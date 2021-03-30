@@ -90,7 +90,13 @@ type private CirCtx =
     Tys: AssocMap<TySerial, TyDef>
     TyUniqueNames: AssocMap<Ty, Ident>
     Stmts: CStmt list
-    Decls: CDecl list }
+    Decls: CDecl list
+
+    /// Doc ID of current module.
+    DocId: DocId
+    /// Already-declared functions.
+    VarDecls: AssocSet<VarSerial>
+    FunDecls: AssocSet<FunSerial> }
 
 let private ofMirCtx (mirCtx: MirCtx) : CirCtx =
   let valueUniqueNames =
@@ -152,7 +158,11 @@ let private ofMirCtx (mirCtx: MirCtx) : CirCtx =
     Tys = mirCtx.Tys
     TyUniqueNames = tyNames
     Stmts = []
-    Decls = [] }
+    Decls = []
+
+    DocId = ""
+    VarDecls = TSet.empty varSerialCompare
+    FunDecls = TSet.empty funSerialCompare }
 
 let private findStorageModifier (ctx: CirCtx) varSerial =
   match ctx.Vars |> TMap.tryFind varSerial with
@@ -216,7 +226,7 @@ let private genFunTyDef (ctx: CirCtx) sTy tTy =
 
       let argTys, ctx =
         (argTys, ctx)
-        |> stMap (fun (ty, ctx) -> cgTyIncomplete ctx ty)
+        |> stMap (fun (ty, ctx) -> cgTyComplete ctx ty)
 
       let resultTy, (ctx: CirCtx) = cgTyComplete ctx resultTy
 
@@ -613,6 +623,64 @@ let private cgTyComplete (ctx: CirCtx) (ty: Ty) : CTy * CirCtx =
   | UnresolvedVarTk _, _ -> unreachable () // Resolved in NameRes.
 
 // -----------------------------------------------
+// Extern decl
+// -----------------------------------------------
+
+let private cgExternVarDecl (ctx: CirCtx) varSerial =
+  if TSet.contains varSerial ctx.VarDecls then
+    ctx
+  else
+    let varDef = ctx.Vars |> mapFind varSerial
+
+    let name = getUniqueVarName ctx varSerial
+    let ty, ctx = cgTyComplete ctx varDef.Ty
+
+    let ctx = addDecl ctx (CExternVarDecl(name, ty))
+
+    { ctx with
+        VarDecls = ctx.VarDecls |> TSet.add varSerial }
+
+let private cgExternFunDecl (ctx: CirCtx) funSerial =
+  if TSet.contains funSerial ctx.FunDecls then
+    ctx
+  else
+    let funDef = ctx.Funs |> mapFind funSerial
+    let (Loc (docId, _, _)) = funDef.Loc
+
+    if docId = ctx.DocId then
+      ctx
+    else
+      let (TyScheme (_, ty)) = funDef.Ty
+
+      let argTys, resultTy =
+        let rec go arity ty =
+          if arity = 0 then
+            [], ty
+          else
+            match ty with
+            | Ty (FunTk, [ sTy; tTy ]) ->
+                let argTys, resultTy = go (arity - 1) tTy
+                sTy :: argTys, resultTy
+
+            | _ -> unreachable (ty, arity)
+
+        go funDef.Arity ty
+
+      let name = getUniqueFunName ctx funSerial
+
+      let argTys, ctx =
+        (argTys, ctx)
+        |> stMap (fun (argTy, ctx) -> cgTyComplete ctx argTy)
+
+      let resultTy, ctx = cgTyComplete ctx resultTy
+
+      let ctx : CirCtx =
+        addDecl ctx (CFunForwardDecl(name, argTys, resultTy))
+
+      { ctx with
+          FunDecls = TSet.add funSerial ctx.FunDecls }
+
+// -----------------------------------------------
 // Expressions
 // -----------------------------------------------
 
@@ -774,7 +842,16 @@ let private cgExpr (ctx: CirCtx) (arg: MExpr) : CExpr * CirCtx =
   | MUnitExpr _ -> CVarExpr "0", ctx
   | MNeverExpr loc -> unreachable ("MNeverExpr " + locToString loc)
 
-  | MVarExpr (serial, _, _) -> CVarExpr(getUniqueVarName ctx serial), ctx
+  | MVarExpr (serial, _, _) ->
+      (fun () ->
+        let ctx =
+          match findStorageModifier ctx serial with
+          | IsStatic -> cgExternVarDecl ctx serial
+          | NotStatic -> ctx
+
+        CVarExpr(getUniqueVarName ctx serial), ctx)
+        ()
+
   | MProcExpr (serial, _, _) -> CVarExpr(getUniqueFunName ctx serial), ctx
 
   | MVariantExpr (_, serial, ty, _) -> genVariantNameExpr ctx serial ty
@@ -938,14 +1015,24 @@ let private cgPrimStmt (ctx: CirCtx) itself prim args serial =
   | MStrGetSlicePrim -> regular ctx (fun args -> (CCallExpr(CVarExpr "str_get_slice", args)))
 
   | MClosurePrim funSerial ->
-      regularWithTy
-        ctx
-        (fun args resultTy ->
-          let funExpr = CVarExpr(getUniqueFunName ctx funSerial)
+      let name = getUniqueVarName ctx serial
+      let isStatic = findStorageModifier ctx serial
+      let linkage = findVarLinkage ctx serial
+      let ty, ctx = cgTyComplete ctx resultTy
 
-          match args with
-          | [ env ] -> CInitExpr([ "fun", funExpr; "env", env ], resultTy)
-          | _ -> unreachable itself)
+      let args, ctx =
+        (args, ctx)
+        |> stMap (fun (arg, ctx) -> cgExpr ctx arg)
+
+      let expr, ctx =
+        let ctx = cgExternFunDecl ctx funSerial
+        let funExpr = CVarExpr(getUniqueFunName ctx funSerial)
+
+        match args with
+        | [ env ] -> CInitExpr([ "fun", funExpr; "env", env ], ty), ctx
+        | _ -> unreachable itself
+
+      addLetStmt ctx name (Some expr) ty isStatic linkage
 
   | MBoxPrim ->
       match args with
@@ -1005,24 +1092,52 @@ let private cgPrimStmt (ctx: CirCtx) itself prim args serial =
           CInitExpr(fields, recordTy))
 
   | MCallProcPrim ->
-      regular
-        ctx
-        (fun args ->
-          match args with
-          | callee :: args -> CCallExpr(callee, args)
-          | [] -> unreachable itself)
+      let name = getUniqueVarName ctx serial
+      let isStatic = findStorageModifier ctx serial
+      let linkage = findVarLinkage ctx serial
+      let ty, ctx = cgTyComplete ctx resultTy
+
+      let ctx =
+        match args with
+        | MProcExpr (funSerial, _, loc) :: _ -> cgExternFunDecl ctx funSerial
+        | _ -> ctx
+
+      let args, ctx =
+        (args, ctx)
+        |> stMap (fun (arg, ctx) -> cgExpr ctx arg)
+
+      match args with
+      | callee :: args ->
+          let expr = CCallExpr(callee, args)
+          addLetStmt ctx name (Some expr) ty isStatic linkage
+
+      | [] -> unreachable itself
 
   | MCallClosurePrim ->
-      regular
-        ctx
-        (fun args ->
-          match args with
-          | callee :: args ->
-              let funPtr = CDotExpr(callee, "fun")
-              let envArg = CDotExpr(callee, "env")
-              CCallExpr(funPtr, envArg :: args)
+      let name = getUniqueVarName ctx serial
+      let isStatic = findStorageModifier ctx serial
+      let linkage = findVarLinkage ctx serial
+      let ty, ctx = cgTyComplete ctx resultTy
 
-          | [] -> unreachable itself)
+      let ctx =
+        match args with
+        | MProcExpr (funSerial, _, _) :: _ -> cgExternFunDecl ctx funSerial
+        | _ -> ctx
+
+      let args, ctx =
+        (args, ctx)
+        |> stMap (fun (arg, ctx) -> cgExpr ctx arg)
+
+      match args with
+      | callee :: args ->
+          let expr =
+            let funPtr = CDotExpr(callee, "fun")
+            let envArg = CDotExpr(callee, "env")
+            CCallExpr(funPtr, envArg :: args)
+
+          addLetStmt ctx name (Some expr) ty isStatic linkage
+
+      | [] -> unreachable itself
 
   | MCallNativePrim funName ->
       let ctx =
@@ -1220,19 +1335,9 @@ let private cgDecls (ctx: CirCtx) decls =
       let ctx = addDecl ctx (CNativeDecl code)
       cgDecls ctx decls
 
-// -----------------------------------------------
-// Interface
-// -----------------------------------------------
-
-let genCir (decls, mirCtx: MirCtx) : CDecl list =
-  let ctx = ofMirCtx mirCtx
-
-  let ctx = cgDecls ctx decls
-
-  let decls = List.rev ctx.Decls
-
-  // Sort declarations by kind.
-  // Without this, static variable definition can appear before its type definition.
+// Sort declarations by kind.
+// Without this, static variable definition can appear before its type definition.
+let private sortDecls (decls: CDecl list) : CDecl list =
   let types, vars, bodies =
     decls
     |> List.fold
@@ -1244,7 +1349,8 @@ let genCir (decls, mirCtx: MirCtx) : CDecl list =
            | CEnumDecl _ -> decl :: types, vars, bodies
 
            | CStaticVarDecl _
-           | CInternalStaticVarDecl _ -> types, decl :: vars, bodies
+           | CInternalStaticVarDecl _
+           | CExternVarDecl _ -> types, decl :: vars, bodies
 
            | CNativeDecl _
            | CFunForwardDecl _
@@ -1253,3 +1359,41 @@ let genCir (decls, mirCtx: MirCtx) : CDecl list =
          ([], [], [])
 
   List.collect List.rev [ types; vars; bodies ]
+
+// -----------------------------------------------
+// Interface
+// -----------------------------------------------
+
+let genCir (decls, mirCtx: MirCtx) : (DocId * CDecl list) list =
+  let ctx = ofMirCtx mirCtx
+
+  // Split into modules based on docId.
+  let acc, _ =
+    decls
+    |> List.fold
+         (fun moduleMap decl ->
+           let (Loc (docId, _, _)) = mDeclToLoc decl
+
+           moduleMap |> multimapAdd docId decl)
+         (TMap.empty compare)
+    |> TMap.fold
+         (fun (acc, ctx: CirCtx) docId declAcc ->
+           // Reset state.
+           let ctx =
+             { ctx with
+                 TyEnv = TMap.empty tyCompare
+                 Stmts = []
+                 Decls = []
+                 VarDecls = TSet.empty varSerialCompare
+                 FunDecls = TSet.empty funSerialCompare
+                 DocId = docId }
+
+           // Generate decls.
+           let decls = List.rev declAcc
+           let ctx = cgDecls ctx decls
+           let decls = List.rev ctx.Decls |> sortDecls
+
+           (docId, decls) :: acc, ctx)
+         ([], ctx)
+
+  List.rev acc

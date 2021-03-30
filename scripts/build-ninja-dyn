@@ -1,0 +1,81 @@
+#!/bin/sh
+#
+# Standard input: C file names.
+#
+# ENV:
+#   ID: Some identity.
+#   EXE: Executable name.
+#   TARGET_DIR: Directory where C files are generated.
+
+set -eu
+
+FILES="$(cat)"
+
+: $EXE $ID $TARGET_DIR
+
+if test -z "$FILES"
+then
+    echo 'build-ninja-gen: error: No input.' >&2
+    exit 1
+fi
+
+echo "builddir = target/build-ninja-dyn-$ID"
+
+cat <<'END'
+
+warning_flags = $
+  -Wall $
+  -Wextra $
+  -Wpedantic $
+  -Wno-parentheses-equality $
+  -Wno-pointer-to-int-cast $
+  -Wno-unknown-warning-option $
+  -Wno-unused-but-set-parameter $
+  -Wno-unused-but-set-variable $
+  -Wno-unused-const-variable $
+  -Wno-unused-function $
+  -Wno-unused-label $
+  -Wno-unused-parameter $
+  -Wno-unused-variable
+
+rule compile_c_to_obj
+  description = compile_c_to_obj $in
+  command = $${CC:-gcc} -std=c11 $warning_flags -O1 -g -c -Iruntime $in -o $out
+
+rule link_objs_to_exe
+  description = link_objs_to_exe
+  command = $${CC:-gcc} $in -o $out
+END
+
+# Build statements for object files.
+
+echo "$FILES" | \
+while read NAME
+do
+    NAME=$(basename $NAME .c)
+
+    cat <<END
+
+build $TARGET_DIR/$NAME.o: \$
+  compile_c_to_obj \$
+    $TARGET_DIR/$NAME.c
+END
+done
+
+# Build statement for executable.
+
+OBJ_FILES=$( \
+    echo "$FILES" | \
+    sed 's;\.c$;.o;' | \
+    sed "s;^;$TARGET_DIR/;" | \
+    sed -z 's;\n; ;g' )
+
+cat <<END
+
+build $EXE: \$
+  link_objs_to_exe \$
+    runtime/milone.o \$
+    $OBJ_FILES
+
+default $EXE
+END

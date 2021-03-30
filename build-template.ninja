@@ -12,6 +12,25 @@ milone_dotnet_debug = MiloneLang/bin/Debug/net5.0/MiloneLang
 
 milone_dotnet_release = MiloneLang/bin/Release/net5.0/MiloneLang
 
+warning_flags = $
+  -Wall $
+  -Wextra $
+  -Wpedantic $
+  -Wno-parentheses-equality $
+  -Wno-pointer-to-int-cast $
+  -Wno-unknown-warning-option $
+  -Wno-unused-but-set-parameter $
+  -Wno-unused-but-set-variable $
+  -Wno-unused-const-variable $
+  -Wno-unused-function $
+  -Wno-unused-label $
+  -Wno-unused-parameter $
+  -Wno-unused-variable
+
+rule subninja
+  description = subninja $file
+  command = ninja -f $file && touch $out
+
 # ------------------------------------------------
 # dotnet restore
 # ------------------------------------------------
@@ -22,7 +41,7 @@ milone_dotnet_release = MiloneLang/bin/Release/net5.0/MiloneLang
 rule dotnet_restore
   description = dotnet_restore
   command = $
-    dotnet restore; $
+    dotnet restore && $
     touch $out
 
 build target/timestamp.dotnet_restore: $
@@ -38,7 +57,9 @@ build dotnet_restore: $
 
 rule build_milone_dotnet
   description = build_milone_dotnet ($CONFIG)
-  command = CONFIG=$CONFIG scripts/build-milone-dotnet
+  command = $
+    CONFIG=$CONFIG scripts/build-milone-dotnet && $
+    touch $out
 
 build $milone_dotnet_debug: $
   build_milone_dotnet $
@@ -56,78 +77,90 @@ build $milone_dotnet_release: $
 # milone-native
 # ------------------------------------------------
 
-rule build_milone
-  description = build_milone $out
+# Rules for self compilation.
+
+rule compile_milone_to_c
+  description = compile_milone_to_c $name
   command = $
-    mkdir -p target/$name; $
-    MILONE_HOME=$$PWD $milone compile $verbosity --target-dir target/$name MiloneLang
-  restat = 1
+    MILONE_HOME=$$PWD MILONE=$milone TARGET_DIR=$target_dir scripts/milone-incremental $verbosity $project | $
+      ID=$name EXE=$exe TARGET_DIR=$target_dir scripts/build-ninja-dyn >$out
 
-rule build_cc
-  description = build_cc $in
-  command = MILONE_HOME="$$PWD" CFLAGS='-O0' INPUTS="$in" OUTPUT="$out" scripts/build-with-cc
+rule compile_c_to_obj
+  description = compile_c_to_obj $in
+  command = $${CC:-gcc} -std=c11 $warning_flags -O1 -g -c -Iruntime $in -o $out
 
-# .fs -> .c (with .NET)
+build runtime/milone.o: $
+  compile_c_to_obj $
+    runtime/milone.c $
+    | runtime/milone.h
 
-build target/gen2/MiloneLang.c: $
-  build_milone $
-    | {{ MILONE_CORE_SRC }} {{ MILONE_STD_SRC }} {{ MILONE_LANG_SRC }} $
-    $milone_dotnet_debug
+# ------------------------------------------------
+# gen2 build
+# ------------------------------------------------
+
+# This statement doesn't need to have source files as input
+# because $milone_dotnet_debug is updated on change.
+build target/gen2.ninja: $
+  compile_milone_to_c $
+    | $milone_dotnet_debug $
+      scripts/build-ninja-dyn $
+      scripts/milone-incremental
+  exe = target/milone
   milone = $milone_dotnet_debug
   name = gen2
-  verbosity = -q
-
-# .c -> .exe
+  project = MiloneLang
+  target_dir = target/gen2
+  verbosity = --quiet
 
 build target/milone: $
-  build_cc $
-    target/gen2/MiloneLang.c $
-    | runtime/milone.h $
-      runtime/milone.c
+  subninja $
+    | target/gen2.ninja $
+      runtime/milone.o
+  file = target/gen2.ninja
+  pool = console
 
-# .fs -> .c (with native)
+build gen2: phony target/milone
 
-build target/gen3/MiloneLang.c: $
-  build_milone $
-    | {{ MILONE_CORE_SRC }} {{ MILONE_STD_SRC }} {{ MILONE_LANG_SRC }} $
-    target/milone
+# ------------------------------------------------
+# gen3 build
+# ------------------------------------------------
+
+build target/gen3.ninja: $
+  compile_milone_to_c $
+    | target/milone
+  exe = target/milone_gen3
   milone = target/milone
   name = gen3
+  project = MiloneLang
+  target_dir = target/gen3
   verbosity = --profile
   pool = console
 
-# .c -> .diff
+build gen3: $
+  phony | target/gen3.ninja
 
-rule diff
-  description = diff $out
-  command = diff $in | scripts/write-if-change $out
-  restat = 1
+# ------------------------------------------------
+# gen3 verification
+# ------------------------------------------------
 
-build target/gen3/MiloneLang.diff: $
-  diff $
-    target/gen2/MiloneLang.c $
-    target/gen3/MiloneLang.c
-
-# Verify diff.
-# About test command:
-#   predicate `-f file` is true if the file exists,
-#   predicate `! -s file` is true if the file (doesn't exist or) is empty,
-#   so the conjunction (`-a`) means that the file exists and is empty.
-
-rule verify_no_diff
-  description = verify_no_diff $in
+rule diff_self
+  description = diff_self
   command = $
-    test -f $in -a ! -s $in && $
-    echo '✔ OK' || $
-    { echo '✘ FAILED'; exit 1; }; $
-    touch $out
+    ls -1 target/gen2/*.c | xargs -I{} basename {} .c | sort >target/gen2_files.txt; $
+    ls -1 target/gen3/*.c | xargs -I{} basename {} .c | sort >target/gen3_files.txt; $
+    { $
+      diff target/gen2_files.txt target/gen3_files.txt; $
+      cat target/gen2_files.txt | $
+        xargs -n1 basename | $
+        xargs -I{} diff target/gen2/{}.c target/gen3/{}.c; $
+    } >$out
 
-build target/test_self.timestamp: $
-  verify_no_diff $
-    target/gen3/MiloneLang.diff
+build target/self.diff: $
+  diff_self $
+    | gen2 gen3
 
-build test_self: $
-  phony target/test_self.timestamp
+build self: phony target/self.diff
+build test_self: phony target/self.diff
 
 # ------------------------------------------------
 # Snapshot testing
@@ -139,18 +172,20 @@ rule take_snapshot
   description = take_snapshot $project
   command = $
     if test -z "$$(grep 'milone-lang compile error.' -- $expected_out_file)"; then $
-      MILONE_HOME=$$PWD $milone compile --quiet --target-dir $project $project; $
+      MILONE_HOME=$$PWD $milone compile --quiet --target-dir $project $project | $
+        ID=$name EXE=$exe_file TARGET_DIR=$project scripts/build-ninja-dyn >$out; $
     else $
-      if ! env MILONE_HOME=$$PWD $milone compile --quiet --target-dir $project $project >$out; then $
-        echo 'milone-lang compile error.' | scripts/write-if-change $out_file; $
-      fi $
+      if ! env MILONE_HOME=$$PWD $milone compile --quiet --target-dir $project $project >/dev/null; then $
+        echo 'milone-lang compile error.' >$out_file; $
+      else $
+        echo 'Compile success (expected compile error.)' >$out_file; $
+      fi; $
+      echo "build $exe_file: phony" >$out; $
     fi
-  restat = 1
 
 # Print snapshot diff.
 rule git_diff_snapshot_stats
-  command = git diff --stat -- 'tests/**/*.c' | scripts/write-if-change $out
-  restat = 1
+  command = git diff --stat -- 'tests/**/*.c' >$out
 
 build snapshot_diff: $
   git_diff_snapshot_stats $
@@ -162,34 +197,32 @@ build snapshot_diff: $
 # ------------------------------------------------
 
 rule build_test
-  description = build_test $in
+  description = build_test $project
   command = $
-    if test -z "$$(grep '#error' -- $in)"; then $
-      MILONE_HOME="$$PWD" INPUTS="$in" OUTPUT="$out" scripts/build-with-cc; $
+    if test -z "$$(grep 'milone-lang compile error.' -- $expected_out_file)"; then $
+      ninja -f $in; $
     else $
-      echo '' | scripts/write-if-change $out; $
+      : >$out; $
     fi
-  restat = 1
 
 rule execute_test
-  description = execute_test $c_file
+  description = execute_test $project
   command = $
-    if test -z "$$(grep '#error' -- $c_file)"; then $
-      $in >$out.tmp ; $
-      echo '$$? = '$$? >>$out.tmp ; $
-      cat $out.tmp | scripts/write-if-change $out ; $
-      rm -f $out.tmp ; $
+    if test -z "$$(grep 'milone-lang compile error.' -- $expected_out_file)"; then $
+      $in >$out.tmp; $
+      echo '$$? = '$$? >>$out.tmp; $
+      cat $out.tmp >$out; $
+      rm -f $out.tmp; $
     else $
-      echo 'milone-lang compile error.' | scripts/write-if-change $out; $
+      echo 'milone-lang compile error.' >$out; $
     fi
-  restat = 1
 
 rule diff_test_output
-  description = diff_test_output $test
+  description = diff_test_output $name
   command = $
     diff -q $in && $
-      echo OK $test >$out || $
-      echo FAILED $test >$out
+      echo OK $name >$out || $
+      echo FAILED $name >$out
 
 # Verify outputs.
 rule verify_test_output
@@ -249,6 +282,8 @@ build clean: clean
 # ------------------------------------------------
 # Entrypoint
 # ------------------------------------------------
+
+build build: phony gen2
 
 build test: $
   phony $

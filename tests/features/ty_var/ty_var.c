@@ -10,13 +10,13 @@ struct StringStringListTuple2;
 
 struct StringList;
 
-static int pair_1(struct IntIntTuple2 arg_);
+int pair_1(struct IntIntTuple2 arg_);
 
-static int pair_(struct StringStringTuple2 arg_1);
+int pair_(struct StringStringTuple2 arg_1);
 
 char ty_var_Program_useStringIndexWithoutAscription(struct String x_);
 
-static struct StringStringListTuple2 useTyVarInBody_(struct String x_1);
+struct StringStringListTuple2 useTyVarInBody_(struct String x_1);
 
 int milone_main();
 
@@ -40,11 +40,11 @@ struct StringList {
     struct StringList const* tail;
 };
 
-static int pair_1(struct IntIntTuple2 arg_) {
+int pair_1(struct IntIntTuple2 arg_) {
     return 2;
 }
 
-static int pair_(struct StringStringTuple2 arg_1) {
+int pair_(struct StringStringTuple2 arg_1) {
     return 2;
 }
 
@@ -54,7 +54,7 @@ char ty_var_Program_useStringIndexWithoutAscription(struct String x_) {
     return x_.str[0];
 }
 
-static struct StringStringListTuple2 useTyVarInBody_(struct String x_1) {
+struct StringStringListTuple2 useTyVarInBody_(struct String x_1) {
     struct StringList const* xs_ = NULL;
     struct StringStringListTuple2 tuple_1 = (struct StringStringListTuple2){.t0 = x_1, .t1 = xs_};
     return tuple_1;

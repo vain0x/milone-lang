@@ -2,7 +2,7 @@
 
 struct UnitUnitTuple2;
 
-static char f_(char arg_);
+char f_(char arg_);
 
 int milone_main();
 
@@ -11,7 +11,7 @@ struct UnitUnitTuple2 {
     char t1;
 };
 
-static char f_(char arg_) {
+char f_(char arg_) {
     printf("hello\n");
     return 0;
 }

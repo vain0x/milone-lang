@@ -30,11 +30,11 @@ struct IntThird_Tuple2;
 
 struct IntThird_Tuple2List;
 
-static struct First_ListSecond_ListTuple2 f_(struct First_Second_Tuple2List const* arg_2);
+struct First_ListSecond_ListTuple2 f_(struct First_Second_Tuple2List const* arg_2);
 
-static struct First_ListSecond_ListTuple2 fun_(void const* env_, struct First_Second_Tuple2List const* arg_);
+struct First_ListSecond_ListTuple2 fun_(void const* env_, struct First_Second_Tuple2List const* arg_);
 
-static struct First_ListSecond_ListTuple2 fun_1(void const* env_1, struct First_Second_Tuple2List const* arg_1);
+struct First_ListSecond_ListTuple2 fun_1(void const* env_1, struct First_Second_Tuple2List const* arg_1);
 
 int milone_main();
 
@@ -115,17 +115,17 @@ struct IntThird_Tuple2List {
     struct IntThird_Tuple2List const* tail;
 };
 
-static struct First_ListSecond_ListTuple2 f_(struct First_Second_Tuple2List const* arg_2) {
+struct First_ListSecond_ListTuple2 f_(struct First_Second_Tuple2List const* arg_2) {
     struct First_ListSecond_ListTuple2 tuple_ = (struct First_ListSecond_ListTuple2){.t0 = NULL, .t1 = NULL};
     return tuple_;
 }
 
-static struct First_ListSecond_ListTuple2 fun_(void const* env_, struct First_Second_Tuple2List const* arg_) {
+struct First_ListSecond_ListTuple2 fun_(void const* env_, struct First_Second_Tuple2List const* arg_) {
     struct First_ListSecond_ListTuple2 call_ = f_(arg_);
     return call_;
 }
 
-static struct First_ListSecond_ListTuple2 fun_1(void const* env_1, struct First_Second_Tuple2List const* arg_1) {
+struct First_ListSecond_ListTuple2 fun_1(void const* env_1, struct First_Second_Tuple2List const* arg_1) {
     struct First_ListSecond_ListTuple2 call_1 = f_(arg_1);
     return call_1;
 }

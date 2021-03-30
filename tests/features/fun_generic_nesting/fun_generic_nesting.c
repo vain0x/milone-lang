@@ -1,57 +1,57 @@
 #include "milone.h"
 
-static int aux_2(int x_, char arg_);
+int aux_2(int x_, char arg_);
 
-static struct String aux_1(struct String x_, char arg_1);
+struct String aux_1(struct String x_, char arg_1);
 
-static int id_2(int x_);
+int id_2(int x_);
 
-static struct String id_1(struct String x_);
+struct String id_1(struct String x_);
 
-static int gooAux_2(int x_1, char arg_2);
+int gooAux_2(int x_1, char arg_2);
 
-static struct String gooAux_1(struct String x_1, char arg_3);
+struct String gooAux_1(struct String x_1, char arg_3);
 
-static int goo_2(int x_1);
+int goo_2(int x_1);
 
-static struct String goo_1(struct String x_1);
+struct String goo_1(struct String x_1);
 
 int milone_main();
 
-static int aux_2(int x_, char arg_) {
+int aux_2(int x_, char arg_) {
     return x_;
 }
 
-static struct String aux_1(struct String x_, char arg_1) {
+struct String aux_1(struct String x_, char arg_1) {
     return x_;
 }
 
-static int id_2(int x_) {
+int id_2(int x_) {
     int call_ = aux_2(x_, 0);
     return call_;
 }
 
-static struct String id_1(struct String x_) {
+struct String id_1(struct String x_) {
     struct String call_1 = aux_1(x_, 0);
     return call_1;
 }
 
-static int gooAux_2(int x_1, char arg_2) {
+int gooAux_2(int x_1, char arg_2) {
     int call_2 = id_2(x_1);
     return call_2;
 }
 
-static struct String gooAux_1(struct String x_1, char arg_3) {
+struct String gooAux_1(struct String x_1, char arg_3) {
     struct String call_3 = id_1(x_1);
     return call_3;
 }
 
-static int goo_2(int x_1) {
+int goo_2(int x_1) {
     int call_4 = gooAux_2(x_1, 0);
     return call_4;
 }
 
-static struct String goo_1(struct String x_1) {
+struct String goo_1(struct String x_1) {
     struct String call_5 = gooAux_1(x_1, 0);
     return call_5;
 }

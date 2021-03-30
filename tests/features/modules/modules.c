@@ -2,7 +2,7 @@
 
 struct Val_;
 
-static int f_(int x_);
+int f_(int);
 
 int milone_main();
 
@@ -18,10 +18,6 @@ struct Val_ {
         struct String Str_;
     };
 };
-
-static int f_(int x_) {
-    return x_;
-}
 
 int milone_main() {
     int match_;

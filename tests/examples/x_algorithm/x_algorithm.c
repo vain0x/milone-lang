@@ -6,7 +6,7 @@ int x_algorithm_Program_abs(int x_1);
 
 int x_algorithm_Program_gcd(int x_2, int y_);
 
-static bool go_(int x_3, int k_);
+bool go_(int x_3, int k_);
 
 bool x_algorithm_Program_isPrime(int x_3);
 
@@ -56,7 +56,7 @@ if_next_5:;
     return if_1;
 }
 
-static bool go_(int x_3, int k_) {
+bool go_(int x_3, int k_) {
 tailrec_8:;
     bool if_2;
     if ((x_3 < (k_ * k_))) {

@@ -4,7 +4,7 @@ void* milone_mem_alloc(int, uintptr_t);
 
 void* native_fun_ptr_Program_memAlloc(int len_, int size_);
 
-static int intCompare_(void const* l_, void const* r_);
+int intCompare_(void const* l_, void const* r_);
 
 void qsort(void*, uintptr_t, uintptr_t, int(*)(void const*, void const*));
 
@@ -17,7 +17,7 @@ void* native_fun_ptr_Program_memAlloc(int len_, int size_) {
     return milone_mem_alloc_result;
 }
 
-static int intCompare_(void const* l_, void const* r_) {
+int intCompare_(void const* l_, void const* r_) {
     return int_compare((*(((int const*)((void const*)l_)))), (*(((int const*)((void const*)r_)))));
 }
 

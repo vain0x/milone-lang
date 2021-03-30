@@ -1,10 +1,10 @@
 #include "milone.h"
 
-static int factorial_(int x_);
+int factorial_(int x_);
 
 int milone_main();
 
-static int factorial_(int x_) {
+int factorial_(int x_) {
     int if_;
     if ((x_ == 0)) {
         goto then_2;

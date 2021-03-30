@@ -603,6 +603,24 @@ void file_write_all_text(struct String file_name, struct String content) {
         exit(1);
     }
 
+    // Skip writing if unchanged.
+    {
+        fseek(fp, 0, SEEK_END);
+        long size = ftell(fp);
+        fseek(fp, 0, SEEK_SET);
+
+        if (size >= 0 && (size_t)size == (size_t)content.len) {
+            char *old_content = calloc((size_t)size + 1, sizeof(char));
+            size_t read_len = fread(old_content, sizeof(char), (size_t)size, fp);
+            bool same = read_len == (size_t)size && memcmp(old_content, content.str, read_len) == 0;
+            free(old_content);
+
+            if (same) {
+                goto END;
+            }
+        }
+    }
+
     bool ok = fwrite(content.str, sizeof(char), (size_t)content.len, fp) == (size_t)content.len;
     if (!ok) {
         perror("fwrite");
@@ -610,6 +628,7 @@ void file_write_all_text(struct String file_name, struct String content) {
         exit(1);
     }
 
+END:
     fclose(fp);
 }
 

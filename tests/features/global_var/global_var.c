@@ -6,9 +6,13 @@ int global_var_Program_g(char arg_1);
 
 int milone_main();
 
+extern int global_var_Program_success;
+
 int global_var_Program_success;
 
-static int failure_;
+int failure_;
+
+extern int failure_;
 
 int global_var_Program_f(char arg_) {
     return global_var_Program_success;

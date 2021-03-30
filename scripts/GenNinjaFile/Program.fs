@@ -38,7 +38,7 @@ let private findFiles pred (rootDir: string) =
           if pred entry then entry
     }
 
-  go rootDir |> String.concat " "
+  go rootDir
 
 let private findTestProjects testsDir =
   [| for category in IO.Directory.GetDirectories(testsDir) do
@@ -54,6 +54,18 @@ let private findTestProjects testsDir =
 
 let private generate (solutionDir: string) (ninjaTemplate: string) =
   let testsDir = solutionDir + "/tests"
+
+  let miloneCoreSrc =
+    findFiles extIsSrc (solutionDir + "/milone_libs/MiloneCore")
+    |> Seq.toList
+
+  let miloneStdSrc =
+    findFiles extIsSrc (solutionDir + "/milone_libs/MiloneStd")
+    |> Seq.toList
+
+  let miloneLangSrc =
+    findFiles extIsSrc (solutionDir + "/MiloneLang")
+    |> Seq.toList
 
   let testProjects = findTestProjects testsDir
 
@@ -75,10 +87,12 @@ let private generate (solutionDir: string) (ninjaTemplate: string) =
     |> String.concat "\n"
 
   ninjaTemplate
-    .Replace("{{ FS_PROJ_FILES }}", findFiles (extIs ".fsproj") solutionDir)
-    .Replace("{{ MILONE_CORE_SRC }}", findFiles extIsSrc (solutionDir + "/milone_libs/MiloneCore"))
-    .Replace("{{ MILONE_STD_SRC }}", findFiles extIsSrc (solutionDir + "/milone_libs/MiloneStd"))
-    .Replace("{{ MILONE_LANG_SRC }}", findFiles extIsSrc (solutionDir + "/MiloneLang"))
+    .Replace("{{ FS_PROJ_FILES }}",
+             findFiles (extIs ".fsproj") solutionDir
+             |> String.concat " ")
+    .Replace("{{ MILONE_CORE_SRC }}", miloneCoreSrc |> String.concat " ")
+    .Replace("{{ MILONE_STD_SRC }}", miloneStdSrc |> String.concat " ")
+    .Replace("{{ MILONE_LANG_SRC }}", miloneLangSrc |> String.concat " ")
     .Replace("{{ TEST_C_FILES }}", testCFiles)
     .Replace("{{ TEST_DIFF_FILES }}", testDiffFiles)
     .Replace("{{ TEST_BUILDS }}", testBuilds)

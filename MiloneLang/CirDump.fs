@@ -486,7 +486,15 @@ let private cpDecl decl acc =
 
   | CInternalStaticVarDecl(name, ty) ->
       acc
-      |> cons "static "
+      // FIXME: global variable is now defined in entry module no matter where it is.
+      // |> cons "static "
+      |> cpTyWithName name ty
+      |> cons ";"
+      |> cons eol
+
+  | CExternVarDecl (name, ty) ->
+      acc
+      |> cons "extern "
       |> cpTyWithName name ty
       |> cons ";"
       |> cons eol
@@ -503,8 +511,11 @@ let private cpDecl decl acc =
       |> cons eol
 
   | CStaticFunDecl (name, args, resultTy, body) ->
+      // FIXME: monomorphization instances can't have stable external linkage,
+      //        however, they still need to have external linkage.
+
       acc
-      |> cons "static "
+      // |> cons "static "
       |> cpTyWithName name resultTy
       |> cons "("
       |> cpParams args
@@ -533,7 +544,8 @@ let private cpForwardDecl decl acc =
   | CErrorDecl _
   | CEnumDecl _
   | CStaticVarDecl _
-  | CInternalStaticVarDecl _ -> acc
+  | CInternalStaticVarDecl _
+  | CExternVarDecl _ -> acc
 
   | CStructDecl (name, _, _) ->
       acc
@@ -575,7 +587,7 @@ let private cpForwardDecl decl acc =
 
   | CStaticFunDecl (name, args, resultTy, _) ->
       acc
-      |> cons "static "
+      // |> cons "static "
       |> cpFunForwardDecl name (cpParams args) resultTy
 
   | CNativeDecl code -> acc |> cons code |> cons eol

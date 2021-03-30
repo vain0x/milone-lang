@@ -8,7 +8,7 @@ char record_inference_Program_typeAscriptionExprCase(int n_1);
 
 char record_inference_Program_matchExprCase(int n_2);
 
-static int unwrap_(struct IntWrapper_ w_1);
+int unwrap_(struct IntWrapper_ w_1);
 
 char record_inference_Program_funAppCase(int n_3);
 
@@ -52,7 +52,7 @@ switch_next_1:;
     return 0;
 }
 
-static int unwrap_(struct IntWrapper_ w_1) {
+int unwrap_(struct IntWrapper_ w_1) {
     return w_1.t0;
 }
 

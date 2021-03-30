@@ -10,7 +10,7 @@ struct RecordUsingMyUnit_;
 
 char union_unitlike_Program_basicCase(char arg_);
 
-static bool toBool_(struct MyBool_ myBool_1);
+bool toBool_(struct MyBool_ myBool_1);
 
 char union_unitlike_Program_usedInOtherSumTypeCase(char arg_1);
 
@@ -51,7 +51,7 @@ end_match_1:;
     return 0;
 }
 
-static bool toBool_(struct MyBool_ myBool_1) {
+bool toBool_(struct MyBool_ myBool_1) {
     bool match_1;
     if ((myBool_1.discriminant != MyFalse_)) goto next_4;
     match_1 = false;

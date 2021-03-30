@@ -470,18 +470,29 @@ let codeGenHirViaMir (host: CliHost) v projectName headerOnly (decls, tyCtx) : C
   let stmts, mirCtx = mirify (decls, tyCtx)
 
   writeLog host v "CirGen"
-  let cir = genCir (stmts, mirCtx)
+  let modules = genCir (stmts, mirCtx)
 
   writeLog host v "CirDump"
 
   let output =
     if headerOnly then
-      cirDumpHeader cir
-    else
-      cirDump cir
+      failwith "header command is unimplemented"
+
+    modules
+    |> List.map
+         (fun (docId, cir) ->
+           let fileName =
+             if docId = projectName + ".Program"
+                || docId = projectName + ".EntryPoint"
+                || docId = projectName + "." + projectName then
+               projectName + ".c"
+             else
+               S.replace "." "_" docId + ".c"
+
+           fileName, cirDump cir)
 
   writeLog host v "Finish"
-  [ projectName + ".c", output ]
+  output
 
 let check (ctx: CompileCtx) : bool * string =
   let host = ctx.Host
@@ -581,7 +592,13 @@ let cliCompile (host: CliHost) (options: CompileOptions) =
 
   match result with
   | CompileOk files ->
-      List.fold (fun () (name, contents) -> host.FileWriteAllText(options.TargetDir + "/" + name) contents) () files
+      List.fold
+        (fun () (name, contents) ->
+          printfn "%s" name
+          host.FileWriteAllText(options.TargetDir + "/" + name) contents)
+        ()
+        files
+
       0
 
   | CompileError output ->

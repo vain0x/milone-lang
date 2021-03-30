@@ -4,7 +4,7 @@ char str_operators_Program_addTest(char arg_);
 
 char str_operators_Program_compareTest(char arg_1);
 
-static char at_(int i_, struct String s_);
+char at_(int i_, struct String s_);
 
 char str_operators_Program_indexOperatorTest(char arg_2);
 
@@ -34,7 +34,7 @@ char str_operators_Program_compareTest(char arg_1) {
     return 0;
 }
 
-static char at_(int i_, struct String s_) {
+char at_(int i_, struct String s_) {
     return s_.str[i_];
 }
 

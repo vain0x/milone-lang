@@ -12,7 +12,7 @@ int fun_pipeline_operator_Program_sub(int x_2, int y_);
 
 bool fun_pipeline_operator_Program_between(int l_, int r_, int x_3);
 
-static int len_(struct IntList const* xs_);
+int len_(struct IntList const* xs_);
 
 int milone_main();
 
@@ -50,7 +50,7 @@ if_next_1:;
     return if_;
 }
 
-static int len_(struct IntList const* xs_) {
+int len_(struct IntList const* xs_) {
     int if_1;
     if ((!(xs_))) {
         goto nil_cl_5;

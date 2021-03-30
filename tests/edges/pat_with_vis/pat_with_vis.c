@@ -11,7 +11,11 @@ struct IntIntTuple2 {
 
 int pat_with_vis_Program_x;
 
-static int y_;
+int y_;
+
+extern int pat_with_vis_Program_x;
+
+extern int y_;
 
 int milone_main() {
     struct IntIntTuple2 tuple_ = (struct IntIntTuple2){.t0 = 2, .t1 = 3};

@@ -4,23 +4,23 @@ struct IntIntFun1;
 
 struct IntIntIntFun2;
 
-static int apply_1(struct IntIntFun1 f_, int x_);
+int apply_1(struct IntIntFun1 f_, int x_);
 
-static int fun_(int x_1);
+int fun_(int x_1);
 
-static int fun_3(void const* env_, int arg_);
+int fun_3(void const* env_, int arg_);
 
 char fun_lambda_Program_layoutTest(char arg_4);
 
-static int twice_1(struct IntIntFun1 f_1, int x_2);
+int twice_1(struct IntIntFun1 f_1, int x_2);
 
-static int fun_1(int x_4);
+int fun_1(int x_4);
 
-static int fun_4(void const* env_1, int arg_1);
+int fun_4(void const* env_1, int arg_1);
 
-static int fun_2(int x_5, int y_1);
+int fun_2(int x_5, int y_1);
 
-static int fun_5(void const* env_2, int arg_2, int arg_3);
+int fun_5(void const* env_2, int arg_2, int arg_3);
 
 int milone_main();
 
@@ -34,16 +34,16 @@ struct IntIntIntFun2 {
     void const* env;
 };
 
-static int apply_1(struct IntIntFun1 f_, int x_) {
+int apply_1(struct IntIntFun1 f_, int x_) {
     int app_ = f_.fun(f_.env, x_);
     return app_;
 }
 
-static int fun_(int x_1) {
+int fun_(int x_1) {
     return (x_1 + 3);
 }
 
-static int fun_3(void const* env_, int arg_) {
+int fun_3(void const* env_, int arg_) {
     int call_ = fun_(arg_);
     return call_;
 }
@@ -56,27 +56,27 @@ char fun_lambda_Program_layoutTest(char arg_4) {
     return 0;
 }
 
-static int twice_1(struct IntIntFun1 f_1, int x_2) {
+int twice_1(struct IntIntFun1 f_1, int x_2) {
     int app_1 = f_1.fun(f_1.env, x_2);
     int app_2 = f_1.fun(f_1.env, app_1);
     return app_2;
 }
 
-static int fun_1(int x_4) {
+int fun_1(int x_4) {
     int y_ = (x_4 + 1);
     return y_;
 }
 
-static int fun_4(void const* env_1, int arg_1) {
+int fun_4(void const* env_1, int arg_1) {
     int call_2 = fun_1(arg_1);
     return call_2;
 }
 
-static int fun_2(int x_5, int y_1) {
+int fun_2(int x_5, int y_1) {
     return ((x_5 / y_1) + 0);
 }
 
-static int fun_5(void const* env_2, int arg_2, int arg_3) {
+int fun_5(void const* env_2, int arg_2, int arg_3) {
     int call_3 = fun_2(arg_2, arg_3);
     return call_3;
 }
