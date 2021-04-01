@@ -1,0 +1,26 @@
+﻿<Project Sdk="Microsoft.NET.Sdk">
+
+  <PropertyGroup>
+    <TargetFramework>net5.0</TargetFramework>
+    <GenerateDocumentationFile>true</GenerateDocumentationFile>
+  </PropertyGroup>
+
+  <ItemGroup>
+    <Compile Include="Syntax.fs" />
+    <Compile Include="Tir.fs" />
+    <Compile Include="TySystem.fs" />
+    <Compile Include="SyntaxTokenize.fs" />
+    <Compile Include="SyntaxParse.fs" />
+    <Compile Include="AstToHir.fs" />
+    <Compile Include="AstBundle.fs" />
+    <Compile Include="NameRes.fs" />
+    <Compile Include="Typing.fs" />
+    <Compile Include="ArityCheck.fs" />
+  </ItemGroup>
+
+  <ItemGroup>
+    <ProjectReference Include="..\..\milone_libs\MiloneStd\MiloneStd.fsproj" />
+    <ProjectReference Include="..\MiloneShared\MiloneShared.fsproj" />
+  </ItemGroup>
+
+</Project>

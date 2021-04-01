@@ -1,3 +1,6 @@
+.fake
+
+
 
 # Created by https://www.toptal.com/developers/gitignore/api/fsharp
 # Edit at https://www.toptal.com/developers/gitignore?templates=fsharp
@@ -16,5 +19,3 @@ bin
 .ionide/
 
 # End of https://www.toptal.com/developers/gitignore/api/fsharp
-
-.fake
