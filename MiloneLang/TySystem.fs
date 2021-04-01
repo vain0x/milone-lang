@@ -6,17 +6,14 @@
 module rec MiloneLang.TySystem
 
 open MiloneLang.Util
+open MiloneLang.SharedTypes
 open MiloneLang.Syntax
 open MiloneLang.TypeFloat
 open MiloneLang.TypeIntegers
-open MiloneLang.Hir
+open MiloneLang.Tir
 
 module TMap = MiloneStd.StdMap
 module S = MiloneStd.StdString
-
-let emptyTyLevels : AssocMap<TySerial, Level> = TMap.empty compare
-
-let emptyBinding : AssocMap<TySerial, Ty> = TMap.empty compare
 
 // -----------------------------------------------
 // Tk

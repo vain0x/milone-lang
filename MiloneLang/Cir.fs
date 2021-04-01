@@ -10,9 +10,10 @@
 /// to finally make a milone-lang code executable.
 module rec MiloneLang.Cir
 
-open MiloneLang.Syntax
 open MiloneLang.TypeFloat
 open MiloneLang.TypeIntegers
+
+type private Ident = string
 
 // -----------------------------------------------
 // CIR types

@@ -49,15 +49,15 @@
 module rec MiloneLang.Monomorphizing
 
 open MiloneLang.Util
-open MiloneLang.Syntax
-open MiloneLang.TySystem
-open MiloneLang.Typing
+open MiloneLang.SharedTypes
 open MiloneLang.Hir
 
 module TMap = MiloneStd.StdMap
 
 let private funSerialTyPairCompare l r =
   pairCompare funSerialCompare tyCompare l r
+
+let private emptyBinding : AssocMap<TySerial, Ty> = TMap.empty compare
 
 // -----------------------------------------------
 // Context

@@ -7,9 +7,10 @@
 module rec MiloneLang.AstBundle
 
 open MiloneLang.Util
+open MiloneLang.SharedTypes
 open MiloneLang.Syntax
 open MiloneLang.AstToHir
-open MiloneLang.Hir
+open MiloneLang.Tir
 
 module TSet = MiloneStd.StdSet
 module TMap = MiloneStd.StdMap

@@ -242,6 +242,20 @@ let map (f: 'K -> 'T -> 'U) (map: TreeMap<'K, 'T>) : TreeMap<'K, 'U> =
 
   node, keyCompare, None
 
+/// Maps both keys and values. Keys must preserve their relative ordering (unchecked).
+let stableMap (f: 'K -> 'T -> 'H * 'U) (otherKeyCompare: 'H -> 'H -> int) (map: TreeMap<'K, 'T>) : TreeMap<'H, 'U> =
+  let node, keyCompare, _ = map
+
+  let node =
+    node
+    |> doMap
+         (fun kv ->
+           let k, v = unbox kv
+           let kv = f k v
+           box kv)
+
+  node, otherKeyCompare, None
+
 let fold (folder: 'S -> 'K -> 'T -> 'S) (state: 'S) (map: TreeMap<'K, 'T>) : 'S =
   let node, keyCompare, _ = map
 

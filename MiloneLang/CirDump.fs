@@ -4,6 +4,7 @@
 module rec MiloneLang.CirDump
 
 open MiloneLang.Util
+open MiloneLang.SharedTypes
 open MiloneLang.TypeFloat
 open MiloneLang.TypeIntegers
 open MiloneLang.Cir

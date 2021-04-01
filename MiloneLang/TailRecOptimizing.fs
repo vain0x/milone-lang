@@ -18,9 +18,7 @@
 module rec MiloneLang.TailRecOptimizing
 
 open MiloneLang.Util
-open MiloneLang.Syntax
 open MiloneLang.Hir
-open MiloneLang.Typing
 
 [<NoEquality; NoComparison>]
 type private IsTail =

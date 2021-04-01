@@ -24,8 +24,9 @@
 module rec MiloneLang.AstToHir
 
 open MiloneLang.Util
+open MiloneLang.SharedTypes
 open MiloneLang.Syntax
-open MiloneLang.Hir
+open MiloneLang.Tir
 
 let private greek (Name (ident, pos)) = Name("'" + ident, pos)
 

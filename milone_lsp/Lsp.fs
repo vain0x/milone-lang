@@ -3,6 +3,7 @@ module rec MiloneLsp.Lsp
 
 open MiloneLang
 open MiloneLang.Util
+open MiloneLang.SharedTypes
 open MiloneLang.Syntax
 open MiloneLang.Hir
 open MiloneLsp.Util

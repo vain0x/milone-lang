@@ -10,61 +10,14 @@
 /// Finally AST is converted to HIR in `AstToHir`.
 module rec MiloneLang.Syntax
 
+open MiloneLang.SharedTypes
 open MiloneLang.Util
 
 module TMap = MiloneStd.StdMap
 
-// -----------------------------------------------
-// Vocabulary types
-// -----------------------------------------------
-
-/// Identifier. Name of something.
-type Ident = string
-
 /// Name with ID.
 [<NoEquality; NoComparison>]
 type Name = Name of string * Pos
-
-/// Visibility.
-[<NoEquality; NoComparison>]
-type Vis =
-  | PrivateVis
-  | PublicVis
-
-/// Is recursive?
-[<NoEquality; NoComparison>]
-type IsRec =
-  | IsRec
-  | NotRec
-
-/// Literal of primitive, non-generic value.
-[<Struct; NoEquality; NoComparison>]
-type Lit =
-  | BoolLit of boolValue: bool
-  | IntLit of intText: string
-  | FloatLit of floatText: string
-  | CharLit of charValue: char
-  | StrLit of stringValue: string
-
-// -----------------------------------------------
-// Position and location
-// -----------------------------------------------
-
-/// 0-indexed. Row number.
-type RowIndex = int
-
-/// 0-indexed. Column number.
-type ColumnIndex = int
-
-/// Position. Coordinate in a file.
-type Pos = RowIndex * ColumnIndex
-
-/// Identity of documents.
-/// Document can be a source file, an editor tab, or something else.
-type DocId = string
-
-/// Location.
-type Loc = Loc of DocId * RowIndex * ColumnIndex
 
 // -----------------------------------------------
 // Syntax errors
@@ -460,35 +413,6 @@ type ADecl =
 type ARoot =
   | AExprRoot of ADecl list
   | AModuleRoot of Name * ADecl list * Pos
-
-// -----------------------------------------------
-// Position
-// -----------------------------------------------
-
-let posCompare (l: Pos) (r: Pos) = pairCompare compare compare l r
-
-let posToString ((y, x): Pos) = string (y + 1) + ":" + string (x + 1)
-
-// -----------------------------------------------
-// Location
-// -----------------------------------------------
-
-/// No location information. Should be fixed.
-let noLoc = Loc("<noLoc>", -1, -1)
-
-let locToString (Loc (docId, y, x)) =
-  docId
-  + ":"
-  + string (y + 1)
-  + ":"
-  + string (x + 1)
-
-let locCompare (Loc (lDoc, ly, lx)) (Loc (rDoc, ry, rx)) =
-  let c = compare lDoc rDoc
-
-  if c <> 0 then c
-  else if ly <> ry then compare ly ry
-  else compare lx rx
 
 // -----------------------------------------------
 // Keywords

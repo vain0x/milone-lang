@@ -4,12 +4,10 @@
 module rec MiloneLang.AutoBoxing
 
 open MiloneLang.Util
-open MiloneLang.Syntax
+open MiloneLang.SharedTypes
 open MiloneLang.TypeFloat
 open MiloneLang.TypeIntegers
 open MiloneLang.Hir
-open MiloneLang.TySystem
-open MiloneLang.Typing
 
 module Int = MiloneStd.StdInt
 module TSet = MiloneStd.StdSet

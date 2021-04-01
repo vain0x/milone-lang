@@ -11,10 +11,9 @@
 module rec MiloneLang.CirGen
 
 open MiloneLang.Util
-open MiloneLang.Syntax
+open MiloneLang.SharedTypes
 open MiloneLang.TypeFloat
 open MiloneLang.TypeIntegers
-open MiloneLang.TySystem
 open MiloneLang.Hir
 open MiloneLang.Mir
 open MiloneLang.MirGen

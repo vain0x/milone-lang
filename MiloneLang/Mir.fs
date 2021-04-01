@@ -13,7 +13,7 @@
 module rec MiloneLang.Mir
 
 open MiloneLang.Util
-open MiloneLang.Syntax
+open MiloneLang.SharedTypes
 open MiloneLang.TypeFloat
 open MiloneLang.TypeIntegers
 open MiloneLang.Hir

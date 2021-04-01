@@ -54,6 +54,7 @@
 module rec MiloneLang.SyntaxTokenize
 
 open MiloneLang.Util
+open MiloneLang.SharedTypes
 open MiloneLang.Syntax
 
 module C = MiloneStd.StdChar

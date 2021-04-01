@@ -82,8 +82,7 @@
 module rec MiloneLang.ClosureConversion
 
 open MiloneLang.Util
-open MiloneLang.Syntax
-open MiloneLang.Typing
+open MiloneLang.SharedTypes
 open MiloneLang.Hir
 
 module TMap = MiloneStd.StdMap

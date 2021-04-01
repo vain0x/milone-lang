@@ -2,11 +2,12 @@
 module rec MiloneLang.Cli
 
 open MiloneLang.Util
+open MiloneLang.SharedTypes
 open MiloneLang.Syntax
 open MiloneLang.SyntaxTokenize
 open MiloneLang.SyntaxParse
+open MiloneLang.ArityCheck
 open MiloneLang.AstBundle
-open MiloneLang.Hir
 open MiloneLang.TySystem
 open MiloneLang.AstToHir
 open MiloneLang.AutoBoxing
@@ -27,6 +28,9 @@ module C = MiloneStd.StdChar
 module TMap = MiloneStd.StdMap
 module TSet = MiloneStd.StdSet
 module S = MiloneStd.StdString
+
+module Hir = MiloneLang.Hir
+module Tir = MiloneLang.Tir
 
 let private currentVersion () = "0.3.0"
 
@@ -336,7 +340,7 @@ let private nameResLogsToString logs =
          "#error "
          + locToString loc
          + " "
-         + nameResLogToString log
+         + Tir.nameResLogToString log
          + "\n")
   |> strConcat
 
@@ -345,7 +349,7 @@ let private semanticErrorToString (tyCtx: TyCtx) logs =
     let getTyName tySerial =
       tyCtx.Tys
       |> TMap.tryFind tySerial
-      |> Option.map tyDefToName
+      |> Option.map Tir.tyDefToName
 
     tyDisplay getTyName ty
 
@@ -356,15 +360,269 @@ let private semanticErrorToString (tyCtx: TyCtx) logs =
          "#error "
          + locToString loc
          + " "
-         + logToString tyDisplayFn log
+         + Tir.logToString tyDisplayFn log
          + "\n")
   |> strConcat
+
+// -----------------------------------------------
+// Syntax/semantics data type conversion
+// -----------------------------------------------
+
+let private lowerTk (tk: Tir.Tk) : Hir.Tk =
+  match tk with
+  | Tir.IntTk intFlavor -> Hir.IntTk intFlavor
+  | Tir.FloatTk floatFlavor -> Hir.FloatTk floatFlavor
+  | Tir.BoolTk -> Hir.BoolTk
+  | Tir.CharTk -> Hir.CharTk
+  | Tir.StrTk -> Hir.StrTk
+  | Tir.ObjTk -> Hir.ObjTk
+
+  | Tir.FunTk -> Hir.FunTk
+  | Tir.TupleTk -> Hir.TupleTk
+  | Tir.OptionTk -> Hir.OptionTk
+  | Tir.ListTk -> Hir.ListTk
+
+  | Tir.VoidTk -> Hir.VoidTk
+  | Tir.NativePtrTk isMut -> Hir.NativePtrTk isMut
+  | Tir.NativeFunTk -> Hir.NativeFunTk
+  | Tir.NativeTypeTk code -> Hir.NativeTypeTk code
+
+  | Tir.MetaTk (serial, loc) -> Hir.MetaTk(serial, loc)
+  | Tir.UnionTk serial -> Hir.UnionTk serial
+  | Tir.RecordTk serial -> Hir.RecordTk serial
+
+  | Tir.ErrorTk _
+  | Tir.SynonymTk _ -> unreachable () // Resolved in Typing.
+
+  | Tir.UnresolvedTk _
+  | Tir.UnresolvedVarTk _ -> unreachable () // Resolved in NameRes.
+
+let private lowerTy (ty: Tir.Ty) : Hir.Ty =
+  let (Tir.Ty (tk, tyArgs)) = ty
+  Hir.Ty(lowerTk tk, List.map lowerTy tyArgs)
+
+let private lowerTyScheme (tyScheme: Tir.TyScheme) : Hir.TyScheme =
+  let (Tir.TyScheme (fvs, ty)) = tyScheme
+  Hir.TyScheme(fvs, lowerTy ty)
+
+let private lowerVarSerial (Tir.VarSerial serial) = Hir.VarSerial serial
+let private lowerFunSerial (Tir.FunSerial serial) = Hir.FunSerial serial
+let private lowerVariantSerial (Tir.VariantSerial serial) = Hir.VariantSerial serial
+
+let private lowerVarDef (def: Tir.VarDef) : Hir.VarDef =
+  { Name = def.Name
+    IsStatic = def.IsStatic
+    Linkage = def.Linkage
+    Ty = lowerTy def.Ty
+    Loc = def.Loc }
+
+let private lowerFunDef (def: Tir.FunDef) : Hir.FunDef =
+  { Name = def.Name
+    Arity = def.Arity
+    Ty = lowerTyScheme def.Ty
+    Abi = def.Abi
+    Linkage = def.Linkage
+    Loc = def.Loc }
+
+let private lowerVariantDef (def: Tir.VariantDef) : Hir.VariantDef =
+  { Name = def.Name
+    UnionTySerial = def.UnionTySerial
+    IsNewtype = def.IsNewtype
+    HasPayload = def.HasPayload
+    PayloadTy = lowerTy def.PayloadTy
+    Loc = def.Loc }
+
+let private lowerTyDef (def: Tir.TyDef) : Hir.TyDef =
+  match def with
+  | Tir.UnionTyDef (ident, variants, loc) -> Hir.UnionTyDef(ident, List.map lowerVariantSerial variants, loc)
+  | Tir.RecordTyDef (ident, fields, loc) ->
+      Hir.RecordTyDef(ident, List.map (fun (ident, ty, loc) -> ident, lowerTy ty, loc) fields, loc)
+
+  | Tir.MetaTyDef _
+  | Tir.UniversalTyDef _
+  | Tir.SynonymTyDef _ -> unreachable () // Resolved in Typing.
+
+let private lowerPrim (prim: Tir.HPrim) : Hir.HPrim =
+  match prim with
+  | Tir.HPrim.Not -> Hir.HPrim.Not
+  | Tir.HPrim.Add -> Hir.HPrim.Add
+  | Tir.HPrim.Sub -> Hir.HPrim.Sub
+  | Tir.HPrim.Mul -> Hir.HPrim.Mul
+  | Tir.HPrim.Div -> Hir.HPrim.Div
+  | Tir.HPrim.Modulo -> Hir.HPrim.Modulo
+  | Tir.HPrim.BitAnd -> Hir.HPrim.BitAnd
+  | Tir.HPrim.BitOr -> Hir.HPrim.BitOr
+  | Tir.HPrim.BitXor -> Hir.HPrim.BitXor
+  | Tir.HPrim.LeftShift -> Hir.HPrim.LeftShift
+  | Tir.HPrim.RightShift -> Hir.HPrim.RightShift
+  | Tir.HPrim.Equal -> Hir.HPrim.Equal
+  | Tir.HPrim.Less -> Hir.HPrim.Less
+  | Tir.HPrim.Compare -> Hir.HPrim.Compare
+  | Tir.HPrim.ToInt flavor -> Hir.HPrim.ToInt flavor
+  | Tir.HPrim.ToFloat flavor -> Hir.HPrim.ToFloat flavor
+  | Tir.HPrim.Char -> Hir.HPrim.Char
+  | Tir.HPrim.String -> Hir.HPrim.String
+  | Tir.HPrim.Box -> Hir.HPrim.Box
+  | Tir.HPrim.Unbox -> Hir.HPrim.Unbox
+  | Tir.HPrim.StrLength -> Hir.HPrim.StrLength
+  | Tir.HPrim.OptionNone -> Hir.HPrim.OptionNone
+  | Tir.HPrim.OptionSome -> Hir.HPrim.OptionSome
+  | Tir.HPrim.Nil -> Hir.HPrim.Nil
+  | Tir.HPrim.Cons -> Hir.HPrim.Cons
+  | Tir.HPrim.Exit -> Hir.HPrim.Exit
+  | Tir.HPrim.Assert -> Hir.HPrim.Assert
+  | Tir.HPrim.Printfn -> Hir.HPrim.Printfn
+  | Tir.HPrim.InRegion -> Hir.HPrim.InRegion
+  | Tir.HPrim.NativeCast -> Hir.HPrim.NativeCast
+  | Tir.HPrim.PtrRead -> Hir.HPrim.PtrRead
+  | Tir.HPrim.PtrWrite -> Hir.HPrim.PtrWrite
+
+  | Tir.HPrim.NativeFun
+  | Tir.HPrim.NativeExpr
+  | Tir.HPrim.NativeStmt
+  | Tir.HPrim.NativeDecl
+  | Tir.HPrim.SizeOfVal -> unreachable () // Resolved in Typing.
+
+let private lowerPatKind (kind: Tir.HPatKind) : Hir.HPatKind =
+  match kind with
+  | Tir.HNilPN -> Hir.HNilPN
+  | Tir.HConsPN -> Hir.HConsPN
+  | Tir.HNonePN -> Hir.HNonePN
+  | Tir.HSomeAppPN -> Hir.HSomeAppPN
+  | Tir.HVariantAppPN serial -> Hir.HVariantAppPN(lowerVariantSerial serial)
+  | Tir.HTuplePN -> Hir.HTuplePN
+  | Tir.HAbortPN -> Hir.HAbortPN
+
+  | Tir.HAppPN
+  | Tir.HNavPN _ -> unreachable () // Resolved in NameRes.
+
+  | Tir.HSomePN
+  | Tir.HAscribePN -> unreachable () // Resolved in Typing.
+
+  | Tir.HBoxPN -> unreachable () // Generated in AutoBoxing.
+
+let private lowerExprKind (kind: Tir.HExprKind) : Hir.HExprKind =
+  match kind with
+  | Tir.HAbortEN -> Hir.HAbortEN
+  | Tir.HMinusEN -> Hir.HMinusEN
+  | Tir.HAppEN -> Hir.HAppEN
+  | Tir.HIndexEN -> Hir.HIndexEN
+  | Tir.HSliceEN -> Hir.HSliceEN
+  | Tir.HCallNativeEN funName -> Hir.HCallNativeEN funName
+  | Tir.HTupleEN -> Hir.HTupleEN
+  | Tir.HNativeFunEN funSerial -> Hir.HNativeFunEN(lowerFunSerial funSerial)
+  | Tir.HNativeExprEN code -> Hir.HNativeExprEN code
+  | Tir.HNativeStmtEN code -> Hir.HNativeStmtEN code
+  | Tir.HNativeDeclEN code -> Hir.HNativeDeclEN code
+  | Tir.HSizeOfValEN -> Hir.HSizeOfValEN
+
+  | Tir.HRangeEN -> unreachable () // Never generated.
+  | Tir.HAscribeEN -> unreachable () // Resolved in Typing.
+
+  | Tir.HCallProcEN
+  | Tir.HCallClosureEN
+  | Tir.HClosureEN -> unreachable () // Generated in EtaExpansion.
+
+  | Tir.HCallTailRecEN -> unreachable () // Generated in TailRecOptimizing.
+
+  | Tir.HRecordEN
+  | Tir.HRecordItemEN _ -> unreachable () // Generated in RecordRes.
+
+let private lowerPat (pat: Tir.HPat) : Hir.HPat =
+  match pat with
+  | Tir.HLitPat (lit, loc) -> Hir.HLitPat(lit, loc)
+  | Tir.HDiscardPat (ty, loc) -> Hir.HDiscardPat(lowerTy ty, loc)
+  | Tir.HVarPat (vis, varSerial, ty, loc) -> Hir.HVarPat(vis, lowerVarSerial varSerial, lowerTy ty, loc)
+  | Tir.HVariantPat (variantSerial, ty, loc) -> Hir.HVariantPat(lowerVariantSerial variantSerial, lowerTy ty, loc)
+  | Tir.HNodePat (kind, args, ty, loc) -> Hir.HNodePat(lowerPatKind kind, List.map lowerPat args, lowerTy ty, loc)
+  | Tir.HAsPat (body, varSerial, loc) -> Hir.HAsPat(lowerPat body, lowerVarSerial varSerial, loc)
+  | Tir.HOrPat (l, r, loc) -> Hir.HOrPat(lowerPat l, lowerPat r, loc)
+
+let private lowerExpr (expr: Tir.HExpr) : Hir.HExpr =
+  match expr with
+  | Tir.HLitExpr (lit, loc) -> Hir.HLitExpr(lit, loc)
+  | Tir.HVarExpr (varSerial, ty, loc) -> Hir.HVarExpr(lowerVarSerial varSerial, lowerTy ty, loc)
+  | Tir.HFunExpr (funSerial, ty, loc) -> Hir.HFunExpr(lowerFunSerial funSerial, lowerTy ty, loc)
+  | Tir.HVariantExpr (variantSerial, ty, loc) -> Hir.HVariantExpr(lowerVariantSerial variantSerial, lowerTy ty, loc)
+  | Tir.HPrimExpr (prim, ty, loc) -> Hir.HPrimExpr(lowerPrim prim, lowerTy ty, loc)
+  | Tir.HRecordExpr (exprOpt, fields, ty, loc) ->
+      Hir.HRecordExpr(
+        Option.map lowerExpr exprOpt,
+        List.map (fun (ident, init, loc) -> ident, lowerExpr init, loc) fields,
+        lowerTy ty,
+        loc
+      )
+  | Tir.HMatchExpr (cond, arms, ty, loc) ->
+      Hir.HMatchExpr(
+        lowerExpr cond,
+        List.map (fun (pat, guard, body) -> lowerPat pat, lowerExpr guard, lowerExpr body) arms,
+        lowerTy ty,
+        loc
+      )
+  | Tir.HNavExpr (l, r, ty, loc) -> Hir.HNavExpr(lowerExpr l, r, lowerTy ty, loc)
+  | Tir.HNodeExpr (kind, args, ty, loc) -> Hir.HNodeExpr(lowerExprKind kind, List.map lowerExpr args, lowerTy ty, loc)
+  | Tir.HBlockExpr (stmts, last) -> Hir.HBlockExpr(List.map lowerExpr stmts, lowerExpr last)
+  | Tir.HLetValExpr (pat, init, next, ty, loc) ->
+      Hir.HLetValExpr(lowerPat pat, lowerExpr init, lowerExpr next, lowerTy ty, loc)
+  | Tir.HLetFunExpr _ ->
+      (fun () ->
+        let funSerial, isRec, vis, argPats, body, next, ty, loc =
+          match expr with
+          | Tir.HLetFunExpr (t0, t1, t2, t3, t4, t5, t6, t7) -> t0, t1, t2, t3, t4, t5, t6, t7
+          | _ -> unreachable ()
+
+        Hir.HLetFunExpr(
+          lowerFunSerial funSerial,
+          isRec,
+          vis,
+          List.map lowerPat argPats,
+          lowerExpr body,
+          lowerExpr next,
+          lowerTy ty,
+          loc
+        ))
+        ()
+
+  | Tir.HTyDeclExpr _
+  | Tir.HOpenExpr _
+  | Tir.HModuleExpr _
+  | Tir.HModuleSynonymExpr _ -> Hir.hxUnit (Tir.exprToLoc expr) // Consumed in NameRes.
+
+let private lowerModules (modules: Tir.HProgram) : Hir.HProgram =
+  modules
+  |> List.map (fun (p, m, decls) -> p, m, List.map lowerExpr decls)
+
+let private lowerTyCtx (tyCtx: Typing.TyCtx) : Hir.TyCtx =
+  { Serial = tyCtx.Serial
+
+    Vars =
+      tyCtx.Vars
+      |> TMap.stableMap (fun serial def -> lowerVarSerial serial, lowerVarDef def) Hir.varSerialCompare
+
+    Funs =
+      tyCtx.Funs
+      |> TMap.stableMap (fun serial def -> lowerFunSerial serial, lowerFunDef def) Hir.funSerialCompare
+
+    Variants =
+      tyCtx.Variants
+      |> TMap.stableMap (fun serial def -> lowerVariantSerial serial, lowerVariantDef def) Hir.variantSerialCompare
+
+    MainFunOpt = tyCtx.MainFunOpt |> Option.map lowerFunSerial
+
+    Tys =
+      tyCtx.Tys
+      |> TMap.map (fun _ def -> lowerTyDef def)
+
+    TyLevels = tyCtx.TyLevels
+    Level = 0
+    TraitBounds = []
+    Logs = [] }
 
 // -----------------------------------------------
 // Processes
 // -----------------------------------------------
 
-type private SyntaxAnalysisResult = HProgram * NameCtx * (string * Loc) list
+type private SyntaxAnalysisResult = Tir.HProgram * Tir.NameCtx * (string * Loc) list
 
 let private isErrorToken token =
   match token with
@@ -399,9 +657,9 @@ let syntacticallyAnalyze (ctx: CompileCtx) : SyntaxAnalysisResult =
 
 [<NoEquality; NoComparison>]
 type SemaAnalysisResult =
-  | SemaAnalysisOk of HProgram * TyCtx
-  | SemaAnalysisNameResError of (NameResLog * Loc) list
-  | SemaAnalysisTypingError of TyCtx
+  | SemaAnalysisOk of Tir.HProgram * Typing.TyCtx
+  | SemaAnalysisNameResError of (Tir.NameResLog * Loc) list
+  | SemaAnalysisTypingError of Typing.TyCtx
 
 /// Analyzes HIR to validate program and collect information.
 let semanticallyAnalyze (host: CliHost) v (syntax: SyntaxAnalysisResult) : SemaAnalysisResult =
@@ -431,13 +689,17 @@ let semanticallyAnalyze (host: CliHost) v (syntax: SyntaxAnalysisResult) : SemaA
         SemaAnalysisOk(modules, tyCtx)
 
 /// Transforms HIR. The result can be converted to MIR.
-let transformHir (host: CliHost) v (modules: HProgram, tyCtx) =
+let transformHir (host: CliHost) v (modules: Tir.HProgram, tyCtx: Typing.TyCtx) =
+  writeLog host v "Lower"
+  let modules = lowerModules modules
+  let tyCtx = lowerTyCtx tyCtx
+
   let expr =
     let decls =
       (modules
        |> List.collect (fun (_, _, decls) -> decls))
 
-    hxSemi decls noLoc
+    Hir.hxSemi decls noLoc
 
   writeLog host v "AutoBoxing"
   let expr, tyCtx = autoBox (expr, tyCtx)

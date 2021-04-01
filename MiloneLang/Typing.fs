@@ -11,13 +11,14 @@
 
 module rec MiloneLang.Typing
 
-open MiloneLang.Util
-open MiloneLang.Syntax
-open MiloneLang.TySystem
 open MiloneLang.NameRes
-open MiloneLang.Hir
-open MiloneLang.TypeIntegers
+open MiloneLang.SharedTypes
+open MiloneLang.Syntax
+open MiloneLang.Tir
 open MiloneLang.TypeFloat
+open MiloneLang.TypeIntegers
+open MiloneLang.TySystem
+open MiloneLang.Util
 
 module StdInt = MiloneStd.StdInt
 module TMap = MiloneStd.StdMap
