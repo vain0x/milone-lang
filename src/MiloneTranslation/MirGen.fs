@@ -3,13 +3,13 @@
 /// Converts HIR to MIR.
 ///
 /// Deconstructs pattern matching.
-module rec MiloneLang.MirGen
+module rec MiloneTranslation.MirGen
 
-open MiloneLang.Util
-open MiloneLang.SharedTypes
-open MiloneLang.TypeIntegers
-open MiloneLang.Hir
-open MiloneLang.Mir
+open MiloneShared.SharedTypes
+open MiloneShared.TypeIntegers
+open MiloneShared.Util
+open MiloneTranslation.Hir
+open MiloneTranslation.Mir
 
 module TMap = MiloneStd.StdMap
 module TSet = MiloneStd.StdSet

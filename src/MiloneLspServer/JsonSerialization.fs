@@ -1,7 +1,7 @@
-module MiloneLsp.JsonSerialization
+module MiloneLspServer.JsonSerialization
 
 open Utf8Json
-open MiloneLsp.JsonValue
+open MiloneLspServer.JsonValue
 
 type private JsonValueFormatter() =
   interface IJsonFormatter<JsonValue> with

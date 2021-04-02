@@ -1,36 +1,36 @@
 /// Front end of the compiler.
-module rec MiloneLang.Cli
+module rec MiloneCli.Cli
 
-open MiloneLang.Util
-open MiloneLang.SharedTypes
-open MiloneLang.Syntax
-open MiloneLang.SyntaxTokenize
-open MiloneLang.SyntaxParse
-open MiloneLang.ArityCheck
-open MiloneLang.AstBundle
-open MiloneLang.TySystem
-open MiloneLang.AstToHir
-open MiloneLang.AutoBoxing
-open MiloneLang.NameRes
-open MiloneLang.Typing
-open MiloneLang.RecordRes
-open MiloneLang.ClosureConversion
-open MiloneLang.EtaExpansion
-open MiloneLang.Hoist
-open MiloneLang.TailRecOptimizing
-open MiloneLang.Monomorphizing
-open MiloneLang.MirGen
-open MiloneLang.Cir
-open MiloneLang.CirGen
-open MiloneLang.CirDump
+open MiloneShared.SharedTypes
+open MiloneShared.Util
+open MiloneSyntax.ArityCheck
+open MiloneSyntax.AstBundle
+open MiloneSyntax.AstToHir
+open MiloneSyntax.NameRes
+open MiloneSyntax.Syntax
+open MiloneSyntax.SyntaxParse
+open MiloneSyntax.SyntaxTokenize
+open MiloneSyntax.Typing
+open MiloneSyntax.TySystem
+open MiloneTranslation.AutoBoxing
+open MiloneTranslation.Cir
+open MiloneTranslation.CirDump
+open MiloneTranslation.CirGen
+open MiloneTranslation.ClosureConversion
+open MiloneTranslation.EtaExpansion
+open MiloneTranslation.Hoist
+open MiloneTranslation.MirGen
+open MiloneTranslation.Monomorphizing
+open MiloneTranslation.RecordRes
+open MiloneTranslation.TailRecOptimizing
 
 module C = MiloneStd.StdChar
+module Hir = MiloneTranslation.Hir
+module S = MiloneStd.StdString
+module Tir = MiloneSyntax.Tir
 module TMap = MiloneStd.StdMap
 module TSet = MiloneStd.StdSet
-module S = MiloneStd.StdString
-
-module Hir = MiloneLang.Hir
-module Tir = MiloneLang.Tir
+module Typing = MiloneSyntax.Typing
 
 let private currentVersion () = "0.3.0"
 

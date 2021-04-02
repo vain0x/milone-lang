@@ -51,11 +51,11 @@
 /// ### Other notes
 ///
 /// Sometimes row number is denoted by `y` and column number by `x`.
-module rec MiloneLang.SyntaxTokenize
+module rec MiloneSyntax.SyntaxTokenize
 
-open MiloneLang.Util
-open MiloneLang.SharedTypes
-open MiloneLang.Syntax
+open MiloneShared.SharedTypes
+open MiloneShared.Util
+open MiloneSyntax.Syntax
 
 module C = MiloneStd.StdChar
 module S = MiloneStd.StdString

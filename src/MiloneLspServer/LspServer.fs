@@ -1,11 +1,12 @@
-module MiloneLsp.LspServer
+module MiloneLspServer.LspServer
 
 open System.Threading
-open MiloneLsp.JsonValue
-open MiloneLsp.JsonSerialization
-open MiloneLsp.JsonRpcWriter
-open MiloneLsp.Lsp
-open MiloneLsp.Util
+open MiloneShared.SharedTypes
+open MiloneLspServer.JsonValue
+open MiloneLspServer.JsonSerialization
+open MiloneLspServer.JsonRpcWriter
+open MiloneLspServer.Lsp
+open MiloneLspServer.Util
 
 type private Position = int * int
 

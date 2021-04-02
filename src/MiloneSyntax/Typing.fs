@@ -9,16 +9,16 @@
 /// and this one (written in Japanese) too:
 ///   - [OCaml でも採用されているレベルベースの多相型型推論とは](https://rhysd.hatenablog.com/entry/2017/12/16/002048)
 
-module rec MiloneLang.Typing
+module rec MiloneSyntax.Typing
 
-open MiloneLang.NameRes
-open MiloneLang.SharedTypes
-open MiloneLang.Syntax
-open MiloneLang.Tir
-open MiloneLang.TypeFloat
-open MiloneLang.TypeIntegers
-open MiloneLang.TySystem
-open MiloneLang.Util
+open MiloneShared.SharedTypes
+open MiloneShared.TypeFloat
+open MiloneShared.TypeIntegers
+open MiloneShared.Util
+open MiloneSyntax.NameRes
+open MiloneSyntax.Syntax
+open MiloneSyntax.Tir
+open MiloneSyntax.TySystem
 
 module StdInt = MiloneStd.StdInt
 module TMap = MiloneStd.StdMap

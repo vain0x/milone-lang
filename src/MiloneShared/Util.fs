@@ -1,5 +1,5 @@
 /// Defines utility types and functions used in multiple modules.
-module rec MiloneLang.Util
+module rec MiloneShared.Util
 
 module C = MiloneStd.StdChar
 module S = MiloneStd.StdString

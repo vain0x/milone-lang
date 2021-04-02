@@ -1,11 +1,11 @@
-module rec MiloneLsp.JsonRpcReaderForAbstractStream
+module rec MiloneLspServer.JsonRpcReaderForAbstractStream
 
 // (Not compliant with JSON-RPC for now.)
 
 open System.IO
 open System.Threading
-open MiloneLsp.JsonValue
-open MiloneLsp.JsonSerialization
+open MiloneLspServer.JsonValue
+open MiloneLspServer.JsonSerialization
 
 type ExitCode = int
 

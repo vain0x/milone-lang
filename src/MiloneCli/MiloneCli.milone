@@ -1,14 +1,11 @@
 /// Entry point of the milone-lang compiler.
-module rec MiloneLang.EntryPoint
-
-// HACK: "MiloneOnly" module is automatically loaded in AstBundle and opened in NameRes.
-// open MiloneLang.MiloneOnly
+module rec MiloneCli.EntryPoint
 
 // See milone_libs for implementations.
 open MiloneStd.StdChar
 open MiloneStd.StdString
 
-open MiloneLang.Cli
+open MiloneCli.Cli
 
 module Env = MiloneStd.StdEnv
 

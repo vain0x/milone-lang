@@ -1,7 +1,7 @@
 /// # SharedTypes
 ///
 /// Provides types that are commonly used in syntax part and semantics part.
-module rec MiloneLang.SharedTypes
+module rec MiloneShared.SharedTypes
 
 // -----------------------------------------------
 // Vocabulary types

@@ -1,12 +1,13 @@
-module MiloneLsp.LspLangService
+module MiloneLspServer.LspLangService
 
 open System
 open System.Collections.Generic
 open System.IO
 open System.Text
-open MiloneLsp.Lsp
-open MiloneLsp.Util
-open MiloneLsp.LspCacheLayer
+open MiloneShared.SharedTypes
+open MiloneLspServer.Lsp
+open MiloneLspServer.Util
+open MiloneLspServer.LspCacheLayer
 
 let private miloneHome =
   let miloneHome =
@@ -257,7 +258,7 @@ let private doValidateWorkspace projects =
 
   for project in projects do
     for msg, loc in validateProject project do
-      let (Loc.Loc (docId, y, x)) = loc
+      let (Loc (docId, y, x)) = loc
       map |> MutMultimap.insert docId (msg, (y, x))
 
   let diagnostics =

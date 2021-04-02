@@ -8,10 +8,10 @@
 /// and gets pretty-printed to a string by `cirDump`.
 /// C compiler will compile the generated C codes
 /// to finally make a milone-lang code executable.
-module rec MiloneLang.Cir
+module rec MiloneTranslation.Cir
 
-open MiloneLang.TypeFloat
-open MiloneLang.TypeIntegers
+open MiloneShared.TypeFloat
+open MiloneShared.TypeIntegers
 
 type private Ident = string
 

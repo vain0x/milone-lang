@@ -75,11 +75,11 @@
 ///    let env = box ()
 ///    (sumObj0, ()) :> (int -> int -> int -> int)
 /// ```
-module rec MiloneLang.EtaExpansion
+module rec MiloneTranslation.EtaExpansion
 
-open MiloneLang.Util
-open MiloneLang.SharedTypes
-open MiloneLang.Hir
+open MiloneShared.SharedTypes
+open MiloneShared.Util
+open MiloneTranslation.Hir
 
 module TMap = MiloneStd.StdMap
 module S = MiloneStd.StdString

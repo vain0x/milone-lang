@@ -1,7 +1,7 @@
-module MiloneLsp.JsonRpcWriter
+module MiloneLspServer.JsonRpcWriter
 
-open MiloneLsp.JsonValue
-open MiloneLsp.JsonSerialization
+open MiloneLspServer.JsonValue
+open MiloneLspServer.JsonSerialization
 
 /// Writes a string (that represents a body of single message)
 /// to STDOUT in the format of JSON-RPC.

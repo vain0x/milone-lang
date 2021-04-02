@@ -1,9 +1,9 @@
-module rec MiloneLang.ArityCheck
+module rec MiloneSyntax.ArityCheck
 
-open MiloneLang.SharedTypes
-open MiloneLang.Tir
-open MiloneLang.Typing
-open MiloneLang.Util
+open MiloneShared.SharedTypes
+open MiloneShared.Util
+open MiloneSyntax.Tir
+open MiloneSyntax.Typing
 
 module StdInt = MiloneStd.StdInt
 module S = MiloneStd.StdString

@@ -1,18 +1,16 @@
 /// Module for LSP to talk directly to MiloneLang compiler.
-module rec MiloneLsp.Lsp
+module rec MiloneLspServer.Lsp
 
-open MiloneLang
-open MiloneLang.Util
-open MiloneLang.SharedTypes
-open MiloneLang.Syntax
-open MiloneLang.Hir
-open MiloneLsp.Util
+open MiloneLspServer.Util
+open MiloneShared.SharedTypes
+open MiloneShared.Util
+open MiloneSyntax
+open MiloneSyntax.Syntax
+open MiloneSyntax.Tir
 
+module Cli = MiloneCli.Cli
+module SharedTypes = MiloneShared.SharedTypes
 module TMap = MiloneStd.StdMap
-
-// Re-exports.
-type Pos = Syntax.Pos
-type Loc = Syntax.Loc
 
 type Range = Pos * Pos
 
@@ -139,12 +137,12 @@ let private tyDisplayFn (tyCtx: Typing.TyCtx) ty =
   let getTyName tySerial =
     tyCtx.Tys
     |> TMap.tryFind tySerial
-    |> Option.map Hir.tyDefToName
+    |> Option.map tyDefToName
 
   TySystem.tyDisplay getTyName ty
 
 let private doBundle (ls: LangServiceState) projectDir =
-  let cliHost = Program.dotnetCliHost ()
+  let cliHost = MiloneCli.Program.dotnetCliHost ()
 
   let compileCtx =
     Cli.compileCtxNew cliHost Cli.Quiet projectDir
@@ -176,14 +174,14 @@ let private doBundle (ls: LangServiceState) projectDir =
     | Cli.SemaAnalysisNameResError errors ->
         let errors =
           errors
-          |> List.map (fun (log, loc) -> Hir.nameResLogToString log, loc)
+          |> List.map (fun (log, loc) -> nameResLogToString log, loc)
 
         None, errors, docVersions
 
     | Cli.SemaAnalysisTypingError tyCtx ->
         let errors =
           tyCtx.Logs
-          |> List.map (fun (log, loc) -> Hir.logToString (tyDisplayFn tyCtx) log, loc)
+          |> List.map (fun (log, loc) -> logToString (tyDisplayFn tyCtx) log, loc)
 
         None, errors, docVersions
 

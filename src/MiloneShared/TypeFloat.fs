@@ -1,4 +1,4 @@
-module rec MiloneLang.TypeFloat
+module rec MiloneShared.TypeFloat
 
 [<NoComparison>]
 type FloatFlavor =

@@ -3,12 +3,12 @@
 /// This stage traverses the expressions twice
 /// to collect symbol information
 /// and assign the same serials to the same symbols.
-module rec MiloneLang.NameRes
+module rec MiloneSyntax.NameRes
 
-open MiloneLang.Util
-open MiloneLang.SharedTypes
-open MiloneLang.TypeIntegers
-open MiloneLang.Tir
+open MiloneShared.SharedTypes
+open MiloneShared.TypeIntegers
+open MiloneShared.Util
+open MiloneSyntax.Tir
 
 module TMap = MiloneStd.StdMap
 module TSet = MiloneStd.StdSet

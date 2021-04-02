@@ -79,11 +79,11 @@
 /// ```
 ///
 /// See also `let_fun_closure.fs` in tests.
-module rec MiloneLang.ClosureConversion
+module rec MiloneTranslation.ClosureConversion
 
-open MiloneLang.Util
-open MiloneLang.SharedTypes
-open MiloneLang.Hir
+open MiloneShared.SharedTypes
+open MiloneShared.Util
+open MiloneTranslation.Hir
 
 module TMap = MiloneStd.StdMap
 module TSet = MiloneStd.StdSet

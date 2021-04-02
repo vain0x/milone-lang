@@ -1,6 +1,6 @@
-module rec MiloneLsp.LspDocCache
+module rec MiloneLspServer.LspDocCache
 
-open MiloneLsp.Util
+open MiloneLspServer.Util
 
 /// Text doc that is opened in editor.
 [<RequireQualifiedAccess; NoEquality; NoComparison>]

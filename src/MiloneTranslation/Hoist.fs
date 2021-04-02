@@ -37,11 +37,11 @@
 /// however, we don't care lexical scope after NameRes.
 /// This stage changes that layout to `let pat = init in (); next`
 /// so that chain of let expressions to be flat.
-module rec MiloneLang.Hoist
+module rec MiloneTranslation.Hoist
 
-open MiloneLang.Util
-open MiloneLang.SharedTypes
-open MiloneLang.Hir
+open MiloneShared.SharedTypes
+open MiloneShared.Util
+open MiloneTranslation.Hir
 
 let private hxDummy : HExpr = hxUnit noLoc
 

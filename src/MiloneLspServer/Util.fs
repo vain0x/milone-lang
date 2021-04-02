@@ -1,4 +1,4 @@
-module MiloneLsp.Util
+module MiloneLspServer.Util
 
 open System.Collections.Generic
 open System.IO

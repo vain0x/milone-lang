@@ -46,11 +46,11 @@
 ///    The cloned function is referred as monomorphized instance of (`f`, `t`).
 ///
 /// NOTE: The algorithm seems inefficient and the finiteness is unproven.
-module rec MiloneLang.Monomorphizing
+module rec MiloneTranslation.Monomorphizing
 
-open MiloneLang.Util
-open MiloneLang.SharedTypes
-open MiloneLang.Hir
+open MiloneShared.SharedTypes
+open MiloneShared.Util
+open MiloneTranslation.Hir
 
 module TMap = MiloneStd.StdMap
 

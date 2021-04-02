@@ -1,5 +1,5 @@
 [<AutoOpen>]
-module MiloneLsp.JsonValue
+module MiloneLspServer.JsonValue
 
 [<Struct>]
 type JsonValue =

@@ -21,12 +21,12 @@
 /// Another example, `let` expressions are confusing whether
 /// they introduce either functions or variables. The two kind of
 /// entities have different behavior in the following stages.
-module rec MiloneLang.AstToHir
+module rec MiloneSyntax.AstToHir
 
-open MiloneLang.Util
-open MiloneLang.SharedTypes
-open MiloneLang.Syntax
-open MiloneLang.Tir
+open MiloneShared.SharedTypes
+open MiloneShared.Util
+open MiloneSyntax.Syntax
+open MiloneSyntax.Tir
 
 let private greek (Name (ident, pos)) = Name("'" + ident, pos)
 

@@ -1,8 +1,8 @@
-module rec MiloneLsp.Program
+module rec MiloneLspServer.Program
 
-open MiloneLsp.JsonRpcReaderForAbstractStream
-open MiloneLsp.JsonRpcReaderForStdIn
-open MiloneLsp.LspServer
+open MiloneLspServer.JsonRpcReaderForAbstractStream
+open MiloneLspServer.JsonRpcReaderForStdIn
+open MiloneLspServer.LspServer
 
 [<EntryPoint>]
 let main _ =

@@ -1,11 +1,11 @@
 /// # RecordRes
 ///
 /// Resolves.
-module rec MiloneLang.RecordRes
+module rec MiloneTranslation.RecordRes
 
-open MiloneLang.Util
-open MiloneLang.SharedTypes
-open MiloneLang.Hir
+open MiloneShared.SharedTypes
+open MiloneShared.Util
+open MiloneTranslation.Hir
 
 module TMap = MiloneStd.StdMap
 

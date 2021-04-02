@@ -4,13 +4,13 @@
 /// This stage determines the set of modules in the project and the ordering of them.
 ///
 /// These modules are combined into single HIR expression.
-module rec MiloneLang.AstBundle
+module rec MiloneSyntax.AstBundle
 
-open MiloneLang.Util
-open MiloneLang.SharedTypes
-open MiloneLang.Syntax
-open MiloneLang.AstToHir
-open MiloneLang.Tir
+open MiloneShared.SharedTypes
+open MiloneShared.Util
+open MiloneSyntax.AstToHir
+open MiloneSyntax.Syntax
+open MiloneSyntax.Tir
 
 module TSet = MiloneStd.StdSet
 module TMap = MiloneStd.StdMap

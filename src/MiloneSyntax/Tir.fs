@@ -3,13 +3,13 @@
 /// Type-check intermediate representation (TIR).
 ///
 /// TIR is functional-style. Similar to milone-lang's syntax.
-module rec MiloneLang.Tir
+module rec MiloneSyntax.Tir
 
-open MiloneLang.Util
-open MiloneLang.SharedTypes
-open MiloneLang.Syntax
-open MiloneLang.TypeFloat
-open MiloneLang.TypeIntegers
+open MiloneShared.Util
+open MiloneShared.SharedTypes
+open MiloneSyntax.Syntax
+open MiloneShared.TypeFloat
+open MiloneShared.TypeIntegers
 
 module TMap = MiloneStd.StdMap
 module S = MiloneStd.StdString

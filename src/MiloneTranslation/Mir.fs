@@ -10,13 +10,13 @@
 ///
 /// (TODO: Function body is just a list of statements.
 ///        Currently not "well-considered" form; not XXX-normal form nor SSA nor basic blocks etc.)
-module rec MiloneLang.Mir
+module rec MiloneTranslation.Mir
 
-open MiloneLang.Util
-open MiloneLang.SharedTypes
-open MiloneLang.TypeFloat
-open MiloneLang.TypeIntegers
-open MiloneLang.Hir
+open MiloneShared.SharedTypes
+open MiloneShared.TypeFloat
+open MiloneShared.TypeIntegers
+open MiloneShared.Util
+open MiloneTranslation.Hir
 
 // -----------------------------------------------
 // MIR types

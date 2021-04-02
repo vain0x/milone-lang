@@ -1,13 +1,13 @@
 /// # CirDump
 ///
 /// Converts CIR to C language source code.
-module rec MiloneLang.CirDump
+module rec MiloneTranslation.CirDump
 
-open MiloneLang.Util
-open MiloneLang.SharedTypes
-open MiloneLang.TypeFloat
-open MiloneLang.TypeIntegers
-open MiloneLang.Cir
+open MiloneShared.SharedTypes
+open MiloneShared.TypeFloat
+open MiloneShared.TypeIntegers
+open MiloneShared.Util
+open MiloneTranslation.Cir
 
 module S = MiloneStd.StdString
 

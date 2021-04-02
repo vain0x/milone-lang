@@ -1,7 +1,7 @@
 /// Entry point of the compiler.
-module rec MiloneLang.Program
+module rec MiloneCli.Program
 
-open MiloneLang.Cli
+open MiloneCli.Cli
 
 let private readFile (filePath: string) =
   try

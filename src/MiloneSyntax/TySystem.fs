@@ -3,14 +3,14 @@
 /// Provides functions about type system.
 ///
 /// This module is mainly used in Typing and Monomorphizing.
-module rec MiloneLang.TySystem
+module rec MiloneSyntax.TySystem
 
-open MiloneLang.Util
-open MiloneLang.SharedTypes
-open MiloneLang.Syntax
-open MiloneLang.TypeFloat
-open MiloneLang.TypeIntegers
-open MiloneLang.Tir
+open MiloneShared.SharedTypes
+open MiloneShared.TypeFloat
+open MiloneShared.TypeIntegers
+open MiloneShared.Util
+open MiloneSyntax.Syntax
+open MiloneSyntax.Tir
 
 module TMap = MiloneStd.StdMap
 module S = MiloneStd.StdString

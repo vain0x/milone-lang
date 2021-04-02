@@ -1,4 +1,4 @@
-module MiloneLsp.JsonRpcReaderForStdIn
+module MiloneLspServer.JsonRpcReaderForStdIn
 
 /// Provides two functions for JSON RPC node to read data from stream.
 /// (Not compliant with JSON-RPC, indeed.)

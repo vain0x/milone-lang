@@ -1,13 +1,13 @@
 /// ## Auto Boxing
 ///
 /// Provides implicit indirection by inserting allocate/dereference operations.
-module rec MiloneLang.AutoBoxing
+module rec MiloneTranslation.AutoBoxing
 
-open MiloneLang.Util
-open MiloneLang.SharedTypes
-open MiloneLang.TypeFloat
-open MiloneLang.TypeIntegers
-open MiloneLang.Hir
+open MiloneShared.SharedTypes
+open MiloneShared.TypeFloat
+open MiloneShared.TypeIntegers
+open MiloneShared.Util
+open MiloneTranslation.Hir
 
 module Int = MiloneStd.StdInt
 module TSet = MiloneStd.StdSet

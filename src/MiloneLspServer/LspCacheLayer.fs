@@ -1,11 +1,12 @@
-module rec MiloneLsp.LspCacheLayer
+module rec MiloneLspServer.LspCacheLayer
 
 open System
 open System.Security.Cryptography
 open System.Text
 open System.Threading
-open MiloneLsp.Util
-open MiloneLang.Syntax
+open MiloneLspServer.Util
+open MiloneShared.SharedTypes
+open MiloneSyntax.Syntax
 
 let private md5Hasher =
   new ThreadLocal<MD5>(fun () -> MD5.Create())

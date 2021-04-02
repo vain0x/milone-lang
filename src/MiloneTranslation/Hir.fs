@@ -15,12 +15,12 @@
 /// Finally HIR is converted to MIR in `MirGen`.
 ///
 /// See `Cli.fs` for details.
-module rec MiloneLang.Hir
+module rec MiloneTranslation.Hir
 
-open MiloneLang.Util
-open MiloneLang.SharedTypes
-open MiloneLang.TypeFloat
-open MiloneLang.TypeIntegers
+open MiloneShared.SharedTypes
+open MiloneShared.TypeFloat
+open MiloneShared.TypeIntegers
+open MiloneShared.Util
 
 module TMap = MiloneStd.StdMap
 module S = MiloneStd.StdString

@@ -64,11 +64,11 @@
 ///   except a semicolon precedes it.
 ///
 /// Note that the implementation doesn't verify the rule completely.
-module rec MiloneLang.SyntaxParse
+module rec MiloneSyntax.SyntaxParse
 
-open MiloneLang.Util
-open MiloneLang.SharedTypes
-open MiloneLang.Syntax
+open MiloneShared.SharedTypes
+open MiloneShared.Util
+open MiloneSyntax.Syntax
 
 module Int = MiloneStd.StdInt
 

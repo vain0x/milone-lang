@@ -1,4 +1,4 @@
-module rec MiloneLang.TypeIntegers
+module rec MiloneShared.TypeIntegers
 
 [<NoComparison>]
 type Signedness =

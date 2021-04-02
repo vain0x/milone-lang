@@ -15,10 +15,10 @@
 ///     | _ :: xs -> length xs
 ///   //             ^^^^^^ tail recursive call
 /// ```
-module rec MiloneLang.TailRecOptimizing
+module rec MiloneTranslation.TailRecOptimizing
 
-open MiloneLang.Util
-open MiloneLang.Hir
+open MiloneShared.Util
+open MiloneTranslation.Hir
 
 [<NoEquality; NoComparison>]
 type private IsTail =

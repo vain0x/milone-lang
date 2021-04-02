@@ -8,16 +8,16 @@
 ///
 /// Milone-lang's types are converted to
 /// C-style struct/union types.
-module rec MiloneLang.CirGen
+module rec MiloneTranslation.CirGen
 
-open MiloneLang.Util
-open MiloneLang.SharedTypes
-open MiloneLang.TypeFloat
-open MiloneLang.TypeIntegers
-open MiloneLang.Hir
-open MiloneLang.Mir
-open MiloneLang.MirGen
-open MiloneLang.Cir
+open MiloneShared.SharedTypes
+open MiloneShared.TypeFloat
+open MiloneShared.TypeIntegers
+open MiloneShared.Util
+open MiloneTranslation.Cir
+open MiloneTranslation.Hir
+open MiloneTranslation.Mir
+open MiloneTranslation.MirGen
 
 module TMap = MiloneStd.StdMap
 module TSet = MiloneStd.StdSet

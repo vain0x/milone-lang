@@ -1,7 +1,7 @@
 /// Defines F# primitives for milone-lang.
 ///
 /// Not used in F#.
-module rec MiloneLang.MiloneOnly
+module rec MiloneShared.MiloneOnly
 
 let failwith (str: string) =
   printfn "FATAL ERROR: %s" str
