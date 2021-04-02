@@ -48,3 +48,7 @@ uninstall:
 
 bin/ninja:
 	scripts/install-ninja
+
+# https://deno.land/
+.deno:
+	env DENO_INSTALL="${PWD}/.deno" sh -c 'curl -fsSL https://deno.land/x/install/install.sh | sh'
