@@ -2,23 +2,28 @@
 
 set -eu
 
-MILONE_LANG_DIR="$(dirname $PWD)/MiloneLang"
+MILONE_CLI_DIR="$(dirname $PWD)/MiloneCli"
+MILONE_CLI_PATH="$MILONE_CLI_DIR/MiloneCli.milone"
+MILONE_HOME=$(dirname $(dirname $PWD))
 
 # Find the line number.
-LINE=$(cat ../MiloneLang/MiloneLang.milone | grep -n 'cli host' | cut -d ':' -f 1)
+LINE=$(cat $MILONE_CLI_PATH | grep -n 'cli host' | cut -d ':' -f 1)
 LINE=$(( $LINE - 1 ))
+
+tail -f err.generated.txt &
+TAIL=$!
 
 {
 ./req <<END
 {"method": "initialize", "id": 1, "params": {
-    "rootUri": "file://${MILONE_LANG_DIR}"
+    "rootUri": "file://${MILONE_CLI_DIR}"
 }}
 END
 
 ./req <<END
 {"method": "textDocument/hover", "id": 2, "params": {
     "textDocument": {
-        "uri": "file://${MILONE_LANG_DIR}/MiloneLang.milone"
+        "uri": "file://$MILONE_CLI_PATH"
     },
     "position": {
         "line": $LINE,
@@ -30,10 +35,10 @@ END
 ./req <<END
 {"method": "textDocument/didOpen", "params": {
     "textDocument": {
-        "uri": "file://${MILONE_LANG_DIR}/MiloneLang.milone",
+        "uri": "file://$MILONE_CLI_PATH",
         "languageId": "milone",
         "version": 1,
-        "text": $(cat ${MILONE_LANG_DIR}/MiloneLang.milone | ./json-encode)
+        "text": $(cat $MILONE_CLI_PATH | ./json-encode)
     }
 }}
 END
@@ -41,7 +46,7 @@ END
 ./req <<END
 {"method": "textDocument/hover", "id": 3, "params": {
     "textDocument": {
-        "uri": "file://${MILONE_LANG_DIR}/MiloneLang.milone"
+        "uri": "file://$MILONE_CLI_PATH"
     },
     "position": {
         "line": $LINE,
@@ -53,7 +58,7 @@ END
 ./req <<END
 {"method": "textDocument/hover", "id": 4, "params": {
     "textDocument": {
-        "uri": "file://${MILONE_LANG_DIR}/MiloneLang.milone"
+        "uri": "file://$MILONE_CLI_PATH"
     },
     "position": {
         "line": $LINE,
@@ -69,4 +74,6 @@ END
 ./req <<END
 {"method": "exit"}
 END
-} | MILONE_HOME="$(dirname $PWD)" dotnet run 2>err.generated.txt
+} | MILONE_HOME="$MILONE_HOME" dotnet run 2>err.generated.txt
+
+kill $!

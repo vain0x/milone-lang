@@ -133,7 +133,10 @@ let private doBundle (ls: LangServiceState) projectDir =
 
   let fetchModule (projectName: string) (moduleName: string) =
     match ls.Host.Docs.FindDocId projectName moduleName with
-    | None -> None
+    | None ->
+        eprintfn "// missing %s.%s" projectName moduleName
+        None
+
     | Some docId ->
         docVersions
         |> MutMap.insert docId (ls.Host.Docs.GetVersion docId)
