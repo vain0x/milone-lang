@@ -11,6 +11,7 @@ open MiloneSyntax.Tir
 module Cli = MiloneCli.Cli
 module SharedTypes = MiloneShared.SharedTypes
 module TMap = MiloneStd.StdMap
+module SyntaxApi = MiloneSyntax.SyntaxApi
 
 type Range = Pos * Pos
 
@@ -53,12 +54,6 @@ let private locToPos (loc: Loc) : Pos =
   y, x
 
 let private tokenizeHost = tokenizeHostNew ()
-
-let private tokenAsTriviaOrError (token, pos) =
-  match token with
-  | ErrorToken error -> Some(Some(tokenizeErrorToString error, pos))
-  | _ when isTrivia token -> Some None
-  | _ -> None
 
 let private tokenizeWithCache (ls: LangServiceState) docId =
   let currentVersion = ls.Host.Docs.GetVersion docId
@@ -103,25 +98,12 @@ let private parseWithCache (ls: LangServiceState) docId =
       // | _ -> eprintfn "parse cache not found: v%d" currentVersion
 
       // Tokenize.
-      let tokens = tokenizeWithCache ls docId
-
-      // Remove trivias.
-      let tokenizeErrors, tokens =
-        tokens |> partition1 tokenAsTriviaOrError
-
-      let tokens = List.ofArray tokens
+      let tokens =
+        tokenizeWithCache ls docId
+        |> List.filter (fun (token, _) -> token |> isTrivia |> not)
 
       // Parse.
-      let ast, parseErrors = SyntaxParse.parse tokens
-
-      let errors =
-        List.append (tokenizeErrors |> Array.choose id |> List.ofArray) parseErrors
-
-      let ast =
-        if errors |> List.isEmpty then
-          Cli.resolveMiloneCoreDeps tokens ast
-        else
-          ast
+      let _, ast, errors = SyntaxApi.parseModuleWith docId tokens
 
       ls.ParseCache
       |> MutMap.insert docId (currentVersion, (ast, errors))
@@ -149,7 +131,7 @@ let private doBundle (ls: LangServiceState) projectDir =
 
   let docVersions = MutMap()
 
-  let fetchModule (projectName: string) (_projectDir: string) (moduleName: string) =
+  let fetchModule (projectName: string) (moduleName: string) =
     match ls.Host.Docs.FindDocId projectName moduleName with
     | None -> None
     | Some docId ->
@@ -161,29 +143,18 @@ let private doBundle (ls: LangServiceState) projectDir =
 
   let compileCtx =
     { compileCtx with
-        FetchModule = fetchModule }
+        SyntaxCtx =
+          { compileCtx.SyntaxCtx with
+              FetchModule = fetchModule } }
 
-  let expr, nameCtx, errors = Cli.syntacticallyAnalyze compileCtx
+  match SyntaxApi.performSyntaxAnalysis compileCtx.SyntaxCtx with
+  | SyntaxApi.SyntaxAnalysisOk (modules, tyCtx) -> Some(modules, tyCtx), [], docVersions
 
-  if errors |> List.isEmpty |> not then
-    None, errors, docVersions
-  else
-    match Cli.semanticallyAnalyze cliHost Cli.Quiet (expr, nameCtx, []) with
-    | Cli.SemaAnalysisOk (expr, tyCtx) -> Some(expr, tyCtx), [], docVersions
+  | SyntaxApi.SyntaxAnalysisError (errors, tyCtxOpt) ->
+      let tirOpt =
+        tyCtxOpt |> Option.map (fun it -> [], it)
 
-    | Cli.SemaAnalysisNameResError errors ->
-        let errors =
-          errors
-          |> List.map (fun (log, loc) -> nameResLogToString log, loc)
-
-        None, errors, docVersions
-
-    | Cli.SemaAnalysisTypingError tyCtx ->
-        let errors =
-          tyCtx.Logs
-          |> List.map (fun (log, loc) -> logToString (tyDisplayFn tyCtx) log, loc)
-
-        None, errors, docVersions
+      tirOpt, errors, docVersions
 
 let bundleWithCache (ls: LangServiceState) projectDir =
   let docsAreAllFresh (docs: MutMap<DocId, DocVersion>) =

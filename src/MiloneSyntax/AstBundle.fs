@@ -221,7 +221,7 @@ let bundleAddModuleInfo (moduleInfo: ModuleInfo) (ctx: BundleCtx) : BundleCtx =
 let bundleCompatible
   (fetchModule: ProjectName -> ModuleName -> (DocId * ARoot * (string * Pos) list) option)
   (entryProjectName: string)
-  =
+  : HProgram * NameCtx * (string * Loc) list =
   let rec go (serial: int) errorAcc bundleCtx =
     let status, bundleCtx = bundleNext bundleCtx
 
@@ -286,10 +286,15 @@ let bundleCompatible
 
            | Some ast ->
                // Compute docId.
-               let docId : DocId = moduleInfo.Project + "." + snd moduleInfo.Ref
+               let docId : DocId =
+                 moduleInfo.Project + "." + snd moduleInfo.Ref
 
-               let exprs, nameCtx = astToHir moduleInfo.Project docId (ast, nameCtx)
-               (moduleInfo.Project, snd moduleInfo.Ref, exprs) :: moduleAcc, nameCtx)
+               let exprs, nameCtx =
+                 astToHir moduleInfo.Project docId (ast, nameCtx)
+
+               (moduleInfo.Project, snd moduleInfo.Ref, exprs)
+               :: moduleAcc,
+               nameCtx)
          ([], nameCtxEmpty ())
 
   let modules : HProgram = List.rev moduleAcc

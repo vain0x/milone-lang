@@ -31,6 +31,7 @@ module Tir = MiloneSyntax.Tir
 module TMap = MiloneStd.StdMap
 module TSet = MiloneStd.StdSet
 module Typing = MiloneSyntax.Typing
+module SyntaxApi = MiloneSyntax.SyntaxApi
 
 let private currentVersion () = "0.3.0"
 
@@ -157,54 +158,6 @@ let private pathIsRelative (s: string) =
   || (s |> S.startsWith "../")
 
 // -----------------------------------------------
-// MiloneCore resolution
-// -----------------------------------------------
-
-/// Generates decls for each MiloneCore module
-/// whose name appears in the token stream.
-let resolveMiloneCoreDeps tokens ast =
-  let knownNames = [ "List"; "Option"; "String" ]
-
-  let isKnownName moduleName =
-    knownNames
-    |> List.exists (fun name -> name = moduleName)
-
-  let moduleMap =
-    let rec go acc tokens =
-      match tokens with
-      | [] -> acc
-      | (IdentToken moduleName, pos) :: (DotToken, _) :: tokens -> go ((moduleName, pos) :: acc) tokens
-      | _ :: tokens -> go acc tokens
-
-    let moduleNames = go [] tokens
-
-    let add acc (moduleName, pos) =
-      if (acc |> TMap.containsKey moduleName |> not)
-         && isKnownName moduleName then
-        acc |> TMap.add moduleName pos
-      else
-        acc
-
-    moduleNames |> List.fold add (TMap.empty compare)
-
-  let insertOpenDecls decls =
-    moduleMap
-    |> TMap.fold
-         (fun decls moduleName pos ->
-           AModuleSynonymDecl(
-             Name(moduleName, pos),
-             [ Name("MiloneCore", pos)
-               Name(moduleName, pos) ],
-             pos
-           )
-           :: decls)
-         decls
-
-  match ast with
-  | AExprRoot decls -> AExprRoot(insertOpenDecls decls)
-  | AModuleRoot (name, decls, pos) -> AModuleRoot(name, insertOpenDecls decls, pos)
-
-// -----------------------------------------------
 // Context
 // -----------------------------------------------
 
@@ -212,15 +165,10 @@ type private ModuleSyntaxData = DocId * ARoot * (string * Pos) list
 
 [<RequireQualifiedAccess; NoEquality; NoComparison>]
 type CompileCtx =
-  { ProjectDir: string
-    ProjectName: string
+  { EntryProjectDir: string
+    EntryProjectName: string
 
-    /// project name -> project directory
-    Projects: AssocMap<string, string>
-
-    TokenizeHost: TokenizeHost
-    FetchModule: ProjectName -> ProjectDir -> ModuleName -> ModuleSyntaxData option
-
+    SyntaxCtx: SyntaxApi.SyntaxCtx
     HeaderOnly: bool
 
     Verbosity: Verbosity
@@ -231,76 +179,30 @@ let compileCtxNew (host: CliHost) verbosity projectDir : CompileCtx =
   let projectName = projectDir |> pathStrToStem
 
   let miloneHome =
-    if host.MiloneHome <> "" then
-      host.MiloneHome
-    else
-      host.Home + "/.milone"
+    let getEnv name =
+      match name with
+      | "MILONE_HOME" when host.MiloneHome <> "" -> Some host.MiloneHome
+      | "HOME" when host.Home <> "" -> Some host.Home
+      | _ -> None
 
-  let projects =
-    TMap.empty compare
-    |> TMap.add "MiloneCore" (miloneHome + "/milone_libs/MiloneCore")
-    |> TMap.add "MiloneStd" (miloneHome + "/milone_libs/MiloneStd")
-    |> TMap.add projectName projectDir
+    SyntaxApi.getMiloneHomeFromEnv getEnv
 
-  let readModuleFile (_: string) (projectDir: string) (moduleName: string) =
-    let read (ext: string) =
-      match host.FileReadAllText(projectDir + "/" + moduleName + ext) with
-      | Some text -> Some(moduleName, text)
-      | None -> None
+  let syntaxCtx : SyntaxApi.SyntaxCtx =
+    let host : SyntaxApi.SyntaxHost =
+      { EntryProjectDir = projectDir
+        EntryProjectName = projectName
+        MiloneHome = miloneHome
+        ReadTextFile = host.FileReadAllText
+        WriteLog = writeLog host verbosity }
 
-    match read ".milone" with
-    | (Some _) as it -> it
-    | None -> read ".fs"
+    SyntaxApi.syntaxCtxNew host
 
-  let tokenizeHost = tokenizeHostNew ()
-
-  let doParse (text: string) =
-    let tokens = text |> tokenize tokenizeHost
-    let errorTokens, tokens = tokens |> List.partition isErrorToken
-    let ast, parseErrors = tokens |> parse
-
-    let errors =
-      List.append (tokenizeErrors errorTokens) parseErrors
-
-    let ast =
-      if errors |> List.isEmpty then
-        resolveMiloneCoreDeps tokens ast
-      else
-        ast
-
-    ast, errors
-
-  let fetchModule (projectName: string) (projectDir: string) (moduleName: string) =
-    match readModuleFile projectName projectDir moduleName with
-    | None -> None
-    | Some (docId, text) ->
-        let ast, errors = doParse text
-        Some(docId, ast, errors)
-
-  { ProjectDir = projectDir
-    ProjectName = projectName
-    Projects = projects
-    TokenizeHost = tokenizeHost
-    FetchModule = fetchModule
+  { EntryProjectDir = projectDir
+    EntryProjectName = projectName
+    SyntaxCtx = syntaxCtx
     HeaderOnly = false
     Verbosity = verbosity
     Host = host }
-
-let private compileCtxAddProjectReferences references (ctx: CompileCtx) =
-  let projects =
-    references
-    |> List.fold
-         (fun projects projectDir ->
-           let projectDir = projectDir |> pathStrTrimEndPathSep
-           let projectName = projectDir |> pathStrToStem
-
-           if projects |> TMap.containsKey projectName then
-             failwithf "Project name is duplicated: '%s'" projectName
-
-           projects |> TMap.add projectName projectDir)
-         ctx.Projects
-
-  { ctx with Projects = projects }
 
 // -----------------------------------------------
 // Write output and logs
@@ -317,52 +219,6 @@ let private writeLog (host: CliHost) verbosity msg =
   | Profile profiler -> profiler |> profileLog msg
 
   | Quiet -> ()
-
-let private syntaxHasError (syntax: SyntaxAnalysisResult) =
-  let _, _, errors = syntax
-  errors |> List.isEmpty |> not
-
-let private syntaxErrorToString syntax =
-  let _, _, errors = syntax
-
-  errors
-  |> listSort (fun (_, l) (_, r) -> locCompare l r)
-  |> List.map (fun (msg, loc) -> "#error " + locToString loc + " " + msg + "\n")
-  |> strConcat
-
-let private tyCtxHasError (tyCtx: TyCtx) = tyCtx.Logs |> List.isEmpty |> not
-
-let private nameResLogsToString logs =
-  logs
-  |> listSort (fun (_, l) (_, r) -> locCompare l r)
-  |> List.map
-       (fun (log, loc) ->
-         "#error "
-         + locToString loc
-         + " "
-         + Tir.nameResLogToString log
-         + "\n")
-  |> strConcat
-
-let private semanticErrorToString (tyCtx: TyCtx) logs =
-  let tyDisplayFn ty =
-    let getTyName tySerial =
-      tyCtx.Tys
-      |> TMap.tryFind tySerial
-      |> Option.map Tir.tyDefToName
-
-    tyDisplay getTyName ty
-
-  logs
-  |> listSort (fun (_, l) (_, r) -> locCompare l r)
-  |> List.map
-       (fun (log, loc) ->
-         "#error "
-         + locToString loc
-         + " "
-         + Tir.logToString tyDisplayFn log
-         + "\n")
-  |> strConcat
 
 // -----------------------------------------------
 // Syntax/semantics data type conversion
@@ -622,72 +478,6 @@ let private lowerTyCtx (tyCtx: Typing.TyCtx) : Hir.TyCtx =
 // Processes
 // -----------------------------------------------
 
-type private SyntaxAnalysisResult = Tir.HProgram * Tir.NameCtx * (string * Loc) list
-
-let private isErrorToken token =
-  match token with
-  | ErrorToken _, _ -> true
-  | _ -> false
-
-let private tokenizeErrors errorTokens =
-  errorTokens
-  |> List.map
-       (fun token ->
-         match token with
-         | ErrorToken error, pos -> tokenizeErrorToString error, pos
-         | _ -> unreachable ())
-
-/// Loads source codes from files, performs tokenization and SyntaxParse,
-/// and transforms them into high-level intermediate representation (HIR).
-let syntacticallyAnalyze (ctx: CompileCtx) : SyntaxAnalysisResult =
-  let host = ctx.Host
-  let v = ctx.Verbosity
-
-  writeLog host v ("AstBundle project=" + ctx.ProjectName)
-
-  let fetchModule (projectName: ProjectName) (moduleName: ModuleName) : ModuleSyntaxData option =
-    let projectDir =
-      match ctx.Projects |> TMap.tryFind projectName with
-      | Some it -> it
-      | None -> ctx.ProjectDir + "/../" + projectName
-
-    ctx.FetchModule projectName projectDir moduleName
-
-  bundleCompatible fetchModule ctx.ProjectName
-
-[<NoEquality; NoComparison>]
-type SemaAnalysisResult =
-  | SemaAnalysisOk of Tir.HProgram * Typing.TyCtx
-  | SemaAnalysisNameResError of (Tir.NameResLog * Loc) list
-  | SemaAnalysisTypingError of Typing.TyCtx
-
-/// Analyzes HIR to validate program and collect information.
-let semanticallyAnalyze (host: CliHost) v (syntax: SyntaxAnalysisResult) : SemaAnalysisResult =
-  let modules, nameCtx, syntaxErrors = syntax
-  assert (syntaxErrors |> List.isEmpty)
-
-  writeLog host v "NameRes"
-
-  let modules, scopeCtx = nameRes (modules, nameCtx)
-
-  if scopeCtx.Logs |> List.isEmpty |> not then
-    SemaAnalysisNameResError scopeCtx.Logs
-  else
-    writeLog host v "Typing"
-
-    let modules, tyCtx = infer (modules, scopeCtx, [])
-
-    if tyCtx.Logs |> List.isEmpty |> not then
-      SemaAnalysisTypingError tyCtx
-    else
-      writeLog host v "ArityCheck"
-      let tyCtx = arityCheck (modules, tyCtx)
-
-      if tyCtx.Logs |> List.isEmpty |> not then
-        SemaAnalysisTypingError tyCtx
-      else
-        SemaAnalysisOk(modules, tyCtx)
-
 /// Transforms HIR. The result can be converted to MIR.
 let transformHir (host: CliHost) v (modules: Tir.HProgram, tyCtx: Typing.TyCtx) =
   writeLog host v "Lower"
@@ -757,18 +547,9 @@ let codeGenHirViaMir (host: CliHost) v projectName headerOnly (decls, tyCtx) : C
   output
 
 let check (ctx: CompileCtx) : bool * string =
-  let host = ctx.Host
-  let v = ctx.Verbosity
-
-  let syntax = syntacticallyAnalyze ctx
-
-  if syntax |> syntaxHasError then
-    false, syntaxErrorToString syntax
-  else
-    match semanticallyAnalyze host v syntax with
-    | SemaAnalysisNameResError logs -> false, nameResLogsToString logs
-    | SemaAnalysisTypingError tyCtx -> false, semanticErrorToString tyCtx tyCtx.Logs
-    | SemaAnalysisOk _ -> true, ""
+  match SyntaxApi.performSyntaxAnalysis ctx.SyntaxCtx with
+  | SyntaxApi.SyntaxAnalysisOk _ -> true, ""
+  | SyntaxApi.SyntaxAnalysisError (errors, _) -> false, SyntaxApi.syntaxErrorsToString errors
 
 [<NoEquality; NoComparison>]
 type CompileResult =
@@ -779,18 +560,12 @@ let private compile (ctx: CompileCtx) : CompileResult =
   let host = ctx.Host
   let v = ctx.Verbosity
 
-  let syntax = syntacticallyAnalyze ctx
+  match SyntaxApi.performSyntaxAnalysis ctx.SyntaxCtx with
+  | SyntaxApi.SyntaxAnalysisError (errors, _) -> CompileError(SyntaxApi.syntaxErrorsToString errors)
 
-  if syntax |> syntaxHasError then
-    CompileError(syntaxErrorToString syntax)
-  else
-    match semanticallyAnalyze host v syntax with
-    | SemaAnalysisNameResError logs -> CompileError(nameResLogsToString logs)
-    | SemaAnalysisTypingError tyCtx -> CompileError(semanticErrorToString tyCtx tyCtx.Logs)
-
-    | SemaAnalysisOk (modules, tyCtx) ->
-        let decls, tyCtx = transformHir host v (modules, tyCtx)
-        CompileOk(codeGenHirViaMir host v ctx.ProjectName ctx.HeaderOnly (decls, tyCtx))
+  | SyntaxApi.SyntaxAnalysisOk (modules, tyCtx) ->
+      let decls, tyCtx = transformHir host v (modules, tyCtx)
+      CompileOk(codeGenHirViaMir host v ctx.EntryProjectName ctx.HeaderOnly (decls, tyCtx))
 
 // -----------------------------------------------
 // Actions
