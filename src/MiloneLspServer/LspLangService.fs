@@ -10,14 +10,25 @@ open MiloneLspServer.Util
 open MiloneLspServer.LspCacheLayer
 
 let private miloneHome =
-  let miloneHome =
-    Environment.GetEnvironmentVariable("MILONE_HOME")
+  let opt (s: string) =
+    match s with
+    | null
+    | "" -> None
+    | _ -> Some s
 
-  if miloneHome <> "" then
-    miloneHome
-  else
-    Environment.GetFolderPath(Environment.SpecialFolder.UserProfile)
-    + "/.milone"
+  let getEnv name =
+    match name with
+    | "MILONE_HOME" ->
+        Environment.GetEnvironmentVariable("MILONE_HOME")
+        |> opt
+
+    | "HOME" ->
+        Environment.GetFolderPath(Environment.SpecialFolder.UserProfile)
+        |> opt
+
+    | _ -> None
+
+  MiloneSyntax.SyntaxApi.getMiloneHomeFromEnv getEnv
 
 let private uriOfFilePath (filePath: string) =
   StringBuilder()
