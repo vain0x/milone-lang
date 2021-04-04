@@ -131,11 +131,9 @@ let private doBundle (ls: LangServiceState) projectDir =
 
   let docVersions = MutMap()
 
-  let fetchModule (projectName: string) (moduleName: string) =
+  let fetchModuleUsingCache defaultFetchModule (projectName: string) (moduleName: string) =
     match ls.Host.Docs.FindDocId projectName moduleName with
-    | None ->
-        eprintfn "// missing %s.%s" projectName moduleName
-        None
+    | None -> defaultFetchModule projectName moduleName
 
     | Some docId ->
         docVersions
@@ -148,7 +146,7 @@ let private doBundle (ls: LangServiceState) projectDir =
     { compileCtx with
         SyntaxCtx =
           { compileCtx.SyntaxCtx with
-              FetchModule = fetchModule } }
+              FetchModule = fetchModuleUsingCache compileCtx.SyntaxCtx.FetchModule } }
 
   match SyntaxApi.performSyntaxAnalysis compileCtx.SyntaxCtx with
   | SyntaxApi.SyntaxAnalysisOk (modules, tyCtx) -> Some(modules, tyCtx), [], docVersions
