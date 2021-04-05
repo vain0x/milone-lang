@@ -25,33 +25,14 @@ build {{ FILES_TXT }}: $
       {{ EXPECTED_OUT }} $
       target/milone
 
-build {{ EXE_FILE }}: $
-  testing_run_cc $
-    {{ NINJA_FILE }} $
-    | runtime/milone.h $
-      runtime/milone.o
-  expected_out_file = {{ EXPECTED_OUT_FILE }}
-  out_file = {{ OUT_FILE }}
-  project = tests/{{ CATEGORY }}/{{ PROJECT }}
+rule {{ MILONE_RULE }}_run
+  description = run_tests run {{ PROJECT }}
+  command = { {{ EXE }}; echo '$$? = '$$?; } >$out
 
-build {{ OUT_FILE }}: $
-  execute_test {{ EXE_FILE }}
-  expected_out_file = {{ EXPECTED_OUT_FILE }}
-  project = tests/{{ CATEGORY }}/{{ PROJECT }}
-
-build {{ DIFF_FILE }}: $
-  diff_test_output $
-    {{ OUT_FILE }} $
-    tests/{{ CATEGORY }}/{{ PROJECT }}/{{ PROJECT }}.out
-  name = {{ PROJECT }}
-
-build target/tests/{{ CATEGORY }}/{{ PROJECT }}/test.timestamp: $
-  verify_test_output {{ DIFF_FILE }}
-  pool = console
-
-build {{ PROJECT }}: $
-  phony target/tests/{{ CATEGORY }}/{{ PROJECT }}/test.timestamp
-  pool = console
+build {{ GENERATED_OUT }}: $
+  {{ MILONE_RULE }}_run $
+    | {{ EXPECTED_OUT }} $
+      {{ EXE }}
 """
 
 let errorTestTemplate = """
@@ -68,30 +49,67 @@ build {{ GENERATED_OUT }}: $
     | {{ SRC }} $
       {{ EXPECTED_OUT }} $
       target/milone
-
-build {{ DIFF }}: $
-  diff {{ GENERATED_OUT }} {{ EXPECTED_OUT }}
-
-build {{ PROJECT }}: should_empty {{ DIFF }}
 """
 
+let testCollectionTemplate = """
+# ------------------------------------------------
+# Tests
+# ------------------------------------------------
+
+rule build_run_tests
+  description = build_run_tests
+  command = $my_build_tool --build-run-tests
+
+build {{ EXE_FILES }}: $
+  build_run_tests | {{ RUN_TEST_INPUTS }}
+
+build run_tests: $
+  phony {{ EXE_FILES }}
+
+build error_tests: $
+  phony {{ ERROR_TEST_INPUTS }}
 
 
-let renderTestCaseBuildStatements category projectName =
-  let file ext =
-    sprintf "tests/%s/%s/%s%s" category projectName projectName ext
 
-  buildTemplate
-    .Replace("{{ CATEGORY }}", category)
-    .Replace("{{ PROJECT }}", projectName)
-    .Replace("{{ FS_FILE }}", file ".fs")
-    .Replace("{{ EXPECTED_OUT_FILE }}", file ".out")
-    .Replace("{{ DIFF_FILE }}", file ".generated.diff")
-    .Replace("{{ EXE_FILE }}", file ".generated.exe")
-    .Replace("{{ NINJA_FILE }}", file ".generated.ninja")
-    .Replace("{{ OUT_FILE }}", file ".generated.out")
+rule summarize_tests
+  description = summarize_tests
+  command = $my_build_tool --summarize-tests
+
+build target/summarize_tests.timestamp: $
+  summarize_tests $
+    | run_tests error_tests
+
+build tests: phony target/summarize_tests.timestamp
+"""
 
 // -----------------------------------------------
+
+type TestProject =
+  { ProjectDir: string
+    CategoryDir: string
+    CategoryName: string
+    ProjectName: string
+    TargetDir: string
+    Exe: string
+    FilesTxt: string
+    ExpectedOut: string
+    GeneratedOut: string
+    Sources: string list }
+
+let testProject (categoryDir: string, projectDir, projectName, sources) =
+  let categoryName = Path.GetFileName(categoryDir)
+  let targetDir = $"target/{categoryName}/{projectName}"
+
+  { CategoryDir = categoryDir
+    ProjectDir = projectDir
+    CategoryName = categoryName
+    ProjectName = projectName
+    TargetDir = targetDir
+    FilesTxt = $"{targetDir}/files.txt"
+    Exe = $"{targetDir}/{projectName}.exe"
+    ExpectedOut = $"{projectDir}/{projectName}.out"
+    GeneratedOut = $"{targetDir}/generated.txt"
+    Sources = sources }
 
 let render () =
   let solutionDir = System.Environment.CurrentDirectory
@@ -99,6 +117,16 @@ let render () =
   let testProjects = FS.allTestProjects solutionDir
 
   let ninjaTemplate = File.ReadAllText("build-template.ninja")
+
+  let ninjaTemplate =
+    ninjaTemplate
+      .Replace("{{ FS_PROJ_FILES }}", List.map fst fsProjects |> String.concat " ")
+      .Replace(
+        "{{ MILONE_CLI_SRC }}",
+        fsProjects
+        |> List.collect snd
+        |> String.concat " "
+      )
 
   let runTests, errorTests =
     let readExpectedOutput t =
@@ -128,8 +156,58 @@ let render () =
 
                Some(shouldRun, t))
     |> List.partition fst
+    |> (fun (x, y) -> List.map (snd >> testProject) x, List.map (snd >> testProject) y)
 
+  let test =
+    runTests
+    |> List.map
+         (fun (t: TestProject) ->
+           runTestTemplate
+             .Replace("{{ PATH }}", t.ProjectDir)
+             .Replace("{{ PROJECT }}", t.ProjectName)
+             .Replace("{{ MILONE_RULE }}", t.ProjectName + "_build")
+             .Replace("{{ SRC }}", String.concat " " t.Sources)
+             .Replace("{{ TARGET_DIR }}", t.TargetDir)
+             .Replace("{{ EXE }}", t.Exe)
+             .Replace("{{ EXPECTED_OUT }}", t.ExpectedOut)
+             .Replace("{{ FILES_TXT }}", t.FilesTxt)
+             .Replace("{{ GENERATED_OUT }}", t.GeneratedOut))
+    |> fun items ->
+         List.append
+           items
+           (errorTests
+            |> List.map
+                 (fun (t: TestProject) ->
+                   errorTestTemplate
+                     .Replace("{{ PATH }}", t.ProjectDir)
+                     .Replace("{{ PROJECT }}", t.ProjectName)
+                     .Replace("{{ MILONE_RULE }}", t.ProjectName + "_build")
+                     .Replace("{{ SRC }}", String.concat " " t.Sources)
+                     .Replace("{{ TARGET_DIR }}", t.TargetDir)
+                     .Replace("{{ GENERATED_OUT }}", t.GeneratedOut)
+                     .Replace("{{ EXPECTED_OUT }}", t.ExpectedOut)))
+    |> String.concat "\n"
 
+  let collect =
+    let exeFiles =
+      runTests
+      |> List.map (fun (t: TestProject) -> t.Exe)
+      |> String.concat " "
+
+    let runTestInputs =
+      runTests
+      |> List.collect (fun (t: TestProject) -> t.ExpectedOut :: t.Sources)
+      |> String.concat " "
+
+    let errorTestInputs =
+      errorTests
+      |> List.collect (fun (t: TestProject) -> t.ExpectedOut :: t.Sources)
+      |> String.concat " "
+
+    testCollectionTemplate
+      .Replace("{{ EXE_FILES }}", exeFiles)
+      .Replace("{{ RUN_TEST_INPUTS }}", runTestInputs)
+      .Replace("{{ ERROR_TEST_INPUTS }}", errorTestInputs)
 
   ninjaTemplate
     .Replace("{{ FSPROJ_FILES }}", fsProjects |> List.map fst |> String.concat " ")
@@ -139,4 +217,4 @@ let render () =
       |> List.collect (fun (x, xs) -> x :: xs)
       |> String.concat " "
     )
-    .Replace("{{ TEST }}", test)
+    .Replace("{{ TEST }}", test + "\n" + collect)

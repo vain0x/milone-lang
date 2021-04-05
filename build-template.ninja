@@ -7,10 +7,10 @@
 # <https://ninja-build.org/manual.html>
 
 builddir = target
+timestamp = target/.timestamp
 
-milone_dotnet_debug = MiloneLang/bin/Debug/net5.0/MiloneLang
-
-milone_dotnet_release = MiloneLang/bin/Release/net5.0/MiloneLang
+my_build_tool = scripts/MyBuildTool/bin/Debug/net5.0/MyBuildTool
+milone_dotnet_debug = src/MiloneCli/bin/Debug/net5.0/MiloneCli
 
 warning_flags = $
   -Wall $
@@ -44,82 +44,60 @@ rule dotnet_restore
     dotnet restore && $
     touch $out
 
-build target/timestamp.dotnet_restore: $
+build $timestamp/dotnet_restore: $
   dotnet_restore $
-    {{ FS_PROJ_FILES }}
+    | {{ FS_PROJ_FILES }}
 
 build dotnet_restore: $
-  phony target/timestamp.dotnet_restore
+  phony $timestamp/dotnet_restore
 
 # ------------------------------------------------
 # milone-dotnet
 # ------------------------------------------------
 
 rule build_milone_dotnet
-  description = build_milone_dotnet ($CONFIG)
+  description = build_milone_dotnet ($config)
   command = $
-    CONFIG=$CONFIG scripts/build-milone-dotnet && $
+    CONFIG=$config scripts/build-milone-dotnet && $
     touch $out
 
 build $milone_dotnet_debug: $
   build_milone_dotnet $
-    {{ MILONE_CORE_SRC }} {{ MILONE_STD_SRC }} {{ MILONE_LANG_SRC }} $
+    {{ MILONE_CLI_SRC }} $
     | dotnet_restore
-  CONFIG = Debug
-
-build $milone_dotnet_release: $
-  build_milone_dotnet $
-    {{ MILONE_CORE_SRC }} {{ MILONE_STD_SRC }} {{ MILONE_LANG_SRC }} $
-    | dotnet_restore
-  CONFIG = Release
-
-# ------------------------------------------------
-# milone-native
-# ------------------------------------------------
-
-# Rules for self compilation.
-
-rule compile_milone_to_c
-  description = compile_milone_to_c $name
-  command = $
-    MILONE_HOME=$$PWD MILONE=$milone TARGET_DIR=$target_dir scripts/milone-incremental $verbosity $project | $
-      ID=$name EXE=$exe TARGET_DIR=$target_dir scripts/build-ninja-dyn >$out
-
-rule compile_c_to_obj
-  description = compile_c_to_obj $in
-  command = $${CC:-gcc} -std=c11 $warning_flags -O1 -g -c -Iruntime $in -o $out
-
-build runtime/milone.o: $
-  compile_c_to_obj $
-    runtime/milone.c $
-    | runtime/milone.h
+  config = Debug
 
 # ------------------------------------------------
 # gen2 build
 # ------------------------------------------------
 
+rule build_gen2
+  description = build_gen2
+  command = $
+    >old_files.txt
+
+    $my_build_tool milone src/MiloneCli $
+      -e MILONE_HOME=$$PWD $
+      -e MILONE=$milone_dotnet_debug $
+      -e EXE=$out $
+      -e TARGET_DIR=target/gen2 $
+      -e VERBOSITY=$verbosity $
+      >$target_dir/build.ninja && $
+    ninja -f $target_dir/build.ninja && $
+    touch $out && $
+    $my_build_tool delete-c-files target/gen2
+
 # This statement doesn't need to have source files as input
 # because $milone_dotnet_debug is updated on change.
-build target/gen2.ninja: $
-  compile_milone_to_c $
-    | $milone_dotnet_debug $
-      scripts/build-ninja-dyn $
-      scripts/milone-incremental
-  exe = target/milone
-  milone = $milone_dotnet_debug
-  name = gen2
-  project = MiloneLang
-  target_dir = target/gen2
-  verbosity = --quiet
-
 build target/milone: $
-  subninja $
-    | target/gen2.ninja $
-      runtime/milone.o
-  file = target/gen2.ninja
-  pool = console
+  build_gen2 $
+    $milone_dotnet_debug $
+      $my_build_tool $
+      runtime/milone.c $
+      runtime/milone.h
 
-build gen2: phony target/milone
+build gen2: $
+  phony target/milone
 
 # ------------------------------------------------
 # gen3 build
@@ -168,87 +146,87 @@ build test_self: phony target/self.diff
 
 # Build a test-case project.
 # This always succeeds for some cases to test compile error.
-rule take_snapshot
-  description = take_snapshot $project
-  command = $
-    if test -z "$$(grep 'milone-lang compile error.' -- $expected_out_file)"; then $
-      MILONE_HOME=$$PWD $milone compile --quiet --target-dir $project $project | $
-        ID=$name EXE=$exe_file TARGET_DIR=$project scripts/build-ninja-dyn >$out; $
-    else $
-      if ! env MILONE_HOME=$$PWD $milone compile --quiet --target-dir $project $project >/dev/null; then $
-        echo 'milone-lang compile error.' >$out_file; $
-      else $
-        echo 'Compile success (expected compile error.)' >$out_file; $
-      fi; $
-      echo "build $exe_file: phony" >$out; $
-    fi
+# rule take_snapshot
+#   description = take_snapshot $project
+#   command = $
+#     if test -z "$$(grep 'milone-lang compile error.' -- $expected_out_file)"; then $
+#       MILONE_HOME=$$PWD $milone compile --quiet --target-dir $project $project | $
+#         ID=$name EXE=$exe_file TARGET_DIR=$project scripts/build-ninja-dyn >$out; $
+#     else $
+#       if ! env MILONE_HOME=$$PWD $milone compile --quiet --target-dir $project $project >/dev/null; then $
+#         echo 'milone-lang compile error.' >$out_file; $
+#       else $
+#         echo 'Compile success (expected compile error.)' >$out_file; $
+#       fi; $
+#       echo "build $exe_file: phony" >$out; $
+#     fi
 
 # Print snapshot diff.
-rule git_diff_snapshot_stats
-  command = git diff --stat -- 'tests/**/*.c' >$out
+# rule git_diff_snapshot_stats
+#   command = git diff --stat -- 'tests/**/*.c' >$out
 
-build snapshot_diff: $
-  git_diff_snapshot_stats $
-    {{ TEST_C_FILES }}
-  pool = console
+# build snapshot_diff: $
+#   git_diff_snapshot_stats $
+#     {{ TEST_C_FILES }}
+#   pool = console
 
 # ------------------------------------------------
 # Execution testing
 # ------------------------------------------------
 
-rule build_test
-  description = build_test $project
-  command = $
-    if test -z "$$(grep 'milone-lang compile error.' -- $expected_out_file)"; then $
-      ninja -f $in; $
-    else $
-      : >$out; $
-    fi
+# rule build_test
+#   description = build_test $project
+#   command = $
+#     if test -z "$$(grep 'milone-lang compile error.' -- $expected_out_file)"; then $
+#       ninja -f $in; $
+#     else $
+#       : >$out; $
+#     fi
 
-rule execute_test
-  description = execute_test $project
-  command = $
-    if test -z "$$(grep 'milone-lang compile error.' -- $expected_out_file)"; then $
-      $in >$out.tmp; $
-      echo '$$? = '$$? >>$out.tmp; $
-      cat $out.tmp >$out; $
-      rm -f $out.tmp; $
-    else $
-      echo 'milone-lang compile error.' >$out; $
-    fi
+# rule execute_test
+#   description = execute_test $project
+#   command = $
+#     if test -z "$$(grep 'milone-lang compile error.' -- $expected_out_file)"; then $
+#       $in >$out.tmp; $
+#       echo '$$? = '$$? >>$out.tmp; $
+#       cat $out.tmp >$out; $
+#       rm -f $out.tmp; $
+#     else $
+#       echo 'milone-lang compile error.' >$out; $
+#     fi
 
-rule diff_test_output
-  description = diff_test_output $name
-  command = $
-    diff -q $in && $
-      echo OK $name >$out || $
-      echo FAILED $name >$out
+# rule diff_test_output
+#   description = diff_test_output $name
+#   command = $
+#     diff -q $in && $
+#       echo OK $name >$out || $
+#       echo FAILED $name >$out
 
 # Verify outputs.
-rule verify_test_output
-  description = verify_test_output
-  command = $
-    OK_COUNT=$$(grep ^OK -- $in | wc -l); $
-    FAIL_COUNT=$$(grep ^FAIL -- $in | wc -l); $
-    TOTAL_COUNT=$$(cat $in | wc -l) $
-    STATUS=$$(if test $$FAIL_COUNT -eq 0; then echo OK; else echo FAIL; fi); $
-    grep ^FAIL -- $in; $
-    echo "$$STATUS - ok $$OK_COUNT / fail $$FAIL_COUNT / total $$TOTAL_COUNT"; $
-    touch $out
+# rule verify_test_output
+#   description = verify_test_output
+#   command = $
+#     OK_COUNT=$$(grep ^OK -- $in | wc -l); $
+#     FAIL_COUNT=$$(grep ^FAIL -- $in | wc -l); $
+#     TOTAL_COUNT=$$(cat $in | wc -l) $
+#     STATUS=$$(if test $$FAIL_COUNT -eq 0; then echo OK; else echo FAIL; fi); $
+#     grep ^FAIL -- $in; $
+#     echo "$$STATUS - ok $$OK_COUNT / fail $$FAIL_COUNT / total $$TOTAL_COUNT"; $
+#     touch $out
 
-build target/integration_tests.timestamp: $
-  verify_test_output $
-    {{ TEST_DIFF_FILES }}
-  pool = console
+# build target/integration_tests.timestamp: $
+#   verify_test_output $
+#     {{ TEST_DIFF_FILES }}
+#   pool = console
 
-build integration_tests: $
-  phony target/integration_tests.timestamp
+# build integration_tests: $
+#   phony target/integration_tests.timestamp
 
 # ------------------------------------------------
 # Test Projects
 # ------------------------------------------------
 
-{{ TEST_BUILDS }}
+{{ TEST }}
 
 # ------------------------------------------------
 # Other tests
@@ -285,10 +263,10 @@ build clean: clean
 
 build build: phony gen2
 
-build test: $
-  phony $
-    test_self $
-    integration_tests $
-    test_project_reference
+# build test: $
+#   phony $
+#     test_self $
+#     integration_tests $
+#     test_project_reference
 
-default test
+default tests

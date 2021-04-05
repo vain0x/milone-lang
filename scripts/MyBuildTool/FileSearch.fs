@@ -45,29 +45,17 @@ let private searchFiles pred (rootDir: string) =
 
   go 0 rootDir
 
-let subdirs (dir: string) : seq<string> =
-  seq {
-    if isIncluded dir then
-      yield! Directory.GetDirectories(dir)
-  }
-
-let childFiles (dir: string) : seq<string> = Directory.GetFiles(dir) :> seq<_>
-
-let children (dir: string) : seq<string> =
-  seq {
-    yield! subdirs dir
-    yield! childFiles dir
-  }
-
 let descendantDirs maxDepth (dir: string) : seq<string> =
   seq {
-    if maxDepth >= 1 then
-      yield! descendantDirs (maxDepth - 1) dir
-      yield! subdirs dir
+    if maxDepth >= 1 && isIncluded dir then
+      yield dir
+
+      for subdir in Directory.EnumerateDirectories(dir) do
+        yield! descendantDirs (maxDepth - 1) subdir
   }
 
 let private sourceFiles solutionDir projectDir =
-  [ for file in childFiles projectDir do
+  [ for file in Directory.EnumerateFiles(projectDir) do
       if file |> ext |> oneOf [ ".fs"; ".milone" ] then
         yield file |> relativeTo solutionDir ]
 
@@ -81,6 +69,8 @@ let allFsProjects (solutionDir: string) =
 let allTestProjects (solutionDir: string) =
   let rel = relativeTo solutionDir
 
-  [ for categoryDir in subdirs (solutionDir + "/tests") do
-      for projectDir in subdirs categoryDir do
-        yield rel categoryDir, rel projectDir, basename projectDir, sourceFiles solutionDir projectDir ]
+  [ for categoryDir in Directory.EnumerateDirectories(solutionDir + "/tests") do
+      if isIncluded categoryDir then
+        for projectDir in Directory.EnumerateDirectories(categoryDir) do
+          if isIncluded projectDir then
+            yield rel categoryDir, rel projectDir, basename projectDir, sourceFiles solutionDir projectDir ]
