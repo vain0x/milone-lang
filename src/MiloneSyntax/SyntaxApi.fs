@@ -252,7 +252,7 @@ let syntaxCtxNew (host: SyntaxHost) : SyntaxCtx =
 
 [<NoEquality; NoComparison>]
 type SyntaxAnalysisResult =
-  | SyntaxAnalysisOk of Tir.HProgram * Typing.TyCtx
+  | SyntaxAnalysisOk of Tir.TProgram * Typing.TyCtx
   | SyntaxAnalysisError of SyntaxError list * Typing.TyCtx option
 
 /// Creates a TIR and collects errors

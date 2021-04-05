@@ -19,7 +19,7 @@ let private isNoTy ty =
   | Ty (ErrorTk _, _) -> true
   | _ -> false
 
-let private hxAbort loc = HNodeExpr(HAbortEN, [], noTy, loc)
+let private hxAbort loc = TNodeExpr(TAbortEN, [], noTy, loc)
 
 // -----------------------------------------------
 // Type primitives
@@ -904,17 +904,17 @@ let private collectDecls moduleSerialOpt (expr, ctx) =
 
   let rec goPat (pat, ctx) =
     match pat with
-    | HLitPat _
-    | HDiscardPat _
-    | HVariantPat _
-    | HOrPat _ -> pat, ctx
+    | TLitPat _
+    | TDiscardPat _
+    | TVariantPat _
+    | TOrPat _ -> pat, ctx
 
-    | HVarPat (vis, varSerial, ty, loc) ->
+    | TVarPat (vis, varSerial, ty, loc) ->
         let name =
           ctx |> findName (varSerialToInt varSerial)
 
         match ctx |> resolveLocalVarName name with
-        | Some (VariantSymbol variantSerial) -> HVariantPat(variantSerial, ty, loc), ctx
+        | Some (VariantSymbol variantSerial) -> TVariantPat(variantSerial, ty, loc), ctx
 
         | _ ->
             let varDef : VarDef =
@@ -931,11 +931,11 @@ let private collectDecls moduleSerialOpt (expr, ctx) =
 
             pat, ctx
 
-    | HNodePat (kind, argPats, ty, loc) ->
+    | TNodePat (kind, argPats, ty, loc) ->
         let argPats, ctx = (argPats, ctx) |> stMap goPat
-        HNodePat(kind, argPats, ty, loc), ctx
+        TNodePat(kind, argPats, ty, loc), ctx
 
-    | HAsPat (pat, varSerial, loc) ->
+    | TAsPat (pat, varSerial, loc) ->
         let name =
           ctx |> findName (varSerialToInt varSerial)
 
@@ -949,16 +949,16 @@ let private collectDecls moduleSerialOpt (expr, ctx) =
         let ctx = ctx |> addLocalVar varSerial varDef
 
         let pat, ctx = (pat, ctx) |> goPat
-        HAsPat(pat, varSerial, loc), ctx
+        TAsPat(pat, varSerial, loc), ctx
 
   let rec goExpr (expr, ctx) =
     match expr with
-    | HLetValExpr (pat, init, next, ty, loc) ->
+    | TLetValExpr (pat, init, next, ty, loc) ->
         let pat, ctx = (pat, ctx) |> goPat
         let next, ctx = (next, ctx) |> goExpr
-        HLetValExpr(pat, init, next, ty, loc), ctx
+        TLetValExpr(pat, init, next, ty, loc), ctx
 
-    | HLetFunExpr (funSerial, isRec, vis, args, body, next, ty, loc) ->
+    | TLetFunExpr (funSerial, isRec, vis, args, body, next, ty, loc) ->
         let ctx =
           let name =
             ctx |> findName (funSerialToInt funSerial)
@@ -976,21 +976,21 @@ let private collectDecls moduleSerialOpt (expr, ctx) =
           |> addVarToModule vis (FunSymbol funSerial)
 
         let next, ctx = (next, ctx) |> goExpr
-        HLetFunExpr(funSerial, isRec, vis, args, body, next, ty, loc), ctx
+        TLetFunExpr(funSerial, isRec, vis, args, body, next, ty, loc), ctx
 
-    | HBlockExpr (stmts, last) ->
+    | TBlockExpr (stmts, last) ->
         let stmts, ctx = (stmts, ctx) |> stMap goExpr
         let last, ctx = (last, ctx) |> goExpr
-        HBlockExpr(stmts, last), ctx
+        TBlockExpr(stmts, last), ctx
 
-    | HTyDeclExpr (serial, vis, tyArgs, tyDecl, loc) ->
+    | TTyDeclExpr (serial, vis, tyArgs, tyDecl, loc) ->
         let ctx =
           ctx
           |> startDefineTy moduleSerialOpt serial vis tyArgs tyDecl loc
 
-        HTyDeclExpr(serial, vis, tyArgs, tyDecl, loc), ctx
+        TTyDeclExpr(serial, vis, tyArgs, tyDecl, loc), ctx
 
-    | HModuleExpr (serial, body, loc) ->
+    | TModuleExpr (serial, body, loc) ->
         let name =
           ctx |> findName (moduleTySerialToInt serial)
 
@@ -1000,9 +1000,9 @@ let private collectDecls moduleSerialOpt (expr, ctx) =
           |> addNsToModule PublicVis (ModuleNsOwner serial)
           |> importNs (ModuleNsOwner serial)
 
-        HModuleExpr(serial, body, loc), ctx
+        TModuleExpr(serial, body, loc), ctx
 
-    | HModuleSynonymExpr (serial, path, loc) ->
+    | TModuleSynonymExpr (serial, path, loc) ->
         let name =
           ctx |> findName (moduleSynonymSerialToInt serial)
 
@@ -1060,21 +1060,21 @@ let private nameResVarPat vis serial ty loc ctx =
   let name = ctx |> findName serial
 
   if name = "_" then
-    HDiscardPat(ty, loc), ctx
+    TDiscardPat(ty, loc), ctx
   else
     match ctx |> resolveLocalVarName name with
-    | Some (VariantSymbol variantSerial) -> HVariantPat(variantSerial, ty, loc), ctx
+    | Some (VariantSymbol variantSerial) -> TVariantPat(variantSerial, ty, loc), ctx
 
     | _ ->
         match name with
-        | "None" -> HNodePat(HNonePN, [], ty, loc), ctx
-        | "Some" -> HNodePat(HSomePN, [], ty, loc), ctx
+        | "None" -> TNodePat(TNonePN, [], ty, loc), ctx
+        | "Some" -> TNodePat(TSomePN, [], ty, loc), ctx
 
         | _ ->
             let varSerial, ctx =
               doResolveVarInPat serial name ty loc ctx
 
-            HVarPat(vis, varSerial, ty, loc), ctx
+            TVarPat(vis, varSerial, ty, loc), ctx
 
 let private nameResNavPat pat ctx =
   /// Resolves a pattern as scope.
@@ -1084,11 +1084,11 @@ let private nameResNavPat pat ctx =
   /// `pat` is also updated by resolving inner qualifiers as possible.
   let rec resolvePatAsNsOwners pat ctx : NsOwner list =
     match pat with
-    | HVarPat (_, varSerial, _, _) ->
+    | TVarPat (_, varSerial, _, _) ->
         let name = ctx |> findVarName varSerial
         ctx |> resolveLocalNsOwners name
 
-    | HNodePat (HNavPN r, [ l ], _, _) ->
+    | TNodePat (TNavPN r, [ l ], _, _) ->
         ctx
         |> resolvePatAsNsOwners l
         |> List.collect (fun nsOwner -> ctx |> resolveSubNsOwners nsOwner r)
@@ -1097,7 +1097,7 @@ let private nameResNavPat pat ctx =
 
   let l, r, ty, loc =
     match pat with
-    | HNodePat (HNavPN r, [ l ], ty, loc) -> l, r, ty, loc
+    | TNodePat (TNavPN r, [ l ], ty, loc) -> l, r, ty, loc
     | _ -> unreachable ()
 
   let notResolved ctx =
@@ -1109,7 +1109,7 @@ let private nameResNavPat pat ctx =
     |> List.tryPick
          (fun nsOwner ->
            match ctx |> resolveScopedVarName nsOwner r with
-           | Some (VariantSymbol variantSerial) -> Some(HVariantPat(variantSerial, ty, loc))
+           | Some (VariantSymbol variantSerial) -> Some(TVariantPat(variantSerial, ty, loc))
            | _ -> None)
 
   match patOpt with
@@ -1121,8 +1121,8 @@ let private nameResAppPat l r loc ctx =
   let r, ctx = (r, ctx) |> nameResPat
 
   match l with
-  | HNodePat (HSomePN, [], _, _) -> HNodePat(HSomeAppPN, [ r ], noTy, loc), ctx
-  | HVariantPat (variantSerial, _, _) -> HNodePat(HVariantAppPN variantSerial, [ r ], noTy, loc), ctx
+  | TNodePat (TSomePN, [], _, _) -> TNodePat(TSomeAppPN, [ r ], noTy, loc), ctx
+  | TVariantPat (variantSerial, _, _) -> TNodePat(TVariantAppPN variantSerial, [ r ], noTy, loc), ctx
   | _ ->
       let ctx =
         ctx
@@ -1133,7 +1133,7 @@ let private nameResAppPat l r loc ctx =
 let private nameResAscribePat bodyPat ascriptionTy loc ctx =
   let ascriptionTy, ctx = ctx |> resolveTy ascriptionTy loc
   let bodyPat, ctx = (bodyPat, ctx) |> nameResPat
-  HNodePat(HAscribePN, [ bodyPat ], ascriptionTy, loc), ctx
+  TNodePat(TAscribePN, [ bodyPat ], ascriptionTy, loc), ctx
 
 let private nameResAsPat bodyPat serial loc ctx =
   let bodyPat, ctx = (bodyPat, ctx) |> nameResPat
@@ -1142,53 +1142,53 @@ let private nameResAsPat bodyPat serial loc ctx =
     let name = ctx |> findName serial
     doResolveVarInPat serial name noTy loc ctx
 
-  HAsPat(bodyPat, varSerial, loc), ctx
+  TAsPat(bodyPat, varSerial, loc), ctx
 
-let private nameResPat (pat: HPat, ctx: ScopeCtx) =
+let private nameResPat (pat: TPat, ctx: ScopeCtx) =
   match pat with
-  | HLitPat _
-  | HDiscardPat _
-  | HVariantPat _ -> pat, ctx
+  | TLitPat _
+  | TDiscardPat _
+  | TVariantPat _ -> pat, ctx
 
-  | HVarPat (vis, VarSerial serial, ty, loc) -> nameResVarPat vis serial ty loc ctx
+  | TVarPat (vis, VarSerial serial, ty, loc) -> nameResVarPat vis serial ty loc ctx
 
-  | HNodePat (kind, argPats, ty, loc) ->
+  | TNodePat (kind, argPats, ty, loc) ->
       let fail () = unreachable pat
 
       match kind, argPats with
-      | HNilPN, _
-      | HNonePN, _
-      | HSomePN, _
-      | HAbortPN, _ ->
+      | TNilPN, _
+      | TNonePN, _
+      | TSomePN, _
+      | TAbortPN, _ ->
           assert (List.isEmpty argPats)
           pat, ctx
 
-      | HAppPN, [ l; r ] -> nameResAppPat l r loc ctx
-      | HAppPN, _ -> fail ()
+      | TAppPN, [ l; r ] -> nameResAppPat l r loc ctx
+      | TAppPN, _ -> fail ()
 
-      | HConsPN, _
-      | HSomeAppPN, _
-      | HVariantAppPN _, _
-      | HTuplePN, _ ->
+      | TConsPN, _
+      | TSomeAppPN, _
+      | TVariantAppPN _, _
+      | TTuplePN, _ ->
           let argPats, ctx = (argPats, ctx) |> stMap nameResPat
-          HNodePat(kind, argPats, ty, loc), ctx
+          TNodePat(kind, argPats, ty, loc), ctx
 
-      | HNavPN _, [ _ ] -> nameResNavPat pat ctx
-      | HNavPN _, _ -> fail ()
+      | TNavPN _, [ _ ] -> nameResNavPat pat ctx
+      | TNavPN _, _ -> fail ()
 
-      | HAscribePN, [ bodyPat ] -> nameResAscribePat bodyPat ty loc ctx
-      | HAscribePN, _ -> fail ()
+      | TAscribePN, [ bodyPat ] -> nameResAscribePat bodyPat ty loc ctx
+      | TAscribePN, _ -> fail ()
 
-  | HAsPat (bodyPat, VarSerial serial, loc) -> nameResAsPat bodyPat serial loc ctx
+  | TAsPat (bodyPat, VarSerial serial, loc) -> nameResAsPat bodyPat serial loc ctx
 
-  | HOrPat (l, r, loc) ->
+  | TOrPat (l, r, loc) ->
       // No OR patterns appear in arm patterns due to normalization.
       // So we can assume that it's inside of irrefutable pattern.
       let ctx = ctx |> addLog IllegalOrPatError loc
 
       let l, ctx = (l, ctx) |> nameResPat
       let r, ctx = (r, ctx) |> nameResPat
-      HOrPat(l, r, loc), ctx
+      TOrPat(l, r, loc), ctx
 
 let private doWithPatScope patScopeOpt (f: ScopeCtx -> _ * ScopeCtx) (ctx: ScopeCtx) =
   let parentPatScope, ctx =
@@ -1205,7 +1205,7 @@ let private doWithPatScope patScopeOpt (f: ScopeCtx -> _ * ScopeCtx) (ctx: Scope
 
   (patScope, result), ctx
 
-let private nameResRefutablePat (pat: HPat, ctx: ScopeCtx) =
+let private nameResRefutablePat (pat: TPat, ctx: ScopeCtx) =
   let loc = patToLoc pat
 
   let pat, pats =
@@ -1277,11 +1277,11 @@ let private nameResRefutablePat (pat: HPat, ctx: ScopeCtx) =
       ctx
 
   let pat =
-    List.fold (fun l r -> HOrPat(l, r, loc)) pat pats
+    List.fold (fun l r -> TOrPat(l, r, loc)) pat pats
 
   pat, ctx
 
-let private nameResIrrefutablePat (pat: HPat, ctx: ScopeCtx) =
+let private nameResIrrefutablePat (pat: TPat, ctx: ScopeCtx) =
   let (scope, pat), ctx =
     ctx
     |> doWithPatScope None (fun ctx -> nameResPat (pat, ctx))
@@ -1302,27 +1302,27 @@ let private nameResIrrefutablePat (pat: HPat, ctx: ScopeCtx) =
 // -----------------------------------------------
 
 type private ResolvedExpr =
-  | ResolvedAsExpr of HExpr
-  | ResolvedAsScope of NsOwner list * HExpr option * Loc
+  | ResolvedAsExpr of TExpr
+  | ResolvedAsScope of NsOwner list * TExpr option * Loc
   | NotResolvedExpr of Ident * Loc
 
 /// Tries to resolve a name expression as value; or just return None.
 let private doNameResVarExpr expr ctx =
   let serial, ty, loc =
     match expr with
-    | HVarExpr (VarSerial serial, ty, loc) -> serial, ty, loc
+    | TVarExpr (VarSerial serial, ty, loc) -> serial, ty, loc
     | _ -> unreachable ()
 
   let name = ctx |> findName serial
 
   match ctx |> resolveLocalVarName name with
-  | Some (VarSymbol serial) -> HVarExpr(serial, ty, loc) |> Some
-  | Some (FunSymbol serial) -> HFunExpr(serial, ty, loc) |> Some
-  | Some (VariantSymbol serial) -> HVariantExpr(serial, ty, loc) |> Some
+  | Some (VarSymbol serial) -> TVarExpr(serial, ty, loc) |> Some
+  | Some (FunSymbol serial) -> TFunExpr(serial, ty, loc) |> Some
+  | Some (VariantSymbol serial) -> TVariantExpr(serial, ty, loc) |> Some
 
   | None ->
       match primFromIdent name with
-      | Some prim -> HPrimExpr(prim, ty, loc) |> Some
+      | Some prim -> TPrimExpr(prim, ty, loc) |> Some
       | None -> None
 
 let private nameResVarExpr expr ctx =
@@ -1332,7 +1332,7 @@ let private nameResVarExpr expr ctx =
   | None ->
       let name, loc =
         match expr with
-        | HVarExpr (VarSerial serial, _, loc) -> findName serial ctx, loc
+        | TVarExpr (VarSerial serial, _, loc) -> findName serial ctx, loc
         | _ -> unreachable ()
 
       let ctx =
@@ -1348,7 +1348,7 @@ let private nameResNavExpr expr ctx =
   /// exprOpt is also obtained by resolving inner `nav`s as possible.
   let rec resolveExprAsNsOwners expr ctx : ResolvedExpr * ScopeCtx =
     match expr with
-    | HVarExpr (VarSerial serial, _, loc) ->
+    | TVarExpr (VarSerial serial, _, loc) ->
         let name = ctx |> findName serial
         let nsOwners = ctx |> resolveLocalNsOwners name
         let exprOpt = doNameResVarExpr expr ctx
@@ -1358,13 +1358,13 @@ let private nameResNavExpr expr ctx =
         | [], Some expr -> ResolvedAsExpr expr, ctx
         | _ -> ResolvedAsScope(nsOwners, exprOpt, loc), ctx
 
-    | HNavExpr (l, r, ty, loc) ->
+    | TNavExpr (l, r, ty, loc) ->
         let l, ctx = ctx |> resolveExprAsNsOwners l
 
         match l with
         | NotResolvedExpr _ -> l, ctx
 
-        | ResolvedAsExpr l -> ResolvedAsExpr(HNavExpr(l, r, ty, loc)), ctx
+        | ResolvedAsExpr l -> ResolvedAsExpr(TNavExpr(l, r, ty, loc)), ctx
 
         | ResolvedAsScope (superNsOwners, lExprOpt, _) ->
             assert (List.isEmpty superNsOwners |> not)
@@ -1385,16 +1385,16 @@ let private nameResNavExpr expr ctx =
                        | it -> it)
 
               match varSymbolOpt with
-              | Some (VarSymbol varSerial) -> HVarExpr(varSerial, ty, loc) |> Some
-              | Some (FunSymbol funSerial) -> HFunExpr(funSerial, ty, loc) |> Some
-              | Some (VariantSymbol variantSerial) -> HVariantExpr(variantSerial, ty, loc) |> Some
+              | Some (VarSymbol varSerial) -> TVarExpr(varSerial, ty, loc) |> Some
+              | Some (FunSymbol funSerial) -> TFunExpr(funSerial, ty, loc) |> Some
+              | Some (VariantSymbol variantSerial) -> TVariantExpr(variantSerial, ty, loc) |> Some
               | None -> None
 
             // If not resolved as value, keep try to unresolved.
             let exprOpt =
               match exprOpt, lExprOpt with
               | Some _, _ -> exprOpt
-              | None, Some l -> HNavExpr(l, r, ty, loc) |> Some
+              | None, Some l -> TNavExpr(l, r, ty, loc) |> Some
               | None, None -> None
 
             match nsOwners, exprOpt with
@@ -1424,14 +1424,14 @@ let private nameResNavExpr expr ctx =
 
       hxAbort loc, ctx
 
-let private nameResExpr (expr: HExpr, ctx: ScopeCtx) =
+let private nameResExpr (expr: TExpr, ctx: ScopeCtx) =
   match expr with
-  | HLitExpr _
-  | HPrimExpr _ -> expr, ctx
+  | TLitExpr _
+  | TPrimExpr _ -> expr, ctx
 
-  | HVarExpr _ -> nameResVarExpr expr ctx
+  | TVarExpr _ -> nameResVarExpr expr ctx
 
-  | HRecordExpr (baseOpt, fields, ty, loc) ->
+  | TRecordExpr (baseOpt, fields, ty, loc) ->
       let doArm () =
         let baseOpt, ctx =
           (baseOpt, ctx) |> stOptionMap nameResExpr
@@ -1443,11 +1443,11 @@ let private nameResExpr (expr: HExpr, ctx: ScopeCtx) =
                  let init, ctx = (init, ctx) |> nameResExpr
                  (name, init, loc), ctx)
 
-        HRecordExpr(baseOpt, fields, ty, loc), ctx
+        TRecordExpr(baseOpt, fields, ty, loc), ctx
 
       doArm ()
 
-  | HMatchExpr (cond, arms, ty, loc) ->
+  | TMatchExpr (cond, arms, ty, loc) ->
       let doArm () =
         let cond, ctx = (cond, ctx) |> nameResExpr
 
@@ -1462,31 +1462,31 @@ let private nameResExpr (expr: HExpr, ctx: ScopeCtx) =
                  let ctx = ctx |> finishScope
                  (pat, guard, body), ctx)
 
-        HMatchExpr(cond, arms, ty, loc), ctx
+        TMatchExpr(cond, arms, ty, loc), ctx
 
       doArm ()
 
-  | HNavExpr _ -> nameResNavExpr expr ctx
+  | TNavExpr _ -> nameResNavExpr expr ctx
 
-  | HNodeExpr (op, items, ty, loc) ->
+  | TNodeExpr (op, items, ty, loc) ->
       let doArm () =
         // Necessary in case of ascribe expression.
         let ty, ctx = ctx |> resolveTy ty loc
 
         let items, ctx = (items, ctx) |> stMap nameResExpr
-        HNodeExpr(op, items, ty, loc), ctx
+        TNodeExpr(op, items, ty, loc), ctx
 
       doArm ()
 
-  | HBlockExpr (stmts, last) ->
+  | TBlockExpr (stmts, last) ->
       let doArm () =
         let stmts, ctx = (stmts, ctx) |> stMap nameResExpr
         let last, ctx = (last, ctx) |> nameResExpr
-        HBlockExpr(stmts, last), ctx
+        TBlockExpr(stmts, last), ctx
 
       doArm ()
 
-  | HLetValExpr (pat, body, next, ty, loc) ->
+  | TLetValExpr (pat, body, next, ty, loc) ->
       let doArm () =
         let body, ctx =
           let ctx = ctx |> startScope ExprScope
@@ -1501,11 +1501,11 @@ let private nameResExpr (expr: HExpr, ctx: ScopeCtx) =
           let ctx = ctx |> finishScope
           pat, next, ctx
 
-        HLetValExpr(pat, body, next, ty, loc), ctx
+        TLetValExpr(pat, body, next, ty, loc), ctx
 
       doArm ()
 
-  | HLetFunExpr (serial, isRec, vis, pats, body, next, ty, loc) ->
+  | TLetFunExpr (serial, isRec, vis, pats, body, next, ty, loc) ->
       let doArm () =
         let ctx = ctx |> startScope ExprScope
 
@@ -1547,11 +1547,11 @@ let private nameResExpr (expr: HExpr, ctx: ScopeCtx) =
         let next, ctx = (next, ctx) |> nameResExpr
         let ctx = ctx |> finishScope
 
-        HLetFunExpr(serial, isRec, vis, pats, body, next, ty, loc), ctx
+        TLetFunExpr(serial, isRec, vis, pats, body, next, ty, loc), ctx
 
       doArm ()
 
-  | HTyDeclExpr (serial, _, tyArgs, tyDecl, loc) ->
+  | TTyDeclExpr (serial, _, tyArgs, tyDecl, loc) ->
       let doArm () =
         let ctx =
           ctx |> finishDefineTy serial tyArgs tyDecl loc
@@ -1560,7 +1560,7 @@ let private nameResExpr (expr: HExpr, ctx: ScopeCtx) =
 
       doArm ()
 
-  | HOpenExpr (path, loc) ->
+  | TOpenExpr (path, loc) ->
       let doArm () =
         let ctx =
           let moduleSerials = ctx |> resolveModulePath path
@@ -1574,7 +1574,7 @@ let private nameResExpr (expr: HExpr, ctx: ScopeCtx) =
 
       doArm ()
 
-  | HModuleExpr (serial, body, loc) ->
+  | TModuleExpr (serial, body, loc) ->
       let doArm () =
         let moduleName =
           ctx |> findName (moduleTySerialToInt serial)
@@ -1612,7 +1612,7 @@ let private nameResExpr (expr: HExpr, ctx: ScopeCtx) =
 
       doArm ()
 
-  | HModuleSynonymExpr (serial, path, loc) ->
+  | TModuleSynonymExpr (serial, path, loc) ->
       let doArm () =
         let name =
           ctx |> findName (moduleSynonymSerialToInt serial)
@@ -1642,10 +1642,10 @@ let private nameResExpr (expr: HExpr, ctx: ScopeCtx) =
 
       doArm ()
 
-  | HFunExpr _
-  | HVariantExpr _ -> unreachable expr // HFunExpr and HVariantExpr are generated in NameRes.
+  | TFunExpr _
+  | TVariantExpr _ -> unreachable expr // HFunExpr and HVariantExpr are generated in NameRes.
 
-let nameRes (modules: HProgram, nameCtx: NameCtx) : HProgram * ScopeCtx =
+let nameRes (modules: TProgram, nameCtx: NameCtx) : TProgram * ScopeCtx =
   let scopeCtx = ofNameCtx nameCtx
 
   let modules, scopeCtx =

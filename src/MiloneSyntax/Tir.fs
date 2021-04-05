@@ -224,65 +224,65 @@ type TySymbol =
   | UnionTySymbol of unionTySerial: TySerial
   | RecordTySymbol of recordTySerial: TySerial
 
-/// Kind of HNodePat.
+/// Kind of TNodePat.
 [<Struct; NoEquality; NoComparison>]
-type HPatKind =
+type TPatKind =
   /// `[]`.
-  | HNilPN
+  | TNilPN
 
   /// `p1 :: p2`.
-  | HConsPN
+  | TConsPN
 
-  | HNonePN
+  | TNonePN
 
   /// `Some`.
-  | HSomePN
+  | TSomePN
 
   /// `p1 p2`.
-  | HAppPN
+  | TAppPN
 
   /// `Some p1`.
-  | HSomeAppPN
+  | TSomeAppPN
 
   /// `Variant p1`.
-  | HVariantAppPN of variantApp: VariantSerial
+  | TVariantAppPN of variantApp: VariantSerial
 
   /// `p1, p2, ..., pN` or `()`.
-  | HTuplePN
+  | TTuplePN
 
   /// `p1.r`
-  | HNavPN of navR: Ident
+  | TNavPN of navR: Ident
 
   /// `p1: ty`
-  | HAscribePN
+  | TAscribePN
 
   /// Generated after compile error occurred while processing a pattern.
-  | HAbortPN
+  | TAbortPN
 
 /// Pattern in HIR.
 [<NoEquality; NoComparison>]
-type HPat =
-  | HLitPat of Lit * Loc
+type TPat =
+  | TLitPat of Lit * Loc
 
   /// `_`.
-  | HDiscardPat of Ty * Loc
+  | TDiscardPat of Ty * Loc
 
   /// Variable pattern.
-  | HVarPat of Vis * VarSerial * Ty * Loc
+  | TVarPat of Vis * VarSerial * Ty * Loc
 
   /// Variant name pattern.
-  | HVariantPat of VariantSerial * Ty * Loc
+  | TVariantPat of VariantSerial * Ty * Loc
 
-  | HNodePat of HPatKind * HPat list * Ty * Loc
+  | TNodePat of TPatKind * TPat list * Ty * Loc
 
-  | HAsPat of HPat * VarSerial * Loc
+  | TAsPat of TPat * VarSerial * Loc
 
   /// Disjunction.
-  | HOrPat of HPat * HPat * Loc
+  | TOrPat of TPat * TPat * Loc
 
 /// Primitive in HIR.
 [<RequireQualifiedAccess; Struct; NoComparison>]
-type HPrim =
+type TPrim =
   // operator:
   | Not
   | Add
@@ -333,85 +333,85 @@ type HPrim =
   | PtrWrite
 
 [<Struct; NoEquality; NoComparison>]
-type HExprKind =
-  | HAbortEN
+type TExprKind =
+  | TAbortEN
 
   /// `-x`.
-  | HMinusEN
+  | TMinusEN
 
-  | HAppEN
+  | TAppEN
 
   /// Type ascription `x : 'x`.
-  | HAscribeEN
+  | TAscribeEN
 
   /// `s.[i]`
-  | HIndexEN
+  | TIndexEN
 
   /// `s.[l .. r]`
-  | HSliceEN
+  | TSliceEN
 
   /// Direct call to native fun.
-  | HCallNativeEN of funName: string
+  | TCallNativeEN of funName: string
 
   /// Tuple constructor, e.g. `x, y, z`.
-  | HTupleEN
+  | TTupleEN
 
   /// Use function as function pointer.
-  | HNativeFunEN of FunSerial
+  | TNativeFunEN of FunSerial
 
   /// Embed some C expression to output.
-  | HNativeExprEN of nativeExprCode: string
+  | TNativeExprEN of nativeExprCode: string
 
   /// Embed some C statement to output.
-  | HNativeStmtEN of nativeStmtCode: string
+  | TNativeStmtEN of nativeStmtCode: string
 
   /// Embed some C toplevel codes to output.
-  | HNativeDeclEN of nativeDeclCode: string
+  | TNativeDeclEN of nativeDeclCode: string
 
   /// Size of type.
-  | HSizeOfValEN
+  | TSizeOfValEN
 
 /// Expression in HIR.
 [<NoEquality; NoComparison>]
-type HExpr =
-  | HLitExpr of Lit * Loc
+type TExpr =
+  | TLitExpr of Lit * Loc
 
   /// Name of variable.
-  | HVarExpr of VarSerial * Ty * Loc
+  | TVarExpr of VarSerial * Ty * Loc
 
   /// Name of function.
-  | HFunExpr of FunSerial * Ty * Loc
+  | TFunExpr of FunSerial * Ty * Loc
 
   /// Name of variant.
-  | HVariantExpr of VariantSerial * Ty * Loc
+  | TVariantExpr of VariantSerial * Ty * Loc
 
-  | HPrimExpr of HPrim * Ty * Loc
+  | TPrimExpr of TPrim * Ty * Loc
 
-  | HRecordExpr of HExpr option * fields: (Ident * HExpr * Loc) list * Ty * Loc
+  | TRecordExpr of TExpr option * fields: (Ident * TExpr * Loc) list * Ty * Loc
 
   /// arms: (pat, guard, body). Guard is `true` if omit.
-  | HMatchExpr of cond: HExpr * arms: (HPat * HExpr * HExpr) list * Ty * Loc
+  | TMatchExpr of cond: TExpr * arms: (TPat * TExpr * TExpr) list * Ty * Loc
 
   /// E.g. `List.isEmpty`, `str.Length`
-  | HNavExpr of HExpr * Ident * Ty * Loc
+  | TNavExpr of TExpr * Ident * Ty * Loc
 
   /// Some built-in operation.
-  | HNodeExpr of HExprKind * HExpr list * Ty * Loc
+  | TNodeExpr of TExprKind * TExpr list * Ty * Loc
 
   /// Evaluate a list of expressions and returns the last, e.g. `x1; x2; ...; y`.
-  | HBlockExpr of HExpr list * HExpr
+  | TBlockExpr of TExpr list * TExpr
 
-  | HLetValExpr of pat: HPat * init: HExpr * next: HExpr * Ty * Loc
-  | HLetFunExpr of FunSerial * IsRec * Vis * args: HPat list * body: HExpr * next: HExpr * Ty * Loc
+  | TLetValExpr of pat: TPat * init: TExpr * next: TExpr * Ty * Loc
+  | TLetFunExpr of FunSerial * IsRec * Vis * args: TPat list * body: TExpr * next: TExpr * Ty * Loc
 
   /// Type declaration.
-  | HTyDeclExpr of TySerial * Vis * tyArgs: TySerial list * TyDecl * Loc
-  | HOpenExpr of Ident list * Loc
-  | HModuleExpr of ModuleTySerial * body: HExpr list * Loc
-  | HModuleSynonymExpr of ModuleSynonymSerial * path: Ident list * Loc
+  | TTyDeclExpr of TySerial * Vis * tyArgs: TySerial list * TyDecl * Loc
+  | TOpenExpr of Ident list * Loc
+  | TModuleExpr of ModuleTySerial * body: TExpr list * Loc
+  | TModuleSynonymExpr of ModuleSynonymSerial * path: Ident list * Loc
 
-/// HIR program. (project name, module name, decls) list.
-type HProgram = (string * string * HExpr list) list
+/// TIR program. (project name, module name, decls) list.
+type TProgram = (string * string * TExpr list) list
 
 // -----------------------------------------------
 // Errors
@@ -580,62 +580,62 @@ let litToTy (lit: Lit) : Ty =
   | StrLit _ -> tyStr
 
 // -----------------------------------------------
-// Primitives (HIR)
+// Primitives (TIR)
 // -----------------------------------------------
 
 let primFromIdent ident =
   match ident with
-  | "not" -> HPrim.Not |> Some
+  | "not" -> TPrim.Not |> Some
 
-  | "exit" -> HPrim.Exit |> Some
+  | "exit" -> TPrim.Exit |> Some
 
-  | "assert" -> HPrim.Assert |> Some
+  | "assert" -> TPrim.Assert |> Some
 
-  | "box" -> HPrim.Box |> Some
+  | "box" -> TPrim.Box |> Some
 
-  | "unbox" -> HPrim.Unbox |> Some
+  | "unbox" -> TPrim.Unbox |> Some
 
-  | "printfn" -> HPrim.Printfn |> Some
+  | "printfn" -> TPrim.Printfn |> Some
 
-  | "compare" -> HPrim.Compare |> Some
+  | "compare" -> TPrim.Compare |> Some
 
-  | "char" -> HPrim.Char |> Some
+  | "char" -> TPrim.Char |> Some
 
   | "int"
-  | "int32" -> HPrim.ToInt(IntFlavor(Signed, I32)) |> Some
+  | "int32" -> TPrim.ToInt(IntFlavor(Signed, I32)) |> Some
   | "uint"
-  | "uint32" -> HPrim.ToInt(IntFlavor(Unsigned, I32)) |> Some
+  | "uint32" -> TPrim.ToInt(IntFlavor(Unsigned, I32)) |> Some
   | "sbyte"
-  | "int8" -> HPrim.ToInt(IntFlavor(Signed, I8)) |> Some
+  | "int8" -> TPrim.ToInt(IntFlavor(Signed, I8)) |> Some
   | "byte"
-  | "uint8" -> HPrim.ToInt(IntFlavor(Unsigned, I8)) |> Some
+  | "uint8" -> TPrim.ToInt(IntFlavor(Unsigned, I8)) |> Some
 
-  | "int16" -> HPrim.ToInt(IntFlavor(Signed, I16)) |> Some
-  | "int64" -> HPrim.ToInt(IntFlavor(Signed, I64)) |> Some
-  | "nativeint" -> HPrim.ToInt(IntFlavor(Signed, IPtr)) |> Some
-  | "uint16" -> HPrim.ToInt(IntFlavor(Unsigned, I16)) |> Some
-  | "uint64" -> HPrim.ToInt(IntFlavor(Unsigned, I64)) |> Some
-  | "unativeint" -> HPrim.ToInt(IntFlavor(Unsigned, IPtr)) |> Some
+  | "int16" -> TPrim.ToInt(IntFlavor(Signed, I16)) |> Some
+  | "int64" -> TPrim.ToInt(IntFlavor(Signed, I64)) |> Some
+  | "nativeint" -> TPrim.ToInt(IntFlavor(Signed, IPtr)) |> Some
+  | "uint16" -> TPrim.ToInt(IntFlavor(Unsigned, I16)) |> Some
+  | "uint64" -> TPrim.ToInt(IntFlavor(Unsigned, I64)) |> Some
+  | "unativeint" -> TPrim.ToInt(IntFlavor(Unsigned, IPtr)) |> Some
 
-  | "float" -> HPrim.ToFloat F64 |> Some
-  | "float32" -> HPrim.ToFloat F32 |> Some
+  | "float" -> TPrim.ToFloat F64 |> Some
+  | "float32" -> TPrim.ToFloat F32 |> Some
 
-  | "string" -> HPrim.String |> Some
+  | "string" -> TPrim.String |> Some
 
-  | "None" -> HPrim.OptionNone |> Some
+  | "None" -> TPrim.OptionNone |> Some
 
-  | "Some" -> HPrim.OptionSome |> Some
+  | "Some" -> TPrim.OptionSome |> Some
 
-  | "inRegion" -> HPrim.InRegion |> Some
+  | "inRegion" -> TPrim.InRegion |> Some
 
-  | "__nativeFun" -> HPrim.NativeFun |> Some
-  | "__nativeCast" -> HPrim.NativeCast |> Some
-  | "__nativeExpr" -> HPrim.NativeExpr |> Some
-  | "__nativeStmt" -> HPrim.NativeStmt |> Some
-  | "__nativeDecl" -> HPrim.NativeDecl |> Some
-  | "__sizeOfVal" -> HPrim.SizeOfVal |> Some
-  | "__ptrRead" -> HPrim.PtrRead |> Some
-  | "__ptrWrite" -> HPrim.PtrWrite |> Some
+  | "__nativeFun" -> TPrim.NativeFun |> Some
+  | "__nativeCast" -> TPrim.NativeCast |> Some
+  | "__nativeExpr" -> TPrim.NativeExpr |> Some
+  | "__nativeStmt" -> TPrim.NativeStmt |> Some
+  | "__nativeDecl" -> TPrim.NativeDecl |> Some
+  | "__sizeOfVal" -> TPrim.SizeOfVal |> Some
+  | "__ptrRead" -> TPrim.PtrRead |> Some
+  | "__ptrWrite" -> TPrim.PtrWrite |> Some
 
   | _ -> None
 
@@ -645,117 +645,117 @@ let primToTySpec prim =
   let poly ty traits = TySpec(ty, traits)
 
   match prim with
-  | HPrim.Add ->
+  | TPrim.Add ->
       let addTy = meta 1
       poly (tyFun addTy (tyFun addTy addTy)) [ AddTrait addTy ]
 
-  | HPrim.Sub
-  | HPrim.Mul
-  | HPrim.Div
-  | HPrim.Modulo ->
+  | TPrim.Sub
+  | TPrim.Mul
+  | TPrim.Div
+  | TPrim.Modulo ->
       let ty = meta 1
       poly (tyFun ty (tyFun ty ty)) [ IsNumberTrait ty ]
 
-  | HPrim.BitAnd
-  | HPrim.BitOr
-  | HPrim.BitXor ->
+  | TPrim.BitAnd
+  | TPrim.BitOr
+  | TPrim.BitXor ->
       let ty = meta 1
       poly (tyFun ty (tyFun ty ty)) [ IsIntTrait ty ]
 
-  | HPrim.LeftShift
-  | HPrim.RightShift ->
+  | TPrim.LeftShift
+  | TPrim.RightShift ->
       let ty = meta 1
       poly (tyFun ty (tyFun tyInt ty)) [ IsIntTrait ty ]
 
-  | HPrim.Equal ->
+  | TPrim.Equal ->
       let argTy = meta 1
       poly (tyFun argTy (tyFun argTy tyBool)) [ EqualTrait argTy ]
 
-  | HPrim.Less ->
+  | TPrim.Less ->
       let compareTy = meta 1
       poly (tyFun compareTy (tyFun compareTy tyBool)) [ CompareTrait compareTy ]
 
-  | HPrim.Compare ->
+  | TPrim.Compare ->
       let compareTy = meta 1
       poly (tyFun compareTy (tyFun compareTy tyInt)) [ CompareTrait compareTy ]
 
-  | HPrim.Nil ->
+  | TPrim.Nil ->
       let itemTy = meta 1
       poly (tyList itemTy) []
 
-  | HPrim.Cons ->
+  | TPrim.Cons ->
       let itemTy = meta 1
       let listTy = tyList itemTy
       poly (tyFun itemTy (tyFun listTy listTy)) []
 
-  | HPrim.OptionNone ->
+  | TPrim.OptionNone ->
       let itemTy = meta 1
       poly (tyOption itemTy) []
 
-  | HPrim.OptionSome ->
+  | TPrim.OptionSome ->
       let itemTy = meta 1
       let listTy = tyOption itemTy
       poly (tyFun itemTy listTy) []
 
-  | HPrim.Not -> mono (tyFun tyBool tyBool)
+  | TPrim.Not -> mono (tyFun tyBool tyBool)
 
-  | HPrim.Exit ->
+  | TPrim.Exit ->
       let resultTy = meta 1
       poly (tyFun tyInt resultTy) []
 
-  | HPrim.Assert -> mono (tyFun tyBool tyUnit)
+  | TPrim.Assert -> mono (tyFun tyBool tyUnit)
 
-  | HPrim.Box ->
+  | TPrim.Box ->
       let itemTy = meta 1
       poly (tyFun itemTy tyObj) []
 
-  | HPrim.Unbox ->
+  | TPrim.Unbox ->
       let itemTy = meta 1
       poly (tyFun tyObj itemTy) []
 
-  | HPrim.Char ->
+  | TPrim.Char ->
       let srcTy = meta 1
       poly (tyFun srcTy tyChar) [ ToCharTrait srcTy ]
 
-  | HPrim.ToInt flavor ->
+  | TPrim.ToInt flavor ->
       let toIntTy = meta 1
       let resultTy = Ty(IntTk flavor, [])
       poly (tyFun toIntTy resultTy) [ ToIntTrait toIntTy ]
 
-  | HPrim.ToFloat flavor ->
+  | TPrim.ToFloat flavor ->
       let srcTy = meta 1
       let resultTy = Ty(FloatTk flavor, [])
       poly (tyFun srcTy resultTy) [ ToFloatTrait srcTy ]
 
-  | HPrim.String ->
+  | TPrim.String ->
       let toStrTy = meta 1
       poly (tyFun toStrTy tyStr) [ ToStringTrait toStrTy ]
 
-  | HPrim.StrLength -> mono (tyFun tyStr tyInt)
+  | TPrim.StrLength -> mono (tyFun tyStr tyInt)
 
-  | HPrim.InRegion -> mono (tyFun (tyFun tyUnit tyInt) tyInt)
+  | TPrim.InRegion -> mono (tyFun (tyFun tyUnit tyInt) tyInt)
 
-  | HPrim.Printfn
-  | HPrim.NativeFun
-  | HPrim.NativeExpr
-  | HPrim.NativeStmt
-  | HPrim.NativeDecl ->
+  | TPrim.Printfn
+  | TPrim.NativeFun
+  | TPrim.NativeExpr
+  | TPrim.NativeStmt
+  | TPrim.NativeDecl ->
       // Incorrect use of this primitive is handled as error before instantiating its type.
       unreachable ()
 
-  | HPrim.NativeCast ->
+  | TPrim.NativeCast ->
       let srcTy = meta 1
       let destTy = meta 2
       poly (tyFun srcTy destTy) [ PtrTrait srcTy; PtrTrait destTy ]
 
-  | HPrim.SizeOfVal -> poly (tyFun (meta 1) tyInt) []
+  | TPrim.SizeOfVal -> poly (tyFun (meta 1) tyInt) []
 
-  | HPrim.PtrRead ->
+  | TPrim.PtrRead ->
       // __constptr<'p> -> int -> 'a
       let valueTy = meta 1
       poly (tyFun (tyConstPtr valueTy) (tyFun tyInt valueTy)) []
 
-  | HPrim.PtrWrite ->
+  | TPrim.PtrWrite ->
       // nativeptr<'a> -> int -> 'a -> unit
       let valueTy = meta 1
       poly (tyFun (tyNativePtr valueTy) (tyFun tyInt (tyFun valueTy tyUnit))) []
@@ -764,34 +764,34 @@ let primToTySpec prim =
 // Patterns (HIR)
 // -----------------------------------------------
 
-let hpAbort ty loc = HNodePat(HAbortPN, [], ty, loc)
+let hpAbort ty loc = TNodePat(TAbortPN, [], ty, loc)
 
-let patExtract (pat: HPat) : Ty * Loc =
+let patExtract (pat: TPat) : Ty * Loc =
   match pat with
-  | HLitPat (lit, a) -> litToTy lit, a
-  | HDiscardPat (ty, a) -> ty, a
-  | HVarPat (_, _, ty, a) -> ty, a
-  | HVariantPat (_, ty, a) -> ty, a
+  | TLitPat (lit, a) -> litToTy lit, a
+  | TDiscardPat (ty, a) -> ty, a
+  | TVarPat (_, _, ty, a) -> ty, a
+  | TVariantPat (_, ty, a) -> ty, a
 
-  | HNodePat (_, _, ty, a) -> ty, a
-  | HAsPat (bodyPat, _, a) -> patToTy bodyPat, a
-  | HOrPat (l, _, a) -> patToTy l, a
+  | TNodePat (_, _, ty, a) -> ty, a
+  | TAsPat (bodyPat, _, a) -> patToTy bodyPat, a
+  | TOrPat (l, _, a) -> patToTy l, a
 
 let patToTy pat = pat |> patExtract |> fst
 
 let patToLoc pat = pat |> patExtract |> snd
 
-let patMap (f: Ty -> Ty) (g: Loc -> Loc) (pat: HPat) : HPat =
+let patMap (f: Ty -> Ty) (g: Loc -> Loc) (pat: TPat) : TPat =
   let rec go pat =
     match pat with
-    | HLitPat (lit, a) -> HLitPat(lit, g a)
-    | HDiscardPat (ty, a) -> HDiscardPat(f ty, g a)
-    | HVarPat (vis, serial, ty, a) -> HVarPat(vis, serial, f ty, g a)
-    | HVariantPat (serial, ty, a) -> HVariantPat(serial, f ty, g a)
+    | TLitPat (lit, a) -> TLitPat(lit, g a)
+    | TDiscardPat (ty, a) -> TDiscardPat(f ty, g a)
+    | TVarPat (vis, serial, ty, a) -> TVarPat(vis, serial, f ty, g a)
+    | TVariantPat (serial, ty, a) -> TVariantPat(serial, f ty, g a)
 
-    | HNodePat (kind, args, ty, a) -> HNodePat(kind, List.map go args, f ty, g a)
-    | HAsPat (bodyPat, serial, a) -> HAsPat(go bodyPat, serial, g a)
-    | HOrPat (l, r, a) -> HOrPat(go l, go r, g a)
+    | TNodePat (kind, args, ty, a) -> TNodePat(kind, List.map go args, f ty, g a)
+    | TAsPat (bodyPat, serial, a) -> TAsPat(go bodyPat, serial, g a)
+    | TOrPat (l, r, a) -> TOrPat(go l, go r, g a)
 
   go pat
 
@@ -800,21 +800,21 @@ let patMap (f: Ty -> Ty) (g: Loc -> Loc) (pat: HPat) : HPat =
 let patNormalize pat =
   let rec go pat =
     match pat with
-    | HLitPat _
-    | HDiscardPat _
-    | HVarPat _
-    | HVariantPat _ -> [ pat ]
+    | TLitPat _
+    | TDiscardPat _
+    | TVarPat _
+    | TVariantPat _ -> [ pat ]
 
-    | HNodePat (kind, argPats, ty, loc) ->
+    | TNodePat (kind, argPats, ty, loc) ->
         argPats
         |> doNormalizePats
-        |> List.map (fun itemPats -> HNodePat(kind, itemPats, ty, loc))
+        |> List.map (fun itemPats -> TNodePat(kind, itemPats, ty, loc))
 
-    | HAsPat (bodyPat, serial, loc) ->
+    | TAsPat (bodyPat, serial, loc) ->
         go bodyPat
-        |> List.map (fun bodyPat -> HAsPat(bodyPat, serial, loc))
+        |> List.map (fun bodyPat -> TAsPat(bodyPat, serial, loc))
 
-    | HOrPat (l, r, _) -> List.append (go l) (go r)
+    | TOrPat (l, r, _) -> List.append (go l) (go r)
 
   go pat
 
@@ -836,33 +836,33 @@ let private doNormalizePats pats =
 let patIsClearlyExhaustive isNewtypeVariant pat =
   let rec go pat =
     match pat with
-    | HLitPat _ -> false
+    | TLitPat _ -> false
 
-    | HDiscardPat _
-    | HVarPat _ -> true
+    | TDiscardPat _
+    | TVarPat _ -> true
 
-    | HVariantPat (variantSerial, _, _) -> isNewtypeVariant variantSerial
+    | TVariantPat (variantSerial, _, _) -> isNewtypeVariant variantSerial
 
-    | HNodePat (kind, argPats, _, _) ->
+    | TNodePat (kind, argPats, _, _) ->
         match kind, argPats with
-        | HVariantAppPN variantSerial, [ payloadPat ] -> isNewtypeVariant variantSerial && go payloadPat
+        | TVariantAppPN variantSerial, [ payloadPat ] -> isNewtypeVariant variantSerial && go payloadPat
 
-        | HAbortPN, _ -> true
+        | TAbortPN, _ -> true
 
-        | HNilPN, _
-        | HConsPN, _
-        | HNonePN, _
-        | HSomePN, _
-        | HSomeAppPN, _
-        | HAppPN, _
-        | HVariantAppPN _, _
-        | HNavPN _, _ -> false
+        | TNilPN, _
+        | TConsPN, _
+        | TNonePN, _
+        | TSomePN, _
+        | TSomeAppPN, _
+        | TAppPN, _
+        | TVariantAppPN _, _
+        | TNavPN _, _ -> false
 
-        | HTuplePN, _
-        | HAscribePN, _ -> argPats |> List.forall go
+        | TTuplePN, _
+        | TAscribePN, _ -> argPats |> List.forall go
 
-    | HAsPat (bodyPat, _, _) -> go bodyPat
-    | HOrPat (l, r, _) -> go l || go r
+    | TAsPat (bodyPat, _, _) -> go bodyPat
+    | TOrPat (l, r, _) -> go l || go r
 
   go pat
 
@@ -870,81 +870,81 @@ let patIsClearlyExhaustive isNewtypeVariant pat =
 // Expressions (HIR)
 // -----------------------------------------------
 
-let hxTrue loc = HLitExpr(BoolLit true, loc)
+let hxTrue loc = TLitExpr(BoolLit true, loc)
 
-let hxApp f x ty loc = HNodeExpr(HAppEN, [ f; x ], ty, loc)
+let hxApp f x ty loc = TNodeExpr(TAppEN, [ f; x ], ty, loc)
 
 let hxAscribe expr ty loc =
-  HNodeExpr(HAscribeEN, [ expr ], ty, loc)
+  TNodeExpr(TAscribeEN, [ expr ], ty, loc)
 
 let hxSemi items loc =
   match splitLast items with
-  | Some (stmts, last) -> HBlockExpr(stmts, last)
-  | None -> HNodeExpr(HTupleEN, [], tyUnit, loc)
+  | Some (stmts, last) -> TBlockExpr(stmts, last)
+  | None -> TNodeExpr(TTupleEN, [], tyUnit, loc)
 
 let hxTuple items loc =
-  HNodeExpr(HTupleEN, items, tyTuple (List.map exprToTy items), loc)
+  TNodeExpr(TTupleEN, items, tyTuple (List.map exprToTy items), loc)
 
 let hxUnit loc = hxTuple [] loc
 
 let hxNil itemTy loc =
-  HPrimExpr(HPrim.Nil, tyList itemTy, loc)
+  TPrimExpr(TPrim.Nil, tyList itemTy, loc)
 
-let exprExtract (expr: HExpr) : Ty * Loc =
+let exprExtract (expr: TExpr) : Ty * Loc =
   match expr with
-  | HLitExpr (lit, a) -> litToTy lit, a
-  | HVarExpr (_, ty, a) -> ty, a
-  | HFunExpr (_, ty, a) -> ty, a
-  | HVariantExpr (_, ty, a) -> ty, a
-  | HPrimExpr (_, ty, a) -> ty, a
-  | HRecordExpr (_, _, ty, a) -> ty, a
-  | HMatchExpr (_, _, ty, a) -> ty, a
-  | HNavExpr (_, _, ty, a) -> ty, a
-  | HNodeExpr (_, _, ty, a) -> ty, a
-  | HBlockExpr (_, last) -> exprExtract last
-  | HLetValExpr (_, _, _, ty, a) -> ty, a
-  | HLetFunExpr (_, _, _, _, _, _, ty, a) -> ty, a
-  | HTyDeclExpr (_, _, _, _, a) -> tyUnit, a
-  | HOpenExpr (_, a) -> tyUnit, a
-  | HModuleExpr (_, _, a) -> tyUnit, a
-  | HModuleSynonymExpr (_, _, a) -> tyUnit, a
+  | TLitExpr (lit, a) -> litToTy lit, a
+  | TVarExpr (_, ty, a) -> ty, a
+  | TFunExpr (_, ty, a) -> ty, a
+  | TVariantExpr (_, ty, a) -> ty, a
+  | TPrimExpr (_, ty, a) -> ty, a
+  | TRecordExpr (_, _, ty, a) -> ty, a
+  | TMatchExpr (_, _, ty, a) -> ty, a
+  | TNavExpr (_, _, ty, a) -> ty, a
+  | TNodeExpr (_, _, ty, a) -> ty, a
+  | TBlockExpr (_, last) -> exprExtract last
+  | TLetValExpr (_, _, _, ty, a) -> ty, a
+  | TLetFunExpr (_, _, _, _, _, _, ty, a) -> ty, a
+  | TTyDeclExpr (_, _, _, _, a) -> tyUnit, a
+  | TOpenExpr (_, a) -> tyUnit, a
+  | TModuleExpr (_, _, a) -> tyUnit, a
+  | TModuleSynonymExpr (_, _, a) -> tyUnit, a
 
-let exprMap (f: Ty -> Ty) (g: Loc -> Loc) (expr: HExpr) : HExpr =
+let exprMap (f: Ty -> Ty) (g: Loc -> Loc) (expr: TExpr) : TExpr =
   let goPat pat = patMap f g pat
 
   let rec go expr =
     match expr with
-    | HLitExpr (lit, a) -> HLitExpr(lit, g a)
-    | HVarExpr (serial, ty, a) -> HVarExpr(serial, f ty, g a)
-    | HFunExpr (serial, ty, a) -> HFunExpr(serial, f ty, g a)
-    | HVariantExpr (serial, ty, a) -> HVariantExpr(serial, f ty, g a)
-    | HPrimExpr (prim, ty, a) -> HPrimExpr(prim, f ty, g a)
+    | TLitExpr (lit, a) -> TLitExpr(lit, g a)
+    | TVarExpr (serial, ty, a) -> TVarExpr(serial, f ty, g a)
+    | TFunExpr (serial, ty, a) -> TFunExpr(serial, f ty, g a)
+    | TVariantExpr (serial, ty, a) -> TVariantExpr(serial, f ty, g a)
+    | TPrimExpr (prim, ty, a) -> TPrimExpr(prim, f ty, g a)
 
-    | HRecordExpr (baseOpt, fields, ty, a) ->
+    | TRecordExpr (baseOpt, fields, ty, a) ->
         let baseOpt = baseOpt |> Option.map go
 
         let fields =
           fields
           |> List.map (fun (name, init, a) -> name, go init, g a)
 
-        HRecordExpr(baseOpt, fields, f ty, g a)
+        TRecordExpr(baseOpt, fields, f ty, g a)
 
-    | HMatchExpr (cond, arms, ty, a) ->
+    | TMatchExpr (cond, arms, ty, a) ->
         let arms =
           arms
           |> List.map (fun (pat, guard, body) -> goPat pat, go guard, go body)
 
-        HMatchExpr(go cond, arms, f ty, g a)
-    | HNavExpr (sub, mes, ty, a) -> HNavExpr(go sub, mes, f ty, g a)
-    | HNodeExpr (kind, args, resultTy, a) -> HNodeExpr(kind, List.map go args, f resultTy, g a)
-    | HBlockExpr (stmts, last) -> HBlockExpr(List.map go stmts, go last)
-    | HLetValExpr (pat, init, next, ty, a) -> HLetValExpr(goPat pat, go init, go next, f ty, g a)
-    | HLetFunExpr (serial, isRec, vis, args, body, next, ty, a) ->
-        HLetFunExpr(serial, isRec, vis, List.map goPat args, go body, go next, f ty, g a)
-    | HTyDeclExpr (serial, vis, tyArgs, tyDef, a) -> HTyDeclExpr(serial, vis, tyArgs, tyDef, g a)
-    | HOpenExpr (path, a) -> HOpenExpr(path, g a)
-    | HModuleExpr (name, body, a) -> HModuleExpr(name, List.map go body, g a)
-    | HModuleSynonymExpr (name, path, a) -> HModuleSynonymExpr(name, path, g a)
+        TMatchExpr(go cond, arms, f ty, g a)
+    | TNavExpr (sub, mes, ty, a) -> TNavExpr(go sub, mes, f ty, g a)
+    | TNodeExpr (kind, args, resultTy, a) -> TNodeExpr(kind, List.map go args, f resultTy, g a)
+    | TBlockExpr (stmts, last) -> TBlockExpr(List.map go stmts, go last)
+    | TLetValExpr (pat, init, next, ty, a) -> TLetValExpr(goPat pat, go init, go next, f ty, g a)
+    | TLetFunExpr (serial, isRec, vis, args, body, next, ty, a) ->
+        TLetFunExpr(serial, isRec, vis, List.map goPat args, go body, go next, f ty, g a)
+    | TTyDeclExpr (serial, vis, tyArgs, tyDef, a) -> TTyDeclExpr(serial, vis, tyArgs, tyDef, g a)
+    | TOpenExpr (path, a) -> TOpenExpr(path, g a)
+    | TModuleExpr (name, body, a) -> TModuleExpr(name, List.map go body, g a)
+    | TModuleSynonymExpr (name, path, a) -> TModuleSynonymExpr(name, path, g a)
 
   go expr
 
@@ -961,7 +961,7 @@ let exprToLoc expr =
 // -----------------------------------------------
 
 /// Does something for each module in program, updating a state.
-let hirProgramEachModule (mutator: HExpr list * 'S -> HExpr list * 'S) (modules: HProgram, state: 'S) : HProgram * 'S =
+let hirProgramEachModule (mutator: TExpr list * 'S -> TExpr list * 'S) (modules: TProgram, state: 'S) : TProgram * 'S =
   (modules, state)
   |> stMap
        (fun ((p, m, decls), state) ->
@@ -969,12 +969,12 @@ let hirProgramEachModule (mutator: HExpr list * 'S -> HExpr list * 'S) (modules:
          (p, m, decls), state)
 
 /// Does something for each toplevel expression in program, updating a state.
-let hirProgramEachExpr (mutator: HExpr * 'S -> HExpr * 'S) (modules: HProgram, state: 'S) : HProgram * 'S =
+let hirProgramEachExpr (mutator: TExpr * 'S -> TExpr * 'S) (modules: TProgram, state: 'S) : TProgram * 'S =
   (modules, state)
   |> hirProgramEachModule (stMap mutator)
 
 /// Iterates over toplevel expressions in program to update a state.
-let hirProgramFoldExpr (folder: HExpr * 'S -> 'S) (state: 'S) (modules: HProgram) : 'S =
+let hirProgramFoldExpr (folder: TExpr * 'S -> 'S) (state: 'S) (modules: TProgram) : 'S =
   modules
   |> List.fold
        (fun state (_, _, decls) ->

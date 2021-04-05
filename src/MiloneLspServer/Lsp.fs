@@ -193,7 +193,7 @@ type private TokenizeFullResult = (Token * Pos) list
 
 type private ParseResult = ARoot * (string * Pos) list
 
-type private BundleResult = (HProgram * Typing.TyCtx) option * (string * Loc) list * MutMap<DocId, DocVersion>
+type private BundleResult = (TProgram * Typing.TyCtx) option * (string * Loc) list * MutMap<DocId, DocVersion>
 
 [<RequireQualifiedAccess; NoEquality; NoComparison>]
 type LangServiceState =
@@ -264,37 +264,37 @@ type private Visitor =
     OnVar: VarSerial * DefOrUse * Ty * Loc -> unit
     OnFun: FunSerial * Ty option * Loc -> unit
     OnVariant: VariantSerial * Ty * Loc -> unit
-    OnPrim: HPrim * Ty * Loc -> unit }
+    OnPrim: TPrim * Ty * Loc -> unit }
 
 let private dfsPat (visitor: Visitor) pat =
   match pat with
-  | HLitPat _ -> ()
-  | HDiscardPat (ty, loc) -> visitor.OnDiscardPat(ty, loc)
-  | HVarPat (_, varSerial, ty, loc) -> visitor.OnVar(varSerial, Def, ty, loc)
-  | HVariantPat (variantSerial, ty, loc) -> visitor.OnVariant(variantSerial, ty, loc)
+  | TLitPat _ -> ()
+  | TDiscardPat (ty, loc) -> visitor.OnDiscardPat(ty, loc)
+  | TVarPat (_, varSerial, ty, loc) -> visitor.OnVar(varSerial, Def, ty, loc)
+  | TVariantPat (variantSerial, ty, loc) -> visitor.OnVariant(variantSerial, ty, loc)
 
-  | HNodePat (_, pats, _, _) ->
+  | TNodePat (_, pats, _, _) ->
       for pat in pats do
         dfsPat visitor pat
 
-  | HAsPat (bodyPat, varSerial, loc) ->
+  | TAsPat (bodyPat, varSerial, loc) ->
       let ty = patToTy bodyPat
       visitor.OnVar(varSerial, Def, ty, loc)
       dfsPat visitor bodyPat
 
-  | HOrPat (l, r, _) ->
+  | TOrPat (l, r, _) ->
       dfsPat visitor l
       dfsPat visitor r
 
 let private dfsExpr (visitor: Visitor) expr =
   match expr with
-  | HLitExpr _ -> ()
-  | HVarExpr (varSerial, ty, loc) -> visitor.OnVar(varSerial, Use, ty, loc)
-  | HFunExpr (funSerial, ty, loc) -> visitor.OnFun(funSerial, Some ty, loc)
-  | HVariantExpr (variantSerial, ty, loc) -> visitor.OnVariant(variantSerial, ty, loc)
-  | HPrimExpr (prim, ty, loc) -> visitor.OnPrim(prim, ty, loc)
+  | TLitExpr _ -> ()
+  | TVarExpr (varSerial, ty, loc) -> visitor.OnVar(varSerial, Use, ty, loc)
+  | TFunExpr (funSerial, ty, loc) -> visitor.OnFun(funSerial, Some ty, loc)
+  | TVariantExpr (variantSerial, ty, loc) -> visitor.OnVariant(variantSerial, ty, loc)
+  | TPrimExpr (prim, ty, loc) -> visitor.OnPrim(prim, ty, loc)
 
-  | HMatchExpr (cond, arms, _, _) ->
+  | TMatchExpr (cond, arms, _, _) ->
       dfsExpr visitor cond
 
       for pat, guard, expr in arms do
@@ -302,30 +302,30 @@ let private dfsExpr (visitor: Visitor) expr =
         dfsExpr visitor guard
         dfsExpr visitor expr
 
-  | HRecordExpr (baseOpt, fields, _, _) ->
+  | TRecordExpr (baseOpt, fields, _, _) ->
       baseOpt |> Option.iter (dfsExpr visitor)
 
       for _, field, _ in fields do
         dfsExpr visitor field
 
-  | HNavExpr (expr, _, _, _) -> dfsExpr visitor expr
+  | TNavExpr (expr, _, _, _) -> dfsExpr visitor expr
 
-  | HNodeExpr (_, exprs, _, _) ->
+  | TNodeExpr (_, exprs, _, _) ->
       for expr in exprs do
         dfsExpr visitor expr
 
-  | HBlockExpr (stmts, expr) ->
+  | TBlockExpr (stmts, expr) ->
       for stmt in stmts do
         dfsExpr visitor stmt
 
       dfsExpr visitor expr
 
-  | HLetValExpr (pat, init, next, _, _) ->
+  | TLetValExpr (pat, init, next, _, _) ->
       dfsPat visitor pat
       dfsExpr visitor init
       dfsExpr visitor next
 
-  | HLetFunExpr (funSerial, _, _, argPats, body, next, _, loc) ->
+  | TLetFunExpr (funSerial, _, _, argPats, body, next, _, loc) ->
       visitor.OnFun(funSerial, None, loc)
 
       for argPat in argPats do
@@ -334,16 +334,16 @@ let private dfsExpr (visitor: Visitor) expr =
       dfsExpr visitor body
       dfsExpr visitor next
 
-  | HTyDeclExpr _
-  | HOpenExpr _ -> ()
+  | TTyDeclExpr _
+  | TOpenExpr _ -> ()
 
-  | HModuleExpr (_, body, _) ->
+  | TModuleExpr (_, body, _) ->
       for stmt in body do
         dfsExpr visitor stmt
 
-  | HModuleSynonymExpr _ -> ()
+  | TModuleSynonymExpr _ -> ()
 
-let private findTyInExpr (ls: LangServiceState) (expr: HExpr) (tyCtx: Typing.TyCtx) (tokenLoc: Loc) =
+let private findTyInExpr (ls: LangServiceState) (expr: TExpr) (tyCtx: Typing.TyCtx) (tokenLoc: Loc) =
   let mutable contentOpt = None
 
   let onVisit tyOpt loc =
@@ -364,11 +364,11 @@ let private findTyInExpr (ls: LangServiceState) (expr: HExpr) (tyCtx: Typing.TyC
 [<NoComparison>]
 type private Symbol =
   | DiscardSymbol
-  | PrimSymbol of HPrim
+  | PrimSymbol of TPrim
   | ValueSymbol of ValueSymbol
   | TySymbol of TySymbol
 
-let private collectSymbolsInExpr (modules: HProgram) =
+let private collectSymbolsInExpr (modules: TProgram) =
   let mutable symbols = ResizeArray()
 
   let onVisit symbol defOrUse loc = symbols.Add((symbol, defOrUse, loc))

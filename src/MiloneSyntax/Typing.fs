@@ -511,10 +511,10 @@ let private resolveAscriptionTy ctx ascriptionTy =
 let private hxAbort (ctx: TyCtx) loc =
   let ty, ctx = ctx |> freshMetaTy loc
   let funTy = tyFun tyInt ty
-  let exitExpr = HPrimExpr(HPrim.Exit, funTy, loc)
+  let exitExpr = TPrimExpr(TPrim.Exit, funTy, loc)
 
   let callExpr =
-    hxApp exitExpr (HLitExpr(IntLit "1", loc)) ty loc
+    hxApp exitExpr (TLitExpr(IntLit "1", loc)) ty loc
 
   callExpr, ty, ctx
 
@@ -529,11 +529,11 @@ let private inferLitPat ctx pat lit =
 /// Tries to get ty ascription from pat.
 let private patToAscriptionTy pat =
   match pat with
-  | HNodePat (HAscribePN, _, ty, _) -> Some ty
+  | TNodePat (TAscribePN, _, ty, _) -> Some ty
 
-  | HAsPat (bodyPat, _, _) -> patToAscriptionTy bodyPat
+  | TAsPat (bodyPat, _, _) -> patToAscriptionTy bodyPat
 
-  | HOrPat (l, r, _) ->
+  | TOrPat (l, r, _) ->
       match patToAscriptionTy l with
       | None -> patToAscriptionTy r
       | it -> it
@@ -543,12 +543,12 @@ let private patToAscriptionTy pat =
 let private inferNilPat ctx pat loc =
   let itemTy, ctx = ctx |> freshMetaTyForPat pat
   let ty = tyList itemTy
-  HNodePat(HNilPN, [], ty, loc), ty, ctx
+  TNodePat(TNilPN, [], ty, loc), ty, ctx
 
 let private inferNonePat ctx pat loc =
   let itemTy, ctx = ctx |> freshMetaTyForPat pat
   let ty = tyOption itemTy
-  HNodePat(HNonePN, [], ty, loc), ty, ctx
+  TNodePat(TNonePN, [], ty, loc), ty, ctx
 
 let private inferSomePat ctx pat loc =
   let unknownTy, ctx = ctx |> freshMetaTyForPat pat
@@ -560,11 +560,11 @@ let private inferSomePat ctx pat loc =
 
 let private inferDiscardPat ctx pat loc =
   let ty, ctx = ctx |> freshMetaTyForPat pat
-  HDiscardPat(ty, loc), ty, ctx
+  TDiscardPat(ty, loc), ty, ctx
 
 let private inferVarPat (ctx: TyCtx) varSerial loc =
   let ty, ctx = ctx |> unifyVarTy varSerial None loc
-  HVarPat(PrivateVis, varSerial, ty, loc), ty, ctx
+  TVarPat(PrivateVis, varSerial, ty, loc), ty, ctx
 
 let private inferVariantPat (ctx: TyCtx) variantSerial loc =
   let variantDef = ctx.Variants |> mapFind variantSerial
@@ -576,12 +576,12 @@ let private inferVariantPat (ctx: TyCtx) variantSerial loc =
     else
       ctx
 
-  HVariantPat(variantSerial, ty, loc), ty, ctx
+  TVariantPat(variantSerial, ty, loc), ty, ctx
 
 let private inferSomeAppPat ctx payloadPat loc =
   let payloadPat, payloadTy, ctx = inferPat ctx payloadPat
   let targetTy = tyOption payloadTy
-  HNodePat(HSomeAppPN, [ payloadPat ], targetTy, loc), targetTy, ctx
+  TNodePat(TSomeAppPN, [ payloadPat ], targetTy, loc), targetTy, ctx
 
 let private inferVariantAppPat (ctx: TyCtx) variantSerial payloadPat loc =
   let variantDef = ctx.Variants |> mapFind variantSerial
@@ -592,7 +592,7 @@ let private inferVariantAppPat (ctx: TyCtx) variantSerial payloadPat loc =
   let ctx =
     unifyTy ctx loc variantDef.PayloadTy payloadTy
 
-  HNodePat(HVariantAppPN variantSerial, [ payloadPat ], targetTy, loc), targetTy, ctx
+  TNodePat(TVariantAppPN variantSerial, [ payloadPat ], targetTy, loc), targetTy, ctx
 
 let private inferConsPat ctx l r loc =
   let l, lTy, ctx = inferPat ctx l
@@ -601,13 +601,13 @@ let private inferConsPat ctx l r loc =
   let listTy = tyList lTy
   let ctx = unifyTy ctx loc rTy listTy
 
-  HNodePat(HConsPN, [ l; r ], listTy, loc), listTy, ctx
+  TNodePat(TConsPN, [ l; r ], listTy, loc), listTy, ctx
 
 let private inferTuplePat ctx itemPats loc =
   let itemPats, itemTys, ctx = doInferPats ctx itemPats
 
   let tupleTy = tyTuple itemTys
-  HNodePat(HTuplePN, itemPats, tupleTy, loc), tupleTy, ctx
+  TNodePat(TTuplePN, itemPats, tupleTy, loc), tupleTy, ctx
 
 let private inferAscribePat ctx body ascriptionTy loc =
   let body, bodyTy, ctx = inferPat ctx body
@@ -622,14 +622,14 @@ let private inferAsPat ctx body varSerial loc =
   let _, ctx =
     ctx |> unifyVarTy varSerial (Some bodyTy) loc
 
-  HAsPat(body, varSerial, loc), bodyTy, ctx
+  TAsPat(body, varSerial, loc), bodyTy, ctx
 
 let private inferOrPat ctx l r loc =
   let l, lTy, ctx = inferPat ctx l
   let r, rTy, ctx = inferPat ctx r
 
   let ctx = unifyTy ctx loc lTy rTy
-  HOrPat(l, r, loc), lTy, ctx
+  TOrPat(l, r, loc), lTy, ctx
 
 let private inferAbortPat ctx pat loc =
   let targetTy, ctx = freshMetaTyForPat pat ctx
@@ -646,42 +646,42 @@ let private doInferPats ctx pats =
 
   go ctx [] [] pats
 
-let private inferPat ctx pat : HPat * Ty * TyCtx =
+let private inferPat ctx pat : TPat * Ty * TyCtx =
   match pat with
-  | HLitPat (lit, _) -> inferLitPat ctx pat lit
-  | HDiscardPat (_, loc) -> inferDiscardPat ctx pat loc
-  | HVarPat (_, varSerial, _, loc) -> inferVarPat ctx varSerial loc
-  | HVariantPat (variantSerial, _, loc) -> inferVariantPat ctx variantSerial loc
+  | TLitPat (lit, _) -> inferLitPat ctx pat lit
+  | TDiscardPat (_, loc) -> inferDiscardPat ctx pat loc
+  | TVarPat (_, varSerial, _, loc) -> inferVarPat ctx varSerial loc
+  | TVariantPat (variantSerial, _, loc) -> inferVariantPat ctx variantSerial loc
 
-  | HNodePat (kind, argPats, nodeTy, loc) ->
+  | TNodePat (kind, argPats, nodeTy, loc) ->
       let fail () = unreachable pat
 
       match kind, argPats with
-      | HNilPN, _ -> inferNilPat ctx pat loc
-      | HNonePN, _ -> inferNonePat ctx pat loc
-      | HSomePN, _ -> inferSomePat ctx pat loc
+      | TNilPN, _ -> inferNilPat ctx pat loc
+      | TNonePN, _ -> inferNonePat ctx pat loc
+      | TSomePN, _ -> inferSomePat ctx pat loc
 
-      | HConsPN, [ l; r ] -> inferConsPat ctx l r loc
-      | HConsPN, _ -> fail ()
+      | TConsPN, [ l; r ] -> inferConsPat ctx l r loc
+      | TConsPN, _ -> fail ()
 
-      | HSomeAppPN, [ payloadPat ] -> inferSomeAppPat ctx payloadPat loc
-      | HSomeAppPN, _ -> fail ()
+      | TSomeAppPN, [ payloadPat ] -> inferSomeAppPat ctx payloadPat loc
+      | TSomeAppPN, _ -> fail ()
 
-      | HVariantAppPN variantSerial, [ payloadPat ] -> inferVariantAppPat ctx variantSerial payloadPat loc
-      | HVariantAppPN _, _ -> fail ()
+      | TVariantAppPN variantSerial, [ payloadPat ] -> inferVariantAppPat ctx variantSerial payloadPat loc
+      | TVariantAppPN _, _ -> fail ()
 
-      | HTuplePN, _ -> inferTuplePat ctx argPats loc
+      | TTuplePN, _ -> inferTuplePat ctx argPats loc
 
-      | HAscribePN, [ bodyPat ] -> inferAscribePat ctx bodyPat nodeTy loc
-      | HAscribePN, _ -> fail ()
+      | TAscribePN, [ bodyPat ] -> inferAscribePat ctx bodyPat nodeTy loc
+      | TAscribePN, _ -> fail ()
 
-      | HAbortPN, _ -> inferAbortPat ctx pat loc
+      | TAbortPN, _ -> inferAbortPat ctx pat loc
 
-      | HAppPN, _ -> fail () // Error in NameRes.
-      | HNavPN _, _ -> fail () // Resolved in NameRes.
+      | TAppPN, _ -> fail () // Error in NameRes.
+      | TNavPN _, _ -> fail () // Resolved in NameRes.
 
-  | HAsPat (bodyPat, serial, loc) -> inferAsPat ctx bodyPat serial loc
-  | HOrPat (l, r, loc) -> inferOrPat ctx l r loc
+  | TAsPat (bodyPat, serial, loc) -> inferAsPat ctx bodyPat serial loc
+  | TOrPat (l, r, loc) -> inferOrPat ctx l r loc
 
 let private inferRefutablePat ctx pat = inferPat ctx pat
 
@@ -710,14 +710,14 @@ let private inferLitExpr ctx expr lit =
 let private inferVarExpr (ctx: TyCtx) varSerial loc =
   let ty, ctx = ctx |> unifyVarTy varSerial None loc
 
-  HVarExpr(varSerial, ty, loc), ty, ctx
+  TVarExpr(varSerial, ty, loc), ty, ctx
 
 let private inferFunExpr (ctx: TyCtx) funSerial loc =
   let ty, _, ctx =
     let funDef = ctx.Funs |> mapFind funSerial
     instantiateTyScheme ctx funDef.Ty loc
 
-  HFunExpr(funSerial, ty, loc), ty, ctx
+  TFunExpr(funSerial, ty, loc), ty, ctx
 
 let private inferVariantExpr (ctx: TyCtx) variantSerial loc =
   let ty =
@@ -725,11 +725,11 @@ let private inferVariantExpr (ctx: TyCtx) variantSerial loc =
     |> mapFind variantSerial
     |> variantDefToVariantTy
 
-  HVariantExpr(variantSerial, ty, loc), ty, ctx
+  TVariantExpr(variantSerial, ty, loc), ty, ctx
 
 let private inferPrimExpr ctx prim loc =
   match prim with
-  | HPrim.Printfn ->
+  | TPrim.Printfn ->
       let ctx =
         addError
           ctx
@@ -738,19 +738,19 @@ let private inferPrimExpr ctx prim loc =
 
       hxAbort ctx loc
 
-  | HPrim.NativeFun ->
+  | TPrim.NativeFun ->
       let ctx =
         addError ctx "Illegal use of __nativeFun. Hint: `__nativeFun (\"funName\", arg1, arg2, ...): ResultType`." loc
 
       hxAbort ctx loc
 
-  | HPrim.NativeDecl ->
+  | TPrim.NativeDecl ->
       let ctx =
         addError ctx "Illegal use of __nativeDecl. Hint: `__nativeDecl \"Some C code here.\"`." loc
 
       hxAbort ctx loc
 
-  | HPrim.SizeOfVal ->
+  | TPrim.SizeOfVal ->
       let ctx =
         addError ctx "Illegal use of __sizeOfVal. Hint: `__sizeOfVal expr`." loc
 
@@ -760,7 +760,7 @@ let private inferPrimExpr ctx prim loc =
       let tySpec = prim |> primToTySpec
       let primTy, traits, ctx = (tySpec, ctx) |> instantiateTySpec loc
       let ctx = ctx |> addTraitBounds traits
-      HPrimExpr(prim, primTy, loc), primTy, ctx
+      TPrimExpr(prim, primTy, loc), primTy, ctx
 
 let private inferRecordExpr ctx expectOpt baseOpt fields loc =
   // First, infer base if exists.
@@ -842,7 +842,7 @@ let private inferRecordExpr ctx expectOpt baseOpt fields loc =
           ctx
 
       match baseOpt with
-      | None -> HRecordExpr(None, fields, recordTy, loc), recordTy, ctx
+      | None -> TRecordExpr(None, fields, recordTy, loc), recordTy, ctx
 
       | Some baseExpr ->
           // Assign to a temporary var so that RecordRes can reuse the expr safely.
@@ -851,16 +851,16 @@ let private inferRecordExpr ctx expectOpt baseOpt fields loc =
           let varSerial, ctx = freshVar ctx "base" recordTy loc
 
           let varPat =
-            HVarPat(PrivateVis, varSerial, recordTy, loc)
+            TVarPat(PrivateVis, varSerial, recordTy, loc)
 
-          let varExpr = HVarExpr(varSerial, recordTy, loc)
+          let varExpr = TVarExpr(varSerial, recordTy, loc)
 
           let recordExpr =
-            HRecordExpr(Some varExpr, fields, recordTy, loc)
+            TRecordExpr(Some varExpr, fields, recordTy, loc)
 
-          HLetValExpr(varPat, baseExpr, recordExpr, recordTy, loc), recordTy, ctx
+          TLetValExpr(varPat, baseExpr, recordExpr, recordTy, loc), recordTy, ctx
 
-/// match 'a with ( | 'a -> 'b )*
+/// match 'a with ( | 'aT-> 'b )*
 let private inferMatchExpr ctx expectOpt itself cond arms loc =
   let targetTy, ctx = freshMetaTyForExpr itself ctx
 
@@ -886,7 +886,7 @@ let private inferMatchExpr ctx expectOpt itself cond arms loc =
 
            (pat, guard, body), ctx)
 
-  HMatchExpr(cond, arms, targetTy, loc), targetTy, ctx
+  TMatchExpr(cond, arms, targetTy, loc), targetTy, ctx
 
 let private inferNavExpr ctx l (r: Ident) loc =
   let fail ctx =
@@ -902,7 +902,7 @@ let private inferNavExpr ctx l (r: Ident) loc =
   match lTy, r with
   | Ty (StrTk, []), "Length" ->
       let funExpr =
-        HPrimExpr(HPrim.StrLength, tyFun tyStr tyInt, loc)
+        TPrimExpr(TPrim.StrLength, tyFun tyStr tyInt, loc)
 
       hxApp funExpr l tyInt loc, tyInt, ctx
 
@@ -919,7 +919,7 @@ let private inferNavExpr ctx l (r: Ident) loc =
         | _ -> None
 
       match fieldTyOpt with
-      | Some fieldTy -> HNavExpr(l, r, fieldTy, loc), fieldTy, ctx
+      | Some fieldTy -> TNavExpr(l, r, fieldTy, loc), fieldTy, ctx
       | None -> fail ctx
 
   | _ -> fail ctx
@@ -935,53 +935,53 @@ let private inferAppExpr ctx itself callee arg loc =
   // Special forms must be handled before recursion.
   match callee, arg with
   // printfn "..."
-  | HPrimExpr (HPrim.Printfn, _, _), HLitExpr (StrLit format, _) ->
+  | TPrimExpr (TPrim.Printfn, _, _), TLitExpr (StrLit format, _) ->
       let funTy, targetTy =
         match analyzeFormat format with
         | (Ty (FunTk, [ _; targetTy ])) as funTy -> funTy, targetTy
         | _ -> unreachable ()
 
-      hxApp (HPrimExpr(HPrim.Printfn, funTy, loc)) arg targetTy loc, targetTy, ctx
+      hxApp (TPrimExpr(TPrim.Printfn, funTy, loc)) arg targetTy loc, targetTy, ctx
 
   // __nativeFun f
-  | HPrimExpr (HPrim.NativeFun, _, loc), HFunExpr (funSerial, _, _) ->
+  | TPrimExpr (TPrim.NativeFun, _, loc), TFunExpr (funSerial, _, _) ->
       let targetTy, ctx = castFunAsNativeFun funSerial ctx
-      HNodeExpr(HNativeFunEN funSerial, [], targetTy, loc), targetTy, ctx
+      TNodeExpr(TNativeFunEN funSerial, [], targetTy, loc), targetTy, ctx
 
   // __nativeFun "funName"
-  | HPrimExpr (HPrim.NativeFun, _, loc), HLitExpr (StrLit funName, _) ->
+  | TPrimExpr (TPrim.NativeFun, _, loc), TLitExpr (StrLit funName, _) ->
       let targetTy, ctx = ctx |> freshMetaTyForExpr itself
-      HNodeExpr(HCallNativeEN funName, [], targetTy, loc), targetTy, ctx
+      TNodeExpr(TCallNativeEN funName, [], targetTy, loc), targetTy, ctx
 
   // __nativeFun ("funName", arg1, arg2, ...)
-  | HPrimExpr (HPrim.NativeFun, _, loc), HNodeExpr (HTupleEN, HLitExpr (StrLit funName, _) :: args, _, _) ->
+  | TPrimExpr (TPrim.NativeFun, _, loc), TNodeExpr (TTupleEN, TLitExpr (StrLit funName, _) :: args, _, _) ->
       // Type of native function is unchecked. Type ascriptions must be written correctly.
       let targetTy, ctx = ctx |> freshMetaTyForExpr itself
       let args, ctx = inferUntypedExprs ctx args
 
-      HNodeExpr(HCallNativeEN funName, args, targetTy, loc), targetTy, ctx
+      TNodeExpr(TCallNativeEN funName, args, targetTy, loc), targetTy, ctx
 
   // __nativeExpr "code"
-  | HPrimExpr (HPrim.NativeExpr, _, loc), HLitExpr (StrLit code, _) ->
+  | TPrimExpr (TPrim.NativeExpr, _, loc), TLitExpr (StrLit code, _) ->
       let targetTy, ctx = ctx |> freshMetaTyForExpr itself
-      HNodeExpr(HNativeExprEN code, [], targetTy, loc), targetTy, ctx
+      TNodeExpr(TNativeExprEN code, [], targetTy, loc), targetTy, ctx
 
   // __nativeStmt "code"
-  | HPrimExpr (HPrim.NativeStmt, _, loc), HLitExpr (StrLit code, _) ->
-      HNodeExpr(HNativeStmtEN code, [], tyUnit, loc), tyUnit, ctx
+  | TPrimExpr (TPrim.NativeStmt, _, loc), TLitExpr (StrLit code, _) ->
+      TNodeExpr(TNativeStmtEN code, [], tyUnit, loc), tyUnit, ctx
 
   // __nativeStmt ("code", args...)
-  | HPrimExpr (HPrim.NativeStmt, _, loc), HNodeExpr (HTupleEN, HLitExpr (StrLit code, _) :: args, _, _) ->
+  | TPrimExpr (TPrim.NativeStmt, _, loc), TNodeExpr (TTupleEN, TLitExpr (StrLit code, _) :: args, _, _) ->
       let args, ctx = inferUntypedExprs ctx args
-      HNodeExpr(HNativeStmtEN code, args, tyUnit, loc), tyUnit, ctx
+      TNodeExpr(TNativeStmtEN code, args, tyUnit, loc), tyUnit, ctx
 
   // __nativeDecl "code"
-  | HPrimExpr (HPrim.NativeDecl, _, loc), HLitExpr (StrLit code, _) ->
-      HNodeExpr(HNativeDeclEN code, [], tyUnit, loc), tyUnit, ctx
+  | TPrimExpr (TPrim.NativeDecl, _, loc), TLitExpr (StrLit code, _) ->
+      TNodeExpr(TNativeDeclEN code, [], tyUnit, loc), tyUnit, ctx
 
-  | HPrimExpr (HPrim.SizeOfVal, _, loc), _ ->
+  | TPrimExpr (TPrim.SizeOfVal, _, loc), _ ->
       let arg, argTy, ctx = inferExpr ctx None arg
-      HNodeExpr(HSizeOfValEN, [ HNodeExpr(HAbortEN, [], argTy, exprToLoc arg) ], tyInt, loc), tyInt, ctx
+      TNodeExpr(TSizeOfValEN, [ TNodeExpr(TAbortEN, [], argTy, exprToLoc arg) ], tyInt, loc), tyInt, ctx
 
   | _ ->
       let targetTy, ctx = ctx |> freshMetaTyForExpr itself
@@ -1007,7 +1007,7 @@ let private inferMinusExpr ctx arg loc =
   let ctx =
     ctx |> addTraitBounds [ IsNumberTrait argTy, loc ]
 
-  HNodeExpr(HMinusEN, [ arg ], argTy, loc), argTy, ctx
+  TNodeExpr(TMinusEN, [ arg ], argTy, loc), argTy, ctx
 
 let private inferIndexExpr ctx l r loc =
   let l, lTy, ctx = inferExpr ctx (Some tyStr) l
@@ -1018,7 +1018,7 @@ let private inferIndexExpr ctx l r loc =
     ctx
     |> addTraitBounds [ IndexTrait(lTy, rTy, tTy), loc ]
 
-  HNodeExpr(HIndexEN, [ l; r ], tTy, loc), tTy, ctx
+  TNodeExpr(TIndexEN, [ l; r ], tTy, loc), tTy, ctx
 
 let private inferSliceExpr ctx l r x loc =
   let l, lTy, ctx = inferExpr ctx (Some tyInt) l
@@ -1033,7 +1033,7 @@ let private inferSliceExpr ctx l r x loc =
 
     unifyTy ctx loc actualTy expectedTy
 
-  HNodeExpr(HSliceEN, [ l; r; x ], xTy, loc), xTy, ctx
+  TNodeExpr(TSliceEN, [ l; r; x ], xTy, loc), xTy, ctx
 
 let private inferTupleExpr (ctx: TyCtx) items loc =
   let rec go acc itemTys ctx items =
@@ -1069,7 +1069,7 @@ let private inferBlockExpr ctx expectOpt stmts last =
 
   let last, lastTy, ctx = inferExpr ctx expectOpt last
 
-  HBlockExpr(stmts, last), lastTy, ctx
+  TBlockExpr(stmts, last), lastTy, ctx
 
 let private inferLetValExpr ctx expectOpt pat init next loc =
   let init, initTy, ctx =
@@ -1081,7 +1081,7 @@ let private inferLetValExpr ctx expectOpt pat init next loc =
   let ctx = unifyTy ctx loc initTy patTy
 
   let next, nextTy, ctx = inferExpr ctx expectOpt next
-  HLetValExpr(pat, init, next, nextTy, loc), nextTy, ctx
+  TLetValExpr(pat, init, next, nextTy, loc), nextTy, ctx
 
 let private inferLetFunExpr (ctx: TyCtx) expectOpt callee vis argPats body next loc =
   // Special treatment for main function.
@@ -1090,7 +1090,7 @@ let private inferLetFunExpr (ctx: TyCtx) expectOpt callee vis argPats body next 
       // arguments must be syntactically `_`.
       let ctx =
         match argPats with
-        | [ HDiscardPat _ ] -> ctx
+        | [ TDiscardPat _ ] -> ctx
         | _ -> addError ctx "main function must be defined in the form of: `let main _ = ...`." loc
 
       // FIXME: argument type is string[]
@@ -1142,54 +1142,53 @@ let private inferLetFunExpr (ctx: TyCtx) expectOpt callee vis argPats body next 
   let ctx = generalizeFun ctx outerLevel callee
 
   let next, nextTy, ctx = inferExpr ctx expectOpt next
-  HLetFunExpr(callee, NotRec, vis, argPats, body, next, nextTy, loc), nextTy, ctx
+  TLetFunExpr(callee, NotRec, vis, argPats, body, next, nextTy, loc), nextTy, ctx
 
-let private inferExpr (ctx: TyCtx) (expectOpt: Ty option) (expr: HExpr) : HExpr * Ty * TyCtx =
+let private inferExpr (ctx: TyCtx) (expectOpt: Ty option) (expr: TExpr) : TExpr * Ty * TyCtx =
   let fail () = unreachable expr
 
   match expr with
-  | HLitExpr (lit, _) -> inferLitExpr ctx expr lit
-  | HVarExpr (serial, _, loc) -> inferVarExpr ctx serial loc
-  | HFunExpr (serial, _, loc) -> inferFunExpr ctx serial loc
-  | HVariantExpr (serial, _, loc) -> inferVariantExpr ctx serial loc
-  | HPrimExpr (prim, _, loc) -> inferPrimExpr ctx prim loc
-  | HRecordExpr (baseOpt, fields, _, loc) -> inferRecordExpr ctx expectOpt baseOpt fields loc
-  | HMatchExpr (cond, arms, _, loc) -> inferMatchExpr ctx expectOpt expr cond arms loc
-  | HNavExpr (receiver, field, _, loc) -> inferNavExpr ctx receiver field loc
+  | TLitExpr (lit, _) -> inferLitExpr ctx expr lit
+  | TVarExpr (serial, _, loc) -> inferVarExpr ctx serial loc
+  | TFunExpr (serial, _, loc) -> inferFunExpr ctx serial loc
+  | TVariantExpr (serial, _, loc) -> inferVariantExpr ctx serial loc
+  | TPrimExpr (prim, _, loc) -> inferPrimExpr ctx prim loc
+  | TRecordExpr (baseOpt, fields, _, loc) -> inferRecordExpr ctx expectOpt baseOpt fields loc
+  | TMatchExpr (cond, arms, _, loc) -> inferMatchExpr ctx expectOpt expr cond arms loc
+  | TNavExpr (receiver, field, _, loc) -> inferNavExpr ctx receiver field loc
+  | TNodeExpr (TAbortEN, _, _, loc) -> hxAbort ctx loc
+  | TNodeExpr (TMinusEN, [ arg ], _, loc) -> inferMinusExpr ctx arg loc
+  | TNodeExpr (TAppEN, [ callee; arg ], _, loc) -> inferAppExpr ctx expr callee arg loc
+  | TNodeExpr (TTupleEN, items, _, loc) -> inferTupleExpr ctx items loc
+  | TNodeExpr (TAscribeEN, [ expr ], ascriptionTy, loc) -> inferAscribeExpr ctx expr ascriptionTy loc
 
-  | HNodeExpr (HAbortEN, _, _, loc) -> hxAbort ctx loc
-  | HNodeExpr (HMinusEN, [ arg ], _, loc) -> inferMinusExpr ctx arg loc
-  | HNodeExpr (HAppEN, [ callee; arg ], _, loc) -> inferAppExpr ctx expr callee arg loc
-  | HNodeExpr (HTupleEN, items, _, loc) -> inferTupleExpr ctx items loc
-  | HNodeExpr (HAscribeEN, [ expr ], ascriptionTy, loc) -> inferAscribeExpr ctx expr ascriptionTy loc
+  | TNodeExpr (TIndexEN, [ l; r ], _, loc) -> inferIndexExpr ctx l r loc
+  | TNodeExpr (TIndexEN, _, _, _) -> fail ()
+  | TNodeExpr (TSliceEN, [ l; r; x ], _, loc) -> inferSliceExpr ctx l r x loc
+  | TNodeExpr (TSliceEN, _, _, _) -> fail ()
 
-  | HNodeExpr (HIndexEN, [ l; r ], _, loc) -> inferIndexExpr ctx l r loc
-  | HNodeExpr (HIndexEN, _, _, _) -> fail ()
-  | HNodeExpr (HSliceEN, [ l; r; x ], _, loc) -> inferSliceExpr ctx l r x loc
-  | HNodeExpr (HSliceEN, _, _, _) -> fail ()
+  | TBlockExpr (stmts, last) -> inferBlockExpr ctx expectOpt stmts last
 
-  | HBlockExpr (stmts, last) -> inferBlockExpr ctx expectOpt stmts last
+  | TLetValExpr (pat, body, next, _, loc) -> inferLetValExpr ctx expectOpt pat body next loc
 
-  | HLetValExpr (pat, body, next, _, loc) -> inferLetValExpr ctx expectOpt pat body next loc
-
-  | HLetFunExpr (oldSerial, _, vis, args, body, next, _, loc) ->
+  | TLetFunExpr (oldSerial, _, vis, args, body, next, _, loc) ->
       inferLetFunExpr ctx expectOpt oldSerial vis args body next loc
 
-  | HTyDeclExpr _
-  | HOpenExpr _ -> expr, tyUnit, ctx
+  | TTyDeclExpr _
+  | TOpenExpr _ -> expr, tyUnit, ctx
 
-  | HNodeExpr (HMinusEN, _, _, _)
-  | HNodeExpr (HAscribeEN, _, _, _)
-  | HNodeExpr (HAppEN, _, _, _)
-  | HNodeExpr (HCallNativeEN _, _, _, _)
-  | HNodeExpr (HNativeFunEN _, _, _, _)
-  | HNodeExpr (HNativeExprEN _, _, _, _)
-  | HNodeExpr (HNativeStmtEN _, _, _, _)
-  | HNodeExpr (HNativeDeclEN _, _, _, _)
-  | HNodeExpr (HSizeOfValEN, _, _, _) -> unreachable ()
+  | TNodeExpr (TMinusEN, _, _, _)
+  | TNodeExpr (TAscribeEN, _, _, _)
+  | TNodeExpr (TAppEN, _, _, _)
+  | TNodeExpr (TCallNativeEN _, _, _, _)
+  | TNodeExpr (TNativeFunEN _, _, _, _)
+  | TNodeExpr (TNativeExprEN _, _, _, _)
+  | TNodeExpr (TNativeStmtEN _, _, _, _)
+  | TNodeExpr (TNativeDeclEN _, _, _, _)
+  | TNodeExpr (TSizeOfValEN, _, _, _) -> unreachable ()
 
-  | HModuleExpr _
-  | HModuleSynonymExpr _ -> unreachable () // Resolved in NameRes.
+  | TModuleExpr _
+  | TModuleSynonymExpr _ -> unreachable () // Resolved in NameRes.
 
 // -----------------------------------------------
 // Reject cyclic synonyms
@@ -1293,7 +1292,7 @@ let private synonymCycleCheck (tyCtx: TyCtx) =
 // Interface
 // -----------------------------------------------
 
-let infer (modules: HProgram, scopeCtx: ScopeCtx, errors) : HProgram * TyCtx =
+let infer (modules: TProgram, scopeCtx: ScopeCtx, errors) : TProgram * TyCtx =
   let ctx : TyCtx =
     { Serial = scopeCtx.Serial
       Vars = scopeCtx.Vars

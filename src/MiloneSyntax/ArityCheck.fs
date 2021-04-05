@@ -108,17 +108,17 @@ let private acExprChecked expr ctx =
 
 let private acExpr (expr, ctx: ArityCheckCtx) : ArityEx * ArityCheckCtx =
   match expr with
-  | HLitExpr _
-  | HTyDeclExpr _
-  | HOpenExpr _ -> UnitAx, ctx
+  | TLitExpr _
+  | TTyDeclExpr _
+  | TOpenExpr _ -> UnitAx, ctx
 
-  | HVarExpr (_, ty, _) -> tyToArityEx ty, ctx
-  | HVariantExpr (_, ty, _) -> tyToArityEx ty, ctx
-  | HPrimExpr (_, ty, _) -> tyToArityEx ty, ctx
+  | TVarExpr (_, ty, _) -> tyToArityEx ty, ctx
+  | TVariantExpr (_, ty, _) -> tyToArityEx ty, ctx
+  | TPrimExpr (_, ty, _) -> tyToArityEx ty, ctx
 
-  | HFunExpr (funSerial, _, _) -> ctx.GetFunArity funSerial, ctx
+  | TFunExpr (funSerial, _, _) -> ctx.GetFunArity funSerial, ctx
 
-  | HRecordExpr (baseOpt, fields, _, _) ->
+  | TRecordExpr (baseOpt, fields, _, _) ->
       let doArm () =
         let ctx =
           match baseOpt with
@@ -133,7 +133,7 @@ let private acExpr (expr, ctx: ArityCheckCtx) : ArityEx * ArityCheckCtx =
 
       doArm ()
 
-  | HMatchExpr (cond, arms, ty, _) ->
+  | TMatchExpr (cond, arms, ty, _) ->
       let doArm () =
         let _, ctx = acExpr (cond, ctx)
 
@@ -149,11 +149,11 @@ let private acExpr (expr, ctx: ArityCheckCtx) : ArityEx * ArityCheckCtx =
 
       doArm ()
 
-  | HNavExpr (l, _, ty, _) ->
+  | TNavExpr (l, _, ty, _) ->
       let _, ctx = acExpr (l, ctx)
       tyToArityEx ty, ctx
 
-  | HNodeExpr (HAppEN, [ callee; arg ], ty, loc) ->
+  | TNodeExpr (TAppEN, [ callee; arg ], ty, loc) ->
       let calleeArity, ctx = acExpr (callee, ctx)
       let argArity, ctx = acExpr (arg, ctx)
 
@@ -175,24 +175,24 @@ let private acExpr (expr, ctx: ArityCheckCtx) : ArityEx * ArityCheckCtx =
 
           tyToArityEx ty, ctx
 
-  | HNodeExpr (_, items, ty, _) ->
+  | TNodeExpr (_, items, ty, _) ->
       let ctx = acExprs items ctx
       tyToArityEx ty, ctx
 
-  | HBlockExpr (stmts, last) ->
+  | TBlockExpr (stmts, last) ->
       let ctx = acExprs stmts ctx
       acExpr (last, ctx)
 
-  | HLetValExpr (_, init, next, _, _) ->
+  | TLetValExpr (_, init, next, _, _) ->
       let ctx = acExprChecked init ctx
       acExpr (next, ctx)
 
-  | HLetFunExpr (_, _, _, _, body, next, _, _) ->
+  | TLetFunExpr (_, _, _, _, body, next, _, _) ->
       let ctx = acExprChecked body ctx
       acExpr (next, ctx)
 
-  | HModuleExpr _
-  | HModuleSynonymExpr _ -> unreachable () // Resolved in NameRes.
+  | TModuleExpr _
+  | TModuleSynonymExpr _ -> unreachable () // Resolved in NameRes.
 
 let private acExprs exprs ctx =
   exprs
@@ -202,7 +202,7 @@ let private acExprs exprs ctx =
 // Interface
 // -----------------------------------------------
 
-let arityCheck (modules: HProgram, tyCtx: Typing.TyCtx) : Typing.TyCtx =
+let arityCheck (modules: TProgram, tyCtx: Typing.TyCtx) : Typing.TyCtx =
   let ctx : ArityCheckCtx =
     { GetFunArity =
         fun funSerial ->
