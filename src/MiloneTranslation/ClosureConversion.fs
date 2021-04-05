@@ -400,9 +400,7 @@ let private ccExpr (expr, ctx) =
   match expr with
   | HLitExpr _
   | HVariantExpr _
-  | HPrimExpr _
-  | HTyDeclExpr _
-  | HOpenExpr _ -> expr, ctx
+  | HPrimExpr _ -> expr, ctx
 
   | HVarExpr (serial, ty, loc) ->
       let doArm () =
@@ -462,8 +460,6 @@ let private ccExpr (expr, ctx) =
 
   | HNavExpr _ -> unreachable () // HNavExpr is resolved in NameRes, Typing, or RecordRes.
   | HRecordExpr _ -> unreachable () // HRecordExpr is resolved in RecordRes.
-  | HModuleExpr _
-  | HModuleSynonymExpr _ -> unreachable () // Resolved in NameRes.
 
 let closureConversion (expr, tyCtx: TyCtx) =
   let ccCtx = ofTyCtx tyCtx

@@ -208,9 +208,7 @@ let private teExpr (ctx: RrCtx) expr =
   | HVarExpr _
   | HFunExpr _
   | HVariantExpr _
-  | HPrimExpr _
-  | HOpenExpr _
-  | HTyDeclExpr _ -> expr
+  | HPrimExpr _ -> expr
 
   | HMatchExpr (cond, arms, ty, loc) ->
       let doArm () =
@@ -249,9 +247,6 @@ let private teExpr (ctx: RrCtx) expr =
         HLetFunExpr(callee, isRec, vis, args, body, next, ty, loc)
 
       doArm ()
-
-  | HModuleExpr _
-  | HModuleSynonymExpr _ -> unreachable () // Resolved in NameRes.
 
 let recordRes (expr: HExpr, tyCtx: TyCtx) =
   let ctx = ofTyCtx tyCtx

@@ -73,9 +73,7 @@ let private troExpr isTail (expr, ctx) =
   | HVarExpr _
   | HFunExpr _
   | HVariantExpr _
-  | HPrimExpr _
-  | HOpenExpr _
-  | HTyDeclExpr _ -> expr, ctx
+  | HPrimExpr _ -> expr, ctx
 
   | HMatchExpr (cond, arms, ty, loc) ->
       let doArm () =
@@ -119,8 +117,6 @@ let private troExpr isTail (expr, ctx) =
 
   | HNavExpr _ -> unreachable () // HNavExpr is resolved in NameRes, Typing, or RecordRes.
   | HRecordExpr _ -> unreachable () // HRecordExpr is resolved in RecordRes.
-  | HModuleExpr _
-  | HModuleSynonymExpr _ -> unreachable () // Resolved in NameRes.
 
 let tailRecOptimize (decls: HExpr list, tyCtx: TyCtx) : HExpr list * TyCtx =
   let ctx = ofTyCtx tyCtx

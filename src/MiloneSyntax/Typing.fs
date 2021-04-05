@@ -679,7 +679,6 @@ let private inferPat ctx pat : HPat * Ty * TyCtx =
 
       | HAppPN, _ -> fail () // Error in NameRes.
       | HNavPN _, _ -> fail () // Resolved in NameRes.
-      | HBoxPN, _ -> fail () // Generated in AutoBoxing.
 
   | HAsPat (bodyPat, serial, loc) -> inferAsPat ctx bodyPat serial loc
   | HOrPat (l, r, loc) -> inferOrPat ctx l r loc
@@ -1179,22 +1178,10 @@ let private inferExpr (ctx: TyCtx) (expectOpt: Ty option) (expr: HExpr) : HExpr 
   | HTyDeclExpr _
   | HOpenExpr _ -> expr, tyUnit, ctx
 
-  | HNodeExpr (HRangeEN, _, _, loc) ->
-      let ctx =
-        addError ctx "Range operator can be used in the form of `s.[l..r]` for now." loc
-
-      hxAbort ctx loc
-
   | HNodeExpr (HMinusEN, _, _, _)
   | HNodeExpr (HAscribeEN, _, _, _)
   | HNodeExpr (HAppEN, _, _, _)
-  | HNodeExpr (HClosureEN, _, _, _)
-  | HNodeExpr (HCallProcEN, _, _, _)
-  | HNodeExpr (HCallTailRecEN, _, _, _)
-  | HNodeExpr (HCallClosureEN, _, _, _)
   | HNodeExpr (HCallNativeEN _, _, _, _)
-  | HNodeExpr (HRecordEN, _, _, _)
-  | HNodeExpr (HRecordItemEN _, _, _, _)
   | HNodeExpr (HNativeFunEN _, _, _, _)
   | HNodeExpr (HNativeExprEN _, _, _, _)
   | HNodeExpr (HNativeStmtEN _, _, _, _)

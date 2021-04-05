@@ -256,16 +256,6 @@ type HPatKind =
   /// `p1: ty`
   | HAscribePN
 
-  /// Used to dereference a box inside of pattern matching.
-  ///
-  /// To match a value `v: obj` with box pattern `box p: T`,
-  /// match `unbox v: T` with `p: T`.
-  ///
-  /// This is only generated internally in AutoBoxing.
-  /// Not a part of F# nor milone-lang syntax.
-  /// Unlike `:? T`, unboxing is unchecked.
-  | HBoxPN
-
   /// Generated after compile error occurred while processing a pattern.
   | HAbortPN
 
@@ -351,12 +341,6 @@ type HExprKind =
 
   | HAppEN
 
-  /// `..`.
-  ///
-  /// Every occurrence of this is currently error
-  /// because valid use (`s.[l..r]`) gets rewritten in AstToHir.
-  | HRangeEN
-
   /// Type ascription `x : 'x`.
   | HAscribeEN
 
@@ -366,32 +350,11 @@ type HExprKind =
   /// `s.[l .. r]`
   | HSliceEN
 
-  /// Direct call to procedure or primitive.
-  | HCallProcEN
-
-  /// Indirect call to closure.
-  | HCallClosureEN
-
-  /// Direct call to current procedure at the end of function (i.e. tail-call).
-  | HCallTailRecEN
-
   /// Direct call to native fun.
   | HCallNativeEN of funName: string
 
   /// Tuple constructor, e.g. `x, y, z`.
   | HTupleEN
-
-  /// Closure constructor.
-  | HClosureEN
-
-  /// Record creation.
-  ///
-  /// Unlike record expr, it's guaranteed that
-  /// all of fields are specified in order of declaration.
-  | HRecordEN
-
-  /// Gets i'th field of record.
-  | HRecordItemEN of index: int
 
   /// Use function as function pointer.
   | HNativeFunEN of FunSerial
@@ -449,12 +412,6 @@ type HExpr =
 
 /// HIR program. (project name, module name, decls) list.
 type HProgram = (string * string * HExpr list) list
-
-[<RequireQualifiedAccess>]
-[<NoEquality; NoComparison>]
-type MonoMode =
-  | Monify
-  | RemoveGenerics
 
 // -----------------------------------------------
 // Errors
@@ -809,10 +766,6 @@ let primToTySpec prim =
 
 let hpAbort ty loc = HNodePat(HAbortPN, [], ty, loc)
 
-let hpTuple itemPats loc =
-  let tupleTy = itemPats |> List.map patToTy |> tyTuple
-  HNodePat(HTuplePN, itemPats, tupleTy, loc)
-
 let patExtract (pat: HPat) : Ty * Loc =
   match pat with
   | HLitPat (lit, a) -> litToTy lit, a
@@ -906,8 +859,7 @@ let patIsClearlyExhaustive isNewtypeVariant pat =
         | HNavPN _, _ -> false
 
         | HTuplePN, _
-        | HAscribePN, _
-        | HBoxPN, _ -> argPats |> List.forall go
+        | HAscribePN, _ -> argPats |> List.forall go
 
     | HAsPat (bodyPat, _, _) -> go bodyPat
     | HOrPat (l, r, _) -> go l || go r
@@ -920,8 +872,6 @@ let patIsClearlyExhaustive isNewtypeVariant pat =
 
 let hxTrue loc = HLitExpr(BoolLit true, loc)
 
-let hxFalse loc = HLitExpr(BoolLit false, loc)
-
 let hxApp f x ty loc = HNodeExpr(HAppEN, [ f; x ], ty, loc)
 
 let hxAscribe expr ty loc =
@@ -932,12 +882,6 @@ let hxSemi items loc =
   | Some (stmts, last) -> HBlockExpr(stmts, last)
   | None -> HNodeExpr(HTupleEN, [], tyUnit, loc)
 
-let hxCallProc callee args resultTy loc =
-  HNodeExpr(HCallProcEN, callee :: args, resultTy, loc)
-
-let hxCallClosure callee args resultTy loc =
-  HNodeExpr(HCallClosureEN, callee :: args, resultTy, loc)
-
 let hxTuple items loc =
   HNodeExpr(HTupleEN, items, tyTuple (List.map exprToTy items), loc)
 
@@ -945,16 +889,6 @@ let hxUnit loc = hxTuple [] loc
 
 let hxNil itemTy loc =
   HPrimExpr(HPrim.Nil, tyList itemTy, loc)
-
-let hxIsUnitLit expr =
-  match expr with
-  | HNodeExpr (HTupleEN, [], _, _) -> true
-  | _ -> false
-
-let hxIsAlwaysTrue expr =
-  match expr with
-  | HLitExpr (BoolLit true, _) -> true
-  | _ -> false
 
 let exprExtract (expr: HExpr) : Ty * Loc =
   match expr with

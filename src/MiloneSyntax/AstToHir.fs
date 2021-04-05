@@ -528,15 +528,6 @@ let private athExpr (docId: DocId) (expr: AExpr, nameCtx: NameCtx) : HExpr * Nam
 
       doArm ()
 
-  | ARangeExpr (l, r, pos) ->
-      let doArm () =
-        let l, nameCtx = (l, nameCtx) |> athExpr docId
-        let r, nameCtx = (r, nameCtx) |> athExpr docId
-        let loc = toLoc docId pos
-        HNodeExpr(HRangeEN, [ l; r ], noTy, loc), nameCtx
-
-      doArm ()
-
   | ATupleExpr (items, pos) ->
       let doArm () =
         let loc = toLoc docId pos
@@ -588,6 +579,8 @@ let private athExpr (docId: DocId) (expr: AExpr, nameCtx: NameCtx) : HExpr * Nam
             HLetValExpr(pat, body, next, noTy, loc), nameCtx
 
       doArm ()
+
+  | ARangeExpr _ -> unreachable () // Generated only inside of AIndexExpr.
 
 let private prepend stmt stmts = stmt :: stmts
 

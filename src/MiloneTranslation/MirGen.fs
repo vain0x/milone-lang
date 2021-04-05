@@ -49,8 +49,6 @@ type MirCtx =
     Decls: MDecl list }
 
 let private ofTyCtx (tyCtx: TyCtx) : MirCtx =
-  assert (List.isEmpty tyCtx.Logs)
-
   { Serial = tyCtx.Serial
     Vars = tyCtx.Vars
     Funs = tyCtx.Funs
@@ -238,9 +236,7 @@ let private containsTailRec expr =
   | HVariantExpr _
   | HPrimExpr _
   | HNavExpr _
-  | HNodeExpr _
-  | HOpenExpr _
-  | HTyDeclExpr _ -> false
+  | HNodeExpr _ -> false
 
   | HMatchExpr (_, arms, _, _) ->
       arms
@@ -252,9 +248,7 @@ let private containsTailRec expr =
 
   | HLetFunExpr (_, _, _, _, _, next, _, _) -> next |> containsTailRec
 
-  | HRecordExpr _ -> unreachable () // record expr is resolved in type elaborating.
-  | HModuleExpr _
-  | HModuleSynonymExpr _ -> unreachable () // Resolved in NameRes.
+  | HRecordExpr _ -> unreachable () // Resolved in RecordRes.
 
 // -----------------------------------------------
 // Pattern
@@ -425,11 +419,6 @@ let private mirifyPat ctx (endLabel: string) (pat: HPat) (expr: MExpr) : MirCtx 
       | HBoxPN, _ -> fail ()
 
       | HAbortPN, _ -> mirifyPatAbort ctx loc
-
-      | HSomePN, _ -> fail () // Resolved in Typing
-      | HAppPN, _ -> fail () // Resolved in NameRes.
-      | HNavPN _, _ -> fail () // Resolved in NameRes.
-      | HAscribePN, _ -> fail () // Resolved in Typing
 
   | HAsPat (pat, serial, loc) -> mirifyPatAs ctx endLabel pat serial expr loc
 
@@ -1229,12 +1218,6 @@ let private mirifyCallPrimExpr ctx itself prim args ty loc =
   | HPrim.Nil, _
   | HPrim.OptionNone, _ -> fail ()
 
-  | HPrim.NativeFun, _
-  | HPrim.NativeExpr, _
-  | HPrim.NativeStmt, _
-  | HPrim.NativeDecl, _
-  | HPrim.SizeOfVal, _ -> unreachable () // Resolved in Typing.
-
 let private mirifyExprInfCallClosure ctx callee args resultTy loc =
   let callee, ctx = mirifyExpr ctx callee
 
@@ -1459,12 +1442,6 @@ let private mirifyOtherExprWrapper ctx expr =
 
   | HNavExpr _ -> unreachable () // HNavExpr is resolved in NameRes, Typing, or RecordRes.
   | HRecordExpr _ -> unreachable () // HRecordExpr is resolved in RecordRes.
-
-  | HModuleExpr _
-  | HModuleSynonymExpr _ -> unreachable () // Resolved in NameRes.
-
-  | HTyDeclExpr _
-  | HOpenExpr _ -> unreachable () // Resolved in NameRes and discarded in Hoist.
 
 let private mirifyExpr (ctx: MirCtx) (expr: HExpr) : MExpr * MirCtx =
   // HACK: This function runs into stack overflow easily

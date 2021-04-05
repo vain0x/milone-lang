@@ -4,20 +4,12 @@ open MiloneShared.SharedTypes
 open MiloneShared.Util
 open MiloneSyntax.Tir
 open MiloneSyntax.Typing
+open MiloneSyntax.TySystem
 
 module StdInt = MiloneStd.StdInt
 module S = MiloneStd.StdString
 module TMap = MiloneStd.StdMap
 module TSet = MiloneStd.StdSet
-
-/// Converts nested function type to multi-arguments function type.
-let private tyToArgList ty =
-  let rec go n acc ty =
-    match ty with
-    | Ty (FunTk, [ sTy; tTy ]) -> go (n + 1) (sTy :: acc) tTy
-    | tTy -> n, List.rev acc, tTy
-
-  go 0 [] ty
 
 // -----------------------------------------------
 // ArityEx

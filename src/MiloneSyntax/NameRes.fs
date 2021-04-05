@@ -1169,8 +1169,7 @@ let private nameResPat (pat: HPat, ctx: ScopeCtx) =
       | HConsPN, _
       | HSomeAppPN, _
       | HVariantAppPN _, _
-      | HTuplePN, _
-      | HBoxPN, _ ->
+      | HTuplePN, _ ->
           let argPats, ctx = (argPats, ctx) |> stMap nameResPat
           HNodePat(kind, argPats, ty, loc), ctx
 

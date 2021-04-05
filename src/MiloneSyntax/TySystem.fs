@@ -121,16 +121,6 @@ let traitMapTys f it =
 // Types (HIR/MIR)
 // -----------------------------------------------
 
-let tyIsUnit ty =
-  match ty with
-  | Ty (TupleTk, []) -> true
-  | _ -> false
-
-let tyIsFun ty =
-  match ty with
-  | Ty (FunTk, _) -> true
-  | _ -> false
-
 let tyCompare l r =
   match l, r with
   | Ty (lTk, lTyArgs), Ty (rTk, rTyArgs) ->
@@ -144,7 +134,7 @@ let tyCompare l r =
 let tyEqual l r = tyCompare l r = 0
 
 /// Gets if the specified type variable doesn't appear in a type.
-let tyIsFreeIn ty tySerial : bool =
+let private tyIsFreeIn ty tySerial : bool =
   let rec go ty =
     match ty with
     | Ty (MetaTk (s, _), _) -> s <> tySerial
@@ -154,19 +144,6 @@ let tyIsFreeIn ty tySerial : bool =
     | Ty (tk, ty :: tys) -> go ty && go (Ty(tk, tys))
 
   go ty
-
-/// Gets if the type is monomorphic.
-/// Assume all bound type variables are substituted.
-let tyIsMonomorphic ty : bool =
-  let rec go tys =
-    match tys with
-    | [] -> true
-
-    | Ty (MetaTk _, _) :: _ -> false
-
-    | Ty (_, tys1) :: tys2 -> go tys1 && go tys2
-
-  go [ ty ]
 
 /// Gets a list of type variables.
 /// Assume all bound type variables are substituted.
@@ -189,22 +166,13 @@ let tyCollectFreeVars ty =
   go [] [ ty ] |> listUnique compare
 
 /// Converts nested function type to multi-arguments function type.
-let rec tyToArgList ty =
+let tyToArgList ty =
   let rec go n acc ty =
     match ty with
     | Ty (FunTk, [ sTy; tTy ]) -> go (n + 1) (sTy :: acc) tTy
     | tTy -> n, List.rev acc, tTy
 
   go 0 [] ty
-
-/// Checks if the type contains no bound meta types.
-let private tyIsFullySubstituted (isBound: TySerial -> bool) ty : bool =
-  let rec go ty =
-    match ty with
-    | Ty (MetaTk (tySerial, _), _) -> isBound tySerial |> not
-    | Ty (_, tyArgs) -> List.forall go tyArgs
-
-  go ty
 
 /// Substitutes meta types in a type as possible.
 let tySubst (substMeta: TySerial -> Ty option) ty =

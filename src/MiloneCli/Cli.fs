@@ -355,8 +355,6 @@ let private lowerPatKind (kind: Tir.HPatKind) : Hir.HPatKind =
   | Tir.HSomePN
   | Tir.HAscribePN -> unreachable () // Resolved in Typing.
 
-  | Tir.HBoxPN -> unreachable () // Generated in AutoBoxing.
-
 let private lowerExprKind (kind: Tir.HExprKind) : Hir.HExprKind =
   match kind with
   | Tir.HAbortEN -> Hir.HAbortEN
@@ -372,17 +370,7 @@ let private lowerExprKind (kind: Tir.HExprKind) : Hir.HExprKind =
   | Tir.HNativeDeclEN code -> Hir.HNativeDeclEN code
   | Tir.HSizeOfValEN -> Hir.HSizeOfValEN
 
-  | Tir.HRangeEN -> unreachable () // Never generated.
   | Tir.HAscribeEN -> unreachable () // Resolved in Typing.
-
-  | Tir.HCallProcEN
-  | Tir.HCallClosureEN
-  | Tir.HClosureEN -> unreachable () // Generated in EtaExpansion.
-
-  | Tir.HCallTailRecEN -> unreachable () // Generated in TailRecOptimizing.
-
-  | Tir.HRecordEN
-  | Tir.HRecordItemEN _ -> unreachable () // Generated in RecordRes.
 
 let private lowerPat (pat: Tir.HPat) : Hir.HPat =
   match pat with
@@ -467,12 +455,7 @@ let private lowerTyCtx (tyCtx: Typing.TyCtx) : Hir.TyCtx =
 
     Tys =
       tyCtx.Tys
-      |> TMap.map (fun _ def -> lowerTyDef def)
-
-    TyLevels = tyCtx.TyLevels
-    Level = 0
-    TraitBounds = []
-    Logs = [] }
+      |> TMap.map (fun _ def -> lowerTyDef def) }
 
 // -----------------------------------------------
 // Processes

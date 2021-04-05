@@ -169,9 +169,7 @@ let private trdTyDef isDirect (ctx: TrdCtx) tySerial tyDef : TrdCtx =
 
   | RecordTyDef _ -> trdRecordTyDef isDirect ctx tySerial tyDef
 
-  | MetaTyDef _
-  | UniversalTyDef _
-  | SynonymTyDef _ -> unreachable () // Resolved in Typing.
+  | MetaTyDef _ -> unreachable () // Resolved in Typing.
 
 let private trdTy isDirect (ctx: TrdCtx) ty : TrdCtx =
   match ty with
@@ -180,7 +178,6 @@ let private trdTy isDirect (ctx: TrdCtx) ty : TrdCtx =
         trdTyDef isDirect ctx tySerial (ctx.Tys |> mapFind tySerial)
 
       match tk with
-      | ErrorTk _
       | IntTk _
       | FloatTk _
       | BoolTk
@@ -203,11 +200,6 @@ let private trdTy isDirect (ctx: TrdCtx) ty : TrdCtx =
 
       | UnionTk tySerial -> nominal tySerial
       | RecordTk tySerial -> nominal tySerial
-
-      | SynonymTk _ -> unreachable () // Resolved in Typing.
-
-      | UnresolvedTk _
-      | UnresolvedVarTk _ -> unreachable () // Resolved in NameRes.
 
 let private detectTypeRecursion (tyCtx: TyCtx) : TrdCtx =
   let ctx : TrdCtx =
@@ -363,9 +355,7 @@ let private tsmTyDef (ctx: TsmCtx) tySerial tyDef =
 
   | RecordTyDef _ -> tsmRecordTyDef ctx tySerial tyDef
 
-  | MetaTyDef _
-  | UniversalTyDef _
-  | SynonymTyDef _ -> unreachable () // Resolved in Typing.
+  | MetaTyDef _ -> unreachable () // Resolved in Typing.
 
 let private tsmTy (ctx: TsmCtx) ty =
   match ty with
@@ -411,14 +401,8 @@ let private tsmTy (ctx: TsmCtx) ty =
       | UnionTk tySerial -> nominal tySerial
       | RecordTk tySerial -> nominal tySerial
 
-      | ErrorTk _
       | MetaTk _
       | NativeTypeTk _ -> 1000000, ctx
-
-      | SynonymTk _ -> unreachable () // Resolved in Typing.
-
-      | UnresolvedTk _
-      | UnresolvedVarTk _ -> unreachable () // Resolved in NameRes.
 
 let private measureTys (trdCtx: TrdCtx) : TsmCtx =
   let boxedVariants =
@@ -788,9 +772,7 @@ let private abExpr ctx expr =
 
       doArm ()
 
-  | HLitExpr _
-  | HOpenExpr _
-  | HTyDeclExpr _ -> expr
+  | HLitExpr _ -> expr
 
   | HVarExpr _
   | HFunExpr _
@@ -839,9 +821,6 @@ let private abExpr ctx expr =
         HLetFunExpr(callee, isRec, vis, args, body, next, ty, loc)
 
       doArm ()
-
-  | HModuleExpr _
-  | HModuleSynonymExpr _ -> unreachable () // Resolved in NameRes.
 
 let autoBox (expr: HExpr, tyCtx: TyCtx) =
   // Detect recursion.

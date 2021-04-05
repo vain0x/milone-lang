@@ -133,12 +133,7 @@ let private primToArity ty prim =
   | HPrim.ToFloat _
   | HPrim.String
   | HPrim.InRegion
-  | HPrim.NativeFun
-  | HPrim.NativeCast
-  | HPrim.NativeExpr
-  | HPrim.NativeStmt
-  | HPrim.NativeDecl
-  | HPrim.SizeOfVal -> 1
+  | HPrim.NativeCast -> 1
 
   | HPrim.Add
   | HPrim.Sub
@@ -480,9 +475,7 @@ let private exLetFunExpr callee isRec vis argPats body next ty loc ctx =
 let private exExpr (expr, ctx) =
   match expr with
   | HLitExpr _
-  | HVarExpr _
-  | HTyDeclExpr _
-  | HOpenExpr _ -> expr, ctx
+  | HVarExpr _ -> expr, ctx
 
   | HFunExpr (serial, _, calleeLoc) -> exFunName expr serial calleeLoc ctx
   | HVariantExpr (_, ty, loc) -> exVariantName expr ty loc ctx
@@ -521,8 +514,6 @@ let private exExpr (expr, ctx) =
 
   | HNavExpr _ -> unreachable () // HNavExpr is resolved in NameRes, Typing, or RecordRes.
   | HRecordExpr _ -> unreachable () // HRecordExpr is resolved in RecordRes.
-  | HModuleExpr _
-  | HModuleSynonymExpr _ -> unreachable () // Resolved in NameRes.
 
 let etaExpansion (expr, tyCtx: TyCtx) =
   let etaCtx = ofTyCtx tyCtx

@@ -141,9 +141,7 @@ let private ofMirCtx (mirCtx: MirCtx) : CirCtx =
       | UnionTyDef _ -> tyUnion serial
       | RecordTyDef _ -> tyRecord serial
 
-      | MetaTyDef _
-      | UniversalTyDef _
-      | SynonymTyDef _ -> unreachable () // Resolved in Typing.
+      | MetaTyDef _ -> unreachable () // Resolved in Typing.
 
     mirCtx.Tys
     |> renameIdents tyDefToName toKey tyCompare
@@ -558,12 +556,7 @@ let private cgTyIncomplete (ctx: CirCtx) (ty: Ty) : CTy * CirCtx =
   | UnionTk tySerial, _ -> genIncompleteUnionTyDecl ctx tySerial
   | RecordTk tySerial, _ -> genIncompleteRecordTyDecl ctx tySerial
 
-  | ErrorTk _, _
-  | MetaTk _, _
-  | SynonymTk _, _ -> unreachable () // Resolved in Typing.
-
-  | UnresolvedTk _, _
-  | UnresolvedVarTk _, _ -> unreachable () // Resolved in NameRes.
+  | MetaTk _, _ -> unreachable () // Resolved in Typing.
 
 /// Converts a type to complete C type.
 ///
@@ -614,12 +607,7 @@ let private cgTyComplete (ctx: CirCtx) (ty: Ty) : CTy * CirCtx =
 
       | _ -> unreachable () // Record type undefined?
 
-  | ErrorTk _, _
-  | MetaTk _, _
-  | SynonymTk _, _ -> unreachable () // Resolved in Typing.
-
-  | UnresolvedTk _, _
-  | UnresolvedVarTk _, _ -> unreachable () // Resolved in NameRes.
+  | MetaTk _, _ -> unreachable () // Resolved in Typing.
 
 // -----------------------------------------------
 // Extern decl

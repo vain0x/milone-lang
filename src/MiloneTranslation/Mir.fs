@@ -269,7 +269,7 @@ let mDeclToLoc (decl: MDecl): Loc =
 // Expression sugaring (MIR)
 // -----------------------------------------------
 
-let rec mxSugar expr =
+let mxSugar expr =
   let mxSugarUni op l ty loc =
     match l with
     // SUGAR: `not true` ==> `false`

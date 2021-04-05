@@ -186,15 +186,8 @@ let private hoistExpr (expr, ctx) : HExpr * HoistCtx =
       |> hoistExprLetFunForNonMainFun
       |> hoistExpr
 
-  | HTyDeclExpr _
-  | HOpenExpr _ ->
-      // We can ignore them because these declarations are used only in NameRes.
-      hxDummy, ctx
-
   | HNavExpr _ -> unreachable () // HNavExpr is resolved in NameRes, Typing, or RecordRes.
   | HRecordExpr _ -> unreachable () // HRecordExpr is resolved in RecordRes.
-  | HModuleExpr _
-  | HModuleSynonymExpr _ -> unreachable () // Resolved in NameRes.
 
 let private hoistExprToplevel (expr, ctx) : HoistCtx =
   match expr with
@@ -228,11 +221,6 @@ let private hoistExprToplevel (expr, ctx) : HoistCtx =
       (expr, ctx)
       |> hoistExprLetFunForNonMainFun
       |> hoistExprToplevel
-
-  | HTyDeclExpr _
-  | HOpenExpr _ ->
-      // We can ignore them because these declarations are used only in NameRes.
-      ctx
 
   | _ -> hoistStmt ctx expr
 

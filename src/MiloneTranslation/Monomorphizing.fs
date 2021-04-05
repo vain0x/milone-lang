@@ -66,7 +66,6 @@ let private emptyBinding : AssocMap<TySerial, Ty> = TMap.empty compare
 [<RequireQualifiedAccess; NoEquality; NoComparison>]
 type private MonoCtx =
   { Serial: Serial
-    Logs: (Log * Loc) list
 
     Funs: AssocMap<FunSerial, FunDef>
     Tys: AssocMap<TySerial, TyDef>
@@ -92,7 +91,6 @@ type private MonoCtx =
 
 let private ofTyCtx (tyCtx: TyCtx) : MonoCtx =
   { Serial = tyCtx.Serial
-    Logs = tyCtx.Logs
 
     Funs = tyCtx.Funs
     Tys = tyCtx.Tys
@@ -131,7 +129,7 @@ let private unifyTy (monoCtx: MonoCtx) (lTy: Ty) (rTy: Ty) loc =
         | Some ty -> go ty otherTy loc binding
 
         | None ->
-            match unifyAfterExpandMeta lTy rTy tySerial (substTy binding otherTy) loc with
+            match unifyAfterExpandMeta tySerial (substTy binding otherTy) loc with
             | UnifyAfterExpandMetaResult.OkNoBind -> binding
 
             | UnifyAfterExpandMetaResult.OkBind -> binding |> TMap.add tySerial otherTy
@@ -323,8 +321,6 @@ let private monifyLetFunExpr (ctx: MonoCtx) callee isRec vis args body next ty l
 
 let private monifyExpr (expr, ctx) =
   match expr with
-  | HTyDeclExpr _
-  | HOpenExpr _
   | HLitExpr _
   | HVarExpr _
   | HVariantExpr _
@@ -387,8 +383,6 @@ let private monifyExpr (expr, ctx) =
 
   | HNavExpr _ -> unreachable () // HNavExpr is resolved in NameRes, Typing, or RecordRes.
   | HRecordExpr _ -> unreachable () // HRecordExpr is resolved in RecordRes.
-  | HModuleExpr _
-  | HModuleSynonymExpr _ -> unreachable () // Resolved in NameRes.
 
 let monify (decls: HExpr list, tyCtx: TyCtx) : HExpr list * TyCtx =
   let monoCtx = ofTyCtx tyCtx |> forceGeneralizeFuns
