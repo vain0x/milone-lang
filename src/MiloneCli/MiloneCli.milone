@@ -1,0 +1,52 @@
+/// Entry point of the milone-lang compiler.
+module rec MiloneCli.EntryPoint
+
+// See milone_libs for implementations.
+open MiloneStd.StdChar
+open MiloneStd.StdString
+
+open MiloneCli.Cli
+
+module Env = MiloneStd.StdEnv
+
+let private profileInit (): Profiler =
+  let state: voidptr = __nativeFun "milone_profile_init"
+  Profiler state
+
+let private profileLog (msg: string) (Profiler state): unit =
+  __nativeFun ("milone_profile_log", msg, state)
+
+let private fileExists (filePath: string): bool = __nativeFun ("file_exists", filePath)
+
+let private fileReadAllText (filePath: string): string =
+  __nativeFun ("file_read_all_text", filePath)
+
+let private fileWriteAllText (filePath: string) (contents: string) : unit =
+  __nativeFun ("file_write_all_text", filePath, contents)
+
+let private writeStdout (contents: string) : unit =
+  __nativeStmt ("fwrite({0}.str, sizeof(char), (size_t){0}.len, stdout);", contents)
+
+let private getEnv (name: string): string = __nativeFun ("milone_get_env", name)
+
+let private readFile filePath =
+  if fileExists filePath then fileReadAllText filePath |> Some else None
+
+[<EntryPoint>]
+let main _ =
+  let args = Env.commandLineArgs ()
+
+  let home = getEnv "HOME"
+  let miloneHome = getEnv "MILONE_HOME"
+
+  let host: CliHost =
+    { Args = args
+      Home = home
+      MiloneHome = miloneHome
+      ProfileInit = profileInit
+      ProfileLog = profileLog
+      FileReadAllText = readFile
+      FileWriteAllText = fileWriteAllText
+      WriteStdout = writeStdout }
+
+  cli host
