@@ -1,7 +1,9 @@
 module rec MyBuildTool.Program
 
 open System
+open System.Diagnostics
 open System.IO
+open System.Text
 
 module FS = MyBuildTool.FileSearch
 
@@ -42,6 +44,26 @@ let main argv =
   | "--version" :: _ ->
       printfn "0.1.0"
       0
+
+  | "gen2" :: _ ->
+
+    let startInfo = ProcessStartInfo("dotnet")
+    startInfo.ArgumentList.Add("run")
+    startInfo.ArgumentList.Add("-p")
+    startInfo.ArgumentList.Add("src/MiloneCli")
+    startInfo.ArgumentList.Add("--")
+    startInfo.ArgumentList.Add("compile")
+    startInfo.ArgumentList.Add("src/MiloneCli")
+    startInfo.ArgumentList.Add("--target-dir")
+    startInfo.ArgumentList.Add("target/gen2")
+    startInfo.RedirectStandardOutput <- true
+    startInfo.UseShellExecute <- false
+    let p = Process.Start(startInfo)
+    p.WaitForExit()
+    let stdOut = p.StandardOutput.ReadToEnd()
+
+    eprintfn "out = %A, %d" (stdOut) p.ExitCode
+    0
 
   | "milone" :: projectDir :: envs ->
       let _, map =
