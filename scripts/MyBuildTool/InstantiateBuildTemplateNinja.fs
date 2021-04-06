@@ -211,12 +211,15 @@ build {t.GeneratedOut}: $
 
 rule build_run_tests
   description = build_run_tests
-  command = $my_build_tool --build-run-tests {runTestProjectDirs}
+  command = $
+    $my_build_tool --build-run-tests {runTestProjectDirs} && $
+    ninja -f target/tests2-build.ninja
 
 build {exeFiles}: $
   build_run_tests $
     | $my_build_tool runtime/milone.o runtime/milone.h $
       {runTestInputs}
+  pool = console
 
 build run_tests: $
   phony {exeFiles}

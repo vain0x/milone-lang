@@ -114,11 +114,10 @@ let private commandGen2 () =
         "target/gen2" ]
 
   let ninja = StringBuilder()
+  let w (s: string) = ninja.AppendLine(s) |> ignore
 
-  ninja.AppendLine("builddir = target/gen2")
-  |> ignore
-
-  ninja.AppendLine(cRules) |> ignore
+  w "builddir = target/gen2"
+  w cRules
 
   let oFiles = ResizeArray()
 
@@ -131,13 +130,11 @@ let private commandGen2 () =
       let o = $"target/gen2/{name}.o"
       oFiles.Add(o)
 
-      ninja.AppendLine($"build {o}: compile_c_to_obj {c} | runtime/milone.h")
-      |> ignore
+      w $"build {o}: compile_c_to_obj {c} | runtime/milone.h"
 
   let input = oFiles |> String.concat " "
 
-  ninja.AppendLine($"build target/milone: link_objs_to_exe runtime/milone.o {input}")
-  |> ignore
+  w $"build target/milone: link_objs_to_exe runtime/milone.o {input}"
 
   writeTo (ninja.ToString()) "target/gen2/build.ninja"
 
@@ -180,9 +177,9 @@ let private commandGen3 () =
   if not ok then exit 1
 
 let private commandTests () =
-  writeTo (InstantiateBuildTemplateNinja.render ()) "target/tests.ninja"
+  File.WriteAllText("target/tests-build.ninja", InstantiateBuildTemplateNinja.render ())
 
-  run "ninja" [ "-f"; "target/tests.ninja"; "tests" ]
+  run "bin/ninja" [ "-f"; "target/tests-build.ninja" ]
 
 let private commandTestsBuild (testProjectDirs: string list) =
   let ninja = StringBuilder()
@@ -232,10 +229,6 @@ let private commandTestsBuild (testProjectDirs: string list) =
   w $"default {exeFiles}"
 
   writeTo (ninja.ToString()) "target/tests2-build.ninja"
-
-  eprintfn "c-compiling test projects"
-
-  run "bin/ninja" [ "-f"; "target/tests2-build.ninja" ]
 
 let private commandTestsSummarize (testProjectDirs: string list) =
   let mutable pass = 0

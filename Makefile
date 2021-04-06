@@ -77,7 +77,7 @@ bin/ninja:
 
 MY_BUILD := scripts/MyBuildTool/bin/Debug/net5.0/MyBuildTool
 
-.PHONY: all gen2 gen3 integration_tests my_build self test_self all
+.PHONY: gen2 gen3 integration_tests my_build self test_self
 
 ${MY_BUILD}: \
 		$(wildcard scripts/MyBuildTool/*.fs) \
@@ -94,8 +94,11 @@ target/milone: bin/ninja ${MY_BUILD} \
 
 gen2: target/milone
 
-gen3: bin/ninja ${MY_BUILD} target/milone
-	${MY_BUILD} gen3
+target/.timestamp/gen3: bin/ninja ${MY_BUILD} target/milone
+	${MY_BUILD} gen3 && \
+	touch target/.timestamp/gen3
+
+gen3: target/.timestamp/gen3
 
 self: gen2
 
