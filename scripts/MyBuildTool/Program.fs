@@ -47,23 +47,80 @@ let main argv =
 
   | "gen2" :: _ ->
 
-    let startInfo = ProcessStartInfo("dotnet")
-    startInfo.ArgumentList.Add("run")
-    startInfo.ArgumentList.Add("-p")
-    startInfo.ArgumentList.Add("src/MiloneCli")
-    startInfo.ArgumentList.Add("--")
-    startInfo.ArgumentList.Add("compile")
-    startInfo.ArgumentList.Add("src/MiloneCli")
-    startInfo.ArgumentList.Add("--target-dir")
-    startInfo.ArgumentList.Add("target/gen2")
-    startInfo.RedirectStandardOutput <- true
-    startInfo.UseShellExecute <- false
-    let p = Process.Start(startInfo)
-    p.WaitForExit()
-    let stdOut = p.StandardOutput.ReadToEnd()
+      let startInfo = ProcessStartInfo("dotnet")
+      startInfo.ArgumentList.Add("run")
+      startInfo.ArgumentList.Add("-p")
+      startInfo.ArgumentList.Add("src/MiloneCli")
+      startInfo.ArgumentList.Add("--")
+      startInfo.ArgumentList.Add("compile")
+      startInfo.ArgumentList.Add("src/MiloneCli")
+      startInfo.ArgumentList.Add("--target-dir")
+      startInfo.ArgumentList.Add("target/gen2")
+      startInfo.RedirectStandardOutput <- true
+      startInfo.UseShellExecute <- false
+      let p = Process.Start(startInfo)
+      p.WaitForExit()
+      let stdOut = p.StandardOutput.ReadToEnd()
 
-    eprintfn "out = %A, %d" (stdOut) p.ExitCode
-    0
+      if p.ExitCode <> 0 then
+        1
+      // eprintfn "out = %A, %d" (stdOut) p.ExitCode
+      else
+
+        let ninja = StringBuilder()
+
+        """
+builddir = target/gen2
+
+rule compile_c_to_obj
+  description = compile_c_to_obj $in
+  command = $${CC:-gcc} -std=c11 $warning_flags -O1 -g -c -Iruntime $in -o $out
+
+rule link_objs_to_exe
+  description = link_objs_to_exe
+  command = $${CC:-gcc} $in -o $out
+
+build runtime/milone.o: $
+  compile_c_to_obj $
+    runtime/milone.c $
+    | runtime/milone.h
+"""
+        |> ninja.AppendLine
+        |> ignore
+
+        let oFiles = ResizeArray()
+
+        for name in stdOut.Split("\n") do
+          let name =
+            Path.GetFileNameWithoutExtension(name.Trim())
+
+          if String.IsNullOrEmpty(name) |> not then
+            let c = $"target/gen2/{name}.c"
+            let o = $"target/gen2/{name}.o"
+            oFiles.Add(o)
+
+            ninja.AppendLine($"build {o}: compile_c_to_obj {c} | runtime/milone.h")
+            |> ignore
+
+        let input = oFiles |> String.concat " "
+
+        ninja.AppendLine($"build target/milone: link_objs_to_exe runtime/milone.o {input}")
+        |> ignore
+
+        writeTo (ninja.ToString()) "target/gen2/build.ninja"
+
+        let startInfo = ProcessStartInfo("bin/ninja")
+        startInfo.ArgumentList.Add("-f")
+        startInfo.ArgumentList.Add("target/gen2/build.ninja")
+        startInfo.ArgumentList.Add("target/milone")
+        startInfo.UseShellExecute <- false
+        let p = Process.Start(startInfo)
+        p.WaitForExit()
+
+        if p.ExitCode <> 0 then
+          p.ExitCode
+        else
+          0
 
   | "milone" :: projectDir :: envs ->
       let _, map =
