@@ -80,7 +80,10 @@ let private run command args =
 
   let p = Process.Start(startInfo)
   p.WaitForExit()
-  if p.ExitCode <> 0 then exit 1
+
+  if p.ExitCode <> 0 then
+    eprintfn "ERROR: '%s' %A exited with %d." command args p.ExitCode
+    exit 1
 
 let private runToOut command args =
   let startInfo = ProcessStartInfo(command)
@@ -93,9 +96,14 @@ let private runToOut command args =
 
   let p = Process.Start(startInfo)
   p.WaitForExit()
-  if p.ExitCode <> 0 then exit 1
 
-  p.StandardOutput.ReadToEnd()
+  let output = p.StandardOutput.ReadToEnd()
+
+  if p.ExitCode <> 0 then
+    printfn "%s\nERROR: '%s' %A exited with %d." output command args p.ExitCode
+    exit 1
+
+  output
 
 let private commandGen2 () =
   eprintfn "milone-compiling gen2"
@@ -273,82 +281,6 @@ let main argv =
   | "tests" :: _ -> commandTests ()
   | "--build-run-tests" :: args -> commandTestsBuild args
   | "--summarize-tests" :: args -> commandTestsSummarize args
-
-  // | "milone" :: projectDir :: envs ->
-  //     let _, map =
-  //       envs
-  //       |> List.fold
-  //            (fun (parity, map) (e: string) ->
-  //              if parity = 0 then
-  //                if e = "-e" then
-  //                  1, map
-  //                else
-  //                  failwithf "Expected -e, %A" e
-  //              else
-  //                match e.Split("=")
-  //                      |> Array.map (fun (s: string) -> s.Trim()) with
-  //                | [| name; value |] -> 0, Map.add name value map
-  //                | _ -> failwithf "invalid env %A" e)
-  //            (0, Map.empty)
-
-  //     let env (name: string) =
-  //       match Map.tryFind name map with
-  //       | Some it -> it
-  //       | None ->
-  //           match Environment.GetEnvironmentVariable(name) with
-  //           | null
-  //           | "" ->
-  //               match name with
-  //               | "MILONE_HOME" ->
-  //                   Environment.GetFolderPath(Environment.SpecialFolder.UserProfile)
-  //                   + "/.milone"
-  //               | "MILONE" -> "milone"
-  //               | "EXE" -> "a.out"
-  //               | "VERBOSITY" -> "--quiet"
-  //               | "TARGET_DIR" -> "target"
-  //               | _ -> failwithf "env missing %A" name
-  //           | it -> it
-
-  //     eprintfn "projectDir=%s map=%A" projectDir map
-
-  // $my_build_tool milone src/MiloneCli $
-  //   -e MILONE_HOME=$$PWD $
-  //   -e MILONE=$milone_dotnet_debug $
-  //   -e EXE=$out $
-  //   -e TARGET_DIR=target/gen2 $
-  //   -e VERBOSITY=$verbosity $
-  //   >$target_dir/build.ninja && $
-
-  // | "milone-delete-c-files" :: targetDir -> ()
-
-  // Stage 1: Install 'bin/ninja'.
-  // FIXME: impl
-
-  // Stage 2: Generate the default 'build.ninja'.
-  // let workspaceDir = Environment.CurrentDirectory
-  // let fsProjects = FS.allFsProjects workspaceDir
-  // let testProjects = FS.allTestProjects workspaceDir
-
-  // let stage2 () =
-  //   let input =
-  //     [ yield "build-template.ninja"
-
-  //       for projectFile, sourceFiles in fsProjects do
-  //         yield projectFile
-  //         yield! sourceFiles
-
-  //       for _, projectDir, _, _ in testProjects do
-  //         yield projectDir ]
-
-  //   let output = "target/build-meta.ninja"
-
-  //   let ninjaTemplate = File.ReadAllText("build-template.ninja")
-
-  //   output |> writeTo (InstantiateBuildTemplateNinja.render ())
-
-  // Stage 3: Run ninja-1.
-
-  // Stage 4: Re-run ninja-2.
 
   | _ ->
       eprintfn "unknown target: %A" argv
