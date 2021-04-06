@@ -7,7 +7,6 @@
 # <https://ninja-build.org/manual.html>
 
 builddir = target
-timestamp = target/.timestamp
 
 my_build_tool = scripts/MyBuildTool/bin/Debug/net5.0/MyBuildTool
 milone_dotnet_debug = src/MiloneCli/bin/Debug/net5.0/MiloneCli
@@ -44,12 +43,12 @@ rule dotnet_restore
     dotnet restore && $
     touch $out
 
-build $timestamp/dotnet_restore: $
+build target/.timestamp/dotnet_restore: $
   dotnet_restore $
     | {{ FS_PROJ_FILES }}
 
 build dotnet_restore: $
-  phony $timestamp/dotnet_restore
+  phony target/.timestamp/dotnet_restore
 
 # ------------------------------------------------
 # milone-dotnet
