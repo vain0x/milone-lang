@@ -7,28 +7,6 @@ open System.Text
 
 module FS = MyBuildTool.FileSearch
 
-// -----------------------------------------------
-// tests
-// -----------------------------------------------
-
-// let errorTestTemplate = """
-// # ------------------------------------------------
-// # {{ PATH }} (error)
-// # ------------------------------------------------
-
-// rule {{ MILONE_RULE }}
-//   description = milone {{ PATH }}
-//   command = ! target/milone compile {{ PATH }} --target-dir {{ TARGET_DIR }} >$out
-
-// build {{ GENERATED_OUT }}: $
-//   {{ MILONE_RULE }} $
-//     | {{ SRC }} $
-//       {{ EXPECTED_OUT }} $
-//       target/milone
-// """
-
-// -----------------------------------------------
-
 type TestProject =
   { ProjectDir: string
     CategoryDir: string
@@ -43,7 +21,9 @@ type TestProject =
 
 let testProject (categoryDir: string, projectDir, projectName, sources) =
   let categoryName = Path.GetFileName(categoryDir)
-  let targetDir = $"target/tests/{categoryName}/{projectName}"
+
+  let targetDir =
+    $"target/tests/{categoryName}/{projectName}"
 
   { CategoryDir = categoryDir
     ProjectDir = projectDir
@@ -60,8 +40,6 @@ let render () =
   let solutionDir = System.Environment.CurrentDirectory
   let fsProjects = FS.allFsProjects solutionDir
   let testProjects = FS.allTestProjects solutionDir
-
-  // let ninjaTemplate = File.ReadAllText("build-template.ninja")
 
   let myBuildToolInput =
     seq {
@@ -117,7 +95,8 @@ let render () =
   let ninja = StringBuilder()
   let w (s: string) = ninja.AppendLine(s) |> ignore
 
-  w """
+  w
+    """
 builddir = target/tests
 timestamp = target/.timestamp
 
@@ -137,47 +116,51 @@ rule build_milone_dotnet
   w $"build $milone_dotnet: build_milone_dotnet {miloneCliInput}"
 
   for t in runTests do
-    let id = $"tests_{t.CategoryName}_{t.ProjectName}"
+    let id =
+      $"tests_{t.CategoryName}_{t.ProjectName}"
+
     let src = String.concat " " t.Sources
 
-    w $"""
+    w
+      $"""
 # ------------------------------------------------
 # {t.ProjectDir} (run)
 # ------------------------------------------------
-
 rule {id}_build
   description = milone {t.ProjectDir}
   command = target/milone compile {t.ProjectDir} --target-dir {t.TargetDir} >$out
-
 build {t.FilesTxt}: $
   {id}_build $
     | {src} $
       {t.ExpectedOut} $
       target/milone
-
 rule {id}_run
   description = run {t.ProjectDir}
   command = {{ {t.Exe}; echo '$$? = '$$?; }} >$out
-
 build {t.GeneratedOut}: $
   {id}_run $
     | {t.ExpectedOut} $
-      {t.Exe}
-"""
+      {t.Exe}"""
 
-  // for t in errorTests do
-    //         |> List.map
-    //              (fun (t: TestProject) ->
-    //                errorTestTemplate
-    //                  .Replace("{{ PATH }}", t.ProjectDir)
-    //                  .Replace("{{ PROJECT }}", t.ProjectName)
-    //                  .Replace("{{ MILONE_RULE }}", t.ProjectName + "_build")
-    //                  .Replace("{{ SRC }}", String.concat " " t.Sources)
-    //                  .Replace("{{ TARGET_DIR }}", t.TargetDir)
-    //                  .Replace("{{ GENERATED_OUT }}", t.GeneratedOut)
-    //                  .Replace("{{ EXPECTED_OUT }}", t.ExpectedOut)))
-    // |> String.concat "\n"
-    // ()
+  for t in errorTests do
+    let id =
+      $"tests_{t.CategoryName}_{t.ProjectName}"
+
+    let src = String.concat " " t.Sources
+
+    w
+      $"""
+# ------------------------------------------------
+# {t.ProjectDir} (error)
+# ------------------------------------------------
+rule {id}_build
+  description = ! milone {t.ProjectDir}
+  command = ! target/milone compile {t.ProjectDir} --target-dir {t.TargetDir} >$out
+build {t.GeneratedOut}: $
+  {id}_build $
+    | {src} $
+      {t.ExpectedOut} $
+      target/milone"""
 
   let exeFiles =
     runTests
@@ -199,12 +182,13 @@ build {t.GeneratedOut}: $
     |> Seq.map (fun (t: TestProject) -> t.ProjectDir)
     |> String.concat " "
 
-  // let errorTestInputs =
-  //   errorTests
-  //   |> List.collect (fun (t: TestProject) -> t.ExpectedOut :: t.Sources)
-  //   |> String.concat " "
+  let testProjectDirs =
+    (runTestProjectDirs
+     :: List.map (fun (t: TestProject) -> t.ProjectDir) errorTests)
+    |> String.concat " "
 
-  w $"""
+  w
+    $"""
 # ------------------------------------------------
 # Tests
 # ------------------------------------------------
@@ -214,37 +198,17 @@ rule build_run_tests
   command = $
     $my_build_tool --build-run-tests {runTestProjectDirs} && $
     ninja -f target/tests2-build.ninja
-
 build {exeFiles}: $
   build_run_tests $
     | $my_build_tool runtime/milone.o runtime/milone.h $
       {runTestInputs}
   pool = console
-
-build run_tests: $
-  phony {exeFiles}
-
-
-
 rule summarize_tests
   description = summarize_tests
-  command = $my_build_tool --summarize-tests {runTestProjectDirs} && touch $out
-
+  command = $my_build_tool --summarize-tests {testProjectDirs} && touch $out
 build target/.timestamp/summarize_tests: $
   summarize_tests $
-    | run_tests $my_build_tool {generatedOuts}
-
-build tests: phony target/.timestamp/summarize_tests
-"""
-
-  // ninjaTemplate
-  //   .Replace("{{ FSPROJ_FILES }}", fsProjects |> List.map fst |> String.concat " ")
-  //   .Replace(
-  //     "{{ MILONE_CLI_SRC }}",
-  //     fsProjects
-  //     |> List.collect (fun (x, xs) -> x :: xs)
-  //     |> String.concat " "
-  //   )
-  //   .Replace("{{ TEST }}", test + "\n" + collect)
+    | {exeFiles} $my_build_tool {generatedOuts}
+build tests: phony target/.timestamp/summarize_tests"""
 
   ninja.ToString()
