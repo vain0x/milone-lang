@@ -1,8 +1,0 @@
-#!/bin/bash
-
-set -eu
-
-diff <(cat target/gen2_files.txt | xargs -n1 basename) <(cat target/gen3_files.txt | xargs -n1 basename)
-cat target/gen2_files.txt | \
-    xargs -n1 basename | \
-    xargs -I{} diff target/gen2/{} target/gen3/{}
