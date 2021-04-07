@@ -130,7 +130,7 @@ rule build_milone_dotnet
 # ------------------------------------------------
 rule {id}_build
   description = milone {t.ProjectDir}
-  command = target/milone compile {t.ProjectDir} --target-dir {t.TargetDir} >$out
+  command = target/milone compile {t.ProjectDir} --target-dir {t.ProjectDir} >$out
 build {t.FilesTxt}: $
   {id}_build $
     | {src} $

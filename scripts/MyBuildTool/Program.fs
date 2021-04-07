@@ -222,7 +222,7 @@ let private commandTestsBuild (testProjectDirs: string list) =
         Path.GetFileNameWithoutExtension(name.Trim())
 
       if String.IsNullOrEmpty(name) |> not then
-        let c = $"{targetDir}/{name}.c"
+        let c = $"{projectDir}/{name}.c"
         let o = $"{targetDir}/{name}.o"
         oFiles.Add(o)
 
