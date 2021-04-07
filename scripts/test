@@ -1,6 +1,0 @@
-#!/bin/sh
-# USAGE: scripts/test
-
-set -eux
-
-bin/ninja test

@@ -1,8 +1,0 @@
-#!/bin/sh
-# Generate <build.ninja>.
-#
-# USAGE: scripts/build-ninja-gen
-
-set -eu
-
-cat build-template.ninja | dotnet run -p scripts/GenNinjaFile -c Release -- $PWD >build.ninja

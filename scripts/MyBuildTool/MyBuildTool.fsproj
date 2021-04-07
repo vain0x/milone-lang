@@ -6,7 +6,8 @@
   </PropertyGroup>
 
   <ItemGroup>
-    <Compile Include="TemplateTestCase.fs" />
+    <Compile Include="FileSearch.fs" />
+    <Compile Include="InstantiateBuildTemplateNinja.fs" />
     <Compile Include="Program.fs" />
   </ItemGroup>
 
