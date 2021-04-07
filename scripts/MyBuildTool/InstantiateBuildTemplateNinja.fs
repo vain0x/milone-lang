@@ -15,6 +15,7 @@ type TestProject =
     TargetDir: string
     Exe: string
     FilesTxt: string
+    ErrorTxt: string
     ExpectedOut: string
     GeneratedOut: string
     Sources: string list }
@@ -33,6 +34,7 @@ let testProject (categoryDir: string, projectDir, projectName, sources) =
     FilesTxt = $"{targetDir}/files.txt"
     Exe = $"{targetDir}/{projectName}.exe"
     ExpectedOut = $"{projectDir}/{projectName}.out"
+    ErrorTxt = $"{projectDir}/{projectName}_error.txt"
     GeneratedOut = $"{targetDir}/generated.txt"
     Sources = sources }
 
@@ -155,7 +157,13 @@ build {t.GeneratedOut}: $
 # ------------------------------------------------
 rule {id}_build
   description = ! milone {t.ProjectDir}
-  command = ! target/milone compile {t.ProjectDir} --target-dir {t.TargetDir} >$out
+  command = $
+    if target/milone compile {t.ProjectDir} --target-dir {t.TargetDir} >{t.ProjectDir}/{t.ProjectName}.c; then $
+      echo 'Unexpectedly compilation succeeded.' >$out; $
+    else $
+      echo 'milone-lang compile error.' >$out; $
+    fi
+
 build {t.GeneratedOut}: $
   {id}_build $
     | {src} $
