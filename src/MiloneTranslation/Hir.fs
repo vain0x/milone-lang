@@ -262,6 +262,15 @@ type HExprKind =
   /// Tuple constructor, e.g. `x, y, z`.
   | HTupleEN
 
+  /// Gets tuple i'th item.
+  | HTupleItemEN of tupleItemIndex: int
+
+  /// Gets head of list.
+  | HListHeadEN
+
+  /// Gets tail of list.
+  | HListTailEN
+
   /// Closure constructor.
   | HClosureEN
 

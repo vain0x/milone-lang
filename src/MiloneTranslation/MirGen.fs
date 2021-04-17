@@ -1308,6 +1308,11 @@ let private mirifyExprInfCallNative ctx (funName: string) args ty loc =
     temp, ctx
 
 let private mirifyExprInf ctx itself kind args ty loc =
+  let toUnary unary ctx arg =
+    let argTy = exprToTy arg
+    let arg, ctx = mirifyExpr ctx arg
+    MUnaryExpr(unary, arg, argTy, loc), ctx
+
   match kind, args, ty with
   | HMinusEN, [ arg ], _ ->
       let arg, ctx = mirifyExpr ctx arg
@@ -1317,6 +1322,10 @@ let private mirifyExprInf ctx itself kind args ty loc =
   | HTupleEN, _, Ty (TupleTk, itemTys) -> mirifyExprTuple ctx args itemTys loc
   | HRecordEN, _, _ -> mirifyExprRecord ctx args ty loc
   | HRecordItemEN index, [ record ], itemTy -> mirifyExprRecordItem ctx index record itemTy loc
+
+  | HTupleItemEN index, [ tuple ], _ -> toUnary (MProjUnary index) ctx tuple
+  | HListHeadEN, [ list ], _ -> toUnary MListHeadUnary ctx list
+  | HListTailEN, [ list ], _ -> toUnary MListTailUnary ctx list
 
   | HIndexEN, [ l; r ], _ -> mirifyCallStrIndexExpr ctx l r ty loc
   | HSliceEN, _, _ -> mirifyCallStrGetSliceExpr ctx args loc
