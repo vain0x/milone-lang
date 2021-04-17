@@ -485,7 +485,7 @@ let private cpDecl decl acc =
       |> cons ";"
       |> cons eol
 
-  | CInternalStaticVarDecl(name, ty) ->
+  | CInternalStaticVarDecl (name, ty) ->
       acc
       // FIXME: global variable is now defined in entry module no matter where it is.
       // |> cons "static "

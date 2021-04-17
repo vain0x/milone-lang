@@ -1432,7 +1432,7 @@ let private nameResExpr (expr: TExpr, ctx: ScopeCtx) =
   | TVarExpr _ -> nameResVarExpr expr ctx
 
   | TRecordExpr (baseOpt, fields, ty, loc) ->
-      let doArm () =
+      invoke (fun () ->
         let baseOpt, ctx =
           (baseOpt, ctx) |> stOptionMap nameResExpr
 
@@ -1443,12 +1443,10 @@ let private nameResExpr (expr: TExpr, ctx: ScopeCtx) =
                  let init, ctx = (init, ctx) |> nameResExpr
                  (name, init, loc), ctx)
 
-        TRecordExpr(baseOpt, fields, ty, loc), ctx
-
-      doArm ()
+        TRecordExpr(baseOpt, fields, ty, loc), ctx)
 
   | TMatchExpr (cond, arms, ty, loc) ->
-      let doArm () =
+      invoke (fun () ->
         let cond, ctx = (cond, ctx) |> nameResExpr
 
         let arms, ctx =
@@ -1462,32 +1460,26 @@ let private nameResExpr (expr: TExpr, ctx: ScopeCtx) =
                  let ctx = ctx |> finishScope
                  (pat, guard, body), ctx)
 
-        TMatchExpr(cond, arms, ty, loc), ctx
-
-      doArm ()
+        TMatchExpr(cond, arms, ty, loc), ctx)
 
   | TNavExpr _ -> nameResNavExpr expr ctx
 
   | TNodeExpr (op, items, ty, loc) ->
-      let doArm () =
+      invoke (fun () ->
         // Necessary in case of ascribe expression.
         let ty, ctx = ctx |> resolveTy ty loc
 
         let items, ctx = (items, ctx) |> stMap nameResExpr
-        TNodeExpr(op, items, ty, loc), ctx
-
-      doArm ()
+        TNodeExpr(op, items, ty, loc), ctx)
 
   | TBlockExpr (stmts, last) ->
-      let doArm () =
+      invoke (fun () ->
         let stmts, ctx = (stmts, ctx) |> stMap nameResExpr
         let last, ctx = (last, ctx) |> nameResExpr
-        TBlockExpr(stmts, last), ctx
-
-      doArm ()
+        TBlockExpr(stmts, last), ctx)
 
   | TLetValExpr (pat, body, next, ty, loc) ->
-      let doArm () =
+      invoke (fun () ->
         let body, ctx =
           let ctx = ctx |> startScope ExprScope
           let body, ctx = (body, ctx) |> nameResExpr
@@ -1501,12 +1493,10 @@ let private nameResExpr (expr: TExpr, ctx: ScopeCtx) =
           let ctx = ctx |> finishScope
           pat, next, ctx
 
-        TLetValExpr(pat, body, next, ty, loc), ctx
-
-      doArm ()
+        TLetValExpr(pat, body, next, ty, loc), ctx)
 
   | TLetFunExpr (serial, isRec, vis, pats, body, next, ty, loc) ->
-      let doArm () =
+      invoke (fun () ->
         let ctx = ctx |> startScope ExprScope
 
         let pats, body, ctx =
@@ -1547,21 +1537,17 @@ let private nameResExpr (expr: TExpr, ctx: ScopeCtx) =
         let next, ctx = (next, ctx) |> nameResExpr
         let ctx = ctx |> finishScope
 
-        TLetFunExpr(serial, isRec, vis, pats, body, next, ty, loc), ctx
-
-      doArm ()
+        TLetFunExpr(serial, isRec, vis, pats, body, next, ty, loc), ctx)
 
   | TTyDeclExpr (serial, _, tyArgs, tyDecl, loc) ->
-      let doArm () =
+      invoke (fun () ->
         let ctx =
           ctx |> finishDefineTy serial tyArgs tyDecl loc
 
-        expr, ctx
-
-      doArm ()
+        expr, ctx)
 
   | TOpenExpr (path, loc) ->
-      let doArm () =
+      invoke (fun () ->
         let ctx =
           let moduleSerials = ctx |> resolveModulePath path
 
@@ -1570,12 +1556,10 @@ let private nameResExpr (expr: TExpr, ctx: ScopeCtx) =
           else
             ctx |> openModules moduleSerials
 
-        expr, ctx
-
-      doArm ()
+        expr, ctx)
 
   | TModuleExpr (serial, body, loc) ->
-      let doArm () =
+      invoke (fun () ->
         let moduleName =
           ctx |> findName (moduleTySerialToInt serial)
 
@@ -1608,12 +1592,10 @@ let private nameResExpr (expr: TExpr, ctx: ScopeCtx) =
             ctx
 
         // Module no longer needed.
-        hxSemi body loc, ctx
-
-      doArm ()
+        hxSemi body loc, ctx)
 
   | TModuleSynonymExpr (serial, path, loc) ->
-      let doArm () =
+      invoke (fun () ->
         let name =
           ctx |> findName (moduleSynonymSerialToInt serial)
 
@@ -1638,9 +1620,7 @@ let private nameResExpr (expr: TExpr, ctx: ScopeCtx) =
                      (fun moduleSerial ctx -> doImportNsWithAlias name (ModuleNsOwner moduleSerial) ctx)
                      moduleSerials
 
-        hxUnit loc, ctx
-
-      doArm ()
+        hxUnit loc, ctx)
 
   | TFunExpr _
   | TVariantExpr _ -> unreachable expr // HFunExpr and HVariantExpr are generated in NameRes.

@@ -1464,21 +1464,25 @@ let private mirifyExpr (ctx: MirCtx) (expr: HExpr) : MExpr * MirCtx =
       mirifyExpr ctx last
 
   | HLetValExpr (_, _, next, _, _) ->
-      let doArm () =
-        match expr with
-        | HLetValExpr (pat, init, _, _, _) -> mirifyExprLetValContents ctx pat init
-        | _ -> unreachable ()
+      let ctx =
+        invoke
+          (fun () ->
+            match expr with
+            | HLetValExpr (pat, init, _, _, _) -> mirifyExprLetValContents ctx pat init
+            | _ -> unreachable ())
 
-      mirifyExpr (doArm ()) next
+      mirifyExpr ctx next
 
   | HLetFunExpr (_, _, _, _, _, next, _, _) ->
-      let doArm () =
-        match expr with
-        | HLetFunExpr (funSerial, _, _, argPats, body, _, _, loc) ->
-            mirifyExprLetFunContents ctx funSerial argPats body loc
-        | _ -> unreachable ()
+      let ctx =
+        invoke
+          (fun () ->
+            match expr with
+            | HLetFunExpr (funSerial, _, _, argPats, body, _, _, loc) ->
+                mirifyExprLetFunContents ctx funSerial argPats body loc
+            | _ -> unreachable ())
 
-      mirifyExpr (doArm ()) next
+      mirifyExpr ctx next
 
   | _ -> mirifyOtherExprWrapper ctx expr
 

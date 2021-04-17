@@ -26,6 +26,17 @@ let unreachable context = failwithf "NEVER: %A" context
 let todo context = failwithf "Not implemented: %A" context
 
 // -----------------------------------------------
+// Combinator
+// -----------------------------------------------
+
+/// Just calls a function.
+///
+/// HACK: This is mainly used to wrap a match clause in a separate function
+///       to reduce the size of stack frame; without this,
+///       deeply recursive calls cause stack overflow.
+let invoke (f: unit -> 'A): 'A = f ()
+
+// -----------------------------------------------
 // Pair
 // -----------------------------------------------
 

@@ -409,7 +409,7 @@ let private lowerExpr (expr: Tir.TExpr) : Hir.HExpr =
   | Tir.TLetValExpr (pat, init, next, ty, loc) ->
       Hir.HLetValExpr(lowerPat pat, lowerExpr init, lowerExpr next, lowerTy ty, loc)
   | Tir.TLetFunExpr _ ->
-      (fun () ->
+      invoke (fun () ->
         let funSerial, isRec, vis, argPats, body, next, ty, loc =
           match expr with
           | Tir.TLetFunExpr (t0, t1, t2, t3, t4, t5, t6, t7) -> t0, t1, t2, t3, t4, t5, t6, t7
@@ -425,7 +425,6 @@ let private lowerExpr (expr: Tir.TExpr) : Hir.HExpr =
           lowerTy ty,
           loc
         ))
-        ()
 
   | Tir.TTyDeclExpr _
   | Tir.TOpenExpr _

@@ -497,12 +497,11 @@ let private exExpr (expr, ctx) =
   | HNodeExpr (kind, args, ty, loc) -> exInfExpr expr kind args ty loc ctx
 
   | HBlockExpr (stmts, last) ->
-      let doArm () =
-        let stmts, ctx = (stmts, ctx) |> stMap exExpr
-        let last, ctx = (last, ctx) |> exExpr
-        HBlockExpr(stmts, last), ctx
-
-      doArm ()
+      invoke
+        (fun () ->
+          let stmts, ctx = (stmts, ctx) |> stMap exExpr
+          let last, ctx = (last, ctx) |> exExpr
+          HBlockExpr(stmts, last), ctx)
 
   | HLetValExpr (pat, init, next, ty, loc) ->
       let init, ctx = (init, ctx) |> exExpr

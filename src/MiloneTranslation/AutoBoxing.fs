@@ -671,14 +671,13 @@ let private abPat ctx pat =
   | HVarPat _ -> pat |> patMap (abTy ctx) id
 
   | HVariantPat (variantSerial, ty, loc) ->
-      let doArm () =
-        let ty = ty |> abTy ctx
+      invoke
+        (fun () ->
+          let ty = ty |> abTy ctx
 
-        match unwrapNewtypeVariantPat ctx variantSerial loc with
-        | Some pat -> pat
-        | None -> HVariantPat(variantSerial, ty, loc)
-
-      doArm ()
+          match unwrapNewtypeVariantPat ctx variantSerial loc with
+          | Some pat -> pat
+          | None -> HVariantPat(variantSerial, ty, loc))
 
   | HNodePat ((HVariantAppPN variantSerial as kind), [ payloadPat ], ty, loc) ->
       let payloadPat = payloadPat |> abPat ctx
@@ -710,67 +709,63 @@ let private abPat ctx pat =
 let private abExpr ctx expr =
   match expr with
   | HVariantExpr (variantSerial, ty, loc) ->
-      let doArm () =
-        let ty = ty |> abTy ctx
+      invoke
+        (fun () ->
+          let ty = ty |> abTy ctx
 
-        match unwrapNewtypeVariantExpr ctx variantSerial loc with
-        | Some expr -> expr
-        | None -> HVariantExpr(variantSerial, ty, loc)
-
-      doArm ()
+          match unwrapNewtypeVariantExpr ctx variantSerial loc with
+          | Some expr -> expr
+          | None -> HVariantExpr(variantSerial, ty, loc))
 
   | HRecordExpr (baseOpt, fields, ty, loc) ->
-      let doArm () =
-        assert (tyIsRecord ty)
+      invoke
+        (fun () ->
+          assert (tyIsRecord ty)
 
-        let baseOpt = baseOpt |> Option.map (abExpr ctx)
+          let baseOpt = baseOpt |> Option.map (abExpr ctx)
 
-        let fields =
-          fields
-          |> List.map
-               (fun (name, init, loc) ->
-                 let init = init |> abExpr ctx
-                 name, init, loc)
+          let fields =
+            fields
+            |> List.map
+                 (fun (name, init, loc) ->
+                   let init = init |> abExpr ctx
+                   name, init, loc)
 
-        match postProcessRecordExpr ctx baseOpt fields ty loc with
-        | Some expr -> expr
-        | None -> HRecordExpr(baseOpt, fields, ty, loc)
-
-      doArm ()
+          match postProcessRecordExpr ctx baseOpt fields ty loc with
+          | Some expr -> expr
+          | None -> HRecordExpr(baseOpt, fields, ty, loc))
 
   | HNavExpr (l, r, ty, loc) ->
-      let doArm () =
-        let recordTy = l |> exprToTy
-        assert (tyIsRecord recordTy)
+      invoke
+        (fun () ->
+          let recordTy = l |> exprToTy
+          assert (tyIsRecord recordTy)
 
-        let l = l |> abExpr ctx
-        let ty = ty |> abTy ctx
+          let l = l |> abExpr ctx
+          let ty = ty |> abTy ctx
 
-        match postProcessFieldExpr ctx l recordTy r ty loc with
-        | Some expr -> expr
-        | None -> HNavExpr(l, r, ty, loc)
-
-      doArm ()
+          match postProcessFieldExpr ctx l recordTy r ty loc with
+          | Some expr -> expr
+          | None -> HNavExpr(l, r, ty, loc))
 
   | HNodeExpr (kind, items, ty, loc) ->
-      let doArm () =
-        let items = items |> List.map (abExpr ctx)
-        let ty = ty |> abTy ctx
+      invoke
+        (fun () ->
+          let items = items |> List.map (abExpr ctx)
+          let ty = ty |> abTy ctx
 
-        match kind, items with
-        | HAppEN, [ (HVariantExpr (variantSerial, _, _) as callee); payload ] ->
-            let payload =
-              match postProcessVariantFunAppExpr ctx variantSerial payload with
+          match kind, items with
+          | HAppEN, [ (HVariantExpr (variantSerial, _, _) as callee); payload ] ->
+              let payload =
+                match postProcessVariantFunAppExpr ctx variantSerial payload with
+                | Some payload -> payload
+                | None -> payload
+
+              match unwrapNewtypeVariantAppExpr ctx variantSerial payload with
               | Some payload -> payload
-              | None -> payload
+              | None -> hxApp callee payload ty loc
 
-            match unwrapNewtypeVariantAppExpr ctx variantSerial payload with
-            | Some payload -> payload
-            | None -> hxApp callee payload ty loc
-
-        | _ -> HNodeExpr(kind, items, ty, loc)
-
-      doArm ()
+          | _ -> HNodeExpr(kind, items, ty, loc))
 
   | HLitExpr _ -> expr
 
@@ -779,48 +774,44 @@ let private abExpr ctx expr =
   | HPrimExpr _ -> expr |> exprMap (abTy ctx) id
 
   | HMatchExpr (cond, arms, ty, loc) ->
-      let doArm () =
-        let cond = cond |> abExpr ctx
+      invoke
+        (fun () ->
+          let cond = cond |> abExpr ctx
 
-        let go (pat, guard, body) =
-          let pat = pat |> abPat ctx
-          let guard = guard |> abExpr ctx
-          let body = body |> abExpr ctx
-          pat, guard, body
+          let go (pat, guard, body) =
+            let pat = pat |> abPat ctx
+            let guard = guard |> abExpr ctx
+            let body = body |> abExpr ctx
+            pat, guard, body
 
-        let arms = arms |> List.map go
-        let ty = ty |> abTy ctx
-        HMatchExpr(cond, arms, ty, loc)
-
-      doArm ()
+          let arms = arms |> List.map go
+          let ty = ty |> abTy ctx
+          HMatchExpr(cond, arms, ty, loc))
 
   | HBlockExpr (stmts, last) ->
-      let doArm () =
-        let stmts = stmts |> List.map (abExpr ctx)
-        let last = last |> abExpr ctx
-        HBlockExpr(stmts, last)
-
-      doArm ()
+      invoke
+        (fun () ->
+          let stmts = stmts |> List.map (abExpr ctx)
+          let last = last |> abExpr ctx
+          HBlockExpr(stmts, last))
 
   | HLetValExpr (pat, init, next, ty, loc) ->
-      let doArm () =
-        let pat = pat |> abPat ctx
-        let init = init |> abExpr ctx
-        let next = next |> abExpr ctx
-        let ty = ty |> abTy ctx
-        HLetValExpr(pat, init, next, ty, loc)
-
-      doArm ()
+      invoke
+        (fun () ->
+          let pat = pat |> abPat ctx
+          let init = init |> abExpr ctx
+          let next = next |> abExpr ctx
+          let ty = ty |> abTy ctx
+          HLetValExpr(pat, init, next, ty, loc))
 
   | HLetFunExpr (callee, isRec, vis, args, body, next, ty, loc) ->
-      let doArm () =
-        let args = args |> List.map (abPat ctx)
-        let body = body |> abExpr ctx
-        let next = next |> abExpr ctx
-        let ty = ty |> abTy ctx
-        HLetFunExpr(callee, isRec, vis, args, body, next, ty, loc)
-
-      doArm ()
+      invoke
+        (fun () ->
+          let args = args |> List.map (abPat ctx)
+          let body = body |> abExpr ctx
+          let next = next |> abExpr ctx
+          let ty = ty |> abTy ctx
+          HLetFunExpr(callee, isRec, vis, args, body, next, ty, loc))
 
 let autoBox (expr: HExpr, tyCtx: TyCtx) =
   // Detect recursion.

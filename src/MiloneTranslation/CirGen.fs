@@ -830,14 +830,14 @@ let private cgExpr (ctx: CirCtx) (arg: MExpr) : CExpr * CirCtx =
   | MNeverExpr loc -> unreachable ("MNeverExpr " + locToString loc)
 
   | MVarExpr (serial, _, _) ->
-      (fun () ->
-        let ctx =
-          match findStorageModifier ctx serial with
-          | IsStatic -> cgExternVarDecl ctx serial
-          | NotStatic -> ctx
+      invoke
+        (fun () ->
+          let ctx =
+            match findStorageModifier ctx serial with
+            | IsStatic -> cgExternVarDecl ctx serial
+            | NotStatic -> ctx
 
-        CVarExpr(getUniqueVarName ctx serial), ctx)
-        ()
+          CVarExpr(getUniqueVarName ctx serial), ctx)
 
   | MProcExpr (serial, _, _) -> CVarExpr(getUniqueFunName ctx serial), ctx
 
@@ -1238,11 +1238,10 @@ let private cgTerminatorStmt ctx stmt =
       addStmt ctx (CSwitchStmt(cond, clauses))
 
   | MExitTerminator arg ->
-      let doArm () =
-        let arg, ctx = cgExpr ctx arg
-        addStmt ctx (CExprStmt(CCallExpr(CVarExpr "exit", [ arg ])))
-
-      doArm ()
+      invoke
+        (fun () ->
+          let arg, ctx = cgExpr ctx arg
+          addStmt ctx (CExprStmt(CCallExpr(CVarExpr "exit", [ arg ]))))
 
 let private cgStmt ctx stmt =
   match stmt with

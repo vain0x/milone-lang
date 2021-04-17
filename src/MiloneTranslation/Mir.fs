@@ -260,7 +260,7 @@ let mexprToTy expr = expr |> mexprExtract |> fst
 // Declarations (MIR)
 // -----------------------------------------------
 
-let mDeclToLoc (decl: MDecl): Loc =
+let mDeclToLoc (decl: MDecl) : Loc =
   match decl with
   | MProcDecl (_, _, _, _, loc) -> loc
   | MNativeDecl (_, loc) -> loc
