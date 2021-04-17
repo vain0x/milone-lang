@@ -62,8 +62,8 @@ type MUnary =
   /// Downcast.
   | MUnboxUnary
 
-  /// Projection. Gets an item of tuple.
-  | MProjUnary of tupleItemIndex: int
+  /// Gets an item of tuple.
+  | MTupleItemUnary of tupleItemIndex: int
 
   /// Gets variant tag of union value.
   | MGetDiscriminantUnary

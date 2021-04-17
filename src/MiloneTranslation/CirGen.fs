@@ -762,7 +762,7 @@ let private genUnaryExpr ctx op arg ty _ =
 
       deref, ctx
 
-  | MProjUnary index -> CDotExpr(arg, tupleField index), ctx
+  | MTupleItemUnary index -> CDotExpr(arg, tupleField index), ctx
 
   | MGetDiscriminantUnary -> CDotExpr(arg, "discriminant"), ctx
 

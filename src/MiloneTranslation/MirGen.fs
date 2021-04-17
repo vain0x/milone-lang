@@ -171,10 +171,8 @@ let private opIsComparison op =
 let private mxNot expr loc =
   MUnaryExpr(MNotUnary, expr, tyBool, loc)
 
-/// Wraps an expression with projection operation.
-/// And unbox if necessary.
-let private mxProj expr index resultTy loc =
-  MUnaryExpr(MProjUnary index, expr, resultTy, loc)
+let private mxTupleItem expr index resultTy loc =
+  MUnaryExpr(MTupleItemUnary index, expr, resultTy, loc)
 
 let private mxStrAdd ctx _op l r (_, loc) =
   MBinaryExpr(MStrAddBinary, l, r, tyStr, loc), ctx
@@ -364,7 +362,7 @@ let private mirifyPatTuple ctx endLabel itemPats expr loc =
 
     | itemPat :: itemPats ->
         let itemTy = patToTy itemPat
-        let item = mxProj expr i itemTy loc
+        let item = mxTupleItem expr i itemTy loc
         let ctx = mirifyPat ctx endLabel itemPat item
         go ctx (i + 1) itemPats
 
