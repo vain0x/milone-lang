@@ -904,11 +904,14 @@ let cli (host: CliHost) =
   | BuildCmd, args ->
       let verbosity, args = parseVerbosity host args
 
+      let targetDir, args =
+        parseOption (fun x -> x = "--target-dir") args
+
       match args with
       | projectDir :: _ ->
           let options : BuildOptions =
             { ProjectDir = projectDir
-              TargetDir = "."
+              TargetDir = Option.defaultValue "." targetDir
               Verbosity = verbosity }
 
           cliBuild host options
