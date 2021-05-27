@@ -2,26 +2,6 @@ module rec MiloneStd.StdOpts
 
 module S = MiloneStd.StdString
 
-type CliOptionKind =
-  | Flag
-  | Prop of defaultValue: string option
-  | List
-
-type CliOption =
-  { Long: string option
-    Short: char option
-    Kind: CliOptionKind
-    Description: string }
-
-type CliOptsSchema =
-  { SkipFirst: bool
-    Options: CliOption list }
-
-type CliOptionName =
-  | Long of string
-  | Short of char
-  | LongShort of string * char
-
 module OptsCore =
   [<RequireQualifiedAccess; NoEquality; NoComparison>]
   type PropName =
@@ -46,7 +26,7 @@ module OptsCore =
   let private isValueArg (arg: string) =
     not (arg.Length >= 1 && arg.[0] = '-')
     || arg.Length = 1
-    || arg.[2] = '='
+    || arg.[1] = '='
 
   let run (args: string list) (init: 'S) (hasParam: PropName -> 'S -> bool) (update: Msg -> 'S -> 'S) : 'S * Result =
     let addPositional (state: 'S) value = update (Msg.Positional value) state
@@ -109,22 +89,24 @@ module OptsCore =
             | Some i -> arg.[0..i - 2], arg.[i - 1], Some arg.[i + 1..arg.Length - 1]
             | None -> arg.[0..arg.Length - 2], arg.[arg.Length - 1], None
 
-          let state =
-            let rec gogo (i: int) (state: 'S) : 'S =
+          let state, result =
+            let rec gogo (i: int) (state: 'S) : 'S * Result =
               if i = flags.Length then
-                state
+                state, Result.Ok
               else
                 let name = PropName.Short flags.[i]
 
                 if hasParam name state then
-                  update (Msg.NoValueError name) state
+                  state, Result.NoValueError name
                 else
                   addBinding state name None |> gogo (i + 1)
 
             gogo 0 state
 
           let state, args, result =
-            addWithValueOpt state (PropName.Short last) valueOpt args
+            match result with
+            | Result.Ok -> addWithValueOpt state (PropName.Short last) valueOpt args
+            | _ -> state, args, result
 
           match result with
           | Result.Ok -> go args state
