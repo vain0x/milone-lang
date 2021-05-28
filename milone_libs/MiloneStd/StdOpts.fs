@@ -1,117 +1,135 @@
 module rec MiloneStd.StdOpts
 
+module OptsCore = MiloneStd.StdOptsCore
 module S = MiloneStd.StdString
+module TMap = MiloneStd.StdMap
+module TSet = MiloneStd.StdSet
 
-module OptsCore =
-  [<RequireQualifiedAccess; NoEquality; NoComparison>]
-  type PropName =
-    | Long of string
-    | Short of char
+type private Kind =
+  | Flag
+  | Required
+  | Optional
 
-  [<RequireQualifiedAccess; NoEquality; NoComparison>]
-  type Msg =
-    | Binding of PropName * string option
-    | Positional of string
-    | NoValueError of PropName
-    | InvalidValueError of PropName * string
+[<RequireQualifiedAccess; NoEquality; NoComparison>]
+type Opts =
+  { Positional: string list
+    Flags: string list
+    Bindings: (string * string) list
+    Error: string option }
 
-  [<RequireQualifiedAccess; NoEquality; NoComparison>]
-  type Result =
-    | Ok
-    | NoValueError of PropName
-    | RedundantValueError of PropName * string
+let private emptyOpts : Opts =
+  { Positional = []
+    Flags = []
+    Bindings = []
+    Error = None }
 
-  /// Gets whether a string can be used as parameter of option.
-  /// It can't be a value if it starts with a '-', except for "-" and "-=".
-  let private isValueArg (arg: string) =
-    not (arg.Length >= 1 && arg.[0] = '-')
-    || arg.Length = 1
-    || arg.[1] = '='
+/// Easy way to parse command line arguments.
+///
+/// def: List of valid parameter names in the form of:
+///
+/// - `name`: flag
+/// - `*name`: required
+/// - `?name`: optional
+let parseOpts (def: string list) (args: string list) : Opts =
+  let nameToString name =
+    match name with
+    | OptsCore.PropName.Long name -> name
+    | OptsCore.PropName.Short c -> string c
 
-  let run (args: string list) (init: 'S) (hasParam: PropName -> 'S -> bool) (update: Msg -> 'S -> 'S) : 'S * Result =
-    let addPositional (state: 'S) value = update (Msg.Positional value) state
+  let defMap, missed =
+    def
+    |> List.fold
+         (fun (defMap, missed) def ->
+           let name, kind =
+             if S.startsWith "*" def then
+               S.skip 1 def, Required
+             else if S.startsWith "?" def then
+               S.skip 1 def, Optional
+             else
+               def, Flag
 
-    let addPositionalList (state: 'S) args = args |> List.fold addPositional state
+           let defMap = defMap |> TMap.add name kind
 
-    let addBinding (state: 'S) name valueOpt =
-      update (Msg.Binding(name, valueOpt)) state
+           let missed =
+             match kind with
+             | Required -> missed |> TSet.add name
+             | _ -> missed
 
-    // Tries to take next argument as value of option.
-    let take args =
-      match args with
-      | [] -> None, []
-      | "--" :: value :: args -> Some value, "--" :: args
-      | value :: args when isValueArg value -> Some value, args
-      | _ -> None, args
+           defMap, missed)
+         (TMap.empty compare, TSet.empty compare)
 
-    let addWithValueOpt (state: 'S) name valueOpt args : 'S * string list * Result =
-      match hasParam name state, valueOpt with
-      | true, Some _
-      | false, None -> addBinding state name valueOpt, args, Result.Ok
+  let hasParam name (_: Opts, _: TSet.TreeSet<string>, _: string list) =
+    match defMap |> TMap.tryFind (nameToString name) with
+    | Some Optional
+    | Some Required -> true
 
-      | false, Some value -> state, args, Result.RedundantValueError(name, value)
+    | _ -> false
 
-      | true, None ->
-          let valueOpt, args = take args
+  let update msg (opts: Opts, missed, redundant) =
+    match msg with
+    | OptsCore.Msg.Binding (name, valueOpt) ->
+        let name = nameToString name
 
-          match valueOpt with
-          | Some _ -> addBinding state name valueOpt, args, Result.Ok
-          | None -> state, args, Result.NoValueError name
+        match TMap.tryFind name defMap, valueOpt with
+        | None, _ -> opts, missed, name :: redundant
 
-    let rec go args (state: 'S) : 'S * Result =
-      match args with
-      | [] -> state, Result.Ok
+        | Some Flag, _ -> { opts with Flags = name :: opts.Flags }, missed, redundant
 
-      | "--" :: args -> args |> List.fold addPositional state, Result.Ok
+        | Some Optional, Some value ->
+            { opts with
+                Bindings = (name, value) :: opts.Bindings },
+            missed,
+            redundant
 
-      // Long option.
-      | arg :: args when S.startsWith "--" arg ->
-          let arg = arg.[2..arg.Length - 1]
+        | Some Required, Some value ->
+            let _, missed = missed |> TSet.remove name
 
-          let name, valueOpt =
-            match S.findIndex "=" arg with
-            | None -> arg, None
-            | Some i -> arg.[0..i - 1], Some arg.[i + 1..arg.Length - 1]
+            { opts with
+                Bindings = (name, value) :: opts.Bindings },
+            missed,
+            redundant
 
-          let state, args, result =
-            addWithValueOpt state (PropName.Long name) valueOpt args
+        | _ ->
+            assert false // unreachable
+            exit 1
 
-          match result with
-          | Result.Ok -> go args state
-          | _ -> state, result
+    | OptsCore.Msg.Positional value ->
+        { opts with
+            Positional = value :: opts.Positional },
+        missed,
+        redundant
 
-      // Short option.
-      | arg :: args when not (isValueArg arg) ->
-          let arg = arg.[1..arg.Length - 1]
+  let (opts, missed, redundant), result =
+    OptsCore.run args (emptyOpts, missed, []) hasParam update
 
-          let flags, last, valueOpt =
-            match S.findIndex "=" arg with
-            | Some i -> arg.[0..i - 2], arg.[i - 1], Some arg.[i + 1..arg.Length - 1]
-            | None -> arg.[0..arg.Length - 2], arg.[arg.Length - 1], None
+  let error =
+    match result with
+    | OptsCore.Result.Ok ->
+        let missedError missed =
+          "Missed options: " + S.concat ", " missed + "."
 
-          let state, result =
-            let rec gogo (i: int) (state: 'S) : 'S * Result =
-              if i = flags.Length then
-                state, Result.Ok
-              else
-                let name = PropName.Short flags.[i]
+        let redundantError redundant =
+          "Redundant flags: "
+          + S.concat ", " redundant
+          + "."
 
-                if hasParam name state then
-                  state, Result.NoValueError name
-                else
-                  addBinding state name None |> gogo (i + 1)
+        match TSet.toList missed, redundant with
+        | [], [] -> None
+        | missed, [] -> Some(missedError missed)
+        | [], redundant -> Some(redundantError redundant)
+        | missed, redundant ->
+            Some(
+              missedError missed
+              + " "
+              + redundantError redundant
+            )
 
-            gogo 0 state
+    | OptsCore.Result.NoValueError name -> Some("Specify value of option: " + nameToString name)
 
-          let state, args, result =
-            match result with
-            | Result.Ok -> addWithValueOpt state (PropName.Short last) valueOpt args
-            | _ -> state, args, result
+    | OptsCore.Result.RedundantValueError (name, _) ->
+        Some(
+          "Don't specify value for flag: "
+          + nameToString name
+        )
 
-          match result with
-          | Result.Ok -> go args state
-          | _ -> state, result
-
-      | value :: args -> addPositional state value |> go args
-
-    go args init
+  { opts with Error = error }
