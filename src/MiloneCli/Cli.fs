@@ -666,7 +666,7 @@ rule link
   let ctx =
     compileCtxNew host options.Verbosity projectDir
 
-  let exe =
+  let exeFile =
     targetDir + "/" + ctx.EntryProjectName + ".exe"
 
   match compile ctx with
@@ -676,9 +676,9 @@ rule link
       let build =
         build
         |> cons "build "
-        |> cons exe
+        |> cons exeFile
         |> cons ": false\ndefault "
-        |> cons exe
+        |> cons exeFile
         |> cons "\n"
 
       host.FileWriteAllText ninjaFile (build |> List.rev |> S.concat "")
@@ -686,6 +686,16 @@ rule link
 
   | CompileOk files ->
       let miloneObj = miloneHome + "/runtime/milone.o"
+      let miloneHeader = miloneHome + "/runtime/milone.h"
+
+      let cFile name = [ projectDir; "/"; name ] |> S.concat ""
+
+      let objFile name =
+        [ targetDir
+          "/"
+          pathStrToStem name
+          ".o" ]
+        |> S.concat ""
 
       let build =
         List.fold
@@ -694,28 +704,27 @@ rule link
 
             build
             |> cons "build "
-            |> cons (pathStrToStem name)
-            |> cons ".o: cc "
-            |> cons name
+            |> cons (objFile name)
+            |> cons ": cc "
+            |> cons (cFile name)
             |> cons " | "
-            |> cons miloneHome
-            |> cons "/runtime/milone.h\n\n")
+            |> cons miloneHeader
+            |> cons "\n\n")
           build
           files
 
       let build =
         build
         |> cons "build "
-        |> cons exe
+        |> cons exeFile
         |> cons ": link "
         |> cons miloneObj
         |> cons " "
         |> cons (
           files
-          |> List.map (fun (name, _) -> " " + pathStrToStem name + ".o")
+          |> List.map (fun (name, _) -> objFile name)
           |> S.concat ""
         )
-        |> cons ""
         |> cons "\n"
 
       host.FileWriteAllText ninjaFile (build |> List.rev |> S.concat "")
