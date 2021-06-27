@@ -175,5 +175,5 @@ find -type f \
 
 # Execute for each milone file. Use temporary file since fantomas doesn't allow non-F# file extensions.
 find -type f -name '*.milone' | \
-    xargs -I{} -P4 sh -c 'cp -f {} {}_.fs; fantomas {}_.fs; if test $? -eq 0; then cat {}_.fs >{}; fi; rm -f {}_.fs'
+    xargs -I{} -P4 sh -c 'cp -f {} {}_.fs; dotnet fantomas {}_.fs; if test $? -eq 0; then cat {}_.fs >{}; fi; rm -f {}_.fs'
 ```
