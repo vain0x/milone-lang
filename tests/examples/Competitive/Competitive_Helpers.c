@@ -643,7 +643,7 @@ struct IntList const* listInit_(int len_4, struct IntIntFun1 gen_) {
 struct StringStringListTuple2 go_5(struct StringList const* xs_11, int xn_) {
     struct StringStringListTuple2 match_6;
     if ((!((!(xs_11))))) goto next_60;
-    milone_assert((xn_ == 0), 97, 8);
+    milone_assert((xn_ == 0), 97, 6);
     struct StringStringListTuple2 tuple_2 = (struct StringStringListTuple2){.t0 = (struct String){.str = "", .len = 0}, .t1 = NULL};
     match_6 = tuple_2;
     goto end_match_59;

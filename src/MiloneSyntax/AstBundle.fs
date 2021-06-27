@@ -97,27 +97,27 @@ let private requestDeps (moduleInfo: ModuleInfo) (ctx: BundleCtx) : BundleCtx =
   | None -> ctx
 
   | Some root ->
-      // All modules depend on MiloneOnly implicitly.
-      let deps, stack =
-        let r = newMiloneOnlyRequest moduleInfo.Project
-        [ r.ProjectName, r.ModuleName ], r :: ctx.ModuleStack
+    // All modules depend on MiloneOnly implicitly.
+    let deps, stack =
+      let r = newMiloneOnlyRequest moduleInfo.Project
+      [ r.ProjectName, r.ModuleName ], r :: ctx.ModuleStack
 
-      let deps, stack =
-        findDependentModules root
-        |> List.fold
-             (fun (deps, stack) (projectName, moduleName, pos) ->
-               let deps = (projectName, moduleName) :: deps
+    let deps, stack =
+      findDependentModules root
+      |> List.fold
+           (fun (deps, stack) (projectName, moduleName, pos) ->
+             let deps = (projectName, moduleName) :: deps
 
-               let stack =
-                 newDepRequest projectName moduleName moduleInfo.Ref pos
-                 :: stack
+             let stack =
+               newDepRequest projectName moduleName moduleInfo.Ref pos
+               :: stack
 
-               deps, stack)
-             (deps, stack)
+             deps, stack)
+           (deps, stack)
 
-      { ctx with
-          ModuleDeps = ctx.ModuleDeps |> TMap.add moduleInfo.Ref deps
-          ModuleStack = stack }
+    { ctx with
+        ModuleDeps = ctx.ModuleDeps |> TMap.add moduleInfo.Ref deps
+        ModuleStack = stack }
 
 // -----------------------------------------------
 // Interface
@@ -152,9 +152,9 @@ let bundleFinish (ctx: BundleCtx) : BundleResult =
                match ctx.ModuleMap |> TMap.tryFind dep with
                | None -> None
                | Some depInfo ->
-                   ctx.ModuleDeps
-                   |> TMap.tryFind depInfo.Ref
-                   |> Option.map (fun deps -> depInfo.Ref, deps))
+                 ctx.ModuleDeps
+                 |> TMap.tryFind depInfo.Ref
+                 |> Option.map (fun deps -> depInfo.Ref, deps))
         |> List.fold folder (doneSet, acc)
 
       doneSet, moduleInfo :: acc
@@ -173,20 +173,20 @@ let bundleNext (ctx: BundleCtx) : BundleStatus * BundleCtx =
   | [] -> NoRequest, ctx
 
   | r :: stack ->
-      match ctx.ModuleMap
-            |> TMap.tryFind (r.ProjectName, r.ModuleName) with
-      | None -> ModuleInfoRequested r, ctx
+    match ctx.ModuleMap
+          |> TMap.tryFind (r.ProjectName, r.ModuleName) with
+    | None -> ModuleInfoRequested r, ctx
 
-      | Some moduleInfo ->
-          // Request is resolved.
-          let ctx = { ctx with ModuleStack = stack }
+    | Some moduleInfo ->
+      // Request is resolved.
+      let ctx = { ctx with ModuleStack = stack }
 
-          if ctx.ModuleDeps |> TMap.containsKey moduleInfo.Ref then
-            // Already bundled.
-            bundleNext ctx
-          else
-            let ctx = ctx |> requestDeps moduleInfo
-            ModuleBundled moduleInfo.Ref, ctx
+      if ctx.ModuleDeps |> TMap.containsKey moduleInfo.Ref then
+        // Already bundled.
+        bundleNext ctx
+      else
+        let ctx = ctx |> requestDeps moduleInfo
+        ModuleBundled moduleInfo.Ref, ctx
 
 let bundleSkip (ctx: BundleCtx) : BundleCtx =
   match ctx.ModuleStack with
@@ -229,46 +229,46 @@ let bundleCompatible
     | NoRequest -> bundleFinish bundleCtx, errorAcc
 
     | ModuleInfoRequested r ->
-        let projectName = r.ProjectName
-        let moduleName = r.ModuleName
+      let projectName = r.ProjectName
+      let moduleName = r.ModuleName
 
-        // Fetch module.
-        let moduleInfoOpt, serial, errorAcc =
-          match fetchModule projectName moduleName with
-          | None -> None, serial, errorAcc
+      // Fetch module.
+      let moduleInfoOpt, serial, errorAcc =
+        match fetchModule projectName moduleName with
+        | None -> None, serial, errorAcc
 
-          | Some (docId, ast, errors) ->
-              let serial = serial + 1
+        | Some (docId, ast, errors) ->
+          let serial = serial + 1
 
-              let moduleInfo : ModuleInfo =
-                { Ref = (serial, moduleName)
-                  Project = projectName
-                  DocId = docId
-                  AstOpt = Some ast }
+          let moduleInfo : ModuleInfo =
+            { Ref = (serial, moduleName)
+              Project = projectName
+              DocId = docId
+              AstOpt = Some ast }
 
-              let errorAcc =
-                errors
-                |> List.fold (fun errorAcc (msg, (y, x)) -> (msg, Loc(docId, y, x)) :: errorAcc) errorAcc
+          let errorAcc =
+            errors
+            |> List.fold (fun errorAcc (msg, (y, x)) -> (msg, Loc(docId, y, x)) :: errorAcc) errorAcc
 
-              Some moduleInfo, serial, errorAcc
+          Some moduleInfo, serial, errorAcc
 
-        // Tell or discard.
-        match moduleInfoOpt with
-        | None ->
-            let errorAcc =
-              if r.Optional then
-                errorAcc
-              else
-                let originLoc =
-                  match r.OriginOpt with
-                  | None -> Loc(entryProjectName, 0, 0)
-                  | Some (moduleRef, (y, x)) -> Loc(snd moduleRef, y, x)
+      // Tell or discard.
+      match moduleInfoOpt with
+      | None ->
+        let errorAcc =
+          if r.Optional then
+            errorAcc
+          else
+            let originLoc =
+              match r.OriginOpt with
+              | None -> Loc(entryProjectName, 0, 0)
+              | Some (moduleRef, (y, x)) -> Loc(snd moduleRef, y, x)
 
-                ("Module not found.", originLoc) :: errorAcc
+            ("Module not found.", originLoc) :: errorAcc
 
-            go serial errorAcc (bundleSkip bundleCtx)
+        go serial errorAcc (bundleSkip bundleCtx)
 
-        | Some moduleInfo -> go serial errorAcc (bundleAddModuleInfo moduleInfo bundleCtx)
+      | Some moduleInfo -> go serial errorAcc (bundleAddModuleInfo moduleInfo bundleCtx)
 
     | ModuleBundled _ -> go serial errorAcc bundleCtx
 
@@ -285,16 +285,16 @@ let bundleCompatible
            | None -> moduleAcc, nameCtx
 
            | Some ast ->
-               // Compute docId.
-               let docId : DocId =
-                 moduleInfo.Project + "." + snd moduleInfo.Ref
+             // Compute docId.
+             let docId : DocId =
+               moduleInfo.Project + "." + snd moduleInfo.Ref
 
-               let exprs, nameCtx =
-                 astToHir moduleInfo.Project docId (ast, nameCtx)
+             let exprs, nameCtx =
+               astToHir moduleInfo.Project docId (ast, nameCtx)
 
-               (moduleInfo.Project, snd moduleInfo.Ref, exprs)
-               :: moduleAcc,
-               nameCtx)
+             (moduleInfo.Project, snd moduleInfo.Ref, exprs)
+             :: moduleAcc,
+             nameCtx)
          ([], nameCtxEmpty ())
 
   let modules : TProgram = List.rev moduleAcc

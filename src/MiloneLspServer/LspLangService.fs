@@ -19,12 +19,12 @@ let private miloneHome =
   let getEnv name =
     match name with
     | "MILONE_HOME" ->
-        Environment.GetEnvironmentVariable("MILONE_HOME")
-        |> opt
+      Environment.GetEnvironmentVariable("MILONE_HOME")
+      |> opt
 
     | "HOME" ->
-        Environment.GetFolderPath(Environment.SpecialFolder.UserProfile)
-        |> opt
+      Environment.GetFolderPath(Environment.SpecialFolder.UserProfile)
+      |> opt
 
     | _ -> None
 
@@ -54,7 +54,8 @@ let private uriToFilePath (uri: string) =
         path
 
     Some path
-  with _ -> None
+  with
+  | _ -> None
 
 /// Whether dir is excluded in traversal?
 let private dirIsExcluded (dir: string) =
@@ -113,7 +114,8 @@ let private doFindProjects (rootUri: string) : ProjectInfo list =
       let subdirs =
         try
           Directory.GetDirectories(dir)
-        with _ ->
+        with
+        | _ ->
           eprintfn "couldn't get list of files: '%s'" dir
           [||]
 
@@ -131,17 +133,18 @@ let findProjects (rootUriOpt: string option) : Result<ProjectInfo list, exn> =
   | None, None -> Ok []
 
   | None, Some rootUri ->
-      let projects =
-        try
-          let projects = doFindProjects rootUri
-          eprintfn "findProjects: %A" (List.map (fun (p: ProjectInfo) -> p.ProjectDir) projects)
-          Ok projects
-        with ex ->
-          eprintfn "findProjects failed: %A" ex
-          Error ex
+    let projects =
+      try
+        let projects = doFindProjects rootUri
+        eprintfn "findProjects: %A" (List.map (fun (p: ProjectInfo) -> p.ProjectDir) projects)
+        Ok projects
+      with
+      | ex ->
+        eprintfn "findProjects failed: %A" ex
+        Error ex
 
-      projectsRef := Some projects
-      projects
+    projectsRef := Some projects
+    projects
 
 // ---------------------------------------------
 // Analysis
@@ -171,20 +174,20 @@ let newLangService (project: ProjectInfo) : LangServiceState =
     match projectName with
     | "MiloneCore"
     | "MiloneStd" ->
-        sprintf "%s/milone_libs/%s/%s.milone" miloneHome projectName moduleName
-        |> fixExt
-        |> uriOfFilePath
-        |> Some
+      sprintf "%s/milone_libs/%s/%s.milone" miloneHome projectName moduleName
+      |> fixExt
+      |> uriOfFilePath
+      |> Some
 
     | _ when projectName = project.ProjectName ->
-        toFilePath moduleName ".milone"
-        |> fixExt
-        |> uriOfFilePath
-        |> Some
+      toFilePath moduleName ".milone"
+      |> fixExt
+      |> uriOfFilePath
+      |> Some
 
     | _ ->
-        eprintfn "findDocId: not found %s/%s" projectName moduleName
-        None
+      eprintfn "findDocId: not found %s/%s" projectName moduleName
+      None
 
   let getVersion docId =
     match LspDocCache.findDoc docId with
@@ -196,28 +199,31 @@ let newLangService (project: ProjectInfo) : LangServiceState =
     | Some docCache -> docCache.Version, docCache.Text
 
     | None ->
-        match docId |> uriToFilePath with
+      match docId |> uriToFilePath with
+      | None ->
+        eprintfn "getText: docId not found: %s" docId
+        0, ""
+
+      | Some filePath ->
+        match File.tryReadFile filePath with
+        | Some it -> 0, it
         | None ->
-            eprintfn "getText: docId not found: %s" docId
-            0, ""
+          if
+            Path.GetFileNameWithoutExtension(filePath)
+            <> "MiloneOnly"
+          then
+            eprintfn "getText: docId file could not read: %s" filePath
 
-        | Some filePath ->
-            match File.tryReadFile filePath with
-            | Some it -> 0, it
-            | None ->
-                if Path.GetFileNameWithoutExtension(filePath)
-                   <> "MiloneOnly" then
-                  eprintfn "getText: docId file could not read: %s" filePath
-
-                0, ""
+          0, ""
 
   let getProjectName docId =
     match docId |> uriToFilePath with
     | None -> None
     | Some filePath ->
-        try
-          Path.GetDirectoryName(filePath) |> Some
-        with _ -> None
+      try
+        Path.GetDirectoryName(filePath) |> Some
+      with
+      | _ -> None
 
   let docs : LangServiceDocs =
     { FindDocId = findDocId
@@ -237,13 +243,13 @@ let newLangServiceWithCache (project: ProjectInfo) =
   | Some it -> it
 
   | None ->
-      let ls = newLangService project
+    let ls = newLangService project
 
-      langServiceCache
-      |> MutMap.insert project.ProjectName ls
-      |> ignore
+    langServiceCache
+    |> MutMap.insert project.ProjectName ls
+    |> ignore
 
-      ls
+    ls
 
 let validateProject (project: ProjectInfo) : ProjectValidateResult =
   project
@@ -303,11 +309,12 @@ let validateWorkspace (rootUriOpt: string option) : WorkspaceValidateResult =
   | Error _ -> []
 
   | Ok projects ->
-      try
-        doValidateWorkspace projects
-      with ex ->
-        eprintfn "validateWorkspace failed: %A" ex
-        []
+    try
+      doValidateWorkspace projects
+    with
+    | ex ->
+      eprintfn "validateWorkspace failed: %A" ex
+      []
 
 let documentHighlight rootUriOpt uri pos =
   let doHighlight (project: ProjectInfo) uri pos =
@@ -322,14 +329,15 @@ let documentHighlight rootUriOpt uri pos =
   match findProjects rootUriOpt with
   | Error _ -> ()
   | Ok projects ->
-      try
-        for project in projects do
-          match doHighlight project uri pos with
-          | None -> ()
-          | Some (r, w) ->
-              reads.AddRange(r)
-              writes.AddRange(w)
-      with ex -> eprintfn "documentHighlight failed: %A" ex
+    try
+      for project in projects do
+        match doHighlight project uri pos with
+        | None -> ()
+        | Some (r, w) ->
+          reads.AddRange(r)
+          writes.AddRange(w)
+    with
+    | ex -> eprintfn "documentHighlight failed: %A" ex
 
   reads, writes
 
@@ -343,12 +351,13 @@ let hover rootUriOpt uri pos =
   | Error _ -> []
 
   | Ok projects ->
-      try
-        projects
-        |> List.choose (fun project -> doHover project uri pos)
-      with ex ->
-        eprintfn "hover failed: %A" ex
-        []
+    try
+      projects
+      |> List.choose (fun project -> doHover project uri pos)
+    with
+    | ex ->
+      eprintfn "hover failed: %A" ex
+      []
 
 let definition rootUriOpt uri pos =
   let doDefinition (project: ProjectInfo) uri pos =
@@ -359,12 +368,13 @@ let definition rootUriOpt uri pos =
   match findProjects rootUriOpt with
   | Error _ -> []
   | Ok projects ->
-      try
-        projects
-        |> List.collect (fun project -> doDefinition project uri pos)
-      with ex ->
-        eprintfn "definition failed: %A" ex
-        []
+    try
+      projects
+      |> List.collect (fun project -> doDefinition project uri pos)
+    with
+    | ex ->
+      eprintfn "definition failed: %A" ex
+      []
 
 let references rootUriOpt uri pos (includeDecl: bool) =
   let doReferences (project: ProjectInfo) uri pos =
@@ -375,9 +385,10 @@ let references rootUriOpt uri pos (includeDecl: bool) =
   match findProjects rootUriOpt with
   | Error _ -> []
   | Ok projects ->
-      try
-        projects
-        |> List.collect (fun project -> doReferences project uri pos)
-      with ex ->
-        eprintfn "references failed: %A" ex
-        []
+    try
+      projects
+      |> List.collect (fun project -> doReferences project uri pos)
+    with
+    | ex ->
+      eprintfn "references failed: %A" ex
+      []

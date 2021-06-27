@@ -21,7 +21,8 @@ SUBCOMMANDS:
     version, -V, --version
 """
 
-let private cRules = """
+let private cRules =
+  """
 warning_flags = $
   -Wall $
   -Wextra $
@@ -60,14 +61,16 @@ let private readToDiff (file: string) =
       File.ReadAllText(file)
     else
       $"{file} doesn't exist"
-  with _ -> $"{file} couldn't be read."
+  with
+  | _ -> $"{file} couldn't be read."
 
 let private writeTo (contents: string) (output: string) =
   let same =
     try
       File.Exists(output)
       && File.ReadAllText(output) = contents
-    with _ -> false
+    with
+    | _ -> false
 
   if not same then
     File.WriteAllText(output, contents)
@@ -283,7 +286,7 @@ let main argv =
   | "--summarize-tests" :: args -> commandTestsSummarize args
 
   | _ ->
-      eprintfn "unknown target: %A" argv
-      exit 1
+    eprintfn "unknown target: %A" argv
+    exit 1
 
   0

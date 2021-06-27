@@ -108,9 +108,9 @@ let private unifyTy (monoCtx: MonoCtx) (lTy: Ty) (rTy: Ty) loc =
     match binding |> TMap.tryFind tySerial with
     | (Some _) as it -> it
     | _ ->
-        match ctx.Tys |> TMap.tryFind tySerial with
-        | Some (MetaTyDef ty) -> Some ty
-        | _ -> None
+      match ctx.Tys |> TMap.tryFind tySerial with
+      | Some (MetaTyDef ty) -> Some ty
+      | _ -> None
 
   let substTy binding ty = tySubst (expandMeta binding) ty
 
@@ -118,23 +118,23 @@ let private unifyTy (monoCtx: MonoCtx) (lTy: Ty) (rTy: Ty) loc =
     match unifyNext lTy rTy loc with
     | UnifyOk
     | UnifyError _ ->
-        // NOTE: Unification may fail due to auto boxing.
-        //       This is not fatal problem since all type errors are already handled in typing phase.
-        binding
+      // NOTE: Unification may fail due to auto boxing.
+      //       This is not fatal problem since all type errors are already handled in typing phase.
+      binding
 
     | UnifyOkWithStack stack -> List.fold (fun binding (l, r) -> go l r loc binding) binding stack
 
     | UnifyExpandMeta (tySerial, otherTy) ->
-        match expandMeta binding tySerial with
-        | Some ty -> go ty otherTy loc binding
+      match expandMeta binding tySerial with
+      | Some ty -> go ty otherTy loc binding
 
-        | None ->
-            match unifyAfterExpandMeta tySerial (substTy binding otherTy) loc with
-            | UnifyAfterExpandMetaResult.OkNoBind -> binding
+      | None ->
+        match unifyAfterExpandMeta tySerial (substTy binding otherTy) loc with
+        | UnifyAfterExpandMetaResult.OkNoBind -> binding
 
-            | UnifyAfterExpandMetaResult.OkBind -> binding |> TMap.add tySerial otherTy
+        | UnifyAfterExpandMetaResult.OkBind -> binding |> TMap.add tySerial otherTy
 
-            | UnifyAfterExpandMetaResult.Error _ -> binding
+        | UnifyAfterExpandMetaResult.Error _ -> binding
 
     | UnifyExpandSynonym _ -> unreachable () // Resolved in Typing.
 
@@ -234,15 +234,15 @@ let private takeMarkedTys (ctx: MonoCtx) funSerial =
   | Some [] -> [], ctx
 
   | Some useSiteTys ->
-      let ctx =
-        { ctx with
-            GenericFunUseSiteTys =
-              ctx.GenericFunUseSiteTys
-              |> TMap.remove funSerial
-              |> snd }
-        |> markAsSomethingHappened
+    let ctx =
+      { ctx with
+          GenericFunUseSiteTys =
+            ctx.GenericFunUseSiteTys
+            |> TMap.remove funSerial
+            |> snd }
+      |> markAsSomethingHappened
 
-      useSiteTys, ctx
+    useSiteTys, ctx
 
 // -----------------------------------------------
 // Featured transformations
@@ -262,9 +262,9 @@ let private monifyFunExpr ctx funSerial useSiteTy =
     | Some monoFunSerial -> monoFunSerial, ctx
 
     | None ->
-        let ctx = markUseSite ctx funSerial useSiteTy
+      let ctx = markUseSite ctx funSerial useSiteTy
 
-        funSerial, ctx
+      funSerial, ctx
 
 let private monifyLetFunExpr (ctx: MonoCtx) callee isRec vis args body next ty loc =
   let genericFunSerial = callee
@@ -276,44 +276,44 @@ let private monifyLetFunExpr (ctx: MonoCtx) callee isRec vis args body next ty l
     match useSiteTys with
     | [] -> next, ctx
     | useSiteTy :: useSiteTys ->
-        match tryFindMonomorphizedFun ctx genericFunSerial useSiteTy with
-        | Some _ -> go next arity genericFunTy useSiteTys ctx
-        | None ->
-            // Unify genericFunTy and useSiteTy to build a mapping
-            // from type variable to use-site type.
-            let binding = unifyTy ctx genericFunTy useSiteTy loc
+      match tryFindMonomorphizedFun ctx genericFunSerial useSiteTy with
+      | Some _ -> go next arity genericFunTy useSiteTys ctx
+      | None ->
+        // Unify genericFunTy and useSiteTy to build a mapping
+        // from type variable to use-site type.
+        let binding = unifyTy ctx genericFunTy useSiteTy loc
 
-            let substOrDegenerateTy ty =
-              let substMeta tySerial =
-                match binding |> TMap.tryFind tySerial with
-                | (Some _) as it -> it
-                | None ->
-                    match ctx.Tys |> TMap.tryFind tySerial with
-                    | Some (MetaTyDef ty) -> Some ty
-                    | _ -> Some tyUnit
+        let substOrDegenerateTy ty =
+          let substMeta tySerial =
+            match binding |> TMap.tryFind tySerial with
+            | (Some _) as it -> it
+            | None ->
+              match ctx.Tys |> TMap.tryFind tySerial with
+              | Some (MetaTyDef ty) -> Some ty
+              | _ -> Some tyUnit
 
-              tySubst substMeta ty
+          tySubst substMeta ty
 
-            let monoArgs =
-              args |> List.map (patMap substOrDegenerateTy id)
+        let monoArgs =
+          args |> List.map (patMap substOrDegenerateTy id)
 
-            let monoBody = body |> exprMap substOrDegenerateTy id
+        let monoBody = body |> exprMap substOrDegenerateTy id
 
-            let monoFunSerial, ctx =
-              addMonomorphizedFun ctx genericFunSerial arity useSiteTy loc
+        let monoFunSerial, ctx =
+          addMonomorphizedFun ctx genericFunSerial arity useSiteTy loc
 
-            let next =
-              HLetFunExpr(monoFunSerial, isRec, vis, monoArgs, monoBody, next, ty, loc)
+        let next =
+          HLetFunExpr(monoFunSerial, isRec, vis, monoArgs, monoBody, next, ty, loc)
 
-            go next arity genericFunTy useSiteTys ctx
+        go next arity genericFunTy useSiteTys ctx
 
   match findGenericFun ctx genericFunSerial, ctx.Mode with
   | None, _ -> letGenericFunExpr, ctx
   | Some _, MonoMode.RemoveGenerics -> next, ctx
   | Some (_, arity, genericFunTy, _), _ ->
-      let useSiteTys, ctx = takeMarkedTys ctx genericFunSerial
+    let useSiteTys, ctx = takeMarkedTys ctx genericFunSerial
 
-      go letGenericFunExpr arity genericFunTy useSiteTys ctx
+    go letGenericFunExpr arity genericFunTy useSiteTys ctx
 
 // -----------------------------------------------
 // Control
@@ -327,53 +327,53 @@ let private monifyExpr (expr, ctx) =
   | HPrimExpr _ -> expr, ctx
 
   | HFunExpr (funSerial, useSiteTy, loc) ->
-      invoke
-        (fun () ->
-          let funSerial, ctx = monifyFunExpr ctx funSerial useSiteTy
+    invoke
+      (fun () ->
+        let funSerial, ctx = monifyFunExpr ctx funSerial useSiteTy
 
-          HFunExpr(funSerial, useSiteTy, loc), ctx)
+        HFunExpr(funSerial, useSiteTy, loc), ctx)
 
   | HMatchExpr (cond, arms, ty, loc) ->
-      invoke
-        (fun () ->
-          let cond, ctx = (cond, ctx) |> monifyExpr
+    invoke
+      (fun () ->
+        let cond, ctx = (cond, ctx) |> monifyExpr
 
-          let arms, ctx =
-            (arms, ctx)
-            |> stMap
-                 (fun ((pat, guard, body), ctx) ->
-                   let guard, ctx = (guard, ctx) |> monifyExpr
-                   let body, ctx = (body, ctx) |> monifyExpr
-                   (pat, guard, body), ctx)
+        let arms, ctx =
+          (arms, ctx)
+          |> stMap
+               (fun ((pat, guard, body), ctx) ->
+                 let guard, ctx = (guard, ctx) |> monifyExpr
+                 let body, ctx = (body, ctx) |> monifyExpr
+                 (pat, guard, body), ctx)
 
-          HMatchExpr(cond, arms, ty, loc), ctx)
+        HMatchExpr(cond, arms, ty, loc), ctx)
 
   | HNodeExpr (kind, args, ty, loc) ->
-      invoke
-        (fun () ->
-          let args, ctx = (args, ctx) |> stMap monifyExpr
-          HNodeExpr(kind, args, ty, loc), ctx)
+    invoke
+      (fun () ->
+        let args, ctx = (args, ctx) |> stMap monifyExpr
+        HNodeExpr(kind, args, ty, loc), ctx)
 
   | HBlockExpr (stmts, last) ->
-      invoke
-        (fun () ->
-          let stmts, ctx = (stmts, ctx) |> stMap monifyExpr
-          let last, ctx = (last, ctx) |> monifyExpr
-          HBlockExpr(stmts, last), ctx)
+    invoke
+      (fun () ->
+        let stmts, ctx = (stmts, ctx) |> stMap monifyExpr
+        let last, ctx = (last, ctx) |> monifyExpr
+        HBlockExpr(stmts, last), ctx)
 
   | HLetValExpr (pat, init, next, ty, loc) ->
-      invoke
-        (fun () ->
-          let init, ctx = (init, ctx) |> monifyExpr
-          let next, ctx = (next, ctx) |> monifyExpr
-          HLetValExpr(pat, init, next, ty, loc), ctx)
+    invoke
+      (fun () ->
+        let init, ctx = (init, ctx) |> monifyExpr
+        let next, ctx = (next, ctx) |> monifyExpr
+        HLetValExpr(pat, init, next, ty, loc), ctx)
 
   | HLetFunExpr (callee, isRec, vis, args, body, next, ty, loc) ->
-      invoke
-        (fun () ->
-          let body, ctx = (body, ctx) |> monifyExpr
-          let next, ctx = (next, ctx) |> monifyExpr
-          monifyLetFunExpr ctx callee isRec vis args body next ty loc)
+    invoke
+      (fun () ->
+        let body, ctx = (body, ctx) |> monifyExpr
+        let next, ctx = (next, ctx) |> monifyExpr
+        monifyLetFunExpr ctx callee isRec vis args body next ty loc)
 
   | HNavExpr _ -> unreachable () // HNavExpr is resolved in NameRes, Typing, or RecordRes.
   | HRecordExpr _ -> unreachable () // HRecordExpr is resolved in RecordRes.

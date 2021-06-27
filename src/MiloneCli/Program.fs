@@ -17,14 +17,16 @@ let private readFile (filePath: string) =
       System.IO.File.ReadAllText(filePath) |> Some
     else
       None
-  with _ -> None
+  with
+  | _ -> None
 
 let private writeFile (filePath: string) (contents: string) : unit =
   try
     match readFile filePath with
     | Some it when it = contents -> ()
     | _ -> System.IO.File.WriteAllText(filePath, contents)
-  with err -> eprintfn "Couldn't write to file '%s'. '%s'" filePath err.Message
+  with
+  | err -> eprintfn "Couldn't write to file '%s'. '%s'" filePath err.Message
 
 let dotnetCliHost () : CliHost =
   let args =

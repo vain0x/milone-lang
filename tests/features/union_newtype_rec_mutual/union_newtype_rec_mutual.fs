@@ -13,10 +13,10 @@ let main _ =
 
   match four with
   | Even (s4, Some (Odd (n3, Some (Even (s2, Some (Odd (n1, None))))))) ->
-      assert (n1 = 1)
-      assert (s2 = "two")
-      assert (n3 = 3)
-      assert (s4 = "four")
+    assert (n1 = 1)
+    assert (s2 = "two")
+    assert (n3 = 3)
+    assert (s4 = "four")
 
   | _ -> assert false
 

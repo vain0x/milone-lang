@@ -42,10 +42,10 @@ let private jTryFind key jsonValue : JsonValue option =
 let private jFind key jsonValue : JsonValue =
   match jsonValue with
   | JObject map ->
-      match map |> Map.tryFind key with
-      | Some value -> value
+    match map |> Map.tryFind key with
+    | Some value -> value
 
-      | None -> failwithf "Missed key '%s' in object: '%s'" key (jsonDisplay jsonValue)
+    | None -> failwithf "Missed key '%s' in object: '%s'" key (jsonDisplay jsonValue)
 
   | _ -> failwithf "Expected a map with key '%s'; but was '%s'" key (jsonDisplay jsonValue)
 
@@ -115,7 +115,8 @@ let private parseInitializeParam jsonValue : InitializeParam =
       |> jFind2 "params" "rootUri"
       |> jToString
       |> Some
-    with _ -> None
+    with
+    | _ -> None
 
   { RootUriOpt = rootUriOpt }
 
@@ -298,12 +299,12 @@ let private parseIncome (jsonValue: JsonValue) : LspIncome =
   | "$/cancelRequest" -> CancelRequestNotification(jsonValue |> jFind2 "params" "id")
 
   | methodName ->
-      let msgId =
-        jsonValue
-        |> jTryFind "id"
-        |> Option.defaultValue JNull
+    let msgId =
+      jsonValue
+      |> jTryFind "id"
+      |> Option.defaultValue JNull
 
-      ErrorIncome(MethodNotFoundError(msgId, methodName))
+    ErrorIncome(MethodNotFoundError(msgId, methodName))
 
 let private processNext () : LspIncome -> ProcessResult =
   let mutable exitCode : int = 1
@@ -312,156 +313,156 @@ let private processNext () : LspIncome -> ProcessResult =
   fun (income: LspIncome) ->
     match income with
     | InitializeRequest (msgId, param) ->
-        rootUriOpt <- param.RootUriOpt
-        // eprintfn "rootUriOpt = %A" rootUriOpt
+      rootUriOpt <- param.RootUriOpt
+      // eprintfn "rootUriOpt = %A" rootUriOpt
 
-        let result = createInitializeResult ()
-        jsonRpcWriteWithResult msgId result
-        Continue
+      let result = createInitializeResult ()
+      jsonRpcWriteWithResult msgId result
+      Continue
 
     | InitializedNotification -> Continue
 
     | ShutdownRequest msgId ->
-        exitCode <- 0
-        jsonRpcWriteWithResult msgId JNull
-        Continue
+      exitCode <- 0
+      jsonRpcWriteWithResult msgId JNull
+      Continue
 
     | ExitNotification -> Exit exitCode
 
     | DidOpenNotification p ->
-        let uri, version, text = p.Uri, p.Version, p.Text
+      let uri, version, text = p.Uri, p.Version, p.Text
 
-        LspDocCache.openDoc uri version text
-        Continue
+      LspDocCache.openDoc uri version text
+      Continue
 
     | DidChangeNotification p ->
-        let uri, version, text = p.Uri, p.Version, p.Text
+      let uri, version, text = p.Uri, p.Version, p.Text
 
-        LspDocCache.changeDoc uri version text
-        Continue
+      LspDocCache.changeDoc uri version text
+      Continue
 
     | DidCloseNotification p ->
-        let uri = p.Uri
+      let uri = p.Uri
 
-        LspDocCache.closeDoc uri
-        Continue
+      LspDocCache.closeDoc uri
+      Continue
 
     | DiagnosticsRequest ->
-        for uri, errors in LspLangService.validateWorkspace rootUriOpt do
-          let diagnostics =
-            [ for msg, pos in errors do
-                jOfObj [ "range", jOfRange (pos, pos)
-                         "message", JString msg
-                         "source", JString "milone-lang" ] ]
-            |> JArray
+      for uri, errors in LspLangService.validateWorkspace rootUriOpt do
+        let diagnostics =
+          [ for msg, pos in errors do
+              jOfObj [ "range", jOfRange (pos, pos)
+                       "message", JString msg
+                       "source", JString "milone-lang" ] ]
+          |> JArray
 
-          let param =
-            jOfObj [ "uri", JString uri
-                     "diagnostics", diagnostics ]
+        let param =
+          jOfObj [ "uri", JString uri
+                   "diagnostics", diagnostics ]
 
-          jsonRpcWriteWithParams "textDocument/publishDiagnostics" param
+        jsonRpcWriteWithParams "textDocument/publishDiagnostics" param
 
-        Continue
+      Continue
 
     | DefinitionRequest (msgId, p) ->
-        // <https://microsoft.github.io/language-server-protocol/specifications/specification-current/#textDocument_definition>
+      // <https://microsoft.github.io/language-server-protocol/specifications/specification-current/#textDocument_definition>
 
-        let uri, pos = p.Uri, p.Pos
+      let uri, pos = p.Uri, p.Pos
 
-        let result =
-          LspLangService.definition rootUriOpt uri pos
-          |> List.map
-               (fun (docId, range) ->
-                 jOfObj [ "uri", JString docId
-                          "range", jOfRange range ])
-          |> JArray
+      let result =
+        LspLangService.definition rootUriOpt uri pos
+        |> List.map
+             (fun (docId, range) ->
+               jOfObj [ "uri", JString docId
+                        "range", jOfRange range ])
+        |> JArray
 
-        jsonRpcWriteWithResult msgId result
-        Continue
+      jsonRpcWriteWithResult msgId result
+      Continue
 
     | ReferencesRequest (msgId, p) ->
-        // <https://microsoft.github.io/language-server-protocol/specifications/specification-current/#textDocument_references>
+      // <https://microsoft.github.io/language-server-protocol/specifications/specification-current/#textDocument_references>
 
-        let uri, pos, includeDecl = p.Uri, p.Pos, p.IncludeDecl
+      let uri, pos, includeDecl = p.Uri, p.Pos, p.IncludeDecl
 
-        let result =
-          LspLangService.references rootUriOpt uri pos includeDecl
-          |> List.map
-               (fun (docId, range) ->
-                 jOfObj [ "uri", JString docId
-                          "range", jOfRange range ])
-          |> JArray
+      let result =
+        LspLangService.references rootUriOpt uri pos includeDecl
+        |> List.map
+             (fun (docId, range) ->
+               jOfObj [ "uri", JString docId
+                        "range", jOfRange range ])
+        |> JArray
 
-        jsonRpcWriteWithResult msgId result
-        Continue
+      jsonRpcWriteWithResult msgId result
+      Continue
 
     | DocumentHighlightRequest (msgId, p) ->
-        // <https://microsoft.github.io/language-server-protocol/specifications/specification-current/#textDocument_documentHighlight>
+      // <https://microsoft.github.io/language-server-protocol/specifications/specification-current/#textDocument_documentHighlight>
 
-        let uri, pos = p.Uri, p.Pos
+      let uri, pos = p.Uri, p.Pos
 
-        let reads, writes =
-          LspLangService.documentHighlight rootUriOpt uri pos
+      let reads, writes =
+        LspLangService.documentHighlight rootUriOpt uri pos
 
-        let toHighlights kind posList =
-          posList
-          |> Seq.map
-               (fun (start, endPos) ->
-                 jOfObj [ "range", jOfRange (start, endPos)
-                          "kind", jOfInt kind ])
+      let toHighlights kind posList =
+        posList
+        |> Seq.map
+             (fun (start, endPos) ->
+               jOfObj [ "range", jOfRange (start, endPos)
+                        "kind", jOfInt kind ])
 
-        let result =
-          JArray [ yield! toHighlights 2 reads
-                   yield! toHighlights 3 writes ]
+      let result =
+        JArray [ yield! toHighlights 2 reads
+                 yield! toHighlights 3 writes ]
 
-        jsonRpcWriteWithResult msgId result
-        Continue
+      jsonRpcWriteWithResult msgId result
+      Continue
 
     | HoverRequest (msgId, p) ->
-        // https://microsoft.github.io/language-server-protocol/specifications/specification-current/#textDocument_hover
+      // https://microsoft.github.io/language-server-protocol/specifications/specification-current/#textDocument_hover
 
-        let uri, pos = p.Uri, p.Pos
+      let uri, pos = p.Uri, p.Pos
 
-        let contents = LspLangService.hover rootUriOpt uri pos
+      let contents = LspLangService.hover rootUriOpt uri pos
 
-        let result =
-          match contents with
-          | [] -> JNull
-          | _ ->
-              jOfObj [ "contents", contents |> List.map jOfMarkdownString |> JArray
-                       // "range", jOfRange range
-                        ]
+      let result =
+        match contents with
+        | [] -> JNull
+        | _ ->
+          jOfObj [ "contents", contents |> List.map jOfMarkdownString |> JArray
+                   // "range", jOfRange range
+                    ]
 
-        jsonRpcWriteWithResult msgId result
-        Continue
+      jsonRpcWriteWithResult msgId result
+      Continue
 
     | CancelRequestNotification _ -> Continue
 
     | ErrorIncome error ->
-        let methodNotFoundCode = -32601
-        let requestCancelledCode = -32800
+      let methodNotFoundCode = -32601
+      let requestCancelledCode = -32800
 
-        match error with
-        | CancelledRequestError msgId ->
-            let error =
-              jOfObj [ "code", jOfInt requestCancelledCode
-                       "message", JString "Request is cancelled." ]
+      match error with
+      | CancelledRequestError msgId ->
+        let error =
+          jOfObj [ "code", jOfInt requestCancelledCode
+                   "message", JString "Request is cancelled." ]
 
-            jsonRpcWriteWithError msgId error
-            Continue
+        jsonRpcWriteWithError msgId error
+        Continue
 
-        | MethodNotFoundError (JNull, methodName) ->
-            eprintfn "[TRACE] Unknown methodName: '%s'." methodName
-            Continue
+      | MethodNotFoundError (JNull, methodName) ->
+        eprintfn "[TRACE] Unknown methodName: '%s'." methodName
+        Continue
 
-        | MethodNotFoundError (msgId, methodName) ->
-            let error =
-              jOfObj [ "code", jOfInt methodNotFoundCode
-                       "message", JString "Unknown method."
-                       "data", jOfObj [ "methodName", JString methodName ] ]
+      | MethodNotFoundError (msgId, methodName) ->
+        let error =
+          jOfObj [ "code", jOfInt methodNotFoundCode
+                   "message", JString "Unknown method."
+                   "data", jOfObj [ "methodName", JString methodName ] ]
 
-            jsonRpcWriteWithError msgId error
-            Continue
+        jsonRpcWriteWithError msgId error
+        Continue
 
 // -----------------------------------------------
 // Request preprocess
@@ -474,14 +475,14 @@ let private dedupChanges (incomes: LspIncome list) : LspIncome list =
   | [] -> []
 
   | last :: incomes ->
-      incomes
-      |> List.fold
-           (fun (next, acc) income ->
-             match income, next with
-             | DidChangeNotification p, DidChangeNotification q when p.Uri = q.Uri -> next, acc
-             | _ -> income, income :: acc)
-           (last, [ last ])
-      |> snd
+    incomes
+    |> List.fold
+         (fun (next, acc) income ->
+           match income, next with
+           | DidChangeNotification p, DidChangeNotification q when p.Uri = q.Uri -> next, acc
+           | _ -> income, income :: acc)
+         (last, [ last ])
+    |> snd
 
 /// Automatically update diagnostics by appending diagnostics request
 /// if some document changed.
@@ -558,19 +559,19 @@ let lspServer (host: LspServerHost) : Async<int> =
       async {
         match incomes with
         | [] ->
-            let incomes =
-              host.DrainRequests()
-              |> List.map parseIncome
-              |> preprocess
+          let incomes =
+            host.DrainRequests()
+            |> List.map parseIncome
+            |> preprocess
 
-            return! go incomes
+          return! go incomes
 
         | income :: incomes ->
-            // eprintfn "[TRACE] process %A" income
+          // eprintfn "[TRACE] process %A" income
 
-            match onRequest income with
-            | Exit it -> return it
-            | Continue -> return! go incomes
+          match onRequest income with
+          | Exit it -> return it
+          | Continue -> return! go incomes
       }
 
     return! go []

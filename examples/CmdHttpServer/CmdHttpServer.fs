@@ -50,20 +50,20 @@ let private doHandle (methodName: string) (pathname: string) : HttpResult =
 
   match methodName with
   | "GET" ->
-      if pathname |> S.contains ".." then
-        Error(BadRequestError, "Path may not include '..'.")
-      else
-        let followLink = false
+    if pathname |> S.contains ".." then
+      Error(BadRequestError, "Path may not include '..'.")
+    else
+      let followLink = false
 
-        if ReadableFileStream.exists pathname followLink then
-          match ReadableFileStream.readAllText pathname with
-          | Some contents -> Ok(contents, contentType ())
-          | None -> Error(NotFoundError, "File cannot read.")
-        else if Directory.exists pathname followLink
-                && ReadableFileStream.exists (pathname + "/index.html") followLink then
-          Error(FoundError "index.html", "Redirect.")
-        else
-          Error(NotFoundError, "File not found.")
+      if ReadableFileStream.exists pathname followLink then
+        match ReadableFileStream.readAllText pathname with
+        | Some contents -> Ok(contents, contentType ())
+        | None -> Error(NotFoundError, "File cannot read.")
+      else if Directory.exists pathname followLink
+              && ReadableFileStream.exists (pathname + "/index.html") followLink then
+        Error(FoundError "index.html", "Redirect.")
+      else
+        Error(NotFoundError, "File not found.")
 
   | _ -> Error(NotImplementedError, "Method not implemented.")
 
@@ -119,32 +119,32 @@ let handler
   let statusText =
     match res with
     | Ok (content, contentType) ->
-        let statusText = "200 OK"
-        writeCommonHeaders statusText
-        writeBody content contentType
-        statusText
+      let statusText = "200 OK"
+      writeCommonHeaders statusText
+      writeBody content contentType
+      statusText
 
     | Error (err, _) ->
-        let statusText, headers =
-          match err with
-          | FoundError location -> "302 Found", [ "Location", location ]
-          | BadRequestError -> "400 Bad Request", []
-          | NotFoundError -> "404 Not Found", []
-          | NotImplementedError -> "501 Not Implemented", []
+      let statusText, headers =
+        match err with
+        | FoundError location -> "302 Found", [ "Location", location ]
+        | BadRequestError -> "400 Bad Request", []
+        | NotFoundError -> "404 Not Found", []
+        | NotImplementedError -> "501 Not Implemented", []
 
-        writeCommonHeaders statusText
+      writeCommonHeaders statusText
 
-        let rec go headers =
-          match headers with
-          | [] -> ()
-          | (header, text) :: headers ->
-              writeString (header + ": " + text + "\r\n")
-              go headers
+      let rec go headers =
+        match headers with
+        | [] -> ()
+        | (header, text) :: headers ->
+          writeString (header + ": " + text + "\r\n")
+          go headers
 
-        go headers
+      go headers
 
-        writeBody "" "text/plain; charset=utf-8"
-        statusText
+      writeBody "" "text/plain; charset=utf-8"
+      statusText
 
   // Access log.
   writeTrace (

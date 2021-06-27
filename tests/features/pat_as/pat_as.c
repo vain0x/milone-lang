@@ -63,7 +63,7 @@ else_11:;
     if_1 = false;
     goto if_next_9;
 if_next_9:;
-    milone_assert(if_1, 15, 6);
+    milone_assert(if_1, 15, 4);
     match_1 = 0;
     goto end_match_4;
 next_5:;

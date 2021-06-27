@@ -256,11 +256,11 @@ let private scanNumberLit (text: string) (i: int) =
     | 'E'
     | 'p'
     | 'P' ->
-        match at text (i + 1) with
-        | '+'
-        | '-' -> true, scanDigits (i + 2)
+      match at text (i + 1) with
+      | '+'
+      | '-' -> true, scanDigits (i + 2)
 
-        | _ -> true, scanDigits (i + 1)
+      | _ -> true, scanDigits (i + 1)
     | _ -> false, i
 
   let i = scanDigits i
@@ -289,10 +289,10 @@ let private scanCharLit (text: string) (i: int) =
     | '\n' -> i
 
     | '\\' ->
-        if at (i + 1) <> '\x00' then
-          go (i + 2)
-        else
-          i + 1
+      if at (i + 1) <> '\x00' then
+        go (i + 2)
+      else
+        i + 1
 
     | _ -> go (i + 1)
 
@@ -315,10 +315,10 @@ let private scanStrLit (text: string) (i: int) =
     | '\n' -> i
 
     | '\\' ->
-        if at (i + 1) <> '\x00' then
-          go (i + 2)
-        else
-          i + 1
+      if at (i + 1) <> '\x00' then
+        go (i + 2)
+      else
+        i + 1
 
     | _ -> go (i + 1)
 
@@ -352,58 +352,58 @@ let private tokenOfOp (text: string) l r : Token =
 
   match s.[0] with
   | '&' ->
-      match s with
-      | "&" -> AmpToken
-      | "&&" -> AmpAmpToken
-      | "&&&" -> AmpAmpAmpToken
-      | _ -> error ()
+    match s with
+    | "&" -> AmpToken
+    | "&&" -> AmpAmpToken
+    | "&&&" -> AmpAmpAmpToken
+    | _ -> error ()
 
   | '-' ->
-      match s with
-      | "->" -> ArrowToken
-      | "-" -> MinusToken
-      | _ -> error ()
+    match s with
+    | "->" -> ArrowToken
+    | "-" -> MinusToken
+    | _ -> error ()
 
   | ':' ->
-      match s with
-      | ":" -> ColonToken
-      | "::" -> ColonColonToken
-      | _ -> error ()
+    match s with
+    | ":" -> ColonToken
+    | "::" -> ColonColonToken
+    | _ -> error ()
 
   | '.' ->
-      match s with
-      | "." -> DotToken
-      | ".." -> DotDotToken
-      | _ -> error ()
+    match s with
+    | "." -> DotToken
+    | ".." -> DotDotToken
+    | _ -> error ()
 
   | '<' ->
-      match s with
-      | "<" -> LeftAngleToken
-      | "<=" -> LeftEqualToken
-      | "<>" -> LeftRightToken
-      | "<<" -> LeftLeftToken
-      | "<<<" -> LeftLeftLeftToken
-      | _ -> error ()
+    match s with
+    | "<" -> LeftAngleToken
+    | "<=" -> LeftEqualToken
+    | "<>" -> LeftRightToken
+    | "<<" -> LeftLeftToken
+    | "<<<" -> LeftLeftLeftToken
+    | _ -> error ()
 
   | '>' ->
-      match s with
-      | ">" -> RightAngleToken
-      | ">=" -> RightEqualToken
-      | _ -> error ()
+    match s with
+    | ">" -> RightAngleToken
+    | ">=" -> RightEqualToken
+    | _ -> error ()
 
   | '|' ->
-      match s with
-      | "|" -> PipeToken
-      | "|>" -> PipeRightToken
-      | "||" -> PipePipeToken
-      | "|||" -> PipePipePipeToken
-      | _ -> error ()
+    match s with
+    | "|" -> PipeToken
+    | "|>" -> PipeRightToken
+    | "||" -> PipePipeToken
+    | "|||" -> PipePipePipeToken
+    | _ -> error ()
 
   | '^' ->
-      match s with
-      | "^" -> HatToken
-      | "^^^" -> HatHatHatToken
-      | _ -> error ()
+    match s with
+    | "^" -> HatToken
+    | "^^^" -> HatHatHatToken
+    | _ -> error ()
 
   | '=' -> expect "=" EqualToken
   | '%' -> expect "%" PercentToken
@@ -423,30 +423,32 @@ let private evalCharLit (text: string) (l: int) (r: int) : Token =
   | 4 when
     text.[l] = '\''
     && text.[l + 1] = '\\'
-    && text.[l + 3] = '\'' ->
-      let c = text.[l + 2]
+    && text.[l + 3] = '\''
+    ->
+    let c = text.[l + 2]
 
-      match c with
-      | 't' -> CharToken '\t'
-      | 'r' -> CharToken '\r'
-      | 'n' -> CharToken '\n'
+    match c with
+    | 't' -> CharToken '\t'
+    | 'r' -> CharToken '\r'
+    | 'n' -> CharToken '\n'
 
-      | '\\'
-      | '\''
-      | '"' -> CharToken c
+    | '\\'
+    | '\''
+    | '"' -> CharToken c
 
-      | _ -> ErrorToken UnknownEscapeSequenceError
+    | _ -> ErrorToken UnknownEscapeSequenceError
 
   // '\xHH'
   | 6 when
     text.[l] = '\''
     && text.[l + 1] = '\\'
     && text.[l + 2] = 'x'
-    && text.[l + 5] = '\'' ->
-      if text.[l + 3] = '0' && text.[l + 4] = '0' then
-        CharToken '\x00'
-      else
-        ErrorToken UnimplHexEscapeError
+    && text.[l + 5] = '\''
+    ->
+    if text.[l + 3] = '0' && text.[l + 4] = '0' then
+      CharToken '\x00'
+    else
+      ErrorToken UnimplHexEscapeError
 
   | _ -> ErrorToken InvalidCharLitError
 
@@ -483,7 +485,9 @@ let private evalStrLit (text: string) (l: int) (r: int) : Token =
       | 'x' when
         i + 4 < r
         && text.[i + 2] = '0'
-        && text.[i + 3] = '0' -> go ("\x00" :: acc) (i + 4)
+        && text.[i + 3] = '0'
+        ->
+        go ("\x00" :: acc) (i + 4)
       | 't' when i + 2 < r -> go ("	" :: acc) (i + 2)
       | 'r' when i + 2 < r -> go ("\r" :: acc) (i + 2)
       | 'n' when i + 2 < r -> go ("\n" :: acc) (i + 2)
@@ -616,16 +620,16 @@ let private lookahead (text: string) (i: int) =
   | 'z' -> LIdent, 1
 
   | '\'' ->
-      if charIsTyVar (at (i + 1)) && at (i + 2) <> '\'' then
-        LTyVar, 2
-      else
-        LChar, 1
+    if charIsTyVar (at (i + 1)) && at (i + 2) <> '\'' then
+      LTyVar, 2
+    else
+      LChar, 1
 
   | '"' ->
-      if isFollowedByRawQuotes i text then
-        LRawStr, 3
-      else
-        LStr, 1
+    if isFollowedByRawQuotes i text then
+      LRawStr, 3
+    else
+      LStr, 1
 
   | '`' -> LRawIdent, 1
 
@@ -634,28 +638,28 @@ let private lookahead (text: string) (i: int) =
   | ')' -> LToken RightParenToken, 1
 
   | '[' ->
-      match at (i + 1) with
-      | '<' -> LToken LeftAttrToken, 2
-      | _ -> LToken LeftBracketToken, 1
+    match at (i + 1) with
+    | '<' -> LToken LeftAttrToken, 2
+    | _ -> LToken LeftBracketToken, 1
 
   | ']' -> LToken RightBracketToken, 1
   | '{' -> LToken LeftBraceToken, 1
   | '}' -> LToken RightBraceToken, 1
 
   | '/' ->
-      match at (i + 1) with
-      | '/' -> LComment, 2
-      | _ -> LOp, 1
+    match at (i + 1) with
+    | '/' -> LComment, 2
+    | _ -> LOp, 1
 
   | '>' ->
-      match at (i + 1) with
-      | ']' -> LToken RightAttrToken, 2
+    match at (i + 1) with
+    | ']' -> LToken RightAttrToken, 2
 
-      | c when c <> '>' && charIsOp c -> LOp, 2
+    | c when c <> '>' && charIsOp c -> LOp, 2
 
-      | _ ->
-          // Consecutive right angles (such as `>>>`) are merged while parsing.
-          LToken RightAngleToken, 1
+    | _ ->
+      // Consecutive right angles (such as `>>>`) are merged while parsing.
+      LToken RightAngleToken, 1
 
   | '-'
   | ';'
@@ -680,81 +684,81 @@ let private doNext (host: TokenizeHost) (text: string) (index: int) : Token * in
   | LEof -> BlankToken, text.Length - index
 
   | LBlank ->
-      let r = scanBlank text (index + len)
-      BlankToken, r
+    let r = scanBlank text (index + len)
+    BlankToken, r
 
   | LNewline ->
-      let r = scanNewlines text (index + len)
-      NewlinesToken, r
+    let r = scanNewlines text (index + len)
+    NewlinesToken, r
 
   | LComment ->
-      let r = scanLine text (index + len)
-      CommentToken, r
+    let r = scanLine text (index + len)
+    CommentToken, r
 
   | LNumber ->
-      let isFloat, m, r = scanNumberLit text (index + len)
+    let isFloat, m, r = scanNumberLit text (index + len)
 
-      // Value can be too large or too small; range should be checked in Typing.
-      // m: before suffix
-      if m < r then
-        ErrorToken UnimplNumberSuffixError, r
-      else if isFloat then
-        FloatToken text.[index..r - 1], r
-      else
-        IntToken(S.slice index r text), r
+    // Value can be too large or too small; range should be checked in Typing.
+    // m: before suffix
+    if m < r then
+      ErrorToken UnimplNumberSuffixError, r
+    else if isFloat then
+      FloatToken text.[index..r - 1], r
+    else
+      IntToken(S.slice index r text), r
 
   | LNonKeywordIdent ->
-      let r = scanIdent text (index + len)
-      IdentToken text.[index..r - 1], r
+    let r = scanIdent text (index + len)
+    IdentToken text.[index..r - 1], r
 
   | LIdent ->
-      let r = scanIdent text (index + len)
-      let ident = text |> S.slice index r
+    let r = scanIdent text (index + len)
+    let ident = text |> S.slice index r
 
-      let token =
-        match host.FindKeyword ident with
-        | Some it -> it
-        | None -> IdentToken ident
+    let token =
+      match host.FindKeyword ident with
+      | Some it -> it
+      | None -> IdentToken ident
 
-      token, r
+    token, r
 
   | LRawIdent ->
-      match scanRawIdent text index with
-      | Some m ->
-          assert (text |> isFollowedByBackticks m)
-          let ident = text.[index + 2..m - 1]
-          IdentToken ident, m + 2
+    match scanRawIdent text index with
+    | Some m ->
+      assert (text |> isFollowedByBackticks m)
+      let ident = text.[index + 2..m - 1]
+      IdentToken ident, m + 2
 
-      | None -> ErrorToken InvalidRawIdentError, index + len
+    | None -> ErrorToken InvalidRawIdentError, index + len
 
   | LTyVar ->
-      let r = index + len
-      TyVarToken text.[index + 1..r - 1], r
+    let r = index + len
+    TyVarToken text.[index + 1..r - 1], r
 
   | LChar ->
-      let r = scanCharLit text (index + len)
-      evalCharLit text index r, r
+    let r = scanCharLit text (index + len)
+    evalCharLit text index r, r
 
   | LStr ->
-      let r = scanStrLit text (index + len)
-      evalStrLit text index r, r
+    let r = scanStrLit text (index + len)
+    evalStrLit text index r, r
 
   | LRawStr ->
-      let r = scanStrLitRaw text (index + len)
-      evalStrLitRaw text index r, r
+    let r = scanStrLitRaw text (index + len)
+    evalStrLitRaw text index r, r
 
   | LOp ->
-      let r = scanOp text (index + len)
-      tokenOfOp text index r, r
+    let r = scanOp text (index + len)
+    tokenOfOp text index r, r
 
   | LToken _ ->
-      match look with
-      | LToken token -> token, index + len
-      | _ -> unreachable ()
+    match look with
+    | LToken token -> token, index + len
+    | _ -> unreachable ()
 
   | LBad ->
-      let r = scanBad text (index + len)
-      ErrorToken BadTokenError, r
+    let r = scanBad text (index + len)
+    ErrorToken BadTokenError, r
 
 /// Tokenizes a string. Trivias are removed.
 let tokenize (host: TokenizeHost) (text: string) : (Token * Pos) list =

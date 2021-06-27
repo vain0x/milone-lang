@@ -544,8 +544,8 @@ let segTreeTest () =
             else
               match xs with
               | x :: xs ->
-                  let acc = if i < l then acc else acc + x
-                  sum acc (i + 1) xs
+                let acc = if i < l then acc else acc + x
+                sum acc (i + 1) xs
               | _ -> failwith "NEVER"
 
           sum 0 0 xs

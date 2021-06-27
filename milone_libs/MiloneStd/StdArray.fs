@@ -141,8 +141,8 @@ let choose (f: _ -> _ option) (src: Array<_>) : Array<_> =
     else
       match f (__constArrayGet si src) with
       | Some value ->
-          __mutArraySet di value dest
-          chooseLoop (di + 1) (si + 1)
+        __mutArraySet di value dest
+        chooseLoop (di + 1) (si + 1)
 
       | None -> chooseLoop di (si + 1)
 
@@ -186,8 +186,8 @@ let ofList (xs: _ list) : Array<_> =
     match xs with
     | [] -> assert (i = len)
     | x :: xs ->
-        __mutArraySet i x dest
-        ofListLoop (i + 1) xs
+      __mutArraySet i x dest
+      ofListLoop (i + 1) xs
 
   ofListLoop 0 xs
   __constArrayOfMut dest

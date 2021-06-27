@@ -9,8 +9,8 @@ let unwrap opt =
   | Some value -> value
 
   | None ->
-      printfn "Can't unwrap None."
-      exit 1
+    printfn "Can't unwrap None."
+    exit 1
 
 let isEmptyTest () =
   assert (S.isEmpty "")

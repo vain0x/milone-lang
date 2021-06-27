@@ -115,10 +115,10 @@ char list_operators_Program_literalTest(char arg_3) {
     if ((!(zs_->tail->tail->tail))) goto next_14;
     int z7_ = zs_->tail->tail->tail->head;
     if ((!((!(zs_->tail->tail->tail->tail))))) goto next_14;
-    milone_assert((z2_ == 2), 30, 6);
-    milone_assert((z3_ == 3), 31, 6);
-    milone_assert((z5_ == 5), 32, 6);
-    milone_assert((z7_ == 7), 33, 6);
+    milone_assert((z2_ == 2), 30, 4);
+    milone_assert((z3_ == 3), 31, 4);
+    milone_assert((z5_ == 5), 32, 4);
+    milone_assert((z7_ == 7), 33, 4);
     match_2 = 0;
     goto end_match_13;
 next_14:;

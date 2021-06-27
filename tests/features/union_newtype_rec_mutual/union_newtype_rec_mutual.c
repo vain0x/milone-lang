@@ -74,10 +74,10 @@ int milone_main() {
     if ((!((*(((struct StringOdd_OptionTuple2 const*)(*(((struct IntObjectOptionTuple2 const*)(*(((struct StringOdd_OptionTuple2 const*)four_))).t1.value.Odd_))).t1.value))).t1.some))) goto next_2;
     int n1_ = (*(((struct IntObjectOptionTuple2 const*)(*(((struct StringOdd_OptionTuple2 const*)(*(((struct IntObjectOptionTuple2 const*)(*(((struct StringOdd_OptionTuple2 const*)four_))).t1.value.Odd_))).t1.value))).t1.value.Odd_))).t0;
     if ((*(((struct IntObjectOptionTuple2 const*)(*(((struct StringOdd_OptionTuple2 const*)(*(((struct IntObjectOptionTuple2 const*)(*(((struct StringOdd_OptionTuple2 const*)four_))).t1.value.Odd_))).t1.value))).t1.value.Odd_))).t1.some) goto next_2;
-    milone_assert((n1_ == 1), 15, 6);
-    milone_assert((str_compare(s2_, (struct String){.str = "two", .len = 3}) == 0), 16, 6);
-    milone_assert((n3_ == 3), 17, 6);
-    milone_assert((str_compare(s4_, (struct String){.str = "four", .len = 4}) == 0), 18, 6);
+    milone_assert((n1_ == 1), 15, 4);
+    milone_assert((str_compare(s2_, (struct String){.str = "two", .len = 3}) == 0), 16, 4);
+    milone_assert((n3_ == 3), 17, 4);
+    milone_assert((str_compare(s4_, (struct String){.str = "four", .len = 4}) == 0), 18, 4);
     match_ = 0;
     goto end_match_1;
 next_2:;

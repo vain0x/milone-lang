@@ -33,17 +33,17 @@ let private doTryFind (keyCompare: obj -> int) node : obj option =
     | E -> None
 
     | T (_, a, kv, b) ->
-        let c = keyCompare kv
+      let c = keyCompare kv
 
-        if c < 0 then
-          // key < k
-          go a
-        else if c > 0 then
-          // k < key
-          go b
-        else
-          // key = k
-          Some kv
+      if c < 0 then
+        // key < k
+        go a
+      else if c > 0 then
+        // k < key
+        go b
+      else
+        // key = k
+        Some kv
 
   go node
 
@@ -66,17 +66,17 @@ let private doInsert (keyCompare: obj -> int) (newKv: obj) node =
     | E -> R, E, newKv, E
 
     | T (color, l, kv, r) ->
-        let c = keyCompare kv
+      let c = keyCompare kv
 
-        if c < 0 then
-          // key < k
-          balanceL (color, T(go l), kv, r)
-        else if c > 0 then
-          // k < key
-          balanceR (color, l, kv, T(go r))
-        else
-          // key = k
-          color, l, newKv, r
+      if c < 0 then
+        // key < k
+        balanceL (color, T(go l), kv, r)
+      else if c > 0 then
+        // k < key
+        balanceR (color, l, kv, T(go r))
+      else
+        // key = k
+        color, l, newKv, r
 
   let _, y, a, b = go node
   T(B, y, a, b)
@@ -105,30 +105,30 @@ let private doRemove (keyCompare: obj -> int) (keyCompareTo: obj -> obj -> int) 
     | E -> None, E
 
     | T (color, l, kv, r) ->
-        let c = keyCompare kv
+      let c = keyCompare kv
 
-        if c < 0 then
-          // key < k
-          let removed, l = go keyCompare l
-          removed, T(balanceL (color, l, kv, r))
-        else if c > 0 then
-          // k < key
-          let removed, r = go keyCompare r
-          removed, T(balanceR (color, l, kv, r))
-        else
-          // key = k
-          let rest =
-            match l, r with
-            | E, _ -> setBlack r
-            | _, E -> setBlack l
-            | _ ->
-                match findMinItem r with
-                | None -> unreachable ()
-                | Some rkv ->
-                    let _, r = go (keyCompareTo rkv) r
-                    T(balanceR (color, l, rkv, r))
+      if c < 0 then
+        // key < k
+        let removed, l = go keyCompare l
+        removed, T(balanceL (color, l, kv, r))
+      else if c > 0 then
+        // k < key
+        let removed, r = go keyCompare r
+        removed, T(balanceR (color, l, kv, r))
+      else
+        // key = k
+        let rest =
+          match l, r with
+          | E, _ -> setBlack r
+          | _, E -> setBlack l
+          | _ ->
+            match findMinItem r with
+            | None -> unreachable ()
+            | Some rkv ->
+              let _, r = go (keyCompareTo rkv) r
+              T(balanceR (color, l, rkv, r))
 
-          Some kv, rest
+        Some kv, rest
 
   go keyCompare node
 
@@ -139,10 +139,10 @@ let private doMap f node =
     | E -> E
 
     | T (color, l, kv, r) ->
-        let l = go l
-        let kv = f kv
-        let r = go r
-        T(color, l, kv, r)
+      let l = go l
+      let kv = f kv
+      let r = go r
+      T(color, l, kv, r)
 
   go node
 
@@ -153,9 +153,9 @@ let private doFold folder state node =
     | E -> state
 
     | T (_, l, kv, r) ->
-        let state = go state l
-        let state = folder state kv
-        go state r
+      let state = go state l
+      let state = folder state kv
+      go state r
 
   go state node
 
@@ -166,10 +166,10 @@ let private doMapFold folder state node =
     | E -> E, state
 
     | T (color, l, kv, r) ->
-        let l, state = go state l
-        let kv, state = folder state kv
-        let r, state = go state r
-        T(color, l, kv, r), state
+      let l, state = go state l
+      let kv, state = folder state kv
+      let r, state = go state r
+      T(color, l, kv, r), state
 
   go state node
 

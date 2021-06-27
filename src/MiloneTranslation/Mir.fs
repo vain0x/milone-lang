@@ -245,10 +245,10 @@ let mexprExtract expr =
   | MDiscriminantConstExpr (_, loc) -> tyInt, loc
 
   | MGenericValueExpr (genericValue, ty, loc) ->
-      match genericValue with
-      | MNoneGv
-      | MNilGv -> ty, loc
-      | MSizeOfGv -> tyInt, loc
+    match genericValue with
+    | MNoneGv
+    | MNilGv -> ty, loc
+    | MSizeOfGv -> tyInt, loc
 
   | MUnaryExpr (_, _, ty, loc) -> ty, loc
   | MBinaryExpr (_, _, _, ty, loc) -> ty, loc
@@ -312,12 +312,12 @@ let mxSugar expr =
   | MVarExpr (_, Ty (TupleTk, []), loc) -> MUnitExpr loc
 
   | MUnaryExpr (op, l, ty, loc) ->
-      let l = mxSugar l
-      mxSugarUni op l ty loc
+    let l = mxSugar l
+    mxSugarUni op l ty loc
 
   | MBinaryExpr (op, l, r, ty, loc) ->
-      let l = mxSugar l
-      let r = mxSugar r
-      mxSugarBin op l r ty loc
+    let l = mxSugar l
+    let r = mxSugar r
+    mxSugarBin op l r ty loc
 
   | _ -> expr

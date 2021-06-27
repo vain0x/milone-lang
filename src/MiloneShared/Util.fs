@@ -34,7 +34,7 @@ let todo context = failwithf "Not implemented: %A" context
 /// HACK: This is mainly used to wrap a match clause in a separate function
 ///       to reduce the size of stack frame; without this,
 ///       deeply recursive calls cause stack overflow.
-let invoke (f: unit -> 'A): 'A = f ()
+let invoke (f: unit -> 'A) : 'A = f ()
 
 // -----------------------------------------------
 // Pair
@@ -52,8 +52,8 @@ let pairCompare compare1 compare2 (l1, l2) (r1, r2) =
 let stOptionMap f (x, ctx) =
   match x with
   | Some x ->
-      let x, ctx = f (x, ctx)
-      Some x, ctx
+    let x, ctx = f (x, ctx)
+    Some x, ctx
   | None -> None, ctx
 
 // -----------------------------------------------
@@ -98,8 +98,8 @@ let stFlatMap f (xs, ctx) =
     match xs with
     | [] -> List.rev acc, ctx
     | x :: xs ->
-        let acc, ctx = f (x, acc, ctx)
-        go acc xs ctx
+      let acc, ctx = f (x, acc, ctx)
+      go acc xs ctx
 
   go [] xs ctx
 
@@ -110,8 +110,8 @@ let listCompare compare ls rs =
     | [], _ -> -1
     | _, [] -> 1
     | l :: ls, r :: rs ->
-        let c = compare l r
-        if c <> 0 then c else go ls rs
+      let c = compare l r
+      if c <> 0 then c else go ls rs
 
   go ls rs
 
@@ -138,14 +138,14 @@ let listSortCore unique compare xs =
       | _, [] -> unreachable () // wrong list length.
 
       | x :: xs1, y :: ys1 ->
-          let c = compare x y
+        let c = compare x y
 
-          if c > 0 then
-            merge (y :: zs, zn + 1) d (xs, xn) (ys1, yn - 1)
-          else if c = 0 && unique then
-            merge (zs, zn) (d + 1) (xs, xn) (ys1, yn - 1)
-          else
-            merge (x :: zs, zn + 1) d (xs1, xn - 1) (ys, yn)
+        if c > 0 then
+          merge (y :: zs, zn + 1) d (xs, xn) (ys1, yn - 1)
+        else if c = 0 && unique then
+          merge (zs, zn) (d + 1) (xs, xn) (ys1, yn - 1)
+        else
+          merge (x :: zs, zn + 1) d (xs1, xn - 1) (ys, yn)
 
   // `go (xs, xn) = (zs, zn), xs1, d` where
   // `zs.[0..xn - 1]` is the sort of `xs.[0..xn - 1]`,
@@ -281,8 +281,8 @@ let charEscape (c: char) =
 
   match c with
   | '\x00' ->
-      // C-style.
-      "\\0"
+    // C-style.
+    "\\0"
 
   | '\t' -> "\\t"
 
@@ -297,8 +297,8 @@ let charEscape (c: char) =
   | '\\' -> "\\\\"
 
   | c ->
-      let h = c |> int |> intToHexWithPadding 2
-      "\\x" + h
+    let h = c |> int |> intToHexWithPadding 2
+    "\\x" + h
 
 // -----------------------------------------------
 // String

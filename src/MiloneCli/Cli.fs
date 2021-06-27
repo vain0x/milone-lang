@@ -157,9 +157,9 @@ let private pathStrToStem (s: string) =
   | ".." -> s
 
   | s ->
-      match s |> S.findLastIndex "." with
-      | Some i -> s |> S.slice 0 i
-      | None -> s
+    match s |> S.findLastIndex "." with
+    | Some i -> s |> S.slice 0 i
+    | None -> s
 
 let private pathIsRelative (s: string) =
   (s |> S.startsWith "./")
@@ -221,8 +221,8 @@ let private writeLog (host: CliHost) verbosity msg =
 
   match verbosity with
   | Verbose ->
-      // FIXME: to stderr
-      printfn "// %s" msg
+    // FIXME: to stderr
+    printfn "// %s" msg
 
   | Profile profiler -> profiler |> profileLog msg
 
@@ -300,7 +300,7 @@ let private lowerTyDef (def: Tir.TyDef) : Hir.TyDef =
   match def with
   | Tir.UnionTyDef (ident, variants, loc) -> Hir.UnionTyDef(ident, List.map lowerVariantSerial variants, loc)
   | Tir.RecordTyDef (ident, fields, loc) ->
-      Hir.RecordTyDef(ident, List.map (fun (ident, ty, loc) -> ident, lowerTy ty, loc) fields, loc)
+    Hir.RecordTyDef(ident, List.map (fun (ident, ty, loc) -> ident, lowerTy ty, loc) fields, loc)
 
   | Tir.MetaTyDef _
   | Tir.UniversalTyDef _
@@ -398,42 +398,42 @@ let private lowerExpr (expr: Tir.TExpr) : Hir.HExpr =
   | Tir.TVariantExpr (variantSerial, ty, loc) -> Hir.HVariantExpr(lowerVariantSerial variantSerial, lowerTy ty, loc)
   | Tir.TPrimExpr (prim, ty, loc) -> Hir.HPrimExpr(lowerPrim prim, lowerTy ty, loc)
   | Tir.TRecordExpr (exprOpt, fields, ty, loc) ->
-      Hir.HRecordExpr(
-        Option.map lowerExpr exprOpt,
-        List.map (fun (ident, init, loc) -> ident, lowerExpr init, loc) fields,
-        lowerTy ty,
-        loc
-      )
+    Hir.HRecordExpr(
+      Option.map lowerExpr exprOpt,
+      List.map (fun (ident, init, loc) -> ident, lowerExpr init, loc) fields,
+      lowerTy ty,
+      loc
+    )
   | Tir.TMatchExpr (cond, arms, ty, loc) ->
-      Hir.HMatchExpr(
-        lowerExpr cond,
-        List.map (fun (pat, guard, body) -> lowerPat pat, lowerExpr guard, lowerExpr body) arms,
-        lowerTy ty,
-        loc
-      )
+    Hir.HMatchExpr(
+      lowerExpr cond,
+      List.map (fun (pat, guard, body) -> lowerPat pat, lowerExpr guard, lowerExpr body) arms,
+      lowerTy ty,
+      loc
+    )
   | Tir.TNavExpr (l, r, ty, loc) -> Hir.HNavExpr(lowerExpr l, r, lowerTy ty, loc)
   | Tir.TNodeExpr (kind, args, ty, loc) -> Hir.HNodeExpr(lowerExprKind kind, List.map lowerExpr args, lowerTy ty, loc)
   | Tir.TBlockExpr (stmts, last) -> Hir.HBlockExpr(List.map lowerExpr stmts, lowerExpr last)
   | Tir.TLetValExpr (pat, init, next, ty, loc) ->
-      Hir.HLetValExpr(lowerPat pat, lowerExpr init, lowerExpr next, lowerTy ty, loc)
+    Hir.HLetValExpr(lowerPat pat, lowerExpr init, lowerExpr next, lowerTy ty, loc)
   | Tir.TLetFunExpr _ ->
-      invoke
-        (fun () ->
-          let funSerial, isRec, vis, argPats, body, next, ty, loc =
-            match expr with
-            | Tir.TLetFunExpr (t0, t1, t2, t3, t4, t5, t6, t7) -> t0, t1, t2, t3, t4, t5, t6, t7
-            | _ -> unreachable ()
+    invoke
+      (fun () ->
+        let funSerial, isRec, vis, argPats, body, next, ty, loc =
+          match expr with
+          | Tir.TLetFunExpr (t0, t1, t2, t3, t4, t5, t6, t7) -> t0, t1, t2, t3, t4, t5, t6, t7
+          | _ -> unreachable ()
 
-          Hir.HLetFunExpr(
-            lowerFunSerial funSerial,
-            isRec,
-            vis,
-            List.map lowerPat argPats,
-            lowerExpr body,
-            lowerExpr next,
-            lowerTy ty,
-            loc
-          ))
+        Hir.HLetFunExpr(
+          lowerFunSerial funSerial,
+          isRec,
+          vis,
+          List.map lowerPat argPats,
+          lowerExpr body,
+          lowerExpr next,
+          lowerTy ty,
+          loc
+        ))
 
   | Tir.TTyDeclExpr _
   | Tir.TOpenExpr _
@@ -555,8 +555,8 @@ let private compile (ctx: CompileCtx) : CompileResult =
   | SyntaxApi.SyntaxAnalysisError (errors, _) -> CompileError(SyntaxApi.syntaxErrorsToString errors)
 
   | SyntaxApi.SyntaxAnalysisOk (modules, tyCtx) ->
-      let decls, tyCtx = transformHir host v (modules, tyCtx)
-      CompileOk(codeGenHirViaMir host v ctx.EntryProjectName ctx.HeaderOnly (decls, tyCtx))
+    let decls, tyCtx = transformHir host v (modules, tyCtx)
+    CompileOk(codeGenHirViaMir host v ctx.EntryProjectName ctx.HeaderOnly (decls, tyCtx))
 
 // -----------------------------------------------
 // Actions
@@ -620,18 +620,18 @@ let cliCompile (host: CliHost) (options: CompileOptions) =
 
   match result with
   | CompileOk files ->
-      List.fold
-        (fun () (name, contents) ->
-          printfn "%s" name
-          host.FileWriteAllText(options.TargetDir + "/" + name) contents)
-        ()
-        files
+    List.fold
+      (fun () (name, contents) ->
+        printfn "%s" name
+        host.FileWriteAllText(options.TargetDir + "/" + name) contents)
+      ()
+      files
 
-      0
+    0
 
   | CompileError output ->
-      host.WriteStdout output
-      1
+    host.WriteStdout output
+    1
 
 [<RequireQualifiedAccess; NoEquality; NoComparison>]
 type BuildOptions =
@@ -646,7 +646,8 @@ let private cliBuild (host: CliHost) (options: BuildOptions) =
   let ninjaFile = targetDir + "/build.ninja"
 
   let build =
-    let rules = """
+    let rules =
+      """
 rule false
   description = false $out
   command = false
@@ -684,64 +685,65 @@ rule link
 
   match compile ctx with
   | CompileError output ->
-      host.WriteStdout output
+    host.WriteStdout output
 
-      let build =
-        build
-        |> cons "build "
-        |> cons exeFile
-        |> cons ": false\ndefault "
-        |> cons exeFile
-        |> cons "\n"
+    let build =
+      build
+      |> cons "build "
+      |> cons exeFile
+      |> cons ": false\ndefault "
+      |> cons exeFile
+      |> cons "\n"
 
-      host.FileWriteAllText ninjaFile (build |> List.rev |> S.concat "")
-      1
+    host.FileWriteAllText ninjaFile (build |> List.rev |> S.concat "")
+    1
 
   | CompileOk files ->
-      let miloneObj = miloneHome + "/runtime/milone.o"
-      let miloneHeader = miloneHome + "/runtime/milone.h"
+    let miloneObj = miloneHome + "/runtime/milone.o"
+    let miloneHeader = miloneHome + "/runtime/milone.h"
 
-      let cFile name = [ projectDir; "/"; name ] |> S.concat ""
+    let cFile name =
+      [ projectDir; "/"; name ] |> S.concat ""
 
-      let objFile name =
-        [ targetDir
-          "/"
-          pathStrToStem name
-          ".o" ]
-        |> S.concat ""
+    let objFile name =
+      [ targetDir
+        "/"
+        pathStrToStem name
+        ".o" ]
+      |> S.concat ""
 
-      let build =
-        List.fold
-          (fun build (name, contents) ->
-            host.FileWriteAllText(targetDir + "/" + name) contents
+    let build =
+      List.fold
+        (fun build (name, contents) ->
+          host.FileWriteAllText(targetDir + "/" + name) contents
 
-            build
-            |> cons "build "
-            |> cons (objFile name)
-            |> cons ": cc "
-            |> cons (cFile name)
-            |> cons " | "
-            |> cons miloneHeader
-            |> cons "\n\n")
           build
-          files
-
-      let build =
+          |> cons "build "
+          |> cons (objFile name)
+          |> cons ": cc "
+          |> cons (cFile name)
+          |> cons " | "
+          |> cons miloneHeader
+          |> cons "\n\n")
         build
-        |> cons "build "
-        |> cons exeFile
-        |> cons ": link "
-        |> cons miloneObj
-        |> cons " "
-        |> cons (
-          files
-          |> List.map (fun (name, _) -> objFile name)
-          |> S.concat ""
-        )
-        |> cons "\n"
+        files
 
-      host.FileWriteAllText ninjaFile (build |> List.rev |> S.concat "")
-      0
+    let build =
+      build
+      |> cons "build "
+      |> cons exeFile
+      |> cons ": link "
+      |> cons miloneObj
+      |> cons " "
+      |> cons (
+        files
+        |> List.map (fun (name, _) -> objFile name)
+        |> S.concat ""
+      )
+      |> cons "\n"
+
+    host.FileWriteAllText ninjaFile (build |> List.rev |> S.concat "")
+    0
 
 // -----------------------------------------------
 // Arg parsing
@@ -760,10 +762,10 @@ let private parseFlag picker state args =
     | "--" :: _ -> state, List.append (List.rev acc) args
 
     | arg :: args ->
-        match picker state arg with
-        | Some state -> go acc state args
+      match picker state arg with
+      | Some state -> go acc state args
 
-        | None -> go (arg :: acc) state args
+      | None -> go (arg :: acc) state args
 
   go [] state args
 
@@ -836,17 +838,17 @@ let private parseArgs args =
   | "--profile" :: _ -> CompileCmd, args
 
   | arg :: args ->
-      match arg with
-      | "build" -> BuildCmd, args
-      | "check" -> CheckCmd, args
-      | "compile" -> CompileCmd, args
+    match arg with
+    | "build" -> BuildCmd, args
+    | "check" -> CheckCmd, args
+    | "compile" -> CompileCmd, args
 
-      | "header" -> HeaderCmd, args
+    | "header" -> HeaderCmd, args
 
-      // for debug
-      | "parse" -> ParseCmd, args
+    // for debug
+    | "parse" -> ParseCmd, args
 
-      | _ -> BadCmd arg, []
+    | _ -> BadCmd arg, []
 
 // -----------------------------------------------
 // Entrypoint
@@ -855,93 +857,93 @@ let private parseArgs args =
 let cli (host: CliHost) =
   match host.Args |> parseArgs with
   | HelpCmd, _ ->
-      printfn "%s" (helpText ())
-      0
+    printfn "%s" (helpText ())
+    0
 
   | VersionCmd, _ ->
-      printfn "%s" (currentVersion ())
-      0
+    printfn "%s" (currentVersion ())
+    0
 
   | CheckCmd, args ->
-      let verbosity, args = parseVerbosity host args
+    let verbosity, args = parseVerbosity host args
 
-      match args with
-      | [ projectDir ] -> cliCheck host verbosity projectDir
+    match args with
+    | [ projectDir ] -> cliCheck host verbosity projectDir
 
-      | [] ->
-          printfn "ERROR: Expected project dir."
-          1
+    | [] ->
+      printfn "ERROR: Expected project dir."
+      1
 
-      | arg :: _ ->
-          printfn "ERROR: Unknown argument: '%s'." arg
-          1
+    | arg :: _ ->
+      printfn "ERROR: Unknown argument: '%s'." arg
+      1
 
   | HeaderCmd, args ->
-      let verbosity, args = parseVerbosity host args
+    let verbosity, args = parseVerbosity host args
 
-      match args with
-      | projectDir :: _ ->
-          let options : CompileOptions =
-            { ProjectDir = projectDir
-              TargetDir = "."
-              HeaderOnly = true
-              Verbosity = verbosity }
+    match args with
+    | projectDir :: _ ->
+      let options : CompileOptions =
+        { ProjectDir = projectDir
+          TargetDir = "."
+          HeaderOnly = true
+          Verbosity = verbosity }
 
-          cliCompile host options
+      cliCompile host options
 
-      | [] ->
-          printfn "ERROR: Expected project dir."
-          1
+    | [] ->
+      printfn "ERROR: Expected project dir."
+      1
 
   | CompileCmd, args ->
-      let verbosity, args = parseVerbosity host args
+    let verbosity, args = parseVerbosity host args
 
-      let targetDir, args =
-        parseOption (fun x -> x = "--target-dir") args
+    let targetDir, args =
+      parseOption (fun x -> x = "--target-dir") args
 
-      match args with
-      | projectDir :: _ ->
-          let options : CompileOptions =
-            { ProjectDir = projectDir
-              TargetDir = Option.defaultValue "." targetDir
-              HeaderOnly = false
-              Verbosity = verbosity }
+    match args with
+    | projectDir :: _ ->
+      let options : CompileOptions =
+        { ProjectDir = projectDir
+          TargetDir = Option.defaultValue "." targetDir
+          HeaderOnly = false
+          Verbosity = verbosity }
 
-          cliCompile host options
+      cliCompile host options
 
-      | [] ->
-          printfn "ERROR: Expected project dir."
-          1
+    | [] ->
+      printfn "ERROR: Expected project dir."
+      1
 
   | ParseCmd, args ->
-      let verbosity, args = parseVerbosity host args
+    let verbosity, args = parseVerbosity host args
 
-      match args with
-      | projectDir :: _ -> cliParse host verbosity projectDir
+    match args with
+    | projectDir :: _ -> cliParse host verbosity projectDir
 
-      | [] ->
-          printfn "ERROR: Expected project dir."
-          1
+    | [] ->
+      printfn "ERROR: Expected project dir."
+      1
 
   | BuildCmd, args ->
-      let verbosity, args = parseVerbosity host args
+    let verbosity, args = parseVerbosity host args
 
-      let targetDir, args =
-        parseOption (fun x -> x = "--target-dir") args
+    let targetDir, args =
+      parseOption (fun x -> x = "--target-dir") args
 
-      match args with
-      | projectDir :: _ ->
-          let options : BuildOptions =
-            { ProjectDir = projectDir
-              TargetDir = Option.defaultValue "." targetDir
-              Verbosity = verbosity }
+    match args with
+    | projectDir :: _ ->
+      let options : BuildOptions =
+        { ProjectDir = projectDir
+          TargetDir = Option.defaultValue "." targetDir
+          Verbosity = verbosity }
 
-          cliBuild host options
+      cliBuild host options
 
-      | [] ->
-          printfn "ERROR: Expected project dir."
-          1
+    | [] ->
+      printfn "ERROR: Expected project dir."
+      1
 
   | BadCmd subcommand, _ ->
-      printfn "ERROR: Unknown subcommand '%s'." subcommand
-      1
+    printfn "ERROR: Unknown subcommand '%s'." subcommand
+    1

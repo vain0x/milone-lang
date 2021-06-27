@@ -17,7 +17,7 @@ let main _ =
 
   match UnionX.VariantY with
   | VariantX -> // Is a variant pattern rather than variable
-      assert false
+    assert false
   | _ -> ()
 
   let useRecA = RecA.T []

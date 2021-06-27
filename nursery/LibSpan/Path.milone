@@ -71,10 +71,10 @@ let divideExt (path: Path) : Path * Path option * string option =
   let dir, baseOpt = divideBase path
 
   match baseOpt with
-  | Some(Path ".")
-  | Some(Path "..") -> dir, baseOpt, None
+  | Some (Path ".")
+  | Some (Path "..") -> dir, baseOpt, None
 
-  | Some(Path s) ->
+  | Some (Path s) ->
       match s |> S.findLastIndex "." with
       | Some i -> dir, Some(Path s.[0..i - 2]), Some s.[i..s.Length]
       | None -> dir, Some(Path s), None

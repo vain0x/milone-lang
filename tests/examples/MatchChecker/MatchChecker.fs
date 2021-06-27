@@ -198,13 +198,13 @@ let rec spaceIsEmpty space =
 let spaceDecompose space =
   match space with
   | Space.Ref (_, thunk) ->
-      let space = thunk ()
-      assert (space |> spaceIsEmpty |> not)
-      space
+    let space = thunk ()
+    assert (space |> spaceIsEmpty |> not)
+    space
 
   | _ ->
-      assert false
-      space
+    assert false
+    space
 
 /// Gets if the two spaces are disjoint, i.e., the intersection is empty.
 // let spaceIsDisjoint first second =
@@ -254,32 +254,32 @@ let rec spaceExclude first second =
 
   // Matching constructor reduces the space of items.
   | Space.Ctor (tag, firsts), Space.Ctor (secondTag, seconds) when tag = secondTag ->
-      // `(s, t) - (u, v) = {} if s <= u and t <= v`.
-      let dominant =
-        listZip firsts seconds
-        |> listForAll (fun (first, second) -> second |> spaceCovers first)
+    // `(s, t) - (u, v) = {} if s <= u and t <= v`.
+    let dominant =
+      listZip firsts seconds
+      |> listForAll (fun (first, second) -> second |> spaceCovers first)
 
-      if dominant then
-        spaceEmpty
-      else
+    if dominant then
+      spaceEmpty
+    else
 
-        // FIXME: disjoint case
+      // FIXME: disjoint case
 
-        // `(s, t) - (u, v) = (s - u, t) + (s, t - v)`.
-        // For example, the space of bool^2 excluded by the `false, true` pattern
-        // is "the left is not false, or the right is not true."
-        firsts
-        |> listMapWithIndex
-             (fun i _ ->
-               listZip firsts seconds
-               |> listMapWithIndex
-                    (fun j (first, second) ->
-                      if i = j then
-                        spaceExclude first second
-                      else
-                        first)
-               |> spaceCtor tag)
-        |> spaceUnion
+      // `(s, t) - (u, v) = (s - u, t) + (s, t - v)`.
+      // For example, the space of bool^2 excluded by the `false, true` pattern
+      // is "the left is not false, or the right is not true."
+      firsts
+      |> listMapWithIndex
+           (fun i _ ->
+             listZip firsts seconds
+             |> listMapWithIndex
+                  (fun j (first, second) ->
+                    if i = j then
+                      spaceExclude first second
+                    else
+                      first)
+             |> spaceCtor tag)
+      |> spaceUnion
 
   // Non-matching constructors do nothing because disjoint.
   | Space.Ctor _, Space.Ctor _ -> first
@@ -290,9 +290,9 @@ let rec spaceExclude first second =
   // `(x + y) - second` = (x - second) + (y - second)`.
   // Too inefficient but okay for small, hand-written patterns and types.
   | Space.Union firsts, _ ->
-      firsts
-      |> listMap (fun first -> spaceExclude first second)
-      |> spaceUnion
+    firsts
+    |> listMap (fun first -> spaceExclude first second)
+    |> spaceUnion
 
   // `x - x = {}` even if x is infinite.
   | Space.Ref (tag, _), Space.Ref (secondTag, _) when tag = secondTag -> spaceEmpty
@@ -303,10 +303,10 @@ let rec spaceExclude first second =
   | Space.Ref _, _ -> spaceExclude (spaceDecompose first) second
 
   | _, Space.Ref _ ->
-      // Never happens because patterns don't generate ref spaces
-      // at least in milone-lang... not true perhaps in Scala?
-      assert false
-      spaceExclude first (spaceDecompose second)
+    // Never happens because patterns don't generate ref spaces
+    // at least in milone-lang... not true perhaps in Scala?
+    assert false
+    spaceExclude first (spaceDecompose second)
 
 /// Gets if the `other` is subspace of the `cover`.
 let spaceCovers other cover =
@@ -320,22 +320,22 @@ let spaceToString space =
     | Space.Ctor (tag, []) -> acc |> cons tag
 
     | Space.Ctor (tag, item :: items) ->
-        let acc = acc |> cons tag |> cons "(" |> go item
+      let acc = acc |> cons tag |> cons "(" |> go item
 
-        items
-        |> listFold (fun acc space -> acc |> cons ", " |> go space) acc
-        |> cons ")"
+      items
+      |> listFold (fun acc space -> acc |> cons ", " |> go space) acc
+      |> cons ")"
 
     | Space.Ref (tag, _) -> acc |> cons tag
 
     | Space.Union [] -> acc |> cons "empty"
 
     | Space.Union (subspace :: subspaces) ->
-        let acc = acc |> cons "+(" |> go subspace
+      let acc = acc |> cons "+(" |> go subspace
 
-        subspaces
-        |> listFold (fun acc space -> acc |> cons ", " |> go space) acc
-        |> cons ")"
+      subspaces
+      |> listFold (fun acc space -> acc |> cons ", " |> go space) acc
+      |> cons ")"
 
     | _ -> failwith "NEVER: suppress warning"
 
@@ -354,15 +354,15 @@ let tyToSpace ty =
     | Ty.Tuple itemTys -> itemTys |> listMap go |> spaceCtor "tuple"
 
     | Ty.List itemTy ->
-        let itemSpace = go itemTy
+      let itemSpace = go itemTy
 
-        // Space of the list type is recursive.
-        // The function reifies it step by step.
-        let rec thunk () =
-          spaceUnion [ spaceCtor "nil" []
-                       spaceCtor "cons" [ itemSpace; spaceRef "list" thunk ] ]
+      // Space of the list type is recursive.
+      // The function reifies it step by step.
+      let rec thunk () =
+        spaceUnion [ spaceCtor "nil" []
+                     spaceCtor "cons" [ itemSpace; spaceRef "list" thunk ] ]
 
-        spaceRef "list" thunk
+      spaceRef "list" thunk
 
   go ty
 

@@ -28,40 +28,40 @@ let private readHeader (host: JsonRpcReaderHost) (state: State) : int option =
   | None -> None
 
   | Some "" ->
-      // \n\n is read, which indicates the start of body.
+    // \n\n is read, which indicates the start of body.
 
-      match state with
-      | State None -> failwith "ERROR: Body started before content length specified"
+    match state with
+    | State None -> failwith "ERROR: Body started before content length specified"
 
-      | State (Some len) ->
-          // eprintfn "begin body (len = %d)" len
-          Some len
+    | State (Some len) ->
+      // eprintfn "begin body (len = %d)" len
+      Some len
 
   | Some line ->
-      // eprintfn "header: %s" line
+    // eprintfn "header: %s" line
 
-      let line = line.Trim()
+    let line = line.Trim()
 
-      if line.StartsWith("Content-Length:") then
-        let len =
-          let n = "Content-Length:".Length
-          line.[n..].Trim() |> int
+    if line.StartsWith("Content-Length:") then
+      let len =
+        let n = "Content-Length:".Length
+        line.[n..].Trim() |> int
 
-        // eprintfn "received Content-Length: %d" len
-        let state = State(Some len)
-        readHeader host state
+      // eprintfn "received Content-Length: %d" len
+      let state = State(Some len)
+      readHeader host state
 
-      else
-        // ignore unsupported header
-        readHeader host state
+    else
+      // ignore unsupported header
+      readHeader host state
 
 let private readBody (host: JsonRpcReaderHost) (len: int) : JsonValue =
   match host.ReadBytes len with
   | None -> failwith "ERROR: unexpected EOF in the middle of body"
 
   | Some body ->
-      // eprintfn "body.length = %d" body.Length
-      jsonDeserializeBytes body
+    // eprintfn "body.length = %d" body.Length
+    jsonDeserializeBytes body
 
 type DrainFun = unit -> JsonValue list
 
@@ -79,10 +79,10 @@ let startJsonRpcReader (host: JsonRpcReaderHost) : Async<unit> * DrainFun =
         | None -> ()
 
         | Some contentLength ->
-            let value = readBody host contentLength
-            queue.Enqueue(value)
-            signal.Set()
-            return! go ()
+          let value = readBody host contentLength
+          queue.Enqueue(value)
+          signal.Set()
+          return! go ()
       }
 
     go ()
@@ -93,21 +93,21 @@ let startJsonRpcReader (host: JsonRpcReaderHost) : Async<unit> * DrainFun =
     let rec go () =
       match queue.TryDequeue() with
       | true, value ->
-          itemAcc.Add(value)
-          go ()
+        itemAcc.Add(value)
+        go ()
 
       | false, _ ->
-          let items = List.ofSeq itemAcc
-          itemAcc.Clear()
-          items
+        let items = List.ofSeq itemAcc
+        itemAcc.Clear()
+        items
 
     match go () with
     | [] ->
-        signal.Wait()
-        drain ()
+      signal.Wait()
+      drain ()
 
     | items ->
-        signal.Reset()
-        items
+      signal.Reset()
+      items
 
   work, drain

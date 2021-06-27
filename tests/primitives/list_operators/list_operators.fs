@@ -28,10 +28,10 @@ let literalTest () =
 
   match zs with
   | [ z2; z3; z5; z7 ] ->
-      assert (z2 = 2)
-      assert (z3 = 3)
-      assert (z5 = 5)
-      assert (z7 = 7)
+    assert (z2 = 2)
+    assert (z3 = 3)
+    assert (z5 = 5)
+    assert (z7 = 7)
 
   | _ -> assert false
 

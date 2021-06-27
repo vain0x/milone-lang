@@ -229,13 +229,13 @@ let private createRestArgsAndPats callee arity argLen callLoc ctx =
     | 0, _ -> [], [], ctx
 
     | n, Ty (FunTk, [ argTy; restTy ]) ->
-        let argExpr, argSerial, ctx = freshVar "arg" argTy callLoc ctx
-        let restArgPats, restArgs, ctx = go (n - 1) restTy ctx
+      let argExpr, argSerial, ctx = freshVar "arg" argTy callLoc ctx
+      let restArgPats, restArgs, ctx = go (n - 1) restTy ctx
 
-        let restArgPat =
-          HVarPat(PrivateVis, argSerial, argTy, callLoc)
+      let restArgPat =
+        HVarPat(PrivateVis, argSerial, argTy, callLoc)
 
-        restArgPat :: restArgPats, argExpr :: restArgs, ctx
+      restArgPat :: restArgPats, argExpr :: restArgs, ctx
 
     | _ -> unreachable (callLoc, callee, n, restTy) // Type error?
 
@@ -248,14 +248,14 @@ let private createEnvPatAndTy items callLoc ctx =
     | [] -> [], [], [], ctx
 
     | item :: items ->
-        let itemTy, itemLoc = exprExtract item
-        let itemExpr, itemSerial, ctx = freshVar "arg" itemTy itemLoc ctx
+      let itemTy, itemLoc = exprExtract item
+      let itemExpr, itemSerial, ctx = freshVar "arg" itemTy itemLoc ctx
 
-        let itemPat =
-          HVarPat(PrivateVis, itemSerial, itemTy, itemLoc)
+      let itemPat =
+        HVarPat(PrivateVis, itemSerial, itemTy, itemLoc)
 
-        let itemPats, argTys, argExprs, ctx = go items ctx
-        itemPat :: itemPats, itemTy :: argTys, itemExpr :: argExprs, ctx
+      let itemPats, argTys, argExprs, ctx = go items ctx
+      itemPat :: itemPats, itemTy :: argTys, itemExpr :: argExprs, ctx
 
   let itemPats, itemTys, itemExprs, ctx = go items ctx
   let envTy = tyTuple itemTys
@@ -404,27 +404,27 @@ let private doExpandCall calleeKind callee arity calleeLoc args resultTy callLoc
 let private expandCallExpr callee args resultTy loc (ctx: EtaCtx) =
   match callee, args with
   | HFunExpr (funSerial, _, calleeLoc), _ ->
-      let arity = (ctx.Funs |> mapFind funSerial).Arity
-      let args, ctx = (args, ctx) |> stMap exExpr
-      doExpandCall CalleeKind.Fun callee arity calleeLoc args resultTy loc ctx
+    let arity = (ctx.Funs |> mapFind funSerial).Arity
+    let args, ctx = (args, ctx) |> stMap exExpr
+    doExpandCall CalleeKind.Fun callee arity calleeLoc args resultTy loc ctx
 
   | HVariantExpr (_, variantTy, calleeLoc), _ ->
-      assert (tyIsFun variantTy)
-      let arity = 1
-      let args, ctx = (args, ctx) |> stMap exExpr
-      doExpandCall CalleeKind.Fun callee arity calleeLoc args resultTy loc ctx
+    assert (tyIsFun variantTy)
+    let arity = 1
+    let args, ctx = (args, ctx) |> stMap exExpr
+    doExpandCall CalleeKind.Fun callee arity calleeLoc args resultTy loc ctx
 
   | HPrimExpr (prim, primTy, calleeLoc), _ ->
-      let arity = prim |> primToArity primTy
-      let args, ctx = (args, ctx) |> stMap exExpr
-      doExpandCall CalleeKind.Fun callee arity calleeLoc args resultTy loc ctx
+    let arity = prim |> primToArity primTy
+    let args, ctx = (args, ctx) |> stMap exExpr
+    doExpandCall CalleeKind.Fun callee arity calleeLoc args resultTy loc ctx
 
   | _, args ->
-      let calleeTy, calleeLoc = exprExtract callee
-      let callee, ctx = (callee, ctx) |> exExpr
-      let args, ctx = (args, ctx) |> stMap exExpr
-      let arity = tyToArity calleeTy // FIXME: maybe wrong
-      doExpandCall CalleeKind.Obj callee arity calleeLoc args resultTy loc ctx
+    let calleeTy, calleeLoc = exprExtract callee
+    let callee, ctx = (callee, ctx) |> exExpr
+    let args, ctx = (args, ctx) |> stMap exExpr
+    let arity = tyToArity calleeTy // FIXME: maybe wrong
+    doExpandCall CalleeKind.Obj callee arity calleeLoc args resultTy loc ctx
 
 let private exFunName expr funSerial calleeLoc (ctx: EtaCtx) =
   let arity = (ctx.Funs |> mapFind funSerial).Arity
@@ -450,18 +450,18 @@ let private exPrimExpr expr prim primTy calleeLoc (ctx: EtaCtx) =
 let private exInfExpr expr kind args ty loc ctx =
   match kind with
   | HAppEN ->
-      /// Converts `(((f x) ..) y)` to `f(x, .., y)`.
-      let rec roll acc callee =
-        match callee with
-        | HNodeExpr (HAppEN, [ callee; arg ], _, _) -> roll (arg :: acc) callee
-        | _ -> callee, acc
+    /// Converts `(((f x) ..) y)` to `f(x, .., y)`.
+    let rec roll acc callee =
+      match callee with
+      | HNodeExpr (HAppEN, [ callee; arg ], _, _) -> roll (arg :: acc) callee
+      | _ -> callee, acc
 
-      let callee, args = roll [] expr
-      expandCallExpr callee args ty loc ctx
+    let callee, args = roll [] expr
+    expandCallExpr callee args ty loc ctx
 
   | _ ->
-      let args, ctx = (args, ctx) |> stMap exExpr
-      HNodeExpr(kind, args, ty, loc), ctx
+    let args, ctx = (args, ctx) |> stMap exExpr
+    HNodeExpr(kind, args, ty, loc), ctx
 
 let private exLetFunExpr callee isRec vis argPats body next ty loc ctx =
   let body, ctx = (body, ctx) |> exExpr
@@ -482,34 +482,34 @@ let private exExpr (expr, ctx) =
   | HPrimExpr (prim, primTy, calleeLoc) -> exPrimExpr expr prim primTy calleeLoc ctx
 
   | HMatchExpr (cond, arms, ty, loc) ->
-      let cond, ctx = (cond, ctx) |> exExpr
+    let cond, ctx = (cond, ctx) |> exExpr
 
-      let arms, ctx =
-        (arms, ctx)
-        |> stMap
-             (fun ((pat, guard, body), ctx) ->
-               let guard, ctx = (guard, ctx) |> exExpr
-               let body, ctx = (body, ctx) |> exExpr
-               (pat, guard, body), ctx)
+    let arms, ctx =
+      (arms, ctx)
+      |> stMap
+           (fun ((pat, guard, body), ctx) ->
+             let guard, ctx = (guard, ctx) |> exExpr
+             let body, ctx = (body, ctx) |> exExpr
+             (pat, guard, body), ctx)
 
-      HMatchExpr(cond, arms, ty, loc), ctx
+    HMatchExpr(cond, arms, ty, loc), ctx
 
   | HNodeExpr (kind, args, ty, loc) -> exInfExpr expr kind args ty loc ctx
 
   | HBlockExpr (stmts, last) ->
-      invoke
-        (fun () ->
-          let stmts, ctx = (stmts, ctx) |> stMap exExpr
-          let last, ctx = (last, ctx) |> exExpr
-          HBlockExpr(stmts, last), ctx)
+    invoke
+      (fun () ->
+        let stmts, ctx = (stmts, ctx) |> stMap exExpr
+        let last, ctx = (last, ctx) |> exExpr
+        HBlockExpr(stmts, last), ctx)
 
   | HLetValExpr (pat, init, next, ty, loc) ->
-      let init, ctx = (init, ctx) |> exExpr
-      let next, ctx = (next, ctx) |> exExpr
-      HLetValExpr(pat, init, next, ty, loc), ctx
+    let init, ctx = (init, ctx) |> exExpr
+    let next, ctx = (next, ctx) |> exExpr
+    HLetValExpr(pat, init, next, ty, loc), ctx
 
   | HLetFunExpr (callee, isRec, vis, args, body, next, ty, loc) ->
-      exLetFunExpr callee isRec vis args body next ty loc ctx
+    exLetFunExpr callee isRec vis args body next ty loc ctx
 
   | HNavExpr _ -> unreachable () // HNavExpr is resolved in NameRes, Typing, or RecordRes.
   | HRecordExpr _ -> unreachable () // HRecordExpr is resolved in RecordRes.

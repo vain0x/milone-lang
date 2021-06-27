@@ -95,15 +95,15 @@ let strConcat (xs: string list) =
     // assert (xn <= listLength xs)
     match xs with
     | [] ->
-        assert (xn = 0)
-        "", []
+      assert (xn = 0)
+      "", []
     | x :: xs when xn = 1 -> x, xs
     | x :: y :: xs when xn = 2 -> x + y, xs
     | xs ->
-        let m = xn / 2
-        let l, xs = go xs m
-        let r, xs = go xs (xn - m)
-        l + r, xs
+      let m = xn / 2
+      let l, xs = go xs m
+      let r, xs = go xs (xn - m)
+      l + r, xs
 
   let n = xs |> listLength
   let s, xs = go xs n
@@ -205,8 +205,8 @@ let vectorOfList ty xs =
     match xs with
     | [] -> assert (i = len)
     | x :: xs ->
-        v |> vectorSet i x
-        go (i + 1) xs
+      v |> vectorSet i x
+      go (i + 1) xs
 
   go 0 xs
   v

@@ -646,90 +646,90 @@ let primToTySpec prim =
 
   match prim with
   | TPrim.Add ->
-      let addTy = meta 1
-      poly (tyFun addTy (tyFun addTy addTy)) [ AddTrait addTy ]
+    let addTy = meta 1
+    poly (tyFun addTy (tyFun addTy addTy)) [ AddTrait addTy ]
 
   | TPrim.Sub
   | TPrim.Mul
   | TPrim.Div
   | TPrim.Modulo ->
-      let ty = meta 1
-      poly (tyFun ty (tyFun ty ty)) [ IsNumberTrait ty ]
+    let ty = meta 1
+    poly (tyFun ty (tyFun ty ty)) [ IsNumberTrait ty ]
 
   | TPrim.BitAnd
   | TPrim.BitOr
   | TPrim.BitXor ->
-      let ty = meta 1
-      poly (tyFun ty (tyFun ty ty)) [ IsIntTrait ty ]
+    let ty = meta 1
+    poly (tyFun ty (tyFun ty ty)) [ IsIntTrait ty ]
 
   | TPrim.LeftShift
   | TPrim.RightShift ->
-      let ty = meta 1
-      poly (tyFun ty (tyFun tyInt ty)) [ IsIntTrait ty ]
+    let ty = meta 1
+    poly (tyFun ty (tyFun tyInt ty)) [ IsIntTrait ty ]
 
   | TPrim.Equal ->
-      let argTy = meta 1
-      poly (tyFun argTy (tyFun argTy tyBool)) [ EqualTrait argTy ]
+    let argTy = meta 1
+    poly (tyFun argTy (tyFun argTy tyBool)) [ EqualTrait argTy ]
 
   | TPrim.Less ->
-      let compareTy = meta 1
-      poly (tyFun compareTy (tyFun compareTy tyBool)) [ CompareTrait compareTy ]
+    let compareTy = meta 1
+    poly (tyFun compareTy (tyFun compareTy tyBool)) [ CompareTrait compareTy ]
 
   | TPrim.Compare ->
-      let compareTy = meta 1
-      poly (tyFun compareTy (tyFun compareTy tyInt)) [ CompareTrait compareTy ]
+    let compareTy = meta 1
+    poly (tyFun compareTy (tyFun compareTy tyInt)) [ CompareTrait compareTy ]
 
   | TPrim.Nil ->
-      let itemTy = meta 1
-      poly (tyList itemTy) []
+    let itemTy = meta 1
+    poly (tyList itemTy) []
 
   | TPrim.Cons ->
-      let itemTy = meta 1
-      let listTy = tyList itemTy
-      poly (tyFun itemTy (tyFun listTy listTy)) []
+    let itemTy = meta 1
+    let listTy = tyList itemTy
+    poly (tyFun itemTy (tyFun listTy listTy)) []
 
   | TPrim.OptionNone ->
-      let itemTy = meta 1
-      poly (tyOption itemTy) []
+    let itemTy = meta 1
+    poly (tyOption itemTy) []
 
   | TPrim.OptionSome ->
-      let itemTy = meta 1
-      let listTy = tyOption itemTy
-      poly (tyFun itemTy listTy) []
+    let itemTy = meta 1
+    let listTy = tyOption itemTy
+    poly (tyFun itemTy listTy) []
 
   | TPrim.Not -> mono (tyFun tyBool tyBool)
 
   | TPrim.Exit ->
-      let resultTy = meta 1
-      poly (tyFun tyInt resultTy) []
+    let resultTy = meta 1
+    poly (tyFun tyInt resultTy) []
 
   | TPrim.Assert -> mono (tyFun tyBool tyUnit)
 
   | TPrim.Box ->
-      let itemTy = meta 1
-      poly (tyFun itemTy tyObj) []
+    let itemTy = meta 1
+    poly (tyFun itemTy tyObj) []
 
   | TPrim.Unbox ->
-      let itemTy = meta 1
-      poly (tyFun tyObj itemTy) []
+    let itemTy = meta 1
+    poly (tyFun tyObj itemTy) []
 
   | TPrim.Char ->
-      let srcTy = meta 1
-      poly (tyFun srcTy tyChar) [ ToCharTrait srcTy ]
+    let srcTy = meta 1
+    poly (tyFun srcTy tyChar) [ ToCharTrait srcTy ]
 
   | TPrim.ToInt flavor ->
-      let toIntTy = meta 1
-      let resultTy = Ty(IntTk flavor, [])
-      poly (tyFun toIntTy resultTy) [ ToIntTrait toIntTy ]
+    let toIntTy = meta 1
+    let resultTy = Ty(IntTk flavor, [])
+    poly (tyFun toIntTy resultTy) [ ToIntTrait toIntTy ]
 
   | TPrim.ToFloat flavor ->
-      let srcTy = meta 1
-      let resultTy = Ty(FloatTk flavor, [])
-      poly (tyFun srcTy resultTy) [ ToFloatTrait srcTy ]
+    let srcTy = meta 1
+    let resultTy = Ty(FloatTk flavor, [])
+    poly (tyFun srcTy resultTy) [ ToFloatTrait srcTy ]
 
   | TPrim.String ->
-      let toStrTy = meta 1
-      poly (tyFun toStrTy tyStr) [ ToStringTrait toStrTy ]
+    let toStrTy = meta 1
+    poly (tyFun toStrTy tyStr) [ ToStringTrait toStrTy ]
 
   | TPrim.StrLength -> mono (tyFun tyStr tyInt)
 
@@ -740,25 +740,25 @@ let primToTySpec prim =
   | TPrim.NativeExpr
   | TPrim.NativeStmt
   | TPrim.NativeDecl ->
-      // Incorrect use of this primitive is handled as error before instantiating its type.
-      unreachable ()
+    // Incorrect use of this primitive is handled as error before instantiating its type.
+    unreachable ()
 
   | TPrim.NativeCast ->
-      let srcTy = meta 1
-      let destTy = meta 2
-      poly (tyFun srcTy destTy) [ PtrTrait srcTy; PtrTrait destTy ]
+    let srcTy = meta 1
+    let destTy = meta 2
+    poly (tyFun srcTy destTy) [ PtrTrait srcTy; PtrTrait destTy ]
 
   | TPrim.SizeOfVal -> poly (tyFun (meta 1) tyInt) []
 
   | TPrim.PtrRead ->
-      // __constptr<'p> -> int -> 'a
-      let valueTy = meta 1
-      poly (tyFun (tyConstPtr valueTy) (tyFun tyInt valueTy)) []
+    // __constptr<'p> -> int -> 'a
+    let valueTy = meta 1
+    poly (tyFun (tyConstPtr valueTy) (tyFun tyInt valueTy)) []
 
   | TPrim.PtrWrite ->
-      // nativeptr<'a> -> int -> 'a -> unit
-      let valueTy = meta 1
-      poly (tyFun (tyNativePtr valueTy) (tyFun tyInt (tyFun valueTy tyUnit))) []
+    // nativeptr<'a> -> int -> 'a -> unit
+    let valueTy = meta 1
+    poly (tyFun (tyNativePtr valueTy) (tyFun tyInt (tyFun valueTy tyUnit))) []
 
 // -----------------------------------------------
 // Patterns (HIR)
@@ -806,13 +806,13 @@ let patNormalize pat =
     | TVariantPat _ -> [ pat ]
 
     | TNodePat (kind, argPats, ty, loc) ->
-        argPats
-        |> doNormalizePats
-        |> List.map (fun itemPats -> TNodePat(kind, itemPats, ty, loc))
+      argPats
+      |> doNormalizePats
+      |> List.map (fun itemPats -> TNodePat(kind, itemPats, ty, loc))
 
     | TAsPat (bodyPat, serial, loc) ->
-        go bodyPat
-        |> List.map (fun bodyPat -> TAsPat(bodyPat, serial, loc))
+      go bodyPat
+      |> List.map (fun bodyPat -> TAsPat(bodyPat, serial, loc))
 
     | TOrPat (l, r, _) -> List.append (go l) (go r)
 
@@ -823,13 +823,13 @@ let private doNormalizePats pats =
   | [] -> [ [] ]
 
   | headPat :: tailPats ->
-      let headPats = patNormalize headPat
+    let headPats = patNormalize headPat
 
-      doNormalizePats tailPats
-      |> List.collect
-           (fun tailPats ->
-             headPats
-             |> List.map (fun headPat -> headPat :: tailPats))
+    doNormalizePats tailPats
+    |> List.collect
+         (fun tailPats ->
+           headPats
+           |> List.map (fun headPat -> headPat :: tailPats))
 
 /// Gets whether a pattern is clearly exhaustive, that is,
 /// pattern matching on it always succeeds (assuming type check is passing).
@@ -844,22 +844,22 @@ let patIsClearlyExhaustive isNewtypeVariant pat =
     | TVariantPat (variantSerial, _, _) -> isNewtypeVariant variantSerial
 
     | TNodePat (kind, argPats, _, _) ->
-        match kind, argPats with
-        | TVariantAppPN variantSerial, [ payloadPat ] -> isNewtypeVariant variantSerial && go payloadPat
+      match kind, argPats with
+      | TVariantAppPN variantSerial, [ payloadPat ] -> isNewtypeVariant variantSerial && go payloadPat
 
-        | TAbortPN, _ -> true
+      | TAbortPN, _ -> true
 
-        | TNilPN, _
-        | TConsPN, _
-        | TNonePN, _
-        | TSomePN, _
-        | TSomeAppPN, _
-        | TAppPN, _
-        | TVariantAppPN _, _
-        | TNavPN _, _ -> false
+      | TNilPN, _
+      | TConsPN, _
+      | TNonePN, _
+      | TSomePN, _
+      | TSomeAppPN, _
+      | TAppPN, _
+      | TVariantAppPN _, _
+      | TNavPN _, _ -> false
 
-        | TTuplePN, _
-        | TAscribePN, _ -> argPats |> List.forall go
+      | TTuplePN, _
+      | TAscribePN, _ -> argPats |> List.forall go
 
     | TAsPat (bodyPat, _, _) -> go bodyPat
     | TOrPat (l, r, _) -> go l || go r
@@ -921,26 +921,26 @@ let exprMap (f: Ty -> Ty) (g: Loc -> Loc) (expr: TExpr) : TExpr =
     | TPrimExpr (prim, ty, a) -> TPrimExpr(prim, f ty, g a)
 
     | TRecordExpr (baseOpt, fields, ty, a) ->
-        let baseOpt = baseOpt |> Option.map go
+      let baseOpt = baseOpt |> Option.map go
 
-        let fields =
-          fields
-          |> List.map (fun (name, init, a) -> name, go init, g a)
+      let fields =
+        fields
+        |> List.map (fun (name, init, a) -> name, go init, g a)
 
-        TRecordExpr(baseOpt, fields, f ty, g a)
+      TRecordExpr(baseOpt, fields, f ty, g a)
 
     | TMatchExpr (cond, arms, ty, a) ->
-        let arms =
-          arms
-          |> List.map (fun (pat, guard, body) -> goPat pat, go guard, go body)
+      let arms =
+        arms
+        |> List.map (fun (pat, guard, body) -> goPat pat, go guard, go body)
 
-        TMatchExpr(go cond, arms, f ty, g a)
+      TMatchExpr(go cond, arms, f ty, g a)
     | TNavExpr (sub, mes, ty, a) -> TNavExpr(go sub, mes, f ty, g a)
     | TNodeExpr (kind, args, resultTy, a) -> TNodeExpr(kind, List.map go args, f resultTy, g a)
     | TBlockExpr (stmts, last) -> TBlockExpr(List.map go stmts, go last)
     | TLetValExpr (pat, init, next, ty, a) -> TLetValExpr(goPat pat, go init, go next, f ty, g a)
     | TLetFunExpr (serial, isRec, vis, args, body, next, ty, a) ->
-        TLetFunExpr(serial, isRec, vis, List.map goPat args, go body, go next, f ty, g a)
+      TLetFunExpr(serial, isRec, vis, List.map goPat args, go body, go next, f ty, g a)
     | TTyDeclExpr (serial, vis, tyArgs, tyDef, a) -> TTyDeclExpr(serial, vis, tyArgs, tyDef, g a)
     | TOpenExpr (path, a) -> TOpenExpr(path, g a)
     | TModuleExpr (name, body, a) -> TModuleExpr(name, List.map go body, g a)
@@ -1009,16 +1009,16 @@ let analyzeFormat (format: string) =
 let nameResLogToString log =
   match log with
   | UndefinedValueError name ->
-      "The name '"
-      + name
-      + "' here should denote to some value; but not found."
+    "The name '"
+    + name
+    + "' here should denote to some value; but not found."
 
   | TyUsedAsValueError -> "This is a type. A value is expected here."
 
   | UndefinedTyError name ->
-      "The name '"
-      + name
-      + "' here should denote to some type; but not found."
+    "The name '"
+    + name
+    + "' here should denote to some type; but not found."
 
   | VarNameConflictError -> "Variable name conflicts"
 
@@ -1031,18 +1031,18 @@ let nameResLogToString log =
   | TyArityError ("_", _, _) -> "'_' can't have type arguments."
 
   | TyArityError (name, actual, expected) ->
-      "Type arity mismatch. The type '"
-      + name
-      + "' expected "
-      + string expected
-      + " arguments; but given "
-      + string actual
-      + "."
+    "Type arity mismatch. The type '"
+    + name
+    + "' expected "
+    + string expected
+    + " arguments; but given "
+    + string actual
+    + "."
 
   | ModuleUsedAsTyError name ->
-      "The name '"
-      + name
-      + "' here should denote to some type; but is a module name."
+    "The name '"
+    + name
+    + "' here should denote to some type; but is a module name."
 
   | ModulePathNotFoundError -> "Module not found for this path"
 
@@ -1053,31 +1053,31 @@ let nameResLogToString log =
 let private traitBoundErrorToString tyDisplay it =
   match it with
   | AddTrait ty ->
-      "Operator (+) is not supported for type: "
-      + tyDisplay ty
+    "Operator (+) is not supported for type: "
+    + tyDisplay ty
 
   | EqualTrait ty ->
-      "Equality is not defined for type: "
-      + tyDisplay ty
+    "Equality is not defined for type: "
+    + tyDisplay ty
 
   | CompareTrait ty ->
-      "Comparison is not defined for type: "
-      + tyDisplay ty
+    "Comparison is not defined for type: "
+    + tyDisplay ty
 
   | IndexTrait (lTy, rTy, _) ->
-      "Index operation type error: lhs: '"
-      + tyDisplay lTy
-      + "', rhs: "
-      + tyDisplay rTy
-      + "."
+    "Index operation type error: lhs: '"
+    + tyDisplay lTy
+    + "', rhs: "
+    + tyDisplay rTy
+    + "."
 
   | IsIntTrait ty ->
-      "Expected int or some integer type but was: "
-      + tyDisplay ty
+    "Expected int or some integer type but was: "
+    + tyDisplay ty
 
   | IsNumberTrait ty ->
-      "Expected int or float type but was: "
-      + tyDisplay ty
+    "Expected int or float type but was: "
+    + tyDisplay ty
 
   | ToCharTrait ty -> "Can't convert to char from: " + tyDisplay ty
   | ToIntTrait ty -> "Can't convert to integer from: " + tyDisplay ty
@@ -1092,46 +1092,46 @@ let logToString tyDisplay log =
   | Log.LiteralRangeError -> "This type of literal can't represent the value."
 
   | Log.IrrefutablePatNonExhaustiveError ->
-      "Let expressions cannot contain refutable patterns, which could fail to match for now."
+    "Let expressions cannot contain refutable patterns, which could fail to match for now."
 
   | Log.TyUnify (TyUnifyLog.SelfRec, lTy, rTy) ->
-      "Recursive type occurred while unifying '"
-      + tyDisplay lTy
-      + "' to '"
-      + tyDisplay rTy
-      + "'."
+    "Recursive type occurred while unifying '"
+    + tyDisplay lTy
+    + "' to '"
+    + tyDisplay rTy
+    + "'."
 
   | Log.TyUnify (TyUnifyLog.Mismatch, lTy, rTy) ->
-      "Type mismatch: '"
-      + tyDisplay lTy
-      + "' <> '"
-      + tyDisplay rTy
-      + "'."
+    "Type mismatch: '"
+    + tyDisplay lTy
+    + "' <> '"
+    + tyDisplay rTy
+    + "'."
 
   | Log.TyBoundError it -> traitBoundErrorToString tyDisplay it
 
   | Log.TySynonymCycleError -> "Cyclic type synonym is forbidden."
 
   | Log.RedundantFieldError (recordName, fieldName) ->
-      "The field '"
-      + fieldName
-      + "' is redundant for record '"
-      + recordName
-      + "'."
+    "The field '"
+    + fieldName
+    + "' is redundant for record '"
+    + recordName
+    + "'."
 
   | Log.MissingFieldsError (recordName, fieldNames) ->
-      let fields = fieldNames |> S.concat ", "
+    let fields = fieldNames |> S.concat ", "
 
-      "Record '"
-      + recordName
-      + "' must have fields: "
-      + fields
+    "Record '"
+    + recordName
+    + "' must have fields: "
+    + fields
 
   | Log.ArityMismatch (actual, expected) ->
-      "Arity mismatch: expected "
-      + expected
-      + ", but was "
-      + actual
-      + "."
+    "Arity mismatch: expected "
+    + expected
+    + ", but was "
+    + actual
+    + "."
 
   | Log.Error msg -> msg

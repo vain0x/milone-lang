@@ -6,9 +6,9 @@ let get (i: int) (array: A.Array<_>) =
   match A.tryItem i array with
   | Some it -> it
   | None ->
-      printfn "out of range: i=%d len=%d" i (A.length array)
-      assert false
-      exit 1
+    printfn "out of range: i=%d len=%d" i (A.length array)
+    assert false
+    exit 1
 
 let initTest () =
   let emptyArray = A.init 0 (fun (_: int) -> assert false)
@@ -71,18 +71,18 @@ let unconsTest () =
   match A.uncons a123 with
   | None -> assert false
   | Some (n1, a23) ->
-      assert (n1 = 1)
-      assert (A.length a23 = 2)
+    assert (n1 = 1)
+    assert (A.length a23 = 2)
 
-      match A.uncons (A.skip 1 a23) with
-      | None -> assert false
-      | Some (n3, empty) ->
-          assert (n3 = 3)
-          assert (A.length empty = 0)
+    match A.uncons (A.skip 1 a23) with
+    | None -> assert false
+    | Some (n3, empty) ->
+      assert (n3 = 3)
+      assert (A.length empty = 0)
 
-          match A.uncons empty with
-          | None -> ()
-          | Some _ -> assert false
+      match A.uncons empty with
+      | None -> ()
+      | Some _ -> assert false
 
 let mapTest () =
   let mapped =
@@ -134,9 +134,9 @@ let toListTest () =
 
   match tl with
   | [ n0; n1; n2 ] ->
-      assert (n0 = 0)
-      assert (n1 = 1)
-      assert (n2 = 2)
+    assert (n0 = 0)
+    assert (n1 = 1)
+    assert (n2 = 2)
 
   | _ -> ()
 

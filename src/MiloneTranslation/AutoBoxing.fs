@@ -66,106 +66,106 @@ let private trdVariant isDirect (ctx: TrdCtx) variantSerial (variantDefOpt: Vari
   match ctx.VariantMemo
         |> TMap.tryFind (variantSerial, isDirect) with
   | Some Recursive ->
-      // printfn "// trd variant %s is now boxed (%s)" (ctx.Variants |> mapFind variantSerial).Name (objToString isDirect)
+    // printfn "// trd variant %s is now boxed (%s)" (ctx.Variants |> mapFind variantSerial).Name (objToString isDirect)
+    { ctx with
+        VariantMemo =
+          ctx.VariantMemo
+          |> TMap.add (variantSerial, isDirect) Boxed }
+
+  | Some t ->
+    // printfn "// trd variant %s is done: %s" (ctx.Variants |> mapFind variantSerial).Name (objToString t)
+    ctx
+
+  | None ->
+    // printfn "// trd variant %s begin" (ctx.Variants |> mapFind variantSerial).Name
+
+    let ctx =
       { ctx with
           VariantMemo =
             ctx.VariantMemo
-            |> TMap.add (variantSerial, isDirect) Boxed }
+            |> TMap.add (variantSerial, isDirect) Recursive }
 
-  | Some t ->
-      // printfn "// trd variant %s is done: %s" (ctx.Variants |> mapFind variantSerial).Name (objToString t)
-      ctx
+    let ctx : TrdCtx =
+      let variantDef =
+        match variantDefOpt with
+        | Some variantDef -> variantDef
+        | None -> ctx.Variants |> mapFind variantSerial
 
-  | None ->
-      // printfn "// trd variant %s begin" (ctx.Variants |> mapFind variantSerial).Name
+      trdTy isDirect ctx variantDef.PayloadTy
 
-      let ctx =
+    let ctx =
+      match ctx.VariantMemo
+            |> TMap.tryFind (variantSerial, isDirect) with
+      | Some Recursive
+      | None ->
         { ctx with
             VariantMemo =
               ctx.VariantMemo
-              |> TMap.add (variantSerial, isDirect) Recursive }
+              |> TMap.add (variantSerial, isDirect) Unboxed }
 
-      let ctx : TrdCtx =
-        let variantDef =
-          match variantDefOpt with
-          | Some variantDef -> variantDef
-          | None -> ctx.Variants |> mapFind variantSerial
+      | Some _ -> ctx
 
-        trdTy isDirect ctx variantDef.PayloadTy
-
-      let ctx =
-        match ctx.VariantMemo
-              |> TMap.tryFind (variantSerial, isDirect) with
-        | Some Recursive
-        | None ->
-            { ctx with
-                VariantMemo =
-                  ctx.VariantMemo
-                  |> TMap.add (variantSerial, isDirect) Unboxed }
-
-        | Some _ -> ctx
-
-      // printfn
-      //   "// trd variant %s (%s) end: %s"
-      //   (ctx.Variants |> mapFind variantSerial).Name
-      //   (objToString isDirect)
-      //   (ctx.VariantMemo
-      //    |> mapFind (variantSerial, isDirect)
-      //    |> objToString)
-      ctx
+    // printfn
+    //   "// trd variant %s (%s) end: %s"
+    //   (ctx.Variants |> mapFind variantSerial).Name
+    //   (objToString isDirect)
+    //   (ctx.VariantMemo
+    //    |> mapFind (variantSerial, isDirect)
+    //    |> objToString)
+    ctx
 
 let private trdRecordTyDef isDirect (ctx: TrdCtx) tySerial tyDef =
   match ctx.RecordTyMemo
         |> TMap.tryFind (tySerial, isDirect) with
   | Some Recursive ->
-      // printfn "// trd tyDef %s is now boxed" (tyDefToName tyDef)
+    // printfn "// trd tyDef %s is now boxed" (tyDefToName tyDef)
+    { ctx with
+        RecordTyMemo =
+          ctx.RecordTyMemo
+          |> TMap.add (tySerial, isDirect) Boxed }
+
+  | Some t ->
+    // printfn "// trd tyDef %s is done: %s" (tyDefToName tyDef) (objToString t)
+    ctx
+
+  | None ->
+    // printfn "// trd tyDef %s begin" (tyDefToName tyDef)
+
+    let ctx =
       { ctx with
           RecordTyMemo =
             ctx.RecordTyMemo
-            |> TMap.add (tySerial, isDirect) Boxed }
+            |> TMap.add (tySerial, isDirect) Recursive }
 
-  | Some t ->
-      // printfn "// trd tyDef %s is done: %s" (tyDefToName tyDef) (objToString t)
-      ctx
+    let ctx : TrdCtx =
+      match tyDef with
+      | RecordTyDef (_, fields, _) ->
+        fields
+        |> List.fold (fun ctx (_, fieldTy, _) -> trdTy isDirect ctx fieldTy) ctx
 
-  | None ->
-      // printfn "// trd tyDef %s begin" (tyDefToName tyDef)
+      | _ -> unreachable ()
 
-      let ctx =
+    let ctx =
+      match ctx.RecordTyMemo
+            |> TMap.tryFind (tySerial, isDirect) with
+      | Some Recursive
+      | None ->
         { ctx with
             RecordTyMemo =
               ctx.RecordTyMemo
-              |> TMap.add (tySerial, isDirect) Recursive }
+              |> TMap.add (tySerial, isDirect) Unboxed }
 
-      let ctx : TrdCtx =
-        match tyDef with
-        | RecordTyDef (_, fields, _) ->
-            fields
-            |> List.fold (fun ctx (_, fieldTy, _) -> trdTy isDirect ctx fieldTy) ctx
+      | Some _ -> ctx
 
-        | _ -> unreachable ()
+    // printfn "// trd tyDef %s end: %s" (tyDefToName tyDef) (objToString (ctx.RecordTyMemo |> mapFind tySerial))
 
-      let ctx =
-        match ctx.RecordTyMemo
-              |> TMap.tryFind (tySerial, isDirect) with
-        | Some Recursive
-        | None ->
-            { ctx with
-                RecordTyMemo =
-                  ctx.RecordTyMemo
-                  |> TMap.add (tySerial, isDirect) Unboxed }
-
-        | Some _ -> ctx
-
-      // printfn "// trd tyDef %s end: %s" (tyDefToName tyDef) (objToString (ctx.RecordTyMemo |> mapFind tySerial))
-
-      ctx
+    ctx
 
 let private trdTyDef isDirect (ctx: TrdCtx) tySerial tyDef : TrdCtx =
   match tyDef with
   | UnionTyDef (_, variants, _) ->
-      variants
-      |> List.fold (fun (ctx: TrdCtx) variantSerial -> trdVariant isDirect ctx variantSerial None) ctx
+    variants
+    |> List.fold (fun (ctx: TrdCtx) variantSerial -> trdVariant isDirect ctx variantSerial None) ctx
 
   | RecordTyDef _ -> trdRecordTyDef isDirect ctx tySerial tyDef
 
@@ -174,32 +174,32 @@ let private trdTyDef isDirect (ctx: TrdCtx) tySerial tyDef : TrdCtx =
 let private trdTy isDirect (ctx: TrdCtx) ty : TrdCtx =
   match ty with
   | Ty (tk, tyArgs) ->
-      let nominal tySerial =
-        trdTyDef isDirect ctx tySerial (ctx.Tys |> mapFind tySerial)
+    let nominal tySerial =
+      trdTyDef isDirect ctx tySerial (ctx.Tys |> mapFind tySerial)
 
-      match tk with
-      | IntTk _
-      | FloatTk _
-      | BoolTk
-      | CharTk
-      | StrTk
-      | ObjTk
-      | VoidTk
-      | MetaTk _ ->
-          assert (List.isEmpty tyArgs)
-          ctx
+    match tk with
+    | IntTk _
+    | FloatTk _
+    | BoolTk
+    | CharTk
+    | StrTk
+    | ObjTk
+    | VoidTk
+    | MetaTk _ ->
+      assert (List.isEmpty tyArgs)
+      ctx
 
-      | ListTk -> tyArgs |> List.fold (trdTy IsIndirect) ctx
+    | ListTk -> tyArgs |> List.fold (trdTy IsIndirect) ctx
 
-      | OptionTk
-      | FunTk
-      | TupleTk
-      | NativePtrTk _
-      | NativeFunTk
-      | NativeTypeTk _ -> tyArgs |> List.fold (trdTy isDirect) ctx
+    | OptionTk
+    | FunTk
+    | TupleTk
+    | NativePtrTk _
+    | NativeFunTk
+    | NativeTypeTk _ -> tyArgs |> List.fold (trdTy isDirect) ctx
 
-      | UnionTk tySerial -> nominal tySerial
-      | RecordTk tySerial -> nominal tySerial
+    | UnionTk tySerial -> nominal tySerial
+    | RecordTk tySerial -> nominal tySerial
 
 let private detectTypeRecursion (tyCtx: TyCtx) : TrdCtx =
   let ctx : TrdCtx =
@@ -235,123 +235,123 @@ type private TsmCtx =
 let private tsmVariant (ctx: TsmCtx) variantSerial (variantDefOpt: VariantDef option) =
   match ctx.VariantMemo |> TMap.tryFind variantSerial with
   | Some size ->
-      // printfn "// measure variant %s cached: size=%d" (ctx.Variants |> mapFind variantSerial).Name size
-      assert (size >= 0)
-      size, ctx
+    // printfn "// measure variant %s cached: size=%d" (ctx.Variants |> mapFind variantSerial).Name size
+    assert (size >= 0)
+    size, ctx
 
   | _ when ctx.BoxedVariants |> TSet.contains variantSerial ->
-      // printfn "// measure variant: %s is boxed" (ctx.Variants |> mapFind variantSerial).Name
-      12, ctx
+    // printfn "// measure variant: %s is boxed" (ctx.Variants |> mapFind variantSerial).Name
+    12, ctx
 
   | None ->
-      // printfn "// measure variant %s begin" (ctx.Variants |> mapFind variantSerial).Name
+    // printfn "// measure variant %s begin" (ctx.Variants |> mapFind variantSerial).Name
 
-      // Prevent infinite recursion, just in case. (Recursive variants are already boxed.)
-      let ctx =
-        { ctx with
-            VariantMemo = ctx.VariantMemo |> TMap.add variantSerial (-1) }
+    // Prevent infinite recursion, just in case. (Recursive variants are already boxed.)
+    let ctx =
+      { ctx with
+          VariantMemo = ctx.VariantMemo |> TMap.add variantSerial (-1) }
 
-      let size, (ctx: TsmCtx) =
-        let variantDef =
-          match variantDefOpt with
-          | Some variantDef -> variantDef
-          | None -> ctx.Variants |> mapFind variantSerial
+    let size, (ctx: TsmCtx) =
+      let variantDef =
+        match variantDefOpt with
+        | Some variantDef -> variantDef
+        | None -> ctx.Variants |> mapFind variantSerial
 
-        tsmTy ctx variantDef.PayloadTy
+      tsmTy ctx variantDef.PayloadTy
 
-      let size, isBoxed =
-        if 4 + size > 32 then
-          8, true
-        else
-          size, false
+    let size, isBoxed =
+      if 4 + size > 32 then
+        8, true
+      else
+        size, false
 
-      let ctx =
-        assert ((ctx.VariantMemo
-                 |> TMap.tryFind variantSerial
-                 |> Option.defaultValue (-1)) < 0)
+    let ctx =
+      assert ((ctx.VariantMemo
+               |> TMap.tryFind variantSerial
+               |> Option.defaultValue (-1)) < 0)
 
-        { ctx with
-            VariantMemo = ctx.VariantMemo |> TMap.add variantSerial size
-            BoxedVariants =
-              if isBoxed then
-                ctx.BoxedVariants |> TSet.add variantSerial
-              else
-                ctx.BoxedVariants }
+      { ctx with
+          VariantMemo = ctx.VariantMemo |> TMap.add variantSerial size
+          BoxedVariants =
+            if isBoxed then
+              ctx.BoxedVariants |> TSet.add variantSerial
+            else
+              ctx.BoxedVariants }
 
-      // printfn
-      //   "// measure variant %s end: size=%d%s"
-      //   (ctx.Variants |> mapFind variantSerial).Name
-      //   size
-      //   (if isBoxed then " (boxed)" else "")
+    // printfn
+    //   "// measure variant %s end: size=%d%s"
+    //   (ctx.Variants |> mapFind variantSerial).Name
+    //   size
+    //   (if isBoxed then " (boxed)" else "")
 
-      size, ctx
+    size, ctx
 
 let private tsmRecordTyDef (ctx: TsmCtx) tySerial tyDef =
   match ctx.RecordTyMemo |> TMap.tryFind tySerial with
   | Some size ->
-      // printfn "// measure record %s: cached %d" (tyDefToName tyDef) size
-      assert (size >= 1)
-      size, ctx
+    // printfn "// measure record %s: cached %d" (tyDefToName tyDef) size
+    assert (size >= 1)
+    size, ctx
 
   | _ when ctx.BoxedRecordTys |> TSet.contains tySerial ->
-      // printfn "// measure record %s: boxed" (tyDefToName tyDef)
-      8, ctx
+    // printfn "// measure record %s: boxed" (tyDefToName tyDef)
+    8, ctx
 
   | None ->
-      // printfn "// measure record %s begin" (tyDefToName tyDef)
+    // printfn "// measure record %s begin" (tyDefToName tyDef)
 
-      // Just in case of recursion was not detected correctly.
-      let ctx =
-        { ctx with
-            RecordTyMemo = ctx.RecordTyMemo |> TMap.add tySerial (-1) }
+    // Just in case of recursion was not detected correctly.
+    let ctx =
+      { ctx with
+          RecordTyMemo = ctx.RecordTyMemo |> TMap.add tySerial (-1) }
 
-      let size, (ctx: TsmCtx) =
-        match tyDef with
-        | RecordTyDef (_, fields, _) ->
-            fields
-            |> List.fold
-                 (fun (totalSize, ctx) (fieldName, fieldTy, _) ->
-                   let fieldSize, ctx = tsmTy ctx fieldTy
-                   //  printfn "//   field %s size=%d total=%d" fieldName fieldSize (totalSize + fieldSize)
-                   totalSize + fieldSize, ctx)
-                 (0, ctx)
+    let size, (ctx: TsmCtx) =
+      match tyDef with
+      | RecordTyDef (_, fields, _) ->
+        fields
+        |> List.fold
+             (fun (totalSize, ctx) (fieldName, fieldTy, _) ->
+               let fieldSize, ctx = tsmTy ctx fieldTy
+               //  printfn "//   field %s size=%d total=%d" fieldName fieldSize (totalSize + fieldSize)
+               totalSize + fieldSize, ctx)
+             (0, ctx)
 
-        | _ -> unreachable ()
+      | _ -> unreachable ()
 
-      let size, isBoxed =
-        if size > 32 then
-          8, true
-        else
-          Int.max 1 size, false
+    let size, isBoxed =
+      if size > 32 then
+        8, true
+      else
+        Int.max 1 size, false
 
-      let ctx =
-        assert ((ctx.RecordTyMemo
-                 |> TMap.tryFind tySerial
-                 |> Option.defaultValue (-1)) < 0)
+    let ctx =
+      assert ((ctx.RecordTyMemo
+               |> TMap.tryFind tySerial
+               |> Option.defaultValue (-1)) < 0)
 
-        { ctx with
-            RecordTyMemo = ctx.RecordTyMemo |> TMap.add tySerial size
-            BoxedRecordTys =
-              if isBoxed then
-                ctx.BoxedRecordTys |> TSet.add tySerial
-              else
-                ctx.BoxedRecordTys }
+      { ctx with
+          RecordTyMemo = ctx.RecordTyMemo |> TMap.add tySerial size
+          BoxedRecordTys =
+            if isBoxed then
+              ctx.BoxedRecordTys |> TSet.add tySerial
+            else
+              ctx.BoxedRecordTys }
 
-      // printfn "// measure record %s end: size=%d%s" (tyDefToName tyDef) size (if isBoxed then " (boxed)" else "")
-      size, ctx
+    // printfn "// measure record %s end: size=%d%s" (tyDefToName tyDef) size (if isBoxed then " (boxed)" else "")
+    size, ctx
 
 let private tsmTyDef (ctx: TsmCtx) tySerial tyDef =
   match tyDef with
   | UnionTyDef (_, variants, _) ->
-      let payloadSize, ctx =
-        variants
-        |> List.fold
-             (fun (maxSize, ctx: TsmCtx) variantSerial ->
-               let payloadSize, ctx = tsmVariant ctx variantSerial None
-               Int.max maxSize payloadSize, ctx)
-             (0, ctx)
+    let payloadSize, ctx =
+      variants
+      |> List.fold
+           (fun (maxSize, ctx: TsmCtx) variantSerial ->
+             let payloadSize, ctx = tsmVariant ctx variantSerial None
+             Int.max maxSize payloadSize, ctx)
+           (0, ctx)
 
-      4 + payloadSize, ctx
+    4 + payloadSize, ctx
 
   | RecordTyDef _ -> tsmRecordTyDef ctx tySerial tyDef
 
@@ -360,49 +360,49 @@ let private tsmTyDef (ctx: TsmCtx) tySerial tyDef =
 let private tsmTy (ctx: TsmCtx) ty =
   match ty with
   | Ty (tk, tyArgs) ->
-      let nominal tySerial =
-        tsmTyDef ctx tySerial (ctx.Tys |> mapFind tySerial)
+    let nominal tySerial =
+      tsmTyDef ctx tySerial (ctx.Tys |> mapFind tySerial)
 
-      match tk with
-      | BoolTk
-      | CharTk
-      | VoidTk -> 1, ctx
+    match tk with
+    | BoolTk
+    | CharTk
+    | VoidTk -> 1, ctx
 
-      | IntTk flavor -> intFlavorToBytes flavor, ctx
-      | FloatTk flavor -> floatFlavorToBytes flavor, ctx
+    | IntTk flavor -> intFlavorToBytes flavor, ctx
+    | FloatTk flavor -> floatFlavorToBytes flavor, ctx
 
-      | ObjTk
-      | ListTk
-      | NativePtrTk _
-      | NativeFunTk -> 8, ctx
+    | ObjTk
+    | ListTk
+    | NativePtrTk _
+    | NativeFunTk -> 8, ctx
 
-      | StrTk
-      | FunTk -> 16, ctx
+    | StrTk
+    | FunTk -> 16, ctx
 
-      | OptionTk ->
-          match tyArgs with
-          | [ itemTy ] ->
-              let size, ctx = tsmTy ctx itemTy
-              1 + size, ctx
+    | OptionTk ->
+      match tyArgs with
+      | [ itemTy ] ->
+        let size, ctx = tsmTy ctx itemTy
+        1 + size, ctx
 
-          | _ -> unreachable ()
+      | _ -> unreachable ()
 
-      | TupleTk ->
-          let size, ctx =
-            tyArgs
-            |> List.fold
-                 (fun (totalSize, ctx) fieldTy ->
-                   let size, ctx = tsmTy ctx fieldTy
-                   totalSize + size, ctx)
-                 (0, ctx)
+    | TupleTk ->
+      let size, ctx =
+        tyArgs
+        |> List.fold
+             (fun (totalSize, ctx) fieldTy ->
+               let size, ctx = tsmTy ctx fieldTy
+               totalSize + size, ctx)
+             (0, ctx)
 
-          Int.max 1 size, ctx
+      Int.max 1 size, ctx
 
-      | UnionTk tySerial -> nominal tySerial
-      | RecordTk tySerial -> nominal tySerial
+    | UnionTk tySerial -> nominal tySerial
+    | RecordTk tySerial -> nominal tySerial
 
-      | MetaTk _
-      | NativeTypeTk _ -> 1000000, ctx
+    | MetaTk _
+    | NativeTypeTk _ -> 1000000, ctx
 
 let private measureTys (trdCtx: TrdCtx) : TsmCtx =
   let boxedVariants =
@@ -530,18 +530,18 @@ let private unwrapNewtypeUnionTy (ctx: AbCtx) ty : Ty option =
   let asNewtypeVariant ty =
     match ty with
     | Ty (UnionTk tySerial, _) ->
-        match ctx.Tys |> mapFind tySerial with
-        | UnionTyDef (_, [ variantSerial ], _) when not (isRecursiveVariant ctx variantSerial) -> Some variantSerial
-        | _ -> None
+      match ctx.Tys |> mapFind tySerial with
+      | UnionTyDef (_, [ variantSerial ], _) when not (isRecursiveVariant ctx variantSerial) -> Some variantSerial
+      | _ -> None
     | _ -> None
 
   match asNewtypeVariant ty with
   | Some variantSerial ->
-      let variantDef = ctx.Variants |> mapFind variantSerial
-      assert variantDef.IsNewtype
+    let variantDef = ctx.Variants |> mapFind variantSerial
+    assert variantDef.IsNewtype
 
-      erasePayloadTy ctx variantSerial variantDef.PayloadTy
-      |> Some
+    erasePayloadTy ctx variantSerial variantDef.PayloadTy
+    |> Some
 
   | _ -> None
 
@@ -558,8 +558,10 @@ let private unwrapNewtypeVariantPat (ctx: AbCtx) variantSerial loc : HPat option
 let private unwrapNewtypeVariantAppPat (ctx: AbCtx) variantSerial payloadPat : HPat option =
   let variantDef = ctx.Variants |> mapFind variantSerial
 
-  if not (isRecursiveVariant ctx variantSerial)
-     && variantDef.IsNewtype then
+  if
+    not (isRecursiveVariant ctx variantSerial)
+    && variantDef.IsNewtype
+  then
     Some payloadPat
   else
     None
@@ -577,8 +579,10 @@ let private unwrapNewtypeVariantExpr (ctx: AbCtx) variantSerial loc : HExpr opti
 let private unwrapNewtypeVariantAppExpr (ctx: AbCtx) variantSerial payload : HExpr option =
   let variantDef = ctx.Variants |> mapFind variantSerial
 
-  if not (isRecursiveVariant ctx variantSerial)
-     && variantDef.IsNewtype then
+  if
+    not (isRecursiveVariant ctx variantSerial)
+    && variantDef.IsNewtype
+  then
     Some payload
   else
     None
@@ -645,24 +649,24 @@ let private postProcessFieldExpr ctx recordExpr recordTy fieldName fieldTy loc =
 let private abTy ctx ty =
   match ty with
   | Ty (RecordTk _, tyArgs) ->
-      assert (List.isEmpty tyArgs)
+    assert (List.isEmpty tyArgs)
 
-      match eraseRecordTy ctx ty with
-      | Some ty -> ty
-      | None -> ty
+    match eraseRecordTy ctx ty with
+    | Some ty -> ty
+    | None -> ty
 
   | Ty (UnionTk _, tyArgs) ->
-      assert (List.isEmpty tyArgs)
+    assert (List.isEmpty tyArgs)
 
-      match unwrapNewtypeUnionTy ctx ty with
-      | Some ty -> ty
-      | None -> ty
+    match unwrapNewtypeUnionTy ctx ty with
+    | Some ty -> ty
+    | None -> ty
 
   | Ty (_, []) -> ty
 
   | Ty (tk, tyArgs) ->
-      let tyArgs = tyArgs |> List.map (abTy ctx)
-      Ty(tk, tyArgs)
+    let tyArgs = tyArgs |> List.map (abTy ctx)
+    Ty(tk, tyArgs)
 
 let private abPat ctx pat =
   match pat with
@@ -671,101 +675,101 @@ let private abPat ctx pat =
   | HVarPat _ -> pat |> patMap (abTy ctx) id
 
   | HVariantPat (variantSerial, ty, loc) ->
-      invoke
-        (fun () ->
-          let ty = ty |> abTy ctx
+    invoke
+      (fun () ->
+        let ty = ty |> abTy ctx
 
-          match unwrapNewtypeVariantPat ctx variantSerial loc with
-          | Some pat -> pat
-          | None -> HVariantPat(variantSerial, ty, loc))
+        match unwrapNewtypeVariantPat ctx variantSerial loc with
+        | Some pat -> pat
+        | None -> HVariantPat(variantSerial, ty, loc))
 
   | HNodePat ((HVariantAppPN variantSerial as kind), [ payloadPat ], ty, loc) ->
-      let payloadPat = payloadPat |> abPat ctx
-      let ty = ty |> abTy ctx
+    let payloadPat = payloadPat |> abPat ctx
+    let ty = ty |> abTy ctx
 
-      let payloadPat =
-        match postProcessVariantAppPat ctx variantSerial payloadPat with
-        | Some payloadPat -> payloadPat
-        | None -> payloadPat
-
-      match unwrapNewtypeVariantAppPat ctx variantSerial payloadPat with
+    let payloadPat =
+      match postProcessVariantAppPat ctx variantSerial payloadPat with
       | Some payloadPat -> payloadPat
-      | None -> HNodePat(kind, [ payloadPat ], ty, loc)
+      | None -> payloadPat
+
+    match unwrapNewtypeVariantAppPat ctx variantSerial payloadPat with
+    | Some payloadPat -> payloadPat
+    | None -> HNodePat(kind, [ payloadPat ], ty, loc)
 
   | HNodePat (kind, argPats, ty, loc) ->
-      let argPats = argPats |> List.map (abPat ctx)
-      let ty = ty |> abTy ctx
-      HNodePat(kind, argPats, ty, loc)
+    let argPats = argPats |> List.map (abPat ctx)
+    let ty = ty |> abTy ctx
+    HNodePat(kind, argPats, ty, loc)
 
   | HAsPat (bodyPat, varSerial, loc) ->
-      let bodyPat = bodyPat |> abPat ctx
-      HAsPat(bodyPat, varSerial, loc)
+    let bodyPat = bodyPat |> abPat ctx
+    HAsPat(bodyPat, varSerial, loc)
 
   | HOrPat (l, r, loc) ->
-      let l = l |> abPat ctx
-      let r = r |> abPat ctx
-      HOrPat(l, r, loc)
+    let l = l |> abPat ctx
+    let r = r |> abPat ctx
+    HOrPat(l, r, loc)
 
 let private abExpr ctx expr =
   match expr with
   | HVariantExpr (variantSerial, ty, loc) ->
-      invoke
-        (fun () ->
-          let ty = ty |> abTy ctx
+    invoke
+      (fun () ->
+        let ty = ty |> abTy ctx
 
-          match unwrapNewtypeVariantExpr ctx variantSerial loc with
-          | Some expr -> expr
-          | None -> HVariantExpr(variantSerial, ty, loc))
+        match unwrapNewtypeVariantExpr ctx variantSerial loc with
+        | Some expr -> expr
+        | None -> HVariantExpr(variantSerial, ty, loc))
 
   | HRecordExpr (baseOpt, fields, ty, loc) ->
-      invoke
-        (fun () ->
-          assert (tyIsRecord ty)
+    invoke
+      (fun () ->
+        assert (tyIsRecord ty)
 
-          let baseOpt = baseOpt |> Option.map (abExpr ctx)
+        let baseOpt = baseOpt |> Option.map (abExpr ctx)
 
-          let fields =
-            fields
-            |> List.map
-                 (fun (name, init, loc) ->
-                   let init = init |> abExpr ctx
-                   name, init, loc)
+        let fields =
+          fields
+          |> List.map
+               (fun (name, init, loc) ->
+                 let init = init |> abExpr ctx
+                 name, init, loc)
 
-          match postProcessRecordExpr ctx baseOpt fields ty loc with
-          | Some expr -> expr
-          | None -> HRecordExpr(baseOpt, fields, ty, loc))
+        match postProcessRecordExpr ctx baseOpt fields ty loc with
+        | Some expr -> expr
+        | None -> HRecordExpr(baseOpt, fields, ty, loc))
 
   | HNavExpr (l, r, ty, loc) ->
-      invoke
-        (fun () ->
-          let recordTy = l |> exprToTy
-          assert (tyIsRecord recordTy)
+    invoke
+      (fun () ->
+        let recordTy = l |> exprToTy
+        assert (tyIsRecord recordTy)
 
-          let l = l |> abExpr ctx
-          let ty = ty |> abTy ctx
+        let l = l |> abExpr ctx
+        let ty = ty |> abTy ctx
 
-          match postProcessFieldExpr ctx l recordTy r ty loc with
-          | Some expr -> expr
-          | None -> HNavExpr(l, r, ty, loc))
+        match postProcessFieldExpr ctx l recordTy r ty loc with
+        | Some expr -> expr
+        | None -> HNavExpr(l, r, ty, loc))
 
   | HNodeExpr (kind, items, ty, loc) ->
-      invoke
-        (fun () ->
-          let items = items |> List.map (abExpr ctx)
-          let ty = ty |> abTy ctx
+    invoke
+      (fun () ->
+        let items = items |> List.map (abExpr ctx)
+        let ty = ty |> abTy ctx
 
-          match kind, items with
-          | HAppEN, [ (HVariantExpr (variantSerial, _, _) as callee); payload ] ->
-              let payload =
-                match postProcessVariantFunAppExpr ctx variantSerial payload with
-                | Some payload -> payload
-                | None -> payload
+        match kind, items with
+        | HAppEN, [ (HVariantExpr (variantSerial, _, _) as callee); payload ] ->
+          let payload =
+            match postProcessVariantFunAppExpr ctx variantSerial payload with
+            | Some payload -> payload
+            | None -> payload
 
-              match unwrapNewtypeVariantAppExpr ctx variantSerial payload with
-              | Some payload -> payload
-              | None -> hxApp callee payload ty loc
+          match unwrapNewtypeVariantAppExpr ctx variantSerial payload with
+          | Some payload -> payload
+          | None -> hxApp callee payload ty loc
 
-          | _ -> HNodeExpr(kind, items, ty, loc))
+        | _ -> HNodeExpr(kind, items, ty, loc))
 
   | HLitExpr _ -> expr
 
@@ -774,44 +778,44 @@ let private abExpr ctx expr =
   | HPrimExpr _ -> expr |> exprMap (abTy ctx) id
 
   | HMatchExpr (cond, arms, ty, loc) ->
-      invoke
-        (fun () ->
-          let cond = cond |> abExpr ctx
+    invoke
+      (fun () ->
+        let cond = cond |> abExpr ctx
 
-          let go (pat, guard, body) =
-            let pat = pat |> abPat ctx
-            let guard = guard |> abExpr ctx
-            let body = body |> abExpr ctx
-            pat, guard, body
+        let go (pat, guard, body) =
+          let pat = pat |> abPat ctx
+          let guard = guard |> abExpr ctx
+          let body = body |> abExpr ctx
+          pat, guard, body
 
-          let arms = arms |> List.map go
-          let ty = ty |> abTy ctx
-          HMatchExpr(cond, arms, ty, loc))
+        let arms = arms |> List.map go
+        let ty = ty |> abTy ctx
+        HMatchExpr(cond, arms, ty, loc))
 
   | HBlockExpr (stmts, last) ->
-      invoke
-        (fun () ->
-          let stmts = stmts |> List.map (abExpr ctx)
-          let last = last |> abExpr ctx
-          HBlockExpr(stmts, last))
+    invoke
+      (fun () ->
+        let stmts = stmts |> List.map (abExpr ctx)
+        let last = last |> abExpr ctx
+        HBlockExpr(stmts, last))
 
   | HLetValExpr (pat, init, next, ty, loc) ->
-      invoke
-        (fun () ->
-          let pat = pat |> abPat ctx
-          let init = init |> abExpr ctx
-          let next = next |> abExpr ctx
-          let ty = ty |> abTy ctx
-          HLetValExpr(pat, init, next, ty, loc))
+    invoke
+      (fun () ->
+        let pat = pat |> abPat ctx
+        let init = init |> abExpr ctx
+        let next = next |> abExpr ctx
+        let ty = ty |> abTy ctx
+        HLetValExpr(pat, init, next, ty, loc))
 
   | HLetFunExpr (callee, isRec, vis, args, body, next, ty, loc) ->
-      invoke
-        (fun () ->
-          let args = args |> List.map (abPat ctx)
-          let body = body |> abExpr ctx
-          let next = next |> abExpr ctx
-          let ty = ty |> abTy ctx
-          HLetFunExpr(callee, isRec, vis, args, body, next, ty, loc))
+    invoke
+      (fun () ->
+        let args = args |> List.map (abPat ctx)
+        let body = body |> abExpr ctx
+        let next = next |> abExpr ctx
+        let ty = ty |> abTy ctx
+        HLetFunExpr(callee, isRec, vis, args, body, next, ty, loc))
 
 let autoBox (expr: HExpr, tyCtx: TyCtx) =
   // Detect recursion.
@@ -869,14 +873,14 @@ let autoBox (expr: HExpr, tyCtx: TyCtx) =
          (fun _ tyDef ->
            match tyDef with
            | RecordTyDef (recordName, fields, loc) ->
-               let fields =
-                 fields
-                 |> List.map
-                      (fun (name, ty, loc) ->
-                        let ty = ty |> abTy ctx
-                        name, ty, loc)
+             let fields =
+               fields
+               |> List.map
+                    (fun (name, ty, loc) ->
+                      let ty = ty |> abTy ctx
+                      name, ty, loc)
 
-               RecordTyDef(recordName, fields, loc)
+             RecordTyDef(recordName, fields, loc)
 
            | _ -> tyDef)
 

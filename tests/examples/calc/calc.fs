@@ -99,10 +99,10 @@ let tokenize (source: string) : Token list =
       | '\r' -> (acc, i) |> readEol source |> go
       | '\n' -> (acc, i) |> readEol source |> go
       | c ->
-          if isDigit c then
-            (acc, i) |> readInt source |> go
-          else
-            (TkOp c :: acc, i + 1) |> go
+        if isDigit c then
+          (acc, i) |> readInt source |> go
+        else
+          (TkOp c :: acc, i + 1) |> go
 
   go ([], 0)
 
@@ -110,32 +110,32 @@ let rec tokenListPrint tokens =
   match tokens with
   | [] -> ()
   | TkInt n :: tokens ->
-      printfn "int %d" n
-      tokenListPrint tokens
+    printfn "int %d" n
+    tokenListPrint tokens
   | TkOp c :: tokens ->
-      printfn "op %c" c
-      tokenListPrint tokens
+    printfn "op %c" c
+    tokenListPrint tokens
 
 let rec evalExpr tokens =
   let evalTerm tokens =
     match tokens with
     | TkInt n :: tokens -> n, tokens
     | TkOp '(' :: tokens ->
-        match evalExpr tokens with
-        | value, TkOp ')' :: tokens -> value, tokens
-        | _ ->
-            printfn "expected ')'"
-            exit 1
-    | _ ->
-        printfn "expected an int"
+      match evalExpr tokens with
+      | value, TkOp ')' :: tokens -> value, tokens
+      | _ ->
+        printfn "expected ')'"
         exit 1
+    | _ ->
+      printfn "expected an int"
+      exit 1
 
   let evalMul tokens =
     let rec go acc tokens =
       match tokens with
       | TkOp '*' :: tokens ->
-          let r, tokens = evalTerm tokens
-          go (acc * r) tokens
+        let r, tokens = evalTerm tokens
+        go (acc * r) tokens
       | _ -> acc, tokens
 
     let l, tokens = evalTerm tokens
@@ -145,11 +145,11 @@ let rec evalExpr tokens =
     let rec go acc tokens =
       match tokens with
       | TkOp '+' :: tokens ->
-          let r, tokens = evalMul tokens
-          go (acc + r) tokens
+        let r, tokens = evalMul tokens
+        go (acc + r) tokens
       | TkOp '-' :: tokens ->
-          let r, tokens = evalMul tokens
-          go (acc - r) tokens
+        let r, tokens = evalMul tokens
+        go (acc - r) tokens
       | _ -> acc, tokens
 
     let l, tokens = evalMul tokens
@@ -161,9 +161,9 @@ let eval str =
   match str |> tokenize |> evalExpr with
   | value, [] -> value
   | _, tokens ->
-      printfn "ERROR: couldn't parse tokens:"
-      tokenListPrint tokens
-      exit 1
+    printfn "ERROR: couldn't parse tokens:"
+    tokenListPrint tokens
+    exit 1
 
 let main _ =
   assert (strContains '+' "+-*/")

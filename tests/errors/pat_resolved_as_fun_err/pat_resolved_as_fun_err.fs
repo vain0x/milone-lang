@@ -7,4 +7,5 @@ open pat_resolved_as_fun_err.sub
 let main _ =
   match fun () -> () with
   | sub.f -> assert true
+
   0

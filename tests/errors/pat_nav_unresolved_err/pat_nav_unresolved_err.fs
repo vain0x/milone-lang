@@ -5,4 +5,5 @@ module rec pat_nav_unresolved_err.Program
 let main _ =
   match () with
   | A.x -> assert false
+
   0

@@ -89,18 +89,18 @@ module MutMap =
   let insert key value (map: MutMap<_, _>) =
     match map.TryGetValue(key) with
     | true, removed ->
-        map.[key] <- value
-        Some removed
+      map.[key] <- value
+      Some removed
 
     | false, _ ->
-        map.Add(key, value)
-        None
+      map.Add(key, value)
+      None
 
   let remove key (map: MutMap<_, _>) =
     match map.TryGetValue(key) with
     | true, removed ->
-        map.Remove(key) |> ignore
-        Some removed
+      map.Remove(key) |> ignore
+      Some removed
 
     | false, _ -> None
 
@@ -134,4 +134,5 @@ module File =
         System.IO.File.ReadAllText(filePath) |> Some
       else
         None
-    with _ -> None
+    with
+    | _ -> None

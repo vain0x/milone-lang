@@ -18,8 +18,8 @@ let private isIncluded (filePath: string) =
   | "node_modules"
   | "target" -> false
   | _ ->
-      not (fileName.StartsWith("."))
-      && not (fileName.Contains("~"))
+    not (fileName.StartsWith("."))
+    && not (fileName.Contains("~"))
 
 let private relativeTo (baseDir: string) (file: string) : string = Path.GetRelativePath(baseDir, file)
 

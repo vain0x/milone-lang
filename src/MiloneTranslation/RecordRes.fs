@@ -96,15 +96,15 @@ let private buildRecordMap (ctx: RrCtx) =
        (fun acc tySerial tyDef ->
          match tyDef with
          | RecordTyDef (_, fields, _) ->
-             let fieldTys =
-               fields |> List.map (fun (_, ty, _) -> ty)
+           let fieldTys =
+             fields |> List.map (fun (_, ty, _) -> ty)
 
-             let fieldMap =
-               fields
-               |> List.mapi (fun i (name, ty, _) -> name, (i, ty))
-               |> TMap.ofList compare
+           let fieldMap =
+             fields
+             |> List.mapi (fun i (name, ty, _) -> name, (i, ty))
+             |> TMap.ofList compare
 
-             acc |> TMap.add tySerial (fieldTys, fieldMap)
+           acc |> TMap.add tySerial (fieldTys, fieldMap)
 
          | _ -> acc)
        (TMap.empty compare)
@@ -113,9 +113,9 @@ let private rewriteRecordExpr (ctx: RrCtx) itself baseOpt fields ty loc =
   let fieldTys, fieldMap =
     match ty with
     | Ty (RecordTk tySerial, _) ->
-        match ctx.RecordMap |> TMap.tryFind tySerial with
-        | Some (fieldTys, fieldMap) -> fieldTys, fieldMap
-        | _ -> unreachable itself
+      match ctx.RecordMap |> TMap.tryFind tySerial with
+      | Some (fieldTys, fieldMap) -> fieldTys, fieldMap
+      | _ -> unreachable itself
     | _ -> unreachable itself
 
   // Base expr is guaranteed to be a cheap expr thanks to modification in Typing,
@@ -136,36 +136,36 @@ let private rewriteRecordExpr (ctx: RrCtx) itself baseOpt fields ty loc =
 
   match baseOpt with
   | Some baseExpr ->
-      let itemExpr index fieldTy =
-        HNodeExpr(HRecordItemEN index, [ baseExpr ], fieldTy, loc)
+    let itemExpr index fieldTy =
+      HNodeExpr(HRecordItemEN index, [ baseExpr ], fieldTy, loc)
 
-      let rec go i fields fieldTys =
-        match fields, fieldTys with
-        | [], [] -> []
+    let rec go i fields fieldTys =
+      match fields, fieldTys with
+      | [], [] -> []
 
-        | (index, init) :: fields, _ :: fieldTys when index = i -> init :: go (i + 1) fields fieldTys
+      | (index, init) :: fields, _ :: fieldTys when index = i -> init :: go (i + 1) fields fieldTys
 
-        | _, fieldTy :: fieldTys -> itemExpr i fieldTy :: go (i + 1) fields fieldTys
+      | _, fieldTy :: fieldTys -> itemExpr i fieldTy :: go (i + 1) fields fieldTys
 
-        | _, [] -> unreachable ()
+      | _, [] -> unreachable ()
 
-      let fields = go 0 fields fieldTys
-      HNodeExpr(HRecordEN, fields, ty, loc)
+    let fields = go 0 fields fieldTys
+    HNodeExpr(HRecordEN, fields, ty, loc)
 
   | None ->
-      let fields =
-        fields |> List.map (fun (_, init) -> init)
+    let fields =
+      fields |> List.map (fun (_, init) -> init)
 
-      HNodeExpr(HRecordEN, fields, ty, loc)
+    HNodeExpr(HRecordEN, fields, ty, loc)
 
 let private rewriteFieldExpr (ctx: RrCtx) itself recordTy l r ty loc =
   let index =
     match recordTy with
     | Ty (RecordTk tySerial, _) ->
-        let _, fieldMap = ctx.RecordMap |> mapFind tySerial
+      let _, fieldMap = ctx.RecordMap |> mapFind tySerial
 
-        let index, _ = fieldMap |> mapFind r
-        index
+      let index, _ = fieldMap |> mapFind r
+      index
 
     | _ -> unreachable itself
 
@@ -178,29 +178,29 @@ let private rewriteFieldExpr (ctx: RrCtx) itself recordTy l r ty loc =
 let private teExpr (ctx: RrCtx) expr =
   match expr with
   | HRecordExpr (baseOpt, fields, ty, loc) ->
-      let baseOpt = baseOpt |> Option.map (teExpr ctx)
+    let baseOpt = baseOpt |> Option.map (teExpr ctx)
 
-      let fields =
-        fields
-        |> List.map
-             (fun (name, init, loc) ->
-               let init = init |> teExpr ctx
-               name, init, loc)
+    let fields =
+      fields
+      |> List.map
+           (fun (name, init, loc) ->
+             let init = init |> teExpr ctx
+             name, init, loc)
 
-      rewriteRecordExpr ctx expr baseOpt fields ty loc
+    rewriteRecordExpr ctx expr baseOpt fields ty loc
 
   | HNavExpr (l, r, ty, loc) ->
-      invoke
-        (fun () ->
-          let recordTy = exprToTy l
-          let l = l |> teExpr ctx
-          rewriteFieldExpr ctx expr recordTy l r ty loc)
+    invoke
+      (fun () ->
+        let recordTy = exprToTy l
+        let l = l |> teExpr ctx
+        rewriteFieldExpr ctx expr recordTy l r ty loc)
 
   | HNodeExpr (kind, items, ty, loc) ->
-      invoke
-        (fun () ->
-          let items = items |> List.map (teExpr ctx)
-          HNodeExpr(kind, items, ty, loc))
+    invoke
+      (fun () ->
+        let items = items |> List.map (teExpr ctx)
+        HNodeExpr(kind, items, ty, loc))
 
   | HLitExpr _
   | HVarExpr _
@@ -209,38 +209,38 @@ let private teExpr (ctx: RrCtx) expr =
   | HPrimExpr _ -> expr
 
   | HMatchExpr (cond, arms, ty, loc) ->
-      invoke
-        (fun () ->
-          let cond = cond |> teExpr ctx
+    invoke
+      (fun () ->
+        let cond = cond |> teExpr ctx
 
-          let go (pat, guard, body) =
-            let guard = guard |> teExpr ctx
-            let body = body |> teExpr ctx
-            pat, guard, body
+        let go (pat, guard, body) =
+          let guard = guard |> teExpr ctx
+          let body = body |> teExpr ctx
+          pat, guard, body
 
-          let arms = arms |> List.map go
-          HMatchExpr(cond, arms, ty, loc))
+        let arms = arms |> List.map go
+        HMatchExpr(cond, arms, ty, loc))
 
   | HBlockExpr (stmts, last) ->
-      invoke
-        (fun () ->
-          let stmts = stmts |> List.map (teExpr ctx)
-          let last = last |> teExpr ctx
-          HBlockExpr(stmts, last))
+    invoke
+      (fun () ->
+        let stmts = stmts |> List.map (teExpr ctx)
+        let last = last |> teExpr ctx
+        HBlockExpr(stmts, last))
 
   | HLetValExpr (pat, init, next, ty, loc) ->
-      invoke
-        (fun () ->
-          let init = init |> teExpr ctx
-          let next = next |> teExpr ctx
-          HLetValExpr(pat, init, next, ty, loc))
+    invoke
+      (fun () ->
+        let init = init |> teExpr ctx
+        let next = next |> teExpr ctx
+        HLetValExpr(pat, init, next, ty, loc))
 
   | HLetFunExpr (callee, isRec, vis, args, body, next, ty, loc) ->
-      invoke
-        (fun () ->
-          let body = body |> teExpr ctx
-          let next = next |> teExpr ctx
-          HLetFunExpr(callee, isRec, vis, args, body, next, ty, loc))
+    invoke
+      (fun () ->
+        let body = body |> teExpr ctx
+        let next = next |> teExpr ctx
+        HLetFunExpr(callee, isRec, vis, args, body, next, ty, loc))
 
 let recordRes (expr: HExpr, tyCtx: TyCtx) =
   let ctx = ofTyCtx tyCtx

@@ -8,16 +8,16 @@ let tryParseTest () =
     | Some value -> value
 
     | None ->
-        printfn "should parse: %s" s
-        assert false
-        0
+      printfn "should parse: %s" s
+      assert false
+      0
 
   let parseError (s: string) =
     match I.tryParse s with
     | None -> true
     | Some value ->
-        printfn "should not parse: %s -> %d" s value
-        false
+      printfn "should not parse: %s -> %d" s value
+      false
 
   assert (parseOk "0" = 0)
   assert (parseOk "000" = 0)

@@ -43,12 +43,12 @@ let tokenizeErrorToString error =
   | BadTokenError -> "Invalid characters."
 
   | UnknownEscapeSequenceError ->
-      "Unknown escape sequence. After `\\`, one of these chars is only allowed: `\\` `'` `\"` t r n x. `\\xHH` other than `\\x00` is unimplemented."
+    "Unknown escape sequence. After `\\`, one of these chars is only allowed: `\\` `'` `\"` t r n x. `\\xHH` other than `\\x00` is unimplemented."
 
   | UndefinedOpTokenError -> "Undefined operator."
 
   | ReservedWordError ->
-      "This word can't be used as identifier, because it's reserved for future expansion of the language."
+    "This word can't be used as identifier, because it's reserved for future expansion of the language."
 
   | UnimplNumberSuffixError -> "Number literal suffix is unimplemented yet."
   | UnimplHexEscapeError -> "`\\xHH` escape sequence is unimplemented yet, except for `\\x00`."

@@ -19,7 +19,7 @@ int milone_main() {
 next_2:;
     if ((tuple_.t0 != 999)) goto next_3;
     int y_ = tuple_.t1;
-    milone_assert((y_ != 9), 9, 6);
+    milone_assert((y_ != 9), 9, 4);
     match_ = 1;
     goto end_match_1;
 next_3:;

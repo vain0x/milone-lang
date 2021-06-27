@@ -109,12 +109,12 @@ let private cpParams ps acc : string list =
     | [ name, ty ] -> acc |> cpTy ty |> cons " " |> cons name
 
     | (name, ty) :: ps ->
-        acc
-        |> cpTy ty
-        |> cons " "
-        |> cons name
-        |> cons ", "
-        |> go ps
+      acc
+      |> cpTy ty
+      |> cons " "
+      |> cons name
+      |> cons ", "
+      |> go ps
 
   acc |> go ps
 
@@ -183,10 +183,10 @@ let private cpExpr expr acc : string list =
   | CDoubleExpr value -> acc |> cons (string value)
 
   | CCharExpr value ->
-      acc
-      |> cons "'"
-      |> cons (cpCharLit value)
-      |> cons "'"
+    acc
+    |> cons "'"
+    |> cons (cpCharLit value)
+    |> cons "'"
 
   | CStrObjExpr value -> acc |> cpStrObjLit value
   | CStrRawExpr value -> acc |> cpStrRawLit value
@@ -194,56 +194,56 @@ let private cpExpr expr acc : string list =
   | CInitExpr (fields, ty) -> acc |> cpStructLit fields ty
 
   | CDotExpr (CStrObjExpr value, "len") ->
-      acc
-      |> cons (string (__stringLengthInUtf8Bytes value))
+    acc
+    |> cons (string (__stringLengthInUtf8Bytes value))
 
   | CVarExpr name -> acc |> cons name
 
   | CCastExpr (expr, ty) ->
-      acc
-      |> cons "(("
-      |> cpTy ty
-      |> cons ")"
-      |> cpExpr expr
-      |> cons ")"
+    acc
+    |> cons "(("
+    |> cpTy ty
+    |> cons ")"
+    |> cpExpr expr
+    |> cons ")"
 
   | CDotExpr (expr, field) -> acc |> cpExpr expr |> cons "." |> cons field
 
   | CArrowExpr (expr, field) -> acc |> cpExpr expr |> cons "->" |> cons field
 
   | CIndexExpr (l, r) ->
-      acc
-      |> cpExpr l
-      |> cons "["
-      |> cpExpr r
-      |> cons "]"
+    acc
+    |> cpExpr l
+    |> cons "["
+    |> cpExpr r
+    |> cons "]"
 
   | CCallExpr (callee, args) ->
-      acc
-      |> cpExpr callee
-      |> cons "("
-      |> cpExprList ", " args
-      |> cons ")"
+    acc
+    |> cpExpr callee
+    |> cons "("
+    |> cpExprList ", " args
+    |> cons ")"
 
   | CSizeOfExpr ty -> acc |> cons "sizeof(" |> cpTy ty |> cons ")"
 
   | CUnaryExpr (op, arg) ->
-      acc
-      |> cons "("
-      |> cons (unaryToString op)
-      |> cons "("
-      |> cpExpr arg
-      |> cons "))"
+    acc
+    |> cons "("
+    |> cons (unaryToString op)
+    |> cons "("
+    |> cpExpr arg
+    |> cons "))"
 
   | CBinaryExpr (op, l, r) ->
-      acc
-      |> cons "("
-      |> cpExpr l
-      |> cons " "
-      |> cons (binaryToString op)
-      |> cons " "
-      |> cpExpr r
-      |> cons ")"
+    acc
+    |> cons "("
+    |> cpExpr l
+    |> cons " "
+    |> cons (binaryToString op)
+    |> cons " "
+    |> cpExpr r
+    |> cons ")"
 
   | CNativeExpr code -> acc |> cons code
 
@@ -256,154 +256,154 @@ let private cpStmt indent stmt acc : string list =
   | CReturnStmt None -> acc |> cons indent |> cons "return;" |> cons eol
 
   | CReturnStmt (Some expr) ->
-      acc
-      |> cons indent
-      |> cons "return "
-      |> cpExpr expr
-      |> cons ";"
-      |> cons eol
+    acc
+    |> cons indent
+    |> cons "return "
+    |> cpExpr expr
+    |> cons ";"
+    |> cons eol
 
   | CExprStmt expr ->
-      acc
-      |> cons indent
-      |> cpExpr expr
-      |> cons ";"
-      |> cons eol
+    acc
+    |> cons indent
+    |> cpExpr expr
+    |> cons ";"
+    |> cons eol
 
   | CLetStmt (name, init, ty) ->
-      let cpInit acc =
-        match init with
-        | Some init -> acc |> cons " = " |> cpExpr init
-        | None -> acc
+    let cpInit acc =
+      match init with
+      | Some init -> acc |> cons " = " |> cpExpr init
+      | None -> acc
 
-      acc
-      |> cons indent
-      |> cpTyWithName name ty
-      |> cpInit
-      |> cons ";"
-      |> cons eol
+    acc
+    |> cons indent
+    |> cpTyWithName name ty
+    |> cpInit
+    |> cons ";"
+    |> cons eol
 
   | CLetAllocStmt (name, valTy, varTy) ->
-      acc
-      |> cons indent
-      |> cpTyWithName name varTy
-      |> cons " = milone_mem_alloc(1, sizeof("
-      |> cpTy valTy
-      |> cons "));"
-      |> cons eol
+    acc
+    |> cons indent
+    |> cpTyWithName name varTy
+    |> cons " = milone_mem_alloc(1, sizeof("
+    |> cpTy valTy
+    |> cons "));"
+    |> cons eol
 
   | CSetStmt (l, r) ->
-      acc
-      |> cons indent
-      |> cpExpr l
-      |> cons " = "
-      |> cpExpr r
-      |> cons ";"
-      |> cons eol
+    acc
+    |> cons indent
+    |> cpExpr l
+    |> cons " = "
+    |> cpExpr r
+    |> cons ";"
+    |> cons eol
 
   | CLabelStmt label -> acc |> cons label |> cons ":;" |> cons eol
 
   | CGotoStmt label ->
-      acc
-      |> cons indent
-      |> cons "goto "
-      |> cons label
-      |> cons ";"
-      |> cons eol
+    acc
+    |> cons indent
+    |> cons "goto "
+    |> cons label
+    |> cons ";"
+    |> cons eol
 
   | CGotoIfStmt (pred, label) ->
-      acc
-      |> cons indent
-      |> cons "if ("
-      |> cpExpr pred
-      |> cons ") goto "
-      |> cons label
-      |> cons ";"
-      |> cons eol
+    acc
+    |> cons indent
+    |> cons "if ("
+    |> cpExpr pred
+    |> cons ") goto "
+    |> cons label
+    |> cons ";"
+    |> cons eol
 
   | CIfStmt (cond, thenCl, elseCl) ->
-      acc
-      |> cons indent
-      |> cons "if ("
-      |> cpExpr cond
-      |> cons ") {"
-      |> cons eol
-      |> cpStmtList (deeper indent) thenCl
-      |> cons indent
-      |> cons "} else {"
-      |> cons eol
-      |> cpStmtList (deeper indent) elseCl
-      |> cons indent
-      |> cons "}"
-      |> cons eol
+    acc
+    |> cons indent
+    |> cons "if ("
+    |> cpExpr cond
+    |> cons ") {"
+    |> cons eol
+    |> cpStmtList (deeper indent) thenCl
+    |> cons indent
+    |> cons "} else {"
+    |> cons eol
+    |> cpStmtList (deeper indent) elseCl
+    |> cons indent
+    |> cons "}"
+    |> cons eol
 
   | CSwitchStmt (cond, clauses) ->
-      let cpCaseLabels cases acc =
-        cases
-        |> List.fold
-             (fun acc lit ->
-               acc
-               |> cons (deeper indent)
-               |> cons "case "
-               |> cpExpr lit
-               |> cons ":"
-               |> cons eol)
+    let cpCaseLabels cases acc =
+      cases
+      |> List.fold
+           (fun acc lit ->
              acc
+             |> cons (deeper indent)
+             |> cons "case "
+             |> cpExpr lit
+             |> cons ":"
+             |> cons eol)
+           acc
 
-      let cpDefaultLabel isDefault acc =
-        if isDefault then
-          acc
-          |> cons (deeper indent)
-          |> cons "default:"
-          |> cons eol
-        else
-          acc
+    let cpDefaultLabel isDefault acc =
+      if isDefault then
+        acc
+        |> cons (deeper indent)
+        |> cons "default:"
+        |> cons eol
+      else
+        acc
 
-      let cpClause acc =
-        clauses
-        |> List.fold
-             (fun (first, acc) (cases, isDefault, body) ->
-               let acc =
-                 (if isFirst first then
-                    acc
-                  else
-                    acc |> cons eol)
-                 |> cpCaseLabels cases
-                 |> cpDefaultLabel isDefault
-                 |> cpStmtList (deeper (deeper indent)) body
+    let cpClause acc =
+      clauses
+      |> List.fold
+           (fun (first, acc) (cases, isDefault, body) ->
+             let acc =
+               (if isFirst first then
+                  acc
+                else
+                  acc |> cons eol)
+               |> cpCaseLabels cases
+               |> cpDefaultLabel isDefault
+               |> cpStmtList (deeper (deeper indent)) body
 
-               NotFirst, acc)
-             (First, acc)
-        |> snd
+             NotFirst, acc)
+           (First, acc)
+      |> snd
 
-      acc
-      |> cons indent
-      |> cons "switch ("
-      |> cpExpr cond
-      |> cons ") {"
-      |> cons eol
-      |> cpClause
-      |> cons indent
-      |> cons "}"
-      |> cons eol
+    acc
+    |> cons indent
+    |> cons "switch ("
+    |> cpExpr cond
+    |> cons ") {"
+    |> cons eol
+    |> cpClause
+    |> cons indent
+    |> cons "}"
+    |> cons eol
 
   | CNativeStmt (code, args) ->
-      let code =
-        List.fold
-          (fun (i, code) arg ->
-            let arg =
-              [] |> cpExpr arg |> List.rev |> S.concat ""
+    let code =
+      List.fold
+        (fun (i, code) arg ->
+          let arg =
+            [] |> cpExpr arg |> List.rev |> S.concat ""
 
-            let code =
-              let placeholder = "{" + string i + "}"
-              code |> S.replace placeholder arg
+          let code =
+            let placeholder = "{" + string i + "}"
+            code |> S.replace placeholder arg
 
-            i + 1, code)
-          (0, code)
-          args
-        |> snd
+          i + 1, code)
+        (0, code)
+        args
+      |> snd
 
-      acc |> cons code
+    acc |> cons code
 
 let private cpStmtList indent stmts acc : string list =
   stmts
@@ -416,115 +416,115 @@ let private cpStmtList indent stmts acc : string list =
 let private cpDecl decl acc =
   match decl with
   | CErrorDecl (message, line) ->
-      acc
-      |> cons "#line "
-      |> cons (string line)
-      |> cons eol
-      |> cons "#error "
-      |> cons message
-      |> cons eol
+    acc
+    |> cons "#line "
+    |> cons (string line)
+    |> cons eol
+    |> cons "#error "
+    |> cons message
+    |> cons eol
 
   | CStructDecl (structName, fields, variants) ->
-      let cpFields indent fields acc =
-        fields
-        |> List.fold
-             (fun acc (name, ty) ->
-               acc
-               |> cons indent
-               |> cpTyWithName name ty
-               |> cons ";"
-               |> cons eol)
+    let cpFields indent fields acc =
+      fields
+      |> List.fold
+           (fun acc (name, ty) ->
              acc
+             |> cons indent
+             |> cpTyWithName name ty
+             |> cons ";"
+             |> cons eol)
+           acc
 
-      let cpVariants acc =
-        match variants with
-        | [] -> acc
+    let cpVariants acc =
+      match variants with
+      | [] -> acc
 
-        | _ ->
-            acc
-            |> cons "    union {"
-            |> cons eol
-            |> cpFields "        " variants
-            |> cons "    };"
-            |> cons eol
+      | _ ->
+        acc
+        |> cons "    union {"
+        |> cons eol
+        |> cpFields "        " variants
+        |> cons "    };"
+        |> cons eol
 
-      acc
-      |> cons "struct "
-      |> cons structName
-      |> cons " {"
-      |> cons eol
-      |> cpFields "    " fields
-      |> cpVariants
-      |> cons "};"
-      |> cons eol
+    acc
+    |> cons "struct "
+    |> cons structName
+    |> cons " {"
+    |> cons eol
+    |> cpFields "    " fields
+    |> cpVariants
+    |> cons "};"
+    |> cons eol
 
   | CEnumDecl (enumName, variants) ->
-      let cpEnumerants variants acc =
-        variants
-        |> List.fold
-             (fun acc variant ->
-               acc
-               |> cons "    "
-               |> cons variant
-               |> cons ","
-               |> cons eol)
+    let cpEnumerants variants acc =
+      variants
+      |> List.fold
+           (fun acc variant ->
              acc
+             |> cons "    "
+             |> cons variant
+             |> cons ","
+             |> cons eol)
+           acc
 
-      acc
-      |> cons "enum "
-      |> cons enumName
-      |> cons " {"
-      |> cons eol
-      |> cpEnumerants variants
-      |> cons "};"
-      |> cons eol
+    acc
+    |> cons "enum "
+    |> cons enumName
+    |> cons " {"
+    |> cons eol
+    |> cpEnumerants variants
+    |> cons "};"
+    |> cons eol
 
   | CStaticVarDecl (name, ty) ->
-      acc
-      |> cpTyWithName name ty
-      |> cons ";"
-      |> cons eol
+    acc
+    |> cpTyWithName name ty
+    |> cons ";"
+    |> cons eol
 
   | CInternalStaticVarDecl (name, ty) ->
-      acc
-      // FIXME: global variable is now defined in entry module no matter where it is.
-      // |> cons "static "
-      |> cpTyWithName name ty
-      |> cons ";"
-      |> cons eol
+    acc
+    // FIXME: global variable is now defined in entry module no matter where it is.
+    // |> cons "static "
+    |> cpTyWithName name ty
+    |> cons ";"
+    |> cons eol
 
   | CExternVarDecl (name, ty) ->
-      acc
-      |> cons "extern "
-      |> cpTyWithName name ty
-      |> cons ";"
-      |> cons eol
+    acc
+    |> cons "extern "
+    |> cpTyWithName name ty
+    |> cons ";"
+    |> cons eol
 
   | CFunDecl (name, args, resultTy, body) ->
-      acc
-      |> cpTyWithName name resultTy
-      |> cons "("
-      |> cpParams args
-      |> cons ") {"
-      |> cons eol
-      |> cpStmtList "    " body
-      |> cons "}"
-      |> cons eol
+    acc
+    |> cpTyWithName name resultTy
+    |> cons "("
+    |> cpParams args
+    |> cons ") {"
+    |> cons eol
+    |> cpStmtList "    " body
+    |> cons "}"
+    |> cons eol
 
   | CStaticFunDecl (name, args, resultTy, body) ->
-      // FIXME: monomorphization instances can't have stable external linkage,
-      //        however, they still need to have external linkage.
+    // FIXME: monomorphization instances can't have stable external linkage,
+    //        however, they still need to have external linkage.
 
-      acc
-      // |> cons "static "
-      |> cpTyWithName name resultTy
-      |> cons "("
-      |> cpParams args
-      |> cons ") {"
-      |> cons eol
-      |> cpStmtList "    " body
-      |> cons "}"
-      |> cons eol
+    acc
+    // |> cons "static "
+    |> cpTyWithName name resultTy
+    |> cons "("
+    |> cpParams args
+    |> cons ") {"
+    |> cons eol
+    |> cpStmtList "    " body
+    |> cons "}"
+    |> cons eol
 
   | CStructForwardDecl _
   | CFunForwardDecl _
@@ -549,47 +549,47 @@ let private cpForwardDecl decl acc =
   | CExternVarDecl _ -> acc
 
   | CStructDecl (name, _, _) ->
-      acc
-      |> cons "struct "
-      |> cons name
-      |> cons ";"
-      |> cons eol
-      |> cons eol
+    acc
+    |> cons "struct "
+    |> cons name
+    |> cons ";"
+    |> cons eol
+    |> cons eol
 
   | CStructForwardDecl name ->
-      acc
-      |> cons "struct "
-      |> cons name
-      |> cons ";"
-      |> cons eol
-      |> cons eol
+    acc
+    |> cons "struct "
+    |> cons name
+    |> cons ";"
+    |> cons eol
+    |> cons eol
 
   | CFunForwardDecl (name, argTys, resultTy) ->
-      let cpParamTys acc =
-        argTys
-        |> List.fold
-             (fun (first, acc) ty ->
-               let acc =
-                 (if isFirst first then
-                    acc
-                  else
-                    acc |> cons ", ")
-                 |> cpTy ty
+    let cpParamTys acc =
+      argTys
+      |> List.fold
+           (fun (first, acc) ty ->
+             let acc =
+               (if isFirst first then
+                  acc
+                else
+                  acc |> cons ", ")
+               |> cpTy ty
 
-               (NotFirst, acc))
-             (First, acc)
-        |> snd
+             (NotFirst, acc))
+           (First, acc)
+      |> snd
 
-      acc |> cpFunForwardDecl name cpParamTys resultTy
+    acc |> cpFunForwardDecl name cpParamTys resultTy
 
   | CFunDecl (name, args, resultTy, _) ->
-      acc
-      |> cpFunForwardDecl name (cpParams args) resultTy
+    acc
+    |> cpFunForwardDecl name (cpParams args) resultTy
 
   | CStaticFunDecl (name, args, resultTy, _) ->
-      acc
-      // |> cons "static "
-      |> cpFunForwardDecl name (cpParams args) resultTy
+    acc
+    // |> cons "static "
+    |> cpFunForwardDecl name (cpParams args) resultTy
 
   | CNativeDecl code -> acc |> cons code |> cons eol
 

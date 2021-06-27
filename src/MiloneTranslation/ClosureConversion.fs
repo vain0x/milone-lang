@@ -216,12 +216,12 @@ let private addLocal varSerial (ctx: CcCtx) =
 let private useVar varSerial (ctx: CcCtx) =
   match (ctx.Vars |> mapFind varSerial).IsStatic with
   | IsStatic ->
-      // Don't count static vars as used.
-      ctx
+    // Don't count static vars as used.
+    ctx
 
   | _ ->
-      { ctx with
-          Current = ctx.Current |> knownCtxUseVar varSerial }
+    { ctx with
+        Current = ctx.Current |> knownCtxUseVar varSerial }
 
 let private useFun funSerial (ctx: CcCtx) =
   { ctx with
@@ -328,16 +328,16 @@ let private updateFunDefs (ctx: CcCtx) =
            | [] -> funs
 
            | caps ->
-               let funDef : FunDef = funs |> mapFind funSerial
-               let (TyScheme (tyVars, funTy)) = funDef.Ty
+             let funDef : FunDef = funs |> mapFind funSerial
+             let (TyScheme (tyVars, funTy)) = funDef.Ty
 
-               let funTy, arity =
-                 caps |> capsUpdateFunDef funTy funDef.Arity
+             let funTy, arity =
+               caps |> capsUpdateFunDef funTy funDef.Arity
 
-               let ty = TyScheme(tyVars, funTy)
+             let ty = TyScheme(tyVars, funTy)
 
-               funs
-               |> TMap.add funSerial { funDef with Arity = arity; Ty = ty })
+             funs
+             |> TMap.add funSerial { funDef with Arity = arity; Ty = ty })
          ctx.Funs
 
   { ctx with Funs = funs }
@@ -379,22 +379,22 @@ let private ccPat (pat, ctx) =
   | HVariantPat _ -> pat, ctx
 
   | HVarPat (_, serial, _, _) ->
-      let ctx = ctx |> addLocal serial
-      pat, ctx
+    let ctx = ctx |> addLocal serial
+    pat, ctx
 
   | HNodePat (kind, argPats, ty, loc) ->
-      let argPats, ctx = (argPats, ctx) |> stMap ccPat
-      HNodePat(kind, argPats, ty, loc), ctx
+    let argPats, ctx = (argPats, ctx) |> stMap ccPat
+    HNodePat(kind, argPats, ty, loc), ctx
 
   | HAsPat (pat, serial, loc) ->
-      let ctx = ctx |> addLocal serial
-      let pat, ctx = (pat, ctx) |> ccPat
-      HAsPat(pat, serial, loc), ctx
+    let ctx = ctx |> addLocal serial
+    let pat, ctx = (pat, ctx) |> ccPat
+    HAsPat(pat, serial, loc), ctx
 
   | HOrPat (l, r, loc) ->
-      let l, ctx = (l, ctx) |> ccPat
-      let r, ctx = (r, ctx) |> ccPat
-      HOrPat(l, r, loc), ctx
+    let l, ctx = (l, ctx) |> ccPat
+    let r, ctx = (r, ctx) |> ccPat
+    HOrPat(l, r, loc), ctx
 
 let private ccExpr (expr, ctx) =
   match expr with
@@ -403,54 +403,54 @@ let private ccExpr (expr, ctx) =
   | HPrimExpr _ -> expr, ctx
 
   | HVarExpr (serial, ty, loc) ->
-      invoke
-        (fun () ->
-          let ctx = ctx |> useVar serial
-          HVarExpr(serial, ty, loc), ctx)
+    invoke
+      (fun () ->
+        let ctx = ctx |> useVar serial
+        HVarExpr(serial, ty, loc), ctx)
 
   | HFunExpr (serial, funTy, funLoc) ->
-      invoke
-        (fun () ->
-          let ctx = ctx |> useFun serial
-          ccFunExpr serial funTy funLoc ctx, ctx)
+    invoke
+      (fun () ->
+        let ctx = ctx |> useFun serial
+        ccFunExpr serial funTy funLoc ctx, ctx)
 
   | HMatchExpr (cond, arms, ty, loc) ->
-      invoke
-        (fun () ->
-          let cond, ctx = ccExpr (cond, ctx)
+    invoke
+      (fun () ->
+        let cond, ctx = ccExpr (cond, ctx)
 
-          let go ((pat, guard, body), ctx) =
-            let pat, ctx = ccPat (pat, ctx)
-            let guard, ctx = ccExpr (guard, ctx)
-            let body, ctx = ccExpr (body, ctx)
-            (pat, guard, body), ctx
+        let go ((pat, guard, body), ctx) =
+          let pat, ctx = ccPat (pat, ctx)
+          let guard, ctx = ccExpr (guard, ctx)
+          let body, ctx = ccExpr (body, ctx)
+          (pat, guard, body), ctx
 
-          let arms, ctx = (arms, ctx) |> stMap go
-          HMatchExpr(cond, arms, ty, loc), ctx)
+        let arms, ctx = (arms, ctx) |> stMap go
+        HMatchExpr(cond, arms, ty, loc), ctx)
 
   | HNodeExpr (kind, items, ty, loc) ->
-      invoke
-        (fun () ->
-          let items, ctx = (items, ctx) |> stMap ccExpr
-          HNodeExpr(kind, items, ty, loc), ctx)
+    invoke
+      (fun () ->
+        let items, ctx = (items, ctx) |> stMap ccExpr
+        HNodeExpr(kind, items, ty, loc), ctx)
 
   | HBlockExpr (stmts, last) ->
-      invoke
-        (fun () ->
-          let stmts, ctx = (stmts, ctx) |> stMap ccExpr
-          let last, ctx = (last, ctx) |> ccExpr
-          HBlockExpr(stmts, last), ctx)
+    invoke
+      (fun () ->
+        let stmts, ctx = (stmts, ctx) |> stMap ccExpr
+        let last, ctx = (last, ctx) |> ccExpr
+        HBlockExpr(stmts, last), ctx)
 
   | HLetValExpr (pat, body, next, ty, loc) ->
-      invoke
-        (fun () ->
-          let pat, ctx = ccPat (pat, ctx)
-          let body, ctx = ccExpr (body, ctx)
-          let next, ctx = ccExpr (next, ctx)
-          HLetValExpr(pat, body, next, ty, loc), ctx)
+    invoke
+      (fun () ->
+        let pat, ctx = ccPat (pat, ctx)
+        let body, ctx = ccExpr (body, ctx)
+        let next, ctx = ccExpr (next, ctx)
+        HLetValExpr(pat, body, next, ty, loc), ctx)
 
   | HLetFunExpr (callee, isRec, vis, args, body, next, ty, loc) ->
-      ccLetFunExpr callee isRec vis args body next ty loc ctx
+    ccLetFunExpr callee isRec vis args body next ty loc ctx
 
   | HNavExpr _ -> unreachable () // HNavExpr is resolved in NameRes, Typing, or RecordRes.
   | HRecordExpr _ -> unreachable () // HRecordExpr is resolved in RecordRes.

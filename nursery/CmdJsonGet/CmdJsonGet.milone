@@ -27,14 +27,13 @@ OPTIONS:
 // Imports
 // -----------------------------------------------
 
-let private stdinReadAll (): string =
-  __nativeFun "stdin_read_all"
+let private stdinReadAll () : string = __nativeFun "stdin_read_all"
 
 // -----------------------------------------------
 // String helpers
 // -----------------------------------------------
 
-let divide (sep: string) (s: string): string * string option =
+let divide (sep: string) (s: string) : string * string option =
   match S.findIndex sep s with
   | None -> s, None
   | Some i -> s.[0..i - 1], Some s.[i + sep.Length..s.Length - 1]
@@ -71,31 +70,32 @@ let main _ =
       let root = stdinReadAll () |> jsonParseFromString
       // printfn "// input: %s\n" (jsonToString root)
 
-      path |> List.fold (fun obj key ->
-        match key, obj with
-        | ".", _ -> obj
+      path
+      |> List.fold
+           (fun obj key ->
+             match key, obj with
+             | ".", _ -> obj
 
-        | "length", JArray items ->
-            items |> List.length |> float |> JNumber
+             | "length", JArray items -> items |> List.length |> float |> JNumber
 
-        | _, JArray items ->
-            items |> List.tryItem (int key) |> Option.defaultWith (fun () ->
-              // printfn "// %s missing" key
-              JNull)
+             | _, JArray items ->
+                 items
+                 |> List.tryItem (int key)
+                 |> Option.defaultWith
+                      (fun () ->
+                        // printfn "// %s missing" key
+                        JNull)
 
-        | _, JObject entries ->
-            entries
-            |> List.tryPick (fun (k, value) ->
-                if k = key then
-                  Some value
-                else
-                  None)
-            |> Option.defaultWith (fun () ->
-                // printfn "// %s missing" key
-                JNull)
+             | _, JObject entries ->
+                 entries
+                 |> List.tryPick (fun (k, value) -> if k = key then Some value else None)
+                 |> Option.defaultWith
+                      (fun () ->
+                        // printfn "// %s missing" key
+                        JNull)
 
-        | _ -> JNull
-      ) root
+             | _ -> JNull)
+           root
       |> jsonToString
       |> printfn "%s"
 

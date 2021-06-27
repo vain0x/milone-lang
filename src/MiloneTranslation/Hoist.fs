@@ -103,9 +103,9 @@ let private hoistExprLetFunForNonMainFun (expr, ctx) : HExpr * HoistCtx =
 let private isMainFun expr (ctx: HoistCtx) : bool =
   match expr with
   | HLetFunExpr (callee, _, _, _, _, _, _, _) ->
-      match ctx.MainFunOpt with
-      | Some mainFun -> funSerialCompare mainFun callee = 0
-      | _ -> false
+    match ctx.MainFunOpt with
+    | Some mainFun -> funSerialCompare mainFun callee = 0
+    | _ -> false
 
   | _ -> unreachable ()
 
@@ -141,48 +141,48 @@ let private hoistExpr (expr, ctx) : HExpr * HoistCtx =
   | HPrimExpr _ -> expr, ctx
 
   | HMatchExpr (cond, arms, ty, loc) ->
-      invoke
-        (fun () ->
-          let go ((pat, guard, body), ctx) =
-            let guard, ctx = hoistBlock (guard, ctx)
-            let body, ctx = hoistBlock (body, ctx)
-            (pat, guard, body), ctx
+    invoke
+      (fun () ->
+        let go ((pat, guard, body), ctx) =
+          let guard, ctx = hoistBlock (guard, ctx)
+          let body, ctx = hoistBlock (body, ctx)
+          (pat, guard, body), ctx
 
-          let cond, ctx = hoistExpr (cond, ctx)
-          let arms, ctx = (arms, ctx) |> stMap go
-          HMatchExpr(cond, arms, ty, loc), ctx)
+        let cond, ctx = hoistExpr (cond, ctx)
+        let arms, ctx = (arms, ctx) |> stMap go
+        HMatchExpr(cond, arms, ty, loc), ctx)
 
   | HNodeExpr (kind, items, ty, loc) ->
-      invoke
-        (fun () ->
-          let items, ctx = (items, ctx) |> stMap hoistExpr
-          HNodeExpr(kind, items, ty, loc), ctx)
+    invoke
+      (fun () ->
+        let items, ctx = (items, ctx) |> stMap hoistExpr
+        HNodeExpr(kind, items, ty, loc), ctx)
 
   | HBlockExpr (stmts, last) ->
-      let ctx = stmts |> List.fold hoistStmt ctx
-      (last, ctx) |> hoistExpr
+    let ctx = stmts |> List.fold hoistStmt ctx
+    (last, ctx) |> hoistExpr
 
   | HLetValExpr _ ->
-      invoke
-        (fun () ->
-          let pat, init, next, loc =
-            match expr with
-            | HLetValExpr (pat, init, next, _, loc) -> pat, init, next, loc
-            | _ -> unreachable ()
+    invoke
+      (fun () ->
+        let pat, init, next, loc =
+          match expr with
+          | HLetValExpr (pat, init, next, _, loc) -> pat, init, next, loc
+          | _ -> unreachable ()
 
-          let init, ctx = (init, ctx) |> hoistExpr
+        let init, ctx = (init, ctx) |> hoistExpr
 
-          let ctx =
-            ctx
-            |> addStmt (HLetValExpr(pat, init, hxDummy, tyUnit, loc))
+        let ctx =
+          ctx
+          |> addStmt (HLetValExpr(pat, init, hxDummy, tyUnit, loc))
 
-          next, ctx)
-      |> hoistExpr
+        next, ctx)
+    |> hoistExpr
 
   | HLetFunExpr _ ->
-      (expr, ctx)
-      |> hoistExprLetFunForNonMainFun
-      |> hoistExpr
+    (expr, ctx)
+    |> hoistExprLetFunForNonMainFun
+    |> hoistExpr
 
   | HNavExpr _ -> unreachable () // HNavExpr is resolved in NameRes, Typing, or RecordRes.
   | HRecordExpr _ -> unreachable () // HRecordExpr is resolved in RecordRes.
@@ -190,35 +190,35 @@ let private hoistExpr (expr, ctx) : HExpr * HoistCtx =
 let private hoistExprToplevel (expr, ctx) : HoistCtx =
   match expr with
   | HBlockExpr (stmts, last) ->
-      invoke
-        (fun () ->
-          let ctx = stmts |> List.fold hoistStmt ctx
-          last, ctx)
-      |> hoistExprToplevel
+    invoke
+      (fun () ->
+        let ctx = stmts |> List.fold hoistStmt ctx
+        last, ctx)
+    |> hoistExprToplevel
 
   | HLetValExpr _ ->
-      invoke
-        (fun () ->
-          let pat, init, next, loc =
-            match expr with
-            | HLetValExpr (pat, init, next, _, loc) -> pat, init, next, loc
-            | _ -> unreachable ()
+    invoke
+      (fun () ->
+        let pat, init, next, loc =
+          match expr with
+          | HLetValExpr (pat, init, next, _, loc) -> pat, init, next, loc
+          | _ -> unreachable ()
 
-          let init, ctx = (init, ctx) |> hoistBlock
+        let init, ctx = (init, ctx) |> hoistBlock
 
-          let ctx =
-            ctx
-            |> addStmt (HLetValExpr(pat, init, hxDummy, tyUnit, loc))
+        let ctx =
+          ctx
+          |> addStmt (HLetValExpr(pat, init, hxDummy, tyUnit, loc))
 
-          next, ctx)
-      |> hoistExprToplevel
+        next, ctx)
+    |> hoistExprToplevel
 
   | HLetFunExpr _ when isMainFun expr ctx -> hoistExprLetFunForMainFun (expr, ctx)
 
   | HLetFunExpr _ ->
-      (expr, ctx)
-      |> hoistExprLetFunForNonMainFun
-      |> hoistExprToplevel
+    (expr, ctx)
+    |> hoistExprLetFunForNonMainFun
+    |> hoistExprToplevel
 
   | _ -> hoistStmt ctx expr
 

@@ -31,7 +31,7 @@ int parseOk_(struct String s_2) {
 next_11:;
     if (call_3.some) goto next_12;
     printf("should parse: %s\n", str_to_c_str(s_2));
-    milone_assert(false, 11, 8);
+    milone_assert(false, 11, 6);
     match_ = 0;
     goto end_match_10;
 next_12:;

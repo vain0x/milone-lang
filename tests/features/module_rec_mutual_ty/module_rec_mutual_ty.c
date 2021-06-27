@@ -49,7 +49,7 @@ int milone_main() {
             goto clause_3;
     }
 clause_2:;
-    milone_assert(false, 19, 6);
+    milone_assert(false, 19, 4);
     switch_ = 0;
     goto switch_next_1;
 clause_3:;

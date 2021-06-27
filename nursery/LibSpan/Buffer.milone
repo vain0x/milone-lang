@@ -33,7 +33,9 @@ let append (src: Span) (itemSize: unativeint) (buffer: Buffer) : Buffer =
   __nativeFun ("buffer_append_nonmut", buffer, src, itemSize)
 
 let slice (start: unativeint) (endIndex: unativeint) (itemSize: unativeint) (buffer: Buffer) : Span =
-  buffer |> sliceMut start endIndex itemSize |> SpanMut.asConst
+  buffer
+  |> sliceMut start endIndex itemSize
+  |> SpanMut.asConst
 
 let sliceMut (start: unativeint) (endIndex: unativeint) (itemSize: unativeint) (buffer: Buffer) : SpanMut =
   __nativeFun ("buffer_slice_mut", buffer, start, endIndex, itemSize)

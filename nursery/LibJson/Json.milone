@@ -10,11 +10,11 @@ type JsonValue =
   | JArray of items: JsonValue list
   | JObject of entries: (string * JsonValue) list
 
-let jsonParseFromString (s: string): JsonValue =
+let jsonParseFromString (s: string) : JsonValue =
   __nativeFun ("json_parse_from_string", s)
 
 // FIXME: fix escape, make it efficient
-let jsonToString (value: JsonValue): string =
+let jsonToString (value: JsonValue) : string =
   match value with
   | JNull -> "null"
 
@@ -33,11 +33,13 @@ let jsonToString (value: JsonValue): string =
   | JBoolean false -> "false"
 
   | JArray items ->
-      "[" + (List.map jsonToString items |> S.concat ",") + "]"
+      "["
+      + (List.map jsonToString items |> S.concat ",")
+      + "]"
 
   | JObject entries ->
       "{"
       + (entries
-        |> List.map (fun (key, value) -> "\"" + key + "\":" + jsonToString value)
-        |> S.concat ",")
+         |> List.map (fun (key, value) -> "\"" + key + "\":" + jsonToString value)
+         |> S.concat ",")
       + "}"

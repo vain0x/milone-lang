@@ -86,13 +86,13 @@ let private resolveMiloneCoreDeps tokens ast =
 let getMiloneHomeFromEnv (getEnv: string -> string option) : string =
   match getEnv "MILONE_HOME" with
   | Some miloneHome ->
-      assert (miloneHome <> "")
-      miloneHome
+    assert (miloneHome <> "")
+    miloneHome
 
   | None ->
-      match getEnv "HOME" with
-      | Some home -> home + "/.milone"
-      | None -> failwith "$MILONE_HOME and $HOME are missing."
+    match getEnv "HOME" with
+    | Some home -> home + "/.milone"
+    | None -> failwith "$MILONE_HOME and $HOME are missing."
 
 let private findProjectWith
   (projects: TMap.TreeMap<ProjectName, ProjectDir>)
@@ -151,10 +151,10 @@ let private fetchModuleWith
   match readModuleInProjectWith readTextFile projectDir moduleName with
   | None -> None
   | Some (docId, _, contents) ->
-      contents
-      |> tokenize
-      |> parseModuleWith docId
-      |> Some
+    contents
+    |> tokenize
+    |> parseModuleWith docId
+    |> Some
 
 // -----------------------------------------------
 // Error processing
@@ -275,12 +275,12 @@ let performSyntaxAnalysis (ctx: SyntaxCtx) : SyntaxAnalysisResult =
     | Some errors -> SyntaxAnalysisError(errors, None)
 
     | None ->
-        writeLog "Typing"
-        let modules, tyCtx = Typing.infer (modules, scopeCtx, [])
+      writeLog "Typing"
+      let modules, tyCtx = Typing.infer (modules, scopeCtx, [])
 
-        writeLog "ArityCheck"
-        let tyCtx = ArityCheck.arityCheck (modules, tyCtx)
+      writeLog "ArityCheck"
+      let tyCtx = ArityCheck.arityCheck (modules, tyCtx)
 
-        match collectTypingErrors tyCtx with
-        | Some errors -> SyntaxAnalysisError(errors, Some tyCtx)
-        | None -> SyntaxAnalysisOk(modules, tyCtx)
+      match collectTypingErrors tyCtx with
+      | Some errors -> SyntaxAnalysisError(errors, Some tyCtx)
+      | None -> SyntaxAnalysisOk(modules, tyCtx)

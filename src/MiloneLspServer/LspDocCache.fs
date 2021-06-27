@@ -36,12 +36,12 @@ let openDoc (uri: string) (version: int) (text: string) =
 let changeDoc (uri: string) (version: int) (text: string) : unit =
   match findDoc uri with
   | Some _ ->
-      let docData : DocData =
-        { Uri = uri
-          Version = version
-          Text = text }
+    let docData : DocData =
+      { Uri = uri
+        Version = version
+        Text = text }
 
-      docs.[uri] <- docData
+    docs.[uri] <- docData
 
   | None -> openDoc uri version text
 

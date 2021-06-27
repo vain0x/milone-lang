@@ -14,9 +14,9 @@ type Widget =
 
 type UI = UI of Widget list
 
-let stack widgets: UI = UI widgets
+let stack widgets : UI = UI widgets
 
-let button msg text = Button (msg, text)
+let button msg text = Button(msg, text)
 
 let label text = Label text
 
@@ -31,78 +31,110 @@ type UIDiff =
   | SetButtonText of index: int * string
   | Delete of index: int
 
-let diff oldUI newUI: UIDiff list =
+let diff oldUI newUI : UIDiff list =
   let rec go i acc ls rs =
     match ls, rs with
     | [], [] -> List.rev acc
 
     | Label t1 :: ls, Label t2 :: rs ->
-      let acc = if t1 <> t2 then SetLabel (i, t2) :: acc else acc
-      go (i + 1) acc ls rs
+        let acc =
+          if t1 <> t2 then
+            SetLabel(i, t2) :: acc
+          else
+            acc
+
+        go (i + 1) acc ls rs
 
     | Button (_, t1) :: ls, Button (_, t2) :: rs ->
-      let acc = if t1 <> t2 then SetButtonText (i, t2) :: acc else acc
-      go (i + 1) acc ls rs
+        let acc =
+          if t1 <> t2 then
+            SetButtonText(i, t2) :: acc
+          else
+            acc
+
+        go (i + 1) acc ls rs
 
     | [], Label text :: rs ->
-      let acc = AddLabel (i, text) :: acc
-      go (i + 1) acc ls rs
+        let acc = AddLabel(i, text) :: acc
+        go (i + 1) acc ls rs
 
     | [], Button (msg, text) :: rs ->
-      let acc = AddButton (i, msg, text) :: acc
-      go (i + 1) acc ls rs
+        let acc = AddButton(i, msg, text) :: acc
+        go (i + 1) acc ls rs
 
     | _ :: ls, _ ->
-      let acc = Delete i :: acc
-      go (i + 1) acc ls rs
+        let acc = Delete i :: acc
+        go (i + 1) acc ls rs
 
   let (UI ls) = oldUI
   let (UI rs) = newUI
   go 0 [] ls rs
 
-let dumpDiff (diffList: UIDiff list): string =
+let dumpDiff (diffList: UIDiff list) : string =
   let num (n: int) acc = acc |> cons (string n)
   let str (s: string) acc = acc |> cons s
 
   let render acc diff =
     match diff with
     | AddLabel (index, text) ->
-      acc |> str "ADD_LABEL" |> num index |> str text |> cons "\n"
+        acc
+        |> str "ADD_LABEL"
+        |> num index
+        |> str text
+        |> cons "\n"
 
     | AddButton (index, msg, text) ->
-      acc |> str "ADD_BUTTON" |> num index |> num msg |> str text |> cons "\n"
+        acc
+        |> str "ADD_BUTTON"
+        |> num index
+        |> num msg
+        |> str text
+        |> cons "\n"
 
     | SetLabel (index, text) ->
-      acc |> str "SET_LABEL" |> num index |> str text |> cons "\n"
+        acc
+        |> str "SET_LABEL"
+        |> num index
+        |> str text
+        |> cons "\n"
 
     | SetButtonText (index, text) ->
-      acc |> str "SET_BUTTON_TEXT" |> num index |> str text |> cons "\n"
+        acc
+        |> str "SET_BUTTON_TEXT"
+        |> num index
+        |> str text
+        |> cons "\n"
 
-    | Delete index  ->
-      // TODO
-      // acc |> str "DELETE" |> num index |> cons "\n"
-      acc
+    | Delete index ->
+        // TODO
+        // acc |> str "DELETE" |> num index |> cons "\n"
+        acc
 
-  List.fold render [] diffList |> List.rev |> S.concat " "
+  List.fold render [] diffList
+  |> List.rev
+  |> S.concat " "
 
 // -----------------------------------------------
 // Runtime
 // -----------------------------------------------
 
-let gtkRun (init: 'S) (update: 'S -> 'M -> 'S) (view: 'S -> UI): int =
-  let setUI (ui: UI): unit = __nativeFun ("milone_gtk_set_view", box ui)
-  let getUI (): UI = __nativeFun "milone_gtk_get_view" |> unbox
+let gtkRun (init: 'S) (update: 'S -> 'M -> 'S) (view: 'S -> UI) : int =
+  let setUI (ui: UI) : unit =
+    __nativeFun ("milone_gtk_set_view", box ui)
+
+  let getUI () : UI =
+    __nativeFun "milone_gtk_get_view" |> unbox
 
   setUI (stack [])
 
-  let initObj: obj = box init
+  let initObj : obj = box init
 
-  let updateObj: obj -> obj -> obj =
+  let updateObj : obj -> obj -> obj =
     fun (state: obj) (msg: obj) -> update (unbox state) (unbox msg) |> box
 
-  let viewObj: obj -> obj =
+  let viewObj : obj -> obj =
     fun (state: obj) ->
-      let oldUI: UI = getUI ()
+      let oldUI : UI = getUI ()
       let newUI = view (unbox state)
 
       let d = dumpDiff (diff oldUI newUI)
@@ -117,34 +149,37 @@ let gtkRun (init: 'S) (update: 'S -> 'M -> 'S) (view: 'S -> UI): int =
 // App
 // -----------------------------------------------
 
-type MyState = { Count: int; History: int option list }
+type MyState =
+  { Count: int
+    History: int option list }
 
-let private init: MyState = { Count = 0; History = [] }
+let private init : MyState = { Count = 0; History = [] }
 
 type MyMsg = int
 
-let private update (state: MyState) (msg: MyMsg): MyState =
+let private update (state: MyState) (msg: MyMsg) : MyState =
   let delta = msg
+
   { state with
       Count = state.Count + delta
       History = Some state.Count :: List.truncate 5 state.History }
 
-let private view (state: MyState): UI =
-  let buttons =
-    [ button 1 "+"
-      button (-1) "-" ]
+let private view (state: MyState) : UI =
+  let buttons = [ button 1 "+"; button (-1) "-" ]
 
   let labels =
     label (string state.Count)
-    :: List.map (fun (n: int option) ->
-      let s =
-        match n with
-        | Some n -> string n
-        | None -> "　"
+    :: List.map
+         (fun (n: int option) ->
+           let s =
+             match n with
+             | Some n -> string n
+             | None -> "　"
 
-      label s
-      ) state.History
+           label s)
+         state.History
 
   stack (List.append buttons labels)
 
-let main _: int = inRegion (fun () -> gtkRun init update view)
+let main _ : int =
+  inRegion (fun () -> gtkRun init update view)

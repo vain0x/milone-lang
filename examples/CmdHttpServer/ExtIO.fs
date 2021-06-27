@@ -31,30 +31,30 @@ module ReadableFileStream =
     match doOpen filePath with
     | None -> None
     | Some fp ->
-        let itemSize = unativeint 1
-        let chunkLen = unativeint 64
+      let itemSize = unativeint 1
+      let chunkLen = unativeint 64
 
-        let contents = Buffer.create (unativeint 1024) itemSize
+      let contents = Buffer.create (unativeint 1024) itemSize
 
-        let chunk =
-          Buffer.zeroCreate chunkLen itemSize
-          |> Buffer.sliceMut (unativeint 0) chunkLen itemSize
+      let chunk =
+        Buffer.zeroCreate chunkLen itemSize
+        |> Buffer.sliceMut (unativeint 0) chunkLen itemSize
 
-        let rec go contents =
-          let n = doRead chunk fp
+      let rec go contents =
+        let n = doRead chunk fp
 
-          if n = unativeint 0 then
-            contents
-          else
-            let chunk =
-              chunk |> SpanMut.asConst |> Span.take n itemSize
+        if n = unativeint 0 then
+          contents
+        else
+          let chunk =
+            chunk |> SpanMut.asConst |> Span.take n itemSize
 
-            contents |> Buffer.append chunk itemSize |> go
+          contents |> Buffer.append chunk itemSize |> go
 
-        let contents = go contents |> Buffer.asString
+      let contents = go contents |> Buffer.asString
 
-        doClose fp
-        Some contents
+      doClose fp
+      Some contents
 
 module Directory =
   let exists (path: string) (followLink: bool) : bool =

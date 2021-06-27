@@ -21,12 +21,12 @@ else_3:;
     if_ = (str_compare(eol_, (struct String){.str = "\r\n", .len = 2}) == 0);
     goto if_next_1;
 if_next_1:;
-    milone_assert(if_, 6, 2);
+    milone_assert(if_, 7, 2);
     return 0;
 }
 
 char str_literal_raw_Program_testNoEscape(char arg_1) {
-    milone_assert((str_compare((struct String){.str = " \\\"\" ", .len = 5}, (struct String){.str = " \\\"\" ", .len = 5}) == 0), 8, 22);
+    milone_assert((str_compare((struct String){.str = " \\\"\" ", .len = 5}, (struct String){.str = " \\\"\" ", .len = 5}) == 0), 9, 22);
     return 0;
 }
 

@@ -65,7 +65,7 @@ let tkCompare l r : int =
   | _, NativeTypeTk _ -> 1
 
   | UnresolvedTk (lQuals, lSerial), UnresolvedTk (rQuals, rSerial) ->
-      pairCompare (listCompare compare) compare (lQuals, lSerial) (rQuals, rSerial)
+    pairCompare (listCompare compare) compare (lQuals, lSerial) (rQuals, rSerial)
 
   | UnresolvedTk _, _ -> -1
   | _, UnresolvedTk _ -> 1
@@ -124,12 +124,12 @@ let traitMapTys f it =
 let tyCompare l r =
   match l, r with
   | Ty (lTk, lTyArgs), Ty (rTk, rTyArgs) ->
-      let c = tkCompare lTk rTk
+    let c = tkCompare lTk rTk
 
-      if c <> 0 then
-        c
-      else
-        listCompare tyCompare lTyArgs rTyArgs
+    if c <> 0 then
+      c
+    else
+      listCompare tyCompare lTyArgs rTyArgs
 
 let tyEqual l r = tyCompare l r = 0
 
@@ -153,15 +153,15 @@ let tyCollectFreeVars ty =
     | [] -> fvAcc
 
     | Ty (MetaTk (serial, _), _) :: tys ->
-        let acc = serial :: fvAcc
-        go acc tys
+      let acc = serial :: fvAcc
+      go acc tys
 
     | Ty (_, []) :: tys -> go fvAcc tys
 
     | Ty (_, tys1) :: tys2 ->
-        let acc = go fvAcc tys1
-        let acc = go acc tys2
-        acc
+      let acc = go fvAcc tys1
+      let acc = go acc tys2
+      acc
 
   go [] [ ty ] |> listUnique compare
 
@@ -179,10 +179,10 @@ let tySubst (substMeta: TySerial -> Ty option) ty =
   let rec go ty =
     match ty with
     | Ty (MetaTk (tySerial, _), _) ->
-        match substMeta tySerial with
-        | Some ty -> go ty
+      match substMeta tySerial with
+      | Some ty -> go ty
 
-        | None -> ty
+      | None -> ty
 
     | Ty (_, []) -> ty
 
@@ -210,12 +210,12 @@ let tyExpandSynonyms (expand: TySerial -> TyDef option) ty : Ty =
   let rec go ty =
     match ty with
     | Ty (SynonymTk tySerial, useTyArgs) ->
-        match expand tySerial with
-        | Some (SynonymTyDef (_, defTySerials, bodyTy, _)) ->
-            tyExpandSynonym useTyArgs defTySerials bodyTy
-            |> go
+      match expand tySerial with
+      | Some (SynonymTyDef (_, defTySerials, bodyTy, _)) ->
+        tyExpandSynonym useTyArgs defTySerials bodyTy
+        |> go
 
-        | _ -> Ty(SynonymTk tySerial, useTyArgs)
+      | _ -> Ty(SynonymTk tySerial, useTyArgs)
 
     | Ty (tk, tyArgs) -> Ty(tk, tyArgs |> List.map go)
 
@@ -250,8 +250,8 @@ let tyDisplay getTyName ty =
       match args with
       | [] -> tk
       | _ ->
-          let args = args |> List.map (go 0) |> S.concat ", "
-          tk + "<" + args + ">"
+        let args = args |> List.map (go 0) |> S.concat ", "
+        tk + "<" + args + ">"
 
     match ty with
     | Ty (FunTk, [ sTy; tTy ]) -> paren 10 (go 11 sTy + " -> " + go 10 tTy)
@@ -259,31 +259,31 @@ let tyDisplay getTyName ty =
     | Ty (TupleTk, []) -> "unit"
 
     | Ty (TupleTk, itemTys) ->
-        "("
-        + (itemTys |> List.map (go 20) |> S.concat " * ")
-        + ")"
+      "("
+      + (itemTys |> List.map (go 20) |> S.concat " * ")
+      + ")"
 
     | Ty (OptionTk, [ itemTy ]) -> paren 30 (go 30 itemTy + " option")
 
     | Ty (ListTk, [ itemTy ]) -> paren 30 (go 30 itemTy + " list")
 
     | Ty (MetaTk (tySerial, loc), _) ->
-        match getTyName tySerial with
-        | Some name -> "{" + name + "}@" + locToString loc
-        | None -> "{?" + string tySerial + "}@" + locToString loc
+      match getTyName tySerial with
+      | Some name -> "{" + name + "}@" + locToString loc
+      | None -> "{?" + string tySerial + "}@" + locToString loc
 
     | Ty (SynonymTk tySerial, args) -> nominal tySerial args
     | Ty (UnionTk tySerial, args) -> nominal tySerial args
     | Ty (RecordTk tySerial, args) -> nominal tySerial args
 
     | Ty (tk, args) ->
-        let tk = tkDisplay (fun _ -> unreachable ()) tk
+      let tk = tkDisplay (fun _ -> unreachable ()) tk
 
-        match args with
-        | [] -> tk
-        | _ ->
-            let args = args |> List.map (go 0) |> S.concat ", "
-            tk + "<" + args + ">"
+      match args with
+      | [] -> tk
+      | _ ->
+        let args = args |> List.map (go 0) |> S.concat ", "
+        tk + "<" + args + ">"
 
   go 0 ty
 
@@ -331,18 +331,18 @@ let tyMangle (ty: Ty, memo: AssocMap<Ty, string>) : string * AssocMap<Ty, string
       | NativeTypeTk name -> name, ctx
 
       | FunTk ->
-          let arity, argTys, resultTy = tyToArgList ty
+        let arity, argTys, resultTy = tyToArgList ty
 
-          let argTys, ctx = mangleList argTys ctx
-          let resultTy, ctx = ctx |> go resultTy
+        let argTys, ctx = mangleList argTys ctx
+        let resultTy, ctx = ctx |> go resultTy
 
-          let funTy =
-            (argTys |> strConcat)
-            + resultTy
-            + "Fun"
-            + string arity
+        let funTy =
+          (argTys |> strConcat)
+          + resultTy
+          + "Fun"
+          + string arity
 
-          funTy, ctx
+        funTy, ctx
 
       | UnionTk _
       | RecordTk _ -> unreachable () // Must be stored in memo.
@@ -358,8 +358,8 @@ let tyMangle (ty: Ty, memo: AssocMap<Ty, string>) : string * AssocMap<Ty, string
     | Some name -> name, ctx
 
     | None ->
-        let name, ctx = doMangle ()
-        name, TMap.add ty name ctx
+      let name, ctx = doMangle ()
+      name, TMap.add ty name ctx
 
   go ty memo
 
@@ -371,9 +371,9 @@ let private getLevel tyLevels levelChanges tySerial : Level =
   match levelChanges |> TMap.tryFind tySerial with
   | Some level -> level
   | _ ->
-      tyLevels
-      |> TMap.tryFind tySerial
-      |> Option.defaultValue 0
+    tyLevels
+    |> TMap.tryFind tySerial
+    |> Option.defaultValue 0
 
 let private metaTyIsBound tys binding tySerial : bool =
   TMap.containsKey tySerial binding
@@ -385,9 +385,9 @@ let private tyExpandMeta tys binding tySerial : Ty option =
   match binding |> TMap.tryFind tySerial with
   | (Some _) as it -> it
   | _ ->
-      match tys |> TMap.tryFind tySerial with
-      | Some (MetaTyDef ty) -> Some ty
-      | _ -> None
+    match tys |> TMap.tryFind tySerial with
+    | Some (MetaTyDef ty) -> Some ty
+    | _ -> None
 
 let doInstantiateTyScheme
   (serial: int)
@@ -431,29 +431,29 @@ let unifyNext (lTy: Ty) (rTy: Ty) (loc: Loc) : UnifyResult =
   match lTy, rTy with
   | Ty (MetaTk _, _), _
   | _, Ty (MetaTk _, _) ->
-      match lTy, rTy with
-      | Ty (MetaTk (l, _), _), Ty (MetaTk (r, _), _) when l = r -> UnifyOk
+    match lTy, rTy with
+    | Ty (MetaTk (l, _), _), Ty (MetaTk (r, _), _) when l = r -> UnifyOk
 
-      | Ty (MetaTk (lSerial, _), _), _ -> UnifyExpandMeta(lSerial, rTy)
-      | _, Ty (MetaTk (rSerial, _), _) -> UnifyExpandMeta(rSerial, lTy)
+    | Ty (MetaTk (lSerial, _), _), _ -> UnifyExpandMeta(lSerial, rTy)
+    | _, Ty (MetaTk (rSerial, _), _) -> UnifyExpandMeta(rSerial, lTy)
 
-      | _ -> unreachable ()
+    | _ -> unreachable ()
 
   | Ty (lTk, lTyArgs), Ty (rTk, rTyArgs) when tkEqual lTk rTk ->
-      match lTyArgs, rTyArgs with
-      | [], [] -> UnifyOk
+    match lTyArgs, rTyArgs with
+    | [], [] -> UnifyOk
 
-      | _ ->
-          match listTryZip lTyArgs rTyArgs with
-          | tyPairs, [], [] -> UnifyOkWithStack(tyPairs)
-          | _ -> mismatchError ()
+    | _ ->
+      match listTryZip lTyArgs rTyArgs with
+      | tyPairs, [], [] -> UnifyOkWithStack(tyPairs)
+      | _ -> mismatchError ()
 
   | Ty (SynonymTk _, _), _
   | _, Ty (SynonymTk _, _) ->
-      match lTy, rTy with
-      | Ty (SynonymTk tySerial, tyArgs), _ -> UnifyExpandSynonym(tySerial, tyArgs, rTy)
-      | _, Ty (SynonymTk tySerial, tyArgs) -> UnifyExpandSynonym(tySerial, tyArgs, lTy)
-      | _ -> unreachable ()
+    match lTy, rTy with
+    | Ty (SynonymTk tySerial, tyArgs), _ -> UnifyExpandSynonym(tySerial, tyArgs, rTy)
+    | _, Ty (SynonymTk tySerial, tyArgs) -> UnifyExpandSynonym(tySerial, tyArgs, lTy)
+    | _ -> unreachable ()
 
   | _ -> mismatchError ()
 
@@ -468,8 +468,8 @@ let unifyAfterExpandMeta lTy rTy tySerial otherTy loc =
   | Ty (MetaTk (otherSerial, _), _) when otherSerial = tySerial -> UnifyAfterExpandMetaResult.OkNoBind
 
   | _ when tyIsFreeIn otherTy tySerial |> not ->
-      // ^ Occurrence check.
-      UnifyAfterExpandMetaResult.Error(Log.TyUnify(TyUnifyLog.SelfRec, lTy, rTy), loc)
+    // ^ Occurrence check.
+    UnifyAfterExpandMetaResult.Error(Log.TyUnify(TyUnifyLog.SelfRec, lTy, rTy), loc)
 
   | _ -> UnifyAfterExpandMetaResult.OkBind
 

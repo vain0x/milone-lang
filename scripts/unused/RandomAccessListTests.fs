@@ -25,7 +25,10 @@ let addTest () =
 [<Fact>]
 let addManyTest () =
   let rec go i xs =
-    if i = 100 then xs else xs |> Ral.add i |> go (i + 1)
+    if i = 100 then
+      xs
+    else
+      xs |> Ral.add i |> go (i + 1)
 
   let xs = Ral.empty () |> go 0
 

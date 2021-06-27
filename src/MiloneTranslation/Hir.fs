@@ -469,13 +469,13 @@ let patNormalize pat =
     | HVariantPat _ -> [ pat ]
 
     | HNodePat (kind, argPats, ty, loc) ->
-        argPats
-        |> doNormalizePats
-        |> List.map (fun itemPats -> HNodePat(kind, itemPats, ty, loc))
+      argPats
+      |> doNormalizePats
+      |> List.map (fun itemPats -> HNodePat(kind, itemPats, ty, loc))
 
     | HAsPat (bodyPat, serial, loc) ->
-        go bodyPat
-        |> List.map (fun bodyPat -> HAsPat(bodyPat, serial, loc))
+      go bodyPat
+      |> List.map (fun bodyPat -> HAsPat(bodyPat, serial, loc))
 
     | HOrPat (l, r, _) -> List.append (go l) (go r)
 
@@ -486,13 +486,13 @@ let private doNormalizePats pats =
   | [] -> [ [] ]
 
   | headPat :: tailPats ->
-      let headPats = patNormalize headPat
+    let headPats = patNormalize headPat
 
-      doNormalizePats tailPats
-      |> List.collect
-           (fun tailPats ->
-             headPats
-             |> List.map (fun headPat -> headPat :: tailPats))
+    doNormalizePats tailPats
+    |> List.collect
+         (fun tailPats ->
+           headPats
+           |> List.map (fun headPat -> headPat :: tailPats))
 
 /// Gets whether a pattern is clearly exhaustive, that is,
 /// pattern matching on it always succeeds (assuming type check is passing).
@@ -507,19 +507,19 @@ let patIsClearlyExhaustive isNewtypeVariant pat =
     | HVariantPat (variantSerial, _, _) -> isNewtypeVariant variantSerial
 
     | HNodePat (kind, argPats, _, _) ->
-        match kind, argPats with
-        | HVariantAppPN variantSerial, [ payloadPat ] -> isNewtypeVariant variantSerial && go payloadPat
+      match kind, argPats with
+      | HVariantAppPN variantSerial, [ payloadPat ] -> isNewtypeVariant variantSerial && go payloadPat
 
-        | HAbortPN, _ -> true
+      | HAbortPN, _ -> true
 
-        | HNilPN, _
-        | HConsPN, _
-        | HNonePN, _
-        | HSomeAppPN, _
-        | HVariantAppPN _, _ -> false
+      | HNilPN, _
+      | HConsPN, _
+      | HNonePN, _
+      | HSomeAppPN, _
+      | HVariantAppPN _, _ -> false
 
-        | HTuplePN, _
-        | HBoxPN, _ -> argPats |> List.forall go
+      | HTuplePN, _
+      | HBoxPN, _ -> argPats |> List.forall go
 
     | HAsPat (bodyPat, _, _) -> go bodyPat
     | HOrPat (l, r, _) -> go l || go r
@@ -587,26 +587,26 @@ let exprMap (f: Ty -> Ty) (g: Loc -> Loc) (expr: HExpr) : HExpr =
     | HPrimExpr (prim, ty, a) -> HPrimExpr(prim, f ty, g a)
 
     | HRecordExpr (baseOpt, fields, ty, a) ->
-        let baseOpt = baseOpt |> Option.map go
+      let baseOpt = baseOpt |> Option.map go
 
-        let fields =
-          fields
-          |> List.map (fun (name, init, a) -> name, go init, g a)
+      let fields =
+        fields
+        |> List.map (fun (name, init, a) -> name, go init, g a)
 
-        HRecordExpr(baseOpt, fields, f ty, g a)
+      HRecordExpr(baseOpt, fields, f ty, g a)
 
     | HMatchExpr (cond, arms, ty, a) ->
-        let arms =
-          arms
-          |> List.map (fun (pat, guard, body) -> goPat pat, go guard, go body)
+      let arms =
+        arms
+        |> List.map (fun (pat, guard, body) -> goPat pat, go guard, go body)
 
-        HMatchExpr(go cond, arms, f ty, g a)
+      HMatchExpr(go cond, arms, f ty, g a)
     | HNavExpr (sub, mes, ty, a) -> HNavExpr(go sub, mes, f ty, g a)
     | HNodeExpr (kind, args, resultTy, a) -> HNodeExpr(kind, List.map go args, f resultTy, g a)
     | HBlockExpr (stmts, last) -> HBlockExpr(List.map go stmts, go last)
     | HLetValExpr (pat, init, next, ty, a) -> HLetValExpr(goPat pat, go init, go next, f ty, g a)
     | HLetFunExpr (serial, isRec, vis, args, body, next, ty, a) ->
-        HLetFunExpr(serial, isRec, vis, List.map goPat args, go body, go next, f ty, g a)
+      HLetFunExpr(serial, isRec, vis, List.map goPat args, go body, go next, f ty, g a)
 
   go expr
 
@@ -726,12 +726,12 @@ let tyIsFun ty =
 let tyCompare l r =
   match l, r with
   | Ty (lTk, lTyArgs), Ty (rTk, rTyArgs) ->
-      let c = tkCompare lTk rTk
+    let c = tkCompare lTk rTk
 
-      if c <> 0 then
-        c
-      else
-        listCompare tyCompare lTyArgs rTyArgs
+    if c <> 0 then
+      c
+    else
+      listCompare tyCompare lTyArgs rTyArgs
 
 let tyEqual l r = tyCompare l r = 0
 
@@ -768,15 +768,15 @@ let tyCollectFreeVars ty =
     | [] -> fvAcc
 
     | Ty (MetaTk (serial, _), _) :: tys ->
-        let acc = serial :: fvAcc
-        go acc tys
+      let acc = serial :: fvAcc
+      go acc tys
 
     | Ty (_, []) :: tys -> go fvAcc tys
 
     | Ty (_, tys1) :: tys2 ->
-        let acc = go fvAcc tys1
-        let acc = go acc tys2
-        acc
+      let acc = go fvAcc tys1
+      let acc = go acc tys2
+      acc
 
   go [] [ ty ] |> listUnique compare
 
@@ -794,10 +794,10 @@ let tySubst (substMeta: TySerial -> Ty option) ty =
   let rec go ty =
     match ty with
     | Ty (MetaTk (tySerial, _), _) ->
-        match substMeta tySerial with
-        | Some ty -> go ty
+      match substMeta tySerial with
+      | Some ty -> go ty
 
-        | None -> ty
+      | None -> ty
 
     | Ty (_, []) -> ty
 
@@ -860,18 +860,18 @@ let tyMangle (ty: Ty, memo: AssocMap<Ty, string>) : string * AssocMap<Ty, string
       | NativeTypeTk name -> name, ctx
 
       | FunTk ->
-          let arity, argTys, resultTy = tyToArgList ty
+        let arity, argTys, resultTy = tyToArgList ty
 
-          let argTys, ctx = mangleList argTys ctx
-          let resultTy, ctx = ctx |> go resultTy
+        let argTys, ctx = mangleList argTys ctx
+        let resultTy, ctx = ctx |> go resultTy
 
-          let funTy =
-            (argTys |> strConcat)
-            + resultTy
-            + "Fun"
-            + string arity
+        let funTy =
+          (argTys |> strConcat)
+          + resultTy
+          + "Fun"
+          + string arity
 
-          funTy, ctx
+        funTy, ctx
 
       | UnionTk _
       | RecordTk _ -> unreachable () // Must be stored in memo.
@@ -881,8 +881,8 @@ let tyMangle (ty: Ty, memo: AssocMap<Ty, string>) : string * AssocMap<Ty, string
     | Some name -> name, ctx
 
     | None ->
-        let name, ctx = doMangle ()
-        name, TMap.add ty name ctx
+      let name, ctx = doMangle ()
+      name, TMap.add ty name ctx
 
   go ty memo
 
@@ -903,22 +903,22 @@ let unifyNext (lTy: Ty) (rTy: Ty) (loc: Loc) : UnifyResult =
   match lTy, rTy with
   | Ty (MetaTk _, _), _
   | _, Ty (MetaTk _, _) ->
-      match lTy, rTy with
-      | Ty (MetaTk (l, _), _), Ty (MetaTk (r, _), _) when l = r -> UnifyOk
+    match lTy, rTy with
+    | Ty (MetaTk (l, _), _), Ty (MetaTk (r, _), _) when l = r -> UnifyOk
 
-      | Ty (MetaTk (lSerial, _), _), _ -> UnifyExpandMeta(lSerial, rTy)
-      | _, Ty (MetaTk (rSerial, _), _) -> UnifyExpandMeta(rSerial, lTy)
+    | Ty (MetaTk (lSerial, _), _), _ -> UnifyExpandMeta(lSerial, rTy)
+    | _, Ty (MetaTk (rSerial, _), _) -> UnifyExpandMeta(rSerial, lTy)
 
-      | _ -> unreachable ()
+    | _ -> unreachable ()
 
   | Ty (lTk, lTyArgs), Ty (rTk, rTyArgs) when tkEqual lTk rTk ->
-      match lTyArgs, rTyArgs with
-      | [], [] -> UnifyOk
+    match lTyArgs, rTyArgs with
+    | [], [] -> UnifyOk
 
-      | _ ->
-          match listTryZip lTyArgs rTyArgs with
-          | tyPairs, [], [] -> UnifyOkWithStack(tyPairs)
-          | _ -> mismatchError ()
+    | _ ->
+      match listTryZip lTyArgs rTyArgs with
+      | tyPairs, [], [] -> UnifyOkWithStack(tyPairs)
+      | _ -> mismatchError ()
 
   | _ -> mismatchError ()
 
@@ -933,7 +933,7 @@ let unifyAfterExpandMeta tySerial otherTy loc =
   | Ty (MetaTk (otherSerial, _), _) when otherSerial = tySerial -> UnifyAfterExpandMetaResult.OkNoBind
 
   | _ when tyIsFreeIn otherTy tySerial |> not ->
-      // ^ Occurrence check.
-      UnifyAfterExpandMetaResult.Error loc
+    // ^ Occurrence check.
+    UnifyAfterExpandMetaResult.Error loc
 
   | _ -> UnifyAfterExpandMetaResult.OkBind

@@ -39,12 +39,12 @@ let private arityExIsUnifiable l r =
     | UnitAx, UnitAx -> true
 
     | FunAx (ls, lt), FunAx (rs, rt) ->
-        let zipped, lRest, rRest = listTryZip ls rs
+      let zipped, lRest, rRest = listTryZip ls rs
 
-        List.isEmpty lRest
-        && List.isEmpty rRest
-        && List.forall go zipped
-        && go (lt, rt)
+      List.isEmpty lRest
+      && List.isEmpty rRest
+      && List.forall go zipped
+      && go (lt, rt)
 
     | UnitAx, _
     | FunAx _, _ -> false
@@ -57,18 +57,18 @@ let private arityExToString a =
   | HungryAx -> "*"
 
   | FunAx (args, result) ->
-      "("
-      + (args |> List.map arityExToString |> S.concat ", ")
-      + ") -> "
-      + arityExToString result
+    "("
+    + (args |> List.map arityExToString |> S.concat ", ")
+    + ") -> "
+    + arityExToString result
 
 let private tyToArityEx ty =
   let rec goFun ty =
     match ty with
     | Ty (FunTk, [ sTy; tTy ]) ->
-        let sTy = tyToArityEx sTy
-        let args, result = goFun tTy
-        sTy :: args, result
+      let sTy = tyToArityEx sTy
+      let args, result = goFun tTy
+      sTy :: args, result
 
     | _ -> [], UnitAx
 
@@ -119,75 +119,75 @@ let private acExpr (expr, ctx: ArityCheckCtx) : ArityEx * ArityCheckCtx =
   | TFunExpr (funSerial, _, _) -> ctx.GetFunArity funSerial, ctx
 
   | TRecordExpr (baseOpt, fields, _, _) ->
-      invoke
-        (fun () ->
-          let ctx =
-            match baseOpt with
-            | Some baseExpr -> acExpr (baseExpr, ctx) |> snd
-            | None -> ctx
+    invoke
+      (fun () ->
+        let ctx =
+          match baseOpt with
+          | Some baseExpr -> acExpr (baseExpr, ctx) |> snd
+          | None -> ctx
 
-          let ctx =
-            fields
-            |> List.fold (fun ctx (_, init, _) -> acExprChecked init ctx) ctx
+        let ctx =
+          fields
+          |> List.fold (fun ctx (_, init, _) -> acExprChecked init ctx) ctx
 
-          UnitAx, ctx)
+        UnitAx, ctx)
 
   | TMatchExpr (cond, arms, ty, _) ->
-      invoke
-        (fun () ->
-          let _, ctx = acExpr (cond, ctx)
+    invoke
+      (fun () ->
+        let _, ctx = acExpr (cond, ctx)
 
-          let ctx =
-            arms
-            |> List.fold
-                 (fun ctx (_, guard, body) ->
-                   let _, ctx = acExpr (guard, ctx)
-                   acExprChecked body ctx)
-                 ctx
+        let ctx =
+          arms
+          |> List.fold
+               (fun ctx (_, guard, body) ->
+                 let _, ctx = acExpr (guard, ctx)
+                 acExprChecked body ctx)
+               ctx
 
-          tyToArityEx ty, ctx)
+        tyToArityEx ty, ctx)
 
   | TNavExpr (l, _, ty, _) ->
-      let _, ctx = acExpr (l, ctx)
-      tyToArityEx ty, ctx
+    let _, ctx = acExpr (l, ctx)
+    tyToArityEx ty, ctx
 
   | TNodeExpr (TAppEN, [ callee; arg ], ty, loc) ->
-      let calleeArity, ctx = acExpr (callee, ctx)
-      let argArity, ctx = acExpr (arg, ctx)
+    let calleeArity, ctx = acExpr (callee, ctx)
+    let argArity, ctx = acExpr (arg, ctx)
 
-      match calleeArity with
-      | HungryAx -> HungryAx, ctx
+    match calleeArity with
+    | HungryAx -> HungryAx, ctx
 
-      | FunAx (a :: args, result) when arityExIsUnifiable a argArity ->
-          if List.isEmpty args then
-            tyToArityEx ty, ctx
-          else
-            FunAx(args, result), ctx
+    | FunAx (a :: args, result) when arityExIsUnifiable a argArity ->
+      if List.isEmpty args then
+        tyToArityEx ty, ctx
+      else
+        FunAx(args, result), ctx
 
-      | _ ->
-          let expected =
-            "(" + arityExToString argArity + ", ..) -> .."
+    | _ ->
+      let expected =
+        "(" + arityExToString argArity + ", ..) -> .."
 
-          let ctx =
-            addArityError (arityExToString calleeArity) expected loc ctx
+      let ctx =
+        addArityError (arityExToString calleeArity) expected loc ctx
 
-          tyToArityEx ty, ctx
-
-  | TNodeExpr (_, items, ty, _) ->
-      let ctx = acExprs items ctx
       tyToArityEx ty, ctx
 
+  | TNodeExpr (_, items, ty, _) ->
+    let ctx = acExprs items ctx
+    tyToArityEx ty, ctx
+
   | TBlockExpr (stmts, last) ->
-      let ctx = acExprs stmts ctx
-      acExpr (last, ctx)
+    let ctx = acExprs stmts ctx
+    acExpr (last, ctx)
 
   | TLetValExpr (_, init, next, _, _) ->
-      let ctx = acExprChecked init ctx
-      acExpr (next, ctx)
+    let ctx = acExprChecked init ctx
+    acExpr (next, ctx)
 
   | TLetFunExpr (_, _, _, _, body, next, _, _) ->
-      let ctx = acExprChecked body ctx
-      acExpr (next, ctx)
+    let ctx = acExprChecked body ctx
+    acExpr (next, ctx)
 
   | TModuleExpr _
   | TModuleSynonymExpr _ -> unreachable () // Resolved in NameRes.
