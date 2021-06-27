@@ -18,6 +18,9 @@ let private profileLog (msg: string) (Profiler state): unit =
 
 let private fileExists (filePath: string): bool = __nativeFun ("file_exists", filePath)
 
+let private dirCreate (baseDir: string) (dir: string): bool =
+  __nativeFun ("dir_create", dir, baseDir)
+
 let private fileReadAllText (filePath: string): string =
   __nativeFun ("file_read_all_text", filePath)
 
@@ -38,13 +41,16 @@ let main _ =
 
   let home = getEnv "HOME"
   let miloneHome = getEnv "MILONE_HOME"
+  let workDir = getEnv "PWD"
 
   let host: CliHost =
     { Args = args
+      WorkDir = workDir
       Home = home
       MiloneHome = miloneHome
       ProfileInit = profileInit
       ProfileLog = profileLog
+      DirCreate = dirCreate
       FileReadAllText = readFile
       FileWriteAllText = fileWriteAllText
       WriteStdout = writeStdout }

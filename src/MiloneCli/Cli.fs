@@ -101,6 +101,8 @@ type CliHost =
     /// Command line args.
     Args: string list
 
+    WorkDir: string
+
     /// Path to $HOME.
     Home: string
 
@@ -112,6 +114,11 @@ type CliHost =
 
     /// Prints a message to stderr for profiling.
     ProfileLog: string -> Profiler -> unit
+
+    /// Ensures directory exist.
+    ///
+    /// baseDir -> dir -> exist
+    DirCreate: string -> string -> bool
 
     /// Reads all contents of a file as string.
     FileReadAllText: string -> string option
@@ -668,6 +675,12 @@ rule link
 
   let exeFile =
     targetDir + "/" + ctx.EntryProjectName + ".exe"
+
+  let ok = host.DirCreate host.WorkDir targetDir
+
+  if not ok then
+    printfn "error: Couldn't create target dir: %s." targetDir
+    exit 1
 
   match compile ctx with
   | CompileError output ->
