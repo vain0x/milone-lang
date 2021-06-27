@@ -60,7 +60,12 @@ struct String str_of_c_str(char const *s);
 struct String str_add(struct String l, struct String r);
 
 // Create a slice of string.
-struct String str_get_slice(int l, int r, struct String s);
+struct String str_slice(struct String s, int l, int r);
+
+/// Implementation of `s.[l..r]`; `r` is inclusive.
+static struct String str_get_slice(int l, int r, struct String s) {
+    return str_slice(s, l, r + 1);
+}
 
 struct String str_ensure_null_terminated(struct String s);
 

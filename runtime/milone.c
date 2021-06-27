@@ -332,12 +332,9 @@ struct String str_add(struct String left, struct String right) {
     return (struct String){.str = str, .len = len};
 }
 
-struct String str_get_slice(int l, int r, struct String s) {
+struct String str_slice(struct String s, int l, int r) {
     l = int_clamp(l, 0, s.len);
-
-    // Note `r` is inclusive so far.
-    r = int_clamp(r + 1, l, s.len);
-
+    r = int_clamp(r, l, s.len);
     assert(0 <= l && l <= r && r <= s.len);
     return (struct String){.str = s.str + l, .len = r - l};
 }
