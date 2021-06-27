@@ -14,6 +14,9 @@
 #include <string.h>
 #include <time.h>
 
+#include <sys/stat.h> // for mkdir; FIXME: portable way
+#include <sys/types.h>
+
 #include <milone.h>
 
 // -----------------------------------------------
@@ -561,6 +564,67 @@ int file_exists(struct String file_name) {
     return ok;
 }
 
+// Prepend `base_path` as prefix to the path if it's relative.
+// For absolute path, just return `path`.
+struct String path_join(struct String base_path, struct String path) {
+    assert(base_path.len >= 1 && *base_path.str == '/');
+
+    if (path.len >= 1 && *path.str == '/') {
+        return path;
+    }
+
+    if (base_path.len >= 1 && base_path.str[base_path.len - 1] != '/') {
+        base_path = str_add(base_path, str_borrow("/"));
+    }
+    return str_add(base_path, path);
+}
+
+// Create a directory unless it exists.
+bool dir_create(struct String dir, struct String base_dir) {
+    assert(dir.len != 0);
+
+    dir = path_join(base_dir, dir);
+
+    // Span of absolute path.
+    char const *const al = dir.str;
+    char const *const ar = dir.str + (size_t)dir.len;
+
+    // Start of basename.
+    char const *bl = al;
+
+    while (bl - al < dir.len) {
+        if (*bl == '/') {
+            bl++;
+            continue;
+        }
+
+        // Assume a directory at `dir[..bl]` exists.
+        // Find the range of basename: `bl..br`.
+        char const *br = bl + 1;
+        while (br != ar && *br != '/') {
+            br++;
+        }
+
+        if ((br - bl == 1 && *bl == '.')
+            || (br - bl == 2 && strncmp(bl, "..", 2) == 0)) {
+            bl = br;
+            continue;
+        }
+
+        // Create the directory at `al..br`.
+        {
+            // FIXME: Unnecessary copying
+            const char *d = str_to_c_str(str_slice(dir, 0, (int)(br - al)));
+
+            if (mkdir(d, 0774) != 0 && errno != EEXIST) {
+                return false;
+            }
+            bl = br;
+        }
+    }
+    return true;
+}
+
 struct String file_read_all_text(struct String file_name) {
     file_name = str_ensure_null_terminated(file_name);
 
@@ -608,8 +672,10 @@ void file_write_all_text(struct String file_name, struct String content) {
 
         if (size >= 0 && (size_t)size == (size_t)content.len) {
             char *old_content = calloc((size_t)size + 1, sizeof(char));
-            size_t read_len = fread(old_content, sizeof(char), (size_t)size, fp);
-            bool same = read_len == (size_t)size && memcmp(old_content, content.str, read_len) == 0;
+            size_t read_len =
+                fread(old_content, sizeof(char), (size_t)size, fp);
+            bool same = read_len == (size_t)size &&
+                        memcmp(old_content, content.str, read_len) == 0;
             free(old_content);
 
             if (same) {
@@ -618,7 +684,8 @@ void file_write_all_text(struct String file_name, struct String content) {
         }
     }
 
-    bool ok = fwrite(content.str, sizeof(char), (size_t)content.len, fp) == (size_t)content.len;
+    bool ok = fwrite(content.str, sizeof(char), (size_t)content.len, fp) ==
+              (size_t)content.len;
     if (!ok) {
         perror("fwrite");
         fclose(fp);
