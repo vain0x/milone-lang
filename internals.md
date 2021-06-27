@@ -150,3 +150,30 @@ scripts/pack
 - Make a release in GitHub
     - Add the package to release
     - Build a package on Windows and add it to release too
+
+## Formatting
+
+TODO: explain more
+
+Check current fantomas version used in [ionide-vscode-fsharp](https://github.com/ionide/ionide-vscode-fsharp/blob/master/RELEASE_NOTES.md).
+See also [FsAutoComplete/RELEASE_NOTES.md](https://github.com/fsharp/FsAutoComplete/blob/master/RELEASE_NOTES.md).
+
+Install [fantomas](https://github.com/fsprojects/fantomas) locally.
+
+```sh
+dotnet tool install fantomas-tool --version 4.5.0-beta-001
+
+# Execute for each F# file. Since fantomas crashes on error, avoid using --recursive mode.
+find -type f \
+    -name '*.fs' \
+    -not \( \
+        -path '*/bin/Debug/*' \
+        -or -path '*/bin/Release/*' \
+        -or -path '*/obj/Debug/*' \
+        -or -path '*/obj/Release/*' \) | \
+    xargs -I{} -P4 dotnet fantomas {}
+
+# Execute for each milone file. Use temporary file since fantomas doesn't allow non-F# file extensions.
+find -type f -name '*.milone' | \
+    xargs -I{} -P4 sh -c 'cp -f {} {}_.fs; fantomas {}_.fs; if test $? -eq 0; then cat {}_.fs >{}; fi; rm -f {}_.fs'
+```
