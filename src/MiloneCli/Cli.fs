@@ -809,6 +809,14 @@ let private parseVerbosity (host: CliHost) args =
     Quiet
     args
 
+let private defaultTargetDir projectDir =
+  let projectName =
+    projectDir
+    |> pathStrTrimEndPathSep
+    |> pathStrToFileName
+
+  "target/" + projectName
+
 [<NoEquality; NoComparison>]
 type private CliCmd =
   | HelpCmd
@@ -905,7 +913,7 @@ let cli (host: CliHost) =
     | projectDir :: _ ->
       let options : CompileOptions =
         { ProjectDir = projectDir
-          TargetDir = Option.defaultValue "." targetDir
+          TargetDir = Option.defaultValue (defaultTargetDir projectDir) targetDir
           HeaderOnly = false
           Verbosity = verbosity }
 
@@ -935,7 +943,7 @@ let cli (host: CliHost) =
     | projectDir :: _ ->
       let options : BuildOptions =
         { ProjectDir = projectDir
-          TargetDir = Option.defaultValue "." targetDir
+          TargetDir = Option.defaultValue (defaultTargetDir projectDir) targetDir
           Verbosity = verbosity }
 
       cliBuild host options
