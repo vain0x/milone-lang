@@ -69,6 +69,9 @@ SUBCOMMANDS
         Builds a milone-lang project to C & build.ninja
         so that you can make an executable with ninja easily.
 
+        --target-dir <DIR>  Output directory.
+                            (Defaults to target/<PROJECT-NAME>)
+
 OPTIONS
     -h, --help      Print help text.
     -V, --version   Print compiler version.
