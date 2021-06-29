@@ -716,8 +716,7 @@ rule link
     let miloneObj = miloneHome + "/runtime/milone.o"
     let miloneHeader = miloneHome + "/runtime/milone.h"
 
-    let cFile name =
-      [ projectDir; "/"; name ] |> S.concat ""
+    let cFile name = [ targetDir; "/"; name ] |> S.concat ""
 
     let objFile name =
       [ targetDir
@@ -752,7 +751,7 @@ rule link
       |> cons (
         files
         |> List.map (fun (name, _) -> objFile name)
-        |> S.concat ""
+        |> S.concat " "
       )
       |> cons "\n"
 
