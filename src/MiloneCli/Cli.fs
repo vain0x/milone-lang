@@ -73,7 +73,7 @@ EXPERIMENTAL features
         --target-dir <DIR>  Output directory.
                             (Defaults to target/<PROJECT-NAME>)
 
-    milone run <PROJECT-DIR>
+    milone run <PROJECT-DIR> [-- ARGS...]
         Runs a milone-lang project.
         (Requirements: gcc and ninja.)
 
@@ -758,7 +758,7 @@ rule link
     host.FileWriteAllText ninjaFile (build |> List.rev |> S.concat "")
     0
 
-let private cliRun (host: CliHost) (options: BuildOptions) =
+let private cliRun (host: CliHost) (options: BuildOptions) (restArgs: string list) =
   let projectDir = options.ProjectDir
   let targetDir = options.TargetDir
   let ninjaFile = targetDir + "/build.ninja"
@@ -768,6 +768,18 @@ let private cliRun (host: CliHost) (options: BuildOptions) =
       compileCtxNew host options.Verbosity projectDir
 
     targetDir + "/" + ctx.EntryProjectName + ".exe"
+
+  // FIXME: Escape correctly.
+  let restArgs =
+    let escape (s: string) =
+      s
+      |> S.replace "\\" "/"
+      |> S.replace "$" "\\$"
+      |> S.replace "'" "\\'"
+      |> S.replace "\"" "\\\""
+      |> S.replace " " "\\ "
+
+    restArgs |> List.map escape |> S.concat " "
 
   let exitCode = cliBuild host options
 
@@ -780,6 +792,7 @@ let private cliRun (host: CliHost) (options: BuildOptions) =
       + "' 1>&2 && '"
       + exeFile
       + "' "
+      + restArgs
     )
 
     1
@@ -999,6 +1012,11 @@ let cli (host: CliHost) =
     let targetDir, args =
       parseOption (fun x -> x = "--target-dir") args
 
+    let restArgs =
+      args
+      |> List.skipWhile (fun x -> x <> "--")
+      |> List.skip 1
+
     match args with
     | projectDir :: _ ->
       let options : BuildOptions =
@@ -1006,7 +1024,7 @@ let cli (host: CliHost) =
           TargetDir = Option.defaultValue (defaultTargetDir projectDir) targetDir
           Verbosity = verbosity }
 
-      cliRun host options
+      cliRun host options restArgs
 
     | [] ->
       printfn "ERROR: Expected project dir."
