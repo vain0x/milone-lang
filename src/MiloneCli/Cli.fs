@@ -775,11 +775,11 @@ let private cliRun (host: CliHost) (options: BuildOptions) =
     exitCode
   else
     host.ExecuteInto(
-      "ninja -f \""
+      "ninja -f '"
       + ninjaFile
-      + "\" 1>&2 && \""
+      + "' 1>&2 && '"
       + exeFile
-      + "\""
+      + "' "
     )
 
     1
