@@ -605,8 +605,8 @@ bool dir_create(struct String dir, struct String base_dir) {
             br++;
         }
 
-        if ((br - bl == 1 && *bl == '.')
-            || (br - bl == 2 && strncmp(bl, "..", 2) == 0)) {
+        if ((br - bl == 1 && *bl == '.') ||
+            (br - bl == 2 && strncmp(bl, "..", 2) == 0)) {
             bl = br;
             continue;
         }
