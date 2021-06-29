@@ -659,30 +659,37 @@ struct String file_read_all_text(struct String file_name) {
 void file_write_all_text(struct String file_name, struct String content) {
     file_name = str_ensure_null_terminated(file_name);
 
-    FILE *fp = fopen(file_name.str, "w+");
-    if (!fp) {
-        perror("fopen(w+)");
-        exit(1);
-    }
+    FILE *fp = NULL;
 
     // Skip writing if unchanged.
     {
-        fseek(fp, 0, SEEK_END);
-        long size = ftell(fp);
-        fseek(fp, 0, SEEK_SET);
+        fp = fopen(file_name.str, "r");
+        if (fp) {
+            fseek(fp, 0, SEEK_END);
+            long size = ftell(fp);
+            fseek(fp, 0, SEEK_SET);
 
-        if (size >= 0 && (size_t)size == (size_t)content.len) {
-            char *old_content = calloc((size_t)size + 1, sizeof(char));
-            size_t read_len =
-                fread(old_content, sizeof(char), (size_t)size, fp);
-            bool same = read_len == (size_t)size &&
-                        memcmp(old_content, content.str, read_len) == 0;
-            free(old_content);
+            if (size >= 0 && (size_t)size == (size_t)content.len) {
+                char *old_content = calloc((size_t)size + 1, sizeof(char));
+                size_t read_len =
+                    fread(old_content, sizeof(char), (size_t)size, fp);
+                bool same = read_len == (size_t)size &&
+                            memcmp(old_content, content.str, read_len) == 0;
+                free(old_content);
 
-            if (same) {
-                goto END;
+                if (same) {
+                    goto END;
+                }
             }
+            fclose(fp);
+            fp = NULL;
         }
+    }
+
+    fp = fopen(file_name.str, "w+");
+    if (!fp) {
+        perror("fopen(w+)");
+        exit(1);
     }
 
     bool ok = fwrite(content.str, sizeof(char), (size_t)content.len, fp) ==
