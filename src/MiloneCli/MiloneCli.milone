@@ -32,6 +32,8 @@ let private writeStdout (contents: string) : unit =
 
 let private getEnv (name: string) : string = __nativeFun ("milone_get_env", name)
 
+let private executeInto (cmd: string) : unit = __nativeFun ("execute_into", cmd)
+
 let private readFile filePath =
   if fileExists filePath then
     fileReadAllText filePath |> Some
@@ -56,6 +58,7 @@ let main _ =
       DirCreate = dirCreate
       FileReadAllText = readFile
       FileWriteAllText = fileWriteAllText
-      WriteStdout = writeStdout }
+      WriteStdout = writeStdout
+      ExecuteInto = executeInto }
 
   cli host

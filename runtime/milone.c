@@ -16,6 +16,7 @@
 
 #include <sys/stat.h> // for mkdir; FIXME: portable way
 #include <sys/types.h>
+#include <unistd.h> // for exec
 
 #include <milone.h>
 
@@ -705,6 +706,17 @@ struct String milone_get_env(struct String name) {
     }
 
     return str_of_c_str(value);
+}
+
+void execute_into(struct String cmd) {
+    char *argv[] = {
+        "/bin/sh",
+        "-c",
+        (char *)str_to_c_str(cmd),
+        0,
+    };
+
+    execv("/bin/sh", argv);
 }
 
 // -----------------------------------------------

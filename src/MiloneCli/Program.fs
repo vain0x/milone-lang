@@ -28,6 +28,15 @@ let private writeFile (filePath: string) (contents: string) : unit =
   with
   | err -> eprintfn "Couldn't write to file '%s'. '%s'" filePath err.Message
 
+let private executeInto (cmd: string) : unit =
+  try
+    let p =
+      System.Diagnostics.Process.Start("/bin/sh", [ "-c"; cmd ])
+
+    p.WaitForExit()
+  with
+  | err -> eprintfn "Couldn't execute into: '%s'. '%s'" cmd err.Message
+
 let dotnetCliHost () : CliHost =
   let args =
     System.Environment.GetCommandLineArgs()
@@ -50,7 +59,8 @@ let dotnetCliHost () : CliHost =
     DirCreate = dirCreate
     FileReadAllText = readFile
     FileWriteAllText = writeFile
-    WriteStdout = printf "%s" }
+    WriteStdout = printf "%s"
+    ExecuteInto = executeInto }
 
 [<EntryPoint>]
 let main _ = cli (dotnetCliHost ())

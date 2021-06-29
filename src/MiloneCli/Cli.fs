@@ -65,11 +65,19 @@ SUBCOMMANDS
         If error, exits with non-zero code.
         Errors are written to STDOUT. (FIXME: use STDERR)
 
+EXPERIMENTAL features
     milone build <PROJECT-DIR>
         Builds a milone-lang project to C & build.ninja
         so that you can make an executable with ninja easily.
 
         --target-dir <DIR>  Output directory.
+                            (Defaults to target/<PROJECT-NAME>)
+
+    milone run <PROJECT-DIR>
+        Runs a milone-lang project.
+        (Requirements: gcc and ninja.)
+
+        --target-dir <DIR>  Output/build directory.
                             (Defaults to target/<PROJECT-NAME>)
 
 OPTIONS
@@ -130,7 +138,10 @@ type CliHost =
     FileWriteAllText: string -> string -> unit
 
     /// Writes to standard output.
-    WriteStdout: string -> unit }
+    WriteStdout: string -> unit
+
+    /// Turns this process into a shell that runs specified command.
+    ExecuteInto: string -> unit }
 
 // -----------------------------------------------
 // Helpers
@@ -748,6 +759,32 @@ rule link
     host.FileWriteAllText ninjaFile (build |> List.rev |> S.concat "")
     0
 
+let private cliRun (host: CliHost) (options: BuildOptions) =
+  let projectDir = options.ProjectDir
+  let targetDir = options.TargetDir
+  let ninjaFile = targetDir + "/build.ninja"
+
+  let exeFile =
+    let ctx =
+      compileCtxNew host options.Verbosity projectDir
+
+    targetDir + "/" + ctx.EntryProjectName + ".exe"
+
+  let exitCode = cliBuild host options
+
+  if exitCode <> 0 then
+    exitCode
+  else
+    host.ExecuteInto(
+      "ninja -f \""
+      + ninjaFile
+      + "\" 1>&2 && \""
+      + exeFile
+      + "\""
+    )
+
+    1
+
 // -----------------------------------------------
 // Arg parsing
 // -----------------------------------------------
@@ -829,6 +866,7 @@ type private CliCmd =
   | BuildCmd
   | HeaderCmd
   | ParseCmd
+  | RunCmd
   | BadCmd of string
 
 let private parseArgs args =
@@ -853,6 +891,7 @@ let private parseArgs args =
     | "build" -> BuildCmd, args
     | "check" -> CheckCmd, args
     | "compile" -> CompileCmd, args
+    | "run" -> RunCmd, args
 
     | "header" -> HeaderCmd, args
 
@@ -950,6 +989,25 @@ let cli (host: CliHost) =
           Verbosity = verbosity }
 
       cliBuild host options
+
+    | [] ->
+      printfn "ERROR: Expected project dir."
+      1
+
+  | RunCmd, args ->
+    let verbosity, args = parseVerbosity host args
+
+    let targetDir, args =
+      parseOption (fun x -> x = "--target-dir") args
+
+    match args with
+    | projectDir :: _ ->
+      let options : BuildOptions =
+        { ProjectDir = projectDir
+          TargetDir = Option.defaultValue (defaultTargetDir projectDir) targetDir
+          Verbosity = verbosity }
+
+      cliRun host options
 
     | [] ->
       printfn "ERROR: Expected project dir."
