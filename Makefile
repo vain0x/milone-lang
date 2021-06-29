@@ -42,7 +42,7 @@ MY_BUILD := scripts/MyBuildTool/bin/Debug/net5.0/MyBuildTool
 
 target/.timestamp/dotnet_restore: \
 		$(wildcard **/*.fsproj)
-	dotnet restore && touch $@
+	dotnet restore && mkdir -p $(shell dirname $@) && touch $@
 
 ${MY_BUILD}: target/.timestamp/dotnet_restore \
 		$(wildcard scripts/MyBuildTool/*.fs) \
