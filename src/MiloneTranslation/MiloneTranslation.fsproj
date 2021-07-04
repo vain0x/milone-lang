@@ -16,6 +16,8 @@
     <Compile Include="Monomorphizing.fs" />
     <Compile Include="Mir.fs" />
     <Compile Include="MirGen.fs" />
+    <Compile Include="Xir.fs" />
+    <Compile Include="XirGen.fs" />
     <Compile Include="Cir.fs" />
     <Compile Include="CirGen.fs" />
     <Compile Include="CirDump.fs" />

@@ -23,6 +23,7 @@ open MiloneTranslation.MirGen
 open MiloneTranslation.Monomorphizing
 open MiloneTranslation.RecordRes
 open MiloneTranslation.TailRecOptimizing
+open MiloneTranslation.XirGen
 
 module C = MiloneStd.StdChar
 module Hir = MiloneTranslation.Hir
@@ -880,6 +881,8 @@ type private CliCmd =
   | HeaderCmd
   | ParseCmd
   | RunCmd
+  // experimental
+  | XCmd
   | BadCmd of string
 
 let private parseArgs args =
@@ -905,6 +908,7 @@ let private parseArgs args =
     | "check" -> CheckCmd, args
     | "compile" -> CompileCmd, args
     | "run" -> RunCmd, args
+    | "x" -> XCmd, args
 
     | "header" -> HeaderCmd, args
 
@@ -1029,6 +1033,83 @@ let cli (host: CliHost) =
 
     | [] ->
       printfn "ERROR: Expected project dir."
+      1
+
+  | XCmd, args ->
+    let verbosity, args = parseVerbosity host args
+
+    let targetDir, args =
+      parseOption (fun x -> x = "--target-dir") args
+
+    let trace (fmt: string) (args: string list) : unit =
+      let rec go fmt args acc =
+        match args with
+        | [] -> fmt :: acc
+
+        | arg :: args ->
+          match fmt |> S.findIndex "{}" with
+          | Some i ->
+            acc
+            |> cons (fmt |> S.truncate i)
+            |> cons arg
+            |> go (fmt |> S.skip (i + 2)) args
+
+          | None -> fmt :: acc
+
+      go fmt args []
+      |> cons "\n"
+      |> List.rev
+      |> S.concat ""
+      |> host.WriteStderr
+
+    let compileWithX (ctx: CompileCtx) =
+      let host = ctx.Host
+      let v = ctx.Verbosity
+
+      match SyntaxApi.performSyntaxAnalysis ctx.SyntaxCtx with
+      | SyntaxApi.SyntaxAnalysisError (errors, _) -> CompileError(SyntaxApi.syntaxErrorsToString errors)
+
+      | SyntaxApi.SyntaxAnalysisOk (modules, tyCtx) ->
+        let decls, tyCtx = transformHir host v (modules, tyCtx)
+        // CompileOk(codeGenHirViaMir host v ctx.EntryProjectName ctx.HeaderOnly (decls, tyCtx))
+        let program = xirGen trace (decls, tyCtx)
+        trace "OK" [ objToString program ]
+        CompileOk []
+
+    match args with
+    | projectDir :: _ ->
+      let options : CompileOptions =
+        { ProjectDir = projectDir
+          TargetDir = Option.defaultValue (defaultTargetDir projectDir) targetDir
+          HeaderOnly = false
+          Verbosity = verbosity }
+
+      let ctx =
+        compileCtxNew host options.Verbosity options.ProjectDir
+
+      let ctx =
+        { ctx with
+            HeaderOnly = options.HeaderOnly }
+
+      let result = compileWithX ctx
+
+      match result with
+      | CompileOk files ->
+        List.fold
+          (fun () (name, contents) ->
+            printfn "%s" name
+            host.FileWriteAllText(options.TargetDir + "/" + name) contents)
+          ()
+          files
+
+        0
+
+      | CompileError output ->
+        host.WriteStdout output
+        1
+
+    | _ ->
+      printfn "expected project dir"
       1
 
   | BadCmd subcommand, _ ->
