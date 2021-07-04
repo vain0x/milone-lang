@@ -237,7 +237,6 @@ let private xgVar varSerial (ctx: Ctx) : XRegId * Ctx =
 
     if ctx.Regs |> TMap.containsKey regId then
       regId, ctx
-
     else
       let ty, (ctx: Ctx) = xgTy (varDef.Ty, ctx)
 
@@ -404,6 +403,11 @@ let private xgExprToArg (expr: HExpr, ctx: Ctx) : XArg * Ctx =
 
 let private xgExprAsStmt (expr: HExpr) (ctx: Ctx) : Ctx =
   match expr with
+  | HLitExpr _
+  | HVarExpr _
+  | HFunExpr _
+  | HVariantExpr _ -> ctx
+
   | _ when ctx.TerminatorOpt |> Option.isSome ->
     ctx.Trace
       "unreachable expr deleted {} {}"
@@ -412,34 +416,18 @@ let private xgExprAsStmt (expr: HExpr) (ctx: Ctx) : Ctx =
 
     ctx
 
-  | HLitExpr _
-  | HVarExpr _
-  | HFunExpr _
-  | HVariantExpr _ -> ctx
-
-  | HPrimExpr (prim, ty, loc) ->
-    invoke
-      (fun () ->
-        ctx.Trace "prim at {} {}" [ locToString loc ]
-        ctx)
-
-  | HMatchExpr _ ->
-    let _, ctx = xgMatchExpr expr ctx
-    ctx
-
-  | HNodeExpr _ ->
-    let _, ctx = xgNodeExprToArg expr ctx
-    ctx
-
   | HBlockExpr (stmts, last) ->
     let ctx = xgStmts stmts ctx
     xgExprAsStmt last ctx
 
   | HLetValExpr _ -> xgLetValExpr expr ctx
 
-  | HLetFunExpr _ // Nested HLetFunExpr is resolved in Hoist.
-  | HNavExpr _ // HNavExpr is resolved in RecordRes.
-  | HRecordExpr _ -> unreachable () // HRecordExpr is resolved in RecordRes.
+  | _ ->
+    let _, ctx = xgExprToArg (expr, ctx)
+    ctx
+
+let private xgStmts (stmts: HExpr list) (ctx: Ctx) : Ctx =
+  List.fold (fun ctx expr -> xgExprAsStmt expr ctx) ctx stmts
 
 let private xgExprAsBranch (expr: HExpr) (target: XTarget) (loc: Loc) (ctx: Ctx) : XBlockId * Ctx =
   let entryBlockId, ctx = freshBlock ctx
@@ -457,9 +445,6 @@ let private xgExprAsBranch (expr: HExpr) (target: XTarget) (loc: Loc) (ctx: Ctx)
   let ctx = leaveBlock parent ctx
 
   entryBlockId, ctx
-
-let private xgStmts (stmts: HExpr list) (ctx: Ctx) : Ctx =
-  List.fold (fun ctx expr -> xgExprAsStmt expr ctx) ctx stmts
 
 // -----------------------------------------------
 // decls
