@@ -60,6 +60,7 @@ let dotnetCliHost () : CliHost =
     FileReadAllText = readFile
     FileWriteAllText = writeFile
     WriteStdout = printf "%s"
+    WriteStderr = eprintf "%s"
     ExecuteInto = executeInto }
 
 [<EntryPoint>]

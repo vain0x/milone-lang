@@ -30,6 +30,9 @@ let private fileWriteAllText (filePath: string) (contents: string) : unit =
 let private writeStdout (contents: string) : unit =
   __nativeStmt ("fwrite({0}.str, sizeof(char), (size_t){0}.len, stdout);", contents)
 
+let private writeStderr (contents: string) : unit =
+  __nativeStmt ("fwrite({0}.str, sizeof(char), (size_t){0}.len, stderr);", contents)
+
 let private getEnv (name: string) : string = __nativeFun ("milone_get_env", name)
 
 let private executeInto (cmd: string) : unit = __nativeFun ("execute_into", cmd)
@@ -59,6 +62,7 @@ let main _ =
       FileReadAllText = readFile
       FileWriteAllText = fileWriteAllText
       WriteStdout = writeStdout
+      WriteStderr = writeStderr
       ExecuteInto = executeInto }
 
   cli host

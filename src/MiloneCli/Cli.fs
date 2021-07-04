@@ -139,6 +139,7 @@ type CliHost =
 
     /// Writes to standard output.
     WriteStdout: string -> unit
+    WriteStderr: string -> unit
 
     /// Turns this process into a shell that runs specified command.
     ExecuteInto: string -> unit }
