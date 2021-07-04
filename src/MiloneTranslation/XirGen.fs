@@ -124,7 +124,7 @@ let private freshSerial (ctx: Ctx) =
 
 let private enterBlock blockId (ctx: Ctx) =
   let parent =
-    (ctx.CurrentBlockOpt, ctx.Stmts, ctx.TerminatorOpt)
+    ctx.CurrentBlockOpt, ctx.Stmts, ctx.TerminatorOpt
 
   let ctx =
     { ctx with
@@ -140,7 +140,7 @@ let private leaveBlock parent (ctx: Ctx) =
   let terminator = ctx.TerminatorOpt |> expect ()
 
   let ctx =
-    let (blockIdOpt, stmts, terminatorOpt) = parent
+    let blockIdOpt, stmts, terminatorOpt = parent
 
     { ctx with
         CurrentBlockOpt = blockIdOpt
@@ -202,6 +202,8 @@ let private freshBlock (ctx: Ctx) =
 
 let private finishBranching terminator targetBlock (ctx: Ctx) =
   let blockId = ctx.CurrentBlockOpt |> expect ()
+  let stmts = ctx.Stmts |> List.rev
+  let terminatorOpt = ctx.TerminatorOpt
 
   let ctx =
     let blockDef = ctx.Blocks |> mapFind blockId
@@ -209,8 +211,8 @@ let private finishBranching terminator targetBlock (ctx: Ctx) =
 
     let blockDef =
       { blockDef with
-          Stmts = ctx.Stmts
-          Terminator = Option.defaultValue terminator ctx.TerminatorOpt }
+          Stmts = stmts
+          Terminator = Option.defaultValue terminator terminatorOpt }
 
     { ctx with
         Blocks = ctx.Blocks |> TMap.add blockId blockDef }
@@ -219,6 +221,37 @@ let private finishBranching terminator targetBlock (ctx: Ctx) =
       CurrentBlockOpt = Some targetBlock
       Stmts = []
       TerminatorOpt = None }
+
+// -----------------------------------------------
+// symbols
+// -----------------------------------------------
+
+let private xgVar varSerial (ctx: Ctx) : XRegId * Ctx =
+  let varDef = mapFind varSerial ctx.Vars
+
+  match varDef.IsStatic with
+  | IsStatic -> todo ()
+
+  | NotStatic ->
+    let regId : XRegId = varSerial |> varSerialToInt
+
+    if ctx.Regs |> TMap.containsKey regId then
+      regId, ctx
+
+    else
+      let ty, (ctx: Ctx) = xgTy (varDef.Ty, ctx)
+
+      let regDef : XRegDef =
+        { Name = Some varDef.Name
+          Id = regId
+          Ty = ty
+          Loc = varDef.Loc }
+
+      let ctx =
+        { ctx with
+            Regs = ctx.Regs |> TMap.add regId regDef }
+
+      regId, ctx
 
 // -----------------------------------------------
 // tys
@@ -237,6 +270,25 @@ let private xgTy (ty: Ty, ctx: Ctx) : XTy * Ctx =
 // -----------------------------------------------
 // pats
 // -----------------------------------------------
+
+let private xgPatAsIrrefutable (pat: HPat) (cond: XArg) (ctx: Ctx) : Ctx =
+  match pat with
+  | HDiscardPat _
+  | HNodePat (HTuplePN, [], _, _) -> ctx
+
+  | HVarPat (_, varSerial, _, loc) ->
+    let reg, ctx = xgVar varSerial ctx
+    ctx |> addStmt (XAssignStmt(reg, cond, loc))
+
+  | HAsPat (innerPat, varSerial, loc) ->
+    let reg, ctx = xgVar varSerial ctx
+
+    let ctx =
+      ctx |> addStmt (XAssignStmt(reg, cond, loc))
+
+    xgPatAsIrrefutable innerPat cond ctx
+
+  | _ -> todo ()
 
 // -----------------------------------------------
 // pattern matching
@@ -309,13 +361,21 @@ let private xgNodeExprToArg (expr: HExpr) (ctx: Ctx) =
     // todo
     XUnitArg loc, ctx
 
+let private xgLetValExpr (expr: HExpr) (ctx: Ctx) : Ctx =
+  let pat, init =
+    match expr with
+    | HLetValExpr (pat, init, _, _, _) -> pat, init
+    | _ -> unreachable ()
+
+  let init, ctx = xgExprToArg (init, ctx)
+  xgPatAsIrrefutable pat init ctx
+
 let private xgExprToArg (expr: HExpr, ctx: Ctx) : XArg * Ctx =
   match expr with
   | HLitExpr (lit, loc) -> XLitArg(lit, loc), ctx
 
-  | HVarExpr (serial, ty, loc) ->
-    // TODO: register var as local reg
-    let regId = 0
+  | HVarExpr (varSerial, _, loc) ->
+    let regId, ctx = xgVar varSerial ctx
     XRegArg(regId, loc), ctx
 
   | HFunExpr _ -> failwith "fun expr must occur as callee or arg of closure"
@@ -330,8 +390,13 @@ let private xgExprToArg (expr: HExpr, ctx: Ctx) : XArg * Ctx =
 
   | HNodeExpr _ -> xgNodeExprToArg expr ctx
 
-  | HBlockExpr _ -> todo ()
-  | HLetValExpr _ -> todo ()
+  | HBlockExpr (stmts, last) ->
+    let ctx = xgStmts stmts ctx
+    xgExprToArg (last, ctx)
+
+  | HLetValExpr _ ->
+    let ctx = xgLetValExpr expr ctx
+    XUnitArg(exprToLoc expr), ctx
 
   | HLetFunExpr _ // Nested HLetFunExpr is resolved in Hoist.
   | HNavExpr _ // HNavExpr is resolved in RecordRes.
@@ -367,16 +432,10 @@ let private xgExprAsStmt (expr: HExpr) (ctx: Ctx) : Ctx =
     ctx
 
   | HBlockExpr (stmts, last) ->
-    let ctx =
-      List.fold (fun ctx expr -> xgExprAsStmt expr ctx) ctx stmts
-
+    let ctx = xgStmts stmts ctx
     xgExprAsStmt last ctx
 
-  | HLetValExpr (pat, init, _, _, loc) ->
-    invoke
-      (fun () ->
-        ctx.Trace "let at {}" [ locToString loc ]
-        ctx)
+  | HLetValExpr _ -> xgLetValExpr expr ctx
 
   | HLetFunExpr _ // Nested HLetFunExpr is resolved in Hoist.
   | HNavExpr _ // HNavExpr is resolved in RecordRes.
@@ -389,21 +448,18 @@ let private xgExprAsBranch (expr: HExpr) (target: XTarget) (loc: Loc) (ctx: Ctx)
   let arg, (ctx: Ctx) = xgExprToArg (expr, ctx)
 
   let ctx =
-    match ctx.TerminatorOpt with
-    | Some _ -> ctx
+    let targetReg, targetBlockId = target
 
-    | None ->
-      let targetReg, targetBlockId = target
-
-      let ctx =
-        ctx |> addStmt (XAssignStmt(targetReg, arg, loc))
-
-      { ctx with
-          TerminatorOpt = Some(XJumpTk targetBlockId) }
+    ctx
+    |> addStmt (XAssignStmt(targetReg, arg, loc))
+    |> setTerminator (XJumpTk targetBlockId)
 
   let ctx = leaveBlock parent ctx
 
   entryBlockId, ctx
+
+let private xgStmts (stmts: HExpr list) (ctx: Ctx) : Ctx =
+  List.fold (fun ctx expr -> xgExprAsStmt expr ctx) ctx stmts
 
 // -----------------------------------------------
 // decls
