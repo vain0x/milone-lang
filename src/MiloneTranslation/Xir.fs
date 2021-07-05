@@ -31,13 +31,31 @@ type XArg =
   // | XDiscriminantArg of XVariantId
   | XRegArg of XRegId * Loc
 
+type XUnary =
+  | XMinusUnary
+  | XNotUnary
+
+type XBinary =
+  | XAddBinary
+  | XStrAddBinary
+
+type XRval =
+  // extends XArgs
+  | XLitRval of Lit * Loc
+  | XUnitRval of Loc
+  | XRegRval of XRegId * Loc
+
+  | XUnaryRval of XUnary * XArg * Loc
+  | XBinaryRval of XBinary * XArg * XArg * Loc
+
 type XStmt =
   | XAssignStmt of XRegId * XArg * Loc
   | XPrintfnStmt of XArg list * Loc
+  | XPtrWriteStmt of XArg * XArg * Loc
 
 type XTerminator =
   | XUnreachableTk
-  | XExitTk of XArg
+  | XExitTk of XArg * Loc
   | XReturnTk of XArg
   | XJumpTk of XBlockId
   | XIfTk of XArg * XBlockId * XBlockId * Loc
