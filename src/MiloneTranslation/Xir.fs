@@ -50,6 +50,7 @@ type XTy =
 [<RequireQualifiedAccess>]
 type XPart =
   | Deref
+  | Discriminant
   | Field of XFieldId
   | Payload of XVariantId
 
@@ -59,7 +60,7 @@ type XPlace = { Local: XLocalId; Path: XPart list }
 type XArg =
   | XUnitArg of Loc
   | XLitArg of Lit * Loc
-  // | XDiscriminantArg of XVariantId
+  | XDiscriminantArg of XVariantId * Loc
   | XLocalArg of XLocalId * Loc
 
 type XUnary =
@@ -69,6 +70,7 @@ type XUnary =
 type XBinary =
   | XAddBinary
   | XStrAddBinary
+  | XScalarEqualBinary
 
 type XAggregateKind =
   | XUnionAk of XUnionTyId
@@ -78,7 +80,9 @@ type XRval =
   // extends XArg
   | XLitRval of Lit * Loc
   | XUnitRval of Loc
+  | XDiscriminantRval of XVariantId * Loc
   | XLocalRval of XLocalId * Loc
+  | XPlaceRval of XPlace * Loc
 
   | XUnaryRval of XUnary * XArg * Loc
   | XBinaryRval of XBinary * XArg * XArg * Loc
