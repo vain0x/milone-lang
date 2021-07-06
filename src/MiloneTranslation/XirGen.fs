@@ -27,11 +27,11 @@ type private PrimTyInfo =
   | None
   | ScalarAdd
   | StrAdd
-  | OptionSome of optionItemTy: Ty
+  | Option of optionItemTy: Ty
 
-let private primTyInfo (prim: HPrim) (args: HExpr list) : PrimTyInfo =
-  match prim, args with
-  | HPrim.Add, l :: _ ->
+let private primTyInfo (prim: HPrim) (args: HExpr list) (targetTy: Ty) : PrimTyInfo =
+  match prim, args, targetTy with
+  | HPrim.Add, l :: _, _ ->
     let (Ty (tk, _)) = exprToTy l
 
     match tk with
@@ -42,7 +42,10 @@ let private primTyInfo (prim: HPrim) (args: HExpr list) : PrimTyInfo =
     | StrTk -> PrimTyInfo.StrAdd
     | _ -> unreachable ()
 
-  | HPrim.OptionSome, arg :: _ -> PrimTyInfo.OptionSome(exprToTy arg)
+  | HPrim.OptionSome, arg :: _, _ -> PrimTyInfo.Option(exprToTy arg)
+  | HPrim.OptionSome, _, _ -> unreachable ()
+  | HPrim.OptionNone, [], Ty (OptionTk, [ itemTy ]) -> PrimTyInfo.Option(itemTy)
+  | HPrim.OptionNone, _, _ -> unreachable ()
 
   | _ -> PrimTyInfo.None
 
@@ -439,10 +442,13 @@ let private mcToIf (cond: XArg) (condTy: Ty) arms target loc (ctx: Ctx) : Ctx op
 // expr: prim and node
 // -----------------------------------------------
 
-let private xgPrimExpr (prim: HPrim) (targetTy: XTy) loc ctx : XRval * Ctx =
-  match prim with
-  | HPrim.OptionNone
-  | HPrim.Nil -> todo ()
+let private xgPrimExpr (prim: HPrim) (tyInfo: PrimTyInfo) loc ctx : XRval * Ctx =
+  match prim, tyInfo with
+  | HPrim.OptionNone, PrimTyInfo.Option itemTy ->
+    let unionId, ctx = xgOptionTy itemTy ctx
+    XAggregateRval(XUnionAk unionId, [], loc), ctx
+
+  | HPrim.Nil, _ -> todo ()
 
   | _ -> unreachable () // Must be called.
 
@@ -461,7 +467,7 @@ let private xgCallPrim (prim: HPrim) (tyInfo: PrimTyInfo) (args: XArg list) loc 
   | HPrim.Add, _, _ -> unreachable ()
 
   // constructor:
-  | HPrim.OptionSome, [ arg ], PrimTyInfo.OptionSome itemTy ->
+  | HPrim.OptionSome, [ arg ], PrimTyInfo.Option itemTy ->
     let ty, ctx = xgOptionTy itemTy ctx
     XAggregateRval(XUnionAk ty, [ arg ], loc), ctx
 
@@ -480,9 +486,9 @@ let private xgCallPrim (prim: HPrim) (tyInfo: PrimTyInfo) (args: XArg list) loc 
   | _ -> todo ()
 
 let private xgNodeExpr (expr: HExpr) (ctx: Ctx) : XRval * Ctx =
-  let kind, args, loc =
+  let kind, args, targetTy, loc =
     match expr with
-    | HNodeExpr (kind, args, _, loc) -> kind, args, loc
+    | HNodeExpr (kind, args, ty, loc) -> kind, args, ty, loc
     | _ -> unreachable ()
 
   match kind, args with
@@ -497,7 +503,7 @@ let private xgNodeExpr (expr: HExpr) (ctx: Ctx) : XRval * Ctx =
     XUnitRval loc, ctx
 
   | HCallProcEN, HPrimExpr (prim, _, _) :: args ->
-    let tyInfo = primTyInfo prim args
+    let tyInfo = primTyInfo prim args targetTy
     let args, ctx = (args, ctx) |> stMap xgExprToArg
     xgCallPrim prim tyInfo args loc ctx
 
@@ -574,9 +580,9 @@ let private xgExprToRval (expr: HExpr) (ctx: Ctx) : XRval * Ctx =
 
   | HVariantExpr (serial, ty, loc) -> todo ()
 
-  | HPrimExpr (prim, ty, loc) ->
-    ctx.Trace "prim {}" [ objToString prim ]
-    XLocalRval(0, loc), ctx
+  | HPrimExpr (prim, targetTy, loc) ->
+    let tyInfo = primTyInfo prim [] targetTy
+    xgPrimExpr prim tyInfo loc ctx
 
   | HMatchExpr _ ->
     let arg, ctx = xgMatchExpr expr ctx
