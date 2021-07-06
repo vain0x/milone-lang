@@ -8,7 +8,7 @@ open MiloneTranslation.Hir
 
 type XBodyId = int
 type XBlockId = int
-type XRegId = int
+type XLocalId = int
 type XPtrTyId = int
 // type XVariantId = int
 type XUnionTyId = int
@@ -29,7 +29,7 @@ type XArg =
   | XUnitArg of Loc
   | XLitArg of Lit * Loc
   // | XDiscriminantArg of XVariantId
-  | XRegArg of XRegId * Loc
+  | XLocalArg of XLocalId * Loc
 
 type XUnary =
   | XMinusUnary
@@ -43,13 +43,13 @@ type XRval =
   // extends XArgs
   | XLitRval of Lit * Loc
   | XUnitRval of Loc
-  | XRegRval of XRegId * Loc
+  | XLocalRval of XLocalId * Loc
 
   | XUnaryRval of XUnary * XArg * Loc
   | XBinaryRval of XBinary * XArg * XArg * Loc
 
 type XStmt =
-  | XAssignStmt of XRegId * XArg * Loc
+  | XAssignStmt of XLocalId * XArg * Loc
   | XPrintfnStmt of XArg list * Loc
   | XPtrWriteStmt of XArg * XArg * Loc
 
@@ -61,9 +61,9 @@ type XTerminator =
   | XIfTk of XArg * XBlockId * XBlockId * Loc
 // | XSwitchTk of XArg * (int * XBlockId) list
 
-type XRegDef =
+type XLocalDef =
   { Name: string option
-    Id: XRegId
+    Id: XLocalId
     Ty: XTy
     Loc: Loc }
 
@@ -77,7 +77,7 @@ type XBodyDef =
     ArgTys: XTy list
     ResultTy: XTy
 
-    Regs: AssocMap<XRegId, XRegDef>
+    Locals: AssocMap<XLocalId, XLocalDef>
     Blocks: AssocMap<XBlockId, XBlockDef>
     EntryBlockId: XBlockId
 

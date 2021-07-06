@@ -49,29 +49,29 @@ let private primTyInfo (prim: HPrim) (args: HExpr list) : PrimTyInfo =
 
 /// Target represents a context of evaluating an expr.
 ///
-/// After the expr is evaluated, the value is set to the reg
+/// After the expr is evaluated, the value is set to the local
 /// and code jumps to the block.
-type private XTarget = XRegId * XBlockId
+type private XTarget = XLocalId * XBlockId
 
 let private unreachableBlockDef : XBlockDef =
   { Stmts = []
     Terminator = XUnreachableTk }
 
-let private emptyRegs : AssocMap<XRegId, XRegDef> = TMap.empty compare
+let private emptyLocals : AssocMap<XLocalId, XLocalDef> = TMap.empty compare
 let private emptyBlocks : AssocMap<XBlockId, XBlockDef> = TMap.empty compare
 
 let private xArgOfRval (rval: XRval) : XArg option =
   match rval with
   | XLitRval (lit, loc) -> XLitArg(lit, loc) |> Some
   | XUnitRval loc -> XUnitArg loc |> Some
-  | XRegRval (regId, loc) -> XRegArg(regId, loc) |> Some
+  | XLocalRval (localId, loc) -> XLocalArg(localId, loc) |> Some
   | _ -> None
 
 let private xRvalOfArg (arg: XArg) : XRval =
   match arg with
   | XLitArg (lit, loc) -> XLitRval(lit, loc)
   | XUnitArg loc -> XUnitRval loc
-  | XRegArg (regId, loc) -> XRegRval(regId, loc)
+  | XLocalArg (localId, loc) -> XLocalRval(localId, loc)
 
 // -----------------------------------------------
 // Context
@@ -98,7 +98,7 @@ type private Ctx =
 
     // Current body:
     CurrentBodyOpt: XBodyDef option
-    Regs: AssocMap<XRegId, XRegDef>
+    Locals: AssocMap<XLocalId, XLocalDef>
     Blocks: AssocMap<XBlockId, XBlockDef>
 
     Trace: TraceFun }
@@ -117,7 +117,7 @@ let private ofTyCtx (trace: TraceFun) (tyCtx: TyCtx) : Ctx =
     Stmts = []
     TerminatorOpt = None
     CurrentBodyOpt = None
-    Regs = emptyRegs
+    Locals = emptyLocals
     Blocks = emptyBlocks
 
     Trace = trace }
@@ -130,16 +130,21 @@ let private toProgram (ctx: Ctx) : XProgram =
     (fun () (body: XBodyDef) ->
       ctx.Trace "\nbody \"{}\" {}" [ body.Name; locToString body.Loc ]
 
-      ctx.Trace "  regs({})" [ body.Regs |> TMap.toList |> List.length |> string ]
+      ctx.Trace
+        "  locals({})"
+        [ body.Locals
+          |> TMap.toList
+          |> List.length
+          |> string ]
 
       TMap.fold
-        (fun () (regId: XRegId) (reg: XRegDef) ->
+        (fun () (localId: XLocalId) (local: XLocalDef) ->
           ctx.Trace
             "    {}#{}"
-            [ Option.defaultValue "" reg.Name
-              string regId ])
+            [ Option.defaultValue "" local.Name
+              string localId ])
         ()
-        body.Regs
+        body.Locals
 
       ctx.Trace
         "  blocks ({})"
@@ -212,26 +217,26 @@ let private setTerminator terminator (ctx: Ctx) =
     { ctx with
         TerminatorOpt = Some terminator }
 
-/// Allocates a fresh reg.
-let private addReg (name: string) (ty: XTy) (loc: Loc) (ctx: Ctx) : XRegId * Ctx =
-  let regId, ctx = freshSerial ctx
+/// Allocates a fresh local.
+let private addLocal (name: string) (ty: XTy) (loc: Loc) (ctx: Ctx) : XLocalId * Ctx =
+  let localId, ctx = freshSerial ctx
 
-  let regDef : XRegDef =
+  let localDef : XLocalDef =
     { Name = Some name
-      Id = regId
+      Id = localId
       Ty = ty
       Loc = loc }
 
   let ctx =
     { ctx with
-        Regs = ctx.Regs |> TMap.add regId regDef }
+        Locals = ctx.Locals |> TMap.add localId localDef }
 
-  regId, ctx
+  localId, ctx
 
-/// Converts Ty -> XTy and adds an reg of the type.
-let private addTempReg (name: string) (ty: Ty) (loc: Loc) (ctx: Ctx) =
+/// Converts Ty -> XTy and adds an local of the type.
+let private addTempLocal (name: string) (ty: Ty) (loc: Loc) (ctx: Ctx) =
   let ty, ctx = xgTy (ty, ctx)
-  addReg name ty loc ctx
+  addLocal name ty loc ctx
 
 let private freshBlock (ctx: Ctx) =
   let blockId, ctx = freshSerial ctx
@@ -268,31 +273,31 @@ let private finishBranching terminator targetBlock (ctx: Ctx) =
 // symbols
 // -----------------------------------------------
 
-let private xgVar varSerial (ctx: Ctx) : XRegId * Ctx =
+let private xgVar varSerial (ctx: Ctx) : XLocalId * Ctx =
   let varDef = mapFind varSerial ctx.Vars
 
   match varDef.IsStatic with
   | IsStatic -> todo ()
 
   | NotStatic ->
-    let regId : XRegId = varSerial |> varSerialToInt
+    let localId : XLocalId = varSerial |> varSerialToInt
 
-    if ctx.Regs |> TMap.containsKey regId then
-      regId, ctx
+    if ctx.Locals |> TMap.containsKey localId then
+      localId, ctx
     else
       let ty, (ctx: Ctx) = xgTy (varDef.Ty, ctx)
 
-      let regDef : XRegDef =
+      let localDef : XLocalDef =
         { Name = Some varDef.Name
-          Id = regId
+          Id = localId
           Ty = ty
           Loc = varDef.Loc }
 
       let ctx =
         { ctx with
-            Regs = ctx.Regs |> TMap.add regId regDef }
+            Locals = ctx.Locals |> TMap.add localId localDef }
 
-      regId, ctx
+      localId, ctx
 
 // -----------------------------------------------
 // tys
@@ -318,14 +323,14 @@ let private xgPatAsIrrefutable (pat: HPat) (cond: XArg) (ctx: Ctx) : Ctx =
   | HNodePat (HTuplePN, [], _, _) -> ctx
 
   | HVarPat (_, varSerial, _, loc) ->
-    let reg, ctx = xgVar varSerial ctx
-    ctx |> addStmt (XAssignStmt(reg, cond, loc))
+    let local, ctx = xgVar varSerial ctx
+    ctx |> addStmt (XAssignStmt(local, cond, loc))
 
   | HAsPat (innerPat, varSerial, loc) ->
-    let reg, ctx = xgVar varSerial ctx
+    let local, ctx = xgVar varSerial ctx
 
     let ctx =
-      ctx |> addStmt (XAssignStmt(reg, cond, loc))
+      ctx |> addStmt (XAssignStmt(local, cond, loc))
 
     xgPatAsIrrefutable innerPat cond ctx
 
@@ -421,18 +426,18 @@ let private xgMatchExpr (expr: HExpr) (ctx: Ctx) : XArg * Ctx =
   let condTy = exprToTy cond
   let cond, ctx = xgExprToArg (cond, ctx)
 
-  let targetReg, ctx = addTempReg "match" targetTy loc ctx
+  let targetLocal, ctx = addTempLocal "match" targetTy loc ctx
   let targetBlock, ctx = freshBlock ctx
-  let target : XTarget = targetReg, targetBlock
+  let target : XTarget = targetLocal, targetBlock
 
   match mcToIf cond condTy arms target loc ctx with
   | Some ctx ->
     assert (ctx.CurrentBlockOpt |> expect () = targetBlock)
-    XRegArg(targetReg, loc), ctx
+    XLocalArg(targetLocal, loc), ctx
 
   | None ->
     ctx.Trace "unimplemented full-match" []
-    XRegArg(targetReg, loc), ctx
+    XLocalArg(targetLocal, loc), ctx
 
 let private xgLetValExpr (expr: HExpr) (ctx: Ctx) : Ctx =
   let pat, init =
@@ -446,23 +451,21 @@ let private xgLetValExpr (expr: HExpr) (ctx: Ctx) : Ctx =
 let private xgExprToArg (expr: HExpr, ctx: Ctx) : XArg * Ctx =
   let rval, ctx = xgExprToRval expr ctx
 
-  match rval with
-  | XLitRval (lit, loc) -> XLitArg(lit, loc), ctx
-  | XUnitRval loc -> XUnitArg loc, ctx
-  | XRegRval (regId, loc) -> XRegArg(regId, loc), ctx
+  match xArgOfRval rval with
+  | Some it -> it, ctx
 
-  | _ ->
+  | None ->
     let ty, loc = exprExtract expr
-    let regId, ctx = addTempReg "rval" ty loc ctx
-    XRegArg(regId, loc), ctx
+    let localId, ctx = addTempLocal "rval" ty loc ctx
+    XLocalArg(localId, loc), ctx
 
 let private xgExprToRval (expr: HExpr) (ctx: Ctx) : XRval * Ctx =
   match expr with
   | HLitExpr (lit, loc) -> XLitRval(lit, loc), ctx
 
   | HVarExpr (varSerial, _, loc) ->
-    let regId, ctx = xgVar varSerial ctx
-    XRegRval(regId, loc), ctx
+    let localId, ctx = xgVar varSerial ctx
+    XLocalRval(localId, loc), ctx
 
   | HFunExpr _ -> failwith "fun expr must occur as callee or arg of closure"
 
@@ -470,7 +473,7 @@ let private xgExprToRval (expr: HExpr) (ctx: Ctx) : XRval * Ctx =
 
   | HPrimExpr (prim, ty, loc) ->
     ctx.Trace "prim {}" [ objToString prim ]
-    XRegRval(0, loc), ctx
+    XLocalRval(0, loc), ctx
 
   | HMatchExpr _ ->
     let arg, ctx = xgMatchExpr expr ctx
@@ -525,10 +528,10 @@ let private xgExprAsBranch (expr: HExpr) (target: XTarget) (loc: Loc) (ctx: Ctx)
   let arg, (ctx: Ctx) = xgExprToArg (expr, ctx)
 
   let ctx =
-    let targetReg, targetBlockId = target
+    let targetLocal, targetBlockId = target
 
     ctx
-    |> addStmt (XAssignStmt(targetReg, arg, loc))
+    |> addStmt (XAssignStmt(targetLocal, arg, loc))
     |> setTerminator (XJumpTk targetBlockId)
 
   let ctx = leaveBlock parent ctx
@@ -544,7 +547,7 @@ let private xgLetFunDeclContents (decl: HExpr, ctx: Ctx) =
   assert (ctx.Stmts |> List.isEmpty)
   assert (ctx.TerminatorOpt |> Option.isNone)
   assert (ctx.CurrentBodyOpt |> Option.isNone)
-  assert (ctx.Regs |> TMap.isEmpty)
+  assert (ctx.Locals |> TMap.isEmpty)
   assert (ctx.Blocks |> TMap.isEmpty)
 
   let funSerial, argPats, bodyExpr, loc =
@@ -562,7 +565,7 @@ let private xgLetFunDeclContents (decl: HExpr, ctx: Ctx) =
 
       ArgTys = []
       ResultTy = XUnitTy
-      Regs = emptyRegs
+      Locals = emptyLocals
       Blocks = emptyBlocks
       EntryBlockId = -1 }
 
@@ -592,14 +595,14 @@ let private xgLetFunDeclContents (decl: HExpr, ctx: Ctx) =
 
   let bodyDef =
     { bodyDef with
-        Regs = ctx.Regs
+        Locals = ctx.Locals
         Blocks = ctx.Blocks
         EntryBlockId = entryBlockId }
 
   { ctx with
       Bodies = bodyDef :: ctx.Bodies
       CurrentBodyOpt = None
-      Regs = emptyRegs
+      Locals = emptyLocals
       Blocks = emptyBlocks }
 
 let private xgDecl (decl: HExpr, ctx: Ctx) =
