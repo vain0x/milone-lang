@@ -10,20 +10,51 @@ type XBodyId = int
 type XBlockId = int
 type XLocalId = int
 type XPtrTyId = int
-// type XVariantId = int
+type XVariantId = int
 type XUnionTyId = int
+type XFieldId = int
 type XRecordTyId = int
 type XFunTyId = int
+
+type XVariantDef =
+  { Name: string
+    HasPayload: bool
+    PayloadTy: XTy
+    IsNewtype: bool }
+
+// type XUnionCause =
+//   | XOptionUc
+//   | XListUc
+
+[<RequireQualifiedAccess>]
+type XUnionDef =
+  { Name: string
+    Variants: XVariantId list }
+
+// type XRecordCause =
+//   | XTupleRc
+//   | XUserRc
+
+[<RequireQualifiedAccess>]
+type XRecordDef = { Name: string; Fields: XFieldId list }
 
 type XTy =
   | XUnitTy
   | XIntTy of IntFlavor
   | XStrTy
   | XBoolTy
-  // | XUnionTy of XUnionTyId
-  // | XRecordTy of XRecordTyId
+  | XUnionTy of XUnionTyId
+  | XRecordTy of XRecordTyId
   | XFunTy of XFunTyId
-// | XGenericTy of index: int
+
+[<RequireQualifiedAccess>]
+type XPart =
+  | Deref
+  | Field of XFieldId
+  | Payload of XVariantId
+
+[<RequireQualifiedAccess>]
+type XPlace = { Local: XLocalId; Path: XPart list }
 
 type XArg =
   | XUnitArg of Loc
@@ -39,17 +70,22 @@ type XBinary =
   | XAddBinary
   | XStrAddBinary
 
+type XAggregateKind =
+  | XUnionAk of XUnionTyId
+  | XRecordAk of XRecordTyId
+
 type XRval =
-  // extends XArgs
+  // extends XArg
   | XLitRval of Lit * Loc
   | XUnitRval of Loc
   | XLocalRval of XLocalId * Loc
 
   | XUnaryRval of XUnary * XArg * Loc
   | XBinaryRval of XBinary * XArg * XArg * Loc
+  | XAggregateRval of XAggregateKind * XArg list * Loc
 
 type XStmt =
-  | XAssignStmt of XLocalId * XArg * Loc
+  | XAssignStmt of XPlace * XRval * Loc
   | XPrintfnStmt of XArg list * Loc
   | XPtrWriteStmt of XArg * XArg * Loc
 
@@ -61,16 +97,19 @@ type XTerminator =
   | XIfTk of XArg * XBlockId * XBlockId * Loc
 // | XSwitchTk of XArg * (int * XBlockId) list
 
+[<RequireQualifiedAccess>]
 type XLocalDef =
   { Name: string option
     Id: XLocalId
     Ty: XTy
     Loc: Loc }
 
+[<RequireQualifiedAccess>]
 type XBlockDef =
   { Stmts: XStmt list
     Terminator: XTerminator }
 
+[<RequireQualifiedAccess>]
 type XBodyDef =
   { Name: string
 
@@ -83,6 +122,7 @@ type XBodyDef =
 
     Loc: Loc }
 
+[<RequireQualifiedAccess>]
 type XProgram =
   { Bodies: AssocMap<XBodyId, XBodyDef>
     MainId: XBodyId }

@@ -27,6 +27,7 @@ type private PrimTyInfo =
   | None
   | ScalarAdd
   | StrAdd
+  | OptionSome of optionItemTy: Ty
 
 let private primTyInfo (prim: HPrim) (args: HExpr list) : PrimTyInfo =
   match prim, args with
@@ -40,6 +41,8 @@ let private primTyInfo (prim: HPrim) (args: HExpr list) : PrimTyInfo =
 
     | StrTk -> PrimTyInfo.StrAdd
     | _ -> unreachable ()
+
+  | HPrim.OptionSome, arg :: _ -> PrimTyInfo.OptionSome(exprToTy arg)
 
   | _ -> PrimTyInfo.None
 
@@ -59,6 +62,8 @@ let private unreachableBlockDef : XBlockDef =
 
 let private emptyLocals : AssocMap<XLocalId, XLocalDef> = TMap.empty compare
 let private emptyBlocks : AssocMap<XBlockId, XBlockDef> = TMap.empty compare
+
+let private xLocalPlace (local: XLocalId) : XPlace = { Local = local; Path = [] }
 
 let private xArgOfRval (rval: XRval) : XArg option =
   match rval with
@@ -87,6 +92,13 @@ type private Ctx =
 
     MainFunOpt: FunSerial option
 
+    TyMangleMemo: AssocMap<Ty, string>
+    OptionTyMap: AssocMap<Ty, XUnionTyId>
+    ListTyMap: AssocMap<Ty, XUnionTyId>
+    XRecords: AssocMap<XRecordTyId, XRecordDef>
+    XVariants: AssocMap<XVariantId, XVariantDef>
+    XUnions: AssocMap<XUnionTyId, XUnionDef>
+
     // Done bodies.
     Bodies: XBodyDef list
     MainBodyIdOpt: XBodyId option
@@ -110,6 +122,12 @@ let private ofTyCtx (trace: TraceFun) (tyCtx: TyCtx) : Ctx =
     // Variants = tyCtx.Variants
     MainFunOpt = tyCtx.MainFunOpt
     Tys = tyCtx.Tys
+    TyMangleMemo = TMap.empty tyCompare
+    OptionTyMap = TMap.empty tyCompare
+    ListTyMap = TMap.empty tyCompare
+    XRecords = TMap.empty compare
+    XVariants = TMap.empty compare
+    XUnions = TMap.empty compare
 
     Bodies = []
     MainBodyIdOpt = None
@@ -168,6 +186,10 @@ let private toProgram (ctx: Ctx) : XProgram =
 
 let private freshSerial (ctx: Ctx) =
   ctx.Serial + 1, { ctx with Serial = ctx.Serial + 1 }
+
+let private freshSerialBy (n: int) (ctx: Ctx) =
+  assert (n >= 1)
+  ctx.Serial + n, { ctx with Serial = ctx.Serial + n }
 
 let private enterBlock blockId (ctx: Ctx) =
   let parent =
@@ -235,7 +257,7 @@ let private addLocal (name: string) (ty: XTy) (loc: Loc) (ctx: Ctx) : XLocalId *
 
 /// Converts Ty -> XTy and adds an local of the type.
 let private addTempLocal (name: string) (ty: Ty) (loc: Loc) (ctx: Ctx) =
-  let ty, ctx = xgTy (ty, ctx)
+  let ty, ctx = xgTy ty ctx
   addLocal name ty loc ctx
 
 let private freshBlock (ctx: Ctx) =
@@ -285,7 +307,7 @@ let private xgVar varSerial (ctx: Ctx) : XLocalId * Ctx =
     if ctx.Locals |> TMap.containsKey localId then
       localId, ctx
     else
-      let ty, (ctx: Ctx) = xgTy (varDef.Ty, ctx)
+      let ty, (ctx: Ctx) = xgTy varDef.Ty ctx
 
       let localDef : XLocalDef =
         { Name = Some varDef.Name
@@ -303,7 +325,54 @@ let private xgVar varSerial (ctx: Ctx) : XLocalId * Ctx =
 // tys
 // -----------------------------------------------
 
-let private xgTy (ty: Ty, ctx: Ctx) : XTy * Ctx =
+// Type conversion doesn't recurse thanks to auto-boxing.
+
+let private ctxTyMangle (ty: Ty) (ctx: Ctx) =
+  let name, memo = tyMangle (ty, ctx.TyMangleMemo)
+  name, { ctx with TyMangleMemo = memo }
+
+let private xgOptionTy (itemTy: Ty) (ctx: Ctx) : XUnionTyId * Ctx =
+  match ctx.OptionTyMap |> TMap.tryFind itemTy with
+  | Some it -> it, ctx
+
+  | None ->
+    let n, ctx = freshSerialBy 3 ctx
+    let unionTyId = n
+    let noneVariantId = n + 1
+    let someVariantId = n + 2
+
+    let optionTy = tyOption itemTy
+    let name, ctx = ctxTyMangle optionTy ctx
+    let someTy, ctx = xgTy itemTy ctx
+
+    let noneVariant : XVariantDef =
+      { Name = "None"
+        HasPayload = false
+        PayloadTy = XUnitTy
+        IsNewtype = false }
+
+    let someVariant : XVariantDef =
+      { Name = "Some"
+        HasPayload = true
+        PayloadTy = someTy
+        IsNewtype = false }
+
+    let unionDef : XUnionDef =
+      { Name = name
+        Variants = [ noneVariantId; someVariantId ] }
+
+    let ctx =
+      { ctx with
+          OptionTyMap = ctx.OptionTyMap |> TMap.add itemTy unionTyId
+          XVariants =
+            ctx.XVariants
+            |> TMap.add noneVariantId noneVariant
+            |> TMap.add someVariantId someVariant
+          XUnions = ctx.XUnions |> TMap.add unionTyId unionDef }
+
+    unionTyId, ctx
+
+let private xgTy (ty: Ty) (ctx: Ctx) : XTy * Ctx =
   let (Ty (tk, tyArgs)) = ty
 
   match tk, tyArgs with
@@ -311,6 +380,12 @@ let private xgTy (ty: Ty, ctx: Ctx) : XTy * Ctx =
   | StrTk, _ -> XStrTy, ctx
   | BoolTk, _ -> XBoolTy, ctx
   | TupleTk, [] -> XUnitTy, ctx
+
+  | OptionTk, [ itemTy ] ->
+    let unionTyId, ctx = xgOptionTy itemTy ctx
+    XUnionTy unionTyId, ctx
+  | OptionTk, _ -> unreachable ()
+
   | _ -> todo ty
 
 // -----------------------------------------------
@@ -324,13 +399,16 @@ let private xgPatAsIrrefutable (pat: HPat) (cond: XArg) (ctx: Ctx) : Ctx =
 
   | HVarPat (_, varSerial, _, loc) ->
     let local, ctx = xgVar varSerial ctx
-    ctx |> addStmt (XAssignStmt(local, cond, loc))
+
+    ctx
+    |> addStmt (XAssignStmt(xLocalPlace local, xRvalOfArg cond, loc))
 
   | HAsPat (innerPat, varSerial, loc) ->
     let local, ctx = xgVar varSerial ctx
 
     let ctx =
-      ctx |> addStmt (XAssignStmt(local, cond, loc))
+      ctx
+      |> addStmt (XAssignStmt(xLocalPlace local, xRvalOfArg cond, loc))
 
     xgPatAsIrrefutable innerPat cond ctx
 
@@ -358,8 +436,15 @@ let private mcToIf (cond: XArg) (condTy: Ty) arms target loc (ctx: Ctx) : Ctx op
   | _ -> None
 
 // -----------------------------------------------
-// exprs
+// expr: prim and node
 // -----------------------------------------------
+
+let private xgPrimExpr (prim: HPrim) (targetTy: XTy) loc ctx : XRval * Ctx =
+  match prim with
+  | HPrim.OptionNone
+  | HPrim.Nil -> todo ()
+
+  | _ -> unreachable () // Must be called.
 
 let private xgCallPrim (prim: HPrim) (tyInfo: PrimTyInfo) (args: XArg list) loc ctx : XRval * Ctx =
   let regularAction stmt ctx =
@@ -374,6 +459,11 @@ let private xgCallPrim (prim: HPrim) (tyInfo: PrimTyInfo) (args: XArg list) loc 
   | HPrim.Add, [ l; r ], PrimTyInfo.ScalarAdd -> XBinaryRval(XAddBinary, l, r, loc), ctx
   | HPrim.Add, [ l; r ], PrimTyInfo.StrAdd -> XBinaryRval(XStrAddBinary, l, r, loc), ctx
   | HPrim.Add, _, _ -> unreachable ()
+
+  // constructor:
+  | HPrim.OptionSome, [ arg ], PrimTyInfo.OptionSome itemTy ->
+    let ty, ctx = xgOptionTy itemTy ctx
+    XAggregateRval(XUnionAk ty, [ arg ], loc), ctx
 
   // effects:
   | HPrim.Exit, [ arg ], _ -> XUnitRval loc, setTerminator (XExitTk(arg, loc)) ctx
@@ -417,6 +507,10 @@ let private xgNodeExpr (expr: HExpr) (ctx: Ctx) : XRval * Ctx =
     // todo
     XUnitRval loc, ctx
 
+// -----------------------------------------------
+// expr: pattern matching
+// -----------------------------------------------
+
 let private xgMatchExpr (expr: HExpr) (ctx: Ctx) : XArg * Ctx =
   let cond, arms, targetTy, loc =
     match expr with
@@ -448,6 +542,10 @@ let private xgLetValExpr (expr: HExpr) (ctx: Ctx) : Ctx =
   let init, ctx = xgExprToArg (init, ctx)
   xgPatAsIrrefutable pat init ctx
 
+// -----------------------------------------------
+// expr: exprToXxx flavors
+// -----------------------------------------------
+
 let private xgExprToArg (expr: HExpr, ctx: Ctx) : XArg * Ctx =
   let rval, ctx = xgExprToRval expr ctx
 
@@ -457,6 +555,11 @@ let private xgExprToArg (expr: HExpr, ctx: Ctx) : XArg * Ctx =
   | None ->
     let ty, loc = exprExtract expr
     let localId, ctx = addTempLocal "rval" ty loc ctx
+
+    let ctx =
+      ctx
+      |> addStmt (XAssignStmt(xLocalPlace localId, rval, loc))
+
     XLocalArg(localId, loc), ctx
 
 let private xgExprToRval (expr: HExpr) (ctx: Ctx) : XRval * Ctx =
@@ -525,13 +628,13 @@ let private xgExprAsBranch (expr: HExpr) (target: XTarget) (loc: Loc) (ctx: Ctx)
   let entryBlockId, ctx = freshBlock ctx
 
   let parent, ctx = enterBlock entryBlockId ctx
-  let arg, (ctx: Ctx) = xgExprToArg (expr, ctx)
+  let rval, (ctx: Ctx) = xgExprToRval expr ctx
 
   let ctx =
     let targetLocal, targetBlockId = target
 
     ctx
-    |> addStmt (XAssignStmt(targetLocal, arg, loc))
+    |> addStmt (XAssignStmt(xLocalPlace targetLocal, rval, loc))
     |> setTerminator (XJumpTk targetBlockId)
 
   let ctx = leaveBlock parent ctx
