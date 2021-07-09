@@ -6,6 +6,7 @@ open MiloneShared.TypeIntegers
 open MiloneShared.Util
 open MiloneTranslation.Hir
 open MiloneTranslation.Xir
+open MiloneTranslation.PatCompile
 
 module S = MiloneStd.StdString
 module TMap = MiloneStd.StdMap
@@ -367,6 +368,8 @@ let private ctxTyMangle (ty: Ty) (ctx: Ctx) =
 
 let private computeNoneVariantId (unionTyId: XUnionTyId) : XVariantId = unionTyId + 1
 
+let private computeSomeVariantId (unionTyId: XUnionTyId) : XVariantId = unionTyId + 2
+
 let private xgOptionTy (itemTy: Ty) (ctx: Ctx) : XUnionTyId * Ctx =
   match ctx.OptionTyMap |> TMap.tryFind itemTy with
   | Some it -> it, ctx
@@ -377,6 +380,7 @@ let private xgOptionTy (itemTy: Ty) (ctx: Ctx) : XUnionTyId * Ctx =
     let noneVariantId = n + 1
     let someVariantId = n + 2
     assert (computeNoneVariantId unionTyId = noneVariantId)
+    assert (computeSomeVariantId unionTyId = someVariantId)
 
     let optionTy = tyOption itemTy
     let name, ctx = ctxTyMangle optionTy ctx
@@ -429,7 +433,112 @@ let private xgTy (ty: Ty) (ctx: Ctx) : XTy * Ctx =
 // pats
 // -----------------------------------------------
 
+type private PatTermHost =
+  { Guard: int -> Ctx -> Ctx
+    Body: int -> Ctx -> Ctx
+    Fallback: int -> Ctx -> Ctx }
+
+let private optionTyToItemTy (ty: XTy) (ctx: Ctx) =
+  match ty with
+  | XUnionTy unionTyId ->
+    let variantId = computeSomeVariantId unionTyId
+    let variantDef = ctx.XVariants |> mapFind variantId
+    assert (variantDef.Name = "Some")
+    unionTyId, variantDef.PayloadTy
+
+  | _ -> unreachable () // not an option type
+
+let private isNoneRval (arg: XRval) argTy loc ctx =
+  let unionTyId, _itemTy = optionTyToItemTy argTy ctx
+
+  let argLocal, ctx = rvalToLocal arg argTy loc ctx
+
+  let place : XPlace =
+    { Local = argLocal
+      Path = [ XPart.Discriminant ] }
+
+  let l, ctx =
+    rvalToArg (XPlaceRval(place, loc)) xtInt loc ctx
+
+  let r =
+    XDiscriminantArg(computeNoneVariantId unionTyId, loc)
+
+  XBinaryRval(XScalarEqualBinary, l, r, loc), ctx
+
+let private xgPatTerm (host: PatTermHost) (term: PTerm) (cond: XRval) condTy loc ctx : Ctx =
+  match term with
+  | PAbortTerm -> setTerminator (XExitTk(XLitArg(IntLit "1", loc))) ctx
+
+  | PSelectTerm (part, term) ->
+    match part with
+    | PSomeContentPart ->
+      let local, ctx = rvalToLocal cond condTy loc ctx
+      let unionTyId, condTy = optionTyToItemTy condTy ctx
+
+      let cond =
+        XPlaceRval(
+          { Local = local
+            Path = [ XPart.Payload(computeSomeVariantId unionTyId) ] },
+          loc
+        )
+
+      xgPatTerm host term cond condTy loc ctx
+
+    | _ -> todo ()
+
+  | PGuardTerm (_, body, _) ->
+    // just skip for now
+    // FIXME: implement
+    xgPatTerm host body cond condTy loc ctx
+
+  | PBodyTerm i ->
+    let ctx = host.Body i ctx
+    assert (ctx.TerminatorOpt |> Option.isSome)
+    ctx
+
+  | PFallbackTerm i ->
+    let ctx = host.Fallback i ctx
+    assert (ctx.TerminatorOpt |> Option.isSome)
+    ctx
+
+  | PLetTerm (varSerial, _, term) ->
+    let local, ctx = xgVar varSerial ctx
+
+    let ctx =
+      ctx
+      |> addStmt (XAssignStmt(xLocalPlace local, cond, loc))
+
+    let cond = XPlaceRval(xLocalPlace local, loc)
+    xgPatTerm host term cond condTy loc ctx
+
+  | PMatchOptionTerm (_, termOnNone, termOnSome) ->
+    let isNoneArg, ctx =
+      let rval, ctx = isNoneRval cond condTy loc ctx
+      rvalToArg rval XBoolTy loc ctx
+
+    let bodyBlock, ctx =
+      xgPatTermAsBranch host termOnNone cond condTy loc ctx
+
+    let altBlock, ctx =
+      xgPatTermAsBranch host termOnSome cond condTy loc ctx
+
+    ctx
+    |> setTerminator (XIfTk(isNoneArg, bodyBlock, altBlock, loc))
+
+  | _ -> todo ()
+
+let private xgPatTermAsBranch (host: PatTermHost) (term: PTerm) (cond: XRval) condTy loc ctx =
+  let entryBlockId, ctx = freshBlock ctx
+  let parent, ctx = enterBlock entryBlockId ctx
+
+  let ctx = xgPatTerm host term cond condTy loc ctx
+
+  let ctx = leaveBlock parent ctx
+  entryBlockId, ctx
+
 let private xgPatAsIrrefutable (pat: HPat) (cond: XArg) (ctx: Ctx) : Ctx =
+  let term = patCompileForLetValExpr pat
+
   match pat with
   | HDiscardPat _
   | HNodePat (HTuplePN, [], _, _) -> ctx
@@ -541,7 +650,7 @@ let private xgCallPrim (prim: HPrim) (tyInfo: PrimTyInfo) (args: XArg list) loc 
     XAggregateRval(XUnionAk ty, [ arg ], loc), ctx
 
   // effects:
-  | HPrim.Exit, [ arg ], _ -> XUnitRval loc, setTerminator (XExitTk(arg, loc)) ctx
+  | HPrim.Exit, [ arg ], _ -> XUnitRval loc, setTerminator (XExitTk arg) ctx
   | HPrim.Exit, _, _ -> unreachable ()
 
   | HPrim.Printfn, _, _ -> regularAction (XPrintfnStmt(args, loc)) ctx
@@ -605,7 +714,61 @@ let private xgMatchExpr (expr: HExpr) (ctx: Ctx) : XArg * Ctx =
     XLocalArg(targetLocal, loc), ctx
 
   | None ->
-    ctx.Trace "unimplemented full-match" []
+    let condTy, ctx = xgTy condTy ctx
+    let cond = xRvalOfArg cond
+
+    let n = List.length arms
+
+    let terms =
+      patCompileForMatchExprToBlocks (List.map (fun (pat, _, _) -> pat) arms)
+
+    let serial, ctx = freshSerialBy (n * 3) ctx
+    let nthArmId (i: int) : XBlockId = serial + i * 3
+    let nthGuardId (i: int) : XBlockId = serial + i * 3 + 1
+    let nthBodyId (i: int) : XBlockId = serial + i * 3 + 2
+
+    let host : PatTermHost =
+      { Guard = fun _ -> todo ()
+        Body = fun i ctx -> ctx |> setTerminator (XJumpTk(nthBodyId i))
+        Fallback = fun i ctx -> ctx |> setTerminator (XJumpTk(nthArmId i)) }
+
+    let ctx =
+      (List.zip arms terms)
+      |> List.mapi (fun i ((_, guard, body), term) -> i, guard, body, term)
+      |> List.fold
+           (fun (ctx: Ctx) (i, _guard, body, term) ->
+             // arm:
+             let ctx =
+               let entryBlockId = nthArmId i
+               let parent, ctx = enterBlock entryBlockId ctx
+
+               let ctx = xgPatTerm host term cond condTy loc ctx
+
+               leaveBlock parent ctx
+
+             // todo guard
+
+             // body:
+             let ctx =
+               let entryBlockId = nthBodyId i
+               let parent, ctx = enterBlock entryBlockId ctx
+
+               let rval, ctx = xgExprToRval body ctx
+
+               let ctx =
+                 ctx
+                 |> addStmt (XAssignStmt(xLocalPlace (fst target), rval, loc))
+                 |> setTerminator (XJumpTk(snd target))
+
+               leaveBlock parent ctx
+
+             ctx)
+           ctx
+
+    let ctx =
+      ctx
+      |> finishBranching (XJumpTk(nthArmId 0)) targetBlock
+
     XLocalArg(targetLocal, loc), ctx
 
 let private xgLetValExpr (expr: HExpr) (ctx: Ctx) : Ctx =
@@ -791,10 +954,7 @@ let private xgDecl (decl: HExpr, ctx: Ctx) =
     xgDecl (next, ctx)
 
   | HLetFunExpr (_, _, _, _, _, next, _, _) ->
-    ctx.Trace
-      "// top-level fun: {} {}"
-      [ exprToLoc decl |> locToString
-        objToString decl ]
+    ctx.Trace "// top-level fun: {}" [ exprToLoc decl |> locToString ]
 
     let ctx = xgLetFunDeclContents (decl, ctx)
     xgDecl (next, ctx)

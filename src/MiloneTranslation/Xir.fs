@@ -95,7 +95,7 @@ type XStmt =
 
 type XTerminator =
   | XUnreachableTk
-  | XExitTk of XArg * Loc
+  | XExitTk of XArg
   | XReturnTk of XArg
   | XJumpTk of XBlockId
   | XIfTk of XArg * XBlockId * XBlockId * Loc
