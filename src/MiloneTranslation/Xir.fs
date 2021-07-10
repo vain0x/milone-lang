@@ -90,6 +90,7 @@ type XRval =
 
 type XStmt =
   | XAssignStmt of XPlace * XRval * Loc
+  | XCallStmt of XBodyId * XArg list * XPlace * Loc
   | XPrintfnStmt of XArg list * Loc
   | XPtrWriteStmt of XArg * XArg * Loc
 

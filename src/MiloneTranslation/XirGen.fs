@@ -199,6 +199,8 @@ let private freshSerialBy (n: int) (ctx: Ctx) =
   assert (n >= 1)
   ctx.Serial + 1, { ctx with Serial = ctx.Serial + n }
 
+let private funSerialToBodyId (funSerial: FunSerial) : XBodyId = funSerialToInt funSerial
+
 let private enterBlock blockId (ctx: Ctx) =
   let parent =
     ctx.CurrentBlockOpt, ctx.Stmts, ctx.TerminatorOpt
@@ -682,10 +684,20 @@ let private xgNodeExpr (expr: HExpr) (ctx: Ctx) : XRval * Ctx =
     XUnaryRval(XMinusUnary, arg, loc), ctx
 
   | HCallProcEN, HFunExpr (funSerial, _, _) :: args ->
+    let bodyId = funSerialToBodyId funSerial
     let args, ctx = (args, ctx) |> stMap xgExprToArg
-    ctx.Trace "unimplemented call-fun expr {} ({})" [ objToString kind; locToString loc ]
-    // let ctx = ctx |> addStmt (XPrintfnStmt(args, loc))
-    XUnitRval loc, ctx
+
+    let resultLocal, ctx =
+      let name =
+        (ctx.Funs |> mapFind funSerial).Name + "_result"
+
+      addTempLocal name targetTy loc ctx
+
+    let ctx =
+      ctx
+      |> addStmt (XCallStmt(bodyId, args, xLocalPlace resultLocal, loc))
+
+    XLocalRval(resultLocal, loc), ctx
 
   | HCallProcEN, HPrimExpr (prim, _, _) :: args ->
     let tyInfo = primTyInfo prim args targetTy
@@ -905,7 +917,7 @@ let private xgLetFunDeclContents (decl: HExpr, ctx: Ctx) =
 
   let funDef = ctx.Funs |> mapFind funSerial
 
-  let bodyId, ctx = freshSerial ctx
+  let bodyId = funSerialToInt funSerial
 
   let bodyDef : XBodyDef =
     { Name = funDef.Name
