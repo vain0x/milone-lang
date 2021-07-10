@@ -434,7 +434,7 @@ let private xgTy (ty: Ty) (ctx: Ctx) : XTy * Ctx =
 // -----------------------------------------------
 
 type private PatTermHost =
-  { Guard: int -> Ctx -> Ctx
+  { Guard: int -> Ctx -> XArg * Ctx
     Body: int -> Ctx -> Ctx
     Fallback: int -> Ctx -> Ctx }
 
@@ -486,10 +486,17 @@ let private xgPatTerm (host: PatTermHost) (term: PTerm) (cond: XRval) condTy loc
 
     | _ -> todo ()
 
-  | PGuardTerm (_, body, _) ->
-    // just skip for now
-    // FIXME: implement
-    xgPatTerm host body cond condTy loc ctx
+  | PGuardTerm (clauseIndex, body, alt) ->
+    let guard, ctx = host.Guard clauseIndex ctx
+
+    let bodyBlock, ctx =
+      xgPatTermAsBranch host body cond condTy loc ctx
+
+    let altBlock, ctx =
+      xgPatTermAsBranch host alt cond condTy loc ctx
+
+    ctx
+    |> setTerminator (XIfTk(guard, bodyBlock, altBlock, loc))
 
   | PBodyTerm i ->
     let ctx = host.Body i ctx
@@ -722,13 +729,20 @@ let private xgMatchExpr (expr: HExpr) (ctx: Ctx) : XArg * Ctx =
     let terms =
       patCompileForMatchExprToBlocks (List.map (fun (pat, _, _) -> pat) arms)
 
-    let serial, ctx = freshSerialBy (n * 3) ctx
-    let nthArmId (i: int) : XBlockId = serial + i * 3
-    let nthGuardId (i: int) : XBlockId = serial + i * 3 + 1
-    let nthBodyId (i: int) : XBlockId = serial + i * 3 + 2
+    let serial, ctx = freshSerialBy (n * 4) ctx
+    let nthArmId (i: int) : XBlockId = serial + i * 4
+    let nthBodyId (i: int) : XBlockId = serial + i * 4 + 1
 
     let host : PatTermHost =
-      { Guard = fun _ -> todo ()
+      { Guard =
+          fun i ctx ->
+            let guard =
+              match List.tryItem i arms with
+              | Some (_, guard, _) -> guard
+              | _ -> unreachable ()
+
+            xgExprToArg (guard, ctx)
+
         Body = fun i ctx -> ctx |> setTerminator (XJumpTk(nthBodyId i))
         Fallback = fun i ctx -> ctx |> setTerminator (XJumpTk(nthArmId i)) }
 
@@ -746,13 +760,11 @@ let private xgMatchExpr (expr: HExpr) (ctx: Ctx) : XArg * Ctx =
 
                leaveBlock parent ctx
 
-             // todo guard
-
              // body:
              let ctx =
                let entryBlockId = nthBodyId i
-               let parent, ctx = enterBlock entryBlockId ctx
 
+               let parent, ctx = enterBlock entryBlockId ctx
                let rval, ctx = xgExprToRval body ctx
 
                let ctx =
