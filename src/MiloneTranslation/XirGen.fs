@@ -204,53 +204,9 @@ let private freshSerialBy (n: int) (ctx: Ctx) =
 
 let private funSerialToBodyId (funSerial: FunSerial) : XBodyId = funSerialToInt funSerial
 
-let private enterBlock blockId (ctx: Ctx) =
-  let parent =
-    ctx.CurrentBlockOpt, ctx.Stmts, ctx.TerminatorOpt
-
-  let ctx =
-    { ctx with
-        CurrentBlockOpt = Some blockId
-        Stmts = []
-        TerminatorOpt = None }
-
-  parent, ctx
-
-let private leaveBlock parent (ctx: Ctx) =
-  let exitBlockId = ctx.CurrentBlockOpt |> expect ()
-  let stmts = ctx.Stmts |> List.rev
-  let terminator = ctx.TerminatorOpt |> expect ()
-
-  let ctx =
-    let blockIdOpt, stmts, terminatorOpt = parent
-
-    { ctx with
-        CurrentBlockOpt = blockIdOpt
-        Stmts = stmts
-        TerminatorOpt = terminatorOpt }
-
-  let ctx =
-    let blockDef : XBlockDef =
-      { Stmts = stmts
-        Terminator = terminator }
-
-    { ctx with
-        Blocks = ctx.Blocks |> TMap.add exitBlockId blockDef }
-
-  ctx
-
-let private addStmt stmt (ctx: Ctx) =
-  if ctx.TerminatorOpt |> Option.isSome then
-    ctx
-  else
-    { ctx with Stmts = stmt :: ctx.Stmts }
-
-let private setTerminator terminator (ctx: Ctx) =
-  if ctx.TerminatorOpt |> Option.isSome then
-    ctx
-  else
-    { ctx with
-        TerminatorOpt = Some terminator }
+// -----------------------------------------------
+// Context: places and values
+// -----------------------------------------------
 
 /// Allocates a fresh local.
 let private addLocal (name: string) (ty: XTy) (loc: Loc) (ctx: Ctx) : XLocalId * Ctx =
@@ -302,6 +258,23 @@ let private rvalToArg (rval: XRval) (ty: XTy) (loc: Loc) (ctx: Ctx) : XArg * Ctx
     let local, ctx = rvalToLocal rval ty loc ctx
     XLocalArg(local, loc), ctx
 
+// -----------------------------------------------
+// Context: statements, terminators and blocks
+// -----------------------------------------------
+
+let private addStmt stmt (ctx: Ctx) =
+  if ctx.TerminatorOpt |> Option.isSome then
+    ctx
+  else
+    { ctx with Stmts = stmt :: ctx.Stmts }
+
+let private setTerminator terminator (ctx: Ctx) =
+  if ctx.TerminatorOpt |> Option.isSome then
+    ctx
+  else
+    { ctx with
+        TerminatorOpt = Some terminator }
+
 let private freshBlock (ctx: Ctx) =
   let blockId, ctx = freshSerial ctx
 
@@ -310,6 +283,41 @@ let private freshBlock (ctx: Ctx) =
         Blocks = ctx.Blocks |> TMap.add blockId unreachableBlockDef }
 
   blockId, ctx
+
+let private enterBlock blockId (ctx: Ctx) =
+  let parent =
+    ctx.CurrentBlockOpt, ctx.Stmts, ctx.TerminatorOpt
+
+  let ctx =
+    { ctx with
+        CurrentBlockOpt = Some blockId
+        Stmts = []
+        TerminatorOpt = None }
+
+  parent, ctx
+
+let private leaveBlock parent (ctx: Ctx) =
+  let exitBlockId = ctx.CurrentBlockOpt |> expect ()
+  let stmts = ctx.Stmts |> List.rev
+  let terminator = ctx.TerminatorOpt |> expect ()
+
+  let ctx =
+    let blockIdOpt, stmts, terminatorOpt = parent
+
+    { ctx with
+        CurrentBlockOpt = blockIdOpt
+        Stmts = stmts
+        TerminatorOpt = terminatorOpt }
+
+  let ctx =
+    let blockDef : XBlockDef =
+      { Stmts = stmts
+        Terminator = terminator }
+
+    { ctx with
+        Blocks = ctx.Blocks |> TMap.add exitBlockId blockDef }
+
+  ctx
 
 /// Emits after all branches in the current conditional branching
 /// (those branches should jump to the target if converging).
@@ -338,6 +346,13 @@ let private finishBranching terminator targetBlock (ctx: Ctx) =
       Stmts = []
       TerminatorOpt = None }
 
+let private jumpToTarget rval (target: XTarget) loc (ctx: Ctx) =
+  let local, block = target
+
+  ctx
+  |> addStmt (xAssignStmtToLocalFromRval local rval loc)
+  |> setTerminator (XJumpTk block)
+
 /// Emits a (chain of) basic block as a branch of conditional branching.
 ///
 /// That block jumps to the specified target if converging.
@@ -359,14 +374,7 @@ let private emitInFreshBranch (f: Ctx -> XRval * Ctx) target loc ctx : XBlockId 
 
   entryBlockId, ctx
 
-let private jumpToTarget rval (target: XTarget) loc (ctx: Ctx) =
-  let local, block = target
-
-  ctx
-  |> addStmt (xAssignStmtToLocalFromRval local rval loc)
-  |> setTerminator (XJumpTk block)
-
-/// Emits a if-like control structure.
+/// Emits an if-like control structure.
 /// Always terminates and jumps to target if converging.
 let private emitIf (cond: XArg) (body: Ctx -> XRval * Ctx) (alt: Ctx -> XRval * Ctx) (target: XTarget) loc ctx : Ctx =
   let bodyBlock, ctx = emitInFreshBranch body target loc ctx
@@ -666,91 +674,6 @@ let private mcToIf (cond: XArg) (condTy: Ty) arms target loc (ctx: Ctx) : Ctx op
   | _ -> None
 
 // -----------------------------------------------
-// expr: prim and node
-// -----------------------------------------------
-
-let private xgPrimExpr (prim: HPrim) (tyInfo: PrimTyInfo) loc ctx : XRval * Ctx =
-  match prim, tyInfo with
-  | HPrim.OptionNone, PrimTyInfo.Option itemTy ->
-    let unionId, ctx = xgOptionTy itemTy ctx
-    XAggregateRval(XUnionAk unionId, [], loc), ctx
-
-  | HPrim.Nil, _ -> todo ()
-
-  | _ -> unreachable () // Must be called.
-
-let private xgCallPrim (prim: HPrim) (tyInfo: PrimTyInfo) (args: XArg list) loc ctx : XRval * Ctx =
-  let regularAction stmt ctx =
-    let ctx = ctx |> addStmt stmt
-    XUnitRval loc, ctx
-
-  match prim, args, tyInfo with
-  // operator:
-  | HPrim.Not, [ arg ], _ -> XUnaryRval(XNotUnary, arg, loc), ctx
-  | HPrim.Not, _, _ -> unreachable ()
-
-  | HPrim.Add, [ l; r ], PrimTyInfo.ScalarAdd -> XBinaryRval(XAddBinary, l, r, loc), ctx
-  | HPrim.Add, [ l; r ], PrimTyInfo.StrAdd -> XBinaryRval(XStrAddBinary, l, r, loc), ctx
-  | HPrim.Add, _, _ -> unreachable ()
-
-  // constructor:
-  | HPrim.OptionSome, [ arg ], PrimTyInfo.Option itemTy ->
-    let ty, ctx = xgOptionTy itemTy ctx
-    XAggregateRval(XUnionAk ty, [ arg ], loc), ctx
-
-  // effects:
-  | HPrim.Exit, [ arg ], _ -> XUnitRval loc, setTerminator (XExitTk arg) ctx
-  | HPrim.Exit, _, _ -> unreachable ()
-
-  | HPrim.Printfn, _, _ -> regularAction (XPrintfnStmt(args, loc)) ctx
-
-  | HPrim.PtrWrite, [ l; r ], _ -> regularAction (XPtrWriteStmt(l, r, loc)) ctx
-  | HPrim.PtrWrite, _, _ -> unreachable ()
-
-  | HPrim.Nil, _, _
-  | HPrim.OptionNone, _, _ -> unreachable () // Can't be called.
-
-  | _ -> todo ()
-
-let private xgNodeExpr (expr: HExpr) (ctx: Ctx) : XRval * Ctx =
-  let kind, args, targetTy, loc =
-    match expr with
-    | HNodeExpr (kind, args, ty, loc) -> kind, args, ty, loc
-    | _ -> unreachable ()
-
-  match kind, args with
-  | HMinusEN, [ arg ] ->
-    let arg, ctx = xgExprToArg (arg, ctx)
-    XUnaryRval(XMinusUnary, arg, loc), ctx
-
-  | HCallProcEN, HFunExpr (funSerial, _, _) :: args ->
-    let bodyId = funSerialToBodyId funSerial
-    let args, ctx = (args, ctx) |> stMap xgExprToArg
-
-    let resultLocal, ctx =
-      let name =
-        (ctx.Funs |> mapFind funSerial).Name + "_result"
-
-      addTempLocal name targetTy loc ctx
-
-    let ctx =
-      ctx
-      |> addStmt (XCallStmt(bodyId, args, xLocalPlace resultLocal, loc))
-
-    XLocalRval(resultLocal, loc), ctx
-
-  | HCallProcEN, HPrimExpr (prim, _, _) :: args ->
-    let tyInfo = primTyInfo prim args targetTy
-    let args, ctx = (args, ctx) |> stMap xgExprToArg
-    xgCallPrim prim tyInfo args loc ctx
-
-  | _ ->
-    ctx.Trace "unimplemented node expr {} ({})" [ objToString kind; locToString loc ]
-    let args, ctx = (args, ctx) |> stMap xgExprToArg
-    // todo
-    XUnitRval loc, ctx
-
-// -----------------------------------------------
 // expr: pattern matching
 // -----------------------------------------------
 
@@ -835,6 +758,91 @@ let private xgLetValExpr (expr: HExpr) (ctx: Ctx) : Ctx =
 
   let init, ctx = xgExprToRval init ctx
   xgPatAsIrrefutable pat init ctx
+
+// -----------------------------------------------
+// expr: prim and node
+// -----------------------------------------------
+
+let private xgPrimExpr (prim: HPrim) (tyInfo: PrimTyInfo) loc ctx : XRval * Ctx =
+  match prim, tyInfo with
+  | HPrim.OptionNone, PrimTyInfo.Option itemTy ->
+    let unionId, ctx = xgOptionTy itemTy ctx
+    XAggregateRval(XUnionAk unionId, [], loc), ctx
+
+  | HPrim.Nil, _ -> todo ()
+
+  | _ -> unreachable () // Must be called.
+
+let private xgCallPrim (prim: HPrim) (tyInfo: PrimTyInfo) (args: XArg list) loc ctx : XRval * Ctx =
+  let regularAction stmt ctx =
+    let ctx = ctx |> addStmt stmt
+    XUnitRval loc, ctx
+
+  match prim, args, tyInfo with
+  // operator:
+  | HPrim.Not, [ arg ], _ -> XUnaryRval(XNotUnary, arg, loc), ctx
+  | HPrim.Not, _, _ -> unreachable ()
+
+  | HPrim.Add, [ l; r ], PrimTyInfo.ScalarAdd -> XBinaryRval(XAddBinary, l, r, loc), ctx
+  | HPrim.Add, [ l; r ], PrimTyInfo.StrAdd -> XBinaryRval(XStrAddBinary, l, r, loc), ctx
+  | HPrim.Add, _, _ -> unreachable ()
+
+  // constructor:
+  | HPrim.OptionSome, [ arg ], PrimTyInfo.Option itemTy ->
+    let ty, ctx = xgOptionTy itemTy ctx
+    XAggregateRval(XUnionAk ty, [ arg ], loc), ctx
+
+  // effects:
+  | HPrim.Exit, [ arg ], _ -> XUnitRval loc, setTerminator (XExitTk arg) ctx
+  | HPrim.Exit, _, _ -> unreachable ()
+
+  | HPrim.Printfn, _, _ -> regularAction (XPrintfnStmt(args, loc)) ctx
+
+  | HPrim.PtrWrite, [ l; r ], _ -> regularAction (XPtrWriteStmt(l, r, loc)) ctx
+  | HPrim.PtrWrite, _, _ -> unreachable ()
+
+  | HPrim.Nil, _, _
+  | HPrim.OptionNone, _, _ -> unreachable () // Can't be called.
+
+  | _ -> todo ()
+
+let private xgNodeExpr (expr: HExpr) (ctx: Ctx) : XRval * Ctx =
+  let kind, args, targetTy, loc =
+    match expr with
+    | HNodeExpr (kind, args, ty, loc) -> kind, args, ty, loc
+    | _ -> unreachable ()
+
+  match kind, args with
+  | HMinusEN, [ arg ] ->
+    let arg, ctx = xgExprToArg (arg, ctx)
+    XUnaryRval(XMinusUnary, arg, loc), ctx
+
+  | HCallProcEN, HFunExpr (funSerial, _, _) :: args ->
+    let bodyId = funSerialToBodyId funSerial
+    let args, ctx = (args, ctx) |> stMap xgExprToArg
+
+    let resultLocal, ctx =
+      let name =
+        (ctx.Funs |> mapFind funSerial).Name + "_result"
+
+      addTempLocal name targetTy loc ctx
+
+    let ctx =
+      ctx
+      |> addStmt (XCallStmt(bodyId, args, xLocalPlace resultLocal, loc))
+
+    XLocalRval(resultLocal, loc), ctx
+
+  | HCallProcEN, HPrimExpr (prim, _, _) :: args ->
+    let tyInfo = primTyInfo prim args targetTy
+    let args, ctx = (args, ctx) |> stMap xgExprToArg
+    xgCallPrim prim tyInfo args loc ctx
+
+  | _ ->
+    ctx.Trace "unimplemented node expr {} ({})" [ objToString kind; locToString loc ]
+    let args, ctx = (args, ctx) |> stMap xgExprToArg
+    // todo
+    XUnitRval loc, ctx
 
 // -----------------------------------------------
 // expr: exprToXxx flavors
