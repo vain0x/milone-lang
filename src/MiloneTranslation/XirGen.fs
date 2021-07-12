@@ -86,6 +86,9 @@ let private xRvalOfArg (arg: XArg) : XRval =
   | XDiscriminantArg (variantId, loc) -> XDiscriminantRval(variantId, loc)
   | XLocalArg (localId, loc) -> XLocalRval(localId, loc)
 
+let private xAssignStmtToLocalFromRval local rval loc =
+  XAssignStmt(xLocalPlace local, rval, loc)
+
 // -----------------------------------------------
 // Context
 // -----------------------------------------------
@@ -270,6 +273,7 @@ let private addTempLocal (name: string) (ty: Ty) (loc: Loc) (ctx: Ctx) =
   let ty, ctx = xgTy ty ctx
   addLocal name ty loc ctx
 
+/// Converts an rval to a local (fresh temporary).
 let private rvalToLocal (rval: XRval) (ty: XTy) (loc: Loc) (ctx: Ctx) : XLocalId * Ctx =
   let localOpt =
     match rval with
@@ -285,10 +289,11 @@ let private rvalToLocal (rval: XRval) (ty: XTy) (loc: Loc) (ctx: Ctx) : XLocalId
 
     let ctx =
       ctx
-      |> addStmt (XAssignStmt(xLocalPlace localId, rval, loc))
+      |> addStmt (xAssignStmtToLocalFromRval localId rval loc)
 
     localId, ctx
 
+/// Converts an rval to an arg (fresh temporary).
 let private rvalToArg (rval: XRval) (ty: XTy) (loc: Loc) (ctx: Ctx) : XArg * Ctx =
   match xArgOfRval rval with
   | Some arg -> arg, ctx
@@ -306,6 +311,11 @@ let private freshBlock (ctx: Ctx) =
 
   blockId, ctx
 
+/// Emits after all branches in the current conditional branching
+/// (those branches should jump to the target if converging).
+///
+/// Emits a terminator in the case it's converging.
+/// Current block switches to the target.
 let private finishBranching terminator targetBlock (ctx: Ctx) =
   let blockId = ctx.CurrentBlockOpt |> expect ()
   let stmts = ctx.Stmts |> List.rev
@@ -327,6 +337,43 @@ let private finishBranching terminator targetBlock (ctx: Ctx) =
       CurrentBlockOpt = Some targetBlock
       Stmts = []
       TerminatorOpt = None }
+
+/// Emits a (chain of) basic block as a branch of conditional branching.
+///
+/// That block jumps to the specified target if converging.
+///
+/// `f` is a function to emit code for that block
+/// and return a value to be passed to the target.
+let private emitInBranch (f: Ctx -> XRval * Ctx) blockId target loc ctx : Ctx =
+  let parent, ctx = enterBlock blockId ctx
+  let rval, (ctx: Ctx) = f ctx
+  let ctx = jumpToTarget rval target loc ctx
+  leaveBlock parent ctx
+
+/// Emits a (chain of) fresh basic block as a branch.
+let private emitInFreshBranch (f: Ctx -> XRval * Ctx) target loc ctx : XBlockId * Ctx =
+  let entryBlockId, ctx = freshBlock ctx
+
+  let ctx =
+    emitInBranch f entryBlockId target loc ctx
+
+  entryBlockId, ctx
+
+let private jumpToTarget rval (target: XTarget) loc (ctx: Ctx) =
+  let local, block = target
+
+  ctx
+  |> addStmt (xAssignStmtToLocalFromRval local rval loc)
+  |> setTerminator (XJumpTk block)
+
+/// Emits a if-like control structure.
+/// Always terminates and jumps to target if converging.
+let private emitIf (cond: XArg) (body: Ctx -> XRval * Ctx) (alt: Ctx -> XRval * Ctx) (target: XTarget) loc ctx : Ctx =
+  let bodyBlock, ctx = emitInFreshBranch body target loc ctx
+  let altBlock, ctx = emitInFreshBranch alt target loc ctx
+
+  ctx
+  |> finishBranching (XIfTk(cond, bodyBlock, altBlock, loc)) (snd target)
 
 // -----------------------------------------------
 // symbols
@@ -357,6 +404,16 @@ let private xgVar varSerial (ctx: Ctx) : XLocalId * Ctx =
             Locals = ctx.Locals |> TMap.add localId localDef }
 
       localId, ctx
+
+/// Converts a var to place, assigned an initial value.
+let private xgVarWithRval varSerial (init: XRval) loc ctx =
+  let local, ctx = xgVar varSerial ctx
+
+  let ctx =
+    ctx
+    |> addStmt (xAssignStmtToLocalFromRval local init loc)
+
+  XPlaceRval(xLocalPlace local, loc), ctx
 
 // -----------------------------------------------
 // tys
@@ -492,10 +549,10 @@ let private xgPatTerm (host: PatTermHost) (term: PTerm) (cond: XRval) condTy loc
     let guard, ctx = host.Guard clauseIndex ctx
 
     let bodyBlock, ctx =
-      xgPatTermAsBranch host body cond condTy loc ctx
+      xgPatTermAsFreshBranch host body cond condTy loc ctx
 
     let altBlock, ctx =
-      xgPatTermAsBranch host alt cond condTy loc ctx
+      xgPatTermAsFreshBranch host alt cond condTy loc ctx
 
     ctx
     |> setTerminator (XIfTk(guard, bodyBlock, altBlock, loc))
@@ -511,13 +568,7 @@ let private xgPatTerm (host: PatTermHost) (term: PTerm) (cond: XRval) condTy loc
     ctx
 
   | PLetTerm (varSerial, _, term) ->
-    let local, ctx = xgVar varSerial ctx
-
-    let ctx =
-      ctx
-      |> addStmt (XAssignStmt(xLocalPlace local, cond, loc))
-
-    let cond = XPlaceRval(xLocalPlace local, loc)
+    let cond, ctx = xgVarWithRval varSerial cond loc ctx
     xgPatTerm host term cond condTy loc ctx
 
   | PMatchOptionTerm (_, termOnNone, termOnSome) ->
@@ -526,45 +577,40 @@ let private xgPatTerm (host: PatTermHost) (term: PTerm) (cond: XRval) condTy loc
       rvalToArg rval XBoolTy loc ctx
 
     let bodyBlock, ctx =
-      xgPatTermAsBranch host termOnNone cond condTy loc ctx
+      xgPatTermAsFreshBranch host termOnNone cond condTy loc ctx
 
     let altBlock, ctx =
-      xgPatTermAsBranch host termOnSome cond condTy loc ctx
+      xgPatTermAsFreshBranch host termOnSome cond condTy loc ctx
 
     ctx
     |> setTerminator (XIfTk(isNoneArg, bodyBlock, altBlock, loc))
 
   | _ -> todo ()
 
-let private xgPatTermAsBranch (host: PatTermHost) (term: PTerm) (cond: XRval) condTy loc ctx =
-  let entryBlockId, ctx = freshBlock ctx
-  let parent, ctx = enterBlock entryBlockId ctx
-
+let private xgPatTermInBranch (host: PatTermHost) blockId (term: PTerm) (cond: XRval) condTy loc ctx =
+  let parent, ctx = enterBlock blockId ctx
   let ctx = xgPatTerm host term cond condTy loc ctx
+  leaveBlock parent ctx
 
-  let ctx = leaveBlock parent ctx
+let private xgPatTermAsFreshBranch (host: PatTermHost) (term: PTerm) (cond: XRval) condTy loc ctx =
+  let entryBlockId, ctx = freshBlock ctx
+
+  let ctx =
+    xgPatTermInBranch host entryBlockId term cond condTy loc ctx
+
   entryBlockId, ctx
 
-let private xgPatAsIrrefutable (pat: HPat) (cond: XArg) (ctx: Ctx) : Ctx =
-  let term = patCompileForLetValExpr pat
-
+let private xgPatAsIrrefutable (pat: HPat) (cond: XRval) (ctx: Ctx) : Ctx =
   match pat with
   | HDiscardPat _
   | HNodePat (HTuplePN, [], _, _) -> ctx
 
   | HVarPat (_, varSerial, _, loc) ->
-    let local, ctx = xgVar varSerial ctx
-
+    let _, ctx = xgVarWithRval varSerial cond loc ctx
     ctx
-    |> addStmt (XAssignStmt(xLocalPlace local, xRvalOfArg cond, loc))
 
   | HAsPat (innerPat, varSerial, loc) ->
-    let local, ctx = xgVar varSerial ctx
-
-    let ctx =
-      ctx
-      |> addStmt (XAssignStmt(xLocalPlace local, xRvalOfArg cond, loc))
-
+    let cond, ctx = xgVarWithRval varSerial cond loc ctx
     xgPatAsIrrefutable innerPat cond ctx
 
   | _ -> todo ()
@@ -582,45 +628,39 @@ let private mcToIf (cond: XArg) (condTy: Ty) arms target loc (ctx: Ctx) : Ctx op
     [ HLitPat (BoolLit true, _), HLitExpr (BoolLit true, _), body;
       HLitPat (BoolLit false, _), HLitExpr (BoolLit true, _), alt ] ->
 
-    let bodyBlock, ctx = xgExprAsBranch body target loc ctx
-    let altBlock, ctx = xgExprAsBranch alt target loc ctx
-
     ctx
-    |> finishBranching (XIfTk(cond, bodyBlock, altBlock, loc)) (snd target)
+    |> emitIf cond (fun ctx -> xgExprToRval body ctx) (fun ctx -> xgExprToRval alt ctx) target loc
     |> Some
 
   // | None -> ... | _ -> ...
   | Ty (OptionTk, [ itemTy ]),
     [ HNodePat (HNonePN, _, _, _), HLitExpr (BoolLit true, _), noneCl; HDiscardPat _, HLitExpr (BoolLit true, _), someCl ] ->
 
-    let unionTyId, ctx = xgOptionTy itemTy ctx
-
-    let condLocal, ctx =
-      let condTy, ctx = xgTy condTy ctx
-      rvalToLocal (xRvalOfArg cond) condTy loc ctx
-
-    let l, ctx =
-      rvalToArg
-        (XPlaceRval(
-          { Local = condLocal
-            Path = [ XPart.Discriminant ] },
-          loc
-        ))
-        xtInt
-        loc
-        ctx
-
-    let r =
-      XDiscriminantArg(computeNoneVariantId unionTyId, loc)
-
     let cond, ctx =
+      let unionTyId, ctx = xgOptionTy itemTy ctx
+
+      let condLocal, ctx =
+        let condTy, ctx = xgTy condTy ctx
+        rvalToLocal (xRvalOfArg cond) condTy loc ctx
+
+      let l, ctx =
+        rvalToArg
+          (XPlaceRval(
+            { Local = condLocal
+              Path = [ XPart.Discriminant ] },
+            loc
+          ))
+          xtInt
+          loc
+          ctx
+
+      let r =
+        XDiscriminantArg(computeNoneVariantId unionTyId, loc)
+
       rvalToArg (XBinaryRval(XScalarEqualBinary, l, r, loc)) XBoolTy loc ctx
 
-    let bodyBlock, ctx = xgExprAsBranch noneCl target loc ctx
-    let altBlock, ctx = xgExprAsBranch someCl target loc ctx
-
     ctx
-    |> finishBranching (XIfTk(cond, bodyBlock, altBlock, loc)) (snd target)
+    |> emitIf cond (fun ctx -> xgExprToRval noneCl ctx) (fun ctx -> xgExprToRval someCl ctx) target loc
     |> Some
 
   | _ -> None
@@ -767,23 +807,15 @@ let private xgMatchExpr (expr: HExpr) (ctx: Ctx) : XArg * Ctx =
              let ctx =
                let entryBlockId = nthArmId i
                let parent, ctx = enterBlock entryBlockId ctx
-
                let ctx = xgPatTerm host term cond condTy loc ctx
-
                leaveBlock parent ctx
 
              // body:
              let ctx =
                let entryBlockId = nthBodyId i
-
                let parent, ctx = enterBlock entryBlockId ctx
                let rval, ctx = xgExprToRval body ctx
-
-               let ctx =
-                 ctx
-                 |> addStmt (XAssignStmt(xLocalPlace (fst target), rval, loc))
-                 |> setTerminator (XJumpTk(snd target))
-
+               let ctx = jumpToTarget rval target loc ctx
                leaveBlock parent ctx
 
              ctx)
@@ -801,7 +833,7 @@ let private xgLetValExpr (expr: HExpr) (ctx: Ctx) : Ctx =
     | HLetValExpr (pat, init, _, _, _) -> pat, init
     | _ -> unreachable ()
 
-  let init, ctx = xgExprToArg (init, ctx)
+  let init, ctx = xgExprToRval init ctx
   xgPatAsIrrefutable pat init ctx
 
 // -----------------------------------------------
@@ -881,23 +913,6 @@ let private xgExprAsStmt (expr: HExpr) (ctx: Ctx) : Ctx =
 let private xgStmts (stmts: HExpr list) (ctx: Ctx) : Ctx =
   List.fold (fun ctx expr -> xgExprAsStmt expr ctx) ctx stmts
 
-let private xgExprAsBranch (expr: HExpr) (target: XTarget) (loc: Loc) (ctx: Ctx) : XBlockId * Ctx =
-  let entryBlockId, ctx = freshBlock ctx
-
-  let parent, ctx = enterBlock entryBlockId ctx
-  let rval, (ctx: Ctx) = xgExprToRval expr ctx
-
-  let ctx =
-    let targetLocal, targetBlockId = target
-
-    ctx
-    |> addStmt (XAssignStmt(xLocalPlace targetLocal, rval, loc))
-    |> setTerminator (XJumpTk targetBlockId)
-
-  let ctx = leaveBlock parent ctx
-
-  entryBlockId, ctx
-
 // -----------------------------------------------
 // decls
 // -----------------------------------------------
@@ -943,15 +958,17 @@ let private xgLetFunDeclContents (decl: HExpr, ctx: Ctx) =
 
   // Generate blocks.
   let entryBlockId, ctx = freshBlock ctx
-  let noBlock, ctx = enterBlock entryBlockId ctx
-  // process arg pats
-  let resultArg, ctx = xgExprToArg (bodyExpr, ctx)
 
   let ctx =
-    { ctx with
-        TerminatorOpt = Some(Option.defaultValue (XReturnTk resultArg) ctx.TerminatorOpt) }
+    let noBlock, ctx = enterBlock entryBlockId ctx
+    // process arg pats
+    let resultArg, ctx = xgExprToArg (bodyExpr, ctx)
 
-  let ctx = leaveBlock noBlock ctx
+    let ctx =
+      { ctx with
+          TerminatorOpt = Some(Option.defaultValue (XReturnTk resultArg) ctx.TerminatorOpt) }
+
+    leaveBlock noBlock ctx
 
   let bodyDef =
     { bodyDef with

@@ -67,11 +67,6 @@ type PTerm =
 /// Index of clause in match expression.
 type private ClauseIndex = int
 
-/// (clauseIndex, pats, isGuarded, holedTerm).
-///
-/// Internal representation of clause.
-type private PClause = ClauseIndex * PPat list * bool * (PTerm -> PTerm)
-
 let private pcNodePat pat body alt =
   let kind, argPats, _ty, _loc =
     match pat with
@@ -118,6 +113,3 @@ let patCompileForMatchExprToBlocks (pats: HPat list) : PTerm list =
              PAbortTerm
 
          pcPat pat (PGuardTerm(i, PBodyTerm i, alt)) alt)
-
-let patCompileForLetValExpr (pat: HPat) : PTerm =
-  pcPat pat (PBodyTerm 0) (PFallbackTerm 1)
