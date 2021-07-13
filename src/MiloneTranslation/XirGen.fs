@@ -722,7 +722,12 @@ let private xgMatchExpr (expr: HExpr) (ctx: Ctx) : XArg * Ctx =
         Fallback = fun i ctx -> ctx |> setTerminator (XJumpTk(nthArmId i)) }
 
     let ctx =
-      (List.zip arms terms)
+      let zipped =
+        match listTryZip arms terms with
+        | it, [], [] -> it
+        | _ -> unreachable ()
+
+      zipped
       |> List.mapi (fun i ((_, guard, body), term) -> i, guard, body, term)
       |> List.fold
            (fun (ctx: Ctx) (i, _guard, body, term) ->
