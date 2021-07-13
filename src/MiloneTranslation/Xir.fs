@@ -97,7 +97,7 @@ type XStmt =
 type XTerminator =
   | XUnreachableTk
   | XExitTk of XArg
-  | XReturnTk of XArg
+  | XReturnTk
   | XJumpTk of XBlockId
   | XIfTk of XArg * XBlockId * XBlockId * Loc
 // | XSwitchTk of XArg * (int * XBlockId) list
@@ -122,6 +122,8 @@ type XBodyDef =
     ResultTy: XTy
 
     Locals: AssocMap<XLocalId, XLocalDef>
+    ArgLocals: XLocalId list
+    ResultLocal: XLocalId
     Blocks: AssocMap<XBlockId, XBlockDef>
     EntryBlockId: XBlockId
 

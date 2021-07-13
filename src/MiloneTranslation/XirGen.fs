@@ -121,6 +121,7 @@ type private Ctx =
 
     // Current body:
     CurrentBodyOpt: XBodyDef option
+    ResultLocalOpt: XLocalId option
     Locals: AssocMap<XLocalId, XLocalDef>
     Blocks: AssocMap<XBlockId, XBlockDef>
 
@@ -141,11 +142,12 @@ let private ofTyCtx (trace: TraceFun) (tyCtx: TyCtx) : Ctx =
     XUnions = TMap.empty compare
 
     Bodies = []
-    MainBodyIdOpt = None
+    MainBodyIdOpt = tyCtx.MainFunOpt |> Option.map funSerialToBodyId
     CurrentBlockOpt = None
     Stmts = []
     TerminatorOpt = None
     CurrentBodyOpt = None
+    ResultLocalOpt = None
     Locals = emptyLocals
     Blocks = emptyBlocks
 
@@ -225,7 +227,7 @@ let private addLocal (name: string) (ty: XTy) (loc: Loc) (ctx: Ctx) : XLocalId *
   localId, ctx
 
 /// Converts Ty -> XTy and adds an local of the type.
-let private addTempLocal (name: string) (ty: Ty) (loc: Loc) (ctx: Ctx) =
+let private addTempLocal (name: string) (ty: Ty) (loc: Loc) (ctx: Ctx) : XLocalId * Ctx =
   let ty, ctx = xgTy ty ctx
   addLocal name ty loc ctx
 
@@ -623,6 +625,33 @@ let private xgPatAsIrrefutable (pat: HPat) (cond: XRval) (ctx: Ctx) : Ctx =
 
   | _ -> todo ()
 
+/// Processes an arg-site pattern to local.
+let private xgArgPat funName (i: int) pat ctx : XLocalId * Ctx =
+  match pat with
+  | HVarPat (_, varSerial, _, _) -> xgVar varSerial ctx
+
+  | _ ->
+    let ty, loc = patExtract pat
+
+    let local, ctx =
+      addTempLocal (funName + "_arg_" + string i) ty loc ctx
+
+    let ctx =
+      xgPatAsIrrefutable pat (XLocalRval(local, loc)) ctx
+
+    local, ctx
+
+let private xgArgPats funName argPats ctx : XLocalId list * Ctx =
+  let locals, (_, ctx) =
+    argPats
+    |> List.mapFold
+         (fun (i: int, ctx) pat ->
+           let local, ctx = xgArgPat funName i pat ctx
+           local, (i + 1, ctx))
+         (0, ctx)
+
+  locals, ctx
+
 // -----------------------------------------------
 // pattern matching
 // -----------------------------------------------
@@ -940,8 +969,7 @@ let private xgLetFunDeclContents (decl: HExpr, ctx: Ctx) =
     | _ -> unreachable ()
 
   let funDef = ctx.Funs |> mapFind funSerial
-
-  let bodyId = funSerialToInt funSerial
+  let bodyTy, bodyLoc = exprExtract bodyExpr
 
   let bodyDef : XBodyDef =
     { Name = funDef.Name
@@ -950,39 +978,51 @@ let private xgLetFunDeclContents (decl: HExpr, ctx: Ctx) =
       ArgTys = []
       ResultTy = XUnitTy
       Locals = emptyLocals
+      ArgLocals = []
+      ResultLocal = -1
       Blocks = emptyBlocks
       EntryBlockId = -1 }
 
   let ctx =
-    let mainBodyIdOpt =
-      match ctx.MainFunOpt with
-      | Some mainFun when funSerialToInt mainFun = funSerialToInt funSerial -> Some bodyId
-      | _ -> ctx.MainBodyIdOpt
-
     { ctx with
-        MainBodyIdOpt = mainBodyIdOpt
         CurrentBodyOpt = Some bodyDef }
 
-  // Compute signature.
+  let argTys, resultTy, ctx =
+    let argTys, ctx =
+      (argPats, ctx)
+      |> stMap (fun (pat, ctx) -> xgTy (patToTy pat) ctx)
 
-  // Generate blocks.
-  let entryBlockId, ctx = freshBlock ctx
+    let resultTy, ctx = xgTy bodyTy ctx
+    argTys, resultTy, ctx
 
-  let ctx =
+  let entryBlockId, resultLocal, argLocals, ctx =
+    let entryBlockId, ctx = freshBlock ctx
     let noBlock, ctx = enterBlock entryBlockId ctx
-    // process arg pats
-    let resultArg, ctx = xgExprToArg (bodyExpr, ctx)
+
+    let resultLocal, ctx =
+      let name = (funDef.Name + "_result")
+      addTempLocal name bodyTy bodyLoc ctx
+
+    let argLocals, ctx = xgArgPats funDef.Name argPats ctx
+
+    let resultRval, ctx = xgExprToRval bodyExpr ctx
 
     let ctx =
-      { ctx with
-          TerminatorOpt = Some(Option.defaultValue (XReturnTk resultArg) ctx.TerminatorOpt) }
+      ctx
+      |> addStmt (xAssignStmtToLocalFromRval resultLocal resultRval bodyLoc)
+      |> setTerminator XReturnTk
 
-    leaveBlock noBlock ctx
+    let ctx = leaveBlock noBlock ctx
+    entryBlockId, resultLocal, argLocals, ctx
 
   let bodyDef =
     { bodyDef with
         Locals = ctx.Locals
         Blocks = ctx.Blocks
+        ArgTys = argTys
+        ResultTy = resultTy
+        ArgLocals = argLocals
+        ResultLocal = resultLocal
         EntryBlockId = entryBlockId }
 
   { ctx with
