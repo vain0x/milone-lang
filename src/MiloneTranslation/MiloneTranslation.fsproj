@@ -19,6 +19,7 @@
     <Compile Include="PatCompile.fs" />
     <Compile Include="Xir.fs" />
     <Compile Include="XirGen.fs" />
+    <Compile Include="XirReuse.fs" />
     <Compile Include="Cir.fs" />
     <Compile Include="CirGen.fs" />
     <Compile Include="CirDump.fs" />
