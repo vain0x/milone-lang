@@ -25,7 +25,7 @@ let private expect (context: _) (opt: 'T option) : 'T =
 
 [<RequireQualifiedAccess>]
 type private PrimTyInfo =
-  | None
+  | NoInfo
   | ScalarAdd
   | StrAdd
   | Option of optionItemTy: Ty
@@ -48,7 +48,7 @@ let private primTyInfo (prim: HPrim) (args: HExpr list) (targetTy: Ty) : PrimTyI
   | HPrim.OptionNone, [], Ty (OptionTk, [ itemTy ]) -> PrimTyInfo.Option(itemTy)
   | HPrim.OptionNone, _, _ -> unreachable ()
 
-  | _ -> PrimTyInfo.None
+  | _ -> PrimTyInfo.NoInfo
 
 // -----------------------------------------------
 // XIR helpers
@@ -543,11 +543,11 @@ let private xgPatTerm (host: PatTermHost) (term: PTerm) (cond: XRval) condTy loc
       let unionTyId, condTy = optionTyToItemTy condTy ctx
 
       let cond =
-        XPlaceRval(
+        let place : XPlace =
           { Local = local
-            Path = [ XPart.Payload(computeSomeVariantId unionTyId) ] },
-          loc
-        )
+            Path = [ XPart.Payload(computeSomeVariantId unionTyId) ] }
+
+        XPlaceRval(place, loc)
 
       xgPatTerm host term cond condTy loc ctx
 
@@ -652,15 +652,11 @@ let private mcToIf (cond: XArg) (condTy: Ty) arms target loc (ctx: Ctx) : Ctx op
         rvalToLocal (xRvalOfArg cond) condTy loc ctx
 
       let l, ctx =
-        rvalToArg
-          (XPlaceRval(
-            { Local = condLocal
-              Path = [ XPart.Discriminant ] },
-            loc
-          ))
-          xtInt
-          loc
-          ctx
+        let place : XPlace =
+          { Local = condLocal
+            Path = [ XPart.Discriminant ] }
+
+        rvalToArg (XPlaceRval(place, loc)) xtInt loc ctx
 
       let r =
         XDiscriminantArg(computeNoneVariantId unionTyId, loc)
@@ -960,7 +956,7 @@ let private xgLetFunDeclContents (decl: HExpr, ctx: Ctx) =
   let ctx =
     let mainBodyIdOpt =
       match ctx.MainFunOpt with
-      | Some mainFun when mainFun = funSerial -> Some bodyId
+      | Some mainFun when funSerialToInt mainFun = funSerialToInt funSerial -> Some bodyId
       | _ -> ctx.MainBodyIdOpt
 
     { ctx with
