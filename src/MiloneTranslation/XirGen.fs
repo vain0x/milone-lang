@@ -111,7 +111,7 @@ type private Ctx =
     XUnions: AssocMap<XUnionTyId, XUnionDef>
 
     // Done bodies.
-    Bodies: XBodyDef list
+    Bodies: AssocMap<XBodyId, XBodyDef>
     MainBodyIdOpt: XBodyId option
 
     // Current block:
@@ -141,7 +141,7 @@ let private ofTyCtx (trace: TraceFun) (tyCtx: TyCtx) : Ctx =
     XVariants = TMap.empty compare
     XUnions = TMap.empty compare
 
-    Bodies = []
+    Bodies = TMap.empty compare
     MainBodyIdOpt = tyCtx.MainFunOpt |> Option.map funSerialToBodyId
     CurrentBlockOpt = None
     Stmts = []
@@ -157,8 +157,8 @@ let private toProgram (ctx: Ctx) : XProgram =
   // instead of generating XProgram, print debug info...
   ctx.Trace "toProgram:" []
 
-  List.fold
-    (fun () (body: XBodyDef) ->
+  TMap.fold
+    (fun () _ (body: XBodyDef) ->
       ctx.Trace "\nbody \"{}\" {}" [ body.Name; locToString body.Loc ]
 
       ctx.Trace
@@ -195,7 +195,8 @@ let private toProgram (ctx: Ctx) : XProgram =
     ()
     ctx.Bodies
 
-  exit 1
+  { Bodies = ctx.Bodies
+    MainId = ctx.MainBodyIdOpt |> expect () }
 
 let private freshSerial (ctx: Ctx) =
   ctx.Serial + 1, { ctx with Serial = ctx.Serial + 1 }
@@ -1026,7 +1027,9 @@ let private xgLetFunDeclContents (decl: HExpr, ctx: Ctx) =
         EntryBlockId = entryBlockId }
 
   { ctx with
-      Bodies = bodyDef :: ctx.Bodies
+      Bodies =
+        ctx.Bodies
+        |> TMap.add (funSerialToBodyId funSerial) bodyDef
       CurrentBodyOpt = None
       Locals = emptyLocals
       Blocks = emptyBlocks }

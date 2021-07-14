@@ -10,6 +10,8 @@ module S = MiloneStd.StdString
 module TMap = MiloneStd.StdMap
 module TSet = MiloneStd.StdSet
 
+type private TraceFun = string -> string list -> unit
+
 let private listContains (x: int) (xs: int list) = xs |> List.exists (fun y -> x = y)
 
 // -----------------------------------------------
@@ -67,11 +69,10 @@ let private xStmtToDef (stmt: XStmt) : XLocalId list =
 
 let private xStmtToUse (stmt: XStmt) : XLocalId list =
   match stmt with
-  | XAssignStmt (place, _, _) -> [ place.Local ]
-  | XCallStmt (_, _, place, _) -> [ place.Local ]
-
-  | XPrintfnStmt _
-  | XPtrWriteStmt _ -> []
+  | XAssignStmt (_, rval, _) -> xRvalToUse rval
+  | XCallStmt (_, args, _, _) -> List.collect xArgToUse args
+  | XPrintfnStmt (args, _) -> List.collect xArgToUse args
+  | XPtrWriteStmt (l, r, _) -> List.collect xArgToUse [ l; r ]
 
 let private xTerminatorToUse (terminator: XTerminator) : XLocalId list =
   match terminator with
@@ -159,17 +160,23 @@ type private Ctx =
 
     CurrentLocal: XLocalId
 
-    /// Successors of each block.
-    /// (For each entry `b, [s]`, s may jump to b.)
-    SuccessorMap: AssocMap<XBlockId, XBlockId list>
-
     LiveIn: AssocSet<XBlockId * XLocalId>
     LiveOut: AssocSet<XBlockId * XLocalId>
-    SomethingHappened: bool }
+    SomethingHappened: bool
 
-let private ctxOfBodyDef (bodyDef: XBodyDef) : Ctx = todo ()
+    Trace: TraceFun }
 
-let private successors blockId ctx = ctx.SuccessorMap |> mapFind blockId
+let private ctxOfBodyDef trace (bodyDef: XBodyDef) : Ctx =
+  { Blocks = bodyDef.Blocks
+    EntryBlock = bodyDef.EntryBlockId
+    ResultLocal = bodyDef.ResultLocal
+
+    CurrentLocal = -1
+    LiveIn = TMap.empty (pairCompare compare compare)
+    LiveOut = TMap.empty (pairCompare compare compare)
+    SomethingHappened = false
+
+    Trace = trace }
 
 let private isLiveIn blockId localId (ctx: Ctx) =
   ctx.LiveIn |> TSet.contains (blockId, localId)
@@ -186,13 +193,13 @@ let private markAsSomethingHappened (ctx: Ctx) : Ctx =
   else
     { ctx with SomethingHappened = true }
 
-let private markAsLiveInAll blockId localIds (ctx: Ctx) =
-  { ctx with
-      LiveIn =
-        ctx.LiveIn
-        |> forList TSet.add (localIds |> List.map (fun local -> blockId, local))
+// let private markAsLiveInAll blockId localIds (ctx: Ctx) =
+//   { ctx with
+//       LiveIn =
+//         ctx.LiveIn
+//         |> forList TSet.add (localIds |> List.map (fun local -> blockId, local))
 
-      SomethingHappened = true }
+//       SomethingHappened = true }
 
 let private markAsLiveInOut blockId localId liveIn liveOut (ctx: Ctx) =
   let pair = blockId, localId
@@ -228,36 +235,47 @@ let private xrBlock (blockId: XBlockId) (ctx: Ctx) : Ctx =
   let local = ctx.CurrentLocal
 
   let liveOut =
-    let isLiveOutAsResultLocal () =
-      match blockDef.Terminator with
-      | XReturnTk -> ctx.ResultLocal = local
-      | _ -> false
-
     isLiveOut blockId local ctx
     || xTerminatorToSuccessors blockDef.Terminator
        |> List.exists (fun b -> isLiveIn b local ctx)
-    || isLiveOutAsResultLocal ()
 
   let liveIn =
     let isDefined () =
       blockDef.Stmts
-      |> List.exists (fun stmt -> xStmtToDef stmt |> listContains local)
+      |> List.exists
+           (fun stmt ->
+             //  ctx.Trace
+             //    "stmt ({}) def({}) use({})"
+             //    [ objToString stmt
+             //      List.map string (xStmtToDef stmt) |> S.concat ","
+             //      List.map string (xStmtToUse stmt) |> S.concat "," ]
+
+             xStmtToDef stmt |> listContains local)
+
+    let isUsedBeforeDef () =
+      blockDef.Stmts
+      |> List.takeWhile (fun stmt -> xStmtToDef stmt |> listContains local |> not)
+      |> List.exists (fun stmt -> xStmtToUse stmt |> listContains local)
+      || (not (isDefined ())
+          && xTerminatorToUse blockDef.Terminator
+             |> listContains local)
 
     isLiveIn blockId local ctx
     || (liveOut && not (isDefined ()))
+    || isUsedBeforeDef ()
 
   markAsLiveInOut blockId local liveIn liveOut ctx
 
-let private xrBody (bodyDef: XBodyDef) : XBodyDef =
-  let ctx = ctxOfBodyDef bodyDef
+let private xrBody (trace: TraceFun) (bodyDef: XBodyDef) : XBodyDef =
+  let ctx = ctxOfBodyDef trace bodyDef
 
-  let ctx =
-    markAsLiveInAll bodyDef.EntryBlockId (bodyDef.Locals |> TMap.toKeys) ctx
+  // let ctx =
+  //   markAsLiveInAll bodyDef.EntryBlockId (bodyDef.Locals |> TMap.toKeys) ctx
 
   // FIXME: topological sort
   let blocks = bodyDef.Blocks |> TMap.toKeys
 
-  let rec go (ctx: Ctx) =
+  let rec go i (ctx: Ctx) =
     let ctx =
       bodyDef.Locals
       |> TMap.fold
@@ -267,18 +285,61 @@ let private xrBody (bodyDef: XBodyDef) : XBodyDef =
            ctx
 
     let happened, ctx = takeSomethingHappened ctx
-    if happened then go ctx else ctx
 
-  let ctx = go ctx
+    if i < 10 || happened then
+      go (i + 1) ctx
+    else
+      ctx
+
+  let ctx = go 0 ctx
   // TODO: when a local is defined, try to pick another local of the same type whose lifetime is disjoint, and (if any) replace it with the other.
+
+  let dump () =
+    trace "\nliveness {}" [ bodyDef.Name ]
+
+    let displayLocal local =
+      let d = bodyDef.Locals |> mapFind local
+      Option.defaultValue "" d.Name + "#" + string d.Id
+
+    ctx.Blocks
+    |> TMap.fold
+         (fun () blockId _ ->
+           let liveIn =
+             ctx.LiveIn
+             |> TSet.toList
+             |> List.choose
+                  (fun (b, l) ->
+                    if b = blockId then
+                      Some(displayLocal l)
+                    else
+                      None)
+             |> S.concat ", "
+
+           let liveOut =
+             ctx.LiveOut
+             |> TSet.toList
+             |> List.choose
+                  (fun (b, l) ->
+                    if b = blockId then
+                      Some(displayLocal l)
+                    else
+                      None)
+             |> S.concat ", "
+
+           trace "  #{}" [ string blockId ]
+           trace "    in {}" [ liveIn ]
+           trace "    out {}" [ liveOut ])
+         ()
+
+  dump ()
 
   bodyDef
 
 // ===============================================
 
-let xirReuse (program: XProgram) : XProgram =
+let xirReuse (trace: TraceFun) (program: XProgram) : XProgram =
   let bodies =
     program.Bodies
-    |> TMap.map (fun (_: XBodyId) bodyDef -> xrBody bodyDef)
+    |> TMap.map (fun (_: XBodyId) bodyDef -> xrBody trace bodyDef)
 
   { program with Bodies = bodies }

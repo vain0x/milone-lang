@@ -24,6 +24,7 @@ open MiloneTranslation.Monomorphizing
 open MiloneTranslation.RecordRes
 open MiloneTranslation.TailRecOptimizing
 open MiloneTranslation.XirGen
+open MiloneTranslation.XirReuse
 
 module C = MiloneStd.StdChar
 module Hir = MiloneTranslation.Hir
@@ -1073,6 +1074,7 @@ let cli (host: CliHost) =
         let decls, tyCtx = transformHir host v (modules, tyCtx)
         // CompileOk(codeGenHirViaMir host v ctx.EntryProjectName ctx.HeaderOnly (decls, tyCtx))
         let program = xirGen trace (decls, tyCtx)
+        xirReuse trace program |> ignore
         trace "OK" [ objToString program ]
         CompileOk []
 
