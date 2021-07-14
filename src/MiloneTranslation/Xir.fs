@@ -71,6 +71,11 @@ type XBinary =
   | XAddBinary
   | XStrAddBinary
   | XScalarEqualBinary
+  | XStrEqualBinary
+  | XScalarLessBinary
+  | XStrLessBinary
+  | XScalarCompareBinary
+  | XStrCompareBinary
 
 type XAggregateKind =
   | XUnionAk of XUnionTyId

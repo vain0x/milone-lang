@@ -26,22 +26,29 @@ let private expect (context: _) (opt: 'T option) : 'T =
 [<RequireQualifiedAccess>]
 type private PrimTyInfo =
   | NoInfo
-  | ScalarAdd
-  | StrAdd
+  | ScalarOperation
+  | StrOperation
   | Option of optionItemTy: Ty
 
 let private primTyInfo (prim: HPrim) (args: HExpr list) (targetTy: Ty) : PrimTyInfo =
-  match prim, args, targetTy with
-  | HPrim.Add, l :: _, _ ->
-    let (Ty (tk, _)) = exprToTy l
+  let onScalarOrStr expr =
+    let (Ty (tk, _)) = exprToTy expr
 
     match tk with
     | IntTk _
     | FloatTk _
-    | CharTk -> PrimTyInfo.ScalarAdd
+    | BoolTk
+    | CharTk -> PrimTyInfo.ScalarOperation
 
-    | StrTk -> PrimTyInfo.StrAdd
+    | StrTk -> PrimTyInfo.StrOperation
     | _ -> unreachable ()
+
+  match prim, args, targetTy with
+  | HPrim.Add, l :: _, _ -> onScalarOrStr l
+
+  | HPrim.Equal, l :: _, _ -> onScalarOrStr l
+  | HPrim.Less, l :: _, _ -> onScalarOrStr l
+  | HPrim.Compare, l :: _, _ -> onScalarOrStr l
 
   | HPrim.OptionSome, arg :: _, _ -> PrimTyInfo.Option(exprToTy arg)
   | HPrim.OptionSome, _, _ -> unreachable ()
@@ -814,9 +821,16 @@ let private xgCallPrim (prim: HPrim) (tyInfo: PrimTyInfo) (args: XArg list) loc 
   | HPrim.Not, [ arg ], _ -> XUnaryRval(XNotUnary, arg, loc), ctx
   | HPrim.Not, _, _ -> unreachable ()
 
-  | HPrim.Add, [ l; r ], PrimTyInfo.ScalarAdd -> XBinaryRval(XAddBinary, l, r, loc), ctx
-  | HPrim.Add, [ l; r ], PrimTyInfo.StrAdd -> XBinaryRval(XStrAddBinary, l, r, loc), ctx
+  | HPrim.Add, [ l; r ], PrimTyInfo.ScalarOperation -> XBinaryRval(XAddBinary, l, r, loc), ctx
+  | HPrim.Add, [ l; r ], PrimTyInfo.StrOperation -> XBinaryRval(XStrAddBinary, l, r, loc), ctx
   | HPrim.Add, _, _ -> unreachable ()
+
+  | HPrim.Equal, [ l; r ], PrimTyInfo.ScalarOperation -> XBinaryRval(XScalarEqualBinary, l, r, loc), ctx
+  | HPrim.Equal, [ l; r ], PrimTyInfo.StrOperation -> XBinaryRval(XStrEqualBinary, l, r, loc), ctx
+  | HPrim.Less, [ l; r ], PrimTyInfo.ScalarOperation -> XBinaryRval(XScalarLessBinary, l, r, loc), ctx
+  | HPrim.Less, [ l; r ], PrimTyInfo.StrOperation -> XBinaryRval(XStrLessBinary, l, r, loc), ctx
+  | HPrim.Compare, [ l; r ], PrimTyInfo.ScalarOperation -> XBinaryRval(XScalarCompareBinary, l, r, loc), ctx
+  | HPrim.Compare, [ l; r ], PrimTyInfo.StrOperation -> XBinaryRval(XStrCompareBinary, l, r, loc), ctx
 
   // constructor:
   | HPrim.OptionSome, [ arg ], PrimTyInfo.Option itemTy ->
