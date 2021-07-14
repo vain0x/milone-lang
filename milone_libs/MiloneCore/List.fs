@@ -63,6 +63,14 @@ let filter (pred: _ -> bool) (xs: _ list) : _ list =
 
   listFilterLoop [] xs
 
+let takeWhile (pred: _ -> bool) (xs: _ list) : _ list =
+  let rec listTakeWhileLoop acc xs =
+    match xs with
+    | x :: tail when pred x -> listTakeWhileLoop (x :: acc) tail
+    | _ -> rev acc
+
+  listTakeWhileLoop [] xs
+
 let skipWhile (pred: _ -> bool) (xs: _ list) : _ list =
   let rec listSkipWhileLoop xs =
     match xs with
