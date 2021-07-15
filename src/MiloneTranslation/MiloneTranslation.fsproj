@@ -21,6 +21,7 @@
     <Compile Include="XirGen.fs" />
     <Compile Include="XirReuse.fs" />
     <Compile Include="Cir.fs" />
+    <Compile Include="XirToCir.fs" />
     <Compile Include="CirGen.fs" />
     <Compile Include="CirDump.fs" />
   </ItemGroup>

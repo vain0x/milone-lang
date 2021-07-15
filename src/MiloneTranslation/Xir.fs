@@ -138,3 +138,16 @@ type XBodyDef =
 type XProgram =
   { Bodies: AssocMap<XBodyId, XBodyDef>
     MainId: XBodyId }
+
+// -----------------------------------------------
+// terminator
+// -----------------------------------------------
+
+let xTerminatorToSuccessors (terminator: XTerminator) : XBlockId list =
+  match terminator with
+  | XUnreachableTk
+  | XExitTk _
+  | XReturnTk -> []
+
+  | XJumpTk blockId -> [ blockId ]
+  | XIfTk (_, body, alt, _) -> [ body; alt ]

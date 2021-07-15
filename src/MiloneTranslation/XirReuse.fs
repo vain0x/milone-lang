@@ -83,15 +83,6 @@ let private xTerminatorToUse (terminator: XTerminator) : XLocalId list =
 
   | XIfTk (arg, _, _, _) -> xArgToUse arg
 
-let private xTerminatorToSuccessors (terminator: XTerminator) : XBlockId list =
-  match terminator with
-  | XUnreachableTk
-  | XExitTk _
-  | XReturnTk -> []
-
-  | XJumpTk blockId -> [ blockId ]
-  | XIfTk (_, body, alt, _) -> [ body; alt ]
-
 type private Rewriter =
   { OnLocal: XLocalId -> XLocalId
     OnPlace: XPlace -> XPlace
