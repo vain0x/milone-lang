@@ -30,6 +30,7 @@ trap 'test $? -ne 0 && echo "install-dev: Installation failed."' EXIT
 scripts/uninstall
 
 # Ensure directories exist.
+mkdir -p "$BIN_DIR"
 mkdir -p "$MILONE_HOME/bin/milone_dotnet"
 mkdir -p "$MILONE_HOME/bin/milone_lsp"
 
