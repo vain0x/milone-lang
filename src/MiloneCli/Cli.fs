@@ -1015,7 +1015,7 @@ let cli (host: CliHost) =
     let restArgs =
       args
       |> List.skipWhile (fun x -> x <> "--")
-      |> List.skip 1
+      |> listSkip 1
 
     match args with
     | projectDir :: _ ->
