@@ -59,13 +59,17 @@ MILONE_HOME="{{ MILONE_HOME }}" "{{ MILONE_HOME }}/bin/milone_native" "$@"
 CODE1=$?
 test $CODE1 -eq 0 && exit 0
 
-echo -e '\nmilone: Retrying with .NET version...\n' >&2
+{
+    echo ''
+    echo 'milone: Retrying with .NET version...'
+    echo ''
+} >&2
 
 MILONE_HOME="{{ MILONE_HOME }}" "{{ MILONE_HOME }}/bin/milone_dotnet/MiloneCli" "$@"
 CODE2=$?
 test $CODE2 -eq 0 && exit 0
 
-echo "milone: Exited with $CODE1 (native) and $CODE2 (dotnet)"
+echo "milone: Exited with $CODE1 (native) and $CODE2 (dotnet)" >&2
 exit 1
 END
 
