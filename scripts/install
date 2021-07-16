@@ -66,16 +66,16 @@ scripts/build-milone-native
 cp -bf target/milone "$BIN_DIR/milone"
 
 # Install .NET executable.
-dotnet publish MiloneLang \
+dotnet publish src/MiloneCli \
     --runtime linux-x64 \
     -c Release \
     -o "$MILONE_HOME/bin/milone_dotnet" \
     -nologo >>$LOG
 
-ln -s "$MILONE_HOME/bin/milone_dotnet/MiloneLang" "$BIN_DIR/milone_dotnet"
+ln -s "$MILONE_HOME/bin/milone_dotnet/MiloneCli" "$BIN_DIR/milone_dotnet"
 
 # Install LSP server.
-dotnet publish milone_lsp \
+dotnet publish src/MiloneLspServer \
     --runtime linux-x64 \
     -c Release \
     -o "$MILONE_HOME/bin/milone_lsp" \

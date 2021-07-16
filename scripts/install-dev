@@ -36,8 +36,8 @@ mkdir -p "$MILONE_HOME/bin/milone_lsp"
 
 # Make symbolic links.
 ln -fs "$PWD/target/milone" "$MILONE_HOME/bin/milone_native"
-ln -fs "$PWD/MiloneLang/bin/Debug/net5.0/MiloneLang" "$MILONE_HOME/bin/milone_dotnet/MiloneLang"
-ln -fs "$PWD/milone_lsp/bin/Debug/net5.0/MiloneLsp" "$MILONE_HOME/bin/milone_lsp/MiloneLsp"
+ln -fs "$PWD/src/MiloneCli/bin/Debug/net5.0/MiloneCli" "$MILONE_HOME/bin/milone_dotnet/MiloneCli"
+ln -fs "$PWD/src/MiloneLspServer/bin/Debug/net5.0/MiloneLspServer" "$MILONE_HOME/bin/milone_lsp/MiloneLspServer"
 ln -fs "$PWD/runtime" "$MILONE_HOME/runtime"
 ln -fs "$PWD/milone_libs" "$MILONE_HOME/milone_libs"
 
@@ -61,7 +61,7 @@ test $CODE1 -eq 0 && exit 0
 
 echo -e '\nmilone: Retrying with .NET version...\n' >&2
 
-MILONE_HOME="{{ MILONE_HOME }}" "{{ MILONE_HOME }}/bin/milone_dotnet/MiloneLang" "$@"
+MILONE_HOME="{{ MILONE_HOME }}" "{{ MILONE_HOME }}/bin/milone_dotnet/MiloneCli" "$@"
 CODE2=$?
 test $CODE2 -eq 0 && exit 0
 
