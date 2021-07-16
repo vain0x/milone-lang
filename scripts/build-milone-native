@@ -1,5 +1,5 @@
 #!/bin/sh
-# Build milone binary without using ninja.
+# Build milone binary.
 
 set -eu
 
@@ -18,12 +18,9 @@ $CC --version >/dev/null
 
 mkdir -p target/gen2
 
-MILONE_HOME=$PWD \
-    dotnet run -p MiloneLang -- \
-    compile --quiet --target-dir target/gen2 \
-    MiloneLang
+MILONE_HOME=$PWD PATH=$PWD/bin:$PATH \
+    dotnet run -p src/MiloneCli -- \
+    build --target-dir target/gen2 \
+    src/MiloneCli
 
-MILONE_HOME=$PWD \
-INPUTS='target/gen2/MiloneLang.c' \
-OUTPUT='target/milone' \
-    scripts/build-with-cc
+cp -f target/gen2/MiloneCli.exe target/milone
