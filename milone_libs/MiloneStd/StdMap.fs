@@ -177,10 +177,10 @@ let private doMapFold folder state node =
 // Interface
 // -----------------------------------------------
 
-// Third item is always None. This is just for "phantom" type parameter 'T.
-type TreeMap<'K, 'T> = TreeMapRawNode * ('K -> 'K -> int) * ('T option)
+// Third item is always `[]`. This is just for "phantom" type parameter 'T.
+type TreeMap<'K, 'T> = TreeMapRawNode * ('K -> 'K -> int) * ('T list)
 
-let empty (keyCompare: 'K -> 'K -> int) : TreeMap<'K, 'T> = E, keyCompare, None
+let empty (keyCompare: 'K -> 'K -> int) : TreeMap<'K, 'T> = E, keyCompare, []
 
 let isEmpty (map: TreeMap<_, _>) : bool =
   let node, _, _ = map
@@ -240,7 +240,7 @@ let map (f: 'K -> 'T -> 'U) (map: TreeMap<'K, 'T>) : TreeMap<'K, 'U> =
            let v = f k v
            box (k, v))
 
-  node, keyCompare, None
+  node, keyCompare, []
 
 /// Maps both keys and values. Keys must preserve their relative ordering (unchecked).
 let stableMap (f: 'K -> 'T -> 'H * 'U) (otherKeyCompare: 'H -> 'H -> int) (map: TreeMap<'K, 'T>) : TreeMap<'H, 'U> =
@@ -254,7 +254,7 @@ let stableMap (f: 'K -> 'T -> 'H * 'U) (otherKeyCompare: 'H -> 'H -> int) (map: 
            let kv = f k v
            box kv)
 
-  node, otherKeyCompare, None
+  node, otherKeyCompare, []
 
 let fold (folder: 'S -> 'K -> 'T -> 'S) (state: 'S) (map: TreeMap<'K, 'T>) : 'S =
   let node, keyCompare, _ = map
@@ -278,7 +278,7 @@ let mapFold (folder: 'S -> 'K -> 'T -> 'U * 'S) (state: 'S) (map: TreeMap<'K, 'T
       state
       node
 
-  (node, keyCompare, None), state
+  (node, keyCompare, []), state
 
 let filter (pred: 'K -> 'T -> bool) (map: TreeMap<'K, 'T>) : TreeMap<'K, 'T> =
   let _, keyCompare, _ = map
@@ -292,7 +292,7 @@ let ofList keyCompare (assoc: ('K * 'T) list) : TreeMap<'K, 'T> =
     assoc
     |> List.fold (fun node kv -> doInsert (fun r -> keyCompare (fst kv) (fst (unbox r: 'K * 'T))) (box kv) node) E
 
-  node, keyCompare, None
+  node, keyCompare, []
 
 let toList (map: TreeMap<'K, 'T>) : ('K * 'T) list =
   map
