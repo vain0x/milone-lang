@@ -761,6 +761,7 @@ static void thousand_sep(long value, char *buf, size_t buf_size) {
 
 struct Profiler {
     struct String msg;
+    long start_epoch;
     long epoch;
     size_t heap_size;
     size_t alloc_cost;
@@ -770,39 +771,55 @@ void *milone_profile_init(void) {
     struct Profiler *p = milone_mem_alloc(1, sizeof(struct Profiler));
     p->msg = str_borrow("start");
     p->epoch = milone_get_time_millis();
+    p->start_epoch = p->epoch;
     p->heap_size = s_heap_size;
     p->alloc_cost = s_alloc_cost;
     return p;
+}
+
+static void milone_profile_print_log(struct String msg, long millis,
+                                     long mem_bytes, long alloc_cost) {
+                                         msg = str_ensure_null_terminated(msg);
+
+    if (millis < 0) {
+        millis = 0;
+    }
+    long sec = millis / 1000;
+    millis %= 1000;
+    millis /= 10; // 10 ms
+
+    char mem[16];
+    thousand_sep(mem_bytes, mem, sizeof(mem));
+
+    char cost[16];
+    thousand_sep(alloc_cost, cost, sizeof(cost));
+
+    fprintf(stderr, "profile: %-17s time=%4d.%02d mem=%s cost=%s\n", msg.str,
+            (int)sec, (int)millis, mem, cost);
 }
 
 void milone_profile_log(struct String msg, void *profiler) {
     struct Profiler *p = (struct Profiler *)profiler;
 
     long t = milone_get_time_millis();
-    long s = p->epoch;
 
-    long millis = t - s;
-    if (millis < 0) {
-        millis = 0;
-    }
+    long millis = t - p->epoch;
+    long mem_bytes = (long)s_heap_size - (long)p->heap_size;
+    long alloc_cost = (long)s_alloc_cost - (long)p->alloc_cost;
 
-    long sec = millis / 1000;
-    millis %= 1000;
-    millis /= 10; // 10 ms
+    milone_profile_print_log(p->msg, millis, mem_bytes, alloc_cost);
 
-    char mem[16];
-    thousand_sep((long)s_heap_size - (long)p->heap_size, mem, sizeof(mem));
-
-    char cost[16];
-    thousand_sep((long)s_alloc_cost - (long)p->alloc_cost, cost, sizeof(cost));
-
-    fprintf(stderr, "profile: %-17s time=%4d.%02d mem=%s cost=%s\n", p->msg.str,
-            (int)sec, (int)millis, mem, cost);
-
-    p->msg = str_ensure_null_terminated(msg);
+    p->msg = msg;
     p->epoch = t;
     p->heap_size = s_heap_size;
     p->alloc_cost = s_alloc_cost;
+
+    if (str_compare(msg, str_borrow("Finish")) == 0) {
+        fprintf(stderr, "profile: Finish\n");
+        long millis = t - p->start_epoch;
+        milone_profile_print_log(str_borrow("total"), millis, (long)s_heap_size,
+                                 (long)s_alloc_cost);
+    }
 }
 
 // -----------------------------------------------
