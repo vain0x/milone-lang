@@ -685,6 +685,14 @@ rule link
     |> cons "/runtime\n"
     |> cons rules
     |> cons "\n\n"
+    |> cons "build "
+    |> cons miloneHome
+    |> cons "/runtime/milone.o: cc "
+    |> cons miloneHome
+    |> cons "/runtime/milone.c | "
+    |> cons miloneHome
+    |> cons "/runtime/milone.h"
+    |> cons "\n\n"
 
   let ctx =
     compileCtxNew host options.Verbosity projectDir
