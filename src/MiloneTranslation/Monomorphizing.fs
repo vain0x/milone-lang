@@ -86,8 +86,7 @@ type private MonoCtx =
     GenericFunMonoSerials: AssocMap<FunSerial * Ty, FunSerial>
 
     Mode: MonoMode
-    SomethingHappened: bool
-    InfiniteLoopDetector: int }
+    SomethingHappened: bool }
 
 let private ofTyCtx (tyCtx: TyCtx) : MonoCtx =
   { Serial = tyCtx.Serial
@@ -98,8 +97,7 @@ let private ofTyCtx (tyCtx: TyCtx) : MonoCtx =
     GenericFunUseSiteTys = TMap.empty funSerialCompare
     GenericFunMonoSerials = TMap.empty funSerialTyPairCompare
     Mode = MonoMode.Monify
-    SomethingHappened = true
-    InfiniteLoopDetector = 0 }
+    SomethingHappened = true }
 
 let private unifyTy (monoCtx: MonoCtx) (lTy: Ty) (rTy: Ty) loc =
   let ctx = monoCtx
@@ -382,20 +380,17 @@ let monify (decls: HExpr list, tyCtx: TyCtx) : HExpr list * TyCtx =
   let monoCtx = ofTyCtx tyCtx |> forceGeneralizeFuns
 
   // Monomorphization.
-  let rec go (decls, ctx: MonoCtx) =
+  let rec go (round: int) (decls, ctx: MonoCtx) =
     if not ctx.SomethingHappened then
       decls, ctx
-    else if ctx.InfiniteLoopDetector > 1000000 then
+    else if round > 1000000 then
       failwith "Infinite loop in monomorphization"
     else
-      let ctx =
-        { ctx with
-            SomethingHappened = false
-            InfiniteLoopDetector = ctx.InfiniteLoopDetector + 1 }
+      let ctx = { ctx with SomethingHappened = false }
 
-      (decls, ctx) |> stMap monifyExpr |> go
+      (decls, ctx) |> stMap monifyExpr |> go (round + 1)
 
-  let decls, monoCtx = go (decls, monoCtx)
+  let decls, monoCtx = go 0 (decls, monoCtx)
 
   // Remove generic function definitions.
   // WARNING: Bad kind of code reuse.
