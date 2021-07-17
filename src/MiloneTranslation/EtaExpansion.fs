@@ -92,7 +92,7 @@ type private CalleeKind =
   | Obj
 
 let private listSplitAt i xs =
-  List.truncate i xs, List.skip (Int.min i (List.length xs)) xs
+  List.truncate i xs, listSkip (Int.min i (List.length xs)) xs
 
 let private tyToArity ty =
   match ty with

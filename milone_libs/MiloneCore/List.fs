@@ -105,17 +105,6 @@ let collect (f: _ -> _ list) (xs: _ list) : _ list =
 
   listCollectOuterLoop [] xs
 
-let skip (count: int) (xs: _ list) : _ list =
-  let rec listSkipLoop count xs =
-    match xs with
-    | [] -> []
-
-    | _ when count <= 0 -> xs
-
-    | _ :: xs -> listSkipLoop (count - 1) xs
-
-  listSkipLoop count xs
-
 let truncate (count: int) (xs: _ list) : _ list =
   let rec listTruncateLoop acc count xs =
     match xs with
@@ -209,7 +198,17 @@ let tryLast (xs: _ list) : _ option =
 /// Gets the i'th item if exists.
 ///
 /// Spends O(N) time at worst. Avoid using this as possible.
-let tryItem (i: int) (xs: _ list) : _ option = xs |> skip i |> tryHead
+let tryItem (i: int) (xs: _ list) : _ option =
+  let rec listTryItemLoop (i: int) xs =
+    match xs with
+    | [] -> None
+    | x :: _ when i = 0 -> Some x
+    | _ :: xs -> listTryItemLoop (i - 1) xs
+
+  if i >= 0 then
+    listTryItemLoop i xs
+  else
+    None
 
 let tryFind (pred: _ -> bool) (xs: _ list) : _ option =
   let rec listTryFindLoop xs =

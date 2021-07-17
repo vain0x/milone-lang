@@ -883,7 +883,7 @@ type private CliCmd =
   | BadCmd of string
 
 let private parseArgs args =
-  let args = args |> List.skip 1
+  let args = args |> listSkip 1
 
   match args with
   | []

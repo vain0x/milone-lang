@@ -165,7 +165,7 @@ let listSortCore unique compare xs =
   // and `d` is the number of duplicated items.
   let rec go (xs, n) =
     if n <= 1 then
-      (xs, n), List.skip n xs, 0
+      (xs, n), listSkip n xs, 0
     else
       let m = n / 2
       let (xs, xn), xs1, d1 = go (xs, m)

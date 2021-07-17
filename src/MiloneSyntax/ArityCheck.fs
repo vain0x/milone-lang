@@ -215,7 +215,7 @@ let arityCheck (modules: TProgram, tyCtx: Typing.TyCtx) : Typing.TyCtx =
             let _, args, result = ty |> tyToArgList
 
             let args, otherArgs =
-              List.truncate funDef.Arity args, List.skip funDef.Arity args
+              List.truncate funDef.Arity args, listSkip funDef.Arity args
 
             let result =
               otherArgs
