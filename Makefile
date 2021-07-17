@@ -74,7 +74,7 @@ test_self: gen3
 target/.timestamp/integration_tests: bin/ninja ${MY_BUILD_TIMESTAMP} target/milone \
 		$(wildcard tests/**/*.fs) \
 		$(wildcard tests/**/*.milone) \
-		$(wildcard tests/**/*.out)
+		$(wildcard tests/**/*.output)
 	${MY_BUILD} tests && mkdir -p $(shell dirname $@) && touch $@
 
 integration_tests: target/.timestamp/integration_tests

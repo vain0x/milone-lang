@@ -103,14 +103,14 @@ bin/ninja
         ↓ compile with C compiler
     tests/*/X/X.exe
         ↓ execute
-    tests/*/X/X.out     → integration test
+    tests/*/X/X.output  → integration test
 ```
 
 The `tests` directory contains projects for testing. Testing consist of two phases.
 
 First, snapshot testing: each test project (at `tests/*/X`) is compiled with milone-lang compiler to C file. C files are committed to Git and you can assume they are verified before commit. OK if unchanged. Otherwise, the project proceeds to the next phase to verify the modified output.
 
-Second, integration testing: each test project is compiled with GCC and executed. The standard output and exit code is written to `tests/*/X/X.generated.out`. The expected result is stored in `tests/*/X/X.out`, which is committed. OK if the two files are same. Otherwise, something wrong. Debug it.
+Second, integration testing: each test project is compiled with GCC and executed. The standard output and exit code is written to `tests/*/X/X.generated.output`. The expected result is stored in `tests/*/X/X.output`, which is committed. OK if the two files are same. Otherwise, something wrong. Debug it.
 
 In addition, self compilation is also a kind of testing. The milone-lang compiler (on .NET) compiles the compiler itself (obtaining first C code) and the output compiler also compiles the compiler itself (obtaining second C code). OK if the generated two C codes are same, and the generated compiler passes the all tests described above.
 

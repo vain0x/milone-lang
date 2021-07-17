@@ -252,7 +252,7 @@ let private commandTestsSummarize (testProjectDirs: string list) =
       Path.GetFileName(Path.GetDirectoryName(projectDir))
 
     let targetDir = $"target/tests/{category}/{projectName}"
-    let expectedOut = $"{projectDir}/{projectName}.out"
+    let expectedOut = $"{projectDir}/{projectName}.output"
     let generatedTxt = $"{targetDir}/generated.txt"
 
     if readToDiff expectedOut <> readToDiff generatedTxt then

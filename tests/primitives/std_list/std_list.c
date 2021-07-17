@@ -20,7 +20,7 @@ struct StringList const* map_(struct IntStringFun1, struct IntList const*);
 
 struct String MiloneStd_StdString_concat(struct String, struct StringList const*);
 
-struct String debug_(struct IntList const* xs_64);
+struct String debug_(struct IntList const* xs_63);
 
 bool eq_(struct IntList const* expected_, struct IntList const* actual_);
 
@@ -36,11 +36,11 @@ struct IntList const* skipWhile_(struct IntBoolFun1, struct IntList const*);
 
 char std_list_Program_testSkipWhile(struct IntIntListFun1 gen_);
 
-struct IntList const* go_(struct IntList const* acc_17, int i_8);
+struct IntList const* go_(struct IntList const* acc_17, int i_9);
 
 struct IntList const* gen_1(int n_4);
 
-int fun_2(int x_21, int y_3);
+int fun_2(int x_22, int y_3);
 
 int fun_9(void const* env_6, int arg_6, int arg_7);
 
@@ -82,9 +82,9 @@ struct String fun_6(void const* env_3, int arg_3) {
     return call_49;
 }
 
-struct String debug_(struct IntList const* xs_64) {
+struct String debug_(struct IntList const* xs_63) {
     struct IntStringFun1 fun_15 = (struct IntStringFun1){.fun = fun_6, .env = NULL};
-    struct StringList const* call_50 = map_(fun_15, xs_64);
+    struct StringList const* call_50 = map_(fun_15, xs_63);
     struct String call_51 = MiloneStd_StdString_concat((struct String){.str = ", ", .len = 2}, call_50);
     return call_51;
 }
@@ -151,10 +151,10 @@ char std_list_Program_testSkipWhile(struct IntIntListFun1 gen_) {
     return 0;
 }
 
-struct IntList const* go_(struct IntList const* acc_17, int i_8) {
+struct IntList const* go_(struct IntList const* acc_17, int i_9) {
 tailrec_255:;
     struct IntList const* if_74;
-    if ((i_8 == 0)) {
+    if ((i_9 == 0)) {
         goto then_257;
     } else {
         goto else_258;
@@ -163,13 +163,13 @@ then_257:;
     if_74 = acc_17;
     goto if_next_256;
 else_258:;
-    int i_9 = (i_8 - 1);
+    int i_10 = (i_9 - 1);
     struct IntList const* list_9 = milone_mem_alloc(1, sizeof(struct IntList));
-    (*(((struct IntList*)list_9))) = (struct IntList){.head = i_9, .tail = acc_17};
+    (*(((struct IntList*)list_9))) = (struct IntList){.head = i_10, .tail = acc_17};
     struct IntList const* arg_57 = list_9;
-    int arg_58 = i_9;
+    int arg_58 = i_10;
     acc_17 = arg_57;
-    i_8 = arg_58;
+    i_9 = arg_58;
     goto tailrec_255;
 if_next_256:;
     return if_74;
@@ -180,8 +180,8 @@ struct IntList const* gen_1(int n_4) {
     return call_60;
 }
 
-int fun_2(int x_21, int y_3) {
-    return (x_21 + y_3);
+int fun_2(int x_22, int y_3) {
+    return (x_22 + y_3);
 }
 
 int fun_9(void const* env_6, int arg_6, int arg_7) {

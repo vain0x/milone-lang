@@ -28,6 +28,6 @@ echo -e "module rec $NAME.Program\n\nlet main _ =\n  0" >"tests/$CATEGORY/$NAME/
     else
         echo '$? = 0'
     fi
-) >"tests/$CATEGORY/$NAME/$NAME.out"
+) >"tests/$CATEGORY/$NAME/$NAME.output"
 
 code "tests/$CATEGORY/$NAME/$NAME.fs"

@@ -33,7 +33,7 @@ let testProject (categoryDir: string, projectDir, projectName, sources) =
     TargetDir = targetDir
     FilesTxt = $"{targetDir}/files.txt"
     Exe = $"{targetDir}/{projectName}.exe"
-    ExpectedOut = $"{projectDir}/{projectName}.out"
+    ExpectedOut = $"{projectDir}/{projectName}.output"
     ErrorTxt = $"{projectDir}/{projectName}_error.txt"
     GeneratedOut = $"{targetDir}/generated.txt"
     Sources = sources }
@@ -67,7 +67,7 @@ let render () =
   let runTests, errorTests =
     let readExpectedOutput t =
       let _, projectDir, name, _ = t
-      let path = sprintf "%s/%s.out" projectDir name
+      let path = sprintf "%s/%s.output" projectDir name
 
       try
         if File.Exists(path) then

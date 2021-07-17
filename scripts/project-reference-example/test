@@ -31,4 +31,4 @@ $CC -std=c11 -O2 \
 
 $APP_EXE >$APP_OUT
 
-diff "$APP_OUT" "$PROJECT_DIR/app.out"
+diff "$APP_OUT" "$PROJECT_DIR/app.output"
