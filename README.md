@@ -40,6 +40,8 @@ Prerequisites:
 - Install some C11-compliant C compiler, typically either:
     - GCC 7, or
     - Clang 6
+- Install `busybox`, which is likely pre-installed, by:
+    `apt install -y busybox-static`
 
 Do:
 

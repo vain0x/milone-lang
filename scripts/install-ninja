@@ -1,9 +1,5 @@
 #!/bin/sh
 # See also: https://github.com/ninja-build/ninja
-#
-# Prerequisites:
-#   - busybox (which is likely pre-installed)
-#       `apt install -y busybox-static`
 
 set -eu
 
