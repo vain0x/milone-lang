@@ -50,6 +50,7 @@ static struct MemoryChunk s_heap;
 static size_t s_heap_level; // depth of current region
 static size_t s_heap_size;  // consumed size in all regions
 static size_t s_heap_alloc; // allocated size in all regions
+static size_t s_alloc_cost; // allocation count
 
 _Noreturn static void oom(void) {
     fprintf(stderr, "Out of memory.\n");
@@ -74,6 +75,7 @@ void milone_enter_region(void) {
     if (parent == NULL) {
         oom();
     }
+    s_alloc_cost++;
 
     *parent = s_heap;
     s_heap = (struct MemoryChunk){.parent = parent};
@@ -125,6 +127,7 @@ static void *milone_mem_alloc_slow(size_t total) {
         if (used == NULL) {
             oom();
         }
+        s_alloc_cost++;
 
         *used = s_heap;
         s_heap.used = used;
@@ -141,6 +144,7 @@ static void *milone_mem_alloc_slow(size_t total) {
     if (ptr == NULL) {
         oom();
     }
+    s_alloc_cost++;
     s_heap.ptr = ptr;
     s_heap.len = total;
     s_heap.cap = cap;
@@ -170,6 +174,7 @@ void *milone_mem_alloc(int count, size_t size) {
     void *ptr = (char *)s_heap.ptr + s_heap.len;
     s_heap.len += total;
     s_heap_size += total;
+    s_alloc_cost++;
 
     // fprintf(stderr, "debug: alloc level=%d size=%d (%dx%d)\n", s_heap_level,
     // (int)((size_t)count * size), (int)count, (int)size);
@@ -736,15 +741,37 @@ static long milone_get_time_millis(void) {
     return (long)(t.tv_sec * 1000L + t.tv_nsec / (1000L * 1000L));
 }
 
+static void thousand_sep(long value, char *buf, size_t buf_size) {
+    assert(buf_size >= 14);
+
+    bool neg = value < 0;
+    if (neg)
+        value = -value;
+
+    long kilo = value / 1000;
+    value %= 1000;
+
+    long mega = kilo / 1000;
+    kilo %= 1000;
+
+    size_t written = snprintf(buf, buf_size, "%3u,%03u,%03u", (uint32_t)mega,
+                              (uint32_t)kilo, (uint32_t)value);
+    assert(written < buf_size);
+}
+
 struct Profiler {
+    struct String msg;
     long epoch;
     size_t heap_size;
+    size_t alloc_cost;
 };
 
 void *milone_profile_init(void) {
     struct Profiler *p = milone_mem_alloc(1, sizeof(struct Profiler));
+    p->msg = str_borrow("start");
     p->epoch = milone_get_time_millis();
     p->heap_size = s_heap_size;
+    p->alloc_cost = s_alloc_cost;
     return p;
 }
 
@@ -761,25 +788,21 @@ void milone_profile_log(struct String msg, void *profiler) {
 
     long sec = millis / 1000;
     millis %= 1000;
+    millis /= 10; // 10 ms
 
-    long bytes = (long)s_heap_size - (long)p->heap_size;
-    if (bytes < 0) {
-        bytes = 0;
-    }
+    char mem[16];
+    thousand_sep((long)s_heap_size - (long)p->heap_size, mem, sizeof(mem));
 
-    long kilo = bytes / 1000;
-    bytes %= 1000;
+    char cost[16];
+    thousand_sep((long)s_alloc_cost - (long)p->alloc_cost, cost, sizeof(cost));
 
-    long mega = kilo / 1000;
-    kilo %= 1000;
+    fprintf(stderr, "profile: %-17s time=%4d.%02d mem=%s cost=%s\n", p->msg.str,
+            (int)sec, (int)millis, mem, cost);
 
-    double usage = s_heap_alloc == 0 ? 0.0 : (double)s_heap_size / s_heap_alloc;
-    fprintf(stderr, "profile: time=%4d.%03d mem=%5d,%03d,%03d use=%.03f\n%s\n",
-            (int)sec, (int)millis, (int)mega, (int)kilo, (int)bytes, usage,
-            msg.str);
-
+    p->msg = str_ensure_null_terminated(msg);
     p->epoch = t;
     p->heap_size = s_heap_size;
+    p->alloc_cost = s_alloc_cost;
 }
 
 // -----------------------------------------------
