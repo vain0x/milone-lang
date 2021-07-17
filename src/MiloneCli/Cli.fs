@@ -179,6 +179,15 @@ let private pathIsRelative (s: string) =
   (s |> S.startsWith "./")
   || (s |> S.startsWith "../")
 
+let private hostToMiloneHome (host: CliHost) =
+  let getEnv name =
+    match name with
+    | "MILONE_HOME" when host.MiloneHome <> "" -> Some host.MiloneHome
+    | "HOME" when host.Home <> "" -> Some host.Home
+    | _ -> None
+
+  SyntaxApi.getMiloneHomeFromEnv getEnv
+
 // -----------------------------------------------
 // Context
 // -----------------------------------------------
@@ -197,17 +206,9 @@ type CompileCtx =
     Host: CliHost }
 
 let compileCtxNew (host: CliHost) verbosity projectDir : CompileCtx =
+  let miloneHome = hostToMiloneHome host
   let projectDir = projectDir |> pathStrTrimEndPathSep
   let projectName = projectDir |> pathStrToStem
-
-  let miloneHome =
-    let getEnv name =
-      match name with
-      | "MILONE_HOME" when host.MiloneHome <> "" -> Some host.MiloneHome
-      | "HOME" when host.Home <> "" -> Some host.Home
-      | _ -> None
-
-    SyntaxApi.getMiloneHomeFromEnv getEnv
 
   let syntaxCtx : SyntaxApi.SyntaxCtx =
     let host : SyntaxApi.SyntaxHost =
@@ -654,7 +655,7 @@ type BuildOptions =
     Verbosity: Verbosity }
 
 let private cliBuild (host: CliHost) (options: BuildOptions) =
-  let miloneHome = host.MiloneHome
+  let miloneHome = hostToMiloneHome host
   let projectDir = options.ProjectDir
   let targetDir = options.TargetDir
   let ninjaFile = targetDir + "/build.ninja"
