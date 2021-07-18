@@ -89,6 +89,7 @@ type private CirCtx =
     Tys: AssocMap<TySerial, TyDef>
     TyUniqueNames: AssocMap<Ty, Ident>
     Stmts: CStmt list
+    StmtsBack: CStmt list
     Decls: CDecl list
 
     /// Doc ID of current module.
@@ -155,6 +156,7 @@ let private ofMirCtx (mirCtx: MirCtx) : CirCtx =
     Tys = mirCtx.Tys
     TyUniqueNames = tyNames
     Stmts = []
+    StmtsBack = []
     Decls = []
 
     DocId = ""
@@ -178,11 +180,18 @@ let private isMainFun (ctx: CirCtx) funSerial =
   | Some mainFun -> funSerialCompare mainFun funSerial = 0
   | _ -> false
 
-let private enterBlock (ctx: CirCtx) = { ctx with Stmts = [] }
+let private enterBlock (ctx: CirCtx) = { ctx with Stmts = []; StmtsBack = [] }
 
-let private rollback (bCtx: CirCtx) (dCtx: CirCtx) = { dCtx with Stmts = bCtx.Stmts }
+let private rollback (bCtx: CirCtx) (dCtx: CirCtx) =
+  { dCtx with
+      Stmts = bCtx.Stmts
+      StmtsBack = bCtx.StmtsBack }
 
 let private addStmt (ctx: CirCtx) stmt = { ctx with Stmts = stmt :: ctx.Stmts }
+
+let private prependStmt (ctx: CirCtx) stmt =
+  { ctx with
+      StmtsBack = stmt :: ctx.StmtsBack }
 
 let private addDecl (ctx: CirCtx) decl = { ctx with Decls = decl :: ctx.Decls }
 
@@ -1021,9 +1030,9 @@ let private cgPrimStmt (ctx: CirCtx) itself prim args serial =
 
     addLetStmt ctx name (Some expr) ty isStatic linkage
 
-  | MBoxPrim ->
+  | MBoxPrim region ->
     match args with
-    | [ arg ] -> cgBoxStmt ctx serial arg
+    | [ arg ] -> cgBoxStmt ctx region serial arg
     | _ -> unreachable itself
 
   | MOptionSomePrim ->
@@ -1144,22 +1153,44 @@ let private cgPrimStmt (ctx: CirCtx) itself prim args serial =
 
 let private cgCallPrimExpr ctx itself serial prim args = cgPrimStmt ctx itself prim args serial
 
-let private cgBoxStmt ctx serial arg =
+let private cgBoxStmt ctx region serial arg =
   let argTy, ctx = cgTyComplete ctx (mexprToTy arg)
   let arg, ctx = cgExpr ctx arg
 
-  // void const* p = malloc(sizeof T);
   let temp = getUniqueVarName ctx serial
-  let isStatic = findStorageModifier ctx serial
+  let tempTy = CConstPtrTy CVoidTy
 
-  let ctx =
-    addLetAllocStmt ctx temp argTy (CConstPtrTy CVoidTy) isStatic
+  assert (match findStorageModifier ctx serial with
+          | NotStatic -> true
+          | IsStatic -> false)
 
-  // *(T*)p = t;
-  let left =
-    CUnaryExpr(CDerefUnary, CCastExpr(CVarExpr temp, CPtrTy argTy))
+  match region with
+  | OnHeap ->
+    // void const* result = malloc(sizeof(T));
+    let ctx =
+      addLetAllocStmt ctx temp argTy tempTy NotStatic
 
-  addStmt ctx (CSetStmt(left, arg))
+    // *(T*)p = arg;
+    let left =
+      CUnaryExpr(CDerefUnary, CCastExpr(CVarExpr temp, CPtrTy argTy))
+
+    addStmt ctx (CSetStmt(left, arg))
+
+  | OnStack ->
+    // At the beginning of function:
+    // T data;
+    let data = temp + "_data"
+
+    let ctx =
+      prependStmt ctx (CLetStmt(data, None, argTy))
+
+    // data = arg;
+    let ctx =
+      addStmt ctx (CSetStmt(CVarExpr data, arg))
+
+    // void const* result = &data;
+    let ptr = CUnaryExpr(CRefUnary, (CVarExpr data))
+    addStmt ctx (CLetStmt(temp, Some ptr, tempTy))
 
 let private cgConsStmt ctx serial head tail =
   let temp = getUniqueVarName ctx serial
@@ -1265,8 +1296,9 @@ let private cgStmt ctx stmt =
 let private cgBlock (ctx: CirCtx) (stmts: MStmt list) =
   let bodyCtx : CirCtx = cgStmts (enterBlock ctx) stmts
   let stmts = bodyCtx.Stmts
+  let prependStmts = bodyCtx.StmtsBack
   let ctx = rollback ctx bodyCtx
-  List.rev stmts, ctx
+  List.append (List.rev prependStmts) (List.rev stmts), ctx
 
 let private cgBlocks (ctx: CirCtx) (blocks: MBlock list) =
   match blocks with

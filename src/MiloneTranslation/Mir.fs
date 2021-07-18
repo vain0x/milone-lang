@@ -122,6 +122,11 @@ type MAction =
   | MCallNativeAction of funName: string
   | MPtrWriteAction
 
+[<NoEquality; NoComparison>]
+type RegionKind =
+  | OnHeap
+  | OnStack
+
 [<Struct; NoEquality; NoComparison>]
 type MPrim =
   /// string -> int
@@ -139,7 +144,7 @@ type MPrim =
   /// Construct a closure, packing environment.
   | MClosurePrim of closureFunSerial: FunSerial
 
-  | MBoxPrim
+  | MBoxPrim of boxRegion: RegionKind
   | MOptionSomePrim
   | MConsPrim
   | MTuplePrim

@@ -210,6 +210,7 @@ type HPrim =
   | Char
   | String
   | Box
+  | BoxOnStack
   | Unbox
 
   // string:
@@ -231,11 +232,6 @@ type HPrim =
   | NativeCast
   | PtrRead
   | PtrWrite
-
-[<NoEquality; NoComparison>]
-type RegionKind =
-  | OnHeap
-  | OnStack
 
 [<Struct; NoEquality; NoComparison>]
 type HExprKind =
@@ -268,7 +264,7 @@ type HExprKind =
   | HTupleEN
 
   /// Closure constructor.
-  | HClosureEN of closureRegion: RegionKind
+  | HClosureEN
 
   /// Record creation.
   ///

@@ -89,13 +89,52 @@ let private patsToEscaping escaping (pats: HPat list) (ctx: Ctx) =
            | IsEscaping -> IsEscaping)
          NotEscaping
 
-// -> (escaping args, non-escaping args)
+/// Returns (escaping args, non-escaping-args).
+let private processCallPrimExpr prim args =
+  match prim, args with
+  // Everything escaping.
+  | HPrim.Box, _
+  | HPrim.BoxOnStack, _
+  | HPrim.OptionSome, _
+  | HPrim.Cons, _
+  | HPrim.NativeCast, _ -> args, []
+
+  // Everything non-escaping.
+  | HPrim.Not, _
+  | HPrim.Add, _
+  | HPrim.Sub, _
+  | HPrim.Mul, _
+  | HPrim.Div, _
+  | HPrim.Modulo, _
+  | HPrim.BitAnd, _
+  | HPrim.BitOr, _
+  | HPrim.BitXor, _
+  | HPrim.LeftShift, _
+  | HPrim.RightShift, _
+  | HPrim.Equal, _
+  | HPrim.Less, _
+  | HPrim.Compare, _
+  | HPrim.ToInt _, _
+  | HPrim.ToFloat _, _
+  | HPrim.Char, _
+  | HPrim.String, _
+  | HPrim.Unbox, _
+  | HPrim.StrLength, _
+  | HPrim.Exit, _
+  | HPrim.Assert, _
+  | HPrim.Printfn, _
+  | HPrim.InRegion, _
+  | HPrim.PtrRead, _ -> [], args
+
+  | HPrim.PtrWrite, [ ptr; i; value ] -> [ ptr; i ], [ value ]
+  | HPrim.PtrWrite, _ -> unreachable ()
+
+  | HPrim.OptionNone, _
+  | HPrim.Nil, _ -> unreachable () // Can't be called.
+
+/// Returns (escaping args, non-escaping args).
 let private processNodeExpr kind args =
   match kind, args with
-  // Everything non-escaping.
-  | HAbortEN, _
-  | HMinusEN, _ -> [], args
-
   // Everything escaping.
   | HTupleEN, _
   | HRecordEN, _
@@ -111,9 +150,11 @@ let private processNodeExpr kind args =
   | HSliceEN, [ l; r; s ] -> [ s ], [ l; r ]
   | HSliceEN, _ -> unreachable ()
 
-  // unimplemented
-  | HCallProcEN, HPrimExpr (_prim, _, _) :: args -> args, []
+  // Everything non-escaping.
+  | HAbortEN, _
+  | HMinusEN, _ -> [], args
 
+  | HCallProcEN, HPrimExpr (prim, _, _) :: args -> processCallPrimExpr prim args
   | HCallProcEN, callee :: args -> args, [ callee ]
   | HCallTailRecEN, callee :: args -> args, [ callee ]
   | HCallClosureEN, callee :: args -> args, [ callee ]
@@ -121,9 +162,8 @@ let private processNodeExpr kind args =
   | HCallTailRecEN, _
   | HCallClosureEN, _ -> unreachable ()
 
-  // No need to check args.
   | HNativeFunEN _, _
-  | HSizeOfValEN, _ -> [], []
+  | HSizeOfValEN, _ -> [], [] // Ignorable.
 
   | HAppEN, _ -> unreachable () // HAppEN is resolved in EtaExpansion.
 
@@ -215,20 +255,24 @@ let private rewriteExpr escaping expr (ctx: Ctx) =
   | HPrimExpr _ -> expr
 
   | HNodeExpr (kind, args, ty, loc) ->
+    let doDefault () =
+      // FIXME: check escaping-ness for args
+      let args = rewriteExprs IsEscaping args ctx
+      HNodeExpr(kind, args, ty, loc)
+
     invoke
       (fun () ->
-        let kind =
-          match escaping, kind with
-          | NotEscaping, HClosureEN _ ->
-            // printfn "// allocate closure on stack %s" (locToString loc)
-            HClosureEN OnStack
-          | _ -> kind
+        match escaping, kind, args with
+        | NotEscaping, HCallProcEN, HPrimExpr (HPrim.Box, primTy, primLoc) :: args ->
+          printfn "// box-on-stack @%s" (locToString loc)
 
-        let args =
-          args
-          |> List.map (fun arg -> rewriteExpr escaping arg ctx)
+          let callee =
+            HPrimExpr(HPrim.BoxOnStack, primTy, primLoc)
 
-        HNodeExpr(kind, args, ty, loc))
+          let args = rewriteExprs IsEscaping args ctx
+          HNodeExpr(HCallProcEN, callee :: args, ty, loc)
+
+        | _ -> doDefault ())
 
   | HMatchExpr (cond, arms, ty, loc) ->
     invoke
