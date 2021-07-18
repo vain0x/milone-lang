@@ -129,6 +129,7 @@ let private processCallPrimExpr prim args =
   match prim, args with
   // Everything escaping.
   | HPrim.Box, _
+  | HPrim.Unbox, _
   | HPrim.OptionSome, _
   | HPrim.Cons, _
   | HPrim.NativeCast, _ -> args, []
@@ -152,7 +153,6 @@ let private processCallPrimExpr prim args =
   | HPrim.ToFloat _, _
   | HPrim.Char, _
   | HPrim.String, _
-  | HPrim.Unbox, _
   | HPrim.StrLength, _
   | HPrim.Exit, _
   | HPrim.Assert, _
@@ -172,7 +172,7 @@ let private processCallPrimExpr prim args =
 let private processNodeExpr kind args ctx =
   match kind, args with
   // Everything escaping.
-  | HSliceEN, _ // NOTE: the index doesn't escape indeed but no need to be strict.
+  | HSliceEN, _ // NOTE: indices doesn't escape indeed but no need to be strict.
   | HCallClosureEN, _ // NOTE: closure may return its env, so it escapes on called.
   | HTupleEN, _
   | HRecordEN, _
@@ -261,10 +261,24 @@ let private eaExpr escaping expr (ctx: Ctx) : Ctx =
         let escaping = patToEscaping pat ctx
         eaExpr escaping init ctx)
 
-  | HLetFunExpr (callee, _, _, _, body, next, _, loc) ->
+  | HLetFunExpr (callee, _, _, args, body, next, _, loc) ->
     invoke
       (fun () ->
         assert (hxIsUnitLit next) // let-next is resolved in Hoist.
+
+        let ctx =
+          args
+          |> List.fold
+               (fun (i, ctx) arg ->
+                 let ctx =
+                   match patToEscaping arg ctx with
+                   | IsEscaping -> markArgAsEscaping callee i ctx
+                   | NotEscaping -> ctx
+
+                 i + 1, ctx)
+               (0, ctx)
+          |> snd
+
         // printfn "// enter let-fun %s @%s" (ctx.Funs |> mapFind callee).Name (locToString loc)
         eaExpr IsEscaping body ctx)
 
@@ -385,7 +399,7 @@ let escapeAnalyze (decls: HExpr list, tyCtx: TyCtx) : HExpr list * TyCtx =
         assert (round < 10000000)
         go (round + 1) ctx
       else
-        printfn "// escapeAnalyze finished in %d rounds" (round + 1)
+        // printfn "// escapeAnalyze finished in %d rounds" (round + 1)
         ctx
 
     go 0 ctx
