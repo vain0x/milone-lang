@@ -327,7 +327,7 @@ let private resolvePartialAppFun callee arity args argLen callLoc ctx =
   let envBoxExpr = createEnvBoxExpr envItems envTy callLoc
 
   let funObjExpr =
-    HNodeExpr(HClosureEN, [ funExpr; envBoxExpr ], tyAppliedBy argLen funTy, callLoc)
+    HNodeExpr(HClosureEN OnHeap, [ funExpr; envBoxExpr ], tyAppliedBy argLen funTy, callLoc)
 
   let expr = funLet funObjExpr
   expr, ctx
@@ -371,7 +371,7 @@ let private resolvePartialAppObj callee arity args argLen callLoc ctx =
   let envBoxExpr = createEnvBoxExpr envItems envTy callLoc
 
   let closureExpr =
-    HNodeExpr(HClosureEN, [ funExpr; envBoxExpr ], tyAppliedBy argLen funTy, callLoc)
+    HNodeExpr(HClosureEN OnHeap, [ funExpr; envBoxExpr ], tyAppliedBy argLen funTy, callLoc)
 
   let expr = calleeLet (funLet closureExpr)
   expr, ctx

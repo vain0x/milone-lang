@@ -232,6 +232,11 @@ type HPrim =
   | PtrRead
   | PtrWrite
 
+[<NoEquality; NoComparison>]
+type RegionKind =
+  | OnHeap
+  | OnStack
+
 [<Struct; NoEquality; NoComparison>]
 type HExprKind =
   | HAbortEN
@@ -263,7 +268,7 @@ type HExprKind =
   | HTupleEN
 
   /// Closure constructor.
-  | HClosureEN
+  | HClosureEN of closureRegion: RegionKind
 
   /// Record creation.
   ///

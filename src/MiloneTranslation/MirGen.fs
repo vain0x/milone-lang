@@ -1325,7 +1325,7 @@ let private mirifyExprInf ctx itself kind args ty loc =
   | HCallTailRecEN, callee :: args, _ -> mirifyExprInfCallTailRec ctx callee args ty loc
   | HCallClosureEN, callee :: args, _ -> mirifyExprInfCallClosure ctx callee args ty loc
   | HCallNativeEN funName, args, _ -> mirifyExprInfCallNative ctx funName args ty loc
-  | HClosureEN, [ HFunExpr (funSerial, _, _); env ], _ -> mirifyExprInfClosure ctx funSerial env ty loc
+  | HClosureEN _, [ HFunExpr (funSerial, _, _); env ], _ -> mirifyExprInfClosure ctx funSerial env ty loc
 
   | HNativeFunEN funSerial, _, _ -> MProcExpr(funSerial, ty, loc), ctx
 
