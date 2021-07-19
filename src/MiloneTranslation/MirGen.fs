@@ -830,7 +830,7 @@ let private mirifyExprCallExit ctx arg ty loc =
 
   MNeverExpr loc, ctx
 
-let private mirifyExprCallBox ctx region arg _ loc =
+let private mirifyExprCallBox ctx arg _ loc =
   let arg, ctx = mirifyExpr ctx arg
 
   // HACK: `box ()` occurs when turning a non-capturing function into function object.
@@ -840,7 +840,7 @@ let private mirifyExprCallBox ctx region arg _ loc =
     let temp, tempSerial, ctx = freshVar ctx "box" tyObj loc
 
     let ctx =
-      addStmt ctx (MPrimStmt(MBoxPrim region, [ arg ], tempSerial, loc))
+      addStmt ctx (MPrimStmt(MBoxPrim, [ arg ], tempSerial, loc))
 
     temp, ctx
 
@@ -1188,10 +1188,8 @@ let private mirifyCallPrimExpr ctx itself prim args ty loc =
   | HPrim.Not, _ -> fail ()
   | HPrim.Exit, [ arg ] -> mirifyExprCallExit ctx arg ty loc
   | HPrim.Exit, _ -> fail ()
-  | HPrim.Box, [ arg ] -> mirifyExprCallBox ctx OnHeap arg ty loc
+  | HPrim.Box, [ arg ] -> mirifyExprCallBox ctx arg ty loc
   | HPrim.Box, _ -> fail ()
-  | HPrim.BoxOnStack, [ arg ] -> mirifyExprCallBox ctx OnStack arg ty loc
-  | HPrim.BoxOnStack, _ -> fail ()
   | HPrim.Unbox, [ arg ] -> mirifyCallUnbox ctx arg ty loc
   | HPrim.Unbox, _ -> fail ()
   | HPrim.StrLength, [ arg ] -> regularUnary MStrLenUnary arg

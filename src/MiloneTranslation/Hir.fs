@@ -210,7 +210,6 @@ type HPrim =
   | Char
   | String
   | Box
-  | BoxOnStack
   | Unbox
 
   // string:

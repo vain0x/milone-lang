@@ -23,7 +23,6 @@ open MiloneTranslation.MirGen
 open MiloneTranslation.Monomorphizing
 open MiloneTranslation.RecordRes
 open MiloneTranslation.TailRecOptimizing
-open MiloneTranslation.EscapeAnalyze
 
 module C = MiloneStd.StdChar
 module Hir = MiloneTranslation.Hir
@@ -202,7 +201,6 @@ type CompileCtx =
 
     SyntaxCtx: SyntaxApi.SyntaxCtx
     HeaderOnly: bool
-    Ea: bool
 
     Verbosity: Verbosity
     Host: CliHost }
@@ -227,8 +225,7 @@ let compileCtxNew (host: CliHost) verbosity projectDir : CompileCtx =
     SyntaxCtx = syntaxCtx
     HeaderOnly = false
     Verbosity = verbosity
-    Host = host
-    Ea = false }
+    Host = host }
 
 // -----------------------------------------------
 // Write output and logs
@@ -488,7 +485,7 @@ let private lowerTyCtx (tyCtx: Typing.TyCtx) : Hir.TyCtx =
 // -----------------------------------------------
 
 /// Transforms HIR. The result can be converted to MIR.
-let transformHir (host: CliHost) v ea (modules: Tir.TProgram, tyCtx: Typing.TyCtx) =
+let transformHir (host: CliHost) v (modules: Tir.TProgram, tyCtx: Typing.TyCtx) =
   writeLog host v "Lower"
   let modules = lowerModules modules
   let tyCtx = lowerTyCtx tyCtx
@@ -514,13 +511,6 @@ let transformHir (host: CliHost) v ea (modules: Tir.TProgram, tyCtx: Typing.TyCt
 
   writeLog host v "Hoist"
   let decls, tyCtx = hoist (expr, tyCtx)
-
-  let decls, tyCtx =
-    if ea then
-      writeLog host v "EscapeAnalyze"
-      escapeAnalyze (decls, tyCtx)
-    else
-      decls, tyCtx
 
   writeLog host v "TailRecOptimizing"
   let decls, tyCtx = tailRecOptimize (decls, tyCtx)
@@ -580,9 +570,7 @@ let private compile (ctx: CompileCtx) : CompileResult =
   | SyntaxApi.SyntaxAnalysisError (errors, _) -> CompileError(SyntaxApi.syntaxErrorsToString errors)
 
   | SyntaxApi.SyntaxAnalysisOk (modules, tyCtx) ->
-    let decls, tyCtx =
-      transformHir host v ctx.Ea (modules, tyCtx)
-
+    let decls, tyCtx = transformHir host v (modules, tyCtx)
     CompileOk(codeGenHirViaMir host v ctx.EntryProjectName ctx.HeaderOnly (decls, tyCtx))
 
 // -----------------------------------------------
@@ -664,8 +652,7 @@ let cliCompile (host: CliHost) (options: CompileOptions) =
 type BuildOptions =
   { ProjectDir: string
     TargetDir: string
-    Verbosity: Verbosity
-    Ea: bool }
+    Verbosity: Verbosity }
 
 let private cliBuild (host: CliHost) (options: BuildOptions) =
   let miloneHome = hostToMiloneHome host
@@ -708,8 +695,7 @@ rule link
     |> cons "\n\n"
 
   let ctx =
-    { compileCtxNew host options.Verbosity projectDir with
-        Ea = options.Ea }
+    compileCtxNew host options.Verbosity projectDir
 
   let exeFile =
     targetDir + "/" + ctx.EntryProjectName + ".exe"
@@ -902,7 +888,6 @@ type private CliCmd =
   | HeaderCmd
   | ParseCmd
   | RunCmd
-  | EaCmd
   | BadCmd of string
 
 let private parseArgs args =
@@ -930,7 +915,6 @@ let private parseArgs args =
     | "run" -> RunCmd, args
 
     | "header" -> HeaderCmd, args
-    | "ea" -> EaCmd, args
 
     // for debug
     | "parse" -> ParseCmd, args
@@ -1023,8 +1007,7 @@ let cli (host: CliHost) =
       let options : BuildOptions =
         { ProjectDir = projectDir
           TargetDir = Option.defaultValue (defaultTargetDir projectDir) targetDir
-          Verbosity = verbosity
-          Ea = false }
+          Verbosity = verbosity }
 
       cliBuild host options
 
@@ -1048,33 +1031,7 @@ let cli (host: CliHost) =
       let options : BuildOptions =
         { ProjectDir = projectDir
           TargetDir = Option.defaultValue (defaultTargetDir projectDir) targetDir
-          Verbosity = verbosity
-          Ea = false }
-
-      cliRun host options restArgs
-
-    | [] ->
-      printfn "ERROR: Expected project dir."
-      1
-
-  | EaCmd, args ->
-    let verbosity, args = parseVerbosity host args
-
-    let targetDir, args =
-      parseOption (fun x -> x = "--target-dir") args
-
-    let restArgs =
-      args
-      |> List.skipWhile (fun x -> x <> "--")
-      |> listSkip 1
-
-    match args with
-    | projectDir :: _ ->
-      let options : BuildOptions =
-        { ProjectDir = projectDir
-          TargetDir = Option.defaultValue (defaultTargetDir projectDir) targetDir
-          Verbosity = verbosity
-          Ea = true }
+          Verbosity = verbosity }
 
       cliRun host options restArgs
 

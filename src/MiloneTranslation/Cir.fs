@@ -53,9 +53,6 @@ type CUnary =
   /// `*p`
   | CDerefUnary
 
-  /// `&x`
-  | CRefUnary
-
 /// Binary operators in CIR.
 [<NoEquality; NoComparison>]
 type CBinary =

@@ -155,8 +155,6 @@ let private primToArity ty prim =
 
   | HPrim.Printfn -> ty |> tyToArity
 
-  | HPrim.BoxOnStack -> unreachable ()
-
 // -----------------------------------------------
 // Context
 // -----------------------------------------------
