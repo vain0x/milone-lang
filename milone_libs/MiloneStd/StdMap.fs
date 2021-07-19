@@ -4,10 +4,6 @@
 /// Requires comparison of keys.
 module rec MiloneStd.StdMap
 
-let private unreachable () =
-  printfn "FATAL ERROR: unreachable"
-  exit 1
-
 let private fst (x, _) = x
 
 let private snd (_, y) = y
@@ -120,10 +116,9 @@ let private doRemove (keyCompare: obj -> int) (keyCompareTo: obj -> obj -> int) 
         let rest =
           match l, r with
           | E, _ -> setBlack r
-          | _, E -> setBlack l
           | _ ->
             match findMinItem r with
-            | None -> unreachable ()
+            | None -> setBlack l
             | Some rkv ->
               let _, r = go (keyCompareTo rkv) r
               T(balanceR (color, l, rkv, r))
