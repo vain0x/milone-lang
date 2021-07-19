@@ -310,6 +310,10 @@ let private rewriteExpr escaping expr (ctx: Ctx) =
     invoke
       (fun () ->
         match escaping, kind, args with
+        | NotEscaping, HCallProcEN, HPrimExpr (HPrim.Cons, _, _) :: _ ->
+          printfn "// cons-on-stack @%s" (locToString loc)
+          doDefault ()
+
         | NotEscaping, HCallProcEN, HPrimExpr (HPrim.Box, primTy, primLoc) :: args ->
           printfn "// box-on-stack @%s" (locToString loc)
 
