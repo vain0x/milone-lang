@@ -7,9 +7,34 @@ open MiloneTranslation.Hir
 module TMap = MiloneStd.StdMap
 module TSet = MiloneStd.StdSet
 
+/// Bit flag to indicate which part of value is escaping.
+///
+/// - 0: the value and its contents are no escaping
+/// - 1: the value itself it no escaping, but its contents are.
+/// - 2: the value itself and its contents are escaping.
 type private Escaping =
-  | IsEscaping
   | NotEscaping
+  | PartiallyEscaping
+  | TotallyEscaping
+
+let private encode x =
+  match x with
+  | NotEscaping -> 0
+  | PartiallyEscaping -> 1
+  | TotallyEscaping -> -1
+
+let private decode x =
+  match x with
+  | 0 -> NotEscaping
+  | 1 -> PartiallyEscaping
+  | _ -> TotallyEscaping
+
+let private escapingEqual l r = encode l = encode r
+let private conj l r = decode (encode l &&& encode r)
+let private disj (l: Escaping) (r: Escaping) = decode (encode l ||| encode r)
+let private notEscaping (x: Escaping) = escapingEqual x NotEscaping
+let private isPartial (x: Escaping) = escapingEqual x PartiallyEscaping
+let private isTotal (x: Escaping) = escapingEqual x TotallyEscaping
 
 let private patFoldVars (onVar: 'S -> VarSerial -> 'S) (state: 'S) (pat: HPat) : 'S =
   let rec go state pat =
@@ -37,8 +62,8 @@ type private Ctx =
     Variants: AssocMap<VariantSerial, VariantDef>
     Tys: AssocMap<TySerial, TyDef>
 
-    Escaped: AssocSet<int>
-    EscapedArgs: AssocSet<FunSerial * int>
+    VarEscapeMap: AssocMap<VarSerial, Escaping>
+    ArgEscapeMap: AssocMap<FunSerial * int, Escaping>
     SomethingHappened: bool }
 
 let private ofTyCtx (tyCtx: TyCtx) : Ctx =
@@ -47,8 +72,8 @@ let private ofTyCtx (tyCtx: TyCtx) : Ctx =
     Variants = tyCtx.Variants
     Tys = tyCtx.Tys
 
-    Escaped = TMap.empty compare
-    EscapedArgs = TMap.empty (pairCompare funSerialCompare compare)
+    VarEscapeMap = TMap.empty varSerialCompare
+    ArgEscapeMap = TMap.empty (pairCompare funSerialCompare compare)
     SomethingHappened = false }
 
 // let private toTyCtx (tyCtx: TyCtx) (ctx: Ctx) : TyCtx = tyCtx
@@ -56,85 +81,105 @@ let private ofTyCtx (tyCtx: TyCtx) : Ctx =
 let private takeSomethingHappened (ctx: Ctx) =
   ctx.SomethingHappened, { ctx with SomethingHappened = false }
 
-let private markVarAsEscaping varSerial (ctx: Ctx) =
-  let n = varSerialToInt varSerial
+let private varToEscaping varSerial (ctx: Ctx) =
+  ctx.VarEscapeMap
+  |> TMap.tryFind varSerial
+  |> Option.defaultValue NotEscaping
 
-  if ctx.Escaped |> TSet.contains n then
+let private argToEscaping funSerial index (ctx: Ctx) =
+  ctx.ArgEscapeMap
+  |> TMap.tryFind (funSerial, index)
+  |> Option.defaultValue NotEscaping
+
+let private markVarAsEscaping varSerial (escaping: Escaping) loc (ctx: Ctx) =
+  if notEscaping escaping then
     ctx
   else
-    { ctx with
-        Escaped = ctx.Escaped |> TSet.add n
-        SomethingHappened = true }
+    let current = varToEscaping varSerial ctx
+    let next = disj current escaping
 
-let private markArgAsEscaping funSerial index (ctx: Ctx) =
-  let pair = funSerial, index
+    if escapingEqual current next then
+      ctx
+    else
+      printfn "// var %s %s -> %s" (ctx.Vars |> mapFind varSerial).Name (locToString loc) (objToString next)
 
-  if ctx.EscapedArgs |> TSet.contains pair then
+      { ctx with
+          VarEscapeMap = ctx.VarEscapeMap |> TMap.add varSerial next
+          SomethingHappened = true }
+
+let private markArgAsEscaping funSerial index (escaping: Escaping) loc (ctx: Ctx) =
+  if notEscaping escaping then
     ctx
   else
-    { ctx with
-        EscapedArgs = ctx.EscapedArgs |> TSet.add pair
-        SomethingHappened = true }
+    let current = argToEscaping funSerial index ctx
+    let next = disj current escaping
 
-let private isVarEscaping varSerial (ctx: Ctx) =
-  ctx.Escaped
-  |> TSet.contains (varSerialToInt varSerial)
+    if escapingEqual current next then
+      ctx
+    else
+      printfn "// arg %s#%d %s -> %s" (ctx.Funs |> mapFind funSerial).Name index (locToString loc) (objToString next)
 
-let private isArgEscaping funSerial index (ctx: Ctx) =
-  ctx.EscapedArgs
-  |> TSet.contains (funSerial, index)
+      { ctx with
+          ArgEscapeMap =
+            ctx.ArgEscapeMap
+            |> TMap.add (funSerial, index) next
+          SomethingHappened = true }
 
 // -----------------------------------------------
 // Control
 // -----------------------------------------------
 
-/// Does pat contain an escaping variable?
+/// Compute escaping for `cond` of pattern matching.
 let private patToEscaping pat (ctx: Ctx) =
-  patFoldVars
-    (fun (escaping: Escaping) varSerial ->
-      match escaping with
-      | IsEscaping -> IsEscaping
-      | _ when isVarEscaping varSerial ctx -> IsEscaping
-      | NotEscaping -> NotEscaping)
-    NotEscaping
-    pat
+  let rec go escaping pat =
+    match pat with
+    | _ when notEscaping escaping -> NotEscaping
 
-/// Is target escaping and then does one of pat contains an escaping variable?
-let private patsToEscaping escaping (pats: HPat list) (ctx: Ctx) =
-  match escaping with
-  | NotEscaping -> NotEscaping
+    | HLitPat _
+    | HDiscardPat _
+    | HVariantPat _ -> NotEscaping
 
-  | IsEscaping ->
-    pats
-    |> List.fold
-         (fun escaping pat ->
-           match escaping with
-           | NotEscaping -> patToEscaping pat ctx
-           | IsEscaping -> IsEscaping)
-         NotEscaping
+    | HVarPat (_, varSerial, _, _) -> conj escaping (varToEscaping varSerial ctx)
 
-let private processCallFunExpr funSerial args ctx =
+    | HNodePat (kind, args, _, _) ->
+      let escaping =
+        match kind, args with
+        | HNilPN, _
+        | HNonePN, _
+        | HTuplePN, []
+        | HVariantAppPN _, []
+        | HAbortPN, _ -> NotEscaping
+
+        | _ -> conj escaping PartiallyEscaping
+
+      args
+      |> List.map (go escaping)
+      |> List.fold disj NotEscaping
+
+    | HAsPat (bodyPat, varSerial, _) ->
+      let escaping =
+        conj escaping (varToEscaping varSerial ctx)
+
+      go escaping bodyPat
+
+    | HOrPat (l, r, _) -> disj (go escaping l) (go escaping r)
+
+  go TotallyEscaping pat
+
+let private patsToEscaping (pats: HPat list) (ctx: Ctx) =
+  pats
+  |> List.map (fun pat -> patToEscaping pat ctx)
+  |> List.fold disj NotEscaping
+
+let private processCallFunExpr funSerial (args: HExpr list) ctx =
   args
-  |> List.fold
-       (fun (i, (escapingArgs, nonEscapingArgs)) arg ->
-         if isArgEscaping funSerial i ctx then
-           i + 1, (arg :: escapingArgs, nonEscapingArgs)
-         else
-           i + 1, (escapingArgs, arg :: nonEscapingArgs))
-       (0, ([], []))
-  |> snd
+  |> List.mapi (fun i arg -> argToEscaping funSerial i ctx, arg)
 
-/// Returns (escaping args, non-escaping-args).
+let private uniformly escaping args : (Escaping * HExpr) list =
+  args |> List.map (fun arg -> escaping, arg)
+
 let private processCallPrimExpr prim args =
   match prim, args with
-  // Everything escaping.
-  | HPrim.Box, _
-  | HPrim.Unbox, _
-  | HPrim.OptionSome, _
-  | HPrim.Cons, _
-  | HPrim.NativeCast, _ -> args, []
-
-  // Everything non-escaping.
   | HPrim.Not, _
   | HPrim.Add, _
   | HPrim.Sub, _
@@ -158,48 +203,63 @@ let private processCallPrimExpr prim args =
   | HPrim.Assert, _
   | HPrim.Printfn, _
   | HPrim.InRegion, _
-  | HPrim.PtrRead, _ -> [], args
+  | HPrim.PtrRead, _ -> uniformly NotEscaping args
 
-  | HPrim.PtrWrite, [ ptr; i; value ] -> [ ptr; i ], [ value ]
+  | HPrim.Unbox, _ -> uniformly PartiallyEscaping args
+
+  | HPrim.Box, _
+  | HPrim.BoxOnStack, _
+  | HPrim.OptionSome, _
+  | HPrim.Cons, _
+  | HPrim.NativeCast, _ -> uniformly TotallyEscaping args
+
+  | HPrim.PtrWrite, [ ptr; i; value ] ->
+    [ NotEscaping, ptr
+      NotEscaping, i
+      TotallyEscaping, value ]
   | HPrim.PtrWrite, _ -> unreachable ()
 
   | HPrim.OptionNone, _
   | HPrim.Nil, _ -> unreachable () // Can't be called.
 
-  | HPrim.BoxOnStack, _ -> unreachable () // HPrim.BoxOnStack is generated in EscapeAnalyze.
-
-/// Returns (escaping args, non-escaping args).
 let private processNodeExpr kind args ctx =
   match kind, args with
-  // Everything escaping.
-  | HSliceEN, _ // NOTE: indices doesn't escape indeed but no need to be strict.
+  | HAbortEN, _
+  | HMinusEN, _
+  | HIndexEN, _
+  | HNativeFunEN _, _
+  | HSizeOfValEN, _ -> uniformly NotEscaping args
+
+  | HRecordItemEN _, _ -> uniformly PartiallyEscaping args
+
+  | HSliceEN, _ // NOTE: indices don't escape indeed but no need to be strict.
   | HCallClosureEN, _ // NOTE: closure may return its env, so it escapes on called.
   | HTupleEN, _
   | HRecordEN, _
-  | HRecordItemEN _, _
   | HClosureEN _, _
   | HCallNativeEN _, _
   | HNativeExprEN _, _
   | HNativeDeclEN _, _
-  | HNativeStmtEN _, _ -> args, []
+  | HNativeStmtEN _, _ -> uniformly TotallyEscaping args
 
-  // Everything non-escaping.
-  | HAbortEN, _
-  | HMinusEN, _
-  | HIndexEN, _ -> [], args
-
-  | HCallProcEN, HFunExpr (funSerial, _, _) :: args -> processCallFunExpr funSerial args ctx
-  | HCallProcEN, HPrimExpr (prim, _, _) :: args -> processCallPrimExpr prim args
-  | HCallProcEN, callee :: args -> args, [ callee ]
-  | HCallTailRecEN, callee :: args -> args, [ callee ]
+  | HCallProcEN, (HFunExpr (funSerial, _, _) as callee) :: args ->
+    (NotEscaping, callee)
+    :: processCallFunExpr funSerial args ctx
+  | HCallProcEN, (HPrimExpr (prim, _, _) as callee) :: args ->
+    (NotEscaping, callee)
+    :: processCallPrimExpr prim args
+  | HCallProcEN, callee :: args ->
+    (NotEscaping, callee)
+    :: uniformly TotallyEscaping args
+  | HCallTailRecEN, callee :: args ->
+    (NotEscaping, callee)
+    :: uniformly TotallyEscaping args
   | HCallProcEN, _
   | HCallTailRecEN, _ -> unreachable ()
 
-  | HNativeFunEN _, _
-  | HSizeOfValEN, _ -> [], [] // Ignorable.
-
   | HAppEN, _ -> unreachable () // HAppEN is resolved in EtaExpansion.
 
+/// `escaping` param indicates how the target of the expr is escaping.
 let private eaExpr escaping expr (ctx: Ctx) : Ctx =
   match expr with
   | HLitExpr _
@@ -207,80 +267,70 @@ let private eaExpr escaping expr (ctx: Ctx) : Ctx =
   | HVariantExpr _
   | HPrimExpr _ -> ctx
 
-  | HVarExpr (varSerial, _, loc) ->
-    match escaping with
-    | IsEscaping when not (isVarEscaping varSerial ctx) ->
-      // printfn "// var marked as escaping @%s" (locToString loc)
-      ()
-    | _ -> ()
-
-    match escaping with
-    | IsEscaping -> markVarAsEscaping varSerial ctx
-    | NotEscaping -> ctx
+  | HVarExpr (varSerial, _, loc) -> markVarAsEscaping varSerial escaping loc ctx
 
   | HNodeExpr (kind, args, _, _) ->
     invoke
       (fun () ->
-        let escapingArgs, nonEscapingArgs =
-          match escaping with
-          | NotEscaping -> [], args
-          | IsEscaping -> processNodeExpr kind args ctx
+        let args =
+          if notEscaping escaping then
+            uniformly NotEscaping args
+          else
+            processNodeExpr kind args ctx
 
-        eaExprs escaping escapingArgs ctx
-        |> eaExprs NotEscaping nonEscapingArgs)
+        args
+        |> List.fold (fun ctx (escaping, arg) -> eaExpr escaping arg ctx) ctx)
 
   | HMatchExpr (cond, arms, _, _) ->
+    let pats () =
+      arms |> List.map (fun (pat, _, _) -> pat)
+
+    let bodies () =
+      arms |> List.map (fun (_, _, body) -> body)
+
     invoke
       (fun () ->
-        let pats () =
-          arms |> List.map (fun (pat, _, _) -> pat)
-
-        let bodies () =
-          arms |> List.map (fun (_, _, body) -> body)
-
-        let ctx = eaExprs escaping (bodies ()) ctx
-
-        let ctx =
-          let escaping = patsToEscaping escaping (pats ()) ctx
-          eaExpr escaping cond ctx
-
-        ctx)
+        ctx
+        |> eaExprs escaping (bodies ())
+        |> eaExpr (patsToEscaping (pats ()) ctx) cond)
 
   | HBlockExpr (stmts, last) ->
     invoke
       (fun () ->
         ctx
         |> eaExpr escaping last
-        |> eaExprs NotEscaping (List.rev stmts))
+        |> eaExprs escaping (List.rev stmts))
 
   | HLetValExpr (pat, init, next, _, _) ->
     invoke
       (fun () ->
         assert (hxIsUnitLit next) // let-next is resolved in Hoist.
 
-        let escaping = patToEscaping pat ctx
-        eaExpr escaping init ctx)
+        eaExpr (conj escaping (patToEscaping pat ctx)) init ctx)
 
   | HLetFunExpr (callee, _, _, args, body, next, _, loc) ->
     invoke
       (fun () ->
         assert (hxIsUnitLit next) // let-next is resolved in Hoist.
 
+        let funName = (ctx.Funs |> mapFind callee).Name
+        // printfn "// enter let-fun %s @%s" funName (locToString loc)
+        let ctx = eaExpr escaping body ctx
+
         let ctx =
           args
           |> List.fold
                (fun (i, ctx) arg ->
+                 //  printfn "// arg? %s#%d %s" funName i (patToEscaping arg ctx |> objToString)
+
                  let ctx =
-                   match patToEscaping arg ctx with
-                   | IsEscaping -> markArgAsEscaping callee i ctx
-                   | NotEscaping -> ctx
+                   markArgAsEscaping callee i (patToEscaping arg ctx) loc ctx
 
                  i + 1, ctx)
                (0, ctx)
           |> snd
 
-        // printfn "// enter let-fun %s @%s" (ctx.Funs |> mapFind callee).Name (locToString loc)
-        eaExpr IsEscaping body ctx)
+        ctx)
 
   | HNavExpr _ -> unreachable () // HNavExpr is resolved in NameRes, Typing, or RecordRes.
   | HRecordExpr _ -> unreachable () // HRecordExpr is resolved in RecordRes.
@@ -303,53 +353,59 @@ let private rewriteExpr escaping expr (ctx: Ctx) =
 
   | HNodeExpr (kind, args, ty, loc) ->
     let doDefault () =
-      // FIXME: check escaping-ness for args
-      let args = rewriteExprs escaping args ctx
+      let arity = List.length args
+
+      let args =
+        if notEscaping escaping then
+          uniformly NotEscaping args
+        else
+          processNodeExpr kind args ctx
+
+      let args = rewriteArgs args ctx
+
+      assert (List.length args = arity)
       HNodeExpr(kind, args, ty, loc)
 
     invoke
       (fun () ->
-        match escaping, kind, args with
-        | NotEscaping, HCallProcEN, HPrimExpr (HPrim.Cons, _, _) :: _ ->
-          printfn "// cons-on-stack @%s" (locToString loc)
+        match kind, args with
+        | HCallProcEN, (HFunExpr (funSerial, _, _) as callee) :: args ->
+          let args =
+            rewriteArgs (processCallFunExpr funSerial args ctx) ctx
+
+          HNodeExpr(HCallProcEN, callee :: args, ty, loc)
+
+        | HCallProcEN, HPrimExpr (HPrim.Cons, _, _) :: _ when not (isTotal escaping) ->
+          printfn "// cons-on-stack @%s (%s)" (locToString loc) (objToString escaping)
           doDefault ()
 
-        | NotEscaping, HCallProcEN, HPrimExpr (HPrim.Box, primTy, primLoc) :: args ->
-          printfn "// box-on-stack @%s" (locToString loc)
+        | HCallProcEN, HPrimExpr (HPrim.Box, primTy, primLoc) :: args when not (isTotal escaping) ->
+          printfn "// box-on-stack @%s (%s)" (locToString loc) (objToString escaping)
 
           let callee =
             HPrimExpr(HPrim.BoxOnStack, primTy, primLoc)
 
-          let args = rewriteExprs IsEscaping args ctx
-          HNodeExpr(HCallProcEN, callee :: args, ty, loc)
-
-        | NotEscaping, HCallProcEN, (HFunExpr (funSerial, _, _) as callee) :: args ->
           let args =
-            args
-            |> List.mapi
-                 (fun i arg ->
-                   let escaping =
-                     if isArgEscaping funSerial i ctx then
-                       IsEscaping
-                     else
-                       NotEscaping
+            rewriteArgs (processNodeExpr kind (callee :: args) ctx) ctx
 
-                   rewriteExpr escaping arg ctx)
-
-          HNodeExpr(HCallProcEN, callee :: args, ty, loc)
+          HNodeExpr(HCallProcEN, args, ty, loc)
 
         | _ -> doDefault ())
 
   | HMatchExpr (cond, arms, ty, loc) ->
+    let pats () =
+      arms |> List.map (fun (pat, _, _) -> pat)
+
     invoke
       (fun () ->
-        let cond = rewriteExpr escaping cond ctx
+        let cond =
+          rewriteExpr (patsToEscaping (pats ()) ctx) cond ctx
 
         let arms =
           arms
           |> List.map
                (fun (pat, guard, body) ->
-                 let guard = rewriteExpr escaping guard ctx
+                 let guard = rewriteExpr NotEscaping guard ctx
                  let body = rewriteExpr escaping body ctx
                  pat, guard, body)
 
@@ -358,7 +414,7 @@ let private rewriteExpr escaping expr (ctx: Ctx) =
   | HBlockExpr (stmts, last) ->
     invoke
       (fun () ->
-        let stmts = rewriteExprs NotEscaping stmts ctx
+        let stmts = rewriteExprs escaping stmts ctx
         let last = rewriteExpr escaping last ctx
         HBlockExpr(stmts, last))
 
@@ -368,8 +424,7 @@ let private rewriteExpr escaping expr (ctx: Ctx) =
         assert (hxIsUnitLit next) // let-next is resolved in Hoist.
 
         let init =
-          let escaping = patToEscaping pat ctx
-          rewriteExpr escaping init ctx
+          rewriteExpr (conj escaping (patToEscaping pat ctx)) init ctx
 
         HLetValExpr(pat, init, next, ty, loc))
 
@@ -377,7 +432,7 @@ let private rewriteExpr escaping expr (ctx: Ctx) =
     invoke
       (fun () ->
         assert (hxIsUnitLit next) // let-next is resolved in Hoist.
-        let body = rewriteExpr IsEscaping body ctx
+        let body = rewriteExpr escaping body ctx
         HLetFunExpr(callee, isRec, vis, args, body, next, ty, loc))
 
   | HNavExpr _ -> unreachable () // HNavExpr is resolved in NameRes, Typing, or RecordRes.
@@ -387,26 +442,32 @@ let private rewriteExprs escaping exprs (ctx: Ctx) : HExpr list =
   exprs
   |> List.map (fun expr -> rewriteExpr escaping expr ctx)
 
+let private rewriteArgs args (ctx: Ctx) =
+  args
+  |> List.map (fun (escaping, arg) -> rewriteExpr escaping arg ctx)
+
 // ===============================================
 
 let escapeAnalyze (decls: HExpr list, tyCtx: TyCtx) : HExpr list * TyCtx =
   let ctx = ofTyCtx tyCtx
 
+  printfn "// escapeAnalyze begin"
+
   let ctx =
     let rec go round ctx =
       let modified, ctx =
         ctx
-        |> eaExprs NotEscaping decls
+        |> eaExprs TotallyEscaping decls
         |> takeSomethingHappened
 
       if modified then
         assert (round < 10000000)
         go (round + 1) ctx
       else
-        // printfn "// escapeAnalyze finished in %d rounds" (round + 1)
+        printfn "// escapeAnalyze finished in %d rounds" (round + 1)
         ctx
 
     go 0 ctx
 
-  let decls = rewriteExprs NotEscaping decls ctx
+  let decls = rewriteExprs TotallyEscaping decls ctx
   decls, tyCtx
