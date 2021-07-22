@@ -7,16 +7,30 @@
             "name": "Launch Extension Host",
             "runtimeExecutable": "${execPath}",
             "args": [
-                "--extensionDevelopmentPath=${workspaceFolder}/../vscode_ext"
+                "--extensionDevelopmentPath=${workspaceFolder}/../../vscode_ext"
             ],
-            "env": {
-                "MILONE_LSP_COMMAND": "${workspaceFolder}/bin/Debug/net5.0/MiloneLsp",
-                "MILONE_HOME": "${workspaceFolder}/.."
+            "linux": {
+                "name": "Launch (windows)",
+                "type": "extensionHost",
+                "request": "launch",
+                "args": [
+                    "--extensionDevelopmentPath=${workspaceFolder}/../../vscode_ext"
+                ],
+                "env": {
+                    "MILONE_LSP_COMMAND": "${workspaceFolder}/bin/Debug/net5.0/MiloneLspServer",
+                    "MILONE_HOME": "${workspaceFolder}/../.."
+                }
             },
             "windows": {
+                "name": "Launch (windows)",
+                "type": "extensionHost",
+                "request": "launch",
+                "args": [
+                    "--extensionDevelopmentPath=${workspaceFolder}/../../vscode_ext"
+                ],
                 "env": {
                     "MILONE_LSP_COMMAND": "${workspaceFolder}/bin/Debug/net5.0/MiloneLspServer.exe",
-                    "MILONE_HOME": "${workspaceFolder}/.."
+                    "MILONE_HOME": "${workspaceFolder}/../.."
                 }
             },
             "preLaunchTask": "vscode_ext_build"
