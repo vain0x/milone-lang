@@ -210,10 +210,13 @@ db_select(struct String sql, struct StringDbValuePairCons const *params) {
     }
 
     // Array to list.
-    struct DbValueListCons *result = milone_mem_alloc((int)len, sizeof(struct DbValueListCons));
-    for (size_t i = 0; i < len; i++) {
-        result[i].head = table[i];
-        result[i].tail = i + 1 < len ? &result[i + 1] : NULL;
+    struct DbValueListCons *result = NULL;
+    if (len != 0) {
+        result = milone_mem_alloc((int)len, sizeof(struct DbValueListCons));
+        for (size_t i = 0; i < len; i++) {
+            result[i].head = table[i];
+            result[i].tail = i + 1 < len ? &result[i + 1] : NULL;
+        }
     }
     free(table);
     return result;
