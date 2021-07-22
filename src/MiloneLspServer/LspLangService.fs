@@ -186,8 +186,13 @@ let newLangService (project: ProjectInfo) : LangServiceState =
       |> Some
 
     | _ ->
-      eprintfn "findDocId: not found %s/%s" projectName moduleName
-      None
+      let projectDir =
+        project.ProjectDir + "/../" + projectName
+
+      Path.Combine(projectDir, moduleName + ".milone")
+      |> fixExt
+      |> uriOfFilePath
+      |> Some
 
   let getVersion docId =
     match LspDocCache.findDoc docId with
