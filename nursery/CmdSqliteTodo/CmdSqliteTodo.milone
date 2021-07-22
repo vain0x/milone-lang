@@ -93,7 +93,11 @@ let private cmdList () =
 // -----------------------------------------------
 
 let main _ =
-  let args = E.commandLineArgs () |> List.skip 1
+  let args =
+    // wants List.skip
+    match E.commandLineArgs () with
+    | [] -> exit 1
+    | _ :: xs -> xs
 
   match args with
   | "-h" :: _
