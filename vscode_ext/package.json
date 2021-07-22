@@ -38,7 +38,7 @@
         },
         "milone-lang.lsp-command": {
           "type": "string",
-          "description": "[debug] Absolute path to the LSP server binary to be used. Defaults to '$HOME/.milone/bin/MiloneLsp'."
+          "description": "[debug] Absolute path to the LSP server binary to be used. Defaults to '$HOME/.milone/bin/MiloneLspServer'."
         },
         "milone-lang.trace.server": {
           "type": "string",
