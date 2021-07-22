@@ -163,6 +163,35 @@ let private uriToDocId (uri: Uri) : DocId =
 
   sprintf "%s.%s" projectName moduleName
 
+let private fixExt filePath =
+  let fs = Path.ChangeExtension(filePath, ".fs")
+
+  if File.Exists(filePath) || not (File.Exists(fs)) then
+    filePath
+  else
+    fs
+
+let private docIdToUri (project: ProjectInfo) (docId: string) =
+  let projectName, moduleName =
+    match docId.Split(".") with
+    | [| p; m |] -> p, m
+    | _ -> failwithf "unexpected docId: '%s'" docId
+
+  match projectName with
+  | "MiloneCore"
+  | "MiloneStd" ->
+    sprintf "%s/milone_libs/%s/%s.milone" miloneHome projectName moduleName
+    |> fixExt
+    |> uriOfFilePath
+
+  | _ ->
+    let projectDir =
+      project.ProjectDir + "/../" + projectName
+
+    Path.Combine(projectDir, moduleName + ".milone")
+    |> fixExt
+    |> uriOfFilePath
+
 // ---------------------------------------------
 // Analysis
 // ---------------------------------------------
@@ -179,42 +208,10 @@ let newLangService (project: ProjectInfo) : LangServiceState =
   let toUri moduleName ext =
     toFilePath moduleName ext |> uriOfFilePath
 
-  let fixExt filePath =
-    let fs = Path.ChangeExtension(filePath, ".fs")
-
-    if File.Exists(filePath) || not (File.Exists(fs)) then
-      filePath
-    else
-      fs
-
   let findDocId projectName moduleName =
     sprintf "%s.%s" projectName moduleName |> Some
 
-  let docIdToUri (docId: string) =
-    let projectName, moduleName =
-      match docId.Split(".") with
-      | [| p; m |] -> p, m
-      | _ -> failwithf "unexpected docId: '%s'" docId
-
-    match projectName with
-    | "MiloneCore"
-    | "MiloneStd" ->
-      sprintf "%s/milone_libs/%s/%s.milone" miloneHome projectName moduleName
-      |> fixExt
-      |> uriOfFilePath
-
-    | _ when projectName = project.ProjectName ->
-      toFilePath moduleName ".milone"
-      |> fixExt
-      |> uriOfFilePath
-
-    | _ ->
-      let projectDir =
-        project.ProjectDir + "/../" + projectName
-
-      Path.Combine(projectDir, moduleName + ".milone")
-      |> fixExt
-      |> uriOfFilePath
+  let docIdToUri = docIdToUri project
 
   let getVersion docId =
     match LspDocCache.findDoc (docIdToUri docId) with
@@ -393,6 +390,7 @@ let definition rootUriOpt uri pos =
     project
     |> newLangServiceWithCache
     |> LangService.definition project.ProjectDir (uriToDocId uri) pos
+    |> List.map (fun (docId, range) -> docIdToUri project docId, range)
 
   match findProjects rootUriOpt with
   | Error _ -> []
@@ -410,6 +408,7 @@ let references rootUriOpt uri pos (includeDecl: bool) =
     project
     |> newLangServiceWithCache
     |> LangService.references project.ProjectDir (uriToDocId uri) pos includeDecl
+    |> List.map (fun (docId, range) -> docIdToUri project docId, range)
 
   match findProjects rootUriOpt with
   | Error _ -> []

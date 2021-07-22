@@ -10,6 +10,7 @@ MILONE_HOME=$(dirname $(dirname $PWD))
 LINE=$(cat $MILONE_CLI_PATH | grep -n 'cli host' | cut -d ':' -f 1)
 LINE=$(( $LINE - 1 ))
 
+: >err.generated.txt
 tail -f err.generated.txt &
 TAIL=$!
 

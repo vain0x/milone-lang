@@ -374,8 +374,8 @@ let private processNext () : LspIncome -> ProcessResult =
       let result =
         LspLangService.definition rootUriOpt uri pos
         |> List.map
-             (fun (docId, range) ->
-               jOfObj [ "uri", JString docId
+             (fun (Uri uri, range) ->
+               jOfObj [ "uri", JString uri
                         "range", jOfRange range ])
         |> JArray
 
@@ -390,8 +390,8 @@ let private processNext () : LspIncome -> ProcessResult =
       let result =
         LspLangService.references rootUriOpt uri pos includeDecl
         |> List.map
-             (fun (docId, range) ->
-               jOfObj [ "uri", JString docId
+             (fun (Uri uri, range) ->
+               jOfObj [ "uri", JString uri
                         "range", jOfRange range ])
         |> JArray
 
