@@ -8,6 +8,7 @@ open MiloneShared.SharedTypes
 open MiloneLspServer.Lsp
 open MiloneLspServer.Util
 open MiloneLspServer.LspCacheLayer
+open MiloneLspServer.LspDocCache
 
 let private miloneHome =
   let opt (s: string) =
@@ -37,10 +38,12 @@ let private uriOfFilePath (filePath: string) =
     .Replace("\\", "/")
     .Insert(0, "file://")
     .ToString()
+  |> Uri
 
-let private uriToFilePath (uri: string) =
+let private uriToFilePath (uri: Uri) =
   try
-    let path = Uri(uri).LocalPath
+    let (Uri uri) = uri
+    let path = System.Uri(uri).LocalPath
 
     // HOTFIX: On linux, path starts with \\ and is separated by \ for some reason.
     let path =
@@ -85,7 +88,7 @@ let private doFindProjects (rootUri: string) : ProjectInfo list =
   let projects = ResizeArray()
 
   let rootDir =
-    match rootUri |> uriToFilePath with
+    match Uri rootUri |> uriToFilePath with
     | Some it -> it
     | None -> failwithf "rootUri: %A" rootUri
 
@@ -146,6 +149,20 @@ let findProjects (rootUriOpt: string option) : Result<ProjectInfo list, exn> =
     projectsRef := Some projects
     projects
 
+let private uriToDocId (uri: Uri) : DocId =
+  let filePath =
+    match uriToFilePath uri with
+    | Some it -> it
+    | None -> failwithf "unexpected URI: %A" uri
+
+  let projectName =
+    Path.GetFileName(Path.GetDirectoryName(filePath))
+
+  let moduleName =
+    Path.GetFileNameWithoutExtension(filePath)
+
+  sprintf "%s.%s" projectName moduleName
+
 // ---------------------------------------------
 // Analysis
 // ---------------------------------------------
@@ -171,19 +188,25 @@ let newLangService (project: ProjectInfo) : LangServiceState =
       fs
 
   let findDocId projectName moduleName =
+    sprintf "%s.%s" projectName moduleName |> Some
+
+  let docIdToUri (docId: string) =
+    let projectName, moduleName =
+      match docId.Split(".") with
+      | [| p; m |] -> p, m
+      | _ -> failwithf "unexpected docId: '%s'" docId
+
     match projectName with
     | "MiloneCore"
     | "MiloneStd" ->
       sprintf "%s/milone_libs/%s/%s.milone" miloneHome projectName moduleName
       |> fixExt
       |> uriOfFilePath
-      |> Some
 
     | _ when projectName = project.ProjectName ->
       toFilePath moduleName ".milone"
       |> fixExt
       |> uriOfFilePath
-      |> Some
 
     | _ ->
       let projectDir =
@@ -192,19 +215,20 @@ let newLangService (project: ProjectInfo) : LangServiceState =
       Path.Combine(projectDir, moduleName + ".milone")
       |> fixExt
       |> uriOfFilePath
-      |> Some
 
   let getVersion docId =
-    match LspDocCache.findDoc docId with
+    match LspDocCache.findDoc (docIdToUri docId) with
     | Some docCache -> docCache.Version
     | None -> 0
 
-  let getText docId =
-    match LspDocCache.findDoc docId with
+  let getText (docId: string) =
+    let uri = docIdToUri docId
+
+    match LspDocCache.findDoc uri with
     | Some docCache -> docCache.Version, docCache.Text
 
     | None ->
-      match docId |> uriToFilePath with
+      match uri |> uriToFilePath with
       | None ->
         eprintfn "getText: docId not found: %s" docId
         0, ""
@@ -222,7 +246,7 @@ let newLangService (project: ProjectInfo) : LangServiceState =
           0, ""
 
   let getProjectName docId =
-    match docId |> uriToFilePath with
+    match docId |> docIdToUri |> uriToFilePath with
     | None -> None
     | Some filePath ->
       try
@@ -325,7 +349,7 @@ let documentHighlight rootUriOpt uri pos =
   let doHighlight (project: ProjectInfo) uri pos =
     project
     |> newLangServiceWithCache
-    |> LangService.documentHighlight project.ProjectDir uri pos
+    |> LangService.documentHighlight project.ProjectDir (uriToDocId uri) pos
 
   // let texts = ResizeArray()
   let reads = ResizeArray()
@@ -350,7 +374,7 @@ let hover rootUriOpt uri pos =
   let doHover (project: ProjectInfo) uri pos =
     project
     |> newLangServiceWithCache
-    |> LangService.hover project.ProjectDir uri pos
+    |> LangService.hover project.ProjectDir (uriToDocId uri) pos
 
   match findProjects rootUriOpt with
   | Error _ -> []
@@ -368,7 +392,7 @@ let definition rootUriOpt uri pos =
   let doDefinition (project: ProjectInfo) uri pos =
     project
     |> newLangServiceWithCache
-    |> LangService.definition project.ProjectDir uri pos
+    |> LangService.definition project.ProjectDir (uriToDocId uri) pos
 
   match findProjects rootUriOpt with
   | Error _ -> []
@@ -385,7 +409,7 @@ let references rootUriOpt uri pos (includeDecl: bool) =
   let doReferences (project: ProjectInfo) uri pos =
     project
     |> newLangServiceWithCache
-    |> LangService.references project.ProjectDir uri pos includeDecl
+    |> LangService.references project.ProjectDir (uriToDocId uri) pos includeDecl
 
   match findProjects rootUriOpt with
   | Error _ -> []

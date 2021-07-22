@@ -2,12 +2,14 @@ module rec MiloneLspServer.LspDocCache
 
 open MiloneLspServer.Util
 
+type Uri = Uri of string
+
 /// Text doc that is opened in editor.
 [<RequireQualifiedAccess; NoEquality; NoComparison>]
 type DocData =
   {
     /// String to identify the document. E.g. `file:///home/owner/.../foo.milone`.
-    Uri: string
+    Uri: Uri
 
     /// Number to identify an edition of the document.
     Version: int
@@ -15,16 +17,16 @@ type DocData =
     Text: string }
 
 /// List of docs open in editor, keyed by URI.
-let private docs = MutMap<string, DocData>()
+let private docs = MutMap<Uri, DocData>()
 
-let findDoc (uri: string) : DocData option =
+let findDoc (uri: Uri) : DocData option =
   // eprintfn "INFO: Doc find uri:'%s'" uri
 
   match docs.TryGetValue(uri) with
   | true, docData -> Some docData
   | false, _ -> None
 
-let openDoc (uri: string) (version: int) (text: string) =
+let openDoc (uri: Uri) (version: int) (text: string) =
   let docData : DocData =
     { Uri = uri
       Version = version
@@ -33,7 +35,7 @@ let openDoc (uri: string) (version: int) (text: string) =
   // eprintfn "INFO: Doc opened uri:'%s' v:%d len:%d" uri version text.Length
   docs.Add(uri, docData)
 
-let changeDoc (uri: string) (version: int) (text: string) : unit =
+let changeDoc (uri: Uri) (version: int) (text: string) : unit =
   match findDoc uri with
   | Some _ ->
     let docData : DocData =
@@ -45,6 +47,6 @@ let changeDoc (uri: string) (version: int) (text: string) : unit =
 
   | None -> openDoc uri version text
 
-let closeDoc (uri: string) : unit =
+let closeDoc (uri: Uri) : unit =
   // eprintfn "INFO: Doc closed uri:'%s'" uri
   docs.Remove(uri) |> ignore

@@ -6,6 +6,7 @@ open MiloneLspServer.JsonValue
 open MiloneLspServer.JsonSerialization
 open MiloneLspServer.JsonRpcWriter
 open MiloneLspServer.Lsp
+open MiloneLspServer.LspDocCache
 open MiloneLspServer.Util
 
 type private Position = int * int
@@ -198,13 +199,14 @@ let private parseDidCloseParam jsonValue : DidCloseParam =
   { Uri = uri }
 
 [<RequireQualifiedAccess; NoEquality; NoComparison>]
-type private DocumentPositionParam = { Uri: string; Pos: Pos }
+type private DocumentPositionParam = { Uri: Uri; Pos: Pos }
 
 let private parseDocumentPositionParam jsonValue : DocumentPositionParam =
   let uri =
     jsonValue
     |> jFind3 "params" "textDocument" "uri"
     |> jToString
+    |> Uri
 
   let pos =
     jsonValue |> jFind2 "params" "position" |> jToPos
@@ -213,7 +215,7 @@ let private parseDocumentPositionParam jsonValue : DocumentPositionParam =
 
 [<RequireQualifiedAccess; NoEquality; NoComparison>]
 type private ReferencesParam =
-  { Uri: string
+  { Uri: Uri
     Pos: Pos
     IncludeDecl: bool }
 
@@ -330,19 +332,19 @@ let private processNext () : LspIncome -> ProcessResult =
     | ExitNotification -> Exit exitCode
 
     | DidOpenNotification p ->
-      let uri, version, text = p.Uri, p.Version, p.Text
+      let uri, version, text = Uri p.Uri, p.Version, p.Text
 
       LspDocCache.openDoc uri version text
       Continue
 
     | DidChangeNotification p ->
-      let uri, version, text = p.Uri, p.Version, p.Text
+      let uri, version, text = Uri p.Uri, p.Version, p.Text
 
       LspDocCache.changeDoc uri version text
       Continue
 
     | DidCloseNotification p ->
-      let uri = p.Uri
+      let uri = Uri p.Uri
 
       LspDocCache.closeDoc uri
       Continue
