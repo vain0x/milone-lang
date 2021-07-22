@@ -13,7 +13,7 @@ fi
 
 (
     cd vendor
-    wget 'https://sqlite.org/2021/sqlite-amalgamation-3340100.zip' -O - | busybox unzip -
+    busybox wget 'https://sqlite.org/2021/sqlite-amalgamation-3340100.zip' -O - | busybox unzip -
     mv 'sqlite-amalgamation-3340100' sqlite3
 
     cd sqlite3
