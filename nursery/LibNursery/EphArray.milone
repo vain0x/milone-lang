@@ -1,0 +1,113 @@
+module rec LibNursery.EphArray
+
+open LibNursery.EphSerial
+open LibNursery.Runtime
+
+// buffer ptr, length, serial
+/// Ephemeral mutable array.
+type EphArray<'T> = nativeptr<'T> * int * EphSerial
+
+let private error (msg: string) : bool =
+  __nativeStmt ("""fprintf(stderr, "error: %s\n", {0});""", msg)
+  false
+
+module EphArray =
+  module Unsafe =
+    /// Allocates an array with specified length.
+    ///
+    /// SAFETY: Contents are zero-filled.
+    ///         All of contents must be written before the array is exposed
+    ///         if zero-fill is invalid for the type.
+    let zeroCreate (len: int) : EphArray<'T> =
+      if len <= 0 then
+        assert (len = 0 || error "negative length")
+        empty ()
+      else
+        let size =
+          __sizeOfVal (__ptrRead (__nativeCast (unativeint 0): __constptr<'T>) 0)
+          |> unativeint
+
+        let ptr = memAlloc len size |> __nativeCast
+
+        ptr, len, EphSerial.create ()
+
+    let asMut (array: EphArray<'T>) : nativeptr<'T> =
+      let ptr, _, serial = array
+      assert (EphSerial.alive serial || error "no longer alive")
+      ptr
+
+    let asPtr (array: EphArray<'T>) : __constptr<'T> =
+      let ptr, _, serial = array
+      assert (EphSerial.alive serial || error "no longer alive")
+      __nativeCast ptr
+
+  let private refresh (array: EphArray<'T>) : EphArray<'T> =
+    let ptr, len, serial = array
+    ptr, len, EphSerial.refresh serial
+
+  /// Gets an ephemeral array with length 0.
+  let empty () : EphArray<_> =
+    __nativeCast (unativeint 0), 0, EphSerial.create ()
+
+  /// Creates an array with specified length.
+  /// `i`'th item is initialized with `f i`.
+  ///
+  /// That is, `[| f 0; f 1; ...; f (len - 1) |]` is created.
+  let init (len: int) (f: int -> 'T) : EphArray<'T> =
+    let output = Unsafe.zeroCreate len
+    let ptr, _, _ = output
+
+    let rec go i =
+      if i < len then
+        __ptrWrite ptr i (f i)
+        go (i + 1)
+
+    go 0
+    output
+
+  let replicate (len: int) (item: 'T) : EphArray<'T> =
+    let output = Unsafe.zeroCreate len
+
+    let rec ephArrayReplicateLoop i =
+      if i < len then
+        __ptrWrite (Unsafe.asMut output) i item
+        ephArrayReplicateLoop (i + 1)
+
+    ephArrayReplicateLoop 0
+    output
+
+  let alive (array: EphArray<_>) : bool =
+    let _, _, serial = array
+    EphSerial.alive serial
+
+  let length (array: EphArray<_>) : int =
+    assert (alive array || error "no longer alive")
+
+    let _, len, _ = array
+    len
+
+  /// Gets i'th item. Out of range is fatal error.
+  let item (i: int) (array: EphArray<'T>) : 'T =
+    assert (alive array || error "no longer alive")
+
+    assert (unativeint i < unativeint (length array)
+            || error "out of range")
+
+    __ptrRead (Unsafe.asPtr array) i
+
+  /// Gets i'th item. Returns None if out of range.
+  let tryItem (i: int) (array: EphArray<'T>) : 'T option =
+    assert (alive array || error "no longer alive")
+
+    if unativeint i < unativeint (length array) then
+      Some(__ptrRead (Unsafe.asPtr array) i)
+    else
+      None
+
+  /// Writes to i'th item. Out of range is fatal error.
+  let setItem (i: int) (value: 'T) (array: EphArray<'T>) : EphArray<'T> =
+    let array = refresh array
+    assert (unativeint i < unativeint (length array))
+
+    __ptrWrite (Unsafe.asMut array) i value
+    array

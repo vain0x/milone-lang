@@ -1,10 +1,64 @@
 module rec LibNurseryTests.Program
 
+open LibNursery.EphArray
 open LibNursery.EphRef
 open LibNursery.EphSerial
 open LibNurseryTests.ClapTests
 open LibNurseryTests.ExtIterTests
 open LibNurseryTests.ExtStringTests
+
+let eaItem i a =
+  match EphArray.tryItem i a with
+  | Some it -> it
+
+  | None ->
+    printfn "error: %d is out of range" i
+    exit 1
+
+let testEphArrayEmpty () =
+  let a : EphArray<int> = EphArray.empty ()
+  assert (EphArray.alive a)
+  assert (EphArray.length a = 0)
+  a
+
+let testEphArrayInit () =
+  let a = EphArray.init 3 (fun i -> i + 1)
+  assert (EphArray.length a = 3)
+  assert (eaItem 0 a = 1)
+  assert (eaItem 1 a = 2)
+  assert (eaItem 2 a = 3)
+  assert (EphArray.tryItem (-1) a |> Option.isNone)
+  assert (EphArray.tryItem 3 a |> Option.isNone)
+  a
+
+let testEphArrayReplicate () =
+  let a = EphArray.replicate 5 42
+  assert (EphArray.length a = 5)
+  assert (eaItem 0 a = 42)
+  assert (eaItem 4 a = 42)
+  a
+
+let testEphArraySetItem () =
+  let n = 5
+  let a = EphArray.replicate n 0
+  let init = a
+
+  let a =
+    let rec go i a =
+      if i < n then
+        let a = EphArray.setItem i ((i + 1) * (i + 1)) a
+        go (i + 1) a
+      else
+        a
+
+    go 0 a
+
+  assert (EphArray.alive a)
+  assert (EphArray.alive init |> not)
+  assert (EphArray.item 0 a = 1)
+  assert (EphArray.item 2 a = 9)
+  assert (EphArray.item 4 a = 25)
+  a
 
 let testEphSerialRefresh () =
   let s : EphSerial = EphSerial.create ()
@@ -74,4 +128,9 @@ let main _ =
   let _ = testEphSerialEquivalent ()
   let _ = testEphRef ()
   let _ = testEphRefReplace ()
+  let _ = testEphArrayEmpty ()
+  let _ = testEphArrayInit ()
+  let _ = testEphArrayReplicate ()
+  let _ = testEphArraySetItem ()
+  printfn "OK"
   0
