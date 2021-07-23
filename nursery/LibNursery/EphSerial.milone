@@ -16,15 +16,26 @@ type EphSerial = EphSerial of uint * nativeptr<uint>
 // Meant to prevent copy propagation. (Actually such optimization is yet implemented though.)
 let private blackbox (f: unit -> EphSerial) : EphSerial = f ()
 
-module rec EphSerial =
-  /// Creates a fresh serial.
-  let create () : EphSerial =
-    let ptr : nativeptr<uint> =
-      memAlloc 1 (unativeint (__sizeOfVal (unativeint 0)))
-      |> __nativeCast
+let private createNew () =
+  let ptr : nativeptr<uint> =
+    memAlloc 1 (unativeint (__sizeOfVal (unativeint 0)))
+    |> __nativeCast
 
-    __ptrWrite ptr 0 (uint 0)
-    EphSerial(uint 0, ptr)
+  __ptrWrite ptr 0 (uint 0)
+  EphSerial(uint 0, ptr)
+
+module rec EphSerial =
+  /// Invokes a function that uses impure computation.
+  let run (f: EphSerial -> 'T * EphSerial) : 'T =
+    let result, s = f (createNew ())
+    let ok, _ = alive (refresh s)
+    assert (ok || violate "no longer alive")
+    result
+
+  /// Creates a fresh serial. (created one, parent one)
+  let create (parent: EphSerial) : EphSerial * EphSerial =
+    let parent = refresh parent
+    createNew (), parent
 
   /// Gets whether two serials are equivalent (i.e. serials for the same timeline).
   let equivalent (l: EphSerial) (r: EphSerial) : bool =

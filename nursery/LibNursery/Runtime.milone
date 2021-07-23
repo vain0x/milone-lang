@@ -8,5 +8,5 @@ let memAlloc (len: int) (size: unativeint) : voidptr =
 /// Meant to be used like this:
 ///   `assert (pred || violate "reason")`
 let violate (msg: string) : bool =
-  __nativeStmt ("""fprintf(stderr, "error: %s\n", {0});""", msg)
+  __nativeStmt ("""fprintf(stderr, "error: %s\n", str_to_c_str({0}));""", msg)
   false

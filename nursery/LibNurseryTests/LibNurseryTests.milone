@@ -9,15 +9,15 @@ open LibNurseryTests.ExtStringTests
 
 module S = MiloneStd.StdString
 
-let testEphArrayEmpty () =
-  let a : EphArray<int> = EphArray.empty ()
+let testEphArrayEmpty (ss: EphSerial) : EphSerial =
+  let (a: EphArray<int>), ss = EphArray.empty ss
   let ok, a = EphArray.alive a
   assert ok
   assert (EphArray.length a = 0)
-  a
+  ss
 
-let testEphArrayInit () =
-  let a = EphArray.init 3 (fun i -> i + 1)
+let testEphArrayInit (ss: EphSerial) : EphSerial =
+  let a, ss = EphArray.init 3 (fun i -> i + 1) ss
   assert (EphArray.length a = 3)
 
   let itemEq i (expected: int) a =
@@ -35,11 +35,11 @@ let testEphArrayInit () =
     a
 
   let a = notExist (-1) a
-  let a = notExist 3 a
-  a
+  let _ = notExist 3 a
+  ss
 
-let testEphArrayReplicate () =
-  let a = EphArray.replicate 5 42
+let testEphArrayReplicate (ss: EphSerial) : EphSerial =
+  let a, ss = EphArray.replicate 5 42 ss
   assert (EphArray.length a = 5)
 
   let itemEq i (expected: int) a =
@@ -48,12 +48,12 @@ let testEphArrayReplicate () =
     a
 
   let a = itemEq 0 42 a
-  let a = itemEq 4 42 a
-  a
+  let _ = itemEq 4 42 a
+  ss
 
-let testEphArraySetItem () =
+let testEphArraySetItem (ss: EphSerial) : EphSerial =
   let n = 5
-  let a = EphArray.replicate n 0
+  let a, ss = EphArray.replicate n 0 ss
   let init = a
 
   let a =
@@ -78,11 +78,11 @@ let testEphArraySetItem () =
 
   let a = itemEq 0 1 a
   let a = itemEq 2 9 a
-  let a = itemEq 4 25 a
-  a
+  let _ = itemEq 4 25 a
+  ss
 
-let testEphArrayOfList () =
-  let a = EphArray.ofList [ 2; 3; 5; 7; 11 ]
+let testEphArrayOfList (ss: EphSerial) : EphSerial =
+  let a, ss = EphArray.ofList [ 2; 3; 5; 7; 11 ] ss
   assert (EphArray.length a = 5)
 
   let itemEq i (expected: int) a =
@@ -92,11 +92,13 @@ let testEphArrayOfList () =
 
   let a = itemEq 0 2 a
   let a = itemEq 2 5 a
-  let a = itemEq 4 11 a
-  a
+  let _ = itemEq 4 11 a
+  ss
 
-let testEphArrayToList () =
-  let a = EphArray.init 5 (fun i -> (i + 1) * 2)
+let testEphArrayToList (ss: EphSerial) : EphSerial =
+  let a, ss =
+    EphArray.init 5 (fun i -> (i + 1) * 2) ss
+
   let xs, a = EphArray.toList a
   assert (List.length xs = 5)
 
@@ -106,12 +108,12 @@ let testEphArrayToList () =
     |> S.concat ", "
 
   assert (s = "2, 4, 6, 8, 10")
-  a
+  ss
 
-let testEphSerialRefresh () =
-  let s : EphSerial = EphSerial.create ()
+let testEphSerialRefresh (ss: EphSerial) : EphSerial =
+  let (s: EphSerial), ss = EphSerial.create ss
   //      ^ this symbol is type
-  //                  ^ this symbol is module
+  //                       ^ this symbol is module
 
   // At first the serial is alive.
   let ok, s = EphSerial.alive s
@@ -124,15 +126,13 @@ let testEphSerialRefresh () =
   let prevIsAlive, _ = EphSerial.alive prev
   assert (not prevIsAlive)
 
-  let ok, s = EphSerial.alive s
+  let ok, _ = EphSerial.alive s
   assert ok
+  ss
 
-  // Return the final serial to ensure `s` is alive (in terms of data flow).
-  s
-
-let testEphSerialEquivalent () =
-  let s : EphSerial = EphSerial.create ()
-  let t : EphSerial = EphSerial.create ()
+let testEphSerialEquivalent (ss: EphSerial) : EphSerial =
+  let s, ss = EphSerial.create ss
+  let t, ss = EphSerial.create ss
   let sIsAlive, s = EphSerial.alive s
   let tIsAlive, t = EphSerial.alive t
   assert sIsAlive
@@ -145,13 +145,12 @@ let testEphSerialEquivalent () =
   let sIsAlive, _ = EphSerial.alive s
   assert (not sIsAlive)
 
-  let ok, t = EphSerial.alive t
+  let ok, _ = EphSerial.alive t
   assert ok
+  ss
 
-  s2, t
-
-let testEphRef () =
-  let r : EphRef<int> = EphRef.create 2
+let testEphRef (ss: EphSerial) : EphSerial =
+  let (r: EphRef<int>), ss = EphRef.create 2 ss
   let ok, r = EphRef.alive r
   assert ok
 
@@ -163,37 +162,44 @@ let testEphRef () =
   let init = r
   let r = EphRef.write 3 r
 
-  let n, r = EphRef.read r
+  let n, _ = EphRef.read r
   assert (n = 3)
 
   // Old reference is outdated.
   let initIsAlive, _ = EphRef.alive init
   assert (not initIsAlive)
-  r
+  ss
 
-let testEphRefReplace () =
-  let r = EphRef.create "hello"
+let testEphRefReplace (ss: EphSerial) : EphSerial =
+  let r, ss = EphRef.create "hello" ss
   let prev, r = EphRef.replace "bye" r
   assert (prev = "hello")
 
-  let next, r = EphRef.read r
+  let next, _ = EphRef.read r
   assert (next = "bye")
-  r
+  ss
 
 let main _ =
   testClapModule ()
   testExtIterModule ()
   testExtStringModule ()
 
-  let _ = testEphSerialRefresh ()
-  let _ = testEphSerialEquivalent ()
-  let _ = testEphRef ()
-  let _ = testEphRefReplace ()
-  let _ = testEphArrayEmpty ()
-  let _ = testEphArrayInit ()
-  let _ = testEphArrayReplicate ()
-  let _ = testEphArraySetItem ()
-  let _ = testEphArrayOfList ()
-  let _ = testEphArrayToList ()
+  EphSerial.run
+    (fun (ss: EphSerial) ->
+      let ss : EphSerial =
+        ss
+        |> testEphSerialRefresh
+        |> testEphSerialEquivalent
+        |> testEphRef
+        |> testEphRefReplace
+        |> testEphArrayEmpty
+        |> testEphArrayInit
+        |> testEphArrayReplicate
+        |> testEphArraySetItem
+        |> testEphArrayOfList
+        |> testEphArrayToList
+
+      (), ss)
+
   printfn "OK"
   0
