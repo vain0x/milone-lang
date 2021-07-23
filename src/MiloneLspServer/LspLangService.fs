@@ -31,10 +31,26 @@ let private miloneHome =
   MiloneSyntax.SyntaxApi.getMiloneHomeFromEnv getEnv
 
 let private uriOfFilePath (filePath: string) =
+  let canonicalize (filePath: string) =
+    let filePath =
+      filePath.Replace("\\", "/").Replace("//", "/")
+
+    let rec go (components: string []) =
+      let i = Array.IndexOf(components, "..")
+
+      if i < 0 || i = 0 then
+        components
+      else
+        let parent, rest =
+          components.[..i - 2], components.[i + 1..]
+
+        go (Array.append parent rest)
+
+    String.concat "/" (go (filePath.Split("/")))
+
   StringBuilder()
-    .Append(filePath)
+    .Append(canonicalize filePath)
     .Replace(":", "%3A")
-    .Replace("\\", "/")
     .Insert(0, "file://")
     .ToString()
   |> Uri
