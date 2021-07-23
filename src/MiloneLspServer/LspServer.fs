@@ -142,7 +142,7 @@ let private createInitializeResult () =
 
 [<RequireQualifiedAccess; NoEquality; NoComparison>]
 type private DidOpenParam =
-  { Uri: string
+  { Uri: Uri
     Version: int
     Text: string }
 
@@ -154,7 +154,7 @@ let private parseDidOpenParam jsonValue : DidOpenParam =
     docParam |> jFields3 "uri" "version" "text"
 
   let uri, version, text =
-    jToString uri, jToInt version, jToString text
+    Uri(jToString uri), jToInt version, jToString text
 
   { Uri = uri
     Version = version
@@ -162,7 +162,7 @@ let private parseDidOpenParam jsonValue : DidOpenParam =
 
 [<RequireQualifiedAccess; NoEquality; NoComparison>]
 type private DidChangeParam =
-  { Uri: string
+  { Uri: Uri
     Version: int
     Text: string }
 
@@ -173,7 +173,7 @@ let private parseDidChangeParam jsonValue : DidChangeParam =
       |> jFind2 "params" "textDocument"
       |> jFields2 "uri" "version"
 
-    jToString uri, jToInt version
+    Uri(jToString uri), jToInt version
 
   let text =
     jsonValue
@@ -187,13 +187,14 @@ let private parseDidChangeParam jsonValue : DidChangeParam =
     Text = text }
 
 [<RequireQualifiedAccess; NoEquality; NoComparison>]
-type private DidCloseParam = { Uri: string }
+type private DidCloseParam = { Uri: Uri }
 
 let private parseDidCloseParam jsonValue : DidCloseParam =
   let uri =
     jsonValue
     |> jFind3 "params" "textDocument" "uri"
     |> jToString
+    |> Uri
 
   { Uri = uri }
 
@@ -331,25 +332,25 @@ let private processNext () : LspIncome -> ProcessResult =
     | ExitNotification -> Exit exitCode
 
     | DidOpenNotification p ->
-      let uri, version, text = Uri p.Uri, p.Version, p.Text
+      let uri, version, text = p.Uri, p.Version, p.Text
 
       LspDocCache.openDoc uri version text
       Continue
 
     | DidChangeNotification p ->
-      let uri, version, text = Uri p.Uri, p.Version, p.Text
+      let uri, version, text = p.Uri, p.Version, p.Text
 
       LspDocCache.changeDoc uri version text
       Continue
 
     | DidCloseNotification p ->
-      let uri = Uri p.Uri
+      let uri = p.Uri
 
       LspDocCache.closeDoc uri
       Continue
 
     | DiagnosticsRequest ->
-      for uri, errors in LspLangService.validateWorkspace rootUriOpt do
+      for Uri uri, errors in LspLangService.validateWorkspace rootUriOpt do
         let diagnostics =
           [ for msg, pos in errors do
               jOfObj [ "range", jOfRange (pos, pos)

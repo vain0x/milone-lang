@@ -18,9 +18,9 @@ let private hashEquals (l: byte array) (r: byte array) : bool =
 // DiagnosticsCache
 // -----------------------------------------------
 
-type Diagnostics = (string * (string * Pos) list) list
+type Diagnostics = (Uri * (string * Pos) list) list
 
-type DiagnosticsCache = { Map: MutMap<string, byte array> }
+type DiagnosticsCache = { Map: MutMap<Uri, byte array> }
 
 module DiagnosticsCache =
   let empty () : DiagnosticsCache = { Map = MutMap() }
@@ -32,7 +32,7 @@ module DiagnosticsCache =
     let encoding = Encoding.Default
     let hasher = md5Hasher.Value
 
-    for docId, errors in diagnostics do
+    for uri, errors in diagnostics do
       // Compute hash of errors.
       let newHash =
         sb.Clear() |> ignore
@@ -51,14 +51,14 @@ module DiagnosticsCache =
         hasher.ComputeHash(encoding.GetBytes(sb.ToString()))
 
       // Remove if unchanged.
-      let oldHashOpt = map.Map |> MutMap.remove docId
+      let oldHashOpt = map.Map |> MutMap.remove uri
 
       if oldHashOpt
          |> Option.forall (fun oldHash -> hashEquals oldHash newHash |> not) then
-        publish.Add((docId, errors))
+        publish.Add((uri, errors))
 
       // Update cache.
       if errors |> List.isEmpty |> not then
-        map.Map |> MutMap.insert docId newHash |> ignore
+        map.Map |> MutMap.insert uri newHash |> ignore
 
     List.ofSeq publish

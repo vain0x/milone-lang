@@ -281,10 +281,10 @@ let validateProject (project: ProjectInfo) : ProjectValidateResult =
   |> newLangServiceWithCache
   |> LangService.validateProject project.ProjectDir
 
-// (docId, (msg, pos) list) list
-type WorkspaceValidateResult = (string * (string * Pos) list) list
+// (uri, (msg, pos) list) list
+type WorkspaceValidateResult = (Uri * (string * Pos) list) list
 
-let private diagnosticKeys = ResizeArray<string>()
+let private diagnosticKeys = ResizeArray<Uri>()
 
 // URI -> MD5 hash of diagnostics
 let private diagnosticsCache = DiagnosticsCache.empty ()
@@ -293,7 +293,7 @@ let private doValidateWorkspace projects =
   // Collect list of errors per file.
   // Note we need to report absence of errors for docs opened in editor
   // so that the editor clears outdated diagnostics.
-  let map = MutMultimap<string, string * Pos>()
+  let map = MutMultimap<Uri, string * Pos>()
 
   for docId in diagnosticKeys do
     map |> MutMultimap.insertKey docId
@@ -301,16 +301,18 @@ let private doValidateWorkspace projects =
   for project in projects do
     for msg, loc in validateProject project do
       let (Loc (docId, y, x)) = loc
-      map |> MutMultimap.insert docId (msg, (y, x))
+
+      map
+      |> MutMultimap.insert (docIdToUri project docId) (msg, (y, x))
 
   let diagnostics =
-    [ for KeyValue (docId, errors) in map do
+    [ for KeyValue (uri, errors) in map do
         let errors =
           errors.ToArray()
           |> Array.sortBy (fun (_, pos) -> pos)
           |> Array.toList
 
-        yield docId, errors ]
+        yield uri, errors ]
 
   // Remember docId for each document that some error is published to.
   // We need publish empty error list to it to remove these errors next time.
@@ -318,9 +320,9 @@ let private doValidateWorkspace projects =
   |> ResizeArray.assign (
     diagnostics
     |> List.choose
-         (fun (docId, errors) ->
+         (fun (uri, errors) ->
            if errors |> List.isEmpty |> not then
-             Some docId
+             Some uri
            else
              None)
   )

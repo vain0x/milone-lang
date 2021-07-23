@@ -2,23 +2,28 @@
 
 set -eu
 
-MILONE_LANG_DIR="$(dirname $PWD)/MiloneLang"
+MILONE_CLI_DIR="$(dirname $PWD)/MiloneCli"
+MILONE_CLI_PATH="$MILONE_CLI_DIR/MiloneCli.milone"
+MILONE_HOME=$(dirname $(dirname $PWD))
+CONTENTS=$(cat $MILONE_CLI_PATH | ./json-encode)
+
+: >err.generated.txt
+tail -f err.generated.txt &
+TAIL=$!
 
 dotnet build
-
-CONTENTS=$(cat ${MILONE_LANG_DIR}/MiloneLang.milone | ./json-encode)
 
 {
 ./req <<END
 {"method": "initialize", "id": 1, "params": {
-    "rootUri": "file://${MILONE_LANG_DIR}"
+    "rootUri": "file://$MILONE_CLI_DIR"
 }}
 END
 
 ./req <<END
 {"method": "textDocument/didOpen", "params": {
     "textDocument": {
-        "uri": "file://${MILONE_LANG_DIR}/MiloneLang.milone",
+        "uri": "file://$MILONE_CLI_PATH",
         "languageId": "milone",
         "version": 1,
         "text": $CONTENTS
@@ -29,7 +34,7 @@ END
 ./req <<END
 {"method": "textDocument/didChange", "params": {
     "textDocument": {
-        "uri": "file://${MILONE_LANG_DIR}/MiloneLang.milone",
+        "uri": "file://$MILONE_CLI_PATH",
         "version": 2
     },
     "contentChanges": [
@@ -43,7 +48,7 @@ END
 ./req <<END
 {"method": "textDocument/didChange", "params": {
     "textDocument": {
-        "uri": "file://${MILONE_LANG_DIR}/MiloneLang.milone",
+        "uri": "file://$MILONE_CLI_PATH",
         "version": 3
     },
     "contentChanges": [
@@ -63,4 +68,6 @@ END
 ./req <<END
 {"method": "exit"}
 END
-} | MILONE_HOME="$(dirname $PWD)" dotnet run
+} | MILONE_HOME="$MILONE_HOME" dotnet run
+
+kill $!
