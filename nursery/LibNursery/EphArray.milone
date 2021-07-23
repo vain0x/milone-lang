@@ -7,10 +7,6 @@ open LibNursery.Runtime
 /// Ephemeral mutable array.
 type EphArray<'T> = nativeptr<'T> * int * EphSerial
 
-let private error (msg: string) : bool =
-  __nativeStmt ("""fprintf(stderr, "error: %s\n", {0});""", msg)
-  false
-
 module EphArray =
   module Unsafe =
     /// Allocates an array with specified length.
@@ -20,7 +16,7 @@ module EphArray =
     ///         if zero-fill is invalid for the type.
     let zeroCreate (len: int) : EphArray<'T> =
       if len <= 0 then
-        assert (len = 0 || error "negative length")
+        assert (len = 0 || violate "negative length")
         empty ()
       else
         let size =
@@ -29,17 +25,27 @@ module EphArray =
 
         let ptr = memAlloc len size |> __nativeCast
 
-        ptr, len, EphSerial.create ()
+        ptr, len, EphSerial.create () // TASK: should use single allocation
 
-    let asMut (array: EphArray<'T>) : nativeptr<'T> =
-      let ptr, _, serial = array
-      assert (EphSerial.alive serial || error "no longer alive")
-      ptr
+    let asMut (array: EphArray<'T>) : nativeptr<'T> * EphArray<'T> =
+      let array = assertAlive array
+      let ptr, _, _ = array
+      ptr, array
 
-    let asPtr (array: EphArray<'T>) : __constptr<'T> =
-      let ptr, _, serial = array
-      assert (EphSerial.alive serial || error "no longer alive")
-      __nativeCast ptr
+    let asPtr (array: EphArray<'T>) : __constptr<'T> * EphArray<'T> =
+      let array = assertAlive array
+      let ptr, _, _ = array
+      __nativeCast ptr, array
+
+  let alive (array: EphArray<'T>) : bool * EphArray<'T> =
+    let ptr, len, serial = array
+    let ok, serial = EphSerial.alive serial
+    ok, (ptr, len, serial)
+
+  let private assertAlive (array: EphArray<_>) : EphArray<_> =
+    let ok, array = alive array
+    assert (ok || violate "no longer alive")
+    array
 
   let private refresh (array: EphArray<'T>) : EphArray<'T> =
     let ptr, len, serial = array
@@ -47,7 +53,7 @@ module EphArray =
 
   /// Gets an ephemeral array with length 0.
   let empty () : EphArray<_> =
-    __nativeCast (unativeint 0), 0, EphSerial.create ()
+    __nativeCast (unativeint 0), 0, EphSerial.create () // TASK: should not allocate
 
   /// Creates an array with specified length.
   /// `i`'th item is initialized with `f i`.
@@ -65,49 +71,52 @@ module EphArray =
     go 0
     output
 
+  /// Creates an array with specified length and filled by specified value.
+  ///
+  /// That is, `[| item; item; ...; item |]` is created.
   let replicate (len: int) (item: 'T) : EphArray<'T> =
     let output = Unsafe.zeroCreate len
+    let ptr, _, _ = output
 
     let rec ephArrayReplicateLoop i =
       if i < len then
-        __ptrWrite (Unsafe.asMut output) i item
+        __ptrWrite ptr i item
         ephArrayReplicateLoop (i + 1)
 
     ephArrayReplicateLoop 0
     output
 
-  let alive (array: EphArray<_>) : bool =
-    let _, _, serial = array
-    EphSerial.alive serial
-
+  /// Gets length.
+  ///
+  /// (This doesn't outdate the array reference because length never changes.)
   let length (array: EphArray<_>) : int =
-    assert (alive array || error "no longer alive")
-
-    let _, len, _ = array
+    let _, len, _ = assertAlive array
     len
 
   /// Gets i'th item. Out of range is fatal error.
-  let item (i: int) (array: EphArray<'T>) : 'T =
-    assert (alive array || error "no longer alive")
-
+  let item (i: int) (array: EphArray<'T>) : 'T * EphArray<'T> =
     assert (unativeint i < unativeint (length array)
-            || error "out of range")
+            || violate "out of range")
 
-    __ptrRead (Unsafe.asPtr array) i
+    let array = assertAlive array
+    let ptr, _, _ = array
+    __ptrRead (__nativeCast ptr) i, array
 
-  /// Gets i'th item. Returns None if out of range.
-  let tryItem (i: int) (array: EphArray<'T>) : 'T option =
-    assert (alive array || error "no longer alive")
+  /// Gets i'th item. Returns None if out of range. Fatal error if outdated.
+  let tryItem (i: int) (array: EphArray<'T>) : 'T option * EphArray<'T> =
+    let array = assertAlive array
 
     if unativeint i < unativeint (length array) then
-      Some(__ptrRead (Unsafe.asPtr array) i)
+      let ptr, _, _ = array
+      Some(__ptrRead (__nativeCast ptr) i), array
     else
-      None
+      None, array
 
   /// Writes to i'th item. Out of range is fatal error.
   let setItem (i: int) (value: 'T) (array: EphArray<'T>) : EphArray<'T> =
-    let array = refresh array
     assert (unativeint i < unativeint (length array))
 
-    __ptrWrite (Unsafe.asMut array) i value
+    let array = refresh array
+    let ptr, _, _ = array
+    __ptrWrite ptr i value
     array

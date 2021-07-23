@@ -24,9 +24,10 @@ module rec EphRef =
     ptr, EphSerial.create () // TASK: use single allocation for value and serial
 
   /// Gets whether the cell is alive (in terms of ephemeral structure).
-  let alive (r: EphRef<'_>) : bool =
-    let _, serial = r
-    EphSerial.alive serial
+  let alive (r: EphRef<_>) : bool * EphRef<_> =
+    let ptr, serial = r
+    let ok, serial = EphSerial.alive serial
+    ok, (ptr, serial)
 
   /// Gets whether two cells are referentially same.
   let equivalent (l: EphRef<'T>) (r: EphRef<'T>) : bool =

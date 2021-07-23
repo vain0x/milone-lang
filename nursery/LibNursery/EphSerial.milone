@@ -13,6 +13,9 @@ open LibNursery.Runtime
 /// Could be also called as "version".
 type EphSerial = EphSerial of uint * nativeptr<uint>
 
+// Meant to prevent copy propagation. (Actually such optimization is yet implemented though.)
+let private blackbox (f: unit -> EphSerial) : EphSerial = f ()
+
 module rec EphSerial =
   /// Creates a fresh serial.
   let create () : EphSerial =
@@ -30,13 +33,14 @@ module rec EphSerial =
     (__nativeCast lPtr: unativeint) = __nativeCast rPtr
 
   /// Checks specified serial is alive (not outdated).
-  let alive (serial: EphSerial) : bool =
+  let alive (serial: EphSerial) : bool * EphSerial =
     let (EphSerial (current, ptr)) = serial
-    __ptrRead (__nativeCast ptr) 0 = current
+    __ptrRead (__nativeCast ptr) 0 = current, blackbox (fun () -> serial)
 
   /// Creates a fresh serial. After this, specified serial is outdated (no longer alive).
   let refresh (serial: EphSerial) : EphSerial =
-    assert (alive serial)
+    let ok, serial = alive serial
+    assert (ok || violate "no longer alive")
 
     let (EphSerial (current, ptr)) = serial
     let next = current + uint 1
