@@ -8,7 +8,6 @@ open MiloneShared.SharedTypes
 open MiloneLspServer.Lsp
 open MiloneLspServer.Util
 open MiloneLspServer.LspCacheLayer
-open MiloneLspServer.LspDocCache
 
 let private miloneHome =
   let opt (s: string) =

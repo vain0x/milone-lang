@@ -3,6 +3,8 @@ module MiloneLspServer.Util
 open System.Collections.Generic
 open System.IO
 
+type Uri = Uri of string
+
 let partition1 (f: 'T -> 'U option) (items: #seq<'T>) : 'U array * 'T array =
   let someItems = ResizeArray()
   let noneItems = ResizeArray()

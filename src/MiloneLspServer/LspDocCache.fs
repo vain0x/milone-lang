@@ -2,8 +2,6 @@ module rec MiloneLspServer.LspDocCache
 
 open MiloneLspServer.Util
 
-type Uri = Uri of string
-
 /// Text doc that is opened in editor.
 [<RequireQualifiedAccess; NoEquality; NoComparison>]
 type DocData =
