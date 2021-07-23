@@ -7,6 +7,8 @@ open LibNurseryTests.ClapTests
 open LibNurseryTests.ExtIterTests
 open LibNurseryTests.ExtStringTests
 
+module S = MiloneStd.StdString
+
 let testEphArrayEmpty () =
   let a : EphArray<int> = EphArray.empty ()
   let ok, a = EphArray.alive a
@@ -77,6 +79,33 @@ let testEphArraySetItem () =
   let a = itemEq 0 1 a
   let a = itemEq 2 9 a
   let a = itemEq 4 25 a
+  a
+
+let testEphArrayOfList () =
+  let a = EphArray.ofList [ 2; 3; 5; 7; 11 ]
+  assert (EphArray.length a = 5)
+
+  let itemEq i (expected: int) a =
+    let actual, a = EphArray.item i a
+    assert (actual = expected)
+    a
+
+  let a = itemEq 0 2 a
+  let a = itemEq 2 5 a
+  let a = itemEq 4 11 a
+  a
+
+let testEphArrayToList () =
+  let a = EphArray.init 5 (fun i -> (i + 1) * 2)
+  let xs, a = EphArray.toList a
+  assert (List.length xs = 5)
+
+  let s =
+    xs
+    |> List.map (fun (x: int) -> string x)
+    |> S.concat ", "
+
+  assert (s = "2, 4, 6, 8, 10")
   a
 
 let testEphSerialRefresh () =
@@ -164,5 +193,7 @@ let main _ =
   let _ = testEphArrayInit ()
   let _ = testEphArrayReplicate ()
   let _ = testEphArraySetItem ()
+  let _ = testEphArrayOfList ()
+  let _ = testEphArrayToList ()
   printfn "OK"
   0

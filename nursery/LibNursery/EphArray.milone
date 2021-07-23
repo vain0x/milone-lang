@@ -120,3 +120,33 @@ module EphArray =
     let ptr, _, _ = array
     __ptrWrite ptr i value
     array
+
+  /// Converts a list to array.
+  let ofList (xs: 'T list) : EphArray<'T> =
+    let len = List.length xs
+    let output = Unsafe.zeroCreate len
+    let ptr, _, _ = output
+
+    let rec writeAll i (xs: _ list) =
+      match xs with
+      | [] -> ()
+
+      | x :: xs ->
+        __ptrWrite ptr i x
+        writeAll (i + 1) xs
+
+    writeAll 0 xs
+    output
+
+  /// Converts an array to list.
+  let toList (array: EphArray<'T>) : 'T list * EphArray<'T> =
+    let array = refresh array
+    let ptr, len, _ = array
+
+    let rec readAll acc i =
+      if i = 0 then
+        acc
+      else
+        readAll (__ptrRead (__nativeCast ptr) (i - 1) :: acc) (i - 1)
+
+    readAll [] len, array
