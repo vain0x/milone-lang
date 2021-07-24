@@ -1,5 +1,6 @@
 module MiloneLspServer.LspServer
 
+open System.Collections.Concurrent
 open System.Threading
 open MiloneShared.SharedTypes
 open MiloneLspServer.JsonValue
@@ -316,10 +317,7 @@ let private processNext () : LspIncome -> ProcessResult =
     match income with
     | InitializeRequest (msgId, param) ->
       rootUriOpt <- param.RootUriOpt
-      // eprintfn "rootUriOpt = %A" rootUriOpt
-
-      let result = createInitializeResult ()
-      jsonRpcWriteWithResult msgId result
+      jsonRpcWriteWithResult msgId (createInitializeResult ())
       Continue
 
     | InitializedNotification -> Continue
@@ -332,25 +330,22 @@ let private processNext () : LspIncome -> ProcessResult =
     | ExitNotification -> Exit exitCode
 
     | DidOpenNotification p ->
-      let uri, version, text = p.Uri, p.Version, p.Text
-
-      LspDocCache.openDoc uri version text
+      LspDocCache.openDoc p.Uri p.Version p.Text
       Continue
 
     | DidChangeNotification p ->
-      let uri, version, text = p.Uri, p.Version, p.Text
-
-      LspDocCache.changeDoc uri version text
+      LspDocCache.changeDoc p.Uri p.Version p.Text
       Continue
 
     | DidCloseNotification p ->
-      let uri = p.Uri
-
-      LspDocCache.closeDoc uri
+      LspDocCache.closeDoc p.Uri
       Continue
 
     | DiagnosticsRequest ->
-      for Uri uri, errors in LspLangService.validateWorkspace rootUriOpt do
+      let result =
+        LspLangService.validateWorkspace rootUriOpt
+
+      for Uri uri, errors in result do
         let diagnostics =
           [ for msg, pos in errors do
               jOfObj [ "range", jOfRange (pos, pos)
@@ -369,10 +364,11 @@ let private processNext () : LspIncome -> ProcessResult =
     | DefinitionRequest (msgId, p) ->
       // <https://microsoft.github.io/language-server-protocol/specifications/specification-current/#textDocument_definition>
 
-      let uri, pos = p.Uri, p.Pos
+      let result =
+        LspLangService.definition rootUriOpt p.Uri p.Pos
 
       let result =
-        LspLangService.definition rootUriOpt uri pos
+        result
         |> List.map
              (fun (Uri uri, range) ->
                jOfObj [ "uri", JString uri
@@ -385,10 +381,11 @@ let private processNext () : LspIncome -> ProcessResult =
     | ReferencesRequest (msgId, p) ->
       // <https://microsoft.github.io/language-server-protocol/specifications/specification-current/#textDocument_references>
 
-      let uri, pos, includeDecl = p.Uri, p.Pos, p.IncludeDecl
+      let result =
+        LspLangService.references rootUriOpt p.Uri p.Pos p.IncludeDecl
 
       let result =
-        LspLangService.references rootUriOpt uri pos includeDecl
+        result
         |> List.map
              (fun (Uri uri, range) ->
                jOfObj [ "uri", JString uri
@@ -401,19 +398,17 @@ let private processNext () : LspIncome -> ProcessResult =
     | DocumentHighlightRequest (msgId, p) ->
       // <https://microsoft.github.io/language-server-protocol/specifications/specification-current/#textDocument_documentHighlight>
 
-      let uri, pos = p.Uri, p.Pos
-
       let reads, writes =
-        LspLangService.documentHighlight rootUriOpt uri pos
-
-      let toHighlights kind posList =
-        posList
-        |> Seq.map
-             (fun (start, endPos) ->
-               jOfObj [ "range", jOfRange (start, endPos)
-                        "kind", jOfInt kind ])
+        LspLangService.documentHighlight rootUriOpt p.Uri p.Pos
 
       let result =
+        let toHighlights kind posList =
+          posList
+          |> Seq.map
+               (fun (start, endPos) ->
+                 jOfObj [ "range", jOfRange (start, endPos)
+                          "kind", jOfInt kind ])
+
         JArray [ yield! toHighlights 2 reads
                  yield! toHighlights 3 writes ]
 
@@ -423,13 +418,13 @@ let private processNext () : LspIncome -> ProcessResult =
     | HoverRequest (msgId, p) ->
       // https://microsoft.github.io/language-server-protocol/specifications/specification-current/#textDocument_hover
 
-      let uri, pos = p.Uri, p.Pos
-
-      let contents = LspLangService.hover rootUriOpt uri pos
+      let contents =
+        LspLangService.hover rootUriOpt p.Uri p.Pos
 
       let result =
         match contents with
         | [] -> JNull
+
         | _ ->
           jOfObj [ "contents", contents |> List.map jOfMarkdownString |> JArray
                    // "range", jOfRange range
@@ -453,10 +448,6 @@ let private processNext () : LspIncome -> ProcessResult =
         jsonRpcWriteWithError msgId error
         Continue
 
-      | MethodNotFoundError (JNull, methodName) ->
-        eprintfn "[TRACE] Unknown methodName: '%s'." methodName
-        Continue
-
       | MethodNotFoundError (msgId, methodName) ->
         let error =
           jOfObj [ "code", jOfInt methodNotFoundCode
@@ -470,7 +461,7 @@ let private processNext () : LspIncome -> ProcessResult =
 // Request preprocess
 // -----------------------------------------------
 
-/// Removes a list of didChange notifications in a line
+/// Removes didChange notifications in a line
 /// except for the last one.
 let private dedupChanges (incomes: LspIncome list) : LspIncome list =
   match List.rev incomes with
@@ -498,7 +489,16 @@ let private autoUpdateDiagnostics (incomes: LspIncome list) : LspIncome list =
 
     | _ -> false
 
+  let isDiagnosticRequest income =
+    match income with
+    | DiagnosticsRequest -> true
+    | _ -> false
+
   if incomes |> List.exists doesUpdateDiagnostics then
+    let incomes =
+      incomes
+      |> List.filter (isDiagnosticRequest >> not)
+
     List.append incomes [ DiagnosticsRequest ]
   else
     incomes
@@ -509,6 +509,9 @@ let private preprocessCancelRequests (incomes: LspIncome list) : LspIncome list 
     match income with
     | CancelRequestNotification msgId -> Some msgId
     | _ -> None
+
+  let isCancelRequest income =
+    income |> asCancelRequest |> Option.isSome
 
   let asMsgId income =
     match income with
@@ -524,19 +527,15 @@ let private preprocessCancelRequests (incomes: LspIncome list) : LspIncome list 
     |> List.choose asCancelRequest
     |> Set.ofList
 
-  if Set.isEmpty cancelledIds then
-    incomes
-  else
-    incomes
-    |> List.choose
-         (fun income ->
-           if income |> asCancelRequest |> Option.isSome then
-             None
-           else
-             match asMsgId income with
-             | Some msgId when Set.contains msgId cancelledIds -> ErrorIncome(CancelledRequestError msgId) |> Some
+  let isCanceled msgId = Set.contains msgId cancelledIds
 
-             | _ -> Some income)
+  incomes
+  |> List.filter (isCancelRequest >> not)
+  |> List.map
+       (fun income ->
+         match asMsgId income with
+         | Some msgId when isCanceled msgId -> ErrorIncome(CancelledRequestError msgId)
+         | _ -> income)
 
 /// Optimizes a bunch of messages.
 let private preprocess (incomes: LspIncome list) : LspIncome list =
@@ -551,30 +550,64 @@ let private preprocess (incomes: LspIncome list) : LspIncome list =
 
 [<RequireQualifiedAccess; NoEquality; NoComparison>]
 type LspServerHost =
-  { DrainRequests: unit -> JsonValue list }
+  { RequestReceived: IEvent<JsonValue>
+    OnQueueLengthChanged: int -> unit }
 
 let lspServer (host: LspServerHost) : Async<int> =
-  async {
-    let onRequest = processNext ()
+  let onRequest = processNext ()
 
-    let rec go incomes =
-      async {
-        match incomes with
-        | [] ->
-          let incomes =
-            host.DrainRequests()
-            |> List.map parseIncome
-            |> preprocess
+  let queue = ConcurrentQueue<LspIncome>()
+  let queueChangedEvent = Event<unit>()
+  let queueChanged = queueChangedEvent.Publish
 
-          return! go incomes
+  let dequeueMany (limit: int) =
+    assert (limit >= 0)
 
-        | income :: incomes ->
-          // eprintfn "[TRACE] process %A" income
+    let rec go (limit: int) acc =
+      if limit = 0 then
+        acc
+      else
+        match queue.TryDequeue() with
+        | true, income -> go (limit - 1) (income :: acc)
+        | false, _ -> acc
 
-          match onRequest income with
-          | Exit it -> return it
-          | Continue -> return! go incomes
-      }
+    go limit [] |> List.rev
 
-    return! go []
-  }
+  let mutable incomeCount = 0
+
+  let setIncomeCount n =
+    Interlocked.Exchange(&incomeCount, n) |> ignore
+    host.OnQueueLengthChanged(n + queue.Count)
+
+  host.RequestReceived.Subscribe
+    (fun msg ->
+      queue.Enqueue(parseIncome msg)
+      queueChangedEvent.Trigger()
+      host.OnQueueLengthChanged(incomeCount + queue.Count))
+  |> ignore
+
+  let rec go incomes =
+    async {
+      let incomes =
+        let len = List.length incomes
+
+        if len < 50 then
+          List.append incomes (dequeueMany (100 - len))
+          |> preprocess
+        else
+          incomes
+
+      setIncomeCount (List.length incomes)
+
+      match incomes with
+      | [] ->
+        do! Async.AwaitEvent(queueChanged)
+        return! go incomes
+
+      | income :: incomes ->
+        match onRequest income with
+        | Exit code -> return code
+        | Continue -> return! go incomes
+    }
+
+  go []
