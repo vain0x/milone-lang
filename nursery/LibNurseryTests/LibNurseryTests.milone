@@ -3,6 +3,7 @@ module rec LibNurseryTests.Program
 open LibNursery.EphArray
 open LibNursery.EphRef
 open LibNursery.EphSerial
+open LibNursery.Impure
 open LibNurseryTests.ClapTests
 open LibNurseryTests.ExtIterTests
 open LibNurseryTests.ExtStringTests
@@ -179,11 +180,7 @@ let testEphRefReplace (ss: EphSerial) : EphSerial =
   assert (next = "bye")
   ss
 
-let main _ =
-  testClapModule ()
-  testExtIterModule ()
-  testExtStringModule ()
-
+let testEphSerialThings () =
   EphSerial.run
     (fun (ss: EphSerial) ->
       let ss : EphSerial =
@@ -201,5 +198,16 @@ let main _ =
 
       (), ss)
 
-  printfn "OK"
-  0
+let private println (msg: string) : Impure<unit> =
+  fun (ss: EphSerial) -> printfn "%s" msg, ss
+
+let main _ =
+  testClapModule ()
+  testExtIterModule ()
+  testExtStringModule ()
+  testEphSerialThings ()
+
+  Impure.just ()
+  |> Impure.andThen (fun () s -> println "OK" s)
+  |> Impure.map (fun _ -> 0)
+  |> Impure.exec
