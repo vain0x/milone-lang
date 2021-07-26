@@ -4,6 +4,49 @@ open LibNursery.EphSerial
 open LibNursery.NativeInterop
 open LibNursery.Runtime
 
+/// Copies memory block. Does range checks.
+///
+/// itemSize: size of the item type
+/// destLen: number of items (total capacity of dest)
+/// destStart: start index of dest part to be written
+/// destEnd: end index of dest part to be written
+/// src etc.: same
+let private rawCopySlice
+  (itemSize: int)
+  (dest: voidptr)
+  (destLen: int)
+  (destStart: int)
+  (destEnd: int)
+  (src: obj)
+  (srcLen: int)
+  (srcStart: int)
+  (srcEnd: int)
+  : unit =
+  let itemSize = unativeint itemSize
+
+  let dl, dr = destStart, destEnd
+  assert (0 <= dl)
+  assert (dl <= dr)
+  assert (dr <= destLen)
+
+  let sl, sr = srcStart, srcEnd
+  assert (0 <= sl)
+  assert (sl <= sr)
+  assert (sr <= srcLen)
+
+  assert (dr - dl = sr - sl)
+  let len = unativeint (sr - sl)
+
+  if len <> unativeint 0 then
+    let d : voidptr =
+      __nativeCast (unativeint dest + unativeint dl * itemSize)
+
+    let s : obj =
+      __nativeCast (__nativeCast src + unativeint sl * itemSize)
+
+    let _ = memcpy d s (len * itemSize)
+    ()
+
 // buffer ptr, length, serial
 /// Ephemeral mutable array.
 type EphArray<'T> = nativeptr<'T> * int * EphSerial
@@ -155,3 +198,30 @@ module EphArray =
         readAll (NativePtr.get ptr (i - 1) :: acc) (i - 1)
 
     readAll [] len, array
+
+  /// Copies some part of items to another array. Returns (dest, src).
+  let copyTo
+    (dest: EphArray<'T>)
+    (destStart: int)
+    (src: EphArray<'T>)
+    (srcStart: int)
+    (len: int)
+    : EphArray<'T> * EphArray<'T> =
+    let dest = refresh dest
+    let src = refresh src
+
+    let destPtr, destLen, _ = dest
+    let srcPtr, srcLen, _ = src
+
+    rawCopySlice
+      (NativePtr.sizeOf destPtr)
+      (__nativeCast destPtr)
+      destLen
+      destStart
+      (destStart + len)
+      (__nativeCast srcPtr)
+      srcLen
+      srcStart
+      (srcStart + len)
+
+    dest, src
