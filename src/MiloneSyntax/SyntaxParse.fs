@@ -271,16 +271,6 @@ let private parseNewError msg (tokens, errors) =
   let pos = nextPos tokens
   parseErrorCore msg pos errors
 
-let private isMissingPat pat =
-  match pat with
-  | AMissingPat _ -> true
-  | _ -> false
-
-let private isMissingExpr expr =
-  match expr with
-  | AMissingExpr _ -> true
-  | _ -> false
-
 // -----------------------------------------------
 // Eating
 // -----------------------------------------------
@@ -490,8 +480,11 @@ let private parsePatAtom basePos (tokens, errors) =
   | (PrivateToken, _) :: tokens -> onVis PrivateVis tokens
 
   | (MinusToken, pos) :: (IntToken text, _) :: tokens -> ALitPat(IntLit("-" + text), pos), tokens, errors
+  | (MinusToken, _) :: tokens -> parsePatError "Expected negative literal pattern" (tokens, errors)
 
-  | _ -> parsePatError "NEVER: The token must be a pat" (tokens, errors)
+  | _ ->
+    // Drop the next token to prevent infinite loop.
+    parsePatError "Expected a pattern atom" (listSkip 1 tokens, errors)
 
 /// `pat-nav = pat-atom ( '.' ident )?`
 let private parsePatNav basePos (tokens, errors) =
@@ -510,8 +503,9 @@ let private parsePatCallArgs basePos (tokens, errors) =
 
   let rec go acc (tokens, errors) =
     if nextInside innerBasePos tokens && leadsPat tokens then
-      let pat, tokens, errors = parsePatNav basePos (tokens, errors)
-      assert (isMissingPat pat |> not)
+      let pat, tokens, errors =
+        parsePatNav innerBasePos (tokens, errors)
+
       go (pat :: acc) (tokens, errors)
     else
       List.rev acc, tokens, errors
@@ -526,8 +520,9 @@ let private parsePatApp basePos (tokens, errors) =
   // Parse argument if exists.
   if nextInside (basePos |> posAddX 1) tokens
      && leadsPat tokens then
-    let arg, tokens, errors = parsePatNav basePos (tokens, errors)
-    assert (isMissingPat arg |> not)
+    let arg, tokens, errors =
+      parsePatNav (basePos |> posAddX 1) (tokens, errors)
+
     AAppPat(callee, arg, calleePos), tokens, errors
   else
     callee, tokens, errors
@@ -679,7 +674,9 @@ let private parseAtom basePos (tokens, errors) =
   | (FunToken, pos) :: tokens -> parseFun basePos pos (tokens, errors)
   | (LetToken, letPos) :: tokens -> parseLet letPos (tokens, errors)
 
-  | _ -> parseExprError "Expected an expression" (tokens, errors)
+  | _ ->
+    // Drop the next token to prevent infinite loop.
+    parseExprError "Expected an expression" (listSkip 1 tokens, errors)
 
 /// `suffix = atom ( '.' '[' range ']' | '.' ident )*`
 let private parseSuffix basePos (tokens, errors) =
@@ -715,8 +712,9 @@ let private parseApp basePos (tokens, errors) =
 
   let rec go callee (tokens, errors) =
     if nextInside innerBasePos tokens && leadsArg tokens then
-      let arg, tokens, errors = parseSuffix basePos (tokens, errors)
-      assert (isMissingExpr arg |> not)
+      let arg, tokens, errors =
+        parseSuffix innerBasePos (tokens, errors)
+
       go (ABinaryExpr(AppBinary, callee, arg, calleePos)) (tokens, errors)
     else
       callee, tokens, errors
@@ -1127,19 +1125,20 @@ let private parseStmt basePos (tokens, errors) =
 ///
 /// Returns last and non-last statements in reversed order.
 let private doParseStmts basePos (tokens, errors) =
-  let rec go last acc alignPos (tokens, errors) =
+  let rec go i last acc alignPos (tokens, errors) =
+    assert (i < 100100100)
+
     match tokens with
     | (SemiToken, semiPos) :: tokens when posInside alignPos semiPos ->
       let expr, tokens, errors = parseStmt alignPos (tokens, errors)
-      go expr (last :: acc) alignPos (tokens, errors)
+      go (i + 1) expr (last :: acc) alignPos (tokens, errors)
 
     | _ when
       posIsSameColumn alignPos (nextPos tokens)
       && leadsExpr tokens
       ->
       let expr, tokens, errors = parseStmt alignPos (tokens, errors)
-      assert (isMissingExpr expr |> not)
-      go expr (last :: acc) alignPos (tokens, errors)
+      go (i + 1) expr (last :: acc) alignPos (tokens, errors)
 
     | _ -> Some(last, acc), tokens, errors
 
@@ -1147,7 +1146,7 @@ let private doParseStmts basePos (tokens, errors) =
 
   if posInside basePos alignPos && leadsExpr tokens then
     let first, tokens, errors = parseStmt alignPos (tokens, errors)
-    go first [] alignPos (tokens, errors)
+    go 0 first [] alignPos (tokens, errors)
   else
     None, tokens, errors
 
