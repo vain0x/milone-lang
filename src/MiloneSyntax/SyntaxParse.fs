@@ -271,6 +271,16 @@ let private parseNewError msg (tokens, errors) =
   let pos = nextPos tokens
   parseErrorCore msg pos errors
 
+let private isMissingPat pat =
+  match pat with
+  | AMissingPat _ -> true
+  | _ -> false
+
+let private isMissingExpr expr =
+  match expr with
+  | AMissingExpr _ -> true
+  | _ -> false
+
 // -----------------------------------------------
 // Eating
 // -----------------------------------------------
@@ -500,8 +510,9 @@ let private parsePatCallArgs basePos (tokens, errors) =
 
   let rec go acc (tokens, errors) =
     if nextInside innerBasePos tokens && leadsPat tokens then
-      let expr, tokens, errors = parsePatNav basePos (tokens, errors)
-      go (expr :: acc) (tokens, errors)
+      let pat, tokens, errors = parsePatNav basePos (tokens, errors)
+      assert (isMissingPat pat |> not)
+      go (pat :: acc) (tokens, errors)
     else
       List.rev acc, tokens, errors
 
@@ -516,6 +527,7 @@ let private parsePatApp basePos (tokens, errors) =
   if nextInside (basePos |> posAddX 1) tokens
      && leadsPat tokens then
     let arg, tokens, errors = parsePatNav basePos (tokens, errors)
+    assert (isMissingPat arg |> not)
     AAppPat(callee, arg, calleePos), tokens, errors
   else
     callee, tokens, errors
@@ -704,6 +716,7 @@ let private parseApp basePos (tokens, errors) =
   let rec go callee (tokens, errors) =
     if nextInside innerBasePos tokens && leadsArg tokens then
       let arg, tokens, errors = parseSuffix basePos (tokens, errors)
+      assert (isMissingExpr arg |> not)
       go (ABinaryExpr(AppBinary, callee, arg, calleePos)) (tokens, errors)
     else
       callee, tokens, errors
@@ -1125,6 +1138,7 @@ let private doParseStmts basePos (tokens, errors) =
       && leadsExpr tokens
       ->
       let expr, tokens, errors = parseStmt alignPos (tokens, errors)
+      assert (isMissingExpr expr |> not)
       go expr (last :: acc) alignPos (tokens, errors)
 
     | _ -> Some(last, acc), tokens, errors
@@ -1328,7 +1342,9 @@ let private parseDecl basePos (tokens, errors) =
     | expr -> Some(AExprDecl expr), tokens, errors
 
 let private parseModuleBody basePos (tokens, errors) =
-  let rec go acc (tokens, errors) =
+  let rec go i acc (tokens, errors) =
+    assert (i < 1100100)
+
     match tokens with
     | _ when nextInside basePos tokens |> not -> List.rev acc, tokens, errors
 
@@ -1337,10 +1353,10 @@ let private parseModuleBody basePos (tokens, errors) =
       let declOpt, tokens, errors = parseDecl basePos (tokens, errors)
 
       match declOpt with
-      | Some decl -> go (decl :: acc) (tokens, errors)
+      | Some decl -> go (i + 1) (decl :: acc) (tokens, errors)
       | None -> List.rev acc, tokens, errors
 
-  go [] (tokens, errors)
+  go 0 [] (tokens, errors)
 
 // -----------------------------------------------
 // Parse toplevel
