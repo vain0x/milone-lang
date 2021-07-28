@@ -1,6 +1,7 @@
 module rec LibNursery.EphArray
 
 open LibNursery.EphSerial
+open LibNursery.NativeInterop
 open LibNursery.Runtime
 
 // buffer ptr, length, serial
@@ -20,7 +21,7 @@ module EphArray =
         empty serial
       else
         let size =
-          __sizeOfVal (__ptrRead (__nativeCast (unativeint 0): __constptr<'T>) 0)
+          NativePtr.sizeOf (NativePtr.getNullPtr (): nativeptr<'T>)
           |> unativeint
 
         let ptr = memAlloc len size |> __nativeCast
@@ -38,7 +39,7 @@ module EphArray =
     let asPtr (array: EphArray<'T>) : __constptr<'T> * EphArray<'T> =
       let array = assertAlive array
       let ptr, _, _ = array
-      __nativeCast ptr, array
+      ConstPtr.ofNativePtr ptr, array
 
   let alive (array: EphArray<'T>) : bool * EphArray<'T> =
     let ptr, len, serial = array
@@ -50,14 +51,14 @@ module EphArray =
     assert (ok || violate "no longer alive")
     array
 
-  let private refresh (array: EphArray<'T>) : EphArray<'T> =
+  let refresh (array: EphArray<'T>) : EphArray<'T> =
     let ptr, len, serial = array
     ptr, len, EphSerial.refresh serial
 
   /// Gets an ephemeral array with length 0.
   let empty (serial: EphSerial) : EphArray<_> * EphSerial =
     let arraySerial, parentSerial = EphSerial.create serial
-    (__nativeCast (unativeint 0), 0, arraySerial), parentSerial // TASK: should not allocate
+    (NativePtr.getNullPtr (), 0, arraySerial), parentSerial // TASK: should not allocate
 
   /// Creates an array with specified length.
   /// `i`'th item is initialized with `f i`.
@@ -69,7 +70,7 @@ module EphArray =
 
     let rec go i =
       if i < len then
-        __ptrWrite ptr i (f i)
+        NativePtr.set ptr i (f i)
         go (i + 1)
 
     go 0
@@ -84,7 +85,7 @@ module EphArray =
 
     let rec ephArrayReplicateLoop i =
       if i < len then
-        __ptrWrite ptr i item
+        NativePtr.set ptr i item
         ephArrayReplicateLoop (i + 1)
 
     ephArrayReplicateLoop 0
@@ -104,7 +105,7 @@ module EphArray =
 
     let array = assertAlive array
     let ptr, _, _ = array
-    __ptrRead (__nativeCast ptr) i, array
+    NativePtr.get ptr i, array
 
   /// Gets i'th item. Returns None if out of range. Fatal error if outdated.
   let tryItem (i: int) (array: EphArray<'T>) : 'T option * EphArray<'T> =
@@ -112,7 +113,7 @@ module EphArray =
 
     if unativeint i < unativeint (length array) then
       let ptr, _, _ = array
-      Some(__ptrRead (__nativeCast ptr) i), array
+      Some(NativePtr.get ptr i), array
     else
       None, array
 
@@ -122,7 +123,7 @@ module EphArray =
 
     let array = refresh array
     let ptr, _, _ = array
-    __ptrWrite ptr i value
+    NativePtr.set ptr i value
     array
 
   /// Converts a list to array.
@@ -136,7 +137,7 @@ module EphArray =
       | [] -> ()
 
       | x :: xs ->
-        __ptrWrite ptr i x
+        NativePtr.set ptr i x
         writeAll (i + 1) xs
 
     writeAll 0 xs
@@ -151,6 +152,6 @@ module EphArray =
       if i = 0 then
         acc
       else
-        readAll (__ptrRead (__nativeCast ptr) (i - 1) :: acc) (i - 1)
+        readAll (NativePtr.get ptr (i - 1) :: acc) (i - 1)
 
     readAll [] len, array
