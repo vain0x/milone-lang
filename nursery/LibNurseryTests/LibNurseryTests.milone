@@ -1,7 +1,7 @@
 module rec LibNurseryTests.Program
 
-open LibNurseryTests.TestHelper
+open LibNurseryTests.ExtStringTests
 
 let main _ =
-  assert (eq string 42 42)
+  testExtStringModule ()
   0

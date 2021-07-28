@@ -1,0 +1,33 @@
+/// String functions that might be added to standard library.
+module rec LibNursery.ExtString
+
+module S = MiloneStd.StdString
+
+/// Divides a string into two part by separator if found.
+/// Returns `(first, rest)`.
+///
+/// The first occurrence of separator is picked if multiple.
+let divide (sep: string) (s: string) : string * string option =
+  match S.findIndex sep s with
+  | None -> s, None
+  | Some i -> s.[0..i - 1], Some s.[i + sep.Length..s.Length - 1]
+
+/// Splits a string by separator.
+///
+/// ## Edges
+///
+/// - `split "," "foo"` = `[ "foo" ]` (not separated)
+/// - `split "," "foo,"` = `[ "foo"; "" ]` (trailing separator)
+/// - `split "" "foo"`: error (empty separator)
+let split (sep: string) (s: string) : string list =
+  assert (sep.Length <> 0)
+
+  let rec go acc s =
+    let part, s = divide sep s
+    let acc = part :: acc
+
+    match s with
+    | None -> acc
+    | Some s -> go acc s
+
+  go [] s |> List.rev
