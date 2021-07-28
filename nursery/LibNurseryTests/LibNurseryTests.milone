@@ -124,19 +124,6 @@ let testEphArrayCopyTo (ss: EphSerial) : EphSerial =
   assert (dest = "0, 0, 4, 6, 0")
   ss
 
-let testEphArrayCopyToExceeding (ss: EphSerial) : EphSerial =
-  let src, ss =
-    EphArray.init 5 (fun i -> (i + 1) * 2) ss
-
-  let dest, ss = EphArray.replicate 5 0 ss
-
-  let dest, _ = EphArray.copyTo dest (-1) src 2 3
-  let dest, _ = dest |> EphArray.toList
-  let dest = dest |> List.map string |> S.concat ", "
-
-  assert (dest = "8, 10, 0, 0, 0")
-  ss
-
 let testEphSerialRefresh (ss: EphSerial) : EphSerial =
   let (s: EphSerial), ss = EphSerial.create ss
   //      ^ this symbol is type
@@ -222,7 +209,6 @@ let testEphSerialThings () =
         |> testEphArrayOfList
         |> testEphArrayToList
         |> testEphArrayCopyTo
-        |> testEphArrayCopyToExceeding
 
       (), ss)
 
