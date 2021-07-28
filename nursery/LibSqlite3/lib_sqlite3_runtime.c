@@ -93,7 +93,8 @@ static void db_bind_params(sqlite3_stmt *stmt,
 
         int i = sqlite3_bind_parameter_index(stmt, str_to_c_str(key));
         if (i == 0) {
-            db_fail(str_to_c_str(str_add(str_borrow("Unknown variable: "), key)));
+            db_fail(
+                str_to_c_str(str_add(str_borrow("Unknown variable: "), key)));
         }
 
         switch (value.discriminant) {
@@ -165,7 +166,8 @@ db_select(struct String sql, struct StringDbValuePairCons const *params) {
     assert(db != NULL && "db not open");
 
     sqlite3_stmt *stmt = NULL;
-    bool ok = sqlite3_prepare(db, str_to_c_str(sql), sql.len, &stmt, NULL) == SQLITE_OK;
+    bool ok = sqlite3_prepare(db, str_to_c_str(sql), sql.len, &stmt, NULL) ==
+              SQLITE_OK;
     if (!ok) {
         db_fail("prepare");
     }
@@ -174,7 +176,8 @@ db_select(struct String sql, struct StringDbValuePairCons const *params) {
 
     size_t cap = 16;
     size_t len = 0;
-    struct DbValueCons const **table = malloc(cap * sizeof(struct DbValueCons const *));
+    struct DbValueCons const **table =
+        malloc(cap * sizeof(struct DbValueCons const *));
 
     while (true) {
         int stat = sqlite3_step(stmt);
@@ -190,7 +193,8 @@ db_select(struct String sql, struct StringDbValuePairCons const *params) {
         case SQLITE_ROW: {
             if (len == cap) {
                 cap *= 2;
-                table = realloc(table, cap * sizeof(struct DbValueCons const *));
+                table =
+                    realloc(table, cap * sizeof(struct DbValueCons const *));
             }
             table[len] = db_read_row(stmt);
             len++;
@@ -228,7 +232,8 @@ void db_mutate(struct String sql, struct StringDbValuePairCons const *params) {
     assert(db != NULL && "db not open");
 
     sqlite3_stmt *stmt = NULL;
-    bool ok = sqlite3_prepare(db, str_to_c_str(sql), sql.len, &stmt, NULL) == SQLITE_OK;
+    bool ok = sqlite3_prepare(db, str_to_c_str(sql), sql.len, &stmt, NULL) ==
+              SQLITE_OK;
     if (!ok) {
         db_fail("prepare");
     }

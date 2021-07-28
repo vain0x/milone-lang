@@ -53,10 +53,10 @@ let toDir (path: Path) : Path =
   match baseOpt with
   | Some _ -> dir
   | None ->
-      if isAbsolute path then
-        Path "/"
-      else
-        Path "."
+    if isAbsolute path then
+      Path "/"
+    else
+      Path "."
 
 /// Gets basename part of path.
 let toBase (path: Path) : Path option =
@@ -75,9 +75,9 @@ let divideExt (path: Path) : Path * Path option * string option =
   | Some (Path "..") -> dir, baseOpt, None
 
   | Some (Path s) ->
-      match s |> S.findLastIndex "." with
-      | Some i -> dir, Some(Path s.[0..i - 2]), Some s.[i..s.Length]
-      | None -> dir, Some(Path s), None
+    match s |> S.findLastIndex "." with
+    | Some i -> dir, Some(Path s.[0..i - 2]), Some s.[i..s.Length]
+    | None -> dir, Some(Path s), None
 
   | None -> path, None, None
 
