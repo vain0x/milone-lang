@@ -1,7 +1,12 @@
 #!/bin/bash
-# USAGE: scripts/test-new features/lambda
 
 set -eu
+
+if test "${1:---help}" = '--help' ||  test "${1:--h}" = '-h'
+then
+    echo 'USAGE: scripts/test-new features/lambda' >&2
+    exit 0
+fi
 
 CATEGORY=$(dirname "$1")
 NAME=$(basename "$1")
