@@ -2,6 +2,8 @@ default: build
 
 .PHONY: build clean default restore run test
 
+# FIXME: Add LibNursery and LibNurseryTests
+
 JSON_GET := target/CmdJsonGet/json_get
 TODO := target/CmdSqliteTodo/todo
 

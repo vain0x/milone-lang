@@ -1,0 +1,9 @@
+#!/bin/sh
+
+set -eu
+
+CC=${CC:-gcc}
+MILONE_HOME=${MILONE_HOME:-$HOME/.milone}
+TARGET=$PWD/../target/LibNurseryTests
+
+milone run --target-dir "$TARGET" $PWD
