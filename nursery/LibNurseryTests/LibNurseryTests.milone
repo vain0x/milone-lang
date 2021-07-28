@@ -1,0 +1,7 @@
+module rec LibNurseryTests.Program
+
+open LibNurseryTests.TestHelper
+
+let main _ =
+  assert (eq string 42 42)
+  0
