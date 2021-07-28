@@ -4,19 +4,15 @@ open LibNurseryTests.TestHelper
 
 module S = MiloneStd.StdString
 module XS = LibNursery.ExtString
+module Debug = LibNurseryTests.Debug
 
 let private id x = x
-
-let debugOpt (debug: 'T -> string) (opt: 'T option) : string =
-  match opt with
-  | Some value -> "Some(" + debug value + ")"
-  | None -> "None"
 
 let testDivide () =
   let run expected sep input =
     let head, tail = XS.divide sep input
     let xHead, xTail = expected
-    eq id xHead head && eq (debugOpt id) xTail tail
+    eq id xHead head && eq (Debug.opt id) xTail tail
 
   assert (run ("one", Some "two,three") "," "one,two,three")
   assert (run ("", Some ",") "," ",,")
