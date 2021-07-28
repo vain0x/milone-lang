@@ -1,0 +1,104 @@
+module rec LibNursery.NativeInterop
+
+let private memcpy (dest: voidptr) (src: obj) (size: unativeint) : voidptr = __nativeFun ("memcpy", dest, src, size)
+
+// See also:
+//
+// - https://github.com/dotnet/fsharp/blob/main/src/fsharp/FSharp.Core/nativeptr.fs
+// - https://github.com/fsharp/fslang-design/blob/main/RFCs/FS-1109-Additional-intrinsics-for-the-NativePtr-module.md
+module rec NativePtr =
+  // ---------------------------------------------
+  // NativePtr at F# 5.0
+  // ---------------------------------------------
+
+  let ofNativeInt (p: nativeint) : nativeptr<'T> = __nativeCast p
+  let toNativeInt (p: nativeptr<_>) : nativeint = nativeint p
+  let toVoidPtr (p: nativeptr<_>) : voidptr = __nativeCast p
+  let ofVoidPtr (p: voidptr) : nativeptr<_> = __nativeCast p
+
+  let add (p: nativeptr<'T>) (i: int) : nativeptr<'T> =
+    __nativeCast (nativeint p + nativeint i * nativeint (sizeOf p))
+
+  let get (p: nativeptr<'T>) (i: int) : 'T =
+    __ptrRead (__nativeCast p: __constptr<'T>) i
+
+  let set (p: nativeptr<'T>) (i: int) (value: 'T) : unit = __ptrWrite p i value
+
+  let read (p: nativeptr<'T>) : 'T =
+    __ptrRead (__nativeCast p: __constptr<'T>) 0
+
+  let write (p: nativeptr<'T>) (value: 'T) : unit = __ptrWrite p 0 value
+
+  // not supported: stackalloc, toByRef
+
+  // ---------------------------------------------
+  // NativePtr at F# RFC FS-1109
+  // ---------------------------------------------
+
+  let isNullPtr (p: nativeptr<_>) : bool = unativeint p = unativeint 0
+
+  /// Copies single value. (`*dest = *src`)
+  let copy (dest: nativeptr<'T>) (src: nativeptr<'T>) : unit =
+    assert (isNullPtr dest |> not)
+    assert (isNullPtr src |> not)
+
+    let _ =
+      memcpy (__nativeCast dest) (__nativeCast src) (unativeint (sizeOf dest))
+
+    ()
+
+  /// Copies a number of values.
+  let copyBlock (dest: nativeptr<'T>) (src: nativeptr<'T>) (len: int) : unit =
+    assert (isNullPtr dest |> not)
+    assert (isNullPtr src |> not)
+    assert (len >= 0)
+
+    let _ =
+      memcpy (__nativeCast dest) (__nativeCast src) (unativeint (sizeOf dest * len))
+
+    ()
+
+  // not supported: nullPtr (generic constant isn't supported)
+  // unimplemented: initBlock, clear
+
+  // =============================================
+
+  /// Gets size of the underlying type. (`sizeof(*p)`)
+  let sizeOf (p: nativeptr<'T>) : int = __sizeOfVal (read p: 'T)
+
+  let getNullPtr () : nativeptr<_> = __nativeCast (unativeint 0)
+
+// =============================================================================
+
+module rec ConstPtr =
+  // F# 5.0
+  // not supported: stackalloc, toByRef, set, write
+
+  let ofNativeInt (p: nativeint) : __constptr<'T> = __nativeCast p
+  let toNativeInt (p: __constptr<_>) : nativeint = nativeint p
+  let toObj (p: __constptr<_>) : obj = __nativeCast p
+  let ofObj (p: obj) : __constptr<_> = __nativeCast p
+
+  let add (p: __constptr<'T>) (i: int) : __constptr<'T> =
+    __nativeCast (nativeint p + nativeint i * nativeint (sizeOf p))
+
+  let get (p: __constptr<'T>) (i: int) : 'T = __ptrRead p i
+  let read (p: __constptr<'T>) : 'T = __ptrRead p 0
+
+  // F# RFC FS-1109
+  // not supported: nullPtr (generic constant isn't supported)
+
+  let isNullPtr (p: __constptr<_>) : bool = unativeint p = unativeint 0
+
+  // =============================================
+
+  /// Gets size of the underlying type. (`sizeof(*p)`)
+  let sizeOf (p: __constptr<'T>) : int = __sizeOfVal (read p: 'T)
+
+  let getNullPtr () : __constptr<_> = __nativeCast (unativeint 0)
+
+  /// Adds const qualifier.
+  let ofNativePtr (p: nativeptr<'T>) : __constptr<'T> = __nativeCast p
+
+  /// Drops const qualifier.
+  let toNativePtr (p: __constptr<'T>) : nativeptr<'T> = __nativeCast p
