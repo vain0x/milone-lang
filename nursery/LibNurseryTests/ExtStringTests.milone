@@ -6,8 +6,6 @@ module S = MiloneStd.StdString
 module XS = LibNursery.ExtString
 module Debug = LibNurseryTests.Debug
 
-let private id x = x
-
 let testDivide () =
   let run expected sep input =
     let head, tail = XS.divide sep input

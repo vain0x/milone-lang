@@ -4,9 +4,9 @@ int aux_2(int x_, char arg_);
 
 struct String aux_1(struct String x_, char arg_1);
 
-int id_2(int x_);
+int myId_2(int x_);
 
-struct String id_1(struct String x_);
+struct String myId_1(struct String x_);
 
 int gooAux_2(int x_1, char arg_2);
 
@@ -26,23 +26,23 @@ struct String aux_1(struct String x_, char arg_1) {
     return x_;
 }
 
-int id_2(int x_) {
+int myId_2(int x_) {
     int call_ = aux_2(x_, 0);
     return call_;
 }
 
-struct String id_1(struct String x_) {
+struct String myId_1(struct String x_) {
     struct String call_1 = aux_1(x_, 0);
     return call_1;
 }
 
 int gooAux_2(int x_1, char arg_2) {
-    int call_2 = id_2(x_1);
+    int call_2 = myId_2(x_1);
     return call_2;
 }
 
 struct String gooAux_1(struct String x_1, char arg_3) {
-    struct String call_3 = id_1(x_1);
+    struct String call_3 = myId_1(x_1);
     return call_3;
 }
 
@@ -57,9 +57,9 @@ struct String goo_1(struct String x_1) {
 }
 
 int milone_main() {
-    int call_6 = id_2(1);
+    int call_6 = myId_2(1);
     milone_assert((call_6 == 1), 11, 2);
-    struct String call_7 = id_1((struct String){.str = "a", .len = 1});
+    struct String call_7 = myId_1((struct String){.str = "a", .len = 1});
     milone_assert((str_compare(call_7, (struct String){.str = "a", .len = 1}) == 0), 12, 2);
     int call_8 = goo_2(1);
     milone_assert((call_8 == 1), 20, 2);

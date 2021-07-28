@@ -635,7 +635,7 @@ if_next_56:;
 }
 
 struct IntList const* listInit_(int len_4, struct IntIntFun1 gen_) {
-    milone_assert((len_4 >= 0), 79, 2);
+    milone_assert((len_4 >= 0), 77, 2);
     struct IntList const* call_10 = go_26(len_4, gen_, NULL, 0);
     return call_10;
 }
@@ -643,7 +643,7 @@ struct IntList const* listInit_(int len_4, struct IntIntFun1 gen_) {
 struct StringStringListTuple2 go_5(struct StringList const* xs_11, int xn_) {
     struct StringStringListTuple2 match_6;
     if ((!((!(xs_11))))) goto next_60;
-    milone_assert((xn_ == 0), 97, 6);
+    milone_assert((xn_ == 0), 95, 6);
     struct StringStringListTuple2 tuple_2 = (struct StringStringListTuple2){.t0 = (struct String){.str = "", .len = 0}, .t1 = NULL};
     match_6 = tuple_2;
     goto end_match_59;
@@ -689,7 +689,7 @@ struct String Competitive_Helpers_strConcat(struct StringList const* xs_10) {
     struct String s_ = call_14.t0;
     struct StringList const* xs_17 = call_14.t1;
     bool call_15 = listIsEmpty_(xs_17);
-    milone_assert(call_15, 109, 2);
+    milone_assert(call_15, 107, 2);
     return s_;
 }
 
@@ -859,7 +859,7 @@ char go_27(int len_10, struct IntIntIntVoidMutPtrFun1VoidMutPtrIntIntFun2VoidMut
 tailrec_76:;
     char match_7;
     if ((!((!(xs_19))))) goto next_78;
-    milone_assert((i_2 == len_10), 205, 12);
+    milone_assert((i_2 == len_10), 203, 12);
     match_7 = 0;
     goto end_match_77;
 next_78:;
@@ -928,12 +928,12 @@ char refCase_(char arg_70) {
     struct IntIntIntVoidMutPtrFun1VoidMutPtrIntIntFun2VoidMutPtrIntIntUnitFun3UnitTuple6VoidMutPtrIntIntUnitTuple5 call_36 = vectorNew_(Competitive_Helpers_typeInt, 1);
     struct IntIntIntVoidMutPtrFun1VoidMutPtrIntIntFun2VoidMutPtrIntIntUnitFun3UnitTuple6VoidMutPtrIntIntUnitTuple5 v_2 = call_36;
     int call_37 = vectorToLength_(v_2);
-    milone_assert((call_37 == 1), 228, 4);
+    milone_assert((call_37 == 1), 226, 4);
     int call_38 = vectorGet_(0, v_2);
-    milone_assert((call_38 == 0), 229, 4);
+    milone_assert((call_38 == 0), 227, 4);
     char call_39 = vectorSet_(0, 42, v_2);
     int call_40 = vectorGet_(0, v_2);
-    milone_assert((call_40 == 42), 231, 4);
+    milone_assert((call_40 == 42), 229, 4);
     return 0;
 }
 
@@ -947,13 +947,13 @@ char vectorOfListTest_(char arg_71) {
     struct IntIntIntVoidMutPtrFun1VoidMutPtrIntIntFun2VoidMutPtrIntIntUnitFun3UnitTuple6VoidMutPtrIntIntUnitTuple5 call_41 = vectorOfList_(Competitive_Helpers_typeInt, list_4);
     struct IntIntIntVoidMutPtrFun1VoidMutPtrIntIntFun2VoidMutPtrIntIntUnitFun3UnitTuple6VoidMutPtrIntIntUnitTuple5 v_3 = call_41;
     int call_42 = vectorToLength_(v_3);
-    milone_assert((call_42 == 3), 237, 4);
+    milone_assert((call_42 == 3), 235, 4);
     int call_43 = vectorGet_(0, v_3);
-    milone_assert((call_43 == 1), 238, 4);
+    milone_assert((call_43 == 1), 236, 4);
     int call_44 = vectorGet_(1, v_3);
-    milone_assert((call_44 == 2), 239, 4);
+    milone_assert((call_44 == 2), 237, 4);
     int call_45 = vectorGet_(2, v_3);
-    milone_assert((call_45 == 3), 240, 4);
+    milone_assert((call_45 == 3), 238, 4);
     return 0;
 }
 

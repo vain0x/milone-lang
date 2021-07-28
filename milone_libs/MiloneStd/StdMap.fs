@@ -4,10 +4,6 @@
 /// Requires comparison of keys.
 module rec MiloneStd.StdMap
 
-let private fst (x, _) = x
-
-let private snd (_, y) = y
-
 // -----------------------------------------------
 // Nodes
 // -----------------------------------------------

@@ -35,45 +35,73 @@ type private SourceExt = string
 
 // FIXME: move to ast bundle?
 
+let private preludeFuns = [ "ignore"; "id"; "fst"; "snd" ]
+
+let private knownModules =
+  [ "List"
+    "Option"
+    "Prelude"
+    "String" ]
+
+let private isPreludeFun funName =
+  preludeFuns
+  |> List.exists (fun name -> name = funName)
+
+let private isKnownModule moduleName =
+  knownModules
+  |> List.exists (fun name -> name = moduleName)
+
 /// Generates decls for each MiloneCore module
 /// whose name appears in the token stream.
 let private resolveMiloneCoreDeps tokens ast =
-  let knownNames = [ "List"; "Option"; "String" ]
-
-  let isKnownName moduleName =
-    knownNames
-    |> List.exists (fun name -> name = moduleName)
-
-  let moduleMap =
-    let rec go acc tokens =
+  let preludeOpt, moduleMap =
+    let rec go preludeOpt acc tokens =
       match tokens with
-      | [] -> acc
-      | (IdentToken moduleName, pos) :: (DotToken, _) :: tokens -> go ((moduleName, pos) :: acc) tokens
-      | _ :: tokens -> go acc tokens
+      | [] -> preludeOpt, acc
 
-    let moduleNames = go [] tokens
+      | (IdentToken name, pos) :: tokens when Option.isNone preludeOpt && isPreludeFun name -> go (Some pos) acc tokens
+
+      | (IdentToken moduleName, pos) :: (DotToken, _) :: tokens -> go preludeOpt ((moduleName, pos) :: acc) tokens
+
+      | _ :: tokens -> go preludeOpt acc tokens
+
+    let preludeOpt, moduleNames = go None [] tokens
 
     let add acc (moduleName, pos) =
       if (acc |> TMap.containsKey moduleName |> not)
-         && isKnownName moduleName then
+         && isKnownModule moduleName then
         acc |> TMap.add moduleName pos
       else
         acc
 
-    moduleNames |> List.fold add (TMap.empty compare)
+    let moduleMap =
+      moduleNames |> List.fold add (TMap.empty compare)
+
+    preludeOpt, moduleMap
 
   let insertOpenDecls decls =
-    moduleMap
-    |> TMap.fold
-         (fun decls moduleName pos ->
-           AModuleSynonymDecl(
-             Name(moduleName, pos),
-             [ Name("MiloneCore", pos)
-               Name(moduleName, pos) ],
-             pos
-           )
-           :: decls)
-         decls
+    let decls =
+      moduleMap
+      |> TMap.fold
+           (fun decls moduleName pos ->
+             AModuleSynonymDecl(
+               Name(moduleName, pos),
+               [ Name("MiloneCore", pos)
+                 Name(moduleName, pos) ],
+               pos
+             )
+             :: decls)
+           decls
+
+    match preludeOpt with
+    | Some pos ->
+      AOpenDecl(
+        [ Name("MiloneCore", pos)
+          Name("Prelude", pos) ],
+        pos
+      )
+      :: decls
+    | None -> decls
 
   match ast with
   | AExprRoot decls -> AExprRoot(insertOpenDecls decls)

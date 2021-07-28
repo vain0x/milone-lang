@@ -15,9 +15,6 @@ module rec MiloneStd.StdLoop
 
 module S = MiloneStd.StdString
 
-let private fst (x, _) = x
-let private snd (_, y) = y
-
 /// Function type to compute a step of iteration.
 ///
 /// Result boolean means whether the iteration is running gracefully.

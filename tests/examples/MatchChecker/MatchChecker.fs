@@ -14,12 +14,6 @@ module rec MatchChecker.Program
 
 // Basic auxillary functions.
 
-let id x = x
-
-let ignore _ = ()
-
-let fst (x, _) = x
-
 let failwith msg =
   printfn "ERROR %s" msg
   exit 1

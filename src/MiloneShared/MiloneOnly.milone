@@ -15,12 +15,4 @@ let objToString _ = "<objToString not supported>"
 
 let __stringLengthInUtf8Bytes (s: string) = s.Length
 
-let ignore _ = ()
-
-let id x = x
-
-let fst (x, _) = x
-
-let snd (_, y) = y
-
 type Profiler = Profiler of voidptr

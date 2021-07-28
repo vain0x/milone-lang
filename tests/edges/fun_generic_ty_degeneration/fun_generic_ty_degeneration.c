@@ -6,7 +6,7 @@ struct IntStringTuple2;
 
 struct IntStringTuple2Option;
 
-int fst_(struct IntUnitTuple2 arg_);
+int myFst_(struct IntUnitTuple2 arg_);
 
 int f_1(void const* boxedPair_, char arg_1);
 
@@ -31,13 +31,13 @@ struct IntStringTuple2Option {
     struct IntStringTuple2 value;
 };
 
-int fst_(struct IntUnitTuple2 arg_) {
+int myFst_(struct IntUnitTuple2 arg_) {
     int x_ = arg_.t0;
     return x_;
 }
 
 int f_1(void const* boxedPair_, char arg_1) {
-    int call_ = fst_((*(((struct IntUnitTuple2 const*)boxedPair_))));
+    int call_ = myFst_((*(((struct IntUnitTuple2 const*)boxedPair_))));
     return call_;
 }
 

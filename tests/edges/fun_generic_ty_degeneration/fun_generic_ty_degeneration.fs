@@ -9,10 +9,10 @@ module rec fun_generic_ty_degeneration.Program
 // made some type variables unbound, so instantiation of generic functions
 // should have performed degeneration too.
 
-let fst (x, _) = x
+let myFst (x, _) = x
 
 let fstUnbox (boxedPair: obj) (phantom: ('S * 'T) option) : 'S =
-  let f () = fst (unbox boxedPair: 'S * 'T)
+  let f () = myFst (unbox boxedPair: 'S * 'T)
   f ()
 
 let testCase (kv: int * string) =

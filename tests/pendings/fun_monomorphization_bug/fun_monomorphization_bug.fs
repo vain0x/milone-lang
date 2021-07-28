@@ -4,7 +4,7 @@ module rec fun_monomorphization_bug.Program
 // It seems 'T is not replaced with type argument in monomorphization.
 // The reason seems g has monomorphic signature and "forceGeneration" doesn't occur.
 
-let fst (pair: 'T * _) : obj =
+let myFst (pair: 'T * _) : obj =
   // let g (pair: obj): obj =
   //   let x, _ = unbox pair: 'T * _
   //   box x
@@ -15,5 +15,5 @@ let fst (pair: 'T * _) : obj =
   box x
 
 let main _ =
-  assert (unbox (fst (2, 3)) = 2)
+  assert (unbox (myFst (2, 3)) = 2)
   0
