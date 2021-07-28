@@ -991,6 +991,19 @@ let private collectDecls moduleSerialOpt (expr, ctx) =
 
       TTyDeclExpr(serial, vis, tyArgs, tyDecl, loc), ctx
 
+    | TOpenExpr (path, loc) ->
+      invoke
+        (fun () ->
+          let ctx =
+            let moduleSerials = ctx |> resolveModulePath path
+
+            if List.isEmpty moduleSerials then
+              ctx |> addLog ModulePathNotFoundError loc
+            else
+              ctx |> openModules moduleSerials
+
+          expr, ctx)
+
     | TModuleExpr (serial, body, loc) ->
       let name =
         ctx |> findName (moduleTySerialToInt serial)
@@ -1554,18 +1567,7 @@ let private nameResExpr (expr: TExpr, ctx: ScopeCtx) =
 
         expr, ctx)
 
-  | TOpenExpr (path, loc) ->
-    invoke
-      (fun () ->
-        let ctx =
-          let moduleSerials = ctx |> resolveModulePath path
-
-          if List.isEmpty moduleSerials then
-            ctx |> addLog ModulePathNotFoundError loc
-          else
-            ctx |> openModules moduleSerials
-
-        expr, ctx)
+  | TOpenExpr _ -> expr, ctx
 
   | TModuleExpr (serial, body, loc) ->
     invoke
