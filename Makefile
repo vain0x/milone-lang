@@ -56,6 +56,7 @@ target/milone: bin/ninja ${MY_BUILD_TIMESTAMP} \
 		runtime/milone.h \
 		runtime/milone.c \
 		$(wildcard milone_libs/*/*.fs) \
+		$(wildcard milone_libs/*/*.milone) \
 		$(wildcard src/*/*.fs) \
 		$(wildcard src/*/*.fsproj) \
 		$(wildcard src/*/*.milone)
