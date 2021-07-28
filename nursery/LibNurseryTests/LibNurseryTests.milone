@@ -1,11 +1,77 @@
 module rec LibNurseryTests.Program
 
+open LibNursery.EphRef
+open LibNursery.EphSerial
 open LibNurseryTests.ClapTests
 open LibNurseryTests.ExtIterTests
 open LibNurseryTests.ExtStringTests
+
+let testEphSerialRefresh () =
+  let s : EphSerial = EphSerial.create ()
+  //      ^ this symbol is type
+  //                  ^ this symbol is module
+
+  // At first the serial is alive.
+  assert (EphSerial.alive s)
+
+  // Refresh the serial. Old one is now outdated and result one is alive.
+  let prev = s
+  let s = EphSerial.refresh s
+  assert (EphSerial.alive prev |> not)
+  assert (EphSerial.alive s)
+
+  // Return the final serial to ensure `s` is alive (in terms of data flow).
+  s
+
+let testEphSerialEquivalent () =
+  let s : EphSerial = EphSerial.create()
+  let t : EphSerial = EphSerial.create()
+  assert (EphSerial.alive s)
+  assert (EphSerial.alive t)
+  assert (EphSerial.equivalent s s)
+  assert (EphSerial.equivalent t t)
+  assert (EphSerial.equivalent s t |> not)
+
+  let s2 = EphSerial.refresh s
+  assert (EphSerial.alive s |> not)
+  assert (EphSerial.alive t)
+  s2, t
+
+let testEphRef () =
+  let r : EphRef<int> = EphRef.create 2
+  assert (EphRef.alive r)
+
+  // Initial value is stored.
+  let n, r = EphRef.read r
+  assert (n = 2)
+
+  // Update the value.
+  let init = r
+  let r = EphRef.write 3 r
+
+  let n, r = EphRef.read r
+  assert (n = 3)
+
+  // Old reference is outdated.
+  assert (EphRef.alive init |> not)
+  r
+
+let testEphRefReplace () =
+  let r = EphRef.create "hello"
+  let prev, r = EphRef.replace "bye" r
+  assert (prev = "hello")
+
+  let next, r = EphRef.read r
+  assert (next = "bye")
+  r
 
 let main _ =
   testClapModule ()
   testExtIterModule ()
   testExtStringModule ()
+
+  let _ = testEphSerialRefresh ()
+  let _ = testEphSerialEquivalent ()
+  let _ = testEphRef ()
+  let _ = testEphRefReplace ()
   0

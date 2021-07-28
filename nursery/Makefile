@@ -2,8 +2,6 @@ default: build
 
 .PHONY: build clean default restore run test
 
-# FIXME: Add LibNursery and LibNurseryTests
-
 JSON_GET := target/CmdJsonGet/json_get
 TODO := target/CmdSqliteTodo/todo
 
@@ -42,6 +40,15 @@ target/lib_file_system_tests: \
 	$(wildcard LibFileSystemTests/*.milone)
 	(cd LibFileSystemTests; ./build)
 
+target/LibNurseryTests/.timestamp: \
+	$(wildcard LibNursery/*.milone) \
+	$(wildcard LibNurseryTests/*.milone)
+	(cd LibNurseryTests; ./run) && \
+		mkdir -p $(dirname $@) && \
+		touch $@
+
+test_lib_nursery: target/LibNurseryTests/.timestamp
+
 run: build
 	cat .vscode/c_cpp_properties.json | ${JSON_GET} version
 	cat .vscode/c_cpp_properties.json | ${JSON_GET} configurations.length
@@ -53,7 +60,9 @@ run: build
 	${TODO} remove 'up'
 	${TODO}
 
-test: target/lib_span_tests target/lib_file_system_tests
+test: target/lib_span_tests \
+		target/lib_file_system_tests \
+		target/LibNurseryTests/.timestamp
 	if target/lib_span_tests; then echo OK; else echo FAIL=$?; fi
 	if target/lib_file_system_tests; then echo OK; else echo FAIL=$?; fi
 

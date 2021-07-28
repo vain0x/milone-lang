@@ -1,0 +1,4 @@
+module rec LibNursery.Runtime
+
+let memAlloc (len: int) (size: unativeint) : voidptr =
+  __nativeFun ("milone_mem_alloc", len, size)
