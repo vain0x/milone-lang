@@ -12,7 +12,7 @@ char printIntOrStr_(bool isInt_, void const* value_) {
         goto else_3;
     }
 then_2:;
-    printf("%d\n", (*(((int const*)value_))));
+    printf("%d\n", ((int)((intptr_t)value_)));
     if_ = 0;
     goto if_next_1;
 else_3:;
@@ -24,11 +24,9 @@ if_next_1:;
 }
 
 int milone_main() {
-    void const* box_ = milone_mem_alloc(1, sizeof(int));
-    (*(((int*)box_))) = 2;
-    char call_ = printIntOrStr_(true, box_);
-    void const* box_1 = milone_mem_alloc(1, sizeof(struct String));
-    (*(((struct String*)box_1))) = (struct String){.str = "Fizz", .len = 4};
-    char call_1 = printIntOrStr_(false, box_1);
+    char call_ = printIntOrStr_(true, ((void const*)((intptr_t)2)));
+    void const* box_ = milone_mem_alloc(1, sizeof(struct String));
+    (*(((struct String*)box_))) = (struct String){.str = "Fizz", .len = 4};
+    char call_1 = printIntOrStr_(false, box_);
     return 0;
 }

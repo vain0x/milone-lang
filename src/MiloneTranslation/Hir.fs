@@ -337,6 +337,8 @@ type MonoMode =
 
 let tyInt = Ty(IntTk(IntFlavor(Signed, I32)), [])
 
+let tyNativeInt = Ty(IntTk(IntFlavor(Signed, IPtr)), [])
+
 let tyBool = Ty(BoolTk, [])
 
 let tyFloat = Ty(FloatTk F64, [])
