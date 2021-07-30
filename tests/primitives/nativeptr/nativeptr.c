@@ -33,7 +33,8 @@ int milone_main() {
     void* call_ = nativeptr_Program_memAlloc(1, 8);
     void* buf_ = call_;
     char call_1 = nativeptr_Program_memSet(buf_, ((uint8_t)255), 8);
-    milone_assert(((*(((int const*)((void const*)buf_)))) == -1), 22, 2);
+    int read_ = (*(((int const*)buf_)));
+    milone_assert((read_ == -1), 22, 2);
     milone_assert((((uintptr_t)buf_) != ((uintptr_t)0)), 25, 2);
     return 0;
 }

@@ -14,4 +14,8 @@ let main _ =
 
   printIntOrStr true (box 2)
   printIntOrStr false (box "Fizz")
+
+  // boxing int types
+
+
   0

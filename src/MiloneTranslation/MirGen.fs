@@ -207,12 +207,39 @@ let private mxCompare ctx (op: MBinary) (l: MExpr) r (ty: Ty) loc =
   | Ty (StrTk, _) -> mxStrCompare ctx op l r (ty, loc)
   | _ -> unreachable ()
 
+/// How `box`/`unbox` works for the type.
+[<RequireQualifiedAccess; NoEquality; NoComparisonAttribute>]
+type private BoxMode =
+  | Null
+  | Alloc
+  | Cast
+
+let private toBoxMode (ty: Ty) : BoxMode =
+  match ty with
+  | Ty (IntTk (IntFlavor (_, IPtr)), _) -> BoxMode.Alloc
+  | Ty (TupleTk, []) -> BoxMode.Null
+
+  | Ty (IntTk _, _)
+  | Ty (BoolTk, _)
+  | Ty (CharTk, _)
+  | Ty (ObjTk, _)
+  | Ty (ListTk, _)
+  | Ty (NativePtrTk _, _)
+  | Ty (NativeFunTk, _) -> BoxMode.Cast
+
+  | _ -> BoxMode.Alloc
+
 let private mxUnbox expr ty loc : MExpr =
-  // HACK: Remove `unbox obj: unit` because `box ()` is null.
-  if tyIsUnit ty then
-    MUnitExpr loc
-  else
-    MUnaryExpr(MUnboxUnary, expr, ty, loc)
+  match toBoxMode ty with
+  | BoxMode.Null -> MUnitExpr loc
+
+  | BoxMode.Cast ->
+    let expr =
+      MUnaryExpr(MNativeCastUnary, expr, tyNativeInt, loc)
+
+    MUnaryExpr(MNativeCastUnary, expr, ty, loc)
+
+  | BoxMode.Alloc -> MUnaryExpr(MUnboxUnary, expr, ty, loc)
 
 let private mtAbort loc =
   MExitTerminator(MLitExpr(IntLit "1", loc))
@@ -833,10 +860,18 @@ let private mirifyExprCallExit ctx arg ty loc =
 let private mirifyExprCallBox ctx arg _ loc =
   let arg, ctx = mirifyExpr ctx arg
 
-  // HACK: `box ()` occurs when turning a non-capturing function into function object.
-  if mexprToTy arg |> tyIsUnit then
+  match arg |> mexprToTy |> toBoxMode with
+  | BoxMode.Null ->
+    // HACK: `box ()` occurs when turning a non-capturing function into function object.
     MNativeExpr("NULL", tyObj, loc), ctx
-  else
+
+  | BoxMode.Cast ->
+    let arg =
+      MUnaryExpr(MNativeCastUnary, arg, tyNativeInt, loc)
+
+    MUnaryExpr(MNativeCastUnary, arg, tyObj, loc), ctx
+
+  | BoxMode.Alloc ->
     let temp, tempSerial, ctx = freshVar ctx "box" tyObj loc
 
     let ctx =
