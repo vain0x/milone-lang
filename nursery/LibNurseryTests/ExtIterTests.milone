@@ -3,8 +3,8 @@ module rec LibNurseryTests.ExtIterTests
 module S = MiloneStd.StdString
 open LibNursery.ExtIter
 
-let testNext () =
-  let private bang () = exit 1
+let private testNext () =
+  let bang () = exit 1
 
   let xs: Iter<int> = ExtIter.range 1 4
   let xs1 = xs
@@ -48,7 +48,7 @@ let testNext () =
 
   | Some (x, xs) -> assert (x = 1)
 
-let testFold () =
+let private testFold () =
   let xs: Iter<int> = ExtIter.range 1 4
 
   let n =
@@ -56,6 +56,19 @@ let testFold () =
 
   assert (n = 123)
 
+let private testOfList () =
+  let f iter = ExtIter.fold (fun n x -> n * 10 + x) 0 iter
+
+  let xs: Iter<int> = ExtIter.ofList [ 2; 3; 5 ]
+  assert (f xs = 235)
+
+  let ys = ExtIter.ofList [ 2 ]
+  assert (f ys = 2)
+
+  let zs = ExtIter.ofList [ ]
+  assert (f zs = 0)
+
 let testExtIterModule () =
   testNext ()
   testFold ()
+  testOfList ()

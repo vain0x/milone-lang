@@ -3,6 +3,7 @@ module rec LibNursery.ExtIter
 type private NextFun<'S, 'T> = 'S -> ('T * 'S) option
 
 // obj: state of iterator
+// that is, Iter<'T> = (forall 'S => NextFun<'S, 'T> * 'S)
 type Iter<'T> = NextFun<obj, 'T> * obj
 
 module rec ExtIter =
@@ -58,3 +59,15 @@ module rec ExtIter =
 
   let fold (folder: 'S -> 'T -> 'S) (state: 'S) (xs: Iter<'T>) : 'S =
     foldEx (fun state item -> Some (folder state item), None) id state xs
+
+  // ---------------------------------------------
+  // List
+  // ---------------------------------------------
+
+  let ofList (xs: 'T list) : Iter<'T> =
+    let nextFun (state: obj) : ('T * obj) option =
+      match unbox state with
+      | [] -> None
+      | x :: xs -> Some(x, box xs)
+
+    nextFun, box xs
