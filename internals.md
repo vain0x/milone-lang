@@ -158,10 +158,14 @@ TODO: explain more
 Check current fantomas version used in [ionide-vscode-fsharp](https://github.com/ionide/ionide-vscode-fsharp/blob/master/RELEASE_NOTES.md).
 See also [FsAutoComplete/RELEASE_NOTES.md](https://github.com/fsharp/FsAutoComplete/blob/master/RELEASE_NOTES.md).
 
-Install [fantomas](https://github.com/fsprojects/fantomas) locally.
+Install [fantomas](https://github.com/fsprojects/fantomas).
 
 ```sh
-dotnet tool install fantomas-tool --version 4.5.0-beta-001
+# Install globally.
+# dotnet tool install fantomas-tool --version 4.5.0
+
+# Restore locally. (See also `./.config/dotnet-tools.json`.)
+dotnet tool restore
 
 # Execute for each F# file. Since fantomas crashes on error, avoid using --recursive mode.
 find -type f \
