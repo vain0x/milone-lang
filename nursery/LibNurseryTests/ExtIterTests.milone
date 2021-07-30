@@ -69,8 +69,9 @@ let private testSingleton () =
 let private testReplicate () =
   assert (ExtIter.replicate 0 "x" |> ExtIter.isEmpty)
 
-  assert (ExtIter.replicate 2 "x" |> ExtIter.toList |> S.concat ","
-  =   "x,x")
+  assert (ExtIter.replicate 2 "x"
+          |> ExtIter.toList
+          |> S.concat "," = "x,x")
 
 let private testMap () =
   assert (gen 0
@@ -83,6 +84,14 @@ let private testMap () =
           |> ExtIter.map (fun x -> x * 2)
           |> ExtIter.map (fun x -> x + 1)
           |> cat = 135)
+
+let private testCollect () =
+  let n =
+    gen 4
+    |> ExtIter.collect (fun n -> ExtIter.replicate n n)
+    |> cat
+
+  assert (n = 122333)
 
 let private testIsEmpty () =
   assert (ExtIter.range 0 0 |> ExtIter.isEmpty)
@@ -126,6 +135,7 @@ let testExtIterModule () =
   testSingleton ()
   testReplicate ()
   testMap ()
+  testCollect ()
   testIsEmpty ()
   testFold ()
   testOfList ()

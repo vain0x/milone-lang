@@ -77,6 +77,9 @@ module rec ExtIter =
   let map (f: 'T -> 'U) (xs: Iter<'T>) : Iter<'U> =
     scanEx (fun () (x: 'T) -> singleton (f x), ()) () xs
 
+  let collect (f: 'T -> Iter<'U>) (xs: Iter<'T>) : Iter<'U> =
+    scanEx (fun () (x: 'T) -> f x, ()) () xs
+
   // ---------------------------------------------
   // Consumer
   // ---------------------------------------------
