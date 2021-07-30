@@ -63,8 +63,10 @@ type private TrdCtx =
     RecordTyMemo: AssocMap<TySerial * IsDirect, Status> }
 
 let private trdVariant isDirect (ctx: TrdCtx) variantSerial (variantDefOpt: VariantDef option) =
-  match ctx.VariantMemo
-        |> TMap.tryFind (variantSerial, isDirect) with
+  match
+    ctx.VariantMemo
+    |> TMap.tryFind (variantSerial, isDirect)
+    with
   | Some Recursive ->
     // printfn "// trd variant %s is now boxed (%s)" (ctx.Variants |> mapFind variantSerial).Name (objToString isDirect)
     { ctx with
@@ -85,7 +87,7 @@ let private trdVariant isDirect (ctx: TrdCtx) variantSerial (variantDefOpt: Vari
             ctx.VariantMemo
             |> TMap.add (variantSerial, isDirect) Recursive }
 
-    let ctx : TrdCtx =
+    let ctx: TrdCtx =
       let variantDef =
         match variantDefOpt with
         | Some variantDef -> variantDef
@@ -94,8 +96,10 @@ let private trdVariant isDirect (ctx: TrdCtx) variantSerial (variantDefOpt: Vari
       trdTy isDirect ctx variantDef.PayloadTy
 
     let ctx =
-      match ctx.VariantMemo
-            |> TMap.tryFind (variantSerial, isDirect) with
+      match
+        ctx.VariantMemo
+        |> TMap.tryFind (variantSerial, isDirect)
+        with
       | Some Recursive
       | None ->
         { ctx with
@@ -115,8 +119,10 @@ let private trdVariant isDirect (ctx: TrdCtx) variantSerial (variantDefOpt: Vari
     ctx
 
 let private trdRecordTyDef isDirect (ctx: TrdCtx) tySerial tyDef =
-  match ctx.RecordTyMemo
-        |> TMap.tryFind (tySerial, isDirect) with
+  match
+    ctx.RecordTyMemo
+    |> TMap.tryFind (tySerial, isDirect)
+    with
   | Some Recursive ->
     // printfn "// trd tyDef %s is now boxed" (tyDefToName tyDef)
     { ctx with
@@ -137,7 +143,7 @@ let private trdRecordTyDef isDirect (ctx: TrdCtx) tySerial tyDef =
             ctx.RecordTyMemo
             |> TMap.add (tySerial, isDirect) Recursive }
 
-    let ctx : TrdCtx =
+    let ctx: TrdCtx =
       match tyDef with
       | RecordTyDef (_, fields, _) ->
         fields
@@ -146,8 +152,10 @@ let private trdRecordTyDef isDirect (ctx: TrdCtx) tySerial tyDef =
       | _ -> unreachable ()
 
     let ctx =
-      match ctx.RecordTyMemo
-            |> TMap.tryFind (tySerial, isDirect) with
+      match
+        ctx.RecordTyMemo
+        |> TMap.tryFind (tySerial, isDirect)
+        with
       | Some Recursive
       | None ->
         { ctx with
@@ -202,7 +210,7 @@ let private trdTy isDirect (ctx: TrdCtx) ty : TrdCtx =
     | RecordTk tySerial -> nominal tySerial
 
 let private detectTypeRecursion (tyCtx: TyCtx) : TrdCtx =
-  let ctx : TrdCtx =
+  let ctx: TrdCtx =
     { Variants = tyCtx.Variants
       Tys = tyCtx.Tys
       VariantMemo = TMap.empty (pairCompare variantSerialCompare compareIsDirect)
@@ -423,7 +431,7 @@ let private measureTys (trdCtx: TrdCtx) : TsmCtx =
            | _ -> set)
          (TSet.empty compare)
 
-  let ctx : TsmCtx =
+  let ctx: TsmCtx =
     { Variants = trdCtx.Variants
       Tys = trdCtx.Tys
       BoxedVariants = boxedVariants
@@ -822,7 +830,7 @@ let autoBox (expr: HExpr, tyCtx: TyCtx) =
   let trdCtx = detectTypeRecursion tyCtx
 
   // Measure types.
-  let tsmCtx : TsmCtx = measureTys trdCtx
+  let tsmCtx: TsmCtx = measureTys trdCtx
 
   // Auto boxing.
   let ctx =

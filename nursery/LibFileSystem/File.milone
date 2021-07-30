@@ -62,7 +62,7 @@ let readAllText (file: File) : string =
   let contents = Buffer.create (unativeint 0) itemSize
 
   let rec go contents =
-    let n : unativeint =
+    let n: unativeint =
       __nativeFun ("fread", SpanMut.asPtr chunk, unativeint 1, SpanMut.length chunk, fileAsFp file)
 
     if n = unativeint 0 then

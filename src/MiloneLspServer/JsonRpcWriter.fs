@@ -5,7 +5,7 @@ open MiloneLspServer.JsonSerialization
 
 /// Writes a string (that represents a body of single message)
 /// to STDOUT in the format of JSON-RPC.
-let private jsonRpcWriteString : string -> unit =
+let private jsonRpcWriteString: string -> unit =
   let buf = System.Console.OpenStandardOutput()
   let writer = new System.IO.BinaryWriter(buf)
 

@@ -13,7 +13,7 @@ module ReadableFileStream =
     __nativeFun ("milone_file_exists", filePath, followLink)
 
   let doOpen (filePath: string) : ReadableFileStream option =
-    let file : File =
+    let file: File =
       __nativeFun ("milone_file_open", filePath, "r")
 
     if __nativeFun ("milone_file_is_null", file) then

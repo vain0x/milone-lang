@@ -7,5 +7,4 @@ let private doEqual (expected: string) (actual: string) : bool =
     printfn "Assertion error.\nExpected: %s\nActual: %s" expected actual
     false
 
-let eq (debug: 'T -> string) (expected: 'T) (actual: 'T) : bool =
-  doEqual (debug expected) (debug actual)
+let eq (debug: 'T -> string) (expected: 'T) (actual: 'T) : bool = doEqual (debug expected) (debug actual)

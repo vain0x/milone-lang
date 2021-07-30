@@ -96,7 +96,7 @@ type ProjectInfo =
     ProjectName: string
     EntryFileExt: string }
 
-let private projectsRef : Result<ProjectInfo list, exn> option ref = ref None
+let private projectsRef: Result<ProjectInfo list, exn> option ref = ref None
 
 /// Finds all projects inside of the workspace.
 let private doFindProjects (rootUri: string) : ProjectInfo list =
@@ -118,7 +118,7 @@ let private doFindProjects (rootUri: string) : ProjectInfo list =
 
     let tryAddProject ext =
       if File.Exists(Path.Combine(dir, projectName + ext)) then
-        let project : ProjectInfo =
+        let project: ProjectInfo =
           { ProjectDir = dir
             ProjectName = projectName
             EntryFileExt = ext }
@@ -266,13 +266,13 @@ let newLangService (project: ProjectInfo) : LangServiceState =
       with
       | _ -> None
 
-  let docs : LangServiceDocs =
+  let docs: LangServiceDocs =
     { FindDocId = findDocId
       GetVersion = getVersion
       GetText = getText
       GetProjectName = getProjectName }
 
-  let langServiceHost : LangServiceHost = { MiloneHome = miloneHome; Docs = docs }
+  let langServiceHost: LangServiceHost = { MiloneHome = miloneHome; Docs = docs }
 
   LangService.create langServiceHost
 

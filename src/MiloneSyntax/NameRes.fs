@@ -375,7 +375,7 @@ let private importVar symbol (scopeCtx: ScopeCtx) : ScopeCtx =
 
   assert (varName <> "_")
 
-  let scope : Scope =
+  let scope: Scope =
     match scopeCtx.Local with
     | kinds, map :: varScopes, tyScopes, nsScopes ->
       let varScopes =
@@ -389,7 +389,7 @@ let private importVar symbol (scopeCtx: ScopeCtx) : ScopeCtx =
 
 /// Adds a type to a scope, aliasing a name.
 let private doImportTyWithAlias alias (symbol: TySymbol) (scopeCtx: ScopeCtx) : ScopeCtx =
-  let scope : Scope =
+  let scope: Scope =
     match scopeCtx.Local with
     | kinds, varScopes, (tyMap :: tyScopes), (nsMap :: nsScopes) ->
       let tyMap = tyMap |> TMap.add alias symbol
@@ -410,7 +410,7 @@ let private importTy symbol (scopeCtx: ScopeCtx) : ScopeCtx =
 
 /// Adds a type to a scope, aliasing a name.
 let private doImportNsWithAlias alias nsOwner (scopeCtx: ScopeCtx) : ScopeCtx =
-  let scope : Scope =
+  let scope: Scope =
     match scopeCtx.Local with
     | kinds, varScopes, tyScopes, ((map :: nsScopes) as allNsScopes) ->
       let shadowed =
@@ -721,7 +721,7 @@ let private defineFunUniquely vis funSerial args ty loc (scopeCtx: ScopeCtx) : S
     let name =
       scopeCtx |> findName (funSerialToInt funSerial)
 
-    let funDef : FunDef =
+    let funDef: FunDef =
       { Name = name
         Arity = args |> List.length
         Ty = TyScheme([], ty)
@@ -776,7 +776,7 @@ let private startDefineTy moduleSerialOpt tySerial vis tyArgs tyDecl loc ctx =
       let defineVariant ctx (name, variantSerial, hasPayload, payloadTy) =
         let variantSymbol = VariantSymbol variantSerial
 
-        let variantDef : VariantDef =
+        let variantDef: VariantDef =
           { Name = name
             UnionTySerial = tySerial
             IsNewtype = List.length variants = 1
@@ -918,7 +918,7 @@ let private collectDecls moduleSerialOpt (expr, ctx) =
       | Some (VariantSymbol variantSerial) -> TVariantPat(variantSerial, ty, loc), ctx
 
       | _ ->
-        let varDef : VarDef =
+        let varDef: VarDef =
           { Name = name
             IsStatic = IsStatic
             Ty = ty
@@ -940,7 +940,7 @@ let private collectDecls moduleSerialOpt (expr, ctx) =
       let name =
         ctx |> findName (varSerialToInt varSerial)
 
-      let varDef : VarDef =
+      let varDef: VarDef =
         { Name = name
           IsStatic = IsStatic
           Ty = noTy
@@ -1045,7 +1045,7 @@ let private doResolveVarInPat serial name ty loc (ctx: ScopeCtx) =
   | None ->
     let varSerial = VarSerial serial
 
-    let varDef : VarDef =
+    let varDef: VarDef =
       { Name = name
         IsStatic = NotStatic
         Ty = ty

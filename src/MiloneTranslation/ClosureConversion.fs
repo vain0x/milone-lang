@@ -328,7 +328,7 @@ let private updateFunDefs (ctx: CcCtx) =
            | [] -> funs
 
            | caps ->
-             let funDef : FunDef = funs |> mapFind funSerial
+             let funDef: FunDef = funs |> mapFind funSerial
              let (TyScheme (tyVars, funTy)) = funDef.Ty
 
              let funTy, arity =

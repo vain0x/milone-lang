@@ -7,5 +7,5 @@ type Stack<'T> = 'T list
 let f (_stack: Stack<int, string>) = ()
 
 let main _ =
-  let _stack : Stack = []
+  let _stack: Stack = []
   0

@@ -182,7 +182,7 @@ let private toTyCtx (tyCtx: TyCtx) (ctx: EtaCtx) =
 let private freshFun name arity (ty: Ty) loc (ctx: EtaCtx) =
   let funSerial = FunSerial(ctx.Serial + 1)
 
-  let funDef : FunDef =
+  let funDef: FunDef =
     let tyScheme =
       let isOwned (_: Serial) = true // FIXME: is it okay?
       tyGeneralize isOwned ty
@@ -205,7 +205,7 @@ let private freshFun name arity (ty: Ty) loc (ctx: EtaCtx) =
 let private freshVar name (ty: Ty) loc (ctx: EtaCtx) =
   let serial = VarSerial(ctx.Serial + 1)
 
-  let varDef : VarDef =
+  let varDef: VarDef =
     { Name = name
       IsStatic = NotStatic
       Ty = ty

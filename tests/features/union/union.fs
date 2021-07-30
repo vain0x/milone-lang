@@ -45,11 +45,11 @@ let main _ =
     | _ -> assert false
 
   // Type ascriptions should work.
-  let ok : Status = Ok: Status
+  let ok: Status = Ok: Status
 
   // Variants can have the same name with others. Distinct by qualification.
-  let okOk : Ok = Ok.Ok
-  let statusOk : Status = Status.Ok
+  let okOk: Ok = Ok.Ok
+  let statusOk: Status = Status.Ok
 
   match Status.Ok with
   | Status.Ok -> ()

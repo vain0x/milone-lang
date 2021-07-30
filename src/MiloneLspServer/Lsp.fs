@@ -351,7 +351,7 @@ let private findTyInExpr (ls: LangServiceState) (expr: TExpr) (tyCtx: Typing.TyC
     if loc = tokenLoc then
       contentOpt <- tyOpt
 
-  let visitor : Visitor =
+  let visitor: Visitor =
     { OnDiscardPat = fun (ty, loc) -> onVisit (Some ty) loc
       OnVar = fun (_, _, ty, loc) -> onVisit (Some ty) loc
       OnFun = fun (_, tyOpt, loc) -> onVisit tyOpt loc
@@ -373,7 +373,7 @@ let private collectSymbolsInExpr (modules: TProgram) =
 
   let onVisit symbol defOrUse loc = symbols.Add((symbol, defOrUse, loc))
 
-  let visitor : Visitor =
+  let visitor: Visitor =
     { OnDiscardPat = fun (_, loc) -> onVisit DiscardSymbol Def loc
       OnVar = fun (varSerial, defOrUse, _, loc) -> onVisit (ValueSymbol(VarSymbol varSerial)) defOrUse loc
       OnFun = fun (funSerial, _, loc) -> onVisit (ValueSymbol(FunSymbol funSerial)) Use loc

@@ -43,7 +43,7 @@ open MiloneShared.SharedTypes
 open MiloneShared.Util
 open MiloneTranslation.Hir
 
-let private hxDummy : HExpr = hxUnit noLoc
+let private hxDummy: HExpr = hxUnit noLoc
 
 let private hxBlock stmts last : HExpr =
   match stmts with
@@ -60,7 +60,7 @@ type private HoistCtx =
     Stmts: HExpr list
     MainFunOpt: FunSerial option }
 
-let private hoistCtxEmpty : HoistCtx =
+let private hoistCtxEmpty: HoistCtx =
   { Decls = []
     Stmts = []
     MainFunOpt = None }
@@ -119,7 +119,7 @@ let private hoistExprLetFunForMainFun (expr, ctx: HoistCtx) : HoistCtx =
   let body, (ctx: HoistCtx) = (body, ctx) |> hoistBlock
 
   // Go to the end to process all toplevel expressions.
-  let ctx : HoistCtx = (next, ctx) |> hoistExprToplevel
+  let ctx: HoistCtx = (next, ctx) |> hoistExprToplevel
 
   // Body of the main function starts with a sequence of toplevel non-declaration expressions.
   let stmts, ctx = takeStmts ctx

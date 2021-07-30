@@ -25,7 +25,7 @@ let findDoc (uri: Uri) : DocData option =
   | false, _ -> None
 
 let openDoc (uri: Uri) (version: int) (text: string) =
-  let docData : DocData =
+  let docData: DocData =
     { Uri = uri
       Version = version
       Text = text }
@@ -36,7 +36,7 @@ let openDoc (uri: Uri) (version: int) (text: string) =
 let changeDoc (uri: Uri) (version: int) (text: string) : unit =
   match findDoc uri with
   | Some _ ->
-    let docData : DocData =
+    let docData: DocData =
       { Uri = uri
         Version = version
         Text = text }

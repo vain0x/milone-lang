@@ -661,7 +661,7 @@ let private cgExternFunDecl (ctx: CirCtx) funSerial =
 
       let resultTy, ctx = cgTyComplete ctx resultTy
 
-      let ctx : CirCtx =
+      let ctx: CirCtx =
         addDecl ctx (CFunForwardDecl(name, argTys, resultTy))
 
       { ctx with
@@ -1263,7 +1263,7 @@ let private cgStmt ctx stmt =
     addStmt ctx (CNativeStmt(code, args))
 
 let private cgBlock (ctx: CirCtx) (stmts: MStmt list) =
-  let bodyCtx : CirCtx = cgStmts (enterBlock ctx) stmts
+  let bodyCtx: CirCtx = cgStmts (enterBlock ctx) stmts
   let stmts = bodyCtx.Stmts
   let ctx = rollback ctx bodyCtx
   List.rev stmts, ctx
@@ -1289,7 +1289,7 @@ let private cgDecls (ctx: CirCtx) decls =
   | [] -> ctx
 
   | MProcDecl (callee, args, body, resultTy, _) :: decls ->
-    let def : FunDef = ctx.Funs |> mapFind callee
+    let def: FunDef = ctx.Funs |> mapFind callee
 
     let funName, args =
       if isMainFun ctx callee then

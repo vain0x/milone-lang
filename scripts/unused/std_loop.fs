@@ -29,7 +29,7 @@ let testEmpty () =
   assert (xs |> eq [])
   assert (xs |> Loop.isEmpty)
 
-  let n : int = Loop.length xs = eq
+  let n: int = Loop.length xs = eq
   assert (n = 0)
 
 let testRange (len: int) =

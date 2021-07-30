@@ -8,9 +8,9 @@ type ExitCodeList = ExitCode list
 type Condition = bool
 
 let baseCase () =
-  let success : ExitCode = 0
-  let failure : ExitCode = 1
-  let codes : ExitCodeList = [ success; failure ]
+  let success: ExitCode = 0
+  let failure: ExitCode = 1
+  let codes: ExitCodeList = [ success; failure ]
   assert (success = 0)
 
 // int = ExitCode should be unifiable.

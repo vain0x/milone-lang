@@ -8,7 +8,7 @@ let main _ =
   match Int 2 with
   | Int x
   | String x ->
-    let n : int = box x |> unbox
+    let n: int = box x |> unbox
     assert (n = 2)
 
   assert false

@@ -201,7 +201,7 @@ let private acExprs exprs ctx =
 // -----------------------------------------------
 
 let arityCheck (modules: TProgram, tyCtx: Typing.TyCtx) : Typing.TyCtx =
-  let ctx : ArityCheckCtx =
+  let ctx: ArityCheckCtx =
     { GetFunArity =
         fun funSerial ->
           let funDef = tyCtx.Funs |> mapFind funSerial

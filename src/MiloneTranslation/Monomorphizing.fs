@@ -57,7 +57,7 @@ module TMap = MiloneStd.StdMap
 let private funSerialTyPairCompare l r =
   pairCompare funSerialCompare tyCompare l r
 
-let private emptyBinding : AssocMap<TySerial, Ty> = TMap.empty compare
+let private emptyBinding: AssocMap<TySerial, Ty> = TMap.empty compare
 
 // -----------------------------------------------
 // Context
@@ -172,8 +172,8 @@ let private addMonomorphizedFun (ctx: MonoCtx) genericFunSerial arity useSiteTy 
   assert (tryFindMonomorphizedFun ctx genericFunSerial useSiteTy
           |> Option.isNone)
 
-  let funDef : FunDef =
-    let def : FunDef = ctx.Funs |> mapFind genericFunSerial
+  let funDef: FunDef =
+    let def: FunDef = ctx.Funs |> mapFind genericFunSerial
 
     { def with
         Arity = arity

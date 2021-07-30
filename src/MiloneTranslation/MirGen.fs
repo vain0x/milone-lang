@@ -118,7 +118,7 @@ let private takeDecls (ctx: MirCtx) =
 let private freshVar (ctx: MirCtx) (name: Ident) (ty: Ty) loc =
   let varSerial = VarSerial(ctx.Serial + 1)
 
-  let varDef : VarDef =
+  let varDef: VarDef =
     { Name = name
       IsStatic = NotStatic
       Ty = ty
@@ -149,7 +149,7 @@ let private freshLabel (ctx: MirCtx) (name: Ident) loc =
     { ctx with
         LabelSerial = ctx.LabelSerial + 1 }
 
-  let label : Label = name + "_" + string serial
+  let label: Label = name + "_" + string serial
   let labelStmt = MLabelStmt(label, loc)
   labelStmt, label, ctx
 
@@ -487,7 +487,7 @@ let private doEmitIfStmt ctx cond thenHint body altHint alt targetTy loc =
 let private mirifyExprMatchAsIfStmt ctx cond arms ty loc =
   match exprToTy cond, arms with
   | Ty (BoolTk, []),
-    [ HLitPat (BoolLit true, _), HLitExpr (BoolLit true, _), body;
+    [ HLitPat (BoolLit true, _), HLitExpr (BoolLit true, _), body
       HLitPat (BoolLit false, _), HLitExpr (BoolLit true, _), alt ] ->
     let cond, ctx = mirifyExpr ctx cond
 
@@ -602,7 +602,7 @@ let private mirifyExprMatchAsSwitchStmt ctx cond arms ty loc =
 
              let cases, isDefault = go pat
 
-             let clause : MSwitchClause =
+             let clause: MSwitchClause =
                { Cases = List.rev cases
                  IsDefault = isDefault
                  Terminator = MGotoTerminator clauseLabel }
@@ -629,7 +629,7 @@ let private mirifyExprMatchAsSwitchStmt ctx cond arms ty loc =
     if exhaust then
       clauses
     else
-      let clause : MSwitchClause =
+      let clause: MSwitchClause =
         { Cases = []
           IsDefault = true
           Terminator = mtAbort loc }
@@ -1405,7 +1405,7 @@ let private mirifyExprLetFunContents (ctx: MirCtx) calleeSerial argPats body let
 
     let body, ctx =
       let stmts, ctx = takeStmts ctx
-      let block : MBlock = { Stmts = stmts }
+      let block: MBlock = { Stmts = stmts }
       [ block ], ctx
 
     args, blockTy, body, ctx

@@ -127,14 +127,14 @@ let gtkRun (init: 'S) (update: 'S -> 'M -> 'S) (view: 'S -> UI) : int =
 
   setUI (stack [])
 
-  let initObj : obj = box init
+  let initObj: obj = box init
 
-  let updateObj : obj -> obj -> obj =
+  let updateObj: obj -> obj -> obj =
     fun (state: obj) (msg: obj) -> update (unbox state) (unbox msg) |> box
 
-  let viewObj : obj -> obj =
+  let viewObj: obj -> obj =
     fun (state: obj) ->
-      let oldUI : UI = getUI ()
+      let oldUI: UI = getUI ()
       let newUI = view (unbox state)
 
       let d = dumpDiff (diff oldUI newUI)
@@ -153,7 +153,7 @@ type MyState =
   { Count: int
     History: int option list }
 
-let private init : MyState = { Count = 0; History = [] }
+let private init: MyState = { Count = 0; History = [] }
 
 type MyMsg = int
 

@@ -12,7 +12,7 @@ let main _ =
   assert (unbox intBox = 42)
 
   // write to array
-  let buf : nativeptr<char> = uint64 0 |> box |> __nativeCast
+  let buf: nativeptr<char> = uint64 0 |> box |> __nativeCast
   __ptrWrite buf 0 'H'
   __ptrWrite buf 1 'i'
   let s = strOfRawParts (__nativeCast buf) 2

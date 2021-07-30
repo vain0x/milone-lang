@@ -46,7 +46,7 @@ let __mutArrayCreate (len: int) : __MutArray<_> =
   if len = 0 then
     __nativeCast (unativeint 0), 0
   else
-    let nullPtr : __constptr<_> = __nativeCast (unativeint 0)
+    let nullPtr: __constptr<_> = __nativeCast (unativeint 0)
 
     let ptr =
       __nativeCast (memAlloc len (unativeint (__pointeeSize nullPtr)))
@@ -100,10 +100,10 @@ let __constArraySlice (start: int) (endIndex: int) (array: __ConstArray<_>) : __
 // -----------------------------------------------
 
 let __intOfStr (s: string) : int option =
-  let valueRef : nativeptr<int> =
+  let valueRef: nativeptr<int> =
     __nativeCast (memAlloc 1 (unativeint (__sizeOfVal 0)))
 
-  let ok : bool =
+  let ok: bool =
     __nativeFun ("str_to_int_checked", s, valueRef)
 
   if ok then

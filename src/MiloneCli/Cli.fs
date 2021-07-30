@@ -210,8 +210,8 @@ let compileCtxNew (host: CliHost) verbosity projectDir : CompileCtx =
   let projectDir = projectDir |> pathStrTrimEndPathSep
   let projectName = projectDir |> pathStrToStem
 
-  let syntaxCtx : SyntaxApi.SyntaxCtx =
-    let host : SyntaxApi.SyntaxHost =
+  let syntaxCtx: SyntaxApi.SyntaxCtx =
+    let host: SyntaxApi.SyntaxHost =
       { EntryProjectDir = projectDir
         EntryProjectName = projectName
         MiloneHome = miloneHome
@@ -954,7 +954,7 @@ let cli (host: CliHost) =
 
     match args with
     | projectDir :: _ ->
-      let options : CompileOptions =
+      let options: CompileOptions =
         { ProjectDir = projectDir
           TargetDir = "."
           HeaderOnly = true
@@ -974,7 +974,7 @@ let cli (host: CliHost) =
 
     match args with
     | projectDir :: _ ->
-      let options : CompileOptions =
+      let options: CompileOptions =
         { ProjectDir = projectDir
           TargetDir = Option.defaultValue (defaultTargetDir projectDir) targetDir
           HeaderOnly = false
@@ -1004,7 +1004,7 @@ let cli (host: CliHost) =
 
     match args with
     | projectDir :: _ ->
-      let options : BuildOptions =
+      let options: BuildOptions =
         { ProjectDir = projectDir
           TargetDir = Option.defaultValue (defaultTargetDir projectDir) targetDir
           Verbosity = verbosity }
@@ -1028,7 +1028,7 @@ let cli (host: CliHost) =
 
     match args with
     | projectDir :: _ ->
-      let options : BuildOptions =
+      let options: BuildOptions =
         { ProjectDir = projectDir
           TargetDir = Option.defaultValue (defaultTargetDir projectDir) targetDir
           Verbosity = verbosity }

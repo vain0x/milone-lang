@@ -310,8 +310,8 @@ let private parseIncome (jsonValue: JsonValue) : LspIncome =
     ErrorIncome(MethodNotFoundError(msgId, methodName))
 
 let private processNext () : LspIncome -> ProcessResult =
-  let mutable exitCode : int = 1
-  let mutable rootUriOpt : string option = None
+  let mutable exitCode: int = 1
+  let mutable rootUriOpt: string option = None
 
   fun (income: LspIncome) ->
     match income with

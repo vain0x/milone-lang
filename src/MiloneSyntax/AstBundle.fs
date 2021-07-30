@@ -173,8 +173,10 @@ let bundleNext (ctx: BundleCtx) : BundleStatus * BundleCtx =
   | [] -> NoRequest, ctx
 
   | r :: stack ->
-    match ctx.ModuleMap
-          |> TMap.tryFind (r.ProjectName, r.ModuleName) with
+    match
+      ctx.ModuleMap
+      |> TMap.tryFind (r.ProjectName, r.ModuleName)
+      with
     | None -> ModuleInfoRequested r, ctx
 
     | Some moduleInfo ->
@@ -240,7 +242,7 @@ let bundleCompatible
         | Some (docId, ast, errors) ->
           let serial = serial + 1
 
-          let moduleInfo : ModuleInfo =
+          let moduleInfo: ModuleInfo =
             { Ref = (serial, moduleName)
               Project = projectName
               DocId = docId
@@ -286,7 +288,7 @@ let bundleCompatible
 
            | Some ast ->
              // Compute docId.
-             let docId : DocId =
+             let docId: DocId =
                moduleInfo.Project + "." + snd moduleInfo.Ref
 
              let exprs, nameCtx =
@@ -297,6 +299,6 @@ let bundleCompatible
              nameCtx)
          ([], nameCtxEmpty ())
 
-  let modules : TProgram = List.rev moduleAcc
+  let modules: TProgram = List.rev moduleAcc
 
   modules, nameCtx, errors

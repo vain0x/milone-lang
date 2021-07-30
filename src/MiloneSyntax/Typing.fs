@@ -85,7 +85,7 @@ let private isMainFun funSerial (ctx: TyCtx) =
 let private freshVar (ctx: TyCtx) hint ty loc =
   let varSerial = VarSerial(ctx.Serial + 1)
 
-  let varDef : VarDef =
+  let varDef: VarDef =
     { Name = hint
       IsStatic = NotStatic
       Ty = ty
@@ -433,7 +433,7 @@ let private resolveTraitBounds (ctx: TyCtx) =
 
     let n = List.length traits
 
-    let ctx : TyCtx =
+    let ctx: TyCtx =
       traits
       |> List.fold
            (fun ctx (theTrait, loc) ->
@@ -1246,7 +1246,7 @@ let private rcsTy (ctx: SynonymCycleCtx) (ty: Ty) =
 let private rcsTys ctx tys = List.fold rcsTy ctx tys
 
 let private synonymCycleCheck (tyCtx: TyCtx) =
-  let ctx : SynonymCycleCtx =
+  let ctx: SynonymCycleCtx =
     { ExpandMetaOrSynonymTy =
         fun tySerial ->
           match findTy tySerial tyCtx with
@@ -1293,7 +1293,7 @@ let private synonymCycleCheck (tyCtx: TyCtx) =
 // -----------------------------------------------
 
 let infer (modules: TProgram, scopeCtx: ScopeCtx, errors) : TProgram * TyCtx =
-  let ctx : TyCtx =
+  let ctx: TyCtx =
     { Serial = scopeCtx.Serial
       Vars = scopeCtx.Vars
       Funs = scopeCtx.Funs
