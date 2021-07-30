@@ -34,6 +34,48 @@ module rec ExtIter =
     nextFun, box start
 
   // ---------------------------------------------
+  // Transformer
+  // ---------------------------------------------
+
+  /// Extended `scan`.
+  let private scanEx (f: 'S -> 'T -> Iter<'U> * 'S) (state: 'S) (xs: Iter<'T>) : Iter<'U> =
+    let innerNextFun, innerState = xs
+
+    let pack (subIterOpt: Iter<'U> option) (innerState: obj) (state: 'S) = box (subIterOpt, innerState, state)
+    let unpack (outerState: obj) : Iter<'U> option * obj * 'S = unbox outerState
+
+    let rec scanExLoop
+      (ysOpt: Iter<'U> option)
+      (innerState: obj)
+      (state: 'S)
+      : ('U * (Iter<'U> option * obj * 'S)) option =
+      match ysOpt with
+      | Some ys ->
+        match next ys with
+        | None -> scanExLoop None innerState state
+        | Some (y, ys) -> Some(y, (Some ys, innerState, state))
+
+      | None ->
+        match innerNextFun innerState with
+        | None -> None
+
+        | Some (x, innerState) ->
+          let ys, state = f state x
+          scanExLoop (Some ys) innerState state
+
+    let nextFun outerState : ('U * obj) option =
+      let ysOpt, innerState, state = unpack outerState
+
+      match scanExLoop ysOpt innerState state with
+      | None -> None
+      | Some (y, (ysOpt, innerState, state)) -> Some(y, pack ysOpt innerState state)
+
+    nextFun, pack None innerState state
+
+  let map (f: 'T -> 'U) (xs: Iter<'T>) : Iter<'U> =
+    scanEx (fun () (x: 'T) -> singleton (f x), ()) () xs
+
+  // ---------------------------------------------
   // Consumer
   // ---------------------------------------------
 

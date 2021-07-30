@@ -3,9 +3,15 @@ module rec LibNurseryTests.ExtIterTests
 module S = MiloneStd.StdString
 open LibNursery.ExtIter
 
-let private testNext () =
-  let bang () = exit 1
+let private bang () = exit 1
 
+/// Generates `i`: `0 <= i < n`.
+let private gen (n: int) = ExtIter.range 0 n
+
+let private cat (xs: Iter<int>) : int =
+  ExtIter.fold (fun n x -> n * 10 + x) 0 xs
+
+let private testNext () =
   let xs: Iter<int> = ExtIter.range 1 4
   let xs1 = xs
 
@@ -60,6 +66,18 @@ let private testSingleton () =
     | None -> ()
     | Some _ -> assert false
 
+let private testMap () =
+  assert (gen 0
+          |> ExtIter.map (fun _ -> bang (assert false))
+          |> cat = 0)
+
+  assert (gen 3 |> ExtIter.map (fun x -> x + 1) |> cat = 123)
+
+  assert (gen 3
+          |> ExtIter.map (fun x -> x * 2)
+          |> ExtIter.map (fun x -> x + 1)
+          |> cat = 135)
+
 let private testIsEmpty () =
   assert (ExtIter.range 0 0 |> ExtIter.isEmpty)
   assert (ExtIter.range 0 1 |> ExtIter.isEmpty |> not)
@@ -100,6 +118,7 @@ let private testToList () =
 let testExtIterModule () =
   testNext ()
   testSingleton ()
+  testMap ()
   testIsEmpty ()
   testFold ()
   testOfList ()
