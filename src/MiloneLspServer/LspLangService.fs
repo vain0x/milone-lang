@@ -437,3 +437,82 @@ let references rootUriOpt uri pos (includeDecl: bool) =
     | ex ->
       eprintfn "references failed: %A" ex
       []
+
+[<RequireQualifiedAccess; NoEquality; NoComparison>]
+type FormattingResult = { Edits: (Range * string) list }
+
+// FIXME: compute diff
+let private formattingResultOfDiff _prev next : FormattingResult =
+  { Edits = [ ((0, 0), (1100100100, 0)), next ] }
+
+let formatting (uri: Uri) : FormattingResult option =
+  match uriToFilePath uri with
+  | Some filePath ->
+    let dir = Path.GetDirectoryName(filePath)
+
+    let temp =
+      let basename =
+        Path.GetFileNameWithoutExtension(filePath)
+
+      let suffix = Guid.NewGuid().ToString()
+
+      // Create temporary file alongside the file for .editorconfig.
+      Path.Combine(dir, sprintf "%s_%s.ignored.fs" basename suffix)
+
+    let textOpt =
+      LspDocCache.findDoc uri
+      |> Option.map (fun data -> data.Text)
+
+    try
+      try
+        let text =
+          match textOpt with
+          | Some text ->
+            File.WriteAllText(temp, text)
+            text
+
+          | None ->
+            File.Copy(filePath, temp)
+            File.ReadAllText(filePath)
+
+        eprintfn "running dotnet fantomas %s" temp
+
+        use proc =
+          // When the server is executed as VSCode extension,
+          // some environment variables are not inherited.
+
+          let homeDir =
+            Environment.GetFolderPath(Environment.SpecialFolder.UserProfile)
+
+          let startInfo = Diagnostics.ProcessStartInfo()
+          startInfo.FileName <- "/usr/bin/dotnet"
+          startInfo.ArgumentList.Add("fantomas")
+          startInfo.ArgumentList.Add(temp)
+          startInfo.WorkingDirectory <- dir
+          startInfo.EnvironmentVariables.Add("DOTNET_CLI_HOME", homeDir)
+          startInfo.EnvironmentVariables.Add("PATH", "/usr/bin")
+          startInfo.RedirectStandardOutput <- true
+          Diagnostics.Process.Start(startInfo)
+
+        let exited = proc.WaitForExit(30 * 1000)
+
+        if not exited then
+          proc.Kill(entireProcessTree = true)
+          None
+        else
+          let output = proc.StandardOutput.ReadToEnd()
+          eprintfn "fantomas output: >>>\n%s<<<" output
+
+          let newText = File.ReadAllText(temp)
+          formattingResultOfDiff text newText |> Some
+      with
+      | err ->
+        eprintfn "warn: failed fantomas: %O" err
+        None
+    finally
+      try
+        File.Delete(temp)
+      with
+      | err -> eprintfn "warn: failed deleting temporary file '%s': %O" temp err
+
+  | None -> None

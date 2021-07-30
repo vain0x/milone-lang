@@ -131,6 +131,7 @@ let private createInitializeResult () =
           },
           "definitionProvider": true,
           "documentHighlightProvider": true,
+          "documentFormattingProvider": true,
           "hoverProvider": true,
           "referencesProvider": true,
           "renameProvider": false
@@ -140,6 +141,12 @@ let private createInitializeResult () =
           "version": "0.1.0"
       }
     }"""
+
+let private getUriParam jsonValue : Uri =
+  jsonValue
+  |> jFind3 "params" "textDocument" "uri"
+  |> jToString
+  |> Uri
 
 [<RequireQualifiedAccess; NoEquality; NoComparison>]
 type private DidOpenParam =
@@ -268,6 +275,7 @@ type private LspIncome =
   | DefinitionRequest of MsgId * DocumentPositionParam
   | ReferencesRequest of MsgId * ReferencesParam
   | DocumentHighlightRequest of MsgId * DocumentPositionParam
+  | FormattingRequest of MsgId * Uri
   | HoverRequest of MsgId * DocumentPositionParam
 
   // Others.
@@ -297,6 +305,7 @@ let private parseIncome (jsonValue: JsonValue) : LspIncome =
   | "textDocument/definition" -> DefinitionRequest(getMsgId (), parseDocumentPositionParam jsonValue)
   | "textDocument/references" -> ReferencesRequest(getMsgId (), parseReferencesParam jsonValue)
   | "textDocument/documentHighlight" -> DocumentHighlightRequest(getMsgId (), parseDocumentPositionParam jsonValue)
+  | "textDocument/formatting" -> FormattingRequest(getMsgId (), getUriParam jsonValue)
   | "textDocument/hover" -> HoverRequest(getMsgId (), parseDocumentPositionParam jsonValue)
 
   | "$/cancelRequest" -> CancelRequestNotification(jsonValue |> jFind2 "params" "id")
@@ -411,6 +420,24 @@ let private processNext () : LspIncome -> ProcessResult =
 
         JArray [ yield! toHighlights 2 reads
                  yield! toHighlights 3 writes ]
+
+      jsonRpcWriteWithResult msgId result
+      Continue
+
+    | FormattingRequest (msgId, uri) ->
+      // https://microsoft.github.io/language-server-protocol/specifications/specification-current/#textDocument_formatting
+
+      let result =
+        match LspLangService.formatting uri with
+        | None -> JNull
+        | Some result ->
+          result.Edits
+          |> List.map
+               (fun (range, text) ->
+                 // TextEdit
+                 jOfObj [ "range", jOfRange range
+                          "newText", JString text ])
+          |> JArray
 
       jsonRpcWriteWithResult msgId result
       Continue
