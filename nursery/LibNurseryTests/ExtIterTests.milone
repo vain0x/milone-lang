@@ -48,6 +48,18 @@ let private testNext () =
 
   | Some (x, xs) -> assert (x = 1)
 
+let private testSingleton () =
+  let xs = ExtIter.singleton "foo"
+
+  match ExtIter.next xs with
+  | None -> assert false
+  | Some (x, xs) ->
+    assert (x = "foo")
+
+    match ExtIter.next xs with
+    | None -> ()
+    | Some _ -> assert false
+
 let private testFold () =
   let xs: Iter<int> = ExtIter.range 1 4
 
@@ -57,7 +69,8 @@ let private testFold () =
   assert (n = 123)
 
 let private testOfList () =
-  let f iter = ExtIter.fold (fun n x -> n * 10 + x) 0 iter
+  let f iter =
+    ExtIter.fold (fun n x -> n * 10 + x) 0 iter
 
   let xs: Iter<int> = ExtIter.ofList [ 2; 3; 5 ]
   assert (f xs = 235)
@@ -65,18 +78,23 @@ let private testOfList () =
   let ys = ExtIter.ofList [ 2 ]
   assert (f ys = 2)
 
-  let zs = ExtIter.ofList [ ]
+  let zs = ExtIter.ofList []
   assert (f zs = 0)
 
 let private testToList () =
-  let xs = ExtIter.ofList [ 2; 3; 5 ] |> ExtIter.toList
+  let xs =
+    ExtIter.ofList [ 2; 3; 5 ] |> ExtIter.toList
+
   assert (List.fold (fun n x -> n * 10 + x) 0 xs = 235)
 
-  let ys = ExtIter.ofList [ "x"; "y"; "z" ] |> ExtIter.toList
+  let ys =
+    ExtIter.ofList [ "x"; "y"; "z" ] |> ExtIter.toList
+
   assert (List.fold (fun (x: string) y -> x + y) "" ys = "xyz")
 
 let testExtIterModule () =
   testNext ()
+  testSingleton ()
   testFold ()
   testOfList ()
   testToList ()
