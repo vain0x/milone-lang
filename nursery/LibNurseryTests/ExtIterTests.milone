@@ -3,10 +3,10 @@ module rec LibNurseryTests.ExtIterTests
 module S = MiloneStd.StdString
 open LibNursery.ExtIter
 
-let private bang () = exit 1
+let testNext () =
+  let private bang () = exit 1
 
-let testExtIterModule () =
-  let xs : Iter<int> = ExtIter.range 1 4
+  let xs: Iter<int> = ExtIter.range 1 4
   let xs1 = xs
 
   let xs =
@@ -46,5 +46,16 @@ let testExtIterModule () =
   match ExtIter.next xs1 with
   | None -> bang (assert false)
 
-  | Some (x, xs) ->
-    assert (x = 1)
+  | Some (x, xs) -> assert (x = 1)
+
+let testFold () =
+  let xs: Iter<int> = ExtIter.range 1 4
+
+  let n =
+    xs |> ExtIter.fold (fun n x -> n * 10 + x) 0
+
+  assert (n = 123)
+
+let testExtIterModule () =
+  testNext ()
+  testFold ()

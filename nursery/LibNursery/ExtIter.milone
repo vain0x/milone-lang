@@ -29,3 +29,32 @@ module rec ExtIter =
         None
 
     nextFun, box start
+
+  // ---------------------------------------------
+  // Consumer
+  // ---------------------------------------------
+
+  // wants Result<'S, 'A>, use 'S option * 'A option instead
+  /// Runs an iterator updating a state.
+  ///
+  /// `folder state item` computes the next state `Ok s`
+  /// or returns `Err a` to break from the iteration.
+  let private foldEx (folder: 'S -> 'T -> 'S option * 'A option) (complete: 'S -> 'A) (state: 'S) (xs: Iter<'T>) : 'A =
+    let nextFun, iterState = xs
+
+    let rec foldExLoop (state: 'S) (iterState: obj) : 'A =
+      match nextFun iterState with
+      | None -> complete state
+
+      | Some (item, iterState) ->
+        match folder state item with
+        | Some state, None -> foldExLoop state iterState
+        | None, Some result -> result
+        | _ ->
+          assert false
+          exit 1
+
+    foldExLoop state iterState
+
+  let fold (folder: 'S -> 'T -> 'S) (state: 'S) (xs: Iter<'T>) : 'S =
+    foldEx (fun state item -> Some (folder state item), None) id state xs
