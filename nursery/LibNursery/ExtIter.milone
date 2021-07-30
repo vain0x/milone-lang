@@ -1,0 +1,31 @@
+module rec LibNursery.ExtIter
+
+type private NextFun<'S, 'T> = 'S -> ('T * 'S) option
+
+// obj: state of iterator
+type Iter<'T> = NextFun<obj, 'T> * obj
+
+module rec ExtIter =
+  let next (xs: Iter<'T>) : ('T * Iter<'T>) option =
+    let nextFun, state = xs
+
+    match nextFun state with
+    | None -> None
+    | Some (item, state) ->
+      let xs: Iter<'T> = nextFun, state
+      Some(item, xs)
+
+  // ---------------------------------------------
+  // Constructor
+  // ---------------------------------------------
+
+  let range (start: int) (endIndex: int) : Iter<int> =
+    let nextFun state =
+      let i = unbox state
+
+      if i < endIndex then
+        Some(i, box (i + 1))
+      else
+        None
+
+    nextFun, box start

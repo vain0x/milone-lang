@@ -1,0 +1,50 @@
+module rec LibNurseryTests.ExtIterTests
+
+module S = MiloneStd.StdString
+open LibNursery.ExtIter
+
+let private bang () = exit 1
+
+let testExtIterModule () =
+  let xs : Iter<int> = ExtIter.range 1 4
+  let xs1 = xs
+
+  let xs =
+    match ExtIter.next xs with
+    | None -> bang (assert false)
+
+    | Some (x, xs) ->
+      assert (x = 1)
+      xs
+
+  let xs =
+    match ExtIter.next xs with
+    | None -> bang (assert false)
+
+    | Some (x, xs) ->
+      assert (x = 2)
+      xs
+
+  let xs =
+    match ExtIter.next xs with
+    | None -> bang (assert false)
+
+    | Some (x, xs) ->
+      assert (x = 3)
+      xs
+
+  match ExtIter.next xs with
+  | None -> ()
+  | Some _ -> bang (assert false)
+
+  // fused
+  match ExtIter.next xs with
+  | None -> ()
+  | Some _ -> bang (assert false)
+
+  // it's stateless
+  match ExtIter.next xs1 with
+  | None -> bang (assert false)
+
+  | Some (x, xs) ->
+    assert (x = 1)
