@@ -13,7 +13,7 @@ let memAlloc (len: int) (size: int) : voidptr =
 
 let sortIntArray (array: nativeptr<int>) (len: int) : unit =
   let intCompare (l: obj) (r: obj) =
-    compare (unbox (__nativeCast l): int) (unbox (__nativeCast r): int)
+    compare (__ptrRead (__nativeCast l) 0: int) (__ptrRead (__nativeCast r) 0: int)
 
   __nativeFun (
     "qsort",
