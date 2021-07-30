@@ -101,6 +101,16 @@ let private testCollect () =
 
   assert (n = 122333)
 
+let private testScan () =
+  let s =
+    gen 4
+    |> ExtIter.scan (fun n x -> n * 10 + x) 0
+    |> ExtIter.map string
+    |> ExtIter.toList
+    |> S.concat ","
+
+  assert (s = "0,1,12,123")
+
 let private testIsEmpty () =
   assert (gen 0 |> ExtIter.isEmpty)
   assert (gen 1 |> ExtIter.isEmpty |> not)
@@ -142,6 +152,7 @@ let testExtIterModule () =
   testMap ()
   testChoose ()
   testCollect ()
+  testScan ()
   testIsEmpty ()
   testFold ()
   testOfOption ()

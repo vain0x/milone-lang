@@ -83,6 +83,14 @@ module rec ExtIter =
   let collect (f: 'T -> Iter<'U>) (xs: Iter<'T>) : Iter<'U> =
     scanEx (fun () (x: 'T) -> f x, ()) () xs
 
+  let scan (folder: 'S -> 'T -> 'S) (state: 'S) (xs: Iter<'T>) : Iter<'S> =
+    scanEx
+      (fun state x ->
+        let state = folder state x
+        singleton state, state)
+      state
+      xs
+
   // ---------------------------------------------
   // Consumer
   // ---------------------------------------------
