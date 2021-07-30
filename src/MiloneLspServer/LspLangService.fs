@@ -475,8 +475,6 @@ let formatting (uri: Uri) : FormattingResult option =
             File.Copy(filePath, temp)
             File.ReadAllText(filePath)
 
-        eprintfn "running dotnet fantomas %s" temp
-
         use proc =
           // When the server is executed as VSCode extension,
           // some environment variables are not inherited.
@@ -500,9 +498,6 @@ let formatting (uri: Uri) : FormattingResult option =
           proc.Kill(entireProcessTree = true)
           None
         else
-          let output = proc.StandardOutput.ReadToEnd()
-          eprintfn "fantomas output: >>>\n%s<<<" output
-
           let newText = File.ReadAllText(temp)
           formattingResultOfDiff text newText |> Some
       with
