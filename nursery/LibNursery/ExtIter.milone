@@ -71,3 +71,6 @@ module rec ExtIter =
       | x :: xs -> Some(x, box xs)
 
     nextFun, box xs
+
+  let toList (xs: Iter<'T>) : 'T list =
+    xs |> fold (fun xs x -> x :: xs) [] |> List.rev

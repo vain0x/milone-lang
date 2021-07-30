@@ -68,7 +68,15 @@ let private testOfList () =
   let zs = ExtIter.ofList [ ]
   assert (f zs = 0)
 
+let private testToList () =
+  let xs = ExtIter.ofList [ 2; 3; 5 ] |> ExtIter.toList
+  assert (List.fold (fun n x -> n * 10 + x) 0 xs = 235)
+
+  let ys = ExtIter.ofList [ "x"; "y"; "z" ] |> ExtIter.toList
+  assert (List.fold (fun (x: string) y -> x + y) "" ys = "xyz")
+
 let testExtIterModule () =
   testNext ()
   testFold ()
   testOfList ()
+  testToList ()
