@@ -85,6 +85,14 @@ let private testMap () =
           |> ExtIter.map (fun x -> x + 1)
           |> cat = 135)
 
+let private testChoose () =
+  let n =
+    gen 6
+    |> ExtIter.choose (fun n -> if n % 2 = 0 then Some(n * 2) else None)
+    |> cat
+
+  assert (n = 48)
+
 let private testCollect () =
   let n =
     gen 4
@@ -132,6 +140,7 @@ let testExtIterModule () =
   testSingleton ()
   testReplicate ()
   testMap ()
+  testChoose ()
   testCollect ()
   testIsEmpty ()
   testFold ()
