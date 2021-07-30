@@ -60,6 +60,11 @@ let private testSingleton () =
     | None -> ()
     | Some _ -> assert false
 
+let private testIsEmpty () =
+  assert (ExtIter.range 0 0 |> ExtIter.isEmpty)
+  assert (ExtIter.range 0 1 |> ExtIter.isEmpty |> not)
+  assert (ExtIter.range 0 2 |> ExtIter.isEmpty |> not)
+
 let private testFold () =
   let xs: Iter<int> = ExtIter.range 1 4
 
@@ -95,6 +100,7 @@ let private testToList () =
 let testExtIterModule () =
   testNext ()
   testSingleton ()
+  testIsEmpty ()
   testFold ()
   testOfList ()
   testToList ()

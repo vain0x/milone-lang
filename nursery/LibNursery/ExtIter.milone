@@ -37,6 +37,8 @@ module rec ExtIter =
   // Consumer
   // ---------------------------------------------
 
+  let isEmpty (xs: Iter<_>) : bool = Option.isNone (next xs)
+
   // wants Result<'S, 'A>, use 'S option * 'A option instead
   /// Runs an iterator updating a state.
   ///
