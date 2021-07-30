@@ -430,25 +430,39 @@ let private parsePatParenBody basePos (tokens, errors) =
   let tokens, errors = (tokens, errors) |> expectRightParen
   pat, tokens, errors
 
+// same as doParseStmts
+let private doParseListPatItems basePos (tokens, errors) =
+  let rec go i last acc alignPos (tokens, errors) =
+    assert (i < 100100100)
+
+    match tokens with
+    | (SemiToken, semiPos) :: tokens when posInside alignPos semiPos ->
+      let pat, tokens, errors = parsePat alignPos (tokens, errors)
+      go (i + 1) pat (last :: acc) alignPos (tokens, errors)
+
+    | _ when
+      posIsSameColumn alignPos (nextPos tokens)
+      && leadsPat tokens
+      ->
+      let pat, tokens, errors = parsePat alignPos (tokens, errors)
+      go (i + 1) pat (last :: acc) alignPos (tokens, errors)
+
+    | _ -> List.rev (last :: acc), tokens, errors
+
+  let alignPos = nextPos tokens
+
+  if posInside basePos alignPos && leadsPat tokens then
+    let first, tokens, errors = parsePat alignPos (tokens, errors)
+    go 0 first [] alignPos (tokens, errors)
+  else
+    [], tokens, errors
+
 /// `pat ( ';' pat )* ']'`
 let private parsePatListBody basePos bracketPos (tokens, errors) =
-  let rec go patAcc (tokens, errors) =
-    match tokens with
-    | (RightBracketToken, _) :: tokens -> List.rev patAcc, tokens, errors
+  let itemPats, tokens, errors =
+    doParseListPatItems basePos (tokens, errors)
 
-    // FIXME: Semicolon is required for now.
-    | (SemiToken, _) :: tokens ->
-      let pat, tokens, errors = parsePat basePos (tokens, errors)
-      go (pat :: patAcc) (tokens, errors)
-
-    | _ ->
-      let errors =
-        parseNewError "Expected ';' or ']'" (tokens, errors)
-
-      List.rev patAcc, tokens, errors
-
-  let itemPat, tokens, errors = parsePat basePos (tokens, errors)
-  let itemPats, tokens, errors = go [ itemPat ] (tokens, errors)
+  let tokens, errors = expectRightBracket (tokens, errors)
   AListPat(itemPats, bracketPos), tokens, errors
 
 let private parsePatAtom basePos (tokens, errors) =
