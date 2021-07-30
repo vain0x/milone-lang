@@ -94,30 +94,27 @@ let private testCollect () =
   assert (n = 122333)
 
 let private testIsEmpty () =
-  assert (ExtIter.range 0 0 |> ExtIter.isEmpty)
-  assert (ExtIter.range 0 1 |> ExtIter.isEmpty |> not)
-  assert (ExtIter.range 0 2 |> ExtIter.isEmpty |> not)
+  assert (gen 0 |> ExtIter.isEmpty)
+  assert (gen 1 |> ExtIter.isEmpty |> not)
+  assert (gen 2 |> ExtIter.isEmpty |> not)
 
 let private testFold () =
   let xs: Iter<int> = ExtIter.range 1 4
+  assert (cat xs = 123)
 
-  let n =
-    xs |> ExtIter.fold (fun n x -> n * 10 + x) 0
-
-  assert (n = 123)
+let private testOfOption () =
+  assert (cat (ExtIter.ofOption None) = 0)
+  assert (cat (ExtIter.ofOption (Some 2)) = 2)
 
 let private testOfList () =
-  let f iter =
-    ExtIter.fold (fun n x -> n * 10 + x) 0 iter
-
   let xs: Iter<int> = ExtIter.ofList [ 2; 3; 5 ]
-  assert (f xs = 235)
+  assert (cat xs = 235)
 
   let ys = ExtIter.ofList [ 2 ]
-  assert (f ys = 2)
+  assert (cat ys = 2)
 
   let zs = ExtIter.ofList []
-  assert (f zs = 0)
+  assert (cat zs = 0)
 
 let private testToList () =
   let xs =
@@ -138,5 +135,6 @@ let testExtIterModule () =
   testCollect ()
   testIsEmpty ()
   testFold ()
+  testOfOption ()
   testOfList ()
   testToList ()

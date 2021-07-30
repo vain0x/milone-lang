@@ -112,6 +112,15 @@ module rec ExtIter =
     foldEx (fun state item -> Some(folder state item), None) id state xs
 
   // ---------------------------------------------
+  // Option
+  // ---------------------------------------------
+
+  let ofOption (opt: 'T option) : Iter<'T> =
+    match opt with
+    | Some item -> singleton item
+    | None -> ofList []
+
+  // ---------------------------------------------
   // List
   // ---------------------------------------------
 
