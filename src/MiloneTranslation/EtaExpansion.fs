@@ -242,39 +242,56 @@ let private createRestArgsAndPats callee arity argLen callLoc ctx =
   let restTy = callee |> exprToTy |> tyAppliedBy argLen
   go (arity - argLen) restTy ctx
 
-let private createEnvPatAndTy items callLoc ctx =
-  let rec go items ctx =
-    match items with
+/// args: given args to be packed as env and set to fun obj
+let private createEnvPatAndTy args callLoc ctx =
+  let rec go args ctx =
+    match args with
     | [] -> [], [], [], ctx
 
-    | item :: items ->
-      let itemTy, itemLoc = exprExtract item
-      let itemExpr, itemSerial, ctx = freshVar "arg" itemTy itemLoc ctx
+    | arg :: args ->
+      let argTy, argLoc = exprExtract arg
+      let itemExpr, varSerial, ctx = freshVar "arg" argTy argLoc ctx
 
       let itemPat =
-        HVarPat(PrivateVis, itemSerial, itemTy, itemLoc)
+        HVarPat(PrivateVis, varSerial, argTy, argLoc)
 
-      let itemPats, argTys, argExprs, ctx = go items ctx
-      itemPat :: itemPats, itemTy :: argTys, itemExpr :: argExprs, ctx
+      let itemPats, itemTys, itemExprs, ctx = go args ctx
+      itemPat :: itemPats, argTy :: itemTys, itemExpr :: itemExprs, ctx
 
-  let itemPats, itemTys, itemExprs, ctx = go items ctx
-  let envTy = tyTuple itemTys
-  let envPat = hpTuple itemPats callLoc
-  envPat, envTy, itemExprs, ctx
+  // itemExprs: each is var expr bound to an item of unpacked env tuple.
+  let itemPats, itemTys, itemExprs, ctx = go args ctx
 
-let private createEnvDeconstructLetExpr envPat envTy envArgExpr next callLoc =
-  let unboxPrim =
-    HPrimExpr(HPrim.Unbox, tyFun tyObj envTy, callLoc)
+  // envPat: pat to unpack env arg (given to underlying function).
+  // envTy: type of env pat
+  // envExpr: expr to be boxed and set to fun object
+  let envPat, envTy, envExpr =
+    match itemPats, itemTys, args with
+    | [ itemPat ], [ itemTy ], [ arg ] -> itemPat, itemTy, arg
 
-  let unboxExpr =
+    | pats, tys, _ ->
+      let envPat = hpTuple pats callLoc
+      let envTy = tyTuple tys
+      let envExpr = hxTuple args callLoc
+      envPat, envTy, envExpr
+
+  let boxedEnvExpr =
+    let boxPrim =
+      HPrimExpr(HPrim.Box, tyFun envTy tyObj, callLoc)
+
+    hxCallProc boxPrim [ envExpr ] tyObj callLoc
+
+  let unboxedEnvExpr envArgExpr = // envArgExpr: expr of env arg, given to underlying function
+    let unboxPrim =
+      HPrimExpr(HPrim.Unbox, tyFun tyObj envTy, callLoc)
+
     hxCallProc unboxPrim [ envArgExpr ] envTy callLoc
 
-  HLetValExpr(envPat, unboxExpr, next, exprToTy next, callLoc)
+  envPat, envTy, itemExprs, boxedEnvExpr, unboxedEnvExpr, ctx
 
 /// Creates a let expression to define an underlying function.
 /// It takes an environment and rest parameters
 /// and calls the partial-applied callee with full arguments.
-let private createUnderlyingFunDef funTy arity envPat envTy forwardCall restArgPats callLoc ctx =
+let private createUnderlyingFunDef funTy arity envPat envTy forwardCall restArgPats unboxedEnvExpr callLoc ctx =
   let envArgExpr, envArgSerial, ctx = freshVar "env" tyObj callLoc ctx
 
   let envArgPat =
@@ -288,7 +305,8 @@ let private createUnderlyingFunDef funTy arity envPat envTy forwardCall restArgP
   let argPats = envArgPat :: restArgPats
 
   let body =
-    createEnvDeconstructLetExpr envPat envTy envArgExpr forwardCall callLoc
+    let next = forwardCall
+    HLetValExpr(envPat, unboxedEnvExpr envArgExpr, next, exprToTy next, callLoc)
 
   let funLet next =
     HLetFunExpr(funSerial, NotRec, PrivateVis, argPats, body, next, exprToTy next, callLoc)
@@ -298,36 +316,25 @@ let private createUnderlyingFunDef funTy arity envPat envTy forwardCall restArgP
 
   funLet, funExpr, ctx
 
-let private createEnvBoxExpr args envTy callLoc =
-  let tuple = hxTuple args callLoc
-
-  let boxPrim =
-    HPrimExpr(HPrim.Box, tyFun envTy tyObj, callLoc)
-
-  hxCallProc boxPrim [ tuple ] tyObj callLoc
-
 /// In the case the callee is a function.
 let private resolvePartialAppFun callee arity args argLen callLoc ctx =
   let funTy = exprToTy callee
   let resultTy = tyAppliedBy arity funTy
-  let envItems = args
 
   let restArgPats, restArgs, ctx =
     createRestArgsAndPats callee arity argLen callLoc ctx
 
-  let envPat, envTy, envExprs, ctx = createEnvPatAndTy envItems callLoc ctx
-  let forwardArgs = List.append envExprs restArgs
+  let envPat, envTy, itemExprs, boxedEnvExpr, unboxedEnvExpr, ctx = createEnvPatAndTy args callLoc ctx
 
   let forwardExpr =
+    let forwardArgs = List.append itemExprs restArgs
     hxCallProc callee forwardArgs resultTy callLoc
 
   let funLet, funExpr, ctx =
-    createUnderlyingFunDef funTy arity envPat envTy forwardExpr restArgPats callLoc ctx
-
-  let envBoxExpr = createEnvBoxExpr envItems envTy callLoc
+    createUnderlyingFunDef funTy arity envPat envTy forwardExpr restArgPats unboxedEnvExpr callLoc ctx
 
   let funObjExpr =
-    HNodeExpr(HClosureEN, [ funExpr; envBoxExpr ], tyAppliedBy argLen funTy, callLoc)
+    HNodeExpr(HClosureEN, [ funExpr; boxedEnvExpr ], tyAppliedBy argLen funTy, callLoc)
 
   let expr = funLet funObjExpr
   expr, ctx
@@ -350,15 +357,15 @@ let private resolvePartialAppObj callee arity args argLen callLoc ctx =
 
     calleeExpr, calleeLet, ctx
 
-  let envItems = calleeExpr :: args
-
   let restArgPats, restArgs, ctx =
     createRestArgsAndPats callee arity argLen callLoc ctx
 
-  let envPat, envTy, envExprs, ctx = createEnvPatAndTy envItems callLoc ctx
+  // callee itself is also a kind of hidden arg to be packed into env obj.
+  let envPat, envTy, itemExprs, boxedEnvExpr, unboxedEnvExpr, ctx =
+    createEnvPatAndTy (calleeExpr :: args) callLoc ctx
 
   let calleeExpr, forwardArgs =
-    match List.append envExprs restArgs with
+    match List.append itemExprs restArgs with
     | calleeExpr :: forwardArgs -> calleeExpr, forwardArgs
     | _ -> unreachable ()
 
@@ -366,12 +373,10 @@ let private resolvePartialAppObj callee arity args argLen callLoc ctx =
     hxCallClosure calleeExpr forwardArgs resultTy callLoc
 
   let funLet, funExpr, ctx =
-    createUnderlyingFunDef funTy arity envPat envTy forwardExpr restArgPats callLoc ctx
-
-  let envBoxExpr = createEnvBoxExpr envItems envTy callLoc
+    createUnderlyingFunDef funTy arity envPat envTy forwardExpr restArgPats unboxedEnvExpr callLoc ctx
 
   let closureExpr =
-    HNodeExpr(HClosureEN, [ funExpr; envBoxExpr ], tyAppliedBy argLen funTy, callLoc)
+    HNodeExpr(HClosureEN, [ funExpr; boxedEnvExpr ], tyAppliedBy argLen funTy, callLoc)
 
   let expr = calleeLet (funLet closureExpr)
   expr, ctx

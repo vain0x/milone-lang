@@ -6,8 +6,6 @@ struct IntStringUnitFun2IntTuple2;
 
 struct StringUnitFun1;
 
-struct StringTuple1;
-
 char fun_(void const* env_, struct String arg_);
 
 struct StringUnitFun1 fun_with_fun_arg_Program_bindInt(struct IntStringUnitFun2 f_, int x_);
@@ -35,10 +33,6 @@ struct IntStringUnitFun2IntTuple2 {
 struct StringUnitFun1 {
     char(*fun)(void const*, struct String);
     void const* env;
-};
-
-struct StringTuple1 {
-    struct String t0;
 };
 
 char fun_(void const* env_, struct String arg_) {
@@ -92,7 +86,7 @@ if_next_2:;
 }
 
 char fun_2(void const* env_2, int arg_5, struct String arg_6) {
-    struct String arg_7 = (*(((struct StringTuple1 const*)env_2))).t0;
+    struct String arg_7 = (*(((struct String const*)env_2)));
     char call_1 = der_(arg_7, arg_5, arg_6);
     return 0;
 }
@@ -103,9 +97,8 @@ int milone_main() {
     struct StringUnitFun1 print42_ = call_2;
     char app_1 = print42_.fun(print42_.env, (struct String){.str = "The answer", .len = 10});
     struct String d_ = (struct String){.str = "\'", .len = 1};
-    struct StringTuple1 tuple_1 = (struct StringTuple1){.t0 = d_};
-    void const* box_1 = milone_mem_alloc(1, sizeof(struct StringTuple1));
-    (*(((struct StringTuple1*)box_1))) = tuple_1;
+    void const* box_1 = milone_mem_alloc(1, sizeof(struct String));
+    (*(((struct String*)box_1))) = d_;
     struct IntStringUnitFun2 fun_5 = (struct IntStringUnitFun2){.fun = fun_2, .env = box_1};
     struct StringUnitFun1 call_3 = fun_with_fun_arg_Program_bindInt(fun_5, 2);
     struct StringUnitFun1 der2_ = call_3;

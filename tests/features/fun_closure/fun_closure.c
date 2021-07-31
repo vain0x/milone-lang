@@ -1,7 +1,5 @@
 #include "milone.h"
 
-struct IntTuple1;
-
 struct UnitIntFun1;
 
 int sub_(int step_, int x_);
@@ -67,10 +65,6 @@ int fun_closure_Program_f6(char arg_22);
 int fun_closure_Program_f7(char arg_23);
 
 int milone_main();
-
-struct IntTuple1 {
-    int t0;
-};
 
 struct UnitIntFun1 {
     int(*fun)(void const*, char);
@@ -152,16 +146,13 @@ int fun_(int lx_, char arg_8) {
 }
 
 int fun_1(void const* env_, char arg_) {
-    int arg_1 = (*(((struct IntTuple1 const*)env_))).t0;
+    int arg_1 = ((int)((intptr_t)env_));
     int call_7 = fun_(arg_1, 0);
     return call_7;
 }
 
 int lf_(int lx_, char arg_9) {
-    struct IntTuple1 tuple_ = (struct IntTuple1){.t0 = lx_};
-    void const* box_ = milone_mem_alloc(1, sizeof(struct IntTuple1));
-    (*(((struct IntTuple1*)box_))) = tuple_;
-    struct UnitIntFun1 fun_2 = (struct UnitIntFun1){.fun = fun_1, .env = box_};
+    struct UnitIntFun1 fun_2 = (struct UnitIntFun1){.fun = fun_1, .env = ((void const*)((intptr_t)lx_))};
     int app_ = fun_2.fun(fun_2.env, 0);
     return app_;
 }
