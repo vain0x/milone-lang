@@ -9,7 +9,7 @@ then
 fi
 
 CATEGORY=$(dirname "$1")
-NAME=$(basename "$1")
+NAME=$(basename "$1" | sed 's/-/_/g')
 
 if test "$CATEGORY" = "." || test "$NAME" = ""
 then
