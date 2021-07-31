@@ -641,6 +641,8 @@ struct IntList const* listInit_(int len_4, struct IntIntFun1 gen_) {
 }
 
 struct StringStringListTuple2 go_5(struct StringList const* xs_11, int xn_) {
+    struct StringList const* xs_12;
+    struct String x_2;
     struct StringStringListTuple2 match_6;
     if ((!((!(xs_11))))) goto next_60;
     milone_assert((xn_ == 0), 95, 6);
@@ -649,26 +651,26 @@ struct StringStringListTuple2 go_5(struct StringList const* xs_11, int xn_) {
     goto end_match_59;
 next_60:;
     if ((!(xs_11))) goto next_61;
-    struct String x_2 = xs_11->head;
-    struct StringList const* xs_12 = xs_11->tail;
+    x_2 = xs_11->head;
+    xs_12 = xs_11->tail;
     if ((xn_ != 1)) goto next_61;
     struct StringStringListTuple2 tuple_3 = (struct StringStringListTuple2){.t0 = x_2, .t1 = xs_12};
     match_6 = tuple_3;
     goto end_match_59;
 next_61:;
     if ((!(xs_11))) goto next_62;
-    struct String x_3 = xs_11->head;
+    x_2 = xs_11->head;
     if ((!(xs_11->tail))) goto next_62;
     struct String y_1 = xs_11->tail->head;
-    struct StringList const* xs_13 = xs_11->tail->tail;
+    xs_12 = xs_11->tail->tail;
     if ((xn_ != 2)) goto next_62;
-    struct StringStringListTuple2 tuple_4 = (struct StringStringListTuple2){.t0 = str_add(x_3, y_1), .t1 = xs_13};
+    struct StringStringListTuple2 tuple_4 = (struct StringStringListTuple2){.t0 = str_add(x_2, y_1), .t1 = xs_12};
     match_6 = tuple_4;
     goto end_match_59;
 next_62:;
-    struct StringList const* xs_14 = xs_11;
+    xs_12 = xs_11;
     int m_ = (xn_ / 2);
-    struct StringStringListTuple2 call_11 = go_5(xs_14, m_);
+    struct StringStringListTuple2 call_11 = go_5(xs_12, m_);
     struct String l_ = call_11.t0;
     struct StringList const* xs_15 = call_11.t1;
     struct StringStringListTuple2 call_12 = go_5(xs_15, (xn_ - m_));
