@@ -5,8 +5,6 @@
 #error range_as_value_err:9:3 PARSE ERROR: Expected an expression (9:3)
 #error range_as_value_err:10:14 PARSE ERROR: Expected ']' (10:14)
 #error range_as_value_err:10:14 PARSE ERROR: Expected 'with' (10:14)
-#error range_as_value_err:10:14 PARSE ERROR: Expected a pattern (10:14)
-#error range_as_value_err:10:14 PARSE ERROR: Expected '->' (10:14)
 #error range_as_value_err:10:17 PARSE ERROR: Expected an expression (10:17)
 #error range_as_value_err:10:20 PARSE ERROR: Expected an expression (10:20)
 #error range_as_value_err:10:20 PARSE ERROR: Expected eof (10:20)

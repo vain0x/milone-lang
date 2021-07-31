@@ -962,17 +962,17 @@ let private parseMatchArm matchPos armPos (tokens, errors) =
 let private parseMatch matchPos (tokens, errors) =
   let cond, tokens, errors = parseExpr matchPos (tokens, errors)
 
-  let armPos, tokens, errors =
+  let armPos, withTaken, pipeTaken, tokens, errors =
     match tokens with
-    | (WithToken, _) :: (PipeToken, pipePos) :: tokens -> pipePos, tokens, errors
+    | (WithToken, _) :: (PipeToken, pipePos) :: tokens -> pipePos, true, true, tokens, errors
 
-    | (WithToken, withPos) :: tokens -> withPos, tokens, errors
+    | (WithToken, withPos) :: tokens -> withPos, true, false, tokens, errors
 
     | _ ->
       let errors =
         parseNewError "Expected 'with'" (tokens, errors)
 
-      matchPos, tokens, errors
+      matchPos, false, false, tokens, errors
 
   let rec go acc armPos (tokens, errors) =
     let arm, tokens, errors =
@@ -983,7 +983,18 @@ let private parseMatch matchPos (tokens, errors) =
 
     | _ -> List.rev (arm :: acc), tokens, errors
 
-  let arms, tokens, errors = go [] armPos (tokens, errors)
+  let arms, tokens, errors =
+    if not withTaken then
+      [], tokens, errors
+    else if
+      not pipeTaken
+      && not (nextInside matchPos tokens && leadsPat tokens)
+    then
+      // Avoid parsing body if apparently no arms.
+      [], tokens, ("Expected at least one arm.", armPos) :: errors
+    else
+      go [] armPos (tokens, errors)
+
   AMatchExpr(cond, arms, matchPos), tokens, errors
 
 /// `fun-expr = 'fun' pat* '->' expr`
