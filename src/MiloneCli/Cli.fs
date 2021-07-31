@@ -431,24 +431,17 @@ let private lowerExpr (expr: Tir.TExpr) : Hir.HExpr =
   | Tir.TBlockExpr (stmts, last) -> Hir.HBlockExpr(List.map lowerExpr stmts, lowerExpr last)
   | Tir.TLetValExpr (pat, init, next, ty, loc) ->
     Hir.HLetValExpr(lowerPat pat, lowerExpr init, lowerExpr next, lowerTy ty, loc)
-  | Tir.TLetFunExpr _ ->
-    invoke
-      (fun () ->
-        let funSerial, isRec, vis, argPats, body, next, ty, loc =
-          match expr with
-          | Tir.TLetFunExpr (t0, t1, t2, t3, t4, t5, t6, t7) -> t0, t1, t2, t3, t4, t5, t6, t7
-          | _ -> unreachable ()
-
-        Hir.HLetFunExpr(
-          lowerFunSerial funSerial,
-          isRec,
-          vis,
-          List.map lowerPat argPats,
-          lowerExpr body,
-          lowerExpr next,
-          lowerTy ty,
-          loc
-        ))
+  | Tir.TLetFunExpr (funSerial, isRec, vis, argPats, body, next, ty, loc) ->
+    Hir.HLetFunExpr(
+      lowerFunSerial funSerial,
+      isRec,
+      vis,
+      List.map lowerPat argPats,
+      lowerExpr body,
+      lowerExpr next,
+      lowerTy ty,
+      loc
+    )
 
   | Tir.TTyDeclExpr _
   | Tir.TOpenExpr _

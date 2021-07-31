@@ -119,33 +119,29 @@ let private acExpr (expr, ctx: ArityCheckCtx) : ArityEx * ArityCheckCtx =
   | TFunExpr (funSerial, _, _) -> ctx.GetFunArity funSerial, ctx
 
   | TRecordExpr (baseOpt, fields, _, _) ->
-    invoke
-      (fun () ->
-        let ctx =
-          match baseOpt with
-          | Some baseExpr -> acExpr (baseExpr, ctx) |> snd
-          | None -> ctx
+    let ctx =
+      match baseOpt with
+      | Some baseExpr -> acExpr (baseExpr, ctx) |> snd
+      | None -> ctx
 
-        let ctx =
-          fields
-          |> List.fold (fun ctx (_, init, _) -> acExprChecked init ctx) ctx
+    let ctx =
+      fields
+      |> List.fold (fun ctx (_, init, _) -> acExprChecked init ctx) ctx
 
-        UnitAx, ctx)
+    UnitAx, ctx
 
   | TMatchExpr (cond, arms, ty, _) ->
-    invoke
-      (fun () ->
-        let _, ctx = acExpr (cond, ctx)
+    let _, ctx = acExpr (cond, ctx)
 
-        let ctx =
-          arms
-          |> List.fold
-               (fun ctx (_, guard, body) ->
-                 let _, ctx = acExpr (guard, ctx)
-                 acExprChecked body ctx)
-               ctx
+    let ctx =
+      arms
+      |> List.fold
+           (fun ctx (_, guard, body) ->
+             let _, ctx = acExpr (guard, ctx)
+             acExprChecked body ctx)
+           ctx
 
-        tyToArityEx ty, ctx)
+    tyToArityEx ty, ctx
 
   | TNavExpr (l, _, ty, _) ->
     let _, ctx = acExpr (l, ctx)

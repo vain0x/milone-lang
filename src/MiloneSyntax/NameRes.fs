@@ -992,17 +992,15 @@ let private collectDecls moduleSerialOpt (expr, ctx) =
       TTyDeclExpr(serial, vis, tyArgs, tyDecl, loc), ctx
 
     | TOpenExpr (path, loc) ->
-      invoke
-        (fun () ->
-          let ctx =
-            let moduleSerials = ctx |> resolveModulePath path
+      let ctx =
+        let moduleSerials = ctx |> resolveModulePath path
 
-            if List.isEmpty moduleSerials then
-              ctx |> addLog ModulePathNotFoundError loc
-            else
-              ctx |> openModules moduleSerials
+        if List.isEmpty moduleSerials then
+          ctx |> addLog ModulePathNotFoundError loc
+        else
+          ctx |> openModules moduleSerials
 
-          expr, ctx)
+      expr, ctx
 
     | TModuleExpr (serial, body, loc) ->
       let name =
@@ -1446,194 +1444,174 @@ let private nameResExpr (expr: TExpr, ctx: ScopeCtx) =
   | TVarExpr _ -> nameResVarExpr expr ctx
 
   | TRecordExpr (baseOpt, fields, ty, loc) ->
-    invoke
-      (fun () ->
-        let baseOpt, ctx =
-          (baseOpt, ctx) |> stOptionMap nameResExpr
+    let baseOpt, ctx =
+      (baseOpt, ctx) |> stOptionMap nameResExpr
 
-        let fields, ctx =
-          (fields, ctx)
-          |> stMap
-               (fun ((name, init, loc), ctx) ->
-                 let init, ctx = (init, ctx) |> nameResExpr
-                 (name, init, loc), ctx)
+    let fields, ctx =
+      (fields, ctx)
+      |> stMap
+           (fun ((name, init, loc), ctx) ->
+             let init, ctx = (init, ctx) |> nameResExpr
+             (name, init, loc), ctx)
 
-        TRecordExpr(baseOpt, fields, ty, loc), ctx)
+    TRecordExpr(baseOpt, fields, ty, loc), ctx
 
   | TMatchExpr (cond, arms, ty, loc) ->
-    invoke
-      (fun () ->
-        let cond, ctx = (cond, ctx) |> nameResExpr
+    let cond, ctx = (cond, ctx) |> nameResExpr
 
-        let arms, ctx =
-          (arms, ctx)
-          |> stMap
-               (fun ((pat, guard, body), ctx) ->
-                 let ctx = ctx |> startScope ExprScope
-                 let pat, ctx = (pat, ctx) |> nameResRefutablePat
-                 let guard, ctx = (guard, ctx) |> nameResExpr
-                 let body, ctx = (body, ctx) |> nameResExpr
-                 let ctx = ctx |> finishScope
-                 (pat, guard, body), ctx)
+    let arms, ctx =
+      (arms, ctx)
+      |> stMap
+           (fun ((pat, guard, body), ctx) ->
+             let ctx = ctx |> startScope ExprScope
+             let pat, ctx = (pat, ctx) |> nameResRefutablePat
+             let guard, ctx = (guard, ctx) |> nameResExpr
+             let body, ctx = (body, ctx) |> nameResExpr
+             let ctx = ctx |> finishScope
+             (pat, guard, body), ctx)
 
-        TMatchExpr(cond, arms, ty, loc), ctx)
+    TMatchExpr(cond, arms, ty, loc), ctx
 
   | TNavExpr _ -> nameResNavExpr expr ctx
 
   | TNodeExpr (op, items, ty, loc) ->
-    invoke
-      (fun () ->
-        // Necessary in case of ascribe expression.
-        let ty, ctx = ctx |> resolveTy ty loc
+    // Necessary in case of ascribe expression.
+    let ty, ctx = ctx |> resolveTy ty loc
 
-        let items, ctx = (items, ctx) |> stMap nameResExpr
-        TNodeExpr(op, items, ty, loc), ctx)
+    let items, ctx = (items, ctx) |> stMap nameResExpr
+    TNodeExpr(op, items, ty, loc), ctx
 
   | TBlockExpr (stmts, last) ->
-    invoke
-      (fun () ->
-        let stmts, ctx = (stmts, ctx) |> stMap nameResExpr
-        let last, ctx = (last, ctx) |> nameResExpr
-        TBlockExpr(stmts, last), ctx)
+    let stmts, ctx = (stmts, ctx) |> stMap nameResExpr
+    let last, ctx = (last, ctx) |> nameResExpr
+    TBlockExpr(stmts, last), ctx
 
   | TLetValExpr (pat, body, next, ty, loc) ->
-    invoke
-      (fun () ->
-        let body, ctx =
-          let ctx = ctx |> startScope ExprScope
-          let body, ctx = (body, ctx) |> nameResExpr
-          let ctx = ctx |> finishScope
-          body, ctx
+    let body, ctx =
+      let ctx = ctx |> startScope ExprScope
+      let body, ctx = (body, ctx) |> nameResExpr
+      let ctx = ctx |> finishScope
+      body, ctx
 
-        let pat, next, ctx =
-          let ctx = ctx |> startScope ExprScope
-          let pat, ctx = (pat, ctx) |> nameResIrrefutablePat
-          let next, ctx = (next, ctx) |> nameResExpr
-          let ctx = ctx |> finishScope
-          pat, next, ctx
+    let pat, next, ctx =
+      let ctx = ctx |> startScope ExprScope
+      let pat, ctx = (pat, ctx) |> nameResIrrefutablePat
+      let next, ctx = (next, ctx) |> nameResExpr
+      let ctx = ctx |> finishScope
+      pat, next, ctx
 
-        TLetValExpr(pat, body, next, ty, loc), ctx)
+    TLetValExpr(pat, body, next, ty, loc), ctx
 
   | TLetFunExpr (serial, isRec, vis, pats, body, next, ty, loc) ->
-    invoke
-      (fun () ->
-        let ctx = ctx |> startScope ExprScope
+    let ctx = ctx |> startScope ExprScope
 
-        let pats, body, ctx =
-          match isRec with
-          | IsRec ->
-            // Define the function itself for recursive referencing.
-            // (If this declaration is not written in module directly, visibility meaning less, so use PrivateVis.)
-            let ctx =
-              ctx
-              |> enterLetInit
-              |> defineFunUniquely PrivateVis serial pats noTy loc
-              |> startScope ExprScope
+    let pats, body, ctx =
+      match isRec with
+      | IsRec ->
+        // Define the function itself for recursive referencing.
+        // (If this declaration is not written in module directly, visibility meaning less, so use PrivateVis.)
+        let ctx =
+          ctx
+          |> enterLetInit
+          |> defineFunUniquely PrivateVis serial pats noTy loc
+          |> startScope ExprScope
 
-            let pats, ctx =
-              (pats, ctx) |> stMap nameResIrrefutablePat
+        let pats, ctx =
+          (pats, ctx) |> stMap nameResIrrefutablePat
 
-            let body, ctx = (body, ctx) |> nameResExpr
-            let ctx = ctx |> finishScope |> leaveLetInit
-            pats, body, ctx
+        let body, ctx = (body, ctx) |> nameResExpr
+        let ctx = ctx |> finishScope |> leaveLetInit
+        pats, body, ctx
 
-          | NotRec ->
-            let ctx =
-              ctx |> enterLetInit |> startScope ExprScope
+      | NotRec ->
+        let ctx =
+          ctx |> enterLetInit |> startScope ExprScope
 
-            let pats, ctx =
-              (pats, ctx) |> stMap nameResIrrefutablePat
+        let pats, ctx =
+          (pats, ctx) |> stMap nameResIrrefutablePat
 
-            let body, ctx = (body, ctx) |> nameResExpr
+        let body, ctx = (body, ctx) |> nameResExpr
 
-            let ctx =
-              ctx
-              |> finishScope
-              |> defineFunUniquely PrivateVis serial pats noTy loc
-              |> leaveLetInit
+        let ctx =
+          ctx
+          |> finishScope
+          |> defineFunUniquely PrivateVis serial pats noTy loc
+          |> leaveLetInit
 
-            pats, body, ctx
+        pats, body, ctx
 
-        let next, ctx = (next, ctx) |> nameResExpr
-        let ctx = ctx |> finishScope
+    let next, ctx = (next, ctx) |> nameResExpr
+    let ctx = ctx |> finishScope
 
-        TLetFunExpr(serial, isRec, vis, pats, body, next, ty, loc), ctx)
+    TLetFunExpr(serial, isRec, vis, pats, body, next, ty, loc), ctx
 
   | TTyDeclExpr (serial, _, tyArgs, tyDecl, loc) ->
-    invoke
-      (fun () ->
-        let ctx =
-          ctx |> finishDefineTy serial tyArgs tyDecl loc
+    let ctx =
+      ctx |> finishDefineTy serial tyArgs tyDecl loc
 
-        expr, ctx)
+    expr, ctx
 
   | TOpenExpr _ -> expr, ctx
 
   | TModuleExpr (serial, body, loc) ->
-    invoke
-      (fun () ->
-        let moduleName =
-          ctx |> findName (moduleTySerialToInt serial)
+    let moduleName =
+      ctx |> findName (moduleTySerialToInt serial)
 
-        let ctx =
-          ctx
-          |> addModuleTyDef serial ({ Name = moduleName; Loc = loc }: ModuleTyDef)
-          |> importNs (ModuleNsOwner serial)
+    let ctx =
+      ctx
+      |> addModuleTyDef serial ({ Name = moduleName; Loc = loc }: ModuleTyDef)
+      |> importNs (ModuleNsOwner serial)
 
-        let parent, ctx = ctx |> enterModule serial
+    let parent, ctx = ctx |> enterModule serial
 
-        let ctx = ctx |> startScope ExprScope
+    let ctx = ctx |> startScope ExprScope
 
-        let ctx =
-          // Open the parent module (and modules with the same path).
-          ctx
-          |> forList (fun moduleTySerial ctx -> openModule moduleTySerial ctx) (ctx |> resolveModulePath (snd parent))
+    let ctx =
+      // Open the parent module (and modules with the same path).
+      ctx
+      |> forList (fun moduleTySerial ctx -> openModule moduleTySerial ctx) (ctx |> resolveModulePath (snd parent))
 
-        let body, ctx =
-          (body, ctx)
-          |> stMap (collectDecls (Some serial))
-          |> stMap nameResExpr
+    let body, ctx =
+      (body, ctx)
+      |> stMap (collectDecls (Some serial))
+      |> stMap nameResExpr
 
-        let ctx = ctx |> finishScope |> leaveModule parent
+    let ctx = ctx |> finishScope |> leaveModule parent
 
-        // HACK: MiloneOnly is auto-open.
-        let ctx =
-          if moduleName = "MiloneOnly" then
-            ctx |> openModule serial
-          else
-            ctx
+    // HACK: MiloneOnly is auto-open.
+    let ctx =
+      if moduleName = "MiloneOnly" then
+        ctx |> openModule serial
+      else
+        ctx
 
-        // Module no longer needed.
-        hxSemi body loc, ctx)
+    // Module no longer needed.
+    hxSemi body loc, ctx
 
   | TModuleSynonymExpr (serial, path, loc) ->
-    invoke
-      (fun () ->
-        let name =
-          ctx |> findName (moduleSynonymSerialToInt serial)
+    let name =
+      ctx |> findName (moduleSynonymSerialToInt serial)
 
-        let ctx =
-          match name, path with
-          | "_", _
-          | _, [] -> ctx
+    let ctx =
+      match name, path with
+      | "_", _
+      | _, [] -> ctx
 
-          | _, path ->
-            let moduleSerials = ctx |> resolveModulePath path
+      | _, path ->
+        let moduleSerials = ctx |> resolveModulePath path
 
-            if List.isEmpty moduleSerials then
-              ctx |> addLog ModulePathNotFoundError loc
-            else
-              ctx
-              |> addModuleSynonymDef
-                   serial
-                   ({ Name = name
-                      Bound = moduleSerials
-                      Loc = loc }: ModuleSynonymDef)
-              |> forList
-                   (fun moduleSerial ctx -> doImportNsWithAlias name (ModuleNsOwner moduleSerial) ctx)
-                   moduleSerials
+        if List.isEmpty moduleSerials then
+          ctx |> addLog ModulePathNotFoundError loc
+        else
+          ctx
+          |> addModuleSynonymDef
+               serial
+               ({ Name = name
+                  Bound = moduleSerials
+                  Loc = loc }: ModuleSynonymDef)
+          |> forList (fun moduleSerial ctx -> doImportNsWithAlias name (ModuleNsOwner moduleSerial) ctx) moduleSerials
 
-        hxUnit loc, ctx)
+    hxUnit loc, ctx
 
   | TFunExpr _
   | TVariantExpr _ -> unreachable expr // HFunExpr and HVariantExpr are generated in NameRes.

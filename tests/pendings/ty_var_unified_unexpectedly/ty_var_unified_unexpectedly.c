@@ -10,6 +10,6 @@ int ty_var_unified_unexpectedly_Program_f(char arg_) {
 
 int milone_main() {
     int call_ = ty_var_unified_unexpectedly_Program_f(0);
-    milone_assert((call_ == 1), 9, 2);
+    milone_assert((call_ == 1), 10, 2);
     return 0;
 }

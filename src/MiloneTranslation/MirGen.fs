@@ -38,11 +38,16 @@ type MirCtx =
     Tys: AssocMap<TySerial, TyDef>
     LabelSerial: Serial
 
+    CurrentFunSerial: FunSerial option
+
     /// (label, parameters), where the label is the entrypoint of current fun.
     /// For tail-rec (tail-call) optimization.
     CurrentFun: (Label * VarSerial list) option
 
     IsReachable: bool
+
+    FunLocals: AssocMap<FunSerial, (VarSerial * Ty) list>
+    ReplacingVars: AssocSet<VarSerial>
 
     Stmts: MStmt list
     Blocks: MBlock list
@@ -56,8 +61,11 @@ let private ofTyCtx (tyCtx: TyCtx) : MirCtx =
     MainFunOpt = tyCtx.MainFunOpt
     Tys = tyCtx.Tys
     LabelSerial = 0
+    CurrentFunSerial = None
     CurrentFun = None
     IsReachable = true
+    FunLocals = TMap.empty funSerialCompare
+    ReplacingVars = TSet.empty varSerialCompare
     Stmts = []
     Blocks = []
     Decls = [] }
@@ -836,6 +844,8 @@ let private mirifyExprMatchFull ctx cond arms ty loc =
   temp, ctx
 
 let private mirifyExprMatch ctx cond arms ty loc =
+  let arms, ctx = reuseArmLocals arms ctx
+
   match mirifyExprMatchAsIfStmt ctx cond arms ty loc with
   | Some (result, ctx) -> result, ctx
 
@@ -844,6 +854,144 @@ let private mirifyExprMatch ctx cond arms ty loc =
       mirifyExprMatchAsSwitchStmt ctx cond arms ty loc
     else
       mirifyExprMatchFull ctx cond arms ty loc
+
+// -----------------------------------------------
+// Var reusing
+// -----------------------------------------------
+
+[<RequireQualifiedAccess; NoEquality; NoComparison>]
+type private VarReuse =
+  | Replacing of Ty
+  | ReplacedBy of VarSerial
+
+type private VarReuseMap = AssocMap<VarSerial, VarReuse>
+
+let private reuseVarSerial (reuseMap: VarReuseMap) serial : VarSerial =
+  match TMap.tryFind serial reuseMap with
+  | Some (VarReuse.ReplacedBy serial) -> serial
+  | _ -> serial
+
+let private reuseVarOnPat (reuseMap: VarReuseMap) (pat: HPat) : HPat =
+  let rec go pat =
+    match pat with
+    | HLitPat _
+    | HDiscardPat _
+    | HVariantPat _ -> pat
+
+    | HVarPat (vis, serial, ty, loc) -> HVarPat(vis, reuseVarSerial reuseMap serial, ty, loc)
+
+    | HNodePat (kind, args, ty, loc) -> HNodePat(kind, List.map go args, ty, loc)
+    | HAsPat (bodyPat, serial, loc) -> HAsPat(go bodyPat, reuseVarSerial reuseMap serial, loc)
+    | HOrPat (l, r, loc) -> HOrPat(go l, go r, loc)
+
+  go pat
+
+let private reuseVarOnExpr (reuseMap: VarReuseMap) (expr: HExpr) : HExpr =
+  let goPat pat = reuseVarOnPat reuseMap pat
+
+  let rec go expr =
+    match expr with
+    | HLitExpr _
+    | HFunExpr _
+    | HVariantExpr _
+    | HPrimExpr _ -> expr
+
+    | HVarExpr (serial, ty, loc) -> HVarExpr(reuseVarSerial reuseMap serial, ty, loc)
+
+    | HMatchExpr (cond, arms, ty, loc) ->
+      let arms =
+        arms
+        |> List.map (fun (pat, guard, body) -> goPat pat, go guard, go body)
+
+      HMatchExpr(go cond, arms, ty, loc)
+
+    | HNodeExpr (kind, args, ty, loc) -> HNodeExpr(kind, List.map go args, ty, loc)
+    | HBlockExpr (stmts, last) -> HBlockExpr(List.map go stmts, go last)
+    | HLetValExpr (pat, init, next, ty, loc) -> HLetValExpr(goPat pat, go init, go next, ty, loc)
+    | HLetFunExpr (serial, isRec, vis, args, body, next, ty, loc) ->
+      HLetFunExpr(serial, isRec, vis, List.map goPat args, go body, go next, ty, loc)
+
+    | HNavExpr _ -> unreachable () // HNavExpr is resolved in NameRes, Typing, or RecordRes.
+    | HRecordExpr _ -> unreachable () // HRecordExpr is resolved in RecordRes.
+
+  go expr
+
+let private doReuseArmLocals funSerial arms (ctx: MirCtx) : _ * MirCtx =
+  let emptyReuseMap: VarReuseMap = TMap.empty varSerialCompare
+
+  let emptyVarMap: AssocMap<Ty * int, VarSerial> =
+    TMap.empty (pairCompare tyCompare compare)
+
+  // ty -> index:
+  // index is the number of variables of the same type appeared earlier in the same pattern.
+  let emptyFreq: AssocMap<Ty, int> = TMap.empty tyCompare
+
+  let analyzeVarPat varSerial varTy reuseMap varMap freq =
+    let index =
+      freq
+      |> TMap.tryFind varTy
+      |> Option.defaultValue 0
+
+    let freq = freq |> TMap.add varTy (index + 1)
+
+    let reuseMap, varMap =
+      match varMap |> TMap.tryFind (varTy, index) with
+      | None ->
+        let varMap =
+          varMap |> TMap.add (varTy, index) varSerial
+
+        reuseMap, varMap
+
+      | Some otherSerial ->
+        let reuseMap =
+          reuseMap
+          |> TMap.add otherSerial (VarReuse.Replacing varTy)
+          |> TMap.add varSerial (VarReuse.ReplacedBy otherSerial)
+
+        reuseMap, varMap
+
+    reuseMap, varMap, freq
+
+  let reuseMap, _ =
+    List.fold
+      (fun (reuseMap, varMap) (pat, _, _) ->
+        let reuseMap, varMap, _ =
+          patFold
+            (fun (reuseMap, varMap, freq) varSerial ty -> analyzeVarPat varSerial ty reuseMap varMap freq)
+            (reuseMap, varMap, emptyFreq)
+            pat
+
+        reuseMap, varMap)
+      (emptyReuseMap, emptyVarMap)
+      arms
+
+  let arms =
+    arms
+    |> List.map
+         (fun (pat, guard, body) ->
+           reuseVarOnPat reuseMap pat, reuseVarOnExpr reuseMap guard, reuseVarOnExpr reuseMap body)
+
+  let ctx: MirCtx =
+    let funLocals, replacingVars =
+      reuseMap
+      |> TMap.fold
+           (fun (funLocals, replacingVars) varSerial reuse ->
+             match reuse with
+             | VarReuse.Replacing ty ->
+               multimapAdd funSerial (varSerial, ty) funLocals, TSet.add varSerial replacingVars
+             | _ -> funLocals, replacingVars)
+           (ctx.FunLocals, ctx.ReplacingVars)
+
+    { ctx with
+        FunLocals = funLocals
+        ReplacingVars = replacingVars }
+
+  arms, ctx
+
+let private reuseArmLocals arms (ctx: MirCtx) : _ * MirCtx =
+  match ctx.CurrentFunSerial with
+  | Some funSerial -> doReuseArmLocals funSerial arms ctx
+  | _ -> arms, ctx // toplevel match? unreachable?
 
 // -----------------------------------------------
 // Expressions
@@ -1388,6 +1536,13 @@ let private mirifyExprLetValContents ctx pat init =
   mirifyPat ctx "_never_" pat init
 
 let private mirifyExprLetFunContents (ctx: MirCtx) calleeSerial argPats body letLoc =
+  let prepareCurrentFunSerial (ctx: MirCtx) =
+    ctx.CurrentFunSerial,
+    { ctx with
+        CurrentFunSerial = Some calleeSerial }
+
+  let cleanUpCurrentFunSerial (ctx: MirCtx) parent = { ctx with CurrentFunSerial = parent }
+
   let prepareTailRec (ctx: MirCtx) args =
     let parentFun = ctx.CurrentFun
 
@@ -1430,6 +1585,7 @@ let private mirifyExprLetFunContents (ctx: MirCtx) calleeSerial argPats body let
     let blockTy, blockLoc = exprExtract body
 
     let args, ctx = defineArgs [] ctx argPats
+    let parentSerial, ctx = prepareCurrentFunSerial ctx
     let parentFun, ctx = prepareTailRec ctx args
     let lastExpr, ctx = mirifyExpr ctx body
 
@@ -1437,6 +1593,7 @@ let private mirifyExprLetFunContents (ctx: MirCtx) calleeSerial argPats body let
       addTerminator ctx (MReturnTerminator lastExpr) blockLoc
 
     let ctx = cleanUpTailRec ctx parentFun
+    let ctx = cleanUpCurrentFunSerial ctx parentSerial
 
     let body, ctx =
       let stmts, ctx = takeStmts ctx
@@ -1476,12 +1633,6 @@ let private mirifyOtherExprWrapper ctx expr =
   | HRecordExpr _ -> unreachable () // HRecordExpr is resolved in RecordRes.
 
 let private mirifyExpr (ctx: MirCtx) (expr: HExpr) : MExpr * MirCtx =
-  // HACK: This function runs into stack overflow easily
-  //       since HExpr is nesting too deeply
-  //       and stack frame of functions generated by milone-lang is too large.
-  //       The implementation here is carefully written to keep the size of stack frame small
-  //       and utilize tail-rec optimization as possible.
-
   match expr with
   | HBlockExpr (stmts, last) ->
     let ctx =
@@ -1495,28 +1646,20 @@ let private mirifyExpr (ctx: MirCtx) (expr: HExpr) : MExpr * MirCtx =
 
     mirifyExpr ctx last
 
-  | HLetValExpr (_, _, next, _, _) ->
+  | HLetValExpr (pat, init, next, _, _) ->
+    let ctx = mirifyExprLetValContents ctx pat init
+    mirifyExpr ctx next
+
+  | HLetFunExpr (funSerial, _, _, argPats, body, next, _, loc) ->
     let ctx =
-      invoke
-        (fun () ->
-          match expr with
-          | HLetValExpr (pat, init, _, _, _) -> mirifyExprLetValContents ctx pat init
-          | _ -> unreachable ())
+      mirifyExprLetFunContents ctx funSerial argPats body loc
 
     mirifyExpr ctx next
 
-  | HLetFunExpr (_, _, _, _, _, next, _, _) ->
-    let ctx =
-      invoke
-        (fun () ->
-          match expr with
-          | HLetFunExpr (funSerial, _, _, argPats, body, _, _, loc) ->
-            mirifyExprLetFunContents ctx funSerial argPats body loc
-          | _ -> unreachable ())
-
-    mirifyExpr ctx next
-
-  | _ -> mirifyOtherExprWrapper ctx expr
+  | _ ->
+    // Split function to reduce stack size.
+    // (This was required to avoid stack overflow previously but it might be non-issue now?)
+    mirifyOtherExprWrapper ctx expr
 
 let private mirifyExprs ctx exprs =
   (exprs, ctx)

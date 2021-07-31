@@ -446,6 +446,20 @@ let patToTy pat = pat |> patExtract |> fst
 
 let patToLoc pat = pat |> patExtract |> snd
 
+let patFold (onVar: 'S -> VarSerial -> Ty -> 'S) (state: 'S) (pat: HPat) : 'S =
+  let rec go state pat =
+    match pat with
+    | HLitPat _
+    | HDiscardPat _
+    | HVariantPat _ -> state
+
+    | HVarPat (_, serial, ty, _) -> onVar state serial ty
+    | HNodePat (_, args, _, _) -> List.fold go state args
+    | HAsPat (bodyPat, serial, _) -> go (onVar state serial (patToTy bodyPat)) bodyPat
+    | HOrPat (l, r, _) -> go (go state l) r
+
+  go state pat
+
 let patMap (f: Ty -> Ty) (g: Loc -> Loc) (pat: HPat) : HPat =
   let rec go pat =
     match pat with
