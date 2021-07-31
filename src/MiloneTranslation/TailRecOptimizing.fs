@@ -76,17 +76,15 @@ let private troExpr isTail (expr, ctx) =
   | HPrimExpr _ -> expr, ctx
 
   | HMatchExpr (cond, arms, ty, loc) ->
-    invoke
-      (fun () ->
-        let cond, ctx = troExpr NotTail (cond, ctx)
+    let cond, ctx = troExpr NotTail (cond, ctx)
 
-        let go ((pat, guard, body), ctx) =
-          let guard, ctx = troExpr NotTail (guard, ctx)
-          let body, ctx = troExpr isTail (body, ctx)
-          (pat, guard, body), ctx
+    let go ((pat, guard, body), ctx) =
+      let guard, ctx = troExpr NotTail (guard, ctx)
+      let body, ctx = troExpr isTail (body, ctx)
+      (pat, guard, body), ctx
 
-        let arms, ctx = (arms, ctx) |> stMap go
-        HMatchExpr(cond, arms, ty, loc), ctx)
+    let arms, ctx = (arms, ctx) |> stMap go
+    HMatchExpr(cond, arms, ty, loc), ctx
 
   | HNodeExpr (kind, items, ty, loc) -> ctx |> troInfExpr isTail kind items ty loc
 
@@ -96,21 +94,17 @@ let private troExpr isTail (expr, ctx) =
     HBlockExpr(stmts, last), ctx
 
   | HLetValExpr (pat, init, next, ty, loc) ->
-    invoke
-      (fun () ->
-        let init, ctx = troExpr NotTail (init, ctx)
-        let next, ctx = troExpr isTail (next, ctx)
-        HLetValExpr(pat, init, next, ty, loc), ctx)
+    let init, ctx = troExpr NotTail (init, ctx)
+    let next, ctx = troExpr isTail (next, ctx)
+    HLetValExpr(pat, init, next, ty, loc), ctx
 
   | HLetFunExpr (callee, isRec, vis, args, body, next, ty, loc) ->
-    invoke
-      (fun () ->
-        let body, ctx =
-          ctx
-          |> withCurrentFun callee (fun ctx -> troExpr IsTail (body, ctx))
+    let body, ctx =
+      ctx
+      |> withCurrentFun callee (fun ctx -> troExpr IsTail (body, ctx))
 
-        let next, ctx = troExpr isTail (next, ctx)
-        HLetFunExpr(callee, isRec, vis, args, body, next, ty, loc), ctx)
+    let next, ctx = troExpr isTail (next, ctx)
+    HLetFunExpr(callee, isRec, vis, args, body, next, ty, loc), ctx
 
   | HNavExpr _ -> unreachable () // HNavExpr is resolved in NameRes, Typing, or RecordRes.
   | HRecordExpr _ -> unreachable () // HRecordExpr is resolved in RecordRes.

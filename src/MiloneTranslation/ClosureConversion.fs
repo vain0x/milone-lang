@@ -403,51 +403,39 @@ let private ccExpr (expr, ctx) =
   | HPrimExpr _ -> expr, ctx
 
   | HVarExpr (serial, ty, loc) ->
-    invoke
-      (fun () ->
-        let ctx = ctx |> useVar serial
-        HVarExpr(serial, ty, loc), ctx)
+    let ctx = ctx |> useVar serial
+    HVarExpr(serial, ty, loc), ctx
 
   | HFunExpr (serial, funTy, funLoc) ->
-    invoke
-      (fun () ->
-        let ctx = ctx |> useFun serial
-        ccFunExpr serial funTy funLoc ctx, ctx)
+    let ctx = ctx |> useFun serial
+    ccFunExpr serial funTy funLoc ctx, ctx
 
   | HMatchExpr (cond, arms, ty, loc) ->
-    invoke
-      (fun () ->
-        let cond, ctx = ccExpr (cond, ctx)
+    let cond, ctx = ccExpr (cond, ctx)
 
-        let go ((pat, guard, body), ctx) =
-          let pat, ctx = ccPat (pat, ctx)
-          let guard, ctx = ccExpr (guard, ctx)
-          let body, ctx = ccExpr (body, ctx)
-          (pat, guard, body), ctx
+    let go ((pat, guard, body), ctx) =
+      let pat, ctx = ccPat (pat, ctx)
+      let guard, ctx = ccExpr (guard, ctx)
+      let body, ctx = ccExpr (body, ctx)
+      (pat, guard, body), ctx
 
-        let arms, ctx = (arms, ctx) |> stMap go
-        HMatchExpr(cond, arms, ty, loc), ctx)
+    let arms, ctx = (arms, ctx) |> stMap go
+    HMatchExpr(cond, arms, ty, loc), ctx
 
   | HNodeExpr (kind, items, ty, loc) ->
-    invoke
-      (fun () ->
-        let items, ctx = (items, ctx) |> stMap ccExpr
-        HNodeExpr(kind, items, ty, loc), ctx)
+    let items, ctx = (items, ctx) |> stMap ccExpr
+    HNodeExpr(kind, items, ty, loc), ctx
 
   | HBlockExpr (stmts, last) ->
-    invoke
-      (fun () ->
-        let stmts, ctx = (stmts, ctx) |> stMap ccExpr
-        let last, ctx = (last, ctx) |> ccExpr
-        HBlockExpr(stmts, last), ctx)
+    let stmts, ctx = (stmts, ctx) |> stMap ccExpr
+    let last, ctx = (last, ctx) |> ccExpr
+    HBlockExpr(stmts, last), ctx
 
   | HLetValExpr (pat, body, next, ty, loc) ->
-    invoke
-      (fun () ->
-        let pat, ctx = ccPat (pat, ctx)
-        let body, ctx = ccExpr (body, ctx)
-        let next, ctx = ccExpr (next, ctx)
-        HLetValExpr(pat, body, next, ty, loc), ctx)
+    let pat, ctx = ccPat (pat, ctx)
+    let body, ctx = ccExpr (body, ctx)
+    let next, ctx = ccExpr (next, ctx)
+    HLetValExpr(pat, body, next, ty, loc), ctx
 
   | HLetFunExpr (callee, isRec, vis, args, body, next, ty, loc) ->
     ccLetFunExpr callee isRec vis args body next ty loc ctx

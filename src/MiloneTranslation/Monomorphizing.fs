@@ -325,53 +325,41 @@ let private monifyExpr (expr, ctx) =
   | HPrimExpr _ -> expr, ctx
 
   | HFunExpr (funSerial, useSiteTy, loc) ->
-    invoke
-      (fun () ->
-        let funSerial, ctx = monifyFunExpr ctx funSerial useSiteTy
+    let funSerial, ctx = monifyFunExpr ctx funSerial useSiteTy
 
-        HFunExpr(funSerial, useSiteTy, loc), ctx)
+    HFunExpr(funSerial, useSiteTy, loc), ctx
 
   | HMatchExpr (cond, arms, ty, loc) ->
-    invoke
-      (fun () ->
-        let cond, ctx = (cond, ctx) |> monifyExpr
+    let cond, ctx = (cond, ctx) |> monifyExpr
 
-        let arms, ctx =
-          (arms, ctx)
-          |> stMap
-               (fun ((pat, guard, body), ctx) ->
-                 let guard, ctx = (guard, ctx) |> monifyExpr
-                 let body, ctx = (body, ctx) |> monifyExpr
-                 (pat, guard, body), ctx)
+    let arms, ctx =
+      (arms, ctx)
+      |> stMap
+           (fun ((pat, guard, body), ctx) ->
+             let guard, ctx = (guard, ctx) |> monifyExpr
+             let body, ctx = (body, ctx) |> monifyExpr
+             (pat, guard, body), ctx)
 
-        HMatchExpr(cond, arms, ty, loc), ctx)
+    HMatchExpr(cond, arms, ty, loc), ctx
 
   | HNodeExpr (kind, args, ty, loc) ->
-    invoke
-      (fun () ->
-        let args, ctx = (args, ctx) |> stMap monifyExpr
-        HNodeExpr(kind, args, ty, loc), ctx)
+    let args, ctx = (args, ctx) |> stMap monifyExpr
+    HNodeExpr(kind, args, ty, loc), ctx
 
   | HBlockExpr (stmts, last) ->
-    invoke
-      (fun () ->
-        let stmts, ctx = (stmts, ctx) |> stMap monifyExpr
-        let last, ctx = (last, ctx) |> monifyExpr
-        HBlockExpr(stmts, last), ctx)
+    let stmts, ctx = (stmts, ctx) |> stMap monifyExpr
+    let last, ctx = (last, ctx) |> monifyExpr
+    HBlockExpr(stmts, last), ctx
 
   | HLetValExpr (pat, init, next, ty, loc) ->
-    invoke
-      (fun () ->
-        let init, ctx = (init, ctx) |> monifyExpr
-        let next, ctx = (next, ctx) |> monifyExpr
-        HLetValExpr(pat, init, next, ty, loc), ctx)
+    let init, ctx = (init, ctx) |> monifyExpr
+    let next, ctx = (next, ctx) |> monifyExpr
+    HLetValExpr(pat, init, next, ty, loc), ctx
 
   | HLetFunExpr (callee, isRec, vis, args, body, next, ty, loc) ->
-    invoke
-      (fun () ->
-        let body, ctx = (body, ctx) |> monifyExpr
-        let next, ctx = (next, ctx) |> monifyExpr
-        monifyLetFunExpr ctx callee isRec vis args body next ty loc)
+    let body, ctx = (body, ctx) |> monifyExpr
+    let next, ctx = (next, ctx) |> monifyExpr
+    monifyLetFunExpr ctx callee isRec vis args body next ty loc
 
   | HNavExpr _ -> unreachable () // HNavExpr is resolved in NameRes, Typing, or RecordRes.
   | HRecordExpr _ -> unreachable () // HRecordExpr is resolved in RecordRes.
