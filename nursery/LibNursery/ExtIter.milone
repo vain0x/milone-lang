@@ -55,6 +55,14 @@ module rec ExtIter =
 
     nextFun, box start
 
+  let unfold (unfolder: 'S -> ('T * 'S) option) (state: 'S) : Iter<'T> =
+    let nextFun (state: obj) : ('T * obj) option =
+      match unfolder (unbox state) with
+      | None -> None
+      | Some (item, state) -> Some(item, box state)
+
+    nextFun, box state
+
   // ---------------------------------------------
   // Transformer
   // ---------------------------------------------
