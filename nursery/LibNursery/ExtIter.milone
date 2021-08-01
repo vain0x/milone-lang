@@ -32,43 +32,6 @@ module rec ExtIter =
       let xs: Iter<'T> = nextFun, state
       Some(item, xs)
 
-  // ---------------------------------------------
-  // Constructor
-  // ---------------------------------------------
-
-  let empty () : Iter<'T> =
-    let nextFun (_: obj) : ('T * obj) option = None
-    nextFun, box ()
-
-  let singleton (item: 'T) : Iter<'T> = ofList [ item ]
-
-  let init (count: int) (initializer: int -> 'T) : Iter<'T> = range 0 count |> map initializer
-
-  let replicate (count: int) (item: 'T) : Iter<'T> = range 0 count |> map (fun _ -> item)
-
-  let range (start: int) (endIndex: int) : Iter<int> =
-    let nextFun state =
-      let i = unbox state
-
-      if i < endIndex then
-        Some(i, box (i + 1))
-      else
-        None
-
-    nextFun, box start
-
-  let unfold (unfolder: 'S -> ('T * 'S) option) (state: 'S) : Iter<'T> =
-    let nextFun (state: obj) : ('T * obj) option =
-      match unfolder (unbox state) with
-      | None -> None
-      | Some (item, state) -> Some(item, box state)
-
-    nextFun, box state
-
-  // ---------------------------------------------
-  // Transformer
-  // ---------------------------------------------
-
   /// Extended `scan`.
   let private scanEx (f: 'S -> 'T -> Iter<'U> * 'S) (state: 'S) (xs: Iter<'T>) : Iter<'U> =
     let innerNextFun, innerState = xs
@@ -103,6 +66,47 @@ module rec ExtIter =
       | Some (y, (ysOpt, innerState, state)) -> Some(y, pack ysOpt innerState state)
 
     nextFun, pack None innerState state
+
+  // ---------------------------------------------
+  // Constructor
+  // ---------------------------------------------
+
+  let empty () : Iter<'T> =
+    let nextFun (_: obj) : ('T * obj) option = None
+    nextFun, box ()
+
+  let singleton (item: 'T) : Iter<'T> = ofList [ item ]
+
+  let init (count: int) (initializer: int -> 'T) : Iter<'T> =
+    range 0 count
+    |> scanEx (fun () i -> singleton (initializer i), ()) ()
+
+  let replicate (count: int) (item: 'T) : Iter<'T> =
+    range 0 count
+    |> scanEx (fun () (_: int) -> singleton item, ()) ()
+
+  let range (start: int) (endIndex: int) : Iter<int> =
+    let nextFun state =
+      let i = unbox state
+
+      if i < endIndex then
+        Some(i, box (i + 1))
+      else
+        None
+
+    nextFun, box start
+
+  let unfold (unfolder: 'S -> ('T * 'S) option) (state: 'S) : Iter<'T> =
+    let nextFun (state: obj) : ('T * obj) option =
+      match unfolder (unbox state) with
+      | None -> None
+      | Some (item, state) -> Some(item, box state)
+
+    nextFun, box state
+
+  // ---------------------------------------------
+  // Transformer
+  // ---------------------------------------------
 
   let map (f: 'T -> 'U) (xs: Iter<'T>) : Iter<'U> =
     scanEx (fun () (x: 'T) -> singleton (f x), ()) () xs

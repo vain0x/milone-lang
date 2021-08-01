@@ -6,7 +6,7 @@ open LibNursery.ExtIter
 let private bang () = exit 1
 
 /// Generates `i`: `0 <= i < n`.
-let private gen (n: int) = ExtIter.range 0 n
+let private gen (n: int) : Iter<int> = ExtIter.range 0 n
 
 let private cat (xs: Iter<int>) : int =
   ExtIter.fold (fun n x -> n * 10 + x) 0 xs
