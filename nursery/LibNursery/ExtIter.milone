@@ -135,6 +135,9 @@ module rec ExtIter =
       ()
       xs
 
+  let indexed (xs: Iter<'T>) : Iter<int * 'T> =
+    scanEx (fun (i: int) (x: 'T) -> singleton (i, x), i + 1) 0 xs
+
   // ---------------------------------------------
   // Consumer
   // ---------------------------------------------
