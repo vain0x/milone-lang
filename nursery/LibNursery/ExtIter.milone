@@ -2,8 +2,24 @@ module rec LibNursery.ExtIter
 
 type private NextFun<'S, 'T> = 'S -> ('T * 'S) option
 
-// obj: state of iterator
-// that is, Iter<'T> = (forall 'S => NextFun<'S, 'T> * 'S)
+// The implementation of the Iter type.
+//
+// If generic nominal type were implemented,
+// iterator (enumerator in .NET) would be defined as:
+//    Iter<'T> = Iter of unit -> ('T * Iter<'T>) option
+//
+// The recursion of type can be avoided by
+// splitting the function and the state that changes during iteration.
+// That is:
+//    Iter<'T> = (forall 'S => 'S -> ('T * 'S) option)
+//
+// `forall` is not supported (no plan to support).
+// 'S is just replaced by obj here.
+
+/// Iterator, abstraction of iteration.
+///
+/// Also known as "enumerator" in .NET.
+/// Iterator is stateless and different than IEnumerator.
 type Iter<'T> = NextFun<obj, 'T> * obj
 
 module rec ExtIter =
