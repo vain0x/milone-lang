@@ -33,6 +33,8 @@ if_next_1:;
 }
 
 int milone_main() {
+    int b_;
+    int a_;
     char call_ = printIntOrStr_(true, ((void const*)((intptr_t)2)));
     void const* box_ = milone_mem_alloc(1, sizeof(struct String));
     (*(((struct String*)box_))) = (struct String){.str = "Fizz", .len = 4};
@@ -46,9 +48,9 @@ int milone_main() {
     void const* xs_ = ((void const*)((intptr_t)list_));
     char match_;
     if ((!(((struct IntList const*)((intptr_t)xs_))))) goto next_5;
-    int a_ = ((struct IntList const*)((intptr_t)xs_))->head;
+    a_ = ((struct IntList const*)((intptr_t)xs_))->head;
     if ((!(((struct IntList const*)((intptr_t)xs_))->tail))) goto next_5;
-    int b_ = ((struct IntList const*)((intptr_t)xs_))->tail->head;
+    b_ = ((struct IntList const*)((intptr_t)xs_))->tail->head;
     if ((!((!(((struct IntList const*)((intptr_t)xs_))->tail->tail))))) goto next_5;
     milone_assert((((a_ * 10) + b_) == 42), 24, 16);
     match_ = 0;

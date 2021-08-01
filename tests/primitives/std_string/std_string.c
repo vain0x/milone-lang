@@ -94,9 +94,10 @@ struct StringList {
 };
 
 char unwrap_1(struct CharOption opt_8) {
+    char value_2;
     char match_5;
     if ((!(opt_8.some))) goto next_241;
-    char value_2 = opt_8.value;
+    value_2 = opt_8.value;
     match_5 = value_2;
     goto end_match_240;
 next_241:;
@@ -110,9 +111,10 @@ end_match_240:;
 }
 
 int unwrap_(struct IntOption opt_8) {
+    int value_2;
     int match_6;
     if ((!(opt_8.some))) goto next_244;
-    int value_2 = opt_8.value;
+    value_2 = opt_8.value;
     match_6 = value_2;
     goto end_match_243;
 next_244:;

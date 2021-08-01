@@ -157,10 +157,11 @@ struct IntList {
 };
 
 int get_(int i_8, struct IntConstPtrIntTuple2 array_18) {
+    int it_;
     int match_3;
     struct IntOption call_64 = tryItem_(i_8, array_18);
     if ((!(call_64.some))) goto next_78;
-    int it_ = call_64.value;
+    it_ = call_64.value;
     match_3 = it_;
     goto end_match_77;
 next_78:;
@@ -229,10 +230,11 @@ char std_array_Program_rangeTest(char arg_59) {
 }
 
 int at_(int bad_, int i_9, struct IntConstPtrIntTuple2 array_19) {
+    int it_1;
     int match_4;
     struct IntOption call_80 = tryItem_(i_9, array_19);
     if ((!(call_80.some))) goto next_81;
-    int it_1 = call_80.value;
+    it_1 = call_80.value;
     match_4 = it_1;
     goto end_match_80;
 next_81:;
@@ -302,6 +304,10 @@ int fun_19(void const* env_7, int arg_13) {
 }
 
 char std_array_Program_unconsTest(char arg_62) {
+    struct IntConstPtrIntTuple2 empty_;
+    int n3_;
+    struct IntConstPtrIntTuple2 a23_;
+    int n1_;
     struct IntIntFun1 fun_30 = (struct IntIntFun1){.fun = fun_19, .env = NULL};
     struct IntConstPtrIntTuple2 call_101 = init_(3, fun_30);
     struct IntConstPtrIntTuple2 a123_ = call_101;
@@ -313,8 +319,8 @@ char std_array_Program_unconsTest(char arg_62) {
     goto end_match_83;
 next_84:;
     if ((!(call_102.some))) goto next_85;
-    int n1_ = call_102.value.t0;
-    struct IntConstPtrIntTuple2 a23_ = call_102.value.t1;
+    n1_ = call_102.value.t0;
+    a23_ = call_102.value.t1;
     milone_assert((n1_ == 1), 73, 4);
     int call_103 = length_(a23_);
     milone_assert((call_103 == 2), 74, 4);
@@ -327,8 +333,8 @@ next_84:;
     goto end_match_86;
 next_87:;
     if ((!(call_105.some))) goto next_88;
-    int n3_ = call_105.value.t0;
-    struct IntConstPtrIntTuple2 empty_ = call_105.value.t1;
+    n3_ = call_105.value.t0;
+    empty_ = call_105.value.t1;
     milone_assert((n3_ == 3), 79, 6);
     int call_106 = length_(empty_);
     milone_assert((call_106 == 0), 80, 6);
@@ -476,16 +482,19 @@ char std_array_Program_ofListTest(char arg_67) {
 }
 
 char std_array_Program_toListTest(char arg_68) {
+    int n2_;
+    int n1_1;
+    int n0_;
     struct IntConstPtrIntTuple2 call_134 = MiloneStd_StdArray_range(3);
     struct IntList const* call_135 = toList_(call_134);
     struct IntList const* tl_ = call_135;
     char match_8;
     if ((!(tl_))) goto next_96;
-    int n0_ = tl_->head;
+    n0_ = tl_->head;
     if ((!(tl_->tail))) goto next_96;
-    int n1_1 = tl_->tail->head;
+    n1_1 = tl_->tail->head;
     if ((!(tl_->tail->tail))) goto next_96;
-    int n2_ = tl_->tail->tail->head;
+    n2_ = tl_->tail->tail->head;
     if ((!((!(tl_->tail->tail->tail))))) goto next_96;
     milone_assert((n0_ == 0), 136, 4);
     milone_assert((n1_1 == 1), 137, 4);

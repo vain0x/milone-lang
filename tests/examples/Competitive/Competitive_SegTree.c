@@ -1903,6 +1903,8 @@ struct IntIntIntFun2IntIntIntObjectUnitTuple5ObjectUnitTuple4IntIntIntObjectUnit
 }
 
 struct IntIntIntFun2IntIntIntObjectUnitTuple5ObjectUnitTuple4IntIntIntObjectUnitTuple5UnitTuple3 go_32(struct IntIntIntFun2IntIntIntObjectUnitTuple5ObjectUnitTuple4IntIntIntObjectUnitTuple5UnitTuple3 t_2, struct IntList const* xs_22) {
+    struct IntList const* xs_23;
+    int x_6;
 tailrec_267:;
     struct IntIntIntFun2IntIntIntObjectUnitTuple5ObjectUnitTuple4IntIntIntObjectUnitTuple5UnitTuple3 match_10;
     if ((!((!(xs_22))))) goto next_269;
@@ -1910,8 +1912,8 @@ tailrec_267:;
     goto end_match_268;
 next_269:;
     if ((!(xs_22))) goto next_270;
-    int x_6 = xs_22->head;
-    struct IntList const* xs_23 = xs_22->tail;
+    x_6 = xs_22->head;
+    xs_23 = xs_22->tail;
     struct IntIntIntFun2IntIntIntObjectUnitTuple5ObjectUnitTuple4IntIntIntObjectUnitTuple5UnitTuple3 call_238 = segTreePush_(x_6, t_2);
     struct IntIntIntFun2IntIntIntObjectUnitTuple5ObjectUnitTuple4IntIntIntObjectUnitTuple5UnitTuple3 arg_89 = call_238;
     struct IntList const* arg_90 = xs_23;
@@ -2168,6 +2170,8 @@ char testSum_(struct IntIntIntFun2IntIntIntObjectUnitTuple5ObjectUnitTuple4 segI
 }
 
 int sum_(int l_1, int r_1, int acc_4, int i_5, struct IntList const* xs_25) {
+    struct IntList const* xs_26;
+    int x_10;
 tailrec_279:;
     int if_74;
     if ((i_5 == r_1)) {
@@ -2181,8 +2185,8 @@ then_281:;
 else_282:;
     int match_11;
     if ((!(xs_25))) goto next_284;
-    int x_10 = xs_25->head;
-    struct IntList const* xs_26 = xs_25->tail;
+    x_10 = xs_25->head;
+    xs_26 = xs_25->tail;
     int if_75;
     if ((i_5 < l_1)) {
         goto then_287;

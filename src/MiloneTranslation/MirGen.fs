@@ -861,14 +861,14 @@ let private mirifyExprMatch ctx cond arms ty loc =
 
 [<RequireQualifiedAccess; NoEquality; NoComparison>]
 type private VarReuse =
-  | Replacing of Ty
+  | Replacing
   | ReplacedBy of VarSerial
 
-type private VarReuseMap = AssocMap<VarSerial, VarReuse>
+type private VarReuseMap = AssocMap<VarSerial, VarReuse * Ty>
 
 let private reuseVarSerial (reuseMap: VarReuseMap) serial : VarSerial =
   match TMap.tryFind serial reuseMap with
-  | Some (VarReuse.ReplacedBy serial) -> serial
+  | Some (VarReuse.ReplacedBy serial, _) -> serial
   | _ -> serial
 
 let private reuseVarOnPat (reuseMap: VarReuseMap) (pat: HPat) : HPat =
@@ -937,6 +937,10 @@ let private doReuseArmLocals funSerial arms (ctx: MirCtx) : _ * MirCtx =
     let reuseMap, varMap =
       match varMap |> TMap.tryFind (varTy, index) with
       | None ->
+        let reuseMap =
+          reuseMap
+          |> TMap.add varSerial (VarReuse.Replacing, varTy)
+
         let varMap =
           varMap |> TMap.add (varTy, index) varSerial
 
@@ -945,8 +949,7 @@ let private doReuseArmLocals funSerial arms (ctx: MirCtx) : _ * MirCtx =
       | Some otherSerial ->
         let reuseMap =
           reuseMap
-          |> TMap.add otherSerial (VarReuse.Replacing varTy)
-          |> TMap.add varSerial (VarReuse.ReplacedBy otherSerial)
+          |> TMap.add varSerial (VarReuse.ReplacedBy otherSerial, varTy)
 
         reuseMap, varMap
 
@@ -975,11 +978,8 @@ let private doReuseArmLocals funSerial arms (ctx: MirCtx) : _ * MirCtx =
     let funLocals, replacingVars =
       reuseMap
       |> TMap.fold
-           (fun (funLocals, replacingVars) varSerial reuse ->
-             match reuse with
-             | VarReuse.Replacing ty ->
-               multimapAdd funSerial (varSerial, ty) funLocals, TSet.add varSerial replacingVars
-             | _ -> funLocals, replacingVars)
+           (fun (funLocals, replacingVars) varSerial (_, ty) ->
+             multimapAdd funSerial (varSerial, ty) funLocals, TSet.add varSerial replacingVars)
            (ctx.FunLocals, ctx.ReplacingVars)
 
     { ctx with

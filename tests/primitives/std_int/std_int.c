@@ -22,10 +22,11 @@ int MiloneStd_StdInt_MinValue;
 int MiloneStd_StdInt_MaxValue;
 
 int parseOk_(struct String s_2) {
+    int value_1;
     int match_;
     struct IntOption call_3 = MiloneStd_StdInt_tryParse(s_2);
     if ((!(call_3.some))) goto next_11;
-    int value_1 = call_3.value;
+    value_1 = call_3.value;
     match_ = value_1;
     goto end_match_10;
 next_11:;
@@ -41,6 +42,7 @@ end_match_10:;
 }
 
 bool parseError_(struct String s_3) {
+    int value_2;
     bool match_1;
     struct IntOption call_4 = MiloneStd_StdInt_tryParse(s_3);
     if (call_4.some) goto next_14;
@@ -48,7 +50,7 @@ bool parseError_(struct String s_3) {
     goto end_match_13;
 next_14:;
     if ((!(call_4.some))) goto next_15;
-    int value_2 = call_4.value;
+    value_2 = call_4.value;
     printf("should not parse: %s -> %d\n", str_to_c_str(s_3), value_2);
     match_1 = false;
     goto end_match_13;

@@ -44,6 +44,10 @@ struct StringOdd_OptionTuple2 {
 };
 
 int milone_main() {
+    int n1_;
+    struct String s2_;
+    int n3_;
+    struct String s4_;
     struct IntObjectOptionTuple2 tuple_ = (struct IntObjectOptionTuple2){.t0 = 1, .t1 = (struct ObjectOption){.some = false}};
     void const* box_ = milone_mem_alloc(1, sizeof(struct IntObjectOptionTuple2));
     (*(((struct IntObjectOptionTuple2*)box_))) = tuple_;
@@ -66,13 +70,13 @@ int milone_main() {
     (*(((struct StringOdd_OptionTuple2*)box_3))) = tuple_3;
     void const* four_ = box_3;
     char match_;
-    struct String s4_ = (*(((struct StringOdd_OptionTuple2 const*)four_))).t0;
+    s4_ = (*(((struct StringOdd_OptionTuple2 const*)four_))).t0;
     if ((!((*(((struct StringOdd_OptionTuple2 const*)four_))).t1.some))) goto next_2;
-    int n3_ = (*(((struct IntObjectOptionTuple2 const*)(*(((struct StringOdd_OptionTuple2 const*)four_))).t1.value.Odd_))).t0;
+    n3_ = (*(((struct IntObjectOptionTuple2 const*)(*(((struct StringOdd_OptionTuple2 const*)four_))).t1.value.Odd_))).t0;
     if ((!((*(((struct IntObjectOptionTuple2 const*)(*(((struct StringOdd_OptionTuple2 const*)four_))).t1.value.Odd_))).t1.some))) goto next_2;
-    struct String s2_ = (*(((struct StringOdd_OptionTuple2 const*)(*(((struct IntObjectOptionTuple2 const*)(*(((struct StringOdd_OptionTuple2 const*)four_))).t1.value.Odd_))).t1.value))).t0;
+    s2_ = (*(((struct StringOdd_OptionTuple2 const*)(*(((struct IntObjectOptionTuple2 const*)(*(((struct StringOdd_OptionTuple2 const*)four_))).t1.value.Odd_))).t1.value))).t0;
     if ((!((*(((struct StringOdd_OptionTuple2 const*)(*(((struct IntObjectOptionTuple2 const*)(*(((struct StringOdd_OptionTuple2 const*)four_))).t1.value.Odd_))).t1.value))).t1.some))) goto next_2;
-    int n1_ = (*(((struct IntObjectOptionTuple2 const*)(*(((struct StringOdd_OptionTuple2 const*)(*(((struct IntObjectOptionTuple2 const*)(*(((struct StringOdd_OptionTuple2 const*)four_))).t1.value.Odd_))).t1.value))).t1.value.Odd_))).t0;
+    n1_ = (*(((struct IntObjectOptionTuple2 const*)(*(((struct StringOdd_OptionTuple2 const*)(*(((struct IntObjectOptionTuple2 const*)(*(((struct StringOdd_OptionTuple2 const*)four_))).t1.value.Odd_))).t1.value))).t1.value.Odd_))).t0;
     if ((*(((struct IntObjectOptionTuple2 const*)(*(((struct StringOdd_OptionTuple2 const*)(*(((struct IntObjectOptionTuple2 const*)(*(((struct StringOdd_OptionTuple2 const*)four_))).t1.value.Odd_))).t1.value))).t1.value.Odd_))).t1.some) goto next_2;
     milone_assert((n1_ == 1), 15, 4);
     milone_assert((str_compare(s2_, (struct String){.str = "two", .len = 3}) == 0), 16, 4);

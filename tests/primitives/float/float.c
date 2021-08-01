@@ -31,6 +31,8 @@ struct F64List {
 };
 
 bool go_1(struct F64BoolFun1 pred_, struct F64List const* xs_1) {
+    struct F64List const* xs_2;
+    double x_;
 tailrec_1:;
     bool match_;
     if ((!((!(xs_1))))) goto next_3;
@@ -38,8 +40,8 @@ tailrec_1:;
     goto end_match_2;
 next_3:;
     if ((!(xs_1))) goto next_4;
-    double x_ = xs_1->head;
-    struct F64List const* xs_2 = xs_1->tail;
+    x_ = xs_1->head;
+    xs_2 = xs_1->tail;
     bool app_ = pred_.fun(pred_.env, x_);
     bool if_;
     if (app_) {

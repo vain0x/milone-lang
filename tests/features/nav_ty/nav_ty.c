@@ -42,6 +42,7 @@ struct Node_ node_(struct Node_ l_, struct Node_ r_) {
 }
 
 int milone_main() {
+    int x_;
     struct Node_ call_ = leaf_(2);
     struct Node_ call_1 = leaf_(3);
     struct Node_ call_2 = leaf_(5);
@@ -51,7 +52,7 @@ int milone_main() {
     char match_;
     if ((t_.discriminant != Node_)) goto next_2;
     if (((*(((struct Node_Node_Tuple2 const*)t_.Node_))).t0.discriminant != Leaf_)) goto next_2;
-    int x_ = (*(((struct Node_Node_Tuple2 const*)t_.Node_))).t0.Leaf_;
+    x_ = (*(((struct Node_Node_Tuple2 const*)t_.Node_))).t0.Leaf_;
     milone_assert((x_ == 2), 22, 24);
     match_ = 0;
     goto end_match_1;

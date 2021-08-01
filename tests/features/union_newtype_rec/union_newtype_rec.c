@@ -41,6 +41,7 @@ struct MyList_ myCons_(int head_, struct MyList_ tail_) {
 }
 
 int milone_main() {
+    int value_;
     struct IntMyList_OptionTuple2 tuple_1 = (struct IntMyList_OptionTuple2){.t0 = 0, .t1 = (struct MyList_Option){.some = false}};
     void const* box_1 = milone_mem_alloc(1, sizeof(struct IntMyList_OptionTuple2));
     (*(((struct IntMyList_OptionTuple2*)box_1))) = tuple_1;
@@ -61,7 +62,7 @@ next_3:;
 end_match_1:;
     char match_1;
     if ((!((*(((struct IntMyList_OptionTuple2 const*)second_.MyList_))).t1.some))) goto next_5;
-    int value_ = (*(((struct IntMyList_OptionTuple2 const*)(*(((struct IntMyList_OptionTuple2 const*)second_.MyList_))).t1.value.MyList_))).t0;
+    value_ = (*(((struct IntMyList_OptionTuple2 const*)(*(((struct IntMyList_OptionTuple2 const*)second_.MyList_))).t1.value.MyList_))).t0;
     milone_assert((value_ == 0), 17, 44);
     match_1 = 0;
     goto end_match_4;

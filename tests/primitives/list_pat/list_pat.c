@@ -67,6 +67,13 @@ struct IntOptionOptionOption fun_1(void const* env_, int arg_) {
 }
 
 int milone_main() {
+    int x7_;
+    int x6_;
+    int x5_;
+    int x4_;
+    int x3_;
+    int x2_;
+    int x1_;
     char match_2;
     struct IntIntOptionOptionOptionFun1 fun_3 = (struct IntIntOptionOptionOptionFun1){.fun = fun_1, .env = NULL};
     struct IntList const* list_8 = milone_mem_alloc(1, sizeof(struct IntList));
@@ -88,37 +95,37 @@ int milone_main() {
     if ((!(call_4->head.some))) goto next_10;
     if ((!(call_4->head.value.some))) goto next_10;
     if ((!(call_4->head.value.value.some))) goto next_10;
-    int x1_ = call_4->head.value.value.value;
+    x1_ = call_4->head.value.value.value;
     if ((!(call_4->tail))) goto next_10;
     if ((!(call_4->tail->head.some))) goto next_10;
     if ((!(call_4->tail->head.value.some))) goto next_10;
     if ((!(call_4->tail->head.value.value.some))) goto next_10;
-    int x2_ = call_4->tail->head.value.value.value;
+    x2_ = call_4->tail->head.value.value.value;
     if ((!(call_4->tail->tail))) goto next_10;
     if ((!(call_4->tail->tail->head.some))) goto next_10;
     if ((!(call_4->tail->tail->head.value.some))) goto next_10;
     if ((!(call_4->tail->tail->head.value.value.some))) goto next_10;
-    int x3_ = call_4->tail->tail->head.value.value.value;
+    x3_ = call_4->tail->tail->head.value.value.value;
     if ((!(call_4->tail->tail->tail))) goto next_10;
     if ((!(call_4->tail->tail->tail->head.some))) goto next_10;
     if ((!(call_4->tail->tail->tail->head.value.some))) goto next_10;
     if ((!(call_4->tail->tail->tail->head.value.value.some))) goto next_10;
-    int x4_ = call_4->tail->tail->tail->head.value.value.value;
+    x4_ = call_4->tail->tail->tail->head.value.value.value;
     if ((!(call_4->tail->tail->tail->tail))) goto next_10;
     if ((!(call_4->tail->tail->tail->tail->head.some))) goto next_10;
     if ((!(call_4->tail->tail->tail->tail->head.value.some))) goto next_10;
     if ((!(call_4->tail->tail->tail->tail->head.value.value.some))) goto next_10;
-    int x5_ = call_4->tail->tail->tail->tail->head.value.value.value;
+    x5_ = call_4->tail->tail->tail->tail->head.value.value.value;
     if ((!(call_4->tail->tail->tail->tail->tail))) goto next_10;
     if ((!(call_4->tail->tail->tail->tail->tail->head.some))) goto next_10;
     if ((!(call_4->tail->tail->tail->tail->tail->head.value.some))) goto next_10;
     if ((!(call_4->tail->tail->tail->tail->tail->head.value.value.some))) goto next_10;
-    int x6_ = call_4->tail->tail->tail->tail->tail->head.value.value.value;
+    x6_ = call_4->tail->tail->tail->tail->tail->head.value.value.value;
     if ((!(call_4->tail->tail->tail->tail->tail->tail))) goto next_10;
     if ((!(call_4->tail->tail->tail->tail->tail->tail->head.some))) goto next_10;
     if ((!(call_4->tail->tail->tail->tail->tail->tail->head.value.some))) goto next_10;
     if ((!(call_4->tail->tail->tail->tail->tail->tail->head.value.value.some))) goto next_10;
-    int x7_ = call_4->tail->tail->tail->tail->tail->tail->head.value.value.value;
+    x7_ = call_4->tail->tail->tail->tail->tail->tail->head.value.value.value;
     if ((!((!(call_4->tail->tail->tail->tail->tail->tail->tail))))) goto next_10;
     milone_assert((x1_ == 1), 14, 4);
     milone_assert((x2_ == 2), 15, 4);

@@ -61,6 +61,7 @@ struct StringStringListTuple2 useTyVarInBody_(struct String x_1) {
 }
 
 int milone_main() {
+    struct String s_;
     struct IntIntTuple2 tuple_2 = (struct IntIntTuple2){.t0 = 0, .t1 = 0};
     int call_1 = pair_1(tuple_2);
     milone_assert((call_1 == 2), 18, 2);
@@ -72,7 +73,7 @@ int milone_main() {
     char match_;
     struct StringStringListTuple2 call_4 = useTyVarInBody_((struct String){.str = "b", .len = 1});
     if ((!(call_4.t1))) goto next_2;
-    struct String s_ = call_4.t1->head;
+    s_ = call_4.t1->head;
     milone_assert((s_.str[0] == 'b'), 24, 17);
     match_ = 0;
     goto end_match_1;

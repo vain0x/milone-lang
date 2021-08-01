@@ -131,6 +131,9 @@ struct First_ListSecond_ListTuple2 fun_1(void const* env_1, struct First_Second_
 }
 
 int milone_main() {
+    int z_;
+    int y_;
+    int x_;
     char match_;
     struct Node_ variant_ = (struct Node_){.discriminant = Leaf_, .Leaf_ = 1};
     struct Node_ variant_1 = (struct Node_){.discriminant = Leaf_, .Leaf_ = 2};
@@ -156,10 +159,10 @@ int milone_main() {
     if ((variant_6.Node_->head.discriminant != Node_)) goto next_2;
     if ((!(variant_6.Node_->head.Node_))) goto next_2;
     if ((variant_6.Node_->head.Node_->head.discriminant != Leaf_)) goto next_2;
-    int x_ = variant_6.Node_->head.Node_->head.Leaf_;
+    x_ = variant_6.Node_->head.Node_->head.Leaf_;
     if ((!(variant_6.Node_->head.Node_->tail))) goto next_2;
     if ((variant_6.Node_->head.Node_->tail->head.discriminant != Leaf_)) goto next_2;
-    int y_ = variant_6.Node_->head.Node_->tail->head.Leaf_;
+    y_ = variant_6.Node_->head.Node_->tail->head.Leaf_;
     if ((!((!(variant_6.Node_->head.Node_->tail->tail))))) goto next_2;
     if ((!(variant_6.Node_->tail))) goto next_2;
     if ((variant_6.Node_->tail->head.discriminant != Node_)) goto next_2;
@@ -168,7 +171,7 @@ int milone_main() {
     if ((variant_6.Node_->tail->tail->head.discriminant != Node_)) goto next_2;
     if ((!(variant_6.Node_->tail->tail->head.Node_))) goto next_2;
     if ((variant_6.Node_->tail->tail->head.Node_->head.discriminant != Leaf_)) goto next_2;
-    int z_ = variant_6.Node_->tail->tail->head.Node_->head.Leaf_;
+    z_ = variant_6.Node_->tail->tail->head.Node_->head.Leaf_;
     if ((!((!(variant_6.Node_->tail->tail->head.Node_->tail))))) goto next_2;
     if ((!((!(variant_6.Node_->tail->tail->tail))))) goto next_2;
     bool if_;

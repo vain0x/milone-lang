@@ -27,15 +27,18 @@ struct Expr_Expr_Tuple2 {
 };
 
 int eval_(struct Expr_ expr_) {
+    struct Expr_ r_;
+    struct Expr_ l_;
+    int value_;
     int match_;
     if ((expr_.discriminant != Int_)) goto next_2;
-    int value_ = expr_.Int_;
+    value_ = expr_.Int_;
     match_ = value_;
     goto end_match_1;
 next_2:;
     if ((expr_.discriminant != Add_)) goto next_3;
-    struct Expr_ l_ = (*(((struct Expr_Expr_Tuple2 const*)expr_.Add_))).t0;
-    struct Expr_ r_ = (*(((struct Expr_Expr_Tuple2 const*)expr_.Add_))).t1;
+    l_ = (*(((struct Expr_Expr_Tuple2 const*)expr_.Add_))).t0;
+    r_ = (*(((struct Expr_Expr_Tuple2 const*)expr_.Add_))).t1;
     int call_ = eval_(l_);
     int call_1 = eval_(r_);
     match_ = (call_ + call_1);

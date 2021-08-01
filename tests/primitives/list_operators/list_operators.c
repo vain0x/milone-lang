@@ -39,12 +39,13 @@ if_next_1:;
 }
 
 char list_operators_Program_cons1Test(char arg_1) {
+    int x_;
     struct IntList const* list_ = milone_mem_alloc(1, sizeof(struct IntList));
     (*(((struct IntList*)list_))) = (struct IntList){.head = 1, .tail = NULL};
     struct IntList const* xs_ = list_;
     char match_;
     if ((!(xs_))) goto next_5;
-    int x_ = xs_->head;
+    x_ = xs_->head;
     if ((!((!(xs_->tail))))) goto next_5;
     milone_assert((x_ == 1), 15, 15);
     match_ = 0;
@@ -59,6 +60,8 @@ end_match_4:;
 }
 
 char list_operators_Program_cons2Test(char arg_2) {
+    int y3_;
+    int y2_;
     struct IntList const* list_2 = milone_mem_alloc(1, sizeof(struct IntList));
     (*(((struct IntList*)list_2))) = (struct IntList){.head = 3, .tail = NULL};
     struct IntList const* list_1 = milone_mem_alloc(1, sizeof(struct IntList));
@@ -66,9 +69,9 @@ char list_operators_Program_cons2Test(char arg_2) {
     struct IntList const* ys_ = list_1;
     char match_1;
     if ((!(ys_))) goto next_8;
-    int y2_ = ys_->head;
+    y2_ = ys_->head;
     if ((!(ys_->tail))) goto next_8;
-    int y3_ = ys_->tail->head;
+    y3_ = ys_->tail->head;
     if ((!((!(ys_->tail->tail))))) goto next_8;
     bool if_1;
     if ((y2_ == 2)) {
@@ -96,6 +99,10 @@ end_match_7:;
 }
 
 char list_operators_Program_literalTest(char arg_3) {
+    int z7_;
+    int z5_;
+    int z3_;
+    int z2_;
     struct IntList const* list_6 = milone_mem_alloc(1, sizeof(struct IntList));
     (*(((struct IntList*)list_6))) = (struct IntList){.head = 7, .tail = NULL};
     struct IntList const* list_5 = milone_mem_alloc(1, sizeof(struct IntList));
@@ -107,13 +114,13 @@ char list_operators_Program_literalTest(char arg_3) {
     struct IntList const* zs_ = list_3;
     char match_2;
     if ((!(zs_))) goto next_14;
-    int z2_ = zs_->head;
+    z2_ = zs_->head;
     if ((!(zs_->tail))) goto next_14;
-    int z3_ = zs_->tail->head;
+    z3_ = zs_->tail->head;
     if ((!(zs_->tail->tail))) goto next_14;
-    int z5_ = zs_->tail->tail->head;
+    z5_ = zs_->tail->tail->head;
     if ((!(zs_->tail->tail->tail))) goto next_14;
-    int z7_ = zs_->tail->tail->tail->head;
+    z7_ = zs_->tail->tail->tail->head;
     if ((!((!(zs_->tail->tail->tail->tail))))) goto next_14;
     milone_assert((z2_ == 2), 30, 4);
     milone_assert((z3_ == 3), 31, 4);

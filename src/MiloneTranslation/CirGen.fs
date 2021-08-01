@@ -958,9 +958,10 @@ let private cgPrimStmt (ctx: CirCtx) itself prim args serial =
       let name = getUniqueVarName ctx serial
       let isStatic = findStorageModifier ctx serial
       let linkage = findVarLinkage ctx serial
+      let replacing = isReplacing ctx serial
       let ty, ctx = cgTyComplete ctx resultTy
       let arg, ctx = cgExpr ctx arg
-      addLetStmt ctx name (Some(makeExpr arg)) ty isStatic linkage false
+      addLetStmt ctx name (Some(makeExpr arg)) ty isStatic linkage replacing
 
     | _ -> unreachable itself
 

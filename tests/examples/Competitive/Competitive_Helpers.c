@@ -370,6 +370,7 @@ if_next_16:;
 }
 
 int go_22(int len_2, struct StringList const* xs_2) {
+    struct StringList const* xs_3;
 tailrec_19:;
     int match_;
     if ((!((!(xs_2))))) goto next_21;
@@ -377,7 +378,7 @@ tailrec_19:;
     goto end_match_20;
 next_21:;
     if ((!(xs_2))) goto next_22;
-    struct StringList const* xs_3 = xs_2->tail;
+    xs_3 = xs_2->tail;
     int arg_36 = (len_2 + 1);
     struct StringList const* arg_37 = xs_3;
     len_2 = arg_36;
@@ -390,6 +391,7 @@ end_match_20:;
 }
 
 int go_21(int len_2, struct IntList const* xs_2) {
+    struct IntList const* xs_3;
 tailrec_23:;
     int match_1;
     if ((!((!(xs_2))))) goto next_25;
@@ -397,7 +399,7 @@ tailrec_23:;
     goto end_match_24;
 next_25:;
     if ((!(xs_2))) goto next_26;
-    struct IntList const* xs_3 = xs_2->tail;
+    xs_3 = xs_2->tail;
     int arg_38 = (len_2 + 1);
     struct IntList const* arg_39 = xs_3;
     len_2 = arg_38;
@@ -420,6 +422,8 @@ int listLength_(struct IntList const* xs_1) {
 }
 
 struct IntList const* go_38(struct IntList const* acc_, struct IntList const* xs_5) {
+    struct IntList const* xs_6;
+    int x_;
 tailrec_27:;
     struct IntList const* match_2;
     if ((!((!(xs_5))))) goto next_29;
@@ -427,8 +431,8 @@ tailrec_27:;
     goto end_match_28;
 next_29:;
     if ((!(xs_5))) goto next_30;
-    int x_ = xs_5->head;
-    struct IntList const* xs_6 = xs_5->tail;
+    x_ = xs_5->head;
+    xs_6 = xs_5->tail;
     struct IntList const* list_ = milone_mem_alloc(1, sizeof(struct IntList));
     (*(((struct IntList*)list_))) = (struct IntList){.head = x_, .tail = acc_};
     struct IntList const* arg_40 = list_;
@@ -443,6 +447,8 @@ end_match_28:;
 }
 
 struct StringList const* go_37(struct StringList const* acc_, struct StringList const* xs_5) {
+    struct StringList const* xs_6;
+    struct String x_;
 tailrec_31:;
     struct StringList const* match_3;
     if ((!((!(xs_5))))) goto next_33;
@@ -450,8 +456,8 @@ tailrec_31:;
     goto end_match_32;
 next_33:;
     if ((!(xs_5))) goto next_34;
-    struct String x_ = xs_5->head;
-    struct StringList const* xs_6 = xs_5->tail;
+    x_ = xs_5->head;
+    xs_6 = xs_5->tail;
     struct StringList const* list_1 = milone_mem_alloc(1, sizeof(struct StringList));
     (*(((struct StringList*)list_1))) = (struct StringList){.head = x_, .tail = acc_};
     struct StringList const* arg_42 = list_1;
@@ -476,6 +482,10 @@ struct StringList const* listRev_(struct StringList const* xs_4) {
 }
 
 bool go_24(struct IntIntBoolFun2 itemEqual_, struct IntList const* xs_8, struct IntList const* ys_1) {
+    struct IntList const* ys_2;
+    int y_;
+    struct IntList const* xs_9;
+    int x_1;
 tailrec_35:;
     bool match_4;
     struct IntListIntListTuple2 tuple_ = (struct IntListIntListTuple2){.t0 = xs_8, .t1 = ys_1};
@@ -485,11 +495,11 @@ tailrec_35:;
     goto end_match_36;
 next_37:;
     if ((!(tuple_.t0))) goto next_38;
-    int x_1 = tuple_.t0->head;
-    struct IntList const* xs_9 = tuple_.t0->tail;
+    x_1 = tuple_.t0->head;
+    xs_9 = tuple_.t0->tail;
     if ((!(tuple_.t1))) goto next_38;
-    int y_ = tuple_.t1->head;
-    struct IntList const* ys_2 = tuple_.t1->tail;
+    y_ = tuple_.t1->head;
+    ys_2 = tuple_.t1->tail;
     bool app_ = itemEqual_.fun(itemEqual_.env, x_1, y_);
     bool if_6;
     if (app_) {
@@ -520,6 +530,10 @@ end_match_36:;
 }
 
 bool go_23(struct StringStringBoolFun2 itemEqual_, struct StringList const* xs_8, struct StringList const* ys_1) {
+    struct StringList const* ys_2;
+    struct String y_;
+    struct StringList const* xs_9;
+    struct String x_1;
 tailrec_43:;
     bool match_5;
     struct StringListStringListTuple2 tuple_1 = (struct StringListStringListTuple2){.t0 = xs_8, .t1 = ys_1};
@@ -529,11 +543,11 @@ tailrec_43:;
     goto end_match_44;
 next_45:;
     if ((!(tuple_1.t0))) goto next_46;
-    struct String x_1 = tuple_1.t0->head;
-    struct StringList const* xs_9 = tuple_1.t0->tail;
+    x_1 = tuple_1.t0->head;
+    xs_9 = tuple_1.t0->tail;
     if ((!(tuple_1.t1))) goto next_46;
-    struct String y_ = tuple_1.t1->head;
-    struct StringList const* ys_2 = tuple_1.t1->tail;
+    y_ = tuple_1.t1->head;
+    ys_2 = tuple_1.t1->tail;
     bool app_1 = itemEqual_.fun(itemEqual_.env, x_1, y_);
     bool if_7;
     if (app_1) {
@@ -641,6 +655,10 @@ struct IntList const* listInit_(int len_4, struct IntIntFun1 gen_) {
 }
 
 struct StringStringListTuple2 go_5(struct StringList const* xs_11, int xn_) {
+    struct StringList const* xs_14;
+    struct StringList const* xs_13;
+    struct String y_1;
+    struct String x_3;
     struct StringList const* xs_12;
     struct String x_2;
     struct StringStringListTuple2 match_6;
@@ -661,7 +679,7 @@ next_61:;
     if ((!(xs_11))) goto next_62;
     x_2 = xs_11->head;
     if ((!(xs_11->tail))) goto next_62;
-    struct String y_1 = xs_11->tail->head;
+    y_1 = xs_11->tail->head;
     xs_12 = xs_11->tail->tail;
     if ((xn_ != 2)) goto next_62;
     struct StringStringListTuple2 tuple_4 = (struct StringStringListTuple2){.t0 = str_add(x_2, y_1), .t1 = xs_12};
@@ -858,6 +876,8 @@ char vectorSet_(int index_4, int value_1, struct IntIntIntVoidMutPtrFun1VoidMutP
 }
 
 char go_27(int len_10, struct IntIntIntVoidMutPtrFun1VoidMutPtrIntIntFun2VoidMutPtrIntIntUnitFun3UnitTuple6VoidMutPtrIntIntUnitTuple5 v_, int i_2, struct IntList const* xs_19) {
+    struct IntList const* xs_20;
+    int x_4;
 tailrec_76:;
     char match_7;
     if ((!((!(xs_19))))) goto next_78;
@@ -866,8 +886,8 @@ tailrec_76:;
     goto end_match_77;
 next_78:;
     if ((!(xs_19))) goto next_79;
-    int x_4 = xs_19->head;
-    struct IntList const* xs_20 = xs_19->tail;
+    x_4 = xs_19->head;
+    xs_20 = xs_19->tail;
     char call_28 = vectorSet_(i_2, x_4, v_);
     int arg_63 = len_10;
     struct IntIntIntVoidMutPtrFun1VoidMutPtrIntIntFun2VoidMutPtrIntIntUnitFun3UnitTuple6VoidMutPtrIntIntUnitTuple5 arg_64 = v_;

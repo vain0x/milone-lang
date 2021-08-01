@@ -12,9 +12,11 @@ struct IntIntTuple2 {
 };
 
 bool pat_when_Program_equal(struct IntIntTuple2 t_) {
+    int y_;
+    int x_;
     bool match_;
-    int x_ = t_.t0;
-    int y_ = t_.t1;
+    x_ = t_.t0;
+    y_ = t_.t1;
     if ((x_ != y_)) goto next_2;
     match_ = true;
     goto end_match_1;

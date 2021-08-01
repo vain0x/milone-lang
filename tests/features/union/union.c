@@ -54,6 +54,10 @@ struct ApiResponse_ {
 };
 
 int milone_main() {
+    struct String statusText_;
+    int statusCode_;
+    int x_;
+    struct String e_;
     struct Status_ ok_ = (struct Status_){.discriminant = Ok_1};
     struct Status_ variant_ = (struct Status_){.discriminant = Err_, .Err_ = (struct String){.str = "No such file or directory.", .len = 26}};
     struct Status_ err1_ = variant_;
@@ -66,7 +70,7 @@ int milone_main() {
     goto end_match_1;
 next_2:;
     if ((err1_.discriminant != Err_)) goto next_3;
-    struct String e_ = err1_.Err_;
+    e_ = err1_.Err_;
     milone_assert((str_compare(e_, (struct String){.str = "No such file or directory.", .len = 26}) == 0), 29, 15);
     match_ = 0;
     goto end_match_1;
@@ -76,7 +80,7 @@ end_match_1:;
     char match_1;
     struct Limit_ variant_2 = (struct Limit_){.discriminant = LimitVal_, .LimitVal_ = 1};
     if ((variant_2.discriminant != LimitVal_)) goto next_5;
-    int x_ = variant_2.LimitVal_;
+    x_ = variant_2.LimitVal_;
     milone_assert((x_ == 1), 33, 20);
     match_1 = 0;
     goto end_match_4;
@@ -106,8 +110,8 @@ switch_next_7:;
     struct IntStringTuple2 tuple_ = (struct IntStringTuple2){.t0 = 404, .t1 = (struct String){.str = "Not Found", .len = 9}};
     struct ApiResponse_ variant_3 = (struct ApiResponse_){.discriminant = ARError_, .ARError_ = tuple_};
     if ((variant_3.discriminant != ARError_)) goto next_11;
-    int statusCode_ = variant_3.ARError_.t0;
-    struct String statusText_ = variant_3.ARError_.t1;
+    statusCode_ = variant_3.ARError_.t0;
+    statusText_ = variant_3.ARError_.t1;
     bool if_;
     if ((statusCode_ == 404)) {
         goto then_14;

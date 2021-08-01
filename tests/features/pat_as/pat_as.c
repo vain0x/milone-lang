@@ -14,8 +14,9 @@ struct IntIntTuple2 {
 };
 
 char pat_as_Program_simpleCase(char arg_) {
+    int x_;
     char match_;
-    int x_ = 1;
+    x_ = 1;
     if ((x_ != 1)) goto next_2;
     milone_assert((x_ == 1), 6, 14);
     match_ = 0;
@@ -30,11 +31,13 @@ end_match_1:;
 }
 
 char pat_as_Program_shadowingCase(char arg_1) {
+    int x_2;
+    struct IntIntTuple2 y_;
     int x_1 = 1;
     char match_1;
     struct IntIntTuple2 tuple_ = (struct IntIntTuple2){.t0 = x_1, .t1 = 2};
-    struct IntIntTuple2 y_ = tuple_;
-    int x_2 = y_.t1;
+    y_ = tuple_;
+    x_2 = y_.t1;
     int y1_ = y_.t0;
     int y2_ = y_.t1;
     bool if_;

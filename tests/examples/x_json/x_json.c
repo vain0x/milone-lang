@@ -26,6 +26,8 @@ struct StringList {
 };
 
 struct StringList const* go_(struct StringList const* acc_, struct StringList const* xs_1) {
+    struct StringList const* xs_2;
+    struct String x_;
 tailrec_1:;
     struct StringList const* match_;
     if ((!((!(xs_1))))) goto next_3;
@@ -33,8 +35,8 @@ tailrec_1:;
     goto end_match_2;
 next_3:;
     if ((!(xs_1))) goto next_4;
-    struct String x_ = xs_1->head;
-    struct StringList const* xs_2 = xs_1->tail;
+    x_ = xs_1->head;
+    xs_2 = xs_1->tail;
     struct StringList const* list_ = milone_mem_alloc(1, sizeof(struct StringList));
     (*(((struct StringList*)list_))) = (struct StringList){.head = x_, .tail = acc_};
     struct StringList const* arg_ = list_;
@@ -54,6 +56,8 @@ struct StringList const* x_json_Program_listRev(struct StringList const* xs_) {
 }
 
 char x_json_Program_printList(struct StringList const* xs_3) {
+    struct StringList const* xs_4;
+    struct String x_1;
 tailrec_5:;
     char match_1;
     if ((!((!(xs_3))))) goto next_7;
@@ -61,8 +65,8 @@ tailrec_5:;
     goto end_match_6;
 next_7:;
     if ((!(xs_3))) goto next_8;
-    struct String x_1 = xs_3->head;
-    struct StringList const* xs_4 = xs_3->tail;
+    x_1 = xs_3->head;
+    xs_4 = xs_3->tail;
     printf("%s\n", str_to_c_str(x_1));
     struct StringList const* arg_2 = xs_4;
     xs_3 = arg_2;
