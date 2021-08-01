@@ -121,6 +121,16 @@ module rec ExtIter =
       state
       xs
 
+  let filter (pred: 'T -> bool) (xs: Iter<'T>) : Iter<'T> =
+    scanEx
+      (fun () (x: 'T) ->
+        if pred x then
+          singleton x, ()
+        else
+          empty (), ())
+      ()
+      xs
+
   // ---------------------------------------------
   // Consumer
   // ---------------------------------------------

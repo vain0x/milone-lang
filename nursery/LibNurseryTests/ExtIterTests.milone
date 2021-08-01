@@ -132,6 +132,14 @@ let private testScan () =
 
   assert (s = "0,1,12,123")
 
+let private testFilter () =
+  let n =
+    gen 11
+    |> ExtIter.filter (fun n -> n % 2 = 1)
+    |> cat
+
+  assert (n = 13579)
+
 let private testIsEmpty () =
   assert (gen 0 |> ExtIter.isEmpty)
   assert (gen 1 |> ExtIter.isEmpty |> not)
@@ -177,6 +185,7 @@ let testExtIterModule () =
   testChoose ()
   testCollect ()
   testScan ()
+  testFilter ()
   testIsEmpty ()
   testFold ()
   testOfOption ()
