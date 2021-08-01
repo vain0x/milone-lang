@@ -171,6 +171,17 @@ let private testFold () =
   let xs: Iter<int> = ExtIter.range 1 4
   assert (cat xs = 123)
 
+let private testForall () =
+  assert (gen 3
+          |> ExtIter.forall (fun (i: int) -> 0 <= i && i < 3))
+
+  assert (gen 3
+          |> ExtIter.forall
+               (fun (i: int) ->
+                 assert (i <= 1) // Loop stops at i = 1.
+                 i <> 1)
+          |> not)
+
 let private testOfOption () =
   assert (cat (ExtIter.ofOption None) = 0)
   assert (cat (ExtIter.ofOption (Some 2)) = 2)
@@ -212,6 +223,7 @@ let testExtIterModule () =
   testIndexed ()
   testIsEmpty ()
   testFold ()
+  testForall ()
   testOfOption ()
   testOfList ()
   testToList ()

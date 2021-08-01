@@ -172,6 +172,18 @@ module rec ExtIter =
   let fold (folder: 'S -> 'T -> 'S) (state: 'S) (xs: Iter<'T>) : 'S =
     foldEx (fun state item -> Some(folder state item), None) id state xs
 
+  let forall (pred: 'T -> bool) (xs: Iter<'T>) : bool =
+    foldEx
+      (fun ok x ->
+        if pred x then
+          Some(), None // Ok ()
+        else
+          None, Some false // Err false
+      )
+      (fun () -> true)
+      ()
+      xs
+
   // ---------------------------------------------
   // Option
   // ---------------------------------------------
