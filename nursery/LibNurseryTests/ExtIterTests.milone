@@ -141,6 +141,16 @@ let private testFilter () =
 
   assert (n = 13579)
 
+let private testMapI () =
+  let s =
+    gen 3
+    |> ExtIter.map (fun (i: int) -> string (i + 1))
+    |> ExtIter.mapi (fun (i: int) x -> string i + ":" + x)
+    |> ExtIter.toList
+    |> S.concat ","
+
+  assert (s = "0:1,1:2,2:3")
+
 let private testIndexed () =
   let s =
     gen 3
@@ -198,6 +208,7 @@ let testExtIterModule () =
   testCollect ()
   testScan ()
   testFilter ()
+  testMapI ()
   testIndexed ()
   testIsEmpty ()
   testFold ()

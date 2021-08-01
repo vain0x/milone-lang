@@ -135,6 +135,9 @@ module rec ExtIter =
       ()
       xs
 
+  let mapi (f: int -> 'T -> 'U) (xs: Iter<'T>) : Iter<'U> =
+    scanEx (fun (i: int) (x: 'T) -> singleton (f i x), i + 1) 0 xs
+
   let indexed (xs: Iter<'T>) : Iter<int * 'T> =
     scanEx (fun (i: int) (x: 'T) -> singleton (i, x), i + 1) 0 xs
 
