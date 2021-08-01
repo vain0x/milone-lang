@@ -36,6 +36,10 @@ module rec ExtIter =
   // Constructor
   // ---------------------------------------------
 
+  let empty () : Iter<'T> =
+    let nextFun (_: obj) : ('T * obj) option = None
+    nextFun, box ()
+
   let singleton (item: 'T) : Iter<'T> = ofList [ item ]
 
   let replicate (count: int) (item: 'T) : Iter<'T> = range 0 count |> map (fun _ -> item)

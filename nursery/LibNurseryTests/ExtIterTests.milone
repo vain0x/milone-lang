@@ -54,6 +54,11 @@ let private testNext () =
 
   | Some (x, xs) -> assert (x = 1)
 
+let private testEmpty () =
+  let xs : Iter<string> = ExtIter.empty ()
+
+  assert (Option.isNone (ExtIter.next xs))
+
 let private testSingleton () =
   let xs = ExtIter.singleton "foo"
 
@@ -147,6 +152,7 @@ let private testToList () =
 
 let testExtIterModule () =
   testNext ()
+  testEmpty ()
   testSingleton ()
   testReplicate ()
   testMap ()
