@@ -42,6 +42,8 @@ module rec ExtIter =
 
   let singleton (item: 'T) : Iter<'T> = ofList [ item ]
 
+  let init (count: int) (initializer: int -> 'T) : Iter<'T> = range 0 count |> map initializer
+
   let replicate (count: int) (item: 'T) : Iter<'T> = range 0 count |> map (fun _ -> item)
 
   let range (start: int) (endIndex: int) : Iter<int> =

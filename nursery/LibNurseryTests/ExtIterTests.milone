@@ -71,6 +71,9 @@ let private testSingleton () =
     | None -> ()
     | Some _ -> assert false
 
+let private testInit () =
+  assert (ExtIter.init 5 (fun i -> i + 1) |> cat = 12345)
+
 let private testReplicate () =
   assert (ExtIter.replicate 0 "x" |> ExtIter.isEmpty)
 
@@ -167,6 +170,7 @@ let testExtIterModule () =
   testNext ()
   testEmpty ()
   testSingleton ()
+  testInit ()
   testReplicate ()
   testUnfold ()
   testMap ()
