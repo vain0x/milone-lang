@@ -182,6 +182,13 @@ let private testForall () =
                  i <> 1)
           |> not)
 
+let private testExists () =
+  assert (gen 3
+          |> ExtIter.exists
+               (fun (i: int) ->
+                 assert (i <= 1) // Loop stops at i = 1.
+                 i = 1))
+
 let private testOfOption () =
   assert (cat (ExtIter.ofOption None) = 0)
   assert (cat (ExtIter.ofOption (Some 2)) = 2)
@@ -224,6 +231,7 @@ let testExtIterModule () =
   testIsEmpty ()
   testFold ()
   testForall ()
+  testExists ()
   testOfOption ()
   testOfList ()
   testToList ()

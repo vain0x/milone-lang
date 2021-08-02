@@ -184,6 +184,18 @@ module rec ExtIter =
       ()
       xs
 
+  let exists (pred: 'T -> bool) (xs: Iter<'T>) : bool =
+    foldEx
+      (fun ok x ->
+        if pred x then
+          None, Some true // Err true
+        else
+          Some(), None // Ok ()
+      )
+      (fun () -> false)
+      ()
+      xs
+
   // ---------------------------------------------
   // Option
   // ---------------------------------------------
