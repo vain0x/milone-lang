@@ -203,6 +203,11 @@ module rec ExtIter =
       ()
       xs
 
+  let tryPick (picker: 'T -> 'U option) (xs: Iter<'T>) : 'U option =
+    match next (choose picker xs) with
+    | Some (it, _) -> Some it
+    | _ -> None
+
   // ---------------------------------------------
   // Option
   // ---------------------------------------------
