@@ -162,6 +162,15 @@ let private testIndexed () =
 
   assert (s = "0:1,1:2,2:3")
 
+let private testAppend () =
+  let s =
+    ExtIter.append (gen 3) (gen 2)
+    |> ExtIter.map string
+    |> ExtIter.toList
+    |> S.concat ","
+
+  assert (s = "0,1,2,0,1")
+
 let private testIsEmpty () =
   assert (gen 0 |> ExtIter.isEmpty)
   assert (gen 1 |> ExtIter.isEmpty |> not)
@@ -228,6 +237,7 @@ let testExtIterModule () =
   testFilter ()
   testMapI ()
   testIndexed ()
+  testAppend ()
   testIsEmpty ()
   testFold ()
   testForall ()

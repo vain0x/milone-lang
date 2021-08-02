@@ -141,6 +141,15 @@ module rec ExtIter =
   let indexed (xs: Iter<'T>) : Iter<int * 'T> =
     scanEx (fun (i: int) (x: 'T) -> singleton (i, x), i + 1) 0 xs
 
+  let append (first: Iter<'T>) (second: Iter<'T>) : Iter<'T> =
+    scanEx
+      (fun () (i: int) ->
+        match i with
+        | 0 -> first, ()
+        | _ -> second, ())
+      ()
+      (range 0 2)
+
   // ---------------------------------------------
   // Consumer
   // ---------------------------------------------
@@ -178,8 +187,7 @@ module rec ExtIter =
         if pred x then
           Some(), None // Ok ()
         else
-          None, Some false // Err false
-      )
+          None, Some false) // Err false
       (fun () -> true)
       ()
       xs
@@ -190,8 +198,7 @@ module rec ExtIter =
         if pred x then
           None, Some true // Err true
         else
-          Some(), None // Ok ()
-      )
+          Some(), None) // Ok ()
       (fun () -> false)
       ()
       xs
