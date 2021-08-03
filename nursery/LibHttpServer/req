@@ -1,0 +1,44 @@
+#!/bin/bash
+
+set -eu
+SERVER="$PWD/../target/LibHttpServer/httpd --stdio"
+
+./build
+
+cat <<REQ | $SERVER
+GET /null?content-length-header=no HTTP/1.1
+
+REQ
+
+cat <<REQ | $SERVER
+GET /null?content-length-header=exist HTTP/1.1
+Content-Length: 0
+
+REQ
+
+cat <<REQ | $SERVER
+GET /expect?error=not_found HTTP/1.1
+
+REQ
+
+cat <<REQ | $SERVER
+GET /../secret/expect/?error=bad_request HTTP/1.1
+
+REQ
+
+cat <<REQ | $SERVER
+POST /expect?error=method_not_supported HTTP/1.1
+
+REQ
+
+cat <<REQ | $SERVER
+GET / HTTP/1.1
+
+REQ
+
+cat <<REQ | $SERVER
+GET /index.html HTTP/1.1
+
+GET /main.css HTTP/1.1
+
+REQ

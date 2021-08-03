@@ -1,0 +1,18 @@
+#!/bin/sh
+
+set -eu
+
+CC=${CC:-gcc}
+MILONE_HOME=${MILONE_HOME:-$HOME/.milone}
+TARGET=$PWD/../target/LibHttpServer
+
+milone build --target-dir "$TARGET" $PWD
+
+$CC -std=gnu11 \
+    -I$MILONE_HOME/runtime \
+    $MILONE_HOME/runtime/milone.c \
+    ../LibHttpServer/lib_http_server.c \
+    $(find "$TARGET" -name '*.c') \
+    -o $TARGET/httpd
+
+echo "trace: Built. '$TARGET/httpd'" >&2
