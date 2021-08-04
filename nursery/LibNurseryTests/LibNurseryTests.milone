@@ -1,7 +1,9 @@
 module rec LibNurseryTests.Program
 
+open LibNurseryTests.ExtIterTests
 open LibNurseryTests.ExtStringTests
 
 let main _ =
+  testExtIterModule ()
   testExtStringModule ()
   0
