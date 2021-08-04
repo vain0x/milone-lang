@@ -1,0 +1,17 @@
+// FNV-1a hash
+
+let fnv1aInit = uint64 "14695981039346656037"
+
+let fnv1aPrime = uint64 "1099511628211"
+
+let fnv1aReduceUInt8 (n: uint8) (h: uint64) = (h ^^^ uint64 n) * fnv1aPrime
+
+let fnv1aReduceUInt16 (n: uint16) (h: uint64) =
+  h
+  |> fnv1aReduceUInt8 (uint8 (uint n &&& uint 15))
+  |> fnv1aReduceUInt8 (uint8 ((uint n >>> 8) &&& uint 15))
+
+let fnv1aReduceUInt (n: uint) (h: uint64) =
+  h
+  |> fnv1aReduceUInt16 (uint16 (uint n &&& uint 255))
+  |> fnv1aReduceUInt16 (uint16 ((uint n >>> 16) &&& uint 255))
