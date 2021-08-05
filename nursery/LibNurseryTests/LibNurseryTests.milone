@@ -3,9 +3,18 @@ module rec LibNurseryTests.Program
 open LibNurseryTests.ClapTests
 open LibNurseryTests.ExtIterTests
 open LibNurseryTests.ExtStringTests
+open LibNurseryTests.EphArrayTests
+open LibNurseryTests.EphRefTests
+open LibNurseryTests.EphSerialTests
+open LibNurseryTests.ImpureTests
 
 let main _ =
   testClapModule ()
   testExtIterModule ()
   testExtStringModule ()
-  0
+  testEphArrayModule ()
+  testEphRefModule  ()
+  testEphSerialModule ()
+
+  // Exits.
+  testImpureModule ()

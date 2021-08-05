@@ -1,6 +1,6 @@
 module rec LibNursery.NativeInterop
 
-let private memcpy (dest: voidptr) (src: obj) (size: unativeint) : voidptr = __nativeFun ("memcpy", dest, src, size)
+open LibNursery.Runtime
 
 // See also:
 //
