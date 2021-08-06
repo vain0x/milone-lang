@@ -157,7 +157,7 @@ let private inFirstOfPatAndExpr (token: Token) =
   | LeftBracketToken
   | LeftBraceToken
   | FalseToken
-  | MinusToken
+  | MinusToken _
   | TrueToken -> true
 
   | _ -> false
@@ -183,7 +183,7 @@ let private inFirstOfExpr (token: Token) =
 /// In the FIRST set of arguments?
 let private inFirstOfArg (token: Token) =
   match token with
-  | MinusToken -> false
+  | MinusToken false -> false
 
   | _ -> inFirstOfExpr token
 
@@ -493,8 +493,8 @@ let private parsePatAtom basePos (tokens, errors) =
   | (PublicToken, _) :: tokens -> onVis PublicVis tokens
   | (PrivateToken, _) :: tokens -> onVis PrivateVis tokens
 
-  | (MinusToken, pos) :: (IntToken text, _) :: tokens -> ALitPat(IntLit("-" + text), pos), tokens, errors
-  | (MinusToken, _) :: tokens -> parsePatError "Expected negative literal pattern" (tokens, errors)
+  | (MinusToken _, pos) :: (IntToken text, _) :: tokens -> ALitPat(IntLit("-" + text), pos), tokens, errors
+  | (MinusToken _, _) :: tokens -> parsePatError "Expected negative literal pattern" (tokens, errors)
 
   | _ ->
     // Drop the next token to prevent infinite loop.
@@ -722,12 +722,12 @@ let private parseApp basePos (tokens, errors) =
   let calleePos = nextPos tokens
   let innerBasePos = basePos |> posAddX 1
 
-  let callee, tokens, errors = parseSuffix basePos (tokens, errors)
+  let callee, tokens, errors = parsePrefix basePos (tokens, errors)
 
   let rec go callee (tokens, errors) =
     if nextInside innerBasePos tokens && leadsArg tokens then
       let arg, tokens, errors =
-        parseSuffix innerBasePos (tokens, errors)
+        parsePrefix innerBasePos (tokens, errors)
 
       go (ABinaryExpr(AppBinary, callee, arg, calleePos)) (tokens, errors)
     else
@@ -738,15 +738,15 @@ let private parseApp basePos (tokens, errors) =
 /// `prefix = '-'? app`
 let private parsePrefix basePos (tokens, errors) =
   match tokens with
-  | (MinusToken, pos) :: tokens ->
-    let arg, tokens, errors = parseApp basePos (tokens, errors)
+  | (MinusToken _, pos) :: tokens ->
+    let arg, tokens, errors = parseSuffix basePos (tokens, errors)
     AUnaryExpr(MinusUnary, arg, pos), tokens, errors
 
-  | _ -> parseApp basePos (tokens, errors)
+  | _ -> parseSuffix basePos (tokens, errors)
 
 let private parseNextBp bp basePos (tokens, errors) =
   match bpNext bp with
-  | PrefixBp -> parsePrefix basePos (tokens, errors)
+  | PrefixBp -> parseApp basePos (tokens, errors)
 
   | nextBp -> parseOp nextBp basePos (tokens, errors)
 
@@ -789,7 +789,7 @@ let private parseOps bp basePos l (tokens, errors) =
   | ConsBp, (ColonColonToken, opPos) :: tokens -> nextR l ConsBinary opPos (tokens, errors)
 
   | AddBp, (PlusToken, opPos) :: tokens -> nextL l AddBinary opPos (tokens, errors)
-  | AddBp, (MinusToken, opPos) :: tokens -> nextL l SubBinary opPos (tokens, errors)
+  | AddBp, (MinusToken false, opPos) :: tokens -> nextL l SubBinary opPos (tokens, errors)
 
   | MulBp, (StarToken, opPos) :: tokens -> nextL l MulBinary opPos (tokens, errors)
   | MulBp, (SlashToken, opPos) :: tokens -> nextL l DivBinary opPos (tokens, errors)

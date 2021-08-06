@@ -342,7 +342,7 @@ let private scanStrLitRaw (text: string) (i: int) =
 // Evaluation
 // -----------------------------------------------
 
-let private tokenOfOp (text: string) l r : Token =
+let private tokenOfOp allowPrefix (text: string) l r : Token =
   let s = text |> S.slice l r
 
   let error () = ErrorToken UndefinedOpTokenError
@@ -361,7 +361,7 @@ let private tokenOfOp (text: string) l r : Token =
   | '-' ->
     match s with
     | "->" -> ArrowToken
-    | "-" -> MinusToken
+    | "-" -> MinusToken(allowPrefix && not (atSpace text r))
     | _ -> error ()
 
   | ':' ->
@@ -514,6 +514,16 @@ let private evalStrLitRaw (text: string) l r =
 // -----------------------------------------------
 // Tokenize routines
 // -----------------------------------------------
+
+let private atSpace (text: string) i : bool = C.isSpace (at text i)
+
+let private leadsPrefix token : bool =
+  match token with
+  | BlankToken
+  | NewlinesToken
+  | CommentToken -> true
+
+  | _ -> false
 
 [<Struct>]
 [<NoEquality; NoComparison>]
@@ -677,7 +687,7 @@ let private lookahead (text: string) (i: int) =
 
   | _ -> LBad, 1
 
-let private doNext (host: TokenizeHost) (text: string) (index: int) : Token * int =
+let private doNext (host: TokenizeHost) allowPrefix (text: string) (index: int) : Token * int =
   let look, len = lookahead text index
 
   match look with
@@ -749,7 +759,7 @@ let private doNext (host: TokenizeHost) (text: string) (index: int) : Token * in
 
   | LOp ->
     let r = scanOp text (index + len)
-    tokenOfOp text index r, r
+    tokenOfOp allowPrefix text index r, r
 
   | LToken _ ->
     match look with
@@ -762,9 +772,10 @@ let private doNext (host: TokenizeHost) (text: string) (index: int) : Token * in
 
 /// Tokenizes a string. Trivias are removed.
 let tokenize (host: TokenizeHost) (text: string) : (Token * Pos) list =
-  let rec go acc (i: int) (pos: Pos) =
+  // allowPrefix: preceded by space?
+  let rec go acc allowPrefix (i: int) (pos: Pos) =
     if i < text.Length then
-      let token, r = doNext host text i
+      let token, r = doNext host allowPrefix text i
 
       assert (i < r)
 
@@ -777,24 +788,24 @@ let tokenize (host: TokenizeHost) (text: string) : (Token * Pos) list =
         | _ -> (token, pos) :: acc
 
       let pos = posShift text i r pos
-      go acc r pos
+      go acc (leadsPrefix token) r pos
     else
       acc
 
-  go [] 0 (0, 0) |> List.rev
+  go [] true 0 (0, 0) |> List.rev
 
 /// Tokenizes a string. Trivias are preserved.
 let tokenizeAll (host: TokenizeHost) (text: string) : (Token * Pos) list =
-  let rec go acc (i: int) (pos: Pos) =
+  let rec go acc allowPrefix (i: int) (pos: Pos) =
     if i < text.Length then
-      let token, r = doNext host text i
+      let token, r = doNext host allowPrefix text i
       assert (i < r)
 
       let acc = (token, pos) :: acc
 
       let pos = posShift text i r pos
-      go acc r pos
+      go acc (leadsPrefix token) r pos
     else
       acc
 
-  go [] 0 (0, 0) |> List.rev
+  go [] true 0 (0, 0) |> List.rev

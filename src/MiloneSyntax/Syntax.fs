@@ -131,7 +131,7 @@ type Token =
   /// `>=`
   | RightEqualToken
   /// `-`
-  | MinusToken
+  | MinusToken of minusPrefix: bool
   /// `%`
   | PercentToken
   /// `|`
