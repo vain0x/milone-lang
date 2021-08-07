@@ -113,6 +113,15 @@ let private isFollowedByBackticks (i: int) (s: string) : bool =
       | '`', '`' -> true
       | _ -> false)
 
+let private strToAsciiLower (s: string) : string =
+  let rec go (i: int) acc =
+    if i < s.Length then
+      go (i + 1) (string (C.toLower s.[i]) :: acc)
+    else
+      List.rev acc
+
+  go 0 [] |> S.concat ""
+
 // -----------------------------------------------
 // Pos
 // -----------------------------------------------
@@ -744,7 +753,7 @@ let private doNext (host: TokenizeHost) allowPrefix (text: string) (index: int) 
     if m < r then
       ErrorToken UnimplNumberSuffixError, r
     else
-      IntToken(S.slice index r text), r
+      IntToken(strToAsciiLower (S.slice index r text)), r
 
   | LNonKeywordIdent ->
     let r = scanIdent text (index + len)

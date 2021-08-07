@@ -138,8 +138,7 @@ let private validateLit ctx lit loc =
       else
         text
 
-    if S.startsWith "0x" nonNeg
-       || S.startsWith "0X" nonNeg then
+    if S.startsWith "0x" nonNeg then
       let digits = S.skip 2 nonNeg
 
       if digits.Length <= 8 then
