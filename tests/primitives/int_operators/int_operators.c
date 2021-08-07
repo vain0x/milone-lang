@@ -15,7 +15,7 @@ char int_operators_Program_toIntTest(char arg_2);
 int milone_main();
 
 char int_operators_Program_literalTest(char arg_) {
-    milone_assert(((-((-2147483648 + 1))) == 2147483647), 4, 2);
+    milone_assert(((-(((int)0x80000000 + 1))) == 2147483647), 4, 2);
     return 0;
 }
 
