@@ -1,10 +1,10 @@
 module rec MiloneStd.StdInt
 
 [<Literal>]
-let MinValue = -2147483648
+let MinValue = 0x80000000
 
 [<Literal>]
-let MaxValue = 2147483647
+let MaxValue = 0x7fffffff
 
 let min (l: int) (r: int) : int = if l < r then l else r
 

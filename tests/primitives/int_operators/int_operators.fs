@@ -4,6 +4,12 @@ let literalTest () =
   // Int minimum/maximum values can be written as literal.
   assert (-((-2147483648) + 1) = 2147483647)
 
+let hexLiteralTest () =
+  assert (0x00000000 = 0)
+  assert (0x10 = 16)
+  assert (0x7fffffff = 2147483647)
+  assert (0xffffffff = -1)
+
 let arithmeticOperatorsTest (two: int) (three: int) (thirtyNine: int) =
   assert (two + three = 5)
   assert (three - two = 1)
@@ -57,6 +63,7 @@ let toIntTest () =
 
 let main _ =
   literalTest ()
+  hexLiteralTest ()
   arithmeticOperatorsTest 2 3 39
   bitOperatorsTest 1
   compareTest 2 3

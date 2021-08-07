@@ -113,6 +113,15 @@ let private isFollowedByBackticks (i: int) (s: string) : bool =
       | '`', '`' -> true
       | _ -> false)
 
+let private strToAsciiLower (s: string) : string =
+  let rec go (i: int) acc =
+    if i < s.Length then
+      go (i + 1) (string (C.toLower s.[i]) :: acc)
+    else
+      List.rev acc
+
+  go 0 [] |> S.concat ""
+
 // -----------------------------------------------
 // Pos
 // -----------------------------------------------
@@ -235,6 +244,20 @@ let private scanRawIdent (text: string) (i: int) =
     if ok then Some m else None
   else
     None
+
+let private scanHex (text: string) (i: int) : int * int =
+  let rec scanDigits (i: int) =
+    if at text i |> C.isHex then
+      scanDigits (i + 1)
+    else
+      i
+
+  let m = scanDigits i
+
+  // Suffix.
+  let r = scanIdent text m
+
+  m, r
 
 let private scanNumberLit (text: string) (i: int) =
   let rec scanDigits (i: int) =
@@ -533,6 +556,7 @@ type private Lookahead =
   | LNewline
   | LComment
   | LNumber
+  | LZeroX
   | LNonKeywordIdent
   | LIdent
   | LRawIdent
@@ -563,7 +587,12 @@ let private lookahead (text: string) (i: int) =
   | '\r'
   | '\n' -> LNewline, 1
 
-  | '0'
+  | '0' ->
+    match at (i + 1) with
+    | 'x'
+    | 'X' -> LZeroX, 2
+    | _ -> LNumber, 1
+
   | '1'
   | '2'
   | '3'
@@ -716,6 +745,15 @@ let private doNext (host: TokenizeHost) allowPrefix (text: string) (index: int) 
       FloatToken text.[index..r - 1], r
     else
       IntToken(S.slice index r text), r
+
+  | LZeroX ->
+    let l = index + len
+    let m, r = scanHex text l
+
+    if m < r then
+      ErrorToken UnimplNumberSuffixError, r
+    else
+      IntToken(strToAsciiLower (S.slice index r text)), r
 
   | LNonKeywordIdent ->
     let r = scanIdent text (index + len)

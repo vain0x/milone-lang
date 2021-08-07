@@ -12,8 +12,12 @@ let invalidLitInExpr (value: int) =
   assert (2147483648 <> value)
   assert (-2147483649 <> value)
 
+let invalidHexLit (value: int) =
+  assert (0x910001000 <> value)
+
 let main _ =
   invalidLitInPat 0
   invalidLitInExpr 0
+  invalidHexLit 0
   assert false
-  0
+  1

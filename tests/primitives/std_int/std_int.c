@@ -106,8 +106,8 @@ char std_int_Program_tryParseTest(char arg_1) {
 }
 
 int milone_main() {
-    MiloneStd_StdInt_MinValue = -2147483648;
-    MiloneStd_StdInt_MaxValue = 2147483647;
+    MiloneStd_StdInt_MinValue = (int)0x80000000;
+    MiloneStd_StdInt_MaxValue = 0x7fffffff;
     char call_25 = std_int_Program_tryParseTest(0);
     return 0;
 }
