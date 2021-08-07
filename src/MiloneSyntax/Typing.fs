@@ -20,6 +20,7 @@ open MiloneSyntax.Syntax
 open MiloneSyntax.Tir
 open MiloneSyntax.TySystem
 
+module S = MiloneStd.StdString
 module StdInt = MiloneStd.StdInt
 module TMap = MiloneStd.StdMap
 module TSet = MiloneStd.StdSet
@@ -128,11 +129,27 @@ let private freshMetaTyForExpr expr ctx =
 
 let private validateLit ctx lit loc =
   // FIXME: validate float too
+
   match lit with
   | IntLit text ->
-    match StdInt.tryParse text with
-    | Some _ -> ctx
-    | None -> addLog ctx Log.LiteralRangeError loc
+    let nonNeg =
+      if S.startsWith "-" text then
+        S.skip 1 text
+      else
+        text
+
+    if S.startsWith "0x" nonNeg
+       || S.startsWith "0X" nonNeg then
+      let digits = S.skip 2 nonNeg
+
+      if digits.Length <= 8 then
+        ctx
+      else
+        addLog ctx Log.LiteralRangeError loc
+    else
+      match StdInt.tryParse text with
+      | Some _ -> ctx
+      | None -> addLog ctx Log.LiteralRangeError loc
 
   | _ -> ctx
 
