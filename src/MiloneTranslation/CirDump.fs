@@ -122,6 +122,15 @@ let private cpParams ps acc : string list =
 // Literals
 // -----------------------------------------------
 
+let private cpIntLit (text: string) acc =
+  // Note: >=0x80000000 is unsigned in C.
+  if S.startsWith "0x" text
+     && text.Length >= 10
+     && intFromHex 2 3 text >= 8 then
+    acc |> cons "(int)" |> cons text
+  else
+    acc |> cons text
+
 let private cpCharLit value =
   if value |> charNeedsEscaping then
     value |> charEscape
@@ -179,7 +188,7 @@ let private cpExpr expr acc : string list =
     |> snd
 
   match expr with
-  | CIntExpr value -> acc |> cons (string value)
+  | CIntExpr value -> acc |> cpIntLit value
   | CDoubleExpr value -> acc |> cons (string value)
 
   | CCharExpr value ->

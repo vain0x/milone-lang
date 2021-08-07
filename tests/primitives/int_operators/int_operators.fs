@@ -8,6 +8,7 @@ let hexLiteralTest () =
   assert (0x00000000 = 0)
   assert (0x10 = 16)
   assert (0x7fffffff = 2147483647)
+  assert (0xffffffff = -1)
 
 let arithmeticOperatorsTest (two: int) (three: int) (thirtyNine: int) =
   assert (two + three = 5)
