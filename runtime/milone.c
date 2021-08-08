@@ -3,6 +3,9 @@
 // Some of functions are not declared in milone.h
 // but usable with __nativeFun.
 
+// Customization:
+//      Define MILONE_NO_DEFAULT_ALLOCATOR to disable memory allocator API.
+
 #include <assert.h>
 #include <ctype.h>
 #include <errno.h>
@@ -23,6 +26,9 @@
 // -----------------------------------------------
 // memory management (memory pool)
 // -----------------------------------------------
+
+size_t milone_mem_heap_size(void);
+size_t milone_mem_alloc_cost(void);
 
 // structure for memory management. poor implementation. thread unsafe.
 struct MemoryChunk {
@@ -67,7 +73,7 @@ static void free_chunk(struct MemoryChunk *chunk) {
     s_heap_alloc -= chunk->cap;
 }
 
-void milone_enter_region(void) {
+static void do_enter_region(void) {
     // fprintf(stderr, "debug: enter_region level=%d size=%d\n", s_heap_level +
     // 1, s_heap_size);
 
@@ -83,7 +89,7 @@ void milone_enter_region(void) {
     s_heap_level++;
 }
 
-void milone_leave_region(void) {
+static void do_leave_region(void) {
     // fprintf(stderr, "debug: leave_region level=%d size=%d\n", s_heap_level,
     // s_heap_size);
 
@@ -157,7 +163,7 @@ static void *milone_mem_alloc_slow(size_t total) {
     return ptr;
 }
 
-void *milone_mem_alloc(int count, size_t size) {
+static void *do_mem_alloc(int count, size_t size) {
     assert(count > 0 && size > 0);
 
     size_t total = (size_t)count * size;
@@ -180,6 +186,20 @@ void *milone_mem_alloc(int count, size_t size) {
     // (int)((size_t)count * size), (int)count, (int)size);
     return ptr;
 }
+
+#ifndef MILONE_NO_DEFAULT_ALLOCATOR
+
+size_t milone_mem_heap_size(void) { return s_heap_size; }
+size_t milone_mem_alloc_cost(void) { return s_alloc_cost; }
+
+void milone_enter_region(void) { do_enter_region(); }
+void milone_leave_region(void) { do_leave_region(); }
+
+void *milone_mem_alloc(int count, size_t size) {
+    return do_mem_alloc(count, size);
+}
+
+#endif // MILONE_NO_DEFAULT_ALLOCATOR
 
 // -----------------------------------------------
 // int
@@ -772,14 +792,14 @@ void *milone_profile_init(void) {
     p->msg = str_borrow("start");
     p->epoch = milone_get_time_millis();
     p->start_epoch = p->epoch;
-    p->heap_size = s_heap_size;
-    p->alloc_cost = s_alloc_cost;
+    p->heap_size = milone_mem_heap_size();
+    p->alloc_cost = milone_mem_alloc_cost();
     return p;
 }
 
 static void milone_profile_print_log(struct String msg, long millis,
                                      long mem_bytes, long alloc_cost) {
-                                         msg = str_ensure_null_terminated(msg);
+    msg = str_ensure_null_terminated(msg);
 
     if (millis < 0) {
         millis = 0;
@@ -802,23 +822,25 @@ void milone_profile_log(struct String msg, void *profiler) {
     struct Profiler *p = (struct Profiler *)profiler;
 
     long t = milone_get_time_millis();
+    long heap_size = (long)milone_mem_heap_size();
+    long alloc_cost = (long)milone_mem_alloc_cost();
 
-    long millis = t - p->epoch;
-    long mem_bytes = (long)s_heap_size - (long)p->heap_size;
-    long alloc_cost = (long)s_alloc_cost - (long)p->alloc_cost;
+    long time_delta = t - p->epoch;
+    long mem_delta = heap_size - (long)p->heap_size;
+    long alloc_delta = alloc_cost - (long)p->alloc_cost;
 
-    milone_profile_print_log(p->msg, millis, mem_bytes, alloc_cost);
+    milone_profile_print_log(p->msg, time_delta, mem_delta, alloc_delta);
 
     p->msg = msg;
     p->epoch = t;
-    p->heap_size = s_heap_size;
-    p->alloc_cost = s_alloc_cost;
+    p->heap_size = heap_size;
+    p->alloc_cost = alloc_cost;
 
     if (str_compare(msg, str_borrow("Finish")) == 0) {
         fprintf(stderr, "profile: Finish\n");
         long millis = t - p->start_epoch;
-        milone_profile_print_log(str_borrow("total"), millis, (long)s_heap_size,
-                                 (long)s_alloc_cost);
+        milone_profile_print_log(str_borrow("total"), millis, heap_size,
+                                 alloc_cost);
     }
 }
 
