@@ -38,10 +38,10 @@ let private rawCopySlice
   let len = unativeint (sr - sl)
 
   if len <> unativeint 0 then
-    let d : voidptr =
+    let d: voidptr =
       __nativeCast (unativeint dest + unativeint dl * itemSize)
 
-    let s : obj =
+    let s: obj =
       __nativeCast (__nativeCast src + unativeint sl * itemSize)
 
     let _ = memcpy d s (len * itemSize)
@@ -72,6 +72,14 @@ module EphArray =
         // TASK: should use single allocation
         let arraySerial, parentSerial = EphSerial.create serial
 
+        (ptr, len, arraySerial), parentSerial
+
+    let ofRawParts (ptr: nativeptr<'T>) (len: int) (serial: EphSerial) : EphArray<'T> * EphSerial =
+      if len <= 0 then
+        assert (len = 0 || violate "negative length")
+        empty serial
+      else
+        let arraySerial, parentSerial = EphSerial.create serial
         (ptr, len, arraySerial), parentSerial
 
     let asMut (array: EphArray<'T>) : nativeptr<'T> * EphArray<'T> =

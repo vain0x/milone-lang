@@ -1,0 +1,6 @@
+#!/bin/sh
+
+set -eux
+
+./build
+../target/Parallel/parallel
