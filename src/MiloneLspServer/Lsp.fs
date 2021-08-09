@@ -4,11 +4,11 @@ module rec MiloneLspServer.Lsp
 open MiloneLspServer.Util
 open MiloneShared.SharedTypes
 open MiloneShared.Util
+open MiloneStd.StdPath
 open MiloneSyntax
 open MiloneSyntax.Syntax
 open MiloneSyntax.Tir
 
-module Cli = MiloneCli.Cli
 module SharedTypes = MiloneShared.SharedTypes
 module TMap = MiloneStd.StdMap
 module SyntaxApi = MiloneSyntax.SyntaxApi
@@ -36,6 +36,28 @@ type LangServiceDocs =
 type LangServiceHost =
   { MiloneHome: FilePath
     Docs: LangServiceDocs }
+
+// -----------------------------------------------
+// Utils
+// -----------------------------------------------
+
+let private pathStrTrimEndPathSep (s: string) : string =
+  s
+  |> Path.ofString
+  |> Path.trimEndSep
+  |> Path.toString
+
+let private pathStrToStem (s: string) : string =
+  s
+  |> Path.ofString
+  |> Path.fileStem
+  |> Path.toString
+
+let private pathStrToFileName (s: string) : string =
+  s
+  |> Path.ofString
+  |> Path.basename
+  |> Path.toString
 
 // -----------------------------------------------
 // Syntax
@@ -124,10 +146,19 @@ let private tyDisplayFn (tyCtx: Typing.TyCtx) ty =
   TySystem.tyDisplay getTyName ty
 
 let private doBundle (ls: LangServiceState) projectDir =
-  let cliHost = MiloneCli.Program.dotnetCliHost ()
+  let miloneHome = ls.Host.MiloneHome
+  let projectDir = projectDir |> pathStrTrimEndPathSep
+  let projectName = projectDir |> pathStrToStem
 
-  let compileCtx =
-    Cli.compileCtxNew cliHost Cli.Quiet projectDir
+  let syntaxCtx: SyntaxApi.SyntaxCtx =
+    let host: SyntaxApi.SyntaxHost =
+      { EntryProjectDir = projectDir
+        EntryProjectName = projectName
+        MiloneHome = miloneHome
+        ReadTextFile = File.tryReadFile
+        WriteLog = fun _ -> () }
+
+    SyntaxApi.syntaxCtxNew host
 
   let docVersions = MutMap()
 
@@ -142,13 +173,11 @@ let private doBundle (ls: LangServiceState) projectDir =
 
       parseWithCache ls docId |> Some
 
-  let compileCtx =
-    { compileCtx with
-        SyntaxCtx =
-          { compileCtx.SyntaxCtx with
-              FetchModule = fetchModuleUsingCache compileCtx.SyntaxCtx.FetchModule } }
+  let syntaxCtx =
+    { syntaxCtx with
+        FetchModule = fetchModuleUsingCache syntaxCtx.FetchModule }
 
-  match SyntaxApi.performSyntaxAnalysis compileCtx.SyntaxCtx with
+  match SyntaxApi.performSyntaxAnalysis syntaxCtx with
   | SyntaxApi.SyntaxAnalysisOk (modules, tyCtx) -> Some(modules, tyCtx), [], docVersions
 
   | SyntaxApi.SyntaxAnalysisError (errors, tyCtxOpt) ->
