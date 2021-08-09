@@ -3,6 +3,7 @@ module rec MiloneCli.Cli
 
 open MiloneShared.SharedTypes
 open MiloneShared.Util
+open MiloneStd.StdPath
 open MiloneSyntax.ArityCheck
 open MiloneSyntax.AstBundle
 open MiloneSyntax.AstToHir
@@ -147,37 +148,23 @@ type CliHost =
 // Helpers
 // -----------------------------------------------
 
-let private charIsPathSep (c: char) = c = '/' || c = '\\'
+let private pathStrTrimEndPathSep (s: string) : string =
+  s
+  |> Path.ofString
+  |> Path.trimEndSep
+  |> Path.toString
 
-let private pathStrTrimEndPathSep (s: string) = S.trimEndIf charIsPathSep s
+let private pathStrToStem (s: string) : string =
+  s
+  |> Path.ofString
+  |> Path.fileStem
+  |> Path.toString
 
-// wants string.findLastIndex
-/// Gets the final component splitting by path separators.
-let private pathStrToFileName (s: string) =
-  let rec go i =
-    if i = 0 then
-      s
-    else if charIsPathSep s.[i - 1] then
-      s |> S.slice i s.Length
-    else
-      go (i - 1)
-
-  go s.Length
-
-/// Gets the file name without extension.
-let private pathStrToStem (s: string) =
-  match s |> pathStrToFileName with
-  | "."
-  | ".." -> s
-
-  | s ->
-    match s |> S.findLastIndex "." with
-    | Some i -> s |> S.slice 0 i
-    | None -> s
-
-let private pathIsRelative (s: string) =
-  (s |> S.startsWith "./")
-  || (s |> S.startsWith "../")
+let private pathStrToFileName (s: string) : string =
+  s
+  |> Path.ofString
+  |> Path.basename
+  |> Path.toString
 
 let private hostToMiloneHome (host: CliHost) =
   let getEnv name =
