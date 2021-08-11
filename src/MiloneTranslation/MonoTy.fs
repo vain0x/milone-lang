@@ -24,6 +24,14 @@ let private tupleField (i: int) : string = "t" + string i
 
 type private MonoTy = M.MonoTy
 
+let private mutEquals (l: IsMut) (r: IsMut) =
+  let encode isMut =
+    match isMut with
+    | IsMut -> true
+    | IsConst -> false
+
+  encode l = encode r
+
 let private monoTyCompare (l: MonoTy) (r: MonoTy) : int =
   let pair x y =
     assert (x < 100)
@@ -45,8 +53,8 @@ let private monoTyCompare (l: MonoTy) (r: MonoTy) : int =
     | M.ListMt _ -> just 9
 
     | M.VoidMt -> just 11
-    | M.NativePtrMt IsConst -> pair 12 1
-    | M.NativePtrMt IsMut -> pair 12 2
+    | M.NativePtrMt (IsConst, _) -> pair 12 1
+    | M.NativePtrMt (IsMut, _) -> pair 12 2
     | M.NativeFunMt _ -> just 13
     | M.NativeTypeMt _ -> just 14
 
@@ -57,6 +65,7 @@ let private monoTyCompare (l: MonoTy) (r: MonoTy) : int =
   | M.ListMt l, M.ListMt r -> monoTyCompare l r
   | M.FunMt l, M.FunMt r -> listCompare monoTyCompare l r
   | M.NativeFunMt l, M.NativeFunMt r -> listCompare monoTyCompare l r
+  | M.NativePtrMt (lMut, l), M.NativePtrMt (rMut, r) when mutEquals lMut rMut -> monoTyCompare l r
   | M.NativeTypeMt l, M.NativeTypeMt r -> compare l r
   | _ -> compare (encode l) (encode r)
 
@@ -225,7 +234,8 @@ let private mtTy (ty: Ty, ctx: MtCtx) : M.MonoTy * MtCtx =
   | ListTk, [ itemTy ] -> M.ListMt itemTy, ctx
   | ListTk, _ -> unreachable ()
 
-  | NativePtrTk isMut, _ -> M.NativePtrMt isMut, ctx
+  | NativePtrTk isMut, [ itemTy ] -> M.NativePtrMt(isMut, itemTy), ctx
+  | NativePtrTk _, _ -> unreachable ()
   | NativeFunTk, _ -> M.NativeFunMt tyArgs, ctx
 
   | MetaTk _, _ -> unreachable () // Resolved in Typing.
@@ -471,7 +481,7 @@ let private bthTy (ty: MonoTy) : Ty =
   | M.FunMt tyArgs -> newTyApp FunTk tyArgs
 
   | M.VoidMt -> ofTk VoidTk
-  | M.NativePtrMt isMut -> ofTk (NativePtrTk isMut)
+  | M.NativePtrMt (isMut, itemTy) -> newTyApp (NativePtrTk isMut) [ itemTy ]
   | M.NativeFunMt tyArgs -> newTyApp NativeFunTk tyArgs
   | M.NativeTypeMt cCode -> ofTk (NativeTypeTk cCode)
 

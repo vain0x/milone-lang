@@ -19,7 +19,7 @@ type private HPatKind = Hir.HPatKind
 type private HPrim = Hir.HPrim
 type private HExprKind = Hir.HExprKind
 
-/// Monomorphized type.
+/// Monomorphized type (?)
 [<NoEquality; NoComparison>]
 type MonoTy =
   | IntMt of intFlavor: IntFlavor
@@ -30,15 +30,12 @@ type MonoTy =
   | StrMt
   | ObjMt
 
-  // FIXME: change to record {fun, env}
   | FunMt of MonoTy list
-  // FIXME: change to `μL. (box<'T * L> | null)`.
   | ListMt of MonoTy
 
   // FFI types.
   | VoidMt
-  | NativePtrMt of nativePtrIsMut: IsMut
-  // FIXME: change to nominal type
+  | NativePtrMt of IsMut * MonoTy
   | NativeFunMt of MonoTy list
   | NativeTypeMt of cCode: string
 
