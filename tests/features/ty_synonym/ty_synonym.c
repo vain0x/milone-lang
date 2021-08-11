@@ -8,9 +8,9 @@ char ty_synonym_Program_baseCase(char arg_);
 
 char ty_synonym_Program_yodaCase(int exitCode_);
 
-int proj_2(bool cond_, int body_, int alt_);
+int proj_1(bool cond_, int body_, int alt_);
 
-struct String proj_1(bool cond_, struct String body_, struct String alt_);
+struct String proj_(bool cond_, struct String body_, struct String alt_);
 
 char ty_synonym_Program_polymorphicFunCase(char arg_1);
 
@@ -38,7 +38,7 @@ char ty_synonym_Program_yodaCase(int exitCode_) {
     return 0;
 }
 
-int proj_2(bool cond_, int body_, int alt_) {
+int proj_1(bool cond_, int body_, int alt_) {
     int if_;
     if (cond_) {
         goto then_2;
@@ -55,7 +55,7 @@ if_next_1:;
     return if_;
 }
 
-struct String proj_1(bool cond_, struct String body_, struct String alt_) {
+struct String proj_(bool cond_, struct String body_, struct String alt_) {
     struct String if_1;
     if (cond_) {
         goto then_5;
@@ -73,9 +73,9 @@ if_next_4:;
 }
 
 char ty_synonym_Program_polymorphicFunCase(char arg_1) {
-    int call_ = proj_2(true, 1, 0);
+    int call_ = proj_1(true, 1, 0);
     milone_assert((call_ == 1), 21, 2);
-    struct String call_1 = proj_1(false, (struct String){.str = "T", .len = 1}, (struct String){.str = "F", .len = 1});
+    struct String call_1 = proj_(false, (struct String){.str = "T", .len = 1}, (struct String){.str = "F", .len = 1});
     milone_assert((str_compare(call_1, (struct String){.str = "F", .len = 1}) == 0), 22, 2);
     return 0;
 }

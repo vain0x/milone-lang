@@ -6,7 +6,7 @@ struct F64List;
 
 struct F64List;
 
-bool go_1(struct F64BoolFun1 pred_, struct F64List const* xs_1);
+bool go_(struct F64BoolFun1 pred_, struct F64List const* xs_1);
 
 bool all_(struct F64BoolFun1 pred_, struct F64List const* xs_);
 
@@ -30,7 +30,7 @@ struct F64List {
     struct F64List const* tail;
 };
 
-bool go_1(struct F64BoolFun1 pred_, struct F64List const* xs_1) {
+bool go_(struct F64BoolFun1 pred_, struct F64List const* xs_1) {
     struct F64List const* xs_2;
     double x_;
 tailrec_1:;
@@ -68,7 +68,7 @@ end_match_2:;
 }
 
 bool all_(struct F64BoolFun1 pred_, struct F64List const* xs_) {
-    bool call_ = go_1(pred_, xs_);
+    bool call_ = go_(pred_, xs_);
     return call_;
 }
 

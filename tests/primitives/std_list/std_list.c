@@ -14,7 +14,7 @@ struct IntList;
 
 struct IntIntIntFun2;
 
-struct String fun_6(void const* env_3, int arg_3);
+struct String fun_5(void const* env_3, int arg_3);
 
 struct StringList const* map_(struct IntStringFun1, struct IntList const*);
 
@@ -24,13 +24,13 @@ struct String debug_(struct IntList const* xs_63);
 
 bool eq_(struct IntList const* expected_, struct IntList const* actual_);
 
-bool fun_11(int arg_56);
+bool fun_10(int arg_56);
 
-bool fun_7(void const* env_4, int arg_4);
+bool fun_6(void const* env_4, int arg_4);
 
-bool fun_1(int n_3);
+bool fun_(int n_3);
 
-bool fun_8(void const* env_5, int arg_5);
+bool fun_7(void const* env_5, int arg_5);
 
 struct IntList const* skipWhile_(struct IntBoolFun1, struct IntList const*);
 
@@ -40,11 +40,11 @@ struct IntList const* go_(struct IntList const* acc_17, int i_9);
 
 struct IntList const* gen_1(int n_4);
 
-int fun_2(int x_22, int y_3);
+int fun_1(int x_22, int y_3);
 
-int fun_9(void const* env_6, int arg_6, int arg_7);
+int fun_8(void const* env_6, int arg_6, int arg_7);
 
-struct IntList const* fun_10(void const* env_7, int arg_8);
+struct IntList const* fun_9(void const* env_7, int arg_8);
 
 bool isEmpty_(struct IntList const*);
 
@@ -77,14 +77,14 @@ struct IntIntIntFun2 {
     void const* env;
 };
 
-struct String fun_6(void const* env_3, int arg_3) {
+struct String fun_5(void const* env_3, int arg_3) {
     struct String call_49 = str_of_int64(arg_3);
     return call_49;
 }
 
 struct String debug_(struct IntList const* xs_63) {
-    struct IntStringFun1 fun_15 = (struct IntStringFun1){.fun = fun_6, .env = NULL};
-    struct StringList const* call_50 = map_(fun_15, xs_63);
+    struct IntStringFun1 fun_14 = (struct IntStringFun1){.fun = fun_5, .env = NULL};
+    struct StringList const* call_50 = map_(fun_14, xs_63);
     struct String call_51 = MiloneStd_StdString_concat((struct String){.str = ", ", .len = 2}, call_50);
     return call_51;
 }
@@ -111,28 +111,28 @@ if_next_252:;
     return if_73;
 }
 
-bool fun_11(int arg_56) {
+bool fun_10(int arg_56) {
     return true;
 }
 
-bool fun_7(void const* env_4, int arg_4) {
-    bool call_54 = fun_11(arg_4);
+bool fun_6(void const* env_4, int arg_4) {
+    bool call_54 = fun_10(arg_4);
     return call_54;
 }
 
-bool fun_1(int n_3) {
+bool fun_(int n_3) {
     return ((n_3 % 2) == 0);
 }
 
-bool fun_8(void const* env_5, int arg_5) {
-    bool call_55 = fun_1(arg_5);
+bool fun_7(void const* env_5, int arg_5) {
+    bool call_55 = fun_(arg_5);
     return call_55;
 }
 
 char std_list_Program_testSkipWhile(struct IntIntListFun1 gen_) {
-    struct IntBoolFun1 fun_16 = (struct IntBoolFun1){.fun = fun_7, .env = NULL};
+    struct IntBoolFun1 fun_15 = (struct IntBoolFun1){.fun = fun_6, .env = NULL};
     struct IntList const* app_7 = gen_.fun(gen_.env, 5);
-    struct IntList const* call_56 = skipWhile_(fun_16, app_7);
+    struct IntList const* call_56 = skipWhile_(fun_15, app_7);
     bool call_57 = eq_(NULL, call_56);
     milone_assert(call_57, 22, 2);
     struct IntList const* list_8 = milone_mem_alloc(1, sizeof(struct IntList));
@@ -143,9 +143,9 @@ char std_list_Program_testSkipWhile(struct IntIntListFun1 gen_) {
     (*(((struct IntList*)list_6))) = (struct IntList){.head = 2, .tail = list_7};
     struct IntList const* list_5 = milone_mem_alloc(1, sizeof(struct IntList));
     (*(((struct IntList*)list_5))) = (struct IntList){.head = 1, .tail = list_6};
-    struct IntBoolFun1 fun_17 = (struct IntBoolFun1){.fun = fun_8, .env = NULL};
+    struct IntBoolFun1 fun_16 = (struct IntBoolFun1){.fun = fun_7, .env = NULL};
     struct IntList const* app_8 = gen_.fun(gen_.env, 5);
-    struct IntList const* call_58 = skipWhile_(fun_17, app_8);
+    struct IntList const* call_58 = skipWhile_(fun_16, app_8);
     bool call_59 = eq_(list_5, call_58);
     milone_assert(call_59, 24, 2);
     return 0;
@@ -180,16 +180,16 @@ struct IntList const* gen_1(int n_4) {
     return call_60;
 }
 
-int fun_2(int x_22, int y_3) {
+int fun_1(int x_22, int y_3) {
     return (x_22 + y_3);
 }
 
-int fun_9(void const* env_6, int arg_6, int arg_7) {
-    int call_61 = fun_2(arg_6, arg_7);
+int fun_8(void const* env_6, int arg_6, int arg_7) {
+    int call_61 = fun_1(arg_6, arg_7);
     return call_61;
 }
 
-struct IntList const* fun_10(void const* env_7, int arg_8) {
+struct IntList const* fun_9(void const* env_7, int arg_8) {
     struct IntList const* call_62 = gen_1(arg_8);
     return call_62;
 }
@@ -198,12 +198,12 @@ int milone_main() {
     struct IntList const* call_63 = gen_1(0);
     bool call_64 = isEmpty_(call_63);
     milone_assert(call_64, 42, 2);
-    struct IntIntIntFun2 fun_18 = (struct IntIntIntFun2){.fun = fun_9, .env = NULL};
+    struct IntIntIntFun2 fun_17 = (struct IntIntIntFun2){.fun = fun_8, .env = NULL};
     struct IntList const* call_65 = gen_1(5);
-    int call_66 = fold_(fun_18, 0, call_65);
+    int call_66 = fold_(fun_17, 0, call_65);
     milone_assert((call_66 == ((((0 + 1) + 2) + 3) + 4)), 44, 2);
-    struct IntIntListFun1 fun_19 = (struct IntIntListFun1){.fun = fun_10, .env = NULL};
-    struct IntIntListFun1 gen_2 = fun_19;
+    struct IntIntListFun1 fun_18 = (struct IntIntListFun1){.fun = fun_9, .env = NULL};
+    struct IntIntListFun1 gen_2 = fun_18;
     char call_67 = std_list_Program_testSkipWhile(gen_2);
     return 0;
 }

@@ -1,6 +1,6 @@
 #include "milone.h"
 
-struct IntIntTuple2;
+struct IntIntTuple2_;
 
 char pat_as_Program_simpleCase(char arg_);
 
@@ -8,7 +8,7 @@ char pat_as_Program_shadowingCase(char arg_1);
 
 int milone_main();
 
-struct IntIntTuple2 {
+struct IntIntTuple2_ {
     int t0;
     int t1;
 };
@@ -32,11 +32,11 @@ end_match_1:;
 
 char pat_as_Program_shadowingCase(char arg_1) {
     int x_2;
-    struct IntIntTuple2 y_;
+    struct IntIntTuple2_ y_;
     int x_1 = 1;
     char match_1;
-    struct IntIntTuple2 tuple_ = (struct IntIntTuple2){.t0 = x_1, .t1 = 2};
-    y_ = tuple_;
+    struct IntIntTuple2_ IntIntTuple2_ = (struct IntIntTuple2_){.t0 = x_1, .t1 = 2};
+    y_ = IntIntTuple2_;
     x_2 = y_.t1;
     int y1_ = y_.t0;
     int y2_ = y_.t1;

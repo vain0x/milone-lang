@@ -2,7 +2,7 @@
 
 struct IntStringUnitFun2;
 
-struct IntStringUnitFun2IntTuple2;
+struct IntStringUnitFun2IntTuple2_;
 
 struct StringUnitFun1;
 
@@ -25,7 +25,7 @@ struct IntStringUnitFun2 {
     void const* env;
 };
 
-struct IntStringUnitFun2IntTuple2 {
+struct IntStringUnitFun2IntTuple2_ {
     struct IntStringUnitFun2 t0;
     int t1;
 };
@@ -36,17 +36,17 @@ struct StringUnitFun1 {
 };
 
 char fun_(void const* env_, struct String arg_) {
-    struct IntStringUnitFun2 arg_1 = (*(((struct IntStringUnitFun2IntTuple2 const*)env_))).t0;
-    int arg_2 = (*(((struct IntStringUnitFun2IntTuple2 const*)env_))).t1;
+    struct IntStringUnitFun2 arg_1 = (*(((struct IntStringUnitFun2IntTuple2_ const*)env_))).t0;
+    int arg_2 = (*(((struct IntStringUnitFun2IntTuple2_ const*)env_))).t1;
     char app_ = arg_1.fun(arg_1.env, arg_2, arg_);
     return 0;
 }
 
 struct StringUnitFun1 fun_with_fun_arg_Program_bindInt(struct IntStringUnitFun2 f_, int x_) {
     struct IntStringUnitFun2 callee_ = f_;
-    struct IntStringUnitFun2IntTuple2 tuple_ = (struct IntStringUnitFun2IntTuple2){.t0 = callee_, .t1 = x_};
-    void const* box_ = milone_mem_alloc(1, sizeof(struct IntStringUnitFun2IntTuple2));
-    (*(((struct IntStringUnitFun2IntTuple2*)box_))) = tuple_;
+    struct IntStringUnitFun2IntTuple2_ IntStringUnitFun2IntTuple2_ = (struct IntStringUnitFun2IntTuple2_){.t0 = callee_, .t1 = x_};
+    void const* box_ = milone_mem_alloc(1, sizeof(struct IntStringUnitFun2IntTuple2_));
+    (*(((struct IntStringUnitFun2IntTuple2_*)box_))) = IntStringUnitFun2IntTuple2_;
     struct StringUnitFun1 fun_3 = (struct StringUnitFun1){.fun = fun_, .env = box_};
     return fun_3;
 }

@@ -4,7 +4,7 @@ struct IntList;
 
 struct IntList;
 
-struct IntIntTuple2;
+struct IntIntTuple2_;
 
 char match_complicated_Program_testTrivialCase(char arg_);
 
@@ -21,7 +21,7 @@ struct IntList {
     struct IntList const* tail;
 };
 
-struct IntIntTuple2 {
+struct IntIntTuple2_ {
     int t0;
     int t1;
 };
@@ -64,14 +64,14 @@ char match_complicated_Program_testMatchArmsMakeScope(char arg_2) {
     int x_1;
     int x_ = 2;
     char match_2;
-    struct IntIntTuple2 tuple_ = (struct IntIntTuple2){.t0 = x_, .t1 = 1};
-    if ((tuple_.t0 != 1)) goto next_8;
-    x_1 = tuple_.t1;
+    struct IntIntTuple2_ IntIntTuple2_ = (struct IntIntTuple2_){.t0 = x_, .t1 = 1};
+    if ((IntIntTuple2_.t0 != 1)) goto next_8;
+    x_1 = IntIntTuple2_.t1;
     milone_assert(false, 18, 12);
     match_2 = 0;
     goto end_match_7;
 next_8:;
-    if ((tuple_.t0 != 2)) goto next_9;
+    if ((IntIntTuple2_.t0 != 2)) goto next_9;
     char if_;
     if ((x_ != 2)) {
         goto then_12;

@@ -8,9 +8,9 @@ struct IntList;
 
 struct IntIntIntFun2List;
 
-struct IntIntIntObjectUnitTuple5List;
+struct IntIntIntObjectUnitTuple5_List;
 
-struct StringIntIntObjectUnitTuple5List;
+struct StringIntIntObjectUnitTuple5_List;
 
 struct StringList;
 
@@ -18,15 +18,15 @@ struct IntList;
 
 struct IntIntBoolFun2;
 
-struct IntListIntListTuple2;
+struct IntListIntListTuple2_;
 
 struct StringStringBoolFun2;
 
-struct StringListStringListTuple2;
+struct StringListStringListTuple2_;
 
 struct IntIntFun1;
 
-struct StringStringListTuple2;
+struct StringStringListTuple2_;
 
 struct IntVoidMutPtrFun1;
 
@@ -34,9 +34,9 @@ struct VoidMutPtrIntIntFun2;
 
 struct VoidMutPtrIntIntUnitFun3;
 
-struct IntIntIntVoidMutPtrFun1VoidMutPtrIntIntFun2VoidMutPtrIntIntUnitFun3UnitTuple6;
+struct IntIntIntVoidMutPtrFun1VoidMutPtrIntIntFun2VoidMutPtrIntIntUnitFun3UnitTuple6_;
 
-struct IntIntIntVoidMutPtrFun1VoidMutPtrIntIntFun2VoidMutPtrIntIntUnitFun3UnitTuple6VoidMutPtrIntIntUnitTuple5;
+struct IntIntIntVoidMutPtrFun1VoidMutPtrIntIntFun2VoidMutPtrIntIntUnitFun3UnitTuple6VoidMutPtrIntIntUnitTuple5_;
 
 void* milone_mem_alloc(int, uintptr_t);
 
@@ -66,43 +66,43 @@ bool listIsEmpty_2(struct IntList const* xs_);
 
 bool listIsEmpty_1(struct IntIntIntFun2List const* xs_);
 
-bool listIsEmpty_4(struct IntIntIntObjectUnitTuple5List const* xs_);
+bool listIsEmpty_4(struct IntIntIntObjectUnitTuple5_List const* xs_);
 
-bool listIsEmpty_5(struct StringIntIntObjectUnitTuple5List const* xs_);
+bool listIsEmpty_5(struct StringIntIntObjectUnitTuple5_List const* xs_);
 
-int go_22(int len_2, struct StringList const* xs_2);
+int go_7(int len_2, struct StringList const* xs_2);
 
-int go_21(int len_2, struct IntList const* xs_2);
+int go_6(int len_2, struct IntList const* xs_2);
 
 int listLength_1(struct StringList const* xs_1);
 
 int listLength_(struct IntList const* xs_1);
 
-struct IntList const* go_38(struct IntList const* acc_, struct IntList const* xs_5);
+struct IntList const* go_23(struct IntList const* acc_, struct IntList const* xs_5);
 
-struct StringList const* go_37(struct StringList const* acc_, struct StringList const* xs_5);
+struct StringList const* go_22(struct StringList const* acc_, struct StringList const* xs_5);
 
 struct IntList const* listRev_1(struct IntList const* xs_4);
 
 struct StringList const* listRev_(struct StringList const* xs_4);
 
-bool go_24(struct IntIntBoolFun2 itemEqual_, struct IntList const* xs_8, struct IntList const* ys_1);
+bool go_9(struct IntIntBoolFun2 itemEqual_, struct IntList const* xs_8, struct IntList const* ys_1);
 
-bool go_23(struct StringStringBoolFun2 itemEqual_, struct StringList const* xs_8, struct StringList const* ys_1);
+bool go_8(struct StringStringBoolFun2 itemEqual_, struct StringList const* xs_8, struct StringList const* ys_1);
 
 bool listEqual_1(struct IntIntBoolFun2 itemEqual_, struct IntList const* xs_7, struct IntList const* ys_);
 
 bool listEqual_(struct StringStringBoolFun2 itemEqual_, struct StringList const* xs_7, struct StringList const* ys_);
 
-struct IntList const* go_25(int item_, int len_3, struct IntList const* acc_1, int i_);
+struct IntList const* go_10(int item_, int len_3, struct IntList const* acc_1, int i_);
 
 struct IntList const* listReplicate_(int item_, int len_3);
 
-struct IntList const* go_26(int len_4, struct IntIntFun1 gen_, struct IntList const* acc_2, int i_1);
+struct IntList const* go_11(int len_4, struct IntIntFun1 gen_, struct IntList const* acc_2, int i_1);
 
 struct IntList const* listInit_(int len_4, struct IntIntFun1 gen_);
 
-struct StringStringListTuple2 go_5(struct StringList const* xs_11, int xn_);
+struct StringStringListTuple2_ go_(struct StringList const* xs_11, int xn_);
 
 struct String Competitive_Helpers_strConcat(struct StringList const* xs_10);
 
@@ -116,41 +116,41 @@ bool Competitive_Helpers_strEqual(struct String first_3, struct String second_3)
 
 int failwith_(struct String msg_);
 
-int fun_21(int arg_58);
+int fun_18(int arg_58);
 
-int fun_3(void const* env_, int arg_);
+int fun_(void const* env_, int arg_);
 
 struct IntList const* Competitive_Helpers_scanIntList(int len_5);
 
-struct IntVoidMutPtrFun1 typeToArrayNew_(struct IntIntIntVoidMutPtrFun1VoidMutPtrIntIntFun2VoidMutPtrIntIntUnitFun3UnitTuple6 arg_59);
+struct IntVoidMutPtrFun1 typeToArrayNew_(struct IntIntIntVoidMutPtrFun1VoidMutPtrIntIntFun2VoidMutPtrIntIntUnitFun3UnitTuple6_ arg_59);
 
-struct VoidMutPtrIntIntFun2 typeToArrayGet_(struct IntIntIntVoidMutPtrFun1VoidMutPtrIntIntFun2VoidMutPtrIntIntUnitFun3UnitTuple6 arg_60);
+struct VoidMutPtrIntIntFun2 typeToArrayGet_(struct IntIntIntVoidMutPtrFun1VoidMutPtrIntIntFun2VoidMutPtrIntIntUnitFun3UnitTuple6_ arg_60);
 
-struct VoidMutPtrIntIntUnitFun3 typeToArraySet_(struct IntIntIntVoidMutPtrFun1VoidMutPtrIntIntFun2VoidMutPtrIntIntUnitFun3UnitTuple6 arg_61);
+struct VoidMutPtrIntIntUnitFun3 typeToArraySet_(struct IntIntIntVoidMutPtrFun1VoidMutPtrIntIntFun2VoidMutPtrIntIntUnitFun3UnitTuple6_ arg_61);
 
-void* fun_4(void const* env_1, int arg_1);
+void* fun_1(void const* env_1, int arg_1);
 
-int fun_5(void const* env_2, void* arg_2, int arg_3);
+int fun_2(void const* env_2, void* arg_2, int arg_3);
 
-char fun_6(void const* env_3, void* arg_4, int arg_5, int arg_6);
+char fun_3(void const* env_3, void* arg_4, int arg_5, int arg_6);
 
-int vectorToLength_(struct IntIntIntVoidMutPtrFun1VoidMutPtrIntIntFun2VoidMutPtrIntIntUnitFun3UnitTuple6VoidMutPtrIntIntUnitTuple5 arg_62);
+int vectorToLength_(struct IntIntIntVoidMutPtrFun1VoidMutPtrIntIntFun2VoidMutPtrIntIntUnitFun3UnitTuple6VoidMutPtrIntIntUnitTuple5_ arg_62);
 
-struct IntIntIntVoidMutPtrFun1VoidMutPtrIntIntFun2VoidMutPtrIntIntUnitFun3UnitTuple6VoidMutPtrIntIntUnitTuple5 vectorNew_(struct IntIntIntVoidMutPtrFun1VoidMutPtrIntIntFun2VoidMutPtrIntIntUnitFun3UnitTuple6 itemTy_, int len_7);
+struct IntIntIntVoidMutPtrFun1VoidMutPtrIntIntFun2VoidMutPtrIntIntUnitFun3UnitTuple6VoidMutPtrIntIntUnitTuple5_ vectorNew_(struct IntIntIntVoidMutPtrFun1VoidMutPtrIntIntFun2VoidMutPtrIntIntUnitFun3UnitTuple6_ itemTy_, int len_7);
 
-char vectorCheckIndex_(int index_2, struct IntIntIntVoidMutPtrFun1VoidMutPtrIntIntFun2VoidMutPtrIntIntUnitFun3UnitTuple6VoidMutPtrIntIntUnitTuple5 self_);
+char vectorCheckIndex_(int index_2, struct IntIntIntVoidMutPtrFun1VoidMutPtrIntIntFun2VoidMutPtrIntIntUnitFun3UnitTuple6VoidMutPtrIntIntUnitTuple5_ self_);
 
-int vectorGet_(int index_3, struct IntIntIntVoidMutPtrFun1VoidMutPtrIntIntFun2VoidMutPtrIntIntUnitFun3UnitTuple6VoidMutPtrIntIntUnitTuple5 self_1);
+int vectorGet_(int index_3, struct IntIntIntVoidMutPtrFun1VoidMutPtrIntIntFun2VoidMutPtrIntIntUnitFun3UnitTuple6VoidMutPtrIntIntUnitTuple5_ self_1);
 
-char vectorSet_(int index_4, int value_1, struct IntIntIntVoidMutPtrFun1VoidMutPtrIntIntFun2VoidMutPtrIntIntUnitFun3UnitTuple6VoidMutPtrIntIntUnitTuple5 self_2);
+char vectorSet_(int index_4, int value_1, struct IntIntIntVoidMutPtrFun1VoidMutPtrIntIntFun2VoidMutPtrIntIntUnitFun3UnitTuple6VoidMutPtrIntIntUnitTuple5_ self_2);
 
-char go_27(int len_10, struct IntIntIntVoidMutPtrFun1VoidMutPtrIntIntFun2VoidMutPtrIntIntUnitFun3UnitTuple6VoidMutPtrIntIntUnitTuple5 v_, int i_2, struct IntList const* xs_19);
+char go_12(int len_10, struct IntIntIntVoidMutPtrFun1VoidMutPtrIntIntFun2VoidMutPtrIntIntUnitFun3UnitTuple6VoidMutPtrIntIntUnitTuple5_ v_, int i_2, struct IntList const* xs_19);
 
-struct IntIntIntVoidMutPtrFun1VoidMutPtrIntIntFun2VoidMutPtrIntIntUnitFun3UnitTuple6VoidMutPtrIntIntUnitTuple5 vectorOfList_(struct IntIntIntVoidMutPtrFun1VoidMutPtrIntIntFun2VoidMutPtrIntIntUnitFun3UnitTuple6 ty_, struct IntList const* xs_18);
+struct IntIntIntVoidMutPtrFun1VoidMutPtrIntIntFun2VoidMutPtrIntIntUnitFun3UnitTuple6VoidMutPtrIntIntUnitTuple5_ vectorOfList_(struct IntIntIntVoidMutPtrFun1VoidMutPtrIntIntFun2VoidMutPtrIntIntUnitFun3UnitTuple6_ ty_, struct IntList const* xs_18);
 
-char go_7(int len_11, struct IntIntIntVoidMutPtrFun1VoidMutPtrIntIntFun2VoidMutPtrIntIntUnitFun3UnitTuple6VoidMutPtrIntIntUnitTuple5 v_1, int i_3);
+char go_1(int len_11, struct IntIntIntVoidMutPtrFun1VoidMutPtrIntIntFun2VoidMutPtrIntIntUnitFun3UnitTuple6VoidMutPtrIntIntUnitTuple5_ v_1, int i_3);
 
-struct IntIntIntVoidMutPtrFun1VoidMutPtrIntIntFun2VoidMutPtrIntIntUnitFun3UnitTuple6VoidMutPtrIntIntUnitTuple5 Competitive_Helpers_scanIntVector(int len_11);
+struct IntIntIntVoidMutPtrFun1VoidMutPtrIntIntFun2VoidMutPtrIntIntUnitFun3UnitTuple6VoidMutPtrIntIntUnitTuple5_ Competitive_Helpers_scanIntVector(int len_11);
 
 char refCase_(char arg_70);
 
@@ -173,7 +173,7 @@ struct IntIntBoolFun2 {
     void const* env;
 };
 
-struct IntListIntListTuple2 {
+struct IntListIntListTuple2_ {
     struct IntList const* t0;
     struct IntList const* t1;
 };
@@ -183,7 +183,7 @@ struct StringStringBoolFun2 {
     void const* env;
 };
 
-struct StringListStringListTuple2 {
+struct StringListStringListTuple2_ {
     struct StringList const* t0;
     struct StringList const* t1;
 };
@@ -193,7 +193,7 @@ struct IntIntFun1 {
     void const* env;
 };
 
-struct StringStringListTuple2 {
+struct StringStringListTuple2_ {
     struct String t0;
     struct StringList const* t1;
 };
@@ -213,7 +213,7 @@ struct VoidMutPtrIntIntUnitFun3 {
     void const* env;
 };
 
-struct IntIntIntVoidMutPtrFun1VoidMutPtrIntIntFun2VoidMutPtrIntIntUnitFun3UnitTuple6 {
+struct IntIntIntVoidMutPtrFun1VoidMutPtrIntIntFun2VoidMutPtrIntIntUnitFun3UnitTuple6_ {
     int t0;
     int t1;
     struct IntVoidMutPtrFun1 t2;
@@ -222,15 +222,15 @@ struct IntIntIntVoidMutPtrFun1VoidMutPtrIntIntFun2VoidMutPtrIntIntUnitFun3UnitTu
     char t5;
 };
 
-struct IntIntIntVoidMutPtrFun1VoidMutPtrIntIntFun2VoidMutPtrIntIntUnitFun3UnitTuple6VoidMutPtrIntIntUnitTuple5 {
-    struct IntIntIntVoidMutPtrFun1VoidMutPtrIntIntFun2VoidMutPtrIntIntUnitFun3UnitTuple6 t0;
+struct IntIntIntVoidMutPtrFun1VoidMutPtrIntIntFun2VoidMutPtrIntIntUnitFun3UnitTuple6VoidMutPtrIntIntUnitTuple5_ {
+    struct IntIntIntVoidMutPtrFun1VoidMutPtrIntIntFun2VoidMutPtrIntIntUnitFun3UnitTuple6_ t0;
     void* t1;
     int t2;
     int t3;
     char t4;
 };
 
-extern struct IntIntIntVoidMutPtrFun1VoidMutPtrIntIntFun2VoidMutPtrIntIntUnitFun3UnitTuple6 Competitive_Helpers_typeInt;
+extern struct IntIntIntVoidMutPtrFun1VoidMutPtrIntIntFun2VoidMutPtrIntIntUnitFun3UnitTuple6_ Competitive_Helpers_typeInt;
 
 void* Competitive_Helpers_memAlloc(int len_, int size_) {
     void* milone_mem_alloc_result = milone_mem_alloc(len_, ((uintptr_t)size_));
@@ -335,7 +335,7 @@ if_next_10:;
     return if_3;
 }
 
-bool listIsEmpty_4(struct IntIntIntObjectUnitTuple5List const* xs_) {
+bool listIsEmpty_4(struct IntIntIntObjectUnitTuple5_List const* xs_) {
     bool if_4;
     if ((!(xs_))) {
         goto nil_cl_14;
@@ -352,7 +352,7 @@ if_next_13:;
     return if_4;
 }
 
-bool listIsEmpty_5(struct StringIntIntObjectUnitTuple5List const* xs_) {
+bool listIsEmpty_5(struct StringIntIntObjectUnitTuple5_List const* xs_) {
     bool if_5;
     if ((!(xs_))) {
         goto nil_cl_17;
@@ -369,7 +369,7 @@ if_next_16:;
     return if_5;
 }
 
-int go_22(int len_2, struct StringList const* xs_2) {
+int go_7(int len_2, struct StringList const* xs_2) {
     struct StringList const* xs_3;
 tailrec_19:;
     int match_;
@@ -390,7 +390,7 @@ end_match_20:;
     return match_;
 }
 
-int go_21(int len_2, struct IntList const* xs_2) {
+int go_6(int len_2, struct IntList const* xs_2) {
     struct IntList const* xs_3;
 tailrec_23:;
     int match_1;
@@ -412,16 +412,16 @@ end_match_24:;
 }
 
 int listLength_1(struct StringList const* xs_1) {
-    int call_2 = go_22(0, xs_1);
+    int call_2 = go_7(0, xs_1);
     return call_2;
 }
 
 int listLength_(struct IntList const* xs_1) {
-    int call_3 = go_21(0, xs_1);
+    int call_3 = go_6(0, xs_1);
     return call_3;
 }
 
-struct IntList const* go_38(struct IntList const* acc_, struct IntList const* xs_5) {
+struct IntList const* go_23(struct IntList const* acc_, struct IntList const* xs_5) {
     struct IntList const* xs_6;
     int x_;
 tailrec_27:;
@@ -446,7 +446,7 @@ end_match_28:;
     return match_2;
 }
 
-struct StringList const* go_37(struct StringList const* acc_, struct StringList const* xs_5) {
+struct StringList const* go_22(struct StringList const* acc_, struct StringList const* xs_5) {
     struct StringList const* xs_6;
     struct String x_;
 tailrec_31:;
@@ -472,34 +472,34 @@ end_match_32:;
 }
 
 struct IntList const* listRev_1(struct IntList const* xs_4) {
-    struct IntList const* call_4 = go_38(NULL, xs_4);
+    struct IntList const* call_4 = go_23(NULL, xs_4);
     return call_4;
 }
 
 struct StringList const* listRev_(struct StringList const* xs_4) {
-    struct StringList const* call_5 = go_37(NULL, xs_4);
+    struct StringList const* call_5 = go_22(NULL, xs_4);
     return call_5;
 }
 
-bool go_24(struct IntIntBoolFun2 itemEqual_, struct IntList const* xs_8, struct IntList const* ys_1) {
+bool go_9(struct IntIntBoolFun2 itemEqual_, struct IntList const* xs_8, struct IntList const* ys_1) {
     struct IntList const* ys_2;
     int y_;
     struct IntList const* xs_9;
     int x_1;
 tailrec_35:;
     bool match_4;
-    struct IntListIntListTuple2 tuple_ = (struct IntListIntListTuple2){.t0 = xs_8, .t1 = ys_1};
-    if ((!((!(tuple_.t0))))) goto next_37;
-    if ((!((!(tuple_.t1))))) goto next_37;
+    struct IntListIntListTuple2_ IntListIntListTuple2_ = (struct IntListIntListTuple2_){.t0 = xs_8, .t1 = ys_1};
+    if ((!((!(IntListIntListTuple2_.t0))))) goto next_37;
+    if ((!((!(IntListIntListTuple2_.t1))))) goto next_37;
     match_4 = true;
     goto end_match_36;
 next_37:;
-    if ((!(tuple_.t0))) goto next_38;
-    x_1 = tuple_.t0->head;
-    xs_9 = tuple_.t0->tail;
-    if ((!(tuple_.t1))) goto next_38;
-    y_ = tuple_.t1->head;
-    ys_2 = tuple_.t1->tail;
+    if ((!(IntListIntListTuple2_.t0))) goto next_38;
+    x_1 = IntListIntListTuple2_.t0->head;
+    xs_9 = IntListIntListTuple2_.t0->tail;
+    if ((!(IntListIntListTuple2_.t1))) goto next_38;
+    y_ = IntListIntListTuple2_.t1->head;
+    ys_2 = IntListIntListTuple2_.t1->tail;
     bool app_ = itemEqual_.fun(itemEqual_.env, x_1, y_);
     bool if_6;
     if (app_) {
@@ -529,25 +529,25 @@ end_match_36:;
     return match_4;
 }
 
-bool go_23(struct StringStringBoolFun2 itemEqual_, struct StringList const* xs_8, struct StringList const* ys_1) {
+bool go_8(struct StringStringBoolFun2 itemEqual_, struct StringList const* xs_8, struct StringList const* ys_1) {
     struct StringList const* ys_2;
     struct String y_;
     struct StringList const* xs_9;
     struct String x_1;
 tailrec_43:;
     bool match_5;
-    struct StringListStringListTuple2 tuple_1 = (struct StringListStringListTuple2){.t0 = xs_8, .t1 = ys_1};
-    if ((!((!(tuple_1.t0))))) goto next_45;
-    if ((!((!(tuple_1.t1))))) goto next_45;
+    struct StringListStringListTuple2_ StringListStringListTuple2_ = (struct StringListStringListTuple2_){.t0 = xs_8, .t1 = ys_1};
+    if ((!((!(StringListStringListTuple2_.t0))))) goto next_45;
+    if ((!((!(StringListStringListTuple2_.t1))))) goto next_45;
     match_5 = true;
     goto end_match_44;
 next_45:;
-    if ((!(tuple_1.t0))) goto next_46;
-    x_1 = tuple_1.t0->head;
-    xs_9 = tuple_1.t0->tail;
-    if ((!(tuple_1.t1))) goto next_46;
-    y_ = tuple_1.t1->head;
-    ys_2 = tuple_1.t1->tail;
+    if ((!(StringListStringListTuple2_.t0))) goto next_46;
+    x_1 = StringListStringListTuple2_.t0->head;
+    xs_9 = StringListStringListTuple2_.t0->tail;
+    if ((!(StringListStringListTuple2_.t1))) goto next_46;
+    y_ = StringListStringListTuple2_.t1->head;
+    ys_2 = StringListStringListTuple2_.t1->tail;
     bool app_1 = itemEqual_.fun(itemEqual_.env, x_1, y_);
     bool if_7;
     if (app_1) {
@@ -578,16 +578,16 @@ end_match_44:;
 }
 
 bool listEqual_1(struct IntIntBoolFun2 itemEqual_, struct IntList const* xs_7, struct IntList const* ys_) {
-    bool call_6 = go_24(itemEqual_, xs_7, ys_);
+    bool call_6 = go_9(itemEqual_, xs_7, ys_);
     return call_6;
 }
 
 bool listEqual_(struct StringStringBoolFun2 itemEqual_, struct StringList const* xs_7, struct StringList const* ys_) {
-    bool call_7 = go_23(itemEqual_, xs_7, ys_);
+    bool call_7 = go_8(itemEqual_, xs_7, ys_);
     return call_7;
 }
 
-struct IntList const* go_25(int item_, int len_3, struct IntList const* acc_1, int i_) {
+struct IntList const* go_10(int item_, int len_3, struct IntList const* acc_1, int i_) {
 tailrec_51:;
     struct IntList const* if_8;
     if ((i_ == len_3)) {
@@ -615,11 +615,11 @@ if_next_52:;
 }
 
 struct IntList const* listReplicate_(int item_, int len_3) {
-    struct IntList const* call_8 = go_25(item_, len_3, NULL, 0);
+    struct IntList const* call_8 = go_10(item_, len_3, NULL, 0);
     return call_8;
 }
 
-struct IntList const* go_26(int len_4, struct IntIntFun1 gen_, struct IntList const* acc_2, int i_1) {
+struct IntList const* go_11(int len_4, struct IntIntFun1 gen_, struct IntList const* acc_2, int i_1) {
 tailrec_55:;
     struct IntList const* if_9;
     if ((i_1 == len_4)) {
@@ -650,30 +650,30 @@ if_next_56:;
 
 struct IntList const* listInit_(int len_4, struct IntIntFun1 gen_) {
     milone_assert((len_4 >= 0), 77, 2);
-    struct IntList const* call_10 = go_26(len_4, gen_, NULL, 0);
+    struct IntList const* call_10 = go_11(len_4, gen_, NULL, 0);
     return call_10;
 }
 
-struct StringStringListTuple2 go_5(struct StringList const* xs_11, int xn_) {
+struct StringStringListTuple2_ go_(struct StringList const* xs_11, int xn_) {
     struct StringList const* xs_14;
     struct StringList const* xs_13;
     struct String y_1;
     struct String x_3;
     struct StringList const* xs_12;
     struct String x_2;
-    struct StringStringListTuple2 match_6;
+    struct StringStringListTuple2_ match_6;
     if ((!((!(xs_11))))) goto next_60;
     milone_assert((xn_ == 0), 95, 6);
-    struct StringStringListTuple2 tuple_2 = (struct StringStringListTuple2){.t0 = (struct String){.str = "", .len = 0}, .t1 = NULL};
-    match_6 = tuple_2;
+    struct StringStringListTuple2_ StringStringListTuple2_ = (struct StringStringListTuple2_){.t0 = (struct String){.str = "", .len = 0}, .t1 = NULL};
+    match_6 = StringStringListTuple2_;
     goto end_match_59;
 next_60:;
     if ((!(xs_11))) goto next_61;
     x_2 = xs_11->head;
     xs_12 = xs_11->tail;
     if ((xn_ != 1)) goto next_61;
-    struct StringStringListTuple2 tuple_3 = (struct StringStringListTuple2){.t0 = x_2, .t1 = xs_12};
-    match_6 = tuple_3;
+    struct StringStringListTuple2_ StringStringListTuple2_1 = (struct StringStringListTuple2_){.t0 = x_2, .t1 = xs_12};
+    match_6 = StringStringListTuple2_1;
     goto end_match_59;
 next_61:;
     if ((!(xs_11))) goto next_62;
@@ -682,20 +682,20 @@ next_61:;
     y_1 = xs_11->tail->head;
     xs_12 = xs_11->tail->tail;
     if ((xn_ != 2)) goto next_62;
-    struct StringStringListTuple2 tuple_4 = (struct StringStringListTuple2){.t0 = str_add(x_2, y_1), .t1 = xs_12};
-    match_6 = tuple_4;
+    struct StringStringListTuple2_ StringStringListTuple2_2 = (struct StringStringListTuple2_){.t0 = str_add(x_2, y_1), .t1 = xs_12};
+    match_6 = StringStringListTuple2_2;
     goto end_match_59;
 next_62:;
     xs_12 = xs_11;
     int m_ = (xn_ / 2);
-    struct StringStringListTuple2 call_11 = go_5(xs_12, m_);
+    struct StringStringListTuple2_ call_11 = go_(xs_12, m_);
     struct String l_ = call_11.t0;
     struct StringList const* xs_15 = call_11.t1;
-    struct StringStringListTuple2 call_12 = go_5(xs_15, (xn_ - m_));
+    struct StringStringListTuple2_ call_12 = go_(xs_15, (xn_ - m_));
     struct String r_ = call_12.t0;
     struct StringList const* xs_16 = call_12.t1;
-    struct StringStringListTuple2 tuple_5 = (struct StringStringListTuple2){.t0 = str_add(l_, r_), .t1 = xs_16};
-    match_6 = tuple_5;
+    struct StringStringListTuple2_ StringStringListTuple2_3 = (struct StringStringListTuple2_){.t0 = str_add(l_, r_), .t1 = xs_16};
+    match_6 = StringStringListTuple2_3;
     goto end_match_59;
 next_63:;
 end_match_59:;
@@ -705,7 +705,7 @@ end_match_59:;
 struct String Competitive_Helpers_strConcat(struct StringList const* xs_10) {
     int call_13 = listLength_1(xs_10);
     int n_ = call_13;
-    struct StringStringListTuple2 call_14 = go_5(xs_10, n_);
+    struct StringStringListTuple2_ call_14 = go_(xs_10, n_);
     struct String s_ = call_14.t0;
     struct StringList const* xs_17 = call_14.t1;
     bool call_15 = listIsEmpty_(xs_17);
@@ -760,70 +760,70 @@ int failwith_(struct String msg_) {
     exit(1);
 }
 
-int fun_21(int arg_58) {
+int fun_18(int arg_58) {
     int call_16 = Competitive_Helpers_scanInt(0);
     return call_16;
 }
 
-int fun_3(void const* env_, int arg_) {
-    int call_17 = fun_21(arg_);
+int fun_(void const* env_, int arg_) {
+    int call_17 = fun_18(arg_);
     return call_17;
 }
 
 struct IntList const* Competitive_Helpers_scanIntList(int len_5) {
-    struct IntIntFun1 fun_24 = (struct IntIntFun1){.fun = fun_3, .env = NULL};
-    struct IntList const* call_18 = listInit_(len_5, fun_24);
+    struct IntIntFun1 fun_21 = (struct IntIntFun1){.fun = fun_, .env = NULL};
+    struct IntList const* call_18 = listInit_(len_5, fun_21);
     return call_18;
 }
 
-struct IntVoidMutPtrFun1 typeToArrayNew_(struct IntIntIntVoidMutPtrFun1VoidMutPtrIntIntFun2VoidMutPtrIntIntUnitFun3UnitTuple6 arg_59) {
+struct IntVoidMutPtrFun1 typeToArrayNew_(struct IntIntIntVoidMutPtrFun1VoidMutPtrIntIntFun2VoidMutPtrIntIntUnitFun3UnitTuple6_ arg_59) {
     struct IntVoidMutPtrFun1 arrayNew_ = arg_59.t2;
     char _typeTag_2 = arg_59.t5;
     return arrayNew_;
 }
 
-struct VoidMutPtrIntIntFun2 typeToArrayGet_(struct IntIntIntVoidMutPtrFun1VoidMutPtrIntIntFun2VoidMutPtrIntIntUnitFun3UnitTuple6 arg_60) {
+struct VoidMutPtrIntIntFun2 typeToArrayGet_(struct IntIntIntVoidMutPtrFun1VoidMutPtrIntIntFun2VoidMutPtrIntIntUnitFun3UnitTuple6_ arg_60) {
     struct VoidMutPtrIntIntFun2 arrayGet_ = arg_60.t3;
     char _typeTag_3 = arg_60.t5;
     return arrayGet_;
 }
 
-struct VoidMutPtrIntIntUnitFun3 typeToArraySet_(struct IntIntIntVoidMutPtrFun1VoidMutPtrIntIntFun2VoidMutPtrIntIntUnitFun3UnitTuple6 arg_61) {
+struct VoidMutPtrIntIntUnitFun3 typeToArraySet_(struct IntIntIntVoidMutPtrFun1VoidMutPtrIntIntFun2VoidMutPtrIntIntUnitFun3UnitTuple6_ arg_61) {
     struct VoidMutPtrIntIntUnitFun3 arraySet_ = arg_61.t4;
     char _typeTag_4 = arg_61.t5;
     return arraySet_;
 }
 
-void* fun_4(void const* env_1, int arg_1) {
+void* fun_1(void const* env_1, int arg_1) {
     void* call_19 = Competitive_Helpers_rawIntArrayNew(arg_1);
     return call_19;
 }
 
-int fun_5(void const* env_2, void* arg_2, int arg_3) {
+int fun_2(void const* env_2, void* arg_2, int arg_3) {
     int call_20 = Competitive_Helpers_rawIntArrayGet(arg_2, arg_3);
     return call_20;
 }
 
-char fun_6(void const* env_3, void* arg_4, int arg_5, int arg_6) {
+char fun_3(void const* env_3, void* arg_4, int arg_5, int arg_6) {
     char call_21 = Competitive_Helpers_rawIntArraySet(arg_4, arg_5, arg_6);
     return 0;
 }
 
-int vectorToLength_(struct IntIntIntVoidMutPtrFun1VoidMutPtrIntIntFun2VoidMutPtrIntIntUnitFun3UnitTuple6VoidMutPtrIntIntUnitTuple5 arg_62) {
+int vectorToLength_(struct IntIntIntVoidMutPtrFun1VoidMutPtrIntIntFun2VoidMutPtrIntIntUnitFun3UnitTuple6VoidMutPtrIntIntUnitTuple5_ arg_62) {
     int len_6 = arg_62.t2;
     char _vectorTag = arg_62.t4;
     return len_6;
 }
 
-struct IntIntIntVoidMutPtrFun1VoidMutPtrIntIntFun2VoidMutPtrIntIntUnitFun3UnitTuple6VoidMutPtrIntIntUnitTuple5 vectorNew_(struct IntIntIntVoidMutPtrFun1VoidMutPtrIntIntFun2VoidMutPtrIntIntUnitFun3UnitTuple6 itemTy_, int len_7) {
+struct IntIntIntVoidMutPtrFun1VoidMutPtrIntIntFun2VoidMutPtrIntIntUnitFun3UnitTuple6VoidMutPtrIntIntUnitTuple5_ vectorNew_(struct IntIntIntVoidMutPtrFun1VoidMutPtrIntIntFun2VoidMutPtrIntIntUnitFun3UnitTuple6_ itemTy_, int len_7) {
     struct IntVoidMutPtrFun1 call_22 = typeToArrayNew_(itemTy_);
     void* app_3 = call_22.fun(call_22.env, len_7);
     void* array_2 = app_3;
-    struct IntIntIntVoidMutPtrFun1VoidMutPtrIntIntFun2VoidMutPtrIntIntUnitFun3UnitTuple6VoidMutPtrIntIntUnitTuple5 tuple_6 = (struct IntIntIntVoidMutPtrFun1VoidMutPtrIntIntFun2VoidMutPtrIntIntUnitFun3UnitTuple6VoidMutPtrIntIntUnitTuple5){.t0 = itemTy_, .t1 = array_2, .t2 = len_7, .t3 = len_7, .t4 = 0};
-    return tuple_6;
+    struct IntIntIntVoidMutPtrFun1VoidMutPtrIntIntFun2VoidMutPtrIntIntUnitFun3UnitTuple6VoidMutPtrIntIntUnitTuple5_ IntIntIntVoidMutPtrFun1VoidMutPtrIntIntFun2VoidMutPtrIntIntUnitFun3UnitTuple6VoidMutPtrIntIntUnitTuple5_ = (struct IntIntIntVoidMutPtrFun1VoidMutPtrIntIntFun2VoidMutPtrIntIntUnitFun3UnitTuple6VoidMutPtrIntIntUnitTuple5_){.t0 = itemTy_, .t1 = array_2, .t2 = len_7, .t3 = len_7, .t4 = 0};
+    return IntIntIntVoidMutPtrFun1VoidMutPtrIntIntFun2VoidMutPtrIntIntUnitFun3UnitTuple6VoidMutPtrIntIntUnitTuple5_;
 }
 
-char vectorCheckIndex_(int index_2, struct IntIntIntVoidMutPtrFun1VoidMutPtrIntIntFun2VoidMutPtrIntIntUnitFun3UnitTuple6VoidMutPtrIntIntUnitTuple5 self_) {
+char vectorCheckIndex_(int index_2, struct IntIntIntVoidMutPtrFun1VoidMutPtrIntIntFun2VoidMutPtrIntIntUnitFun3UnitTuple6VoidMutPtrIntIntUnitTuple5_ self_) {
     int call_23 = vectorToLength_(self_);
     int len_8 = call_23;
     bool if_12;
@@ -855,9 +855,9 @@ if_next_73:;
     return 0;
 }
 
-int vectorGet_(int index_3, struct IntIntIntVoidMutPtrFun1VoidMutPtrIntIntFun2VoidMutPtrIntIntUnitFun3UnitTuple6VoidMutPtrIntIntUnitTuple5 self_1) {
+int vectorGet_(int index_3, struct IntIntIntVoidMutPtrFun1VoidMutPtrIntIntFun2VoidMutPtrIntIntUnitFun3UnitTuple6VoidMutPtrIntIntUnitTuple5_ self_1) {
     char call_24 = vectorCheckIndex_(index_3, self_1);
-    struct IntIntIntVoidMutPtrFun1VoidMutPtrIntIntFun2VoidMutPtrIntIntUnitFun3UnitTuple6 itemTy_1 = self_1.t0;
+    struct IntIntIntVoidMutPtrFun1VoidMutPtrIntIntFun2VoidMutPtrIntIntUnitFun3UnitTuple6_ itemTy_1 = self_1.t0;
     void* array_3 = self_1.t1;
     char _vectorTag_1 = self_1.t4;
     struct VoidMutPtrIntIntFun2 call_25 = typeToArrayGet_(itemTy_1);
@@ -865,9 +865,9 @@ int vectorGet_(int index_3, struct IntIntIntVoidMutPtrFun1VoidMutPtrIntIntFun2Vo
     return app_4;
 }
 
-char vectorSet_(int index_4, int value_1, struct IntIntIntVoidMutPtrFun1VoidMutPtrIntIntFun2VoidMutPtrIntIntUnitFun3UnitTuple6VoidMutPtrIntIntUnitTuple5 self_2) {
+char vectorSet_(int index_4, int value_1, struct IntIntIntVoidMutPtrFun1VoidMutPtrIntIntFun2VoidMutPtrIntIntUnitFun3UnitTuple6VoidMutPtrIntIntUnitTuple5_ self_2) {
     char call_26 = vectorCheckIndex_(index_4, self_2);
-    struct IntIntIntVoidMutPtrFun1VoidMutPtrIntIntFun2VoidMutPtrIntIntUnitFun3UnitTuple6 itemTy_2 = self_2.t0;
+    struct IntIntIntVoidMutPtrFun1VoidMutPtrIntIntFun2VoidMutPtrIntIntUnitFun3UnitTuple6_ itemTy_2 = self_2.t0;
     void* array_4 = self_2.t1;
     char _vectorTag_2 = self_2.t4;
     struct VoidMutPtrIntIntUnitFun3 call_27 = typeToArraySet_(itemTy_2);
@@ -875,7 +875,7 @@ char vectorSet_(int index_4, int value_1, struct IntIntIntVoidMutPtrFun1VoidMutP
     return 0;
 }
 
-char go_27(int len_10, struct IntIntIntVoidMutPtrFun1VoidMutPtrIntIntFun2VoidMutPtrIntIntUnitFun3UnitTuple6VoidMutPtrIntIntUnitTuple5 v_, int i_2, struct IntList const* xs_19) {
+char go_12(int len_10, struct IntIntIntVoidMutPtrFun1VoidMutPtrIntIntFun2VoidMutPtrIntIntUnitFun3UnitTuple6VoidMutPtrIntIntUnitTuple5_ v_, int i_2, struct IntList const* xs_19) {
     struct IntList const* xs_20;
     int x_4;
 tailrec_76:;
@@ -890,7 +890,7 @@ next_78:;
     xs_20 = xs_19->tail;
     char call_28 = vectorSet_(i_2, x_4, v_);
     int arg_63 = len_10;
-    struct IntIntIntVoidMutPtrFun1VoidMutPtrIntIntFun2VoidMutPtrIntIntUnitFun3UnitTuple6VoidMutPtrIntIntUnitTuple5 arg_64 = v_;
+    struct IntIntIntVoidMutPtrFun1VoidMutPtrIntIntFun2VoidMutPtrIntIntUnitFun3UnitTuple6VoidMutPtrIntIntUnitTuple5_ arg_64 = v_;
     int arg_65 = (i_2 + 1);
     struct IntList const* arg_66 = xs_20;
     len_10 = arg_63;
@@ -904,16 +904,16 @@ end_match_77:;
     return 0;
 }
 
-struct IntIntIntVoidMutPtrFun1VoidMutPtrIntIntFun2VoidMutPtrIntIntUnitFun3UnitTuple6VoidMutPtrIntIntUnitTuple5 vectorOfList_(struct IntIntIntVoidMutPtrFun1VoidMutPtrIntIntFun2VoidMutPtrIntIntUnitFun3UnitTuple6 ty_, struct IntList const* xs_18) {
+struct IntIntIntVoidMutPtrFun1VoidMutPtrIntIntFun2VoidMutPtrIntIntUnitFun3UnitTuple6VoidMutPtrIntIntUnitTuple5_ vectorOfList_(struct IntIntIntVoidMutPtrFun1VoidMutPtrIntIntFun2VoidMutPtrIntIntUnitFun3UnitTuple6_ ty_, struct IntList const* xs_18) {
     int call_29 = listLength_(xs_18);
     int len_10 = call_29;
-    struct IntIntIntVoidMutPtrFun1VoidMutPtrIntIntFun2VoidMutPtrIntIntUnitFun3UnitTuple6VoidMutPtrIntIntUnitTuple5 call_30 = vectorNew_(ty_, len_10);
-    struct IntIntIntVoidMutPtrFun1VoidMutPtrIntIntFun2VoidMutPtrIntIntUnitFun3UnitTuple6VoidMutPtrIntIntUnitTuple5 v_ = call_30;
-    char call_31 = go_27(len_10, v_, 0, xs_18);
+    struct IntIntIntVoidMutPtrFun1VoidMutPtrIntIntFun2VoidMutPtrIntIntUnitFun3UnitTuple6VoidMutPtrIntIntUnitTuple5_ call_30 = vectorNew_(ty_, len_10);
+    struct IntIntIntVoidMutPtrFun1VoidMutPtrIntIntFun2VoidMutPtrIntIntUnitFun3UnitTuple6VoidMutPtrIntIntUnitTuple5_ v_ = call_30;
+    char call_31 = go_12(len_10, v_, 0, xs_18);
     return v_;
 }
 
-char go_7(int len_11, struct IntIntIntVoidMutPtrFun1VoidMutPtrIntIntFun2VoidMutPtrIntIntUnitFun3UnitTuple6VoidMutPtrIntIntUnitTuple5 v_1, int i_3) {
+char go_1(int len_11, struct IntIntIntVoidMutPtrFun1VoidMutPtrIntIntFun2VoidMutPtrIntIntUnitFun3UnitTuple6VoidMutPtrIntIntUnitTuple5_ v_1, int i_3) {
 tailrec_80:;
     char if_14;
     if ((i_3 < len_11)) {
@@ -926,7 +926,7 @@ then_82:;
     int value_3 = call_32;
     char call_33 = vectorSet_(i_3, value_3, v_1);
     int arg_67 = len_11;
-    struct IntIntIntVoidMutPtrFun1VoidMutPtrIntIntFun2VoidMutPtrIntIntUnitFun3UnitTuple6VoidMutPtrIntIntUnitTuple5 arg_68 = v_1;
+    struct IntIntIntVoidMutPtrFun1VoidMutPtrIntIntFun2VoidMutPtrIntIntUnitFun3UnitTuple6VoidMutPtrIntIntUnitTuple5_ arg_68 = v_1;
     int arg_69 = (i_3 + 1);
     len_11 = arg_67;
     v_1 = arg_68;
@@ -939,16 +939,16 @@ if_next_81:;
     return 0;
 }
 
-struct IntIntIntVoidMutPtrFun1VoidMutPtrIntIntFun2VoidMutPtrIntIntUnitFun3UnitTuple6VoidMutPtrIntIntUnitTuple5 Competitive_Helpers_scanIntVector(int len_11) {
-    struct IntIntIntVoidMutPtrFun1VoidMutPtrIntIntFun2VoidMutPtrIntIntUnitFun3UnitTuple6VoidMutPtrIntIntUnitTuple5 call_34 = vectorNew_(Competitive_Helpers_typeInt, len_11);
-    struct IntIntIntVoidMutPtrFun1VoidMutPtrIntIntFun2VoidMutPtrIntIntUnitFun3UnitTuple6VoidMutPtrIntIntUnitTuple5 v_1 = call_34;
-    char call_35 = go_7(len_11, v_1, 0);
+struct IntIntIntVoidMutPtrFun1VoidMutPtrIntIntFun2VoidMutPtrIntIntUnitFun3UnitTuple6VoidMutPtrIntIntUnitTuple5_ Competitive_Helpers_scanIntVector(int len_11) {
+    struct IntIntIntVoidMutPtrFun1VoidMutPtrIntIntFun2VoidMutPtrIntIntUnitFun3UnitTuple6VoidMutPtrIntIntUnitTuple5_ call_34 = vectorNew_(Competitive_Helpers_typeInt, len_11);
+    struct IntIntIntVoidMutPtrFun1VoidMutPtrIntIntFun2VoidMutPtrIntIntUnitFun3UnitTuple6VoidMutPtrIntIntUnitTuple5_ v_1 = call_34;
+    char call_35 = go_1(len_11, v_1, 0);
     return v_1;
 }
 
 char refCase_(char arg_70) {
-    struct IntIntIntVoidMutPtrFun1VoidMutPtrIntIntFun2VoidMutPtrIntIntUnitFun3UnitTuple6VoidMutPtrIntIntUnitTuple5 call_36 = vectorNew_(Competitive_Helpers_typeInt, 1);
-    struct IntIntIntVoidMutPtrFun1VoidMutPtrIntIntFun2VoidMutPtrIntIntUnitFun3UnitTuple6VoidMutPtrIntIntUnitTuple5 v_2 = call_36;
+    struct IntIntIntVoidMutPtrFun1VoidMutPtrIntIntFun2VoidMutPtrIntIntUnitFun3UnitTuple6VoidMutPtrIntIntUnitTuple5_ call_36 = vectorNew_(Competitive_Helpers_typeInt, 1);
+    struct IntIntIntVoidMutPtrFun1VoidMutPtrIntIntFun2VoidMutPtrIntIntUnitFun3UnitTuple6VoidMutPtrIntIntUnitTuple5_ v_2 = call_36;
     int call_37 = vectorToLength_(v_2);
     milone_assert((call_37 == 1), 226, 4);
     int call_38 = vectorGet_(0, v_2);
@@ -966,8 +966,8 @@ char vectorOfListTest_(char arg_71) {
     (*(((struct IntList*)list_5))) = (struct IntList){.head = 2, .tail = list_6};
     struct IntList const* list_4 = milone_mem_alloc(1, sizeof(struct IntList));
     (*(((struct IntList*)list_4))) = (struct IntList){.head = 1, .tail = list_5};
-    struct IntIntIntVoidMutPtrFun1VoidMutPtrIntIntFun2VoidMutPtrIntIntUnitFun3UnitTuple6VoidMutPtrIntIntUnitTuple5 call_41 = vectorOfList_(Competitive_Helpers_typeInt, list_4);
-    struct IntIntIntVoidMutPtrFun1VoidMutPtrIntIntFun2VoidMutPtrIntIntUnitFun3UnitTuple6VoidMutPtrIntIntUnitTuple5 v_3 = call_41;
+    struct IntIntIntVoidMutPtrFun1VoidMutPtrIntIntFun2VoidMutPtrIntIntUnitFun3UnitTuple6VoidMutPtrIntIntUnitTuple5_ call_41 = vectorOfList_(Competitive_Helpers_typeInt, list_4);
+    struct IntIntIntVoidMutPtrFun1VoidMutPtrIntIntFun2VoidMutPtrIntIntUnitFun3UnitTuple6VoidMutPtrIntIntUnitTuple5_ v_3 = call_41;
     int call_42 = vectorToLength_(v_3);
     milone_assert((call_42 == 3), 235, 4);
     int call_43 = vectorGet_(0, v_3);

@@ -12,11 +12,11 @@ struct Token_List;
 
 struct CharBoolFun1;
 
-struct StringIntTuple2;
+struct StringIntTuple2_;
 
-struct Token_ListIntTuple2;
+struct TokenListIntTuple2_;
 
-struct IntToken_ListTuple2;
+struct IntTokenListTuple2_;
 
 bool calc_Program_charEqual(char l_, char r_);
 
@@ -44,37 +44,37 @@ bool calc_Program_isDigit(char c_1);
 
 int go_5(struct CharBoolFun1 pred_, struct String source_, int r_1);
 
-int calc_Program_takeWhile(struct CharBoolFun1 pred_, struct StringIntTuple2 arg_16);
+int calc_Program_takeWhile(struct CharBoolFun1 pred_, struct StringIntTuple2_ arg_16);
 
 bool fun_(void const* env_, char arg_);
 
-struct Token_ListIntTuple2 readSpace_(struct String source_1, struct Token_ListIntTuple2 arg_17);
+struct TokenListIntTuple2_ readSpace_(struct String source_1, struct TokenListIntTuple2_ arg_17);
 
-struct Token_ListIntTuple2 readEol_(struct String source_2, struct Token_ListIntTuple2 arg_18);
+struct TokenListIntTuple2_ readEol_(struct String source_2, struct TokenListIntTuple2_ arg_18);
 
 bool fun_1(void const* env_1, char arg_2);
 
-struct Token_ListIntTuple2 readInt_(struct String source_3, struct Token_ListIntTuple2 arg_19);
+struct TokenListIntTuple2_ readInt_(struct String source_3, struct TokenListIntTuple2_ arg_19);
 
 char at_(struct String source_4, int i_6);
 
-struct Token_List const* go_6(struct String source_4, struct Token_ListIntTuple2 arg_20);
+struct Token_List const* go_6(struct String source_4, struct TokenListIntTuple2_ arg_20);
 
 struct Token_List const* calc_Program_tokenize(struct String source_4);
 
 char calc_Program_tokenListPrint(struct Token_List const* tokens_);
 
-struct IntToken_ListTuple2 evalTerm_(struct Token_List const* tokens_4);
+struct IntTokenListTuple2_ evalTerm_(struct Token_List const* tokens_4);
 
-struct IntToken_ListTuple2 go_7(int acc_6, struct Token_List const* tokens_9);
+struct IntTokenListTuple2_ go_7(int acc_6, struct Token_List const* tokens_9);
 
-struct IntToken_ListTuple2 evalMul_(struct Token_List const* tokens_8);
+struct IntTokenListTuple2_ evalMul_(struct Token_List const* tokens_8);
 
-struct IntToken_ListTuple2 go_8(int acc_7, struct Token_List const* tokens_14);
+struct IntTokenListTuple2_ go_8(int acc_7, struct Token_List const* tokens_14);
 
-struct IntToken_ListTuple2 evalAdd_(struct Token_List const* tokens_13);
+struct IntTokenListTuple2_ evalAdd_(struct Token_List const* tokens_13);
 
-struct IntToken_ListTuple2 calc_Program_evalExpr(struct Token_List const* tokens_3);
+struct IntTokenListTuple2_ calc_Program_evalExpr(struct Token_List const* tokens_3);
 
 int calc_Program_eval(struct String str_);
 
@@ -108,17 +108,17 @@ struct CharBoolFun1 {
     void const* env;
 };
 
-struct StringIntTuple2 {
+struct StringIntTuple2_ {
     struct String t0;
     int t1;
 };
 
-struct Token_ListIntTuple2 {
+struct TokenListIntTuple2_ {
     struct Token_List const* t0;
     int t1;
 };
 
-struct IntToken_ListTuple2 {
+struct IntTokenListTuple2_ {
     int t0;
     struct Token_List const* t1;
 };
@@ -361,7 +361,7 @@ if_next_36:;
     return if_7;
 }
 
-int calc_Program_takeWhile(struct CharBoolFun1 pred_, struct StringIntTuple2 arg_16) {
+int calc_Program_takeWhile(struct CharBoolFun1 pred_, struct StringIntTuple2_ arg_16) {
     struct String source_ = arg_16.t0;
     int i_2 = arg_16.t1;
     int call_6 = go_5(pred_, source_, i_2);
@@ -374,19 +374,19 @@ bool fun_(void const* env_, char arg_) {
     return call_7;
 }
 
-struct Token_ListIntTuple2 readSpace_(struct String source_1, struct Token_ListIntTuple2 arg_17) {
+struct TokenListIntTuple2_ readSpace_(struct String source_1, struct TokenListIntTuple2_ arg_17) {
     struct Token_List const* acc_2 = arg_17.t0;
     int i_3 = arg_17.t1;
     milone_assert((source_1.str[i_3] == ' '), 59, 2);
     struct CharBoolFun1 fun_2 = (struct CharBoolFun1){.fun = fun_, .env = ((void const*)((intptr_t)' '))};
-    struct StringIntTuple2 tuple_ = (struct StringIntTuple2){.t0 = source_1, .t1 = (i_3 + 1)};
-    int call_8 = calc_Program_takeWhile(fun_2, tuple_);
+    struct StringIntTuple2_ StringIntTuple2_ = (struct StringIntTuple2_){.t0 = source_1, .t1 = (i_3 + 1)};
+    int call_8 = calc_Program_takeWhile(fun_2, StringIntTuple2_);
     int r_2 = call_8;
-    struct Token_ListIntTuple2 tuple_1 = (struct Token_ListIntTuple2){.t0 = acc_2, .t1 = r_2};
-    return tuple_1;
+    struct TokenListIntTuple2_ TokenListIntTuple2_ = (struct TokenListIntTuple2_){.t0 = acc_2, .t1 = r_2};
+    return TokenListIntTuple2_;
 }
 
-struct Token_ListIntTuple2 readEol_(struct String source_2, struct Token_ListIntTuple2 arg_18) {
+struct TokenListIntTuple2_ readEol_(struct String source_2, struct TokenListIntTuple2_ arg_18) {
     struct Token_List const* acc_3 = arg_18.t0;
     int i_4 = arg_18.t1;
     bool if_8;
@@ -443,8 +443,8 @@ else_50:;
     goto if_next_48;
 if_next_48:;
     int r_3 = if_11;
-    struct Token_ListIntTuple2 tuple_2 = (struct Token_ListIntTuple2){.t0 = acc_3, .t1 = r_3};
-    return tuple_2;
+    struct TokenListIntTuple2_ TokenListIntTuple2_1 = (struct TokenListIntTuple2_){.t0 = acc_3, .t1 = r_3};
+    return TokenListIntTuple2_1;
 }
 
 bool fun_1(void const* env_1, char arg_2) {
@@ -452,14 +452,14 @@ bool fun_1(void const* env_1, char arg_2) {
     return call_9;
 }
 
-struct Token_ListIntTuple2 readInt_(struct String source_3, struct Token_ListIntTuple2 arg_19) {
+struct TokenListIntTuple2_ readInt_(struct String source_3, struct TokenListIntTuple2_ arg_19) {
     struct Token_List const* acc_4 = arg_19.t0;
     int i_5 = arg_19.t1;
     bool call_10 = calc_Program_isDigit(source_3.str[i_5]);
     milone_assert(call_10, 80, 2);
     struct CharBoolFun1 fun_3 = (struct CharBoolFun1){.fun = fun_1, .env = NULL};
-    struct StringIntTuple2 tuple_3 = (struct StringIntTuple2){.t0 = source_3, .t1 = i_5};
-    int call_11 = calc_Program_takeWhile(fun_3, tuple_3);
+    struct StringIntTuple2_ StringIntTuple2_1 = (struct StringIntTuple2_){.t0 = source_3, .t1 = i_5};
+    int call_11 = calc_Program_takeWhile(fun_3, StringIntTuple2_1);
     int r_4 = call_11;
     struct String slice_ = str_get_slice(i_5, (r_4 - 1), source_3);
     int call_12 = str_to_int(slice_);
@@ -467,8 +467,8 @@ struct Token_ListIntTuple2 readInt_(struct String source_3, struct Token_ListInt
     struct Token_ variant_ = (struct Token_){.discriminant = TkInt_, .TkInt_ = n_};
     struct Token_List const* list_2 = milone_mem_alloc(1, sizeof(struct Token_List));
     (*(((struct Token_List*)list_2))) = (struct Token_List){.head = variant_, .tail = acc_4};
-    struct Token_ListIntTuple2 tuple_4 = (struct Token_ListIntTuple2){.t0 = list_2, .t1 = r_4};
-    return tuple_4;
+    struct TokenListIntTuple2_ TokenListIntTuple2_2 = (struct TokenListIntTuple2_){.t0 = list_2, .t1 = r_4};
+    return TokenListIntTuple2_2;
 }
 
 char at_(struct String source_4, int i_6) {
@@ -488,7 +488,7 @@ if_next_51:;
     return if_12;
 }
 
-struct Token_List const* go_6(struct String source_4, struct Token_ListIntTuple2 arg_20) {
+struct Token_List const* go_6(struct String source_4, struct TokenListIntTuple2_ arg_20) {
     char c_2;
 tailrec_54:;
     struct Token_List const* acc_5 = arg_20.t0;
@@ -507,27 +507,27 @@ else_57:;
     struct Token_List const* match_3;
     if ((source_4.str[i_7] != ' ')) goto next_59;
     struct String arg_21 = source_4;
-    struct Token_ListIntTuple2 tuple_5 = (struct Token_ListIntTuple2){.t0 = acc_5, .t1 = i_7};
-    struct Token_ListIntTuple2 call_14 = readSpace_(source_4, tuple_5);
-    struct Token_ListIntTuple2 arg_22 = call_14;
+    struct TokenListIntTuple2_ TokenListIntTuple2_3 = (struct TokenListIntTuple2_){.t0 = acc_5, .t1 = i_7};
+    struct TokenListIntTuple2_ call_14 = readSpace_(source_4, TokenListIntTuple2_3);
+    struct TokenListIntTuple2_ arg_22 = call_14;
     source_4 = arg_21;
     arg_20 = arg_22;
     goto tailrec_54;
 next_59:;
     if ((source_4.str[i_7] != '\r')) goto next_60;
     struct String arg_23 = source_4;
-    struct Token_ListIntTuple2 tuple_6 = (struct Token_ListIntTuple2){.t0 = acc_5, .t1 = i_7};
-    struct Token_ListIntTuple2 call_15 = readEol_(source_4, tuple_6);
-    struct Token_ListIntTuple2 arg_24 = call_15;
+    struct TokenListIntTuple2_ TokenListIntTuple2_4 = (struct TokenListIntTuple2_){.t0 = acc_5, .t1 = i_7};
+    struct TokenListIntTuple2_ call_15 = readEol_(source_4, TokenListIntTuple2_4);
+    struct TokenListIntTuple2_ arg_24 = call_15;
     source_4 = arg_23;
     arg_20 = arg_24;
     goto tailrec_54;
 next_60:;
     if ((source_4.str[i_7] != '\n')) goto next_61;
     struct String arg_25 = source_4;
-    struct Token_ListIntTuple2 tuple_7 = (struct Token_ListIntTuple2){.t0 = acc_5, .t1 = i_7};
-    struct Token_ListIntTuple2 call_16 = readEol_(source_4, tuple_7);
-    struct Token_ListIntTuple2 arg_26 = call_16;
+    struct TokenListIntTuple2_ TokenListIntTuple2_5 = (struct TokenListIntTuple2_){.t0 = acc_5, .t1 = i_7};
+    struct TokenListIntTuple2_ call_16 = readEol_(source_4, TokenListIntTuple2_5);
+    struct TokenListIntTuple2_ arg_26 = call_16;
     source_4 = arg_25;
     arg_20 = arg_26;
     goto tailrec_54;
@@ -542,9 +542,9 @@ next_61:;
     }
 then_64:;
     struct String arg_27 = source_4;
-    struct Token_ListIntTuple2 tuple_8 = (struct Token_ListIntTuple2){.t0 = acc_5, .t1 = i_7};
-    struct Token_ListIntTuple2 call_18 = readInt_(source_4, tuple_8);
-    struct Token_ListIntTuple2 arg_28 = call_18;
+    struct TokenListIntTuple2_ TokenListIntTuple2_6 = (struct TokenListIntTuple2_){.t0 = acc_5, .t1 = i_7};
+    struct TokenListIntTuple2_ call_18 = readInt_(source_4, TokenListIntTuple2_6);
+    struct TokenListIntTuple2_ arg_28 = call_18;
     source_4 = arg_27;
     arg_20 = arg_28;
     goto tailrec_54;
@@ -553,8 +553,8 @@ else_65:;
     struct Token_ variant_1 = (struct Token_){.discriminant = TkOp_, .TkOp_ = c_2};
     struct Token_List const* list_3 = milone_mem_alloc(1, sizeof(struct Token_List));
     (*(((struct Token_List*)list_3))) = (struct Token_List){.head = variant_1, .tail = acc_5};
-    struct Token_ListIntTuple2 tuple_9 = (struct Token_ListIntTuple2){.t0 = list_3, .t1 = (i_7 + 1)};
-    struct Token_ListIntTuple2 arg_30 = tuple_9;
+    struct TokenListIntTuple2_ TokenListIntTuple2_7 = (struct TokenListIntTuple2_){.t0 = list_3, .t1 = (i_7 + 1)};
+    struct TokenListIntTuple2_ arg_30 = TokenListIntTuple2_7;
     source_4 = arg_29;
     arg_20 = arg_30;
     goto tailrec_54;
@@ -570,8 +570,8 @@ if_next_55:;
 }
 
 struct Token_List const* calc_Program_tokenize(struct String source_4) {
-    struct Token_ListIntTuple2 tuple_10 = (struct Token_ListIntTuple2){.t0 = NULL, .t1 = 0};
-    struct Token_List const* call_19 = go_6(source_4, tuple_10);
+    struct TokenListIntTuple2_ TokenListIntTuple2_8 = (struct TokenListIntTuple2_){.t0 = NULL, .t1 = 0};
+    struct Token_List const* call_19 = go_6(source_4, TokenListIntTuple2_8);
     return call_19;
 }
 
@@ -609,34 +609,34 @@ end_match_67:;
     return 0;
 }
 
-struct IntToken_ListTuple2 evalTerm_(struct Token_List const* tokens_4) {
+struct IntTokenListTuple2_ evalTerm_(struct Token_List const* tokens_4) {
     struct Token_List const* tokens_7;
     int value_;
     struct Token_List const* tokens_6;
     struct Token_List const* tokens_5;
     int n_2;
-    struct IntToken_ListTuple2 match_5;
+    struct IntTokenListTuple2_ match_5;
     if ((!(tokens_4))) goto next_72;
     if ((tokens_4->head.discriminant != TkInt_)) goto next_72;
     n_2 = tokens_4->head.TkInt_;
     tokens_5 = tokens_4->tail;
-    struct IntToken_ListTuple2 tuple_11 = (struct IntToken_ListTuple2){.t0 = n_2, .t1 = tokens_5};
-    match_5 = tuple_11;
+    struct IntTokenListTuple2_ IntTokenListTuple2_ = (struct IntTokenListTuple2_){.t0 = n_2, .t1 = tokens_5};
+    match_5 = IntTokenListTuple2_;
     goto end_match_71;
 next_72:;
     if ((!(tokens_4))) goto next_73;
     if ((tokens_4->head.discriminant != TkOp_)) goto next_73;
     if ((tokens_4->head.TkOp_ != '(')) goto next_73;
     tokens_5 = tokens_4->tail;
-    struct IntToken_ListTuple2 match_6;
-    struct IntToken_ListTuple2 call_20 = calc_Program_evalExpr(tokens_5);
+    struct IntTokenListTuple2_ match_6;
+    struct IntTokenListTuple2_ call_20 = calc_Program_evalExpr(tokens_5);
     value_ = call_20.t0;
     if ((!(call_20.t1))) goto next_76;
     if ((call_20.t1->head.discriminant != TkOp_)) goto next_76;
     if ((call_20.t1->head.TkOp_ != ')')) goto next_76;
     tokens_7 = call_20.t1->tail;
-    struct IntToken_ListTuple2 tuple_12 = (struct IntToken_ListTuple2){.t0 = value_, .t1 = tokens_7};
-    match_6 = tuple_12;
+    struct IntTokenListTuple2_ IntTokenListTuple2_1 = (struct IntTokenListTuple2_){.t0 = value_, .t1 = tokens_7};
+    match_6 = IntTokenListTuple2_1;
     goto end_match_75;
 next_76:;
     printf("expected \')\'\n");
@@ -653,15 +653,15 @@ end_match_71:;
     return match_5;
 }
 
-struct IntToken_ListTuple2 go_7(int acc_6, struct Token_List const* tokens_9) {
+struct IntTokenListTuple2_ go_7(int acc_6, struct Token_List const* tokens_9) {
     struct Token_List const* tokens_10;
 tailrec_78:;
-    struct IntToken_ListTuple2 match_7;
+    struct IntTokenListTuple2_ match_7;
     if ((!(tokens_9))) goto next_80;
     if ((tokens_9->head.discriminant != TkOp_)) goto next_80;
     if ((tokens_9->head.TkOp_ != '*')) goto next_80;
     tokens_10 = tokens_9->tail;
-    struct IntToken_ListTuple2 call_21 = evalTerm_(tokens_10);
+    struct IntTokenListTuple2_ call_21 = evalTerm_(tokens_10);
     int r_5 = call_21.t0;
     struct Token_List const* tokens_11 = call_21.t1;
     int arg_33 = (acc_6 * r_5);
@@ -670,32 +670,32 @@ tailrec_78:;
     tokens_9 = arg_34;
     goto tailrec_78;
 next_80:;
-    struct IntToken_ListTuple2 tuple_13 = (struct IntToken_ListTuple2){.t0 = acc_6, .t1 = tokens_9};
-    match_7 = tuple_13;
+    struct IntTokenListTuple2_ IntTokenListTuple2_2 = (struct IntTokenListTuple2_){.t0 = acc_6, .t1 = tokens_9};
+    match_7 = IntTokenListTuple2_2;
     goto end_match_79;
 next_81:;
 end_match_79:;
     return match_7;
 }
 
-struct IntToken_ListTuple2 evalMul_(struct Token_List const* tokens_8) {
-    struct IntToken_ListTuple2 call_22 = evalTerm_(tokens_8);
+struct IntTokenListTuple2_ evalMul_(struct Token_List const* tokens_8) {
+    struct IntTokenListTuple2_ call_22 = evalTerm_(tokens_8);
     int l_1 = call_22.t0;
     struct Token_List const* tokens_12 = call_22.t1;
-    struct IntToken_ListTuple2 call_23 = go_7(l_1, tokens_12);
+    struct IntTokenListTuple2_ call_23 = go_7(l_1, tokens_12);
     return call_23;
 }
 
-struct IntToken_ListTuple2 go_8(int acc_7, struct Token_List const* tokens_14) {
+struct IntTokenListTuple2_ go_8(int acc_7, struct Token_List const* tokens_14) {
     struct Token_List const* tokens_17;
     struct Token_List const* tokens_15;
 tailrec_82:;
-    struct IntToken_ListTuple2 match_8;
+    struct IntTokenListTuple2_ match_8;
     if ((!(tokens_14))) goto next_84;
     if ((tokens_14->head.discriminant != TkOp_)) goto next_84;
     if ((tokens_14->head.TkOp_ != '+')) goto next_84;
     tokens_15 = tokens_14->tail;
-    struct IntToken_ListTuple2 call_24 = evalMul_(tokens_15);
+    struct IntTokenListTuple2_ call_24 = evalMul_(tokens_15);
     int r_6 = call_24.t0;
     struct Token_List const* tokens_16 = call_24.t1;
     int arg_35 = (acc_7 + r_6);
@@ -708,7 +708,7 @@ next_84:;
     if ((tokens_14->head.discriminant != TkOp_)) goto next_85;
     if ((tokens_14->head.TkOp_ != '-')) goto next_85;
     tokens_15 = tokens_14->tail;
-    struct IntToken_ListTuple2 call_25 = evalMul_(tokens_15);
+    struct IntTokenListTuple2_ call_25 = evalMul_(tokens_15);
     int r_7 = call_25.t0;
     struct Token_List const* tokens_18 = call_25.t1;
     int arg_37 = (acc_7 - r_7);
@@ -717,24 +717,24 @@ next_84:;
     tokens_14 = arg_38;
     goto tailrec_82;
 next_85:;
-    struct IntToken_ListTuple2 tuple_14 = (struct IntToken_ListTuple2){.t0 = acc_7, .t1 = tokens_14};
-    match_8 = tuple_14;
+    struct IntTokenListTuple2_ IntTokenListTuple2_3 = (struct IntTokenListTuple2_){.t0 = acc_7, .t1 = tokens_14};
+    match_8 = IntTokenListTuple2_3;
     goto end_match_83;
 next_86:;
 end_match_83:;
     return match_8;
 }
 
-struct IntToken_ListTuple2 evalAdd_(struct Token_List const* tokens_13) {
-    struct IntToken_ListTuple2 call_26 = evalMul_(tokens_13);
+struct IntTokenListTuple2_ evalAdd_(struct Token_List const* tokens_13) {
+    struct IntTokenListTuple2_ call_26 = evalMul_(tokens_13);
     int l_2 = call_26.t0;
     struct Token_List const* tokens_19 = call_26.t1;
-    struct IntToken_ListTuple2 call_27 = go_8(l_2, tokens_19);
+    struct IntTokenListTuple2_ call_27 = go_8(l_2, tokens_19);
     return call_27;
 }
 
-struct IntToken_ListTuple2 calc_Program_evalExpr(struct Token_List const* tokens_3) {
-    struct IntToken_ListTuple2 call_28 = evalAdd_(tokens_3);
+struct IntTokenListTuple2_ calc_Program_evalExpr(struct Token_List const* tokens_3) {
+    struct IntTokenListTuple2_ call_28 = evalAdd_(tokens_3);
     return call_28;
 }
 
@@ -743,7 +743,7 @@ int calc_Program_eval(struct String str_) {
     int value_1;
     int match_9;
     struct Token_List const* call_29 = calc_Program_tokenize(str_);
-    struct IntToken_ListTuple2 call_30 = calc_Program_evalExpr(call_29);
+    struct IntTokenListTuple2_ call_30 = calc_Program_evalExpr(call_29);
     value_1 = call_30.t0;
     if ((!((!(call_30.t1))))) goto next_88;
     match_9 = value_1;
