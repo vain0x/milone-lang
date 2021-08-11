@@ -106,14 +106,6 @@ let private mangle (tk: Tk, tyArgs: Ty list, ctx: MtCtx) : string * MtCtx =
   name, { ctx with TyNames = memo }
 
 // -----------------------------------------------
-// Generation
-// -----------------------------------------------
-
-// -----------------------------------------------
-// Transformation
-// -----------------------------------------------
-
-// -----------------------------------------------
 // Control
 // -----------------------------------------------
 
@@ -156,7 +148,6 @@ let private mtTy (ty: Ty, ctx: MtCtx) : M.MonoTy * MtCtx =
   match tk, tyArgs with
   | IntTk flavor, _ -> M.IntMt flavor, ctx
   | FloatTk flavor, _ -> M.FloatMt flavor, ctx
-  | TupleTk, [] -> M.UnitMt, ctx
   | BoolTk, _ -> M.BoolMt, ctx
   | CharTk, _ -> M.CharMt, ctx
   | StrTk, _ -> M.StrMt, ctx
@@ -165,6 +156,8 @@ let private mtTy (ty: Ty, ctx: MtCtx) : M.MonoTy * MtCtx =
   | NativeTypeTk cCode, _ -> M.NativeTypeMt cCode, ctx
   | UnionTk tySerial, _ -> M.UnionMt tySerial, ctx
   | RecordTk tySerial, _ -> M.RecordMt tySerial, ctx
+
+  | TupleTk, [] -> M.UnitMt, ctx
 
   | TupleTk, _ ->
     assert (List.isEmpty tyArgs |> not)
