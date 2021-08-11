@@ -4,7 +4,7 @@ struct Status_;
 
 struct Limit_;
 
-struct IntStringTuple2;
+struct IntStringTuple2_;
 
 struct ApiResponse_;
 
@@ -34,7 +34,7 @@ struct Limit_ {
     };
 };
 
-struct IntStringTuple2 {
+struct IntStringTuple2_ {
     int t0;
     struct String t1;
 };
@@ -49,7 +49,7 @@ struct ApiResponse_ {
     enum ApiResponse_Discriminant discriminant;
     union {
         struct String ARJson_;
-        struct IntStringTuple2 ARError_;
+        struct IntStringTuple2_ ARError_;
     };
 };
 
@@ -107,8 +107,8 @@ clause_9:;
     goto switch_next_7;
 switch_next_7:;
     char match_2;
-    struct IntStringTuple2 tuple_ = (struct IntStringTuple2){.t0 = 404, .t1 = (struct String){.str = "Not Found", .len = 9}};
-    struct ApiResponse_ variant_3 = (struct ApiResponse_){.discriminant = ARError_, .ARError_ = tuple_};
+    struct IntStringTuple2_ IntStringTuple2_ = (struct IntStringTuple2_){.t0 = 404, .t1 = (struct String){.str = "Not Found", .len = 9}};
+    struct ApiResponse_ variant_3 = (struct ApiResponse_){.discriminant = ARError_, .ARError_ = IntStringTuple2_};
     if ((variant_3.discriminant != ARError_)) goto next_11;
     statusCode_ = variant_3.ARError_.t0;
     statusText_ = variant_3.ARError_.t1;

@@ -1,6 +1,6 @@
 #include "milone.h"
 
-struct UInt64UInt64Tuple2;
+struct UInt64UInt64Tuple2_;
 
 struct String str_of_raw_parts(char const*, int);
 
@@ -8,7 +8,7 @@ struct String native_ptr_write_Program_strOfRawParts(char const* p_, int len_);
 
 int milone_main();
 
-struct UInt64UInt64Tuple2 {
+struct UInt64UInt64Tuple2_ {
     uint64_t t0;
     uint64_t t1;
 };
@@ -24,9 +24,9 @@ int milone_main() {
     void const* stringBox_ = box_;
     (*(((struct String*)stringBox_))) = (struct String){.str = "one", .len = 3};
     milone_assert((str_compare((*(((struct String const*)stringBox_))), (struct String){.str = "one", .len = 3}) == 0), 11, 2);
-    struct UInt64UInt64Tuple2 tuple_ = (struct UInt64UInt64Tuple2){.t0 = ((uint64_t)0), .t1 = ((uint64_t)0)};
-    void const* box_1 = milone_mem_alloc(1, sizeof(struct UInt64UInt64Tuple2));
-    (*(((struct UInt64UInt64Tuple2*)box_1))) = tuple_;
+    struct UInt64UInt64Tuple2_ UInt64UInt64Tuple2_ = (struct UInt64UInt64Tuple2_){.t0 = ((uint64_t)0), .t1 = ((uint64_t)0)};
+    void const* box_1 = milone_mem_alloc(1, sizeof(struct UInt64UInt64Tuple2_));
+    (*(((struct UInt64UInt64Tuple2_*)box_1))) = UInt64UInt64Tuple2_;
     char* buf_ = ((char*)box_1);
     (*(buf_)) = 'H';
     buf_[1] = 'i';

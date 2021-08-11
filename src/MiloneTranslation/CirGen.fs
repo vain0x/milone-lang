@@ -245,46 +245,6 @@ let private genFunTyDef (ctx: CirCtx) sTy tTy =
 
     selfTy, ctx
 
-let private genIncompleteOptionTyDecl (ctx: CirCtx) itemTy =
-  let optionTy = tyOption itemTy
-
-  match ctx.TyEnv |> TMap.tryFind optionTy with
-  | Some (_, ty) -> ty, ctx
-
-  | None ->
-    let structName, ctx = getUniqueTyName ctx optionTy
-    let selfTy = CStructTy structName
-
-    let ctx =
-      { ctx with
-          TyEnv =
-            ctx.TyEnv
-            |> TMap.add optionTy (CTyDeclared, selfTy) }
-
-    selfTy, ctx
-
-let private genOptionTyDef (ctx: CirCtx) itemTy =
-  let optionTy = tyOption itemTy
-
-  match ctx.TyEnv |> TMap.tryFind optionTy with
-  | Some (CTyDefined, ty) -> ty, ctx
-
-  | _ ->
-    let structName, ctx = getUniqueTyName ctx optionTy
-    let selfTy, ctx = genIncompleteOptionTyDecl ctx itemTy
-
-    let itemTy, (ctx: CirCtx) = cgTyComplete ctx itemTy
-    let fields = [ "some", CBoolTy; "value", itemTy ]
-
-    let ctx =
-      { ctx with
-          Decls = CStructDecl(structName, fields, []) :: ctx.Decls
-          TyEnv =
-            ctx.TyEnv
-            |> TMap.add optionTy (CTyDefined, selfTy) }
-
-    selfTy, ctx
-
 let private genIncompleteListTyDecl (ctx: CirCtx) itemTy =
   let listTy = tyList itemTy
 
@@ -319,57 +279,6 @@ let private genListTyDef (ctx: CirCtx) itemTy =
       { ctx with
           Decls = CStructDecl(structName, fields, []) :: ctx.Decls
           TyEnv = ctx.TyEnv |> TMap.add listTy (CTyDefined, selfTy) }
-
-    selfTy, ctx
-
-let private genIncompleteTupleTyDecl (ctx: CirCtx) itemTys =
-  let tupleTy = tyTuple itemTys
-
-  match ctx.TyEnv |> TMap.tryFind tupleTy with
-  | Some (_, ty) -> ty, ctx
-
-  | None ->
-    let structName, ctx = getUniqueTyName ctx tupleTy
-    let selfTy = CStructTy structName
-
-    let ctx =
-      { ctx with
-          TyEnv =
-            ctx.TyEnv
-            |> TMap.add tupleTy (CTyDeclared, selfTy) }
-
-    selfTy, ctx
-
-let private genTupleTyDef (ctx: CirCtx) itemTys =
-  let tupleTy = tyTuple itemTys
-
-  match ctx.TyEnv |> TMap.tryFind tupleTy with
-  | Some (CTyDefined, ty) -> ty, ctx
-
-  | _ ->
-    let structName, ctx = getUniqueTyName ctx tupleTy
-    let selfTy, ctx = genIncompleteTupleTyDecl ctx itemTys
-
-    let rec go i itemTys =
-      match itemTys with
-      | [] -> []
-
-      | itemTy :: itemTys ->
-        let field = tupleField i, itemTy
-        field :: go (i + 1) itemTys
-
-    let itemTys, (ctx: CirCtx) =
-      (itemTys, ctx)
-      |> stMap (fun (ty, ctx) -> cgTyComplete ctx ty)
-
-    let fields = go 0 itemTys
-
-    let tupleDecl = CStructDecl(structName, fields, [])
-
-    let ctx =
-      { ctx with
-          Decls = tupleDecl :: ctx.Decls
-          TyEnv = ctx.TyEnv |> TMap.add tupleTy (CTyDefined, selfTy) }
 
     selfTy, ctx
 
@@ -546,10 +455,7 @@ let private cgTyIncomplete (ctx: CirCtx) (ty: Ty) : CTy * CirCtx =
   | FunTk, _ -> unreachable ()
 
   | TupleTk, [] -> CCharTy, ctx
-  | TupleTk, _ -> genIncompleteTupleTyDecl ctx tyArgs
-
-  | OptionTk, [ itemTy ] -> genIncompleteOptionTyDecl ctx itemTy
-  | OptionTk, _ -> unreachable ()
+  | TupleTk, _ -> unreachable () // Non-unit TupleTk is resolved in MonoTy.
 
   | ListTk, [ itemTy ] -> genIncompleteListTyDecl ctx itemTy
   | ListTk, _ -> unreachable ()
@@ -563,6 +469,7 @@ let private cgTyIncomplete (ctx: CirCtx) (ty: Ty) : CTy * CirCtx =
   | UnionTk tySerial, _ -> genIncompleteUnionTyDecl ctx tySerial
   | RecordTk tySerial, _ -> genIncompleteRecordTyDecl ctx tySerial
 
+  | OptionTk, _ // OptionTk is resolved in MonoTy.
   | MetaTk _, _ -> unreachable () // Resolved in Typing.
 
 /// Converts a type to complete C type.
@@ -583,10 +490,7 @@ let private cgTyComplete (ctx: CirCtx) (ty: Ty) : CTy * CirCtx =
   | FunTk, _ -> unreachable ()
 
   | TupleTk, [] -> CCharTy, ctx
-  | TupleTk, _ -> genTupleTyDef ctx tyArgs
-
-  | OptionTk, [ itemTy ] -> genOptionTyDef ctx itemTy
-  | OptionTk, _ -> unreachable ()
+  | TupleTk, _ -> unreachable () // Non-unit TupleTk is resolved in MonoTy.
 
   | ListTk, [ itemTy ] ->
     // Complete definition of the underlying struct type is unnecessary yet
@@ -614,6 +518,7 @@ let private cgTyComplete (ctx: CirCtx) (ty: Ty) : CTy * CirCtx =
 
     | _ -> unreachable () // Record type undefined?
 
+  | OptionTk, _ // OptionTk is resolved in MonoTy.
   | MetaTk _, _ -> unreachable () // Resolved in Typing.
 
 // -----------------------------------------------
@@ -729,10 +634,6 @@ let private genVariantNameExpr ctx serial ty =
 
 let private genGenericValue ctx genericValue ty =
   match genericValue with
-  | MNoneGv ->
-    let ty, ctx = cgTyComplete ctx ty
-    CInitExpr([ "some", CVarExpr "false" ], ty), ctx
-
   | MNilGv -> CVarExpr "NULL", ctx
 
   | MSizeOfGv ->
@@ -776,14 +677,6 @@ let private genUnaryExpr ctx op arg ty _ =
     CDotExpr(arg, getUniqueVariantName ctx serial), ctx
 
   | MRecordItemUnary index -> CDotExpr(arg, tupleField index), ctx
-
-  | MOptionIsSomeUnary ->
-    let _, ctx = cgTyComplete ctx ty
-    CDotExpr(arg, "some"), ctx
-
-  | MOptionToValueUnary ->
-    let _, ctx = cgTyComplete ctx ty
-    CDotExpr(arg, "value"), ctx
 
   | MListIsEmptyUnary -> CUnaryExpr(CNotUnary, arg), ctx
 
@@ -1037,32 +930,10 @@ let private cgPrimStmt (ctx: CirCtx) itself prim args serial resultTy =
     | [ arg ] -> cgBoxStmt ctx serial arg
     | _ -> unreachable itself
 
-  | MOptionSomePrim ->
-    regularWithTy
-      ctx
-      (fun args optionTy ->
-        match args with
-        | [ item ] ->
-          let fields =
-            [ "some", CVarExpr "true"
-              "value", item ]
-
-          CInitExpr(fields, optionTy)
-        | _ -> unreachable itself)
-
   | MConsPrim ->
     match args with
     | [ l; r ] -> cgConsStmt ctx serial l r
     | _ -> unreachable itself
-
-  | MTuplePrim ->
-    regularWithTy
-      ctx
-      (fun args tupleTy ->
-        let fields =
-          args |> List.mapi (fun i arg -> tupleField i, arg)
-
-        CInitExpr(fields, tupleTy))
 
   | MVariantPrim variantSerial ->
     regularWithTy

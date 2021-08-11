@@ -8,9 +8,9 @@ struct StringList;
 
 struct StringList;
 
-int go_2(int n_, struct IntList const* xs_1);
+int go_1(int n_, struct IntList const* xs_1);
 
-int go_1(int n_, struct StringList const* xs_1);
+int go_(int n_, struct StringList const* xs_1);
 
 int listToArraySize_1(struct IntList const* xs_);
 
@@ -28,7 +28,7 @@ struct StringList {
     struct StringList const* tail;
 };
 
-int go_2(int n_, struct IntList const* xs_1) {
+int go_1(int n_, struct IntList const* xs_1) {
     struct IntList const* xs_2;
 tailrec_1:;
     int match_;
@@ -49,7 +49,7 @@ end_match_2:;
     return match_;
 }
 
-int go_1(int n_, struct StringList const* xs_1) {
+int go_(int n_, struct StringList const* xs_1) {
     struct StringList const* xs_2;
 tailrec_5:;
     int match_1;
@@ -80,7 +80,7 @@ next_10:;
     if ((!(xs_))) goto next_11;
     x_ = xs_->head;
     int itemSize_ = sizeof(int);
-    int call_ = go_2(0, xs_);
+    int call_ = go_1(0, xs_);
     int n_1 = call_;
     match_2 = (itemSize_ * n_1);
     goto end_match_9;
@@ -100,7 +100,7 @@ next_13:;
     if ((!(xs_))) goto next_14;
     x_ = xs_->head;
     int itemSize_ = sizeof(struct String);
-    int call_1 = go_1(0, xs_);
+    int call_1 = go_(0, xs_);
     int n_1 = call_1;
     match_3 = (itemSize_ * n_1);
     goto end_match_12;

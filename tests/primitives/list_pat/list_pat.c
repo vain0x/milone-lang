@@ -1,46 +1,67 @@
 #include "milone.h"
 
-struct IntOption;
+struct IntOption_;
 
-struct IntOptionOption;
+struct IntOptionOption_;
 
-struct IntOptionOptionOption;
+struct IntOptionOptionOption_;
 
-struct IntIntOptionOptionOptionFun1;
-
-struct IntList;
+struct IntIntOptionOptionOption_Fun1;
 
 struct IntList;
 
-struct IntOptionOptionOptionList;
+struct IntList;
 
-struct IntOptionOptionOptionList;
+struct IntOptionOptionOption_List;
 
-struct IntOptionOptionOption fun_2(int x_22);
+struct IntOptionOptionOption_List;
 
-struct IntOptionOptionOption fun_1(void const* env_, int arg_);
+struct IntOptionOptionOption_ fun_1(int x_22);
 
-struct IntOptionOptionOptionList const* map_(struct IntIntOptionOptionOptionFun1, struct IntList const*);
+struct IntOptionOptionOption_ fun_(void const* env_, int arg_);
+
+struct IntOptionOptionOption_List const* map_(struct IntIntOptionOptionOption_Fun1, struct IntList const*);
 
 int milone_main();
 
-struct IntOption {
-    bool some;
-    int value;
+enum IntOption_Discriminant {
+    None_,
+    Some_,
 };
 
-struct IntOptionOption {
-    bool some;
-    struct IntOption value;
+struct IntOption_ {
+    enum IntOption_Discriminant discriminant;
+    union {
+        int Some_;
+    };
 };
 
-struct IntOptionOptionOption {
-    bool some;
-    struct IntOptionOption value;
+enum IntOptionOption_Discriminant {
+    None_1,
+    Some_1,
 };
 
-struct IntIntOptionOptionOptionFun1 {
-    struct IntOptionOptionOption(*fun)(void const*, int);
+struct IntOptionOption_ {
+    enum IntOptionOption_Discriminant discriminant;
+    union {
+        struct IntOption_ Some_1;
+    };
+};
+
+enum IntOptionOptionOption_Discriminant {
+    None_2,
+    Some_2,
+};
+
+struct IntOptionOptionOption_ {
+    enum IntOptionOptionOption_Discriminant discriminant;
+    union {
+        struct IntOptionOption_ Some_2;
+    };
+};
+
+struct IntIntOptionOptionOption_Fun1 {
+    struct IntOptionOptionOption_(*fun)(void const*, int);
     void const* env;
 };
 
@@ -49,20 +70,20 @@ struct IntList {
     struct IntList const* tail;
 };
 
-struct IntOptionOptionOptionList {
-    struct IntOptionOptionOption head;
-    struct IntOptionOptionOptionList const* tail;
+struct IntOptionOptionOption_List {
+    struct IntOptionOptionOption_ head;
+    struct IntOptionOptionOption_List const* tail;
 };
 
-struct IntOptionOptionOption fun_2(int x_22) {
-    struct IntOption some_2 = (struct IntOption){.some = true, .value = x_22};
-    struct IntOptionOption some_1 = (struct IntOptionOption){.some = true, .value = some_2};
-    struct IntOptionOptionOption some_ = (struct IntOptionOptionOption){.some = true, .value = some_1};
-    return some_;
+struct IntOptionOptionOption_ fun_1(int x_22) {
+    struct IntOption_ variant_ = (struct IntOption_){.discriminant = Some_, .Some_ = x_22};
+    struct IntOptionOption_ variant_1 = (struct IntOptionOption_){.discriminant = Some_1, .Some_1 = variant_};
+    struct IntOptionOptionOption_ variant_2 = (struct IntOptionOptionOption_){.discriminant = Some_2, .Some_2 = variant_1};
+    return variant_2;
 }
 
-struct IntOptionOptionOption fun_1(void const* env_, int arg_) {
-    struct IntOptionOptionOption call_3 = fun_2(arg_);
+struct IntOptionOptionOption_ fun_(void const* env_, int arg_) {
+    struct IntOptionOptionOption_ call_3 = fun_1(arg_);
     return call_3;
 }
 
@@ -75,7 +96,7 @@ int milone_main() {
     int x2_;
     int x1_;
     char match_2;
-    struct IntIntOptionOptionOptionFun1 fun_3 = (struct IntIntOptionOptionOptionFun1){.fun = fun_1, .env = NULL};
+    struct IntIntOptionOptionOption_Fun1 fun_2 = (struct IntIntOptionOptionOption_Fun1){.fun = fun_, .env = NULL};
     struct IntList const* list_8 = milone_mem_alloc(1, sizeof(struct IntList));
     (*(((struct IntList*)list_8))) = (struct IntList){.head = 7, .tail = NULL};
     struct IntList const* list_7 = milone_mem_alloc(1, sizeof(struct IntList));
@@ -90,42 +111,42 @@ int milone_main() {
     (*(((struct IntList*)list_3))) = (struct IntList){.head = 2, .tail = list_4};
     struct IntList const* list_2 = milone_mem_alloc(1, sizeof(struct IntList));
     (*(((struct IntList*)list_2))) = (struct IntList){.head = 1, .tail = list_3};
-    struct IntOptionOptionOptionList const* call_4 = map_(fun_3, list_2);
+    struct IntOptionOptionOption_List const* call_4 = map_(fun_2, list_2);
     if ((!(call_4))) goto next_10;
-    if ((!(call_4->head.some))) goto next_10;
-    if ((!(call_4->head.value.some))) goto next_10;
-    if ((!(call_4->head.value.value.some))) goto next_10;
-    x1_ = call_4->head.value.value.value;
+    if ((call_4->head.discriminant != Some_2)) goto next_10;
+    if ((call_4->head.Some_2.discriminant != Some_1)) goto next_10;
+    if ((call_4->head.Some_2.Some_1.discriminant != Some_)) goto next_10;
+    x1_ = call_4->head.Some_2.Some_1.Some_;
     if ((!(call_4->tail))) goto next_10;
-    if ((!(call_4->tail->head.some))) goto next_10;
-    if ((!(call_4->tail->head.value.some))) goto next_10;
-    if ((!(call_4->tail->head.value.value.some))) goto next_10;
-    x2_ = call_4->tail->head.value.value.value;
+    if ((call_4->tail->head.discriminant != Some_2)) goto next_10;
+    if ((call_4->tail->head.Some_2.discriminant != Some_1)) goto next_10;
+    if ((call_4->tail->head.Some_2.Some_1.discriminant != Some_)) goto next_10;
+    x2_ = call_4->tail->head.Some_2.Some_1.Some_;
     if ((!(call_4->tail->tail))) goto next_10;
-    if ((!(call_4->tail->tail->head.some))) goto next_10;
-    if ((!(call_4->tail->tail->head.value.some))) goto next_10;
-    if ((!(call_4->tail->tail->head.value.value.some))) goto next_10;
-    x3_ = call_4->tail->tail->head.value.value.value;
+    if ((call_4->tail->tail->head.discriminant != Some_2)) goto next_10;
+    if ((call_4->tail->tail->head.Some_2.discriminant != Some_1)) goto next_10;
+    if ((call_4->tail->tail->head.Some_2.Some_1.discriminant != Some_)) goto next_10;
+    x3_ = call_4->tail->tail->head.Some_2.Some_1.Some_;
     if ((!(call_4->tail->tail->tail))) goto next_10;
-    if ((!(call_4->tail->tail->tail->head.some))) goto next_10;
-    if ((!(call_4->tail->tail->tail->head.value.some))) goto next_10;
-    if ((!(call_4->tail->tail->tail->head.value.value.some))) goto next_10;
-    x4_ = call_4->tail->tail->tail->head.value.value.value;
+    if ((call_4->tail->tail->tail->head.discriminant != Some_2)) goto next_10;
+    if ((call_4->tail->tail->tail->head.Some_2.discriminant != Some_1)) goto next_10;
+    if ((call_4->tail->tail->tail->head.Some_2.Some_1.discriminant != Some_)) goto next_10;
+    x4_ = call_4->tail->tail->tail->head.Some_2.Some_1.Some_;
     if ((!(call_4->tail->tail->tail->tail))) goto next_10;
-    if ((!(call_4->tail->tail->tail->tail->head.some))) goto next_10;
-    if ((!(call_4->tail->tail->tail->tail->head.value.some))) goto next_10;
-    if ((!(call_4->tail->tail->tail->tail->head.value.value.some))) goto next_10;
-    x5_ = call_4->tail->tail->tail->tail->head.value.value.value;
+    if ((call_4->tail->tail->tail->tail->head.discriminant != Some_2)) goto next_10;
+    if ((call_4->tail->tail->tail->tail->head.Some_2.discriminant != Some_1)) goto next_10;
+    if ((call_4->tail->tail->tail->tail->head.Some_2.Some_1.discriminant != Some_)) goto next_10;
+    x5_ = call_4->tail->tail->tail->tail->head.Some_2.Some_1.Some_;
     if ((!(call_4->tail->tail->tail->tail->tail))) goto next_10;
-    if ((!(call_4->tail->tail->tail->tail->tail->head.some))) goto next_10;
-    if ((!(call_4->tail->tail->tail->tail->tail->head.value.some))) goto next_10;
-    if ((!(call_4->tail->tail->tail->tail->tail->head.value.value.some))) goto next_10;
-    x6_ = call_4->tail->tail->tail->tail->tail->head.value.value.value;
+    if ((call_4->tail->tail->tail->tail->tail->head.discriminant != Some_2)) goto next_10;
+    if ((call_4->tail->tail->tail->tail->tail->head.Some_2.discriminant != Some_1)) goto next_10;
+    if ((call_4->tail->tail->tail->tail->tail->head.Some_2.Some_1.discriminant != Some_)) goto next_10;
+    x6_ = call_4->tail->tail->tail->tail->tail->head.Some_2.Some_1.Some_;
     if ((!(call_4->tail->tail->tail->tail->tail->tail))) goto next_10;
-    if ((!(call_4->tail->tail->tail->tail->tail->tail->head.some))) goto next_10;
-    if ((!(call_4->tail->tail->tail->tail->tail->tail->head.value.some))) goto next_10;
-    if ((!(call_4->tail->tail->tail->tail->tail->tail->head.value.value.some))) goto next_10;
-    x7_ = call_4->tail->tail->tail->tail->tail->tail->head.value.value.value;
+    if ((call_4->tail->tail->tail->tail->tail->tail->head.discriminant != Some_2)) goto next_10;
+    if ((call_4->tail->tail->tail->tail->tail->tail->head.Some_2.discriminant != Some_1)) goto next_10;
+    if ((call_4->tail->tail->tail->tail->tail->tail->head.Some_2.Some_1.discriminant != Some_)) goto next_10;
+    x7_ = call_4->tail->tail->tail->tail->tail->tail->head.Some_2.Some_1.Some_;
     if ((!((!(call_4->tail->tail->tail->tail->tail->tail->tail))))) goto next_10;
     milone_assert((x1_ == 1), 14, 4);
     milone_assert((x2_ == 2), 15, 4);

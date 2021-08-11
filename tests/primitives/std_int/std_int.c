@@ -1,8 +1,8 @@
 #include "milone.h"
 
-struct IntOption;
+struct IntOption_;
 
-struct IntOption MiloneStd_StdInt_tryParse(struct String);
+struct IntOption_ MiloneStd_StdInt_tryParse(struct String);
 
 int parseOk_(struct String s_2);
 
@@ -12,9 +12,16 @@ char std_int_Program_tryParseTest(char arg_1);
 
 int milone_main();
 
-struct IntOption {
-    bool some;
-    int value;
+enum IntOption_Discriminant {
+    None_,
+    Some_,
+};
+
+struct IntOption_ {
+    enum IntOption_Discriminant discriminant;
+    union {
+        int Some_;
+    };
 };
 
 int MiloneStd_StdInt_MinValue;
@@ -24,13 +31,13 @@ int MiloneStd_StdInt_MaxValue;
 int parseOk_(struct String s_2) {
     int value_1;
     int match_;
-    struct IntOption call_3 = MiloneStd_StdInt_tryParse(s_2);
-    if ((!(call_3.some))) goto next_11;
-    value_1 = call_3.value;
+    struct IntOption_ call_3 = MiloneStd_StdInt_tryParse(s_2);
+    if ((call_3.discriminant != Some_)) goto next_11;
+    value_1 = call_3.Some_;
     match_ = value_1;
     goto end_match_10;
 next_11:;
-    if (call_3.some) goto next_12;
+    if ((call_3.discriminant != None_)) goto next_12;
     printf("should parse: %s\n", str_to_c_str(s_2));
     milone_assert(false, 11, 6);
     match_ = 0;
@@ -44,13 +51,13 @@ end_match_10:;
 bool parseError_(struct String s_3) {
     int value_2;
     bool match_1;
-    struct IntOption call_4 = MiloneStd_StdInt_tryParse(s_3);
-    if (call_4.some) goto next_14;
+    struct IntOption_ call_4 = MiloneStd_StdInt_tryParse(s_3);
+    if ((call_4.discriminant != None_)) goto next_14;
     match_1 = true;
     goto end_match_13;
 next_14:;
-    if ((!(call_4.some))) goto next_15;
-    value_2 = call_4.value;
+    if ((call_4.discriminant != Some_)) goto next_15;
+    value_2 = call_4.Some_;
     printf("should not parse: %s -> %d\n", str_to_c_str(s_3), value_2);
     match_1 = false;
     goto end_match_13;

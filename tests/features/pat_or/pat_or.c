@@ -4,7 +4,7 @@ struct IntList;
 
 struct IntList;
 
-struct IntIntTuple2;
+struct IntIntTuple2_;
 
 bool pat_or_Program_isZeroOrOne(int x_);
 
@@ -14,7 +14,7 @@ bool pat_or_Program_startsWithDoubleBits(struct IntList const* xs_);
 
 char pat_or_Program_nestedCase(char arg_1);
 
-bool pat_or_Program_performComplexMatching(struct IntIntTuple2 expr_);
+bool pat_or_Program_performComplexMatching(struct IntIntTuple2_ expr_);
 
 char pat_or_Program_complexCase(char arg_2);
 
@@ -25,7 +25,7 @@ struct IntList {
     struct IntList const* tail;
 };
 
-struct IntIntTuple2 {
+struct IntIntTuple2_ {
     int t0;
     int t1;
 };
@@ -126,7 +126,7 @@ char pat_or_Program_nestedCase(char arg_1) {
     return 0;
 }
 
-bool pat_or_Program_performComplexMatching(struct IntIntTuple2 expr_) {
+bool pat_or_Program_performComplexMatching(struct IntIntTuple2_ expr_) {
     bool match_1;
     if ((expr_.t0 != 0)) goto next_16;
     if ((expr_.t1 != 0)) goto next_16;
@@ -147,11 +147,11 @@ end_match_14:;
 }
 
 char pat_or_Program_complexCase(char arg_2) {
-    struct IntIntTuple2 tuple_ = (struct IntIntTuple2){.t0 = 0, .t1 = 1};
-    bool call_5 = pat_or_Program_performComplexMatching(tuple_);
+    struct IntIntTuple2_ IntIntTuple2_ = (struct IntIntTuple2_){.t0 = 0, .t1 = 1};
+    bool call_5 = pat_or_Program_performComplexMatching(IntIntTuple2_);
     milone_assert(call_5, 38, 2);
-    struct IntIntTuple2 tuple_1 = (struct IntIntTuple2){.t0 = 1, .t1 = 2};
-    bool call_6 = pat_or_Program_performComplexMatching(tuple_1);
+    struct IntIntTuple2_ IntIntTuple2_1 = (struct IntIntTuple2_){.t0 = 1, .t1 = 2};
+    bool call_6 = pat_or_Program_performComplexMatching(IntIntTuple2_1);
     milone_assert((!(call_6)), 39, 2);
     return 0;
 }

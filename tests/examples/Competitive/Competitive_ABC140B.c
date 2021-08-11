@@ -2,27 +2,27 @@
 
 struct IntIntIntFun2;
 
-struct IntIntIntObjectUnitTuple5;
+struct IntIntIntObjectUnitTuple5_;
 
-struct IntIntIntFun2IntIntIntObjectUnitTuple5ObjectUnitTuple4;
+struct IntIntIntFun2IntIntIntObjectUnitTuple5ObjectUnitTuple4_;
 
-struct IntIntIntFun2IntIntIntObjectUnitTuple5ObjectUnitTuple4IntIntIntObjectUnitTuple5UnitTuple3;
-
-struct IntList;
+struct IntIntIntFun2IntIntIntObjectUnitTuple5ObjectUnitTuple4IntIntIntObjectUnitTuple5UnitTuple3_;
 
 struct IntList;
 
-int fun_23(int arg_135, int arg_136);
+struct IntList;
 
-int fun_20(void const* env_17, int arg_33, int arg_34);
+int fun_20(int arg_135, int arg_136);
 
-int segTreeGet_(int, struct IntIntIntFun2IntIntIntObjectUnitTuple5ObjectUnitTuple4IntIntIntObjectUnitTuple5UnitTuple3);
+int fun_17(void const* env_17, int arg_33, int arg_34);
 
-int go_18(int n_5, struct IntIntIntFun2IntIntIntObjectUnitTuple5ObjectUnitTuple4IntIntIntObjectUnitTuple5UnitTuple3 a_1, struct IntIntIntFun2IntIntIntObjectUnitTuple5ObjectUnitTuple4IntIntIntObjectUnitTuple5UnitTuple3 b_1, struct IntIntIntFun2IntIntIntObjectUnitTuple5ObjectUnitTuple4IntIntIntObjectUnitTuple5UnitTuple3 c_1, int sum_3, int i_8);
+int segTreeGet_(int, struct IntIntIntFun2IntIntIntObjectUnitTuple5ObjectUnitTuple4IntIntIntObjectUnitTuple5UnitTuple3_);
 
-struct IntIntIntFun2IntIntIntObjectUnitTuple5ObjectUnitTuple4 segItemTypeNew_(int, struct IntIntIntFun2);
+int go_3(int n_5, struct IntIntIntFun2IntIntIntObjectUnitTuple5ObjectUnitTuple4IntIntIntObjectUnitTuple5UnitTuple3_ a_1, struct IntIntIntFun2IntIntIntObjectUnitTuple5ObjectUnitTuple4IntIntIntObjectUnitTuple5UnitTuple3_ b_1, struct IntIntIntFun2IntIntIntObjectUnitTuple5ObjectUnitTuple4IntIntIntObjectUnitTuple5UnitTuple3_ c_1, int sum_3, int i_8);
 
-struct IntIntIntFun2IntIntIntObjectUnitTuple5ObjectUnitTuple4IntIntIntObjectUnitTuple5UnitTuple3 segTreeOfList_(struct IntIntIntFun2IntIntIntObjectUnitTuple5ObjectUnitTuple4, struct IntList const*);
+struct IntIntIntFun2IntIntIntObjectUnitTuple5ObjectUnitTuple4_ segItemTypeNew_(int, struct IntIntIntFun2);
+
+struct IntIntIntFun2IntIntIntObjectUnitTuple5ObjectUnitTuple4IntIntIntObjectUnitTuple5UnitTuple3_ segTreeOfList_(struct IntIntIntFun2IntIntIntObjectUnitTuple5ObjectUnitTuple4_, struct IntList const*);
 
 int Competitive_ABC140B_abc140bSolve(int n_5, struct IntList const* a_, struct IntList const* b_, struct IntList const* c_);
 
@@ -49,7 +49,7 @@ struct IntIntIntFun2 {
     void const* env;
 };
 
-struct IntIntIntObjectUnitTuple5 {
+struct IntIntIntObjectUnitTuple5_ {
     int t0;
     int t1;
     int t2;
@@ -57,16 +57,16 @@ struct IntIntIntObjectUnitTuple5 {
     char t4;
 };
 
-struct IntIntIntFun2IntIntIntObjectUnitTuple5ObjectUnitTuple4 {
+struct IntIntIntFun2IntIntIntObjectUnitTuple5ObjectUnitTuple4_ {
     struct IntIntIntFun2 t0;
-    struct IntIntIntObjectUnitTuple5 t1;
+    struct IntIntIntObjectUnitTuple5_ t1;
     void const* t2;
     char t3;
 };
 
-struct IntIntIntFun2IntIntIntObjectUnitTuple5ObjectUnitTuple4IntIntIntObjectUnitTuple5UnitTuple3 {
-    struct IntIntIntFun2IntIntIntObjectUnitTuple5ObjectUnitTuple4 t0;
-    struct IntIntIntObjectUnitTuple5 t1;
+struct IntIntIntFun2IntIntIntObjectUnitTuple5ObjectUnitTuple4IntIntIntObjectUnitTuple5UnitTuple3_ {
+    struct IntIntIntFun2IntIntIntObjectUnitTuple5ObjectUnitTuple4_ t0;
+    struct IntIntIntObjectUnitTuple5_ t1;
     char t2;
 };
 
@@ -75,16 +75,16 @@ struct IntList {
     struct IntList const* tail;
 };
 
-int fun_23(int arg_135, int arg_136) {
+int fun_20(int arg_135, int arg_136) {
     return 0;
 }
 
-int fun_20(void const* env_17, int arg_33, int arg_34) {
-    int call_344 = fun_23(arg_33, arg_34);
+int fun_17(void const* env_17, int arg_33, int arg_34) {
+    int call_344 = fun_20(arg_33, arg_34);
     return call_344;
 }
 
-int go_18(int n_5, struct IntIntIntFun2IntIntIntObjectUnitTuple5ObjectUnitTuple4IntIntIntObjectUnitTuple5UnitTuple3 a_1, struct IntIntIntFun2IntIntIntObjectUnitTuple5ObjectUnitTuple4IntIntIntObjectUnitTuple5UnitTuple3 b_1, struct IntIntIntFun2IntIntIntObjectUnitTuple5ObjectUnitTuple4IntIntIntObjectUnitTuple5UnitTuple3 c_1, int sum_3, int i_8) {
+int go_3(int n_5, struct IntIntIntFun2IntIntIntObjectUnitTuple5ObjectUnitTuple4IntIntIntObjectUnitTuple5UnitTuple3_ a_1, struct IntIntIntFun2IntIntIntObjectUnitTuple5ObjectUnitTuple4IntIntIntObjectUnitTuple5UnitTuple3_ b_1, struct IntIntIntFun2IntIntIntObjectUnitTuple5ObjectUnitTuple4IntIntIntObjectUnitTuple5UnitTuple3_ c_1, int sum_3, int i_8) {
 tailrec_313:;
     int if_83;
     if ((i_8 == n_5)) {
@@ -130,9 +130,9 @@ else_322:;
 if_next_320:;
     int bonus_ = if_85;
     int arg_137 = n_5;
-    struct IntIntIntFun2IntIntIntObjectUnitTuple5ObjectUnitTuple4IntIntIntObjectUnitTuple5UnitTuple3 arg_138 = a_1;
-    struct IntIntIntFun2IntIntIntObjectUnitTuple5ObjectUnitTuple4IntIntIntObjectUnitTuple5UnitTuple3 arg_139 = b_1;
-    struct IntIntIntFun2IntIntIntObjectUnitTuple5ObjectUnitTuple4IntIntIntObjectUnitTuple5UnitTuple3 arg_140 = c_1;
+    struct IntIntIntFun2IntIntIntObjectUnitTuple5ObjectUnitTuple4IntIntIntObjectUnitTuple5UnitTuple3_ arg_138 = a_1;
+    struct IntIntIntFun2IntIntIntObjectUnitTuple5ObjectUnitTuple4IntIntIntObjectUnitTuple5UnitTuple3_ arg_139 = b_1;
+    struct IntIntIntFun2IntIntIntObjectUnitTuple5ObjectUnitTuple4IntIntIntObjectUnitTuple5UnitTuple3_ arg_140 = c_1;
     int arg_141 = ((sum_3 + eat_) + bonus_);
     int arg_142 = (i_8 + 1);
     n_5 = arg_137;
@@ -147,16 +147,16 @@ if_next_314:;
 }
 
 int Competitive_ABC140B_abc140bSolve(int n_5, struct IntList const* a_, struct IntList const* b_, struct IntList const* c_) {
-    struct IntIntIntFun2 fun_38 = (struct IntIntIntFun2){.fun = fun_20, .env = NULL};
-    struct IntIntIntFun2IntIntIntObjectUnitTuple5ObjectUnitTuple4 call_349 = segItemTypeNew_(0, fun_38);
-    struct IntIntIntFun2IntIntIntObjectUnitTuple5ObjectUnitTuple4 segItemTypeInt_2 = call_349;
-    struct IntIntIntFun2IntIntIntObjectUnitTuple5ObjectUnitTuple4IntIntIntObjectUnitTuple5UnitTuple3 call_350 = segTreeOfList_(segItemTypeInt_2, a_);
-    struct IntIntIntFun2IntIntIntObjectUnitTuple5ObjectUnitTuple4IntIntIntObjectUnitTuple5UnitTuple3 a_1 = call_350;
-    struct IntIntIntFun2IntIntIntObjectUnitTuple5ObjectUnitTuple4IntIntIntObjectUnitTuple5UnitTuple3 call_351 = segTreeOfList_(segItemTypeInt_2, b_);
-    struct IntIntIntFun2IntIntIntObjectUnitTuple5ObjectUnitTuple4IntIntIntObjectUnitTuple5UnitTuple3 b_1 = call_351;
-    struct IntIntIntFun2IntIntIntObjectUnitTuple5ObjectUnitTuple4IntIntIntObjectUnitTuple5UnitTuple3 call_352 = segTreeOfList_(segItemTypeInt_2, c_);
-    struct IntIntIntFun2IntIntIntObjectUnitTuple5ObjectUnitTuple4IntIntIntObjectUnitTuple5UnitTuple3 c_1 = call_352;
-    int call_353 = go_18(n_5, a_1, b_1, c_1, 0, 0);
+    struct IntIntIntFun2 fun_35 = (struct IntIntIntFun2){.fun = fun_17, .env = NULL};
+    struct IntIntIntFun2IntIntIntObjectUnitTuple5ObjectUnitTuple4_ call_349 = segItemTypeNew_(0, fun_35);
+    struct IntIntIntFun2IntIntIntObjectUnitTuple5ObjectUnitTuple4_ segItemTypeInt_2 = call_349;
+    struct IntIntIntFun2IntIntIntObjectUnitTuple5ObjectUnitTuple4IntIntIntObjectUnitTuple5UnitTuple3_ call_350 = segTreeOfList_(segItemTypeInt_2, a_);
+    struct IntIntIntFun2IntIntIntObjectUnitTuple5ObjectUnitTuple4IntIntIntObjectUnitTuple5UnitTuple3_ a_1 = call_350;
+    struct IntIntIntFun2IntIntIntObjectUnitTuple5ObjectUnitTuple4IntIntIntObjectUnitTuple5UnitTuple3_ call_351 = segTreeOfList_(segItemTypeInt_2, b_);
+    struct IntIntIntFun2IntIntIntObjectUnitTuple5ObjectUnitTuple4IntIntIntObjectUnitTuple5UnitTuple3_ b_1 = call_351;
+    struct IntIntIntFun2IntIntIntObjectUnitTuple5ObjectUnitTuple4IntIntIntObjectUnitTuple5UnitTuple3_ call_352 = segTreeOfList_(segItemTypeInt_2, c_);
+    struct IntIntIntFun2IntIntIntObjectUnitTuple5ObjectUnitTuple4IntIntIntObjectUnitTuple5UnitTuple3_ c_1 = call_352;
+    int call_353 = go_3(n_5, a_1, b_1, c_1, 0, 0);
     return call_353;
 }
 

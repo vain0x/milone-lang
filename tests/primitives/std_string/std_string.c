@@ -1,24 +1,24 @@
 #include "milone.h"
 
-struct CharOption;
+struct CharOption_;
 
-struct IntOption;
-
-struct StringList;
+struct IntOption_;
 
 struct StringList;
 
-char unwrap_1(struct CharOption opt_8);
+struct StringList;
 
-int unwrap_(struct IntOption opt_8);
+char unwrap_1(struct CharOption_ opt_8);
+
+int unwrap_(struct IntOption_ opt_8);
 
 bool MiloneStd_StdString_isEmpty(struct String);
 
 char std_string_Program_isEmptyTest(char arg_42);
 
-struct CharOption MiloneStd_StdString_tryItem(int, struct String);
+struct CharOption_ MiloneStd_StdString_tryItem(int, struct String);
 
-bool isNone_1(struct CharOption);
+bool isNone_1(struct CharOption_);
 
 char std_string_Program_tryItemTest(char arg_43);
 
@@ -30,13 +30,13 @@ bool MiloneStd_StdString_endsWith(struct String, struct String);
 
 char std_string_Program_endsWithTest(char arg_45);
 
-struct IntOption MiloneStd_StdString_findIndex(struct String, struct String);
+struct IntOption_ MiloneStd_StdString_findIndex(struct String, struct String);
 
-bool isNone_(struct IntOption);
+bool isNone_(struct IntOption_);
 
 char std_string_Program_findIndexTest(char arg_46);
 
-struct IntOption MiloneStd_StdString_findLastIndex(struct String, struct String);
+struct IntOption_ MiloneStd_StdString_findLastIndex(struct String, struct String);
 
 char std_string_Program_findLastIndexTest(char arg_47);
 
@@ -78,14 +78,28 @@ char std_string_Program_concatTest(char arg_55);
 
 int milone_main();
 
-struct CharOption {
-    bool some;
-    char value;
+enum CharOption_Discriminant {
+    None_1,
+    Some_1,
 };
 
-struct IntOption {
-    bool some;
-    int value;
+struct CharOption_ {
+    enum CharOption_Discriminant discriminant;
+    union {
+        char Some_1;
+    };
+};
+
+enum IntOption_Discriminant {
+    None_,
+    Some_,
+};
+
+struct IntOption_ {
+    enum IntOption_Discriminant discriminant;
+    union {
+        int Some_;
+    };
 };
 
 struct StringList {
@@ -93,38 +107,38 @@ struct StringList {
     struct StringList const* tail;
 };
 
-char unwrap_1(struct CharOption opt_8) {
+char unwrap_1(struct CharOption_ opt_8) {
     char value_2;
-    char match_5;
-    if ((!(opt_8.some))) goto next_241;
-    value_2 = opt_8.value;
-    match_5 = value_2;
+    char match_2;
+    if ((opt_8.discriminant != Some_1)) goto next_241;
+    value_2 = opt_8.Some_1;
+    match_2 = value_2;
     goto end_match_240;
 next_241:;
-    if (opt_8.some) goto next_242;
+    if ((opt_8.discriminant != None_1)) goto next_242;
     printf("Can\'t unwrap None.\n");
     exit(1);
 next_242:;
     exit(1);
 end_match_240:;
-    return match_5;
+    return match_2;
 }
 
-int unwrap_(struct IntOption opt_8) {
+int unwrap_(struct IntOption_ opt_8) {
     int value_2;
-    int match_6;
-    if ((!(opt_8.some))) goto next_244;
-    value_2 = opt_8.value;
-    match_6 = value_2;
+    int match_3;
+    if ((opt_8.discriminant != Some_)) goto next_244;
+    value_2 = opt_8.Some_;
+    match_3 = value_2;
     goto end_match_243;
 next_244:;
-    if (opt_8.some) goto next_245;
+    if ((opt_8.discriminant != None_)) goto next_245;
     printf("Can\'t unwrap None.\n");
     exit(1);
 next_245:;
     exit(1);
 end_match_243:;
-    return match_6;
+    return match_3;
 }
 
 char std_string_Program_isEmptyTest(char arg_42) {
@@ -136,16 +150,16 @@ char std_string_Program_isEmptyTest(char arg_42) {
 }
 
 char std_string_Program_tryItemTest(char arg_43) {
-    struct CharOption call_47 = MiloneStd_StdString_tryItem(0, (struct String){.str = "", .len = 0});
+    struct CharOption_ call_47 = MiloneStd_StdString_tryItem(0, (struct String){.str = "", .len = 0});
     bool call_48 = isNone_1(call_47);
     milone_assert(call_48, 19, 2);
-    struct CharOption call_49 = MiloneStd_StdString_tryItem(-1, (struct String){.str = "a", .len = 1});
+    struct CharOption_ call_49 = MiloneStd_StdString_tryItem(-1, (struct String){.str = "a", .len = 1});
     bool call_50 = isNone_1(call_49);
     milone_assert(call_50, 20, 2);
-    struct CharOption call_51 = MiloneStd_StdString_tryItem(1, (struct String){.str = "a", .len = 1});
+    struct CharOption_ call_51 = MiloneStd_StdString_tryItem(1, (struct String){.str = "a", .len = 1});
     bool call_52 = isNone_1(call_51);
     milone_assert(call_52, 21, 2);
-    struct CharOption call_53 = MiloneStd_StdString_tryItem(2, (struct String){.str = "abc", .len = 3});
+    struct CharOption_ call_53 = MiloneStd_StdString_tryItem(2, (struct String){.str = "abc", .len = 3});
     char call_54 = unwrap_1(call_53);
     milone_assert((call_54 == 'c'), 22, 2);
     return 0;
@@ -172,38 +186,38 @@ char std_string_Program_endsWithTest(char arg_45) {
 }
 
 char std_string_Program_findIndexTest(char arg_46) {
-    struct IntOption call_61 = MiloneStd_StdString_findIndex((struct String){.str = "ab", .len = 2}, (struct String){.str = "", .len = 0});
+    struct IntOption_ call_61 = MiloneStd_StdString_findIndex((struct String){.str = "ab", .len = 2}, (struct String){.str = "", .len = 0});
     bool call_62 = isNone_(call_61);
     milone_assert(call_62, 35, 2);
-    struct IntOption call_63 = MiloneStd_StdString_findIndex((struct String){.str = "ab", .len = 2}, (struct String){.str = "cacbc", .len = 5});
+    struct IntOption_ call_63 = MiloneStd_StdString_findIndex((struct String){.str = "ab", .len = 2}, (struct String){.str = "cacbc", .len = 5});
     bool call_64 = isNone_(call_63);
     milone_assert(call_64, 36, 2);
-    struct IntOption call_65 = MiloneStd_StdString_findIndex((struct String){.str = "ab", .len = 2}, (struct String){.str = "abcc", .len = 4});
+    struct IntOption_ call_65 = MiloneStd_StdString_findIndex((struct String){.str = "ab", .len = 2}, (struct String){.str = "abcc", .len = 4});
     int call_66 = unwrap_(call_65);
     milone_assert((call_66 == 0), 38, 2);
-    struct IntOption call_67 = MiloneStd_StdString_findIndex((struct String){.str = "ab", .len = 2}, (struct String){.str = "ccabccabcc", .len = 10});
+    struct IntOption_ call_67 = MiloneStd_StdString_findIndex((struct String){.str = "ab", .len = 2}, (struct String){.str = "ccabccabcc", .len = 10});
     int call_68 = unwrap_(call_67);
     milone_assert((call_68 == 2), 39, 2);
-    struct IntOption call_69 = MiloneStd_StdString_findIndex((struct String){.str = "", .len = 0}, (struct String){.str = "", .len = 0});
+    struct IntOption_ call_69 = MiloneStd_StdString_findIndex((struct String){.str = "", .len = 0}, (struct String){.str = "", .len = 0});
     int call_70 = unwrap_(call_69);
     milone_assert((call_70 == 0), 40, 2);
     return 0;
 }
 
 char std_string_Program_findLastIndexTest(char arg_47) {
-    struct IntOption call_71 = MiloneStd_StdString_findLastIndex((struct String){.str = "ab", .len = 2}, (struct String){.str = "", .len = 0});
+    struct IntOption_ call_71 = MiloneStd_StdString_findLastIndex((struct String){.str = "ab", .len = 2}, (struct String){.str = "", .len = 0});
     bool call_72 = isNone_(call_71);
     milone_assert(call_72, 43, 2);
-    struct IntOption call_73 = MiloneStd_StdString_findLastIndex((struct String){.str = "ab", .len = 2}, (struct String){.str = "cacbc", .len = 5});
+    struct IntOption_ call_73 = MiloneStd_StdString_findLastIndex((struct String){.str = "ab", .len = 2}, (struct String){.str = "cacbc", .len = 5});
     bool call_74 = isNone_(call_73);
     milone_assert(call_74, 44, 2);
-    struct IntOption call_75 = MiloneStd_StdString_findLastIndex((struct String){.str = "ab", .len = 2}, (struct String){.str = "ccab", .len = 4});
+    struct IntOption_ call_75 = MiloneStd_StdString_findLastIndex((struct String){.str = "ab", .len = 2}, (struct String){.str = "ccab", .len = 4});
     int call_76 = unwrap_(call_75);
     milone_assert((call_76 == 2), 46, 2);
-    struct IntOption call_77 = MiloneStd_StdString_findLastIndex((struct String){.str = "ab", .len = 2}, (struct String){.str = "ccabccabcc", .len = 10});
+    struct IntOption_ call_77 = MiloneStd_StdString_findLastIndex((struct String){.str = "ab", .len = 2}, (struct String){.str = "ccabccabcc", .len = 10});
     int call_78 = unwrap_(call_77);
     milone_assert((call_78 == 6), 47, 2);
-    struct IntOption call_79 = MiloneStd_StdString_findLastIndex((struct String){.str = "", .len = 0}, (struct String){.str = "", .len = 0});
+    struct IntOption_ call_79 = MiloneStd_StdString_findLastIndex((struct String){.str = "", .len = 0}, (struct String){.str = "", .len = 0});
     int call_80 = unwrap_(call_79);
     milone_assert((call_80 == 0), 48, 2);
     return 0;

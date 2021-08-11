@@ -2,7 +2,7 @@
 
 struct IntIntFun1;
 
-struct IntIntTuple2;
+struct IntIntTuple2_;
 
 struct IntIntIntFun2;
 
@@ -27,7 +27,7 @@ struct IntIntFun1 {
     void const* env;
 };
 
-struct IntIntTuple2 {
+struct IntIntTuple2_ {
     int t0;
     int t1;
 };
@@ -63,8 +63,8 @@ int fun_(void const* env_, int arg_) {
 }
 
 int fun_1(void const* env_1, int arg_2, int arg_3) {
-    int arg_4 = (*(((struct IntIntTuple2 const*)env_1))).t0;
-    int arg_5 = (*(((struct IntIntTuple2 const*)env_1))).t1;
+    int arg_4 = (*(((struct IntIntTuple2_ const*)env_1))).t0;
+    int arg_5 = (*(((struct IntIntTuple2_ const*)env_1))).t1;
     int call_1 = fun_partial_app_Program_add4(arg_4, arg_5, arg_2, arg_3);
     return call_1;
 }
@@ -79,9 +79,9 @@ int milone_main() {
     struct IntIntFun1 dec3_ = fun_3;
     int call_3 = fun_partial_app_Program_twice(dec3_, 8);
     milone_assert((call_3 == 2), 12, 2);
-    struct IntIntTuple2 tuple_ = (struct IntIntTuple2){.t0 = 2, .t1 = 3};
-    void const* box_ = milone_mem_alloc(1, sizeof(struct IntIntTuple2));
-    (*(((struct IntIntTuple2*)box_))) = tuple_;
+    struct IntIntTuple2_ IntIntTuple2_ = (struct IntIntTuple2_){.t0 = 2, .t1 = 3};
+    void const* box_ = milone_mem_alloc(1, sizeof(struct IntIntTuple2_));
+    (*(((struct IntIntTuple2_*)box_))) = IntIntTuple2_;
     struct IntIntIntFun2 fun_4 = (struct IntIntIntFun2){.fun = fun_1, .env = box_};
     struct IntIntIntFun2 add2_ = fun_4;
     int app_2 = add2_.fun(add2_.env, 5, 7);

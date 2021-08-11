@@ -22,6 +22,7 @@ open MiloneTranslation.EtaExpansion
 open MiloneTranslation.Hoist
 open MiloneTranslation.MirGen
 open MiloneTranslation.Monomorphizing
+open MiloneTranslation.MonoTy
 open MiloneTranslation.RecordRes
 open MiloneTranslation.TailRecOptimizing
 
@@ -496,7 +497,12 @@ let transformHir (host: CliHost) v (modules: Tir.TProgram, tyCtx: Typing.TyCtx) 
   let decls, tyCtx = tailRecOptimize (decls, tyCtx)
 
   writeLog host v "Monomorphizing"
-  monify (decls, tyCtx)
+  let decls, tyCtx = monify (decls, tyCtx)
+
+  writeLog host v "MonoTy"
+  let decls, tyCtx = monoTy (decls, tyCtx)
+
+  decls, tyCtx
 
 /// (module name, C code) list
 type CodeGenResult = (string * string) list
@@ -551,6 +557,7 @@ let private compile (ctx: CompileCtx) : CompileResult =
 
   | SyntaxApi.SyntaxAnalysisOk (modules, tyCtx) ->
     let decls, tyCtx = transformHir host v (modules, tyCtx)
+
     CompileOk(codeGenHirViaMir host v ctx.EntryProjectName ctx.HeaderOnly (decls, tyCtx))
 
 // -----------------------------------------------

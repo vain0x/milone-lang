@@ -2,11 +2,11 @@
 
 struct BoxedVariant_;
 
-struct BoxedVariant_Option;
+struct BoxedVariantOption_;
 
-struct BoxedVariant_OptionBoxedVariant_Fun1;
+struct BoxedVariantOption_BoxedVariant_Fun1;
 
-struct BoxedVariant_ variant_fun_auto_boxing_bug_Program_feedNil(struct BoxedVariant_OptionBoxedVariant_Fun1 f_);
+struct BoxedVariant_ variant_fun_auto_boxing_bug_Program_feedNil(struct BoxedVariantOption_BoxedVariant_Fun1 f_);
 
 int milone_main();
 
@@ -21,18 +21,25 @@ struct BoxedVariant_ {
     };
 };
 
-struct BoxedVariant_Option {
-    bool some;
-    struct BoxedVariant_ value;
+enum BoxedVariantOption_Discriminant {
+    None_,
+    Some_,
 };
 
-struct BoxedVariant_OptionBoxedVariant_Fun1 {
-    struct BoxedVariant_(*fun)(void const*, struct BoxedVariant_Option);
+struct BoxedVariantOption_ {
+    enum BoxedVariantOption_Discriminant discriminant;
+    union {
+        struct BoxedVariant_ Some_;
+    };
+};
+
+struct BoxedVariantOption_BoxedVariant_Fun1 {
+    struct BoxedVariant_(*fun)(void const*, struct BoxedVariantOption_);
     void const* env;
 };
 
-struct BoxedVariant_ variant_fun_auto_boxing_bug_Program_feedNil(struct BoxedVariant_OptionBoxedVariant_Fun1 f_) {
-    struct BoxedVariant_ app_ = f_.fun(f_.env, (struct BoxedVariant_Option){.some = false});
+struct BoxedVariant_ variant_fun_auto_boxing_bug_Program_feedNil(struct BoxedVariantOption_BoxedVariant_Fun1 f_) {
+    struct BoxedVariant_ app_ = f_.fun(f_.env, (struct BoxedVariantOption_){.discriminant = None_});
     return app_;
 }
 

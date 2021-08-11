@@ -297,27 +297,6 @@ let private mirifyPatLit ctx endLabel lit expr loc =
   let ctx = addStmt ctx gotoStmt
   ctx
 
-let private mirifyPatNone ctx endLabel expr loc =
-  let isNoneExpr =
-    mxNot (MUnaryExpr(MOptionIsSomeUnary, expr, tyBool, loc)) loc
-
-  let gotoStmt = msGotoUnless isNoneExpr endLabel loc
-  addStmt ctx gotoStmt
-
-let private mirifyPatSomeApp ctx endLabel item loc expr =
-  let itemTy = patToTy item
-
-  let isSome =
-    MUnaryExpr(MOptionIsSomeUnary, expr, tyBool, loc)
-
-  let gotoStmt = msGotoUnless isSome endLabel loc
-  let ctx = addStmt ctx gotoStmt
-
-  let value =
-    MUnaryExpr(MOptionToValueUnary, expr, itemTy, loc)
-
-  mirifyPat ctx endLabel item value
-
 let private mirifyPatNil ctx endLabel listTy expr loc =
   let itemTy = unwrapListTy listTy
 
@@ -437,11 +416,6 @@ let private mirifyPat ctx (endLabel: string) (pat: HPat) (expr: MExpr) : MirCtx 
     | HConsPN, [ l; r ] -> mirifyPatCons ctx endLabel l r ty loc expr
     | HConsPN, _ -> fail ()
 
-    | HNonePN, _ -> mirifyPatNone ctx endLabel expr loc
-
-    | HSomeAppPN, [ payloadPat ] -> mirifyPatSomeApp ctx endLabel payloadPat loc expr
-    | HSomeAppPN, _ -> fail ()
-
     | HVariantAppPN variantSerial, [ payloadPat ] -> mirifyPatVariantApp ctx endLabel variantSerial payloadPat loc expr
     | HVariantAppPN _, _ -> fail ()
 
@@ -451,6 +425,9 @@ let private mirifyPat ctx (endLabel: string) (pat: HPat) (expr: MExpr) : MirCtx 
     | HBoxPN, _ -> fail ()
 
     | HAbortPN, _ -> mirifyPatAbort ctx loc
+
+    | HNonePN, _
+    | HSomeAppPN, _ -> unreachable () // Resolved in MonoTy.
 
   | HAsPat (pat, serial, loc) -> mirifyPatAs ctx endLabel pat serial expr loc
 
@@ -469,8 +446,8 @@ let private mirifyExprVariant (ctx: MirCtx) itself serial ty loc =
 let private mirifyExprPrim (ctx: MirCtx) prim ty loc =
   match prim with
   | HPrim.Nil -> MGenericValueExpr(MNilGv, ty, loc), ctx
-  | HPrim.OptionNone -> MGenericValueExpr(MNoneGv, ty, loc), ctx
 
+  | HPrim.OptionNone -> unreachable () // Resolved in MonoTy.
   | _ -> unreachable () // Primitives must appear as callee.
 
 let private doEmitIfStmt ctx cond thenHint body altHint alt targetTy loc =
@@ -527,18 +504,6 @@ let private mirifyExprMatchAsIfStmt ctx cond arms ty loc =
     let cond, ctx = mirifyExpr ctx cond
 
     doEmitIfStmt ctx cond "then" body "else" alt ty loc
-    |> Some
-
-  // | None -> ... | _ -> ...
-  | Ty (OptionTk, _),
-    [ HNodePat (HNonePN, _, _, _), HLitExpr (BoolLit true, _), noneCl; HDiscardPat _, HLitExpr (BoolLit true, _), someCl ] ->
-    let cond, ctx = mirifyExpr ctx cond
-
-    let isNone =
-      let ty, loc = mexprExtract cond
-      mxNot (MUnaryExpr(MOptionIsSomeUnary, cond, ty, loc)) loc
-
-    doEmitIfStmt ctx isNone "none_cl" noneCl "some_cl" someCl ty loc
     |> Some
 
   // | [] -> ... | _ -> ...
@@ -1048,16 +1013,6 @@ let private mirifyCallStrGetSliceExpr ctx args loc =
 
   temp, ctx
 
-let private mirifyExprCallSome ctx item ty loc =
-  let _, tempSerial, ctx = freshVar ctx "some" ty loc
-
-  let item, ctx = mirifyExpr ctx item
-
-  let ctx =
-    addStmt ctx (MPrimStmt(MOptionSomePrim, [ item ], tempSerial, ty, loc))
-
-  MVarExpr(tempSerial, ty, loc), ctx
-
 let private mirifyCallVariantExpr (ctx: MirCtx) serial payload ty loc =
   let payload, ctx = mirifyExpr ctx payload
   let payloadTy = mexprToTy payload
@@ -1082,24 +1037,6 @@ let private mirifyExprOpCons ctx l r listTy loc =
     addStmt ctx (MPrimStmt(MConsPrim, [ l; r ], tempSerial, listTy, loc))
 
   MVarExpr(tempSerial, listTy, loc), ctx
-
-let private mirifyExprTuple ctx items itemTys loc =
-  let ty = tyTuple itemTys
-  let _, tempSerial, ctx = freshVar ctx "tuple" ty loc
-
-  let rec go acc ctx items =
-    match items with
-    | [] -> List.rev acc, ctx
-    | item :: items ->
-      let item, ctx = mirifyExpr ctx item
-      go (item :: acc) ctx items
-
-  let items, ctx = go [] ctx items
-
-  let ctx =
-    addStmt ctx (MPrimStmt(MTuplePrim, items, tempSerial, ty, loc))
-
-  MVarExpr(tempSerial, ty, loc), ctx
 
 let private mirifyExprRecord (ctx: MirCtx) args ty loc =
   let name =
@@ -1365,8 +1302,6 @@ let private mirifyCallPrimExpr ctx itself prim args ty loc =
   | HPrim.Compare, _ -> fail ()
   | HPrim.Cons, [ l; r ] -> mirifyExprOpCons ctx l r ty loc
   | HPrim.Cons, _ -> fail ()
-  | HPrim.OptionSome, [ item ] -> mirifyExprCallSome ctx item ty loc
-  | HPrim.OptionSome, _ -> fail ()
   | HPrim.Not, [ arg ] -> regularUnary MNotUnary arg
   | HPrim.Not, _ -> fail ()
   | HPrim.Exit, [ arg ] -> mirifyExprCallExit ctx arg ty loc
@@ -1396,7 +1331,8 @@ let private mirifyCallPrimExpr ctx itself prim args ty loc =
   | HPrim.PtrWrite, _ -> regularAction MPtrWriteAction
 
   | HPrim.Nil, _
-  | HPrim.OptionNone, _ -> fail ()
+  | HPrim.OptionNone, _ -> fail () // Can't be called.
+  | HPrim.OptionSome, _ -> unreachable () // Resolved in MonoTy.
 
 let private mirifyExprInfCallClosure ctx callee args resultTy loc =
   let callee, ctx = mirifyExpr ctx callee
@@ -1493,8 +1429,8 @@ let private mirifyExprInf ctx itself kind args ty loc =
     let arg, ctx = mirifyExpr ctx arg
     MUnaryExpr(MMinusUnary, arg, ty, loc), ctx
 
-  | HTupleEN, [], Ty (TupleTk, []) -> MUnitExpr loc, ctx
-  | HTupleEN, _, Ty (TupleTk, itemTys) -> mirifyExprTuple ctx args itemTys loc
+  | HTupleEN, [], _ -> MUnitExpr loc, ctx
+  | HTupleEN, _, _ -> unreachable () // Non-unit HTupleEN is resolved in MonoTy.
   | HRecordEN, _, _ -> mirifyExprRecord ctx args ty loc
   | HRecordItemEN index, [ record ], itemTy -> mirifyExprRecordItem ctx index record itemTy loc
 
