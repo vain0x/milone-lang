@@ -37,7 +37,6 @@ type MatchIR =
 
 [<NoEquality; NoComparison>]
 type MGenericValue =
-  | MNoneGv
   | MNilGv
   | MSizeOfGv
 
@@ -73,9 +72,6 @@ type MUnary =
 
   /// Gets a field of record.
   | MRecordItemUnary of recordItemIndex: int
-
-  | MOptionIsSomeUnary
-  | MOptionToValueUnary
 
   | MListIsEmptyUnary
 
@@ -140,9 +136,7 @@ type MPrim =
   | MClosurePrim of closureFunSerial: FunSerial
 
   | MBoxPrim
-  | MOptionSomePrim
   | MConsPrim
-  | MTuplePrim
   | MVariantPrim of variantSerial: VariantSerial
   | MRecordPrim
 
@@ -246,7 +240,6 @@ let mexprExtract expr =
 
   | MGenericValueExpr (genericValue, ty, loc) ->
     match genericValue with
-    | MNoneGv
     | MNilGv -> ty, loc
     | MSizeOfGv -> tyInt, loc
 
