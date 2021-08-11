@@ -189,7 +189,6 @@ type CompileCtx =
 
     SyntaxCtx: SyntaxApi.SyntaxCtx
     HeaderOnly: bool
-    UseMonoTy: bool
 
     Verbosity: Verbosity
     Host: CliHost }
@@ -213,7 +212,6 @@ let compileCtxNew (host: CliHost) verbosity projectDir : CompileCtx =
     EntryProjectName = projectName
     SyntaxCtx = syntaxCtx
     HeaderOnly = false
-    UseMonoTy = false
     Verbosity = verbosity
     Host = host }
 
@@ -468,7 +466,7 @@ let private lowerTyCtx (tyCtx: Typing.TyCtx) : Hir.TyCtx =
 // -----------------------------------------------
 
 /// Transforms HIR. The result can be converted to MIR.
-let transformHir (host: CliHost) v useMonoTy (modules: Tir.TProgram, tyCtx: Typing.TyCtx) =
+let transformHir (host: CliHost) v (modules: Tir.TProgram, tyCtx: Typing.TyCtx) =
   writeLog host v "Lower"
   let modules = lowerModules modules
   let tyCtx = lowerTyCtx tyCtx
@@ -501,12 +499,8 @@ let transformHir (host: CliHost) v useMonoTy (modules: Tir.TProgram, tyCtx: Typi
   writeLog host v "Monomorphizing"
   let decls, tyCtx = monify (decls, tyCtx)
 
-  let decls, tyCtx =
-    if useMonoTy then
-      writeLog host v "MonoTy"
-      monoTy (decls, tyCtx)
-    else
-      decls, tyCtx
+  writeLog host v "MonoTy"
+  let decls, tyCtx = monoTy (decls, tyCtx)
 
   decls, tyCtx
 
@@ -562,8 +556,7 @@ let private compile (ctx: CompileCtx) : CompileResult =
   | SyntaxApi.SyntaxAnalysisError (errors, _) -> CompileError(SyntaxApi.syntaxErrorsToString errors)
 
   | SyntaxApi.SyntaxAnalysisOk (modules, tyCtx) ->
-    let decls, tyCtx =
-      transformHir host v ctx.UseMonoTy (modules, tyCtx)
+    let decls, tyCtx = transformHir host v (modules, tyCtx)
 
     CompileOk(codeGenHirViaMir host v ctx.EntryProjectName ctx.HeaderOnly (decls, tyCtx))
 
@@ -615,7 +608,6 @@ type CompileOptions =
   { ProjectDir: string
     TargetDir: string
     HeaderOnly: bool
-    UseMonoTy: bool
     Verbosity: Verbosity }
 
 let cliCompile (host: CliHost) (options: CompileOptions) =
@@ -624,8 +616,7 @@ let cliCompile (host: CliHost) (options: CompileOptions) =
 
   let ctx =
     { ctx with
-        HeaderOnly = options.HeaderOnly
-        UseMonoTy = options.UseMonoTy }
+        HeaderOnly = options.HeaderOnly }
 
   let result = compile ctx
 
@@ -883,7 +874,6 @@ type private CliCmd =
   | BuildCmd
   | HeaderCmd
   | ParseCmd
-  | MonoTyCmd
   | RunCmd
   | BadCmd of string
 
@@ -915,7 +905,6 @@ let private parseArgs args =
 
     // for debug
     | "parse" -> ParseCmd, args
-    | "mono-ty" -> MonoTyCmd, args
 
     | _ -> BadCmd arg, []
 
@@ -956,7 +945,6 @@ let cli (host: CliHost) =
         { ProjectDir = projectDir
           TargetDir = "."
           HeaderOnly = true
-          UseMonoTy = false
           Verbosity = verbosity }
 
       cliCompile host options
@@ -976,7 +964,6 @@ let cli (host: CliHost) =
       let options: CompileOptions =
         { ProjectDir = projectDir
           TargetDir = Option.defaultValue (defaultTargetDir projectDir) targetDir
-          UseMonoTy = false
           HeaderOnly = false
           Verbosity = verbosity }
 
@@ -991,27 +978,6 @@ let cli (host: CliHost) =
 
     match args with
     | projectDir :: _ -> cliParse host verbosity projectDir
-
-    | [] ->
-      printfn "ERROR: Expected project dir."
-      1
-
-  | MonoTyCmd, args ->
-    let verbosity, args = parseVerbosity host args
-
-    let targetDir, args =
-      parseOption (fun x -> x = "--target-dir") args
-
-    match args with
-    | projectDir :: _ ->
-      let options: CompileOptions =
-        { ProjectDir = projectDir
-          TargetDir = Option.defaultValue (defaultTargetDir projectDir) targetDir
-          UseMonoTy = true
-          HeaderOnly = false
-          Verbosity = verbosity }
-
-      cliCompile host options
 
     | [] ->
       printfn "ERROR: Expected project dir."
