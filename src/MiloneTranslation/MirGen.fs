@@ -129,7 +129,7 @@ let private freshVar (ctx: MirCtx) (name: Ident) (ty: Ty) loc =
   let varDef: VarDef =
     { Name = name
       IsStatic = NotStatic
-      Ty = ty
+      Ty = noTy // Never used.
       Linkage = InternalLinkage
       Loc = loc }
 
@@ -1023,7 +1023,7 @@ let private mirifyExprCallBox ctx arg _ loc =
     let temp, tempSerial, ctx = freshVar ctx "box" tyObj loc
 
     let ctx =
-      addStmt ctx (MPrimStmt(MBoxPrim, [ arg ], tempSerial, loc))
+      addStmt ctx (MPrimStmt(MBoxPrim, [ arg ], tempSerial, tyObj, loc))
 
     temp, ctx
 
@@ -1044,7 +1044,7 @@ let private mirifyCallStrGetSliceExpr ctx args loc =
   let temp, tempSerial, ctx = freshVar ctx "slice" tyStr loc
 
   let ctx =
-    addStmt ctx (MPrimStmt(MStrGetSlicePrim, args, tempSerial, loc))
+    addStmt ctx (MPrimStmt(MStrGetSlicePrim, args, tempSerial, tyStr, loc))
 
   temp, ctx
 
@@ -1054,7 +1054,7 @@ let private mirifyExprCallSome ctx item ty loc =
   let item, ctx = mirifyExpr ctx item
 
   let ctx =
-    addStmt ctx (MPrimStmt(MOptionSomePrim, [ item ], tempSerial, loc))
+    addStmt ctx (MPrimStmt(MOptionSomePrim, [ item ], tempSerial, ty, loc))
 
   MVarExpr(tempSerial, ty, loc), ctx
 
@@ -1068,7 +1068,7 @@ let private mirifyCallVariantExpr (ctx: MirCtx) serial payload ty loc =
   let temp, tempSerial, ctx = freshVar ctx "variant" ty loc
 
   let ctx =
-    addStmt ctx (MPrimStmt(MVariantPrim serial, [ payload ], tempSerial, loc))
+    addStmt ctx (MPrimStmt(MVariantPrim serial, [ payload ], tempSerial, ty, loc))
 
   temp, ctx
 
@@ -1079,7 +1079,7 @@ let private mirifyExprOpCons ctx l r listTy loc =
   let r, ctx = mirifyExpr ctx r
 
   let ctx =
-    addStmt ctx (MPrimStmt(MConsPrim, [ l; r ], tempSerial, loc))
+    addStmt ctx (MPrimStmt(MConsPrim, [ l; r ], tempSerial, listTy, loc))
 
   MVarExpr(tempSerial, listTy, loc), ctx
 
@@ -1097,7 +1097,7 @@ let private mirifyExprTuple ctx items itemTys loc =
   let items, ctx = go [] ctx items
 
   let ctx =
-    addStmt ctx (MPrimStmt(MTuplePrim, items, tempSerial, loc))
+    addStmt ctx (MPrimStmt(MTuplePrim, items, tempSerial, ty, loc))
 
   MVarExpr(tempSerial, ty, loc), ctx
 
@@ -1112,7 +1112,7 @@ let private mirifyExprRecord (ctx: MirCtx) args ty loc =
   let args, ctx = mirifyExprs ctx args
 
   let ctx =
-    addStmt ctx (MPrimStmt(MRecordPrim, args, tempSerial, loc))
+    addStmt ctx (MPrimStmt(MRecordPrim, args, tempSerial, ty, loc))
 
   MVarExpr(tempSerial, ty, loc), ctx
 
@@ -1182,7 +1182,7 @@ let private mirifyCallToIntExpr ctx itself flavor arg ty loc =
     let temp, tempSerial, ctx = freshVar ctx "call" ty loc
 
     let ctx =
-      addStmt ctx (MPrimStmt(MIntOfStrPrim flavor, [ arg ], tempSerial, loc))
+      addStmt ctx (MPrimStmt(MIntOfStrPrim flavor, [ arg ], tempSerial, ty, loc))
 
     temp, ctx
 
@@ -1201,7 +1201,7 @@ let private mirifyCallToFloatExpr ctx itself flavor arg ty loc =
     let temp, tempSerial, ctx = freshVar ctx "call" ty loc
 
     let ctx =
-      addStmt ctx (MPrimStmt(MFloatOfStrPrim flavor, [ arg ], tempSerial, loc))
+      addStmt ctx (MPrimStmt(MFloatOfStrPrim flavor, [ arg ], tempSerial, ty, loc))
 
     temp, ctx
 
@@ -1222,7 +1222,7 @@ let private mirifyCallCharExpr ctx itself arg ty loc =
     let temp, tempSerial, ctx = freshVar ctx "char_of_string" ty loc
 
     let ctx =
-      addStmt ctx (MPrimStmt(MCharOfStrPrim, [ arg ], tempSerial, loc))
+      addStmt ctx (MPrimStmt(MCharOfStrPrim, [ arg ], tempSerial, ty, loc))
 
     temp, ctx
 
@@ -1236,7 +1236,7 @@ let private mirifyCallStringExpr ctx itself arg ty loc =
     let temp, tempSerial, ctx = freshVar ctx "call" ty loc
 
     let ctx =
-      addStmt ctx (MPrimStmt(prim, [ arg ], tempSerial, loc))
+      addStmt ctx (MPrimStmt(prim, [ arg ], tempSerial, ty, loc))
 
     temp, ctx
 
@@ -1277,7 +1277,7 @@ let private mirifyCallInRegionExpr ctx arg loc =
 
   let ctx =
     let unit = MUnitExpr loc
-    addStmt ctx (MPrimStmt(MCallClosurePrim, [ arg; unit ], tempSerial, loc))
+    addStmt ctx (MPrimStmt(MCallClosurePrim, [ arg; unit ], tempSerial, tyInt, loc))
 
   let ctx =
     addStmt ctx (MActionStmt(MLeaveRegionAction, [], loc))
@@ -1300,7 +1300,7 @@ let private mirifyCallProcExpr ctx callee args ty loc =
   let temp, tempSerial, ctx = freshVar ctx "call" ty loc
 
   let ctx =
-    addStmt ctx (MPrimStmt(MCallProcPrim, callee :: args, tempSerial, loc))
+    addStmt ctx (MPrimStmt(MCallProcPrim, callee :: args, tempSerial, ty, loc))
 
   temp, ctx
 
@@ -1322,7 +1322,7 @@ let private mirifyCallPrimExpr ctx itself prim args ty loc =
     let tempExpr, temp, ctx = freshVar ctx hint ty loc
 
     let ctx =
-      addStmt ctx (MPrimStmt(prim, args, temp, loc))
+      addStmt ctx (MPrimStmt(prim, args, temp, ty, loc))
 
     tempExpr, ctx
 
@@ -1406,7 +1406,7 @@ let private mirifyExprInfCallClosure ctx callee args resultTy loc =
   let tempRef, tempSerial, ctx = freshVar ctx "app" resultTy loc
 
   let ctx =
-    addStmt ctx (MPrimStmt(MCallClosurePrim, callee :: args, tempSerial, loc))
+    addStmt ctx (MPrimStmt(MCallClosurePrim, callee :: args, tempSerial, resultTy, loc))
 
   tempRef, ctx
 
@@ -1465,7 +1465,7 @@ let private mirifyExprInfClosure ctx funSerial env funTy loc =
   let tempRef, tempSerial, ctx = freshVar ctx "fun" funTy loc
 
   let ctx =
-    addStmt ctx (MPrimStmt(MClosurePrim funSerial, [ env ], tempSerial, loc))
+    addStmt ctx (MPrimStmt(MClosurePrim funSerial, [ env ], tempSerial, funTy, loc))
 
   tempRef, ctx
 
@@ -1483,7 +1483,7 @@ let private mirifyExprInfCallNative ctx (funName: string) args ty loc =
       freshVar ctx (funName + "_result") ty loc
 
     let ctx =
-      addStmt ctx (MPrimStmt(MCallNativePrim funName, args, tempSerial, loc))
+      addStmt ctx (MPrimStmt(MCallNativePrim funName, args, tempSerial, ty, loc))
 
     temp, ctx
 

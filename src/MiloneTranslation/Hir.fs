@@ -101,7 +101,11 @@ type VarDef =
   { Name: Ident
     IsStatic: IsStatic
     Linkage: Linkage
+
+    /// Remark: After monomorphization, variables occur in multiple monomorphized instances
+    ///         and Ty field can contain undefined type variables. It shouldn't be used.
     Ty: Ty
+
     Loc: Loc }
 
 [<RequireQualifiedAccess; NoEquality; NoComparison>]
@@ -728,6 +732,8 @@ let tkDisplay getTyName tk =
 // -----------------------------------------------
 // Types (HIR/MIR)
 // -----------------------------------------------
+
+let noTy: Ty = Ty(NativeTypeTk "__no_use", [])
 
 let tyIsUnit ty =
   match ty with

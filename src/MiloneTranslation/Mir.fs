@@ -206,7 +206,7 @@ type MTerminator =
 type MStmt =
   | MActionStmt of MAction * MExpr list * Loc
 
-  | MPrimStmt of MPrim * MExpr list * result: VarSerial * Loc
+  | MPrimStmt of MPrim * MExpr list * result: VarSerial * resultTy: Ty * Loc
 
   /// Declare a local variable.
   | MLetValStmt of VarSerial * MExpr option * Ty * Loc

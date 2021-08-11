@@ -620,14 +620,12 @@ let private cgTyComplete (ctx: CirCtx) (ty: Ty) : CTy * CirCtx =
 // Extern decl
 // -----------------------------------------------
 
-let private cgExternVarDecl (ctx: CirCtx) varSerial =
+let private cgExternVarDecl (ctx: CirCtx) varSerial ty =
   if TSet.contains varSerial ctx.VarDecls then
     ctx
   else
-    let varDef = ctx.Vars |> mapFind varSerial
-
     let name = getUniqueVarName ctx varSerial
-    let ty, ctx = cgTyComplete ctx varDef.Ty
+    let ty, ctx = cgTyComplete ctx ty
 
     let ctx = addDecl ctx (CExternVarDecl(name, ty))
 
@@ -836,10 +834,10 @@ let private cgExpr (ctx: CirCtx) (arg: MExpr) : CExpr * CirCtx =
   | MUnitExpr _ -> CVarExpr "0", ctx
   | MNeverExpr loc -> unreachable ("MNeverExpr " + locToString loc)
 
-  | MVarExpr (serial, _, _) ->
+  | MVarExpr (serial, ty, _) ->
     let ctx =
       match findStorageModifier ctx serial with
-      | IsStatic -> cgExternVarDecl ctx serial
+      | IsStatic -> cgExternVarDecl ctx serial ty
       | NotStatic -> ctx
 
     CVarExpr(getUniqueVarName ctx serial), ctx
@@ -949,9 +947,7 @@ let private doGenLetValStmt ctx serial expr ty =
   let cty, ctx = cgTyComplete ctx ty
   addLetStmt ctx name expr cty isStatic linkage replacing
 
-let private cgPrimStmt (ctx: CirCtx) itself prim args serial =
-  let resultTy = (ctx.Vars |> mapFind serial).Ty
-
+let private cgPrimStmt (ctx: CirCtx) itself prim args serial resultTy =
   let conversion ctx makeExpr =
     match args with
     | [ arg ] ->
@@ -1259,7 +1255,7 @@ let private cgTerminatorStmt ctx stmt =
 let private cgStmt ctx stmt =
   match stmt with
   | MActionStmt (action, args, _) -> cgActionStmt ctx stmt action args
-  | MPrimStmt (prim, args, temp, _) -> cgPrimStmt ctx stmt prim args temp
+  | MPrimStmt (prim, args, temp, resultTy, _) -> cgPrimStmt ctx stmt prim args temp resultTy
   | MLetValStmt (serial, init, ty, _) -> cgLetValStmt ctx serial init ty
   | MSetStmt (serial, right, _) -> cgSetStmt ctx serial right
   | MLabelStmt (label, _) -> addStmt ctx (CLabelStmt label)

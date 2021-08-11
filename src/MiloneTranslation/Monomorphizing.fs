@@ -389,9 +389,16 @@ let monify (decls: HExpr list, tyCtx: TyCtx) : HExpr list * TyCtx =
 
     (decls, monoCtx) |> stMap monifyExpr
 
+  // Currently monomorphized instances don't duplicate local variable definitions.
+  // VarDef.Ty is no longer reliable.
+  let vars =
+    tyCtx.Vars
+    |> TMap.map (fun _ (varDef: VarDef) -> { varDef with Ty = noTy })
+
   let tyCtx =
     { tyCtx with
         Serial = monoCtx.Serial
+        Vars = vars
         Funs = monoCtx.Funs
         Tys = monoCtx.Tys }
 
