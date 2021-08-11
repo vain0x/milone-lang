@@ -1159,8 +1159,6 @@ let private cgPrimStmt (ctx: CirCtx) itself prim args serial =
         | [ ptr; index ] -> CIndexExpr(ptr, index)
         | _ -> unreachable ())
 
-let private cgCallPrimExpr ctx itself serial prim args = cgPrimStmt ctx itself prim args serial
-
 let private cgBoxStmt ctx serial arg =
   let argTy, ctx = cgTyComplete ctx (mexprToTy arg)
   let arg, ctx = cgExpr ctx arg
