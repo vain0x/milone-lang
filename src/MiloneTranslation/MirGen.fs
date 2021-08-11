@@ -1493,7 +1493,7 @@ let private mirifyExprInf ctx itself kind args ty loc =
     let arg, ctx = mirifyExpr ctx arg
     MUnaryExpr(MMinusUnary, arg, ty, loc), ctx
 
-  | HTupleEN, [], Ty (TupleTk, []) -> MUnitExpr loc, ctx
+  | HTupleEN, [], _ -> MUnitExpr loc, ctx
   | HTupleEN, _, Ty (TupleTk, itemTys) -> mirifyExprTuple ctx args itemTys loc
   | HRecordEN, _, _ -> mirifyExprRecord ctx args ty loc
   | HRecordItemEN index, [ record ], itemTy -> mirifyExprRecordItem ctx index record itemTy loc
