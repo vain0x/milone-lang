@@ -16,14 +16,9 @@ type private OptionDef =
   { NoneSerial: VariantSerial
     SomeSerial: VariantSerial }
 
-type private ListDef =
-  { NilSerial: VariantSerial
-    ConsSerial: VariantSerial }
-
 type private GeneratedTy =
   | TupleGT
   | OptionGT of OptionDef
-  | ListGT of ListDef
 
 let private tupleField (i: int) : string = "t" + string i
 
@@ -47,6 +42,7 @@ let private monoTyCompare (l: MonoTy) (r: MonoTy) : int =
     | M.StrMt -> just 6
     | M.ObjMt -> just 7
     | M.FunMt _ -> just 8
+    | M.ListMt _ -> just 9
 
     | M.VoidMt -> just 11
     | M.NativePtrMt IsConst -> pair 12 1
@@ -58,6 +54,7 @@ let private monoTyCompare (l: MonoTy) (r: MonoTy) : int =
     | M.RecordMt tySerial -> pair 22 tySerial
 
   match l, r with
+  | M.ListMt l, M.ListMt r -> monoTyCompare l r
   | M.FunMt l, M.FunMt r -> listCompare monoTyCompare l r
   | M.NativeFunMt l, M.NativeFunMt r -> listCompare monoTyCompare l r
   | M.NativeTypeMt l, M.NativeTypeMt r -> compare l r
@@ -225,60 +222,7 @@ let private mtTy (ty: Ty, ctx: MtCtx) : M.MonoTy * MtCtx =
 
   | FunTk, _ -> M.FunMt(tyArgs), ctx
 
-  | ListTk, [ itemTy ] ->
-    match ctx.Map |> TMap.tryFind (tk, tyArgs) with
-    | Some (ty, _) -> ty, ctx
-
-    | None ->
-      // 'T list ==> Nil | Cons of obj
-      // (Payload is ('T * 'T list) ref.)
-      let name, ctx = mangle (tk, polyTyArgs, ctx)
-
-      let tySerial = ctx.Serial + 1
-      let nilSerial = VariantSerial(ctx.Serial + 2)
-      let consSerial = VariantSerial(ctx.Serial + 3)
-      let ctx = { ctx with Serial = ctx.Serial + 3 }
-      let unionTy = Ty(UnionTk tySerial, [])
-      let unionMt = M.UnionMt tySerial
-
-      let nilDef: M.VariantDef =
-        { Name = "Nil"
-          UnionTySerial = tySerial
-          IsNewtype = false
-          HasPayload = false
-          PayloadTy = M.UnitMt
-          Loc = noLoc }
-
-      let consDef: M.VariantDef =
-        { Name = "Cons"
-          UnionTySerial = tySerial
-          IsNewtype = false
-          HasPayload = true
-          PayloadTy = M.ObjMt
-          Loc = noLoc }
-
-      let unionTyDef =
-        M.UnionTyDef(name, [ nilSerial; consSerial ], noLoc)
-
-      let listDef: ListDef =
-        { NilSerial = nilSerial
-          ConsSerial = consSerial }
-
-      let ctx =
-        { ctx with
-            Serial = ctx.Serial + 3
-            TyNames = ctx.TyNames |> TMap.add unionTy name
-            Map =
-              ctx.Map
-              |> TMap.add (tk, tyArgs) (unionMt, ListGT listDef)
-              |> TMap.add (UnionTk tySerial, []) (unionMt, ListGT listDef)
-            NewTys = (tySerial, unionTyDef) :: ctx.NewTys
-            NewVariants =
-              (consSerial, consDef)
-              :: (nilSerial, nilDef) :: ctx.NewVariants }
-
-      unionMt, ctx
-
+  | ListTk, [ itemTy ] -> M.ListMt itemTy, ctx
   | ListTk, _ -> unreachable ()
 
   | NativePtrTk isMut, _ -> M.NativePtrMt isMut, ctx
@@ -292,14 +236,6 @@ let private tyToOptionDef (ty: Ty, ctx: MtCtx) =
 
   match ctx.Map |> TMap.tryFind (OptionTk, tyArgs) with
   | Some (_, OptionGT it) -> it, ctx
-  | _ -> unreachable ()
-
-let private tyToListDef (ty: Ty, ctx: MtCtx) =
-  let (Ty (_, tyArgs)) = ty
-  let tyArgs, ctx = (tyArgs, ctx) |> stMap mtTy
-
-  match ctx.Map |> TMap.tryFind (ListTk, tyArgs) with
-  | Some (_, ListGT it) -> it, ctx
   | _ -> unreachable ()
 
 let private mtPat (pat, ctx) : M.HPat * MtCtx =
@@ -330,31 +266,6 @@ let private mtPat (pat, ctx) : M.HPat * MtCtx =
     let itemPat, ctx = (itemPat, ctx) |> mtPat
     let ty, ctx = (ty, ctx) |> mtTy
     M.HNodePat(HVariantAppPN optionDef.SomeSerial, [ itemPat ], ty, loc), ctx
-
-  | HNodePat (HNilPN, _, ty, loc) ->
-    let listDef, ctx = tyToListDef (ty, ctx)
-
-    let ty, ctx = (ty, ctx) |> mtTy
-    M.HVariantPat(listDef.NilSerial, ty, loc), ctx
-
-  | HNodePat (HConsPN, [ l; r ], ty, loc) ->
-    // l :: r ==> Cons(box (l, r))
-    let listTy = ty
-    let itemTy = patToTy l
-    let listDef, ctx = tyToListDef (listTy, ctx)
-
-    let pairTy = tyTuple [ itemTy; listTy ]
-
-    let itemPat, ctx =
-      let boxed =
-        let pair =
-          HNodePat(HTuplePN, [ l; r ], pairTy, loc)
-
-        HNodePat(HBoxPN, [ pair ], pairTy, loc)
-
-      (boxed, ctx) |> mtPat
-
-    M.HNodePat(HVariantAppPN listDef.ConsSerial, [ itemPat ], M.ObjMt, loc), ctx
 
   | HNodePat (kind, argPats, ty, loc) ->
     let argPats, ctx = (argPats, ctx) |> stMap mtPat
@@ -405,12 +316,6 @@ let private mtExpr (expr, ctx) : M.HExpr * MtCtx =
 
       M.HVariantExpr(optionDef.SomeSerial, ty, loc), ctx
 
-    | HPrim.Nil ->
-      let listDef, ctx = tyToListDef (hTy, ctx)
-      M.HVariantExpr(listDef.NilSerial, ty, loc), ctx
-
-    | HPrim.Cons -> unreachable ()
-
     | _ -> regular ()
 
   | HMatchExpr (cond, arms, ty, loc) ->
@@ -436,44 +341,6 @@ let private mtExpr (expr, ctx) : M.HExpr * MtCtx =
 
     match kind, args with
     | HTupleEN, _ :: _ -> onDefault HRecordEN
-
-    | HCallProcEN, [ HPrimExpr (HPrim.Cons, _, _); l; r ] ->
-      // l :: r ==> Cons(box (l, r))
-
-      let itemTy = exprToTy l
-      let listTy = exprToTy r
-      let boxTy = tyFun listTy tyObj
-      let listDef, ctx = tyToListDef (listTy, ctx)
-      let pairTy = tyTuple [ itemTy; listTy ]
-      let consTy = tyFun tyObj listTy
-
-      let (payload, ctx) =
-        let boxed =
-          let pair =
-            HNodeExpr(HTupleEN, [ l; r ], pairTy, loc)
-
-          HNodeExpr(
-            HCallProcEN,
-            [ HPrimExpr(HPrim.Box, boxTy, loc)
-              pair ],
-            tyObj,
-            loc
-          )
-
-        (boxed, ctx) |> mtExpr
-
-      let consTy, ctx = (consTy, ctx) |> mtTy
-      let listTy, ctx = (listTy, ctx) |> mtTy
-
-      M.HNodeExpr(
-        HCallProcEN,
-        [ M.HVariantExpr(listDef.ConsSerial, consTy, loc)
-          payload ],
-        listTy,
-        loc
-      ),
-      ctx
-
     | _ -> onDefault kind
 
   | HBlockExpr (stmts, last) ->
@@ -600,6 +467,7 @@ let private bthTy (ty: MonoTy) : Ty =
   | M.CharMt -> ofTk CharTk
   | M.StrMt -> ofTk StrTk
   | M.ObjMt -> ofTk ObjTk
+  | M.ListMt itemTy -> newTyApp ListTk [ itemTy ]
   | M.FunMt tyArgs -> newTyApp FunTk tyArgs
 
   | M.VoidMt -> ofTk VoidTk

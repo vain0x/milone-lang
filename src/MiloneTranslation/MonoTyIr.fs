@@ -32,6 +32,8 @@ type MonoTy =
 
   // FIXME: change to record {fun, env}
   | FunMt of MonoTy list
+  // FIXME: change to `μL. (box<'T * L> | null)`.
+  | ListMt of MonoTy
 
   // FFI types.
   | VoidMt
