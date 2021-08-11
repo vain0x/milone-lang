@@ -46,6 +46,10 @@
 ///    The cloned function is referred as monomorphized instance of (`f`, `t`).
 ///
 /// NOTE: The algorithm seems inefficient and the finiteness is unproven.
+///
+/// ## Remarks
+///
+/// - Currently monomorphized instances don't duplicate local variable definitions.
 module rec MiloneTranslation.Monomorphizing
 
 open MiloneShared.SharedTypes
