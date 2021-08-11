@@ -32,7 +32,7 @@ module Path =
     let (Path s) = path
 
     match S.findLastIndex "/" s with
-    | Some i -> Path(S.skip i s)
+    | Some i -> Path(S.skip (i + 1) s)
     | None -> path
 
   /// Removes last extension.
