@@ -62,6 +62,8 @@ let private tyPrimOfName name tys =
     Ty(NativeFunTk, List.append itemTys [ resultTy ])
     |> Some
 
+  | "__nativeFun", [ itemTy; resultTy ] -> Ty(NativeFunTk, [ itemTy; resultTy ]) |> Some
+
   | _ -> None
 
 // -----------------------------------------------

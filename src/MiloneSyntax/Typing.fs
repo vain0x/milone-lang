@@ -489,7 +489,11 @@ let private castFunAsNativeFun funSerial (ctx: TyCtx) : Ty * TyCtx =
 
     let ty = expandSynonyms ctx ty
 
-    let _, paramTys, resultTy = tyToArgList ty
+    let _, paramTys, resultTy =
+      match ty with
+      | Ty (FunTk, [ Ty (TupleTk, []); resultTy ]) -> 0, [], resultTy
+      | _ -> tyToArgList ty
+
     tyNativeFun paramTys resultTy
 
   nativeFunTy, ctx

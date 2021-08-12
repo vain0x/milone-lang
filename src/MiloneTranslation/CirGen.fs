@@ -432,10 +432,17 @@ let private cgNativeFunTy ctx tys =
   | None -> unreachable ()
   | Some (paramTys, resultTy) ->
     let paramTys, ctx =
-      (paramTys, ctx)
-      |> stMap (fun (ty, ctx) -> cgTyComplete ctx ty)
+      match paramTys with
+      | [ Ty (TupleTk, []) ] -> [], ctx
+      | _ ->
+        (paramTys, ctx)
+        |> stMap (fun (ty, ctx) -> cgTyComplete ctx ty)
 
-    let resultTy, ctx = cgTyComplete ctx resultTy
+    let resultTy, ctx =
+      match resultTy with
+      | Ty (TupleTk, []) -> CVoidTy, ctx
+      | _ -> cgTyComplete ctx resultTy
+
     CFunPtrTy(paramTys, resultTy), ctx
 
 /// Converts a type to incomplete type.
