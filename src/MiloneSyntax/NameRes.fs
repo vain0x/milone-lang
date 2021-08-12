@@ -801,7 +801,7 @@ let private startDefineTy moduleSerialOpt tySerial vis tyArgs tyDecl loc ctx =
           variants
           |> List.map (fun (_, variantSerial, _, _) -> variantSerial)
 
-        UnionTyDef(tyName, variantSerials, loc)
+        UnionTyDef(tyName, tyArgs, variantSerials, loc)
 
       ctx
       |> addLocalTy tySymbol tyDef
@@ -810,7 +810,7 @@ let private startDefineTy moduleSerialOpt tySerial vis tyArgs tyDecl loc ctx =
     | RecordTyDecl (_, fields, loc) ->
       let tySymbol = RecordTySymbol tySerial
 
-      let tyDef = RecordTyDef(tyName, fields, loc)
+      let tyDef = RecordTyDef(tyName, tyArgs, fields, loc)
 
       ctx
       |> addLocalTy tySymbol tyDef
@@ -850,7 +850,13 @@ let private finishDefineTy tySerial tyArgs tyDecl loc ctx =
     ctx
     |> addTy (SynonymTySymbol tySerial) (SynonymTyDef(tyName, tyArgs, bodyTy, loc))
 
-  | UnionTyDef (_, variantSerials, _unionLoc) ->
+  | UnionTyDef (_, tyArgs, variantSerials, _unionLoc) ->
+    let ctx =
+      if tyArgs |> List.isEmpty |> not then
+        addLog UnimplGenericTyError loc ctx
+      else
+        ctx
+
     let go ctx variantSerial =
       let def = ctx |> findVariant variantSerial
       let payloadTy, ctx = ctx |> resolveTy def.PayloadTy loc
@@ -860,7 +866,13 @@ let private finishDefineTy tySerial tyArgs tyDecl loc ctx =
 
     variantSerials |> List.fold go ctx
 
-  | RecordTyDef (tyName, fields, loc) ->
+  | RecordTyDef (tyName, tyArgs, fields, loc) ->
+    let ctx =
+      if tyArgs |> List.isEmpty |> not then
+        addLog UnimplGenericTyError loc ctx
+      else
+        ctx
+
     let resolveField ((name, ty, loc), ctx) =
       let ty, ctx = ctx |> resolveTy ty loc
       (name, ty, loc), ctx
@@ -868,7 +880,7 @@ let private finishDefineTy tySerial tyArgs tyDecl loc ctx =
     let fields, ctx = (fields, ctx) |> stMap resolveField
 
     ctx
-    |> addTy (RecordTySymbol tySerial) (RecordTyDef(tyName, fields, loc))
+    |> addTy (RecordTySymbol tySerial) (RecordTyDef(tyName, tyArgs, fields, loc))
 
   | MetaTyDef _ -> unreachable tyDecl // Bound meta types don't happen in NameRes.
 
