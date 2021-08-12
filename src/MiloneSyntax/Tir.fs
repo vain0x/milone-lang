@@ -156,11 +156,11 @@ type TyDef =
 
   | UniversalTyDef of Ident * Loc
 
-  | SynonymTyDef of Ident * TySerial list * Ty * Loc
+  | SynonymTyDef of Ident * tyArgs: TySerial list * Ty * Loc
 
-  | UnionTyDef of Ident * VariantSerial list * Loc
+  | UnionTyDef of Ident * tyArgs: TySerial list * VariantSerial list * Loc
 
-  | RecordTyDef of Ident * fields: (Ident * Ty * Loc) list * Loc
+  | RecordTyDef of Ident * tyArgs: TySerial list * fields: (Ident * Ty * Loc) list * Loc
 
 [<Struct; NoComparison>]
 type ModuleTySerial = ModuleTySerial of Serial
@@ -437,6 +437,7 @@ type NameResLog =
   // other
   | ModulePathNotFoundError
 
+  | UnimplGenericTyError
   | UnimplOrPatBindingError
   | OtherNameResLog of msg: string
 
@@ -513,7 +514,7 @@ let tyMeta serial loc = Ty(MetaTk(serial, loc), [])
 
 let tySynonym tySerial tyArgs = Ty(SynonymTk tySerial, tyArgs)
 
-let tyUnion tySerial = Ty(UnionTk tySerial, [])
+let tyUnion tySerial tyArgs = Ty(UnionTk tySerial, tyArgs)
 
 let tyRecord tySerial = Ty(RecordTk tySerial, [])
 
@@ -537,8 +538,8 @@ let tyDefToName tyDef =
   | MetaTyDef _ -> "{bound}"
   | UniversalTyDef (name, _) -> name
   | SynonymTyDef (name, _, _, _) -> name
-  | UnionTyDef (name, _, _) -> name
-  | RecordTyDef (name, _, _) -> name
+  | UnionTyDef (name, _, _, _) -> name
+  | RecordTyDef (name, _, _, _) -> name
 
 // -----------------------------------------------
 // Variable definitions (HIR)
@@ -558,14 +559,6 @@ let variantSerialToInt (VariantSerial serial) = serial
 
 let variantSerialCompare l r =
   compare (variantSerialToInt l) (variantSerialToInt r)
-
-let variantDefToVariantTy (variantDef: VariantDef) : Ty =
-  let unionTy = tyUnion variantDef.UnionTySerial
-
-  if variantDef.HasPayload then
-    tyFun variantDef.PayloadTy unionTy
-  else
-    unionTy
 
 // -----------------------------------------------
 // Literals
@@ -1046,6 +1039,7 @@ let nameResLogToString log =
 
   | ModulePathNotFoundError -> "Module not found for this path"
 
+  | UnimplGenericTyError -> "Generic record type is unimplemented."
   | UnimplOrPatBindingError -> "OR pattern including some bindings is unimplemented."
 
   | OtherNameResLog msg -> msg

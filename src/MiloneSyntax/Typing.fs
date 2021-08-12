@@ -259,7 +259,7 @@ let private unifyVarTy varSerial tyOpt loc ctx =
 // Generalization and instantiation
 // -----------------------------------------------
 
-let private instantiateTyScheme (ctx: TyCtx) (tyScheme: TyScheme) loc =
+let private instantiateTyScheme (ctx: TyCtx) (tyScheme: TyScheme) loc : Ty * (TySerial * Ty) list * TyCtx =
   match tyScheme with
   | TyScheme ([], ty) -> ty, [], ctx
 
@@ -474,6 +474,54 @@ let private resolveTraitBounds (ctx: TyCtx) =
 // Others
 // -----------------------------------------------
 
+// payloadTy, unionTy, variantTy
+let private instantiateVariant variantSerial loc (ctx: TyCtx) : Ty * Ty * Ty * TyCtx =
+  let variantDef = ctx.Variants |> mapFind variantSerial
+  let tySerial = variantDef.UnionTySerial
+
+  let tyArgs =
+    match ctx.Tys |> mapFind tySerial with
+    | UnionTyDef (_, tyArgs, _, _) -> tyArgs
+    | _ -> []
+
+  match tyArgs with
+  | [] ->
+    let payloadTy = variantDef.PayloadTy
+    let unionTy = tyUnion tySerial []
+
+    let variantTy =
+      if variantDef.HasPayload then
+        tyFun payloadTy unionTy
+      else
+        unionTy
+
+    payloadTy, unionTy, variantTy, ctx
+
+  | _ ->
+    let payloadTy = variantDef.PayloadTy
+
+    let unionTy =
+      let tyArgs =
+        tyArgs
+        |> List.map (fun tyArg -> Ty(MetaTk(tyArg, loc), []))
+
+      tyUnion tySerial tyArgs
+
+    let variantTy, assignment, ctx =
+      let variantTy =
+        if variantDef.HasPayload then
+          tyFun payloadTy unionTy
+        else
+          unionTy
+
+      let tyScheme = TyScheme(tyArgs, variantTy)
+
+      instantiateTyScheme ctx tyScheme loc
+
+    let payloadTy = tyAssign assignment payloadTy
+    let unionTy = tyAssign assignment unionTy
+    payloadTy, unionTy, variantTy, ctx
+
 let private castFunAsNativeFun funSerial (ctx: TyCtx) : Ty * TyCtx =
   let funDef = ctx.Funs |> mapFind funSerial
 
@@ -587,16 +635,18 @@ let private inferVarPat (ctx: TyCtx) varSerial loc =
   TVarPat(PrivateVis, varSerial, ty, loc), ty, ctx
 
 let private inferVariantPat (ctx: TyCtx) variantSerial loc =
-  let variantDef = ctx.Variants |> mapFind variantSerial
-  let ty = variantDefToVariantTy variantDef
+  let _, unionTy, _, ctx =
+    instantiateVariant variantSerial loc ctx
 
   let ctx =
+    let variantDef = ctx.Variants |> mapFind variantSerial
+
     if variantDef.HasPayload then
       addError ctx "Variant with payload must be used in the form of: `Variant pattern`." loc
     else
       ctx
 
-  TVariantPat(variantSerial, ty, loc), ty, ctx
+  TVariantPat(variantSerial, unionTy, loc), unionTy, ctx
 
 let private inferSomeAppPat ctx payloadPat loc =
   let payloadPat, payloadTy, ctx = inferPat ctx payloadPat
@@ -604,15 +654,15 @@ let private inferSomeAppPat ctx payloadPat loc =
   TNodePat(TSomeAppPN, [ payloadPat ], targetTy, loc), targetTy, ctx
 
 let private inferVariantAppPat (ctx: TyCtx) variantSerial payloadPat loc =
-  let variantDef = ctx.Variants |> mapFind variantSerial
-  let targetTy = tyUnion variantDef.UnionTySerial
+  let expectedPayloadTy, unionTy, _, ctx =
+    instantiateVariant variantSerial loc ctx
 
   let payloadPat, payloadTy, ctx = inferPat ctx payloadPat
 
   let ctx =
-    unifyTy ctx loc variantDef.PayloadTy payloadTy
+    unifyTy ctx loc expectedPayloadTy payloadTy
 
-  TNodePat(TVariantAppPN variantSerial, [ payloadPat ], targetTy, loc), targetTy, ctx
+  TNodePat(TVariantAppPN variantSerial, [ payloadPat ], unionTy, loc), unionTy, ctx
 
 let private inferConsPat ctx l r loc =
   let l, lTy, ctx = inferPat ctx l
@@ -740,10 +790,8 @@ let private inferFunExpr (ctx: TyCtx) funSerial loc =
   TFunExpr(funSerial, ty, loc), ty, ctx
 
 let private inferVariantExpr (ctx: TyCtx) variantSerial loc =
-  let ty =
-    ctx.Variants
-    |> mapFind variantSerial
-    |> variantDefToVariantTy
+  let _, _, ty, ctx =
+    instantiateVariant variantSerial loc ctx
 
   TVariantExpr(variantSerial, ty, loc), ty, ctx
 
@@ -800,7 +848,7 @@ let private inferRecordExpr ctx expectOpt baseOpt fields loc =
         assert (List.isEmpty tyArgs)
 
         match ctx |> findTy tySerial with
-        | RecordTyDef (name, fieldDefs, _) -> Some(recordTy, name, fieldDefs)
+        | RecordTyDef (name, _unimplTyArgs, fieldDefs, _) -> Some(recordTy, name, fieldDefs)
         | _ -> None
 
       | _ -> None
@@ -931,7 +979,7 @@ let private inferNavExpr ctx l (r: Ident) loc =
 
     let fieldTyOpt =
       match ctx |> findTy tySerial with
-      | RecordTyDef (_, fieldDefs, _) ->
+      | RecordTyDef (_, _unimplTyArgs, fieldDefs, _) ->
         match fieldDefs
               |> List.tryFind (fun (theName, _, _) -> theName = r) with
         | Some (_, fieldTy, _) -> Some fieldTy
@@ -1429,7 +1477,7 @@ let infer (modules: TProgram, scopeCtx: ScopeCtx, errors) : TProgram * TyCtx =
              | UniversalTyDef _
              | SynonymTyDef _ -> acc
 
-             | RecordTyDef (recordName, fields, loc) ->
+             | RecordTyDef (recordName, unimplTyArgs, fields, loc) ->
                let fields =
                  fields
                  |> List.map
@@ -1438,7 +1486,7 @@ let infer (modules: TProgram, scopeCtx: ScopeCtx, errors) : TProgram * TyCtx =
                         name, ty, loc)
 
                acc
-               |> TMap.add tySerial (RecordTyDef(recordName, fields, loc))
+               |> TMap.add tySerial (RecordTyDef(recordName, unimplTyArgs, fields, loc))
 
              | _ -> acc |> TMap.add tySerial tyDef)
            (TMap.empty compare)

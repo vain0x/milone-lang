@@ -1,7 +1,1 @@
-#include "milone.h"
-
-int milone_main(void);
-
-int milone_main(void) {
-    return 0;
-}
+#error union_with_ty_args.union_with_ty_args:6:8 Type arity mismatch. The type 'MyInt' expected 0 arguments; but given 1.

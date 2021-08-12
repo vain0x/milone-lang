@@ -140,7 +140,7 @@ let private ofMirCtx (mirCtx: MirCtx) : CirCtx =
   let tyNames =
     let toKey (serial, tyDef) =
       match tyDef with
-      | UnionTyDef _ -> tyUnion serial
+      | UnionTyDef _ -> tyUnion serial []
       | RecordTyDef _ -> tyRecord serial
 
       | MetaTyDef _ -> unreachable () // Resolved in Typing.
@@ -294,7 +294,7 @@ let private genListTyDef (ctx: CirCtx) itemTy =
     selfTy, ctx
 
 let private genIncompleteUnionTyDecl (ctx: CirCtx) tySerial =
-  let unionTyRef = tyUnion tySerial
+  let unionTyRef = tyUnion tySerial []
 
   match ctx.TyEnv |> TMap.tryFind unionTyRef with
   | Some (_, ty) -> ty, ctx
@@ -312,7 +312,7 @@ let private genIncompleteUnionTyDecl (ctx: CirCtx) tySerial =
     selfTy, ctx
 
 let private genUnionTyDef (ctx: CirCtx) tySerial variants =
-  let unionTyRef = tyUnion tySerial
+  let unionTyRef = tyUnion tySerial []
 
   match ctx.TyEnv |> TMap.tryFind unionTyRef with
   | Some (CTyDefined, ty) -> ty, ctx
@@ -516,7 +516,7 @@ let private cgTyComplete (ctx: CirCtx) (ty: Ty) : CTy * CirCtx =
 
   | UnionTk serial, _ ->
     match ctx.Tys |> TMap.tryFind serial with
-    | Some (UnionTyDef (_, variants, _)) -> genUnionTyDef ctx serial variants
+    | Some (UnionTyDef (_, _, variants, _)) -> genUnionTyDef ctx serial variants
 
     | _ -> unreachable () // Union type undefined?
 

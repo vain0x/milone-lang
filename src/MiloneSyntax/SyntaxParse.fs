@@ -1200,6 +1200,34 @@ let private parseItems basePos (tokens, errors) =
 // Parse declarations
 // -----------------------------------------------
 
+let private parseTyParams identPos (tokens, errors) : Name list * _ =
+  match tokens with
+  | (LeftAngleToken, anglePos) :: tokens when posIsSameRow identPos anglePos ->
+    let rec go acc tokens =
+      match tokens with
+      | (TyVarToken ident, identPos) :: tokens ->
+        let acc = Name(ident, identPos) :: acc
+
+        match tokens with
+        | (CommaToken, _) :: tokens -> go acc tokens
+
+        | (RightAngleToken, _) :: tokens -> List.rev acc, None, tokens
+
+        | _ -> List.rev acc, Some "Expected '>'.", tokens
+
+      | _ -> List.rev acc, Some "Expected type variable.", tokens
+
+    let tyArgs, msgOpt, tokens = go [] tokens
+
+    let errors =
+      match msgOpt with
+      | Some msg -> parseNewError msg (tokens, errors)
+      | None -> errors
+
+    tyArgs, (tokens, errors)
+
+  | _ -> [], (tokens, errors)
+
 let private parseLetDecl letPos (tokens, errors) =
   let innerBasePos = letPos |> posAddX 1
 
@@ -1220,58 +1248,47 @@ let private parseTyDecl typePos (tokens, errors) =
 
   let vis, tokens = eatVis tokens
 
-  match tokens with
-  | (IdentToken tyIdent, tyIdentPos) :: (LeftAngleToken, _) :: tokens ->
-    let rec go acc tokens =
-      match tokens with
-      | (TyVarToken ident, identPos) :: tokens ->
-        let acc = Name(ident, identPos) :: acc
-
-        match tokens with
-        | (CommaToken, _) :: tokens -> go acc tokens
-
-        | (RightAngleToken, _) :: tokens -> List.rev acc, None, tokens
-
-        | _ -> List.rev acc, Some "Expected '>'.", tokens
-
-      | _ -> List.rev acc, Some "Expected type variable.", tokens
-
-    match go [] tokens with
-    | _, Some msg, tokens -> parseDeclError msg (tokens, errors)
-
-    | tyArgs, None, tokens ->
-      let ty, tokens, errors =
-        match tokens with
-        | (EqualToken, _) :: tokens -> parseTy basePos (tokens, errors)
-        | _ -> parseTyError "Expected '='." (tokens, errors)
-
-      Some(ATySynonymDecl(vis, Name(tyIdent, tyIdentPos), tyArgs, ty, typePos)), tokens, errors
-
-  | (IdentToken tyIdent, tyIdentPos) :: tokens ->
-    let tyName = Name(tyIdent, tyIdentPos)
-
+  let tyIdentOpt, (tokens, errors) =
     match tokens with
-    | (EqualToken, _) :: tokens ->
-
-      let tyDecl, tokens, errors =
-        parseTyDeclBody basePos (tokens, errors)
-
-      let decl =
-
-        match tyDecl with
-        | ATySynonymDeclBody ty -> ATySynonymDecl(vis, tyName, [], ty, typePos)
-        | AUnionTyDeclBody variants -> AUnionTyDecl(vis, tyName, variants, typePos)
-        | ARecordTyDeclBody fields -> ARecordTyDecl(vis, tyName, fields, typePos)
-
-      Some decl, tokens, errors
-
+    | (IdentToken tyIdent, tyIdentPos) :: tokens -> Some(tyIdent, tyIdentPos), (tokens, errors)
     | _ ->
-      let ty, tokens, errors =
-        parseTyError "Expected '='" (tokens, errors)
+      let errors =
+        parseNewError "Expected identifier" (tokens, errors)
 
-      Some(ATySynonymDecl(vis, tyName, [], ty, typePos)), tokens, errors
+      None, (tokens, errors)
 
-  | _ -> parseDeclError "Expected identifier" (tokens, errors)
+  let opt, tokens, errors =
+    match tyIdentOpt with
+    | Some (tyIdent, tyIdentPos) ->
+      let tyName = Name(tyIdent, tyIdentPos)
+
+      let tyArgs, (tokens, errors) =
+        parseTyParams tyIdentPos (tokens, errors)
+
+      Some(tyName, tyArgs), tokens, errors
+
+    | None -> None, tokens, errors
+
+  match opt, tokens with
+  | Some (tyName, tyArgs), (EqualToken, _) :: tokens ->
+    let tyDecl, tokens, errors =
+      parseTyDeclBody basePos (tokens, errors)
+
+    let decl =
+      match tyDecl with
+      | ATySynonymDeclBody ty -> ATySynonymDecl(vis, tyName, tyArgs, ty, typePos)
+      | AUnionTyDeclBody variants -> AUnionTyDecl(vis, tyName, tyArgs, variants, typePos)
+      | ARecordTyDeclBody fields -> ARecordTyDecl(vis, tyName, tyArgs, fields, typePos)
+
+    Some decl, tokens, errors
+
+  | Some (tyName, tyArgs), tokens ->
+    let ty, tokens, errors =
+      parseTyError "Expected '='" (tokens, errors)
+
+    Some(ATySynonymDecl(vis, tyName, tyArgs, ty, typePos)), tokens, errors
+
+  | _ -> None, tokens, errors
 
 let private parsePath (tokens, errors) =
   let rec go acc (tokens, errors) =

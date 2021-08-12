@@ -259,7 +259,7 @@ let private lowerTk (tk: Tir.Tk) : Hir.Tk =
   | Tir.RecordTk serial -> Hir.RecordTk serial
 
   | Tir.ErrorTk _
-  | Tir.SynonymTk _ -> unreachable () // Resolved in Typing.
+  | Tir.SynonymTk _ -> unreachable tk // Resolved in Typing.
 
   | Tir.UnresolvedTk _
   | Tir.UnresolvedVarTk _ -> unreachable () // Resolved in NameRes.
@@ -301,8 +301,9 @@ let private lowerVariantDef (def: Tir.VariantDef) : Hir.VariantDef =
 
 let private lowerTyDef (def: Tir.TyDef) : Hir.TyDef =
   match def with
-  | Tir.UnionTyDef (ident, variants, loc) -> Hir.UnionTyDef(ident, List.map lowerVariantSerial variants, loc)
-  | Tir.RecordTyDef (ident, fields, loc) ->
+  | Tir.UnionTyDef (ident, tyArgs, variants, loc) ->
+    Hir.UnionTyDef(ident, tyArgs, List.map lowerVariantSerial variants, loc)
+  | Tir.RecordTyDef (ident, unimplTyArgs, fields, loc) ->
     Hir.RecordTyDef(ident, List.map (fun (ident, ty, loc) -> ident, lowerTy ty, loc) fields, loc)
 
   | Tir.MetaTyDef _

@@ -91,7 +91,7 @@ type TyDef =
   /// Bound type variable.
   | MetaTyDef of Ty
 
-  | UnionTyDef of Ident * VariantSerial list * Loc
+  | UnionTyDef of Ident * tyArgs: TySerial list * VariantSerial list * Loc
 
   | RecordTyDef of Ident * fields: (Ident * Ty * Loc) list * Loc
 
@@ -372,7 +372,7 @@ let tyUnit = tyTuple []
 
 let tyMeta serial loc = Ty(MetaTk(serial, loc), [])
 
-let tyUnion tySerial = Ty(UnionTk tySerial, [])
+let tyUnion tySerial tyArgs = Ty(UnionTk tySerial, tyArgs)
 
 let tyRecord tySerial = Ty(RecordTk tySerial, [])
 
@@ -383,7 +383,7 @@ let tyRecord tySerial = Ty(RecordTk tySerial, [])
 let tyDefToName tyDef =
   match tyDef with
   | MetaTyDef _ -> "{bound}"
-  | UnionTyDef (name, _, _) -> name
+  | UnionTyDef (name, _, _, _) -> name
   | RecordTyDef (name, _, _) -> name
 
 // -----------------------------------------------
@@ -404,14 +404,6 @@ let variantSerialToInt (VariantSerial serial) = serial
 
 let variantSerialCompare l r =
   compare (variantSerialToInt l) (variantSerialToInt r)
-
-let variantDefToVariantTy (variantDef: VariantDef) : Ty =
-  let unionTy = tyUnion variantDef.UnionTySerial
-
-  if variantDef.HasPayload then
-    tyFun variantDef.PayloadTy unionTy
-  else
-    unionTy
 
 // -----------------------------------------------
 // Literals

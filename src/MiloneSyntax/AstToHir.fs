@@ -516,6 +516,10 @@ let private athExpr (docId: DocId) (expr: AExpr, nameCtx: NameCtx) : TExpr * Nam
 
 let private prepend stmt stmts = stmt :: stmts
 
+let private athTyArgs (tyArgs, nameCtx) =
+  (tyArgs, nameCtx)
+  |> stMap (fun (name, nameCtx) -> nameCtx |> nameCtxAdd (greek name))
+
 let private athDecl docId (decl, nameCtx) =
   match decl with
   | AExprDecl expr ->
@@ -542,15 +546,12 @@ let private athDecl docId (decl, nameCtx) =
   | ATySynonymDecl (vis, name, tyArgs, ty, pos) ->
     let serial, nameCtx = nameCtx |> nameCtxAdd name
     let ty, nameCtx = (ty, nameCtx) |> athTy docId
-
-    let tyArgs, nameCtx =
-      (tyArgs, nameCtx)
-      |> stMap (fun (name, nameCtx) -> nameCtx |> nameCtxAdd (greek name))
+    let tyArgs, nameCtx = (tyArgs, nameCtx) |> athTyArgs
 
     let loc = toLoc docId pos
     prepend (TTyDeclExpr(serial, vis, tyArgs, TySynonymDecl(ty, loc), loc)), nameCtx
 
-  | AUnionTyDecl (vis, name, variants, pos) ->
+  | AUnionTyDecl (vis, name, tyArgs, variants, pos) ->
     let athVariant (AVariant (name, payloadTy, _variantLoc), nameCtx) =
       let serial, nameCtx = nameCtx |> nameCtxAdd name
 
@@ -564,11 +565,12 @@ let private athDecl docId (decl, nameCtx) =
       (nameToIdent name, VariantSerial serial, hasPayload, payloadTy), nameCtx
 
     let unionSerial, nameCtx = nameCtx |> nameCtxAdd name
+    let tyArgs, nameCtx = (tyArgs, nameCtx) |> athTyArgs
     let variants, nameCtx = (variants, nameCtx) |> stMap athVariant
     let loc = toLoc docId pos
-    prepend (TTyDeclExpr(unionSerial, vis, [], UnionTyDecl(nameToIdent name, variants, loc), loc)), nameCtx
+    prepend (TTyDeclExpr(unionSerial, vis, tyArgs, UnionTyDecl(nameToIdent name, variants, loc), loc)), nameCtx
 
-  | ARecordTyDecl (vis, recordName, fieldDecls, pos) ->
+  | ARecordTyDecl (vis, recordName, tyArgs, fieldDecls, pos) ->
     let athFieldDecl ((name, ty, fieldPos), nameCtx) =
       let ty, nameCtx = (ty, nameCtx) |> athTy docId
       let fieldLoc = toLoc docId fieldPos
@@ -576,12 +578,13 @@ let private athDecl docId (decl, nameCtx) =
       (nameToIdent name, ty, fieldLoc), nameCtx
 
     let tySerial, nameCtx = nameCtx |> nameCtxAdd recordName
+    let tyArgs, nameCtx = (tyArgs, nameCtx) |> athTyArgs
 
     let fields, nameCtx =
       (fieldDecls, nameCtx) |> stMap athFieldDecl
 
     let loc = toLoc docId pos
-    prepend (TTyDeclExpr(tySerial, vis, [], RecordTyDecl(nameToIdent recordName, fields, loc), loc)), nameCtx
+    prepend (TTyDeclExpr(tySerial, vis, tyArgs, RecordTyDecl(nameToIdent recordName, fields, loc), loc)), nameCtx
 
   | AOpenDecl (path, pos) ->
     let loc = toLoc docId pos

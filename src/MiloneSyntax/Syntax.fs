@@ -391,10 +391,10 @@ type ADecl =
   | ATySynonymDecl of Vis * Name * tyArgs: Name list * ATy * Pos
 
   /// Discriminated union type declaration, e.g. `type Result = | Ok | Err of int`.
-  | AUnionTyDecl of Vis * Name * AVariant list * Pos
+  | AUnionTyDecl of Vis * Name * tyArgs: Name list * AVariant list * Pos
 
   /// Record type declaration, e.g. `type Pos = { X: int; Y: int }`.
-  | ARecordTyDecl of Vis * Name * AFieldDecl list * Pos
+  | ARecordTyDecl of Vis * Name * tyArgs: Name list * AFieldDecl list * Pos
 
   /// Open statement, e.g. `open System.IO`.
   | AOpenDecl of Name list * Pos
