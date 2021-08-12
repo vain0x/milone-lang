@@ -4,7 +4,7 @@ struct IntIntTuple2_;
 
 bool pat_when_Program_equal(struct IntIntTuple2_ t_);
 
-int milone_main();
+int milone_main(void);
 
 struct IntIntTuple2_ {
     int t0;
@@ -28,7 +28,7 @@ end_match_1:;
     return match_;
 }
 
-int milone_main() {
+int milone_main(void) {
     struct IntIntTuple2_ IntIntTuple2_ = (struct IntIntTuple2_){.t0 = 1, .t1 = 1};
     bool call_ = pat_when_Program_equal(IntIntTuple2_);
     milone_assert(call_, 10, 2);

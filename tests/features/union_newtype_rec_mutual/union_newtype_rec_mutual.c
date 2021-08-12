@@ -10,7 +10,7 @@ struct OddOption_;
 
 struct StringOddOptionTuple2_;
 
-int milone_main();
+int milone_main(void);
 
 enum ObjectOption_Discriminant {
     None_,
@@ -57,7 +57,7 @@ struct StringOddOptionTuple2_ {
     struct OddOption_ t1;
 };
 
-int milone_main() {
+int milone_main(void) {
     int n1_;
     struct String s2_;
     int n3_;

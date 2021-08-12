@@ -6,7 +6,7 @@ struct ExprExprTuple2_;
 
 int eval_(struct Expr_ expr_);
 
-int milone_main();
+int milone_main(void);
 
 enum Expr_Discriminant {
     Int_,
@@ -49,7 +49,7 @@ end_match_1:;
     return match_;
 }
 
-int milone_main() {
+int milone_main(void) {
     struct Expr_ variant_ = (struct Expr_){.discriminant = Int_, .Int_ = 11};
     struct Expr_ variant_1 = (struct Expr_){.discriminant = Int_, .Int_ = 22};
     struct Expr_ variant_2 = (struct Expr_){.discriminant = Int_, .Int_ = 9};

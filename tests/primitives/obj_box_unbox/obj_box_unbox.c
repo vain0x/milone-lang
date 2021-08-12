@@ -4,16 +4,16 @@ struct IntList;
 
 struct IntList;
 
-char printIntOrStr_(bool isInt_, void const* value_);
+void printIntOrStr_(bool isInt_, void const* value_);
 
-int milone_main();
+int milone_main(void);
 
 struct IntList {
     int head;
     struct IntList const* tail;
 };
 
-char printIntOrStr_(bool isInt_, void const* value_) {
+void printIntOrStr_(bool isInt_, void const* value_) {
     char if_;
     if (isInt_) {
         goto then_2;
@@ -29,16 +29,16 @@ else_3:;
     if_ = 0;
     goto if_next_1;
 if_next_1:;
-    return 0;
+    return;
 }
 
-int milone_main() {
+int milone_main(void) {
     int b_;
     int a_;
-    char call_ = printIntOrStr_(true, ((void const*)((intptr_t)2)));
+    printIntOrStr_(true, ((void const*)((intptr_t)2)));
     void const* box_ = milone_mem_alloc(1, sizeof(struct String));
     (*(((struct String*)box_))) = (struct String){.str = "Fizz", .len = 4};
-    char call_1 = printIntOrStr_(false, box_);
+    printIntOrStr_(false, box_);
     void const* n_ = ((void const*)((intptr_t)42));
     milone_assert((((int)((intptr_t)n_)) == 42), 19, 2);
     struct IntList const* list_1 = milone_mem_alloc(1, sizeof(struct IntList));

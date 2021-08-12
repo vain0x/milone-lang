@@ -8,7 +8,7 @@ struct IntStringTuple2_;
 
 struct ApiResponse_;
 
-int milone_main();
+int milone_main(void);
 
 enum Status_Discriminant {
     Ok_1,
@@ -53,7 +53,7 @@ struct ApiResponse_ {
     };
 };
 
-int milone_main() {
+int milone_main(void) {
     struct String statusText_;
     int statusCode_;
     int x_;

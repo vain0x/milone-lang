@@ -18,7 +18,7 @@ char ty_var_Program_useStringIndexWithoutAscription(struct String x_);
 
 struct StringStringListTuple2_ useTyVarInBody_(struct String x_1);
 
-int milone_main();
+int milone_main(void);
 
 struct IntIntTuple2_ {
     int t0;
@@ -60,7 +60,7 @@ struct StringStringListTuple2_ useTyVarInBody_(struct String x_1) {
     return StringStringListTuple2_;
 }
 
-int milone_main() {
+int milone_main(void) {
     struct String s_;
     struct IntIntTuple2_ IntIntTuple2_ = (struct IntIntTuple2_){.t0 = 0, .t1 = 0};
     int call_1 = pair_1(IntIntTuple2_);

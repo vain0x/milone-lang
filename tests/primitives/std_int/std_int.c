@@ -2,15 +2,15 @@
 
 struct IntOption_;
 
-struct IntOption_ MiloneStd_StdInt_tryParse(struct String);
+struct IntOption_ MiloneStd_StdInt_tryParse(struct String );
 
 int parseOk_(struct String s_2);
 
 bool parseError_(struct String s_3);
 
-char std_int_Program_tryParseTest(char arg_1);
+void std_int_Program_tryParseTest(void);
 
-int milone_main();
+int milone_main(void);
 
 enum IntOption_Discriminant {
     None_,
@@ -67,7 +67,7 @@ end_match_13:;
     return match_1;
 }
 
-char std_int_Program_tryParseTest(char arg_1) {
+void std_int_Program_tryParseTest(void) {
     int call_5 = parseOk_((struct String){.str = "0", .len = 1});
     milone_assert((call_5 == 0), 21, 2);
     int call_6 = parseOk_((struct String){.str = "000", .len = 3});
@@ -109,12 +109,12 @@ char std_int_Program_tryParseTest(char arg_1) {
     milone_assert(call_23, 40, 2);
     bool call_24 = parseError_((struct String){.str = "1e9", .len = 3});
     milone_assert(call_24, 41, 2);
-    return 0;
+    return;
 }
 
-int milone_main() {
+int milone_main(void) {
     MiloneStd_StdInt_MinValue = (int)0x80000000;
     MiloneStd_StdInt_MaxValue = 0x7fffffff;
-    char call_25 = std_int_Program_tryParseTest(0);
+    std_int_Program_tryParseTest();
     return 0;
 }

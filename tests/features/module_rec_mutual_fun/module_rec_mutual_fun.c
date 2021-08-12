@@ -4,7 +4,7 @@ bool module_rec_mutual_fun_Program_even(int n_);
 
 bool module_rec_mutual_fun_Program_odd(int n_1);
 
-int milone_main();
+int milone_main(void);
 
 bool module_rec_mutual_fun_Program_even(int n_) {
     bool if_;
@@ -42,7 +42,7 @@ if_next_4:;
     return if_1;
 }
 
-int milone_main() {
+int milone_main(void) {
     bool call_2 = module_rec_mutual_fun_Program_odd(1);
     milone_assert(call_2, 9, 2);
     bool call_3 = module_rec_mutual_fun_Program_even(2);

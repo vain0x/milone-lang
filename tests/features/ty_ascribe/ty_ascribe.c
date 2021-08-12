@@ -12,7 +12,7 @@ int f_(int x_);
 
 int g_(int x_1);
 
-int milone_main();
+int milone_main(void);
 
 struct IntList {
     int head;
@@ -32,7 +32,7 @@ int g_(int x_1) {
     return x_1;
 }
 
-int milone_main() {
+int milone_main(void) {
     int call_ = f_(1);
     int call_1 = g_(1);
     int zero_ = (call_ - call_1);

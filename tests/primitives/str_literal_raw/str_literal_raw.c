@@ -1,12 +1,12 @@
 #include "milone.h"
 
-char str_literal_raw_Program_testEol(char arg_);
+void str_literal_raw_Program_testEol(void);
 
-char str_literal_raw_Program_testNoEscape(char arg_1);
+void str_literal_raw_Program_testNoEscape(void);
 
-int milone_main();
+int milone_main(void);
 
-char str_literal_raw_Program_testEol(char arg_) {
+void str_literal_raw_Program_testEol(void) {
     struct String eol_ = (struct String){.str = "\n", .len = 1};
     bool if_;
     if ((str_compare(eol_, (struct String){.str = "\n", .len = 1}) == 0)) {
@@ -22,16 +22,16 @@ else_3:;
     goto if_next_1;
 if_next_1:;
     milone_assert(if_, 7, 2);
-    return 0;
+    return;
 }
 
-char str_literal_raw_Program_testNoEscape(char arg_1) {
+void str_literal_raw_Program_testNoEscape(void) {
     milone_assert((str_compare((struct String){.str = " \\\"\" ", .len = 5}, (struct String){.str = " \\\"\" ", .len = 5}) == 0), 9, 22);
-    return 0;
+    return;
 }
 
-int milone_main() {
-    char call_ = str_literal_raw_Program_testEol(0);
-    char call_1 = str_literal_raw_Program_testNoEscape(0);
+int milone_main(void) {
+    str_literal_raw_Program_testEol();
+    str_literal_raw_Program_testNoEscape();
     return 0;
 }

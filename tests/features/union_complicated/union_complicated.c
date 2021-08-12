@@ -36,7 +36,7 @@ struct FirstListSecondListTuple2_ fun_(void const* env_, struct FirstSecondTuple
 
 struct FirstListSecondListTuple2_ fun_1(void const* env_1, struct FirstSecondTuple2_List const* arg_1);
 
-int milone_main();
+int milone_main(void);
 
 struct FirstListSecondListTuple2_ {
     struct First_List const* t0;
@@ -130,7 +130,7 @@ struct FirstListSecondListTuple2_ fun_1(void const* env_1, struct FirstSecondTup
     return call_1;
 }
 
-int milone_main() {
+int milone_main(void) {
     int z_;
     int y_;
     int x_;

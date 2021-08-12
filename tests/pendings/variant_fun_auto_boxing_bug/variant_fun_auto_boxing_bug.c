@@ -8,7 +8,7 @@ struct BoxedVariantOption_BoxedVariant_Fun1;
 
 struct BoxedVariant_ variant_fun_auto_boxing_bug_Program_feedNil(struct BoxedVariantOption_BoxedVariant_Fun1 f_);
 
-int milone_main();
+int milone_main(void);
 
 enum BoxedVariant_Discriminant {
     A_,
@@ -43,6 +43,6 @@ struct BoxedVariant_ variant_fun_auto_boxing_bug_Program_feedNil(struct BoxedVar
     return app_;
 }
 
-int milone_main() {
+int milone_main(void) {
     return 0;
 }

@@ -2,14 +2,14 @@
 
 struct IntIntTuple2_;
 
-int milone_main();
+int milone_main(void);
 
 struct IntIntTuple2_ {
     int t0;
     int t1;
 };
 
-int milone_main() {
+int milone_main(void) {
     int y_;
     int match_;
     struct IntIntTuple2_ IntIntTuple2_ = (struct IntIntTuple2_){.t0 = (2 * 2), .t1 = (3 * 3)};

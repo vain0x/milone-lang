@@ -20,9 +20,9 @@ struct IntOptionOptionOption_ fun_1(int x_22);
 
 struct IntOptionOptionOption_ fun_(void const* env_, int arg_);
 
-struct IntOptionOptionOption_List const* map_(struct IntIntOptionOptionOption_Fun1, struct IntList const*);
+struct IntOptionOptionOption_List const* map_(struct IntIntOptionOptionOption_Fun1 , struct IntList const* );
 
-int milone_main();
+int milone_main(void);
 
 enum IntOption_Discriminant {
     None_,
@@ -87,7 +87,7 @@ struct IntOptionOptionOption_ fun_(void const* env_, int arg_) {
     return call_3;
 }
 
-int milone_main() {
+int milone_main(void) {
     int x7_;
     int x6_;
     int x5_;

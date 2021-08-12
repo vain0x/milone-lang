@@ -1,8 +1,8 @@
 #include "milone.h"
 
-int milone_main();
+int milone_main(void);
 
-int milone_main() {
+int milone_main(void) {
     void* mutNull_ = ((void*)((uintptr_t)0));
     void const* constNull_ = ((void const*)mutNull_);
     int const* constIntPtr_ = ((int const*)constNull_);

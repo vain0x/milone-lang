@@ -2,7 +2,7 @@
 
 struct IntIntTuple2_;
 
-int milone_main();
+int milone_main(void);
 
 struct IntIntTuple2_ {
     int t0;
@@ -17,7 +17,7 @@ extern int pat_with_vis_Program_x;
 
 extern int y_;
 
-int milone_main() {
+int milone_main(void) {
     struct IntIntTuple2_ IntIntTuple2_ = (struct IntIntTuple2_){.t0 = 2, .t1 = 3};
     pat_with_vis_Program_x = IntIntTuple2_.t0;
     y_ = IntIntTuple2_.t1;

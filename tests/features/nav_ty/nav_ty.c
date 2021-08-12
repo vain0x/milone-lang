@@ -8,7 +8,7 @@ struct Node_ leaf_(int n_);
 
 struct Node_ node_(struct Node_ l_, struct Node_ r_);
 
-int milone_main();
+int milone_main(void);
 
 enum Node_Discriminant {
     Leaf_,
@@ -41,7 +41,7 @@ struct Node_ node_(struct Node_ l_, struct Node_ r_) {
     return variant_1;
 }
 
-int milone_main() {
+int milone_main(void) {
     int x_;
     struct Node_ call_ = leaf_(2);
     struct Node_ call_1 = leaf_(3);

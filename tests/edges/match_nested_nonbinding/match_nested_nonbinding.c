@@ -4,7 +4,7 @@ struct MyBool_;
 
 struct MyOption_;
 
-int milone_main();
+int milone_main(void);
 
 enum MyBool_Discriminant {
     MyFalse_,
@@ -27,7 +27,7 @@ struct MyOption_ {
     };
 };
 
-int milone_main() {
+int milone_main(void) {
     char match_;
     struct MyOption_ variant_ = (struct MyOption_){.discriminant = MySome_, .MySome_ = (struct MyBool_){.discriminant = MyTrue_}};
     if ((variant_.discriminant != MySome_)) goto next_2;

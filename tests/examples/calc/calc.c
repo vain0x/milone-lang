@@ -62,7 +62,7 @@ struct Token_List const* go_6(struct String source_4, struct TokenListIntTuple2_
 
 struct Token_List const* calc_Program_tokenize(struct String source_4);
 
-char calc_Program_tokenListPrint(struct Token_List const* tokens_);
+void calc_Program_tokenListPrint(struct Token_List const* tokens_);
 
 struct IntTokenListTuple2_ evalTerm_(struct Token_List const* tokens_4);
 
@@ -78,7 +78,7 @@ struct IntTokenListTuple2_ calc_Program_evalExpr(struct Token_List const* tokens
 
 int calc_Program_eval(struct String str_);
 
-int milone_main();
+int milone_main(void);
 
 struct StringList {
     struct String head;
@@ -506,27 +506,27 @@ then_56:;
 else_57:;
     struct Token_List const* match_3;
     if ((source_4.str[i_7] != ' ')) goto next_59;
-    struct String arg_21 = source_4;
     struct TokenListIntTuple2_ TokenListIntTuple2_3 = (struct TokenListIntTuple2_){.t0 = acc_5, .t1 = i_7};
     struct TokenListIntTuple2_ call_14 = readSpace_(source_4, TokenListIntTuple2_3);
+    struct String arg_21 = source_4;
     struct TokenListIntTuple2_ arg_22 = call_14;
     source_4 = arg_21;
     arg_20 = arg_22;
     goto tailrec_54;
 next_59:;
     if ((source_4.str[i_7] != '\r')) goto next_60;
-    struct String arg_23 = source_4;
     struct TokenListIntTuple2_ TokenListIntTuple2_4 = (struct TokenListIntTuple2_){.t0 = acc_5, .t1 = i_7};
     struct TokenListIntTuple2_ call_15 = readEol_(source_4, TokenListIntTuple2_4);
+    struct String arg_23 = source_4;
     struct TokenListIntTuple2_ arg_24 = call_15;
     source_4 = arg_23;
     arg_20 = arg_24;
     goto tailrec_54;
 next_60:;
     if ((source_4.str[i_7] != '\n')) goto next_61;
-    struct String arg_25 = source_4;
     struct TokenListIntTuple2_ TokenListIntTuple2_5 = (struct TokenListIntTuple2_){.t0 = acc_5, .t1 = i_7};
     struct TokenListIntTuple2_ call_16 = readEol_(source_4, TokenListIntTuple2_5);
+    struct String arg_25 = source_4;
     struct TokenListIntTuple2_ arg_26 = call_16;
     source_4 = arg_25;
     arg_20 = arg_26;
@@ -541,19 +541,19 @@ next_61:;
         goto else_65;
     }
 then_64:;
-    struct String arg_27 = source_4;
     struct TokenListIntTuple2_ TokenListIntTuple2_6 = (struct TokenListIntTuple2_){.t0 = acc_5, .t1 = i_7};
     struct TokenListIntTuple2_ call_18 = readInt_(source_4, TokenListIntTuple2_6);
+    struct String arg_27 = source_4;
     struct TokenListIntTuple2_ arg_28 = call_18;
     source_4 = arg_27;
     arg_20 = arg_28;
     goto tailrec_54;
 else_65:;
-    struct String arg_29 = source_4;
     struct Token_ variant_1 = (struct Token_){.discriminant = TkOp_, .TkOp_ = c_2};
     struct Token_List const* list_3 = milone_mem_alloc(1, sizeof(struct Token_List));
     (*(((struct Token_List*)list_3))) = (struct Token_List){.head = variant_1, .tail = acc_5};
     struct TokenListIntTuple2_ TokenListIntTuple2_7 = (struct TokenListIntTuple2_){.t0 = list_3, .t1 = (i_7 + 1)};
+    struct String arg_29 = source_4;
     struct TokenListIntTuple2_ arg_30 = TokenListIntTuple2_7;
     source_4 = arg_29;
     arg_20 = arg_30;
@@ -575,7 +575,7 @@ struct Token_List const* calc_Program_tokenize(struct String source_4) {
     return call_19;
 }
 
-char calc_Program_tokenListPrint(struct Token_List const* tokens_) {
+void calc_Program_tokenListPrint(struct Token_List const* tokens_) {
     struct Token_List const* tokens_2;
     char c_3;
     struct Token_List const* tokens_1;
@@ -606,7 +606,7 @@ next_69:;
 next_70:;
     exit(1);
 end_match_67:;
-    return 0;
+    return;
 }
 
 struct IntTokenListTuple2_ evalTerm_(struct Token_List const* tokens_4) {
@@ -751,45 +751,45 @@ int calc_Program_eval(struct String str_) {
 next_88:;
     tokens_20 = call_30.t1;
     printf("ERROR: couldn\'t parse tokens:\n");
-    char call_31 = calc_Program_tokenListPrint(tokens_20);
+    calc_Program_tokenListPrint(tokens_20);
     exit(1);
 next_89:;
 end_match_87:;
     return match_9;
 }
 
-int milone_main() {
-    bool call_32 = calc_Program_strContains('+', (struct String){.str = "+-*/", .len = 4});
-    milone_assert(call_32, 168, 2);
-    bool call_33 = calc_Program_strStartsWith((struct String){.str = "hell", .len = 4}, (struct String){.str = "hello", .len = 5});
-    milone_assert(call_33, 169, 2);
-    bool call_34 = calc_Program_strStartsWith((struct String){.str = "heaven", .len = 6}, (struct String){.str = "hello", .len = 5});
-    milone_assert((!(call_34)), 170, 2);
+int milone_main(void) {
+    bool call_31 = calc_Program_strContains('+', (struct String){.str = "+-*/", .len = 4});
+    milone_assert(call_31, 168, 2);
+    bool call_32 = calc_Program_strStartsWith((struct String){.str = "hell", .len = 4}, (struct String){.str = "hello", .len = 5});
+    milone_assert(call_32, 169, 2);
+    bool call_33 = calc_Program_strStartsWith((struct String){.str = "heaven", .len = 6}, (struct String){.str = "hello", .len = 5});
+    milone_assert((!(call_33)), 170, 2);
     struct StringList const* list_6 = milone_mem_alloc(1, sizeof(struct StringList));
     (*(((struct StringList*)list_6))) = (struct StringList){.head = (struct String){.str = "b", .len = 1}, .tail = NULL};
     struct StringList const* list_5 = milone_mem_alloc(1, sizeof(struct StringList));
     (*(((struct StringList*)list_5))) = (struct StringList){.head = (struct String){.str = ",", .len = 1}, .tail = list_6};
     struct StringList const* list_4 = milone_mem_alloc(1, sizeof(struct StringList));
     (*(((struct StringList*)list_4))) = (struct StringList){.head = (struct String){.str = "a", .len = 1}, .tail = list_5};
-    struct String call_35 = calc_Program_strConcat(list_4);
-    milone_assert((str_compare(call_35, (struct String){.str = "a,b", .len = 3}) == 0), 171, 2);
+    struct String call_34 = calc_Program_strConcat(list_4);
+    milone_assert((str_compare(call_34, (struct String){.str = "a,b", .len = 3}) == 0), 171, 2);
     struct StringList const* list_9 = milone_mem_alloc(1, sizeof(struct StringList));
     (*(((struct StringList*)list_9))) = (struct StringList){.head = (struct String){.str = "b", .len = 1}, .tail = NULL};
     struct StringList const* list_8 = milone_mem_alloc(1, sizeof(struct StringList));
     (*(((struct StringList*)list_8))) = (struct StringList){.head = (struct String){.str = ",", .len = 1}, .tail = list_9};
     struct StringList const* list_7 = milone_mem_alloc(1, sizeof(struct StringList));
     (*(((struct StringList*)list_7))) = (struct StringList){.head = (struct String){.str = "a", .len = 1}, .tail = list_8};
-    struct StringList const* call_36 = calc_Program_strListRev(list_7);
-    struct String call_37 = calc_Program_strConcat(call_36);
-    milone_assert((str_compare(call_37, (struct String){.str = "b,a", .len = 3}) == 0), 172, 2);
+    struct StringList const* call_35 = calc_Program_strListRev(list_7);
+    struct String call_36 = calc_Program_strConcat(call_35);
+    milone_assert((str_compare(call_36, (struct String){.str = "b,a", .len = 3}) == 0), 172, 2);
     struct String source_5 = (struct String){.str = "2 + 3\r\n    - 4", .len = 14};
-    struct Token_List const* call_38 = calc_Program_tokenize(source_5);
-    char call_39 = calc_Program_tokenListPrint(call_38);
-    int call_40 = calc_Program_eval(source_5);
-    milone_assert((call_40 == ((2 + 3) - 4)), 177, 2);
-    int call_41 = calc_Program_eval((struct String){.str = "2 - 3 * 4 + 5", .len = 13});
-    milone_assert((call_41 == ((2 - (3 * 4)) + 5)), 178, 2);
-    int call_42 = calc_Program_eval((struct String){.str = "(2 - 3) * 4 + (1 + (2 + 2))", .len = 27});
-    milone_assert((call_42 == (((2 - 3) * 4) + (1 + (2 + 2)))), 179, 2);
+    struct Token_List const* call_37 = calc_Program_tokenize(source_5);
+    calc_Program_tokenListPrint(call_37);
+    int call_38 = calc_Program_eval(source_5);
+    milone_assert((call_38 == ((2 + 3) - 4)), 177, 2);
+    int call_39 = calc_Program_eval((struct String){.str = "2 - 3 * 4 + 5", .len = 13});
+    milone_assert((call_39 == ((2 - (3 * 4)) + 5)), 178, 2);
+    int call_40 = calc_Program_eval((struct String){.str = "(2 - 3) * 4 + (1 + (2 + 2))", .len = 27});
+    milone_assert((call_40 == (((2 - 3) * 4) + (1 + (2 + 2)))), 179, 2);
     return 0;
 }

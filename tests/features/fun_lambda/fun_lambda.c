@@ -10,7 +10,7 @@ int fun_(int x_1);
 
 int fun_3(void const* env_, int arg_);
 
-char fun_lambda_Program_layoutTest(char arg_4);
+void fun_lambda_Program_layoutTest(void);
 
 int twice_(struct IntIntFun1 f_1, int x_2);
 
@@ -22,7 +22,7 @@ int fun_2(int x_5, int y_1);
 
 int fun_5(void const* env_2, int arg_2, int arg_3);
 
-int milone_main();
+int milone_main(void);
 
 struct IntIntFun1 {
     int(*fun)(void const*, int);
@@ -48,12 +48,12 @@ int fun_3(void const* env_, int arg_) {
     return call_;
 }
 
-char fun_lambda_Program_layoutTest(char arg_4) {
+void fun_lambda_Program_layoutTest(void) {
     struct IntIntFun1 fun_6 = (struct IntIntFun1){.fun = fun_3, .env = NULL};
     int call_1 = apply_(fun_6, 2);
     int a_ = call_1;
     milone_assert((a_ == 5), 14, 2);
-    return 0;
+    return;
 }
 
 int twice_(struct IntIntFun1 f_1, int x_2) {
@@ -81,7 +81,7 @@ int fun_5(void const* env_2, int arg_2, int arg_3) {
     return call_3;
 }
 
-int milone_main() {
+int milone_main(void) {
     struct IntIntFun1 fun_7 = (struct IntIntFun1){.fun = fun_4, .env = NULL};
     int call_4 = twice_(fun_7, 40);
     int x_3 = call_4;
@@ -89,6 +89,6 @@ int milone_main() {
     struct IntIntIntFun2 fun_8 = (struct IntIntIntFun2){.fun = fun_5, .env = NULL};
     int app_3 = fun_8.fun(fun_8.env, 84, 2);
     milone_assert((app_3 == 42), 28, 2);
-    char call_5 = fun_lambda_Program_layoutTest(0);
+    fun_lambda_Program_layoutTest();
     return 0;
 }

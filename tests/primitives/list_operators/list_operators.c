@@ -4,22 +4,22 @@ struct IntList;
 
 struct IntList;
 
-char list_operators_Program_nilTest(char arg_);
+void list_operators_Program_nilTest(void);
 
-char list_operators_Program_cons1Test(char arg_1);
+void list_operators_Program_cons1Test(void);
 
-char list_operators_Program_cons2Test(char arg_2);
+void list_operators_Program_cons2Test(void);
 
-char list_operators_Program_literalTest(char arg_3);
+void list_operators_Program_literalTest(void);
 
-int milone_main();
+int milone_main(void);
 
 struct IntList {
     int head;
     struct IntList const* tail;
 };
 
-char list_operators_Program_nilTest(char arg_) {
+void list_operators_Program_nilTest(void) {
     struct IntList const* nil_ = NULL;
     char if_;
     if ((!(nil_))) {
@@ -35,10 +35,10 @@ cons_cl_3:;
     if_ = 0;
     goto if_next_1;
 if_next_1:;
-    return 0;
+    return;
 }
 
-char list_operators_Program_cons1Test(char arg_1) {
+void list_operators_Program_cons1Test(void) {
     int x_;
     struct IntList const* list_ = milone_mem_alloc(1, sizeof(struct IntList));
     (*(((struct IntList*)list_))) = (struct IntList){.head = 1, .tail = NULL};
@@ -56,10 +56,10 @@ next_5:;
     goto end_match_4;
 next_6:;
 end_match_4:;
-    return 0;
+    return;
 }
 
-char list_operators_Program_cons2Test(char arg_2) {
+void list_operators_Program_cons2Test(void) {
     int y3_;
     int y2_;
     struct IntList const* list_2 = milone_mem_alloc(1, sizeof(struct IntList));
@@ -95,10 +95,10 @@ next_8:;
     goto end_match_7;
 next_9:;
 end_match_7:;
-    return 0;
+    return;
 }
 
-char list_operators_Program_literalTest(char arg_3) {
+void list_operators_Program_literalTest(void) {
     int z7_;
     int z5_;
     int z3_;
@@ -134,13 +134,13 @@ next_14:;
     goto end_match_13;
 next_15:;
 end_match_13:;
-    return 0;
+    return;
 }
 
-int milone_main() {
-    char call_ = list_operators_Program_nilTest(0);
-    char call_1 = list_operators_Program_cons1Test(0);
-    char call_2 = list_operators_Program_cons2Test(0);
-    char call_3 = list_operators_Program_literalTest(0);
+int milone_main(void) {
+    list_operators_Program_nilTest();
+    list_operators_Program_cons1Test();
+    list_operators_Program_cons2Test();
+    list_operators_Program_literalTest();
     return 0;
 }

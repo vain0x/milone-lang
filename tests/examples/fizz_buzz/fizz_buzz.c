@@ -1,10 +1,10 @@
 #include "milone.h"
 
-char fizzBuzz_(int i_);
+void fizzBuzz_(int i_);
 
-int milone_main();
+int milone_main(void);
 
-char fizzBuzz_(int i_) {
+void fizzBuzz_(int i_) {
 tailrec_1:;
     char if_;
     if ((15 >= i_)) {
@@ -63,10 +63,10 @@ else_13:;
     if_ = 0;
     goto if_next_2;
 if_next_2:;
-    return 0;
+    return;
 }
 
-int milone_main() {
-    char call_ = fizzBuzz_(1);
+int milone_main(void) {
+    fizzBuzz_(1);
     return 0;
 }

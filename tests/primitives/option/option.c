@@ -6,13 +6,13 @@ struct StringOption_;
 
 struct UnitOption_;
 
-char option_Program_basicSomeCase(char arg_);
+void option_Program_basicSomeCase(void);
 
-char option_Program_basicNoneCase(char arg_1);
+void option_Program_basicNoneCase(void);
 
-char option_Program_basicMatchCase(char arg_2);
+void option_Program_basicMatchCase(void);
 
-int milone_main();
+int milone_main(void);
 
 enum IntOption_Discriminant {
     None_,
@@ -50,7 +50,7 @@ struct UnitOption_ {
     };
 };
 
-char option_Program_basicSomeCase(char arg_) {
+void option_Program_basicSomeCase(void) {
     char match_;
     struct IntOption_ variant_ = (struct IntOption_){.discriminant = Some_, .Some_ = 1};
     if ((variant_.discriminant != None_)) goto next_2;
@@ -68,10 +68,10 @@ next_3:;
     goto end_match_1;
 next_4:;
 end_match_1:;
-    return 0;
+    return;
 }
 
-char option_Program_basicNoneCase(char arg_1) {
+void option_Program_basicNoneCase(void) {
     struct StringOption_ none_ = (struct StringOption_){.discriminant = None_1};
     char match_1;
     if ((none_.discriminant != Some_1)) goto next_6;
@@ -89,10 +89,10 @@ next_7:;
     goto end_match_5;
 next_8:;
 end_match_5:;
-    return 0;
+    return;
 }
 
-char option_Program_basicMatchCase(char arg_2) {
+void option_Program_basicMatchCase(void) {
     char switch_;
     struct UnitOption_ variant_1 = (struct UnitOption_){.discriminant = Some_2, .Some_2 = 0};
     switch (variant_1.discriminant) {
@@ -110,12 +110,12 @@ clause_11:;
     switch_ = 0;
     goto switch_next_9;
 switch_next_9:;
-    return 0;
+    return;
 }
 
-int milone_main() {
-    char call_ = option_Program_basicSomeCase(0);
-    char call_1 = option_Program_basicNoneCase(0);
-    char call_2 = option_Program_basicMatchCase(0);
+int milone_main(void) {
+    option_Program_basicSomeCase();
+    option_Program_basicNoneCase();
+    option_Program_basicMatchCase();
     return 0;
 }

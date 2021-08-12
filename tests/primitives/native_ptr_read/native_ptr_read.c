@@ -1,10 +1,10 @@
 #include "milone.h"
 
-char const* str_as_ptr(struct String);
+char const* str_as_ptr(struct String );
 
-int milone_main();
+int milone_main(void);
 
-int milone_main() {
+int milone_main(void) {
     void const* box_ = milone_mem_alloc(1, sizeof(struct String));
     (*(((struct String*)box_))) = (struct String){.str = "hey", .len = 3};
     struct String const* p_ = ((struct String const*)box_);

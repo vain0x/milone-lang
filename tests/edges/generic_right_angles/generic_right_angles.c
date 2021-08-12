@@ -2,9 +2,9 @@
 
 struct IntListListList;
 
-int milone_main();
+int milone_main(void);
 
-int milone_main() {
+int milone_main(void) {
     struct IntListListList const* n_ = NULL;
     bool if_;
     if ((!(n_))) {

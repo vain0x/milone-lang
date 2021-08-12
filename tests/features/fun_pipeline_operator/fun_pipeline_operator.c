@@ -14,7 +14,7 @@ bool fun_pipeline_operator_Program_between(int l_, int r_, int x_3);
 
 int len_(struct IntList const* xs_);
 
-int milone_main();
+int milone_main(void);
 
 struct IntList {
     int head;
@@ -67,7 +67,7 @@ if_next_4:;
     return if_1;
 }
 
-int milone_main() {
+int milone_main(void) {
     int call_ = fun_pipeline_operator_Program_inc(1);
     int call_1 = fun_pipeline_operator_Program_twice(call_);
     int call_2 = fun_pipeline_operator_Program_twice(call_1);

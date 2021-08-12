@@ -2,18 +2,18 @@
 
 struct IntIntTuple2_;
 
-char pat_as_Program_simpleCase(char arg_);
+void pat_as_Program_simpleCase(void);
 
-char pat_as_Program_shadowingCase(char arg_1);
+void pat_as_Program_shadowingCase(void);
 
-int milone_main();
+int milone_main(void);
 
 struct IntIntTuple2_ {
     int t0;
     int t1;
 };
 
-char pat_as_Program_simpleCase(char arg_) {
+void pat_as_Program_simpleCase(void) {
     int x_;
     char match_;
     x_ = 1;
@@ -27,10 +27,10 @@ next_2:;
     goto end_match_1;
 next_3:;
 end_match_1:;
-    return 0;
+    return;
 }
 
-char pat_as_Program_shadowingCase(char arg_1) {
+void pat_as_Program_shadowingCase(void) {
     int x_2;
     struct IntIntTuple2_ y_;
     int x_1 = 1;
@@ -71,11 +71,11 @@ if_next_9:;
     goto end_match_4;
 next_5:;
 end_match_4:;
-    return 0;
+    return;
 }
 
-int milone_main() {
-    char call_ = pat_as_Program_simpleCase(0);
-    char call_1 = pat_as_Program_shadowingCase(0);
+int milone_main(void) {
+    pat_as_Program_simpleCase();
+    pat_as_Program_shadowingCase();
     return 0;
 }

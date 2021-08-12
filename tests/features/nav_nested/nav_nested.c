@@ -2,13 +2,13 @@
 
 struct SubRecord_;
 
-int milone_main();
+int milone_main(void);
 
 struct SubRecord_ {
     struct String t0;
 };
 
-int milone_main() {
+int milone_main(void) {
     int value_;
     struct SubRecord_ SubRecord_ = (struct SubRecord_){.t0 = (struct String){.str = "Hello", .len = 5}};
     struct SubRecord_ text_ = SubRecord_;

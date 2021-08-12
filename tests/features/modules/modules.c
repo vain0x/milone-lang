@@ -2,9 +2,9 @@
 
 struct Val_;
 
-int f_(int);
+int f_(int );
 
-int milone_main();
+int milone_main(void);
 
 enum Val_Discriminant {
     Int_,
@@ -19,7 +19,7 @@ struct Val_ {
     };
 };
 
-int milone_main() {
+int milone_main(void) {
     int x_1;
     int match_;
     struct Val_ variant_ = (struct Val_){.discriminant = Int_, .Int_ = 0};

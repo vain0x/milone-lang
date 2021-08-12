@@ -1,8 +1,8 @@
 #include "milone.h"
 
-int milone_main();
+int milone_main(void);
 
-int milone_main() {
+int milone_main(void) {
     int if_;
     if (true) {
         goto then_2;

@@ -16,7 +16,7 @@ int listToArraySize_1(struct IntList const* xs_);
 
 int listToArraySize_(struct StringList const* xs_);
 
-int milone_main();
+int milone_main(void);
 
 struct IntList {
     int head;
@@ -110,7 +110,7 @@ end_match_12:;
     return match_3;
 }
 
-int milone_main() {
+int milone_main(void) {
     struct IntList const* list_2 = milone_mem_alloc(1, sizeof(struct IntList));
     (*(((struct IntList*)list_2))) = (struct IntList){.head = 5, .tail = NULL};
     struct IntList const* list_1 = milone_mem_alloc(1, sizeof(struct IntList));

@@ -4,9 +4,9 @@ struct StringOption_;
 
 struct GitCommitOptions_;
 
-void const* record_large_Program_defaultOptions(char arg_);
+void const* record_large_Program_defaultOptions(void);
 
-int milone_main();
+int milone_main(void);
 
 enum StringOption_Discriminant {
     None_,
@@ -30,15 +30,15 @@ struct GitCommitOptions_ {
     bool t6;
 };
 
-void const* record_large_Program_defaultOptions(char arg_) {
+void const* record_large_Program_defaultOptions(void) {
     struct GitCommitOptions_ GitCommitOptions_ = (struct GitCommitOptions_){.t0 = false, .t1 = false, .t2 = (struct StringOption_){.discriminant = None_}, .t3 = (struct StringOption_){.discriminant = None_}, .t4 = (struct StringOption_){.discriminant = None_}, .t5 = (struct StringOption_){.discriminant = None_}, .t6 = false};
     void const* box_ = milone_mem_alloc(1, sizeof(struct GitCommitOptions_));
     (*(((struct GitCommitOptions_*)box_))) = GitCommitOptions_;
     return box_;
 }
 
-int milone_main() {
-    void const* call_ = record_large_Program_defaultOptions(0);
+int milone_main(void) {
+    void const* call_ = record_large_Program_defaultOptions();
     void const* _options = call_;
     return 0;
 }

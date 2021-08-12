@@ -1,10 +1,10 @@
 #include "milone.h"
 
-char go_(struct String source_, int len_, int i_);
+void go_(struct String source_, int len_, int i_);
 
-int milone_main();
+int milone_main(void);
 
-char go_(struct String source_, int len_, int i_) {
+void go_(struct String source_, int len_, int i_) {
 tailrec_1:;
     char if_;
     if ((i_ < len_)) {
@@ -38,12 +38,12 @@ else_7:;
     if_ = 0;
     goto if_next_2;
 if_next_2:;
-    return 0;
+    return;
 }
 
-int milone_main() {
+int milone_main(void) {
     struct String source_ = (struct String){.str = "hello world", .len = 11};
     int len_ = source_.len;
-    char call_ = go_(source_, len_, 0);
+    go_(source_, len_, 0);
     return 0;
 }

@@ -10,7 +10,7 @@ bool go_(int x_3, int k_);
 
 bool x_algorithm_Program_isPrime(int x_3);
 
-int milone_main();
+int milone_main(void);
 
 int x_algorithm_Program_minus(int x_) {
     return (0 - x_);
@@ -108,7 +108,7 @@ if_next_15:;
     return if_4;
 }
 
-int milone_main() {
+int milone_main(void) {
     int call_3 = x_algorithm_Program_abs(0);
     milone_assert((call_3 == 0), 13, 2);
     int call_4 = x_algorithm_Program_abs(1);

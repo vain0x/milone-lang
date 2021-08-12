@@ -12,37 +12,37 @@ struct IntList;
 
 struct IntList;
 
-int fun_20(int arg_135, int arg_136);
+int fun_20(int arg_120, int arg_121);
 
 int fun_17(void const* env_17, int arg_33, int arg_34);
 
-int segTreeGet_(int, struct IntIntIntFun2IntIntIntObjectUnitTuple5ObjectUnitTuple4IntIntIntObjectUnitTuple5UnitTuple3_);
+int segTreeGet_(int , struct IntIntIntFun2IntIntIntObjectUnitTuple5ObjectUnitTuple4IntIntIntObjectUnitTuple5UnitTuple3_ );
 
 int go_3(int n_5, struct IntIntIntFun2IntIntIntObjectUnitTuple5ObjectUnitTuple4IntIntIntObjectUnitTuple5UnitTuple3_ a_1, struct IntIntIntFun2IntIntIntObjectUnitTuple5ObjectUnitTuple4IntIntIntObjectUnitTuple5UnitTuple3_ b_1, struct IntIntIntFun2IntIntIntObjectUnitTuple5ObjectUnitTuple4IntIntIntObjectUnitTuple5UnitTuple3_ c_1, int sum_3, int i_8);
 
-struct IntIntIntFun2IntIntIntObjectUnitTuple5ObjectUnitTuple4_ segItemTypeNew_(int, struct IntIntIntFun2);
+struct IntIntIntFun2IntIntIntObjectUnitTuple5ObjectUnitTuple4_ segItemTypeNew_(int , struct IntIntIntFun2 );
 
-struct IntIntIntFun2IntIntIntObjectUnitTuple5ObjectUnitTuple4IntIntIntObjectUnitTuple5UnitTuple3_ segTreeOfList_(struct IntIntIntFun2IntIntIntObjectUnitTuple5ObjectUnitTuple4_, struct IntList const*);
+struct IntIntIntFun2IntIntIntObjectUnitTuple5ObjectUnitTuple4IntIntIntObjectUnitTuple5UnitTuple3_ segTreeOfList_(struct IntIntIntFun2IntIntIntObjectUnitTuple5ObjectUnitTuple4_ , struct IntList const* );
 
 int Competitive_ABC140B_abc140bSolve(int n_5, struct IntList const* a_, struct IntList const* b_, struct IntList const* c_);
 
-int listLength_(struct IntList const*);
+int listLength_(struct IntList const* );
 
 int f_(struct IntList const* a_2, struct IntList const* b_2, struct IntList const* c_2);
 
-bool case1_(char arg_143);
+bool case1_(void);
 
-bool case2_(char arg_144);
+bool case2_(void);
 
-bool case3_(char arg_145);
+bool case3_(void);
 
-char Competitive_ABC140B_abc140bTest(char arg_146);
+void Competitive_ABC140B_abc140bTest(void);
 
-int Competitive_Helpers_scanInt(char);
+int Competitive_Helpers_scanInt(void);
 
-struct IntList const* Competitive_Helpers_scanIntList(int);
+struct IntList const* Competitive_Helpers_scanIntList(int );
 
-char Competitive_ABC140B_abc140bMain(char arg_147);
+void Competitive_ABC140B_abc140bMain(void);
 
 struct IntIntIntFun2 {
     int(*fun)(void const*, int, int);
@@ -75,13 +75,13 @@ struct IntList {
     struct IntList const* tail;
 };
 
-int fun_20(int arg_135, int arg_136) {
+int fun_20(int arg_120, int arg_121) {
     return 0;
 }
 
 int fun_17(void const* env_17, int arg_33, int arg_34) {
-    int call_344 = fun_20(arg_33, arg_34);
-    return call_344;
+    int call_327 = fun_20(arg_33, arg_34);
+    return call_327;
 }
 
 int go_3(int n_5, struct IntIntIntFun2IntIntIntObjectUnitTuple5ObjectUnitTuple4IntIntIntObjectUnitTuple5UnitTuple3_ a_1, struct IntIntIntFun2IntIntIntObjectUnitTuple5ObjectUnitTuple4IntIntIntObjectUnitTuple5UnitTuple3_ b_1, struct IntIntIntFun2IntIntIntObjectUnitTuple5ObjectUnitTuple4IntIntIntObjectUnitTuple5UnitTuple3_ c_1, int sum_3, int i_8) {
@@ -96,10 +96,10 @@ then_315:;
     if_83 = sum_3;
     goto if_next_314;
 else_316:;
-    int call_345 = segTreeGet_(i_8, a_1);
-    int ai_ = call_345;
-    int call_346 = segTreeGet_((ai_ - 1), b_1);
-    int eat_ = call_346;
+    int call_328 = segTreeGet_(i_8, a_1);
+    int ai_ = call_328;
+    int call_329 = segTreeGet_((ai_ - 1), b_1);
+    int eat_ = call_329;
     bool if_84;
     if (((i_8 + 1) < n_5)) {
         goto then_318;
@@ -107,8 +107,8 @@ else_316:;
         goto else_319;
     }
 then_318:;
-    int call_347 = segTreeGet_((i_8 + 1), a_1);
-    if_84 = (call_347 == (ai_ + 1));
+    int call_330 = segTreeGet_((i_8 + 1), a_1);
+    if_84 = (call_330 == (ai_ + 1));
     goto if_next_317;
 else_319:;
     if_84 = false;
@@ -121,26 +121,26 @@ if_next_317:;
         goto else_322;
     }
 then_321:;
-    int call_348 = segTreeGet_((ai_ - 1), c_1);
-    if_85 = call_348;
+    int call_331 = segTreeGet_((ai_ - 1), c_1);
+    if_85 = call_331;
     goto if_next_320;
 else_322:;
     if_85 = 0;
     goto if_next_320;
 if_next_320:;
     int bonus_ = if_85;
-    int arg_137 = n_5;
-    struct IntIntIntFun2IntIntIntObjectUnitTuple5ObjectUnitTuple4IntIntIntObjectUnitTuple5UnitTuple3_ arg_138 = a_1;
-    struct IntIntIntFun2IntIntIntObjectUnitTuple5ObjectUnitTuple4IntIntIntObjectUnitTuple5UnitTuple3_ arg_139 = b_1;
-    struct IntIntIntFun2IntIntIntObjectUnitTuple5ObjectUnitTuple4IntIntIntObjectUnitTuple5UnitTuple3_ arg_140 = c_1;
-    int arg_141 = ((sum_3 + eat_) + bonus_);
-    int arg_142 = (i_8 + 1);
-    n_5 = arg_137;
-    a_1 = arg_138;
-    b_1 = arg_139;
-    c_1 = arg_140;
-    sum_3 = arg_141;
-    i_8 = arg_142;
+    int arg_122 = n_5;
+    struct IntIntIntFun2IntIntIntObjectUnitTuple5ObjectUnitTuple4IntIntIntObjectUnitTuple5UnitTuple3_ arg_123 = a_1;
+    struct IntIntIntFun2IntIntIntObjectUnitTuple5ObjectUnitTuple4IntIntIntObjectUnitTuple5UnitTuple3_ arg_124 = b_1;
+    struct IntIntIntFun2IntIntIntObjectUnitTuple5ObjectUnitTuple4IntIntIntObjectUnitTuple5UnitTuple3_ arg_125 = c_1;
+    int arg_126 = ((sum_3 + eat_) + bonus_);
+    int arg_127 = (i_8 + 1);
+    n_5 = arg_122;
+    a_1 = arg_123;
+    b_1 = arg_124;
+    c_1 = arg_125;
+    sum_3 = arg_126;
+    i_8 = arg_127;
     goto tailrec_313;
 if_next_314:;
     return if_83;
@@ -148,30 +148,30 @@ if_next_314:;
 
 int Competitive_ABC140B_abc140bSolve(int n_5, struct IntList const* a_, struct IntList const* b_, struct IntList const* c_) {
     struct IntIntIntFun2 fun_35 = (struct IntIntIntFun2){.fun = fun_17, .env = NULL};
-    struct IntIntIntFun2IntIntIntObjectUnitTuple5ObjectUnitTuple4_ call_349 = segItemTypeNew_(0, fun_35);
-    struct IntIntIntFun2IntIntIntObjectUnitTuple5ObjectUnitTuple4_ segItemTypeInt_2 = call_349;
-    struct IntIntIntFun2IntIntIntObjectUnitTuple5ObjectUnitTuple4IntIntIntObjectUnitTuple5UnitTuple3_ call_350 = segTreeOfList_(segItemTypeInt_2, a_);
-    struct IntIntIntFun2IntIntIntObjectUnitTuple5ObjectUnitTuple4IntIntIntObjectUnitTuple5UnitTuple3_ a_1 = call_350;
-    struct IntIntIntFun2IntIntIntObjectUnitTuple5ObjectUnitTuple4IntIntIntObjectUnitTuple5UnitTuple3_ call_351 = segTreeOfList_(segItemTypeInt_2, b_);
-    struct IntIntIntFun2IntIntIntObjectUnitTuple5ObjectUnitTuple4IntIntIntObjectUnitTuple5UnitTuple3_ b_1 = call_351;
-    struct IntIntIntFun2IntIntIntObjectUnitTuple5ObjectUnitTuple4IntIntIntObjectUnitTuple5UnitTuple3_ call_352 = segTreeOfList_(segItemTypeInt_2, c_);
-    struct IntIntIntFun2IntIntIntObjectUnitTuple5ObjectUnitTuple4IntIntIntObjectUnitTuple5UnitTuple3_ c_1 = call_352;
-    int call_353 = go_3(n_5, a_1, b_1, c_1, 0, 0);
-    return call_353;
+    struct IntIntIntFun2IntIntIntObjectUnitTuple5ObjectUnitTuple4_ call_332 = segItemTypeNew_(0, fun_35);
+    struct IntIntIntFun2IntIntIntObjectUnitTuple5ObjectUnitTuple4_ segItemTypeInt_2 = call_332;
+    struct IntIntIntFun2IntIntIntObjectUnitTuple5ObjectUnitTuple4IntIntIntObjectUnitTuple5UnitTuple3_ call_333 = segTreeOfList_(segItemTypeInt_2, a_);
+    struct IntIntIntFun2IntIntIntObjectUnitTuple5ObjectUnitTuple4IntIntIntObjectUnitTuple5UnitTuple3_ a_1 = call_333;
+    struct IntIntIntFun2IntIntIntObjectUnitTuple5ObjectUnitTuple4IntIntIntObjectUnitTuple5UnitTuple3_ call_334 = segTreeOfList_(segItemTypeInt_2, b_);
+    struct IntIntIntFun2IntIntIntObjectUnitTuple5ObjectUnitTuple4IntIntIntObjectUnitTuple5UnitTuple3_ b_1 = call_334;
+    struct IntIntIntFun2IntIntIntObjectUnitTuple5ObjectUnitTuple4IntIntIntObjectUnitTuple5UnitTuple3_ call_335 = segTreeOfList_(segItemTypeInt_2, c_);
+    struct IntIntIntFun2IntIntIntObjectUnitTuple5ObjectUnitTuple4IntIntIntObjectUnitTuple5UnitTuple3_ c_1 = call_335;
+    int call_336 = go_3(n_5, a_1, b_1, c_1, 0, 0);
+    return call_336;
 }
 
 int f_(struct IntList const* a_2, struct IntList const* b_2, struct IntList const* c_2) {
-    int call_354 = listLength_(a_2);
-    int n_6 = call_354;
-    int call_355 = listLength_(b_2);
-    milone_assert((call_355 == n_6), 32, 4);
-    int call_356 = listLength_(c_2);
-    milone_assert((call_356 == (n_6 - 1)), 33, 4);
-    int call_357 = Competitive_ABC140B_abc140bSolve(n_6, a_2, b_2, c_2);
-    return call_357;
+    int call_337 = listLength_(a_2);
+    int n_6 = call_337;
+    int call_338 = listLength_(b_2);
+    milone_assert((call_338 == n_6), 32, 4);
+    int call_339 = listLength_(c_2);
+    milone_assert((call_339 == (n_6 - 1)), 33, 4);
+    int call_340 = Competitive_ABC140B_abc140bSolve(n_6, a_2, b_2, c_2);
+    return call_340;
 }
 
-bool case1_(char arg_143) {
+bool case1_(void) {
     struct IntList const* list_72 = milone_mem_alloc(1, sizeof(struct IntList));
     (*(((struct IntList*)list_72))) = (struct IntList){.head = 2, .tail = NULL};
     struct IntList const* list_71 = milone_mem_alloc(1, sizeof(struct IntList));
@@ -191,11 +191,11 @@ bool case1_(char arg_143) {
     struct IntList const* list_76 = milone_mem_alloc(1, sizeof(struct IntList));
     (*(((struct IntList*)list_76))) = (struct IntList){.head = 3, .tail = list_77};
     struct IntList const* c_3 = list_76;
-    int call_358 = f_(a_3, b_3, c_3);
-    return (call_358 == 14);
+    int call_341 = f_(a_3, b_3, c_3);
+    return (call_341 == 14);
 }
 
-bool case2_(char arg_144) {
+bool case2_(void) {
     struct IntList const* list_81 = milone_mem_alloc(1, sizeof(struct IntList));
     (*(((struct IntList*)list_81))) = (struct IntList){.head = 1, .tail = NULL};
     struct IntList const* list_80 = milone_mem_alloc(1, sizeof(struct IntList));
@@ -221,11 +221,11 @@ bool case2_(char arg_144) {
     struct IntList const* list_86 = milone_mem_alloc(1, sizeof(struct IntList));
     (*(((struct IntList*)list_86))) = (struct IntList){.head = 45, .tail = list_87};
     struct IntList const* c_4 = list_86;
-    int call_359 = f_(a_4, b_4, c_4);
-    return (call_359 == 74);
+    int call_342 = f_(a_4, b_4, c_4);
+    return (call_342 == 74);
 }
 
-bool case3_(char arg_145) {
+bool case3_(void) {
     struct IntList const* list_90 = milone_mem_alloc(1, sizeof(struct IntList));
     (*(((struct IntList*)list_90))) = (struct IntList){.head = 2, .tail = NULL};
     struct IntList const* list_89 = milone_mem_alloc(1, sizeof(struct IntList));
@@ -239,31 +239,31 @@ bool case3_(char arg_145) {
     struct IntList const* list_93 = milone_mem_alloc(1, sizeof(struct IntList));
     (*(((struct IntList*)list_93))) = (struct IntList){.head = 50, .tail = NULL};
     struct IntList const* c_5 = list_93;
-    int call_360 = f_(a_5, b_5, c_5);
-    return (call_360 == 150);
+    int call_343 = f_(a_5, b_5, c_5);
+    return (call_343 == 150);
 }
 
-char Competitive_ABC140B_abc140bTest(char arg_146) {
-    bool call_361 = case1_(0);
-    milone_assert(call_361, 42, 2);
-    bool call_362 = case2_(0);
-    milone_assert(call_362, 50, 2);
-    bool call_363 = case3_(0);
-    milone_assert(call_363, 58, 2);
-    return 0;
+void Competitive_ABC140B_abc140bTest(void) {
+    bool call_344 = case1_();
+    milone_assert(call_344, 42, 2);
+    bool call_345 = case2_();
+    milone_assert(call_345, 50, 2);
+    bool call_346 = case3_();
+    milone_assert(call_346, 58, 2);
+    return;
 }
 
-char Competitive_ABC140B_abc140bMain(char arg_147) {
-    int call_364 = Competitive_Helpers_scanInt(0);
-    int n_7 = call_364;
-    struct IntList const* call_365 = Competitive_Helpers_scanIntList(n_7);
-    struct IntList const* a_6 = call_365;
-    struct IntList const* call_366 = Competitive_Helpers_scanIntList(n_7);
-    struct IntList const* b_6 = call_366;
-    struct IntList const* call_367 = Competitive_Helpers_scanIntList((n_7 - 1));
-    struct IntList const* c_6 = call_367;
-    int call_368 = Competitive_ABC140B_abc140bSolve(n_7, a_6, b_6, c_6);
-    int m_3 = call_368;
+void Competitive_ABC140B_abc140bMain(void) {
+    int call_347 = Competitive_Helpers_scanInt();
+    int n_7 = call_347;
+    struct IntList const* call_348 = Competitive_Helpers_scanIntList(n_7);
+    struct IntList const* a_6 = call_348;
+    struct IntList const* call_349 = Competitive_Helpers_scanIntList(n_7);
+    struct IntList const* b_6 = call_349;
+    struct IntList const* call_350 = Competitive_Helpers_scanIntList((n_7 - 1));
+    struct IntList const* c_6 = call_350;
+    int call_351 = Competitive_ABC140B_abc140bSolve(n_7, a_6, b_6, c_6);
+    int m_3 = call_351;
     printf("%d\n", m_3);
-    return 0;
+    return;
 }

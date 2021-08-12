@@ -20,7 +20,7 @@ int fun_1(void const* env_1, int arg_2, int arg_3);
 
 int fun_2(void const* env_2, int arg_6, int arg_7, int arg_8, int arg_9);
 
-int milone_main();
+int milone_main(void);
 
 struct IntIntFun1 {
     int(*fun)(void const*, int);
@@ -74,7 +74,7 @@ int fun_2(void const* env_2, int arg_6, int arg_7, int arg_8, int arg_9) {
     return call_2;
 }
 
-int milone_main() {
+int milone_main(void) {
     struct IntIntFun1 fun_3 = (struct IntIntFun1){.fun = fun_, .env = ((void const*)((intptr_t)3))};
     struct IntIntFun1 dec3_ = fun_3;
     int call_3 = fun_partial_app_Program_twice(dec3_, 8);

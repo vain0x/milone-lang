@@ -2,13 +2,13 @@
 
 int f_(int x_);
 
-int milone_main();
+int milone_main(void);
 
 int f_(int x_) {
     return (x_ * x_);
 }
 
-int milone_main() {
+int milone_main(void) {
     int y_;
     int match_;
     int call_ = f_(3);

@@ -1,12 +1,12 @@
 #include "milone.h"
 
-char int_flavors_Program_signedCases(char arg_);
+void int_flavors_Program_signedCases(void);
 
-char int_flavors_Program_unsignedCases(char arg_1);
+void int_flavors_Program_unsignedCases(void);
 
-int milone_main();
+int milone_main(void);
 
-char int_flavors_Program_signedCases(char arg_) {
+void int_flavors_Program_signedCases(void) {
     milone_assert((1 == 1), 10, 2);
     milone_assert((((int8_t)1) == ((int8_t)1)), 13, 2);
     milone_assert(((((int8_t)2) + ((int8_t)3)) == ((int8_t)5)), 19, 2);
@@ -32,10 +32,10 @@ char int_flavors_Program_signedCases(char arg_) {
     milone_assert((str_compare(call_1, (struct String){.str = "3693693693", .len = 10}) == 0), 49, 2);
     int64_t call_2 = str_to_int64((struct String){.str = "-3693693693", .len = 11});
     milone_assert((((int)(call_2 / ((int64_t)3))) == -1231231231), 52, 2);
-    return 0;
+    return;
 }
 
-char int_flavors_Program_unsignedCases(char arg_1) {
+void int_flavors_Program_unsignedCases(void) {
     milone_assert((((uint8_t)1) == ((uint8_t)1)), 56, 2);
     milone_assert((((uint32_t)1) == ((uint32_t)1)), 59, 2);
     milone_assert(((((uint8_t)2) + ((uint8_t)3)) == ((uint8_t)5)), 62, 2);
@@ -59,11 +59,11 @@ char int_flavors_Program_unsignedCases(char arg_1) {
     milone_assert((call_5 == ((uint8_t)255)), 89, 2);
     uint64_t call_6 = str_to_uint64((struct String){.str = "3693693693", .len = 10});
     milone_assert((((int)(call_6 / ((uint64_t)3))) == 1231231231), 90, 2);
-    return 0;
+    return;
 }
 
-int milone_main() {
-    char call_7 = int_flavors_Program_signedCases(0);
-    char call_8 = int_flavors_Program_unsignedCases(0);
+int milone_main(void) {
+    int_flavors_Program_signedCases();
+    int_flavors_Program_unsignedCases();
     return 0;
 }

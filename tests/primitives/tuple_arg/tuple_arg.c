@@ -4,7 +4,7 @@ struct IntIntTuple2_;
 
 int sub_(struct IntIntTuple2_ arg_);
 
-int milone_main();
+int milone_main(void);
 
 struct IntIntTuple2_ {
     int t0;
@@ -17,7 +17,7 @@ int sub_(struct IntIntTuple2_ arg_) {
     return (x_ - y_);
 }
 
-int milone_main() {
+int milone_main(void) {
     struct IntIntTuple2_ IntIntTuple2_ = (struct IntIntTuple2_){.t0 = 8, .t1 = 3};
     int call_ = sub_(IntIntTuple2_);
     return (call_ - 5);

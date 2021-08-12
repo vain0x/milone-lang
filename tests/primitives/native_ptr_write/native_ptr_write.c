@@ -2,11 +2,11 @@
 
 struct UInt64UInt64Tuple2_;
 
-struct String str_of_raw_parts(char const*, int);
+struct String str_of_raw_parts(char const* , int );
 
 struct String native_ptr_write_Program_strOfRawParts(char const* p_, int len_);
 
-int milone_main();
+int milone_main(void);
 
 struct UInt64UInt64Tuple2_ {
     uint64_t t0;
@@ -18,7 +18,7 @@ struct String native_ptr_write_Program_strOfRawParts(char const* p_, int len_) {
     return str_of_raw_parts_result;
 }
 
-int milone_main() {
+int milone_main(void) {
     void const* box_ = milone_mem_alloc(1, sizeof(struct String));
     (*(((struct String*)box_))) = (struct String){.str = "zero", .len = 4};
     void const* stringBox_ = box_;

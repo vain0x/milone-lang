@@ -8,7 +8,7 @@ struct StringList const* go_(struct StringList const* acc_, struct StringList co
 
 struct StringList const* x_json_Program_listRev(struct StringList const* xs_);
 
-char x_json_Program_printList(struct StringList const* xs_3);
+void x_json_Program_printList(struct StringList const* xs_3);
 
 bool x_json_Program_isDigit(char c_);
 
@@ -18,7 +18,7 @@ struct StringList const* go_1(struct String s_, struct StringList const* acc_1, 
 
 struct StringList const* x_json_Program_tokenize(struct String s_);
 
-int milone_main();
+int milone_main(void);
 
 struct StringList {
     struct String head;
@@ -55,7 +55,7 @@ struct StringList const* x_json_Program_listRev(struct StringList const* xs_) {
     return call_;
 }
 
-char x_json_Program_printList(struct StringList const* xs_3) {
+void x_json_Program_printList(struct StringList const* xs_3) {
     struct StringList const* xs_4;
     struct String x_1;
 tailrec_5:;
@@ -74,7 +74,7 @@ next_7:;
 next_8:;
     exit(1);
 end_match_6:;
-    return 0;
+    return;
 }
 
 bool x_json_Program_isDigit(char c_) {
@@ -244,10 +244,10 @@ struct StringList const* x_json_Program_tokenize(struct String s_) {
     return call_5;
 }
 
-int milone_main() {
+int milone_main(void) {
     struct String source_ = (struct String){.str = "[0, 1000000007, 314159]", .len = 23};
     struct StringList const* call_6 = x_json_Program_tokenize(source_);
     struct StringList const* tokens_ = call_6;
-    char call_7 = x_json_Program_printList(tokens_);
+    x_json_Program_printList(tokens_);
     return 0;
 }

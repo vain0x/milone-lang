@@ -2,14 +2,14 @@
 
 struct Person_;
 
-int milone_main();
+int milone_main(void);
 
 struct Person_ {
     struct String t0;
     int t1;
 };
 
-int milone_main() {
+int milone_main(void) {
     struct Person_ Person_ = (struct Person_){.t0 = (struct String){.str = "John Doe", .len = 8}, .t1 = 16};
     struct Person_ john_ = Person_;
     struct Person_ base_ = john_;
