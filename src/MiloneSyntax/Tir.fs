@@ -514,7 +514,7 @@ let tyMeta serial loc = Ty(MetaTk(serial, loc), [])
 
 let tySynonym tySerial tyArgs = Ty(SynonymTk tySerial, tyArgs)
 
-let tyUnion tySerial = Ty(UnionTk tySerial, [])
+let tyUnion tySerial tyArgs = Ty(UnionTk tySerial, tyArgs)
 
 let tyRecord tySerial = Ty(RecordTk tySerial, [])
 
@@ -559,14 +559,6 @@ let variantSerialToInt (VariantSerial serial) = serial
 
 let variantSerialCompare l r =
   compare (variantSerialToInt l) (variantSerialToInt r)
-
-let variantDefToVariantTy (variantDef: VariantDef) : Ty =
-  let unionTy = tyUnion variantDef.UnionTySerial
-
-  if variantDef.HasPayload then
-    tyFun variantDef.PayloadTy unionTy
-  else
-    unionTy
 
 // -----------------------------------------------
 // Literals
@@ -1047,7 +1039,7 @@ let nameResLogToString log =
 
   | ModulePathNotFoundError -> "Module not found for this path"
 
-  | UnimplGenericTyError -> "Generic union/record types is unimplemented."
+  | UnimplGenericTyError -> "Generic record type is unimplemented."
   | UnimplOrPatBindingError -> "OR pattern including some bindings is unimplemented."
 
   | OtherNameResLog msg -> msg

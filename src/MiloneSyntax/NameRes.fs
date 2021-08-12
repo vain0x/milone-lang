@@ -673,7 +673,7 @@ let private resolveTy ty loc scopeCtx =
       | Some (UnivTySymbol tySerial) -> tyMeta tySerial loc, scopeCtx
 
       | Some (SynonymTySymbol tySerial) ->
-        // Arity check.
+        // Arity check. #tyaritycheck
         match scopeCtx.Tys |> TMap.tryFind tySerial with
         | Some (SynonymTyDef (name, defTyArgs, _, _)) when List.length defTyArgs <> arity ->
           let scopeCtx =
@@ -685,12 +685,30 @@ let private resolveTy ty loc scopeCtx =
         | _ -> tySynonym tySerial tys, scopeCtx
 
       | Some (UnionTySymbol tySerial) ->
-        assert (List.isEmpty tys)
-        tyUnion tySerial, scopeCtx
+        // Arity check. #tyaritycheck
+        match scopeCtx.Tys |> TMap.tryFind tySerial with
+        | Some (UnionTyDef (name, defTyArgs, _, _)) when List.length defTyArgs <> arity ->
+          let scopeCtx =
+            scopeCtx
+            |> addLog (TyArityError(name, arity, List.length defTyArgs)) loc
+
+          tyError loc, scopeCtx
+
+        | _ -> tyUnion tySerial tys, scopeCtx
 
       | Some (RecordTySymbol tySerial) ->
-        assert (List.isEmpty tys)
-        tyRecord tySerial, scopeCtx
+        // Arity check. #tyaritycheck
+        match scopeCtx.Tys |> TMap.tryFind tySerial with
+        | Some (RecordTyDef _) when arity <> 0 ->
+          let defArity = 0 // generic record type is unimplemented
+
+          let scopeCtx =
+            scopeCtx
+            |> addLog (TyArityError(name, arity, defArity)) loc
+
+          tyError loc, scopeCtx
+
+        | _ -> tyRecord tySerial, scopeCtx
 
       | Some (MetaTySymbol _) -> unreachable (serial, name, loc)
 
@@ -821,6 +839,19 @@ let private startDefineTy moduleSerialOpt tySerial vis tyArgs tyDecl loc ctx =
 /// - No need to call `startDefineTy` first.
 /// - This resolves inner type expressions.
 let private finishDefineTy tySerial tyArgs tyDecl loc ctx =
+  let withTyArgsImported tyArgs (body: ScopeCtx -> 'A * ScopeCtx) ctx : 'A * ScopeCtx =
+    ctx
+    |> startScope TyDeclScope
+    |> forList
+         (fun tyArg ctx ->
+           let name = ctx |> findName tyArg
+
+           ctx
+           |> addLocalTy (UnivTySymbol tyArg) (UniversalTyDef(name, loc)))
+         tyArgs
+    |> body
+    |> (fun (result, ctx) -> result, finishScope ctx)
+
   let ctx =
     // Pass in PrivateVis because if this type is not pre-declared here, it's local to function.
     ctx
@@ -832,39 +863,31 @@ let private finishDefineTy tySerial tyArgs tyDecl loc ctx =
   | UniversalTyDef _ -> ctx
 
   | SynonymTyDef (tyName, tyArgs, bodyTy, loc) ->
-    let ctx = ctx |> startScope TyDeclScope
-
-    let ctx =
-      tyArgs
-      |> List.fold
-           (fun ctx tyArg ->
-             let name = ctx |> findName tyArg
-
-             ctx
-             |> addLocalTy (UnivTySymbol tyArg) (UniversalTyDef(name, loc)))
-           ctx
-
-    let bodyTy, ctx = ctx |> resolveTy bodyTy loc
-    let ctx = ctx |> finishScope
+    let bodyTy, ctx =
+      ctx
+      |> withTyArgsImported tyArgs (resolveTy bodyTy loc)
 
     ctx
     |> addTy (SynonymTySymbol tySerial) (SynonymTyDef(tyName, tyArgs, bodyTy, loc))
 
-  | UnionTyDef (_, tyArgs, variantSerials, _unionLoc) ->
-    let ctx =
-      if tyArgs |> List.isEmpty |> not then
-        addLog UnimplGenericTyError loc ctx
-      else
-        ctx
+  | UnionTyDef (_, tyArgs, variantSerials, _) ->
+    ctx
+    |> withTyArgsImported
+         tyArgs
+         (fun ctx ->
+           let ctx =
+             variantSerials
+             |> List.fold
+                  (fun ctx variantSerial ->
+                    let def = ctx |> findVariant variantSerial
+                    let payloadTy, ctx = ctx |> resolveTy def.PayloadTy loc
 
-    let go ctx variantSerial =
-      let def = ctx |> findVariant variantSerial
-      let payloadTy, ctx = ctx |> resolveTy def.PayloadTy loc
+                    ctx
+                    |> addVariantDef variantSerial { def with PayloadTy = payloadTy })
+                  ctx
 
-      ctx
-      |> addVariantDef variantSerial { def with PayloadTy = payloadTy }
-
-    variantSerials |> List.fold go ctx
+           (), ctx)
+    |> snd
 
   | RecordTyDef (tyName, tyArgs, fields, loc) ->
     let ctx =

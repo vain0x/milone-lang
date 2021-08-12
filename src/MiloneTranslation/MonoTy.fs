@@ -88,7 +88,7 @@ let private ofTyCtx (tyCtx: TyCtx) : MtCtx =
          (fun tyNames tySerial tyDef ->
            let tk, name =
              match tyDef with
-             | UnionTyDef (ident, _, _) -> UnionTk tySerial, ident
+             | UnionTyDef (ident, _, _, _) -> UnionTk tySerial, ident
              | RecordTyDef (ident, _, _) -> RecordTk tySerial, ident
              | MetaTyDef _ -> unreachable () // Resolved in Typing.
 
@@ -154,7 +154,6 @@ let private mtTy (ty: Ty, ctx: MtCtx) : M.MonoTy * MtCtx =
   | ObjTk, _ -> M.ObjMt, ctx
   | VoidTk, _ -> M.VoidMt, ctx
   | NativeTypeTk cCode, _ -> M.NativeTypeMt cCode, ctx
-  | UnionTk tySerial, _ -> M.UnionMt tySerial, ctx
   | RecordTk tySerial, _ -> M.RecordMt tySerial, ctx
 
   | TupleTk, [] -> M.UnitMt, ctx
@@ -199,7 +198,7 @@ let private mtTy (ty: Ty, ctx: MtCtx) : M.MonoTy * MtCtx =
           Loc = noLoc }
 
       let unionTyDef =
-        M.UnionTyDef(name, [ noneSerial; someSerial ], noLoc)
+        M.UnionTyDef(name, [], [ noneSerial; someSerial ], noLoc)
 
       let optionDef: OptionDef =
         { NoneSerial = noneSerial
@@ -230,6 +229,12 @@ let private mtTy (ty: Ty, ctx: MtCtx) : M.MonoTy * MtCtx =
   | NativePtrTk isMut, [ itemTy ] -> M.NativePtrMt(isMut, itemTy), ctx
   | NativePtrTk _, _ -> unreachable ()
   | NativeFunTk, _ -> M.NativeFunMt tyArgs, ctx
+
+  | UnionTk tySerial, _ ->
+    // NOTE: Surprizing! Ty args are ignored here but it does work.
+    //       Due to AutoBoxing, all ty parameters are hidden behind `obj`,
+    //       no need to monomorphize ty definitions.
+    M.UnionMt tySerial, ctx
 
   | MetaTk _, _ -> unreachable () // Resolved in Typing.
 
@@ -426,8 +431,8 @@ let private mtDefs (tyCtx: TyCtx) (mtCtx: MtCtx) =
     |> TMap.fold
          (fun (tys, ctx) tySerial (tyDef: TyDef) ->
            match tyDef with
-           | UnionTyDef (name, serials, loc) ->
-             let tyDef = M.UnionTyDef(name, serials, loc)
+           | UnionTyDef (name, tyArgs, serials, loc) ->
+             let tyDef = M.UnionTyDef(name, tyArgs, serials, loc)
              tys |> TMap.add tySerial tyDef, ctx
 
            | RecordTyDef (ident, fields, loc) ->
@@ -540,7 +545,7 @@ let private bthVariantDef (variantDef: M.VariantDef) : VariantDef =
 
 let private bthTyDef (tyDef: M.TyDef) : TyDef =
   match tyDef with
-  | M.UnionTyDef (ident, variantSerials, loc) -> UnionTyDef(ident, variantSerials, loc)
+  | M.UnionTyDef (ident, tyArgs, variantSerials, loc) -> UnionTyDef(ident, tyArgs, variantSerials, loc)
 
   | M.RecordTyDef (ident, fields, loc) ->
     let fields =

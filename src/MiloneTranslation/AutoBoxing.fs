@@ -171,7 +171,7 @@ let private trdRecordTyDef isDirect (ctx: TrdCtx) tySerial tyDef =
 
 let private trdTyDef isDirect (ctx: TrdCtx) tySerial tyDef : TrdCtx =
   match tyDef with
-  | UnionTyDef (_, variants, _) ->
+  | UnionTyDef (_, _, variants, _) ->
     variants
     |> List.fold (fun (ctx: TrdCtx) variantSerial -> trdVariant isDirect ctx variantSerial None) ctx
 
@@ -182,7 +182,7 @@ let private trdTyDef isDirect (ctx: TrdCtx) tySerial tyDef : TrdCtx =
 let private trdTy isDirect (ctx: TrdCtx) ty : TrdCtx =
   match ty with
   | Ty (tk, tyArgs) ->
-    let nominal tySerial =
+    let nominal ctx tySerial =
       trdTyDef isDirect ctx tySerial (ctx.Tys |> mapFind tySerial)
 
     match tk with
@@ -206,8 +206,11 @@ let private trdTy isDirect (ctx: TrdCtx) ty : TrdCtx =
     | NativeFunTk
     | NativeTypeTk _ -> tyArgs |> List.fold (trdTy isDirect) ctx
 
-    | UnionTk tySerial -> nominal tySerial
-    | RecordTk tySerial -> nominal tySerial
+    | UnionTk tySerial ->
+      let ctx = tyArgs |> List.fold (trdTy isDirect) ctx
+      nominal ctx tySerial
+
+    | RecordTk tySerial -> nominal ctx tySerial
 
 let private detectTypeRecursion (tyCtx: TyCtx) : TrdCtx =
   let ctx: TrdCtx =
@@ -350,7 +353,7 @@ let private tsmRecordTyDef (ctx: TsmCtx) tySerial tyDef =
 
 let private tsmTyDef (ctx: TsmCtx) tySerial tyDef =
   match tyDef with
-  | UnionTyDef (_, variants, _) ->
+  | UnionTyDef (_, _, variants, _) ->
     let payloadSize, ctx =
       variants
       |> List.fold
@@ -534,12 +537,27 @@ let private postProcessVariantFunAppExpr ctx variantSerial payload : HExpr optio
 
 /// ### Unwrapping newtype variants
 
-let private unwrapNewtypeUnionTy (ctx: AbCtx) ty : Ty option =
+let private assignToPayloadTy (ctx: AbCtx) variantSerial (tyArgs: Ty list) =
+  let variantDef = ctx.Variants |> mapFind variantSerial
+
+  let tyParams =
+    match ctx.Tys |> mapFind variantDef.UnionTySerial with
+    | UnionTyDef (_, tyParams, _, _) -> tyParams
+    | _ -> []
+
+  let assignment =
+    match listTryZip tyParams tyArgs with
+    | zipped, [], [] -> TMap.ofList compare zipped
+    | _ -> unreachable () // Arity mismatch.
+
+  tySubst (fun tySerial -> assignment |> TMap.tryFind tySerial) variantDef.PayloadTy
+
+let private unwrapNewtypeUnionTy (ctx: AbCtx) ty tyArgs : Ty option =
   let asNewtypeVariant ty =
     match ty with
     | Ty (UnionTk tySerial, _) ->
       match ctx.Tys |> mapFind tySerial with
-      | UnionTyDef (_, [ variantSerial ], _) when not (isRecursiveVariant ctx variantSerial) -> Some variantSerial
+      | UnionTyDef (_, _, [ variantSerial ], _) when not (isRecursiveVariant ctx variantSerial) -> Some variantSerial
       | _ -> None
     | _ -> None
 
@@ -548,8 +566,10 @@ let private unwrapNewtypeUnionTy (ctx: AbCtx) ty : Ty option =
     let variantDef = ctx.Variants |> mapFind variantSerial
     assert variantDef.IsNewtype
 
-    erasePayloadTy ctx variantSerial variantDef.PayloadTy
-    |> Some
+    let payloadTy =
+      assignToPayloadTy ctx variantSerial tyArgs
+
+    erasePayloadTy ctx variantSerial payloadTy |> Some
 
   | _ -> None
 
@@ -664,9 +684,9 @@ let private abTy ctx ty =
     | None -> ty
 
   | Ty (UnionTk _, tyArgs) ->
-    assert (List.isEmpty tyArgs)
+    let tyArgs = tyArgs |> List.map (abTy ctx)
 
-    match unwrapNewtypeUnionTy ctx ty with
+    match unwrapNewtypeUnionTy ctx ty tyArgs with
     | Some ty -> ty
     | None -> ty
 
