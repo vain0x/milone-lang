@@ -24,6 +24,10 @@ let private unwrapListTy ty =
   | Ty (ListTk, [ it ]) -> it
   | _ -> unreachable ()
 
+let private patIsUnit pat = pat |> patToTy |> tyIsUnit
+
+let private exprIsUnit expr = expr |> exprToTy |> tyIsUnit
+
 // -----------------------------------------------
 // Context
 // -----------------------------------------------
@@ -1213,8 +1217,7 @@ let private mirifyCallInRegionExpr ctx arg loc =
     addStmt ctx (MActionStmt(MEnterRegionAction, [], loc))
 
   let ctx =
-    let unit = MUnitExpr loc
-    addStmt ctx (MPrimStmt(MCallClosurePrim, [ arg; unit ], tempSerial, tyInt, loc))
+    addStmt ctx (MPrimStmt(MCallClosurePrim, [ arg ], tempSerial, tyInt, loc))
 
   let ctx =
     addStmt ctx (MActionStmt(MLeaveRegionAction, [], loc))
@@ -1231,15 +1234,20 @@ let private mirifyCallPrintfnExpr ctx args loc =
 
 let private mirifyCallProcExpr ctx callee args ty loc =
   let callee, ctx = mirifyExpr ctx callee
+  let args, ctx = mirifyArgs ctx args
 
-  let args, ctx = mirifyExprs ctx args
+  if tyIsUnit ty then
+    let ctx =
+      addStmt ctx (MActionStmt(MCallProcAction, callee :: args, loc))
 
-  let temp, tempSerial, ctx = freshVar ctx "call" ty loc
+    MUnitExpr loc, ctx
+  else
+    let temp, tempSerial, ctx = freshVar ctx "call" ty loc
 
-  let ctx =
-    addStmt ctx (MPrimStmt(MCallProcPrim, callee :: args, tempSerial, ty, loc))
+    let ctx =
+      addStmt ctx (MPrimStmt(MCallProcPrim, callee :: args, tempSerial, ty, loc))
 
-  temp, ctx
+    temp, ctx
 
 let private mirifyCallPrimExpr ctx itself prim args ty loc =
   let fail () = unreachable itself
@@ -1336,17 +1344,22 @@ let private mirifyCallPrimExpr ctx itself prim args ty loc =
 
 let private mirifyExprInfCallClosure ctx callee args resultTy loc =
   let callee, ctx = mirifyExpr ctx callee
+  let args, ctx = mirifyArgs ctx args
 
-  let args, ctx = mirifyExprs ctx args
+  if tyIsUnit resultTy then
+    let ctx =
+      addStmt ctx (MActionStmt(MCallClosureAction, callee :: args, loc))
 
-  let tempRef, tempSerial, ctx = freshVar ctx "app" resultTy loc
+    MUnitExpr loc, ctx
+  else
+    let tempRef, tempSerial, ctx = freshVar ctx "app" resultTy loc
 
-  let ctx =
-    addStmt ctx (MPrimStmt(MCallClosurePrim, callee :: args, tempSerial, resultTy, loc))
+    let ctx =
+      addStmt ctx (MPrimStmt(MCallClosurePrim, callee :: args, tempSerial, resultTy, loc))
 
-  tempRef, ctx
+    tempRef, ctx
 
-let private mirifyExprInfCallTailRec (ctx: MirCtx) _callee args ty loc =
+let private mirifyExprInfCallTailRec (ctx: MirCtx) _callee args _ty loc =
   // It's guaranteed that callee points to the current fun,
   // but it's serial can now be wrong due to monomorphization.
 
@@ -1357,13 +1370,13 @@ let private mirifyExprInfCallTailRec (ctx: MirCtx) _callee args ty loc =
 
   // Evaluate args and assign to temp vars.
   let tempExprs, ctx =
+    let args, ctx = mirifyArgs ctx args
+
     (args, ctx)
     |> stMap
          (fun (arg, ctx) ->
-           let ty, loc = exprExtract arg
+           let ty, loc = mexprExtract arg
            let tempVarExpr, tempVarSerial, ctx = freshVar ctx "arg" ty loc
-
-           let arg, ctx = mirifyExpr ctx arg
 
            let ctx =
              addStmt ctx (MLetValStmt(tempVarSerial, Some arg, ty, loc))
@@ -1520,6 +1533,10 @@ let private mirifyExprLetFunContents (ctx: MirCtx) calleeSerial argPats body let
   let mirifyFunBody (ctx: MirCtx) argPats body =
     let blockTy, blockLoc = exprExtract body
 
+    let argPats =
+      argPats
+      |> List.filter (fun pat -> patIsUnit pat |> not)
+
     let args, ctx = defineArgs [] ctx argPats
     let parentSerial, ctx = prepareCurrentFunSerial ctx
     let parentFun, ctx = prepareTailRec ctx args
@@ -1600,6 +1617,15 @@ let private mirifyExpr (ctx: MirCtx) (expr: HExpr) : MExpr * MirCtx =
 let private mirifyExprs ctx exprs =
   (exprs, ctx)
   |> stMap (fun (expr, ctx) -> mirifyExpr ctx expr)
+
+let private mirifyArgs ctx args =
+  let args, ctx = mirifyExprs ctx args
+
+  let args =
+    args
+    |> List.filter (fun arg -> arg |> mexprToTy |> tyIsUnit |> not)
+
+  args, ctx
 
 let mirify (decls: HExpr list, tyCtx: TyCtx) : MDecl list * MirCtx =
   let ctx = ofTyCtx tyCtx

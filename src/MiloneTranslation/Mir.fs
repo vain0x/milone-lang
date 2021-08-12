@@ -115,6 +115,8 @@ type MAction =
   | MPrintfnAction
   | MEnterRegionAction
   | MLeaveRegionAction
+  | MCallProcAction
+  | MCallClosureAction
   | MCallNativeAction of funName: string
   | MPtrWriteAction
 

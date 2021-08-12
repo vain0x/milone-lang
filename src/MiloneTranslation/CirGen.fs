@@ -197,6 +197,20 @@ let private addDecl (ctx: CirCtx) decl = { ctx with Decls = decl :: ctx.Decls }
 // Type definition generation
 // -----------------------------------------------
 
+let private cgArgTys ctx argTys : CTy list * CirCtx =
+  let argTys =
+    argTys
+    |> List.filter (fun ty -> tyIsUnit ty |> not)
+
+  (argTys, ctx)
+  |> stMap (fun (ty, ctx) -> cgTyComplete ctx ty)
+
+let private cgResultTy ctx resultTy : CTy * CirCtx =
+  if tyIsUnit resultTy then
+    CVoidTy, ctx
+  else
+    cgTyComplete ctx resultTy
+
 let private genIncompleteFunTyDecl (ctx: CirCtx) sTy tTy =
   let funTy = tyFun sTy tTy
 
@@ -228,11 +242,8 @@ let private genFunTyDef (ctx: CirCtx) sTy tTy =
     let envTy = CConstPtrTy CVoidTy
     let _, argTys, resultTy = tyToArgList funTy
 
-    let argTys, ctx =
-      (argTys, ctx)
-      |> stMap (fun (ty, ctx) -> cgTyComplete ctx ty)
-
-    let resultTy, (ctx: CirCtx) = cgTyComplete ctx resultTy
+    let argTys, ctx = cgArgTys ctx argTys
+    let resultTy, ctx = cgResultTy ctx resultTy
 
     let fields =
       [ "fun", CFunPtrTy(envTy :: argTys, resultTy)
@@ -430,20 +441,10 @@ let private cgNativePtrTy ctx isMut itemTy =
 let private cgNativeFunTy ctx tys =
   match splitLast tys with
   | None -> unreachable ()
-  | Some (paramTys, resultTy) ->
-    let paramTys, ctx =
-      match paramTys with
-      | [ Ty (TupleTk, []) ] -> [], ctx
-      | _ ->
-        (paramTys, ctx)
-        |> stMap (fun (ty, ctx) -> cgTyComplete ctx ty)
-
-    let resultTy, ctx =
-      match resultTy with
-      | Ty (TupleTk, []) -> CVoidTy, ctx
-      | _ -> cgTyComplete ctx resultTy
-
-    CFunPtrTy(paramTys, resultTy), ctx
+  | Some (argTys, resultTy) ->
+    let argTys, ctx = cgArgTys ctx argTys
+    let resultTy, ctx = cgResultTy ctx resultTy
+    CFunPtrTy(argTys, resultTy), ctx
 
 /// Converts a type to incomplete type.
 /// whose type definition is not necessary to be visible.
@@ -571,12 +572,8 @@ let private cgExternFunDecl (ctx: CirCtx) funSerial =
         go funDef.Arity ty
 
       let name = getUniqueFunName ctx funSerial
-
-      let argTys, ctx =
-        (argTys, ctx)
-        |> stMap (fun (argTy, ctx) -> cgTyComplete ctx argTy)
-
-      let resultTy, ctx = cgTyComplete ctx resultTy
+      let argTys, ctx = cgArgTys ctx argTys
+      let resultTy, ctx = cgResultTy ctx resultTy
 
       let ctx: CirCtx =
         addDecl ctx (CFunForwardDecl(name, argTys, resultTy))
@@ -757,9 +754,8 @@ let private cgExpr (ctx: CirCtx) (arg: MExpr) : CExpr * CirCtx =
 // -----------------------------------------------
 
 let private addNativeFunDecl ctx funName args resultTy =
-  let argTys, ctx =
-    (args, ctx)
-    |> stMap (fun (arg, ctx) -> cgTyComplete ctx (mexprToTy arg))
+  let argTys, ctx = cgArgTys ctx (List.map mexprToTy args)
+  let resultTy, ctx = cgResultTy ctx resultTy
 
   addDecl ctx (CFunForwardDecl(funName, argTys, resultTy))
 
@@ -779,9 +775,43 @@ let private cgActionStmt ctx itself action args =
     assert (List.isEmpty args)
     addStmt ctx (CExprStmt(CCallExpr(CVarExpr "milone_leave_region", [])))
 
-  | MCallNativeAction funName ->
+  | MCallProcAction ->
     let ctx =
-      addNativeFunDecl ctx funName args CVoidTy
+      match args with
+      | MProcExpr (funSerial, _, _) :: _ -> cgExternFunDecl ctx funSerial
+      | _ -> ctx
+
+    let args, ctx =
+      (args, ctx)
+      |> stMap (fun (arg, ctx) -> cgExpr ctx arg)
+
+    match args with
+    | callee :: args -> addStmt ctx (CExprStmt(CCallExpr(callee, args)))
+    | _ -> unreachable itself
+
+  | MCallClosureAction ->
+    let ctx =
+      match args with
+      | MProcExpr (funSerial, _, _) :: _ -> cgExternFunDecl ctx funSerial
+      | _ -> ctx
+
+    let args, ctx =
+      (args, ctx)
+      |> stMap (fun (arg, ctx) -> cgExpr ctx arg)
+
+    match args with
+    | callee :: args ->
+      let callExpr =
+        let funPtr = CDotExpr(callee, "fun")
+        let envArg = CDotExpr(callee, "env")
+        CCallExpr(funPtr, envArg :: args)
+
+      addStmt ctx (CExprStmt callExpr)
+
+    | _ -> unreachable itself
+
+  | MCallNativeAction funName ->
+    let ctx = addNativeFunDecl ctx funName args tyUnit
 
     let args, ctx = cgExprList ctx args
     addStmt ctx (CExprStmt(CCallExpr(CVarExpr funName, args)))
@@ -976,7 +1006,7 @@ let private cgPrimStmt (ctx: CirCtx) itself prim args serial resultTy =
 
     let ctx =
       match args with
-      | MProcExpr (funSerial, _, loc) :: _ -> cgExternFunDecl ctx funSerial
+      | MProcExpr (funSerial, _, _) :: _ -> cgExternFunDecl ctx funSerial
       | _ -> ctx
 
     let args, ctx =
@@ -1019,7 +1049,6 @@ let private cgPrimStmt (ctx: CirCtx) itself prim args serial resultTy =
 
   | MCallNativePrim funName ->
     let ctx =
-      let resultTy, ctx = cgTyComplete ctx resultTy
       addNativeFunDecl ctx funName args resultTy
 
     regular ctx (fun args -> (CCallExpr(CVarExpr funName, args)))
@@ -1090,8 +1119,11 @@ let private cgSetStmt ctx serial right =
   addStmt ctx (CSetStmt(left, right))
 
 let private cgReturnStmt ctx expr =
-  let expr, ctx = cgExpr ctx expr
-  addStmt ctx (CReturnStmt(Some expr))
+  if expr |> mexprToTy |> tyIsUnit then
+    addStmt ctx (CReturnStmt None)
+  else
+    let expr, ctx = cgExpr ctx expr
+    addStmt ctx (CReturnStmt(Some expr))
 
 // FIXME: Without the result type ascription, invalid code is generated for some reason.
 let private cgTerminatorAsBlock ctx terminator : CStmt list * CirCtx =
@@ -1204,7 +1236,7 @@ let private cgDecls (ctx: CirCtx) decls =
     let args, ctx = collectArgs [] ctx args
     let stmts, ctx = collectFunLocalStmts ctx
     let body, ctx = cgBlocks ctx body
-    let resultTy, ctx = cgTyComplete ctx resultTy
+    let resultTy, ctx = cgResultTy ctx resultTy
 
     let funDecl =
       let body = List.append stmts body

@@ -73,13 +73,22 @@ let private binaryToString op =
 // -----------------------------------------------
 
 let private cpFunPtrTy name argTys resultTy acc =
-  acc
-  |> cpTy resultTy
-  |> cons "(*"
-  |> cons name
-  |> cons ")("
-  |> join ", " argTys cpTy
-  |> cons ")"
+  match argTys with
+  | [] ->
+    acc
+    |> cpTy resultTy
+    |> cons "(*"
+    |> cons name
+    |> cons ")(void)"
+
+  | _ ->
+    acc
+    |> cpTy resultTy
+    |> cons "(*"
+    |> cons name
+    |> cons ")("
+    |> join ", " argTys cpTy
+    |> cons ")"
 
 let private cpTy ty acc : string list =
   match ty with
@@ -116,7 +125,9 @@ let private cpParams ps acc : string list =
       |> cons ", "
       |> go ps
 
-  acc |> go ps
+  match ps with
+  | [] -> acc |> cons "void"
+  | _ -> acc |> go ps
 
 // -----------------------------------------------
 // Literals
@@ -578,19 +589,8 @@ let private cpForwardDecl decl acc =
 
   | CFunForwardDecl (name, argTys, resultTy) ->
     let cpParamTys acc =
-      argTys
-      |> List.fold
-           (fun (first, acc) ty ->
-             let acc =
-               (if isFirst first then
-                  acc
-                else
-                  acc |> cons ", ")
-               |> cpTy ty
-
-             (NotFirst, acc))
-           (First, acc)
-      |> snd
+      let args = List.map (fun argTy -> "", argTy) argTys
+      acc |> cpParams args
 
     acc |> cpFunForwardDecl name cpParamTys resultTy
 
