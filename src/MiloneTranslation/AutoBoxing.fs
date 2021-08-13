@@ -15,14 +15,24 @@ module TMap = MiloneStd.StdMap
 
 let private tyIsRecord ty =
   match ty with
-  | Ty (RecordTk _, _) -> true
+  | Ty (RecordTk _, tyArgs) ->
+    assert (List.isEmpty tyArgs)
+    true
+
   | _ -> false
 
+let private unwrapRecordTy ty =
+  match ty with
+  | Ty (RecordTk tySerial, tyArgs) ->
+    assert (List.isEmpty tyArgs)
+    tySerial
+  | _ -> unreachable ()
+
 let private hxBox itemExpr itemTy loc =
-  hxApp (HPrimExpr(HPrim.Box, tyFun itemTy tyObj, loc)) itemExpr tyObj loc
+  hxCallProc (HPrimExpr(HPrim.Box, tyFun itemTy tyObj, loc)) [ itemExpr ] tyObj loc
 
 let private hxUnbox boxExpr itemTy loc =
-  hxApp (HPrimExpr(HPrim.Unbox, tyFun tyObj itemTy, loc)) boxExpr itemTy loc
+  hxCallProc (HPrimExpr(HPrim.Unbox, tyFun tyObj itemTy, loc)) [ boxExpr ] itemTy loc
 
 // -----------------------------------------------
 // Type recursion detection
@@ -527,7 +537,7 @@ let private postProcessVariantAppPat (ctx: AbCtx) variantSerial payloadPat =
   else
     None
 
-let private postProcessVariantFunAppExpr ctx variantSerial payload : HExpr option =
+let private postProcessVariantFunCallExpr ctx variantSerial payload : HExpr option =
   if needsBoxedVariant ctx variantSerial then
     // FIXME: ty is now wrong for the same reason as call-variant pattern.
     let ty, loc = exprExtract payload
@@ -604,7 +614,7 @@ let private unwrapNewtypeVariantExpr (ctx: AbCtx) variantSerial loc : HExpr opti
   else
     None
 
-let private unwrapNewtypeVariantAppExpr (ctx: AbCtx) variantSerial payload : HExpr option =
+let private unwrapNewtypeVariantCallExpr (ctx: AbCtx) variantSerial payload : HExpr option =
   let variantDef = ctx.Variants |> mapFind variantSerial
 
   if
@@ -662,11 +672,28 @@ let private postProcessRecordExpr ctx baseOpt fields recordTy loc =
   else
     None
 
+let private postProcessRecordExpr2 ctx recordTySerial args loc =
+  if needsBoxedRecordTySerial ctx recordTySerial then
+    let ty = tyRecord recordTySerial
+    let recordExpr = HNodeExpr(HRecordEN, args, ty, loc)
+
+    Some(hxBox recordExpr ty loc)
+  else
+    None
+
 let private postProcessFieldExpr ctx recordExpr recordTy fieldName fieldTy loc =
   if needsBoxedRecordTy ctx recordTy then
     assert (recordExpr |> exprToTy |> tyEqual tyObj)
 
     Some(HNavExpr(hxUnbox recordExpr recordTy loc, fieldName, fieldTy, loc))
+  else
+    None
+
+let private postProcessFieldExpr2 ctx recordTySerial recordExpr index fieldTy loc =
+  if needsBoxedRecordTySerial ctx recordTySerial then
+    let ty = tyRecord recordTySerial
+
+    Some(HNodeExpr(HRecordItemEN index, [ hxUnbox recordExpr ty loc ], fieldTy, loc))
   else
     None
 
@@ -745,49 +772,43 @@ let private abExpr ctx expr =
     | Some expr -> expr
     | None -> HVariantExpr(variantSerial, ty, loc)
 
-  | HRecordExpr (baseOpt, fields, ty, loc) ->
-    assert (tyIsRecord ty)
-
-    let baseOpt = baseOpt |> Option.map (abExpr ctx)
-
-    let fields =
-      fields
-      |> List.map
-           (fun (name, init, loc) ->
-             let init = init |> abExpr ctx
-             name, init, loc)
-
-    match postProcessRecordExpr ctx baseOpt fields ty loc with
-    | Some expr -> expr
-    | None -> HRecordExpr(baseOpt, fields, ty, loc)
-
-  | HNavExpr (l, r, ty, loc) ->
-    let recordTy = l |> exprToTy
-    assert (tyIsRecord recordTy)
-
-    let l = l |> abExpr ctx
-    let ty = ty |> abTy ctx
-
-    match postProcessFieldExpr ctx l recordTy r ty loc with
-    | Some expr -> expr
-    | None -> HNavExpr(l, r, ty, loc)
-
   | HNodeExpr (kind, items, ty, loc) ->
-    let items = items |> List.map (abExpr ctx)
-    let ty = ty |> abTy ctx
-
     match kind, items with
-    | HAppEN, [ (HVariantExpr (variantSerial, _, _) as callee); payload ] ->
+    | HCallProcEN, [ (HVariantExpr (variantSerial, _, _) as callee); payload ] ->
+      let payload = payload |> abExpr ctx
+      let ty = ty |> abTy ctx
+
       let payload =
-        match postProcessVariantFunAppExpr ctx variantSerial payload with
+        match postProcessVariantFunCallExpr ctx variantSerial payload with
         | Some payload -> payload
         | None -> payload
 
-      match unwrapNewtypeVariantAppExpr ctx variantSerial payload with
+      match unwrapNewtypeVariantCallExpr ctx variantSerial payload with
       | Some payload -> payload
-      | None -> hxApp callee payload ty loc
+      | None -> hxCallProc callee [ payload ] ty loc
 
-    | _ -> HNodeExpr(kind, items, ty, loc)
+    | HRecordEN, _ ->
+      let recordSerial = unwrapRecordTy ty
+      let items = items |> List.map (abExpr ctx)
+      let ty = ty |> abTy ctx
+
+      match postProcessRecordExpr2 ctx recordSerial items loc with
+      | Some expr -> expr
+      | None -> HNodeExpr(HRecordEN, items, ty, loc)
+
+    | HRecordItemEN index, [ recordExpr ] ->
+      let recordTySerial = recordExpr |> exprToTy |> unwrapRecordTy
+      let recordExpr = recordExpr |> abExpr ctx
+      let ty = ty |> abTy ctx
+
+      match postProcessFieldExpr2 ctx recordTySerial recordExpr index ty loc with
+      | Some expr -> expr
+      | None -> HNodeExpr(HRecordItemEN index, [ recordExpr ], ty, loc)
+
+    | _ ->
+      let items = items |> List.map (abExpr ctx)
+      let ty = ty |> abTy ctx
+      HNodeExpr(kind, items, ty, loc)
 
   | HLitExpr _ -> expr
 
@@ -826,6 +847,9 @@ let private abExpr ctx expr =
     let next = next |> abExpr ctx
     let ty = ty |> abTy ctx
     HLetFunExpr(callee, isRec, vis, args, body, next, ty, loc)
+
+  | HNavExpr _ -> unreachable () // HNavExpr is resolved in NameRes, Typing, or RecordRes.
+  | HRecordExpr _ -> unreachable () // HRecordExpr is resolved in RecordRes.
 
 let autoBox (expr: HExpr, tyCtx: TyCtx) =
   // Detect recursion.

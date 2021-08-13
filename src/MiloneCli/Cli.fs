@@ -480,9 +480,6 @@ let transformHir (host: CliHost) v (modules: Tir.TProgram, tyCtx: Typing.TyCtx) 
 
     Hir.hxSemi decls noLoc
 
-  writeLog host v "AutoBoxing"
-  let expr, tyCtx = autoBox (expr, tyCtx)
-
   writeLog host v "RecordRes"
   let expr, tyCtx = recordRes (expr, tyCtx)
 
@@ -491,6 +488,9 @@ let transformHir (host: CliHost) v (modules: Tir.TProgram, tyCtx: Typing.TyCtx) 
 
   writeLog host v "EtaExpansion"
   let expr, tyCtx = etaExpansion (expr, tyCtx)
+
+  writeLog host v "AutoBoxing"
+  let expr, tyCtx = autoBox (expr, tyCtx)
 
   writeLog host v "Hoist"
   let decls, tyCtx = hoist (expr, tyCtx)
