@@ -184,6 +184,7 @@ type ScopeCtx =
     RootModules: ModuleTySerial list
     CurrentModule: ModuleTySerial option
     CurrentPath: string list
+    AncestralFuns: FunSerial list
 
     /// Values contained by types.
     VarNs: Ns<ValueSymbol>
@@ -223,6 +224,7 @@ let private ofNameCtx (nameCtx: NameCtx) : ScopeCtx =
     RootModules = []
     CurrentModule = None
     CurrentPath = []
+    AncestralFuns = []
     VarNs = TMap.empty nsOwnerCompare
     TyNs = TMap.empty nsOwnerCompare
     NsNs = TMap.empty nsOwnerCompare
@@ -470,14 +472,16 @@ let private addLocalTy tySymbol tyDef (scopeCtx: ScopeCtx) : ScopeCtx =
   |> addTy tySymbol tyDef
   |> importTy tySymbol
 
-/// Called on enter the init of let expressions.
-let private enterLetInit (scopeCtx: ScopeCtx) : ScopeCtx =
+/// Called on enter the init of let-fun expressions.
+let private enterLetInit funSerial (scopeCtx: ScopeCtx) : ScopeCtx =
   { scopeCtx with
-      Level = scopeCtx.Level + 1 }
+      Level = scopeCtx.Level + 1
+      AncestralFuns = funSerial :: scopeCtx.AncestralFuns }
 
 let private leaveLetInit (scopeCtx: ScopeCtx) : ScopeCtx =
   { scopeCtx with
-      Level = scopeCtx.Level - 1 }
+      Level = scopeCtx.Level - 1
+      AncestralFuns = listSkip 1 scopeCtx.AncestralFuns }
 
 /// Starts a new scope.
 let private startScope kind (scopeCtx: ScopeCtx) : ScopeCtx =
@@ -747,6 +751,10 @@ let private defineFunUniquely vis funSerial args ty loc (scopeCtx: ScopeCtx) : S
         Ty = TyScheme([], ty)
         Abi = MiloneAbi
         Linkage = makeLinkage vis name scopeCtx
+
+        // The function itself is registered as ancestor if `rec`. Use the second for that case.
+        ParentOpt = List.tryFind (fun x -> funSerialCompare x funSerial <> 0) scopeCtx.AncestralFuns
+
         Loc = loc }
 
     let scopeCtx =
@@ -1008,7 +1016,7 @@ let private collectDecls moduleSerialOpt (expr, ctx) =
 
       let ctx =
         ctx
-        |> enterLetInit
+        |> enterLetInit funSerial
         |> defineFunUniquely vis funSerial args noTy loc
         |> leaveLetInit
         |> addVarToModule vis (FunSymbol funSerial)
@@ -1549,7 +1557,7 @@ let private nameResExpr (expr: TExpr, ctx: ScopeCtx) =
         // (If this declaration is not written in module directly, visibility meaning less, so use PrivateVis.)
         let ctx =
           ctx
-          |> enterLetInit
+          |> enterLetInit serial
           |> defineFunUniquely PrivateVis serial pats noTy loc
           |> startScope ExprScope
 
@@ -1562,7 +1570,7 @@ let private nameResExpr (expr: TExpr, ctx: ScopeCtx) =
 
       | NotRec ->
         let ctx =
-          ctx |> enterLetInit |> startScope ExprScope
+          ctx |> enterLetInit serial |> startScope ExprScope
 
         let pats, ctx =
           (pats, ctx) |> stMap nameResIrrefutablePat

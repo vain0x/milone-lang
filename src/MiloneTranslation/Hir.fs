@@ -115,6 +115,7 @@ type FunDef =
     Ty: TyScheme
     Abi: FunAbi
     Linkage: Linkage
+    ParentOpt: FunSerial option
     Loc: Loc }
 
 [<RequireQualifiedAccess; NoEquality; NoComparison>]

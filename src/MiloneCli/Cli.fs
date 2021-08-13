@@ -289,6 +289,7 @@ let private lowerFunDef (def: Tir.FunDef) : Hir.FunDef =
     Ty = lowerTyScheme def.Ty
     Abi = def.Abi
     Linkage = def.Linkage
+    ParentOpt = Option.map lowerFunSerial def.ParentOpt
     Loc = def.Loc }
 
 let private lowerVariantDef (def: Tir.VariantDef) : Hir.VariantDef =

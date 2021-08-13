@@ -397,6 +397,7 @@ let private mtDefs (tyCtx: TyCtx) (mtCtx: MtCtx) =
                  Ty = ty
                  Abi = funDef.Abi
                  Linkage = funDef.Linkage
+                 ParentOpt = funDef.ParentOpt
                  Loc = funDef.Loc }
 
              let funs = funs |> TMap.add funSerial funDef
@@ -533,6 +534,7 @@ let private bthFunDef (funDef: M.FunDef) : FunDef =
     Ty = TyScheme([], bthTy funDef.Ty)
     Abi = funDef.Abi
     Linkage = funDef.Linkage
+    ParentOpt = funDef.ParentOpt
     Loc = funDef.Loc }
 
 let private bthVariantDef (variantDef: M.VariantDef) : VariantDef =

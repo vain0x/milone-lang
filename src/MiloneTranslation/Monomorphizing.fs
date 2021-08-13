@@ -57,6 +57,7 @@ open MiloneShared.Util
 open MiloneTranslation.Hir
 
 module TMap = MiloneStd.StdMap
+module TSet = MiloneStd.StdSet
 
 let private funSerialTyPairCompare l r =
   pairCompare funSerialCompare tyCompare l r
@@ -159,16 +160,50 @@ let private findGenericFun (ctx: MonoCtx) funSerial =
   else
     Some(funDef.Name, funDef.Arity, funTy, funDef.Loc)
 
+let private topologicalSort (keyCompare: 'K -> 'K -> int) (parent: 'K -> 'K option) (keys: 'K list) : 'K list =
+  let rec go key doneSet acc =
+    if TSet.contains key doneSet then
+      doneSet, acc
+    else
+      let doneSet = TSet.add key doneSet
+
+      let doneSet, acc =
+        match parent key with
+        | Some p -> go p doneSet acc
+        | _ -> doneSet, acc
+
+      doneSet, key :: acc
+
+  List.fold (fun (doneSet, acc) key -> go key doneSet acc) (TSet.empty keyCompare, []) keys
+  |> snd
+  |> List.rev
+
 /// Generalizes all functions that has type variables.
+///
+/// Nested functions inherit type variables from parent functions.
 let private forceGeneralizeFuns (ctx: MonoCtx) =
   let funs =
     ctx.Funs
-    |> TMap.map
-         (fun funSerial (funDef: FunDef) ->
-           let (TyScheme (_, ty)) = funDef.Ty
-           let fvs = ty |> tyCollectFreeVars
+    |> TMap.toKeys
+    |> topologicalSort funSerialCompare (fun funSerial -> (ctx.Funs |> mapFind funSerial).ParentOpt)
+    |> List.fold
+         (fun funs funSerial ->
+           let funDef: FunDef = funs |> mapFind funSerial
+           let (TyScheme (currentFvs, ty)) = funDef.Ty
 
-           { funDef with Ty = TyScheme(fvs, ty) })
+           match funDef.ParentOpt with
+           | Some parent ->
+             let (TyScheme (parentFvs, _)) = (funs |> mapFind parent).Ty
+
+             let fvs =
+               List.append parentFvs currentFvs
+               |> listUnique compare
+
+             funs
+             |> TMap.add funSerial { funDef with Ty = TyScheme(fvs, ty) }
+
+           | None -> funs)
+         ctx.Funs
 
   { ctx with Funs = funs }
 
