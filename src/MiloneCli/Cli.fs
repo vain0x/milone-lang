@@ -259,7 +259,7 @@ let private lowerTk (tk: Tir.Tk) : Hir.Tk =
   | Tir.RecordTk serial -> Hir.RecordTk serial
 
   | Tir.ErrorTk _
-  | Tir.SynonymTk _ -> unreachable tk // Resolved in Typing.
+  | Tir.SynonymTk _ -> unreachable () // Resolved in Typing.
 
   | Tir.UnresolvedTk _
   | Tir.UnresolvedVarTk _ -> unreachable () // Resolved in NameRes.
