@@ -418,29 +418,35 @@ let private lowerExpr (expr: Tir.TExpr) : Hir.HExpr =
     )
   | Tir.TNavExpr (l, r, ty, loc) -> Hir.HNavExpr(lowerExpr l, r, lowerTy ty, loc)
   | Tir.TNodeExpr (kind, args, ty, loc) -> Hir.HNodeExpr(lowerExprKind kind, List.map lowerExpr args, lowerTy ty, loc)
-  | Tir.TBlockExpr (stmts, last) -> Hir.HBlockExpr(List.map lowerExpr stmts, lowerExpr last)
-  | Tir.TLetValExpr (pat, init, next, ty, loc) ->
-    Hir.HLetValExpr(lowerPat pat, lowerExpr init, lowerExpr next, lowerTy ty, loc)
-  | Tir.TLetFunExpr (funSerial, isRec, vis, argPats, body, next, ty, loc) ->
+  | Tir.TBlockExpr (_, stmts, last) -> Hir.HBlockExpr(List.map lowerStmt stmts, lowerExpr last)
+
+let private lowerStmt (stmt: Tir.TStmt) : Hir.HExpr =
+  match stmt with
+  | Tir.TExprStmt expr -> lowerExpr expr
+
+  | Tir.TLetValStmt (pat, init, loc) -> Hir.HLetValExpr(lowerPat pat, lowerExpr init, Hir.hxUnit loc, Hir.tyUnit, loc)
+
+  | Tir.TLetFunStmt (funSerial, isRec, vis, argPats, body, loc) ->
     Hir.HLetFunExpr(
       lowerFunSerial funSerial,
       isRec,
       vis,
       List.map lowerPat argPats,
       lowerExpr body,
-      lowerExpr next,
-      lowerTy ty,
+      Hir.hxUnit loc,
+      Hir.tyUnit,
       loc
     )
 
-  | Tir.TTyDeclExpr _
-  | Tir.TOpenExpr _
-  | Tir.TModuleExpr _
-  | Tir.TModuleSynonymExpr _ -> Hir.hxUnit (Tir.exprToLoc expr) // Consumed in NameRes.
+  // These statements are removed. Already used in NameRes.
+  | Tir.TTyDeclStmt _
+  | Tir.TOpenStmt _
+  | Tir.TModuleStmt _
+  | Tir.TModuleSynonymStmt _ -> Hir.hxUnit (Tir.stmtToLoc stmt)
 
 let private lowerModules (modules: Tir.TProgram) : Hir.HProgram =
   modules
-  |> List.map (fun (p, m, decls) -> p, m, List.map lowerExpr decls)
+  |> List.map (fun (p, m, stmts) -> p, m, List.map lowerStmt stmts)
 
 let private lowerTyCtx (tyCtx: Typing.TyCtx) : Hir.TyCtx =
   { Serial = tyCtx.Serial

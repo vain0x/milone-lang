@@ -486,13 +486,16 @@ let private athExpr (docId: DocId) (expr: AExpr, nameCtx: NameCtx) : TExpr * Nam
     let loc = toLoc docId pos
     hxAscribe body ty loc, nameCtx
 
-  | ASemiExpr (stmts, last, pos) ->
+  | ASemiExpr (stmts, last, _) ->
     let stmts, nameCtx =
-      (stmts, nameCtx) |> stMap (athExpr docId)
+      (stmts, nameCtx)
+      |> stMap
+           (fun (expr, nameCtx) ->
+             let expr, nameCtx = athExpr docId (expr, nameCtx)
+             TExprStmt expr, nameCtx)
 
     let last, nameCtx = (last, nameCtx) |> athExpr docId
-    let loc = toLoc docId pos
-    hxSemi (List.append stmts [ last ]) loc, nameCtx
+    TBlockExpr(NotRec, stmts, last), nameCtx
 
   | ALetExpr (isRec, pat, body, next, pos) ->
     match desugarLet isRec pat body next pos with
@@ -501,30 +504,36 @@ let private athExpr (docId: DocId) (expr: AExpr, nameCtx: NameCtx) : TExpr * Nam
       let args, nameCtx = (args, nameCtx) |> stMap (athPat docId)
       let body, nameCtx = (body, nameCtx) |> athExpr docId
       let next, nameCtx = (next, nameCtx) |> athExpr docId
-      let loc = toLoc docId pos
-      TLetFunExpr(FunSerial serial, isRec, vis, args, body, next, noTy, loc), nameCtx
+
+      let stmt =
+        let loc = toLoc docId pos
+        TLetFunStmt(FunSerial serial, isRec, vis, args, body, loc)
+
+      hxLetIn stmt next, nameCtx
 
     | ALetVal (_isRec, pat, body, next, pos) ->
       let pat, nameCtx = (pat, nameCtx) |> athPat docId
       let body, nameCtx = (body, nameCtx) |> athExpr docId
       let next, nameCtx = (next, nameCtx) |> athExpr docId
-      let loc = toLoc docId pos
-      // FIXME: let rec for let-val is error. No way to report it for now...
-      TLetValExpr(pat, body, next, noTy, loc), nameCtx
+
+      let stmt =
+        let loc = toLoc docId pos
+        // FIXME: let rec for let-val is error.
+        TLetValStmt(pat, body, loc)
+
+      hxLetIn stmt next, nameCtx
 
   | ARangeExpr _ -> unreachable () // Generated only inside of AIndexExpr.
-
-let private prepend stmt stmts = stmt :: stmts
 
 let private athTyArgs (tyArgs, nameCtx) =
   (tyArgs, nameCtx)
   |> stMap (fun (name, nameCtx) -> nameCtx |> nameCtxAdd (greek name))
 
-let private athDecl docId (decl, nameCtx) =
+let private athDecl docId (decl, nameCtx) : TStmt * NameCtx =
   match decl with
   | AExprDecl expr ->
     let expr, nameCtx = (expr, nameCtx) |> athExpr docId
-    prepend expr, nameCtx
+    TExprStmt expr, nameCtx
 
   | ALetDecl (isRec, pat, body, pos) ->
     match desugarLetDecl isRec pat body pos with
@@ -534,14 +543,14 @@ let private athDecl docId (decl, nameCtx) =
       let body, nameCtx = (body, nameCtx) |> athExpr docId
       let loc = toLoc docId pos
 
-      (fun next -> [ TLetFunExpr(FunSerial serial, isRec, vis, args, body, hxSemi next loc, noTy, loc) ]), nameCtx
+      TLetFunStmt(FunSerial serial, isRec, vis, args, body, loc), nameCtx
 
     | ALetValDecl (_isRec, pat, body, pos) ->
       let pat, nameCtx = (pat, nameCtx) |> athPat docId
       let body, nameCtx = (body, nameCtx) |> athExpr docId
       let loc = toLoc docId pos
-      // FIXME: let rec for let-val is error, no way to report.
-      (fun next -> [ TLetValExpr(pat, body, hxSemi next loc, noTy, loc) ]), nameCtx
+      // FIXME: let rec for let-val is error.
+      TLetValStmt(pat, body, loc), nameCtx
 
   | ATySynonymDecl (vis, name, tyArgs, ty, pos) ->
     let serial, nameCtx = nameCtx |> nameCtxAdd name
@@ -549,7 +558,7 @@ let private athDecl docId (decl, nameCtx) =
     let tyArgs, nameCtx = (tyArgs, nameCtx) |> athTyArgs
 
     let loc = toLoc docId pos
-    prepend (TTyDeclExpr(serial, vis, tyArgs, TySynonymDecl(ty, loc), loc)), nameCtx
+    TTyDeclStmt(serial, vis, tyArgs, TySynonymDecl(ty, loc), loc), nameCtx
 
   | AUnionTyDecl (vis, name, tyArgs, variants, pos) ->
     let athVariant (AVariant (name, payloadTy, _variantLoc), nameCtx) =
@@ -568,7 +577,8 @@ let private athDecl docId (decl, nameCtx) =
     let tyArgs, nameCtx = (tyArgs, nameCtx) |> athTyArgs
     let variants, nameCtx = (variants, nameCtx) |> stMap athVariant
     let loc = toLoc docId pos
-    prepend (TTyDeclExpr(unionSerial, vis, tyArgs, UnionTyDecl(nameToIdent name, variants, loc), loc)), nameCtx
+
+    TTyDeclStmt(unionSerial, vis, tyArgs, UnionTyDecl(nameToIdent name, variants, loc), loc), nameCtx
 
   | ARecordTyDecl (vis, recordName, tyArgs, fieldDecls, pos) ->
     let athFieldDecl ((name, ty, fieldPos), nameCtx) =
@@ -584,57 +594,48 @@ let private athDecl docId (decl, nameCtx) =
       (fieldDecls, nameCtx) |> stMap athFieldDecl
 
     let loc = toLoc docId pos
-    prepend (TTyDeclExpr(tySerial, vis, tyArgs, RecordTyDecl(nameToIdent recordName, fields, loc), loc)), nameCtx
+    TTyDeclStmt(tySerial, vis, tyArgs, RecordTyDecl(nameToIdent recordName, fields, loc), loc), nameCtx
 
   | AOpenDecl (path, pos) ->
     let loc = toLoc docId pos
-    prepend (TOpenExpr(List.map nameToIdent path, loc)), nameCtx
+    TOpenStmt(List.map nameToIdent path, loc), nameCtx
 
   | AModuleSynonymDecl (ident, path, pos) ->
     let serial, nameCtx = nameCtx |> nameCtxAdd ident
     let loc = toLoc docId pos
-    prepend (TModuleSynonymExpr(ModuleSynonymSerial serial, List.map nameToIdent path, loc)), nameCtx
+
+    TModuleSynonymStmt(ModuleSynonymSerial serial, List.map nameToIdent path, loc), nameCtx
 
   | AModuleDecl (_isRec, _vis, name, decls, pos) ->
     // FIXME: use rec, vis
     let serial, nameCtx = nameCtx |> nameCtxAdd name
-    let decls, nameCtx = (decls, nameCtx) |> athDecls docId
+    let body, nameCtx = (decls, nameCtx) |> athDecls docId
     let loc = toLoc docId pos
-    prepend (TModuleExpr(ModuleTySerial serial, decls, loc)), nameCtx
+
+    TModuleStmt(ModuleTySerial serial, body, loc), nameCtx
 
   | AAttrDecl (contents, next, pos) ->
     // printfn "/* attribute: %s %s */" (pos |> toLoc docId |> locToString) (objToString contents)
     athDecl docId (next, nameCtx)
 
-let private athDecls docId (decls, nameCtx) =
-  let axUnit pos = ATupleExpr([], pos)
+let private athDecls docId (decls, nameCtx) : TStmt list * NameCtx =
+  (decls, nameCtx) |> stMap (athDecl docId)
 
-  let rec go (decls, nameCtx) =
-    match decls with
-    | [] -> [], nameCtx
-
-    | decl :: decls ->
-      let hole, nameCtx = athDecl docId (decl, nameCtx)
-      let next, nameCtx = go (decls, nameCtx)
-      hole next, nameCtx
-
-  go (decls, nameCtx)
-
-let astToHir (projectName: string) (docId: DocId) (root: ARoot, nameCtx: NameCtx) : TExpr list * NameCtx =
+let astToHir (projectName: string) (docId: DocId) (root: ARoot, nameCtx: NameCtx) : TStmt list * NameCtx =
   let onModuleRoot moduleName body pos =
     let body, nameCtx = (body, nameCtx) |> athDecls docId
     let serial, nameCtx = nameCtx |> nameCtxAdd moduleName
     let loc = toLoc docId pos
-    [ TModuleExpr(ModuleTySerial serial, body, loc) ], nameCtx
+    [ TModuleStmt(ModuleTySerial serial, body, loc) ], nameCtx
 
   let wrapWithProjectModule (body, nameCtx) =
     let serial, nameCtx =
       nameCtx |> nameCtxAdd (Name(projectName, (0, 0)))
 
-    [ TModuleExpr(ModuleTySerial serial, body, noLoc) ], nameCtx
+    [ TModuleStmt(ModuleTySerial serial, body, noLoc) ], nameCtx
 
   match root with
-  | AExprRoot exprs -> (exprs, nameCtx) |> athDecls docId
+  | AExprRoot decls -> (decls, nameCtx) |> athDecls docId
 
   | AModuleRoot (moduleName, body, pos) ->
     if nameToIdent moduleName = "MiloneOnly" then

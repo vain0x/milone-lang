@@ -926,7 +926,7 @@ let private inferRecordExpr ctx expectOpt baseOpt fields loc =
       let recordExpr =
         TRecordExpr(Some varExpr, fields, recordTy, loc)
 
-      TLetValExpr(varPat, baseExpr, recordExpr, recordTy, loc), recordTy, ctx
+      hxLetIn (TLetValStmt(varPat, baseExpr, loc)) recordExpr, recordTy, ctx
 
 /// match 'a with ( | 'aT-> 'b )*
 let private inferMatchExpr ctx expectOpt itself cond arms loc =
@@ -1123,23 +1123,27 @@ let private inferAscribeExpr ctx body ascriptionTy loc =
   let ctx = unifyTy ctx loc bodyTy ascriptionTy
   body, ascriptionTy, ctx
 
-let private inferBlockExpr ctx expectOpt stmts last =
+let private inferBlockExpr ctx expectOpt mutuallyRec stmts last =
   let stmts, ctx =
     (stmts, ctx)
-    |> stMap
-         (fun (expr, ctx) ->
-           let loc = exprToLoc expr
+    |> stMap (fun (stmt, ctx) -> inferStmt ctx mutuallyRec stmt)
 
-           let expr, resultTy, ctx = inferExpr ctx None expr
-           let ctx = unifyTy ctx loc resultTy tyUnit
-
-           expr, ctx)
+  // TODO: Generalize functions if recursive.
 
   let last, lastTy, ctx = inferExpr ctx expectOpt last
 
-  TBlockExpr(stmts, last), lastTy, ctx
+  TBlockExpr(mutuallyRec, stmts, last), lastTy, ctx
 
-let private inferLetValExpr ctx expectOpt pat init next loc =
+// -----------------------------------------------
+// Statement
+// -----------------------------------------------
+
+let private inferExprStmt ctx expr =
+  let expr, ty, ctx = inferExpr ctx None expr
+  let ctx = unifyTy ctx (exprToLoc expr) ty tyUnit
+  TExprStmt expr, ctx
+
+let private inferLetValStmt ctx pat init loc =
   let init, initTy, ctx =
     let expectOpt = patToAscriptionTy pat
     inferExpr ctx expectOpt init
@@ -1148,10 +1152,9 @@ let private inferLetValExpr ctx expectOpt pat init next loc =
 
   let ctx = unifyTy ctx loc initTy patTy
 
-  let next, nextTy, ctx = inferExpr ctx expectOpt next
-  TLetValExpr(pat, init, next, nextTy, loc), nextTy, ctx
+  TLetValStmt(pat, init, loc), ctx
 
-let private inferLetFunExpr (ctx: TyCtx) expectOpt callee vis argPats body next loc =
+let private inferLetFunStmt ctx mutuallyRec callee vis argPats body loc =
   // Special treatment for main function.
   let mainFunTyOpt, ctx =
     if ctx |> isMainFun callee then
@@ -1207,10 +1210,10 @@ let private inferLetFunExpr (ctx: TyCtx) expectOpt callee vis argPats body next 
 
   let ctx = ctx |> decLevel
 
+  // TODO: generalize on block expr if mutually recursive.
   let ctx = generalizeFun ctx outerLevel callee
 
-  let next, nextTy, ctx = inferExpr ctx expectOpt next
-  TLetFunExpr(callee, NotRec, vis, argPats, body, next, nextTy, loc), nextTy, ctx
+  TLetFunStmt(callee, NotRec, vis, argPats, body, loc), ctx
 
 let private inferExpr (ctx: TyCtx) (expectOpt: Ty option) (expr: TExpr) : TExpr * Ty * TyCtx =
   let fail () = unreachable expr
@@ -1235,15 +1238,7 @@ let private inferExpr (ctx: TyCtx) (expectOpt: Ty option) (expr: TExpr) : TExpr 
   | TNodeExpr (TSliceEN, [ l; r; x ], _, loc) -> inferSliceExpr ctx l r x loc
   | TNodeExpr (TSliceEN, _, _, _) -> fail ()
 
-  | TBlockExpr (stmts, last) -> inferBlockExpr ctx expectOpt stmts last
-
-  | TLetValExpr (pat, body, next, _, loc) -> inferLetValExpr ctx expectOpt pat body next loc
-
-  | TLetFunExpr (oldSerial, _, vis, args, body, next, _, loc) ->
-    inferLetFunExpr ctx expectOpt oldSerial vis args body next loc
-
-  | TTyDeclExpr _
-  | TOpenExpr _ -> expr, tyUnit, ctx
+  | TBlockExpr (mutuallyRec, stmts, last) -> inferBlockExpr ctx expectOpt mutuallyRec stmts last
 
   | TNodeExpr (TMinusEN, _, _, _)
   | TNodeExpr (TAscribeEN, _, _, _)
@@ -1255,8 +1250,17 @@ let private inferExpr (ctx: TyCtx) (expectOpt: Ty option) (expr: TExpr) : TExpr 
   | TNodeExpr (TNativeDeclEN _, _, _, _)
   | TNodeExpr (TSizeOfValEN, _, _, _) -> unreachable ()
 
-  | TModuleExpr _
-  | TModuleSynonymExpr _ -> unreachable () // Resolved in NameRes.
+let private inferStmt ctx mutuallyRec stmt : TStmt * TyCtx =
+  match stmt with
+  | TExprStmt expr -> inferExprStmt ctx expr
+  | TLetValStmt (pat, init, loc) -> inferLetValStmt ctx pat init loc
+  | TLetFunStmt (oldSerial, _, vis, args, body, loc) -> inferLetFunStmt ctx mutuallyRec oldSerial vis args body loc
+
+  | TTyDeclStmt _
+  | TOpenStmt _ -> stmt, ctx
+
+  | TModuleStmt _
+  | TModuleSynonymStmt _ -> unreachable () // Resolved in NameRes.
 
 // -----------------------------------------------
 // Reject cyclic synonyms
@@ -1416,12 +1420,8 @@ let infer (modules: TProgram, scopeCtx: ScopeCtx, errors) : TProgram * TyCtx =
   let ctx = { ctx with Funs = funs; Level = 0 }
 
   let modules, ctx =
-    let inferStmt (expr, ctx) =
-      let expr, ty, ctx = inferExpr ctx (Some tyUnit) expr
-      let ctx = unifyTy ctx (exprToLoc expr) ty tyUnit
-      expr, ctx
-
-    (modules, ctx) |> hirProgramEachExpr inferStmt
+    (modules, ctx)
+    |> hirProgramEachStmt (fun (stmt, ctx) -> inferStmt ctx NotRec stmt)
 
   let ctx = ctx |> resolveTraitBounds
 
@@ -1435,7 +1435,7 @@ let infer (modules: TProgram, scopeCtx: ScopeCtx, errors) : TProgram * TyCtx =
 
   let modules, ctx =
     (modules, ctx)
-    |> hirProgramEachExpr (fun (expr, ctx) -> exprMap substOrDegenerate id expr, ctx)
+    |> hirProgramEachStmt (fun (stmt, ctx) -> stmtMap substOrDegenerate id stmt, ctx)
 
   let ctx =
     let vars =
