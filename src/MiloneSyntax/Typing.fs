@@ -1165,8 +1165,6 @@ let private inferBlockExpr ctx expectOpt mutuallyRec stmts last =
                  let funDef: FunDef = ctx.Funs |> mapFind funSerial
                  let (TyScheme (tyVars, funTy)) = funDef.Ty
 
-                 let oldTy = funDef.Ty
-
                  match tyVars with
                  | [] -> ctx
 
@@ -1194,22 +1192,6 @@ let private inferBlockExpr ctx expectOpt mutuallyRec stmts last =
 
                      tyVars
                      |> List.fold (fun tyLevels fv -> tyLevels |> TMap.add fv 1000000000) ctx.TyLevels
-
-                   //  let watched =
-                   //    let n = funDef.Name
-                   //    let (Loc (docId, row, _)) = funDef.Loc
-
-                   //    n = "doInferPats"
-                   //    || ((n = "filter" || n = "ofList")
-                   //        && docId = "MiloneStd.StdMap")
-
-                   //  if watched then
-                   //    printfn
-                   //      "regen %s %s\n  old: %s\n  new: %s"
-                   //      funDef.Name
-                   //      (locToString funDef.Loc)
-                   //      (objToString oldTy)
-                   //      (objToString funTyScheme)
 
                    let instantiations, grayInstantiations =
                      ctx.GrayInstantiations |> TMap.remove funSerial
