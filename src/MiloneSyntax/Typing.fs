@@ -48,6 +48,7 @@ type TyCtx =
     Tys: AssocMap<TySerial, TyDef>
 
     TyLevels: AssocMap<TySerial, Level>
+    QuantifiedTys: AssocSet<TySerial>
     Level: Level
 
     /// Funs that are mutually recursive and defined in the current block.
@@ -186,12 +187,11 @@ let private substOrDegenerateTy (ctx: TyCtx) ty =
     | Some (UniversalTyDef _) -> None
 
     | _ ->
-      let level = getTyLevel tySerial ctx
       // Degenerate unless quantified.
-      if level < 1000000000 then
-        Some tyUnit
-      else
+      if ctx.QuantifiedTys |> TSet.contains tySerial then
         None
+      else
+        Some tyUnit
 
   tySubst substMeta ty
 
@@ -319,15 +319,14 @@ let private generalizeFun (ctx: TyCtx) (outerLevel: Level) funSerial =
             ctx.Funs
             |> TMap.add funSerial { funDef with Ty = funTyScheme } }
 
-    // Mark generalized meta tys (universally quantified vars),
-    // by increasing their level to infinite (10^9).
+    // Mark generalized meta tys (universally quantified vars)
     let ctx =
       let (TyScheme (fvs, _)) = funTyScheme
 
       { ctx with
-          TyLevels =
+          QuantifiedTys =
             fvs
-            |> List.fold (fun tyLevels fv -> tyLevels |> TMap.add fv 1000000000) ctx.TyLevels }
+            |> List.fold (fun quantifiedTys tyVar -> TSet.add tyVar quantifiedTys) ctx.QuantifiedTys }
 
     ctx
 
@@ -1187,11 +1186,9 @@ let private inferBlockExpr ctx expectOpt mutuallyRec stmts last =
                      ctx.Funs
                      |> TMap.add funSerial { funDef with Ty = funTyScheme }
 
-                   let tyLevels =
-                     let (TyScheme (tyVars, _)) = funTyScheme
-
+                   let quantifiedTys =
                      tyVars
-                     |> List.fold (fun tyLevels fv -> tyLevels |> TMap.add fv 1000000000) ctx.TyLevels
+                     |> List.fold (fun quantifiedTys tyVar -> TSet.add tyVar quantifiedTys) ctx.QuantifiedTys
 
                    let instantiations, grayInstantiations =
                      ctx.GrayInstantiations |> TMap.remove funSerial
@@ -1199,7 +1196,7 @@ let private inferBlockExpr ctx expectOpt mutuallyRec stmts last =
                    let ctx =
                      { ctx with
                          Funs = funs
-                         TyLevels = tyLevels
+                         QuantifiedTys = quantifiedTys
                          GrayInstantiations = grayInstantiations }
 
                    let ctx =
@@ -1475,6 +1472,7 @@ let infer (modules: TProgram, scopeCtx: ScopeCtx, errors) : TProgram * TyCtx =
       MainFunOpt = scopeCtx.MainFunOpt
       Tys = scopeCtx.Tys
       TyLevels = TMap.empty compare
+      QuantifiedTys = TSet.empty compare
       Level = 0
       GrayFuns = TSet.empty funSerialCompare
       GrayInstantiations = TMap.empty funSerialCompare
