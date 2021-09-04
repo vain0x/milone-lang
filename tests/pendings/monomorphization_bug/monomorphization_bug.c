@@ -1,6 +1,6 @@
 #include "milone.h"
 
-struct UnitUnitTuple2_;
+struct StringStringTuple2_;
 
 void const* dup_(void const* arg_);
 
@@ -8,16 +8,16 @@ void const* bug_(void const* b_);
 
 int milone_main(void);
 
-struct UnitUnitTuple2_ {
-    char t0;
-    char t1;
+struct StringStringTuple2_ {
+    struct String t0;
+    struct String t1;
 };
 
 void const* dup_(void const* arg_) {
-    char x_ = 0;
-    struct UnitUnitTuple2_ UnitUnitTuple2_ = (struct UnitUnitTuple2_){.t0 = 0, .t1 = 0};
-    void const* box_ = milone_mem_alloc(1, sizeof(struct UnitUnitTuple2_));
-    (*(((struct UnitUnitTuple2_*)box_))) = UnitUnitTuple2_;
+    struct String x_ = (*(((struct String const*)arg_)));
+    struct StringStringTuple2_ StringStringTuple2_ = (struct StringStringTuple2_){.t0 = x_, .t1 = x_};
+    void const* box_ = milone_mem_alloc(1, sizeof(struct StringStringTuple2_));
+    (*(((struct StringStringTuple2_*)box_))) = StringStringTuple2_;
     return box_;
 }
 
