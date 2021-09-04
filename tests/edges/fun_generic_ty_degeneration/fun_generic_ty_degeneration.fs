@@ -1,5 +1,7 @@
 module rec fun_generic_ty_degeneration.Program
 
+// NOTE: after some change (introducing compute-ty-args and fixing generalization of nested function), the following comment might be incorrect.
+
 // Function body can contain unbound type variables.
 // These types are degenerated (converted) to unit.
 
