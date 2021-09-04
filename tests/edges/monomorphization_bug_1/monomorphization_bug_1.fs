@@ -1,4 +1,4 @@
-module rec monomorphization_bug.Program
+module rec monomorphization_bug_1.Program
 
 type private Box<'T> = Box of 'T
 
