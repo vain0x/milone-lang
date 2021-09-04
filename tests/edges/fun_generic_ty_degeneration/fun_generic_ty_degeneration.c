@@ -50,7 +50,7 @@ void fun_generic_ty_degeneration_Program_testCase(struct IntStringTuple2_ kv_) {
     void const* box_ = milone_mem_alloc(1, sizeof(struct IntStringTuple2_));
     (*(((struct IntStringTuple2_*)box_))) = kv_;
     int call_2 = fstUnbox_(box_, (struct IntStringTuple2Option_){.discriminant = None_});
-    milone_assert((call_2 == 0), 18, 2);
+    milone_assert((call_2 == 0), 20, 2);
     return;
 }
 

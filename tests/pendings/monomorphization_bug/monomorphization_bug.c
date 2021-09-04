@@ -27,7 +27,12 @@ void const* bug_(void const* b_) {
 }
 
 int milone_main(void) {
-    printf("x1 = \'a\'\n");
-    printf("x2 = \'a\'\n");
+    void const* box_1 = milone_mem_alloc(1, sizeof(struct String));
+    (*(((struct String*)box_1))) = (struct String){.str = "a", .len = 1};
+    void const* call_1 = bug_(box_1);
+    struct String x1_ = (*(((struct StringStringTuple2_ const*)call_1))).t0;
+    struct String x2_ = (*(((struct StringStringTuple2_ const*)call_1))).t1;
+    printf("x1 = \'%s\'\n", str_to_c_str(x1_));
+    printf("x2 = \'%s\'\n", str_to_c_str(x2_));
     return 0;
 }
