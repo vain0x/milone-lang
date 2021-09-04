@@ -1,5 +1,9 @@
 module rec fun_monomorphization_bug.Program
 
+// Fixed.
+
+// ===============================================
+
 // During compilation, compiles crashes in unreachable code.
 // It seems 'T is not replaced with type argument in monomorphization.
 // The reason seems g has monomorphic signature and "forceGeneration" doesn't occur.
