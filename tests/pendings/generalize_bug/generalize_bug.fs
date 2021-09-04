@@ -2,7 +2,9 @@ module rec generalize_bug.Program
 
 // Repro. Issue about type inference and forward use of mutually recursive function.
 
-type Pat = | Pat
+type Pat =
+  | Pat
+  | OtherPat
 
 let private anotherFun pat = inferPat pat // Here inferPat has provisional type 'a and (in previous implementation) 'a is generalized and levels downs to 10^9.
 
@@ -23,5 +25,7 @@ let private doInferPats pats =
 let inferPat pat : Pat = pat
 
 let main _ =
-  let _ = doInferPats []
+  let _ = doInferPats [ Pat ]
+  // ^ In generated code, the type of _ is unit list for some reason.
+
   0

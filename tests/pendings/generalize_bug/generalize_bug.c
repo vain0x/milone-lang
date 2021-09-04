@@ -1,34 +1,47 @@
 #include "milone.h"
 
-struct UnitList;
+struct Pat_;
+
+struct Pat_List;
+
+struct Pat_List;
 
 struct UnitList;
 
-void anotherFun_(void);
+struct Pat_ anotherFun_(struct Pat_ pat_);
 
-struct UnitList const* go_(struct UnitList const* acc_, struct UnitList const* pats_1);
+struct Pat_List const* go_(struct Pat_List const* acc_, struct Pat_List const* pats_1);
 
-struct UnitList const* doInferPats_(struct UnitList const* pats_);
+struct Pat_List const* doInferPats_(struct Pat_List const* pats_);
 
-void generalize_bug_Program_inferPat(void);
+struct Pat_ generalize_bug_Program_inferPat(struct Pat_ pat_3);
 
 int milone_main(void);
 
-struct UnitList {
-    char head;
-    struct UnitList const* tail;
+enum Pat_Discriminant {
+    Pat_,
+    OtherPat_,
 };
 
-void anotherFun_(void) {
-    generalize_bug_Program_inferPat();
-    return;
+struct Pat_ {
+    enum Pat_Discriminant discriminant;
+};
+
+struct Pat_List {
+    struct Pat_ head;
+    struct Pat_List const* tail;
+};
+
+struct Pat_ anotherFun_(struct Pat_ pat_) {
+    struct Pat_ call_ = generalize_bug_Program_inferPat(pat_);
+    return call_;
 }
 
-struct UnitList const* go_(struct UnitList const* acc_, struct UnitList const* pats_1) {
-    struct UnitList const* pats_2;
-    char pat_1;
+struct Pat_List const* go_(struct Pat_List const* acc_, struct Pat_List const* pats_1) {
+    struct Pat_List const* pats_2;
+    struct Pat_ pat_1;
 tailrec_1:;
-    struct UnitList const* match_;
+    struct Pat_List const* match_;
     if ((!((!(pats_1))))) goto next_3;
     match_ = acc_;
     goto end_match_2;
@@ -36,12 +49,12 @@ next_3:;
     if ((!(pats_1))) goto next_4;
     pat_1 = pats_1->head;
     pats_2 = pats_1->tail;
-    generalize_bug_Program_inferPat();
-    char pat_2 = 0;
-    struct UnitList const* list_ = milone_mem_alloc(1, sizeof(struct UnitList));
-    (*(((struct UnitList*)list_))) = (struct UnitList){.head = 0, .tail = acc_};
-    struct UnitList const* arg_ = list_;
-    struct UnitList const* arg_1 = pats_2;
+    struct Pat_ call_1 = generalize_bug_Program_inferPat(pat_1);
+    struct Pat_ pat_2 = call_1;
+    struct Pat_List const* list_ = milone_mem_alloc(1, sizeof(struct Pat_List));
+    (*(((struct Pat_List*)list_))) = (struct Pat_List){.head = pat_2, .tail = acc_};
+    struct Pat_List const* arg_ = list_;
+    struct Pat_List const* arg_1 = pats_2;
     acc_ = arg_;
     pats_1 = arg_1;
     goto tailrec_1;
@@ -51,16 +64,18 @@ end_match_2:;
     return match_;
 }
 
-struct UnitList const* doInferPats_(struct UnitList const* pats_) {
-    struct UnitList const* call_ = go_(NULL, pats_);
-    return call_;
+struct Pat_List const* doInferPats_(struct Pat_List const* pats_) {
+    struct Pat_List const* call_2 = go_(NULL, pats_);
+    return call_2;
 }
 
-void generalize_bug_Program_inferPat(void) {
-    return;
+struct Pat_ generalize_bug_Program_inferPat(struct Pat_ pat_3) {
+    return pat_3;
 }
 
 int milone_main(void) {
-    struct UnitList const* call_1 = doInferPats_(NULL);
+    struct Pat_List const* list_1 = milone_mem_alloc(1, sizeof(struct Pat_List));
+    (*(((struct Pat_List*)list_1))) = (struct Pat_List){.head = (struct Pat_){.discriminant = Pat_}, .tail = NULL};
+    struct UnitList const* call_3 = doInferPats_(list_1);
     return 0;
 }
