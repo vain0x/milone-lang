@@ -200,7 +200,7 @@ let private freshFun name arity (ty: Ty) loc (ctx: EtaCtx) =
         Serial = ctx.Serial + 1
         Funs = ctx.Funs |> TMap.add funSerial funDef }
 
-  let funExpr = HFunExpr(funSerial, ty, loc)
+  let funExpr = HFunExpr(funSerial, ty, [], loc) // FIXME: unimpl ty args
   funExpr, funSerial, ctx
 
 let private freshVar name (ty: Ty) loc (ctx: EtaCtx) =
@@ -313,7 +313,7 @@ let private createUnderlyingFunDef funTy arity envPat envTy forwardCall restArgP
     HLetFunExpr(funSerial, NotRec, PrivateVis, argPats, body, next, exprToTy next, callLoc)
 
   let funExpr =
-    HFunExpr(funSerial, underlyingFunTy, callLoc)
+    HFunExpr(funSerial, underlyingFunTy, [], callLoc)
 
   funLet, funExpr, ctx
 
@@ -409,7 +409,7 @@ let private doExpandCall calleeKind callee arity calleeLoc args resultTy callLoc
 
 let private expandCallExpr callee args resultTy loc (ctx: EtaCtx) =
   match callee, args with
-  | HFunExpr (funSerial, _, calleeLoc), _ ->
+  | HFunExpr (funSerial, _, _, calleeLoc), _ ->
     let arity = (ctx.Funs |> mapFind funSerial).Arity
     let args, ctx = (args, ctx) |> stMap exExpr
     doExpandCall CalleeKind.Fun callee arity calleeLoc args resultTy loc ctx
@@ -483,7 +483,7 @@ let private exExpr (expr, ctx) =
   | HLitExpr _
   | HVarExpr _ -> expr, ctx
 
-  | HFunExpr (serial, _, calleeLoc) -> exFunName expr serial calleeLoc ctx
+  | HFunExpr (serial, _, _, calleeLoc) -> exFunName expr serial calleeLoc ctx
   | HVariantExpr (_, ty, loc) -> exVariantName expr ty loc ctx
   | HPrimExpr (prim, primTy, calleeLoc) -> exPrimExpr expr prim primTy calleeLoc ctx
 

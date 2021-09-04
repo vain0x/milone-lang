@@ -59,10 +59,19 @@ open MiloneTranslation.Hir
 module TMap = MiloneStd.StdMap
 module TSet = MiloneStd.StdSet
 
-let private funSerialTyPairCompare l r =
-  pairCompare funSerialCompare tyCompare l r
+let private funSerialTyListPairCompare l r =
+  pairCompare funSerialCompare (listCompare tyCompare) l r
 
-let private emptyBinding: AssocMap<TySerial, Ty> = TMap.empty compare
+// #tyAssign
+let private tyAssign tyScheme (tyArgs: Ty list) =
+  let (TyScheme (tyVars, genericTy)) = tyScheme
+
+  let assignment =
+    match listTryZip tyVars tyArgs with
+    | zipped, [], [] -> TMap.ofList compare zipped
+    | _ -> unreachable () // Arity mismatch.
+
+  tySubst (fun tySerial -> assignment |> TMap.tryFind tySerial) genericTy
 
 // -----------------------------------------------
 // Context
@@ -79,16 +88,16 @@ type private MonoCtx =
     /// - generic function serial
     ///
     /// to:
-    /// - found use-site types
-    GenericFunUseSiteTys: AssocMap<FunSerial, Ty list>
+    /// - list of found use-site ty args
+    GenericFunUseSiteTys: AssocMap<FunSerial, Ty list list>
 
     /// Map from pairs:
     /// - generic function's serial
-    /// - monomorphic type
+    /// - monomorphic use-site ty args
     ///
     /// to:
     /// - monomorphized function's serial
-    GenericFunMonoSerials: AssocMap<FunSerial * Ty, FunSerial>
+    GenericFunMonoSerials: AssocMap<FunSerial * Ty list, FunSerial>
 
     Mode: MonoMode
     SomethingHappened: bool }
@@ -100,48 +109,9 @@ let private ofTyCtx (tyCtx: TyCtx) : MonoCtx =
     Tys = tyCtx.Tys
 
     GenericFunUseSiteTys = TMap.empty funSerialCompare
-    GenericFunMonoSerials = TMap.empty funSerialTyPairCompare
+    GenericFunMonoSerials = TMap.empty funSerialTyListPairCompare
     Mode = MonoMode.Monify
     SomethingHappened = true }
-
-let private unifyTy (monoCtx: MonoCtx) (lTy: Ty) (rTy: Ty) loc =
-  let ctx = monoCtx
-
-  let expandMeta binding tySerial =
-    match binding |> TMap.tryFind tySerial with
-    | (Some _) as it -> it
-    | _ ->
-      match ctx.Tys |> TMap.tryFind tySerial with
-      | Some (MetaTyDef ty) -> Some ty
-      | _ -> None
-
-  let substTy binding ty = tySubst (expandMeta binding) ty
-
-  let rec go lTy rTy loc binding =
-    match unifyNext lTy rTy loc with
-    | UnifyOk
-    | UnifyError _ ->
-      // NOTE: Unification may fail due to auto boxing.
-      //       This is not fatal problem since all type errors are already handled in typing phase.
-      binding
-
-    | UnifyOkWithStack stack -> List.fold (fun binding (l, r) -> go l r loc binding) binding stack
-
-    | UnifyExpandMeta (tySerial, otherTy) ->
-      match expandMeta binding tySerial with
-      | Some ty -> go ty otherTy loc binding
-
-      | None ->
-        match unifyAfterExpandMeta tySerial (substTy binding otherTy) loc with
-        | UnifyAfterExpandMetaResult.OkNoBind -> binding
-
-        | UnifyAfterExpandMetaResult.OkBind -> binding |> TMap.add tySerial otherTy
-
-        | UnifyAfterExpandMetaResult.Error _ -> binding
-
-    | UnifyExpandSynonym _ -> unreachable () // Resolved in Typing.
-
-  go lTy rTy loc emptyBinding
 
 let private markAsSomethingHappened (ctx: MonoCtx) =
   if ctx.SomethingHappened then
@@ -160,63 +130,32 @@ let private findGenericFun (ctx: MonoCtx) funSerial =
   else
     Some(funDef.Name, funDef.Arity, funTy, funDef.Loc)
 
-let private topologicalSort (keyCompare: 'K -> 'K -> int) (parent: 'K -> 'K option) (keys: 'K list) : 'K list =
-  let rec go key doneSet acc =
-    if TSet.contains key doneSet then
-      doneSet, acc
-    else
-      let doneSet = TSet.add key doneSet
-
-      let doneSet, acc =
-        match parent key with
-        | Some p -> go p doneSet acc
-        | _ -> doneSet, acc
-
-      doneSet, key :: acc
-
-  List.fold (fun (doneSet, acc) key -> go key doneSet acc) (TSet.empty keyCompare, []) keys
-  |> snd
-  |> List.rev
-
-/// Generalizes all functions that has type variables.
-///
-/// Nested functions inherit type variables from parent functions.
-let private forceGeneralizeFuns (ctx: MonoCtx) =
-  let funs =
-    ctx.Funs
-    |> TMap.toKeys
-    |> topologicalSort funSerialCompare (fun funSerial -> (ctx.Funs |> mapFind funSerial).ParentOpt)
-    |> List.fold
-         (fun funs funSerial ->
-           let funDef: FunDef = funs |> mapFind funSerial
-           let (TyScheme (currentFvs, ty)) = funDef.Ty
-
-           match funDef.ParentOpt with
-           | Some parent ->
-             let (TyScheme (parentFvs, _)) = (funs |> mapFind parent).Ty
-
-             let fvs =
-               List.append parentFvs currentFvs
-               |> listUnique compare
-
-             funs
-             |> TMap.add funSerial { funDef with Ty = TyScheme(fvs, ty) }
-
-           | None -> funs)
-         ctx.Funs
-
-  { ctx with Funs = funs }
-
-let private addMonomorphizedFun (ctx: MonoCtx) genericFunSerial arity useSiteTy loc =
-  assert (tryFindMonomorphizedFun ctx genericFunSerial useSiteTy
+let private addMonomorphizedFun (ctx: MonoCtx) genericFunSerial arity tyArgs loc =
+  assert (tryFindMonomorphizedFun ctx genericFunSerial tyArgs
           |> Option.isNone)
 
   let funDef: FunDef =
     let def: FunDef = ctx.Funs |> mapFind genericFunSerial
 
+    let monomorphicFunTy = tyAssign def.Ty tyArgs
+
+    // if not (tyIsMonomorphic monomorphicFunTy) then
+    //   let (TyScheme (tyVars, genericTy)) = def.Ty
+
+    //   printfn
+    //     "\n\nassertion violation\n %s defined at %s\n  tyVars = %s\ngenericTy = %s\ntyArgs = %s\n monoTy = %s"
+    //     def.Name
+    //     (locToString def.Loc)
+    //     (objToString tyVars)
+    //     (objToString genericTy)
+    //     (objToString tyArgs)
+    //     (objToString monomorphicFunTy)
+
+    assert (tyIsMonomorphic monomorphicFunTy)
+
     { def with
         Arity = arity
-        Ty = TyScheme([], useSiteTy)
+        Ty = TyScheme([], monomorphicFunTy)
         Linkage = InternalLinkage // Generic function can't have stable linkage.
         Loc = loc }
 
@@ -228,41 +167,30 @@ let private addMonomorphizedFun (ctx: MonoCtx) genericFunSerial arity useSiteTy 
         Funs = ctx.Funs |> TMap.add monoFunSerial funDef
         GenericFunMonoSerials =
           ctx.GenericFunMonoSerials
-          |> TMap.add (genericFunSerial, useSiteTy) monoFunSerial }
+          |> TMap.add (genericFunSerial, tyArgs) monoFunSerial }
 
   let ctx = markAsSomethingHappened ctx
   monoFunSerial, ctx
 
 /// Tries to find a monomorphized instance of generic function with use-site type.
-let private tryFindMonomorphizedFun (ctx: MonoCtx) funSerial useSiteTy =
+let private tryFindMonomorphizedFun (ctx: MonoCtx) funSerial tyArgs =
   ctx.GenericFunMonoSerials
-  |> TMap.tryFind (funSerial, useSiteTy)
+  |> TMap.tryFind (funSerial, tyArgs)
 
-let private markUseSite (ctx: MonoCtx) funSerial useSiteTy =
-  let useSiteTyIsMonomorphic = useSiteTy |> tyIsMonomorphic
+let private markUseSite (ctx: MonoCtx) funSerial tyArgs =
+  let isMonomorphic = List.forall tyIsMonomorphic tyArgs
 
   let notMonomorphizedYet =
-    tryFindMonomorphizedFun ctx funSerial useSiteTy
+    tryFindMonomorphizedFun ctx funSerial tyArgs
     |> Option.isNone
 
-  let canMark =
-    useSiteTyIsMonomorphic && notMonomorphizedYet
+  let canMark = isMonomorphic && notMonomorphizedYet
 
   if not canMark then
     ctx
   else
-    let useSiteTys =
-      let useSiteTys =
-        match ctx.GenericFunUseSiteTys |> TMap.tryFind funSerial with
-        | None -> []
-        | Some useSiteTys -> useSiteTys
-
-      useSiteTy :: useSiteTys
-
     { ctx with
-        GenericFunUseSiteTys =
-          ctx.GenericFunUseSiteTys
-          |> TMap.add funSerial useSiteTys }
+        GenericFunUseSiteTys = multimapAdd funSerial tyArgs ctx.GenericFunUseSiteTys }
     |> markAsSomethingHappened
 
 let private takeMarkedTys (ctx: MonoCtx) funSerial =
@@ -288,20 +216,20 @@ let private takeMarkedTys (ctx: MonoCtx) funSerial =
 /// Replaces the variable serial to monomorphized function serial if possible.
 /// Or marks an use of generic function if possible.
 /// Does nothing if the serial is NOT a generic function.
-let private monifyFunExpr ctx funSerial useSiteTy =
+let private monifyFunExpr ctx funSerial tyArgs =
   let funDef = findFun ctx funSerial
   let (TyScheme (tyVars, _)) = funDef.Ty
 
   if List.isEmpty tyVars then
-    funSerial, ctx
+    funSerial, [], ctx
   else
-    match tryFindMonomorphizedFun ctx funSerial useSiteTy with
-    | Some monoFunSerial -> monoFunSerial, ctx
+    match tryFindMonomorphizedFun ctx funSerial tyArgs with
+    | Some monoFunSerial -> monoFunSerial, [], ctx
 
     | None ->
-      let ctx = markUseSite ctx funSerial useSiteTy
+      let ctx = markUseSite ctx funSerial tyArgs
 
-      funSerial, ctx
+      funSerial, tyArgs, ctx
 
 let private monifyLetFunExpr (ctx: MonoCtx) callee isRec vis args body next ty loc =
   let genericFunSerial = callee
@@ -309,16 +237,21 @@ let private monifyLetFunExpr (ctx: MonoCtx) callee isRec vis args body next ty l
   let letGenericFunExpr =
     HLetFunExpr(callee, isRec, vis, args, body, next, ty, loc)
 
-  let rec go next arity genericFunTy useSiteTys ctx =
-    match useSiteTys with
+  let rec go next arity genericFunTy workList ctx =
+    match workList with
     | [] -> next, ctx
-    | useSiteTy :: useSiteTys ->
-      match tryFindMonomorphizedFun ctx genericFunSerial useSiteTy with
-      | Some _ -> go next arity genericFunTy useSiteTys ctx
+    | tyArgs :: workList ->
+      match tryFindMonomorphizedFun ctx genericFunSerial tyArgs with
+      | Some _ -> go next arity genericFunTy workList ctx
       | None ->
-        // Unify genericFunTy and useSiteTy to build a mapping
-        // from type variable to use-site type.
-        let binding = unifyTy ctx genericFunTy useSiteTy loc
+        let genericFunDef = ctx.Funs |> mapFind genericFunSerial
+        let (TyScheme (tyVars, _)) = genericFunDef.Ty
+
+        let binding =
+          // #tyAssign?
+          match listTryZip tyVars tyArgs with
+          | zipped, [], [] -> TMap.ofList compare zipped
+          | _ -> unreachable () // Arity mismatch.
 
         let substOrDegenerateTy ty =
           let substMeta tySerial =
@@ -337,20 +270,20 @@ let private monifyLetFunExpr (ctx: MonoCtx) callee isRec vis args body next ty l
         let monoBody = body |> exprMap substOrDegenerateTy id
 
         let monoFunSerial, ctx =
-          addMonomorphizedFun ctx genericFunSerial arity useSiteTy loc
+          addMonomorphizedFun ctx genericFunSerial arity tyArgs loc
 
         let next =
           HLetFunExpr(monoFunSerial, isRec, vis, monoArgs, monoBody, next, ty, loc)
 
-        go next arity genericFunTy useSiteTys ctx
+        go next arity genericFunTy workList ctx
 
   match findGenericFun ctx genericFunSerial, ctx.Mode with
   | None, _ -> letGenericFunExpr, ctx
   | Some _, MonoMode.RemoveGenerics -> next, ctx
   | Some (_, arity, genericFunTy, _), _ ->
-    let useSiteTys, ctx = takeMarkedTys ctx genericFunSerial
+    let workList, ctx = takeMarkedTys ctx genericFunSerial
 
-    go letGenericFunExpr arity genericFunTy useSiteTys ctx
+    go letGenericFunExpr arity genericFunTy workList ctx
 
 // -----------------------------------------------
 // Control
@@ -363,10 +296,9 @@ let private monifyExpr (expr, ctx) =
   | HVariantExpr _
   | HPrimExpr _ -> expr, ctx
 
-  | HFunExpr (funSerial, useSiteTy, loc) ->
-    let funSerial, ctx = monifyFunExpr ctx funSerial useSiteTy
-
-    HFunExpr(funSerial, useSiteTy, loc), ctx
+  | HFunExpr (funSerial, ty, tyArgs, loc) ->
+    let funSerial, tyArgs, ctx = monifyFunExpr ctx funSerial tyArgs
+    HFunExpr(funSerial, ty, tyArgs, loc), ctx
 
   | HMatchExpr (cond, arms, ty, loc) ->
     let cond, ctx = (cond, ctx) |> monifyExpr
@@ -404,7 +336,7 @@ let private monifyExpr (expr, ctx) =
   | HRecordExpr _ -> unreachable () // HRecordExpr is resolved in RecordRes.
 
 let monify (decls: HExpr list, tyCtx: TyCtx) : HExpr list * TyCtx =
-  let monoCtx = ofTyCtx tyCtx |> forceGeneralizeFuns
+  let monoCtx = ofTyCtx tyCtx
 
   // Monomorphization.
   let rec go (round: int) (decls, ctx: MonoCtx) =

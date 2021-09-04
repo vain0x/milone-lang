@@ -151,10 +151,10 @@ let private capsAddToFunTy tTy (caps: Caps) =
   |> List.fold (fun tTy (_, sTy, _) -> tyFun sTy tTy) tTy
 
 /// Updates the callee to take captured variables as arguments.
-let private capsMakeApp calleeSerial calleeTy calleeLoc (caps: Caps) =
+let private capsMakeApp calleeSerial tyArgs calleeTy calleeLoc (caps: Caps) =
   let callee =
     let calleeTy = caps |> capsAddToFunTy calleeTy
-    HFunExpr(calleeSerial, calleeTy, calleeLoc)
+    HFunExpr(calleeSerial, calleeTy, tyArgs, calleeLoc)
 
   let app, _ =
     caps
@@ -346,10 +346,10 @@ let private updateFunDefs (ctx: CcCtx) =
 // Featured transformations
 // -----------------------------------------------
 
-let private ccFunExpr funSerial funTy funLoc ctx =
+let private ccFunExpr funSerial tyArgs funTy funLoc ctx =
   ctx
   |> genFunCaps funSerial
-  |> capsMakeApp funSerial funTy funLoc
+  |> capsMakeApp funSerial tyArgs funTy funLoc
 
 let private ccLetFunExpr callee isRec vis args body next ty loc ctx =
   let args, body, ctx =
@@ -406,9 +406,9 @@ let private ccExpr (expr, ctx) =
     let ctx = ctx |> useVar serial
     HVarExpr(serial, ty, loc), ctx
 
-  | HFunExpr (serial, funTy, funLoc) ->
+  | HFunExpr (serial, funTy, tyArgs, funLoc) ->
     let ctx = ctx |> useFun serial
-    ccFunExpr serial funTy funLoc ctx, ctx
+    ccFunExpr serial tyArgs funTy funLoc ctx, ctx
 
   | HMatchExpr (cond, arms, ty, loc) ->
     let cond, ctx = ccExpr (cond, ctx)

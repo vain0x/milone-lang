@@ -399,7 +399,7 @@ let private lowerExpr (expr: Tir.TExpr) : Hir.HExpr =
   match expr with
   | Tir.TLitExpr (lit, loc) -> Hir.HLitExpr(lit, loc)
   | Tir.TVarExpr (varSerial, ty, loc) -> Hir.HVarExpr(lowerVarSerial varSerial, lowerTy ty, loc)
-  | Tir.TFunExpr (funSerial, ty, loc) -> Hir.HFunExpr(lowerFunSerial funSerial, lowerTy ty, loc)
+  | Tir.TFunExpr (funSerial, ty, loc) -> Hir.HFunExpr(lowerFunSerial funSerial, lowerTy ty, [], loc)
   | Tir.TVariantExpr (variantSerial, ty, loc) -> Hir.HVariantExpr(lowerVariantSerial variantSerial, lowerTy ty, loc)
   | Tir.TPrimExpr (prim, ty, loc) -> Hir.HPrimExpr(lowerPrim prim, lowerTy ty, loc)
   | Tir.TRecordExpr (exprOpt, fields, ty, loc) ->
@@ -494,6 +494,9 @@ let transformHir (host: CliHost) v (modules: Tir.TProgram, tyCtx: Typing.TyCtx) 
 
   writeLog host v "EtaExpansion"
   let expr, tyCtx = etaExpansion (expr, tyCtx)
+
+  writeLog host v "ComputeTyArgs"
+  let expr, tyCtx = computeFunTyArgs (expr, tyCtx)
 
   writeLog host v "AutoBoxing"
   let expr, tyCtx = autoBox (expr, tyCtx)

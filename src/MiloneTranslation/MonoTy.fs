@@ -297,7 +297,7 @@ let private mtExpr (expr, ctx) : M.HExpr * MtCtx =
     let ty, ctx = (ty, ctx) |> mtTy
     M.HVarExpr(varSerial, ty, loc), ctx
 
-  | HFunExpr (funSerial, ty, loc) ->
+  | HFunExpr (funSerial, ty, _, loc) ->
     let ty, ctx = (ty, ctx) |> mtTy
     M.HFunExpr(funSerial, ty, loc), ctx
 
@@ -511,7 +511,7 @@ let private bthExpr (expr: M.HExpr) : HExpr =
   match expr with
   | M.HLitExpr (lit, loc) -> HLitExpr(lit, loc)
   | M.HVarExpr (varSerial, ty, loc) -> HVarExpr(varSerial, ofTy ty, loc)
-  | M.HFunExpr (funSerial, ty, loc) -> HFunExpr(funSerial, ofTy ty, loc)
+  | M.HFunExpr (funSerial, ty, loc) -> HFunExpr(funSerial, ofTy ty, [], loc)
   | M.HVariantExpr (variantSerial, ty, loc) -> HVariantExpr(variantSerial, ofTy ty, loc)
   | M.HPrimExpr (prim, ty, loc) -> HPrimExpr(prim, ofTy ty, loc)
 
