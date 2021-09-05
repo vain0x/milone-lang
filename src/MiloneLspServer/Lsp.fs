@@ -343,36 +343,39 @@ let private dfsExpr (visitor: Visitor) expr =
     for expr in exprs do
       dfsExpr visitor expr
 
-  | TBlockExpr (stmts, expr) ->
+  | TBlockExpr (_, stmts, expr) ->
     for stmt in stmts do
-      dfsExpr visitor stmt
+      dfsStmt visitor stmt
 
     dfsExpr visitor expr
 
-  | TLetValExpr (pat, init, next, _, _) ->
-    dfsPat visitor pat
-    dfsExpr visitor init
-    dfsExpr visitor next
+let private dfsStmt (visitor: Visitor) stmt =
+  let onPat pat = dfsPat visitor pat
+  let onExpr expr = dfsExpr visitor expr
+  let onStmt stmt = dfsStmt visitor stmt
 
-  | TLetFunExpr (funSerial, _, _, argPats, body, next, _, loc) ->
-    visitor.OnFun(funSerial, None, loc)
+  match stmt with
+  | TExprStmt expr -> onExpr expr
 
-    for argPat in argPats do
-      dfsPat visitor argPat
+  | TLetValStmt (pat, init, _) ->
+    onPat pat
+    onExpr init
 
-    dfsExpr visitor body
-    dfsExpr visitor next
+  | TLetFunStmt (_, _, _, args, body, _) ->
+    for arg in args do
+      onPat arg
 
-  | TTyDeclExpr _
-  | TOpenExpr _ -> ()
+    onExpr body
 
-  | TModuleExpr (_, body, _) ->
+  | TModuleStmt (_, body, _) ->
     for stmt in body do
-      dfsExpr visitor stmt
+      onStmt stmt
 
-  | TModuleSynonymExpr _ -> ()
+  | TTyDeclStmt _
+  | TOpenStmt _
+  | TModuleSynonymStmt _ -> ()
 
-let private findTyInExpr (ls: LangServiceState) (expr: TExpr) (tyCtx: Typing.TyCtx) (tokenLoc: Loc) =
+let private findTyInStmt (ls: LangServiceState) (stmt: TStmt) (tyCtx: Typing.TyCtx) (tokenLoc: Loc) =
   let mutable contentOpt = None
 
   let onVisit tyOpt loc =
@@ -387,7 +390,7 @@ let private findTyInExpr (ls: LangServiceState) (expr: TExpr) (tyCtx: Typing.TyC
       OnVariant = fun (_, ty, loc) -> onVisit (Some ty) loc
       OnPrim = fun (_, ty, loc) -> onVisit (Some ty) loc }
 
-  dfsExpr visitor expr
+  dfsStmt visitor stmt
   contentOpt
 
 [<NoComparison>]
@@ -410,8 +413,8 @@ let private collectSymbolsInExpr (modules: TProgram) =
       OnPrim = fun (prim, _, loc) -> onVisit (PrimSymbol prim) Use loc }
 
   for _, _, decls in modules do
-    for expr in decls do
-      dfsExpr visitor expr
+    for stmt in decls do
+      dfsStmt visitor stmt
 
   symbols
 
@@ -590,7 +593,7 @@ module LangService =
               |> List.tryPick
                    (fun (_, _, decls) ->
                      decls
-                     |> List.tryPick (fun expr -> findTyInExpr ls expr tyCtx tokenLoc)) with
+                     |> List.tryPick (fun stmt -> findTyInStmt ls stmt tyCtx tokenLoc)) with
         | None -> None
         | Some ty -> Some(tyDisplayFn tyCtx ty)
 

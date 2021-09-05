@@ -2,7 +2,7 @@
     "version": "0.2.0",
     "configurations": [
         {
-            "type": "extensionHost",
+            "type": "pwa-extensionHost",
             "request": "launch",
             "name": "Launch Extension Host",
             "runtimeExecutable": "${execPath}",
@@ -11,7 +11,7 @@
             ],
             "linux": {
                 "name": "Launch (windows)",
-                "type": "extensionHost",
+                "type": "pwa-extensionHost",
                 "request": "launch",
                 "args": [
                     "--extensionDevelopmentPath=${workspaceFolder}/../../vscode_ext"
@@ -23,7 +23,7 @@
             },
             "windows": {
                 "name": "Launch (windows)",
-                "type": "extensionHost",
+                "type": "pwa-extensionHost",
                 "request": "launch",
                 "args": [
                     "--extensionDevelopmentPath=${workspaceFolder}/../../vscode_ext"

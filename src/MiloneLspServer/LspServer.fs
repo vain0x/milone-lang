@@ -83,6 +83,12 @@ let private jToBool jsonValue : bool =
   | JBoolean value -> value
   | _ -> false
 
+let private jToArray jsonValue : JsonValue list =
+  match jsonValue with
+  | JArray items -> items
+
+  | _ -> failwithf "Expected an array but: %s" (jsonDisplay jsonValue)
+
 let private jToPos jsonValue : Position =
   let row, column =
     jsonValue |> jFields2 "line" "character"
@@ -207,6 +213,41 @@ let private parseDidCloseParam jsonValue : DidCloseParam =
   { Uri = uri }
 
 [<RequireQualifiedAccess; NoEquality; NoComparison>]
+type private FileChangeType =
+  | Created
+  | Changed
+  | Deleted
+
+let private jToFileChangeType jsonValue =
+  match jsonValue |> jToNumber |> int with
+  | 1 -> FileChangeType.Created
+  | 2 -> FileChangeType.Changed
+  | 3 -> FileChangeType.Deleted
+  | _ -> failwithf "Invalid FileChangeType: %A." jsonValue
+
+[<RequireQualifiedAccess; NoEquality; NoComparison>]
+type private FileEvent = { Uri: Uri; Type: FileChangeType }
+
+let private jToFileEvent jsonValue : FileEvent =
+  let uri, ty = jFields2 "uri" "type" jsonValue
+  let uri = uri |> jToString |> Uri
+  let ty = jToFileChangeType ty
+
+  { Uri = uri; Type = ty }
+
+[<RequireQualifiedAccess; NoEquality; NoComparison>]
+type private DidChangeWatchedFilesParam = { Changes: FileEvent list }
+
+let private parseDidChangeWatchedFilesParam jsonValue : DidChangeWatchedFilesParam =
+  let changes =
+    jsonValue
+    |> jFind2 "params" "changes"
+    |> jToArray
+    |> List.map jToFileEvent
+
+  { Changes = changes }
+
+[<RequireQualifiedAccess; NoEquality; NoComparison>]
 type private DocumentPositionParam = { Uri: Uri; Pos: Pos }
 
 let private parseDocumentPositionParam jsonValue : DocumentPositionParam =
@@ -269,6 +310,7 @@ type private LspIncome =
   | DidOpenNotification of DidOpenParam
   | DidChangeNotification of DidChangeParam
   | DidCloseNotification of DidCloseParam
+  | DidChangeWatchedFiles of DidChangeWatchedFilesParam
 
   // Queries.
   | DiagnosticsRequest
@@ -279,6 +321,7 @@ type private LspIncome =
   | HoverRequest of MsgId * DocumentPositionParam
 
   // Others.
+  | RegisterCapabilityResponse of MsgId
   | CancelRequestNotification of MsgId
   | ErrorIncome of LspError
 
@@ -290,7 +333,11 @@ type private ProcessResult =
 let private parseIncome (jsonValue: JsonValue) : LspIncome =
   let getMsgId () = jsonValue |> jFind "id"
 
-  let methodName = jsonValue |> jFind "method" |> jToString
+  let methodName =
+    jsonValue
+    |> jTryFind "method"
+    |> Option.map jToString
+    |> Option.defaultValue "$/response"
 
   match methodName with
   | "initialize" -> InitializeRequest(getMsgId (), parseInitializeParam jsonValue)
@@ -301,6 +348,7 @@ let private parseIncome (jsonValue: JsonValue) : LspIncome =
   | "textDocument/didOpen" -> DidOpenNotification(parseDidOpenParam jsonValue)
   | "textDocument/didChange" -> DidChangeNotification(parseDidChangeParam jsonValue)
   | "textDocument/didClose" -> DidCloseNotification(parseDidCloseParam jsonValue)
+  | "workspace/didChangeWatchedFiles" -> DidChangeWatchedFiles(parseDidChangeWatchedFilesParam jsonValue)
 
   | "textDocument/definition" -> DefinitionRequest(getMsgId (), parseDocumentPositionParam jsonValue)
   | "textDocument/references" -> ReferencesRequest(getMsgId (), parseReferencesParam jsonValue)
@@ -308,6 +356,7 @@ let private parseIncome (jsonValue: JsonValue) : LspIncome =
   | "textDocument/formatting" -> FormattingRequest(getMsgId (), getUriParam jsonValue)
   | "textDocument/hover" -> HoverRequest(getMsgId (), parseDocumentPositionParam jsonValue)
 
+  | "$/response" -> RegisterCapabilityResponse(getMsgId ())
   | "$/cancelRequest" -> CancelRequestNotification(jsonValue |> jFind2 "params" "id")
 
   | methodName ->
@@ -329,7 +378,26 @@ let private processNext () : LspIncome -> ProcessResult =
       jsonRpcWriteWithResult msgId (createInitializeResult ())
       Continue
 
-    | InitializedNotification -> Continue
+    | InitializedNotification ->
+      // Use fixed id because of no further requests.
+      let msgId = JNumber 1.0
+
+      let param =
+        jsonDeserializeString
+          """
+            { "registrations": [
+              {
+                "id": "1",
+                "method": "workspace/didChangeWatchedFiles",
+                "registerOptions": {
+                  "watchers": [{ "globPattern": "**/*.{fs,milone}" }]
+                }
+              }
+            ] }
+          """
+
+      jsonRpcWriteWithIdParams "client/registerCapability" msgId param
+      Continue
 
     | ShutdownRequest msgId ->
       exitCode <- 0
@@ -348,6 +416,15 @@ let private processNext () : LspIncome -> ProcessResult =
 
     | DidCloseNotification p ->
       LspDocCache.closeDoc p.Uri
+      Continue
+
+    | DidChangeWatchedFiles p ->
+      for change in p.Changes do
+        match change.Type with
+        | FileChangeType.Created -> LspLangService.didOpenFile change.Uri
+        | FileChangeType.Changed -> LspLangService.didChangeFile change.Uri
+        | FileChangeType.Deleted -> LspLangService.didCloseFile change.Uri
+
       Continue
 
     | DiagnosticsRequest ->
@@ -460,6 +537,7 @@ let private processNext () : LspIncome -> ProcessResult =
       jsonRpcWriteWithResult msgId result
       Continue
 
+    | RegisterCapabilityResponse _
     | CancelRequestNotification _ -> Continue
 
     | ErrorIncome error ->
@@ -512,7 +590,8 @@ let private autoUpdateDiagnostics (incomes: LspIncome list) : LspIncome list =
     | InitializedNotification _
     | DidOpenNotification _
     | DidChangeNotification _
-    | DidCloseNotification _ -> true
+    | DidCloseNotification _
+    | DidChangeWatchedFiles _ -> true
 
     | _ -> false
 
