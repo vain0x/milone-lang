@@ -292,6 +292,29 @@ let newLangServiceWithCache (project: ProjectInfo) =
 
     ls
 
+let mutable lastId = 0
+
+let nextId () =
+  System.Threading.Interlocked.Increment(&lastId)
+
+let didOpenFile (uri: Uri) : unit =
+  match uriToFilePath uri |> Option.bind File.tryReadFile with
+  | Some text ->
+    let version = nextId ()
+    LspDocCache.openDoc uri version text
+
+  | None -> ()
+
+let didChangeFile (uri: Uri) : unit =
+  match uriToFilePath uri |> Option.bind File.tryReadFile with
+  | Some text ->
+    let version = nextId ()
+    LspDocCache.changeDoc uri version text
+
+  | None -> ()
+
+let didCloseFile (uri: Uri) : unit = LspDocCache.closeDoc uri
+
 let validateProject (project: ProjectInfo) : ProjectValidateResult =
   project
   |> newLangServiceWithCache

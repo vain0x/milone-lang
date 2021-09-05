@@ -102,7 +102,10 @@ const startLspSession = (_context: ExtensionContext, logger: Logger) => {
       },
     ],
     synchronize: {
-      fileEvents: workspace.createFileSystemWatcher("**/.clientrc"),
+      fileEvents: [
+        workspace.createFileSystemWatcher("**/*.fs"),
+        workspace.createFileSystemWatcher("**/*.milone"),
+      ],
     },
   }
 
