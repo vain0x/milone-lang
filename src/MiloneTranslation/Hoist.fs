@@ -178,7 +178,10 @@ let private hoistExpr (expr, ctx) : HExpr * HoistCtx =
 let private hoistExprToplevel (expr, ctx) : HoistCtx =
   match expr with
   | HBlockExpr (stmts, last) ->
-    let ctx = stmts |> List.fold hoistStmt ctx
+    let ctx =
+      stmts
+      |> List.fold (fun ctx stmt -> hoistExprToplevel (stmt, ctx)) ctx
+
     hoistExprToplevel (last, ctx)
 
   | HLetValExpr (pat, init, next, _, loc) ->

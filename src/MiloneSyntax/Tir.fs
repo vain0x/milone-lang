@@ -196,6 +196,7 @@ type FunDef =
     Ty: TyScheme
     Abi: FunAbi
     Linkage: Linkage
+    ParentOpt: FunSerial option
     Loc: Loc }
 
 [<RequireQualifiedAccess; NoEquality; NoComparison>]
@@ -398,20 +399,25 @@ type TExpr =
   /// Some built-in operation.
   | TNodeExpr of TExprKind * TExpr list * Ty * Loc
 
-  /// Evaluate a list of expressions and returns the last, e.g. `x1; x2; ...; y`.
-  | TBlockExpr of TExpr list * TExpr
+  /// Statements and last expression.
+  ///
+  /// - Statements might define symbols locally for the last expression.
+  /// - If recursive, local definitions are mutually recursive.
+  | TBlockExpr of IsRec * TStmt list * last: TExpr
 
-  | TLetValExpr of pat: TPat * init: TExpr * next: TExpr * Ty * Loc
-  | TLetFunExpr of FunSerial * IsRec * Vis * args: TPat list * body: TExpr * next: TExpr * Ty * Loc
-
-  /// Type declaration.
-  | TTyDeclExpr of TySerial * Vis * tyArgs: TySerial list * TyDecl * Loc
-  | TOpenExpr of Ident list * Loc
-  | TModuleExpr of ModuleTySerial * body: TExpr list * Loc
-  | TModuleSynonymExpr of ModuleSynonymSerial * path: Ident list * Loc
+/// Statement in HIR.
+[<NoEquality; NoComparison>]
+type TStmt =
+  | TExprStmt of TExpr
+  | TLetValStmt of TPat * TExpr * Loc
+  | TLetFunStmt of FunSerial * IsRec * Vis * args: TPat list * body: TExpr * Loc
+  | TTyDeclStmt of TySerial * Vis * tyArgs: TySerial list * TyDecl * Loc
+  | TOpenStmt of Ident list * Loc
+  | TModuleStmt of ModuleTySerial * body: TStmt list * Loc
+  | TModuleSynonymStmt of ModuleSynonymSerial * path: Ident list * Loc
 
 /// TIR program. (project name, module name, decls) list.
-type TProgram = (string * string * TExpr list) list
+type TProgram = (string * string * TStmt list) list
 
 // -----------------------------------------------
 // Errors
@@ -870,9 +876,11 @@ let hxApp f x ty loc = TNodeExpr(TAppEN, [ f; x ], ty, loc)
 let hxAscribe expr ty loc =
   TNodeExpr(TAscribeEN, [ expr ], ty, loc)
 
+let hxLetIn stmt next = TBlockExpr(NotRec, [ stmt ], next)
+
 let hxSemi items loc =
   match splitLast items with
-  | Some (stmts, last) -> TBlockExpr(stmts, last)
+  | Some (stmts, last) -> TBlockExpr(NotRec, List.map (fun expr -> TExprStmt expr) stmts, last)
   | None -> TNodeExpr(TTupleEN, [], tyUnit, loc)
 
 let hxTuple items loc =
@@ -894,13 +902,7 @@ let exprExtract (expr: TExpr) : Ty * Loc =
   | TMatchExpr (_, _, ty, a) -> ty, a
   | TNavExpr (_, _, ty, a) -> ty, a
   | TNodeExpr (_, _, ty, a) -> ty, a
-  | TBlockExpr (_, last) -> exprExtract last
-  | TLetValExpr (_, _, _, ty, a) -> ty, a
-  | TLetFunExpr (_, _, _, _, _, _, ty, a) -> ty, a
-  | TTyDeclExpr (_, _, _, _, a) -> tyUnit, a
-  | TOpenExpr (_, a) -> tyUnit, a
-  | TModuleExpr (_, _, a) -> tyUnit, a
-  | TModuleSynonymExpr (_, _, a) -> tyUnit, a
+  | TBlockExpr (_, _, last) -> exprExtract last
 
 let exprMap (f: Ty -> Ty) (g: Loc -> Loc) (expr: TExpr) : TExpr =
   let goPat pat = patMap f g pat
@@ -930,14 +932,7 @@ let exprMap (f: Ty -> Ty) (g: Loc -> Loc) (expr: TExpr) : TExpr =
       TMatchExpr(go cond, arms, f ty, g a)
     | TNavExpr (sub, mes, ty, a) -> TNavExpr(go sub, mes, f ty, g a)
     | TNodeExpr (kind, args, resultTy, a) -> TNodeExpr(kind, List.map go args, f resultTy, g a)
-    | TBlockExpr (stmts, last) -> TBlockExpr(List.map go stmts, go last)
-    | TLetValExpr (pat, init, next, ty, a) -> TLetValExpr(goPat pat, go init, go next, f ty, g a)
-    | TLetFunExpr (serial, isRec, vis, args, body, next, ty, a) ->
-      TLetFunExpr(serial, isRec, vis, List.map goPat args, go body, go next, f ty, g a)
-    | TTyDeclExpr (serial, vis, tyArgs, tyDef, a) -> TTyDeclExpr(serial, vis, tyArgs, tyDef, g a)
-    | TOpenExpr (path, a) -> TOpenExpr(path, g a)
-    | TModuleExpr (name, body, a) -> TModuleExpr(name, List.map go body, g a)
-    | TModuleSynonymExpr (name, path, a) -> TModuleSynonymExpr(name, path, g a)
+    | TBlockExpr (isRec, stmts, last) -> TBlockExpr(isRec, List.map (stmtMap f g) stmts, go last)
 
   go expr
 
@@ -950,29 +945,60 @@ let exprToLoc expr =
   loc
 
 // -----------------------------------------------
+// TStmt
+// -----------------------------------------------
+
+let stmtToLoc (stmt: TStmt) : Loc =
+  match stmt with
+  | TExprStmt expr -> exprToLoc expr
+  | TLetValStmt (_, _, loc) -> loc
+  | TLetFunStmt (_, _, _, _, _, loc) -> loc
+  | TTyDeclStmt (_, _, _, _, loc) -> loc
+  | TOpenStmt (_, loc) -> loc
+  | TModuleStmt (_, _, loc) -> loc
+  | TModuleSynonymStmt (_, _, loc) -> loc
+
+let stmtMap (onTy: Ty -> Ty) (onLoc: Loc -> Loc) (stmt: TStmt) : TStmt =
+  let onPat pat = patMap onTy onLoc pat
+  let onPats pats = List.map (patMap onTy onLoc) pats
+  let onExpr expr = exprMap onTy onLoc expr
+  let onStmt stmt = stmtMap onTy onLoc stmt
+  let onStmts stmts = List.map (stmtMap onTy onLoc) stmts
+
+  match stmt with
+  | TExprStmt expr -> TExprStmt(onExpr expr)
+  | TLetValStmt (pat, init, loc) -> TLetValStmt(onPat pat, onExpr init, onLoc loc)
+  | TLetFunStmt (serial, isRec, vis, args, body, loc) ->
+    TLetFunStmt(serial, isRec, vis, onPats args, onExpr body, onLoc loc)
+  | TTyDeclStmt (serial, vis, tyArgs, tyDef, loc) -> TTyDeclStmt(serial, vis, tyArgs, tyDef, onLoc loc)
+  | TOpenStmt (path, loc) -> TOpenStmt(path, onLoc loc)
+  | TModuleStmt (name, body, loc) -> TModuleStmt(name, onStmts body, onLoc loc)
+  | TModuleSynonymStmt (name, path, loc) -> TModuleSynonymStmt(name, path, onLoc loc)
+
+// -----------------------------------------------
 // HProgram
 // -----------------------------------------------
 
 /// Does something for each module in program, updating a state.
-let hirProgramEachModule (mutator: TExpr list * 'S -> TExpr list * 'S) (modules: TProgram, state: 'S) : TProgram * 'S =
+let hirProgramEachModule (mutator: TStmt list * 'S -> TStmt list * 'S) (modules: TProgram, state: 'S) : TProgram * 'S =
   (modules, state)
   |> stMap
        (fun ((p, m, decls), state) ->
          let decls, state = (decls, state) |> mutator
          (p, m, decls), state)
 
-/// Does something for each toplevel expression in program, updating a state.
-let hirProgramEachExpr (mutator: TExpr * 'S -> TExpr * 'S) (modules: TProgram, state: 'S) : TProgram * 'S =
+/// Does something for each toplevel statement in program, updating a state.
+let hirProgramEachStmt (mutator: TStmt * 'S -> TStmt * 'S) (modules: TProgram, state: 'S) : TProgram * 'S =
   (modules, state)
   |> hirProgramEachModule (stMap mutator)
 
-/// Iterates over toplevel expressions in program to update a state.
-let hirProgramFoldExpr (folder: TExpr * 'S -> 'S) (state: 'S) (modules: TProgram) : 'S =
+/// Iterates over toplevel statements in program to update a state.
+let hirProgramFoldStmt (folder: TStmt * 'S -> 'S) (state: 'S) (modules: TProgram) : 'S =
   modules
   |> List.fold
-       (fun state (_, _, decls) ->
-         decls
-         |> List.fold (fun state decl -> folder (decl, state)) state)
+       (fun state (_, _, stmts) ->
+         stmts
+         |> List.fold (fun state stmt -> folder (stmt, state)) state)
        state
 
 // -----------------------------------------------

@@ -58,7 +58,7 @@ let private troInfExpr isTail kind items ty loc ctx =
   let items, ctx = (items, ctx) |> stMap (troExpr NotTail)
 
   match kind, items, isTail with
-  | HCallProcEN, HFunExpr (funSerial, _, _) :: _, IsTail when ctx |> isCurrentFun funSerial ->
+  | HCallProcEN, HFunExpr (funSerial, _, _, _) :: _, IsTail when ctx |> isCurrentFun funSerial ->
     HNodeExpr(HCallTailRecEN, items, ty, loc), ctx
 
   | _ -> HNodeExpr(kind, items, ty, loc), ctx

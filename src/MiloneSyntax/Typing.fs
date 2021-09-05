@@ -48,7 +48,19 @@ type TyCtx =
     Tys: AssocMap<TySerial, TyDef>
 
     TyLevels: AssocMap<TySerial, Level>
+    QuantifiedTys: AssocSet<TySerial>
     Level: Level
+
+    /// Funs that are mutually recursive and defined in the current block.
+    ///
+    /// These funs might have incorrect ty scheme
+    /// because their body might use forward reference of another funs.
+    ///
+    /// Instantiation of such these funs are recorded
+    /// to verify after final ty scheme is computed.
+    GrayFuns: AssocSet<FunSerial>
+    GrayInstantiations: AssocMap<FunSerial, (Ty * Loc) list>
+
     TraitBounds: (Trait * Loc) list
     Logs: (Log * Loc) list }
 
@@ -175,12 +187,11 @@ let private substOrDegenerateTy (ctx: TyCtx) ty =
     | Some (UniversalTyDef _) -> None
 
     | _ ->
-      let level = getTyLevel tySerial ctx
       // Degenerate unless quantified.
-      if level < 1000000000 then
-        Some tyUnit
-      else
+      if ctx.QuantifiedTys |> TSet.contains tySerial then
         None
+      else
+        Some tyUnit
 
   tySubst substMeta ty
 
@@ -289,6 +300,7 @@ let private instantiateTySpec loc (TySpec (polyTy, traits), ctx: TyCtx) =
 
   polyTy, traits, ctx
 
+// #generalizeFun
 let private generalizeFun (ctx: TyCtx) (outerLevel: Level) funSerial =
   let funDef = ctx.Funs |> mapFind funSerial
 
@@ -307,15 +319,14 @@ let private generalizeFun (ctx: TyCtx) (outerLevel: Level) funSerial =
             ctx.Funs
             |> TMap.add funSerial { funDef with Ty = funTyScheme } }
 
-    // Mark generalized meta tys (universally quantified vars),
-    // by increasing their level to infinite (10^9).
+    // Mark generalized meta tys (universally quantified vars)
     let ctx =
       let (TyScheme (fvs, _)) = funTyScheme
 
       { ctx with
-          TyLevels =
+          QuantifiedTys =
             fvs
-            |> List.fold (fun tyLevels fv -> tyLevels |> TMap.add fv 1000000000) ctx.TyLevels }
+            |> List.fold (fun quantifiedTys tyVar -> TSet.add tyVar quantifiedTys) ctx.QuantifiedTys }
 
     ctx
 
@@ -783,9 +794,17 @@ let private inferVarExpr (ctx: TyCtx) varSerial loc =
   TVarExpr(varSerial, ty, loc), ty, ctx
 
 let private inferFunExpr (ctx: TyCtx) funSerial loc =
-  let ty, _, ctx =
-    let funDef = ctx.Funs |> mapFind funSerial
-    instantiateTyScheme ctx funDef.Ty loc
+  let funDef = ctx.Funs |> mapFind funSerial
+  let ty, _, ctx = instantiateTyScheme ctx funDef.Ty loc
+
+  let ctx =
+    if ctx.GrayFuns |> TSet.contains funSerial then
+      { ctx with
+          GrayInstantiations =
+            ctx.GrayInstantiations
+            |> multimapAdd funSerial (ty, loc) }
+    else
+      ctx
 
   TFunExpr(funSerial, ty, loc), ty, ctx
 
@@ -926,7 +945,7 @@ let private inferRecordExpr ctx expectOpt baseOpt fields loc =
       let recordExpr =
         TRecordExpr(Some varExpr, fields, recordTy, loc)
 
-      TLetValExpr(varPat, baseExpr, recordExpr, recordTy, loc), recordTy, ctx
+      hxLetIn (TLetValStmt(varPat, baseExpr, loc)) recordExpr, recordTy, ctx
 
 /// match 'a with ( | 'aT-> 'b )*
 let private inferMatchExpr ctx expectOpt itself cond arms loc =
@@ -1123,23 +1142,101 @@ let private inferAscribeExpr ctx body ascriptionTy loc =
   let ctx = unifyTy ctx loc bodyTy ascriptionTy
   body, ascriptionTy, ctx
 
-let private inferBlockExpr ctx expectOpt stmts last =
+let private inferBlockExpr ctx expectOpt mutuallyRec stmts last =
   let stmts, ctx =
-    (stmts, ctx)
-    |> stMap
-         (fun (expr, ctx) ->
-           let loc = exprToLoc expr
+    match mutuallyRec with
+    | IsRec ->
+      let outerLevel = (ctx: TyCtx).Level
+      let parentCtx = ctx
 
-           let expr, resultTy, ctx = inferExpr ctx None expr
-           let ctx = unifyTy ctx loc resultTy tyUnit
+      let stmts, ctx =
+        (stmts, ctx)
+        |> stMap (fun (stmt, ctx) -> inferStmt ctx mutuallyRec stmt)
 
-           expr, ctx)
+      // Generalize these funs again.
+      // Ty scheme of these funs might try to quantify meta tys that are bound later.
+      let ctx =
+        stmts
+        |> List.fold
+             (fun (ctx: TyCtx) stmt ->
+               match stmt with
+               | TLetFunStmt (funSerial, _, _, _, _, _) ->
+                 let funDef: FunDef = ctx.Funs |> mapFind funSerial
+                 let (TyScheme (tyVars, funTy)) = funDef.Ty
+
+                 match tyVars with
+                 | [] -> ctx
+
+                 | _ ->
+                   // #generalizeFun
+                   let isOwned tySerial =
+                     let highLevel () =
+                       let level = getTyLevel tySerial ctx
+                       level > outerLevel
+
+                     let alreadyQuantified () =
+                       tyVars |> List.exists (fun t -> t = tySerial)
+
+                     highLevel () || alreadyQuantified ()
+
+                   let funTy = substTy ctx funTy
+                   let funTyScheme = tyGeneralize isOwned funTy
+
+                   let funs =
+                     ctx.Funs
+                     |> TMap.add funSerial { funDef with Ty = funTyScheme }
+
+                   let quantifiedTys =
+                     tyVars
+                     |> List.fold (fun quantifiedTys tyVar -> TSet.add tyVar quantifiedTys) ctx.QuantifiedTys
+
+                   let instantiations, grayInstantiations =
+                     ctx.GrayInstantiations |> TMap.remove funSerial
+
+                   let ctx =
+                     { ctx with
+                         Funs = funs
+                         QuantifiedTys = quantifiedTys
+                         GrayInstantiations = grayInstantiations }
+
+                   let ctx =
+                     instantiations
+                     |> Option.defaultValue []
+                     |> List.fold
+                          (fun (ctx: TyCtx) (useSiteTy, loc) ->
+                            let funTy, _, ctx = instantiateTyScheme ctx funTyScheme loc
+                            let newCtx = unifyTy ctx loc funTy useSiteTy
+                            { ctx with Logs = newCtx.Logs })
+                          ctx
+
+                   ctx
+               | _ -> ctx)
+             ctx
+
+      let ctx =
+        { ctx with
+            GrayFuns = parentCtx.GrayFuns }
+
+      stmts, ctx
+
+    | NotRec ->
+      (stmts, ctx)
+      |> stMap (fun (stmt, ctx) -> inferStmt ctx mutuallyRec stmt)
 
   let last, lastTy, ctx = inferExpr ctx expectOpt last
 
-  TBlockExpr(stmts, last), lastTy, ctx
+  TBlockExpr(mutuallyRec, stmts, last), lastTy, ctx
 
-let private inferLetValExpr ctx expectOpt pat init next loc =
+// -----------------------------------------------
+// Statement
+// -----------------------------------------------
+
+let private inferExprStmt ctx expr =
+  let expr, ty, ctx = inferExpr ctx None expr
+  let ctx = unifyTy ctx (exprToLoc expr) ty tyUnit
+  TExprStmt expr, ctx
+
+let private inferLetValStmt ctx pat init loc =
   let init, initTy, ctx =
     let expectOpt = patToAscriptionTy pat
     inferExpr ctx expectOpt init
@@ -1148,10 +1245,9 @@ let private inferLetValExpr ctx expectOpt pat init next loc =
 
   let ctx = unifyTy ctx loc initTy patTy
 
-  let next, nextTy, ctx = inferExpr ctx expectOpt next
-  TLetValExpr(pat, init, next, nextTy, loc), nextTy, ctx
+  TLetValStmt(pat, init, loc), ctx
 
-let private inferLetFunExpr (ctx: TyCtx) expectOpt callee vis argPats body next loc =
+let private inferLetFunStmt ctx mutuallyRec callee vis argPats body loc =
   // Special treatment for main function.
   let mainFunTyOpt, ctx =
     if ctx |> isMainFun callee then
@@ -1209,8 +1305,14 @@ let private inferLetFunExpr (ctx: TyCtx) expectOpt callee vis argPats body next 
 
   let ctx = generalizeFun ctx outerLevel callee
 
-  let next, nextTy, ctx = inferExpr ctx expectOpt next
-  TLetFunExpr(callee, NotRec, vis, argPats, body, next, nextTy, loc), nextTy, ctx
+  let ctx =
+    match mutuallyRec with
+    | IsRec ->
+      { ctx with
+          GrayFuns = ctx.GrayFuns |> TSet.add callee }
+    | _ -> ctx
+
+  TLetFunStmt(callee, NotRec, vis, argPats, body, loc), ctx
 
 let private inferExpr (ctx: TyCtx) (expectOpt: Ty option) (expr: TExpr) : TExpr * Ty * TyCtx =
   let fail () = unreachable expr
@@ -1235,15 +1337,7 @@ let private inferExpr (ctx: TyCtx) (expectOpt: Ty option) (expr: TExpr) : TExpr 
   | TNodeExpr (TSliceEN, [ l; r; x ], _, loc) -> inferSliceExpr ctx l r x loc
   | TNodeExpr (TSliceEN, _, _, _) -> fail ()
 
-  | TBlockExpr (stmts, last) -> inferBlockExpr ctx expectOpt stmts last
-
-  | TLetValExpr (pat, body, next, _, loc) -> inferLetValExpr ctx expectOpt pat body next loc
-
-  | TLetFunExpr (oldSerial, _, vis, args, body, next, _, loc) ->
-    inferLetFunExpr ctx expectOpt oldSerial vis args body next loc
-
-  | TTyDeclExpr _
-  | TOpenExpr _ -> expr, tyUnit, ctx
+  | TBlockExpr (mutuallyRec, stmts, last) -> inferBlockExpr ctx expectOpt mutuallyRec stmts last
 
   | TNodeExpr (TMinusEN, _, _, _)
   | TNodeExpr (TAscribeEN, _, _, _)
@@ -1255,8 +1349,17 @@ let private inferExpr (ctx: TyCtx) (expectOpt: Ty option) (expr: TExpr) : TExpr 
   | TNodeExpr (TNativeDeclEN _, _, _, _)
   | TNodeExpr (TSizeOfValEN, _, _, _) -> unreachable ()
 
-  | TModuleExpr _
-  | TModuleSynonymExpr _ -> unreachable () // Resolved in NameRes.
+let private inferStmt ctx mutuallyRec stmt : TStmt * TyCtx =
+  match stmt with
+  | TExprStmt expr -> inferExprStmt ctx expr
+  | TLetValStmt (pat, init, loc) -> inferLetValStmt ctx pat init loc
+  | TLetFunStmt (oldSerial, _, vis, args, body, loc) -> inferLetFunStmt ctx mutuallyRec oldSerial vis args body loc
+
+  | TTyDeclStmt _
+  | TOpenStmt _ -> stmt, ctx
+
+  | TModuleStmt _
+  | TModuleSynonymStmt _ -> unreachable () // Resolved in NameRes.
 
 // -----------------------------------------------
 // Reject cyclic synonyms
@@ -1369,7 +1472,10 @@ let infer (modules: TProgram, scopeCtx: ScopeCtx, errors) : TProgram * TyCtx =
       MainFunOpt = scopeCtx.MainFunOpt
       Tys = scopeCtx.Tys
       TyLevels = TMap.empty compare
+      QuantifiedTys = TSet.empty compare
       Level = 0
+      GrayFuns = TSet.empty funSerialCompare
+      GrayInstantiations = TMap.empty funSerialCompare
       TraitBounds = []
       Logs = [] }
 
@@ -1416,12 +1522,8 @@ let infer (modules: TProgram, scopeCtx: ScopeCtx, errors) : TProgram * TyCtx =
   let ctx = { ctx with Funs = funs; Level = 0 }
 
   let modules, ctx =
-    let inferStmt (expr, ctx) =
-      let expr, ty, ctx = inferExpr ctx (Some tyUnit) expr
-      let ctx = unifyTy ctx (exprToLoc expr) ty tyUnit
-      expr, ctx
-
-    (modules, ctx) |> hirProgramEachExpr inferStmt
+    (modules, ctx)
+    |> hirProgramEachStmt (fun (stmt, ctx) -> inferStmt ctx NotRec stmt)
 
   let ctx = ctx |> resolveTraitBounds
 
@@ -1435,7 +1537,7 @@ let infer (modules: TProgram, scopeCtx: ScopeCtx, errors) : TProgram * TyCtx =
 
   let modules, ctx =
     (modules, ctx)
-    |> hirProgramEachExpr (fun (expr, ctx) -> exprMap substOrDegenerate id expr, ctx)
+    |> hirProgramEachStmt (fun (stmt, ctx) -> stmtMap substOrDegenerate id stmt, ctx)
 
   let ctx =
     let vars =

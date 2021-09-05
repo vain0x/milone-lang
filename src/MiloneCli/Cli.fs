@@ -259,7 +259,7 @@ let private lowerTk (tk: Tir.Tk) : Hir.Tk =
   | Tir.RecordTk serial -> Hir.RecordTk serial
 
   | Tir.ErrorTk _
-  | Tir.SynonymTk _ -> unreachable tk // Resolved in Typing.
+  | Tir.SynonymTk _ -> unreachable () // Resolved in Typing.
 
   | Tir.UnresolvedTk _
   | Tir.UnresolvedVarTk _ -> unreachable () // Resolved in NameRes.
@@ -289,6 +289,7 @@ let private lowerFunDef (def: Tir.FunDef) : Hir.FunDef =
     Ty = lowerTyScheme def.Ty
     Abi = def.Abi
     Linkage = def.Linkage
+    ParentOpt = Option.map lowerFunSerial def.ParentOpt
     Loc = def.Loc }
 
 let private lowerVariantDef (def: Tir.VariantDef) : Hir.VariantDef =
@@ -398,7 +399,7 @@ let private lowerExpr (expr: Tir.TExpr) : Hir.HExpr =
   match expr with
   | Tir.TLitExpr (lit, loc) -> Hir.HLitExpr(lit, loc)
   | Tir.TVarExpr (varSerial, ty, loc) -> Hir.HVarExpr(lowerVarSerial varSerial, lowerTy ty, loc)
-  | Tir.TFunExpr (funSerial, ty, loc) -> Hir.HFunExpr(lowerFunSerial funSerial, lowerTy ty, loc)
+  | Tir.TFunExpr (funSerial, ty, loc) -> Hir.HFunExpr(lowerFunSerial funSerial, lowerTy ty, [], loc)
   | Tir.TVariantExpr (variantSerial, ty, loc) -> Hir.HVariantExpr(lowerVariantSerial variantSerial, lowerTy ty, loc)
   | Tir.TPrimExpr (prim, ty, loc) -> Hir.HPrimExpr(lowerPrim prim, lowerTy ty, loc)
   | Tir.TRecordExpr (exprOpt, fields, ty, loc) ->
@@ -417,29 +418,35 @@ let private lowerExpr (expr: Tir.TExpr) : Hir.HExpr =
     )
   | Tir.TNavExpr (l, r, ty, loc) -> Hir.HNavExpr(lowerExpr l, r, lowerTy ty, loc)
   | Tir.TNodeExpr (kind, args, ty, loc) -> Hir.HNodeExpr(lowerExprKind kind, List.map lowerExpr args, lowerTy ty, loc)
-  | Tir.TBlockExpr (stmts, last) -> Hir.HBlockExpr(List.map lowerExpr stmts, lowerExpr last)
-  | Tir.TLetValExpr (pat, init, next, ty, loc) ->
-    Hir.HLetValExpr(lowerPat pat, lowerExpr init, lowerExpr next, lowerTy ty, loc)
-  | Tir.TLetFunExpr (funSerial, isRec, vis, argPats, body, next, ty, loc) ->
+  | Tir.TBlockExpr (_, stmts, last) -> Hir.HBlockExpr(List.map lowerStmt stmts, lowerExpr last)
+
+let private lowerStmt (stmt: Tir.TStmt) : Hir.HExpr =
+  match stmt with
+  | Tir.TExprStmt expr -> lowerExpr expr
+
+  | Tir.TLetValStmt (pat, init, loc) -> Hir.HLetValExpr(lowerPat pat, lowerExpr init, Hir.hxUnit loc, Hir.tyUnit, loc)
+
+  | Tir.TLetFunStmt (funSerial, isRec, vis, argPats, body, loc) ->
     Hir.HLetFunExpr(
       lowerFunSerial funSerial,
       isRec,
       vis,
       List.map lowerPat argPats,
       lowerExpr body,
-      lowerExpr next,
-      lowerTy ty,
+      Hir.hxUnit loc,
+      Hir.tyUnit,
       loc
     )
 
-  | Tir.TTyDeclExpr _
-  | Tir.TOpenExpr _
-  | Tir.TModuleExpr _
-  | Tir.TModuleSynonymExpr _ -> Hir.hxUnit (Tir.exprToLoc expr) // Consumed in NameRes.
+  // These statements are removed. Already used in NameRes.
+  | Tir.TTyDeclStmt _
+  | Tir.TOpenStmt _
+  | Tir.TModuleStmt _
+  | Tir.TModuleSynonymStmt _ -> Hir.hxUnit (Tir.stmtToLoc stmt)
 
 let private lowerModules (modules: Tir.TProgram) : Hir.HProgram =
   modules
-  |> List.map (fun (p, m, decls) -> p, m, List.map lowerExpr decls)
+  |> List.map (fun (p, m, stmts) -> p, m, List.map lowerStmt stmts)
 
 let private lowerTyCtx (tyCtx: Typing.TyCtx) : Hir.TyCtx =
   { Serial = tyCtx.Serial
@@ -479,9 +486,6 @@ let transformHir (host: CliHost) v (modules: Tir.TProgram, tyCtx: Typing.TyCtx) 
 
     Hir.hxSemi decls noLoc
 
-  writeLog host v "AutoBoxing"
-  let expr, tyCtx = autoBox (expr, tyCtx)
-
   writeLog host v "RecordRes"
   let expr, tyCtx = recordRes (expr, tyCtx)
 
@@ -490,6 +494,12 @@ let transformHir (host: CliHost) v (modules: Tir.TProgram, tyCtx: Typing.TyCtx) 
 
   writeLog host v "EtaExpansion"
   let expr, tyCtx = etaExpansion (expr, tyCtx)
+
+  writeLog host v "ComputeTyArgs"
+  let expr, tyCtx = computeFunTyArgs (expr, tyCtx)
+
+  writeLog host v "AutoBoxing"
+  let expr, tyCtx = autoBox (expr, tyCtx)
 
   writeLog host v "Hoist"
   let decls, tyCtx = hoist (expr, tyCtx)

@@ -108,9 +108,7 @@ let private acExprChecked expr ctx =
 
 let private acExpr (expr, ctx: ArityCheckCtx) : ArityEx * ArityCheckCtx =
   match expr with
-  | TLitExpr _
-  | TTyDeclExpr _
-  | TOpenExpr _ -> UnitAx, ctx
+  | TLitExpr _ -> UnitAx, ctx
 
   | TVarExpr (_, ty, _) -> tyToArityEx ty, ctx
   | TVariantExpr (_, ty, _) -> tyToArityEx ty, ctx
@@ -173,24 +171,29 @@ let private acExpr (expr, ctx: ArityCheckCtx) : ArityEx * ArityCheckCtx =
     let ctx = acExprs items ctx
     tyToArityEx ty, ctx
 
-  | TBlockExpr (stmts, last) ->
-    let ctx = acExprs stmts ctx
+  | TBlockExpr (_, stmts, last) ->
+    let ctx = acStmts stmts ctx
     acExpr (last, ctx)
-
-  | TLetValExpr (_, init, next, _, _) ->
-    let ctx = acExprChecked init ctx
-    acExpr (next, ctx)
-
-  | TLetFunExpr (_, _, _, _, body, next, _, _) ->
-    let ctx = acExprChecked body ctx
-    acExpr (next, ctx)
-
-  | TModuleExpr _
-  | TModuleSynonymExpr _ -> unreachable () // Resolved in NameRes.
 
 let private acExprs exprs ctx =
   exprs
   |> List.fold (fun ctx expr -> acExpr (expr, ctx) |> snd) ctx
+
+let private acStmt (stmt, ctx: ArityCheckCtx) : ArityCheckCtx =
+  match stmt with
+  | TExprStmt expr -> acExprChecked expr ctx
+  | TLetValStmt (_, init, _) -> acExprChecked init ctx
+  | TLetFunStmt (_, _, _, _, body, _) -> acExprChecked body ctx
+
+  | TTyDeclStmt _
+  | TOpenStmt _ -> ctx
+
+  | TModuleStmt _
+  | TModuleSynonymStmt _ -> unreachable () // Resolved in NameRes.
+
+let private acStmts stmts ctx =
+  stmts
+  |> List.fold (fun ctx stmt -> acStmt (stmt, ctx)) ctx
 
 // -----------------------------------------------
 // Interface
@@ -224,13 +227,7 @@ let arityCheck (modules: TProgram, tyCtx: Typing.TyCtx) : Typing.TyCtx =
 
       Errors = [] }
 
-  let ctx =
-    modules
-    |> hirProgramFoldExpr
-         (fun (expr, ctx) ->
-           let _, ctx = acExpr (expr, ctx)
-           ctx)
-         ctx
+  let ctx = modules |> hirProgramFoldStmt acStmt ctx
 
   let logs =
     ctx.Errors

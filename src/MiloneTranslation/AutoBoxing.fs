@@ -15,14 +15,24 @@ module TMap = MiloneStd.StdMap
 
 let private tyIsRecord ty =
   match ty with
-  | Ty (RecordTk _, _) -> true
+  | Ty (RecordTk _, tyArgs) ->
+    assert (List.isEmpty tyArgs)
+    true
+
   | _ -> false
 
+let private unwrapRecordTy ty =
+  match ty with
+  | Ty (RecordTk tySerial, tyArgs) ->
+    assert (List.isEmpty tyArgs)
+    tySerial
+  | _ -> unreachable ()
+
 let private hxBox itemExpr itemTy loc =
-  hxApp (HPrimExpr(HPrim.Box, tyFun itemTy tyObj, loc)) itemExpr tyObj loc
+  hxCallProc (HPrimExpr(HPrim.Box, tyFun itemTy tyObj, loc)) [ itemExpr ] tyObj loc
 
 let private hxUnbox boxExpr itemTy loc =
-  hxApp (HPrimExpr(HPrim.Unbox, tyFun tyObj itemTy, loc)) boxExpr itemTy loc
+  hxCallProc (HPrimExpr(HPrim.Unbox, tyFun tyObj itemTy, loc)) [ boxExpr ] itemTy loc
 
 // -----------------------------------------------
 // Type recursion detection
@@ -527,7 +537,7 @@ let private postProcessVariantAppPat (ctx: AbCtx) variantSerial payloadPat =
   else
     None
 
-let private postProcessVariantFunAppExpr ctx variantSerial payload : HExpr option =
+let private postProcessVariantFunCallExpr ctx variantSerial payload : HExpr option =
   if needsBoxedVariant ctx variantSerial then
     // FIXME: ty is now wrong for the same reason as call-variant pattern.
     let ty, loc = exprExtract payload
@@ -537,6 +547,7 @@ let private postProcessVariantFunAppExpr ctx variantSerial payload : HExpr optio
 
 /// ### Unwrapping newtype variants
 
+// #tyAssign
 let private assignToPayloadTy (ctx: AbCtx) variantSerial (tyArgs: Ty list) =
   let variantDef = ctx.Variants |> mapFind variantSerial
 
@@ -604,7 +615,7 @@ let private unwrapNewtypeVariantExpr (ctx: AbCtx) variantSerial loc : HExpr opti
   else
     None
 
-let private unwrapNewtypeVariantAppExpr (ctx: AbCtx) variantSerial payload : HExpr option =
+let private unwrapNewtypeVariantCallExpr (ctx: AbCtx) variantSerial payload : HExpr option =
   let variantDef = ctx.Variants |> mapFind variantSerial
 
   if
@@ -662,11 +673,28 @@ let private postProcessRecordExpr ctx baseOpt fields recordTy loc =
   else
     None
 
+let private postProcessRecordExpr2 ctx recordTySerial args loc =
+  if needsBoxedRecordTySerial ctx recordTySerial then
+    let ty = tyRecord recordTySerial
+    let recordExpr = HNodeExpr(HRecordEN, args, ty, loc)
+
+    Some(hxBox recordExpr ty loc)
+  else
+    None
+
 let private postProcessFieldExpr ctx recordExpr recordTy fieldName fieldTy loc =
   if needsBoxedRecordTy ctx recordTy then
     assert (recordExpr |> exprToTy |> tyEqual tyObj)
 
     Some(HNavExpr(hxUnbox recordExpr recordTy loc, fieldName, fieldTy, loc))
+  else
+    None
+
+let private postProcessFieldExpr2 ctx recordTySerial recordExpr index fieldTy loc =
+  if needsBoxedRecordTySerial ctx recordTySerial then
+    let ty = tyRecord recordTySerial
+
+    Some(HNodeExpr(HRecordItemEN index, [ hxUnbox recordExpr ty loc ], fieldTy, loc))
   else
     None
 
@@ -745,49 +773,43 @@ let private abExpr ctx expr =
     | Some expr -> expr
     | None -> HVariantExpr(variantSerial, ty, loc)
 
-  | HRecordExpr (baseOpt, fields, ty, loc) ->
-    assert (tyIsRecord ty)
-
-    let baseOpt = baseOpt |> Option.map (abExpr ctx)
-
-    let fields =
-      fields
-      |> List.map
-           (fun (name, init, loc) ->
-             let init = init |> abExpr ctx
-             name, init, loc)
-
-    match postProcessRecordExpr ctx baseOpt fields ty loc with
-    | Some expr -> expr
-    | None -> HRecordExpr(baseOpt, fields, ty, loc)
-
-  | HNavExpr (l, r, ty, loc) ->
-    let recordTy = l |> exprToTy
-    assert (tyIsRecord recordTy)
-
-    let l = l |> abExpr ctx
-    let ty = ty |> abTy ctx
-
-    match postProcessFieldExpr ctx l recordTy r ty loc with
-    | Some expr -> expr
-    | None -> HNavExpr(l, r, ty, loc)
-
   | HNodeExpr (kind, items, ty, loc) ->
-    let items = items |> List.map (abExpr ctx)
-    let ty = ty |> abTy ctx
-
     match kind, items with
-    | HAppEN, [ (HVariantExpr (variantSerial, _, _) as callee); payload ] ->
+    | HCallProcEN, [ (HVariantExpr (variantSerial, _, _) as callee); payload ] ->
+      let payload = payload |> abExpr ctx
+      let ty = ty |> abTy ctx
+
       let payload =
-        match postProcessVariantFunAppExpr ctx variantSerial payload with
+        match postProcessVariantFunCallExpr ctx variantSerial payload with
         | Some payload -> payload
         | None -> payload
 
-      match unwrapNewtypeVariantAppExpr ctx variantSerial payload with
+      match unwrapNewtypeVariantCallExpr ctx variantSerial payload with
       | Some payload -> payload
-      | None -> hxApp callee payload ty loc
+      | None -> hxCallProc callee [ payload ] ty loc
 
-    | _ -> HNodeExpr(kind, items, ty, loc)
+    | HRecordEN, _ ->
+      let recordSerial = unwrapRecordTy ty
+      let items = items |> List.map (abExpr ctx)
+      let ty = ty |> abTy ctx
+
+      match postProcessRecordExpr2 ctx recordSerial items loc with
+      | Some expr -> expr
+      | None -> HNodeExpr(HRecordEN, items, ty, loc)
+
+    | HRecordItemEN index, [ recordExpr ] ->
+      let recordTySerial = recordExpr |> exprToTy |> unwrapRecordTy
+      let recordExpr = recordExpr |> abExpr ctx
+      let ty = ty |> abTy ctx
+
+      match postProcessFieldExpr2 ctx recordTySerial recordExpr index ty loc with
+      | Some expr -> expr
+      | None -> HNodeExpr(HRecordItemEN index, [ recordExpr ], ty, loc)
+
+    | _ ->
+      let items = items |> List.map (abExpr ctx)
+      let ty = ty |> abTy ctx
+      HNodeExpr(kind, items, ty, loc)
 
   | HLitExpr _ -> expr
 
@@ -826,6 +848,9 @@ let private abExpr ctx expr =
     let next = next |> abExpr ctx
     let ty = ty |> abTy ctx
     HLetFunExpr(callee, isRec, vis, args, body, next, ty, loc)
+
+  | HNavExpr _ -> unreachable () // HNavExpr is resolved in NameRes, Typing, or RecordRes.
+  | HRecordExpr _ -> unreachable () // HRecordExpr is resolved in RecordRes.
 
 let autoBox (expr: HExpr, tyCtx: TyCtx) =
   // Detect recursion.
@@ -904,4 +929,260 @@ let autoBox (expr: HExpr, tyCtx: TyCtx) =
   let expr = expr |> abExpr ctx
 
   let tyCtx = ctx |> toTyCtx tyCtx
+  expr, tyCtx
+
+// ===============================================
+// FIXME: split file
+
+// -----------------------------------------------
+// Detect use of type vars
+// -----------------------------------------------
+
+let private emptyTyVarSet: AssocSet<TySerial> = TSet.empty compare
+
+type private TvCtx =
+  { Funs: AssocMap<FunSerial, FunDef>
+    UsedTyVars: AssocSet<TySerial> }
+
+let private tvTy (ty: Ty) (ctx: TvCtx) : TvCtx =
+  let modified, usedTyVars =
+    tyCollectFreeVars ty
+    |> List.fold
+         (fun (modified, tyVars) tySerial ->
+           if not modified && TSet.contains tySerial tyVars then
+             false, tyVars
+           else
+             true, TSet.add tySerial tyVars)
+         (false, ctx.UsedTyVars)
+
+  if modified then
+    { ctx with UsedTyVars = usedTyVars }
+  else
+    ctx
+
+let private tvPat (pat: HPat) (ctx: TvCtx) : TvCtx =
+  let onTy ty ctx = tvTy ty ctx
+  let onPat pat ctx = tvPat pat ctx
+  let onPats pats ctx = forList tvPat pats ctx
+
+  match pat with
+  | HLitPat _ -> ctx
+  | HDiscardPat (ty, _) -> onTy ty ctx
+  | HVarPat (_, _, ty, _) -> onTy ty ctx
+  | HVariantPat (_, ty, _) -> onTy ty ctx
+  | HNodePat (_, argPats, ty, _) -> ctx |> onPats argPats |> onTy ty
+  | HAsPat (bodyPat, _, _) -> onPat bodyPat ctx
+  | HOrPat (l, r, _) -> ctx |> onPat l |> onPat r
+
+let private tvExpr (expr: HExpr) (ctx: TvCtx) : TvCtx =
+  let onTy ty ctx = tvTy ty ctx
+  let onPat pat ctx = tvPat pat ctx
+  let onPats pats ctx = forList onPat pats ctx
+  let onExpr expr ctx = tvExpr expr ctx
+  let onExprs exprs ctx = forList tvExpr exprs ctx
+
+  match expr with
+  | HLitExpr _ -> ctx
+
+  | HVarExpr (_, ty, _) -> onTy ty ctx
+  | HFunExpr (_, ty, _, _) -> onTy ty ctx
+  | HVariantExpr (_, ty, _) -> onTy ty ctx
+  | HPrimExpr (_, ty, _) -> onTy ty ctx
+
+  | HMatchExpr (cond, arms, ty, _) ->
+    ctx
+    |> onExpr cond
+    |> forList (fun (pat, guard, body) ctx -> ctx |> onPat pat |> onExpr guard |> onExpr body) arms
+    |> onTy ty
+
+  | HNodeExpr (_, args, ty, loc) -> ctx |> onExprs args |> onTy ty
+
+  | HBlockExpr (stmts, last) -> ctx |> onExprs stmts |> tvExpr last
+
+  | HLetValExpr (pat, init, next, ty, _) ->
+    ctx
+    |> onExpr init
+    |> onPat pat
+    |> onTy ty
+    |> tvExpr next
+
+  | HLetFunExpr (funSerial, _, _, args, body, next, ty, _) ->
+    let parent, ctx =
+      ctx.UsedTyVars, { ctx with UsedTyVars = emptyTyVarSet }
+
+    let ctx = ctx |> onPats args |> onExpr body
+
+    let ctx =
+      let funDef = ctx.Funs |> mapFind funSerial
+      let (TyScheme (tyVars, funTy)) = funDef.Ty
+      let oldTyVars = tyVars
+
+      let isOwned (tySerial: TySerial) =
+        oldTyVars
+        |> List.exists (fun tyVar -> tyVar = tySerial)
+
+      let funs =
+        let funDef =
+          let tyVars =
+            tyVars
+            |> List.fold (fun tyVars tySerial -> TSet.add tySerial tyVars) ctx.UsedTyVars
+            |> TSet.toList
+
+          { funDef with
+              Ty = TyScheme(tyVars, funTy) }
+
+        ctx.Funs |> TMap.add funSerial funDef
+
+      { ctx with
+          Funs = funs
+          // FIXME: TSet.union
+          UsedTyVars =
+            TSet.fold
+              (fun tySerial tyVars ->
+                if isOwned tyVars then
+                  tySerial
+                else
+                  TSet.add tyVars tySerial)
+              parent
+              ctx.UsedTyVars }
+
+    ctx |> onTy ty |> tvExpr next
+
+  | HNavExpr _ -> unreachable () // HNavExpr is resolved in NameRes, Typing, or RecordRes.
+  | HRecordExpr _ -> unreachable () // HRecordExpr is resolved in RecordRes.
+
+// -----------------------------------------------
+// Compute ty args
+// -----------------------------------------------
+
+type private TyMap = AssocMap<TySerial, TyDef>
+
+let private emptyTys: TyMap = TMap.empty compare
+let private emptyBinding: AssocMap<TySerial, Ty> = TMap.empty compare
+
+/// Generates a binding (from meta ty to ty) by unifying.
+let private unifyTy (tys: TyMap) (lTy: Ty) (rTy: Ty) loc : AssocMap<TySerial, Ty> =
+  let expandMeta binding tySerial =
+    match binding |> TMap.tryFind tySerial with
+    | (Some _) as it -> it
+    | _ ->
+      match tys |> TMap.tryFind tySerial with
+      | Some (MetaTyDef ty) -> Some ty
+      | _ -> None
+
+  let substTy binding ty = tySubst (expandMeta binding) ty
+
+  let rec go lTy rTy loc binding =
+    match unifyNext lTy rTy loc with
+    | UnifyOk
+    | UnifyError _ ->
+      // NOTE: Unification may fail due to auto boxing.
+      //       This is not fatal problem since all type errors are already handled in typing phase.
+      binding
+
+    | UnifyOkWithStack stack -> List.fold (fun binding (l, r) -> go l r loc binding) binding stack
+
+    | UnifyExpandMeta (tySerial, otherTy) ->
+      match expandMeta binding tySerial with
+      | Some ty -> go ty otherTy loc binding
+
+      | None ->
+        match unifyAfterExpandMeta tySerial (substTy binding otherTy) loc with
+        | UnifyAfterExpandMetaResult.OkNoBind -> binding
+
+        | UnifyAfterExpandMetaResult.OkBind -> binding |> TMap.add tySerial otherTy
+
+        | UnifyAfterExpandMetaResult.Error _ -> binding
+
+    | UnifyExpandSynonym _ -> unreachable () // Resolved in Typing.
+
+  go lTy rTy loc emptyBinding
+
+type private TaCtx =
+  { Funs: AssocMap<FunSerial, FunDef>
+    QuantifiedTys: AssocSet<TySerial> }
+
+let private processFunExpr (ctx: TaCtx) funSerial useSiteTy loc : HExpr =
+  let def: FunDef = ctx.Funs |> mapFind funSerial
+  let (TyScheme (tyVars, genericTy)) = def.Ty
+
+  let binding = unifyTy emptyTys genericTy useSiteTy loc
+
+  let tyArgs =
+    tyVars
+    |> List.map
+         (fun tySerial ->
+           binding
+           |> TMap.tryFind tySerial
+           |> Option.defaultWith
+                (fun () ->
+                  if ctx.QuantifiedTys |> TSet.contains tySerial then
+                    tyMeta tySerial loc
+                  else
+                    tyUnit))
+
+  HFunExpr(funSerial, useSiteTy, tyArgs, loc)
+
+let private taExpr (ctx: TaCtx) (expr: HExpr) : HExpr =
+  let onExpr expr = taExpr ctx expr
+  let onExprs exprs = List.map (taExpr ctx) exprs
+
+  match expr with
+  | HLitExpr _
+  | HVarExpr _
+  | HVariantExpr _
+  | HPrimExpr _ -> expr
+
+  | HFunExpr (funSerial, useSiteTy, tyArgs, loc) ->
+    assert (List.isEmpty tyArgs) // No computed.
+    processFunExpr ctx funSerial useSiteTy loc
+
+  | HMatchExpr (cond, arms, ty, loc) ->
+    let cond = onExpr cond
+
+    let arms =
+      arms
+      |> List.map (fun (pat, guard, body) -> (pat, onExpr guard, onExpr body))
+
+    HMatchExpr(cond, arms, ty, loc)
+
+  | HNodeExpr (kind, args, ty, loc) -> HNodeExpr(kind, onExprs args, ty, loc)
+  | HBlockExpr (stmts, last) -> HBlockExpr(onExprs stmts, onExpr last)
+  | HLetValExpr (pat, init, next, ty, loc) -> HLetValExpr(pat, onExpr init, onExpr next, ty, loc)
+
+  | HLetFunExpr (callee, isRec, vis, args, body, next, ty, loc) ->
+    let ctx =
+      let funDef = ctx.Funs |> mapFind callee
+
+      match funDef.Ty with
+      | TyScheme ([], _) -> ctx
+      | TyScheme (tyVars, _) ->
+        let quantifiedTys =
+          tyVars
+          |> List.fold (fun quantifiedTys tySerial -> TSet.add tySerial quantifiedTys) ctx.QuantifiedTys
+
+        { ctx with
+            QuantifiedTys = quantifiedTys }
+
+    HLetFunExpr(callee, isRec, vis, args, taExpr ctx body, onExpr next, ty, loc)
+
+  | HNavExpr _ -> unreachable () // HNavExpr is resolved in NameRes, Typing, or RecordRes.
+  | HRecordExpr _ -> unreachable () // HRecordExpr is resolved in RecordRes.
+
+let computeFunTyArgs (expr: HExpr, tyCtx: TyCtx) : HExpr * TyCtx =
+  let tyCtx =
+    let ctx: TvCtx =
+      { Funs = tyCtx.Funs
+        UsedTyVars = TSet.empty compare }
+
+    let ctx = tvExpr expr ctx
+    { tyCtx with Funs = ctx.Funs }
+
+  let expr =
+    let ctx: TaCtx =
+      { Funs = tyCtx.Funs
+        QuantifiedTys = TSet.empty compare }
+
+    taExpr ctx expr
+
   expr, tyCtx

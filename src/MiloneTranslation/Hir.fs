@@ -115,6 +115,7 @@ type FunDef =
     Ty: TyScheme
     Abi: FunAbi
     Linkage: Linkage
+    ParentOpt: FunSerial option
     Loc: Loc }
 
 [<RequireQualifiedAccess; NoEquality; NoComparison>]
@@ -302,7 +303,7 @@ type HExpr =
   | HVarExpr of VarSerial * Ty * Loc
 
   /// Name of function.
-  | HFunExpr of FunSerial * Ty * Loc
+  | HFunExpr of FunSerial * Ty * tyArgs: Ty list * Loc
 
   /// Name of variant.
   | HVariantExpr of VariantSerial * Ty * Loc
@@ -576,7 +577,7 @@ let exprExtract (expr: HExpr) : Ty * Loc =
   match expr with
   | HLitExpr (lit, a) -> litToTy lit, a
   | HVarExpr (_, ty, a) -> ty, a
-  | HFunExpr (_, ty, a) -> ty, a
+  | HFunExpr (_, ty, _, a) -> ty, a
   | HVariantExpr (_, ty, a) -> ty, a
   | HPrimExpr (_, ty, a) -> ty, a
   | HRecordExpr (_, _, ty, a) -> ty, a
@@ -594,7 +595,7 @@ let exprMap (f: Ty -> Ty) (g: Loc -> Loc) (expr: HExpr) : HExpr =
     match expr with
     | HLitExpr (lit, a) -> HLitExpr(lit, g a)
     | HVarExpr (serial, ty, a) -> HVarExpr(serial, f ty, g a)
-    | HFunExpr (serial, ty, a) -> HFunExpr(serial, f ty, g a)
+    | HFunExpr (serial, ty, tyArgs, a) -> HFunExpr(serial, f ty, List.map f tyArgs, g a)
     | HVariantExpr (serial, ty, a) -> HVariantExpr(serial, f ty, g a)
     | HPrimExpr (prim, ty, a) -> HPrimExpr(prim, f ty, g a)
 
