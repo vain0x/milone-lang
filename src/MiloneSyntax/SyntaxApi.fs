@@ -136,10 +136,10 @@ let private readModuleInProjectWith
   (readTextFile: string -> string option)
   (projectDir: ProjectDir)
   (moduleName: ModuleName)
-  : (ModuleName * SourceExt * SourceCode) option =
+  : (SourceExt * SourceCode) option =
   let read (ext: SourceExt) =
     match readTextFile (projectDir + "/" + moduleName + ext) with
-    | Some contents -> Some(moduleName, ext, contents)
+    | Some contents -> Some(ext, contents)
     | None -> None
 
   match read ".milone" with
@@ -178,7 +178,10 @@ let private fetchModuleWith
 
   match readModuleInProjectWith readTextFile projectDir moduleName with
   | None -> None
-  | Some (docId, _, contents) ->
+
+  | Some (_, contents) ->
+    let docId = projectName + "." + moduleName
+
     contents
     |> tokenize
     |> parseModuleWith docId
