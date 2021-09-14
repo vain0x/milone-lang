@@ -180,7 +180,8 @@ let private fetchModuleWith
   | None -> None
 
   | Some (_, contents) ->
-    let docId = projectName + "." + moduleName
+    let docId =
+      AstBundle.computeDocId projectName moduleName
 
     contents
     |> tokenize
@@ -294,7 +295,7 @@ let performSyntaxAnalysis (ctx: SyntaxCtx) : SyntaxAnalysisResult =
   writeLog "AstBundle"
 
   let modules, nameCtx, bundleErrors =
-    AstBundle.bundleCompatible ctx.FetchModule ctx.Host.EntryProjectName
+    AstBundle.bundle ctx.FetchModule ctx.Host.EntryProjectName
 
   if bundleErrors |> List.isEmpty |> not then
     SyntaxAnalysisError(bundleErrors, None)
