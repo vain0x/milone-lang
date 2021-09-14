@@ -20,29 +20,6 @@ module S = MiloneStd.StdString
 // Utils
 // -----------------------------------------------
 
-let private mpscConcurrent
-  (consumer: 'S -> 'A -> 'S * 'T list)
-  (producer: 'S -> 'T -> 'A option)
-  (initialState: 'S)
-  (initialCommands: 'T list)
-  : 'S =
-  let rec folder state commands =
-    let state, commandListList =
-      commands
-      |> List.fold
-           (fun (state, acc) command ->
-             match producer state command with
-             | None -> state, acc
-
-             | Some action ->
-               let state, newCommands = consumer state action
-               state, newCommands :: acc)
-           (state, [])
-
-    List.fold folder state (List.rev commandListList)
-
-  folder initialState initialCommands
-
 let private topologicalSort
   (compareVertices: 'T -> 'T -> int)
   (getChildren: 'T -> 'T list)

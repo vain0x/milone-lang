@@ -16,3 +16,33 @@ let objToString _ = "<objToString not supported>"
 let __stringLengthInUtf8Bytes (s: string) = s.Length
 
 type Profiler = Profiler of voidptr
+
+// -----------------------------------------------
+// Concurrency
+// -----------------------------------------------
+
+// Since runtime doesn't support concurrent programming yet,
+// these functions work synchronously.
+
+let mpscConcurrent
+  (consumer: 'S -> 'A -> 'S * 'T list)
+  (producer: 'S -> 'T -> 'A option)
+  (initialState: 'S)
+  (initialCommands: 'T list)
+  : 'S =
+  let rec folder state commands =
+    let state, commandListList =
+      commands
+      |> List.fold
+           (fun (state, acc) command ->
+             match producer state command with
+             | None -> state, acc
+
+             | Some action ->
+               let state, newCommands = consumer state action
+               state, newCommands :: acc)
+           (state, [])
+
+    List.fold folder state (List.rev commandListList)
+
+  folder initialState initialCommands
