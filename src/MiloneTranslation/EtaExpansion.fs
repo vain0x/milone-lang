@@ -332,7 +332,8 @@ let private resolvePartialAppFun callee arity args argLen callLoc ctx =
     hxCallProc callee forwardArgs resultTy callLoc
 
   let funLet, funExpr, ctx =
-    createUnderlyingFunDef funTy arity envPat envTy forwardExpr restArgPats unboxedEnvExpr callLoc ctx
+    let appliedTy = tyAppliedBy argLen funTy
+    createUnderlyingFunDef appliedTy (arity - argLen) envPat envTy forwardExpr restArgPats unboxedEnvExpr callLoc ctx
 
   let funObjExpr =
     HNodeExpr(HClosureEN, [ funExpr; boxedEnvExpr ], tyAppliedBy argLen funTy, callLoc)
@@ -374,7 +375,9 @@ let private resolvePartialAppObj callee arity args argLen callLoc ctx =
     hxCallClosure calleeExpr forwardArgs resultTy callLoc
 
   let funLet, funExpr, ctx =
-    createUnderlyingFunDef funTy arity envPat envTy forwardExpr restArgPats unboxedEnvExpr callLoc ctx
+    let appliedTy = tyAppliedBy argLen funTy
+
+    createUnderlyingFunDef appliedTy (arity - argLen) envPat envTy forwardExpr restArgPats unboxedEnvExpr callLoc ctx
 
   let closureExpr =
     HNodeExpr(HClosureEN, [ funExpr; boxedEnvExpr ], tyAppliedBy argLen funTy, callLoc)
