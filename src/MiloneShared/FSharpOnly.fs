@@ -114,6 +114,13 @@ let mpscConcurrent
 
   consumerWork ()
 
+/// `List.map` in parallel.
+let __parallelMap (f: 'T -> 'U) (xs: 'T list) : 'U list =
+  xs
+  |> List.toArray
+  |> Array.Parallel.map f
+  |> Array.toList
+
 // -----------------------------------------------
 // C FFI
 // -----------------------------------------------

@@ -64,3 +64,5 @@ let mpscConcurrent
     List.fold folder state (List.rev commandListList)
 
   folder initialState initialCommands
+
+let __parallelMap (f: 'T -> 'U) (xs: 'T list) : 'U list = List.map f xs

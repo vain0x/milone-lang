@@ -45,9 +45,8 @@ type FunSerial = FunSerial of Serial
 [<Struct; NoComparison>]
 type VariantSerial = VariantSerial of Serial
 
-[<Struct>]
-[<NoEquality; NoComparison>]
-type NameCtx = NameCtx of map: AssocMap<Serial, Ident> * lastSerial: Serial
+[<Struct; NoEquality; NoComparison>]
+type NameCtx = NameCtx of identMap: AssocMap<Serial, Ident> * lastSerial: Serial
 
 /// Type constructor.
 [<Struct; NoEquality; NoComparison>]
@@ -469,17 +468,6 @@ type Log =
   | MissingFieldsError of ty: Ident * fields: Ident list
   | ArityMismatch of actual: string * expected: string
   | Error of string
-
-// -----------------------------------------------
-// Name context
-// -----------------------------------------------
-
-let nameCtxEmpty () = NameCtx(TMap.empty compare, 0)
-
-let nameCtxAdd (Name (name, _)) (NameCtx (map, serial)) =
-  let serial = serial + 1
-  let map = map |> TMap.add serial name
-  serial, NameCtx(map, serial)
 
 // -----------------------------------------------
 // Types (HIR/MIR)

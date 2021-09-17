@@ -65,6 +65,29 @@ let private opToPrim op =
   | PipeBinary -> unreachable ()
 
 // -----------------------------------------------
+// NameCtx
+// -----------------------------------------------
+
+// NameCtx is not suitable for parallel computation
+// so here we use different type.
+
+[<Struct; NoEquality; NoComparison>]
+type AhNameCtx = AhNameCtx of lastSerial: Serial * identAcc: Ident list
+
+type private NameCtx = AhNameCtx
+
+let private nameCtxAdd (name: Name) (ctx: AhNameCtx) : Serial * NameCtx =
+  let (AhNameCtx (serial, idents)) = ctx
+  let (Name (ident, _)) = name
+  serial + 1, AhNameCtx(serial + 1, ident :: idents)
+
+let nameCtxFold folder state (nameCtx: AhNameCtx) =
+  let (AhNameCtx (lastSerial, identAcc)) = nameCtx
+
+  identAcc
+  |> List.fold (fun (serial, state) ident -> serial - 1, folder state serial ident) (lastSerial, state)
+
+// -----------------------------------------------
 // APat
 // -----------------------------------------------
 

@@ -280,14 +280,9 @@ let bundle (fetchModule: FetchModuleFun) (entryProjectName: string) : BundleResu
          0
 
   // Convert to TIR.
-  let (NameCtx (emptyMap, _)) = nameCtxEmpty ()
-
   let modules =
-    // FIXME: make it parallel
-    let parallelMap f xs = List.map f xs
-
     modules
-    |> parallelMap
+    |> __parallelMap
          (fun (serial: Serial, moduleData: ModuleData) ->
            let moduleName = moduleData.Name
            let projectName = moduleData.Project
@@ -295,15 +290,14 @@ let bundle (fetchModule: FetchModuleFun) (entryProjectName: string) : BundleResu
            let ast = moduleData.Ast
            let symbolCount = moduleData.SymbolCount
 
-           let nameCtx = NameCtx(emptyMap, serial)
-
            let exprs, nameCtx =
+             let nameCtx = AhNameCtx(serial, [])
              astToHir projectName docId (ast, nameCtx)
 
-           let (NameCtx (_, lastSerial)) = nameCtx
+           let (AhNameCtx (lastSerial, _)) = nameCtx
 
            //  printfn
-           //    "%s expect: %d..%d (%d)  actual: %d..%d (%d)"
+           //    "%s expect: %d..%d (%d) actual: %d..%d (%d)"
            //    docId
            //    serial
            //    (serial + symbolCount)
@@ -316,34 +310,17 @@ let bundle (fetchModule: FetchModuleFun) (entryProjectName: string) : BundleResu
 
            (projectName, moduleName, exprs), nameCtx)
 
-  let modules, nameMap =
+  let modules, identMap =
     modules
     |> List.mapFold
-         (fun nameMap (m, nameCtx) ->
-           let nameMap =
-             let (NameCtx (newNameMap, _)) = nameCtx
-             // FIXME: merge
-             newNameMap
-             |> TMap.fold (fun map key value -> TMap.add key value map) nameMap
+         (fun identMap (m, nameCtx) ->
+           let _, identMap =
+             nameCtx
+             |> nameCtxFold (fun map serial ident -> TMap.add serial ident map) identMap
 
-           m, nameMap)
-         emptyMap
+           m, identMap)
+         (TMap.empty compare)
 
-  let nameCtx = NameCtx(nameMap, lastSerial)
-
-  // let modules, nameCtx =
-  //   modules
-  //   |> List.mapFold
-  //        (fun nameCtx (moduleData: ModuleData) ->
-  //          let moduleName = moduleData.Name
-  //          let projectName = moduleData.Project
-  //          let docId = moduleData.DocId
-  //          let ast = moduleData.Ast
-
-  //          let exprs, nameCtx =
-  //            astToHir projectName docId (ast, nameCtx)
-
-  //          (projectName, moduleName, exprs), nameCtx)
-  //        (nameCtxEmpty ())
+  let nameCtx = NameCtx(identMap, lastSerial)
 
   modules, nameCtx, errors
