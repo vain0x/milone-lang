@@ -42,6 +42,10 @@ module Future =
         .Unwrap()
       |> ofTask
 
+  /// Spawns a task to run a complex computation. (.NET only)
+  let spawn (f: unit -> Future<'T>) : Future<'T> =
+    Task.Run<'T>(fun () -> (f ()).AsTask()) |> ofTask
+
 /// Performs a concurrent work.
 /// (mpsc: multiple producers single consumer)
 ///
@@ -60,12 +64,14 @@ let mpscConcurrent
     System.Threading.Channels.Channel.CreateUnbounded<'A>()
 
   let producerWork (state: 'S) (command: 'T) =
-    producer state command
-    |> Future.map
-         (fun actionOpt ->
-           match actionOpt with
-           | Some action -> chan.Writer.TryWrite(action) |> ignore
-           | None -> ())
+    Future.spawn
+      (fun () ->
+        producer state command
+        |> Future.map
+             (fun actionOpt ->
+               match actionOpt with
+               | Some action -> chan.Writer.TryWrite(action) |> ignore
+               | None -> ()))
     |> ignore
 
   let consumerWork () =
