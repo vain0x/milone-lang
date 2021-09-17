@@ -64,6 +64,7 @@ type private ModuleData =
     DocId: DocId
     Ast: ARoot
     Deps: ModuleRequest list
+    SymbolCount: SymbolCount
     Errors: Error list }
 
 [<RequireQualifiedAccess; NoEquality; NoComparison>]
@@ -224,6 +225,7 @@ let private producer (fetchModule: FetchModuleFun) (_: State) (r: ModuleRequest)
                DocId = docId
                Ast = ast
                Deps = deps
+               SymbolCount = countSymbols ast
                Errors = errors }
 
            Some(Action.DidFetchOk m)
@@ -234,7 +236,9 @@ let private producer (fetchModule: FetchModuleFun) (_: State) (r: ModuleRequest)
 // Interface
 // -----------------------------------------------
 
-type private FetchModuleFun = ProjectName -> ModuleName -> Future<(DocId * ARoot * (string * Pos) list) option>
+type private SymbolCount = int
+type private ModuleSyntaxData = DocId * ARoot * (string * Pos) list
+type private FetchModuleFun = ProjectName -> ModuleName -> Future<ModuleSyntaxData option>
 type private BundleResult = TProgram * NameCtx * Error list
 
 let bundle (fetchModule: FetchModuleFun) (entryProjectName: string) : BundleResult =
@@ -266,19 +270,80 @@ let bundle (fetchModule: FetchModuleFun) (entryProjectName: string) : BundleResu
 
   let errors = state |> toErrors
 
-  let modules, nameCtx =
+  // Allocate serials for all modules.
+  let modules, lastSerial =
     modules
     |> List.mapFold
-         (fun nameCtx (moduleData: ModuleData) ->
+         (fun (serial: int) (moduleData: ModuleData) ->
+           let endSerial = serial + moduleData.SymbolCount
+           (serial, moduleData), endSerial)
+         0
+
+  // Convert to TIR.
+  let (NameCtx (emptyMap, _)) = nameCtxEmpty ()
+
+  let modules =
+    // FIXME: make it parallel
+    let parallelMap f xs = List.map f xs
+
+    modules
+    |> parallelMap
+         (fun (serial: Serial, moduleData: ModuleData) ->
            let moduleName = moduleData.Name
            let projectName = moduleData.Project
            let docId = moduleData.DocId
            let ast = moduleData.Ast
+           let symbolCount = moduleData.SymbolCount
+
+           let nameCtx = NameCtx(emptyMap, serial)
 
            let exprs, nameCtx =
              astToHir projectName docId (ast, nameCtx)
 
+           let (NameCtx (_, lastSerial)) = nameCtx
+
+           //  printfn
+           //    "%s expect: %d..%d (%d)  actual: %d..%d (%d)"
+           //    docId
+           //    serial
+           //    (serial + symbolCount)
+           //    symbolCount
+           //    serial
+           //    lastSerial
+           //    (lastSerial - serial)
+
+           assert (lastSerial - serial = symbolCount)
+
            (projectName, moduleName, exprs), nameCtx)
-         (nameCtxEmpty ())
+
+  let modules, nameMap =
+    modules
+    |> List.mapFold
+         (fun nameMap (m, nameCtx) ->
+           let nameMap =
+             let (NameCtx (newNameMap, _)) = nameCtx
+             // FIXME: merge
+             newNameMap
+             |> TMap.fold (fun map key value -> TMap.add key value map) nameMap
+
+           m, nameMap)
+         emptyMap
+
+  let nameCtx = NameCtx(nameMap, lastSerial)
+
+  // let modules, nameCtx =
+  //   modules
+  //   |> List.mapFold
+  //        (fun nameCtx (moduleData: ModuleData) ->
+  //          let moduleName = moduleData.Name
+  //          let projectName = moduleData.Project
+  //          let docId = moduleData.DocId
+  //          let ast = moduleData.Ast
+
+  //          let exprs, nameCtx =
+  //            astToHir projectName docId (ast, nameCtx)
+
+  //          (projectName, moduleName, exprs), nameCtx)
+  //        (nameCtxEmpty ())
 
   modules, nameCtx, errors

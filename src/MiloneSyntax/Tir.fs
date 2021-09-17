@@ -416,8 +416,11 @@ type TStmt =
   | TModuleStmt of ModuleTySerial * body: TStmt list * Loc
   | TModuleSynonymStmt of ModuleSynonymSerial * path: Ident list * Loc
 
-/// TIR program. (project name, module name, decls) list.
-type TProgram = (string * string * TStmt list) list
+/// (project name, module name, decls)
+type TModule = string * string * TStmt list
+
+/// TIR program.
+type TProgram = TModule list
 
 // -----------------------------------------------
 // Errors
