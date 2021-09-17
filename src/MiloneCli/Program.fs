@@ -12,19 +12,15 @@ let private dirCreate (baseDir: string) (dir: string) =
   | _ -> false
 
 let private readFile (filePath: string) : Future<string option> =
-  async {
-    try
-      if System.IO.File.Exists(filePath) then
-        let! text =
-          System.IO.File.ReadAllTextAsync(filePath)
-          |> Async.AwaitTask
-
-        return text |> Some
-      else
-        return None
-    with
-    | _ -> return None
-  }
+  try
+    if System.IO.File.Exists(filePath) then
+      System.IO.File.ReadAllTextAsync(filePath)
+      |> Future.ofTask
+      |> Future.map Some
+    else
+      Future.just None
+  with
+  | _ -> Future.just None
 
 let private writeFile (filePath: string) (contents: string) : unit =
   let readFile filePath =

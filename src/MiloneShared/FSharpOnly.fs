@@ -13,22 +13,34 @@ let __stringLengthInUtf8Bytes (s: string) : int =
 // Concurrency
 // -----------------------------------------------
 
-type Future<'T> = Async<'T>
+type Future<'T> = System.Threading.Tasks.ValueTask<'T>
 
 module Future =
-  let just (value: 'T) : Future<'T> = async { return value }
+  open System.Threading.Tasks
 
-  let map (f: 'T -> 'U) (future: Future<'T>) : Future<'U> =
-    async {
-      let! value = future
-      return f value
-    }
+  // .NET only
+  let ofTask (task: Task<'T>) : Future<'T> = ValueTask<'T>(task)
 
-  let andThen (f: 'T -> Future<'U>) (future: Future<'T>) : Future<'U> =
-    async {
-      let! value = future
-      return! f value
-    }
+  let just (value: 'T) : Future<'T> = ValueTask.FromResult(value)
+
+  let map (f: 'T -> 'U) (task: Future<'T>) : Future<'U> =
+    if task.IsCompletedSuccessfully then
+      ValueTask.FromResult(f task.Result)
+    else
+      task
+        .AsTask()
+        .ContinueWith(fun (task: Task<_>) -> f task.Result)
+      |> ofTask
+
+  let andThen (f: 'T -> Future<'U>) (task: Future<'T>) : Future<'U> =
+    if task.IsCompletedSuccessfully then
+      f task.Result
+    else
+      task
+        .AsTask()
+        .ContinueWith(fun (task: Task<_>) -> (f task.Result).AsTask())
+        .Unwrap()
+      |> ofTask
 
 /// Performs a concurrent work.
 /// (mpsc: multiple producers single consumer)
@@ -48,12 +60,13 @@ let mpscConcurrent
     System.Threading.Channels.Channel.CreateUnbounded<'A>()
 
   let producerWork (state: 'S) (command: 'T) =
-    async {
-      match! producer state command with
-      | Some action -> chan.Writer.TryWrite(action) |> ignore
-      | None -> ()
-    }
-    |> Async.Start
+    producer state command
+    |> Future.map
+         (fun actionOpt ->
+           match actionOpt with
+           | Some action -> chan.Writer.TryWrite(action) |> ignore
+           | None -> ())
+    |> ignore
 
   let consumerWork () =
     let mutable state = initialState
