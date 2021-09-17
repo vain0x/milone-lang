@@ -29,7 +29,7 @@ module Future =
     else
       task
         .AsTask()
-        .ContinueWith(fun (task: Task<_>) -> f task.Result)
+        .ContinueWith((fun (task: Task<_>) -> f task.Result), TaskContinuationOptions.OnlyOnRanToCompletion)
       |> ofTask
 
   let andThen (f: 'T -> Future<'U>) (task: Future<'T>) : Future<'U> =
@@ -38,13 +38,20 @@ module Future =
     else
       task
         .AsTask()
-        .ContinueWith(fun (task: Task<_>) -> (f task.Result).AsTask())
+        .ContinueWith((fun (task: Task<_>) -> (f task.Result).AsTask()), TaskContinuationOptions.OnlyOnRanToCompletion)
         .Unwrap()
       |> ofTask
 
   /// Spawns a task to run a complex computation. (.NET only)
   let spawn (f: unit -> Future<'T>) : Future<'T> =
     Task.Run<'T>(fun () -> (f ()).AsTask()) |> ofTask
+
+  // .NET only
+  let catch (f: exn -> unit) (future: Future<'T>) : Future<unit> =
+    future
+      .AsTask()
+      .ContinueWith((fun (task: Task<_>) -> f task.Exception), TaskContinuationOptions.OnlyOnFaulted)
+    |> ofTask
 
 /// Performs a concurrent work.
 /// (mpsc: multiple producers single consumer)
@@ -72,6 +79,7 @@ let mpscConcurrent
                match actionOpt with
                | Some action -> chan.Writer.TryWrite(action) |> ignore
                | None -> ()))
+    |> Future.catch (fun ex -> chan.Writer.Complete(ex))
     |> ignore
 
   let consumerWork () =
