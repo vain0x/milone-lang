@@ -155,7 +155,7 @@ let private doBundle (ls: LangServiceState) projectDir =
       { EntryProjectDir = projectDir
         EntryProjectName = projectName
         MiloneHome = miloneHome
-        ReadTextFile = File.tryReadFile
+        ReadTextFile = File.readFile
         WriteLog = fun _ -> () }
 
     SyntaxApi.syntaxCtxNew host
@@ -171,7 +171,7 @@ let private doBundle (ls: LangServiceState) projectDir =
       |> MutMap.insert docId (ls.Host.Docs.GetVersion docId)
       |> ignore
 
-      parseWithCache ls docId |> Some
+      parseWithCache ls docId |> Some |> Future.just
 
   let syntaxCtx =
     { syntaxCtx with

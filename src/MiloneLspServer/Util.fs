@@ -1,7 +1,6 @@
 module MiloneLspServer.Util
 
 open System.Collections.Generic
-open System.IO
 
 type Uri = Uri of string
 
@@ -130,6 +129,8 @@ module MutMultimap =
 // -----------------------------------------------
 
 module File =
+  open System.IO
+
   let tryReadFile (filePath: string) =
     try
       if File.Exists(filePath) then
@@ -138,3 +139,14 @@ module File =
         None
     with
     | _ -> None
+
+  let readFile (filePath: string) : Future<string option> =
+    try
+      if System.IO.File.Exists(filePath) then
+        System.IO.File.ReadAllTextAsync(filePath)
+        |> Future.ofTask
+        |> Future.map Some
+      else
+        Future.just None
+    with
+    | _ -> Future.just None
