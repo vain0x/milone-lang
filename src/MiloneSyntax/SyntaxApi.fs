@@ -131,20 +131,29 @@ let private findProjectWith
   | Some it -> it
   | None -> entryProjectDir + "/../" + projectName
 
+/// filename -> (contents option)
+type private ReadTextFileFun = string -> Future<string option>
+
 /// Reads a file to get source code of specified module.
 let private readModuleInProjectWith
-  (readTextFile: string -> string option)
+  (readTextFile: ReadTextFileFun)
   (projectDir: ProjectDir)
   (moduleName: ModuleName)
-  : (SourceExt * SourceCode) option =
+  : Future<(SourceExt * SourceCode) option> =
   let read (ext: SourceExt) =
-    match readTextFile (projectDir + "/" + moduleName + ext) with
-    | Some contents -> Some(ext, contents)
-    | None -> None
+    readTextFile (projectDir + "/" + moduleName + ext)
+    |> Future.map
+         (fun result ->
+           match result with
+           | Some contents -> Some(ext, contents)
+           | None -> None)
 
-  match read ".milone" with
-  | (Some _) as it -> it
-  | None -> read ".fs"
+  read ".milone"
+  |> Future.andThen
+       (fun result ->
+         match result with
+         | (Some _) as it -> Future.just it
+         | None -> read ".fs")
 
 type private ModuleSyntaxData = DocId * ARoot * (string * Pos) list
 
@@ -163,30 +172,33 @@ let parseModuleWith (docId: DocId) (tokens: (Token * Pos) list) : ModuleSyntaxDa
 
   docId, ast, errors
 
-type private FetchModuleFun = ProjectName -> ModuleName -> ModuleSyntaxData option
+type private FetchModuleFun = ProjectName -> ModuleName -> Future<ModuleSyntaxData option>
 
 let private fetchModuleWith
-  (readTextFile: string -> string option)
+  (readTextFile: ReadTextFileFun)
   (projects: TMap.TreeMap<ProjectName, ProjectDir>)
   (entryProjectDir: ProjectDir)
   (tokenize: SourceCode -> (Token * Pos) list)
   (projectName: ProjectName)
   (moduleName: ModuleName)
-  : ModuleSyntaxData option =
+  : Future<ModuleSyntaxData option> =
   let projectDir =
     findProjectWith projects entryProjectDir projectName
 
-  match readModuleInProjectWith readTextFile projectDir moduleName with
-  | None -> None
+  readModuleInProjectWith readTextFile projectDir moduleName
+  |> Future.map
+       (fun result ->
+         match result with
+         | None -> None
 
-  | Some (_, contents) ->
-    let docId =
-      AstBundle.computeDocId projectName moduleName
+         | Some (_, contents) ->
+           let docId =
+             AstBundle.computeDocId projectName moduleName
 
-    contents
-    |> tokenize
-    |> parseModuleWith docId
-    |> Some
+           contents
+           |> tokenize
+           |> parseModuleWith docId
+           |> Some)
 
 // -----------------------------------------------
 // Error processing
@@ -249,9 +261,7 @@ type SyntaxHost =
     EntryProjectName: ProjectName
     MiloneHome: ProjectDir
 
-    /// path -> contents option
-    ReadTextFile: string -> string option
-
+    ReadTextFile: ReadTextFileFun
     WriteLog: string -> unit }
 
 [<RequireQualifiedAccess; NoEquality; NoComparison>]

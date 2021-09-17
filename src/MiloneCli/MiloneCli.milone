@@ -36,9 +36,9 @@ let private executeInto (cmd: string) : unit = __nativeFun ("execute_into", cmd)
 
 let private readFile filePath =
   if fileExists filePath then
-    fileReadAllText filePath |> Some
+    fileReadAllText filePath |> Some |> Future.just
   else
-    None
+    None |> Future.just
 
 [<EntryPoint>]
 let main _ =

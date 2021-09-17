@@ -134,7 +134,7 @@ type CliHost =
     DirCreate: string -> string -> bool
 
     /// Reads all contents of a file as string.
-    FileReadAllText: string -> string option
+    FileReadAllText: string -> Future<string option>
 
     /// Writes to text file.
     FileWriteAllText: string -> string -> unit

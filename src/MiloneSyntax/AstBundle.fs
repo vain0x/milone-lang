@@ -193,45 +193,48 @@ let private consumer (state: State) action : State * ModuleRequest list =
 
     | _ -> unreachable ()
 
-let private producer (fetchModule: FetchModuleFun) (_: State) (r: ModuleRequest) : Action option =
-  match fetchModule r.ProjectName r.ModuleName with
-  | Some (docId, ast, errors) ->
-    let deps =
-      let dep1 = newMiloneOnlyRequest r.ProjectName docId
+let private producer (fetchModule: FetchModuleFun) (_: State) (r: ModuleRequest) : Future<Action option> =
+  fetchModule r.ProjectName r.ModuleName
+  |> Future.map
+       (fun result ->
+         match result with
+         | Some (docId, ast, errors) ->
+           let deps =
+             let dep1 = newMiloneOnlyRequest r.ProjectName docId
 
-      let otherDeps =
-        findDependentModules ast
-        |> List.map
-             (fun (projectName, moduleName, pos) ->
-               let originLoc =
-                 let y, x = pos
-                 Loc(docId, y, x)
+             let otherDeps =
+               findDependentModules ast
+               |> List.map
+                    (fun (projectName, moduleName, pos) ->
+                      let originLoc =
+                        let y, x = pos
+                        Loc(docId, y, x)
 
-               newDepRequest projectName moduleName originLoc)
+                      newDepRequest projectName moduleName originLoc)
 
-      dep1 :: otherDeps
+             dep1 :: otherDeps
 
-    let errors =
-      errors
-      |> List.map (fun (msg, (y, x)) -> (msg, Loc(docId, y, x)))
+           let errors =
+             errors
+             |> List.map (fun (msg, (y, x)) -> (msg, Loc(docId, y, x)))
 
-    let m: ModuleData =
-      { Name = r.ModuleName
-        Project = r.ProjectName
-        DocId = docId
-        Ast = ast
-        Deps = deps
-        Errors = errors }
+           let m: ModuleData =
+             { Name = r.ModuleName
+               Project = r.ProjectName
+               DocId = docId
+               Ast = ast
+               Deps = deps
+               Errors = errors }
 
-    Some(Action.DidFetchOk m)
+           Some(Action.DidFetchOk m)
 
-  | None -> Some(Action.DidFetchFail r)
+         | None -> Some(Action.DidFetchFail r))
 
 // -----------------------------------------------
 // Interface
 // -----------------------------------------------
 
-type private FetchModuleFun = ProjectName -> ModuleName -> (DocId * ARoot * (string * Pos) list) option
+type private FetchModuleFun = ProjectName -> ModuleName -> Future<(DocId * ARoot * (string * Pos) list) option>
 type private BundleResult = TProgram * NameCtx * Error list
 
 let bundle (fetchModule: FetchModuleFun) (entryProjectName: string) : BundleResult =
