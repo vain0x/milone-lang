@@ -16,6 +16,7 @@ let __stringLengthInUtf8Bytes (s: string) : int =
 type Future<'T> = System.Threading.Tasks.ValueTask<'T>
 
 module Future =
+  open System
   open System.Threading.Tasks
 
   // .NET only
@@ -42,12 +43,23 @@ module Future =
         .Unwrap()
       |> ofTask
 
+  // .NET only
+  let internal ofUnitValueTask (task: ValueTask) : ValueTask<unit> =
+    if task.IsCompletedSuccessfully then
+      ValueTask<unit>(())
+    else
+      ValueTask<unit>(
+        task
+          .AsTask()
+          .ContinueWith(Func<_, unit>(fun _ -> ()), TaskContinuationOptions.OnlyOnRanToCompletion)
+      )
+
   /// Spawns a task to run a complex computation. (.NET only)
-  let spawn (f: unit -> Future<'T>) : Future<'T> =
+  let internal spawn (f: unit -> Future<'T>) : Future<'T> =
     Task.Run<'T>(fun () -> (f ()).AsTask()) |> ofTask
 
   // .NET only
-  let catch (f: exn -> unit) (future: Future<'T>) : Future<unit> =
+  let internal catch (f: exn -> unit) (future: Future<'T>) : Future<unit> =
     future
       .AsTask()
       .ContinueWith((fun (task: Task<_>) -> f task.Exception), TaskContinuationOptions.OnlyOnFaulted)
@@ -68,13 +80,16 @@ let mpscConcurrent
   (initialCommands: 'T list)
   : 'S =
   let chan =
-    System.Threading.Channels.Channel.CreateUnbounded<'A>()
+    System.Threading.Channels.Channel.CreateBounded<'A>(256)
 
   let producerWork (state: 'S) (command: 'T) =
     Future.spawn
       (fun () ->
         producer state command
-        |> Future.map (fun action -> chan.Writer.TryWrite(action) |> ignore))
+        |> Future.andThen
+             (fun action ->
+               chan.Writer.WriteAsync(action)
+               |> Future.ofUnitValueTask))
     |> Future.catch (fun ex -> chan.Writer.Complete(ex))
     |> ignore
 
@@ -102,6 +117,7 @@ let mpscConcurrent
         if task.IsCompletedSuccessfully then
           task.Result
         else
+          // Block.
           task.AsTask().Result
 
       update action
