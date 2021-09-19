@@ -59,11 +59,11 @@ module Future =
 /// What happens:
 ///
 /// - For each `command`, a worker is spawned to compute `producer` function.
-/// - Once a worker ends with an `action`, state is updated by `consumer` function.
+/// - Once a worker end, state is updated by `consumer` function.
 /// - Final state is returned. (Function continues while any worker is running.)
 let mpscConcurrent
   (consumer: 'S -> 'A -> 'S * 'T list)
-  (producer: 'S -> 'T -> Future<'A option>)
+  (producer: 'S -> 'T -> Future<'A>)
   (initialState: 'S)
   (initialCommands: 'T list)
   : 'S =
@@ -74,11 +74,7 @@ let mpscConcurrent
     Future.spawn
       (fun () ->
         producer state command
-        |> Future.map
-             (fun actionOpt ->
-               match actionOpt with
-               | Some action -> chan.Writer.TryWrite(action) |> ignore
-               | None -> ()))
+        |> Future.map (fun action -> chan.Writer.TryWrite(action) |> ignore))
     |> Future.catch (fun ex -> chan.Writer.Complete(ex))
     |> ignore
 

@@ -44,7 +44,7 @@ module Future =
 
 let mpscConcurrent
   (consumer: 'S -> 'A -> 'S * 'T list)
-  (producer: 'S -> 'T -> Future<'A option>)
+  (producer: 'S -> 'T -> Future<'A>)
   (initialState: 'S)
   (initialCommands: 'T list)
   : 'S =
@@ -53,12 +53,9 @@ let mpscConcurrent
       commands
       |> List.fold
            (fun (state, acc) command ->
-             match producer state command |> Future.unwrap with
-             | None -> state, acc
-
-             | Some action ->
-               let state, newCommands = consumer state action
-               state, newCommands :: acc)
+             let action = producer state command |> Future.unwrap
+             let state, newCommands = consumer state action
+             state, newCommands :: acc)
            (state, [])
 
     List.fold folder state (List.rev commandListList)

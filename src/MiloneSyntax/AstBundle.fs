@@ -194,7 +194,7 @@ let private consumer (state: State) action : State * ModuleRequest list =
 
     | _ -> unreachable ()
 
-let private producer (fetchModule: FetchModuleFun) (_: State) (r: ModuleRequest) : Future<Action option> =
+let private producer (fetchModule: FetchModuleFun) (_: State) (r: ModuleRequest) : Future<Action> =
   fetchModule r.ProjectName r.ModuleName
   |> Future.map
        (fun result ->
@@ -228,9 +228,9 @@ let private producer (fetchModule: FetchModuleFun) (_: State) (r: ModuleRequest)
                SymbolCount = countSymbols ast
                Errors = errors }
 
-           Some(Action.DidFetchOk m)
+           Action.DidFetchOk m
 
-         | None -> Some(Action.DidFetchFail r))
+         | None -> Action.DidFetchFail r)
 
 // -----------------------------------------------
 // Interface
