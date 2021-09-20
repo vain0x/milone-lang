@@ -14,11 +14,6 @@ module TMap = MiloneStd.StdMap
 module TSet = MiloneStd.StdSet
 module S = MiloneStd.StdString
 
-let private isNoTy ty =
-  match ty with
-  | Ty (ErrorTk _, _) -> true
-  | _ -> false
-
 let private hxAbort loc = TNodeExpr(TAbortEN, [], noTy, loc)
 
 // -----------------------------------------------
