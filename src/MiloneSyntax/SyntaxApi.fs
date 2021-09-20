@@ -35,6 +35,16 @@ type private SourceExt = string
 
 // FIXME: move to ast bundle?
 
+[<RequireQualifiedAccess>]
+type ModuleKind =
+  | MiloneCore
+  | Regular
+
+let getModuleKind projectName _moduleName =
+  match projectName with
+  | "MiloneCore" -> ModuleKind.MiloneCore
+  | _ -> ModuleKind.Regular
+
 let private preludeFuns = [ "ignore"; "id"; "fst"; "snd" ]
 
 let private knownModules =
@@ -53,8 +63,8 @@ let private isKnownModule moduleName =
 
 /// Generates decls for each MiloneCore module
 /// whose name appears in the token stream.
-let private resolveMiloneCoreDeps tokens ast =
-  let preludeOpt, moduleMap =
+let private resolveMiloneCoreDeps kind tokens ast =
+  let analyze tokens =
     let rec go preludeOpt acc tokens =
       match tokens with
       | [] -> preludeOpt, acc
@@ -80,6 +90,8 @@ let private resolveMiloneCoreDeps tokens ast =
     preludeOpt, moduleMap
 
   let insertOpenDecls decls =
+    let preludeOpt, moduleMap = analyze tokens
+
     let decls =
       moduleMap
       |> TMap.fold
@@ -103,9 +115,14 @@ let private resolveMiloneCoreDeps tokens ast =
       :: decls
     | None -> decls
 
-  match ast with
-  | AExprRoot decls -> AExprRoot(insertOpenDecls decls)
-  | AModuleRoot (name, decls, pos) -> AModuleRoot(name, insertOpenDecls decls, pos)
+  let updateAst ast =
+    match ast with
+    | AExprRoot decls -> AExprRoot(insertOpenDecls decls)
+    | AModuleRoot (name, decls, pos) -> AModuleRoot(name, insertOpenDecls decls, pos)
+
+  match kind with
+  | ModuleKind.MiloneCore -> ast
+  | _ -> updateAst ast
 
 // -----------------------------------------------
 // Utilities
@@ -157,7 +174,7 @@ let private readModuleInProjectWith
 
 type private ModuleSyntaxData = DocId * ARoot * (string * Pos) list
 
-let parseModuleWith (docId: DocId) (tokens: (Token * Pos) list) : ModuleSyntaxData =
+let parseModuleWith (docId: DocId) (kind: ModuleKind) (tokens: (Token * Pos) list) : ModuleSyntaxData =
   let errorTokens, tokens = tokens |> List.partition isErrorToken
   let ast, parseErrors = tokens |> SyntaxParse.parse
 
@@ -166,7 +183,7 @@ let parseModuleWith (docId: DocId) (tokens: (Token * Pos) list) : ModuleSyntaxDa
 
   let ast =
     if errors |> List.isEmpty then
-      resolveMiloneCoreDeps tokens ast
+      resolveMiloneCoreDeps kind tokens ast
     else
       ast
 
@@ -195,9 +212,11 @@ let private fetchModuleWith
            let docId =
              AstBundle.computeDocId projectName moduleName
 
+           let kind = getModuleKind projectName moduleName
+
            contents
            |> tokenize
-           |> parseModuleWith docId
+           |> parseModuleWith docId kind
            |> Some)
 
 // -----------------------------------------------

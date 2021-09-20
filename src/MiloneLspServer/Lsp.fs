@@ -104,7 +104,7 @@ let private tokenizeWithCache (ls: LangServiceState) docId =
 
     tokens
 
-let private parseWithCache (ls: LangServiceState) docId =
+let private parseWithCache (ls: LangServiceState) docId kind =
   let currentVersion = ls.Host.Docs.GetVersion docId
 
   let cacheOpt = ls.ParseCache |> MutMap.tryFind docId
@@ -125,7 +125,8 @@ let private parseWithCache (ls: LangServiceState) docId =
       |> List.filter (fun (token, _) -> token |> isTrivia |> not)
 
     // Parse.
-    let _, ast, errors = SyntaxApi.parseModuleWith docId tokens
+    let _, ast, errors =
+      SyntaxApi.parseModuleWith docId kind tokens
 
     ls.ParseCache
     |> MutMap.insert docId (currentVersion, (ast, errors))
@@ -171,7 +172,12 @@ let private doBundle (ls: LangServiceState) projectDir =
       |> MutMap.insert docId (ls.Host.Docs.GetVersion docId)
       |> ignore
 
-      parseWithCache ls docId |> Some |> Future.just
+      let kind =
+        SyntaxApi.getModuleKind projectName moduleName
+
+      parseWithCache ls docId kind
+      |> Some
+      |> Future.just
 
   let syntaxCtx =
     { syntaxCtx with
