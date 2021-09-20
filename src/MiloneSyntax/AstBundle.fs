@@ -20,27 +20,42 @@ module S = MiloneStd.StdString
 // Utils
 // -----------------------------------------------
 
-let private topologicalSort
+/// Splits vertices in a tree into a list of layers.
+///
+/// Result (list of layers) satisfies a condition:
+///   vertices in a layer depend only vertices in strictly lower layers.
+let private computeLayer
   (compareVertices: 'T -> 'T -> int)
   (getChildren: 'T -> 'T list)
   (vertices: 'T list)
-  : 'T list =
-  let rec folder (doneSet, acc: 'T list) (v: 'T) =
-    if TSet.contains v doneSet then
-      doneSet, acc
+  : 'T list list =
+  let rec collect prevSet (okAcc: 'T list, ngAcc: 'T list) (v: 'T) =
+    assert (TSet.contains v prevSet |> not)
+
+    let ok =
+      getChildren v
+      |> List.forall (fun u -> TSet.contains u prevSet)
+
+    if ok then
+      v :: okAcc, ngAcc
     else
-      let doneSet = TSet.add v doneSet
+      okAcc, v :: ngAcc
 
-      let doneSet, acc =
-        List.fold folder (doneSet, acc) (getChildren v)
+  let rec go prevSet (rest: 'T list) (acc: 'T list list) =
+    if List.isEmpty rest then
+      List.rev acc
+    else
+      let okAcc, ngAcc =
+        rest |> List.fold (collect prevSet) ([], [])
 
-      doneSet, v :: acc
+      assert (List.isEmpty okAcc |> not) // Cyclic dependencies might exist.
 
-  let _, acc =
-    let doneSet = TSet.empty compareVertices
-    vertices |> List.fold folder (doneSet, [])
+      let prevSet =
+        List.fold (fun prevSet v -> TSet.add v prevSet) prevSet okAcc
 
-  List.rev acc
+      go prevSet ngAcc (okAcc :: acc)
+
+  go (TSet.empty compareVertices) vertices []
 
 // -----------------------------------------------
 // Types
@@ -257,7 +272,7 @@ let bundle (fetchModule: FetchModuleFun) (entryProjectName: string) : BundleResu
   let state =
     mpscConcurrent consumer (producer fetchModule) state [ entryRequest ]
 
-  let modules =
+  let layers =
     let comparer (l: ModuleData) (r: ModuleData) = compare l.DocId r.DocId
 
     let getDeps (m: ModuleData) =
@@ -270,61 +285,72 @@ let bundle (fetchModule: FetchModuleFun) (entryProjectName: string) : BundleResu
 
     state
     |> toModules
-    |> topologicalSort comparer getDeps
+    |> computeLayer comparer getDeps
 
   let errors = state |> toErrors
 
   // Allocate serials for all modules.
-  let modules, lastSerial =
-    modules
+  let layers, lastSerial =
+    layers
     |> List.mapFold
-         (fun (serial: int) (moduleData: ModuleData) ->
-           let endSerial = serial + moduleData.SymbolCount
-           (serial, moduleData), endSerial)
+         (fun (serial: int) layer ->
+           layer
+           |> List.mapFold
+                (fun (serial: int) (moduleData: ModuleData) ->
+                  let endSerial = serial + moduleData.SymbolCount
+                  (serial, moduleData), endSerial)
+                serial)
          0
 
   // Convert to TIR.
-  let modules =
-    modules
+  let layers =
+    layers
     |> __parallelMap
-         (fun (serial: Serial, moduleData: ModuleData) ->
-           let moduleName = moduleData.Name
-           let projectName = moduleData.Project
-           let docId = moduleData.DocId
-           let ast = moduleData.Ast
-           let symbolCount = moduleData.SymbolCount
+         (fun modules ->
+           modules
+           |> __parallelMap
+                (fun (serial: Serial, moduleData: ModuleData) ->
+                  let moduleName = moduleData.Name
+                  let projectName = moduleData.Project
+                  let docId = moduleData.DocId
+                  let ast = moduleData.Ast
+                  let symbolCount = moduleData.SymbolCount
 
-           let exprs, nameCtx =
-             let nameCtx = AhNameCtx(serial, [])
-             astToHir projectName docId (ast, nameCtx)
+                  let exprs, nameCtx =
+                    let nameCtx = AhNameCtx(serial, [])
+                    astToHir projectName docId (ast, nameCtx)
 
-           let (AhNameCtx (lastSerial, _)) = nameCtx
+                  let (AhNameCtx (lastSerial, _)) = nameCtx
 
-           //  printfn
-           //    "%s expect: %d..%d (%d) actual: %d..%d (%d)"
-           //    docId
-           //    serial
-           //    (serial + symbolCount)
-           //    symbolCount
-           //    serial
-           //    lastSerial
-           //    (lastSerial - serial)
+                  //  printfn
+                  //    "%s expect: %d..%d (%d) actual: %d..%d (%d)"
+                  //    docId
+                  //    serial
+                  //    (serial + symbolCount)
+                  //    symbolCount
+                  //    serial
+                  //    lastSerial
+                  //    (lastSerial - serial)
 
-           assert (lastSerial - serial = symbolCount)
+                  assert (lastSerial - serial = symbolCount)
 
-           (projectName, moduleName, exprs), nameCtx)
+                  (projectName, moduleName, exprs), nameCtx))
 
-  let modules, identMap =
-    modules
+  let layers, identMap =
+    layers
     |> List.mapFold
-         (fun identMap (m, nameCtx) ->
-           let _, identMap =
-             nameCtx
-             |> nameCtxFold (fun map serial ident -> TMap.add serial ident map) identMap
+         (fun nameCtx modules ->
+           modules
+           |> List.mapFold
+                (fun identMap (m, nameCtx) ->
+                  let _, identMap =
+                    nameCtx
+                    |> nameCtxFold (fun map serial ident -> TMap.add serial ident map) identMap
 
-           m, identMap)
+                  m, identMap)
+                nameCtx)
          (TMap.empty compare)
 
   let nameCtx = NameCtx(identMap, lastSerial)
 
-  modules, nameCtx, errors
+  List.collect id layers, nameCtx, errors
