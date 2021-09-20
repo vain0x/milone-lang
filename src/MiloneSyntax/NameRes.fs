@@ -262,10 +262,6 @@ let private makeLinkage vis name (ctx: ScopeCtx) =
 
 let private findName serial (scopeCtx: ScopeCtx) : Ident = scopeCtx.NameMap |> mapFind serial
 
-let private findFun funSerial (scopeCtx: ScopeCtx) =
-  assert (scopeCtx.Funs |> TMap.containsKey funSerial)
-  scopeCtx.Funs |> mapFind funSerial
-
 let private findVariant variantSerial (scopeCtx: ScopeCtx) =
   assert (scopeCtx.Variants
           |> TMap.containsKey variantSerial)
