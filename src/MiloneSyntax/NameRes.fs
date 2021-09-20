@@ -262,10 +262,6 @@ let private makeLinkage vis name (ctx: ScopeCtx) =
 
 let private findName serial (scopeCtx: ScopeCtx) : Ident = scopeCtx.NameMap |> mapFind serial
 
-let private findVar varSerial (scopeCtx: ScopeCtx) =
-  assert (scopeCtx.Vars |> TMap.containsKey varSerial)
-  scopeCtx.Vars |> mapFind varSerial
-
 let private findFun funSerial (scopeCtx: ScopeCtx) =
   assert (scopeCtx.Funs |> TMap.containsKey funSerial)
   scopeCtx.Funs |> mapFind funSerial
@@ -390,10 +386,7 @@ let private addNsToNs (parentNsOwner: NsOwner) (childNsOwner: NsOwner) (scopeCtx
 /// Adds a variable to a scope.
 let private importVar symbol (scopeCtx: ScopeCtx) : ScopeCtx =
   let varName =
-    match symbol with
-    | VarSymbol varSerial -> (scopeCtx |> findVar varSerial).Name
-    | FunSymbol funSerial -> (scopeCtx |> findFun funSerial).Name
-    | VariantSymbol variantSerial -> (scopeCtx |> findVariant variantSerial).Name
+    findName (valueSymbolToSerial symbol) scopeCtx
 
   assert (varName <> "_")
 
