@@ -79,26 +79,26 @@ void std_string_Program_concatTest(void);
 int milone_main(void);
 
 enum CharOption_Discriminant {
-    None_,
-    Some_,
+    None_1,
+    Some_1,
 };
 
 struct CharOption_ {
     enum CharOption_Discriminant discriminant;
     union {
-        char Some_;
+        char Some_1;
     };
 };
 
 enum IntOption_Discriminant {
-    None_1,
-    Some_1,
+    None_,
+    Some_,
 };
 
 struct IntOption_ {
     enum IntOption_Discriminant discriminant;
     union {
-        int Some_1;
+        int Some_;
     };
 };
 
@@ -110,12 +110,12 @@ struct StringList {
 char unwrap_1(struct CharOption_ opt_8) {
     char value_2;
     char match_2;
-    if ((opt_8.discriminant != Some_)) goto next_241;
-    value_2 = opt_8.Some_;
+    if ((opt_8.discriminant != Some_1)) goto next_241;
+    value_2 = opt_8.Some_1;
     match_2 = value_2;
     goto end_match_240;
 next_241:;
-    if ((opt_8.discriminant != None_)) goto next_242;
+    if ((opt_8.discriminant != None_1)) goto next_242;
     printf("Can\'t unwrap None.\n");
     exit(1);
 next_242:;
@@ -127,12 +127,12 @@ end_match_240:;
 int unwrap_(struct IntOption_ opt_8) {
     int value_2;
     int match_3;
-    if ((opt_8.discriminant != Some_1)) goto next_244;
-    value_2 = opt_8.Some_1;
+    if ((opt_8.discriminant != Some_)) goto next_244;
+    value_2 = opt_8.Some_;
     match_3 = value_2;
     goto end_match_243;
 next_244:;
-    if ((opt_8.discriminant != None_1)) goto next_245;
+    if ((opt_8.discriminant != None_)) goto next_245;
     printf("Can\'t unwrap None.\n");
     exit(1);
 next_245:;
