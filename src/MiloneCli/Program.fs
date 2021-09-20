@@ -45,7 +45,23 @@ let private executeInto (cmd: string) : unit =
   with
   | err -> eprintfn "Couldn't execute into: '%s'. '%s'" cmd err.Message
 
+// HACK: Force to load DLLs and perhaps do JIT-ing functions.
+//       (With this, AstBundle becomes much faster.)
+let private preLoad () =
+  let rng = System.Random()
+  let next () = lock rng (fun () -> rng.Next())
+
+  mpscConcurrent
+    (fun () a ->
+      eprintf "%d\n" (a % 10) // Prevent dead code elimination.
+      (), [])
+    (fun () () -> Future.just (next ()))
+    ()
+    [ (); () ]
+
 let dotnetCliHost () : CliHost =
+  preLoad ()
+
   let args =
     System.Environment.GetCommandLineArgs()
     |> Array.toList
