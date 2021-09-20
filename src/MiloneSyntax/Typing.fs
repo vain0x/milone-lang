@@ -1463,14 +1463,16 @@ let private synonymCycleCheck (tyCtx: TyCtx) =
 // Interface
 // -----------------------------------------------
 
-let infer (modules: TProgram, scopeCtx: ScopeCtx) : TProgram * TyCtx =
+let infer (modules: TProgram, nameRes: NameResResult) : TProgram * TyCtx =
+  assert (List.isEmpty nameRes.Logs)
+
   let ctx: TyCtx =
-    { Serial = scopeCtx.Serial
-      Vars = scopeCtx.Vars
-      Funs = scopeCtx.Funs
-      Variants = scopeCtx.Variants
-      MainFunOpt = scopeCtx.MainFunOpt
-      Tys = scopeCtx.Tys
+    { Serial = nameRes.Serial
+      Vars = nameRes.Vars
+      Funs = nameRes.Funs
+      Variants = nameRes.Variants
+      MainFunOpt = nameRes.MainFunOpt
+      Tys = nameRes.Tys
       TyLevels = TMap.empty compare
       QuantifiedTys = TSet.empty compare
       Level = 0
@@ -1488,7 +1490,7 @@ let infer (modules: TProgram, scopeCtx: ScopeCtx) : TProgram * TyCtx =
              let ctx =
                { ctx with
                    Level =
-                     scopeCtx.VarLevels
+                     nameRes.VarLevels
                      |> mapFind (varSerialToInt varSerial) }
 
              let varDef, ctx =
@@ -1507,7 +1509,7 @@ let infer (modules: TProgram, scopeCtx: ScopeCtx) : TProgram * TyCtx =
            let ctx =
              { ctx with
                  Level =
-                   scopeCtx.VarLevels
+                   nameRes.VarLevels
                    |> mapFind (funSerialToInt funSerial) }
 
            let ty, ctx = freshMetaTy funDef.Loc ctx

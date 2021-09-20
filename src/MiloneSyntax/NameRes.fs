@@ -89,7 +89,7 @@ let private tySymbolToSerial symbol =
 // -----------------------------------------------
 
 /// Identity of namespace owner.
-type NsOwner =
+type private NsOwner =
   | TyNsOwner of TySerial
   | ModuleNsOwner of ModuleTySerial
   | ModuleSynonymNsOwner of ModuleSynonymSerial
@@ -109,7 +109,7 @@ let private nsOwnerOfTySymbol (tySymbol: TySymbol) : NsOwner = TyNsOwner(tySymbo
 // Namespace
 // -----------------------------------------------
 
-type Ns<'T> = AssocMap<NsOwner, (AssocMap<Ident, 'T>)>
+type private Ns<'T> = AssocMap<NsOwner, (AssocMap<Ident, 'T>)>
 
 let private nsFind (key: NsOwner) (ns: Ns<_>) : AssocMap<Ident, _> =
   match ns |> TMap.tryFind key with
@@ -131,7 +131,7 @@ let private nsMerge (key: NsOwner) (ident: Ident) value (ns: Ns<_>) : Ns<_> =
 // --------------------------------------------
 
 [<NoEquality; NoComparison>]
-type ScopeKind =
+type private ScopeKind =
   | ExprScope
   | TyDeclScope
 
@@ -151,16 +151,40 @@ let private scopeEmpty () : Scope =
   [], scopeChainEmpty (), scopeChainEmpty (), scopeChainEmpty ()
 
 // -----------------------------------------------
+// NameResResult
+// -----------------------------------------------
+
+/// Output of NameRes pass.
+[<RequireQualifiedAccess; NoEquality; NoComparison>]
+type NameResResult =
+  { Serial: Serial
+    Vars: AssocMap<VarSerial, VarDef>
+    Funs: AssocMap<FunSerial, FunDef>
+    Variants: AssocMap<VariantSerial, VariantDef>
+    Tys: AssocMap<TySerial, TyDef>
+    VarLevels: AssocMap<Serial, Level>
+    MainFunOpt: FunSerial option
+    Logs: (NameResLog * Loc) list }
+
+let private toResult (nameCtx: NameCtx) (scopeCtx: ScopeCtx) : NameResResult =
+  let (NameCtx (_, serial)) = nameCtx
+
+  { Serial = serial
+    Vars = scopeCtx.Vars
+    Funs = scopeCtx.Funs
+    Variants = scopeCtx.Variants
+    Tys = scopeCtx.Tys
+    VarLevels = scopeCtx.VarLevels
+    MainFunOpt = scopeCtx.MainFunOpt
+    Logs = scopeCtx.Logs }
+
+// -----------------------------------------------
 // ScopeCtx
 // -----------------------------------------------
 
 [<RequireQualifiedAccess; NoEquality; NoComparison>]
-type ScopeCtx =
+type private ScopeCtx =
   {
-    /// Last serial number.
-    /// We need manage identifiers as integers rather than strings due to shadowing.
-    Serial: Serial
-
     /// Serial to ident map.
     NameMap: AssocMap<Serial, Ident>
 
@@ -209,10 +233,9 @@ type ScopeCtx =
     Logs: (NameResLog * Loc) list }
 
 let private ofNameCtx (nameCtx: NameCtx) : ScopeCtx =
-  let (NameCtx (nameMap, serial)) = nameCtx
+  let (NameCtx (nameMap, _)) = nameCtx
 
-  { Serial = serial
-    NameMap = nameMap
+  { NameMap = nameMap
     Vars = TMap.empty varSerialCompare
     Funs = TMap.empty funSerialCompare
     Variants = TMap.empty variantSerialCompare
@@ -1649,7 +1672,7 @@ let private nameResModuleBody serialOpt (stmts, ctx) : TStmt list * ScopeCtx =
   |> stMap (collectDecls serialOpt)
   |> stMap nameResStmt
 
-let nameRes (modules: TProgram, nameCtx: NameCtx) : TProgram * ScopeCtx =
+let nameRes (modules: TProgram, nameCtx: NameCtx) : TProgram * NameResResult =
   let scopeCtx = ofNameCtx nameCtx
 
   let modules, scopeCtx =
@@ -1661,4 +1684,4 @@ let nameRes (modules: TProgram, nameCtx: NameCtx) : TProgram * ScopeCtx =
 
            (p, m, stmts), scopeCtx)
 
-  modules, scopeCtx
+  modules, toResult nameCtx scopeCtx

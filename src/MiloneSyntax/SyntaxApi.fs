@@ -297,14 +297,14 @@ let performSyntaxAnalysis (ctx: SyntaxCtx) : SyntaxAnalysisResult =
     SyntaxAnalysisError(bundleErrors, None)
   else
     writeLog "NameRes"
-    let modules, scopeCtx = NameRes.nameRes (modules, nameCtx)
+    let modules, nameResResult = NameRes.nameRes (modules, nameCtx)
 
-    match collectNameResErrors scopeCtx.Logs with
+    match collectNameResErrors nameResResult.Logs with
     | Some errors -> SyntaxAnalysisError(errors, None)
 
     | None ->
       writeLog "Typing"
-      let modules, tyCtx = Typing.infer (modules, scopeCtx)
+      let modules, tyCtx = Typing.infer (modules, nameResResult)
 
       writeLog "ArityCheck"
       let tyCtx = ArityCheck.arityCheck (modules, tyCtx)
