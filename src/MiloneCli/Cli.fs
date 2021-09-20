@@ -89,7 +89,8 @@ OPTIONS
 GLOBAL OPTIONS
     -v, --verbose   Enable verbose logging for debug
         --profile   Enable profile logging
-    -q, --quiet     Disable logging"""
+    -q, --quiet     Disable logging
+        --parallel  Enable parallel compilation (experimental)"""
 
 // -----------------------------------------------
 // Interface (1)
@@ -855,6 +856,21 @@ let private containsHelpFlag args =
 
   ok
 
+let private parseParallel args =
+  parseFlag
+    (fun (_: bool) arg ->
+      match arg with
+      | "--parallel" -> Some true
+      | _ -> None)
+    false
+    args
+
+let private eatParallelFlag args =
+  let ok, args = parseParallel args
+  if ok then __allowParallel () // FIXME: avoid global state
+  __preLoad ()
+  args
+
 let private parseVerbosity (host: CliHost) args =
   parseFlag
     (fun (_: Verbosity) arg ->
@@ -965,6 +981,7 @@ let cli (host: CliHost) =
       1
 
   | CompileCmd, args ->
+    let args = eatParallelFlag args
     let verbosity, args = parseVerbosity host args
 
     let targetDir, args =
@@ -995,6 +1012,7 @@ let cli (host: CliHost) =
       1
 
   | BuildCmd, args ->
+    let args = eatParallelFlag args
     let verbosity, args = parseVerbosity host args
 
     let targetDir, args =
@@ -1014,6 +1032,7 @@ let cli (host: CliHost) =
       1
 
   | RunCmd, args ->
+    let args = eatParallelFlag args
     let verbosity, args = parseVerbosity host args
 
     let targetDir, args =

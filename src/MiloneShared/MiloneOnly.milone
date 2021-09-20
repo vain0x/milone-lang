@@ -42,7 +42,8 @@ module Future =
   // milone-only
   let unwrap (Future x) = x
 
-let mpscConcurrent
+// #mpscSync
+let private mpscSync
   (consumer: 'S -> 'A -> 'S * 'T list)
   (producer: 'S -> 'T -> Future<'A>)
   (initialState: 'S)
@@ -62,4 +63,16 @@ let mpscConcurrent
 
   folder initialState initialCommands
 
+// #mpscSync
+let mpscConcurrent
+  (consumer: 'S -> 'A -> 'S * 'T list)
+  (producer: 'S -> 'T -> Future<'A>)
+  (initialState: 'S)
+  (initialCommands: 'T list)
+  : 'S =
+  mpscSync consumer producer initialState initialCommands
+
 let __parallelMap (f: 'T -> 'U) (xs: 'T list) : 'U list = List.map f xs
+
+let __preLoad () = ()
+let __allowParallel () = ()
