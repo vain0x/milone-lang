@@ -201,7 +201,11 @@ let private producer (fetchModule: FetchModuleFun) (_: State) (r: ModuleRequest)
          match result with
          | Some (docId, ast, errors) ->
            let deps =
-             let dep1 = newMiloneOnlyRequest r.ProjectName docId
+             let dep1 =
+               if r.ModuleName <> "MiloneOnly" then
+                 [ newMiloneOnlyRequest r.ProjectName docId ]
+               else
+                 []
 
              let otherDeps =
                findDependentModules ast
@@ -213,7 +217,7 @@ let private producer (fetchModule: FetchModuleFun) (_: State) (r: ModuleRequest)
 
                       newDepRequest projectName moduleName originLoc)
 
-             dep1 :: otherDeps
+             List.append dep1 otherDeps
 
            let errors =
              errors
