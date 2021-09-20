@@ -65,6 +65,29 @@ let private opToPrim op =
   | PipeBinary -> unreachable ()
 
 // -----------------------------------------------
+// NameCtx
+// -----------------------------------------------
+
+// NameCtx is not suitable for parallel computation
+// so here we use different type.
+
+[<Struct; NoEquality; NoComparison>]
+type AhNameCtx = AhNameCtx of lastSerial: Serial * identAcc: Ident list
+
+type private NameCtx = AhNameCtx
+
+let private nameCtxAdd (name: Name) (ctx: AhNameCtx) : Serial * NameCtx =
+  let (AhNameCtx (serial, idents)) = ctx
+  let (Name (ident, _)) = name
+  serial + 1, AhNameCtx(serial + 1, ident :: idents)
+
+let nameCtxFold folder state (nameCtx: AhNameCtx) =
+  let (AhNameCtx (lastSerial, identAcc)) = nameCtx
+
+  identAcc
+  |> List.fold (fun (serial, state) ident -> serial - 1, folder state serial ident) (lastSerial, state)
+
+// -----------------------------------------------
 // APat
 // -----------------------------------------------
 
@@ -643,3 +666,130 @@ let astToHir (projectName: string) (docId: DocId) (root: ARoot, nameCtx: NameCtx
     else
       onModuleRoot moduleName body pos
       |> wrapWithProjectModule
+
+// ===============================================
+// Experimental
+
+// Count number of symbols.
+
+let private plus (x: int) (y: int) : int = x + y
+
+let private sumBy count xs =
+  xs |> List.fold (fun (n: int) x -> n + count x) 0
+
+let private ocTy (ty: ATy) : int =
+  match ty with
+  | AMissingTy _ -> 0
+  | AVarTy _name -> 1
+
+  | AAppTy (quals, _name, argTys, _) -> List.length quals + 1 + ocTys argTys
+  | ASuffixTy (lTy, _suffix) -> ocTy lTy + 1
+  | ATupleTy (itemTys, _) -> ocTys itemTys
+  | AFunTy (sTy, tTy, _) -> ocTy sTy + ocTy tTy
+
+let private ocTyOpt tyOpt =
+  match tyOpt with
+  | Some ty -> ocTy ty
+  | None -> 0
+
+let private ocTys = sumBy ocTy
+
+let private ocPat (pat: APat) : int =
+  match pat with
+  | AMissingPat _
+  | ALitPat _ -> 0
+
+  | AIdentPat (_name, _) -> 1
+  | AListPat (pats, _) -> ocPats pats
+  | ANavPat (l, _, _) -> ocPat l
+  | AAppPat (calleePat, argPat, _) -> ocPat calleePat + ocPat argPat
+  | AConsPat (l, r, _) -> ocPat l + ocPat r
+  | ATuplePat (pats, _) -> ocPats pats
+  | AAsPat (bodyPat, _name, _) -> ocPat bodyPat + 1
+  | AAscribePat (bodyPat, ty, _) -> ocPat bodyPat + ocTy ty
+  | AOrPat (l, r, _) -> ocPat l + ocPat r
+  | AFunDeclPat (_, _name, argPats) -> 1 + ocPats argPats
+
+let private ocPats = sumBy ocPat
+
+let private ocExpr (expr: AExpr) : int =
+  match expr with
+  | AMissingExpr _
+  | ALitExpr _ -> 0
+
+  | AIdentExpr _ -> 1
+  | AListExpr (items, _) -> ocExprs items
+
+  | ARecordExpr (baseOpt, fields, _) ->
+    ocExprOpt baseOpt
+    + sumBy (fun (_, init, _) -> ocExpr init) fields
+
+  | AIfExpr (cond, body, altOpt, _) -> ocExpr cond + ocExpr body + ocExprOpt altOpt
+
+  | AMatchExpr (cond, arms, _) ->
+    ocExpr cond
+    + sumBy (fun (AArm (pat, guardOpt, body, _)) -> ocPat pat + ocExprOpt guardOpt + ocExpr body) arms
+
+  | AFunExpr (pats, body, _) -> ocPats pats + ocExpr body + 2 // "fun" occurs twice
+
+  | ANavExpr (l, _, _) -> ocExpr l
+
+  | AIndexExpr (l, r, _) ->
+    match expr with
+    | AIndexExpr (x, ARangeExpr (l, r, _), _) -> ocExpr x + ocExpr l + ocExpr r
+    | _ -> ocExpr l + ocExpr r
+
+  | AUnaryExpr (_, arg, _) -> ocExpr arg
+  | ABinaryExpr (_, l, r, _) -> ocExpr l + ocExpr r
+  | ATupleExpr (items, _) -> ocExprs items
+  | AAscribeExpr (body, ty, _) -> ocExpr body + ocTy ty
+  | ASemiExpr (stmts, last, _) -> ocExprs stmts + ocExpr last
+  | ALetExpr (_, pat, body, next, _) -> ocPat pat + ocExpr body + ocExpr next
+
+  | ARangeExpr _ -> unreachable () // Generated only inside of AIndexExpr.
+
+let private ocExprOpt exprOpt : int =
+  match exprOpt with
+  | Some expr -> ocExpr expr
+  | None -> 0
+
+let private ocExprs = sumBy ocExpr
+
+let private ocDecl (decl: ADecl) : int =
+  match decl with
+  | AExprDecl expr -> ocExpr expr
+  | ALetDecl (_, pat, body, _) -> ocPat pat + ocExpr body
+
+  | ATySynonymDecl (_, _name, tyArgs, ty, _) -> 1 + List.length tyArgs + ocTy ty
+
+  | AUnionTyDecl (_, _name, tyArgs, variants, _) ->
+    1
+    + List.length tyArgs
+    + sumBy (fun (AVariant (_name, payloadTy, _)) -> 1 + ocTyOpt payloadTy) variants
+
+  | ARecordTyDecl (_, _name, tyArgs, fieldDecls, _) ->
+    1
+    + List.length tyArgs
+    + sumBy (fun (_, ty, _) -> ocTy ty) fieldDecls
+
+  | AOpenDecl _ -> 0
+  | AModuleSynonymDecl (_name, _, _) -> 1
+  | AModuleDecl (_, _, _name, decls, _) -> 1 + ocDecls decls
+  | AAttrDecl (_contents, next, _) -> ocDecl next
+
+let private ocDecls = sumBy ocDecl
+
+let countSymbols (root: ARoot) : int =
+  match root with
+  | AExprRoot decls -> ocDecls decls
+
+  | AModuleRoot (moduleName, body, _) ->
+    // name of project module
+    let p =
+      if nameToIdent moduleName = "MiloneOnly" then
+        0
+      else
+        1
+
+    // 1 for module itself
+    1 + ocDecls body + p

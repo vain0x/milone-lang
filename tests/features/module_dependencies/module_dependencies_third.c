@@ -5,6 +5,6 @@ int module_dependencies_root_root(void);
 int module_dependencies_third_third(void);
 
 int module_dependencies_third_third(void) {
-    int call_ = module_dependencies_root_root();
-    return call_;
+    int call_1 = module_dependencies_root_root();
+    return call_1;
 }

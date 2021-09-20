@@ -35,6 +35,16 @@ type private SourceExt = string
 
 // FIXME: move to ast bundle?
 
+[<RequireQualifiedAccess>]
+type ModuleKind =
+  | MiloneCore
+  | Regular
+
+let getModuleKind projectName _moduleName =
+  match projectName with
+  | "MiloneCore" -> ModuleKind.MiloneCore
+  | _ -> ModuleKind.Regular
+
 let private preludeFuns = [ "ignore"; "id"; "fst"; "snd" ]
 
 let private knownModules =
@@ -53,8 +63,8 @@ let private isKnownModule moduleName =
 
 /// Generates decls for each MiloneCore module
 /// whose name appears in the token stream.
-let private resolveMiloneCoreDeps tokens ast =
-  let preludeOpt, moduleMap =
+let private resolveMiloneCoreDeps kind tokens ast =
+  let analyze tokens =
     let rec go preludeOpt acc tokens =
       match tokens with
       | [] -> preludeOpt, acc
@@ -80,6 +90,8 @@ let private resolveMiloneCoreDeps tokens ast =
     preludeOpt, moduleMap
 
   let insertOpenDecls decls =
+    let preludeOpt, moduleMap = analyze tokens
+
     let decls =
       moduleMap
       |> TMap.fold
@@ -103,9 +115,14 @@ let private resolveMiloneCoreDeps tokens ast =
       :: decls
     | None -> decls
 
-  match ast with
-  | AExprRoot decls -> AExprRoot(insertOpenDecls decls)
-  | AModuleRoot (name, decls, pos) -> AModuleRoot(name, insertOpenDecls decls, pos)
+  let updateAst ast =
+    match ast with
+    | AExprRoot decls -> AExprRoot(insertOpenDecls decls)
+    | AModuleRoot (name, decls, pos) -> AModuleRoot(name, insertOpenDecls decls, pos)
+
+  match kind with
+  | ModuleKind.MiloneCore -> ast
+  | _ -> updateAst ast
 
 // -----------------------------------------------
 // Utilities
@@ -131,24 +148,33 @@ let private findProjectWith
   | Some it -> it
   | None -> entryProjectDir + "/../" + projectName
 
+/// filename -> (contents option)
+type private ReadTextFileFun = string -> Future<string option>
+
 /// Reads a file to get source code of specified module.
 let private readModuleInProjectWith
-  (readTextFile: string -> string option)
+  (readTextFile: ReadTextFileFun)
   (projectDir: ProjectDir)
   (moduleName: ModuleName)
-  : (ModuleName * SourceExt * SourceCode) option =
+  : Future<(SourceExt * SourceCode) option> =
   let read (ext: SourceExt) =
-    match readTextFile (projectDir + "/" + moduleName + ext) with
-    | Some contents -> Some(moduleName, ext, contents)
-    | None -> None
+    readTextFile (projectDir + "/" + moduleName + ext)
+    |> Future.map
+         (fun result ->
+           match result with
+           | Some contents -> Some(ext, contents)
+           | None -> None)
 
-  match read ".milone" with
-  | (Some _) as it -> it
-  | None -> read ".fs"
+  read ".milone"
+  |> Future.andThen
+       (fun result ->
+         match result with
+         | (Some _) as it -> Future.just it
+         | None -> read ".fs")
 
 type private ModuleSyntaxData = DocId * ARoot * (string * Pos) list
 
-let parseModuleWith (docId: DocId) (tokens: (Token * Pos) list) : ModuleSyntaxData =
+let parseModuleWith (docId: DocId) (kind: ModuleKind) (tokens: (Token * Pos) list) : ModuleSyntaxData =
   let errorTokens, tokens = tokens |> List.partition isErrorToken
   let ast, parseErrors = tokens |> SyntaxParse.parse
 
@@ -157,32 +183,41 @@ let parseModuleWith (docId: DocId) (tokens: (Token * Pos) list) : ModuleSyntaxDa
 
   let ast =
     if errors |> List.isEmpty then
-      resolveMiloneCoreDeps tokens ast
+      resolveMiloneCoreDeps kind tokens ast
     else
       ast
 
   docId, ast, errors
 
-type private FetchModuleFun = ProjectName -> ModuleName -> ModuleSyntaxData option
+type private FetchModuleFun = ProjectName -> ModuleName -> Future<ModuleSyntaxData option>
 
 let private fetchModuleWith
-  (readTextFile: string -> string option)
+  (readTextFile: ReadTextFileFun)
   (projects: TMap.TreeMap<ProjectName, ProjectDir>)
   (entryProjectDir: ProjectDir)
   (tokenize: SourceCode -> (Token * Pos) list)
   (projectName: ProjectName)
   (moduleName: ModuleName)
-  : ModuleSyntaxData option =
+  : Future<ModuleSyntaxData option> =
   let projectDir =
     findProjectWith projects entryProjectDir projectName
 
-  match readModuleInProjectWith readTextFile projectDir moduleName with
-  | None -> None
-  | Some (docId, _, contents) ->
-    contents
-    |> tokenize
-    |> parseModuleWith docId
-    |> Some
+  readModuleInProjectWith readTextFile projectDir moduleName
+  |> Future.map
+       (fun result ->
+         match result with
+         | None -> None
+
+         | Some (_, contents) ->
+           let docId =
+             AstBundle.computeDocId projectName moduleName
+
+           let kind = getModuleKind projectName moduleName
+
+           contents
+           |> tokenize
+           |> parseModuleWith docId kind
+           |> Some)
 
 // -----------------------------------------------
 // Error processing
@@ -245,9 +280,7 @@ type SyntaxHost =
     EntryProjectName: ProjectName
     MiloneHome: ProjectDir
 
-    /// path -> contents option
-    ReadTextFile: string -> string option
-
+    ReadTextFile: ReadTextFileFun
     WriteLog: string -> unit }
 
 [<RequireQualifiedAccess; NoEquality; NoComparison>]
@@ -291,7 +324,7 @@ let performSyntaxAnalysis (ctx: SyntaxCtx) : SyntaxAnalysisResult =
   writeLog "AstBundle"
 
   let modules, nameCtx, bundleErrors =
-    AstBundle.bundleCompatible ctx.FetchModule ctx.Host.EntryProjectName
+    AstBundle.bundle ctx.FetchModule ctx.Host.EntryProjectName
 
   if bundleErrors |> List.isEmpty |> not then
     SyntaxAnalysisError(bundleErrors, None)
