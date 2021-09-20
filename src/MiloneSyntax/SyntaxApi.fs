@@ -304,7 +304,7 @@ let performSyntaxAnalysis (ctx: SyntaxCtx) : SyntaxAnalysisResult =
 
     | None ->
       writeLog "Typing"
-      let modules, tyCtx = Typing.infer (modules, scopeCtx, [])
+      let modules, tyCtx = Typing.infer (modules, scopeCtx)
 
       writeLog "ArityCheck"
       let tyCtx = ArityCheck.arityCheck (modules, tyCtx)

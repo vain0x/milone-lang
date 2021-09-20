@@ -1463,7 +1463,7 @@ let private synonymCycleCheck (tyCtx: TyCtx) =
 // Interface
 // -----------------------------------------------
 
-let infer (modules: TProgram, scopeCtx: ScopeCtx, errors) : TProgram * TyCtx =
+let infer (modules: TProgram, scopeCtx: ScopeCtx) : TProgram * TyCtx =
   let ctx: TyCtx =
     { Serial = scopeCtx.Serial
       Vars = scopeCtx.Vars
@@ -1478,10 +1478,6 @@ let infer (modules: TProgram, scopeCtx: ScopeCtx, errors) : TProgram * TyCtx =
       GrayInstantiations = TMap.empty funSerialCompare
       TraitBounds = []
       Logs = [] }
-
-  let ctx =
-    errors
-    |> List.fold (fun ctx (msg, loc) -> addError ctx msg loc) ctx
 
   // Assign type vars to var/fun definitions.
   let ctx =
