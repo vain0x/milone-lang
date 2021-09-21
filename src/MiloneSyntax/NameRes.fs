@@ -284,14 +284,7 @@ let private findTySymbolName tySymbol (scopeCtx: ScopeCtx) =
   |> tyDefToName
 
 let private findNsOwnerName nsOwner (scopeCtx: ScopeCtx) =
-  match nsOwner with
-  | TyNsOwner tySerial ->
-    match scopeCtx.Tys |> TMap.tryFind tySerial with
-    | Some a -> a |> tyDefToName
-    | None -> "type#" + string tySerial
-
-  | ModuleNsOwner serial -> findName (moduleTySerialToInt serial) scopeCtx
-  | ModuleSynonymNsOwner serial -> findName (moduleSynonymSerialToInt serial) scopeCtx
+  findName (nsOwnerToInt nsOwner) scopeCtx
 
 /// Defines a variable, without adding to any scope.
 let private addVar varSerial (varDef: VarDef) (scopeCtx: ScopeCtx) : ScopeCtx =
