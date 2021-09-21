@@ -197,8 +197,10 @@ type private ScopeCtx =
 
     /// Type serial to definition map.
     Tys: AssocMap<TySerial, TyDef>
+    NewTys: AssocMap<TySerial, TyDef>
 
     RootModules: ModuleTySerial list
+    NewRootModules: ModuleTySerial list
     CurrentModule: ModuleTySerial option
     CurrentPath: string list
     AncestralFuns: FunSerial list
@@ -233,7 +235,9 @@ let private emptyScopeCtx: ScopeCtx =
     VarLevels = []
     MainFunOpt = None
     Tys = TMap.empty compare
+    NewTys = TMap.empty compare
     RootModules = []
+    NewRootModules = []
     CurrentModule = None
     CurrentPath = []
     AncestralFuns = []
@@ -321,7 +325,8 @@ let private addTy tySymbol tyDef (scopeCtx: ScopeCtx) : ScopeCtx =
   let tySerial = tySymbolToSerial tySymbol
 
   { scopeCtx with
-      Tys = scopeCtx.Tys |> TMap.add tySerial tyDef }
+      Tys = scopeCtx.Tys |> TMap.add tySerial tyDef
+      NewTys = scopeCtx.NewTys |> TMap.add tySerial tyDef }
 
 /// Adds a variable to a namespace.
 let private addVarToNs (nsOwner: NsOwner) valueSymbol (scopeCtx: ScopeCtx) : ScopeCtx =
@@ -493,7 +498,8 @@ let private enterModule moduleTySerial (scopeCtx: ScopeCtx) =
     match scopeCtx.CurrentModule with
     | None ->
       { scopeCtx with
-          RootModules = moduleTySerial :: scopeCtx.RootModules }
+          RootModules = moduleTySerial :: scopeCtx.RootModules
+          NewRootModules = moduleTySerial :: scopeCtx.NewRootModules }
 
     | Some parent ->
       scopeCtx
@@ -1650,9 +1656,9 @@ let nameRes (modules: TProgram list, nameCtx: NameCtx) : TProgram * NameResResul
         Vars = mapMerge current.Vars scopeCtx.Vars
         Funs = mapMerge current.Funs scopeCtx.Funs
         Variants = mapMerge current.Variants scopeCtx.Variants
-        Tys = mapMerge current.Tys scopeCtx.Tys
+        Tys = mapMerge current.Tys scopeCtx.NewTys
         MainFunOpt = optionMerge current.MainFunOpt scopeCtx.MainFunOpt
-        RootModules = listUnique moduleTySerialCompare (List.append current.RootModules scopeCtx.RootModules)
+        RootModules = List.append scopeCtx.NewRootModules current.RootModules
         Local = scopeMerge current.Local scopeCtx.Local
         VarNs = mapMerge current.VarNs scopeCtx.VarNs
         TyNs = mapMerge current.TyNs scopeCtx.TyNs
@@ -1665,7 +1671,15 @@ let nameRes (modules: TProgram list, nameCtx: NameCtx) : TProgram * NameResResul
     |> List.mapFold
          (fun (state: ScopeCtx) modules ->
            // Single scopeCtx is used to do NameRes all modules in current layer.
-           let scopeCtx: ScopeCtx = { state with VarLevels = []; Logs = [] }
+           let scopeCtx: ScopeCtx =
+             { state with
+                 Vars = emptyScopeCtx.Vars
+                 Funs = emptyScopeCtx.Funs
+                 Variants = emptyScopeCtx.Variants
+                 NewTys = emptyScopeCtx.NewTys
+                 NewRootModules = []
+                 VarLevels = []
+                 Logs = [] }
 
            let modulesCtxs =
              modules
