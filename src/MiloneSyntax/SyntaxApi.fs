@@ -9,15 +9,12 @@ open MiloneSyntax.Syntax
 
 module ArityCheck = MiloneSyntax.ArityCheck
 module AstBundle = MiloneSyntax.AstBundle
-module AstToHir = MiloneSyntax.AstToHir
-module C = MiloneStd.StdChar
 module NameRes = MiloneSyntax.NameRes
 module S = MiloneStd.StdString
 module SyntaxParse = MiloneSyntax.SyntaxParse
 module SyntaxTokenize = MiloneSyntax.SyntaxTokenize
 module Tir = MiloneSyntax.Tir
 module TMap = MiloneStd.StdMap
-module TSet = MiloneStd.StdSet
 module Typing = MiloneSyntax.Typing
 module TySystem = MiloneSyntax.TySystem
 

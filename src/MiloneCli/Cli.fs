@@ -4,17 +4,9 @@ module rec MiloneCli.Cli
 open MiloneShared.SharedTypes
 open MiloneShared.Util
 open MiloneStd.StdPath
-open MiloneSyntax.ArityCheck
-open MiloneSyntax.AstBundle
-open MiloneSyntax.AstToHir
-open MiloneSyntax.NameRes
 open MiloneSyntax.Syntax
-open MiloneSyntax.SyntaxParse
-open MiloneSyntax.SyntaxTokenize
 open MiloneSyntax.Typing
-open MiloneSyntax.TySystem
 open MiloneTranslation.AutoBoxing
-open MiloneTranslation.Cir
 open MiloneTranslation.CirDump
 open MiloneTranslation.CirGen
 open MiloneTranslation.ClosureConversion

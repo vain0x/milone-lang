@@ -3,7 +3,6 @@ module rec MiloneLspServer.Lsp
 
 open MiloneLspServer.Util
 open MiloneShared.SharedTypes
-open MiloneShared.Util
 open MiloneStd.StdPath
 open MiloneSyntax
 open MiloneSyntax.Syntax

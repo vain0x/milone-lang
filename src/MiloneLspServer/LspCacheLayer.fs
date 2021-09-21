@@ -6,7 +6,6 @@ open System.Text
 open System.Threading
 open MiloneLspServer.Util
 open MiloneShared.SharedTypes
-open MiloneSyntax.Syntax
 
 let private md5Hasher =
   new ThreadLocal<MD5>(fun () -> MD5.Create())

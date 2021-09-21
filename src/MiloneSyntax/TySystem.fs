@@ -9,7 +9,6 @@ open MiloneShared.SharedTypes
 open MiloneShared.TypeFloat
 open MiloneShared.TypeIntegers
 open MiloneShared.Util
-open MiloneSyntax.Syntax
 open MiloneSyntax.Tir
 
 module TMap = MiloneStd.StdMap

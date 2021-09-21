@@ -5,7 +5,6 @@ module rec MiloneLspServer.JsonRpcReader
 
 open System
 open System.IO
-open System.Threading
 open MiloneLspServer.JsonValue
 open MiloneLspServer.JsonSerialization
 

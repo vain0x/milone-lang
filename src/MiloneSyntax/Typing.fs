@@ -12,11 +12,9 @@
 module rec MiloneSyntax.Typing
 
 open MiloneShared.SharedTypes
-open MiloneShared.TypeFloat
 open MiloneShared.TypeIntegers
 open MiloneShared.Util
 open MiloneSyntax.NameRes
-open MiloneSyntax.Syntax
 open MiloneSyntax.Tir
 open MiloneSyntax.TySystem
 

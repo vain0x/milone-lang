@@ -3,7 +3,6 @@
 /// Provides implicit indirection by inserting allocate/dereference operations.
 module rec MiloneTranslation.AutoBoxing
 
-open MiloneShared.SharedTypes
 open MiloneShared.TypeFloat
 open MiloneShared.TypeIntegers
 open MiloneShared.Util

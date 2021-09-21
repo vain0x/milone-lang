@@ -57,7 +57,6 @@ open MiloneShared.Util
 open MiloneTranslation.Hir
 
 module TMap = MiloneStd.StdMap
-module TSet = MiloneStd.StdSet
 
 let private funSerialTyListPairCompare l r =
   pairCompare funSerialCompare (listCompare tyCompare) l r
