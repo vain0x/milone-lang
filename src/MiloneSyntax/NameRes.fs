@@ -272,16 +272,6 @@ let private findTy tySerial (scopeCtx: ScopeCtx) =
   assert (scopeCtx.Tys |> TMap.containsKey tySerial)
   scopeCtx.Tys |> mapFind tySerial
 
-let private findModuleTy moduleSerial (scopeCtx: ScopeCtx) =
-  assert (scopeCtx.ModuleTys
-          |> TMap.containsKey moduleSerial)
-
-  scopeCtx.ModuleTys |> mapFind moduleSerial
-
-let private findModuleSynonym serial (scopeCtx: ScopeCtx) =
-  assert (scopeCtx.ModuleSynonyms |> TMap.containsKey serial)
-  scopeCtx.ModuleSynonyms |> mapFind serial
-
 let private findVarName varSerial (scopeCtx: ScopeCtx) =
   scopeCtx |> findName (varSerialToInt varSerial)
 
