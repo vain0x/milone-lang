@@ -146,6 +146,106 @@ let private scopeEmpty () : Scope =
   [], scopeChainEmpty (), scopeChainEmpty (), scopeChainEmpty ()
 
 // -----------------------------------------------
+// NameResState
+// -----------------------------------------------
+
+/// Intermediate state of NameRes pass.
+[<RequireQualifiedAccess; NoEquality; NoComparison>]
+type private NameResState =
+  { NameCtx: NameCtx
+    ScopeCtx: ScopeCtx
+    Vars: AssocMap<VarSerial, VarDef>
+    Funs: AssocMap<FunSerial, FunDef>
+    Variants: AssocMap<VariantSerial, VariantDef>
+    VarLevels: AssocMap<Serial, Level>
+    Logs: (NameResLog * Loc) list }
+
+let private sInit (nameCtx: NameCtx) : NameResState =
+  { NameCtx = nameCtx
+    ScopeCtx = ofNameCtx nameCtx
+    Vars = TMap.empty varSerialCompare
+    Funs = TMap.empty funSerialCompare
+    Variants = TMap.empty variantSerialCompare
+    VarLevels = TMap.empty compare
+    Logs = [] }
+
+let private optionMerge first second : _ option =
+  match first, second with
+  | Some _, _ -> first
+  | _, Some _ -> second
+  | _ -> None
+
+let private mapMerge first second : AssocMap<_, _> =
+  second
+  |> TMap.fold (fun map key value -> TMap.add key value map) first
+
+let private mapAddEntries (entries: ('K * 'T) list) (map: AssocMap<'K, 'T>) : AssocMap<'K, 'T> =
+  entries
+  |> List.rev
+  |> List.fold (fun map (key, value) -> TMap.add key value map) map
+
+/// Merges two scopes into flattened scope.
+let private scopeMerge (first: Scope) (second: Scope) : Scope =
+  let mergeChain xs1 xs2 : ScopeChain<_> =
+    [ List.append xs1 xs2
+      |> List.fold mapMerge (scopeMapEmpty ()) ]
+
+  let _, values1, tys1, nss1 = first
+  let _, values2, tys2, nss2 = second
+  [], mergeChain values1 values2, mergeChain tys1 tys2, mergeChain nss1 nss2
+
+let private sMerge (state: NameResState) (scopeCtx: ScopeCtx) : NameResState =
+  let s = state.ScopeCtx
+
+  // Other fields are intermediate state.
+  { state with
+      ScopeCtx =
+        { state.ScopeCtx with
+            Tys = mapAddEntries scopeCtx.NewTys s.Tys
+            MainFunOpt = optionMerge scopeCtx.MainFunOpt s.MainFunOpt
+            RootModules = List.append scopeCtx.NewRootModules s.RootModules
+
+            // FIXME: inefficient
+            Local = scopeMerge scopeCtx.Local s.Local
+            VarNs = mapMerge s.VarNs scopeCtx.VarNs
+            TyNs = mapMerge s.TyNs scopeCtx.TyNs
+            NsNs = mapMerge s.NsNs scopeCtx.NsNs }
+
+      Vars =
+        scopeCtx.NewVars
+        |> List.fold
+             (fun vars (varSerial, varDef) ->
+               // Var can replace old definition but metadata shouldn't change.
+               let varDef: VarDef =
+                 match TMap.tryFind varSerial scopeCtx.NewVarMeta with
+                 | Some (isStatic, linkage) ->
+                   { varDef with
+                       IsStatic = isStatic
+                       Linkage = linkage }
+                 | None -> varDef
+
+               vars |> TMap.add varSerial varDef)
+             state.Vars
+
+      Funs = mapAddEntries scopeCtx.NewFuns state.Funs
+      Variants = mapMerge state.Variants scopeCtx.NewVariants
+      VarLevels = mapAddEntries scopeCtx.NewVarLevels state.VarLevels
+      Logs = List.append scopeCtx.NewLogs state.Logs }
+
+let private sToResult (state: NameResState) : NameResResult =
+  let (NameCtx (_, serial)) = state.NameCtx
+  let scopeCtx = state.ScopeCtx
+
+  { Serial = serial
+    Vars = state.Vars
+    Funs = state.Funs
+    Variants = state.Variants
+    Tys = scopeCtx.Tys
+    VarLevels = state.VarLevels
+    MainFunOpt = scopeCtx.MainFunOpt
+    Logs = state.Logs }
+
+// -----------------------------------------------
 // NameResResult
 // -----------------------------------------------
 
@@ -161,43 +261,27 @@ type NameResResult =
     MainFunOpt: FunSerial option
     Logs: (NameResLog * Loc) list }
 
-let private toResult (nameCtx: NameCtx) (scopeCtx: ScopeCtx) : NameResResult =
-  let (NameCtx (_, serial)) = nameCtx
-
-  { Serial = serial
-    Vars = scopeCtx.Vars
-    Funs = scopeCtx.Funs
-    Variants = scopeCtx.Variants
-    Tys = scopeCtx.Tys
-    VarLevels = TMap.ofList compare scopeCtx.VarLevels
-    MainFunOpt = scopeCtx.MainFunOpt
-    Logs = scopeCtx.Logs }
-
 // -----------------------------------------------
 // ScopeCtx
 // -----------------------------------------------
 
 [<RequireQualifiedAccess; NoEquality; NoComparison>]
 type private ScopeCtx =
-  {
-    /// Serial to ident map.
-    NameMap: AssocMap<Serial, Ident>
+  { NameMap: AssocMap<Serial, Ident>
 
-    /// Variable serial to definition map.
-    Vars: AssocMap<VarSerial, VarDef>
-
-    Funs: AssocMap<FunSerial, FunDef>
-
-    Variants: AssocMap<VariantSerial, VariantDef>
+    NewVars: (VarSerial * VarDef) list
+    NewFuns: (FunSerial * FunDef) list
+    NewFunSet: AssocSet<FunSerial>
+    NewVariants: AssocMap<VariantSerial, VariantDef>
 
     /// Vars/funs and levels.
-    VarLevels: (Serial * Level) list
+    NewVarLevels: (Serial * Level) list
+    NewVarMeta: AssocMap<VarSerial, IsStatic * Linkage>
 
     MainFunOpt: FunSerial option
 
-    /// Type serial to definition map.
     Tys: AssocMap<TySerial, TyDef>
-    NewTys: AssocMap<TySerial, TyDef>
+    NewTys: (TySerial * TyDef) list
 
     RootModules: ModuleTySerial list
     NewRootModules: ModuleTySerial list
@@ -225,17 +309,19 @@ type private ScopeCtx =
     /// Current level.
     Level: Level
 
-    Logs: (NameResLog * Loc) list }
+    NewLogs: (NameResLog * Loc) list }
 
 let private emptyScopeCtx: ScopeCtx =
   { NameMap = TMap.empty compare
-    Vars = TMap.empty varSerialCompare
-    Funs = TMap.empty funSerialCompare
-    Variants = TMap.empty variantSerialCompare
-    VarLevels = []
+    NewVars = []
+    NewFuns = []
+    NewFunSet = TMap.empty funSerialCompare
+    NewVariants = TMap.empty variantSerialCompare
+    NewVarLevels = []
+    NewVarMeta = TMap.empty varSerialCompare
     MainFunOpt = None
     Tys = TMap.empty compare
-    NewTys = TMap.empty compare
+    NewTys = []
     RootModules = []
     NewRootModules = []
     CurrentModule = None
@@ -247,7 +333,7 @@ let private emptyScopeCtx: ScopeCtx =
     Local = scopeEmpty ()
     PatScope = TMap.empty compare
     Level = 0
-    Logs = [] }
+    NewLogs = [] }
 
 let private ofNameCtx (nameCtx: NameCtx) : ScopeCtx =
   let (NameCtx (nameMap, _)) = nameCtx
@@ -256,7 +342,7 @@ let private ofNameCtx (nameCtx: NameCtx) : ScopeCtx =
 
 let private addLog (log: NameResLog) (loc: Loc) (ctx: ScopeCtx) =
   { ctx with
-      Logs = (log, loc) :: ctx.Logs }
+      NewLogs = (log, loc) :: ctx.NewLogs }
 
 let private makeLinkage vis name (ctx: ScopeCtx) =
   match vis with
@@ -266,10 +352,10 @@ let private makeLinkage vis name (ctx: ScopeCtx) =
 let private findName serial (scopeCtx: ScopeCtx) : Ident = scopeCtx.NameMap |> mapFind serial
 
 let private findVariant variantSerial (scopeCtx: ScopeCtx) =
-  assert (scopeCtx.Variants
+  assert (scopeCtx.NewVariants
           |> TMap.containsKey variantSerial)
 
-  scopeCtx.Variants |> mapFind variantSerial
+  scopeCtx.NewVariants |> mapFind variantSerial
 
 let private findTy tySerial (scopeCtx: ScopeCtx) =
   assert (scopeCtx.Tys |> TMap.containsKey tySerial)
@@ -292,32 +378,34 @@ let private findNsOwnerName nsOwner (scopeCtx: ScopeCtx) =
 
 /// Defines a variable, without adding to any scope.
 let private addVar varSerial (varDef: VarDef) (scopeCtx: ScopeCtx) : ScopeCtx =
-  // Merge into current definition.
-  let varDef =
-    match scopeCtx.Vars |> TMap.tryFind varSerial with
-    | Some oldDef ->
-      { varDef with
-          IsStatic = oldDef.IsStatic
-          Linkage = oldDef.Linkage }
-    | _ -> varDef
-
   { scopeCtx with
-      Vars = scopeCtx.Vars |> TMap.add varSerial varDef
-      VarLevels =
+      NewVars = (varSerial, varDef) :: scopeCtx.NewVars
+
+      NewVarLevels =
         (varSerialToInt varSerial, scopeCtx.Level)
-        :: scopeCtx.VarLevels }
+        :: scopeCtx.NewVarLevels
+
+      // Store metadata separately not to be overridden on late definition.
+      NewVarMeta =
+        match varDef.IsStatic, varDef.Linkage with
+        | NotStatic, InternalLinkage -> scopeCtx.NewVarMeta
+        | isStatic, linkage ->
+          scopeCtx.NewVarMeta
+          |> TMap.add varSerial (isStatic, linkage) }
 
 let private addFunDef funSerial funDef (scopeCtx: ScopeCtx) : ScopeCtx =
   { scopeCtx with
-      Funs = scopeCtx.Funs |> TMap.add funSerial funDef
-      VarLevels =
+      NewFuns = (funSerial, funDef) :: scopeCtx.NewFuns
+      NewFunSet = scopeCtx.NewFunSet |> TSet.add funSerial
+
+      NewVarLevels =
         (funSerialToInt funSerial, scopeCtx.Level)
-        :: scopeCtx.VarLevels }
+        :: scopeCtx.NewVarLevels }
 
 let private addVariantDef variantSerial variantDef (scopeCtx: ScopeCtx) : ScopeCtx =
   { scopeCtx with
-      Variants =
-        scopeCtx.Variants
+      NewVariants =
+        scopeCtx.NewVariants
         |> TMap.add variantSerial variantDef }
 
 /// Defines a type, without adding to any scope.
@@ -326,7 +414,7 @@ let private addTy tySymbol tyDef (scopeCtx: ScopeCtx) : ScopeCtx =
 
   { scopeCtx with
       Tys = scopeCtx.Tys |> TMap.add tySerial tyDef
-      NewTys = scopeCtx.NewTys |> TMap.add tySerial tyDef }
+      NewTys = (tySerial, tyDef) :: scopeCtx.NewTys }
 
 /// Adds a variable to a namespace.
 let private addVarToNs (nsOwner: NsOwner) valueSymbol (scopeCtx: ScopeCtx) : ScopeCtx =
@@ -723,10 +811,9 @@ let private resolveTy ty loc scopeCtx =
 // -----------------------------------------------
 
 let private defineFunUniquely vis funSerial args ty loc (scopeCtx: ScopeCtx) : ScopeCtx =
-  match scopeCtx.Funs |> TMap.tryFind funSerial with
-  | Some _ -> scopeCtx
-
-  | None ->
+  if scopeCtx.NewFunSet |> TSet.contains funSerial then
+    scopeCtx
+  else
     let name =
       scopeCtx |> findName (funSerialToInt funSerial)
 
@@ -1627,59 +1714,13 @@ let private nameResModuleBody serialOpt (stmts, ctx) : TStmt list * ScopeCtx =
 // Interface
 // -----------------------------------------------
 
-let private optionMerge first second =
-  match first, second with
-  | Some _, _ -> first
-  | _, Some _ -> second
-  | _ -> None
-
-let private mapMerge first second =
-  second
-  |> TMap.fold (fun map key value -> TMap.add key value map) first
-
-/// Merges two scopes into flattened scope.
-let private scopeMerge (first: Scope) (second: Scope) : Scope =
-  let mergeChain xs1 xs2 : ScopeChain<_> =
-    [ List.append xs1 xs2
-      |> List.fold mapMerge (scopeMapEmpty ()) ]
-
-  let _, values1, tys1, nss1 = first
-  let _, values2, tys2, nss2 = second
-  [], mergeChain values1 values2, mergeChain tys1 tys2, mergeChain nss1 nss2
-
 let nameRes (modules: TProgram list, nameCtx: NameCtx) : TProgram * NameResResult =
-  let init () : ScopeCtx = ofNameCtx nameCtx
-
-  let merge (current: ScopeCtx) (scopeCtx: ScopeCtx) : ScopeCtx =
-    // Other fields are intermediate state.
-    { current with
-        Vars = mapMerge current.Vars scopeCtx.Vars
-        Funs = mapMerge current.Funs scopeCtx.Funs
-        Variants = mapMerge current.Variants scopeCtx.Variants
-        Tys = mapMerge current.Tys scopeCtx.NewTys
-        MainFunOpt = optionMerge current.MainFunOpt scopeCtx.MainFunOpt
-        RootModules = List.append scopeCtx.NewRootModules current.RootModules
-        Local = scopeMerge current.Local scopeCtx.Local
-        VarNs = mapMerge current.VarNs scopeCtx.VarNs
-        TyNs = mapMerge current.TyNs scopeCtx.TyNs
-        NsNs = mapMerge current.NsNs scopeCtx.NsNs
-        VarLevels = List.append current.VarLevels scopeCtx.VarLevels
-        Logs = List.append current.Logs scopeCtx.Logs }
-
   let modules, state =
     modules
     |> List.mapFold
-         (fun (state: ScopeCtx) modules ->
+         (fun (state: NameResState) modules ->
            // Single scopeCtx is used to do NameRes all modules in current layer.
-           let scopeCtx: ScopeCtx =
-             { state with
-                 Vars = emptyScopeCtx.Vars
-                 Funs = emptyScopeCtx.Funs
-                 Variants = emptyScopeCtx.Variants
-                 NewTys = emptyScopeCtx.NewTys
-                 NewRootModules = []
-                 VarLevels = []
-                 Logs = [] }
+           let scopeCtx = state.ScopeCtx
 
            let modulesCtxs =
              modules
@@ -1691,7 +1732,7 @@ let nameRes (modules: TProgram list, nameCtx: NameCtx) : TProgram * NameResResul
                     (p, m, stmts), scopeCtx)
 
            modulesCtxs
-           |> List.mapFold (fun state (m, scopeCtx) -> m, merge state scopeCtx) state)
-         (init ())
+           |> List.mapFold (fun state (m, scopeCtx) -> m, sMerge state scopeCtx) state)
+         (sInit nameCtx)
 
-  List.collect id modules, toResult nameCtx state
+  List.collect id modules, sToResult state
