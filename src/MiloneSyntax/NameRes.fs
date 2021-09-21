@@ -198,8 +198,6 @@ type private ScopeCtx =
     /// Type serial to definition map.
     Tys: AssocMap<TySerial, TyDef>
 
-    ModuleTys: AssocMap<ModuleTySerial, ModuleTyDef>
-    ModuleSynonyms: AssocMap<ModuleSynonymSerial, ModuleSynonymDef>
     RootModules: ModuleTySerial list
     CurrentModule: ModuleTySerial option
     CurrentPath: string list
@@ -237,8 +235,6 @@ let private ofNameCtx (nameCtx: NameCtx) : ScopeCtx =
     VarLevels = TMap.empty compare
     MainFunOpt = None
     Tys = TMap.empty compare
-    ModuleTys = TMap.empty moduleTySerialCompare
-    ModuleSynonyms = TMap.empty moduleSynonymSerialCompare
     RootModules = []
     CurrentModule = None
     CurrentPath = []
@@ -291,8 +287,8 @@ let private findNsOwnerName nsOwner (scopeCtx: ScopeCtx) =
     | Some a -> a |> tyDefToName
     | None -> "type#" + string tySerial
 
-  | ModuleNsOwner serial -> (scopeCtx.ModuleTys |> mapFind serial).Name
-  | ModuleSynonymNsOwner serial -> (scopeCtx.ModuleSynonyms |> mapFind serial).Name
+  | ModuleNsOwner serial -> findName (moduleTySerialToInt serial) scopeCtx
+  | ModuleSynonymNsOwner serial -> findName (moduleSynonymSerialToInt serial) scopeCtx
 
 /// Defines a variable, without adding to any scope.
 let private addVar varSerial (varDef: VarDef) (scopeCtx: ScopeCtx) : ScopeCtx =
@@ -330,16 +326,6 @@ let private addTy tySymbol tyDef (scopeCtx: ScopeCtx) : ScopeCtx =
 
   { scopeCtx with
       Tys = scopeCtx.Tys |> TMap.add tySerial tyDef }
-
-let private addModuleTyDef moduleTySerial (tyDef: ModuleTyDef) (scopeCtx: ScopeCtx) : ScopeCtx =
-  { scopeCtx with
-      ModuleTys =
-        scopeCtx.ModuleTys
-        |> TMap.add moduleTySerial tyDef }
-
-let private addModuleSynonymDef serial (tyDef: ModuleSynonymDef) (scopeCtx: ScopeCtx) : ScopeCtx =
-  { scopeCtx with
-      ModuleSynonyms = scopeCtx.ModuleSynonyms |> TMap.add serial tyDef }
 
 /// Adds a variable to a namespace.
 let private addVarToNs (nsOwner: NsOwner) valueSymbol (scopeCtx: ScopeCtx) : ScopeCtx =
@@ -505,8 +491,7 @@ let private isTyDeclScope (scopeCtx: ScopeCtx) =
 
 let private enterModule moduleTySerial (scopeCtx: ScopeCtx) =
   let moduleName =
-    (scopeCtx.ModuleTys |> mapFind moduleTySerial)
-      .Name
+    findName (moduleTySerialToInt moduleTySerial) scopeCtx
 
   let scopeCtx =
     match scopeCtx.CurrentModule with
@@ -543,9 +528,10 @@ let private resolveModulePath path (scopeCtx: ScopeCtx) : ModuleTySerial list =
       scopeCtx.RootModules
       |> List.filter
            (fun serial ->
-             let moduleDef = scopeCtx.ModuleTys |> mapFind serial
+             let moduleName =
+               findName (moduleTySerialToInt serial) scopeCtx
 
-             moduleDef.Name = head)
+             moduleName = head)
 
     let rec go serial path =
       match path with
@@ -1045,7 +1031,6 @@ let private collectDecls moduleSerialOpt (stmt, ctx) : TStmt * ScopeCtx =
 
       let ctx =
         ctx
-        |> addModuleTyDef serial ({ Name = name; Loc = loc }: ModuleTyDef)
         |> addNsToModule PublicVis (ModuleNsOwner serial)
         |> importNs (ModuleNsOwner serial)
 
@@ -1061,9 +1046,7 @@ let private collectDecls moduleSerialOpt (stmt, ctx) : TStmt * ScopeCtx =
 
       | _ ->
         let ctx =
-          ctx
-          |> addModuleSynonymDef serial ({ Name = name; Bound = []; Loc = loc }: ModuleSynonymDef)
-          |> importNs (ModuleSynonymNsOwner serial)
+          ctx |> importNs (ModuleSynonymNsOwner serial)
 
         stmt, ctx
 
@@ -1587,10 +1570,7 @@ let private nameResStmt (stmt, ctx) : TStmt * ScopeCtx =
     let moduleName =
       ctx |> findName (moduleTySerialToInt serial)
 
-    let ctx =
-      ctx
-      |> addModuleTyDef serial ({ Name = moduleName; Loc = loc }: ModuleTyDef)
-      |> importNs (ModuleNsOwner serial)
+    let ctx = ctx |> importNs (ModuleNsOwner serial)
 
     let parent, ctx = ctx |> enterModule serial
 
@@ -1631,11 +1611,6 @@ let private nameResStmt (stmt, ctx) : TStmt * ScopeCtx =
           ctx |> addLog ModulePathNotFoundError loc
         else
           ctx
-          |> addModuleSynonymDef
-               serial
-               ({ Name = name
-                  Bound = moduleSerials
-                  Loc = loc }: ModuleSynonymDef)
           |> forList (fun moduleSerial ctx -> doImportNsWithAlias name (ModuleNsOwner moduleSerial) ctx) moduleSerials
 
     // No longer necessary.
