@@ -258,7 +258,7 @@ let private producer (fetchModule: FetchModuleFun) (_: State) (r: ModuleRequest)
 type private SymbolCount = int
 type private ModuleSyntaxData = DocId * ARoot * (string * Pos) list
 type private FetchModuleFun = ProjectName -> ModuleName -> Future<ModuleSyntaxData option>
-type private BundleResult = TProgram * NameCtx * Error list
+type private BundleResult = TProgram list * NameCtx * Error list
 
 let bundle (fetchModule: FetchModuleFun) (entryProjectName: string) : BundleResult =
   let entryRequest =
@@ -353,4 +353,4 @@ let bundle (fetchModule: FetchModuleFun) (entryProjectName: string) : BundleResu
 
   let nameCtx = NameCtx(identMap, lastSerial)
 
-  List.collect id layers, nameCtx, errors
+  layers, nameCtx, errors
