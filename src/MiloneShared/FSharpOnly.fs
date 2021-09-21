@@ -9,6 +9,9 @@ let inRegion (f: unit -> int) : int = f ()
 let __stringLengthInUtf8Bytes (s: string) : int =
   System.Text.Encoding.UTF8.GetByteCount(s)
 
+/// Only for debugging.
+let __trace (s: string) : unit = eprintf "%s" (s + "\n")
+
 // -----------------------------------------------
 // Concurrency
 // -----------------------------------------------
