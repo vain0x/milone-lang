@@ -104,7 +104,6 @@ let private nsOwnerOfTySymbol (tySymbol: TySymbol) : NsOwner = TyNsOwner(tySymbo
 // Namespace
 // -----------------------------------------------
 
-/// Namespace.
 type private Ns<'T> = AssocMap<NsOwner, (AssocMap<Ident, 'T>)>
 
 let private nsFind (key: NsOwner) (ns: Ns<_>) : AssocMap<Ident, _> =
@@ -185,14 +184,6 @@ let private mapAddEntries (entries: ('K * 'T) list) (map: AssocMap<'K, 'T>) : As
   |> List.rev
   |> List.fold (fun map (key, value) -> TMap.add key value map) map
 
-let private nsAddEntries entries ns : Ns<_> =
-  entries
-  |> List.fold (fun ns (nsOwner, ident, value) -> nsAdd nsOwner ident value ns) ns
-
-let private nsMergeEntries entries ns : Ns<_> =
-  entries
-  |> List.fold (fun ns (nsOwner, ident, value) -> nsMerge nsOwner ident value ns) ns
-
 /// Merges two scopes into flattened scope.
 let private scopeMerge (first: Scope) (second: Scope) : Scope =
   let mergeChain xs1 xs2 : ScopeChain<_> =
@@ -213,12 +204,12 @@ let private sMerge (state: NameResState) (scopeCtx: ScopeCtx) : NameResState =
             Tys = mapAddEntries scopeCtx.NewTys s.Tys
             MainFunOpt = optionMerge scopeCtx.MainFunOpt s.MainFunOpt
             RootModules = List.append scopeCtx.NewRootModules s.RootModules
-            VarNs = nsAddEntries scopeCtx.NewVarNs s.VarNs
-            TyNs = nsAddEntries scopeCtx.NewTyNs s.TyNs
-            NsNs = nsMergeEntries scopeCtx.NewNsNs s.NsNs
 
             // FIXME: inefficient
-            Local = scopeMerge scopeCtx.Local s.Local }
+            Local = scopeMerge scopeCtx.Local s.Local
+            VarNs = mapMerge s.VarNs scopeCtx.VarNs
+            TyNs = mapMerge s.TyNs scopeCtx.TyNs
+            NsNs = mapMerge s.NsNs scopeCtx.NsNs }
 
       Vars =
         scopeCtx.NewVars
@@ -300,15 +291,12 @@ type private ScopeCtx =
 
     /// Values contained by types.
     VarNs: Ns<ValueSymbol>
-    NewVarNs: (NsOwner * Ident * ValueSymbol) list
 
     /// Types contained by types.
     TyNs: Ns<TySymbol>
-    NewTyNs: (NsOwner * Ident * TySymbol) list
 
     /// Sub namespaces.
     NsNs: Ns<NsOwner list>
-    NewNsNs: (NsOwner * Ident * NsOwner) list
 
     /// Current scope.
     Local: Scope
@@ -340,11 +328,8 @@ let private emptyScopeCtx: ScopeCtx =
     CurrentPath = []
     AncestralFuns = []
     VarNs = TMap.empty nsOwnerCompare
-    NewVarNs = []
     TyNs = TMap.empty nsOwnerCompare
-    NewTyNs = []
     NsNs = TMap.empty nsOwnerCompare
-    NewNsNs = []
     Local = scopeEmpty ()
     PatScope = TMap.empty compare
     Level = 0
@@ -437,8 +422,7 @@ let private addVarToNs (nsOwner: NsOwner) valueSymbol (scopeCtx: ScopeCtx) : Sco
     scopeCtx |> findValueSymbolName valueSymbol
 
   { scopeCtx with
-      VarNs = scopeCtx.VarNs |> nsAdd nsOwner name valueSymbol
-      NewVarNs = (nsOwner, name, valueSymbol) :: scopeCtx.NewVarNs }
+      VarNs = scopeCtx.VarNs |> nsAdd nsOwner name valueSymbol }
 
 /// Adds a type to a namespace.
 let private addTyToNs (nsOwner: NsOwner) tySymbol (scopeCtx: ScopeCtx) : ScopeCtx =
@@ -447,15 +431,9 @@ let private addTyToNs (nsOwner: NsOwner) tySymbol (scopeCtx: ScopeCtx) : ScopeCt
   { scopeCtx with
       TyNs = scopeCtx.TyNs |> nsAdd nsOwner name tySymbol
 
-      NewTyNs = (nsOwner, name, tySymbol) :: scopeCtx.NewTyNs
-
       NsNs =
         scopeCtx.NsNs
-        |> nsMerge nsOwner name (nsOwnerOfTySymbol tySymbol)
-
-      NewNsNs =
-        (nsOwner, name, nsOwnerOfTySymbol tySymbol)
-        :: scopeCtx.NewNsNs }
+        |> nsMerge nsOwner name (nsOwnerOfTySymbol tySymbol) }
 
 /// Adds a child namespace.
 let private addNsToNs (parentNsOwner: NsOwner) (childNsOwner: NsOwner) (scopeCtx: ScopeCtx) : ScopeCtx =
@@ -464,11 +442,7 @@ let private addNsToNs (parentNsOwner: NsOwner) (childNsOwner: NsOwner) (scopeCtx
   { scopeCtx with
       NsNs =
         scopeCtx.NsNs
-        |> nsMerge parentNsOwner name childNsOwner
-
-      NewNsNs =
-        (parentNsOwner, name, childNsOwner)
-        :: scopeCtx.NewNsNs }
+        |> nsMerge parentNsOwner name childNsOwner }
 
 /// Adds a variable to a scope.
 let private importVar symbol (scopeCtx: ScopeCtx) : ScopeCtx =
