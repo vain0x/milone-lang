@@ -104,6 +104,7 @@ let private nsOwnerOfTySymbol (tySymbol: TySymbol) : NsOwner = TyNsOwner(tySymbo
 // Namespace
 // -----------------------------------------------
 
+/// Namespace.
 type private Ns<'T> = AssocMap<NsOwner, (AssocMap<Ident, 'T>)>
 
 let private nsFind (key: NsOwner) (ns: Ns<_>) : AssocMap<Ident, _> =
@@ -205,7 +206,7 @@ let private sMerge (state: NameResState) (scopeCtx: ScopeCtx) : NameResState =
             MainFunOpt = optionMerge scopeCtx.MainFunOpt s.MainFunOpt
             RootModules = List.append scopeCtx.NewRootModules s.RootModules
 
-            // FIXME: inefficient
+            // These seem inefficient but not.
             Local = scopeMerge scopeCtx.Local s.Local
             VarNs = mapMerge s.VarNs scopeCtx.VarNs
             TyNs = mapMerge s.TyNs scopeCtx.TyNs
@@ -289,13 +290,9 @@ type private ScopeCtx =
     CurrentPath: string list
     AncestralFuns: FunSerial list
 
-    /// Values contained by types.
     VarNs: Ns<ValueSymbol>
-
-    /// Types contained by types.
     TyNs: Ns<TySymbol>
-
-    /// Sub namespaces.
+    /// Subnamespaces.
     NsNs: Ns<NsOwner list>
 
     /// Current scope.
