@@ -203,8 +203,9 @@ let private scopeMerge (first: Scope) (second: Scope) : Scope =
   let _, values2, tys2, nss2 = second
   [], mergeChain values1 values2, mergeChain tys1 tys2, mergeChain nss1 nss2
 
-let private sMerge (state: NameResState) (scopeCtx: ScopeCtx) : NameResState =
+let private sMerge (state: NameResState) m (scopeCtx: ScopeCtx) : NameResState =
   let s = state.ScopeCtx
+  let _, m, _ = m
 
   // Other fields are intermediate state.
   { state with
@@ -217,8 +218,13 @@ let private sMerge (state: NameResState) (scopeCtx: ScopeCtx) : NameResState =
             TyNs = nsAddEntries scopeCtx.NewTyNs s.TyNs
             NsNs = nsMergeEntries scopeCtx.NewNsNs s.NsNs
 
-            // FIXME: inefficient
-            Local = scopeMerge scopeCtx.Local s.Local }
+            Local =
+              // Root of "local" scope (= global scope) extends only by MiloneOnly.
+              // This conditional reduces complexity of merging.
+              if m = "MiloneOnly" then
+                scopeMerge scopeCtx.Local s.Local
+              else
+                s.Local }
 
       Vars =
         scopeCtx.NewVars
@@ -1758,7 +1764,7 @@ let nameRes (modules: TProgram list, nameCtx: NameCtx) : TProgram * NameResResul
                     (p, m, stmts), scopeCtx)
 
            modulesCtxs
-           |> List.mapFold (fun state (m, scopeCtx) -> m, sMerge state scopeCtx) state)
+           |> List.mapFold (fun state (m, scopeCtx) -> m, sMerge state m scopeCtx) state)
          (sInit nameCtx)
 
   List.collect id modules, sToResult state
