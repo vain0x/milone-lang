@@ -1306,7 +1306,7 @@ let genCir (decls, mirCtx: MirCtx) : (DocId * CDecl list) list =
   let ctx = ofMirCtx mirCtx
 
   // Split into modules based on docId.
-  let acc, _ =
+  let modules =
     decls
     |> List.fold
          (fun moduleMap decl ->
@@ -1314,8 +1314,9 @@ let genCir (decls, mirCtx: MirCtx) : (DocId * CDecl list) list =
 
            moduleMap |> multimapAdd docId decl)
          (TMap.empty compare)
-    |> TMap.fold
-         (fun (acc, ctx: CirCtx) docId declAcc ->
+    |> TMap.toList
+    |> __parallelMap
+         (fun (docId, declAcc) ->
            let ctx: CirCtx =
              { Rx = { ctx.Rx with DocIdOpt = Some docId }
                TyEnv = TMap.empty tyCompare
@@ -1330,7 +1331,6 @@ let genCir (decls, mirCtx: MirCtx) : (DocId * CDecl list) list =
            let ctx = cgDecls ctx decls
            let decls = List.rev ctx.Decls |> sortDecls
 
-           (docId, decls) :: acc, ctx)
-         ([], ctx)
+           (docId, decls))
 
-  List.rev acc
+  modules
