@@ -1,6 +1,5 @@
 module rec MiloneLspServer.Program
 
-open System.Collections.Concurrent
 open MiloneLspServer.JsonRpcReader
 open MiloneLspServer.LspServer
 

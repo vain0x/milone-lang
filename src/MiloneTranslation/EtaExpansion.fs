@@ -82,7 +82,6 @@ open MiloneShared.Util
 open MiloneTranslation.Hir
 
 module TMap = MiloneStd.StdMap
-module S = MiloneStd.StdString
 module Int = MiloneStd.StdInt
 
 [<RequireQualifiedAccess>]

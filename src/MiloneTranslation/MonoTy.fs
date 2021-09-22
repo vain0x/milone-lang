@@ -9,7 +9,6 @@ open MiloneShared.Util
 open MiloneTranslation.Hir
 
 module TMap = MiloneStd.StdMap
-module TSet = MiloneStd.StdSet
 module M = MiloneTranslation.MonoTyIr
 
 type private OptionDef =

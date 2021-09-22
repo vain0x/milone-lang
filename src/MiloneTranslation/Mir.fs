@@ -15,7 +15,6 @@ module rec MiloneTranslation.Mir
 open MiloneShared.SharedTypes
 open MiloneShared.TypeFloat
 open MiloneShared.TypeIntegers
-open MiloneShared.Util
 open MiloneTranslation.Hir
 
 // -----------------------------------------------

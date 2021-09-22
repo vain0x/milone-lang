@@ -7,11 +7,9 @@ module rec MiloneSyntax.Tir
 
 open MiloneShared.Util
 open MiloneShared.SharedTypes
-open MiloneSyntax.Syntax
 open MiloneShared.TypeFloat
 open MiloneShared.TypeIntegers
 
-module TMap = MiloneStd.StdMap
 module S = MiloneStd.StdString
 
 /// Level.

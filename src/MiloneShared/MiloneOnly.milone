@@ -15,6 +15,9 @@ let objToString _ = "<objToString not supported>"
 
 let __stringLengthInUtf8Bytes (s: string) = s.Length
 
+let __trace (s: string) : unit =
+  __nativeStmt ("fwrite({0}.str, sizeof(char), (size_t){0}.len, stderr);", s)
+
 type Profiler = Profiler of voidptr
 
 // -----------------------------------------------

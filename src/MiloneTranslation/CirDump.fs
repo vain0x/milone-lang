@@ -3,7 +3,6 @@
 /// Converts CIR to C language source code.
 module rec MiloneTranslation.CirDump
 
-open MiloneShared.SharedTypes
 open MiloneShared.TypeFloat
 open MiloneShared.TypeIntegers
 open MiloneShared.Util
