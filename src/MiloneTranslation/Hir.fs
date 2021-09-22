@@ -889,7 +889,11 @@ let tyMangle (ty: Ty, memo: AssocMap<Ty, string>) : string * AssocMap<Ty, string
         funTy, ctx
 
       | UnionTk _
-      | RecordTk _ -> unreachable () // Must be stored in memo.
+      | RecordTk _ ->
+        // Name must be stored in memo if monomorphic.
+        assert (List.isEmpty tyArgs |> not)
+        let name = memo |> mapFind (Ty(tk, []))
+        variadicGeneric name
 
     // Memoization.
     match TMap.tryFind ty ctx with
