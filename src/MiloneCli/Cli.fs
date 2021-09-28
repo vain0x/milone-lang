@@ -684,6 +684,14 @@ rule link
     |> cons miloneHome
     |> cons "/runtime/milone.h"
     |> cons "\n\n"
+    |> cons "build "
+    |> cons miloneHome
+    |> cons "/runtime/milone_platform.o: cc "
+    |> cons miloneHome
+    |> cons "/runtime/milone_platform.c | "
+    |> cons miloneHome
+    |> cons "/runtime/milone.h"
+    |> cons "\n\n"
 
   let ctx =
     compileCtxNew host options.Verbosity projectDir
@@ -714,6 +722,7 @@ rule link
 
   | CompileOk files ->
     let miloneObj = miloneHome + "/runtime/milone.o"
+    let milonePlatformObj = miloneHome + "/runtime/milone_platform.o"
     let miloneHeader = miloneHome + "/runtime/milone.h"
 
     let cFile name = [ targetDir; "/"; name ] |> S.concat ""
@@ -747,6 +756,8 @@ rule link
       |> cons exeFile
       |> cons ": link "
       |> cons miloneObj
+      |> cons " "
+      |> cons milonePlatformObj
       |> cons " "
       |> cons (
         files

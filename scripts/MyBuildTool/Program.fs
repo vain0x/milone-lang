@@ -50,6 +50,10 @@ rule link_objs_to_exe
 build runtime/milone.o: $
   compile_c_to_obj $
     runtime/milone.c $
+    | runtime/milone.h
+
+build runtime/milone_platform.o: $
+  compile_c_to_obj $
     runtime/milone_platform.c $
     | runtime/milone.h
 """
@@ -147,7 +151,7 @@ let private commandGen2 () =
 
   let input = oFiles |> String.concat " "
 
-  w $"build target/milone: link_objs_to_exe runtime/milone.o {input}"
+  w $"build target/milone: link_objs_to_exe runtime/milone.o runtime/milone_platform.o {input}"
 
   writeTo (ninja.ToString()) "target/gen2/build.ninja"
 
@@ -235,7 +239,7 @@ let private commandTestsBuild (testProjectDirs: string list) =
 
     let input = oFiles |> String.concat " "
 
-    w $"build {exe}: link_objs_to_exe runtime/milone.o {input}"
+    w $"build {exe}: link_objs_to_exe runtime/milone.o runtime/milone_platform.o {input}"
 
   let exeFiles = String.concat " " exeFiles
 

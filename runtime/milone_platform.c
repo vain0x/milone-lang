@@ -1,6 +1,7 @@
 // Expose platform-specific functions for milone-lang compiler.
 
 #include <assert.h>
+#include <errno.h>
 
 #include <milone.h>
 
