@@ -2,6 +2,7 @@
 
 #include <assert.h>
 #include <errno.h>
+#include <string.h>
 
 #include <milone.h>
 
@@ -116,7 +117,8 @@ static struct String os_string_to(struct OsString s) {
 
     char *buf = milone_mem_alloc(len + 1, sizeof(char));
 
-    int n = WideCharToMultiByte(CP_UTF8, 0, s.str, (int)s.len, buf, len, NULL, NULL);
+    int n = WideCharToMultiByte(CP_UTF8, 0, s.str, (int)s.len, buf, len, NULL,
+                                NULL);
     if (n == 0) {
         failwith("WideCharToMultiByte");
     }
