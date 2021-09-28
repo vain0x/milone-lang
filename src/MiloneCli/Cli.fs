@@ -626,6 +626,13 @@ let cliCompile (host: CliHost) (options: CompileOptions) =
 
   match result with
   | CompileOk files ->
+    let ok =
+      host.DirCreate host.WorkDir options.TargetDir
+
+    if not ok then
+      printfn "error: Couldn't create target dir: %s." options.TargetDir
+      exit 1
+
     List.fold
       (fun () (name, contents) ->
         printfn "%s" name
@@ -722,7 +729,10 @@ rule link
 
   | CompileOk files ->
     let miloneObj = miloneHome + "/runtime/milone.o"
-    let milonePlatformObj = miloneHome + "/runtime/milone_platform.o"
+
+    let milonePlatformObj =
+      miloneHome + "/runtime/milone_platform.o"
+
     let miloneHeader = miloneHome + "/runtime/milone.h"
 
     let cFile name = [ targetDir; "/"; name ] |> S.concat ""
