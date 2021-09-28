@@ -154,7 +154,7 @@ static struct String milone_platform_normalize_path_sep(struct String path) {
 // Create a single directory (not recursive).
 static bool milone_platform_create_single_directory(struct String dir) {
 #if defined(MILONE_PLATFORM_UNIX)
-    return mkdir(str_to_c_str(dir), 0774) != 0 && errno != EEXIST;
+    return mkdir(str_to_c_str(dir), 0774) == 0 || errno == EEXIST;
 #elif defined(MILONE_PLATFORM_WINDOWS)
     struct OsString d = os_string_of(dir);
     return CreateDirectoryW(d.str, NULL) != 0;
