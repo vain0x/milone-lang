@@ -16,6 +16,7 @@ SUBCOMMANDS:
             and verify the result.
 
     tests   tests projects in the `tests` directory
+    windows builds for Windows
 
     help, -h, --help
     version, -V, --version
@@ -267,6 +268,74 @@ let private commandTestsSummarize (testProjectDirs: string list) =
   printfn "%s" (if ok then "OK" else "FAILED")
   if not ok then exit 1
 
+let private commandWindows () =
+  eprintfn "milone-compiling on windows"
+
+  // Set up env var.
+  if String.IsNullOrEmpty(Environment.GetEnvironmentVariable("MILONE_HOME")) then
+    Environment.SetEnvironmentVariable("MILONE_HOME", Environment.CurrentDirectory)
+
+  // Compile milone-lang project.
+  let stdOut =
+    runToOut
+      "dotnet"
+      [ "run"
+        "-p"
+        "src/MiloneCli"
+        "--"
+        "compile"
+        "src/MiloneCli"
+        "--target-dir"
+        "target/MiloneCli" ]
+
+  let cFiles =
+    stdOut.Split([| '\r'; '\n' |])
+    |> Array.filter (fun (s: string) -> s.EndsWith(".c"))
+
+  // Generate VC++ project file.
+  let vc =
+    "scripts/milone-lang-win10-msvc/MiloneLang"
+
+  let template =
+    File.ReadAllText($"{vc}/MiloneLang.vcxproj.template")
+
+  let projectFile =
+    let elements =
+      cFiles
+      |> Array.map
+           (fun name ->
+             let name = name.Replace("/", "\\")
+             let path = $@"..\..\..\target\MiloneCli\{name}"
+             $"<ClCompile Include=\"{path}\"/>")
+      |> String.concat "\n"
+
+    template.Replace("<!-- {{ SRCS }} -->", elements)
+
+  File.WriteAllText($"{vc}/MiloneLang.vcxproj", projectFile)
+
+  // Compile VC++ project.
+  let msBuildPath =
+    seq {
+      for year in [ 2019; 2017; 2015; 2021 ] do
+        for edition in
+          [ "Community"
+            "Enterprise"
+            "Professional"
+            "BuildTools" ] do
+          $"C:/Program Files (x86)/Microsoft Visual Studio/{year}/{edition}/MSBuild/Current/Bin/MSBuild.exe"
+    }
+    |> Seq.tryFind File.Exists
+    |> Option.defaultValue "MSBuild.exe"
+
+  eprintfn "Running %s" msBuildPath
+
+  run
+    msBuildPath
+    [ "scripts/milone-lang-win10-msvc/milone-lang-win10-msvc.sln"
+      "-p:Configuration=Release;Platform=x64" ]
+
+  printfn "Generated scripts/milone-lang-win10-msvc/target/x64-Release-bin/milone.exe"
+
 [<EntryPoint>]
 let main argv =
   match Array.toList argv with
@@ -285,6 +354,8 @@ let main argv =
   | "tests" :: _ -> commandTests ()
   | "--build-run-tests" :: args -> commandTestsBuild args
   | "--summarize-tests" :: args -> commandTestsSummarize args
+
+  | "windows" :: _ -> commandWindows ()
 
   | _ ->
     eprintfn "unknown target: %A" argv

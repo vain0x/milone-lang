@@ -1,0 +1,7 @@
+#!/bin/sh
+# Build milone binary on Windows.
+
+set -eu
+
+MILONE_HOME=$PWD PATH=$PWD/bin:$PATH \
+    dotnet run -p scripts/MyBuildTool windows
