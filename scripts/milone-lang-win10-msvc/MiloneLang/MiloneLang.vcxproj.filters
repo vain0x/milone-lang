@@ -18,7 +18,7 @@
     <ClCompile Include="..\..\..\runtime\milone.c">
       <Filter>ソース ファイル</Filter>
     </ClCompile>
-    <ClCompile Include="..\..\..\target\gen2\MiloneLang.c">
+    <ClCompile Include="..\..\..\runtime\milone_platform.c">
       <Filter>ソース ファイル</Filter>
     </ClCompile>
   </ItemGroup>
