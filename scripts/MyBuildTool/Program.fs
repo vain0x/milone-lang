@@ -49,6 +49,7 @@ rule link_objs_to_exe
 build runtime/milone.o: $
   compile_c_to_obj $
     runtime/milone.c $
+    runtime/milone_platform.c $
     | runtime/milone.h
 """
 
