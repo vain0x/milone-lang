@@ -74,15 +74,7 @@ cd milone-lang
 
 # ---- BUILD ----
 
-# Build milone-lang compiler to C code.
-mkdir -p target/gen2
-MILONE_HOME=$PWD dotnet run -p MiloneLang --target-dir target/gen2 -- compile MiloneLang
-
-# Build for executable.
-# Remark: MSBuild.exe is not in PATH by default.
-#         If you don't know what to do about this,
-#         just open the solution with Visual Studio to build instead.
-MSBuild.exe 'scripts/milone-lang-win10-msvc/milone-lang-win10-msvc.sln' '-p:Configuration=Release;Platform=x64'
+scripts/build-milone-windows
 
 # ---- INSTALL ----
 
