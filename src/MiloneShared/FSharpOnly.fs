@@ -12,6 +12,13 @@ let __stringLengthInUtf8Bytes (s: string) : int =
 /// Only for debugging.
 let __trace (s: string) : unit = eprintf "%s" (s + "\n")
 
+/// Only for debugging.
+let __context (info: obj) (action: unit -> 'A) : 'A =
+  try
+    action ()
+  with
+  | ex -> raise (exn (sprintf "%O" info, ex))
+
 // -----------------------------------------------
 // Concurrency
 // -----------------------------------------------
