@@ -847,16 +847,20 @@ let private parseExpr basePos (tokens, errors) : PR<AExpr> = parseAscribe basePo
 // Parse block expressions
 // -----------------------------------------------
 
-let private parseParenBody basePos _parenPos (tokens, errors) : PR<AExpr> =
-  // NOTE: Parens should form a layout block but not for now.
-  //  If does, `(` in `xs |> List.map (fun x -> body)` unexpectedly requires
-  //  `body` to be deeper than it. This is one of flaws of the simplified layout rule.
-  let body, tokens, errors = parseExpr basePos (tokens, errors)
+let private parseParenBody _basePos parenPos (tokens, errors) : PR<AExpr> =
+  let stmts, tokens, errors = parseItems (tokens, errors)
+
+  let body, tokens, errors =
+    match splitLast stmts with
+    | Some ([], expr) -> expr, tokens, errors
+    | Some (stmts, last) -> ASemiExpr(stmts, last, parenPos), tokens, errors
+    | None -> parseExprError "Expected an expression" (tokens, errors)
+
   let tokens, errors = (tokens, errors) |> expectRightParen
   body, tokens, errors
 
-let private parseList basePos bracketPos (tokens, errors) : PR<AExpr> =
-  let items, tokens, errors = parseItems basePos (tokens, errors)
+let private parseList _basePos bracketPos (tokens, errors) : PR<AExpr> =
+  let items, tokens, errors = parseItems (tokens, errors)
   let tokens, errors = (tokens, errors) |> expectRightBracket
   AListExpr(items, bracketPos), tokens, errors
 
@@ -1155,7 +1159,7 @@ let private parseStmt basePos (tokens, errors) : PR<AExpr> =
 /// except ones preceded by semicolon.
 ///
 /// Returns last and non-last statements in reversed order.
-let private doParseStmts basePos (tokens, errors) : PR<(AExpr * AExpr list) option> =
+let private doParseStmts last alignPos (tokens, errors) : PR<AExpr * AExpr list> =
   let rec go i last acc alignPos (tokens, errors) =
     assert (i < 100100100)
 
@@ -1171,15 +1175,9 @@ let private doParseStmts basePos (tokens, errors) : PR<(AExpr * AExpr list) opti
       let expr, tokens, errors = parseStmt alignPos (tokens, errors)
       go (i + 1) expr (last :: acc) alignPos (tokens, errors)
 
-    | _ -> Some(last, acc), tokens, errors
+    | _ -> (last, acc), tokens, errors
 
-  let alignPos = nextPos tokens
-
-  if posInside basePos alignPos && leadsExpr tokens then
-    let first, tokens, errors = parseStmt alignPos (tokens, errors)
-    go 0 first [] alignPos (tokens, errors)
-  else
-    None, tokens, errors
+  go 0 last [] alignPos (tokens, errors)
 
 /// Parses a sequence of expressions separated by `;`s
 /// or aligned on the same column.
@@ -1189,18 +1187,30 @@ let private doParseStmts basePos (tokens, errors) : PR<(AExpr * AExpr list) opti
 /// `stmts = stmt ( ';' stmt )*`
 let private parseSemi basePos mainPos (tokens, errors) : PR<AExpr> =
   let basePos = nextPos tokens |> posMax basePos
-  let contents, tokens, errors = doParseStmts basePos (tokens, errors)
+  let alignPos = nextPos tokens
 
-  match contents with
-  | None -> parseExprError "Expected statements" (tokens, errors)
-  | Some (last, acc) -> ASemiExpr(List.rev acc, last, mainPos), tokens, errors
+  if posInside basePos alignPos && leadsExpr tokens then
+    let first, tokens, errors = parseStmt alignPos (tokens, errors)
 
-let private parseItems basePos (tokens, errors) : PR<AExpr list> =
-  let contents, tokens, errors = doParseStmts basePos (tokens, errors)
+    let (last, acc), tokens, errors =
+      doParseStmts first alignPos (tokens, errors)
 
-  match contents with
-  | Some (last, acc) -> List.rev (last :: acc), tokens, errors
-  | None -> [], tokens, errors
+    ASemiExpr(List.rev acc, last, mainPos), tokens, errors
+  else
+    parseExprError "Expected statements" (tokens, errors)
+
+let private parseItems (tokens, errors) : PR<AExpr list> =
+  let alignPos = nextPos tokens
+
+  if leadsExpr tokens then
+    let first, tokens, errors = parseStmt alignPos (tokens, errors)
+
+    let (last, acc), tokens, errors =
+      doParseStmts first alignPos (tokens, errors)
+
+    List.rev (last :: acc), tokens, errors
+  else
+    [], tokens, errors
 
 // -----------------------------------------------
 // Parse declarations
