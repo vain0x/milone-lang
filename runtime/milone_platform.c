@@ -16,9 +16,9 @@
 #else
 
 #define MILONE_PLATFORM_UNIX 1
-#include <sys/stat.h> // for mkdir
+#include <sys/stat.h>
 #include <sys/types.h>
-#include <unistd.h> // for exec
+#include <unistd.h>
 #endif              // defined(_MSC_VER)
 
 // -----------------------------------------------
@@ -30,12 +30,24 @@ _Noreturn static void failwith(char const *msg) {
     exit(1);
 }
 
+static bool path_is_absolute(struct String path) {
+#if defined(MILONE_PLATFORM_UNIX)
+    return path.len >= 1 && *path.str == '/';
+#elif defined(MILONE_PLATFORM_WINDOWS)
+    // FIXME: support UNC style path
+    return (path.len >= 1 && *path.str == '/') ||
+           (path.len >= 2 && path.str[1] == ':');
+#else
+#error no platform
+#endif
+}
+
 // Prepend `base_path` as prefix to the path if it's relative.
 // For absolute path, just return `path`.
 static struct String path_join(struct String base_path, struct String path) {
-    assert(base_path.len >= 1 && *base_path.str == '/');
+    assert(path_is_absolute(base_path));
 
-    if (path.len >= 1 && *path.str == '/') {
+    if (path_is_absolute(path)) {
         return path;
     }
 
@@ -130,6 +142,20 @@ static struct String os_string_to(struct OsString s) {
 #endif // windows
 
 // -----------------------------------------------
+// misc
+// -----------------------------------------------
+
+struct String milone_get_platform(void) {
+#if defined(MILONE_PLATFORM_UNIX)
+    return str_borrow("unix");
+#elif defined(MILONE_PLATFORM_WINDOWS)
+    return str_borrow("windows");
+#else
+#error no platform
+#endif
+}
+
+// -----------------------------------------------
 // file IO
 // -----------------------------------------------
 
@@ -147,7 +173,7 @@ static struct String milone_platform_normalize_path_sep(struct String path) {
     }
     return (struct String){.str = buf, .len = path.len};
 #else
-#error "no platform"
+#error no platform
 #endif
 }
 
@@ -160,7 +186,7 @@ static bool milone_platform_create_single_directory(struct String dir) {
     return CreateDirectoryW(d.str, NULL) != 0 ||
            GetLastError() == ERROR_ALREADY_EXISTS;
 #else
-#error "no platform"
+#error no platform
 #endif
 }
 
@@ -217,6 +243,127 @@ bool dir_create(struct String dir, struct String base_dir) {
 // processes
 // -----------------------------------------------
 
+struct StringCons {
+    struct String head;
+    struct StringCons const *tail;
+};
+
+#if defined(MILONE_PLATFORM_UNIX)
+
+// pass
+
+#elif defined(MILONE_PLATFORM_WINDOWS)
+
+// Combine command and args into single command line string.
+// Write to buf.
+static void build_cmdline(struct String command, struct StringCons const *args,
+                          char *buf, size_t buf_size) {
+    size_t total_len = command.len + 2;
+    {
+        struct StringCons const *a = args;
+        while (a != NULL) {
+            total_len += a->head.len + 3;
+            a = a->tail;
+        }
+    }
+    if (buf_size <= total_len) {
+        fprintf(stderr, "error: command line too long\n");
+        exit(1);
+    }
+
+    size_t i = 0;
+    buf[i] = '"';
+    i++;
+
+    strncpy(&buf[i], command.str, (size_t)command.len);
+    i += command.len;
+
+    buf[i] = '"';
+    i++;
+
+    {
+        struct StringCons const *a = args;
+        while (a != NULL) {
+            buf[i] = ' ';
+            i++;
+
+            buf[i] = '"';
+            i++;
+
+            strncpy(&buf[i], a->head.str, a->head.len);
+            i += a->head.len;
+
+            buf[i] = '"';
+            i++;
+
+            a = a->tail;
+        }
+    }
+
+    assert(i == total_len);
+    buf[i] = '\0';
+}
+
+static void milone_subprocess_run_windows(struct String cmdline, int *code) {
+    PROCESS_INFORMATION process_info = {NULL};
+    STARTUPINFO start_info = {sizeof(STARTUPINFO)};
+
+    BOOL ok = CreateProcessW(
+        // application name: null to use command line
+        NULL,
+        // command line
+        (LPWSTR)os_string_of(cmdline).str,
+        // process security attributes
+        NULL,
+        // primary thread security attributes
+        NULL,
+        // inherit handles
+        TRUE,
+        // creation flags
+        0,
+        // used environment
+        NULL,
+        // working directory: null to use parent's current directory
+        NULL, &start_info, &process_info);
+    if (!ok) {
+        fprintf(stderr, "error: CreateProcess %d\n", (int)GetLastError());
+        exit(1);
+    }
+
+    WaitForSingleObject(process_info.hProcess, INFINITE);
+
+    DWORD exit_code = 0;
+    ok = GetExitCodeProcess(process_info.hProcess, &exit_code);
+    assert(ok && "GetExitCodeProcess");
+    *code = (int)exit_code;
+
+    CloseHandle(process_info.hProcess);
+    CloseHandle(process_info.hThread);
+}
+
+#endif
+
+// Run a subprocess and wait for exit.
+// Return exit code.
+int milone_subprocess_run(struct String command,
+                          struct StringCons const *args) {
+#if defined(MILONE_PLATFORM_UNIX)
+    // FIXME: implement
+    fprintf(stderr, "ERROR: subprocess not implemented on Unix.\n");
+    exit(1);
+#elif defined(MILONE_PLATFORM_WINDOWS)
+    char buf[8000] = "";
+    build_cmdline(command, args, buf, sizeof(buf));
+    struct String cmdline = str_borrow(buf);
+
+    int code;
+    milone_subprocess_run_windows(cmdline, &code);
+    return code;
+#else
+#error no platform
+#endif
+}
+
 // Turn current process into a shell to execute a command.
 void execute_into(struct String cmd) {
 #if defined(MILONE_PLATFORM_UNIX)
@@ -233,6 +380,6 @@ void execute_into(struct String cmd) {
     fprintf(stdout, "Please execute: %s\n", str_to_c_str(cmd));
     exit(0);
 #else
-#error "no platform"
+#error no platform
 #endif
 }

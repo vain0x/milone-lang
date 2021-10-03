@@ -26,6 +26,7 @@ module TMap = MiloneStd.StdMap
 module TSet = MiloneStd.StdSet
 module Typing = MiloneSyntax.Typing
 module SyntaxApi = MiloneSyntax.SyntaxApi
+module PW = MiloneCli.PlatformWindows
 
 let private currentVersion () = "0.3.0"
 
@@ -100,6 +101,11 @@ type Verbosity =
   | Profile of Profiler
   | Quiet
 
+[<RequireQualifiedAccess; NoEquality; NoComparison>]
+type Platform =
+  | Unix
+  | Windows
+
 /// Abstraction layer of CLI program.
 [<NoEquality; NoComparison>]
 type CliHost =
@@ -115,11 +121,15 @@ type CliHost =
     /// Path to milone home (installation directory).
     MiloneHome: string
 
+    Platform: Platform
+
     /// Creates a profiler.
     ProfileInit: unit -> Profiler
 
     /// Prints a message to stderr for profiling.
     ProfileLog: string -> Profiler -> unit
+
+    NewGuid: unit -> string
 
     /// Ensures directory exist.
     ///
@@ -134,6 +144,11 @@ type CliHost =
 
     /// Writes to standard output.
     WriteStdout: string -> unit
+
+    /// Runs a subprocess and waits for exit. Returns exit code.
+    ///
+    /// (Pipes are inherited.)
+    RunCommand: string -> string list -> int
 
     /// Turns this process into a shell that runs specified command.
     ExecuteInto: string -> unit }
@@ -652,7 +667,7 @@ type BuildOptions =
     TargetDir: string
     Verbosity: Verbosity }
 
-let private cliBuild (host: CliHost) (options: BuildOptions) =
+let private buildOnUnix (host: CliHost) (options: BuildOptions) =
   let miloneHome = hostToMiloneHome host
   let projectDir = options.ProjectDir
   let targetDir = options.TargetDir
@@ -779,7 +794,7 @@ rule link
     host.FileWriteAllText ninjaFile (build |> List.rev |> S.concat "")
     0
 
-let private cliRun (host: CliHost) (options: BuildOptions) (restArgs: string list) =
+let private runOnUnix (host: CliHost) (options: BuildOptions) (restArgs: string list) =
   let projectDir = options.ProjectDir
   let targetDir = options.TargetDir
   let ninjaFile = targetDir + "/build.ninja"
@@ -817,6 +832,125 @@ let private cliRun (host: CliHost) (options: BuildOptions) (restArgs: string lis
     )
 
     1
+
+let private writeCFiles (host: CliHost) (targetDir: string) (cFiles: (string * string) list) : unit =
+  let ok = host.DirCreate host.WorkDir targetDir
+
+  if not ok then
+    printfn "error: Couldn't create target dir: %s." targetDir
+    exit 1
+
+  List.fold (fun () (name, contents) -> host.FileWriteAllText(targetDir + "/" + name) contents) () cFiles
+
+let private cliBuild (host: CliHost) (options: BuildOptions) =
+  match host.Platform with
+  | Platform.Unix -> buildOnUnix host options
+
+  | Platform.Windows ->
+    let miloneHome = hostToMiloneHome host
+
+    let ctx =
+      compileCtxNew host options.Verbosity options.ProjectDir
+
+    match compile ctx with
+    | CompileError output ->
+      host.WriteStdout output
+      1
+
+    | CompileOk cFiles ->
+      writeCFiles host options.TargetDir cFiles
+
+      let p: PW.BuildOnWindowsParams =
+        { ProjectName = ctx.EntryProjectName
+
+          CFiles =
+            cFiles
+            |> List.map (fun (fileName, _) -> Path fileName)
+
+          OutputName = ctx.EntryProjectName
+          MiloneHome = Path miloneHome
+          TargetDir = Path options.TargetDir
+
+          NewGuid = fun () -> PW.Guid(host.NewGuid())
+
+          DirCreate =
+            fun dirPath ->
+              let ok =
+                host.DirCreate host.WorkDir (Path.toString dirPath)
+
+              if not ok then
+                printfn "error: couldn't create directory at %s" (Path.toString dirPath)
+                exit 1
+
+          FileWrite = fun filePath contents -> host.FileWriteAllText(Path.toString filePath) contents
+
+          RunCommand =
+            fun command args ->
+              let code =
+                host.RunCommand(Path.toString command) args
+
+              if code <> 0 then
+                printfn "error: subprocess '%s' exited in code %d" (Path.toString command) code
+                exit code }
+
+      PW.buildOnWindows p
+      0
+
+let private cliRun (host: CliHost) (options: BuildOptions) (restArgs: string list) =
+  match host.Platform with
+  | Platform.Unix -> runOnUnix host options restArgs
+
+  | Platform.Windows ->
+    let miloneHome = hostToMiloneHome host
+
+    let ctx =
+      compileCtxNew host options.Verbosity options.ProjectDir
+
+    match compile ctx with
+    | CompileError output ->
+      host.WriteStdout output
+      1
+
+    | CompileOk cFiles ->
+      writeCFiles host options.TargetDir cFiles
+
+      let p: PW.RunOnWindowsParams =
+        { ProjectName = ctx.EntryProjectName
+
+          CFiles =
+            cFiles
+            |> List.map (fun (fileName, _) -> Path fileName)
+
+          OutputName = ctx.EntryProjectName
+          MiloneHome = Path miloneHome
+          TargetDir = Path options.TargetDir
+
+          NewGuid = fun () -> PW.Guid(host.NewGuid())
+
+          DirCreate =
+            fun dirPath ->
+              let ok =
+                host.DirCreate host.WorkDir (Path.toString dirPath)
+
+              if not ok then
+                printfn "error: couldn't create directory at %s" (Path.toString dirPath)
+                exit 1
+
+          FileWrite = fun filePath contents -> host.FileWriteAllText(Path.toString filePath) contents
+
+          RunCommand =
+            fun command args ->
+              let code =
+                host.RunCommand(Path.toString command) args
+
+              if code <> 0 then
+                printfn "error: subprocess '%s' exited in code %d" (Path.toString command) code
+                exit code
+
+          Args = restArgs }
+
+      PW.runOnWindows p
+      0
 
 // -----------------------------------------------
 // Arg parsing

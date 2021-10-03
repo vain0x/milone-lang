@@ -3,6 +3,11 @@ module rec MiloneCli.Program
 
 open MiloneCli.Cli
 
+let private getPlatform () : Platform =
+  match System.Environment.OSVersion.Platform with
+  | System.PlatformID.Win32NT -> Platform.Windows
+  | _ -> Platform.Unix
+
 let private dirCreate (baseDir: string) (dir: string) =
   try
     let dir = System.IO.Path.Combine(baseDir, dir)
@@ -36,6 +41,13 @@ let private writeFile (filePath: string) (contents: string) : unit =
   with
   | err -> eprintfn "Couldn't write to file '%s'. '%s'" filePath err.Message
 
+let private runCommand (command: string) (args: string list) : int =
+  let p =
+    System.Diagnostics.Process.Start(command, args)
+
+  p.WaitForExit()
+  p.ExitCode
+
 let private executeInto (cmd: string) : unit =
   try
     let p =
@@ -43,7 +55,9 @@ let private executeInto (cmd: string) : unit =
 
     p.WaitForExit()
   with
-  | err -> eprintfn "Couldn't execute into: '%s'. '%s'" cmd err.Message
+  | _ ->
+    eprintfn "error: executeInto '%s'" cmd
+    reraise ()
 
 let dotnetCliHost () : CliHost =
   let args =
@@ -62,12 +76,15 @@ let dotnetCliHost () : CliHost =
     WorkDir = System.Environment.CurrentDirectory
     Home = home
     MiloneHome = miloneHome
+    Platform = getPlatform ()
     ProfileInit = profileInit
     ProfileLog = profileLog
+    NewGuid = fun () -> System.Guid.NewGuid().ToString()
     DirCreate = dirCreate
     FileReadAllText = readFile
     FileWriteAllText = writeFile
     WriteStdout = printf "%s"
+    RunCommand = runCommand
     ExecuteInto = executeInto }
 
 [<EntryPoint>]
