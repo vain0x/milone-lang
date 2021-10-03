@@ -476,7 +476,7 @@ let private cliBuild (host: CliHost) (options: BuildOptions) =
       writeCFiles host targetDir cFiles
 
       let exeFile =
-        Path(targetDir + ctx.EntryProjectName + ".exe")
+        Path(targetDir + "/" + ctx.EntryProjectName + ".exe")
 
       let p: PU.BuildOnUnixParams =
         { TargetDir = Path options.TargetDir
@@ -542,7 +542,7 @@ let private cliRun (host: CliHost) (options: BuildOptions) (restArgs: string lis
       writeCFiles host targetDir cFiles
 
       let exeFile =
-        Path(targetDir + ctx.EntryProjectName + ".exe")
+        Path(targetDir + "/" + ctx.EntryProjectName + ".exe")
 
       let p: PU.RunOnUnixParams =
         { TargetDir = Path options.TargetDir

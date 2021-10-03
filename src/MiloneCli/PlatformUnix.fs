@@ -11,13 +11,13 @@ module S = MiloneStd.StdString
 
 let private escapeShellWord (s: string) : string =
   s
-  |> S.replace "\\" "/" // FIXME: path normalization is not a business
+  |> S.replace "\\" "\\\\"
+  |> S.replace "!" "\\!"
   |> S.replace "$" "\\$"
   |> S.replace "'" "\\'"
   |> S.replace "\"" "\\\""
-  |> S.replace " " "\\ "
 
-let private quoteShellWord (s: string) : string = "'" + escapeShellWord s + "'"
+let private quoteShellWord (s: string) : string = "\"" + escapeShellWord s + "\""
 
 // -----------------------------------------------
 // Interface
@@ -93,7 +93,7 @@ let runOnUnix (p: RunOnUnixParams) : unit =
     + quoteShellWord (Path.toString exeFile)
     + (p.Args
        |> List.map (fun arg -> " " + quoteShellWord arg)
-       |> S.concat " ")
+       |> S.concat "")
   )
 
 // -----------------------------------------------
