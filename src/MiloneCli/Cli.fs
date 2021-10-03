@@ -5,7 +5,6 @@ open MiloneShared.SharedTypes
 open MiloneShared.Util
 open MiloneStd.StdPath
 open MiloneSyntax.Syntax
-open MiloneSyntax.Typing
 open MiloneTranslation.AutoBoxing
 open MiloneTranslation.CirDump
 open MiloneTranslation.CirGen
@@ -26,64 +25,33 @@ module TMap = MiloneStd.StdMap
 module TSet = MiloneStd.StdSet
 module Typing = MiloneSyntax.Typing
 module SyntaxApi = MiloneSyntax.SyntaxApi
+module Lower = MiloneCli.Lower
+module PU = MiloneCli.PlatformUnix
 module PW = MiloneCli.PlatformWindows
 
 let private currentVersion () = "0.3.0"
 
 let private helpText () =
-  """milone-lang v"""
-  + currentVersion ()
-  + """ <https://github.com/vain0x/milone-lang>
-
-USAGE:
-    milone <SUBCOMMAND> OPTIONS...
+  let s =
+    """milone v${VERSION}" <https://github.com/vain0x/milone-lang>
 
 EXAMPLE
-    milone compile src/MiloneCli
+
+    # Run a project
+    milone run path/to/MiloneProject
+
+    # Build a project
+    milone build path/to/MiloneProject
 
 SUBCOMMANDS
-    milone check <PROJECT-DIR>
-        Checks a milone-lang project.
+    run       Run a project
+    build     Build a project for executable
+    check     Analyze a project
+    compile   Compile a project to C
 
-        Performs syntax validation and type checking
-        but skips code generation.
+See <https://github.com/vain0x/milone-lang/blob/v${VERISON}/docs/cli.md> for details."""
 
-        If error, exits with non-zero code
-        after writing errors to standard output.
-
-    milone compile <PROJECT-DIR>
-        Compiles a milone-lang project to C.
-
-        If success, writes generated C codes to STDOUT
-        and exits with zero.
-
-        If error, exits with non-zero code.
-        Errors are written to STDOUT. (FIXME: use STDERR)
-
-EXPERIMENTAL features
-    milone build <PROJECT-DIR>
-        Builds a milone-lang project to C & build.ninja
-        so that you can make an executable with ninja easily.
-
-        --target-dir <DIR>  Output directory.
-                            (Defaults to target/<PROJECT-NAME>)
-
-    milone run <PROJECT-DIR> [-- ARGS...]
-        Runs a milone-lang project.
-        (Requirements: gcc and ninja.)
-
-        --target-dir <DIR>  Output/build directory.
-                            (Defaults to target/<PROJECT-NAME>)
-
-OPTIONS
-    -h, --help      Print help text.
-    -V, --version   Print compiler version.
-
-GLOBAL OPTIONS
-    -v, --verbose   Enable verbose logging for debug
-        --profile   Enable profile logging
-    -q, --quiet     Disable logging
-        --parallel  Enable parallel compilation (experimental)"""
+  s |> S.replace "${VERSION}" (currentVersion ())
 
 // -----------------------------------------------
 // Interface (1)
@@ -186,6 +154,25 @@ let private hostToMiloneHome (host: CliHost) =
 
   SyntaxApi.getMiloneHomeFromEnv getEnv
 
+let private dirCreateOrFail (host: CliHost) (dirPath: Path) : unit =
+  let ok =
+    host.DirCreate host.WorkDir (Path.toString dirPath)
+
+  if not ok then
+    printfn "error: couldn't create directory at %s" (Path.toString dirPath)
+    exit 1
+
+let private fileWrite (host: CliHost) (filePath: Path) (contents: string) : unit =
+  host.FileWriteAllText(Path.toString filePath) contents
+
+let private runCommand (host: CliHost) (command: Path) (args: string list) : unit =
+  let code =
+    host.RunCommand(Path.toString command) args
+
+  if code <> 0 then
+    printfn "error: subprocess '%s' exited in code %d" (Path.toString command) code
+    exit code
+
 // -----------------------------------------------
 // Context
 // -----------------------------------------------
@@ -198,7 +185,6 @@ type CompileCtx =
     EntryProjectName: string
 
     SyntaxCtx: SyntaxApi.SyntaxCtx
-    HeaderOnly: bool
 
     Verbosity: Verbosity
     Host: CliHost }
@@ -221,7 +207,6 @@ let compileCtxNew (host: CliHost) verbosity projectDir : CompileCtx =
   { EntryProjectDir = projectDir
     EntryProjectName = projectName
     SyntaxCtx = syntaxCtx
-    HeaderOnly = false
     Verbosity = verbosity
     Host = host }
 
@@ -242,252 +227,13 @@ let private writeLog (host: CliHost) verbosity msg =
   | Quiet -> ()
 
 // -----------------------------------------------
-// Syntax/semantics data type conversion
-// -----------------------------------------------
-
-let private lowerTk (tk: Tir.Tk) : Hir.Tk =
-  match tk with
-  | Tir.IntTk intFlavor -> Hir.IntTk intFlavor
-  | Tir.FloatTk floatFlavor -> Hir.FloatTk floatFlavor
-  | Tir.BoolTk -> Hir.BoolTk
-  | Tir.CharTk -> Hir.CharTk
-  | Tir.StrTk -> Hir.StrTk
-  | Tir.ObjTk -> Hir.ObjTk
-
-  | Tir.FunTk -> Hir.FunTk
-  | Tir.TupleTk -> Hir.TupleTk
-  | Tir.OptionTk -> Hir.OptionTk
-  | Tir.ListTk -> Hir.ListTk
-
-  | Tir.VoidTk -> Hir.VoidTk
-  | Tir.NativePtrTk isMut -> Hir.NativePtrTk isMut
-  | Tir.NativeFunTk -> Hir.NativeFunTk
-  | Tir.NativeTypeTk code -> Hir.NativeTypeTk code
-
-  | Tir.MetaTk (serial, loc) -> Hir.MetaTk(serial, loc)
-  | Tir.UnionTk serial -> Hir.UnionTk serial
-  | Tir.RecordTk serial -> Hir.RecordTk serial
-
-  | Tir.ErrorTk _
-  | Tir.SynonymTk _ -> unreachable () // Resolved in Typing.
-
-  | Tir.UnresolvedTk _
-  | Tir.UnresolvedVarTk _ -> unreachable () // Resolved in NameRes.
-
-let private lowerTy (ty: Tir.Ty) : Hir.Ty =
-  let (Tir.Ty (tk, tyArgs)) = ty
-  Hir.Ty(lowerTk tk, List.map lowerTy tyArgs)
-
-let private lowerTyScheme (tyScheme: Tir.TyScheme) : Hir.TyScheme =
-  let (Tir.TyScheme (fvs, ty)) = tyScheme
-  Hir.TyScheme(fvs, lowerTy ty)
-
-let private lowerVarSerial (Tir.VarSerial serial) = Hir.VarSerial serial
-let private lowerFunSerial (Tir.FunSerial serial) = Hir.FunSerial serial
-let private lowerVariantSerial (Tir.VariantSerial serial) = Hir.VariantSerial serial
-
-let private lowerVarDef (def: Tir.VarDef) : Hir.VarDef =
-  { Name = def.Name
-    IsStatic = def.IsStatic
-    Linkage = def.Linkage
-    Ty = lowerTy def.Ty
-    Loc = def.Loc }
-
-let private lowerFunDef (def: Tir.FunDef) : Hir.FunDef =
-  { Name = def.Name
-    Arity = def.Arity
-    Ty = lowerTyScheme def.Ty
-    Abi = def.Abi
-    Linkage = def.Linkage
-    ParentOpt = Option.map lowerFunSerial def.ParentOpt
-    Loc = def.Loc }
-
-let private lowerVariantDef (def: Tir.VariantDef) : Hir.VariantDef =
-  { Name = def.Name
-    UnionTySerial = def.UnionTySerial
-    IsNewtype = def.IsNewtype
-    HasPayload = def.HasPayload
-    PayloadTy = lowerTy def.PayloadTy
-    Loc = def.Loc }
-
-let private lowerTyDef (def: Tir.TyDef) : Hir.TyDef =
-  match def with
-  | Tir.UnionTyDef (ident, tyArgs, variants, loc) ->
-    Hir.UnionTyDef(ident, tyArgs, List.map lowerVariantSerial variants, loc)
-  | Tir.RecordTyDef (ident, unimplTyArgs, fields, loc) ->
-    Hir.RecordTyDef(ident, List.map (fun (ident, ty, loc) -> ident, lowerTy ty, loc) fields, loc)
-
-  | Tir.MetaTyDef _
-  | Tir.UniversalTyDef _
-  | Tir.SynonymTyDef _ -> unreachable () // Resolved in Typing.
-
-let private lowerPrim (prim: Tir.TPrim) : Hir.HPrim =
-  match prim with
-  | Tir.TPrim.Not -> Hir.HPrim.Not
-  | Tir.TPrim.Add -> Hir.HPrim.Add
-  | Tir.TPrim.Sub -> Hir.HPrim.Sub
-  | Tir.TPrim.Mul -> Hir.HPrim.Mul
-  | Tir.TPrim.Div -> Hir.HPrim.Div
-  | Tir.TPrim.Modulo -> Hir.HPrim.Modulo
-  | Tir.TPrim.BitAnd -> Hir.HPrim.BitAnd
-  | Tir.TPrim.BitOr -> Hir.HPrim.BitOr
-  | Tir.TPrim.BitXor -> Hir.HPrim.BitXor
-  | Tir.TPrim.LeftShift -> Hir.HPrim.LeftShift
-  | Tir.TPrim.RightShift -> Hir.HPrim.RightShift
-  | Tir.TPrim.Equal -> Hir.HPrim.Equal
-  | Tir.TPrim.Less -> Hir.HPrim.Less
-  | Tir.TPrim.Compare -> Hir.HPrim.Compare
-  | Tir.TPrim.ToInt flavor -> Hir.HPrim.ToInt flavor
-  | Tir.TPrim.ToFloat flavor -> Hir.HPrim.ToFloat flavor
-  | Tir.TPrim.Char -> Hir.HPrim.Char
-  | Tir.TPrim.String -> Hir.HPrim.String
-  | Tir.TPrim.Box -> Hir.HPrim.Box
-  | Tir.TPrim.Unbox -> Hir.HPrim.Unbox
-  | Tir.TPrim.StrLength -> Hir.HPrim.StrLength
-  | Tir.TPrim.OptionNone -> Hir.HPrim.OptionNone
-  | Tir.TPrim.OptionSome -> Hir.HPrim.OptionSome
-  | Tir.TPrim.Nil -> Hir.HPrim.Nil
-  | Tir.TPrim.Cons -> Hir.HPrim.Cons
-  | Tir.TPrim.Exit -> Hir.HPrim.Exit
-  | Tir.TPrim.Assert -> Hir.HPrim.Assert
-  | Tir.TPrim.Printfn -> Hir.HPrim.Printfn
-  | Tir.TPrim.InRegion -> Hir.HPrim.InRegion
-  | Tir.TPrim.NativeCast -> Hir.HPrim.NativeCast
-  | Tir.TPrim.PtrRead -> Hir.HPrim.PtrRead
-  | Tir.TPrim.PtrWrite -> Hir.HPrim.PtrWrite
-
-  | Tir.TPrim.NativeFun
-  | Tir.TPrim.NativeExpr
-  | Tir.TPrim.NativeStmt
-  | Tir.TPrim.NativeDecl
-  | Tir.TPrim.SizeOfVal -> unreachable () // Resolved in Typing.
-
-let private lowerPatKind (kind: Tir.TPatKind) : Hir.HPatKind =
-  match kind with
-  | Tir.TNilPN -> Hir.HNilPN
-  | Tir.TConsPN -> Hir.HConsPN
-  | Tir.TNonePN -> Hir.HNonePN
-  | Tir.TSomeAppPN -> Hir.HSomeAppPN
-  | Tir.TVariantAppPN serial -> Hir.HVariantAppPN(lowerVariantSerial serial)
-  | Tir.TTuplePN -> Hir.HTuplePN
-  | Tir.TAbortPN -> Hir.HAbortPN
-
-  | Tir.TAppPN
-  | Tir.TNavPN _ -> unreachable () // Resolved in NameRes.
-
-  | Tir.TSomePN
-  | Tir.TAscribePN -> unreachable () // Resolved in Typing.
-
-let private lowerExprKind (kind: Tir.TExprKind) : Hir.HExprKind =
-  match kind with
-  | Tir.TAbortEN -> Hir.HAbortEN
-  | Tir.TMinusEN -> Hir.HMinusEN
-  | Tir.TAppEN -> Hir.HAppEN
-  | Tir.TIndexEN -> Hir.HIndexEN
-  | Tir.TSliceEN -> Hir.HSliceEN
-  | Tir.TCallNativeEN funName -> Hir.HCallNativeEN funName
-  | Tir.TTupleEN -> Hir.HTupleEN
-  | Tir.TNativeFunEN funSerial -> Hir.HNativeFunEN(lowerFunSerial funSerial)
-  | Tir.TNativeExprEN code -> Hir.HNativeExprEN code
-  | Tir.TNativeStmtEN code -> Hir.HNativeStmtEN code
-  | Tir.TNativeDeclEN code -> Hir.HNativeDeclEN code
-  | Tir.TSizeOfValEN -> Hir.HSizeOfValEN
-
-  | Tir.TAscribeEN -> unreachable () // Resolved in Typing.
-
-let private lowerPat (pat: Tir.TPat) : Hir.HPat =
-  match pat with
-  | Tir.TLitPat (lit, loc) -> Hir.HLitPat(lit, loc)
-  | Tir.TDiscardPat (ty, loc) -> Hir.HDiscardPat(lowerTy ty, loc)
-  | Tir.TVarPat (vis, varSerial, ty, loc) -> Hir.HVarPat(vis, lowerVarSerial varSerial, lowerTy ty, loc)
-  | Tir.TVariantPat (variantSerial, ty, loc) -> Hir.HVariantPat(lowerVariantSerial variantSerial, lowerTy ty, loc)
-  | Tir.TNodePat (kind, args, ty, loc) -> Hir.HNodePat(lowerPatKind kind, List.map lowerPat args, lowerTy ty, loc)
-  | Tir.TAsPat (body, varSerial, loc) -> Hir.HAsPat(lowerPat body, lowerVarSerial varSerial, loc)
-  | Tir.TOrPat (l, r, loc) -> Hir.HOrPat(lowerPat l, lowerPat r, loc)
-
-let private lowerExpr (expr: Tir.TExpr) : Hir.HExpr =
-  match expr with
-  | Tir.TLitExpr (lit, loc) -> Hir.HLitExpr(lit, loc)
-  | Tir.TVarExpr (varSerial, ty, loc) -> Hir.HVarExpr(lowerVarSerial varSerial, lowerTy ty, loc)
-  | Tir.TFunExpr (funSerial, ty, loc) -> Hir.HFunExpr(lowerFunSerial funSerial, lowerTy ty, [], loc)
-  | Tir.TVariantExpr (variantSerial, ty, loc) -> Hir.HVariantExpr(lowerVariantSerial variantSerial, lowerTy ty, loc)
-  | Tir.TPrimExpr (prim, ty, loc) -> Hir.HPrimExpr(lowerPrim prim, lowerTy ty, loc)
-  | Tir.TRecordExpr (exprOpt, fields, ty, loc) ->
-    Hir.HRecordExpr(
-      Option.map lowerExpr exprOpt,
-      List.map (fun (ident, init, loc) -> ident, lowerExpr init, loc) fields,
-      lowerTy ty,
-      loc
-    )
-  | Tir.TMatchExpr (cond, arms, ty, loc) ->
-    Hir.HMatchExpr(
-      lowerExpr cond,
-      List.map (fun (pat, guard, body) -> lowerPat pat, lowerExpr guard, lowerExpr body) arms,
-      lowerTy ty,
-      loc
-    )
-  | Tir.TNavExpr (l, r, ty, loc) -> Hir.HNavExpr(lowerExpr l, r, lowerTy ty, loc)
-  | Tir.TNodeExpr (kind, args, ty, loc) -> Hir.HNodeExpr(lowerExprKind kind, List.map lowerExpr args, lowerTy ty, loc)
-  | Tir.TBlockExpr (_, stmts, last) -> Hir.HBlockExpr(List.map lowerStmt stmts, lowerExpr last)
-
-let private lowerStmt (stmt: Tir.TStmt) : Hir.HExpr =
-  match stmt with
-  | Tir.TExprStmt expr -> lowerExpr expr
-
-  | Tir.TLetValStmt (pat, init, loc) -> Hir.HLetValExpr(lowerPat pat, lowerExpr init, Hir.hxUnit loc, Hir.tyUnit, loc)
-
-  | Tir.TLetFunStmt (funSerial, isRec, vis, argPats, body, loc) ->
-    Hir.HLetFunExpr(
-      lowerFunSerial funSerial,
-      isRec,
-      vis,
-      List.map lowerPat argPats,
-      lowerExpr body,
-      Hir.hxUnit loc,
-      Hir.tyUnit,
-      loc
-    )
-
-  // These statements are removed. Already used in NameRes.
-  | Tir.TTyDeclStmt _
-  | Tir.TOpenStmt _
-  | Tir.TModuleStmt _
-  | Tir.TModuleSynonymStmt _ -> Hir.hxUnit (Tir.stmtToLoc stmt)
-
-let private lowerModules (modules: Tir.TProgram) : Hir.HProgram =
-  modules
-  |> List.map (fun (p, m, stmts) -> p, m, List.map lowerStmt stmts)
-
-let private lowerTyCtx (tyCtx: Typing.TyCtx) : Hir.TyCtx =
-  { Serial = tyCtx.Serial
-
-    Vars =
-      tyCtx.Vars
-      |> TMap.stableMap (fun serial def -> lowerVarSerial serial, lowerVarDef def) Hir.varSerialCompare
-
-    Funs =
-      tyCtx.Funs
-      |> TMap.stableMap (fun serial def -> lowerFunSerial serial, lowerFunDef def) Hir.funSerialCompare
-
-    Variants =
-      tyCtx.Variants
-      |> TMap.stableMap (fun serial def -> lowerVariantSerial serial, lowerVariantDef def) Hir.variantSerialCompare
-
-    MainFunOpt = tyCtx.MainFunOpt |> Option.map lowerFunSerial
-
-    Tys =
-      tyCtx.Tys
-      |> TMap.map (fun _ def -> lowerTyDef def) }
-
-// -----------------------------------------------
 // Processes
 // -----------------------------------------------
 
 /// Transforms HIR. The result can be converted to MIR.
 let transformHir (host: CliHost) v (modules: Tir.TProgram, tyCtx: Typing.TyCtx) =
   writeLog host v "Lower"
-  let modules = lowerModules modules
-  let tyCtx = lowerTyCtx tyCtx
+  let modules, tyCtx = Lower.lower (modules, tyCtx)
 
   let expr =
     let decls =
@@ -530,7 +276,7 @@ type CodeGenResult = (string * string) list
 
 /// Generates C language codes from transformed HIR,
 /// using mid-level intermediate representation (MIR).
-let codeGenHirViaMir (host: CliHost) v projectName headerOnly (decls, tyCtx) : CodeGenResult =
+let codeGenHirViaMir (host: CliHost) v projectName (decls, tyCtx) : CodeGenResult =
   writeLog host v "Mir"
   let stmts, mirCtx = mirify (decls, tyCtx)
 
@@ -540,9 +286,6 @@ let codeGenHirViaMir (host: CliHost) v projectName headerOnly (decls, tyCtx) : C
   writeLog host v "CirDump"
 
   let output =
-    if headerOnly then
-      failwith "header command is unimplemented"
-
     modules
     |> List.map
          (fun (docId, cir) ->
@@ -579,41 +322,19 @@ let private compile (ctx: CompileCtx) : CompileResult =
   | SyntaxApi.SyntaxAnalysisOk (modules, tyCtx) ->
     let decls, tyCtx = transformHir host v (modules, tyCtx)
 
-    CompileOk(codeGenHirViaMir host v ctx.EntryProjectName ctx.HeaderOnly (decls, tyCtx))
+    CompileOk(codeGenHirViaMir host v ctx.EntryProjectName (decls, tyCtx))
+
+// -----------------------------------------------
+// Others
+// -----------------------------------------------
+
+let private writeCFiles (host: CliHost) (targetDir: string) (cFiles: (string * string) list) : unit =
+  dirCreateOrFail host (Path targetDir)
+  List.fold (fun () (name, contents) -> host.FileWriteAllText(targetDir + "/" + name) contents) () cFiles
 
 // -----------------------------------------------
 // Actions
 // -----------------------------------------------
-
-let cliParse (host: CliHost) v (projectDir: string) = todo ()
-// let ctx = compileCtxNew host v projectDir
-
-// let parseWithLogging moduleName contents =
-//   writeLog
-//     host
-//     v
-//     ("\n-------------\nSyntaxParse %s...\n--------------"
-//      + moduleName)
-
-//   let ast, errors =
-//     contents |> tokenize ctx.TokenizeHost |> parse
-
-//   if errors |> List.isEmpty |> not then
-//     printfn "In %s" moduleName
-
-//     errors
-//     |> List.iter (fun (msg, pos) -> printfn "ERROR: %s %s" (posToString pos) msg)
-
-//   match v with
-//   | Verbose -> printfn "%s" (objToString ast)
-//   | _ -> ()
-
-//   ast, errors
-
-// bundleProgram (ctx |> toBundleHost parseWithLogging) ctx.ProjectName
-// |> ignore
-
-// 0
 
 let cliCheck (host: CliHost) verbosity projectDir =
   let ctx = compileCtxNew host verbosity projectDir
@@ -628,225 +349,66 @@ let cliCheck (host: CliHost) verbosity projectDir =
 type CompileOptions =
   { ProjectDir: string
     TargetDir: string
-    HeaderOnly: bool
     Verbosity: Verbosity }
 
 let cliCompile (host: CliHost) (options: CompileOptions) =
   let ctx =
     compileCtxNew host options.Verbosity options.ProjectDir
 
-  let ctx =
-    { ctx with
-        HeaderOnly = options.HeaderOnly }
-
-  let result = compile ctx
-
-  match result with
-  | CompileOk files ->
-    let ok =
-      host.DirCreate host.WorkDir options.TargetDir
-
-    if not ok then
-      printfn "error: Couldn't create target dir: %s." options.TargetDir
-      exit 1
-
-    List.fold
-      (fun () (name, contents) ->
-        printfn "%s" name
-        host.FileWriteAllText(options.TargetDir + "/" + name) contents)
-      ()
-      files
-
-    0
-
+  match compile ctx with
   | CompileError output ->
     host.WriteStdout output
     1
 
-[<RequireQualifiedAccess; NoEquality; NoComparison>]
+  | CompileOk cFiles ->
+    let targetDir = options.TargetDir
+
+    dirCreateOrFail host (Path targetDir)
+    writeCFiles host targetDir cFiles
+
+    cFiles
+    |> List.map (fun (name, _) -> options.TargetDir + "/" + name + "\n")
+    |> S.concat ""
+    |> host.WriteStdout
+
+    0
+
 type BuildOptions =
   { ProjectDir: string
     TargetDir: string
     Verbosity: Verbosity }
 
-let private buildOnUnix (host: CliHost) (options: BuildOptions) =
-  let miloneHome = hostToMiloneHome host
-  let projectDir = options.ProjectDir
-  let targetDir = options.TargetDir
-  let ninjaFile = targetDir + "/build.ninja"
-
-  let build =
-    let rules =
-      """
-rule false
-  description = false $out
-  command = false
-
-rule cc
-  description = cc $in
-  command = $${CC:-gcc} -std=c11 -O1 -g -c $include_flag $in -o $out
-
-rule link
-  description = link $out
-  command = $${CC:-gcc} $in -o $out"""
-
-    []
-    |> cons "# Generated by 'milone build'.\n"
-    |> cons "builddir = "
-    |> cons targetDir
-    |> cons "\n"
-    |> cons "include_flag = -I"
-    |> cons miloneHome
-    |> cons "/runtime\n"
-    |> cons rules
-    |> cons "\n\n"
-    |> cons "build "
-    |> cons miloneHome
-    |> cons "/runtime/milone.o: cc "
-    |> cons miloneHome
-    |> cons "/runtime/milone.c | "
-    |> cons miloneHome
-    |> cons "/runtime/milone.h"
-    |> cons "\n\n"
-    |> cons "build "
-    |> cons miloneHome
-    |> cons "/runtime/milone_platform.o: cc "
-    |> cons miloneHome
-    |> cons "/runtime/milone_platform.c | "
-    |> cons miloneHome
-    |> cons "/runtime/milone.h"
-    |> cons "\n\n"
-
-  let ctx =
-    compileCtxNew host options.Verbosity projectDir
-
-  let exeFile =
-    targetDir + "/" + ctx.EntryProjectName + ".exe"
-
-  let ok = host.DirCreate host.WorkDir targetDir
-
-  if not ok then
-    printfn "error: Couldn't create target dir: %s." targetDir
-    exit 1
-
-  match compile ctx with
-  | CompileError output ->
-    host.WriteStdout output
-
-    let build =
-      build
-      |> cons "build "
-      |> cons exeFile
-      |> cons ": false\ndefault "
-      |> cons exeFile
-      |> cons "\n"
-
-    host.FileWriteAllText ninjaFile (build |> List.rev |> S.concat "")
-    1
-
-  | CompileOk files ->
-    let miloneObj = miloneHome + "/runtime/milone.o"
-
-    let milonePlatformObj =
-      miloneHome + "/runtime/milone_platform.o"
-
-    let miloneHeader = miloneHome + "/runtime/milone.h"
-
-    let cFile name = [ targetDir; "/"; name ] |> S.concat ""
-
-    let objFile name =
-      [ targetDir
-        "/"
-        pathStrToStem name
-        ".o" ]
-      |> S.concat ""
-
-    let build =
-      List.fold
-        (fun build (name, contents) ->
-          host.FileWriteAllText(targetDir + "/" + name) contents
-
-          build
-          |> cons "build "
-          |> cons (objFile name)
-          |> cons ": cc "
-          |> cons (cFile name)
-          |> cons " | "
-          |> cons miloneHeader
-          |> cons "\n\n")
-        build
-        files
-
-    let build =
-      build
-      |> cons "build "
-      |> cons exeFile
-      |> cons ": link "
-      |> cons miloneObj
-      |> cons " "
-      |> cons milonePlatformObj
-      |> cons " "
-      |> cons (
-        files
-        |> List.map (fun (name, _) -> objFile name)
-        |> S.concat " "
-      )
-      |> cons "\n"
-
-    host.FileWriteAllText ninjaFile (build |> List.rev |> S.concat "")
-    0
-
-let private runOnUnix (host: CliHost) (options: BuildOptions) (restArgs: string list) =
-  let projectDir = options.ProjectDir
-  let targetDir = options.TargetDir
-  let ninjaFile = targetDir + "/build.ninja"
-
-  let exeFile =
-    let ctx =
-      compileCtxNew host options.Verbosity projectDir
-
-    targetDir + "/" + ctx.EntryProjectName + ".exe"
-
-  // FIXME: Escape correctly.
-  let restArgs =
-    let escape (s: string) =
-      s
-      |> S.replace "\\" "/"
-      |> S.replace "$" "\\$"
-      |> S.replace "'" "\\'"
-      |> S.replace "\"" "\\\""
-      |> S.replace " " "\\ "
-
-    restArgs |> List.map escape |> S.concat " "
-
-  let exitCode = cliBuild host options
-
-  if exitCode <> 0 then
-    exitCode
-  else
-    host.ExecuteInto(
-      "ninja -f '"
-      + ninjaFile
-      + "' 1>&2 && '"
-      + exeFile
-      + "' "
-      + restArgs
-    )
-
-    1
-
-let private writeCFiles (host: CliHost) (targetDir: string) (cFiles: (string * string) list) : unit =
-  let ok = host.DirCreate host.WorkDir targetDir
-
-  if not ok then
-    printfn "error: Couldn't create target dir: %s." targetDir
-    exit 1
-
-  List.fold (fun () (name, contents) -> host.FileWriteAllText(targetDir + "/" + name) contents) () cFiles
-
 let private cliBuild (host: CliHost) (options: BuildOptions) =
   match host.Platform with
-  | Platform.Unix -> buildOnUnix host options
+  | Platform.Unix ->
+    let ctx =
+      compileCtxNew host options.Verbosity options.ProjectDir
+
+    match compile ctx with
+    | CompileError output ->
+      host.WriteStdout output
+      1
+
+    | CompileOk cFiles ->
+      let targetDir = options.TargetDir
+      let miloneHome = Path(hostToMiloneHome host)
+
+      writeCFiles host targetDir cFiles
+
+      let exeFile =
+        Path(targetDir + "/" + ctx.EntryProjectName + ".exe")
+
+      let p: PU.BuildOnUnixParams =
+        { TargetDir = Path options.TargetDir
+          ExeFile = exeFile
+          CFiles = List.map (fun (name, _) -> Path name) cFiles
+          MiloneHome = miloneHome
+          DirCreate = dirCreateOrFail host
+          FileWrite = fileWrite host
+          ExecuteInto = host.ExecuteInto }
+
+      PU.buildOnUnix p
+      unreachable ()
 
   | Platform.Windows ->
     let miloneHome = hostToMiloneHome host
@@ -864,45 +426,52 @@ let private cliBuild (host: CliHost) (options: BuildOptions) =
 
       let p: PW.BuildOnWindowsParams =
         { ProjectName = ctx.EntryProjectName
-
-          CFiles =
-            cFiles
-            |> List.map (fun (fileName, _) -> Path fileName)
-
+          CFiles = cFiles |> List.map (fun (name, _) -> Path name)
           OutputName = ctx.EntryProjectName
           MiloneHome = Path miloneHome
           TargetDir = Path options.TargetDir
 
           NewGuid = fun () -> PW.Guid(host.NewGuid())
-
-          DirCreate =
-            fun dirPath ->
-              let ok =
-                host.DirCreate host.WorkDir (Path.toString dirPath)
-
-              if not ok then
-                printfn "error: couldn't create directory at %s" (Path.toString dirPath)
-                exit 1
-
+          DirCreate = dirCreateOrFail host
           FileExists = fun filePath -> host.FileExists(Path.toString filePath)
-
-          FileWrite = fun filePath contents -> host.FileWriteAllText(Path.toString filePath) contents
-
-          RunCommand =
-            fun command args ->
-              let code =
-                host.RunCommand(Path.toString command) args
-
-              if code <> 0 then
-                printfn "error: subprocess '%s' exited in code %d" (Path.toString command) code
-                exit code }
+          FileWrite = fileWrite host
+          RunCommand = runCommand host }
 
       PW.buildOnWindows p
       0
 
 let private cliRun (host: CliHost) (options: BuildOptions) (restArgs: string list) =
   match host.Platform with
-  | Platform.Unix -> runOnUnix host options restArgs
+  | Platform.Unix ->
+    let ctx =
+      compileCtxNew host options.Verbosity options.ProjectDir
+
+    match compile ctx with
+    | CompileError output ->
+      host.WriteStdout output
+      1
+
+    | CompileOk cFiles ->
+      let targetDir = options.TargetDir
+      let miloneHome = Path(hostToMiloneHome host)
+
+      writeCFiles host targetDir cFiles
+
+      let exeFile =
+        Path(targetDir + "/" + ctx.EntryProjectName + ".exe")
+
+      let p: PU.RunOnUnixParams =
+        { TargetDir = Path options.TargetDir
+          ExeFile = exeFile
+          CFiles = List.map (fun (name, _) -> Path name) cFiles
+          MiloneHome = miloneHome
+          Args = restArgs
+          DirCreate = dirCreateOrFail host
+          FileWrite = fileWrite host
+          ExecuteInto = host.ExecuteInto }
+
+      PU.runOnUnix p
+      unreachable ()
 
   | Platform.Windows ->
     let miloneHome = hostToMiloneHome host
@@ -920,38 +489,17 @@ let private cliRun (host: CliHost) (options: BuildOptions) (restArgs: string lis
 
       let p: PW.RunOnWindowsParams =
         { ProjectName = ctx.EntryProjectName
-
-          CFiles =
-            cFiles
-            |> List.map (fun (fileName, _) -> Path fileName)
+          CFiles = cFiles |> List.map (fun (name, _) -> Path name)
 
           OutputName = ctx.EntryProjectName
           MiloneHome = Path miloneHome
           TargetDir = Path options.TargetDir
 
           NewGuid = fun () -> PW.Guid(host.NewGuid())
-
-          DirCreate =
-            fun dirPath ->
-              let ok =
-                host.DirCreate host.WorkDir (Path.toString dirPath)
-
-              if not ok then
-                printfn "error: couldn't create directory at %s" (Path.toString dirPath)
-                exit 1
-
+          DirCreate = dirCreateOrFail host
           FileExists = fun filePath -> host.FileExists(Path.toString filePath)
-
-          FileWrite = fun filePath contents -> host.FileWriteAllText(Path.toString filePath) contents
-
-          RunCommand =
-            fun command args ->
-              let code =
-                host.RunCommand(Path.toString command) args
-
-              if code <> 0 then
-                printfn "error: subprocess '%s' exited in code %d" (Path.toString command) code
-                exit code
+          FileWrite = fileWrite host
+          RunCommand = runCommand host
 
           Args = restArgs }
 
@@ -1051,8 +599,6 @@ type private CliCmd =
   | CheckCmd
   | CompileCmd
   | BuildCmd
-  | HeaderCmd
-  | ParseCmd
   | RunCmd
   | BadCmd of string
 
@@ -1068,23 +614,12 @@ let private parseArgs args =
   | "-V" :: _
   | "--version" :: _ -> VersionCmd, []
 
-  // for backward
-  | "-v" :: _
-  | "-q" :: _
-  | "--profile" :: _ -> CompileCmd, args
-
   | arg :: args ->
     match arg with
     | "build" -> BuildCmd, args
     | "check" -> CheckCmd, args
     | "compile" -> CompileCmd, args
     | "run" -> RunCmd, args
-
-    | "header" -> HeaderCmd, args
-
-    // for debug
-    | "parse" -> ParseCmd, args
-
     | _ -> BadCmd arg, []
 
 // -----------------------------------------------
@@ -1115,23 +650,6 @@ let cli (host: CliHost) =
       printfn "ERROR: Unknown argument: '%s'." arg
       1
 
-  | HeaderCmd, args ->
-    let verbosity, args = parseVerbosity host args
-
-    match args with
-    | projectDir :: _ ->
-      let options: CompileOptions =
-        { ProjectDir = projectDir
-          TargetDir = "."
-          HeaderOnly = true
-          Verbosity = verbosity }
-
-      cliCompile host options
-
-    | [] ->
-      printfn "ERROR: Expected project dir."
-      1
-
   | CompileCmd, args ->
     let args = eatParallelFlag args
     let verbosity, args = parseVerbosity host args
@@ -1144,20 +662,9 @@ let cli (host: CliHost) =
       let options: CompileOptions =
         { ProjectDir = projectDir
           TargetDir = Option.defaultValue (defaultTargetDir projectDir) targetDir
-          HeaderOnly = false
           Verbosity = verbosity }
 
       cliCompile host options
-
-    | [] ->
-      printfn "ERROR: Expected project dir."
-      1
-
-  | ParseCmd, args ->
-    let verbosity, args = parseVerbosity host args
-
-    match args with
-    | projectDir :: _ -> cliParse host verbosity projectDir
 
     | [] ->
       printfn "ERROR: Expected project dir."

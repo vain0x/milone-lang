@@ -4,7 +4,7 @@ type private MyOption<'T> =
   | MyNone
   | MySome of 'T
 
-let private isNone (opt: MyOption<'_>) : bool =
+let private isNone (opt: MyOption<'A>) : bool =
   match opt with
   | MyNone -> true
   | MySome _ -> false
@@ -30,11 +30,11 @@ let private testBasicUsage () =
   assert (unwrap some = 42)
 
 let private testAnotherInstance () =
-  let stringNone : MyOption<string> = MyNone
+  let stringNone: MyOption<string> = MyNone
 
   assert (isNone stringNone)
 
-  let stringSome : MyOption<string> = MySome "hey"
+  let stringSome: MyOption<string> = MySome "hey"
 
   assert (isNone stringSome |> not)
   assert (unwrap stringSome = "hey")

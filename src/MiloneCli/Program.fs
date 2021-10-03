@@ -59,6 +59,8 @@ let private executeInto (cmd: string) : unit =
     eprintfn "error: executeInto '%s'" cmd
     reraise ()
 
+  exit 0
+
 let dotnetCliHost () : CliHost =
   let args =
     System.Environment.GetCommandLineArgs()
