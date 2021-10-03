@@ -647,11 +647,6 @@ let private parseArgs args =
   | "-V" :: _
   | "--version" :: _ -> VersionCmd, []
 
-  // for backward
-  | "-v" :: _
-  | "-q" :: _
-  | "--profile" :: _ -> CompileCmd, args
-
   | arg :: args ->
     match arg with
     | "build" -> BuildCmd, args
