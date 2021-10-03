@@ -9,7 +9,9 @@
     - [#From sources on Linux](#install-from-sources-on-linux)
     - [#From sources on Windows](#install-from-sources-on-windows)
 - [#How it works](#how-it-works)
-- Documentation -> [docs/refs](docs/refs)
+- Documentation
+    - Language -> [docs/refs](docs/refs)
+    - CLI -> [docs/cli.md](docs/cli.md)
 - Examples -> [examples](examples)
 - Internals -> [internals.md](internals.md)
 
@@ -37,9 +39,7 @@ Prerequisites:
 
 - Ubuntu 18.04 (or similar platform)
 - Install [.NET SDK 5](https://dotnet.microsoft.com/download/dotnet/5.0)
-- Install some C11-compliant C compiler, typically either:
-    - GCC 7, or
-    - Clang 6
+- Install GCC 7.5.0
 - Install `busybox`, which is likely pre-installed, by:
     `apt install -y busybox-static`
 
@@ -86,29 +86,6 @@ cp 'scripts/milone-lang-win10-msvc/target/64-Release-bin/milone.exe' $USERPROFIL
 # Copy libraries to it.
 mkdir -p $USERPROFILE/.milone
 cp milone_libs $USERPROFILE/.milone
-```
-
-## How to build a test project
-
-TODO: Write in docs and include in test chain.
-
-These commands build [tests/examples/hello_world](tests/examples/hello_world) project.
-
-```sh
-# Compile to C code.
-milone compile tests/examples/hello_world >hello.c
-
-# Build C code with C compiler.
-# You need to specify include directory (-I)
-# and compile runtime code.
-gcc -std=c11 \
-    -I$HOME/.milone/runtime \
-    $HOME/.milone/runtime/milone.c \
-    hello.c \
-    -o hello
-
-# Execute.
-./hello
 ```
 
 ## Install VSCode Extension
