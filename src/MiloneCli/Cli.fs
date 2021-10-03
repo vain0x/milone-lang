@@ -508,7 +508,7 @@ let transformHir (host: CliHost) v (modules: Tir.TProgram, tyCtx: Typing.TyCtx) 
 
   decls, tyCtx
 
-/// (module name, C code) list
+/// (file name, C code) list
 type CodeGenResult = (string * string) list
 
 /// Generates C language codes from transformed HIR,
