@@ -481,7 +481,7 @@ let private cliBuild (host: CliHost) (options: BuildOptions) =
       let p: PU.BuildOnUnixParams =
         { TargetDir = Path options.TargetDir
           ExeFile = exeFile
-          CFiles = List.map (fun (name, s) -> Path name, s) cFiles
+          CFiles = List.map (fun (name, _) -> Path name) cFiles
           MiloneHome = miloneHome
           DirCreate = dirCreateOrFail host
           FileWrite = fileWrite host
@@ -547,7 +547,7 @@ let private cliRun (host: CliHost) (options: BuildOptions) (restArgs: string lis
       let p: PU.RunOnUnixParams =
         { TargetDir = Path options.TargetDir
           ExeFile = exeFile
-          CFiles = List.map (fun (name, s) -> Path name, s) cFiles
+          CFiles = List.map (fun (name, _) -> Path name) cFiles
           MiloneHome = miloneHome
           Args = restArgs
           DirCreate = dirCreateOrFail host
@@ -573,38 +573,17 @@ let private cliRun (host: CliHost) (options: BuildOptions) (restArgs: string lis
 
       let p: PW.RunOnWindowsParams =
         { ProjectName = ctx.EntryProjectName
-
-          CFiles =
-            cFiles
-            |> List.map (fun (fileName, _) -> Path fileName)
+          CFiles = cFiles |> List.map (fun (name, _) -> Path name)
 
           OutputName = ctx.EntryProjectName
           MiloneHome = Path miloneHome
           TargetDir = Path options.TargetDir
 
           NewGuid = fun () -> PW.Guid(host.NewGuid())
-
-          DirCreate =
-            fun dirPath ->
-              let ok =
-                host.DirCreate host.WorkDir (Path.toString dirPath)
-
-              if not ok then
-                printfn "error: couldn't create directory at %s" (Path.toString dirPath)
-                exit 1
-
+          DirCreate = dirCreateOrFail host
           FileExists = fun filePath -> host.FileExists(Path.toString filePath)
-
-          FileWrite = fun filePath contents -> host.FileWriteAllText(Path.toString filePath) contents
-
-          RunCommand =
-            fun command args ->
-              let code =
-                host.RunCommand(Path.toString command) args
-
-              if code <> 0 then
-                printfn "error: subprocess '%s' exited in code %d" (Path.toString command) code
-                exit code
+          FileWrite = fileWrite host
+          RunCommand = runCommand host
 
           Args = restArgs }
 

@@ -25,7 +25,7 @@ let private quoteShellWord (s: string) : string = "\"" + escapeShellWord s + "\"
 
 [<RequireQualifiedAccess; NoEquality; NoComparison>]
 type BuildOnUnixParams =
-  { CFiles: (Path * string) list
+  { CFiles: Path list
     TargetDir: Path
     ExeFile: Path
     MiloneHome: Path
@@ -55,7 +55,7 @@ let buildOnUnix (p: BuildOnUnixParams) : unit =
 
 [<RequireQualifiedAccess; NoEquality; NoComparison>]
 type RunOnUnixParams =
-  { CFiles: (Path * string) list
+  { CFiles: Path list
     TargetDir: Path
     ExeFile: Path
     MiloneHome: Path
@@ -102,7 +102,7 @@ let runOnUnix (p: RunOnUnixParams) : unit =
 
 type private RenderNinjaFileParams =
   { TargetDir: Path
-    CFiles: (Path * string) list
+    CFiles: Path list
     ExeFile: Path
     MiloneHome: Path }
 
@@ -156,7 +156,7 @@ build $milone_platform_o: cc $milone_platform_c | $milone_h
 
   let build =
     List.fold
-      (fun build (name, _) ->
+      (fun build name ->
         build
         |> cons "build "
         |> cons (objFile name)
@@ -170,11 +170,7 @@ build $milone_platform_o: cc $milone_platform_c | $milone_h
   let build =
     build
     |> cons "build $exe_file: link $milone_o $milone_platform_o "
-    |> cons (
-      p.CFiles
-      |> List.map (fun (name, _) -> objFile name)
-      |> S.concat " "
-    )
+    |> cons (p.CFiles |> List.map objFile |> S.concat " ")
     |> cons "\n"
 
   build |> List.rev |> S.concat ""
