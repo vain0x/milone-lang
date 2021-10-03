@@ -191,6 +191,19 @@ Output:
 
 ----
 
+## Global options
+
+These options works in any subcommands. Currently you want none of them.
+
+```
+    -v, --verbose   Enable verbose logging for debug
+        --profile   Enable profile logging
+    -q, --quiet     Disable logging (default)
+        --parallel  Enable parallel compilation (experimental)
+```
+
+----
+
 ## Requirements
 
 Some of subcommands require something on runtime environment.

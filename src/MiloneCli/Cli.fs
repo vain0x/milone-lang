@@ -32,59 +32,26 @@ module PW = MiloneCli.PlatformWindows
 let private currentVersion () = "0.3.0"
 
 let private helpText () =
-  """milone-lang v"""
-  + currentVersion ()
-  + """ <https://github.com/vain0x/milone-lang>
-
-USAGE:
-    milone <SUBCOMMAND> OPTIONS...
+  let s =
+    """milone v${VERSION}" <https://github.com/vain0x/milone-lang>
 
 EXAMPLE
-    milone compile src/MiloneCli
+
+    # Run a project
+    milone run path/to/MiloneProject
+
+    # Build a project
+    milone build path/to/MiloneProject
 
 SUBCOMMANDS
-    milone check <PROJECT-DIR>
-        Checks a milone-lang project.
+    run       Run a project
+    build     Build a project for executable
+    check     Analyze a project
+    compile   Compile a project to C
 
-        Performs syntax validation and type checking
-        but skips code generation.
+See <https://github.com/vain0x/milone-lang/blob/v${VERISON}/docs/cli.md> for details."""
 
-        If error, exits with non-zero code
-        after writing errors to standard output.
-
-    milone compile <PROJECT-DIR>
-        Compiles a milone-lang project to C.
-
-        If success, writes generated C codes to STDOUT
-        and exits with zero.
-
-        If error, exits with non-zero code.
-        Errors are written to STDOUT. (FIXME: use STDERR)
-
-EXPERIMENTAL features
-    milone build <PROJECT-DIR>
-        Builds a milone-lang project to C & build.ninja
-        so that you can make an executable with ninja easily.
-
-        --target-dir <DIR>  Output directory.
-                            (Defaults to target/<PROJECT-NAME>)
-
-    milone run <PROJECT-DIR> [-- ARGS...]
-        Runs a milone-lang project.
-        (Requirements: gcc and ninja.)
-
-        --target-dir <DIR>  Output/build directory.
-                            (Defaults to target/<PROJECT-NAME>)
-
-OPTIONS
-    -h, --help      Print help text.
-    -V, --version   Print compiler version.
-
-GLOBAL OPTIONS
-    -v, --verbose   Enable verbose logging for debug
-        --profile   Enable profile logging
-    -q, --quiet     Disable logging
-        --parallel  Enable parallel compilation (experimental)"""
+  s |> S.replace "${VERSION}" (currentVersion ())
 
 // -----------------------------------------------
 // Interface (1)
