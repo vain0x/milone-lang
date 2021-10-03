@@ -199,22 +199,6 @@ let __parallelMap (f: 'T -> 'U) (xs: 'T list) : 'U list =
   else
     List.map f xs
 
-// HACK: Force to load DLLs and perhaps do JIT-ing functions.
-//       (With this, AstBundle becomes much faster.)
-let __preLoad () =
-  let rng = System.Random()
-  let next () = lock rng (fun () -> rng.Next())
-
-  mpscConcurrent
-    (fun () a ->
-      eprintf " %d" (a % 10) // Prevent dead code elimination.
-      (), [])
-    (fun () () -> Future.just (next ()))
-    ()
-    [ (); () ]
-
-  eprintfn ""
-
 let __allowParallel () =
   AllowParallel <- true
   eprintf "info: Parallel compilation enabled. "

@@ -79,5 +79,4 @@ let mpscConcurrent
 
 let __parallelMap (f: 'T -> 'U) (xs: 'T list) : 'U list = List.map f xs
 
-let __preLoad () = ()
 let __allowParallel () = ()

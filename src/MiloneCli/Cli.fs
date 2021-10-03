@@ -1021,7 +1021,6 @@ let private parseParallel args =
 let private eatParallelFlag args =
   let ok, args = parseParallel args
   if ok then __allowParallel () // FIXME: avoid global state
-  __preLoad ()
   args
 
 let private parseVerbosity (host: CliHost) args =
