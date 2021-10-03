@@ -358,6 +358,14 @@ let private compile (ctx: CompileCtx) : CompileResult =
     CompileOk(codeGenHirViaMir host v ctx.EntryProjectName (decls, tyCtx))
 
 // -----------------------------------------------
+// Others
+// -----------------------------------------------
+
+let private writeCFiles (host: CliHost) (targetDir: string) (cFiles: (string * string) list) : unit =
+  dirCreateOrFail host (Path targetDir)
+  List.fold (fun () (name, contents) -> host.FileWriteAllText(targetDir + "/" + name) contents) () cFiles
+
+// -----------------------------------------------
 // Actions
 // -----------------------------------------------
 
@@ -410,38 +418,23 @@ let cliCompile (host: CliHost) (options: CompileOptions) =
   let ctx =
     compileCtxNew host options.Verbosity options.ProjectDir
 
-  let result = compile ctx
-
-  match result with
-  | CompileOk files ->
-    let ok =
-      host.DirCreate host.WorkDir options.TargetDir
-
-    if not ok then
-      printfn "error: Couldn't create target dir: %s." options.TargetDir
-      exit 1
-
-    List.fold
-      (fun () (name, contents) ->
-        printfn "%s" name
-        host.FileWriteAllText(options.TargetDir + "/" + name) contents)
-      ()
-      files
-
-    0
-
+  match compile ctx with
   | CompileError output ->
     host.WriteStdout output
     1
 
-let private writeCFiles (host: CliHost) (targetDir: string) (cFiles: (string * string) list) : unit =
-  let ok = host.DirCreate host.WorkDir targetDir
+  | CompileOk cFiles ->
+    let targetDir = options.TargetDir
 
-  if not ok then
-    printfn "error: Couldn't create target dir: %s." targetDir
-    exit 1
+    dirCreateOrFail host (Path targetDir)
+    writeCFiles host targetDir cFiles
 
-  List.fold (fun () (name, contents) -> host.FileWriteAllText(targetDir + "/" + name) contents) () cFiles
+    cFiles
+    |> List.map (fun (name, _) -> options.TargetDir + "/" + name + "\n")
+    |> S.concat ""
+    |> host.WriteStdout
+
+    0
 
 type BuildOptions =
   { ProjectDir: string
@@ -496,11 +489,7 @@ let private cliBuild (host: CliHost) (options: BuildOptions) =
 
       let p: PW.BuildOnWindowsParams =
         { ProjectName = ctx.EntryProjectName
-
-          CFiles =
-            cFiles
-            |> List.map (fun (fileName, _) -> Path fileName)
-
+          CFiles = cFiles |> List.map (fun (name, _) -> Path name)
           OutputName = ctx.EntryProjectName
           MiloneHome = Path miloneHome
           TargetDir = Path options.TargetDir
