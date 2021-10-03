@@ -218,7 +218,6 @@ type CompileCtx =
     EntryProjectName: string
 
     SyntaxCtx: SyntaxApi.SyntaxCtx
-    HeaderOnly: bool
 
     Verbosity: Verbosity
     Host: CliHost }
@@ -241,7 +240,6 @@ let compileCtxNew (host: CliHost) verbosity projectDir : CompileCtx =
   { EntryProjectDir = projectDir
     EntryProjectName = projectName
     SyntaxCtx = syntaxCtx
-    HeaderOnly = false
     Verbosity = verbosity
     Host = host }
 
@@ -311,7 +309,7 @@ type CodeGenResult = (string * string) list
 
 /// Generates C language codes from transformed HIR,
 /// using mid-level intermediate representation (MIR).
-let codeGenHirViaMir (host: CliHost) v projectName headerOnly (decls, tyCtx) : CodeGenResult =
+let codeGenHirViaMir (host: CliHost) v projectName (decls, tyCtx) : CodeGenResult =
   writeLog host v "Mir"
   let stmts, mirCtx = mirify (decls, tyCtx)
 
@@ -321,9 +319,6 @@ let codeGenHirViaMir (host: CliHost) v projectName headerOnly (decls, tyCtx) : C
   writeLog host v "CirDump"
 
   let output =
-    if headerOnly then
-      failwith "header command is unimplemented"
-
     modules
     |> List.map
          (fun (docId, cir) ->
@@ -360,7 +355,7 @@ let private compile (ctx: CompileCtx) : CompileResult =
   | SyntaxApi.SyntaxAnalysisOk (modules, tyCtx) ->
     let decls, tyCtx = transformHir host v (modules, tyCtx)
 
-    CompileOk(codeGenHirViaMir host v ctx.EntryProjectName ctx.HeaderOnly (decls, tyCtx))
+    CompileOk(codeGenHirViaMir host v ctx.EntryProjectName (decls, tyCtx))
 
 // -----------------------------------------------
 // Actions
@@ -409,16 +404,11 @@ let cliCheck (host: CliHost) verbosity projectDir =
 type CompileOptions =
   { ProjectDir: string
     TargetDir: string
-    HeaderOnly: bool
     Verbosity: Verbosity }
 
 let cliCompile (host: CliHost) (options: CompileOptions) =
   let ctx =
     compileCtxNew host options.Verbosity options.ProjectDir
-
-  let ctx =
-    { ctx with
-        HeaderOnly = options.HeaderOnly }
 
   let result = compile ctx
 
@@ -683,7 +673,6 @@ type private CliCmd =
   | CheckCmd
   | CompileCmd
   | BuildCmd
-  | HeaderCmd
   | ParseCmd
   | RunCmd
   | BadCmd of string
@@ -711,8 +700,6 @@ let private parseArgs args =
     | "check" -> CheckCmd, args
     | "compile" -> CompileCmd, args
     | "run" -> RunCmd, args
-
-    | "header" -> HeaderCmd, args
 
     // for debug
     | "parse" -> ParseCmd, args
@@ -747,23 +734,6 @@ let cli (host: CliHost) =
       printfn "ERROR: Unknown argument: '%s'." arg
       1
 
-  | HeaderCmd, args ->
-    let verbosity, args = parseVerbosity host args
-
-    match args with
-    | projectDir :: _ ->
-      let options: CompileOptions =
-        { ProjectDir = projectDir
-          TargetDir = "."
-          HeaderOnly = true
-          Verbosity = verbosity }
-
-      cliCompile host options
-
-    | [] ->
-      printfn "ERROR: Expected project dir."
-      1
-
   | CompileCmd, args ->
     let args = eatParallelFlag args
     let verbosity, args = parseVerbosity host args
@@ -776,7 +746,6 @@ let cli (host: CliHost) =
       let options: CompileOptions =
         { ProjectDir = projectDir
           TargetDir = Option.defaultValue (defaultTargetDir projectDir) targetDir
-          HeaderOnly = false
           Verbosity = verbosity }
 
       cliCompile host options
