@@ -103,6 +103,7 @@
       <AdditionalIncludeDirectories>../../../runtime</AdditionalIncludeDirectories>
       <AdditionalOptions>/utf-8 /std:c11 %(AdditionalOptions)</AdditionalOptions>
       <LanguageStandard>Default</LanguageStandard>
+      <DisableSpecificWarnings>4101;4102;5105</DisableSpecificWarnings>
     </ClCompile>
     <Link>
       <SubSystem>Console</SubSystem>
@@ -120,6 +121,7 @@
       <AdditionalIncludeDirectories>../../../runtime</AdditionalIncludeDirectories>
       <AdditionalOptions>/utf-8 /std:c11 %(AdditionalOptions)</AdditionalOptions>
       <LanguageStandard>Default</LanguageStandard>
+      <DisableSpecificWarnings>4101;4102;5105</DisableSpecificWarnings>
     </ClCompile>
     <Link>
       <SubSystem>Console</SubSystem>
@@ -137,6 +139,7 @@
       <AdditionalIncludeDirectories>../../../runtime</AdditionalIncludeDirectories>
       <AdditionalOptions>/utf-8 /std:c11 %(AdditionalOptions)</AdditionalOptions>
       <LanguageStandard>Default</LanguageStandard>
+      <DisableSpecificWarnings>4101;4102;5105</DisableSpecificWarnings>
     </ClCompile>
     <Link>
       <SubSystem>Console</SubSystem>
@@ -154,6 +157,7 @@
       <AdditionalIncludeDirectories>../../../runtime</AdditionalIncludeDirectories>
       <AdditionalOptions>/utf-8 /std:c11 %(AdditionalOptions)</AdditionalOptions>
       <LanguageStandard>Default</LanguageStandard>
+      <DisableSpecificWarnings>4101;4102;5105</DisableSpecificWarnings>
     </ClCompile>
     <Link>
       <SubSystem>Console</SubSystem>
