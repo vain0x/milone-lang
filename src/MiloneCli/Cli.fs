@@ -369,36 +369,6 @@ let private writeCFiles (host: CliHost) (targetDir: string) (cFiles: (string * s
 // Actions
 // -----------------------------------------------
 
-let cliParse (host: CliHost) v (projectDir: string) = todo ()
-// let ctx = compileCtxNew host v projectDir
-
-// let parseWithLogging moduleName contents =
-//   writeLog
-//     host
-//     v
-//     ("\n-------------\nSyntaxParse %s...\n--------------"
-//      + moduleName)
-
-//   let ast, errors =
-//     contents |> tokenize ctx.TokenizeHost |> parse
-
-//   if errors |> List.isEmpty |> not then
-//     printfn "In %s" moduleName
-
-//     errors
-//     |> List.iter (fun (msg, pos) -> printfn "ERROR: %s %s" (posToString pos) msg)
-
-//   match v with
-//   | Verbose -> printfn "%s" (objToString ast)
-//   | _ -> ()
-
-//   ast, errors
-
-// bundleProgram (ctx |> toBundleHost parseWithLogging) ctx.ProjectName
-// |> ignore
-
-// 0
-
 let cliCheck (host: CliHost) verbosity projectDir =
   let ctx = compileCtxNew host verbosity projectDir
 
@@ -662,7 +632,6 @@ type private CliCmd =
   | CheckCmd
   | CompileCmd
   | BuildCmd
-  | ParseCmd
   | RunCmd
   | BadCmd of string
 
@@ -689,10 +658,6 @@ let private parseArgs args =
     | "check" -> CheckCmd, args
     | "compile" -> CompileCmd, args
     | "run" -> RunCmd, args
-
-    // for debug
-    | "parse" -> ParseCmd, args
-
     | _ -> BadCmd arg, []
 
 // -----------------------------------------------
@@ -738,16 +703,6 @@ let cli (host: CliHost) =
           Verbosity = verbosity }
 
       cliCompile host options
-
-    | [] ->
-      printfn "ERROR: Expected project dir."
-      1
-
-  | ParseCmd, args ->
-    let verbosity, args = parseVerbosity host args
-
-    match args with
-    | projectDir :: _ -> cliParse host verbosity projectDir
 
     | [] ->
       printfn "ERROR: Expected project dir."
