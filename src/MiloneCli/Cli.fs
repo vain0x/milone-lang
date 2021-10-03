@@ -136,6 +136,8 @@ type CliHost =
     /// baseDir -> dir -> exist
     DirCreate: string -> string -> bool
 
+    FileExists: string -> bool
+
     /// Reads all contents of a file as string.
     FileReadAllText: string -> Future<string option>
 
@@ -882,6 +884,8 @@ let private cliBuild (host: CliHost) (options: BuildOptions) =
                 printfn "error: couldn't create directory at %s" (Path.toString dirPath)
                 exit 1
 
+          FileExists = fun filePath -> host.FileExists(Path.toString filePath)
+
           FileWrite = fun filePath contents -> host.FileWriteAllText(Path.toString filePath) contents
 
           RunCommand =
@@ -935,6 +939,8 @@ let private cliRun (host: CliHost) (options: BuildOptions) (restArgs: string lis
               if not ok then
                 printfn "error: couldn't create directory at %s" (Path.toString dirPath)
                 exit 1
+
+          FileExists = fun filePath -> host.FileExists(Path.toString filePath)
 
           FileWrite = fun filePath contents -> host.FileWriteAllText(Path.toString filePath) contents
 

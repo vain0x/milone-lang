@@ -81,6 +81,7 @@ let dotnetCliHost () : CliHost =
     ProfileLog = profileLog
     NewGuid = fun () -> System.Guid.NewGuid().ToString()
     DirCreate = dirCreate
+    FileExists = System.IO.File.Exists
     FileReadAllText = readFile
     FileWriteAllText = writeFile
     WriteStdout = printf "%s"

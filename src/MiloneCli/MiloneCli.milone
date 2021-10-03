@@ -92,6 +92,7 @@ let main _ =
       ProfileInit = profileInit
       ProfileLog = profileLog
       DirCreate = dirCreate
+      FileExists = fileExists
       FileReadAllText = readFile
       FileWriteAllText = fileWriteAllText
       WriteStdout = writeStdout

@@ -38,6 +38,34 @@ module private Path =
     else
       Path(Path.toString basePath + "/" + Path.toString name)
 
+type private FileExistsFun = Path -> bool
+
+let private findMSBuild (fileExists: FileExistsFun) : Path =
+  let years = [ 2019; 2017; 2015; 2021 ]
+
+  let editions =
+    [ "Community"
+      "Enterprise"
+      "Professional"
+      "BuildTools" ]
+
+  let msBuildPath (year: int) edition =
+    Path(
+      "C:/Program Files (x86)/Microsoft Visual Studio/"
+      + string year
+      + "/"
+      + edition
+      + "/MSBuild/Current/Bin/MSBuild.exe"
+    )
+
+  years
+  |> List.collect
+       (fun year ->
+         editions
+         |> List.map (fun edition -> msBuildPath year edition))
+  |> List.tryFind fileExists
+  |> Option.defaultValue (Path "MSBuild.exe")
+
 // -----------------------------------------------
 // Interface
 // -----------------------------------------------
@@ -52,6 +80,7 @@ type BuildOnWindowsParams =
 
     NewGuid: NewGuidFun
     DirCreate: Path -> unit
+    FileExists: FileExistsFun
     FileWrite: Path -> string -> unit
     RunCommand: Path -> string list -> unit }
 
@@ -99,9 +128,7 @@ let buildOnWindows (p: BuildOnWindowsParams) : unit =
        ()
 
   // Build with MSBuild.
-  // FIXME: find from paths
-  let msBuild =
-    Path "C:/Program Files (x86)/Microsoft Visual Studio/2019/Community/MSBuild/Current/Bin/MSBuild.exe"
+  let msBuild = findMSBuild p.FileExists
 
   p.RunCommand
     msBuild
@@ -126,6 +153,7 @@ type RunOnWindowsParams =
     // Effects
     NewGuid: NewGuidFun
     DirCreate: Path -> unit
+    FileExists: FileExistsFun
     FileWrite: Path -> string -> unit
     RunCommand: Path -> string list -> unit }
 
@@ -139,6 +167,7 @@ let runOnWindows (p: RunOnWindowsParams) : unit =
         TargetDir = p.TargetDir
         NewGuid = p.NewGuid
         DirCreate = p.DirCreate
+        FileExists = p.FileExists
         FileWrite = p.FileWrite
         RunCommand = p.RunCommand }
 
