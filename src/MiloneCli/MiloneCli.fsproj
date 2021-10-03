@@ -6,6 +6,7 @@
   </PropertyGroup>
 
   <ItemGroup>
+    <Compile Include="PlatformWindows.fs" />
     <Compile Include="Cli.fs" />
     <Compile Include="Program.fs" />
   </ItemGroup>

@@ -2,6 +2,8 @@ module rec MiloneStd.StdPath
 
 module S = MiloneStd.StdString
 
+// FIXME: support Windows paths, such as UNC
+
 /// Any kind of file path or name.
 ///
 /// Relative or absolute.
@@ -22,6 +24,7 @@ module Path =
 
   let toString (Path s) : string = s
 
+  // FIXME: what if path is /
   /// Removes trailing path separators.
   let trimEndSep (path: Path) : Path =
     let (Path s) = path
