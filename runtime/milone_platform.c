@@ -157,7 +157,8 @@ static bool milone_platform_create_single_directory(struct String dir) {
     return mkdir(str_to_c_str(dir), 0774) == 0 || errno == EEXIST;
 #elif defined(MILONE_PLATFORM_WINDOWS)
     struct OsString d = os_string_of(dir);
-    return CreateDirectoryW(d.str, NULL) != 0;
+    return CreateDirectoryW(d.str, NULL) != 0 ||
+           GetLastError() == ERROR_ALREADY_EXISTS;
 #else
 #error "no platform"
 #endif
