@@ -29,7 +29,7 @@ module Lower = MiloneCli.Lower
 module PU = MiloneCli.PlatformUnix
 module PW = MiloneCli.PlatformWindows
 
-let private currentVersion () = "0.3.0"
+let private currentVersion () = "0.4.0"
 
 let private helpText () =
   let s =
