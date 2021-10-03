@@ -18,7 +18,7 @@ $CC --version >/dev/null
 
 MILONE_HOME=$PWD PATH=$PWD/bin:$PATH \
     dotnet run -p src/MiloneCli -- \
-    run --target-dir target/gen2 \
-    src/MiloneCli -- --version
+    build --target-dir target/gen2 \
+    src/MiloneCli
 
 cp -f target/gen2/MiloneCli.exe target/milone

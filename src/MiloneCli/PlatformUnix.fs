@@ -53,6 +53,13 @@ let buildOnUnix (p: BuildOnUnixParams) : unit =
   p.DirCreate targetDir
   p.FileWrite ninjaFile ninjaScript
 
+  p.ExecuteInto(
+    "ninja -f "
+    + quoteShellWord (Path.toString ninjaFile)
+    + " "
+    + quoteShellWord (Path.toString p.ExeFile)
+  )
+
 [<RequireQualifiedAccess; NoEquality; NoComparison>]
 type RunOnUnixParams =
   { CFiles: Path list
