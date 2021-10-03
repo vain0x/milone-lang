@@ -30,7 +30,8 @@ module private Path =
 
   let join (basePath: Path) (name: Path) : Path =
     let isRooted =
-      name |> Path.toString |> S.startsWith "/"
+      (name |> Path.toString |> S.startsWith "/")
+      || (name |> Path.toString |> S.slice 1 2 = ":")
 
     if isRooted then
       name
