@@ -1,6 +1,6 @@
 # `milone` command usage
 
-`milone` command is standard CLI interface for milone-lang projects.
+`milone` command is standard CLI for milone-lang projects.
 
 ## Subcommands
 
@@ -146,7 +146,6 @@ Output:
 - Stdout: Compilation progress and compile errors.
 - Files:
     - `<TARGET-DIR>/*.c`: C files (if success)
-    - `<TARGET-DIR>/<PROJECT-NAME>.exe`: Executable (if success)
 
 ### help
 
@@ -246,12 +245,11 @@ Install `MSBuild.exe` in some way:
 Notes:
 
 - `MSBuild.exe` is a build tool that is used to compile C (MSVC) project on windows.
-- (I'm not familiar with these tools.)
 
 ----
 
 ## Misc notes
 
 - I'm NOT familiar with external tools; please teach me.
-- CLI interface is similar to `cargo` (in Rust).
+- Interface is similar to `cargo` (in Rust).
 - On linux: consider to install [mold](https://github.com/rui314/mold) for faster linking.
