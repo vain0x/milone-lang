@@ -33,7 +33,7 @@ let private currentVersion () = "0.3.0"
 
 let private helpText () =
   let s =
-    """milone v${VERSION}" <https://github.com/vain0x/milone-lang>
+    """milone v${VERSION} <https://github.com/vain0x/milone-lang>
 
 EXAMPLE
 
@@ -49,7 +49,7 @@ SUBCOMMANDS
     check     Analyze a project
     compile   Compile a project to C
 
-See <https://github.com/vain0x/milone-lang/blob/v${VERISON}/docs/cli.md> for details."""
+See <https://github.com/vain0x/milone-lang/blob/v${VERSION}/docs/cli.md> for details."""
 
   s |> S.replace "${VERSION}" (currentVersion ())
 
