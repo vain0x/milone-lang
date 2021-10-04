@@ -4,68 +4,7 @@ Notes for milone-lang developers.
 
 ## Architecture
 
-See comments written at the top of each file.
-
-Utilities:
-
-- [Util](MiloneLang/Util.fs)
-    - Utility functions for string, list etc.
-
-Domains (types and functions):
-
-- [Syntax](MiloneLang/Syntax.fs)
-    - Tokens, abstract syntax tree (AST), source location information etc.
-- [Hir](MiloneLang/Hir.fs):
-    - Functional-style intermediate representation
-- [Mir](MiloneLang/Mir.fs):
-    - Imperative-style intermediate representation
-- [Cir](MiloneLang/Cir.fs)
-    - AST of the C code to be pretty printed
-
-Program analysis:
-
-- [SyntaxTokenize](MiloneLang/SyntaxTokenize.fs) (milone-lang source code -> Token list)
-- [SyntaxParse](MiloneLang/SyntaxParse.fs) (Token list -> AST)
-- [AstToHir](MiloneLang/AstToHir.fs) (AST -> HIR)
-- [AstBundle](MiloneLang/AstBundle.fs) (\*files\* -> HIR)
-    - Loads source files of project and concatenates them into single HIR program
-- [NameRes](MiloneLang/NameRes.fs) (Name resolution) (HIR)
-- [Typing](MiloneLang/Typing.fs) (Type inference) (HIR)
-
-Transformations:
-
-- [AutoBoxing](MiloneLang/AutoBoxing.fs)
-    - Resolves recursive nominal types
-- [RecordRes](MiloneLang/RecordRes.fs)
-    - Resolves use of field names
-- [ClosureConversion](MiloneLang/ClosureConversion.fs)
-    - Resolves non-closed functions
-- [EtaExpansion](MiloneLang/EtaExpansion.fs)
-    - Resolves partial applications and function references
-- [Hoist](MiloneLang/Hoist.fs)
-    - Just a preparation of monomorphization
-- [Monomorphization](MiloneLang/Monomorphization.fs)
-    - Resolves use of generic functions by code cloning
-- [TailRecOptimizing](MiloneLang/TailRecOptimizing.fs)
-    - Marks tail-recursive calls to be optimized
-- [MirGen](MiloneLang/MirGen.fs) (HIR -> MIR)
-    - Resolves pattern matches
-- [CirGen](MiloneLang/CirGen.fs) (MIR -> CIR)
-- [CirDump](MiloneLang/CirDump.fs) (CIR -> C source code)
-
-Entrypoints:
-
-- [Cli.fs](MiloneLang/Cli.fs)
-    - CLI application logic shared by F# and milone-lang
-- [Program.fs](MiloneLang/Program.fs)
-    - .NET entrypoint
-- [MiloneLang.milone](MiloneLang/MiloneLang.milone)
-    - milone-lang entrypoint
-
-Language-specific parts:
-
-- [FSharpOnly](MiloneLang/FSharpOnly.fs)
-- [MiloneOnly](MiloneLang/MiloneOnly.milone)
+[ARCHITECTURE.md](ARCHITECTURE.md)
 
 ## Development
 
