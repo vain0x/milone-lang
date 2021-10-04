@@ -80,7 +80,7 @@ scripts/build-milone-windows
 
 # Copy the generated executable to some directory as you want.
 mkdir -p $USERPROFILE/bin
-cp 'scripts/milone-lang-win10-msvc/target/64-Release-bin/milone.exe' $USERPROFILE/bin
+cp 'target/MiloneCli/target/x64-Release-bin/MiloneCli.exe' $USERPROFILE/bin/milone.exe
 
 # Create '.milone' directory in user directory.
 # Copy libraries to it.
