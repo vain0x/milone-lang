@@ -93,7 +93,7 @@ Output:
     - `<TARGET-DIR>/<PROJECT-NAME>.exe`: Executable (if success)
     - where `TARGET-DIR` is specified by `--target-dir` option
     - On linux:
-        - `<TARGET-DIR>/build.ninja` 
+        - `<TARGET-DIR>/build.ninja`
     - On windows:
         - `<TARGET-DIR>/<PROJECT-NAME>.sln`
         - `<TARGET-DIR>/<PROJECT-NAME>/<PROJECT-NAME>.vcxproj`
@@ -247,6 +247,12 @@ Notes:
 - `MSBuild.exe` is a build tool that is used to compile C (MSVC) project on windows.
 
 ----
+
+## Less Important Features
+
+- `-p <PROJECT-DIR>`, `--project-dir <PROJECT-DIR>`
+    - Subcommands that take `<PROJECT-DIR>` as positional argument also support `-p`/`--project-dir` option instead.
+    - That's to match behavior with `dotnet run`.
 
 ## Misc notes
 
