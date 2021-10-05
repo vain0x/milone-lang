@@ -427,7 +427,6 @@ let private cliBuild (host: CliHost) (options: BuildOptions) =
       let p: PW.BuildOnWindowsParams =
         { ProjectName = ctx.EntryProjectName
           CFiles = cFiles |> List.map (fun (name, _) -> Path name)
-          OutputName = ctx.EntryProjectName
           MiloneHome = Path miloneHome
           TargetDir = Path options.TargetDir
 
@@ -491,7 +490,6 @@ let private cliRun (host: CliHost) (options: BuildOptions) (restArgs: string lis
         { ProjectName = ctx.EntryProjectName
           CFiles = cFiles |> List.map (fun (name, _) -> Path name)
 
-          OutputName = ctx.EntryProjectName
           MiloneHome = Path miloneHome
           TargetDir = Path options.TargetDir
 

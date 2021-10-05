@@ -73,7 +73,6 @@ let private findMSBuild (fileExists: FileExistsFun) : Path =
 type BuildOnWindowsParams =
   { ProjectName: string
     CFiles: Path list
-    OutputName: string
 
     MiloneHome: Path
     TargetDir: Path
@@ -114,8 +113,7 @@ let buildOnWindows (p: BuildOnWindowsParams) : unit =
         ProjectGuid = projectGuid
         ProjectName = p.ProjectName
         IncludeDir = runtimeDir
-        RuntimeDir = runtimeDir
-        TargetName = p.OutputName }
+        RuntimeDir = runtimeDir }
 
     renderVcxProjectXml p
 
@@ -141,7 +139,6 @@ type RunOnWindowsParams =
   { // Milone build result
     ProjectName: string
     CFiles: Path list
-    OutputName: string
 
     // Build options
     MiloneHome: Path
@@ -162,7 +159,6 @@ let runOnWindows (p: RunOnWindowsParams) : unit =
     let p: BuildOnWindowsParams =
       { ProjectName = p.ProjectName
         CFiles = p.CFiles
-        OutputName = p.OutputName
         MiloneHome = p.MiloneHome
         TargetDir = p.TargetDir
         NewGuid = p.NewGuid
@@ -174,7 +170,7 @@ let runOnWindows (p: RunOnWindowsParams) : unit =
     buildOnWindows p
 
   let exeFile =
-    Path.join p.TargetDir (Path("target/x64-Release-bin/" + p.OutputName + ".exe"))
+    Path.join p.TargetDir (Path("target/x64-Release-bin/" + p.ProjectName + ".exe"))
 
   p.RunCommand exeFile p.Args
 
@@ -238,8 +234,7 @@ type private VcxProjectParams =
     ProjectGuid: Guid
     ProjectName: string
     IncludeDir: string
-    RuntimeDir: string
-    TargetName: string }
+    RuntimeDir: string }
 
 let private renderVcxProjectXml (p: VcxProjectParams) : string =
   """<?xml version="1.0" encoding="utf-8"?>
@@ -319,25 +314,25 @@ let private renderVcxProjectXml (p: VcxProjectParams) : string =
     <LinkIncremental>true</LinkIncremental>
     <OutDir>$(SolutionDir)target\$(Platform)-$(Configuration)-bin\</OutDir>
     <IntDir>$(SolutionDir)target\$(Platform)-$(Configuration)-obj\</IntDir>
-    <TargetName>${TARGET_NAME}</TargetName>
+    <TargetName>${PROJECT_NAME}</TargetName>
   </PropertyGroup>
   <PropertyGroup Condition="'$(Configuration)|$(Platform)'=='Release|Win32'">
     <LinkIncremental>false</LinkIncremental>
     <OutDir>$(SolutionDir)target\$(Platform)-$(Configuration)-bin\</OutDir>
     <IntDir>$(SolutionDir)target\$(Platform)-$(Configuration)-obj\</IntDir>
-    <TargetName>${TARGET_NAME}</TargetName>
+    <TargetName>${PROJECT_NAME}</TargetName>
   </PropertyGroup>
   <PropertyGroup Condition="'$(Configuration)|$(Platform)'=='Debug|x64'">
     <LinkIncremental>true</LinkIncremental>
     <OutDir>$(SolutionDir)target\$(Platform)-$(Configuration)-bin\</OutDir>
     <IntDir>$(SolutionDir)target\$(Platform)-$(Configuration)-obj\</IntDir>
-    <TargetName>${TARGET_NAME}</TargetName>
+    <TargetName>${PROJECT_NAME}</TargetName>
   </PropertyGroup>
   <PropertyGroup Condition="'$(Configuration)|$(Platform)'=='Release|x64'">
     <LinkIncremental>false</LinkIncremental>
     <OutDir>$(SolutionDir)target\$(Platform)-$(Configuration)-bin\</OutDir>
     <IntDir>$(SolutionDir)target\$(Platform)-$(Configuration)-obj\</IntDir>
-    <TargetName>${TARGET_NAME}</TargetName>
+    <TargetName>${PROJECT_NAME}</TargetName>
   </PropertyGroup>
   <ItemDefinitionGroup Condition="'$(Configuration)|$(Platform)'=='Debug|Win32'">
     <ClCompile>
@@ -346,9 +341,9 @@ let private renderVcxProjectXml (p: VcxProjectParams) : string =
       <PreprocessorDefinitions>_CRT_SECURE_NO_WARNINGS;WIN32;_DEBUG;_CONSOLE;%(PreprocessorDefinitions)</PreprocessorDefinitions>
       <ConformanceMode>true</ConformanceMode>
       <AdditionalIncludeDirectories>${INCLUDE_DIR}</AdditionalIncludeDirectories>
-      <AdditionalOptions>/utf-8 /std:c11 %(AdditionalOptions)</AdditionalOptions>
-      <LanguageStandard>Default</LanguageStandard>
+      <AdditionalOptions>/utf-8 %(AdditionalOptions)</AdditionalOptions>
       <DisableSpecificWarnings>4101;4102;5105</DisableSpecificWarnings>
+      <LanguageStandard_C>stdc17</LanguageStandard_C>
     </ClCompile>
     <Link>
       <SubSystem>Console</SubSystem>
@@ -364,9 +359,10 @@ let private renderVcxProjectXml (p: VcxProjectParams) : string =
       <PreprocessorDefinitions>_CRT_SECURE_NO_WARNINGS;WIN32;NDEBUG;_CONSOLE;%(PreprocessorDefinitions)</PreprocessorDefinitions>
       <ConformanceMode>true</ConformanceMode>
       <AdditionalIncludeDirectories>${INCLUDE_DIR}</AdditionalIncludeDirectories>
-      <AdditionalOptions>/utf-8 /std:c11 %(AdditionalOptions)</AdditionalOptions>
-      <LanguageStandard>Default</LanguageStandard>
+      <AdditionalOptions>/utf-8 %(AdditionalOptions)</AdditionalOptions>
       <DisableSpecificWarnings>4101;4102;5105</DisableSpecificWarnings>
+      <LanguageStandard_C>stdc17</LanguageStandard_C>
+      <RuntimeLibrary>MultiThreaded</RuntimeLibrary>
     </ClCompile>
     <Link>
       <SubSystem>Console</SubSystem>
@@ -383,9 +379,9 @@ let private renderVcxProjectXml (p: VcxProjectParams) : string =
       <PreprocessorDefinitions>_CRT_SECURE_NO_WARNINGS;_DEBUG;_CONSOLE;%(PreprocessorDefinitions)</PreprocessorDefinitions>
       <ConformanceMode>true</ConformanceMode>
       <AdditionalIncludeDirectories>${INCLUDE_DIR}</AdditionalIncludeDirectories>
-      <AdditionalOptions>/utf-8 /std:c11 %(AdditionalOptions)</AdditionalOptions>
-      <LanguageStandard>Default</LanguageStandard>
+      <AdditionalOptions>/utf-8 %(AdditionalOptions)</AdditionalOptions>
       <DisableSpecificWarnings>4101;4102;5105</DisableSpecificWarnings>
+      <LanguageStandard_C>stdc17</LanguageStandard_C>
     </ClCompile>
     <Link>
       <SubSystem>Console</SubSystem>
@@ -401,9 +397,10 @@ let private renderVcxProjectXml (p: VcxProjectParams) : string =
       <PreprocessorDefinitions>_CRT_SECURE_NO_WARNINGS;NDEBUG;_CONSOLE;%(PreprocessorDefinitions)</PreprocessorDefinitions>
       <ConformanceMode>true</ConformanceMode>
       <AdditionalIncludeDirectories>${INCLUDE_DIR}</AdditionalIncludeDirectories>
-      <AdditionalOptions>/utf-8 /std:c11 %(AdditionalOptions)</AdditionalOptions>
-      <LanguageStandard>Default</LanguageStandard>
+      <AdditionalOptions>/utf-8 %(AdditionalOptions)</AdditionalOptions>
       <DisableSpecificWarnings>4101;4102;5105</DisableSpecificWarnings>
+      <LanguageStandard_C>stdc17</LanguageStandard_C>
+      <RuntimeLibrary>MultiThreaded</RuntimeLibrary>
     </ClCompile>
     <Link>
       <SubSystem>Console</SubSystem>
@@ -427,7 +424,6 @@ let private renderVcxProjectXml (p: VcxProjectParams) : string =
 """
   |> S.replace "${PROJECT_GUID}" (Guid.toString p.ProjectGuid)
   |> S.replace "${PROJECT_NAME}" p.ProjectName
-  |> S.replace "${TARGET_NAME}" p.TargetName
   |> S.replace "${RUNTIME_DIR}" p.RuntimeDir
   |> S.replace "${INCLUDE_DIR}" p.IncludeDir
   |> S.replace
