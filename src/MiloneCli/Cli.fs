@@ -590,6 +590,51 @@ let private defaultTargetDir projectDir =
 
   "target/" + projectName
 
+/// Set of options, used commonly for build-like subcommands (check, compile, build, run).
+type private BuildLikeOptions =
+  { ProjectDir: string
+    TargetDir: string
+    Verbosity: Verbosity }
+
+let private parseBuildLikeOptions host args : BuildLikeOptions * string list =
+  let verbosity, args = parseVerbosity host args
+
+  let targetDirOpt, args =
+    parseOption (fun x -> x = "--target-dir") args
+
+  let projectDirOpt, args =
+    match args with
+    | arg :: args when not (S.startsWith "-" arg) -> Some arg, args
+    | _ -> None, args
+
+  let projectDir =
+    match projectDirOpt with
+    | Some it -> it
+    | None ->
+      printfn "ERROR: Expected project dir."
+      exit 1
+
+  let targetDir =
+    match targetDirOpt with
+    | Some it -> it
+    | None -> defaultTargetDir projectDir
+
+  let options: BuildLikeOptions =
+    { ProjectDir = projectDir
+      TargetDir = targetDir
+      Verbosity = verbosity }
+
+  options, args
+
+/// Ensures that no redundant arguments are specified.
+let private endArgs args : unit =
+  match args with
+  | arg :: _ ->
+    printfn "ERROR: Unknown argument '%s'." arg
+    exit 1
+
+  | _ -> ()
+
 [<NoEquality; NoComparison>]
 type private CliCmd =
   | HelpCmd
@@ -635,83 +680,54 @@ let cli (host: CliHost) =
     0
 
   | CheckCmd, args ->
-    let verbosity, args = parseVerbosity host args
+    let b, args = parseBuildLikeOptions host args
+    endArgs args
 
-    match args with
-    | [ projectDir ] -> cliCheck host verbosity projectDir
-
-    | [] ->
-      printfn "ERROR: Expected project dir."
-      1
-
-    | arg :: _ ->
-      printfn "ERROR: Unknown argument: '%s'." arg
-      1
+    let projectDir = b.ProjectDir
+    let verbosity = b.Verbosity
+    cliCheck host verbosity projectDir
 
   | CompileCmd, args ->
     let args = eatParallelFlag args
-    let verbosity, args = parseVerbosity host args
+    let b, args = parseBuildLikeOptions host args
+    endArgs args
 
-    let targetDir, args =
-      parseOption (fun x -> x = "--target-dir") args
+    let options: CompileOptions =
+      { ProjectDir = b.ProjectDir
+        TargetDir = b.TargetDir
+        Verbosity = b.Verbosity }
 
-    match args with
-    | projectDir :: _ ->
-      let options: CompileOptions =
-        { ProjectDir = projectDir
-          TargetDir = Option.defaultValue (defaultTargetDir projectDir) targetDir
-          Verbosity = verbosity }
-
-      cliCompile host options
-
-    | [] ->
-      printfn "ERROR: Expected project dir."
-      1
+    cliCompile host options
 
   | BuildCmd, args ->
     let args = eatParallelFlag args
-    let verbosity, args = parseVerbosity host args
+    let b, args = parseBuildLikeOptions host args
+    endArgs args
 
-    let targetDir, args =
-      parseOption (fun x -> x = "--target-dir") args
+    let options: BuildOptions =
+      { ProjectDir = b.ProjectDir
+        TargetDir = b.TargetDir
+        Verbosity = b.Verbosity }
 
-    match args with
-    | projectDir :: _ ->
-      let options: BuildOptions =
-        { ProjectDir = projectDir
-          TargetDir = Option.defaultValue (defaultTargetDir projectDir) targetDir
-          Verbosity = verbosity }
-
-      cliBuild host options
-
-    | [] ->
-      printfn "ERROR: Expected project dir."
-      1
+    cliBuild host options
 
   | RunCmd, args ->
     let args = eatParallelFlag args
-    let verbosity, args = parseVerbosity host args
+    let b, args = parseBuildLikeOptions host args
 
-    let targetDir, args =
-      parseOption (fun x -> x = "--target-dir") args
+    let runArgs, args =
+      match args with
+      | "--" :: it -> it, []
+      | _ -> [], args
 
-    let restArgs =
-      args
-      |> List.skipWhile (fun x -> x <> "--")
-      |> listSkip 1
+    endArgs args
 
-    match args with
-    | projectDir :: _ ->
-      let options: BuildOptions =
-        { ProjectDir = projectDir
-          TargetDir = Option.defaultValue (defaultTargetDir projectDir) targetDir
-          Verbosity = verbosity }
+    let options: BuildOptions =
+      { ProjectDir = b.ProjectDir
+        TargetDir = b.TargetDir
+        Verbosity = b.Verbosity }
 
-      cliRun host options restArgs
-
-    | [] ->
-      printfn "ERROR: Expected project dir."
-      1
+    cliRun host options runArgs
 
   | BadCmd subcommand, _ ->
     printfn "ERROR: Unknown subcommand '%s'." subcommand
