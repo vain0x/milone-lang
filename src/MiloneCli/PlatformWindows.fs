@@ -76,6 +76,7 @@ type BuildOnWindowsParams =
 
     MiloneHome: Path
     TargetDir: Path
+    IsRelease: bool
     ExeFile: Path
 
     NewGuid: NewGuidFun
@@ -85,6 +86,12 @@ type BuildOnWindowsParams =
     RunCommand: Path -> string list -> unit }
 
 let buildOnWindows (p: BuildOnWindowsParams) : unit =
+  let configuration =
+    if p.IsRelease then
+      "Release"
+    else
+      "Debug"
+
   // Generate solution/project files for VC++ project.
   let projectGuid = p.NewGuid()
 
@@ -132,7 +139,9 @@ let buildOnWindows (p: BuildOnWindowsParams) : unit =
   p.RunCommand
     msBuild
     [ Path.toString slnFile
-      "-p:Configuration=Release;Platform=x64"
+      "-p:Configuration="
+      + configuration
+      + ";Platform=x64"
       "-v:quiet"
       "-nologo" ]
 
@@ -144,6 +153,7 @@ type RunOnWindowsParams =
     // Build options
     MiloneHome: Path
     TargetDir: Path
+    IsRelease: bool
     ExeFile: Path
 
     // Run options
@@ -163,6 +173,7 @@ let runOnWindows (p: RunOnWindowsParams) : unit =
         CFiles = p.CFiles
         MiloneHome = p.MiloneHome
         TargetDir = p.TargetDir
+        IsRelease = p.IsRelease
         ExeFile = p.ExeFile
         NewGuid = p.NewGuid
         DirCreate = p.DirCreate

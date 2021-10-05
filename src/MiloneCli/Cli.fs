@@ -173,13 +173,15 @@ let private runCommand (host: CliHost) (command: Path) (args: string list) : uni
     printfn "error: subprocess '%s' exited in code %d" (Path.toString command) code
     exit code
 
-let private computeExePath targetDir platform name : Path =
+let private computeExePath targetDir platform isRelease name : Path =
   let triple =
     match platform with
     | Platform.Unix -> "x86_64-unknown-linux-gnu"
     | Platform.Windows -> "x86_64-pc-windows-msvc"
 
-  let quad = triple + "-release"
+  let mode = if isRelease then "release" else "debug"
+
+  let quad = triple + "-" + mode
 
   let ext =
     match platform with
@@ -395,9 +397,11 @@ let cliCompile (host: CliHost) (options: CompileOptions) =
 
     0
 
+[<RequireQualifiedAccess; NoEquality; NoComparison>]
 type BuildOptions =
   { ProjectDir: string
     TargetDir: string
+    IsRelease: bool
     Verbosity: Verbosity }
 
 let private cliBuild (host: CliHost) (options: BuildOptions) =
@@ -413,6 +417,7 @@ let private cliBuild (host: CliHost) (options: BuildOptions) =
 
     | CompileOk cFiles ->
       let targetDir = options.TargetDir
+      let isRelease = options.IsRelease
       let projectName = ctx.EntryProjectName
       let miloneHome = Path(hostToMiloneHome host)
 
@@ -420,7 +425,7 @@ let private cliBuild (host: CliHost) (options: BuildOptions) =
 
       let p: PU.BuildOnUnixParams =
         { TargetDir = Path targetDir
-          ExeFile = computeExePath (Path targetDir) host.Platform projectName
+          ExeFile = computeExePath (Path targetDir) host.Platform isRelease projectName
           CFiles = cFiles |> List.map (fun (name, _) -> Path name)
           MiloneHome = miloneHome
           DirCreate = dirCreateOrFail host
@@ -441,6 +446,7 @@ let private cliBuild (host: CliHost) (options: BuildOptions) =
 
     | CompileOk cFiles ->
       let targetDir = options.TargetDir
+      let isRelease = options.IsRelease
       let projectName = ctx.EntryProjectName
       let miloneHome = Path(hostToMiloneHome host)
 
@@ -451,7 +457,8 @@ let private cliBuild (host: CliHost) (options: BuildOptions) =
           CFiles = cFiles |> List.map (fun (name, _) -> Path name)
           MiloneHome = miloneHome
           TargetDir = Path targetDir
-          ExeFile = computeExePath (Path targetDir) host.Platform projectName
+          IsRelease = isRelease
+          ExeFile = computeExePath (Path targetDir) host.Platform isRelease projectName
 
           NewGuid = fun () -> PW.Guid(host.NewGuid())
           DirCreate = dirCreateOrFail host
@@ -475,6 +482,7 @@ let private cliRun (host: CliHost) (options: BuildOptions) (restArgs: string lis
 
     | CompileOk cFiles ->
       let targetDir = options.TargetDir
+      let isRelease = options.IsRelease
       let projectName = ctx.EntryProjectName
       let miloneHome = Path(hostToMiloneHome host)
 
@@ -482,7 +490,7 @@ let private cliRun (host: CliHost) (options: BuildOptions) (restArgs: string lis
 
       let p: PU.RunOnUnixParams =
         { TargetDir = Path targetDir
-          ExeFile = computeExePath (Path targetDir) host.Platform projectName
+          ExeFile = computeExePath (Path targetDir) host.Platform isRelease projectName
           CFiles = cFiles |> List.map (fun (name, _) -> Path name)
           MiloneHome = miloneHome
           Args = restArgs
@@ -504,6 +512,7 @@ let private cliRun (host: CliHost) (options: BuildOptions) (restArgs: string lis
 
     | CompileOk cFiles ->
       let targetDir = options.TargetDir
+      let isRelease = options.IsRelease
       let projectName = ctx.EntryProjectName
       let miloneHome = Path(hostToMiloneHome host)
 
@@ -515,7 +524,8 @@ let private cliRun (host: CliHost) (options: BuildOptions) (restArgs: string lis
 
           MiloneHome = miloneHome
           TargetDir = Path targetDir
-          ExeFile = computeExePath (Path targetDir) host.Platform projectName
+          IsRelease = isRelease
+          ExeFile = computeExePath (Path targetDir) host.Platform isRelease projectName
 
           NewGuid = fun () -> PW.Guid(host.NewGuid())
           DirCreate = dirCreateOrFail host
@@ -618,6 +628,7 @@ let private defaultTargetDir projectDir =
 type private BuildLikeOptions =
   { ProjectDir: string
     TargetDir: string
+    IsRelease: bool
     Verbosity: Verbosity }
 
 let private parseBuildLikeOptions host args : BuildLikeOptions * string list =
@@ -625,6 +636,16 @@ let private parseBuildLikeOptions host args : BuildLikeOptions * string list =
 
   let targetDirOpt, args =
     parseOption (fun x -> x = "--target-dir") args
+
+  let isReleaseOpt, args =
+    parseFlag
+      (fun (_: bool option) x ->
+        match x with
+        | "--release" -> Some(Some true)
+        | "--debug" -> Some(Some false)
+        | _ -> None)
+      None
+      args
 
   let projectDirOpt, args =
     let projectDirOpt, args =
@@ -650,6 +671,7 @@ let private parseBuildLikeOptions host args : BuildLikeOptions * string list =
   let options: BuildLikeOptions =
     { ProjectDir = projectDir
       TargetDir = targetDir
+      IsRelease = Option.defaultValue false isReleaseOpt
       Verbosity = verbosity }
 
   options, args
@@ -735,6 +757,7 @@ let cli (host: CliHost) =
     let options: BuildOptions =
       { ProjectDir = b.ProjectDir
         TargetDir = b.TargetDir
+        IsRelease = b.IsRelease
         Verbosity = b.Verbosity }
 
     cliBuild host options
@@ -753,6 +776,7 @@ let cli (host: CliHost) =
     let options: BuildOptions =
       { ProjectDir = b.ProjectDir
         TargetDir = b.TargetDir
+        IsRelease = b.IsRelease
         Verbosity = b.Verbosity }
 
     cliRun host options runArgs

@@ -45,6 +45,8 @@ Options:
 - `-- ARGS...`
     - Arguments for generated executable.
     - Note that `--` is required to pass some args.
+- `--release`
+    - Compile in release mode.
 - `--target-dir <DIR>` (defaults to `target/<PROJECT-NAME>`)
     - Specify target directory.
     - That directory contains intermediate files and output files.
@@ -74,11 +76,13 @@ milone build ./MiloneProject
 ```
 
 ```sh
-milone build ./MiloneProject --target-dir ../build
+milone build ./MiloneProject --release --target-dir ../build
 ```
 
 Options:
 
+- `--release`
+    - Compile in release mode.
 - `--target-dir <DIR>` (defaults to `target/<PROJECT-NAME>`)
     - Specify target directory.
     - That directory contains intermediate files and output files.
