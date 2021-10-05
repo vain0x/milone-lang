@@ -287,9 +287,10 @@ let private commandWindows () =
       "src/MiloneCli"
       "--"
       "build"
+      "--release"
       "src/MiloneCli" ]
 
-  printfn "Generated target/MiloneCli/target/x64-Release-bin/MiloneCli.exe"
+  printfn "Generated target/MiloneCli/x86_64-pc-windows-msvc-release/MiloneCli.exe"
 
 [<EntryPoint>]
 let main argv =
