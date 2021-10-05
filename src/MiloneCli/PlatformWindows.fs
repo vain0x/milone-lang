@@ -76,6 +76,7 @@ type BuildOnWindowsParams =
 
     MiloneHome: Path
     TargetDir: Path
+    ExeFile: Path
 
     NewGuid: NewGuidFun
     DirCreate: Path -> unit
@@ -143,6 +144,7 @@ type RunOnWindowsParams =
     // Build options
     MiloneHome: Path
     TargetDir: Path
+    ExeFile: Path
 
     // Run options
     Args: string list
@@ -161,6 +163,7 @@ let runOnWindows (p: RunOnWindowsParams) : unit =
         CFiles = p.CFiles
         MiloneHome = p.MiloneHome
         TargetDir = p.TargetDir
+        ExeFile = p.ExeFile
         NewGuid = p.NewGuid
         DirCreate = p.DirCreate
         FileExists = p.FileExists
@@ -169,10 +172,7 @@ let runOnWindows (p: RunOnWindowsParams) : unit =
 
     buildOnWindows p
 
-  let exeFile =
-    Path.join p.TargetDir (Path("target/x64-Release-bin/" + p.ProjectName + ".exe"))
-
-  p.RunCommand exeFile p.Args
+  p.RunCommand p.ExeFile p.Args
 
 // =============================================================================
 
@@ -312,26 +312,26 @@ let private renderVcxProjectXml (p: VcxProjectParams) : string =
   <PropertyGroup Label="UserMacros" />
   <PropertyGroup Condition="'$(Configuration)|$(Platform)'=='Debug|Win32'">
     <LinkIncremental>true</LinkIncremental>
-    <OutDir>$(SolutionDir)target\$(Platform)-$(Configuration)-bin\</OutDir>
-    <IntDir>$(SolutionDir)target\$(Platform)-$(Configuration)-obj\</IntDir>
+    <OutDir>$(SolutionDir)i686-pc-windows-msvc-debug\</OutDir>
+    <IntDir>$(SolutionDir)i686-pc-windows-msvc-debug-obj\</IntDir>
     <TargetName>${PROJECT_NAME}</TargetName>
   </PropertyGroup>
   <PropertyGroup Condition="'$(Configuration)|$(Platform)'=='Release|Win32'">
     <LinkIncremental>false</LinkIncremental>
-    <OutDir>$(SolutionDir)target\$(Platform)-$(Configuration)-bin\</OutDir>
-    <IntDir>$(SolutionDir)target\$(Platform)-$(Configuration)-obj\</IntDir>
+    <OutDir>$(SolutionDir)i686-pc-windows-msvc-release\</OutDir>
+    <IntDir>$(SolutionDir)i686-pc-windows-msvc-release-obj\</IntDir>
     <TargetName>${PROJECT_NAME}</TargetName>
   </PropertyGroup>
   <PropertyGroup Condition="'$(Configuration)|$(Platform)'=='Debug|x64'">
     <LinkIncremental>true</LinkIncremental>
-    <OutDir>$(SolutionDir)target\$(Platform)-$(Configuration)-bin\</OutDir>
-    <IntDir>$(SolutionDir)target\$(Platform)-$(Configuration)-obj\</IntDir>
+    <OutDir>$(SolutionDir)x86_64-pc-windows-msvc-debug\</OutDir>
+    <IntDir>$(SolutionDir)x86_64-pc-windows-msvc-debug-obj\</IntDir>
     <TargetName>${PROJECT_NAME}</TargetName>
   </PropertyGroup>
   <PropertyGroup Condition="'$(Configuration)|$(Platform)'=='Release|x64'">
     <LinkIncremental>false</LinkIncremental>
-    <OutDir>$(SolutionDir)target\$(Platform)-$(Configuration)-bin\</OutDir>
-    <IntDir>$(SolutionDir)target\$(Platform)-$(Configuration)-obj\</IntDir>
+    <OutDir>$(SolutionDir)x86_64-pc-windows-msvc-release\</OutDir>
+    <IntDir>$(SolutionDir)x86_64-pc-windows-msvc-release-obj\</IntDir>
     <TargetName>${PROJECT_NAME}</TargetName>
   </PropertyGroup>
   <ItemDefinitionGroup Condition="'$(Configuration)|$(Platform)'=='Debug|Win32'">

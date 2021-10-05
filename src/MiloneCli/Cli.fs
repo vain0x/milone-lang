@@ -173,6 +173,28 @@ let private runCommand (host: CliHost) (command: Path) (args: string list) : uni
     printfn "error: subprocess '%s' exited in code %d" (Path.toString command) code
     exit code
 
+let private computeExePath targetDir platform name : Path =
+  let triple =
+    match platform with
+    | Platform.Unix -> "x86_64-unknown-linux-gnu"
+    | Platform.Windows -> "x86_64-pc-windows-msvc"
+
+  let quad = triple + "-release"
+
+  let ext =
+    match platform with
+    | Platform.Unix -> ""
+    | Platform.Windows -> ".exe"
+
+  Path(
+    Path.toString targetDir
+    + "/"
+    + quad
+    + "/"
+    + name
+    + ext
+  )
+
 // -----------------------------------------------
 // Context
 // -----------------------------------------------
@@ -367,7 +389,7 @@ let cliCompile (host: CliHost) (options: CompileOptions) =
     writeCFiles host targetDir cFiles
 
     cFiles
-    |> List.map (fun (name, _) -> options.TargetDir + "/" + name + "\n")
+    |> List.map (fun (name, _) -> targetDir + "/" + name + "\n")
     |> S.concat ""
     |> host.WriteStdout
 
@@ -391,17 +413,15 @@ let private cliBuild (host: CliHost) (options: BuildOptions) =
 
     | CompileOk cFiles ->
       let targetDir = options.TargetDir
+      let projectName = ctx.EntryProjectName
       let miloneHome = Path(hostToMiloneHome host)
 
       writeCFiles host targetDir cFiles
 
-      let exeFile =
-        Path(targetDir + "/" + ctx.EntryProjectName + ".exe")
-
       let p: PU.BuildOnUnixParams =
-        { TargetDir = Path options.TargetDir
-          ExeFile = exeFile
-          CFiles = List.map (fun (name, _) -> Path name) cFiles
+        { TargetDir = Path targetDir
+          ExeFile = computeExePath (Path targetDir) host.Platform projectName
+          CFiles = cFiles |> List.map (fun (name, _) -> Path name)
           MiloneHome = miloneHome
           DirCreate = dirCreateOrFail host
           FileWrite = fileWrite host
@@ -411,8 +431,6 @@ let private cliBuild (host: CliHost) (options: BuildOptions) =
       unreachable ()
 
   | Platform.Windows ->
-    let miloneHome = hostToMiloneHome host
-
     let ctx =
       compileCtxNew host options.Verbosity options.ProjectDir
 
@@ -422,13 +440,18 @@ let private cliBuild (host: CliHost) (options: BuildOptions) =
       1
 
     | CompileOk cFiles ->
-      writeCFiles host options.TargetDir cFiles
+      let targetDir = options.TargetDir
+      let projectName = ctx.EntryProjectName
+      let miloneHome = Path(hostToMiloneHome host)
+
+      writeCFiles host targetDir cFiles
 
       let p: PW.BuildOnWindowsParams =
-        { ProjectName = ctx.EntryProjectName
+        { ProjectName = projectName
           CFiles = cFiles |> List.map (fun (name, _) -> Path name)
-          MiloneHome = Path miloneHome
-          TargetDir = Path options.TargetDir
+          MiloneHome = miloneHome
+          TargetDir = Path targetDir
+          ExeFile = computeExePath (Path targetDir) host.Platform projectName
 
           NewGuid = fun () -> PW.Guid(host.NewGuid())
           DirCreate = dirCreateOrFail host
@@ -452,17 +475,15 @@ let private cliRun (host: CliHost) (options: BuildOptions) (restArgs: string lis
 
     | CompileOk cFiles ->
       let targetDir = options.TargetDir
+      let projectName = ctx.EntryProjectName
       let miloneHome = Path(hostToMiloneHome host)
 
       writeCFiles host targetDir cFiles
 
-      let exeFile =
-        Path(targetDir + "/" + ctx.EntryProjectName + ".exe")
-
       let p: PU.RunOnUnixParams =
-        { TargetDir = Path options.TargetDir
-          ExeFile = exeFile
-          CFiles = List.map (fun (name, _) -> Path name) cFiles
+        { TargetDir = Path targetDir
+          ExeFile = computeExePath (Path targetDir) host.Platform projectName
+          CFiles = cFiles |> List.map (fun (name, _) -> Path name)
           MiloneHome = miloneHome
           Args = restArgs
           DirCreate = dirCreateOrFail host
@@ -473,8 +494,6 @@ let private cliRun (host: CliHost) (options: BuildOptions) (restArgs: string lis
       unreachable ()
 
   | Platform.Windows ->
-    let miloneHome = hostToMiloneHome host
-
     let ctx =
       compileCtxNew host options.Verbosity options.ProjectDir
 
@@ -484,14 +503,19 @@ let private cliRun (host: CliHost) (options: BuildOptions) (restArgs: string lis
       1
 
     | CompileOk cFiles ->
-      writeCFiles host options.TargetDir cFiles
+      let targetDir = options.TargetDir
+      let projectName = ctx.EntryProjectName
+      let miloneHome = Path(hostToMiloneHome host)
+
+      writeCFiles host targetDir cFiles
 
       let p: PW.RunOnWindowsParams =
         { ProjectName = ctx.EntryProjectName
           CFiles = cFiles |> List.map (fun (name, _) -> Path name)
 
-          MiloneHome = Path miloneHome
-          TargetDir = Path options.TargetDir
+          MiloneHome = miloneHome
+          TargetDir = Path targetDir
+          ExeFile = computeExePath (Path targetDir) host.Platform projectName
 
           NewGuid = fun () -> PW.Guid(host.NewGuid())
           DirCreate = dirCreateOrFail host
