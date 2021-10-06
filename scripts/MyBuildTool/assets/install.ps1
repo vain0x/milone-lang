@@ -12,11 +12,11 @@ New-Item -Type Directory -Force "$HOME/bin"
 New-Item -Type Directory -Force "$HOME/.milone"
 
 # Uninstall.
-Remove-Item -Force "$HOME/bin/milone" -ErrorAction SilentlyContinue
-Remove-Item -Recurse -Force "$HOME/.milone" -ErrorAction SilentlyContinue
+Remove-Item -Force "$HOME/bin/milone.exe" -ErrorAction SilentlyContinue
+Remove-Item -Recurse -Force "$HOME/.milone"
 
 # Install.
-Copy-Item -Recurse -Force 'bin/*' -Destination "$HOME/bin"
+Copy-Item -Force 'bin/milone.exe' -Destination "$HOME/bin/milone.exe"
 Copy-Item -Recurse -Force '.milone' -Destination "$HOME/.milone"
 
 # Information about PATH.

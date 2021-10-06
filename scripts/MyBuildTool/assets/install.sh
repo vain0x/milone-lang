@@ -16,7 +16,7 @@ rm "$HOME/bin/milone"
 rm -rf "$HOME/.milone"
 
 # Install.
-cp -R 'bin' "$HOME/bin"
+cp 'bin/milone' "$HOME/bin/milone"
 cp -R '.milone' "$HOME/.milone"
 
 # Information about PATH.
