@@ -10,12 +10,6 @@ Package file extension is either `.tar.gz` or `.zip`.
 
 ----
 
-## Why
-
-- Easy
-- Fast
-- No .NET tools
-
 ## Package structure
 
 Package should consist of these files.
