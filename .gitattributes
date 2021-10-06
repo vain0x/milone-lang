@@ -3,6 +3,9 @@
 *.milone    linguist-language=fsharp
 *.c         linguist-detectable=false
 
+*.ps1       text eol=crlf
+*.sh        text eol=lf
+
 # <https://github.com/github/linguist#generated-code>
 boot/MiloneLang/Records.fs      linguist-generated
 boot/scripts/**/*.c             linguist-generated
