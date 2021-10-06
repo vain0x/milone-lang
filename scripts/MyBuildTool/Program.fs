@@ -20,6 +20,7 @@ SUBCOMMANDS:
 
     self-install     install milone locally
     self-uninstall   uninstall it
+    pack             make binary package
 
     help, -h, --help
     version, -V, --version
@@ -65,6 +66,9 @@ module StringExt =
   let split (sep: string) (s: string) = s.Split(sep) |> Array.toList
   let trim (s: string) = s.Trim()
 
+let private tRng =
+  new System.Threading.ThreadLocal<System.Random>(fun () -> System.Random())
+
 let private makeDir (dir: string) : unit =
   Directory.CreateDirectory(dir) |> ignore
 
@@ -99,6 +103,13 @@ let private writeTo (contents: string) (output: string) =
 
 let private copyFile src dest : unit = System.IO.File.Copy(src, dest, true)
 
+let private copyFilesTo (srcFiles: string list) (destDir: string) : unit =
+  for src in srcFiles do
+    let destFile =
+      Path.Combine(destDir, System.IO.Path.GetFileName(src))
+
+    System.IO.File.Copy(src, destFile, true)
+
 let private copyDir src dest : unit =
   let rec go src dest =
     makeDir dest
@@ -116,6 +127,8 @@ let private copyDir src dest : unit =
       System.IO.File.Copy(file, destFile)
 
   go src dest
+
+let private moveDir (src: string) (dest: string) : unit = System.IO.Directory.Move(src, dest)
 
 let private removeFile file : unit = System.IO.File.Delete(file)
 
@@ -485,6 +498,136 @@ let private commandSelfUninstall () =
   | None -> printfn "milone-lang is not installed."
   | Some _ -> ()
 
+// -----------------------------------------------
+// Deployment
+// -----------------------------------------------
+
+let private commandPack () =
+  let platform = getPlatform ()
+  let ext = getExt platform
+
+  let assetsDir = "scripts/MyBuildTool/assets"
+
+  let workDir =
+    let n = tRng.Value.Next()
+    $"target/pack-{n}"
+
+  let tempDir = $"{workDir}/milone-X.Y.Z"
+  let destBinDir = $"{tempDir}/bin"
+  let destMiloneHome = $"{tempDir}/.milone"
+  let destMiloneExe = $"{destBinDir}/milone{ext}"
+  let destMiloneDotnetDir = $"{destMiloneHome}/bin/milone_dotnet"
+  let destMiloneLspDir = $"{destMiloneHome}/bin/milone_lsp"
+  let destRuntimeDir = $"{destMiloneHome}/runtime"
+  let destMiloneLibsDir = $"{destMiloneHome}/milone_libs"
+  let destVersionFile = $"{destMiloneHome}/version"
+
+  // Make structure.
+  removeDir workDir
+  makeDir destBinDir
+  makeDir destMiloneHome
+
+  // Build binary.
+  let generatedExeFile =
+    match platform with
+    | Platform.Unix -> "target/MiloneCli/x86_64-unknown-linux-gnu-release/MiloneCli"
+    | Platform.Windows -> windowsBinaryPath
+
+  buildSelf ()
+  copyFile generatedExeFile destMiloneExe
+
+  match platform with
+  | Platform.Unix -> run "strip" [ "-s"; destMiloneExe ]
+  | _ -> ()
+
+  // Record version.
+  let version =
+    runToOut destMiloneExe [ "--version" ]
+    |> StringExt.trim
+
+  writeFile destVersionFile $"{version}\n"
+
+  // Build .NET executable.
+  let runtimeIdentifier =
+    match platform with
+    | Platform.Unix -> "linux-x64"
+    | Platform.Windows -> "win10-x64"
+
+  run
+    "dotnet"
+    [ "publish"
+      "src/MiloneCli"
+      "--runtime"
+      runtimeIdentifier
+      "-c"
+      "Release"
+      "-o"
+      destMiloneDotnetDir
+      "-nologo" ]
+
+  // Build LSP server.
+  run
+    "dotnet"
+    [ "publish"
+      "src/MiloneLspServer"
+      "--runtime"
+      runtimeIdentifier
+      "-c"
+      "Release"
+      "-o"
+      destMiloneLspDir
+      "-nologo" ]
+
+  // Copy runtime files.
+  copyDir "runtime" destRuntimeDir
+  copyDir "milone_libs" destMiloneLibsDir
+  // FIXME: Exclude files
+  removeFile $"{destRuntimeDir}/milone.o"
+  removeFile $"{destRuntimeDir}/milone_platform.o"
+  removeDir $"{destMiloneLibsDir}/MiloneStd/bin"
+  removeDir $"{destMiloneLibsDir}/MiloneStd/obj"
+
+  // Add documents.
+  copyFilesTo
+    [ "README.md"
+      "LICENSE"
+      $"{assetsDir}/INSTALL.md"
+      $"{assetsDir}/install.ps1"
+      $"{assetsDir}/install.sh" ]
+    tempDir
+
+  // Rename and compress.
+  let packDir = $"milone-{version}"
+
+  moveDir tempDir packDir
+
+  let outFile =
+    match platform with
+    | Platform.Unix ->
+      let triple = "x86_64-linux-gnu"
+
+      let outFile =
+        $"{workDir}/milone-{version}-{triple}.tar.gz"
+
+      removeFile outFile
+      run "tar" [ "-czf"; outFile; packDir ]
+      outFile
+
+    | Platform.Windows ->
+      let triple = "x86_64-pc-windows-msvc"
+
+      let outFile =
+        $"{workDir}/milone-{version}-{triple}.zip"
+
+      removeFile outFile
+      System.IO.Compression.ZipFile.CreateFromDirectory(packDir, outFile)
+      outFile
+
+  moveDir packDir tempDir
+
+  printfn "Generated %s" outFile
+  printfn "milone-lang v%s is packed successfully!" version
+
 let private commandWindows () =
   eprintfn "milone-compiling on windows"
   buildSelf ()
@@ -511,6 +654,7 @@ let main argv =
 
   | "self-install" :: _ -> commandSelfInstall ()
   | "self-uninstall" :: _ -> commandSelfUninstall ()
+  | "pack" :: _ -> commandPack ()
   | "windows" :: _ -> commandWindows ()
 
   | _ ->
