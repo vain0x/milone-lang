@@ -69,6 +69,21 @@ module StringExt =
 let private tRng =
   new System.Threading.ThreadLocal<System.Random>(fun () -> System.Random())
 
+// Sha256.
+let private computeFileHash (file: string) : string =
+  let contents = System.IO.File.ReadAllBytes(file)
+
+  use h =
+    System.Security.Cryptography.SHA256.Create()
+
+  let hash = h.ComputeHash(contents)
+
+  System
+    .BitConverter
+    .ToString(hash)
+    .Replace("-", "")
+    .ToLower()
+
 let private makeDir (dir: string) : unit =
   Directory.CreateDirectory(dir) |> ignore
 
@@ -625,6 +640,7 @@ let private commandPack () =
 
   moveDir packDir tempDir
 
+  printfn "%s  %s" (computeFileHash outFile) (Path.GetFileName(outFile))
   printfn "Generated %s" outFile
   printfn "milone-lang v%s is packed successfully!" version
 
