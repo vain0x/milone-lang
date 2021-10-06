@@ -61,6 +61,8 @@ let private fileWriteAllText (filePath: string) (contents: string) : unit =
 let private writeStdout (contents: string) : unit =
   __nativeStmt ("fwrite({0}.str, sizeof(char), (size_t){0}.len, stdout);", contents)
 
+let private getCwd () : string = __nativeFun "milone_get_cwd"
+
 let private getEnv (name: string) : string = __nativeFun ("milone_get_env", name)
 
 let private runCommand (command: string) (args: string list) : int =
@@ -84,11 +86,10 @@ let main _ =
     | Platform.Windows -> getEnv "USERPROFILE"
 
   let miloneHome = getEnv "MILONE_HOME"
-  let workDir = getEnv "PWD"
 
   let host: CliHost =
     { Args = args
-      WorkDir = workDir
+      WorkDir = getCwd ()
       Home = home
       MiloneHome = miloneHome
       Platform = getPlatform ()
