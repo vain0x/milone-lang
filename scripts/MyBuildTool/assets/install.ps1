@@ -5,30 +5,29 @@
 
 $ErrorActionPreference = 'Stop'
 
-$HOME = $env:USERPROFILE
-$VERSION = $(get-content '.milone/version').Trim()
+$VERSION = $(Get-Content '.milone/version').Trim()
 
 # Ensure directories exist and non-directory doesn't resident.
-new-item -type directory -force "$HOME/bin"
-new-item -type directory -force "$HOME/.milone"
+New-Item -Type Directory -Force "$HOME/bin"
+New-Item -Type Directory -Force "$HOME/.milone"
 
 # Uninstall.
-remove-item -force "$HOME/bin/milone"
-remove-item -recurse -force "$HOME/.milone"
+Remove-Item -Force "$HOME/bin/milone" -ErrorAction SilentlyContinue
+Remove-Item -Recurse -Force "$HOME/.milone" -ErrorAction SilentlyContinue
 
 # Install.
-copy-item -recurse 'bin' -destination "$HOME/bin"
-copy-item -recurse '.milone' -destination "$HOME/.milone"
+Copy-Item -Recurse -Force 'bin/*' -Destination "$HOME/bin"
+Copy-Item -Recurse -Force '.milone' -Destination "$HOME/.milone"
 
 # Information about PATH.
 $underPath = $true
 try {
-    milone --version | out-null
-} catch ($ex) {
+    milone --version | Out-Null
+} catch {
     $underPath = $false
 }
 if (!$underPath) {
-    echo "It's recommended to add $HOME/bin to \$PATH."
+    echo "It's recommended to add $HOME/bin to `$PATH."
 }
 
 # Finish.

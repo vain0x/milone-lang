@@ -3,7 +3,7 @@
 Run a script to complete installation.
 
 - On linux: `./install.sh`
-- On windows: `pwsh -c ./install.ps1`
+- On windows: `powershell -c "Set-ExecutionPolicy RemoteSigned -Scope Process; ./install.ps1"`
 
 ----
 
