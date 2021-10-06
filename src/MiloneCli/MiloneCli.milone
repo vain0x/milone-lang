@@ -78,7 +78,11 @@ let private readFile filePath =
 let main _ =
   let args = Env.commandLineArgs ()
 
-  let home = getEnv "HOME"
+  let home =
+    match getPlatform () with
+    | Platform.Unix -> getEnv "HOME"
+    | Platform.Windows -> getEnv "USERPROFILE"
+
   let miloneHome = getEnv "MILONE_HOME"
   let workDir = getEnv "PWD"
 
