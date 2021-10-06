@@ -7,6 +7,11 @@ Run a script to complete installation.
 
 ----
 
+## Uninstall
+
+- On linux: `./uninstall.sh`
+- On windows: `powershell -c "Set-ExecutionPolicy RemoteSigned -Scope Process; ./uninstall.ps1"`
+
 ## Remarks on PATH
 
 To use unqualified `milone` command, add `$HOME/bin` to your `$PATH` environment variable.

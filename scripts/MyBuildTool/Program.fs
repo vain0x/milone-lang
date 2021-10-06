@@ -608,7 +608,9 @@ let private commandPack () =
       "LICENSE"
       $"{assetsDir}/INSTALL.md"
       $"{assetsDir}/install.ps1"
-      $"{assetsDir}/install.sh" ]
+      $"{assetsDir}/install.sh"
+      $"{assetsDir}/uninstall.ps1"
+      $"{assetsDir}/uninstall.sh" ]
     tempDir
 
   // Rename and compress.
