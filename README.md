@@ -38,6 +38,7 @@ Prerequisites:
 
 - Ubuntu 18.04 (or similar platform)
 - Install [.NET SDK 5](https://dotnet.microsoft.com/download/dotnet/5.0)
+- Install GNU make
 - Install GCC 7.5.0
 - Install `busybox`, which is likely pre-installed, by:
     `apt install -y busybox-static`
@@ -50,10 +51,10 @@ git clone 'https://github.com/vain0x/milone-lang' --filter=blob:none
 
 # Build and install.
 cd milone-lang
-scripts/install
+make install
 ```
 
-- To uninstall, do `scripts/uninstall`.
+- To uninstall, do `make uninstall`.
 
 ### Install from binary package on Windows
 
