@@ -6,7 +6,7 @@
 - [#Install](#install)
     - ~~With package manager~~ (yet)
     - [#From sources on Linux](#install-from-sources-on-linux)
-    - [#From sources on Windows](#install-from-sources-on-windows)
+    - [#From binary package on Windows](#install-from-binary-package-on-windows)
 - [#How it works](#how-it-works)
 - Documentation
     - Language -> [docs/refs](docs/refs)
