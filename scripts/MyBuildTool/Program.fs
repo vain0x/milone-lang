@@ -379,9 +379,6 @@ let private getExt platform : string =
   | Platform.Windows -> ".exe"
 
 let private buildSelf () : unit =
-  if String.IsNullOrEmpty(Environment.GetEnvironmentVariable("MILONE_HOME")) then
-    Environment.SetEnvironmentVariable("MILONE_HOME", Environment.CurrentDirectory)
-
   run
     "dotnet"
     ("run -p src/MiloneCli -- build --release src/MiloneCli"
@@ -653,6 +650,9 @@ let private commandWindows () =
 
 [<EntryPoint>]
 let main argv =
+  if String.IsNullOrEmpty(Environment.GetEnvironmentVariable("MILONE_HOME")) then
+    Environment.SetEnvironmentVariable("MILONE_HOME", Environment.CurrentDirectory)
+
   match Array.toList argv with
   | []
   | "help" :: _
