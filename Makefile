@@ -7,23 +7,13 @@
 
 default: test
 
-.PHONY: build clean default install install-dev test uninstall
-
-# ------------------------------------------------
-# entrypoints
-# ------------------------------------------------
+.PHONY: build clean default install install-dev pack test uninstall
 
 clean:
 	scripts/clean
 
-install:
-	scripts/install
-
 install-dev:
 	scripts/install-dev
-
-uninstall:
-	scripts/uninstall
 
 # ------------------------------------------------
 # misc
@@ -51,6 +41,15 @@ ${MY_BUILD_TIMESTAMP}: target/.timestamp/dotnet_restore \
 	dotnet build -nologo scripts/MyBuildTool && mkdir -p $(shell dirname $@) && touch $@
 
 my_build: ${MY_BUILD_TIMESTAMP}
+
+install: ${MY_BUILD_TIMESTAMP}
+	${MY_BUILD} self-install
+
+uninstall: ${MY_BUILD_TIMESTAMP}
+	${MY_BUILD} self-uninstall
+
+pack: ${MY_BUILD_TIMESTAMP}
+	${MY_BUILD} pack
 
 target/milone: bin/ninja ${MY_BUILD_TIMESTAMP} \
 		runtime/milone.h \
