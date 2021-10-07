@@ -668,19 +668,8 @@ END:
 }
 
 // -----------------------------------------------
-// environemnt
+// environment
 // -----------------------------------------------
-
-struct String milone_get_cwd(void) {
-    char buf[FILENAME_MAX + 1];
-    bool ok = getcwd(buf, sizeof buf) != NULL;
-    if (!ok) {
-        perror("getcwd");
-        exit(1);
-    }
-
-    return str_of_c_str(buf);
-}
 
 struct String milone_get_env(struct String name) {
     name = str_ensure_null_terminated(name);
