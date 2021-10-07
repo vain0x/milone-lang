@@ -10,6 +10,8 @@ Notes for milone-lang developers.
 
 Scripts are written for `bash` because I use a Ubuntu desktop for development.
 
+TODO: prepare scripts/unused/.devcontainer
+
 ### Dev: Prerequisites
 
 See the "install from sources" section in README.
@@ -19,19 +21,17 @@ For incremental building and testing, `ninja` command is also used.
 `git` command is used in tests to generate diff.
 
 - Install Git 2.30.0
+- Install GNU make
 - Install [ninja 1.10.2](https://github.com/ninja-build/ninja) (build tool)
     with `scripts/install-ninja`
 
 ### Dev: Build
 
 ```sh
-# If you have make:
 make
-
-# Otherwise:
-scripts/build-ninja-gen
-bin/ninja
 ```
+
+See also Makefile.
 
 ### Dev: Testing
 
@@ -77,13 +77,12 @@ In tests, there are some categories of test cases:
 - Merge to master branch
 
 ```sh
-# Make a git tag.
-make target/milone
-git tag v$(target/milone --version)
+# Make Git tag.
+git tag v0.0.0
 git push --tags
 
 # Create package.
-scripts/pack
+make pack
 ```
 
 - Make a release in GitHub
