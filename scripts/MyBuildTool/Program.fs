@@ -16,7 +16,6 @@ SUBCOMMANDS:
             and verify the result.
 
     tests   tests projects in the `tests` directory
-    windows builds for Windows
 
     self-install     install milone locally
     self-uninstall   uninstall it
@@ -643,11 +642,6 @@ let private commandPack () =
   printfn "Generated %s" outFile
   printfn "milone-lang v%s is packed successfully!" version
 
-let private commandWindows () =
-  eprintfn "milone-compiling on windows"
-  buildSelf ()
-  printfn $"Generated {windowsBinaryPath}"
-
 [<EntryPoint>]
 let main argv =
   if String.IsNullOrEmpty(Environment.GetEnvironmentVariable("MILONE_HOME")) then
@@ -673,7 +667,6 @@ let main argv =
   | "self-install" :: _ -> commandSelfInstall ()
   | "self-uninstall" :: _ -> commandSelfUninstall ()
   | "pack" :: _ -> commandPack ()
-  | "windows" :: _ -> commandWindows ()
 
   | _ ->
     eprintfn "unknown target: %A" argv
