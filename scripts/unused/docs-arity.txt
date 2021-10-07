@@ -1,0 +1,26 @@
+
+### Arity and parameter flattening
+
+In milone-lang type system, every function is 1-arity.
+Function type `S -> T -> U` is just a nested function type.
+That is, it equals to `S -> (T -> U)`: a function that takes `S` value and returns another function of `T -> U`.
+
+However, the runtime representation of functions is not the same.
+If every function is still 1-arity at runtime, calling to N-arity function creates N-1 intermediate function objects.
+That is unrealistically inefficient.
+That's why compiler flattens the parameter list of functions.
+To do so, compiler needs to track *arity* of expressions.
+
+*Arity* is the number of parameters syntactically specified for functions defined by `let` or `fun` expression.
+For example, `let f x y z = ..`, f's arity is 3.
+The function body and function type are ignored.
+Even when `f` returns a function, say `let g u = v in let f x y z = g`, `f` is still 3-arity.
+
+Definition if arity is extended to non-function symbols and non-fun expressions.
+When a value or expression `x` is not function symbol nor fun expression, its type determines its arity.
+When the form of type is `T1 -> T2 -> ... -> TN`, its arity is N.
+
+    type-of-arity (S -> T)  = T + 1
+    type-of-arity T         = 0       (otherwise)
+
+FIXME: WIP

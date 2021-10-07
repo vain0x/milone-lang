@@ -1,0 +1,97 @@
+
+/// Tree to generate a string for debugging.
+[<NoEquality; NoComparison>]
+type DumpTree = DumpTree of heading: string * body: DumpTree list * next: DumpTree list
+
+// -----------------------------------------------
+// DumpTree (for debugging)
+// -----------------------------------------------
+
+let dumpTreeNew text children = DumpTree(text, children, [])
+
+let dumpTreeNewLeaf text = DumpTree(text, [], [])
+
+let dumpTreeAttachNext next tree =
+  match tree with
+  | DumpTree (text, children, oldNext) ->
+      assert (children |> List.isEmpty |> not)
+      assert (oldNext |> List.isEmpty)
+      DumpTree(text, children, [ next ])
+
+let dumpTreeFromError (msg: string) (y, x) =
+  let y = string (y + 1)
+  let x = string (x + 1)
+  dumpTreeNew
+    "ERROR"
+    [ dumpTreeNewLeaf msg
+      dumpTreeNewLeaf ("(" + y + ":" + x + ")") ]
+
+let dumpTreeToString (node: DumpTree) =
+  let rec go eol node acc =
+    let rec goChildren eol children acc =
+      match children with
+      | [] -> acc
+
+      | child :: children ->
+          acc
+          |> cons eol
+          |> cons "- "
+          |> go (eol + "  ") child
+          |> goChildren eol children
+
+    let goNext eol next acc =
+      match next with
+      | [] -> acc
+
+      | [ next ] -> acc |> cons eol |> go eol next
+
+      | _ -> unreachable () // DumpTree.next never empty.
+
+    match node with
+    | DumpTree (text, [], []) -> acc |> cons (strEscape text)
+
+    | DumpTree (text, [ DumpTree (childText, [], []) ], next) ->
+        acc
+        |> cons (strEscape text)
+        |> cons ": "
+        |> cons (strEscape childText)
+        |> goNext eol next
+
+    | DumpTree (text, children, next) ->
+        acc
+        |> cons (strEscape text)
+        |> cons ":"
+        |> goChildren eol children
+        |> goNext eol next
+
+  let eol = "\n"
+  [] |> go eol node |> List.rev |> strConcat
+
+[<Fact>]
+let dumpTreeTestEscape () =
+  let toString text = dumpTreeNewLeaf text |> dumpTreeToString
+  " hello \x00 \x08 \x1f \x7f \t \n \r \\ \" ' "
+  |> toString
+  |> is """ hello \0 \x08 \x1f \x7f \t \n \r \\ \" \' """
+
+[<Fact>]
+let dumpTreeTestLayout () =
+  let tree =
+    dumpTreeNew "module" [ dumpTreeNewLeaf "Program" ]
+    |> dumpTreeAttachNext
+         (dumpTreeNew
+           "let"
+            [ dumpTreeNewLeaf "main"
+              dumpTreeNew
+                "body"
+                [ dumpTreeNew "printfn" [ dumpTreeNewLeaf "\"Hello, world!\"" ]
+                  dumpTreeNewLeaf "0" ] ])
+
+  let expected = """module: Program
+let:
+- main
+- body:
+  - printfn: \"Hello, world!\"
+  - 0"""
+
+  tree |> dumpTreeToString |> is expected

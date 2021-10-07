@@ -25,12 +25,12 @@ let private listRev xs =
 // char
 // -----------------------------------------------
 
-let private charIsSpace (c: char): bool =
+let private charIsSpace (c: char) : bool =
   c = ' ' || c = '\t' || c = '\r' || c = '\n'
 
-let private charIsDigit (c: char): bool = '0' <= c && c <= '9'
+let private charIsDigit (c: char) : bool = '0' <= c && c <= '9'
 
-let private charIsAlpha (c: char): bool =
+let private charIsAlpha (c: char) : bool =
   ('A' <= c && c <= 'Z') || ('a' <= c && c <= 'z')
 
 let private charToLower (c: char) =
@@ -76,16 +76,26 @@ let private pError msg (_, _, y, x) =
 
 let private pBump (text: string, i: int, y, x) =
   assert (i < text.Length)
-  if text.[i] = '\n' then text, i + 1, y + 1, 0 else text, i + 1, y, x + 1
+
+  if text.[i] = '\n' then
+    text, i + 1, y + 1, 0
+  else
+    text, i + 1, y, x + 1
 
 let private pWhile pred p =
   let rec go p =
-    if pLook p <> '\x00' && pred (pLook p) then p |> pBump |> go else p
+    if pLook p <> '\x00' && pred (pLook p) then
+      p |> pBump |> go
+    else
+      p
 
   go p
 
 let private pLook (text: string, i: int, _, _) =
-  if i < text.Length then text.[i] else '\x00'
+  if i < text.Length then
+    text.[i]
+  else
+    '\x00'
 
 let private pSlice (text: string, l: int, _, _) (_, r: int, _, _) =
   assert (0 <= l && l <= r && r <= text.Length)
@@ -99,10 +109,16 @@ let private pIsDeeper (_, posX: int) (_, _, _, x: int) = x > posX
 
 let private pExpect (str: string) p =
   let rec go count p =
-    if count = 0 || pLook p = '\x00' then p else go (count - 1) (p |> pBump)
+    if count = 0 || pLook p = '\x00' then
+      p
+    else
+      go (count - 1) (p |> pBump)
 
   let q = go str.Length p
-  if pSlice p q <> str then pError ("Expected `" + str + "`") p
+
+  if pSlice p q <> str then
+    pError ("Expected `" + str + "`") p
+
   q
 
 let private pLine p =
@@ -116,7 +132,11 @@ let private pBlank p =
 
 let private pSpace p =
   let p = p |> pBlank
-  if pLook p |> charIsSpace then p |> pBump |> pSpace else p
+
+  if pLook p |> charIsSpace then
+    p |> pBump |> pSpace
+  else
+    p
 
 let private pIdent p =
   let q =
@@ -126,13 +146,14 @@ let private pIdent p =
   pSlice p q, q
 
 let private pEof p =
-  if pLook p <> '\x00' then pError "Expected EOF" p
+  if pLook p <> '\x00' then
+    pError "Expected EOF" p
 
 let private pTable basePos p =
   let rec go (entries, p) =
     let q = p |> pSpace
-    if q
-       |> pIsAligned basePos
+
+    if q |> pIsAligned basePos
        && q |> pIdent |> fst <> "" then
       q
       |> pIdent
@@ -151,6 +172,7 @@ let private pItem basePos p =
   if p |> pIsDeeper basePos then
     let pos = p |> pToPos
     let _, q = p |> pIdent |> pairMap pBlank
+
     if pLook q = ':' then
       pTable pos p
     else
@@ -160,7 +182,7 @@ let private pItem basePos p =
   else
     pError "Expected a value" p
 
-let parseYaml (text: string): YamlValue =
+let parseYaml (text: string) : YamlValue =
   let p = text, 0, 0, 0
   let basePos = 0, 0
 

@@ -1,0 +1,19 @@
+#!/bin/bash
+
+set -eu
+
+./req <<END
+{"method": "initialize", "id": 1}
+END
+
+./req <<END
+{"method": "initialized"}
+END
+
+./req <<END
+{"method": "shutdown", "id": 2}
+END
+
+./req <<END
+{"method": "exit"}
+END

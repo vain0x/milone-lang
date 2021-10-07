@@ -1,0 +1,145 @@
+module rec LibNurseryTests.ClapTests
+
+module M = MiloneStd.StdMap
+module S = MiloneStd.StdString
+module Clap = LibNursery.Clap
+
+open LibNursery.ClapCore
+
+let private format (s: string) (args: string list) =
+  let _, s =
+    args
+    |> List.fold
+         (fun (i, s) arg ->
+           let s =
+             s |> S.replace ("{" + string i + "}") arg
+
+           i + 1, s)
+         (0, s)
+
+  s
+
+let private parseForTest (args: string list) (hasParam: string -> bool) : string =
+  let ofName name =
+    match name with
+    | PropName.Long name -> format "long `{0}`" [ name ]
+    | PropName.Short name -> format "short `{0}`" [ string name ]
+
+  let myUpdate msg acc =
+    match msg with
+    | Msg.Binding (name, None) -> format "flag {0}" [ ofName name ] :: acc
+
+    | Msg.Binding (name, Some value) ->
+      format "binding {0} = `{1}`" [ ofName name; value ]
+      :: acc
+
+    | Msg.Positional value -> format "pos `{0}`" [ value ] :: acc
+
+  let myHasParam name (_: string list) =
+    match name with
+    | PropName.Long name -> hasParam name
+    | PropName.Short name -> hasParam (string name)
+
+  let acc, result = runClapCore args [] myHasParam myUpdate
+
+  let acc =
+    match result with
+    | Result.Ok -> acc
+
+    | Result.NoValueError name ->
+      format "error (no-value) {0}" [ ofName name ]
+      :: acc
+
+    | Result.RedundantValueError (name, value) ->
+      format "error (invalid-value) {0} = `{1}`" [ ofName name; value ]
+      :: acc
+
+  acc |> List.rev |> S.concat "; "
+
+let private testCore () =
+  assert (format "" [] = "")
+  assert (format "{0} + {0} = {1}" [ "1"; "2" ] = "1 + 1 = 2")
+
+  let noParam = fun (_: string) -> false
+
+  // Empty.
+  assert (parseForTest [] noParam = "")
+
+  // Short flag.
+  assert (parseForTest [ "-h" ] noParam = "flag short `h`")
+
+  // Long flag.
+  assert (parseForTest [ "--help" ] noParam = "flag long `help`")
+
+  // Composite flags.
+  assert (parseForTest [ "-abc" ] noParam = "flag short `a`; flag short `b`; flag short `c`")
+
+  // Positional.
+  assert (parseForTest [ "foo" ] noParam = "pos `foo`")
+
+  // Short bindings.
+  let hasParam =
+    fun (name: string) -> name = "n" || S.startsWith "set-" name
+
+  assert (parseForTest [ "-n"; "10" ] hasParam = "binding short `n` = `10`")
+
+  // Short binding with '='.
+  assert (parseForTest [ "-n=-1" ] hasParam = "binding short `n` = `-1`")
+
+  // Short flags and binding.
+  assert (parseForTest [ "-mn"; "1" ] hasParam = "flag short `m`; binding short `n` = `1`")
+  assert (parseForTest [ "-mn=1" ] hasParam = "flag short `m`; binding short `n` = `1`")
+
+  // Long bindings.
+  assert (parseForTest [ "--set-name"; "john" ] hasParam = "binding long `set-name` = `john`")
+  assert (parseForTest [ "--set-name=john-doe" ] hasParam = "binding long `set-name` = `john-doe`")
+
+  // Separator.
+  assert (parseForTest [ "--" ] noParam = "")
+  assert (parseForTest [ "--"; "--help" ] noParam = "pos `--help`")
+  assert (parseForTest [ "--"; "dotnet"; "run"; "--"; "--help"  ] noParam = "pos `dotnet`; pos `run`; pos `--`; pos `--help`")
+
+  // Edges.
+  assert (parseForTest [ "-"; "-=" ] noParam = "pos `-`; pos `-=`")
+
+  // Error.
+  assert (parseForTest [ "-n" ] hasParam = "error (no-value) short `n`")
+  assert (parseForTest [ "-n"; "--" ] hasParam = "error (no-value) short `n`")
+  assert (parseForTest [ "-n"; "--"; "1" ] hasParam = "error (no-value) short `n`")
+  assert (parseForTest [ "-x=foo"; "-" ] hasParam = "error (invalid-value) short `x` = `foo`")
+
+let private testParseOpts () =
+  let def = [ "help"; "*user"; "?level" ]
+
+  let display (opts: Clap.Opts) =
+    let s =
+      opts.Flags
+      |> List.fold (fun s name -> name :: s) []
+
+    let s =
+      opts.Bindings
+      |> List.fold (fun s (name, value) -> format "{0}=`{1}`" [ name; value ] :: s) s
+
+    let s =
+      opts.Positional
+      |> List.fold (fun s value -> format "`{0}`" [ value ] :: s) s
+
+    let s =
+      match opts.Error with
+      | Some error -> "error " + error :: s
+      | None -> s
+
+    s |> List.rev |> S.concat "; "
+
+  assert (Clap.parseOpts
+            def
+            [ "--user"
+              "john"
+              "foo.txt"
+              "--level=0"
+              "bar.txt" ]
+          |> display = "level=`0`; user=`john`; `bar.txt`; `foo.txt`")
+
+let testClapModule () =
+  testCore ()
+  testParseOpts ()

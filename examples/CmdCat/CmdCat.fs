@@ -6,8 +6,6 @@ open CmdCat.Ffi
 // Util
 // -----------------------------------------------
 
-let ignore _ = ()
-
 let failwith msg =
   printfn "ERROR: %s" msg
   exit 1

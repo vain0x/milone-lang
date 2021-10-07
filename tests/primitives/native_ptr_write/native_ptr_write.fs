@@ -7,12 +7,14 @@ let strOfRawParts (p: __constptr<char>) (len: int) : string =
 
 let main _ =
   // write to box
-  let intBox = box 0
-  __ptrWrite (__nativeCast intBox) 0 42
-  assert (unbox intBox = 42)
+  let stringBox = box "zero"
+  __ptrWrite (__nativeCast stringBox) 0 "one"
+  assert (unbox stringBox = "one")
 
   // write to array
-  let buf : nativeptr<char> = uint64 0 |> box |> __nativeCast
+  let buf: nativeptr<char> =
+    (uint64 0, uint64 0) |> box |> __nativeCast
+
   __ptrWrite buf 0 'H'
   __ptrWrite buf 1 'i'
   let s = strOfRawParts (__nativeCast buf) 2

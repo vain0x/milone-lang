@@ -1,161 +1,45 @@
 #include "milone.h"
 
-struct StringList;
+struct IntOption_;
 
-struct IntOption;
-
-struct String str_concat(struct String, struct StringList const*);
-
-struct String __stringJoin_(struct String sep_, struct StringList const* xs_);
-
-int const* __ptrAsConst_1(int* mutPtr_);
-
-void* milone_mem_alloc(int, uintptr_t);
-
-void* memAlloc_(int len_, uintptr_t size_);
-
-void* memcpy(void*, void const*, uintptr_t);
-
-void* memcpy_(void* dest_, void const* src_, uintptr_t size_1);
-
-bool str_to_int_checked(struct String, int*);
-
-struct IntOption __intOfStr_(struct String s_);
-
-int milone_get_arg_count();
-
-int __argCount_(char arg_);
-
-struct String milone_get_arg(int);
-
-struct String __argGet_(int index_4);
-
-int min_(int l_, int r_);
-
-int max_(int l_1, int r_1);
-
-struct IntOption tryParse_(struct String s_1);
+struct IntOption_ MiloneStd_StdInt_tryParse(struct String );
 
 int parseOk_(struct String s_2);
 
 bool parseError_(struct String s_3);
 
-char tryParseTest_(char arg_1);
+void std_int_Program_tryParseTest(void);
 
-int milone_main();
+int milone_main(void);
 
-struct IntOption {
-    bool some;
-    int value;
+enum IntOption_Discriminant {
+    None_,
+    Some_,
 };
 
-static int MinValue_;
+struct IntOption_ {
+    enum IntOption_Discriminant discriminant;
+    union {
+        int Some_;
+    };
+};
 
-static int MaxValue_;
+int MiloneStd_StdInt_MinValue;
 
-struct String __stringJoin_(struct String sep_, struct StringList const* xs_) {
-    struct String str_concat_result_ = str_concat(sep_, xs_);
-    return str_concat_result_;
-}
-
-int const* __ptrAsConst_1(int* mutPtr_) {
-    return ((int const*)mutPtr_);
-}
-
-void* memAlloc_(int len_, uintptr_t size_) {
-    void* milone_mem_alloc_result_ = milone_mem_alloc(len_, size_);
-    return milone_mem_alloc_result_;
-}
-
-void* memcpy_(void* dest_, void const* src_, uintptr_t size_1) {
-    void* memcpy_result_ = memcpy(dest_, src_, size_1);
-    return memcpy_result_;
-}
-
-struct IntOption __intOfStr_(struct String s_) {
-    void* call_ = memAlloc_(1, ((uintptr_t)sizeof(int)));
-    int* valueRef_ = ((int*)call_);
-    bool str_to_int_checked_result_ = str_to_int_checked(s_, valueRef_);
-    bool ok_ = str_to_int_checked_result_;
-    struct IntOption if_;
-    if (ok_) {
-        goto then_2;
-    } else {
-        goto else_3;
-    }
-then_2:;
-    int const* call_1 = __ptrAsConst_1(valueRef_);
-    int read_ = (*(call_1));
-    struct IntOption some_ = (struct IntOption){.some = true, .value = read_};
-    if_ = some_;
-    goto if_next_1;
-else_3:;
-    if_ = (struct IntOption){.some = false};
-    goto if_next_1;
-if_next_1:;
-    return if_;
-}
-
-int __argCount_(char arg_) {
-    int milone_get_arg_count_result_ = milone_get_arg_count();
-    return milone_get_arg_count_result_;
-}
-
-struct String __argGet_(int index_4) {
-    struct String milone_get_arg_result_ = milone_get_arg(index_4);
-    return milone_get_arg_result_;
-}
-
-int min_(int l_, int r_) {
-    int if_1;
-    if ((l_ < r_)) {
-        goto then_5;
-    } else {
-        goto else_6;
-    }
-then_5:;
-    if_1 = l_;
-    goto if_next_4;
-else_6:;
-    if_1 = r_;
-    goto if_next_4;
-if_next_4:;
-    return if_1;
-}
-
-int max_(int l_1, int r_1) {
-    int if_2;
-    if ((l_1 < r_1)) {
-        goto then_8;
-    } else {
-        goto else_9;
-    }
-then_8:;
-    if_2 = r_1;
-    goto if_next_7;
-else_9:;
-    if_2 = l_1;
-    goto if_next_7;
-if_next_7:;
-    return if_2;
-}
-
-struct IntOption tryParse_(struct String s_1) {
-    struct IntOption call_2 = __intOfStr_(s_1);
-    return call_2;
-}
+int MiloneStd_StdInt_MaxValue;
 
 int parseOk_(struct String s_2) {
+    int value_1;
     int match_;
-    struct IntOption call_3 = tryParse_(s_2);
-    if ((!(call_3.some))) goto next_11;
-    int value_1 = call_3.value;
+    struct IntOption_ call_3 = MiloneStd_StdInt_tryParse(s_2);
+    if ((call_3.discriminant != Some_)) goto next_11;
+    value_1 = call_3.Some_;
     match_ = value_1;
     goto end_match_10;
 next_11:;
-    if (call_3.some) goto next_12;
+    if ((call_3.discriminant != None_)) goto next_12;
     printf("should parse: %s\n", str_to_c_str(s_2));
-    milone_assert(false, 11, 8);
+    milone_assert(false, 11, 6);
     match_ = 0;
     goto end_match_10;
 next_12:;
@@ -165,14 +49,15 @@ end_match_10:;
 }
 
 bool parseError_(struct String s_3) {
+    int value_2;
     bool match_1;
-    struct IntOption call_4 = tryParse_(s_3);
-    if (call_4.some) goto next_14;
+    struct IntOption_ call_4 = MiloneStd_StdInt_tryParse(s_3);
+    if ((call_4.discriminant != None_)) goto next_14;
     match_1 = true;
     goto end_match_13;
 next_14:;
-    if ((!(call_4.some))) goto next_15;
-    int value_2 = call_4.value;
+    if ((call_4.discriminant != Some_)) goto next_15;
+    value_2 = call_4.Some_;
     printf("should not parse: %s -> %d\n", str_to_c_str(s_3), value_2);
     match_1 = false;
     goto end_match_13;
@@ -182,7 +67,7 @@ end_match_13:;
     return match_1;
 }
 
-char tryParseTest_(char arg_1) {
+void std_int_Program_tryParseTest(void) {
     int call_5 = parseOk_((struct String){.str = "0", .len = 1});
     milone_assert((call_5 == 0), 21, 2);
     int call_6 = parseOk_((struct String){.str = "000", .len = 3});
@@ -224,12 +109,12 @@ char tryParseTest_(char arg_1) {
     milone_assert(call_23, 40, 2);
     bool call_24 = parseError_((struct String){.str = "1e9", .len = 3});
     milone_assert(call_24, 41, 2);
-    return 0;
+    return;
 }
 
-int milone_main() {
-    MinValue_ = -2147483648;
-    MaxValue_ = 2147483647;
-    char call_25 = tryParseTest_(0);
+int milone_main(void) {
+    MiloneStd_StdInt_MinValue = (int)0x80000000;
+    MiloneStd_StdInt_MaxValue = 0x7fffffff;
+    std_int_Program_tryParseTest();
     return 0;
 }

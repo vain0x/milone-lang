@@ -1,8 +1,19 @@
 # Notes
 
-### Language Extensions
+## Policy about language extensions
 
 Although some language extensions are necessary, milone-lang should be a subset of F# as possible. That is, language extensions should be used only in libraries, not application-wide.
+
+## Policy about F# language features
+
+No plan to implement complete set of F# features. Especially, these features below are unlikely implemented:
+
+- Code quotations
+- Custom computation expressions
+- Custom operators
+- Inheritance
+- Type provider
+- Units of measure
 
 ### FFI
 
@@ -111,19 +122,3 @@ Const variants can't have payload patterns.
     match A with
     | A _ -> () // Notice the `_`.
 ```
-
-## No Support
-
-There is no plan to implement complete set of F# features. These features are unlikely implemented:
-
-- Mutable variables
-- Mutable fields
-- Classes, interfaces, structs, delegates etc.
-- Exceptions
-- Code quotations
-- Computation expressions
-- Type provider
-- Units of measure
-- User-defined operators
-- .NET standard library
-- etc.

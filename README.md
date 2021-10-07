@@ -5,11 +5,12 @@
 - [#About](#about)
 - [#Install](#install)
     - ~~With package manager~~ (yet)
-    - From binary -> [install_from_binary.md](install_from_binary.md)
     - [#From sources on Linux](#install-from-sources-on-linux)
-    - [#From sources on Windows](#install-from-sources-on-windows)
+    - [#From binary package on Windows](#install-from-binary-package-on-windows)
 - [#How it works](#how-it-works)
-- Documentation -> [docs/refs](docs/refs)
+- Documentation
+    - Language -> [docs/refs](docs/refs)
+    - CLI -> [docs/cli.md](docs/cli.md)
 - Examples -> [examples](examples)
 - Internals -> [internals.md](internals.md)
 
@@ -37,9 +38,10 @@ Prerequisites:
 
 - Ubuntu 18.04 (or similar platform)
 - Install [.NET SDK 5](https://dotnet.microsoft.com/download/dotnet/5.0)
-- Install some C11-compliant C compiler, typically either:
-    - GCC 7, or
-    - Clang 6
+- Install GNU make
+- Install GCC 7.5.0
+- Install `busybox`, which is likely pre-installed, by:
+    `apt install -y busybox-static`
 
 Do:
 
@@ -49,76 +51,27 @@ git clone 'https://github.com/vain0x/milone-lang' --filter=blob:none
 
 # Build and install.
 cd milone-lang
-scripts/install
+make install
 ```
 
-- To uninstall, do `scripts/uninstall`.
+- To uninstall, do `make uninstall`.
 
-### Install from sources on Windows
+### Install from binary package on Windows
 
 Prerequisites:
 
 - Windows 10
-- Install [Git for Windows](https://gitforwindows.org/)
-- Install [.NET SDK 5](https://dotnet.microsoft.com/download/dotnet/5.0)
-- Install [Visual Studio 2019](https://visualstudio.microsoft.com/ja/downloads/) with "Desktop development with C++" option
+- Install `MSBuild.exe` in some way:
+    - install Visual Studio 2019 with "Desktop development with C++" option, *OR*
+    - install [Visual Studio 2019 Build Tools](https://visualstudio.microsoft.com/ja/downloads/?q=build+tools#build-tools-for-visual-studio-2019).
 
-Do with Git Bash:
+Instructions:
 
-```sh
-# Download the source code.
-git clone 'https://github.com/vain0x/milone-lang' --filter=blob:none
-cd milone-lang
+- Download a binary package from [GitHub Releases](https://github.com/vain0x/milone-lang/releases)
+- Unarchive it somewhere
+- Follow instructions written in [INSTALL.md](scripts/MyBuildTool/assets/INSTALL.md)
 
-# ---- BUILD ----
-
-# Build milone-lang compiler to C code.
-mkdir -p target
-MILONE_HOME=$PWD dotnet run -p MiloneLang -- compile MiloneLang >target/milone_gen2.c
-
-# HACK: MSVC seems to not handle minimum int literal. Replace them with hex notation.
-sed -i 's/-2147483648/0x80000000/' target/milone_gen2.c
-
-# Build for executable.
-# Remark: MSBuild.exe is not in PATH by default.
-#         If you don't know what to do about this,
-#         just open the solution with Visual Studio to build instead.
-MSBuild.exe 'scripts/milone-lang-win10-msvc/milone-lang-win10-msvc.sln' '-p:Configuration=Release;Platform=x64'
-
-# ---- INSTALL ----
-
-# Copy the generated executable to some directory as you want.
-mkdir -p $USERPROFILE/bin
-cp 'scripts/milone-lang-win10-msvc/target/64-Release-bin/milone.exe' $USERPROFILE/bin
-
-# Create '.milone' directory in user directory.
-# Copy libraries to it.
-mkdir -p $USERPROFILE/.milone
-cp milone_libs $USERPROFILE/.milone
-```
-
-## How to build a test project
-
-TODO: Write in docs and include in test chain.
-
-These commands build [tests/examples/hello_world](tests/examples/hello_world) project.
-
-```sh
-# Compile to C code.
-milone compile tests/examples/hello_world >hello.c
-
-# Build C code with C compiler.
-# You need to specify include directory (-I)
-# and compile runtime code.
-gcc -std=c11 \
-    -I$HOME/.milone/runtime \
-    $HOME/.milone/runtime/milone.c \
-    hello.c \
-    -o hello
-
-# Execute.
-./hello
-```
+See also [docs/binary_package.md](docs/binary_package.md).
 
 ## Install VSCode Extension
 
@@ -207,4 +160,4 @@ Milone-lang tools (compiler and LSP server) are distributed under either:
 - the Apache 2.0 license, or
 - the MIT license.
 
-Others including documentation, examples, libraries, runtime code, scripts, tests, etc. are distributed under CC0-1.0.
+Others including documentation, examples, libraries, runtime code, scripts, tests, etc. are distributed under [CC0-1.0](https://creativecommons.org/publicdomain/zero/1.0/).

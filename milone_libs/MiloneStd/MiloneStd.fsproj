@@ -13,6 +13,7 @@
     <Compile Include="StdSet.fs" />
     <Compile Include="StdInt.fs" />
     <Compile Include="StdEnv.fs" />
+    <Compile Include="StdPath.fs" />
   </ItemGroup>
 
 </Project>

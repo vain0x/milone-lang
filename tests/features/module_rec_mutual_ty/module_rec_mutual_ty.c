@@ -10,7 +10,7 @@ struct RecA_ListList;
 
 struct RecA_;
 
-int milone_main();
+int milone_main(void);
 
 struct UnitList {
     char head;
@@ -37,7 +37,7 @@ struct RecA_ {
     };
 };
 
-int milone_main() {
+int milone_main(void) {
     struct UnitList const* list_ = milone_mem_alloc(1, sizeof(struct UnitList));
     (*(((struct UnitList*)list_))) = (struct UnitList){.head = 0, .tail = NULL};
     char switch_;
@@ -49,7 +49,7 @@ int milone_main() {
             goto clause_3;
     }
 clause_2:;
-    milone_assert(false, 19, 6);
+    milone_assert(false, 19, 4);
     switch_ = 0;
     goto switch_next_1;
 clause_3:;

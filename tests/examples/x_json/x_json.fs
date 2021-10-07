@@ -14,8 +14,8 @@ let rec printList xs =
   match xs with
   | [] -> ()
   | x :: xs ->
-      printfn "%s" x
-      printList xs
+    printfn "%s" x
+    printList xs
 
 let isDigit c = '0' <= c && c <= '9'
 

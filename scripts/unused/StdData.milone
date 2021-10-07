@@ -1,0 +1,18 @@
+
+module rec MiloneStd.StdData
+
+/// Standard data type for untyped computation
+/// such as serialization and deserialization.
+[<NoEquality; NoComparison>]
+type Data =
+  /// Unit value. Used also as "null" in other languages.
+  | DUnit
+
+  | DFalse
+  | DTrue
+  | DInt of int
+  | DFloat of float
+  | DString of string
+
+  | DList of Data list
+  | DMap of (string * Data) list

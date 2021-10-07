@@ -1,0 +1,12 @@
+/// Provides functions imported to scope by default.
+module rec MiloneCore.Prelude
+
+// Argument names are to be unique (for small diff in snapshots).
+
+let ignore (_: 'A) : unit = ()
+
+let id (idArg: 'T) : 'T = idArg
+
+let fst (fstArg: 'T, _: 'A) : 'T = fstArg
+
+let snd (_: 'A, sndArg: 'T) : 'T = sndArg

@@ -1,8 +1,8 @@
 #include "milone.h"
 
-int milone_main();
+int milone_main(void);
 
-int milone_main() {
+int milone_main(void) {
     struct String hello_ = (struct String){.str = "hello", .len = 5};
     struct String world_ = (struct String){.str = "world", .len = 5};
     milone_assert((hello_.len == 5), 8, 2);

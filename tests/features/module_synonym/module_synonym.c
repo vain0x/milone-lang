@@ -1,15 +1,11 @@
 #include "milone.h"
 
-int inc_(int x_);
+int module_synonym_sub_inc(int );
 
-int milone_main();
+int milone_main(void);
 
-int inc_(int x_) {
-    return (x_ + 1);
-}
-
-int milone_main() {
-    int call_ = inc_(2);
+int milone_main(void) {
+    int call_ = module_synonym_sub_inc(2);
     milone_assert((call_ == 3), 7, 2);
     return 0;
 }

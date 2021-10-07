@@ -2,12 +2,15 @@ default: build
 
 .PHONY: build clean default restore run test
 
-build: target/json_get target/todo
+JSON_GET := target/CmdJsonGet/json_get
+TODO := target/CmdSqliteTodo/todo
+
+build: ${JSON_GET} ${TODO}
 
 target/lib_json.c: LibJson/Json.milone 
 	(cd LibJson; ./build)
 
-target/json_get: \
+${JSON_GET}: \
 	CmdJsonGet/CmdJsonGet.milone \
 	CmdJsonGet/cmd_json_get_runtime.c \
 	LibJson/lib_json_runtime.c \
@@ -15,7 +18,7 @@ target/json_get: \
 	vendor/pdjson/pdjson.o
 	(cd CmdJsonGet; ./build)
 
-target/todo: \
+${TODO}: \
 	CmdSqliteTodo/CmdSqliteTodo.milone \
 	LibSqlite3/Db.milone \
 	LibSqlite3/lib_sqlite3_runtime.c \
@@ -37,18 +40,29 @@ target/lib_file_system_tests: \
 	$(wildcard LibFileSystemTests/*.milone)
 	(cd LibFileSystemTests; ./build)
 
-run: build
-	cat .vscode/c_cpp_properties.json | target/json_get version
-	cat .vscode/c_cpp_properties.json | target/json_get configurations.length
-	cat .vscode/c_cpp_properties.json | target/json_get configurations.0.name
-	target/todo add 'wash dishes'
-	target/todo add 'clean up table'
-	target/todo
-	target/todo remove 'wash'
-	target/todo remove 'up'
-	target/todo
+target/LibNurseryTests/.timestamp: \
+	$(wildcard LibNursery/*.milone) \
+	$(wildcard LibNurseryTests/*.milone)
+	(cd LibNurseryTests; ./run) && \
+		mkdir -p $(dirname $@) && \
+		touch $@
 
-test: target/lib_span_tests target/lib_file_system_tests
+test_lib_nursery: target/LibNurseryTests/.timestamp
+
+run: build
+	cat .vscode/c_cpp_properties.json | ${JSON_GET} version
+	cat .vscode/c_cpp_properties.json | ${JSON_GET} configurations.length
+	cat .vscode/c_cpp_properties.json | ${JSON_GET} configurations.0.name
+	${TODO} add 'wash dishes'
+	${TODO} add 'clean up table'
+	${TODO}
+	${TODO} remove 'wash'
+	${TODO} remove 'up'
+	${TODO}
+
+test: target/lib_span_tests \
+		target/lib_file_system_tests \
+		target/LibNurseryTests/.timestamp
 	if target/lib_span_tests; then echo OK; else echo FAIL=$?; fi
 	if target/lib_file_system_tests; then echo OK; else echo FAIL=$?; fi
 

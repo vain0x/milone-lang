@@ -1,4 +1,7 @@
 #!/bin/sh
+
+# FIXME: needs updating
+
 # Install milone command locally for development.
 #
 # See <scripts/install> for production.
@@ -30,13 +33,14 @@ trap 'test $? -ne 0 && echo "install-dev: Installation failed."' EXIT
 scripts/uninstall
 
 # Ensure directories exist.
+mkdir -p "$BIN_DIR"
 mkdir -p "$MILONE_HOME/bin/milone_dotnet"
 mkdir -p "$MILONE_HOME/bin/milone_lsp"
 
 # Make symbolic links.
 ln -fs "$PWD/target/milone" "$MILONE_HOME/bin/milone_native"
-ln -fs "$PWD/MiloneLang/bin/Debug/net5.0/MiloneLang" "$MILONE_HOME/bin/milone_dotnet/MiloneLang"
-ln -fs "$PWD/milone_lsp/bin/Debug/net5.0/MiloneLsp" "$MILONE_HOME/bin/milone_lsp/MiloneLsp"
+ln -fs "$PWD/src/MiloneCli/bin/Debug/net5.0/MiloneCli" "$MILONE_HOME/bin/milone_dotnet/MiloneCli"
+ln -fs "$PWD/src/MiloneLspServer/bin/Debug/net5.0/MiloneLspServer" "$MILONE_HOME/bin/milone_lsp/MiloneLspServer"
 ln -fs "$PWD/runtime" "$MILONE_HOME/runtime"
 ln -fs "$PWD/milone_libs" "$MILONE_HOME/milone_libs"
 
@@ -58,13 +62,17 @@ MILONE_HOME="{{ MILONE_HOME }}" "{{ MILONE_HOME }}/bin/milone_native" "$@"
 CODE1=$?
 test $CODE1 -eq 0 && exit 0
 
-echo -e '\nmilone: Retrying with .NET version...\n' >&2
+{
+    echo ''
+    echo 'milone: Retrying with .NET version...'
+    echo ''
+} >&2
 
-MILONE_HOME="{{ MILONE_HOME }}" "{{ MILONE_HOME }}/bin/milone_dotnet/MiloneLang" "$@"
+MILONE_HOME="{{ MILONE_HOME }}" "{{ MILONE_HOME }}/bin/milone_dotnet/MiloneCli" "$@"
 CODE2=$?
 test $CODE2 -eq 0 && exit 0
 
-echo "milone: Exited with $CODE1 (native) and $CODE2 (dotnet)"
+echo "milone: Exited with $CODE1 (native) and $CODE2 (dotnet)" >&2
 exit 1
 END
 

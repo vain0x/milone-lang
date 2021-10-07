@@ -1,3 +1,0 @@
-module rec CmdHttpServer.MiloneOnly
-
-let _unit = ()

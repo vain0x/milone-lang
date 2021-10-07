@@ -16,13 +16,13 @@ type RawNode =
 // (len, (weight, node) list, None)
 type RandomAccessList<'T> = int * (int * RawNode) list * 'T option
 
-let empty (): RandomAccessList<_> = 0, [], None
+let empty () : RandomAccessList<_> = 0, [], None
 
-let length (ral: RandomAccessList<_>): int =
+let length (ral: RandomAccessList<_>) : int =
   let len, _, _ = ral
   len
 
-let add value (ral: RandomAccessList<_>): RandomAccessList<_> =
+let add value (ral: RandomAccessList<_>) : RandomAccessList<_> =
   let len, ts, none = ral
   let _typeUnifier () = [ Some value; none ] |> ignore
 
@@ -31,9 +31,10 @@ let add value (ral: RandomAccessList<_>): RandomAccessList<_> =
   let ts =
     match ts with
     | (w1, t1) :: (w2, t2) :: rest ->
-        if w1 = w2
-        then (1 + w1 + w2, Node(value, t1, t2)) :: rest
-        else (1, Leaf value) :: ts
+      if w1 = w2 then
+        (1 + w1 + w2, Node(value, t1, t2)) :: rest
+      else
+        (1, Leaf value) :: ts
 
     | _ -> (1, Leaf value) :: ts
 
@@ -62,25 +63,32 @@ let add value (ral: RandomAccessList<_>): RandomAccessList<_> =
 //       Some head, (len - 1, ts, none)
 
 /// Gets i'th item.
-let item (index: int) (ral: RandomAccessList<_>): _ =
+let item (index: int) (ral: RandomAccessList<_>) : _ =
   let len, ts, none = ral
   assert (index < len)
 
   let rec go2 w i t =
     match t with
     | Leaf x ->
-        assert (w = 1)
-        unbox x
+      assert (w = 1)
+      unbox x
 
     | Node (x, t1, t2) ->
-        if i = 0 then unbox x
-        else if i <= w / 2 then go2 (w / 2) (i - 1) t1
-        else go2 (w / 2) (i - 1 - w / 2) t2
+      if i = 0 then
+        unbox x
+      else if i <= w / 2 then
+        go2 (w / 2) (i - 1) t1
+      else
+        go2 (w / 2) (i - 1 - w / 2) t2
 
   let rec go1 i ts =
     match ts with
     | [] -> failwith "NEVER: Out of range."
-    | (w, t) :: ts -> if i < w then go2 w i t else go1 (i - w) ts
+    | (w, t) :: ts ->
+      if i < w then
+        go2 w i t
+      else
+        go1 (i - w) ts
 
   let value = go1 (len - 1 - index) ts
   let _typeUnifier () = [ Some value; none ] |> ignore
@@ -88,7 +96,7 @@ let item (index: int) (ral: RandomAccessList<_>): _ =
   value
 
 /// Replaces i'th item immutably.
-let withItem (index: int) value (ral: RandomAccessList<_>): RandomAccessList<_> =
+let withItem (index: int) value (ral: RandomAccessList<_>) : RandomAccessList<_> =
   let len, ts, none = ral
   assert (index < len)
 
@@ -101,15 +109,20 @@ let withItem (index: int) value (ral: RandomAccessList<_>): RandomAccessList<_> 
     | Leaf _ -> Leaf value
 
     | Node (x, t1, t2) ->
-        if i <= w / 2
-        then Node(x, go2 (w / 2) (i - 1) t1, t2)
-        else Node(x, t1, go2 (w / 2) (i - 1 - w / 2) t2)
+      if i <= w / 2 then
+        Node(x, go2 (w / 2) (i - 1) t1, t2)
+      else
+        Node(x, t1, go2 (w / 2) (i - 1 - w / 2) t2)
 
   let rec go1 i ts =
     match ts with
     | [] -> failwith "NEVER: Out of range."
 
-    | (w, t) :: ts -> if i < w then (w, go2 w i t) :: ts else (w, t) :: go1 (i - w) ts
+    | (w, t) :: ts ->
+      if i < w then
+        (w, go2 w i t) :: ts
+      else
+        (w, t) :: go1 (i - w) ts
 
   let ts = go1 (len - 1 - index) ts
   len, ts, none
@@ -128,18 +141,18 @@ let fold folder state (ral: RandomAccessList<_>) =
     | Leaf x -> folder state (unbox x)
 
     | Node (x, t1, t2) ->
-        let state = go2 state t2
-        let state = go2 state t1
-        folder state (unbox x)
+      let state = go2 state t2
+      let state = go2 state t1
+      folder state (unbox x)
 
   let rec go1 state ts =
     match ts with
     | [] -> state
 
     | (_, t) :: ts ->
-        // No need to be tail-recursive because ts is short: O(log N).
-        let state = go1 state ts
-        go2 state t
+      // No need to be tail-recursive because ts is short: O(log N).
+      let state = go1 state ts
+      go2 state t
 
   go1 state ts
 
@@ -158,23 +171,23 @@ let map f (ral: RandomAccessList<_>) =
     | Leaf x -> Leaf(g x)
 
     | Node (x, t1, t2) ->
-        let t2 = go2 t2
-        let t1 = go2 t1
-        Node(g x, t1, t2)
+      let t2 = go2 t2
+      let t1 = go2 t1
+      Node(g x, t1, t2)
 
   let rec go1 ts =
     match ts with
     | [] -> []
 
     | (w, t) :: ts ->
-        let ts = go1 ts
-        (w, go2 t) :: ts
+      let ts = go1 ts
+      (w, go2 t) :: ts
 
   let ts = go1 ts
   len, ts, none
 
-let ofList (xs: _ list): RandomAccessList<_> =
+let ofList (xs: _ list) : RandomAccessList<_> =
   List.fold (fun ral x -> add x ral) (empty ()) xs
 
-let toList (ral: RandomAccessList<_>): _ list =
+let toList (ral: RandomAccessList<_>) : _ list =
   ral |> fold (fun acc x -> x :: acc) [] |> List.rev

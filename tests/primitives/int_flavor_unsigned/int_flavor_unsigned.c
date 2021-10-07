@@ -1,8 +1,8 @@
 #include "milone.h"
 
-int milone_main();
+int milone_main(void);
 
-int milone_main() {
+int milone_main(void) {
     milone_assert((((int)((uint32_t)42)) == 42), 6, 2);
     milone_assert((((int)((uint32_t)'A')) == ((int)'A')), 7, 2);
     uint32_t call_ = str_to_uint32((struct String){.str = "42", .len = 2});

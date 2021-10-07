@@ -1,15 +1,17 @@
 #!/bin/sh
 # See also: https://github.com/ninja-build/ninja
-#
-# Prerequisites:
-#   - busybox (which is likely pre-installed)
-#       `apt install -y busybox-static`
 
 set -eu
 
 URL='https://github.com/ninja-build/ninja/releases/download/v1.10.2/ninja-linux.zip'
 
 mkdir -p bin
+
+if test -x bin/ninja
+then
+    echo 'trace: bin/ninja is already installed.' >&2
+    exit
+fi
 
 (
     cd bin

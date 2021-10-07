@@ -1,12 +1,12 @@
 #include "milone.h"
 
-char testEol_(char arg_);
+void str_literal_raw_Program_testEol(void);
 
-char testNoEscape_(char arg_1);
+void str_literal_raw_Program_testNoEscape(void);
 
-int milone_main();
+int milone_main(void);
 
-char testEol_(char arg_) {
+void str_literal_raw_Program_testEol(void) {
     struct String eol_ = (struct String){.str = "\n", .len = 1};
     bool if_;
     if ((str_compare(eol_, (struct String){.str = "\n", .len = 1}) == 0)) {
@@ -21,17 +21,17 @@ else_3:;
     if_ = (str_compare(eol_, (struct String){.str = "\r\n", .len = 2}) == 0);
     goto if_next_1;
 if_next_1:;
-    milone_assert(if_, 6, 2);
-    return 0;
+    milone_assert(if_, 7, 2);
+    return;
 }
 
-char testNoEscape_(char arg_1) {
-    milone_assert((str_compare((struct String){.str = " \\\"\" ", .len = 5}, (struct String){.str = " \\\"\" ", .len = 5}) == 0), 8, 22);
-    return 0;
+void str_literal_raw_Program_testNoEscape(void) {
+    milone_assert((str_compare((struct String){.str = " \\\"\" ", .len = 5}, (struct String){.str = " \\\"\" ", .len = 5}) == 0), 9, 22);
+    return;
 }
 
-int milone_main() {
-    char call_ = testEol_(0);
-    char call_1 = testNoEscape_(0);
+int milone_main(void) {
+    str_literal_raw_Program_testEol();
+    str_literal_raw_Program_testNoEscape();
     return 0;
 }

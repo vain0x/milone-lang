@@ -1,0 +1,73 @@
+#!/bin/bash
+
+set -eu
+
+MILONE_CLI_DIR="$(dirname $PWD)/MiloneCli"
+MILONE_CLI_PATH="$MILONE_CLI_DIR/MiloneCli.milone"
+MILONE_HOME=$(dirname $(dirname $PWD))
+CONTENTS=$(cat $MILONE_CLI_PATH | ./json-encode)
+
+: >err.generated.txt
+tail -f err.generated.txt &
+TAIL=$!
+
+dotnet build
+
+{
+./req <<END
+{"method": "initialize", "id": 1, "params": {
+    "rootUri": "file://$MILONE_CLI_DIR"
+}}
+END
+
+./req <<END
+{"method": "textDocument/didOpen", "params": {
+    "textDocument": {
+        "uri": "file://$MILONE_CLI_PATH",
+        "languageId": "milone",
+        "version": 1,
+        "text": $CONTENTS
+    }
+}}
+END
+
+./req <<END
+{"method": "textDocument/didChange", "params": {
+    "textDocument": {
+        "uri": "file://$MILONE_CLI_PATH",
+        "version": 2
+    },
+    "contentChanges": [
+        {
+            "text": $CONTENTS
+        }
+    ]
+}}
+END
+
+./req <<END
+{"method": "textDocument/didChange", "params": {
+    "textDocument": {
+        "uri": "file://$MILONE_CLI_PATH",
+        "version": 3
+    },
+    "contentChanges": [
+        {
+            "text": $CONTENTS
+        }
+    ]
+}}
+END
+
+sleep 3s
+
+./req <<END
+{"method": "shutdown", "id": 1000000000}
+END
+
+./req <<END
+{"method": "exit"}
+END
+} | MILONE_HOME="$MILONE_HOME" dotnet run
+
+kill $!

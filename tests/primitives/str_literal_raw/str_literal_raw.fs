@@ -1,7 +1,8 @@
 module rec str_literal_raw.Program
 
 let testEol () =
-  let eol = """
+  let eol =
+    """
 """
 
   assert (eol = "\n" || eol = "\r\n")

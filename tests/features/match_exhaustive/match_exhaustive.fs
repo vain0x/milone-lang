@@ -7,9 +7,9 @@ let main _ =
 
   match f 3 with
   | 1 ->
-      assert false
-      1
+    assert false
+    1
 
   | y ->
-      assert (y = 9)
-      0
+    assert (y = 9)
+    0

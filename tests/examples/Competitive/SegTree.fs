@@ -26,6 +26,7 @@ let intervalCovers (first: Interval) (second: Interval) =
 // -----------------------------------------------
 
 type SegItemTypeTag = | SegItemTypeTag
+type private SegItemType<'T> = ('T -> 'T -> 'T) * SegNode<'T> * obj * SegItemTypeTag
 
 let segItemTypeToAppend (append, _, _, (_: SegItemTypeTag)) = append
 
@@ -33,7 +34,7 @@ let segItemTypeToEmptyNode (_, emptyNode, _, (_: SegItemTypeTag)) = emptyNode
 
 let segItemTypeToNoChildren (_, _, noChildren, (_: SegItemTypeTag)) : obj = noChildren
 
-let segItemTypeToEmptyItem itemTy =
+let segItemTypeToEmptyItem (itemTy: SegItemType<_>) =
   itemTy |> segItemTypeToEmptyNode |> segNodeToItem
 
 let segItemTypeNew emptyItem append =
@@ -60,6 +61,7 @@ let segItemTypeNew emptyItem append =
 // -----------------------------------------------
 
 type SegNodeTag = | SegNodeTag
+type private SegNode<'T> = 'T * int * int * obj * SegNodeTag
 
 let segNodeNewEmpty emptyItem = emptyItem, 0, (-1), unitObj, SegNodeTag
 
@@ -544,8 +546,8 @@ let segTreeTest () =
             else
               match xs with
               | x :: xs ->
-                  let acc = if i < l then acc else acc + x
-                  sum acc (i + 1) xs
+                let acc = if i < l then acc else acc + x
+                sum acc (i + 1) xs
               | _ -> failwith "NEVER"
 
           sum 0 0 xs

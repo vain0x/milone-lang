@@ -18,4 +18,8 @@ target
 
 
 # Build outputs.
-a.out
+*.o
+*.out
+
+tests/**/MiloneCore_*.c
+tests/**/MiloneStd_*.c

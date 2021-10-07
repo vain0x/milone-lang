@@ -29,7 +29,8 @@ SUBCOMMANDS:
 let private dbInit () =
   dbOpen "todo.db"
 
-  dbExec """
+  dbExec
+    """
     create table if not exists todos(
       todo_id integer primary key autoincrement,
       text text not null
@@ -42,11 +43,12 @@ let private dbInit () =
 
 let private cmdAdd text =
   dbInit ()
-  dbMutate """
+
+  dbMutate
+    """
     insert into todos(text) values (:text)
-  """ [
-    ":text", DString text
-  ]
+  """
+    [ ":text", DString text ]
 
 // -----------------------------------------------
 // remove
@@ -56,12 +58,12 @@ let private cmdRemove word =
   dbInit ()
 
   // FIXME: escape '%' and '_'
-  dbMutate """
+  dbMutate
+    """
     delete from todos
     where text like :word
-  """ [
-    ":word", DString ("%" + word + "%")
-  ]
+  """
+    [ ":word", DString("%" + word + "%") ]
 
 // -----------------------------------------------
 // list
@@ -70,45 +72,52 @@ let private cmdRemove word =
 let private cmdList () =
   dbInit ()
 
-  dbSelect """
+  dbSelect
+    """
     select todo_id, text from todos
     order by todo_id
-  """ [] |> List.fold (fun () row ->
-    match row with
-    | [ DInt todoId; DString text ] ->
-        printfn "%d: %s" todoId text
+  """
+    []
+  |> List.fold
+       (fun () row ->
+         match row with
+         | [ DInt todoId; DString text ] -> printfn "%d: %s" todoId text
 
-    | _ ->
-        assert false
-        exit 1
-  ) ()
+         | _ ->
+           assert false
+           exit 1)
+       ()
 
 // -----------------------------------------------
 // Entrypoint
 // -----------------------------------------------
 
 let main _ =
-  let args = E.commandLineArgs () |> List.skip 1
+  let args =
+    // wants List.skip
+    match E.commandLineArgs () with
+    | [] -> exit 1
+    | _ :: xs -> xs
 
   match args with
   | "-h" :: _
   | "--help" :: _ ->
-      printfn "%s" (helpText ())
-      0
+    printfn "%s" (helpText ())
+    0
 
   | [ "add"; text ] ->
-      cmdAdd text
-      0
+    cmdAdd text
+    0
 
   | [ "remove"; word ] ->
-      cmdRemove word
-      0
+    cmdRemove word
+    0
 
   | []
   | [ "list" ] ->
-      cmdList ()
-      0
+    cmdList ()
+    0
 
   | _ ->
-      printfn "error: Unknown arguments. Run with --help for usage."
-      1
+    printfn "error: Unknown arguments. Run with --help for usage."
+    1

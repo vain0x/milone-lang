@@ -1,0 +1,80 @@
+#!/bin/bash
+
+set -eu
+
+MILONE_CLI_DIR="$(dirname $PWD)/MiloneCli"
+MILONE_CLI_PATH="$MILONE_CLI_DIR/MiloneCli.milone"
+MILONE_HOME=$(dirname $(dirname $PWD))
+
+# Find the line number.
+LINE=$(cat $MILONE_CLI_PATH | grep -n 'cli host' | cut -d ':' -f 1)
+LINE=$(( $LINE - 1 ))
+
+: >err.generated.txt
+tail -f err.generated.txt &
+TAIL=$!
+
+{
+./req <<END
+{"method": "initialize", "id": 1, "params": {
+    "rootUri": "file://${MILONE_CLI_DIR}"
+}}
+END
+
+./req <<END
+{"method": "textDocument/hover", "id": 2, "params": {
+    "textDocument": {
+        "uri": "file://$MILONE_CLI_PATH"
+    },
+    "position": {
+        "line": $LINE,
+        "character": 2
+    }
+}}
+END
+
+./req <<END
+{"method": "textDocument/didOpen", "params": {
+    "textDocument": {
+        "uri": "file://$MILONE_CLI_PATH",
+        "languageId": "milone",
+        "version": 1,
+        "text": $(cat $MILONE_CLI_PATH | ./json-encode)
+    }
+}}
+END
+
+./req <<END
+{"method": "textDocument/hover", "id": 3, "params": {
+    "textDocument": {
+        "uri": "file://$MILONE_CLI_PATH"
+    },
+    "position": {
+        "line": $LINE,
+        "character": 3
+    }
+}}
+END
+
+./req <<END
+{"method": "textDocument/hover", "id": 4, "params": {
+    "textDocument": {
+        "uri": "file://$MILONE_CLI_PATH"
+    },
+    "position": {
+        "line": $LINE,
+        "character": 2
+    }
+}}
+END
+
+./req <<END
+{"method": "shutdown", "id": 1000000000}
+END
+
+./req <<END
+{"method": "exit"}
+END
+} | MILONE_HOME="$MILONE_HOME" dotnet run 2>err.generated.txt
+
+kill $!

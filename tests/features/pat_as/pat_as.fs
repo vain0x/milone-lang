@@ -12,8 +12,8 @@ let shadowingCase () =
 
   match x, 2 with
   | _, x as y ->
-      let y1, y2 = y
-      assert (x = 2 && y1 = 1 && y2 = 2)
+    let y1, y2 = y
+    assert (x = 2 && y1 = 1 && y2 = 2)
 
 let main _ =
   simpleCase ()

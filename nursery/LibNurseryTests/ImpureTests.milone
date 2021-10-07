@@ -1,0 +1,13 @@
+module rec LibNurseryTests.ImpureTests
+
+open LibNursery.EphSerial
+open LibNursery.Impure
+
+let private println (msg: string) : Impure<unit> =
+  fun (ss: EphSerial) -> printfn "%s" msg, ss
+
+let testImpureModule () : int =
+  Impure.just ()
+  |> Impure.andThen (fun () s -> println "OK" s)
+  |> Impure.map (fun _ -> 0)
+  |> Impure.exec

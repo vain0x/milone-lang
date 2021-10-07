@@ -23,8 +23,8 @@ let testMatchArmsMakeScope () =
 let testNestedMatchesParseCorrectly () =
   match 1 with
   | _ when false ->
-      match 1 with
-      | _ -> assert false
+    match 1 with
+    | _ -> assert false
   | _ -> ()
 
 let main _ =

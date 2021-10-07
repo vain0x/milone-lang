@@ -7,16 +7,16 @@ let listToArraySize xs =
   | [] -> 0
 
   | x :: _ ->
-      let itemSize = __sizeOfVal x
+    let itemSize = __sizeOfVal x
 
-      let rec go n xs =
-        match xs with
-        | [] -> n
-        | _ :: xs -> go (n + 1) xs
+    let rec go n xs =
+      match xs with
+      | [] -> n
+      | _ :: xs -> go (n + 1) xs
 
-      let n = go 0 xs
+    let n = go 0 xs
 
-      itemSize * n
+    itemSize * n
 
 let main _ =
   assert (listToArraySize [ 2; 3; 5 ] = 3 * 4)

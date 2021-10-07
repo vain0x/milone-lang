@@ -1,22 +1,18 @@
 #include "milone.h"
 
-void const* f_(char arg_);
+void const* global_var_initializer_Program_f(void);
 
-int milone_main();
+int milone_main(void);
 
-static void const* boxedValue_;
+void const* global_var_initializer_Program_boxedValue;
 
-void const* f_(char arg_) {
-    void const* box_ = milone_mem_alloc(1, sizeof(int));
-    (*(((int*)box_))) = 1;
-    return box_;
+void const* global_var_initializer_Program_f(void) {
+    return ((void const*)((intptr_t)1));
 }
 
-int milone_main() {
-    void const* box_1 = milone_mem_alloc(1, sizeof(int));
-    (*(((int*)box_1))) = 1;
-    boxedValue_ = box_1;
-    void const* call_ = f_(0);
-    milone_assert(((*(((int const*)call_))) == 1), 10, 2);
+int milone_main(void) {
+    global_var_initializer_Program_boxedValue = ((void const*)((intptr_t)1));
+    void const* call_ = global_var_initializer_Program_f();
+    milone_assert((((int)((intptr_t)call_)) == 1), 10, 2);
     return 0;
 }

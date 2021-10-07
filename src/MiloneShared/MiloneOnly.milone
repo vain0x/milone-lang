@@ -1,0 +1,82 @@
+/// Defines F# primitives for milone-lang.
+///
+/// Not used in F#.
+module rec MiloneShared.MiloneOnly
+
+let failwith (str: string) =
+  printfn "FATAL ERROR: %s" str
+  exit 1
+
+let failwithf (str: string) =
+  printfn "FATAL ERROR: %s" str
+  exit 1
+
+let objToString _ = "<objToString not supported>"
+
+let __stringLengthInUtf8Bytes (s: string) = s.Length
+
+let __trace (s: string) : unit =
+  __nativeStmt ("fwrite({0}.str, sizeof(char), (size_t){0}.len, stderr);", s)
+
+let __context _ action = action ()
+
+type Profiler = Profiler of voidptr
+
+// -----------------------------------------------
+// Concurrency
+// -----------------------------------------------
+
+// Since runtime doesn't support concurrent programming yet,
+// these functions work synchronously.
+
+// note: synonym doesn't work due to an issue of type checker
+// type Future<'T> = 'T
+type Future<'T> = Future of 'T
+
+module Future =
+  let just (value: 'T) : Future<'T> = Future value
+
+  let map (f: 'T -> 'U) (future: Future<'T>) : Future<'U> =
+    let (Future x) = future
+    Future(f x)
+
+  let andThen (f: 'T -> Future<'U>) (future: Future<'T>) : Future<'U> =
+    let (Future x) = future
+    f x
+
+  // milone-only
+  let unwrap (Future x) = x
+
+// #mpscSync
+let private mpscSync
+  (consumer: 'S -> 'A -> 'S * 'T list)
+  (producer: 'S -> 'T -> Future<'A>)
+  (initialState: 'S)
+  (initialCommands: 'T list)
+  : 'S =
+  let rec folder state commands =
+    let state, commandListList =
+      commands
+      |> List.fold
+           (fun (state, acc) command ->
+             let action = producer state command |> Future.unwrap
+             let state, newCommands = consumer state action
+             state, newCommands :: acc)
+           (state, [])
+
+    List.fold folder state (List.rev commandListList)
+
+  folder initialState initialCommands
+
+// #mpscSync
+let mpscConcurrent
+  (consumer: 'S -> 'A -> 'S * 'T list)
+  (producer: 'S -> 'T -> Future<'A>)
+  (initialState: 'S)
+  (initialCommands: 'T list)
+  : 'S =
+  mpscSync consumer producer initialState initialCommands
+
+let __parallelMap (f: 'T -> 'U) (xs: 'T list) : 'U list = List.map f xs
+
+let __allowParallel () = ()

@@ -6,22 +6,27 @@ set -eu
 CC=${CC:-gcc}
 
 PROJECT_DIR="$PWD/scripts/project-reference-example"
-TARGET_DIR=${TARGET_DIR:-$PROJECT_DIR/target}
+TARGET_DIR=${TARGET_DIR:-$PROJECT_DIR/target/project-reference-example}
 
-APP_C="$TARGET_DIR/project_reference_example_app.c"
 APP_EXE="$TARGET_DIR/project_reference_example_app.exe"
 APP_OUT="$TARGET_DIR/project_reference_example_app.txt"
+APP_NINJA="$TARGET_DIR/project_reference_example_app.ninja"
 
-mkdir -p $TARGET_DIR
+C_FILES=$(milone compile "$PROJECT_DIR/App" --target-dir $TARGET_DIR)
+if test $? -ne 0
+then
+    exit 1
+fi
 
-milone compile "$PROJECT_DIR/App" >$APP_C || { cat $APP_C >&2; false; }
+C_FILES=$(echo "$C_FILES" | xargs -I{} echo $TARGET_DIR/{})
 
 $CC -std=c11 -O2 \
+    -Wno-parentheses-equality \
     -I$PWD/runtime \
     "$PWD/runtime/milone.c" \
-    "$APP_C" \
+    $C_FILES \
     -o "$APP_EXE"
 
 $APP_EXE >$APP_OUT
 
-diff "$APP_OUT" "$PROJECT_DIR/app.out"
+diff "$APP_OUT" "$PROJECT_DIR/app.output"

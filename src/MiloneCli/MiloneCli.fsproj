@@ -1,0 +1,23 @@
+﻿<Project Sdk="Microsoft.NET.Sdk">
+
+  <PropertyGroup>
+    <OutputType>Exe</OutputType>
+    <TargetFramework>net5.0</TargetFramework>
+  </PropertyGroup>
+
+  <ItemGroup>
+    <Compile Include="Lower.fs" />
+    <Compile Include="PlatformUnix.fs" />
+    <Compile Include="PlatformWindows.fs" />
+    <Compile Include="Cli.fs" />
+    <Compile Include="Program.fs" />
+  </ItemGroup>
+
+  <ItemGroup>
+    <ProjectReference Include="..\..\milone_libs\MiloneStd\MiloneStd.fsproj" />
+    <ProjectReference Include="..\MiloneShared\MiloneShared.fsproj" />
+    <ProjectReference Include="..\MiloneSyntax\MiloneSyntax.fsproj" />
+    <ProjectReference Include="..\MiloneTranslation\MiloneTranslation.fsproj" />
+  </ItemGroup>
+
+</Project>

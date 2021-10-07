@@ -2,36 +2,19 @@
 
 struct UnitList;
 
-bool isEmpty_1(struct UnitList const* xs_);
+bool isEmpty_(struct UnitList const* );
 
-char assertIsEmpty_1(struct UnitList const* xs_60);
+void assertIsEmpty_(struct UnitList const* xs_61);
 
-int milone_main();
+int milone_main(void);
 
-bool isEmpty_1(struct UnitList const* xs_) {
-    bool if_;
-    if ((!(xs_))) {
-        goto nil_cl_2;
-    } else {
-        goto cons_cl_3;
-    }
-nil_cl_2:;
-    if_ = true;
-    goto if_next_1;
-cons_cl_3:;
-    if_ = false;
-    goto if_next_1;
-if_next_1:;
-    return if_;
-}
-
-char assertIsEmpty_1(struct UnitList const* xs_60) {
-    bool call_ = isEmpty_1(xs_60);
+void assertIsEmpty_(struct UnitList const* xs_61) {
+    bool call_ = isEmpty_(xs_61);
     milone_assert(call_, 4, 23);
-    return 0;
+    return;
 }
 
-int milone_main() {
-    char call_1 = assertIsEmpty_1(NULL);
+int milone_main(void) {
+    assertIsEmpty_(NULL);
     return 0;
 }

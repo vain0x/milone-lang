@@ -7,5 +7,5 @@ let main _ =
   | 4, 9 -> 0
 
   | 999, y ->
-      assert (y <> 9)
-      1
+    assert (y <> 9)
+    1

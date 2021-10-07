@@ -15,8 +15,8 @@ let main _ =
         match xs with
         | LazyList.Nil -> ()
         | LazyList.Cons (head, tail) ->
-            printfn "%d" head
-            go (n - 1) (tail ())
+          printfn "%d" head
+          go (n - 1) (tail ())
 
     go n xs
 

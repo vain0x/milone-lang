@@ -1,0 +1,107 @@
+/// Entry point of the milone-lang compiler.
+module rec MiloneCli.EntryPoint
+
+// See milone_libs for implementations.
+open MiloneStd.StdChar
+open MiloneStd.StdString
+
+open MiloneCli.Cli
+
+module Env = MiloneStd.StdEnv
+
+let private getPlatform () : Platform =
+  match __nativeFun "milone_get_platform" with
+  | "windows" -> Platform.Windows
+  | _ -> Platform.Unix
+
+let private newGuid () : string =
+  let i : int =
+    __nativeStmt "static int s_count = 0;"
+    __nativeExpr "s_count++"
+
+  // FIXME: implemented GUID generation
+  // pre-generated GUIDs
+  let guids =
+    [
+      "202fcb2a-7c37-400a-9639-749c183e5255"
+      "3062ba8a-b9d9-475a-bed2-b434c8de6af8"
+      "7c2cad7a-7d2f-4788-a72d-cc67c89526f4"
+      "13cead8e-f52d-425e-951c-27c304a40f04"
+      "ee7426d0-1aca-4032-9d4c-7106ece712f3"
+      "6ed0c5b8-6cc7-4e39-9516-610b4165e033"
+      "f4466b19-50e6-4fe5-9ddf-acbcbef6e5e1"
+      "d1a8ed2e-e1de-4deb-b111-8d32b6a66128"
+    ]
+
+  match List.tryItem i guids with
+  | Some it -> it
+
+  | None ->
+      printfn "error: no guid"
+      exit 1
+
+let private profileInit () : Profiler =
+  let state: voidptr = __nativeFun "milone_profile_init"
+  Profiler state
+
+let private profileLog (msg: string) (Profiler state) : unit =
+  __nativeFun ("milone_profile_log", msg, state)
+
+let private fileExists (filePath: string) : bool = __nativeFun ("file_exists", filePath)
+
+let private dirCreate (baseDir: string) (dir: string) : bool =
+  __nativeFun ("dir_create", dir, baseDir)
+
+let private fileReadAllText (filePath: string) : string =
+  __nativeFun ("file_read_all_text", filePath)
+
+let private fileWriteAllText (filePath: string) (contents: string) : unit =
+  __nativeFun ("file_write_all_text", filePath, contents)
+
+let private writeStdout (contents: string) : unit =
+  __nativeStmt ("fwrite({0}.str, sizeof(char), (size_t){0}.len, stdout);", contents)
+
+let private getCwd () : string = __nativeFun "milone_get_cwd"
+
+let private getEnv (name: string) : string = __nativeFun ("milone_get_env", name)
+
+let private runCommand (command: string) (args: string list) : int =
+  __nativeFun ("milone_subprocess_run", command, args)
+
+let private executeInto (cmd: string) : unit = __nativeFun ("execute_into", cmd)
+
+let private readFile filePath =
+  if fileExists filePath then
+    fileReadAllText filePath |> Some |> Future.just
+  else
+    None |> Future.just
+
+[<EntryPoint>]
+let main _ =
+  let args = Env.commandLineArgs ()
+
+  let home =
+    match getPlatform () with
+    | Platform.Unix -> getEnv "HOME"
+    | Platform.Windows -> getEnv "USERPROFILE"
+
+  let miloneHome = getEnv "MILONE_HOME"
+
+  let host: CliHost =
+    { Args = args
+      WorkDir = getCwd ()
+      Home = home
+      MiloneHome = miloneHome
+      Platform = getPlatform ()
+      NewGuid = newGuid
+      ProfileInit = profileInit
+      ProfileLog = profileLog
+      DirCreate = dirCreate
+      FileExists = fileExists
+      FileReadAllText = readFile
+      FileWriteAllText = fileWriteAllText
+      WriteStdout = writeStdout
+      RunCommand = runCommand
+      ExecuteInto = executeInto }
+
+  cli host

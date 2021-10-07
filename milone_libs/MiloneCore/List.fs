@@ -58,10 +58,23 @@ let filter (pred: _ -> bool) (xs: _ list) : _ list =
     | [] -> rev acc
 
     | x :: xs ->
-        let acc = if pred x then x :: acc else acc
-        listFilterLoop acc xs
+      let acc = if pred x then x :: acc else acc
+      listFilterLoop acc xs
 
   listFilterLoop [] xs
+
+let skipWhile (pred: _ -> bool) (xs: _ list) : _ list =
+  let rec listSkipWhileLoop xs =
+    match xs with
+    | [] -> []
+
+    | x :: tail ->
+      if pred x then
+        listSkipWhileLoop tail
+      else
+        xs
+
+  listSkipWhileLoop xs
 
 let choose (f: _ -> _ option) (xs: _ list) : _ list =
   let rec listChooseLoop acc xs =
@@ -69,9 +82,9 @@ let choose (f: _ -> _ option) (xs: _ list) : _ list =
     | [] -> rev acc
 
     | x :: xs ->
-        match f x with
-        | Some y -> listChooseLoop (y :: acc) xs
-        | None -> listChooseLoop acc xs
+      match f x with
+      | Some y -> listChooseLoop (y :: acc) xs
+      | None -> listChooseLoop acc xs
 
   listChooseLoop [] xs
 
@@ -87,21 +100,10 @@ let collect (f: _ -> _ list) (xs: _ list) : _ list =
     | [] -> rev acc
 
     | x :: xs ->
-        let acc = listCollectInnerLoop acc (f x)
-        listCollectOuterLoop acc xs
+      let acc = listCollectInnerLoop acc (f x)
+      listCollectOuterLoop acc xs
 
   listCollectOuterLoop [] xs
-
-let skip (count: int) (xs: _ list) : _ list =
-  let rec listSkipLoop count xs =
-    match xs with
-    | [] -> []
-
-    | _ when count <= 0 -> xs
-
-    | _ :: xs -> listSkipLoop (count - 1) xs
-
-  listSkipLoop count xs
 
 let truncate (count: int) (xs: _ list) : _ list =
   let rec listTruncateLoop acc count xs =
@@ -145,8 +147,8 @@ let mapFold (folder: 'S -> 'T -> 'U * 'S) (state: 'S) (xs: 'T list) : 'U list * 
     | [] -> rev acc, state
 
     | x :: xs ->
-        let y, state = folder state x
-        listMapFoldLoop state (y :: acc) xs
+      let y, state = folder state x
+      listMapFoldLoop state (y :: acc) xs
 
   listMapFoldLoop state [] xs
 
@@ -173,8 +175,8 @@ let iter (f: _ -> unit) (xs: _ list) : unit =
   | [] -> ()
 
   | x :: xs ->
-      f x
-      iter f xs
+    f x
+    iter f xs
 
 let tryHead (xs: _ list) : _ option =
   match xs with
@@ -185,18 +187,28 @@ let tryLast (xs: _ list) : _ option =
   match xs with
   | [] -> None
   | x :: xs ->
-      let rec listTryLastLoop xs =
-        match xs with
-        | [] -> x
-        | [ x ] -> x
-        | _ :: xs -> listTryLastLoop xs
+    let rec listTryLastLoop xs =
+      match xs with
+      | [] -> x
+      | [ x ] -> x
+      | _ :: xs -> listTryLastLoop xs
 
-      Some(listTryLastLoop xs)
+    Some(listTryLastLoop xs)
 
 /// Gets the i'th item if exists.
 ///
 /// Spends O(N) time at worst. Avoid using this as possible.
-let tryItem (i: int) (xs: _ list) : _ option = xs |> skip i |> tryHead
+let tryItem (i: int) (xs: _ list) : _ option =
+  let rec listTryItemLoop (i: int) xs =
+    match xs with
+    | [] -> None
+    | x :: _ when i = 0 -> Some x
+    | _ :: xs -> listTryItemLoop (i - 1) xs
+
+  if i >= 0 then
+    listTryItemLoop i xs
+  else
+    None
 
 let tryFind (pred: _ -> bool) (xs: _ list) : _ option =
   let rec listTryFindLoop xs =
@@ -215,9 +227,9 @@ let tryPick (f: _ -> _ option) (xs: _ list) : _ option =
     | [] -> None
 
     | x :: xs ->
-        match f x with
-        | Some x -> Some x
-        | None -> listTryPickLoop xs
+      match f x with
+      | Some x -> Some x
+      | None -> listTryPickLoop xs
 
   listTryPickLoop xs
 
@@ -233,10 +245,10 @@ let partition (pred: _ -> bool) (xs: _ list) : _ list * _ list =
     | [] -> rev trueAcc, rev falseAcc
 
     | x :: xs ->
-        if pred x then
-          listPartitionLoop (x :: trueAcc) falseAcc xs
-        else
-          listPartitionLoop trueAcc (x :: falseAcc) xs
+      if pred x then
+        listPartitionLoop (x :: trueAcc) falseAcc xs
+      else
+        listPartitionLoop trueAcc (x :: falseAcc) xs
 
   listPartitionLoop [] [] xs
 

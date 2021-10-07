@@ -8,15 +8,15 @@ struct UnitList;
 
 struct RecordUsingMyUnit_;
 
-char basicCase_(char arg_);
+void union_unitlike_Program_basicCase(void);
 
 bool toBool_(struct MyBool_ myBool_1);
 
-char usedInOtherSumTypeCase_(char arg_1);
+void union_unitlike_Program_usedInOtherSumTypeCase(void);
 
-char usedInRecordTypeCase_(char arg_2);
+void union_unitlike_Program_usedInRecordTypeCase(void);
 
-int milone_main();
+int milone_main(void);
 
 enum MyBool_Discriminant {
     MyFalse_,
@@ -41,14 +41,14 @@ struct RecordUsingMyUnit_ {
     struct UnitList const* t1;
 };
 
-char basicCase_(char arg_) {
+void union_unitlike_Program_basicCase(void) {
     char myUnit_ = 0;
     char match_;
     match_ = 0;
     goto end_match_1;
 next_2:;
 end_match_1:;
-    return 0;
+    return;
 }
 
 bool toBool_(struct MyBool_ myBool_1) {
@@ -66,15 +66,15 @@ end_match_3:;
     return match_1;
 }
 
-char usedInOtherSumTypeCase_(char arg_1) {
+void union_unitlike_Program_usedInOtherSumTypeCase(void) {
     struct MyBool_ variant_ = (struct MyBool_){.discriminant = MyTrue_, .MyTrue_ = 0};
     struct MyBool_ myBool_ = variant_;
     bool call_ = toBool_(myBool_);
     milone_assert(call_, 27, 2);
-    return 0;
+    return;
 }
 
-char usedInRecordTypeCase_(char arg_2) {
+void union_unitlike_Program_usedInRecordTypeCase(void) {
     struct UnitList const* list_ = milone_mem_alloc(1, sizeof(struct UnitList));
     (*(((struct UnitList*)list_))) = (struct UnitList){.head = 0, .tail = NULL};
     struct RecordUsingMyUnit_ RecordUsingMyUnit_ = (struct RecordUsingMyUnit_){.t0 = 0, .t1 = list_};
@@ -90,12 +90,12 @@ next_7:;
     goto end_match_6;
 next_8:;
 end_match_6:;
-    return 0;
+    return;
 }
 
-int milone_main() {
-    char call_1 = basicCase_(0);
-    char call_2 = usedInOtherSumTypeCase_(0);
-    char call_3 = usedInRecordTypeCase_(0);
+int milone_main(void) {
+    union_unitlike_Program_basicCase();
+    union_unitlike_Program_usedInOtherSumTypeCase();
+    union_unitlike_Program_usedInRecordTypeCase();
     return 0;
 }
