@@ -5,9 +5,8 @@
 - [#About](#about)
 - [#Install](#install)
     - ~~With package manager~~ (yet)
-    - From binary -> [install_from_binary.md](install_from_binary.md)
     - [#From sources on Linux](#install-from-sources-on-linux)
-    - [#From sources on Windows](#install-from-sources-on-windows)
+    - [#From binary package on Windows](#install-from-binary-package-on-windows)
 - [#How it works](#how-it-works)
 - Documentation
     - Language -> [docs/refs](docs/refs)
@@ -39,6 +38,7 @@ Prerequisites:
 
 - Ubuntu 18.04 (or similar platform)
 - Install [.NET SDK 5](https://dotnet.microsoft.com/download/dotnet/5.0)
+- Install GNU make
 - Install GCC 7.5.0
 - Install `busybox`, which is likely pre-installed, by:
     `apt install -y busybox-static`
@@ -51,42 +51,27 @@ git clone 'https://github.com/vain0x/milone-lang' --filter=blob:none
 
 # Build and install.
 cd milone-lang
-scripts/install
+make install
 ```
 
-- To uninstall, do `scripts/uninstall`.
+- To uninstall, do `make uninstall`.
 
-### Install from sources on Windows
+### Install from binary package on Windows
 
 Prerequisites:
 
 - Windows 10
-- Install [Git for Windows](https://gitforwindows.org/)
-- Install [.NET SDK 5](https://dotnet.microsoft.com/download/dotnet/5.0)
-- Install [Visual Studio 2019](https://visualstudio.microsoft.com/ja/downloads/) with "Desktop development with C++" option
+- Install `MSBuild.exe` in some way:
+    - install Visual Studio 2019 with "Desktop development with C++" option, *OR*
+    - install [Visual Studio 2019 Build Tools](https://visualstudio.microsoft.com/ja/downloads/?q=build+tools#build-tools-for-visual-studio-2019).
 
-Do with Git Bash:
+Instructions:
 
-```sh
-# Download the source code.
-git clone 'https://github.com/vain0x/milone-lang' --filter=blob:none
-cd milone-lang
+- Download a binary package from [GitHub Releases](https://github.com/vain0x/milone-lang/releases)
+- Unarchive it somewhere
+- Follow instructions written in [INSTALL.md](scripts/MyBuildTool/assets/INSTALL.md)
 
-# ---- BUILD ----
-
-scripts/build-milone-windows
-
-# ---- INSTALL ----
-
-# Copy the generated executable to some directory as you want.
-mkdir -p $USERPROFILE/bin
-cp 'target/MiloneCli/target/x64-Release-bin/MiloneCli.exe' $USERPROFILE/bin/milone.exe
-
-# Create '.milone' directory in user directory.
-# Copy libraries to it.
-mkdir -p $USERPROFILE/.milone
-cp milone_libs $USERPROFILE/.milone
-```
+See also [docs/binary_package.md](docs/binary_package.md).
 
 ## Install VSCode Extension
 

@@ -156,6 +156,34 @@ struct String milone_get_platform(void) {
 }
 
 // -----------------------------------------------
+// environment
+// -----------------------------------------------
+
+struct String milone_get_cwd(void) {
+#if defined(MILONE_PLATFORM_UNIX)
+    char buf[FILENAME_MAX + 1];
+    bool ok = getcwd(buf, sizeof buf) != NULL;
+    if (!ok) {
+        perror("getcwd");
+        exit(1);
+    }
+
+    return str_of_c_str(buf);
+#elif defined(MILONE_PLATFORM_WINDOWS)
+    TCHAR buf[MAX_PATH + 1] = {0};
+    DWORD len = GetCurrentDirectory(sizeof(buf), buf);
+    if (len == 0 || len >= sizeof(buf)) {
+        failwith("GetCurrentDirectory");
+        exit(1);
+    }
+
+    return os_string_to((struct OsString){.str = buf, .len = len});
+#else
+#error no platform
+#endif
+}
+
+// -----------------------------------------------
 // file IO
 // -----------------------------------------------
 

@@ -45,6 +45,8 @@ Options:
 - `-- ARGS...`
     - Arguments for generated executable.
     - Note that `--` is required to pass some args.
+- `--release`
+    - Compile in release mode.
 - `--target-dir <DIR>` (defaults to `target/<PROJECT-NAME>`)
     - Specify target directory.
     - That directory contains intermediate files and output files.
@@ -74,11 +76,13 @@ milone build ./MiloneProject
 ```
 
 ```sh
-milone build ./MiloneProject --target-dir ../build
+milone build ./MiloneProject --release --target-dir ../build
 ```
 
 Options:
 
+- `--release`
+    - Compile in release mode.
 - `--target-dir <DIR>` (defaults to `target/<PROJECT-NAME>`)
     - Specify target directory.
     - That directory contains intermediate files and output files.
@@ -93,7 +97,7 @@ Output:
     - `<TARGET-DIR>/<PROJECT-NAME>.exe`: Executable (if success)
     - where `TARGET-DIR` is specified by `--target-dir` option
     - On linux:
-        - `<TARGET-DIR>/build.ninja` 
+        - `<TARGET-DIR>/build.ninja`
     - On windows:
         - `<TARGET-DIR>/<PROJECT-NAME>.sln`
         - `<TARGET-DIR>/<PROJECT-NAME>/<PROJECT-NAME>.vcxproj`
@@ -247,6 +251,15 @@ Notes:
 - `MSBuild.exe` is a build tool that is used to compile C (MSVC) project on windows.
 
 ----
+
+## Less Important Features
+
+- `-p <PROJECT-DIR>`, `--project-dir <PROJECT-DIR>`
+    - Subcommands that take `<PROJECT-DIR>` as positional argument also support `-p`/`--project-dir` option instead.
+    - That's to match behavior with `dotnet run`.
+- `--release` and `--target-dir`
+    - `check` and `compile` subcommands accept these flags but ignore. (So that you can replace `build` subcommand with `check` without changing other args.)
+- `--debug` (inversion of `--release`) is accepted but ignored.
 
 ## Misc notes
 

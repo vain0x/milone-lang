@@ -668,7 +668,7 @@ END:
 }
 
 // -----------------------------------------------
-// environemnt
+// environment
 // -----------------------------------------------
 
 struct String milone_get_env(struct String name) {

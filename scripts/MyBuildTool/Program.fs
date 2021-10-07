@@ -16,7 +16,10 @@ SUBCOMMANDS:
             and verify the result.
 
     tests   tests projects in the `tests` directory
-    windows builds for Windows
+
+    self-install     install milone locally
+    self-uninstall   uninstall it
+    pack             make binary package
 
     help, -h, --help
     version, -V, --version
@@ -58,8 +61,39 @@ build runtime/milone_platform.o: $
     | runtime/milone.h
 """
 
-let private makeDir (dir: string) =
+module StringExt =
+  let split (sep: string) (s: string) = s.Split(sep) |> Array.toList
+  let trim (s: string) = s.Trim()
+
+let private tRng =
+  new System.Threading.ThreadLocal<System.Random>(fun () -> System.Random())
+
+// Sha256.
+let private computeFileHash (file: string) : string =
+  let contents = System.IO.File.ReadAllBytes(file)
+
+  use h =
+    System.Security.Cryptography.SHA256.Create()
+
+  let hash = h.ComputeHash(contents)
+
+  System
+    .BitConverter
+    .ToString(hash)
+    .Replace("-", "")
+    .ToLower()
+
+let private makeDir (dir: string) : unit =
   Directory.CreateDirectory(dir) |> ignore
+
+let private readFile file : string option =
+  try
+    System.IO.File.ReadAllText(file) |> Some
+  with
+  | _ -> None
+
+let private writeFile file contents : unit =
+  System.IO.File.WriteAllText(file, contents)
 
 let private readToDiff (file: string) =
   try
@@ -81,7 +115,44 @@ let private writeTo (contents: string) (output: string) =
   if not same then
     File.WriteAllText(output, contents)
 
-let private run command args =
+let private copyFile src dest : unit = System.IO.File.Copy(src, dest, true)
+
+let private copyFilesTo (srcFiles: string list) (destDir: string) : unit =
+  for src in srcFiles do
+    let destFile =
+      Path.Combine(destDir, System.IO.Path.GetFileName(src))
+
+    System.IO.File.Copy(src, destFile, true)
+
+let private copyDir src dest : unit =
+  let rec go src dest =
+    makeDir dest
+
+    for subdir in System.IO.Directory.GetDirectories(src) do
+      let destSubdir =
+        Path.Combine(dest, System.IO.Path.GetFileName(subdir))
+
+      go subdir destSubdir
+
+    for file in System.IO.Directory.GetFiles(src) do
+      let destFile =
+        Path.Combine(dest, System.IO.Path.GetFileName(file))
+
+      System.IO.File.Copy(file, destFile)
+
+  go src dest
+
+let private moveDir (src: string) (dest: string) : unit = System.IO.Directory.Move(src, dest)
+
+let private removeFile file : unit = System.IO.File.Delete(file)
+
+let private removeDir dir : unit =
+  try
+    System.IO.Directory.Delete(dir, true)
+  with
+  | :? System.IO.DirectoryNotFoundException -> ()
+
+let private run command (args: string list) : unit =
   let startInfo = ProcessStartInfo(command)
 
   for arg in args do
@@ -94,7 +165,7 @@ let private run command args =
     eprintfn "ERROR: '%s' %A exited with %d." command args p.ExitCode
     exit 1
 
-let private runToOut command args =
+let private runToOut command (args: string list) : string =
   let startInfo = ProcessStartInfo(command)
 
   for arg in args do
@@ -113,6 +184,10 @@ let private runToOut command args =
     exit 1
 
   output
+
+// -----------------------------------------------
+// gen2
+// -----------------------------------------------
 
 let private commandGen2 () =
   eprintfn "milone-compiling gen2"
@@ -163,6 +238,10 @@ let private commandGen2 () =
       "target/gen2/build.ninja"
       "target/milone" ]
 
+// -----------------------------------------------
+// gen3
+// -----------------------------------------------
+
 let private commandGen3 () =
   eprintfn "milone-compiling gen3"
   makeDir "target/gen3"
@@ -192,6 +271,10 @@ let private commandGen3 () =
         ok <- true
 
   if not ok then exit 1
+
+// -----------------------------------------------
+// tests
+// -----------------------------------------------
 
 let private commandTests () =
   File.WriteAllText("target/tests-build.ninja", InstantiateBuildTemplateNinja.render ())
@@ -272,27 +355,298 @@ let private commandTestsSummarize (testProjectDirs: string list) =
   printfn "%s" (if ok then "OK" else "FAILED")
   if not ok then exit 1
 
-let private commandWindows () =
-  eprintfn "milone-compiling on windows"
+// -----------------------------------------------
+// self-install
+// -----------------------------------------------
 
-  // Set up env var.
-  if String.IsNullOrEmpty(Environment.GetEnvironmentVariable("MILONE_HOME")) then
-    Environment.SetEnvironmentVariable("MILONE_HOME", Environment.CurrentDirectory)
+let private getHome () : string =
+  System.Environment.GetFolderPath(System.Environment.SpecialFolder.UserProfile)
 
-  // Compile milone-lang project.
+[<RequireQualifiedAccess>]
+type private Platform =
+  | Unix
+  | Windows
+
+let private getPlatform () : Platform =
+  match System.Environment.OSVersion.Platform with
+  | System.PlatformID.Win32NT -> Platform.Windows
+  | _ -> Platform.Unix
+
+let private getExt platform : string =
+  match platform with
+  | Platform.Unix -> ""
+  | Platform.Windows -> ".exe"
+
+let private buildSelf () : unit =
   run
     "dotnet"
-    [ "run"
-      "-p"
-      "src/MiloneCli"
-      "--"
-      "build"
-      "src/MiloneCli" ]
+    ("run -p src/MiloneCli -- build --release src/MiloneCli"
+     |> StringExt.split " ")
 
-  printfn "Generated target/MiloneCli/target/x64-Release-bin/MiloneCli.exe"
+let private windowsBinaryPath =
+  "target/MiloneCli/x86_64-pc-windows-msvc-release/MiloneCli.exe"
+
+let private commandSelfInstall () : unit =
+  let home = getHome ()
+  let platform = getPlatform ()
+  let ext = getExt platform
+
+  let binDir = $"{home}/bin"
+  let miloneHome = $"{home}/.milone"
+  let destMiloneExe = $"{binDir}/milone{ext}"
+  let destMiloneDotnetDir = $"{miloneHome}/bin/milone_dotnet"
+  let destMiloneLspDir = $"{miloneHome}/bin/milone_lsp"
+  let destRuntimeDir = $"{miloneHome}/runtime"
+  let destMiloneLibsDir = $"{miloneHome}/milone_libs"
+  let destVersionFile = $"{miloneHome}/version"
+
+  doUninstall () |> ignore
+
+  // Create directories.
+  makeDir binDir
+  makeDir miloneHome
+
+  // Build binary.
+  let generatedExeFile =
+    match platform with
+    | Platform.Unix -> "target/MiloneCli/x86_64-unknown-linux-gnu-release/MiloneCli"
+    | Platform.Windows -> windowsBinaryPath
+
+  buildSelf ()
+  copyFile generatedExeFile destMiloneExe
+
+  match platform with
+  | Platform.Unix -> run "strip" [ "-s"; destMiloneExe ]
+  | _ -> ()
+
+  // Install .NET executable.
+  let runtimeIdentifier =
+    match platform with
+    | Platform.Unix -> "linux-x64"
+    | Platform.Windows -> "win10-x64"
+
+  run
+    "dotnet"
+    [ "publish"
+      "src/MiloneCli"
+      "--runtime"
+      runtimeIdentifier
+      "-c"
+      "Release"
+      "-o"
+      destMiloneDotnetDir
+      "-nologo" ]
+
+  // Install LSP server.
+  run
+    "dotnet"
+    [ "publish"
+      "src/MiloneLspServer"
+      "--runtime"
+      runtimeIdentifier
+      "-c"
+      "Release"
+      "-o"
+      destMiloneLspDir
+      "-nologo" ]
+
+  // Copy files.
+  copyDir "runtime" destRuntimeDir
+  copyDir "milone_libs" destMiloneLibsDir
+
+  // FIXME: Exclude files
+  removeFile $"{destRuntimeDir}/milone.o"
+  removeFile $"{destRuntimeDir}/milone_platform.o"
+  removeDir $"{destMiloneLibsDir}/MiloneStd/bin"
+  removeDir $"{destMiloneLibsDir}/MiloneStd/obj"
+
+  // Record version.
+  let version =
+    runToOut destMiloneExe [ "--version" ]
+    |> StringExt.trim
+
+  writeFile destVersionFile $"{version}\n"
+
+  // Info about PATH.
+  let underPath =
+    try
+      runToOut "milone" [ "--version" ] |> ignore
+      true
+    with
+    | _ -> false
+
+  if not underPath then
+    printfn "It's recommended to add %s to $PATH." binDir
+
+  printfn "milone-lang v%s is installed successfully!" version
+
+let private doUninstall () : string option =
+  let home = getHome ()
+  let platform = getPlatform ()
+  let ext = getExt platform
+
+  let binDir = $"{home}/bin"
+  let miloneHome = $"{home}/.milone"
+  let destMiloneExe = $"{binDir}/milone{ext}"
+  let destVersionFile = $"{miloneHome}/version"
+
+  let versionOpt =
+    readFile destVersionFile
+    |> Option.map StringExt.trim
+
+  match versionOpt with
+  | Some version ->
+    removeFile destMiloneExe
+    removeDir miloneHome
+    printfn "milone-lang v%s is uninstalled." version
+
+  | None -> ()
+
+  versionOpt
+
+let private commandSelfUninstall () =
+  match doUninstall () with
+  | None -> printfn "milone-lang is not installed."
+  | Some _ -> ()
+
+// -----------------------------------------------
+// Deployment
+// -----------------------------------------------
+
+let private commandPack () =
+  let platform = getPlatform ()
+  let ext = getExt platform
+
+  let assetsDir = "scripts/MyBuildTool/assets"
+
+  let workDir =
+    let n = tRng.Value.Next()
+    $"target/pack-{n}"
+
+  let tempDir = $"{workDir}/milone-X.Y.Z"
+  let destBinDir = $"{tempDir}/bin"
+  let destMiloneHome = $"{tempDir}/.milone"
+  let destMiloneExe = $"{destBinDir}/milone{ext}"
+  let destMiloneDotnetDir = $"{destMiloneHome}/bin/milone_dotnet"
+  let destMiloneLspDir = $"{destMiloneHome}/bin/milone_lsp"
+  let destRuntimeDir = $"{destMiloneHome}/runtime"
+  let destMiloneLibsDir = $"{destMiloneHome}/milone_libs"
+  let destVersionFile = $"{destMiloneHome}/version"
+
+  // Make structure.
+  removeDir workDir
+  makeDir destBinDir
+  makeDir destMiloneHome
+
+  // Build binary.
+  let generatedExeFile =
+    match platform with
+    | Platform.Unix -> "target/MiloneCli/x86_64-unknown-linux-gnu-release/MiloneCli"
+    | Platform.Windows -> windowsBinaryPath
+
+  buildSelf ()
+  copyFile generatedExeFile destMiloneExe
+
+  match platform with
+  | Platform.Unix -> run "strip" [ "-s"; destMiloneExe ]
+  | _ -> ()
+
+  // Record version.
+  let version =
+    runToOut destMiloneExe [ "--version" ]
+    |> StringExt.trim
+
+  writeFile destVersionFile $"{version}\n"
+
+  // Build .NET executable.
+  let runtimeIdentifier =
+    match platform with
+    | Platform.Unix -> "linux-x64"
+    | Platform.Windows -> "win10-x64"
+
+  run
+    "dotnet"
+    [ "publish"
+      "src/MiloneCli"
+      "--runtime"
+      runtimeIdentifier
+      "-c"
+      "Release"
+      "-o"
+      destMiloneDotnetDir
+      "-nologo" ]
+
+  // Build LSP server.
+  run
+    "dotnet"
+    [ "publish"
+      "src/MiloneLspServer"
+      "--runtime"
+      runtimeIdentifier
+      "-c"
+      "Release"
+      "-o"
+      destMiloneLspDir
+      "-nologo" ]
+
+  // Copy runtime files.
+  copyDir "runtime" destRuntimeDir
+  copyDir "milone_libs" destMiloneLibsDir
+  // FIXME: Exclude files
+  removeFile $"{destRuntimeDir}/milone.o"
+  removeFile $"{destRuntimeDir}/milone_platform.o"
+  removeDir $"{destMiloneLibsDir}/MiloneStd/bin"
+  removeDir $"{destMiloneLibsDir}/MiloneStd/obj"
+
+  // Add documents.
+  copyFilesTo
+    [ "README.md"
+      "LICENSE"
+      $"{assetsDir}/INSTALL.md"
+      $"{assetsDir}/install.ps1"
+      $"{assetsDir}/install.sh"
+      $"{assetsDir}/uninstall.ps1"
+      $"{assetsDir}/uninstall.sh" ]
+    tempDir
+
+  // Rename and compress.
+  let packDir = $"milone-{version}"
+
+  moveDir tempDir packDir
+
+  let outFile =
+    match platform with
+    | Platform.Unix ->
+      let triple = "x86_64-linux-gnu"
+
+      let outFile =
+        $"{workDir}/milone-{version}-{triple}.tar.gz"
+
+      removeFile outFile
+      run "tar" [ "-czf"; outFile; packDir ]
+      outFile
+
+    | Platform.Windows ->
+      let triple = "x86_64-pc-windows-msvc"
+
+      let outFile =
+        $"{workDir}/milone-{version}-{triple}.zip"
+
+      removeFile outFile
+      System.IO.Compression.ZipFile.CreateFromDirectory(packDir, outFile)
+      outFile
+
+  moveDir packDir tempDir
+
+  printfn "%s  %s" (computeFileHash outFile) (Path.GetFileName(outFile))
+  printfn "Generated %s" outFile
+  printfn "milone-lang v%s is packed successfully!" version
 
 [<EntryPoint>]
 let main argv =
+  if String.IsNullOrEmpty(Environment.GetEnvironmentVariable("MILONE_HOME")) then
+    Environment.SetEnvironmentVariable("MILONE_HOME", Environment.CurrentDirectory)
+
   match Array.toList argv with
   | []
   | "help" :: _
@@ -310,7 +664,9 @@ let main argv =
   | "--build-run-tests" :: args -> commandTestsBuild args
   | "--summarize-tests" :: args -> commandTestsSummarize args
 
-  | "windows" :: _ -> commandWindows ()
+  | "self-install" :: _ -> commandSelfInstall ()
+  | "self-uninstall" :: _ -> commandSelfUninstall ()
+  | "pack" :: _ -> commandPack ()
 
   | _ ->
     eprintfn "unknown target: %A" argv
