@@ -142,7 +142,7 @@ Not all of F# features are supported. Features for functional-style programming 
 - Types
     - Polymorphic type inference
     - Primitive types: int, float, string, tuples, lists, functions, etc.
-    - Discriminated unions (non-generic ones only)
+    - Discriminated unions
     - Records (non-generic ones only)
 - IO
     - `printfn` (`%s`, `%d`, `%f` only)
