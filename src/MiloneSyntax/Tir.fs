@@ -614,7 +614,7 @@ let primFromIdent ident =
 
   | "Some" -> TPrim.OptionSome |> Some
 
-  | "inRegion" -> TPrim.InRegion |> Some
+  | "__inRegion" -> TPrim.InRegion |> Some
 
   | "__nativeFun" -> TPrim.NativeFun |> Some
   | "__nativeCast" -> TPrim.NativeCast |> Some

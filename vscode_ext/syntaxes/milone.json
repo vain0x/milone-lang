@@ -98,7 +98,7 @@
         {
             "comment": "Built-in functions",
             "name": "entity.name.function.milone",
-            "match": "\\b(assert|box|char|compare|exit|int|not|printfn|string|unbox|inRegion|__nativeCast|__nativeDecl|__nativeExpr|__nativeFun|__nativeStmt|__nativeType|__ptrRead|__ptrWrite|__sizeOfVal)\\b"
+            "match": "\\b(assert|box|char|compare|exit|int|not|printfn|string|unbox|__inRegion|__nativeCast|__nativeDecl|__nativeExpr|__nativeFun|__nativeStmt|__nativeType|__ptrRead|__ptrWrite|__sizeOfVal)\\b"
         },
         {
             "comment": "Built-in values",

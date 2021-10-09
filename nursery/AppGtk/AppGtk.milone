@@ -182,4 +182,4 @@ let private view (state: MyState) : UI =
   stack (List.append buttons labels)
 
 let main _ : int =
-  inRegion (fun () -> gtkRun init update view)
+  __inRegion (fun () -> gtkRun init update view)

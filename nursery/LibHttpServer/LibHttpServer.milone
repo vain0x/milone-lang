@@ -318,7 +318,7 @@ let private tryStripPrefix (prefix: string) (s: string) : string option =
 /// (Therefore, this function never returns 0.)
 let private loopInRegion (f: unit -> int) : int =
   let rec go () =
-    let code = inRegion f
+    let code = __inRegion f
     if code = 0 then go () else code
 
   go ()
