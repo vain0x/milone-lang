@@ -659,20 +659,7 @@ let private eraseRecordTy ctx ty =
   else
     None
 
-let private postProcessRecordExpr ctx baseOpt fields recordTy loc =
-  if needsBoxedRecordTy ctx recordTy then
-    let baseOpt =
-      baseOpt
-      |> Option.map (fun expr -> hxUnbox expr recordTy loc)
-
-    let recordExpr =
-      HRecordExpr(baseOpt, fields, recordTy, loc)
-
-    Some(hxBox recordExpr recordTy loc)
-  else
-    None
-
-let private postProcessRecordExpr2 ctx recordTySerial args loc =
+let private postProcessRecordExpr ctx recordTySerial args loc =
   if needsBoxedRecordTySerial ctx recordTySerial then
     let ty = tyRecord recordTySerial
     let recordExpr = HNodeExpr(HRecordEN, args, ty, loc)
@@ -792,7 +779,7 @@ let private abExpr ctx expr =
       let items = items |> List.map (abExpr ctx)
       let ty = ty |> abTy ctx
 
-      match postProcessRecordExpr2 ctx recordSerial items loc with
+      match postProcessRecordExpr ctx recordSerial items loc with
       | Some expr -> expr
       | None -> HNodeExpr(HRecordEN, items, ty, loc)
 
