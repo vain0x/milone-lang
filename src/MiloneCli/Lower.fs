@@ -77,8 +77,8 @@ let private lowerTyDef (def: Tir.TyDef) : Hir.TyDef =
   match def with
   | Tir.UnionTyDef (ident, tyArgs, variants, loc) ->
     Hir.UnionTyDef(ident, tyArgs, List.map lowerVariantSerial variants, loc)
-  | Tir.RecordTyDef (ident, unimplTyArgs, fields, loc) ->
-    Hir.RecordTyDef(ident, List.map (fun (ident, ty, loc) -> ident, lowerTy ty, loc) fields, loc)
+  | Tir.RecordTyDef (ident, unimplTyArgs, fields, repr, loc) ->
+    Hir.RecordTyDef(ident, List.map (fun (ident, ty, loc) -> ident, lowerTy ty, loc) fields, repr, loc)
 
   | Tir.MetaTyDef _
   | Tir.UniversalTyDef _

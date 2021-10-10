@@ -543,7 +543,7 @@ let private cgTyComplete (ctx: CirCtx) (ty: Ty) : CTy * CirCtx =
 
   | RecordTk serial, _ ->
     match ctx.Rx.Tys |> TMap.tryFind serial with
-    | Some (RecordTyDef (_, fields, _)) -> genRecordTyDef ctx serial fields
+    | Some (RecordTyDef (_, fields, _, _)) -> genRecordTyDef ctx serial fields
 
     | _ -> unreachable () // Record type undefined?
 

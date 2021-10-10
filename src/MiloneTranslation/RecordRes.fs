@@ -95,7 +95,7 @@ let private buildRecordMap (ctx: RrCtx) =
   |> TMap.fold
        (fun acc tySerial tyDef ->
          match tyDef with
-         | RecordTyDef (_, fields, _) ->
+         | RecordTyDef (_, fields, _, _) ->
            let fieldTys =
              fields |> List.map (fun (_, ty, _) -> ty)
 

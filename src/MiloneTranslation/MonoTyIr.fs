@@ -45,7 +45,7 @@ type MonoTy =
 [<NoEquality; NoComparison>]
 type TyDef =
   | UnionTyDef of Ident * tyArgs: TySerial list * VariantSerial list * Loc
-  | RecordTyDef of Ident * fields: (Ident * Ty * Loc) list * Loc
+  | RecordTyDef of Ident * fields: (Ident * Ty * Loc) list * IsCRepr * Loc
 
 [<RequireQualifiedAccess; NoEquality; NoComparison>]
 type FunDef =

@@ -143,7 +143,7 @@ type TyDecl =
   /// Variants: (ident, serial, has-payload, payload type).
   | UnionTyDecl of Ident * variants: (Ident * VariantSerial * bool * Ty) list * Loc
 
-  | RecordTyDecl of Ident * fields: (Ident * Ty * Loc) list * Loc
+  | RecordTyDecl of Ident * fields: (Ident * Ty * Loc) list * IsCRepr * Loc
 
 /// Type definition.
 [<NoEquality; NoComparison>]
@@ -157,7 +157,7 @@ type TyDef =
 
   | UnionTyDef of Ident * tyArgs: TySerial list * VariantSerial list * Loc
 
-  | RecordTyDef of Ident * tyArgs: TySerial list * fields: (Ident * Ty * Loc) list * Loc
+  | RecordTyDef of Ident * tyArgs: TySerial list * fields: (Ident * Ty * Loc) list * IsCRepr * Loc
 
 [<Struct; NoComparison>]
 type ModuleTySerial = ModuleTySerial of Serial
@@ -534,7 +534,7 @@ let tyDefToName tyDef =
   | UniversalTyDef (name, _) -> name
   | SynonymTyDef (name, _, _, _) -> name
   | UnionTyDef (name, _, _, _) -> name
-  | RecordTyDef (name, _, _, _) -> name
+  | RecordTyDef (name, _, _, _, _) -> name
 
 // -----------------------------------------------
 // Variable definitions (HIR)

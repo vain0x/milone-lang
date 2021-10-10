@@ -3,6 +3,7 @@
 /// Provides implicit indirection by inserting allocate/dereference operations.
 module rec MiloneTranslation.AutoBoxing
 
+open MiloneShared.SharedTypes
 open MiloneShared.TypeFloat
 open MiloneShared.TypeIntegers
 open MiloneShared.Util
@@ -154,7 +155,7 @@ let private trdRecordTyDef isDirect (ctx: TrdCtx) tySerial tyDef =
 
     let ctx: TrdCtx =
       match tyDef with
-      | RecordTyDef (_, fields, _) ->
+      | RecordTyDef (_, fields, _, _) ->
         fields
         |> List.fold (fun ctx (_, fieldTy, _) -> trdTy isDirect ctx fieldTy) ctx
 
@@ -307,6 +308,11 @@ let private tsmVariant (ctx: TsmCtx) variantSerial (variantDefOpt: VariantDef op
     size, ctx
 
 let private tsmRecordTyDef (ctx: TsmCtx) tySerial tyDef =
+  let canBox () =
+    match ctx.Tys |> mapFind tySerial with
+    | RecordTyDef (_, _, IsCRepr true, _) -> false
+    | _ -> true
+
   match ctx.RecordTyMemo |> TMap.tryFind tySerial with
   | Some size ->
     // printfn "// measure record %s: cached %d" (tyDefToName tyDef) size
@@ -327,7 +333,7 @@ let private tsmRecordTyDef (ctx: TsmCtx) tySerial tyDef =
 
     let size, (ctx: TsmCtx) =
       match tyDef with
-      | RecordTyDef (_, fields, _) ->
+      | RecordTyDef (_, fields, _, _) ->
         fields
         |> List.fold
              (fun (totalSize, ctx) (fieldName, fieldTy, _) ->
@@ -339,7 +345,7 @@ let private tsmRecordTyDef (ctx: TsmCtx) tySerial tyDef =
       | _ -> unreachable ()
 
     let size, isBoxed =
-      if size > 32 then
+      if canBox () && size > 32 then
         8, true
       else
         Int.max 1 size, false
@@ -893,7 +899,7 @@ let autoBox (expr: HExpr, tyCtx: TyCtx) =
     |> TMap.map
          (fun _ tyDef ->
            match tyDef with
-           | RecordTyDef (recordName, fields, loc) ->
+           | RecordTyDef (recordName, fields, repr, loc) ->
              let fields =
                fields
                |> List.map
@@ -901,7 +907,7 @@ let autoBox (expr: HExpr, tyCtx: TyCtx) =
                       let ty = ty |> abTy ctx
                       name, ty, loc)
 
-             RecordTyDef(recordName, fields, loc)
+             RecordTyDef(recordName, fields, repr, loc)
 
            | _ -> tyDef)
 

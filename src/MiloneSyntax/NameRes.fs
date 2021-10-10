@@ -902,10 +902,11 @@ let private startDefineTy moduleSerialOpt tySerial vis tyArgs tyDecl loc ctx =
       |> addLocalTy tySymbol tyDef
       |> addTyToModule tySymbol
 
-    | RecordTyDecl (_, fields, loc) ->
+    | RecordTyDecl (_, fields, repr, loc) ->
       let tySymbol = RecordTySymbol tySerial
 
-      let tyDef = RecordTyDef(tyName, tyArgs, fields, loc)
+      let tyDef =
+        RecordTyDef(tyName, tyArgs, fields, repr, loc)
 
       ctx
       |> addLocalTy tySymbol tyDef
@@ -966,7 +967,7 @@ let private finishDefineTy tySerial tyArgs tyDecl loc ctx =
            (), ctx)
     |> snd
 
-  | RecordTyDef (tyName, tyArgs, fields, loc) ->
+  | RecordTyDef (tyName, tyArgs, fields, repr, loc) ->
     let ctx =
       if tyArgs |> List.isEmpty |> not then
         addLog UnimplGenericTyError loc ctx
@@ -980,7 +981,7 @@ let private finishDefineTy tySerial tyArgs tyDecl loc ctx =
     let fields, ctx = (fields, ctx) |> stMap resolveField
 
     ctx
-    |> addTy (RecordTySymbol tySerial) (RecordTyDef(tyName, tyArgs, fields, loc))
+    |> addTy (RecordTySymbol tySerial) (RecordTyDef(tyName, tyArgs, fields, repr, loc))
 
   | MetaTyDef _ -> unreachable tyDecl // Bound meta types don't happen in NameRes.
 

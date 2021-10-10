@@ -57,6 +57,11 @@ type IsMut =
   | IsConst
   | IsMut
 
+[<NoEquality; NoComparison>]
+type IsCRepr = IsCRepr of bool
+
+let isCRepr (IsCRepr x) = x
+
 /// Literal of primitive, non-generic value.
 [<Struct; NoEquality; NoComparison>]
 type Lit =

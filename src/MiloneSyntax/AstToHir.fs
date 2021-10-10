@@ -552,7 +552,7 @@ let private athTyArgs (tyArgs, nameCtx) =
   (tyArgs, nameCtx)
   |> stMap (fun (name, nameCtx) -> nameCtx |> nameCtxAdd (greek name))
 
-let private athDecl docId (decl, nameCtx) : TStmt * NameCtx =
+let private athDecl docId attrs (decl, nameCtx) : TStmt * NameCtx =
   match decl with
   | AExprDecl expr ->
     let expr, nameCtx = (expr, nameCtx) |> athExpr docId
@@ -604,6 +604,15 @@ let private athDecl docId (decl, nameCtx) : TStmt * NameCtx =
     TTyDeclStmt(unionSerial, vis, tyArgs, UnionTyDecl(nameToIdent name, variants, loc), loc), nameCtx
 
   | ARecordTyDecl (vis, recordName, tyArgs, fieldDecls, pos) ->
+    let repr =
+      attrs
+      |> List.exists
+           (fun a ->
+             match a with
+             | ABinaryExpr (AppBinary, AIdentExpr (Name ("Repr", _)), ALitExpr (StrLit "C", _), _) -> true
+             | _ -> false)
+      |> IsCRepr
+
     let athFieldDecl ((name, ty, fieldPos), nameCtx) =
       let ty, nameCtx = (ty, nameCtx) |> athTy docId
       let fieldLoc = toLoc docId fieldPos
@@ -617,7 +626,7 @@ let private athDecl docId (decl, nameCtx) : TStmt * NameCtx =
       (fieldDecls, nameCtx) |> stMap athFieldDecl
 
     let loc = toLoc docId pos
-    TTyDeclStmt(tySerial, vis, tyArgs, RecordTyDecl(nameToIdent recordName, fields, loc), loc), nameCtx
+    TTyDeclStmt(tySerial, vis, tyArgs, RecordTyDecl(nameToIdent recordName, fields, repr, loc), loc), nameCtx
 
   | AOpenDecl (path, pos) ->
     let loc = toLoc docId pos
@@ -637,12 +646,17 @@ let private athDecl docId (decl, nameCtx) : TStmt * NameCtx =
 
     TModuleStmt(ModuleTySerial serial, body, loc), nameCtx
 
-  | AAttrDecl (contents, next, pos) ->
+  | AAttrDecl (attr, next, _pos) ->
+    let rec prepend attr acc =
+      match attr with
+      | ASemiExpr (stmts, last, _) -> List.append stmts (last :: acc)
+      | _ -> attr :: acc
+
     // printfn "/* attribute: %s %s */" (pos |> toLoc docId |> locToString) (objToString contents)
-    athDecl docId (next, nameCtx)
+    athDecl docId (prepend attr attrs) (next, nameCtx)
 
 let private athDecls docId (decls, nameCtx) : TStmt list * NameCtx =
-  (decls, nameCtx) |> stMap (athDecl docId)
+  (decls, nameCtx) |> stMap (athDecl docId [])
 
 let astToHir (projectName: string) (docId: DocId) (root: ARoot, nameCtx: NameCtx) : TStmt list * NameCtx =
   let onModuleRoot moduleName body pos =

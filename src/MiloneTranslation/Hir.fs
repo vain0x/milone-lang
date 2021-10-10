@@ -93,7 +93,7 @@ type TyDef =
 
   | UnionTyDef of Ident * tyArgs: TySerial list * VariantSerial list * Loc
 
-  | RecordTyDef of Ident * fields: (Ident * Ty * Loc) list * Loc
+  | RecordTyDef of Ident * fields: (Ident * Ty * Loc) list * IsCRepr * Loc
 
 /// Definition of named value in HIR.
 [<RequireQualifiedAccess; NoEquality; NoComparison>]
@@ -385,7 +385,7 @@ let tyDefToName tyDef =
   match tyDef with
   | MetaTyDef _ -> "{bound}"
   | UnionTyDef (name, _, _, _) -> name
-  | RecordTyDef (name, _, _) -> name
+  | RecordTyDef (name, _, _, _) -> name
 
 // -----------------------------------------------
 // Variable definitions (HIR)

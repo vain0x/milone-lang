@@ -88,7 +88,7 @@ let private ofTyCtx (tyCtx: TyCtx) : MtCtx =
            let tk, name =
              match tyDef with
              | UnionTyDef (ident, _, _, _) -> UnionTk tySerial, ident
-             | RecordTyDef (ident, _, _) -> RecordTk tySerial, ident
+             | RecordTyDef (ident, _, _, _) -> RecordTk tySerial, ident
              | MetaTyDef _ -> unreachable () // Resolved in Typing.
 
            tyNames |> TMap.add (Ty(tk, [])) name)
@@ -124,7 +124,7 @@ let private addTupleDef (name: string) (itemTys: MonoTy list) (ctx: MtCtx) =
         itemTys
         |> List.mapi (fun i ty -> tupleField i, ty, noLoc)
 
-      M.RecordTyDef(name, fields, noLoc)
+      M.RecordTyDef(name, fields, IsCRepr false, noLoc)
 
     let ctx =
       { ctx with
@@ -435,7 +435,7 @@ let private mtDefs (tyCtx: TyCtx) (mtCtx: MtCtx) =
              let tyDef = M.UnionTyDef(name, tyArgs, serials, loc)
              tys |> TMap.add tySerial tyDef, ctx
 
-           | RecordTyDef (ident, fields, loc) ->
+           | RecordTyDef (ident, fields, repr, loc) ->
              let fields, ctx =
                (fields, ctx)
                |> stMap
@@ -443,7 +443,7 @@ let private mtDefs (tyCtx: TyCtx) (mtCtx: MtCtx) =
                       let ty, ctx = (ty, ctx) |> mtTy
                       (ident, ty, loc), ctx)
 
-             let tyDef = M.RecordTyDef(ident, fields, loc)
+             let tyDef = M.RecordTyDef(ident, fields, repr, loc)
              tys |> TMap.add tySerial tyDef, ctx
 
            | MetaTyDef _ -> unreachable ()) // Resolve in Typing.
@@ -548,12 +548,12 @@ let private bthTyDef (tyDef: M.TyDef) : TyDef =
   match tyDef with
   | M.UnionTyDef (ident, tyArgs, variantSerials, loc) -> UnionTyDef(ident, tyArgs, variantSerials, loc)
 
-  | M.RecordTyDef (ident, fields, loc) ->
+  | M.RecordTyDef (ident, fields, repr, loc) ->
     let fields =
       fields
       |> List.map (fun (ident, ty, loc) -> ident, bthTy ty, loc)
 
-    RecordTyDef(ident, fields, loc)
+    RecordTyDef(ident, fields, repr, loc)
 
 // -----------------------------------------------
 // Interface
