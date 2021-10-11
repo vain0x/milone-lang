@@ -6,7 +6,7 @@ struct IntList;
 
 bool isEmpty_(struct IntList const* );
 
-void assertNotEmpty_(struct IntList const* xs_61);
+void assertNotEmpty_(struct IntList const* xs_64);
 
 int milone_main(void);
 
@@ -15,8 +15,8 @@ struct IntList {
     struct IntList const* tail;
 };
 
-void assertNotEmpty_(struct IntList const* xs_61) {
-    bool call_ = isEmpty_(xs_61);
+void assertNotEmpty_(struct IntList const* xs_64) {
+    bool call_ = isEmpty_(xs_64);
     milone_assert((!(call_)), 5, 34);
     return;
 }

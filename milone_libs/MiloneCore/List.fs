@@ -252,6 +252,14 @@ let partition (pred: _ -> bool) (xs: _ list) : _ list * _ list =
 
   listPartitionLoop [] [] xs
 
+let unzip (xs: ('T * 'U) list) : 'T list * 'U list =
+  let rec listUnzipLoop lAcc rAcc xs =
+    match xs with
+    | [] -> rev lAcc, rev rAcc
+    | (l, r) :: xs -> listUnzipLoop (l :: lAcc) (r :: rAcc) xs
+
+  listUnzipLoop [] [] xs
+
 /// Creates a list with specified length. i'th element is filled by `f i`.
 /// That is, `[ f 0; f 1; ...; f (len - 1) ]`.
 let init (len: int) (f: int -> _) : _ list =
