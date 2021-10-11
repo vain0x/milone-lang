@@ -265,6 +265,7 @@ let syntaxErrorsToString (errors: SyntaxError list) : string =
 type SyntaxHost =
   { EntryProjectDir: ProjectDir
     EntryProjectName: ProjectName
+    Projects: (ProjectName * ProjectDir) list
     MiloneHome: ProjectDir
 
     ReadTextFile: ReadTextFileFun
@@ -282,7 +283,7 @@ let syntaxCtxNew (host: SyntaxHost) : SyntaxCtx =
   let miloneHome = host.MiloneHome
 
   let projects =
-    TMap.empty compare
+    TMap.ofList compare host.Projects
     |> TMap.add "MiloneCore" (miloneHome + "/milone_libs/MiloneCore")
     |> TMap.add "MiloneStd" (miloneHome + "/milone_libs/MiloneStd")
     |> TMap.add entryProjectName entryProjectDir
