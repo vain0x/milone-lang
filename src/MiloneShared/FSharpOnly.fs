@@ -62,6 +62,9 @@ module Future =
         .Unwrap()
       |> ofTask
 
+  /// Waits for a future to complete.
+  let wait (future: Future<'T>) : 'T = future.AsTask().Result
+
   // .NET only
   let internal ofUnitValueTask (task: ValueTask) : ValueTask<unit> =
     if not AllowParallel || task.IsCompletedSuccessfully then

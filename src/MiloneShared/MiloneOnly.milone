@@ -44,8 +44,9 @@ module Future =
     let (Future x) = future
     f x
 
-  // milone-only
-  let unwrap (Future x) = x
+  let wait (future: Future<'T>) : 'T =
+    let (Future x) = future
+    x
 
 // #mpscSync
 let private mpscSync
@@ -59,7 +60,7 @@ let private mpscSync
       commands
       |> List.fold
            (fun (state, acc) command ->
-             let action = producer state command |> Future.unwrap
+             let action = producer state command |> Future.wait
              let state, newCommands = consumer state action
              state, newCommands :: acc)
            (state, [])
