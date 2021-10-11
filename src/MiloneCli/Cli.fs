@@ -197,8 +197,8 @@ let private computeExePath targetDir platform isRelease name : Path =
 
 [<RequireQualifiedAccess; NoEquality; NoComparison>]
 type CompileCtx =
-  { EntryProjectDir: string
-    EntryProjectName: string
+  { EntryProjectDir: ProjectDir
+    EntryProjectName: ProjectName
 
     SyntaxCtx: SyntaxApi.SyntaxCtx
 
@@ -618,7 +618,7 @@ let private defaultTargetDir projectDir =
 
 /// Set of options, used commonly for build-like subcommands (check, compile, build, run).
 type private BuildLikeOptions =
-  { ProjectDir: string
+  { ProjectDir: ProjectDir
     TargetDir: string
     IsRelease: bool
     Verbosity: Verbosity }
