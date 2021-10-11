@@ -152,7 +152,6 @@ let private doBundle (ls: LangServiceState) projectDir =
     let host: SyntaxApi.SyntaxHost =
       { EntryProjectDir = projectDir
         EntryProjectName = projectName
-        Projects = [] // FIXME: read manifest
         MiloneHome = miloneHome
         ReadTextFile = File.readFile
         WriteLog = fun _ -> () }

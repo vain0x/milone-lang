@@ -210,13 +210,10 @@ let compileCtxNew (host: CliHost) verbosity projectDir : CompileCtx =
   let projectDir = projectDir |> pathStrTrimEndPathSep
   let projectName = projectDir |> pathStrToStem
 
-  let projects = loadManifestFile host projectDir
-
   let syntaxCtx: SyntaxApi.SyntaxCtx =
     let host: SyntaxApi.SyntaxHost =
       { EntryProjectDir = projectDir
         EntryProjectName = projectName
-        Projects = projects
         MiloneHome = miloneHome
         ReadTextFile = host.FileReadAllText
         WriteLog = writeLog host verbosity }
@@ -228,70 +225,6 @@ let compileCtxNew (host: CliHost) verbosity projectDir : CompileCtx =
     SyntaxCtx = syntaxCtx
     Verbosity = verbosity
     Host = host }
-
-type private Projects = (ProjectName * ProjectDir) list
-
-let private loadManifestFile (host: CliHost) (projectDir: ProjectDir) : Projects =
-  let parseManifest manifestFile (s: string) =
-    s
-    |> S.toLines
-    |> List.mapi (fun i n -> i, n)
-    |> List.choose
-         (fun (row, s) ->
-           let loc = Loc(manifestFile, row, 0)
-           let s = s |> S.trim
-
-           if S.startsWith "project" s then
-             let s = s |> S.skip "project".Length |> S.trim
-
-             match s |> S.findIndex " " with
-             | None ->
-               printfn "warn %s Invalid project statement. ('project name path')" (locToString loc)
-               None
-
-             | Some i ->
-               let name = s |> S.truncate i |> S.trim
-               let path = s |> S.skip (i + 1) |> S.trim
-
-               if S.isEmpty name || S.isEmpty path then
-                 printfn "warn %s Project name/path can't be empty." (locToString loc)
-                 None
-               else if name |> S.startsWith "Milone" then
-                 printfn "warn %s Project name can't start with \"Milone\"." (locToString loc)
-                 None
-               else
-                 Some(name, path, loc)
-           else if s |> S.isEmpty |> not
-                   && s |> S.startsWith "#" |> not then
-             printfn "warn %s Invalid line." (locToString loc)
-             None
-           else
-             None)
-
-  let toProjects projectStmts =
-    projectStmts
-    |> List.fold
-         (fun projectMap (name, path, loc) ->
-           if projectMap |> TMap.containsKey name then
-             printfn "warn: %s Project '%s' is duplicated." (locToString loc) name
-             projectMap
-           else
-             let path = projectDir + "/" + path
-             projectMap |> TMap.add name path)
-         (TMap.empty compare)
-    |> TMap.toList
-
-  let manifestFile = projectDir + "/milone_manifest"
-
-  let manifestOpt =
-    host.FileReadAllText(manifestFile) |> Future.wait
-
-  match manifestOpt with
-  | None -> []
-
-  | Some manifest ->
-    let projectStmts = manifest |> parseManifest manifestFile
-    toProjects projectStmts
 
 // -----------------------------------------------
 // Write output and logs

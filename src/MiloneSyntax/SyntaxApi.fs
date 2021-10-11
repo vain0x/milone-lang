@@ -10,6 +10,7 @@ open MiloneSyntax.Syntax
 module ArityCheck = MiloneSyntax.ArityCheck
 module AstBundle = MiloneSyntax.AstBundle
 module NameRes = MiloneSyntax.NameRes
+module Manifest = MiloneSyntax.Manifest
 module S = MiloneStd.StdString
 module SyntaxParse = MiloneSyntax.SyntaxParse
 module SyntaxTokenize = MiloneSyntax.SyntaxTokenize
@@ -265,7 +266,6 @@ let syntaxErrorsToString (errors: SyntaxError list) : string =
 type SyntaxHost =
   { EntryProjectDir: ProjectDir
     EntryProjectName: ProjectName
-    Projects: (ProjectName * ProjectDir) list
     MiloneHome: ProjectDir
 
     ReadTextFile: ReadTextFileFun
@@ -274,6 +274,7 @@ type SyntaxHost =
 [<RequireQualifiedAccess; NoEquality; NoComparison>]
 type SyntaxCtx =
   { Projects: TMap.TreeMap<ProjectName, ProjectDir>
+    Errors: (string * Loc) list
     FetchModule: FetchModuleFun
     Host: SyntaxHost }
 
@@ -282,8 +283,16 @@ let syntaxCtxNew (host: SyntaxHost) : SyntaxCtx =
   let entryProjectDir = host.EntryProjectDir
   let miloneHome = host.MiloneHome
 
+  let manifest =
+    Manifest.readManifestFile host.ReadTextFile entryProjectDir
+    |> Future.wait // FIXME: avoid blocking
+
   let projects =
-    TMap.ofList compare host.Projects
+    let manifestProjects =
+      manifest.Projects
+      |> List.map (fun (name, dir, _) -> name, entryProjectDir + "/" + dir)
+
+    TMap.ofList compare manifestProjects
     |> TMap.add "MiloneCore" (miloneHome + "/milone_libs/MiloneCore")
     |> TMap.add "MiloneStd" (miloneHome + "/milone_libs/MiloneStd")
     |> TMap.add entryProjectName entryProjectDir
@@ -292,6 +301,7 @@ let syntaxCtxNew (host: SyntaxHost) : SyntaxCtx =
     SyntaxTokenize.tokenize (tokenizeHostNew ())
 
   { Projects = projects
+    Errors = manifest.Errors
     FetchModule = fetchModuleWith host.ReadTextFile projects entryProjectDir tokenize
     Host = host }
 
@@ -314,8 +324,10 @@ let performSyntaxAnalysis (ctx: SyntaxCtx) : SyntaxAnalysisResult =
   let modules, nameCtx, bundleErrors =
     AstBundle.bundle ctx.FetchModule ctx.Host.EntryProjectName
 
-  if bundleErrors |> List.isEmpty |> not then
-    SyntaxAnalysisError(bundleErrors, None)
+  let errors = List.append ctx.Errors bundleErrors
+
+  if errors |> List.isEmpty |> not then
+    SyntaxAnalysisError(errors, None)
   else
     writeLog "NameRes"
     let modules, nameResResult = NameRes.nameRes (modules, nameCtx)

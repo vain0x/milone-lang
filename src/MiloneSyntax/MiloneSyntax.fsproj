@@ -9,6 +9,7 @@
     <Compile Include="Syntax.fs" />
     <Compile Include="Tir.fs" />
     <Compile Include="TySystem.fs" />
+    <Compile Include="Manifest.fs" />
     <Compile Include="SyntaxTokenize.fs" />
     <Compile Include="SyntaxParse.fs" />
     <Compile Include="AstToHir.fs" />
