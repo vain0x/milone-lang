@@ -11,10 +11,12 @@ open MiloneTranslation.Hir
 module TMap = MiloneStd.StdMap
 module M = MiloneTranslation.MonoTyIr
 
+[<RequireQualifiedAccess; NoEquality; NoComparison>]
 type private OptionDef =
   { NoneSerial: VariantSerial
     SomeSerial: VariantSerial }
 
+[<NoEquality; NoComparison>]
 type private GeneratedTy =
   | TupleGT
   | OptionGT of OptionDef

@@ -20,6 +20,25 @@ module TMap = MiloneStd.StdMap
 type Name = Name of string * Pos
 
 // -----------------------------------------------
+// Build System
+// -----------------------------------------------
+
+type ProjectName = string
+type ModuleName = string
+
+type ProjectDir = string
+type SourceCode = string
+
+type ModuleSyntaxError = string * Pos
+
+type ModuleSyntaxData = DocId * ARoot * ModuleSyntaxError list
+
+/// filename -> (contents option)
+type ReadTextFileFun = string -> Future<string option>
+
+type FetchModuleFun = ProjectName -> ModuleName -> Future<ModuleSyntaxData option>
+
+// -----------------------------------------------
 // Syntax errors
 // -----------------------------------------------
 

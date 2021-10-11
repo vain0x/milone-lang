@@ -23,6 +23,7 @@ let private join sep xs f acc =
 
   go xs acc
 
+[<NoEquality; NoComparison>]
 type private First =
   | First
   | NotFirst

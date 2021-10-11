@@ -19,6 +19,7 @@ let private hashEquals (l: byte array) (r: byte array) : bool =
 
 type Diagnostics = (Uri * (string * Pos) list) list
 
+[<RequireQualifiedAccess; NoEquality; NoComparison>]
 type DiagnosticsCache = { Map: MutMap<Uri, byte array> }
 
 module DiagnosticsCache =

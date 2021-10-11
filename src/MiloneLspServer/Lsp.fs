@@ -21,8 +21,6 @@ type Range = Pos * Pos
 type private DocVersion = int
 
 type private FilePath = string
-type private ProjectName = string
-type private ModuleName = string
 
 [<RequireQualifiedAccess; NoEquality; NoComparison>]
 type LangServiceDocs =
@@ -220,8 +218,6 @@ let bundleWithCache (ls: LangServiceState) projectDir =
 // -----------------------------------------------
 // State
 // -----------------------------------------------
-
-type private ProjectDir = string
 
 type private TokenizeFullResult = (Token * Pos) list
 

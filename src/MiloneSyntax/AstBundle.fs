@@ -61,8 +61,6 @@ let private computeLayer
 // Types
 // -----------------------------------------------
 
-type private ProjectName = string
-type private ModuleName = string
 type private Error = string * Loc
 
 [<RequireQualifiedAccess; NoEquality; NoComparison>]
@@ -256,11 +254,9 @@ let private producer (fetchModule: FetchModuleFun) (_: State) (r: ModuleRequest)
 // -----------------------------------------------
 
 type private SymbolCount = int
-type private ModuleSyntaxData = DocId * ARoot * (string * Pos) list
-type private FetchModuleFun = ProjectName -> ModuleName -> Future<ModuleSyntaxData option>
 type private BundleResult = TProgram list * NameCtx * Error list
 
-let bundle (fetchModule: FetchModuleFun) (entryProjectName: string) : BundleResult =
+let bundle (fetchModule: FetchModuleFun) (entryProjectName: ProjectName) : BundleResult =
   let entryRequest =
     let p = entryProjectName
     let docId = computeDocId p p

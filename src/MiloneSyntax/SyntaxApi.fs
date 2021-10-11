@@ -18,11 +18,6 @@ module TMap = MiloneStd.StdMap
 module Typing = MiloneSyntax.Typing
 module TySystem = MiloneSyntax.TySystem
 
-type private ProjectName = string
-type private ProjectDir = string
-type private ModuleName = string
-type private SourceCode = string
-
 /// `.fs` or `.milone`.
 type private SourceExt = string
 
@@ -32,7 +27,7 @@ type private SourceExt = string
 
 // FIXME: move to ast bundle?
 
-[<RequireQualifiedAccess>]
+[<RequireQualifiedAccess; NoEquality; NoComparison>]
 type ModuleKind =
   | MiloneCore
   | Regular
@@ -145,9 +140,6 @@ let private findProjectWith
   | Some it -> it
   | None -> entryProjectDir + "/../" + projectName
 
-/// filename -> (contents option)
-type private ReadTextFileFun = string -> Future<string option>
-
 /// Reads a file to get source code of specified module.
 let private readModuleInProjectWith
   (readTextFile: ReadTextFileFun)
@@ -185,8 +177,6 @@ let parseModuleWith (docId: DocId) (kind: ModuleKind) (tokens: (Token * Pos) lis
       ast
 
   docId, ast, errors
-
-type private FetchModuleFun = ProjectName -> ModuleName -> Future<ModuleSyntaxData option>
 
 let private fetchModuleWith
   (readTextFile: ReadTextFileFun)

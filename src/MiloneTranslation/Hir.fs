@@ -909,6 +909,7 @@ let tyMangle (ty: Ty, memo: AssocMap<Ty, string>) : string * AssocMap<Ty, string
 // Unification
 // -----------------------------------------------
 
+[<NoEquality; NoComparison>]
 type UnifyResult =
   | UnifyOk
   | UnifyOkWithStack of (Ty * Ty) list

@@ -84,6 +84,7 @@ let private tySymbolToSerial symbol =
 // -----------------------------------------------
 
 /// Identity of namespace owner.
+[<NoEquality; NoComparison>]
 type private NsOwner =
   | TyNsOwner of TySerial
   | ModuleNsOwner of ModuleTySerial
@@ -1418,6 +1419,7 @@ let private nameResIrrefutablePat (pat: TPat, ctx: ScopeCtx) =
 // Expression
 // -----------------------------------------------
 
+[<NoEquality; NoComparison>]
 type private ResolvedExpr =
   | ResolvedAsExpr of TExpr
   | ResolvedAsScope of NsOwner list * TExpr option * Loc

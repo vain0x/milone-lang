@@ -2,6 +2,7 @@ module MiloneLspServer.Util
 
 open System.Collections.Generic
 
+[<NoComparison>]
 type Uri = Uri of string
 
 let partition1 (f: 'T -> 'U option) (items: #seq<'T>) : 'U array * 'T array =

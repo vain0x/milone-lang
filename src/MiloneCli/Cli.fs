@@ -57,12 +57,6 @@ See <https://github.com/vain0x/milone-lang/blob/v${VERSION}/docs/cli.md> for det
 // Interface (1)
 // -----------------------------------------------
 
-type private ProjectName = string
-
-type private ProjectDir = string
-
-type private ModuleName = string
-
 [<NoEquality; NoComparison>]
 type Verbosity =
   | Verbose
@@ -200,8 +194,6 @@ let private computeExePath targetDir platform isRelease name : Path =
 // -----------------------------------------------
 // Context
 // -----------------------------------------------
-
-type private ModuleSyntaxData = DocId * ARoot * (string * Pos) list
 
 [<RequireQualifiedAccess; NoEquality; NoComparison>]
 type CompileCtx =

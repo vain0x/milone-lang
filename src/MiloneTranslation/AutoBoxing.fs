@@ -932,6 +932,7 @@ let autoBox (expr: HExpr, tyCtx: TyCtx) =
 
 let private emptyTyVarSet: AssocSet<TySerial> = TSet.empty compare
 
+[<RequireQualifiedAccess; NoEquality; NoComparison>]
 type private TvCtx =
   { Funs: AssocMap<FunSerial, FunDef>
     UsedTyVars: AssocSet<TySerial> }
@@ -1090,6 +1091,7 @@ let private unifyTy (tys: TyMap) (lTy: Ty) (rTy: Ty) loc : AssocMap<TySerial, Ty
 
   go lTy rTy loc emptyBinding
 
+[<RequireQualifiedAccess; NoEquality; NoComparison>]
 type private TaCtx =
   { Funs: AssocMap<FunSerial, FunDef>
     QuantifiedTys: AssocSet<TySerial> }

@@ -79,6 +79,7 @@ let private toDiscriminantEnumName (name: string) = name + "Discriminant"
 // -----------------------------------------------
 
 /// Read-only context of the pass.
+[<RequireQualifiedAccess; NoEquality; NoComparison>]
 type private Rx =
   { Vars: AssocMap<VarSerial, VarDef>
     Funs: AssocMap<FunSerial, FunDef>
