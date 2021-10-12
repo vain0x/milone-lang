@@ -397,6 +397,8 @@ let private doResolveTraitBound (ctx: TyCtx) theTrait loc : TyCtx =
                  ok && ok1, memo)
              (true, memo)
 
+      | ListTk, [ itemTy ] -> go memo itemTy
+
       | UnionTk tySerial, [] ->
         let memo = memo |> TSet.add ty
 

@@ -10,6 +10,23 @@ open MiloneTranslation.Hir
 module TMap = MiloneStd.StdMap
 module TSet = MiloneStd.StdSet
 
+// #tyAppliedBy
+let private tyAppliedBy n ty =
+  match ty with
+  | Ty (FunTk, [ _; ty ]) when n > 0 -> tyAppliedBy (n - 1) ty
+  | _ -> ty
+
+let private tyFun2 arg1 arg2 result = tyFun arg1 (tyFun arg2 result)
+let private tyFun3 arg1 arg2 arg3 result = tyFun arg1 (tyFun2 arg2 arg3 result)
+
+let private hxApp1 callee arg =
+  let resultTy = exprToTy callee |> tyAppliedBy 1
+  let loc = exprToLoc arg
+  hxApp callee arg resultTy loc
+
+let private hxApp2 callee arg1 arg2 = hxApp1 (hxApp1 callee arg1) arg2
+let private hxApp3 callee arg1 arg2 arg3 = hxApp1 (hxApp2 callee arg1 arg2) arg3
+
 // -----------------------------------------------
 // Collect usage
 // -----------------------------------------------
@@ -104,6 +121,7 @@ type private DCtx =
     NewFuns: (FunSerial * FunDef) list
     NewLetFuns: (Ty * HExpr) list
     WorkList: Ty list
+    GenericListEqualFunOpt: FunSerial option
     EqualFunInstances: AssocMap<Ty, FunSerial> }
 
 let private dCtxOfTyCtx (tyCtx: TyCtx) : DCtx =
@@ -112,6 +130,7 @@ let private dCtxOfTyCtx (tyCtx: TyCtx) : DCtx =
     NewFuns = []
     NewLetFuns = []
     WorkList = []
+    GenericListEqualFunOpt = None
     EqualFunInstances = TMap.empty tyCompare }
 
 let private dExpr (tyCtx: TyCtx) expr : DCtx =
@@ -136,6 +155,32 @@ let private dExpr (tyCtx: TyCtx) expr : DCtx =
           NewVars = (varSerial, varDef) :: ctx.NewVars }
 
     varSerial, ctx
+
+  let findGenericListEqualFunOpt (ctx: DCtx) : FunSerial option * DCtx =
+    match ctx.GenericListEqualFunOpt with
+    | (Some _) as it -> it, ctx
+    | None ->
+      let funSerialOpt =
+        tyCtx.Funs
+        |> TMap.fold
+             (fun opt funSerial (funDef: FunDef) ->
+               let (Loc (docId, _, _)) = funDef.Loc
+
+               if docId = "MiloneStd.Equal"
+                  && funDef.Name = "genericListEqual" then
+                 Some funSerial
+               else
+                 opt)
+             None
+
+      let ctx =
+        if Option.isSome funSerialOpt then
+          { ctx with
+              GenericListEqualFunOpt = funSerialOpt }
+        else
+          ctx
+
+      funSerialOpt, ctx
 
   // l = r :=
   //    let (l1, l2, ...), (r1, r2, ...) = l, r
@@ -219,6 +264,66 @@ let private dExpr (tyCtx: TyCtx) expr : DCtx =
           NewFuns = (funSerial, funDef) :: ctx.NewFuns
           NewLetFuns = (ty, letFunExpr) :: ctx.NewLetFuns
           WorkList = List.append tyArgs ctx.WorkList
+          EqualFunInstances = ctx.EqualFunInstances |> TMap.add ty funSerial }
+
+    ctx
+
+  // l = r :=
+  //    MiloneStd.Equal.genericListEqual compare l r
+  let deriveEqualForList ty (ctx: DCtx) : DCtx =
+    let loc = Loc("MiloneDerive.ListEqual", 0, 0)
+
+    let itemTy =
+      match ty with
+      | Ty (ListTk, [ itemTy ]) -> itemTy
+      | _ -> unreachable ()
+
+    let underlyingFun, ctx =
+      match findGenericListEqualFunOpt ctx with
+      | Some it, ctx -> it, ctx
+
+      | _ ->
+        // FIXME: don't crash it
+        printfn "ERROR: open MiloneStd.Equal to enable list equality"
+        exit 1
+
+    let funSerial, ctx =
+      FunSerial(ctx.Serial + 1), { ctx with Serial = ctx.Serial + 1 }
+
+    let funDef: FunDef =
+      { Name = "listEqual"
+        Arity = 2
+        Ty = TyScheme([], tyFun ty (tyFun ty tyBool))
+        Abi = MiloneAbi
+        Linkage = InternalLinkage
+        ParentOpt = None
+        Loc = loc }
+
+    let lArg, ctx = addVar "l" ty loc ctx
+    let rArg, ctx = addVar "r" ty loc ctx
+
+    let body =
+      let equalTy = tyFun2 itemTy itemTy tyBool
+
+      let callee =
+        HFunExpr(underlyingFun, tyFun3 equalTy itemTy itemTy tyBool, [], loc)
+
+      let equalPrim = HPrimExpr(HPrim.Equal, equalTy, loc)
+      let l = HVarExpr(lArg, ty, loc)
+      let r = HVarExpr(rArg, ty, loc)
+
+      hxApp3 callee equalPrim l r
+
+    let letFunExpr =
+      let lPat = hpVar lArg ty loc
+      let rPat = hpVar rArg ty loc
+      HLetFunExpr(funSerial, NotRec, PrivateVis, [ lPat; rPat ], body, hxUnit loc, tyUnit, loc)
+
+    let ctx =
+      { ctx with
+          NewFuns = (funSerial, funDef) :: ctx.NewFuns
+          NewLetFuns = (ty, letFunExpr) :: ctx.NewLetFuns
+          WorkList = itemTy :: ctx.WorkList
           EqualFunInstances = ctx.EqualFunInstances |> TMap.add ty funSerial }
 
     ctx
@@ -335,8 +440,9 @@ let private dExpr (tyCtx: TyCtx) expr : DCtx =
     | _ when ctx.EqualFunInstances |> TMap.containsKey ty -> ctx
 
     | TupleTk _, [] -> ctx
-
     | TupleTk _, _ -> deriveEqualForTuple ty ctx
+
+    | ListTk _, _ -> deriveEqualForList ty ctx
     | UnionTk _, [] -> deriveEqualForUnion ty ctx
 
     | _ -> ctx
