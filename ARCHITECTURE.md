@@ -2,7 +2,22 @@
 
 (*What is ARCHITECTURE.md?* See [this article: ARCHITECTURE.md](https://matklad.github.io/2021/02/06/ARCHITECTURE.md.html).)
 
-## Code map
+## Bird's Eye Overview
+
+Compiler does *parse* a program and then *transform*.
+
+    [ milone-lang code ]
+        |
+        | OK?
+        +--------→ [ error ]
+        ↓
+    [  IR  ]
+        |
+        | codegen
+        ↓
+    [ C code ]
+
+## Code Map
 
 Projects:
 
@@ -14,7 +29,7 @@ Projects:
 
 Diagram of project dependencies:
 
-         Shared
+        Shared
             ^
           /   \
          /     \
@@ -28,7 +43,7 @@ Diagram of project dependencies:
 Note that Transform is not depended by Syntax and LSP server.
 That illustrates modification of Transform doesn't affect interface of the language.
 
-### Data structures
+### Intermediate representations
 
 - Abstract Syntax Tree (AST)
 - Typed intermediate representation (TIR)
@@ -43,26 +58,28 @@ That illustrates modification of Transform doesn't affect interface of the langu
 
 Diagram of data flow.
 
-    FileSystem (*.milone)
+    Files (*.fs, *.milone)
       | tokenize & parse
       v
      AST
-      |
-      v
+      ↓
      TIR -- type checking etc.
       |
-      ~  -- Syntax / Transform boundary
-      |
-      v
+      ~  -- boundary
+      ↓
      HIR -- closure conversion etc.
       ↓
      MIR
       ↓
      CIR
       ↓
-    FileSystem (*.c)     
+    Files (*.c)     
 
-### Others
+### Language-Specific Files
 
-- FSharpOnly and Program.fs is F# only part.
-- MiloneOnly is milone-lang only part.
+- FSharpOnly and Program.fs are F# only part.
+- MiloneOnly and `*.milone` are milone-lang only part.
+
+## Cross-Cutting Concerns
+
+*WIP*
