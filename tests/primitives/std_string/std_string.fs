@@ -88,6 +88,14 @@ let replaceTest () =
   assert (S.replace "" "" "as is" = "as is")
   assert (S.replace "aa" "a" "aaaaa" = "aaa")
 
+let private toLowerTest () =
+  assert (S.toLower "a To Z 🐧" = "a to z 🐧")
+  assert (S.toLower "" = "")
+
+let private toUpperTest () =
+  assert (S.toUpper "a To Z 🐧" = "A TO Z 🐧")
+  assert (S.toUpper "" = "")
+
 let private cutTest () =
   let run sep s expected =
     let debug (s1, s2, ok: bool) = s1 + ";" + s2 + ";" + string ok
@@ -156,6 +164,8 @@ let main _ =
 
   // Replace.
   replaceTest ()
+  toLowerTest ()
+  toUpperTest ()
 
   // Split.
   cutTest ()

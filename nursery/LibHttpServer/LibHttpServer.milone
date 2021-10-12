@@ -278,6 +278,8 @@ module Option =
     | Some _ -> opt
     | None -> other ()
 
+// FIXME: use S.toLower, toUpper
+
 /// Converts all ASCII latin letters to lowercase.
 let private toAsciiLower (s: string) : string =
   let f = C.toLower

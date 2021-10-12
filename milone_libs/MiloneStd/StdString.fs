@@ -218,6 +218,25 @@ let replace (pattern: string) (target: string) (s: string) =
   else
     replaceLoop [] 0 |> List.rev |> concat target
 
+// unicode is not supported
+let private transformByBytes (f: char -> char) (s: string) : string =
+  let rec stringTransformLoop (s: string) =
+    if s.Length = 1 then
+      string (f s.[0])
+    else
+      let m = s.Length / 2
+
+      stringTransformLoop s.[0..m - 1]
+      + stringTransformLoop s.[m..s.Length - 1]
+
+  if s = "" then
+    ""
+  else
+    stringTransformLoop s
+
+let toLower (s: string) : string = transformByBytes C.toLower s
+let toUpper (s: string) : string = transformByBytes C.toUpper s
+
 // -----------------------------------------------
 // Split
 // -----------------------------------------------
