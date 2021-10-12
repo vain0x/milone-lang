@@ -128,6 +128,10 @@ if_next_22:;
     milone_assert((true >= false), 29, 2);
     milone_assert((true >= true), 30, 2);
     milone_assert((false < true), 32, 2);
+    struct String call_ = str_of_bool(t_);
+    milone_assert((str_compare(call_, (struct String){.str = "True", .len = 4}) == 0), 38, 2);
+    struct String call_1 = str_of_bool(f_);
+    milone_assert((str_compare(call_1, (struct String){.str = "False", .len = 5}) == 0), 39, 2);
     return;
 }
 
@@ -144,7 +148,7 @@ else_27:;
     if_8 = false;
     goto if_next_25;
 if_next_25:;
-    milone_assert((!(if_8)), 44, 2);
+    milone_assert((!(if_8)), 42, 2);
     bool if_9;
     if (t_1) {
         goto then_29;
@@ -157,7 +161,7 @@ then_29:;
 else_30:;
     exit(1);
 if_next_28:;
-    milone_assert(if_9, 50, 2);
+    milone_assert(if_9, 48, 2);
     return;
 }
 

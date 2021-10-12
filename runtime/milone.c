@@ -4,7 +4,8 @@
 // but usable with __nativeFun.
 
 // Use C standard functions only.
-// Other functions that require platform-specific functions are defined in `milone_platform.c`.
+// Other functions that require platform-specific functions are defined in
+// `milone_platform.c`.
 
 // Customization:
 //      Define MILONE_NO_DEFAULT_ALLOCATOR to disable memory allocator API.
@@ -516,6 +517,10 @@ struct String str_of_double(double value) {
     char buf[64] = {0};
     int n = sprintf(buf, "%f", value);
     return str_of_raw_parts(buf, n);
+}
+
+struct String str_of_bool(bool value) {
+    return value ? str_borrow("True") : str_borrow("False");
 }
 
 char str_to_char(struct String s) { return s.len >= 1 ? *s.str : '\0'; }

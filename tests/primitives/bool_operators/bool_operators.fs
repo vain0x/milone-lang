@@ -36,10 +36,8 @@ let test (t: bool) (f: bool) =
   // bool to int is type error in F#.
   // assert (int t = 1)
 
-  // FIXME: implement bool to string conversion
-  // assert (string t = "True")
-  // assert (string f = "False")
-  ()
+  assert (string t = "True")
+  assert (string f = "False")
 
 let testShortCircuit (t: bool) (f: bool) =
   assert (not (

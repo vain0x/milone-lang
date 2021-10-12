@@ -950,7 +950,7 @@ let private cgPrimStmt (ctx: CirCtx) itself prim args serial resultTy =
 
   | MCharOfStrPrim -> conversion ctx (fun arg -> CCallExpr(CVarExpr "str_to_char", [ arg ]))
 
-  | MStrOfBoolPrim -> todo ()
+  | MStrOfBoolPrim -> conversion ctx (fun arg -> CCallExpr(CVarExpr "str_of_bool", [ arg ]))
   | MStrOfCharPrim -> conversion ctx (fun arg -> CCallExpr(CVarExpr "str_of_char", [ arg ]))
 
   | MStrOfIntPrim flavor ->
