@@ -217,7 +217,16 @@ let private mxCompare ctx (op: MBinary) (l: MExpr) r (ty: Ty) loc =
         | CharTk),
         _) -> mxBinOpScalar ctx op l r (ty, loc)
   | Ty (StrTk, _) -> mxStrCompare ctx op l r (ty, loc)
-  | Ty (TupleTk, []) -> mxBinOpScalar ctx op l r (ty, loc)
+
+  | Ty (TupleTk, []) ->
+    let value =
+      match op with
+      | MEqualBinary
+      | MGreaterEqualBinary -> true
+      | _ -> false
+
+    MLitExpr(BoolLit value, loc), ctx
+
   | _ -> unreachable ()
 
 /// How `box`/`unbox` works for the type.

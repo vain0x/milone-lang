@@ -16,6 +16,8 @@ bool tuple2Equal_1(struct IntIntIntTuple2Tuple2_ , struct IntIntIntTuple2Tuple2_
 
 void testNested_(void);
 
+void testUnitCompare_(void);
+
 int milone_main(void);
 
 struct IntStringTuple2_ {
@@ -50,7 +52,7 @@ void testPair_(void) {
 }
 
 void testUnit_(void) {
-    milone_assert((0 == 0), 10, 26);
+    milone_assert(true, 10, 26);
     return;
 }
 
@@ -76,9 +78,18 @@ void testNested_(void) {
     return;
 }
 
+void testUnitCompare_(void) {
+    milone_assert(true, 20, 2);
+    milone_assert(true, 21, 2);
+    milone_assert(true, 22, 2);
+    milone_assert(true, 23, 2);
+    return;
+}
+
 int milone_main(void) {
     testUnit_();
     testPair_();
     testNested_();
+    testUnitCompare_();
     return 0;
 }

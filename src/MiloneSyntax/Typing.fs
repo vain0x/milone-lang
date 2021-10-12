@@ -422,7 +422,10 @@ let private doResolveTraitBound (ctx: TyCtx) theTrait loc : TyCtx =
     let ok, _ = go (TSet.empty tyCompare) ty
     if ok then ctx else addBoundError ctx
 
-  | CompareTrait ty -> ctx |> expectBasic ty
+  | CompareTrait ty ->
+    match ty with
+    | Ty(TupleTk, []) -> ctx
+    | _ -> ctx |> expectBasic ty
 
   | IndexTrait (lTy, rTy, resultTy) ->
     match lTy with

@@ -16,8 +16,16 @@ let private testNested () =
   assert ((1, (2, 3)) <> (0, (2, 3)))
   assert ((1, (2, 3)) <> (1, (2, 0)))
 
+let private testUnitCompare () =
+  // When tuple comparison is implemented, move this there.
+  assert (() <= ())
+  assert (not (() < ()))
+  assert (() >= ())
+  assert (not (() > ()))
+
 let main _ =
   testUnit ()
   testPair ()
   testNested ()
+  testUnitCompare ()
   0
