@@ -424,6 +424,11 @@ let litToTy (lit: Lit) : Ty =
 
 let hpAbort ty loc = HNodePat(HAbortPN, [], ty, loc)
 
+let hpVar varSerial ty loc = HVarPat(PrivateVis, varSerial, ty, loc)
+
+let hpVariantApp variantSerial payloadPat ty loc =
+  HNodePat(HVariantAppPN variantSerial, [ payloadPat ], ty, loc)
+
 let hpTuple itemPats loc =
   let tupleTy = itemPats |> List.map patToTy |> tyTuple
   HNodePat(HTuplePN, itemPats, tupleTy, loc)

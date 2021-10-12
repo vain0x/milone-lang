@@ -370,7 +370,13 @@ let private doResolveTraitBound (ctx: TyCtx) theTrait loc : TyCtx =
     // Coerce to int by default.
     | _ -> unify ty tyInt loc ctx
 
-  | EqualTrait ty -> ctx |> expectBasic ty
+  | EqualTrait ty ->
+    match ty with
+    | Ty(UnionTk _, []) ->
+      // FIXME: check if all payloads are comparable
+      ctx
+
+    | _ -> ctx |> expectBasic ty
 
   | CompareTrait ty -> ctx |> expectBasic ty
 
