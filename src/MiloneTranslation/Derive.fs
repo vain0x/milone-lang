@@ -137,6 +137,92 @@ let private dExpr (tyCtx: TyCtx) expr : DCtx =
 
     varSerial, ctx
 
+  // l = r :=
+  //    let (l1, l2, ...), (r1, r2, ...) = l, r
+  //    (l1 = r1) & (l2 = r2) & ...
+  let deriveEqualForTuple ty (ctx: DCtx) : DCtx =
+    let loc = Loc("MiloneDerive.TupleEqual", 0, 0)
+
+    let tyArgs =
+      match ty with
+      | Ty (TupleTk, tyArgs) -> tyArgs
+      | _ -> unreachable ()
+
+    let funSerial, ctx =
+      FunSerial(ctx.Serial + 1), { ctx with Serial = ctx.Serial + 1 }
+
+    let funDef: FunDef =
+      { Name = "tuple" + string (List.length tyArgs) + "Equal"
+        Arity = 2
+        Ty = TyScheme([], tyFun ty (tyFun ty tyBool))
+        Abi = MiloneAbi
+        Linkage = InternalLinkage
+        ParentOpt = None
+        Loc = loc }
+
+    let lArg, ctx = addVar "l" ty loc ctx
+    let rArg, ctx = addVar "r" ty loc ctx
+
+    let lPatAcc, rPatAcc, prodAcc, ctx =
+      tyArgs
+      |> List.fold
+           (fun (lPats, rPats, prods, ctx) tyArg ->
+             let lArg, ctx = addVar "l" tyArg loc ctx
+             let rArg, ctx = addVar "r" tyArg loc ctx
+
+             let lPat = hpVar lArg tyArg loc
+             let rPat = hpVar rArg tyArg loc
+
+             let prod =
+               let equal =
+                 HPrimExpr(HPrim.Equal, tyFun tyArg (tyFun tyArg tyBool), loc)
+
+               let l = HVarExpr(lArg, tyArg, loc)
+               let r = HVarExpr(rArg, tyArg, loc)
+               hxApp (hxApp equal l (tyFun tyArg tyBool) loc) r tyBool loc
+
+             lPat :: lPats, rPat :: rPats, prod :: prods, ctx)
+           ([], [], [], ctx)
+
+    let lPat = hpTuple (List.rev lPatAcc) loc
+    let rPat = hpTuple (List.rev rPatAcc) loc
+
+    let prod =
+      let prod0, prods =
+        match List.rev prodAcc with
+        | head :: tail -> head, tail
+        | _ -> unreachable () // Not empty.
+
+      List.fold
+        (fun l r ->
+          let conj =
+            HPrimExpr(HPrim.BitAnd, tyFun tyBool (tyFun tyBool tyBool), loc)
+
+          hxApp (hxApp conj l (tyFun tyBool tyBool) loc) r tyBool loc)
+        prod0
+        prods
+
+    let body =
+      HBlockExpr(
+        [ HLetValExpr(lPat, HVarExpr(lArg, ty, loc), hxUnit loc, tyUnit, loc)
+          HLetValExpr(rPat, HVarExpr(rArg, ty, loc), hxUnit loc, tyUnit, loc) ],
+        prod
+      )
+
+    let letFunExpr =
+      let lPat = hpVar lArg ty loc
+      let rPat = hpVar rArg ty loc
+      HLetFunExpr(funSerial, NotRec, PrivateVis, [ lPat; rPat ], body, hxUnit loc, tyUnit, loc)
+
+    let ctx =
+      { ctx with
+          NewFuns = (funSerial, funDef) :: ctx.NewFuns
+          NewLetFuns = (ty, letFunExpr) :: ctx.NewLetFuns
+          WorkList = List.append tyArgs ctx.WorkList
+          EqualFunInstances = ctx.EqualFunInstances |> TMap.add ty funSerial }
+
+    ctx
+
   // l = r := match l, r with | T1 l, T1 r -> l = r | ... | _ -> false
   let deriveEqualForUnion ty (ctx: DCtx) : DCtx =
     let tySerial =
@@ -243,12 +329,14 @@ let private dExpr (tyCtx: TyCtx) expr : DCtx =
     | BoolTk, _
     | CharTk, _
     | StrTk _, _
-    | TupleTk, []
     | NativePtrTk _, _
     | NativeFunTk _, _ -> ctx
 
     | _ when ctx.EqualFunInstances |> TMap.containsKey ty -> ctx
 
+    | TupleTk _, [] -> ctx
+
+    | TupleTk _, _ -> deriveEqualForTuple ty ctx
     | UnionTk _, [] -> deriveEqualForUnion ty ctx
 
     | _ -> ctx

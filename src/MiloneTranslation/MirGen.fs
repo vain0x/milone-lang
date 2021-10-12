@@ -217,6 +217,7 @@ let private mxCompare ctx (op: MBinary) (l: MExpr) r (ty: Ty) loc =
         | CharTk),
         _) -> mxBinOpScalar ctx op l r (ty, loc)
   | Ty (StrTk, _) -> mxStrCompare ctx op l r (ty, loc)
+  | Ty (TupleTk, []) -> mxBinOpScalar ctx op l r (ty, loc)
   | _ -> unreachable ()
 
 /// How `box`/`unbox` works for the type.

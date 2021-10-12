@@ -382,6 +382,21 @@ let private doResolveTraitBound (ctx: TyCtx) theTrait loc : TyCtx =
       match tk, tyArgs with
       | _ when isBasic ty || memo |> TSet.contains ty -> true, memo
 
+      | TupleTk, [] -> true, memo
+
+      | TupleTk, _ ->
+        let memo = memo |> TSet.add ty
+
+        tyArgs
+        |> List.fold
+             (fun (ok, memo) tyArg ->
+               if not ok then
+                 ok, memo
+               else
+                 let ok1, memo = go memo tyArg
+                 ok && ok1, memo)
+             (true, memo)
+
       | UnionTk tySerial, [] ->
         let memo = memo |> TSet.add ty
 

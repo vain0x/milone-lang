@@ -8,6 +8,8 @@ let private testObj () = assert (box 0 = box 0)
 
 let private testFun () = assert (f = f)
 
+let private testTupleWithObj () = assert ((box 0, 0) = (box 0, 0))
+
 type private UnionWithFun = UF of (unit -> int)
 
 let private testUnionContainingFun () = assert (UF f = UF f)
@@ -25,6 +27,7 @@ let private testRecordWithFun () =
 let main _ =
   testObj ()
   testFun ()
+  testTupleWithObj ()
   testUnionContainingFun ()
   testGenericUnion ()
   testRecordWithFun ()
