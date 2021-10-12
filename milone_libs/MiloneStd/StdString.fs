@@ -222,6 +222,15 @@ let replace (pattern: string) (target: string) (s: string) =
 // Split
 // -----------------------------------------------
 
+/// Splits a string into two part by separator.
+/// Returns `(first, second, ok)`.
+///
+/// The first occurrence of separator is picked if multiple.
+let cut (sep: string) (s: string) : string * string * bool =
+  match findIndex sep s with
+  | None -> s, "", false
+  | Some i -> s.[0..i - 1], s.[i + sep.Length..s.Length - 1], true
+
 let private findNewline (start: int) (s: string) =
   let i = start
 

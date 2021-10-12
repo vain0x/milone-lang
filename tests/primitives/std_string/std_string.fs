@@ -88,7 +88,27 @@ let replaceTest () =
   assert (S.replace "" "" "as is" = "as is")
   assert (S.replace "aa" "a" "aaaaa" = "aaa")
 
-let splitTest () =
+let private cutTest () =
+  let run sep s expected =
+    let debug (s1, s2, ok: bool) = s1 + ";" + s2 + ";" + string ok
+    debug (S.cut sep s) = debug expected
+
+  // Basic.
+  assert (run "," "one,two,three" ("one", "two,three", true))
+  // Empty separator.
+  assert (run "" "foo" ("", "foo", true))
+  // Empty elements.
+  assert (run "," ",," ("", ",", true))
+  // Not separated.
+  assert (run "," "foo" ("foo", "", false))
+  // Trailing separator.
+  assert (run "," "foo," ("foo", "", true))
+  // Separator overlapped.
+  assert (run ",," ",,," ("", ",", true))
+  // Binary in case.
+  assert (run "\x00" "+\x00-\x00" ("+", "-\x00", true))
+
+let private toLinesTest () =
   assert ((S.toLines "a\nb\nc" |> S.concat ";") = "a;b;c")
   assert ((S.toLines "a\nb\nc\n" |> S.concat ";") = "a;b;c;")
   assert ((S.toLines "a" |> S.concat ";") = "a")
@@ -121,8 +141,11 @@ let main _ =
   // Replace.
   replaceTest ()
 
-  // Split.
-  splitTest ()
+  // Cut.
+  cutTest ()
+
+  // ToLines.
+  toLinesTest ()
 
   // Concat.
   concatTest ()
