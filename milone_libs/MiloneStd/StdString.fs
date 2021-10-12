@@ -268,6 +268,23 @@ let split (sep: string) (s: string) : string list =
 
   go [] s |> List.rev
 
+// Variant of cut.
+/// Removes a substring if string starts with it.
+/// Returns `(string, ok)`.
+let stripStart (prefix: string) (s: string) : string * bool =
+  if startsWith prefix s then
+    s.[prefix.Length..s.Length - 1], true
+  else
+    s, false
+
+/// Removes a substring if string ends with it.
+/// Returns `(string, ok)`.
+let stripEnd (suffix: string) (s: string) : string * bool =
+  if endsWith suffix s then
+    s.[0..s.Length - suffix.Length - 1], true
+  else
+    s, false
+
 let private findNewline (start: int) (s: string) =
   let i = start
 

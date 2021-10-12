@@ -132,6 +132,34 @@ let private splitTest () =
   // Separator overlapped.
   assert (run ",," ",,," [ ""; "," ])
 
+let private stripStartTest () =
+  let run prefix s expected =
+    let debug (s, ok: bool) = s + ";" + string ok
+    debug (S.stripStart prefix s) = debug expected
+
+  // Basic.
+  assert (run "un" "unhappy" ("happy", true))
+  assert (run "un" "lucky" ("lucky", false))
+
+  // Edges.
+  assert (run "" "foo" ("foo", true))
+  assert (run "un" "" ("", false))
+  assert (run "" "" ("", true))
+
+let private stripEndTest () =
+  let run suffix s expected =
+    let debug (s, ok: bool) = s + ";" + string ok
+    debug (S.stripEnd suffix s) = debug expected
+
+  // Basic.
+  assert (run "apple" "pineapple" ("pine", true))
+  assert (run "apple" "pine" ("pine", false))
+
+  // Edges.
+  assert (run "" "input" ("input", true))
+  assert (run "sep" "" ("", false))
+  assert (run "" "" ("", true))
+
 let private toLinesTest () =
   assert ((S.toLines "a\nb\nc" |> S.concat ";") = "a;b;c")
   assert ((S.toLines "a\nb\nc\n" |> S.concat ";") = "a;b;c;")
@@ -170,6 +198,8 @@ let main _ =
   // Split.
   cutTest ()
   splitTest ()
+  stripStartTest ()
+  stripEndTest ()
   toLinesTest ()
 
   // Concat.
