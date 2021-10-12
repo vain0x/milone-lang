@@ -16,13 +16,13 @@ struct MyResult_;
 
 struct MyResultMyResultTuple2_;
 
-bool __equal(struct MyBool_ l_, struct MyBool_ r_);
+bool MyBoolEqual_(struct MyBool_ l_, struct MyBool_ r_);
 
-bool __equal_1(struct MyIntOption_ l_1, struct MyIntOption_ r_1);
+bool MyIntOptionEqual_(struct MyIntOption_ l_1, struct MyIntOption_ r_1);
 
-bool __equal_3(struct MyValue_ l_6, struct MyValue_ r_6);
+bool MyValueEqual_(struct MyValue_ l_6, struct MyValue_ r_6);
 
-bool __equal_2(struct MyResult_ l_3, struct MyResult_ r_3);
+bool MyResultEqual_(struct MyResult_ l_3, struct MyResult_ r_3);
 
 void testMyBool_(void);
 
@@ -100,7 +100,7 @@ struct MyResultMyResultTuple2_ {
     struct MyResult_ t1;
 };
 
-bool __equal(struct MyBool_ l_, struct MyBool_ r_) {
+bool MyBoolEqual_(struct MyBool_ l_, struct MyBool_ r_) {
     bool match_;
     struct MyBoolMyBoolTuple2_ MyBoolMyBoolTuple2_ = (struct MyBoolMyBoolTuple2_){.t0 = l_, .t1 = r_};
     if ((MyBoolMyBoolTuple2_.t0.discriminant != MyTrue_)) goto next_2;
@@ -120,7 +120,7 @@ end_match_1:;
     return match_;
 }
 
-bool __equal_1(struct MyIntOption_ l_1, struct MyIntOption_ r_1) {
+bool MyIntOptionEqual_(struct MyIntOption_ l_1, struct MyIntOption_ r_1) {
     int r_2;
     int l_2;
     bool match_1;
@@ -144,7 +144,7 @@ end_match_5:;
     return match_1;
 }
 
-bool __equal_3(struct MyValue_ l_6, struct MyValue_ r_6) {
+bool MyValueEqual_(struct MyValue_ l_6, struct MyValue_ r_6) {
     struct String r_8;
     struct String l_8;
     int r_7;
@@ -177,7 +177,7 @@ end_match_9:;
     return match_2;
 }
 
-bool __equal_2(struct MyResult_ l_3, struct MyResult_ r_3) {
+bool MyResultEqual_(struct MyResult_ l_3, struct MyResult_ r_3) {
     struct String r_5;
     struct String l_5;
     struct MyValue_ r_4;
@@ -188,7 +188,7 @@ bool __equal_2(struct MyResult_ l_3, struct MyResult_ r_3) {
     l_4 = MyResultMyResultTuple2_.t0.MyOk_;
     if ((MyResultMyResultTuple2_.t1.discriminant != MyOk_)) goto next_15;
     r_4 = MyResultMyResultTuple2_.t1.MyOk_;
-    bool call_ = __equal_3(l_4, r_4);
+    bool call_ = MyValueEqual_(l_4, r_4);
     match_3 = call_;
     goto end_match_14;
 next_15:;
@@ -208,14 +208,14 @@ end_match_14:;
 
 void testMyBool_(void) {
     struct MyBool_ t_ = (struct MyBool_){.discriminant = MyTrue_};
-    bool call_1 = __equal(t_, (struct MyBool_){.discriminant = MyTrue_});
+    bool call_1 = MyBoolEqual_(t_, (struct MyBool_){.discriminant = MyTrue_});
     milone_assert(call_1, 9, 2);
-    bool call_2 = __equal(t_, (struct MyBool_){.discriminant = MyFalse_});
+    bool call_2 = MyBoolEqual_(t_, (struct MyBool_){.discriminant = MyFalse_});
     milone_assert((!(call_2)), 10, 2);
     struct MyBool_ f_ = (struct MyBool_){.discriminant = MyFalse_};
-    bool call_3 = __equal(t_, f_);
+    bool call_3 = MyBoolEqual_(t_, f_);
     milone_assert((!(call_3)), 13, 2);
-    bool call_4 = __equal(f_, (struct MyBool_){.discriminant = MyFalse_});
+    bool call_4 = MyBoolEqual_(f_, (struct MyBool_){.discriminant = MyFalse_});
     milone_assert(call_4, 14, 2);
     return;
 }
@@ -224,17 +224,17 @@ void testMyInt_(void) {
     struct MyIntOption_ variant_ = (struct MyIntOption_){.discriminant = MySome_, .MySome_ = 2};
     struct MyIntOption_ s_ = variant_;
     struct MyIntOption_ variant_1 = (struct MyIntOption_){.discriminant = MySome_, .MySome_ = 2};
-    bool call_5 = __equal_1(s_, variant_1);
+    bool call_5 = MyIntOptionEqual_(s_, variant_1);
     milone_assert(call_5, 23, 2);
     struct MyIntOption_ variant_2 = (struct MyIntOption_){.discriminant = MySome_, .MySome_ = 3};
-    bool call_6 = __equal_1(s_, variant_2);
+    bool call_6 = MyIntOptionEqual_(s_, variant_2);
     milone_assert((!(call_6)), 24, 2);
-    bool call_7 = __equal_1(s_, (struct MyIntOption_){.discriminant = MyNone_});
+    bool call_7 = MyIntOptionEqual_(s_, (struct MyIntOption_){.discriminant = MyNone_});
     milone_assert((!(call_7)), 25, 2);
     struct MyIntOption_ n_ = (struct MyIntOption_){.discriminant = MyNone_};
-    bool call_8 = __equal_1(s_, n_);
+    bool call_8 = MyIntOptionEqual_(s_, n_);
     milone_assert((!(call_8)), 28, 2);
-    bool call_9 = __equal_1(n_, (struct MyIntOption_){.discriminant = MyNone_});
+    bool call_9 = MyIntOptionEqual_(n_, (struct MyIntOption_){.discriminant = MyNone_});
     milone_assert(call_9, 29, 2);
     return;
 }
@@ -245,29 +245,29 @@ void testMyResult_(void) {
     struct MyResult_ ok2_ = variant_4;
     struct MyValue_ variant_5 = (struct MyValue_){.discriminant = MyInt_, .MyInt_ = 2};
     struct MyResult_ variant_6 = (struct MyResult_){.discriminant = MyOk_, .MyOk_ = variant_5};
-    bool call_10 = __equal_2(ok2_, variant_6);
+    bool call_10 = MyResultEqual_(ok2_, variant_6);
     milone_assert(call_10, 43, 2);
     struct MyValue_ variant_7 = (struct MyValue_){.discriminant = MyInt_, .MyInt_ = 3};
     struct MyResult_ variant_8 = (struct MyResult_){.discriminant = MyOk_, .MyOk_ = variant_7};
-    bool call_11 = __equal_2(ok2_, variant_8);
+    bool call_11 = MyResultEqual_(ok2_, variant_8);
     milone_assert((!(call_11)), 44, 2);
     struct MyResult_ variant_9 = (struct MyResult_){.discriminant = MyOk_, .MyOk_ = (struct MyValue_){.discriminant = MyUnit_}};
-    bool call_12 = __equal_2(ok2_, variant_9);
+    bool call_12 = MyResultEqual_(ok2_, variant_9);
     milone_assert((!(call_12)), 45, 2);
     struct MyResult_ variant_10 = (struct MyResult_){.discriminant = MyErr_, .MyErr_ = (struct String){.str = "", .len = 0}};
-    bool call_13 = __equal_2(ok2_, variant_10);
+    bool call_13 = MyResultEqual_(ok2_, variant_10);
     milone_assert((!(call_13)), 46, 2);
     struct MyValue_ variant_11 = (struct MyValue_){.discriminant = MyString_, .MyString_ = (struct String){.str = "hello", .len = 5}};
     struct MyResult_ variant_12 = (struct MyResult_){.discriminant = MyOk_, .MyOk_ = variant_11};
     struct MyResult_ hello_ = variant_12;
     struct MyValue_ variant_13 = (struct MyValue_){.discriminant = MyString_, .MyString_ = (struct String){.str = "hello", .len = 5}};
     struct MyResult_ variant_14 = (struct MyResult_){.discriminant = MyOk_, .MyOk_ = variant_13};
-    bool call_14 = __equal_2(hello_, variant_14);
+    bool call_14 = MyResultEqual_(hello_, variant_14);
     milone_assert(call_14, 49, 2);
-    bool call_15 = __equal_2(hello_, ok2_);
+    bool call_15 = MyResultEqual_(hello_, ok2_);
     milone_assert((!(call_15)), 50, 2);
     struct MyResult_ variant_15 = (struct MyResult_){.discriminant = MyErr_, .MyErr_ = (struct String){.str = "hello", .len = 5}};
-    bool call_16 = __equal_2(hello_, variant_15);
+    bool call_16 = MyResultEqual_(hello_, variant_15);
     milone_assert((!(call_16)), 51, 2);
     return;
 }

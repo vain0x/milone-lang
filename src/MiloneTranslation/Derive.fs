@@ -144,9 +144,9 @@ let private dExpr (tyCtx: TyCtx) expr : DCtx =
       | Ty (UnionTk tySerial, _) -> tySerial
       | _ -> unreachable ()
 
-    let variantSerials, loc =
+    let ident, variantSerials, loc =
       match findTy tySerial with
-      | UnionTyDef (_, _, variantSerials, loc) -> variantSerials, loc
+      | UnionTyDef (ident, _, variantSerials, loc) -> ident, variantSerials, loc
       | _ -> unreachable ()
 
     let trueExpr = hxTrue loc
@@ -156,7 +156,7 @@ let private dExpr (tyCtx: TyCtx) expr : DCtx =
       FunSerial(ctx.Serial + 1), { ctx with Serial = ctx.Serial + 1 }
 
     let funDef: FunDef =
-      { Name = "__equal"
+      { Name = ident + "Equal"
         Arity = 2
         Ty = TyScheme([], tyFun ty (tyFun ty tyBool))
         Abi = MiloneAbi
