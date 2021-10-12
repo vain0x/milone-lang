@@ -98,6 +98,7 @@ let private tyToArity ty =
   | Ty (FunTk, [ _; ty ]) -> 1 + tyToArity ty
   | _ -> 0
 
+// #tyAppliedBy
 let private tyAppliedBy n ty =
   match ty with
   | Ty (FunTk, [ _; ty ]) when n > 0 -> tyAppliedBy (n - 1) ty

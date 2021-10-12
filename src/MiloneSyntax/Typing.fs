@@ -345,18 +345,23 @@ let private doResolveTraitBound (ctx: TyCtx) theTrait loc : TyCtx =
     addLog ctx (Log.TyBoundError theTrait) loc
     |> addTraitBounds [ theTrait, loc ]
 
-  /// integer, bool, char, or string
-  let expectBasic ty (ctx: TyCtx) =
+  let isBasic ty =
     match ty with
     | Ty (ErrorTk _, _)
-    | Ty (IntTk _, [])
-    | Ty (FloatTk _, [])
-    | Ty (BoolTk, [])
-    | Ty (CharTk, [])
-    | Ty (StrTk, [])
-    | Ty (NativePtrTk _, _) -> ctx
+    | Ty (IntTk _, _)
+    | Ty (FloatTk _, _)
+    | Ty (BoolTk, _)
+    | Ty (CharTk, _)
+    | Ty (StrTk, _)
+    | Ty (NativePtrTk _, _) -> true
+    | _ -> false
 
-    | _ -> addBoundError ctx
+  /// integer, bool, char, or string
+  let expectBasic ty (ctx: TyCtx) =
+    if isBasic ty then
+      ctx
+    else
+      addBoundError ctx
 
   match theTrait with
   | AddTrait ty ->
@@ -370,9 +375,58 @@ let private doResolveTraitBound (ctx: TyCtx) theTrait loc : TyCtx =
     // Coerce to int by default.
     | _ -> unify ty tyInt loc ctx
 
-  | EqualTrait ty -> ctx |> expectBasic ty
+  | EqualTrait ty ->
+    let rec go memo ty =
+      let (Ty (tk, tyArgs)) = ty
 
-  | CompareTrait ty -> ctx |> expectBasic ty
+      match tk, tyArgs with
+      | _ when isBasic ty || memo |> TSet.contains ty -> true, memo
+
+      | TupleTk, [] -> true, memo
+
+      | TupleTk, _ ->
+        let memo = memo |> TSet.add ty
+
+        tyArgs
+        |> List.fold
+             (fun (ok, memo) tyArg ->
+               if not ok then
+                 ok, memo
+               else
+                 let ok1, memo = go memo tyArg
+                 ok && ok1, memo)
+             (true, memo)
+
+      | OptionTk, [ itemTy ] -> go memo itemTy
+      | ListTk, [ itemTy ] -> go memo itemTy
+
+      | UnionTk tySerial, [] ->
+        let memo = memo |> TSet.add ty
+
+        match ctx.Tys |> mapFind tySerial with
+        | UnionTyDef (_, [], variants, _) ->
+          variants
+          |> List.fold
+               (fun (ok, memo) variantSerial ->
+                 let variantDef = ctx.Variants |> mapFind variantSerial
+
+                 if not ok || not variantDef.HasPayload then
+                   ok, memo
+                 else
+                   let ok1, memo = go memo variantDef.PayloadTy
+                   ok && ok1, memo)
+               (true, memo)
+        | _ -> false, memo
+
+      | _ -> false, memo
+
+    let ok, _ = go (TSet.empty tyCompare) ty
+    if ok then ctx else addBoundError ctx
+
+  | CompareTrait ty ->
+    match ty with
+    | Ty (TupleTk, []) -> ctx
+    | _ -> ctx |> expectBasic ty
 
   | IndexTrait (lTy, rTy, resultTy) ->
     match lTy with

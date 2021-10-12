@@ -8,6 +8,7 @@
   <ItemGroup>
     <Compile Include="Hir.fs" />
     <Compile Include="Hoist.fs" />
+    <Compile Include="Derive.fs" />
     <Compile Include="AutoBoxing.fs" />
     <Compile Include="RecordRes.fs" />
     <Compile Include="ClosureConversion.fs" />

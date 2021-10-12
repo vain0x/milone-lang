@@ -18,6 +18,7 @@ open MiloneTranslation.RecordRes
 open MiloneTranslation.TailRecOptimizing
 
 module C = MiloneStd.StdChar
+module Derive = MiloneTranslation.Derive
 module Hir = MiloneTranslation.Hir
 module S = MiloneStd.StdString
 module Tir = MiloneSyntax.Tir
@@ -260,6 +261,9 @@ let transformHir (host: CliHost) v (modules: Tir.TProgram, tyCtx: Typing.TyCtx) 
 
   writeLog host v "RecordRes"
   let expr, tyCtx = recordRes (expr, tyCtx)
+
+  writeLog host v "Derive"
+  let expr, tyCtx = Derive.deriveOps (expr, tyCtx)
 
   writeLog host v "ClosureConversion"
   let expr, tyCtx = closureConversion (expr, tyCtx)
