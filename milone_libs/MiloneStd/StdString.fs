@@ -244,9 +244,18 @@ let toUpper (s: string) : string = transformByBytes C.toUpper s
 /// Splits a string into two part by separator.
 /// Returns `(first, second, ok)`.
 ///
-/// The first occurrence of separator is picked if multiple.
+/// The first occurrence of separator is picked.
 let cut (sep: string) (s: string) : string * string * bool =
   match findIndex sep s with
+  | None -> s, "", false
+  | Some i -> s.[0..i - 1], s.[i + sep.Length..s.Length - 1], true
+
+/// Splits a string into two part by separator.
+/// Returns `(first, second, ok)`.
+///
+/// The *last* occurrence of separator is picked.
+let cutLast (sep: string) (s: string) : string * string * bool =
+  match findLastIndex sep s with
   | None -> s, "", false
   | Some i -> s.[0..i - 1], s.[i + sep.Length..s.Length - 1], true
 

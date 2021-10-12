@@ -116,6 +116,19 @@ let private cutTest () =
   // Binary in case.
   assert (run "\x00" "+\x00-\x00" ("+", "-\x00", true))
 
+let private cutLastTest () =
+  let run sep s expected =
+    let debug (s1, s2, ok: bool) = s1 + ";" + s2 + ";" + string ok
+    debug (S.cutLast sep s) = debug expected
+
+  // Basic.
+  assert (run "." "file.generated.txt" ("file.generated", "txt", true))
+
+  // Edges.
+  assert (run "" "input" ("input", "", true))
+  assert (run "sep" "" ("", "", false))
+  assert (run "" "" ("", "", true))
+
 let private splitTest () =
   let run sep s expected =
     let debug xs = xs |> S.concat ";"
@@ -197,6 +210,7 @@ let main _ =
 
   // Split.
   cutTest ()
+  cutLastTest ()
   splitTest ()
   stripStartTest ()
   stripEndTest ()
