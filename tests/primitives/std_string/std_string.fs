@@ -108,6 +108,22 @@ let private cutTest () =
   // Binary in case.
   assert (run "\x00" "+\x00-\x00" ("+", "-\x00", true))
 
+let private splitTest () =
+  let run sep s expected =
+    let debug xs = xs |> S.concat ";"
+    debug (S.split sep s) = debug expected
+
+  // Basic.
+  assert (run "," "one,two,three" [ "one"; "two"; "three" ])
+  // Not separated.
+  assert (run "," "foo" [ "foo" ])
+  // Empty input.
+  assert (run "," "" [ "" ])
+  // Leading/trailing separators.
+  assert (run "," ",foo," [ ""; "foo"; "" ])
+  // Separator overlapped.
+  assert (run ",," ",,," [ ""; "," ])
+
 let private toLinesTest () =
   assert ((S.toLines "a\nb\nc" |> S.concat ";") = "a;b;c")
   assert ((S.toLines "a\nb\nc\n" |> S.concat ";") = "a;b;c;")
@@ -141,10 +157,9 @@ let main _ =
   // Replace.
   replaceTest ()
 
-  // Cut.
+  // Split.
   cutTest ()
-
-  // ToLines.
+  splitTest ()
   toLinesTest ()
 
   // Concat.

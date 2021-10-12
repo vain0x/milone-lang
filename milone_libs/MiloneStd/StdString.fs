@@ -231,6 +231,24 @@ let cut (sep: string) (s: string) : string * string * bool =
   | None -> s, "", false
   | Some i -> s.[0..i - 1], s.[i + sep.Length..s.Length - 1], true
 
+/// Splits a string by separator.
+///
+/// ## Edges
+///
+/// - `split "," "foo"` is `[ "foo" ]` (not separated)
+/// - `split "," ""` is `[ "" ]` too
+/// - `split "," "foo,"` is `[ "foo"; "" ]` (trailing separator)
+/// - `split "" "foo"` is *unimplemented* (empty separator)
+let split (sep: string) (s: string) : string list =
+  assert (sep.Length <> 0) // should split at every character boundary
+
+  let rec go acc s =
+    let part, s, ok = cut sep s
+    let acc = part :: acc
+    if ok then go acc s else acc
+
+  go [] s |> List.rev
+
 let private findNewline (start: int) (s: string) =
   let i = start
 

@@ -3,6 +3,8 @@ module rec LibNursery.ExtString
 
 module S = MiloneStd.StdString
 
+// FIXME: use S.cut, S.split
+
 /// Divides a string into two part by separator if found.
 /// Returns `(first, rest)`.
 ///
