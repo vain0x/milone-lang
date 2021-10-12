@@ -397,6 +397,7 @@ let private doResolveTraitBound (ctx: TyCtx) theTrait loc : TyCtx =
                  ok && ok1, memo)
              (true, memo)
 
+      | OptionTk, [ itemTy ] -> go memo itemTy
       | ListTk, [ itemTy ] -> go memo itemTy
 
       | UnionTk tySerial, [] ->
@@ -424,7 +425,7 @@ let private doResolveTraitBound (ctx: TyCtx) theTrait loc : TyCtx =
 
   | CompareTrait ty ->
     match ty with
-    | Ty(TupleTk, []) -> ctx
+    | Ty (TupleTk, []) -> ctx
     | _ -> ctx |> expectBasic ty
 
   | IndexTrait (lTy, rTy, resultTy) ->
