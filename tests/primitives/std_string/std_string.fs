@@ -88,7 +88,92 @@ let replaceTest () =
   assert (S.replace "" "" "as is" = "as is")
   assert (S.replace "aa" "a" "aaaaa" = "aaa")
 
-let splitTest () =
+let private toLowerTest () =
+  assert (S.toLower "a To Z 🐧" = "a to z 🐧")
+  assert (S.toLower "" = "")
+
+let private toUpperTest () =
+  assert (S.toUpper "a To Z 🐧" = "A TO Z 🐧")
+  assert (S.toUpper "" = "")
+
+let private cutTest () =
+  let run sep s expected =
+    let debug (s1, s2, ok: bool) = s1 + ";" + s2 + ";" + string ok
+    debug (S.cut sep s) = debug expected
+
+  // Basic.
+  assert (run "," "one,two,three" ("one", "two,three", true))
+  // Empty separator.
+  assert (run "" "foo" ("", "foo", true))
+  // Empty elements.
+  assert (run "," ",," ("", ",", true))
+  // Not separated.
+  assert (run "," "foo" ("foo", "", false))
+  // Trailing separator.
+  assert (run "," "foo," ("foo", "", true))
+  // Separator overlapped.
+  assert (run ",," ",,," ("", ",", true))
+  // Binary in case.
+  assert (run "\x00" "+\x00-\x00" ("+", "-\x00", true))
+
+let private cutLastTest () =
+  let run sep s expected =
+    let debug (s1, s2, ok: bool) = s1 + ";" + s2 + ";" + string ok
+    debug (S.cutLast sep s) = debug expected
+
+  // Basic.
+  assert (run "." "file.generated.txt" ("file.generated", "txt", true))
+
+  // Edges.
+  assert (run "" "input" ("input", "", true))
+  assert (run "sep" "" ("", "", false))
+  assert (run "" "" ("", "", true))
+
+let private splitTest () =
+  let run sep s expected =
+    let debug xs = xs |> S.concat ";"
+    debug (S.split sep s) = debug expected
+
+  // Basic.
+  assert (run "," "one,two,three" [ "one"; "two"; "three" ])
+  // Not separated.
+  assert (run "," "foo" [ "foo" ])
+  // Empty input.
+  assert (run "," "" [ "" ])
+  // Leading/trailing separators.
+  assert (run "," ",foo," [ ""; "foo"; "" ])
+  // Separator overlapped.
+  assert (run ",," ",,," [ ""; "," ])
+
+let private stripStartTest () =
+  let run prefix s expected =
+    let debug (s, ok: bool) = s + ";" + string ok
+    debug (S.stripStart prefix s) = debug expected
+
+  // Basic.
+  assert (run "un" "unhappy" ("happy", true))
+  assert (run "un" "lucky" ("lucky", false))
+
+  // Edges.
+  assert (run "" "foo" ("foo", true))
+  assert (run "un" "" ("", false))
+  assert (run "" "" ("", true))
+
+let private stripEndTest () =
+  let run suffix s expected =
+    let debug (s, ok: bool) = s + ";" + string ok
+    debug (S.stripEnd suffix s) = debug expected
+
+  // Basic.
+  assert (run "apple" "pineapple" ("pine", true))
+  assert (run "apple" "pine" ("pine", false))
+
+  // Edges.
+  assert (run "" "input" ("input", true))
+  assert (run "sep" "" ("", false))
+  assert (run "" "" ("", true))
+
+let private toLinesTest () =
   assert ((S.toLines "a\nb\nc" |> S.concat ";") = "a;b;c")
   assert ((S.toLines "a\nb\nc\n" |> S.concat ";") = "a;b;c;")
   assert ((S.toLines "a" |> S.concat ";") = "a")
@@ -120,9 +205,16 @@ let main _ =
 
   // Replace.
   replaceTest ()
+  toLowerTest ()
+  toUpperTest ()
 
   // Split.
+  cutTest ()
+  cutLastTest ()
   splitTest ()
+  stripStartTest ()
+  stripEndTest ()
+  toLinesTest ()
 
   // Concat.
   concatTest ()

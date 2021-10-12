@@ -278,6 +278,8 @@ module Option =
     | Some _ -> opt
     | None -> other ()
 
+// FIXME: use S.toLower, toUpper
+
 /// Converts all ASCII latin letters to lowercase.
 let private toAsciiLower (s: string) : string =
   let f = C.toLower
@@ -302,6 +304,7 @@ let private toAsciiUpper (s: string) : string =
 
   go 0 [] |> S.concat ""
 
+// FIXME: use S.stripStart
 /// Tries to strip a prefix if the string starts with that prefix.
 let private tryStripPrefix (prefix: string) (s: string) : string option =
   if S.startsWith prefix s then

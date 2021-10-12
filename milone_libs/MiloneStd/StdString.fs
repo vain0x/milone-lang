@@ -218,9 +218,81 @@ let replace (pattern: string) (target: string) (s: string) =
   else
     replaceLoop [] 0 |> List.rev |> concat target
 
+// unicode is not supported
+let private transformByBytes (f: char -> char) (s: string) : string =
+  let rec stringTransformLoop (s: string) =
+    if s.Length = 1 then
+      string (f s.[0])
+    else
+      let m = s.Length / 2
+
+      stringTransformLoop s.[0..m - 1]
+      + stringTransformLoop s.[m..s.Length - 1]
+
+  if s = "" then
+    ""
+  else
+    stringTransformLoop s
+
+let toLower (s: string) : string = transformByBytes C.toLower s
+let toUpper (s: string) : string = transformByBytes C.toUpper s
+
 // -----------------------------------------------
 // Split
 // -----------------------------------------------
+
+/// Splits a string into two part by separator.
+/// Returns `(first, second, ok)`.
+///
+/// The first occurrence of separator is picked.
+let cut (sep: string) (s: string) : string * string * bool =
+  match findIndex sep s with
+  | None -> s, "", false
+  | Some i -> s.[0..i - 1], s.[i + sep.Length..s.Length - 1], true
+
+/// Splits a string into two part by separator.
+/// Returns `(first, second, ok)`.
+///
+/// The *last* occurrence of separator is picked.
+let cutLast (sep: string) (s: string) : string * string * bool =
+  match findLastIndex sep s with
+  | None -> s, "", false
+  | Some i -> s.[0..i - 1], s.[i + sep.Length..s.Length - 1], true
+
+/// Splits a string by separator.
+///
+/// ## Edges
+///
+/// - `split "," "foo"` is `[ "foo" ]` (not separated)
+/// - `split "," ""` is `[ "" ]` too
+/// - `split "," "foo,"` is `[ "foo"; "" ]` (trailing separator)
+/// - `split "" "foo"` is *unimplemented* (empty separator)
+let split (sep: string) (s: string) : string list =
+  assert (sep.Length <> 0) // should split at every character boundary
+
+  let rec go acc s =
+    let part, s, ok = cut sep s
+    let acc = part :: acc
+    if ok then go acc s else acc
+
+  go [] s |> List.rev
+
+// Variant of cut.
+/// Removes a substring if string starts with it.
+/// Returns `(string, ok)`.
+let stripStart (prefix: string) (s: string) : string * bool =
+  if startsWith prefix s then
+    s.[prefix.Length..s.Length - 1], true
+  else
+    s, false
+
+/// Removes a substring if string ends with it.
+/// Returns `(string, ok)`.
+let stripEnd (suffix: string) (s: string) : string * bool =
+  if endsWith suffix s then
+    s.[0..s.Length - suffix.Length - 1], true
+  else
+    s, false
 
 let private findNewline (start: int) (s: string) =
   let i = start
