@@ -6,7 +6,6 @@
 
   <ItemGroup>
     <Compile Include="FSharpOnly.fs" />
-    <Compile Include="Equal.fs" />
     <Compile Include="StdChar.fs" />
     <Compile Include="StdString.fs" />
     <Compile Include="StdArray.fs" />
