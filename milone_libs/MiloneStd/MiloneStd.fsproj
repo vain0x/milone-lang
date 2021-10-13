@@ -8,6 +8,7 @@
     <Compile Include="FSharpOnly.fs" />
     <Compile Include="StdChar.fs" />
     <Compile Include="StdString.fs" />
+    <Compile Include="StdLoop.fs" />
     <Compile Include="StdIter.fs" />
     <Compile Include="StdArray.fs" />
     <Compile Include="StdMap.fs" />
