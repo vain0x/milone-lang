@@ -1,6 +1,4 @@
-module rec LibNursery.ExtIter
-
-// FIXME: replace with StdIter
+module rec MiloneStd.StdIter
 
 type private NextFun<'S, 'T> = 'S -> ('T * 'S) option
 
@@ -24,7 +22,7 @@ type private NextFun<'S, 'T> = 'S -> ('T * 'S) option
 /// Iterator is stateless and different than IEnumerator.
 type Iter<'T> = NextFun<obj, 'T> * obj
 
-module rec ExtIter =
+module Iter =
   let next (xs: Iter<'T>) : ('T * Iter<'T>) option =
     let nextFun, state = xs
 
@@ -76,6 +74,19 @@ module rec ExtIter =
   let empty () : Iter<'T> =
     let nextFun (_: obj) : ('T * obj) option = None
     nextFun, box ()
+
+  let ofOption (opt: 'T option) : Iter<'T> =
+    match opt with
+    | Some item -> singleton item
+    | None -> ofList []
+
+  let ofList (xs: 'T list) : Iter<'T> =
+    let nextFun (state: obj) : ('T * obj) option =
+      match unbox state with
+      | [] -> None
+      | x :: xs -> Some(x, box xs)
+
+    nextFun, box xs
 
   let singleton (item: 'T) : Iter<'T> = ofList [ item ]
 
@@ -185,7 +196,7 @@ module rec ExtIter =
 
   let forall (pred: 'T -> bool) (xs: Iter<'T>) : bool =
     foldEx
-      (fun ok x ->
+      (fun _ x ->
         if pred x then
           Some(), None // Ok ()
         else
@@ -196,7 +207,7 @@ module rec ExtIter =
 
   let exists (pred: 'T -> bool) (xs: Iter<'T>) : bool =
     foldEx
-      (fun ok x ->
+      (fun _ x ->
         if pred x then
           None, Some true // Err true
         else
@@ -209,27 +220,6 @@ module rec ExtIter =
     match next (choose picker xs) with
     | Some (it, _) -> Some it
     | _ -> None
-
-  // ---------------------------------------------
-  // Option
-  // ---------------------------------------------
-
-  let ofOption (opt: 'T option) : Iter<'T> =
-    match opt with
-    | Some item -> singleton item
-    | None -> ofList []
-
-  // ---------------------------------------------
-  // List
-  // ---------------------------------------------
-
-  let ofList (xs: 'T list) : Iter<'T> =
-    let nextFun (state: obj) : ('T * obj) option =
-      match unbox state with
-      | [] -> None
-      | x :: xs -> Some(x, box xs)
-
-    nextFun, box xs
 
   let toList (xs: Iter<'T>) : 'T list =
     xs |> fold (fun xs x -> x :: xs) [] |> List.rev
