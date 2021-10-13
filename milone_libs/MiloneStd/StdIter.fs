@@ -1,6 +1,4 @@
-module rec LibNursery.ExtIter
-
-// FIXME: replace with StdIter
+module rec MiloneStd.StdIter
 
 type private NextFun<'S, 'T> = 'S -> ('T * 'S) option
 
@@ -24,7 +22,7 @@ type private NextFun<'S, 'T> = 'S -> ('T * 'S) option
 /// Iterator is stateless and different than IEnumerator.
 type Iter<'T> = NextFun<obj, 'T> * obj
 
-module rec ExtIter =
+module Iter =
   let next (xs: Iter<'T>) : ('T * Iter<'T>) option =
     let nextFun, state = xs
 
@@ -69,6 +67,16 @@ module rec ExtIter =
 
     nextFun, pack None innerState state
 
+  let map (f: 'T -> 'U) (xs: Iter<'T>) : Iter<'U> =
+    let innerNextFun, state = xs
+
+    let nextFun (state: obj) : ('U * obj) option =
+      match innerNextFun state with
+      | None -> None
+      | Some (x, state) -> Some(f x, state)
+
+    nextFun, state
+
   // ---------------------------------------------
   // Constructor
   // ---------------------------------------------
@@ -77,15 +85,14 @@ module rec ExtIter =
     let nextFun (_: obj) : ('T * obj) option = None
     nextFun, box ()
 
-  let singleton (item: 'T) : Iter<'T> = ofList [ item ]
+  let singleton (item: 'T) : Iter<'T> =
+    let nextFun (state: obj) : ('T * obj) option =
+      if unbox state = 0 then
+        Some(item, box 1)
+      else
+        None
 
-  let init (count: int) (initializer: int -> 'T) : Iter<'T> =
-    range 0 count
-    |> scanEx (fun () i -> singleton (initializer i), ()) ()
-
-  let replicate (count: int) (item: 'T) : Iter<'T> =
-    range 0 count
-    |> scanEx (fun () (_: int) -> singleton item, ()) ()
+    nextFun, box 0
 
   let range (start: int) (endIndex: int) : Iter<int> =
     let nextFun state =
@@ -97,6 +104,23 @@ module rec ExtIter =
         None
 
     nextFun, box start
+
+  let ofOption (opt: 'T option) : Iter<'T> =
+    match opt with
+    | Some item -> singleton item
+    | None -> empty ()
+
+  let ofList (xs: 'T list) : Iter<'T> =
+    let nextFun (state: obj) : ('T * obj) option =
+      match unbox state with
+      | [] -> None
+      | x :: xs -> Some(x, box xs)
+
+    nextFun, box xs
+
+  let init (count: int) (initializer: int -> 'T) : Iter<'T> = range 0 count |> map initializer
+
+  let replicate (count: int) (item: 'T) : Iter<'T> = range 0 count |> map (fun _ -> item)
 
   let unfold (unfolder: 'S -> ('T * 'S) option) (state: 'S) : Iter<'T> =
     let nextFun (state: obj) : ('T * obj) option =
@@ -110,11 +134,19 @@ module rec ExtIter =
   // Transformer
   // ---------------------------------------------
 
-  let map (f: 'T -> 'U) (xs: Iter<'T>) : Iter<'U> =
-    scanEx (fun () (x: 'T) -> singleton (f x), ()) () xs
-
   let choose (f: 'T -> 'U option) (xs: Iter<'T>) : Iter<'U> =
-    scanEx (fun () (x: 'T) -> ofOption (f x), ()) () xs
+    let innerNextFun, state = xs
+
+    let rec nextFun (state: obj) : ('U * obj) option =
+      match innerNextFun state with
+      | None -> None
+
+      | Some (x, innerState) ->
+        match f x with
+        | None -> nextFun innerState
+        | Some y -> Some(y, innerState)
+
+    nextFun, state
 
   let collect (f: 'T -> Iter<'U>) (xs: Iter<'T>) : Iter<'U> =
     scanEx (fun () (x: 'T) -> f x, ()) () xs
@@ -128,14 +160,8 @@ module rec ExtIter =
       xs
 
   let filter (pred: 'T -> bool) (xs: Iter<'T>) : Iter<'T> =
-    scanEx
-      (fun () (x: 'T) ->
-        if pred x then
-          singleton x, ()
-        else
-          empty (), ())
-      ()
-      xs
+    xs
+    |> choose (fun x -> if pred x then Some x else None)
 
   let mapi (f: int -> 'T -> 'U) (xs: Iter<'T>) : Iter<'U> =
     scanEx (fun (i: int) (x: 'T) -> singleton (f i x), i + 1) 0 xs
@@ -185,7 +211,7 @@ module rec ExtIter =
 
   let forall (pred: 'T -> bool) (xs: Iter<'T>) : bool =
     foldEx
-      (fun ok x ->
+      (fun _ x ->
         if pred x then
           Some(), None // Ok ()
         else
@@ -196,7 +222,7 @@ module rec ExtIter =
 
   let exists (pred: 'T -> bool) (xs: Iter<'T>) : bool =
     foldEx
-      (fun ok x ->
+      (fun _ x ->
         if pred x then
           None, Some true // Err true
         else
@@ -209,27 +235,6 @@ module rec ExtIter =
     match next (choose picker xs) with
     | Some (it, _) -> Some it
     | _ -> None
-
-  // ---------------------------------------------
-  // Option
-  // ---------------------------------------------
-
-  let ofOption (opt: 'T option) : Iter<'T> =
-    match opt with
-    | Some item -> singleton item
-    | None -> ofList []
-
-  // ---------------------------------------------
-  // List
-  // ---------------------------------------------
-
-  let ofList (xs: 'T list) : Iter<'T> =
-    let nextFun (state: obj) : ('T * obj) option =
-      match unbox state with
-      | [] -> None
-      | x :: xs -> Some(x, box xs)
-
-    nextFun, box xs
 
   let toList (xs: Iter<'T>) : 'T list =
     xs |> fold (fun xs x -> x :: xs) [] |> List.rev
