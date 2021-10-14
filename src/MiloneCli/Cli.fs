@@ -362,7 +362,9 @@ let cliCheck (host: CliHost) verbosity projectDir =
   let ok, output = check ctx
   let exitCode = if ok then 0 else 1
 
-  printfn "%s" (output |> S.replace "#error " "" |> S.trimEnd)
+  if output <> "" then
+    printfn "%s" (output |> S.replace "#error " "" |> S.trimEnd)
+
   exitCode
 
 [<RequireQualifiedAccess; NoEquality; NoComparison>]
