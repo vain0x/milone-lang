@@ -86,23 +86,23 @@ let private takeDecls (ctx: HoistCtx) : HExpr list * HoistCtx =
 /// Processes a let-fun of non-main function.
 /// Returns `next`, which is not processed.
 let private hoistExprLetFunForNonMainFun (expr, ctx) : HExpr * HoistCtx =
-  let callee, isRec, vis, args, body, next, loc =
+  let callee, args, body, next, loc =
     match expr with
-    | HLetFunExpr (callee, isRec, vis, args, body, next, _, loc) -> callee, isRec, vis, args, body, next, loc
+    | HLetFunExpr (callee, args, body, next, _, loc) -> callee, args, body, next, loc
     | _ -> unreachable ()
 
   let body, ctx = (body, ctx) |> hoistBlock
 
   let ctx =
     ctx
-    |> addDecl (HLetFunExpr(callee, isRec, vis, args, body, hxDummy, tyUnit, loc))
+    |> addDecl (HLetFunExpr(callee, args, body, hxDummy, tyUnit, loc))
 
   next, ctx
 
 /// Checks if an expression is let-fun of main function.
 let private isMainFun expr (ctx: HoistCtx) : bool =
   match expr with
-  | HLetFunExpr (callee, _, _, _, _, _, _, _) ->
+  | HLetFunExpr (callee, _, _, _, _, _) ->
     match ctx.MainFunOpt with
     | Some mainFun -> funSerialCompare mainFun callee = 0
     | _ -> false
@@ -111,9 +111,9 @@ let private isMainFun expr (ctx: HoistCtx) : bool =
 
 /// Processes a let-fun of the main function.
 let private hoistExprLetFunForMainFun (expr, ctx: HoistCtx) : HoistCtx =
-  let callee, isRec, vis, args, body, next, loc =
+  let callee, args, body, next, loc =
     match expr with
-    | HLetFunExpr (callee, isRec, vis, args, body, next, _, loc) -> callee, isRec, vis, args, body, next, loc
+    | HLetFunExpr (callee, args, body, next, _, loc) -> callee, args, body, next, loc
     | _ -> unreachable ()
 
   let body, (ctx: HoistCtx) = (body, ctx) |> hoistBlock
@@ -126,7 +126,7 @@ let private hoistExprLetFunForMainFun (expr, ctx: HoistCtx) : HoistCtx =
   let body = hxBlock stmts body
 
   ctx
-  |> addDecl (HLetFunExpr(callee, isRec, vis, args, body, hxDummy, tyUnit, loc))
+  |> addDecl (HLetFunExpr(callee, args, body, hxDummy, tyUnit, loc))
 
 // -----------------------------------------------
 // Control
@@ -194,6 +194,7 @@ let private hoistExprToplevel (expr, ctx) : HoistCtx =
     hoistExprToplevel (next, ctx)
 
   | HLetFunExpr _ when isMainFun expr ctx -> hoistExprLetFunForMainFun (expr, ctx)
+
 
   | HLetFunExpr _ ->
     (expr, ctx)

@@ -40,7 +40,6 @@ type MGenericValue =
   | MSizeOfGv
 
 /// Built-in 1-arity operation in middle IR.
-[<Struct>]
 [<NoEquality; NoComparison>]
 type MUnary =
   | MMinusUnary
@@ -119,7 +118,7 @@ type MAction =
   | MCallNativeAction of funName: string
   | MPtrWriteAction
 
-[<Struct; NoEquality; NoComparison>]
+[<NoEquality; NoComparison>]
 type MPrim =
   /// string -> int
   | MIntOfStrPrim of intOfStrFlavor: IntFlavor
@@ -176,7 +175,6 @@ type MExpr =
 
   | MNativeExpr of code: string * Ty * Loc
 
-[<Struct>]
 [<NoEquality; NoComparison>]
 type MConst =
   | MLitConst of l: Lit

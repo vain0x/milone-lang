@@ -548,7 +548,6 @@ let private leadsPrefix token : bool =
 
   | _ -> false
 
-[<Struct>]
 [<NoEquality; NoComparison>]
 type private Lookahead =
   | LEof

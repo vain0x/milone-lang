@@ -61,7 +61,7 @@ let private fuExpr ctx expr : FCtx =
   | HNodeExpr (_, items, _, _) -> ctx |> onExprs items
   | HBlockExpr (stmts, last) -> fuExpr (ctx |> onExprs stmts) last
   | HLetValExpr (_, body, next, _, _) -> fuExpr (ctx |> onExpr body) next
-  | HLetFunExpr (_, _, _, _, body, next, _, _) -> fuExpr (ctx |> onExpr body) next
+  | HLetFunExpr (_, _, body, next, _, _) -> fuExpr (ctx |> onExpr body) next
 
   | HNavExpr _ -> unreachable () // HNavExpr is resolved in NameRes, Typing, or RecordRes.
   | HRecordExpr _ -> unreachable ()
@@ -93,20 +93,15 @@ let private rewriteExpr (ctx: AssocMap<Ty, FunSerial>) expr : HExpr =
   | HPrimExpr _ -> expr
 
   | HMatchExpr (cond, arms, ty, loc) ->
-    let onArm (pat, guard, body) =
-      let guard = onExpr guard
-      let body = onExpr body
-      pat, guard, body
-
-    HMatchExpr(onExpr cond, List.map onArm arms, ty, loc)
+    let arms = arms |> List.map (hArmMap id onExpr)
+    HMatchExpr(onExpr cond, arms, ty, loc)
 
   | HNodeExpr (kind, items, ty, loc) -> HNodeExpr(kind, onExprs items, ty, loc)
   | HBlockExpr (stmts, last) -> HBlockExpr(onExprs stmts, onExpr last)
 
   | HLetValExpr (pat, body, next, ty, loc) -> HLetValExpr(pat, onExpr body, onExpr next, ty, loc)
 
-  | HLetFunExpr (callee, isRec, vis, args, body, next, ty, loc) ->
-    HLetFunExpr(callee, isRec, vis, args, onExpr body, onExpr next, ty, loc)
+  | HLetFunExpr (callee, args, body, next, ty, loc) -> HLetFunExpr(callee, args, onExpr body, onExpr next, ty, loc)
 
   | HNavExpr _ -> unreachable () // HNavExpr is resolved in NameRes, Typing, or RecordRes.
   | HRecordExpr _ -> unreachable () // HRecordExpr is resolved in RecordRes.
@@ -257,7 +252,7 @@ let private dExpr (tyCtx: TyCtx) expr : DCtx =
     let letFunExpr =
       let lPat = hpVar lArg ty loc
       let rPat = hpVar rArg ty loc
-      HLetFunExpr(funSerial, NotRec, PrivateVis, [ lPat; rPat ], body, hxUnit loc, tyUnit, loc)
+      HLetFunExpr(funSerial, [ lPat; rPat ], body, hxUnit loc, tyUnit, loc)
 
     let ctx =
       { ctx with
@@ -344,7 +339,7 @@ let private dExpr (tyCtx: TyCtx) expr : DCtx =
     let letFunExpr =
       let lPat = hpVar lArg ty loc
       let rPat = hpVar rArg ty loc
-      HLetFunExpr(funSerial, NotRec, PrivateVis, [ lPat; rPat ], body, hxUnit loc, tyUnit, loc)
+      HLetFunExpr(funSerial, [ lPat; rPat ], body, hxUnit loc, tyUnit, loc)
 
     let ctx =
       { ctx with
@@ -404,7 +399,7 @@ let private dExpr (tyCtx: TyCtx) expr : DCtx =
     let letFunExpr =
       let lPat = hpVar lArg ty loc
       let rPat = hpVar rArg ty loc
-      HLetFunExpr(funSerial, NotRec, PrivateVis, [ lPat; rPat ], body, hxUnit loc, tyUnit, loc)
+      HLetFunExpr(funSerial, [ lPat; rPat ], body, hxUnit loc, tyUnit, loc)
 
     let ctx =
       { ctx with
@@ -500,7 +495,7 @@ let private dExpr (tyCtx: TyCtx) expr : DCtx =
     let letFunExpr =
       let lPat = hpVar lArg ty loc
       let rPat = hpVar rArg ty loc
-      HLetFunExpr(funSerial, NotRec, PrivateVis, [ lPat; rPat ], matchExpr, hxUnit loc, tyUnit, loc)
+      HLetFunExpr(funSerial, [ lPat; rPat ], matchExpr, hxUnit loc, tyUnit, loc)
 
     let ctx =
       { ctx with

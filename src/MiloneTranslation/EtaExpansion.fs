@@ -233,8 +233,7 @@ let private createRestArgsAndPats callee arity argLen callLoc ctx =
       let argExpr, argSerial, ctx = freshVar "arg" argTy callLoc ctx
       let restArgPats, restArgs, ctx = go (n - 1) restTy ctx
 
-      let restArgPat =
-        HVarPat(PrivateVis, argSerial, argTy, callLoc)
+      let restArgPat = HVarPat(argSerial, argTy, callLoc)
 
       restArgPat :: restArgPats, argExpr :: restArgs, ctx
 
@@ -253,8 +252,7 @@ let private createEnvPatAndTy args callLoc ctx =
       let argTy, argLoc = exprExtract arg
       let itemExpr, varSerial, ctx = freshVar "arg" argTy argLoc ctx
 
-      let itemPat =
-        HVarPat(PrivateVis, varSerial, argTy, argLoc)
+      let itemPat = HVarPat(varSerial, argTy, argLoc)
 
       let itemPats, itemTys, itemExprs, ctx = go args ctx
       itemPat :: itemPats, argTy :: itemTys, itemExpr :: itemExprs, ctx
@@ -295,8 +293,7 @@ let private createEnvPatAndTy args callLoc ctx =
 let private createUnderlyingFunDef funTy arity envPat envTy forwardCall restArgPats unboxedEnvExpr callLoc ctx =
   let envArgExpr, envArgSerial, ctx = freshVar "env" tyObj callLoc ctx
 
-  let envArgPat =
-    HVarPat(PrivateVis, envArgSerial, tyObj, callLoc)
+  let envArgPat = HVarPat(envArgSerial, tyObj, callLoc)
 
   let underlyingFunTy = tyFun tyObj funTy
 
@@ -310,7 +307,7 @@ let private createUnderlyingFunDef funTy arity envPat envTy forwardCall restArgP
     HLetValExpr(envPat, unboxedEnvExpr envArgExpr, next, exprToTy next, callLoc)
 
   let funLet next =
-    HLetFunExpr(funSerial, NotRec, PrivateVis, argPats, body, next, exprToTy next, callLoc)
+    HLetFunExpr(funSerial, argPats, body, next, exprToTy next, callLoc)
 
   let funExpr =
     HFunExpr(funSerial, underlyingFunTy, [], callLoc)
@@ -351,8 +348,7 @@ let private resolvePartialAppObj callee arity args argLen callLoc ctx =
   let calleeExpr, calleeLet, ctx =
     let calleeExpr, calleeSerial, ctx = freshVar "callee" funTy callLoc ctx
 
-    let calleePat =
-      HVarPat(PrivateVis, calleeSerial, funTy, callLoc)
+    let calleePat = HVarPat(calleeSerial, funTy, callLoc)
 
     let calleeLet next =
       HLetValExpr(calleePat, callee, next, exprToTy next, callLoc)
@@ -472,10 +468,10 @@ let private exInfExpr expr kind args ty loc ctx =
     let args, ctx = (args, ctx) |> stMap exExpr
     HNodeExpr(kind, args, ty, loc), ctx
 
-let private exLetFunExpr callee isRec vis argPats body next ty loc ctx =
+let private exLetFunExpr callee argPats body next ty loc ctx =
   let body, ctx = (body, ctx) |> exExpr
   let next, ctx = (next, ctx) |> exExpr
-  HLetFunExpr(callee, isRec, vis, argPats, body, next, ty, loc), ctx
+  HLetFunExpr(callee, argPats, body, next, ty, loc), ctx
 
 // -----------------------------------------------
 // Control
@@ -515,8 +511,7 @@ let private exExpr (expr, ctx) =
     let next, ctx = (next, ctx) |> exExpr
     HLetValExpr(pat, init, next, ty, loc), ctx
 
-  | HLetFunExpr (callee, isRec, vis, args, body, next, ty, loc) ->
-    exLetFunExpr callee isRec vis args body next ty loc ctx
+  | HLetFunExpr (callee, args, body, next, ty, loc) -> exLetFunExpr callee args body next ty loc ctx
 
   | HNavExpr _ -> unreachable () // HNavExpr is resolved in NameRes, Typing, or RecordRes.
   | HRecordExpr _ -> unreachable () // HRecordExpr is resolved in RecordRes.

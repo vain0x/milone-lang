@@ -45,7 +45,7 @@ type FunSerial = FunSerial of Serial
 type VariantSerial = VariantSerial of Serial
 
 /// Type constructor.
-[<Struct; NoEquality; NoComparison>]
+[<NoEquality; NoComparison>]
 type Tk =
   | IntTk of intFlavor: IntFlavor
   | FloatTk of floatFlavor: FloatFlavor
@@ -81,8 +81,7 @@ type Ty =
   | Ty of Tk * tyArgs: Ty list
 
 /// Potentially polymorphic type.
-[<Struct>]
-[<NoEquality; NoComparison>]
+[<Struct; NoEquality; NoComparison>]
 type TyScheme = TyScheme of tyVars: TySerial list * Ty
 
 /// Type definition.
@@ -130,14 +129,14 @@ type VariantDef =
     PayloadTy: Ty
     Loc: Loc }
 
-[<Struct; NoComparison>]
+[<NoComparison>]
 type ValueSymbol =
   | VarSymbol of varSerial: VarSerial
   | FunSymbol of funSerial: FunSerial
   | VariantSymbol of variantSerial: VariantSerial
 
 /// Kind of HNodePat.
-[<Struct; NoEquality; NoComparison>]
+[<NoEquality; NoComparison>]
 type HPatKind =
   /// `[]`.
   | HNilPN
@@ -178,7 +177,7 @@ type HPat =
   | HDiscardPat of Ty * Loc
 
   /// Variable pattern.
-  | HVarPat of Vis * VarSerial * Ty * Loc
+  | HVarPat of VarSerial * Ty * Loc
 
   /// Variant name pattern.
   | HVariantPat of VariantSerial * Ty * Loc
@@ -237,7 +236,7 @@ type HPrim =
   | PtrRead
   | PtrWrite
 
-[<Struct; NoEquality; NoComparison>]
+[<NoEquality; NoComparison>]
 type HExprKind =
   | HAbortEN
 
@@ -325,7 +324,7 @@ type HExpr =
   | HBlockExpr of HExpr list * HExpr
 
   | HLetValExpr of pat: HPat * init: HExpr * next: HExpr * Ty * Loc
-  | HLetFunExpr of FunSerial * IsRec * Vis * args: HPat list * body: HExpr * next: HExpr * Ty * Loc
+  | HLetFunExpr of FunSerial * args: HPat list * body: HExpr * next: HExpr * Ty * Loc
 
 /// HIR program. (project name, module name, decls) list.
 type HProgram = (string * string * HExpr list) list
@@ -424,7 +423,7 @@ let litToTy (lit: Lit) : Ty =
 
 let hpAbort ty loc = HNodePat(HAbortPN, [], ty, loc)
 
-let hpVar varSerial ty loc = HVarPat(PrivateVis, varSerial, ty, loc)
+let hpVar varSerial ty loc = HVarPat(varSerial, ty, loc)
 
 let hpVariantApp variantSerial payloadPat ty loc =
   HNodePat(HVariantAppPN variantSerial, [ payloadPat ], ty, loc)
@@ -437,7 +436,7 @@ let patExtract (pat: HPat) : Ty * Loc =
   match pat with
   | HLitPat (lit, a) -> litToTy lit, a
   | HDiscardPat (ty, a) -> ty, a
-  | HVarPat (_, _, ty, a) -> ty, a
+  | HVarPat (_, ty, a) -> ty, a
   | HVariantPat (_, ty, a) -> ty, a
 
   | HNodePat (_, _, ty, a) -> ty, a
@@ -455,24 +454,24 @@ let patFold (onVar: 'S -> VarSerial -> Ty -> 'S) (state: 'S) (pat: HPat) : 'S =
     | HDiscardPat _
     | HVariantPat _ -> state
 
-    | HVarPat (_, serial, ty, _) -> onVar state serial ty
+    | HVarPat (serial, ty, _) -> onVar state serial ty
     | HNodePat (_, args, _, _) -> List.fold go state args
     | HAsPat (bodyPat, serial, _) -> go (onVar state serial (patToTy bodyPat)) bodyPat
     | HOrPat (l, r, _) -> go (go state l) r
 
   go state pat
 
-let patMap (f: Ty -> Ty) (g: Loc -> Loc) (pat: HPat) : HPat =
+let patMap (f: Ty -> Ty) (pat: HPat) : HPat =
   let rec go pat =
     match pat with
-    | HLitPat (lit, a) -> HLitPat(lit, g a)
-    | HDiscardPat (ty, a) -> HDiscardPat(f ty, g a)
-    | HVarPat (vis, serial, ty, a) -> HVarPat(vis, serial, f ty, g a)
-    | HVariantPat (serial, ty, a) -> HVariantPat(serial, f ty, g a)
+    | HLitPat (lit, a) -> HLitPat(lit, a)
+    | HDiscardPat (ty, a) -> HDiscardPat(f ty, a)
+    | HVarPat (serial, ty, a) -> HVarPat(serial, f ty, a)
+    | HVariantPat (serial, ty, a) -> HVariantPat(serial, f ty, a)
 
-    | HNodePat (kind, args, ty, a) -> HNodePat(kind, List.map go args, f ty, g a)
-    | HAsPat (bodyPat, serial, a) -> HAsPat(go bodyPat, serial, g a)
-    | HOrPat (l, r, a) -> HOrPat(go l, go r, g a)
+    | HNodePat (kind, args, ty, a) -> HNodePat(kind, List.map go args, f ty, a)
+    | HAsPat (bodyPat, serial, a) -> HAsPat(go bodyPat, serial, a)
+    | HOrPat (l, r, a) -> HOrPat(go l, go r, a)
 
   go pat
 
@@ -591,40 +590,41 @@ let exprExtract (expr: HExpr) : Ty * Loc =
   | HNodeExpr (_, _, ty, a) -> ty, a
   | HBlockExpr (_, last) -> exprExtract last
   | HLetValExpr (_, _, _, ty, a) -> ty, a
-  | HLetFunExpr (_, _, _, _, _, _, ty, a) -> ty, a
+  | HLetFunExpr (_, _, _, _, ty, a) -> ty, a
 
-let exprMap (f: Ty -> Ty) (g: Loc -> Loc) (expr: HExpr) : HExpr =
-  let goPat pat = patMap f g pat
+let hArmMap (onPat: HPat -> HPat) (onExpr: HExpr -> HExpr) (arm: HPat * HExpr * HExpr) =
+  let pat, guard, body = arm
+  onPat pat, onExpr guard, onExpr body
+
+let exprMap (f: Ty -> Ty) (expr: HExpr) : HExpr =
+  let goPat pat = patMap f pat
 
   let rec go expr =
     match expr with
-    | HLitExpr (lit, a) -> HLitExpr(lit, g a)
-    | HVarExpr (serial, ty, a) -> HVarExpr(serial, f ty, g a)
-    | HFunExpr (serial, ty, tyArgs, a) -> HFunExpr(serial, f ty, List.map f tyArgs, g a)
-    | HVariantExpr (serial, ty, a) -> HVariantExpr(serial, f ty, g a)
-    | HPrimExpr (prim, ty, a) -> HPrimExpr(prim, f ty, g a)
+    | HLitExpr (lit, a) -> HLitExpr(lit, a)
+    | HVarExpr (serial, ty, a) -> HVarExpr(serial, f ty, a)
+    | HFunExpr (serial, ty, tyArgs, a) -> HFunExpr(serial, f ty, List.map f tyArgs, a)
+    | HVariantExpr (serial, ty, a) -> HVariantExpr(serial, f ty, a)
+    | HPrimExpr (prim, ty, a) -> HPrimExpr(prim, f ty, a)
 
     | HRecordExpr (baseOpt, fields, ty, a) ->
       let baseOpt = baseOpt |> Option.map go
 
       let fields =
         fields
-        |> List.map (fun (name, init, a) -> name, go init, g a)
+        |> List.map (fun (name, init, a) -> name, go init, a)
 
-      HRecordExpr(baseOpt, fields, f ty, g a)
+      HRecordExpr(baseOpt, fields, f ty, a)
 
     | HMatchExpr (cond, arms, ty, a) ->
-      let arms =
-        arms
-        |> List.map (fun (pat, guard, body) -> goPat pat, go guard, go body)
-
-      HMatchExpr(go cond, arms, f ty, g a)
-    | HNavExpr (sub, mes, ty, a) -> HNavExpr(go sub, mes, f ty, g a)
-    | HNodeExpr (kind, args, resultTy, a) -> HNodeExpr(kind, List.map go args, f resultTy, g a)
+      let arms = arms |> List.map (hArmMap goPat go)
+      HMatchExpr(go cond, arms, f ty, a)
+    | HNavExpr (sub, mes, ty, a) -> HNavExpr(go sub, mes, f ty, a)
+    | HNodeExpr (kind, args, resultTy, a) -> HNodeExpr(kind, List.map go args, f resultTy, a)
     | HBlockExpr (stmts, last) -> HBlockExpr(List.map go stmts, go last)
-    | HLetValExpr (pat, init, next, ty, a) -> HLetValExpr(goPat pat, go init, go next, f ty, g a)
-    | HLetFunExpr (serial, isRec, vis, args, body, next, ty, a) ->
-      HLetFunExpr(serial, isRec, vis, List.map goPat args, go body, go next, f ty, g a)
+    | HLetValExpr (pat, init, next, ty, a) -> HLetValExpr(goPat pat, go init, go next, f ty, a)
+    | HLetFunExpr (serial, args, body, next, ty, a) ->
+      HLetFunExpr(serial, List.map goPat args, go body, go next, f ty, a)
 
   go expr
 

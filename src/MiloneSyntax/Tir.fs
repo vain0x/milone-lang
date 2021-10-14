@@ -47,7 +47,7 @@ type VariantSerial = VariantSerial of Serial
 type NameCtx = NameCtx of identMap: AssocMap<Serial, Ident> * lastSerial: Serial
 
 /// Type constructor.
-[<Struct; NoEquality; NoComparison>]
+[<NoEquality; NoComparison>]
 type Tk =
   | ErrorTk of errorLoc: Loc
 
@@ -90,13 +90,11 @@ type Ty =
   | Ty of Tk * tyArgs: Ty list
 
 /// Potentially polymorphic type.
-[<Struct>]
-[<NoEquality; NoComparison>]
+[<Struct; NoEquality; NoComparison>]
 type TyScheme = TyScheme of tyVars: TySerial list * Ty
 
 /// Type specification.
-[<Struct>]
-[<NoEquality; NoComparison>]
+[<Struct; NoEquality; NoComparison>]
 type TySpec = TySpec of Ty * Trait list
 
 /// Trait, a constraint about types.
@@ -208,13 +206,13 @@ type VariantDef =
     PayloadTy: Ty
     Loc: Loc }
 
-[<Struct; NoComparison>]
+[<NoComparison>]
 type ValueSymbol =
   | VarSymbol of varSerial: VarSerial
   | FunSymbol of funSerial: FunSerial
   | VariantSymbol of variantSerial: VariantSerial
 
-[<Struct; NoComparison>]
+[<NoComparison>]
 type TySymbol =
   | MetaTySymbol of tySerial: TySerial
   | UnivTySymbol of univTySerial: TySerial
@@ -223,7 +221,7 @@ type TySymbol =
   | RecordTySymbol of recordTySerial: TySerial
 
 /// Kind of TNodePat.
-[<Struct; NoEquality; NoComparison>]
+[<NoEquality; NoComparison>]
 type TPatKind =
   /// `[]`.
   | TNilPN
@@ -330,7 +328,7 @@ type TPrim =
   | PtrRead
   | PtrWrite
 
-[<Struct; NoEquality; NoComparison>]
+[<NoEquality; NoComparison>]
 type TExprKind =
   | TAbortEN
 
@@ -769,17 +767,17 @@ let patToTy pat = pat |> patExtract |> fst
 
 let patToLoc pat = pat |> patExtract |> snd
 
-let patMap (f: Ty -> Ty) (g: Loc -> Loc) (pat: TPat) : TPat =
+let patMap (f: Ty -> Ty) (pat: TPat) : TPat =
   let rec go pat =
     match pat with
-    | TLitPat (lit, a) -> TLitPat(lit, g a)
-    | TDiscardPat (ty, a) -> TDiscardPat(f ty, g a)
-    | TVarPat (vis, serial, ty, a) -> TVarPat(vis, serial, f ty, g a)
-    | TVariantPat (serial, ty, a) -> TVariantPat(serial, f ty, g a)
+    | TLitPat (lit, a) -> TLitPat(lit, a)
+    | TDiscardPat (ty, a) -> TDiscardPat(f ty, a)
+    | TVarPat (vis, serial, ty, a) -> TVarPat(vis, serial, f ty, a)
+    | TVariantPat (serial, ty, a) -> TVariantPat(serial, f ty, a)
 
-    | TNodePat (kind, args, ty, a) -> TNodePat(kind, List.map go args, f ty, g a)
-    | TAsPat (bodyPat, serial, a) -> TAsPat(go bodyPat, serial, g a)
-    | TOrPat (l, r, a) -> TOrPat(go l, go r, g a)
+    | TNodePat (kind, args, ty, a) -> TNodePat(kind, List.map go args, f ty, a)
+    | TAsPat (bodyPat, serial, a) -> TAsPat(go bodyPat, serial, a)
+    | TOrPat (l, r, a) -> TOrPat(go l, go r, a)
 
   go pat
 
@@ -867,11 +865,6 @@ let hxAscribe expr ty loc =
 
 let hxLetIn stmt next = TBlockExpr(NotRec, [ stmt ], next)
 
-let hxSemi items loc =
-  match splitLast items with
-  | Some (stmts, last) -> TBlockExpr(NotRec, List.map (fun expr -> TExprStmt expr) stmts, last)
-  | None -> TNodeExpr(TTupleEN, [], tyUnit, loc)
-
 let hxTuple items loc =
   TNodeExpr(TTupleEN, items, tyTuple (List.map exprToTy items), loc)
 
@@ -893,35 +886,35 @@ let exprExtract (expr: TExpr) : Ty * Loc =
   | TNodeExpr (_, _, ty, a) -> ty, a
   | TBlockExpr (_, _, last) -> exprExtract last
 
-let exprMap (f: Ty -> Ty) (g: Loc -> Loc) (expr: TExpr) : TExpr =
-  let goPat pat = patMap f g pat
+let exprMap (f: Ty -> Ty) (expr: TExpr) : TExpr =
+  let goPat pat = patMap f pat
 
   let rec go expr =
     match expr with
-    | TLitExpr (lit, a) -> TLitExpr(lit, g a)
-    | TVarExpr (serial, ty, a) -> TVarExpr(serial, f ty, g a)
-    | TFunExpr (serial, ty, a) -> TFunExpr(serial, f ty, g a)
-    | TVariantExpr (serial, ty, a) -> TVariantExpr(serial, f ty, g a)
-    | TPrimExpr (prim, ty, a) -> TPrimExpr(prim, f ty, g a)
+    | TLitExpr (lit, a) -> TLitExpr(lit, a)
+    | TVarExpr (serial, ty, a) -> TVarExpr(serial, f ty, a)
+    | TFunExpr (serial, ty, a) -> TFunExpr(serial, f ty, a)
+    | TVariantExpr (serial, ty, a) -> TVariantExpr(serial, f ty, a)
+    | TPrimExpr (prim, ty, a) -> TPrimExpr(prim, f ty, a)
 
     | TRecordExpr (baseOpt, fields, ty, a) ->
       let baseOpt = baseOpt |> Option.map go
 
       let fields =
         fields
-        |> List.map (fun (name, init, a) -> name, go init, g a)
+        |> List.map (fun (name, init, a) -> name, go init, a)
 
-      TRecordExpr(baseOpt, fields, f ty, g a)
+      TRecordExpr(baseOpt, fields, f ty, a)
 
     | TMatchExpr (cond, arms, ty, a) ->
       let arms =
         arms
         |> List.map (fun (pat, guard, body) -> goPat pat, go guard, go body)
 
-      TMatchExpr(go cond, arms, f ty, g a)
-    | TNavExpr (sub, mes, ty, a) -> TNavExpr(go sub, mes, f ty, g a)
-    | TNodeExpr (kind, args, resultTy, a) -> TNodeExpr(kind, List.map go args, f resultTy, g a)
-    | TBlockExpr (isRec, stmts, last) -> TBlockExpr(isRec, List.map (stmtMap f g) stmts, go last)
+      TMatchExpr(go cond, arms, f ty, a)
+    | TNavExpr (sub, mes, ty, a) -> TNavExpr(go sub, mes, f ty, a)
+    | TNodeExpr (kind, args, resultTy, a) -> TNodeExpr(kind, List.map go args, f resultTy, a)
+    | TBlockExpr (isRec, stmts, last) -> TBlockExpr(isRec, List.map (stmtMap f) stmts, go last)
 
   go expr
 
@@ -947,22 +940,21 @@ let stmtToLoc (stmt: TStmt) : Loc =
   | TModuleStmt (_, _, loc) -> loc
   | TModuleSynonymStmt (_, _, loc) -> loc
 
-let stmtMap (onTy: Ty -> Ty) (onLoc: Loc -> Loc) (stmt: TStmt) : TStmt =
-  let onPat pat = patMap onTy onLoc pat
-  let onPats pats = List.map (patMap onTy onLoc) pats
-  let onExpr expr = exprMap onTy onLoc expr
-  let onStmt stmt = stmtMap onTy onLoc stmt
-  let onStmts stmts = List.map (stmtMap onTy onLoc) stmts
+let stmtMap (onTy: Ty -> Ty) (stmt: TStmt) : TStmt =
+  let onPat pat = patMap onTy pat
+  let onPats pats = List.map (patMap onTy) pats
+  let onExpr expr = exprMap onTy expr
+  let onStmt stmt = stmtMap onTy stmt
+  let onStmts stmts = List.map (stmtMap onTy) stmts
 
   match stmt with
   | TExprStmt expr -> TExprStmt(onExpr expr)
-  | TLetValStmt (pat, init, loc) -> TLetValStmt(onPat pat, onExpr init, onLoc loc)
-  | TLetFunStmt (serial, isRec, vis, args, body, loc) ->
-    TLetFunStmt(serial, isRec, vis, onPats args, onExpr body, onLoc loc)
-  | TTyDeclStmt (serial, vis, tyArgs, tyDef, loc) -> TTyDeclStmt(serial, vis, tyArgs, tyDef, onLoc loc)
-  | TOpenStmt (path, loc) -> TOpenStmt(path, onLoc loc)
-  | TModuleStmt (name, body, loc) -> TModuleStmt(name, onStmts body, onLoc loc)
-  | TModuleSynonymStmt (name, path, loc) -> TModuleSynonymStmt(name, path, onLoc loc)
+  | TLetValStmt (pat, init, loc) -> TLetValStmt(onPat pat, onExpr init, loc)
+  | TLetFunStmt (serial, isRec, vis, args, body, loc) -> TLetFunStmt(serial, isRec, vis, onPats args, onExpr body, loc)
+  | TTyDeclStmt (serial, vis, tyArgs, tyDef, loc) -> TTyDeclStmt(serial, vis, tyArgs, tyDef, loc)
+  | TOpenStmt (path, loc) -> TOpenStmt(path, loc)
+  | TModuleStmt (name, body, loc) -> TModuleStmt(name, onStmts body, loc)
+  | TModuleSynonymStmt (name, path, loc) -> TModuleSynonymStmt(name, path, loc)
 
 // -----------------------------------------------
 // HProgram

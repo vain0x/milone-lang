@@ -307,16 +307,14 @@ type APat =
 /// Arm of match expression in AST.
 ///
 /// `| pat when guard -> body`
-[<Struct>]
-[<NoEquality; NoComparison>]
+[<Struct; NoEquality; NoComparison>]
 type AArm = AArm of pat: APat * guard: AExpr option * body: AExpr * Pos
 
 /// Declaration of variant in AST.
 ///
 /// E.g. `| Card of Suit * Rank` (with `of`)
 /// or `| Joker` (without `of`).
-[<Struct>]
-[<NoEquality; NoComparison>]
+[<Struct; NoEquality; NoComparison>]
 type AVariant = AVariant of Name * payloadTyOpt: ATy option * Pos
 
 /// Field declaration in AST.
@@ -428,10 +426,11 @@ type ADecl =
   | AAttrDecl of contents: AExpr * next: ADecl * Pos
 
 /// Root of AST, a result of parsing single source file.
+type AModuleHead = Name list * Pos
+
+/// Root of AST, a result of parsing single source file.
 [<NoEquality; NoComparison>]
-type ARoot =
-  | AExprRoot of ADecl list
-  | AModuleRoot of Name * ADecl list * Pos
+type ARoot = ARoot of AModuleHead option * ADecl list
 
 // -----------------------------------------------
 // Keywords
@@ -583,8 +582,7 @@ let tokenizeHostNew () : TokenizeHost =
 // Module dependencies
 // -----------------------------------------------
 
-/// (projectName, moduleName, pos) list
-let findDependentModules ast =
+let findDependentModules ast : (ProjectName * ModuleName * Pos) list =
   let rec onDecl decl =
     match decl with
     | AOpenDecl ([ Name (p, _); Name (m, _) ], pos) -> Some(p, m, pos)
@@ -592,9 +590,6 @@ let findDependentModules ast =
     | AAttrDecl (_, next, _) -> onDecl next
     | _ -> None
 
-  let decls =
-    match ast with
-    | AExprRoot decls -> decls
-    | AModuleRoot (_, decls, _) -> decls
+  let (ARoot (_, decls)) = ast
 
   decls |> List.choose onDecl

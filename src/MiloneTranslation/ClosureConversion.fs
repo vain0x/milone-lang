@@ -170,7 +170,7 @@ let private capsMakeApp calleeSerial tyArgs calleeTy calleeLoc (caps: Caps) =
 /// Updates the argument patterns to take captured variables.
 let private capsAddToFunPats args (caps: Caps) =
   caps
-  |> List.fold (fun args (serial, ty, loc) -> HVarPat(PrivateVis, serial, ty, loc) :: args) args
+  |> List.fold (fun args (serial, ty, loc) -> HVarPat(serial, ty, loc) :: args) args
 
 let private capsUpdateFunDef funTy arity (caps: Caps) =
   let funTy = caps |> capsAddToFunTy funTy
@@ -351,7 +351,7 @@ let private ccFunExpr funSerial tyArgs funTy funLoc ctx =
   |> genFunCaps funSerial
   |> capsMakeApp funSerial tyArgs funTy funLoc
 
-let private ccLetFunExpr callee isRec vis args body next ty loc ctx =
+let private ccLetFunExpr callee args body next ty loc ctx =
   let args, body, ctx =
     let baseCtx = ctx
     let ctx = ctx |> enterFunDecl
@@ -366,7 +366,7 @@ let private ccLetFunExpr callee isRec vis args body next ty loc ctx =
     ctx |> genFunCaps callee |> capsAddToFunPats args
 
   let next, ctx = (next, ctx) |> ccExpr
-  HLetFunExpr(callee, isRec, vis, args, body, next, ty, loc), ctx
+  HLetFunExpr(callee, args, body, next, ty, loc), ctx
 
 // -----------------------------------------------
 // Control
@@ -378,7 +378,7 @@ let private ccPat (pat, ctx) =
   | HDiscardPat _
   | HVariantPat _ -> pat, ctx
 
-  | HVarPat (_, serial, _, _) ->
+  | HVarPat (serial, _, _) ->
     let ctx = ctx |> addLocal serial
     pat, ctx
 
@@ -437,8 +437,7 @@ let private ccExpr (expr, ctx) =
     let next, ctx = ccExpr (next, ctx)
     HLetValExpr(pat, body, next, ty, loc), ctx
 
-  | HLetFunExpr (callee, isRec, vis, args, body, next, ty, loc) ->
-    ccLetFunExpr callee isRec vis args body next ty loc ctx
+  | HLetFunExpr (callee, args, body, next, ty, loc) -> ccLetFunExpr callee args body next ty loc ctx
 
   | HNavExpr _ -> unreachable () // HNavExpr is resolved in NameRes, Typing, or RecordRes.
   | HRecordExpr _ -> unreachable () // HRecordExpr is resolved in RecordRes.

@@ -162,7 +162,7 @@ let private lowerPat (pat: Tir.TPat) : Hir.HPat =
   match pat with
   | Tir.TLitPat (lit, loc) -> Hir.HLitPat(lit, loc)
   | Tir.TDiscardPat (ty, loc) -> Hir.HDiscardPat(lowerTy ty, loc)
-  | Tir.TVarPat (vis, varSerial, ty, loc) -> Hir.HVarPat(vis, lowerVarSerial varSerial, lowerTy ty, loc)
+  | Tir.TVarPat (_, varSerial, ty, loc) -> Hir.HVarPat(lowerVarSerial varSerial, lowerTy ty, loc)
   | Tir.TVariantPat (variantSerial, ty, loc) -> Hir.HVariantPat(lowerVariantSerial variantSerial, lowerTy ty, loc)
   | Tir.TNodePat (kind, args, ty, loc) -> Hir.HNodePat(lowerPatKind kind, List.map lowerPat args, lowerTy ty, loc)
   | Tir.TAsPat (body, varSerial, loc) -> Hir.HAsPat(lowerPat body, lowerVarSerial varSerial, loc)
@@ -199,11 +199,9 @@ let private lowerStmt (stmt: Tir.TStmt) : Hir.HExpr =
 
   | Tir.TLetValStmt (pat, init, loc) -> Hir.HLetValExpr(lowerPat pat, lowerExpr init, Hir.hxUnit loc, Hir.tyUnit, loc)
 
-  | Tir.TLetFunStmt (funSerial, isRec, vis, argPats, body, loc) ->
+  | Tir.TLetFunStmt (funSerial, _, _, argPats, body, loc) ->
     Hir.HLetFunExpr(
       lowerFunSerial funSerial,
-      isRec,
-      vis,
       List.map lowerPat argPats,
       lowerExpr body,
       Hir.hxUnit loc,

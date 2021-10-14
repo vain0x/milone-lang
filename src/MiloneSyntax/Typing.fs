@@ -1587,7 +1587,7 @@ let infer (modules: TProgram, nameRes: NameResResult) : TProgram * TyCtx =
 
   let modules, ctx =
     (modules, ctx)
-    |> hirProgramEachStmt (fun (stmt, ctx) -> stmtMap substOrDegenerate id stmt, ctx)
+    |> hirProgramEachStmt (fun (stmt, ctx) -> stmtMap substOrDegenerate stmt, ctx)
 
   let ctx =
     let vars =

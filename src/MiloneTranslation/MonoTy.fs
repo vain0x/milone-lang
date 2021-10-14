@@ -255,9 +255,9 @@ let private mtPat (pat, ctx) : M.HPat * MtCtx =
     let ty, ctx = (ty, ctx) |> mtTy
     M.HDiscardPat(ty, loc), ctx
 
-  | HVarPat (vis, varSerial, ty, loc) ->
+  | HVarPat (varSerial, ty, loc) ->
     let ty, ctx = (ty, ctx) |> mtTy
-    M.HVarPat(vis, varSerial, ty, loc), ctx
+    M.HVarPat(varSerial, ty, loc), ctx
 
   | HVariantPat (variantSerial, ty, loc) ->
     let ty, ctx = (ty, ctx) |> mtTy
@@ -364,12 +364,12 @@ let private mtExpr (expr, ctx) : M.HExpr * MtCtx =
     let next, ctx = (next, ctx) |> mtExpr
     M.HLetValExpr(pat, init, next, ty, loc), ctx
 
-  | HLetFunExpr (callee, isRec, vis, args, body, next, ty, loc) ->
+  | HLetFunExpr (callee, args, body, next, ty, loc) ->
     let args, ctx = (args, ctx) |> stMap mtPat
     let body, ctx = (body, ctx) |> mtExpr
     let ty, ctx = (ty, ctx) |> mtTy
     let next, ctx = (next, ctx) |> mtExpr
-    M.HLetFunExpr(callee, isRec, vis, args, body, next, ty, loc), ctx
+    M.HLetFunExpr(callee, args, body, next, ty, loc), ctx
 
   | HNavExpr _ -> unreachable () // HNavExpr is resolved in NameRes, Typing, or RecordRes.
   | HRecordExpr _ -> unreachable () // HRecordExpr is resolved in RecordRes.
@@ -496,7 +496,7 @@ let private bthPat (pat: M.HPat) : HPat =
   match pat with
   | M.HLitPat (lit, loc) -> HLitPat(lit, loc)
   | M.HDiscardPat (ty, loc) -> HDiscardPat(ofTy ty, loc)
-  | M.HVarPat (vis, varSerial, ty, loc) -> HVarPat(vis, varSerial, ofTy ty, loc)
+  | M.HVarPat (varSerial, ty, loc) -> HVarPat(varSerial, ofTy ty, loc)
   | M.HVariantPat (variantSerial, ty, loc) -> HVariantPat(variantSerial, ofTy ty, loc)
   | M.HNodePat (kind, pats, ty, loc) -> HNodePat(kind, ofPats pats, ofTy ty, loc)
   | M.HAsPat (pat, varSerial, loc) -> HAsPat(ofPat pat, varSerial, loc)
@@ -526,8 +526,8 @@ let private bthExpr (expr: M.HExpr) : HExpr =
   | M.HNodeExpr (kind, args, ty, loc) -> HNodeExpr(kind, ofExprs args, ofTy ty, loc)
   | M.HBlockExpr (stmts, last) -> HBlockExpr(ofExprs stmts, ofExpr last)
   | M.HLetValExpr (pat, init, next, ty, loc) -> HLetValExpr(ofPat pat, ofExpr init, ofExpr next, ofTy ty, loc)
-  | M.HLetFunExpr (funSerial, isRec, vis, args, body, next, ty, loc) ->
-    HLetFunExpr(funSerial, isRec, vis, ofPats args, ofExpr body, ofExpr next, ofTy ty, loc)
+  | M.HLetFunExpr (funSerial, args, body, next, ty, loc) ->
+    HLetFunExpr(funSerial, ofPats args, ofExpr body, ofExpr next, ofTy ty, loc)
 
 let private bthFunDef (funDef: M.FunDef) : FunDef =
   { Name = funDef.Name

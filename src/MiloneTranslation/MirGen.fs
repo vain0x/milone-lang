@@ -293,7 +293,7 @@ let private containsTailRec expr =
 
   | HLetValExpr (_, _, next, _, _) -> next |> containsTailRec
 
-  | HLetFunExpr (_, _, _, _, _, next, _, _) -> next |> containsTailRec
+  | HLetFunExpr (_, _, _, next, _, _) -> next |> containsTailRec
 
   | HRecordExpr _ -> unreachable () // Resolved in RecordRes.
 
@@ -420,7 +420,7 @@ let private mirifyPat ctx (endLabel: string) (pat: HPat) (expr: MExpr) : MirCtx 
   match pat with
   | HLitPat (lit, loc) -> mirifyPatLit ctx endLabel lit expr loc
   | HDiscardPat _ -> ctx
-  | HVarPat (_, serial, ty, loc) -> mirifyPatVar ctx endLabel serial ty loc expr
+  | HVarPat (serial, ty, loc) -> mirifyPatVar ctx endLabel serial ty loc expr
   | HVariantPat (serial, ty, loc) -> mirifyPatVariant ctx endLabel serial ty loc expr
 
   | HNodePat (kind, argPats, ty, loc) ->
@@ -857,7 +857,7 @@ let private reuseVarOnPat (reuseMap: VarReuseMap) (pat: HPat) : HPat =
     | HDiscardPat _
     | HVariantPat _ -> pat
 
-    | HVarPat (vis, serial, ty, loc) -> HVarPat(vis, reuseVarSerial reuseMap serial, ty, loc)
+    | HVarPat (serial, ty, loc) -> HVarPat(reuseVarSerial reuseMap serial, ty, loc)
 
     | HNodePat (kind, args, ty, loc) -> HNodePat(kind, List.map go args, ty, loc)
     | HAsPat (bodyPat, serial, loc) -> HAsPat(go bodyPat, reuseVarSerial reuseMap serial, loc)
@@ -878,17 +878,14 @@ let private reuseVarOnExpr (reuseMap: VarReuseMap) (expr: HExpr) : HExpr =
     | HVarExpr (serial, ty, loc) -> HVarExpr(reuseVarSerial reuseMap serial, ty, loc)
 
     | HMatchExpr (cond, arms, ty, loc) ->
-      let arms =
-        arms
-        |> List.map (fun (pat, guard, body) -> goPat pat, go guard, go body)
-
+      let arms = arms |> List.map (hArmMap goPat go)
       HMatchExpr(go cond, arms, ty, loc)
 
     | HNodeExpr (kind, args, ty, loc) -> HNodeExpr(kind, List.map go args, ty, loc)
     | HBlockExpr (stmts, last) -> HBlockExpr(List.map go stmts, go last)
     | HLetValExpr (pat, init, next, ty, loc) -> HLetValExpr(goPat pat, go init, go next, ty, loc)
-    | HLetFunExpr (serial, isRec, vis, args, body, next, ty, loc) ->
-      HLetFunExpr(serial, isRec, vis, List.map goPat args, go body, go next, ty, loc)
+    | HLetFunExpr (serial, args, body, next, ty, loc) ->
+      HLetFunExpr(serial, List.map goPat args, go body, go next, ty, loc)
 
     | HNavExpr _ -> unreachable () // HNavExpr is resolved in NameRes, Typing, or RecordRes.
     | HRecordExpr _ -> unreachable () // HRecordExpr is resolved in RecordRes.
@@ -1523,7 +1520,7 @@ let private mirifyExprLetFunContents (ctx: MirCtx) calleeSerial argPats body let
     assert (patsIsCovering ctx [ argPat ])
 
     match argPat with
-    | HVarPat (_, serial, ty, loc) ->
+    | HVarPat (serial, ty, loc) ->
       // NOTE: Optimize for usual cases to not generate redundant local vars.
       (serial, ty, loc), ctx
     | _ ->
@@ -1613,7 +1610,7 @@ let private mirifyExpr (ctx: MirCtx) (expr: HExpr) : MExpr * MirCtx =
     let ctx = mirifyExprLetValContents ctx pat init
     mirifyExpr ctx next
 
-  | HLetFunExpr (funSerial, _, _, argPats, body, next, _, loc) ->
+  | HLetFunExpr (funSerial, argPats, body, next, _, loc) ->
     let ctx =
       mirifyExprLetFunContents ctx funSerial argPats body loc
 
