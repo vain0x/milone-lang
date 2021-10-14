@@ -86,6 +86,7 @@ let dotnetCliHost () : CliHost =
     FileExists = System.IO.File.Exists
     FileReadAllText = readFile
     FileWriteAllText = writeFile
+    ReadStdinAll = stdin.ReadToEnd
     WriteStdout = printf "%s"
     RunCommand = runCommand
     ExecuteInto = executeInto }

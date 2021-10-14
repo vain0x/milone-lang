@@ -108,6 +108,9 @@ type CliHost =
     /// Writes to text file.
     FileWriteAllText: string -> string -> unit
 
+    /// Reads from standard input.
+    ReadStdinAll: unit -> string
+
     /// Writes to standard output.
     WriteStdout: string -> unit
 
@@ -544,9 +547,13 @@ let private cliEval (host: CliHost) (sourceCode: string) =
 module S = MiloneStd.StdString
 
 let main _ =
-  ("""
+  (
+"""
     + sourceCode
-    + ") |> string |> printfn \"%s\"; 0\n"
+    + """
+  ) |> string |> printfn "%s"
+  0
+"""
 
   let projectDir = "target/Eval"
   let projectName = "Eval"
@@ -851,6 +858,7 @@ let cli (host: CliHost) =
   | EvalCmd, args ->
     let sourceCode =
       match args with
+      | [ "-" ] -> host.ReadStdinAll()
       | [ it ] -> it
 
       | _ ->

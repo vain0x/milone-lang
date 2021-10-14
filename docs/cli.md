@@ -140,6 +140,7 @@ Remarks:
 
 - Expression must be of a type that can convert to `string`.
 - Line numbers in compile error are incorrect.
+- `milone eval -` reads an expression from standard input that ends with an EOF character.
 
 ### check
 

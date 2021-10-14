@@ -558,6 +558,7 @@ struct String str_concat(struct String sep, struct StringList const *strings) {
         string_builder_append_string(sb, head);
     }
 
+    // #sb_finish
     // Null termination. Technically unnecessary but can skip some cloning.
     assert(sb->len < sb->cap);
     sb->buf[sb->len] = '\0';
@@ -670,6 +671,32 @@ void file_write_all_text(struct String file_name, struct String content) {
 
 END:
     fclose(fp);
+}
+
+struct String milone_read_stdin_all(void) {
+    char buf[0x1000] = "";
+    struct StringBuilder *sb = string_builder_new_with_capacity(sizeof buf);
+
+    while (true) {
+        if (sb->cap > 10100100) {
+            fprintf(stderr, "error: stdin too long\n");
+            exit(1);
+        }
+
+        size_t read_len = fread(buf, 1, sizeof buf, stdin);
+        if (read_len == 0)
+            break;
+
+        string_builder_append_string(
+            sb, (struct String){.str = buf, .len = read_len});
+    }
+
+    // #sb_finish
+    // Null termination. Technically unnecessary but can skip some cloning.
+    assert(sb->len < sb->cap);
+    sb->buf[sb->len] = '\0';
+
+    return (struct String){.str = sb->buf, .len = sb->len};
 }
 
 // -----------------------------------------------
