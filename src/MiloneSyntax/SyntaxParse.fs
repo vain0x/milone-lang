@@ -1419,38 +1419,60 @@ let private parseModuleBody basePos (tokens, errors) : PR<ADecl list> =
 // Parse toplevel
 // -----------------------------------------------
 
-/// `top-level = ( 'module' 'rec'? path module-body / module-body )?`
-let private parseTopLevel (tokens, errors) : PR<ARoot> =
+let private parseModuleHead (tokens, errors) : PR<AModuleHead option> =
+  let backtrack () = None, tokens, errors
+
   match tokens with
-  | [] -> AExprRoot [], tokens, errors
+  | (ModuleToken, modulePos) :: tokens ->
+    let isRec, tokens = eatRec tokens
+    let path, tokens, errors = parsePath (tokens, errors)
 
-  | (ModuleToken, modulePos) :: (RecToken, _) :: (IdentToken _, _) :: (DotToken, _) :: (IdentToken ident, identPos) :: tokens ->
-    let decls, tokens, errors =
-      parseModuleBody modulePos (tokens, errors)
+    match tokens with
+    | (EqualToken, _) :: _ ->
+      // It was inner module.
+      backtrack ()
 
-    AModuleRoot(Name(ident, identPos), decls, modulePos), tokens, errors
+    | _ ->
+      let hint () =
+        "Hint: `module rec ProjectName.ModuleName`."
 
-  | (ModuleToken, modulePos) :: (RecToken, _) :: (IdentToken ident, identPos) :: tokens ->
-    let decls, tokens, errors =
-      parseModuleBody modulePos (tokens, errors)
+      let errors =
+        match isRec with
+        | IsRec -> errors
+        | NotRec -> parseErrorCore ("Module header requires 'rec'. " + hint ()) modulePos errors
 
-    AModuleRoot(Name(ident, identPos), decls, modulePos), tokens, errors
+      let errors =
+        match path with
+        | []
+        | [ _; _ ] -> errors
+        | Name (_, pos) :: _ ->
+          parseErrorCore
+            ("Module header must contain exactly two names. "
+             + hint ())
+            pos
+            errors
 
-  | (ModuleToken, _) :: tokens ->
-    let errors =
-      parseNewError
-        "module syntax error. Hint: `module rec ProjectName.ModuleName`. (rec keyword is mandatory for now.)"
-        (tokens, errors)
+      Some(path, modulePos), tokens, errors
 
-    AExprRoot [], [], errors
+  | _ -> backtrack ()
 
-  | _ ->
-    let pos = 0, 0
-    let exprs, tokens, errors = parseModuleBody pos (tokens, errors)
-    AExprRoot exprs, tokens, errors
+let private parseRoot (tokens, errors) : PR<ARoot> =
+  let headOpt, tokens, errors = parseModuleHead (tokens, errors)
 
-let parse (tokens: (Token * Pos) list) : ARoot * (string * Pos) list =
-  let expr, tokens, errors = parseTopLevel (tokens, [])
+  let basePos: Pos =
+    match headOpt with
+    | Some (_, pos) -> pos
+    | None -> 0, 0
+
+  let decls, tokens, errors =
+    match tokens with
+    | [] -> [], tokens, errors
+    | _ -> parseModuleBody basePos (tokens, errors)
+
+  ARoot(headOpt, decls), tokens, errors
+
+let parse (tokens: (Token * Pos) list) : ARoot * Errors =
+  let root, tokens, errors = parseRoot (tokens, [])
 
   let errors =
     match tokens with
@@ -1458,4 +1480,4 @@ let parse (tokens: (Token * Pos) list) : ARoot * (string * Pos) list =
 
     | _ -> parseNewError "Expected eof" (tokens, errors)
 
-  expr, errors
+  root, errors

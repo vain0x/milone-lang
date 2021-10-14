@@ -671,15 +671,16 @@ let astToHir (projectName: string) (docId: DocId) (root: ARoot, nameCtx: NameCtx
 
     [ TModuleStmt(ModuleTySerial serial, body, noLoc) ], nameCtx
 
-  match root with
-  | AExprRoot decls -> (decls, nameCtx) |> athDecls docId
+  let (ARoot (headOpt, decls)) = root
 
-  | AModuleRoot (moduleName, body, pos) ->
-    if nameToIdent moduleName = "MiloneOnly" then
-      onModuleRoot moduleName body pos
-    else
-      onModuleRoot moduleName body pos
-      |> wrapWithProjectModule
+  match headOpt with
+  | Some ([ _; (Name ("MiloneOnly", _) as moduleName) ], pos) -> onModuleRoot moduleName decls pos
+
+  | Some ([ _; moduleName ], pos) ->
+    onModuleRoot moduleName decls pos
+    |> wrapWithProjectModule
+
+  | _ -> (decls, nameCtx) |> athDecls docId
 
 // ===============================================
 // Experimental
@@ -794,16 +795,15 @@ let private ocDecl (decl: ADecl) : int =
 let private ocDecls = sumBy ocDecl
 
 let countSymbols (root: ARoot) : int =
-  match root with
-  | AExprRoot decls -> ocDecls decls
+  let (ARoot (headOpt, decls)) = root
 
-  | AModuleRoot (moduleName, body, _) ->
-    // name of project module
-    let p =
-      if nameToIdent moduleName = "MiloneOnly" then
-        0
-      else
-        1
+  match headOpt with
+  | Some ([ _; Name ("MiloneOnly", _) ], _) ->
+    // +1 for project
+    ocDecls decls + 1
 
-    // 1 for module itself
-    1 + ocDecls body + p
+  | Some ([ _; _ ], _) ->
+    // +2 for project and module
+    ocDecls decls + 2
+
+  | _ -> ocDecls decls

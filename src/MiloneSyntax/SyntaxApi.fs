@@ -109,9 +109,8 @@ let private resolveMiloneCoreDeps kind tokens ast =
     | None -> decls
 
   let updateAst ast =
-    match ast with
-    | AExprRoot decls -> AExprRoot(insertOpenDecls decls)
-    | AModuleRoot (name, decls, pos) -> AModuleRoot(name, insertOpenDecls decls, pos)
+    let (ARoot (headOpt, decls)) = ast
+    ARoot(headOpt, insertOpenDecls decls)
 
   match kind with
   | ModuleKind.MiloneCore -> ast
@@ -166,6 +165,7 @@ type private ModuleSyntaxData = DocId * ARoot * (string * Pos) list
 
 let parseModuleWith (docId: DocId) (kind: ModuleKind) (tokens: (Token * Pos) list) : ModuleSyntaxData =
   let errorTokens, tokens = tokens |> List.partition isErrorToken
+
   let ast, parseErrors = tokens |> SyntaxParse.parse
 
   let errors =
