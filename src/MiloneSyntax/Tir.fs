@@ -867,11 +867,6 @@ let hxAscribe expr ty loc =
 
 let hxLetIn stmt next = TBlockExpr(NotRec, [ stmt ], next)
 
-let hxSemi items loc =
-  match splitLast items with
-  | Some (stmts, last) -> TBlockExpr(NotRec, List.map (fun expr -> TExprStmt expr) stmts, last)
-  | None -> TNodeExpr(TTupleEN, [], tyUnit, loc)
-
 let hxTuple items loc =
   TNodeExpr(TTupleEN, items, tyTuple (List.map exprToTy items), loc)
 
