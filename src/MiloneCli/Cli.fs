@@ -49,6 +49,7 @@ SUBCOMMANDS
     build     Build a project for executable
     check     Analyze a project
     compile   Compile a project to C
+    eval      Compute an expression
 
 See <https://github.com/vain0x/milone-lang/blob/v${VERSION}/docs/cli.md> for details."""
 
@@ -536,6 +537,72 @@ let private cliRun (host: CliHost) (options: BuildOptions) (restArgs: string lis
       PW.runOnWindows p
       0
 
+let private cliEval (host: CliHost) (sourceCode: string) =
+  let sourceCode =
+    """module rec Eval.Program
+
+module S = MiloneStd.StdString
+
+let main _ =
+  ("""
+    + sourceCode
+    + ") |> string |> printfn \"%s\"; 0\n"
+
+  let projectDir = "target/Eval"
+  let projectName = "Eval"
+  let targetDir = projectDir
+  let isRelease = false
+  let miloneHome = Path(hostToMiloneHome host)
+
+  dirCreateOrFail host (Path targetDir)
+  fileWrite host (Path(projectDir + "/Eval.milone")) sourceCode
+
+  let ctx = compileCtxNew host Quiet projectDir
+
+  match compile ctx with
+  | CompileError output ->
+    host.WriteStdout output
+    1
+
+  | CompileOk cFiles ->
+    writeCFiles host targetDir cFiles
+
+    match host.Platform with
+    | Platform.Unix ->
+      let p: PU.RunOnUnixParams =
+        { TargetDir = Path targetDir
+          ExeFile = computeExePath (Path targetDir) host.Platform isRelease projectName
+          CFiles = cFiles |> List.map (fun (name, _) -> Path name)
+          MiloneHome = miloneHome
+          Args = []
+          DirCreate = dirCreateOrFail host
+          FileWrite = fileWrite host
+          ExecuteInto = host.ExecuteInto }
+
+      PU.runOnUnix p
+      unreachable ()
+
+    | Platform.Windows ->
+      let p: PW.RunOnWindowsParams =
+        { ProjectName = ctx.EntryProjectName
+          CFiles = cFiles |> List.map (fun (name, _) -> Path name)
+
+          MiloneHome = miloneHome
+          TargetDir = Path targetDir
+          IsRelease = isRelease
+          ExeFile = computeExePath (Path targetDir) host.Platform isRelease projectName
+
+          NewGuid = fun () -> PW.Guid(host.NewGuid())
+          DirCreate = dirCreateOrFail host
+          FileExists = fun filePath -> host.FileExists(Path.toString filePath)
+          FileWrite = fileWrite host
+          RunCommand = runCommand host
+
+          Args = [] }
+
+      PW.runOnWindows p
+      0
+
 // -----------------------------------------------
 // Arg parsing
 // -----------------------------------------------
@@ -691,6 +758,7 @@ type private CliCmd =
   | CompileCmd
   | BuildCmd
   | RunCmd
+  | EvalCmd
   | BadCmd of string
 
 let private parseArgs args =
@@ -711,6 +779,7 @@ let private parseArgs args =
     | "check" -> CheckCmd, args
     | "compile" -> CompileCmd, args
     | "run" -> RunCmd, args
+    | "eval" -> EvalCmd, args
     | _ -> BadCmd arg, []
 
 // -----------------------------------------------
@@ -778,6 +847,17 @@ let cli (host: CliHost) =
         Verbosity = b.Verbosity }
 
     cliRun host options runArgs
+
+  | EvalCmd, args ->
+    let sourceCode =
+      match args with
+      | [ it ] -> it
+
+      | _ ->
+        printfn "ERROR: Invalid args: `milone eval 'expression'`"
+        exit 1
+
+    cliEval host sourceCode
 
   | BadCmd subcommand, _ ->
     printfn "ERROR: Unknown subcommand '%s'." subcommand
