@@ -264,9 +264,9 @@ let private monifyLetFunExpr (ctx: MonoCtx) callee args body next ty loc =
           tySubst substMeta ty
 
         let monoArgs =
-          args |> List.map (patMap substOrDegenerateTy id)
+          args |> List.map (patMap substOrDegenerateTy)
 
-        let monoBody = body |> exprMap substOrDegenerateTy id
+        let monoBody = body |> exprMap substOrDegenerateTy
 
         let monoFunSerial, ctx =
           addMonomorphizedFun ctx genericFunSerial arity tyArgs loc

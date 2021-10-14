@@ -720,7 +720,7 @@ let private abPat ctx pat =
   match pat with
   | HLitPat _
   | HDiscardPat _
-  | HVarPat _ -> pat |> patMap (abTy ctx) id
+  | HVarPat _ -> pat |> patMap (abTy ctx)
 
   | HVariantPat (variantSerial, ty, loc) ->
     let ty = ty |> abTy ctx
@@ -807,7 +807,7 @@ let private abExpr ctx expr =
 
   | HVarExpr _
   | HFunExpr _
-  | HPrimExpr _ -> expr |> exprMap (abTy ctx) id
+  | HPrimExpr _ -> expr |> exprMap (abTy ctx)
 
   | HMatchExpr (cond, arms, ty, loc) ->
     let cond = cond |> abExpr ctx
