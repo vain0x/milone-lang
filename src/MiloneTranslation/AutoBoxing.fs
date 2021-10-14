@@ -834,12 +834,12 @@ let private abExpr ctx expr =
     let ty = ty |> abTy ctx
     HLetValExpr(pat, init, next, ty, loc)
 
-  | HLetFunExpr (callee, isRec, args, body, next, ty, loc) ->
+  | HLetFunExpr (callee, args, body, next, ty, loc) ->
     let args = args |> List.map (abPat ctx)
     let body = body |> abExpr ctx
     let next = next |> abExpr ctx
     let ty = ty |> abTy ctx
-    HLetFunExpr(callee, isRec, args, body, next, ty, loc)
+    HLetFunExpr(callee, args, body, next, ty, loc)
 
   | HNavExpr _ -> unreachable () // HNavExpr is resolved in NameRes, Typing, or RecordRes.
   | HRecordExpr _ -> unreachable () // HRecordExpr is resolved in RecordRes.
@@ -999,7 +999,7 @@ let private tvExpr (expr: HExpr) (ctx: TvCtx) : TvCtx =
     |> onTy ty
     |> tvExpr next
 
-  | HLetFunExpr (funSerial, _, args, body, next, ty, _) ->
+  | HLetFunExpr (funSerial, args, body, next, ty, _) ->
     let parent, ctx =
       ctx.UsedTyVars, { ctx with UsedTyVars = emptyTyVarSet }
 
@@ -1146,7 +1146,7 @@ let private taExpr (ctx: TaCtx) (expr: HExpr) : HExpr =
   | HBlockExpr (stmts, last) -> HBlockExpr(onExprs stmts, onExpr last)
   | HLetValExpr (pat, init, next, ty, loc) -> HLetValExpr(pat, onExpr init, onExpr next, ty, loc)
 
-  | HLetFunExpr (callee, isRec, args, body, next, ty, loc) ->
+  | HLetFunExpr (callee, args, body, next, ty, loc) ->
     let ctx =
       let funDef = ctx.Funs |> mapFind callee
 
@@ -1160,7 +1160,7 @@ let private taExpr (ctx: TaCtx) (expr: HExpr) : HExpr =
         { ctx with
             QuantifiedTys = quantifiedTys }
 
-    HLetFunExpr(callee, isRec, args, taExpr ctx body, onExpr next, ty, loc)
+    HLetFunExpr(callee, args, taExpr ctx body, onExpr next, ty, loc)
 
   | HNavExpr _ -> unreachable () // HNavExpr is resolved in NameRes, Typing, or RecordRes.
   | HRecordExpr _ -> unreachable () // HRecordExpr is resolved in RecordRes.

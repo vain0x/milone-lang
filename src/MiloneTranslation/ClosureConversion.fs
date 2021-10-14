@@ -351,7 +351,7 @@ let private ccFunExpr funSerial tyArgs funTy funLoc ctx =
   |> genFunCaps funSerial
   |> capsMakeApp funSerial tyArgs funTy funLoc
 
-let private ccLetFunExpr callee isRec args body next ty loc ctx =
+let private ccLetFunExpr callee args body next ty loc ctx =
   let args, body, ctx =
     let baseCtx = ctx
     let ctx = ctx |> enterFunDecl
@@ -366,7 +366,7 @@ let private ccLetFunExpr callee isRec args body next ty loc ctx =
     ctx |> genFunCaps callee |> capsAddToFunPats args
 
   let next, ctx = (next, ctx) |> ccExpr
-  HLetFunExpr(callee, isRec, args, body, next, ty, loc), ctx
+  HLetFunExpr(callee, args, body, next, ty, loc), ctx
 
 // -----------------------------------------------
 // Control
@@ -437,8 +437,7 @@ let private ccExpr (expr, ctx) =
     let next, ctx = ccExpr (next, ctx)
     HLetValExpr(pat, body, next, ty, loc), ctx
 
-  | HLetFunExpr (callee, isRec, args, body, next, ty, loc) ->
-    ccLetFunExpr callee isRec args body next ty loc ctx
+  | HLetFunExpr (callee, args, body, next, ty, loc) -> ccLetFunExpr callee args body next ty loc ctx
 
   | HNavExpr _ -> unreachable () // HNavExpr is resolved in NameRes, Typing, or RecordRes.
   | HRecordExpr _ -> unreachable () // HRecordExpr is resolved in RecordRes.

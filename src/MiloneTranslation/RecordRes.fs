@@ -225,10 +225,10 @@ let private teExpr (ctx: RrCtx) expr =
     let next = next |> teExpr ctx
     HLetValExpr(pat, init, next, ty, loc)
 
-  | HLetFunExpr (callee, isRec, args, body, next, ty, loc) ->
+  | HLetFunExpr (callee, args, body, next, ty, loc) ->
     let body = body |> teExpr ctx
     let next = next |> teExpr ctx
-    HLetFunExpr(callee, isRec, args, body, next, ty, loc)
+    HLetFunExpr(callee, args, body, next, ty, loc)
 
 let recordRes (expr: HExpr, tyCtx: TyCtx) =
   let ctx = ofTyCtx tyCtx

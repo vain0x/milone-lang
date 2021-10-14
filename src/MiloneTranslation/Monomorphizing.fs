@@ -230,11 +230,11 @@ let private monifyFunExpr ctx funSerial tyArgs =
 
       funSerial, tyArgs, ctx
 
-let private monifyLetFunExpr (ctx: MonoCtx) callee isRec args body next ty loc =
+let private monifyLetFunExpr (ctx: MonoCtx) callee args body next ty loc =
   let genericFunSerial = callee
 
   let letGenericFunExpr =
-    HLetFunExpr(callee, isRec, args, body, next, ty, loc)
+    HLetFunExpr(callee, args, body, next, ty, loc)
 
   let rec go next arity genericFunTy workList ctx =
     match workList with
@@ -272,7 +272,7 @@ let private monifyLetFunExpr (ctx: MonoCtx) callee isRec args body next ty loc =
           addMonomorphizedFun ctx genericFunSerial arity tyArgs loc
 
         let next =
-          HLetFunExpr(monoFunSerial, isRec, monoArgs, monoBody, next, ty, loc)
+          HLetFunExpr(monoFunSerial, monoArgs, monoBody, next, ty, loc)
 
         go next arity genericFunTy workList ctx
 
@@ -326,10 +326,10 @@ let private monifyExpr (expr, ctx) =
     let next, ctx = (next, ctx) |> monifyExpr
     HLetValExpr(pat, init, next, ty, loc), ctx
 
-  | HLetFunExpr (callee, isRec, args, body, next, ty, loc) ->
+  | HLetFunExpr (callee, args, body, next, ty, loc) ->
     let body, ctx = (body, ctx) |> monifyExpr
     let next, ctx = (next, ctx) |> monifyExpr
-    monifyLetFunExpr ctx callee isRec args body next ty loc
+    monifyLetFunExpr ctx callee args body next ty loc
 
   | HNavExpr _ -> unreachable () // HNavExpr is resolved in NameRes, Typing, or RecordRes.
   | HRecordExpr _ -> unreachable () // HRecordExpr is resolved in RecordRes.
