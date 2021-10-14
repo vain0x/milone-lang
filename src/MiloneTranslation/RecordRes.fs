@@ -207,12 +207,9 @@ let private teExpr (ctx: RrCtx) expr =
   | HMatchExpr (cond, arms, ty, loc) ->
     let cond = cond |> teExpr ctx
 
-    let go (pat, guard, body) =
-      let guard = guard |> teExpr ctx
-      let body = body |> teExpr ctx
-      pat, guard, body
+    let arms =
+      arms |> List.map (hArmMap id (teExpr ctx))
 
-    let arms = arms |> List.map go
     HMatchExpr(cond, arms, ty, loc)
 
   | HBlockExpr (stmts, last) ->

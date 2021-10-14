@@ -812,13 +812,10 @@ let private abExpr ctx expr =
   | HMatchExpr (cond, arms, ty, loc) ->
     let cond = cond |> abExpr ctx
 
-    let go (pat, guard, body) =
-      let pat = pat |> abPat ctx
-      let guard = guard |> abExpr ctx
-      let body = body |> abExpr ctx
-      pat, guard, body
+    let arms =
+      arms
+      |> List.map (hArmMap (abPat ctx) (abExpr ctx))
 
-    let arms = arms |> List.map go
     let ty = ty |> abTy ctx
     HMatchExpr(cond, arms, ty, loc)
 
@@ -988,7 +985,7 @@ let private tvExpr (expr: HExpr) (ctx: TvCtx) : TvCtx =
     |> forList (fun (pat, guard, body) ctx -> ctx |> onPat pat |> onExpr guard |> onExpr body) arms
     |> onTy ty
 
-  | HNodeExpr (_, args, ty, loc) -> ctx |> onExprs args |> onTy ty
+  | HNodeExpr (_, args, ty, _) -> ctx |> onExprs args |> onTy ty
 
   | HBlockExpr (stmts, last) -> ctx |> onExprs stmts |> tvExpr last
 
@@ -1135,11 +1132,7 @@ let private taExpr (ctx: TaCtx) (expr: HExpr) : HExpr =
 
   | HMatchExpr (cond, arms, ty, loc) ->
     let cond = onExpr cond
-
-    let arms =
-      arms
-      |> List.map (fun (pat, guard, body) -> (pat, onExpr guard, onExpr body))
-
+    let arms = arms |> List.map (hArmMap id onExpr)
     HMatchExpr(cond, arms, ty, loc)
 
   | HNodeExpr (kind, args, ty, loc) -> HNodeExpr(kind, onExprs args, ty, loc)

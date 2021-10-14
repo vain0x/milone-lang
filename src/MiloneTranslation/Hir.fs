@@ -593,6 +593,10 @@ let exprExtract (expr: HExpr) : Ty * Loc =
   | HLetValExpr (_, _, _, ty, a) -> ty, a
   | HLetFunExpr (_, _, _, _, ty, a) -> ty, a
 
+let hArmMap (onPat: HPat -> HPat) (onExpr: HExpr -> HExpr) (arm: HPat * HExpr * HExpr) =
+  let pat, guard, body = arm
+  onPat pat, onExpr guard, onExpr body
+
 let exprMap (f: Ty -> Ty) (g: Loc -> Loc) (expr: HExpr) : HExpr =
   let goPat pat = patMap f g pat
 
@@ -614,10 +618,7 @@ let exprMap (f: Ty -> Ty) (g: Loc -> Loc) (expr: HExpr) : HExpr =
       HRecordExpr(baseOpt, fields, f ty, g a)
 
     | HMatchExpr (cond, arms, ty, a) ->
-      let arms =
-        arms
-        |> List.map (fun (pat, guard, body) -> goPat pat, go guard, go body)
-
+      let arms = arms |> List.map (hArmMap goPat go)
       HMatchExpr(go cond, arms, f ty, g a)
     | HNavExpr (sub, mes, ty, a) -> HNavExpr(go sub, mes, f ty, g a)
     | HNodeExpr (kind, args, resultTy, a) -> HNodeExpr(kind, List.map go args, f resultTy, g a)

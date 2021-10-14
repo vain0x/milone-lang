@@ -878,10 +878,7 @@ let private reuseVarOnExpr (reuseMap: VarReuseMap) (expr: HExpr) : HExpr =
     | HVarExpr (serial, ty, loc) -> HVarExpr(reuseVarSerial reuseMap serial, ty, loc)
 
     | HMatchExpr (cond, arms, ty, loc) ->
-      let arms =
-        arms
-        |> List.map (fun (pat, guard, body) -> goPat pat, go guard, go body)
-
+      let arms = arms |> List.map (hArmMap goPat go)
       HMatchExpr(go cond, arms, ty, loc)
 
     | HNodeExpr (kind, args, ty, loc) -> HNodeExpr(kind, List.map go args, ty, loc)

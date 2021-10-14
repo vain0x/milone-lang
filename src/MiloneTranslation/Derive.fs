@@ -93,12 +93,8 @@ let private rewriteExpr (ctx: AssocMap<Ty, FunSerial>) expr : HExpr =
   | HPrimExpr _ -> expr
 
   | HMatchExpr (cond, arms, ty, loc) ->
-    let onArm (pat, guard, body) =
-      let guard = onExpr guard
-      let body = onExpr body
-      pat, guard, body
-
-    HMatchExpr(onExpr cond, List.map onArm arms, ty, loc)
+    let arms = arms |> List.map (hArmMap id onExpr)
+    HMatchExpr(onExpr cond, arms, ty, loc)
 
   | HNodeExpr (kind, items, ty, loc) -> HNodeExpr(kind, onExprs items, ty, loc)
   | HBlockExpr (stmts, last) -> HBlockExpr(onExprs stmts, onExpr last)
