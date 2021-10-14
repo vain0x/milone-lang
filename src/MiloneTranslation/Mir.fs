@@ -264,7 +264,7 @@ let mDeclToLoc (decl: MDecl) : Loc =
 // -----------------------------------------------
 
 let mxSugar expr =
-  let mxSugarUni op l ty loc =
+  let mxSugarNot l ty loc =
     match l with
     // SUGAR: `not true` ==> `false`
     // SUGAR: `not false` ==> `true`
@@ -285,14 +285,14 @@ let mxSugar expr =
     // SUGAR: `not (x >= y)` ==> `x < y`
     | MBinaryExpr (MGreaterEqualBinary, l, r, ty, loc) -> MBinaryExpr(MLessBinary, l, r, ty, loc)
 
-    | _ -> MUnaryExpr(op, l, ty, loc)
+    | _ -> MUnaryExpr(MNotUnary, l, ty, loc)
 
   let mxSugarBin op l r ty loc =
     match op, l, r with
     // SUGAR: `x = false` ==> `not x`
-    | MEqualBinary, MLitExpr (BoolLit false, _), _ -> mxSugarUni MNotUnary r ty loc
+    | MEqualBinary, MLitExpr (BoolLit false, _), _ -> mxSugarNot r ty loc
 
-    | MEqualBinary, _, MLitExpr (BoolLit false, _) -> mxSugarUni MNotUnary l ty loc
+    | MEqualBinary, _, MLitExpr (BoolLit false, _) -> mxSugarNot l ty loc
 
     // SUGAR: `x = true` ==> `x`
     | MEqualBinary, MLitExpr (BoolLit true, _), _ -> r
@@ -305,9 +305,9 @@ let mxSugar expr =
   // SUGAR: `x: unit` ==> `()`
   | MVarExpr (_, Ty (TupleTk, []), loc) -> MUnitExpr loc
 
-  | MUnaryExpr (op, l, ty, loc) ->
+  | MUnaryExpr (MNotUnary, l, ty, loc) ->
     let l = mxSugar l
-    mxSugarUni op l ty loc
+    mxSugarNot l ty loc
 
   | MBinaryExpr (op, l, r, ty, loc) ->
     let l = mxSugar l
