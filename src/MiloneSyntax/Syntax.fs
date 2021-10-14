@@ -307,16 +307,14 @@ type APat =
 /// Arm of match expression in AST.
 ///
 /// `| pat when guard -> body`
-[<Struct>]
-[<NoEquality; NoComparison>]
+[<Struct; NoEquality; NoComparison>]
 type AArm = AArm of pat: APat * guard: AExpr option * body: AExpr * Pos
 
 /// Declaration of variant in AST.
 ///
 /// E.g. `| Card of Suit * Rank` (with `of`)
 /// or `| Joker` (without `of`).
-[<Struct>]
-[<NoEquality; NoComparison>]
+[<Struct; NoEquality; NoComparison>]
 type AVariant = AVariant of Name * payloadTyOpt: ATy option * Pos
 
 /// Field declaration in AST.

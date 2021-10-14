@@ -47,7 +47,7 @@ type VariantSerial = VariantSerial of Serial
 type NameCtx = NameCtx of identMap: AssocMap<Serial, Ident> * lastSerial: Serial
 
 /// Type constructor.
-[<Struct; NoEquality; NoComparison>]
+[<NoEquality; NoComparison>]
 type Tk =
   | ErrorTk of errorLoc: Loc
 
@@ -90,13 +90,11 @@ type Ty =
   | Ty of Tk * tyArgs: Ty list
 
 /// Potentially polymorphic type.
-[<Struct>]
-[<NoEquality; NoComparison>]
+[<Struct; NoEquality; NoComparison>]
 type TyScheme = TyScheme of tyVars: TySerial list * Ty
 
 /// Type specification.
-[<Struct>]
-[<NoEquality; NoComparison>]
+[<Struct; NoEquality; NoComparison>]
 type TySpec = TySpec of Ty * Trait list
 
 /// Trait, a constraint about types.
@@ -208,13 +206,13 @@ type VariantDef =
     PayloadTy: Ty
     Loc: Loc }
 
-[<Struct; NoComparison>]
+[<NoComparison>]
 type ValueSymbol =
   | VarSymbol of varSerial: VarSerial
   | FunSymbol of funSerial: FunSerial
   | VariantSymbol of variantSerial: VariantSerial
 
-[<Struct; NoComparison>]
+[<NoComparison>]
 type TySymbol =
   | MetaTySymbol of tySerial: TySerial
   | UnivTySymbol of univTySerial: TySerial
@@ -223,7 +221,7 @@ type TySymbol =
   | RecordTySymbol of recordTySerial: TySerial
 
 /// Kind of TNodePat.
-[<Struct; NoEquality; NoComparison>]
+[<NoEquality; NoComparison>]
 type TPatKind =
   /// `[]`.
   | TNilPN
@@ -330,7 +328,7 @@ type TPrim =
   | PtrRead
   | PtrWrite
 
-[<Struct; NoEquality; NoComparison>]
+[<NoEquality; NoComparison>]
 type TExprKind =
   | TAbortEN
 

@@ -45,7 +45,7 @@ type FunSerial = FunSerial of Serial
 type VariantSerial = VariantSerial of Serial
 
 /// Type constructor.
-[<Struct; NoEquality; NoComparison>]
+[<NoEquality; NoComparison>]
 type Tk =
   | IntTk of intFlavor: IntFlavor
   | FloatTk of floatFlavor: FloatFlavor
@@ -81,8 +81,7 @@ type Ty =
   | Ty of Tk * tyArgs: Ty list
 
 /// Potentially polymorphic type.
-[<Struct>]
-[<NoEquality; NoComparison>]
+[<Struct; NoEquality; NoComparison>]
 type TyScheme = TyScheme of tyVars: TySerial list * Ty
 
 /// Type definition.
@@ -130,14 +129,14 @@ type VariantDef =
     PayloadTy: Ty
     Loc: Loc }
 
-[<Struct; NoComparison>]
+[<NoComparison>]
 type ValueSymbol =
   | VarSymbol of varSerial: VarSerial
   | FunSymbol of funSerial: FunSerial
   | VariantSymbol of variantSerial: VariantSerial
 
 /// Kind of HNodePat.
-[<Struct; NoEquality; NoComparison>]
+[<NoEquality; NoComparison>]
 type HPatKind =
   /// `[]`.
   | HNilPN
@@ -237,7 +236,7 @@ type HPrim =
   | PtrRead
   | PtrWrite
 
-[<Struct; NoEquality; NoComparison>]
+[<NoEquality; NoComparison>]
 type HExprKind =
   | HAbortEN
 
