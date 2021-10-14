@@ -310,7 +310,7 @@ let private createUnderlyingFunDef funTy arity envPat envTy forwardCall restArgP
     HLetValExpr(envPat, unboxedEnvExpr envArgExpr, next, exprToTy next, callLoc)
 
   let funLet next =
-    HLetFunExpr(funSerial, NotRec, PrivateVis, argPats, body, next, exprToTy next, callLoc)
+    HLetFunExpr(funSerial, NotRec, argPats, body, next, exprToTy next, callLoc)
 
   let funExpr =
     HFunExpr(funSerial, underlyingFunTy, [], callLoc)
@@ -472,10 +472,10 @@ let private exInfExpr expr kind args ty loc ctx =
     let args, ctx = (args, ctx) |> stMap exExpr
     HNodeExpr(kind, args, ty, loc), ctx
 
-let private exLetFunExpr callee isRec vis argPats body next ty loc ctx =
+let private exLetFunExpr callee isRec argPats body next ty loc ctx =
   let body, ctx = (body, ctx) |> exExpr
   let next, ctx = (next, ctx) |> exExpr
-  HLetFunExpr(callee, isRec, vis, argPats, body, next, ty, loc), ctx
+  HLetFunExpr(callee, isRec, argPats, body, next, ty, loc), ctx
 
 // -----------------------------------------------
 // Control
@@ -515,8 +515,7 @@ let private exExpr (expr, ctx) =
     let next, ctx = (next, ctx) |> exExpr
     HLetValExpr(pat, init, next, ty, loc), ctx
 
-  | HLetFunExpr (callee, isRec, vis, args, body, next, ty, loc) ->
-    exLetFunExpr callee isRec vis args body next ty loc ctx
+  | HLetFunExpr (callee, isRec, args, body, next, ty, loc) -> exLetFunExpr callee isRec args body next ty loc ctx
 
   | HNavExpr _ -> unreachable () // HNavExpr is resolved in NameRes, Typing, or RecordRes.
   | HRecordExpr _ -> unreachable () // HRecordExpr is resolved in RecordRes.

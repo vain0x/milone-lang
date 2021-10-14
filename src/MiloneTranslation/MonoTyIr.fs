@@ -116,4 +116,4 @@ type HExpr =
   | HBlockExpr of HExpr list * HExpr
 
   | HLetValExpr of pat: HPat * init: HExpr * next: HExpr * Ty * Loc
-  | HLetFunExpr of FunSerial * IsRec * Vis * args: HPat list * body: HExpr * next: HExpr * Ty * Loc
+  | HLetFunExpr of FunSerial * IsRec * args: HPat list * body: HExpr * next: HExpr * Ty * Loc

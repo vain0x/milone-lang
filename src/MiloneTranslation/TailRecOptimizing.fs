@@ -98,13 +98,13 @@ let private troExpr isTail (expr, ctx) =
     let next, ctx = troExpr isTail (next, ctx)
     HLetValExpr(pat, init, next, ty, loc), ctx
 
-  | HLetFunExpr (callee, isRec, vis, args, body, next, ty, loc) ->
+  | HLetFunExpr (callee, isRec, args, body, next, ty, loc) ->
     let body, ctx =
       ctx
       |> withCurrentFun callee (fun ctx -> troExpr IsTail (body, ctx))
 
     let next, ctx = troExpr isTail (next, ctx)
-    HLetFunExpr(callee, isRec, vis, args, body, next, ty, loc), ctx
+    HLetFunExpr(callee, isRec, args, body, next, ty, loc), ctx
 
   | HNavExpr _ -> unreachable () // HNavExpr is resolved in NameRes, Typing, or RecordRes.
   | HRecordExpr _ -> unreachable () // HRecordExpr is resolved in RecordRes.

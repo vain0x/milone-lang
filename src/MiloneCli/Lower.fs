@@ -203,7 +203,6 @@ let private lowerStmt (stmt: Tir.TStmt) : Hir.HExpr =
     Hir.HLetFunExpr(
       lowerFunSerial funSerial,
       isRec,
-      vis,
       List.map lowerPat argPats,
       lowerExpr body,
       Hir.hxUnit loc,

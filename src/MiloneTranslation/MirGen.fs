@@ -293,7 +293,7 @@ let private containsTailRec expr =
 
   | HLetValExpr (_, _, next, _, _) -> next |> containsTailRec
 
-  | HLetFunExpr (_, _, _, _, _, next, _, _) -> next |> containsTailRec
+  | HLetFunExpr (_, _, _, _, next, _, _) -> next |> containsTailRec
 
   | HRecordExpr _ -> unreachable () // Resolved in RecordRes.
 
@@ -887,8 +887,8 @@ let private reuseVarOnExpr (reuseMap: VarReuseMap) (expr: HExpr) : HExpr =
     | HNodeExpr (kind, args, ty, loc) -> HNodeExpr(kind, List.map go args, ty, loc)
     | HBlockExpr (stmts, last) -> HBlockExpr(List.map go stmts, go last)
     | HLetValExpr (pat, init, next, ty, loc) -> HLetValExpr(goPat pat, go init, go next, ty, loc)
-    | HLetFunExpr (serial, isRec, vis, args, body, next, ty, loc) ->
-      HLetFunExpr(serial, isRec, vis, List.map goPat args, go body, go next, ty, loc)
+    | HLetFunExpr (serial, isRec, args, body, next, ty, loc) ->
+      HLetFunExpr(serial, isRec, List.map goPat args, go body, go next, ty, loc)
 
     | HNavExpr _ -> unreachable () // HNavExpr is resolved in NameRes, Typing, or RecordRes.
     | HRecordExpr _ -> unreachable () // HRecordExpr is resolved in RecordRes.
@@ -1613,7 +1613,7 @@ let private mirifyExpr (ctx: MirCtx) (expr: HExpr) : MExpr * MirCtx =
     let ctx = mirifyExprLetValContents ctx pat init
     mirifyExpr ctx next
 
-  | HLetFunExpr (funSerial, _, _, argPats, body, next, _, loc) ->
+  | HLetFunExpr (funSerial, _, argPats, body, next, _, loc) ->
     let ctx =
       mirifyExprLetFunContents ctx funSerial argPats body loc
 

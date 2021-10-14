@@ -325,7 +325,7 @@ type HExpr =
   | HBlockExpr of HExpr list * HExpr
 
   | HLetValExpr of pat: HPat * init: HExpr * next: HExpr * Ty * Loc
-  | HLetFunExpr of FunSerial * IsRec * Vis * args: HPat list * body: HExpr * next: HExpr * Ty * Loc
+  | HLetFunExpr of FunSerial * IsRec * args: HPat list * body: HExpr * next: HExpr * Ty * Loc
 
 /// HIR program. (project name, module name, decls) list.
 type HProgram = (string * string * HExpr list) list
@@ -591,7 +591,7 @@ let exprExtract (expr: HExpr) : Ty * Loc =
   | HNodeExpr (_, _, ty, a) -> ty, a
   | HBlockExpr (_, last) -> exprExtract last
   | HLetValExpr (_, _, _, ty, a) -> ty, a
-  | HLetFunExpr (_, _, _, _, _, _, ty, a) -> ty, a
+  | HLetFunExpr (_, _, _, _, _, ty, a) -> ty, a
 
 let exprMap (f: Ty -> Ty) (g: Loc -> Loc) (expr: HExpr) : HExpr =
   let goPat pat = patMap f g pat
@@ -623,8 +623,8 @@ let exprMap (f: Ty -> Ty) (g: Loc -> Loc) (expr: HExpr) : HExpr =
     | HNodeExpr (kind, args, resultTy, a) -> HNodeExpr(kind, List.map go args, f resultTy, g a)
     | HBlockExpr (stmts, last) -> HBlockExpr(List.map go stmts, go last)
     | HLetValExpr (pat, init, next, ty, a) -> HLetValExpr(goPat pat, go init, go next, f ty, g a)
-    | HLetFunExpr (serial, isRec, vis, args, body, next, ty, a) ->
-      HLetFunExpr(serial, isRec, vis, List.map goPat args, go body, go next, f ty, g a)
+    | HLetFunExpr (serial, isRec, args, body, next, ty, a) ->
+      HLetFunExpr(serial, isRec, List.map goPat args, go body, go next, f ty, g a)
 
   go expr
 
