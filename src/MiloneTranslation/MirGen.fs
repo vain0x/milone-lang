@@ -420,7 +420,7 @@ let private mirifyPat ctx (endLabel: string) (pat: HPat) (expr: MExpr) : MirCtx 
   match pat with
   | HLitPat (lit, loc) -> mirifyPatLit ctx endLabel lit expr loc
   | HDiscardPat _ -> ctx
-  | HVarPat (_, serial, ty, loc) -> mirifyPatVar ctx endLabel serial ty loc expr
+  | HVarPat (serial, ty, loc) -> mirifyPatVar ctx endLabel serial ty loc expr
   | HVariantPat (serial, ty, loc) -> mirifyPatVariant ctx endLabel serial ty loc expr
 
   | HNodePat (kind, argPats, ty, loc) ->
@@ -857,7 +857,7 @@ let private reuseVarOnPat (reuseMap: VarReuseMap) (pat: HPat) : HPat =
     | HDiscardPat _
     | HVariantPat _ -> pat
 
-    | HVarPat (vis, serial, ty, loc) -> HVarPat(vis, reuseVarSerial reuseMap serial, ty, loc)
+    | HVarPat (serial, ty, loc) -> HVarPat(reuseVarSerial reuseMap serial, ty, loc)
 
     | HNodePat (kind, args, ty, loc) -> HNodePat(kind, List.map go args, ty, loc)
     | HAsPat (bodyPat, serial, loc) -> HAsPat(go bodyPat, reuseVarSerial reuseMap serial, loc)
@@ -1523,7 +1523,7 @@ let private mirifyExprLetFunContents (ctx: MirCtx) calleeSerial argPats body let
     assert (patsIsCovering ctx [ argPat ])
 
     match argPat with
-    | HVarPat (_, serial, ty, loc) ->
+    | HVarPat (serial, ty, loc) ->
       // NOTE: Optimize for usual cases to not generate redundant local vars.
       (serial, ty, loc), ctx
     | _ ->

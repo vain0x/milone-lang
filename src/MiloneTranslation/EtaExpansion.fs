@@ -233,8 +233,7 @@ let private createRestArgsAndPats callee arity argLen callLoc ctx =
       let argExpr, argSerial, ctx = freshVar "arg" argTy callLoc ctx
       let restArgPats, restArgs, ctx = go (n - 1) restTy ctx
 
-      let restArgPat =
-        HVarPat(PrivateVis, argSerial, argTy, callLoc)
+      let restArgPat = HVarPat(argSerial, argTy, callLoc)
 
       restArgPat :: restArgPats, argExpr :: restArgs, ctx
 
@@ -253,8 +252,7 @@ let private createEnvPatAndTy args callLoc ctx =
       let argTy, argLoc = exprExtract arg
       let itemExpr, varSerial, ctx = freshVar "arg" argTy argLoc ctx
 
-      let itemPat =
-        HVarPat(PrivateVis, varSerial, argTy, argLoc)
+      let itemPat = HVarPat(varSerial, argTy, argLoc)
 
       let itemPats, itemTys, itemExprs, ctx = go args ctx
       itemPat :: itemPats, argTy :: itemTys, itemExpr :: itemExprs, ctx
@@ -295,8 +293,7 @@ let private createEnvPatAndTy args callLoc ctx =
 let private createUnderlyingFunDef funTy arity envPat envTy forwardCall restArgPats unboxedEnvExpr callLoc ctx =
   let envArgExpr, envArgSerial, ctx = freshVar "env" tyObj callLoc ctx
 
-  let envArgPat =
-    HVarPat(PrivateVis, envArgSerial, tyObj, callLoc)
+  let envArgPat = HVarPat(envArgSerial, tyObj, callLoc)
 
   let underlyingFunTy = tyFun tyObj funTy
 
@@ -351,8 +348,7 @@ let private resolvePartialAppObj callee arity args argLen callLoc ctx =
   let calleeExpr, calleeLet, ctx =
     let calleeExpr, calleeSerial, ctx = freshVar "callee" funTy callLoc ctx
 
-    let calleePat =
-      HVarPat(PrivateVis, calleeSerial, funTy, callLoc)
+    let calleePat = HVarPat(calleeSerial, funTy, callLoc)
 
     let calleeLet next =
       HLetValExpr(calleePat, callee, next, exprToTy next, callLoc)

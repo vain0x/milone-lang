@@ -961,7 +961,7 @@ let private tvPat (pat: HPat) (ctx: TvCtx) : TvCtx =
   match pat with
   | HLitPat _ -> ctx
   | HDiscardPat (ty, _) -> onTy ty ctx
-  | HVarPat (_, _, ty, _) -> onTy ty ctx
+  | HVarPat (_, ty, _) -> onTy ty ctx
   | HVariantPat (_, ty, _) -> onTy ty ctx
   | HNodePat (_, argPats, ty, _) -> ctx |> onPats argPats |> onTy ty
   | HAsPat (bodyPat, _, _) -> onPat bodyPat ctx

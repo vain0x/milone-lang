@@ -170,7 +170,7 @@ let private capsMakeApp calleeSerial tyArgs calleeTy calleeLoc (caps: Caps) =
 /// Updates the argument patterns to take captured variables.
 let private capsAddToFunPats args (caps: Caps) =
   caps
-  |> List.fold (fun args (serial, ty, loc) -> HVarPat(PrivateVis, serial, ty, loc) :: args) args
+  |> List.fold (fun args (serial, ty, loc) -> HVarPat(serial, ty, loc) :: args) args
 
 let private capsUpdateFunDef funTy arity (caps: Caps) =
   let funTy = caps |> capsAddToFunTy funTy
@@ -378,7 +378,7 @@ let private ccPat (pat, ctx) =
   | HDiscardPat _
   | HVariantPat _ -> pat, ctx
 
-  | HVarPat (_, serial, _, _) ->
+  | HVarPat (serial, _, _) ->
     let ctx = ctx |> addLocal serial
     pat, ctx
 

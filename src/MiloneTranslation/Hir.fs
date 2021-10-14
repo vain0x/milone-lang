@@ -178,7 +178,7 @@ type HPat =
   | HDiscardPat of Ty * Loc
 
   /// Variable pattern.
-  | HVarPat of Vis * VarSerial * Ty * Loc
+  | HVarPat of VarSerial * Ty * Loc
 
   /// Variant name pattern.
   | HVariantPat of VariantSerial * Ty * Loc
@@ -424,7 +424,7 @@ let litToTy (lit: Lit) : Ty =
 
 let hpAbort ty loc = HNodePat(HAbortPN, [], ty, loc)
 
-let hpVar varSerial ty loc = HVarPat(PrivateVis, varSerial, ty, loc)
+let hpVar varSerial ty loc = HVarPat(varSerial, ty, loc)
 
 let hpVariantApp variantSerial payloadPat ty loc =
   HNodePat(HVariantAppPN variantSerial, [ payloadPat ], ty, loc)
@@ -437,7 +437,7 @@ let patExtract (pat: HPat) : Ty * Loc =
   match pat with
   | HLitPat (lit, a) -> litToTy lit, a
   | HDiscardPat (ty, a) -> ty, a
-  | HVarPat (_, _, ty, a) -> ty, a
+  | HVarPat (_, ty, a) -> ty, a
   | HVariantPat (_, ty, a) -> ty, a
 
   | HNodePat (_, _, ty, a) -> ty, a
@@ -455,7 +455,7 @@ let patFold (onVar: 'S -> VarSerial -> Ty -> 'S) (state: 'S) (pat: HPat) : 'S =
     | HDiscardPat _
     | HVariantPat _ -> state
 
-    | HVarPat (_, serial, ty, _) -> onVar state serial ty
+    | HVarPat (serial, ty, _) -> onVar state serial ty
     | HNodePat (_, args, _, _) -> List.fold go state args
     | HAsPat (bodyPat, serial, _) -> go (onVar state serial (patToTy bodyPat)) bodyPat
     | HOrPat (l, r, _) -> go (go state l) r
@@ -467,7 +467,7 @@ let patMap (f: Ty -> Ty) (g: Loc -> Loc) (pat: HPat) : HPat =
     match pat with
     | HLitPat (lit, a) -> HLitPat(lit, g a)
     | HDiscardPat (ty, a) -> HDiscardPat(f ty, g a)
-    | HVarPat (vis, serial, ty, a) -> HVarPat(vis, serial, f ty, g a)
+    | HVarPat (serial, ty, a) -> HVarPat(serial, f ty, g a)
     | HVariantPat (serial, ty, a) -> HVariantPat(serial, f ty, g a)
 
     | HNodePat (kind, args, ty, a) -> HNodePat(kind, List.map go args, f ty, g a)

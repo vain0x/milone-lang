@@ -255,9 +255,9 @@ let private mtPat (pat, ctx) : M.HPat * MtCtx =
     let ty, ctx = (ty, ctx) |> mtTy
     M.HDiscardPat(ty, loc), ctx
 
-  | HVarPat (vis, varSerial, ty, loc) ->
+  | HVarPat (varSerial, ty, loc) ->
     let ty, ctx = (ty, ctx) |> mtTy
-    M.HVarPat(vis, varSerial, ty, loc), ctx
+    M.HVarPat(varSerial, ty, loc), ctx
 
   | HVariantPat (variantSerial, ty, loc) ->
     let ty, ctx = (ty, ctx) |> mtTy
@@ -496,7 +496,7 @@ let private bthPat (pat: M.HPat) : HPat =
   match pat with
   | M.HLitPat (lit, loc) -> HLitPat(lit, loc)
   | M.HDiscardPat (ty, loc) -> HDiscardPat(ofTy ty, loc)
-  | M.HVarPat (vis, varSerial, ty, loc) -> HVarPat(vis, varSerial, ofTy ty, loc)
+  | M.HVarPat (varSerial, ty, loc) -> HVarPat(varSerial, ofTy ty, loc)
   | M.HVariantPat (variantSerial, ty, loc) -> HVariantPat(variantSerial, ofTy ty, loc)
   | M.HNodePat (kind, pats, ty, loc) -> HNodePat(kind, ofPats pats, ofTy ty, loc)
   | M.HAsPat (pat, varSerial, loc) -> HAsPat(ofPat pat, varSerial, loc)
