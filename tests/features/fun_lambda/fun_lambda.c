@@ -6,13 +6,13 @@ struct IntIntIntFun2;
 
 int apply_(struct IntIntFun1 f_, int x_);
 
+int twice_(struct IntIntFun1 f_1, int x_2);
+
 int fun_(int x_1);
 
 int fun_3(void const* env_, int arg_);
 
 void fun_lambda_Program_layoutTest(void);
-
-int twice_(struct IntIntFun1 f_1, int x_2);
 
 int fun_1(int x_4);
 
@@ -39,6 +39,12 @@ int apply_(struct IntIntFun1 f_, int x_) {
     return app_;
 }
 
+int twice_(struct IntIntFun1 f_1, int x_2) {
+    int app_1 = f_1.fun(f_1.env, x_2);
+    int app_2 = f_1.fun(f_1.env, app_1);
+    return app_2;
+}
+
 int fun_(int x_1) {
     return (x_1 + 3);
 }
@@ -54,12 +60,6 @@ void fun_lambda_Program_layoutTest(void) {
     int a_ = call_1;
     milone_assert((a_ == 5), 14, 2);
     return;
-}
-
-int twice_(struct IntIntFun1 f_1, int x_2) {
-    int app_1 = f_1.fun(f_1.env, x_2);
-    int app_2 = f_1.fun(f_1.env, app_1);
-    return app_2;
 }
 
 int fun_1(int x_4) {

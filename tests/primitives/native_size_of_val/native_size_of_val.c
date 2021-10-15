@@ -1,16 +1,16 @@
 #include "milone.h"
 
-struct IntList;
-
-struct IntList;
-
 struct StringList;
 
 struct StringList;
 
-int go_1(int n_, struct IntList const* xs_1);
+struct IntList;
 
-int go_(int n_, struct StringList const* xs_1);
+struct IntList;
+
+int go_1(int n_, struct StringList const* xs_1);
+
+int go_(int n_, struct IntList const* xs_1);
 
 int listToArraySize_1(struct IntList const* xs_);
 
@@ -18,18 +18,18 @@ int listToArraySize_(struct StringList const* xs_);
 
 int milone_main(void);
 
-struct IntList {
-    int head;
-    struct IntList const* tail;
-};
-
 struct StringList {
     struct String head;
     struct StringList const* tail;
 };
 
-int go_1(int n_, struct IntList const* xs_1) {
-    struct IntList const* xs_2;
+struct IntList {
+    int head;
+    struct IntList const* tail;
+};
+
+int go_1(int n_, struct StringList const* xs_1) {
+    struct StringList const* xs_2;
 tailrec_1:;
     int match_;
     if ((!((!(xs_1))))) goto next_3;
@@ -39,7 +39,7 @@ next_3:;
     if ((!(xs_1))) goto next_4;
     xs_2 = xs_1->tail;
     int arg_ = (n_ + 1);
-    struct IntList const* arg_1 = xs_2;
+    struct StringList const* arg_1 = xs_2;
     n_ = arg_;
     xs_1 = arg_1;
     goto tailrec_1;
@@ -49,8 +49,8 @@ end_match_2:;
     return match_;
 }
 
-int go_(int n_, struct StringList const* xs_1) {
-    struct StringList const* xs_2;
+int go_(int n_, struct IntList const* xs_1) {
+    struct IntList const* xs_2;
 tailrec_5:;
     int match_1;
     if ((!((!(xs_1))))) goto next_7;
@@ -60,7 +60,7 @@ next_7:;
     if ((!(xs_1))) goto next_8;
     xs_2 = xs_1->tail;
     int arg_2 = (n_ + 1);
-    struct StringList const* arg_3 = xs_2;
+    struct IntList const* arg_3 = xs_2;
     n_ = arg_2;
     xs_1 = arg_3;
     goto tailrec_5;
@@ -80,7 +80,7 @@ next_10:;
     if ((!(xs_))) goto next_11;
     x_ = xs_->head;
     int itemSize_ = sizeof(int);
-    int call_ = go_1(0, xs_);
+    int call_ = go_(0, xs_);
     int n_1 = call_;
     match_2 = (itemSize_ * n_1);
     goto end_match_9;
@@ -100,7 +100,7 @@ next_13:;
     if ((!(xs_))) goto next_14;
     x_ = xs_->head;
     int itemSize_ = sizeof(struct String);
-    int call_1 = go_(0, xs_);
+    int call_1 = go_1(0, xs_);
     int n_1 = call_1;
     match_3 = (itemSize_ * n_1);
     goto end_match_12;

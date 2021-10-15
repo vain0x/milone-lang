@@ -2,6 +2,14 @@
 
 struct UnitIntFun1;
 
+int zf11_(int x_4);
+
+int zf1_(int x_4);
+
+int zf22_(int x_5);
+
+int zf2_(int x_5);
+
 int sub_(int step_, int x_);
 
 void fun_closure_Program_basicCase(void);
@@ -38,14 +46,6 @@ int xf1_(int x1_);
 
 void fun_closure_Program_escapeCase(void);
 
-int zf11_(int x_4);
-
-int zf1_(int x_4);
-
-int zf22_(int x_5);
-
-int zf2_(int x_5);
-
 void fun_closure_Program_innerFunCase(void);
 
 void fun_closure_Program_mutuallyRecursiveCase(void);
@@ -75,14 +75,33 @@ extern int fun_closure_Program_a;
 
 int fun_closure_Program_a;
 
+int zf11_(int x_4) {
+    return x_4;
+}
+
+int zf1_(int x_4) {
+    int call_ = zf11_(x_4);
+    return call_;
+}
+
+int zf22_(int x_5) {
+    int call_1 = zf1_(x_5);
+    return call_1;
+}
+
+int zf2_(int x_5) {
+    int call_2 = zf22_(x_5);
+    return call_2;
+}
+
 int sub_(int step_, int x_) {
     return (x_ - step_);
 }
 
 void fun_closure_Program_basicCase(void) {
     int step_ = 3;
-    int call_ = sub_(step_, 8);
-    milone_assert((call_ == 5), 7, 2);
+    int call_3 = sub_(step_, 8);
+    milone_assert((call_3 == 5), 7, 2);
     return;
 }
 
@@ -91,15 +110,15 @@ int inc_(int step_1, int x_1) {
 }
 
 int incTwice_(int step_1, int x_2) {
-    int call_1 = inc_(step_1, x_2);
-    int call_2 = inc_(step_1, call_1);
-    return call_2;
+    int call_4 = inc_(step_1, x_2);
+    int call_5 = inc_(step_1, call_4);
+    return call_5;
 }
 
 void fun_closure_Program_transitiveCase(void) {
     int step_1 = 1;
-    int call_3 = incTwice_(step_1, 0);
-    milone_assert((call_3 == 2), 13, 2);
+    int call_6 = incTwice_(step_1, 0);
+    milone_assert((call_6 == 2), 13, 2);
     return;
 }
 
@@ -119,9 +138,9 @@ then_3:;
     if_ = true;
     goto if_next_2;
 else_4:;
-    int call_4 = inc_1(step_2, n_);
+    int call_7 = inc_1(step_2, n_);
     int arg_2 = step_2;
-    int arg_3 = call_4;
+    int arg_3 = call_7;
     step_2 = arg_2;
     n_ = arg_3;
     goto tailrec_1;
@@ -131,8 +150,8 @@ if_next_2:;
 
 void fun_closure_Program_recursiveCase(void) {
     int step_2 = 1;
-    bool call_5 = go_(step_2, 0);
-    milone_assert(call_5, 21, 2);
+    bool call_8 = go_(step_2, 0);
+    milone_assert(call_8, 21, 2);
     return;
 }
 
@@ -141,14 +160,14 @@ int lg_(int lx_) {
 }
 
 int fun_(int lx_) {
-    int call_6 = lg_(lx_);
-    return call_6;
+    int call_9 = lg_(lx_);
+    return call_9;
 }
 
 int fun_1(void const* env_) {
     int arg_1 = ((int)((intptr_t)env_));
-    int call_7 = fun_(arg_1);
-    return call_7;
+    int call_10 = fun_(arg_1);
+    return call_10;
 }
 
 int lf_(int lx_) {
@@ -159,14 +178,14 @@ int lf_(int lx_) {
 
 void fun_closure_Program_lambdaCase(void) {
     int lx_ = 7;
-    int call_8 = lf_(lx_);
-    milone_assert((call_8 == lx_), 30, 2);
+    int call_11 = lf_(lx_);
+    milone_assert((call_11 == lx_), 30, 2);
     return;
 }
 
 int xf4_(int x1_, int x2_, int x3_) {
-    int call_9 = xf1_(((x1_ + x2_) + x3_));
-    return call_9;
+    int call_12 = xf1_(((x1_ + x2_) + x3_));
+    return call_12;
 }
 
 int xf3_(int x1_, int x2_, int x3_) {
@@ -177,8 +196,8 @@ int xf3_(int x1_, int x2_, int x3_) {
         goto else_7;
     }
 then_6:;
-    int call_10 = xf4_(x1_, x2_, x3_);
-    if_1 = call_10;
+    int call_13 = xf4_(x1_, x2_, x3_);
+    if_1 = call_13;
     goto if_next_5;
 else_7:;
     if_1 = x3_;
@@ -195,8 +214,8 @@ int xf2_(int x1_, int x2_) {
         goto else_10;
     }
 then_9:;
-    int call_11 = xf3_(x1_, x2_, 3);
-    if_2 = call_11;
+    int call_14 = xf3_(x1_, x2_, 3);
+    if_2 = call_14;
     goto if_next_8;
 else_10:;
     if_2 = x2_;
@@ -213,8 +232,8 @@ int xf1_(int x1_) {
         goto else_13;
     }
 then_12:;
-    int call_12 = xf2_(x1_, 2);
-    if_3 = call_12;
+    int call_15 = xf2_(x1_, 2);
+    if_3 = call_15;
     goto if_next_11;
 else_13:;
     if_3 = x1_;
@@ -224,28 +243,9 @@ if_next_11:;
 }
 
 void fun_closure_Program_escapeCase(void) {
-    int call_13 = xf1_(1);
-    milone_assert((call_13 == ((1 + 2) + 3)), 50, 2);
+    int call_16 = xf1_(1);
+    milone_assert((call_16 == ((1 + 2) + 3)), 50, 2);
     return;
-}
-
-int zf11_(int x_4) {
-    return x_4;
-}
-
-int zf1_(int x_4) {
-    int call_14 = zf11_(x_4);
-    return call_14;
-}
-
-int zf22_(int x_5) {
-    int call_15 = zf1_(x_5);
-    return call_15;
-}
-
-int zf2_(int x_5) {
-    int call_16 = zf22_(x_5);
-    return call_16;
 }
 
 void fun_closure_Program_innerFunCase(void) {
