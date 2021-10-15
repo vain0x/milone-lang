@@ -1,16 +1,20 @@
 #include "milone.h"
 
+char at_(int i_, struct String s_);
+
 void str_operators_Program_addTest(void);
 
 void str_operators_Program_compareTest(void);
-
-char at_(int i_, struct String s_);
 
 void str_operators_Program_indexOperatorTest(void);
 
 void str_operators_Program_subscriptOperatorTest(void);
 
 int milone_main(void);
+
+char at_(int i_, struct String s_) {
+    return s_.str[i_];
+}
 
 void str_operators_Program_addTest(void) {
     struct String hello_ = (struct String){.str = "Hello", .len = 5};
@@ -32,10 +36,6 @@ void str_operators_Program_compareTest(void) {
     milone_assert((0 < str_compare((struct String){.str = "beta", .len = 4}, (struct String){.str = "alpha", .len = 5})), 22, 2);
     milone_assert((str_compare((struct String){.str = "\0x", .len = 2}, (struct String){.str = "\0y", .len = 2}) < 0), 25, 2);
     return;
-}
-
-char at_(int i_, struct String s_) {
-    return s_.str[i_];
 }
 
 void str_operators_Program_indexOperatorTest(void) {

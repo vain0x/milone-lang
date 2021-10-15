@@ -6,9 +6,9 @@ bool isNone_2(struct MyOption_ opt_);
 
 bool isNone_1(struct MyOption_ opt_);
 
-bool isNone_(struct MyOption_ opt_);
-
 int unwrap_1(struct MyOption_ opt_1);
+
+bool isNone_(struct MyOption_ opt_);
 
 struct String unwrap_(struct MyOption_ opt_1);
 
@@ -74,43 +74,43 @@ switch_next_4:;
     return switch_1;
 }
 
+int unwrap_1(struct MyOption_ opt_1) {
+    int it_;
+    int match_;
+    if ((opt_1.discriminant != MySome_)) goto next_8;
+    it_ = ((int)((intptr_t)opt_1.MySome_));
+    match_ = it_;
+    goto end_match_7;
+next_8:;
+    if ((opt_1.discriminant != MyNone_)) goto next_9;
+    milone_assert(false, 16, 4);
+    exit(1);
+next_9:;
+    exit(1);
+end_match_7:;
+    return match_;
+}
+
 bool isNone_(struct MyOption_ opt_) {
     bool switch_2;
     switch (opt_.discriminant) {
         case MyNone_:
-            goto clause_8;
+            goto clause_11;
 
         case MySome_:
-            goto clause_9;
+            goto clause_12;
 
         default:
             exit(1);
     }
-clause_8:;
+clause_11:;
     switch_2 = true;
-    goto switch_next_7;
-clause_9:;
+    goto switch_next_10;
+clause_12:;
     switch_2 = false;
-    goto switch_next_7;
-switch_next_7:;
+    goto switch_next_10;
+switch_next_10:;
     return switch_2;
-}
-
-int unwrap_1(struct MyOption_ opt_1) {
-    int it_;
-    int match_;
-    if ((opt_1.discriminant != MySome_)) goto next_11;
-    it_ = ((int)((intptr_t)opt_1.MySome_));
-    match_ = it_;
-    goto end_match_10;
-next_11:;
-    if ((opt_1.discriminant != MyNone_)) goto next_12;
-    milone_assert(false, 16, 4);
-    exit(1);
-next_12:;
-    exit(1);
-end_match_10:;
-    return match_;
 }
 
 struct String unwrap_(struct MyOption_ opt_1) {

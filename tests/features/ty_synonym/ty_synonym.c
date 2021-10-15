@@ -4,13 +4,13 @@ struct IntList;
 
 struct IntList;
 
-void ty_synonym_Program_baseCase(void);
-
-void ty_synonym_Program_yodaCase(int exitCode_);
-
 int proj_1(bool cond_, int body_, int alt_);
 
 struct String proj_(bool cond_, struct String body_, struct String alt_);
+
+void ty_synonym_Program_baseCase(void);
+
+void ty_synonym_Program_yodaCase(int exitCode_);
 
 void ty_synonym_Program_polymorphicFunCase(void);
 
@@ -20,23 +20,6 @@ struct IntList {
     int head;
     struct IntList const* tail;
 };
-
-void ty_synonym_Program_baseCase(void) {
-    int success_ = 0;
-    int failure_ = 1;
-    struct IntList const* list_1 = milone_mem_alloc(1, sizeof(struct IntList));
-    (*(((struct IntList*)list_1))) = (struct IntList){.head = failure_, .tail = NULL};
-    struct IntList const* list_ = milone_mem_alloc(1, sizeof(struct IntList));
-    (*(((struct IntList*)list_))) = (struct IntList){.head = success_, .tail = list_1};
-    struct IntList const* codes_ = list_;
-    milone_assert((success_ == 0), 13, 2);
-    return;
-}
-
-void ty_synonym_Program_yodaCase(int exitCode_) {
-    milone_assert((0 == exitCode_), 16, 36);
-    return;
-}
 
 int proj_1(bool cond_, int body_, int alt_) {
     int if_;
@@ -70,6 +53,23 @@ else_6:;
     goto if_next_4;
 if_next_4:;
     return if_1;
+}
+
+void ty_synonym_Program_baseCase(void) {
+    int success_ = 0;
+    int failure_ = 1;
+    struct IntList const* list_1 = milone_mem_alloc(1, sizeof(struct IntList));
+    (*(((struct IntList*)list_1))) = (struct IntList){.head = failure_, .tail = NULL};
+    struct IntList const* list_ = milone_mem_alloc(1, sizeof(struct IntList));
+    (*(((struct IntList*)list_))) = (struct IntList){.head = success_, .tail = list_1};
+    struct IntList const* codes_ = list_;
+    milone_assert((success_ == 0), 13, 2);
+    return;
+}
+
+void ty_synonym_Program_yodaCase(int exitCode_) {
+    milone_assert((0 == exitCode_), 16, 36);
+    return;
 }
 
 void ty_synonym_Program_polymorphicFunCase(void) {
