@@ -329,12 +329,6 @@ type HExpr =
 /// HIR program. (project name, module name, decls) list.
 type HProgram = (string * string * HExpr list) list
 
-[<RequireQualifiedAccess>]
-[<NoEquality; NoComparison>]
-type MonoMode =
-  | Monify
-  | RemoveGenerics
-
 // -----------------------------------------------
 // Types (HIR/MIR)
 // -----------------------------------------------
