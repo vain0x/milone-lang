@@ -419,39 +419,6 @@ let private collectSymbolsInExpr (modules: TProgram) =
 
   symbols
 
-let private symbolToName (tyCtx: Typing.TyCtx) symbol =
-  match symbol with
-  | DiscardSymbol -> Some "_"
-
-  | PrimSymbol prim -> (sprintf "%A" prim).ToLowerInvariant() |> Some
-
-  | ValueSymbol valueSymbol ->
-    match valueSymbol with
-    | VarSymbol varSerial ->
-      tyCtx.Vars
-      |> TMap.tryFind varSerial
-      |> Option.map (fun (def: VarDef) -> def.Name)
-    | FunSymbol funSerial ->
-      tyCtx.Funs
-      |> TMap.tryFind funSerial
-      |> Option.map (fun (def: FunDef) -> def.Name)
-    | VariantSymbol variantSerial ->
-      tyCtx.Variants
-      |> TMap.tryFind variantSerial
-      |> Option.map (fun (def: VariantDef) -> def.Name)
-
-  | TySymbol tySymbol ->
-    match tySymbol with
-    | MetaTySymbol tySerial -> sprintf "?%d" tySerial |> Some
-
-    | UnivTySymbol tySerial
-    | SynonymTySymbol tySerial
-    | UnionTySymbol tySerial
-    | RecordTySymbol tySerial ->
-      tyCtx.Tys
-      |> TMap.tryFind tySerial
-      |> Option.map tyDefToName
-
 let private doCollectSymbolOccurrences
   hint
   projectDir
