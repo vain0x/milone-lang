@@ -841,7 +841,7 @@ let private abExpr ctx expr =
   | HNavExpr _ -> unreachable () // HNavExpr is resolved in NameRes, Typing, or RecordRes.
   | HRecordExpr _ -> unreachable () // HRecordExpr is resolved in RecordRes.
 
-let autoBox (expr: HExpr, tyCtx: TyCtx) =
+let autoBox (modules: HProgram, tyCtx: TyCtx) : HProgram * TyCtx =
   // Detect recursion.
   let trdCtx = detectTypeRecursion tyCtx
 
@@ -864,8 +864,8 @@ let autoBox (expr: HExpr, tyCtx: TyCtx) =
         BoxedRecordTys = tsmCtx.BoxedRecordTys
         RecursiveVariants = recursiveVariants }
 
-  let vars =
-    ctx.Vars
+  let abVars vars =
+    vars
     |> TMap.map
          (fun _ (varDef: VarDef) ->
            let ty = varDef.Ty |> abTy ctx
@@ -910,15 +910,21 @@ let autoBox (expr: HExpr, tyCtx: TyCtx) =
 
   let ctx =
     { ctx with
-        Vars = vars
+        Vars = abVars ctx.Vars
         Funs = funs
         Variants = variants
         Tys = tys }
 
-  let expr = expr |> abExpr ctx
+  let modules =
+    modules
+    |> List.map
+         (fun (m: HModule) ->
+           let vars = abVars m.Vars
+           let stmts = m.Stmts |> List.map (abExpr ctx)
+           { m with Vars = vars; Stmts = stmts })
 
   let tyCtx = ctx |> toTyCtx tyCtx
-  expr, tyCtx
+  modules, tyCtx
 
 // ===============================================
 // FIXME: split file
