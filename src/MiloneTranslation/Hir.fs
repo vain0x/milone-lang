@@ -25,6 +25,10 @@ open MiloneShared.Util
 module TMap = MiloneStd.StdMap
 module S = MiloneStd.StdString
 
+// from syntax
+type private ProjectName = string
+type private ModuleName = string
+
 // -----------------------------------------------
 // HIR types
 // -----------------------------------------------
@@ -326,8 +330,20 @@ type HExpr =
   | HLetValExpr of pat: HPat * init: HExpr * next: HExpr * Ty * Loc
   | HLetFunExpr of FunSerial * args: HPat list * body: HExpr * next: HExpr * Ty * Loc
 
+type VarMap = AssocMap<VarSerial, VarDef>
+
+[<RequireQualifiedAccess; NoEquality; NoComparison>]
+type HModule =
+  { ProjectName: ProjectName
+    ModuleName: ModuleName
+
+    /// Non-static variables.
+    Vars: VarMap
+
+    Stmts: HExpr list }
+
 /// HIR program. (project name, module name, decls) list.
-type HProgram = (string * string * HExpr list) list
+type HProgram = HModule list
 
 // -----------------------------------------------
 // Types (HIR/MIR)
@@ -629,6 +645,15 @@ let exprToTy expr =
 let exprToLoc expr =
   let _, loc = exprExtract expr
   loc
+
+// -----------------------------------------------
+// HProgram
+// -----------------------------------------------
+
+module HProgram =
+  let mapExpr (f: HExpr -> HExpr) (program: HProgram) : HProgram =
+    program
+    |> List.map (fun (m: HModule) -> { m with Stmts = m.Stmts |> List.map f })
 
 // ===============================================
 // patchwork

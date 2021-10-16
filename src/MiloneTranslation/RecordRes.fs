@@ -219,14 +219,14 @@ let private teExpr (ctx: RrCtx) expr =
     let next = next |> teExpr ctx
     HLetFunExpr(callee, args, body, next, ty, loc)
 
-let recordRes (expr: HExpr, tyCtx: TyCtx) =
+let recordRes (modules: HProgram, tyCtx: TyCtx) : HProgram * TyCtx =
   let ctx = ofTyCtx tyCtx
 
   let ctx =
     { ctx with
         RecordMap = buildRecordMap ctx }
 
-  let expr = expr |> teExpr ctx
+  let modules = modules |> HProgram.mapExpr (teExpr ctx)
 
   // tyCtx doesn't change.
-  expr, tyCtx
+  modules, tyCtx

@@ -84,6 +84,10 @@ let private lowerTyDef (def: Tir.TyDef) : Hir.TyDef =
   | Tir.UniversalTyDef _
   | Tir.SynonymTyDef _ -> unreachable () // Resolved in Typing.
 
+let private lowerVarMap vars =
+  vars
+  |> TMap.stableMap (fun serial def -> lowerVarSerial serial, lowerVarDef def) Hir.varSerialCompare
+
 let private lowerPrim (prim: Tir.TPrim) : Hir.HPrim =
   match prim with
   | Tir.TPrim.Not -> Hir.HPrim.Not
@@ -217,14 +221,20 @@ let private lowerStmt (stmt: Tir.TStmt) : Hir.HExpr =
 
 let private lowerModules (modules: Tir.TProgram) : Hir.HProgram =
   modules
-  |> List.map (fun (m: Tir.TModule) -> m.ProjectName, m.ModuleName, List.map lowerStmt m.Stmts)
+  |> List.map
+       (fun (m: Tir.TModule) ->
+         let m: Hir.HModule =
+           { ProjectName = m.ProjectName
+             ModuleName = m.ModuleName
+             Vars = lowerVarMap m.Vars
+             Stmts = List.map lowerStmt m.Stmts }
+
+         m)
 
 let private lowerTyCtx (tyCtx: Typing.TyCtx) : Hir.TyCtx =
   { Serial = tyCtx.Serial
 
-    Vars =
-      tyCtx.Vars
-      |> TMap.stableMap (fun serial def -> lowerVarSerial serial, lowerVarDef def) Hir.varSerialCompare
+    Vars = lowerVarMap tyCtx.Vars
 
     Funs =
       tyCtx.Funs

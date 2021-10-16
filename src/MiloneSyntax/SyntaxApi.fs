@@ -342,22 +342,6 @@ let performSyntaxAnalysis (ctx: SyntaxCtx) : SyntaxAnalysisResult =
       writeLog "ArityCheck"
       let tyCtx = ArityCheck.arityCheck (modules, tyCtx)
 
-      writeLog "Merge vars"
-
-      let modules, vars =
-        modules
-        |> List.mapFold
-             (fun vars (m: Tir.TModule) ->
-               let vars =
-                 // #map_merge
-                 m.Vars
-                 |> TMap.fold (fun vars k v -> TMap.add k v vars) vars
-
-               { m with Vars = Tir.emptyVars }, vars)
-             tyCtx.Vars
-
-      let tyCtx = { tyCtx with Vars = vars }
-
       match collectTypingErrors tyCtx with
       | Some errors -> SyntaxAnalysisError(errors, Some tyCtx)
       | None -> SyntaxAnalysisOk(modules, tyCtx)

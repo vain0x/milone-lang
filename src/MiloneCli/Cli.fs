@@ -256,18 +256,36 @@ let transformHir (host: CliHost) v (modules: Tir.TProgram, tyCtx: Typing.TyCtx) 
   writeLog host v "Lower"
   let modules, tyCtx = Lower.lower (modules, tyCtx)
 
+  writeLog host v "RecordRes"
+  let modules, tyCtx = recordRes (modules, tyCtx)
+
+  writeLog host v "Derive"
+  let modules, tyCtx = Derive.deriveOps (modules, tyCtx)
+
+  writeLog host v "Flatten"
+
+  let modules, vars =
+    let emptyVars: Hir.VarMap = TMap.empty Hir.varSerialCompare
+
+    modules
+    |> List.mapFold
+         (fun vars (m: Hir.HModule) ->
+           let vars =
+             // #map_merge
+             m.Vars
+             |> TMap.fold (fun vars k v -> TMap.add k v vars) vars
+
+           { m with Vars = emptyVars }, vars)
+         tyCtx.Vars
+
+  let tyCtx = { tyCtx with Vars = vars }
+
   let expr =
     let decls =
       (modules
-       |> List.collect (fun (_, _, decls) -> decls))
+       |> List.collect (fun (m: Hir.HModule) -> m.Stmts))
 
     Hir.hxSemi decls noLoc
-
-  writeLog host v "RecordRes"
-  let expr, tyCtx = recordRes (expr, tyCtx)
-
-  writeLog host v "Derive"
-  let expr, tyCtx = Derive.deriveOps (expr, tyCtx)
 
   writeLog host v "ClosureConversion"
   let expr, tyCtx = closureConversion (expr, tyCtx)
