@@ -165,7 +165,7 @@ type private NameResState =
 let private sInit (nameCtx: NameCtx) : NameResState =
   { NameCtx = nameCtx
     ScopeCtx = ofNameCtx nameCtx
-    Vars = TMap.empty varSerialCompare
+    Vars = emptyVars
     Funs = TMap.empty funSerialCompare
     Variants = TMap.empty variantSerialCompare
     VarLevels = TMap.empty compare
@@ -196,8 +196,28 @@ let private scopeMerge (first: Scope) (second: Scope) : Scope =
   let _, values2, tys2, nss2 = second
   [], mergeChain values1 values2, mergeChain tys1 tys2, mergeChain nss1 nss2
 
-let private sMerge (state: NameResState) (scopeCtx: ScopeCtx) : NameResState =
+let private sMerge (state: NameResState) (scopeCtx: ScopeCtx) : NameResState * _ =
   let s = state.ScopeCtx
+
+  let globalVars, localVars =
+    scopeCtx.NewVars
+    |> List.fold
+         (fun (globalVars, localVars) (varSerial, varDef: VarDef) ->
+           // Var can replace old definition but metadata shouldn't change.
+           match TMap.tryFind varSerial scopeCtx.NewVarMeta with
+           | Some (isStatic, linkage) ->
+             let varDef =
+               { varDef with
+                   IsStatic = isStatic
+                   Linkage = linkage }
+
+             let globalVars = globalVars |> TMap.add varSerial varDef
+             globalVars, localVars
+
+           | None ->
+             let localVars = localVars |> TMap.add varSerial varDef
+             globalVars, localVars)
+         (state.Vars, emptyVars)
 
   // Other fields are intermediate state.
   { state with
@@ -213,26 +233,12 @@ let private sMerge (state: NameResState) (scopeCtx: ScopeCtx) : NameResState =
             TyNs = mapMerge s.TyNs scopeCtx.TyNs
             NsNs = mapMerge s.NsNs scopeCtx.NsNs }
 
-      Vars =
-        scopeCtx.NewVars
-        |> List.fold
-             (fun vars (varSerial, varDef) ->
-               // Var can replace old definition but metadata shouldn't change.
-               let varDef: VarDef =
-                 match TMap.tryFind varSerial scopeCtx.NewVarMeta with
-                 | Some (isStatic, linkage) ->
-                   { varDef with
-                       IsStatic = isStatic
-                       Linkage = linkage }
-                 | None -> varDef
-
-               vars |> TMap.add varSerial varDef)
-             state.Vars
-
+      Vars = globalVars
       Funs = mapAddEntries scopeCtx.NewFuns state.Funs
       Variants = mapMerge state.Variants scopeCtx.NewVariants
       VarLevels = mapAddEntries scopeCtx.NewVarLevels state.VarLevels
-      Logs = List.append scopeCtx.NewLogs state.Logs }
+      Logs = List.append scopeCtx.NewLogs state.Logs },
+  localVars
 
 let private sToResult (state: NameResState) : NameResResult =
   let (NameCtx (_, serial)) = state.NameCtx
@@ -1714,25 +1720,32 @@ let private nameResModuleBody serialOpt (stmts, ctx) : TStmt list * ScopeCtx =
 // Interface
 // -----------------------------------------------
 
-let nameRes (modules: TProgram list, nameCtx: NameCtx) : TProgram * NameResResult =
-  let modules, state =
-    modules
+let nameRes (layers: TProgram list, nameCtx: NameCtx) : TProgram * NameResResult =
+  let layers, state =
+    layers
     |> List.mapFold
-         (fun (state: NameResState) modules ->
+         (fun (state: NameResState) layer ->
            // Single scopeCtx is used to do NameRes all modules in current layer.
            let scopeCtx = state.ScopeCtx
 
            let modulesCtxs =
-             modules
+             layer
              |> __parallelMap
-                  (fun (p, m, stmts) ->
+                  (fun (m: TModule) ->
                     let stmts, scopeCtx =
-                      nameResModuleBody None (stmts, scopeCtx)
+                      nameResModuleBody None (m.Stmts, scopeCtx)
 
-                    (p, m, stmts), scopeCtx)
+                    let m = { m with Stmts = stmts }
+                    m, scopeCtx)
 
            modulesCtxs
-           |> List.mapFold (fun state (m, scopeCtx) -> m, sMerge state scopeCtx) state)
+           |> List.mapFold
+                (fun state (m: TModule, scopeCtx) ->
+                  let state, localVars = sMerge state scopeCtx
+                  { m with Vars = localVars }, state)
+                state)
          (sInit nameCtx)
 
-  List.collect id modules, sToResult state
+  let result = sToResult state
+
+  List.collect id layers, result

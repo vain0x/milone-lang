@@ -330,7 +330,13 @@ let bundle (fetchModule: FetchModuleFun) (entryProjectName: ProjectName) : Bundl
 
                   assert (lastSerial - serial = symbolCount)
 
-                  (projectName, moduleName, exprs), nameCtx))
+                  let m: TModule =
+                    { ProjectName = projectName
+                      ModuleName = moduleName
+                      Vars = emptyVars
+                      Stmts = exprs }
+
+                  m, nameCtx))
 
   let layers, identMap =
     layers

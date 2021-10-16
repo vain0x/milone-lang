@@ -413,8 +413,8 @@ let private collectSymbolsInExpr (modules: TProgram) =
       OnVariant = fun (variantSerial, _, loc) -> onVisit (ValueSymbol(VariantSymbol variantSerial)) Use loc
       OnPrim = fun (prim, _, loc) -> onVisit (PrimSymbol prim) Use loc }
 
-  for _, _, decls in modules do
-    for stmt in decls do
+  for m in modules do
+    for stmt in m.Stmts do
       dfsStmt visitor stmt
 
   symbols
@@ -559,8 +559,8 @@ module LangService =
 
         match modules
               |> List.tryPick
-                   (fun (_, _, decls) ->
-                     decls
+                   (fun m ->
+                     m.Stmts
                      |> List.tryPick (fun stmt -> findTyInStmt ls stmt tyCtx tokenLoc)) with
         | None -> None
         | Some ty -> Some(tyDisplayFn tyCtx ty)

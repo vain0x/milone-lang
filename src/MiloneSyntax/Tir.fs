@@ -10,7 +10,12 @@ open MiloneShared.SharedTypes
 open MiloneShared.TypeFloat
 open MiloneShared.TypeIntegers
 
+module TMap = MiloneStd.StdMap
 module S = MiloneStd.StdString
+
+// from syntax
+type private ProjectName = string
+type private ModuleName = string
 
 /// Level.
 ///
@@ -411,10 +416,18 @@ type TStmt =
   | TModuleStmt of ModuleTySerial * body: TStmt list * Loc
   | TModuleSynonymStmt of ModuleSynonymSerial * path: Ident list * Loc
 
-/// (project name, module name, decls)
-type TModule = string * string * TStmt list
+type private VarMap = AssocMap<VarSerial, VarDef>
 
-/// TIR program.
+[<RequireQualifiedAccess; NoEquality; NoComparison>]
+type TModule =
+  { ProjectName: ProjectName
+    ModuleName: ModuleName
+
+    /// Non-static variables.
+    Vars: VarMap
+
+    Stmts: TStmt list }
+
 type TProgram = TModule list
 
 // -----------------------------------------------
@@ -957,28 +970,21 @@ let stmtMap (onTy: Ty -> Ty) (stmt: TStmt) : TStmt =
   | TModuleSynonymStmt (name, path, loc) -> TModuleSynonymStmt(name, path, loc)
 
 // -----------------------------------------------
-// HProgram
+// TModule
 // -----------------------------------------------
 
-/// Does something for each module in program, updating a state.
-let hirProgramEachModule (mutator: TStmt list * 'S -> TStmt list * 'S) (modules: TProgram, state: 'S) : TProgram * 'S =
-  (modules, state)
-  |> stMap
-       (fun ((p, m, decls), state) ->
-         let decls, state = (decls, state) |> mutator
-         (p, m, decls), state)
+let emptyVars: AssocMap<VarSerial, VarDef> = TMap.empty Tir.varSerialCompare
 
-/// Does something for each toplevel statement in program, updating a state.
-let hirProgramEachStmt (mutator: TStmt * 'S -> TStmt * 'S) (modules: TProgram, state: 'S) : TProgram * 'S =
-  (modules, state)
-  |> hirProgramEachModule (stMap mutator)
+// -----------------------------------------------
+// HProgram
+// -----------------------------------------------
 
 /// Iterates over toplevel statements in program to update a state.
 let hirProgramFoldStmt (folder: TStmt * 'S -> 'S) (state: 'S) (modules: TProgram) : 'S =
   modules
   |> List.fold
-       (fun state (_, _, stmts) ->
-         stmts
+       (fun state (m: TModule) ->
+         m.Stmts
          |> List.fold (fun state stmt -> folder (stmt, state)) state)
        state
 

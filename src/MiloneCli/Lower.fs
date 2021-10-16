@@ -217,7 +217,7 @@ let private lowerStmt (stmt: Tir.TStmt) : Hir.HExpr =
 
 let private lowerModules (modules: Tir.TProgram) : Hir.HProgram =
   modules
-  |> List.map (fun (p, m, stmts) -> p, m, List.map lowerStmt stmts)
+  |> List.map (fun (m: Tir.TModule) -> m.ProjectName, m.ModuleName, List.map lowerStmt m.Stmts)
 
 let private lowerTyCtx (tyCtx: Typing.TyCtx) : Hir.TyCtx =
   { Serial = tyCtx.Serial

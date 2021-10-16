@@ -1533,6 +1533,12 @@ let infer (modules: TProgram, nameRes: NameResResult) : TProgram * TyCtx =
       TraitBounds = []
       Logs = [] }
 
+  let withLevel level (ctx: TyCtx) =
+    if ctx.Level <> level then
+      { ctx with Level = level }
+    else
+      ctx
+
   // Assign type vars to var/fun definitions.
   let ctx =
     let vars, ctx =
@@ -1540,10 +1546,11 @@ let infer (modules: TProgram, nameRes: NameResResult) : TProgram * TyCtx =
       |> TMap.mapFold
            (fun (ctx: TyCtx) varSerial (varDef: VarDef) ->
              let ctx =
-               { ctx with
-                   Level =
-                     nameRes.VarLevels
-                     |> mapFind (varSerialToInt varSerial) }
+               let level =
+                 nameRes.VarLevels
+                 |> mapFind (varSerialToInt varSerial)
+
+               ctx |> withLevel level
 
              let varDef, ctx =
                let ty, ctx = freshMetaTy varDef.Loc ctx
@@ -1552,17 +1559,18 @@ let infer (modules: TProgram, nameRes: NameResResult) : TProgram * TyCtx =
              varDef, ctx)
            ctx
 
-    { ctx with Vars = vars }
+    { ctx with Vars = vars; Level = 0 }
 
   let funs, ctx =
     ctx.Funs
     |> TMap.mapFold
          (fun (ctx: TyCtx) funSerial (funDef: FunDef) ->
            let ctx =
-             { ctx with
-                 Level =
-                   nameRes.VarLevels
-                   |> mapFind (funSerialToInt funSerial) }
+             let level =
+               nameRes.VarLevels
+               |> mapFind (funSerialToInt funSerial)
+
+             ctx |> withLevel level
 
            let ty, ctx = freshMetaTy funDef.Loc ctx
 
@@ -1572,8 +1580,59 @@ let infer (modules: TProgram, nameRes: NameResResult) : TProgram * TyCtx =
   let ctx = { ctx with Funs = funs; Level = 0 }
 
   let modules, ctx =
-    (modules, ctx)
-    |> hirProgramEachStmt (fun (stmt, ctx) -> inferStmt ctx NotRec stmt)
+    let oldStaticVars = ctx.Vars
+
+    let isStaticVar varSerial =
+      oldStaticVars |> TMap.containsKey varSerial
+
+    modules
+    |> List.mapFold
+         (fun (ctx: TyCtx) (m: TModule) ->
+           let vars, ctx =
+             m.Vars
+             |> TMap.fold
+                  (fun (vars, ctx: TyCtx) varSerial (varDef: VarDef) ->
+                    let ctx =
+                      let level =
+                        nameRes.VarLevels
+                        |> mapFind (varSerialToInt varSerial)
+
+                      ctx |> withLevel level
+
+                    let varDef, ctx =
+                      let ty, ctx = freshMetaTy varDef.Loc ctx
+                      { varDef with Ty = ty }, ctx
+
+                    let vars = TMap.add varSerial varDef vars
+                    vars, ctx)
+                  (ctx.Vars, ctx)
+
+           let ctx = { ctx with Vars = vars; Level = 0 }
+
+           let stmts, ctx =
+             m.Stmts
+             |> List.mapFold (fun ctx stmt -> inferStmt ctx NotRec stmt) ctx
+
+           let staticVars, localVars =
+             ctx.Vars
+             |> TMap.fold
+                  (fun (staticVars, localVars) varSerial varDef ->
+                    if isStaticVar varSerial then
+                      let staticVars = staticVars |> TMap.add varSerial varDef
+                      staticVars, localVars
+                    else
+                      let localVars = localVars |> TMap.add varSerial varDef
+                      staticVars, localVars)
+                  (emptyVars, emptyVars)
+
+           let m =
+             { m with
+                 Vars = localVars
+                 Stmts = stmts }
+
+           let ctx = { ctx with Vars = staticVars }
+           m, ctx)
+         ctx
 
   let ctx = ctx |> resolveTraitBounds
 
@@ -1585,17 +1644,28 @@ let infer (modules: TProgram, nameRes: NameResResult) : TProgram * TyCtx =
     |> substOrDegenerateTy ctx
     |> expandSynonyms ctx
 
+  let substOrDegenerateVars vars =
+    vars
+    |> TMap.map
+         (fun _ (varDef: VarDef) ->
+           let ty = substOrDegenerate varDef.Ty
+           { varDef with Ty = ty })
+
   let modules, ctx =
-    (modules, ctx)
-    |> hirProgramEachStmt (fun (stmt, ctx) -> stmtMap substOrDegenerate stmt, ctx)
+    modules
+    |> List.mapFold
+         (fun ctx (m: TModule) ->
+           let vars = substOrDegenerateVars m.Vars
+
+           let stmts =
+             m.Stmts
+             |> List.map (fun stmt -> stmtMap substOrDegenerate stmt)
+
+           { m with Vars = vars; Stmts = stmts }, ctx)
+         ctx
 
   let ctx =
-    let vars =
-      ctx.Vars
-      |> TMap.map
-           (fun _ (varDef: VarDef) ->
-             let ty = substOrDegenerate varDef.Ty
-             { varDef with Ty = ty })
+    let vars = substOrDegenerateVars ctx.Vars
 
     let funs =
       ctx.Funs
