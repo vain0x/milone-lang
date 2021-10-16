@@ -112,7 +112,7 @@ type private CirCtx =
     VarDecls: AssocSet<VarSerial>
     FunDecls: AssocSet<FunSerial> }
 
-let private ofMirCtx (mirCtx: MirCtx) : CirCtx =
+let private ofMirResult (mirCtx: MirResult) : CirCtx =
   let valueUniqueNames =
     let m = TMap.empty valueSymbolCompare
 
@@ -1303,8 +1303,8 @@ let private sortDecls (decls: CDecl list) : CDecl list =
 // Interface
 // -----------------------------------------------
 
-let genCir (decls, mirCtx: MirCtx) : (DocId * CDecl list) list =
-  let ctx = ofMirCtx mirCtx
+let genCir (decls, mirResult: MirResult) : (DocId * CDecl list) list =
+  let ctx = ofMirResult mirResult
 
   // Split into modules based on docId.
   let modules =
