@@ -163,21 +163,18 @@ let private primToArity ty prim =
 type private EtaCtx =
   { Serial: Serial
     Vars: AssocMap<VarSerial, VarDef>
-    Funs: AssocMap<FunSerial, FunDef>
-    Tys: AssocMap<TySerial, TyDef> }
+    Funs: AssocMap<FunSerial, FunDef> }
 
 let private ofTyCtx (tyCtx: TyCtx) : EtaCtx =
   { Serial = tyCtx.Serial
     Vars = tyCtx.Vars
-    Funs = tyCtx.Funs
-    Tys = tyCtx.Tys }
+    Funs = tyCtx.Funs }
 
 let private toTyCtx (tyCtx: TyCtx) (ctx: EtaCtx) =
   { tyCtx with
       Serial = ctx.Serial
       Vars = ctx.Vars
-      Funs = ctx.Funs
-      Tys = ctx.Tys }
+      Funs = ctx.Funs }
 
 let private freshFun name arity (ty: Ty) loc (ctx: EtaCtx) =
   let funSerial = FunSerial(ctx.Serial + 1)
