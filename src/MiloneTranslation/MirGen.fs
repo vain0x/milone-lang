@@ -29,17 +29,38 @@ let private patIsUnit pat = pat |> patToTy |> tyIsUnit
 let private exprIsUnit expr = expr |> exprToTy |> tyIsUnit
 
 // -----------------------------------------------
-// Context
+// Result
 // -----------------------------------------------
 
 [<RequireQualifiedAccess; NoEquality; NoComparison>]
-type MirCtx =
-  { Serial: Serial
-    Vars: AssocMap<VarSerial, VarDef>
+type MirResult =
+  { Vars: AssocMap<VarSerial, VarDef>
     Funs: AssocMap<FunSerial, FunDef>
     Variants: AssocMap<VariantSerial, VariantDef>
-    MainFunOpt: FunSerial option
     Tys: AssocMap<TySerial, TyDef>
+
+    MainFunOpt: FunSerial option
+    FunLocals: AssocMap<FunSerial, (VarSerial * Ty) list>
+    ReplacingVars: AssocSet<VarSerial> }
+
+// -----------------------------------------------
+// Context
+// -----------------------------------------------
+
+/// Read-only context of the pass.
+[<RequireQualifiedAccess; NoEquality; NoComparison>]
+type private MirRx =
+  { Funs: AssocMap<FunSerial, FunDef>
+    Variants: AssocMap<VariantSerial, VariantDef>
+    Tys: AssocMap<TySerial, TyDef> }
+
+/// Mutable context of the pass.
+[<RequireQualifiedAccess; NoEquality; NoComparison>]
+type private MirCtx =
+  { Rx: MirRx
+
+    Serial: Serial
+    Vars: AssocMap<VarSerial, VarDef>
     LabelSerial: Serial
 
     CurrentFunSerial: FunSerial option
@@ -54,16 +75,17 @@ type MirCtx =
     ReplacingVars: AssocSet<VarSerial>
 
     Stmts: MStmt list
-    Blocks: MBlock list
     Decls: MDecl list }
 
 let private ofTyCtx (tyCtx: TyCtx) : MirCtx =
-  { Serial = tyCtx.Serial
+  let rx: MirRx =
+    { Funs = tyCtx.Funs
+      Variants = tyCtx.Variants
+      Tys = tyCtx.Tys }
+
+  { Rx = rx
+    Serial = tyCtx.Serial
     Vars = tyCtx.Vars
-    Funs = tyCtx.Funs
-    Variants = tyCtx.Variants
-    MainFunOpt = tyCtx.MainFunOpt
-    Tys = tyCtx.Tys
     LabelSerial = 0
     CurrentFunSerial = None
     CurrentFun = None
@@ -71,11 +93,11 @@ let private ofTyCtx (tyCtx: TyCtx) : MirCtx =
     FunLocals = TMap.empty funSerialCompare
     ReplacingVars = TSet.empty varSerialCompare
     Stmts = []
-    Blocks = []
     Decls = [] }
 
 let private isNewtypeVariant (ctx: MirCtx) variantSerial =
-  (ctx.Variants |> mapFind variantSerial).IsNewtype
+  (ctx.Rx.Variants |> mapFind variantSerial)
+    .IsNewtype
 
 let private startBlock (ctx: MirCtx) = { ctx with Stmts = [] }
 
@@ -454,7 +476,7 @@ let private mirifyPat ctx (endLabel: string) (pat: HPat) (expr: MExpr) : MirCtx 
 // -----------------------------------------------
 
 let private mirifyExprVariant (ctx: MirCtx) itself serial ty loc =
-  let variantDef = ctx.Variants |> mapFind serial
+  let variantDef = ctx.Rx.Variants |> mapFind serial
   MVariantExpr(variantDef.UnionTySerial, serial, ty, loc), ctx
 
 let private mirifyExprPrim (ctx: MirCtx) prim ty loc =
@@ -1052,7 +1074,7 @@ let private mirifyExprOpCons ctx l r listTy loc =
 let private mirifyExprRecord (ctx: MirCtx) args ty loc =
   let name =
     match ty with
-    | Ty (RecordTk tySerial, _) -> ctx.Tys |> mapFind tySerial |> tyDefToName
+    | Ty (RecordTk tySerial, _) -> ctx.Rx.Tys |> mapFind tySerial |> tyDefToName
     | _ -> unreachable ()
 
   let _, tempSerial, ctx = freshVar ctx name ty loc
@@ -1634,7 +1656,7 @@ let private mirifyArgs ctx args =
 
   args, ctx
 
-let mirify (decls: HExpr list, tyCtx: TyCtx) : MDecl list * MirCtx =
+let mirify (decls: HExpr list, tyCtx: TyCtx) : MDecl list * MirResult =
   let ctx = ofTyCtx tyCtx
 
   // OK: It's safe to discard the expression thanks to main hoisting.
@@ -1642,4 +1664,16 @@ let mirify (decls: HExpr list, tyCtx: TyCtx) : MDecl list * MirCtx =
     (decls, ctx)
     |> stMap (fun (expr, ctx) -> mirifyExpr ctx expr)
 
-  takeDecls ctx
+  let decls, ctx = takeDecls ctx
+
+  let result: MirResult =
+    { Vars = ctx.Vars
+      Funs = tyCtx.Funs
+      Variants = tyCtx.Variants
+      Tys = tyCtx.Tys
+
+      MainFunOpt = tyCtx.MainFunOpt
+      FunLocals = ctx.FunLocals
+      ReplacingVars = ctx.ReplacingVars }
+
+  decls, result

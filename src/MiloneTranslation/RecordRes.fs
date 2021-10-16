@@ -21,22 +21,14 @@ let private hxIsVarOrUnboxingVar expr =
 
 [<RequireQualifiedAccess; NoEquality; NoComparison>]
 type private RrCtx =
-  { Vars: AssocMap<VarSerial, VarDef>
-    Funs: AssocMap<FunSerial, FunDef>
-    Variants: AssocMap<VariantSerial, VariantDef>
-    Tys: AssocMap<TySerial, TyDef>
+  { Tys: AssocMap<TySerial, TyDef>
 
     /// recordTySerial -> (fieldTys, (field -> (fieldIndex, fieldTy)))
     RecordMap: AssocMap<TySerial, (Ty list * AssocMap<Ident, int * Ty>)> }
 
 let private ofTyCtx (tyCtx: TyCtx) : RrCtx =
-  { Vars = tyCtx.Vars
-    Funs = tyCtx.Funs
-    Variants = tyCtx.Variants
-    Tys = tyCtx.Tys
+  { Tys = tyCtx.Tys
     RecordMap = TMap.empty compare }
-
-let private toTyCtx (tyCtx: TyCtx) (ctx: RrCtx) : TyCtx = tyCtx
 
 /// ## Resolution of records and fields
 ///
@@ -236,5 +228,5 @@ let recordRes (expr: HExpr, tyCtx: TyCtx) =
 
   let expr = expr |> teExpr ctx
 
-  let tyCtx = ctx |> toTyCtx tyCtx
+  // tyCtx doesn't change.
   expr, tyCtx

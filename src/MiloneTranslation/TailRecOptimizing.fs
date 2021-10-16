@@ -29,30 +29,22 @@ type private IsTail =
 // Helpers
 // -----------------------------------------------
 
-[<RequireQualifiedAccess; NoEquality; NoComparison>]
-type private TailRecCtx =
-  { Vars: AssocMap<VarSerial, VarDef>
-    Tys: AssocMap<TySerial, TyDef>
-    CurrentFun: FunSerial option }
+/// Current function.
+type private TailRecCtx = FunSerial option
 
-let private ofTyCtx (tyCtx: TyCtx) : TailRecCtx =
-  { Vars = tyCtx.Vars
-    Tys = tyCtx.Tys
-    CurrentFun = None }
-
-let private isCurrentFun funSerial (ctx: TailRecCtx) =
-  match ctx.CurrentFun with
+let private isCurrentFun funSerial (currentFunOpt: TailRecCtx) =
+  match currentFunOpt with
   | Some current -> funSerialCompare current funSerial = 0
   | _ -> false
 
 let private withCurrentFun funSerial (f: TailRecCtx -> HExpr * TailRecCtx) (ctx: TailRecCtx) =
-  let parentFun = ctx.CurrentFun
-  let ctx = { ctx with CurrentFun = Some funSerial }
+  let parentCtx = ctx
 
-  let result, ctx = f ctx
+  let result, _ =
+    let newCtx: TailRecCtx = Some funSerial
+    f newCtx
 
-  let ctx = { ctx with CurrentFun = parentFun }
-  result, ctx
+  result, parentCtx
 
 let private troInfExpr isTail kind items ty loc ctx =
   let items, ctx = (items, ctx) |> stMap (troExpr NotTail)
@@ -110,8 +102,8 @@ let private troExpr isTail (expr, ctx) =
   | HRecordExpr _ -> unreachable () // HRecordExpr is resolved in RecordRes.
 
 let tailRecOptimize (decls: HExpr list, tyCtx: TyCtx) : HExpr list * TyCtx =
-  let ctx = ofTyCtx tyCtx
-
-  let decls, _ = (decls, ctx) |> stMap (troExpr IsTail)
+  let decls, _ =
+    let ctx: TailRecCtx = None
+    (decls, ctx) |> stMap (troExpr IsTail)
 
   decls, tyCtx
