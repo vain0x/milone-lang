@@ -162,18 +162,19 @@ let private primToArity ty prim =
 [<RequireQualifiedAccess; NoEquality; NoComparison>]
 type private EtaCtx =
   { Serial: Serial
-    Vars: AssocMap<VarSerial, VarDef>
+    StaticVars: VarMap
+    Vars: VarMap
     Funs: AssocMap<FunSerial, FunDef> }
 
 let private ofTyCtx (tyCtx: TyCtx) : EtaCtx =
   { Serial = tyCtx.Serial
-    Vars = tyCtx.Vars
+    StaticVars = tyCtx.Vars
+    Vars = emptyVars
     Funs = tyCtx.Funs }
 
 let private toTyCtx (tyCtx: TyCtx) (ctx: EtaCtx) =
   { tyCtx with
       Serial = ctx.Serial
-      Vars = ctx.Vars
       Funs = ctx.Funs }
 
 let private freshFun name arity (ty: Ty) loc (ctx: EtaCtx) =
@@ -513,8 +514,26 @@ let private exExpr (expr, ctx) =
   | HNavExpr _ -> unreachable () // HNavExpr is resolved in NameRes, Typing, or RecordRes.
   | HRecordExpr _ -> unreachable () // HRecordExpr is resolved in RecordRes.
 
-let etaExpansion (expr, tyCtx: TyCtx) =
+let private exModule (m: HModule, ctx: EtaCtx) =
+  let ctx = { ctx with Vars = m.Vars }
+
+  let stmts, ctx =
+    m.Stmts
+    |> List.mapFold (fun ctx stmt -> exExpr (stmt, ctx)) ctx
+
+  let m =
+    { m with
+        Vars = ctx.Vars
+        Stmts = stmts }
+
+  m, ctx
+
+let etaExpansion (modules: HProgram, tyCtx: TyCtx) : HProgram * TyCtx =
   let etaCtx = ofTyCtx tyCtx
-  let expr, etaCtx = (expr, etaCtx) |> exExpr
+
+  let modules, etaCtx =
+    modules
+    |> List.mapFold (fun ctx m -> exModule (m, ctx)) etaCtx
+
   let tyCtx = etaCtx |> toTyCtx tyCtx
-  expr, tyCtx
+  modules, tyCtx
