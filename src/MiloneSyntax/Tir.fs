@@ -973,7 +973,7 @@ let stmtMap (onTy: Ty -> Ty) (stmt: TStmt) : TStmt =
 // TModule
 // -----------------------------------------------
 
-let emptyVars: AssocMap<VarSerial, VarDef> = TMap.empty Tir.varSerialCompare
+let emptyVars: AssocMap<VarSerial, VarDef> = TMap.empty varSerialCompare
 
 // -----------------------------------------------
 // HProgram

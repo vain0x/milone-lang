@@ -650,6 +650,8 @@ let exprToLoc expr =
 // HProgram
 // -----------------------------------------------
 
+let emptyVars: AssocMap<VarSerial, VarDef> = TMap.empty varSerialCompare
+
 module HProgram =
   let mapExpr (f: HExpr -> HExpr) (program: HProgram) : HProgram =
     program
