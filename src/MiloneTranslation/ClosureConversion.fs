@@ -184,30 +184,21 @@ let private capsUpdateFunDef funTy arity (caps: Caps) =
 /// Context of closure conversion.
 [<RequireQualifiedAccess; NoEquality; NoComparison>]
 type private CcCtx =
-  { Serial: Serial
-    Vars: AssocMap<VarSerial, VarDef>
+  { Vars: AssocMap<VarSerial, VarDef>
     Funs: AssocMap<FunSerial, FunDef>
-    Tys: AssocMap<TySerial, TyDef>
     Current: KnownCtx
     FunKnowns: AssocMap<FunSerial, KnownCtx>
     FunUpvars: AssocMap<FunSerial, AssocSet<VarSerial>> }
 
 let private ofTyCtx (tyCtx: TyCtx) : CcCtx =
-  { Serial = tyCtx.Serial
-    Vars = tyCtx.Vars
+  { Vars = tyCtx.Vars
     Funs = tyCtx.Funs
-    Tys = tyCtx.Tys
 
     Current = knownCtxEmpty ()
     FunKnowns = TMap.empty funSerialCompare
     FunUpvars = TMap.empty funSerialCompare }
 
-let private toTyCtx (tyCtx: TyCtx) (ctx: CcCtx) =
-  { tyCtx with
-      Serial = ctx.Serial
-      Vars = ctx.Vars
-      Funs = ctx.Funs
-      Tys = ctx.Tys }
+let private toTyCtx (tyCtx: TyCtx) (ctx: CcCtx) = { tyCtx with Funs = ctx.Funs }
 
 let private addLocal varSerial (ctx: CcCtx) =
   { ctx with
