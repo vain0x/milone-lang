@@ -274,6 +274,9 @@ let transformHir (host: CliHost) v (modules: Tir.TProgram, tyCtx: Typing.TyCtx) 
   writeLog host v "AutoBoxing"
   let modules, tyCtx = autoBox (modules, tyCtx)
 
+  writeLog host v "Hoist"
+  let modules, tyCtx = hoist (modules, tyCtx)
+
   writeLog host v "Flatten"
 
   let modules, vars =
@@ -290,15 +293,9 @@ let transformHir (host: CliHost) v (modules: Tir.TProgram, tyCtx: Typing.TyCtx) 
 
   let tyCtx = { tyCtx with Vars = vars }
 
-  let expr =
-    let decls =
-      (modules
-       |> List.collect (fun (m: Hir.HModule) -> m.Stmts))
-
-    Hir.hxSemi decls noLoc
-
-  writeLog host v "Hoist"
-  let decls, tyCtx = hoist (expr, tyCtx)
+  let decls =
+    (modules
+     |> List.collect (fun (m: Hir.HModule) -> m.Stmts))
 
   writeLog host v "TailRecOptimizing"
   let decls, tyCtx = tailRecOptimize (decls, tyCtx)

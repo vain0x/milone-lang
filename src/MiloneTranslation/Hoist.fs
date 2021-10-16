@@ -39,6 +39,12 @@
 /// so that chain of let expressions to be flat.
 module rec MiloneTranslation.Hoist
 
+// FIXME: Wording should be fixed.
+//        "Declarations" above denotes to syntaxes that
+//        introduce some symbols (and don't compute things)
+//        such as let-val, let-fun and type-stmt.
+//        Now I'm using "statements" for such syntax now.
+
 open MiloneShared.SharedTypes
 open MiloneShared.Util
 open MiloneTranslation.Hir
@@ -195,7 +201,6 @@ let private hoistExprToplevel (expr, ctx) : HoistCtx =
 
   | HLetFunExpr _ when isMainFun expr ctx -> hoistExprLetFunForMainFun (expr, ctx)
 
-
   | HLetFunExpr _ ->
     (expr, ctx)
     |> hoistExprLetFunForNonMainFun
@@ -221,21 +226,30 @@ let private hoistBlock (expr, ctx: HoistCtx) : HExpr * HoistCtx =
 
   hxBlock stmts expr, ctx
 
+let private hoistModule (ctx: HoistCtx) (m: HModule) : HModule * HoistCtx =
+  let ctx =
+    m.Stmts
+    |> List.fold (fun ctx stmt -> hoistExprToplevel (stmt, ctx)) ctx
+
+  let stmts, ctx = takeDecls ctx
+
+  let m = { m with Stmts = stmts }
+  m, ctx
+
 // -----------------------------------------------
 // Interface
 // -----------------------------------------------
 
-let hoist (expr: HExpr, tyCtx: TyCtx) : HExpr list * TyCtx =
+let hoist (modules: HProgram, tyCtx: TyCtx) : HProgram * TyCtx =
   let hoistCtx =
     { hoistCtxEmpty with
         MainFunOpt = tyCtx.MainFunOpt }
 
-  let hoistCtx = (expr, hoistCtx) |> hoistExprToplevel
+  let modules, hoistCtx =
+    modules |> List.mapFold hoistModule hoistCtx
 
   // Toplevel statements should have been moved into the main function.
   if hoistCtx.Stmts |> List.isEmpty |> not then
     unreachable () // Main function not found?
 
-  let decls, _ = takeDecls hoistCtx
-
-  decls, tyCtx
+  modules, tyCtx
