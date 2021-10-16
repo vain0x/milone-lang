@@ -657,6 +657,10 @@ module HProgram =
     program
     |> List.map (fun (m: HModule) -> { m with Stmts = m.Stmts |> List.map f })
 
+  let foldExpr (f: 'S -> HExpr -> 'S) (state: 'S) (program: HProgram) : 'S =
+    program
+    |> List.fold (fun (state: 'S) (m: HModule) -> m.Stmts |> List.fold f state) state
+
 // ===============================================
 // patchwork
 

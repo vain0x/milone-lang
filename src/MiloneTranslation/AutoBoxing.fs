@@ -1158,20 +1158,23 @@ let private taExpr (ctx: TaCtx) (expr: HExpr) : HExpr =
   | HNavExpr _ -> unreachable () // HNavExpr is resolved in NameRes, Typing, or RecordRes.
   | HRecordExpr _ -> unreachable () // HRecordExpr is resolved in RecordRes.
 
-let computeFunTyArgs (expr: HExpr, tyCtx: TyCtx) : HExpr * TyCtx =
+let computeFunTyArgs (modules: HProgram, tyCtx: TyCtx) : HProgram * TyCtx =
   let tyCtx =
     let ctx: TvCtx =
       { Funs = tyCtx.Funs
         UsedTyVars = TSet.empty compare }
 
-    let ctx = tvExpr expr ctx
+    let ctx =
+      modules
+      |> HProgram.foldExpr (fun ctx expr -> tvExpr expr ctx) ctx
+
     { tyCtx with Funs = ctx.Funs }
 
-  let expr =
+  let modules =
     let ctx: TaCtx =
       { Funs = tyCtx.Funs
         QuantifiedTys = TSet.empty compare }
 
-    taExpr ctx expr
+    modules |> HProgram.mapExpr (taExpr ctx)
 
-  expr, tyCtx
+  modules, tyCtx

@@ -268,6 +268,9 @@ let transformHir (host: CliHost) v (modules: Tir.TProgram, tyCtx: Typing.TyCtx) 
   writeLog host v "EtaExpansion"
   let modules, tyCtx = etaExpansion (modules, tyCtx)
 
+  writeLog host v "ComputeTyArgs"
+  let modules, tyCtx = computeFunTyArgs (modules, tyCtx)
+
   writeLog host v "Flatten"
 
   let modules, vars =
@@ -290,9 +293,6 @@ let transformHir (host: CliHost) v (modules: Tir.TProgram, tyCtx: Typing.TyCtx) 
        |> List.collect (fun (m: Hir.HModule) -> m.Stmts))
 
     Hir.hxSemi decls noLoc
-
-  writeLog host v "ComputeTyArgs"
-  let expr, tyCtx = computeFunTyArgs (expr, tyCtx)
 
   writeLog host v "AutoBoxing"
   let expr, tyCtx = autoBox (expr, tyCtx)
