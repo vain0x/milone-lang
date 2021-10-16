@@ -347,7 +347,7 @@ let private ccLetFunExpr callee args body next ty loc ctx =
     let baseCtx = ctx
     let ctx = ctx |> enterFunDecl
 
-    let args, ctx = (args, ctx) |> stMap ccPat
+    let ctx = args |> List.fold ccPat ctx
     let body, ctx = (body, ctx) |> ccExpr
 
     let ctx = ctx |> leaveFunDecl callee baseCtx
@@ -363,29 +363,19 @@ let private ccLetFunExpr callee args body next ty loc ctx =
 // Control
 // -----------------------------------------------
 
-let private ccPat (pat, ctx) =
+let private ccPat ctx pat : CcCtx =
+  let onPat pat ctx = ccPat ctx pat
+  let onPats pats ctx = pats |> List.fold ccPat ctx
+
   match pat with
   | HLitPat _
   | HDiscardPat _
-  | HVariantPat _ -> pat, ctx
+  | HVariantPat _ -> ctx
 
-  | HVarPat (serial, _, _) ->
-    let ctx = ctx |> addLocal serial
-    pat, ctx
-
-  | HNodePat (kind, argPats, ty, loc) ->
-    let argPats, ctx = (argPats, ctx) |> stMap ccPat
-    HNodePat(kind, argPats, ty, loc), ctx
-
-  | HAsPat (pat, serial, loc) ->
-    let ctx = ctx |> addLocal serial
-    let pat, ctx = (pat, ctx) |> ccPat
-    HAsPat(pat, serial, loc), ctx
-
-  | HOrPat (l, r, loc) ->
-    let l, ctx = (l, ctx) |> ccPat
-    let r, ctx = (r, ctx) |> ccPat
-    HOrPat(l, r, loc), ctx
+  | HVarPat (serial, _, _) -> ctx |> addLocal serial
+  | HNodePat (_, argPats, _, _) -> ctx |> onPats argPats
+  | HAsPat (bodyPat, serial, _) -> ctx |> addLocal serial |> onPat bodyPat
+  | HOrPat (l, r, _) -> ctx |> onPat l |> onPat r
 
 let private ccExpr (expr, ctx) =
   match expr with
@@ -405,7 +395,7 @@ let private ccExpr (expr, ctx) =
     let cond, ctx = ccExpr (cond, ctx)
 
     let go ((pat, guard, body), ctx) =
-      let pat, ctx = ccPat (pat, ctx)
+      let ctx = ccPat ctx pat
       let guard, ctx = ccExpr (guard, ctx)
       let body, ctx = ccExpr (body, ctx)
       (pat, guard, body), ctx
@@ -423,7 +413,7 @@ let private ccExpr (expr, ctx) =
     HBlockExpr(stmts, last), ctx
 
   | HLetValExpr (pat, body, next, ty, loc) ->
-    let pat, ctx = ccPat (pat, ctx)
+    let ctx = ccPat ctx pat
     let body, ctx = ccExpr (body, ctx)
     let next, ctx = ccExpr (next, ctx)
     HLetValExpr(pat, body, next, ty, loc), ctx
