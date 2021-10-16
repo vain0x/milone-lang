@@ -81,7 +81,7 @@ let private toDiscriminantEnumName (name: string) = name + "Discriminant"
 /// Read-only context of the pass.
 [<RequireQualifiedAccess; NoEquality; NoComparison>]
 type private Rx =
-  { Vars: AssocMap<VarSerial, VarDef>
+  { StaticVars: AssocMap<VarSerial, VarDef>
     Funs: AssocMap<FunSerial, FunDef>
     Variants: AssocMap<VariantSerial, VariantDef>
     Tys: AssocMap<TySerial, TyDef>
@@ -117,7 +117,7 @@ let private ofMirResult (mirCtx: MirResult) : CirCtx =
     let m = TMap.empty valueSymbolCompare
 
     let m =
-      mirCtx.Vars
+      mirCtx.StaticVars
       |> TMap.fold
            (fun acc varSerial (varDef: VarDef) ->
              let name =
@@ -127,6 +127,10 @@ let private ofMirResult (mirCtx: MirResult) : CirCtx =
 
              acc |> TMap.add (VarSymbol varSerial) name)
            m
+
+    let m =
+      mirCtx.VarNameMap
+      |> TMap.fold (fun m varSerial name -> m |> TMap.add (VarSymbol varSerial) name) m
 
     let m =
       mirCtx.Funs
@@ -162,7 +166,7 @@ let private ofMirResult (mirCtx: MirResult) : CirCtx =
     |> renameIdents tyDefToName toKey tyCompare
 
   let rx: Rx =
-    { Vars = mirCtx.Vars
+    { StaticVars = mirCtx.StaticVars
       Funs = mirCtx.Funs
       Variants = mirCtx.Variants
       Tys = mirCtx.Tys
@@ -188,13 +192,13 @@ let private currentDocId (ctx: CirCtx) : DocId =
   | None -> unreachable () // Must be filled before starting work.
 
 let private findStorageModifier (ctx: CirCtx) varSerial =
-  match ctx.Rx.Vars |> TMap.tryFind varSerial with
+  match ctx.Rx.StaticVars |> TMap.tryFind varSerial with
   | Some varDef -> varDef.IsStatic
 
-  | _ -> IsStatic
+  | _ -> NotStatic
 
 let private findVarLinkage (ctx: CirCtx) varSerial =
-  match ctx.Rx.Vars |> TMap.tryFind varSerial with
+  match ctx.Rx.StaticVars |> TMap.tryFind varSerial with
   | Some varDef -> varDef.Linkage
 
   | _ -> InternalLinkage

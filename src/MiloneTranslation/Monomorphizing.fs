@@ -410,15 +410,8 @@ let monify (decls: HExpr list, tyCtx: TyCtx) : HExpr list * TyCtx =
       ctx.NewFuns
       |> List.fold (fun funs (funSerial, funDef, _, _) -> funs |> TMap.add funSerial funDef) funs
 
-    // Currently monomorphized instances don't duplicate local variable definitions.
-    // VarDef.Ty is no longer reliable.
-    let vars =
-      tyCtx.Vars
-      |> TMap.map (fun _ (varDef: VarDef) -> { varDef with Ty = noTy })
-
     { tyCtx with
         Serial = ctx.Serial
-        Vars = vars
         Funs = funs }
 
   decls, tyCtx

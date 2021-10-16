@@ -252,7 +252,7 @@ let private writeLog (host: CliHost) verbosity msg =
 // -----------------------------------------------
 
 /// Transforms HIR. The result can be converted to MIR.
-let transformHir (host: CliHost) v (modules: Tir.TProgram, tyCtx: Typing.TyCtx) =
+let private transformHir (host: CliHost) v (modules: Tir.TProgram, tyCtx: Typing.TyCtx) =
   writeLog host v "Lower"
   let modules, tyCtx = Lower.lower (modules, tyCtx)
 
@@ -282,23 +282,20 @@ let transformHir (host: CliHost) v (modules: Tir.TProgram, tyCtx: Typing.TyCtx) 
 
   writeLog host v "Flatten"
 
-  let modules, vars =
+  let varNameMap =
+    // Reduce info of variables.
     modules
-    |> List.mapFold
-         (fun vars (m: Hir.HModule) ->
-           let vars =
-             // #map_merge
-             m.Vars
-             |> TMap.fold (fun vars k v -> TMap.add k v vars) vars
-
-           { m with Vars = Hir.emptyVars }, vars)
-         tyCtx.Vars
-
-  let tyCtx = { tyCtx with Vars = vars }
+    |> List.fold
+         (fun varNames (m: Hir.HModule) ->
+           m.Vars
+           |> TMap.fold
+                (fun varNames varSerial (varDef: Hir.VarDef) -> varNames |> TMap.add varSerial varDef.Name)
+                varNames)
+         (TMap.empty Hir.varSerialCompare)
 
   let decls =
-    (modules
-     |> List.collect (fun (m: Hir.HModule) -> m.Stmts))
+    modules
+    |> List.collect (fun (m: Hir.HModule) -> m.Stmts)
 
   writeLog host v "Monomorphizing"
   let decls, tyCtx = monify (decls, tyCtx)
@@ -306,16 +303,16 @@ let transformHir (host: CliHost) v (modules: Tir.TProgram, tyCtx: Typing.TyCtx) 
   writeLog host v "MonoTy"
   let decls, tyCtx = monoTy (decls, tyCtx)
 
-  decls, tyCtx
+  decls, tyCtx, varNameMap
 
 /// (file name, C code) list
-type CodeGenResult = (string * string) list
+type private CodeGenResult = (string * string) list
 
 /// Generates C language codes from transformed HIR,
 /// using mid-level intermediate representation (MIR).
-let codeGenHirViaMir (host: CliHost) v projectName (decls, tyCtx) : CodeGenResult =
+let private codeGenHirViaMir (host: CliHost) v projectName (decls, tyCtx, varNameMap) : CodeGenResult =
   writeLog host v "Mir"
-  let stmts, mirCtx = mirify (decls, tyCtx)
+  let stmts, mirCtx = mirify (decls, tyCtx, varNameMap)
 
   writeLog host v "CirGen"
   let modules = genCir (stmts, mirCtx)
@@ -357,9 +354,9 @@ let private compile (ctx: CompileCtx) : CompileResult =
   | SyntaxApi.SyntaxAnalysisError (errors, _) -> CompileError(SyntaxApi.syntaxErrorsToString errors)
 
   | SyntaxApi.SyntaxAnalysisOk (modules, tyCtx) ->
-    let decls, tyCtx = transformHir host v (modules, tyCtx)
+    let decls, tyCtx, varNameMap = transformHir host v (modules, tyCtx)
 
-    CompileOk(codeGenHirViaMir host v ctx.EntryProjectName (decls, tyCtx))
+    CompileOk(codeGenHirViaMir host v ctx.EntryProjectName (decls, tyCtx, varNameMap))
 
 // -----------------------------------------------
 // Others

@@ -34,7 +34,8 @@ let private exprIsUnit expr = expr |> exprToTy |> tyIsUnit
 
 [<RequireQualifiedAccess; NoEquality; NoComparison>]
 type MirResult =
-  { Vars: AssocMap<VarSerial, VarDef>
+  { StaticVars: AssocMap<VarSerial, VarDef>
+    VarNameMap: AssocMap<VarSerial, Ident>
     Funs: AssocMap<FunSerial, FunDef>
     Variants: AssocMap<VariantSerial, VariantDef>
     Tys: AssocMap<TySerial, TyDef>
@@ -60,7 +61,7 @@ type private MirCtx =
   { Rx: MirRx
 
     Serial: Serial
-    Vars: AssocMap<VarSerial, VarDef>
+    VarNameMap: AssocMap<VarSerial, Ident>
     LabelSerial: Serial
 
     CurrentFunSerial: FunSerial option
@@ -77,7 +78,7 @@ type private MirCtx =
     Stmts: MStmt list
     Decls: MDecl list }
 
-let private ofTyCtx (tyCtx: TyCtx) : MirCtx =
+let private ofTyCtx varNameMap (tyCtx: TyCtx) : MirCtx =
   let rx: MirRx =
     { Funs = tyCtx.Funs
       Variants = tyCtx.Variants
@@ -85,7 +86,7 @@ let private ofTyCtx (tyCtx: TyCtx) : MirCtx =
 
   { Rx = rx
     Serial = tyCtx.Serial
-    Vars = tyCtx.Vars
+    VarNameMap = varNameMap
     LabelSerial = 0
     CurrentFunSerial = None
     CurrentFun = None
@@ -152,17 +153,10 @@ let private takeDecls (ctx: MirCtx) =
 let private freshVar (ctx: MirCtx) (name: Ident) (ty: Ty) loc =
   let varSerial = VarSerial(ctx.Serial + 1)
 
-  let varDef: VarDef =
-    { Name = name
-      IsStatic = NotStatic
-      Ty = noTy // Never used.
-      Linkage = InternalLinkage
-      Loc = loc }
-
   let ctx =
     { ctx with
         Serial = ctx.Serial + 1
-        Vars = ctx.Vars |> TMap.add varSerial varDef }
+        VarNameMap = ctx.VarNameMap |> TMap.add varSerial name }
 
   let varExpr = MVarExpr(varSerial, ty, loc)
   varExpr, varSerial, ctx
@@ -1656,8 +1650,8 @@ let private mirifyArgs ctx args =
 
   args, ctx
 
-let mirify (decls: HExpr list, tyCtx: TyCtx) : MDecl list * MirResult =
-  let ctx = ofTyCtx tyCtx
+let mirify (decls: HExpr list, tyCtx: TyCtx, varNameMap) : MDecl list * MirResult =
+  let ctx = ofTyCtx varNameMap tyCtx
 
   // OK: It's safe to discard the expression thanks to main hoisting.
   let _expr, ctx =
@@ -1667,7 +1661,8 @@ let mirify (decls: HExpr list, tyCtx: TyCtx) : MDecl list * MirResult =
   let decls, ctx = takeDecls ctx
 
   let result: MirResult =
-    { Vars = ctx.Vars
+    { StaticVars = tyCtx.Vars
+      VarNameMap = ctx.VarNameMap
       Funs = tyCtx.Funs
       Variants = tyCtx.Variants
       Tys = tyCtx.Tys
