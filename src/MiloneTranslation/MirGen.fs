@@ -34,7 +34,7 @@ let private exprIsUnit expr = expr |> exprToTy |> tyIsUnit
 
 [<RequireQualifiedAccess; NoEquality; NoComparison>]
 type MirResult =
-  { Vars: AssocMap<VarSerial, VarDef>
+  { StaticVars: AssocMap<VarSerial, VarDef>
     Funs: AssocMap<FunSerial, FunDef>
     Variants: AssocMap<VariantSerial, VariantDef>
     Tys: AssocMap<TySerial, TyDef>
@@ -60,7 +60,7 @@ type private MirCtx =
   { Rx: MirRx
 
     Serial: Serial
-    Vars: AssocMap<VarSerial, VarDef>
+    VarNameMap: AssocMap<VarSerial, Ident>
     LabelSerial: Serial
 
     CurrentFunSerial: FunSerial option
@@ -85,7 +85,7 @@ let private ofTyCtx (tyCtx: TyCtx) : MirCtx =
 
   { Rx = rx
     Serial = tyCtx.Serial
-    Vars = tyCtx.Vars
+    VarNameMap = TMap.empty varSerialCompare
     LabelSerial = 0
     CurrentFunSerial = None
     CurrentFun = None
@@ -152,17 +152,10 @@ let private takeDecls (ctx: MirCtx) =
 let private freshVar (ctx: MirCtx) (name: Ident) (ty: Ty) loc =
   let varSerial = VarSerial(ctx.Serial + 1)
 
-  let varDef: VarDef =
-    { Name = name
-      IsStatic = NotStatic
-      Ty = noTy // Never used.
-      Linkage = InternalLinkage
-      Loc = loc }
-
   let ctx =
     { ctx with
         Serial = ctx.Serial + 1
-        Vars = ctx.Vars |> TMap.add varSerial varDef }
+        VarNameMap = ctx.VarNameMap |> TMap.add varSerial name }
 
   let varExpr = MVarExpr(varSerial, ty, loc)
   varExpr, varSerial, ctx
@@ -1048,10 +1041,6 @@ let private mirifyCallStrGetSliceExpr ctx args loc =
 
 let private mirifyCallVariantExpr (ctx: MirCtx) serial payload ty loc =
   let payload, ctx = mirifyExpr ctx payload
-  let payloadTy = mexprToTy payload
-
-  // FIXME: Generate a serial to reduce diff. Remove this later.
-  let _, _payloadSerial, ctx = freshVar ctx "payload" payloadTy loc
 
   let temp, tempSerial, ctx = freshVar ctx "variant" ty loc
 
@@ -1434,11 +1423,7 @@ let private mirifyExprInfCallTailRec (ctx: MirCtx) _callee args _ty loc =
   MNeverExpr loc, ctx
 
 let private mirifyExprInfClosure ctx funSerial env funTy loc =
-  let envTy, envLoc = exprExtract env
   let env, ctx = mirifyExpr ctx env
-
-  // FIXME: Generate a serial to reduce diff; remove this later.
-  let _, _, ctx = freshVar ctx "env" envTy envLoc
 
   let tempRef, tempSerial, ctx = freshVar ctx "fun" funTy loc
 
@@ -1656,18 +1641,32 @@ let private mirifyArgs ctx args =
 
   args, ctx
 
-let mirify (decls: HExpr list, tyCtx: TyCtx) : MDecl list * MirResult =
-  let ctx = ofTyCtx tyCtx
+let private mirifyModule (m: HModule2, ctx: MirCtx) =
+  let ctx = { ctx with VarNameMap = m.Vars }
 
-  // OK: It's safe to discard the expression thanks to main hoisting.
-  let _expr, ctx =
-    (decls, ctx)
-    |> stMap (fun (expr, ctx) -> mirifyExpr ctx expr)
+  // OK: It's safe to discard expressions because
+  //     toplevel expressions that involves side-effects
+  //     have already moved into main function in Hoist.
+  let (_: MExpr list), ctx =
+    (m.Stmts, ctx)
+    |> stMap (fun (stmt, ctx) -> mirifyExpr ctx stmt)
 
   let decls, ctx = takeDecls ctx
 
+  let m: MModule =
+    { DocId = m.DocId
+      Vars = ctx.VarNameMap
+      Decls = decls }
+
+  m, ctx
+
+let mirify (modules: HModule2 list, tyCtx: TyCtx) : MModule list * MirResult =
+  let ctx = ofTyCtx tyCtx
+
+  let modules, ctx = (modules, ctx) |> stMap mirifyModule
+
   let result: MirResult =
-    { Vars = ctx.Vars
+    { StaticVars = tyCtx.Vars
       Funs = tyCtx.Funs
       Variants = tyCtx.Variants
       Tys = tyCtx.Tys
@@ -1676,4 +1675,4 @@ let mirify (decls: HExpr list, tyCtx: TyCtx) : MDecl list * MirResult =
       FunLocals = ctx.FunLocals
       ReplacingVars = ctx.ReplacingVars }
 
-  decls, result
+  modules, result

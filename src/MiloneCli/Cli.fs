@@ -20,6 +20,7 @@ open MiloneTranslation.TailRecOptimizing
 module C = MiloneStd.StdChar
 module Derive = MiloneTranslation.Derive
 module Hir = MiloneTranslation.Hir
+module Mir = MiloneTranslation.Mir
 module S = MiloneStd.StdString
 module Tir = MiloneSyntax.Tir
 module TMap = MiloneStd.StdMap
@@ -252,60 +253,69 @@ let private writeLog (host: CliHost) verbosity msg =
 // -----------------------------------------------
 
 /// Transforms HIR. The result can be converted to MIR.
-let transformHir (host: CliHost) v (modules: Tir.TProgram, tyCtx: Typing.TyCtx) =
+let private transformHir (host: CliHost) v (modules: Tir.TProgram, tirCtx: Tir.TirCtx) =
   writeLog host v "Lower"
-  let modules, tyCtx = Lower.lower (modules, tyCtx)
-
-  let expr =
-    let decls =
-      (modules
-       |> List.collect (fun (_, _, decls) -> decls))
-
-    Hir.hxSemi decls noLoc
+  let modules, tyCtx = Lower.lower (modules, tirCtx)
 
   writeLog host v "RecordRes"
-  let expr, tyCtx = recordRes (expr, tyCtx)
+  let modules, tyCtx = recordRes (modules, tyCtx)
 
   writeLog host v "Derive"
-  let expr, tyCtx = Derive.deriveOps (expr, tyCtx)
+  let modules, tyCtx = Derive.deriveOps (modules, tyCtx)
 
   writeLog host v "ClosureConversion"
-  let expr, tyCtx = closureConversion (expr, tyCtx)
+  let modules, tyCtx = closureConversion (modules, tyCtx)
 
   writeLog host v "EtaExpansion"
-  let expr, tyCtx = etaExpansion (expr, tyCtx)
+  let modules, tyCtx = etaExpansion (modules, tyCtx)
 
   writeLog host v "ComputeTyArgs"
-  let expr, tyCtx = computeFunTyArgs (expr, tyCtx)
+  let modules, tyCtx = computeFunTyArgs (modules, tyCtx)
 
   writeLog host v "AutoBoxing"
-  let expr, tyCtx = autoBox (expr, tyCtx)
+  let modules, tyCtx = autoBox (modules, tyCtx)
 
   writeLog host v "Hoist"
-  let decls, tyCtx = hoist (expr, tyCtx)
+  let modules, tyCtx = hoist (modules, tyCtx)
 
   writeLog host v "TailRecOptimizing"
-  let decls, tyCtx = tailRecOptimize (decls, tyCtx)
+  let modules, tyCtx = tailRecOptimize (modules, tyCtx)
 
   writeLog host v "Monomorphizing"
-  let decls, tyCtx = monify (decls, tyCtx)
+  let modules, tyCtx = monify (modules, tyCtx)
+
+  // Reduce info of variables.
+  let modules: Hir.HModule2 list =
+    modules
+    |> List.map
+         (fun (m: Hir.HModule) ->
+           let varNameMap =
+             m.Vars
+             |> TMap.map (fun _ (varDef: Hir.VarDef) -> varDef.Name)
+
+           let m: Hir.HModule2 =
+             { DocId = m.DocId
+               Vars = varNameMap
+               Stmts = m.Stmts }
+
+           m)
 
   writeLog host v "MonoTy"
-  let decls, tyCtx = monoTy (decls, tyCtx)
+  let modules, tyCtx = monoTy (modules, tyCtx)
 
-  decls, tyCtx
+  modules, tyCtx
 
 /// (file name, C code) list
-type CodeGenResult = (string * string) list
+type private CodeGenResult = (string * string) list
 
 /// Generates C language codes from transformed HIR,
 /// using mid-level intermediate representation (MIR).
-let codeGenHirViaMir (host: CliHost) v projectName (decls, tyCtx) : CodeGenResult =
+let private codeGenHirViaMir (host: CliHost) v projectName (modules, tyCtx) : CodeGenResult =
   writeLog host v "Mir"
-  let stmts, mirCtx = mirify (decls, tyCtx)
+  let modules, mirCtx = mirify (modules, tyCtx)
 
   writeLog host v "CirGen"
-  let modules = genCir (stmts, mirCtx)
+  let modules = genCir (modules, mirCtx)
 
   writeLog host v "CirDump"
 
@@ -343,10 +353,10 @@ let private compile (ctx: CompileCtx) : CompileResult =
   match SyntaxApi.performSyntaxAnalysis ctx.SyntaxCtx with
   | SyntaxApi.SyntaxAnalysisError (errors, _) -> CompileError(SyntaxApi.syntaxErrorsToString errors)
 
-  | SyntaxApi.SyntaxAnalysisOk (modules, tyCtx) ->
-    let decls, tyCtx = transformHir host v (modules, tyCtx)
+  | SyntaxApi.SyntaxAnalysisOk (modules, tirCtx) ->
+    let modules, tirCtx = transformHir host v (modules, tirCtx)
 
-    CompileOk(codeGenHirViaMir host v ctx.EntryProjectName (decls, tyCtx))
+    CompileOk(codeGenHirViaMir host v ctx.EntryProjectName (modules, tirCtx))
 
 // -----------------------------------------------
 // Others

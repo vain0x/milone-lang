@@ -76,6 +76,8 @@ let private tyAssign tyScheme (tyArgs: Ty list) =
 
   tySubst (fun tySerial -> assignment |> TMap.tryFind tySerial) genericTy
 
+type private ModuleId = int
+
 [<NoEquality; NoComparison>]
 type private FunBody = FunBody of argPats: HPat list * body: HExpr
 
@@ -95,12 +97,14 @@ let private monoUseCompare =
 //  - body of generic functions.
 
 /// Read-only context of collect step.
-type private CollectRx = AssocMap<FunSerial, FunDef>
+type private CollectRx =
+  { Funs: AssocMap<FunSerial, FunDef>
+    CurrentModuleId: ModuleId }
 
 /// Mutable context of collect step.
 [<RequireQualifiedAccess; NoEquality; NoComparison>]
 type private CollectWx =
-  { GenericFunBody: AssocMap<FunSerial, FunBody>
+  { GenericFunBody: AssocMap<FunSerial, ModuleId * FunBody>
     UseSiteTys: MonoUse list }
 
 let private emptyCollectWx: CollectWx =
@@ -113,7 +117,7 @@ let private collectOnExpr (rx: CollectRx) (wx: CollectWx) expr : CollectWx =
   let onExprs exprs ctx =
     exprs |> List.fold (collectOnExpr rx) ctx
 
-  let getFunDef funSerial = rx |> mapFind funSerial
+  let getFunDef funSerial = rx.Funs |> mapFind funSerial
 
   match expr with
   | HLitExpr _
@@ -147,7 +151,7 @@ let private collectOnExpr (rx: CollectRx) (wx: CollectWx) expr : CollectWx =
         { wx with
             GenericFunBody =
               wx.GenericFunBody
-              |> TMap.add funSerial (FunBody(args, body)) }
+              |> TMap.add funSerial (rx.CurrentModuleId, FunBody(args, body)) }
       else
         wx
 
@@ -233,8 +237,8 @@ let private rewriteExpr (rx: RewriteRx) expr : HExpr =
 
 /// State of monomorphization.
 type private MonoCtx =
-  { Serial: int
-    NewFuns: (FunSerial * FunDef * FunBody * Loc) list
+  { Serial: Serial
+    NewFuns: (FunSerial * FunDef * FunBody * FunSerial * Loc) list
     InstanceMap: AssocMap<MonoUse, FunSerial>
     WorkList: MonoUse list }
 
@@ -296,10 +300,10 @@ let private generate isMetaTy (rx: CollectRx) genericFunBodyMap (ctx: MonoCtx) (
   | Some _ -> ctx
 
   | None ->
-    let genericFunDef = rx |> mapFind funSerial
+    let genericFunDef = rx.Funs |> mapFind funSerial
 
     let monoFunDef, monoFunBody =
-      let genericFunBody = genericFunBodyMap |> mapFind funSerial
+      let _, genericFunBody = genericFunBodyMap |> mapFind funSerial
       generateMonomorphizedFun isMetaTy genericFunDef genericFunBody monoTyArgs
 
     let workList =
@@ -317,7 +321,7 @@ let private generate isMetaTy (rx: CollectRx) genericFunBodyMap (ctx: MonoCtx) (
     { ctx with
         Serial = ctx.Serial + 1
         NewFuns =
-          (monoFunSerial, monoFunDef, monoFunBody, genericFunDef.Loc)
+          (monoFunSerial, monoFunDef, monoFunBody, funSerial, genericFunDef.Loc)
           :: ctx.NewFuns
         InstanceMap = ctx.InstanceMap |> TMap.add entry monoFunSerial
         WorkList = workList }
@@ -326,7 +330,7 @@ let private generate isMetaTy (rx: CollectRx) genericFunBodyMap (ctx: MonoCtx) (
 // Interface
 // -----------------------------------------------
 
-let monify (decls: HExpr list, tyCtx: TyCtx) : HExpr list * TyCtx =
+let monify (modules: HProgram, tyCtx: TyCtx) : HProgram * TyCtx =
   let getFunIdent funSerial =
     let funDef = tyCtx.Funs |> mapFind funSerial
     let serial = string (funSerialToInt funSerial)
@@ -335,12 +339,18 @@ let monify (decls: HExpr list, tyCtx: TyCtx) : HExpr list * TyCtx =
     funDef.Name + " #" + serial + " " + loc
 
   // Analyze initially.
-  let collectRx: CollectRx = tyCtx.Funs
-
   let initialWorkList, genericFunBodyMap =
     let collectWx =
-      decls
-      |> List.fold (collectMonoUse collectRx) emptyCollectWx
+      modules
+      |> List.mapi (fun moduleId (m: HModule) -> moduleId, m)
+      |> List.fold
+           (fun wx (moduleId, m: HModule) ->
+             let collectRx: CollectRx =
+               { CurrentModuleId = moduleId
+                 Funs = tyCtx.Funs }
+
+             m.Stmts |> List.fold (collectMonoUse collectRx) wx)
+           emptyCollectWx
 
     collectWx.UseSiteTys, collectWx.GenericFunBody
 
@@ -369,7 +379,13 @@ let monify (decls: HExpr list, tyCtx: TyCtx) : HExpr list * TyCtx =
 
         go workList ctx
 
-    | item :: workList -> go workList (generate isMetaTy collectRx genericFunBodyMap ctx item)
+    | item :: workList ->
+      // Module id is unused.
+      let collectRx: CollectRx =
+        { CurrentModuleId = -1
+          Funs = tyCtx.Funs }
+
+      go workList (generate isMetaTy collectRx genericFunBodyMap ctx item)
 
   let ctx =
     let ctx: MonoCtx =
@@ -380,27 +396,44 @@ let monify (decls: HExpr list, tyCtx: TyCtx) : HExpr list * TyCtx =
 
     go initialWorkList ctx
 
+  // Split monomorphized instances into modules.
+  let newFunsPerModule =
+    ctx.NewFuns
+    |> List.map
+         (fun (funSerial, _, body, genericFunSerial, loc) ->
+           let moduleId, _ =
+             genericFunBodyMap |> mapFind genericFunSerial
+
+           moduleId, (funSerial, body, loc))
+    |> multimapOfList compare
+
   // Rewrite.
-  let decls =
-    let funBodies =
-      ctx.NewFuns
-      |> List.map
-           (fun (funSerial, _, body, loc) ->
-             let (FunBody (args, body)) = body
-             HLetFunExpr(funSerial, args, body, hxUnit loc, tyUnit, loc))
+  let modules =
+    modules
+    |> List.mapi
+         (fun moduleId (m: HModule) ->
+           let funBodies =
+             newFunsPerModule
+             |> multimapFind moduleId
+             |> List.map
+                  (fun (funSerial, body, loc) ->
+                    let (FunBody (args, body)) = body
+                    HLetFunExpr(funSerial, args, body, hxUnit loc, tyUnit, loc))
 
-    let decls = List.append funBodies decls
+           let stmts = List.append funBodies m.Stmts
 
-    let rx: RewriteRx =
-      { GetFunIdent = getFunIdent
-        IsGenericFun = isGenericFun
-        InstanceMap = ctx.InstanceMap }
+           let stmts =
+             let rx: RewriteRx =
+               { GetFunIdent = getFunIdent
+                 IsGenericFun = isGenericFun
+                 InstanceMap = ctx.InstanceMap }
 
-    decls |> List.map (rewriteExpr rx)
+             stmts |> List.map (rewriteExpr rx)
+
+           { m with Stmts = stmts })
 
   // Merge.
   let tyCtx: TyCtx =
-
     let funs =
       tyCtx.Funs
       |> TMap.filter (fun funSerial _ -> funSerial |> isGenericFun |> not)
@@ -408,17 +441,10 @@ let monify (decls: HExpr list, tyCtx: TyCtx) : HExpr list * TyCtx =
     // #map_merge
     let funs =
       ctx.NewFuns
-      |> List.fold (fun funs (funSerial, funDef, _, _) -> funs |> TMap.add funSerial funDef) funs
-
-    // Currently monomorphized instances don't duplicate local variable definitions.
-    // VarDef.Ty is no longer reliable.
-    let vars =
-      tyCtx.Vars
-      |> TMap.map (fun _ (varDef: VarDef) -> { varDef with Ty = noTy })
+      |> List.fold (fun funs (funSerial, funDef, _, _, _) -> funs |> TMap.add funSerial funDef) funs
 
     { tyCtx with
         Serial = ctx.Serial
-        Vars = vars
         Funs = funs }
 
-  decls, tyCtx
+  modules, tyCtx

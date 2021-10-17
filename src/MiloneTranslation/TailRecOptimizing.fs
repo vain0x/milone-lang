@@ -101,9 +101,16 @@ let private troExpr isTail (expr, ctx) =
   | HNavExpr _ -> unreachable () // HNavExpr is resolved in NameRes, Typing, or RecordRes.
   | HRecordExpr _ -> unreachable () // HRecordExpr is resolved in RecordRes.
 
-let tailRecOptimize (decls: HExpr list, tyCtx: TyCtx) : HExpr list * TyCtx =
+let private troModule (m: HModule, ctx: TailRecCtx) : HModule * TailRecCtx =
+  let stmts, ctx =
+    (m.Stmts, ctx) |> stMap (troExpr IsTail)
+
+  let m = { m with Stmts = stmts }
+  m, ctx
+
+let tailRecOptimize (modules: HProgram, tyCtx: TyCtx) : HProgram * TyCtx =
   let decls, _ =
     let ctx: TailRecCtx = None
-    (decls, ctx) |> stMap (troExpr IsTail)
+    (modules, ctx) |> stMap troModule
 
   decls, tyCtx

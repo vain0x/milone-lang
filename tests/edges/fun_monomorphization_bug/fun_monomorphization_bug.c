@@ -2,9 +2,9 @@
 
 struct IntIntTuple2_;
 
-void const* g_(void const* pair_1);
-
 void const* myFst_(struct IntIntTuple2_ pair_);
+
+void const* g_(void const* pair_1);
 
 int milone_main(void);
 
@@ -13,16 +13,16 @@ struct IntIntTuple2_ {
     int t1;
 };
 
-void const* g_(void const* pair_1) {
-    int x_ = (*(((struct IntIntTuple2_ const*)pair_1))).t0;
-    return ((void const*)((intptr_t)x_));
-}
-
 void const* myFst_(struct IntIntTuple2_ pair_) {
     void const* box_ = milone_mem_alloc(1, sizeof(struct IntIntTuple2_));
     (*(((struct IntIntTuple2_*)box_))) = pair_;
     void const* call_ = g_(box_);
     return call_;
+}
+
+void const* g_(void const* pair_1) {
+    int x_ = (*(((struct IntIntTuple2_ const*)pair_1))).t0;
+    return ((void const*)((intptr_t)x_));
 }
 
 int milone_main(void) {

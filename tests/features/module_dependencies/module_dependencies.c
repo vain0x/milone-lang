@@ -7,7 +7,7 @@ int module_dependencies_third_third(void);
 int milone_main(void);
 
 int milone_main(void) {
-    int call_2 = module_dependencies_second_second();
-    int call_3 = module_dependencies_third_third();
-    return (call_2 + call_3);
+    int call_ = module_dependencies_second_second();
+    int call_1 = module_dependencies_third_third();
+    return (call_ + call_1);
 }

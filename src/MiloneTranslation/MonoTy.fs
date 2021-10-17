@@ -374,6 +374,16 @@ let private mtExpr (expr, ctx) : M.HExpr * MtCtx =
   | HNavExpr _ -> unreachable () // HNavExpr is resolved in NameRes, Typing, or RecordRes.
   | HRecordExpr _ -> unreachable () // HRecordExpr is resolved in RecordRes.
 
+let private mtModule (m: HModule2, ctx) =
+  let stmts, ctx = (m.Stmts, ctx) |> stMap mtExpr
+
+  let m: M.HModule2 =
+    { DocId = m.DocId
+      Vars = m.Vars
+      Stmts = stmts }
+
+  m, ctx
+
 // -----------------------------------------------
 // Context
 // -----------------------------------------------
@@ -529,6 +539,11 @@ let private bthExpr (expr: M.HExpr) : HExpr =
   | M.HLetFunExpr (funSerial, args, body, next, ty, loc) ->
     HLetFunExpr(funSerial, ofPats args, ofExpr body, ofExpr next, ofTy ty, loc)
 
+let private bthModule (m: M.HModule2) : HModule2 =
+  { DocId = m.DocId
+    Vars = m.Vars
+    Stmts = m.Stmts |> List.map bthExpr }
+
 let private bthFunDef (funDef: M.FunDef) : FunDef =
   { Name = funDef.Name
     Arity = funDef.Arity
@@ -561,15 +576,15 @@ let private bthTyDef (tyDef: M.TyDef) : TyDef =
 // Interface
 // -----------------------------------------------
 
-let monoTy (decls: HExpr list, tyCtx: TyCtx) : HExpr list * TyCtx =
+let monoTy (modules: HModule2 list, tyCtx: TyCtx) : HModule2 list * TyCtx =
   let mtCtx = ofTyCtx tyCtx
 
   // Convert to IR.
-  let decls, mtCtx = (decls, mtCtx) |> stMap mtExpr
+  let modules, mtCtx = (modules, mtCtx) |> stMap mtModule
   let funs, variants, tys, mtCtx = mtDefs tyCtx mtCtx
 
   // Back to HIR.
-  let decls = decls |> List.map bthExpr
+  let modules = modules |> List.map bthModule
 
   let funs =
     funs
@@ -589,4 +604,4 @@ let monoTy (decls: HExpr list, tyCtx: TyCtx) : HExpr list * TyCtx =
         Variants = variants
         Tys = tys }
 
-  decls, tyCtx
+  modules, tyCtx

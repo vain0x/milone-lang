@@ -223,6 +223,10 @@ let multimapAdd (key: 'K) (item: 'T) (multimap: Multimap<'K, 'T>) : Multimap<'K,
   let items = multimap |> multimapFind key
   TMap.add key (item :: items) multimap
 
+let multimapOfList compareFun (entries: ('K * 'T) list) : Multimap<'K, 'T> =
+  entries
+  |> List.fold (fun map (key, value) -> multimapAdd key value map) (TMap.empty compareFun)
+
 // -----------------------------------------------
 // Int
 // -----------------------------------------------

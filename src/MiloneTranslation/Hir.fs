@@ -25,6 +25,10 @@ open MiloneShared.Util
 module TMap = MiloneStd.StdMap
 module S = MiloneStd.StdString
 
+// from syntax
+type private ProjectName = string
+type private ModuleName = string
+
 // -----------------------------------------------
 // HIR types
 // -----------------------------------------------
@@ -128,12 +132,6 @@ type VariantDef =
     HasPayload: bool
     PayloadTy: Ty
     Loc: Loc }
-
-[<NoComparison>]
-type ValueSymbol =
-  | VarSymbol of varSerial: VarSerial
-  | FunSymbol of funSerial: FunSerial
-  | VariantSymbol of variantSerial: VariantSerial
 
 /// Kind of HNodePat.
 [<NoEquality; NoComparison>]
@@ -326,8 +324,30 @@ type HExpr =
   | HLetValExpr of pat: HPat * init: HExpr * next: HExpr * Ty * Loc
   | HLetFunExpr of FunSerial * args: HPat list * body: HExpr * next: HExpr * Ty * Loc
 
+type VarMap = AssocMap<VarSerial, VarDef>
+type VarNameMap = AssocMap<VarSerial, Ident>
+
+[<RequireQualifiedAccess; NoEquality; NoComparison>]
+type HModule =
+  { DocId: DocId
+
+    /// Non-static variables.
+    Vars: VarMap
+
+    Stmts: HExpr list }
+
+/// Module. Variable info is reduced.
+[<RequireQualifiedAccess; NoEquality; NoComparison>]
+type HModule2 =
+  { DocId: DocId
+
+    /// Non-static variables.
+    Vars: VarNameMap
+
+    Stmts: HExpr list }
+
 /// HIR program. (project name, module name, decls) list.
-type HProgram = (string * string * HExpr list) list
+type HProgram = HModule list
 
 // -----------------------------------------------
 // Types (HIR/MIR)
@@ -630,6 +650,21 @@ let exprToLoc expr =
   let _, loc = exprExtract expr
   loc
 
+// -----------------------------------------------
+// HProgram
+// -----------------------------------------------
+
+let emptyVars: AssocMap<VarSerial, VarDef> = TMap.empty varSerialCompare
+
+module HProgram =
+  let mapExpr (f: HExpr -> HExpr) (program: HProgram) : HProgram =
+    program
+    |> List.map (fun (m: HModule) -> { m with Stmts = m.Stmts |> List.map f })
+
+  let foldExpr (f: 'S -> HExpr -> 'S) (state: 'S) (program: HProgram) : 'S =
+    program
+    |> List.fold (fun (state: 'S) (m: HModule) -> m.Stmts |> List.fold f state) state
+
 // ===============================================
 // patchwork
 
@@ -648,7 +683,6 @@ type TyCtx =
 
     MainFunOpt: FunSerial option
 
-    /// Type serial to type definition.
     Tys: AssocMap<TySerial, TyDef> }
 
 // -----------------------------------------------

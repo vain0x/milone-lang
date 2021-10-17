@@ -184,14 +184,16 @@ let private capsUpdateFunDef funTy arity (caps: Caps) =
 /// Context of closure conversion.
 [<RequireQualifiedAccess; NoEquality; NoComparison>]
 type private CcCtx =
-  { Vars: AssocMap<VarSerial, VarDef>
+  { StaticVars: AssocMap<VarSerial, VarDef>
+    Vars: AssocMap<VarSerial, VarDef>
     Funs: AssocMap<FunSerial, FunDef>
     Current: KnownCtx
     FunKnowns: AssocMap<FunSerial, KnownCtx>
     FunUpvars: AssocMap<FunSerial, AssocSet<VarSerial>> }
 
 let private ofTyCtx (tyCtx: TyCtx) : CcCtx =
-  { Vars = tyCtx.Vars
+  { StaticVars = tyCtx.Vars
+    Vars = emptyVars
     Funs = tyCtx.Funs
 
     Current = knownCtxEmpty ()
@@ -204,13 +206,14 @@ let private addLocal varSerial (ctx: CcCtx) =
   { ctx with
       Current = ctx.Current |> knownCtxAddLocal varSerial }
 
+let private isStaticVar varSerial (ctx: CcCtx) =
+  ctx.StaticVars |> TMap.containsKey varSerial
+
 let private useVar varSerial (ctx: CcCtx) =
-  match (ctx.Vars |> mapFind varSerial).IsStatic with
-  | IsStatic ->
+  if isStaticVar varSerial ctx then
     // Don't count static vars as used.
     ctx
-
-  | _ ->
+  else
     { ctx with
         Current = ctx.Current |> knownCtxUseVar varSerial }
 
@@ -248,16 +251,14 @@ let private genFunCaps funSerial (ctx: CcCtx) : Caps =
     | Some it -> it |> TSet.toList
     | None -> []
 
-  // FIXME: List.rev here is just to reduce diff. Remove later.
   varSerials
   |> List.choose
        (fun varSerial ->
-         let varDef = ctx.Vars |> mapFind varSerial
-
-         match varDef.IsStatic with
-         | NotStatic -> Some(varSerial, varDef.Ty, varDef.Loc)
-         | _ -> None)
-  |> List.rev
+         if isStaticVar varSerial ctx |> not then
+           let varDef = ctx.Vars |> mapFind varSerial
+           Some(varSerial, varDef.Ty, varDef.Loc)
+         else
+           None)
 
 let private closureRefs (ctx: CcCtx) : CcCtx =
   let mergeUpvars localVars newUpvars (modified, upvars) : bool * AssocSet<VarSerial> =
@@ -276,10 +277,14 @@ let private closureRefs (ctx: CcCtx) : CcCtx =
       funs
       |> List.fold
            (fun (modified, upvars) funSerial ->
-             let newUpvars, _, _ = funUpvarsMap |> mapFind funSerial
+             match funUpvarsMap |> TMap.tryFind funSerial with
+             | Some (newUpvars, _, _) ->
+               (modified, upvars)
+               |> mergeUpvars localVars newUpvars
 
-             (modified, upvars)
-             |> mergeUpvars localVars newUpvars)
+             | None ->
+               // `funSerial` is defined in earlier module. newUpvars is [].
+               modified, upvars)
            (false, upvars)
 
     if modified then
@@ -423,21 +428,29 @@ let private ccExpr (expr, ctx) =
   | HNavExpr _ -> unreachable () // HNavExpr is resolved in NameRes, Typing, or RecordRes.
   | HRecordExpr _ -> unreachable () // HRecordExpr is resolved in RecordRes.
 
-let closureConversion (expr, tyCtx: TyCtx) =
+let private ccModule1 (m: HModule, ctx: CcCtx) =
+  let stmts, ctx = (m.Stmts, ctx) |> stMap ccExpr
+  let m = { m with Stmts = stmts }
+  m, ctx
+
+let private ccModule (m: HModule, tyCtx: TyCtx) =
   let ccCtx = ofTyCtx tyCtx
+
+  let ccCtx = { ccCtx with Vars = m.Vars }
 
   // Traverse for reference collection.
   // NOTE: Converted expression is possibly incorrect
   //       because the set of captured variables is incomplete
   //       when to process a function reference before definition.
-  let _, ccCtx = (expr, ccCtx) |> ccExpr
+  let _, ccCtx = (m, ccCtx) |> ccModule1
 
   // Resolve transitive references.
   let ccCtx = ccCtx |> closureRefs
 
   // Traverse again to transform function references.
-  let expr, ccCtx = (expr, ccCtx) |> ccExpr
+  let m, ccCtx = (m, ccCtx) |> ccModule1
 
   let tyCtx = ccCtx |> updateFunDefs |> toTyCtx tyCtx
+  m, tyCtx
 
-  expr, tyCtx
+let closureConversion (modules: HProgram, tyCtx: TyCtx) : HProgram * TyCtx = (modules, tyCtx) |> stMap ccModule

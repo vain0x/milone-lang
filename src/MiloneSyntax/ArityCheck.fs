@@ -3,7 +3,6 @@ module rec MiloneSyntax.ArityCheck
 open MiloneShared.SharedTypes
 open MiloneShared.Util
 open MiloneSyntax.Tir
-open MiloneSyntax.Typing
 open MiloneSyntax.TySystem
 
 module StdInt = MiloneStd.StdInt
@@ -199,11 +198,11 @@ let private acStmts stmts ctx =
 // Interface
 // -----------------------------------------------
 
-let arityCheck (modules: TProgram, tyCtx: Typing.TyCtx) : Typing.TyCtx =
+let arityCheck (modules: TProgram, tirCtx: TirCtx) : TirCtx =
   let ctx: ArityCheckCtx =
     { GetFunArity =
         fun funSerial ->
-          let funDef = tyCtx.Funs |> mapFind funSerial
+          let funDef = tirCtx.Funs |> mapFind funSerial
 
           // HACK: failwithf can take any number of arguments.
           if funDef.Name = "failwithf" then
@@ -233,5 +232,5 @@ let arityCheck (modules: TProgram, tyCtx: Typing.TyCtx) : Typing.TyCtx =
     ctx.Errors
     |> List.map (fun (actual, expected, loc) -> Log.ArityMismatch(actual, expected), loc)
 
-  { tyCtx with
-      Logs = List.append tyCtx.Logs logs }
+  { tirCtx with
+      Logs = List.append tirCtx.Logs logs }

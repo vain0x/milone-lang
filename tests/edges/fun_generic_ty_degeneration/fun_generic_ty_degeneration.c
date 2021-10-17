@@ -4,11 +4,11 @@ struct IntStringTuple2_;
 
 struct IntStringTuple2Option_;
 
-int myFst_(struct IntStringTuple2_ arg_);
+int fstUnbox_(void const* boxedPair_, struct IntStringTuple2Option_ phantom_);
 
 int f_(void const* boxedPair_);
 
-int fstUnbox_(void const* boxedPair_, struct IntStringTuple2Option_ phantom_);
+int myFst_(struct IntStringTuple2_ arg_);
 
 void fun_generic_ty_degeneration_Program_testCase(struct IntStringTuple2_ kv_);
 
@@ -31,19 +31,19 @@ struct IntStringTuple2Option_ {
     };
 };
 
-int myFst_(struct IntStringTuple2_ arg_) {
-    int x_ = arg_.t0;
-    return x_;
-}
-
-int f_(void const* boxedPair_) {
-    int call_ = myFst_((*(((struct IntStringTuple2_ const*)boxedPair_))));
+int fstUnbox_(void const* boxedPair_, struct IntStringTuple2Option_ phantom_) {
+    int call_ = f_(boxedPair_);
     return call_;
 }
 
-int fstUnbox_(void const* boxedPair_, struct IntStringTuple2Option_ phantom_) {
-    int call_1 = f_(boxedPair_);
+int f_(void const* boxedPair_) {
+    int call_1 = myFst_((*(((struct IntStringTuple2_ const*)boxedPair_))));
     return call_1;
+}
+
+int myFst_(struct IntStringTuple2_ arg_) {
+    int x_ = arg_.t0;
+    return x_;
 }
 
 void fun_generic_ty_degeneration_Program_testCase(struct IntStringTuple2_ kv_) {

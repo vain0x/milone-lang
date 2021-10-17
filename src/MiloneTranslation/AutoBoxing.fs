@@ -841,7 +841,7 @@ let private abExpr ctx expr =
   | HNavExpr _ -> unreachable () // HNavExpr is resolved in NameRes, Typing, or RecordRes.
   | HRecordExpr _ -> unreachable () // HRecordExpr is resolved in RecordRes.
 
-let autoBox (expr: HExpr, tyCtx: TyCtx) =
+let autoBox (modules: HProgram, tyCtx: TyCtx) : HProgram * TyCtx =
   // Detect recursion.
   let trdCtx = detectTypeRecursion tyCtx
 
@@ -864,8 +864,8 @@ let autoBox (expr: HExpr, tyCtx: TyCtx) =
         BoxedRecordTys = tsmCtx.BoxedRecordTys
         RecursiveVariants = recursiveVariants }
 
-  let vars =
-    ctx.Vars
+  let abVars vars =
+    vars
     |> TMap.map
          (fun _ (varDef: VarDef) ->
            let ty = varDef.Ty |> abTy ctx
@@ -910,15 +910,21 @@ let autoBox (expr: HExpr, tyCtx: TyCtx) =
 
   let ctx =
     { ctx with
-        Vars = vars
+        Vars = abVars ctx.Vars
         Funs = funs
         Variants = variants
         Tys = tys }
 
-  let expr = expr |> abExpr ctx
+  let modules =
+    modules
+    |> List.map
+         (fun (m: HModule) ->
+           let vars = abVars m.Vars
+           let stmts = m.Stmts |> List.map (abExpr ctx)
+           { m with Vars = vars; Stmts = stmts })
 
   let tyCtx = ctx |> toTyCtx tyCtx
-  expr, tyCtx
+  modules, tyCtx
 
 // ===============================================
 // FIXME: split file
@@ -1158,20 +1164,23 @@ let private taExpr (ctx: TaCtx) (expr: HExpr) : HExpr =
   | HNavExpr _ -> unreachable () // HNavExpr is resolved in NameRes, Typing, or RecordRes.
   | HRecordExpr _ -> unreachable () // HRecordExpr is resolved in RecordRes.
 
-let computeFunTyArgs (expr: HExpr, tyCtx: TyCtx) : HExpr * TyCtx =
+let computeFunTyArgs (modules: HProgram, tyCtx: TyCtx) : HProgram * TyCtx =
   let tyCtx =
     let ctx: TvCtx =
       { Funs = tyCtx.Funs
         UsedTyVars = TSet.empty compare }
 
-    let ctx = tvExpr expr ctx
+    let ctx =
+      modules
+      |> HProgram.foldExpr (fun ctx expr -> tvExpr expr ctx) ctx
+
     { tyCtx with Funs = ctx.Funs }
 
-  let expr =
+  let modules =
     let ctx: TaCtx =
       { Funs = tyCtx.Funs
         QuantifiedTys = TSet.empty compare }
 
-    taExpr ctx expr
+    modules |> HProgram.mapExpr (taExpr ctx)
 
-  expr, tyCtx
+  modules, tyCtx

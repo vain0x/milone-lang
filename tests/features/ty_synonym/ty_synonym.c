@@ -4,9 +4,9 @@ struct IntList;
 
 struct IntList;
 
-int proj_1(bool cond_, int body_, int alt_);
-
 struct String proj_(bool cond_, struct String body_, struct String alt_);
+
+int proj_1(bool cond_, int body_, int alt_);
 
 void ty_synonym_Program_baseCase(void);
 
@@ -21,8 +21,8 @@ struct IntList {
     struct IntList const* tail;
 };
 
-int proj_1(bool cond_, int body_, int alt_) {
-    int if_;
+struct String proj_(bool cond_, struct String body_, struct String alt_) {
+    struct String if_;
     if (cond_) {
         goto then_2;
     } else {
@@ -38,8 +38,8 @@ if_next_1:;
     return if_;
 }
 
-struct String proj_(bool cond_, struct String body_, struct String alt_) {
-    struct String if_1;
+int proj_1(bool cond_, int body_, int alt_) {
+    int if_1;
     if (cond_) {
         goto then_5;
     } else {

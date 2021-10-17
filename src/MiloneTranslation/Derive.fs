@@ -128,7 +128,7 @@ let private dCtxOfTyCtx (tyCtx: TyCtx) : DCtx =
     GenericListEqualFunOpt = None
     EqualFunInstances = TMap.empty tyCompare }
 
-let private dExpr (tyCtx: TyCtx) expr : DCtx =
+let private deriveOnExpr (tyCtx: TyCtx) (ctx: DCtx) expr : DCtx =
   let findTy tySerial = tyCtx.Tys |> mapFind tySerial
 
   let findVariant variantSerial = tyCtx.Variants |> mapFind variantSerial
@@ -505,8 +505,6 @@ let private dExpr (tyCtx: TyCtx) expr : DCtx =
 
     ctx
 
-  let ctx = dCtxOfTyCtx tyCtx
-
   let generate (ctx: DCtx) ty : DCtx =
     let (Ty (tk, tyArgs)) = ty
 
@@ -547,37 +545,54 @@ let private dExpr (tyCtx: TyCtx) expr : DCtx =
 
     | ty :: workList -> go workList (generate ctx ty)
 
-  go [] ctx
+  let ctx = go [] ctx
 
-// -----------------------------------------------
-// Interface
-// -----------------------------------------------
+  assert (List.isEmpty ctx.WorkList)
+  ctx
 
-let deriveOps (expr, tyCtx: TyCtx) : HExpr * TyCtx =
-  let ctx = dExpr tyCtx expr
+let private deriveOnModule (m: HModule, tyCtx: TyCtx) : HModule * TyCtx =
+  let ctx =
+    m.Stmts
+    |> List.fold (deriveOnExpr tyCtx) (dCtxOfTyCtx tyCtx)
+
   assert (List.isEmpty ctx.WorkList)
 
-  let vars =
+  // Rewrite.
+  let stmts =
+    let letFunStmts =
+      ctx.NewLetFuns
+      |> listSort (fun (l, _) (r, _) -> tyCompare l r)
+      |> List.map snd
+
+    let stmts = List.append letFunStmts m.Stmts
+
+    stmts
+    |> List.map (rewriteExpr ctx.EqualFunInstances)
+
+  // Merge.
+  let localVars =
     ctx.NewVars
-    |> List.fold (fun vars (varSerial, varDef) -> vars |> TMap.add varSerial varDef) tyCtx.Vars
+    |> List.fold (fun vars (varSerial, varDef) -> vars |> TMap.add varSerial varDef) m.Vars
 
   let funs =
     ctx.NewFuns
     |> List.fold (fun funs (funSerial, funDef) -> funs |> TMap.add funSerial funDef) tyCtx.Funs
 
+  let m =
+    { m with
+        Vars = localVars
+        Stmts = stmts }
+
   let tyCtx =
     { tyCtx with
         Serial = ctx.Serial
-        Vars = vars
         Funs = funs }
 
-  let expr =
-    let stmts =
-      ctx.NewLetFuns
-      |> listSort (fun (l, _) (r, _) -> tyCompare l r)
-      |> List.map snd
+  m, tyCtx
 
-    HBlockExpr(stmts, expr)
-    |> rewriteExpr ctx.EqualFunInstances
+// -----------------------------------------------
+// Interface
+// -----------------------------------------------
 
-  expr, tyCtx
+let deriveOps (modules: HProgram, tyCtx: TyCtx) : HProgram * TyCtx =
+  (modules, tyCtx) |> stMap deriveOnModule

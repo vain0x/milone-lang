@@ -23,19 +23,41 @@ module TMap = MiloneStd.StdMap
 module TSet = MiloneStd.StdSet
 module S = MiloneStd.StdString
 
-let private valueSymbolCompare l r =
-  let encode symbol =
-    match symbol with
-    | VarSymbol (VarSerial serial) -> serial
-    | FunSymbol (FunSerial serial) -> serial
-    | VariantSymbol (VariantSerial serial) -> serial
-
-  compare (encode l) (encode r)
-
 let private unwrapListTy ty =
   match ty with
   | Ty (ListTk, [ itemTy ]) -> itemTy
   | _ -> unreachable ()
+
+let private tupleField (i: int) = "t" + string i
+
+/// Calculates discriminant type's name of union type.
+let private toDiscriminantEnumName (name: string) = name + "Discriminant"
+
+// -----------------------------------------------
+// Renaming idents
+// -----------------------------------------------
+
+/// Frequencies. Mapping from key to multiplicity. (Multi-set.)
+type private Freq<'K> = AssocMap<'K, int>
+
+let private freqEmpty compareFun : Freq<_> = TMap.empty compareFun
+
+let private freqAdd key map : int * Freq<_> =
+  let i =
+    map |> TMap.tryFind key |> Option.defaultValue 0
+
+  let map = map |> TMap.add key (i + 1)
+  i, map
+
+/// Computes renamed ident for the index-th occurrence of the same ident.
+let private renameIdent (ident: Ident) (index: int) : Ident =
+  if index = 0 then
+    if ident |> S.contains "_" then
+      ident
+    else
+      ident + "_"
+  else
+    ident + "_" + string index
 
 let private renameIdents toIdent toKey mapFuns (defMap: AssocMap<_, _>) =
   let rename (ident: string) (index: int) =
@@ -69,10 +91,34 @@ let private renameIdents toIdent toKey mapFuns (defMap: AssocMap<_, _>) =
   serialsMap
   |> TMap.fold addIdents (TMap.empty mapFuns)
 
-let private tupleField (i: int) = "t" + string i
+let private renameIdents2
+  (defMap: AssocMap<_, 'T>)
+  (toIdent: 'T -> string)
+  (nameMap: AssocMap<'K, Ident>)
+  (freq: Freq<Ident>)
+  : AssocMap<'K, Ident> * Freq<Ident> =
+  defMap
+  |> TMap.fold
+       (fun (nameMap, freq) key (value: 'T) ->
+         let name = toIdent value
 
-/// Calculates discriminant type's name of union type.
-let private toDiscriminantEnumName (name: string) = name + "Discriminant"
+         let i, freq = freq |> freqAdd name
+         let name = renameIdent name i
+         let nameMap = nameMap |> TMap.add key name
+
+         nameMap, freq)
+       (nameMap, freq)
+
+let private linkageToIdent rawName linkage =
+  match linkage with
+  | InternalLinkage -> rawName
+  | ExternalLinkage name -> name
+
+let private varDefToName (varDef: VarDef) =
+  linkageToIdent varDef.Name varDef.Linkage
+
+let private funDefToName (funDef: FunDef) =
+  linkageToIdent funDef.Name funDef.Linkage
 
 // -----------------------------------------------
 // Rx
@@ -81,7 +127,7 @@ let private toDiscriminantEnumName (name: string) = name + "Discriminant"
 /// Read-only context of the pass.
 [<RequireQualifiedAccess; NoEquality; NoComparison>]
 type private Rx =
-  { Vars: AssocMap<VarSerial, VarDef>
+  { StaticVars: AssocMap<VarSerial, VarDef>
     Funs: AssocMap<FunSerial, FunDef>
     Variants: AssocMap<VariantSerial, VariantDef>
     Tys: AssocMap<TySerial, TyDef>
@@ -90,7 +136,10 @@ type private Rx =
     FunLocals: AssocMap<FunSerial, (VarSerial * Ty) list>
     ReplacingVars: AssocSet<VarSerial>
 
-    ValueUniqueNames: AssocMap<ValueSymbol, Ident>
+    ValueNameFreq: AssocMap<Ident, int>
+    VarUniqueNames: AssocMap<VarSerial, Ident>
+    FunUniqueNames: AssocMap<FunSerial, Ident>
+    VariantUniqueNames: AssocMap<VariantSerial, Ident>
 
     /// Doc ID of current module.
     DocIdOpt: DocId option }
@@ -113,42 +162,20 @@ type private CirCtx =
     FunDecls: AssocSet<FunSerial> }
 
 let private ofMirResult (mirCtx: MirResult) : CirCtx =
-  let valueUniqueNames =
-    let m = TMap.empty valueSymbolCompare
+  let freq = freqEmpty compare
 
-    let m =
-      mirCtx.Vars
-      |> TMap.fold
-           (fun acc varSerial (varDef: VarDef) ->
-             let name =
-               match varDef.Linkage with
-               | InternalLinkage -> varDef.Name
-               | ExternalLinkage name -> name
+  let varUniqueNames, freq =
+    renameIdents2 mirCtx.StaticVars varDefToName (TMap.empty varSerialCompare) freq
 
-             acc |> TMap.add (VarSymbol varSerial) name)
-           m
+  let funUniqueNames, freq =
+    renameIdents2 mirCtx.Funs funDefToName (TMap.empty funSerialCompare) freq
 
-    let m =
-      mirCtx.Funs
-      |> TMap.fold
-           (fun acc funSerial (funDef: FunDef) ->
-             let name =
-               match funDef.Linkage with
-               | InternalLinkage -> funDef.Name
-               | ExternalLinkage name -> name
-
-             acc |> TMap.add (FunSymbol funSerial) name)
-           m
-
-    let m =
+  let variantUniqueNames, freq =
+    renameIdents2
       mirCtx.Variants
-      |> TMap.fold
-           (fun acc variantSerial (variantDef: VariantDef) ->
-             acc
-             |> TMap.add (VariantSymbol variantSerial) variantDef.Name)
-           m
-
-    m |> renameIdents id fst valueSymbolCompare
+      (fun (variantDef: VariantDef) -> variantDef.Name)
+      (TMap.empty variantSerialCompare)
+      freq
 
   let tyNames =
     let toKey (serial, tyDef) =
@@ -162,7 +189,7 @@ let private ofMirResult (mirCtx: MirResult) : CirCtx =
     |> renameIdents tyDefToName toKey tyCompare
 
   let rx: Rx =
-    { Vars = mirCtx.Vars
+    { StaticVars = mirCtx.StaticVars
       Funs = mirCtx.Funs
       Variants = mirCtx.Variants
       Tys = mirCtx.Tys
@@ -171,7 +198,10 @@ let private ofMirResult (mirCtx: MirResult) : CirCtx =
       FunLocals = mirCtx.FunLocals
       ReplacingVars = mirCtx.ReplacingVars
 
-      ValueUniqueNames = valueUniqueNames
+      ValueNameFreq = freq
+      VarUniqueNames = varUniqueNames
+      FunUniqueNames = funUniqueNames
+      VariantUniqueNames = variantUniqueNames
       DocIdOpt = None }
 
   { Rx = rx
@@ -188,13 +218,13 @@ let private currentDocId (ctx: CirCtx) : DocId =
   | None -> unreachable () // Must be filled before starting work.
 
 let private findStorageModifier (ctx: CirCtx) varSerial =
-  match ctx.Rx.Vars |> TMap.tryFind varSerial with
+  match ctx.Rx.StaticVars |> TMap.tryFind varSerial with
   | Some varDef -> varDef.IsStatic
 
-  | _ -> IsStatic
+  | _ -> NotStatic
 
 let private findVarLinkage (ctx: CirCtx) varSerial =
-  match ctx.Rx.Vars |> TMap.tryFind varSerial with
+  match ctx.Rx.StaticVars |> TMap.tryFind varSerial with
   | Some varDef -> varDef.Linkage
 
   | _ -> InternalLinkage
@@ -437,16 +467,13 @@ let private genRecordTyDef ctx tySerial fields =
 // -----------------------------------------------
 
 let private getUniqueVarName (ctx: CirCtx) varSerial =
-  ctx.Rx.ValueUniqueNames
-  |> mapFind (VarSymbol varSerial)
+  ctx.Rx.VarUniqueNames |> mapFind varSerial
 
 let private getUniqueFunName (ctx: CirCtx) funSerial =
-  ctx.Rx.ValueUniqueNames
-  |> mapFind (FunSymbol funSerial)
+  ctx.Rx.FunUniqueNames |> mapFind funSerial
 
 let private getUniqueVariantName (ctx: CirCtx) variantSerial =
-  ctx.Rx.ValueUniqueNames
-  |> mapFind (VariantSymbol variantSerial)
+  ctx.Rx.VariantUniqueNames |> mapFind variantSerial
 
 let private getUniqueTyName (ctx: CirCtx) ty : _ * CirCtx =
   let memo = ctx.TyUniqueNames
@@ -1299,39 +1326,35 @@ let private sortDecls (decls: CDecl list) : CDecl list =
 
   List.collect List.rev [ types; vars; bodies ]
 
+let private cgModule (ctx: CirCtx) (m: MModule) : DocId * CDecl list =
+  let varUniqueNames, _ =
+    renameIdents2 m.Vars id ctx.Rx.VarUniqueNames ctx.Rx.ValueNameFreq
+
+  let ctx: CirCtx =
+    { Rx =
+        { ctx.Rx with
+            DocIdOpt = Some m.DocId
+            VarUniqueNames = varUniqueNames }
+      TyEnv = TMap.empty tyCompare
+      TyUniqueNames = ctx.TyUniqueNames
+      Stmts = []
+      Decls = []
+      VarDecls = TSet.empty varSerialCompare
+      FunDecls = TSet.empty funSerialCompare }
+
+  // Generate decls.
+  let ctx = cgDecls ctx m.Decls
+  let decls = List.rev ctx.Decls |> sortDecls
+
+  m.DocId, decls
+
 // -----------------------------------------------
 // Interface
 // -----------------------------------------------
 
-let genCir (decls, mirResult: MirResult) : (DocId * CDecl list) list =
+let genCir (modules: MModule list, mirResult: MirResult) : (DocId * CDecl list) list =
   let ctx = ofMirResult mirResult
 
-  // Split into modules based on docId.
-  let modules =
-    decls
-    |> List.fold
-         (fun moduleMap decl ->
-           let (Loc (docId, _, _)) = mDeclToLoc decl
-
-           moduleMap |> multimapAdd docId decl)
-         (TMap.empty compare)
-    |> TMap.toList
-    |> __parallelMap
-         (fun (docId, declAcc) ->
-           let ctx: CirCtx =
-             { Rx = { ctx.Rx with DocIdOpt = Some docId }
-               TyEnv = TMap.empty tyCompare
-               TyUniqueNames = ctx.TyUniqueNames
-               Stmts = []
-               Decls = []
-               VarDecls = TSet.empty varSerialCompare
-               FunDecls = TSet.empty funSerialCompare }
-
-           // Generate decls.
-           let decls = List.rev declAcc
-           let ctx = cgDecls ctx decls
-           let decls = List.rev ctx.Decls |> sortDecls
-
-           (docId, decls))
-
   modules
+  |> __parallelMap (cgModule ctx)
+  |> List.filter (fun (_, decls) -> decls |> List.isEmpty |> not)

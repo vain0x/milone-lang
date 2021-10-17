@@ -20,12 +20,12 @@ struct Val_ {
 };
 
 int milone_main(void) {
-    int x_1;
+    int x_;
     int match_;
     struct Val_ variant_ = (struct Val_){.discriminant = Int_, .Int_ = 0};
     if ((variant_.discriminant != Int_)) goto next_2;
-    x_1 = variant_.Int_;
-    match_ = x_1;
+    x_ = variant_.Int_;
+    match_ = x_;
     goto end_match_1;
 next_2:;
     if ((variant_.discriminant != Str_)) goto next_3;

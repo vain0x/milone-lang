@@ -234,15 +234,15 @@ let private collectNameResErrors logs : SyntaxError list option =
     |> List.map (fun (log, loc) -> Tir.nameResLogToString log, loc)
     |> Some
 
-let private collectTypingErrors (tyCtx: Typing.TyCtx) : SyntaxError list option =
-  let logs = tyCtx.Logs
+let private collectTypingErrors (tirCtx: Tir.TirCtx) : SyntaxError list option =
+  let logs = tirCtx.Logs
 
   if List.isEmpty logs then
     None
   else
     let tyDisplayFn ty =
       let getTyName tySerial =
-        tyCtx.Tys
+        tirCtx.Tys
         |> TMap.tryFind tySerial
         |> Option.map Tir.tyDefToName
 
@@ -311,8 +311,8 @@ let syntaxCtxNew (host: SyntaxHost) : SyntaxCtx =
 
 [<NoEquality; NoComparison>]
 type SyntaxAnalysisResult =
-  | SyntaxAnalysisOk of Tir.TProgram * Typing.TyCtx
-  | SyntaxAnalysisError of SyntaxError list * Typing.TyCtx option
+  | SyntaxAnalysisOk of Tir.TProgram * Tir.TirCtx
+  | SyntaxAnalysisError of SyntaxError list * Tir.TirCtx option
 
 /// Creates a TIR and collects errors
 /// by loading source files and processing.
@@ -337,11 +337,11 @@ let performSyntaxAnalysis (ctx: SyntaxCtx) : SyntaxAnalysisResult =
 
     | None ->
       writeLog "Typing"
-      let modules, tyCtx = Typing.infer (modules, nameResResult)
+      let modules, tirCtx = Typing.infer (modules, nameResResult)
 
       writeLog "ArityCheck"
-      let tyCtx = ArityCheck.arityCheck (modules, tyCtx)
+      let tirCtx = ArityCheck.arityCheck (modules, tirCtx)
 
-      match collectTypingErrors tyCtx with
-      | Some errors -> SyntaxAnalysisError(errors, Some tyCtx)
-      | None -> SyntaxAnalysisOk(modules, tyCtx)
+      match collectTypingErrors tirCtx with
+      | Some errors -> SyntaxAnalysisError(errors, Some tirCtx)
+      | None -> SyntaxAnalysisOk(modules, tirCtx)
