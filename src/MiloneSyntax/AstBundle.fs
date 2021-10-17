@@ -331,8 +331,7 @@ let bundle (fetchModule: FetchModuleFun) (entryProjectName: ProjectName) : Bundl
                   assert (lastSerial - serial = symbolCount)
 
                   let m: TModule =
-                    { ProjectName = projectName
-                      ModuleName = moduleName
+                    { DocId = docId
                       Vars = emptyVars
                       Stmts = exprs }
 

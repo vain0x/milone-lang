@@ -122,7 +122,9 @@ type HExpr =
 /// Module. Variable info is reduced.
 [<RequireQualifiedAccess; NoEquality; NoComparison>]
 type HModule2 =
-  { /// Non-static variables.
+  { DocId: DocId
+
+    /// Non-static variables.
     Vars: TMap.TreeMap<VarSerial, Ident>
 
     Stmts: HExpr list }

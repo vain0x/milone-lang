@@ -1662,7 +1662,10 @@ let private mirifyModule (m: HModule2, ctx: MirCtx) =
 
   let decls, ctx = takeDecls ctx
 
-  let m: MModule = { Vars = ctx.VarNameMap; Decls = decls }
+  let m: MModule =
+    { DocId = m.DocId
+      Vars = ctx.VarNameMap
+      Decls = decls }
 
   m, ctx
 

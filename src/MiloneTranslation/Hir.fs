@@ -335,8 +335,7 @@ type VarNameMap = AssocMap<VarSerial, Ident>
 
 [<RequireQualifiedAccess; NoEquality; NoComparison>]
 type HModule =
-  { ProjectName: ProjectName
-    ModuleName: ModuleName
+  { DocId: DocId
 
     /// Non-static variables.
     Vars: VarMap
@@ -346,7 +345,9 @@ type HModule =
 /// Module. Variable info is reduced.
 [<RequireQualifiedAccess; NoEquality; NoComparison>]
 type HModule2 =
-  { /// Non-static variables.
+  { DocId: DocId
+
+    /// Non-static variables.
     Vars: VarNameMap
 
     Stmts: HExpr list }

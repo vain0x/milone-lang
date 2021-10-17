@@ -293,7 +293,11 @@ let private transformHir (host: CliHost) v (modules: Tir.TProgram, tyCtx: Typing
              m.Vars
              |> TMap.map (fun _ (varDef: Hir.VarDef) -> varDef.Name)
 
-           let m: Hir.HModule2 = { Vars = varNameMap; Stmts = m.Stmts }
+           let m: Hir.HModule2 =
+             { DocId = m.DocId
+               Vars = varNameMap
+               Stmts = m.Stmts }
+
            m)
 
   writeLog host v "MonoTy"
@@ -310,12 +314,8 @@ let private codeGenHirViaMir (host: CliHost) v projectName (modules, tyCtx) : Co
   writeLog host v "Mir"
   let modules, mirCtx = mirify (modules, tyCtx)
 
-  let decls =
-    modules
-    |> List.collect (fun (m: Mir.MModule) -> m.Decls)
-
   writeLog host v "CirGen"
-  let modules = genCir (decls, mirCtx)
+  let modules = genCir (modules, mirCtx)
 
   writeLog host v "CirDump"
 

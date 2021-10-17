@@ -224,7 +224,10 @@ type MDecl =
   | MNativeDecl of code: string * Loc
 
 [<RequireQualifiedAccess; NoEquality; NoComparison>]
-type MModule = { Vars: VarNameMap; Decls: MDecl list }
+type MModule =
+  { DocId: DocId
+    Vars: VarNameMap
+    Decls: MDecl list }
 
 // -----------------------------------------------
 // Expressions (MIR)

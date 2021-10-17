@@ -224,8 +224,7 @@ let private lowerModules (modules: Tir.TProgram) : Hir.HProgram =
   |> List.map
        (fun (m: Tir.TModule) ->
          let m: Hir.HModule =
-           { ProjectName = m.ProjectName
-             ModuleName = m.ModuleName
+           { DocId = m.DocId
              Vars = lowerVarMap m.Vars
              Stmts = List.map lowerStmt m.Stmts }
 

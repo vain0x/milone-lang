@@ -420,8 +420,7 @@ type private VarMap = AssocMap<VarSerial, VarDef>
 
 [<RequireQualifiedAccess; NoEquality; NoComparison>]
 type TModule =
-  { ProjectName: ProjectName
-    ModuleName: ModuleName
+  { DocId: DocId
 
     /// Non-static variables.
     Vars: VarMap

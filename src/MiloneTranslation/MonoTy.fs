@@ -376,7 +376,12 @@ let private mtExpr (expr, ctx) : M.HExpr * MtCtx =
 
 let private mtModule (m: HModule2, ctx) =
   let stmts, ctx = (m.Stmts, ctx) |> stMap mtExpr
-  let m: M.HModule2 = { Vars = m.Vars; Stmts = stmts }
+
+  let m: M.HModule2 =
+    { DocId = m.DocId
+      Vars = m.Vars
+      Stmts = stmts }
+
   m, ctx
 
 // -----------------------------------------------
@@ -535,7 +540,8 @@ let private bthExpr (expr: M.HExpr) : HExpr =
     HLetFunExpr(funSerial, ofPats args, ofExpr body, ofExpr next, ofTy ty, loc)
 
 let private bthModule (m: M.HModule2) : HModule2 =
-  { Vars = m.Vars
+  { DocId = m.DocId
+    Vars = m.Vars
     Stmts = m.Stmts |> List.map bthExpr }
 
 let private bthFunDef (funDef: M.FunDef) : FunDef =

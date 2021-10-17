@@ -1307,23 +1307,16 @@ let private sortDecls (decls: CDecl list) : CDecl list =
 // Interface
 // -----------------------------------------------
 
-let genCir (decls, mirResult: MirResult) : (DocId * CDecl list) list =
+let genCir (modules: MModule list, mirResult: MirResult) : (DocId * CDecl list) list =
   let ctx = ofMirResult mirResult
 
   // Split into modules based on docId.
   let modules =
-    decls
-    |> List.fold
-         (fun moduleMap decl ->
-           let (Loc (docId, _, _)) = mDeclToLoc decl
-
-           moduleMap |> multimapAdd docId decl)
-         (TMap.empty compare)
-    |> TMap.toList
+    modules
     |> __parallelMap
-         (fun (docId, declAcc) ->
+         (fun (m: MModule) ->
            let ctx: CirCtx =
-             { Rx = { ctx.Rx with DocIdOpt = Some docId }
+             { Rx = { ctx.Rx with DocIdOpt = Some m.DocId }
                TyEnv = TMap.empty tyCompare
                TyUniqueNames = ctx.TyUniqueNames
                Stmts = []
@@ -1332,10 +1325,11 @@ let genCir (decls, mirResult: MirResult) : (DocId * CDecl list) list =
                FunDecls = TSet.empty funSerialCompare }
 
            // Generate decls.
-           let decls = List.rev declAcc
+           let decls = m.Decls
            let ctx = cgDecls ctx decls
            let decls = List.rev ctx.Decls |> sortDecls
 
-           (docId, decls))
+           (m.DocId, decls))
+    |> List.filter (fun (_, decls) -> decls |> List.isEmpty |> not)
 
   modules
