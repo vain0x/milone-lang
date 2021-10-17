@@ -62,6 +62,32 @@ type private TyCtx =
     TraitBounds: (Trait * Loc) list
     Logs: (Log * Loc) list }
 
+let private newTyCtx (nr: NameResResult) : TyCtx =
+  assert (List.isEmpty nr.Logs)
+
+  { Serial = nr.Serial
+    Vars = nr.Vars
+    Funs = nr.Funs
+    Variants = nr.Variants
+    MainFunOpt = nr.MainFunOpt
+    Tys = nr.Tys
+    TyLevels = TMap.empty compare
+    QuantifiedTys = TSet.empty compare
+    Level = 0
+    GrayFuns = TSet.empty funSerialCompare
+    GrayInstantiations = TMap.empty funSerialCompare
+    TraitBounds = []
+    Logs = [] }
+
+let private toTirCtx (ctx: TyCtx) : TirCtx =
+  { Serial = ctx.Serial
+    Vars = ctx.Vars
+    Funs = ctx.Funs
+    Variants = ctx.Variants
+    Tys = ctx.Tys
+    MainFunOpt = ctx.MainFunOpt
+    Logs = ctx.Logs }
+
 let private addLog (ctx: TyCtx) log loc =
   { ctx with
       Logs = (log, loc) :: ctx.Logs }
@@ -1516,22 +1542,7 @@ let private synonymCycleCheck (tyCtx: TyCtx) =
 // -----------------------------------------------
 
 let infer (modules: TProgram, nameRes: NameResResult) : TProgram * TirCtx =
-  assert (List.isEmpty nameRes.Logs)
-
-  let ctx: TyCtx =
-    { Serial = nameRes.Serial
-      Vars = nameRes.Vars
-      Funs = nameRes.Funs
-      Variants = nameRes.Variants
-      MainFunOpt = nameRes.MainFunOpt
-      Tys = nameRes.Tys
-      TyLevels = TMap.empty compare
-      QuantifiedTys = TSet.empty compare
-      Level = 0
-      GrayFuns = TSet.empty funSerialCompare
-      GrayInstantiations = TMap.empty funSerialCompare
-      TraitBounds = []
-      Logs = [] }
+  let ctx = newTyCtx nameRes
 
   let withLevel level (ctx: TyCtx) =
     if ctx.Level <> level then
@@ -1715,13 +1726,5 @@ let infer (modules: TProgram, nameRes: NameResResult) : TProgram * TirCtx =
 
     { ctx with Tys = tys }
 
-  let ctx: TirCtx =
-    { Serial = ctx.Serial
-      Vars = ctx.Vars
-      Funs = ctx.Funs
-      Variants = ctx.Variants
-      Tys = ctx.Tys
-      MainFunOpt = ctx.MainFunOpt
-      Logs = ctx.Logs }
-
+  let ctx = toTirCtx ctx
   modules, ctx
