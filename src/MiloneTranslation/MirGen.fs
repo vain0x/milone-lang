@@ -1041,10 +1041,6 @@ let private mirifyCallStrGetSliceExpr ctx args loc =
 
 let private mirifyCallVariantExpr (ctx: MirCtx) serial payload ty loc =
   let payload, ctx = mirifyExpr ctx payload
-  let payloadTy = mexprToTy payload
-
-  // FIXME: Generate a serial to reduce diff. Remove this later.
-  let _, _payloadSerial, ctx = freshVar ctx "payload" payloadTy loc
 
   let temp, tempSerial, ctx = freshVar ctx "variant" ty loc
 
@@ -1427,11 +1423,7 @@ let private mirifyExprInfCallTailRec (ctx: MirCtx) _callee args _ty loc =
   MNeverExpr loc, ctx
 
 let private mirifyExprInfClosure ctx funSerial env funTy loc =
-  let envTy, envLoc = exprExtract env
   let env, ctx = mirifyExpr ctx env
-
-  // FIXME: Generate a serial to reduce diff; remove this later.
-  let _, _, ctx = freshVar ctx "env" envTy envLoc
 
   let tempRef, tempSerial, ctx = freshVar ctx "fun" funTy loc
 

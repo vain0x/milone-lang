@@ -251,7 +251,6 @@ let private genFunCaps funSerial (ctx: CcCtx) : Caps =
     | Some it -> it |> TSet.toList
     | None -> []
 
-  // FIXME: List.rev here is just to reduce diff. Remove later.
   varSerials
   |> List.choose
        (fun varSerial ->
@@ -260,7 +259,6 @@ let private genFunCaps funSerial (ctx: CcCtx) : Caps =
            Some(varSerial, varDef.Ty, varDef.Loc)
          else
            None)
-  |> List.rev
 
 let private closureRefs (ctx: CcCtx) : CcCtx =
   let mergeUpvars localVars newUpvars (modified, upvars) : bool * AssocSet<VarSerial> =
