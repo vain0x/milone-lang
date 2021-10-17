@@ -239,7 +239,7 @@ type private CompileResult =
   | CompileOk of CodeGenResult
   | CompileError of string
 
-let private getCFileName projectName docId : CFilename =
+let private computeCFilename projectName docId : CFilename =
   if docId = projectName + ".Program"
      || docId = projectName + ".EntryPoint"
      || docId = projectName + "." + projectName then
@@ -268,7 +268,7 @@ let private compile (ctx: CompileCtx) : CompileResult =
 
     let cFiles =
       cFiles
-      |> List.map (fun (docId, cCode) -> getCFileName projectName docId, cCode)
+      |> List.map (fun (docId, cCode) -> computeCFilename projectName docId, cCode)
 
     writeLog "Finish"
     CompileOk cFiles
