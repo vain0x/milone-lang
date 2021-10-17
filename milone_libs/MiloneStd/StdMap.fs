@@ -9,23 +9,23 @@ module rec MiloneStd.StdMap
 // -----------------------------------------------
 
 [<NoEquality; NoComparison>]
-type TreeMapColor =
+type Color =
   | R
   | B
 
 [<NoEquality; NoComparison>]
-type TreeMapRawNode =
+type Node<'K, 'T> =
   | E
-  | T of TreeMapColor * left: TreeMapRawNode * keyValuePair: obj * right: TreeMapRawNode
+  | T of Color * left: Node<'K, 'T> * pair: ('K * 'T) * right: Node<'K, 'T>
 
 // keyCompare kv = compare theKey (fst (unbox kv))
-let private doTryFind (keyCompare: obj -> int) node : obj option =
+let private doTryFind (keyCompare: 'K -> 'K -> int) key node : ('K * 'T) option =
   let rec go node =
     match node with
     | E -> None
 
-    | T (_, a, kv, b) ->
-      let c = keyCompare kv
+    | T (_, a, ((k, _) as kv), b) ->
+      let c = keyCompare key k
 
       if c < 0 then
         // key < k
@@ -52,13 +52,15 @@ let private balanceR body =
   | _ -> body
 
 // keyCompare kv = compare (fst (unbox newKv)) (fst (unbox kv))
-let private doInsert (keyCompare: obj -> int) (newKv: obj) node =
+let private doInsert (keyCompare: 'K -> 'K -> int) (newKv: 'K * 'T) node : Node<'K, 'T> =
+  let newKey, _ = newKv
+
   let rec go node =
     match node with
     | E -> R, E, newKv, E
 
-    | T (color, l, kv, r) ->
-      let c = keyCompare kv
+    | T (color, l, ((k, _) as kv), r) ->
+      let c = keyCompare newKey k
 
       if c < 0 then
         // key < k
@@ -91,21 +93,21 @@ let private findMinItem node =
 
 // keyCompare kv = compare theKey k
 // keyCompareTo l r = compare (fst l) (fst r)
-let private doRemove (keyCompare: obj -> int) (keyCompareTo: obj -> obj -> int) node : obj option * _ =
-  let rec go keyCompare node =
+let private doRemove (keyCompare: 'K -> 'K -> int) key node : ('K * 'T) option * Node<'K, 'T> =
+  let rec go node =
     match node with
     | E -> None, E
 
-    | T (color, l, kv, r) ->
-      let c = keyCompare kv
+    | T (color, l, ((k, _) as kv), r) ->
+      let c = keyCompare key k
 
       if c < 0 then
         // key < k
-        let removed, l = go keyCompare l
+        let removed, l = go l
         removed, T(balanceL (color, l, kv, r))
       else if c > 0 then
         // k < key
-        let removed, r = go keyCompare r
+        let removed, r = go r
         removed, T(balanceR (color, l, kv, r))
       else
         // key = k
@@ -115,13 +117,13 @@ let private doRemove (keyCompare: obj -> int) (keyCompareTo: obj -> obj -> int) 
           | _ ->
             match findMinItem r with
             | None -> setBlack l
-            | Some rkv ->
-              let _, r = go (keyCompareTo rkv) r
+            | Some ((rk, _) as rkv) ->
+              let _, r = doRemove keyCompare rk r
               T(balanceR (color, l, rkv, r))
 
         Some kv, rest
 
-  go keyCompare node
+  go node
 
 // f: kv -> kv
 let private doMap f node =
@@ -168,27 +170,24 @@ let private doMapFold folder state node =
 // Interface
 // -----------------------------------------------
 
-// Third item is always `[]`. This is just for "phantom" type parameter 'T.
-type TreeMap<'K, 'T> = TreeMapRawNode * ('K -> 'K -> int) * ('T list)
+type TreeMap<'K, 'T> = TreeMap of Node<'K, 'T> * ('K -> 'K -> int)
 
-let empty (keyCompare: 'K -> 'K -> int) : TreeMap<'K, 'T> = E, keyCompare, []
+let empty (keyCompare: 'K -> 'K -> int) : TreeMap<'K, 'T> = TreeMap(E, keyCompare)
 
 let isEmpty (map: TreeMap<_, _>) : bool =
-  let node, _, _ = map
+  let (TreeMap (node, _)) = map
 
   match node with
   | E -> true
   | _ -> false
 
 let tryFind (key: 'K) (map: TreeMap<'K, 'T>) : 'T option =
-  let node, keyCompare, _ = map
+  let (TreeMap (node, keyCompare)) = map
 
-  let kvOpt =
-    node
-    |> doTryFind (fun kv -> keyCompare key (fst (unbox kv: 'K * 'T)))
+  let kvOpt = doTryFind keyCompare key node
 
   match kvOpt with
-  | Some kv -> Some(snd (unbox kv: 'K * 'T))
+  | Some (_, v) -> Some v
   | None -> None
 
 let containsKey (key: 'K) (map: TreeMap<'K, _>) : bool =
@@ -197,82 +196,60 @@ let containsKey (key: 'K) (map: TreeMap<'K, _>) : bool =
   | None -> false
 
 let add (key: 'K) (value: 'T) (map: TreeMap<'K, 'T>) : TreeMap<'K, 'T> =
-  let node, keyCompare, none = map
+  let (TreeMap (node, keyCompare)) = map
 
-  let node =
-    doInsert (fun kv -> keyCompare key (fst (unbox kv: 'K * 'T))) (box (key, value)) node
+  let node = doInsert keyCompare (key, value) node
 
-  node, keyCompare, none
+  TreeMap(node, keyCompare)
 
 let remove (key: 'K) (map: TreeMap<'K, 'T>) : 'T option * TreeMap<'K, 'T> =
-  let node, keyCompare, none = map
+  let (TreeMap (node, keyCompare)) = map
 
-  let kvOpt, node =
-    doRemove
-      (fun kv -> keyCompare key (fst (unbox kv: 'K * 'T)))
-      (fun l r -> keyCompare (fst (unbox l: 'K * 'T)) (fst (unbox r: 'K * 'T)))
-      node
+  let kvOpt, node = doRemove keyCompare key node
 
   let valueOpt =
     match kvOpt with
-    | Some kv -> Some(snd (unbox kv: 'K * 'T))
+    | Some (_, v) -> Some v
     | None -> None
 
-  valueOpt, (node, keyCompare, none)
+  valueOpt, TreeMap(node, keyCompare)
 
 let map (f: 'K -> 'T -> 'U) (map: TreeMap<'K, 'T>) : TreeMap<'K, 'U> =
-  let node, keyCompare, _ = map
+  let (TreeMap (node, keyCompare)) = map
 
-  let node =
-    node
-    |> doMap
-         (fun kv ->
-           let k, v = unbox kv
-           let v = f k v
-           box (k, v))
+  let node = node |> doMap (fun (k, v) -> k, f k v)
 
-  node, keyCompare, []
+  TreeMap(node, keyCompare)
 
 /// Maps both keys and values. Keys must preserve their relative ordering (unchecked).
 let stableMap (f: 'K -> 'T -> 'H * 'U) (otherKeyCompare: 'H -> 'H -> int) (map: TreeMap<'K, 'T>) : TreeMap<'H, 'U> =
-  let node, keyCompare, _ = map
+  let (TreeMap (node, keyCompare)) = map
 
-  let node =
-    node
-    |> doMap
-         (fun kv ->
-           let k, v = unbox kv
-           let kv = f k v
-           box kv)
+  let node = node |> doMap (fun (k, v) -> f k v)
 
-  node, otherKeyCompare, []
+  TreeMap(node, otherKeyCompare)
 
 let fold (folder: 'S -> 'K -> 'T -> 'S) (state: 'S) (map: TreeMap<'K, 'T>) : 'S =
-  let node, keyCompare, _ = map
+  let (TreeMap (node, keyCompare)) = map
 
-  doFold
-    (fun state kv ->
-      let k, v = unbox kv
-      folder state k v)
-    state
-    node
+  doFold (fun state (k, v) -> folder state k v) state node
 
 let mapFold (folder: 'S -> 'K -> 'T -> 'U * 'S) (state: 'S) (map: TreeMap<'K, 'T>) : TreeMap<'K, 'U> * 'S =
-  let node, keyCompare, _ = map
+  let (TreeMap (node, keyCompare)) = map
 
   let node, state =
     doMapFold
       (fun state kv ->
-        let k, v = unbox kv
+        let k, v = kv
         let v, state = folder state k v
-        box (k, v), state)
+        (k, v), state)
       state
       node
 
-  (node, keyCompare, []), state
+  TreeMap(node, keyCompare), state
 
 let filter (pred: 'K -> 'T -> bool) (map: TreeMap<'K, 'T>) : TreeMap<'K, 'T> =
-  let _, keyCompare, _ = map
+  let (TreeMap (_, keyCompare)) = map
 
   map
   |> fold (fun acc k v -> if pred k v then (k, v) :: acc else acc) []
@@ -281,9 +258,9 @@ let filter (pred: 'K -> 'T -> bool) (map: TreeMap<'K, 'T>) : TreeMap<'K, 'T> =
 let ofList keyCompare (assoc: ('K * 'T) list) : TreeMap<'K, 'T> =
   let node =
     assoc
-    |> List.fold (fun node kv -> doInsert (fun r -> keyCompare (fst kv) (fst (unbox r: 'K * 'T))) (box kv) node) E
+    |> List.fold (fun node kv -> doInsert keyCompare kv node) E
 
-  node, keyCompare, []
+  TreeMap(node, keyCompare)
 
 let toList (map: TreeMap<'K, 'T>) : ('K * 'T) list =
   map
