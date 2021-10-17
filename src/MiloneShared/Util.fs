@@ -191,7 +191,7 @@ let assocTryFind compare key assoc =
   go assoc
 
 // -----------------------------------------------
-// AssocMap
+// TreeMap
 // -----------------------------------------------
 
 let mapFind key map =
