@@ -208,11 +208,19 @@ let mapFold (folder: 'S -> 'K -> 'T -> 'U * 'S) (state: 'S) (map: TreeMap<'K, 'T
   TreeMap(node, keyCompare), state
 
 let filter (pred: 'K -> 'T -> bool) (map: TreeMap<'K, 'T>) : TreeMap<'K, 'T> =
-  let (TreeMap (_, keyCompare)) = map
+  let (TreeMap (node, keyCompare)) = map
 
-  map
-  |> fold (fun acc k v -> if pred k v then (k, v) :: acc else acc) []
-  |> ofList keyCompare
+  let node =
+    node
+    |> foldNode
+         (fun node k v ->
+           if pred k v then
+             insertNode keyCompare k v node
+           else
+             node)
+         E
+
+  TreeMap(node, keyCompare)
 
 let ofList keyCompare (assoc: ('K * 'T) list) : TreeMap<'K, 'T> =
   let node =
