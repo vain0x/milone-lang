@@ -22,6 +22,7 @@
     <Compile Include="Cir.fs" />
     <Compile Include="CirGen.fs" />
     <Compile Include="CirDump.fs" />
+    <Compile Include="TranslationApi.fs" />
   </ItemGroup>
 
   <ItemGroup>
