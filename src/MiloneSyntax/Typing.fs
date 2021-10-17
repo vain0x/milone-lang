@@ -28,7 +28,7 @@ module TSet = MiloneStd.StdSet
 // -----------------------------------------------
 
 [<RequireQualifiedAccess; NoEquality; NoComparison>]
-type TyCtx =
+type private TyCtx =
   {
     /// Next serial number.
     /// We need to identify variables by serial number rather than names
@@ -1515,7 +1515,7 @@ let private synonymCycleCheck (tyCtx: TyCtx) =
 // Interface
 // -----------------------------------------------
 
-let infer (modules: TProgram, nameRes: NameResResult) : TProgram * TyCtx =
+let infer (modules: TProgram, nameRes: NameResResult) : TProgram * TirCtx =
   assert (List.isEmpty nameRes.Logs)
 
   let ctx: TyCtx =
@@ -1714,5 +1714,14 @@ let infer (modules: TProgram, nameRes: NameResResult) : TProgram * TyCtx =
            (TMap.empty compare)
 
     { ctx with Tys = tys }
+
+  let ctx: TirCtx =
+    { Serial = ctx.Serial
+      Vars = ctx.Vars
+      Funs = ctx.Funs
+      Variants = ctx.Variants
+      Tys = ctx.Tys
+      MainFunOpt = ctx.MainFunOpt
+      Logs = ctx.Logs }
 
   modules, ctx

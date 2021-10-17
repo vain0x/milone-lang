@@ -253,9 +253,9 @@ let private writeLog (host: CliHost) verbosity msg =
 // -----------------------------------------------
 
 /// Transforms HIR. The result can be converted to MIR.
-let private transformHir (host: CliHost) v (modules: Tir.TProgram, tyCtx: Typing.TyCtx) =
+let private transformHir (host: CliHost) v (modules: Tir.TProgram, tirCtx: Tir.TirCtx) =
   writeLog host v "Lower"
-  let modules, tyCtx = Lower.lower (modules, tyCtx)
+  let modules, tyCtx = Lower.lower (modules, tirCtx)
 
   writeLog host v "RecordRes"
   let modules, tyCtx = recordRes (modules, tyCtx)
@@ -353,10 +353,10 @@ let private compile (ctx: CompileCtx) : CompileResult =
   match SyntaxApi.performSyntaxAnalysis ctx.SyntaxCtx with
   | SyntaxApi.SyntaxAnalysisError (errors, _) -> CompileError(SyntaxApi.syntaxErrorsToString errors)
 
-  | SyntaxApi.SyntaxAnalysisOk (modules, tyCtx) ->
-    let modules, tyCtx = transformHir host v (modules, tyCtx)
+  | SyntaxApi.SyntaxAnalysisOk (modules, tirCtx) ->
+    let modules, tirCtx = transformHir host v (modules, tirCtx)
 
-    CompileOk(codeGenHirViaMir host v ctx.EntryProjectName (modules, tyCtx))
+    CompileOk(codeGenHirViaMir host v ctx.EntryProjectName (modules, tirCtx))
 
 // -----------------------------------------------
 // Others

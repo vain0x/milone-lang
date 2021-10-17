@@ -230,24 +230,21 @@ let private lowerModules (modules: Tir.TProgram) : Hir.HProgram =
 
          m)
 
-let private lowerTyCtx (tyCtx: Typing.TyCtx) : Hir.TyCtx =
-  { Serial = tyCtx.Serial
+let private lowerTirCtx (ctx: Tir.TirCtx) : Hir.TyCtx =
+  { Serial = ctx.Serial
 
-    Vars = lowerVarMap tyCtx.Vars
+    Vars = lowerVarMap ctx.Vars
 
     Funs =
-      tyCtx.Funs
+      ctx.Funs
       |> TMap.stableMap (fun serial def -> lowerFunSerial serial, lowerFunDef def) Hir.funSerialCompare
 
     Variants =
-      tyCtx.Variants
+      ctx.Variants
       |> TMap.stableMap (fun serial def -> lowerVariantSerial serial, lowerVariantDef def) Hir.variantSerialCompare
 
-    MainFunOpt = tyCtx.MainFunOpt |> Option.map lowerFunSerial
+    MainFunOpt = ctx.MainFunOpt |> Option.map lowerFunSerial
 
-    Tys =
-      tyCtx.Tys
-      |> TMap.map (fun _ def -> lowerTyDef def) }
+    Tys = ctx.Tys |> TMap.map (fun _ def -> lowerTyDef def) }
 
-let lower (modules: Tir.TProgram, tyCtx: Typing.TyCtx) : Hir.HProgram * Hir.TyCtx =
-  lowerModules modules, lowerTyCtx tyCtx
+let lower (modules: Tir.TProgram, ctx: Tir.TirCtx) : Hir.HProgram * Hir.TyCtx = lowerModules modules, lowerTirCtx ctx

@@ -225,6 +225,21 @@ type TySymbol =
   | UnionTySymbol of unionTySerial: TySerial
   | RecordTySymbol of recordTySerial: TySerial
 
+/// Context of TIR program.
+[<RequireQualifiedAccess; NoEquality; NoComparison>]
+type TirCtx =
+  { /// Last serial number.
+    Serial: Serial
+
+    Vars: AssocMap<VarSerial, VarDef>
+    Funs: AssocMap<FunSerial, FunDef>
+    Variants: AssocMap<VariantSerial, VariantDef>
+
+    MainFunOpt: FunSerial option
+
+    Tys: AssocMap<TySerial, TyDef>
+    Logs: (Log * Loc) list }
+
 /// Kind of TNodePat.
 [<NoEquality; NoComparison>]
 type TPatKind =

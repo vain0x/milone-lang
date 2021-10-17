@@ -683,7 +683,6 @@ type TyCtx =
 
     MainFunOpt: FunSerial option
 
-    /// Type serial to type definition.
     Tys: AssocMap<TySerial, TyDef> }
 
 // -----------------------------------------------
