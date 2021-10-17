@@ -49,7 +49,6 @@ type private UnitFun = __nativeFun<unit, int>
 let private testUnitFun () =
   let answer () = 42
 
-  // FIXME: cast is necessary to ignore `unit` parameter.
   let fp: UnitFun = __nativeCast (__nativeFun answer)
 
   __nativeStmt ("""int (*unit_fun)(void) = {0};""", fp)
@@ -73,7 +72,6 @@ let private testVoidFun () =
   let log (n: int) =
     __nativeStmt ("""printf("f is called: n=%d.\n", {0});""", n)
 
-  // FIXME: cast is necessary to ignore `unit` result.
   let fp: VoidFun = __nativeCast (__nativeFun log)
 
   __nativeStmt ("""void(*void_fun)(int) = {0}; void_fun(42);""", fp)

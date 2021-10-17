@@ -73,7 +73,7 @@ int answer_(void) {
 void testUnitFun_(void) {
     int(*fp_)(void) = ((int(*)(void))answer_);
 int (*unit_fun)(void) = fp_;    int value_ = unit_fun();
-    milone_assert((value_ == 42), 56, 2);
+    milone_assert((value_ == 42), 55, 2);
     return;
 }
 
@@ -84,7 +84,7 @@ int inc_(int n_) {
 void testUnaryFun_(void) {
     int(*fp_1)(int) = inc_;
 int (*unary_fun)(int) = fp_1;    int value_1 = unary_fun(41);
-    milone_assert((value_1 == 42), 67, 2);
+    milone_assert((value_1 == 42), 66, 2);
     return;
 }
 
