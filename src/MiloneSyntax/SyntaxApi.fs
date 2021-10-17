@@ -23,10 +23,8 @@ module TySystem = MiloneSyntax.TySystem
 type private SourceExt = string
 
 // -----------------------------------------------
-// MiloneCore resolution
+// Prelude resolution
 // -----------------------------------------------
-
-// FIXME: move to ast bundle?
 
 [<RequireQualifiedAccess; NoEquality; NoComparison>]
 type ModuleKind =
