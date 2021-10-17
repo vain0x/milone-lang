@@ -7,11 +7,10 @@
 ///
 /// Source code (string) is split into a list of tokens in `SyntaxTokenize`
 /// and converted to an abstract syntax tree (AST) in `SyntaxParse`.
-/// Finally AST is converted to HIR in `AstToHir`.
+/// Finally AST is converted to TIR in `TirGen`.
 module rec MiloneSyntax.Syntax
 
 open MiloneShared.SharedTypes
-open MiloneShared.Util
 open MiloneStd.StdMap
 
 /// Name with ID.

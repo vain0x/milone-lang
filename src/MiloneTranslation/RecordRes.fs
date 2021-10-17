@@ -25,8 +25,8 @@ type private RrCtx =
     /// recordTySerial -> (fieldTys, (field -> (fieldIndex, fieldTy)))
     RecordMap: TreeMap<TySerial, (Ty list * TreeMap<Ident, int * Ty>)> }
 
-let private ofTyCtx (tyCtx: TyCtx) : RrCtx =
-  { Tys = tyCtx.Tys
+let private ofHirCtx (hirCtx: HirCtx) : RrCtx =
+  { Tys = hirCtx.Tys
     RecordMap = TMap.empty compare }
 
 /// ## Resolution of records and fields
@@ -218,8 +218,8 @@ let private teExpr (ctx: RrCtx) expr =
     let next = next |> teExpr ctx
     HLetFunExpr(callee, args, body, next, ty, loc)
 
-let recordRes (modules: HProgram, tyCtx: TyCtx) : HProgram * TyCtx =
-  let ctx = ofTyCtx tyCtx
+let recordRes (modules: HProgram, hirCtx: HirCtx) : HProgram * HirCtx =
+  let ctx = ofHirCtx hirCtx
 
   let ctx =
     { ctx with
@@ -227,5 +227,5 @@ let recordRes (modules: HProgram, tyCtx: TyCtx) : HProgram * TyCtx =
 
   let modules = modules |> HProgram.mapExpr (teExpr ctx)
 
-  // tyCtx doesn't change.
-  modules, tyCtx
+  // HirCtx doesn't change.
+  modules, hirCtx

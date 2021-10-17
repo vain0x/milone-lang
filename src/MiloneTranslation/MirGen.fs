@@ -76,14 +76,14 @@ type private MirCtx =
     Stmts: MStmt list
     Decls: MDecl list }
 
-let private ofTyCtx (tyCtx: TyCtx) : MirCtx =
+let private ofHirCtx (hirCtx: HirCtx) : MirCtx =
   let rx: MirRx =
-    { Funs = tyCtx.Funs
-      Variants = tyCtx.Variants
-      Tys = tyCtx.Tys }
+    { Funs = hirCtx.Funs
+      Variants = hirCtx.Variants
+      Tys = hirCtx.Tys }
 
   { Rx = rx
-    Serial = tyCtx.Serial
+    Serial = hirCtx.Serial
     VarNameMap = TMap.empty varSerialCompare
     LabelSerial = 0
     CurrentFunSerial = None
@@ -1659,18 +1659,18 @@ let private mirifyModule (m: HModule2, ctx: MirCtx) =
 
   m, ctx
 
-let mirify (modules: HModule2 list, tyCtx: TyCtx) : MModule list * MirResult =
-  let ctx = ofTyCtx tyCtx
+let mirify (modules: HModule2 list, hirCtx: HirCtx) : MModule list * MirResult =
+  let ctx = ofHirCtx hirCtx
 
   let modules, ctx = (modules, ctx) |> stMap mirifyModule
 
   let result: MirResult =
-    { StaticVars = tyCtx.Vars
-      Funs = tyCtx.Funs
-      Variants = tyCtx.Variants
-      Tys = tyCtx.Tys
+    { StaticVars = hirCtx.Vars
+      Funs = hirCtx.Funs
+      Variants = hirCtx.Variants
+      Tys = hirCtx.Tys
 
-      MainFunOpt = tyCtx.MainFunOpt
+      MainFunOpt = hirCtx.MainFunOpt
       FunLocals = ctx.FunLocals
       ReplacingVars = ctx.ReplacingVars }
 

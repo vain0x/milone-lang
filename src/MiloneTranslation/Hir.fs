@@ -3,18 +3,6 @@
 /// Provides types and functions for high-level intermediate representation (HIR).
 ///
 /// HIR is functional-style. Similar to milone-lang's syntax.
-///
-/// ## Lifecycle
-///
-/// HIR is generated in `AstToHir` for each file
-/// and all modules of a project are *concatenated* in `AstBundle`.
-///
-/// Most of analysis (for error reporting and soundness)
-/// and transformations (for code generation) are performed on it.
-///
-/// Finally HIR is converted to MIR in `MirGen`.
-///
-/// See `Cli.fs` for details.
 module rec MiloneTranslation.Hir
 
 open MiloneShared.SharedTypes
@@ -24,10 +12,6 @@ open MiloneShared.Util
 open MiloneStd.StdMap
 
 module S = MiloneStd.StdString
-
-// from syntax
-type private ProjectName = string
-type private ModuleName = string
 
 // -----------------------------------------------
 // HIR types
@@ -350,6 +334,24 @@ type HModule2 =
 type HProgram = HModule list
 
 // -----------------------------------------------
+// HirCtx
+// -----------------------------------------------
+
+/// Context of HIR program.
+[<RequireQualifiedAccess; NoEquality; NoComparison>]
+type HirCtx =
+  { /// Next serial number.
+    Serial: Serial
+
+    Vars: TreeMap<VarSerial, VarDef>
+    Funs: TreeMap<FunSerial, FunDef>
+    Variants: TreeMap<VariantSerial, VariantDef>
+
+    MainFunOpt: FunSerial option
+
+    Tys: TreeMap<TySerial, TyDef> }
+
+// -----------------------------------------------
 // Types (HIR/MIR)
 // -----------------------------------------------
 
@@ -664,26 +666,6 @@ module HProgram =
   let foldExpr (f: 'S -> HExpr -> 'S) (state: 'S) (program: HProgram) : 'S =
     program
     |> List.fold (fun (state: 'S) (m: HModule) -> m.Stmts |> List.fold f state) state
-
-// ===============================================
-// patchwork
-
-[<RequireQualifiedAccess; NoEquality; NoComparison>]
-type TyCtx =
-  {
-    /// Next serial number.
-    /// We need to identify variables by serial number rather than names
-    /// due to scope locality and shadowing.
-    Serial: Serial
-
-    /// Variable serial to variable definition.
-    Vars: TreeMap<VarSerial, VarDef>
-    Funs: TreeMap<FunSerial, FunDef>
-    Variants: TreeMap<VariantSerial, VariantDef>
-
-    MainFunOpt: FunSerial option
-
-    Tys: TreeMap<TySerial, TyDef> }
 
 // -----------------------------------------------
 // Tk

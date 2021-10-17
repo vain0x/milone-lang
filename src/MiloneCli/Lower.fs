@@ -1,4 +1,6 @@
-// Conversion from TIR to HIR.
+/// # Lower
+///
+/// Conversion from TIR to HIR.
 module rec MiloneCli.Lower
 
 open MiloneShared.Util
@@ -237,7 +239,7 @@ let private lowerModules (modules: Tir.TProgram) : Hir.HProgram =
 
          m)
 
-let private lowerTirCtx (ctx: Tir.TirCtx) : Hir.TyCtx =
+let private lowerTirCtx (ctx: Tir.TirCtx) : Hir.HirCtx =
   { Serial = ctx.Serial
 
     Vars = lowerVarMap ctx.Vars
@@ -254,4 +256,4 @@ let private lowerTirCtx (ctx: Tir.TirCtx) : Hir.TyCtx =
 
     Tys = ctx.Tys |> TMap.map (fun _ def -> lowerTyDef def) }
 
-let lower (modules: Tir.TProgram, ctx: Tir.TirCtx) : Hir.HProgram * Hir.TyCtx = lowerModules modules, lowerTirCtx ctx
+let lower (modules: Tir.TProgram, ctx: Tir.TirCtx) : Hir.HProgram * Hir.HirCtx = lowerModules modules, lowerTirCtx ctx

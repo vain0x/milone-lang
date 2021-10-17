@@ -240,10 +240,10 @@ let private hoistModule (ctx: HoistCtx) (m: HModule) : HModule * HoistCtx =
 // Interface
 // -----------------------------------------------
 
-let hoist (modules: HProgram, tyCtx: TyCtx) : HProgram * TyCtx =
+let hoist (modules: HProgram, hirCtx: HirCtx) : HProgram * HirCtx =
   let hoistCtx =
     { hoistCtxEmpty with
-        MainFunOpt = tyCtx.MainFunOpt }
+        MainFunOpt = hirCtx.MainFunOpt }
 
   let modules, hoistCtx =
     modules |> List.mapFold hoistModule hoistCtx
@@ -252,4 +252,4 @@ let hoist (modules: HProgram, tyCtx: TyCtx) : HProgram * TyCtx =
   if hoistCtx.Stmts |> List.isEmpty |> not then
     unreachable () // Main function not found?
 
-  modules, tyCtx
+  modules, hirCtx

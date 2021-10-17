@@ -108,9 +108,9 @@ let private troModule (m: HModule, ctx: TailRecCtx) : HModule * TailRecCtx =
   let m = { m with Stmts = stmts }
   m, ctx
 
-let tailRecOptimize (modules: HProgram, tyCtx: TyCtx) : HProgram * TyCtx =
+let tailRecOptimize (modules: HProgram, hirCtx: HirCtx) : HProgram * HirCtx =
   let decls, _ =
     let ctx: TailRecCtx = None
     (modules, ctx) |> stMap troModule
 
-  decls, tyCtx
+  decls, hirCtx

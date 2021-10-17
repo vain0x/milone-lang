@@ -2,30 +2,16 @@
 module rec MiloneCli.Cli
 
 open MiloneShared.Util
-open MiloneStd.StdMap
-open MiloneStd.StdSet
 open MiloneStd.StdPath
 open MiloneSyntax.Syntax
-open MiloneTranslation.AutoBoxing
-open MiloneTranslation.CirDump
-open MiloneTranslation.CirGen
-open MiloneTranslation.ClosureConversion
-open MiloneTranslation.EtaExpansion
-open MiloneTranslation.Hoist
-open MiloneTranslation.MirGen
-open MiloneTranslation.Monomorphizing
-open MiloneTranslation.MonoTy
-open MiloneTranslation.RecordRes
-open MiloneTranslation.TailRecOptimizing
 
 module C = MiloneStd.StdChar
-module Derive = MiloneTranslation.Derive
-module Hir = MiloneTranslation.Hir
-module Mir = MiloneTranslation.Mir
 module S = MiloneStd.StdString
 module Tir = MiloneSyntax.Tir
 module Typing = MiloneSyntax.Typing
 module SyntaxApi = MiloneSyntax.SyntaxApi
+module Hir = MiloneTranslation.Hir
+module TranslationApi = MiloneTranslation.TranslationApi
 module Lower = MiloneCli.Lower
 module PU = MiloneCli.PlatformUnix
 module PW = MiloneCli.PlatformWindows
@@ -172,6 +158,16 @@ let private runCommand (host: CliHost) (command: Path) (args: string list) : uni
     printfn "error: subprocess '%s' exited in code %d" (Path.toString command) code
     exit code
 
+let private writeLog (host: CliHost) verbosity msg : unit =
+  match verbosity with
+  | Verbose -> __trace ("// " + msg)
+
+  | Profile profiler ->
+    let profileLog = host.ProfileLog
+    profiler |> profileLog msg
+
+  | Quiet -> ()
+
 let private computeExePath targetDir platform isRelease name : Path =
   let triple =
     match platform with
@@ -201,16 +197,12 @@ let private computeExePath targetDir platform isRelease name : Path =
 // -----------------------------------------------
 
 [<RequireQualifiedAccess; NoEquality; NoComparison>]
-type CompileCtx =
-  { EntryProjectDir: ProjectDir
-    EntryProjectName: ProjectName
-
+type private CompileCtx =
+  { EntryProjectName: ProjectName
     SyntaxCtx: SyntaxApi.SyntaxCtx
+    WriteLog: string -> unit }
 
-    Verbosity: Verbosity
-    Host: CliHost }
-
-let compileCtxNew (host: CliHost) verbosity projectDir : CompileCtx =
+let private compileCtxNew (host: CliHost) verbosity projectDir : CompileCtx =
   let miloneHome = hostToMiloneHome host
   let projectDir = projectDir |> pathStrTrimEndPathSep
   let projectName = projectDir |> pathStrToStem
@@ -225,137 +217,59 @@ let compileCtxNew (host: CliHost) verbosity projectDir : CompileCtx =
 
     SyntaxApi.syntaxCtxNew host
 
-  { EntryProjectDir = projectDir
-    EntryProjectName = projectName
+  { EntryProjectName = projectName
     SyntaxCtx = syntaxCtx
-    Verbosity = verbosity
-    Host = host }
-
-// -----------------------------------------------
-// Write output and logs
-// -----------------------------------------------
-
-let private writeLog (host: CliHost) verbosity msg =
-  let profileLog = host.ProfileLog
-
-  match verbosity with
-  | Verbose ->
-    // FIXME: to stderr
-    printfn "// %s" msg
-
-  | Profile profiler -> profiler |> profileLog msg
-
-  | Quiet -> ()
+    WriteLog = writeLog host verbosity }
 
 // -----------------------------------------------
 // Processes
 // -----------------------------------------------
 
-/// Transforms HIR. The result can be converted to MIR.
-let private transformHir (host: CliHost) v (modules: Tir.TProgram, tirCtx: Tir.TirCtx) =
-  writeLog host v "Lower"
-  let modules, tyCtx = Lower.lower (modules, tirCtx)
+/// Filename of C code. `ProjectName_ModuleName.c` or `ProjectName.c`.
+type private CFilename = string
 
-  writeLog host v "RecordRes"
-  let modules, tyCtx = recordRes (modules, tyCtx)
+type private CCode = string
 
-  writeLog host v "Derive"
-  let modules, tyCtx = Derive.deriveOps (modules, tyCtx)
+type private CodeGenResult = (CFilename * CCode) list
 
-  writeLog host v "ClosureConversion"
-  let modules, tyCtx = closureConversion (modules, tyCtx)
+[<NoEquality; NoComparison>]
+type private CompileResult =
+  | CompileOk of CodeGenResult
+  | CompileError of string
 
-  writeLog host v "EtaExpansion"
-  let modules, tyCtx = etaExpansion (modules, tyCtx)
+let private computeCFilename projectName docId : CFilename =
+  if docId = projectName + ".Program"
+     || docId = projectName + ".EntryPoint"
+     || docId = projectName + "." + projectName then
+    projectName + ".c"
+  else
+    S.replace "." "_" docId + ".c"
 
-  writeLog host v "ComputeTyArgs"
-  let modules, tyCtx = computeFunTyArgs (modules, tyCtx)
-
-  writeLog host v "AutoBoxing"
-  let modules, tyCtx = autoBox (modules, tyCtx)
-
-  writeLog host v "Hoist"
-  let modules, tyCtx = hoist (modules, tyCtx)
-
-  writeLog host v "TailRecOptimizing"
-  let modules, tyCtx = tailRecOptimize (modules, tyCtx)
-
-  writeLog host v "Monomorphizing"
-  let modules, tyCtx = monify (modules, tyCtx)
-
-  // Reduce info of variables.
-  let modules: Hir.HModule2 list =
-    modules
-    |> List.map
-         (fun (m: Hir.HModule) ->
-           let varNameMap =
-             m.Vars
-             |> TMap.map (fun _ (varDef: Hir.VarDef) -> varDef.Name)
-
-           let m: Hir.HModule2 =
-             { DocId = m.DocId
-               Vars = varNameMap
-               Stmts = m.Stmts }
-
-           m)
-
-  writeLog host v "MonoTy"
-  let modules, tyCtx = monoTy (modules, tyCtx)
-
-  modules, tyCtx
-
-/// (file name, C code) list
-type private CodeGenResult = (string * string) list
-
-/// Generates C language codes from transformed HIR,
-/// using mid-level intermediate representation (MIR).
-let private codeGenHirViaMir (host: CliHost) v projectName (modules, tyCtx) : CodeGenResult =
-  writeLog host v "Mir"
-  let modules, mirCtx = mirify (modules, tyCtx)
-
-  writeLog host v "CirGen"
-  let modules = genCir (modules, mirCtx)
-
-  writeLog host v "CirDump"
-
-  let output =
-    modules
-    |> List.map
-         (fun (docId, cir) ->
-           let fileName =
-             if docId = projectName + ".Program"
-                || docId = projectName + ".EntryPoint"
-                || docId = projectName + "." + projectName then
-               projectName + ".c"
-             else
-               S.replace "." "_" docId + ".c"
-
-           fileName, cirDump cir)
-
-  writeLog host v "Finish"
-  output
-
-let check (ctx: CompileCtx) : bool * string =
+let private check (ctx: CompileCtx) : bool * string =
   match SyntaxApi.performSyntaxAnalysis ctx.SyntaxCtx with
   | SyntaxApi.SyntaxAnalysisOk _ -> true, ""
   | SyntaxApi.SyntaxAnalysisError (errors, _) -> false, SyntaxApi.syntaxErrorsToString errors
 
-[<NoEquality; NoComparison>]
-type CompileResult =
-  | CompileOk of CodeGenResult
-  | CompileError of string
-
 let private compile (ctx: CompileCtx) : CompileResult =
-  let host = ctx.Host
-  let v = ctx.Verbosity
+  let projectName = ctx.EntryProjectName
+  let writeLog = ctx.WriteLog
 
   match SyntaxApi.performSyntaxAnalysis ctx.SyntaxCtx with
   | SyntaxApi.SyntaxAnalysisError (errors, _) -> CompileError(SyntaxApi.syntaxErrorsToString errors)
 
   | SyntaxApi.SyntaxAnalysisOk (modules, tirCtx) ->
-    let modules, tirCtx = transformHir host v (modules, tirCtx)
+    writeLog "Lower"
+    let modules, hirCtx = Lower.lower (modules, tirCtx)
 
-    CompileOk(codeGenHirViaMir host v ctx.EntryProjectName (modules, tirCtx))
+    let cFiles =
+      TranslationApi.codeGenHir writeLog (modules, hirCtx)
+
+    let cFiles =
+      cFiles
+      |> List.map (fun (docId, cCode) -> computeCFilename projectName docId, cCode)
+
+    writeLog "Finish"
+    CompileOk cFiles
 
 // -----------------------------------------------
 // Others
@@ -369,7 +283,7 @@ let private writeCFiles (host: CliHost) (targetDir: string) (cFiles: (string * s
 // Actions
 // -----------------------------------------------
 
-let cliCheck (host: CliHost) verbosity projectDir =
+let private cliCheck (host: CliHost) verbosity projectDir =
   let ctx = compileCtxNew host verbosity projectDir
 
   let ok, output = check ctx
@@ -381,12 +295,12 @@ let cliCheck (host: CliHost) verbosity projectDir =
   exitCode
 
 [<RequireQualifiedAccess; NoEquality; NoComparison>]
-type CompileOptions =
+type private CompileOptions =
   { ProjectDir: string
     TargetDir: string
     Verbosity: Verbosity }
 
-let cliCompile (host: CliHost) (options: CompileOptions) =
+let private cliCompile (host: CliHost) (options: CompileOptions) =
   let ctx =
     compileCtxNew host options.Verbosity options.ProjectDir
 
@@ -409,7 +323,7 @@ let cliCompile (host: CliHost) (options: CompileOptions) =
     0
 
 [<RequireQualifiedAccess; NoEquality; NoComparison>]
-type BuildOptions =
+type private BuildOptions =
   { ProjectDir: string
     TargetDir: string
     IsRelease: bool

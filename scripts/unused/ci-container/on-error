@@ -2,5 +2,5 @@
 
 set -eu
 
-# FIXME: send mail?
+# send mail?
 echo 'ERROR: !!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!'

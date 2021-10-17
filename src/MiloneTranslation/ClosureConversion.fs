@@ -190,16 +190,16 @@ type private CcCtx =
     FunKnowns: TreeMap<FunSerial, KnownCtx>
     FunUpvars: TreeMap<FunSerial, TreeSet<VarSerial>> }
 
-let private ofTyCtx (tyCtx: TyCtx) : CcCtx =
-  { StaticVars = tyCtx.Vars
+let private ofHirCtx (hirCtx: HirCtx) : CcCtx =
+  { StaticVars = hirCtx.Vars
     Vars = emptyVars
-    Funs = tyCtx.Funs
+    Funs = hirCtx.Funs
 
     Current = knownCtxEmpty ()
     FunKnowns = TMap.empty funSerialCompare
     FunUpvars = TMap.empty funSerialCompare }
 
-let private toTyCtx (tyCtx: TyCtx) (ctx: CcCtx) = { tyCtx with Funs = ctx.Funs }
+let private toHirCtx (hirCtx: HirCtx) (ctx: CcCtx) = { hirCtx with Funs = ctx.Funs }
 
 let private addLocal varSerial (ctx: CcCtx) =
   { ctx with
@@ -432,8 +432,8 @@ let private ccModule1 (m: HModule, ctx: CcCtx) =
   let m = { m with Stmts = stmts }
   m, ctx
 
-let private ccModule (m: HModule, tyCtx: TyCtx) =
-  let ccCtx = ofTyCtx tyCtx
+let private ccModule (m: HModule, hirCtx: HirCtx) =
+  let ccCtx = ofHirCtx hirCtx
 
   let ccCtx = { ccCtx with Vars = m.Vars }
 
@@ -449,7 +449,9 @@ let private ccModule (m: HModule, tyCtx: TyCtx) =
   // Traverse again to transform function references.
   let m, ccCtx = (m, ccCtx) |> ccModule1
 
-  let tyCtx = ccCtx |> updateFunDefs |> toTyCtx tyCtx
-  m, tyCtx
+  let hirCtx =
+    ccCtx |> updateFunDefs |> toHirCtx hirCtx
 
-let closureConversion (modules: HProgram, tyCtx: TyCtx) : HProgram * TyCtx = (modules, tyCtx) |> stMap ccModule
+  m, hirCtx
+
+let closureConversion (modules: HProgram, hirCtx: HirCtx) : HProgram * HirCtx = (modules, hirCtx) |> stMap ccModule

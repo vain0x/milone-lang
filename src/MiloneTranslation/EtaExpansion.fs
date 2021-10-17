@@ -166,14 +166,14 @@ type private EtaCtx =
     Vars: VarMap
     Funs: TreeMap<FunSerial, FunDef> }
 
-let private ofTyCtx (tyCtx: TyCtx) : EtaCtx =
-  { Serial = tyCtx.Serial
-    StaticVars = tyCtx.Vars
+let private ofHirCtx (hirCtx: HirCtx) : EtaCtx =
+  { Serial = hirCtx.Serial
+    StaticVars = hirCtx.Vars
     Vars = emptyVars
-    Funs = tyCtx.Funs }
+    Funs = hirCtx.Funs }
 
-let private toTyCtx (tyCtx: TyCtx) (ctx: EtaCtx) =
-  { tyCtx with
+let private toHirCtx (hirCtx: HirCtx) (ctx: EtaCtx) =
+  { hirCtx with
       Serial = ctx.Serial
       Funs = ctx.Funs }
 
@@ -528,12 +528,12 @@ let private exModule (m: HModule, ctx: EtaCtx) =
 
   m, ctx
 
-let etaExpansion (modules: HProgram, tyCtx: TyCtx) : HProgram * TyCtx =
-  let etaCtx = ofTyCtx tyCtx
+let etaExpansion (modules: HProgram, hirCtx: HirCtx) : HProgram * HirCtx =
+  let etaCtx = ofHirCtx hirCtx
 
   let modules, etaCtx =
     modules
     |> List.mapFold (fun ctx m -> exModule (m, ctx)) etaCtx
 
-  let tyCtx = etaCtx |> toTyCtx tyCtx
-  modules, tyCtx
+  let hirCtx = etaCtx |> toHirCtx hirCtx
+  modules, hirCtx

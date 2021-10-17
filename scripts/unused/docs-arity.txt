@@ -1,6 +1,8 @@
 
 ### Arity and parameter flattening
 
+(WIP)
+
 In milone-lang type system, every function is 1-arity.
 Function type `S -> T -> U` is just a nested function type.
 That is, it equals to `S -> (T -> U)`: a function that takes `S` value and returns another function of `T -> U`.
@@ -22,5 +24,3 @@ When the form of type is `T1 -> T2 -> ... -> TN`, its arity is N.
 
     type-of-arity (S -> T)  = T + 1
     type-of-arity T         = 0       (otherwise)
-
-FIXME: WIP

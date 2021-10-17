@@ -1,20 +1,20 @@
-/// # AST Bundle
+/// # AstBundle
 ///
 /// Resolves dependencies between modules.
 /// This stage determines the set of modules in the project and the ordering of them.
 ///
-/// These modules are combined into single HIR expression.
+/// These modules are combined into single TIR program.
 module rec MiloneSyntax.AstBundle
 
 open MiloneShared.SharedTypes
 open MiloneShared.Util
 open MiloneStd.StdSet
 open MiloneStd.StdMap
-open MiloneSyntax.AstToHir
 open MiloneSyntax.Syntax
 open MiloneSyntax.Tir
 
 module S = MiloneStd.StdString
+module TirGen = MiloneSyntax.TirGen
 
 // -----------------------------------------------
 // Utils
@@ -242,7 +242,7 @@ let private producer (fetchModule: FetchModuleFun) (_: State) (r: ModuleRequest)
                DocId = docId
                Ast = ast
                Deps = deps
-               SymbolCount = countSymbols ast
+               SymbolCount = TirGen.countSymbols ast
                Errors = errors }
 
            Action.DidFetchOk m
@@ -306,17 +306,16 @@ let bundle (fetchModule: FetchModuleFun) (entryProjectName: ProjectName) : Bundl
            modules
            |> __parallelMap
                 (fun (serial: Serial, moduleData: ModuleData) ->
-                  let moduleName = moduleData.Name
                   let projectName = moduleData.Project
                   let docId = moduleData.DocId
                   let ast = moduleData.Ast
                   let symbolCount = moduleData.SymbolCount
 
                   let exprs, nameCtx =
-                    let nameCtx = AhNameCtx(serial, [])
-                    astToHir projectName docId (ast, nameCtx)
+                    let nameCtx = TirGen.TgNameCtx(serial, [])
+                    TirGen.genTir projectName docId (ast, nameCtx)
 
-                  let (AhNameCtx (lastSerial, _)) = nameCtx
+                  let (TirGen.TgNameCtx (lastSerial, _)) = nameCtx
 
                   //  printfn
                   //    "%s expect: %d..%d (%d) actual: %d..%d (%d)"
@@ -346,7 +345,7 @@ let bundle (fetchModule: FetchModuleFun) (entryProjectName: ProjectName) : Bundl
                 (fun identMap (m, nameCtx) ->
                   let _, identMap =
                     nameCtx
-                    |> nameCtxFold (fun map serial ident -> TMap.add serial ident map) identMap
+                    |> TirGen.nameCtxFold (fun map serial ident -> TMap.add serial ident map) identMap
 
                   m, identMap)
                 nameCtx)

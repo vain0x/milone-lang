@@ -12,7 +12,7 @@
     <Compile Include="Manifest.fs" />
     <Compile Include="SyntaxTokenize.fs" />
     <Compile Include="SyntaxParse.fs" />
-    <Compile Include="AstToHir.fs" />
+    <Compile Include="TirGen.fs" />
     <Compile Include="AstBundle.fs" />
     <Compile Include="NameRes.fs" />
     <Compile Include="Typing.fs" />
