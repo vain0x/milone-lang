@@ -158,6 +158,18 @@ let private runCommand (host: CliHost) (command: Path) (args: string list) : uni
     printfn "error: subprocess '%s' exited in code %d" (Path.toString command) code
     exit code
 
+let private writeLog (host: CliHost) verbosity msg : unit =
+  match verbosity with
+  | Verbose ->
+    // FIXME: to stderr
+    printfn "// %s" msg
+
+  | Profile profiler ->
+    let profileLog = host.ProfileLog
+    profiler |> profileLog msg
+
+  | Quiet -> ()
+
 let private computeExePath targetDir platform isRelease name : Path =
   let triple =
     match platform with
@@ -210,22 +222,6 @@ let private compileCtxNew (host: CliHost) verbosity projectDir : CompileCtx =
   { EntryProjectName = projectName
     SyntaxCtx = syntaxCtx
     WriteLog = writeLog host verbosity }
-
-// -----------------------------------------------
-// Write output and logs
-// -----------------------------------------------
-
-let private writeLog (host: CliHost) verbosity msg =
-  let profileLog = host.ProfileLog
-
-  match verbosity with
-  | Verbose ->
-    // FIXME: to stderr
-    printfn "// %s" msg
-
-  | Profile profiler -> profiler |> profileLog msg
-
-  | Quiet -> ()
 
 // -----------------------------------------------
 // Processes
