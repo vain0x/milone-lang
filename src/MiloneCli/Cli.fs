@@ -280,6 +280,9 @@ let private transformHir (host: CliHost) v (modules: Tir.TProgram, tyCtx: Typing
   writeLog host v "TailRecOptimizing"
   let modules, tyCtx = tailRecOptimize (modules, tyCtx)
 
+  writeLog host v "Monomorphizing"
+  let modules, tyCtx = monify (modules, tyCtx)
+
   writeLog host v "Flatten"
 
   let varNameMap =
@@ -296,9 +299,6 @@ let private transformHir (host: CliHost) v (modules: Tir.TProgram, tyCtx: Typing
   let decls =
     modules
     |> List.collect (fun (m: Hir.HModule) -> m.Stmts)
-
-  writeLog host v "Monomorphizing"
-  let decls, tyCtx = monify (decls, tyCtx)
 
   writeLog host v "MonoTy"
   let decls, tyCtx = monoTy (decls, tyCtx)
