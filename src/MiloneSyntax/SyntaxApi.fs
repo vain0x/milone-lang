@@ -159,8 +159,6 @@ let private readModuleInProjectWith
          | (Some _) as it -> Future.just it
          | None -> read ".fs")
 
-type private ModuleSyntaxData = DocId * ARoot * (string * Pos) list
-
 let parseModuleWith (docId: DocId) (kind: ModuleKind) (tokens: (Token * Pos) list) : ModuleSyntaxData =
   let errorTokens, tokens = tokens |> List.partition isErrorToken
 
