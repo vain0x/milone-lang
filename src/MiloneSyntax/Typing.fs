@@ -14,14 +14,14 @@ module rec MiloneSyntax.Typing
 open MiloneShared.SharedTypes
 open MiloneShared.TypeIntegers
 open MiloneShared.Util
+open MiloneStd.StdMap
+open MiloneStd.StdSet
 open MiloneSyntax.NameRes
 open MiloneSyntax.Tir
 open MiloneSyntax.TySystem
 
 module S = MiloneStd.StdString
 module StdInt = MiloneStd.StdInt
-module TMap = MiloneStd.StdMap
-module TSet = MiloneStd.StdSet
 
 // -----------------------------------------------
 // Context
@@ -36,17 +36,17 @@ type private TyCtx =
     Serial: Serial
 
     /// Variable serial to variable definition.
-    Vars: AssocMap<VarSerial, VarDef>
-    Funs: AssocMap<FunSerial, FunDef>
-    Variants: AssocMap<VariantSerial, VariantDef>
+    Vars: TreeMap<VarSerial, VarDef>
+    Funs: TreeMap<FunSerial, FunDef>
+    Variants: TreeMap<VariantSerial, VariantDef>
 
     MainFunOpt: FunSerial option
 
     /// Type serial to type definition.
-    Tys: AssocMap<TySerial, TyDef>
+    Tys: TreeMap<TySerial, TyDef>
 
-    TyLevels: AssocMap<TySerial, Level>
-    QuantifiedTys: AssocSet<TySerial>
+    TyLevels: TreeMap<TySerial, Level>
+    QuantifiedTys: TreeSet<TySerial>
     Level: Level
 
     /// Funs that are mutually recursive and defined in the current block.
@@ -56,8 +56,8 @@ type private TyCtx =
     ///
     /// Instantiation of such these funs are recorded
     /// to verify after final ty scheme is computed.
-    GrayFuns: AssocSet<FunSerial>
-    GrayInstantiations: AssocMap<FunSerial, (Ty * Loc) list>
+    GrayFuns: TreeSet<FunSerial>
+    GrayInstantiations: TreeMap<FunSerial, (Ty * Loc) list>
 
     TraitBounds: (Trait * Loc) list
     Logs: (Log * Loc) list }
@@ -1452,7 +1452,7 @@ type private State =
 [<RequireQualifiedAccess; NoEquality; NoComparison>]
 type private SynonymCycleCtx =
   { ExpandMetaOrSynonymTy: TySerial -> Ty option
-    TyState: AssocMap<TySerial, State> }
+    TyState: TreeMap<TySerial, State> }
 
 let private setTyState tySerial state (ctx: SynonymCycleCtx) =
   { ctx with
@@ -1630,9 +1630,11 @@ let infer (modules: TProgram, nameRes: NameResResult) : TProgram * TirCtx =
                   (fun (staticVars, localVars) varSerial varDef ->
                     if isStaticVar varSerial then
                       let staticVars = staticVars |> TMap.add varSerial varDef
+
                       staticVars, localVars
                     else
                       let localVars = localVars |> TMap.add varSerial varDef
+
                       staticVars, localVars)
                   (emptyVars, emptyVars)
 

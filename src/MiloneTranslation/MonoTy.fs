@@ -6,9 +6,9 @@ open MiloneShared.SharedTypes
 open MiloneShared.TypeIntegers
 open MiloneShared.TypeFloat
 open MiloneShared.Util
+open MiloneStd.StdMap
 open MiloneTranslation.Hir
 
-module TMap = MiloneStd.StdMap
 module M = MiloneTranslation.MonoTyIr
 
 [<RequireQualifiedAccess; NoEquality; NoComparison>]
@@ -77,8 +77,8 @@ let private monoTyCompare (l: MonoTy) (r: MonoTy) : int =
 [<RequireQualifiedAccess; NoEquality; NoComparison>]
 type private MtCtx =
   { Serial: Serial
-    Map: AssocMap<Tk * MonoTy list, MonoTy * GeneratedTy>
-    TyNames: AssocMap<Ty, string>
+    Map: TreeMap<Tk * MonoTy list, MonoTy * GeneratedTy>
+    TyNames: TreeMap<Ty, string>
     NewTys: (TySerial * M.TyDef) list
     NewVariants: (VariantSerial * M.VariantDef) list }
 

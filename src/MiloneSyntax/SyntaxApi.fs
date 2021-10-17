@@ -6,6 +6,7 @@ module rec MiloneSyntax.SyntaxApi
 open MiloneShared.SharedTypes
 open MiloneShared.Util
 open MiloneSyntax.Syntax
+open MiloneStd.StdMap
 
 module ArityCheck = MiloneSyntax.ArityCheck
 module AstBundle = MiloneSyntax.AstBundle
@@ -15,7 +16,6 @@ module S = MiloneStd.StdString
 module SyntaxParse = MiloneSyntax.SyntaxParse
 module SyntaxTokenize = MiloneSyntax.SyntaxTokenize
 module Tir = MiloneSyntax.Tir
-module TMap = MiloneStd.StdMap
 module Typing = MiloneSyntax.Typing
 module TySystem = MiloneSyntax.TySystem
 
@@ -132,7 +132,7 @@ let getMiloneHomeFromEnv (getEnv: string -> string option) : string =
     | None -> failwith "$MILONE_HOME and $HOME are missing."
 
 let private findProjectWith
-  (projects: TMap.TreeMap<ProjectName, ProjectDir>)
+  (projects: TreeMap<ProjectName, ProjectDir>)
   (entryProjectDir: ProjectDir)
   (projectName: ProjectName)
   =
@@ -181,7 +181,7 @@ let parseModuleWith (docId: DocId) (kind: ModuleKind) (tokens: (Token * Pos) lis
 
 let private fetchModuleWith
   (readTextFile: ReadTextFileFun)
-  (projects: TMap.TreeMap<ProjectName, ProjectDir>)
+  (projects: TreeMap<ProjectName, ProjectDir>)
   (entryProjectDir: ProjectDir)
   (tokenize: SourceCode -> (Token * Pos) list)
   (projectName: ProjectName)
@@ -273,7 +273,7 @@ type SyntaxHost =
 
 [<RequireQualifiedAccess; NoEquality; NoComparison>]
 type SyntaxCtx =
-  { Projects: TMap.TreeMap<ProjectName, ProjectDir>
+  { Projects: TreeMap<ProjectName, ProjectDir>
     Errors: (string * Loc) list
     FetchModule: FetchModuleFun
     Host: SyntaxHost }

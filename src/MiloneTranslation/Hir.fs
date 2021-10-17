@@ -21,8 +21,8 @@ open MiloneShared.SharedTypes
 open MiloneShared.TypeFloat
 open MiloneShared.TypeIntegers
 open MiloneShared.Util
+open MiloneStd.StdMap
 
-module TMap = MiloneStd.StdMap
 module S = MiloneStd.StdString
 
 // from syntax
@@ -324,8 +324,8 @@ type HExpr =
   | HLetValExpr of pat: HPat * init: HExpr * next: HExpr * Ty * Loc
   | HLetFunExpr of FunSerial * args: HPat list * body: HExpr * next: HExpr * Ty * Loc
 
-type VarMap = AssocMap<VarSerial, VarDef>
-type VarNameMap = AssocMap<VarSerial, Ident>
+type VarMap = TreeMap<VarSerial, VarDef>
+type VarNameMap = TreeMap<VarSerial, Ident>
 
 [<RequireQualifiedAccess; NoEquality; NoComparison>]
 type HModule =
@@ -654,7 +654,7 @@ let exprToLoc expr =
 // HProgram
 // -----------------------------------------------
 
-let emptyVars: AssocMap<VarSerial, VarDef> = TMap.empty varSerialCompare
+let emptyVars: TreeMap<VarSerial, VarDef> = TMap.empty varSerialCompare
 
 module HProgram =
   let mapExpr (f: HExpr -> HExpr) (program: HProgram) : HProgram =
@@ -677,13 +677,13 @@ type TyCtx =
     Serial: Serial
 
     /// Variable serial to variable definition.
-    Vars: AssocMap<VarSerial, VarDef>
-    Funs: AssocMap<FunSerial, FunDef>
-    Variants: AssocMap<VariantSerial, VariantDef>
+    Vars: TreeMap<VarSerial, VarDef>
+    Funs: TreeMap<FunSerial, FunDef>
+    Variants: TreeMap<VariantSerial, VariantDef>
 
     MainFunOpt: FunSerial option
 
-    Tys: AssocMap<TySerial, TyDef> }
+    Tys: TreeMap<TySerial, TyDef> }
 
 // -----------------------------------------------
 // Tk
@@ -867,7 +867,7 @@ let tyGeneralize (isOwned: TySerial -> bool) (ty: Ty) : TyScheme =
 /// Generates a unique name from a type.
 ///
 /// Must be used after successful Typing.
-let tyMangle (ty: Ty, memo: AssocMap<Ty, string>) : string * AssocMap<Ty, string> =
+let tyMangle (ty: Ty, memo: TreeMap<Ty, string>) : string * TreeMap<Ty, string> =
   let rec go ty ctx =
     let (Ty (tk, tyArgs)) = ty
 
@@ -884,7 +884,7 @@ let tyMangle (ty: Ty, memo: AssocMap<Ty, string>) : string * AssocMap<Ty, string
       let tyArgs, ctx = mangleList tyArgs ctx
       S.concat "" tyArgs + (name + string arity), ctx
 
-    let doMangle () : string * AssocMap<_, _> =
+    let doMangle () : string * TreeMap<_, _> =
       match tk with
       | IntTk flavor -> cIntegerTyPascalName flavor, ctx
       | FloatTk flavor -> cFloatTyPascalName flavor, ctx

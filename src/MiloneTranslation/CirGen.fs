@@ -14,13 +14,13 @@ open MiloneShared.SharedTypes
 open MiloneShared.TypeFloat
 open MiloneShared.TypeIntegers
 open MiloneShared.Util
+open MiloneStd.StdMap
+open MiloneStd.StdSet
 open MiloneTranslation.Cir
 open MiloneTranslation.Hir
 open MiloneTranslation.Mir
 open MiloneTranslation.MirGen
 
-module TMap = MiloneStd.StdMap
-module TSet = MiloneStd.StdSet
 module S = MiloneStd.StdString
 
 let private unwrapListTy ty =
@@ -38,7 +38,7 @@ let private toDiscriminantEnumName (name: string) = name + "Discriminant"
 // -----------------------------------------------
 
 /// Frequencies. Mapping from key to multiplicity. (Multi-set.)
-type private Freq<'K> = AssocMap<'K, int>
+type private Freq<'K> = TreeMap<'K, int>
 
 let private freqEmpty compareFun : Freq<_> = TMap.empty compareFun
 
@@ -59,7 +59,7 @@ let private renameIdent (ident: Ident) (index: int) : Ident =
   else
     ident + "_" + string index
 
-let private renameIdents toIdent toKey mapFuns (defMap: AssocMap<_, _>) =
+let private renameIdents toIdent toKey mapFuns (defMap: TreeMap<_, _>) =
   let rename (ident: string) (index: int) =
     if index = 0 then
       if ident |> S.contains "_" then
@@ -92,11 +92,11 @@ let private renameIdents toIdent toKey mapFuns (defMap: AssocMap<_, _>) =
   |> TMap.fold addIdents (TMap.empty mapFuns)
 
 let private renameIdents2
-  (defMap: AssocMap<_, 'T>)
+  (defMap: TreeMap<_, 'T>)
   (toIdent: 'T -> string)
-  (nameMap: AssocMap<'K, Ident>)
+  (nameMap: TreeMap<'K, Ident>)
   (freq: Freq<Ident>)
-  : AssocMap<'K, Ident> * Freq<Ident> =
+  : TreeMap<'K, Ident> * Freq<Ident> =
   defMap
   |> TMap.fold
        (fun (nameMap, freq) key (value: 'T) ->
@@ -127,19 +127,19 @@ let private funDefToName (funDef: FunDef) =
 /// Read-only context of the pass.
 [<RequireQualifiedAccess; NoEquality; NoComparison>]
 type private Rx =
-  { StaticVars: AssocMap<VarSerial, VarDef>
-    Funs: AssocMap<FunSerial, FunDef>
-    Variants: AssocMap<VariantSerial, VariantDef>
-    Tys: AssocMap<TySerial, TyDef>
+  { StaticVars: TreeMap<VarSerial, VarDef>
+    Funs: TreeMap<FunSerial, FunDef>
+    Variants: TreeMap<VariantSerial, VariantDef>
+    Tys: TreeMap<TySerial, TyDef>
     MainFunOpt: FunSerial option
 
-    FunLocals: AssocMap<FunSerial, (VarSerial * Ty) list>
-    ReplacingVars: AssocSet<VarSerial>
+    FunLocals: TreeMap<FunSerial, (VarSerial * Ty) list>
+    ReplacingVars: TreeSet<VarSerial>
 
-    ValueNameFreq: AssocMap<Ident, int>
-    VarUniqueNames: AssocMap<VarSerial, Ident>
-    FunUniqueNames: AssocMap<FunSerial, Ident>
-    VariantUniqueNames: AssocMap<VariantSerial, Ident>
+    ValueNameFreq: TreeMap<Ident, int>
+    VarUniqueNames: TreeMap<VarSerial, Ident>
+    FunUniqueNames: TreeMap<FunSerial, Ident>
+    VariantUniqueNames: TreeMap<VariantSerial, Ident>
 
     /// Doc ID of current module.
     DocIdOpt: DocId option }
@@ -152,14 +152,14 @@ type private Rx =
 type private CirCtx =
   { Rx: Rx
 
-    TyEnv: AssocMap<Ty, CTyInstance * CTy>
-    TyUniqueNames: AssocMap<Ty, Ident>
+    TyEnv: TreeMap<Ty, CTyInstance * CTy>
+    TyUniqueNames: TreeMap<Ty, Ident>
     Stmts: CStmt list
     Decls: CDecl list
 
     /// Already-declared functions.
-    VarDecls: AssocSet<VarSerial>
-    FunDecls: AssocSet<FunSerial> }
+    VarDecls: TreeSet<VarSerial>
+    FunDecls: TreeSet<FunSerial> }
 
 let private ofMirResult (mirCtx: MirResult) : CirCtx =
   let freq = freqEmpty compare

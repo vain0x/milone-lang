@@ -9,9 +9,9 @@ open MiloneShared.SharedTypes
 open MiloneShared.TypeFloat
 open MiloneShared.TypeIntegers
 open MiloneShared.Util
+open MiloneStd.StdMap
 open MiloneSyntax.Tir
 
-module TMap = MiloneStd.StdMap
 module S = MiloneStd.StdString
 
 // -----------------------------------------------
@@ -289,7 +289,7 @@ let tyDisplay getTyName ty =
 /// Generates a unique name from a type.
 ///
 /// Must be used after successful Typing.
-let tyMangle (ty: Ty, memo: AssocMap<Ty, string>) : string * AssocMap<Ty, string> =
+let tyMangle (ty: Ty, memo: TreeMap<Ty, string>) : string * TreeMap<Ty, string> =
   let rec go ty ctx =
     let (Ty (tk, tyArgs)) = ty
 
@@ -306,7 +306,7 @@ let tyMangle (ty: Ty, memo: AssocMap<Ty, string>) : string * AssocMap<Ty, string
       let tyArgs, ctx = mangleList tyArgs ctx
       S.concat "" tyArgs + (name + string arity), ctx
 
-    let doMangle () : string * AssocMap<_, _> =
+    let doMangle () : string * TreeMap<_, _> =
       match tk with
       | IntTk flavor -> cIntegerTyPascalName flavor, ctx
       | FloatTk flavor -> cFloatTyPascalName flavor, ctx
@@ -391,7 +391,7 @@ let private tyExpandMeta tys binding tySerial : Ty option =
 let doInstantiateTyScheme
   (serial: int)
   (level: Level)
-  (tyLevels: AssocMap<TySerial, Level>)
+  (tyLevels: TreeMap<TySerial, Level>)
   (tySerials: TySerial list)
   (ty: Ty)
   (loc: Loc)

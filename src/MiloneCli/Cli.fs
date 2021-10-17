@@ -1,8 +1,9 @@
 /// Front end of the compiler.
 module rec MiloneCli.Cli
 
-open MiloneShared.SharedTypes
 open MiloneShared.Util
+open MiloneStd.StdMap
+open MiloneStd.StdSet
 open MiloneStd.StdPath
 open MiloneSyntax.Syntax
 open MiloneTranslation.AutoBoxing
@@ -23,8 +24,6 @@ module Hir = MiloneTranslation.Hir
 module Mir = MiloneTranslation.Mir
 module S = MiloneStd.StdString
 module Tir = MiloneSyntax.Tir
-module TMap = MiloneStd.StdMap
-module TSet = MiloneStd.StdSet
 module Typing = MiloneSyntax.Typing
 module SyntaxApi = MiloneSyntax.SyntaxApi
 module Lower = MiloneCli.Lower

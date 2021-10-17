@@ -12,8 +12,7 @@ module rec MiloneSyntax.Syntax
 
 open MiloneShared.SharedTypes
 open MiloneShared.Util
-
-module TMap = MiloneStd.StdMap
+open MiloneStd.StdMap
 
 /// Name with ID.
 [<NoEquality; NoComparison>]
@@ -436,7 +435,7 @@ type ARoot = ARoot of AModuleHead option * ADecl list
 // Keywords
 // -----------------------------------------------
 
-type private KeywordMap = AssocMap<Ident, Token>
+type private KeywordMap = TreeMap<Ident, Token>
 
 // See also <https://docs.microsoft.com/en-us/dotnet/fsharp/language-reference/keyword-reference>.
 let private keywordMapBuild () : KeywordMap =

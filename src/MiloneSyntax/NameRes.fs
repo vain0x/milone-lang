@@ -7,11 +7,11 @@ module rec MiloneSyntax.NameRes
 
 open MiloneShared.SharedTypes
 open MiloneShared.TypeIntegers
+open MiloneStd.StdMap
+open MiloneStd.StdSet
 open MiloneShared.Util
 open MiloneSyntax.Tir
 
-module TMap = MiloneStd.StdMap
-module TSet = MiloneStd.StdSet
 module S = MiloneStd.StdString
 
 let private hxAbort loc = TNodeExpr(TAbortEN, [], noTy, loc)
@@ -106,9 +106,9 @@ let private nsOwnerOfTySymbol (tySymbol: TySymbol) : NsOwner = TyNsOwner(tySymbo
 // -----------------------------------------------
 
 /// Namespace.
-type private Ns<'T> = AssocMap<NsOwner, (AssocMap<Ident, 'T>)>
+type private Ns<'T> = TreeMap<NsOwner, (TreeMap<Ident, 'T>)>
 
-let private nsFind (key: NsOwner) (ns: Ns<_>) : AssocMap<Ident, _> =
+let private nsFind (key: NsOwner) (ns: Ns<_>) : TreeMap<Ident, _> =
   match ns |> TMap.tryFind key with
   | Some submap -> submap
   | None -> TMap.empty compare
@@ -133,14 +133,14 @@ type private ScopeKind =
   | TyDeclScope
 
 /// Stack of local scopes.
-type private ScopeChain<'T> = AssocMap<Ident, 'T> list
+type private ScopeChain<'T> = TreeMap<Ident, 'T> list
 
 /// Scope chains, vars and types.
 ///
 /// Type has also a list of types that it shadows for namespace merging.
 type private Scope = ScopeKind list * ScopeChain<ValueSymbol> * ScopeChain<TySymbol> * ScopeChain<NsOwner list>
 
-let private scopeMapEmpty () : AssocMap<Ident, _> = TMap.empty compare
+let private scopeMapEmpty () : TreeMap<Ident, _> = TMap.empty compare
 
 let private scopeChainEmpty () : ScopeChain<_> = [ scopeMapEmpty () ]
 
@@ -156,10 +156,10 @@ let private scopeEmpty () : Scope =
 type private NameResState =
   { NameCtx: NameCtx
     ScopeCtx: ScopeCtx
-    Vars: AssocMap<VarSerial, VarDef>
-    Funs: AssocMap<FunSerial, FunDef>
-    Variants: AssocMap<VariantSerial, VariantDef>
-    VarLevels: AssocMap<Serial, Level>
+    Vars: TreeMap<VarSerial, VarDef>
+    Funs: TreeMap<FunSerial, FunDef>
+    Variants: TreeMap<VariantSerial, VariantDef>
+    VarLevels: TreeMap<Serial, Level>
     Logs: (NameResLog * Loc) list }
 
 let private sInit (nameCtx: NameCtx) : NameResState =
@@ -177,11 +177,11 @@ let private optionMerge first second : _ option =
   | _, Some _ -> second
   | _ -> None
 
-let private mapMerge first second : AssocMap<_, _> =
+let private mapMerge first second : TreeMap<_, _> =
   second
   |> TMap.fold (fun map key value -> TMap.add key value map) first
 
-let private mapAddEntries (entries: ('K * 'T) list) (map: AssocMap<'K, 'T>) : AssocMap<'K, 'T> =
+let private mapAddEntries (entries: ('K * 'T) list) (map: TreeMap<'K, 'T>) : TreeMap<'K, 'T> =
   entries
   |> List.rev
   |> List.fold (fun map (key, value) -> TMap.add key value map) map
@@ -261,11 +261,11 @@ let private sToResult (state: NameResState) : NameResResult =
 [<RequireQualifiedAccess; NoEquality; NoComparison>]
 type NameResResult =
   { Serial: Serial
-    Vars: AssocMap<VarSerial, VarDef>
-    Funs: AssocMap<FunSerial, FunDef>
-    Variants: AssocMap<VariantSerial, VariantDef>
-    Tys: AssocMap<TySerial, TyDef>
-    VarLevels: AssocMap<Serial, Level>
+    Vars: TreeMap<VarSerial, VarDef>
+    Funs: TreeMap<FunSerial, FunDef>
+    Variants: TreeMap<VariantSerial, VariantDef>
+    Tys: TreeMap<TySerial, TyDef>
+    VarLevels: TreeMap<Serial, Level>
     MainFunOpt: FunSerial option
     Logs: (NameResLog * Loc) list }
 
@@ -275,20 +275,20 @@ type NameResResult =
 
 [<RequireQualifiedAccess; NoEquality; NoComparison>]
 type private ScopeCtx =
-  { NameMap: AssocMap<Serial, Ident>
+  { NameMap: TreeMap<Serial, Ident>
 
     NewVars: (VarSerial * VarDef) list
     NewFuns: (FunSerial * FunDef) list
-    NewFunSet: AssocSet<FunSerial>
-    NewVariants: AssocMap<VariantSerial, VariantDef>
+    NewFunSet: TreeSet<FunSerial>
+    NewVariants: TreeMap<VariantSerial, VariantDef>
 
     /// Vars/funs and levels.
     NewVarLevels: (Serial * Level) list
-    NewVarMeta: AssocMap<VarSerial, IsStatic * Linkage>
+    NewVarMeta: TreeMap<VarSerial, IsStatic * Linkage>
 
     MainFunOpt: FunSerial option
 
-    Tys: AssocMap<TySerial, TyDef>
+    Tys: TreeMap<TySerial, TyDef>
     NewTys: (TySerial * TyDef) list
 
     RootModules: ModuleTySerial list
@@ -308,7 +308,7 @@ type private ScopeCtx =
     /// Variables defined in current pattern.
     ///
     /// name -> (varSerial, definedLoc, usedLoc list)
-    PatScope: AssocMap<Ident, VarSerial * Loc * Loc list>
+    PatScope: TreeMap<Ident, VarSerial * Loc * Loc list>
 
     /// Current level.
     Level: Level

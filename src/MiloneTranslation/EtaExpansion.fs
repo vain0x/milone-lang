@@ -79,9 +79,9 @@ module rec MiloneTranslation.EtaExpansion
 
 open MiloneShared.SharedTypes
 open MiloneShared.Util
+open MiloneStd.StdMap
 open MiloneTranslation.Hir
 
-module TMap = MiloneStd.StdMap
 module Int = MiloneStd.StdInt
 
 [<RequireQualifiedAccess>]
@@ -164,7 +164,7 @@ type private EtaCtx =
   { Serial: Serial
     StaticVars: VarMap
     Vars: VarMap
-    Funs: AssocMap<FunSerial, FunDef> }
+    Funs: TreeMap<FunSerial, FunDef> }
 
 let private ofTyCtx (tyCtx: TyCtx) : EtaCtx =
   { Serial = tyCtx.Serial

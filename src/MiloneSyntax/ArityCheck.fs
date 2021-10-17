@@ -7,8 +7,6 @@ open MiloneSyntax.TySystem
 
 module StdInt = MiloneStd.StdInt
 module S = MiloneStd.StdString
-module TMap = MiloneStd.StdMap
-module TSet = MiloneStd.StdSet
 
 // -----------------------------------------------
 // ArityEx

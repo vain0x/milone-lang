@@ -5,10 +5,9 @@ module rec MiloneTranslation.Derive
 
 open MiloneShared.SharedTypes
 open MiloneShared.Util
+open MiloneStd.StdMap
+open MiloneStd.StdSet
 open MiloneTranslation.Hir
-
-module TMap = MiloneStd.StdMap
-module TSet = MiloneStd.StdSet
 
 // #tyAppliedBy
 let private tyAppliedBy n ty =
@@ -31,7 +30,7 @@ let private hxApp3 callee arg1 arg2 arg3 = hxApp1 (hxApp2 callee arg1 arg2) arg3
 // Collect usage
 // -----------------------------------------------
 
-type private FCtx = AssocSet<Ty>
+type private FCtx = TreeSet<Ty>
 
 let private fuExpr ctx expr : FCtx =
   let onExpr expr ctx = fuExpr ctx expr
@@ -70,7 +69,7 @@ let private fuExpr ctx expr : FCtx =
 // Apply changes
 // -----------------------------------------------
 
-let private rewriteExpr (ctx: AssocMap<Ty, FunSerial>) expr : HExpr =
+let private rewriteExpr (ctx: TreeMap<Ty, FunSerial>) expr : HExpr =
   let onExpr expr = rewriteExpr ctx expr
   let onExprs exprs = exprs |> List.map (rewriteExpr ctx)
 
@@ -117,7 +116,7 @@ type private DCtx =
     NewLetFuns: (Ty * HExpr) list
     WorkList: Ty list
     GenericListEqualFunOpt: FunSerial option
-    EqualFunInstances: AssocMap<Ty, FunSerial> }
+    EqualFunInstances: TreeMap<Ty, FunSerial> }
 
 let private dCtxOfTyCtx (tyCtx: TyCtx) : DCtx =
   { Serial = tyCtx.Serial
