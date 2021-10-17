@@ -160,9 +160,7 @@ let private runCommand (host: CliHost) (command: Path) (args: string list) : uni
 
 let private writeLog (host: CliHost) verbosity msg : unit =
   match verbosity with
-  | Verbose ->
-    // FIXME: to stderr
-    printfn "// %s" msg
+  | Verbose -> __trace ("// " + msg)
 
   | Profile profiler ->
     let profileLog = host.ProfileLog
