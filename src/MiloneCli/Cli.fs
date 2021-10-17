@@ -251,35 +251,31 @@ let private getCFileName projectName docId : CFilename =
   else
     S.replace "." "_" docId + ".c"
 
-let private codeGenFromTir
-  (writeLog: string -> unit)
-  (projectName: ProjectName)
-  (modules: Tir.TProgram, tirCtx: Tir.TirCtx)
-  : CodeGenResult =
-  writeLog "Lower"
-  let modules, hirCtx = Lower.lower (modules, tirCtx)
-
-  let cFiles =
-    TranslationApi.codeGenHir writeLog (modules, hirCtx)
-
-  let cFiles =
-    cFiles
-    |> List.map (fun (docId, cCode) -> getCFileName projectName docId, cCode)
-
-  writeLog "Finish"
-  cFiles
-
 let private check (ctx: CompileCtx) : bool * string =
   match SyntaxApi.performSyntaxAnalysis ctx.SyntaxCtx with
   | SyntaxApi.SyntaxAnalysisOk _ -> true, ""
   | SyntaxApi.SyntaxAnalysisError (errors, _) -> false, SyntaxApi.syntaxErrorsToString errors
 
 let private compile (ctx: CompileCtx) : CompileResult =
-  match SyntaxApi.performSyntaxAnalysis ctx.SyntaxCtx with
-  | SyntaxApi.SyntaxAnalysisOk (modules, tirCtx) ->
-    CompileOk(codeGenFromTir ctx.WriteLog ctx.EntryProjectName (modules, tirCtx))
+  let projectName = ctx.EntryProjectName
+  let writeLog = ctx.WriteLog
 
+  match SyntaxApi.performSyntaxAnalysis ctx.SyntaxCtx with
   | SyntaxApi.SyntaxAnalysisError (errors, _) -> CompileError(SyntaxApi.syntaxErrorsToString errors)
+
+  | SyntaxApi.SyntaxAnalysisOk (modules, tirCtx) ->
+    writeLog "Lower"
+    let modules, hirCtx = Lower.lower (modules, tirCtx)
+
+    let cFiles =
+      TranslationApi.codeGenHir writeLog (modules, hirCtx)
+
+    let cFiles =
+      cFiles
+      |> List.map (fun (docId, cCode) -> getCFileName projectName docId, cCode)
+
+    writeLog "Finish"
+    CompileOk cFiles
 
 // -----------------------------------------------
 // Others
