@@ -224,7 +224,9 @@ let arityCheck (modules: TProgram, tirCtx: TirCtx) : TirCtx =
 
       Errors = [] }
 
-  let ctx = modules |> hirProgramFoldStmt acStmt ctx
+  let ctx =
+    modules
+    |> TProgram.foldStmt (fun ctx stmt -> acStmt (stmt, ctx)) ctx
 
   let logs =
     ctx.Errors

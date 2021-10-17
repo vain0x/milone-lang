@@ -3,18 +3,6 @@
 /// Provides types and functions for high-level intermediate representation (HIR).
 ///
 /// HIR is functional-style. Similar to milone-lang's syntax.
-///
-/// ## Lifecycle
-///
-/// HIR is generated in `AstToHir` for each file
-/// and all modules of a project are *concatenated* in `AstBundle`.
-///
-/// Most of analysis (for error reporting and soundness)
-/// and transformations (for code generation) are performed on it.
-///
-/// Finally HIR is converted to MIR in `MirGen`.
-///
-/// See `Cli.fs` for details.
 module rec MiloneTranslation.Hir
 
 open MiloneShared.SharedTypes

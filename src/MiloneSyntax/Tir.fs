@@ -180,7 +180,7 @@ type ModuleSynonymDef =
     Bound: ModuleTySerial list
     Loc: Loc }
 
-/// Definition of named value in HIR.
+/// Definition of named value.
 [<RequireQualifiedAccess; NoEquality; NoComparison>]
 type VarDef =
   { Name: Ident
@@ -275,7 +275,7 @@ type TPatKind =
   /// Generated after compile error occurred while processing a pattern.
   | TAbortPN
 
-/// Pattern in HIR.
+/// Pattern.
 [<NoEquality; NoComparison>]
 type TPat =
   | TLitPat of Lit * Loc
@@ -296,7 +296,7 @@ type TPat =
   /// Disjunction.
   | TOrPat of TPat * TPat * Loc
 
-/// Primitive in HIR.
+/// Primitive.
 [<RequireQualifiedAccess; Struct; NoComparison>]
 type TPrim =
   // operator:
@@ -387,7 +387,7 @@ type TExprKind =
   /// Size of type.
   | TSizeOfValEN
 
-/// Expression in HIR.
+/// Expression.
 [<NoEquality; NoComparison>]
 type TExpr =
   | TLitExpr of Lit * Loc
@@ -420,7 +420,7 @@ type TExpr =
   /// - If recursive, local definitions are mutually recursive.
   | TBlockExpr of IsRec * TStmt list * last: TExpr
 
-/// Statement in HIR.
+/// Statement.
 [<NoEquality; NoComparison>]
 type TStmt =
   | TExprStmt of TExpr
@@ -493,7 +493,7 @@ type Log =
   | Error of string
 
 // -----------------------------------------------
-// Types (HIR/MIR)
+// Ty
 // -----------------------------------------------
 
 let tyError loc = Ty(ErrorTk loc, [])
@@ -539,7 +539,7 @@ let tyUnion tySerial tyArgs = Ty(UnionTk tySerial, tyArgs)
 let tyRecord tySerial = Ty(RecordTk tySerial, [])
 
 // -----------------------------------------------
-// Type definitions (HIR)
+// TyDef
 // -----------------------------------------------
 
 let moduleTySerialToInt (ModuleTySerial serial) = serial
@@ -562,7 +562,7 @@ let tyDefToName tyDef =
   | RecordTyDef (name, _, _, _, _) -> name
 
 // -----------------------------------------------
-// Variable definitions (HIR)
+// VarDef
 // -----------------------------------------------
 
 let varSerialToInt (VarSerial serial) = serial
@@ -581,7 +581,7 @@ let variantSerialCompare l r =
   compare (variantSerialToInt l) (variantSerialToInt r)
 
 // -----------------------------------------------
-// Literals
+// Lit
 // -----------------------------------------------
 
 let litToTy (lit: Lit) : Ty =
@@ -593,7 +593,7 @@ let litToTy (lit: Lit) : Ty =
   | StrLit _ -> tyStr
 
 // -----------------------------------------------
-// Primitives (TIR)
+// TPrim
 // -----------------------------------------------
 
 let primFromIdent ident =
@@ -774,7 +774,7 @@ let primToTySpec prim =
     poly (tyFun (tyNativePtr valueTy) (tyFun tyInt (tyFun valueTy tyUnit))) []
 
 // -----------------------------------------------
-// Patterns (HIR)
+// TPat
 // -----------------------------------------------
 
 let hpAbort ty loc = TNodePat(TAbortPN, [], ty, loc)
@@ -880,7 +880,7 @@ let patIsClearlyExhaustive isNewtypeVariant pat =
   go pat
 
 // -----------------------------------------------
-// Expressions (HIR)
+// TExpr
 // -----------------------------------------------
 
 let hxTrue loc = TLitExpr(BoolLit true, loc)
@@ -990,17 +990,13 @@ let stmtMap (onTy: Ty -> Ty) (stmt: TStmt) : TStmt =
 let emptyVars: TreeMap<VarSerial, VarDef> = TMap.empty varSerialCompare
 
 // -----------------------------------------------
-// HProgram
-// -----------------------------------------------
+// TProgram
+// ----------------------------------------------
 
-/// Iterates over toplevel statements in program to update a state.
-let hirProgramFoldStmt (folder: TStmt * 'S -> 'S) (state: 'S) (modules: TProgram) : 'S =
-  modules
-  |> List.fold
-       (fun state (m: TModule) ->
-         m.Stmts
-         |> List.fold (fun state stmt -> folder (stmt, state)) state)
-       state
+module TProgram =
+  let foldStmt (folder: 'S -> TStmt -> 'S) (state: 'S) (modules: TProgram) : 'S =
+    modules
+    |> List.fold (fun state (m: TModule) -> m.Stmts |> List.fold folder state) state
 
 // -----------------------------------------------
 // Print Formats

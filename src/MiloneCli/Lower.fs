@@ -1,4 +1,6 @@
-// Conversion from TIR to HIR.
+/// # Lower
+///
+/// Conversion from TIR to HIR.
 module rec MiloneCli.Lower
 
 open MiloneShared.Util
