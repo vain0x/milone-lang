@@ -8,6 +8,13 @@ module Tir = MiloneSyntax.Tir
 module TMap = MiloneStd.StdMap
 module Typing = MiloneSyntax.Typing
 
+/// Converts a map by transforming key and value.
+let private convertMap f compareFun (map: AssocMap<'K, 'T>) : AssocMap<'H, 'U> =
+  map
+  |> TMap.toList
+  |> List.map f
+  |> TMap.ofList compareFun
+
 let private lowerTk (tk: Tir.Tk) : Hir.Tk =
   match tk with
   | Tir.IntTk intFlavor -> Hir.IntTk intFlavor
@@ -86,7 +93,7 @@ let private lowerTyDef (def: Tir.TyDef) : Hir.TyDef =
 
 let private lowerVarMap vars =
   vars
-  |> TMap.stableMap (fun serial def -> lowerVarSerial serial, lowerVarDef def) Hir.varSerialCompare
+  |> convertMap (fun (serial, def) -> lowerVarSerial serial, lowerVarDef def) Hir.varSerialCompare
 
 let private lowerPrim (prim: Tir.TPrim) : Hir.HPrim =
   match prim with
@@ -237,11 +244,11 @@ let private lowerTirCtx (ctx: Tir.TirCtx) : Hir.TyCtx =
 
     Funs =
       ctx.Funs
-      |> TMap.stableMap (fun serial def -> lowerFunSerial serial, lowerFunDef def) Hir.funSerialCompare
+      |> convertMap (fun (serial, def) -> lowerFunSerial serial, lowerFunDef def) Hir.funSerialCompare
 
     Variants =
       ctx.Variants
-      |> TMap.stableMap (fun serial def -> lowerVariantSerial serial, lowerVariantDef def) Hir.variantSerialCompare
+      |> convertMap (fun (serial, def) -> lowerVariantSerial serial, lowerVariantDef def) Hir.variantSerialCompare
 
     MainFunOpt = ctx.MainFunOpt |> Option.map lowerFunSerial
 

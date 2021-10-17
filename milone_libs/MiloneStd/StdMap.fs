@@ -235,11 +235,3 @@ let toList (map: TreeMap<'K, 'T>) : ('K * 'T) list =
   |> List.rev
 
 let toKeys (map: TreeMap<'K, 'T>) : 'K list = map |> toList |> List.map fst
-
-// FIXME: remove this
-/// Maps both keys and values. Keys must preserve their relative ordering (unchecked).
-let stableMap (f: 'K -> 'T -> 'H * 'U) (otherKeyCompare: 'H -> 'H -> int) (map: TreeMap<'K, 'T>) : TreeMap<'H, 'U> =
-  map
-  |> toList
-  |> List.map (fun (key, value) -> f key value)
-  |> ofList otherKeyCompare
