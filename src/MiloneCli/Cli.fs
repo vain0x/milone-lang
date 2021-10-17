@@ -285,8 +285,8 @@ let private transformHir (host: CliHost) v (modules: Tir.TProgram, tyCtx: Typing
 
   writeLog host v "Flatten"
 
+  // Reduce info of variables.
   let varNameMap =
-    // Reduce info of variables.
     modules
     |> List.fold
          (fun varNames (m: Hir.HModule) ->
@@ -296,21 +296,23 @@ let private transformHir (host: CliHost) v (modules: Tir.TProgram, tyCtx: Typing
                 varNames)
          (TMap.empty Hir.varSerialCompare)
 
-  let decls =
+  let modules =
     modules
-    |> List.collect (fun (m: Hir.HModule) -> m.Stmts)
+    |> List.map (fun (m: Hir.HModule) -> m.Stmts)
 
   writeLog host v "MonoTy"
-  let decls, tyCtx = monoTy (decls, tyCtx)
+  let modules, tyCtx = monoTy (modules, tyCtx)
 
-  decls, tyCtx, varNameMap
+  modules, tyCtx, varNameMap
 
 /// (file name, C code) list
 type private CodeGenResult = (string * string) list
 
 /// Generates C language codes from transformed HIR,
 /// using mid-level intermediate representation (MIR).
-let private codeGenHirViaMir (host: CliHost) v projectName (decls, tyCtx, varNameMap) : CodeGenResult =
+let private codeGenHirViaMir (host: CliHost) v projectName (modules, tyCtx, varNameMap) : CodeGenResult =
+  let decls = modules |> List.collect id
+
   writeLog host v "Mir"
   let stmts, mirCtx = mirify (decls, tyCtx, varNameMap)
 
@@ -354,9 +356,9 @@ let private compile (ctx: CompileCtx) : CompileResult =
   | SyntaxApi.SyntaxAnalysisError (errors, _) -> CompileError(SyntaxApi.syntaxErrorsToString errors)
 
   | SyntaxApi.SyntaxAnalysisOk (modules, tyCtx) ->
-    let decls, tyCtx, varNameMap = transformHir host v (modules, tyCtx)
+    let modules, tyCtx, varNameMap = transformHir host v (modules, tyCtx)
 
-    CompileOk(codeGenHirViaMir host v ctx.EntryProjectName (decls, tyCtx, varNameMap))
+    CompileOk(codeGenHirViaMir host v ctx.EntryProjectName (modules, tyCtx, varNameMap))
 
 // -----------------------------------------------
 // Others
