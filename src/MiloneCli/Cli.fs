@@ -285,7 +285,7 @@ let private writeCFiles (host: CliHost) (targetDir: string) (cFiles: (string * s
 // Actions
 // -----------------------------------------------
 
-let cliCheck (host: CliHost) verbosity projectDir =
+let private cliCheck (host: CliHost) verbosity projectDir =
   let ctx = compileCtxNew host verbosity projectDir
 
   let ok, output = check ctx
@@ -297,12 +297,12 @@ let cliCheck (host: CliHost) verbosity projectDir =
   exitCode
 
 [<RequireQualifiedAccess; NoEquality; NoComparison>]
-type CompileOptions =
+type private CompileOptions =
   { ProjectDir: string
     TargetDir: string
     Verbosity: Verbosity }
 
-let cliCompile (host: CliHost) (options: CompileOptions) =
+let private cliCompile (host: CliHost) (options: CompileOptions) =
   let ctx =
     compileCtxNew host options.Verbosity options.ProjectDir
 
@@ -325,7 +325,7 @@ let cliCompile (host: CliHost) (options: CompileOptions) =
     0
 
 [<RequireQualifiedAccess; NoEquality; NoComparison>]
-type BuildOptions =
+type private BuildOptions =
   { ProjectDir: string
     TargetDir: string
     IsRelease: bool
