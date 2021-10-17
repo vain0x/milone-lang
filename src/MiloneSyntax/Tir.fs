@@ -84,7 +84,7 @@ type Tk =
   | UnionTk of unionTy: TySerial
   | RecordTk of recordTy: TySerial
 
-  /// Unresolved type. Generated in AstToHir, resolved in NameRes.
+  /// Unresolved type. Generated in TirGen, resolved in NameRes.
   | UnresolvedTk of quals: Serial list * unresolvedSerial: Serial
   | UnresolvedVarTk of unresolvedVarTySerial: (Serial * Loc)
 
