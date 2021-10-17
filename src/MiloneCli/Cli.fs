@@ -20,6 +20,7 @@ open MiloneTranslation.TailRecOptimizing
 module C = MiloneStd.StdChar
 module Derive = MiloneTranslation.Derive
 module Hir = MiloneTranslation.Hir
+module Mir = MiloneTranslation.Mir
 module S = MiloneStd.StdString
 module Tir = MiloneSyntax.Tir
 module TMap = MiloneStd.StdMap
@@ -306,20 +307,15 @@ type private CodeGenResult = (string * string) list
 /// Generates C language codes from transformed HIR,
 /// using mid-level intermediate representation (MIR).
 let private codeGenHirViaMir (host: CliHost) v projectName (modules, tyCtx) : CodeGenResult =
+  writeLog host v "Mir"
+  let modules, mirCtx = mirify (modules, tyCtx)
+
   let decls =
     modules
-    |> List.collect (fun (m: Hir.HModule2) -> m.Stmts)
-
-  let varNameMap =
-    modules
-    |> List.collect (fun (m: Hir.HModule2) -> m.Vars |> TMap.toList)
-    |> TMap.ofList Hir.varSerialCompare
-
-  writeLog host v "Mir"
-  let stmts, mirCtx = mirify (decls, tyCtx, varNameMap)
+    |> List.collect (fun (m: Mir.MModule) -> m.Decls)
 
   writeLog host v "CirGen"
-  let modules = genCir (stmts, mirCtx)
+  let modules = genCir (decls, mirCtx)
 
   writeLog host v "CirDump"
 

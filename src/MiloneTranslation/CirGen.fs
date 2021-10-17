@@ -130,7 +130,7 @@ let private ofMirResult (mirCtx: MirResult) : CirCtx =
 
     let m =
       mirCtx.VarNameMap
-      |> TMap.fold (fun m varSerial name -> m |> TMap.add (VarSymbol varSerial) name) m
+      |> List.fold (fun m (varSerial, name) -> m |> TMap.add (VarSymbol varSerial) name) m
 
     let m =
       mirCtx.Funs

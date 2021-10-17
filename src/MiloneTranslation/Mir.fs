@@ -223,6 +223,9 @@ type MDecl =
   | MProcDecl of FunSerial * args: (VarSerial * Ty * Loc) list * body: MBlock list * resultTy: Ty * Loc
   | MNativeDecl of code: string * Loc
 
+[<RequireQualifiedAccess; NoEquality; NoComparison>]
+type MModule = { Vars: VarNameMap; Decls: MDecl list }
+
 // -----------------------------------------------
 // Expressions (MIR)
 // -----------------------------------------------
