@@ -118,8 +118,8 @@ type private DCtx =
     GenericListEqualFunOpt: FunSerial option
     EqualFunInstances: TreeMap<Ty, FunSerial> }
 
-let private dCtxOfTyCtx (tyCtx: TyCtx) : DCtx =
-  { Serial = tyCtx.Serial
+let private ofHirCtx (hirCtx: HirCtx) : DCtx =
+  { Serial = hirCtx.Serial
     NewVars = []
     NewFuns = []
     NewLetFuns = []
@@ -127,10 +127,11 @@ let private dCtxOfTyCtx (tyCtx: TyCtx) : DCtx =
     GenericListEqualFunOpt = None
     EqualFunInstances = TMap.empty tyCompare }
 
-let private deriveOnExpr (tyCtx: TyCtx) (ctx: DCtx) expr : DCtx =
-  let findTy tySerial = tyCtx.Tys |> mapFind tySerial
+let private deriveOnExpr (hirCtx: HirCtx) (ctx: DCtx) expr : DCtx =
+  let findTy tySerial = hirCtx.Tys |> mapFind tySerial
 
-  let findVariant variantSerial = tyCtx.Variants |> mapFind variantSerial
+  let findVariant variantSerial =
+    hirCtx.Variants |> mapFind variantSerial
 
   let addVar name ty loc (ctx: DCtx) =
     let serial = ctx.Serial + 1
@@ -155,7 +156,7 @@ let private deriveOnExpr (tyCtx: TyCtx) (ctx: DCtx) expr : DCtx =
     | (Some _) as it -> it, ctx
     | None ->
       let funSerialOpt =
-        tyCtx.Funs
+        hirCtx.Funs
         |> TMap.fold
              (fun opt funSerial (funDef: FunDef) ->
                let (Loc (docId, _, _)) = funDef.Loc
@@ -549,10 +550,10 @@ let private deriveOnExpr (tyCtx: TyCtx) (ctx: DCtx) expr : DCtx =
   assert (List.isEmpty ctx.WorkList)
   ctx
 
-let private deriveOnModule (m: HModule, tyCtx: TyCtx) : HModule * TyCtx =
+let private deriveOnModule (m: HModule, hirCtx: HirCtx) : HModule * HirCtx =
   let ctx =
     m.Stmts
-    |> List.fold (deriveOnExpr tyCtx) (dCtxOfTyCtx tyCtx)
+    |> List.fold (deriveOnExpr hirCtx) (ofHirCtx hirCtx)
 
   assert (List.isEmpty ctx.WorkList)
 
@@ -575,23 +576,23 @@ let private deriveOnModule (m: HModule, tyCtx: TyCtx) : HModule * TyCtx =
 
   let funs =
     ctx.NewFuns
-    |> List.fold (fun funs (funSerial, funDef) -> funs |> TMap.add funSerial funDef) tyCtx.Funs
+    |> List.fold (fun funs (funSerial, funDef) -> funs |> TMap.add funSerial funDef) hirCtx.Funs
 
   let m =
     { m with
         Vars = localVars
         Stmts = stmts }
 
-  let tyCtx =
-    { tyCtx with
+  let hirCtx =
+    { hirCtx with
         Serial = ctx.Serial
         Funs = funs }
 
-  m, tyCtx
+  m, hirCtx
 
 // -----------------------------------------------
 // Interface
 // -----------------------------------------------
 
-let deriveOps (modules: HProgram, tyCtx: TyCtx) : HProgram * TyCtx =
-  (modules, tyCtx) |> stMap deriveOnModule
+let deriveOps (modules: HProgram, hirCtx: HirCtx) : HProgram * HirCtx =
+  (modules, hirCtx) |> stMap deriveOnModule

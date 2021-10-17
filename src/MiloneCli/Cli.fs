@@ -257,10 +257,10 @@ let private codeGenFromTir
   (modules: Tir.TProgram, tirCtx: Tir.TirCtx)
   : CodeGenResult =
   writeLog "Lower"
-  let modules, tyCtx = Lower.lower (modules, tirCtx)
+  let modules, hirCtx = Lower.lower (modules, tirCtx)
 
   let cFiles =
-    TranslationApi.codeGenHir writeLog (modules, tyCtx)
+    TranslationApi.codeGenHir writeLog (modules, hirCtx)
 
   let cFiles =
     cFiles

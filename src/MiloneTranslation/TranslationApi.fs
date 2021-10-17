@@ -24,41 +24,41 @@ module TailRecOptimizing = MiloneTranslation.TailRecOptimizing
 type private WriteLogFun = string -> unit
 type private CCode = string
 
-let codeGenHir (writeLog: WriteLogFun) (modules: Hir.HProgram, tyCtx: TyCtx) : (DocId * CCode) list =
+let codeGenHir (writeLog: WriteLogFun) (modules: Hir.HProgram, hirCtx: HirCtx) : (DocId * CCode) list =
   writeLog "RecordRes"
-  let modules, tyCtx = RecordRes.recordRes (modules, tyCtx)
+  let modules, hirCtx = RecordRes.recordRes (modules, hirCtx)
 
   writeLog "Derive"
-  let modules, tyCtx = Derive.deriveOps (modules, tyCtx)
+  let modules, hirCtx = Derive.deriveOps (modules, hirCtx)
 
   writeLog "ClosureConversion"
 
-  let modules, tyCtx =
-    ClosureConversion.closureConversion (modules, tyCtx)
+  let modules, hirCtx =
+    ClosureConversion.closureConversion (modules, hirCtx)
 
   writeLog "EtaExpansion"
 
-  let modules, tyCtx =
-    EtaExpansion.etaExpansion (modules, tyCtx)
+  let modules, hirCtx =
+    EtaExpansion.etaExpansion (modules, hirCtx)
 
   writeLog "ComputeTyArgs"
 
-  let modules, tyCtx =
-    AutoBoxing.computeFunTyArgs (modules, tyCtx)
+  let modules, hirCtx =
+    AutoBoxing.computeFunTyArgs (modules, hirCtx)
 
   writeLog "AutoBoxing"
-  let modules, tyCtx = AutoBoxing.autoBox (modules, tyCtx)
+  let modules, hirCtx = AutoBoxing.autoBox (modules, hirCtx)
 
   writeLog "Hoist"
-  let modules, tyCtx = Hoist.hoist (modules, tyCtx)
+  let modules, hirCtx = Hoist.hoist (modules, hirCtx)
 
   writeLog "TailRecOptimizing"
 
-  let modules, tyCtx =
-    TailRecOptimizing.tailRecOptimize (modules, tyCtx)
+  let modules, hirCtx =
+    TailRecOptimizing.tailRecOptimize (modules, hirCtx)
 
   writeLog "Monomorphizing"
-  let modules, tyCtx = Monomorphizing.monify (modules, tyCtx)
+  let modules, hirCtx = Monomorphizing.monify (modules, hirCtx)
 
   // Reduce info of variables.
   let modules: Hir.HModule2 list =
@@ -77,10 +77,10 @@ let codeGenHir (writeLog: WriteLogFun) (modules: Hir.HProgram, tyCtx: TyCtx) : (
            m)
 
   writeLog "MonoTy"
-  let modules, tyCtx = MonoTy.monoTy (modules, tyCtx)
+  let modules, hirCtx = MonoTy.monoTy (modules, hirCtx)
 
   writeLog "Mir"
-  let modules, mirCtx = MirGen.mirify (modules, tyCtx)
+  let modules, mirCtx = MirGen.mirify (modules, hirCtx)
 
   writeLog "CirGen"
   let modules = CirGen.genCir (modules, mirCtx)

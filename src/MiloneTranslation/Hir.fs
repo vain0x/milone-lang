@@ -13,10 +13,6 @@ open MiloneStd.StdMap
 
 module S = MiloneStd.StdString
 
-// from syntax
-type private ProjectName = string
-type private ModuleName = string
-
 // -----------------------------------------------
 // HIR types
 // -----------------------------------------------
@@ -338,6 +334,24 @@ type HModule2 =
 type HProgram = HModule list
 
 // -----------------------------------------------
+// HirCtx
+// -----------------------------------------------
+
+/// Context of HIR program.
+[<RequireQualifiedAccess; NoEquality; NoComparison>]
+type HirCtx =
+  { /// Next serial number.
+    Serial: Serial
+
+    Vars: TreeMap<VarSerial, VarDef>
+    Funs: TreeMap<FunSerial, FunDef>
+    Variants: TreeMap<VariantSerial, VariantDef>
+
+    MainFunOpt: FunSerial option
+
+    Tys: TreeMap<TySerial, TyDef> }
+
+// -----------------------------------------------
 // Types (HIR/MIR)
 // -----------------------------------------------
 
@@ -652,26 +666,6 @@ module HProgram =
   let foldExpr (f: 'S -> HExpr -> 'S) (state: 'S) (program: HProgram) : 'S =
     program
     |> List.fold (fun (state: 'S) (m: HModule) -> m.Stmts |> List.fold f state) state
-
-// ===============================================
-// patchwork
-
-[<RequireQualifiedAccess; NoEquality; NoComparison>]
-type TyCtx =
-  {
-    /// Next serial number.
-    /// We need to identify variables by serial number rather than names
-    /// due to scope locality and shadowing.
-    Serial: Serial
-
-    /// Variable serial to variable definition.
-    Vars: TreeMap<VarSerial, VarDef>
-    Funs: TreeMap<FunSerial, FunDef>
-    Variants: TreeMap<VariantSerial, VariantDef>
-
-    MainFunOpt: FunSerial option
-
-    Tys: TreeMap<TySerial, TyDef> }
 
 // -----------------------------------------------
 // Tk

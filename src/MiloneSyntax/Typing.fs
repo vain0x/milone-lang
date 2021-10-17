@@ -1731,5 +1731,5 @@ let infer (modules: TProgram, nameRes: NameResResult) : TProgram * TirCtx =
 
     { ctx with Tys = tys }
 
-  let ctx = toTirCtx ctx
-  modules, ctx
+  let tirCtx = toTirCtx ctx
+  modules, tirCtx

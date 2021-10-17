@@ -136,9 +136,9 @@ let private parseWithCache (ls: LangServiceState) docId kind =
 // Semantic analysis
 // -----------------------------------------------
 
-let private tyDisplayFn (tyCtx: TirCtx) ty =
+let private tyDisplayFn (tirCtx: TirCtx) ty =
   let getTyName tySerial =
-    tyCtx.Tys
+    tirCtx.Tys
     |> TMap.tryFind tySerial
     |> Option.map tyDefToName
 
@@ -182,11 +182,11 @@ let private doBundle (ls: LangServiceState) projectDir =
         FetchModule = fetchModuleUsingCache syntaxCtx.FetchModule }
 
   match SyntaxApi.performSyntaxAnalysis syntaxCtx with
-  | SyntaxApi.SyntaxAnalysisOk (modules, tyCtx) -> Some(modules, tyCtx), [], docVersions
+  | SyntaxApi.SyntaxAnalysisOk (modules, tirCtx) -> Some(modules, tirCtx), [], docVersions
 
-  | SyntaxApi.SyntaxAnalysisError (errors, tyCtxOpt) ->
+  | SyntaxApi.SyntaxAnalysisError (errors, tirCtxOpt) ->
     let tirOpt =
-      tyCtxOpt |> Option.map (fun it -> [], it)
+      tirCtxOpt |> Option.map (fun it -> [], it)
 
     tirOpt, errors, docVersions
 
@@ -377,11 +377,11 @@ let private dfsStmt (visitor: Visitor) stmt =
   | TOpenStmt _
   | TModuleSynonymStmt _ -> ()
 
-let private findTyInStmt (ls: LangServiceState) (stmt: TStmt) (tyCtx: TirCtx) (tokenLoc: Loc) =
+let private findTyInStmt (ls: LangServiceState) (stmt: TStmt) (tirCtx: TirCtx) (tokenLoc: Loc) =
   let mutable contentOpt = None
 
   let onVisit tyOpt loc =
-    // eprintfn "hover: loc=%A tyOpt=%A" loc (tyOpt |> Option.map (tyDisplayFn tyCtx))
+    // eprintfn "hover: loc=%A tyOpt=%A" loc (tyOpt |> Option.map (tyDisplayFn tirCtx))
     if loc = tokenLoc then
       contentOpt <- tyOpt
 
@@ -436,7 +436,7 @@ let private doCollectSymbolOccurrences
     eprintfn "%s: no bundle result: errors %d" hint (List.length errors)
     []
 
-  | Some (modules, _tyCtx) ->
+  | Some (modules, _) ->
     let tokenOpt = findTokenAt ls docId targetPos
 
     match tokenOpt with
@@ -492,7 +492,7 @@ module LangService =
       eprintfn "highlight: no bundle result: errors %d" (List.length errors)
       None
 
-    | Some (expr, _tyCtx) ->
+    | Some (expr, _) ->
       let tokenOpt = findTokenAt ls docId targetPos
 
       match tokenOpt with
@@ -545,7 +545,7 @@ module LangService =
       eprintfn "hover: no bundle result: errors %d" (List.length errors)
       None
 
-    | Some (modules, tyCtx) ->
+    | Some (modules, tirCtx) ->
       let tokenOpt = findTokenAt ls docId targetPos
 
       match tokenOpt with
@@ -562,9 +562,9 @@ module LangService =
               |> List.tryPick
                    (fun m ->
                      m.Stmts
-                     |> List.tryPick (fun stmt -> findTyInStmt ls stmt tyCtx tokenLoc)) with
+                     |> List.tryPick (fun stmt -> findTyInStmt ls stmt tirCtx tokenLoc)) with
         | None -> None
-        | Some ty -> Some(tyDisplayFn tyCtx ty)
+        | Some ty -> Some(tyDisplayFn tirCtx ty)
 
   let definition projectDir (docId: DocId) (targetPos: Pos) (ls: LangServiceState) =
     let includeDecl = true

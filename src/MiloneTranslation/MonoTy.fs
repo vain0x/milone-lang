@@ -82,9 +82,9 @@ type private MtCtx =
     NewTys: (TySerial * M.TyDef) list
     NewVariants: (VariantSerial * M.VariantDef) list }
 
-let private ofTyCtx (tyCtx: TyCtx) : MtCtx =
+let private ofHirCtx (hirCtx: HirCtx) : MtCtx =
   let tyNames =
-    tyCtx.Tys
+    hirCtx.Tys
     |> TMap.fold
          (fun tyNames tySerial tyDef ->
            let tk, name =
@@ -96,7 +96,7 @@ let private ofTyCtx (tyCtx: TyCtx) : MtCtx =
            tyNames |> TMap.add (Ty(tk, [])) name)
          (TMap.empty tyCompare)
 
-  { Serial = tyCtx.Serial
+  { Serial = hirCtx.Serial
     Map = TMap.empty (pairCompare tkCompare (listCompare monoTyCompare))
     TyNames = tyNames
     NewTys = []
@@ -388,11 +388,11 @@ let private mtModule (m: HModule2, ctx) =
 // Context
 // -----------------------------------------------
 
-let private mtDefs (tyCtx: TyCtx) (mtCtx: MtCtx) =
+let private mtDefs (hirCtx: HirCtx) (mtCtx: MtCtx) =
   // Remark: `VarDef`s don't need updating because Ty fields are no longer used.
 
   let funs, mtCtx =
-    tyCtx.Funs
+    hirCtx.Funs
     |> TMap.fold
          (fun (funs, ctx) funSerial (funDef: FunDef) ->
            let (TyScheme (tyVars, ty)) = funDef.Ty
@@ -417,7 +417,7 @@ let private mtDefs (tyCtx: TyCtx) (mtCtx: MtCtx) =
          (TMap.empty funSerialCompare, mtCtx)
 
   let variants, mtCtx =
-    tyCtx.Variants
+    hirCtx.Variants
     |> TMap.fold
          (fun (variants, ctx) variantSerial (variantDef: VariantDef) ->
            let payloadTy, ctx =
@@ -439,7 +439,7 @@ let private mtDefs (tyCtx: TyCtx) (mtCtx: MtCtx) =
          (TMap.empty variantSerialCompare, mtCtx)
 
   let tys, mtCtx =
-    tyCtx.Tys
+    hirCtx.Tys
     |> TMap.fold
          (fun (tys, ctx) tySerial (tyDef: TyDef) ->
            match tyDef with
@@ -576,12 +576,12 @@ let private bthTyDef (tyDef: M.TyDef) : TyDef =
 // Interface
 // -----------------------------------------------
 
-let monoTy (modules: HModule2 list, tyCtx: TyCtx) : HModule2 list * TyCtx =
-  let mtCtx = ofTyCtx tyCtx
+let monoTy (modules: HModule2 list, hirCtx: HirCtx) : HModule2 list * HirCtx =
+  let mtCtx = ofHirCtx hirCtx
 
   // Convert to IR.
   let modules, mtCtx = (modules, mtCtx) |> stMap mtModule
-  let funs, variants, tys, mtCtx = mtDefs tyCtx mtCtx
+  let funs, variants, tys, mtCtx = mtDefs hirCtx mtCtx
 
   // Back to HIR.
   let modules = modules |> List.map bthModule
@@ -597,11 +597,11 @@ let monoTy (modules: HModule2 list, tyCtx: TyCtx) : HModule2 list * TyCtx =
   let tys =
     tys |> TMap.map (fun _ tyDef -> bthTyDef tyDef)
 
-  let tyCtx =
-    { tyCtx with
+  let hirCtx =
+    { hirCtx with
         Serial = mtCtx.Serial
         Funs = funs
         Variants = variants
         Tys = tys }
 
-  modules, tyCtx
+  modules, hirCtx

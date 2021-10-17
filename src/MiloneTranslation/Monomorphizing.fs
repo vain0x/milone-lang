@@ -328,9 +328,9 @@ let private generate isMetaTy (rx: CollectRx) genericFunBodyMap (ctx: MonoCtx) (
 // Interface
 // -----------------------------------------------
 
-let monify (modules: HProgram, tyCtx: TyCtx) : HProgram * TyCtx =
+let monify (modules: HProgram, hirCtx: HirCtx) : HProgram * HirCtx =
   let getFunIdent funSerial =
-    let funDef = tyCtx.Funs |> mapFind funSerial
+    let funDef = hirCtx.Funs |> mapFind funSerial
     let serial = string (funSerialToInt funSerial)
     let loc = locToString funDef.Loc
 
@@ -345,7 +345,7 @@ let monify (modules: HProgram, tyCtx: TyCtx) : HProgram * TyCtx =
            (fun wx (moduleId, m: HModule) ->
              let collectRx: CollectRx =
                { CurrentModuleId = moduleId
-                 Funs = tyCtx.Funs }
+                 Funs = hirCtx.Funs }
 
              m.Stmts |> List.fold (collectMonoUse collectRx) wx)
            emptyCollectWx
@@ -357,7 +357,7 @@ let monify (modules: HProgram, tyCtx: TyCtx) : HProgram * TyCtx =
 
   // Repeat to generate.
   let isMetaTy tySerial =
-    match tyCtx.Tys |> TMap.tryFind tySerial with
+    match hirCtx.Tys |> TMap.tryFind tySerial with
     | Some (MetaTyDef ty) ->
       // FIXME: remove this
       printfn "meta #%d %s" tySerial (objToString ty)
@@ -381,13 +381,13 @@ let monify (modules: HProgram, tyCtx: TyCtx) : HProgram * TyCtx =
       // Module id is unused.
       let collectRx: CollectRx =
         { CurrentModuleId = -1
-          Funs = tyCtx.Funs }
+          Funs = hirCtx.Funs }
 
       go workList (generate isMetaTy collectRx genericFunBodyMap ctx item)
 
   let ctx =
     let ctx: MonoCtx =
-      { Serial = tyCtx.Serial
+      { Serial = hirCtx.Serial
         NewFuns = []
         InstanceMap = TMap.empty monoUseCompare
         WorkList = [] }
@@ -431,9 +431,9 @@ let monify (modules: HProgram, tyCtx: TyCtx) : HProgram * TyCtx =
            { m with Stmts = stmts })
 
   // Merge.
-  let tyCtx: TyCtx =
+  let hirCtx: HirCtx =
     let funs =
-      tyCtx.Funs
+      hirCtx.Funs
       |> TMap.filter (fun funSerial _ -> funSerial |> isGenericFun |> not)
 
     // #map_merge
@@ -441,8 +441,8 @@ let monify (modules: HProgram, tyCtx: TyCtx) : HProgram * TyCtx =
       ctx.NewFuns
       |> List.fold (fun funs (funSerial, funDef, _, _, _) -> funs |> TMap.add funSerial funDef) funs
 
-    { tyCtx with
+    { hirCtx with
         Serial = ctx.Serial
         Funs = funs }
 
-  modules, tyCtx
+  modules, hirCtx

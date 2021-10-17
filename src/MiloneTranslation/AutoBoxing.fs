@@ -222,18 +222,18 @@ let private trdTy isDirect (ctx: TrdCtx) ty : TrdCtx =
 
     | RecordTk tySerial -> nominal ctx tySerial
 
-let private detectTypeRecursion (tyCtx: TyCtx) : TrdCtx =
+let private detectTypeRecursion (hirCtx: HirCtx) : TrdCtx =
   let ctx: TrdCtx =
-    { Variants = tyCtx.Variants
-      Tys = tyCtx.Tys
+    { Variants = hirCtx.Variants
+      Tys = hirCtx.Tys
       VariantMemo = TMap.empty (pairCompare variantSerialCompare compareIsDirect)
       RecordTyMemo = TMap.empty (pairCompare compare compareIsDirect) }
 
   let doAll isDirect ctx =
     let ctx =
-      tyCtx.Tys |> TMap.fold (trdTyDef isDirect) ctx
+      hirCtx.Tys |> TMap.fold (trdTyDef isDirect) ctx
 
-    tyCtx.Variants
+    hirCtx.Variants
     |> TMap.fold (fun ctx variantSerial varDef -> trdVariant isDirect ctx variantSerial (Some varDef)) ctx
 
   ctx |> doAll IsDirect |> doAll IsIndirect
@@ -480,17 +480,17 @@ type private AbCtx =
 
     RecursiveVariants: TreeSet<VariantSerial> }
 
-let private ofTyCtx (tyCtx: TyCtx) : AbCtx =
-  { Vars = tyCtx.Vars
-    Funs = tyCtx.Funs
-    Variants = tyCtx.Variants
-    Tys = tyCtx.Tys
+let private ofHirCtx (hirCtx: HirCtx) : AbCtx =
+  { Vars = hirCtx.Vars
+    Funs = hirCtx.Funs
+    Variants = hirCtx.Variants
+    Tys = hirCtx.Tys
     BoxedVariants = TMap.empty variantSerialCompare
     BoxedRecordTys = TMap.empty compare
     RecursiveVariants = TMap.empty variantSerialCompare }
 
-let private toTyCtx (tyCtx: TyCtx) (ctx: AbCtx) =
-  { tyCtx with
+let private toHirCtx (hirCtx: HirCtx) (ctx: AbCtx) =
+  { hirCtx with
       Vars = ctx.Vars
       Funs = ctx.Funs
       Variants = ctx.Variants
@@ -841,9 +841,9 @@ let private abExpr ctx expr =
   | HNavExpr _ -> unreachable () // HNavExpr is resolved in NameRes, Typing, or RecordRes.
   | HRecordExpr _ -> unreachable () // HRecordExpr is resolved in RecordRes.
 
-let autoBox (modules: HProgram, tyCtx: TyCtx) : HProgram * TyCtx =
+let autoBox (modules: HProgram, hirCtx: HirCtx) : HProgram * HirCtx =
   // Detect recursion.
-  let trdCtx = detectTypeRecursion tyCtx
+  let trdCtx = detectTypeRecursion hirCtx
 
   // Measure types.
   let tsmCtx: TsmCtx = measureTys trdCtx
@@ -859,7 +859,7 @@ let autoBox (modules: HProgram, tyCtx: TyCtx) : HProgram * TyCtx =
              | _ -> set)
            (TSet.empty variantSerialCompare)
 
-    { ofTyCtx tyCtx with
+    { ofHirCtx hirCtx with
         BoxedVariants = tsmCtx.BoxedVariants
         BoxedRecordTys = tsmCtx.BoxedRecordTys
         RecursiveVariants = recursiveVariants }
@@ -923,8 +923,8 @@ let autoBox (modules: HProgram, tyCtx: TyCtx) : HProgram * TyCtx =
            let stmts = m.Stmts |> List.map (abExpr ctx)
            { m with Vars = vars; Stmts = stmts })
 
-  let tyCtx = ctx |> toTyCtx tyCtx
-  modules, tyCtx
+  let hirCtx = ctx |> toHirCtx hirCtx
+  modules, hirCtx
 
 // ===============================================
 // FIXME: split file
@@ -1164,23 +1164,23 @@ let private taExpr (ctx: TaCtx) (expr: HExpr) : HExpr =
   | HNavExpr _ -> unreachable () // HNavExpr is resolved in NameRes, Typing, or RecordRes.
   | HRecordExpr _ -> unreachable () // HRecordExpr is resolved in RecordRes.
 
-let computeFunTyArgs (modules: HProgram, tyCtx: TyCtx) : HProgram * TyCtx =
-  let tyCtx =
+let computeFunTyArgs (modules: HProgram, hirCtx: HirCtx) : HProgram * HirCtx =
+  let hirCtx =
     let ctx: TvCtx =
-      { Funs = tyCtx.Funs
+      { Funs = hirCtx.Funs
         UsedTyVars = TSet.empty compare }
 
     let ctx =
       modules
       |> HProgram.foldExpr (fun ctx expr -> tvExpr expr ctx) ctx
 
-    { tyCtx with Funs = ctx.Funs }
+    { hirCtx with Funs = ctx.Funs }
 
   let modules =
     let ctx: TaCtx =
-      { Funs = tyCtx.Funs
+      { Funs = hirCtx.Funs
         QuantifiedTys = TSet.empty compare }
 
     modules |> HProgram.mapExpr (taExpr ctx)
 
-  modules, tyCtx
+  modules, hirCtx
