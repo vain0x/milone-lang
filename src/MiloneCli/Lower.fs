@@ -9,7 +9,7 @@ module Tir = MiloneSyntax.Tir
 module Typing = MiloneSyntax.Typing
 
 /// Converts a map by transforming key and value.
-let private convertMap f compareFun (map: AssocMap<'K, 'T>) : AssocMap<'H, 'U> =
+let private convertMap f compareFun (map: TreeMap<'K, 'T>) : TreeMap<'H, 'U> =
   map
   |> TMap.toList
   |> List.map f

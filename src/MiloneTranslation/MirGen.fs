@@ -33,14 +33,14 @@ let private exprIsUnit expr = expr |> exprToTy |> tyIsUnit
 
 [<RequireQualifiedAccess; NoEquality; NoComparison>]
 type MirResult =
-  { StaticVars: AssocMap<VarSerial, VarDef>
-    Funs: AssocMap<FunSerial, FunDef>
-    Variants: AssocMap<VariantSerial, VariantDef>
-    Tys: AssocMap<TySerial, TyDef>
+  { StaticVars: TreeMap<VarSerial, VarDef>
+    Funs: TreeMap<FunSerial, FunDef>
+    Variants: TreeMap<VariantSerial, VariantDef>
+    Tys: TreeMap<TySerial, TyDef>
 
     MainFunOpt: FunSerial option
-    FunLocals: AssocMap<FunSerial, (VarSerial * Ty) list>
-    ReplacingVars: AssocSet<VarSerial> }
+    FunLocals: TreeMap<FunSerial, (VarSerial * Ty) list>
+    ReplacingVars: TreeSet<VarSerial> }
 
 // -----------------------------------------------
 // Context
@@ -49,9 +49,9 @@ type MirResult =
 /// Read-only context of the pass.
 [<RequireQualifiedAccess; NoEquality; NoComparison>]
 type private MirRx =
-  { Funs: AssocMap<FunSerial, FunDef>
-    Variants: AssocMap<VariantSerial, VariantDef>
-    Tys: AssocMap<TySerial, TyDef> }
+  { Funs: TreeMap<FunSerial, FunDef>
+    Variants: TreeMap<VariantSerial, VariantDef>
+    Tys: TreeMap<TySerial, TyDef> }
 
 /// Mutable context of the pass.
 [<RequireQualifiedAccess; NoEquality; NoComparison>]
@@ -59,7 +59,7 @@ type private MirCtx =
   { Rx: MirRx
 
     Serial: Serial
-    VarNameMap: AssocMap<VarSerial, Ident>
+    VarNameMap: TreeMap<VarSerial, Ident>
     LabelSerial: Serial
 
     CurrentFunSerial: FunSerial option
@@ -70,8 +70,8 @@ type private MirCtx =
 
     IsReachable: bool
 
-    FunLocals: AssocMap<FunSerial, (VarSerial * Ty) list>
-    ReplacingVars: AssocSet<VarSerial>
+    FunLocals: TreeMap<FunSerial, (VarSerial * Ty) list>
+    ReplacingVars: TreeSet<VarSerial>
 
     Stmts: MStmt list
     Decls: MDecl list }
@@ -857,7 +857,7 @@ type private VarReuse =
   | Replacing
   | ReplacedBy of VarSerial
 
-type private VarReuseMap = AssocMap<VarSerial, VarReuse * Ty>
+type private VarReuseMap = TreeMap<VarSerial, VarReuse * Ty>
 
 let private reuseVarSerial (reuseMap: VarReuseMap) serial : VarSerial =
   match TMap.tryFind serial reuseMap with
@@ -909,12 +909,12 @@ let private reuseVarOnExpr (reuseMap: VarReuseMap) (expr: HExpr) : HExpr =
 let private doReuseArmLocals funSerial arms (ctx: MirCtx) : _ * MirCtx =
   let emptyReuseMap: VarReuseMap = TMap.empty varSerialCompare
 
-  let emptyVarMap: AssocMap<Ty * int, VarSerial> =
+  let emptyVarMap: TreeMap<Ty * int, VarSerial> =
     TMap.empty (pairCompare tyCompare compare)
 
   // ty -> index:
   // index is the number of variables of the same type appeared earlier in the same pattern.
-  let emptyFreq: AssocMap<Ty, int> = TMap.empty tyCompare
+  let emptyFreq: TreeMap<Ty, int> = TMap.empty tyCompare
 
   let analyzeVarPat varSerial varTy reuseMap varMap freq =
     let index =

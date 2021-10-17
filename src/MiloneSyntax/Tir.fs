@@ -49,7 +49,7 @@ type FunSerial = FunSerial of Serial
 type VariantSerial = VariantSerial of Serial
 
 [<Struct; NoEquality; NoComparison>]
-type NameCtx = NameCtx of identMap: AssocMap<Serial, Ident> * lastSerial: Serial
+type NameCtx = NameCtx of identMap: TreeMap<Serial, Ident> * lastSerial: Serial
 
 /// Type constructor.
 [<NoEquality; NoComparison>]
@@ -231,13 +231,13 @@ type TirCtx =
   { /// Last serial number.
     Serial: Serial
 
-    Vars: AssocMap<VarSerial, VarDef>
-    Funs: AssocMap<FunSerial, FunDef>
-    Variants: AssocMap<VariantSerial, VariantDef>
+    Vars: TreeMap<VarSerial, VarDef>
+    Funs: TreeMap<FunSerial, FunDef>
+    Variants: TreeMap<VariantSerial, VariantDef>
 
     MainFunOpt: FunSerial option
 
-    Tys: AssocMap<TySerial, TyDef>
+    Tys: TreeMap<TySerial, TyDef>
     Logs: (Log * Loc) list }
 
 /// Kind of TNodePat.
@@ -431,7 +431,7 @@ type TStmt =
   | TModuleStmt of ModuleTySerial * body: TStmt list * Loc
   | TModuleSynonymStmt of ModuleSynonymSerial * path: Ident list * Loc
 
-type private VarMap = AssocMap<VarSerial, VarDef>
+type private VarMap = TreeMap<VarSerial, VarDef>
 
 [<RequireQualifiedAccess; NoEquality; NoComparison>]
 type TModule =
@@ -987,7 +987,7 @@ let stmtMap (onTy: Ty -> Ty) (stmt: TStmt) : TStmt =
 // TModule
 // -----------------------------------------------
 
-let emptyVars: AssocMap<VarSerial, VarDef> = TMap.empty varSerialCompare
+let emptyVars: TreeMap<VarSerial, VarDef> = TMap.empty varSerialCompare
 
 // -----------------------------------------------
 // HProgram

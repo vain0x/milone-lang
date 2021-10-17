@@ -435,7 +435,7 @@ type ARoot = ARoot of AModuleHead option * ADecl list
 // Keywords
 // -----------------------------------------------
 
-type private KeywordMap = AssocMap<Ident, Token>
+type private KeywordMap = TreeMap<Ident, Token>
 
 // See also <https://docs.microsoft.com/en-us/dotnet/fsharp/language-reference/keyword-reference>.
 let private keywordMapBuild () : KeywordMap =

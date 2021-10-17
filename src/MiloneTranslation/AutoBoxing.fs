@@ -61,16 +61,16 @@ type private Status =
 
 [<RequireQualifiedAccess; NoEquality; NoComparison>]
 type private TrdCtx =
-  { Variants: AssocMap<VariantSerial, VariantDef>
-    Tys: AssocMap<TySerial, TyDef>
+  { Variants: TreeMap<VariantSerial, VariantDef>
+    Tys: TreeMap<TySerial, TyDef>
 
     /// ((variantSerial, IsDirect) -> Boxed) means:
     ///     The variant should be boxed because it is recursive without indirection.
     /// ((variantSerial, IsIndirect) -> Boxed) means:
     ///     The variant is indirectly recursive (i.e. by following pointers).
-    VariantMemo: AssocMap<VariantSerial * IsDirect, Status>
+    VariantMemo: TreeMap<VariantSerial * IsDirect, Status>
 
-    RecordTyMemo: AssocMap<TySerial * IsDirect, Status> }
+    RecordTyMemo: TreeMap<TySerial * IsDirect, Status> }
 
 let private trdVariant isDirect (ctx: TrdCtx) variantSerial (variantDefOpt: VariantDef option) =
   match
@@ -244,14 +244,14 @@ let private detectTypeRecursion (tyCtx: TyCtx) : TrdCtx =
 
 [<RequireQualifiedAccess; NoEquality; NoComparison>]
 type private TsmCtx =
-  { Variants: AssocMap<VariantSerial, VariantDef>
-    Tys: AssocMap<TySerial, TyDef>
+  { Variants: TreeMap<VariantSerial, VariantDef>
+    Tys: TreeMap<TySerial, TyDef>
 
-    BoxedVariants: AssocSet<VariantSerial>
-    BoxedRecordTys: AssocSet<TySerial>
+    BoxedVariants: TreeSet<VariantSerial>
+    BoxedRecordTys: TreeSet<TySerial>
 
-    VariantMemo: AssocMap<VariantSerial, int>
-    RecordTyMemo: AssocMap<TySerial, int> }
+    VariantMemo: TreeMap<VariantSerial, int>
+    RecordTyMemo: TreeMap<TySerial, int> }
 
 let private tsmVariant (ctx: TsmCtx) variantSerial (variantDefOpt: VariantDef option) =
   match ctx.VariantMemo |> TMap.tryFind variantSerial with
@@ -470,15 +470,15 @@ let private measureTys (trdCtx: TrdCtx) : TsmCtx =
 
 [<RequireQualifiedAccess; NoEquality; NoComparison>]
 type private AbCtx =
-  { Vars: AssocMap<VarSerial, VarDef>
-    Funs: AssocMap<FunSerial, FunDef>
-    Variants: AssocMap<VariantSerial, VariantDef>
-    Tys: AssocMap<TySerial, TyDef>
+  { Vars: TreeMap<VarSerial, VarDef>
+    Funs: TreeMap<FunSerial, FunDef>
+    Variants: TreeMap<VariantSerial, VariantDef>
+    Tys: TreeMap<TySerial, TyDef>
 
-    BoxedVariants: AssocSet<VariantSerial>
-    BoxedRecordTys: AssocSet<TySerial>
+    BoxedVariants: TreeSet<VariantSerial>
+    BoxedRecordTys: TreeSet<TySerial>
 
-    RecursiveVariants: AssocSet<VariantSerial> }
+    RecursiveVariants: TreeSet<VariantSerial> }
 
 let private ofTyCtx (tyCtx: TyCtx) : AbCtx =
   { Vars = tyCtx.Vars
@@ -933,12 +933,12 @@ let autoBox (modules: HProgram, tyCtx: TyCtx) : HProgram * TyCtx =
 // Detect use of type vars
 // -----------------------------------------------
 
-let private emptyTyVarSet: AssocSet<TySerial> = TSet.empty compare
+let private emptyTyVarSet: TreeSet<TySerial> = TSet.empty compare
 
 [<RequireQualifiedAccess; NoEquality; NoComparison>]
 type private TvCtx =
-  { Funs: AssocMap<FunSerial, FunDef>
-    UsedTyVars: AssocSet<TySerial> }
+  { Funs: TreeMap<FunSerial, FunDef>
+    UsedTyVars: TreeSet<TySerial> }
 
 let private tvTy (ty: Ty) (ctx: TvCtx) : TvCtx =
   let modified, usedTyVars =
@@ -1051,13 +1051,13 @@ let private tvExpr (expr: HExpr) (ctx: TvCtx) : TvCtx =
 // Compute ty args
 // -----------------------------------------------
 
-type private TyMap = AssocMap<TySerial, TyDef>
+type private TyMap = TreeMap<TySerial, TyDef>
 
 let private emptyTys: TyMap = TMap.empty compare
-let private emptyBinding: AssocMap<TySerial, Ty> = TMap.empty compare
+let private emptyBinding: TreeMap<TySerial, Ty> = TMap.empty compare
 
 /// Generates a binding (from meta ty to ty) by unifying.
-let private unifyTy (tys: TyMap) (lTy: Ty) (rTy: Ty) loc : AssocMap<TySerial, Ty> =
+let private unifyTy (tys: TyMap) (lTy: Ty) (rTy: Ty) loc : TreeMap<TySerial, Ty> =
   let expandMeta binding tySerial =
     match binding |> TMap.tryFind tySerial with
     | (Some _) as it -> it
@@ -1096,8 +1096,8 @@ let private unifyTy (tys: TyMap) (lTy: Ty) (rTy: Ty) loc : AssocMap<TySerial, Ty
 
 [<RequireQualifiedAccess; NoEquality; NoComparison>]
 type private TaCtx =
-  { Funs: AssocMap<FunSerial, FunDef>
-    QuantifiedTys: AssocSet<TySerial> }
+  { Funs: TreeMap<FunSerial, FunDef>
+    QuantifiedTys: TreeSet<TySerial> }
 
 let private processFunExpr (ctx: TaCtx) funSerial useSiteTy loc : HExpr =
   let def: FunDef = ctx.Funs |> mapFind funSerial

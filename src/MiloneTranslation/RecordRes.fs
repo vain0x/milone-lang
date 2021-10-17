@@ -20,10 +20,10 @@ let private hxIsVarOrUnboxingVar expr =
 
 [<RequireQualifiedAccess; NoEquality; NoComparison>]
 type private RrCtx =
-  { Tys: AssocMap<TySerial, TyDef>
+  { Tys: TreeMap<TySerial, TyDef>
 
     /// recordTySerial -> (fieldTys, (field -> (fieldIndex, fieldTy)))
-    RecordMap: AssocMap<TySerial, (Ty list * AssocMap<Ident, int * Ty>)> }
+    RecordMap: TreeMap<TySerial, (Ty list * TreeMap<Ident, int * Ty>)> }
 
 let private ofTyCtx (tyCtx: TyCtx) : RrCtx =
   { Tys = tyCtx.Tys

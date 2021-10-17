@@ -93,9 +93,9 @@ open MiloneTranslation.Hir
 
 [<RequireQualifiedAccess; NoEquality; NoComparison>]
 type private KnownCtx =
-  { Locals: AssocSet<VarSerial>
-    UseVars: AssocSet<VarSerial>
-    UseFuns: AssocSet<FunSerial> }
+  { Locals: TreeSet<VarSerial>
+    UseVars: TreeSet<VarSerial>
+    UseFuns: TreeSet<FunSerial> }
 
 let private knownCtxEmpty () : KnownCtx =
   { Locals = TSet.empty varSerialCompare
@@ -126,7 +126,7 @@ let private knownCtxUseFun funSerial (ctx: KnownCtx) =
   { ctx with
       UseFuns = ctx.UseFuns |> TSet.add funSerial }
 
-let private knownCtxToNonlocalVars (ctx: KnownCtx) : AssocSet<VarSerial> =
+let private knownCtxToNonlocalVars (ctx: KnownCtx) : TreeSet<VarSerial> =
   ctx.UseVars
   |> TSet.fold
        (fun acc varSerial ->
@@ -183,12 +183,12 @@ let private capsUpdateFunDef funTy arity (caps: Caps) =
 /// Context of closure conversion.
 [<RequireQualifiedAccess; NoEquality; NoComparison>]
 type private CcCtx =
-  { StaticVars: AssocMap<VarSerial, VarDef>
-    Vars: AssocMap<VarSerial, VarDef>
-    Funs: AssocMap<FunSerial, FunDef>
+  { StaticVars: TreeMap<VarSerial, VarDef>
+    Vars: TreeMap<VarSerial, VarDef>
+    Funs: TreeMap<FunSerial, FunDef>
     Current: KnownCtx
-    FunKnowns: AssocMap<FunSerial, KnownCtx>
-    FunUpvars: AssocMap<FunSerial, AssocSet<VarSerial>> }
+    FunKnowns: TreeMap<FunSerial, KnownCtx>
+    FunUpvars: TreeMap<FunSerial, TreeSet<VarSerial>> }
 
 let private ofTyCtx (tyCtx: TyCtx) : CcCtx =
   { StaticVars = tyCtx.Vars
@@ -260,7 +260,7 @@ let private genFunCaps funSerial (ctx: CcCtx) : Caps =
            None)
 
 let private closureRefs (ctx: CcCtx) : CcCtx =
-  let mergeUpvars localVars newUpvars (modified, upvars) : bool * AssocSet<VarSerial> =
+  let mergeUpvars localVars newUpvars (modified, upvars) : bool * TreeSet<VarSerial> =
     newUpvars
     |> TSet.fold
          (fun (modified, upvars) varSerial ->
@@ -309,7 +309,7 @@ let private closureRefs (ctx: CcCtx) : CcCtx =
          (fun (_: FunSerial) (knownCtx: KnownCtx) ->
            knownCtxToNonlocalVars knownCtx, knownCtx.Locals, TSet.toList knownCtx.UseFuns)
     |> makeTransitive
-    |> TMap.map (fun (_: FunSerial) (upvars: AssocSet<VarSerial>, _: AssocSet<VarSerial>, _: FunSerial list) -> upvars)
+    |> TMap.map (fun (_: FunSerial) (upvars: TreeSet<VarSerial>, _: TreeSet<VarSerial>, _: FunSerial list) -> upvars)
 
   { ctx with FunUpvars = funUpvars }
 

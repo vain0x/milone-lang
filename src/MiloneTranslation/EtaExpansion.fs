@@ -164,7 +164,7 @@ type private EtaCtx =
   { Serial: Serial
     StaticVars: VarMap
     Vars: VarMap
-    Funs: AssocMap<FunSerial, FunDef> }
+    Funs: TreeMap<FunSerial, FunDef> }
 
 let private ofTyCtx (tyCtx: TyCtx) : EtaCtx =
   { Serial = tyCtx.Serial

@@ -58,7 +58,7 @@ open MiloneStd.StdMap
 open MiloneTranslation.Hir
 
 // #tyAssign?
-let private getTyAssignment tyVars tyArgs : AssocMap<TySerial, Ty> =
+let private getTyAssignment tyVars tyArgs : TreeMap<TySerial, Ty> =
   match listTryZip tyVars tyArgs with
   | zipped, [], [] -> TMap.ofList compare zipped
   | _ -> unreachable () // Arity mismatch.
@@ -96,13 +96,13 @@ let private monoUseCompare =
 
 /// Read-only context of collect step.
 type private CollectRx =
-  { Funs: AssocMap<FunSerial, FunDef>
+  { Funs: TreeMap<FunSerial, FunDef>
     CurrentModuleId: ModuleId }
 
 /// Mutable context of collect step.
 [<RequireQualifiedAccess; NoEquality; NoComparison>]
 type private CollectWx =
-  { GenericFunBody: AssocMap<FunSerial, ModuleId * FunBody>
+  { GenericFunBody: TreeMap<FunSerial, ModuleId * FunBody>
     UseSiteTys: MonoUse list }
 
 let private emptyCollectWx: CollectWx =
@@ -173,7 +173,7 @@ let private collectMonoUse (rx: CollectRx) (wx: CollectWx) expr : CollectWx = co
 type private RewriteRx =
   { GetFunIdent: FunSerial -> Ident
     IsGenericFun: FunSerial -> bool
-    InstanceMap: AssocMap<MonoUse, FunSerial> }
+    InstanceMap: TreeMap<MonoUse, FunSerial> }
 
 let private rewriteExpr (rx: RewriteRx) expr : HExpr =
   let onExpr expr = rewriteExpr rx expr
@@ -237,7 +237,7 @@ let private rewriteExpr (rx: RewriteRx) expr : HExpr =
 type private MonoCtx =
   { Serial: Serial
     NewFuns: (FunSerial * FunDef * FunBody * FunSerial * Loc) list
-    InstanceMap: AssocMap<MonoUse, FunSerial>
+    InstanceMap: TreeMap<MonoUse, FunSerial>
     WorkList: MonoUse list }
 
 let private generateMonomorphizedFun isMetaTy (genericFunDef: FunDef) (genericFunBody: FunBody) (monoTyArgs: Ty list) =

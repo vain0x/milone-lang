@@ -2,19 +2,10 @@
 module rec MiloneShared.Util
 
 open MiloneStd.StdMap
-open MiloneStd.StdSet
 
 module C = MiloneStd.StdChar
 module S = MiloneStd.StdString
 module Int = MiloneStd.StdInt
-
-// -----------------------------------------------
-// Collections
-// -----------------------------------------------
-
-type AssocMap<'K, 'V> = TreeMap<'K, 'V>
-
-type AssocSet<'T> = TreeSet<'T>
 
 // -----------------------------------------------
 // Error
