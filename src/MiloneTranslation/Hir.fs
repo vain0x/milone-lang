@@ -133,12 +133,6 @@ type VariantDef =
     PayloadTy: Ty
     Loc: Loc }
 
-[<NoComparison>]
-type ValueSymbol =
-  | VarSymbol of varSerial: VarSerial
-  | FunSymbol of funSerial: FunSerial
-  | VariantSymbol of variantSerial: VariantSerial
-
 /// Kind of HNodePat.
 [<NoEquality; NoComparison>]
 type HPatKind =

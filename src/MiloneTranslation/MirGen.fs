@@ -35,7 +35,6 @@ let private exprIsUnit expr = expr |> exprToTy |> tyIsUnit
 [<RequireQualifiedAccess; NoEquality; NoComparison>]
 type MirResult =
   { StaticVars: AssocMap<VarSerial, VarDef>
-    VarNameMap: (VarSerial * Ident) list
     Funs: AssocMap<FunSerial, FunDef>
     Variants: AssocMap<VariantSerial, VariantDef>
     Tys: AssocMap<TySerial, TyDef>
@@ -1674,13 +1673,8 @@ let mirify (modules: HModule2 list, tyCtx: TyCtx) : MModule list * MirResult =
 
   let modules, ctx = (modules, ctx) |> stMap mirifyModule
 
-  let varNameMap =
-    modules
-    |> List.collect (fun (m: MModule) -> m.Vars |> TMap.toList)
-
   let result: MirResult =
     { StaticVars = tyCtx.Vars
-      VarNameMap = varNameMap
       Funs = tyCtx.Funs
       Variants = tyCtx.Variants
       Tys = tyCtx.Tys
