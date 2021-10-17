@@ -777,7 +777,7 @@ let primToTySpec prim =
 // TPat
 // -----------------------------------------------
 
-let hpAbort ty loc = TNodePat(TAbortPN, [], ty, loc)
+let tpAbort ty loc = TNodePat(TAbortPN, [], ty, loc)
 
 let patExtract (pat: TPat) : Ty * Loc =
   match pat with
@@ -883,22 +883,12 @@ let patIsClearlyExhaustive isNewtypeVariant pat =
 // TExpr
 // -----------------------------------------------
 
-let hxTrue loc = TLitExpr(BoolLit true, loc)
+let txLetIn stmt next = TBlockExpr(NotRec, [ stmt ], next)
 
-let hxApp f x ty loc = TNodeExpr(TAppEN, [ f; x ], ty, loc)
-
-let hxAscribe expr ty loc =
-  TNodeExpr(TAscribeEN, [ expr ], ty, loc)
-
-let hxLetIn stmt next = TBlockExpr(NotRec, [ stmt ], next)
-
-let hxTuple items loc =
+let txTuple items loc =
   TNodeExpr(TTupleEN, items, tyTuple (List.map exprToTy items), loc)
 
-let hxUnit loc = hxTuple [] loc
-
-let hxNil itemTy loc =
-  TPrimExpr(TPrim.Nil, tyList itemTy, loc)
+let txUnit loc = txTuple [] loc
 
 let exprExtract (expr: TExpr) : Ty * Loc =
   match expr with
@@ -945,13 +935,9 @@ let exprMap (f: Ty -> Ty) (expr: TExpr) : TExpr =
 
   go expr
 
-let exprToTy expr =
-  let ty, _ = exprExtract expr
-  ty
+let exprToTy expr = exprExtract expr |> fst
 
-let exprToLoc expr =
-  let _, loc = exprExtract expr
-  loc
+let exprToLoc expr = exprExtract expr |> snd
 
 // -----------------------------------------------
 // TStmt

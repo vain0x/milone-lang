@@ -152,13 +152,13 @@ let private freshMetaTy loc (ctx: TyCtx) : Ty * TyCtx =
   ty, ctx
 
 let private freshMetaTyForPat pat ctx =
-  let _, loc = pat |> patExtract
+  let loc = pat |> patToLoc
   let tySerial, ctx = ctx |> freshTySerial
   let ty = tyMeta tySerial loc
   ty, ctx
 
 let private freshMetaTyForExpr expr ctx =
-  let _, loc = expr |> exprExtract
+  let loc = expr |> exprToLoc
   let tySerial, ctx = ctx |> freshTySerial
   let ty = tyMeta tySerial loc
   ty, ctx
@@ -664,14 +664,17 @@ let private resolveAscriptionTy ctx ascriptionTy =
 // Emission helpers
 // -----------------------------------------------
 
+let private txApp f x resultTy loc =
+  TNodeExpr(TAppEN, [ f; x ], resultTy, loc)
+
 /// Creates an expression to abort.
-let private hxAbort (ctx: TyCtx) loc =
+let private txAbort (ctx: TyCtx) loc =
   let ty, ctx = ctx |> freshMetaTy loc
   let funTy = tyFun tyInt ty
   let exitExpr = TPrimExpr(TPrim.Exit, funTy, loc)
 
   let callExpr =
-    hxApp exitExpr (TLitExpr(IntLit "1", loc)) ty loc
+    txApp exitExpr (TLitExpr(IntLit "1", loc)) ty loc
 
   callExpr, ty, ctx
 
@@ -713,7 +716,7 @@ let private inferSomePat ctx pat loc =
   let ctx =
     addError ctx "Some pattern must be used in the form of: `Some pattern`." loc
 
-  hpAbort unknownTy loc, unknownTy, ctx
+  tpAbort unknownTy loc, unknownTy, ctx
 
 let private inferDiscardPat ctx pat loc =
   let ty, ctx = ctx |> freshMetaTyForPat pat
@@ -792,7 +795,7 @@ let private inferOrPat ctx l r loc =
 
 let private inferAbortPat ctx pat loc =
   let targetTy, ctx = freshMetaTyForPat pat ctx
-  hpAbort targetTy loc, targetTy, ctx
+  tpAbort targetTy loc, targetTy, ctx
 
 let private doInferPats ctx pats =
   let rec go ctx patAcc tyAcc pats =
@@ -854,7 +857,7 @@ let private inferIrrefutablePat ctx pat =
       addLog ctx Log.IrrefutablePatNonExhaustiveError loc
 
     let ty, ctx = freshMetaTyForPat pat ctx
-    hpAbort ty loc, ty, ctx
+    tpAbort ty loc, ty, ctx
   else
     inferPat ctx pat
 
@@ -901,25 +904,25 @@ let private inferPrimExpr ctx prim loc =
         "Illegal use of printfn. printfn must have string literal as first argument; e.g. `printfn \"%s\" s`."
         loc
 
-    hxAbort ctx loc
+    txAbort ctx loc
 
   | TPrim.NativeFun ->
     let ctx =
       addError ctx "Illegal use of __nativeFun. Hint: `__nativeFun (\"funName\", arg1, arg2, ...): ResultType`." loc
 
-    hxAbort ctx loc
+    txAbort ctx loc
 
   | TPrim.NativeDecl ->
     let ctx =
       addError ctx "Illegal use of __nativeDecl. Hint: `__nativeDecl \"Some C code here.\"`." loc
 
-    hxAbort ctx loc
+    txAbort ctx loc
 
   | TPrim.SizeOfVal ->
     let ctx =
       addError ctx "Illegal use of __sizeOfVal. Hint: `__sizeOfVal expr`." loc
 
-    hxAbort ctx loc
+    txAbort ctx loc
 
   | _ ->
     let tySpec = prim |> primToTySpec
@@ -959,7 +962,7 @@ let private inferRecordExpr ctx expectOpt baseOpt fields loc =
     let ctx =
       addError ctx "Can't infer type of record." loc
 
-    hxAbort ctx loc
+    txAbort ctx loc
 
   | Some (recordTy, recordName, fieldDefs) ->
     let addRedundantErr fieldName loc ctx =
@@ -1023,7 +1026,7 @@ let private inferRecordExpr ctx expectOpt baseOpt fields loc =
       let recordExpr =
         TRecordExpr(Some varExpr, fields, recordTy, loc)
 
-      hxLetIn (TLetValStmt(varPat, baseExpr, loc)) recordExpr, recordTy, ctx
+      txLetIn (TLetValStmt(varPat, baseExpr, loc)) recordExpr, recordTy, ctx
 
 /// match 'a with ( | 'aT-> 'b )*
 let private inferMatchExpr ctx expectOpt itself cond arms loc =
@@ -1058,7 +1061,7 @@ let private inferNavExpr ctx l (r: Ident) loc =
     let ctx =
       addError ctx ("Expected to have field: '" + r + "'.") loc
 
-    hxAbort ctx loc
+    txAbort ctx loc
 
   let l, lTy, ctx = inferExpr ctx None l
 
@@ -1069,7 +1072,7 @@ let private inferNavExpr ctx l (r: Ident) loc =
     let funExpr =
       TPrimExpr(TPrim.StrLength, tyFun tyStr tyInt, loc)
 
-    hxApp funExpr l tyInt loc, tyInt, ctx
+    txApp funExpr l tyInt loc, tyInt, ctx
 
   | Ty (RecordTk tySerial, tyArgs), _ ->
     assert (List.isEmpty tyArgs)
@@ -1106,7 +1109,7 @@ let private inferAppExpr ctx itself callee arg loc =
       | (Ty (FunTk, [ _; targetTy ])) as funTy -> funTy, targetTy
       | _ -> unreachable ()
 
-    hxApp (TPrimExpr(TPrim.Printfn, funTy, loc)) arg targetTy loc, targetTy, ctx
+    txApp (TPrimExpr(TPrim.Printfn, funTy, loc)) arg targetTy loc, targetTy, ctx
 
   // __nativeFun f
   | TPrimExpr (TPrim.NativeFun, _, loc), TFunExpr (funSerial, _, _) ->
@@ -1164,7 +1167,7 @@ let private inferAppExpr ctx itself callee arg loc =
     let ctx =
       unifyTy ctx loc calleeTy (tyFun argTy targetTy)
 
-    hxApp callee arg targetTy loc, targetTy, ctx
+    txApp callee arg targetTy loc, targetTy, ctx
 
 let private inferMinusExpr ctx arg loc =
   let arg, argTy, ctx = inferExpr ctx None arg
@@ -1211,7 +1214,7 @@ let private inferTupleExpr (ctx: TyCtx) items loc =
 
   let items, itemTys, ctx = go [] [] ctx items
 
-  hxTuple items loc, tyTuple itemTys, ctx
+  txTuple items loc, tyTuple itemTys, ctx
 
 let private inferAscribeExpr ctx body ascriptionTy loc =
   let body, bodyTy, ctx = inferExpr ctx (Some ascriptionTy) body
@@ -1404,7 +1407,7 @@ let private inferExpr (ctx: TyCtx) (expectOpt: Ty option) (expr: TExpr) : TExpr 
   | TRecordExpr (baseOpt, fields, _, loc) -> inferRecordExpr ctx expectOpt baseOpt fields loc
   | TMatchExpr (cond, arms, _, loc) -> inferMatchExpr ctx expectOpt expr cond arms loc
   | TNavExpr (receiver, field, _, loc) -> inferNavExpr ctx receiver field loc
-  | TNodeExpr (TAbortEN, _, _, loc) -> hxAbort ctx loc
+  | TNodeExpr (TAbortEN, _, _, loc) -> txAbort ctx loc
   | TNodeExpr (TMinusEN, [ arg ], _, loc) -> inferMinusExpr ctx arg loc
   | TNodeExpr (TAppEN, [ callee; arg ], _, loc) -> inferAppExpr ctx expr callee arg loc
   | TNodeExpr (TTupleEN, items, _, loc) -> inferTupleExpr ctx items loc

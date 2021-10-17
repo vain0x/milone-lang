@@ -38,31 +38,6 @@ let private toLoc (doc: DocId) (pos: Pos) : Loc =
   let row, column = pos
   Loc(doc, row, column)
 
-let private opToPrim op =
-  match op with
-  | AddBinary -> TPrim.Add
-  | SubBinary -> TPrim.Sub
-  | MulBinary -> TPrim.Mul
-  | DivBinary -> TPrim.Div
-  | ModuloBinary -> TPrim.Modulo
-  | BitAndBinary -> TPrim.BitAnd
-  | BitOrBinary -> TPrim.BitOr
-  | BitXorBinary -> TPrim.BitXor
-  | LeftShiftBinary -> TPrim.LeftShift
-  | RightShiftBinary -> TPrim.RightShift
-  | EqualBinary -> TPrim.Equal
-  | LessBinary -> TPrim.Less
-  | ConsBinary -> TPrim.Cons
-
-  | NotEqualBinary
-  | LessEqualBinary
-  | GreaterBinary
-  | GreaterEqualBinary
-  | LogicalAndBinary
-  | LogicalOrBinary
-  | AppBinary
-  | PipeBinary -> unreachable ()
-
 // -----------------------------------------------
 // NameCtx
 // -----------------------------------------------
@@ -108,6 +83,49 @@ let private axTrue loc = ALitExpr(BoolLit true, loc)
 let private axNot arg loc =
   let falseExpr = axFalse loc
   ABinaryExpr(EqualBinary, arg, falseExpr, loc)
+
+// -----------------------------------------------
+// TExpr
+// -----------------------------------------------
+
+let private txTrue loc = TLitExpr(BoolLit true, loc)
+
+let private txNil itemTy loc =
+  TPrimExpr(TPrim.Nil, tyList itemTy, loc)
+
+let private txApp f x loc = TNodeExpr(TAppEN, [ f; x ], noTy, loc)
+
+let private txAscribe expr ty loc =
+  TNodeExpr(TAscribeEN, [ expr ], ty, loc)
+
+// -----------------------------------------------
+// TPrim
+// -----------------------------------------------
+
+let private opToPrim op =
+  match op with
+  | AddBinary -> TPrim.Add
+  | SubBinary -> TPrim.Sub
+  | MulBinary -> TPrim.Mul
+  | DivBinary -> TPrim.Div
+  | ModuloBinary -> TPrim.Modulo
+  | BitAndBinary -> TPrim.BitAnd
+  | BitOrBinary -> TPrim.BitOr
+  | BitXorBinary -> TPrim.BitXor
+  | LeftShiftBinary -> TPrim.LeftShift
+  | RightShiftBinary -> TPrim.RightShift
+  | EqualBinary -> TPrim.Equal
+  | LessBinary -> TPrim.Less
+  | ConsBinary -> TPrim.Cons
+
+  | NotEqualBinary
+  | LessEqualBinary
+  | GreaterBinary
+  | GreaterEqualBinary
+  | LogicalAndBinary
+  | LogicalOrBinary
+  | AppBinary
+  | PipeBinary -> unreachable ()
 
 // -----------------------------------------------
 // Desugar
@@ -250,6 +268,10 @@ let private desugarLetDecl isRec pat body pos =
 
 let private tyUnresolved serial argTys = Ty(UnresolvedTk serial, argTys)
 
+// -----------------------------------------------
+// Control
+// -----------------------------------------------
+
 let private athTy (docId: DocId) (ty: ATy, nameCtx: NameCtx) : Ty * NameCtx =
   match ty with
   | AMissingTy pos ->
@@ -289,15 +311,11 @@ let private athTy (docId: DocId) (ty: ATy, nameCtx: NameCtx) : Ty * NameCtx =
     let tTy, nameCtx = (tTy, nameCtx) |> athTy docId
     tyFun sTy tTy, nameCtx
 
-// -----------------------------------------------
-// Control
-// -----------------------------------------------
-
 let private athPat (docId: DocId) (pat: APat, nameCtx: NameCtx) : TPat * NameCtx =
   match pat with
   | AMissingPat pos ->
     let loc = toLoc docId pos
-    hpAbort noTy loc, nameCtx
+    tpAbort noTy loc, nameCtx
 
   | ALitPat (lit, pos) ->
     let loc = toLoc docId pos
@@ -376,7 +394,7 @@ let private athExpr (docId: DocId) (expr: AExpr, nameCtx: NameCtx) : TExpr * Nam
 
   | AListExpr ([], pos) ->
     let loc = toLoc docId pos
-    hxNil noTy loc, nameCtx
+    txNil noTy loc, nameCtx
 
   | AListExpr (items, pos) ->
     let expr = desugarListLitExpr items pos
@@ -409,7 +427,7 @@ let private athExpr (docId: DocId) (expr: AExpr, nameCtx: NameCtx) : TExpr * Nam
 
       let guard, nameCtx =
         match guardOpt with
-        | None -> hxTrue loc, nameCtx
+        | None -> txTrue loc, nameCtx
         | Some guard -> (guard, nameCtx) |> athExpr docId
 
       let body, nameCtx = (body, nameCtx) |> athExpr docId
@@ -484,7 +502,7 @@ let private athExpr (docId: DocId) (expr: AExpr, nameCtx: NameCtx) : TExpr * Nam
     let l, nameCtx = (l, nameCtx) |> athExpr docId
     let r, nameCtx = (r, nameCtx) |> athExpr docId
     let loc = toLoc docId pos
-    hxApp l r noTy loc, nameCtx
+    txApp l r loc, nameCtx
 
   | ABinaryExpr (op, l, r, pos) ->
     let prim = op |> opToPrim
@@ -492,7 +510,7 @@ let private athExpr (docId: DocId) (expr: AExpr, nameCtx: NameCtx) : TExpr * Nam
     let r, nameCtx = (r, nameCtx) |> athExpr docId
     let loc = toLoc docId pos
     let primExpr = TPrimExpr(prim, noTy, loc)
-    hxApp (hxApp primExpr l noTy loc) r noTy loc, nameCtx
+    txApp (txApp primExpr l loc) r loc, nameCtx
 
   | ATupleExpr (items, pos) ->
     let loc = toLoc docId pos
@@ -500,13 +518,13 @@ let private athExpr (docId: DocId) (expr: AExpr, nameCtx: NameCtx) : TExpr * Nam
     let items, nameCtx =
       (items, nameCtx) |> stMap (athExpr docId)
 
-    hxTuple items loc, nameCtx
+    txTuple items loc, nameCtx
 
   | AAscribeExpr (body, ty, pos) ->
     let body, nameCtx = (body, nameCtx) |> athExpr docId
     let ty, nameCtx = (ty, nameCtx) |> athTy docId
     let loc = toLoc docId pos
-    hxAscribe body ty loc, nameCtx
+    txAscribe body ty loc, nameCtx
 
   | ASemiExpr (stmts, last, _) ->
     let stmts, nameCtx =
@@ -531,7 +549,7 @@ let private athExpr (docId: DocId) (expr: AExpr, nameCtx: NameCtx) : TExpr * Nam
         let loc = toLoc docId pos
         TLetFunStmt(FunSerial serial, isRec, vis, args, body, loc)
 
-      hxLetIn stmt next, nameCtx
+      txLetIn stmt next, nameCtx
 
     | ALetVal (_isRec, pat, body, next, pos) ->
       let pat, nameCtx = (pat, nameCtx) |> athPat docId
@@ -543,7 +561,7 @@ let private athExpr (docId: DocId) (expr: AExpr, nameCtx: NameCtx) : TExpr * Nam
         // FIXME: let rec for let-val is error.
         TLetValStmt(pat, body, loc)
 
-      hxLetIn stmt next, nameCtx
+      txLetIn stmt next, nameCtx
 
   | ARangeExpr _ -> unreachable () // Generated only inside of AIndexExpr.
 

@@ -14,7 +14,7 @@ open MiloneSyntax.Tir
 
 module S = MiloneStd.StdString
 
-let private hxAbort loc = TNodeExpr(TAbortEN, [], noTy, loc)
+let private txAbort loc = TNodeExpr(TAbortEN, [], noTy, loc)
 
 // -----------------------------------------------
 // Type primitives
@@ -1226,7 +1226,7 @@ let private nameResNavPat pat ctx =
 
   let notResolved ctx =
     let ctx = ctx |> addLog UnresolvedNavPatError loc
-    hpAbort noTy loc, ctx
+    tpAbort noTy loc, ctx
 
   let patOpt =
     resolvePatAsNsOwners l ctx
@@ -1252,7 +1252,7 @@ let private nameResAppPat l r loc ctx =
       ctx
       |> addLog (OtherNameResLog "Pattern can apply to Some or a variant that takes a payload.") loc
 
-    hpAbort noTy loc, ctx
+    tpAbort noTy loc, ctx
 
 let private nameResAscribePat bodyPat ascriptionTy loc ctx =
   let ascriptionTy, ctx = ctx |> resolveTy ascriptionTy loc
@@ -1463,7 +1463,7 @@ let private nameResVarExpr expr ctx =
     let ctx =
       ctx |> addLog (UndefinedValueError name) loc
 
-    hxAbort loc, ctx
+    txAbort loc, ctx
 
 let private nameResNavExpr expr ctx =
   /// Resolves an expressions as scope.
@@ -1541,13 +1541,13 @@ let private nameResNavExpr expr ctx =
 
   | ResolvedAsScope (_, None, loc) ->
     let ctx = ctx |> addLog TyUsedAsValueError loc
-    hxAbort loc, ctx
+    txAbort loc, ctx
 
   | NotResolvedExpr (name, loc) ->
     let ctx =
       ctx |> addLog (UndefinedValueError name) loc
 
-    hxAbort loc, ctx
+    txAbort loc, ctx
 
 let private nameResExpr (expr: TExpr, ctx: ScopeCtx) : TExpr * ScopeCtx =
   match expr with
@@ -1688,7 +1688,7 @@ let private nameResStmt (stmt, ctx) : TStmt * ScopeCtx =
       else
         ctx
 
-    TExprStmt(TBlockExpr(IsRec, stmts, hxUnit loc)), ctx
+    TExprStmt(TBlockExpr(IsRec, stmts, txUnit loc)), ctx
 
   | TModuleSynonymStmt (serial, path, loc) ->
     let name =
@@ -1709,7 +1709,7 @@ let private nameResStmt (stmt, ctx) : TStmt * ScopeCtx =
           |> forList (fun moduleSerial ctx -> doImportNsWithAlias name (ModuleNsOwner moduleSerial) ctx) moduleSerials
 
     // No longer necessary.
-    TExprStmt(hxUnit loc), ctx
+    TExprStmt(txUnit loc), ctx
 
 let private nameResModuleBody serialOpt (stmts, ctx) : TStmt list * ScopeCtx =
   (stmts, ctx)
