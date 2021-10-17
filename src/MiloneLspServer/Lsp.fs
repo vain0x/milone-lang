@@ -11,6 +11,7 @@ open MiloneSyntax.Tir
 module SharedTypes = MiloneShared.SharedTypes
 module TMap = MiloneStd.StdMap
 module SyntaxApi = MiloneSyntax.SyntaxApi
+module Tir = MiloneSyntax.Tir
 
 type Range = Pos * Pos
 
@@ -135,7 +136,7 @@ let private parseWithCache (ls: LangServiceState) docId kind =
 // Semantic analysis
 // -----------------------------------------------
 
-let private tyDisplayFn (tyCtx: Typing.TyCtx) ty =
+let private tyDisplayFn (tyCtx: TirCtx) ty =
   let getTyName tySerial =
     tyCtx.Tys
     |> TMap.tryFind tySerial
@@ -223,7 +224,7 @@ type private TokenizeFullResult = (Token * Pos) list
 
 type private ParseResult = ARoot * (string * Pos) list
 
-type private BundleResult = (TProgram * Typing.TyCtx) option * (string * Loc) list * MutMap<DocId, DocVersion>
+type private BundleResult = (TProgram * TirCtx) option * (string * Loc) list * MutMap<DocId, DocVersion>
 
 [<RequireQualifiedAccess; NoEquality; NoComparison>]
 type LangServiceState =
@@ -376,7 +377,7 @@ let private dfsStmt (visitor: Visitor) stmt =
   | TOpenStmt _
   | TModuleSynonymStmt _ -> ()
 
-let private findTyInStmt (ls: LangServiceState) (stmt: TStmt) (tyCtx: Typing.TyCtx) (tokenLoc: Loc) =
+let private findTyInStmt (ls: LangServiceState) (stmt: TStmt) (tyCtx: TirCtx) (tokenLoc: Loc) =
   let mutable contentOpt = None
 
   let onVisit tyOpt loc =
