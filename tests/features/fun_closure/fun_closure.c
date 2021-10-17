@@ -2,13 +2,13 @@
 
 struct UnitIntFun1;
 
-int zf11_(int x_4);
-
-int zf1_(int x_4);
+int zf2_(int x_5);
 
 int zf22_(int x_5);
 
-int zf2_(int x_5);
+int zf1_(int x_4);
+
+int zf11_(int x_4);
 
 int sub_(int step_, int x_);
 
@@ -36,9 +36,9 @@ int lf_(int lx_);
 
 void fun_closure_Program_lambdaCase(void);
 
-int xf4_(int x1_, int x2_, int x3_);
+int xf4_(int x3_, int x2_, int x1_);
 
-int xf3_(int x1_, int x2_, int x3_);
+int xf3_(int x2_, int x1_, int x3_);
 
 int xf2_(int x1_, int x2_);
 
@@ -75,12 +75,8 @@ extern int fun_closure_Program_a;
 
 int fun_closure_Program_a;
 
-int zf11_(int x_4) {
-    return x_4;
-}
-
-int zf1_(int x_4) {
-    int call_ = zf11_(x_4);
+int zf2_(int x_5) {
+    int call_ = zf22_(x_5);
     return call_;
 }
 
@@ -89,9 +85,13 @@ int zf22_(int x_5) {
     return call_1;
 }
 
-int zf2_(int x_5) {
-    int call_2 = zf22_(x_5);
+int zf1_(int x_4) {
+    int call_2 = zf11_(x_4);
     return call_2;
+}
+
+int zf11_(int x_4) {
+    return x_4;
 }
 
 int sub_(int step_, int x_) {
@@ -183,12 +183,12 @@ void fun_closure_Program_lambdaCase(void) {
     return;
 }
 
-int xf4_(int x1_, int x2_, int x3_) {
+int xf4_(int x3_, int x2_, int x1_) {
     int call_12 = xf1_(((x1_ + x2_) + x3_));
     return call_12;
 }
 
-int xf3_(int x1_, int x2_, int x3_) {
+int xf3_(int x2_, int x1_, int x3_) {
     int if_1;
     if ((x3_ == 3)) {
         goto then_6;
@@ -196,7 +196,7 @@ int xf3_(int x1_, int x2_, int x3_) {
         goto else_7;
     }
 then_6:;
-    int call_13 = xf4_(x1_, x2_, x3_);
+    int call_13 = xf4_(x3_, x2_, x1_);
     if_1 = call_13;
     goto if_next_5;
 else_7:;
@@ -214,7 +214,7 @@ int xf2_(int x1_, int x2_) {
         goto else_10;
     }
 then_9:;
-    int call_14 = xf3_(x1_, x2_, 3);
+    int call_14 = xf3_(x2_, x1_, 3);
     if_2 = call_14;
     goto if_next_8;
 else_10:;

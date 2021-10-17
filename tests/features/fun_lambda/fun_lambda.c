@@ -4,9 +4,9 @@ struct IntIntFun1;
 
 struct IntIntIntFun2;
 
-int apply_(struct IntIntFun1 f_, int x_);
-
 int twice_(struct IntIntFun1 f_1, int x_2);
+
+int apply_(struct IntIntFun1 f_, int x_);
 
 int fun_(int x_1);
 
@@ -34,14 +34,14 @@ struct IntIntIntFun2 {
     void const* env;
 };
 
-int apply_(struct IntIntFun1 f_, int x_) {
-    int app_ = f_.fun(f_.env, x_);
-    return app_;
+int twice_(struct IntIntFun1 f_1, int x_2) {
+    int app_ = f_1.fun(f_1.env, x_2);
+    int app_1 = f_1.fun(f_1.env, app_);
+    return app_1;
 }
 
-int twice_(struct IntIntFun1 f_1, int x_2) {
-    int app_1 = f_1.fun(f_1.env, x_2);
-    int app_2 = f_1.fun(f_1.env, app_1);
+int apply_(struct IntIntFun1 f_, int x_) {
+    int app_2 = f_.fun(f_.env, x_);
     return app_2;
 }
 

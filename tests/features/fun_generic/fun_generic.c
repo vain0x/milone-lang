@@ -1,18 +1,8 @@
 #include "milone.h"
 
-struct StringList;
-
-struct StringList;
-
-struct IntList;
-
-struct IntList;
-
-struct IntIntFun1;
+struct IntStringTuple2_;
 
 struct StringIntTuple2_;
-
-struct IntStringTuple2_;
 
 struct IntStringTuple2_StringIntTuple2_Fun1;
 
@@ -24,29 +14,39 @@ struct IntStringTuple2_List;
 
 struct StringIntTuple2_List;
 
+struct StringList;
+
+struct IntList;
+
+struct IntIntFun1;
+
+struct IntList;
+
+struct StringList;
+
 struct IntListStringListTuple2_;
 
-struct StringList const* go_1(struct StringList const* acc_, struct StringList const* xs_1);
-
-struct IntList const* go_(struct IntList const* acc_, struct IntList const* xs_1);
-
-int id_1(int x_1);
-
-struct StringList const* id_(struct StringList const* x_1);
-
-struct IntList const* listMap_1(struct IntIntFun1 f_, struct IntList const* xs_3);
-
-struct IntStringTuple2_ flip_1(struct StringIntTuple2_ arg_7);
-
-struct StringIntTuple2_ flip_(struct IntStringTuple2_ arg_8);
-
-struct IntList const* listRev_1(struct IntList const* xs_);
+struct StringIntTuple2_List const* listMap_(struct IntStringTuple2_StringIntTuple2_Fun1 f_1, struct IntStringTuple2_List const* xs_3);
 
 struct StringList const* listRev_(struct StringList const* xs_);
 
-struct StringIntTuple2_List const* listMap_(struct IntStringTuple2_StringIntTuple2_Fun1 f_, struct IntStringTuple2_List const* xs_3);
+struct IntList const* listRev_1(struct IntList const* xs_);
 
-int f_1(int x_3);
+struct StringIntTuple2_ flip_(struct IntStringTuple2_ arg_3);
+
+struct IntStringTuple2_ flip_1(struct StringIntTuple2_ arg_4);
+
+struct IntList const* listMap_1(struct IntIntFun1 f_1, struct IntList const* xs_3);
+
+struct StringList const* id_(struct StringList const* x_1);
+
+int id_1(int x_1);
+
+struct IntList const* go_(struct IntList const* acc_, struct IntList const* xs_1);
+
+struct StringList const* go_1(struct StringList const* acc_, struct StringList const* xs_1);
+
+int f_(int x_3);
 
 int fun_(void const* env_, int arg_);
 
@@ -56,29 +56,14 @@ struct StringIntTuple2_ fun_2(void const* env_2, struct IntStringTuple2_ arg_2);
 
 int milone_main(void);
 
-struct StringList {
-    struct String head;
-    struct StringList const* tail;
-};
-
-struct IntList {
-    int head;
-    struct IntList const* tail;
-};
-
-struct IntIntFun1 {
-    int(*fun)(void const*, int);
-    void const* env;
+struct IntStringTuple2_ {
+    int t0;
+    struct String t1;
 };
 
 struct StringIntTuple2_ {
     struct String t0;
     int t1;
-};
-
-struct IntStringTuple2_ {
-    int t0;
-    struct String t1;
 };
 
 struct IntStringTuple2_StringIntTuple2_Fun1 {
@@ -96,151 +81,166 @@ struct StringIntTuple2_List {
     struct StringIntTuple2_List const* tail;
 };
 
+struct IntIntFun1 {
+    int(*fun)(void const*, int);
+    void const* env;
+};
+
+struct IntList {
+    int head;
+    struct IntList const* tail;
+};
+
+struct StringList {
+    struct String head;
+    struct StringList const* tail;
+};
+
 struct IntListStringListTuple2_ {
     struct IntList const* t0;
     struct StringList const* t1;
 };
 
-struct StringList const* go_1(struct StringList const* acc_, struct StringList const* xs_1) {
-    struct StringList const* xs_2;
-    struct String x_;
-tailrec_1:;
-    struct StringList const* match_;
-    if ((!((!(xs_1))))) goto next_3;
-    match_ = acc_;
-    goto end_match_2;
+struct StringIntTuple2_List const* listMap_(struct IntStringTuple2_StringIntTuple2_Fun1 f_1, struct IntStringTuple2_List const* xs_3) {
+    struct IntStringTuple2_List const* xs_4;
+    struct IntStringTuple2_ x_2;
+    struct StringIntTuple2_List const* match_;
+    if ((!((!(xs_3))))) goto next_2;
+    match_ = NULL;
+    goto end_match_1;
+next_2:;
+    if ((!(xs_3))) goto next_3;
+    x_2 = xs_3->head;
+    xs_4 = xs_3->tail;
+    struct StringIntTuple2_ app_ = f_1.fun(f_1.env, x_2);
+    struct StringIntTuple2_List const* call_ = listMap_(f_1, xs_4);
+    struct StringIntTuple2_List const* list_ = milone_mem_alloc(1, sizeof(struct StringIntTuple2_List));
+    (*(((struct StringIntTuple2_List*)list_))) = (struct StringIntTuple2_List){.head = app_, .tail = call_};
+    match_ = list_;
+    goto end_match_1;
 next_3:;
-    if ((!(xs_1))) goto next_4;
-    x_ = xs_1->head;
-    xs_2 = xs_1->tail;
-    struct StringList const* list_ = milone_mem_alloc(1, sizeof(struct StringList));
-    (*(((struct StringList*)list_))) = (struct StringList){.head = x_, .tail = acc_};
-    struct StringList const* arg_3 = list_;
-    struct StringList const* arg_4 = xs_2;
-    acc_ = arg_3;
-    xs_1 = arg_4;
-    goto tailrec_1;
-next_4:;
     exit(1);
-end_match_2:;
+end_match_1:;
     return match_;
 }
 
-struct IntList const* go_(struct IntList const* acc_, struct IntList const* xs_1) {
-    struct IntList const* xs_2;
-    int x_;
-tailrec_5:;
-    struct IntList const* match_1;
-    if ((!((!(xs_1))))) goto next_7;
-    match_1 = acc_;
-    goto end_match_6;
-next_7:;
-    if ((!(xs_1))) goto next_8;
-    x_ = xs_1->head;
-    xs_2 = xs_1->tail;
-    struct IntList const* list_1 = milone_mem_alloc(1, sizeof(struct IntList));
-    (*(((struct IntList*)list_1))) = (struct IntList){.head = x_, .tail = acc_};
-    struct IntList const* arg_5 = list_1;
-    struct IntList const* arg_6 = xs_2;
-    acc_ = arg_5;
-    xs_1 = arg_6;
-    goto tailrec_5;
-next_8:;
-    exit(1);
-end_match_6:;
-    return match_1;
+struct StringList const* listRev_(struct StringList const* xs_) {
+    struct StringList const* call_1 = go_1(NULL, xs_);
+    return call_1;
 }
 
-int id_1(int x_1) {
-    return x_1;
+struct IntList const* listRev_1(struct IntList const* xs_) {
+    struct IntList const* call_2 = go_(NULL, xs_);
+    return call_2;
+}
+
+struct StringIntTuple2_ flip_(struct IntStringTuple2_ arg_3) {
+    int x_4 = arg_3.t0;
+    struct String y_ = arg_3.t1;
+    struct StringIntTuple2_ StringIntTuple2_ = (struct StringIntTuple2_){.t0 = y_, .t1 = x_4};
+    return StringIntTuple2_;
+}
+
+struct IntStringTuple2_ flip_1(struct StringIntTuple2_ arg_4) {
+    struct String x_4 = arg_4.t0;
+    int y_ = arg_4.t1;
+    struct IntStringTuple2_ IntStringTuple2_ = (struct IntStringTuple2_){.t0 = y_, .t1 = x_4};
+    return IntStringTuple2_;
+}
+
+struct IntList const* listMap_1(struct IntIntFun1 f_1, struct IntList const* xs_3) {
+    struct IntList const* xs_4;
+    int x_2;
+    struct IntList const* match_1;
+    if ((!((!(xs_3))))) goto next_5;
+    match_1 = NULL;
+    goto end_match_4;
+next_5:;
+    if ((!(xs_3))) goto next_6;
+    x_2 = xs_3->head;
+    xs_4 = xs_3->tail;
+    int app_1 = f_1.fun(f_1.env, x_2);
+    struct IntList const* call_3 = listMap_1(f_1, xs_4);
+    struct IntList const* list_1 = milone_mem_alloc(1, sizeof(struct IntList));
+    (*(((struct IntList*)list_1))) = (struct IntList){.head = app_1, .tail = call_3};
+    match_1 = list_1;
+    goto end_match_4;
+next_6:;
+    exit(1);
+end_match_4:;
+    return match_1;
 }
 
 struct StringList const* id_(struct StringList const* x_1) {
     return x_1;
 }
 
-struct IntList const* listMap_1(struct IntIntFun1 f_, struct IntList const* xs_3) {
-    struct IntList const* xs_4;
-    int x_2;
+int id_1(int x_1) {
+    return x_1;
+}
+
+struct IntList const* go_(struct IntList const* acc_, struct IntList const* xs_1) {
+    struct IntList const* xs_2;
+    int x_;
+tailrec_7:;
     struct IntList const* match_2;
-    if ((!((!(xs_3))))) goto next_10;
-    match_2 = NULL;
-    goto end_match_9;
-next_10:;
-    if ((!(xs_3))) goto next_11;
-    x_2 = xs_3->head;
-    xs_4 = xs_3->tail;
-    int app_ = f_.fun(f_.env, x_2);
-    struct IntList const* call_ = listMap_1(f_, xs_4);
+    if ((!((!(xs_1))))) goto next_9;
+    match_2 = acc_;
+    goto end_match_8;
+next_9:;
+    if ((!(xs_1))) goto next_10;
+    x_ = xs_1->head;
+    xs_2 = xs_1->tail;
     struct IntList const* list_2 = milone_mem_alloc(1, sizeof(struct IntList));
-    (*(((struct IntList*)list_2))) = (struct IntList){.head = app_, .tail = call_};
-    match_2 = list_2;
-    goto end_match_9;
-next_11:;
+    (*(((struct IntList*)list_2))) = (struct IntList){.head = x_, .tail = acc_};
+    struct IntList const* arg_5 = list_2;
+    struct IntList const* arg_6 = xs_2;
+    acc_ = arg_5;
+    xs_1 = arg_6;
+    goto tailrec_7;
+next_10:;
     exit(1);
-end_match_9:;
+end_match_8:;
     return match_2;
 }
 
-struct IntStringTuple2_ flip_1(struct StringIntTuple2_ arg_7) {
-    struct String x_4 = arg_7.t0;
-    int y_ = arg_7.t1;
-    struct IntStringTuple2_ IntStringTuple2_ = (struct IntStringTuple2_){.t0 = y_, .t1 = x_4};
-    return IntStringTuple2_;
-}
-
-struct StringIntTuple2_ flip_(struct IntStringTuple2_ arg_8) {
-    int x_4 = arg_8.t0;
-    struct String y_ = arg_8.t1;
-    struct StringIntTuple2_ StringIntTuple2_ = (struct StringIntTuple2_){.t0 = y_, .t1 = x_4};
-    return StringIntTuple2_;
-}
-
-struct IntList const* listRev_1(struct IntList const* xs_) {
-    struct IntList const* call_1 = go_(NULL, xs_);
-    return call_1;
-}
-
-struct StringList const* listRev_(struct StringList const* xs_) {
-    struct StringList const* call_2 = go_1(NULL, xs_);
-    return call_2;
-}
-
-struct StringIntTuple2_List const* listMap_(struct IntStringTuple2_StringIntTuple2_Fun1 f_, struct IntStringTuple2_List const* xs_3) {
-    struct IntStringTuple2_List const* xs_4;
-    struct IntStringTuple2_ x_2;
-    struct StringIntTuple2_List const* match_3;
-    if ((!((!(xs_3))))) goto next_13;
-    match_3 = NULL;
+struct StringList const* go_1(struct StringList const* acc_, struct StringList const* xs_1) {
+    struct StringList const* xs_2;
+    struct String x_;
+tailrec_11:;
+    struct StringList const* match_3;
+    if ((!((!(xs_1))))) goto next_13;
+    match_3 = acc_;
     goto end_match_12;
 next_13:;
-    if ((!(xs_3))) goto next_14;
-    x_2 = xs_3->head;
-    xs_4 = xs_3->tail;
-    struct StringIntTuple2_ app_1 = f_.fun(f_.env, x_2);
-    struct StringIntTuple2_List const* call_3 = listMap_(f_, xs_4);
-    struct StringIntTuple2_List const* list_3 = milone_mem_alloc(1, sizeof(struct StringIntTuple2_List));
-    (*(((struct StringIntTuple2_List*)list_3))) = (struct StringIntTuple2_List){.head = app_1, .tail = call_3};
-    match_3 = list_3;
-    goto end_match_12;
+    if ((!(xs_1))) goto next_14;
+    x_ = xs_1->head;
+    xs_2 = xs_1->tail;
+    struct StringList const* list_3 = milone_mem_alloc(1, sizeof(struct StringList));
+    (*(((struct StringList*)list_3))) = (struct StringList){.head = x_, .tail = acc_};
+    struct StringList const* arg_7 = list_3;
+    struct StringList const* arg_8 = xs_2;
+    acc_ = arg_7;
+    xs_1 = arg_8;
+    goto tailrec_11;
 next_14:;
     exit(1);
 end_match_12:;
     return match_3;
 }
 
-int f_1(int x_3) {
+int f_(int x_3) {
     printf("%d\n", x_3);
     return (x_3 * x_3);
 }
 
 int fun_(void const* env_, int arg_) {
-    int call_4 = f_1(arg_);
+    int call_4 = f_(arg_);
     return call_4;
 }
 
 int fun_1(void const* env_1, int arg_1) {
-    int call_5 = f_1(arg_1);
+    int call_5 = f_(arg_1);
     return call_5;
 }
 

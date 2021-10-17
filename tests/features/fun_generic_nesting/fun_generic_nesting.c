@@ -1,58 +1,58 @@
 #include "milone.h"
 
-struct String gooAux_1(struct String x_1);
-
-int gooAux_(int x_1);
-
-struct String aux_1(struct String x_);
-
-int aux_(int x_);
-
-int myId_1(int x_);
-
-struct String myId_(struct String x_);
+struct String goo_(struct String x_1);
 
 int goo_1(int x_1);
 
-struct String goo_(struct String x_1);
+struct String myId_(struct String x_);
+
+int myId_1(int x_);
+
+int aux_(int x_);
+
+struct String aux_1(struct String x_);
+
+int gooAux_(int x_1);
+
+struct String gooAux_1(struct String x_1);
 
 int milone_main(void);
 
-struct String gooAux_1(struct String x_1) {
-    struct String call_ = myId_(x_1);
+struct String goo_(struct String x_1) {
+    struct String call_ = gooAux_1(x_1);
     return call_;
 }
 
-int gooAux_(int x_1) {
-    int call_1 = myId_1(x_1);
+int goo_1(int x_1) {
+    int call_1 = gooAux_(x_1);
     return call_1;
 }
 
-struct String aux_1(struct String x_) {
-    return x_;
+struct String myId_(struct String x_) {
+    struct String call_2 = aux_1(x_);
+    return call_2;
+}
+
+int myId_1(int x_) {
+    int call_3 = aux_(x_);
+    return call_3;
 }
 
 int aux_(int x_) {
     return x_;
 }
 
-int myId_1(int x_) {
-    int call_2 = aux_(x_);
-    return call_2;
+struct String aux_1(struct String x_) {
+    return x_;
 }
 
-struct String myId_(struct String x_) {
-    struct String call_3 = aux_1(x_);
-    return call_3;
-}
-
-int goo_1(int x_1) {
-    int call_4 = gooAux_(x_1);
+int gooAux_(int x_1) {
+    int call_4 = myId_1(x_1);
     return call_4;
 }
 
-struct String goo_(struct String x_1) {
-    struct String call_5 = gooAux_1(x_1);
+struct String gooAux_1(struct String x_1) {
+    struct String call_5 = myId_(x_1);
     return call_5;
 }
 

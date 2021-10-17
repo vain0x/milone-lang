@@ -1,28 +1,28 @@
 #include "milone.h"
 
-struct IntIntTuple2_;
-
-struct StringStringTuple2_;
-
 struct StringList;
 
 struct StringStringListTuple2_;
 
+struct StringStringTuple2_;
+
+struct IntIntTuple2_;
+
 struct StringList;
-
-int pair_1(struct IntIntTuple2_ arg_);
-
-int pair_(struct StringStringTuple2_ arg_1);
-
-char useStringIndexWithoutAscription_(struct String x_);
 
 struct StringStringListTuple2_ useTyVarInBody_(struct String x_1);
 
+char useStringIndexWithoutAscription_(struct String x_);
+
+int pair_(struct StringStringTuple2_ arg_);
+
+int pair_1(struct IntIntTuple2_ arg_1);
+
 int milone_main(void);
 
-struct IntIntTuple2_ {
-    int t0;
-    int t1;
+struct StringStringListTuple2_ {
+    struct String t0;
+    struct StringList const* t1;
 };
 
 struct StringStringTuple2_ {
@@ -30,9 +30,9 @@ struct StringStringTuple2_ {
     struct String t1;
 };
 
-struct StringStringListTuple2_ {
-    struct String t0;
-    struct StringList const* t1;
+struct IntIntTuple2_ {
+    int t0;
+    int t1;
 };
 
 struct StringList {
@@ -40,12 +40,10 @@ struct StringList {
     struct StringList const* tail;
 };
 
-int pair_1(struct IntIntTuple2_ arg_) {
-    return 2;
-}
-
-int pair_(struct StringStringTuple2_ arg_1) {
-    return 2;
+struct StringStringListTuple2_ useTyVarInBody_(struct String x_1) {
+    struct StringList const* xs_ = NULL;
+    struct StringStringListTuple2_ StringStringListTuple2_ = (struct StringStringListTuple2_){.t0 = x_1, .t1 = xs_};
+    return StringStringListTuple2_;
 }
 
 char useStringIndexWithoutAscription_(struct String x_) {
@@ -54,10 +52,12 @@ char useStringIndexWithoutAscription_(struct String x_) {
     return x_.str[0];
 }
 
-struct StringStringListTuple2_ useTyVarInBody_(struct String x_1) {
-    struct StringList const* xs_ = NULL;
-    struct StringStringListTuple2_ StringStringListTuple2_ = (struct StringStringListTuple2_){.t0 = x_1, .t1 = xs_};
-    return StringStringListTuple2_;
+int pair_(struct StringStringTuple2_ arg_) {
+    return 2;
+}
+
+int pair_1(struct IntIntTuple2_ arg_1) {
+    return 2;
 }
 
 int milone_main(void) {
