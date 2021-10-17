@@ -54,10 +54,8 @@ module rec MiloneTranslation.Monomorphizing
 
 open MiloneShared.SharedTypes
 open MiloneShared.Util
+open MiloneStd.StdMap
 open MiloneTranslation.Hir
-
-module TMap = MiloneStd.StdMap
-module TSet = MiloneStd.StdSet
 
 // #tyAssign?
 let private getTyAssignment tyVars tyArgs : AssocMap<TySerial, Ty> =

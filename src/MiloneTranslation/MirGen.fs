@@ -8,11 +8,10 @@ module rec MiloneTranslation.MirGen
 open MiloneShared.SharedTypes
 open MiloneShared.TypeIntegers
 open MiloneShared.Util
+open MiloneStd.StdMap
+open MiloneStd.StdSet
 open MiloneTranslation.Hir
 open MiloneTranslation.Mir
-
-module TMap = MiloneStd.StdMap
-module TSet = MiloneStd.StdSet
 
 let private unwrapOptionTy ty =
   match ty with

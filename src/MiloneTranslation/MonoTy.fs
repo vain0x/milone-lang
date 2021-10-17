@@ -6,9 +6,9 @@ open MiloneShared.SharedTypes
 open MiloneShared.TypeIntegers
 open MiloneShared.TypeFloat
 open MiloneShared.Util
+open MiloneStd.StdMap
 open MiloneTranslation.Hir
 
-module TMap = MiloneStd.StdMap
 module M = MiloneTranslation.MonoTyIr
 
 [<RequireQualifiedAccess; NoEquality; NoComparison>]

@@ -14,13 +14,13 @@ open MiloneShared.SharedTypes
 open MiloneShared.TypeFloat
 open MiloneShared.TypeIntegers
 open MiloneShared.Util
+open MiloneStd.StdMap
+open MiloneStd.StdSet
 open MiloneTranslation.Cir
 open MiloneTranslation.Hir
 open MiloneTranslation.Mir
 open MiloneTranslation.MirGen
 
-module TMap = MiloneStd.StdMap
-module TSet = MiloneStd.StdSet
 module S = MiloneStd.StdString
 
 let private unwrapListTy ty =

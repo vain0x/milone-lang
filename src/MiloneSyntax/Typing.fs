@@ -14,14 +14,14 @@ module rec MiloneSyntax.Typing
 open MiloneShared.SharedTypes
 open MiloneShared.TypeIntegers
 open MiloneShared.Util
+open MiloneStd.StdMap
+open MiloneStd.StdSet
 open MiloneSyntax.NameRes
 open MiloneSyntax.Tir
 open MiloneSyntax.TySystem
 
 module S = MiloneStd.StdString
 module StdInt = MiloneStd.StdInt
-module TMap = MiloneStd.StdMap
-module TSet = MiloneStd.StdSet
 
 // -----------------------------------------------
 // Context
@@ -1630,9 +1630,11 @@ let infer (modules: TProgram, nameRes: NameResResult) : TProgram * TirCtx =
                   (fun (staticVars, localVars) varSerial varDef ->
                     if isStaticVar varSerial then
                       let staticVars = staticVars |> TMap.add varSerial varDef
+
                       staticVars, localVars
                     else
                       let localVars = localVars |> TMap.add varSerial varDef
+
                       staticVars, localVars)
                   (emptyVars, emptyVars)
 

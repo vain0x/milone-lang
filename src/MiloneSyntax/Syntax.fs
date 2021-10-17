@@ -12,8 +12,7 @@ module rec MiloneSyntax.Syntax
 
 open MiloneShared.SharedTypes
 open MiloneShared.Util
-
-module TMap = MiloneStd.StdMap
+open MiloneStd.StdMap
 
 /// Name with ID.
 [<NoEquality; NoComparison>]

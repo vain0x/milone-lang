@@ -83,10 +83,9 @@ module rec MiloneTranslation.ClosureConversion
 
 open MiloneShared.SharedTypes
 open MiloneShared.Util
+open MiloneStd.StdMap
+open MiloneStd.StdSet
 open MiloneTranslation.Hir
-
-module TMap = MiloneStd.StdMap
-module TSet = MiloneStd.StdSet
 
 // -----------------------------------------------
 // KnownCtx

@@ -4,9 +4,9 @@ module rec MiloneTranslation.MonoTyIr
 open MiloneShared.SharedTypes
 open MiloneShared.TypeIntegers
 open MiloneShared.TypeFloat
+open MiloneStd.StdMap
 
 module Hir = MiloneTranslation.Hir
-module TMap = MiloneStd.StdMap
 
 // Same as HIR but type is mono ty (monomorphized).
 type private Ty = MonoTy
@@ -125,6 +125,6 @@ type HModule2 =
   { DocId: DocId
 
     /// Non-static variables.
-    Vars: TMap.TreeMap<VarSerial, Ident>
+    Vars: TreeMap<VarSerial, Ident>
 
     Stmts: HExpr list }

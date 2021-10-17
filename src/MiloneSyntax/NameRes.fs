@@ -7,11 +7,11 @@ module rec MiloneSyntax.NameRes
 
 open MiloneShared.SharedTypes
 open MiloneShared.TypeIntegers
+open MiloneStd.StdMap
+open MiloneStd.StdSet
 open MiloneShared.Util
 open MiloneSyntax.Tir
 
-module TMap = MiloneStd.StdMap
-module TSet = MiloneStd.StdSet
 module S = MiloneStd.StdString
 
 let private hxAbort loc = TNodeExpr(TAbortEN, [], noTy, loc)

@@ -2,10 +2,10 @@
 module rec MiloneCli.Lower
 
 open MiloneShared.Util
+open MiloneStd.StdMap
 
 module Hir = MiloneTranslation.Hir
 module Tir = MiloneSyntax.Tir
-module TMap = MiloneStd.StdMap
 module Typing = MiloneSyntax.Typing
 
 /// Converts a map by transforming key and value.

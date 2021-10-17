@@ -1,19 +1,20 @@
 /// Defines utility types and functions used in multiple modules.
 module rec MiloneShared.Util
 
+open MiloneStd.StdMap
+open MiloneStd.StdSet
+
 module C = MiloneStd.StdChar
 module S = MiloneStd.StdString
 module Int = MiloneStd.StdInt
-module TMap = MiloneStd.StdMap
-module TSet = MiloneStd.StdSet
 
 // -----------------------------------------------
 // Collections
 // -----------------------------------------------
 
-type AssocMap<'K, 'V> = TMap.TreeMap<'K, 'V>
+type AssocMap<'K, 'V> = TreeMap<'K, 'V>
 
-type AssocSet<'T> = TSet.TreeSet<'T>
+type AssocSet<'T> = TreeSet<'T>
 
 // -----------------------------------------------
 // Error
@@ -212,7 +213,7 @@ let mapFind key map =
 // Multimap
 // -----------------------------------------------
 
-type Multimap<'K, 'T> = TMap.TreeMap<'K, 'T list>
+type Multimap<'K, 'T> = TreeMap<'K, 'T list>
 
 let multimapFind (key: 'K) (multimap: Multimap<'K, 'T>) : 'T list =
   multimap

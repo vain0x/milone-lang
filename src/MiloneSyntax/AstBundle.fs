@@ -8,12 +8,12 @@ module rec MiloneSyntax.AstBundle
 
 open MiloneShared.SharedTypes
 open MiloneShared.Util
+open MiloneStd.StdSet
+open MiloneStd.StdMap
 open MiloneSyntax.AstToHir
 open MiloneSyntax.Syntax
 open MiloneSyntax.Tir
 
-module TSet = MiloneStd.StdSet
-module TMap = MiloneStd.StdMap
 module S = MiloneStd.StdString
 
 // -----------------------------------------------
@@ -86,7 +86,7 @@ type private RequestResult =
   | Resolved of ModuleData
   | Failed
 
-type private RequestMap = TMap.TreeMap<ProjectName * ModuleName, RequestResult>
+type private RequestMap = TreeMap<ProjectName * ModuleName, RequestResult>
 
 // note: avoid using this function so that DocId can be computed by clients.
 let computeDocId (p: ProjectName) (m: ModuleName) : DocId = p + "." + m

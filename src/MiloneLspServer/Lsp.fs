@@ -3,13 +3,13 @@ module rec MiloneLspServer.Lsp
 
 open MiloneLspServer.Util
 open MiloneShared.SharedTypes
+open MiloneStd.StdMap
 open MiloneStd.StdPath
 open MiloneSyntax
 open MiloneSyntax.Syntax
 open MiloneSyntax.Tir
 
 module SharedTypes = MiloneShared.SharedTypes
-module TMap = MiloneStd.StdMap
 module SyntaxApi = MiloneSyntax.SyntaxApi
 module Tir = MiloneSyntax.Tir
 

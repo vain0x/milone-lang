@@ -7,11 +7,11 @@ open MiloneShared.SharedTypes
 open MiloneShared.TypeFloat
 open MiloneShared.TypeIntegers
 open MiloneShared.Util
+open MiloneStd.StdMap
+open MiloneStd.StdSet
 open MiloneTranslation.Hir
 
 module Int = MiloneStd.StdInt
-module TSet = MiloneStd.StdSet
-module TMap = MiloneStd.StdMap
 
 let private tyIsRecord ty =
   match ty with
@@ -1031,7 +1031,7 @@ let private tvExpr (expr: HExpr) (ctx: TvCtx) : TvCtx =
 
       { ctx with
           Funs = funs
-          // FIXME: TSet.union
+          // FIXME: TreeSet.union
           UsedTyVars =
             TSet.fold
               (fun tySerial tyVars ->
