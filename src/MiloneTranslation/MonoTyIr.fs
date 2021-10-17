@@ -6,6 +6,7 @@ open MiloneShared.TypeIntegers
 open MiloneShared.TypeFloat
 
 module Hir = MiloneTranslation.Hir
+module TMap = MiloneStd.StdMap
 
 // Same as HIR but type is mono ty (monomorphized).
 type private Ty = MonoTy
@@ -117,3 +118,11 @@ type HExpr =
 
   | HLetValExpr of pat: HPat * init: HExpr * next: HExpr * Ty * Loc
   | HLetFunExpr of FunSerial * args: HPat list * body: HExpr * next: HExpr * Ty * Loc
+
+/// Module. Variable info is reduced.
+[<RequireQualifiedAccess; NoEquality; NoComparison>]
+type HModule2 =
+  { /// Non-static variables.
+    Vars: TMap.TreeMap<VarSerial, Ident>
+
+    Stmts: HExpr list }

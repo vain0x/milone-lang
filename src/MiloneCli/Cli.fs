@@ -283,35 +283,37 @@ let private transformHir (host: CliHost) v (modules: Tir.TProgram, tyCtx: Typing
   writeLog host v "Monomorphizing"
   let modules, tyCtx = monify (modules, tyCtx)
 
-  writeLog host v "Flatten"
-
   // Reduce info of variables.
-  let varNameMap =
+  let modules: Hir.HModule2 list =
     modules
-    |> List.fold
-         (fun varNames (m: Hir.HModule) ->
-           m.Vars
-           |> TMap.fold
-                (fun varNames varSerial (varDef: Hir.VarDef) -> varNames |> TMap.add varSerial varDef.Name)
-                varNames)
-         (TMap.empty Hir.varSerialCompare)
+    |> List.map
+         (fun (m: Hir.HModule) ->
+           let varNameMap =
+             m.Vars
+             |> TMap.map (fun _ (varDef: Hir.VarDef) -> varDef.Name)
 
-  let modules =
-    modules
-    |> List.map (fun (m: Hir.HModule) -> m.Stmts)
+           let m: Hir.HModule2 = { Vars = varNameMap; Stmts = m.Stmts }
+           m)
 
   writeLog host v "MonoTy"
   let modules, tyCtx = monoTy (modules, tyCtx)
 
-  modules, tyCtx, varNameMap
+  modules, tyCtx
 
 /// (file name, C code) list
 type private CodeGenResult = (string * string) list
 
 /// Generates C language codes from transformed HIR,
 /// using mid-level intermediate representation (MIR).
-let private codeGenHirViaMir (host: CliHost) v projectName (modules, tyCtx, varNameMap) : CodeGenResult =
-  let decls = modules |> List.collect id
+let private codeGenHirViaMir (host: CliHost) v projectName (modules, tyCtx) : CodeGenResult =
+  let decls =
+    modules
+    |> List.collect (fun (m: Hir.HModule2) -> m.Stmts)
+
+  let varNameMap =
+    modules
+    |> List.collect (fun (m: Hir.HModule2) -> m.Vars |> TMap.toList)
+    |> TMap.ofList Hir.varSerialCompare
 
   writeLog host v "Mir"
   let stmts, mirCtx = mirify (decls, tyCtx, varNameMap)
@@ -356,9 +358,9 @@ let private compile (ctx: CompileCtx) : CompileResult =
   | SyntaxApi.SyntaxAnalysisError (errors, _) -> CompileError(SyntaxApi.syntaxErrorsToString errors)
 
   | SyntaxApi.SyntaxAnalysisOk (modules, tyCtx) ->
-    let modules, tyCtx, varNameMap = transformHir host v (modules, tyCtx)
+    let modules, tyCtx = transformHir host v (modules, tyCtx)
 
-    CompileOk(codeGenHirViaMir host v ctx.EntryProjectName (modules, tyCtx, varNameMap))
+    CompileOk(codeGenHirViaMir host v ctx.EntryProjectName (modules, tyCtx))
 
 // -----------------------------------------------
 // Others

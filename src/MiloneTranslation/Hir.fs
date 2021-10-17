@@ -331,6 +331,7 @@ type HExpr =
   | HLetFunExpr of FunSerial * args: HPat list * body: HExpr * next: HExpr * Ty * Loc
 
 type VarMap = AssocMap<VarSerial, VarDef>
+type VarNameMap = AssocMap<VarSerial, Ident>
 
 [<RequireQualifiedAccess; NoEquality; NoComparison>]
 type HModule =
@@ -339,6 +340,14 @@ type HModule =
 
     /// Non-static variables.
     Vars: VarMap
+
+    Stmts: HExpr list }
+
+/// Module. Variable info is reduced.
+[<RequireQualifiedAccess; NoEquality; NoComparison>]
+type HModule2 =
+  { /// Non-static variables.
+    Vars: VarNameMap
 
     Stmts: HExpr list }
 
