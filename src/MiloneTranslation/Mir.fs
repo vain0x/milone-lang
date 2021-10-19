@@ -173,7 +173,7 @@ type MExpr =
   | MUnaryExpr of MUnary * arg: MExpr * resultTy: Ty * Loc
   | MBinaryExpr of MBinary * MExpr * MExpr * resultTy: Ty * Loc
 
-  | MNativeExpr of code: string * Ty * Loc
+  | MNativeExpr of code: string * MExpr list * Ty * Loc
 
 [<NoEquality; NoComparison>]
 type MConst =
@@ -250,7 +250,7 @@ let mexprExtract expr =
 
   | MUnaryExpr (_, _, ty, loc) -> ty, loc
   | MBinaryExpr (_, _, _, ty, loc) -> ty, loc
-  | MNativeExpr (_, ty, loc) -> ty, loc
+  | MNativeExpr (_, _, ty, loc) -> ty, loc
 
 let mexprToTy expr = expr |> mexprExtract |> fst
 

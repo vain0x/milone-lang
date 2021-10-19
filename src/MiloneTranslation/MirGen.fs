@@ -1001,7 +1001,7 @@ let private mirifyExprCallBox ctx arg _ loc =
   match arg |> mexprToTy |> toBoxMode with
   | BoxMode.Null ->
     // HACK: `box ()` occurs when turning a non-capturing function into function object.
-    MNativeExpr("NULL", tyObj, loc), ctx
+    MNativeExpr("NULL", [], tyObj, loc), ctx
 
   | BoxMode.Cast ->
     let arg =
@@ -1474,7 +1474,9 @@ let private mirifyExprInf ctx itself kind args ty loc =
 
   | HNativeFunEN funSerial, _, _ -> MProcExpr(funSerial, ty, loc), ctx
 
-  | HNativeExprEN code, _, _ -> MNativeExpr(code, ty, loc), ctx
+  | HNativeExprEN code, args, _ ->
+    let args, ctx = mirifyExprs ctx args
+    MNativeExpr(code, args, ty, loc), ctx
 
   | HNativeStmtEN code, args, _ ->
     let args, ctx = mirifyExprs ctx args

@@ -796,7 +796,9 @@ let private cgExpr (ctx: CirCtx) (arg: MExpr) : CExpr * CirCtx =
   | MUnaryExpr (op, arg, ty, loc) -> genUnaryExpr ctx op arg ty loc
   | MBinaryExpr (op, l, r, _, _) -> genExprBin ctx op l r
 
-  | MNativeExpr (code, _, _) -> CNativeExpr code, ctx
+  | MNativeExpr (code, args, _, _) ->
+    let args, ctx = cgExprList ctx args
+    CNativeExpr(code, args), ctx
 
 // -----------------------------------------------
 // Statements

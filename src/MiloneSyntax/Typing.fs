@@ -1134,6 +1134,12 @@ let private inferAppExpr ctx itself callee arg loc =
     let targetTy, ctx = ctx |> freshMetaTyForExpr itself
     TNodeExpr(TNativeExprEN code, [], targetTy, loc), targetTy, ctx
 
+  // __nativeExpr ("code", args...)
+  | TPrimExpr (TPrim.NativeExpr, _, loc), TNodeExpr (TTupleEN, TLitExpr (StrLit code, _) :: args, _, _) ->
+    let args, ctx = inferUntypedExprs ctx args
+    let targetTy, ctx = ctx |> freshMetaTyForExpr itself
+    TNodeExpr(TNativeExprEN code, args, targetTy, loc), targetTy, ctx
+
   // __nativeStmt "code"
   | TPrimExpr (TPrim.NativeStmt, _, loc), TLitExpr (StrLit code, _) ->
     TNodeExpr(TNativeStmtEN code, [], tyUnit, loc), tyUnit, ctx

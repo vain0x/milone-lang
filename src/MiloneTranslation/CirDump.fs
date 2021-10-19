@@ -185,6 +185,22 @@ let private cpStructLit fields ty acc =
 // Expressions
 // -----------------------------------------------
 
+/// Replaces `{i}` with i'th argument.
+let private expandPlaceholders args code =
+  args
+  |> List.mapi (fun i arg -> i, arg)
+  |> List.fold
+       (fun code (i: int, arg) ->
+         let arg =
+           [] |> cpExpr arg |> List.rev |> S.concat ""
+
+         let code =
+           let placeholder = "{" + string i + "}"
+           code |> S.replace placeholder arg
+
+         code)
+       code
+
 let private cpExpr expr acc : string list =
   let rec cpExprList sep exprs acc =
     exprs
@@ -268,7 +284,9 @@ let private cpExpr expr acc : string list =
     |> cpExpr r
     |> cons ")"
 
-  | CNativeExpr code -> acc |> cons code
+  | CNativeExpr (code, args) ->
+    let code = expandPlaceholders args code
+    acc |> cons code
 
 // -----------------------------------------------
 // Statements
@@ -411,20 +429,7 @@ let private cpStmt indent stmt acc : string list =
     |> cons eol
 
   | CNativeStmt (code, args) ->
-    let code =
-      List.fold
-        (fun (i, code) arg ->
-          let arg =
-            [] |> cpExpr arg |> List.rev |> S.concat ""
-
-          let code =
-            let placeholder = "{" + string i + "}"
-            code |> S.replace placeholder arg
-
-          i + 1, code)
-        (0, code)
-        args
-      |> snd
+    let code = expandPlaceholders args code
 
     acc |> cons code
 

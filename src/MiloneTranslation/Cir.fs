@@ -108,7 +108,7 @@ type CExpr =
   | CSizeOfExpr of CTy
   | CUnaryExpr of CUnary * CExpr
   | CBinaryExpr of CBinary * CExpr * CExpr
-  | CNativeExpr of string
+  | CNativeExpr of string * CExpr list
 
 /// Statement in CIR.
 [<NoEquality; NoComparison>]
