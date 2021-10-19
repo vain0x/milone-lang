@@ -1120,9 +1120,6 @@ let private collectDecls moduleSerialOpt (stmt, ctx) : TStmt * ScopeCtx =
       stmt, ctx
 
     | TModuleStmt (serial, body, loc) ->
-      let name =
-        ctx |> findName (moduleTySerialToInt serial)
-
       let ctx =
         ctx
         |> addNsToModule PublicVis (ModuleNsOwner serial)
@@ -1130,7 +1127,7 @@ let private collectDecls moduleSerialOpt (stmt, ctx) : TStmt * ScopeCtx =
 
       TModuleStmt(serial, body, loc), ctx
 
-    | TModuleSynonymStmt (serial, path, loc) ->
+    | TModuleSynonymStmt (serial, path, _) ->
       let name =
         ctx |> findName (moduleSynonymSerialToInt serial)
 
