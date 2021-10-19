@@ -1136,6 +1136,9 @@ let private parseTyDeclRecord basePos (tokens, errors) : PR<ATyDeclBody> =
 /// Parses after `type .. =`.
 /// NOTE: Unlike F#, it can't parse `type A = A` as definition of discriminated union.
 let private parseTyDeclBody basePos (tokens, errors) : PR<ATyDeclBody> =
+  // FIXME: implement visibility of fields and variants
+  let _, tokens = eatVis tokens
+
   match tokens with
   | (PipeToken, _) :: _ -> parseTyDeclUnion basePos (tokens, errors)
 
