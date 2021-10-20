@@ -688,7 +688,7 @@ struct String milone_read_stdin_all(void) {
             break;
 
         string_builder_append_string(
-            sb, (struct String){.str = buf, .len = read_len});
+            sb, (struct String){.str = buf, .len = (int)read_len});
     }
 
     // #sb_finish
