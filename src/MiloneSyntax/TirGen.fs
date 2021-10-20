@@ -61,6 +61,10 @@ let nameCtxFold folder state (nameCtx: TgNameCtx) =
   identAcc
   |> List.fold (fun (serial, state) ident -> serial - 1, folder state serial ident) (lastSerial, state)
 
+let private addPath (path: Name list, ctx: TgNameCtx) : Serial list * NameCtx =
+  path
+  |> List.mapFold (fun ctx name -> nameCtxAdd name ctx) ctx
+
 // -----------------------------------------------
 // APat
 // -----------------------------------------------
@@ -273,20 +277,17 @@ let private tyUnresolved serial argTys = Ty(UnresolvedTk serial, argTys)
 // -----------------------------------------------
 
 let private tgTy (docId: DocId) (ty: ATy, ctx: NameCtx) : Ty * NameCtx =
+  let onTy x = tgTy docId x
+
   match ty with
   | AMissingTy pos ->
     let loc = toLoc docId pos
     tyError loc, ctx
 
   | AAppTy (quals, name, argTys, _) ->
-    let quals, ctx =
-      (quals, ctx)
-      |> stMap (fun (name, ctx) -> ctx |> nameCtxAdd name)
-
+    let quals, ctx = (quals, ctx) |> addPath
     let serial, ctx = ctx |> nameCtxAdd name
-
-    let argTys, ctx = (argTys, ctx) |> stMap (tgTy docId)
-
+    let argTys, ctx = (argTys, ctx) |> stMap onTy
     tyUnresolved (quals, serial) argTys, ctx
 
   | AVarTy name ->
@@ -295,22 +296,23 @@ let private tgTy (docId: DocId) (ty: ATy, ctx: NameCtx) : Ty * NameCtx =
     Ty(UnresolvedVarTk(tySerial, loc), []), ctx
 
   | ASuffixTy (lTy, suffix) ->
-    let lTy, ctx = (lTy, ctx) |> tgTy docId
+    let lTy, ctx = (lTy, ctx) |> onTy
     let serial, ctx = ctx |> nameCtxAdd suffix
     tyUnresolved ([], serial) [ lTy ], ctx
 
   | ATupleTy (itemTys, _) ->
-    let itemTys, ctx =
-      (itemTys, ctx) |> stMap (tgTy docId)
-
+    let itemTys, ctx = (itemTys, ctx) |> stMap onTy
     tyTuple itemTys, ctx
 
   | AFunTy (sTy, tTy, _) ->
-    let sTy, ctx = (sTy, ctx) |> tgTy docId
-    let tTy, ctx = (tTy, ctx) |> tgTy docId
+    let sTy, ctx = (sTy, ctx) |> onTy
+    let tTy, ctx = (tTy, ctx) |> onTy
     tyFun sTy tTy, ctx
 
 let private tgPat (docId: DocId) (pat: APat, ctx: NameCtx) : TPat * NameCtx =
+  let onTy x = tgTy docId x
+  let onPat x = tgPat docId x
+
   match pat with
   | AMissingPat pos ->
     let loc = toLoc docId pos
@@ -331,51 +333,55 @@ let private tgPat (docId: DocId) (pat: APat, ctx: NameCtx) : TPat * NameCtx =
 
   | AListPat (pats, pos) ->
     let pat = desugarListLitPat pats pos
-    (pat, ctx) |> tgPat docId
+    (pat, ctx) |> onPat
 
   | ANavPat (l, r, pos) ->
-    let l, ctx = (l, ctx) |> tgPat docId
+    let l, ctx = (l, ctx) |> onPat
     let loc = toLoc docId pos
     TNodePat(TNavPN(nameToIdent r), [ l ], noTy, loc), ctx
 
   | AAppPat (calleePat, argPat, pos) ->
-    let calleePat, ctx = (calleePat, ctx) |> tgPat docId
-    let argPat, ctx = (argPat, ctx) |> tgPat docId
+    let calleePat, ctx = (calleePat, ctx) |> onPat
+    let argPat, ctx = (argPat, ctx) |> onPat
     let loc = toLoc docId pos
     TNodePat(TAppPN, [ calleePat; argPat ], noTy, loc), ctx
 
   | AConsPat (l, r, pos) ->
-    let l, ctx = (l, ctx) |> tgPat docId
-    let r, ctx = (r, ctx) |> tgPat docId
+    let l, ctx = (l, ctx) |> onPat
+    let r, ctx = (r, ctx) |> onPat
     let loc = toLoc docId pos
     TNodePat(TConsPN, [ l; r ], noTy, loc), ctx
 
   | ATuplePat (pats, pos) ->
-    let pats, ctx = (pats, ctx) |> stMap (tgPat docId)
+    let pats, ctx = (pats, ctx) |> stMap onPat
     let loc = toLoc docId pos
     TNodePat(TTuplePN, pats, noTy, loc), ctx
 
   | AAsPat (pat, name, pos) ->
     let serial, ctx = ctx |> nameCtxAdd name
-    let pat, ctx = (pat, ctx) |> tgPat docId
+    let pat, ctx = (pat, ctx) |> onPat
     let loc = toLoc docId pos
     TAsPat(pat, VarSerial serial, loc), ctx
 
   | AAscribePat (bodyPat, ty, pos) ->
-    let bodyPat, ctx = (bodyPat, ctx) |> tgPat docId
-    let ty, ctx = (ty, ctx) |> tgTy docId
+    let bodyPat, ctx = (bodyPat, ctx) |> onPat
+    let ty, ctx = (ty, ctx) |> onTy
     let loc = toLoc docId pos
     TNodePat(TAscribePN, [ bodyPat ], ty, loc), ctx
 
   | AOrPat (l, r, pos) ->
-    let l, ctx = (l, ctx) |> tgPat docId
-    let r, ctx = (r, ctx) |> tgPat docId
+    let l, ctx = (l, ctx) |> onPat
+    let r, ctx = (r, ctx) |> onPat
     let loc = toLoc docId pos
     TOrPat(l, r, loc), ctx
 
   | AFunDeclPat _ -> unreachable () // Invalid occurrence of fun pattern.
 
 let private tgExpr (docId: DocId) (expr: AExpr, ctx: NameCtx) : TExpr * NameCtx =
+  let onTy x = tgTy docId x
+  let onPat x = tgPat docId x
+  let onExpr x = tgExpr docId x
+
   match expr with
   | AMissingExpr pos ->
     // Error is already reported in parsing.
@@ -397,131 +403,124 @@ let private tgExpr (docId: DocId) (expr: AExpr, ctx: NameCtx) : TExpr * NameCtx 
 
   | AListExpr (items, pos) ->
     let expr = desugarListLitExpr items pos
-    (expr, ctx) |> tgExpr docId
+    (expr, ctx) |> onExpr
 
   | ARecordExpr (baseOpt, fields, pos) ->
     let onField ((name, init, fieldPos), ctx) =
-      let init, ctx = (init, ctx) |> tgExpr docId
+      let init, ctx = (init, ctx) |> onExpr
       let fieldLoc = toLoc docId fieldPos
-
       (nameToIdent name, init, fieldLoc), ctx
 
-    let baseOpt, ctx =
-      (baseOpt, ctx) |> stOptionMap (tgExpr docId)
-
+    let baseOpt, ctx = (baseOpt, ctx) |> stOptionMap onExpr
     let fields, ctx = (fields, ctx) |> stMap onField
     let loc = toLoc docId pos
     TRecordExpr(baseOpt, fields, noTy, loc), ctx
 
   | AIfExpr (cond, body, altOpt, pos) ->
     let expr = desugarIf cond body altOpt pos
-    (expr, ctx) |> tgExpr docId
+    (expr, ctx) |> onExpr
 
   | AMatchExpr (cond, arms, pos) ->
     // Desugar `| pat -> body` to `| pat when true -> body` so that all arms have guard expressions.
     let onArm (AArm (pat, guardOpt, body, pos), ctx) =
-      let pat, ctx = (pat, ctx) |> tgPat docId
-
+      let pat, ctx = (pat, ctx) |> onPat
       let loc = toLoc docId pos
 
       let guard, ctx =
         match guardOpt with
         | None -> txTrue loc, ctx
-        | Some guard -> (guard, ctx) |> tgExpr docId
+        | Some guard -> (guard, ctx) |> onExpr
 
-      let body, ctx = (body, ctx) |> tgExpr docId
+      let body, ctx = (body, ctx) |> onExpr
       (pat, guard, body), ctx
 
-    let cond, ctx = (cond, ctx) |> tgExpr docId
+    let cond, ctx = (cond, ctx) |> onExpr
     let arms, ctx = (arms, ctx) |> stMap onArm
     let loc = toLoc docId pos
     TMatchExpr(cond, arms, noTy, loc), ctx
 
   | AFunExpr (pats, body, pos) ->
     let expr = desugarFun pats body pos
-    (expr, ctx) |> tgExpr docId
+    (expr, ctx) |> onExpr
 
   | ANavExpr (l, r, pos) ->
-    let l, ctx = (l, ctx) |> tgExpr docId
+    let l, ctx = (l, ctx) |> onExpr
     let loc = toLoc docId pos
     TNavExpr(l, nameToIdent r, noTy, loc), ctx
 
   | AIndexExpr (l, r, pos) ->
     match expr with
     | AIndexExpr (x, ARangeExpr (l, r, _), _) ->
-      let x, ctx = (x, ctx) |> tgExpr docId
-      let l, ctx = (l, ctx) |> tgExpr docId
-      let r, ctx = (r, ctx) |> tgExpr docId
+      let x, ctx = (x, ctx) |> onExpr
+      let l, ctx = (l, ctx) |> onExpr
+      let r, ctx = (r, ctx) |> onExpr
       let loc = toLoc docId pos
       TNodeExpr(TSliceEN, [ l; r; x ], noTy, loc), ctx
 
     | _ ->
-      let l, ctx = (l, ctx) |> tgExpr docId
-      let r, ctx = (r, ctx) |> tgExpr docId
+      let l, ctx = (l, ctx) |> onExpr
+      let r, ctx = (r, ctx) |> onExpr
       let loc = toLoc docId pos
       TNodeExpr(TIndexEN, [ l; r ], noTy, loc), ctx
 
   | AUnaryExpr (MinusUnary, arg, pos) ->
     match desugarMinusUnary arg with
-    | Some arg -> (arg, ctx) |> tgExpr docId
+    | Some arg -> (arg, ctx) |> onExpr
     | None ->
-      let arg, ctx = (arg, ctx) |> tgExpr docId
+      let arg, ctx = (arg, ctx) |> onExpr
       let loc = toLoc docId pos
       TNodeExpr(TMinusEN, [ arg ], noTy, loc), ctx
 
   | ABinaryExpr (NotEqualBinary, l, r, pos) ->
     let expr = desugarBinNe l r pos
-    (expr, ctx) |> tgExpr docId
+    (expr, ctx) |> onExpr
 
   | ABinaryExpr (LessEqualBinary, l, r, pos) ->
     let expr = desugarBinLe l r pos
-    (expr, ctx) |> tgExpr docId
+    (expr, ctx) |> onExpr
 
   | ABinaryExpr (GreaterBinary, l, r, pos) ->
     let expr = desugarBinGt l r pos
-    (expr, ctx) |> tgExpr docId
+    (expr, ctx) |> onExpr
 
   | ABinaryExpr (GreaterEqualBinary, l, r, pos) ->
     let expr = desugarBinGe l r pos
-    (expr, ctx) |> tgExpr docId
+    (expr, ctx) |> onExpr
 
   | ABinaryExpr (LogicalAndBinary, l, r, pos) ->
     let expr = desugarBinAnd l r pos
-    (expr, ctx) |> tgExpr docId
+    (expr, ctx) |> onExpr
 
   | ABinaryExpr (LogicalOrBinary, l, r, pos) ->
     let expr = desugarBinOr l r pos
-    (expr, ctx) |> tgExpr docId
+    (expr, ctx) |> onExpr
 
   | ABinaryExpr (PipeBinary, l, r, pos) ->
     let expr = desugarBinPipe l r pos
-    (expr, ctx) |> tgExpr docId
+    (expr, ctx) |> onExpr
 
   | ABinaryExpr (AppBinary, l, r, pos) ->
-    let l, ctx = (l, ctx) |> tgExpr docId
-    let r, ctx = (r, ctx) |> tgExpr docId
+    let l, ctx = (l, ctx) |> onExpr
+    let r, ctx = (r, ctx) |> onExpr
     let loc = toLoc docId pos
     txApp l r loc, ctx
 
   | ABinaryExpr (op, l, r, pos) ->
     let prim = op |> opToPrim
-    let l, ctx = (l, ctx) |> tgExpr docId
-    let r, ctx = (r, ctx) |> tgExpr docId
+    let l, ctx = (l, ctx) |> onExpr
+    let r, ctx = (r, ctx) |> onExpr
     let loc = toLoc docId pos
     let primExpr = TPrimExpr(prim, noTy, loc)
     txApp (txApp primExpr l loc) r loc, ctx
 
   | ATupleExpr (items, pos) ->
     let loc = toLoc docId pos
-
-    let items, ctx =
-      (items, ctx) |> stMap (tgExpr docId)
-
+    let items, ctx = (items, ctx) |> stMap onExpr
     txTuple items loc, ctx
 
   | AAscribeExpr (body, ty, pos) ->
-    let body, ctx = (body, ctx) |> tgExpr docId
-    let ty, ctx = (ty, ctx) |> tgTy docId
+    let body, ctx = (body, ctx) |> onExpr
+    let ty, ctx = (ty, ctx) |> onTy
     let loc = toLoc docId pos
     txAscribe body ty loc, ctx
 
@@ -530,19 +529,19 @@ let private tgExpr (docId: DocId) (expr: AExpr, ctx: NameCtx) : TExpr * NameCtx 
       (stmts, ctx)
       |> stMap
            (fun (expr, ctx) ->
-             let expr, ctx = tgExpr docId (expr, ctx)
+             let expr, ctx = onExpr (expr, ctx)
              TExprStmt expr, ctx)
 
-    let last, ctx = (last, ctx) |> tgExpr docId
+    let last, ctx = (last, ctx) |> onExpr
     TBlockExpr(NotRec, stmts, last), ctx
 
   | ALetExpr (isRec, pat, body, next, pos) ->
     match desugarLet isRec pat body next pos with
     | ALetFun (isRec, vis, name, args, body, next, pos) ->
       let serial, ctx = ctx |> nameCtxAdd name
-      let args, ctx = (args, ctx) |> stMap (tgPat docId)
-      let body, ctx = (body, ctx) |> tgExpr docId
-      let next, ctx = (next, ctx) |> tgExpr docId
+      let args, ctx = (args, ctx) |> stMap onPat
+      let body, ctx = (body, ctx) |> onExpr
+      let next, ctx = (next, ctx) |> onExpr
 
       let stmt =
         let loc = toLoc docId pos
@@ -551,9 +550,9 @@ let private tgExpr (docId: DocId) (expr: AExpr, ctx: NameCtx) : TExpr * NameCtx 
       txLetIn stmt next, ctx
 
     | ALetVal (_isRec, pat, body, next, pos) ->
-      let pat, ctx = (pat, ctx) |> tgPat docId
-      let body, ctx = (body, ctx) |> tgExpr docId
-      let next, ctx = (next, ctx) |> tgExpr docId
+      let pat, ctx = (pat, ctx) |> onPat
+      let body, ctx = (body, ctx) |> onExpr
+      let next, ctx = (next, ctx) |> onExpr
 
       let stmt =
         let loc = toLoc docId pos
@@ -569,31 +568,35 @@ let private tgTyArgs (tyArgs, ctx) =
   |> stMap (fun (name, ctx) -> ctx |> nameCtxAdd (greek name))
 
 let private tgDecl docId attrs (decl, ctx) : TStmt * NameCtx =
+  let onTy x = tgTy docId x
+  let onPat x = tgPat docId x
+  let onExpr x = tgExpr docId x
+
   match decl with
   | AExprDecl expr ->
-    let expr, ctx = (expr, ctx) |> tgExpr docId
+    let expr, ctx = (expr, ctx) |> onExpr
     TExprStmt expr, ctx
 
   | ALetDecl (isRec, pat, body, pos) ->
     match desugarLetDecl isRec pat body pos with
     | ALetFunDecl (isRec, vis, name, args, body, pos) ->
       let serial, ctx = ctx |> nameCtxAdd name
-      let args, ctx = (args, ctx) |> stMap (tgPat docId)
-      let body, ctx = (body, ctx) |> tgExpr docId
+      let args, ctx = (args, ctx) |> stMap onPat
+      let body, ctx = (body, ctx) |> onExpr
       let loc = toLoc docId pos
 
       TLetFunStmt(FunSerial serial, isRec, vis, args, body, loc), ctx
 
     | ALetValDecl (_isRec, pat, body, pos) ->
-      let pat, ctx = (pat, ctx) |> tgPat docId
-      let body, ctx = (body, ctx) |> tgExpr docId
+      let pat, ctx = (pat, ctx) |> onPat
+      let body, ctx = (body, ctx) |> onExpr
       let loc = toLoc docId pos
       // FIXME: let rec for let-val is error.
       TLetValStmt(pat, body, loc), ctx
 
   | ATySynonymDecl (vis, name, tyArgs, ty, pos) ->
     let serial, ctx = ctx |> nameCtxAdd name
-    let ty, ctx = (ty, ctx) |> tgTy docId
+    let ty, ctx = (ty, ctx) |> onTy
     let tyArgs, ctx = (tyArgs, ctx) |> tgTyArgs
 
     let loc = toLoc docId pos
@@ -606,7 +609,7 @@ let private tgDecl docId attrs (decl, ctx) : TStmt * NameCtx =
       let hasPayload, payloadTy, ctx =
         match payloadTy with
         | Some ty ->
-          let ty, ctx = (ty, ctx) |> tgTy docId
+          let ty, ctx = (ty, ctx) |> onTy
           true, ty, ctx
         | None -> false, tyUnit, ctx
 
@@ -630,17 +633,13 @@ let private tgDecl docId attrs (decl, ctx) : TStmt * NameCtx =
       |> IsCRepr
 
     let tgFieldDecl ((name, ty, fieldPos), ctx) =
-      let ty, ctx = (ty, ctx) |> tgTy docId
+      let ty, ctx = (ty, ctx) |> onTy
       let fieldLoc = toLoc docId fieldPos
-
       (nameToIdent name, ty, fieldLoc), ctx
 
     let tySerial, ctx = ctx |> nameCtxAdd recordName
     let tyArgs, ctx = (tyArgs, ctx) |> tgTyArgs
-
-    let fields, ctx =
-      (fieldDecls, ctx) |> stMap tgFieldDecl
-
+    let fields, ctx = (fieldDecls, ctx) |> stMap tgFieldDecl
     let loc = toLoc docId pos
     TTyDeclStmt(tySerial, vis, tyArgs, RecordTyDecl(nameToIdent recordName, fields, repr, loc), loc), ctx
 
@@ -671,8 +670,7 @@ let private tgDecl docId attrs (decl, ctx) : TStmt * NameCtx =
     // printfn "/* attribute: %s %s */" (pos |> toLoc docId |> locToString) (objToString contents)
     tgDecl docId (prepend attr attrs) (next, ctx)
 
-let private tgDecls docId (decls, ctx) : TStmt list * NameCtx =
-  (decls, ctx) |> stMap (tgDecl docId [])
+let private tgDecls docId (decls, ctx) : TStmt list * NameCtx = (decls, ctx) |> stMap (tgDecl docId [])
 
 // -----------------------------------------------
 // Interface
