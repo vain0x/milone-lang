@@ -93,26 +93,31 @@ let private renameIdents toIdent toKey mapFuns (defMap: TreeMap<_, _>) =
 
 let private renameIdents2
   (defMap: TreeMap<_, 'T>)
-  (toIdent: 'T -> string)
+  (toIdent: 'T -> bool * string)
   (nameMap: TreeMap<'K, Ident>)
   (freq: Freq<Ident>)
   : TreeMap<'K, Ident> * Freq<Ident> =
   defMap
   |> TMap.fold
        (fun (nameMap, freq) key (value: 'T) ->
-         let name = toIdent value
+         let allowRename, name = toIdent value
 
-         let i, freq = freq |> freqAdd name
-         let name = renameIdent name i
-         let nameMap = nameMap |> TMap.add key name
+         if allowRename then
+           let i, freq = freq |> freqAdd name
+           let name = renameIdent name i
+           let nameMap = nameMap |> TMap.add key name
 
-         nameMap, freq)
+           nameMap, freq
+         else
+           assert (freq |> TMap.containsKey name |> not)
+           let nameMap = nameMap |> TMap.add key name
+           nameMap, freq)
        (nameMap, freq)
 
 let private linkageToIdent rawName linkage =
   match linkage with
-  | InternalLinkage -> rawName
-  | ExternalLinkage name -> name
+  | InternalLinkage -> true, rawName
+  | ExternalLinkage name -> false, name
 
 let private varDefToName (varDef: VarDef) =
   linkageToIdent varDef.Name varDef.Linkage
@@ -173,7 +178,7 @@ let private ofMirResult (mirCtx: MirResult) : CirCtx =
   let variantUniqueNames, freq =
     renameIdents2
       mirCtx.Variants
-      (fun (variantDef: VariantDef) -> variantDef.Name)
+      (fun (variantDef: VariantDef) -> true, variantDef.Name)
       (TMap.empty variantSerialCompare)
       freq
 
@@ -1330,7 +1335,7 @@ let private sortDecls (decls: CDecl list) : CDecl list =
 
 let private cgModule (ctx: CirCtx) (m: MModule) : DocId * CDecl list =
   let varUniqueNames, _ =
-    renameIdents2 m.Vars id ctx.Rx.VarUniqueNames ctx.Rx.ValueNameFreq
+    renameIdents2 m.Vars (fun name -> true, name) ctx.Rx.VarUniqueNames ctx.Rx.ValueNameFreq
 
   let ctx: CirCtx =
     { Rx =
