@@ -182,7 +182,7 @@ let private desugarIf cond body altOpt pos =
 
 /// Desugar to let expression.
 /// `fun x y .. -> z` ==> `let f x y .. = z in f`
-let private desugarFun parentFun pats body pos =
+let private desugarFun pats body pos =
   let name = "fun"
 
   let pat =
@@ -379,10 +379,10 @@ let private tgPat (docId: DocId) (pat: APat, ctx: NameCtx) : TPat * NameCtx =
 
   | AFunDeclPat _ -> unreachable () // Invalid occurrence of fun pattern.
 
-let private tgExpr (docId: DocId, parentFun: string list) (expr: AExpr, ctx: NameCtx) : TExpr * NameCtx =
+let private tgExpr (docId: DocId) (expr: AExpr, ctx: NameCtx) : TExpr * NameCtx =
   let onTy x = tgTy docId x
   let onPat x = tgPat docId x
-  let onExpr x = tgExpr (docId, parentFun) x
+  let onExpr x = tgExpr docId x
 
   match expr with
   | AMissingExpr pos ->
@@ -442,7 +442,7 @@ let private tgExpr (docId: DocId, parentFun: string list) (expr: AExpr, ctx: Nam
     TMatchExpr(cond, arms, noTy, loc), ctx
 
   | AFunExpr (pats, body, pos) ->
-    let expr = desugarFun parentFun pats body pos
+    let expr = desugarFun pats body pos
     (expr, ctx) |> onExpr
 
   | ANavExpr (l, r, pos) ->
@@ -542,11 +542,7 @@ let private tgExpr (docId: DocId, parentFun: string list) (expr: AExpr, ctx: Nam
     | ALetFun (isRec, vis, name, args, body, next, pos) ->
       let serial, ctx = ctx |> nameCtxAdd name
       let args, ctx = (args, ctx) |> stMap onPat
-
-      let body, ctx =
-        (body, ctx)
-        |> tgExpr (docId, nameToIdent name :: parentFun)
-
+      let body, ctx = (body, ctx) |> onExpr
       let next, ctx = (next, ctx) |> onExpr
 
       let stmt =
@@ -576,7 +572,7 @@ let private tgTyArgs (tyArgs, ctx) =
 let private tgDecl docId attrs (decl, ctx) : TStmt * NameCtx =
   let onTy x = tgTy docId x
   let onPat x = tgPat docId x
-  let onExpr x = tgExpr (docId, []) x
+  let onExpr x = tgExpr docId x
 
   match decl with
   | AExprDecl expr ->
@@ -588,11 +584,7 @@ let private tgDecl docId attrs (decl, ctx) : TStmt * NameCtx =
     | ALetFunDecl (isRec, vis, name, args, body, pos) ->
       let serial, ctx = ctx |> nameCtxAdd name
       let args, ctx = (args, ctx) |> stMap onPat
-
-      let body, ctx =
-        (body, ctx)
-        |> tgExpr (docId, [ nameToIdent name ])
-
+      let body, ctx = (body, ctx) |> onExpr
       let loc = toLoc docId pos
 
       TLetFunStmt(FunSerial serial, isRec, vis, args, body, loc), ctx
