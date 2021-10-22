@@ -52,11 +52,11 @@ struct MemoryChunk {
     struct MemoryChunk *parent;
 };
 
-static struct MemoryChunk s_heap;
-static size_t s_heap_level; // depth of current region
-static size_t s_heap_size;  // consumed size in all regions
-static size_t s_heap_alloc; // allocated size in all regions
-static size_t s_alloc_cost; // allocation count
+_Thread_local struct MemoryChunk s_heap;
+_Thread_local size_t s_heap_level; // depth of current region
+_Thread_local size_t s_heap_size;  // consumed size in all regions
+_Thread_local size_t s_heap_alloc; // allocated size in all regions
+_Thread_local size_t s_alloc_cost; // allocation count
 
 _Noreturn static void oom(void) {
     fprintf(stderr, "Out of memory.\n");
