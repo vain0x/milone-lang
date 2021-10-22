@@ -828,10 +828,8 @@ let private defineFunUniquely vis funSerial args ty loc (scopeCtx: ScopeCtx) : S
         Abi = MiloneAbi
         Linkage = makeLinkage vis name scopeCtx
 
-        // The function itself is registered as ancestor if `rec`. Use the second for that case.
-        ParentOpt = List.tryFind (fun x -> funSerialCompare x funSerial <> 0) scopeCtx.AncestralFuns
-
         Prefix =
+          // The function itself is registered as ancestor if `rec`. Use the second for that case.
           scopeCtx.AncestralFuns
           |> List.skipWhile (fun x -> funSerialCompare x funSerial = 0)
           |> List.map (fun funSerial -> findName (funSerialToInt funSerial) scopeCtx)

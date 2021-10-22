@@ -195,7 +195,6 @@ let private freshFun name arity (ty: Ty) loc (ctx: EtaCtx) =
       Ty = tyScheme
       Abi = MiloneAbi
       Linkage = InternalLinkage
-      ParentOpt = None
       Prefix = [ "eta" + string arity ]
       Loc = loc }
 

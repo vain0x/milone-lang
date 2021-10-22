@@ -409,7 +409,6 @@ let private mtDefs (hirCtx: HirCtx) (mtCtx: MtCtx) =
                  Ty = ty
                  Abi = funDef.Abi
                  Linkage = funDef.Linkage
-                 ParentOpt = funDef.ParentOpt
                  Prefix = funDef.Prefix
                  Loc = funDef.Loc }
 
@@ -552,7 +551,6 @@ let private bthFunDef (funDef: M.FunDef) : FunDef =
     Ty = TyScheme([], bthTy funDef.Ty)
     Abi = funDef.Abi
     Linkage = funDef.Linkage
-    ParentOpt = funDef.ParentOpt
     Prefix = funDef.Prefix
     Loc = funDef.Loc }
 
