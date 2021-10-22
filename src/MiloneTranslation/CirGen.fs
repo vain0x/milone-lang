@@ -123,7 +123,22 @@ let private varDefToName (varDef: VarDef) =
   linkageToIdent varDef.Name varDef.Linkage
 
 let private funDefToName (funDef: FunDef) =
-  linkageToIdent funDef.Name funDef.Linkage
+  match funDef.Linkage with
+  | InternalLinkage ->
+    let name =
+      // FIXME: avoid abusing docId
+      let (Loc (docId, _, _)) = funDef.Loc
+      let doc = docId |> S.replace "." "_"
+
+      doc
+      + "_"
+      + (funDef.Name :: funDef.Prefix
+         |> List.rev
+         |> S.concat "_")
+
+    true, name
+
+  | ExternalLinkage name -> false, name
 
 // -----------------------------------------------
 // Rx

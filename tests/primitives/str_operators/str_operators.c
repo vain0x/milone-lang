@@ -1,6 +1,6 @@
 #include "milone.h"
 
-char at_(int i_, struct String s_);
+char str_operators_str_operators_indexOperatorTest_IntStringCharFun2_at(int i_, struct String s_);
 
 void str_operators_Program_addTest(void);
 
@@ -12,7 +12,7 @@ void str_operators_Program_subscriptOperatorTest(void);
 
 int milone_main(void);
 
-char at_(int i_, struct String s_) {
+char str_operators_str_operators_indexOperatorTest_IntStringCharFun2_at(int i_, struct String s_) {
     return s_.str[i_];
 }
 
@@ -54,7 +54,7 @@ else_3:;
     goto if_next_1;
 if_next_1:;
     milone_assert(if_, 33, 2);
-    char call_ = at_(0, hello_1);
+    char call_ = str_operators_str_operators_indexOperatorTest_IntStringCharFun2_at(0, hello_1);
     milone_assert((call_ == 'h'), 38, 2);
     return;
 }

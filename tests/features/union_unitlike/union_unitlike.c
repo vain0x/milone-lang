@@ -10,7 +10,7 @@ struct RecordUsingMyUnit_;
 
 void union_unitlike_Program_basicCase(void);
 
-bool toBool_(struct MyBool_ myBool_1);
+bool union_unitlike_union_unitlike_usedInOtherSumTypeCase_toBool(struct MyBool_ myBool_1);
 
 void union_unitlike_Program_usedInOtherSumTypeCase(void);
 
@@ -51,7 +51,7 @@ end_match_1:;
     return;
 }
 
-bool toBool_(struct MyBool_ myBool_1) {
+bool union_unitlike_union_unitlike_usedInOtherSumTypeCase_toBool(struct MyBool_ myBool_1) {
     bool match_1;
     if ((myBool_1.discriminant != MyFalse_)) goto next_4;
     match_1 = false;
@@ -69,7 +69,7 @@ end_match_3:;
 void union_unitlike_Program_usedInOtherSumTypeCase(void) {
     struct MyBool_ variant_ = (struct MyBool_){.discriminant = MyTrue_, .MyTrue_ = 0};
     struct MyBool_ myBool_ = variant_;
-    bool call_ = toBool_(myBool_);
+    bool call_ = union_unitlike_union_unitlike_usedInOtherSumTypeCase_toBool(myBool_);
     milone_assert(call_, 27, 2);
     return;
 }

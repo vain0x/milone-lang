@@ -196,7 +196,10 @@ type FunDef =
     Ty: TyScheme
     Abi: FunAbi
     Linkage: Linkage
-    ParentOpt: FunSerial option
+
+    /// Represents a context of function (in reversed order.) Function name is finally prefixed to be unique.
+    Prefix: string list
+
     Loc: Loc }
 
 [<RequireQualifiedAccess; NoEquality; NoComparison>]

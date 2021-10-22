@@ -8,7 +8,7 @@ void record_inference_Program_typeAscriptionExprCase(int n_1);
 
 void record_inference_Program_matchExprCase(int n_2);
 
-int unwrap_(struct IntWrapper_ w_1);
+int record_inference_record_inference_funAppCase_unwrap(struct IntWrapper_ w_1);
 
 void record_inference_Program_funAppCase(int n_3);
 
@@ -52,13 +52,13 @@ switch_next_1:;
     return;
 }
 
-int unwrap_(struct IntWrapper_ w_1) {
+int record_inference_record_inference_funAppCase_unwrap(struct IntWrapper_ w_1) {
     return w_1.t0;
 }
 
 void record_inference_Program_funAppCase(int n_3) {
     struct IntWrapper_ IntWrapper_3 = (struct IntWrapper_){.t0 = n_3};
-    int call_ = unwrap_(IntWrapper_3);
+    int call_ = record_inference_record_inference_funAppCase_unwrap(IntWrapper_3);
     milone_assert((call_ == 7), 26, 2);
     return;
 }

@@ -8,13 +8,13 @@ struct IntList;
 
 struct IntList;
 
-int listToArraySize_(struct StringList const* xs_);
+int native_size_of_val_native_size_of_val_StringListIntFun1_listToArraySize(struct StringList const* xs_);
 
-int listToArraySize_1(struct IntList const* xs_);
+int native_size_of_val_native_size_of_val_IntListIntFun1_listToArraySize(struct IntList const* xs_);
 
-int go_(int n_, struct IntList const* xs_1);
+int native_size_of_val_native_size_of_val_listToArraySize_IntIntListIntFun2_go(int n_, struct IntList const* xs_1);
 
-int go_1(int n_, struct StringList const* xs_1);
+int native_size_of_val_native_size_of_val_listToArraySize_IntStringListIntFun2_go(int n_, struct StringList const* xs_1);
 
 int milone_main(void);
 
@@ -28,7 +28,7 @@ struct IntList {
     struct IntList const* tail;
 };
 
-int listToArraySize_(struct StringList const* xs_) {
+int native_size_of_val_native_size_of_val_StringListIntFun1_listToArraySize(struct StringList const* xs_) {
     struct String x_;
     int match_;
     if ((!((!(xs_))))) goto next_2;
@@ -38,7 +38,7 @@ next_2:;
     if ((!(xs_))) goto next_3;
     x_ = xs_->head;
     int itemSize_ = sizeof(struct String);
-    int call_ = go_1(0, xs_);
+    int call_ = native_size_of_val_native_size_of_val_listToArraySize_IntStringListIntFun2_go(0, xs_);
     int n_1 = call_;
     match_ = (itemSize_ * n_1);
     goto end_match_1;
@@ -48,7 +48,7 @@ end_match_1:;
     return match_;
 }
 
-int listToArraySize_1(struct IntList const* xs_) {
+int native_size_of_val_native_size_of_val_IntListIntFun1_listToArraySize(struct IntList const* xs_) {
     int x_;
     int match_1;
     if ((!((!(xs_))))) goto next_5;
@@ -58,7 +58,7 @@ next_5:;
     if ((!(xs_))) goto next_6;
     x_ = xs_->head;
     int itemSize_ = sizeof(int);
-    int call_1 = go_(0, xs_);
+    int call_1 = native_size_of_val_native_size_of_val_listToArraySize_IntIntListIntFun2_go(0, xs_);
     int n_1 = call_1;
     match_1 = (itemSize_ * n_1);
     goto end_match_4;
@@ -68,7 +68,7 @@ end_match_4:;
     return match_1;
 }
 
-int go_(int n_, struct IntList const* xs_1) {
+int native_size_of_val_native_size_of_val_listToArraySize_IntIntListIntFun2_go(int n_, struct IntList const* xs_1) {
     struct IntList const* xs_2;
 tailrec_7:;
     int match_2;
@@ -89,7 +89,7 @@ end_match_8:;
     return match_2;
 }
 
-int go_1(int n_, struct StringList const* xs_1) {
+int native_size_of_val_native_size_of_val_listToArraySize_IntStringListIntFun2_go(int n_, struct StringList const* xs_1) {
     struct StringList const* xs_2;
 tailrec_11:;
     int match_3;
@@ -117,13 +117,13 @@ int milone_main(void) {
     (*(((struct IntList*)list_1))) = (struct IntList){.head = 3, .tail = list_2};
     struct IntList const* list_ = milone_mem_alloc(1, sizeof(struct IntList));
     (*(((struct IntList*)list_))) = (struct IntList){.head = 2, .tail = list_1};
-    int call_2 = listToArraySize_1(list_);
+    int call_2 = native_size_of_val_native_size_of_val_IntListIntFun1_listToArraySize(list_);
     milone_assert((call_2 == (3 * 4)), 21, 2);
     struct StringList const* list_4 = milone_mem_alloc(1, sizeof(struct StringList));
     (*(((struct StringList*)list_4))) = (struct StringList){.head = (struct String){.str = "y", .len = 1}, .tail = NULL};
     struct StringList const* list_3 = milone_mem_alloc(1, sizeof(struct StringList));
     (*(((struct StringList*)list_3))) = (struct StringList){.head = (struct String){.str = "x", .len = 1}, .tail = list_4};
-    int call_3 = listToArraySize_(list_3);
+    int call_3 = native_size_of_val_native_size_of_val_StringListIntFun1_listToArraySize(list_3);
     milone_assert((call_3 == (2 * 16)), 22, 2);
     return 0;
 }

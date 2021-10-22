@@ -1,15 +1,15 @@
 #include "milone.h"
 
-bool id_1(bool );
+bool MiloneCore_Prelude_BoolBoolFun1_id(bool );
 
-int id_(int );
+int MiloneCore_Prelude_IntIntFun1_id(int );
 
 int milone_main(void);
 
 int milone_main(void) {
-    bool call_ = id_1(true);
+    bool call_ = MiloneCore_Prelude_BoolBoolFun1_id(true);
     milone_assert(call_, 6, 2);
-    int call_1 = id_(42);
+    int call_1 = MiloneCore_Prelude_IntIntFun1_id(42);
     milone_assert((call_1 == 42), 7, 2);
     return 0;
 }

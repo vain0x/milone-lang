@@ -6,7 +6,7 @@ struct MyListOption_;
 
 struct IntMyListOptionTuple2_;
 
-struct MyList_ myCons_(int head_, struct MyList_ tail_);
+struct MyList_ union_newtype_rec_union_newtype_rec_main_myCons(int head_, struct MyList_ tail_);
 
 int milone_main(void);
 
@@ -38,7 +38,7 @@ struct IntMyListOptionTuple2_ {
     struct MyListOption_ t1;
 };
 
-struct MyList_ myCons_(int head_, struct MyList_ tail_) {
+struct MyList_ union_newtype_rec_union_newtype_rec_main_myCons(int head_, struct MyList_ tail_) {
     struct MyListOption_ variant_ = (struct MyListOption_){.discriminant = Some_, .Some_ = tail_};
     struct IntMyListOptionTuple2_ IntMyListOptionTuple2_ = (struct IntMyListOptionTuple2_){.t0 = head_, .t1 = variant_};
     void const* box_ = milone_mem_alloc(1, sizeof(struct IntMyListOptionTuple2_));
@@ -54,7 +54,7 @@ int milone_main(void) {
     (*(((struct IntMyListOptionTuple2_*)box_1))) = IntMyListOptionTuple2_1;
     struct MyList_ variant_2 = (struct MyList_){.discriminant = MyList_, .MyList_ = box_1};
     struct MyList_ first_ = variant_2;
-    struct MyList_ call_ = myCons_(1, first_);
+    struct MyList_ call_ = union_newtype_rec_union_newtype_rec_main_myCons(1, first_);
     struct MyList_ second_ = call_;
     char match_;
     if (((*(((struct IntMyListOptionTuple2_ const*)first_.MyList_))).t0 != 0)) goto next_2;

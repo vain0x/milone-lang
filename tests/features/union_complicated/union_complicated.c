@@ -30,11 +30,11 @@ struct IntThirdTuple2_;
 
 struct IntThirdTuple2_List;
 
-struct FirstListSecondListTuple2_ f_(struct FirstSecondTuple2_List const* arg_2);
+struct FirstListSecondListTuple2_ union_complicated_union_complicated_main_f(struct FirstSecondTuple2_List const* arg_2);
 
-struct FirstListSecondListTuple2_ fun_(void const* env_, struct FirstSecondTuple2_List const* arg_);
+struct FirstListSecondListTuple2_ union_complicated_union_complicated_eta2_main_f(void const* env_, struct FirstSecondTuple2_List const* arg_);
 
-struct FirstListSecondListTuple2_ fun_1(void const* env_1, struct FirstSecondTuple2_List const* arg_1);
+struct FirstListSecondListTuple2_ union_complicated_union_complicated_eta2_main_f_1(void const* env_1, struct FirstSecondTuple2_List const* arg_1);
 
 int milone_main(void);
 
@@ -115,18 +115,18 @@ struct IntThirdTuple2_List {
     struct IntThirdTuple2_List const* tail;
 };
 
-struct FirstListSecondListTuple2_ f_(struct FirstSecondTuple2_List const* arg_2) {
+struct FirstListSecondListTuple2_ union_complicated_union_complicated_main_f(struct FirstSecondTuple2_List const* arg_2) {
     struct FirstListSecondListTuple2_ FirstListSecondListTuple2_ = (struct FirstListSecondListTuple2_){.t0 = NULL, .t1 = NULL};
     return FirstListSecondListTuple2_;
 }
 
-struct FirstListSecondListTuple2_ fun_(void const* env_, struct FirstSecondTuple2_List const* arg_) {
-    struct FirstListSecondListTuple2_ call_ = f_(arg_);
+struct FirstListSecondListTuple2_ union_complicated_union_complicated_eta2_main_f(void const* env_, struct FirstSecondTuple2_List const* arg_) {
+    struct FirstListSecondListTuple2_ call_ = union_complicated_union_complicated_main_f(arg_);
     return call_;
 }
 
-struct FirstListSecondListTuple2_ fun_1(void const* env_1, struct FirstSecondTuple2_List const* arg_1) {
-    struct FirstListSecondListTuple2_ call_1 = f_(arg_1);
+struct FirstListSecondListTuple2_ union_complicated_union_complicated_eta2_main_f_1(void const* env_1, struct FirstSecondTuple2_List const* arg_1) {
+    struct FirstListSecondListTuple2_ call_1 = union_complicated_union_complicated_main_f(arg_1);
     return call_1;
 }
 
@@ -209,10 +209,10 @@ next_2:;
     goto end_match_1;
 next_3:;
 end_match_1:;
-    struct FirstSecondTuple2_ListFirstListSecondListTuple2_Fun1 fun_2 = (struct FirstSecondTuple2_ListFirstListSecondListTuple2_Fun1){.fun = fun_, .env = NULL};
-    struct First_ variant_7 = (struct First_){.discriminant = First_, .First_ = fun_2};
-    struct FirstSecondTuple2_ListFirstListSecondListTuple2_Fun1 fun_3 = (struct FirstSecondTuple2_ListFirstListSecondListTuple2_Fun1){.fun = fun_1, .env = NULL};
-    struct Second_ variant_8 = (struct Second_){.discriminant = Second_, .Second_ = fun_3};
+    struct FirstSecondTuple2_ListFirstListSecondListTuple2_Fun1 fun_ = (struct FirstSecondTuple2_ListFirstListSecondListTuple2_Fun1){.fun = union_complicated_union_complicated_eta2_main_f, .env = NULL};
+    struct First_ variant_7 = (struct First_){.discriminant = First_, .First_ = fun_};
+    struct FirstSecondTuple2_ListFirstListSecondListTuple2_Fun1 fun_1 = (struct FirstSecondTuple2_ListFirstListSecondListTuple2_Fun1){.fun = union_complicated_union_complicated_eta2_main_f_1, .env = NULL};
+    struct Second_ variant_8 = (struct Second_){.discriminant = Second_, .Second_ = fun_1};
     struct FirstSecondTuple2_ FirstSecondTuple2_ = (struct FirstSecondTuple2_){.t0 = variant_7, .t1 = variant_8};
     struct First_ first_ = FirstSecondTuple2_.t0;
     struct Second_ second_ = FirstSecondTuple2_.t1;
