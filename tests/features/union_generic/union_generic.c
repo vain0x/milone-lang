@@ -2,19 +2,19 @@
 
 struct MyOption_;
 
-struct String unwrap_(struct MyOption_ opt_1);
+struct String union_generic_union_generic_StringMyOption1StringFun1_unwrap(struct MyOption_ opt_1);
 
-bool isNone_(struct MyOption_ opt_);
+bool union_generic_union_generic_StringMyOption1BoolFun1_isNone(struct MyOption_ opt_);
 
-int unwrap_1(struct MyOption_ opt_1);
+int union_generic_union_generic_IntMyOption1IntFun1_unwrap(struct MyOption_ opt_1);
 
-bool isNone_1(struct MyOption_ opt_);
+bool union_generic_union_generic_IntMyOption1BoolFun1_isNone(struct MyOption_ opt_);
 
-bool isNone_2(struct MyOption_ opt_);
+bool union_generic_union_generic_UnitMyOption1BoolFun1_isNone(struct MyOption_ opt_);
 
-void testBasicUsage_(void);
+void union_generic_union_generic_testBasicUsage(void);
 
-void testAnotherInstance_(void);
+void union_generic_union_generic_testAnotherInstance(void);
 
 int milone_main(void);
 
@@ -30,7 +30,7 @@ struct MyOption_ {
     };
 };
 
-struct String unwrap_(struct MyOption_ opt_1) {
+struct String union_generic_union_generic_StringMyOption1StringFun1_unwrap(struct MyOption_ opt_1) {
     struct String it_;
     struct String match_;
     if ((opt_1.discriminant != MySome_)) goto next_2;
@@ -47,7 +47,7 @@ end_match_1:;
     return match_;
 }
 
-bool isNone_(struct MyOption_ opt_) {
+bool union_generic_union_generic_StringMyOption1BoolFun1_isNone(struct MyOption_ opt_) {
     bool switch_;
     switch (opt_.discriminant) {
         case MyNone_:
@@ -69,7 +69,7 @@ switch_next_4:;
     return switch_;
 }
 
-int unwrap_1(struct MyOption_ opt_1) {
+int union_generic_union_generic_IntMyOption1IntFun1_unwrap(struct MyOption_ opt_1) {
     int it_;
     int match_1;
     if ((opt_1.discriminant != MySome_)) goto next_8;
@@ -86,7 +86,7 @@ end_match_7:;
     return match_1;
 }
 
-bool isNone_1(struct MyOption_ opt_) {
+bool union_generic_union_generic_IntMyOption1BoolFun1_isNone(struct MyOption_ opt_) {
     bool switch_1;
     switch (opt_.discriminant) {
         case MyNone_:
@@ -108,7 +108,7 @@ switch_next_10:;
     return switch_1;
 }
 
-bool isNone_2(struct MyOption_ opt_) {
+bool union_generic_union_generic_UnitMyOption1BoolFun1_isNone(struct MyOption_ opt_) {
     bool switch_2;
     switch (opt_.discriminant) {
         case MyNone_:
@@ -130,36 +130,36 @@ switch_next_13:;
     return switch_2;
 }
 
-void testBasicUsage_(void) {
+void union_generic_union_generic_testBasicUsage(void) {
     struct MyOption_ none_ = (struct MyOption_){.discriminant = MyNone_};
-    bool call_ = isNone_2(none_);
+    bool call_ = union_generic_union_generic_UnitMyOption1BoolFun1_isNone(none_);
     milone_assert(call_, 23, 2);
     struct MyOption_ variant_ = (struct MyOption_){.discriminant = MySome_, .MySome_ = ((void const*)((intptr_t)42))};
     struct MyOption_ some_ = variant_;
-    bool call_1 = isNone_1(some_);
+    bool call_1 = union_generic_union_generic_IntMyOption1BoolFun1_isNone(some_);
     milone_assert((!(call_1)), 28, 2);
-    int call_2 = unwrap_1(some_);
+    int call_2 = union_generic_union_generic_IntMyOption1IntFun1_unwrap(some_);
     milone_assert((call_2 == 42), 29, 2);
     return;
 }
 
-void testAnotherInstance_(void) {
+void union_generic_union_generic_testAnotherInstance(void) {
     struct MyOption_ stringNone_ = (struct MyOption_){.discriminant = MyNone_};
-    bool call_3 = isNone_(stringNone_);
+    bool call_3 = union_generic_union_generic_StringMyOption1BoolFun1_isNone(stringNone_);
     milone_assert(call_3, 34, 2);
     void const* box_ = milone_mem_alloc(1, sizeof(struct String));
     (*(((struct String*)box_))) = (struct String){.str = "hey", .len = 3};
     struct MyOption_ variant_1 = (struct MyOption_){.discriminant = MySome_, .MySome_ = box_};
     struct MyOption_ stringSome_ = variant_1;
-    bool call_4 = isNone_(stringSome_);
+    bool call_4 = union_generic_union_generic_StringMyOption1BoolFun1_isNone(stringSome_);
     milone_assert((!(call_4)), 38, 2);
-    struct String call_5 = unwrap_(stringSome_);
+    struct String call_5 = union_generic_union_generic_StringMyOption1StringFun1_unwrap(stringSome_);
     milone_assert((str_compare(call_5, (struct String){.str = "hey", .len = 3}) == 0), 39, 2);
     return;
 }
 
 int milone_main(void) {
-    testBasicUsage_();
-    testAnotherInstance_();
+    union_generic_union_generic_testBasicUsage();
+    union_generic_union_generic_testAnotherInstance();
     return 0;
 }

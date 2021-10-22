@@ -1,17 +1,17 @@
 #include "milone.h"
 
-int f_(int x_);
+int match_exhaustive_match_exhaustive_main_f(int x_);
 
 int milone_main(void);
 
-int f_(int x_) {
+int match_exhaustive_match_exhaustive_main_f(int x_) {
     return (x_ * x_);
 }
 
 int milone_main(void) {
     int y_;
     int match_;
-    int call_ = f_(3);
+    int call_ = match_exhaustive_match_exhaustive_main_f(3);
     if ((call_ != 1)) goto next_2;
     milone_assert(false, 9, 4);
     match_ = 1;

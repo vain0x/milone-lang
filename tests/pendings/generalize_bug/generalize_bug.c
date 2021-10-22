@@ -8,11 +8,11 @@ struct Pat_List;
 
 struct UnitList;
 
-struct Pat_ anotherFun_(struct Pat_ pat_);
+struct Pat_ generalize_bug_generalize_bug_anotherFun(struct Pat_ pat_);
 
-struct Pat_List const* go_(struct Pat_List const* acc_, struct Pat_List const* pats_1);
+struct Pat_List const* generalize_bug_generalize_bug_doInferPats_go(struct Pat_List const* acc_, struct Pat_List const* pats_1);
 
-struct Pat_List const* doInferPats_(struct Pat_List const* pats_);
+struct Pat_List const* generalize_bug_generalize_bug_doInferPats(struct Pat_List const* pats_);
 
 struct Pat_ generalize_bug_Program_inferPat(struct Pat_ pat_3);
 
@@ -32,12 +32,12 @@ struct Pat_List {
     struct Pat_List const* tail;
 };
 
-struct Pat_ anotherFun_(struct Pat_ pat_) {
+struct Pat_ generalize_bug_generalize_bug_anotherFun(struct Pat_ pat_) {
     struct Pat_ call_ = generalize_bug_Program_inferPat(pat_);
     return call_;
 }
 
-struct Pat_List const* go_(struct Pat_List const* acc_, struct Pat_List const* pats_1) {
+struct Pat_List const* generalize_bug_generalize_bug_doInferPats_go(struct Pat_List const* acc_, struct Pat_List const* pats_1) {
     struct Pat_List const* pats_2;
     struct Pat_ pat_1;
 tailrec_1:;
@@ -64,8 +64,8 @@ end_match_2:;
     return match_;
 }
 
-struct Pat_List const* doInferPats_(struct Pat_List const* pats_) {
-    struct Pat_List const* call_2 = go_(NULL, pats_);
+struct Pat_List const* generalize_bug_generalize_bug_doInferPats(struct Pat_List const* pats_) {
+    struct Pat_List const* call_2 = generalize_bug_generalize_bug_doInferPats_go(NULL, pats_);
     return call_2;
 }
 
@@ -76,6 +76,6 @@ struct Pat_ generalize_bug_Program_inferPat(struct Pat_ pat_3) {
 int milone_main(void) {
     struct Pat_List const* list_1 = milone_mem_alloc(1, sizeof(struct Pat_List));
     (*(((struct Pat_List*)list_1))) = (struct Pat_List){.head = (struct Pat_){.discriminant = Pat_}, .tail = NULL};
-    struct UnitList const* call_3 = doInferPats_(list_1);
+    struct UnitList const* call_3 = generalize_bug_generalize_bug_doInferPats(list_1);
     return 0;
 }

@@ -4,11 +4,11 @@ struct IntStringTuple2_;
 
 struct IntStringTuple2Option_;
 
-int fstUnbox_(void const* boxedPair_, struct IntStringTuple2Option_ phantom_);
+int fun_generic_ty_degeneration_fun_generic_ty_degeneration_ObjectIntStringTuple2OptionIntFun2_fstUnbox(void const* boxedPair_, struct IntStringTuple2Option_ phantom_);
 
-int f_(void const* boxedPair_);
+int fun_generic_ty_degeneration_fun_generic_ty_degeneration_fstUnbox_ObjectUnitIntFun2_f(void const* boxedPair_);
 
-int myFst_(struct IntStringTuple2_ arg_);
+int fun_generic_ty_degeneration_fun_generic_ty_degeneration_IntStringTuple2IntFun1_myFst(struct IntStringTuple2_ arg_);
 
 void fun_generic_ty_degeneration_Program_testCase(struct IntStringTuple2_ kv_);
 
@@ -31,17 +31,17 @@ struct IntStringTuple2Option_ {
     };
 };
 
-int fstUnbox_(void const* boxedPair_, struct IntStringTuple2Option_ phantom_) {
-    int call_ = f_(boxedPair_);
+int fun_generic_ty_degeneration_fun_generic_ty_degeneration_ObjectIntStringTuple2OptionIntFun2_fstUnbox(void const* boxedPair_, struct IntStringTuple2Option_ phantom_) {
+    int call_ = fun_generic_ty_degeneration_fun_generic_ty_degeneration_fstUnbox_ObjectUnitIntFun2_f(boxedPair_);
     return call_;
 }
 
-int f_(void const* boxedPair_) {
-    int call_1 = myFst_((*(((struct IntStringTuple2_ const*)boxedPair_))));
+int fun_generic_ty_degeneration_fun_generic_ty_degeneration_fstUnbox_ObjectUnitIntFun2_f(void const* boxedPair_) {
+    int call_1 = fun_generic_ty_degeneration_fun_generic_ty_degeneration_IntStringTuple2IntFun1_myFst((*(((struct IntStringTuple2_ const*)boxedPair_))));
     return call_1;
 }
 
-int myFst_(struct IntStringTuple2_ arg_) {
+int fun_generic_ty_degeneration_fun_generic_ty_degeneration_IntStringTuple2IntFun1_myFst(struct IntStringTuple2_ arg_) {
     int x_ = arg_.t0;
     return x_;
 }
@@ -49,7 +49,7 @@ int myFst_(struct IntStringTuple2_ arg_) {
 void fun_generic_ty_degeneration_Program_testCase(struct IntStringTuple2_ kv_) {
     void const* box_ = milone_mem_alloc(1, sizeof(struct IntStringTuple2_));
     (*(((struct IntStringTuple2_*)box_))) = kv_;
-    int call_2 = fstUnbox_(box_, (struct IntStringTuple2Option_){.discriminant = None_});
+    int call_2 = fun_generic_ty_degeneration_fun_generic_ty_degeneration_ObjectIntStringTuple2OptionIntFun2_fstUnbox(box_, (struct IntStringTuple2Option_){.discriminant = None_});
     milone_assert((call_2 == 0), 20, 2);
     return;
 }

@@ -16,11 +16,11 @@ struct IntOptionOptionOption_List;
 
 struct IntOptionOptionOption_List;
 
-struct IntOptionOptionOption_ fun_1(int x_);
+struct IntOptionOptionOption_ list_pat_list_pat_main_IntIntOptionOptionOptionFun1_fun(int x_);
 
-struct IntOptionOptionOption_ fun_(void const* env_, int arg_);
+struct IntOptionOptionOption_ list_pat_list_pat_eta2_main_fun(void const* env_, int arg_);
 
-struct IntOptionOptionOption_List const* map_(struct IntIntOptionOptionOption_Fun1 , struct IntList const* );
+struct IntOptionOptionOption_List const* MiloneCore_List_IntIntOptionOptionOptionFun1IntListIntOptionOptionOptionListFun2_map(struct IntIntOptionOptionOption_Fun1 , struct IntList const* );
 
 int milone_main(void);
 
@@ -75,15 +75,15 @@ struct IntOptionOptionOption_List {
     struct IntOptionOptionOption_List const* tail;
 };
 
-struct IntOptionOptionOption_ fun_1(int x_) {
+struct IntOptionOptionOption_ list_pat_list_pat_main_IntIntOptionOptionOptionFun1_fun(int x_) {
     struct IntOption_ variant_ = (struct IntOption_){.discriminant = Some_, .Some_ = x_};
     struct IntOptionOption_ variant_1 = (struct IntOptionOption_){.discriminant = Some_1, .Some_1 = variant_};
     struct IntOptionOptionOption_ variant_2 = (struct IntOptionOptionOption_){.discriminant = Some_2, .Some_2 = variant_1};
     return variant_2;
 }
 
-struct IntOptionOptionOption_ fun_(void const* env_, int arg_) {
-    struct IntOptionOptionOption_ call_ = fun_1(arg_);
+struct IntOptionOptionOption_ list_pat_list_pat_eta2_main_fun(void const* env_, int arg_) {
+    struct IntOptionOptionOption_ call_ = list_pat_list_pat_main_IntIntOptionOptionOptionFun1_fun(arg_);
     return call_;
 }
 
@@ -96,7 +96,7 @@ int milone_main(void) {
     int x2_;
     int x1_;
     char match_;
-    struct IntIntOptionOptionOption_Fun1 fun_2 = (struct IntIntOptionOptionOption_Fun1){.fun = fun_, .env = NULL};
+    struct IntIntOptionOptionOption_Fun1 fun_ = (struct IntIntOptionOptionOption_Fun1){.fun = list_pat_list_pat_eta2_main_fun, .env = NULL};
     struct IntList const* list_6 = milone_mem_alloc(1, sizeof(struct IntList));
     (*(((struct IntList*)list_6))) = (struct IntList){.head = 7, .tail = NULL};
     struct IntList const* list_5 = milone_mem_alloc(1, sizeof(struct IntList));
@@ -111,7 +111,7 @@ int milone_main(void) {
     (*(((struct IntList*)list_1))) = (struct IntList){.head = 2, .tail = list_2};
     struct IntList const* list_ = milone_mem_alloc(1, sizeof(struct IntList));
     (*(((struct IntList*)list_))) = (struct IntList){.head = 1, .tail = list_1};
-    struct IntOptionOptionOption_List const* call_1 = map_(fun_2, list_);
+    struct IntOptionOptionOption_List const* call_1 = MiloneCore_List_IntIntOptionOptionOptionFun1IntListIntOptionOptionOptionListFun2_map(fun_, list_);
     if ((!(call_1))) goto next_10;
     if ((call_1->head.discriminant != Some_2)) goto next_10;
     if ((call_1->head.Some_2.discriminant != Some_1)) goto next_10;

@@ -4,7 +4,7 @@ struct Expr_;
 
 struct ExprExprTuple2_;
 
-int eval_(struct Expr_ expr_);
+int union_rec_direct_union_rec_direct_main_eval(struct Expr_ expr_);
 
 int milone_main(void);
 
@@ -26,7 +26,7 @@ struct ExprExprTuple2_ {
     struct Expr_ t1;
 };
 
-int eval_(struct Expr_ expr_) {
+int union_rec_direct_union_rec_direct_main_eval(struct Expr_ expr_) {
     struct Expr_ r_;
     struct Expr_ l_;
     int value_;
@@ -39,8 +39,8 @@ next_2:;
     if ((expr_.discriminant != Add_)) goto next_3;
     l_ = (*(((struct ExprExprTuple2_ const*)expr_.Add_))).t0;
     r_ = (*(((struct ExprExprTuple2_ const*)expr_.Add_))).t1;
-    int call_ = eval_(l_);
-    int call_1 = eval_(r_);
+    int call_ = union_rec_direct_union_rec_direct_main_eval(l_);
+    int call_1 = union_rec_direct_union_rec_direct_main_eval(r_);
     match_ = (call_ + call_1);
     goto end_match_1;
 next_3:;
@@ -62,7 +62,7 @@ int milone_main(void) {
     (*(((struct ExprExprTuple2_*)box_1))) = ExprExprTuple2_;
     struct Expr_ variant_4 = (struct Expr_){.discriminant = Add_, .Add_ = box_1};
     struct Expr_ expr_1 = variant_4;
-    int call_2 = eval_(expr_1);
+    int call_2 = union_rec_direct_union_rec_direct_main_eval(expr_1);
     milone_assert((call_2 == 42), 17, 2);
     return 0;
 }

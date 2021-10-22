@@ -4,7 +4,7 @@ struct IntList;
 
 struct IntList;
 
-void printIntOrStr_(bool isInt_, void const* value_);
+void obj_box_unbox_obj_box_unbox_main_printIntOrStr(bool isInt_, void const* value_);
 
 int milone_main(void);
 
@@ -13,7 +13,7 @@ struct IntList {
     struct IntList const* tail;
 };
 
-void printIntOrStr_(bool isInt_, void const* value_) {
+void obj_box_unbox_obj_box_unbox_main_printIntOrStr(bool isInt_, void const* value_) {
     char if_;
     if (isInt_) {
         goto then_2;
@@ -35,10 +35,10 @@ if_next_1:;
 int milone_main(void) {
     int b_;
     int a_;
-    printIntOrStr_(true, ((void const*)((intptr_t)2)));
+    obj_box_unbox_obj_box_unbox_main_printIntOrStr(true, ((void const*)((intptr_t)2)));
     void const* box_ = milone_mem_alloc(1, sizeof(struct String));
     (*(((struct String*)box_))) = (struct String){.str = "Fizz", .len = 4};
-    printIntOrStr_(false, box_);
+    obj_box_unbox_obj_box_unbox_main_printIntOrStr(false, box_);
     void const* n_ = ((void const*)((intptr_t)42));
     milone_assert((((int)((intptr_t)n_)) == 42), 19, 2);
     struct IntList const* list_1 = milone_mem_alloc(1, sizeof(struct IntList));

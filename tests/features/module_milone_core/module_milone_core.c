@@ -4,9 +4,9 @@ struct IntList;
 
 struct IntList;
 
-bool isEmpty_(struct IntList const* );
+bool MiloneCore_List_IntListBoolFun1_isEmpty(struct IntList const* );
 
-void assertNotEmpty_(struct IntList const* xs_);
+void module_milone_core_module_milone_core_IntListUnitFun1_assertNotEmpty(struct IntList const* xs_);
 
 int milone_main(void);
 
@@ -15,8 +15,8 @@ struct IntList {
     struct IntList const* tail;
 };
 
-void assertNotEmpty_(struct IntList const* xs_) {
-    bool call_ = isEmpty_(xs_);
+void module_milone_core_module_milone_core_IntListUnitFun1_assertNotEmpty(struct IntList const* xs_) {
+    bool call_ = MiloneCore_List_IntListBoolFun1_isEmpty(xs_);
     milone_assert((!(call_)), 5, 34);
     return;
 }
@@ -24,6 +24,6 @@ void assertNotEmpty_(struct IntList const* xs_) {
 int milone_main(void) {
     struct IntList const* list_ = milone_mem_alloc(1, sizeof(struct IntList));
     (*(((struct IntList*)list_))) = (struct IntList){.head = 1, .tail = NULL};
-    assertNotEmpty_(list_);
+    module_milone_core_module_milone_core_IntListUnitFun1_assertNotEmpty(list_);
     return 0;
 }

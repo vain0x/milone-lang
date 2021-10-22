@@ -2,7 +2,7 @@
 
 struct Val_;
 
-int f_(int );
+int modules_sub_IntIntFun1_f(int );
 
 int milone_main(void);
 
@@ -35,7 +35,7 @@ next_3:;
     exit(1);
 end_match_1:;
     int n_ = match_;
-    int call_ = f_(n_);
+    int call_ = modules_sub_IntIntFun1_f(n_);
     int m_ = call_;
     return m_;
 }

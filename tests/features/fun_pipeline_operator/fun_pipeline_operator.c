@@ -12,7 +12,7 @@ int fun_pipeline_operator_Program_sub(int x_2, int y_);
 
 bool fun_pipeline_operator_Program_between(int l_, int r_, int x_3);
 
-int len_(struct IntList const* xs_);
+int fun_pipeline_operator_fun_pipeline_operator_main_len(struct IntList const* xs_);
 
 int milone_main(void);
 
@@ -50,7 +50,7 @@ if_next_1:;
     return if_;
 }
 
-int len_(struct IntList const* xs_) {
+int fun_pipeline_operator_fun_pipeline_operator_main_len(struct IntList const* xs_) {
     int if_1;
     if ((!(xs_))) {
         goto nil_cl_5;
@@ -78,7 +78,7 @@ int milone_main(void) {
     milone_assert(call_4, 11, 2);
     struct IntList const* list_ = milone_mem_alloc(1, sizeof(struct IntList));
     (*(((struct IntList*)list_))) = (struct IntList){.head = 1, .tail = NULL};
-    int call_5 = len_(list_);
+    int call_5 = fun_pipeline_operator_fun_pipeline_operator_main_len(list_);
     milone_assert((call_5 != 0), 19, 2);
     return 0;
 }
