@@ -183,7 +183,7 @@ let private desugarIf cond body altOpt pos =
 /// Desugar to let expression.
 /// `fun x y .. -> z` ==> `let f x y .. = z in f`
 let private desugarFun parentFun pats body pos =
-  let name = (parentFun |> List.rev |> S.concat "_") + "_fun"
+  let name = "fun"
 
   let pat =
     AFunDeclPat(PrivateVis, Name(name, pos), pats)

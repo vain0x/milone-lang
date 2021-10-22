@@ -198,6 +198,7 @@ let private deriveOnExpr (hirCtx: HirCtx) (ctx: DCtx) expr : DCtx =
         Abi = MiloneAbi
         Linkage = InternalLinkage
         ParentOpt = None
+        Prefix = []
         Loc = loc }
 
     let lArg, ctx = addVar "l" ty loc ctx
@@ -286,6 +287,7 @@ let private deriveOnExpr (hirCtx: HirCtx) (ctx: DCtx) expr : DCtx =
         Abi = MiloneAbi
         Linkage = InternalLinkage
         ParentOpt = None
+        Prefix = []
         Loc = loc }
 
     let lArg, ctx = addVar "l" ty loc ctx
@@ -379,6 +381,7 @@ let private deriveOnExpr (hirCtx: HirCtx) (ctx: DCtx) expr : DCtx =
         Abi = MiloneAbi
         Linkage = InternalLinkage
         ParentOpt = None
+        Prefix = []
         Loc = loc }
 
     let lArg, ctx = addVar "l" ty loc ctx
@@ -435,6 +438,7 @@ let private deriveOnExpr (hirCtx: HirCtx) (ctx: DCtx) expr : DCtx =
         Abi = MiloneAbi
         Linkage = InternalLinkage
         ParentOpt = None
+        Prefix = []
         Loc = loc }
 
     let lArg, ctx = addVar "l" ty loc ctx

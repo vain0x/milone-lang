@@ -196,6 +196,7 @@ let private freshFun name arity (ty: Ty) loc (ctx: EtaCtx) =
       Abi = MiloneAbi
       Linkage = InternalLinkage
       ParentOpt = None
+      Prefix = [ "eta" + string arity ]
       Loc = loc }
 
   let ctx =
@@ -301,7 +302,7 @@ let private createUnderlyingFunDef name funTy arity envPat envTy forwardCall res
   let underlyingFunTy = tyFun tyObj funTy
 
   let _, funSerial, ctx =
-    freshFun (name + "_eta") (arity + 1) underlyingFunTy callLoc ctx
+    freshFun name (arity + 1) underlyingFunTy callLoc ctx
 
   let argPats = envArgPat :: restArgPats
 

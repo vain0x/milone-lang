@@ -240,7 +240,13 @@ type private MonoCtx =
     InstanceMap: TreeMap<MonoUse, FunSerial>
     WorkList: MonoUse list }
 
-let private generateMonomorphizedFun isMetaTy (genericFunDef: FunDef) (genericFunBody: FunBody) (monoTyArgs: Ty list) =
+let private generateMonomorphizedFun
+  isMetaTy
+  mangle
+  (genericFunDef: FunDef)
+  (genericFunBody: FunBody)
+  (monoTyArgs: Ty list)
+  =
   let assertNoMetaTy monoFunTy =
     if monoFunTy |> tyIsMonomorphic |> not then
       let (TyScheme (tyVars, genericFunTy)) = genericFunDef.Ty
@@ -261,6 +267,7 @@ let private generateMonomorphizedFun isMetaTy (genericFunDef: FunDef) (genericFu
     assertNoMetaTy monoFunTy
 
     { genericFunDef with
+        Prefix = mangle monoFunTy :: genericFunDef.Prefix
         Ty = TyScheme([], monoFunTy)
         Linkage = InternalLinkage // Generic function can't have stable linkage.
     }
@@ -291,7 +298,7 @@ let private generateMonomorphizedFun isMetaTy (genericFunDef: FunDef) (genericFu
 
   monoFunDef, monoFunBody
 
-let private generate isMetaTy (rx: CollectRx) genericFunBodyMap (ctx: MonoCtx) (entry: MonoUse) : MonoCtx =
+let private generate isMetaTy mangle (rx: CollectRx) genericFunBodyMap (ctx: MonoCtx) (entry: MonoUse) : MonoCtx =
   let funSerial, monoTyArgs = entry
 
   match ctx.InstanceMap |> TMap.tryFind entry with
@@ -302,7 +309,7 @@ let private generate isMetaTy (rx: CollectRx) genericFunBodyMap (ctx: MonoCtx) (
 
     let monoFunDef, monoFunBody =
       let _, genericFunBody = genericFunBodyMap |> mapFind funSerial
-      generateMonomorphizedFun isMetaTy genericFunDef genericFunBody monoTyArgs
+      generateMonomorphizedFun isMetaTy mangle genericFunDef genericFunBody monoTyArgs
 
     let workList =
       let (FunBody (_, body)) = monoFunBody
@@ -335,6 +342,20 @@ let monify (modules: HProgram, hirCtx: HirCtx) : HProgram * HirCtx =
     let loc = locToString funDef.Loc
 
     funDef.Name + " #" + serial + " " + loc
+
+  // #tyNames
+  let tyNames =
+    hirCtx.Tys
+    |> TMap.fold
+         (fun tyNames tySerial tyDef ->
+           let tk, name =
+             match tyDef with
+             | UnionTyDef (ident, _, _, _) -> UnionTk tySerial, ident
+             | RecordTyDef (ident, _, _, _) -> RecordTk tySerial, ident
+             | MetaTyDef _ -> unreachable () // Resolved in Typing.
+
+           tyNames |> TMap.add (Ty(tk, [])) name)
+         (TMap.empty tyCompare)
 
   // Analyze initially.
   let initialWorkList, genericFunBodyMap =
@@ -383,7 +404,11 @@ let monify (modules: HProgram, hirCtx: HirCtx) : HProgram * HirCtx =
         { CurrentModuleId = -1
           Funs = hirCtx.Funs }
 
-      go workList (generate isMetaTy collectRx genericFunBodyMap ctx item)
+      let mangle ty =
+        // FIXME: keep memoization state of mangle
+        tyMangle (ty, tyNames) |> fst
+
+      go workList (generate isMetaTy mangle collectRx genericFunBodyMap ctx item)
 
   let ctx =
     let ctx: MonoCtx =

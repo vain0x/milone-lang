@@ -83,6 +83,7 @@ type private MtCtx =
     NewVariants: (VariantSerial * M.VariantDef) list }
 
 let private ofHirCtx (hirCtx: HirCtx) : MtCtx =
+  // #tyNames
   let tyNames =
     hirCtx.Tys
     |> TMap.fold
@@ -409,6 +410,7 @@ let private mtDefs (hirCtx: HirCtx) (mtCtx: MtCtx) =
                  Abi = funDef.Abi
                  Linkage = funDef.Linkage
                  ParentOpt = funDef.ParentOpt
+                 Prefix = funDef.Prefix
                  Loc = funDef.Loc }
 
              let funs = funs |> TMap.add funSerial funDef
@@ -551,6 +553,7 @@ let private bthFunDef (funDef: M.FunDef) : FunDef =
     Abi = funDef.Abi
     Linkage = funDef.Linkage
     ParentOpt = funDef.ParentOpt
+    Prefix = funDef.Prefix
     Loc = funDef.Loc }
 
 let private bthVariantDef (variantDef: M.VariantDef) : VariantDef =
