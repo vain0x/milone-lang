@@ -44,7 +44,7 @@ target/LibNurseryTests/.timestamp: \
 	$(wildcard LibNursery/*.milone) \
 	$(wildcard LibNurseryTests/*.milone)
 	(cd LibNurseryTests; ./run) && \
-		mkdir -p $(dirname $@) && \
+		mkdir -p $(shell dirname $@) && \
 		touch $@
 
 test_lib_nursery: target/LibNurseryTests/.timestamp

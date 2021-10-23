@@ -1,11 +1,11 @@
 /// Command line arguments parser.
 module rec LibNursery.Clap
 
-module S = MiloneStd.StdString
-module TMap = MiloneStd.StdMap
-module TSet = MiloneStd.StdSet
-
+open MiloneStd.StdMap
+open MiloneStd.StdSet
 open LibNursery.ClapCore
+
+module S = MiloneStd.StdString
 
 type private Kind =
   | Flag
@@ -62,7 +62,7 @@ let parseOpts (def: string list) (args: string list) : Opts =
            defMap, missed)
          (TMap.empty compare, TSet.empty compare)
 
-  let hasParam name (_: Opts, _: TSet.TreeSet<string>, _: string list) =
+  let hasParam name (_: Opts, _: TreeSet<string>, _: string list) =
     match defMap |> TMap.tryFind (nameToString name) with
     | Some Optional
     | Some Required -> true

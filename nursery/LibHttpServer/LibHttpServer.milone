@@ -5,15 +5,16 @@
 // WARN: Don't expose to Internet.
 module rec LibHttpServer.Program
 
+open MiloneStd.StdMap
+
 module I = MiloneStd.StdInt
 module C = MiloneStd.StdChar
 module S = MiloneStd.StdString
 module StdEnv = MiloneStd.StdEnv
-module TMap = MiloneStd.StdMap
 
 module ExtString = LibNursery.ExtString
 
-type private Map<'K, 'V> = MiloneStd.StdMap.TreeMap<'K, 'V>
+type private Map<'K, 'V> = TreeMap<'K, 'V>
 
 __nativeDecl
   """

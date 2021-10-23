@@ -4,12 +4,6 @@ open LibNursery.EphArray
 open LibNursery.EphRef
 open LibNursery.EphSerial
 open LibNursery.Impure
-open LibNurseryTests.ClapTests
-open LibNurseryTests.ExtIterTests
-open LibNurseryTests.ExtStringTests
-open LibNurseryTests.EphArrayTests
-open LibNurseryTests.EphRefTests
-open LibNurseryTests.EphSerialTests
 
 module S = MiloneStd.StdString
 

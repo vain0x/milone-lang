@@ -1,7 +1,8 @@
 module rec LibNurseryTests.ExtIterTests
 
-module S = MiloneStd.StdString
 open LibNursery.ExtIter
+
+module S = MiloneStd.StdString
 
 let private bang () = exit 1
 
