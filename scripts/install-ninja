@@ -13,8 +13,5 @@ then
     exit
 fi
 
-(
-    cd bin
-    busybox wget -q "$URL" -O - | busybox unzip -q -
-    chmod +x ninja
-)
+dotnet fsi scripts/DownloadZip.fsx "$URL" -o bin
+chmod +x bin/ninja

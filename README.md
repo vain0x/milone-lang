@@ -40,8 +40,6 @@ Prerequisites:
 - Install [.NET SDK 5](https://dotnet.microsoft.com/download/dotnet/5.0)
 - Install GNU make
 - Install GCC 7.5.0
-- Install `busybox`, which is likely pre-installed, by:
-    `apt install -y busybox-static`
 
 Do:
 
