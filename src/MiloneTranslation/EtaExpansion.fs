@@ -519,9 +519,7 @@ let private exLetFunExpr callee argPats body next ty loc (ctx: EtaCtx) =
     let name = (ctx.Funs |> mapFind callee).Name
 
     let parent, ctx =
-      ctx.ParentFun,
-      { ctx with
-          ParentFun = name :: ctx.ParentFun }
+      ctx.ParentFun, { ctx with ParentFun = name :: ctx.ParentFun }
 
     let body, ctx = (body, ctx) |> exExpr
     let ctx = { ctx with ParentFun = parent }
@@ -548,11 +546,10 @@ let private exExpr (expr, ctx) =
 
     let arms, ctx =
       (arms, ctx)
-      |> stMap
-           (fun ((pat, guard, body), ctx) ->
-             let guard, ctx = (guard, ctx) |> exExpr
-             let body, ctx = (body, ctx) |> exExpr
-             (pat, guard, body), ctx)
+      |> stMap (fun ((pat, guard, body), ctx) ->
+        let guard, ctx = (guard, ctx) |> exExpr
+        let body, ctx = (body, ctx) |> exExpr
+        (pat, guard, body), ctx)
 
     HMatchExpr(cond, arms, ty, loc), ctx
 

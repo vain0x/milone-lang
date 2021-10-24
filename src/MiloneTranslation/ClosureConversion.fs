@@ -115,16 +115,13 @@ let private knownCtxLeaveFunDecl (baseCtx: KnownCtx) (ctx: KnownCtx) =
       Locals = baseCtx.Locals }
 
 let private knownCtxAddLocal serial (ctx: KnownCtx) =
-  { ctx with
-      Locals = ctx.Locals |> TSet.add serial }
+  { ctx with Locals = ctx.Locals |> TSet.add serial }
 
 let private knownCtxUseVar serial (ctx: KnownCtx) =
-  { ctx with
-      UseVars = ctx.UseVars |> TSet.add serial }
+  { ctx with UseVars = ctx.UseVars |> TSet.add serial }
 
 let private knownCtxUseFun funSerial (ctx: KnownCtx) =
-  { ctx with
-      UseFuns = ctx.UseFuns |> TSet.add funSerial }
+  { ctx with UseFuns = ctx.UseFuns |> TSet.add funSerial }
 
 let private knownCtxToNonlocalVars (ctx: KnownCtx) : TreeSet<VarSerial> =
   ctx.UseVars
@@ -202,8 +199,7 @@ let private ofHirCtx (hirCtx: HirCtx) : CcCtx =
 let private toHirCtx (hirCtx: HirCtx) (ctx: CcCtx) = { hirCtx with Funs = ctx.Funs }
 
 let private addLocal varSerial (ctx: CcCtx) =
-  { ctx with
-      Current = ctx.Current |> knownCtxAddLocal varSerial }
+  { ctx with Current = ctx.Current |> knownCtxAddLocal varSerial }
 
 let private isStaticVar varSerial (ctx: CcCtx) =
   ctx.StaticVars |> TMap.containsKey varSerial
@@ -213,12 +209,10 @@ let private useVar varSerial (ctx: CcCtx) =
     // Don't count static vars as used.
     ctx
   else
-    { ctx with
-        Current = ctx.Current |> knownCtxUseVar varSerial }
+    { ctx with Current = ctx.Current |> knownCtxUseVar varSerial }
 
 let private useFun funSerial (ctx: CcCtx) =
-  { ctx with
-      Current = ctx.Current |> knownCtxUseFun funSerial }
+  { ctx with Current = ctx.Current |> knownCtxUseFun funSerial }
 
 /// Called on leave function declaration to store the current known context.
 let private saveKnownCtxToFun funSerial (ctx: CcCtx) =
@@ -228,12 +222,10 @@ let private saveKnownCtxToFun funSerial (ctx: CcCtx) =
   if funKnowns |> TMap.containsKey funSerial then
     ctx
   else
-    { ctx with
-        FunKnowns = funKnowns |> TMap.add funSerial ctx.Current }
+    { ctx with FunKnowns = funKnowns |> TMap.add funSerial ctx.Current }
 
 let private enterFunDecl (ctx: CcCtx) =
-  { ctx with
-      Current = ctx.Current |> knownCtxEnterFunDecl }
+  { ctx with Current = ctx.Current |> knownCtxEnterFunDecl }
 
 let private leaveFunDecl funSerial (baseCtx: CcCtx) (ctx: CcCtx) =
   let ctx = ctx |> saveKnownCtxToFun funSerial
@@ -251,13 +243,12 @@ let private genFunCaps funSerial (ctx: CcCtx) : Caps =
     | None -> []
 
   varSerials
-  |> List.choose
-       (fun varSerial ->
-         if isStaticVar varSerial ctx |> not then
-           let varDef = ctx.Vars |> mapFind varSerial
-           Some(varSerial, varDef.Ty, varDef.Loc)
-         else
-           None)
+  |> List.choose (fun varSerial ->
+    if isStaticVar varSerial ctx |> not then
+      let varDef = ctx.Vars |> mapFind varSerial
+      Some(varSerial, varDef.Ty, varDef.Loc)
+    else
+      None)
 
 let private closureRefs (ctx: CcCtx) : CcCtx =
   let mergeUpvars localVars newUpvars (modified, upvars) : bool * TreeSet<VarSerial> =
@@ -305,9 +296,8 @@ let private closureRefs (ctx: CcCtx) : CcCtx =
 
   let funUpvars =
     ctx.FunKnowns
-    |> TMap.map
-         (fun (_: FunSerial) (knownCtx: KnownCtx) ->
-           knownCtxToNonlocalVars knownCtx, knownCtx.Locals, TSet.toList knownCtx.UseFuns)
+    |> TMap.map (fun (_: FunSerial) (knownCtx: KnownCtx) ->
+      knownCtxToNonlocalVars knownCtx, knownCtx.Locals, TSet.toList knownCtx.UseFuns)
     |> makeTransitive
     |> TMap.map (fun (_: FunSerial) (upvars: TreeSet<VarSerial>, _: TreeSet<VarSerial>, _: FunSerial list) -> upvars)
 

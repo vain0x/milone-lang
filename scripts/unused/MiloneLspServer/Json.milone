@@ -10,7 +10,7 @@ type JsonValue =
   | JArray of items: JsonValue list
   | JObject of entries: (string * JsonValue) list
 
-let jsonToString (value: JsonValue): string =
+let jsonToString (value: JsonValue) : string =
   match value with
   | JNull -> "null"
   | JString value -> "\"" + value + "\""
@@ -19,11 +19,13 @@ let jsonToString (value: JsonValue): string =
   | JBoolean false -> "false"
 
   | JArray items ->
-      "[" + (List.map jsonToString items |> S.concat ", ") + "]"
+    "["
+    + (List.map jsonToString items |> S.concat ", ")
+    + "]"
 
   | JObject entries ->
-      "{"
-      + (entries
-        |> List.map (fun (key, value) -> "\"" + key + "\": " + jsonToString value)
-        |> S.concat ", ")
-      + "}"
+    "{"
+    + (entries
+       |> List.map (fun (key, value) -> "\"" + key + "\": " + jsonToString value)
+       |> S.concat ", ")
+    + "}"

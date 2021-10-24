@@ -18,8 +18,8 @@ let private restoreCalleeTy args ty =
   | [] -> ty
 
   | arg :: args ->
-      let argTy = mexprToTy arg
-      restoreCalleeTy args (tyFun argTy ty)
+    let argTy = mexprToTy arg
+    restoreCalleeTy args (tyFun argTy ty)
 
 // -----------------------------------------------
 // KirToMirCtx
@@ -108,14 +108,12 @@ let private collectStmts (processBody: _ -> KirToMirCtx) (ctx: KirToMirCtx) =
 let private addLabelWith label loc processBody ctx =
   let stmts, ctx =
     ctx
-    |> collectStmts
-         (fun ctx ->
-           ctx
-           |> addStmt (MLabelStmt(label, loc))
-           |> processBody)
+    |> collectStmts (fun ctx ->
+      ctx
+      |> addStmt (MLabelStmt(label, loc))
+      |> processBody)
 
-  { ctx with
-      Labels = stmts :: ctx.Labels }
+  { ctx with Labels = stmts :: ctx.Labels }
 
 // -----------------------------------------------
 // Emission helpers
@@ -186,28 +184,28 @@ let private kmPrimMod itself args results conts loc ctx =
 let private kmPrimEqual itself args results conts loc ctx =
   match args, results, conts with
   | [ l; r ], [], [ thenCl; elseCl ] ->
-      let equalExpr =
-        MBinaryExpr(MEqualBinary, kmTerm l, kmTerm r, tyBool, loc)
+    let equalExpr =
+      MBinaryExpr(MEqualBinary, kmTerm l, kmTerm r, tyBool, loc)
 
-      let thenCl, ctx = ctx |> collectStmts (kmNode thenCl)
-      let elseCl, ctx = ctx |> collectStmts (kmNode elseCl)
+    let thenCl, ctx = ctx |> collectStmts (kmNode thenCl)
+    let elseCl, ctx = ctx |> collectStmts (kmNode elseCl)
 
-      ctx
-      |> addStmt (MIfStmt(equalExpr, thenCl, elseCl, loc))
+    ctx
+    |> addStmt (MIfStmt(equalExpr, thenCl, elseCl, loc))
 
   | _ -> unreachable itself
 
 let private kmPrimLess itself args results conts loc ctx =
   match args, results, conts with
   | [ l; r ], [], [ thenCl; elseCl ] ->
-      let equalExpr =
-        MBinaryExpr(MLessBinary, kmTerm l, kmTerm r, tyBool, loc)
+    let equalExpr =
+      MBinaryExpr(MLessBinary, kmTerm l, kmTerm r, tyBool, loc)
 
-      let thenCl, ctx = ctx |> collectStmts (kmNode thenCl)
-      let elseCl, ctx = ctx |> collectStmts (kmNode elseCl)
+    let thenCl, ctx = ctx |> collectStmts (kmNode thenCl)
+    let elseCl, ctx = ctx |> collectStmts (kmNode elseCl)
 
-      ctx
-      |> addStmt (MIfStmt(equalExpr, thenCl, elseCl, loc))
+    ctx
+    |> addStmt (MIfStmt(equalExpr, thenCl, elseCl, loc))
 
   | _ -> unreachable itself
 
@@ -219,26 +217,26 @@ let private kmPrimNot itself args results conts loc ctx =
 let private kmPrimStrIndex itself args results conts loc ctx =
   match args, results, conts with
   | [ l; r ], [ result ], [ cont ] ->
-      // TODO: support l: nativeptr or __constptr
+    // TODO: support l: nativeptr or __constptr
 
-      ctx
-      |> setBinaryK MStrIndexBinary l r result cont loc
+    ctx
+    |> setBinaryK MStrIndexBinary l r result cont loc
 
   | _ -> unreachable itself
 
 let private kmPrimStrAdd itself args results conts loc ctx =
   match args, results, conts with
   | [ l; r ], [ result ], [ cont ] ->
-      ctx
-      |> setBinaryK MStrAddBinary l r result cont loc
+    ctx
+    |> setBinaryK MStrAddBinary l r result cont loc
 
   | _ -> unreachable itself
 
 let private kmPrimStrCompare itself args results conts loc ctx =
   match args, results, conts with
   | [ l; r ], [ result ], [ cont ] ->
-      ctx
-      |> setBinaryK MStrCmpBinary l r result cont loc
+    ctx
+    |> setBinaryK MStrCmpBinary l r result cont loc
 
   | _ -> unreachable itself
 
@@ -250,63 +248,63 @@ let private kmPrimStrLength itself args results conts loc ctx =
 let private kmPrimCons itself args results conts loc ctx =
   match args, results, conts with
   | [ l; r ], [ result ], [ cont ] ->
-      let l = kmTerm l
-      let r = kmTerm r
+    let l = kmTerm l
+    let r = kmTerm r
 
-      let listTy = mexprToTy r
+    let listTy = mexprToTy r
 
-      ctx
-      |> addStmt (MLetValStmt(result, MConsInit(l, r), listTy, loc))
-      |> kmNode cont
+    ctx
+    |> addStmt (MLetValStmt(result, MConsInit(l, r), listTy, loc))
+    |> kmNode cont
 
   | _ -> unreachable itself
 
 let private kmPrimSome itself args results conts loc ctx =
   match args, results, conts with
   | [ item ], [ result ], [ cont ] ->
-      let item = kmTerm item
+    let item = kmTerm item
 
-      let itemTy = mexprToTy item
-      let listTy = tyList itemTy
-      let nil = MDefaultExpr(itemTy, loc)
+    let itemTy = mexprToTy item
+    let listTy = tyList itemTy
+    let nil = MDefaultExpr(itemTy, loc)
 
-      ctx
-      |> addStmt (MLetValStmt(result, MConsInit(item, nil), listTy, loc))
-      |> kmNode cont
+    ctx
+    |> addStmt (MLetValStmt(result, MConsInit(item, nil), listTy, loc))
+    |> kmNode cont
 
   | _ -> unreachable itself
 
 let private kmPrimTuple itself args results conts loc ctx =
   match args, results, conts with
   | args, [ result ], [ cont ] ->
-      let items = args |> List.map kmTerm
-      let itemTys = items |> List.map mexprToTy
-      let tupleTy = tyTuple itemTys
+    let items = args |> List.map kmTerm
+    let itemTys = items |> List.map mexprToTy
+    let tupleTy = tyTuple itemTys
 
-      ctx
-      |> addStmt (MLetValStmt(result, MTupleInit items, tupleTy, loc))
-      |> kmNode cont
+    ctx
+    |> addStmt (MLetValStmt(result, MTupleInit items, tupleTy, loc))
+    |> kmNode cont
 
   | _ -> unreachable itself
 
 let private kmPrimVariant itself args results conts loc ctx =
   match args, results, conts with
   | [ KVariantTerm (variantSerial, _, _); payload ], [ result ], [ cont ] ->
-      let payload = kmTerm payload
-      let resultTy = ctx |> findVarTy result
+    let payload = kmTerm payload
+    let resultTy = ctx |> findVarTy result
 
-      ctx
-      |> addStmt (MLetValStmt(result, MVariantInit(variantSerial, payload), resultTy, loc))
-      |> kmNode cont
+    ctx
+    |> addStmt (MLetValStmt(result, MVariantInit(variantSerial, payload), resultTy, loc))
+    |> kmNode cont
 
   | _ -> unreachable itself
 
 let private kmPrimClosure itself args results conts loc ctx =
   match args, results, conts with
   | [ KFunTerm (funSerial, AppTy (FunTyCtor, [ _; closureTy ]), _); KVarTerm (envSerial, _, _) ], [ result ], [ cont ] ->
-      ctx
-      |> addStmt (MLetValStmt(result, MClosureInit(funSerial, envSerial), closureTy, loc))
-      |> kmNode cont
+    ctx
+    |> addStmt (MLetValStmt(result, MClosureInit(funSerial, envSerial), closureTy, loc))
+    |> kmNode cont
 
   | _ -> unreachable itself
 
@@ -315,12 +313,12 @@ let private kmPrimCallProc itself args results conts loc ctx =
 
   match args, results, conts with
   | callee :: args, [ result ], [ cont ] ->
-      let calleeTy = mexprToTy callee
-      let resultTy = findVarTy result ctx
+    let calleeTy = mexprToTy callee
+    let resultTy = findVarTy result ctx
 
-      ctx
-      |> addStmt (MLetValStmt(result, MCallProcInit(callee, args, calleeTy), resultTy, loc))
-      |> kmNode cont
+    ctx
+    |> addStmt (MLetValStmt(result, MCallProcInit(callee, args, calleeTy), resultTy, loc))
+    |> kmNode cont
 
   | _ -> unreachable itself
 
@@ -329,22 +327,22 @@ let private kmPrimCallClosure itself args results conts loc ctx =
 
   match args, results, conts with
   | callee :: args, [ result ], [ cont ] ->
-      let resultTy = findVarTy result ctx
+    let resultTy = findVarTy result ctx
 
-      ctx
-      |> addStmt (MLetValStmt(result, MCallClosureInit(callee, args), resultTy, loc))
-      |> kmNode cont
+    ctx
+    |> addStmt (MLetValStmt(result, MCallClosureInit(callee, args), resultTy, loc))
+    |> kmNode cont
 
   | _ -> unreachable itself
 
 let private kmPrimBox itself args results conts loc ctx =
   match args, results, conts with
   | [ arg ], [ result ], [ cont ] ->
-      let arg = kmTerm arg
+    let arg = kmTerm arg
 
-      ctx
-      |> addStmt (MLetValStmt(result, MBoxInit arg, tyObj, loc))
-      |> kmNode cont
+    ctx
+    |> addStmt (MLetValStmt(result, MBoxInit arg, tyObj, loc))
+    |> kmNode cont
 
   | _ -> unreachable itself
 
@@ -356,8 +354,8 @@ let private kmPrimUnbox itself args results conts loc ctx =
 let private kmPrimExit itself args results conts loc ctx =
   match args, results, conts with
   | [ arg ], [], [] ->
-      let arg = arg |> kmTerm
-      ctx |> addStmt (MExitStmt(arg, loc))
+    let arg = arg |> kmTerm
+    ctx |> addStmt (MExitStmt(arg, loc))
 
   | _ -> unreachable itself
 
@@ -366,14 +364,14 @@ let private kmPrimExit itself args results conts loc ctx =
 let private kmPrimOther itself prim args results conts loc ctx =
   match results, conts with
   | [ result ], [ cont ] ->
-      let args = args |> List.map kmTerm
+    let args = args |> List.map kmTerm
 
-      let resultTy = findVarTy result ctx
-      let primTy = restoreCalleeTy args resultTy
+    let resultTy = findVarTy result ctx
+    let primTy = restoreCalleeTy args resultTy
 
-      ctx
-      |> addStmt (MLetValStmt(result, MCallPrimInit(prim, args, primTy), resultTy, loc))
-      |> kmNode cont
+    ctx
+    |> addStmt (MLetValStmt(result, MCallPrimInit(prim, args, primTy), resultTy, loc))
+    |> kmNode cont
 
   | _ -> unreachable itself
 
@@ -438,110 +436,110 @@ let private kmTerm (term: KTerm) : MExpr =
 let private kmNode (node: KNode) ctx : KirToMirCtx =
   match node with
   | KJumpNode (jointSerial, args, loc) ->
-      let label, argSerials =
-        match ctx.JointMap |> mapTryFind jointSerial with
-        | Some it -> it
-        | None -> failwithf "NEVER: %A" node
+    let label, argSerials =
+      match ctx.JointMap |> mapTryFind jointSerial with
+      | Some it -> it
+      | None -> failwithf "NEVER: %A" node
 
-      let rec go argSerials args ctx =
-        match argSerials, args with
-        | [], [] -> ctx
+    let rec go argSerials args ctx =
+      match argSerials, args with
+      | [], [] -> ctx
 
-        | varSerial :: argSerials, arg :: args ->
-            ctx
-            |> addStmt (MSetStmt(varSerial, kmTerm arg, loc))
-            |> go argSerials args
+      | varSerial :: argSerials, arg :: args ->
+        ctx
+        |> addStmt (MSetStmt(varSerial, kmTerm arg, loc))
+        |> go argSerials args
 
-        | _ -> failwithf "NEVER: bad arity. %A" node
+      | _ -> failwithf "NEVER: bad arity. %A" node
 
-      ctx
-      |> go argSerials args
-      |> addStmt (MGotoStmt(label, loc))
+    ctx
+    |> go argSerials args
+    |> addStmt (MGotoStmt(label, loc))
 
   | KReturnNode (_funSerial, args, loc) ->
-      let arg =
-        match args with
-        | [] -> MDefaultExpr(tyUnit, loc)
-        | [ arg ] -> kmTerm arg
-        | _ -> unreachable node
+    let arg =
+      match args with
+      | [] -> MDefaultExpr(tyUnit, loc)
+      | [ arg ] -> kmTerm arg
+      | _ -> unreachable node
 
-      ctx |> addStmt (MReturnStmt(arg, loc))
+    ctx |> addStmt (MReturnStmt(arg, loc))
 
   | KSelectNode (term, path, result, cont, loc) ->
-      let term = kmTerm term
-      let resultTy () = findVarTy result ctx
+    let term = kmTerm term
+    let resultTy () = findVarTy result ctx
 
-      let doUnary unary ctx =
-        let expr =
-          MUnaryExpr(unary, term, resultTy (), loc)
+    let doUnary unary ctx =
+      let expr =
+        MUnaryExpr(unary, term, resultTy (), loc)
 
+      ctx
+      |> addStmt (MLetValStmt(result, MExprInit(expr), resultTy (), loc))
+
+    let ctx =
+      match path with
+      | KSelfPath ->
         ctx
-        |> addStmt (MLetValStmt(result, MExprInit(expr), resultTy (), loc))
+        |> addStmt (MLetValStmt(result, MExprInit(term), resultTy (), loc))
 
-      let ctx =
-        match path with
-        | KSelfPath ->
-            ctx
-            |> addStmt (MLetValStmt(result, MExprInit(term), resultTy (), loc))
+      | KHeadPath _ -> doUnary MListHeadUnary ctx
+      | KTailPath _ -> doUnary MListTailUnary ctx
+      | KFieldPath (i, _) -> doUnary (MProjUnary i) ctx
+      | KDiscriminantPath _ -> doUnary MGetDiscriminantUnary ctx
+      | KPayloadPath (variantSerial, _) -> doUnary (MGetVariantUnary variantSerial) ctx
 
-        | KHeadPath _ -> doUnary MListHeadUnary ctx
-        | KTailPath _ -> doUnary MListTailUnary ctx
-        | KFieldPath (i, _) -> doUnary (MProjUnary i) ctx
-        | KDiscriminantPath _ -> doUnary MGetDiscriminantUnary ctx
-        | KPayloadPath (variantSerial, _) -> doUnary (MGetVariantUnary variantSerial) ctx
-
-      kmNode cont ctx
+    kmNode cont ctx
 
   | KPrimNode (prim, args, results, conts, loc) -> kmPrimNode node prim args results conts loc ctx
 
   | KJointNode (joints, cont, jointLoc) ->
-      let folder (jointMap, labelCount, ctx) joint =
-        let (KJointBinding (jointSerial, args, _, _)) = joint
-        let labelCount = labelCount + 1
-        let label = "L" + string labelCount
+    let folder (jointMap, labelCount, ctx) joint =
+      let (KJointBinding (jointSerial, args, _, _)) = joint
+      let labelCount = labelCount + 1
+      let label = "L" + string labelCount
 
-        let jointMap =
-          jointMap |> mapAdd jointSerial (label, args)
+      let jointMap =
+        jointMap |> mapAdd jointSerial (label, args)
 
-        // Declaration of args as local vars.
-        let ctx =
-          args
-          |> List.fold
-               (fun ctx arg ->
-                 let argTy = ctx |> findVarTy arg
-
-                 ctx
-                 |> addStmt (MLetValStmt(arg, MUninitInit, argTy, jointLoc)))
-               ctx
-
-        jointMap, labelCount, ctx
-
+      // Declaration of args as local vars.
       let ctx =
-        let jointMap = ctx.JointMap
-        let labelCount = ctx.LabelCount
-
-        let jointMap, labelCount, ctx =
-          joints
-          |> List.fold folder (jointMap, labelCount, ctx)
-
-        { ctx with
-            JointMap = jointMap
-            LabelCount = labelCount }
-
-      let ctx = ctx |> kmNode cont
-
-      let ctx =
-        joints
+        args
         |> List.fold
-             (fun (ctx: KirToMirCtx) joint ->
-               let (KJointBinding (jointSerial, _, body, loc)) = joint
+             (fun ctx arg ->
+               let argTy = ctx |> findVarTy arg
 
-               let label, _ = ctx.JointMap |> mapFind jointSerial
-
-               ctx |> addLabelWith label loc (kmNode body))
+               ctx
+               |> addStmt (MLetValStmt(arg, MUninitInit, argTy, jointLoc)))
              ctx
 
-      ctx
+      jointMap, labelCount, ctx
+
+    let ctx =
+      let jointMap = ctx.JointMap
+      let labelCount = ctx.LabelCount
+
+      let jointMap, labelCount, ctx =
+        joints
+        |> List.fold folder (jointMap, labelCount, ctx)
+
+      { ctx with
+          JointMap = jointMap
+          LabelCount = labelCount }
+
+    let ctx = ctx |> kmNode cont
+
+    let ctx =
+      joints
+      |> List.fold
+           (fun (ctx: KirToMirCtx) joint ->
+             let (KJointBinding (jointSerial, _, body, loc)) = joint
+
+             let label, _ = ctx.JointMap |> mapFind jointSerial
+
+             ctx |> addLabelWith label loc (kmNode body))
+           ctx
+
+    ctx
 
 let private kmFunBinding binding (ctx: KirToMirCtx) =
   let genFunBody (processBody: _ -> KirToMirCtx) (ctx: KirToMirCtx) =
@@ -577,8 +575,8 @@ let private kmFunBinding binding (ctx: KirToMirCtx) =
     let rec go args funTy =
       match args, funTy with
       | arg :: args, AppTy (FunTyCtor, [ sTy; tTy ]) ->
-          let args, resultTy = go args tTy
-          (arg, sTy, loc) :: args, resultTy
+        let args, resultTy = go args tTy
+        (arg, sTy, loc) :: args, resultTy
 
       | [], resultTy -> [], resultTy
 

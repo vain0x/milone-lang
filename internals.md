@@ -119,3 +119,5 @@ find -type f \
 find -type f -name '*.milone' | \
     xargs -I{} -P4 sh -c 'cp -f {} {}_.fs; dotnet fantomas {}_.fs; if test $? -eq 0; then cat {}_.fs >{}; fi; rm -f {}_.fs'
 ```
+
+- See also [F# code formatting guidelines | Microsoft Docs](https://docs.microsoft.com/en-us/dotnet/fsharp/style-guide/formatting#formatting-expressions).

@@ -120,16 +120,15 @@ let private testCopyTo (ss: EphSerial) : EphSerial =
   ss
 
 let testEphArrayModule () =
-  EphSerial.run
-    (fun (ss: EphSerial) ->
-      let ss : EphSerial =
-        ss
-        |> testEmpty
-        |> testInit
-        |> testReplicate
-        |> testSetItem
-        |> testOfList
-        |> testToList
-        |> testCopyTo
+  EphSerial.run (fun (ss: EphSerial) ->
+    let ss: EphSerial =
+      ss
+      |> testEmpty
+      |> testInit
+      |> testReplicate
+      |> testSetItem
+      |> testOfList
+      |> testToList
+      |> testCopyTo
 
-      (), ss)
+    (), ss)

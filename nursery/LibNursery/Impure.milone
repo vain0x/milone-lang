@@ -15,12 +15,11 @@ module Impure =
   // Note that the programming pattern using Impure type keeps the program pure,
   // `exec` itself still makes the language impure.
   let exec (action: Impure<int>) : _ =
-    EphSerial.run
-      (fun serial ->
-        let exitCode, serial = action serial
-        let ok, _ = EphSerial.alive serial
-        assert ok
-        exit exitCode)
+    EphSerial.run (fun serial ->
+      let exitCode, serial = action serial
+      let ok, _ = EphSerial.alive serial
+      assert ok
+      exit exitCode)
 
   /// Creates an impure action that doesn't do anything
   /// but returns the specified value.

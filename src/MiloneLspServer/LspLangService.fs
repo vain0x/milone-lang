@@ -280,7 +280,8 @@ let private langServiceCache = MutMap<string, LangServiceState>()
 
 let newLangServiceWithCache (project: ProjectInfo) =
   match langServiceCache
-        |> MutMap.tryFind project.ProjectName with
+        |> MutMap.tryFind project.ProjectName
+    with
   | Some it -> it
 
   | None ->
@@ -358,12 +359,11 @@ let private doValidateWorkspace projects =
   diagnosticKeys
   |> ResizeArray.assign (
     diagnostics
-    |> List.choose
-         (fun (uri, errors) ->
-           if errors |> List.isEmpty |> not then
-             Some uri
-           else
-             None)
+    |> List.choose (fun (uri, errors) ->
+      if errors |> List.isEmpty |> not then
+        Some uri
+      else
+        None)
   )
 
   diagnosticsCache

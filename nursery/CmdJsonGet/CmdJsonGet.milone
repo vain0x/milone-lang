@@ -85,18 +85,16 @@ let main _ =
            | _, JArray items ->
              items
              |> List.tryItem (int key)
-             |> Option.defaultWith
-                  (fun () ->
-                    // printfn "// %s missing" key
-                    JNull)
+             |> Option.defaultWith (fun () ->
+               // printfn "// %s missing" key
+               JNull)
 
            | _, JObject entries ->
              entries
              |> List.tryPick (fun (k, value) -> if k = key then Some value else None)
-             |> Option.defaultWith
-                  (fun () ->
-                    // printfn "// %s missing" key
-                    JNull)
+             |> Option.defaultWith (fun () ->
+               // printfn "// %s missing" key
+               JNull)
 
            | _ -> JNull)
          root

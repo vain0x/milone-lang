@@ -847,17 +847,27 @@ let private parseExpr basePos (tokens, errors) : PR<AExpr> = parseAscribe basePo
 // Parse block expressions
 // -----------------------------------------------
 
-let private parseParenBody _basePos parenPos (tokens, errors) : PR<AExpr> =
-  let stmts, tokens, errors = parseItems (tokens, errors)
+let private parseParenBody basePos parenPos (tokens, errors) : PR<AExpr> =
+  match tokens with
+  | (FunToken, funPos) :: tokens ->
+    // HACK: Specialize for `(fun ... -> ...)` so that `(` doesn't form a block.
+    let body, tokens, errors =
+      parseFun basePos funPos (tokens, errors)
 
-  let body, tokens, errors =
-    match splitLast stmts with
-    | Some ([], expr) -> expr, tokens, errors
-    | Some (stmts, last) -> ASemiExpr(stmts, last, parenPos), tokens, errors
-    | None -> parseExprError "Expected an expression" (tokens, errors)
+    let tokens, errors = (tokens, errors) |> expectRightParen
+    body, tokens, errors
 
-  let tokens, errors = (tokens, errors) |> expectRightParen
-  body, tokens, errors
+  | _ ->
+    let stmts, tokens, errors = parseItems (tokens, errors)
+
+    let body, tokens, errors =
+      match splitLast stmts with
+      | Some ([], expr) -> expr, tokens, errors
+      | Some (stmts, last) -> ASemiExpr(stmts, last, parenPos), tokens, errors
+      | None -> parseExprError "Expected an expression" (tokens, errors)
+
+    let tokens, errors = (tokens, errors) |> expectRightParen
+    body, tokens, errors
 
 let private parseList _basePos bracketPos (tokens, errors) : PR<AExpr> =
   let items, tokens, errors = parseItems (tokens, errors)

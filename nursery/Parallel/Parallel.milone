@@ -18,14 +18,13 @@ let main _ =
   let ptr: nativeptr<int> =
     __nativeFun ("milone_parallel_for_int", s, t, f)
 
-  EphSerial.run
-    (fun serial ->
-      let array, serial =
-        EphArray.Unsafe.ofRawParts ptr len serial
+  EphSerial.run (fun serial ->
+    let array, serial =
+      EphArray.Unsafe.ofRawParts ptr len serial
 
-      array
-      |> EphArray.toList
-      |> fst
-      |> List.fold (fun () i -> printfn "%d" i) ()
+    array
+    |> EphArray.toList
+    |> fst
+    |> List.fold (fun () i -> printfn "%d" i) ()
 
-      0, serial)
+    0, serial)

@@ -1,4 +1,3 @@
-
 module rec MiloneStd.StdData
 
 /// Standard data type for untyped computation

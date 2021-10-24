@@ -130,13 +130,11 @@ let private mpscParallel
     System.Threading.Channels.Channel.CreateBounded<'A>(256)
 
   let producerWork (state: 'S) (command: 'T) =
-    Future.spawn
-      (fun () ->
-        producer state command
-        |> Future.andThen
-             (fun action ->
-               chan.Writer.WriteAsync(action)
-               |> Future.ofUnitValueTask))
+    Future.spawn (fun () ->
+      producer state command
+      |> Future.andThen (fun action ->
+        chan.Writer.WriteAsync(action)
+        |> Future.ofUnitValueTask))
     |> Future.catch (fun ex -> chan.Writer.Complete(ex))
     |> ignore
 

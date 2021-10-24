@@ -89,12 +89,10 @@ let private toTirCtx (ctx: TyCtx) : TirCtx =
     Logs = ctx.Logs }
 
 let private addLog (ctx: TyCtx) log loc =
-  { ctx with
-      Logs = (log, loc) :: ctx.Logs }
+  { ctx with Logs = (log, loc) :: ctx.Logs }
 
 let private addError (ctx: TyCtx) message loc =
-  { ctx with
-      Logs = (Log.Error message, loc) :: ctx.Logs }
+  { ctx with Logs = (Log.Error message, loc) :: ctx.Logs }
 
 /// Be carefully. Levels must be counted the same as name resolution.
 let private incLevel (ctx: TyCtx) = { ctx with Level = ctx.Level + 1 }
@@ -361,8 +359,7 @@ let private generalizeFun (ctx: TyCtx) (outerLevel: Level) funSerial =
 // -----------------------------------------------
 
 let private addTraitBounds traits (ctx: TyCtx) =
-  { ctx with
-      TraitBounds = List.append traits ctx.TraitBounds }
+  { ctx with TraitBounds = List.append traits ctx.TraitBounds }
 
 let private doResolveTraitBound (ctx: TyCtx) theTrait loc : TyCtx =
   let unify lTy rTy loc ctx : TyCtx = unifyTy ctx loc lTy rTy
@@ -556,8 +553,7 @@ let private resolveTraitBounds (ctx: TyCtx) =
 
   let ctx = go ctx
 
-  { ctx with
-      Logs = List.append logs ctx.Logs }
+  { ctx with Logs = List.append logs ctx.Logs }
 
 // -----------------------------------------------
 // Others
@@ -645,8 +641,7 @@ let private resolveAscriptionTy ctx ascriptionTy =
 
     | Ty (MetaTk (serial, loc), _) when ctx.TyLevels |> TMap.containsKey serial |> not ->
       let ctx =
-        { ctx with
-            TyLevels = ctx.TyLevels |> TMap.add serial ctx.Level }
+        { ctx with TyLevels = ctx.TyLevels |> TMap.add serial ctx.Level }
 
       tyMeta serial loc, ctx
 
@@ -981,20 +976,19 @@ let private inferRecordExpr ctx expectOpt baseOpt fields loc =
         |> TMap.ofList compare
 
       (fields, (fieldDefs, ctx))
-      |> stMap
-           (fun (field, (fieldDefs, ctx)) ->
-             let name, init, loc = field
+      |> stMap (fun (field, (fieldDefs, ctx)) ->
+        let name, init, loc = field
 
-             match fieldDefs |> TMap.remove name with
-             | None, _ ->
-               let ctx = ctx |> addRedundantErr name loc
-               let init, _, ctx = inferExpr ctx None init
-               (name, init, loc), (fieldDefs, ctx)
+        match fieldDefs |> TMap.remove name with
+        | None, _ ->
+          let ctx = ctx |> addRedundantErr name loc
+          let init, _, ctx = inferExpr ctx None init
+          (name, init, loc), (fieldDefs, ctx)
 
-             | Some defTy, fieldDefs ->
-               let init, initTy, ctx = inferExpr ctx (Some defTy) init
-               let ctx = unifyTy ctx loc initTy defTy
-               (name, init, loc), (fieldDefs, ctx))
+        | Some defTy, fieldDefs ->
+          let init, initTy, ctx = inferExpr ctx (Some defTy) init
+          let ctx = unifyTy ctx loc initTy defTy
+          (name, init, loc), (fieldDefs, ctx))
 
     // Unless base expr is specified, set of field initializers must be complete.
     let ctx =
@@ -1036,23 +1030,22 @@ let private inferMatchExpr ctx expectOpt itself cond arms loc =
 
   let arms, ctx =
     (arms, ctx)
-    |> stMap
-         (fun ((pat, guard, body), ctx) ->
-           let pat, patTy, ctx = inferRefutablePat ctx pat
+    |> stMap (fun ((pat, guard, body), ctx) ->
+      let pat, patTy, ctx = inferRefutablePat ctx pat
 
-           let ctx = unifyTy ctx (patToLoc pat) patTy condTy
+      let ctx = unifyTy ctx (patToLoc pat) patTy condTy
 
-           let guard, guardTy, ctx = inferExpr ctx None guard
+      let guard, guardTy, ctx = inferExpr ctx None guard
 
-           let ctx =
-             unifyTy ctx (exprToLoc guard) guardTy tyBool
+      let ctx =
+        unifyTy ctx (exprToLoc guard) guardTy tyBool
 
-           let body, bodyTy, ctx = inferExpr ctx expectOpt body
+      let body, bodyTy, ctx = inferExpr ctx expectOpt body
 
-           let ctx =
-             unifyTy ctx (exprToLoc body) targetTy bodyTy
+      let ctx =
+        unifyTy ctx (exprToLoc body) targetTy bodyTy
 
-           (pat, guard, body), ctx)
+      (pat, guard, body), ctx)
 
   TMatchExpr(cond, arms, targetTy, loc), targetTy, ctx
 
@@ -1081,7 +1074,8 @@ let private inferNavExpr ctx l (r: Ident) loc =
       match ctx |> findTy tySerial with
       | RecordTyDef (_, _unimplTyArgs, fieldDefs, _, _) ->
         match fieldDefs
-              |> List.tryFind (fun (theName, _, _) -> theName = r) with
+              |> List.tryFind (fun (theName, _, _) -> theName = r)
+          with
         | Some (_, fieldTy, _) -> Some fieldTy
         | None -> None
       | _ -> None
@@ -1095,10 +1089,9 @@ let private inferNavExpr ctx l (r: Ident) loc =
 let private inferAppExpr ctx itself callee arg loc =
   let inferUntypedExprs ctx exprs =
     (exprs, ctx)
-    |> stMap
-         (fun (expr, ctx) ->
-           let exprs, _, ctx = inferExpr ctx None expr
-           exprs, ctx)
+    |> stMap (fun (expr, ctx) ->
+      let exprs, _, ctx = inferExpr ctx None expr
+      exprs, ctx)
 
   // Special forms must be handled before recursion.
   match callee, arg with
@@ -1301,8 +1294,7 @@ let private inferBlockExpr ctx expectOpt mutuallyRec stmts last =
              ctx
 
       let ctx =
-        { ctx with
-            GrayFuns = parentCtx.GrayFuns }
+        { ctx with GrayFuns = parentCtx.GrayFuns }
 
       stmts, ctx
 
@@ -1394,9 +1386,7 @@ let private inferLetFunStmt ctx mutuallyRec callee vis argPats body loc =
 
   let ctx =
     match mutuallyRec with
-    | IsRec ->
-      { ctx with
-          GrayFuns = ctx.GrayFuns |> TSet.add callee }
+    | IsRec -> { ctx with GrayFuns = ctx.GrayFuns |> TSet.add callee }
     | _ -> ctx
 
   TLetFunStmt(callee, NotRec, vis, argPats, body, loc), ctx
@@ -1464,8 +1454,7 @@ type private SynonymCycleCtx =
     TyState: TreeMap<TySerial, State> }
 
 let private setTyState tySerial state (ctx: SynonymCycleCtx) =
-  { ctx with
-      TyState = ctx.TyState |> TMap.add tySerial state }
+  { ctx with TyState = ctx.TyState |> TMap.add tySerial state }
 
 let private rcsSynonymTy (ctx: SynonymCycleCtx) tySerial =
   match ctx.TyState |> TMap.tryFind tySerial with
@@ -1668,10 +1657,9 @@ let infer (modules: TProgram, nameRes: NameResResult) : TProgram * TirCtx =
 
   let substOrDegenerateVars vars =
     vars
-    |> TMap.map
-         (fun _ (varDef: VarDef) ->
-           let ty = substOrDegenerate varDef.Ty
-           { varDef with Ty = ty })
+    |> TMap.map (fun _ (varDef: VarDef) ->
+      let ty = substOrDegenerate varDef.Ty
+      { varDef with Ty = ty })
 
   let modules, ctx =
     modules
@@ -1691,20 +1679,16 @@ let infer (modules: TProgram, nameRes: NameResResult) : TProgram * TirCtx =
 
     let funs =
       ctx.Funs
-      |> TMap.map
-           (fun _ (funDef: FunDef) ->
-             let (TyScheme (tyVars, ty)) = funDef.Ty
-             let ty = substOrDegenerate ty
+      |> TMap.map (fun _ (funDef: FunDef) ->
+        let (TyScheme (tyVars, ty)) = funDef.Ty
+        let ty = substOrDegenerate ty
 
-             { funDef with
-                 Ty = TyScheme(tyVars, ty) })
+        { funDef with Ty = TyScheme(tyVars, ty) })
 
     let variants =
       ctx.Variants
-      |> TMap.map
-           (fun _ (variantDef: VariantDef) ->
-             { variantDef with
-                 PayloadTy = substOrDegenerate variantDef.PayloadTy })
+      |> TMap.map (fun _ (variantDef: VariantDef) ->
+        { variantDef with PayloadTy = substOrDegenerate variantDef.PayloadTy })
 
     { ctx with
         Vars = vars
@@ -1724,10 +1708,9 @@ let infer (modules: TProgram, nameRes: NameResResult) : TProgram * TirCtx =
              | RecordTyDef (recordName, unimplTyArgs, fields, repr, loc) ->
                let fields =
                  fields
-                 |> List.map
-                      (fun (name, ty, loc) ->
-                        let ty = substOrDegenerate ty
-                        name, ty, loc)
+                 |> List.map (fun (name, ty, loc) ->
+                   let ty = substOrDegenerate ty
+                   name, ty, loc)
 
                acc
                |> TMap.add tySerial (RecordTyDef(recordName, unimplTyArgs, fields, repr, loc))

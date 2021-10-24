@@ -16,9 +16,11 @@ type Third =
   | Node3 of (int * Third) list
 
 let main _ =
-  match Node [ Node [ Leaf 1; Leaf 2 ]
-               Node []
-               Node [ Leaf 3 ] ] with
+  match
+    Node [ Node [ Leaf 1; Leaf 2 ]
+           Node []
+           Node [ Leaf 3 ] ]
+    with
   | Node (Node (Leaf x :: Leaf y :: []) :: Node [] :: Node (Leaf z :: []) :: []) -> assert (x = 1 && y = 2 && z = 3)
   | _ -> assert false
 

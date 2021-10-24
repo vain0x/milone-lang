@@ -38,11 +38,7 @@ let private testReplace (ss: EphSerial) : EphSerial =
   ss
 
 let testEphRefModule () =
-  EphSerial.run
-    (fun (ss: EphSerial) ->
-      let ss : EphSerial =
-        ss
-        |> testItWorks
-        |> testReplace
+  EphSerial.run (fun (ss: EphSerial) ->
+    let ss: EphSerial = ss |> testItWorks |> testReplace
 
-      (), ss)
+    (), ss)

@@ -183,32 +183,31 @@ let private testForall () =
           |> Iter.forall (fun (i: int) -> 0 <= i && i < 3))
 
   assert (gen 3
-          |> Iter.forall
-               (fun (i: int) ->
-                 assert (i <= 1) // Loop stops at i = 1.
-                 i <> 1)
+          |> Iter.forall (fun (i: int) ->
+            assert (i <= 1) // Loop stops at i = 1.
+            i <> 1)
           |> not)
 
 let private testExists () =
   assert (gen 3
-          |> Iter.exists
-               (fun (i: int) ->
-                 assert (i <= 1) // Loop stops at i = 1.
-                 i = 1))
+          |> Iter.exists (fun (i: int) ->
+            assert (i <= 1) // Loop stops at i = 1.
+            i = 1))
 
 let private testTryPick () =
   match gen 3
-        |> Iter.tryPick (fun i -> if i = 1 then Some "one" else None) with
+        |> Iter.tryPick (fun i -> if i = 1 then Some "one" else None)
+    with
   | Some "one" -> ()
   | _ -> assert false
 
   match gen 3
-        |> Iter.tryPick
-             (fun i ->
-               if i = 3 then
-                 bang (assert false)
-               else
-                 None) with
+        |> Iter.tryPick (fun i ->
+          if i = 3 then
+            bang (assert false)
+          else
+            None)
+    with
   | Some _ -> assert false
   | _ -> ()
 

@@ -59,10 +59,9 @@ let private findMSBuild (fileExists: FileExistsFun) : Path =
     )
 
   years
-  |> List.collect
-       (fun year ->
-         editions
-         |> List.map (fun edition -> msBuildPath year edition))
+  |> List.collect (fun year ->
+    editions
+    |> List.map (fun edition -> msBuildPath year edition))
   |> List.tryFind fileExists
   |> Option.defaultValue (Path "MSBuild.exe")
 
@@ -440,9 +439,8 @@ let private renderVcxProjectXml (p: VcxProjectParams) : string =
   |> S.replace
        "${SRCS}"
        (p.CFiles
-        |> List.map
-             (fun cFile ->
-               let path = Path.toString cFile
+        |> List.map (fun cFile ->
+          let path = Path.toString cFile
 
-               "<ClCompile Include=\"../" + path + "\"/>")
+          "<ClCompile Include=\"../" + path + "\"/>")
         |> S.concat "\n  ")

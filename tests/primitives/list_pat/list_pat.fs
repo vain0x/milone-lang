@@ -4,7 +4,8 @@ module rec list_pat.Program
 
 let main _ =
   match [ 1; 2; 3; 4; 5; 6; 7 ]
-        |> List.map (fun x -> Some(Some(Some(x)))) with
+        |> List.map (fun x -> Some(Some(Some(x))))
+    with
   | [ Some (Some (Some x1))
       Some (Some (Some x2))
       Some (Some (Some x3))

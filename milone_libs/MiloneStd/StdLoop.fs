@@ -127,13 +127,11 @@ module Loop =
 
   let filter (pred: 'T -> bool) (xs: Loop<'S, 'T>) : Loop<'S, 'T> =
     fun state folder ->
-      xs
-        state
-        (fun state item ->
-          if pred item then
-            folder state item
-          else
-            true, state)
+      xs state (fun state item ->
+        if pred item then
+          folder state item
+        else
+          true, state)
 
   let collect (f: 'T -> Loop<'S, 'U>) (xs: Loop<'S, 'T>) : Loop<'S, 'U> =
     fun state folder -> xs state (fun state item -> (f item) state folder)

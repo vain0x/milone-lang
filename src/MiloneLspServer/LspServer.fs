@@ -454,10 +454,9 @@ let private processNext () : LspIncome -> ProcessResult =
 
       let result =
         result
-        |> List.map
-             (fun (Uri uri, range) ->
-               jOfObj [ "uri", JString uri
-                        "range", jOfRange range ])
+        |> List.map (fun (Uri uri, range) ->
+          jOfObj [ "uri", JString uri
+                   "range", jOfRange range ])
         |> JArray
 
       jsonRpcWriteWithResult msgId result
@@ -471,10 +470,9 @@ let private processNext () : LspIncome -> ProcessResult =
 
       let result =
         result
-        |> List.map
-             (fun (Uri uri, range) ->
-               jOfObj [ "uri", JString uri
-                        "range", jOfRange range ])
+        |> List.map (fun (Uri uri, range) ->
+          jOfObj [ "uri", JString uri
+                   "range", jOfRange range ])
         |> JArray
 
       jsonRpcWriteWithResult msgId result
@@ -489,10 +487,9 @@ let private processNext () : LspIncome -> ProcessResult =
       let result =
         let toHighlights kind posList =
           posList
-          |> Seq.map
-               (fun (start, endPos) ->
-                 jOfObj [ "range", jOfRange (start, endPos)
-                          "kind", jOfInt kind ])
+          |> Seq.map (fun (start, endPos) ->
+            jOfObj [ "range", jOfRange (start, endPos)
+                     "kind", jOfInt kind ])
 
         JArray [ yield! toHighlights 2 reads
                  yield! toHighlights 3 writes ]
@@ -508,11 +505,10 @@ let private processNext () : LspIncome -> ProcessResult =
         | None -> JNull
         | Some result ->
           result.Edits
-          |> List.map
-               (fun (range, text) ->
-                 // TextEdit
-                 jOfObj [ "range", jOfRange range
-                          "newText", JString text ])
+          |> List.map (fun (range, text) ->
+            // TextEdit
+            jOfObj [ "range", jOfRange range
+                     "newText", JString text ])
           |> JArray
 
       jsonRpcWriteWithResult msgId result
@@ -636,11 +632,10 @@ let private preprocessCancelRequests (incomes: LspIncome list) : LspIncome list 
 
   incomes
   |> List.filter (isCancelRequest >> not)
-  |> List.map
-       (fun income ->
-         match asMsgId income with
-         | Some msgId when isCanceled msgId -> ErrorIncome(CancelledRequestError msgId)
-         | _ -> income)
+  |> List.map (fun income ->
+    match asMsgId income with
+    | Some msgId when isCanceled msgId -> ErrorIncome(CancelledRequestError msgId)
+    | _ -> income)
 
 /// Optimizes a bunch of messages.
 let private preprocess (incomes: LspIncome list) : LspIncome list =
@@ -684,11 +679,10 @@ let lspServer (host: LspServerHost) : Async<int> =
     Interlocked.Exchange(&incomeCount, n) |> ignore
     host.OnQueueLengthChanged(n + queue.Count)
 
-  host.RequestReceived.Subscribe
-    (fun msg ->
-      queue.Enqueue(parseIncome msg)
-      queueChangedEvent.Trigger()
-      host.OnQueueLengthChanged(incomeCount + queue.Count))
+  host.RequestReceived.Subscribe (fun msg ->
+    queue.Enqueue(parseIncome msg)
+    queueChangedEvent.Trigger()
+    host.OnQueueLengthChanged(incomeCount + queue.Count))
   |> ignore
 
   let rec go incomes =

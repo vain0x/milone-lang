@@ -842,10 +842,9 @@ let private doNormalizePats pats =
     let headPats = patNormalize headPat
 
     doNormalizePats tailPats
-    |> List.collect
-         (fun tailPats ->
-           headPats
-           |> List.map (fun headPat -> headPat :: tailPats))
+    |> List.collect (fun tailPats ->
+      headPats
+      |> List.map (fun headPat -> headPat :: tailPats))
 
 /// Gets whether a pattern is clearly exhaustive, that is,
 /// pattern matching on it always succeeds (assuming type check is passing).

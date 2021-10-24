@@ -529,10 +529,9 @@ let private tgExpr (docId: DocId) (expr: AExpr, ctx: NameCtx) : TExpr * NameCtx 
   | ASemiExpr (stmts, last, _) ->
     let stmts, ctx =
       (stmts, ctx)
-      |> stMap
-           (fun (expr, ctx) ->
-             let expr, ctx = onExpr (expr, ctx)
-             TExprStmt expr, ctx)
+      |> stMap (fun (expr, ctx) ->
+        let expr, ctx = onExpr (expr, ctx)
+        TExprStmt expr, ctx)
 
     let last, ctx = (last, ctx) |> onExpr
     TBlockExpr(NotRec, stmts, last), ctx
@@ -627,11 +626,10 @@ let private tgDecl docId attrs (decl, ctx) : TStmt * NameCtx =
   | ARecordTyDecl (vis, recordName, tyArgs, fieldDecls, pos) ->
     let repr =
       attrs
-      |> List.exists
-           (fun a ->
-             match a with
-             | ABinaryExpr (AppBinary, AIdentExpr (Name ("Repr", _)), ALitExpr (StrLit "C", _), _) -> true
-             | _ -> false)
+      |> List.exists (fun a ->
+        match a with
+        | ABinaryExpr (AppBinary, AIdentExpr (Name ("Repr", _)), ALitExpr (StrLit "C", _), _) -> true
+        | _ -> false)
       |> IsCRepr
 
     let tgFieldDecl ((name, ty, fieldPos), ctx) =

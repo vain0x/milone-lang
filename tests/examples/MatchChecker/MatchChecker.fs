@@ -263,16 +263,14 @@ let rec spaceExclude first second =
       // For example, the space of bool^2 excluded by the `false, true` pattern
       // is "the left is not false, or the right is not true."
       firsts
-      |> listMapWithIndex
-           (fun i _ ->
-             listZip firsts seconds
-             |> listMapWithIndex
-                  (fun j (first, second) ->
-                    if i = j then
-                      spaceExclude first second
-                    else
-                      first)
-             |> spaceCtor tag)
+      |> listMapWithIndex (fun i _ ->
+        listZip firsts seconds
+        |> listMapWithIndex (fun j (first, second) ->
+          if i = j then
+            spaceExclude first second
+          else
+            first)
+        |> spaceCtor tag)
       |> spaceUnion
 
   // Non-matching constructors do nothing because disjoint.
@@ -429,15 +427,14 @@ let testSpaceToString () =
 
   let ok =
     cases
-    |> listMap
-         (fun (expected, space) ->
-           let actual = space |> spaceToString
+    |> listMap (fun (expected, space) ->
+      let actual = space |> spaceToString
 
-           if actual = expected then
-             true
-           else
-             printfn "%s: NG (%s)" expected actual
-             false)
+      if actual = expected then
+        true
+      else
+        printfn "%s: NG (%s)" expected actual
+        false)
     |> listForAll id
 
   assert ok
@@ -504,36 +501,35 @@ let main _ =
 
   let ok =
     testCases
-    |> listMap
-         (fun (name, ty, pats, covering) ->
-           // The pattern matching is covering if
-           // that the space of patterns covers that of the type.
-           let tySpace = ty |> tyToSpace
-           let patSpace = pats |> patsToSpace
+    |> listMap (fun (name, ty, pats, covering) ->
+      // The pattern matching is covering if
+      // that the space of patterns covers that of the type.
+      let tySpace = ty |> tyToSpace
+      let patSpace = pats |> patsToSpace
 
-           let actual =
-             if patSpace |> spaceCovers tySpace then
-               Covering
-             else
-               Open
+      let actual =
+        if patSpace |> spaceCovers tySpace then
+          Covering
+        else
+          Open
 
-           let ok, msg =
-             match covering, actual with
-             | Covering, Covering
-             | Open, Open -> true, "OK"
+      let ok, msg =
+        match covering, actual with
+        | Covering, Covering
+        | Open, Open -> true, "OK"
 
-             | Covering, Open -> false, "NG. Expected covering but open"
+        | Covering, Open -> false, "NG. Expected covering but open"
 
-             | _ -> false, "NG. Expected open but covering"
+        | _ -> false, "NG. Expected open but covering"
 
-           printfn "%s: %s" name msg
+      printfn "%s: %s" name msg
 
-           if not ok then
-             // Print for debugging.
-             printfn "  ty: %s" (tySpace |> spaceToString)
-             printfn "  pats: %s" (patSpace |> spaceToString)
+      if not ok then
+        // Print for debugging.
+        printfn "  ty: %s" (tySpace |> spaceToString)
+        printfn "  pats: %s" (patSpace |> spaceToString)
 
-           ok)
+      ok)
     |> listForAll id
 
   let exitCode = if ok then 0 else 1

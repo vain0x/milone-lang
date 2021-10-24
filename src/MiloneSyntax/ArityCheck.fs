@@ -86,8 +86,7 @@ type private ArityCheckCtx =
     Errors: (string * string * Loc) list }
 
 let private addArityError actual expected (loc: Loc) (ctx: ArityCheckCtx) =
-  { ctx with
-      Errors = (actual, expected, loc) :: ctx.Errors }
+  { ctx with Errors = (actual, expected, loc) :: ctx.Errors }
 
 let private acExprChecked expr ctx =
   let expected = tyToArityEx (exprToTy expr)
@@ -232,5 +231,4 @@ let arityCheck (modules: TProgram, tirCtx: TirCtx) : TirCtx =
     ctx.Errors
     |> List.map (fun (actual, expected, loc) -> Log.ArityMismatch(actual, expected), loc)
 
-  { tirCtx with
-      Logs = List.append tirCtx.Logs logs }
+  { tirCtx with Logs = List.append tirCtx.Logs logs }

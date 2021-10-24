@@ -170,15 +170,12 @@ let private cpStructLit fields ty acc =
   |> cons "("
   |> cpTy ty
   |> cons "){"
-  |> join
-       ", "
-       fields
-       (fun (field, value) acc ->
-         acc
-         |> cons "."
-         |> cons field
-         |> cons " = "
-         |> cpExpr value)
+  |> join ", " fields (fun (field, value) acc ->
+    acc
+    |> cons "."
+    |> cons field
+    |> cons " = "
+    |> cpExpr value)
   |> cons "}"
 
 // -----------------------------------------------

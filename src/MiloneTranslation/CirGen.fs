@@ -398,10 +398,9 @@ let private genUnionTyDef (ctx: CirCtx) tySerial variants =
 
     let variants =
       variants
-      |> List.map
-           (fun variantSerial ->
-             let v = ctx.Rx.Variants |> mapFind variantSerial
-             v.Name, variantSerial, v.HasPayload, v.PayloadTy)
+      |> List.map (fun variantSerial ->
+        let v = ctx.Rx.Variants |> mapFind variantSerial
+        v.Name, variantSerial, v.HasPayload, v.PayloadTy)
 
     let discriminants =
       variants
@@ -409,16 +408,15 @@ let private genUnionTyDef (ctx: CirCtx) tySerial variants =
 
     let variants, ctx =
       (variants, ctx)
-      |> stFlatMap
-           (fun ((_, serial, hasPayload, payloadTy), acc, ctx) ->
-             if hasPayload then
-               let payloadTy, ctx = cgTyComplete ctx payloadTy
+      |> stFlatMap (fun ((_, serial, hasPayload, payloadTy), acc, ctx) ->
+        if hasPayload then
+          let payloadTy, ctx = cgTyComplete ctx payloadTy
 
-               (getUniqueVariantName ctx serial, payloadTy)
-               :: acc,
-               ctx
-             else
-               acc, ctx)
+          (getUniqueVariantName ctx serial, payloadTy)
+          :: acc,
+          ctx
+        else
+          acc, ctx)
 
     let discriminantEnumDecl =
       CEnumDecl(discriminantEnumName, discriminants)
@@ -464,10 +462,9 @@ let private genRecordTyDef ctx tySerial fields =
   | _ ->
     let fieldTys, (ctx: CirCtx) =
       (fields, ctx)
-      |> stMap
-           (fun ((_, ty, _), ctx) ->
-             let ty, ctx = cgTyComplete ctx ty
-             ty, ctx)
+      |> stMap (fun ((_, ty, _), ctx) ->
+        let ty, ctx = cgTyComplete ctx ty
+        ty, ctx)
 
     let fields =
       fieldTys
@@ -611,8 +608,7 @@ let private cgExternVarDecl (ctx: CirCtx) varSerial ty =
 
     let ctx = addDecl ctx (CExternVarDecl(name, ty))
 
-    { ctx with
-        VarDecls = ctx.VarDecls |> TSet.add varSerial }
+    { ctx with VarDecls = ctx.VarDecls |> TSet.add varSerial }
 
 let private cgExternFunDecl (ctx: CirCtx) funSerial =
   if TSet.contains funSerial ctx.FunDecls then
@@ -647,8 +643,7 @@ let private cgExternFunDecl (ctx: CirCtx) funSerial =
       let ctx: CirCtx =
         addDecl ctx (CFunForwardDecl(name, argTys, resultTy))
 
-      { ctx with
-          FunDecls = TSet.add funSerial ctx.FunDecls }
+      { ctx with FunDecls = TSet.add funSerial ctx.FunDecls }
 
 // -----------------------------------------------
 // Expressions
@@ -900,17 +895,16 @@ let private cgPrintfnActionStmt ctx itself args =
 
     let args, ctx =
       (args, ctx)
-      |> stMap
-           (fun (arg, ctx) ->
-             match arg with
-             | MLitExpr (StrLit value, _) -> CStrRawExpr value, ctx
+      |> stMap (fun (arg, ctx) ->
+        match arg with
+        | MLitExpr (StrLit value, _) -> CStrRawExpr value, ctx
 
-             | _ when tyEqual (mexprToTy arg) tyStr ->
-               // Insert implicit cast from str to str ptr.
-               let arg, ctx = cgExpr ctx arg
-               CCallExpr(CVarExpr "str_to_c_str", [ arg ]), ctx
+        | _ when tyEqual (mexprToTy arg) tyStr ->
+          // Insert implicit cast from str to str ptr.
+          let arg, ctx = cgExpr ctx arg
+          CCallExpr(CVarExpr "str_to_c_str", [ arg ]), ctx
 
-             | _ -> cgExpr ctx arg)
+        | _ -> cgExpr ctx arg)
 
     addStmt ctx (CExprStmt(CCallExpr(CVarExpr "printf", format :: args)))
 
@@ -1044,29 +1038,25 @@ let private cgPrimStmt (ctx: CirCtx) itself prim args serial resultTy =
     | _ -> unreachable itself
 
   | MVariantPrim variantSerial ->
-    regularWithTy
-      ctx
-      (fun args unionTy ->
-        match args with
-        | [ payload ] ->
-          let variantName = getUniqueVariantName ctx variantSerial
+    regularWithTy ctx (fun args unionTy ->
+      match args with
+      | [ payload ] ->
+        let variantName = getUniqueVariantName ctx variantSerial
 
-          let fields =
-            [ "discriminant", CVarExpr variantName
-              variantName, payload ]
+        let fields =
+          [ "discriminant", CVarExpr variantName
+            variantName, payload ]
 
-          CInitExpr(fields, unionTy)
+        CInitExpr(fields, unionTy)
 
-        | _ -> unreachable itself)
+      | _ -> unreachable itself)
 
   | MRecordPrim ->
-    regularWithTy
-      ctx
-      (fun args recordTy ->
-        let fields =
-          args |> List.mapi (fun i arg -> tupleField i, arg)
+    regularWithTy ctx (fun args recordTy ->
+      let fields =
+        args |> List.mapi (fun i arg -> tupleField i, arg)
 
-        CInitExpr(fields, recordTy))
+      CInitExpr(fields, recordTy))
 
   | MCallProcPrim ->
     let name = getUniqueVarName ctx serial
@@ -1125,13 +1115,11 @@ let private cgPrimStmt (ctx: CirCtx) itself prim args serial resultTy =
     regular ctx (fun args -> (CCallExpr(CVarExpr funName, args)))
 
   | MPtrReadPrim ->
-    regular
-      ctx
-      (fun args ->
-        match args with
-        | [ ptr; CIntExpr "0" ] -> CUnaryExpr(CDerefUnary, ptr)
-        | [ ptr; index ] -> CIndexExpr(ptr, index)
-        | _ -> unreachable ())
+    regular ctx (fun args ->
+      match args with
+      | [ ptr; CIntExpr "0" ] -> CUnaryExpr(CDerefUnary, ptr)
+      | [ ptr; index ] -> CIndexExpr(ptr, index)
+      | _ -> unreachable ())
 
 let private cgBoxStmt ctx serial arg =
   let argTy, ctx = cgTyComplete ctx (mexprToTy arg)
@@ -1216,16 +1204,15 @@ let private cgTerminatorStmt ctx stmt =
 
     let clauses, ctx =
       (clauses, ctx)
-      |> stMap
-           (fun (clause: MSwitchClause, ctx) ->
-             let cases =
-               clause.Cases
-               |> List.map (fun cond -> cgConst ctx cond)
+      |> stMap (fun (clause: MSwitchClause, ctx) ->
+        let cases =
+          clause.Cases
+          |> List.map (fun cond -> cgConst ctx cond)
 
-             let stmts, ctx =
-               cgTerminatorAsBlock ctx clause.Terminator
+        let stmts, ctx =
+          cgTerminatorAsBlock ctx clause.Terminator
 
-             (cases, clause.IsDefault, stmts), ctx)
+        (cases, clause.IsDefault, stmts), ctx)
 
     addStmt ctx (CSwitchStmt(cond, clauses))
 
