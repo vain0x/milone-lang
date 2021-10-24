@@ -63,18 +63,17 @@ let codeGenHir (writeLog: WriteLogFun) (modules: Hir.HProgram, hirCtx: HirCtx) :
   // Reduce info of variables.
   let modules: Hir.HModule2 list =
     modules
-    |> List.map
-         (fun (m: Hir.HModule) ->
-           let varNameMap =
-             m.Vars
-             |> TMap.map (fun _ (varDef: Hir.VarDef) -> varDef.Name)
+    |> List.map (fun (m: Hir.HModule) ->
+      let varNameMap =
+        m.Vars
+        |> TMap.map (fun _ (varDef: Hir.VarDef) -> varDef.Name)
 
-           let m: Hir.HModule2 =
-             { DocId = m.DocId
-               Vars = varNameMap
-               Stmts = m.Stmts }
+      let m: Hir.HModule2 =
+        { DocId = m.DocId
+          Vars = varNameMap
+          Stmts = m.Stmts }
 
-           m)
+      m)
 
   writeLog "MonoTy"
   let modules, hirCtx = MonoTy.monoTy (modules, hirCtx)

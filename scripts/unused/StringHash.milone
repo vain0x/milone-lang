@@ -1,4 +1,3 @@
-
 let private hashCombine (n: uint64) (h: uint64) =
   let x = (h <<< 5) ||| (h >>> 57)
   (h + x) ^^^ n

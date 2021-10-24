@@ -106,8 +106,7 @@ let private rollback (parentCtx: MirCtx) (ctx: MirCtx) =
       Stmts = parentCtx.Stmts }
 
 let private prependStmt (ctx: MirCtx) stmt =
-  { ctx with
-      Stmts = List.append ctx.Stmts [ stmt ] }
+  { ctx with Stmts = List.append ctx.Stmts [ stmt ] }
 
 let private addStmtListList (ctx: MirCtx) (stmtListList: MStmt list list) =
   let stmts =
@@ -172,8 +171,7 @@ let private freshLabel (ctx: MirCtx) (name: Ident) loc =
   let serial = ctx.LabelSerial + 1
 
   let ctx =
-    { ctx with
-        LabelSerial = ctx.LabelSerial + 1 }
+    { ctx with LabelSerial = ctx.LabelSerial + 1 }
 
   let label: Label = name + "_" + string serial
   let labelStmt = MLabelStmt(label, loc)
@@ -686,12 +684,11 @@ let private mirifyExprMatchFull ctx cond arms ty loc =
 
   let isCovering =
     arms
-    |> List.choose
-         (fun (pat, guard, _) ->
-           if hxIsAlwaysTrue guard then
-             Some pat
-           else
-             None)
+    |> List.choose (fun (pat, guard, _) ->
+      if hxIsAlwaysTrue guard then
+        Some pat
+      else
+        None)
     |> patsIsCovering ctx
 
   /// By walking over arms, calculates what kind of MIR instructions to emit.
@@ -960,9 +957,8 @@ let private doReuseArmLocals funSerial arms (ctx: MirCtx) : _ * MirCtx =
 
   let arms =
     arms
-    |> List.map
-         (fun (pat, guard, body) ->
-           reuseVarOnPat reuseMap pat, reuseVarOnExpr reuseMap guard, reuseVarOnExpr reuseMap body)
+    |> List.map (fun (pat, guard, body) ->
+      reuseVarOnPat reuseMap pat, reuseVarOnExpr reuseMap guard, reuseVarOnExpr reuseMap body)
 
   let ctx: MirCtx =
     let funLocals, replacingVars =
@@ -1390,15 +1386,14 @@ let private mirifyExprInfCallTailRec (ctx: MirCtx) _callee args _ty loc =
     let args, ctx = mirifyArgs ctx args
 
     (args, ctx)
-    |> stMap
-         (fun (arg, ctx) ->
-           let ty, loc = mexprExtract arg
-           let tempVarExpr, tempVarSerial, ctx = freshVar ctx "arg" ty loc
+    |> stMap (fun (arg, ctx) ->
+      let ty, loc = mexprExtract arg
+      let tempVarExpr, tempVarSerial, ctx = freshVar ctx "arg" ty loc
 
-           let ctx =
-             addStmt ctx (MLetValStmt(tempVarSerial, Some arg, ty, loc))
+      let ctx =
+        addStmt ctx (MLetValStmt(tempVarSerial, Some arg, ty, loc))
 
-           tempVarExpr, ctx)
+      tempVarExpr, ctx)
 
   // Update args.
   let ctx =
@@ -1501,9 +1496,7 @@ let private mirifyExprLetValContents ctx pat init =
 
 let private mirifyExprLetFunContents (ctx: MirCtx) calleeSerial argPats body letLoc =
   let prepareCurrentFunSerial (ctx: MirCtx) =
-    ctx.CurrentFunSerial,
-    { ctx with
-        CurrentFunSerial = Some calleeSerial }
+    ctx.CurrentFunSerial, { ctx with CurrentFunSerial = Some calleeSerial }
 
   let cleanUpCurrentFunSerial (ctx: MirCtx) parent = { ctx with CurrentFunSerial = parent }
 

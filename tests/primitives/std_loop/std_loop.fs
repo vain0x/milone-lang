@@ -56,10 +56,9 @@ let private testForall (len: int) =
   assert (gen len |> Loop.forall (fun i -> i >= 0))
 
   assert (gen len
-          |> Loop.forall
-               (fun i ->
-                 assert (i <= 2) // It breaks at i = 2.
-                 i < 2)
+          |> Loop.forall (fun i ->
+            assert (i <= 2) // It breaks at i = 2.
+            i < 2)
           |> not)
 
 let private testAppend () =

@@ -138,8 +138,7 @@ let private addRequest (state: State) (request: ModuleRequest) : ModuleRequest o
 
   if not (TMap.containsKey key requestMap) then
     let state =
-      { state with
-          RequestMap = TMap.add key RequestResult.Requested requestMap }
+      { state with RequestMap = TMap.add key RequestResult.Requested requestMap }
 
     Some request, state
   else
@@ -148,12 +147,11 @@ let private addRequest (state: State) (request: ModuleRequest) : ModuleRequest o
 let private toModules (state: State) : ModuleData list =
   state.RequestMap
   |> TMap.toList
-  |> List.choose
-       (fun (_, r: RequestResult) ->
-         match r with
-         | RequestResult.Resolved moduleData -> Some moduleData
-         | RequestResult.Failed -> None
-         | RequestResult.Requested -> unreachable ())
+  |> List.choose (fun (_, r: RequestResult) ->
+    match r with
+    | RequestResult.Resolved moduleData -> Some moduleData
+    | RequestResult.Failed -> None
+    | RequestResult.Requested -> unreachable ())
 
 let private toErrors (state: State) : Error list =
   state
@@ -176,8 +174,7 @@ let private consumer (state: State) action : State * ModuleRequest list =
     match TMap.tryFind key requestMap with
     | Some RequestResult.Requested ->
       let state =
-        { state with
-            RequestMap = TMap.add key (RequestResult.Resolved m) requestMap }
+        { state with RequestMap = TMap.add key (RequestResult.Resolved m) requestMap }
 
       let requests, state = m.Deps |> List.mapFold addRequest state
 
@@ -209,45 +206,43 @@ let private consumer (state: State) action : State * ModuleRequest list =
 
 let private producer (fetchModule: FetchModuleFun) (_: State) (r: ModuleRequest) : Future<Action> =
   fetchModule r.ProjectName r.ModuleName
-  |> Future.map
-       (fun result ->
-         match result with
-         | Some (docId, ast, errors) ->
-           let deps =
-             let dep1 =
-               if r.ModuleName <> "MiloneOnly" then
-                 [ newMiloneOnlyRequest r.ProjectName docId ]
-               else
-                 []
+  |> Future.map (fun result ->
+    match result with
+    | Some (docId, ast, errors) ->
+      let deps =
+        let dep1 =
+          if r.ModuleName <> "MiloneOnly" then
+            [ newMiloneOnlyRequest r.ProjectName docId ]
+          else
+            []
 
-             let otherDeps =
-               findDependentModules ast
-               |> List.map
-                    (fun (projectName, moduleName, pos) ->
-                      let originLoc =
-                        let y, x = pos
-                        Loc(docId, y, x)
+        let otherDeps =
+          findDependentModules ast
+          |> List.map (fun (projectName, moduleName, pos) ->
+            let originLoc =
+              let y, x = pos
+              Loc(docId, y, x)
 
-                      newDepRequest projectName moduleName originLoc)
+            newDepRequest projectName moduleName originLoc)
 
-             List.append dep1 otherDeps
+        List.append dep1 otherDeps
 
-           let errors =
-             errors
-             |> List.map (fun (msg, (y, x)) -> (msg, Loc(docId, y, x)))
+      let errors =
+        errors
+        |> List.map (fun (msg, (y, x)) -> (msg, Loc(docId, y, x)))
 
-           let m: ModuleData =
-             { Name = r.ModuleName
-               Project = r.ProjectName
-               DocId = docId
-               Ast = ast
-               Deps = deps
-               SymbolCount = TirGen.countSymbols ast
-               Errors = errors }
+      let m: ModuleData =
+        { Name = r.ModuleName
+          Project = r.ProjectName
+          DocId = docId
+          Ast = ast
+          Deps = deps
+          SymbolCount = TirGen.countSymbols ast
+          Errors = errors }
 
-           Action.DidFetchOk m
+      Action.DidFetchOk m
 
-         | None -> Action.DidFetchFail r)
+    | None -> Action.DidFetchFail r)
 
 // -----------------------------------------------
 // Interface
@@ -273,11 +268,10 @@ let bundle (fetchModule: FetchModuleFun) (entryProjectName: ProjectName) : Bundl
 
     let getDeps (m: ModuleData) =
       m.Deps
-      |> List.choose
-           (fun (r: ModuleRequest) ->
-             match TMap.tryFind (r.ProjectName, r.ModuleName) state.RequestMap with
-             | Some (RequestResult.Resolved m) -> Some m
-             | _ -> None)
+      |> List.choose (fun (r: ModuleRequest) ->
+        match TMap.tryFind (r.ProjectName, r.ModuleName) state.RequestMap with
+        | Some (RequestResult.Resolved m) -> Some m
+        | _ -> None)
 
     state
     |> toModules
@@ -301,40 +295,38 @@ let bundle (fetchModule: FetchModuleFun) (entryProjectName: ProjectName) : Bundl
   // Convert to TIR.
   let layers =
     layers
-    |> __parallelMap
-         (fun modules ->
-           modules
-           |> __parallelMap
-                (fun (serial: Serial, moduleData: ModuleData) ->
-                  let projectName = moduleData.Project
-                  let docId = moduleData.DocId
-                  let ast = moduleData.Ast
-                  let symbolCount = moduleData.SymbolCount
+    |> __parallelMap (fun modules ->
+      modules
+      |> __parallelMap (fun (serial: Serial, moduleData: ModuleData) ->
+        let projectName = moduleData.Project
+        let docId = moduleData.DocId
+        let ast = moduleData.Ast
+        let symbolCount = moduleData.SymbolCount
 
-                  let exprs, nameCtx =
-                    let nameCtx = TirGen.TgNameCtx(serial, [])
-                    TirGen.genTir projectName docId (ast, nameCtx)
+        let exprs, nameCtx =
+          let nameCtx = TirGen.TgNameCtx(serial, [])
+          TirGen.genTir projectName docId (ast, nameCtx)
 
-                  let (TirGen.TgNameCtx (lastSerial, _)) = nameCtx
+        let (TirGen.TgNameCtx (lastSerial, _)) = nameCtx
 
-                  //  printfn
-                  //    "%s expect: %d..%d (%d) actual: %d..%d (%d)"
-                  //    docId
-                  //    serial
-                  //    (serial + symbolCount)
-                  //    symbolCount
-                  //    serial
-                  //    lastSerial
-                  //    (lastSerial - serial)
+        //  printfn
+        //    "%s expect: %d..%d (%d) actual: %d..%d (%d)"
+        //    docId
+        //    serial
+        //    (serial + symbolCount)
+        //    symbolCount
+        //    serial
+        //    lastSerial
+        //    (lastSerial - serial)
 
-                  assert (lastSerial - serial = symbolCount)
+        assert (lastSerial - serial = symbolCount)
 
-                  let m: TModule =
-                    { DocId = docId
-                      Vars = emptyVars
-                      Stmts = exprs }
+        let m: TModule =
+          { DocId = docId
+            Vars = emptyVars
+            Stmts = exprs }
 
-                  m, nameCtx))
+        m, nameCtx))
 
   let layers, identMap =
     layers

@@ -70,8 +70,7 @@ let readManifestFile (readTextFileFun: ReadTextFileFun) (projectDir: ProjectDir)
   let docId: DocId = manifestFile
 
   readTextFileFun manifestFile
-  |> Future.map
-       (fun manifestOpt ->
-         match manifestOpt with
-         | Some manifest -> parseManifest docId manifest
-         | None -> emptyManifest)
+  |> Future.map (fun manifestOpt ->
+    match manifestOpt with
+    | Some manifest -> parseManifest docId manifest
+    | None -> emptyManifest)

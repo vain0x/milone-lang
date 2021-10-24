@@ -6,7 +6,10 @@ module M = MiloneStd.StdMap
 
 type ProjectName = string
 
-type Ns = ValueNs | TyNs | ModuleNs
+type Ns =
+  | ValueNs
+  | TyNs
+  | ModuleNs
 
 type Symbol = Symbol of id: int * raw: string
 
@@ -19,6 +22,4 @@ type Scope =
 type SymbolDb =
   { Modules: M.TreeMap<Symbol, Scope list> }
 
-type SemaDb =
-  { Projects: M.TreeMap<string, string>
-  }
+type SemaDb = { Projects: M.TreeMap<string, string> }

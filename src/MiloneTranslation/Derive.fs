@@ -170,8 +170,7 @@ let private deriveOnExpr (hirCtx: HirCtx) (ctx: DCtx) expr : DCtx =
 
       let ctx =
         if Option.isSome funSerialOpt then
-          { ctx with
-              GenericListEqualFunOpt = funSerialOpt }
+          { ctx with GenericListEqualFunOpt = funSerialOpt }
         else
           ctx
 
@@ -472,8 +471,7 @@ let private deriveOnExpr (hirCtx: HirCtx) (ctx: DCtx) expr : DCtx =
                  hxApp (hxApp equal l (tyFun payloadTy tyBool) loc) r tyBool loc
 
                let ctx =
-                 { ctx with
-                     WorkList = payloadTy :: ctx.WorkList }
+                 { ctx with WorkList = payloadTy :: ctx.WorkList }
 
                (pat, trueExpr, body), ctx)
            ctx

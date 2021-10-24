@@ -80,28 +80,28 @@ let private khTerm (term: KTerm) ctx =
 let private khNode (node: KNode) ctx =
   match node with
   | KJumpNode (funSerial, args, loc) ->
-      let callee =
-        let funTy = findFunDef funSerial
-        HRefExpr(funSerial, funTy, loc)
+    let callee =
+      let funTy = findFunDef funSerial
+      HRefExpr(funSerial, funTy, loc)
 
-      let args =
-        args |> listMap (fun term -> khTerm term ctx)
+    let args =
+      args |> listMap (fun term -> khTerm term ctx)
 
-      hxCallProc callee args tyUnit loc
+    hxCallProc callee args tyUnit loc
 
   | KSwitchNode (cond, arms, loc) -> failwith ""
 
   | KSelectNode (term, path, result, cont, loc) ->
-      let lhs = khTerm term ctx
+    let lhs = khTerm term ctx
 
-      match path with
-      | KFieldPath (i, loc) -> failwith ""
+    match path with
+    | KFieldPath (i, loc) -> failwith ""
 
-      | KTagPath loc ->
-          // InfOp
-          failwith ""
+    | KTagPath loc ->
+      // InfOp
+      failwith ""
 
-      | KPayloadPath (varSerial, loc) -> failwith ""
+    | KPayloadPath (varSerial, loc) -> failwith ""
 
   | KPrimNode (prim, args, results, conts, loc) -> failwith ""
 
@@ -128,7 +128,7 @@ let private khFunBinding binding next nextTy ctx =
 
   HLetFunExpr(funSerial, PrivateVis, isMainFun, argPats, body, next, nextTy, loc)
 
-let kirHir (root: KRoot, ctx: ctx): HExpr * ctx =
+let kirHir (root: KRoot, ctx: ctx) : HExpr * ctx =
   let (KRoot (bindings, node)) = root
 
   let rec go (root, ctx) = ()

@@ -97,7 +97,14 @@ let private testCore () =
   // Separator.
   assert (parseForTest [ "--" ] noParam = "")
   assert (parseForTest [ "--"; "--help" ] noParam = "pos `--help`")
-  assert (parseForTest [ "--"; "dotnet"; "run"; "--"; "--help"  ] noParam = "pos `dotnet`; pos `run`; pos `--`; pos `--help`")
+
+  assert (parseForTest
+            [ "--"
+              "dotnet"
+              "run"
+              "--"
+              "--help" ]
+            noParam = "pos `dotnet`; pos `run`; pos `--`; pos `--help`")
 
   // Edges.
   assert (parseForTest [ "-"; "-=" ] noParam = "pos `-`; pos `-=`")

@@ -73,10 +73,7 @@ type FRecordTyDef =
 // -----------------------------------------------
 
 [<RequireQualifiedAccess; NoEquality; NoComparison>]
-type FLocalVarDef =
-  { Name: Ident
-    Ty: Ty
-    Loc: Loc }
+type FLocalVarDef = { Name: Ident; Ty: Ty; Loc: Loc }
 
 [<RequireQualifiedAccess; NoEquality; NoComparison>]
 type FFunDef =

@@ -17,7 +17,7 @@ type EphSerial = EphSerial of uint * nativeptr<uint>
 let private blackbox (f: unit -> EphSerial) : EphSerial = f ()
 
 let private createNew () =
-  let ptr : nativeptr<uint> =
+  let ptr: nativeptr<uint> =
     memAlloc 1 (unativeint (__sizeOfVal (unativeint 0)))
     |> __nativeCast
 

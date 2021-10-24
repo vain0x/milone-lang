@@ -230,14 +230,13 @@ let private lowerStmt (stmt: Tir.TStmt) : Hir.HExpr =
 
 let private lowerModules (modules: Tir.TProgram) : Hir.HProgram =
   modules
-  |> List.map
-       (fun (m: Tir.TModule) ->
-         let m: Hir.HModule =
-           { DocId = m.DocId
-             Vars = lowerVarMap m.Vars
-             Stmts = List.map lowerStmt m.Stmts }
+  |> List.map (fun (m: Tir.TModule) ->
+    let m: Hir.HModule =
+      { DocId = m.DocId
+        Vars = lowerVarMap m.Vars
+        Stmts = List.map lowerStmt m.Stmts }
 
-         m)
+    m)
 
 let private lowerTirCtx (ctx: Tir.TirCtx) : Hir.HirCtx =
   { Serial = ctx.Serial

@@ -178,8 +178,7 @@ let private doBundle (ls: LangServiceState) projectDir =
       |> Future.just
 
   let syntaxCtx =
-    { syntaxCtx with
-        FetchModule = fetchModuleUsingCache syntaxCtx.FetchModule }
+    { syntaxCtx with FetchModule = fetchModuleUsingCache syntaxCtx.FetchModule }
 
   match SyntaxApi.performSyntaxAnalysis syntaxCtx with
   | SyntaxApi.SyntaxAnalysisOk (modules, tirCtx) -> Some(modules, tirCtx), [], docVersions
@@ -559,10 +558,10 @@ module LangService =
         // eprintfn "hover: %A, tokenLoc=%A" token tokenLoc
 
         match modules
-              |> List.tryPick
-                   (fun m ->
-                     m.Stmts
-                     |> List.tryPick (fun stmt -> findTyInStmt ls stmt tirCtx tokenLoc)) with
+              |> List.tryPick (fun m ->
+                m.Stmts
+                |> List.tryPick (fun stmt -> findTyInStmt ls stmt tirCtx tokenLoc))
+          with
         | None -> None
         | Some ty -> Some(tyDisplayFn tirCtx ty)
 

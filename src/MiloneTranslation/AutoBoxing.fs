@@ -269,8 +269,7 @@ let private tsmVariant (ctx: TsmCtx) variantSerial (variantDefOpt: VariantDef op
 
     // Prevent infinite recursion, just in case. (Recursive variants are already boxed.)
     let ctx =
-      { ctx with
-          VariantMemo = ctx.VariantMemo |> TMap.add variantSerial (-1) }
+      { ctx with VariantMemo = ctx.VariantMemo |> TMap.add variantSerial (-1) }
 
     let size, (ctx: TsmCtx) =
       let variantDef =
@@ -328,8 +327,7 @@ let private tsmRecordTyDef (ctx: TsmCtx) tySerial tyDef =
 
     // Just in case of recursion was not detected correctly.
     let ctx =
-      { ctx with
-          RecordTyMemo = ctx.RecordTyMemo |> TMap.add tySerial (-1) }
+      { ctx with RecordTyMemo = ctx.RecordTyMemo |> TMap.add tySerial (-1) }
 
     let size, (ctx: TsmCtx) =
       match tyDef with
@@ -866,47 +864,40 @@ let autoBox (modules: HProgram, hirCtx: HirCtx) : HProgram * HirCtx =
 
   let abVars vars =
     vars
-    |> TMap.map
-         (fun _ (varDef: VarDef) ->
-           let ty = varDef.Ty |> abTy ctx
-           { varDef with Ty = ty })
+    |> TMap.map (fun _ (varDef: VarDef) ->
+      let ty = varDef.Ty |> abTy ctx
+      { varDef with Ty = ty })
 
   let funs =
     ctx.Funs
-    |> TMap.map
-         (fun _ (funDef: FunDef) ->
-           let (TyScheme (tyVars, ty)) = funDef.Ty
-           let ty = ty |> abTy ctx
+    |> TMap.map (fun _ (funDef: FunDef) ->
+      let (TyScheme (tyVars, ty)) = funDef.Ty
+      let ty = ty |> abTy ctx
 
-           { funDef with
-               Ty = TyScheme(tyVars, ty) })
+      { funDef with Ty = TyScheme(tyVars, ty) })
 
   let variants =
     ctx.Variants
-    |> TMap.map
-         (fun variantSerial (variantDef: VariantDef) ->
-           let payloadTy =
-             erasePayloadTy ctx variantSerial variantDef.PayloadTy
+    |> TMap.map (fun variantSerial (variantDef: VariantDef) ->
+      let payloadTy =
+        erasePayloadTy ctx variantSerial variantDef.PayloadTy
 
-           { variantDef with
-               PayloadTy = payloadTy })
+      { variantDef with PayloadTy = payloadTy })
 
   let tys =
     ctx.Tys
-    |> TMap.map
-         (fun _ tyDef ->
-           match tyDef with
-           | RecordTyDef (recordName, fields, repr, loc) ->
-             let fields =
-               fields
-               |> List.map
-                    (fun (name, ty, loc) ->
-                      let ty = ty |> abTy ctx
-                      name, ty, loc)
+    |> TMap.map (fun _ tyDef ->
+      match tyDef with
+      | RecordTyDef (recordName, fields, repr, loc) ->
+        let fields =
+          fields
+          |> List.map (fun (name, ty, loc) ->
+            let ty = ty |> abTy ctx
+            name, ty, loc)
 
-             RecordTyDef(recordName, fields, repr, loc)
+        RecordTyDef(recordName, fields, repr, loc)
 
-           | _ -> tyDef)
+      | _ -> tyDef)
 
   let ctx =
     { ctx with
@@ -917,11 +908,10 @@ let autoBox (modules: HProgram, hirCtx: HirCtx) : HProgram * HirCtx =
 
   let modules =
     modules
-    |> List.map
-         (fun (m: HModule) ->
-           let vars = abVars m.Vars
-           let stmts = m.Stmts |> List.map (abExpr ctx)
-           { m with Vars = vars; Stmts = stmts })
+    |> List.map (fun (m: HModule) ->
+      let vars = abVars m.Vars
+      let stmts = m.Stmts |> List.map (abExpr ctx)
+      { m with Vars = vars; Stmts = stmts })
 
   let hirCtx = ctx |> toHirCtx hirCtx
   modules, hirCtx
@@ -1024,8 +1014,7 @@ let private tvExpr (expr: HExpr) (ctx: TvCtx) : TvCtx =
             |> List.fold (fun tyVars tySerial -> TSet.add tySerial tyVars) ctx.UsedTyVars
             |> TSet.toList
 
-          { funDef with
-              Ty = TyScheme(tyVars, funTy) }
+          { funDef with Ty = TyScheme(tyVars, funTy) }
 
         ctx.Funs |> TMap.add funSerial funDef
 
@@ -1107,18 +1096,16 @@ let private processFunExpr (ctx: TaCtx) funSerial useSiteTy loc : HExpr =
 
   let tyArgs =
     tyVars
-    |> List.map
-         (fun tySerial ->
-           binding
-           |> TMap.tryFind tySerial
-           |> Option.defaultWith
-                (fun () ->
-                  if ctx.QuantifiedTys |> TSet.contains tySerial then
-                    tyMeta tySerial loc
-                  else
-                    // FIXME: This should be unreachable but does happen in some cases,
-                    //        e.g. `fun x y -> x - y` (tests/primitives/tuple_arg).
-                    tyUnit))
+    |> List.map (fun tySerial ->
+      binding
+      |> TMap.tryFind tySerial
+      |> Option.defaultWith (fun () ->
+        if ctx.QuantifiedTys |> TSet.contains tySerial then
+          tyMeta tySerial loc
+        else
+          // FIXME: This should be unreachable but does happen in some cases,
+          //        e.g. `fun x y -> x - y` (tests/primitives/tuple_arg).
+          tyUnit))
 
   HFunExpr(funSerial, useSiteTy, tyArgs, loc)
 
@@ -1156,8 +1143,7 @@ let private taExpr (ctx: TaCtx) (expr: HExpr) : HExpr =
           tyVars
           |> List.fold (fun quantifiedTys tySerial -> TSet.add tySerial quantifiedTys) ctx.QuantifiedTys
 
-        { ctx with
-            QuantifiedTys = quantifiedTys }
+        { ctx with QuantifiedTys = quantifiedTys }
 
     HLetFunExpr(callee, args, taExpr ctx body, onExpr next, ty, loc)
 

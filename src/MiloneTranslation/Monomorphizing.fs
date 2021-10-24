@@ -126,8 +126,7 @@ let private collectOnExpr (rx: CollectRx) (wx: CollectWx) expr : CollectWx =
   | HFunExpr (funSerial, _, tyArgs, _) ->
     if tyArgs |> List.isEmpty |> not
        && tyArgs |> List.forall tyIsMonomorphic then
-      { wx with
-          UseSiteTys = (funSerial, tyArgs) :: wx.UseSiteTys }
+      { wx with UseSiteTys = (funSerial, tyArgs) :: wx.UseSiteTys }
     else
       wx
 
@@ -269,8 +268,7 @@ let private generateMonomorphizedFun
     { genericFunDef with
         Prefix = mangle monoFunTy :: genericFunDef.Prefix
         Ty = TyScheme([], monoFunTy)
-        Linkage = InternalLinkage // Generic function can't have stable linkage.
-    }
+        Linkage = InternalLinkage } // Generic function can't have stable linkage.
 
   let monoFunBody =
     let (FunBody (genericArgPats, genericBody)) = genericFunBody
@@ -315,8 +313,7 @@ let private generate isMetaTy mangle (rx: CollectRx) genericFunBodyMap (ctx: Mon
       let (FunBody (_, body)) = monoFunBody
 
       let wx =
-        { emptyCollectWx with
-            UseSiteTys = ctx.WorkList }
+        { emptyCollectWx with UseSiteTys = ctx.WorkList }
 
       let wx = collectMonoUse rx wx body
       wx.UseSiteTys
@@ -422,38 +419,35 @@ let monify (modules: HProgram, hirCtx: HirCtx) : HProgram * HirCtx =
   // Split monomorphized instances into modules.
   let newFunsPerModule =
     ctx.NewFuns
-    |> List.map
-         (fun (funSerial, _, body, genericFunSerial, loc) ->
-           let moduleId, _ =
-             genericFunBodyMap |> mapFind genericFunSerial
+    |> List.map (fun (funSerial, _, body, genericFunSerial, loc) ->
+      let moduleId, _ =
+        genericFunBodyMap |> mapFind genericFunSerial
 
-           moduleId, (funSerial, body, loc))
+      moduleId, (funSerial, body, loc))
     |> multimapOfList compare
 
   // Rewrite.
   let modules =
     modules
-    |> List.mapi
-         (fun moduleId (m: HModule) ->
-           let funBodies =
-             newFunsPerModule
-             |> multimapFind moduleId
-             |> List.map
-                  (fun (funSerial, body, loc) ->
-                    let (FunBody (args, body)) = body
-                    HLetFunExpr(funSerial, args, body, hxUnit loc, tyUnit, loc))
+    |> List.mapi (fun moduleId (m: HModule) ->
+      let funBodies =
+        newFunsPerModule
+        |> multimapFind moduleId
+        |> List.map (fun (funSerial, body, loc) ->
+          let (FunBody (args, body)) = body
+          HLetFunExpr(funSerial, args, body, hxUnit loc, tyUnit, loc))
 
-           let stmts = List.append funBodies m.Stmts
+      let stmts = List.append funBodies m.Stmts
 
-           let stmts =
-             let rx: RewriteRx =
-               { GetFunIdent = getFunIdent
-                 IsGenericFun = isGenericFun
-                 InstanceMap = ctx.InstanceMap }
+      let stmts =
+        let rx: RewriteRx =
+          { GetFunIdent = getFunIdent
+            IsGenericFun = isGenericFun
+            InstanceMap = ctx.InstanceMap }
 
-             stmts |> List.map (rewriteExpr rx)
+        stmts |> List.map (rewriteExpr rx)
 
-           { m with Stmts = stmts })
+      { m with Stmts = stmts })
 
   // Merge.
   let hirCtx: HirCtx =

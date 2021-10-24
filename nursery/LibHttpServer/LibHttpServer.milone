@@ -509,11 +509,7 @@ let private writeResponse (res: HttpResponseContext) : unit =
   res.WriteHeader "Connection" "close"
   res.WriteHeader "Server" (serverName + "/" + serverVersion)
 
-  List.fold
-    (fun () (name, value) ->
-      res.WriteHeader name value)
-    ()
-    res.Headers
+  List.fold (fun () (name, value) -> res.WriteHeader name value) () res.Headers
 
   match res.Content with
   | None -> ()
@@ -745,11 +741,10 @@ let private runWithStdio () : int =
 
   printError "info: Reading requests from standard input."
 
-  loopInRegion
-    (fun () ->
-      match readReq handler input output with
-      | None -> exit 0
-      | Some code -> code)
+  loopInRegion (fun () ->
+    match readReq handler input output with
+    | None -> exit 0
+    | Some code -> code)
 
 let private runWithSocket () : int =
   let port = "8080"

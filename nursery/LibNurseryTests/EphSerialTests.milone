@@ -42,11 +42,7 @@ let private testEquivalent (ss: EphSerial) : EphSerial =
   ss
 
 let testEphSerialModule () =
-  EphSerial.run
-    (fun (ss: EphSerial) ->
-      let ss : EphSerial =
-        ss
-        |> testRefresh
-        |> testEquivalent
+  EphSerial.run (fun (ss: EphSerial) ->
+    let ss: EphSerial = ss |> testRefresh |> testEquivalent
 
-      (), ss)
+    (), ss)

@@ -242,8 +242,7 @@ let private hoistModule (ctx: HoistCtx) (m: HModule) : HModule * HoistCtx =
 
 let hoist (modules: HProgram, hirCtx: HirCtx) : HProgram * HirCtx =
   let hoistCtx =
-    { hoistCtxEmpty with
-        MainFunOpt = hirCtx.MainFunOpt }
+    { hoistCtxEmpty with MainFunOpt = hirCtx.MainFunOpt }
 
   let modules, hoistCtx =
     modules |> List.mapFold hoistModule hoistCtx

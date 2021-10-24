@@ -78,20 +78,19 @@ let render () =
       | _ -> None
 
     testProjects
-    |> List.choose
-         (fun t ->
-           match readExpectedOutput t with
-           | None ->
-             let _, projectDir, _, _ = t
-             eprintfn "warn: '%s' skipped." projectDir
-             None
+    |> List.choose (fun t ->
+      match readExpectedOutput t with
+      | None ->
+        let _, projectDir, _, _ = t
+        eprintfn "warn: '%s' skipped." projectDir
+        None
 
-           | Some output ->
-             let shouldRun =
-               output.Contains("milone-lang compile error.")
-               |> not
+      | Some output ->
+        let shouldRun =
+          output.Contains("milone-lang compile error.")
+          |> not
 
-             Some(shouldRun, t))
+        Some(shouldRun, t))
     |> List.partition fst
     |> (fun (x, y) -> List.map (snd >> testProject) x, List.map (snd >> testProject) y)
 

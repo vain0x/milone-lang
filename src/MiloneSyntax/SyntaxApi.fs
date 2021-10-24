@@ -146,18 +146,16 @@ let private readModuleInProjectWith
   : Future<(SourceExt * SourceCode) option> =
   let read (ext: SourceExt) =
     readTextFile (projectDir + "/" + moduleName + ext)
-    |> Future.map
-         (fun result ->
-           match result with
-           | Some contents -> Some(ext, contents)
-           | None -> None)
+    |> Future.map (fun result ->
+      match result with
+      | Some contents -> Some(ext, contents)
+      | None -> None)
 
   read ".milone"
-  |> Future.andThen
-       (fun result ->
-         match result with
-         | (Some _) as it -> Future.just it
-         | None -> read ".fs")
+  |> Future.andThen (fun result ->
+    match result with
+    | (Some _) as it -> Future.just it
+    | None -> read ".fs")
 
 let parseModuleWith (docId: DocId) (kind: ModuleKind) (tokens: (Token * Pos) list) : ModuleSyntaxData =
   let errorTokens, tokens = tokens |> List.partition isErrorToken
@@ -187,21 +185,20 @@ let private fetchModuleWith
     findProjectWith projects entryProjectDir projectName
 
   readModuleInProjectWith readTextFile projectDir moduleName
-  |> Future.map
-       (fun result ->
-         match result with
-         | None -> None
+  |> Future.map (fun result ->
+    match result with
+    | None -> None
 
-         | Some (_, contents) ->
-           let docId =
-             AstBundle.computeDocId projectName moduleName
+    | Some (_, contents) ->
+      let docId =
+        AstBundle.computeDocId projectName moduleName
 
-           let kind = getModuleKind projectName moduleName
+      let kind = getModuleKind projectName moduleName
 
-           contents
-           |> tokenize
-           |> parseModuleWith docId kind
-           |> Some)
+      contents
+      |> tokenize
+      |> parseModuleWith docId kind
+      |> Some)
 
 // -----------------------------------------------
 // Error processing
@@ -216,11 +213,10 @@ let private isErrorToken token =
 
 let private tokenizeErrors errorTokens =
   errorTokens
-  |> List.map
-       (fun token ->
-         match token with
-         | ErrorToken error, pos -> tokenizeErrorToString error, pos
-         | _ -> unreachable ())
+  |> List.map (fun token ->
+    match token with
+    | ErrorToken error, pos -> tokenizeErrorToString error, pos
+    | _ -> unreachable ())
 
 let private collectNameResErrors logs : SyntaxError list option =
   if List.isEmpty logs then

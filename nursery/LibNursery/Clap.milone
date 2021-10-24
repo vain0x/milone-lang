@@ -79,29 +79,18 @@ let parseOpts (def: string list) (args: string list) : Opts =
 
       | Some Flag, _ -> { opts with Flags = name :: opts.Flags }, missed, redundant
 
-      | Some Optional, Some value ->
-        { opts with
-            Bindings = (name, value) :: opts.Bindings },
-        missed,
-        redundant
+      | Some Optional, Some value -> { opts with Bindings = (name, value) :: opts.Bindings }, missed, redundant
 
       | Some Required, Some value ->
         let _, missed = missed |> TSet.remove name
 
-        { opts with
-            Bindings = (name, value) :: opts.Bindings },
-        missed,
-        redundant
+        { opts with Bindings = (name, value) :: opts.Bindings }, missed, redundant
 
       | _ ->
         assert false // unreachable
         exit 1
 
-    | Msg.Positional value ->
-      { opts with
-          Positional = value :: opts.Positional },
-      missed,
-      redundant
+    | Msg.Positional value -> { opts with Positional = value :: opts.Positional }, missed, redundant
 
   let (opts, missed, redundant), result =
     runClapCore args (emptyOpts, missed, []) hasParam update
