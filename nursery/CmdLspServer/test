@@ -1,0 +1,5 @@
+#!/bin/sh
+
+set -eu
+
+$LSP_SERVER_BIN

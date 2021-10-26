@@ -1,0 +1,8 @@
+#!/bin/sh
+
+set -eu
+
+TARGET=$PWD/../target/CmdLspServer
+
+milone build --target-dir "$TARGET" $PWD
+cp -f "$TARGET/x86_64-unknown-linux-gnu-debug/CmdLspServer" "$TARGET/lsp_server"
