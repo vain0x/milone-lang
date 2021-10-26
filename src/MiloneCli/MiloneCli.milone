@@ -1,5 +1,5 @@
 /// Entry point of the milone-lang compiler.
-module rec MiloneCli.EntryPoint
+module rec MiloneCli.Program
 
 // See milone_libs for implementations.
 open MiloneStd.StdChar
