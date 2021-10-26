@@ -238,9 +238,7 @@ type private CompileResult =
   | CompileError of string
 
 let private computeCFilename projectName docId : CFilename =
-  if docId = projectName + ".Program"
-     || docId = projectName + ".EntryPoint"
-     || docId = projectName + "." + projectName then
+  if docId = projectName + "." + projectName then
     projectName + ".c"
   else
     S.replace "." "_" docId + ".c"
