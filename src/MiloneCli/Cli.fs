@@ -275,7 +275,7 @@ let private compile (ctx: CompileCtx) : CompileResult =
 // Others
 // -----------------------------------------------
 
-let private writeCFiles (host: CliHost) (targetDir: string) (cFiles: (string * string) list) : unit =
+let private writeCFiles (host: CliHost) (targetDir: string) (cFiles: (CFilename * CCode) list) : unit =
   dirCreateOrFail host (Path targetDir)
   List.fold (fun () (name, contents) -> host.FileWriteAllText(targetDir + "/" + name) contents) () cFiles
 
@@ -301,8 +301,11 @@ type private CompileOptions =
     Verbosity: Verbosity }
 
 let private cliCompile (host: CliHost) (options: CompileOptions) =
-  let ctx =
-    compileCtxNew host options.Verbosity options.ProjectDir
+  let projectDir = options.ProjectDir
+  let targetDir = options.TargetDir
+  let verbosity = options.Verbosity
+
+  let ctx = compileCtxNew host verbosity projectDir
 
   match compile ctx with
   | CompileError output ->
@@ -310,8 +313,6 @@ let private cliCompile (host: CliHost) (options: CompileOptions) =
     1
 
   | CompileOk cFiles ->
-    let targetDir = options.TargetDir
-
     dirCreateOrFail host (Path targetDir)
     writeCFiles host targetDir cFiles
 
@@ -324,157 +325,117 @@ let private cliCompile (host: CliHost) (options: CompileOptions) =
 
 [<RequireQualifiedAccess; NoEquality; NoComparison>]
 type private BuildOptions =
-  { ProjectDir: string
-    TargetDir: string
-    IsRelease: bool
-    Verbosity: Verbosity }
+  { CompileOptions: CompileOptions
+    IsRelease: bool }
+
+let private toBuildOnUnixParams
+  (host: CliHost)
+  (options: BuildOptions)
+  (ctx: CompileCtx)
+  (cFiles: (CFilename * CCode) list)
+  : PU.BuildOnUnixParams =
+  let miloneHome = Path(hostToMiloneHome host)
+
+  let compileOptions = options.CompileOptions
+  let projectDir = compileOptions.ProjectDir
+  let targetDir = compileOptions.TargetDir
+  let isRelease = options.IsRelease
+  let projectName = ctx.EntryProjectName
+
+  { TargetDir = Path targetDir
+    IsRelease = isRelease
+    ExeFile = computeExePath (Path targetDir) host.Platform isRelease projectName
+    CFiles = cFiles |> List.map (fun (name, _) -> Path name)
+    MiloneHome = miloneHome
+    CStd = ctx.SyntaxCtx.Manifest.CStd
+    CcList =
+      ctx.SyntaxCtx.Manifest.CcList
+      |> List.map (fun (Path name, _) -> Path(projectDir + "/" + name))
+    Libs = ctx.SyntaxCtx.Manifest.Libs |> List.map fst
+    DirCreate = dirCreateOrFail host
+    FileWrite = fileWrite host
+    ExecuteInto = host.ExecuteInto }
+
+let private toBuildOnWindowsParams
+  (host: CliHost)
+  (options: BuildOptions)
+  (ctx: CompileCtx)
+  (cFiles: (CFilename * CCode) list)
+  : PW.BuildOnWindowsParams =
+  let miloneHome = Path(hostToMiloneHome host)
+
+  let compileOptions = options.CompileOptions
+  let targetDir = compileOptions.TargetDir
+  let isRelease = options.IsRelease
+  let projectName = ctx.EntryProjectName
+
+  { ProjectName = projectName
+    CFiles = cFiles |> List.map (fun (name, _) -> Path name)
+    MiloneHome = miloneHome
+    TargetDir = Path targetDir
+    IsRelease = isRelease
+    ExeFile = computeExePath (Path targetDir) host.Platform isRelease projectName
+
+    NewGuid = fun () -> PW.Guid(host.NewGuid())
+    DirCreate = dirCreateOrFail host
+    FileExists = fun filePath -> host.FileExists(Path.toString filePath)
+    FileWrite = fileWrite host
+    RunCommand = runCommand host }
 
 let private cliBuild (host: CliHost) (options: BuildOptions) =
-  match host.Platform with
-  | Platform.Unix ->
-    let ctx =
-      compileCtxNew host options.Verbosity options.ProjectDir
+  let compileOptions = options.CompileOptions
+  let projectDir = compileOptions.ProjectDir
+  let targetDir = compileOptions.TargetDir
+  let verbosity = compileOptions.Verbosity
 
-    match compile ctx with
-    | CompileError output ->
-      host.WriteStdout output
-      1
+  let ctx = compileCtxNew host verbosity projectDir
 
-    | CompileOk cFiles ->
-      let projectDir = options.ProjectDir
-      let targetDir = options.TargetDir
-      let isRelease = options.IsRelease
-      let projectName = ctx.EntryProjectName
-      let miloneHome = Path(hostToMiloneHome host)
+  match compile ctx with
+  | CompileError output ->
+    host.WriteStdout output
+    1
 
-      writeCFiles host targetDir cFiles
+  | CompileOk cFiles ->
+    writeCFiles host targetDir cFiles
 
-      let p: PU.BuildOnUnixParams =
-        { TargetDir = Path targetDir
-          IsRelease = isRelease
-          ExeFile = computeExePath (Path targetDir) host.Platform isRelease projectName
-          CFiles = cFiles |> List.map (fun (name, _) -> Path name)
-          MiloneHome = miloneHome
-          CStd = ctx.SyntaxCtx.Manifest.CStd
-          CcList =
-            ctx.SyntaxCtx.Manifest.CcList
-            |> List.map (fun (Path name, _) -> Path(projectDir + "/" + name))
-          Libs = ctx.SyntaxCtx.Manifest.Libs |> List.map fst
-          DirCreate = dirCreateOrFail host
-          FileWrite = fileWrite host
-          ExecuteInto = host.ExecuteInto }
-
-      PU.buildOnUnix p
+    match host.Platform with
+    | Platform.Unix ->
+      PU.buildOnUnix (toBuildOnUnixParams host options ctx cFiles)
       unreachable ()
 
-  | Platform.Windows ->
-    let ctx =
-      compileCtxNew host options.Verbosity options.ProjectDir
-
-    match compile ctx with
-    | CompileError output ->
-      host.WriteStdout output
-      1
-
-    | CompileOk cFiles ->
-      let targetDir = options.TargetDir
-      let isRelease = options.IsRelease
-      let projectName = ctx.EntryProjectName
-      let miloneHome = Path(hostToMiloneHome host)
-
-      writeCFiles host targetDir cFiles
-
-      let p: PW.BuildOnWindowsParams =
-        { ProjectName = projectName
-          CFiles = cFiles |> List.map (fun (name, _) -> Path name)
-          MiloneHome = miloneHome
-          TargetDir = Path targetDir
-          IsRelease = isRelease
-          ExeFile = computeExePath (Path targetDir) host.Platform isRelease projectName
-
-          NewGuid = fun () -> PW.Guid(host.NewGuid())
-          DirCreate = dirCreateOrFail host
-          FileExists = fun filePath -> host.FileExists(Path.toString filePath)
-          FileWrite = fileWrite host
-          RunCommand = runCommand host }
-
-      PW.buildOnWindows p
+    | Platform.Windows ->
+      PW.buildOnWindows (toBuildOnWindowsParams host options ctx cFiles)
       0
 
 let private cliRun (host: CliHost) (options: BuildOptions) (restArgs: string list) =
-  match host.Platform with
-  | Platform.Unix ->
-    let ctx =
-      compileCtxNew host options.Verbosity options.ProjectDir
+  let compileOptions = options.CompileOptions
+  let projectDir = compileOptions.ProjectDir
+  let targetDir = compileOptions.TargetDir
+  let verbosity = compileOptions.Verbosity
 
-    match compile ctx with
-    | CompileError output ->
-      host.WriteStdout output
-      1
+  let ctx = compileCtxNew host verbosity projectDir
 
-    | CompileOk cFiles ->
-      let projectDir = options.ProjectDir
-      let targetDir = options.TargetDir
-      let isRelease = options.IsRelease
-      let projectName = ctx.EntryProjectName
-      let miloneHome = Path(hostToMiloneHome host)
+  match compile ctx with
+  | CompileError output ->
+    host.WriteStdout output
+    1
 
-      writeCFiles host targetDir cFiles
+  | CompileOk cFiles ->
+    writeCFiles host targetDir cFiles
 
-      let p: PU.RunOnUnixParams =
-        { TargetDir = Path targetDir
-          IsRelease = isRelease
-          ExeFile = computeExePath (Path targetDir) host.Platform isRelease projectName
-          CFiles = cFiles |> List.map (fun (name, _) -> Path name)
-          MiloneHome = miloneHome
-          CStd = ctx.SyntaxCtx.Manifest.CStd
-          CcList =
-            ctx.SyntaxCtx.Manifest.CcList
-            |> List.map (fun (Path name, _) -> Path(projectDir + "/" + name))
-          Libs = ctx.SyntaxCtx.Manifest.Libs |> List.map fst
-          Args = restArgs
-          DirCreate = dirCreateOrFail host
-          FileWrite = fileWrite host
-          ExecuteInto = host.ExecuteInto }
+    match host.Platform with
+    | Platform.Unix ->
+      let p =
+        toBuildOnUnixParams host options ctx cFiles
 
-      PU.runOnUnix p
+      PU.runOnUnix p restArgs
       unreachable ()
 
-  | Platform.Windows ->
-    let ctx =
-      compileCtxNew host options.Verbosity options.ProjectDir
+    | Platform.Windows ->
+      let p =
+        toBuildOnWindowsParams host options ctx cFiles
 
-    match compile ctx with
-    | CompileError output ->
-      host.WriteStdout output
-      1
-
-    | CompileOk cFiles ->
-      let targetDir = options.TargetDir
-      let isRelease = options.IsRelease
-      let projectName = ctx.EntryProjectName
-      let miloneHome = Path(hostToMiloneHome host)
-
-      writeCFiles host targetDir cFiles
-
-      let p: PW.RunOnWindowsParams =
-        { ProjectName = ctx.EntryProjectName
-          CFiles = cFiles |> List.map (fun (name, _) -> Path name)
-
-          MiloneHome = miloneHome
-          TargetDir = Path targetDir
-          IsRelease = isRelease
-          ExeFile = computeExePath (Path targetDir) host.Platform isRelease projectName
-
-          NewGuid = fun () -> PW.Guid(host.NewGuid())
-          DirCreate = dirCreateOrFail host
-          FileExists = fun filePath -> host.FileExists(Path.toString filePath)
-          FileWrite = fileWrite host
-          RunCommand = runCommand host
-
-          Args = restArgs }
-
-      PW.runOnWindows p
+      PW.runOnWindows p restArgs
       0
 
 let private cliEval (host: CliHost) (sourceCode: string) =
@@ -493,15 +454,20 @@ let main _ =
 """
 
   let projectDir = "target/Eval"
-  let projectName = "Eval"
   let targetDir = projectDir
-  let isRelease = false
-  let miloneHome = Path(hostToMiloneHome host)
+  let verbosity = Quiet
+
+  let options: BuildOptions =
+    { CompileOptions =
+        { ProjectDir = projectDir
+          TargetDir = targetDir
+          Verbosity = verbosity }
+      IsRelease = false }
+
+  let ctx = compileCtxNew host verbosity projectDir
 
   dirCreateOrFail host (Path targetDir)
   fileWrite host (Path(projectDir + "/Eval.milone")) sourceCode
-
-  let ctx = compileCtxNew host Quiet projectDir
 
   match compile ctx with
   | CompileError output ->
@@ -513,42 +479,17 @@ let main _ =
 
     match host.Platform with
     | Platform.Unix ->
-      let p: PU.RunOnUnixParams =
-        { TargetDir = Path targetDir
-          IsRelease = false
-          ExeFile = computeExePath (Path targetDir) host.Platform isRelease projectName
-          CFiles = cFiles |> List.map (fun (name, _) -> Path name)
-          MiloneHome = miloneHome
-          CStd = "c11"
-          CcList = []
-          Libs = []
-          Args = []
-          DirCreate = dirCreateOrFail host
-          FileWrite = fileWrite host
-          ExecuteInto = host.ExecuteInto }
+      let p =
+        toBuildOnUnixParams host options ctx cFiles
 
-      PU.runOnUnix p
+      PU.runOnUnix p []
       unreachable ()
 
     | Platform.Windows ->
-      let p: PW.RunOnWindowsParams =
-        { ProjectName = ctx.EntryProjectName
-          CFiles = cFiles |> List.map (fun (name, _) -> Path name)
+      let p =
+        toBuildOnWindowsParams host options ctx cFiles
 
-          MiloneHome = miloneHome
-          TargetDir = Path targetDir
-          IsRelease = isRelease
-          ExeFile = computeExePath (Path targetDir) host.Platform isRelease projectName
-
-          NewGuid = fun () -> PW.Guid(host.NewGuid())
-          DirCreate = dirCreateOrFail host
-          FileExists = fun filePath -> host.FileExists(Path.toString filePath)
-          FileWrite = fileWrite host
-          RunCommand = runCommand host
-
-          Args = [] }
-
-      PW.runOnWindows p
+      PW.runOnWindows p []
       0
 
 // -----------------------------------------------
@@ -638,11 +579,22 @@ let private defaultTargetDir projectDir =
   "target/" + projectName
 
 /// Set of options, used commonly for build-like subcommands (check, compile, build, run).
+[<RequireQualifiedAccess; NoEquality; NoComparison>]
 type private BuildLikeOptions =
   { ProjectDir: ProjectDir
     TargetDir: string
     IsRelease: bool
     Verbosity: Verbosity }
+
+module private BuildLikeOptions =
+  let toCompileOptions (b: BuildLikeOptions) : CompileOptions =
+    { ProjectDir = b.ProjectDir
+      TargetDir = b.TargetDir
+      Verbosity = b.Verbosity }
+
+  let toBuildOptions (b: BuildLikeOptions) : BuildOptions =
+    { CompileOptions = toCompileOptions b
+      IsRelease = b.IsRelease }
 
 let private parseBuildLikeOptions host args : BuildLikeOptions * string list =
   let verbosity, args = parseVerbosity host args
@@ -757,25 +709,14 @@ let cli (host: CliHost) =
     let b, args = parseBuildLikeOptions host args
     endArgs args
 
-    let options: CompileOptions =
-      { ProjectDir = b.ProjectDir
-        TargetDir = b.TargetDir
-        Verbosity = b.Verbosity }
-
-    cliCompile host options
+    cliCompile host (BuildLikeOptions.toCompileOptions b)
 
   | BuildCmd, args ->
     let args = eatParallelFlag args
     let b, args = parseBuildLikeOptions host args
     endArgs args
 
-    let options: BuildOptions =
-      { ProjectDir = b.ProjectDir
-        TargetDir = b.TargetDir
-        IsRelease = b.IsRelease
-        Verbosity = b.Verbosity }
-
-    cliBuild host options
+    cliBuild host (BuildLikeOptions.toBuildOptions b)
 
   | RunCmd, args ->
     let args = eatParallelFlag args
@@ -788,12 +729,7 @@ let cli (host: CliHost) =
 
     endArgs args
 
-    let options: BuildOptions =
-      { ProjectDir = b.ProjectDir
-        TargetDir = b.TargetDir
-        IsRelease = b.IsRelease
-        Verbosity = b.Verbosity }
-
+    let options = BuildLikeOptions.toBuildOptions b
     cliRun host options runArgs
 
   | EvalCmd, args ->

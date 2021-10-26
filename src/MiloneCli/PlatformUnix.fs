@@ -39,25 +39,24 @@ type BuildOnUnixParams =
     FileWrite: Path -> string -> unit
     ExecuteInto: string -> unit }
 
+let private toRenderNinjaParams (p: BuildOnUnixParams) : RenderNinjaFileParams =
+  { TargetDir = p.TargetDir
+    CFiles = p.CFiles
+    ExeFile = p.ExeFile
+    MiloneHome = p.MiloneHome
+    CDebug = not p.IsRelease
+    COptimize = p.IsRelease
+    CStd = p.CStd
+    CcList = p.CcList
+    Libs = p.Libs }
+
 let buildOnUnix (p: BuildOnUnixParams) : unit =
   let targetDir = p.TargetDir
 
   let ninjaFile =
     Path(Path.toString targetDir + "/build.ninja")
 
-  let ninjaScript =
-    let p: RenderNinjaFileParams =
-      { TargetDir = p.TargetDir
-        CFiles = p.CFiles
-        ExeFile = p.ExeFile
-        MiloneHome = p.MiloneHome
-        CDebug = not p.IsRelease
-        COptimize = p.IsRelease
-        CStd = p.CStd
-        CcList = p.CcList
-        Libs = p.Libs }
-
-    renderNinjaFile p
+  let ninjaScript = renderNinjaFile (toRenderNinjaParams p)
 
   p.DirCreate targetDir
   p.FileWrite ninjaFile ninjaScript
@@ -69,44 +68,14 @@ let buildOnUnix (p: BuildOnUnixParams) : unit =
     + quoteShellWord (Path.toString p.ExeFile)
   )
 
-[<RequireQualifiedAccess; NoEquality; NoComparison>]
-type RunOnUnixParams =
-  { CFiles: Path list
-    TargetDir: Path
-    IsRelease: bool
-    ExeFile: Path
-    MiloneHome: Path
-    CStd: string
-    CcList: Path list
-    Libs: string list
-
-    Args: string list
-
-    // Effects
-    DirCreate: Path -> unit
-    FileWrite: Path -> string -> unit
-    ExecuteInto: string -> unit }
-
-let runOnUnix (p: RunOnUnixParams) : unit =
+let runOnUnix (p: BuildOnUnixParams) (args: string list) : unit =
   let targetDir = p.TargetDir
   let exeFile = p.ExeFile
 
   let ninjaFile =
     Path(Path.toString targetDir + "/build.ninja")
 
-  let buildScript =
-    let p: RenderNinjaFileParams =
-      { TargetDir = p.TargetDir
-        CFiles = p.CFiles
-        ExeFile = p.ExeFile
-        MiloneHome = p.MiloneHome
-        CDebug = not p.IsRelease
-        COptimize = p.IsRelease
-        CStd = p.CStd
-        CcList = p.CcList
-        Libs = p.Libs }
-
-    renderNinjaFile p
+  let buildScript = renderNinjaFile (toRenderNinjaParams p)
 
   p.DirCreate targetDir
   p.FileWrite ninjaFile buildScript
@@ -116,7 +85,7 @@ let runOnUnix (p: RunOnUnixParams) : unit =
     + quoteShellWord (Path.toString ninjaFile)
     + " 1>&2 && "
     + quoteShellWord (Path.toString exeFile)
-    + (p.Args
+    + (args
        |> List.map (fun arg -> " " + quoteShellWord arg)
        |> S.concat "")
   )
@@ -125,6 +94,7 @@ let runOnUnix (p: RunOnUnixParams) : unit =
 // Templating
 // -----------------------------------------------
 
+[<RequireQualifiedAccess; NoEquality; NoComparison>]
 type private RenderNinjaFileParams =
   { TargetDir: Path
     CFiles: Path list

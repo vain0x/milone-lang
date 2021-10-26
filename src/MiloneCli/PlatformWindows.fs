@@ -69,6 +69,7 @@ let private findMSBuild (fileExists: FileExistsFun) : Path =
 // Interface
 // -----------------------------------------------
 
+[<RequireQualifiedAccess; NoEquality; NoComparison>]
 type BuildOnWindowsParams =
   { ProjectName: string
     CFiles: Path list
@@ -144,45 +145,9 @@ let buildOnWindows (p: BuildOnWindowsParams) : unit =
       "-v:quiet"
       "-nologo" ]
 
-type RunOnWindowsParams =
-  { // Milone build result
-    ProjectName: string
-    CFiles: Path list
-
-    // Build options
-    MiloneHome: Path
-    TargetDir: Path
-    IsRelease: bool
-    ExeFile: Path
-
-    // Run options
-    Args: string list
-
-    // Effects
-    NewGuid: NewGuidFun
-    DirCreate: Path -> unit
-    FileExists: FileExistsFun
-    FileWrite: Path -> string -> unit
-    RunCommand: Path -> string list -> unit }
-
-let runOnWindows (p: RunOnWindowsParams) : unit =
-  let () =
-    let p: BuildOnWindowsParams =
-      { ProjectName = p.ProjectName
-        CFiles = p.CFiles
-        MiloneHome = p.MiloneHome
-        TargetDir = p.TargetDir
-        IsRelease = p.IsRelease
-        ExeFile = p.ExeFile
-        NewGuid = p.NewGuid
-        DirCreate = p.DirCreate
-        FileExists = p.FileExists
-        FileWrite = p.FileWrite
-        RunCommand = p.RunCommand }
-
-    buildOnWindows p
-
-  p.RunCommand p.ExeFile p.Args
+let runOnWindows (p: BuildOnWindowsParams) (args: string list) : unit =
+  buildOnWindows p
+  p.RunCommand p.ExeFile args
 
 // =============================================================================
 
@@ -190,6 +155,7 @@ let runOnWindows (p: RunOnWindowsParams) : unit =
 // Template: solution
 // -----------------------------------------------
 
+[<RequireQualifiedAccess; NoEquality; NoComparison>]
 type private SolutionXmlParams =
   { Guid1: Guid
     Guid2: Guid
@@ -237,6 +203,7 @@ EndGlobal
 // Template: vcxproj
 // -----------------------------------------------
 
+[<RequireQualifiedAccess; NoEquality; NoComparison>]
 type private VcxProjectParams =
   { MiloneTargetDir: Path
     CFiles: Path list
