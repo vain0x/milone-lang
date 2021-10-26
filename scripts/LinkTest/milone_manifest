@@ -1,5 +1,6 @@
 std gnu11
 cc ./link_test_runtime.c
 lib m
+sanitize address,undefined
 
 # obj other.o

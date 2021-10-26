@@ -30,6 +30,7 @@ type BuildOnUnixParams =
     IsRelease: bool
     ExeFile: Path
     MiloneHome: Path
+    CSanitize: string option
     CStd: string
     CcList: Path list
     ObjList: Path list
@@ -47,6 +48,7 @@ let private toRenderNinjaParams (p: BuildOnUnixParams) : RenderNinjaFileParams =
     MiloneHome = p.MiloneHome
     CDebug = not p.IsRelease
     COptimize = p.IsRelease
+    CSanitize = p.CSanitize
     CStd = p.CStd
     CcList = p.CcList
     ObjList = p.ObjList
@@ -106,6 +108,7 @@ type private RenderNinjaFileParams =
     CDebug: bool
     COptimize: bool
     CStd: string
+    CSanitize: string option
     CcList: Path list
     ObjList: Path list
     Libs: string list }
@@ -149,11 +152,25 @@ build $milone_platform_o: cc $milone_platform_c | $milone_h
 
 """
 
+  let sanitizerFlags =
+    match p.CSanitize with
+    | Some value -> [ "-fsanitize=" + value ]
+    | None -> []
+
   let cFlags =
     let debug = if p.CDebug then [ "-g" ] else []
     let optimize = if p.COptimize then "-O2" else "-O1"
     let std = "-std=" + p.CStd
+
     List.append debug [ optimize; std ]
+    |> List.append sanitizerFlags
+    |> S.concat " "
+
+  let linkFlags =
+    p.Libs
+    |> List.map (fun lib -> "-l" + lib)
+    |> List.append sanitizerFlags
+    |> S.concat " "
 
   let build =
     let rules =
@@ -161,12 +178,8 @@ build $milone_platform_o: cc $milone_platform_c | $milone_h
       |> S.replace "${EXE_FILE}" exeFile
       |> S.replace "${MILONE_HOME}" miloneHome
       |> S.replace "${TARGET_DIR}" targetDir
-      |> S.replace "${C_FLAGS}" (cFlags |> S.concat " ")
-      |> S.replace
-           "${LINK_FLAGS}"
-           (p.Libs
-            |> List.map (fun lib -> "-l" + lib)
-            |> S.concat " ")
+      |> S.replace "${C_FLAGS}" cFlags
+      |> S.replace "${LINK_FLAGS}" linkFlags
 
     [ rules ]
 

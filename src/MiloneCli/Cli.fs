@@ -349,6 +349,7 @@ let private toBuildOnUnixParams
     ExeFile = computeExePath (Path targetDir) host.Platform isRelease projectName
     CFiles = cFiles |> List.map (fun (name, _) -> Path name)
     MiloneHome = miloneHome
+    CSanitize = ctx.SyntaxCtx.Manifest.CSanitize
     CStd = ctx.SyntaxCtx.Manifest.CStd
     CcList =
       ctx.SyntaxCtx.Manifest.CcList

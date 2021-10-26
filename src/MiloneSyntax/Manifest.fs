@@ -18,6 +18,7 @@ type ManifestData =
     Errors: (string * Loc) list
 
     // #experimental
+    CSanitize: string option
     CStd: string
     CcList: (Path * Loc) list
     ObjList: (Path * Loc) list
@@ -27,6 +28,7 @@ let private emptyManifest: ManifestData =
   { Projects = []
     Errors = []
 
+    CSanitize = None
     CStd = "c11"
     CcList = []
     ObjList = []
@@ -76,6 +78,7 @@ let private parseManifest (docId: DocId) (s: string) : ManifestData =
            else
              push name dir
 
+         | [ "sanitize"; value ] -> { m with CSanitize = Some value }
          | [ "std"; version ] -> { m with CStd = version }
          | [ "cc"; path ] -> { m with CcList = (Path path, loc) :: m.CcList }
          | [ "obj"; path ] -> { m with ObjList = (Path path, loc) :: m.ObjList }
