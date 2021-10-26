@@ -52,12 +52,26 @@ type Verbosity =
   | Quiet
 
 [<RequireQualifiedAccess; NoEquality; NoComparison>]
+type UnixApi =
+  { /// Turns this process into a shell that runs specified command.
+    ExecuteInto: string -> unit }
+
+[<RequireQualifiedAccess; NoEquality; NoComparison>]
+type WindowsApi =
+  { NewGuid: unit -> string
+
+    /// Runs a subprocess and waits for exit. Returns exit code.
+    ///
+    /// (Pipes are inherited.)
+    RunCommand: string -> string list -> int }
+
+[<RequireQualifiedAccess; NoEquality; NoComparison>]
 type Platform =
-  | Unix
-  | Windows
+  | Unix of UnixApi
+  | Windows of WindowsApi
 
 /// Abstraction layer of CLI program.
-[<NoEquality; NoComparison>]
+[<RequireQualifiedAccess; NoEquality; NoComparison>]
 type CliHost =
   {
     /// Command line args.
@@ -79,8 +93,6 @@ type CliHost =
     /// Prints a message to stderr for profiling.
     ProfileLog: string -> Profiler -> unit
 
-    NewGuid: unit -> string
-
     /// Ensures directory exist.
     ///
     /// baseDir -> dir -> exist
@@ -98,15 +110,7 @@ type CliHost =
     ReadStdinAll: unit -> string
 
     /// Writes to standard output.
-    WriteStdout: string -> unit
-
-    /// Runs a subprocess and waits for exit. Returns exit code.
-    ///
-    /// (Pipes are inherited.)
-    RunCommand: string -> string list -> int
-
-    /// Turns this process into a shell that runs specified command.
-    ExecuteInto: string -> unit }
+    WriteStdout: string -> unit }
 
 // -----------------------------------------------
 // Helpers
@@ -150,9 +154,8 @@ let private dirCreateOrFail (host: CliHost) (dirPath: Path) : unit =
 let private fileWrite (host: CliHost) (filePath: Path) (contents: string) : unit =
   host.FileWriteAllText(Path.toString filePath) contents
 
-let private runCommand (host: CliHost) (command: Path) (args: string list) : unit =
-  let code =
-    host.RunCommand(Path.toString command) args
+let private runCommand (w: WindowsApi) (command: Path) (args: string list) : unit =
+  let code = w.RunCommand(Path.toString command) args
 
   if code <> 0 then
     printfn "error: subprocess '%s' exited in code %d" (Path.toString command) code
@@ -171,8 +174,8 @@ let private writeLog (host: CliHost) verbosity msg : unit =
 let private computeExePath targetDir platform isRelease name : Path =
   let triple =
     match platform with
-    | Platform.Unix -> "x86_64-unknown-linux-gnu"
-    | Platform.Windows -> "x86_64-pc-windows-msvc"
+    | Platform.Unix _ -> "x86_64-unknown-linux-gnu"
+    | Platform.Windows _ -> "x86_64-pc-windows-msvc"
 
   let mode = if isRelease then "release" else "debug"
 
@@ -180,8 +183,8 @@ let private computeExePath targetDir platform isRelease name : Path =
 
   let ext =
     match platform with
-    | Platform.Unix -> ""
-    | Platform.Windows -> ".exe"
+    | Platform.Unix _ -> ""
+    | Platform.Windows _ -> ".exe"
 
   Path(
     Path.toString targetDir
@@ -328,6 +331,7 @@ type private BuildOptions =
 
 let private toBuildOnUnixParams
   (host: CliHost)
+  (u: UnixApi)
   (options: BuildOptions)
   (ctx: CompileCtx)
   (cFiles: (CFilename * CCode) list)
@@ -352,10 +356,11 @@ let private toBuildOnUnixParams
     Libs = ctx.SyntaxCtx.Manifest.Libs |> List.map fst
     DirCreate = dirCreateOrFail host
     FileWrite = fileWrite host
-    ExecuteInto = host.ExecuteInto }
+    ExecuteInto = u.ExecuteInto }
 
 let private toBuildOnWindowsParams
   (host: CliHost)
+  (w: WindowsApi)
   (options: BuildOptions)
   (ctx: CompileCtx)
   (cFiles: (CFilename * CCode) list)
@@ -374,11 +379,11 @@ let private toBuildOnWindowsParams
     IsRelease = isRelease
     ExeFile = computeExePath (Path targetDir) host.Platform isRelease projectName
 
-    NewGuid = fun () -> PW.Guid(host.NewGuid())
+    NewGuid = fun () -> PW.Guid(w.NewGuid())
     DirCreate = dirCreateOrFail host
     FileExists = fun filePath -> host.FileExists(Path.toString filePath)
     FileWrite = fileWrite host
-    RunCommand = runCommand host }
+    RunCommand = runCommand w }
 
 let private cliBuild (host: CliHost) (options: BuildOptions) =
   let compileOptions = options.CompileOptions
@@ -397,12 +402,12 @@ let private cliBuild (host: CliHost) (options: BuildOptions) =
     writeCFiles host targetDir cFiles
 
     match host.Platform with
-    | Platform.Unix ->
-      PU.buildOnUnix (toBuildOnUnixParams host options ctx cFiles)
+    | Platform.Unix u ->
+      PU.buildOnUnix (toBuildOnUnixParams host u options ctx cFiles)
       unreachable ()
 
-    | Platform.Windows ->
-      PW.buildOnWindows (toBuildOnWindowsParams host options ctx cFiles)
+    | Platform.Windows w ->
+      PW.buildOnWindows (toBuildOnWindowsParams host w options ctx cFiles)
       0
 
 let private cliRun (host: CliHost) (options: BuildOptions) (restArgs: string list) =
@@ -422,16 +427,16 @@ let private cliRun (host: CliHost) (options: BuildOptions) (restArgs: string lis
     writeCFiles host targetDir cFiles
 
     match host.Platform with
-    | Platform.Unix ->
+    | Platform.Unix u ->
       let p =
-        toBuildOnUnixParams host options ctx cFiles
+        toBuildOnUnixParams host u options ctx cFiles
 
       PU.runOnUnix p restArgs
       unreachable ()
 
-    | Platform.Windows ->
+    | Platform.Windows w ->
       let p =
-        toBuildOnWindowsParams host options ctx cFiles
+        toBuildOnWindowsParams host w options ctx cFiles
 
       PW.runOnWindows p restArgs
       0
@@ -476,16 +481,16 @@ let main _ =
     writeCFiles host targetDir cFiles
 
     match host.Platform with
-    | Platform.Unix ->
+    | Platform.Unix u ->
       let p =
-        toBuildOnUnixParams host options ctx cFiles
+        toBuildOnUnixParams host u options ctx cFiles
 
       PU.runOnUnix p []
       unreachable ()
 
-    | Platform.Windows ->
+    | Platform.Windows w ->
       let p =
-        toBuildOnWindowsParams host options ctx cFiles
+        toBuildOnWindowsParams host w options ctx cFiles
 
       PW.runOnWindows p []
       0

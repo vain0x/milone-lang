@@ -9,11 +9,6 @@ open MiloneCli.Cli
 
 module Env = MiloneStd.StdEnv
 
-let private getPlatform () : Platform =
-  match __nativeFun "milone_get_platform" with
-  | "windows" -> Platform.Windows
-  | _ -> Platform.Unix
-
 let private newGuid () : string =
   let i: int =
     __nativeStmt "static int s_count = 0;"
@@ -76,14 +71,27 @@ let private readFile filePath =
   else
     None |> Future.just
 
+let private getPlatform () : Platform =
+  match __nativeFun "milone_get_platform" with
+  | "windows" ->
+    let w: WindowsApi =
+      { NewGuid = newGuid
+        RunCommand = runCommand }
+
+    Platform.Windows w
+
+  | _ ->
+    let u: UnixApi = { ExecuteInto = executeInto }
+    Platform.Unix u
+
 [<EntryPoint>]
 let main _ =
   let args = Env.commandLineArgs ()
 
   let home =
     match getPlatform () with
-    | Platform.Unix -> getEnv "HOME"
-    | Platform.Windows -> getEnv "USERPROFILE"
+    | Platform.Unix _ -> getEnv "HOME"
+    | Platform.Windows _ -> getEnv "USERPROFILE"
 
   let miloneHome = getEnv "MILONE_HOME"
 
@@ -93,7 +101,6 @@ let main _ =
       Home = home
       MiloneHome = miloneHome
       Platform = getPlatform ()
-      NewGuid = newGuid
       ProfileInit = profileInit
       ProfileLog = profileLog
       DirCreate = dirCreate
@@ -101,8 +108,6 @@ let main _ =
       FileReadAllText = readFile
       FileWriteAllText = fileWriteAllText
       ReadStdinAll = readStdinAll
-      WriteStdout = writeStdout
-      RunCommand = runCommand
-      ExecuteInto = executeInto }
+      WriteStdout = writeStdout }
 
   cli host

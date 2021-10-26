@@ -3,11 +3,6 @@ module rec MiloneCli.Program
 
 open MiloneCli.Cli
 
-let private getPlatform () : Platform =
-  match System.Environment.OSVersion.Platform with
-  | System.PlatformID.Win32NT -> Platform.Windows
-  | _ -> Platform.Unix
-
 let private dirCreate (baseDir: string) (dir: string) =
   try
     let dir = System.IO.Path.Combine(baseDir, dir)
@@ -61,6 +56,19 @@ let private executeInto (cmd: string) : unit =
 
   exit 0
 
+let private getPlatform () : Platform =
+  match System.Environment.OSVersion.Platform with
+  | System.PlatformID.Win32NT ->
+    let w: WindowsApi =
+      { NewGuid = fun () -> System.Guid.NewGuid().ToString()
+        RunCommand = runCommand }
+
+    Platform.Windows w
+
+  | _ ->
+    let u: UnixApi = { ExecuteInto = executeInto }
+    Platform.Unix u
+
 let dotnetCliHost () : CliHost =
   let args =
     System.Environment.GetCommandLineArgs()
@@ -81,15 +89,12 @@ let dotnetCliHost () : CliHost =
     Platform = getPlatform ()
     ProfileInit = profileInit
     ProfileLog = profileLog
-    NewGuid = fun () -> System.Guid.NewGuid().ToString()
     DirCreate = dirCreate
     FileExists = System.IO.File.Exists
     FileReadAllText = readFile
     FileWriteAllText = writeFile
     ReadStdinAll = stdin.ReadToEnd
-    WriteStdout = printf "%s"
-    RunCommand = runCommand
-    ExecuteInto = executeInto }
+    WriteStdout = printf "%s" }
 
 [<EntryPoint>]
 let main _ = cli (dotnetCliHost ())
