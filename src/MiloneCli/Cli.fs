@@ -341,6 +341,7 @@ let private cliBuild (host: CliHost) (options: BuildOptions) =
       1
 
     | CompileOk cFiles ->
+      let projectDir = options.ProjectDir
       let targetDir = options.TargetDir
       let isRelease = options.IsRelease
       let projectName = ctx.EntryProjectName
@@ -353,6 +354,9 @@ let private cliBuild (host: CliHost) (options: BuildOptions) =
           ExeFile = computeExePath (Path targetDir) host.Platform isRelease projectName
           CFiles = cFiles |> List.map (fun (name, _) -> Path name)
           MiloneHome = miloneHome
+          CcList =
+            ctx.SyntaxCtx.Manifest.CcList
+            |> List.map (fun (Path name, _) -> Path(projectDir + "/" + name))
           Libs = ctx.SyntaxCtx.Manifest.Libs |> List.map fst
           DirCreate = dirCreateOrFail host
           FileWrite = fileWrite host
@@ -407,6 +411,7 @@ let private cliRun (host: CliHost) (options: BuildOptions) (restArgs: string lis
       1
 
     | CompileOk cFiles ->
+      let projectDir = options.ProjectDir
       let targetDir = options.TargetDir
       let isRelease = options.IsRelease
       let projectName = ctx.EntryProjectName
@@ -419,6 +424,9 @@ let private cliRun (host: CliHost) (options: BuildOptions) (restArgs: string lis
           ExeFile = computeExePath (Path targetDir) host.Platform isRelease projectName
           CFiles = cFiles |> List.map (fun (name, _) -> Path name)
           MiloneHome = miloneHome
+          CcList =
+            ctx.SyntaxCtx.Manifest.CcList
+            |> List.map (fun (Path name, _) -> Path(projectDir + "/" + name))
           Libs = ctx.SyntaxCtx.Manifest.Libs |> List.map fst
           Args = restArgs
           DirCreate = dirCreateOrFail host
@@ -506,7 +514,8 @@ let main _ =
           ExeFile = computeExePath (Path targetDir) host.Platform isRelease projectName
           CFiles = cFiles |> List.map (fun (name, _) -> Path name)
           MiloneHome = miloneHome
-          Libs = ctx.SyntaxCtx.Manifest.Libs |> List.map fst
+          CcList = []
+          Libs = []
           Args = []
           DirCreate = dirCreateOrFail host
           FileWrite = fileWrite host

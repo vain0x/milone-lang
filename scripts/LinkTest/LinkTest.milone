@@ -1,7 +1,9 @@
 module rec LinkTest.Program
 
+let private printlnInt (n: int) : unit = __nativeFun ("println_int", n)
 let private mySqrt (x: float) : float = __nativeFun ("sqrt", x)
 
 let main _ =
+  printlnInt 42
   printfn "sqrt 5 = %s" (mySqrt 5.0 |> string)
   0

@@ -29,6 +29,7 @@ type BuildOnUnixParams =
     TargetDir: Path
     ExeFile: Path
     MiloneHome: Path
+    CcList: Path list
     Libs: string list
 
     // Effects
@@ -48,6 +49,7 @@ let buildOnUnix (p: BuildOnUnixParams) : unit =
         CFiles = p.CFiles
         ExeFile = p.ExeFile
         MiloneHome = p.MiloneHome
+        CcList = p.CcList
         Libs = p.Libs }
 
     renderNinjaFile p
@@ -68,6 +70,7 @@ type RunOnUnixParams =
     TargetDir: Path
     ExeFile: Path
     MiloneHome: Path
+    CcList: Path list
     Libs: string list
 
     Args: string list
@@ -90,6 +93,7 @@ let runOnUnix (p: RunOnUnixParams) : unit =
         CFiles = p.CFiles
         ExeFile = p.ExeFile
         MiloneHome = p.MiloneHome
+        CcList = p.CcList
         Libs = p.Libs }
 
     renderNinjaFile p
@@ -117,6 +121,7 @@ type private RenderNinjaFileParams =
     ExeFile: Path
     MiloneHome: Path
 
+    CcList: Path list
     Libs: string list }
 
 let private renderNinjaFile (p: RenderNinjaFileParams) : string =
@@ -173,6 +178,18 @@ build $milone_platform_o: cc $milone_platform_c | $milone_h
     [ rules ]
 
   let build =
+    p.CcList
+    |> List.fold
+         (fun build name ->
+           build
+           |> cons "build "
+           |> cons (objFile name)
+           |> cons ": cc "
+           |> cons (Path.toString name)
+           |> cons "| $milone_h\n\n")
+         build
+
+  let build =
     List.fold
       (fun build name ->
         build
@@ -186,9 +203,14 @@ build $milone_platform_o: cc $milone_platform_c | $milone_h
       p.CFiles
 
   let build =
+    let objFiles =
+      List.append p.CcList p.CFiles
+      |> List.map objFile
+      |> S.concat " "
+
     build
     |> cons "build $exe_file: link $milone_o $milone_platform_o "
-    |> cons (p.CFiles |> List.map objFile |> S.concat " ")
+    |> cons objFiles
     |> cons "\n"
 
   build |> List.rev |> S.concat ""

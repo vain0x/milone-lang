@@ -1,1 +1,2 @@
+cc ./link_test_runtime.c
 lib m

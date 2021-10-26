@@ -15,11 +15,13 @@ type private Projects = (ProjectName * ProjectDir * Loc) list
 
 type ManifestData =
   { Projects: Projects
+    CcList: (Path * Loc) list
     Libs: (string * Loc) list
     Errors: (string * Loc) list }
 
 let private emptyManifest: ManifestData =
   { Projects = []
+    CcList = []
     Libs = []
     Errors = [] }
 
@@ -52,8 +54,6 @@ let private parseManifest (docId: DocId) (s: string) : ManifestData =
          let push name dir =
            { m with Projects = (name, dir, loc) :: m.Projects }
 
-         let addLib name = { m with Libs = (name, loc) :: m.Libs }
-
          match splitByWhitespace line with
          | [] -> skip ()
          | w :: _ when w |> S.startsWith "#" -> skip ()
@@ -69,7 +69,8 @@ let private parseManifest (docId: DocId) (s: string) : ManifestData =
            else
              push name dir
 
-         | [ "lib"; name ] -> addLib name
+         | [ "cc"; path ] -> { m with CcList = (Path path, loc) :: m.CcList }
+         | [ "lib"; name ] -> { m with Libs = (name, loc) :: m.Libs }
 
          | _ -> warn "Invalid statement.")
        emptyManifest
