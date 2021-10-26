@@ -25,6 +25,8 @@ ${TODO}: \
 	vendor/sqlite3/sqlite3.o
 	(cd CmdSqliteTodo; ./build)
 
+todo: ${TODO}
+
 target/lib_span_tests: \
 	LibSpan/lib_span_runtime.c \
 	LibSpan/lib_span_runtime.h \
