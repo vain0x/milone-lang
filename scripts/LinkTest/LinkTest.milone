@@ -1,0 +1,7 @@
+module rec LinkTest.Program
+
+let private mySqrt (x: float) : float = __nativeFun ("sqrt", x)
+
+let main _ =
+  printfn "sqrt 5 = %s" (mySqrt 5.0 |> string)
+  0

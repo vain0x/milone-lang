@@ -266,6 +266,7 @@ type SyntaxHost =
 [<RequireQualifiedAccess; NoEquality; NoComparison>]
 type SyntaxCtx =
   { Projects: TreeMap<ProjectName, ProjectDir>
+    Manifest: Manifest.ManifestData
     Errors: (string * Loc) list
     FetchModule: FetchModuleFun
     Host: SyntaxHost }
@@ -293,6 +294,7 @@ let syntaxCtxNew (host: SyntaxHost) : SyntaxCtx =
     SyntaxTokenize.tokenize (tokenizeHostNew ())
 
   { Projects = projects
+    Manifest = manifest
     Errors = manifest.Errors
     FetchModule = fetchModuleWith host.ReadTextFile projects entryProjectDir tokenize
     Host = host }

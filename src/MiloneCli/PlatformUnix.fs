@@ -29,6 +29,7 @@ type BuildOnUnixParams =
     TargetDir: Path
     ExeFile: Path
     MiloneHome: Path
+    Libs: string list
 
     // Effects
     DirCreate: Path -> unit
@@ -46,7 +47,8 @@ let buildOnUnix (p: BuildOnUnixParams) : unit =
       { TargetDir = p.TargetDir
         CFiles = p.CFiles
         ExeFile = p.ExeFile
-        MiloneHome = p.MiloneHome }
+        MiloneHome = p.MiloneHome
+        Libs = p.Libs }
 
     renderNinjaFile p
 
@@ -66,6 +68,7 @@ type RunOnUnixParams =
     TargetDir: Path
     ExeFile: Path
     MiloneHome: Path
+    Libs: string list
 
     Args: string list
 
@@ -86,7 +89,8 @@ let runOnUnix (p: RunOnUnixParams) : unit =
       { TargetDir = p.TargetDir
         CFiles = p.CFiles
         ExeFile = p.ExeFile
-        MiloneHome = p.MiloneHome }
+        MiloneHome = p.MiloneHome
+        Libs = p.Libs }
 
     renderNinjaFile p
 
@@ -111,7 +115,9 @@ type private RenderNinjaFileParams =
   { TargetDir: Path
     CFiles: Path list
     ExeFile: Path
-    MiloneHome: Path }
+    MiloneHome: Path
+
+    Libs: string list }
 
 let private renderNinjaFile (p: RenderNinjaFileParams) : string =
   let miloneHome = Path.toString p.MiloneHome
@@ -145,7 +151,7 @@ rule cc
 
 rule link
   description = link $out
-  command = $${CC:-gcc} $in -o $out
+  command = $${CC:-gcc} $in -o $out ${LINK_FLAGS}
 
 build $milone_o: cc $milone_c | $milone_h
 build $milone_platform_o: cc $milone_platform_c | $milone_h
@@ -158,6 +164,11 @@ build $milone_platform_o: cc $milone_platform_c | $milone_h
       |> S.replace "${EXE_FILE}" exeFile
       |> S.replace "${MILONE_HOME}" miloneHome
       |> S.replace "${TARGET_DIR}" targetDir
+      |> S.replace
+           "${LINK_FLAGS}"
+           (p.Libs
+            |> List.map (fun lib -> "-l" + lib)
+            |> S.concat " ")
 
     [ rules ]
 
