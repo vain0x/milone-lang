@@ -1,6 +1,7 @@
 /// Entry point of the compiler.
 module rec MiloneCli.Program
 
+open MiloneShared.Util
 open MiloneCli.Cli
 
 let private dirCreate (baseDir: string) (dir: string) =
@@ -43,7 +44,7 @@ let private runCommand (command: string) (args: string list) : int =
   p.WaitForExit()
   p.ExitCode
 
-let private executeInto (cmd: string) : unit =
+let private executeInto (cmd: string) : Never =
   try
     let p =
       System.Diagnostics.Process.Start("/bin/sh", [ "-c"; cmd ])

@@ -402,7 +402,10 @@ void execute_into(struct String cmd) {
         0,
     };
 
-    execv("/bin/sh", argv);
+    int code = execv("/bin/sh", argv);
+    assert(code != 0);
+    fprintf(stderr, "ERROR: Failed to execute '%s'.\n", str_to_c_str(cmd));
+    exit(code);
 #elif defined(MILONE_PLATFORM_WINDOWS)
     // FIXME: implement
     fprintf(stdout, "Please execute: %s\n", str_to_c_str(cmd));

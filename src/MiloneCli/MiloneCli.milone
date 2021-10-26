@@ -5,6 +5,7 @@ module rec MiloneCli.Program
 open MiloneStd.StdChar
 open MiloneStd.StdString
 
+open MiloneShared.Util
 open MiloneCli.Cli
 
 module Env = MiloneStd.StdEnv
@@ -63,7 +64,9 @@ let private getEnv (name: string) : string = __nativeFun ("milone_get_env", name
 let private runCommand (command: string) (args: string list) : int =
   __nativeFun ("milone_subprocess_run", command, args)
 
-let private executeInto (cmd: string) : unit = __nativeFun ("execute_into", cmd)
+let private executeInto (cmd: string) : Never =
+  __nativeFun ("execute_into", cmd)
+  unreachable ()
 
 let private readFile filePath =
   if fileExists filePath then

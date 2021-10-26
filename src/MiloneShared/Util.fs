@@ -17,6 +17,12 @@ let unreachable context = failwithf "NEVER: %A" context
 /// Not implemented.
 let todo context = failwithf "Not implemented: %A" context
 
+/// Placeholder of result type of diverging function.
+type Never = private | Never
+
+/// Never happens.
+let never Never : 'A = unreachable ()
+
 // -----------------------------------------------
 // Pair
 // -----------------------------------------------

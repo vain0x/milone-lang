@@ -37,7 +37,7 @@ type BuildOnUnixParams =
     // Effects
     DirCreate: Path -> unit
     FileWrite: Path -> string -> unit
-    ExecuteInto: string -> unit }
+    ExecuteInto: string -> Never }
 
 let private toRenderNinjaParams (p: BuildOnUnixParams) : RenderNinjaFileParams =
   { TargetDir = p.TargetDir
@@ -50,7 +50,7 @@ let private toRenderNinjaParams (p: BuildOnUnixParams) : RenderNinjaFileParams =
     CcList = p.CcList
     Libs = p.Libs }
 
-let buildOnUnix (p: BuildOnUnixParams) : unit =
+let buildOnUnix (p: BuildOnUnixParams) : Never =
   let targetDir = p.TargetDir
 
   let ninjaFile =
@@ -68,7 +68,7 @@ let buildOnUnix (p: BuildOnUnixParams) : unit =
     + quoteShellWord (Path.toString p.ExeFile)
   )
 
-let runOnUnix (p: BuildOnUnixParams) (args: string list) : unit =
+let runOnUnix (p: BuildOnUnixParams) (args: string list) : Never =
   let targetDir = p.TargetDir
   let exeFile = p.ExeFile
 

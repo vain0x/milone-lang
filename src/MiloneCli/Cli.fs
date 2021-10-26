@@ -54,7 +54,7 @@ type Verbosity =
 [<RequireQualifiedAccess; NoEquality; NoComparison>]
 type UnixApi =
   { /// Turns this process into a shell that runs specified command.
-    ExecuteInto: string -> unit }
+    ExecuteInto: string -> Never }
 
 [<RequireQualifiedAccess; NoEquality; NoComparison>]
 type WindowsApi =
@@ -404,7 +404,7 @@ let private cliBuild (host: CliHost) (options: BuildOptions) =
     match host.Platform with
     | Platform.Unix u ->
       PU.buildOnUnix (toBuildOnUnixParams host u options ctx cFiles)
-      unreachable ()
+      |> never
 
     | Platform.Windows w ->
       PW.buildOnWindows (toBuildOnWindowsParams host w options ctx cFiles)
@@ -431,8 +431,7 @@ let private cliRun (host: CliHost) (options: BuildOptions) (restArgs: string lis
       let p =
         toBuildOnUnixParams host u options ctx cFiles
 
-      PU.runOnUnix p restArgs
-      unreachable ()
+      PU.runOnUnix p restArgs |> never
 
     | Platform.Windows w ->
       let p =
@@ -485,8 +484,7 @@ let main _ =
       let p =
         toBuildOnUnixParams host u options ctx cFiles
 
-      PU.runOnUnix p []
-      unreachable ()
+      PU.runOnUnix p [] |> never
 
     | Platform.Windows w ->
       let p =
