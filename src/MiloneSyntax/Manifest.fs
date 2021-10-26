@@ -15,15 +15,20 @@ type private Projects = (ProjectName * ProjectDir * Loc) list
 
 type ManifestData =
   { Projects: Projects
+    Errors: (string * Loc) list
+
+    // #experimental
+    CStd: string
     CcList: (Path * Loc) list
-    Libs: (string * Loc) list
-    Errors: (string * Loc) list }
+    Libs: (string * Loc) list }
 
 let private emptyManifest: ManifestData =
   { Projects = []
+    Errors = []
+
+    CStd = "c11"
     CcList = []
-    Libs = []
-    Errors = [] }
+    Libs = [] }
 
 let private getManifestPath (projectDir: ProjectDir) : string = projectDir + "/milone_manifest"
 
@@ -69,6 +74,7 @@ let private parseManifest (docId: DocId) (s: string) : ManifestData =
            else
              push name dir
 
+         | [ "std"; version ] -> { m with CStd = version }
          | [ "cc"; path ] -> { m with CcList = (Path path, loc) :: m.CcList }
          | [ "lib"; name ] -> { m with Libs = (name, loc) :: m.Libs }
 

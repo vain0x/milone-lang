@@ -354,6 +354,7 @@ let private cliBuild (host: CliHost) (options: BuildOptions) =
           ExeFile = computeExePath (Path targetDir) host.Platform isRelease projectName
           CFiles = cFiles |> List.map (fun (name, _) -> Path name)
           MiloneHome = miloneHome
+          CStd = ctx.SyntaxCtx.Manifest.CStd
           CcList =
             ctx.SyntaxCtx.Manifest.CcList
             |> List.map (fun (Path name, _) -> Path(projectDir + "/" + name))
@@ -424,6 +425,7 @@ let private cliRun (host: CliHost) (options: BuildOptions) (restArgs: string lis
           ExeFile = computeExePath (Path targetDir) host.Platform isRelease projectName
           CFiles = cFiles |> List.map (fun (name, _) -> Path name)
           MiloneHome = miloneHome
+          CStd = ctx.SyntaxCtx.Manifest.CStd
           CcList =
             ctx.SyntaxCtx.Manifest.CcList
             |> List.map (fun (Path name, _) -> Path(projectDir + "/" + name))
@@ -514,6 +516,7 @@ let main _ =
           ExeFile = computeExePath (Path targetDir) host.Platform isRelease projectName
           CFiles = cFiles |> List.map (fun (name, _) -> Path name)
           MiloneHome = miloneHome
+          CStd = "c11"
           CcList = []
           Libs = []
           Args = []
