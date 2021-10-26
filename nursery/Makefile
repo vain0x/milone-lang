@@ -1,6 +1,6 @@
 default: build
 
-.PHONY: build clean default restore run test
+.PHONY: build clean default restore run test json_get todo
 
 JSON_GET := target/CmdJsonGet/json_get
 TODO := target/CmdSqliteTodo/todo
@@ -17,6 +17,8 @@ ${JSON_GET}: \
 	LibJson/Json.milone \
 	vendor/pdjson/pdjson.o
 	(cd CmdJsonGet; ./build)
+
+json_get: ${JSON_GET}
 
 ${TODO}: \
 	CmdSqliteTodo/CmdSqliteTodo.milone \
