@@ -1,5 +1,332 @@
 module rec CmdLspServer.Program
 
+open LibJson.Json
+
+module I = MiloneStd.StdInt
+module S = MiloneStd.StdString
+
+__nativeDecl
+  """
+    #include <errno.h>
+  """
+
+let private unreachable () =
+  assert false
+  exit 1
+
+let private trace (s: string) : unit =
+  __nativeStmt ("fwrite({0}.str, sizeof(char), (size_t){0}.len, stderr);", s + "\n")
+
+let private failwith (msg: string) =
+  printfn "ERROR: %s" msg
+  exit 1
+
+let private loopInRegion (f: unit -> int) : int =
+  let rec go () =
+    let code = __inRegion f
+    if code = 0 then go () else code
+
+  go ()
+
+// -----------------------------------------------
+// IO
+// -----------------------------------------------
+
+// notes: Buffer, Stream are copied from LibHttpServer
+
+// ptr, capacity
+type private Buffer = nativeptr<byte> * int
+
+module private Buffer =
+  let allocate (capacity: int) : Buffer =
+    if capacity = 0 then
+      __nativeCast (unativeint 1), 0
+    else
+      assert (capacity >= 1)
+
+      __nativeStmt ("unsigned char *buf = milone_mem_alloc({0}, sizeof(unsigned char));", capacity)
+
+      let ptr: nativeptr<byte> = __nativeExpr "buf"
+
+      ptr, capacity
+
+  /// Converts a buffer to string.
+  ///
+  /// Use this only when the contents of buffer are valid as UTF-8 (not checked).
+  /// Given buffer should never be mutated.
+  let toString (len: int) (buf: Buffer) : string =
+    let ptr, capacity = buf
+    assert (len >= 0)
+    assert (len < capacity)
+    __nativeStmt ("struct String s = str_of_raw_parts({0}, {1});", ptr, len)
+    __nativeExpr "s"
+
+type private Stream = nativeptr<__nativeType<FILE>>
+
+let private getStdin () : Stream = __nativeExpr "stdin"
+let private getStdout () : Stream = __nativeExpr "stdout"
+
+/// Reads from stream to fill the buffer.
+///
+/// Returns size of read data. (Maybe less than capacity.)
+let private readBlock (buf: Buffer) (input: Stream) : int * Buffer * Stream =
+  let bufPtr, bufSize = buf
+
+  __nativeStmt ("int len = (int)fread({1}, 1, (size_t){2}, {0});", input, bufPtr, bufSize)
+
+  let len: int = __nativeExpr "len"
+  len, buf, input
+
+/// Reads a block of bytes equal to specified size.
+///
+/// Blocks to wait for the buffer to fill.
+/// Returns whether read data is of specified size.
+let private readExact (buf: Buffer) (size: int) (input: Stream) : bool * Buffer * Stream =
+  let bufPtr, bufSize = buf
+  assert (size >= 0)
+  assert (size <= bufSize)
+
+  __nativeStmt (
+    """
+      size_t result = fread({1}, (size_t){2}, 1, {0});
+      bool ok = result == 1;
+    """,
+    input,
+    bufPtr,
+    size
+  )
+
+  let ok: bool = __nativeExpr "ok"
+
+  if not ok then
+    // let s: nativeptr<char> = __nativeExpr("strerror(errno)")
+    // let s: string = __nativeExpr ("str_borrow({0})", s)
+    // printfn "%s" s
+    printfn "%d" ((__nativeExpr "result": unativeint) |> int)
+
+  ok, buf, input
+
+let private readLine (input: Stream) : string option * Stream =
+  __nativeStmt (
+    """
+      char buf[4000] = "";
+      bool ok = fgets(buf, sizeof buf, {0}) != NULL;
+    """,
+    input
+  )
+
+  if __nativeExpr "ok" then
+    let line: string = __nativeExpr "str_of_c_str(buf)"
+    Some line, input
+  else
+    None, input
+
+let private doWriteExact (ptr: __constptr<byte>) (len: int) (output: Stream) : unit =
+  assert (len >= 1)
+
+  __nativeStmt (
+    """
+      size_t written = fwrite({1}, {2}, 1, {0});
+      bool ok = written == 1;
+    """,
+    output,
+    ptr,
+    unativeint len
+  )
+
+  let ok: bool = __nativeExpr "ok"
+  if not ok then failwith "writeExact"
+
+let private writeString (s: string) (output: Stream) : Stream =
+  if s.Length <> 0 then
+    let ptr: __constptr<char> = __nativeExpr ("({0}.str)", s)
+    let ptr: __constptr<byte> = __nativeCast ptr
+    let output = doWriteExact ptr s.Length output
+    __nativeStmt ("fflush({0});", output)
+    output
+
+  output
+
+// -----------------------------------------------
+// JSON
+// -----------------------------------------------
+
+module private J =
+  let get key (j: JsonValue) : JsonValue =
+    match j with
+    | JObject entries ->
+      entries
+      |> List.tryPick (fun (k, value) -> if k = key then Some value else None)
+      |> Option.defaultWith (fun () ->
+        // printfn "// %s missing" key
+        JNull)
+
+    | _ -> JNull
+
+  let get2 key1 key2 (j: JsonValue) = j |> get key1 |> get key2
+
+// -----------------------------------------------
+// LSP
+// -----------------------------------------------
+
+type private MsgId = JsonValue
+
+type private LspRequest =
+  | InitializeRequest of MsgId
+  | InitializedNotification
+  | ShutdownRequest of MsgId
+  | ExitNotification
+  | UnknownRequest
+
+let private readRequest () : LspRequest =
+  trace "readRequest"
+
+  let input = getStdin ()
+
+  let rec readHeader lenOpt =
+    trace (
+      "readHeader len="
+      + (lenOpt
+         |> Option.map string
+         |> Option.defaultValue "None")
+    )
+
+    match readLine input with
+    | None, _ -> failwith "Unexpected EOF"
+
+    | Some line, _ when line |> S.trimEnd = "" ->
+      // Hit "\r\n\r\n".
+      match lenOpt with
+      | None -> failwith "Content-Length header missed."
+      | Some len -> len
+
+    | Some header, _ ->
+      let key, value, colon = S.cut ":" header
+
+      if not colon then
+        failwith ("Illegal header: '" + header + "'")
+
+      let key = S.trim key
+      let value = S.trim value
+
+      match key with
+      | "Content-Length" ->
+        match I.tryParse value with
+        | None -> failwith ("Can't parse length as integer: '" + value + "'")
+        | Some len -> readHeader (Some len)
+
+      | _ ->
+        trace ("Ignore header: '" + key + "'")
+        readHeader lenOpt
+
+  let readBody (len: int) : string =
+    trace ("readBody len=" + string len)
+
+    if len >= 10100100 then
+      failwith ("Content-length too large: '" + string len + "'")
+
+    let body = Buffer.allocate (len + 1)
+    let ok, body, _ = readExact body len input
+
+    if not ok then
+      failwith ("Couldn't read request body.")
+
+    body |> Buffer.toString len
+
+  let len = readHeader None
+  let body = readBody len
+  let req = jsonParseFromString body
+  let msgId = req |> J.get "id"
+  let m = req |> J.get "method"
+
+  match m with
+  | JString "initialize" -> InitializeRequest msgId
+  | JString "initialized" -> InitializedNotification
+
+  | JString "shutdown" -> ShutdownRequest msgId
+  | JString "exit" -> ExitNotification
+
+  | JString m ->
+    trace ("unknown method: '" + m + "'")
+    UnknownRequest
+
+  | _ ->
+    trace ("unknown method without method")
+    UnknownRequest
+
+// -----------------------------------------------
+// Interface
+// -----------------------------------------------
+
+let private initializedResponse () =
+  """{
+    "capabilities": {
+        "textDocumentSync": {
+            "openClose": true,
+            "change": 1
+        },
+        "definitionProvider": true,
+        "documentHighlightProvider": true,
+        "documentFormattingProvider": true,
+        "hoverProvider": true,
+        "referencesProvider": true,
+        "renameProvider": false
+    },
+    "serverInfo": {
+        "name": "milone_lsp",
+        "version": "0.1.0"
+    }
+  }"""
+
+[<EntryPoint>]
 let main _ =
-  printfn "Hello, lsp server!"
-  0
+  trace "Hello, lsp server!"
+
+  let output = getStdout ()
+
+  loopInRegion (fun () ->
+    match readRequest () with
+    | InitializeRequest msgId ->
+      let response =
+        ("""{ "jsonrpc": "2.0", "id": ${MSG_ID}, "result": ${RESULT} }"""
+         + "\n")
+        |> S.replace "${MSG_ID}" (jsonToString msgId)
+        |> S.replace "${RESULT}" (initializedResponse ())
+
+      writeString
+        ("Content-Length: "
+         + string response.Length
+         + "\r\n\r\n"
+         + response)
+        output
+      |> ignore
+
+      0
+
+    | InitializedNotification ->
+      trace "Ignore initialized notification."
+      0
+
+    | ShutdownRequest msgId ->
+      let response =
+        ("""{ "jsonrpc": "2.0", "id": ${MSG_ID}, "result": null }"""
+         + "\n")
+        |> S.replace "${MSG_ID}" (jsonToString msgId)
+
+      writeString
+        ("Content-Length: "
+         + string response.Length
+         + "\r\n\r\n"
+         + response)
+        output
+      |> ignore
+
+      0
+
+    | ExitNotification ->
+      trace "Exit gracefully."
+      exit 0
+
+    | UnknownRequest ->
+      trace "Ignore unknown request."
+      0)

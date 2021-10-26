@@ -1,5 +1,21 @@
-#!/bin/sh
+#!/bin/bash
+# env LSP_SERVER_BIN
 
 set -eu
 
-$LSP_SERVER_BIN
+req() {
+    BODY=$(cat)
+    LEN=$(printf "%s\n" "$BODY" | wc -c)
+    printf "Content-Length: %d\r\n\r\n%s\n" "$LEN" "$BODY"
+}
+
+send() {
+    echo "$1" | req
+}
+
+{
+    send '{"method": "initialize", "id": 1}'
+    send '{"method": "initialized"}'
+    send '{"method": "shutdown", "id": 2}'
+    send '{"method": "exit"}'
+} | "$LSP_SERVER_BIN"
