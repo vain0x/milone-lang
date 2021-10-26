@@ -13,6 +13,7 @@ target/lib_json.c: LibJson/Json.milone
 ${JSON_GET}: \
 	CmdJsonGet/CmdJsonGet.milone \
 	CmdJsonGet/cmd_json_get_runtime.c \
+	CmdJsonGet/milone_manifest \
 	LibJson/lib_json_runtime.c \
 	LibJson/Json.milone \
 	vendor/pdjson/pdjson.o
@@ -22,6 +23,7 @@ json_get: ${JSON_GET}
 
 ${TODO}: \
 	CmdSqliteTodo/CmdSqliteTodo.milone \
+	CmdSqliteTodo/milone_manifest \
 	LibSqlite3/Db.milone \
 	LibSqlite3/lib_sqlite3_runtime.c \
 	vendor/sqlite3/sqlite3.o
@@ -45,6 +47,7 @@ target/lib_file_system_tests: \
 	(cd LibFileSystemTests; ./build)
 
 target/LibNurseryTests/.timestamp: \
+	LibNursery/milone_manifest \
 	$(wildcard LibNursery/*.milone) \
 	$(wildcard LibNurseryTests/*.milone)
 	(cd LibNurseryTests; ./run) && \

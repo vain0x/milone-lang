@@ -2,3 +2,4 @@ std gnu11
 cc ../LibJson/lib_json_runtime.c
 cc cmd_json_get_runtime.c
 obj ../vendor/pdjson/pdjson.o
+sanitize address,undefined
