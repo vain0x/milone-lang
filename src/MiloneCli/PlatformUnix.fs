@@ -27,6 +27,7 @@ let private quoteShellWord (s: string) : string = "\"" + escapeShellWord s + "\"
 type BuildOnUnixParams =
   { CFiles: Path list
     TargetDir: Path
+    IsRelease: bool
     ExeFile: Path
     MiloneHome: Path
     CStd: string
@@ -50,6 +51,8 @@ let buildOnUnix (p: BuildOnUnixParams) : unit =
         CFiles = p.CFiles
         ExeFile = p.ExeFile
         MiloneHome = p.MiloneHome
+        CDebug = not p.IsRelease
+        COptimize = p.IsRelease
         CStd = p.CStd
         CcList = p.CcList
         Libs = p.Libs }
@@ -70,6 +73,7 @@ let buildOnUnix (p: BuildOnUnixParams) : unit =
 type RunOnUnixParams =
   { CFiles: Path list
     TargetDir: Path
+    IsRelease: bool
     ExeFile: Path
     MiloneHome: Path
     CStd: string
@@ -96,6 +100,8 @@ let runOnUnix (p: RunOnUnixParams) : unit =
         CFiles = p.CFiles
         ExeFile = p.ExeFile
         MiloneHome = p.MiloneHome
+        CDebug = not p.IsRelease
+        COptimize = p.IsRelease
         CStd = p.CStd
         CcList = p.CcList
         Libs = p.Libs }
@@ -125,6 +131,8 @@ type private RenderNinjaFileParams =
     ExeFile: Path
     MiloneHome: Path
 
+    CDebug: bool
+    COptimize: bool
     CStd: string
     CcList: Path list
     Libs: string list }
@@ -157,7 +165,7 @@ exe_file = ${EXE_FILE}
 
 rule cc
   description = cc $in
-  command = $${CC:-gcc} -std=${STD} -O1 -g -c $include_flag $in -o $out
+  command = $${CC:-gcc} ${C_FLAGS} -c $include_flag $in -o $out
 
 rule link
   description = link $out
@@ -168,13 +176,19 @@ build $milone_platform_o: cc $milone_platform_c | $milone_h
 
 """
 
+  let cFlags =
+    let debug = if p.CDebug then [ "-g" ] else []
+    let optimize = if p.COptimize then "-O2" else "-O1"
+    let std = "-std=" + p.CStd
+    List.append debug [ optimize; std ]
+
   let build =
     let rules =
       rules
       |> S.replace "${EXE_FILE}" exeFile
       |> S.replace "${MILONE_HOME}" miloneHome
       |> S.replace "${TARGET_DIR}" targetDir
-      |> S.replace "${STD}" p.CStd
+      |> S.replace "${C_FLAGS}" (cFlags |> S.concat " ")
       |> S.replace
            "${LINK_FLAGS}"
            (p.Libs

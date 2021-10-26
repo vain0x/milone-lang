@@ -351,6 +351,7 @@ let private cliBuild (host: CliHost) (options: BuildOptions) =
 
       let p: PU.BuildOnUnixParams =
         { TargetDir = Path targetDir
+          IsRelease = isRelease
           ExeFile = computeExePath (Path targetDir) host.Platform isRelease projectName
           CFiles = cFiles |> List.map (fun (name, _) -> Path name)
           MiloneHome = miloneHome
@@ -422,6 +423,7 @@ let private cliRun (host: CliHost) (options: BuildOptions) (restArgs: string lis
 
       let p: PU.RunOnUnixParams =
         { TargetDir = Path targetDir
+          IsRelease = isRelease
           ExeFile = computeExePath (Path targetDir) host.Platform isRelease projectName
           CFiles = cFiles |> List.map (fun (name, _) -> Path name)
           MiloneHome = miloneHome
@@ -513,6 +515,7 @@ let main _ =
     | Platform.Unix ->
       let p: PU.RunOnUnixParams =
         { TargetDir = Path targetDir
+          IsRelease = false
           ExeFile = computeExePath (Path targetDir) host.Platform isRelease projectName
           CFiles = cFiles |> List.map (fun (name, _) -> Path name)
           MiloneHome = miloneHome
