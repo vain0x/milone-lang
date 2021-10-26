@@ -353,6 +353,9 @@ let private toBuildOnUnixParams
     CcList =
       ctx.SyntaxCtx.Manifest.CcList
       |> List.map (fun (Path name, _) -> Path(projectDir + "/" + name))
+    ObjList =
+      ctx.SyntaxCtx.Manifest.ObjList
+      |> List.map (fun (Path name, _) -> Path(projectDir + "/" + name))
     Libs = ctx.SyntaxCtx.Manifest.Libs |> List.map fst
     DirCreate = dirCreateOrFail host
     FileWrite = fileWrite host

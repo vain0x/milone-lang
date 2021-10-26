@@ -1,3 +1,5 @@
 std gnu11
 cc ./link_test_runtime.c
 lib m
+
+# obj other.o

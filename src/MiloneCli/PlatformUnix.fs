@@ -32,6 +32,7 @@ type BuildOnUnixParams =
     MiloneHome: Path
     CStd: string
     CcList: Path list
+    ObjList: Path list
     Libs: string list
 
     // Effects
@@ -48,6 +49,7 @@ let private toRenderNinjaParams (p: BuildOnUnixParams) : RenderNinjaFileParams =
     COptimize = p.IsRelease
     CStd = p.CStd
     CcList = p.CcList
+    ObjList = p.ObjList
     Libs = p.Libs }
 
 let buildOnUnix (p: BuildOnUnixParams) : Never =
@@ -105,6 +107,7 @@ type private RenderNinjaFileParams =
     COptimize: bool
     CStd: string
     CcList: Path list
+    ObjList: Path list
     Libs: string list }
 
 let private renderNinjaFile (p: RenderNinjaFileParams) : string =
@@ -196,6 +199,7 @@ build $milone_platform_o: cc $milone_platform_c | $milone_h
     let objFiles =
       List.append p.CcList p.CFiles
       |> List.map objFile
+      |> List.append (p.ObjList |> List.map Path.toString)
       |> S.concat " "
 
     build

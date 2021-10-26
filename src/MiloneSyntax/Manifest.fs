@@ -20,6 +20,7 @@ type ManifestData =
     // #experimental
     CStd: string
     CcList: (Path * Loc) list
+    ObjList: (Path * Loc) list
     Libs: (string * Loc) list }
 
 let private emptyManifest: ManifestData =
@@ -28,6 +29,7 @@ let private emptyManifest: ManifestData =
 
     CStd = "c11"
     CcList = []
+    ObjList = []
     Libs = [] }
 
 let private getManifestPath (projectDir: ProjectDir) : string = projectDir + "/milone_manifest"
@@ -76,6 +78,7 @@ let private parseManifest (docId: DocId) (s: string) : ManifestData =
 
          | [ "std"; version ] -> { m with CStd = version }
          | [ "cc"; path ] -> { m with CcList = (Path path, loc) :: m.CcList }
+         | [ "obj"; path ] -> { m with ObjList = (Path path, loc) :: m.ObjList }
          | [ "lib"; name ] -> { m with Libs = (name, loc) :: m.Libs }
 
          | _ -> warn "Invalid statement.")
