@@ -170,7 +170,7 @@ let private readExact (buf: Buffer) (size: int) (input: Stream) : bool * Buffer 
     """,
     input,
     bufPtr,
-    bufSize
+    size
   )
 
   let ok: bool = __nativeExpr "ok"
