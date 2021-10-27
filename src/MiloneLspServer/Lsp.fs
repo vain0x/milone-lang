@@ -328,7 +328,12 @@ let private dfsPat (visitor: Visitor) pat =
   | TVarPat (_, varSerial, ty, loc) -> visitor.OnVar(varSerial, Def, ty, loc)
   | TVariantPat (variantSerial, ty, loc) -> visitor.OnVariant(variantSerial, ty, loc)
 
-  | TNodePat (_, pats, _, _) ->
+  | TNodePat (kind, pats, ty, loc) ->
+    match kind with
+    | TVariantAppPN variantSerial -> visitor.OnVariant(variantSerial, ty, loc)
+    | TNavPN _ -> ()
+    | _ -> ()
+
     for pat in pats do
       dfsPat visitor pat
 
@@ -426,10 +431,23 @@ let private dfsStmt (visitor: Visitor) stmt =
 
     onExpr body
 
-  | TTyDeclStmt (tySerial, _, _tyArgs, tyDecl, _) ->
+  | TTyDeclStmt (tySerial, _, tyArgs, tyDecl, tyDeclLoc) ->
     match tyDecl with
     | TySynonymDecl _ -> ()
-    | UnionTyDecl _ -> ()
+
+    | UnionTyDecl (_, variants, _) ->
+      for _, variantSerial, hasPayload, payloadTy, identLoc in variants do
+        let ty =
+          let tyArgs =
+            tyArgs
+            |> List.map (fun tySerial -> tyMeta tySerial tyDeclLoc)
+
+          if hasPayload then
+            tyFun payloadTy (tyUnion tySerial tyArgs)
+          else
+            tyUnit
+
+        visitor.OnVariant(variantSerial, ty, identLoc)
 
     | RecordTyDecl (_, fields, _, _) ->
       for ident, ty, loc in fields do
