@@ -1,12 +1,8 @@
 /// Entry point of the compiler.
 module rec MiloneCli.Program
 
+open MiloneShared.Util
 open MiloneCli.Cli
-
-let private getPlatform () : Platform =
-  match System.Environment.OSVersion.Platform with
-  | System.PlatformID.Win32NT -> Platform.Windows
-  | _ -> Platform.Unix
 
 let private dirCreate (baseDir: string) (dir: string) =
   try
@@ -48,7 +44,7 @@ let private runCommand (command: string) (args: string list) : int =
   p.WaitForExit()
   p.ExitCode
 
-let private executeInto (cmd: string) : unit =
+let private executeInto (cmd: string) : Never =
   try
     let p =
       System.Diagnostics.Process.Start("/bin/sh", [ "-c"; cmd ])
@@ -60,6 +56,19 @@ let private executeInto (cmd: string) : unit =
     reraise ()
 
   exit 0
+
+let private getPlatform () : Platform =
+  match System.Environment.OSVersion.Platform with
+  | System.PlatformID.Win32NT ->
+    let w: WindowsApi =
+      { NewGuid = fun () -> System.Guid.NewGuid().ToString()
+        RunCommand = runCommand }
+
+    Platform.Windows w
+
+  | _ ->
+    let u: UnixApi = { ExecuteInto = executeInto }
+    Platform.Unix u
 
 let dotnetCliHost () : CliHost =
   let args =
@@ -81,15 +90,12 @@ let dotnetCliHost () : CliHost =
     Platform = getPlatform ()
     ProfileInit = profileInit
     ProfileLog = profileLog
-    NewGuid = fun () -> System.Guid.NewGuid().ToString()
     DirCreate = dirCreate
     FileExists = System.IO.File.Exists
     FileReadAllText = readFile
     FileWriteAllText = writeFile
     ReadStdinAll = stdin.ReadToEnd
-    WriteStdout = printf "%s"
-    RunCommand = runCommand
-    ExecuteInto = executeInto }
+    WriteStdout = printf "%s" }
 
 [<EntryPoint>]
 let main _ = cli (dotnetCliHost ())

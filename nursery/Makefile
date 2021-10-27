@@ -1,11 +1,12 @@
 default: build
 
-.PHONY: build clean default restore run test
+.PHONY: build clean default restore run test json_get lsp_server todo
 
-JSON_GET := target/CmdJsonGet/json_get
-TODO := target/CmdSqliteTodo/todo
+JSON_GET := ${PWD}/target/CmdJsonGet/json_get
+LSP_SERVER := ${PWD}/target/CmdLspServer/lsp_server
+TODO := ${PWD}/target/CmdSqliteTodo/todo
 
-build: ${JSON_GET} ${TODO}
+build: ${JSON_GET} ${LSP_SERVER} ${TODO}
 
 target/lib_json.c: LibJson/Json.milone 
 	(cd LibJson; ./build)
@@ -13,17 +14,36 @@ target/lib_json.c: LibJson/Json.milone
 ${JSON_GET}: \
 	CmdJsonGet/CmdJsonGet.milone \
 	CmdJsonGet/cmd_json_get_runtime.c \
+	CmdJsonGet/milone_manifest \
 	LibJson/lib_json_runtime.c \
 	LibJson/Json.milone \
 	vendor/pdjson/pdjson.o
 	(cd CmdJsonGet; ./build)
 
+json_get: ${JSON_GET}
+
+${LSP_SERVER}: \
+	CmdLspServer/milone_manifest \
+	$(wildcard CmdLspServer/*.milone) \
+	LibJson/lib_json_runtime.c \
+	LibJson/Json.milone \
+	vendor/pdjson/pdjson.o
+	(cd CmdLspServer; ./build)
+
+lsp_server: ${LSP_SERVER}
+
+test_lsp_server: ${LSP_SERVER}
+	(cd CmdLspServer; env LSP_SERVER_BIN=${LSP_SERVER} ./test)
+
 ${TODO}: \
 	CmdSqliteTodo/CmdSqliteTodo.milone \
+	CmdSqliteTodo/milone_manifest \
 	LibSqlite3/Db.milone \
 	LibSqlite3/lib_sqlite3_runtime.c \
 	vendor/sqlite3/sqlite3.o
 	(cd CmdSqliteTodo; ./build)
+
+todo: ${TODO}
 
 target/lib_span_tests: \
 	LibSpan/lib_span_runtime.c \
@@ -41,6 +61,7 @@ target/lib_file_system_tests: \
 	(cd LibFileSystemTests; ./build)
 
 target/LibNurseryTests/.timestamp: \
+	LibNursery/milone_manifest \
 	$(wildcard LibNursery/*.milone) \
 	$(wildcard LibNurseryTests/*.milone)
 	(cd LibNurseryTests; ./run) && \

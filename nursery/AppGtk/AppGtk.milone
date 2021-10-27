@@ -1,4 +1,4 @@
-module rec AppGtk.EntryPoint
+module rec AppGtk.Program
 
 module S = MiloneStd.StdString
 

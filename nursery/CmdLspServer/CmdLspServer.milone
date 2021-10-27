@@ -1,0 +1,5 @@
+module rec CmdLspServer.Program
+
+let main _ =
+  printfn "Hello, lsp server!"
+  0

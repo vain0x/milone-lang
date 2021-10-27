@@ -1,0 +1,16 @@
+module rec LinkTest.Program
+
+let private printlnInt (n: int) : unit = __nativeFun ("println_int", n)
+let private mySqrt (x: float) : float = __nativeFun ("sqrt", x)
+
+let main _ =
+  printlnInt 42
+  printfn "sqrt 5 = %s" (mySqrt 5.0 |> string)
+
+  // trigger address sanitizer (stack-buffer-overflow)
+  // __nativeStmt "int x1 = 1; int x2 = 2; int *p = &x1; p[1] = 99;"
+
+  // trigger undefined sanitizer (negation of -2147483648 cannot be represented in type 'int')
+  // printfn "%d" (0x80000000 |> fun (x: int) -> -x)
+
+  0

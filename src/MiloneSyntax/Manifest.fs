@@ -15,9 +15,24 @@ type private Projects = (ProjectName * ProjectDir * Loc) list
 
 type ManifestData =
   { Projects: Projects
-    Errors: (string * Loc) list }
+    Errors: (string * Loc) list
 
-let private emptyManifest: ManifestData = { Projects = []; Errors = [] }
+    // #experimental
+    CSanitize: string option
+    CStd: string
+    CcList: (Path * Loc) list
+    ObjList: (Path * Loc) list
+    Libs: (string * Loc) list }
+
+let private emptyManifest: ManifestData =
+  { Projects = []
+    Errors = []
+
+    CSanitize = None
+    CStd = "c11"
+    CcList = []
+    ObjList = []
+    Libs = [] }
 
 let private getManifestPath (projectDir: ProjectDir) : string = projectDir + "/milone_manifest"
 
@@ -34,36 +49,43 @@ let private splitByWhitespace (s: string) : string list =
   s |> S.trim |> go [] |> List.rev
 
 let private parseManifest (docId: DocId) (s: string) : ManifestData =
-  let projects, errors =
-    s
-    |> S.toLines
-    |> List.mapi (fun i line -> i, line)
-    |> List.fold
-         (fun (projects, errors) (row, line) ->
-           let loc = Loc(docId, row, 0)
-           let skip () = projects, errors
-           let warn msg = projects, (msg, loc) :: errors
-           let push dir = dir :: projects, errors
+  s
+  |> S.toLines
+  |> List.mapi (fun i line -> i, line)
+  |> List.fold
+       (fun (m: ManifestData) (row, line) ->
+         let loc = Loc(docId, row, 0)
+         let skip () = m
 
-           match splitByWhitespace line with
-           | [] -> skip ()
-           | w :: _ when w |> S.startsWith "#" -> skip ()
+         let warn msg =
+           { m with Errors = (msg, loc) :: m.Errors }
 
-           | [ "project"; dir ] ->
-             let name =
-               Path.basename (Path dir) |> Path.toString
+         let push name dir =
+           { m with Projects = (name, dir, loc) :: m.Projects }
 
-             if name = "" || dir = "" then
-               warn "Project name/path can't be empty."
-             else if name |> S.startsWith "Milone" then
-               warn "Project name can't start with 'Milone'."
-             else
-               push (name, dir, loc)
+         match splitByWhitespace line with
+         | [] -> skip ()
+         | w :: _ when w |> S.startsWith "#" -> skip ()
 
-           | _ -> warn "Invalid statement.")
-         ([], [])
+         | [ "project"; dir ] ->
+           let name =
+             Path.basename (Path dir) |> Path.toString
 
-  { Projects = projects; Errors = errors }
+           if name = "" || dir = "" then
+             warn "Project name/path can't be empty."
+           else if name |> S.startsWith "Milone" then
+             warn "Project name can't start with 'Milone'."
+           else
+             push name dir
+
+         | [ "sanitize"; value ] -> { m with CSanitize = Some value }
+         | [ "std"; version ] -> { m with CStd = version }
+         | [ "cc"; path ] -> { m with CcList = (Path path, loc) :: m.CcList }
+         | [ "obj"; path ] -> { m with ObjList = (Path path, loc) :: m.ObjList }
+         | [ "lib"; name ] -> { m with Libs = (name, loc) :: m.Libs }
+
+         | _ -> warn "Invalid statement.")
+       emptyManifest
 
 let readManifestFile (readTextFileFun: ReadTextFileFun) (projectDir: ProjectDir) : Future<ManifestData> =
   let manifestFile = getManifestPath projectDir

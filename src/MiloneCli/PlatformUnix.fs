@@ -27,28 +27,40 @@ let private quoteShellWord (s: string) : string = "\"" + escapeShellWord s + "\"
 type BuildOnUnixParams =
   { CFiles: Path list
     TargetDir: Path
+    IsRelease: bool
     ExeFile: Path
     MiloneHome: Path
+    CSanitize: string option
+    CStd: string
+    CcList: Path list
+    ObjList: Path list
+    Libs: string list
 
     // Effects
     DirCreate: Path -> unit
     FileWrite: Path -> string -> unit
-    ExecuteInto: string -> unit }
+    ExecuteInto: string -> Never }
 
-let buildOnUnix (p: BuildOnUnixParams) : unit =
+let private toRenderNinjaParams (p: BuildOnUnixParams) : RenderNinjaFileParams =
+  { TargetDir = p.TargetDir
+    CFiles = p.CFiles
+    ExeFile = p.ExeFile
+    MiloneHome = p.MiloneHome
+    CDebug = not p.IsRelease
+    COptimize = p.IsRelease
+    CSanitize = p.CSanitize
+    CStd = p.CStd
+    CcList = p.CcList
+    ObjList = p.ObjList
+    Libs = p.Libs }
+
+let buildOnUnix (p: BuildOnUnixParams) : Never =
   let targetDir = p.TargetDir
 
   let ninjaFile =
     Path(Path.toString targetDir + "/build.ninja")
 
-  let ninjaScript =
-    let p: RenderNinjaFileParams =
-      { TargetDir = p.TargetDir
-        CFiles = p.CFiles
-        ExeFile = p.ExeFile
-        MiloneHome = p.MiloneHome }
-
-    renderNinjaFile p
+  let ninjaScript = renderNinjaFile (toRenderNinjaParams p)
 
   p.DirCreate targetDir
   p.FileWrite ninjaFile ninjaScript
@@ -60,35 +72,14 @@ let buildOnUnix (p: BuildOnUnixParams) : unit =
     + quoteShellWord (Path.toString p.ExeFile)
   )
 
-[<RequireQualifiedAccess; NoEquality; NoComparison>]
-type RunOnUnixParams =
-  { CFiles: Path list
-    TargetDir: Path
-    ExeFile: Path
-    MiloneHome: Path
-
-    Args: string list
-
-    // Effects
-    DirCreate: Path -> unit
-    FileWrite: Path -> string -> unit
-    ExecuteInto: string -> unit }
-
-let runOnUnix (p: RunOnUnixParams) : unit =
+let runOnUnix (p: BuildOnUnixParams) (args: string list) : Never =
   let targetDir = p.TargetDir
   let exeFile = p.ExeFile
 
   let ninjaFile =
     Path(Path.toString targetDir + "/build.ninja")
 
-  let buildScript =
-    let p: RenderNinjaFileParams =
-      { TargetDir = p.TargetDir
-        CFiles = p.CFiles
-        ExeFile = p.ExeFile
-        MiloneHome = p.MiloneHome }
-
-    renderNinjaFile p
+  let buildScript = renderNinjaFile (toRenderNinjaParams p)
 
   p.DirCreate targetDir
   p.FileWrite ninjaFile buildScript
@@ -98,7 +89,7 @@ let runOnUnix (p: RunOnUnixParams) : unit =
     + quoteShellWord (Path.toString ninjaFile)
     + " 1>&2 && "
     + quoteShellWord (Path.toString exeFile)
-    + (p.Args
+    + (args
        |> List.map (fun arg -> " " + quoteShellWord arg)
        |> S.concat "")
   )
@@ -107,11 +98,20 @@ let runOnUnix (p: RunOnUnixParams) : unit =
 // Templating
 // -----------------------------------------------
 
+[<RequireQualifiedAccess; NoEquality; NoComparison>]
 type private RenderNinjaFileParams =
   { TargetDir: Path
     CFiles: Path list
     ExeFile: Path
-    MiloneHome: Path }
+    MiloneHome: Path
+
+    CDebug: bool
+    COptimize: bool
+    CStd: string
+    CSanitize: string option
+    CcList: Path list
+    ObjList: Path list
+    Libs: string list }
 
 let private renderNinjaFile (p: RenderNinjaFileParams) : string =
   let miloneHome = Path.toString p.MiloneHome
@@ -141,16 +141,36 @@ exe_file = ${EXE_FILE}
 
 rule cc
   description = cc $in
-  command = $${CC:-gcc} -std=c11 -O1 -g -c $include_flag $in -o $out
+  command = $${CC:-gcc} ${C_FLAGS} -c $include_flag $in -o $out
 
 rule link
   description = link $out
-  command = $${CC:-gcc} $in -o $out
+  command = $${CC:-gcc} $in -o $out ${LINK_FLAGS}
 
 build $milone_o: cc $milone_c | $milone_h
 build $milone_platform_o: cc $milone_platform_c | $milone_h
 
 """
+
+  let sanitizerFlags =
+    match p.CSanitize with
+    | Some value -> [ "-fsanitize=" + value ]
+    | None -> []
+
+  let cFlags =
+    let debug = if p.CDebug then [ "-g" ] else []
+    let optimize = if p.COptimize then "-O2" else "-O1"
+    let std = "-std=" + p.CStd
+
+    List.append debug [ optimize; std ]
+    |> List.append sanitizerFlags
+    |> S.concat " "
+
+  let linkFlags =
+    p.Libs
+    |> List.map (fun lib -> "-l" + lib)
+    |> List.append sanitizerFlags
+    |> S.concat " "
 
   let build =
     let rules =
@@ -158,8 +178,22 @@ build $milone_platform_o: cc $milone_platform_c | $milone_h
       |> S.replace "${EXE_FILE}" exeFile
       |> S.replace "${MILONE_HOME}" miloneHome
       |> S.replace "${TARGET_DIR}" targetDir
+      |> S.replace "${C_FLAGS}" cFlags
+      |> S.replace "${LINK_FLAGS}" linkFlags
 
     [ rules ]
+
+  let build =
+    p.CcList
+    |> List.fold
+         (fun build name ->
+           build
+           |> cons "build "
+           |> cons (objFile name)
+           |> cons ": cc "
+           |> cons (Path.toString name)
+           |> cons "| $milone_h\n\n")
+         build
 
   let build =
     List.fold
@@ -175,9 +209,15 @@ build $milone_platform_o: cc $milone_platform_c | $milone_h
       p.CFiles
 
   let build =
+    let objFiles =
+      List.append p.CcList p.CFiles
+      |> List.map objFile
+      |> List.append (p.ObjList |> List.map Path.toString)
+      |> S.concat " "
+
     build
     |> cons "build $exe_file: link $milone_o $milone_platform_o "
-    |> cons (p.CFiles |> List.map objFile |> S.concat " ")
+    |> cons objFiles
     |> cons "\n"
 
   build |> List.rev |> S.concat ""
