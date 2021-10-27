@@ -295,9 +295,31 @@ type private Visitor =
     OnFun: FunSerial * DefOrUse * Ty option * Loc -> unit
     OnVariant: VariantSerial * Ty * Loc -> unit
     OnPrim: TPrim * Ty * Loc -> unit
+    OnField: TySerial * Ident * DefOrUse * Ty * Loc -> unit
 
     // Context
     GetTokens: DocId -> TokenizeFullResult }
+
+let private lastIdentBefore getTokens loc =
+  let (Loc (docId, py, px)) = loc
+
+  getTokens docId
+  |> List.skipWhile (fun (_, (y, x)) -> (y, x) < (py, 0))
+  |> List.takeWhile (fun (_, (y, x)) -> (y, x) <= (py, px))
+  |> List.rev
+  |> List.tryPick (fun (token, (y, x)) ->
+    match token with
+    | IdentToken _ -> Some(Loc(docId, y, x))
+    | _ -> None)
+
+let private firstIdentAfter getTokens loc =
+  let (Loc (docId, py, px)) = loc
+
+  getTokens docId
+  |> List.tryPick (fun (token, (y, x)) ->
+    match token with
+    | IdentToken _ when (py, px) < (y, x) -> Some(Loc(docId, y, x))
+    | _ -> None)
 
 let private dfsPat (visitor: Visitor) pat =
   match pat with
@@ -335,13 +357,30 @@ let private dfsExpr (visitor: Visitor) expr =
       dfsExpr visitor guard
       dfsExpr visitor expr
 
-  | TRecordExpr (baseOpt, fields, _, _) ->
+  | TRecordExpr (baseOpt, fields, ty, _) ->
     baseOpt |> Option.iter (dfsExpr visitor)
 
-    for _, field, _ in fields do
-      dfsExpr visitor field
+    for ident, init, loc in fields do
+      match ty with
+      | Ty (RecordTk tySerial, _) ->
+        // before '='
+        match lastIdentBefore visitor.GetTokens loc with
+        | Some loc -> visitor.OnField(tySerial, ident, Use, ty, loc)
+        | _ -> ()
+      | _ -> ()
 
-  | TNavExpr (expr, _, _, _) -> dfsExpr visitor expr
+      dfsExpr visitor init
+
+  | TNavExpr (l, r, ty, loc) ->
+    dfsExpr visitor l
+
+    match exprToTy l with
+    | Ty (RecordTk tySerial, _) ->
+      // before '.'
+      match firstIdentAfter visitor.GetTokens loc with
+      | Some loc -> visitor.OnField(tySerial, r, Use, ty, loc)
+      | None -> ()
+    | _ -> ()
 
   | TNodeExpr (_, exprs, _, _) ->
     for expr in exprs do
@@ -367,16 +406,10 @@ let private dfsStmt (visitor: Visitor) stmt =
 
   | TLetFunStmt (callee, _, _, args, body, loc) ->
     let tyFunN argTys resultTy : Ty =
-      argTys |> List.fold (fun funTy argTy -> tyFun argTy funTy) resultTy
+      argTys
+      |> List.fold (fun funTy argTy -> tyFun argTy funTy) resultTy
 
-    let firstIdentAfter getTokens loc =
-      let (Loc(docId, py, px)) = loc
-      getTokens docId |> List.tryPick (fun (token, (y, x)) ->
-        match token with
-        | IdentToken _ when (py, px) < (y, x) -> Some(Loc(docId, y, x))
-        | _ -> None
-      )
-
+    // after 'let'
     match firstIdentAfter visitor.GetTokens loc with
     | Some loc ->
       let funTy =
@@ -384,7 +417,7 @@ let private dfsStmt (visitor: Visitor) stmt =
         let resultTy = body |> exprToTy
         tyFunN argTys resultTy
 
-      visitor.OnFun (callee, Def, Some funTy, loc)
+      visitor.OnFun(callee, Def, Some funTy, loc)
 
     | None -> ()
 
@@ -392,6 +425,18 @@ let private dfsStmt (visitor: Visitor) stmt =
       onPat arg
 
     onExpr body
+
+  | TTyDeclStmt (tySerial, _, _tyArgs, tyDecl, _) ->
+    match tyDecl with
+    | TySynonymDecl _ -> ()
+    | UnionTyDecl _ -> ()
+
+    | RecordTyDecl (_, fields, _, _) ->
+      for ident, ty, loc in fields do
+        // before ':'
+        match lastIdentBefore visitor.GetTokens loc with
+        | Some loc -> visitor.OnField(tySerial, ident, Def, ty, loc)
+        | _ -> ()
 
   | TModuleStmt (_, body, _) ->
     for stmt in body do
@@ -415,6 +460,7 @@ let private findTyInStmt (ls: LangServiceState) (stmt: TStmt) (tirCtx: TirCtx) (
       OnFun = fun (_, _, tyOpt, loc) -> onVisit tyOpt loc
       OnVariant = fun (_, ty, loc) -> onVisit (Some ty) loc
       OnPrim = fun (_, ty, loc) -> onVisit (Some ty) loc
+      OnField = fun (_, _, _, ty, loc) -> onVisit (Some ty) loc
 
       GetTokens = tokenizeWithCache ls }
 
@@ -425,6 +471,7 @@ let private findTyInStmt (ls: LangServiceState) (stmt: TStmt) (tirCtx: TirCtx) (
 type private Symbol =
   | DiscardSymbol
   | PrimSymbol of TPrim
+  | FieldSymbol of tySerial: TySerial * Ident
   | ValueSymbol of ValueSymbol
   | TySymbol of TySymbol
 
@@ -439,6 +486,7 @@ let private collectSymbolsInExpr ls (modules: TProgram) =
       OnFun = fun (funSerial, defOrUse, _, loc) -> onVisit (ValueSymbol(FunSymbol funSerial)) defOrUse loc
       OnVariant = fun (variantSerial, _, loc) -> onVisit (ValueSymbol(VariantSymbol variantSerial)) Use loc
       OnPrim = fun (prim, _, loc) -> onVisit (PrimSymbol prim) Use loc
+      OnField = fun (tySerial, ident, defOrUse, _, loc) -> onVisit (FieldSymbol(tySerial, ident)) defOrUse loc
 
       GetTokens = tokenizeWithCache ls }
 
