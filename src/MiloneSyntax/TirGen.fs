@@ -604,8 +604,9 @@ let private tgDecl docId attrs (decl, ctx) : TStmt * NameCtx =
     TTyDeclStmt(serial, vis, tyArgs, TySynonymDecl(ty, loc), loc), ctx
 
   | AUnionTyDecl (vis, name, tyArgs, variants, pos) ->
-    let tgVariant (AVariant (name, payloadTy, _variantLoc), ctx) =
+    let tgVariant (AVariant (name, payloadTy, pos), ctx) =
       let serial, ctx = ctx |> nameCtxAdd name
+      let loc = toLoc docId pos
 
       let hasPayload, payloadTy, ctx =
         match payloadTy with
@@ -614,7 +615,7 @@ let private tgDecl docId attrs (decl, ctx) : TStmt * NameCtx =
           true, ty, ctx
         | None -> false, tyUnit, ctx
 
-      (nameToIdent name, VariantSerial serial, hasPayload, payloadTy), ctx
+      (nameToIdent name, VariantSerial serial, hasPayload, payloadTy, loc), ctx
 
     let unionSerial, ctx = ctx |> nameCtxAdd name
     let tyArgs, ctx = (tyArgs, ctx) |> tgTyArgs

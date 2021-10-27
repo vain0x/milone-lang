@@ -875,7 +875,7 @@ let private startDefineTy moduleSerialOpt tySerial vis tyArgs tyDecl loc ctx =
       |> addTyToModule tySymbol
 
     | UnionTyDecl (_, variants, _unionLoc) ->
-      let defineVariant ctx (name, variantSerial, hasPayload, payloadTy) =
+      let defineVariant ctx (name, variantSerial, hasPayload, payloadTy, loc) =
         let variantSymbol = VariantSymbol variantSerial
 
         let variantDef: VariantDef =
@@ -899,7 +899,7 @@ let private startDefineTy moduleSerialOpt tySerial vis tyArgs tyDecl loc ctx =
       let tyDef =
         let variantSerials =
           variants
-          |> List.map (fun (_, variantSerial, _, _) -> variantSerial)
+          |> List.map (fun (_, variantSerial, _, _, _) -> variantSerial)
 
         UnionTyDef(tyName, tyArgs, variantSerials, loc)
 
