@@ -35,6 +35,9 @@ let private uriOfFilePath (filePath: string) =
     let filePath =
       filePath.Replace("\\", "/").Replace("//", "/")
 
+    let filePath =
+      if filePath.StartsWith("/") then filePath else "/" + filePath
+
     let rec go (components: string []) =
       let i = Array.IndexOf(components, "..")
 

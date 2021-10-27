@@ -143,8 +143,8 @@ type TyDecl =
   | TySynonymDecl of Ty * Loc
 
   /// Union type.
-  /// Variants: (ident, serial, has-payload, payload type).
-  | UnionTyDecl of Ident * variants: (Ident * VariantSerial * bool * Ty) list * Loc
+  /// Variants: (ident, serial, has-payload, payload type, loc).
+  | UnionTyDecl of Ident * variants: (Ident * VariantSerial * bool * Ty * Loc) list * Loc
 
   | RecordTyDecl of Ident * fields: (Ident * Ty * Loc) list * IsCRepr * Loc
 

@@ -1,0 +1,13 @@
+#!/bin/bash
+
+set -eu
+trap 'kill 0' SIGINT
+
+dotnet watch build --no-restore &
+
+(
+    cd ../../vscode_ext
+    npm run webpack-watch
+) &
+
+wait

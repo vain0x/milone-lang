@@ -1094,15 +1094,15 @@ let private parsePayloadTy basePos (tokens, errors) : PR<ATy> =
 let private parseTyDeclUnion basePos (tokens, errors) : PR<ATyDeclBody> =
   let rec go acc (tokens, errors) =
     match tokens with
-    | (PipeToken, pos) :: (IdentToken ident, identPos) :: (OfToken, _) :: tokens ->
+    | (PipeToken, _) :: (IdentToken ident, identPos) :: (OfToken, _) :: tokens ->
       let payloadTy, tokens, errors = parsePayloadTy basePos (tokens, errors)
 
       go
-        (AVariant(Name(ident, identPos), Some payloadTy, pos)
+        (AVariant(Name(ident, identPos), Some payloadTy, identPos)
          :: acc)
         (tokens, errors)
 
-    | (PipeToken, pos) :: (IdentToken ident, identPos) :: tokens ->
+    | (PipeToken, _) :: (IdentToken ident, identPos) :: tokens ->
       go
         (AVariant(Name(ident, identPos), None, identPos)
          :: acc)

@@ -32,8 +32,7 @@
                     "MILONE_LSP_COMMAND": "${workspaceFolder}/bin/Debug/net5.0/MiloneLspServer.exe",
                     "MILONE_HOME": "${workspaceFolder}/../.."
                 }
-            },
-            "preLaunchTask": "vscode_ext_build"
+            }
         }
     ],
     "compounds": []
