@@ -292,9 +292,12 @@ type private DefOrUse =
 type private Visitor =
   { OnDiscardPat: Ty * Loc -> unit
     OnVar: VarSerial * DefOrUse * Ty * Loc -> unit
-    OnFun: FunSerial * Ty option * Loc -> unit
+    OnFun: FunSerial * DefOrUse * Ty option * Loc -> unit
     OnVariant: VariantSerial * Ty * Loc -> unit
-    OnPrim: TPrim * Ty * Loc -> unit }
+    OnPrim: TPrim * Ty * Loc -> unit
+
+    // Context
+    GetTokens: DocId -> TokenizeFullResult }
 
 let private dfsPat (visitor: Visitor) pat =
   match pat with
@@ -320,7 +323,7 @@ let private dfsExpr (visitor: Visitor) expr =
   match expr with
   | TLitExpr _ -> ()
   | TVarExpr (varSerial, ty, loc) -> visitor.OnVar(varSerial, Use, ty, loc)
-  | TFunExpr (funSerial, ty, loc) -> visitor.OnFun(funSerial, Some ty, loc)
+  | TFunExpr (funSerial, ty, loc) -> visitor.OnFun(funSerial, Use, Some ty, loc)
   | TVariantExpr (variantSerial, ty, loc) -> visitor.OnVariant(variantSerial, ty, loc)
   | TPrimExpr (prim, ty, loc) -> visitor.OnPrim(prim, ty, loc)
 
@@ -362,7 +365,29 @@ let private dfsStmt (visitor: Visitor) stmt =
     onPat pat
     onExpr init
 
-  | TLetFunStmt (_, _, _, args, body, _) ->
+  | TLetFunStmt (callee, _, _, args, body, loc) ->
+    let tyFunN argTys resultTy : Ty =
+      argTys |> List.fold (fun funTy argTy -> tyFun argTy funTy) resultTy
+
+    let firstIdentAfter getTokens loc =
+      let (Loc(docId, py, px)) = loc
+      getTokens docId |> List.tryPick (fun (token, (y, x)) ->
+        match token with
+        | IdentToken _ when (py, px) < (y, x) -> Some(Loc(docId, y, x))
+        | _ -> None
+      )
+
+    match firstIdentAfter visitor.GetTokens loc with
+    | Some loc ->
+      let funTy =
+        let argTys = args |> List.map patToTy
+        let resultTy = body |> exprToTy
+        tyFunN argTys resultTy
+
+      visitor.OnFun (callee, Def, Some funTy, loc)
+
+    | None -> ()
+
     for arg in args do
       onPat arg
 
@@ -387,9 +412,11 @@ let private findTyInStmt (ls: LangServiceState) (stmt: TStmt) (tirCtx: TirCtx) (
   let visitor: Visitor =
     { OnDiscardPat = fun (ty, loc) -> onVisit (Some ty) loc
       OnVar = fun (_, _, ty, loc) -> onVisit (Some ty) loc
-      OnFun = fun (_, tyOpt, loc) -> onVisit tyOpt loc
+      OnFun = fun (_, _, tyOpt, loc) -> onVisit tyOpt loc
       OnVariant = fun (_, ty, loc) -> onVisit (Some ty) loc
-      OnPrim = fun (_, ty, loc) -> onVisit (Some ty) loc }
+      OnPrim = fun (_, ty, loc) -> onVisit (Some ty) loc
+
+      GetTokens = tokenizeWithCache ls }
 
   dfsStmt visitor stmt
   contentOpt
@@ -401,7 +428,7 @@ type private Symbol =
   | ValueSymbol of ValueSymbol
   | TySymbol of TySymbol
 
-let private collectSymbolsInExpr (modules: TProgram) =
+let private collectSymbolsInExpr ls (modules: TProgram) =
   let mutable symbols = ResizeArray()
 
   let onVisit symbol defOrUse loc = symbols.Add((symbol, defOrUse, loc))
@@ -409,9 +436,11 @@ let private collectSymbolsInExpr (modules: TProgram) =
   let visitor: Visitor =
     { OnDiscardPat = fun (_, loc) -> onVisit DiscardSymbol Def loc
       OnVar = fun (varSerial, defOrUse, _, loc) -> onVisit (ValueSymbol(VarSymbol varSerial)) defOrUse loc
-      OnFun = fun (funSerial, _, loc) -> onVisit (ValueSymbol(FunSymbol funSerial)) Use loc
+      OnFun = fun (funSerial, defOrUse, _, loc) -> onVisit (ValueSymbol(FunSymbol funSerial)) defOrUse loc
       OnVariant = fun (variantSerial, _, loc) -> onVisit (ValueSymbol(VariantSymbol variantSerial)) Use loc
-      OnPrim = fun (prim, _, loc) -> onVisit (PrimSymbol prim) Use loc }
+      OnPrim = fun (prim, _, loc) -> onVisit (PrimSymbol prim) Use loc
+
+      GetTokens = tokenizeWithCache ls }
 
   for m in modules do
     for stmt in m.Stmts do
@@ -448,7 +477,7 @@ let private doCollectSymbolOccurrences
 
       let tokenLoc = locOfDocPos docId tokenPos
 
-      let symbols = collectSymbolsInExpr modules
+      let symbols = collectSymbolsInExpr ls modules
 
       let symbolIndex =
         symbols.FindIndex(fun (_, _, loc) -> loc = tokenLoc)
@@ -502,7 +531,7 @@ module LangService =
       | Some (_token, tokenPos) ->
         // eprintfn "highlight: tokenPos=%A" tokenPos
 
-        let symbols = collectSymbolsInExpr expr
+        let symbols = collectSymbolsInExpr ls expr
 
         // Remove symbols occurred in other documents.
         symbols.RemoveAll(fun (_, _, loc) -> locToDoc loc <> docId)
