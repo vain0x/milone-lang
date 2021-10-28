@@ -1,5 +1,6 @@
 module rec CmdLspServer.Program
 
+open LibSqlite3.Db
 open LibJson.Json
 
 module I = MiloneStd.StdInt
@@ -21,7 +22,11 @@ let private failwith (msg: string) =
   printfn "ERROR: %s" msg
   exit 1
 
-let private loopInRegion (f: unit -> int) : int =
+let private loopInRegion (action: unit -> unit) : int =
+  let f () =
+    action ()
+    0
+
   let rec go () =
     let code = __inRegion f
     if code = 0 then go () else code
@@ -152,6 +157,24 @@ let private writeString (s: string) (output: Stream) : Stream =
 // -----------------------------------------------
 
 module private J =
+  let asString j =
+    match j with
+    | JString value -> value
+    | _ -> failwith "expected a string"
+
+  let asInt j =
+    match j with
+    | JNumber value -> int value
+    | _ -> failwith "expected an int"
+
+  let at index (j: JsonValue) : JsonValue =
+    match j with
+    | JArray items ->
+      match items |> List.tryItem index with
+      | Some value -> value
+      | None -> failwith "out of range"
+    | _ -> failwith "expected an array"
+
   let get key (j: JsonValue) : JsonValue =
     match j with
     | JObject entries ->
@@ -163,19 +186,86 @@ module private J =
 
     | _ -> JNull
 
-  let get2 key1 key2 (j: JsonValue) = j |> get key1 |> get key2
+  let dig keys (j: JsonValue) =
+    keys |> List.fold (fun j key -> get key j) j
+
+  let getT2 k1 k2 (j: JsonValue) = get k1 j, get k2 j
+  let getT3 k1 k2 k3 (j: JsonValue) = get k1 j, get k2 j, get k3 j
 
 // -----------------------------------------------
 // LSP
 // -----------------------------------------------
 
 type private MsgId = JsonValue
+type private Uri = Uri of string
+
+module private Uri =
+  let toString (Uri s) = s
+
+type private DidOpenParam =
+  { Uri: Uri
+    Version: int
+    Text: string }
+
+let private parseDidOpenParam j : DidOpenParam =
+  let uri, version, text =
+    j
+    |> J.get "textDocument"
+    |> J.getT3 "uri" "version" "text"
+
+  let uri, version, text =
+    Uri(J.asString uri), J.asInt version, J.asString text
+
+  { Uri = uri
+    Version = version
+    Text = text }
+
+type private DidChangeParam =
+  { Uri: Uri
+    Version: int
+    Text: string }
+
+let private parseDidChangeParam j : DidChangeParam =
+  let uri, version =
+    let uri, version =
+      j
+      |> J.get "textDocument"
+      |> J.getT2 "uri" "version"
+
+    Uri(J.asString uri), J.asInt version
+
+  let text =
+    j
+    |> J.get "contentChanges"
+    |> J.at 0
+    |> J.get "text"
+    |> J.asString
+
+  { Uri = uri
+    Version = version
+    Text = text }
+
+type private DidCloseParam = { Uri: Uri }
+
+let private parseDidCloseParam j : DidCloseParam =
+  let uri =
+    j
+    |> J.dig [ "textDocument"; "uri" ]
+    |> J.asString
+    |> Uri
+
+  { Uri = uri }
 
 type private LspRequest =
   | InitializeRequest of MsgId
   | InitializedNotification
   | ShutdownRequest of MsgId
   | ExitNotification
+
+  | DidOpenNotification of DidOpenParam
+  | DidChangeNotification of DidChangeParam
+  | DidCloseNotification of DidCloseParam
+
   | UnknownRequest
 
 let private readRequest () : LspRequest =
@@ -238,6 +328,7 @@ let private readRequest () : LspRequest =
   let req = jsonParseFromString body
   let msgId = req |> J.get "id"
   let m = req |> J.get "method"
+  let p = req |> J.get "params"
 
   match m with
   | JString "initialize" -> InitializeRequest msgId
@@ -246,6 +337,10 @@ let private readRequest () : LspRequest =
   | JString "shutdown" -> ShutdownRequest msgId
   | JString "exit" -> ExitNotification
 
+  | JString "textDocument/didOpen" -> DidOpenNotification(parseDidOpenParam p)
+  | JString "textDocument/didChange" -> DidChangeNotification(parseDidChangeParam p)
+  | JString "textDocument/didClose" -> DidCloseNotification(parseDidCloseParam p)
+
   | JString m ->
     trace ("unknown method: '" + m + "'")
     UnknownRequest
@@ -253,6 +348,87 @@ let private readRequest () : LspRequest =
   | _ ->
     trace ("unknown method without method")
     UnknownRequest
+
+// -----------------------------------------------
+// Persistent
+// -----------------------------------------------
+
+let private dumpDbTable tableName =
+  let cons h t = h :: t
+  let consBetween l r x acc = r :: x :: l :: acc
+
+  let dumpRow row acc =
+    row
+    |> List.mapi (fun i value -> i, value)
+    |> List.fold
+         (fun acc (i, value) ->
+           let acc = if i = 0 then acc else acc |> cons ", "
+
+           match value with
+           | DNull -> acc |> cons "null"
+           | DInt n -> acc |> cons (string n)
+           | DString s ->
+             if s.Length <= 32 && s |> S.contains "\n" |> not then
+               acc |> consBetween "\"" "\"" s
+             else
+               acc
+               |> consBetween "<string " ">" (string s.Length))
+         acc
+
+  let dumpRows rows acc =
+    rows
+    |> List.mapi (fun i row -> i, row)
+    |> List.fold
+         (fun acc (i, row) ->
+           let acc = if i = 0 then acc else acc |> cons "\n"
+           dumpRow row acc)
+         acc
+
+  let rows =
+    dbSelect ("select * from " + tableName) []
+
+  dumpRows rows []
+  |> List.rev
+  |> S.concat ""
+  |> printfn "%s"
+
+let private dbInit () =
+  dbOpen ":memory:"
+
+  dbExec
+    """
+      create table if not exists docs(
+        uri varchar(300) primary key,
+        version int not null,
+        text text not null
+      );
+    """
+
+let private dbAddDoc uri version text =
+  dbMutate
+    """
+      insert into docs(uri, version, text) values
+        (:uri, :version, :text)
+    """
+    [ ":uri", DString uri
+      ":version", DInt version
+      ":text", DString text ]
+
+let private dbUpdateDoc uri version text =
+  dbMutate
+    """
+      update docs set
+          version = :version,
+          text = :text
+      where
+          uri = :uri
+    """
+    [ ":uri", DString uri
+      ":version", DInt version
+      ":text", DString text ]
+
+let private dbRemoveDoc uri =
+  dbMutate "delete from docs where uri = :uri" [ ":uri", DString uri ]
 
 // -----------------------------------------------
 // Interface
@@ -301,11 +477,8 @@ let main _ =
         output
       |> ignore
 
-      0
-
     | InitializedNotification ->
-      trace "Ignore initialized notification."
-      0
+      dbInit ()
 
     | ShutdownRequest msgId ->
       let response =
@@ -321,12 +494,24 @@ let main _ =
         output
       |> ignore
 
-      0
+      trace "dump docs:"
+      dumpDbTable "docs"
 
     | ExitNotification ->
       trace "Exit gracefully."
       exit 0
 
+    | DidOpenNotification p ->
+      let uri = p.Uri |> Uri.toString
+      dbAddDoc uri p.Version p.Text
+
+    | DidChangeNotification p ->
+      let uri = p.Uri |> Uri.toString
+      dbUpdateDoc uri p.Version p.Text
+
+    | DidCloseNotification p ->
+      let uri = p.Uri |> Uri.toString
+      dbRemoveDoc uri
+
     | UnknownRequest ->
-      trace "Ignore unknown request."
-      0)
+      trace "Ignore unknown request.")

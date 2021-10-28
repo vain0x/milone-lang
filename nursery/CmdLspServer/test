@@ -3,19 +3,36 @@
 
 set -eu
 
-req() {
-    BODY=$(cat)
+send() {
+    BODY="$1"
     LEN=$(printf "%s\n" "$BODY" | wc -c)
     printf "Content-Length: %d\r\n\r\n%s\n" "$LEN" "$BODY"
-}
-
-send() {
-    echo "$1" | req
 }
 
 {
     send '{"method": "initialize", "id": 1}'
     send '{"method": "initialized"}'
+
+    send '{
+        "method": "textDocument/didOpen",
+        "params": {"textDocument": {"uri": "a.txt", "version": 1, "text": "hey!"}}
+    }'
+    send '{
+        "method": "textDocument/didChange",
+        "params": {
+            "textDocument": {"uri": "a.txt", "version": 2},
+            "contentChanges": [{"text": "hey!"}]
+        }
+    }'
+    send '{
+        "method": "textDocument/didOpen",
+        "params": {"textDocument": {"uri": "b.txt", "version": 1, "text": "bbb"}}
+    }'
+    send '{
+        "method": "textDocument/didClose",
+        "params": {"textDocument": {"uri": "b.txt"}}
+    }'
+
     send '{"method": "shutdown", "id": 2}'
     send '{"method": "exit"}'
 } | "$LSP_SERVER_BIN"
