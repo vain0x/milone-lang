@@ -293,7 +293,7 @@ type private Visitor =
   { OnDiscardPat: Ty * Loc -> unit
     OnVar: VarSerial * DefOrUse * Ty * Loc -> unit
     OnFun: FunSerial * DefOrUse * Ty option * Loc -> unit
-    OnVariant: VariantSerial * Ty * Loc -> unit
+    OnVariant: VariantSerial * DefOrUse * Ty * Loc -> unit
     OnPrim: TPrim * Ty * Loc -> unit
     OnField: TySerial * Ident * DefOrUse * Ty * Loc -> unit
     OnTy: TySymbol * DefOrUse * Loc -> unit
@@ -339,11 +339,11 @@ let private dfsPat (visitor: Visitor) pat =
   | TDiscardPat (ty, loc) -> visitor.OnDiscardPat(ty, loc)
 
   | TVarPat (_, varSerial, ty, loc) -> visitor.OnVar(varSerial, Def, ty, loc)
-  | TVariantPat (variantSerial, ty, loc) -> visitor.OnVariant(variantSerial, ty, loc)
+  | TVariantPat (variantSerial, ty, loc) -> visitor.OnVariant(variantSerial, Use, ty, loc)
 
   | TNodePat (kind, pats, ty, loc) ->
     match kind with
-    | TVariantAppPN variantSerial -> visitor.OnVariant(variantSerial, ty, loc)
+    | TVariantAppPN variantSerial -> visitor.OnVariant(variantSerial, Use, ty, loc)
     | TNavPN _ -> ()
     | TAscribePN -> dfsTy visitor ty
     | _ -> ()
@@ -365,7 +365,7 @@ let private dfsExpr (visitor: Visitor) expr =
   | TLitExpr _ -> ()
   | TVarExpr (varSerial, ty, loc) -> visitor.OnVar(varSerial, Use, ty, loc)
   | TFunExpr (funSerial, ty, loc) -> visitor.OnFun(funSerial, Use, Some ty, loc)
-  | TVariantExpr (variantSerial, ty, loc) -> visitor.OnVariant(variantSerial, ty, loc)
+  | TVariantExpr (variantSerial, ty, loc) -> visitor.OnVariant(variantSerial, Use, ty, loc)
   | TPrimExpr (prim, ty, loc) -> visitor.OnPrim(prim, ty, loc)
 
   | TMatchExpr (cond, arms, _, _) ->
@@ -469,7 +469,7 @@ let private dfsStmt (visitor: Visitor) stmt =
           else
             tyUnit
 
-        visitor.OnVariant(variantSerial, ty, identLoc)
+        visitor.OnVariant(variantSerial, Def, ty, identLoc)
 
     | RecordTyDecl (_, fields, _, _) ->
       // after 'type'
@@ -503,7 +503,7 @@ let private findTyInStmt (ls: LangServiceState) (stmt: TStmt) (tirCtx: TirCtx) (
     { OnDiscardPat = fun (ty, loc) -> onVisit (Some ty) loc
       OnVar = fun (_, _, ty, loc) -> onVisit (Some ty) loc
       OnFun = fun (_, _, tyOpt, loc) -> onVisit tyOpt loc
-      OnVariant = fun (_, ty, loc) -> onVisit (Some ty) loc
+      OnVariant = fun (_, _, ty, loc) -> onVisit (Some ty) loc
       OnPrim = fun (_, ty, loc) -> onVisit (Some ty) loc
       OnField = fun (_, _, _, ty, loc) -> onVisit (Some ty) loc
       OnTy = fun _ -> ()
@@ -530,7 +530,8 @@ let private collectSymbolsInExpr ls (modules: TProgram) =
     { OnDiscardPat = fun (_, loc) -> onVisit DiscardSymbol Def loc
       OnVar = fun (varSerial, defOrUse, _, loc) -> onVisit (ValueSymbol(VarSymbol varSerial)) defOrUse loc
       OnFun = fun (funSerial, defOrUse, _, loc) -> onVisit (ValueSymbol(FunSymbol funSerial)) defOrUse loc
-      OnVariant = fun (variantSerial, _, loc) -> onVisit (ValueSymbol(VariantSymbol variantSerial)) Use loc
+      OnVariant =
+        fun (variantSerial, defOrUse, _, loc) -> onVisit (ValueSymbol(VariantSymbol variantSerial)) defOrUse loc
       OnPrim = fun (prim, _, loc) -> onVisit (PrimSymbol prim) Use loc
       OnField = fun (tySerial, ident, defOrUse, _, loc) -> onVisit (FieldSymbol(tySerial, ident)) defOrUse loc
       OnTy = fun (tySymbol, defOrUse, loc) -> onVisit (TySymbol tySymbol) defOrUse loc
