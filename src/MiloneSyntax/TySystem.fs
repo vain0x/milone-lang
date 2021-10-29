@@ -49,8 +49,8 @@ let private tkEncode tk : int =
 
   | MetaTk (tySerial, _) -> pair 20 tySerial
   | SynonymTk tySerial -> pair 21 tySerial
-  | UnionTk tySerial -> pair 22 tySerial
-  | RecordTk tySerial -> pair 23 tySerial
+  | UnionTk (tySerial, _) -> pair 22 tySerial
+  | RecordTk (tySerial, _) -> pair 23 tySerial
 
   | NativeTypeTk _
   | UnresolvedTk _
@@ -63,7 +63,7 @@ let tkCompare l r : int =
   | NativeTypeTk _, _ -> -1
   | _, NativeTypeTk _ -> 1
 
-  | UnresolvedTk (lQuals, lSerial), UnresolvedTk (rQuals, rSerial) ->
+  | UnresolvedTk (lQuals, lSerial, _), UnresolvedTk (rQuals, rSerial, _) ->
     pairCompare (listCompare compare) compare (lQuals, lSerial) (rQuals, rSerial)
 
   | UnresolvedTk _, _ -> -1
@@ -93,9 +93,9 @@ let tkDisplay getTyName tk =
   | NativeTypeTk _ -> "__nativeType"
   | MetaTk (tySerial, _) -> getTyName tySerial
   | SynonymTk tySerial -> getTyName tySerial
-  | RecordTk tySerial -> getTyName tySerial
-  | UnionTk tySerial -> getTyName tySerial
-  | UnresolvedTk (_, serial) -> "?" + string serial
+  | RecordTk (tySerial, _) -> getTyName tySerial
+  | UnionTk (tySerial, _) -> getTyName tySerial
+  | UnresolvedTk (_, serial, _) -> "?" + string serial
   | UnresolvedVarTk (serial, _) -> "'" + string serial
 
 // -----------------------------------------------
@@ -272,8 +272,8 @@ let tyDisplay getTyName ty =
       | None -> "{?" + string tySerial + "}@" + locToString loc
 
     | Ty (SynonymTk tySerial, args) -> nominal tySerial args
-    | Ty (UnionTk tySerial, args) -> nominal tySerial args
-    | Ty (RecordTk tySerial, args) -> nominal tySerial args
+    | Ty (UnionTk (tySerial, _), args) -> nominal tySerial args
+    | Ty (RecordTk (tySerial, _), args) -> nominal tySerial args
 
     | Ty (tk, args) ->
       let tk = tkDisplay (fun _ -> unreachable ()) tk

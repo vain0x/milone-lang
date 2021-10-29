@@ -286,11 +286,12 @@ let private tgTy (docId: DocId) (ty: ATy, ctx: NameCtx) : Ty * NameCtx =
     let loc = toLoc docId pos
     tyError loc, ctx
 
-  | AAppTy (quals, name, argTys, _) ->
+  | AAppTy (quals, name, argTys, pos) ->
     let quals, ctx = (quals, ctx) |> addPath
     let serial, ctx = ctx |> nameCtxAdd name
     let argTys, ctx = (argTys, ctx) |> stMap onTy
-    tyUnresolved (quals, serial) argTys, ctx
+    let loc = toLoc docId pos
+    tyUnresolved (quals, serial, loc) argTys, ctx
 
   | AVarTy name ->
     let tySerial, ctx = ctx |> nameCtxAdd (greek name)
@@ -300,7 +301,8 @@ let private tgTy (docId: DocId) (ty: ATy, ctx: NameCtx) : Ty * NameCtx =
   | ASuffixTy (lTy, suffix) ->
     let lTy, ctx = (lTy, ctx) |> onTy
     let serial, ctx = ctx |> nameCtxAdd suffix
-    tyUnresolved ([], serial) [ lTy ], ctx
+    let loc = toLoc docId (nameToPos suffix)
+    tyUnresolved ([], serial, loc) [ lTy ], ctx
 
   | ATupleTy (itemTys, _) ->
     let itemTys, ctx = (itemTys, ctx) |> stMap onTy

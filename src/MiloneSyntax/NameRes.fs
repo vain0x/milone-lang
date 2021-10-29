@@ -710,9 +710,9 @@ let private resolveTy ty loc scopeCtx =
     match ty with
     | Ty (ErrorTk _, _) -> ty, scopeCtx
 
-    | Ty (UnresolvedTk ([], serial), []) when (scopeCtx |> findName serial) = "_" -> tyMeta serial loc, scopeCtx
+    | Ty (UnresolvedTk ([], serial, loc), []) when (scopeCtx |> findName serial) = "_" -> tyMeta serial loc, scopeCtx
 
-    | Ty (UnresolvedTk ([], serial), [ Ty (UnresolvedTk ([], itemSerial), _) ]) when
+    | Ty (UnresolvedTk ([], serial, _), [ Ty (UnresolvedTk ([], itemSerial, _), _) ]) when
       (scopeCtx |> findName serial = "__nativeType")
       ->
       let code = scopeCtx |> findName itemSerial
@@ -738,7 +738,7 @@ let private resolveTy ty loc scopeCtx =
 
         tyMeta serial loc, scopeCtx
 
-    | Ty (UnresolvedTk (quals, serial), tys) ->
+    | Ty (UnresolvedTk (quals, serial, loc), tys) ->
       let name = scopeCtx |> findName serial
       let tys, scopeCtx = (tys, scopeCtx) |> stMap go
       let arity = List.length tys
@@ -770,7 +770,7 @@ let private resolveTy ty loc scopeCtx =
 
           tyError loc, scopeCtx
 
-        | _ -> tyUnion tySerial tys, scopeCtx
+        | _ -> tyUnion tySerial tys loc, scopeCtx
 
       | Some (RecordTySymbol tySerial) ->
         // Arity check. #tyaritycheck
@@ -784,7 +784,7 @@ let private resolveTy ty loc scopeCtx =
 
           tyError loc, scopeCtx
 
-        | _ -> tyRecord tySerial, scopeCtx
+        | _ -> tyRecord tySerial loc, scopeCtx
 
       | Some (MetaTySymbol _) -> unreachable (serial, name, loc)
 

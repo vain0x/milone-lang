@@ -37,8 +37,8 @@ let private lowerTk (tk: Tir.Tk) : Hir.Tk =
   | Tir.NativeTypeTk code -> Hir.NativeTypeTk code
 
   | Tir.MetaTk (serial, loc) -> Hir.MetaTk(serial, loc)
-  | Tir.UnionTk serial -> Hir.UnionTk serial
-  | Tir.RecordTk serial -> Hir.RecordTk serial
+  | Tir.UnionTk (serial, _) -> Hir.UnionTk serial
+  | Tir.RecordTk (serial, _) -> Hir.RecordTk serial
 
   | Tir.ErrorTk _
   | Tir.SynonymTk _ -> unreachable () // Resolved in Typing.

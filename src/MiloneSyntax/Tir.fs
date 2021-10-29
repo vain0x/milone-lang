@@ -81,11 +81,11 @@ type Tk =
   // Nominal types.
   | MetaTk of metaTy: TySerial * metaLoc: Loc
   | SynonymTk of synonymTy: TySerial
-  | UnionTk of unionTy: TySerial
-  | RecordTk of recordTy: TySerial
+  | UnionTk of unionTy: TySerial * Loc option
+  | RecordTk of recordTy: TySerial * Loc option
 
   /// Unresolved type. Generated in TirGen, resolved in NameRes.
-  | UnresolvedTk of quals: Serial list * unresolvedSerial: Serial
+  | UnresolvedTk of quals: Serial list * unresolvedSerial: Serial * Loc
   | UnresolvedVarTk of unresolvedVarTySerial: (Serial * Loc)
 
 /// Type of expressions.
@@ -537,9 +537,9 @@ let tyMeta serial loc = Ty(MetaTk(serial, loc), [])
 
 let tySynonym tySerial tyArgs = Ty(SynonymTk tySerial, tyArgs)
 
-let tyUnion tySerial tyArgs = Ty(UnionTk tySerial, tyArgs)
+let tyUnion tySerial tyArgs loc = Ty(UnionTk(tySerial, Some loc), tyArgs)
 
-let tyRecord tySerial = Ty(RecordTk tySerial, [])
+let tyRecord tySerial loc = Ty(RecordTk(tySerial, Some loc), [])
 
 // -----------------------------------------------
 // TyDef

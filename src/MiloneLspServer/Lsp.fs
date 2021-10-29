@@ -367,7 +367,7 @@ let private dfsExpr (visitor: Visitor) expr =
 
     for ident, init, loc in fields do
       match ty with
-      | Ty (RecordTk tySerial, _) ->
+      | Ty (RecordTk (tySerial, _), _) ->
         // before '='
         match lastIdentBefore visitor.GetTokens loc with
         | Some loc -> visitor.OnField(tySerial, ident, Use, ty, loc)
@@ -380,7 +380,7 @@ let private dfsExpr (visitor: Visitor) expr =
     dfsExpr visitor l
 
     match exprToTy l with
-    | Ty (RecordTk tySerial, _) ->
+    | Ty (RecordTk (tySerial, _), _) ->
       // before '.'
       match firstIdentAfter visitor.GetTokens loc with
       | Some loc -> visitor.OnField(tySerial, r, Use, ty, loc)
@@ -443,7 +443,7 @@ let private dfsStmt (visitor: Visitor) stmt =
             |> List.map (fun tySerial -> tyMeta tySerial tyDeclLoc)
 
           if hasPayload then
-            tyFun payloadTy (tyUnion tySerial tyArgs)
+            tyFun payloadTy (tyUnion tySerial tyArgs identLoc)
           else
             tyUnit
 
