@@ -296,6 +296,7 @@ type private Visitor =
     OnVariant: VariantSerial * Ty * Loc -> unit
     OnPrim: TPrim * Ty * Loc -> unit
     OnField: TySerial * Ident * DefOrUse * Ty * Loc -> unit
+    OnTy: TySymbol * DefOrUse * Loc -> unit
 
     // Context
     GetTokens: DocId -> TokenizeFullResult }
@@ -321,10 +322,22 @@ let private firstIdentAfter getTokens loc =
     | IdentToken _ when (py, px) < (y, x) -> Some(Loc(docId, y, x))
     | _ -> None)
 
+let private dfsTy (visitor: Visitor) ty : unit =
+  let (Ty (tk, tyArgs)) = ty
+
+  match tk with
+  | UnionTk (tySerial, Some loc) -> visitor.OnTy(UnionTySymbol tySerial, Use, loc)
+  | RecordTk (tySerial, Some loc) -> visitor.OnTy(RecordTySymbol tySerial, Use, loc)
+  | _ -> ()
+
+  for ty in tyArgs do
+    dfsTy visitor ty
+
 let private dfsPat (visitor: Visitor) pat =
   match pat with
   | TLitPat _ -> ()
   | TDiscardPat (ty, loc) -> visitor.OnDiscardPat(ty, loc)
+
   | TVarPat (_, varSerial, ty, loc) -> visitor.OnVar(varSerial, Def, ty, loc)
   | TVariantPat (variantSerial, ty, loc) -> visitor.OnVariant(variantSerial, ty, loc)
 
@@ -332,6 +345,7 @@ let private dfsPat (visitor: Visitor) pat =
     match kind with
     | TVariantAppPN variantSerial -> visitor.OnVariant(variantSerial, ty, loc)
     | TNavPN _ -> ()
+    | TAscribePN -> dfsTy visitor ty
     | _ -> ()
 
     for pat in pats do
@@ -426,6 +440,9 @@ let private dfsStmt (visitor: Visitor) stmt =
 
     | None -> ()
 
+    // HACK: Visit type as if let-fun has result-type ascription. Typing removes result type ascription.
+    dfsTy visitor (exprToTy body)
+
     for arg in args do
       onPat arg
 
@@ -436,6 +453,11 @@ let private dfsStmt (visitor: Visitor) stmt =
     | TySynonymDecl _ -> ()
 
     | UnionTyDecl (_, variants, _) ->
+      // after 'type'
+      match firstIdentAfter visitor.GetTokens tyDeclLoc with
+      | Some loc -> visitor.OnTy(UnionTySymbol tySerial, Def, loc)
+      | _ -> ()
+
       for _, variantSerial, hasPayload, payloadTy, identLoc in variants do
         let ty =
           let tyArgs =
@@ -450,6 +472,11 @@ let private dfsStmt (visitor: Visitor) stmt =
         visitor.OnVariant(variantSerial, ty, identLoc)
 
     | RecordTyDecl (_, fields, _, _) ->
+      // after 'type'
+      match firstIdentAfter visitor.GetTokens tyDeclLoc with
+      | Some loc -> visitor.OnTy(RecordTySymbol tySerial, Def, loc)
+      | _ -> ()
+
       for ident, ty, loc in fields do
         // before ':'
         match lastIdentBefore visitor.GetTokens loc with
@@ -479,6 +506,7 @@ let private findTyInStmt (ls: LangServiceState) (stmt: TStmt) (tirCtx: TirCtx) (
       OnVariant = fun (_, ty, loc) -> onVisit (Some ty) loc
       OnPrim = fun (_, ty, loc) -> onVisit (Some ty) loc
       OnField = fun (_, _, _, ty, loc) -> onVisit (Some ty) loc
+      OnTy = fun _ -> ()
 
       GetTokens = tokenizeWithCache ls }
 
@@ -505,6 +533,7 @@ let private collectSymbolsInExpr ls (modules: TProgram) =
       OnVariant = fun (variantSerial, _, loc) -> onVisit (ValueSymbol(VariantSymbol variantSerial)) Use loc
       OnPrim = fun (prim, _, loc) -> onVisit (PrimSymbol prim) Use loc
       OnField = fun (tySerial, ident, defOrUse, _, loc) -> onVisit (FieldSymbol(tySerial, ident)) defOrUse loc
+      OnTy = fun (tySymbol, defOrUse, loc) -> onVisit (TySymbol tySymbol) defOrUse loc
 
       GetTokens = tokenizeWithCache ls }
 
