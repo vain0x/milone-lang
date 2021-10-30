@@ -214,11 +214,10 @@ let bundleWithCache (ls: LangServiceState) projectDir =
 // State
 // -----------------------------------------------
 
+type private Error = string * Loc
 type private TokenizeFullResult = (Token * Pos) list
-
 type private ParseResult = ARoot * (string * Pos) list
-
-type private BundleResult = (TProgram * TirCtx) option * (string * Loc) list * MutMap<DocId, DocVersion>
+type private BundleResult = (TProgram * TirCtx) option * Error list * MutMap<DocId, DocVersion>
 
 [<RequireQualifiedAccess; NoEquality; NoComparison>]
 type LangServiceState =
