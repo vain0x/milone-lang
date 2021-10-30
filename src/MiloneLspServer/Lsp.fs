@@ -331,12 +331,68 @@ let private pathToPos altPos path =
   | Some name -> name |> nameToPos
   | None -> altPos
 
+let private dfsAExpr (visitor: Visitor) docId expr : unit =
+  let onExpr expr = dfsAExpr visitor docId expr
+  let onExprOpt exprOpt = exprOpt |> Option.iter onExpr
+  let onExprs exprs = exprs |> List.iter onExpr
+
+  let toLoc (y, x) = Loc(docId, y, x)
+
+  match expr with
+  | AMissingExpr _
+  | ALitExpr _
+  | AIdentExpr _ -> ()
+  | AListExpr (items, _) -> onExprs items
+
+  | ARecordExpr (baseOpt, fields, _) ->
+    onExprOpt baseOpt
+
+    for _, init, _ in fields do
+      onExpr init
+
+  | AIfExpr (cond, body, alt, _) ->
+    onExpr cond
+    onExpr body
+    onExprOpt alt
+
+  | AMatchExpr (cond, arms, _) ->
+    onExpr cond
+
+    for AArm (_, guard, body, _) in arms do
+      onExprOpt guard
+      onExpr body
+
+  | AFunExpr (_, body, _) -> onExpr body
+
+  | ANavExpr (l, _, _) ->
+    match l with
+    | ANavExpr (AIdentExpr p, m, _) ->
+      let path = [ p; m ] |> List.map nameToIdent
+      visitor.OnModule(path, Use, toLoc (nameToPos m))
+
+    | _ -> onExpr l
+
+  | AIndexExpr (l, r, _) -> onExprs [ l; r ]
+  | AUnaryExpr (_, arg, _) -> onExpr arg
+  | ABinaryExpr (_, l, r, _) -> onExprs [ l; r ]
+  | ARangeExpr (l, r, _) -> onExprs [ l; r ]
+  | ATupleExpr (items, _) -> onExprs items
+  | AAscribeExpr (l, _, _) -> onExpr l
+
+  | ASemiExpr (stmts, last, _) ->
+    onExprs stmts
+    onExpr last
+
+  | ALetExpr (_, _, init, next, _) -> onExprs [ init; next ]
+
 let private dfsADecl (visitor: Visitor) docId decl =
+  let onExpr expr = dfsAExpr visitor docId expr
   let toLoc (y, x) = Loc(docId, y, x)
 
   match decl with
-  | AExprDecl _
-  | ALetDecl _
+  | AExprDecl expr -> onExpr expr
+  | ALetDecl (_, _, init, _) -> onExpr init
+
   | ATySynonymDecl _
   | AUnionTyDecl _
   | ARecordTyDecl _ -> ()
@@ -349,7 +405,10 @@ let private dfsADecl (visitor: Visitor) docId decl =
     let pos = path |> pathToPos pos
     visitor.OnModule(path |> List.map nameToIdent, Use, toLoc pos)
 
-  | AModuleDecl _ -> ()
+  | AModuleDecl (_, _, _, decls, _) ->
+    for decl in decls do
+      dfsADecl visitor docId decl
+
   | AAttrDecl (_, next, _) -> dfsADecl visitor docId next
 
 let private dfsARoot (visitor: Visitor) (docId: DocId) root =
