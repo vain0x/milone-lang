@@ -734,6 +734,36 @@ module LangService =
 
   let validateProject projectDir (ls: LangServiceState) = bundleWithCache ls projectDir |> snd
 
+  let completion
+    (miloneHomeModules: (ProjectName * ModuleName) list)
+    (findModulesInDir: ProjectDir -> (ProjectName * ModuleName) list)
+    (projectDir: ProjectDir)
+    (docId: DocId)
+    (targetPos: Pos)
+    (ls: LangServiceState)
+    : string list =
+    let tokens = tokenizeWithCache ls docId
+
+    let inModuleLine =
+      let y, _ = targetPos
+
+      tokens
+      |> Seq.skipWhile (fun (_, pos) -> pos < (y, 0))
+      |> Seq.takeWhile (fun (_, pos) -> pos < (y + 1, 0))
+      |> Seq.exists (fun (token, _) ->
+        match token with
+        | ModuleToken
+        | OpenToken -> true
+        | _ -> false)
+
+    if inModuleLine then
+      List.append miloneHomeModules (findModulesInDir projectDir)
+      |> List.collect (fun (p, m) -> [ p; m ])
+      |> MutSet.ofSeq
+      |> MutSet.toList
+    else
+      []
+
   let documentHighlight projectDir (docId: DocId) (targetPos: Pos) (ls: LangServiceState) =
     let resultOpt, errors = bundleWithCache ls projectDir
 

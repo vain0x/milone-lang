@@ -93,6 +93,45 @@ let private dirIsExcluded (dir: string) =
   || name = "obj"
 
 // ---------------------------------------------
+// Standard libs
+// ---------------------------------------------
+
+let private findModulesRecursively (maxDepth: int) (rootDir: string) : (string * string) list =
+  let mutable files = ResizeArray()
+  let mutable stack = Stack()
+  stack.Push(0, rootDir)
+
+  try
+    while stack.Count <> 0 do
+      let depth, dir = stack.Pop()
+      debugFn "in %d:%s" depth dir
+      assert (depth <= maxDepth)
+
+      let projectName = Path.GetFileNameWithoutExtension(dir)
+
+      for file in Directory.GetFiles(dir) do
+        let ext = Path.GetExtension(file)
+
+        if ext = ".milone" || ext = ".fs" then
+          let moduleName = Path.GetFileNameWithoutExtension(file)
+          debugFn "in %s" moduleName
+          files.Add(projectName, moduleName)
+
+      if depth < maxDepth then
+        for subdir in Directory.GetDirectories(dir) do
+          if subdir |> dirIsExcluded |> not then
+            stack.Push(depth + 1, subdir)
+  with
+  | ex -> debugFn "find files in '%s': %A" rootDir ex
+
+  files |> Seq.toList
+
+let private miloneHomeModules =
+  lazy (findModulesRecursively 2 (Path.Combine(miloneHome, "milone_libs")))
+
+let private findModulesInDir projectDir = findModulesRecursively 0 projectDir
+
+// ---------------------------------------------
 // Project
 // ---------------------------------------------
 
@@ -386,6 +425,24 @@ let validateWorkspace (rootUriOpt: string option) : WorkspaceValidateResult =
     with
     | ex ->
       errorFn "validateWorkspace failed: %A" ex
+      []
+
+let completion rootUriOpt uri pos =
+  let doCompletion (project: ProjectInfo) uri pos =
+    project
+    |> newLangServiceWithCache
+    |> LangService.completion miloneHomeModules.Value findModulesInDir project.ProjectDir (uriToDocId uri) pos
+
+  match findProjects rootUriOpt with
+  | Error _ -> []
+
+  | Ok projects ->
+    try
+      projects
+      |> List.collect (fun project -> doCompletion project uri pos)
+    with
+    | ex ->
+      errorFn "completion failed: %A" ex
       []
 
 let documentHighlight rootUriOpt uri pos =

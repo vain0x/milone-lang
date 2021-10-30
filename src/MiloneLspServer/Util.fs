@@ -73,6 +73,8 @@ module MutSet =
   /// Returns true if actually removed.
   let remove item (set: MutSet<_>) : bool = set.Remove(item)
 
+  let toList (set: MutSet<_>) : _ list = Seq.toList set
+
 // -----------------------------------------------
 // MutMap
 // -----------------------------------------------
