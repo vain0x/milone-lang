@@ -25,7 +25,6 @@
 
   <ItemGroup>
     <ProjectReference Include="..\MiloneSyntax\MiloneSyntax.fsproj" />
-    <ProjectReference Include="..\MiloneTranslation\MiloneTranslation.fsproj" />
   </ItemGroup>
 
 </Project>
