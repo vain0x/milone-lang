@@ -139,7 +139,7 @@ let private tyDisplayFn (tirCtx: TirCtx) ty =
 
   TySystem.tyDisplay getTyName ty
 
-let private doBundle (ls: LangServiceState) projectDir =
+let private doBundle (ls: LangServiceState) projectDir : BundleResult =
   let miloneHome = ls.Host.MiloneHome
   let projectDir = projectDir |> pathStrTrimEndPathSep
   let projectName = projectDir |> pathStrToStem
@@ -176,15 +176,21 @@ let private doBundle (ls: LangServiceState) projectDir =
     { syntaxCtx with FetchModule = fetchModuleUsingCache syntaxCtx.FetchModule }
 
   match SyntaxApi.performSyntaxAnalysis syntaxCtx with
-  | SyntaxApi.SyntaxAnalysisOk (modules, tirCtx) -> Some(modules, tirCtx), [], docVersions
+  | SyntaxApi.SyntaxAnalysisOk (modules, tirCtx) ->
+    { ProgramOpt = Some(modules, tirCtx)
+      Errors = []
+      DocVersions = docVersions }
 
   | SyntaxApi.SyntaxAnalysisError (errors, tirCtxOpt) ->
-    let tirOpt =
-      tirCtxOpt |> Option.map (fun it -> [], it)
+    { ProgramOpt =
+        match tirCtxOpt with
+        | Some tirCtx -> Some([], tirCtx)
+        | None -> None
 
-    tirOpt, errors, docVersions
+      Errors = errors
+      DocVersions = docVersions }
 
-let bundleWithCache (ls: LangServiceState) projectDir =
+let private bundleWithCache (ls: LangServiceState) projectDir : BundleResult =
   let docsAreAllFresh (docs: MutMap<DocId, DocVersion>) =
     docs
     |> Seq.forall (fun (KeyValue (docId, version)) -> ls.Host.Docs.GetVersion docId <= version)
@@ -193,22 +199,22 @@ let bundleWithCache (ls: LangServiceState) projectDir =
     ls.BundleCache |> MutMap.tryFind projectDir
 
   match cacheOpt with
-  | Some (opt, errors, docs) when docsAreAllFresh docs ->
+  | Some result when docsAreAllFresh result.DocVersions ->
     // eprintfn "bundle cache reused"
-    opt, errors
+    result
 
   | _ ->
     // match cacheOpt with
     // | Some _ -> eprintfn "bundle cache invalidated"
     // | _ -> eprintfn "bundle cache not found"
 
-    let opt, errors, versions = doBundle ls projectDir
+    let result = doBundle ls projectDir
 
     ls.BundleCache
-    |> MutMap.insert projectDir (opt, errors, versions)
+    |> MutMap.insert projectDir result
     |> ignore
 
-    opt, errors
+    result
 
 // -----------------------------------------------
 // State
@@ -217,7 +223,12 @@ let bundleWithCache (ls: LangServiceState) projectDir =
 type private Error = string * Loc
 type private TokenizeFullResult = (Token * Pos) list
 type private ParseResult = ARoot * (string * Pos) list
-type private BundleResult = (TProgram * TirCtx) option * Error list * MutMap<DocId, DocVersion>
+
+[<RequireQualifiedAccess; NoEquality; NoComparison>]
+type private BundleResult =
+  { ProgramOpt: (TProgram * TirCtx) option
+    Errors: Error list
+    DocVersions: MutMap<DocId, DocVersion> }
 
 [<RequireQualifiedAccess; NoEquality; NoComparison>]
 type LangServiceState =
@@ -671,11 +682,11 @@ let private doCollectSymbolOccurrences
   (includeUse: bool)
   (ls: LangServiceState)
   =
-  let resultOpt, errors = bundleWithCache ls projectDir
+  let result = bundleWithCache ls projectDir
 
-  match resultOpt with
+  match result.ProgramOpt with
   | None ->
-    debugFn "%s: no bundle result: errors %d" hint (List.length errors)
+    debugFn "%s: no bundle result: errors %d" hint (List.length result.Errors)
     []
 
   | Some (modules, _) ->
@@ -724,7 +735,9 @@ module LangService =
       BundleCache = MutMap()
       Host = host }
 
-  let validateProject projectDir (ls: LangServiceState) = bundleWithCache ls projectDir |> snd
+  let validateProject projectDir (ls: LangServiceState) =
+    let result = bundleWithCache ls projectDir
+    result.Errors
 
   let completion
     (miloneHomeModules: (ProjectName * ModuleName) list)
@@ -757,14 +770,14 @@ module LangService =
       []
 
   let documentHighlight projectDir (docId: DocId) (targetPos: Pos) (ls: LangServiceState) =
-    let resultOpt, errors = bundleWithCache ls projectDir
+    let result = bundleWithCache ls projectDir
 
-    match resultOpt with
+    match result.ProgramOpt with
     | None ->
-      debugFn "highlight: no bundle result: errors %d" (List.length errors)
+      debugFn "highlight: no bundle result: errors %d" (List.length result.Errors)
       None
 
-    | Some (expr, _) ->
+    | Some (modules, _) ->
       let tokenOpt = findTokenAt ls docId targetPos
 
       match tokenOpt with
@@ -775,7 +788,7 @@ module LangService =
       | Some (_token, tokenPos) ->
         // debugFn "highlight: tokenPos=%A" tokenPos
 
-        let symbols = collectSymbolsInExpr ls expr
+        let symbols = collectSymbolsInExpr ls modules
 
         // Remove symbols occurred in other documents.
         symbols.RemoveAll(fun (_, _, loc) -> locToDoc loc <> docId)
@@ -810,11 +823,11 @@ module LangService =
           Some((reads, writes))
 
   let hover projectDir (docId: DocId) (targetPos: Pos) (ls: LangServiceState) =
-    let resultOpt, errors = bundleWithCache ls projectDir
+    let result = bundleWithCache ls projectDir
 
-    match resultOpt with
+    match result.ProgramOpt with
     | None ->
-      debugFn "hover: no bundle result: errors %d" (List.length errors)
+      debugFn "hover: no bundle result: errors %d" (List.length result.Errors)
       None
 
     | Some (modules, tirCtx) ->
