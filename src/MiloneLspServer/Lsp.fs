@@ -52,12 +52,6 @@ let private pathStrToStem (s: string) : string =
   |> Path.fileStem
   |> Path.toString
 
-let private pathStrToFileName (s: string) : string =
-  s
-  |> Path.ofString
-  |> Path.basename
-  |> Path.toString
-
 // -----------------------------------------------
 // Syntax
 // -----------------------------------------------
