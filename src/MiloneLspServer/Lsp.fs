@@ -254,7 +254,8 @@ let private findTokenAt (ls: LangServiceState) (docId: DocId) (targetPos: Pos) =
 
     | (token, p1) :: (((_, p2) :: _) as tokens) ->
       if not (isTrivia token)
-         && (p1 <= targetPos)
+         && token <> DotToken
+         && p1 <= targetPos
          && targetPos <= p2 then
         Some(token, p1)
       else if p1 > targetPos then
