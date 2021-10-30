@@ -297,6 +297,7 @@ type private Visitor =
     OnPrim: TPrim * Ty * Loc -> unit
     OnField: TySerial * Ident * DefOrUse * Ty * Loc -> unit
     OnTy: TySymbol * DefOrUse * Loc -> unit
+    OnModule: string list * DefOrUse * Loc -> unit
 
     // Context
     GetTokens: DocId -> TokenizeFullResult }
@@ -321,6 +322,51 @@ let private firstIdentAfter getTokens loc =
     match token with
     | IdentToken _ when (py, px) < (y, x) -> Some(Loc(docId, y, x))
     | _ -> None)
+
+let private nameToIdent (Name (ident, _)) = ident
+let private nameToPos (Name (_, pos)) = pos
+
+let private pathToPos altPos path =
+  match path |> List.tryLast with
+  | Some name -> name |> nameToPos
+  | None -> altPos
+
+let private dfsADecl (visitor: Visitor) docId decl =
+  let toLoc (y, x) = Loc(docId, y, x)
+
+  match decl with
+  | AExprDecl _
+  | ALetDecl _
+  | ATySynonymDecl _
+  | AUnionTyDecl _
+  | ARecordTyDecl _ -> ()
+
+  | AOpenDecl (path, pos) ->
+    let pos = path |> pathToPos pos
+    visitor.OnModule(path |> List.map nameToIdent, Use, toLoc pos)
+
+  | AModuleSynonymDecl (_, path, pos) ->
+    let pos = path |> pathToPos pos
+    visitor.OnModule(path |> List.map nameToIdent, Use, toLoc pos)
+
+  | AModuleDecl _ -> ()
+  | AAttrDecl (_, next, _) -> dfsADecl visitor docId next
+
+let private dfsARoot (visitor: Visitor) (docId: DocId) root =
+  let toLoc (y, x) = Loc(docId, y, x)
+  let (ARoot (headOpt, decls)) = root
+
+  match headOpt with
+  | Some (path, pos) ->
+    let pos = path |> pathToPos pos
+    visitor.OnModule(path |> List.map nameToIdent, Def, toLoc pos)
+
+  | _ ->
+    let path = docId.Split(".") |> Array.toList
+    visitor.OnModule(path, Def, Loc(docId, 0, 0))
+
+  for decl in decls do
+    dfsADecl visitor docId decl
 
 let private dfsTy (visitor: Visitor) ty : unit =
   let (Ty (tk, tyArgs)) = ty
@@ -507,6 +553,7 @@ let private findTyInStmt (ls: LangServiceState) (stmt: TStmt) (tirCtx: TirCtx) (
       OnPrim = fun (_, ty, loc) -> onVisit (Some ty) loc
       OnField = fun (_, _, _, ty, loc) -> onVisit (Some ty) loc
       OnTy = fun _ -> ()
+      OnModule = fun _ -> ()
 
       GetTokens = tokenizeWithCache ls }
 
@@ -520,8 +567,9 @@ type private Symbol =
   | FieldSymbol of tySerial: TySerial * Ident
   | ValueSymbol of ValueSymbol
   | TySymbol of TySymbol
+  | ModuleSymbol of path: string list
 
-let private collectSymbolsInExpr ls (modules: TProgram) =
+let private collectSymbolsInExpr (ls: LangServiceState) (modules: TProgram) =
   let mutable symbols = ResizeArray()
 
   let onVisit symbol defOrUse loc = symbols.Add((symbol, defOrUse, loc))
@@ -535,8 +583,14 @@ let private collectSymbolsInExpr ls (modules: TProgram) =
       OnPrim = fun (prim, _, loc) -> onVisit (PrimSymbol prim) Use loc
       OnField = fun (tySerial, ident, defOrUse, _, loc) -> onVisit (FieldSymbol(tySerial, ident)) defOrUse loc
       OnTy = fun (tySymbol, defOrUse, loc) -> onVisit (TySymbol tySymbol) defOrUse loc
+      OnModule = fun (path, defOrUse, loc) -> onVisit (ModuleSymbol path) defOrUse loc
 
       GetTokens = tokenizeWithCache ls }
+
+  for m in modules do
+    match ls.ParseCache |> MutMap.tryFind m.DocId with
+    | Some (_, (ast, _)) -> dfsARoot visitor m.DocId ast
+    | None -> failwith "must be parsed"
 
   for m in modules do
     for stmt in m.Stmts do
