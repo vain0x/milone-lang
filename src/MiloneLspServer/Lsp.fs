@@ -636,8 +636,7 @@ type private Symbol =
   | ModuleSymbol of ModulePath
 
 let private collectSymbolsInExpr (ls: LangServiceState) (modules: TProgram) =
-  let mutable symbols = ResizeArray()
-
+  let symbols = ResizeArray()
   let onVisit symbol defOrUse loc = symbols.Add((symbol, defOrUse, loc))
 
   let visitor: Visitor =
