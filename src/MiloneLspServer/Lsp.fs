@@ -9,6 +9,7 @@ open MiloneSyntax
 open MiloneSyntax.Syntax
 open MiloneSyntax.Tir
 
+module C = MiloneStd.StdChar
 module SharedTypes = MiloneShared.SharedTypes
 module SyntaxApi = MiloneSyntax.SyntaxApi
 module Tir = MiloneSyntax.Tir
@@ -288,6 +289,13 @@ type private DefOrUse =
   | Def
   | Use
 
+/// Path of module names.
+///
+/// - File module: `[projectName; moduleName]`
+/// - Inner module: `[projectName; moduleName; name1; name2; ...]`
+/// - Module synonym: `[docId; name]`
+type private ModulePath = string list
+
 [<RequireQualifiedAccess; NoEquality; NoComparison>]
 type private Visitor =
   { OnDiscardPat: Ty * Loc -> unit
@@ -297,7 +305,7 @@ type private Visitor =
     OnPrim: TPrim * Ty * Loc -> unit
     OnField: TySerial * Ident * DefOrUse * Ty * Loc -> unit
     OnTy: TySymbol * DefOrUse * Loc -> unit
-    OnModule: string list * DefOrUse * Loc -> unit
+    OnModule: ModulePath * DefOrUse * Loc -> unit
 
     // Context
     GetTokens: DocId -> TokenizeFullResult }
@@ -366,10 +374,16 @@ let private dfsAExpr (visitor: Visitor) docId expr : unit =
 
   | ANavExpr (l, _, _) ->
     match l with
+    | AIdentExpr (Name (l, pos)) when l.Length = 1 && C.isUpper l.[0] -> visitor.OnModule([ docId; l ], Use, toLoc pos)
+
     | ANavExpr (AIdentExpr p, m, _) ->
       let path = [ p; m ] |> List.map nameToIdent
-      visitor.OnModule(path, Use, toLoc (nameToPos m))
 
+      if path
+         |> List.forall (fun name -> name.Length >= 1 && C.isUpper name.[0]) then
+        visitor.OnModule(path, Use, toLoc (nameToPos m))
+
+    | ANavExpr _ -> ()
     | _ -> onExpr l
 
   | AIndexExpr (l, r, _) -> onExprs [ l; r ]
@@ -401,7 +415,9 @@ let private dfsADecl (visitor: Visitor) docId decl =
     let pos = path |> pathToPos pos
     visitor.OnModule(path |> List.map nameToIdent, Use, toLoc pos)
 
-  | AModuleSynonymDecl (_, path, pos) ->
+  | AModuleSynonymDecl (Name (synonym, identPos), path, pos) ->
+    visitor.OnModule([ docId; synonym ], Def, toLoc identPos)
+
     let pos = path |> pathToPos pos
     visitor.OnModule(path |> List.map nameToIdent, Use, toLoc pos)
 
@@ -626,7 +642,7 @@ type private Symbol =
   | FieldSymbol of tySerial: TySerial * Ident
   | ValueSymbol of ValueSymbol
   | TySymbol of TySymbol
-  | ModuleSymbol of path: string list
+  | ModuleSymbol of ModulePath
 
 let private collectSymbolsInExpr (ls: LangServiceState) (modules: TProgram) =
   let mutable symbols = ResizeArray()
