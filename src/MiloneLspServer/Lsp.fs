@@ -512,15 +512,11 @@ let private dfsExpr (visitor: Visitor) expr =
 
       dfsExpr visitor init
 
-  | TNavExpr (l, r, ty, loc) ->
+  | TNavExpr (l, (r, loc), ty, _) ->
     dfsExpr visitor l
 
     match exprToTy l with
-    | Ty (RecordTk (tySerial, _), _) ->
-      // before '.'
-      match firstIdentAfter visitor.GetTokens loc with
-      | Some loc -> visitor.OnField(tySerial, r, Use, ty, loc)
-      | None -> ()
+    | Ty (RecordTk (tySerial, _), _) -> visitor.OnField(tySerial, r, Use, ty, loc)
     | _ -> ()
 
   | TNodeExpr (_, exprs, _, _) ->

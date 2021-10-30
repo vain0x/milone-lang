@@ -386,6 +386,8 @@ let private tgExpr (docId: DocId) (expr: AExpr, ctx: NameCtx) : TExpr * NameCtx 
   let onPat x = tgPat docId x
   let onExpr x = tgExpr docId x
 
+  let toName (Name(ident, pos)): TName = ident, toLoc docId pos
+
   match expr with
   | AMissingExpr pos ->
     // Error is already reported in parsing.
@@ -450,7 +452,7 @@ let private tgExpr (docId: DocId) (expr: AExpr, ctx: NameCtx) : TExpr * NameCtx 
   | ANavExpr (l, r, pos) ->
     let l, ctx = (l, ctx) |> onExpr
     let loc = toLoc docId pos
-    TNavExpr(l, nameToIdent r, noTy, loc), ctx
+    TNavExpr(l, toName r, noTy, loc), ctx
 
   | AIndexExpr (l, r, pos) ->
     match expr with

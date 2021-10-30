@@ -1049,7 +1049,7 @@ let private inferMatchExpr ctx expectOpt itself cond arms loc =
 
   TMatchExpr(cond, arms, targetTy, loc), targetTy, ctx
 
-let private inferNavExpr ctx l (r: Ident) loc =
+let private inferNavExpr ctx l (r: Ident, rLoc) loc =
   let fail ctx =
     let ctx =
       addError ctx ("Expected to have field: '" + r + "'.") loc
@@ -1081,7 +1081,7 @@ let private inferNavExpr ctx l (r: Ident) loc =
       | _ -> None
 
     match fieldTyOpt with
-    | Some fieldTy -> TNavExpr(l, r, fieldTy, loc), fieldTy, ctx
+    | Some fieldTy -> TNavExpr(l, (r, rLoc), fieldTy, loc), fieldTy, ctx
     | None -> fail ctx
 
   | _ -> fail ctx

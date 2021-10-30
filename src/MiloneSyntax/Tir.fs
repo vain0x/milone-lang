@@ -31,6 +31,8 @@ type private ModuleName = string
 /// Only one exception: recursive function has level higher by 1.
 type Level = int
 
+type TName = Ident * Loc
+
 // -----------------------------------------------
 // TIR types
 // -----------------------------------------------
@@ -412,7 +414,7 @@ type TExpr =
   | TMatchExpr of cond: TExpr * arms: (TPat * TExpr * TExpr) list * Ty * Loc
 
   /// E.g. `List.isEmpty`, `str.Length`
-  | TNavExpr of TExpr * Ident * Ty * Loc
+  | TNavExpr of TExpr * TName * Ty * Loc
 
   /// Some built-in operation.
   | TNodeExpr of TExprKind * TExpr list * Ty * Loc

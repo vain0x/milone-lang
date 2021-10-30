@@ -1473,13 +1473,13 @@ let private nameResNavExpr expr ctx =
       | [], Some expr -> ResolvedAsExpr expr, ctx
       | _ -> ResolvedAsScope(nsOwners, exprOpt, loc), ctx
 
-    | TNavExpr (l, r, ty, loc) ->
+    | TNavExpr (l, ((r, identLoc) as rName), ty, dotLoc) ->
       let l, ctx = ctx |> resolveExprAsNsOwners l
 
       match l with
       | NotResolvedExpr _ -> l, ctx
 
-      | ResolvedAsExpr l -> ResolvedAsExpr(TNavExpr(l, r, ty, loc)), ctx
+      | ResolvedAsExpr l -> ResolvedAsExpr(TNavExpr(l, rName, ty, dotLoc)), ctx
 
       | ResolvedAsScope (superNsOwners, lExprOpt, _) ->
         assert (List.isEmpty superNsOwners |> not)
@@ -1499,22 +1499,22 @@ let private nameResNavExpr expr ctx =
               | it -> it)
 
           match varSymbolOpt with
-          | Some (VarSymbol varSerial) -> TVarExpr(varSerial, ty, loc) |> Some
-          | Some (FunSymbol funSerial) -> TFunExpr(funSerial, ty, loc) |> Some
-          | Some (VariantSymbol variantSerial) -> TVariantExpr(variantSerial, ty, loc) |> Some
+          | Some (VarSymbol varSerial) -> TVarExpr(varSerial, ty, identLoc) |> Some
+          | Some (FunSymbol funSerial) -> TFunExpr(funSerial, ty, identLoc) |> Some
+          | Some (VariantSymbol variantSerial) -> TVariantExpr(variantSerial, ty, identLoc) |> Some
           | None -> None
 
         // If not resolved as value, keep try to unresolved.
         let exprOpt =
           match exprOpt, lExprOpt with
           | Some _, _ -> exprOpt
-          | None, Some l -> TNavExpr(l, r, ty, loc) |> Some
+          | None, Some l -> TNavExpr(l, rName, ty, dotLoc) |> Some
           | None, None -> None
 
         match nsOwners, exprOpt with
-        | [], None -> NotResolvedExpr(r, loc), ctx
+        | [], None -> NotResolvedExpr(r, dotLoc), ctx
         | [], Some expr -> ResolvedAsExpr expr, ctx
-        | _ -> ResolvedAsScope(nsOwners, exprOpt, loc), ctx
+        | _ -> ResolvedAsScope(nsOwners, exprOpt, identLoc), ctx
 
     | _ ->
       // l is clearly unresolvable as type, e.g. `(getStr ()).Length`.

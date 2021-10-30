@@ -202,7 +202,7 @@ let private lowerExpr (expr: Tir.TExpr) : Hir.HExpr =
       lowerTy ty,
       loc
     )
-  | Tir.TNavExpr (l, r, ty, loc) -> Hir.HNavExpr(lowerExpr l, r, lowerTy ty, loc)
+  | Tir.TNavExpr (l, (r, _), ty, loc) -> Hir.HNavExpr(lowerExpr l, r, lowerTy ty, loc)
   | Tir.TNodeExpr (kind, args, ty, loc) -> Hir.HNodeExpr(lowerExprKind kind, List.map lowerExpr args, lowerTy ty, loc)
   | Tir.TBlockExpr (_, stmts, last) -> Hir.HBlockExpr(List.map lowerStmt stmts, lowerExpr last)
 
