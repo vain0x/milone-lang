@@ -710,9 +710,9 @@ let private resolveTy ty loc scopeCtx =
     match ty with
     | Ty (ErrorTk _, _) -> ty, scopeCtx
 
-    | Ty (UnresolvedTk ([], serial), []) when (scopeCtx |> findName serial) = "_" -> tyMeta serial loc, scopeCtx
+    | Ty (UnresolvedTk ([], serial, loc), []) when (scopeCtx |> findName serial) = "_" -> tyMeta serial loc, scopeCtx
 
-    | Ty (UnresolvedTk ([], serial), [ Ty (UnresolvedTk ([], itemSerial), _) ]) when
+    | Ty (UnresolvedTk ([], serial, _), [ Ty (UnresolvedTk ([], itemSerial, _), _) ]) when
       (scopeCtx |> findName serial = "__nativeType")
       ->
       let code = scopeCtx |> findName itemSerial
@@ -738,7 +738,7 @@ let private resolveTy ty loc scopeCtx =
 
         tyMeta serial loc, scopeCtx
 
-    | Ty (UnresolvedTk (quals, serial), tys) ->
+    | Ty (UnresolvedTk (quals, serial, loc), tys) ->
       let name = scopeCtx |> findName serial
       let tys, scopeCtx = (tys, scopeCtx) |> stMap go
       let arity = List.length tys
@@ -770,7 +770,7 @@ let private resolveTy ty loc scopeCtx =
 
           tyError loc, scopeCtx
 
-        | _ -> tyUnion tySerial tys, scopeCtx
+        | _ -> tyUnion tySerial tys loc, scopeCtx
 
       | Some (RecordTySymbol tySerial) ->
         // Arity check. #tyaritycheck
@@ -784,7 +784,7 @@ let private resolveTy ty loc scopeCtx =
 
           tyError loc, scopeCtx
 
-        | _ -> tyRecord tySerial, scopeCtx
+        | _ -> tyRecord tySerial loc, scopeCtx
 
       | Some (MetaTySymbol _) -> unreachable (serial, name, loc)
 
@@ -1473,13 +1473,13 @@ let private nameResNavExpr expr ctx =
       | [], Some expr -> ResolvedAsExpr expr, ctx
       | _ -> ResolvedAsScope(nsOwners, exprOpt, loc), ctx
 
-    | TNavExpr (l, r, ty, loc) ->
+    | TNavExpr (l, ((r, identLoc) as rName), ty, dotLoc) ->
       let l, ctx = ctx |> resolveExprAsNsOwners l
 
       match l with
       | NotResolvedExpr _ -> l, ctx
 
-      | ResolvedAsExpr l -> ResolvedAsExpr(TNavExpr(l, r, ty, loc)), ctx
+      | ResolvedAsExpr l -> ResolvedAsExpr(TNavExpr(l, rName, ty, dotLoc)), ctx
 
       | ResolvedAsScope (superNsOwners, lExprOpt, _) ->
         assert (List.isEmpty superNsOwners |> not)
@@ -1499,22 +1499,22 @@ let private nameResNavExpr expr ctx =
               | it -> it)
 
           match varSymbolOpt with
-          | Some (VarSymbol varSerial) -> TVarExpr(varSerial, ty, loc) |> Some
-          | Some (FunSymbol funSerial) -> TFunExpr(funSerial, ty, loc) |> Some
-          | Some (VariantSymbol variantSerial) -> TVariantExpr(variantSerial, ty, loc) |> Some
+          | Some (VarSymbol varSerial) -> TVarExpr(varSerial, ty, identLoc) |> Some
+          | Some (FunSymbol funSerial) -> TFunExpr(funSerial, ty, identLoc) |> Some
+          | Some (VariantSymbol variantSerial) -> TVariantExpr(variantSerial, ty, identLoc) |> Some
           | None -> None
 
         // If not resolved as value, keep try to unresolved.
         let exprOpt =
           match exprOpt, lExprOpt with
           | Some _, _ -> exprOpt
-          | None, Some l -> TNavExpr(l, r, ty, loc) |> Some
+          | None, Some l -> TNavExpr(l, rName, ty, dotLoc) |> Some
           | None, None -> None
 
         match nsOwners, exprOpt with
-        | [], None -> NotResolvedExpr(r, loc), ctx
+        | [], None -> NotResolvedExpr(r, dotLoc), ctx
         | [], Some expr -> ResolvedAsExpr expr, ctx
-        | _ -> ResolvedAsScope(nsOwners, exprOpt, loc), ctx
+        | _ -> ResolvedAsScope(nsOwners, exprOpt, identLoc), ctx
 
     | _ ->
       // l is clearly unresolvable as type, e.g. `(getStr ()).Length`.

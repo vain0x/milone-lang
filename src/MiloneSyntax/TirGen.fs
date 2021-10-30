@@ -286,11 +286,12 @@ let private tgTy (docId: DocId) (ty: ATy, ctx: NameCtx) : Ty * NameCtx =
     let loc = toLoc docId pos
     tyError loc, ctx
 
-  | AAppTy (quals, name, argTys, _) ->
+  | AAppTy (quals, name, argTys, pos) ->
     let quals, ctx = (quals, ctx) |> addPath
     let serial, ctx = ctx |> nameCtxAdd name
     let argTys, ctx = (argTys, ctx) |> stMap onTy
-    tyUnresolved (quals, serial) argTys, ctx
+    let loc = toLoc docId pos
+    tyUnresolved (quals, serial, loc) argTys, ctx
 
   | AVarTy name ->
     let tySerial, ctx = ctx |> nameCtxAdd (greek name)
@@ -300,7 +301,8 @@ let private tgTy (docId: DocId) (ty: ATy, ctx: NameCtx) : Ty * NameCtx =
   | ASuffixTy (lTy, suffix) ->
     let lTy, ctx = (lTy, ctx) |> onTy
     let serial, ctx = ctx |> nameCtxAdd suffix
-    tyUnresolved ([], serial) [ lTy ], ctx
+    let loc = toLoc docId (nameToPos suffix)
+    tyUnresolved ([], serial, loc) [ lTy ], ctx
 
   | ATupleTy (itemTys, _) ->
     let itemTys, ctx = (itemTys, ctx) |> stMap onTy
@@ -384,6 +386,8 @@ let private tgExpr (docId: DocId) (expr: AExpr, ctx: NameCtx) : TExpr * NameCtx 
   let onPat x = tgPat docId x
   let onExpr x = tgExpr docId x
 
+  let toName (Name(ident, pos)): TName = ident, toLoc docId pos
+
   match expr with
   | AMissingExpr pos ->
     // Error is already reported in parsing.
@@ -448,7 +452,7 @@ let private tgExpr (docId: DocId) (expr: AExpr, ctx: NameCtx) : TExpr * NameCtx 
   | ANavExpr (l, r, pos) ->
     let l, ctx = (l, ctx) |> onExpr
     let loc = toLoc docId pos
-    TNavExpr(l, nameToIdent r, noTy, loc), ctx
+    TNavExpr(l, toName r, noTy, loc), ctx
 
   | AIndexExpr (l, r, pos) ->
     match expr with

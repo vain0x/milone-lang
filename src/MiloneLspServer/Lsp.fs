@@ -9,6 +9,7 @@ open MiloneSyntax
 open MiloneSyntax.Syntax
 open MiloneSyntax.Tir
 
+module C = MiloneStd.StdChar
 module SharedTypes = MiloneShared.SharedTypes
 module SyntaxApi = MiloneSyntax.SyntaxApi
 module Tir = MiloneSyntax.Tir
@@ -253,7 +254,8 @@ let private findTokenAt (ls: LangServiceState) (docId: DocId) (targetPos: Pos) =
 
     | (token, p1) :: (((_, p2) :: _) as tokens) ->
       if not (isTrivia token)
-         && (p1 <= targetPos)
+         && token <> DotToken
+         && p1 <= targetPos
          && targetPos <= p2 then
         Some(token, p1)
       else if p1 > targetPos then
@@ -288,14 +290,23 @@ type private DefOrUse =
   | Def
   | Use
 
+/// Path of module names.
+///
+/// - File module: `[projectName; moduleName]`
+/// - Inner module: `[projectName; moduleName; name1; name2; ...]`
+/// - Module synonym: `[docId; name]`
+type private ModulePath = string list
+
 [<RequireQualifiedAccess; NoEquality; NoComparison>]
 type private Visitor =
   { OnDiscardPat: Ty * Loc -> unit
     OnVar: VarSerial * DefOrUse * Ty * Loc -> unit
     OnFun: FunSerial * DefOrUse * Ty option * Loc -> unit
-    OnVariant: VariantSerial * Ty * Loc -> unit
+    OnVariant: VariantSerial * DefOrUse * Ty * Loc -> unit
     OnPrim: TPrim * Ty * Loc -> unit
     OnField: TySerial * Ident * DefOrUse * Ty * Loc -> unit
+    OnTy: TySymbol * DefOrUse * Loc -> unit
+    OnModule: ModulePath * DefOrUse * Loc -> unit
 
     // Context
     GetTokens: DocId -> TokenizeFullResult }
@@ -321,17 +332,142 @@ let private firstIdentAfter getTokens loc =
     | IdentToken _ when (py, px) < (y, x) -> Some(Loc(docId, y, x))
     | _ -> None)
 
+let private nameToIdent (Name (ident, _)) = ident
+let private nameToPos (Name (_, pos)) = pos
+
+let private pathToPos altPos path =
+  match path |> List.tryLast with
+  | Some name -> name |> nameToPos
+  | None -> altPos
+
+let private dfsAExpr (visitor: Visitor) docId expr : unit =
+  let onExpr expr = dfsAExpr visitor docId expr
+  let onExprOpt exprOpt = exprOpt |> Option.iter onExpr
+  let onExprs exprs = exprs |> List.iter onExpr
+
+  let toLoc (y, x) = Loc(docId, y, x)
+
+  match expr with
+  | AMissingExpr _
+  | ALitExpr _
+  | AIdentExpr _ -> ()
+  | AListExpr (items, _) -> onExprs items
+
+  | ARecordExpr (baseOpt, fields, _) ->
+    onExprOpt baseOpt
+
+    for _, init, _ in fields do
+      onExpr init
+
+  | AIfExpr (cond, body, alt, _) ->
+    onExpr cond
+    onExpr body
+    onExprOpt alt
+
+  | AMatchExpr (cond, arms, _) ->
+    onExpr cond
+
+    for AArm (_, guard, body, _) in arms do
+      onExprOpt guard
+      onExpr body
+
+  | AFunExpr (_, body, _) -> onExpr body
+
+  | ANavExpr (l, _, _) ->
+    match l with
+    | AIdentExpr (Name (l, pos)) when l.Length = 1 && C.isUpper l.[0] -> visitor.OnModule([ docId; l ], Use, toLoc pos)
+
+    | ANavExpr (AIdentExpr p, m, _) ->
+      let path = [ p; m ] |> List.map nameToIdent
+
+      if path
+         |> List.forall (fun name -> name.Length >= 1 && C.isUpper name.[0]) then
+        visitor.OnModule(path, Use, toLoc (nameToPos m))
+
+    | ANavExpr _ -> ()
+    | _ -> onExpr l
+
+  | AIndexExpr (l, r, _) -> onExprs [ l; r ]
+  | AUnaryExpr (_, arg, _) -> onExpr arg
+  | ABinaryExpr (_, l, r, _) -> onExprs [ l; r ]
+  | ARangeExpr (l, r, _) -> onExprs [ l; r ]
+  | ATupleExpr (items, _) -> onExprs items
+  | AAscribeExpr (l, _, _) -> onExpr l
+
+  | ASemiExpr (stmts, last, _) ->
+    onExprs stmts
+    onExpr last
+
+  | ALetExpr (_, _, init, next, _) -> onExprs [ init; next ]
+
+let private dfsADecl (visitor: Visitor) docId decl =
+  let onExpr expr = dfsAExpr visitor docId expr
+  let toLoc (y, x) = Loc(docId, y, x)
+
+  match decl with
+  | AExprDecl expr -> onExpr expr
+  | ALetDecl (_, _, init, _) -> onExpr init
+
+  | ATySynonymDecl _
+  | AUnionTyDecl _
+  | ARecordTyDecl _ -> ()
+
+  | AOpenDecl (path, pos) ->
+    let pos = path |> pathToPos pos
+    visitor.OnModule(path |> List.map nameToIdent, Use, toLoc pos)
+
+  | AModuleSynonymDecl (Name (synonym, identPos), path, pos) ->
+    visitor.OnModule([ docId; synonym ], Def, toLoc identPos)
+
+    let pos = path |> pathToPos pos
+    visitor.OnModule(path |> List.map nameToIdent, Use, toLoc pos)
+
+  | AModuleDecl (_, _, _, decls, _) ->
+    for decl in decls do
+      dfsADecl visitor docId decl
+
+  | AAttrDecl (_, next, _) -> dfsADecl visitor docId next
+
+let private dfsARoot (visitor: Visitor) (docId: DocId) root =
+  let toLoc (y, x) = Loc(docId, y, x)
+  let (ARoot (headOpt, decls)) = root
+
+  match headOpt with
+  | Some (path, pos) ->
+    let pos = path |> pathToPos pos
+    visitor.OnModule(path |> List.map nameToIdent, Def, toLoc pos)
+
+  | _ ->
+    let path = docId.Split(".") |> Array.toList
+    visitor.OnModule(path, Def, Loc(docId, 0, 0))
+
+  for decl in decls do
+    dfsADecl visitor docId decl
+
+let private dfsTy (visitor: Visitor) ty : unit =
+  let (Ty (tk, tyArgs)) = ty
+
+  match tk with
+  | UnionTk (tySerial, Some loc) -> visitor.OnTy(UnionTySymbol tySerial, Use, loc)
+  | RecordTk (tySerial, Some loc) -> visitor.OnTy(RecordTySymbol tySerial, Use, loc)
+  | _ -> ()
+
+  for ty in tyArgs do
+    dfsTy visitor ty
+
 let private dfsPat (visitor: Visitor) pat =
   match pat with
   | TLitPat _ -> ()
   | TDiscardPat (ty, loc) -> visitor.OnDiscardPat(ty, loc)
+
   | TVarPat (_, varSerial, ty, loc) -> visitor.OnVar(varSerial, Def, ty, loc)
-  | TVariantPat (variantSerial, ty, loc) -> visitor.OnVariant(variantSerial, ty, loc)
+  | TVariantPat (variantSerial, ty, loc) -> visitor.OnVariant(variantSerial, Use, ty, loc)
 
   | TNodePat (kind, pats, ty, loc) ->
     match kind with
-    | TVariantAppPN variantSerial -> visitor.OnVariant(variantSerial, ty, loc)
+    | TVariantAppPN variantSerial -> visitor.OnVariant(variantSerial, Use, ty, loc)
     | TNavPN _ -> ()
+    | TAscribePN -> dfsTy visitor ty
     | _ -> ()
 
     for pat in pats do
@@ -351,7 +487,7 @@ let private dfsExpr (visitor: Visitor) expr =
   | TLitExpr _ -> ()
   | TVarExpr (varSerial, ty, loc) -> visitor.OnVar(varSerial, Use, ty, loc)
   | TFunExpr (funSerial, ty, loc) -> visitor.OnFun(funSerial, Use, Some ty, loc)
-  | TVariantExpr (variantSerial, ty, loc) -> visitor.OnVariant(variantSerial, ty, loc)
+  | TVariantExpr (variantSerial, ty, loc) -> visitor.OnVariant(variantSerial, Use, ty, loc)
   | TPrimExpr (prim, ty, loc) -> visitor.OnPrim(prim, ty, loc)
 
   | TMatchExpr (cond, arms, _, _) ->
@@ -367,7 +503,7 @@ let private dfsExpr (visitor: Visitor) expr =
 
     for ident, init, loc in fields do
       match ty with
-      | Ty (RecordTk tySerial, _) ->
+      | Ty (RecordTk (tySerial, _), _) ->
         // before '='
         match lastIdentBefore visitor.GetTokens loc with
         | Some loc -> visitor.OnField(tySerial, ident, Use, ty, loc)
@@ -376,15 +512,11 @@ let private dfsExpr (visitor: Visitor) expr =
 
       dfsExpr visitor init
 
-  | TNavExpr (l, r, ty, loc) ->
+  | TNavExpr (l, (r, loc), ty, _) ->
     dfsExpr visitor l
 
     match exprToTy l with
-    | Ty (RecordTk tySerial, _) ->
-      // before '.'
-      match firstIdentAfter visitor.GetTokens loc with
-      | Some loc -> visitor.OnField(tySerial, r, Use, ty, loc)
-      | None -> ()
+    | Ty (RecordTk (tySerial, _), _) -> visitor.OnField(tySerial, r, Use, ty, loc)
     | _ -> ()
 
   | TNodeExpr (_, exprs, _, _) ->
@@ -426,6 +558,9 @@ let private dfsStmt (visitor: Visitor) stmt =
 
     | None -> ()
 
+    // HACK: Visit type as if let-fun has result-type ascription. Typing removes result type ascription.
+    dfsTy visitor (exprToTy body)
+
     for arg in args do
       onPat arg
 
@@ -436,6 +571,11 @@ let private dfsStmt (visitor: Visitor) stmt =
     | TySynonymDecl _ -> ()
 
     | UnionTyDecl (_, variants, _) ->
+      // after 'type'
+      match firstIdentAfter visitor.GetTokens tyDeclLoc with
+      | Some loc -> visitor.OnTy(UnionTySymbol tySerial, Def, loc)
+      | _ -> ()
+
       for _, variantSerial, hasPayload, payloadTy, identLoc in variants do
         let ty =
           let tyArgs =
@@ -443,13 +583,18 @@ let private dfsStmt (visitor: Visitor) stmt =
             |> List.map (fun tySerial -> tyMeta tySerial tyDeclLoc)
 
           if hasPayload then
-            tyFun payloadTy (tyUnion tySerial tyArgs)
+            tyFun payloadTy (tyUnion tySerial tyArgs identLoc)
           else
             tyUnit
 
-        visitor.OnVariant(variantSerial, ty, identLoc)
+        visitor.OnVariant(variantSerial, Def, ty, identLoc)
 
     | RecordTyDecl (_, fields, _, _) ->
+      // after 'type'
+      match firstIdentAfter visitor.GetTokens tyDeclLoc with
+      | Some loc -> visitor.OnTy(RecordTySymbol tySerial, Def, loc)
+      | _ -> ()
+
       for ident, ty, loc in fields do
         // before ':'
         match lastIdentBefore visitor.GetTokens loc with
@@ -476,9 +621,11 @@ let private findTyInStmt (ls: LangServiceState) (stmt: TStmt) (tirCtx: TirCtx) (
     { OnDiscardPat = fun (ty, loc) -> onVisit (Some ty) loc
       OnVar = fun (_, _, ty, loc) -> onVisit (Some ty) loc
       OnFun = fun (_, _, tyOpt, loc) -> onVisit tyOpt loc
-      OnVariant = fun (_, ty, loc) -> onVisit (Some ty) loc
+      OnVariant = fun (_, _, ty, loc) -> onVisit (Some ty) loc
       OnPrim = fun (_, ty, loc) -> onVisit (Some ty) loc
       OnField = fun (_, _, _, ty, loc) -> onVisit (Some ty) loc
+      OnTy = fun _ -> ()
+      OnModule = fun _ -> ()
 
       GetTokens = tokenizeWithCache ls }
 
@@ -492,8 +639,9 @@ type private Symbol =
   | FieldSymbol of tySerial: TySerial * Ident
   | ValueSymbol of ValueSymbol
   | TySymbol of TySymbol
+  | ModuleSymbol of ModulePath
 
-let private collectSymbolsInExpr ls (modules: TProgram) =
+let private collectSymbolsInExpr (ls: LangServiceState) (modules: TProgram) =
   let mutable symbols = ResizeArray()
 
   let onVisit symbol defOrUse loc = symbols.Add((symbol, defOrUse, loc))
@@ -502,11 +650,19 @@ let private collectSymbolsInExpr ls (modules: TProgram) =
     { OnDiscardPat = fun (_, loc) -> onVisit DiscardSymbol Def loc
       OnVar = fun (varSerial, defOrUse, _, loc) -> onVisit (ValueSymbol(VarSymbol varSerial)) defOrUse loc
       OnFun = fun (funSerial, defOrUse, _, loc) -> onVisit (ValueSymbol(FunSymbol funSerial)) defOrUse loc
-      OnVariant = fun (variantSerial, _, loc) -> onVisit (ValueSymbol(VariantSymbol variantSerial)) Use loc
+      OnVariant =
+        fun (variantSerial, defOrUse, _, loc) -> onVisit (ValueSymbol(VariantSymbol variantSerial)) defOrUse loc
       OnPrim = fun (prim, _, loc) -> onVisit (PrimSymbol prim) Use loc
       OnField = fun (tySerial, ident, defOrUse, _, loc) -> onVisit (FieldSymbol(tySerial, ident)) defOrUse loc
+      OnTy = fun (tySymbol, defOrUse, loc) -> onVisit (TySymbol tySymbol) defOrUse loc
+      OnModule = fun (path, defOrUse, loc) -> onVisit (ModuleSymbol path) defOrUse loc
 
       GetTokens = tokenizeWithCache ls }
+
+  for m in modules do
+    match ls.ParseCache |> MutMap.tryFind m.DocId with
+    | Some (_, (ast, _)) -> dfsARoot visitor m.DocId ast
+    | None -> failwith "must be parsed"
 
   for m in modules do
     for stmt in m.Stmts do

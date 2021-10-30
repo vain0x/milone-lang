@@ -31,6 +31,8 @@ type private ModuleName = string
 /// Only one exception: recursive function has level higher by 1.
 type Level = int
 
+type TName = Ident * Loc
+
 // -----------------------------------------------
 // TIR types
 // -----------------------------------------------
@@ -81,11 +83,11 @@ type Tk =
   // Nominal types.
   | MetaTk of metaTy: TySerial * metaLoc: Loc
   | SynonymTk of synonymTy: TySerial
-  | UnionTk of unionTy: TySerial
-  | RecordTk of recordTy: TySerial
+  | UnionTk of unionTy: TySerial * Loc option
+  | RecordTk of recordTy: TySerial * Loc option
 
   /// Unresolved type. Generated in TirGen, resolved in NameRes.
-  | UnresolvedTk of quals: Serial list * unresolvedSerial: Serial
+  | UnresolvedTk of quals: Serial list * unresolvedSerial: Serial * Loc
   | UnresolvedVarTk of unresolvedVarTySerial: (Serial * Loc)
 
 /// Type of expressions.
@@ -412,7 +414,7 @@ type TExpr =
   | TMatchExpr of cond: TExpr * arms: (TPat * TExpr * TExpr) list * Ty * Loc
 
   /// E.g. `List.isEmpty`, `str.Length`
-  | TNavExpr of TExpr * Ident * Ty * Loc
+  | TNavExpr of TExpr * TName * Ty * Loc
 
   /// Some built-in operation.
   | TNodeExpr of TExprKind * TExpr list * Ty * Loc
@@ -537,9 +539,9 @@ let tyMeta serial loc = Ty(MetaTk(serial, loc), [])
 
 let tySynonym tySerial tyArgs = Ty(SynonymTk tySerial, tyArgs)
 
-let tyUnion tySerial tyArgs = Ty(UnionTk tySerial, tyArgs)
+let tyUnion tySerial tyArgs loc = Ty(UnionTk(tySerial, Some loc), tyArgs)
 
-let tyRecord tySerial = Ty(RecordTk tySerial, [])
+let tyRecord tySerial loc = Ty(RecordTk(tySerial, Some loc), [])
 
 // -----------------------------------------------
 // TyDef

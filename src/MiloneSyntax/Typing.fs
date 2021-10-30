@@ -423,7 +423,7 @@ let private doResolveTraitBound (ctx: TyCtx) theTrait loc : TyCtx =
       | OptionTk, [ itemTy ] -> go memo itemTy
       | ListTk, [ itemTy ] -> go memo itemTy
 
-      | UnionTk tySerial, [] ->
+      | UnionTk (tySerial, _), [] ->
         let memo = memo |> TSet.add ty
 
         match ctx.Tys |> mapFind tySerial with
@@ -572,7 +572,7 @@ let private instantiateVariant variantSerial loc (ctx: TyCtx) : Ty * Ty * Ty * T
   match tyArgs with
   | [] ->
     let payloadTy = variantDef.PayloadTy
-    let unionTy = tyUnion tySerial []
+    let unionTy = tyUnion tySerial [] loc
 
     let variantTy =
       if variantDef.HasPayload then
@@ -590,7 +590,7 @@ let private instantiateVariant variantSerial loc (ctx: TyCtx) : Ty * Ty * Ty * T
         tyArgs
         |> List.map (fun tyArg -> Ty(MetaTk(tyArg, loc), []))
 
-      tyUnion tySerial tyArgs
+      tyUnion tySerial tyArgs loc
 
     let variantTy, assignment, ctx =
       let variantTy =
@@ -939,7 +939,7 @@ let private inferRecordExpr ctx expectOpt baseOpt fields loc =
   let recordTyInfoOpt =
     let asRecordTy tyOpt =
       match tyOpt |> Option.map (substTy ctx) with
-      | Some ((Ty (RecordTk tySerial, tyArgs)) as recordTy) ->
+      | Some ((Ty (RecordTk (tySerial, _), tyArgs)) as recordTy) ->
         assert (List.isEmpty tyArgs)
 
         match ctx |> findTy tySerial with
@@ -1049,7 +1049,7 @@ let private inferMatchExpr ctx expectOpt itself cond arms loc =
 
   TMatchExpr(cond, arms, targetTy, loc), targetTy, ctx
 
-let private inferNavExpr ctx l (r: Ident) loc =
+let private inferNavExpr ctx l (r: Ident, rLoc) loc =
   let fail ctx =
     let ctx =
       addError ctx ("Expected to have field: '" + r + "'.") loc
@@ -1067,7 +1067,7 @@ let private inferNavExpr ctx l (r: Ident) loc =
 
     txApp funExpr l tyInt loc, tyInt, ctx
 
-  | Ty (RecordTk tySerial, tyArgs), _ ->
+  | Ty (RecordTk (tySerial, _), tyArgs), _ ->
     assert (List.isEmpty tyArgs)
 
     let fieldTyOpt =
@@ -1081,7 +1081,7 @@ let private inferNavExpr ctx l (r: Ident) loc =
       | _ -> None
 
     match fieldTyOpt with
-    | Some fieldTy -> TNavExpr(l, r, fieldTy, loc), fieldTy, ctx
+    | Some fieldTy -> TNavExpr(l, (r, rLoc), fieldTy, loc), fieldTy, ctx
     | None -> fail ctx
 
   | _ -> fail ctx
