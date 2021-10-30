@@ -683,7 +683,7 @@ let private doCollectSymbolOccurrences
 
   match resultOpt with
   | None ->
-    eprintfn "%s: no bundle result: errors %d" hint (List.length errors)
+    debugFn "%s: no bundle result: errors %d" hint (List.length errors)
     []
 
   | Some (modules, _) ->
@@ -691,7 +691,7 @@ let private doCollectSymbolOccurrences
 
     match tokenOpt with
     | None ->
-      eprintfn "%s: token not found on position: docId=%s pos=%s" hint docId (posToString targetPos)
+      debugFn "%s: token not found on position: docId=%s pos=%s" hint docId (posToString targetPos)
       []
 
     | Some (_token, tokenPos) ->
@@ -705,7 +705,7 @@ let private doCollectSymbolOccurrences
         symbols.FindIndex(fun (_, _, loc) -> loc = tokenLoc)
 
       if symbolIndex < 0 then
-        eprintfn "%s: no symbol" hint
+        debugFn "%s: no symbol" hint
         []
       else
         let targetSymbol, _, _ = symbols.[symbolIndex]
@@ -739,7 +739,7 @@ module LangService =
 
     match resultOpt with
     | None ->
-      eprintfn "highlight: no bundle result: errors %d" (List.length errors)
+      debugFn "highlight: no bundle result: errors %d" (List.length errors)
       None
 
     | Some (expr, _) ->
@@ -747,11 +747,11 @@ module LangService =
 
       match tokenOpt with
       | None ->
-        eprintfn "highlight: token not found on position: docId=%s pos=%s" docId (posToString targetPos)
+        debugFn "highlight: token not found on position: docId=%s pos=%s" docId (posToString targetPos)
         None
 
       | Some (_token, tokenPos) ->
-        // eprintfn "highlight: tokenPos=%A" tokenPos
+        // debugFn "highlight: tokenPos=%A" tokenPos
 
         let symbols = collectSymbolsInExpr ls expr
 
@@ -763,7 +763,7 @@ module LangService =
           symbols.FindIndex(fun (_, _, loc) -> locToPos loc = tokenPos)
 
         if symbolIndex < 0 then
-          eprintfn "highlight: no symbol"
+          debugFn "highlight: no symbol"
           None
         else
           let targetSymbol, _, _ = symbols.[symbolIndex]
@@ -792,7 +792,7 @@ module LangService =
 
     match resultOpt with
     | None ->
-      eprintfn "hover: no bundle result: errors %d" (List.length errors)
+      debugFn "hover: no bundle result: errors %d" (List.length errors)
       None
 
     | Some (modules, tirCtx) ->
@@ -800,7 +800,7 @@ module LangService =
 
       match tokenOpt with
       | None ->
-        eprintfn "hover: token not found on position: docId=%s pos=%s" docId (posToString targetPos)
+        debugFn "hover: token not found on position: docId=%s pos=%s" docId (posToString targetPos)
         None
 
       | Some (_token, tokenPos) ->
