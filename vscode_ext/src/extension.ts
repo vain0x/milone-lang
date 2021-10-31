@@ -1,8 +1,10 @@
+// Entrypoint of extension.
+
 import { homedir } from "os"
-import * as ChildProcess from "child_process"
-import * as path from "path"
+import cp, { ChildProcess } from "child_process"
+import path from "path"
 import { ExtensionContext, workspace } from "vscode"
-import { LanguageClient, LanguageClientOptions, ServerOptions } from "vscode-languageclient/node"
+import { Disposable, LanguageClient, LanguageClientOptions, ServerOptions, State } from "vscode-languageclient/node"
 import { startLspSessionDev } from "./lsp_session_dev"
 
 const DEV = process.env["MILONE_LSP_SERVER_DEV"] === "1"
@@ -54,10 +56,14 @@ const getLspCommand = (miloneHome: string, logger: Logger): string | undefined =
 }
 
 const newLanguageClient = (lspCommand: string, miloneHome: string, logger: Logger): LanguageClient => {
-  const serverOptions: ServerOptions = async (): Promise<ChildProcess.ChildProcess> => {
-    const p = ChildProcess.spawn(lspCommand, {
+  let server: ChildProcess | undefined
+  let clientDisposable: Disposable | undefined
+
+  const serverOptions: ServerOptions = async (): Promise<ChildProcess> => {
+    const p = cp.spawn(lspCommand, {
       env: { MILONE_HOME: miloneHome },
     })
+    server = p
 
     p.stderr.on("readable", () => {
       let buf = ""
@@ -68,6 +74,8 @@ const newLanguageClient = (lspCommand: string, miloneHome: string, logger: Logge
       }
       logger.info("[server]", buf.trimEnd())
     })
+
+    p.on("exit", code => console.log("server exited with", code))
     p.on("error", err => console.error("spawn error", err))
     return p
   }
@@ -86,7 +94,26 @@ const newLanguageClient = (lspCommand: string, miloneHome: string, logger: Logge
     },
   }
 
-  return new LanguageClient("milone-lang", "Milone Language", serverOptions, clientOptions)
+  const client = new LanguageClient("milone-lang", "Milone Language", serverOptions, clientOptions)
+
+  clientDisposable?.dispose()
+  clientDisposable = client.onDidChangeState(e => {
+    // Log state change.
+    const s = (n: number) => ({ 1: "Stopped", 2: "Running", 3: "Starting" })[n] ?? "Unknown"
+    console.log("client state:", s(e.oldState), "->", s(e.newState))
+
+    // Kill server process forcibly. (Server should exit by itself but sometimes it doesn't. Just my guess, client fails to send exit notification.)
+    if (e.oldState === State.Running && e.newState === State.Stopped && server != undefined) {
+      const p = server
+      console.log("terminating server")
+      p.kill()
+      setTimeout(() => {
+        console.log("killing server")
+        p.kill("SIGKILL")
+      }, 5000)
+    }
+  })
+  return client
 }
 
 const startLspSession = (context: ExtensionContext, logger: Logger) => {

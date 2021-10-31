@@ -116,24 +116,21 @@ export const startLspSessionDev = (options: {
   })
 
   // Client:
-  const client = newLanguageClient(backupLspCommand)
-  context.subscriptions.push({ dispose: () => { client.stop() } })
-
-  context.subscriptions.push(
-    client.onDidChangeState(e => {
-      const s = (n: number) => ({ 1: "Stopped", 2: "Running", 3: "Starting" })[n] ?? "Unknown"
-      console.log("client state:", s(e.oldState), "->", s(e.newState))
-    }))
+  let client: LanguageClient | undefined
+  context.subscriptions.push({ dispose: () => { client?.stop() } })
 
   // Reload:
   const reload = async (): Promise<void> => {
     console.log("reload begin")
-    await stopClient(client)
+
+    await Promise.race([client?.stop(), delay(5000)])
+    const c = newLanguageClient(backupLspCommand)
+    client = c
 
     await backup()
     ensureWatch()
 
-    client.start()
+    c.start()
     console.log("reload end")
   }
 
@@ -145,7 +142,7 @@ export const startLspSessionDev = (options: {
       notifyStarted()
     } catch (err) {
       reportError(err)
-      requestReload()
+      setTimeout(() => requestReload(), RETRY_INTERVAL)
     }
   }
 
