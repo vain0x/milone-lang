@@ -75,6 +75,8 @@
     ]
   },
   "dependencies": {
+    "@types/lodash": "^4.14.176",
+    "lodash": "^4.17.21",
     "vscode-languageclient": "^7.0.0",
     "vscode-languageserver-protocol": "^3.16.0"
   },
