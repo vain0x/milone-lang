@@ -7,8 +7,6 @@ module LspTests = MiloneLspServer.LspTests
 
 [<EntryPoint>]
 let main (args: string array) =
-  eprintfn "%A" args
-
   match args with
   | [| "test" |] -> LspTests.lspTests ()
   | _ -> ()
