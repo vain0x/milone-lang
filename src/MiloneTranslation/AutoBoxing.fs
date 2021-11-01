@@ -425,7 +425,7 @@ let private tsmTy (ctx: TsmCtx) ty =
     | UnionTk tySerial -> nominal tySerial
     | RecordTk tySerial -> nominal tySerial
 
-    | MetaTk _
+    | MetaTk _ -> 8, ctx
     | NativeTypeTk _ -> 1000000, ctx
 
 let private measureTys (trdCtx: TrdCtx) : TsmCtx =

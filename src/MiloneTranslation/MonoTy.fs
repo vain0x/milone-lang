@@ -11,15 +11,30 @@ open MiloneTranslation.Hir
 
 module M = MiloneTranslation.MonoTyIr
 
+// #tyAssign?
+let private getTyAssignment tyVars tyArgs : TreeMap<TySerial, _> =
+  match listTryZip tyVars tyArgs with
+  | zipped, [], [] -> TMap.ofList compare zipped
+  | _ -> unreachable () // Arity mismatch.
+
+// #tyAssign?
+let private tyAssign assignment ty =
+  tySubst (fun tySerial -> assignment |> TMap.tryFind tySerial) ty
+
 [<RequireQualifiedAccess; NoEquality; NoComparison>]
 type private OptionDef =
   { NoneSerial: VariantSerial
     SomeSerial: VariantSerial }
 
+[<RequireQualifiedAccess; NoEquality; NoComparison>]
+type private UnionDef =
+  { VariantMap: TreeMap<VariantSerial, VariantSerial> }
+
 [<NoEquality; NoComparison>]
 type private GeneratedTy =
   | TupleGT
   | OptionGT of OptionDef
+  | UnionGT of UnionDef
 
 let private tupleField (i: int) : string = "t" + string i
 
@@ -77,6 +92,7 @@ let private monoTyCompare (l: MonoTy) (r: MonoTy) : int =
 [<RequireQualifiedAccess; NoEquality; NoComparison>]
 type private MtCtx =
   { Serial: Serial
+    GetUnionDef: TySerial -> TySerial list * (string * VariantSerial * bool * Ty * Loc) list * Loc
     Map: TreeMap<Tk * MonoTy list, MonoTy * GeneratedTy>
     TyNames: TreeMap<Ty, string>
     NewTys: (TySerial * M.TyDef) list
@@ -97,7 +113,22 @@ let private ofHirCtx (hirCtx: HirCtx) : MtCtx =
            tyNames |> TMap.add (Ty(tk, [])) name)
          (TMap.empty tyCompare)
 
+  let getUnionDef tySerial =
+    let tyArgs, variants, loc =
+      match hirCtx.Tys |> mapFind tySerial with
+      | UnionTyDef (_, tyArgs, variants, loc) -> tyArgs, variants, loc
+      | _ -> unreachable ()
+
+    let variantDefs =
+      variants
+      |> List.map (fun variantSerial ->
+        let def = hirCtx.Variants |> mapFind variantSerial
+        def.Name, variantSerial, def.HasPayload, def.PayloadTy, def.Loc)
+
+    tyArgs, variantDefs, loc
+
   { Serial = hirCtx.Serial
+    GetUnionDef = getUnionDef
     Map = TMap.empty (pairCompare tkCompare (listCompare monoTyCompare))
     TyNames = tyNames
     NewTys = []
@@ -232,11 +263,75 @@ let private mtTy (ty: Ty, ctx: MtCtx) : M.MonoTy * MtCtx =
   | NativePtrTk _, _ -> unreachable ()
   | NativeFunTk, _ -> M.NativeFunMt tyArgs, ctx
 
-  | UnionTk tySerial, _ ->
-    // NOTE: Surprizing! Ty args are ignored here but it does work.
-    //       Due to AutoBoxing, all ty parameters are hidden behind `obj`,
-    //       no need to monomorphize ty definitions.
-    M.UnionMt tySerial, ctx
+  | UnionTk tySerial, [] -> M.UnionMt tySerial, ctx
+
+  | UnionTk polyTySerial, tyArgs ->
+    match ctx.Map |> TMap.tryFind (tk, tyArgs) with
+    | Some (ty, _) -> ty, ctx
+
+    | None ->
+      let name, ctx = mangle (tk, polyTyArgs, ctx)
+      let tyVars, variants, loc = ctx.GetUnionDef polyTySerial
+      let assignment = getTyAssignment tyVars polyTyArgs
+      let variantCount = List.length variants
+
+      let monoTySerial = ctx.Serial + 1
+      let unionTy = Ty(UnionTk monoTySerial, [])
+      let unionMt = M.UnionMt monoTySerial
+      let getMonoVariantSerial (i: int) = VariantSerial(monoTySerial + i)
+
+      let monoTyDef =
+        let monoVariantSerials =
+          List.init variantCount getMonoVariantSerial
+
+        M.UnionTyDef(name, [], monoVariantSerials, loc)
+
+      let unionDef: UnionDef =
+        let variantMap =
+          variants
+          |> List.mapi (fun i (_, polyVariantSerial, _, _, _) -> polyVariantSerial, getMonoVariantSerial i)
+          |> TMap.ofList variantSerialCompare
+
+        { VariantMap = variantMap }
+
+      // Register to prevent recursion.
+      let ctx: MtCtx =
+        { ctx with
+            Serial = ctx.Serial + 1 + variantCount
+            TyNames = ctx.TyNames |> TMap.add unionTy name
+            Map =
+              ctx.Map
+              |> TMap.add (tk, tyArgs) (unionMt, UnionGT unionDef)
+              |> TMap.add (UnionTk monoTySerial, []) (unionMt, UnionGT unionDef) }
+
+      let monoVariants, ctx =
+        variants
+        |> List.mapi (fun i item -> i, item)
+        |> List.mapFold
+             (fun (ctx: MtCtx) (i, t) ->
+               let name, _, hasPayload, payloadTy, loc = t
+               let v = getMonoVariantSerial i
+
+               let payloadTy, ctx =
+                 (payloadTy |> tyAssign assignment, ctx) |> mtTy
+
+               let def: M.VariantDef =
+                 { Name = name
+                   UnionTySerial = monoTySerial
+                   IsNewtype = variantCount = 1
+                   HasPayload = hasPayload
+                   PayloadTy = payloadTy
+                   Loc = loc }
+
+               (v, def), ctx)
+             ctx
+
+      let ctx =
+        { ctx with
+            NewTys = (monoTySerial, monoTyDef) :: ctx.NewTys
+            NewVariants = List.append monoVariants ctx.NewVariants }
+
+      unionMt, ctx
 
   | MetaTk _, _ -> unreachable () // Resolved in Typing.
 
@@ -247,6 +342,30 @@ let private tyToOptionDef (ty: Ty, ctx: MtCtx) =
   match ctx.Map |> TMap.tryFind (OptionTk, tyArgs) with
   | Some (_, OptionGT it) -> it, ctx
   | _ -> unreachable ()
+
+let private tyToUnionDef (ty: Ty, ctx: MtCtx) : (UnionDef * MtCtx) option =
+  match ty with
+  | Ty (UnionTk polyTySerial, ((_ :: _) as tyArgs)) ->
+    let tyArgs, ctx = (tyArgs, ctx) |> stMap mtTy
+
+    match
+      ctx.Map
+      |> TMap.tryFind (UnionTk polyTySerial, tyArgs)
+      with
+    | Some (_, UnionGT it) -> Some(it, ctx)
+    | _ -> unreachable ()
+
+  | _ -> None
+
+let private asMonoVariant variantSerial ty (ctx: MtCtx) : (VariantSerial * MtCtx) option =
+  match tyToUnionDef (ty, ctx) with
+  | Some (unionDef, ctx) ->
+    let monoVariantSerial =
+      unionDef.VariantMap |> mapFind variantSerial
+
+    Some(monoVariantSerial, ctx)
+
+  | _ -> None
 
 let private mtPat (pat, ctx) : M.HPat * MtCtx =
   match pat with
@@ -261,8 +380,14 @@ let private mtPat (pat, ctx) : M.HPat * MtCtx =
     M.HVarPat(varSerial, ty, loc), ctx
 
   | HVariantPat (variantSerial, ty, loc) ->
-    let ty, ctx = (ty, ctx) |> mtTy
-    M.HVariantPat(variantSerial, ty, loc), ctx
+    match asMonoVariant variantSerial ty ctx with
+    | Some (monoVariantSerial, ctx) ->
+      let ty, ctx = (ty, ctx) |> mtTy
+      M.HVariantPat(monoVariantSerial, ty, loc), ctx
+
+    | _ ->
+      let ty, ctx = (ty, ctx) |> mtTy
+      M.HVariantPat(variantSerial, ty, loc), ctx
 
   | HNodePat (HNonePN, _, ty, loc) ->
     let optionDef, ctx = tyToOptionDef (ty, ctx)
@@ -276,6 +401,18 @@ let private mtPat (pat, ctx) : M.HPat * MtCtx =
     let itemPat, ctx = (itemPat, ctx) |> mtPat
     let ty, ctx = (ty, ctx) |> mtTy
     M.HNodePat(HVariantAppPN optionDef.SomeSerial, [ itemPat ], ty, loc), ctx
+
+  | HNodePat (((HVariantAppPN variantSerial) as kind), ([ payloadPat ] as argPats), ty, loc) ->
+    match asMonoVariant variantSerial ty ctx with
+    | Some (monoVariantSerial, ctx) ->
+      let payloadPat, ctx = (payloadPat, ctx) |> mtPat
+      let ty, ctx = (ty, ctx) |> mtTy
+      M.HNodePat(HVariantAppPN monoVariantSerial, [ payloadPat ], ty, loc), ctx
+
+    | None ->
+      let argPats, ctx = (argPats, ctx) |> stMap mtPat
+      let ty, ctx = (ty, ctx) |> mtTy
+      M.HNodePat(kind, argPats, ty, loc), ctx
 
   | HNodePat (kind, argPats, ty, loc) ->
     let argPats, ctx = (argPats, ctx) |> stMap mtPat
@@ -304,8 +441,14 @@ let private mtExpr (expr, ctx) : M.HExpr * MtCtx =
     M.HFunExpr(funSerial, ty, loc), ctx
 
   | HVariantExpr (variantSerial, ty, loc) ->
-    let ty, ctx = (ty, ctx) |> mtTy
-    M.HVariantExpr(variantSerial, ty, loc), ctx
+    match asMonoVariant variantSerial ty ctx with
+    | Some (monoVariantSerial, ctx) ->
+      let ty, ctx = (ty, ctx) |> mtTy
+      M.HVariantExpr(monoVariantSerial, ty, loc), ctx
+
+    | _ ->
+      let ty, ctx = (ty, ctx) |> mtTy
+      M.HVariantExpr(variantSerial, ty, loc), ctx
 
   | HPrimExpr (prim, ty, loc) ->
     let hTy = ty
@@ -350,6 +493,21 @@ let private mtExpr (expr, ctx) : M.HExpr * MtCtx =
 
     match kind, args with
     | HTupleEN, _ :: _ -> onDefault HRecordEN
+
+    | HCallProcEN, HVariantExpr (variantSerial, variantTy, variantLoc) :: args ->
+      match asMonoVariant variantSerial ty ctx with
+      | Some (monoVariantSerial, ctx) ->
+        let args, ctx = (args, ctx) |> stMap mtExpr
+        let variantTy, ctx = (variantTy, ctx) |> mtTy
+        let ty, ctx = (ty, ctx) |> mtTy
+
+        let callee =
+          M.HVariantExpr(monoVariantSerial, variantTy, variantLoc)
+
+        M.HNodeExpr(kind, callee :: args, ty, loc), ctx
+
+      | _ -> onDefault kind
+
     | _ -> onDefault kind
 
   | HBlockExpr (stmts, last) ->
@@ -420,22 +578,30 @@ let private mtDefs (hirCtx: HirCtx) (mtCtx: MtCtx) =
     hirCtx.Variants
     |> TMap.fold
          (fun (variants, ctx) variantSerial (variantDef: VariantDef) ->
-           let payloadTy, ctx =
-             let ty = variantDef.PayloadTy
-             (ty, ctx) |> mtTy
+           let monomorphic =
+             match hirCtx.Tys |> mapFind variantDef.UnionTySerial with
+             | UnionTyDef (_, [], _, _) -> true
+             | _ -> false
 
-           let variantDef: M.VariantDef =
-             { Name = variantDef.Name
-               UnionTySerial = variantDef.UnionTySerial
-               IsNewtype = variantDef.IsNewtype
-               HasPayload = variantDef.HasPayload
-               PayloadTy = payloadTy
-               Loc = variantDef.Loc }
+           if monomorphic then
+             let payloadTy, ctx =
+               let ty = variantDef.PayloadTy
+               (ty, ctx) |> mtTy
 
-           let variants =
-             variants |> TMap.add variantSerial variantDef
+             let variantDef: M.VariantDef =
+               { Name = variantDef.Name
+                 UnionTySerial = variantDef.UnionTySerial
+                 IsNewtype = variantDef.IsNewtype
+                 HasPayload = variantDef.HasPayload
+                 PayloadTy = payloadTy
+                 Loc = variantDef.Loc }
 
-           variants, ctx)
+             let variants =
+               variants |> TMap.add variantSerial variantDef
+
+             variants, ctx
+           else
+             variants, ctx)
          (TMap.empty variantSerialCompare, mtCtx)
 
   let tys, mtCtx =
