@@ -182,11 +182,11 @@ let private currentLogLevel: LogLevel =
   | "trace" -> LogLevel.Trace
   | _ -> LogLevel.Warn
 
-let private printLog name (maxLevel: LogLevel) =
+let private printLog name (level: LogLevel) =
   fun fmt ->
     Printf.kprintf
       (fun msg ->
-        if currentLogLevel <= maxLevel then
+        if level <= currentLogLevel then
           eprintf "%s: %s" name (msg + "\n")
         else
           ())

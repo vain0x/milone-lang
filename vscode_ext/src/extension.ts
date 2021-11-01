@@ -9,6 +9,7 @@ import { startLspSessionDev } from "./lsp_session_dev"
 
 const DEV = process.env["MILONE_LSP_SERVER_DEV"] === "1"
 const MILONE_LSP_COMMAND = process.env["MILONE_LSP_COMMAND"] ?? ""
+const MILONE_LSP_SERVER_LOG_LEVEL = process.env["MILONE_LSP_SERVER_LOG_LEVEL"]
 const MILONE_HOME = process.env["MILONE_HOME"]
 
 type Logger = {
@@ -61,7 +62,10 @@ const newLanguageClient = (lspCommand: string, miloneHome: string, logger: Logge
 
   const serverOptions: ServerOptions = async (): Promise<ChildProcess> => {
     const p = cp.spawn(lspCommand, {
-      env: { MILONE_HOME: miloneHome },
+      env: {
+        MILONE_HOME: miloneHome,
+        MILONE_LSP_SERVER_LOG_LEVEL,
+      },
     })
     server = p
 
