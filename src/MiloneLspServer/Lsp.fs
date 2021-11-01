@@ -739,6 +739,15 @@ module LangService =
     let result = bundleWithCache ls projectDir
     result.Errors
 
+  /// Prints syntax tree.
+  let parse (ls: LangServiceState) docId : string =
+    let tokens = tokenizeWithCache ls docId
+
+    let _, ast, _ =
+      parseWithCache ls docId SyntaxApi.ModuleKind.Regular
+
+    genSyntaxTree docId tokens ast |> SyntaxTree.dump
+
   let completion
     (miloneHomeModules: (ProjectName * ModuleName) list)
     (findModulesInDir: ProjectDir -> (ProjectName * ModuleName) list)

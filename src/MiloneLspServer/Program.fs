@@ -3,8 +3,16 @@ module rec MiloneLspServer.Program
 open MiloneLspServer.JsonRpcReader
 open MiloneLspServer.LspServer
 
+module LspTests = MiloneLspServer.LspTests
+
 [<EntryPoint>]
-let main _ =
+let main (args: string array) =
+  eprintfn "%A" args
+
+  match args with
+  | [| "test" |] -> LspTests.lspTests ()
+  | _ -> ()
+
   async {
     use reader = openStdin ()
     let mutable queueLength = 0
