@@ -5,32 +5,45 @@ open MiloneLspServer.Lsp
 
 module S = MiloneStd.StdString
 
-let private expect opt =
+let private expect msg opt =
   match opt with
   | Some it -> it
-  | None -> failwith "Expected some"
+  | None -> failwithf "Expected some: %A" msg
 
 let private toLines (s: string) =
   s.TrimEnd().Replace("\r\n", "\n").Split("\n")
   |> Array.mapi (fun i item -> i, item)
   |> Array.toList
 
-let private testReferencesRequest () =
+let private runTests cases =
+  let pass, fail =
+    cases
+    |> Seq.fold
+         (fun (pass, fail) ok ->
+           if ok then
+             pass + 1, fail
+           else
+             pass, fail + 1)
+         (0, 0)
+
+  let status, code = if fail = 0 then "OK", 0 else "FAIL", 1
+
+  eprintfn "%s: pass %d / fail %d / total %d" status pass fail (pass + fail)
+  code
+
+let private assertEqual (title: string) (expected: string) (actual: string) : bool =
+  if actual = expected then
+    if System.Environment.GetEnvironmentVariable("VERBOSE") = "1" then
+      eprintfn "Pass %s:\n%s\n" title actual
+
+    true
+  else
+    eprintfn "Assertion violation: %s\n  actual = %s\n  expected = %s" title actual expected
+    false
+
+let private testRefsSingleFile title text : bool =
   let projectDir = "./TestProject"
   let docId = "TestProject.TestProject"
-
-  let text =
-    """
-      module rec TestProject.Program
-
-      let main _ =
-        let foo = 0
-        //  ^def
-        let _ = foo
-        //      ^use
-        0
-    """
-
   let docMap = Map.ofList [ docId, (1, text) ]
 
   let docs: LangServiceDocs =
@@ -63,9 +76,9 @@ let private testReferencesRequest () =
 
   let ls = LangService.create host
 
-  let lines = text |> toLines
-
   let anchors =
+    let lines = text |> toLines
+
     lines
     |> List.collect (fun (row, line) ->
       if row >= 1
@@ -81,6 +94,11 @@ let private testReferencesRequest () =
       else
         [])
 
+  let firstAnchor =
+    anchors
+    |> List.tryHead
+    |> expect (title + " should have anchor")
+
   let debug xs =
     xs
     |> List.sort
@@ -90,7 +108,7 @@ let private testReferencesRequest () =
   let expected = anchors |> debug
 
   let actual =
-    let row, column, _ = anchors |> List.tryHead |> expect
+    let row, column, _ = firstAnchor
 
     match ls
           |> LangService.findRefs projectDir docId (row, column)
@@ -98,15 +116,214 @@ let private testReferencesRequest () =
     | None -> "No results."
 
     | Some (defs, uses) ->
-      Seq.append (defs |> Seq.map (fun (_, (y, x)) -> y, x, "def")) (uses |> Seq.map (fun (_, (y, x)) -> y, x, "use"))
+      let collect kind xs =
+        xs |> Seq.map (fun (_, (y, x)) -> y, x, kind)
+
+      Seq.append (collect "def" defs) (collect "use" uses)
       |> Seq.toList
       |> debug
 
-  if actual <> expected then
-    eprintfn "actual = %s\nexpected = %s" actual expected
-    assert (actual <> expected)
+  actual |> assertEqual title expected
 
-let lspTests () =
-  eprintfn "Test mode."
-  testReferencesRequest ()
-  exit 0
+// -----------------------------------------------
+// Refs
+// -----------------------------------------------
+
+let testRefs () =
+  [ testRefsSingleFile
+      "local var"
+      """
+        module rec TestProject.Program
+
+        let main _ =
+          let foo = 0
+          //  ^def
+          let _ = foo
+          //      ^use
+          0
+      """
+
+    testRefsSingleFile
+      "static var"
+      """
+        module rec TestProject.Program
+
+        let constant = 42
+        //  ^def
+
+        let n = constant + 1
+        //      ^use
+
+        let _n =
+          let constant = "shadowing"
+          constant
+
+        let main _ =
+          printfn "%d" constant
+          //           ^use
+          0
+      """
+
+    testRefsSingleFile
+      "local fun"
+      """
+        module rec TestProject.Program
+
+        let main _ =
+          let f () = 0
+          //  ^def
+
+          let g () = f ()
+          //         ^use
+
+          let _n = f ()
+          //       ^use
+
+          let f = () // Shadowing.
+          let _ = f
+          0
+      """
+
+    testRefsSingleFile
+      "static fun"
+      """
+        module rec TestProject.Program
+
+        let fact (n: int): int =
+        //  ^def
+          if n = 0 then 1 else fact (n - 1) * n
+        //                     ^use
+
+        let main _ = fact 5
+        //           ^use
+      """
+
+    testRefsSingleFile
+      "unit-like variant"
+      """
+        module rec TestProject.Program
+
+        type MyOption =
+          | MyNone
+        //  ^def
+          | MySome of int
+
+        let none () = MyNone
+        //            ^use
+
+        let main _ =
+          match none () with
+          | MyNone -> 0
+        //  ^use
+          | _ -> 1
+      """
+
+    testRefsSingleFile
+      "primitive"
+      """
+        module rec TestProject.Program
+
+        let main _ =
+          // FIXME: it fails without whitespace
+          printfn "%s" ( string 42)
+          //             ^use
+          printfn "%s" ( string 42.0)
+          //             ^use
+          0
+      """
+
+    testRefsSingleFile
+      "value-carrying variant"
+      """
+        module rec TestProject.Program
+
+        type MyOption =
+          | MyNone
+          | MySome of int
+        //  ^def
+
+        let some x = MySome x
+        //           ^use
+
+        let someFun = MySome
+        //            ^use
+
+        let main _ =
+          match some 1 with
+          | MySome _ -> 0
+        //  ^use
+          | _ -> 1
+      """
+
+    testRefsSingleFile
+      "field"
+      """
+        module rec TestProject.Program
+
+        type MyPair =
+          { First: int
+        //  ^def
+            Second: string }
+
+        let pair x y : MyPair =
+          { First = x
+        //  ^use
+            Second = y }
+
+        let first (pair: MyPair) =
+          pair.First
+        //     ^use
+
+        let main _ = 0
+      """
+
+    testRefsSingleFile
+      "union type"
+      """
+        module rec TestProject.Program
+
+        type MyOption =
+        //   ^def
+          | MyNone
+          | MySome of int
+
+        let some x : MyOption = MySome x
+        //                      ^use
+        // FIXME: incorrect range
+
+        let main _ = 0
+      """
+
+    testRefsSingleFile
+      "record type"
+      """
+        module rec TestProject.Program
+
+        type MyPair =
+        //   ^def
+          { First: int
+            Second: string }
+
+        let pair x y : MyPair =
+        //             ^use
+          { First = x
+            Second = y }
+
+        let first (pair: MyPair) =
+        // FIXME: detect this
+          pair.First
+
+        let second (pair: MyPair) =
+        //                ^use
+          let _ : unit -> MyPair * int = fun () -> pair, 0
+          // FIXME: detect this
+          pair.Second
+
+        let main _ = 0
+      """ ]
+
+// -----------------------------------------------
+// Interface
+// -----------------------------------------------
+
+let lspTests () = testRefs () |> runTests |> exit
