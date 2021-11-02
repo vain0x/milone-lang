@@ -113,7 +113,14 @@ let private testRefsSingleFile title text : bool =
     match ls
           |> LangService.findRefs projectDir docId (row, column)
       with
-    | None -> "No results."
+    | None ->
+      let errors =
+        ls |> LangService.validateProject projectDir
+
+      if errors |> List.isEmpty then
+        "No result."
+      else
+        sprintf "Compile error: %A" errors
 
     | Some (defs, uses) ->
       let collect kind xs =
@@ -122,6 +129,76 @@ let private testRefsSingleFile title text : bool =
       Seq.append (collect "def" defs) (collect "use" uses)
       |> Seq.toList
       |> debug
+
+  actual |> assertEqual title expected
+
+let private testHoverSingleFile title text expected : bool =
+  let projectDir = "./TestProject"
+  let docId = "TestProject.TestProject"
+  let docMap = Map.ofList [ docId, (1, text) ]
+
+  let docs: LangServiceDocs =
+    { FindDocId =
+        fun p m ->
+          let docId = sprintf "%s.%s" p m
+
+          if docMap |> Map.containsKey docId then
+            Some docId
+          else
+            None
+
+      GetVersion =
+        fun docId ->
+          match docMap |> Map.tryFind docId with
+          | Some (version, _) -> version
+          | _ -> 0
+
+      GetText =
+        fun docId ->
+          match docMap |> Map.tryFind docId with
+          | Some it -> it
+          | _ -> (0, "// Missing")
+
+      GetProjectName = fun docId -> Some(docId.Split(".").[0]) }
+
+  let host: Lsp.LangServiceHost =
+    { MiloneHome = "?unexisting"
+      Docs = docs }
+
+  let ls = LangService.create host
+
+  let targetPos =
+    let lines = text |> toLines
+
+    lines
+    |> List.tryPick (fun (row, line) ->
+      if row >= 1
+         && line |> S.trimStart |> S.startsWith "//" then
+        match line |> S.findIndex "^" with
+        | Some column -> Some(row - 1, column)
+        | _ -> None
+      else
+        None)
+    |> expect (title + " should have cursor")
+
+  let debug xs =
+    xs
+    |> List.sort
+    |> List.map (fun (row, column, anchor) -> sprintf "%d:%d %s" row column anchor)
+    |> S.concat "\n"
+
+  let actual =
+    match ls |> LangService.hover projectDir docId targetPos with
+    | None ->
+      let errors =
+        ls |> LangService.validateProject projectDir
+
+      if errors |> List.isEmpty then
+        "No result."
+      else
+        sprintf "Compile error: %A" errors
+
+    | Some it -> it
 
   actual |> assertEqual title expected
 
@@ -323,7 +400,67 @@ let testRefs () =
       """ ]
 
 // -----------------------------------------------
+// Hover
+// -----------------------------------------------
+
+let private testHover () =
+  [ testHoverSingleFile
+      "var"
+      """
+        module rec TestProject.Program
+
+        let main _ =
+          let foo = 42
+          //  ^cursor
+          0
+      """
+      "int"
+
+    // FIXME: it seems incorrect
+    testHoverSingleFile
+      "fun"
+      """
+        module rec TestProject.Program
+
+        let pair (x: int) (y: string) : int * string = x, y
+        //  ^cursor
+
+        let main _ = 0
+      """
+      "string -> int -> (int * string)"
+
+    testHoverSingleFile
+      "user-defined type var"
+      """
+        module rec TestProject.Program
+
+        type MyUnit = | MyUnit
+        type MyBox = { Value: int }
+
+        let main _ =
+          let it =
+          //  ^cursor
+            let b : MyBox = { Value = 42 }
+            MyUnit, b
+          0
+      """
+      "(MyUnit * MyBox)"
+
+    testHoverSingleFile
+      "no hover"
+      """
+        module rec TestProject.Program
+
+        let main _ = 0
+        //         ^cursor
+      """
+      "No result." ]
+
+// -----------------------------------------------
 // Interface
 // -----------------------------------------------
 
-let lspTests () = testRefs () |> runTests |> exit
+let lspTests () =
+  List.collect id [ testRefs (); testHover () ]
+  |> runTests
+  |> exit
