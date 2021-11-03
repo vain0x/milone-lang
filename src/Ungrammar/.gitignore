@@ -1,0 +1,18 @@
+
+# Created by https://www.toptal.com/developers/gitignore/api/fsharp
+# Edit at https://www.toptal.com/developers/gitignore?templates=fsharp
+
+### fsharp ###
+lib/debug
+lib/release
+Debug
+*.suo
+*.user
+obj
+bin
+/build/
+*.exe
+!.paket/paket.bootstrapper.exe
+.ionide/
+
+# End of https://www.toptal.com/developers/gitignore/api/fsharp
