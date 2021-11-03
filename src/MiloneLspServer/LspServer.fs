@@ -134,6 +134,9 @@ let private createInitializeResult () =
               "openClose": true,
               "change": 1
           },
+          "completionProvider": {
+            "triggerCharacters": ["."]
+          },
           "definitionProvider": true,
           "documentHighlightProvider": true,
           "documentFormattingProvider": true,
@@ -313,6 +316,7 @@ type private LspIncome =
 
   // Queries.
   | DiagnosticsRequest
+  | CompletionRequest of MsgId * DocumentPositionParam
   | DefinitionRequest of MsgId * DocumentPositionParam
   | ReferencesRequest of MsgId * ReferencesParam
   | DocumentHighlightRequest of MsgId * DocumentPositionParam
@@ -349,6 +353,7 @@ let private parseIncome (jsonValue: JsonValue) : LspIncome =
   | "textDocument/didClose" -> DidCloseNotification(parseDidCloseParam jsonValue)
   | "workspace/didChangeWatchedFiles" -> DidChangeWatchedFiles(parseDidChangeWatchedFilesParam jsonValue)
 
+  | "textDocument/completion" -> CompletionRequest(getMsgId (), parseDocumentPositionParam jsonValue)
   | "textDocument/definition" -> DefinitionRequest(getMsgId (), parseDocumentPositionParam jsonValue)
   | "textDocument/references" -> ReferencesRequest(getMsgId (), parseReferencesParam jsonValue)
   | "textDocument/documentHighlight" -> DocumentHighlightRequest(getMsgId (), parseDocumentPositionParam jsonValue)
@@ -444,6 +449,20 @@ let private processNext () : LspIncome -> ProcessResult =
 
         jsonRpcWriteWithParams "textDocument/publishDiagnostics" param
 
+      Continue
+
+    | CompletionRequest (msgId, p) ->
+      let result =
+        LspLangService.completion rootUriOpt p.Uri p.Pos
+        |> List.map (fun text -> jOfObj [ "label", JString text ])
+        |> JArray
+
+      let result =
+        match result with
+        | JArray [] -> JNull
+        | _ -> result
+
+      jsonRpcWriteWithResult msgId result
       Continue
 
     | DefinitionRequest (msgId, p) ->

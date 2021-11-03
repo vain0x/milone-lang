@@ -19,6 +19,7 @@
                 "env": {
                     "MILONE_LSP_COMMAND": "${workspaceFolder}/bin/Debug/net5.0/MiloneLspServer",
                     "MILONE_LSP_SERVER_DEV": "1",
+                    "MILONE_LSP_SERVER_LOG_LEVEL": "debug",
                     "MILONE_HOME": "${workspaceFolder}/../.."
                 }
             },
@@ -32,6 +33,7 @@
                 "env": {
                     "MILONE_LSP_COMMAND": "${workspaceFolder}/bin/Debug/net5.0/MiloneLspServer.exe",
                     "MILONE_LSP_SERVER_DEV": "1",
+                    "MILONE_LSP_SERVER_LOG_LEVEL": "debug",
                     "MILONE_HOME": "${workspaceFolder}/../.."
                 }
             }

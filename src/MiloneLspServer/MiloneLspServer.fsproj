@@ -16,6 +16,7 @@
     <Compile Include="LspDocCache.fs" />
     <Compile Include="LspLangService.fs" />
     <Compile Include="LspServer.fs" />
+    <Compile Include="LspTests.fs" />
     <Compile Include="Program.fs" />
   </ItemGroup>
 
@@ -25,7 +26,6 @@
 
   <ItemGroup>
     <ProjectReference Include="..\MiloneSyntax\MiloneSyntax.fsproj" />
-    <ProjectReference Include="..\MiloneTranslation\MiloneTranslation.fsproj" />
   </ItemGroup>
 
 </Project>

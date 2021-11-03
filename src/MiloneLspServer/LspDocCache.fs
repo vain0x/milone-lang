@@ -18,7 +18,7 @@ type DocData =
 let private docs = MutMap<Uri, DocData>()
 
 let findDoc (uri: Uri) : DocData option =
-  // eprintfn "INFO: Doc find uri:'%s'" uri
+  traceFn "Doc find uri:'%A'" (string uri)
 
   match docs.TryGetValue(uri) with
   | true, docData -> Some docData
@@ -30,7 +30,7 @@ let openDoc (uri: Uri) (version: int) (text: string) =
       Version = version
       Text = text }
 
-  // eprintfn "INFO: Doc opened uri:'%s' v:%d len:%d" uri version text.Length
+  debugFn "Doc opened uri:'%A' v:%d len:%d" uri version text.Length
   docs.Add(uri, docData)
 
 let changeDoc (uri: Uri) (version: int) (text: string) : unit =
@@ -46,5 +46,5 @@ let changeDoc (uri: Uri) (version: int) (text: string) : unit =
   | None -> openDoc uri version text
 
 let closeDoc (uri: Uri) : unit =
-  // eprintfn "INFO: Doc closed uri:'%s'" uri
+  debugFn "Doc closed uri:'%A'" uri
   docs.Remove(uri) |> ignore

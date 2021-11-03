@@ -52,12 +52,6 @@ let private pathStrToStem (s: string) : string =
   |> Path.fileStem
   |> Path.toString
 
-let private pathStrToFileName (s: string) : string =
-  s
-  |> Path.ofString
-  |> Path.basename
-  |> Path.toString
-
 // -----------------------------------------------
 // Syntax
 // -----------------------------------------------
@@ -145,7 +139,7 @@ let private tyDisplayFn (tirCtx: TirCtx) ty =
 
   TySystem.tyDisplay getTyName ty
 
-let private doBundle (ls: LangServiceState) projectDir =
+let private doBundle (ls: LangServiceState) projectDir : BundleResult =
   let miloneHome = ls.Host.MiloneHome
   let projectDir = projectDir |> pathStrTrimEndPathSep
   let projectName = projectDir |> pathStrToStem
@@ -182,15 +176,21 @@ let private doBundle (ls: LangServiceState) projectDir =
     { syntaxCtx with FetchModule = fetchModuleUsingCache syntaxCtx.FetchModule }
 
   match SyntaxApi.performSyntaxAnalysis syntaxCtx with
-  | SyntaxApi.SyntaxAnalysisOk (modules, tirCtx) -> Some(modules, tirCtx), [], docVersions
+  | SyntaxApi.SyntaxAnalysisOk (modules, tirCtx) ->
+    { ProgramOpt = Some(modules, tirCtx)
+      Errors = []
+      DocVersions = docVersions }
 
   | SyntaxApi.SyntaxAnalysisError (errors, tirCtxOpt) ->
-    let tirOpt =
-      tirCtxOpt |> Option.map (fun it -> [], it)
+    { ProgramOpt =
+        match tirCtxOpt with
+        | Some tirCtx -> Some([], tirCtx)
+        | None -> None
 
-    tirOpt, errors, docVersions
+      Errors = errors
+      DocVersions = docVersions }
 
-let bundleWithCache (ls: LangServiceState) projectDir =
+let private bundleWithCache (ls: LangServiceState) projectDir : BundleResult =
   let docsAreAllFresh (docs: MutMap<DocId, DocVersion>) =
     docs
     |> Seq.forall (fun (KeyValue (docId, version)) -> ls.Host.Docs.GetVersion docId <= version)
@@ -199,32 +199,36 @@ let bundleWithCache (ls: LangServiceState) projectDir =
     ls.BundleCache |> MutMap.tryFind projectDir
 
   match cacheOpt with
-  | Some (opt, errors, docs) when docsAreAllFresh docs ->
+  | Some result when docsAreAllFresh result.DocVersions ->
     // eprintfn "bundle cache reused"
-    opt, errors
+    result
 
   | _ ->
     // match cacheOpt with
     // | Some _ -> eprintfn "bundle cache invalidated"
     // | _ -> eprintfn "bundle cache not found"
 
-    let opt, errors, versions = doBundle ls projectDir
+    let result = doBundle ls projectDir
 
     ls.BundleCache
-    |> MutMap.insert projectDir (opt, errors, versions)
+    |> MutMap.insert projectDir result
     |> ignore
 
-    opt, errors
+    result
 
 // -----------------------------------------------
 // State
 // -----------------------------------------------
 
+type private Error = string * Loc
 type private TokenizeFullResult = (Token * Pos) list
-
 type private ParseResult = ARoot * (string * Pos) list
 
-type private BundleResult = (TProgram * TirCtx) option * (string * Loc) list * MutMap<DocId, DocVersion>
+[<RequireQualifiedAccess; NoEquality; NoComparison>]
+type private BundleResult =
+  { ProgramOpt: (TProgram * TirCtx) option
+    Errors: Error list
+    DocVersions: MutMap<DocId, DocVersion> }
 
 [<RequireQualifiedAccess; NoEquality; NoComparison>]
 type LangServiceState =
@@ -642,8 +646,7 @@ type private Symbol =
   | ModuleSymbol of ModulePath
 
 let private collectSymbolsInExpr (ls: LangServiceState) (modules: TProgram) =
-  let mutable symbols = ResizeArray()
-
+  let symbols = ResizeArray()
   let onVisit symbol defOrUse loc = symbols.Add((symbol, defOrUse, loc))
 
   let visitor: Visitor =
@@ -670,33 +673,25 @@ let private collectSymbolsInExpr (ls: LangServiceState) (modules: TProgram) =
 
   symbols
 
-let private doCollectSymbolOccurrences
-  hint
-  projectDir
-  (docId: DocId)
-  (targetPos: Pos)
-  (includeDecl: bool)
-  (includeUse: bool)
-  (ls: LangServiceState)
-  =
-  let resultOpt, errors = bundleWithCache ls projectDir
+let private doFindRefs hint projectDir docId targetPos ls =
+  debugFn "doFindRefs %s" hint
+  let result = bundleWithCache ls projectDir
 
-  match resultOpt with
+  match result.ProgramOpt with
   | None ->
-    eprintfn "%s: no bundle result: errors %d" hint (List.length errors)
-    []
+    debugFn "%s: no bundle result: errors %d" hint (List.length result.Errors)
+    None
 
   | Some (modules, _) ->
     let tokenOpt = findTokenAt ls docId targetPos
 
     match tokenOpt with
     | None ->
-      eprintfn "%s: token not found on position: docId=%s pos=%s" hint docId (posToString targetPos)
-      []
+      debugFn "%s: token not found on position: docId=%s pos=%s" hint docId (posToString targetPos)
+      None
 
     | Some (_token, tokenPos) ->
-      // eprintfn "%s: tokenPos=%A" hint tokenPos
-
+      // debugFn "%s: tokenPos=%A" hint tokenPos
       let tokenLoc = locOfDocPos docId tokenPos
 
       let symbols = collectSymbolsInExpr ls modules
@@ -705,25 +700,34 @@ let private doCollectSymbolOccurrences
         symbols.FindIndex(fun (_, _, loc) -> loc = tokenLoc)
 
       if symbolIndex < 0 then
-        eprintfn "%s: no symbol" hint
-        []
+        debugFn "%s: no symbol" hint
+        None
       else
         let targetSymbol, _, _ = symbols.[symbolIndex]
 
-        let map = MutMultimap.empty ()
+        symbols
+        |> Seq.filter (fun (symbol, _, _) -> symbol = targetSymbol)
+        |> Some
 
-        for symbol, defOrUse, loc in symbols do
-          match defOrUse with
-          | Def when not includeDecl -> ()
-          | Use when not includeUse -> ()
-          | _ ->
-            if symbol = targetSymbol then
-              map
-              |> MutMultimap.insert (locToDoc loc) (locToPos loc)
+let private doFindDefsOrUses hint projectDir docId targetPos includeDef includeUse ls =
+  match doFindRefs hint projectDir docId targetPos ls with
+  | None -> None
 
-        [ for KeyValue (docId, posList) in map do
-            for range in resolveTokenRanges ls docId (List.ofSeq posList) do
-              docId, range ]
+  | Some symbols ->
+    let map = MutMultimap.empty ()
+
+    for _, defOrUse, loc in symbols do
+      match defOrUse with
+      | Def when not includeDef -> ()
+      | Use when not includeUse -> ()
+      | _ ->
+        map
+        |> MutMultimap.insert (locToDoc loc) (locToPos loc)
+
+    [ for KeyValue (docId, posList) in map do
+        for range in resolveTokenRanges ls docId (List.ofSeq posList) do
+          docId, range ]
+    |> Some
 
 module LangService =
   let create (host: LangServiceHost) : LangServiceState =
@@ -732,67 +736,94 @@ module LangService =
       BundleCache = MutMap()
       Host = host }
 
-  let validateProject projectDir (ls: LangServiceState) = bundleWithCache ls projectDir |> snd
+  let validateProject projectDir (ls: LangServiceState) : Error list =
+    let result = bundleWithCache ls projectDir
+    result.Errors
 
-  let documentHighlight projectDir (docId: DocId) (targetPos: Pos) (ls: LangServiceState) =
-    let resultOpt, errors = bundleWithCache ls projectDir
+  /// Prints syntax tree.
+  let parse (ls: LangServiceState) docId : string =
+    let tokens = tokenizeWithCache ls docId
 
-    match resultOpt with
+    let _, ast, _ =
+      parseWithCache ls docId SyntaxApi.ModuleKind.Regular
+
+    genSyntaxTree docId tokens ast |> SyntaxTree.dump
+
+  let completion
+    (miloneHomeModules: (ProjectName * ModuleName) list)
+    (findModulesInDir: ProjectDir -> (ProjectName * ModuleName) list)
+    (projectDir: ProjectDir)
+    (docId: DocId)
+    (targetPos: Pos)
+    (ls: LangServiceState)
+    : string list =
+    let tokens = tokenizeWithCache ls docId
+
+    let inModuleLine =
+      let y, _ = targetPos
+
+      tokens
+      |> Seq.skipWhile (fun (_, pos) -> pos < (y, 0))
+      |> Seq.takeWhile (fun (_, pos) -> pos < (y + 1, 0))
+      |> Seq.exists (fun (token, _) ->
+        match token with
+        | ModuleToken
+        | OpenToken -> true
+        | _ -> false)
+
+    if inModuleLine then
+      List.append miloneHomeModules (findModulesInDir projectDir)
+      |> List.collect (fun (p, m) -> [ p; m ])
+      |> MutSet.ofSeq
+      |> MutSet.toList
+    else
+      []
+
+  /// `(defs, uses) option`
+  let findRefs projectDir docId targetPos (ls: LangServiceState) : ((DocId * Pos) list * (DocId * Pos) list) option =
+    match doFindRefs "findRefs" projectDir docId targetPos ls with
+    | Some symbols ->
+      let defs = ResizeArray()
+      let uses = ResizeArray()
+
+      for _, defOrUse, Loc (docId, y, x) in symbols do
+        match defOrUse with
+        | Def -> defs.Add(docId, (y, x))
+        | Use -> uses.Add(docId, (y, x))
+
+      Some(Seq.toList defs, Seq.toList uses)
+
+    | None -> None
+
+  /// `(reads, writes) option`
+  let documentHighlight projectDir docId targetPos (ls: LangServiceState) : (Range list * Range list) option =
+    match doFindRefs "highlight" projectDir docId targetPos ls with
+    | Some symbols ->
+      let reads = ResizeArray()
+      let writes = ResizeArray()
+
+      for _, defOrUse, loc in symbols do
+        if locToDoc loc = docId then
+          let pos = loc |> locToPos
+
+          match defOrUse with
+          | Def -> writes.Add(pos)
+          | Use -> reads.Add(pos)
+
+      let collect (posArray: ResizeArray<Pos>) =
+        resolveTokenRanges ls docId (List.ofSeq posArray)
+        |> Seq.toList
+
+      Some(collect reads, collect writes)
+
+    | None -> None
+
+  let hover projectDir (docId: DocId) (targetPos: Pos) (ls: LangServiceState) : string option =
+    let result = bundleWithCache ls projectDir
+
+    match result.ProgramOpt with
     | None ->
-      eprintfn "highlight: no bundle result: errors %d" (List.length errors)
-      None
-
-    | Some (expr, _) ->
-      let tokenOpt = findTokenAt ls docId targetPos
-
-      match tokenOpt with
-      | None ->
-        eprintfn "highlight: token not found on position: docId=%s pos=%s" docId (posToString targetPos)
-        None
-
-      | Some (_token, tokenPos) ->
-        // eprintfn "highlight: tokenPos=%A" tokenPos
-
-        let symbols = collectSymbolsInExpr ls expr
-
-        // Remove symbols occurred in other documents.
-        symbols.RemoveAll(fun (_, _, loc) -> locToDoc loc <> docId)
-        |> ignore
-
-        let symbolIndex =
-          symbols.FindIndex(fun (_, _, loc) -> locToPos loc = tokenPos)
-
-        if symbolIndex < 0 then
-          eprintfn "highlight: no symbol"
-          None
-        else
-          let targetSymbol, _, _ = symbols.[symbolIndex]
-
-          let reads = ResizeArray()
-          let writes = ResizeArray()
-
-          for symbol, defOrUse, loc in symbols do
-            if symbol = targetSymbol then
-              let pos = locToPos loc
-
-              match defOrUse with
-              | Def -> writes.Add(pos)
-              | Use -> reads.Add(pos)
-
-          let reads =
-            resolveTokenRanges ls docId (List.ofSeq reads)
-
-          let writes =
-            resolveTokenRanges ls docId (List.ofSeq writes)
-
-          Some((reads, writes))
-
-  let hover projectDir (docId: DocId) (targetPos: Pos) (ls: LangServiceState) =
-    let resultOpt, errors = bundleWithCache ls projectDir
-
-    match resultOpt with
-    | None ->
-      eprintfn "hover: no bundle result: errors %d" (List.length errors)
+      debugFn "hover: no bundle result: errors %d" (List.length result.Errors)
       None
 
     | Some (modules, tirCtx) ->
@@ -800,7 +831,7 @@ module LangService =
 
       match tokenOpt with
       | None ->
-        eprintfn "hover: token not found on position: docId=%s pos=%s" docId (posToString targetPos)
+        debugFn "hover: token not found on position: docId=%s pos=%s" docId (posToString targetPos)
         None
 
       | Some (_token, tokenPos) ->
@@ -816,11 +847,15 @@ module LangService =
         | None -> None
         | Some ty -> Some(tyDisplayFn tirCtx ty)
 
-  let definition projectDir (docId: DocId) (targetPos: Pos) (ls: LangServiceState) =
-    let includeDecl = true
+  let definition projectDir docId targetPos (ls: LangServiceState) : (DocId * Range) list =
+    let includeDef = true
     let includeUse = false
-    doCollectSymbolOccurrences "definition" projectDir docId targetPos includeDecl includeUse ls
 
-  let references projectDir (docId: DocId) (targetPos: Pos) (includeDecl: bool) (ls: LangServiceState) =
+    doFindDefsOrUses "definition" projectDir docId targetPos includeDef includeUse ls
+    |> Option.defaultValue []
+
+  let references projectDir docId targetPos (includeDef: bool) (ls: LangServiceState) : (DocId * Range) list =
     let includeUse = true
-    doCollectSymbolOccurrences "references" projectDir docId targetPos includeDecl includeUse ls
+
+    doFindDefsOrUses "references" projectDir docId targetPos includeDef includeUse ls
+    |> Option.defaultValue []

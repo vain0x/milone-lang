@@ -2,8 +2,20 @@ module MiloneLspServer.Util
 
 open System.Collections.Generic
 
+// -----------------------------------------------
+// URI
+// -----------------------------------------------
+
 [<NoComparison>]
-type Uri = Uri of string
+type Uri =
+  | Uri of string
+  override this.ToString() =
+    let (Uri s) = this
+    s
+
+// -----------------------------------------------
+// Array
+// -----------------------------------------------
 
 let partition1 (f: 'T -> 'U option) (items: #seq<'T>) : 'U array * 'T array =
   let someItems = ResizeArray()
@@ -60,6 +72,8 @@ module MutSet =
 
   /// Returns true if actually removed.
   let remove item (set: MutSet<_>) : bool = set.Remove(item)
+
+  let toList (set: MutSet<_>) : _ list = Seq.toList set
 
 // -----------------------------------------------
 // MutMap
@@ -151,3 +165,35 @@ module File =
         Future.just None
     with
     | _ -> Future.just None
+
+// -----------------------------------------------
+// Logging
+// -----------------------------------------------
+
+type private LogLevel =
+  | Error = 3
+  | Warn = 4
+  | Debug = 7 // LOG_DEBUG
+  | Trace = 8
+
+let private currentLogLevel: LogLevel =
+  match System.Environment.GetEnvironmentVariable("MILONE_LSP_SERVER_LOG_LEVEL") with
+  | "debug" -> LogLevel.Debug
+  | "trace" -> LogLevel.Trace
+  | _ -> LogLevel.Warn
+
+let private printLog name (level: LogLevel) =
+  fun fmt ->
+    Printf.kprintf
+      (fun msg ->
+        if level <= currentLogLevel then
+          eprintf "%s: %s" name (msg + "\n")
+        else
+          ())
+      fmt
+
+let errorFn fmt = printLog "error" LogLevel.Error fmt
+let warnFn fmt = printLog "warn" LogLevel.Warn fmt
+let infoFn fmt = printLog "info" LogLevel.Debug fmt // no such level
+let debugFn fmt = printLog "debug" LogLevel.Debug fmt
+let traceFn fmt = printLog "trace" LogLevel.Trace fmt
