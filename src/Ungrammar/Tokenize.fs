@@ -124,7 +124,7 @@ let private advance (text: string) (index: int) : Result<Token * int, TokenizeEr
 
   | _ -> Error TokenizeError.InvalidChar
 
-let tokenize (text: string) : Result<Token list, int * TokenizeError> =
+let tokenize (text: string) : Result<Token list, TokenizeError * Pos> =
   let rec go acc i =
     if i >= text.Length then
       acc |> List.rev |> Ok
@@ -137,6 +137,6 @@ let tokenize (text: string) : Result<Token list, int * TokenizeError> =
       else
         match advance text i with
         | Ok (token, nextIndex) -> go (token :: acc) nextIndex
-        | Error e -> Error(i, e)
+        | Error e -> Error(e, i)
 
   go [] 0
