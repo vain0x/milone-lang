@@ -125,6 +125,8 @@ let private parseWithCache (ls: LangServiceState) docId kind =
     |> MutMap.insert docId (currentVersion, (ast, errors))
     |> ignore
 
+    // eprintfn "syntaxTree: %s %s" docId (genSyntaxTree docId tokens ast |> SyntaxTree.dump)
+
     docId, ast, errors
 
 // -----------------------------------------------
@@ -739,15 +741,6 @@ module LangService =
   let validateProject projectDir (ls: LangServiceState) : Error list =
     let result = bundleWithCache ls projectDir
     result.Errors
-
-  /// Prints syntax tree.
-  let parse (ls: LangServiceState) docId : string =
-    let tokens = tokenizeWithCache ls docId
-
-    let _, ast, _ =
-      parseWithCache ls docId SyntaxApi.ModuleKind.Regular
-
-    genSyntaxTree docId tokens ast |> SyntaxTree.dump
 
   let completion
     (miloneHomeModules: (ProjectName * ModuleName) list)
