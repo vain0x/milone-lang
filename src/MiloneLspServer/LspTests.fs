@@ -72,7 +72,9 @@ let private testRefsSingleFile title text : bool =
 
   let host: Lsp.LangServiceHost =
     { MiloneHome = "?unexisting"
-      Docs = docs }
+      Docs = docs
+      MiloneHomeModules = fun () -> []
+      FindModulesInDir = fun _ -> [] }
 
   let ls = LangService.create host
 
@@ -163,7 +165,9 @@ let private testHoverSingleFile title text expected : bool =
 
   let host: Lsp.LangServiceHost =
     { MiloneHome = "?unexisting"
-      Docs = docs }
+      Docs = docs
+      MiloneHomeModules = fun () -> []
+      FindModulesInDir = fun _ -> [] }
 
   let ls = LangService.create host
 

@@ -34,7 +34,9 @@ type LangServiceDocs =
 [<RequireQualifiedAccess; NoEquality; NoComparison>]
 type LangServiceHost =
   { MiloneHome: FilePath
-    Docs: LangServiceDocs }
+    Docs: LangServiceDocs
+    MiloneHomeModules: unit -> (ProjectName * ModuleName) list
+    FindModulesInDir: ProjectDir -> (ProjectName * ModuleName) list }
 
 // -----------------------------------------------
 // Utils
@@ -742,14 +744,7 @@ module LangService =
     let result = bundleWithCache ls projectDir
     result.Errors
 
-  let completion
-    (miloneHomeModules: (ProjectName * ModuleName) list)
-    (findModulesInDir: ProjectDir -> (ProjectName * ModuleName) list)
-    (projectDir: ProjectDir)
-    (docId: DocId)
-    (targetPos: Pos)
-    (ls: LangServiceState)
-    : string list =
+  let completion (projectDir: ProjectDir) (docId: DocId) (targetPos: Pos) (ls: LangServiceState) : string list =
     let tokens = tokenizeWithCache ls docId
 
     let inModuleLine =
@@ -765,7 +760,9 @@ module LangService =
         | _ -> false)
 
     if inModuleLine then
-      List.append miloneHomeModules (findModulesInDir projectDir)
+      let h = ls.Host
+
+      List.append (h.MiloneHomeModules()) (h.FindModulesInDir projectDir)
       |> List.collect (fun (p, m) -> [ p; m ])
       |> MutSet.ofSeq
       |> MutSet.toList

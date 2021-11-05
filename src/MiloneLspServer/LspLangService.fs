@@ -317,7 +317,11 @@ let newLangService (project: ProjectInfo) : LangServiceState =
       GetText = getText
       GetProjectName = getProjectName }
 
-  let langServiceHost: LangServiceHost = { MiloneHome = miloneHome; Docs = docs }
+  let langServiceHost: LangServiceHost =
+    { MiloneHome = miloneHome
+      Docs = docs
+      MiloneHomeModules = fun () -> miloneHomeModules.Value
+      FindModulesInDir = findModulesInDir }
 
   LangService.create langServiceHost
 
@@ -431,7 +435,7 @@ let completion rootUriOpt uri pos =
   let doCompletion (project: ProjectInfo) uri pos =
     project
     |> newLangServiceWithCache
-    |> LangService.completion miloneHomeModules.Value findModulesInDir project.ProjectDir (uriToDocId uri) pos
+    |> LangService.completion project.ProjectDir (uriToDocId uri) pos
 
   match findProjects rootUriOpt with
   | Error _ -> []
