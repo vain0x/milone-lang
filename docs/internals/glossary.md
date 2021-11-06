@@ -49,6 +49,7 @@
 - ref (reference)
 - semi (semicolon)
 - sub (subtraction)
+- std (standard)
 - stmt (statement)
     - Note that I feel this spelling awful but it's commonly used.
 - ty (type)
