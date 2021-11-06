@@ -23,6 +23,9 @@ module TySystem = MiloneSyntax.TySystem
 /// `.fs` or `.milone`.
 type private SourceExt = string
 
+/// `MILONE_HOME`
+type private MiloneHome = string
+
 type private FileExistsFun = string -> bool
 
 let private changeExt (ext: FileExt) (path: string) : string =
@@ -32,10 +35,17 @@ let private changeExt (ext: FileExt) (path: string) : string =
   basename + ext
 
 // -----------------------------------------------
-// Standard library
+// Std library
 // -----------------------------------------------
 
-let getStandardLibNames () = [ "MiloneCore"; "MiloneStd" ]
+let private getStdLibNames () = [ "MiloneCore"; "MiloneStd" ]
+
+let private computeStdLibProjectDir (miloneHome: MiloneHome) (projectName: ProjectName) : ProjectDir =
+  miloneHome + "/milone_libs/" + projectName
+
+let getStdLibProjects (miloneHome: MiloneHome) : (ProjectName * ProjectDir) list =
+  getStdLibNames ()
+  |> List.map (fun name -> name, computeStdLibProjectDir miloneHome name)
 
 // -----------------------------------------------
 // Prelude resolution
@@ -133,7 +143,7 @@ let private resolveMiloneCoreDeps kind tokens ast =
 // Utilities
 // -----------------------------------------------
 
-let getMiloneHomeFromEnv (getEnv: string -> string option) : string =
+let getMiloneHomeFromEnv (getEnv: string -> string option) : MiloneHome =
   match getEnv "MILONE_HOME" with
   | Some miloneHome ->
     assert (miloneHome <> "")
@@ -290,7 +300,7 @@ let syntaxErrorsToString (errors: SyntaxError list) : string =
 type SyntaxHost =
   { EntryProjectDir: ProjectDir
     EntryProjectName: ProjectName
-    MiloneHome: ProjectDir
+    MiloneHome: MiloneHome
 
     ReadTextFile: ReadTextFileFun
     WriteLog: string -> unit }
@@ -319,12 +329,8 @@ let syntaxCtxNew (host: SyntaxHost) : SyntaxCtx =
 
     let projects = TMap.ofList compare manifestProjects
 
-    getStandardLibNames ()
-    |> List.fold
-         (fun projects name ->
-           projects
-           |> TMap.add name (miloneHome + "/milone_libs/" + name))
-         projects
+    getStdLibProjects miloneHome
+    |> List.fold (fun projects (name, dir) -> projects |> TMap.add name dir) projects
     |> TMap.add entryProjectName entryProjectDir
 
   let tokenize =

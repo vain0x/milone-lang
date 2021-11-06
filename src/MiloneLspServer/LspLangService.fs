@@ -9,9 +9,6 @@ open MiloneLspServer.Lsp
 open MiloneLspServer.Util
 open MiloneLspServer.LspCacheLayer
 
-let private standardLibNames =
-  MiloneSyntax.SyntaxApi.getStandardLibNames ()
-
 let private miloneHome =
   let opt (s: string) =
     match s with
@@ -32,6 +29,10 @@ let private miloneHome =
     | _ -> None
 
   MiloneSyntax.SyntaxApi.getMiloneHomeFromEnv getEnv
+
+let private stdLibProjects =
+  MiloneSyntax.SyntaxApi.getStdLibProjects miloneHome
+  |> Map.ofList
 
 let private uriOfFilePath (filePath: string) =
   let canonicalize (filePath: string) =
@@ -128,9 +129,6 @@ let private findModulesRecursively (maxDepth: int) (rootDir: string) : (string *
   | ex -> debugFn "find files in '%s': %A" rootDir ex
 
   files |> Seq.toList
-
-let private miloneHomeModules =
-  lazy (findModulesRecursively 2 (Path.Combine(miloneHome, "milone_libs")))
 
 let private findModulesInDir projectDir = findModulesRecursively 0 projectDir
 
@@ -235,17 +233,14 @@ let private docIdToUri (project: ProjectInfo) (docId: string) =
     | [| p; m |] -> p, m
     | _ -> failwithf "unexpected docId: '%s'" docId
 
-  if standardLibNames |> List.contains projectName then
-    sprintf "%s/milone_libs/%s/%s.milone" miloneHome projectName moduleName
-    |> fixExt
-    |> uriOfFilePath
-  else
-    let projectDir =
-      project.ProjectDir + "/../" + projectName
+  let projectDir =
+    match stdLibProjects |> Map.tryFind projectName with
+    | Some it -> it
+    | None -> project.ProjectDir + "/../" + projectName
 
-    Path.Combine(projectDir, moduleName + ".milone")
-    |> fixExt
-    |> uriOfFilePath
+  Path.Combine(projectDir, moduleName + ".milone")
+  |> fixExt
+  |> uriOfFilePath
 
 // ---------------------------------------------
 // Analysis
@@ -315,7 +310,7 @@ let newLangService (project: ProjectInfo) : LangServiceState =
   let langServiceHost: LangServiceHost =
     { MiloneHome = miloneHome
       Docs = docs
-      MiloneHomeModules = fun () -> miloneHomeModules.Value
+      MiloneHomeModules = fun () -> stdLibProjects |> Map.toList
       FindModulesInDir = findModulesInDir }
 
   LangService.create langServiceHost
