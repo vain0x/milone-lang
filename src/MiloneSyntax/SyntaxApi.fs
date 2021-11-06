@@ -153,6 +153,14 @@ let chooseSourceExt (fileExists: FileExistsFun) filename =
   else
     fs
 
+let private readManifestFile (readTextFile: ReadTextFileFun) (projectDir: ProjectDir) : Future<Manifest.ManifestData> =
+  let manifestFile = projectDir |> Manifest.getManifestPath
+  let docId: DocId = manifestFile
+
+  manifestFile
+  |> readTextFile
+  |> Future.map (Manifest.parseManifestOpt docId)
+
 let private findProjectWith
   (projects: TreeMap<ProjectName, ProjectDir>)
   (entryProjectDir: ProjectDir)
@@ -301,7 +309,7 @@ let syntaxCtxNew (host: SyntaxHost) : SyntaxCtx =
   let miloneHome = host.MiloneHome
 
   let manifest =
-    Manifest.readManifestFile host.ReadTextFile entryProjectDir
+    readManifestFile host.ReadTextFile entryProjectDir
     |> Future.wait // FIXME: avoid blocking
 
   let projects =
