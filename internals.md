@@ -2,9 +2,9 @@
 
 Notes for milone-lang developers.
 
-## Architecture
-
-[ARCHITECTURE.md](ARCHITECTURE.md)
+- Links:
+    - [ARCHITECTURE](ARCHITECTURE.md)
+    - [Glossary](docs/internals/glossary.md)
 
 ## Development
 
