@@ -120,8 +120,7 @@ let private parseWithCache (ls: LangServiceState) docId kind =
       |> List.filter (fun (token, _) -> token |> isTrivia |> not)
 
     // Parse.
-    let _, ast, errors =
-      SyntaxApi.parseModuleWith docId kind tokens
+    let _, ast, errors = SyntaxApi.parseModule docId kind tokens
 
     ls.ParseCache
     |> MutMap.insert docId (currentVersion, (ast, errors))
@@ -148,21 +147,11 @@ let private doBundle (ls: LangServiceState) projectDir : BundleResult =
   let projectDir = projectDir |> pathStrTrimEndPathSep
   let projectName = projectDir |> pathStrToStem
 
-  let syntaxCtx: SyntaxApi.SyntaxCtx =
-    let host: SyntaxApi.SyntaxHost =
-      { EntryProjectDir = projectDir
-        EntryProjectName = projectName
-        MiloneHome = miloneHome
-        ReadTextFile = File.readFile
-        WriteLog = fun _ -> () }
-
-    SyntaxApi.syntaxCtxNew host
-
   let docVersions = MutMap()
 
-  let fetchModuleUsingCache defaultFetchModule (projectName: string) (moduleName: string) =
+  let fetchModuleUsingCache defaultFun (projectName: string) (moduleName: string) =
     match ls.Host.Docs.FindDocId projectName moduleName with
-    | None -> defaultFetchModule projectName moduleName
+    | None -> defaultFun projectName moduleName
 
     | Some docId ->
       docVersions
@@ -177,7 +166,15 @@ let private doBundle (ls: LangServiceState) projectDir : BundleResult =
       |> Future.just
 
   let syntaxCtx =
-    { syntaxCtx with FetchModule = fetchModuleUsingCache syntaxCtx.FetchModule }
+    let host: SyntaxApi.FetchModuleHost =
+      { EntryProjectDir = projectDir
+        EntryProjectName = projectName
+        MiloneHome = miloneHome
+        ReadTextFile = File.readFile
+        WriteLog = fun _ -> () }
+
+    SyntaxApi.newSyntaxCtx host
+    |> SyntaxApi.SyntaxCtx.withFetchModule fetchModuleUsingCache
 
   match SyntaxApi.performSyntaxAnalysis syntaxCtx with
   | SyntaxApi.SyntaxAnalysisOk (modules, tirCtx) ->

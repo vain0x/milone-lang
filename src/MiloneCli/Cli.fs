@@ -205,14 +205,14 @@ let private compileCtxNew (host: CliHost) verbosity projectDir : CompileCtx =
   let projectName = projectDir |> pathStrToStem
 
   let syntaxCtx: SyntaxApi.SyntaxCtx =
-    let host: SyntaxApi.SyntaxHost =
+    let host: SyntaxApi.FetchModuleHost =
       { EntryProjectDir = projectDir
         EntryProjectName = projectName
         MiloneHome = miloneHome
         ReadTextFile = host.FileReadAllText
         WriteLog = writeLog host verbosity }
 
-    SyntaxApi.syntaxCtxNew host
+    SyntaxApi.newSyntaxCtx host
 
   { EntryProjectName = projectName
     SyntaxCtx = syntaxCtx
@@ -338,20 +338,23 @@ let private toBuildOnUnixParams
   let isRelease = options.IsRelease
   let projectName = ctx.EntryProjectName
 
+  let manifest =
+    ctx.SyntaxCtx |> SyntaxApi.SyntaxCtx.getManifest
+
   { TargetDir = Path targetDir
     IsRelease = isRelease
     ExeFile = computeExePath (Path targetDir) host.Platform isRelease projectName
     CFiles = cFiles |> List.map (fun (name, _) -> Path name)
     MiloneHome = miloneHome
-    CSanitize = ctx.SyntaxCtx.Manifest.CSanitize
-    CStd = ctx.SyntaxCtx.Manifest.CStd
+    CSanitize = manifest.CSanitize
+    CStd = manifest.CStd
     CcList =
-      ctx.SyntaxCtx.Manifest.CcList
+      manifest.CcList
       |> List.map (fun (Path name, _) -> Path(projectDir + "/" + name))
     ObjList =
-      ctx.SyntaxCtx.Manifest.ObjList
+      manifest.ObjList
       |> List.map (fun (Path name, _) -> Path(projectDir + "/" + name))
-    Libs = ctx.SyntaxCtx.Manifest.Libs |> List.map fst
+    Libs = manifest.Libs |> List.map fst
     DirCreate = dirCreateOrFail host
     FileWrite = fileWrite host
     ExecuteInto = u.ExecuteInto }

@@ -25,7 +25,7 @@ type ManifestData =
     ObjList: (Path * Loc) list
     Libs: (string * Loc) list }
 
-let private emptyManifest: ManifestData =
+let emptyManifest: ManifestData =
   { Projects = []
     Errors = []
 
