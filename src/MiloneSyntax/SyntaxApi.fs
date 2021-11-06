@@ -7,6 +7,7 @@ open MiloneShared.SharedTypes
 open MiloneShared.Util
 open MiloneSyntax.Syntax
 open MiloneStd.StdMap
+open MiloneStd.StdPath
 
 module ArityCheck = MiloneSyntax.ArityCheck
 module AstBundle = MiloneSyntax.AstBundle
@@ -21,6 +22,14 @@ module TySystem = MiloneSyntax.TySystem
 
 /// `.fs` or `.milone`.
 type private SourceExt = string
+
+type private FileExistsFun = string -> bool
+
+let private changeExt (ext: FileExt) (path: string) : string =
+  assert (ext |> S.startsWith ".")
+
+  let (Path basename), _ = Path path |> Path.cutExt
+  basename + ext
 
 // -----------------------------------------------
 // Standard library
@@ -134,6 +143,15 @@ let getMiloneHomeFromEnv (getEnv: string -> string option) : string =
     match getEnv "HOME" with
     | Some home -> home + "/.milone"
     | None -> failwith "$MILONE_HOME and $HOME are missing."
+
+/// Computes preferred filename of source file.
+let chooseSourceExt (fileExists: FileExistsFun) filename =
+  let fs = changeExt ".fs" filename
+
+  if fileExists filename || not (fileExists fs) then
+    filename
+  else
+    fs
 
 let private findProjectWith
   (projects: TreeMap<ProjectName, ProjectDir>)

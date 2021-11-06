@@ -227,12 +227,7 @@ let private uriToDocId (uri: Uri) : DocId =
   sprintf "%s.%s" projectName moduleName
 
 let private fixExt filePath =
-  let fs = Path.ChangeExtension(filePath, ".fs")
-
-  if File.Exists(filePath) || not (File.Exists(fs)) then
-    filePath
-  else
-    fs
+  MiloneSyntax.SyntaxApi.chooseSourceExt File.Exists filePath
 
 let private docIdToUri (project: ProjectInfo) (docId: string) =
   let projectName, moduleName =
