@@ -23,6 +23,12 @@ module TySystem = MiloneSyntax.TySystem
 type private SourceExt = string
 
 // -----------------------------------------------
+// Standard library
+// -----------------------------------------------
+
+let getStandardLibNames () = [ "MiloneCore"; "MiloneStd" ]
+
+// -----------------------------------------------
 // Prelude resolution
 // -----------------------------------------------
 
@@ -285,9 +291,14 @@ let syntaxCtxNew (host: SyntaxHost) : SyntaxCtx =
       manifest.Projects
       |> List.map (fun (name, dir, _) -> name, entryProjectDir + "/" + dir)
 
-    TMap.ofList compare manifestProjects
-    |> TMap.add "MiloneCore" (miloneHome + "/milone_libs/MiloneCore")
-    |> TMap.add "MiloneStd" (miloneHome + "/milone_libs/MiloneStd")
+    let projects = TMap.ofList compare manifestProjects
+
+    getStandardLibNames ()
+    |> List.fold
+         (fun projects name ->
+           projects
+           |> TMap.add name (miloneHome + "/milone_libs/" + name))
+         projects
     |> TMap.add entryProjectName entryProjectDir
 
   let tokenize =

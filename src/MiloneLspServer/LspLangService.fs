@@ -9,6 +9,9 @@ open MiloneLspServer.Lsp
 open MiloneLspServer.Util
 open MiloneLspServer.LspCacheLayer
 
+let private standardLibNames =
+  MiloneSyntax.SyntaxApi.getStandardLibNames ()
+
 let private miloneHome =
   let opt (s: string) =
     match s with
@@ -237,14 +240,11 @@ let private docIdToUri (project: ProjectInfo) (docId: string) =
     | [| p; m |] -> p, m
     | _ -> failwithf "unexpected docId: '%s'" docId
 
-  match projectName with
-  | "MiloneCore"
-  | "MiloneStd" ->
+  if standardLibNames |> List.contains projectName then
     sprintf "%s/milone_libs/%s/%s.milone" miloneHome projectName moduleName
     |> fixExt
     |> uriOfFilePath
-
-  | _ ->
+  else
     let projectDir =
       project.ProjectDir + "/../" + projectName
 
