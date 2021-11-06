@@ -16,19 +16,15 @@ let private miloneHome =
     | "" -> None
     | _ -> Some s
 
-  let getEnv name =
-    match name with
-    | "MILONE_HOME" ->
-      Environment.GetEnvironmentVariable("MILONE_HOME")
-      |> opt
+  let getMiloneHomeEnv () =
+    Environment.GetEnvironmentVariable("MILONE_HOME")
+    |> opt
 
-    | "HOME" ->
-      Environment.GetFolderPath(Environment.SpecialFolder.UserProfile)
-      |> opt
+  let getHomeEnv () =
+    Environment.GetFolderPath(Environment.SpecialFolder.UserProfile)
+    |> opt
 
-    | _ -> None
-
-  MiloneSyntax.SyntaxApi.getMiloneHomeFromEnv getEnv
+  MiloneSyntax.SyntaxApi.getMiloneHomeFromEnv getMiloneHomeEnv getHomeEnv
 
 let private stdLibProjects =
   MiloneSyntax.SyntaxApi.getStdLibProjects miloneHome

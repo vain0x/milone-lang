@@ -143,14 +143,14 @@ let private resolveMiloneCoreDeps kind tokens ast =
 // Utilities
 // -----------------------------------------------
 
-let getMiloneHomeFromEnv (getEnv: string -> string option) : MiloneHome =
-  match getEnv "MILONE_HOME" with
+let getMiloneHomeFromEnv (getMiloneHomeEnv: unit -> string option) (getHomeEnv: unit -> string option) : MiloneHome =
+  match getMiloneHomeEnv () with
   | Some miloneHome ->
     assert (miloneHome <> "")
     miloneHome
 
   | None ->
-    match getEnv "HOME" with
+    match getHomeEnv () with
     | Some home -> home + "/.milone"
     | None -> failwith "$MILONE_HOME and $HOME are missing."
 

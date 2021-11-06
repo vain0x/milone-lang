@@ -82,8 +82,9 @@ let dotnetCliHost () : CliHost =
 
   let miloneHome =
     match System.Environment.GetEnvironmentVariable("MILONE_HOME") with
-    | null -> ""
-    | it -> it
+    | null
+    | "" -> None
+    | it -> Some it
 
   { Args = args
     WorkDir = System.Environment.CurrentDirectory

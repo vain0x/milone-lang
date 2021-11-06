@@ -83,7 +83,7 @@ type CliHost =
     Home: string
 
     /// Path to milone home (installation directory).
-    MiloneHome: string
+    MiloneHome: string option
 
     Platform: Platform
 
@@ -135,13 +135,7 @@ let private pathStrToFileName (s: string) : string =
   |> Path.toString
 
 let private hostToMiloneHome (host: CliHost) =
-  let getEnv name =
-    match name with
-    | "MILONE_HOME" when host.MiloneHome <> "" -> Some host.MiloneHome
-    | "HOME" when host.Home <> "" -> Some host.Home
-    | _ -> None
-
-  SyntaxApi.getMiloneHomeFromEnv getEnv
+  SyntaxApi.getMiloneHomeFromEnv (fun () -> host.MiloneHome) (fun () -> Some host.Home)
 
 let private dirCreateOrFail (host: CliHost) (dirPath: Path) : unit =
   let ok =
