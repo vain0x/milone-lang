@@ -189,6 +189,9 @@ type Token =
   | WhenToken
   | WithToken
 
+type TokenizeResult = (Token * Pos) list
+type TokenizeFullResult = (Token * Pos) list
+
 /// Unary operator.
 [<NoEquality; NoComparison>]
 type Unary = | MinusUnary

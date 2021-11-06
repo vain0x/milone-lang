@@ -225,7 +225,6 @@ let private bundleWithCache (ls: LangServiceState) projectDir : BundleResult =
 // -----------------------------------------------
 
 type private Error = string * Loc
-type private TokenizeFullResult = (Token * Pos) list
 type private ParseResult = ARoot * (string * Pos) list
 
 [<RequireQualifiedAccess; NoEquality; NoComparison>]
