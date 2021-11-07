@@ -6,7 +6,7 @@ open MiloneShared.SharedTypes
 open MiloneLspServer.JsonValue
 open MiloneLspServer.JsonSerialization
 open MiloneLspServer.JsonRpcWriter
-open MiloneLspServer.Util
+open MiloneLspServer.LspUtil
 
 type private Position = int * int
 

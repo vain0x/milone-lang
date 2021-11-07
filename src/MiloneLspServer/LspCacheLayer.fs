@@ -4,6 +4,7 @@ open System
 open System.Security.Cryptography
 open System.Text
 open System.Threading
+open MiloneLspServer.LspUtil
 open MiloneLspServer.Util
 open MiloneShared.SharedTypes
 

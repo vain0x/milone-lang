@@ -3,16 +3,6 @@ module MiloneLspServer.Util
 open System.Collections.Generic
 
 // -----------------------------------------------
-// URI
-// -----------------------------------------------
-
-type Uri =
-  | Uri of string
-  override this.ToString() =
-    let (Uri s) = this
-    s
-
-// -----------------------------------------------
 // Array
 // -----------------------------------------------
 
