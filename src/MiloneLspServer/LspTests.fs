@@ -113,8 +113,8 @@ let private testRefsSingleFile title text : bool =
     match ls
           |> LangService.findRefs projectDir docId (row, column)
       with
-    | None ->
-      let errors =
+    | None, ls ->
+      let errors, _ =
         ls |> LangService.validateProject projectDir
 
       if errors |> List.isEmpty then
@@ -122,7 +122,7 @@ let private testRefsSingleFile title text : bool =
       else
         sprintf "Compile error: %A" errors
 
-    | Some (defs, uses) ->
+    | Some (defs, uses), _ ->
       let collect kind xs =
         xs |> Seq.map (fun (_, (y, x)) -> y, x, kind)
 
@@ -189,8 +189,8 @@ let private testHoverSingleFile title text expected : bool =
 
   let actual =
     match ls |> LangService.hover projectDir docId targetPos with
-    | None ->
-      let errors =
+    | None, ls ->
+      let errors, _ =
         ls |> LangService.validateProject projectDir
 
       if errors |> List.isEmpty then
@@ -198,7 +198,7 @@ let private testHoverSingleFile title text expected : bool =
       else
         sprintf "Compile error: %A" errors
 
-    | Some it -> it
+    | Some it, _ -> it
 
   actual |> assertEqual title expected
 
