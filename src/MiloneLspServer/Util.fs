@@ -156,6 +156,23 @@ module File =
     | _ -> Future.just None
 
 // -----------------------------------------------
+// MD5
+// -----------------------------------------------
+
+module Md5Helper =
+  let private hasher =
+    new System.Threading.ThreadLocal<System.Security.Cryptography.MD5>(fun () ->
+      System.Security.Cryptography.MD5.Create())
+
+  let private encoding = System.Text.Encoding.UTF8
+
+  let ofString (s: string) : byte array =
+    hasher.Value.ComputeHash(encoding.GetBytes(s))
+
+  let equals (l: byte array) (r: byte array) : bool =
+    System.Linq.Enumerable.SequenceEqual(l, r)
+
+// -----------------------------------------------
 // Logging
 // -----------------------------------------------
 

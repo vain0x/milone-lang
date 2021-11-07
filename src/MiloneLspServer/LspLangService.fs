@@ -6,9 +6,8 @@ open System.IO
 open System.Text
 open MiloneShared.SharedTypes
 open MiloneLspServer.Lsp
-open MiloneLspServer.Util
-open MiloneLspServer.LspCacheLayer
 open MiloneLspServer.LspUtil
+open MiloneLspServer.Util
 
 let private miloneHome =
   let opt (s: string) =
@@ -244,9 +243,16 @@ let private docIdToUri (project: ProjectInfo) (docId: string) =
 // ---------------------------------------------
 
 [<RequireQualifiedAccess; NoEquality; NoComparison>]
-type LangServiceState2 = { Docs: Docs }
+type LangServiceState2 =
+  { Docs: Docs
 
-let mutable current: LangServiceState2 = { Docs = Docs.empty }
+    DiagnosticsKeys: Uri list
+    DiagnosticsCache: DiagnosticsCache<byte array> }
+
+let mutable current: LangServiceState2 =
+  { Docs = Docs.empty
+    DiagnosticsKeys = []
+    DiagnosticsCache = DiagnosticsCache.empty Md5Helper.ofString Md5Helper.equals }
 
 /// (msg, loc) list
 type ProjectValidateResult = (string * Loc) list
@@ -374,18 +380,15 @@ let validateProject (project: ProjectInfo) : ProjectValidateResult =
 // (uri, (msg, pos) list) list
 type WorkspaceValidateResult = (Uri * (string * Pos) list) list
 
-let private diagnosticKeys = ResizeArray<Uri>()
-
-// URI -> MD5 hash of diagnostics
-let private diagnosticsCache = DiagnosticsCache.empty ()
-
 let private doValidateWorkspace projects =
+  let state = current
+
   // Collect list of errors per file.
   // Note we need to report absence of errors for docs opened in editor
   // so that the editor clears outdated diagnostics.
   let map = MutMultimap<Uri, string * Pos>()
 
-  for docId in diagnosticKeys do
+  for docId in state.DiagnosticsKeys do
     map |> MutMultimap.insertKey docId
 
   for project in projects do
@@ -406,18 +409,24 @@ let private doValidateWorkspace projects =
 
   // Remember docId for each document that some error is published to.
   // We need publish empty error list to it to remove these errors next time.
-  diagnosticKeys
-  |> ResizeArray.assign (
+  let diagnosticsKeys =
     diagnostics
     |> List.choose (fun (uri, errors) ->
       if errors |> List.isEmpty |> not then
         Some uri
       else
         None)
-  )
 
-  diagnosticsCache
-  |> DiagnosticsCache.filter diagnostics
+  let diagnostics, diagnosticsCache =
+    state.DiagnosticsCache
+    |> DiagnosticsCache.filter diagnostics
+
+  current <-
+    { current with
+        DiagnosticsKeys = diagnosticsKeys
+        DiagnosticsCache = diagnosticsCache }
+
+  diagnostics
 
 /// Validate all projects in workspace to report errors.
 let validateWorkspace (rootUriOpt: string option) : WorkspaceValidateResult =
