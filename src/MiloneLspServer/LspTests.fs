@@ -66,9 +66,7 @@ let private testRefsSingleFile title text : bool =
         fun docId ->
           match docMap |> Map.tryFind docId with
           | Some it -> it
-          | _ -> (0, "// Missing")
-
-      GetProjectName = fun docId -> Some(docId.Split(".").[0]) }
+          | _ -> (0, "// Missing") }
 
   let host: Lsp.LangServiceHost =
     { MiloneHome = "?unexisting"
@@ -159,9 +157,7 @@ let private testHoverSingleFile title text expected : bool =
         fun docId ->
           match docMap |> Map.tryFind docId with
           | Some it -> it
-          | _ -> (0, "// Missing")
-
-      GetProjectName = fun docId -> Some(docId.Split(".").[0]) }
+          | _ -> (0, "// Missing") }
 
   let host: Lsp.LangServiceHost =
     { MiloneHome = "?unexisting"

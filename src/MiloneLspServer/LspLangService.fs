@@ -300,20 +300,10 @@ let newLangService (project: ProjectInfo) : LangServiceState =
 
           0, ""
 
-  let getProjectName docId =
-    match docId |> docIdToUri |> uriToFilePath with
-    | None -> None
-    | Some filePath ->
-      try
-        Path.GetDirectoryName(filePath) |> Some
-      with
-      | _ -> None
-
   let docs: LangServiceDocs =
     { FindDocId = findDocId
       GetVersion = getVersion
-      GetText = getText
-      GetProjectName = getProjectName }
+      GetText = getText }
 
   let langServiceHost: LangServiceHost =
     { MiloneHome = miloneHome

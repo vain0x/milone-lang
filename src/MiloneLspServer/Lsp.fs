@@ -28,8 +28,7 @@ type private FilePath = string
 type LangServiceDocs =
   { FindDocId: ProjectName -> ModuleName -> DocId option
     GetVersion: DocId -> DocVersion
-    GetText: DocId -> DocVersion * string
-    GetProjectName: DocId -> ProjectName option }
+    GetText: DocId -> DocVersion * string }
 
 [<RequireQualifiedAccess; NoEquality; NoComparison>]
 type LangServiceHost =
