@@ -411,15 +411,15 @@ let private processNext () : LspIncome -> ProcessResult =
     | ExitNotification -> Exit exitCode
 
     | DidOpenNotification p ->
-      LspDocCache.openDoc p.Uri p.Version p.Text
+      LspLangService.didOpenDoc p.Uri p.Version p.Text
       Continue
 
     | DidChangeNotification p ->
-      LspDocCache.changeDoc p.Uri p.Version p.Text
+      LspLangService.didChangeDoc p.Uri p.Version p.Text
       Continue
 
     | DidCloseNotification p ->
-      LspDocCache.closeDoc p.Uri
+      LspLangService.didCloseDoc p.Uri
       Continue
 
     | DidChangeWatchedFiles p ->

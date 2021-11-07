@@ -8,6 +8,7 @@ open MiloneShared.SharedTypes
 open MiloneLspServer.Lsp
 open MiloneLspServer.Util
 open MiloneLspServer.LspCacheLayer
+open MiloneLspServer.LspUtil
 
 let private miloneHome =
   let opt (s: string) =
@@ -242,6 +243,11 @@ let private docIdToUri (project: ProjectInfo) (docId: string) =
 // Analysis
 // ---------------------------------------------
 
+[<RequireQualifiedAccess; NoEquality; NoComparison>]
+type LangServiceState2 = { Docs: Docs }
+
+let mutable current: LangServiceState2 = { Docs = Docs.empty }
+
 /// (msg, loc) list
 type ProjectValidateResult = (string * Loc) list
 
@@ -260,15 +266,15 @@ let newLangService (project: ProjectInfo) : LangServiceState =
   let docIdToUri = docIdToUri project
 
   let getVersion docId =
-    match LspDocCache.findDoc (docIdToUri docId) with
-    | Some docCache -> docCache.Version
+    match current.Docs |> Docs.find (docIdToUri docId) with
+    | Some d -> d.Version
     | None -> 0
 
   let getText (docId: string) =
     let uri = docIdToUri docId
 
-    match LspDocCache.findDoc uri with
-    | Some docCache -> docCache.Version, docCache.Text
+    match current.Docs |> Docs.find uri with
+    | Some d -> d.Version, d.Text
 
     | None ->
       match uri |> uriToFilePath with
@@ -333,11 +339,20 @@ let mutable lastId = 0
 let nextId () =
   System.Threading.Interlocked.Increment(&lastId)
 
+let didOpenDoc (uri: Uri) (version: int) (text: string) : unit =
+  current <- { current with Docs = current.Docs |> Docs.add uri version text }
+
+let didChangeDoc (uri: Uri) (version: int) (text: string) : unit =
+  current <- { current with Docs = current.Docs |> Docs.update uri version text }
+
+let didCloseDoc (uri: Uri) : unit =
+  current <- { current with Docs = current.Docs |> Docs.remove uri }
+
 let didOpenFile (uri: Uri) : unit =
   match uriToFilePath uri |> Option.bind File.tryReadFile with
   | Some text ->
     let version = nextId ()
-    LspDocCache.openDoc uri version text
+    didOpenDoc uri version text
 
   | None -> ()
 
@@ -345,11 +360,11 @@ let didChangeFile (uri: Uri) : unit =
   match uriToFilePath uri |> Option.bind File.tryReadFile with
   | Some text ->
     let version = nextId ()
-    LspDocCache.changeDoc uri version text
+    didChangeDoc uri version text
 
   | None -> ()
 
-let didCloseFile (uri: Uri) : unit = LspDocCache.closeDoc uri
+let didCloseFile (uri: Uri) : unit = didCloseDoc uri
 
 let validateProject (project: ProjectInfo) : ProjectValidateResult =
   project
@@ -522,6 +537,8 @@ let private formattingResultOfDiff _prev next : FormattingResult =
   { Edits = [ ((0, 0), (1100100100, 0)), next ] }
 
 let formatting (uri: Uri) : FormattingResult option =
+  let state = current
+
   match uriToFilePath uri with
   | Some filePath ->
     let dir = Path.GetDirectoryName(filePath)
@@ -536,7 +553,8 @@ let formatting (uri: Uri) : FormattingResult option =
       Path.Combine(dir, sprintf "%s_%s.ignored.fs" basename suffix)
 
     let textOpt =
-      LspDocCache.findDoc uri
+      state.Docs
+      |> Docs.find uri
       |> Option.map (fun data -> data.Text)
 
     try

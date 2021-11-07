@@ -6,7 +6,6 @@ open System.Collections.Generic
 // URI
 // -----------------------------------------------
 
-[<NoComparison>]
 type Uri =
   | Uri of string
   override this.ToString() =
