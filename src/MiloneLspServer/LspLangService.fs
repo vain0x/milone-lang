@@ -383,43 +383,17 @@ type WorkspaceValidateResult = (Uri * (string * Pos) list) list
 let private doValidateWorkspace projects =
   let state = current
 
-  // Collect list of errors per file.
-  // Note we need to report absence of errors for docs opened in editor
-  // so that the editor clears outdated diagnostics.
-  let map = MutMultimap<Uri, string * Pos>()
-
-  for docId in state.DiagnosticsKeys do
-    map |> MutMultimap.insertKey docId
-
-  for project in projects do
-    for msg, loc in validateProject project do
-      let (Loc (docId, y, x)) = loc
-
-      map
-      |> MutMultimap.insert (docIdToUri project docId) (msg, (y, x))
-
   let diagnostics =
-    [ for KeyValue (uri, errors) in map do
-        let errors =
-          errors.ToArray()
-          |> Array.sortBy (fun (_, pos) -> pos)
-          |> Array.toList
+    projects
+    |> Seq.collect (fun p ->
+      validateProject p
+      |> Seq.map (fun (msg, loc) ->
+        let (Loc (docId, y, x)) = loc
+        msg, docIdToUri p docId, (y, x)))
+    |> Seq.toList
 
-        yield uri, errors ]
-
-  // Remember docId for each document that some error is published to.
-  // We need publish empty error list to it to remove these errors next time.
-  let diagnosticsKeys =
-    diagnostics
-    |> List.choose (fun (uri, errors) ->
-      if errors |> List.isEmpty |> not then
-        Some uri
-      else
-        None)
-
-  let diagnostics, diagnosticsCache =
-    state.DiagnosticsCache
-    |> DiagnosticsCache.filter diagnostics
+  let diagnostics, diagnosticsKeys, diagnosticsCache =
+    aggregateDiagnostics state.DiagnosticsKeys state.DiagnosticsCache diagnostics
 
   current <-
     { current with

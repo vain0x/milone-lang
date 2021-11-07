@@ -1,6 +1,7 @@
 module rec MiloneLspServer.LspUtil
 
 open MiloneShared.SharedTypes
+open MiloneShared.Util
 open MiloneLspServer.Util
 open MiloneStd.StdMap
 
@@ -90,6 +91,44 @@ module DiagnosticsCache =
       DiagnosticsCache(fileMap, hasher, hashEquals)
 
     publishList, cache
+
+let private compareError (_: string, (y1: int, x1: int)) (_: string, (y2: int, x2: int)) : int =
+  if y1 <> y2 then
+    compare y1 y2
+  else
+    compare x1 x2
+
+/// Collect list of errors per file.
+///
+/// Note we need to report absence of errors for docs opened in editor
+/// so that the editor clears outdated diagnostics.
+/// `diagnosticsKeys` remember text doc URIs that
+/// we reported some diagnostics previously (and yet cleared).
+let aggregateDiagnostics diagnosticsKeys diagnosticsCache diagnostics =
+  let diagnostics =
+    let initMap: TreeMap<Uri, (string * Pos) list> =
+      diagnosticsKeys
+      |> List.map (fun uri -> uri, [])
+      |> TMap.ofList Uri.compare
+
+    diagnostics
+    |> List.fold (fun map (msg, uri, (y, x)) -> map |> multimapAdd uri (msg, (y, x))) initMap
+    |> TMap.toList
+    |> List.map (fun (uri, entries) -> uri, entries |> listSort compareError)
+
+  let diagnosticsKeys =
+    diagnostics
+    |> List.choose (fun (uri, errors) ->
+      if errors |> List.isEmpty |> not then
+        Some uri
+      else
+        None)
+
+  let diagnostics, diagnosticsCache =
+    diagnosticsCache
+    |> DiagnosticsCache.filter diagnostics
+
+  diagnostics, diagnosticsKeys, diagnosticsCache
 
 // -----------------------------------------------
 // Docs
