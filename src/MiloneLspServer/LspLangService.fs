@@ -5,9 +5,15 @@ open System.Collections.Generic
 open System.IO
 open System.Text
 open MiloneShared.SharedTypes
+open MiloneStd.StdMap
 open MiloneLspServer.Lsp
 open MiloneLspServer.LspUtil
 open MiloneLspServer.Util
+
+module Syntax = MiloneSyntax.Syntax // FIXME: shouldn't depend
+module SyntaxApi = MiloneSyntax.SyntaxApi
+module SyntaxParse = MiloneSyntax.SyntaxParse
+module SyntaxTokenize = MiloneSyntax.SyntaxTokenize
 
 let private miloneHome =
   let opt (s: string) =
@@ -221,127 +227,207 @@ let private uriToDocId (uri: Uri) : DocId =
   sprintf "%s.%s" projectName moduleName
 
 let private fixExt filePath =
-  MiloneSyntax.SyntaxApi.chooseSourceExt File.Exists filePath
+  SyntaxApi.chooseSourceExt File.Exists filePath
+
+let private docIdToModulePath (docId: DocId) =
+  match docId.Split(".") with
+  | [| p; m |] -> Some(p, m)
+
+  | _ ->
+    debugFn "Not a docId of module file: '%s'" docId
+    None
 
 let private docIdToUri (project: ProjectInfo) (docId: string) =
-  let projectName, moduleName =
-    match docId.Split(".") with
-    | [| p; m |] -> p, m
-    | _ -> failwithf "unexpected docId: '%s'" docId
+  let filePath =
+    match docIdToModulePath docId with
+    | Some (projectName, moduleName) ->
+      let projectDir =
+        match stdLibProjects |> Map.tryFind projectName with
+        | Some it -> it
+        | None -> project.ProjectDir + "/../" + projectName
 
-  let projectDir =
-    match stdLibProjects |> Map.tryFind projectName with
-    | Some it -> it
-    | None -> project.ProjectDir + "/../" + projectName
+      Path.Combine(projectDir, moduleName + ".milone")
 
-  Path.Combine(projectDir, moduleName + ".milone")
-  |> fixExt
-  |> uriOfFilePath
+    | _ when File.Exists(docId) -> docId
+    | _ -> failwithf "Bad docId: '%s'" docId
+
+  filePath |> fixExt |> uriOfFilePath
+
+let private docIdIsOptional docId =
+  match docIdToModulePath docId with
+  | Some (_, "MiloneOnly") -> true
+  | _ -> false
 
 // ---------------------------------------------
 // Analysis
 // ---------------------------------------------
 
+type private DocVersion = int
+
 [<RequireQualifiedAccess; NoEquality; NoComparison>]
 type LangServiceState2 =
-  { Docs: Docs
+  { Docs: TreeMap<Uri, DocVersion * string>
+    Projects: TreeMap<string, LangServiceState>
 
+    // Workspace-wide cache.
+    TokenizeCache: TreeMap<DocId, DocVersion * Syntax.TokenizeFullResult>
+    ParseCache: TreeMap<DocId, DocVersion * Syntax.ModuleSyntaxData>
+
+    // Diagnostics.
     DiagnosticsKeys: Uri list
     DiagnosticsCache: DiagnosticsCache<byte array> }
 
-let mutable current: LangServiceState2 =
-  { Docs = Docs.empty
+let empty2: LangServiceState2 =
+  { Docs = TMap.empty Uri.compare
+    Projects = TMap.empty compare
+
+    TokenizeCache = TMap.empty compare
+    ParseCache = TMap.empty compare
+
     DiagnosticsKeys = []
     DiagnosticsCache = DiagnosticsCache.empty Md5Helper.ofString Md5Helper.equals }
 
+let mutable private current = empty2
+
 /// (msg, loc) list
-type ProjectValidateResult = (string * Loc) list
+type private ProjectValidateResult = (string * Loc) list
 
-let newLangService (project: ProjectInfo) : LangServiceState =
-  let projectDir = project.ProjectDir
-
-  let toFilePath moduleName ext =
-    Path.Combine(projectDir, moduleName + ext)
-
-  let toUri moduleName ext =
-    toFilePath moduleName ext |> uriOfFilePath
-
-  let findDocId projectName moduleName =
-    sprintf "%s.%s" projectName moduleName |> Some
-
-  let docIdToUri = docIdToUri project
-
-  let getVersion docId =
-    match current.Docs |> Docs.find (docIdToUri docId) with
-    | Some d -> d.Version
-    | None -> 0
-
-  let getText (docId: string) =
-    let uri = docIdToUri docId
-
-    match current.Docs |> Docs.find uri with
-    | Some d -> d.Version, d.Text
-
-    | None ->
-      match uri |> uriToFilePath with
-      | None ->
-        debugFn "getText: docId not found: %s" docId
-        0, ""
-
-      | Some filePath ->
-        match File.tryReadFile filePath with
-        | Some it -> 0, it
-        | None ->
-          if
-            Path.GetFileNameWithoutExtension(filePath)
-            <> "MiloneOnly"
-          then
-            debugFn "getText: docId file could not read: %s" filePath
-
-          0, ""
-
-  let docs: LangServiceDocs =
-    { FindDocId = findDocId
-      GetVersion = getVersion
-      GetText = getText }
-
+let private emptyProjectLangService : LangServiceState =
   let langServiceHost: LangServiceHost =
-    { MiloneHome = miloneHome
-      Docs = docs
+    { GetDocVersion = fun _ -> failwith "illegal use"
+      Tokenize = fun _ -> failwith "illegal use"
+      Parse = fun _ -> failwith "illegal use"
+
+      MiloneHome = miloneHome
       MiloneHomeModules = fun () -> stdLibProjects |> Map.toList
       FindModulesInDir = findModulesInDir }
 
   LangService.create langServiceHost
 
-let private langServiceCache = MutMap<string, LangServiceState>()
+let private tokenizeHost = Syntax.tokenizeHostNew ()
 
-let private withLangService (p: ProjectInfo) (action: LangServiceState -> 'A * LangServiceState) : 'A =
+let doWithLangService
+  (p: ProjectInfo)
+  (action: LangServiceState -> 'A * LangServiceState)
+  (state: LangServiceState2)
+  : 'A * LangServiceState2 =
+  let getVersion docId =
+    match state.Docs |> TMap.tryFind (docIdToUri p docId) with
+    | Some (v, _) -> Some v
+    | None -> None
+
   let ls =
-    match langServiceCache |> MutMap.tryFind p.ProjectName with
+    match state.Projects |> TMap.tryFind p.ProjectName with
     | Some it -> it
-    | None -> newLangService p
+    | None -> emptyProjectLangService
+
+  let tokenize1 docId =
+    let version =
+      getVersion docId |> Option.defaultValue 0
+
+    match state.ParseCache |> TMap.tryFind docId with
+    | Some (v, (_, tokens, _, _)) when v >= version -> v, tokens
+
+    | _ ->
+      match state.TokenizeCache |> TMap.tryFind docId with
+      | Some ((v, _) as it) when v >= version -> it
+
+      | _ ->
+        match state.Docs |> TMap.tryFind (docIdToUri p docId) with
+        | None ->
+          if docIdIsOptional docId |> not then
+            warnFn "missing docId '%s' to be tokenized" docId
+
+          -1, []
+
+        | Some (v, text) ->
+          debugFn "tokenize '%s' v:%d" docId v
+
+          let tokens =
+            SyntaxTokenize.tokenizeAll tokenizeHost text
+
+          v, tokens
+
+  let parse1 docId =
+    let version =
+      getVersion docId |> Option.defaultValue 0
+
+    let _, tokens = tokenize1 docId
+
+    match state.ParseCache |> TMap.tryFind docId with
+    | Some ((v, _) as it) when v >= version -> Some it
+
+    | _ ->
+      match getVersion docId with
+      | None ->
+        if docIdIsOptional docId |> not then
+          warnFn "missing docId '%s' to be parsed" docId
+
+        None
+
+      | Some v ->
+        match docIdToModulePath docId with
+        | None ->
+          warnFn "illegal docId '%s'" docId
+          None
+
+        | Some (projectName, moduleName) ->
+          debugFn "parse '%s' v:%d" docId v
+
+          let syntaxData =
+            parseFullTokens projectName moduleName docId tokens
+
+          Some(v, syntaxData)
+
+  let ls =
+    let host =
+      { ls.Host with
+          GetDocVersion = getVersion
+          Tokenize = tokenize1
+          Parse = parse1 }
+
+    { ls with Host = host }
 
   let result, ls = action ls
 
-  langServiceCache
-  |> MutMap.insert p.ProjectName ls
-  |> ignore
+  let state =
+    ls.NewParseResults
+    |> List.fold
+         (fun (state: LangServiceState2) (v, syntaxData) ->
+           let docId, tokens, _, _ = syntaxData
 
+           { state with
+               TokenizeCache = state.TokenizeCache |> TMap.add docId (v, tokens)
+               ParseCache = state.ParseCache |> TMap.add docId (v, syntaxData) })
+         state
+
+  let state =
+    { state with Projects = state.Projects |> TMap.add p.ProjectName ls }
+
+  result, state
+
+let private withLangService p action =
+  let result, state = doWithLangService p action current
+  current <- state
   result
 
-let mutable lastId = 0
+let mutable private lastId = 0
 
 let nextId () =
   System.Threading.Interlocked.Increment(&lastId)
 
+let openDoc (uri: Uri) (version: int) (text: string) (state: LangServiceState2) =
+  { state with Docs = state.Docs |> TMap.add uri (version, text) }
+
 let didOpenDoc (uri: Uri) (version: int) (text: string) : unit =
-  current <- { current with Docs = current.Docs |> Docs.add uri version text }
+  current <- openDoc uri version text current
 
 let didChangeDoc (uri: Uri) (version: int) (text: string) : unit =
-  current <- { current with Docs = current.Docs |> Docs.update uri version text }
+  current <- { current with Docs = current.Docs |> TMap.add uri (version, text) }
 
 let didCloseDoc (uri: Uri) : unit =
-  current <- { current with Docs = current.Docs |> Docs.remove uri }
+  let _, docs = current.Docs |> TMap.remove uri
+  current <- { current with Docs = docs }
 
 let didOpenFile (uri: Uri) : unit =
   match uriToFilePath uri |> Option.bind File.tryReadFile with
@@ -365,7 +451,7 @@ let validateProject (p: ProjectInfo) : ProjectValidateResult =
   withLangService p (LangService.validateProject p.ProjectDir)
 
 // (uri, (msg, pos) list) list
-type WorkspaceValidateResult = (Uri * (string * Pos) list) list
+type private WorkspaceValidateResult = (Uri * (string * Pos) list) list
 
 let private doValidateWorkspace projects =
   let state = current
@@ -513,9 +599,9 @@ let formatting (uri: Uri) : FormattingResult option =
       Path.Combine(dir, sprintf "%s_%s.ignored.fs" basename suffix)
 
     let textOpt =
-      state.Docs
-      |> Docs.find uri
-      |> Option.map (fun data -> data.Text)
+      match state.Docs |> TMap.tryFind uri with
+      | Some (_, text) -> Some text
+      | _ -> None
 
     try
       try

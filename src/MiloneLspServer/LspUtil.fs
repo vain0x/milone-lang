@@ -146,9 +146,19 @@ type Docs = TreeMap<Uri, DocData>
 module Docs =
   let empty: Docs = TMap.empty Uri.compare
 
-  let find (uri: Uri) (docs: Docs) : DocData option =
+  let private find (uri: Uri) (docs: Docs) : DocData option =
     traceFn "Doc find uri:'%A'" (string uri)
     docs |> TMap.tryFind uri
+
+  let getVersion (uri: Uri) docs : int =
+    match docs |> find uri with
+    | Some d -> d.Version
+    | None -> 0
+
+  let getText (uri: Uri) docs : string option =
+    match docs |> find uri with
+    | Some d -> Some d.Text
+    | None -> None
 
   let add (uri: Uri) (version: int) (text: string) (docs: Docs) =
     let docData: DocData = { Version = version; Text = text }

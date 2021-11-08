@@ -2,8 +2,10 @@
 module rec MiloneLspServer.LspTests
 
 open MiloneLspServer.Lsp
+open MiloneLspServer.LspUtil
 
 module S = MiloneStd.StdString
+module LLS = MiloneLspServer.LspLangService
 
 let private expect msg opt =
   match opt with
@@ -39,43 +41,24 @@ let private assertEqual (title: string) (expected: string) (actual: string) : bo
     true
   else
     eprintfn "Assertion violation: %s\n  actual = %s\n  expected = %s" title actual expected
+    assert false
     false
 
-let private testRefsSingleFile title text : bool =
-  let projectDir = "./TestProject"
-  let docId = "TestProject.TestProject"
-  let docMap = Map.ofList [ docId, (1, text) ]
+let private projectDir = "/example.com/TestProject"
+let private projectName = "TestProject"
+let private docId = "TestProject.TestProject"
 
-  let docs: LangServiceDocs =
-    { FindDocId =
-        fun p m ->
-          let docId = sprintf "%s.%s" p m
+let private createSingleFileProject text action =
+  let p: LLS.ProjectInfo =
+    { ProjectDir = projectDir
+      ProjectName = projectName
+      EntryFileExt = ".milone" }
 
-          if docMap |> Map.containsKey docId then
-            Some docId
-          else
-            None
+  LLS.empty2
+  |> LLS.openDoc (Uri "file:///example.com/TestProject/TestProject.milone") 1 text
+  |> LLS.doWithLangService p action
 
-      GetVersion =
-        fun docId ->
-          match docMap |> Map.tryFind docId with
-          | Some (version, _) -> version
-          | _ -> 0
-
-      GetText =
-        fun docId ->
-          match docMap |> Map.tryFind docId with
-          | Some it -> it
-          | _ -> (0, "// Missing") }
-
-  let host: Lsp.LangServiceHost =
-    { MiloneHome = "?unexisting"
-      Docs = docs
-      MiloneHomeModules = fun () -> []
-      FindModulesInDir = fun _ -> [] }
-
-  let ls = LangService.create host
-
+let private doTestRefsSingleFile title text (ls: LangServiceState) : bool * LangServiceState =
   let anchors =
     let lines = text |> toLines
 
@@ -107,66 +90,42 @@ let private testRefsSingleFile title text : bool =
 
   let expected = anchors |> debug
 
-  let actual =
+  let actual, ls =
     let row, column, _ = firstAnchor
 
     match ls
           |> LangService.findRefs projectDir docId (row, column)
       with
     | None, ls ->
-      let errors, _ =
+      let errors, ls =
         ls |> LangService.validateProject projectDir
 
-      if errors |> List.isEmpty then
-        "No result."
-      else
-        sprintf "Compile error: %A" errors
+      let msg =
+        if errors |> List.isEmpty then
+          "No result."
+        else
+          sprintf "Compile error: %A" errors
+
+      msg, ls
 
     | Some (defs, uses), _ ->
       let collect kind xs =
         xs |> Seq.map (fun (_, (y, x)) -> y, x, kind)
 
-      Seq.append (collect "def" defs) (collect "use" uses)
-      |> Seq.toList
-      |> debug
+      let a =
+        Seq.append (collect "def" defs) (collect "use" uses)
+        |> Seq.toList
+        |> debug
 
-  actual |> assertEqual title expected
+      a, ls
 
-let private testHoverSingleFile title text expected : bool =
-  let projectDir = "./TestProject"
-  let docId = "TestProject.TestProject"
-  let docMap = Map.ofList [ docId, (1, text) ]
+  actual |> assertEqual title expected, ls
 
-  let docs: LangServiceDocs =
-    { FindDocId =
-        fun p m ->
-          let docId = sprintf "%s.%s" p m
+let private testRefsSingleFile title text : bool =
+  createSingleFileProject text (doTestRefsSingleFile title text)
+  |> fst
 
-          if docMap |> Map.containsKey docId then
-            Some docId
-          else
-            None
-
-      GetVersion =
-        fun docId ->
-          match docMap |> Map.tryFind docId with
-          | Some (version, _) -> version
-          | _ -> 0
-
-      GetText =
-        fun docId ->
-          match docMap |> Map.tryFind docId with
-          | Some it -> it
-          | _ -> (0, "// Missing") }
-
-  let host: Lsp.LangServiceHost =
-    { MiloneHome = "?unexisting"
-      Docs = docs
-      MiloneHomeModules = fun () -> []
-      FindModulesInDir = fun _ -> [] }
-
-  let ls = LangService.create host
-
+let private doTestHoverSingleFile title text expected ls : bool * _ =
   let targetPos =
     let lines = text |> toLines
 
@@ -187,20 +146,27 @@ let private testHoverSingleFile title text expected : bool =
     |> List.map (fun (row, column, anchor) -> sprintf "%d:%d %s" row column anchor)
     |> S.concat "\n"
 
-  let actual =
+  let actual, ls =
     match ls |> LangService.hover projectDir docId targetPos with
     | None, ls ->
-      let errors, _ =
+      let errors, ls =
         ls |> LangService.validateProject projectDir
 
-      if errors |> List.isEmpty then
-        "No result."
-      else
-        sprintf "Compile error: %A" errors
+      let msg =
+        if errors |> List.isEmpty then
+          "No result."
+        else
+          sprintf "Compile error: %A" errors
 
-    | Some it, _ -> it
+      msg, ls
 
-  actual |> assertEqual title expected
+    | Some it, ls -> it, ls
+
+  actual |> assertEqual title expected, ls
+
+let private testHoverSingleFile title text expected : bool =
+  createSingleFileProject text (doTestHoverSingleFile title text expected)
+  |> fst
 
 // -----------------------------------------------
 // Refs

@@ -25,15 +25,12 @@ type private DocVersion = int
 type private FilePath = string
 
 [<RequireQualifiedAccess; NoEquality; NoComparison>]
-type LangServiceDocs =
-  { FindDocId: ProjectName -> ModuleName -> DocId option
-    GetVersion: DocId -> DocVersion
-    GetText: DocId -> DocVersion * string }
-
-[<RequireQualifiedAccess; NoEquality; NoComparison>]
 type LangServiceHost =
-  { MiloneHome: FilePath
-    Docs: LangServiceDocs
+  { GetDocVersion: DocId -> DocVersion option
+    Tokenize: DocId -> DocVersion * TokenizeFullResult
+    Parse: DocId -> (DocVersion * ModuleSyntaxData) option
+
+    MiloneHome: FilePath
     MiloneHomeModules: unit -> (ProjectName * ModuleName) list
     FindModulesInDir: ProjectDir -> (ProjectName * ModuleName) list }
 
@@ -69,65 +66,14 @@ let private locToPos (loc: Loc) : Pos =
   let (Loc (_, y, x)) = loc
   y, x
 
-let private tokenizeHost = tokenizeHostNew ()
+let private getVersion docId (ls: LangServiceState) =
+  ls.Host.GetDocVersion docId
+  |> Option.defaultValue 0
 
-let private tokenizeWithCache (ls: LangServiceState) docId =
-  let currentVersion = ls.Host.Docs.GetVersion docId
+// FIXME: avoid doing tokenization repeatedly
+let private tokenizeWithCache docId (ls: LangServiceState) = ls.Host.Tokenize docId |> snd
 
-  let cacheOpt =
-    ls.TokenizeFullCache |> MutMap.tryFind docId
-
-  match cacheOpt with
-  | Some (v, tokens) when v >= currentVersion ->
-    // eprintfn "tokens cache reused: %s v%d" docId v
-    tokens
-
-  | _ ->
-    // match cacheOpt with
-    // | Some (v, _) -> eprintfn "tokens cache invalidated: v%d -> v%d" v currentVersion
-    // | _ -> eprintfn "tokens cache not found: v%d" currentVersion
-
-    let _, text = ls.Host.Docs.GetText docId
-
-    let tokens =
-      text |> SyntaxTokenize.tokenizeAll tokenizeHost
-
-    ls.TokenizeFullCache
-    |> MutMap.insert docId (currentVersion, tokens)
-    |> ignore
-
-    tokens
-
-let private parseWithCache (ls: LangServiceState) docId kind =
-  let currentVersion = ls.Host.Docs.GetVersion docId
-
-  let cacheOpt = ls.ParseCache |> MutMap.tryFind docId
-
-  match cacheOpt with
-  | Some (v, (ast, errors)) when v >= currentVersion ->
-    // eprintfn "parse cache reused: %s v%d" docId v
-    docId, ast, errors
-
-  | _ ->
-    // match cacheOpt with
-    // | Some (v, _) -> eprintfn "parse cache invalidated: v%d -> v%d" v currentVersion
-    // | _ -> eprintfn "parse cache not found: v%d" currentVersion
-
-    // Tokenize.
-    let tokens =
-      tokenizeWithCache ls docId
-      |> List.filter (fun (token, _) -> token |> isTrivia |> not)
-
-    // Parse.
-    let _, ast, errors = SyntaxApi.parseModule docId kind tokens
-
-    ls.ParseCache
-    |> MutMap.insert docId (currentVersion, (ast, errors))
-    |> ignore
-
-    // eprintfn "syntaxTree: %s %s" docId (genSyntaxTree docId tokens ast |> SyntaxTree.dump)
-
-    docId, ast, errors
+let private parseWithCache docId (ls: LangServiceState) = ls.Host.Parse docId |> Option.map snd
 
 // -----------------------------------------------
 // Semantic analysis
@@ -146,23 +92,11 @@ let private doBundle (ls: LangServiceState) projectDir : BundleResult =
   let projectDir = projectDir |> pathStrTrimEndPathSep
   let projectName = projectDir |> pathStrToStem
 
-  let docVersions = MutMap()
+  let fetchModuleUsingCache _ (projectName: string) (moduleName: string) =
+    let docId =
+      AstBundle.computeDocId projectName moduleName
 
-  let fetchModuleUsingCache defaultFun (projectName: string) (moduleName: string) =
-    match ls.Host.Docs.FindDocId projectName moduleName with
-    | None -> defaultFun projectName moduleName
-
-    | Some docId ->
-      docVersions
-      |> MutMap.insert docId (ls.Host.Docs.GetVersion docId)
-      |> ignore
-
-      let kind =
-        SyntaxApi.getModuleKind projectName moduleName
-
-      parseWithCache ls docId kind
-      |> Some
-      |> Future.just
+    ls |> parseWithCache docId |> Future.just
 
   let syntaxCtx =
     let host: SyntaxApi.FetchModuleHost =
@@ -175,11 +109,29 @@ let private doBundle (ls: LangServiceState) projectDir : BundleResult =
     SyntaxApi.newSyntaxCtx host
     |> SyntaxApi.SyntaxCtx.withFetchModule fetchModuleUsingCache
 
-  match SyntaxApi.performSyntaxAnalysis syntaxCtx with
+  let layers, result =
+    SyntaxApi.performSyntaxAnalysis syntaxCtx
+
+  let docVersions =
+    layers
+    |> List.collect (fun modules ->
+      modules
+      |> List.map (fun (docId, _, _, _) -> docId, getVersion docId ls))
+
+  let parseResults =
+    layers
+    |> List.collect (fun modules ->
+      modules
+      |> List.map (fun ((docId, _, _, _) as syntaxData) ->
+        let v = getVersion docId ls
+        v, syntaxData))
+
+  match result with
   | SyntaxApi.SyntaxAnalysisOk (modules, tirCtx) ->
     { ProgramOpt = Some(modules, tirCtx)
       Errors = []
-      DocVersions = docVersions }
+      DocVersions = docVersions
+      ParseResults = parseResults }
 
   | SyntaxApi.SyntaxAnalysisError (errors, tirCtxOpt) ->
     { ProgramOpt =
@@ -188,20 +140,21 @@ let private doBundle (ls: LangServiceState) projectDir : BundleResult =
         | None -> None
 
       Errors = errors
-      DocVersions = docVersions }
+      DocVersions = docVersions
+      ParseResults = parseResults }
 
-let private bundleWithCache (ls: LangServiceState) projectDir : BundleResult =
-  let docsAreAllFresh (docs: MutMap<DocId, DocVersion>) =
-    docs
-    |> Seq.forall (fun (KeyValue (docId, version)) -> ls.Host.Docs.GetVersion docId <= version)
+let private bundleWithCache (ls: LangServiceState) projectDir : BundleResult * LangServiceState =
+  let docsAreAllFresh docVersions =
+    docVersions
+    |> List.forall (fun (docId, version) -> getVersion docId ls <= version)
 
   let cacheOpt =
-    ls.BundleCache |> MutMap.tryFind projectDir
+    ls.BundleCache |> TMap.tryFind projectDir
 
   match cacheOpt with
   | Some result when docsAreAllFresh result.DocVersions ->
-    // eprintfn "bundle cache reused"
-    result
+    // traceFn "bundle cache reused"
+    result, ls
 
   | _ ->
     // match cacheOpt with
@@ -210,11 +163,12 @@ let private bundleWithCache (ls: LangServiceState) projectDir : BundleResult =
 
     let result = doBundle ls projectDir
 
-    ls.BundleCache
-    |> MutMap.insert projectDir result
-    |> ignore
+    let ls =
+      { ls with
+          NewParseResults = List.append result.ParseResults ls.NewParseResults
+          BundleCache = ls.BundleCache |> TMap.add projectDir result }
 
-    result
+    result, ls
 
 // -----------------------------------------------
 // State
@@ -224,20 +178,18 @@ type private Error = string * Loc
 type private ParseResult = ARoot * (string * Pos) list
 
 [<RequireQualifiedAccess; NoEquality; NoComparison>]
-type private BundleResult =
+type BundleResult =
   { ProgramOpt: (TProgram * TirCtx) option
     Errors: Error list
-    DocVersions: MutMap<DocId, DocVersion> }
+    DocVersions: (DocId * DocVersion) list
+    ParseResults: (DocVersion * ModuleSyntaxData) list }
 
+// FIXME: private repr
 [<RequireQualifiedAccess; NoEquality; NoComparison>]
 type LangServiceState =
-  private
-    { TokenizeFullCache: MutMap<DocId, DocVersion * TokenizeFullResult>
-      ParseCache: MutMap<DocId, DocVersion * ParseResult>
-
-      BundleCache: MutMap<ProjectDir, BundleResult>
-
-      Host: LangServiceHost }
+  { NewParseResults: (DocVersion * ModuleSyntaxData) list
+    BundleCache: TreeMap<ProjectDir, BundleResult>
+    Host: LangServiceHost }
 
 let private isTrivia token =
   match token with
@@ -248,7 +200,7 @@ let private isTrivia token =
   | _ -> false
 
 let private findTokenAt (ls: LangServiceState) (docId: DocId) (targetPos: Pos) =
-  let tokens = tokenizeWithCache ls docId
+  let tokens = tokenizeWithCache docId ls
 
   let rec go tokens =
     match tokens with
@@ -269,7 +221,7 @@ let private findTokenAt (ls: LangServiceState) (docId: DocId) (targetPos: Pos) =
   go tokens
 
 let private resolveTokenRanges (ls: LangServiceState) docId (posList: Pos list) =
-  let tokens = tokenizeWithCache ls docId
+  let tokens = tokenizeWithCache docId ls
 
   let posSet = MutSet.ofSeq posList
   let ranges = ResizeArray()
@@ -287,6 +239,18 @@ let private resolveTokenRanges (ls: LangServiceState) docId (posList: Pos list) 
 
   go tokens
   ranges
+
+let parseFullTokens projectName moduleName docId (allTokens: TokenizeFullResult) : ModuleSyntaxData =
+  let tokens =
+    allTokens
+    |> List.filter (fun (token, _) -> token |> isTrivia |> not)
+
+  let kind =
+    SyntaxApi.getModuleKind projectName moduleName
+
+  let docId, _, ast, errors = SyntaxApi.parseModule docId kind tokens
+
+  docId, allTokens, ast, errors
 
 [<NoEquality; NoComparison>]
 type private DefOrUse =
@@ -630,7 +594,7 @@ let private findTyInStmt (ls: LangServiceState) (stmt: TStmt) (tirCtx: TirCtx) (
       OnTy = fun _ -> ()
       OnModule = fun _ -> ()
 
-      GetTokens = tokenizeWithCache ls }
+      GetTokens = fun docId -> tokenizeWithCache docId ls }
 
   dfsStmt visitor stmt
   contentOpt
@@ -659,11 +623,17 @@ let private collectSymbolsInExpr (ls: LangServiceState) (modules: TProgram) =
       OnTy = fun (tySymbol, defOrUse, loc) -> onVisit (TySymbol tySymbol) defOrUse loc
       OnModule = fun (path, defOrUse, loc) -> onVisit (ModuleSymbol path) defOrUse loc
 
-      GetTokens = tokenizeWithCache ls }
+      GetTokens = fun docId -> ls |> tokenizeWithCache docId }
 
   for m in modules do
-    match ls.ParseCache |> MutMap.tryFind m.DocId with
-    | Some (_, (ast, _)) -> dfsARoot visitor m.DocId ast
+    let docId = m.DocId
+
+    match ls |> parseWithCache docId with
+    | Some syntaxData ->
+      let _, _, ast, _ = syntaxData
+
+      dfsARoot visitor docId ast
+
     | None -> failwith "must be parsed"
 
   for m in modules do
@@ -674,7 +644,7 @@ let private collectSymbolsInExpr (ls: LangServiceState) (modules: TProgram) =
 
 let private doFindRefs hint projectDir docId targetPos ls =
   debugFn "doFindRefs %s" hint
-  let result = bundleWithCache ls projectDir
+  let result, ls = bundleWithCache ls projectDir
 
   match result.ProgramOpt with
   | None ->
@@ -690,10 +660,19 @@ let private doFindRefs hint projectDir docId targetPos ls =
       None, ls
 
     | Some (_token, tokenPos) ->
-      // debugFn "%s: tokenPos=%A" hint tokenPos
+      debugFn "%s: tokenPos=%A" hint tokenPos
       let tokenLoc = locOfDocPos docId tokenPos
 
       let symbols = collectSymbolsInExpr ls modules
+
+      debugFn
+        "%s: tokenLoc=%A symbols(%s)"
+        hint
+        tokenLoc
+        (symbols
+         |> Seq.map (sprintf "%A")
+         |> Seq.toList
+         |> String.concat "; ")
 
       let symbolIndex =
         symbols.FindIndex(fun (_, _, loc) -> loc = tokenLoc)
@@ -734,13 +713,12 @@ let private doFindDefsOrUses hint projectDir docId targetPos includeDef includeU
 
 module LangService =
   let create (host: LangServiceHost) : LangServiceState =
-    { TokenizeFullCache = MutMap()
-      ParseCache = MutMap()
-      BundleCache = MutMap()
+    { NewParseResults = []
+      BundleCache = TMap.empty compare
       Host = host }
 
   let validateProject projectDir (ls: LangServiceState) : Error list * LangServiceState =
-    let result = bundleWithCache ls projectDir
+    let result, ls = bundleWithCache ls projectDir
     result.Errors, ls
 
   let completion
@@ -749,7 +727,7 @@ module LangService =
     (targetPos: Pos)
     (ls: LangServiceState)
     : string list * LangServiceState =
-    let tokens = tokenizeWithCache ls docId
+    let tokens = tokenizeWithCache docId ls
 
     let inModuleLine =
       let y, _ = targetPos
@@ -826,7 +804,7 @@ module LangService =
     | None, ls -> None, ls
 
   let hover projectDir (docId: DocId) (targetPos: Pos) (ls: LangServiceState) : string option * LangServiceState =
-    let result = bundleWithCache ls projectDir
+    let result, ls = bundleWithCache ls projectDir
 
     match result.ProgramOpt with
     | None ->
