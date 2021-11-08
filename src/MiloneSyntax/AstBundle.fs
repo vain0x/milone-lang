@@ -74,8 +74,7 @@ type private ModuleRequest =
 type private ModuleData =
   { Name: ModuleName
     Project: ProjectName
-    DocId: DocId
-    Ast: ARoot
+    SyntaxData: ModuleSyntaxData
     Deps: ModuleRequest list
     SymbolCount: SymbolCount
     Errors: Error list }
@@ -208,7 +207,9 @@ let private producer (fetchModule: FetchModuleFun) (_: State) (r: ModuleRequest)
   fetchModule r.ProjectName r.ModuleName
   |> Future.map (fun result ->
     match result with
-    | Some (docId, ast, errors) ->
+    | Some syntaxData ->
+      let docId, _, ast, errors = syntaxData
+
       let deps =
         let dep1 =
           if r.ModuleName <> "MiloneOnly" then
@@ -234,8 +235,7 @@ let private producer (fetchModule: FetchModuleFun) (_: State) (r: ModuleRequest)
       let m: ModuleData =
         { Name = r.ModuleName
           Project = r.ProjectName
-          DocId = docId
-          Ast = ast
+          SyntaxData = syntaxData
           Deps = deps
           SymbolCount = TirGen.countSymbols ast
           Errors = errors }
@@ -249,7 +249,8 @@ let private producer (fetchModule: FetchModuleFun) (_: State) (r: ModuleRequest)
 // -----------------------------------------------
 
 type private SymbolCount = int
-type private BundleResult = TProgram list * NameCtx * Error list
+
+type private BundleResult = (ModuleSyntaxData * TModule) list list * NameCtx * Error list
 
 let bundle (fetchModule: FetchModuleFun) (entryProjectName: ProjectName) : BundleResult =
   let entryRequest =
@@ -264,7 +265,10 @@ let bundle (fetchModule: FetchModuleFun) (entryProjectName: ProjectName) : Bundl
     mpscConcurrent consumer (producer fetchModule) state [ entryRequest ]
 
   let layers =
-    let comparer (l: ModuleData) (r: ModuleData) = compare l.DocId r.DocId
+    let comparer (l: ModuleData) (r: ModuleData) =
+      let l, _, _, _ = l.SyntaxData
+      let r, _, _, _ = r.SyntaxData
+      compare l r
 
     let getDeps (m: ModuleData) =
       m.Deps
@@ -299,9 +303,9 @@ let bundle (fetchModule: FetchModuleFun) (entryProjectName: ProjectName) : Bundl
       modules
       |> __parallelMap (fun (serial: Serial, moduleData: ModuleData) ->
         let projectName = moduleData.Project
-        let docId = moduleData.DocId
-        let ast = moduleData.Ast
+        let syntaxData = moduleData.SyntaxData
         let symbolCount = moduleData.SymbolCount
+        let docId, _, ast, _ = syntaxData
 
         let exprs, nameCtx =
           let nameCtx = TirGen.TgNameCtx(serial, [])
@@ -326,7 +330,7 @@ let bundle (fetchModule: FetchModuleFun) (entryProjectName: ProjectName) : Bundl
             Vars = emptyVars
             Stmts = exprs }
 
-        m, nameCtx))
+        syntaxData, m, nameCtx))
 
   let layers, identMap =
     layers
@@ -334,12 +338,12 @@ let bundle (fetchModule: FetchModuleFun) (entryProjectName: ProjectName) : Bundl
          (fun nameCtx modules ->
            modules
            |> List.mapFold
-                (fun identMap (m, nameCtx) ->
+                (fun identMap (parseResult, m, nameCtx) ->
                   let _, identMap =
                     nameCtx
                     |> TirGen.nameCtxFold (fun map serial ident -> TMap.add serial ident map) identMap
 
-                  m, identMap)
+                  (parseResult, m), identMap)
                 nameCtx)
          (TMap.empty compare)
 

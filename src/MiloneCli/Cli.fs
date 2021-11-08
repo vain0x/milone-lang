@@ -241,7 +241,10 @@ let private computeCFilename projectName docId : CFilename =
     S.replace "." "_" docId + ".c"
 
 let private check (ctx: CompileCtx) : bool * string =
-  match SyntaxApi.performSyntaxAnalysis ctx.SyntaxCtx with
+  let _, result =
+    SyntaxApi.performSyntaxAnalysis ctx.SyntaxCtx
+
+  match result with
   | SyntaxApi.SyntaxAnalysisOk _ -> true, ""
   | SyntaxApi.SyntaxAnalysisError (errors, _) -> false, SyntaxApi.syntaxErrorsToString errors
 
@@ -249,7 +252,10 @@ let private compile (ctx: CompileCtx) : CompileResult =
   let projectName = ctx.EntryProjectName
   let writeLog = ctx.WriteLog
 
-  match SyntaxApi.performSyntaxAnalysis ctx.SyntaxCtx with
+  let _, result =
+    SyntaxApi.performSyntaxAnalysis ctx.SyntaxCtx
+
+  match result with
   | SyntaxApi.SyntaxAnalysisError (errors, _) -> CompileError(SyntaxApi.syntaxErrorsToString errors)
 
   | SyntaxApi.SyntaxAnalysisOk (modules, tirCtx) ->

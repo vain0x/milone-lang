@@ -198,7 +198,7 @@ let parseModule (docId: DocId) (kind: ModuleKind) (tokens: TokenizeResult) : Mod
     else
       ast
 
-  docId, ast, errors
+  docId, tokens, ast, errors
 
 // -----------------------------------------------
 // FetchModule
@@ -359,6 +359,8 @@ module SyntaxCtx =
 // Analysis
 // -----------------------------------------------
 
+type SyntaxLayers = ModuleSyntaxData list list
+
 [<NoEquality; NoComparison>]
 type SyntaxAnalysisResult =
   | SyntaxAnalysisOk of Tir.TProgram * Tir.TirCtx
@@ -366,25 +368,33 @@ type SyntaxAnalysisResult =
 
 /// Creates a TIR and collects errors
 /// by loading source files and processing.
-let performSyntaxAnalysis (ctx: SyntaxCtx) : SyntaxAnalysisResult =
+let performSyntaxAnalysis (ctx: SyntaxCtx) : SyntaxLayers * SyntaxAnalysisResult =
   let writeLog = ctx.WriteLog
   let manifestErrors = ctx.Manifest.Errors
 
   writeLog "AstBundle"
 
-  let modules, nameCtx, bundleErrors =
+  let layers, nameCtx, bundleErrors =
     AstBundle.bundle ctx.FetchModule ctx.EntryProjectName
+
+  let syntaxLayers = layers |> List.map (List.map fst)
 
   let errors = List.append manifestErrors bundleErrors
 
   if errors |> List.isEmpty |> not then
-    SyntaxAnalysisError(errors, None)
+    syntaxLayers, SyntaxAnalysisError(errors, None)
   else
     writeLog "NameRes"
-    let modules, nameResResult = NameRes.nameRes (modules, nameCtx)
+
+    let modules, nameResResult =
+      let modules =
+        layers
+        |> List.map (fun modules -> modules |> List.map (fun (_, m) -> m))
+
+      NameRes.nameRes (modules, nameCtx)
 
     match collectNameResErrors nameResResult.Logs with
-    | Some errors -> SyntaxAnalysisError(errors, None)
+    | Some errors -> syntaxLayers, SyntaxAnalysisError(errors, None)
 
     | None ->
       writeLog "Typing"
@@ -394,5 +404,5 @@ let performSyntaxAnalysis (ctx: SyntaxCtx) : SyntaxAnalysisResult =
       let tirCtx = ArityCheck.arityCheck (modules, tirCtx)
 
       match collectTypingErrors tirCtx with
-      | Some errors -> SyntaxAnalysisError(errors, Some tirCtx)
-      | None -> SyntaxAnalysisOk(modules, tirCtx)
+      | Some errors -> syntaxLayers, SyntaxAnalysisError(errors, Some tirCtx)
+      | None -> syntaxLayers, SyntaxAnalysisOk(modules, tirCtx)

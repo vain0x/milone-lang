@@ -29,7 +29,7 @@ type SourceCode = string
 
 type ModuleSyntaxError = string * Pos
 
-type ModuleSyntaxData = DocId * ARoot * ModuleSyntaxError list
+type ModuleSyntaxData = DocId * TokenizeResult * ARoot * ModuleSyntaxError list
 
 /// filename -> (contents option)
 type ReadTextFileFun = string -> Future<string option>
