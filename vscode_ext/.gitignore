@@ -1,6 +1,7 @@
 # Build output to distribute. See webpack.config.js
 dist/*.js
 dist/*.js.map
+dist/*.js.LICENSE.txt
 
 # Build output. See tsconfig.json
 target

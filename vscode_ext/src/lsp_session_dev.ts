@@ -4,11 +4,12 @@
 // See also: <https://github.com/vain0x/vscode-auto-reload-lsp-server>
 
 import fs, { FSWatcher } from "fs"
+import fsP from "fs/promises"
 import { debounce } from "lodash"
 import path from "path"
 import { ExtensionContext, window } from "vscode"
 import { Disposable, LanguageClient } from "vscode-languageclient/node"
-import { copyDirRecursively, unlinkDirRecursively } from "./util/fs_ext"
+import { copyDirRecursively } from "./util/fs_ext"
 
 const RETRY_TIME = 60 * 1000
 const RETRY_INTERVAL = 100
@@ -109,7 +110,7 @@ export const startLspSessionDev = (options: {
   })
   context.subscriptions.push({
     dispose: () => {
-      unlinkDirRecursively(backupDir).catch(err => {
+      fsP.rm(backupDir, { recursive: true, force: true }).catch(err => {
         console.error("warn: Couldn't delete backup dir.", backupDir, err)
       })
     }

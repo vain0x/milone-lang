@@ -48,10 +48,4 @@ export const unlinkDirRecursively = async (dir: string): Promise<void> => {
     }
   }
 
-  await fsP.unlink(dir).catch(err => {
-    if (err.code === "ENOENT") {
-      return // OK.
-    }
-    throw err
-  })
 }

@@ -137,7 +137,7 @@ const startLspSession = (context: ExtensionContext, logger: Logger) => {
     })
   } else {
     const client = newLanguageClient(lspCommand, miloneHome, logger)
-    context.subscriptions.push({ dispose: () => { console.log("client stopped."); client.stop() } })
+    context.subscriptions.push(client.start())
   }
 }
 
