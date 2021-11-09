@@ -199,9 +199,7 @@ let private isTrivia token =
 
   | _ -> false
 
-let private findTokenAt (ls: LangServiceState) (docId: DocId) (targetPos: Pos) =
-  let tokens = tokenizeWithCache docId ls
-
+let private findTokenAt tokens (targetPos: Pos) =
   let rec go tokens =
     match tokens with
     | []
@@ -220,9 +218,7 @@ let private findTokenAt (ls: LangServiceState) (docId: DocId) (targetPos: Pos) =
 
   go tokens
 
-let private resolveTokenRanges (ls: LangServiceState) docId (posList: Pos list) =
-  let tokens = tokenizeWithCache docId ls
-
+let private resolveTokenRanges tokens (posList: Pos list) =
   let posSet = MutSet.ofSeq posList
   let ranges = ResizeArray()
 
@@ -652,7 +648,8 @@ let private doFindRefs hint projectDir docId targetPos ls =
     None, ls
 
   | Some (modules, _) ->
-    let tokenOpt = findTokenAt ls docId targetPos
+    let tokens = tokenizeWithCache docId ls
+    let tokenOpt = findTokenAt tokens targetPos
 
     match tokenOpt with
     | None ->
@@ -706,7 +703,9 @@ let private doFindDefsOrUses hint projectDir docId targetPos includeDef includeU
 
     let result =
       [ for KeyValue (docId, posList) in map do
-          for range in resolveTokenRanges ls docId (List.ofSeq posList) do
+          let tokens = tokenizeWithCache docId ls
+
+          for range in resolveTokenRanges tokens (List.ofSeq posList) do
             docId, range ]
 
     Some result, ls
@@ -795,8 +794,10 @@ module LangService =
           | Def -> writes.Add(pos)
           | Use -> reads.Add(pos)
 
+      let tokens = tokenizeWithCache docId ls
+
       let collect (posArray: ResizeArray<Pos>) =
-        resolveTokenRanges ls docId (List.ofSeq posArray)
+        resolveTokenRanges tokens (List.ofSeq posArray)
         |> Seq.toList
 
       Some(collect reads, collect writes), ls
@@ -812,7 +813,8 @@ module LangService =
       None, ls
 
     | Some (modules, tirCtx) ->
-      let tokenOpt = findTokenAt ls docId targetPos
+      let tokens = tokenizeWithCache docId ls
+      let tokenOpt = findTokenAt tokens targetPos
 
       match tokenOpt with
       | None ->
