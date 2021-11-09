@@ -38,6 +38,13 @@ type LangServiceHost =
 // Utils
 // -----------------------------------------------
 
+/// Folds single value to update a state.
+///
+/// Usage: `state |> up folder item1 |> up folder item2 |> ...`
+let private up (folder: 'S -> 'T -> 'S) (item: 'T) (state: 'S) : 'S = folder state item
+
+let private upList (folder: 'S -> 'T -> 'S) (items: 'T list) (state: 'S) : 'S = List.fold folder state items
+
 let private pathStrTrimEndPathSep (s: string) : string =
   s
   |> Path.ofString
@@ -274,10 +281,10 @@ type private Visitor =
     // Context
     GetTokens: DocId -> TokenizeFullResult }
 
-let private lastIdentBefore getTokens loc =
-  let (Loc (docId, py, px)) = loc
+let private lastIdentBefore tokens docId pos =
+  let py, px = pos
 
-  getTokens docId
+  tokens
   |> List.skipWhile (fun (_, (y, x)) -> (y, x) < (py, 0))
   |> List.takeWhile (fun (_, (y, x)) -> (y, x) <= (py, px))
   |> List.rev
@@ -286,10 +293,10 @@ let private lastIdentBefore getTokens loc =
     | IdentToken _ -> Some(Loc(docId, y, x))
     | _ -> None)
 
-let private firstIdentAfter getTokens loc =
-  let (Loc (docId, py, px)) = loc
+let private firstIdentAfter tokens docId pos =
+  let py, px = pos
 
-  getTokens docId
+  tokens
   |> List.tryPick (fun (token, (y, x)) ->
     match token with
     | IdentToken _ when (py, px) < (y, x) -> Some(Loc(docId, y, x))
@@ -407,193 +414,255 @@ let private dfsARoot (visitor: Visitor) (docId: DocId) root =
   for decl in decls do
     dfsADecl visitor docId decl
 
-let private dfsTy (visitor: Visitor) ty : unit =
+type private Loc2 =
+  | At of Loc
+  | PreviousIdent of Loc
+  | NextIdent of Loc
+
+let private dfsTy acc ty : (Symbol * DefOrUse * Ty option * Loc2) list =
   let (Ty (tk, tyArgs)) = ty
 
-  match tk with
-  | UnionTk (tySerial, Some loc) -> visitor.OnTy(UnionTySymbol tySerial, Use, loc)
-  | RecordTk (tySerial, Some loc) -> visitor.OnTy(RecordTySymbol tySerial, Use, loc)
-  | _ -> ()
+  let acc =
+    match tk with
+    | UnionTk (tySerial, Some loc) ->
+      (TySymbol(UnionTySymbol tySerial), Use, None, At loc)
+      :: acc
+    | RecordTk (tySerial, Some loc) ->
+      (TySymbol(RecordTySymbol tySerial), Use, None, At loc)
+      :: acc
+    | _ -> acc
 
-  for ty in tyArgs do
-    dfsTy visitor ty
+  acc |> up (List.fold dfsTy) tyArgs
 
-let private dfsPat (visitor: Visitor) pat =
+let private dfsPat acc pat : (Symbol * DefOrUse * Ty option * Loc2) list =
   match pat with
-  | TLitPat _ -> ()
-  | TDiscardPat (ty, loc) -> visitor.OnDiscardPat(ty, loc)
+  | TLitPat _ -> acc
 
-  | TVarPat (_, varSerial, ty, loc) -> visitor.OnVar(varSerial, Def, ty, loc)
-  | TVariantPat (variantSerial, ty, loc) -> visitor.OnVariant(variantSerial, Use, ty, loc)
+  | TDiscardPat (ty, loc) -> (DiscardSymbol, Use, Some ty, At loc) :: acc
+
+  | TVarPat (_, varSerial, ty, loc) ->
+    (ValueSymbol(VarSymbol varSerial), Def, Some ty, At loc)
+    :: acc
+  | TVariantPat (variantSerial, ty, loc) ->
+    (ValueSymbol(VariantSymbol variantSerial), Use, Some ty, At loc)
+    :: acc
 
   | TNodePat (kind, pats, ty, loc) ->
-    match kind with
-    | TVariantAppPN variantSerial -> visitor.OnVariant(variantSerial, Use, ty, loc)
-    | TNavPN _ -> ()
-    | TAscribePN -> dfsTy visitor ty
-    | _ -> ()
+    let acc =
+      match kind with
+      | TVariantAppPN variantSerial ->
+        (ValueSymbol(VariantSymbol variantSerial), Use, Some ty, At loc)
+        :: acc
+      | TAscribePN -> dfsTy acc ty
+      | _ -> acc
 
-    for pat in pats do
-      dfsPat visitor pat
+    acc |> up (List.fold dfsPat) pats
 
   | TAsPat (bodyPat, varSerial, loc) ->
-    let ty = patToTy bodyPat
-    visitor.OnVar(varSerial, Def, ty, loc)
-    dfsPat visitor bodyPat
+    let acc =
+      let ty = patToTy bodyPat
 
-  | TOrPat (l, r, _) ->
-    dfsPat visitor l
-    dfsPat visitor r
+      (ValueSymbol(VarSymbol varSerial), Def, Some ty, At loc)
+      :: acc
 
-let private dfsExpr (visitor: Visitor) expr =
+    dfsPat acc bodyPat
+
+  | TOrPat (l, r, _) -> acc |> up dfsPat l |> up dfsPat r
+
+let private dfsExpr acc expr =
   match expr with
-  | TLitExpr _ -> ()
-  | TVarExpr (varSerial, ty, loc) -> visitor.OnVar(varSerial, Use, ty, loc)
-  | TFunExpr (funSerial, ty, loc) -> visitor.OnFun(funSerial, Use, Some ty, loc)
-  | TVariantExpr (variantSerial, ty, loc) -> visitor.OnVariant(variantSerial, Use, ty, loc)
-  | TPrimExpr (prim, ty, loc) -> visitor.OnPrim(prim, ty, loc)
+  | TLitExpr _ -> acc
+
+  | TVarExpr (varSerial, ty, loc) ->
+    (ValueSymbol(VarSymbol varSerial), Use, Some ty, At loc)
+    :: acc
+  | TFunExpr (funSerial, ty, loc) ->
+    (ValueSymbol(FunSymbol funSerial), Use, Some ty, At loc)
+    :: acc
+  | TVariantExpr (variantSerial, ty, loc) ->
+    (ValueSymbol(VariantSymbol variantSerial), Use, Some ty, At loc)
+    :: acc
+  | TPrimExpr (prim, ty, loc) -> (PrimSymbol prim, Use, Some ty, At loc) :: acc
 
   | TMatchExpr (cond, arms, _, _) ->
-    dfsExpr visitor cond
-
-    for pat, guard, expr in arms do
-      dfsPat visitor pat
-      dfsExpr visitor guard
-      dfsExpr visitor expr
+    acc
+    |> up dfsExpr cond
+    |> up
+         (List.fold (fun acc (pat, guard, body) ->
+           acc
+           |> up dfsPat pat
+           |> up dfsExpr guard
+           |> up dfsExpr body))
+         arms
 
   | TRecordExpr (baseOpt, fields, ty, _) ->
-    baseOpt |> Option.iter (dfsExpr visitor)
+    acc
+    |> up (Option.fold dfsExpr) baseOpt
+    |> up
+         (List.fold (fun acc (ident, init, loc) ->
+           let acc =
+             match ty with
+             | Ty (RecordTk (tySerial, _), _) ->
+               // before '='
+               let loc = PreviousIdent loc
 
-    for ident, init, loc in fields do
-      match ty with
-      | Ty (RecordTk (tySerial, _), _) ->
-        // before '='
-        match lastIdentBefore visitor.GetTokens loc with
-        | Some loc -> visitor.OnField(tySerial, ident, Use, ty, loc)
-        | _ -> ()
-      | _ -> ()
+               (FieldSymbol(tySerial, ident), Use, Some ty, loc)
+               :: acc
+             | _ -> acc
 
-      dfsExpr visitor init
+           acc |> up dfsExpr init))
+         fields
 
   | TNavExpr (l, (r, loc), ty, _) ->
-    dfsExpr visitor l
+    let acc = acc |> up dfsExpr l
 
     match exprToTy l with
-    | Ty (RecordTk (tySerial, _), _) -> visitor.OnField(tySerial, r, Use, ty, loc)
-    | _ -> ()
+    | Ty (RecordTk (tySerial, _), _) ->
+      (FieldSymbol(tySerial, r), Use, Some ty, At loc)
+      :: acc
+    | _ -> acc
 
-  | TNodeExpr (_, exprs, _, _) ->
-    for expr in exprs do
-      dfsExpr visitor expr
+  | TNodeExpr (_, args, _, _) -> acc |> up (List.fold dfsExpr) args
 
-  | TBlockExpr (_, stmts, expr) ->
-    for stmt in stmts do
-      dfsStmt visitor stmt
+  | TBlockExpr (_, stmts, last) ->
+    acc
+    |> up (List.fold dfsStmt) stmts
+    |> up dfsExpr last
 
-    dfsExpr visitor expr
-
-let private dfsStmt (visitor: Visitor) stmt =
-  let onPat pat = dfsPat visitor pat
-  let onExpr expr = dfsExpr visitor expr
-  let onStmt stmt = dfsStmt visitor stmt
-
+let private dfsStmt acc stmt =
   match stmt with
-  | TExprStmt expr -> onExpr expr
+  | TExprStmt expr -> dfsExpr acc expr
 
-  | TLetValStmt (pat, init, _) ->
-    onPat pat
-    onExpr init
+  | TLetValStmt (pat, init, _) -> acc |> up dfsPat pat |> up dfsExpr init
 
-  | TLetFunStmt (callee, _, _, args, body, loc) ->
+  | TLetFunStmt (callee, _, _, argPats, body, loc) ->
     let tyFunN argTys resultTy : Ty =
       argTys
       |> List.fold (fun funTy argTy -> tyFun argTy funTy) resultTy
 
-    // after 'let'
-    match firstIdentAfter visitor.GetTokens loc with
-    | Some loc ->
+    let acc =
       let funTy =
-        let argTys = args |> List.map patToTy
+        let argTys = argPats |> List.map patToTy
         let resultTy = body |> exprToTy
         tyFunN argTys resultTy
 
-      visitor.OnFun(callee, Def, Some funTy, loc)
+      // after 'let'
+      let loc = NextIdent loc
 
-    | None -> ()
+      (ValueSymbol(FunSymbol callee), Def, Some funTy, loc)
+      :: acc
 
     // HACK: Visit type as if let-fun has result-type ascription. Typing removes result type ascription.
-    dfsTy visitor (exprToTy body)
-
-    for arg in args do
-      onPat arg
-
-    onExpr body
+    acc
+    |> up dfsTy (exprToTy body)
+    |> up (List.fold dfsPat) argPats
+    |> up dfsExpr body
 
   | TTyDeclStmt (tySerial, _, tyArgs, tyDecl, tyDeclLoc) ->
     match tyDecl with
-    | TySynonymDecl _ -> ()
+    | TySynonymDecl _ -> acc
 
     | UnionTyDecl (_, variants, _) ->
-      // after 'type'
-      match firstIdentAfter visitor.GetTokens tyDeclLoc with
-      | Some loc -> visitor.OnTy(UnionTySymbol tySerial, Def, loc)
-      | _ -> ()
+      let acc =
+        // after 'type'
+        let loc = NextIdent tyDeclLoc
 
-      for _, variantSerial, hasPayload, payloadTy, identLoc in variants do
-        let ty =
-          let tyArgs =
-            tyArgs
-            |> List.map (fun tySerial -> tyMeta tySerial tyDeclLoc)
+        (TySymbol(UnionTySymbol tySerial), Def, None, loc)
+        :: acc
 
-          if hasPayload then
-            tyFun payloadTy (tyUnion tySerial tyArgs identLoc)
-          else
-            tyUnit
+      acc
+      |> up
+           (List.fold (fun acc v ->
+             let _, variantSerial, hasPayload, payloadTy, identLoc = v
 
-        visitor.OnVariant(variantSerial, Def, ty, identLoc)
+             let ty =
+               let tyArgs =
+                 tyArgs
+                 |> List.map (fun tySerial -> tyMeta tySerial tyDeclLoc)
+
+               if hasPayload then
+                 tyFun payloadTy (tyUnion tySerial tyArgs identLoc)
+               else
+                 tyUnit
+
+             (ValueSymbol(VariantSymbol variantSerial), Def, Some ty, At identLoc)
+             :: acc))
+           variants
 
     | RecordTyDecl (_, fields, _, _) ->
-      // after 'type'
-      match firstIdentAfter visitor.GetTokens tyDeclLoc with
-      | Some loc -> visitor.OnTy(RecordTySymbol tySerial, Def, loc)
-      | _ -> ()
+      let acc =
+        // after 'type'
+        let loc = NextIdent tyDeclLoc
 
-      for ident, ty, loc in fields do
-        // before ':'
-        match lastIdentBefore visitor.GetTokens loc with
-        | Some loc -> visitor.OnField(tySerial, ident, Def, ty, loc)
-        | _ -> ()
+        (TySymbol(RecordTySymbol tySerial), Def, None, loc)
+        :: acc
 
-  | TModuleStmt (_, body, _) ->
-    for stmt in body do
-      onStmt stmt
+      acc
+      |> up
+           (List.fold (fun acc (ident, ty, loc) ->
+             // before ':'
+             let loc = PreviousIdent loc
+
+             (FieldSymbol(tySerial, ident), Def, Some ty, loc)
+             :: acc))
+           fields
+
+  | TModuleStmt (_, stmts, _) -> acc |> up (List.fold dfsStmt) stmts
 
   | TTyDeclStmt _
   | TOpenStmt _
-  | TModuleSynonymStmt _ -> ()
+  | TModuleSynonymStmt _ -> acc
 
-let private findTyInStmt (ls: LangServiceState) (stmt: TStmt) (tirCtx: TirCtx) (tokenLoc: Loc) =
-  let mutable contentOpt = None
+let private foldTir modules ls =
+  let symbols =
+    modules
+    |> List.fold (fun acc (m: TModule) -> acc |> up (List.fold dfsStmt) m.Stmts) []
+    |> List.rev
 
-  let onVisit tyOpt loc =
-    // eprintfn "hover: loc=%A tyOpt=%A" loc (tyOpt |> Option.map (tyDisplayFn tirCtx))
-    if loc = tokenLoc then
-      contentOpt <- tyOpt
+  // Resolve locations.
+  symbols
+  |> List.mapFold
+       (fun map item ->
+         let tokenize loc map =
+           let (Loc (docId, y, x)) = loc
 
-  let visitor: Visitor =
-    { OnDiscardPat = fun (ty, loc) -> onVisit (Some ty) loc
-      OnVar = fun (_, _, ty, loc) -> onVisit (Some ty) loc
-      OnFun = fun (_, _, tyOpt, loc) -> onVisit tyOpt loc
-      OnVariant = fun (_, _, ty, loc) -> onVisit (Some ty) loc
-      OnPrim = fun (_, ty, loc) -> onVisit (Some ty) loc
-      OnField = fun (_, _, _, ty, loc) -> onVisit (Some ty) loc
-      OnTy = fun _ -> ()
-      OnModule = fun _ -> ()
+           let tokens, map =
+             match map |> TMap.tryFind docId with
+             | Some it -> it, map
+             | None ->
+               let tokens = tokenizeWithCache docId ls
+               let map = map |> TMap.add docId tokens
+               tokens, map
 
-      GetTokens = fun docId -> tokenizeWithCache docId ls }
+           tokens, docId, (y, x), map
 
-  dfsStmt visitor stmt
-  contentOpt
+         let symbol, defOrUse, tyOpt, loc = item
+
+         let locOpt, map =
+           match loc with
+           | At loc -> Some loc, map
+
+           | PreviousIdent loc ->
+             let tokens, docId, pos, map = tokenize loc map
+             lastIdentBefore tokens docId pos, map
+
+           | NextIdent loc ->
+             let tokens, docId, pos, map = tokenize loc map
+             firstIdentAfter tokens docId pos, map
+
+         match locOpt with
+         | Some loc -> Some(symbol, defOrUse, tyOpt, loc), map
+         | None -> None, map)
+       (TMap.empty compare)
+  |> fst
+  |> List.choose id
+
+let private findTyInStmt (ls: LangServiceState) (modules: TProgram) (tokenLoc: Loc) =
+  foldTir modules ls
+  |> List.tryPick (fun (_, _, tyOpt, loc) ->
+    match tyOpt with
+    | Some ty when loc = tokenLoc -> Some ty
+    | _ -> None)
 
 [<NoComparison>]
 type private Symbol =
@@ -632,9 +701,8 @@ let private collectSymbolsInExpr (ls: LangServiceState) (modules: TProgram) =
 
     | None -> failwith "must be parsed"
 
-  for m in modules do
-    for stmt in m.Stmts do
-      dfsStmt visitor stmt
+  foldTir modules ls
+  |> List.iter (fun (symbol, defOrUse, _, loc) -> symbols.Add((symbol, defOrUse, loc)))
 
   symbols
 
@@ -826,11 +894,7 @@ module LangService =
 
         // eprintfn "hover: %A, tokenLoc=%A" token tokenLoc
 
-        match modules
-              |> List.tryPick (fun m ->
-                m.Stmts
-                |> List.tryPick (fun stmt -> findTyInStmt ls stmt tirCtx tokenLoc))
-          with
+        match findTyInStmt ls modules tokenLoc with
         | None -> None, ls
         | Some ty -> Some(tyDisplayFn tirCtx ty), ls
 
