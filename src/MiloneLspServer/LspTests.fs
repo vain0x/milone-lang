@@ -55,7 +55,7 @@ let private createSingleFileProject text action =
       EntryFileExt = ".milone" }
 
   LLS.empty2
-  |> LLS.openDoc (Uri "file:///example.com/TestProject/TestProject.milone") 1 text
+  |> LLS.WorkspaceAnalysis.didOpenDoc (Uri "file:///example.com/TestProject/TestProject.milone") 1 text
   |> LLS.doWithLangService p action
 
 let private doTestRefsSingleFile title text (ls: ProjectAnalysis) : bool * ProjectAnalysis =

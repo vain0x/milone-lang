@@ -265,7 +265,15 @@ let private docIdIsOptional docId =
 // Analysis
 // ---------------------------------------------
 
+type private FilePath = string
 type private DocVersion = int
+
+type private MiloneHome = string
+
+[<RequireQualifiedAccess; NoEquality; NoComparison>]
+type WorkspaceAnalysisHost =
+  { MiloneHome: MiloneHome
+    FileExistsFun: FilePath -> bool }
 
 /// State of workspace-wide analysis.
 /// That is, this is basically the root of state of LSP server.
@@ -273,7 +281,8 @@ type private DocVersion = int
 /// Also has project-independent data such as parse result.
 [<RequireQualifiedAccess; NoEquality; NoComparison>]
 type WorkspaceAnalysis =
-  { Docs: TreeMap<Uri, DocVersion * string>
+  { LastId: int
+    Docs: TreeMap<Uri, DocVersion * string>
     Projects: TreeMap<string, ProjectAnalysis>
 
     // Per-file cache.
@@ -282,36 +291,44 @@ type WorkspaceAnalysis =
 
     // Diagnostics.
     DiagnosticsKeys: Uri list
-    DiagnosticsCache: DiagnosticsCache<byte array> }
+    DiagnosticsCache: DiagnosticsCache<byte array>
+
+    TokenizeHost: Syntax.TokenizeHost
+    Host: WorkspaceAnalysisHost }
 
 let empty2: WorkspaceAnalysis =
-  { Docs = TMap.empty Uri.compare
+  { LastId = 0
+    Docs = TMap.empty Uri.compare
     Projects = TMap.empty compare
 
     TokenizeCache = TMap.empty compare
     ParseCache = TMap.empty compare
 
     DiagnosticsKeys = []
-    DiagnosticsCache = DiagnosticsCache.empty Md5Helper.ofString Md5Helper.equals }
+    DiagnosticsCache = DiagnosticsCache.empty Md5Helper.ofString Md5Helper.equals
 
-let mutable private current = empty2
+    TokenizeHost = Syntax.tokenizeHostNew ()
+    Host =
+      { MiloneHome = miloneHome
+        FileExistsFun = File.Exists } }
 
 /// (msg, loc) list
 type private ProjectValidateResult = (string * Loc) list
 
-let private emptyProjectLangService: ProjectAnalysis =
-  let langServiceHost: ProjectAnalysisHost =
+let private emptyProjectAnalysis (wa: WorkspaceAnalysis) : ProjectAnalysis =
+  let host: ProjectAnalysisHost =
     { GetDocVersion = fun _ -> failwith "illegal use"
       Tokenize = fun _ -> failwith "illegal use"
       Parse = fun _ -> failwith "illegal use"
 
-      MiloneHome = miloneHome
+      MiloneHome = wa.Host.MiloneHome
       MiloneHomeModules = fun () -> stdLibProjects |> Map.toList
       FindModulesInDir = findModulesInDir }
 
-  ProjectAnalysis.create langServiceHost
+  ProjectAnalysis.create host
 
-let private tokenizeHost = Syntax.tokenizeHostNew ()
+let private freshId (wa: WorkspaceAnalysis) =
+  wa.LastId + 1, { wa with LastId = wa.LastId + 1 }
 
 let doWithLangService
   (p: ProjectInfo)
@@ -326,7 +343,7 @@ let doWithLangService
   let ls =
     match state.Projects |> TMap.tryFind p.ProjectName with
     | Some it -> it
-    | None -> emptyProjectLangService
+    | None -> emptyProjectAnalysis state
 
   let tokenize1 docId =
     let version =
@@ -344,7 +361,7 @@ let doWithLangService
           debugFn "tokenize '%s' v:%d" docId v
 
           let tokens =
-            SyntaxTokenize.tokenizeAll tokenizeHost text
+            SyntaxTokenize.tokenizeAll state.TokenizeHost text
 
           v, tokens
 
@@ -420,46 +437,62 @@ let doWithLangService
 
   result, state
 
+module WorkspaceAnalysis =
+  let didOpenDoc (uri: Uri) (version: int) (text: string) (wa: WorkspaceAnalysis) =
+    { wa with Docs = wa.Docs |> TMap.add uri (version, text) }
+
+  let didChangeDoc (uri: Uri) (version: int) (text: string) (wa: WorkspaceAnalysis) =
+    { wa with Docs = wa.Docs |> TMap.add uri (version, text) }
+
+  let didCloseDoc (uri: Uri) (wa: WorkspaceAnalysis) =
+    // FIXME: drop tokenize/parse result
+    let _, docs = wa.Docs |> TMap.remove uri
+    { wa with Docs = docs }
+
+  let didOpenFile (uri: Uri) (wa: WorkspaceAnalysis) =
+    // FIXME: don't read file
+    match uriToFilePath uri |> Option.bind File.tryReadFile with
+    | Some text ->
+      let version, wa = freshId wa
+      didOpenDoc uri version text wa
+
+    | None -> wa
+
+  let didChangeFile (uri: Uri) (wa: WorkspaceAnalysis) =
+    // FIXME: don't read file
+    match uriToFilePath uri |> Option.bind File.tryReadFile with
+    | Some text ->
+      let version, wa = freshId wa
+      didChangeDoc uri version text wa
+
+    | None -> wa
+
+  let didCloseFile (uri: Uri) (wa: WorkspaceAnalysis) = didCloseDoc uri wa
+
+let mutable private current = empty2
+
 let private withLangService p action =
   let result, state = doWithLangService p action current
   current <- state
   result
 
-let mutable private lastId = 0
+let didOpenDoc uri version text : unit =
+  current <- WorkspaceAnalysis.didOpenDoc uri version text current
 
-let nextId () =
-  System.Threading.Interlocked.Increment(&lastId)
+let didChangeDoc uri version text : unit =
+  current <- WorkspaceAnalysis.didChangeDoc uri version text current
 
-let openDoc (uri: Uri) (version: int) (text: string) (state: WorkspaceAnalysis) =
-  { state with Docs = state.Docs |> TMap.add uri (version, text) }
+let didCloseDoc uri : unit =
+  current <- WorkspaceAnalysis.didCloseDoc uri current
 
-let didOpenDoc (uri: Uri) (version: int) (text: string) : unit =
-  current <- openDoc uri version text current
+let didOpenFile uri : unit =
+  current <- WorkspaceAnalysis.didOpenFile uri current
 
-let didChangeDoc (uri: Uri) (version: int) (text: string) : unit =
-  current <- { current with Docs = current.Docs |> TMap.add uri (version, text) }
+let didChangeFile uri : unit =
+  current <- WorkspaceAnalysis.didChangeFile uri current
 
-let didCloseDoc (uri: Uri) : unit =
-  let _, docs = current.Docs |> TMap.remove uri
-  current <- { current with Docs = docs }
-
-let didOpenFile (uri: Uri) : unit =
-  match uriToFilePath uri |> Option.bind File.tryReadFile with
-  | Some text ->
-    let version = nextId ()
-    didOpenDoc uri version text
-
-  | None -> ()
-
-let didChangeFile (uri: Uri) : unit =
-  match uriToFilePath uri |> Option.bind File.tryReadFile with
-  | Some text ->
-    let version = nextId ()
-    didChangeDoc uri version text
-
-  | None -> ()
-
-let didCloseFile (uri: Uri) : unit = didCloseDoc uri
+let didCloseFile uri : unit =
+  current <- WorkspaceAnalysis.didCloseDoc uri current
 
 let validateProject (p: ProjectInfo) : ProjectValidateResult =
   withLangService p (ProjectAnalysis.validateProject p.ProjectDir)
