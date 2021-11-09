@@ -20,9 +20,9 @@ type Range = Pos * Pos
 // Host
 // -----------------------------------------------
 
-type private DocVersion = int
-
 type private FilePath = string
+type private DocVersion = int
+type private Error = string * Loc
 
 [<RequireQualifiedAccess; NoEquality; NoComparison>]
 type LangServiceHost =
@@ -61,6 +61,14 @@ let private pathStrToStem (s: string) : string =
 // Syntax
 // -----------------------------------------------
 
+let private nameToIdent (Name (ident, _)) = ident
+let private nameToPos (Name (_, pos)) = pos
+
+let private pathToPos altPos path =
+  match path |> List.tryLast with
+  | Some name -> name |> nameToPos
+  | None -> altPos
+
 let private locOfDocPos (docId: DocId) (pos: Pos) : Loc =
   let y, x = pos
   Loc(docId, y, x)
@@ -72,6 +80,105 @@ let private locToDoc (loc: Loc) : DocId =
 let private locToPos (loc: Loc) : Pos =
   let (Loc (_, y, x)) = loc
   y, x
+
+let private isTrivia token =
+  match token with
+  | BlankToken
+  | NewlinesToken
+  | CommentToken -> true
+
+  | _ -> false
+
+let private findTokenAt tokens (targetPos: Pos) =
+  let rec go tokens =
+    match tokens with
+    | []
+    | [ _ ] -> None
+
+    | (token, p1) :: (((_, p2) :: _) as tokens) ->
+      if not (isTrivia token)
+         && token <> DotToken
+         && p1 <= targetPos
+         && targetPos <= p2 then
+        Some(token, p1)
+      else if p1 > targetPos then
+        None
+      else
+        go tokens
+
+  go tokens
+
+let private resolveTokenRanges tokens (posList: Pos list) =
+  let posSet = MutSet.ofSeq posList
+  let ranges = ResizeArray()
+
+  let rec go tokens =
+    match tokens with
+    | []
+    | [ _ ] -> ()
+
+    | (_, p1) :: (((_, p2) :: _) as tokens) ->
+      if posSet |> MutSet.remove p1 then
+        ranges.Add((p1, p2))
+
+      go tokens
+
+  go tokens
+  ranges
+
+let private lastIdentBefore tokens docId pos =
+  let py, px = pos
+
+  tokens
+  |> List.skipWhile (fun (_, (y, x)) -> (y, x) < (py, 0))
+  |> List.takeWhile (fun (_, (y, x)) -> (y, x) <= (py, px))
+  |> List.rev
+  |> List.tryPick (fun (token, (y, x)) ->
+    match token with
+    | IdentToken _ -> Some(Loc(docId, y, x))
+    | _ -> None)
+
+let private firstIdentAfter tokens docId pos =
+  let py, px = pos
+
+  tokens
+  |> List.tryPick (fun (token, (y, x)) ->
+    match token with
+    | IdentToken _ when (py, px) < (y, x) -> Some(Loc(docId, y, x))
+    | _ -> None)
+
+let parseFullTokens projectName moduleName docId (allTokens: TokenizeFullResult) : ModuleSyntaxData =
+  let tokens =
+    allTokens
+    |> List.filter (fun (token, _) -> token |> isTrivia |> not)
+
+  let kind =
+    SyntaxApi.getModuleKind projectName moduleName
+
+  let docId, _, ast, errors = SyntaxApi.parseModule docId kind tokens
+
+  docId, allTokens, ast, errors
+
+let private tyDisplayFn (tirCtx: TirCtx) ty =
+  let getTyName tySerial =
+    tirCtx.Tys
+    |> TMap.tryFind tySerial
+    |> Option.map tyDefToName
+
+  TySystem.tyDisplay getTyName ty
+
+// -----------------------------------------------
+// Project-wise analysis
+// -----------------------------------------------
+
+// FIXME: private repr
+/// State of project analysis.
+[<RequireQualifiedAccess; NoEquality; NoComparison>]
+type LangServiceState =
+  { NewTokenizeCache: TreeMap<DocId, TokenizeFullResult>
+    NewParseResults: (DocVersion * ModuleSyntaxData) list
+    BundleCache: TreeMap<ProjectDir, BundleResult>
+    Host: LangServiceHost }
 
 let private getVersion docId (ls: LangServiceState) =
   ls.Host.GetDocVersion docId
@@ -91,17 +198,13 @@ let private tokenizeWithCache docId (ls: LangServiceState) =
 
 let private parseWithCache docId (ls: LangServiceState) = ls.Host.Parse docId |> Option.map snd
 
-// -----------------------------------------------
-// Semantic analysis
-// -----------------------------------------------
-
-let private tyDisplayFn (tirCtx: TirCtx) ty =
-  let getTyName tySerial =
-    tirCtx.Tys
-    |> TMap.tryFind tySerial
-    |> Option.map tyDefToName
-
-  TySystem.tyDisplay getTyName ty
+// FIXME: private repr
+[<RequireQualifiedAccess; NoEquality; NoComparison>]
+type BundleResult =
+  { ProgramOpt: (TProgram * TirCtx) option
+    Errors: Error list
+    DocVersions: (DocId * DocVersion) list
+    ParseResults: (DocVersion * ModuleSyntaxData) list }
 
 let private doBundle (ls: LangServiceState) projectDir : BundleResult =
   let miloneHome = ls.Host.MiloneHome
@@ -190,87 +293,8 @@ let private bundleWithCache (ls: LangServiceState) projectDir : BundleResult * L
     result, ls
 
 // -----------------------------------------------
-// State
+// Find references
 // -----------------------------------------------
-
-type private Error = string * Loc
-
-[<RequireQualifiedAccess; NoEquality; NoComparison>]
-type BundleResult =
-  { ProgramOpt: (TProgram * TirCtx) option
-    Errors: Error list
-    DocVersions: (DocId * DocVersion) list
-    ParseResults: (DocVersion * ModuleSyntaxData) list }
-
-// FIXME: private repr
-[<RequireQualifiedAccess; NoEquality; NoComparison>]
-type LangServiceState =
-  { NewTokenizeCache: TreeMap<DocId, TokenizeFullResult>
-    NewParseResults: (DocVersion * ModuleSyntaxData) list
-    BundleCache: TreeMap<ProjectDir, BundleResult>
-    Host: LangServiceHost }
-
-let private isTrivia token =
-  match token with
-  | BlankToken
-  | NewlinesToken
-  | CommentToken -> true
-
-  | _ -> false
-
-let private findTokenAt tokens (targetPos: Pos) =
-  let rec go tokens =
-    match tokens with
-    | []
-    | [ _ ] -> None
-
-    | (token, p1) :: (((_, p2) :: _) as tokens) ->
-      if not (isTrivia token)
-         && token <> DotToken
-         && p1 <= targetPos
-         && targetPos <= p2 then
-        Some(token, p1)
-      else if p1 > targetPos then
-        None
-      else
-        go tokens
-
-  go tokens
-
-let private resolveTokenRanges tokens (posList: Pos list) =
-  let posSet = MutSet.ofSeq posList
-  let ranges = ResizeArray()
-
-  let rec go tokens =
-    match tokens with
-    | []
-    | [ _ ] -> ()
-
-    | (_, p1) :: (((_, p2) :: _) as tokens) ->
-      if posSet |> MutSet.remove p1 then
-        ranges.Add((p1, p2))
-
-      go tokens
-
-  go tokens
-  ranges
-
-let parseFullTokens projectName moduleName docId (allTokens: TokenizeFullResult) : ModuleSyntaxData =
-  let tokens =
-    allTokens
-    |> List.filter (fun (token, _) -> token |> isTrivia |> not)
-
-  let kind =
-    SyntaxApi.getModuleKind projectName moduleName
-
-  let docId, _, ast, errors = SyntaxApi.parseModule docId kind tokens
-
-  docId, allTokens, ast, errors
-
-[<NoEquality; NoComparison>]
-type private DefOrUse =
-  | Def
-  | Use
 
 /// Path of module names.
 ///
@@ -279,55 +303,26 @@ type private DefOrUse =
 /// - Module synonym: `[docId; name]`
 type private ModulePath = string list
 
-type private SymbolOccurrence = Symbol * DefOrUse * Ty option * Loc2
+[<NoComparison>]
+type private Symbol =
+  | DiscardSymbol
+  | PrimSymbol of TPrim
+  | FieldSymbol of tySerial: TySerial * Ident
+  | ValueSymbol of ValueSymbol
+  | TySymbol of TySymbol
+  | ModuleSymbol of ModulePath
 
-[<RequireQualifiedAccess; NoEquality; NoComparison>]
-type private Visitor =
-  { OnDiscardPat: Ty * Loc -> unit
-    OnVar: VarSerial * DefOrUse * Ty * Loc -> unit
-    OnFun: FunSerial * DefOrUse * Ty option * Loc -> unit
-    OnVariant: VariantSerial * DefOrUse * Ty * Loc -> unit
-    OnPrim: TPrim * Ty * Loc -> unit
-    OnField: TySerial * Ident * DefOrUse * Ty * Loc -> unit
-    OnTy: TySymbol * DefOrUse * Loc -> unit
-    OnModule: ModulePath * DefOrUse * Loc -> unit
-
-    // Context
-    GetTokens: DocId -> TokenizeFullResult }
+[<NoEquality; NoComparison>]
+type private DefOrUse =
+  | Def
+  | Use
 
 type private Loc2 =
   | At of Loc
   | PreviousIdent of Loc
   | NextIdent of Loc
 
-let private lastIdentBefore tokens docId pos =
-  let py, px = pos
-
-  tokens
-  |> List.skipWhile (fun (_, (y, x)) -> (y, x) < (py, 0))
-  |> List.takeWhile (fun (_, (y, x)) -> (y, x) <= (py, px))
-  |> List.rev
-  |> List.tryPick (fun (token, (y, x)) ->
-    match token with
-    | IdentToken _ -> Some(Loc(docId, y, x))
-    | _ -> None)
-
-let private firstIdentAfter tokens docId pos =
-  let py, px = pos
-
-  tokens
-  |> List.tryPick (fun (token, (y, x)) ->
-    match token with
-    | IdentToken _ when (py, px) < (y, x) -> Some(Loc(docId, y, x))
-    | _ -> None)
-
-let private nameToIdent (Name (ident, _)) = ident
-let private nameToPos (Name (_, pos)) = pos
-
-let private pathToPos altPos path =
-  match path |> List.tryLast with
-  | Some name -> name |> nameToPos
-  | None -> altPos
+type private SymbolOccurrence = Symbol * DefOrUse * Ty option * Loc2
 
 let private dfsAExpr docId acc expr : SymbolOccurrence list =
   let onExpr acc expr = dfsAExpr docId acc expr
@@ -650,7 +645,7 @@ let private foldTir acc modules =
   |> List.fold (fun acc (m: TModule) -> acc |> up (List.fold dfsStmt) m.Stmts) acc
 
 /// Resolve locations.
-let private resolveLoc symbols ls =
+let private resolveLoc (symbols: SymbolOccurrence list) ls =
   symbols
   |> List.mapFold
        (fun (ls: LangServiceState) item ->
@@ -688,15 +683,6 @@ let private findTyInStmt (ls: LangServiceState) (modules: TProgram) (tokenLoc: L
     match tyOpt with
     | Some ty when loc = tokenLoc -> Some ty
     | _ -> None)
-
-[<NoComparison>]
-type private Symbol =
-  | DiscardSymbol
-  | PrimSymbol of TPrim
-  | FieldSymbol of tySerial: TySerial * Ident
-  | ValueSymbol of ValueSymbol
-  | TySymbol of TySymbol
-  | ModuleSymbol of ModulePath
 
 let private collectSymbolsInExpr (ls: LangServiceState) (modules: TProgram) =
   let parseModule (m: TModule) =
