@@ -386,10 +386,7 @@ let doWithLangService
         | Some (v, text) -> ok v text
 
   let parse1 docId =
-    let version =
-      getVersion docId |> Option.defaultValue 0
-
-    let _, tokens = tokenize1 docId
+    let version, tokens = tokenize1 docId
 
     match state.ParseCache |> TMap.tryFind docId with
     | Some ((v, _) as it) when v >= version -> Some it
@@ -421,8 +418,11 @@ let doWithLangService
 
   let result, ls = action ls
 
+  // FIXME: store tokenize cache
+  let _, newParseResults, ls = ls |> ProjectAnalysis.drain
+
   let state =
-    ls.NewParseResults
+    newParseResults
     |> List.fold
          (fun (state: WorkspaceAnalysis) (v, syntaxData) ->
            let docId, tokens, _, _ = syntaxData

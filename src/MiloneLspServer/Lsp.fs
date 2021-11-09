@@ -181,6 +181,8 @@ type ProjectAnalysis =
     BundleCache: TreeMap<ProjectDir, BundleResult>
     Host: ProjectAnalysisHost }
 
+let private emptyTokenizeCache: TreeMap<DocId, TokenizeFullResult> = TMap.empty compare
+
 let private getVersion docId (ls: ProjectAnalysis) =
   ls.Host.GetDocVersion docId
   |> Option.defaultValue 0
@@ -767,10 +769,17 @@ let private doFindDefsOrUses hint projectDir docId targetPos includeDef includeU
 
 module ProjectAnalysis =
   let create (host: ProjectAnalysisHost) : ProjectAnalysis =
-    { NewTokenizeCache = TMap.empty compare
+    { NewTokenizeCache = emptyTokenizeCache
       NewParseResults = []
       BundleCache = TMap.empty compare
       Host = host }
+
+  let drain (pa: ProjectAnalysis) =
+    pa.NewTokenizeCache,
+    pa.NewParseResults,
+    { pa with
+        NewTokenizeCache = emptyTokenizeCache
+        NewParseResults = [] }
 
   let validateProject projectDir (ls: ProjectAnalysis) : Error list * ProjectAnalysis =
     let result, ls = bundleWithCache ls projectDir
