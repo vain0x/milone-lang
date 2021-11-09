@@ -30,10 +30,10 @@ let private miloneHome =
     Environment.GetFolderPath(Environment.SpecialFolder.UserProfile)
     |> opt
 
-  MiloneSyntax.SyntaxApi.getMiloneHomeFromEnv getMiloneHomeEnv getHomeEnv
+  SyntaxApi.getMiloneHomeFromEnv getMiloneHomeEnv getHomeEnv
 
 let private stdLibProjects =
-  MiloneSyntax.SyntaxApi.getStdLibProjects miloneHome
+  SyntaxApi.getStdLibProjects miloneHome
   |> Map.ofList
 
 let private uriOfFilePath (filePath: string) =
@@ -264,12 +264,16 @@ let private docIdIsOptional docId =
 
 type private DocVersion = int
 
+/// State of workspace-wide analysis.
+/// That is, this is basically the root of state of LSP server.
+///
+/// Also has project-independent data such as parse result.
 [<RequireQualifiedAccess; NoEquality; NoComparison>]
-type LangServiceState2 =
+type WorkspaceAnalysis =
   { Docs: TreeMap<Uri, DocVersion * string>
     Projects: TreeMap<string, ProjectAnalysis>
 
-    // Workspace-wide cache.
+    // Per-file cache.
     TokenizeCache: TreeMap<DocId, DocVersion * Syntax.TokenizeFullResult>
     ParseCache: TreeMap<DocId, DocVersion * Syntax.ModuleSyntaxData>
 
@@ -277,7 +281,7 @@ type LangServiceState2 =
     DiagnosticsKeys: Uri list
     DiagnosticsCache: DiagnosticsCache<byte array> }
 
-let empty2: LangServiceState2 =
+let empty2: WorkspaceAnalysis =
   { Docs = TMap.empty Uri.compare
     Projects = TMap.empty compare
 
@@ -309,8 +313,8 @@ let private tokenizeHost = Syntax.tokenizeHostNew ()
 let doWithLangService
   (p: ProjectInfo)
   (action: ProjectAnalysis -> 'A * ProjectAnalysis)
-  (state: LangServiceState2)
-  : 'A * LangServiceState2 =
+  (state: WorkspaceAnalysis)
+  : 'A * WorkspaceAnalysis =
   let getVersion docId =
     match state.Docs |> TMap.tryFind (docIdToUri p docId) with
     | Some (v, _) -> Some v
@@ -393,7 +397,7 @@ let doWithLangService
   let state =
     ls.NewParseResults
     |> List.fold
-         (fun (state: LangServiceState2) (v, syntaxData) ->
+         (fun (state: WorkspaceAnalysis) (v, syntaxData) ->
            let docId, tokens, _, _ = syntaxData
 
            { state with
@@ -416,7 +420,7 @@ let mutable private lastId = 0
 let nextId () =
   System.Threading.Interlocked.Increment(&lastId)
 
-let openDoc (uri: Uri) (version: int) (text: string) (state: LangServiceState2) =
+let openDoc (uri: Uri) (version: int) (text: string) (state: WorkspaceAnalysis) =
   { state with Docs = state.Docs |> TMap.add uri (version, text) }
 
 let didOpenDoc (uri: Uri) (version: int) (text: string) : unit =
