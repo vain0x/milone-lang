@@ -237,21 +237,24 @@ let private docIdToModulePath (docId: DocId) =
     debugFn "Not a docId of module file: '%s'" docId
     None
 
-let private docIdToUri (project: ProjectInfo) (docId: string) =
-  let filePath =
-    match docIdToModulePath docId with
-    | Some (projectName, moduleName) ->
-      let projectDir =
-        match stdLibProjects |> Map.tryFind projectName with
-        | Some it -> it
-        | None -> project.ProjectDir + "/../" + projectName
+let private docIdToFilePath (p: ProjectInfo) (docId: DocId) =
+  match docIdToModulePath docId with
+  | Some (projectName, moduleName) ->
+    let projectDir =
+      match stdLibProjects |> Map.tryFind projectName with
+      | Some it -> it
+      | None -> p.ProjectDir + "/../" + projectName
 
-      Path.Combine(projectDir, moduleName + ".milone")
+    Path.Combine(projectDir, moduleName + ".milone")
 
-    | _ when File.Exists(docId) -> docId
-    | _ -> failwithf "Bad docId: '%s'" docId
+  | _ when File.Exists(docId) -> docId
+  | _ -> failwithf "Bad docId: '%s'" docId
 
-  filePath |> fixExt |> uriOfFilePath
+let private docIdToUri (p: ProjectInfo) (docId: string) =
+  docId
+  |> docIdToFilePath p
+  |> fixExt
+  |> uriOfFilePath
 
 let private docIdIsOptional docId =
   match docIdToModulePath docId with
@@ -337,20 +340,33 @@ let doWithLangService
       | Some ((v, _) as it) when v >= version -> it
 
       | _ ->
-        match state.Docs |> TMap.tryFind (docIdToUri p docId) with
-        | None ->
-          if docIdIsOptional docId |> not then
-            warnFn "missing docId '%s' to be tokenized" docId
-
-          -1, []
-
-        | Some (v, text) ->
+        let ok v text =
           debugFn "tokenize '%s' v:%d" docId v
 
           let tokens =
             SyntaxTokenize.tokenizeAll tokenizeHost text
 
           v, tokens
+
+        match state.Docs |> TMap.tryFind (docIdToUri p docId) with
+        | None ->
+          debugFn "read '%s' from file" docId
+
+          // FIXME: LSP server should add all files to docs before processing queries.
+          let textOpt =
+            SyntaxApi.readSourceFile File.readFile (docIdToFilePath p docId)
+            |> Future.wait
+
+          match textOpt with
+          | None ->
+            if docIdIsOptional docId |> not then
+              warnFn "missing docId '%s' to be tokenized" docId
+
+            -1, []
+
+          | Some text -> ok 0 text
+
+        | Some (v, text) -> ok v text
 
   let parse1 docId =
     let version =
@@ -362,26 +378,20 @@ let doWithLangService
     | Some ((v, _) as it) when v >= version -> Some it
 
     | _ ->
-      match getVersion docId with
-      | None ->
-        if docIdIsOptional docId |> not then
-          warnFn "missing docId '%s' to be parsed" docId
+      let v = version
 
+      match docIdToModulePath docId with
+      | None ->
+        warnFn "illegal docId '%s'" docId
         None
 
-      | Some v ->
-        match docIdToModulePath docId with
-        | None ->
-          warnFn "illegal docId '%s'" docId
-          None
+      | Some (projectName, moduleName) ->
+        debugFn "parse '%s' v:%d" docId v
 
-        | Some (projectName, moduleName) ->
-          debugFn "parse '%s' v:%d" docId v
+        let syntaxData =
+          parseFullTokens projectName moduleName docId tokens
 
-          let syntaxData =
-            parseFullTokens projectName moduleName docId tokens
-
-          Some(v, syntaxData)
+        Some(v, syntaxData)
 
   let ls =
     let host =
