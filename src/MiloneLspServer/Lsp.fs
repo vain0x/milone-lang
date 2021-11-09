@@ -194,7 +194,6 @@ let private bundleWithCache (ls: LangServiceState) projectDir : BundleResult * L
 // -----------------------------------------------
 
 type private Error = string * Loc
-type private ParseResult = ARoot * (string * Pos) list
 
 [<RequireQualifiedAccess; NoEquality; NoComparison>]
 type BundleResult =
@@ -280,6 +279,8 @@ type private DefOrUse =
 /// - Module synonym: `[docId; name]`
 type private ModulePath = string list
 
+type private SymbolOccurrence = Symbol * DefOrUse * Ty option * Loc2
+
 [<RequireQualifiedAccess; NoEquality; NoComparison>]
 type private Visitor =
   { OnDiscardPat: Ty * Loc -> unit
@@ -293,6 +294,11 @@ type private Visitor =
 
     // Context
     GetTokens: DocId -> TokenizeFullResult }
+
+type private Loc2 =
+  | At of Loc
+  | PreviousIdent of Loc
+  | NextIdent of Loc
 
 let private lastIdentBefore tokens docId pos =
   let py, px = pos
@@ -323,114 +329,127 @@ let private pathToPos altPos path =
   | Some name -> name |> nameToPos
   | None -> altPos
 
-let private dfsAExpr (visitor: Visitor) docId expr : unit =
-  let onExpr expr = dfsAExpr visitor docId expr
-  let onExprOpt exprOpt = exprOpt |> Option.iter onExpr
-  let onExprs exprs = exprs |> List.iter onExpr
+let private dfsAExpr docId acc expr : SymbolOccurrence list =
+  let onExpr acc expr = dfsAExpr docId acc expr
+  let onExprOpt acc exprOpt = exprOpt |> Option.fold onExpr acc
+  let onExprs acc exprs = exprs |> List.fold onExpr acc
 
-  let toLoc (y, x) = Loc(docId, y, x)
+  let isModuleSynonymLike (s: string) = s.Length = 1 && C.isUpper s.[0]
+  let isModuleNameLike (s: string) = s.Length >= 1 && C.isUpper s.[0]
+  let isModulePathLike path = path |> List.forall isModuleNameLike
+  let toLoc (y, x) = At(Loc(docId, y, x))
 
   match expr with
   | AMissingExpr _
   | ALitExpr _
-  | AIdentExpr _ -> ()
-  | AListExpr (items, _) -> onExprs items
+  | AIdentExpr _ -> acc
+
+  | AListExpr (items, _) -> onExprs acc items
 
   | ARecordExpr (baseOpt, fields, _) ->
-    onExprOpt baseOpt
-
-    for _, init, _ in fields do
-      onExpr init
+    acc
+    |> up onExprOpt baseOpt
+    |> up (List.fold (fun acc (_, init, _) -> onExpr acc init)) fields
 
   | AIfExpr (cond, body, alt, _) ->
-    onExpr cond
-    onExpr body
-    onExprOpt alt
+    acc
+    |> up onExpr cond
+    |> up onExpr body
+    |> up onExprOpt alt
 
   | AMatchExpr (cond, arms, _) ->
-    onExpr cond
+    acc
+    |> up onExpr cond
+    |> up
+         (List.fold (fun acc arm ->
+           let (AArm (_, guard, body, _)) = arm
+           acc |> up onExprOpt guard |> up onExpr body))
+         arms
 
-    for AArm (_, guard, body, _) in arms do
-      onExprOpt guard
-      onExpr body
-
-  | AFunExpr (_, body, _) -> onExpr body
+  | AFunExpr (_, body, _) -> onExpr acc body
 
   | ANavExpr (l, _, _) ->
     match l with
-    | AIdentExpr (Name (l, pos)) when l.Length = 1 && C.isUpper l.[0] -> visitor.OnModule([ docId; l ], Use, toLoc pos)
+    | AIdentExpr (Name (l, pos)) when l.Length = 1 && C.isUpper l.[0] ->
+      (ModuleSymbol [ docId; l ], Use, None, toLoc pos)
+      :: acc
 
     | ANavExpr (AIdentExpr p, m, _) ->
       let path = [ p; m ] |> List.map nameToIdent
 
-      if path
-         |> List.forall (fun name -> name.Length >= 1 && C.isUpper name.[0]) then
-        visitor.OnModule(path, Use, toLoc (nameToPos m))
+      if isModulePathLike path then
+        (ModuleSymbol path, Use, None, toLoc (nameToPos m))
+        :: acc
+      else
+        acc
 
-    | ANavExpr _ -> ()
-    | _ -> onExpr l
+    | ANavExpr _ -> acc
 
-  | AIndexExpr (l, r, _) -> onExprs [ l; r ]
-  | AUnaryExpr (_, arg, _) -> onExpr arg
-  | ABinaryExpr (_, l, r, _) -> onExprs [ l; r ]
-  | ARangeExpr (l, r, _) -> onExprs [ l; r ]
-  | ATupleExpr (items, _) -> onExprs items
-  | AAscribeExpr (l, _, _) -> onExpr l
+    | _ -> onExpr acc l
 
-  | ASemiExpr (stmts, last, _) ->
-    onExprs stmts
-    onExpr last
+  | AIndexExpr (l, r, _) -> onExprs acc [ l; r ]
+  | AUnaryExpr (_, arg, _) -> onExpr acc arg
+  | ABinaryExpr (_, l, r, _) -> onExprs acc [ l; r ]
+  | ARangeExpr (l, r, _) -> onExprs acc [ l; r ]
+  | ATupleExpr (items, _) -> onExprs acc items
+  | AAscribeExpr (l, _, _) -> onExpr acc l
 
-  | ALetExpr (_, _, init, next, _) -> onExprs [ init; next ]
+  | ASemiExpr (stmts, last, _) -> acc |> up onExprs stmts |> up onExpr last
 
-let private dfsADecl (visitor: Visitor) docId decl =
-  let onExpr expr = dfsAExpr visitor docId expr
-  let toLoc (y, x) = Loc(docId, y, x)
+  | ALetExpr (_, _, init, next, _) -> dfsAExpr docId (onExpr acc init) next
+
+let private dfsADecl docId acc decl : SymbolOccurrence list =
+  let onExpr acc expr = dfsAExpr docId acc expr
+  let onDecl acc decl = dfsADecl docId acc decl
+  let toLoc (y, x) = At(Loc(docId, y, x))
 
   match decl with
-  | AExprDecl expr -> onExpr expr
-  | ALetDecl (_, _, init, _) -> onExpr init
+  | AExprDecl expr -> onExpr acc expr
+  | ALetDecl (_, _, init, _) -> onExpr acc init
 
   | ATySynonymDecl _
   | AUnionTyDecl _
-  | ARecordTyDecl _ -> ()
+  | ARecordTyDecl _ -> acc
 
   | AOpenDecl (path, pos) ->
     let pos = path |> pathToPos pos
-    visitor.OnModule(path |> List.map nameToIdent, Use, toLoc pos)
+
+    (ModuleSymbol(path |> List.map nameToIdent), Use, None, toLoc pos)
+    :: acc
 
   | AModuleSynonymDecl (Name (synonym, identPos), path, pos) ->
-    visitor.OnModule([ docId; synonym ], Def, toLoc identPos)
+    let acc =
+      (ModuleSymbol [ docId; synonym ], Def, None, toLoc identPos)
+      :: acc
 
     let pos = path |> pathToPos pos
-    visitor.OnModule(path |> List.map nameToIdent, Use, toLoc pos)
 
-  | AModuleDecl (_, _, _, decls, _) ->
-    for decl in decls do
-      dfsADecl visitor docId decl
+    (ModuleSymbol(path |> List.map nameToIdent), Use, None, toLoc pos)
+    :: acc
 
-  | AAttrDecl (_, next, _) -> dfsADecl visitor docId next
+  | AModuleDecl (_, _, _, decls, _) -> acc |> up (List.fold onDecl) decls
 
-let private dfsARoot (visitor: Visitor) (docId: DocId) root =
-  let toLoc (y, x) = Loc(docId, y, x)
+  | AAttrDecl (_, next, _) -> dfsADecl docId acc next
+
+let private dfsARoot (docId: DocId) acc root : SymbolOccurrence list =
+  let toLoc (y, x) = At(Loc(docId, y, x))
   let (ARoot (headOpt, decls)) = root
 
-  match headOpt with
-  | Some (path, pos) ->
-    let pos = path |> pathToPos pos
-    visitor.OnModule(path |> List.map nameToIdent, Def, toLoc pos)
+  let acc =
+    match headOpt with
+    | Some (path, pos) ->
+      let pos = path |> pathToPos pos
 
-  | _ ->
-    let path = docId.Split(".") |> Array.toList
-    visitor.OnModule(path, Def, Loc(docId, 0, 0))
+      (ModuleSymbol(path |> List.map nameToIdent), Def, None, toLoc pos)
+      :: acc
 
-  for decl in decls do
-    dfsADecl visitor docId decl
+    | _ ->
+      let path = docId.Split(".") |> Array.toList
 
-type private Loc2 =
-  | At of Loc
-  | PreviousIdent of Loc
-  | NextIdent of Loc
+      (ModuleSymbol path, Def, None, toLoc (0, 0))
+      :: acc
+
+  acc |> up (List.fold (dfsADecl docId)) decls
 
 let private dfsTy acc ty : (Symbol * DefOrUse * Ty option * Loc2) list =
   let (Ty (tk, tyArgs)) = ty
@@ -447,7 +466,7 @@ let private dfsTy acc ty : (Symbol * DefOrUse * Ty option * Loc2) list =
 
   acc |> up (List.fold dfsTy) tyArgs
 
-let private dfsPat acc pat : (Symbol * DefOrUse * Ty option * Loc2) list =
+let private dfsPat acc pat : SymbolOccurrence list =
   match pat with
   | TLitPat _ -> acc
 
@@ -626,13 +645,12 @@ let private dfsStmt acc stmt =
   | TOpenStmt _
   | TModuleSynonymStmt _ -> acc
 
-let private foldTir modules ls =
-  let symbols =
-    modules
-    |> List.fold (fun acc (m: TModule) -> acc |> up (List.fold dfsStmt) m.Stmts) []
-    |> List.rev
+let private foldTir acc modules =
+  modules
+  |> List.fold (fun acc (m: TModule) -> acc |> up (List.fold dfsStmt) m.Stmts) acc
 
-  // Resolve locations.
+/// Resolve locations.
+let private resolveLoc symbols ls =
   symbols
   |> List.mapFold
        (fun (ls: LangServiceState) item ->
@@ -663,7 +681,9 @@ let private foldTir modules ls =
   |> List.choose id
 
 let private findTyInStmt (ls: LangServiceState) (modules: TProgram) (tokenLoc: Loc) =
-  foldTir modules ls
+  let symbols = foldTir [] modules
+
+  resolveLoc symbols ls
   |> List.tryPick (fun (_, _, tyOpt, loc) ->
     match tyOpt with
     | Some ty when loc = tokenLoc -> Some ty
@@ -679,37 +699,22 @@ type private Symbol =
   | ModuleSymbol of ModulePath
 
 let private collectSymbolsInExpr (ls: LangServiceState) (modules: TProgram) =
-  let symbols = ResizeArray()
-  let onVisit symbol defOrUse loc = symbols.Add((symbol, defOrUse, loc))
-
-  let visitor: Visitor =
-    { OnDiscardPat = fun (_, loc) -> onVisit DiscardSymbol Def loc
-      OnVar = fun (varSerial, defOrUse, _, loc) -> onVisit (ValueSymbol(VarSymbol varSerial)) defOrUse loc
-      OnFun = fun (funSerial, defOrUse, _, loc) -> onVisit (ValueSymbol(FunSymbol funSerial)) defOrUse loc
-      OnVariant =
-        fun (variantSerial, defOrUse, _, loc) -> onVisit (ValueSymbol(VariantSymbol variantSerial)) defOrUse loc
-      OnPrim = fun (prim, _, loc) -> onVisit (PrimSymbol prim) Use loc
-      OnField = fun (tySerial, ident, defOrUse, _, loc) -> onVisit (FieldSymbol(tySerial, ident)) defOrUse loc
-      OnTy = fun (tySymbol, defOrUse, loc) -> onVisit (TySymbol tySymbol) defOrUse loc
-      OnModule = fun (path, defOrUse, loc) -> onVisit (ModuleSymbol path) defOrUse loc
-
-      GetTokens = fun docId -> ls |> tokenizeWithCache docId |> fst }
-
-  for m in modules do
+  let parseModule (m: TModule) =
     let docId = m.DocId
 
     match ls |> parseWithCache docId with
-    | Some syntaxData ->
-      let _, _, ast, _ = syntaxData
-
-      dfsARoot visitor docId ast
-
+    | Some (_, _, ast, _) -> docId, ast
     | None -> failwith "must be parsed"
 
-  foldTir modules ls
-  |> List.iter (fun (symbol, defOrUse, _, loc) -> symbols.Add((symbol, defOrUse, loc)))
-
-  symbols
+  []
+  |> up
+       (List.fold (fun acc m ->
+         let docId, ast = parseModule m
+         dfsARoot docId acc ast))
+       modules
+  |> up foldTir modules
+  |> (fun acc -> resolveLoc acc ls)
+  |> List.map (fun (symbol, defOrUse, _, loc) -> symbol, defOrUse, loc)
 
 let private doFindRefs hint projectDir docId targetPos ls =
   debugFn "doFindRefs %s" hint
@@ -735,15 +740,14 @@ let private doFindRefs hint projectDir docId targetPos ls =
 
       let symbols = collectSymbolsInExpr ls modules
 
-      let symbolIndex =
-        symbols.FindIndex(fun (_, _, loc) -> loc = tokenLoc)
-
-      if symbolIndex < 0 then
+      match symbols
+            |> List.tryFind (fun (_, _, loc) -> loc = tokenLoc)
+        with
+      | None ->
         debugFn "%s: no symbol" hint
         None, ls
-      else
-        let targetSymbol, _, _ = symbols.[symbolIndex]
 
+      | Some (targetSymbol, _, _) ->
         let result =
           symbols
           |> Seq.filter (fun (symbol, _, _) -> symbol = targetSymbol)
