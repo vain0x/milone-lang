@@ -77,8 +77,17 @@ let private getVersion docId (ls: LangServiceState) =
   ls.Host.GetDocVersion docId
   |> Option.defaultValue 0
 
-// FIXME: avoid doing tokenization repeatedly
-let private tokenizeWithCache docId (ls: LangServiceState) = ls.Host.Tokenize docId |> snd
+let private tokenizeWithCache docId (ls: LangServiceState) =
+  match ls.NewTokenizeCache |> TMap.tryFind docId with
+  | Some it -> it, ls
+
+  | None ->
+    let tokens = ls.Host.Tokenize docId |> snd
+
+    let ls =
+      { ls with NewTokenizeCache = ls.NewTokenizeCache |> TMap.add docId tokens }
+
+    tokens, ls
 
 let private parseWithCache docId (ls: LangServiceState) = ls.Host.Parse docId |> Option.map snd
 
@@ -172,6 +181,9 @@ let private bundleWithCache (ls: LangServiceState) projectDir : BundleResult * L
 
     let ls =
       { ls with
+          NewTokenizeCache =
+            result.ParseResults
+            |> List.fold (fun map (_, (docId, tokens, _, _)) -> map |> TMap.add docId tokens) ls.NewTokenizeCache
           NewParseResults = List.append result.ParseResults ls.NewParseResults
           BundleCache = ls.BundleCache |> TMap.add projectDir result }
 
@@ -194,7 +206,8 @@ type BundleResult =
 // FIXME: private repr
 [<RequireQualifiedAccess; NoEquality; NoComparison>]
 type LangServiceState =
-  { NewParseResults: (DocVersion * ModuleSyntaxData) list
+  { NewTokenizeCache: TreeMap<DocId, TokenizeFullResult>
+    NewParseResults: (DocVersion * ModuleSyntaxData) list
     BundleCache: TreeMap<ProjectDir, BundleResult>
     Host: LangServiceHost }
 
@@ -622,38 +635,30 @@ let private foldTir modules ls =
   // Resolve locations.
   symbols
   |> List.mapFold
-       (fun map item ->
-         let tokenize loc map =
+       (fun (ls: LangServiceState) item ->
+         let tokenize loc ls =
            let (Loc (docId, y, x)) = loc
-
-           let tokens, map =
-             match map |> TMap.tryFind docId with
-             | Some it -> it, map
-             | None ->
-               let tokens = tokenizeWithCache docId ls
-               let map = map |> TMap.add docId tokens
-               tokens, map
-
-           tokens, docId, (y, x), map
+           let tokens, ls = tokenizeWithCache docId ls
+           tokens, docId, (y, x), ls
 
          let symbol, defOrUse, tyOpt, loc = item
 
-         let locOpt, map =
+         let locOpt, ls =
            match loc with
-           | At loc -> Some loc, map
+           | At loc -> Some loc, ls
 
            | PreviousIdent loc ->
-             let tokens, docId, pos, map = tokenize loc map
-             lastIdentBefore tokens docId pos, map
+             let tokens, docId, pos, ls = tokenize loc ls
+             lastIdentBefore tokens docId pos, ls
 
            | NextIdent loc ->
-             let tokens, docId, pos, map = tokenize loc map
-             firstIdentAfter tokens docId pos, map
+             let tokens, docId, pos, ls = tokenize loc ls
+             firstIdentAfter tokens docId pos, ls
 
          match locOpt with
-         | Some loc -> Some(symbol, defOrUse, tyOpt, loc), map
-         | None -> None, map)
-       (TMap.empty compare)
+         | Some loc -> Some(symbol, defOrUse, tyOpt, loc), ls
+         | None -> None, ls)
+       ls
   |> fst
   |> List.choose id
 
@@ -688,7 +693,7 @@ let private collectSymbolsInExpr (ls: LangServiceState) (modules: TProgram) =
       OnTy = fun (tySymbol, defOrUse, loc) -> onVisit (TySymbol tySymbol) defOrUse loc
       OnModule = fun (path, defOrUse, loc) -> onVisit (ModuleSymbol path) defOrUse loc
 
-      GetTokens = fun docId -> ls |> tokenizeWithCache docId }
+      GetTokens = fun docId -> ls |> tokenizeWithCache docId |> fst }
 
   for m in modules do
     let docId = m.DocId
@@ -716,7 +721,7 @@ let private doFindRefs hint projectDir docId targetPos ls =
     None, ls
 
   | Some (modules, _) ->
-    let tokens = tokenizeWithCache docId ls
+    let tokens, ls = tokenizeWithCache docId ls
     let tokenOpt = findTokenAt tokens targetPos
 
     match tokenOpt with
@@ -729,15 +734,6 @@ let private doFindRefs hint projectDir docId targetPos ls =
       let tokenLoc = locOfDocPos docId tokenPos
 
       let symbols = collectSymbolsInExpr ls modules
-
-      debugFn
-        "%s: tokenLoc=%A symbols(%s)"
-        hint
-        tokenLoc
-        (symbols
-         |> Seq.map (sprintf "%A")
-         |> Seq.toList
-         |> String.concat "; ")
 
       let symbolIndex =
         symbols.FindIndex(fun (_, _, loc) -> loc = tokenLoc)
@@ -771,7 +767,7 @@ let private doFindDefsOrUses hint projectDir docId targetPos includeDef includeU
 
     let result =
       [ for KeyValue (docId, posList) in map do
-          let tokens = tokenizeWithCache docId ls
+          let tokens, _ = tokenizeWithCache docId ls
 
           for range in resolveTokenRanges tokens (List.ofSeq posList) do
             docId, range ]
@@ -780,7 +776,8 @@ let private doFindDefsOrUses hint projectDir docId targetPos includeDef includeU
 
 module LangService =
   let create (host: LangServiceHost) : LangServiceState =
-    { NewParseResults = []
+    { NewTokenizeCache = TMap.empty compare
+      NewParseResults = []
       BundleCache = TMap.empty compare
       Host = host }
 
@@ -794,7 +791,7 @@ module LangService =
     (targetPos: Pos)
     (ls: LangServiceState)
     : string list * LangServiceState =
-    let tokens = tokenizeWithCache docId ls
+    let tokens, ls = tokenizeWithCache docId ls
 
     let inModuleLine =
       let y, _ = targetPos
@@ -862,7 +859,7 @@ module LangService =
           | Def -> writes.Add(pos)
           | Use -> reads.Add(pos)
 
-      let tokens = tokenizeWithCache docId ls
+      let tokens, ls = tokenizeWithCache docId ls
 
       let collect (posArray: ResizeArray<Pos>) =
         resolveTokenRanges tokens (List.ofSeq posArray)
@@ -881,7 +878,7 @@ module LangService =
       None, ls
 
     | Some (modules, tirCtx) ->
-      let tokens = tokenizeWithCache docId ls
+      let tokens, ls = tokenizeWithCache docId ls
       let tokenOpt = findTokenAt tokens targetPos
 
       match tokenOpt with
