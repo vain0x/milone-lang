@@ -267,7 +267,7 @@ type private DocVersion = int
 [<RequireQualifiedAccess; NoEquality; NoComparison>]
 type LangServiceState2 =
   { Docs: TreeMap<Uri, DocVersion * string>
-    Projects: TreeMap<string, LangServiceState>
+    Projects: TreeMap<string, ProjectAnalysis>
 
     // Workspace-wide cache.
     TokenizeCache: TreeMap<DocId, DocVersion * Syntax.TokenizeFullResult>
@@ -292,8 +292,8 @@ let mutable private current = empty2
 /// (msg, loc) list
 type private ProjectValidateResult = (string * Loc) list
 
-let private emptyProjectLangService : LangServiceState =
-  let langServiceHost: LangServiceHost =
+let private emptyProjectLangService: ProjectAnalysis =
+  let langServiceHost: ProjectAnalysisHost =
     { GetDocVersion = fun _ -> failwith "illegal use"
       Tokenize = fun _ -> failwith "illegal use"
       Parse = fun _ -> failwith "illegal use"
@@ -302,13 +302,13 @@ let private emptyProjectLangService : LangServiceState =
       MiloneHomeModules = fun () -> stdLibProjects |> Map.toList
       FindModulesInDir = findModulesInDir }
 
-  LangService.create langServiceHost
+  ProjectAnalysis.create langServiceHost
 
 let private tokenizeHost = Syntax.tokenizeHostNew ()
 
 let doWithLangService
   (p: ProjectInfo)
-  (action: LangServiceState -> 'A * LangServiceState)
+  (action: ProjectAnalysis -> 'A * ProjectAnalysis)
   (state: LangServiceState2)
   : 'A * LangServiceState2 =
   let getVersion docId =
@@ -448,7 +448,7 @@ let didChangeFile (uri: Uri) : unit =
 let didCloseFile (uri: Uri) : unit = didCloseDoc uri
 
 let validateProject (p: ProjectInfo) : ProjectValidateResult =
-  withLangService p (LangService.validateProject p.ProjectDir)
+  withLangService p (ProjectAnalysis.validateProject p.ProjectDir)
 
 // (uri, (msg, pos) list) list
 type private WorkspaceValidateResult = (Uri * (string * Pos) list) list
@@ -490,7 +490,7 @@ let validateWorkspace (rootUriOpt: string option) : WorkspaceValidateResult =
 
 let completion rootUriOpt uri pos =
   let doCompletion (p: ProjectInfo) uri pos =
-    withLangService p (LangService.completion p.ProjectDir (uriToDocId uri) pos)
+    withLangService p (ProjectAnalysis.completion p.ProjectDir (uriToDocId uri) pos)
 
   match findProjects rootUriOpt with
   | Error _ -> []
@@ -506,7 +506,7 @@ let completion rootUriOpt uri pos =
 
 let documentHighlight rootUriOpt uri pos =
   let doHighlight (p: ProjectInfo) uri pos =
-    withLangService p (LangService.documentHighlight p.ProjectDir (uriToDocId uri) pos)
+    withLangService p (ProjectAnalysis.documentHighlight p.ProjectDir (uriToDocId uri) pos)
 
   // let texts = ResizeArray()
   let reads = ResizeArray()
@@ -529,7 +529,7 @@ let documentHighlight rootUriOpt uri pos =
 
 let hover rootUriOpt uri pos =
   let doHover (p: ProjectInfo) uri pos =
-    withLangService p (LangService.hover p.ProjectDir (uriToDocId uri) pos)
+    withLangService p (ProjectAnalysis.hover p.ProjectDir (uriToDocId uri) pos)
 
   match findProjects rootUriOpt with
   | Error _ -> []
@@ -545,7 +545,7 @@ let hover rootUriOpt uri pos =
 
 let definition rootUriOpt uri pos =
   let doDefinition (p: ProjectInfo) uri pos =
-    withLangService p (LangService.definition p.ProjectDir (uriToDocId uri) pos)
+    withLangService p (ProjectAnalysis.definition p.ProjectDir (uriToDocId uri) pos)
     |> List.map (fun (docId, range) -> docIdToUri p docId, range)
 
   match findProjects rootUriOpt with
@@ -561,7 +561,7 @@ let definition rootUriOpt uri pos =
 
 let references rootUriOpt uri pos (includeDecl: bool) =
   let doReferences (p: ProjectInfo) uri pos =
-    withLangService p (LangService.references p.ProjectDir (uriToDocId uri) pos includeDecl)
+    withLangService p (ProjectAnalysis.references p.ProjectDir (uriToDocId uri) pos includeDecl)
     |> List.map (fun (docId, range) -> docIdToUri p docId, range)
 
   match findProjects rootUriOpt with

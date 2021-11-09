@@ -58,7 +58,7 @@ let private createSingleFileProject text action =
   |> LLS.openDoc (Uri "file:///example.com/TestProject/TestProject.milone") 1 text
   |> LLS.doWithLangService p action
 
-let private doTestRefsSingleFile title text (ls: LangServiceState) : bool * LangServiceState =
+let private doTestRefsSingleFile title text (ls: ProjectAnalysis) : bool * ProjectAnalysis =
   let anchors =
     let lines = text |> toLines
 
@@ -94,11 +94,11 @@ let private doTestRefsSingleFile title text (ls: LangServiceState) : bool * Lang
     let row, column, _ = firstAnchor
 
     match ls
-          |> LangService.findRefs projectDir docId (row, column)
+          |> ProjectAnalysis.findRefs projectDir docId (row, column)
       with
     | None, ls ->
       let errors, ls =
-        ls |> LangService.validateProject projectDir
+        ls |> ProjectAnalysis.validateProject projectDir
 
       let msg =
         if errors |> List.isEmpty then
@@ -147,10 +147,12 @@ let private doTestHoverSingleFile title text expected ls : bool * _ =
     |> S.concat "\n"
 
   let actual, ls =
-    match ls |> LangService.hover projectDir docId targetPos with
+    match ls
+          |> ProjectAnalysis.hover projectDir docId targetPos
+      with
     | None, ls ->
       let errors, ls =
-        ls |> LangService.validateProject projectDir
+        ls |> ProjectAnalysis.validateProject projectDir
 
       let msg =
         if errors |> List.isEmpty then

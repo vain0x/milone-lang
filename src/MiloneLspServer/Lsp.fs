@@ -24,16 +24,6 @@ type private FilePath = string
 type private DocVersion = int
 type private Error = string * Loc
 
-[<RequireQualifiedAccess; NoEquality; NoComparison>]
-type LangServiceHost =
-  { GetDocVersion: DocId -> DocVersion option
-    Tokenize: DocId -> DocVersion * TokenizeFullResult
-    Parse: DocId -> (DocVersion * ModuleSyntaxData) option
-
-    MiloneHome: FilePath
-    MiloneHomeModules: unit -> (ProjectName * ModuleName) list
-    FindModulesInDir: ProjectDir -> (ProjectName * ModuleName) list }
-
 // -----------------------------------------------
 // Utils
 // -----------------------------------------------
@@ -171,20 +161,31 @@ let private tyDisplayFn (tirCtx: TirCtx) ty =
 // Project-wise analysis
 // -----------------------------------------------
 
+/// Operations for project analysis.
+[<RequireQualifiedAccess; NoEquality; NoComparison>]
+type ProjectAnalysisHost =
+  { GetDocVersion: DocId -> DocVersion option
+    Tokenize: DocId -> DocVersion * TokenizeFullResult
+    Parse: DocId -> (DocVersion * ModuleSyntaxData) option
+
+    MiloneHome: FilePath
+    MiloneHomeModules: unit -> (ProjectName * ModuleName) list
+    FindModulesInDir: ProjectDir -> (ProjectName * ModuleName) list }
+
 // FIXME: private repr
 /// State of project analysis.
 [<RequireQualifiedAccess; NoEquality; NoComparison>]
-type LangServiceState =
+type ProjectAnalysis =
   { NewTokenizeCache: TreeMap<DocId, TokenizeFullResult>
     NewParseResults: (DocVersion * ModuleSyntaxData) list
     BundleCache: TreeMap<ProjectDir, BundleResult>
-    Host: LangServiceHost }
+    Host: ProjectAnalysisHost }
 
-let private getVersion docId (ls: LangServiceState) =
+let private getVersion docId (ls: ProjectAnalysis) =
   ls.Host.GetDocVersion docId
   |> Option.defaultValue 0
 
-let private tokenizeWithCache docId (ls: LangServiceState) =
+let private tokenizeWithCache docId (ls: ProjectAnalysis) =
   match ls.NewTokenizeCache |> TMap.tryFind docId with
   | Some it -> it, ls
 
@@ -196,7 +197,7 @@ let private tokenizeWithCache docId (ls: LangServiceState) =
 
     tokens, ls
 
-let private parseWithCache docId (ls: LangServiceState) = ls.Host.Parse docId |> Option.map snd
+let private parseWithCache docId (ls: ProjectAnalysis) = ls.Host.Parse docId |> Option.map snd
 
 // FIXME: private repr
 [<RequireQualifiedAccess; NoEquality; NoComparison>]
@@ -206,7 +207,7 @@ type BundleResult =
     DocVersions: (DocId * DocVersion) list
     ParseResults: (DocVersion * ModuleSyntaxData) list }
 
-let private doBundle (ls: LangServiceState) projectDir : BundleResult =
+let private doBundle (ls: ProjectAnalysis) projectDir : BundleResult =
   let miloneHome = ls.Host.MiloneHome
   let projectDir = projectDir |> pathStrTrimEndPathSep
   let projectName = projectDir |> pathStrToStem
@@ -262,7 +263,7 @@ let private doBundle (ls: LangServiceState) projectDir : BundleResult =
       DocVersions = docVersions
       ParseResults = parseResults }
 
-let private bundleWithCache (ls: LangServiceState) projectDir : BundleResult * LangServiceState =
+let private bundleWithCache (ls: ProjectAnalysis) projectDir : BundleResult * ProjectAnalysis =
   let docsAreAllFresh docVersions =
     docVersions
     |> List.forall (fun (docId, version) -> getVersion docId ls <= version)
@@ -648,7 +649,7 @@ let private foldTir acc modules =
 let private resolveLoc (symbols: SymbolOccurrence list) ls =
   symbols
   |> List.mapFold
-       (fun (ls: LangServiceState) item ->
+       (fun (ls: ProjectAnalysis) item ->
          let tokenize loc ls =
            let (Loc (docId, y, x)) = loc
            let tokens, ls = tokenizeWithCache docId ls
@@ -675,7 +676,7 @@ let private resolveLoc (symbols: SymbolOccurrence list) ls =
   |> fst
   |> List.choose id
 
-let private findTyInStmt (ls: LangServiceState) (modules: TProgram) (tokenLoc: Loc) =
+let private findTyInStmt (ls: ProjectAnalysis) (modules: TProgram) (tokenLoc: Loc) =
   let symbols = foldTir [] modules
 
   resolveLoc symbols ls
@@ -684,7 +685,7 @@ let private findTyInStmt (ls: LangServiceState) (modules: TProgram) (tokenLoc: L
     | Some ty when loc = tokenLoc -> Some ty
     | _ -> None)
 
-let private collectSymbolsInExpr (ls: LangServiceState) (modules: TProgram) =
+let private collectSymbolsInExpr (ls: ProjectAnalysis) (modules: TProgram) =
   let parseModule (m: TModule) =
     let docId = m.DocId
 
@@ -764,14 +765,14 @@ let private doFindDefsOrUses hint projectDir docId targetPos includeDef includeU
 
     Some result, ls
 
-module LangService =
-  let create (host: LangServiceHost) : LangServiceState =
+module ProjectAnalysis =
+  let create (host: ProjectAnalysisHost) : ProjectAnalysis =
     { NewTokenizeCache = TMap.empty compare
       NewParseResults = []
       BundleCache = TMap.empty compare
       Host = host }
 
-  let validateProject projectDir (ls: LangServiceState) : Error list * LangServiceState =
+  let validateProject projectDir (ls: ProjectAnalysis) : Error list * ProjectAnalysis =
     let result, ls = bundleWithCache ls projectDir
     result.Errors, ls
 
@@ -779,8 +780,8 @@ module LangService =
     (projectDir: ProjectDir)
     (docId: DocId)
     (targetPos: Pos)
-    (ls: LangServiceState)
-    : string list * LangServiceState =
+    (ls: ProjectAnalysis)
+    : string list * ProjectAnalysis =
     let tokens, ls = tokenizeWithCache docId ls
 
     let inModuleLine =
@@ -813,8 +814,8 @@ module LangService =
     projectDir
     docId
     targetPos
-    (ls: LangServiceState)
-    : ((DocId * Pos) list * (DocId * Pos) list) option * LangServiceState =
+    (ls: ProjectAnalysis)
+    : ((DocId * Pos) list * (DocId * Pos) list) option * ProjectAnalysis =
     match doFindRefs "findRefs" projectDir docId targetPos ls with
     | Some symbols, ls ->
       let defs = ResizeArray()
@@ -834,8 +835,8 @@ module LangService =
     projectDir
     docId
     targetPos
-    (ls: LangServiceState)
-    : (Range list * Range list) option * LangServiceState =
+    (ls: ProjectAnalysis)
+    : (Range list * Range list) option * ProjectAnalysis =
     match doFindRefs "highlight" projectDir docId targetPos ls with
     | Some symbols, ls ->
       let reads = ResizeArray()
@@ -859,7 +860,7 @@ module LangService =
 
     | None, ls -> None, ls
 
-  let hover projectDir (docId: DocId) (targetPos: Pos) (ls: LangServiceState) : string option * LangServiceState =
+  let hover projectDir (docId: DocId) (targetPos: Pos) (ls: ProjectAnalysis) : string option * ProjectAnalysis =
     let result, ls = bundleWithCache ls projectDir
 
     match result.ProgramOpt with
@@ -885,7 +886,7 @@ module LangService =
         | None -> None, ls
         | Some ty -> Some(tyDisplayFn tirCtx ty), ls
 
-  let definition projectDir docId targetPos (ls: LangServiceState) : (DocId * Range) list * LangServiceState =
+  let definition projectDir docId targetPos (ls: ProjectAnalysis) : (DocId * Range) list * ProjectAnalysis =
     let includeDef = true
     let includeUse = false
 
@@ -899,8 +900,8 @@ module LangService =
     docId
     targetPos
     (includeDef: bool)
-    (ls: LangServiceState)
-    : (DocId * Range) list * LangServiceState =
+    (ls: ProjectAnalysis)
+    : (DocId * Range) list * ProjectAnalysis =
     let includeUse = true
 
     let resultOpt, ls =
