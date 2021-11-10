@@ -541,24 +541,14 @@ let private withLangService p action =
   current <- state
   result
 
-let onInitialized rootUriOpt : Result<unit, exn> =
-  let result =
+let onInitialized rootUriOpt : unit =
+  let projects =
     match rootUriOpt with
-    | None -> Ok []
+    | Some rootUri -> doFindProjects rootUri
+    | None -> []
 
-    | Some rootUri ->
-      try
-        Ok(doFindProjects rootUri)
-      with
-      | ex -> Error ex
-
-  match result with
-  | Ok projects ->
-    infoFn "findProjects: %A" (List.map (fun (p: ProjectInfo) -> p.ProjectDir) projects)
-    current <- { current with ProjectList = projects }
-    Ok()
-
-  | Error ex -> Error ex
+  infoFn "findProjects: %A" (List.map (fun (p: ProjectInfo) -> p.ProjectDir) projects)
+  current <- { current with ProjectList = projects }
 
 let didOpenDoc uri version text : unit =
   current <- WorkspaceAnalysis.didOpenDoc uri version text current
@@ -593,17 +583,11 @@ let validateWorkspace () : WorkspaceValidateResult =
   diagnostics
 
 let completion uri pos =
-  try
-    let result, wa =
-      WorkspaceAnalysis.completion uri pos current
+  let result, wa =
+    WorkspaceAnalysis.completion uri pos current
 
-    current <- wa
-    result
-  with
-  | ex ->
-    // FIXME: send error response
-    errorFn "completion failed: %A" ex
-    []
+  current <- wa
+  result
 
 let documentHighlight uri pos =
   let reads, writes, wa =
