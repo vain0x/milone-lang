@@ -586,17 +586,11 @@ type private WorkspaceValidateResult = (Uri * (string * Pos) list) list
 
 /// Validate all projects in workspace to report errors.
 let validateWorkspace () : WorkspaceValidateResult =
-  try
-    let diagnostics, state =
-      WorkspaceAnalysis.validateAllProjects current
+  let diagnostics, state =
+    WorkspaceAnalysis.validateAllProjects current
 
-    current <- state
-    diagnostics
-  with
-  | ex ->
-    // FIXME: send error response
-    errorFn "validateWorkspace failed: %A" ex
-    []
+  current <- state
+  diagnostics
 
 let completion uri pos =
   try

@@ -455,21 +455,29 @@ let private processNext () : LspIncome -> ProcessResult =
       Continue
 
     | DiagnosticsRequest ->
-      let result = LspLangService.validateWorkspace ()
+      let result =
+        try
+          LspLangService.validateWorkspace ()
+          |> List.map (fun (Uri uri, errors) ->
+            let diagnostics =
+              [ for msg, pos in errors do
+                  jOfObj [ "range", jOfRange (pos, pos)
+                           "message", JString msg
+                           "source", JString "milone-lang" ] ]
+              |> JArray
 
-      for Uri uri, errors in result do
-        let diagnostics =
-          [ for msg, pos in errors do
-              jOfObj [ "range", jOfRange (pos, pos)
-                       "message", JString msg
-                       "source", JString "milone-lang" ] ]
-          |> JArray
+            jOfObj [ "uri", JString uri
+                     "diagnostics", diagnostics ])
+          |> Ok
+        with
+        | ex -> Error ex
 
-        let param =
-          jOfObj [ "uri", JString uri
-                   "diagnostics", diagnostics ]
+      match result with
+      | Ok paramList ->
+        for p in paramList do
+          jsonRpcWriteWithParams "textDocument/publishDiagnostics" p
 
-        jsonRpcWriteWithParams "textDocument/publishDiagnostics" param
+      | Error ex -> handleNotificationError "diagnostics" ex
 
       Continue
 
