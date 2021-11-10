@@ -144,8 +144,6 @@ type ProjectInfo =
     ProjectName: string
     EntryFileExt: string }
 
-let private projectsRef: Result<ProjectInfo list, exn> option ref = ref None
-
 /// Finds all projects inside of the workspace.
 let private doFindProjects (rootUri: string) : ProjectInfo list =
   let projects = ResizeArray()
@@ -190,27 +188,6 @@ let private doFindProjects (rootUri: string) : ProjectInfo list =
           stack.Push((depth + 1, subdir))
 
   List.ofSeq projects
-
-/// Finds project directories recursively. Memoized.
-let findProjects (rootUriOpt: string option) : Result<ProjectInfo list, exn> =
-  match !projectsRef, rootUriOpt with
-  | Some it, _ -> it
-
-  | None, None -> Ok []
-
-  | None, Some rootUri ->
-    let projects =
-      try
-        let projects = doFindProjects rootUri
-        infoFn "findProjects: %A" (List.map (fun (p: ProjectInfo) -> p.ProjectDir) projects)
-        Ok projects
-      with
-      | ex ->
-        errorFn "findProjects failed: %A" ex
-        Error ex
-
-    projectsRef := Some projects
-    projects
 
 let private uriToDocId (uri: Uri) : DocId =
   let filePath =
@@ -490,12 +467,41 @@ module WorkspaceAnalysis =
 
     diagnostics, wa
 
+  let completion (uri: Uri) (pos: Pos) (wa: WorkspaceAnalysis) =
+    let results, wa =
+      wa.ProjectList
+      |> List.mapFold
+           (fun wa p -> doWithLangService p (ProjectAnalysis.completion p.ProjectDir (uriToDocId uri) pos) wa)
+           wa
+
+    List.collect id results, wa
+
 let mutable private current = empty2
 
 let private withLangService p action =
   let result, state = doWithLangService p action current
   current <- state
   result
+
+let onInitialized rootUriOpt : unit =
+  let result =
+    match rootUriOpt with
+    | None -> Ok []
+
+    | Some rootUri ->
+      try
+        Ok(doFindProjects rootUri)
+      with
+      | ex -> Error ex
+
+  match result with
+  | Ok projects ->
+    infoFn "findProjects: %A" (List.map (fun (p: ProjectInfo) -> p.ProjectDir) projects)
+    current <- { current with ProjectList = projects }
+
+  | Error ex ->
+    // FIXME: send error response
+    errorFn "findProjects failed: %A" ex
 
 let didOpenDoc uri version text : unit =
   current <- WorkspaceAnalysis.didOpenDoc uri version text current
@@ -522,42 +528,33 @@ let validateProject (p: ProjectInfo) : ProjectValidateResult =
 type private WorkspaceValidateResult = (Uri * (string * Pos) list) list
 
 /// Validate all projects in workspace to report errors.
-let validateWorkspace (rootUriOpt: string option) : WorkspaceValidateResult =
-  match findProjects rootUriOpt with
-  | Error _ -> []
+let validateWorkspace () : WorkspaceValidateResult =
+  try
+    let diagnostics, state =
+      WorkspaceAnalysis.validateAllProjects current
 
-  | Ok projects ->
-    try
-      let state = { current with ProjectList = projects }
+    current <- state
+    diagnostics
+  with
+  | ex ->
+    // FIXME: send error response
+    errorFn "validateWorkspace failed: %A" ex
+    []
 
-      let diagnostics, state =
-        state |> WorkspaceAnalysis.validateAllProjects
+let completion uri pos =
+  try
+    let result, wa =
+      WorkspaceAnalysis.completion uri pos current
 
-      current <- state
+    current <- wa
+    result
+  with
+  | ex ->
+    // FIXME: send error response
+    errorFn "completion failed: %A" ex
+    []
 
-      diagnostics
-    with
-    | ex ->
-      errorFn "validateWorkspace failed: %A" ex
-      []
-
-let completion rootUriOpt uri pos =
-  let doCompletion (p: ProjectInfo) uri pos =
-    withLangService p (ProjectAnalysis.completion p.ProjectDir (uriToDocId uri) pos)
-
-  match findProjects rootUriOpt with
-  | Error _ -> []
-
-  | Ok projects ->
-    try
-      projects
-      |> List.collect (fun project -> doCompletion project uri pos)
-    with
-    | ex ->
-      errorFn "completion failed: %A" ex
-      []
-
-let documentHighlight rootUriOpt uri pos =
+let documentHighlight uri pos =
   let doHighlight (p: ProjectInfo) uri pos =
     withLangService p (ProjectAnalysis.documentHighlight p.ProjectDir (uriToDocId uri) pos)
 
@@ -565,11 +562,9 @@ let documentHighlight rootUriOpt uri pos =
   let reads = ResizeArray()
   let writes = ResizeArray()
 
-  match findProjects rootUriOpt with
-  | Error _ -> ()
-  | Ok projects ->
+  let _ =
     try
-      for project in projects do
+      for project in current.ProjectList do
         match doHighlight project uri pos with
         | None -> ()
         | Some (r, w) ->
@@ -580,53 +575,43 @@ let documentHighlight rootUriOpt uri pos =
 
   reads, writes
 
-let hover rootUriOpt uri pos =
+let hover uri pos =
   let doHover (p: ProjectInfo) uri pos =
     withLangService p (ProjectAnalysis.hover p.ProjectDir (uriToDocId uri) pos)
 
-  match findProjects rootUriOpt with
-  | Error _ -> []
+  try
+    current.ProjectList
+    |> List.choose (fun project -> doHover project uri pos)
+  with
+  | ex ->
+    errorFn "hover failed: %A" ex
+    []
 
-  | Ok projects ->
-    try
-      projects
-      |> List.choose (fun project -> doHover project uri pos)
-    with
-    | ex ->
-      errorFn "hover failed: %A" ex
-      []
-
-let definition rootUriOpt uri pos =
+let definition uri pos =
   let doDefinition (p: ProjectInfo) uri pos =
     withLangService p (ProjectAnalysis.definition p.ProjectDir (uriToDocId uri) pos)
     |> List.map (fun (docId, range) -> docIdToUri p docId, range)
 
-  match findProjects rootUriOpt with
-  | Error _ -> []
-  | Ok projects ->
-    try
-      projects
-      |> List.collect (fun project -> doDefinition project uri pos)
-    with
-    | ex ->
-      errorFn "definition failed: %A" ex
-      []
+  try
+    current.ProjectList
+    |> List.collect (fun project -> doDefinition project uri pos)
+  with
+  | ex ->
+    errorFn "definition failed: %A" ex
+    []
 
-let references rootUriOpt uri pos (includeDecl: bool) =
+let references uri pos (includeDecl: bool) =
   let doReferences (p: ProjectInfo) uri pos =
     withLangService p (ProjectAnalysis.references p.ProjectDir (uriToDocId uri) pos includeDecl)
     |> List.map (fun (docId, range) -> docIdToUri p docId, range)
 
-  match findProjects rootUriOpt with
-  | Error _ -> []
-  | Ok projects ->
-    try
-      projects
-      |> List.collect (fun project -> doReferences project uri pos)
-    with
-    | ex ->
-      errorFn "references failed: %A" ex
-      []
+  try
+    current.ProjectList
+    |> List.collect (fun project -> doReferences project uri pos)
+  with
+  | ex ->
+    errorFn "references failed: %A" ex
+    []
 
 [<RequireQualifiedAccess; NoEquality; NoComparison>]
 type FormattingResult = { Edits: (Range * string) list }

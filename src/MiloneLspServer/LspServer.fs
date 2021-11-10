@@ -383,6 +383,8 @@ let private processNext () : LspIncome -> ProcessResult =
       Continue
 
     | InitializedNotification ->
+      LspLangService.onInitialized rootUriOpt
+
       // Use fixed id because of no further requests.
       let msgId = JNumber 1.0
 
@@ -432,8 +434,7 @@ let private processNext () : LspIncome -> ProcessResult =
       Continue
 
     | DiagnosticsRequest ->
-      let result =
-        LspLangService.validateWorkspace rootUriOpt
+      let result = LspLangService.validateWorkspace ()
 
       for Uri uri, errors in result do
         let diagnostics =
@@ -453,7 +454,7 @@ let private processNext () : LspIncome -> ProcessResult =
 
     | CompletionRequest (msgId, p) ->
       let result =
-        LspLangService.completion rootUriOpt p.Uri p.Pos
+        LspLangService.completion p.Uri p.Pos
         |> List.map (fun text -> jOfObj [ "label", JString text ])
         |> JArray
 
@@ -468,8 +469,7 @@ let private processNext () : LspIncome -> ProcessResult =
     | DefinitionRequest (msgId, p) ->
       // <https://microsoft.github.io/language-server-protocol/specifications/specification-current/#textDocument_definition>
 
-      let result =
-        LspLangService.definition rootUriOpt p.Uri p.Pos
+      let result = LspLangService.definition p.Uri p.Pos
 
       let result =
         result
@@ -485,7 +485,7 @@ let private processNext () : LspIncome -> ProcessResult =
       // <https://microsoft.github.io/language-server-protocol/specifications/specification-current/#textDocument_references>
 
       let result =
-        LspLangService.references rootUriOpt p.Uri p.Pos p.IncludeDecl
+        LspLangService.references p.Uri p.Pos p.IncludeDecl
 
       let result =
         result
@@ -501,7 +501,7 @@ let private processNext () : LspIncome -> ProcessResult =
       // <https://microsoft.github.io/language-server-protocol/specifications/specification-current/#textDocument_documentHighlight>
 
       let reads, writes =
-        LspLangService.documentHighlight rootUriOpt p.Uri p.Pos
+        LspLangService.documentHighlight p.Uri p.Pos
 
       let result =
         let toHighlights kind posList =
@@ -536,8 +536,7 @@ let private processNext () : LspIncome -> ProcessResult =
     | HoverRequest (msgId, p) ->
       // https://microsoft.github.io/language-server-protocol/specifications/specification-current/#textDocument_hover
 
-      let contents =
-        LspLangService.hover rootUriOpt p.Uri p.Pos
+      let contents = LspLangService.hover p.Uri p.Pos
 
       let result =
         match contents with
