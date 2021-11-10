@@ -107,28 +107,25 @@ let private findModulesRecursively (maxDepth: int) (rootDir: string) : (string *
   let mutable stack = Stack()
   stack.Push(0, rootDir)
 
-  try
-    while stack.Count <> 0 do
-      let depth, dir = stack.Pop()
-      debugFn "in %d:%s" depth dir
-      assert (depth <= maxDepth)
+  while stack.Count <> 0 do
+    let depth, dir = stack.Pop()
+    debugFn "in %d:%s" depth dir
+    assert (depth <= maxDepth)
 
-      let projectName = Path.GetFileNameWithoutExtension(dir)
+    let projectName = Path.GetFileNameWithoutExtension(dir)
 
-      for file in Directory.GetFiles(dir) do
-        let ext = Path.GetExtension(file)
+    for file in Directory.GetFiles(dir) do
+      let ext = Path.GetExtension(file)
 
-        if ext = ".milone" || ext = ".fs" then
-          let moduleName = Path.GetFileNameWithoutExtension(file)
-          debugFn "in %s" moduleName
-          files.Add(projectName, moduleName)
+      if ext = ".milone" || ext = ".fs" then
+        let moduleName = Path.GetFileNameWithoutExtension(file)
+        debugFn "in %s" moduleName
+        files.Add(projectName, moduleName)
 
-      if depth < maxDepth then
-        for subdir in Directory.GetDirectories(dir) do
-          if subdir |> dirIsExcluded |> not then
-            stack.Push(depth + 1, subdir)
-  with
-  | ex -> debugFn "find files in '%s': %A" rootDir ex
+    if depth < maxDepth then
+      for subdir in Directory.GetDirectories(dir) do
+        if subdir |> dirIsExcluded |> not then
+          stack.Push(depth + 1, subdir)
 
   files |> Seq.toList
 
@@ -648,50 +645,45 @@ let formatting (uri: Uri) : FormattingResult option =
       | _ -> None
 
     try
-      try
-        let text =
-          match textOpt with
-          | Some text ->
-            File.WriteAllText(temp, text)
-            text
+      let text =
+        match textOpt with
+        | Some text ->
+          File.WriteAllText(temp, text)
+          text
 
-          | None ->
-            File.Copy(filePath, temp)
-            File.ReadAllText(filePath)
+        | None ->
+          File.Copy(filePath, temp)
+          File.ReadAllText(filePath)
 
-        use proc =
-          // When the server is executed as VSCode extension,
-          // some environment variables are not inherited.
+      use proc =
+        // When the server is executed as VSCode extension,
+        // some environment variables are not inherited.
 
-          let homeDir =
-            Environment.GetFolderPath(Environment.SpecialFolder.UserProfile)
+        let homeDir =
+          Environment.GetFolderPath(Environment.SpecialFolder.UserProfile)
 
-          let startInfo = Diagnostics.ProcessStartInfo()
-          startInfo.FileName <- "/usr/bin/dotnet"
-          startInfo.ArgumentList.Add("fantomas")
-          startInfo.ArgumentList.Add(temp)
-          startInfo.WorkingDirectory <- dir
-          startInfo.EnvironmentVariables.Add("DOTNET_CLI_HOME", homeDir)
-          startInfo.EnvironmentVariables.Add("PATH", "/usr/bin")
-          startInfo.RedirectStandardOutput <- true
-          Diagnostics.Process.Start(startInfo)
+        let startInfo = Diagnostics.ProcessStartInfo()
+        startInfo.FileName <- "/usr/bin/dotnet"
+        startInfo.ArgumentList.Add("fantomas")
+        startInfo.ArgumentList.Add(temp)
+        startInfo.WorkingDirectory <- dir
+        startInfo.EnvironmentVariables.Add("DOTNET_CLI_HOME", homeDir)
+        startInfo.EnvironmentVariables.Add("PATH", "/usr/bin")
+        startInfo.RedirectStandardOutput <- true
+        Diagnostics.Process.Start(startInfo)
 
-        let exited = proc.WaitForExit(30 * 1000)
+      let exited = proc.WaitForExit(30 * 1000)
 
-        if not exited then
-          proc.Kill(entireProcessTree = true)
-          None
-        else
-          let newText = File.ReadAllText(temp)
-          formattingResultOfDiff text newText |> Some
-      with
-      | err ->
-        warnFn "failed fantomas: %O" err
+      if not exited then
+        proc.Kill(entireProcessTree = true)
         None
+      else
+        let newText = File.ReadAllText(temp)
+        formattingResultOfDiff text newText |> Some
     finally
       try
         File.Delete(temp)
       with
-      | err -> warnFn "failed deleting temporary file '%s': %O" temp err
+      | ex -> warnFn "failed deleting temporary file '%s': %O" temp ex
 
   | None -> None
