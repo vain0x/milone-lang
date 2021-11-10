@@ -476,6 +476,64 @@ module WorkspaceAnalysis =
 
     List.collect id results, wa
 
+  let documentHighlight (uri: Uri) (pos: Pos) (wa: WorkspaceAnalysis) =
+    let results, wa =
+      wa.ProjectList
+      |> List.mapFold
+           (fun wa p -> doWithLangService p (ProjectAnalysis.documentHighlight p.ProjectDir (uriToDocId uri) pos) wa)
+           wa
+
+    let reads, writes = List.choose id results |> List.unzip
+
+    List.collect id reads, List.collect id writes, wa
+
+  let hover (uri: Uri) (pos: Pos) (wa: WorkspaceAnalysis) =
+    let results, wa =
+      wa.ProjectList
+      |> List.mapFold (fun wa p -> doWithLangService p (ProjectAnalysis.hover p.ProjectDir (uriToDocId uri) pos) wa) wa
+
+    List.choose id results, wa
+
+  let definition (uri: Uri) (pos: Pos) (wa: WorkspaceAnalysis) =
+    let results, wa =
+      wa.ProjectList
+      |> List.mapFold
+           (fun wa p ->
+             let result, wa =
+               wa
+               |> doWithLangService p (ProjectAnalysis.definition p.ProjectDir (uriToDocId uri) pos)
+
+             (p, result), wa)
+           wa
+
+    let result =
+      results
+      |> List.collect (fun (p, result) ->
+        result
+        |> List.map (fun (docId, range) -> docIdToUri p docId, range))
+
+    result, wa
+
+  let references (uri: Uri) (pos: Pos) (includeDecl: bool) (wa: WorkspaceAnalysis) =
+    let results, wa =
+      wa.ProjectList
+      |> List.mapFold
+           (fun wa p ->
+             let result, wa =
+               wa
+               |> doWithLangService p (ProjectAnalysis.references p.ProjectDir (uriToDocId uri) pos includeDecl)
+
+             (p, result), wa)
+           wa
+
+    let result =
+      results
+      |> List.collect (fun (p, result) ->
+        result
+        |> List.map (fun (docId, range) -> docIdToUri p docId, range))
+
+    result, wa
+
 let mutable private current = empty2
 
 let private withLangService p action =
@@ -555,63 +613,34 @@ let completion uri pos =
     []
 
 let documentHighlight uri pos =
-  let doHighlight (p: ProjectInfo) uri pos =
-    withLangService p (ProjectAnalysis.documentHighlight p.ProjectDir (uriToDocId uri) pos)
+  let reads, writes, wa =
+    current
+    |> WorkspaceAnalysis.documentHighlight uri pos
 
-  // let texts = ResizeArray()
-  let reads = ResizeArray()
-  let writes = ResizeArray()
-
-  let _ =
-    try
-      for project in current.ProjectList do
-        match doHighlight project uri pos with
-        | None -> ()
-        | Some (r, w) ->
-          reads.AddRange(r)
-          writes.AddRange(w)
-    with
-    | ex -> errorFn "documentHighlight failed: %A" ex
-
+  current <- wa
   reads, writes
 
 let hover uri pos =
-  let doHover (p: ProjectInfo) uri pos =
-    withLangService p (ProjectAnalysis.hover p.ProjectDir (uriToDocId uri) pos)
+  let result, wa =
+    current |> WorkspaceAnalysis.hover uri pos
 
-  try
-    current.ProjectList
-    |> List.choose (fun project -> doHover project uri pos)
-  with
-  | ex ->
-    errorFn "hover failed: %A" ex
-    []
+  current <- wa
+  result
 
 let definition uri pos =
-  let doDefinition (p: ProjectInfo) uri pos =
-    withLangService p (ProjectAnalysis.definition p.ProjectDir (uriToDocId uri) pos)
-    |> List.map (fun (docId, range) -> docIdToUri p docId, range)
+  let result, wa =
+    current |> WorkspaceAnalysis.definition uri pos
 
-  try
-    current.ProjectList
-    |> List.collect (fun project -> doDefinition project uri pos)
-  with
-  | ex ->
-    errorFn "definition failed: %A" ex
-    []
+  current <- wa
+  result
 
 let references uri pos (includeDecl: bool) =
-  let doReferences (p: ProjectInfo) uri pos =
-    withLangService p (ProjectAnalysis.references p.ProjectDir (uriToDocId uri) pos includeDecl)
-    |> List.map (fun (docId, range) -> docIdToUri p docId, range)
+  let result, wa =
+    current
+    |> WorkspaceAnalysis.references uri pos includeDecl
 
-  try
-    current.ProjectList
-    |> List.collect (fun project -> doReferences project uri pos)
-  with
-  | ex ->
-    errorFn "references failed: %A" ex
-    []
+  current <- wa
+  result
 
 [<RequireQualifiedAccess; NoEquality; NoComparison>]
 type FormattingResult = { Edits: (Range * string) list }
