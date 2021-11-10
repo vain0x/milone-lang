@@ -375,7 +375,10 @@ type private LspIncome =
   | DidChangeWatchedFiles of DidChangeWatchedFilesParam
 
   // Queries.
-  | DiagnosticsRequest
+  /// Notification to update diagnostics.
+  /// This notification is NOT sent by LSP client but is generated inside the server
+  /// whenever server receives a kind of requests that invalidate previous diagnostics.
+  | DiagnosticsNotification
   | CompletionRequest of MsgId * DocumentPositionParam
   /// <https://microsoft.github.io/language-server-protocol/specifications/specification-current/#textDocument_definition>
   | DefinitionRequest of MsgId * DocumentPositionParam
@@ -511,7 +514,7 @@ let private processNext () : LspIncome -> ProcessResult =
 
       Continue
 
-    | DiagnosticsRequest ->
+    | DiagnosticsNotification ->
       handleNotificationWith
         "diagnostics"
         (fun () ->
@@ -654,7 +657,7 @@ let private dedupChanges (incomes: LspIncome list) : LspIncome list =
          (last, [ last ])
     |> snd
 
-/// Automatically update diagnostics by appending diagnostics request
+/// Automatically update diagnostics by appending diagnostics notification
 /// if some document changed.
 let private autoUpdateDiagnostics (incomes: LspIncome list) : LspIncome list =
   let doesUpdateDiagnostics income =
@@ -667,17 +670,17 @@ let private autoUpdateDiagnostics (incomes: LspIncome list) : LspIncome list =
 
     | _ -> false
 
-  let isDiagnosticRequest income =
+  let isDiagnosticsNotification income =
     match income with
-    | DiagnosticsRequest -> true
+    | DiagnosticsNotification -> true
     | _ -> false
 
   if incomes |> List.exists doesUpdateDiagnostics then
     let incomes =
       incomes
-      |> List.filter (isDiagnosticRequest >> not)
+      |> List.filter (isDiagnosticsNotification >> not)
 
-    List.append incomes [ DiagnosticsRequest ]
+    List.append incomes [ DiagnosticsNotification ]
   else
     incomes
 
