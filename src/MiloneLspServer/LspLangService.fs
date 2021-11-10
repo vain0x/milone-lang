@@ -283,6 +283,7 @@ type WorkspaceAnalysisHost =
 type WorkspaceAnalysis =
   { LastId: int
     Docs: TreeMap<Uri, DocVersion * string>
+    ProjectList: ProjectInfo list
     Projects: TreeMap<string, ProjectAnalysis>
 
     // Per-file cache.
@@ -299,6 +300,7 @@ type WorkspaceAnalysis =
 let empty2: WorkspaceAnalysis =
   { LastId = 0
     Docs = TMap.empty Uri.compare
+    ProjectList = []
     Projects = TMap.empty compare
 
     TokenizeCache = TMap.empty compare
@@ -457,6 +459,37 @@ module WorkspaceAnalysis =
 
   let didCloseFile (uri: Uri) (wa: WorkspaceAnalysis) = didCloseDoc uri wa
 
+  let validateProject (p: ProjectInfo) (wa: WorkspaceAnalysis) : ProjectValidateResult * WorkspaceAnalysis =
+    doWithLangService p (ProjectAnalysis.validateProject p.ProjectDir) wa
+
+  let validateAllProjects (wa: WorkspaceAnalysis) =
+    let results, wa =
+      wa.ProjectList
+      |> List.mapFold
+           (fun wa p ->
+             let result, wa = validateProject p wa
+             (p, result), wa)
+           wa
+
+    let diagnostics =
+      results
+      |> Seq.collect (fun (p, list) ->
+        list
+        |> Seq.map (fun (msg, loc) ->
+          let (Loc (docId, y, x)) = loc
+          msg, docIdToUri p docId, (y, x)))
+      |> Seq.toList
+
+    let diagnostics, diagnosticsKeys, diagnosticsCache =
+      aggregateDiagnostics wa.DiagnosticsKeys wa.DiagnosticsCache diagnostics
+
+    let wa =
+      { wa with
+          DiagnosticsKeys = diagnosticsKeys
+          DiagnosticsCache = diagnosticsCache }
+
+    diagnostics, wa
+
 let mutable private current = empty2
 
 let private withLangService p action =
@@ -488,28 +521,6 @@ let validateProject (p: ProjectInfo) : ProjectValidateResult =
 // (uri, (msg, pos) list) list
 type private WorkspaceValidateResult = (Uri * (string * Pos) list) list
 
-let private doValidateWorkspace projects =
-  let state = current
-
-  let diagnostics =
-    projects
-    |> Seq.collect (fun p ->
-      validateProject p
-      |> Seq.map (fun (msg, loc) ->
-        let (Loc (docId, y, x)) = loc
-        msg, docIdToUri p docId, (y, x)))
-    |> Seq.toList
-
-  let diagnostics, diagnosticsKeys, diagnosticsCache =
-    aggregateDiagnostics state.DiagnosticsKeys state.DiagnosticsCache diagnostics
-
-  current <-
-    { current with
-        DiagnosticsKeys = diagnosticsKeys
-        DiagnosticsCache = diagnosticsCache }
-
-  diagnostics
-
 /// Validate all projects in workspace to report errors.
 let validateWorkspace (rootUriOpt: string option) : WorkspaceValidateResult =
   match findProjects rootUriOpt with
@@ -517,7 +528,14 @@ let validateWorkspace (rootUriOpt: string option) : WorkspaceValidateResult =
 
   | Ok projects ->
     try
-      doValidateWorkspace projects
+      let state = { current with ProjectList = projects }
+
+      let diagnostics, state =
+        state |> WorkspaceAnalysis.validateAllProjects
+
+      current <- state
+
+      diagnostics
     with
     | ex ->
       errorFn "validateWorkspace failed: %A" ex
