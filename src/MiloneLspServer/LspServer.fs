@@ -354,10 +354,15 @@ type private LspIncome =
   // Queries.
   | DiagnosticsRequest
   | CompletionRequest of MsgId * DocumentPositionParam
+  /// <https://microsoft.github.io/language-server-protocol/specifications/specification-current/#textDocument_definition>
   | DefinitionRequest of MsgId * DocumentPositionParam
+  /// <https://microsoft.github.io/language-server-protocol/specifications/specification-current/#textDocument_references>
   | ReferencesRequest of MsgId * ReferencesParam
+  /// <https://microsoft.github.io/language-server-protocol/specifications/specification-current/#textDocument_documentHighlight>
   | DocumentHighlightRequest of MsgId * DocumentPositionParam
+  /// <https://microsoft.github.io/language-server-protocol/specifications/specification-current/#textDocument_formatting>
   | FormattingRequest of MsgId * Uri
+  /// <https://microsoft.github.io/language-server-protocol/specifications/specification-current/#textDocument_hover>
   | HoverRequest of MsgId * DocumentPositionParam
 
   // Others.
@@ -496,8 +501,6 @@ let private processNext () : LspIncome -> ProcessResult =
       Continue
 
     | DefinitionRequest (msgId, p) ->
-      // <https://microsoft.github.io/language-server-protocol/specifications/specification-current/#textDocument_definition>
-
       let result = LspLangService.definition p.Uri p.Pos
 
       let result =
@@ -511,8 +514,6 @@ let private processNext () : LspIncome -> ProcessResult =
       Continue
 
     | ReferencesRequest (msgId, p) ->
-      // <https://microsoft.github.io/language-server-protocol/specifications/specification-current/#textDocument_references>
-
       let result =
         LspLangService.references p.Uri p.Pos p.IncludeDecl
 
@@ -527,8 +528,6 @@ let private processNext () : LspIncome -> ProcessResult =
       Continue
 
     | DocumentHighlightRequest (msgId, p) ->
-      // <https://microsoft.github.io/language-server-protocol/specifications/specification-current/#textDocument_documentHighlight>
-
       let reads, writes =
         LspLangService.documentHighlight p.Uri p.Pos
 
@@ -546,8 +545,6 @@ let private processNext () : LspIncome -> ProcessResult =
       Continue
 
     | FormattingRequest (msgId, uri) ->
-      // https://microsoft.github.io/language-server-protocol/specifications/specification-current/#textDocument_formatting
-
       let result =
         match LspLangService.formatting uri with
         | None -> JNull
@@ -563,8 +560,6 @@ let private processNext () : LspIncome -> ProcessResult =
       Continue
 
     | HoverRequest (msgId, p) ->
-      // https://microsoft.github.io/language-server-protocol/specifications/specification-current/#textDocument_hover
-
       let contents = LspLangService.hover p.Uri p.Pos
 
       let result =
