@@ -7,6 +7,7 @@ open MiloneLspServer.JsonValue
 open MiloneLspServer.JsonSerialization
 open MiloneLspServer.JsonRpcWriter
 open MiloneLspServer.LspUtil
+open MiloneLspServer.Util
 
 type private Position = int * int
 
@@ -296,6 +297,42 @@ type private LspError =
   | MethodNotFoundError of msgId: MsgId * methodName: string
 
 // -----------------------------------------------
+// LSP misc
+// -----------------------------------------------
+
+// For when server received a notification and caused an error.
+let private showErrorMessage (msg: string) =
+  let p =
+    jOfObj [ "type", jOfInt 1 // error
+             "message", JString msg ]
+
+  jsonRpcWriteWithParams "window/showMessage" p
+
+let private handleNotificationError hint (ex: exn) =
+  errorFn "%s failed: %A" hint ex
+  showErrorMessage (sprintf "%s failed (%s)" hint ex.Message)
+
+// Use fixed id because of no further requests.
+let private enableDidChangedWatchedFiles () =
+  let msgId = JNumber 1.0
+
+  let param =
+    jsonDeserializeString
+      """
+        { "registrations": [
+          {
+            "id": "1",
+            "method": "workspace/didChangeWatchedFiles",
+            "registerOptions": {
+              "watchers": [{ "globPattern": "**/*.{fs,milone}" }]
+            }
+          }
+        ] }
+      """
+
+  jsonRpcWriteWithIdParams "client/registerCapability" msgId param
+
+// -----------------------------------------------
 // LspIncome
 // -----------------------------------------------
 
@@ -383,26 +420,10 @@ let private processNext () : LspIncome -> ProcessResult =
       Continue
 
     | InitializedNotification ->
-      LspLangService.onInitialized rootUriOpt
+      match LspLangService.onInitialized rootUriOpt with
+      | Ok () -> enableDidChangedWatchedFiles ()
+      | Error ex -> handleNotificationError "initialized" ex
 
-      // Use fixed id because of no further requests.
-      let msgId = JNumber 1.0
-
-      let param =
-        jsonDeserializeString
-          """
-            { "registrations": [
-              {
-                "id": "1",
-                "method": "workspace/didChangeWatchedFiles",
-                "registerOptions": {
-                  "watchers": [{ "globPattern": "**/*.{fs,milone}" }]
-                }
-              }
-            ] }
-          """
-
-      jsonRpcWriteWithIdParams "client/registerCapability" msgId param
       Continue
 
     | ShutdownRequest msgId ->

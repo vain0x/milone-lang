@@ -541,7 +541,7 @@ let private withLangService p action =
   current <- state
   result
 
-let onInitialized rootUriOpt : unit =
+let onInitialized rootUriOpt : Result<unit, exn> =
   let result =
     match rootUriOpt with
     | None -> Ok []
@@ -556,10 +556,9 @@ let onInitialized rootUriOpt : unit =
   | Ok projects ->
     infoFn "findProjects: %A" (List.map (fun (p: ProjectInfo) -> p.ProjectDir) projects)
     current <- { current with ProjectList = projects }
+    Ok()
 
-  | Error ex ->
-    // FIXME: send error response
-    errorFn "findProjects failed: %A" ex
+  | Error ex -> Error ex
 
 let didOpenDoc uri version text : unit =
   current <- WorkspaceAnalysis.didOpenDoc uri version text current
