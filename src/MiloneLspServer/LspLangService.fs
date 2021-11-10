@@ -315,18 +315,6 @@ let empty2: WorkspaceAnalysis =
 /// (msg, loc) list
 type private ProjectValidateResult = (string * Loc) list
 
-let private emptyProjectAnalysis (wa: WorkspaceAnalysis) : ProjectAnalysis =
-  let host: ProjectAnalysisHost =
-    { GetDocVersion = fun _ -> failwith "illegal use"
-      Tokenize = fun _ -> failwith "illegal use"
-      Parse = fun _ -> failwith "illegal use"
-
-      MiloneHome = wa.Host.MiloneHome
-      MiloneHomeModules = fun () -> stdLibProjects |> Map.toList
-      FindModulesInDir = findModulesInDir }
-
-  ProjectAnalysis.create host
-
 let private freshId (wa: WorkspaceAnalysis) =
   wa.LastId + 1, { wa with LastId = wa.LastId + 1 }
 
@@ -339,11 +327,6 @@ let doWithLangService
     match state.Docs |> TMap.tryFind (docIdToUri p docId) with
     | Some (v, _) -> Some v
     | None -> None
-
-  let ls =
-    match state.Projects |> TMap.tryFind p.ProjectName with
-    | Some it -> it
-    | None -> emptyProjectAnalysis state
 
   let tokenize1 docId =
     let version =
@@ -407,14 +390,19 @@ let doWithLangService
 
         Some(v, syntaxData)
 
-  let ls =
-    let host =
-      { ls.Host with
-          GetDocVersion = getVersion
-          Tokenize = tokenize1
-          Parse = parse1 }
+  let host: ProjectAnalysisHost =
+    { GetDocVersion = getVersion
+      Tokenize = tokenize1
+      Parse = parse1
 
-    { ls with Host = host }
+      MiloneHome = state.Host.MiloneHome
+      MiloneHomeModules = fun () -> stdLibProjects |> Map.toList
+      FindModulesInDir = findModulesInDir }
+
+  let ls =
+    match state.Projects |> TMap.tryFind p.ProjectName with
+    | Some it -> it
+    | None -> ProjectAnalysis.create host
 
   let result, ls = action ls
 
