@@ -35,7 +35,9 @@ let private writeFile (filePath: string) (contents: string) : unit =
     | Some it when it = contents -> ()
     | _ -> System.IO.File.WriteAllText(filePath, contents)
   with
-  | err -> eprintfn "Couldn't write to file '%s'. '%s'" filePath err.Message
+  | ex ->
+    eprintfn "Couldn't write to file '%s'. '%s'" filePath ex.Message
+    reraise ()
 
 let private runCommand (command: string) (args: string list) : int =
   let p =
