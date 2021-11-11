@@ -385,7 +385,7 @@ let doWithLangService
   // FIXME: store tokenize cache
   let _, newParseResults, ls = ls |> ProjectAnalysis.drain
 
-  let state =
+  let wa =
     newParseResults
     |> List.fold
          (fun (state: WorkspaceAnalysis) (v, syntaxData) ->
@@ -395,6 +395,23 @@ let doWithLangService
                TokenizeCache = state.TokenizeCache |> TMap.add docId (v, tokens)
                ParseCache = state.ParseCache |> TMap.add docId (v, syntaxData) })
          state
+
+  let state =
+    newParseResults
+    |> List.map (fun (_, (docId, _, _, _)) -> docIdToUri p docId)
+    |> List.filter (fun uri -> wa.Docs |> TMap.containsKey uri |> not)
+    |> List.fold
+         (fun (wa: WorkspaceAnalysis) uri ->
+           // FIXME: don't read file
+           // same as didOpenFile
+           match uriToFilePath uri |> Option.bind File.tryReadFile with
+           | Some text ->
+             debugFn "file '%s' opened after bundle" (Uri.toString uri)
+             let version, wa = freshId wa
+             { wa with Docs = wa.Docs |> TMap.add uri (version, text) }
+
+           | None -> wa)
+         wa
 
   let state =
     { state with Projects = state.Projects |> TMap.add p.ProjectName ls }
