@@ -533,11 +533,6 @@ module WorkspaceAnalysis =
 
 let mutable private current = empty2
 
-let private withLangService p action =
-  let result, state = doWithLangService p action current
-  current <- state
-  result
-
 let onInitialized rootUriOpt : unit =
   let projects =
     match rootUriOpt with
@@ -564,9 +559,6 @@ let didChangeFile uri : unit =
 
 let didCloseFile uri : unit =
   current <- WorkspaceAnalysis.didCloseDoc uri current
-
-let validateProject (p: ProjectInfo) : ProjectValidateResult =
-  withLangService p (ProjectAnalysis.validateProject p.ProjectDir)
 
 // (uri, (msg, pos) list) list
 type private WorkspaceValidateResult = (Uri * (string * Pos) list) list
