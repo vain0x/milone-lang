@@ -380,15 +380,15 @@ type private LspIncome =
   /// whenever server receives a kind of requests that invalidate previous diagnostics.
   | DiagnosticsNotification
   | CompletionRequest of MsgId * DocumentPositionParam
-  /// <https://microsoft.github.io/language-server-protocol/specifications/specification-current/#textDocument_definition>
+  /// https://microsoft.github.io/language-server-protocol/specifications/specification-current/#textDocument_definition
   | DefinitionRequest of MsgId * DocumentPositionParam
-  /// <https://microsoft.github.io/language-server-protocol/specifications/specification-current/#textDocument_references>
+  /// https://microsoft.github.io/language-server-protocol/specifications/specification-current/#textDocument_references
   | ReferencesRequest of MsgId * ReferencesParam
-  /// <https://microsoft.github.io/language-server-protocol/specifications/specification-current/#textDocument_documentHighlight>
+  /// https://microsoft.github.io/language-server-protocol/specifications/specification-current/#tetDocument_documentHighlight
   | DocumentHighlightRequest of MsgId * DocumentPositionParam
-  /// <https://microsoft.github.io/language-server-protocol/specifications/specification-current/#textDocument_formatting>
+  /// https://microsoft.github.io/language-server-protocol/specifications/specification-current/#textDocument_formatting
   | FormattingRequest of MsgId * Uri
-  /// <https://microsoft.github.io/language-server-protocol/specifications/specification-current/#textDocument_hover>
+  /// https://microsoft.github.io/language-server-protocol/specifications/specification-current/#textDocument_hover
   | HoverRequest of MsgId * DocumentPositionParam
 
   // Others.
