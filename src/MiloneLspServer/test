@@ -2,4 +2,4 @@
 
 set -eu
 
-dotnet run -- test
+MILONE_LSP_SERVER_LOG_LEVEL=debug dotnet run -- test

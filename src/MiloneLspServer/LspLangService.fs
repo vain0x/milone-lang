@@ -36,7 +36,7 @@ let private stdLibProjects =
   SyntaxApi.getStdLibProjects miloneHome
   |> Map.ofList
 
-let private uriOfFilePath (filePath: string) =
+let uriOfFilePath (filePath: string) =
   let canonicalize (filePath: string) =
     let filePath =
       filePath.Replace("\\", "/").Replace("//", "/")

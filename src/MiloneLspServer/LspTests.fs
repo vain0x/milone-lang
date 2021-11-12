@@ -425,10 +425,58 @@ let private testHover () =
       "No result." ]
 
 // -----------------------------------------------
+// Diagnostics
+// -----------------------------------------------
+
+// Run server (stateful).
+
+let private testDiagnostics () =
+  let workDir = System.Environment.CurrentDirectory
+
+  let rootUri =
+    workDir |> LLS.uriOfFilePath |> Uri.toString
+
+  let projectDir = "tests/DiagnosticsTest"
+
+  let p: LLS.ProjectInfo =
+    { ProjectDir = projectDir
+      ProjectName = "DiagnosticsTest"
+      EntryFileExt = ".milone" }
+
+  LLS.onInitialized (Some rootUri)
+
+  let result = LLS.validateWorkspace ()
+  assert (List.length result = 0)
+
+  let filename =
+    System.IO.Path.Combine(workDir, "tests/DiagnosticsTest/DiagnosticsTest.milone")
+
+  let fileUri = LLS.uriOfFilePath filename
+  let initialText = System.IO.File.ReadAllText(filename)
+
+  let result =
+    try
+      let text =
+        initialText.Replace("// let x 0", "let x 0")
+
+      System.IO.File.WriteAllText(filename, text)
+
+      LLS.didChangeFile fileUri
+      LLS.validateWorkspace ()
+    finally
+      System.IO.File.WriteAllText(filename, initialText)
+
+  assert (List.length result = 1)
+
+// -----------------------------------------------
 // Interface
 // -----------------------------------------------
 
 let lspTests () =
-  List.collect id [ testRefs (); testHover () ]
-  |> runTests
-  |> exit
+  let code =
+    List.collect id [ testRefs (); testHover () ]
+    |> runTests
+
+  if code = 0 then testDiagnostics ()
+
+  exit code
