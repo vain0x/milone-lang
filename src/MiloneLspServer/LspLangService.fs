@@ -377,7 +377,7 @@ let doWithLangService
 
   let ls =
     match state.Projects |> TMap.tryFind p.ProjectName with
-    | Some it -> it
+    | Some it -> { it with Host = host }
     | None -> ProjectAnalysis.create host
 
   let result, ls = action ls
