@@ -271,7 +271,7 @@ type WorkspaceAnalysis =
     TokenizeHost: Syntax.TokenizeHost
     Host: WorkspaceAnalysisHost }
 
-let empty2: WorkspaceAnalysis =
+let private emptyWorkspaceAnalysis: WorkspaceAnalysis =
   { LastId = 0
     Docs = TMap.empty Uri.compare
     ProjectList = []
@@ -419,6 +419,8 @@ let doWithLangService
   result, state
 
 module WorkspaceAnalysis =
+  let empty: WorkspaceAnalysis = emptyWorkspaceAnalysis
+
   let didOpenDoc (uri: Uri) (version: int) (text: string) (wa: WorkspaceAnalysis) =
     { wa with Docs = wa.Docs |> TMap.add uri (version, text) }
 
@@ -548,7 +550,7 @@ module WorkspaceAnalysis =
 
     result, wa
 
-let mutable private current = empty2
+let mutable private current = emptyWorkspaceAnalysis
 
 let onInitialized rootUriOpt : unit =
   let projects =
