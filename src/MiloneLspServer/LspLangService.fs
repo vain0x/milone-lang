@@ -407,8 +407,7 @@ let doWithLangService
            match uriToFilePath uri |> Option.bind File.tryReadFile with
            | Some text ->
              debugFn "file '%s' opened after bundle" (Uri.toString uri)
-             let version, wa = freshId wa
-             { wa with Docs = wa.Docs |> TMap.add uri (version, text) }
+             { wa with Docs = wa.Docs |> TMap.add uri (0, text) }
 
            | None -> wa)
          wa
