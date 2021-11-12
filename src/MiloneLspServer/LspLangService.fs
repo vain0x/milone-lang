@@ -85,7 +85,9 @@ let private uriToFilePath (uri: Uri) =
 
     Some path
   with
-  | _ -> None
+  | _ ->
+    traceFn "uriToFilePath failed: %s" (Uri.toString uri)
+    None
 
 /// Whether dir is excluded in traversal?
 let private dirIsExcluded (dir: string) =
