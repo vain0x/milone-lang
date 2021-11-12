@@ -109,7 +109,7 @@ let private findModulesRecursively (maxDepth: int) (rootDir: string) : (string *
 
   while stack.Count <> 0 do
     let depth, dir = stack.Pop()
-    debugFn "in %d:%s" depth dir
+    traceFn "in %d:%s" depth dir
     assert (depth <= maxDepth)
 
     let projectName = Path.GetFileNameWithoutExtension(dir)
@@ -119,7 +119,7 @@ let private findModulesRecursively (maxDepth: int) (rootDir: string) : (string *
 
       if ext = ".milone" || ext = ".fs" then
         let moduleName = Path.GetFileNameWithoutExtension(file)
-        debugFn "in %s" moduleName
+        traceFn "in %s" moduleName
         files.Add(projectName, moduleName)
 
     if depth < maxDepth then
@@ -208,7 +208,7 @@ let private docIdToModulePath (docId: DocId) =
   | [| p; m |] -> Some(p, m)
 
   | _ ->
-    debugFn "Not a docId of module file: '%s'" docId
+    traceFn "Not a docId of module file: '%s'" docId
     None
 
 let private docIdToFilePath (p: ProjectInfo) (docId: DocId) =
@@ -302,7 +302,10 @@ let doWithLangService
   let getVersion docId =
     match state.Docs |> TMap.tryFind (docIdToUri p docId) with
     | Some (v, _) -> Some v
-    | None -> None
+
+    | None ->
+      traceFn "docs don't have '%s'" (docIdToUri p docId |> Uri.toString)
+      None
 
   let tokenize1 docId =
     let version =
@@ -317,7 +320,7 @@ let doWithLangService
 
       | _ ->
         let ok v text =
-          debugFn "tokenize '%s' v:%d" docId v
+          traceFn "tokenize '%s' v:%d" docId v
 
           let tokens =
             SyntaxTokenize.tokenizeAll state.TokenizeHost text
@@ -326,7 +329,10 @@ let doWithLangService
 
         match state.Docs |> TMap.tryFind (docIdToUri p docId) with
         | None ->
-          debugFn "read '%s' from file" docId
+          traceFn
+            "tokenize: docId:'%s' uri:'%s' not found -- fallback to file"
+            docId
+            (docIdToUri p docId |> Uri.toString)
 
           // FIXME: LSP server should add all files to docs before processing queries.
           let textOpt =
@@ -359,7 +365,7 @@ let doWithLangService
         None
 
       | Some (projectName, moduleName) ->
-        debugFn "parse '%s' v:%d" docId v
+        traceFn "parse '%s' v:%d" docId v
 
         let syntaxData =
           parseFullTokens projectName moduleName docId tokens
@@ -406,7 +412,7 @@ let doWithLangService
            // same as didOpenFile
            match uriToFilePath uri |> Option.bind File.tryReadFile with
            | Some text ->
-             debugFn "file '%s' opened after bundle" (Uri.toString uri)
+             traceFn "file '%s' opened after bundle" (Uri.toString uri)
              { wa with Docs = wa.Docs |> TMap.add uri (0, text) }
 
            | None -> wa)
@@ -561,21 +567,27 @@ let onInitialized rootUriOpt : unit =
   current <- { current with ProjectList = projects }
 
 let didOpenDoc uri version text : unit =
+  traceFn "didOpenDoc %s v:%d" (Uri.toString uri) version
   current <- WorkspaceAnalysis.didOpenDoc uri version text current
 
 let didChangeDoc uri version text : unit =
+  traceFn "didChangeDoc %s v:%d" (Uri.toString uri) version
   current <- WorkspaceAnalysis.didChangeDoc uri version text current
 
 let didCloseDoc uri : unit =
+  traceFn "didCloseDoc %s" (Uri.toString uri)
   current <- WorkspaceAnalysis.didCloseDoc uri current
 
 let didOpenFile uri : unit =
+  traceFn "didOpenFile %s" (Uri.toString uri)
   current <- WorkspaceAnalysis.didOpenFile uri current
 
 let didChangeFile uri : unit =
+  traceFn "didChangeFile %s" (Uri.toString uri)
   current <- WorkspaceAnalysis.didChangeFile uri current
 
 let didCloseFile uri : unit =
+  traceFn "didCloseFile %s" (Uri.toString uri)
   current <- WorkspaceAnalysis.didCloseDoc uri current
 
 // (uri, (msg, pos) list) list
