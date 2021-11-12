@@ -172,13 +172,7 @@ let private doFindProjects (rootUri: string) : ProjectInfo list =
     tryAddProject ".fs"
 
     if depth < 3 then
-      let subdirs =
-        try
-          Directory.GetDirectories(dir)
-        with
-        | _ ->
-          debugFn "couldn't get list of files: '%s'" dir
-          [||]
+      let subdirs = Directory.GetDirectories(dir)
 
       for subdir in subdirs do
         if subdir |> dirIsExcluded |> not then
