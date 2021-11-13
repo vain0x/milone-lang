@@ -241,6 +241,9 @@ module LSyntaxData =
     let (LSyntaxData (_, tokens, _, _)) = syntaxData
     LTokenList tokens
 
+module BundleResult =
+  let getErrors (b: BundleResult) = b.Errors
+
 // -----------------------------------------------
 // Project-wise analysis
 // -----------------------------------------------
@@ -841,11 +844,14 @@ let private doFindRefs hint projectDir docId targetPos pa =
     let tokenLoc = locOfDocPos docId (LToken.getPos token)
     U.debugFn "%s: tokenLoc=%A" hint tokenLoc
 
-    let bundleResult, pa = bundleWithCache pa projectDir
+    let result, pa = bundleWithCache pa projectDir
 
-    match pa |> ProjectAnalysis1.collectSymbols bundleResult with
+    match pa |> ProjectAnalysis1.collectSymbols result with
     | None ->
-      U.debugFn "%s: no bundle result: errors %d" hint (List.length bundleResult.Errors)
+      let errorCount =
+        result |> BundleResult.getErrors |> List.length
+
+      U.debugFn "%s: no bundle result: errors %d" hint errorCount
       None, pa
 
     | Some symbols ->
@@ -916,7 +922,8 @@ module ProjectAnalysis =
     let result, pa = bundleWithCache pa projectDir
 
     let errorListList, pa =
-      result.Errors
+      result
+      |> BundleResult.getErrors
       |> List.fold
            (fun map (msg, loc) ->
              let docId, pos = locToDocPos loc
@@ -1062,7 +1069,10 @@ module ProjectAnalysis =
 
       match ProjectAnalysis1.getTyName result tokenLoc pa with
       | None ->
-        U.debugFn "hover: no bundle result: errors %d" (List.length result.Errors)
+        let errorCount =
+          result |> BundleResult.getErrors |> List.length
+
+        U.debugFn "hover: no bundle result: errors %d" errorCount
         None, pa
 
       | Some tyNameOpt -> tyNameOpt, pa
