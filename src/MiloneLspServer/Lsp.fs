@@ -1,19 +1,20 @@
 /// Module for LSP to talk directly to MiloneLang compiler.
 module rec MiloneLspServer.Lsp
 
-open MiloneLspServer.Util
 open MiloneShared.SharedTypes
 open MiloneStd.StdMap
 open MiloneStd.StdPath
 open MiloneStd.StdSet
-open MiloneSyntax
 open MiloneSyntax.Syntax
 open MiloneSyntax.Tir
 
+module U = MiloneLspServer.Util // FIXME: don't depend
+
 module C = MiloneStd.StdChar
-module SharedTypes = MiloneShared.SharedTypes
+module AstBundle = MiloneSyntax.AstBundle
 module SyntaxApi = MiloneSyntax.SyntaxApi
-module Tir = MiloneSyntax.Tir
+module SyntaxTokenize = MiloneSyntax.SyntaxTokenize
+module TySystem = MiloneSyntax.TySystem
 
 type Range = Pos * Pos
 type Location = DocId * Pos * Pos
@@ -223,6 +224,7 @@ type ProjectAnalysisHost =
     Parse: DocId -> (DocVersion * LSyntaxData) option
 
     MiloneHome: FilePath
+    ReadTextFile: string -> Future<string option>
     MiloneHomeModules: unit -> (ProjectName * ModuleName) list
     FindModulesInDir: ProjectDir -> (ProjectName * ModuleName) list }
 
@@ -282,7 +284,7 @@ let private doBundle (ls: ProjectAnalysis) projectDir : BundleResult =
       { EntryProjectDir = projectDir
         EntryProjectName = projectName
         MiloneHome = miloneHome
-        ReadTextFile = File.readFile
+        ReadTextFile = ls.Host.ReadTextFile
         WriteLog = fun _ -> () }
 
     SyntaxApi.newSyntaxCtx host
@@ -767,12 +769,12 @@ let private collectSymbolsInExpr (ls: ProjectAnalysis) (modules: TProgram) =
   |> List.map (fun (symbol, defOrUse, _, loc) -> symbol, defOrUse, loc)
 
 let private doFindRefs hint projectDir docId targetPos ls =
-  debugFn "doFindRefs %s" hint
+  U.debugFn "doFindRefs %s" hint
   let result, ls = bundleWithCache ls projectDir
 
   match result.ProgramOpt with
   | None ->
-    debugFn "%s: no bundle result: errors %d" hint (List.length result.Errors)
+    U.debugFn "%s: no bundle result: errors %d" hint (List.length result.Errors)
     None, ls
 
   | Some (modules, _) ->
@@ -781,11 +783,11 @@ let private doFindRefs hint projectDir docId targetPos ls =
 
     match tokenOpt with
     | None ->
-      debugFn "%s: token not found on position: docId=%s pos=%s" hint docId (posToString targetPos)
+      U.debugFn "%s: token not found on position: docId=%s pos=%s" hint docId (posToString targetPos)
       None, ls
 
     | Some (_token, tokenPos) ->
-      debugFn "%s: tokenPos=%A" hint tokenPos
+      U.debugFn "%s: tokenPos=%A" hint tokenPos
       let tokenLoc = locOfDocPos docId tokenPos
 
       let symbols = collectSymbolsInExpr ls modules
@@ -794,7 +796,7 @@ let private doFindRefs hint projectDir docId targetPos ls =
             |> List.tryFind (fun (_, _, loc) -> loc = tokenLoc)
         with
       | None ->
-        debugFn "%s: no symbol" hint
+        U.debugFn "%s: no symbol" hint
         None, ls
 
       | Some (targetSymbol, _, _) ->
@@ -988,7 +990,7 @@ module ProjectAnalysis =
 
     match result.ProgramOpt with
     | None ->
-      debugFn "hover: no bundle result: errors %d" (List.length result.Errors)
+      U.debugFn "hover: no bundle result: errors %d" (List.length result.Errors)
       None, ls
 
     | Some (modules, tirCtx) ->
@@ -997,7 +999,7 @@ module ProjectAnalysis =
 
       match tokenOpt with
       | None ->
-        debugFn "hover: token not found on position: docId=%s pos=%s" docId (posToString targetPos)
+        U.debugFn "hover: token not found on position: docId=%s pos=%s" docId (posToString targetPos)
         None, ls
 
       | Some (_token, tokenPos) ->

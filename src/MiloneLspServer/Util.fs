@@ -144,7 +144,7 @@ module File =
     with
     | _ -> None
 
-  let readFile (filePath: string) : Future<string option> =
+  let readTextFile (filePath: string) : Future<string option> =
     try
       if System.IO.File.Exists(filePath) then
         System.IO.File.ReadAllTextAsync(filePath)

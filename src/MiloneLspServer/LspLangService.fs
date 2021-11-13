@@ -324,7 +324,7 @@ let doWithLangService
 
           // FIXME: LSP server should add all files to docs before processing queries.
           let textOpt =
-            SyntaxApi.readSourceFile File.readFile (docIdToFilePath p docId)
+            SyntaxApi.readSourceFile File.readTextFile (docIdToFilePath p docId)
             |> Future.wait
 
           match textOpt with
@@ -366,6 +366,7 @@ let doWithLangService
       Parse = parse1
 
       MiloneHome = state.Host.MiloneHome
+      ReadTextFile = File.readTextFile
       MiloneHomeModules = fun () -> stdLibProjects |> Map.toList
       FindModulesInDir = findModulesInDir }
 
