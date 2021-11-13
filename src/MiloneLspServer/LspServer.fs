@@ -2,15 +2,14 @@ module MiloneLspServer.LspServer
 
 open System.Collections.Concurrent
 open System.Threading
-open MiloneShared.SharedTypes
 open MiloneLspServer.JsonValue
 open MiloneLspServer.JsonSerialization
 open MiloneLspServer.JsonRpcWriter
 open MiloneLspServer.LspUtil
 open MiloneLspServer.Util
 
+type private Pos = int * int
 type private Position = int * int
-
 type private Range = Position * Position
 
 // -----------------------------------------------

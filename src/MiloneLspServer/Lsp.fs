@@ -16,13 +16,17 @@ module Tir = MiloneSyntax.Tir
 
 type Range = Pos * Pos
 
-// -----------------------------------------------
-// Host
-// -----------------------------------------------
-
 type private FilePath = string
 type private DocVersion = int
 type private Error = string * Loc
+
+// Hide compiler-specific types from other modules.
+
+[<NoEquality; NoComparison>]
+type LTokenList = private LTokenList of TokenizeFullResult
+
+[<NoEquality; NoComparison>]
+type LSyntaxData = private LSyntaxData of ModuleSyntaxData
 
 // -----------------------------------------------
 // Utils
@@ -137,7 +141,7 @@ let private firstIdentAfter tokens docId pos =
     | IdentToken _ when (py, px) < (y, x) -> Some(Loc(docId, y, x))
     | _ -> None)
 
-let parseFullTokens projectName moduleName docId (allTokens: TokenizeFullResult) : ModuleSyntaxData =
+let private parseAllTokens projectName moduleName docId allTokens =
   let tokens =
     allTokens
     |> List.filter (fun (token, _) -> token |> isTrivia |> not)
@@ -158,6 +162,31 @@ let private tyDisplayFn (tirCtx: TirCtx) ty =
   TySystem.tyDisplay getTyName ty
 
 // -----------------------------------------------
+// Abstraction
+// -----------------------------------------------
+
+module LTokenList =
+  let private host = tokenizeHostNew ()
+
+  let empty = LTokenList []
+
+  let tokenizeAll text =
+    SyntaxTokenize.tokenizeAll host text |> LTokenList
+
+module LSyntaxData =
+  let parse projectName moduleName docId (LTokenList tokens) =
+    parseAllTokens projectName moduleName docId tokens
+    |> LSyntaxData
+
+  let getDocId syntaxData =
+    let (LSyntaxData (docId, _, _, _)) = syntaxData
+    docId
+
+  let getTokens syntaxData =
+    let (LSyntaxData (_, tokens, _, _)) = syntaxData
+    LTokenList tokens
+
+// -----------------------------------------------
 // Project-wise analysis
 // -----------------------------------------------
 
@@ -165,23 +194,23 @@ let private tyDisplayFn (tirCtx: TirCtx) ty =
 [<RequireQualifiedAccess; NoEquality; NoComparison>]
 type ProjectAnalysisHost =
   { GetDocVersion: DocId -> DocVersion option
-    Tokenize: DocId -> DocVersion * TokenizeFullResult
-    Parse: DocId -> (DocVersion * ModuleSyntaxData) option
+    Tokenize: DocId -> DocVersion * LTokenList
+    Parse: DocId -> (DocVersion * LSyntaxData) option
 
     MiloneHome: FilePath
     MiloneHomeModules: unit -> (ProjectName * ModuleName) list
     FindModulesInDir: ProjectDir -> (ProjectName * ModuleName) list }
 
-// FIXME: private repr
 /// State of project analysis.
 [<RequireQualifiedAccess; NoEquality; NoComparison>]
 type ProjectAnalysis =
-  { NewTokenizeCache: TreeMap<DocId, TokenizeFullResult>
-    NewParseResults: (DocVersion * ModuleSyntaxData) list
-    BundleCache: TreeMap<ProjectDir, BundleResult>
-    Host: ProjectAnalysisHost }
+  private
+    { NewTokenizeCache: TreeMap<DocId, LTokenList>
+      NewParseResults: (DocVersion * LSyntaxData) list
+      BundleCache: TreeMap<ProjectDir, BundleResult>
+      Host: ProjectAnalysisHost }
 
-let private emptyTokenizeCache: TreeMap<DocId, TokenizeFullResult> = TMap.empty compare
+let private emptyTokenizeCache: TreeMap<DocId, LTokenList> = TMap.empty compare
 
 let private getVersion docId (ls: ProjectAnalysis) =
   ls.Host.GetDocVersion docId
@@ -189,7 +218,7 @@ let private getVersion docId (ls: ProjectAnalysis) =
 
 let private tokenizeWithCache docId (ls: ProjectAnalysis) =
   match ls.NewTokenizeCache |> TMap.tryFind docId with
-  | Some it -> it, ls
+  | Some (LTokenList tokens) -> tokens, ls
 
   | None ->
     let tokens = ls.Host.Tokenize docId |> snd
@@ -197,17 +226,18 @@ let private tokenizeWithCache docId (ls: ProjectAnalysis) =
     let ls =
       { ls with NewTokenizeCache = ls.NewTokenizeCache |> TMap.add docId tokens }
 
+    let (LTokenList tokens) = tokens
     tokens, ls
 
 let private parseWithCache docId (ls: ProjectAnalysis) = ls.Host.Parse docId |> Option.map snd
 
-// FIXME: private repr
 [<RequireQualifiedAccess; NoEquality; NoComparison>]
 type BundleResult =
-  { ProgramOpt: (TProgram * TirCtx) option
-    Errors: Error list
-    DocVersions: (DocId * DocVersion) list
-    ParseResults: (DocVersion * ModuleSyntaxData) list }
+  private
+    { ProgramOpt: (TProgram * TirCtx) option
+      Errors: Error list
+      DocVersions: (DocId * DocVersion) list
+      ParseResults: (DocVersion * LSyntaxData) list }
 
 let private doBundle (ls: ProjectAnalysis) projectDir : BundleResult =
   let miloneHome = ls.Host.MiloneHome
@@ -218,7 +248,9 @@ let private doBundle (ls: ProjectAnalysis) projectDir : BundleResult =
     let docId =
       AstBundle.computeDocId projectName moduleName
 
-    ls |> parseWithCache docId |> Future.just
+    match ls |> parseWithCache docId with
+    | None -> Future.just None
+    | Some (LSyntaxData syntaxData) -> Future.just (Some syntaxData)
 
   let syntaxCtx =
     let host: SyntaxApi.FetchModuleHost =
@@ -246,7 +278,7 @@ let private doBundle (ls: ProjectAnalysis) projectDir : BundleResult =
       modules
       |> List.map (fun ((docId, _, _, _) as syntaxData) ->
         let v = getVersion docId ls
-        v, syntaxData))
+        v, LSyntaxData syntaxData))
 
   match result with
   | SyntaxApi.SyntaxAnalysisOk (modules, tirCtx) ->
@@ -289,7 +321,11 @@ let private bundleWithCache (ls: ProjectAnalysis) projectDir : BundleResult * Pr
       { ls with
           NewTokenizeCache =
             result.ParseResults
-            |> List.fold (fun map (_, (docId, tokens, _, _)) -> map |> TMap.add docId tokens) ls.NewTokenizeCache
+            |> List.fold
+                 (fun map (_, syntaxData) ->
+                   let (LSyntaxData (docId, tokens, _, _)) = syntaxData
+                   map |> TMap.add docId (LTokenList tokens))
+                 ls.NewTokenizeCache
           NewParseResults = List.append result.ParseResults ls.NewParseResults
           BundleCache = ls.BundleCache |> TMap.add projectDir result }
 
@@ -692,7 +728,7 @@ let private collectSymbolsInExpr (ls: ProjectAnalysis) (modules: TProgram) =
     let docId = m.DocId
 
     match ls |> parseWithCache docId with
-    | Some (_, _, ast, _) -> docId, ast
+    | Some (LSyntaxData (_, _, ast, _)) -> docId, ast
     | None -> failwith "must be parsed"
 
   []
@@ -773,6 +809,8 @@ module ProjectAnalysis =
       NewParseResults = []
       BundleCache = TMap.empty compare
       Host = host }
+
+  let withHost (host: ProjectAnalysisHost) pa : ProjectAnalysis = { pa with Host = host }
 
   let drain (pa: ProjectAnalysis) =
     pa.NewTokenizeCache,

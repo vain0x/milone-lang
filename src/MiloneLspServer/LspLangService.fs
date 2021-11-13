@@ -10,10 +10,8 @@ open MiloneLspServer.Lsp
 open MiloneLspServer.LspUtil
 open MiloneLspServer.Util
 
-module Syntax = MiloneSyntax.Syntax // FIXME: shouldn't depend
+// FIXME: shouldn't depend
 module SyntaxApi = MiloneSyntax.SyntaxApi
-module SyntaxParse = MiloneSyntax.SyntaxParse
-module SyntaxTokenize = MiloneSyntax.SyntaxTokenize
 
 let private miloneHome =
   let opt (s: string) =
@@ -257,14 +255,13 @@ type WorkspaceAnalysis =
     Projects: TreeMap<string, ProjectAnalysis>
 
     // Per-file cache.
-    TokenizeCache: TreeMap<DocId, DocVersion * Syntax.TokenizeFullResult>
-    ParseCache: TreeMap<DocId, DocVersion * Syntax.ModuleSyntaxData>
+    TokenizeCache: TreeMap<DocId, DocVersion * LTokenList>
+    ParseCache: TreeMap<DocId, DocVersion * LSyntaxData>
 
     // Diagnostics.
     DiagnosticsKeys: Uri list
     DiagnosticsCache: DiagnosticsCache<byte array>
 
-    TokenizeHost: Syntax.TokenizeHost
     Host: WorkspaceAnalysisHost }
 
 let private emptyWorkspaceAnalysis: WorkspaceAnalysis =
@@ -279,7 +276,6 @@ let private emptyWorkspaceAnalysis: WorkspaceAnalysis =
     DiagnosticsKeys = []
     DiagnosticsCache = DiagnosticsCache.empty Md5Helper.ofString Md5Helper.equals
 
-    TokenizeHost = Syntax.tokenizeHostNew ()
     Host =
       { MiloneHome = miloneHome
         FileExistsFun = File.Exists } }
@@ -308,7 +304,7 @@ let doWithLangService
       getVersion docId |> Option.defaultValue 0
 
     match state.ParseCache |> TMap.tryFind docId with
-    | Some (v, (_, tokens, _, _)) when v >= version -> v, tokens
+    | Some (v, syntaxData) when v >= version -> v, LSyntaxData.getTokens syntaxData
 
     | _ ->
       match state.TokenizeCache |> TMap.tryFind docId with
@@ -318,8 +314,7 @@ let doWithLangService
         let ok v text =
           traceFn "tokenize '%s' v:%d" docId v
 
-          let tokens =
-            SyntaxTokenize.tokenizeAll state.TokenizeHost text
+          let tokens = LTokenList.tokenizeAll text
 
           v, tokens
 
@@ -340,7 +335,7 @@ let doWithLangService
             if docIdIsOptional docId |> not then
               warnFn "missing docId '%s' to be tokenized" docId
 
-            -1, []
+            -1, LTokenList.empty
 
           | Some text -> ok 0 text
 
@@ -364,7 +359,7 @@ let doWithLangService
         traceFn "parse '%s' v:%d" docId v
 
         let syntaxData =
-          parseFullTokens projectName moduleName docId tokens
+          LSyntaxData.parse projectName moduleName docId tokens
 
         Some(v, syntaxData)
 
@@ -379,7 +374,7 @@ let doWithLangService
 
   let ls =
     match state.Projects |> TMap.tryFind p.ProjectName with
-    | Some it -> { it with Host = host }
+    | Some it -> it |> ProjectAnalysis.withHost host
     | None -> ProjectAnalysis.create host
 
   let result, ls = action ls
@@ -391,7 +386,8 @@ let doWithLangService
     newParseResults
     |> List.fold
          (fun (state: WorkspaceAnalysis) (v, syntaxData) ->
-           let docId, tokens, _, _ = syntaxData
+           let docId = LSyntaxData.getDocId syntaxData
+           let tokens = LSyntaxData.getTokens syntaxData
 
            { state with
                TokenizeCache = state.TokenizeCache |> TMap.add docId (v, tokens)
@@ -400,7 +396,7 @@ let doWithLangService
 
   let state =
     newParseResults
-    |> List.map (fun (_, (docId, _, _, _)) -> docIdToUri p docId)
+    |> List.map (fun (_, syntaxData) -> syntaxData |> LSyntaxData.getDocId |> docIdToUri p)
     |> List.filter (fun uri -> wa.Docs |> TMap.containsKey uri |> not)
     |> List.fold
          (fun (wa: WorkspaceAnalysis) uri ->
