@@ -15,6 +15,8 @@ module SyntaxApi = MiloneSyntax.SyntaxApi
 module Tir = MiloneSyntax.Tir
 
 type Range = Pos * Pos
+type Location = DocId * Pos * Pos
+type LError = string * Location
 
 type private FilePath = string
 type private DocVersion = int
@@ -51,6 +53,14 @@ let private pathStrToStem (s: string) : string =
   |> Path.fileStem
   |> Path.toString
 
+module Multimap =
+  let add key value map =
+    map
+    |> TMap.add
+         key
+         (value
+          :: (map |> TMap.tryFind key |> Option.defaultValue []))
+
 // -----------------------------------------------
 // Syntax
 // -----------------------------------------------
@@ -74,6 +84,10 @@ let private locToDoc (loc: Loc) : DocId =
 let private locToPos (loc: Loc) : Pos =
   let (Loc (_, y, x)) = loc
   y, x
+
+let private locToDocPos (loc: Loc) : DocId * Pos =
+  let (Loc (docId, y, x)) = loc
+  docId, (y, x)
 
 let private isTrivia token =
   match token with
@@ -819,9 +833,53 @@ module ProjectAnalysis =
         NewTokenizeCache = emptyTokenizeCache
         NewParseResults = [] }
 
-  let validateProject projectDir (ls: ProjectAnalysis) : Error list * ProjectAnalysis =
+  let validateProject projectDir (ls: ProjectAnalysis) : LError list * ProjectAnalysis =
     let result, ls = bundleWithCache ls projectDir
-    result.Errors, ls
+
+    let errorListList, ls =
+      result.Errors
+      |> List.fold
+           (fun map (msg, loc) ->
+             let docId, pos = locToDocPos loc
+             map |> Multimap.add docId (msg, pos))
+           (TMap.empty compare)
+      |> TMap.toList
+      |> List.mapFold
+           (fun ls (docId, errorList) ->
+             let tokens, ls = tokenizeWithCache docId ls
+
+             // FIXME: parser reports error at EOF as y=-1. Fix up that here.
+             let errorList =
+               errorList
+               |> List.map (fun (msg, pos) ->
+                 let y, _ = pos
+
+                 if y >= 0 then
+                   msg, pos
+                 else
+                   match tokens |> List.tryLast with
+                   | Some (_, (y, _)) -> msg, (y + 1, 0)
+                   | _ -> msg, (0, 0))
+
+             let posList = errorList |> List.map snd
+
+             let rangeMap =
+               resolveTokenRanges tokens posList
+               |> Seq.map (fun (l, r) -> l, r)
+               |> Seq.toList
+               |> TMap.ofList compare
+
+             let locList =
+               errorList
+               |> List.map (fun (msg, pos) ->
+                 match rangeMap |> TMap.tryFind pos with
+                 | Some r -> msg, (docId, pos, r)
+                 | None -> msg, (docId, pos, pos))
+
+             locList, ls)
+           ls
+
+    List.collect id errorListList, ls
 
   let completion
     (projectDir: ProjectDir)

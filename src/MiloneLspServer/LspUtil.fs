@@ -27,12 +27,15 @@ module Uri =
 // DiagnosticsCache
 // -----------------------------------------------
 
+type private Pos = int * int
+type private Error = string * Pos * Pos
+
 [<NoEquality; NoComparison>]
 type DiagnosticsCache<'H> =
   | DiagnosticsCache of files: TreeMap<Uri, 'H> * hasher: (string -> 'H) * hashEquals: ('H -> 'H -> bool)
 
 module DiagnosticsCache =
-  type private Diagnostics = (Uri * (string * Pos) list) list
+  type private Diagnostics = (Uri * Error list) list
 
   let empty (hasher: string -> 'H) (hashEquals: 'H -> 'H -> bool) : DiagnosticsCache<'H> =
     DiagnosticsCache(TMap.empty Uri.compare, hasher, hashEquals)
@@ -44,11 +47,15 @@ module DiagnosticsCache =
     let hashErrors errors =
       errors
       |> List.fold
-           (fun acc (msg, (y, x)) ->
+           (fun acc (msg, l, r) ->
+             let ly, lx = l
+             let ry, rx = r
+             let n1 = ly <<< 16 ||| lx
+             let n2 = ry <<< 16 ||| rx
+             let n = uint64 n1 <<< 32 ||| uint64 n2
+
              acc
-             |> cons (string y)
-             |> cons ":"
-             |> cons (string x)
+             |> cons (string n)
              |> cons "{"
              |> cons msg
              |> cons "}")
@@ -92,11 +99,22 @@ module DiagnosticsCache =
 
     publishList, cache
 
-let private compareError (_: string, (y1: int, x1: int)) (_: string, (y2: int, x2: int)) : int =
-  if y1 <> y2 then
-    compare y1 y2
+let private compareError (_: string, l1, r1) (_: string, l2, r2) : int =
+  let ly1, lx1 = l1
+  let ly2, lx2 = l2
+
+  if ly1 <> ly2 then
+    compare ly1 ly2
+  else if lx1 <> lx2 then
+    compare lx1 lx2
   else
-    compare x1 x2
+    let ry1, rx1 = r1
+    let ry2, rx2 = r2
+
+    if ry1 <> ry2 then
+      compare ry1 ry2
+    else
+      compare rx1 rx2
 
 /// Collect list of errors per file.
 ///
@@ -106,13 +124,13 @@ let private compareError (_: string, (y1: int, x1: int)) (_: string, (y2: int, x
 /// we reported some diagnostics previously (and yet cleared).
 let aggregateDiagnostics diagnosticsKeys diagnosticsCache diagnostics =
   let diagnostics =
-    let initMap: TreeMap<Uri, (string * Pos) list> =
+    let initMap: TreeMap<Uri, (string * Pos * Pos) list> =
       diagnosticsKeys
       |> List.map (fun uri -> uri, [])
       |> TMap.ofList Uri.compare
 
     diagnostics
-    |> List.fold (fun map (msg, uri, (y, x)) -> map |> multimapAdd uri (msg, (y, x))) initMap
+    |> List.fold (fun map (msg, uri, l, r) -> map |> multimapAdd uri (msg, l, r)) initMap
     |> TMap.toList
     |> List.map (fun (uri, entries) -> uri, entries |> listSort compareError)
 

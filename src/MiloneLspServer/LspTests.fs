@@ -468,6 +468,10 @@ let private testDiagnostics () =
 
   assert (List.length result = 1)
 
+  for uri, errors in result do
+    for msg, (y1, x1), (y2, x2) in errors do
+      printfn "error: \"%s\" %s:%d:%d..%d:%d" msg (Uri.toString uri) (y1 + 1) (x1 + 1) (y2 + 1) (x2 + 1)
+
 // -----------------------------------------------
 // Interface
 // -----------------------------------------------

@@ -520,8 +520,8 @@ let private processNext () : LspIncome -> ProcessResult =
           LspLangService.validateWorkspace ()
           |> List.map (fun (Uri uri, errors) ->
             let diagnostics =
-              [ for msg, pos in errors do
-                  jOfObj [ "range", jOfRange (pos, pos)
+              [ for msg, start, endPos in errors do
+                  jOfObj [ "range", jOfRange (start, endPos)
                            "message", JString msg
                            "source", JString "milone-lang" ] ]
               |> JArray

@@ -280,9 +280,6 @@ let private emptyWorkspaceAnalysis: WorkspaceAnalysis =
       { MiloneHome = miloneHome
         FileExistsFun = File.Exists } }
 
-/// (msg, loc) list
-type private ProjectValidateResult = (string * Loc) list
-
 let private freshId (wa: WorkspaceAnalysis) =
   wa.LastId + 1, { wa with LastId = wa.LastId + 1 }
 
@@ -449,7 +446,7 @@ module WorkspaceAnalysis =
 
   let didCloseFile (uri: Uri) (wa: WorkspaceAnalysis) = didCloseDoc uri wa
 
-  let validateProject (p: ProjectInfo) (wa: WorkspaceAnalysis) : ProjectValidateResult * WorkspaceAnalysis =
+  let validateProject (p: ProjectInfo) (wa: WorkspaceAnalysis) =
     doWithLangService p (ProjectAnalysis.validateProject p.ProjectDir) wa
 
   let validateAllProjects (wa: WorkspaceAnalysis) =
@@ -463,11 +460,11 @@ module WorkspaceAnalysis =
 
     let diagnostics =
       results
-      |> Seq.collect (fun (p, list) ->
-        list
-        |> Seq.map (fun (msg, loc) ->
-          let (Loc (docId, y, x)) = loc
-          msg, docIdToUri p docId, (y, x)))
+      |> Seq.collect (fun (p, errors) ->
+        errors
+        |> Seq.map (fun (msg, (docId, start, endPos)) ->
+          let uri = docIdToUri p docId
+          msg, uri, start, endPos))
       |> Seq.toList
 
     let diagnostics, diagnosticsKeys, diagnosticsCache =
@@ -582,11 +579,8 @@ let didCloseFile uri : unit =
   traceFn "didCloseFile %s" (Uri.toString uri)
   current <- WorkspaceAnalysis.didCloseDoc uri current
 
-// (uri, (msg, pos) list) list
-type private WorkspaceValidateResult = (Uri * (string * Pos) list) list
-
 /// Validate all projects in workspace to report errors.
-let validateWorkspace () : WorkspaceValidateResult =
+let validateWorkspace () =
   let diagnostics, state =
     WorkspaceAnalysis.validateAllProjects current
 
