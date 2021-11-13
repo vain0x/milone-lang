@@ -218,7 +218,7 @@ let private docIdToFilePath (p: ProjectInfo) (docId: DocId) =
   | _ when File.Exists(docId) -> docId
   | _ -> failwithf "Bad docId: '%s'" docId
 
-let private docIdToUri (p: ProjectInfo) (docId: string) =
+let private doDocIdToUri (p: ProjectInfo) (docId: string) =
   docId
   |> docIdToFilePath p
   |> fixExt
@@ -241,7 +241,8 @@ type private MiloneHome = string
 [<RequireQualifiedAccess; NoEquality; NoComparison>]
 type WorkspaceAnalysisHost =
   { MiloneHome: MiloneHome
-    FileExistsFun: FilePath -> bool }
+    DocIdToUri: ProjectInfo -> DocId -> Uri
+    ReadSourceFile: string -> Future<string option> }
 
 /// State of workspace-wide analysis.
 /// That is, this is basically the root of state of LSP server.
@@ -278,10 +279,13 @@ let private emptyWorkspaceAnalysis: WorkspaceAnalysis =
 
     Host =
       { MiloneHome = miloneHome
-        FileExistsFun = File.Exists } }
+        DocIdToUri = doDocIdToUri
+        ReadSourceFile = SyntaxApi.readSourceFile File.readTextFile } }
 
 let private freshId (wa: WorkspaceAnalysis) =
   wa.LastId + 1, { wa with LastId = wa.LastId + 1 }
+
+let private docIdToUri p docId (wa: WorkspaceAnalysis) = wa.Host.DocIdToUri p docId
 
 let doWithLangService
   (p: ProjectInfo)
@@ -289,11 +293,14 @@ let doWithLangService
   (state: WorkspaceAnalysis)
   : 'A * WorkspaceAnalysis =
   let getVersion docId =
-    match state.Docs |> TMap.tryFind (docIdToUri p docId) with
+    match
+      state.Docs
+      |> TMap.tryFind (docIdToUri p docId state)
+      with
     | Some (v, _) -> Some v
 
     | None ->
-      traceFn "docs don't have '%s'" (docIdToUri p docId |> Uri.toString)
+      traceFn "docs don't have '%s'" (docIdToUri p docId state |> Uri.toString)
       None
 
   let tokenize1 docId =
@@ -315,12 +322,15 @@ let doWithLangService
 
           v, tokens
 
-        match state.Docs |> TMap.tryFind (docIdToUri p docId) with
+        match
+          state.Docs
+          |> TMap.tryFind (docIdToUri p docId state)
+          with
         | None ->
           traceFn
             "tokenize: docId:'%s' uri:'%s' not found -- fallback to file"
             docId
-            (docIdToUri p docId |> Uri.toString)
+            (docIdToUri p docId state |> Uri.toString)
 
           // FIXME: LSP server should add all files to docs before processing queries.
           let textOpt =
@@ -394,7 +404,9 @@ let doWithLangService
 
   let state =
     newParseResults
-    |> List.map (fun (_, syntaxData) -> syntaxData |> LSyntaxData.getDocId |> docIdToUri p)
+    |> List.map (fun (_, syntaxData) ->
+      let docId = LSyntaxData.getDocId syntaxData
+      docIdToUri p docId state)
     |> List.filter (fun uri -> wa.Docs |> TMap.containsKey uri |> not)
     |> List.fold
          (fun (wa: WorkspaceAnalysis) uri ->
@@ -464,7 +476,7 @@ module WorkspaceAnalysis =
       |> Seq.collect (fun (p, errors) ->
         errors
         |> Seq.map (fun (msg, (docId, start, endPos)) ->
-          let uri = docIdToUri p docId
+          let uri = docIdToUri p docId wa
           msg, uri, start, endPos))
       |> Seq.toList
 
@@ -521,7 +533,7 @@ module WorkspaceAnalysis =
       results
       |> List.collect (fun (p, result) ->
         result
-        |> List.map (fun (docId, range) -> docIdToUri p docId, range))
+        |> List.map (fun (docId, range) -> docIdToUri p docId wa, range))
 
     result, wa
 
@@ -541,7 +553,7 @@ module WorkspaceAnalysis =
       results
       |> List.collect (fun (p, result) ->
         result
-        |> List.map (fun (docId, range) -> docIdToUri p docId, range))
+        |> List.map (fun (docId, range) -> docIdToUri p docId wa, range))
 
     result, wa
 
