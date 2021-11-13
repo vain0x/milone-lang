@@ -290,28 +290,25 @@ let private docIdToUri p docId (wa: WorkspaceAnalysis) = wa.Host.DocIdToUri p do
 let doWithProjectAnalysis
   (p: ProjectInfo)
   (action: ProjectAnalysis -> 'A * ProjectAnalysis)
-  (state: WorkspaceAnalysis)
+  (wa: WorkspaceAnalysis)
   : 'A * WorkspaceAnalysis =
   let getVersion docId =
-    match
-      state.Docs
-      |> TMap.tryFind (docIdToUri p docId state)
-      with
+    match wa.Docs |> TMap.tryFind (docIdToUri p docId wa) with
     | Some (v, _) -> Some v
 
     | None ->
-      traceFn "docs don't have '%s'" (docIdToUri p docId state |> Uri.toString)
+      traceFn "docs don't have '%s'" (docIdToUri p docId wa |> Uri.toString)
       None
 
   let tokenize1 docId =
     let version =
       getVersion docId |> Option.defaultValue 0
 
-    match state.ParseCache |> TMap.tryFind docId with
+    match wa.ParseCache |> TMap.tryFind docId with
     | Some (v, syntaxData) when v >= version -> v, LSyntaxData.getTokens syntaxData
 
     | _ ->
-      match state.TokenizeCache |> TMap.tryFind docId with
+      match wa.TokenizeCache |> TMap.tryFind docId with
       | Some ((v, _) as it) when v >= version -> it
 
       | _ ->
@@ -322,15 +319,12 @@ let doWithProjectAnalysis
 
           v, tokens
 
-        match
-          state.Docs
-          |> TMap.tryFind (docIdToUri p docId state)
-          with
+        match wa.Docs |> TMap.tryFind (docIdToUri p docId wa) with
         | None ->
           traceFn
             "tokenize: docId:'%s' uri:'%s' not found -- fallback to file"
             docId
-            (docIdToUri p docId state |> Uri.toString)
+            (docIdToUri p docId wa |> Uri.toString)
 
           // FIXME: LSP server should add all files to docs before processing queries.
           let textOpt =
@@ -351,7 +345,7 @@ let doWithProjectAnalysis
   let parse1 docId =
     let version, tokens = tokenize1 docId
 
-    match state.ParseCache |> TMap.tryFind docId with
+    match wa.ParseCache |> TMap.tryFind docId with
     | Some ((v, _) as it) when v >= version -> Some it
 
     | _ ->
@@ -375,13 +369,13 @@ let doWithProjectAnalysis
       Tokenize = tokenize1
       Parse = parse1
 
-      MiloneHome = state.Host.MiloneHome
+      MiloneHome = wa.Host.MiloneHome
       ReadTextFile = File.readTextFile
       MiloneHomeModules = fun () -> stdLibProjects |> Map.toList
       FindModulesInDir = findModulesInDir }
 
   let pa =
-    match state.Projects |> TMap.tryFind p.ProjectName with
+    match wa.Projects |> TMap.tryFind p.ProjectName with
     | Some it -> it |> ProjectAnalysis.withHost host
     | None -> ProjectAnalysis.create host
 
@@ -393,20 +387,20 @@ let doWithProjectAnalysis
   let wa =
     newParseResults
     |> List.fold
-         (fun (state: WorkspaceAnalysis) (v, syntaxData) ->
+         (fun (wa: WorkspaceAnalysis) (v, syntaxData) ->
            let docId = LSyntaxData.getDocId syntaxData
            let tokens = LSyntaxData.getTokens syntaxData
 
-           { state with
-               TokenizeCache = state.TokenizeCache |> TMap.add docId (v, tokens)
-               ParseCache = state.ParseCache |> TMap.add docId (v, syntaxData) })
-         state
+           { wa with
+               TokenizeCache = wa.TokenizeCache |> TMap.add docId (v, tokens)
+               ParseCache = wa.ParseCache |> TMap.add docId (v, syntaxData) })
+         wa
 
-  let state =
+  let wa =
     newParseResults
     |> List.map (fun (_, syntaxData) ->
       let docId = LSyntaxData.getDocId syntaxData
-      docIdToUri p docId state)
+      docIdToUri p docId wa)
     |> List.filter (fun uri -> wa.Docs |> TMap.containsKey uri |> not)
     |> List.fold
          (fun (wa: WorkspaceAnalysis) uri ->
@@ -420,10 +414,10 @@ let doWithProjectAnalysis
            | None -> wa)
          wa
 
-  let state =
-    { state with Projects = state.Projects |> TMap.add p.ProjectName pa }
+  let wa =
+    { wa with Projects = wa.Projects |> TMap.add p.ProjectName pa }
 
-  result, state
+  result, wa
 
 module WorkspaceAnalysis =
   let empty: WorkspaceAnalysis = emptyWorkspaceAnalysis
@@ -597,10 +591,10 @@ let didCloseFile uri : unit =
 
 /// Validate all projects in workspace to report errors.
 let validateWorkspace () =
-  let diagnostics, state =
+  let diagnostics, wa =
     WorkspaceAnalysis.validateAllProjects current
 
-  current <- state
+  current <- wa
   diagnostics
 
 let completion uri pos =
@@ -648,7 +642,7 @@ let private formattingResultOfDiff _prev next : FormattingResult =
   { Edits = [ ((0, 0), (1100100100, 0)), next ] }
 
 let formatting (uri: Uri) : FormattingResult option =
-  let state = current
+  let wa = current
 
   match uriToFilePath uri with
   | Some filePath ->
@@ -664,7 +658,7 @@ let formatting (uri: Uri) : FormattingResult option =
       Path.Combine(dir, sprintf "%s_%s.ignored.fs" basename suffix)
 
     let textOpt =
-      match state.Docs |> TMap.tryFind uri with
+      match wa.Docs |> TMap.tryFind uri with
       | Some (_, text) -> Some text
       | _ -> None
 
