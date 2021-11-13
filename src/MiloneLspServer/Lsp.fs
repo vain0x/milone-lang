@@ -267,7 +267,7 @@ type ProjectAnalysis =
     { ProjectDir: ProjectDir
       NewTokenizeCache: TreeMap<DocId, LTokenList>
       NewParseResults: (DocVersion * LSyntaxData) list
-      BundleCache: TreeMap<ProjectDir, BundleResult>
+      BundleCache: BundleResult option
       Host: ProjectAnalysisHost }
 
 let private emptyTokenizeCache: TreeMap<DocId, LTokenList> = TMap.empty compare
@@ -363,8 +363,7 @@ let private bundleWithCache (pa: ProjectAnalysis) : BundleResult * ProjectAnalys
     docVersions
     |> List.forall (fun (docId, version) -> getVersion docId pa <= version)
 
-  let cacheOpt =
-    pa.BundleCache |> TMap.tryFind pa.ProjectDir
+  let cacheOpt = pa.BundleCache
 
   match cacheOpt with
   | Some result when docsAreAllFresh result.DocVersions ->
@@ -388,7 +387,7 @@ let private bundleWithCache (pa: ProjectAnalysis) : BundleResult * ProjectAnalys
                    map |> TMap.add docId (LTokenList tokens))
                  pa.NewTokenizeCache
           NewParseResults = List.append result.ParseResults pa.NewParseResults
-          BundleCache = pa.BundleCache |> TMap.add pa.ProjectDir result }
+          BundleCache = Some result }
 
     result, pa
 
@@ -911,7 +910,7 @@ module ProjectAnalysis =
     { ProjectDir = projectDir
       NewTokenizeCache = emptyTokenizeCache
       NewParseResults = []
-      BundleCache = TMap.empty compare
+      BundleCache = None
       Host = host }
 
   let withHost (host: ProjectAnalysisHost) pa : ProjectAnalysis = { pa with Host = host }
