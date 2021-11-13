@@ -399,7 +399,8 @@ let private bundleWithCache (pa: ProjectAnalysis) projectDir : BundleResult * Pr
 type private ModulePath = string list
 
 [<NoComparison>]
-type private Symbol =
+type Symbol =
+  private
   | DiscardSymbol
   | PrimSymbol of TPrim
   | FieldSymbol of tySerial: TySerial * Ident
@@ -408,15 +409,18 @@ type private Symbol =
   | ModuleSymbol of ModulePath
 
 [<NoEquality; NoComparison>]
-type private DefOrUse =
+type DefOrUse =
   | Def
   | Use
 
+[<NoEquality; NoComparison>]
 type private Loc2 =
   | At of Loc
   | PreviousIdent of Loc
   | NextIdent of Loc
 
+// FIXME: name
+type private SymbolOccurrence1 = Symbol * DefOrUse * Loc
 type private SymbolOccurrence = Symbol * DefOrUse * Ty option * Loc2
 
 let private lowerAExpr docId acc expr : SymbolOccurrence list =
@@ -804,6 +808,11 @@ module ProjectAnalysis1 =
     let tokens, pa = tokenizeWithCache docId pa
     LTokenList tokens, pa
 
+  let collectSymbols (b: BundleResult) (pa: ProjectAnalysis) =
+    match b.ProgramOpt with
+    | None -> None
+    | Some (modules, _) -> collectSymbolsInExpr pa modules |> Some
+
 // -----------------------------------------------
 // Lang service
 // -----------------------------------------------
@@ -812,28 +821,26 @@ module ProjectAnalysis1 =
 
 let private doFindRefs hint projectDir docId targetPos pa =
   U.debugFn "doFindRefs %s" hint
-  let result, pa = bundleWithCache pa projectDir
+  let tokens, pa = ProjectAnalysis1.tokenize docId pa
+  let tokenOpt = tokens |> LTokenList.findAt targetPos
 
-  match result.ProgramOpt with
+  match tokenOpt with
   | None ->
-    U.debugFn "%s: no bundle result: errors %d" hint (List.length result.Errors)
+    U.debugFn "%s: token not found on position: docId=%s pos=%s" hint docId (posToString targetPos)
     None, pa
 
-  | Some (modules, _) ->
-    let tokens, pa = ProjectAnalysis1.tokenize docId pa
-    let tokenOpt = tokens |> LTokenList.findAt targetPos
+  | Some token ->
+    let tokenLoc = locOfDocPos docId (LToken.getPos token)
+    U.debugFn "%s: tokenLoc=%A" hint tokenLoc
 
-    match tokenOpt with
+    let bundleResult, pa = bundleWithCache pa projectDir
+
+    match pa |> ProjectAnalysis1.collectSymbols bundleResult with
     | None ->
-      U.debugFn "%s: token not found on position: docId=%s pos=%s" hint docId (posToString targetPos)
+      U.debugFn "%s: no bundle result: errors %d" hint (List.length bundleResult.Errors)
       None, pa
 
-    | Some token ->
-      let tokenLoc = locOfDocPos docId (LToken.getPos token)
-      U.debugFn "%s: tokenLoc=%A" hint tokenLoc
-
-      let symbols = collectSymbolsInExpr pa modules
-
+    | Some symbols ->
       match symbols
             |> List.tryFind (fun (_, _, loc) -> loc = tokenLoc)
         with
