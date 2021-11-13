@@ -197,6 +197,13 @@ let private tyDisplayFn (tirCtx: TirCtx) ty =
 module LToken =
   let getPos (LToken (_, pos)) : Pos = pos
 
+  /// FIXME: too specific
+  let isModuleOrOpenKeyword (LToken (token, _)) =
+    match token with
+    | ModuleToken
+    | OpenToken -> true
+    | _ -> false
+
 module LTokenList =
   let private host = tokenizeHostNew ()
 
@@ -214,6 +221,12 @@ module LTokenList =
     | None -> None
 
   let resolveRanges (posList: Pos list) (LTokenList tokens) : Range list = resolveTokenRanges tokens posList
+
+  let filterByLine (y: int) (LTokenList tokens) : LToken list =
+    tokens
+    |> List.skipWhile (fun (_, pos) -> pos < (y, 0))
+    |> List.takeWhile (fun (_, pos) -> pos < (y + 1, 0))
+    |> List.map (fun (token, pos) -> LToken(token, pos))
 
 module LSyntaxData =
   let parse projectName moduleName docId (LTokenList tokens) =
@@ -942,19 +955,14 @@ module ProjectAnalysis =
     (targetPos: Pos)
     (pa: ProjectAnalysis)
     : string list * ProjectAnalysis =
-    let (LTokenList tokens), pa = ProjectAnalysis1.tokenize docId pa
+    let tokens, pa = ProjectAnalysis1.tokenize docId pa
 
     let inModuleLine =
       let y, _ = targetPos
 
       tokens
-      |> List.skipWhile (fun (_, pos) -> pos < (y, 0))
-      |> List.takeWhile (fun (_, pos) -> pos < (y + 1, 0))
-      |> List.exists (fun (token, _) ->
-        match token with
-        | ModuleToken
-        | OpenToken -> true
-        | _ -> false)
+      |> LTokenList.filterByLine y
+      |> List.exists LToken.isModuleOrOpenKeyword
 
     let result =
       if inModuleLine then
