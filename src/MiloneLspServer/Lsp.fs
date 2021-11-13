@@ -811,6 +811,8 @@ module ProjectAnalysis1 =
     let tokens, pa = tokenizeWithCache docId pa
     LTokenList tokens, pa
 
+  let bundle projectDir (pa: ProjectAnalysis) : BundleResult * ProjectAnalysis = bundleWithCache pa projectDir
+
   let collectSymbols (b: BundleResult) (pa: ProjectAnalysis) =
     match b.ProgramOpt with
     | None -> None
@@ -844,7 +846,8 @@ let private doFindRefs hint projectDir docId targetPos pa =
     let tokenLoc = locOfDocPos docId (LToken.getPos token)
     U.debugFn "%s: tokenLoc=%A" hint tokenLoc
 
-    let result, pa = bundleWithCache pa projectDir
+    let result, pa =
+      pa |> ProjectAnalysis1.bundle projectDir
 
     match pa |> ProjectAnalysis1.collectSymbols result with
     | None ->
@@ -919,7 +922,8 @@ module ProjectAnalysis =
         NewParseResults = [] }
 
   let validateProject projectDir (pa: ProjectAnalysis) : LError list * ProjectAnalysis =
-    let result, pa = bundleWithCache pa projectDir
+    let result, pa =
+      pa |> ProjectAnalysis1.bundle projectDir
 
     let errorListList, pa =
       result
@@ -1065,7 +1069,8 @@ module ProjectAnalysis =
       let tokenLoc = locOfDocPos docId (LToken.getPos token)
       // eprintfn "hover: %A, tokenLoc=%A" token tokenLoc
 
-      let result, pa = bundleWithCache pa projectDir
+      let result, pa =
+        pa |> ProjectAnalysis1.bundle projectDir
 
       match ProjectAnalysis1.getTyName result tokenLoc pa with
       | None ->
