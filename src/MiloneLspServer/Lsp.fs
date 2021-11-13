@@ -813,6 +813,14 @@ module ProjectAnalysis1 =
     | None -> None
     | Some (modules, _) -> collectSymbolsInExpr pa modules |> Some
 
+  let getTyName (b: BundleResult) (tokenLoc: Loc) (pa: ProjectAnalysis) =
+    match b.ProgramOpt with
+    | None -> None
+    | Some (modules, tirCtx) ->
+      match findTyInStmt pa modules tokenLoc with
+      | None -> Some None
+      | Some ty -> tyDisplayFn tirCtx ty |> Some |> Some
+
 // -----------------------------------------------
 // Lang service
 // -----------------------------------------------
@@ -1038,30 +1046,26 @@ module ProjectAnalysis =
     | None, pa -> None, pa
 
   let hover projectDir (docId: DocId) (targetPos: Pos) (pa: ProjectAnalysis) : string option * ProjectAnalysis =
-    let result, pa = bundleWithCache pa projectDir
+    let tokens, pa = ProjectAnalysis1.tokenize docId pa
+    let tokenOpt = tokens |> LTokenList.findAt targetPos
 
-    match result.ProgramOpt with
+    match tokenOpt with
     | None ->
-      U.debugFn "hover: no bundle result: errors %d" (List.length result.Errors)
+      U.debugFn "hover: token not found on position: docId=%s pos=%s" docId (posToString targetPos)
       None, pa
 
-    | Some (modules, tirCtx) ->
-      let tokens, pa = ProjectAnalysis1.tokenize docId pa
-      let tokenOpt = tokens |> LTokenList.findAt targetPos
+    | Some token ->
+      let tokenLoc = locOfDocPos docId (LToken.getPos token)
+      // eprintfn "hover: %A, tokenLoc=%A" token tokenLoc
 
-      match tokenOpt with
+      let result, pa = bundleWithCache pa projectDir
+
+      match ProjectAnalysis1.getTyName result tokenLoc pa with
       | None ->
-        U.debugFn "hover: token not found on position: docId=%s pos=%s" docId (posToString targetPos)
+        U.debugFn "hover: no bundle result: errors %d" (List.length result.Errors)
         None, pa
 
-      | Some token ->
-        let tokenLoc = locOfDocPos docId (LToken.getPos token)
-
-        // eprintfn "hover: %A, tokenLoc=%A" token tokenLoc
-
-        match findTyInStmt pa modules tokenLoc with
-        | None -> None, pa
-        | Some ty -> Some(tyDisplayFn tirCtx ty), pa
+      | Some tyNameOpt -> tyNameOpt, pa
 
   let definition projectDir docId targetPos (pa: ProjectAnalysis) : (DocId * Range) list * ProjectAnalysis =
     let includeDef = true
