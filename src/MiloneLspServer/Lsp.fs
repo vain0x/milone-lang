@@ -194,6 +194,9 @@ let private tyDisplayFn (tirCtx: TirCtx) ty =
 // Abstraction
 // -----------------------------------------------
 
+module LToken =
+  let getPos (LToken (_, pos)) : Pos = pos
+
 module LTokenList =
   let private host = tokenizeHostNew ()
 
@@ -807,9 +810,9 @@ let private doFindRefs hint projectDir docId targetPos pa =
       U.debugFn "%s: token not found on position: docId=%s pos=%s" hint docId (posToString targetPos)
       None, pa
 
-    | Some (LToken (_, tokenPos)) ->
-      U.debugFn "%s: tokenPos=%A" hint tokenPos
-      let tokenLoc = locOfDocPos docId tokenPos
+    | Some token ->
+      let tokenLoc = locOfDocPos docId (LToken.getPos token)
+      U.debugFn "%s: tokenLoc=%A" hint tokenLoc
 
       let symbols = collectSymbolsInExpr pa modules
 
@@ -1022,8 +1025,8 @@ module ProjectAnalysis =
         U.debugFn "hover: token not found on position: docId=%s pos=%s" docId (posToString targetPos)
         None, pa
 
-      | Some (LToken (_, tokenPos)) ->
-        let tokenLoc = locOfDocPos docId tokenPos
+      | Some token ->
+        let tokenLoc = locOfDocPos docId (LToken.getPos token)
 
         // eprintfn "hover: %A, tokenLoc=%A" token tokenLoc
 
