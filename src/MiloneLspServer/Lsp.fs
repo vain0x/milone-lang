@@ -3,7 +3,6 @@ module rec MiloneLspServer.Lsp
 
 open MiloneShared.SharedTypes
 open MiloneStd.StdMap
-open MiloneStd.StdPath
 open MiloneStd.StdSet
 open MiloneSyntax.Syntax
 open MiloneSyntax.Tir
@@ -49,18 +48,6 @@ let private upList (folder: 'S -> 'T -> 'S) (items: 'T list) (state: 'S) : 'S = 
 // FIXME: avoid using generic compare
 let private listUnique xs =
   xs |> TSet.ofList compare |> TSet.toList
-
-let private pathStrTrimEndPathSep (s: string) : string =
-  s
-  |> Path.ofString
-  |> Path.trimEndSep
-  |> Path.toString
-
-let private pathStrToStem (s: string) : string =
-  s
-  |> Path.ofString
-  |> Path.fileStem
-  |> Path.toString
 
 module Multimap =
   let add key value map =
@@ -265,6 +252,7 @@ type ProjectAnalysisHost =
 type ProjectAnalysis =
   private
     { ProjectDir: ProjectDir
+      ProjectName: ProjectName
       NewTokenizeCache: TreeMap<DocId, LTokenList>
       NewParseResults: (DocVersion * LSyntaxData) list
       BundleCache: BundleResult option
@@ -301,9 +289,8 @@ type BundleResult =
 
 let private doBundle (pa: ProjectAnalysis) : BundleResult =
   let projectDir = pa.ProjectDir
+  let projectName = pa.ProjectName
   let miloneHome = pa.Host.MiloneHome
-  let projectDir = projectDir |> pathStrTrimEndPathSep
-  let projectName = projectDir |> pathStrToStem
 
   let fetchModuleUsingCache _ (projectName: string) (moduleName: string) =
     let docId =
@@ -906,8 +893,9 @@ let private doFindDefsOrUses hint docId targetPos includeDef includeUse pa =
     Some result, pa
 
 module ProjectAnalysis =
-  let create (projectDir: ProjectDir) (host: ProjectAnalysisHost) : ProjectAnalysis =
+  let create (projectDir: ProjectDir) (projectName: ProjectName) (host: ProjectAnalysisHost) : ProjectAnalysis =
     { ProjectDir = projectDir
+      ProjectName = projectName
       NewTokenizeCache = emptyTokenizeCache
       NewParseResults = []
       BundleCache = None

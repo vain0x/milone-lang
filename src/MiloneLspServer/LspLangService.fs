@@ -377,7 +377,7 @@ let doWithProjectAnalysis
   let pa =
     match wa.Projects |> TMap.tryFind p.ProjectName with
     | Some it -> it |> ProjectAnalysis.withHost host
-    | None -> ProjectAnalysis.create p.ProjectDir host
+    | None -> ProjectAnalysis.create p.ProjectDir p.ProjectName host
 
   let result, pa = action pa
 
