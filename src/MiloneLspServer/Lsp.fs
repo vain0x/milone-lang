@@ -390,8 +390,8 @@ type private Loc2 =
 
 type private SymbolOccurrence = Symbol * DefOrUse * Ty option * Loc2
 
-let private dfsAExpr docId acc expr : SymbolOccurrence list =
-  let onExpr acc expr = dfsAExpr docId acc expr
+let private lowerAExpr docId acc expr : SymbolOccurrence list =
+  let onExpr acc expr = lowerAExpr docId acc expr
   let onExprOpt acc exprOpt = exprOpt |> Option.fold onExpr acc
   let onExprs acc exprs = exprs |> List.fold onExpr acc
 
@@ -457,11 +457,11 @@ let private dfsAExpr docId acc expr : SymbolOccurrence list =
 
   | ASemiExpr (stmts, last, _) -> acc |> up onExprs stmts |> up onExpr last
 
-  | ALetExpr (_, _, init, next, _) -> dfsAExpr docId (onExpr acc init) next
+  | ALetExpr (_, _, init, next, _) -> lowerAExpr docId (onExpr acc init) next
 
-let private dfsADecl docId acc decl : SymbolOccurrence list =
-  let onExpr acc expr = dfsAExpr docId acc expr
-  let onDecl acc decl = dfsADecl docId acc decl
+let private lowerADecl docId acc decl : SymbolOccurrence list =
+  let onExpr acc expr = lowerAExpr docId acc expr
+  let onDecl acc decl = lowerADecl docId acc decl
   let toLoc (y, x) = At(Loc(docId, y, x))
 
   match decl with
@@ -490,9 +490,9 @@ let private dfsADecl docId acc decl : SymbolOccurrence list =
 
   | AModuleDecl (_, _, _, decls, _) -> acc |> up (List.fold onDecl) decls
 
-  | AAttrDecl (_, next, _) -> dfsADecl docId acc next
+  | AAttrDecl (_, next, _) -> lowerADecl docId acc next
 
-let private dfsARoot (docId: DocId) acc root : SymbolOccurrence list =
+let private lowerARoot (docId: DocId) acc root : SymbolOccurrence list =
   let toLoc (y, x) = At(Loc(docId, y, x))
   let (ARoot (headOpt, decls)) = root
 
@@ -510,9 +510,9 @@ let private dfsARoot (docId: DocId) acc root : SymbolOccurrence list =
       (ModuleSymbol path, Def, None, toLoc (0, 0))
       :: acc
 
-  acc |> up (List.fold (dfsADecl docId)) decls
+  acc |> up (List.fold (lowerADecl docId)) decls
 
-let private dfsTy acc ty : (Symbol * DefOrUse * Ty option * Loc2) list =
+let private lowerTy acc ty : (Symbol * DefOrUse * Ty option * Loc2) list =
   let (Ty (tk, tyArgs)) = ty
 
   let acc =
@@ -525,9 +525,9 @@ let private dfsTy acc ty : (Symbol * DefOrUse * Ty option * Loc2) list =
       :: acc
     | _ -> acc
 
-  acc |> up (List.fold dfsTy) tyArgs
+  acc |> up (List.fold lowerTy) tyArgs
 
-let private dfsPat acc pat : SymbolOccurrence list =
+let private lowerTPat acc pat : SymbolOccurrence list =
   match pat with
   | TLitPat _ -> acc
 
@@ -546,10 +546,10 @@ let private dfsPat acc pat : SymbolOccurrence list =
       | TVariantAppPN variantSerial ->
         (ValueSymbol(VariantSymbol variantSerial), Use, Some ty, At loc)
         :: acc
-      | TAscribePN -> dfsTy acc ty
+      | TAscribePN -> lowerTy acc ty
       | _ -> acc
 
-    acc |> up (List.fold dfsPat) pats
+    acc |> up (List.fold lowerTPat) pats
 
   | TAsPat (bodyPat, varSerial, loc) ->
     let acc =
@@ -558,11 +558,11 @@ let private dfsPat acc pat : SymbolOccurrence list =
       (ValueSymbol(VarSymbol varSerial), Def, Some ty, At loc)
       :: acc
 
-    dfsPat acc bodyPat
+    lowerTPat acc bodyPat
 
-  | TOrPat (l, r, _) -> acc |> up dfsPat l |> up dfsPat r
+  | TOrPat (l, r, _) -> acc |> up lowerTPat l |> up lowerTPat r
 
-let private dfsExpr acc expr =
+let private lowerTExpr acc expr =
   match expr with
   | TLitExpr _ -> acc
 
@@ -579,18 +579,18 @@ let private dfsExpr acc expr =
 
   | TMatchExpr (cond, arms, _, _) ->
     acc
-    |> up dfsExpr cond
+    |> up lowerTExpr cond
     |> up
          (List.fold (fun acc (pat, guard, body) ->
            acc
-           |> up dfsPat pat
-           |> up dfsExpr guard
-           |> up dfsExpr body))
+           |> up lowerTPat pat
+           |> up lowerTExpr guard
+           |> up lowerTExpr body))
          arms
 
   | TRecordExpr (baseOpt, fields, ty, _) ->
     acc
-    |> up (Option.fold dfsExpr) baseOpt
+    |> up (Option.fold lowerTExpr) baseOpt
     |> up
          (List.fold (fun acc (ident, init, loc) ->
            let acc =
@@ -603,11 +603,11 @@ let private dfsExpr acc expr =
                :: acc
              | _ -> acc
 
-           acc |> up dfsExpr init))
+           acc |> up lowerTExpr init))
          fields
 
   | TNavExpr (l, (r, loc), ty, _) ->
-    let acc = acc |> up dfsExpr l
+    let acc = acc |> up lowerTExpr l
 
     match exprToTy l with
     | Ty (RecordTk (tySerial, _), _) ->
@@ -615,18 +615,18 @@ let private dfsExpr acc expr =
       :: acc
     | _ -> acc
 
-  | TNodeExpr (_, args, _, _) -> acc |> up (List.fold dfsExpr) args
+  | TNodeExpr (_, args, _, _) -> acc |> up (List.fold lowerTExpr) args
 
   | TBlockExpr (_, stmts, last) ->
     acc
-    |> up (List.fold dfsStmt) stmts
-    |> up dfsExpr last
+    |> up (List.fold lowerTStmt) stmts
+    |> up lowerTExpr last
 
-let private dfsStmt acc stmt =
+let private lowerTStmt acc stmt =
   match stmt with
-  | TExprStmt expr -> dfsExpr acc expr
+  | TExprStmt expr -> lowerTExpr acc expr
 
-  | TLetValStmt (pat, init, _) -> acc |> up dfsPat pat |> up dfsExpr init
+  | TLetValStmt (pat, init, _) -> acc |> up lowerTPat pat |> up lowerTExpr init
 
   | TLetFunStmt (callee, _, _, argPats, body, loc) ->
     let tyFunN argTys resultTy : Ty =
@@ -647,9 +647,9 @@ let private dfsStmt acc stmt =
 
     // HACK: Visit type as if let-fun has result-type ascription. Typing removes result type ascription.
     acc
-    |> up dfsTy (exprToTy body)
-    |> up (List.fold dfsPat) argPats
-    |> up dfsExpr body
+    |> up lowerTy (exprToTy body)
+    |> up (List.fold lowerTPat) argPats
+    |> up lowerTExpr body
 
   | TTyDeclStmt (tySerial, _, tyArgs, tyDecl, tyDeclLoc) ->
     match tyDecl with
@@ -700,15 +700,15 @@ let private dfsStmt acc stmt =
              :: acc))
            fields
 
-  | TModuleStmt (_, stmts, _) -> acc |> up (List.fold dfsStmt) stmts
+  | TModuleStmt (_, stmts, _) -> acc |> up (List.fold lowerTStmt) stmts
 
   | TTyDeclStmt _
   | TOpenStmt _
   | TModuleSynonymStmt _ -> acc
 
-let private foldTir acc modules =
+let private lowerTModules acc modules =
   modules
-  |> List.fold (fun acc (m: TModule) -> acc |> up (List.fold dfsStmt) m.Stmts) acc
+  |> List.fold (fun acc (m: TModule) -> acc |> up (List.fold lowerTStmt) m.Stmts) acc
 
 /// Resolve locations.
 let private resolveLoc (symbols: SymbolOccurrence list) pa =
@@ -742,7 +742,7 @@ let private resolveLoc (symbols: SymbolOccurrence list) pa =
   |> List.choose id
 
 let private findTyInStmt (pa: ProjectAnalysis) (modules: TProgram) (tokenLoc: Loc) =
-  let symbols = foldTir [] modules
+  let symbols = lowerTModules [] modules
 
   resolveLoc symbols pa
   |> List.tryPick (fun (_, _, tyOpt, loc) ->
@@ -762,9 +762,9 @@ let private collectSymbolsInExpr (pa: ProjectAnalysis) (modules: TProgram) =
   |> up
        (List.fold (fun acc m ->
          let docId, ast = parseModule m
-         dfsARoot docId acc ast))
+         lowerARoot docId acc ast))
        modules
-  |> up foldTir modules
+  |> up lowerTModules modules
   |> (fun acc -> resolveLoc acc pa)
   |> List.map (fun (symbol, defOrUse, _, loc) -> symbol, defOrUse, loc)
 
