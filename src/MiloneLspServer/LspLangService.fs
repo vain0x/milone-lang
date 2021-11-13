@@ -690,17 +690,21 @@ module WorkspaceAnalysis =
   let empty: WorkspaceAnalysis = emptyWorkspaceAnalysis
 
   let didOpenDoc (uri: Uri) (version: int) (text: string) (wa: WorkspaceAnalysis) =
+    traceFn "didOpenDoc %s v:%d" (Uri.toString uri) version
     { wa with Docs = wa.Docs |> TMap.add uri (version, text) }
 
   let didChangeDoc (uri: Uri) (version: int) (text: string) (wa: WorkspaceAnalysis) =
+    traceFn "didChangeDoc %s v:%d" (Uri.toString uri) version
     { wa with Docs = wa.Docs |> TMap.add uri (version, text) }
 
   let didCloseDoc (uri: Uri) (wa: WorkspaceAnalysis) =
+    traceFn "didCloseDoc %s" (Uri.toString uri)
     // FIXME: drop tokenize/parse result
     let _, docs = wa.Docs |> TMap.remove uri
     { wa with Docs = docs }
 
   let didOpenFile (uri: Uri) (wa: WorkspaceAnalysis) =
+    traceFn "didOpenFile %s" (Uri.toString uri)
     // FIXME: don't read file
     match uriToFilePath uri |> Option.bind File.tryReadFile with
     | Some text ->
@@ -710,6 +714,7 @@ module WorkspaceAnalysis =
     | None -> wa
 
   let didChangeFile (uri: Uri) (wa: WorkspaceAnalysis) =
+    traceFn "didChangeFile %s" (Uri.toString uri)
     // FIXME: don't read file
     match uriToFilePath uri |> Option.bind File.tryReadFile with
     | Some text ->
@@ -718,17 +723,18 @@ module WorkspaceAnalysis =
 
     | None -> wa
 
-  let didCloseFile (uri: Uri) (wa: WorkspaceAnalysis) = didCloseDoc uri wa
+  let didCloseFile (uri: Uri) (wa: WorkspaceAnalysis) =
+    traceFn "didCloseFile %s" (Uri.toString uri)
+    didCloseDoc uri wa
 
-  let validateProject (p: ProjectInfo) (wa: WorkspaceAnalysis) =
-    doWithProjectAnalysis p ProjectAnalysis.validateProject wa
-
-  let validateAllProjects (wa: WorkspaceAnalysis) =
+  let diagnostics (wa: WorkspaceAnalysis) =
     let results, wa =
       wa.ProjectList
       |> List.mapFold
            (fun wa p ->
-             let result, wa = validateProject p wa
+             let result, wa =
+               doWithProjectAnalysis p ProjectAnalysis.validateProject wa
+
              (p, result), wa)
            wa
 
@@ -818,85 +824,20 @@ module WorkspaceAnalysis =
 
     result, wa
 
-let mutable private current = emptyWorkspaceAnalysis
-
-let onInitialized rootUriOpt : unit =
+let onInitialized rootUriOpt (wa: WorkspaceAnalysis) : WorkspaceAnalysis =
   let projects =
     match rootUriOpt with
     | Some rootUri -> doFindProjects rootUri
     | None -> []
 
   infoFn "findProjects: %A" (List.map (fun (p: ProjectInfo) -> p.ProjectDir) projects)
-  current <- { current with ProjectList = projects }
+  { wa with ProjectList = projects }
 
-let didOpenDoc uri version text : unit =
-  traceFn "didOpenDoc %s v:%d" (Uri.toString uri) version
-  current <- WorkspaceAnalysis.didOpenDoc uri version text current
+// -----------------------------------------------
+// Formatting
+// -----------------------------------------------
 
-let didChangeDoc uri version text : unit =
-  traceFn "didChangeDoc %s v:%d" (Uri.toString uri) version
-  current <- WorkspaceAnalysis.didChangeDoc uri version text current
-
-let didCloseDoc uri : unit =
-  traceFn "didCloseDoc %s" (Uri.toString uri)
-  current <- WorkspaceAnalysis.didCloseDoc uri current
-
-let didOpenFile uri : unit =
-  traceFn "didOpenFile %s" (Uri.toString uri)
-  current <- WorkspaceAnalysis.didOpenFile uri current
-
-let didChangeFile uri : unit =
-  traceFn "didChangeFile %s" (Uri.toString uri)
-  current <- WorkspaceAnalysis.didChangeFile uri current
-
-let didCloseFile uri : unit =
-  traceFn "didCloseFile %s" (Uri.toString uri)
-  current <- WorkspaceAnalysis.didCloseDoc uri current
-
-/// Validate all projects in workspace to report errors.
-let validateWorkspace () =
-  let diagnostics, wa =
-    WorkspaceAnalysis.validateAllProjects current
-
-  current <- wa
-  diagnostics
-
-let completion uri pos =
-  let result, wa =
-    WorkspaceAnalysis.completion uri pos current
-
-  current <- wa
-  result
-
-let documentHighlight uri pos =
-  let reads, writes, wa =
-    current
-    |> WorkspaceAnalysis.documentHighlight uri pos
-
-  current <- wa
-  reads, writes
-
-let hover uri pos =
-  let result, wa =
-    current |> WorkspaceAnalysis.hover uri pos
-
-  current <- wa
-  result
-
-let definition uri pos =
-  let result, wa =
-    current |> WorkspaceAnalysis.definition uri pos
-
-  current <- wa
-  result
-
-let references uri pos (includeDecl: bool) =
-  let result, wa =
-    current
-    |> WorkspaceAnalysis.references uri pos includeDecl
-
-  current <- wa
-  result
+// spawns fantomas
 
 [<RequireQualifiedAccess; NoEquality; NoComparison>]
 type FormattingResult = { Edits: (Range * string) list }
@@ -905,9 +846,7 @@ type FormattingResult = { Edits: (Range * string) list }
 let private formattingResultOfDiff _prev next : FormattingResult =
   { Edits = [ ((0, 0), (1100100100, 0)), next ] }
 
-let formatting (uri: Uri) : FormattingResult option =
-  let wa = current
-
+let formatting (uri: Uri) (wa: WorkspaceAnalysis) : FormattingResult option =
   match uriToFilePath uri with
   | Some filePath ->
     let dir = Path.GetDirectoryName(filePath)

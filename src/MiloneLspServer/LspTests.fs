@@ -6,6 +6,7 @@ open MiloneLspServer.LspUtil
 
 module S = MiloneStd.StdString
 module LLS = MiloneLspServer.LspLangService
+module WorkspaceAnalysis = LLS.WorkspaceAnalysis
 
 let private expect msg opt =
   match opt with
@@ -441,9 +442,10 @@ let private testDiagnostics () =
       ProjectName = "DiagnosticsTest"
       EntryFileExt = ".milone" }
 
-  LLS.onInitialized (Some rootUri)
+  let wa = WorkspaceAnalysis.empty
+  let wa = LLS.onInitialized (Some rootUri) wa
 
-  let result = LLS.validateWorkspace ()
+  let result, wa = WorkspaceAnalysis.diagnostics wa
   assert (List.length result = 0)
 
   let filename =
@@ -452,15 +454,17 @@ let private testDiagnostics () =
   let fileUri = LLS.uriOfFilePath filename
   let initialText = System.IO.File.ReadAllText(filename)
 
-  let result =
+  let result, wa =
     try
       let text =
         initialText.Replace("// let x 0", "let x 0")
 
       System.IO.File.WriteAllText(filename, text)
 
-      LLS.didChangeFile fileUri
-      LLS.validateWorkspace ()
+      let wa =
+        WorkspaceAnalysis.didChangeFile fileUri wa
+
+      WorkspaceAnalysis.diagnostics wa
     finally
       System.IO.File.WriteAllText(filename, initialText)
 

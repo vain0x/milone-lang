@@ -8,6 +8,8 @@ open MiloneLspServer.JsonRpcWriter
 open MiloneLspServer.LspUtil
 open MiloneLspServer.Util
 
+module WorkspaceAnalysis = LspLangService.WorkspaceAnalysis
+
 type private Pos = int * int
 type private Position = int * int
 type private Range = Position * Position
@@ -459,6 +461,7 @@ let private enableDidChangedWatchedFiles () =
   jsonRpcWriteWithIdParams "client/registerCapability" msgId param
 
 let private processNext () : LspIncome -> ProcessResult =
+  let mutable current = WorkspaceAnalysis.empty
   let mutable exitCode: int = 1
   let mutable rootUriOpt: string option = None
 
@@ -475,7 +478,7 @@ let private processNext () : LspIncome -> ProcessResult =
       handleNotificationWith
         "initialized"
         (fun () ->
-          LspLangService.onInitialized rootUriOpt
+          current <- LspLangService.onInitialized rootUriOpt current
           enableDidChangedWatchedFiles ())
         id
 
@@ -489,26 +492,34 @@ let private processNext () : LspIncome -> ProcessResult =
     | ExitNotification -> Exit exitCode
 
     | DidOpenNotification p ->
-      handleNotificationWith "didOpen" (fun () -> LspLangService.didOpenDoc p.Uri p.Version p.Text) id
+      handleNotificationWith
+        "didOpen"
+        (fun () -> current <- WorkspaceAnalysis.didOpenDoc p.Uri p.Version p.Text current)
+        id
+
       Continue
 
     | DidChangeNotification p ->
-      handleNotificationWith "didChange" (fun () -> LspLangService.didChangeDoc p.Uri p.Version p.Text) id
+      handleNotificationWith
+        "didChange"
+        (fun () -> current <- WorkspaceAnalysis.didChangeDoc p.Uri p.Version p.Text current)
+        id
+
       Continue
 
     | DidCloseNotification p ->
-      handleNotificationWith "didClose" (fun () -> LspLangService.didCloseDoc p.Uri) id
+      handleNotificationWith "didClose" (fun () -> current <- WorkspaceAnalysis.didCloseDoc p.Uri current) id
       Continue
 
     | DidChangeWatchedFiles p ->
       handleNotificationWith
         "didChangeWatchedFile"
         (fun () ->
-          for change in p.Changes do
-            match change.Type with
-            | FileChangeType.Created -> LspLangService.didOpenFile change.Uri
-            | FileChangeType.Changed -> LspLangService.didChangeFile change.Uri
-            | FileChangeType.Deleted -> LspLangService.didCloseFile change.Uri)
+          for c in p.Changes do
+            match c.Type with
+            | FileChangeType.Created -> current <- WorkspaceAnalysis.didOpenFile c.Uri current
+            | FileChangeType.Changed -> current <- WorkspaceAnalysis.didChangeFile c.Uri current
+            | FileChangeType.Deleted -> current <- WorkspaceAnalysis.didCloseFile c.Uri current)
         id
 
       Continue
@@ -517,7 +528,10 @@ let private processNext () : LspIncome -> ProcessResult =
       handleNotificationWith
         "diagnostics"
         (fun () ->
-          LspLangService.validateWorkspace ()
+          let result, wa = WorkspaceAnalysis.diagnostics current
+          current <- wa
+
+          result
           |> List.map (fun (Uri uri, errors) ->
             let diagnostics =
               [ for msg, start, endPos in errors do
@@ -537,7 +551,12 @@ let private processNext () : LspIncome -> ProcessResult =
     | CompletionRequest (msgId, p) ->
       handleRequestWith "completion" msgId (fun () ->
         let items =
-          LspLangService.completion p.Uri p.Pos
+          let result, wa =
+            WorkspaceAnalysis.completion p.Uri p.Pos current
+
+          current <- wa
+
+          result
           |> List.map (fun text -> jOfObj [ "label", JString text ])
           |> JArray
 
@@ -549,7 +568,12 @@ let private processNext () : LspIncome -> ProcessResult =
 
     | DefinitionRequest (msgId, p) ->
       handleRequestWith "definition" msgId (fun () ->
-        LspLangService.definition p.Uri p.Pos
+        let result, wa =
+          WorkspaceAnalysis.definition p.Uri p.Pos current
+
+        current <- wa
+
+        result
         |> List.map (fun (Uri uri, range) ->
           jOfObj [ "uri", JString uri
                    "range", jOfRange range ])
@@ -559,7 +583,10 @@ let private processNext () : LspIncome -> ProcessResult =
 
     | ReferencesRequest (msgId, p) ->
       handleRequestWith "references" msgId (fun () ->
-        LspLangService.references p.Uri p.Pos p.IncludeDecl
+        let result, wa =
+          WorkspaceAnalysis.references p.Uri p.Pos p.IncludeDecl current
+
+        result
         |> List.map (fun (Uri uri, range) ->
           jOfObj [ "uri", JString uri
                    "range", jOfRange range ])
@@ -569,8 +596,10 @@ let private processNext () : LspIncome -> ProcessResult =
 
     | DocumentHighlightRequest (msgId, p) ->
       handleRequestWith "documentHighlight" msgId (fun () ->
-        let reads, writes =
-          LspLangService.documentHighlight p.Uri p.Pos
+        let reads, writes, wa =
+          WorkspaceAnalysis.documentHighlight p.Uri p.Pos current
+
+        current <- wa
 
         let toHighlights kind posList =
           posList
@@ -585,7 +614,7 @@ let private processNext () : LspIncome -> ProcessResult =
 
     | FormattingRequest (msgId, uri) ->
       handleRequestWith "formatting" msgId (fun () ->
-        match LspLangService.formatting uri with
+        match LspLangService.formatting uri current with
         | None -> JNull
         | Some result ->
           result.Edits
@@ -599,7 +628,10 @@ let private processNext () : LspIncome -> ProcessResult =
 
     | HoverRequest (msgId, p) ->
       handleRequestWith "hover" msgId (fun () ->
-        let contents = LspLangService.hover p.Uri p.Pos
+        let contents, wa =
+          WorkspaceAnalysis.hover p.Uri p.Pos current
+
+        current <- wa
 
         match contents with
         | [] -> JNull
