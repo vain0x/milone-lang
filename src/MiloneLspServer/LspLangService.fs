@@ -287,7 +287,7 @@ let private freshId (wa: WorkspaceAnalysis) =
 
 let private docIdToUri p docId (wa: WorkspaceAnalysis) = wa.Host.DocIdToUri p docId
 
-let doWithLangService
+let doWithProjectAnalysis
   (p: ProjectInfo)
   (action: ProjectAnalysis -> 'A * ProjectAnalysis)
   (state: WorkspaceAnalysis)
@@ -380,15 +380,15 @@ let doWithLangService
       MiloneHomeModules = fun () -> stdLibProjects |> Map.toList
       FindModulesInDir = findModulesInDir }
 
-  let ls =
+  let pa =
     match state.Projects |> TMap.tryFind p.ProjectName with
     | Some it -> it |> ProjectAnalysis.withHost host
     | None -> ProjectAnalysis.create host
 
-  let result, ls = action ls
+  let result, pa = action pa
 
   // FIXME: store tokenize cache
-  let _, newParseResults, ls = ls |> ProjectAnalysis.drain
+  let _, newParseResults, pa = pa |> ProjectAnalysis.drain
 
   let wa =
     newParseResults
@@ -421,7 +421,7 @@ let doWithLangService
          wa
 
   let state =
-    { state with Projects = state.Projects |> TMap.add p.ProjectName ls }
+    { state with Projects = state.Projects |> TMap.add p.ProjectName pa }
 
   result, state
 
@@ -460,7 +460,7 @@ module WorkspaceAnalysis =
   let didCloseFile (uri: Uri) (wa: WorkspaceAnalysis) = didCloseDoc uri wa
 
   let validateProject (p: ProjectInfo) (wa: WorkspaceAnalysis) =
-    doWithLangService p (ProjectAnalysis.validateProject p.ProjectDir) wa
+    doWithProjectAnalysis p (ProjectAnalysis.validateProject p.ProjectDir) wa
 
   let validateAllProjects (wa: WorkspaceAnalysis) =
     let results, wa =
@@ -494,7 +494,7 @@ module WorkspaceAnalysis =
     let results, wa =
       wa.ProjectList
       |> List.mapFold
-           (fun wa p -> doWithLangService p (ProjectAnalysis.completion p.ProjectDir (uriToDocId uri) pos) wa)
+           (fun wa p -> doWithProjectAnalysis p (ProjectAnalysis.completion p.ProjectDir (uriToDocId uri) pos) wa)
            wa
 
     List.collect id results, wa
@@ -503,7 +503,8 @@ module WorkspaceAnalysis =
     let results, wa =
       wa.ProjectList
       |> List.mapFold
-           (fun wa p -> doWithLangService p (ProjectAnalysis.documentHighlight p.ProjectDir (uriToDocId uri) pos) wa)
+           (fun wa p ->
+             doWithProjectAnalysis p (ProjectAnalysis.documentHighlight p.ProjectDir (uriToDocId uri) pos) wa)
            wa
 
     let reads, writes = List.choose id results |> List.unzip
@@ -513,7 +514,9 @@ module WorkspaceAnalysis =
   let hover (uri: Uri) (pos: Pos) (wa: WorkspaceAnalysis) =
     let results, wa =
       wa.ProjectList
-      |> List.mapFold (fun wa p -> doWithLangService p (ProjectAnalysis.hover p.ProjectDir (uriToDocId uri) pos) wa) wa
+      |> List.mapFold
+           (fun wa p -> doWithProjectAnalysis p (ProjectAnalysis.hover p.ProjectDir (uriToDocId uri) pos) wa)
+           wa
 
     List.choose id results, wa
 
@@ -524,7 +527,7 @@ module WorkspaceAnalysis =
            (fun wa p ->
              let result, wa =
                wa
-               |> doWithLangService p (ProjectAnalysis.definition p.ProjectDir (uriToDocId uri) pos)
+               |> doWithProjectAnalysis p (ProjectAnalysis.definition p.ProjectDir (uriToDocId uri) pos)
 
              (p, result), wa)
            wa
@@ -544,7 +547,7 @@ module WorkspaceAnalysis =
            (fun wa p ->
              let result, wa =
                wa
-               |> doWithLangService p (ProjectAnalysis.references p.ProjectDir (uriToDocId uri) pos includeDecl)
+               |> doWithProjectAnalysis p (ProjectAnalysis.references p.ProjectDir (uriToDocId uri) pos includeDecl)
 
              (p, result), wa)
            wa

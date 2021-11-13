@@ -239,24 +239,24 @@ type ProjectAnalysis =
 
 let private emptyTokenizeCache: TreeMap<DocId, LTokenList> = TMap.empty compare
 
-let private getVersion docId (ls: ProjectAnalysis) =
-  ls.Host.GetDocVersion docId
+let private getVersion docId (pa: ProjectAnalysis) =
+  pa.Host.GetDocVersion docId
   |> Option.defaultValue 0
 
-let private tokenizeWithCache docId (ls: ProjectAnalysis) =
-  match ls.NewTokenizeCache |> TMap.tryFind docId with
-  | Some (LTokenList tokens) -> tokens, ls
+let private tokenizeWithCache docId (pa: ProjectAnalysis) =
+  match pa.NewTokenizeCache |> TMap.tryFind docId with
+  | Some (LTokenList tokens) -> tokens, pa
 
   | None ->
-    let tokens = ls.Host.Tokenize docId |> snd
+    let tokens = pa.Host.Tokenize docId |> snd
 
-    let ls =
-      { ls with NewTokenizeCache = ls.NewTokenizeCache |> TMap.add docId tokens }
+    let pa =
+      { pa with NewTokenizeCache = pa.NewTokenizeCache |> TMap.add docId tokens }
 
     let (LTokenList tokens) = tokens
-    tokens, ls
+    tokens, pa
 
-let private parseWithCache docId (ls: ProjectAnalysis) = ls.Host.Parse docId |> Option.map snd
+let private parseWithCache docId (pa: ProjectAnalysis) = pa.Host.Parse docId |> Option.map snd
 
 [<RequireQualifiedAccess; NoEquality; NoComparison>]
 type BundleResult =
@@ -266,8 +266,8 @@ type BundleResult =
       DocVersions: (DocId * DocVersion) list
       ParseResults: (DocVersion * LSyntaxData) list }
 
-let private doBundle (ls: ProjectAnalysis) projectDir : BundleResult =
-  let miloneHome = ls.Host.MiloneHome
+let private doBundle (pa: ProjectAnalysis) projectDir : BundleResult =
+  let miloneHome = pa.Host.MiloneHome
   let projectDir = projectDir |> pathStrTrimEndPathSep
   let projectName = projectDir |> pathStrToStem
 
@@ -275,7 +275,7 @@ let private doBundle (ls: ProjectAnalysis) projectDir : BundleResult =
     let docId =
       AstBundle.computeDocId projectName moduleName
 
-    match ls |> parseWithCache docId with
+    match pa |> parseWithCache docId with
     | None -> Future.just None
     | Some (LSyntaxData syntaxData) -> Future.just (Some syntaxData)
 
@@ -284,7 +284,7 @@ let private doBundle (ls: ProjectAnalysis) projectDir : BundleResult =
       { EntryProjectDir = projectDir
         EntryProjectName = projectName
         MiloneHome = miloneHome
-        ReadTextFile = ls.Host.ReadTextFile
+        ReadTextFile = pa.Host.ReadTextFile
         WriteLog = fun _ -> () }
 
     SyntaxApi.newSyntaxCtx host
@@ -297,14 +297,14 @@ let private doBundle (ls: ProjectAnalysis) projectDir : BundleResult =
     layers
     |> List.collect (fun modules ->
       modules
-      |> List.map (fun (docId, _, _, _) -> docId, getVersion docId ls))
+      |> List.map (fun (docId, _, _, _) -> docId, getVersion docId pa))
 
   let parseResults =
     layers
     |> List.collect (fun modules ->
       modules
       |> List.map (fun ((docId, _, _, _) as syntaxData) ->
-        let v = getVersion docId ls
+        let v = getVersion docId pa
         v, LSyntaxData syntaxData))
 
   match result with
@@ -324,39 +324,39 @@ let private doBundle (ls: ProjectAnalysis) projectDir : BundleResult =
       DocVersions = docVersions
       ParseResults = parseResults }
 
-let private bundleWithCache (ls: ProjectAnalysis) projectDir : BundleResult * ProjectAnalysis =
+let private bundleWithCache (pa: ProjectAnalysis) projectDir : BundleResult * ProjectAnalysis =
   let docsAreAllFresh docVersions =
     docVersions
-    |> List.forall (fun (docId, version) -> getVersion docId ls <= version)
+    |> List.forall (fun (docId, version) -> getVersion docId pa <= version)
 
   let cacheOpt =
-    ls.BundleCache |> TMap.tryFind projectDir
+    pa.BundleCache |> TMap.tryFind projectDir
 
   match cacheOpt with
   | Some result when docsAreAllFresh result.DocVersions ->
     // traceFn "bundle cache reused"
-    result, ls
+    result, pa
 
   | _ ->
     // match cacheOpt with
     // | Some _ -> eprintfn "bundle cache invalidated"
     // | _ -> eprintfn "bundle cache not found"
 
-    let result = doBundle ls projectDir
+    let result = doBundle pa projectDir
 
-    let ls =
-      { ls with
+    let pa =
+      { pa with
           NewTokenizeCache =
             result.ParseResults
             |> List.fold
                  (fun map (_, syntaxData) ->
                    let (LSyntaxData (docId, tokens, _, _)) = syntaxData
                    map |> TMap.add docId (LTokenList tokens))
-                 ls.NewTokenizeCache
-          NewParseResults = List.append result.ParseResults ls.NewParseResults
-          BundleCache = ls.BundleCache |> TMap.add projectDir result }
+                 pa.NewTokenizeCache
+          NewParseResults = List.append result.ParseResults pa.NewParseResults
+          BundleCache = pa.BundleCache |> TMap.add projectDir result }
 
-    result, ls
+    result, pa
 
 // -----------------------------------------------
 // Find references
@@ -711,50 +711,50 @@ let private foldTir acc modules =
   |> List.fold (fun acc (m: TModule) -> acc |> up (List.fold dfsStmt) m.Stmts) acc
 
 /// Resolve locations.
-let private resolveLoc (symbols: SymbolOccurrence list) ls =
+let private resolveLoc (symbols: SymbolOccurrence list) pa =
   symbols
   |> List.mapFold
-       (fun (ls: ProjectAnalysis) item ->
-         let tokenize loc ls =
+       (fun (pa: ProjectAnalysis) item ->
+         let tokenize loc pa =
            let (Loc (docId, y, x)) = loc
-           let tokens, ls = tokenizeWithCache docId ls
-           tokens, docId, (y, x), ls
+           let tokens, pa = tokenizeWithCache docId pa
+           tokens, docId, (y, x), pa
 
          let symbol, defOrUse, tyOpt, loc = item
 
-         let locOpt, ls =
+         let locOpt, pa =
            match loc with
-           | At loc -> Some loc, ls
+           | At loc -> Some loc, pa
 
            | PreviousIdent loc ->
-             let tokens, docId, pos, ls = tokenize loc ls
-             lastIdentBefore tokens docId pos, ls
+             let tokens, docId, pos, pa = tokenize loc pa
+             lastIdentBefore tokens docId pos, pa
 
            | NextIdent loc ->
-             let tokens, docId, pos, ls = tokenize loc ls
-             firstIdentAfter tokens docId pos, ls
+             let tokens, docId, pos, pa = tokenize loc pa
+             firstIdentAfter tokens docId pos, pa
 
          match locOpt with
-         | Some loc -> Some(symbol, defOrUse, tyOpt, loc), ls
-         | None -> None, ls)
-       ls
+         | Some loc -> Some(symbol, defOrUse, tyOpt, loc), pa
+         | None -> None, pa)
+       pa
   |> fst
   |> List.choose id
 
-let private findTyInStmt (ls: ProjectAnalysis) (modules: TProgram) (tokenLoc: Loc) =
+let private findTyInStmt (pa: ProjectAnalysis) (modules: TProgram) (tokenLoc: Loc) =
   let symbols = foldTir [] modules
 
-  resolveLoc symbols ls
+  resolveLoc symbols pa
   |> List.tryPick (fun (_, _, tyOpt, loc) ->
     match tyOpt with
     | Some ty when loc = tokenLoc -> Some ty
     | _ -> None)
 
-let private collectSymbolsInExpr (ls: ProjectAnalysis) (modules: TProgram) =
+let private collectSymbolsInExpr (pa: ProjectAnalysis) (modules: TProgram) =
   let parseModule (m: TModule) =
     let docId = m.DocId
 
-    match ls |> parseWithCache docId with
+    match pa |> parseWithCache docId with
     | Some (LSyntaxData (_, _, ast, _)) -> docId, ast
     | None -> failwith "must be parsed"
 
@@ -765,53 +765,53 @@ let private collectSymbolsInExpr (ls: ProjectAnalysis) (modules: TProgram) =
          dfsARoot docId acc ast))
        modules
   |> up foldTir modules
-  |> (fun acc -> resolveLoc acc ls)
+  |> (fun acc -> resolveLoc acc pa)
   |> List.map (fun (symbol, defOrUse, _, loc) -> symbol, defOrUse, loc)
 
-let private doFindRefs hint projectDir docId targetPos ls =
+let private doFindRefs hint projectDir docId targetPos pa =
   U.debugFn "doFindRefs %s" hint
-  let result, ls = bundleWithCache ls projectDir
+  let result, pa = bundleWithCache pa projectDir
 
   match result.ProgramOpt with
   | None ->
     U.debugFn "%s: no bundle result: errors %d" hint (List.length result.Errors)
-    None, ls
+    None, pa
 
   | Some (modules, _) ->
-    let tokens, ls = tokenizeWithCache docId ls
+    let tokens, pa = tokenizeWithCache docId pa
     let tokenOpt = findTokenAt tokens targetPos
 
     match tokenOpt with
     | None ->
       U.debugFn "%s: token not found on position: docId=%s pos=%s" hint docId (posToString targetPos)
-      None, ls
+      None, pa
 
     | Some (_token, tokenPos) ->
       U.debugFn "%s: tokenPos=%A" hint tokenPos
       let tokenLoc = locOfDocPos docId tokenPos
 
-      let symbols = collectSymbolsInExpr ls modules
+      let symbols = collectSymbolsInExpr pa modules
 
       match symbols
             |> List.tryFind (fun (_, _, loc) -> loc = tokenLoc)
         with
       | None ->
         U.debugFn "%s: no symbol" hint
-        None, ls
+        None, pa
 
       | Some (targetSymbol, _, _) ->
         let result =
           symbols
           |> List.filter (fun (symbol, _, _) -> symbol = targetSymbol)
 
-        Some result, ls
+        Some result, pa
 
-let private doFindDefsOrUses hint projectDir docId targetPos includeDef includeUse ls =
-  match doFindRefs hint projectDir docId targetPos ls with
-  | None, ls -> None, ls
+let private doFindDefsOrUses hint projectDir docId targetPos includeDef includeUse pa =
+  match doFindRefs hint projectDir docId targetPos pa with
+  | None, pa -> None, pa
 
-  | Some symbols, ls ->
-    let result, ls =
+  | Some symbols, pa ->
+    let result, pa =
       symbols
       |> Seq.toList
       |> List.fold
@@ -824,17 +824,17 @@ let private doFindDefsOrUses hint projectDir docId targetPos includeDef includeU
            (TMap.empty compare)
       |> TMap.toList
       |> List.mapFold
-           (fun ls (docId, posList) ->
-             let tokens, ls = tokenizeWithCache docId ls
+           (fun pa (docId, posList) ->
+             let tokens, pa = tokenizeWithCache docId pa
              let ranges = resolveTokenRanges tokens posList
-             (docId, ranges), ls)
-           ls
+             (docId, ranges), pa)
+           pa
 
     let result =
       result
       |> List.collect (fun (docId, ranges) -> ranges |> List.map (fun range -> docId, range))
 
-    Some result, ls
+    Some result, pa
 
 module ProjectAnalysis =
   let create (host: ProjectAnalysisHost) : ProjectAnalysis =
@@ -852,10 +852,10 @@ module ProjectAnalysis =
         NewTokenizeCache = emptyTokenizeCache
         NewParseResults = [] }
 
-  let validateProject projectDir (ls: ProjectAnalysis) : LError list * ProjectAnalysis =
-    let result, ls = bundleWithCache ls projectDir
+  let validateProject projectDir (pa: ProjectAnalysis) : LError list * ProjectAnalysis =
+    let result, pa = bundleWithCache pa projectDir
 
-    let errorListList, ls =
+    let errorListList, pa =
       result.Errors
       |> List.fold
            (fun map (msg, loc) ->
@@ -864,8 +864,8 @@ module ProjectAnalysis =
            (TMap.empty compare)
       |> TMap.toList
       |> List.mapFold
-           (fun ls (docId, errorList) ->
-             let tokens, ls = tokenizeWithCache docId ls
+           (fun pa (docId, errorList) ->
+             let tokens, pa = tokenizeWithCache docId pa
 
              // FIXME: parser reports error at EOF as y=-1. Fix up that here.
              let errorList =
@@ -895,18 +895,18 @@ module ProjectAnalysis =
                  | Some r -> msg, (docId, pos, r)
                  | None -> msg, (docId, pos, pos))
 
-             locList, ls)
-           ls
+             locList, pa)
+           pa
 
-    List.collect id errorListList, ls
+    List.collect id errorListList, pa
 
   let completion
     (projectDir: ProjectDir)
     (docId: DocId)
     (targetPos: Pos)
-    (ls: ProjectAnalysis)
+    (pa: ProjectAnalysis)
     : string list * ProjectAnalysis =
-    let tokens, ls = tokenizeWithCache docId ls
+    let tokens, pa = tokenizeWithCache docId pa
 
     let inModuleLine =
       let y, _ = targetPos
@@ -922,7 +922,7 @@ module ProjectAnalysis =
 
     let result =
       if inModuleLine then
-        let h = ls.Host
+        let h = pa.Host
 
         List.append (h.MiloneHomeModules()) (h.FindModulesInDir projectDir)
         |> List.collect (fun (p, m) -> [ p; m ])
@@ -930,17 +930,17 @@ module ProjectAnalysis =
       else
         []
 
-    result, ls
+    result, pa
 
   /// `(defs, uses) option`
   let findRefs
     projectDir
     docId
     targetPos
-    (ls: ProjectAnalysis)
+    (pa: ProjectAnalysis)
     : ((DocId * Pos) list * (DocId * Pos) list) option * ProjectAnalysis =
-    match doFindRefs "findRefs" projectDir docId targetPos ls with
-    | Some symbols, ls ->
+    match doFindRefs "findRefs" projectDir docId targetPos pa with
+    | Some symbols, pa ->
       let defs, uses =
         symbols
         |> List.fold
@@ -950,19 +950,19 @@ module ProjectAnalysis =
                | Use -> defAcc, (docId, (y, x)) :: useAcc)
              ([], [])
 
-      Some(defs, uses), ls
+      Some(defs, uses), pa
 
-    | None, ls -> None, ls
+    | None, pa -> None, pa
 
   /// `(reads, writes) option`
   let documentHighlight
     projectDir
     docId
     targetPos
-    (ls: ProjectAnalysis)
+    (pa: ProjectAnalysis)
     : (Range list * Range list) option * ProjectAnalysis =
-    match doFindRefs "highlight" projectDir docId targetPos ls with
-    | Some symbols, ls ->
+    match doFindRefs "highlight" projectDir docId targetPos pa with
+    | Some symbols, pa ->
       let reads, writes =
         symbols
         |> List.fold
@@ -977,59 +977,59 @@ module ProjectAnalysis =
                  readAcc, writeAcc)
              ([], [])
 
-      let tokens, ls = tokenizeWithCache docId ls
+      let tokens, pa = tokenizeWithCache docId pa
 
       let collect posList = resolveTokenRanges tokens posList
 
-      Some(collect reads, collect writes), ls
+      Some(collect reads, collect writes), pa
 
-    | None, ls -> None, ls
+    | None, pa -> None, pa
 
-  let hover projectDir (docId: DocId) (targetPos: Pos) (ls: ProjectAnalysis) : string option * ProjectAnalysis =
-    let result, ls = bundleWithCache ls projectDir
+  let hover projectDir (docId: DocId) (targetPos: Pos) (pa: ProjectAnalysis) : string option * ProjectAnalysis =
+    let result, pa = bundleWithCache pa projectDir
 
     match result.ProgramOpt with
     | None ->
       U.debugFn "hover: no bundle result: errors %d" (List.length result.Errors)
-      None, ls
+      None, pa
 
     | Some (modules, tirCtx) ->
-      let tokens, ls = tokenizeWithCache docId ls
+      let tokens, pa = tokenizeWithCache docId pa
       let tokenOpt = findTokenAt tokens targetPos
 
       match tokenOpt with
       | None ->
         U.debugFn "hover: token not found on position: docId=%s pos=%s" docId (posToString targetPos)
-        None, ls
+        None, pa
 
       | Some (_token, tokenPos) ->
         let tokenLoc = locOfDocPos docId tokenPos
 
         // eprintfn "hover: %A, tokenLoc=%A" token tokenLoc
 
-        match findTyInStmt ls modules tokenLoc with
-        | None -> None, ls
-        | Some ty -> Some(tyDisplayFn tirCtx ty), ls
+        match findTyInStmt pa modules tokenLoc with
+        | None -> None, pa
+        | Some ty -> Some(tyDisplayFn tirCtx ty), pa
 
-  let definition projectDir docId targetPos (ls: ProjectAnalysis) : (DocId * Range) list * ProjectAnalysis =
+  let definition projectDir docId targetPos (pa: ProjectAnalysis) : (DocId * Range) list * ProjectAnalysis =
     let includeDef = true
     let includeUse = false
 
-    let resultOpt, ls =
-      doFindDefsOrUses "definition" projectDir docId targetPos includeDef includeUse ls
+    let resultOpt, pa =
+      doFindDefsOrUses "definition" projectDir docId targetPos includeDef includeUse pa
 
-    Option.defaultValue [] resultOpt, ls
+    Option.defaultValue [] resultOpt, pa
 
   let references
     projectDir
     docId
     targetPos
     (includeDef: bool)
-    (ls: ProjectAnalysis)
+    (pa: ProjectAnalysis)
     : (DocId * Range) list * ProjectAnalysis =
     let includeUse = true
 
-    let resultOpt, ls =
-      doFindDefsOrUses "references" projectDir docId targetPos includeDef includeUse ls
+    let resultOpt, pa =
+      doFindDefsOrUses "references" projectDir docId targetPos includeDef includeUse pa
 
-    Option.defaultValue [] resultOpt, ls
+    Option.defaultValue [] resultOpt, pa

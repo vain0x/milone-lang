@@ -56,7 +56,7 @@ let private createSingleFileProject text action =
 
   LLS.WorkspaceAnalysis.empty
   |> LLS.WorkspaceAnalysis.didOpenDoc (Uri "file:///example.com/TestProject/TestProject.milone") 1 text
-  |> LLS.doWithLangService p action
+  |> LLS.doWithProjectAnalysis p action
 
 let private doTestRefsSingleFile title text (ls: ProjectAnalysis) : bool * ProjectAnalysis =
   let anchors =
