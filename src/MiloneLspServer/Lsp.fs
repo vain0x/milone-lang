@@ -5,6 +5,7 @@ open MiloneLspServer.Util
 open MiloneShared.SharedTypes
 open MiloneStd.StdMap
 open MiloneStd.StdPath
+open MiloneStd.StdSet
 open MiloneSyntax
 open MiloneSyntax.Syntax
 open MiloneSyntax.Tir
@@ -40,6 +41,10 @@ type LSyntaxData = private LSyntaxData of ModuleSyntaxData
 let private up (folder: 'S -> 'T -> 'S) (item: 'T) (state: 'S) : 'S = folder state item
 
 let private upList (folder: 'S -> 'T -> 'S) (items: 'T list) (state: 'S) : 'S = List.fold folder state items
+
+// FIXME: avoid using generic compare
+let private listUnique xs =
+  xs |> TSet.ofList compare |> TSet.toList
 
 let private pathStrTrimEndPathSep (s: string) : string =
   s
@@ -116,23 +121,29 @@ let private findTokenAt tokens (targetPos: Pos) =
 
   go tokens
 
-let private resolveTokenRanges tokens (posList: Pos list) =
-  let posSet = MutSet.ofSeq posList
-  let ranges = ResizeArray()
+let private resolveTokenRanges tokens posList : Range list =
+  let posSet = TSet.ofList compare posList
 
-  let rec go tokens =
+  let rec go (posSet, ranges) tokens =
     match tokens with
-    | []
-    | [ _ ] -> ()
+    | [] -> ranges
+
+    | [ (_, (y, _)) ] ->
+      let p = y + 1, 0
+      (p, p) :: ranges
 
     | (_, p1) :: (((_, p2) :: _) as tokens) ->
-      if posSet |> MutSet.remove p1 then
-        ranges.Add((p1, p2))
+      let removed, posSet = posSet |> TSet.remove p1
 
-      go tokens
+      let rangeAcc =
+        if removed then
+          (p1, p2) :: ranges
+        else
+          ranges
 
-  go tokens
-  ranges
+      go (posSet, rangeAcc) tokens
+
+  go (posSet, []) tokens
 
 let private lastIdentBefore tokens docId pos =
   let py, px = pos
@@ -789,7 +800,7 @@ let private doFindRefs hint projectDir docId targetPos ls =
       | Some (targetSymbol, _, _) ->
         let result =
           symbols
-          |> Seq.filter (fun (symbol, _, _) -> symbol = targetSymbol)
+          |> List.filter (fun (symbol, _, _) -> symbol = targetSymbol)
 
         Some result, ls
 
@@ -798,22 +809,28 @@ let private doFindDefsOrUses hint projectDir docId targetPos includeDef includeU
   | None, ls -> None, ls
 
   | Some symbols, ls ->
-    let map = MutMultimap.empty ()
+    let result, ls =
+      symbols
+      |> Seq.toList
+      |> List.fold
+           (fun map (_, defOrUse, loc) ->
+             match defOrUse with
+             | Def when not includeDef -> map
+             | Use when not includeUse -> map
 
-    for _, defOrUse, loc in symbols do
-      match defOrUse with
-      | Def when not includeDef -> ()
-      | Use when not includeUse -> ()
-      | _ ->
-        map
-        |> MutMultimap.insert (locToDoc loc) (locToPos loc)
+             | _ -> map |> Multimap.add (locToDoc loc) (locToPos loc))
+           (TMap.empty compare)
+      |> TMap.toList
+      |> List.mapFold
+           (fun ls (docId, posList) ->
+             let tokens, ls = tokenizeWithCache docId ls
+             let ranges = resolveTokenRanges tokens posList
+             (docId, ranges), ls)
+           ls
 
     let result =
-      [ for KeyValue (docId, posList) in map do
-          let tokens, _ = tokenizeWithCache docId ls
-
-          for range in resolveTokenRanges tokens (List.ofSeq posList) do
-            docId, range ]
+      result
+      |> List.collect (fun (docId, ranges) -> ranges |> List.map (fun range -> docId, range))
 
     Some result, ls
 
@@ -893,9 +910,9 @@ module ProjectAnalysis =
       let y, _ = targetPos
 
       tokens
-      |> Seq.skipWhile (fun (_, pos) -> pos < (y, 0))
-      |> Seq.takeWhile (fun (_, pos) -> pos < (y + 1, 0))
-      |> Seq.exists (fun (token, _) ->
+      |> List.skipWhile (fun (_, pos) -> pos < (y, 0))
+      |> List.takeWhile (fun (_, pos) -> pos < (y + 1, 0))
+      |> List.exists (fun (token, _) ->
         match token with
         | ModuleToken
         | OpenToken -> true
@@ -907,8 +924,7 @@ module ProjectAnalysis =
 
         List.append (h.MiloneHomeModules()) (h.FindModulesInDir projectDir)
         |> List.collect (fun (p, m) -> [ p; m ])
-        |> MutSet.ofSeq
-        |> MutSet.toList
+        |> listUnique
       else
         []
 
@@ -923,15 +939,16 @@ module ProjectAnalysis =
     : ((DocId * Pos) list * (DocId * Pos) list) option * ProjectAnalysis =
     match doFindRefs "findRefs" projectDir docId targetPos ls with
     | Some symbols, ls ->
-      let defs = ResizeArray()
-      let uses = ResizeArray()
+      let defs, uses =
+        symbols
+        |> List.fold
+             (fun (defAcc, useAcc) (_, defOrUse, Loc (docId, y, x)) ->
+               match defOrUse with
+               | Def -> (docId, (y, x)) :: defAcc, useAcc
+               | Use -> defAcc, (docId, (y, x)) :: useAcc)
+             ([], [])
 
-      for _, defOrUse, Loc (docId, y, x) in symbols do
-        match defOrUse with
-        | Def -> defs.Add(docId, (y, x))
-        | Use -> uses.Add(docId, (y, x))
-
-      Some(Seq.toList defs, Seq.toList uses), ls
+      Some(defs, uses), ls
 
     | None, ls -> None, ls
 
@@ -944,22 +961,23 @@ module ProjectAnalysis =
     : (Range list * Range list) option * ProjectAnalysis =
     match doFindRefs "highlight" projectDir docId targetPos ls with
     | Some symbols, ls ->
-      let reads = ResizeArray()
-      let writes = ResizeArray()
+      let reads, writes =
+        symbols
+        |> List.fold
+             (fun (readAcc, writeAcc) (_, defOrUse, loc) ->
+               if locToDoc loc = docId then
+                 let pos = loc |> locToPos
 
-      for _, defOrUse, loc in symbols do
-        if locToDoc loc = docId then
-          let pos = loc |> locToPos
-
-          match defOrUse with
-          | Def -> writes.Add(pos)
-          | Use -> reads.Add(pos)
+                 match defOrUse with
+                 | Def -> readAcc, pos :: writeAcc
+                 | Use -> pos :: readAcc, writeAcc
+               else
+                 readAcc, writeAcc)
+             ([], [])
 
       let tokens, ls = tokenizeWithCache docId ls
 
-      let collect (posArray: ResizeArray<Pos>) =
-        resolveTokenRanges tokens (List.ofSeq posArray)
-        |> Seq.toList
+      let collect posList = resolveTokenRanges tokens posList
 
       Some(collect reads, collect writes), ls
 
