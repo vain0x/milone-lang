@@ -6,12 +6,17 @@ open System.IO
 open System.Text
 open MiloneShared.SharedTypes
 open MiloneStd.StdMap
+open MiloneStd.StdSet
 open MiloneLspServer.Lsp
 open MiloneLspServer.LspUtil
 open MiloneLspServer.Util
 
 // FIXME: shouldn't depend
 module SyntaxApi = MiloneSyntax.SyntaxApi
+
+// FIXME: avoid using generic compare
+let private listUnique xs =
+  xs |> TSet.ofList compare |> TSet.toList
 
 let private miloneHome =
   let opt (s: string) =
@@ -230,7 +235,271 @@ let private docIdIsOptional docId =
   | _ -> false
 
 // ---------------------------------------------
-// Analysis
+// ProjectAnalysis
+// ---------------------------------------------
+
+type private ProjectDir = string
+
+// FIXME: remove doc helpers
+let private locOfDocPos (docId: DocId) (pos: Pos) : Loc =
+  let y, x = pos
+  Loc(docId, y, x)
+
+let private locToDoc (loc: Loc) : DocId =
+  let (Loc (docId, _, _)) = loc
+  docId
+
+let private locToPos (loc: Loc) : Pos =
+  let (Loc (_, y, x)) = loc
+  y, x
+
+let private locToDocPos (loc: Loc) : DocId * Pos =
+  let (Loc (docId, y, x)) = loc
+  docId, (y, x)
+
+let private doFindRefs hint docId targetPos pa =
+  debugFn "doFindRefs %s" hint
+  let tokens, pa = ProjectAnalysis1.tokenize docId pa
+  let tokenOpt = tokens |> LTokenList.findAt targetPos
+
+  match tokenOpt with
+  | None ->
+    debugFn "%s: token not found on position: docId=%s pos=%s" hint docId (posToString targetPos)
+    None, pa
+
+  | Some token ->
+    let tokenLoc = locOfDocPos docId (LToken.getPos token)
+    debugFn "%s: tokenLoc=%A" hint tokenLoc
+
+    let result, pa = pa |> ProjectAnalysis1.bundle
+
+    match pa |> ProjectAnalysis1.collectSymbols result with
+    | None ->
+      let errorCount =
+        result |> BundleResult.getErrors |> List.length
+
+      debugFn "%s: no bundle result: errors %d" hint errorCount
+      None, pa
+
+    | Some symbols ->
+      match symbols
+            |> List.tryFind (fun (_, _, loc) -> loc = tokenLoc)
+        with
+      | None ->
+        debugFn "%s: no symbol" hint
+        None, pa
+
+      | Some (targetSymbol, _, _) ->
+        let result =
+          symbols
+          |> List.filter (fun (symbol, _, _) -> symbol = targetSymbol)
+
+        Some result, pa
+
+let private doFindDefsOrUses hint docId targetPos includeDef includeUse pa =
+  match doFindRefs hint docId targetPos pa with
+  | None, pa -> None, pa
+
+  | Some symbols, pa ->
+    let result, pa =
+      symbols
+      |> Seq.toList
+      |> List.fold
+           (fun map (_, defOrUse, loc) ->
+             match defOrUse with
+             | Def when not includeDef -> map
+             | Use when not includeUse -> map
+
+             | _ -> map |> Multimap.add (locToDoc loc) (locToPos loc))
+           (TMap.empty compare)
+      |> TMap.toList
+      |> List.mapFold
+           (fun pa (docId, posList) ->
+             let tokens, pa = ProjectAnalysis1.tokenize docId pa
+
+             let ranges =
+               tokens |> LTokenList.resolveRanges posList
+
+             (docId, ranges), pa)
+           pa
+
+    let result =
+      result
+      |> List.collect (fun (docId, ranges) -> ranges |> List.map (fun range -> docId, range))
+
+    Some result, pa
+
+module ProjectAnalysis =
+  let validateProject (pa: ProjectAnalysis) : LError list * ProjectAnalysis =
+    let result, pa = pa |> ProjectAnalysis1.bundle
+
+    let errorListList, pa =
+      result
+      |> BundleResult.getErrors
+      |> List.fold
+           (fun map (msg, loc) ->
+             let docId, pos = locToDocPos loc
+             map |> Multimap.add docId (msg, pos))
+           (TMap.empty compare)
+      |> TMap.toList
+      |> List.mapFold
+           (fun pa (docId, errorList) ->
+             let tokens, pa = ProjectAnalysis1.tokenize docId pa
+
+             // FIXME: parser reports error at EOF as y=-1. Fix up that here.
+             let errorList =
+               errorList
+               |> List.map (fun (msg, pos) ->
+                 let y, _ = pos
+
+                 if y >= 0 then
+                   msg, pos
+                 else
+                   match tokens |> LTokenList.tryLast with
+                   | Some token ->
+                     let y, _ = token |> LToken.getPos
+                     msg, (y + 1, 0)
+
+                   | _ -> msg, (0, 0))
+
+             let posList = errorList |> List.map snd
+
+             let rangeMap =
+               tokens
+               |> LTokenList.resolveRanges posList
+               |> Seq.map (fun (l, r) -> l, r)
+               |> Seq.toList
+               |> TMap.ofList compare
+
+             let locList =
+               errorList
+               |> List.map (fun (msg, pos) ->
+                 match rangeMap |> TMap.tryFind pos with
+                 | Some r -> msg, (docId, pos, r)
+                 | None -> msg, (docId, pos, pos))
+
+             locList, pa)
+           pa
+
+    List.collect id errorListList, pa
+
+  let completion
+    (projectDir: ProjectDir)
+    (docId: DocId)
+    (targetPos: Pos)
+    (pa: ProjectAnalysis)
+    : string list * ProjectAnalysis =
+    let tokens, pa = ProjectAnalysis1.tokenize docId pa
+
+    let inModuleLine =
+      let y, _ = targetPos
+
+      tokens
+      |> LTokenList.filterByLine y
+      |> List.exists LToken.isModuleOrOpenKeyword
+
+    let result =
+      if inModuleLine then
+        List.append (Map.toList stdLibProjects) (findModulesInDir projectDir)
+        |> List.collect (fun (p, m) -> [ p; m ])
+        |> listUnique
+      else
+        []
+
+    result, pa
+
+  /// `(defs, uses) option`
+  let findRefs
+    docId
+    targetPos
+    (pa: ProjectAnalysis)
+    : ((DocId * Pos) list * (DocId * Pos) list) option * ProjectAnalysis =
+    match doFindRefs "findRefs" docId targetPos pa with
+    | Some symbols, pa ->
+      let defs, uses =
+        symbols
+        |> List.fold
+             (fun (defAcc, useAcc) (_, defOrUse, Loc (docId, y, x)) ->
+               match defOrUse with
+               | Def -> (docId, (y, x)) :: defAcc, useAcc
+               | Use -> defAcc, (docId, (y, x)) :: useAcc)
+             ([], [])
+
+      Some(defs, uses), pa
+
+    | None, pa -> None, pa
+
+  /// `(reads, writes) option`
+  let documentHighlight docId targetPos (pa: ProjectAnalysis) : (Range list * Range list) option * ProjectAnalysis =
+    match doFindRefs "highlight" docId targetPos pa with
+    | Some symbols, pa ->
+      let reads, writes =
+        symbols
+        |> List.fold
+             (fun (readAcc, writeAcc) (_, defOrUse, loc) ->
+               if locToDoc loc = docId then
+                 let pos = loc |> locToPos
+
+                 match defOrUse with
+                 | Def -> readAcc, pos :: writeAcc
+                 | Use -> pos :: readAcc, writeAcc
+               else
+                 readAcc, writeAcc)
+             ([], [])
+
+      let tokens, pa = ProjectAnalysis1.tokenize docId pa
+
+      let collect posList =
+        tokens |> LTokenList.resolveRanges posList
+
+      Some(collect reads, collect writes), pa
+
+    | None, pa -> None, pa
+
+  let hover (docId: DocId) (targetPos: Pos) (pa: ProjectAnalysis) : string option * ProjectAnalysis =
+    let tokens, pa = ProjectAnalysis1.tokenize docId pa
+    let tokenOpt = tokens |> LTokenList.findAt targetPos
+
+    match tokenOpt with
+    | None ->
+      debugFn "hover: token not found on position: docId=%s pos=%s" docId (posToString targetPos)
+      None, pa
+
+    | Some token ->
+      let tokenLoc = locOfDocPos docId (LToken.getPos token)
+      // eprintfn "hover: %A, tokenLoc=%A" token tokenLoc
+
+      let result, pa = pa |> ProjectAnalysis1.bundle
+
+      match ProjectAnalysis1.getTyName result tokenLoc pa with
+      | None ->
+        let errorCount =
+          result |> BundleResult.getErrors |> List.length
+
+        debugFn "hover: no bundle result: errors %d" errorCount
+        None, pa
+
+      | Some tyNameOpt -> tyNameOpt, pa
+
+  let definition docId targetPos (pa: ProjectAnalysis) : (DocId * Range) list * ProjectAnalysis =
+    let includeDef = true
+    let includeUse = false
+
+    let resultOpt, pa =
+      doFindDefsOrUses "definition" docId targetPos includeDef includeUse pa
+
+    Option.defaultValue [] resultOpt, pa
+
+  let references docId targetPos (includeDef: bool) (pa: ProjectAnalysis) : (DocId * Range) list * ProjectAnalysis =
+    let includeUse = true
+
+    let resultOpt, pa =
+      doFindDefsOrUses "references" docId targetPos includeDef includeUse pa
+
+    Option.defaultValue [] resultOpt, pa
+
+// ---------------------------------------------
+// WorkspaceAnalysis
 // ---------------------------------------------
 
 type private FilePath = string
@@ -370,19 +639,17 @@ let doWithProjectAnalysis
       Parse = parse1
 
       MiloneHome = wa.Host.MiloneHome
-      ReadTextFile = File.readTextFile
-      MiloneHomeModules = fun () -> stdLibProjects |> Map.toList
-      FindModulesInDir = findModulesInDir }
+      ReadTextFile = File.readTextFile }
 
   let pa =
     match wa.Projects |> TMap.tryFind p.ProjectName with
-    | Some it -> it |> ProjectAnalysis.withHost host
-    | None -> ProjectAnalysis.create p.ProjectDir p.ProjectName host
+    | Some it -> it |> ProjectAnalysis1.withHost host
+    | None -> ProjectAnalysis1.create p.ProjectDir p.ProjectName host
 
   let result, pa = action pa
 
   // FIXME: store tokenize cache
-  let _, newParseResults, pa = pa |> ProjectAnalysis.drain
+  let _, newParseResults, pa = pa |> ProjectAnalysis1.drain
 
   let wa =
     newParseResults
