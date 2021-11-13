@@ -27,6 +27,9 @@ type private Error = string * Loc
 // Hide compiler-specific types from other modules.
 
 [<NoEquality; NoComparison>]
+type LToken = private LToken of Token * Pos
+
+[<NoEquality; NoComparison>]
 type LTokenList = private LTokenList of TokenizeFullResult
 
 [<NoEquality; NoComparison>]
@@ -198,6 +201,11 @@ module LTokenList =
 
   let tokenizeAll text =
     SyntaxTokenize.tokenizeAll host text |> LTokenList
+
+  let findAt (pos: Pos) (LTokenList tokens) : LToken option =
+    match findTokenAt tokens pos with
+    | Some (token, pos) -> Some(LToken(token, pos))
+    | None -> None
 
 module LSyntaxData =
   let parse projectName moduleName docId (LTokenList tokens) =
@@ -791,15 +799,15 @@ let private doFindRefs hint projectDir docId targetPos pa =
     None, pa
 
   | Some (modules, _) ->
-    let (LTokenList tokens), pa = ProjectAnalysis1.tokenize docId pa
-    let tokenOpt = findTokenAt tokens targetPos
+    let tokens, pa = ProjectAnalysis1.tokenize docId pa
+    let tokenOpt = tokens |> LTokenList.findAt targetPos
 
     match tokenOpt with
     | None ->
       U.debugFn "%s: token not found on position: docId=%s pos=%s" hint docId (posToString targetPos)
       None, pa
 
-    | Some (_token, tokenPos) ->
+    | Some (LToken (_, tokenPos)) ->
       U.debugFn "%s: tokenPos=%A" hint tokenPos
       let tokenLoc = locOfDocPos docId tokenPos
 
@@ -1006,15 +1014,15 @@ module ProjectAnalysis =
       None, pa
 
     | Some (modules, tirCtx) ->
-      let (LTokenList tokens), pa = ProjectAnalysis1.tokenize docId pa
-      let tokenOpt = findTokenAt tokens targetPos
+      let tokens, pa = ProjectAnalysis1.tokenize docId pa
+      let tokenOpt = tokens |> LTokenList.findAt targetPos
 
       match tokenOpt with
       | None ->
         U.debugFn "hover: token not found on position: docId=%s pos=%s" docId (posToString targetPos)
         None, pa
 
-      | Some (_token, tokenPos) ->
+      | Some (LToken (_, tokenPos)) ->
         let tokenLoc = locOfDocPos docId tokenPos
 
         // eprintfn "hover: %A, tokenLoc=%A" token tokenLoc
