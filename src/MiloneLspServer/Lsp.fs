@@ -768,6 +768,19 @@ let private collectSymbolsInExpr (pa: ProjectAnalysis) (modules: TProgram) =
   |> (fun acc -> resolveLoc acc pa)
   |> List.map (fun (symbol, defOrUse, _, loc) -> symbol, defOrUse, loc)
 
+// Provides fundamental operations as building block of queries.
+// FIXME: name?
+module ProjectAnalysis1 =
+  let tokenize (docId: DocId) (pa: ProjectAnalysis) : LTokenList * ProjectAnalysis =
+    let tokens, pa = tokenizeWithCache docId pa
+    LTokenList tokens, pa
+
+// -----------------------------------------------
+// Lang service
+// -----------------------------------------------
+
+// FIXME: move these analysis process to other module decoupled with compiler.
+
 let private doFindRefs hint projectDir docId targetPos pa =
   U.debugFn "doFindRefs %s" hint
   let result, pa = bundleWithCache pa projectDir
@@ -778,7 +791,7 @@ let private doFindRefs hint projectDir docId targetPos pa =
     None, pa
 
   | Some (modules, _) ->
-    let tokens, pa = tokenizeWithCache docId pa
+    let (LTokenList tokens), pa = ProjectAnalysis1.tokenize docId pa
     let tokenOpt = findTokenAt tokens targetPos
 
     match tokenOpt with
@@ -825,7 +838,7 @@ let private doFindDefsOrUses hint projectDir docId targetPos includeDef includeU
       |> TMap.toList
       |> List.mapFold
            (fun pa (docId, posList) ->
-             let tokens, pa = tokenizeWithCache docId pa
+             let (LTokenList tokens), pa = ProjectAnalysis1.tokenize docId pa
              let ranges = resolveTokenRanges tokens posList
              (docId, ranges), pa)
            pa
@@ -865,7 +878,7 @@ module ProjectAnalysis =
       |> TMap.toList
       |> List.mapFold
            (fun pa (docId, errorList) ->
-             let tokens, pa = tokenizeWithCache docId pa
+             let (LTokenList tokens), pa = ProjectAnalysis1.tokenize docId pa
 
              // FIXME: parser reports error at EOF as y=-1. Fix up that here.
              let errorList =
@@ -906,7 +919,7 @@ module ProjectAnalysis =
     (targetPos: Pos)
     (pa: ProjectAnalysis)
     : string list * ProjectAnalysis =
-    let tokens, pa = tokenizeWithCache docId pa
+    let (LTokenList tokens), pa = ProjectAnalysis1.tokenize docId pa
 
     let inModuleLine =
       let y, _ = targetPos
@@ -977,8 +990,7 @@ module ProjectAnalysis =
                  readAcc, writeAcc)
              ([], [])
 
-      let tokens, pa = tokenizeWithCache docId pa
-
+      let (LTokenList tokens), pa = ProjectAnalysis1.tokenize docId pa
       let collect posList = resolveTokenRanges tokens posList
 
       Some(collect reads, collect writes), pa
@@ -994,7 +1006,7 @@ module ProjectAnalysis =
       None, pa
 
     | Some (modules, tirCtx) ->
-      let tokens, pa = tokenizeWithCache docId pa
+      let (LTokenList tokens), pa = ProjectAnalysis1.tokenize docId pa
       let tokenOpt = findTokenAt tokens targetPos
 
       match tokenOpt with
