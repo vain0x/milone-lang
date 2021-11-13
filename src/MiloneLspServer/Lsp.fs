@@ -202,6 +202,9 @@ module LTokenList =
 
   let empty = LTokenList []
 
+  let tryLast (LTokenList tokens) =
+    tokens |> List.tryLast |> Option.map LToken
+
   let tokenizeAll text =
     SyntaxTokenize.tokenizeAll host text |> LTokenList
 
@@ -209,6 +212,8 @@ module LTokenList =
     match findTokenAt tokens pos with
     | Some (token, pos) -> Some(LToken(token, pos))
     | None -> None
+
+  let resolveRanges (posList: Pos list) (LTokenList tokens) : Range list = resolveTokenRanges tokens posList
 
 module LSyntaxData =
   let parse projectName moduleName docId (LTokenList tokens) =
@@ -849,8 +854,11 @@ let private doFindDefsOrUses hint projectDir docId targetPos includeDef includeU
       |> TMap.toList
       |> List.mapFold
            (fun pa (docId, posList) ->
-             let (LTokenList tokens), pa = ProjectAnalysis1.tokenize docId pa
-             let ranges = resolveTokenRanges tokens posList
+             let tokens, pa = ProjectAnalysis1.tokenize docId pa
+
+             let ranges =
+               tokens |> LTokenList.resolveRanges posList
+
              (docId, ranges), pa)
            pa
 
@@ -889,7 +897,7 @@ module ProjectAnalysis =
       |> TMap.toList
       |> List.mapFold
            (fun pa (docId, errorList) ->
-             let (LTokenList tokens), pa = ProjectAnalysis1.tokenize docId pa
+             let tokens, pa = ProjectAnalysis1.tokenize docId pa
 
              // FIXME: parser reports error at EOF as y=-1. Fix up that here.
              let errorList =
@@ -900,14 +908,18 @@ module ProjectAnalysis =
                  if y >= 0 then
                    msg, pos
                  else
-                   match tokens |> List.tryLast with
-                   | Some (_, (y, _)) -> msg, (y + 1, 0)
+                   match tokens |> LTokenList.tryLast with
+                   | Some token ->
+                     let y, _ = token |> LToken.getPos
+                     msg, (y + 1, 0)
+
                    | _ -> msg, (0, 0))
 
              let posList = errorList |> List.map snd
 
              let rangeMap =
-               resolveTokenRanges tokens posList
+               tokens
+               |> LTokenList.resolveRanges posList
                |> Seq.map (fun (l, r) -> l, r)
                |> Seq.toList
                |> TMap.ofList compare
@@ -1001,8 +1013,10 @@ module ProjectAnalysis =
                  readAcc, writeAcc)
              ([], [])
 
-      let (LTokenList tokens), pa = ProjectAnalysis1.tokenize docId pa
-      let collect posList = resolveTokenRanges tokens posList
+      let tokens, pa = ProjectAnalysis1.tokenize docId pa
+
+      let collect posList =
+        tokens |> LTokenList.resolveRanges posList
 
       Some(collect reads, collect writes), pa
 
