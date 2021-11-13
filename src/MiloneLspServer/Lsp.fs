@@ -111,22 +111,22 @@ let private findTokenAt tokens (targetPos: Pos) =
 let private resolveTokenRanges tokens posList : Range list =
   let posSet = TSet.ofList compare posList
 
-  let rec go (posSet, ranges) tokens =
+  let rec go (posSet, rangeAcc) tokens =
     match tokens with
-    | [] -> ranges
+    | [] -> rangeAcc
 
     | [ (_, (y, _)) ] ->
       let p = y + 1, 0
-      (p, p) :: ranges
+      (p, p) :: rangeAcc
 
     | (_, p1) :: (((_, p2) :: _) as tokens) ->
       let removed, posSet = posSet |> TSet.remove p1
 
       let rangeAcc =
         if removed then
-          (p1, p2) :: ranges
+          (p1, p2) :: rangeAcc
         else
-          ranges
+          rangeAcc
 
       go (posSet, rangeAcc) tokens
 
