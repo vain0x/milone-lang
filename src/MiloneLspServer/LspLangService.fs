@@ -377,7 +377,7 @@ let doWithProjectAnalysis
   let pa =
     match wa.Projects |> TMap.tryFind p.ProjectName with
     | Some it -> it |> ProjectAnalysis.withHost host
-    | None -> ProjectAnalysis.create host
+    | None -> ProjectAnalysis.create p.ProjectDir host
 
   let result, pa = action pa
 
@@ -454,7 +454,7 @@ module WorkspaceAnalysis =
   let didCloseFile (uri: Uri) (wa: WorkspaceAnalysis) = didCloseDoc uri wa
 
   let validateProject (p: ProjectInfo) (wa: WorkspaceAnalysis) =
-    doWithProjectAnalysis p (ProjectAnalysis.validateProject p.ProjectDir) wa
+    doWithProjectAnalysis p ProjectAnalysis.validateProject wa
 
   let validateAllProjects (wa: WorkspaceAnalysis) =
     let results, wa =
@@ -497,8 +497,7 @@ module WorkspaceAnalysis =
     let results, wa =
       wa.ProjectList
       |> List.mapFold
-           (fun wa p ->
-             doWithProjectAnalysis p (ProjectAnalysis.documentHighlight p.ProjectDir (uriToDocId uri) pos) wa)
+           (fun wa p -> doWithProjectAnalysis p (ProjectAnalysis.documentHighlight (uriToDocId uri) pos) wa)
            wa
 
     let reads, writes = List.choose id results |> List.unzip
@@ -508,9 +507,7 @@ module WorkspaceAnalysis =
   let hover (uri: Uri) (pos: Pos) (wa: WorkspaceAnalysis) =
     let results, wa =
       wa.ProjectList
-      |> List.mapFold
-           (fun wa p -> doWithProjectAnalysis p (ProjectAnalysis.hover p.ProjectDir (uriToDocId uri) pos) wa)
-           wa
+      |> List.mapFold (fun wa p -> doWithProjectAnalysis p (ProjectAnalysis.hover (uriToDocId uri) pos) wa) wa
 
     List.choose id results, wa
 
@@ -521,7 +518,7 @@ module WorkspaceAnalysis =
            (fun wa p ->
              let result, wa =
                wa
-               |> doWithProjectAnalysis p (ProjectAnalysis.definition p.ProjectDir (uriToDocId uri) pos)
+               |> doWithProjectAnalysis p (ProjectAnalysis.definition (uriToDocId uri) pos)
 
              (p, result), wa)
            wa
@@ -541,7 +538,7 @@ module WorkspaceAnalysis =
            (fun wa p ->
              let result, wa =
                wa
-               |> doWithProjectAnalysis p (ProjectAnalysis.references p.ProjectDir (uriToDocId uri) pos includeDecl)
+               |> doWithProjectAnalysis p (ProjectAnalysis.references (uriToDocId uri) pos includeDecl)
 
              (p, result), wa)
            wa

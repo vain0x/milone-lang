@@ -93,12 +93,9 @@ let private doTestRefsSingleFile title text (ls: ProjectAnalysis) : bool * Proje
   let actual, ls =
     let row, column, _ = firstAnchor
 
-    match ls
-          |> ProjectAnalysis.findRefs projectDir docId (row, column)
-      with
+    match ls |> ProjectAnalysis.findRefs docId (row, column) with
     | None, ls ->
-      let errors, ls =
-        ls |> ProjectAnalysis.validateProject projectDir
+      let errors, ls = ls |> ProjectAnalysis.validateProject
 
       let msg =
         if errors |> List.isEmpty then
@@ -147,12 +144,9 @@ let private doTestHoverSingleFile title text expected ls : bool * _ =
     |> S.concat "\n"
 
   let actual, ls =
-    match ls
-          |> ProjectAnalysis.hover projectDir docId targetPos
-      with
+    match ls |> ProjectAnalysis.hover docId targetPos with
     | None, ls ->
-      let errors, ls =
-        ls |> ProjectAnalysis.validateProject projectDir
+      let errors, ls = ls |> ProjectAnalysis.validateProject
 
       let msg =
         if errors |> List.isEmpty then
