@@ -3,7 +3,6 @@ module MiloneLspServer.LspLangService
 open System
 open System.Collections.Generic
 open System.IO
-open System.Text
 open MiloneShared.SharedTypes
 open MiloneStd.StdMap
 open MiloneStd.StdSet
@@ -15,6 +14,14 @@ open MiloneLspServer.Util
 module SyntaxApi = MiloneSyntax.SyntaxApi
 
 module S = MiloneStd.StdString
+
+type private DocVersion = int
+type private FilePath = string
+type private ProjectDir = string
+type private MiloneHome = string
+type private FileExistsFun = FilePath -> bool
+type private DocIdToFilePathFun = ProjectDir -> DocId -> string
+type private ReadSourceFileFun = FilePath -> Future<string option>
 
 // -----------------------------------------------
 // Util
@@ -77,6 +84,13 @@ let private basename (path: string) =
   match S.findLastIndex "/" path with
   | Some i -> S.skip (i + 1) path
   | None -> path
+
+let private stem (path: string) =
+  let path = basename path
+
+  match S.findLastIndex "." path with
+  | Some i when 0 < i && i < path.Length -> S.slice 0 i path
+  | _ -> path
 
 /// Normalizes path syntactically. Note Windows prefix is unsupported yet.
 let private normalize (path: string) =
@@ -243,19 +257,17 @@ let private doFindProjects (rootUri: string) : ProjectInfo list =
 
   List.ofSeq projects
 
-let private uriToDocId (uri: Uri) : DocId =
-  let filePath = uriToFilePath uri
-
+let private filePathToDocId (path: string) : DocId =
   let projectName =
-    Path.GetFileName(Path.GetDirectoryName(filePath))
+    match dirname path with
+    | Some path -> basename path
+    | None -> "NoProject" // unlikely happen
 
-  let moduleName =
-    Path.GetFileNameWithoutExtension(filePath)
+  let moduleName = basename path
 
-  sprintf "%s.%s" projectName moduleName
+  projectName + "." + moduleName
 
-let private fixExt filePath =
-  SyntaxApi.chooseSourceExt File.Exists filePath
+let private uriToDocId (uri: Uri) : DocId = uri |> uriToFilePath |> filePathToDocId
 
 let private docIdToModulePath (docId: DocId) =
   match docId.Split(".") with
@@ -265,24 +277,24 @@ let private docIdToModulePath (docId: DocId) =
     traceFn "Not a docId of module file: '%s'" docId
     None
 
-let private docIdToFilePath (p: ProjectInfo) (docId: DocId) =
-  match docIdToModulePath docId with
-  | Some (projectName, moduleName) ->
-    let projectDir =
-      match stdLibProjects |> Map.tryFind projectName with
-      | Some it -> it
-      | None -> p.ProjectDir + "/../" + projectName
+let private convertDocIdToFilePath (fileExists: FileExistsFun) (projectDir: ProjectDir) (docId: DocId) =
+  let fixExt path =
+    SyntaxApi.chooseSourceExt fileExists path
 
-    Path.Combine(projectDir, moduleName + ".milone")
+  let path =
+    match docIdToModulePath docId with
+    | Some (projectName, moduleName) ->
+      let projectDir =
+        match stdLibProjects |> Map.tryFind projectName with
+        | Some it -> it
+        | None -> projectDir + "/../" + projectName
 
-  | _ when File.Exists(docId) -> docId
-  | _ -> failwithf "Bad docId: '%s'" docId
+      projectDir + "/" + moduleName + ".milone"
 
-let private doDocIdToUri (p: ProjectInfo) (docId: string) =
-  docId
-  |> docIdToFilePath p
-  |> fixExt
-  |> uriOfFilePath
+    | _ when fileExists docId -> docId
+    | _ -> failwithf "Bad docId: '%s'" docId
+
+  path |> normalize |> fixExt
 
 let private docIdIsOptional docId =
   match docIdToModulePath docId with
@@ -292,8 +304,6 @@ let private docIdIsOptional docId =
 // ---------------------------------------------
 // ProjectAnalysis
 // ---------------------------------------------
-
-type private ProjectDir = string
 
 // FIXME: remove doc helpers
 let private locOfDocPos (docId: DocId) (pos: Pos) : Loc =
@@ -557,16 +567,11 @@ module ProjectAnalysis =
 // WorkspaceAnalysis
 // ---------------------------------------------
 
-type private FilePath = string
-type private DocVersion = int
-
-type private MiloneHome = string
-
 [<RequireQualifiedAccess; NoEquality; NoComparison>]
 type WorkspaceAnalysisHost =
   { MiloneHome: MiloneHome
-    DocIdToUri: ProjectInfo -> DocId -> Uri
-    ReadSourceFile: string -> Future<string option> }
+    DocIdToFilePath: DocIdToFilePathFun
+    ReadSourceFile: ReadSourceFileFun }
 
 /// State of workspace-wide analysis.
 /// That is, this is basically the root of state of LSP server.
@@ -603,16 +608,20 @@ let private emptyWorkspaceAnalysis: WorkspaceAnalysis =
 
     Host =
       { MiloneHome = miloneHome
-        DocIdToUri = doDocIdToUri
+        DocIdToFilePath = convertDocIdToFilePath File.Exists
         ReadSourceFile = SyntaxApi.readSourceFile File.readTextFile } }
 
 let private freshId (wa: WorkspaceAnalysis) =
   wa.LastId + 1, { wa with LastId = wa.LastId + 1 }
 
-let private docIdToUri p docId (wa: WorkspaceAnalysis) = wa.Host.DocIdToUri p docId
+let private docIdToFilePath (p: ProjectInfo) docId (wa: WorkspaceAnalysis) =
+  wa.Host.DocIdToFilePath p.ProjectDir docId
+
+let private docIdToUri p docId (wa: WorkspaceAnalysis) =
+  docIdToFilePath p docId wa |> uriOfFilePath
 
 let private readSourceFile p docId (wa: WorkspaceAnalysis) =
-  wa.Host.ReadSourceFile(docIdToFilePath p docId)
+  wa.Host.ReadSourceFile(docIdToFilePath p docId wa)
 
 let doWithProjectAnalysis
   (p: ProjectInfo)
