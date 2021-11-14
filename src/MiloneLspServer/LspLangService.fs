@@ -284,7 +284,7 @@ let private filePathToDocId (path: string) : DocId =
     | Some path -> basename path
     | None -> "NoProject" // unlikely happen
 
-  let moduleName = basename path
+  let moduleName = stem path
 
   projectName + "." + moduleName
 
