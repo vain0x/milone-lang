@@ -14,9 +14,123 @@ open MiloneLspServer.Util
 // FIXME: shouldn't depend
 module SyntaxApi = MiloneSyntax.SyntaxApi
 
+module S = MiloneStd.StdString
+
+// -----------------------------------------------
+// Util
+// -----------------------------------------------
+
 // FIXME: avoid using generic compare
 let private listUnique xs =
   xs |> TSet.ofList compare |> TSet.toList
+
+/// Reversed list.
+type private RevList<'T> = 'T list
+
+let rec private listAppend (acc: RevList<'T>) (xs: 'T list) : 'T list =
+  match acc with
+  | [] -> xs
+  | x :: acc -> listAppend acc (x :: xs)
+
+let private listPickWith (chooser: 'T -> 'U option) (xs: 'T list) : 'T RevList * ('U * 'T list) option =
+  let rec go acc xs =
+    match xs with
+    | [] -> acc, None
+
+    | x :: xs ->
+      match chooser x with
+      | None -> go (x :: acc) xs
+      | Some u -> acc, Some(u, xs)
+
+  go [] xs
+
+let private listCutWith equals item xs : 'T RevList * 'T list * bool =
+  let acc, restOpt =
+    xs
+    |> listPickWith (fun x -> if equals item x then Some() else None)
+
+  match restOpt with
+  | Some (_, rest) -> acc, rest, true
+  | None -> acc, [], false
+
+let private tryReplace (pattern: string) (target: string) (s: string) =
+  if s |> S.contains pattern then
+    s |> S.replace pattern target, true
+  else
+    s, false
+
+let private trimEndSep (path: string) = S.trimEndIf (fun c -> c = '/') path
+
+let private dirname (path: string) =
+  let rec go (s: string) =
+    match S.findLastIndex "/" s with
+    | None
+    | Some 0 -> None
+
+    | Some i when i = s.Length - 1 -> go (S.truncate (s.Length - 1) s)
+
+    | Some i -> S.truncate i s |> Some
+
+  path |> trimEndSep |> go
+
+let private basename (path: string) =
+  match S.findLastIndex "/" path with
+  | Some i -> S.skip (i + 1) path
+  | None -> path
+
+/// Normalizes path syntactically. Note Windows prefix is unsupported yet.
+let private normalize (path: string) =
+  let path = path |> S.replace "\\" "/"
+
+  let path =
+    let rec removeDoubleSlashes (s: string) =
+      let s, ok = s |> tryReplace "//" "/"
+      if ok then removeDoubleSlashes s else s
+
+    removeDoubleSlashes path
+
+  let path =
+    if path |> S.startsWith "/" then
+      path
+    else
+      "/" + path
+
+  let rec collapseTwoDots (segments: string list) =
+    match segments |> listCutWith (=) ".." with
+    | _ :: acc, rest, true -> collapseTwoDots (listAppend acc rest)
+    | _ -> segments
+
+  path
+  |> S.split "/"
+  |> collapseTwoDots
+  |> S.concat "/"
+
+let uriOfFilePath (filePath: string) =
+  let pathname =
+    filePath |> normalize |> S.replace ":" "%3A"
+
+  Uri("file://" + pathname)
+
+let private uriToFilePath (uri: Uri) =
+  let path, file =
+    uri |> Uri.toString |> S.stripStart "file://"
+
+  if file then
+    // HOTFIX: On linux, path starts with \\ and is separated by \ for some reason.
+    let path =
+      path |> S.replace "\\\\" "/" |> S.replace "\\" "/"
+
+    // HOTFIX: On Windows, path sometimes starts with an extra / and then it's invalid as file path; e.g. `/c:/Users/john/Foo/Foo.milone`.
+    if path |> S.contains ":" then
+      path |> S.stripStart "/" |> fst
+    else
+      path
+  else
+    path
+
+// -----------------------------------------------
+// Globals
+// -----------------------------------------------
 
 let private miloneHome =
   let opt (s: string) =
@@ -39,62 +153,9 @@ let private stdLibProjects =
   SyntaxApi.getStdLibProjects miloneHome
   |> Map.ofList
 
-let uriOfFilePath (filePath: string) =
-  let canonicalize (filePath: string) =
-    let filePath =
-      filePath.Replace("\\", "/").Replace("//", "/")
-
-    let filePath =
-      if filePath.StartsWith("/") then
-        filePath
-      else
-        "/" + filePath
-
-    let rec go (components: string []) =
-      let i = Array.IndexOf(components, "..")
-
-      if i < 0 || i = 0 then
-        components
-      else
-        let parent, rest =
-          components.[..i - 2], components.[i + 1..]
-
-        go (Array.append parent rest)
-
-    String.concat "/" (go (filePath.Split("/")))
-
-  StringBuilder()
-    .Append(canonicalize filePath)
-    .Replace(":", "%3A")
-    .Insert(0, "file://")
-    .ToString()
-  |> Uri
-
-let private uriToFilePath (uri: Uri) =
-  try
-    let (Uri uri) = uri
-    let path = System.Uri(uri).LocalPath
-
-    // HOTFIX: On linux, path starts with \\ and is separated by \ for some reason.
-    let path =
-      path.Replace("\\\\", "/").Replace("\\", "/")
-
-    // HOTFIX: On Windows, path sometimes starts with an extra / and then it's invalid as file path; e.g. `/c:/Users/john/Foo/Foo.milone`.
-    let path =
-      if path.Contains(":") && path.StartsWith("/") then
-        path.TrimStart('/')
-      else
-        path
-
-    Some path
-  with
-  | _ ->
-    traceFn "uriToFilePath failed: %s" (Uri.toString uri)
-    None
-
 /// Whether dir is excluded in traversal?
 let private dirIsExcluded (dir: string) =
-  let name = Path.GetFileName(dir)
+  let name = basename dir
 
   name.StartsWith(".")
   || name.Contains("~")
@@ -150,10 +211,7 @@ type ProjectInfo =
 let private doFindProjects (rootUri: string) : ProjectInfo list =
   let projects = ResizeArray()
 
-  let rootDir =
-    match Uri rootUri |> uriToFilePath with
-    | Some it -> it
-    | None -> failwithf "rootUri: %A" rootUri
+  let rootDir = Uri rootUri |> uriToFilePath
 
   // Find projects recursively.
   let mutable stack = Stack()
@@ -186,10 +244,7 @@ let private doFindProjects (rootUri: string) : ProjectInfo list =
   List.ofSeq projects
 
 let private uriToDocId (uri: Uri) : DocId =
-  let filePath =
-    match uriToFilePath uri with
-    | Some it -> it
-    | None -> failwithf "unexpected URI: %A" uri
+  let filePath = uriToFilePath uri
 
   let projectName =
     Path.GetFileName(Path.GetDirectoryName(filePath))
@@ -556,6 +611,9 @@ let private freshId (wa: WorkspaceAnalysis) =
 
 let private docIdToUri p docId (wa: WorkspaceAnalysis) = wa.Host.DocIdToUri p docId
 
+let private readSourceFile p docId (wa: WorkspaceAnalysis) =
+  wa.Host.ReadSourceFile(docIdToFilePath p docId)
+
 let doWithProjectAnalysis
   (p: ProjectInfo)
   (action: ProjectAnalysis -> 'A * ProjectAnalysis)
@@ -596,9 +654,7 @@ let doWithProjectAnalysis
             (docIdToUri p docId wa |> Uri.toString)
 
           // FIXME: LSP server should add all files to docs before processing queries.
-          let textOpt =
-            SyntaxApi.readSourceFile File.readTextFile (docIdToFilePath p docId)
-            |> Future.wait
+          let textOpt = readSourceFile p docId wa |> Future.wait
 
           match textOpt with
           | None ->
@@ -673,7 +729,7 @@ let doWithProjectAnalysis
          (fun (wa: WorkspaceAnalysis) uri ->
            // FIXME: don't read file
            // same as didOpenFile
-           match uriToFilePath uri |> Option.bind File.tryReadFile with
+           match uriToFilePath uri |> File.tryReadFile with
            | Some text ->
              traceFn "file '%s' opened after bundle" (Uri.toString uri)
              { wa with Docs = wa.Docs |> TMap.add uri (0, text) }
@@ -706,7 +762,7 @@ module WorkspaceAnalysis =
   let didOpenFile (uri: Uri) (wa: WorkspaceAnalysis) =
     traceFn "didOpenFile %s" (Uri.toString uri)
     // FIXME: don't read file
-    match uriToFilePath uri |> Option.bind File.tryReadFile with
+    match uriToFilePath uri |> File.tryReadFile with
     | Some text ->
       let version, wa = freshId wa
       didOpenDoc uri version text wa
@@ -716,7 +772,7 @@ module WorkspaceAnalysis =
   let didChangeFile (uri: Uri) (wa: WorkspaceAnalysis) =
     traceFn "didChangeFile %s" (Uri.toString uri)
     // FIXME: don't read file
-    match uriToFilePath uri |> Option.bind File.tryReadFile with
+    match uriToFilePath uri |> File.tryReadFile with
     | Some text ->
       let version, wa = freshId wa
       didChangeDoc uri version text wa
@@ -847,64 +903,61 @@ let private formattingResultOfDiff _prev next : FormattingResult =
   { Edits = [ ((0, 0), (1100100100, 0)), next ] }
 
 let formatting (uri: Uri) (wa: WorkspaceAnalysis) : FormattingResult option =
-  match uriToFilePath uri with
-  | Some filePath ->
-    let dir = Path.GetDirectoryName(filePath)
+  let filePath = uriToFilePath uri
+  let dir = Path.GetDirectoryName(filePath)
 
-    let temp =
-      let basename =
-        Path.GetFileNameWithoutExtension(filePath)
+  let temp =
+    let basename =
+      Path.GetFileNameWithoutExtension(filePath)
 
-      let suffix = Guid.NewGuid().ToString()
+    let suffix = Guid.NewGuid().ToString()
 
-      // Create temporary file alongside the file for .editorconfig.
-      Path.Combine(dir, sprintf "%s_%s.ignored.fs" basename suffix)
+    // Create temporary file alongside the file for .editorconfig.
+    Path.Combine(dir, sprintf "%s_%s.ignored.fs" basename suffix)
 
-    let textOpt =
-      match wa.Docs |> TMap.tryFind uri with
-      | Some (_, text) -> Some text
-      | _ -> None
+  let textOpt =
+    match wa.Docs |> TMap.tryFind uri with
+    | Some (_, text) -> Some text
+    | _ -> None
 
+  try
+    let text =
+      match textOpt with
+      | Some text ->
+        File.WriteAllText(temp, text)
+        text
+
+      | None ->
+        File.Copy(filePath, temp)
+        File.ReadAllText(filePath)
+
+    use proc =
+      // When the server is executed as VSCode extension,
+      // some environment variables are not inherited.
+
+      let homeDir =
+        Environment.GetFolderPath(Environment.SpecialFolder.UserProfile)
+
+      let startInfo = Diagnostics.ProcessStartInfo()
+      startInfo.FileName <- "/usr/bin/dotnet"
+      startInfo.ArgumentList.Add("fantomas")
+      startInfo.ArgumentList.Add(temp)
+      startInfo.WorkingDirectory <- dir
+      startInfo.EnvironmentVariables.Add("DOTNET_CLI_HOME", homeDir)
+      startInfo.EnvironmentVariables.Add("PATH", "/usr/bin")
+      startInfo.RedirectStandardOutput <- true
+      Diagnostics.Process.Start(startInfo)
+
+    let exited = proc.WaitForExit(30 * 1000)
+
+    if not exited then
+      proc.Kill(entireProcessTree = true)
+      None
+    else
+      let newText = File.ReadAllText(temp)
+      formattingResultOfDiff text newText |> Some
+  finally
     try
-      let text =
-        match textOpt with
-        | Some text ->
-          File.WriteAllText(temp, text)
-          text
-
-        | None ->
-          File.Copy(filePath, temp)
-          File.ReadAllText(filePath)
-
-      use proc =
-        // When the server is executed as VSCode extension,
-        // some environment variables are not inherited.
-
-        let homeDir =
-          Environment.GetFolderPath(Environment.SpecialFolder.UserProfile)
-
-        let startInfo = Diagnostics.ProcessStartInfo()
-        startInfo.FileName <- "/usr/bin/dotnet"
-        startInfo.ArgumentList.Add("fantomas")
-        startInfo.ArgumentList.Add(temp)
-        startInfo.WorkingDirectory <- dir
-        startInfo.EnvironmentVariables.Add("DOTNET_CLI_HOME", homeDir)
-        startInfo.EnvironmentVariables.Add("PATH", "/usr/bin")
-        startInfo.RedirectStandardOutput <- true
-        Diagnostics.Process.Start(startInfo)
-
-      let exited = proc.WaitForExit(30 * 1000)
-
-      if not exited then
-        proc.Kill(entireProcessTree = true)
-        None
-      else
-        let newText = File.ReadAllText(temp)
-        formattingResultOfDiff text newText |> Some
-    finally
-      try
-        File.Delete(temp)
-      with
-      | ex -> warnFn "failed deleting temporary file '%s': %O" temp ex
-
-  | None -> None
+      File.Delete(temp)
+    with
+    | ex -> warnFn "failed deleting temporary file '%s': %O" temp ex
