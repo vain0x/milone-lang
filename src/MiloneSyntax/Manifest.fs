@@ -11,10 +11,11 @@ open MiloneSyntax.Syntax
 
 module S = MiloneStd.StdString
 
-type private Projects = (ProjectName * ProjectDir * Loc) list
-
+[<RequireQualifiedAccess; NoEquality; NoComparison>]
 type ManifestData =
-  { Projects: Projects
+  { /// Referenced non-entry projects.
+    /// Path is relative to current project directory (where the manifest is).
+    Projects: (ProjectName * ProjectDir * Loc) list
     Errors: (string * Loc) list
 
     // #experimental
@@ -24,7 +25,7 @@ type ManifestData =
     ObjList: (Path * Loc) list
     Libs: (string * Loc) list }
 
-let private emptyManifest: ManifestData =
+let emptyManifest: ManifestData =
   { Projects = []
     Errors = []
 
@@ -34,7 +35,7 @@ let private emptyManifest: ManifestData =
     ObjList = []
     Libs = [] }
 
-let private getManifestPath (projectDir: ProjectDir) : string = projectDir + "/milone_manifest"
+let getManifestPath (projectDir: ProjectDir) : string = projectDir + "/milone_manifest"
 
 let private splitByWhitespace (s: string) : string list =
   let rec go acc s =
@@ -48,8 +49,8 @@ let private splitByWhitespace (s: string) : string list =
 
   s |> S.trim |> go [] |> List.rev
 
-let private parseManifest (docId: DocId) (s: string) : ManifestData =
-  s
+let parseManifest (docId: DocId) (text: string) : ManifestData =
+  text
   |> S.toLines
   |> List.mapi (fun i line -> i, line)
   |> List.fold
@@ -87,12 +88,7 @@ let private parseManifest (docId: DocId) (s: string) : ManifestData =
          | _ -> warn "Invalid statement.")
        emptyManifest
 
-let readManifestFile (readTextFileFun: ReadTextFileFun) (projectDir: ProjectDir) : Future<ManifestData> =
-  let manifestFile = getManifestPath projectDir
-  let docId: DocId = manifestFile
-
-  readTextFileFun manifestFile
-  |> Future.map (fun manifestOpt ->
-    match manifestOpt with
-    | Some manifest -> parseManifest docId manifest
-    | None -> emptyManifest)
+let parseManifestOpt (docId: DocId) (textOpt: string option) : ManifestData =
+  match textOpt with
+  | Some text -> parseManifest docId text
+  | None -> emptyManifest

@@ -22,6 +22,45 @@ module TySystem = MiloneSyntax.TySystem
 /// `.fs` or `.milone`.
 type private SourceExt = string
 
+/// File extension. Starts with `.`.
+type private FileExt = string
+
+/// `MILONE_HOME`
+type private MiloneHome = string
+
+type private FileExistsFun = string -> bool
+type private WriteLogFun = string -> unit
+
+let private changeExt (ext: FileExt) (path: string) : string =
+  assert (ext |> S.startsWith "." && ext <> ".")
+
+  let dirname, basename =
+    match path |> S.cutLast "/" with
+    | dirname, basename, true -> dirname + "/", basename
+    | s, _, _ -> "", s
+
+  let stem =
+    let s = basename
+
+    match s |> S.findIndex "." with
+    | Some i when 0 < i && i < s.Length -> S.truncate i s
+    | _ -> s
+
+  dirname + stem + ext
+
+// -----------------------------------------------
+// Std library
+// -----------------------------------------------
+
+let private getStdLibNames () = [ "MiloneCore"; "MiloneStd" ]
+
+let private computeStdLibProjectDir (miloneHome: MiloneHome) (projectName: ProjectName) : ProjectDir =
+  miloneHome + "/milone_libs/" + projectName
+
+let getStdLibProjects (miloneHome: MiloneHome) : (ProjectName * ProjectDir) list =
+  getStdLibNames ()
+  |> List.map (fun name -> name, computeStdLibProjectDir miloneHome name)
+
 // -----------------------------------------------
 // Prelude resolution
 // -----------------------------------------------
@@ -118,46 +157,34 @@ let private resolveMiloneCoreDeps kind tokens ast =
 // Utilities
 // -----------------------------------------------
 
-let getMiloneHomeFromEnv (getEnv: string -> string option) : string =
-  match getEnv "MILONE_HOME" with
+let getMiloneHomeFromEnv (getMiloneHomeEnv: unit -> string option) (getHomeEnv: unit -> string option) : MiloneHome =
+  match getMiloneHomeEnv () with
   | Some miloneHome ->
     assert (miloneHome <> "")
     miloneHome
 
   | None ->
-    match getEnv "HOME" with
+    match getHomeEnv () with
     | Some home -> home + "/.milone"
     | None -> failwith "$MILONE_HOME and $HOME are missing."
 
-let private findProjectWith
-  (projects: TreeMap<ProjectName, ProjectDir>)
-  (entryProjectDir: ProjectDir)
-  (projectName: ProjectName)
-  =
-  match projects |> TMap.tryFind projectName with
-  | Some it -> it
-  | None -> entryProjectDir + "/../" + projectName
+/// Computes preferred filename of source file.
+let chooseSourceExt (fileExists: FileExistsFun) filename =
+  let fs = changeExt ".fs" filename
 
-/// Reads a file to get source code of specified module.
-let private readModuleInProjectWith
-  (readTextFile: ReadTextFileFun)
-  (projectDir: ProjectDir)
-  (moduleName: ModuleName)
-  : Future<(SourceExt * SourceCode) option> =
-  let read (ext: SourceExt) =
-    readTextFile (projectDir + "/" + moduleName + ext)
-    |> Future.map (fun result ->
-      match result with
-      | Some contents -> Some(ext, contents)
-      | None -> None)
+  if fileExists filename || not (fileExists fs) then
+    filename
+  else
+    fs
 
-  read ".milone"
+let readSourceFile (readTextFile: ReadTextFileFun) filename : Future<string option> =
+  readTextFile filename
   |> Future.andThen (fun result ->
     match result with
     | (Some _) as it -> Future.just it
-    | None -> read ".fs")
+    | None -> readTextFile (changeExt ".fs" filename))
 
-let parseModuleWith (docId: DocId) (kind: ModuleKind) (tokens: (Token * Pos) list) : ModuleSyntaxData =
+let parseModule (docId: DocId) (kind: ModuleKind) (tokens: TokenizeResult) : ModuleSyntaxData =
   let errorTokens, tokens = tokens |> List.partition isErrorToken
 
   let ast, parseErrors = tokens |> SyntaxParse.parse
@@ -171,34 +198,85 @@ let parseModuleWith (docId: DocId) (kind: ModuleKind) (tokens: (Token * Pos) lis
     else
       ast
 
-  docId, ast, errors
+  docId, tokens, ast, errors
 
-let private fetchModuleWith
-  (readTextFile: ReadTextFileFun)
-  (projects: TreeMap<ProjectName, ProjectDir>)
-  (entryProjectDir: ProjectDir)
-  (tokenize: SourceCode -> (Token * Pos) list)
-  (projectName: ProjectName)
-  (moduleName: ModuleName)
-  : Future<ModuleSyntaxData option> =
-  let projectDir =
-    findProjectWith projects entryProjectDir projectName
+// -----------------------------------------------
+// FetchModule
+// -----------------------------------------------
 
-  readModuleInProjectWith readTextFile projectDir moduleName
-  |> Future.map (fun result ->
-    match result with
-    | None -> None
+[<RequireQualifiedAccess; NoEquality; NoComparison>]
+type FetchModuleHost =
+  { EntryProjectDir: ProjectDir
+    EntryProjectName: ProjectName
+    MiloneHome: MiloneHome
 
-    | Some (_, contents) ->
-      let docId =
-        AstBundle.computeDocId projectName moduleName
+    ReadTextFile: ReadTextFileFun
+    WriteLog: WriteLogFun }
 
-      let kind = getModuleKind projectName moduleName
+[<RequireQualifiedAccess; NoEquality; NoComparison>]
+type private FetchModuleCtx =
+  { Projects: TreeMap<ProjectName, ProjectDir>
+    Manifest: Manifest.ManifestData
+    TokenizeHost: TokenizeHost
+    Host: FetchModuleHost }
 
-      contents
-      |> tokenize
-      |> parseModuleWith docId kind
-      |> Some)
+let private readManifestFile (readTextFile: ReadTextFileFun) projectDir =
+  let manifestFile = projectDir |> Manifest.getManifestPath
+  let docId: DocId = manifestFile
+
+  manifestFile
+  |> readTextFile
+  |> Future.map (Manifest.parseManifestOpt docId)
+
+let private prepareFetchModule (host: FetchModuleHost) : Manifest.ManifestData * FetchModuleFun =
+  let entryProjectName = host.EntryProjectName
+  let entryProjectDir = host.EntryProjectDir
+  let miloneHome = host.MiloneHome
+  let readTextFile = host.ReadTextFile
+  let tokenizeHost = tokenizeHostNew ()
+
+  let manifest =
+    readManifestFile readTextFile entryProjectDir
+    |> Future.wait // FIXME: avoid blocking
+
+  let projects =
+    let manifestProjects =
+      manifest.Projects
+      |> List.map (fun (name, dir, _) -> name, entryProjectDir + "/" + dir)
+
+    let projects = TMap.ofList compare manifestProjects
+
+    getStdLibProjects miloneHome
+    |> List.fold (fun projects (name, dir) -> projects |> TMap.add name dir) projects
+    |> TMap.add entryProjectName entryProjectDir
+
+  let fetchModule: FetchModuleFun =
+    fun projectName moduleName ->
+      let filename =
+        let projectDir =
+          match projects |> TMap.tryFind projectName with
+          | Some it -> it
+          | None -> entryProjectDir + "/../" + projectName
+
+        projectDir + "/" + moduleName + ".milone"
+
+      readSourceFile readTextFile filename
+      |> Future.map (fun result ->
+        match result with
+        | None -> None
+
+        | Some text ->
+          let docId =
+            AstBundle.computeDocId projectName moduleName
+
+          let kind = getModuleKind projectName moduleName
+
+          text
+          |> SyntaxTokenize.tokenize tokenizeHost
+          |> parseModule docId kind
+          |> Some)
+
+  manifest, fetchModule
 
 // -----------------------------------------------
 // Error processing
@@ -255,53 +333,33 @@ let syntaxErrorsToString (errors: SyntaxError list) : string =
 // -----------------------------------------------
 
 [<RequireQualifiedAccess; NoEquality; NoComparison>]
-type SyntaxHost =
-  { EntryProjectDir: ProjectDir
-    EntryProjectName: ProjectName
-    MiloneHome: ProjectDir
-
-    ReadTextFile: ReadTextFileFun
-    WriteLog: string -> unit }
-
-[<RequireQualifiedAccess; NoEquality; NoComparison>]
 type SyntaxCtx =
-  { Projects: TreeMap<ProjectName, ProjectDir>
-    Manifest: Manifest.ManifestData
-    Errors: (string * Loc) list
-    FetchModule: FetchModuleFun
-    Host: SyntaxHost }
+  private
+    { EntryProjectName: ProjectName
+      Manifest: Manifest.ManifestData
+      FetchModule: FetchModuleFun
+      WriteLog: WriteLogFun }
 
-let syntaxCtxNew (host: SyntaxHost) : SyntaxCtx =
-  let entryProjectName = host.EntryProjectName
-  let entryProjectDir = host.EntryProjectDir
-  let miloneHome = host.MiloneHome
+/// Using file system.
+let newSyntaxCtx (host: FetchModuleHost) : SyntaxCtx =
+  let manifest, fetchModule = prepareFetchModule host
 
-  let manifest =
-    Manifest.readManifestFile host.ReadTextFile entryProjectDir
-    |> Future.wait // FIXME: avoid blocking
-
-  let projects =
-    let manifestProjects =
-      manifest.Projects
-      |> List.map (fun (name, dir, _) -> name, entryProjectDir + "/" + dir)
-
-    TMap.ofList compare manifestProjects
-    |> TMap.add "MiloneCore" (miloneHome + "/milone_libs/MiloneCore")
-    |> TMap.add "MiloneStd" (miloneHome + "/milone_libs/MiloneStd")
-    |> TMap.add entryProjectName entryProjectDir
-
-  let tokenize =
-    SyntaxTokenize.tokenize (tokenizeHostNew ())
-
-  { Projects = projects
+  { EntryProjectName = host.EntryProjectName
     Manifest = manifest
-    Errors = manifest.Errors
-    FetchModule = fetchModuleWith host.ReadTextFile projects entryProjectDir tokenize
-    Host = host }
+    FetchModule = fetchModule
+    WriteLog = host.WriteLog }
+
+module SyntaxCtx =
+  let getManifest (ctx: SyntaxCtx) = ctx.Manifest
+
+  let withFetchModule fetchModule (ctx: SyntaxCtx) =
+    { ctx with FetchModule = fetchModule ctx.FetchModule }
 
 // -----------------------------------------------
 // Analysis
 // -----------------------------------------------
+
+type SyntaxLayers = ModuleSyntaxData list list
 
 [<NoEquality; NoComparison>]
 type SyntaxAnalysisResult =
@@ -310,24 +368,33 @@ type SyntaxAnalysisResult =
 
 /// Creates a TIR and collects errors
 /// by loading source files and processing.
-let performSyntaxAnalysis (ctx: SyntaxCtx) : SyntaxAnalysisResult =
-  let writeLog = ctx.Host.WriteLog
+let performSyntaxAnalysis (ctx: SyntaxCtx) : SyntaxLayers * SyntaxAnalysisResult =
+  let writeLog = ctx.WriteLog
+  let manifestErrors = ctx.Manifest.Errors
 
   writeLog "AstBundle"
 
-  let modules, nameCtx, bundleErrors =
-    AstBundle.bundle ctx.FetchModule ctx.Host.EntryProjectName
+  let layers, nameCtx, bundleErrors =
+    AstBundle.bundle ctx.FetchModule ctx.EntryProjectName
 
-  let errors = List.append ctx.Errors bundleErrors
+  let syntaxLayers = layers |> List.map (List.map fst)
+
+  let errors = List.append manifestErrors bundleErrors
 
   if errors |> List.isEmpty |> not then
-    SyntaxAnalysisError(errors, None)
+    syntaxLayers, SyntaxAnalysisError(errors, None)
   else
     writeLog "NameRes"
-    let modules, nameResResult = NameRes.nameRes (modules, nameCtx)
+
+    let modules, nameResResult =
+      let modules =
+        layers
+        |> List.map (fun modules -> modules |> List.map (fun (_, m) -> m))
+
+      NameRes.nameRes (modules, nameCtx)
 
     match collectNameResErrors nameResResult.Logs with
-    | Some errors -> SyntaxAnalysisError(errors, None)
+    | Some errors -> syntaxLayers, SyntaxAnalysisError(errors, None)
 
     | None ->
       writeLog "Typing"
@@ -337,5 +404,5 @@ let performSyntaxAnalysis (ctx: SyntaxCtx) : SyntaxAnalysisResult =
       let tirCtx = ArityCheck.arityCheck (modules, tirCtx)
 
       match collectTypingErrors tirCtx with
-      | Some errors -> SyntaxAnalysisError(errors, Some tirCtx)
-      | None -> SyntaxAnalysisOk(modules, tirCtx)
+      | Some errors -> syntaxLayers, SyntaxAnalysisError(errors, Some tirCtx)
+      | None -> syntaxLayers, SyntaxAnalysisOk(modules, tirCtx)

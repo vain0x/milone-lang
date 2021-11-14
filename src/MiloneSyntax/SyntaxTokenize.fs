@@ -808,7 +808,7 @@ let private doNext (host: TokenizeHost) allowPrefix (text: string) (index: int) 
     ErrorToken BadTokenError, r
 
 /// Tokenizes a string. Trivias are removed.
-let tokenize (host: TokenizeHost) (text: string) : (Token * Pos) list =
+let tokenize (host: TokenizeHost) (text: string) : TokenizeResult =
   // allowPrefix: preceded by space?
   let rec go acc allowPrefix (i: int) (pos: Pos) =
     if i < text.Length then
@@ -832,7 +832,7 @@ let tokenize (host: TokenizeHost) (text: string) : (Token * Pos) list =
   go [] true 0 (0, 0) |> List.rev
 
 /// Tokenizes a string. Trivias are preserved.
-let tokenizeAll (host: TokenizeHost) (text: string) : (Token * Pos) list =
+let tokenizeAll (host: TokenizeHost) (text: string) : TokenizeFullResult =
   let rec go acc allowPrefix (i: int) (pos: Pos) =
     if i < text.Length then
       let token, r = doNext host allowPrefix text i

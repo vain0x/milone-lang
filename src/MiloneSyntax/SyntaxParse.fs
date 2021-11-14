@@ -1484,7 +1484,7 @@ let private parseRoot (tokens, errors) : PR<ARoot> =
 
   ARoot(headOpt, decls), tokens, errors
 
-let parse (tokens: (Token * Pos) list) : ARoot * Errors =
+let parse (tokens: TokenizeResult) : ARoot * Errors =
   let root, tokens, errors = parseRoot (tokens, [])
 
   let errors =

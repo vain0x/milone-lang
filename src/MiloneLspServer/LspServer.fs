@@ -2,14 +2,16 @@ module MiloneLspServer.LspServer
 
 open System.Collections.Concurrent
 open System.Threading
-open MiloneShared.SharedTypes
 open MiloneLspServer.JsonValue
 open MiloneLspServer.JsonSerialization
 open MiloneLspServer.JsonRpcWriter
+open MiloneLspServer.LspUtil
 open MiloneLspServer.Util
 
-type private Position = int * int
+module WorkspaceAnalysis = LspLangService.WorkspaceAnalysis
 
+type private Pos = int * int
+type private Position = int * int
 type private Range = Position * Position
 
 // -----------------------------------------------
@@ -296,6 +298,65 @@ type private LspError =
   | MethodNotFoundError of msgId: MsgId * methodName: string
 
 // -----------------------------------------------
+// LSP misc
+// -----------------------------------------------
+
+let private handleRequestError (hint: string) (msgId: JsonValue) (ex: exn) : unit =
+  errorFn "%s failed: %A" hint ex
+
+  let msg = sprintf "%s failed (%s)" hint ex.Message
+
+  let error =
+    let internalErrorCode = -32603
+
+    jOfObj [ "code", jOfInt internalErrorCode
+             "message", JString msg ]
+
+  jsonRpcWriteWithError msgId error
+
+// For when server received a notification and caused an error.
+let private showErrorMessage (msg: string) : unit =
+  let p =
+    jOfObj [ "type", jOfInt 1 // error
+             "message", JString msg ]
+
+  jsonRpcWriteWithParams "window/showMessage" p
+
+let private handleNotificationError (hint: string) (ex: exn) : unit =
+  errorFn "%s failed: %A" hint ex
+  let msg = sprintf "%s failed (%s)" hint ex.Message
+  showErrorMessage msg
+
+/// To handle a request, performs an action.
+/// If an exception is thrown during the process, send an error response.
+let private handleRequestWith hint msgId action : unit =
+  let result =
+    try
+      Ok(action ())
+    with
+    | ex -> Error ex
+
+  match result with
+  | Ok result -> jsonRpcWriteWithResult msgId result
+  | Error ex -> handleRequestError hint msgId ex
+
+// To handle an notification, performs an action.
+// If an exception is thrown, reports an error.
+// Gracefully completed, calls `cont` to send successful messages.
+//
+// - If handler doesn't send any message on success, pass `id` as `cont` parameter.
+let private handleNotificationWith hint action cont : unit =
+  let result =
+    try
+      Ok(action ())
+    with
+    | ex -> Error ex
+
+  match result with
+  | Ok result -> cont result
+  | Error ex -> handleNotificationError hint ex
+
+// -----------------------------------------------
 // LspIncome
 // -----------------------------------------------
 
@@ -315,12 +376,20 @@ type private LspIncome =
   | DidChangeWatchedFiles of DidChangeWatchedFilesParam
 
   // Queries.
-  | DiagnosticsRequest
+  /// Notification to update diagnostics.
+  /// This notification is NOT sent by LSP client but is generated inside the server
+  /// whenever server receives a kind of requests that invalidate previous diagnostics.
+  | DiagnosticsNotification
   | CompletionRequest of MsgId * DocumentPositionParam
+  /// https://microsoft.github.io/language-server-protocol/specifications/specification-current/#textDocument_definition
   | DefinitionRequest of MsgId * DocumentPositionParam
+  /// https://microsoft.github.io/language-server-protocol/specifications/specification-current/#textDocument_references
   | ReferencesRequest of MsgId * ReferencesParam
+  /// https://microsoft.github.io/language-server-protocol/specifications/specification-current/#tetDocument_documentHighlight
   | DocumentHighlightRequest of MsgId * DocumentPositionParam
+  /// https://microsoft.github.io/language-server-protocol/specifications/specification-current/#textDocument_formatting
   | FormattingRequest of MsgId * Uri
+  /// https://microsoft.github.io/language-server-protocol/specifications/specification-current/#textDocument_hover
   | HoverRequest of MsgId * DocumentPositionParam
 
   // Others.
@@ -371,36 +440,48 @@ let private parseIncome (jsonValue: JsonValue) : LspIncome =
 
     ErrorIncome(MethodNotFoundError(msgId, methodName))
 
+// Use fixed id because of no further requests.
+let private enableDidChangedWatchedFiles () =
+  let msgId = JNumber 1.0
+
+  let param =
+    jsonDeserializeString
+      """
+        { "registrations": [
+          {
+            "id": "1",
+            "method": "workspace/didChangeWatchedFiles",
+            "registerOptions": {
+              "watchers": [{ "globPattern": "**/*.{fs,milone}" }]
+            }
+          }
+        ] }
+      """
+
+  jsonRpcWriteWithIdParams "client/registerCapability" msgId param
+
 let private processNext () : LspIncome -> ProcessResult =
+  let mutable current = WorkspaceAnalysis.empty
   let mutable exitCode: int = 1
   let mutable rootUriOpt: string option = None
 
   fun (income: LspIncome) ->
     match income with
     | InitializeRequest (msgId, param) ->
-      rootUriOpt <- param.RootUriOpt
-      jsonRpcWriteWithResult msgId (createInitializeResult ())
+      handleRequestWith "initialize" msgId (fun () ->
+        rootUriOpt <- param.RootUriOpt
+        createInitializeResult ())
+
       Continue
 
     | InitializedNotification ->
-      // Use fixed id because of no further requests.
-      let msgId = JNumber 1.0
+      handleNotificationWith
+        "initialized"
+        (fun () ->
+          current <- LspLangService.onInitialized rootUriOpt current
+          enableDidChangedWatchedFiles ())
+        id
 
-      let param =
-        jsonDeserializeString
-          """
-            { "registrations": [
-              {
-                "id": "1",
-                "method": "workspace/didChangeWatchedFiles",
-                "registerOptions": {
-                  "watchers": [{ "globPattern": "**/*.{fs,milone}" }]
-                }
-              }
-            ] }
-          """
-
-      jsonRpcWriteWithIdParams "client/registerCapability" msgId param
       Continue
 
     | ShutdownRequest msgId ->
@@ -411,99 +492,115 @@ let private processNext () : LspIncome -> ProcessResult =
     | ExitNotification -> Exit exitCode
 
     | DidOpenNotification p ->
-      LspDocCache.openDoc p.Uri p.Version p.Text
+      handleNotificationWith
+        "didOpen"
+        (fun () -> current <- WorkspaceAnalysis.didOpenDoc p.Uri p.Version p.Text current)
+        id
+
       Continue
 
     | DidChangeNotification p ->
-      LspDocCache.changeDoc p.Uri p.Version p.Text
+      handleNotificationWith
+        "didChange"
+        (fun () -> current <- WorkspaceAnalysis.didChangeDoc p.Uri p.Version p.Text current)
+        id
+
       Continue
 
     | DidCloseNotification p ->
-      LspDocCache.closeDoc p.Uri
+      handleNotificationWith "didClose" (fun () -> current <- WorkspaceAnalysis.didCloseDoc p.Uri current) id
       Continue
 
     | DidChangeWatchedFiles p ->
-      for change in p.Changes do
-        match change.Type with
-        | FileChangeType.Created -> LspLangService.didOpenFile change.Uri
-        | FileChangeType.Changed -> LspLangService.didChangeFile change.Uri
-        | FileChangeType.Deleted -> LspLangService.didCloseFile change.Uri
+      handleNotificationWith
+        "didChangeWatchedFile"
+        (fun () ->
+          for c in p.Changes do
+            match c.Type with
+            | FileChangeType.Created -> current <- WorkspaceAnalysis.didOpenFile c.Uri current
+            | FileChangeType.Changed -> current <- WorkspaceAnalysis.didChangeFile c.Uri current
+            | FileChangeType.Deleted -> current <- WorkspaceAnalysis.didCloseFile c.Uri current)
+        id
 
       Continue
 
-    | DiagnosticsRequest ->
-      let result =
-        LspLangService.validateWorkspace rootUriOpt
+    | DiagnosticsNotification ->
+      handleNotificationWith
+        "diagnostics"
+        (fun () ->
+          let result, wa = WorkspaceAnalysis.diagnostics current
+          current <- wa
 
-      for Uri uri, errors in result do
-        let diagnostics =
-          [ for msg, pos in errors do
-              jOfObj [ "range", jOfRange (pos, pos)
-                       "message", JString msg
-                       "source", JString "milone-lang" ] ]
-          |> JArray
+          result
+          |> List.map (fun (Uri uri, errors) ->
+            let diagnostics =
+              [ for msg, start, endPos in errors do
+                  jOfObj [ "range", jOfRange (start, endPos)
+                           "message", JString msg
+                           "source", JString "milone-lang" ] ]
+              |> JArray
 
-        let param =
-          jOfObj [ "uri", JString uri
-                   "diagnostics", diagnostics ]
-
-        jsonRpcWriteWithParams "textDocument/publishDiagnostics" param
+            jOfObj [ "uri", JString uri
+                     "diagnostics", diagnostics ]))
+        (fun paramList ->
+          for p in paramList do
+            jsonRpcWriteWithParams "textDocument/publishDiagnostics" p)
 
       Continue
 
     | CompletionRequest (msgId, p) ->
-      let result =
-        LspLangService.completion rootUriOpt p.Uri p.Pos
-        |> List.map (fun text -> jOfObj [ "label", JString text ])
-        |> JArray
+      handleRequestWith "completion" msgId (fun () ->
+        let items =
+          let result, wa =
+            WorkspaceAnalysis.completion p.Uri p.Pos current
 
-      let result =
-        match result with
+          current <- wa
+
+          result
+          |> List.map (fun text -> jOfObj [ "label", JString text ])
+          |> JArray
+
+        match items with
         | JArray [] -> JNull
-        | _ -> result
+        | _ -> items)
 
-      jsonRpcWriteWithResult msgId result
       Continue
 
     | DefinitionRequest (msgId, p) ->
-      // <https://microsoft.github.io/language-server-protocol/specifications/specification-current/#textDocument_definition>
+      handleRequestWith "definition" msgId (fun () ->
+        let result, wa =
+          WorkspaceAnalysis.definition p.Uri p.Pos current
 
-      let result =
-        LspLangService.definition rootUriOpt p.Uri p.Pos
+        current <- wa
 
-      let result =
         result
         |> List.map (fun (Uri uri, range) ->
           jOfObj [ "uri", JString uri
                    "range", jOfRange range ])
-        |> JArray
+        |> JArray)
 
-      jsonRpcWriteWithResult msgId result
       Continue
 
     | ReferencesRequest (msgId, p) ->
-      // <https://microsoft.github.io/language-server-protocol/specifications/specification-current/#textDocument_references>
+      handleRequestWith "references" msgId (fun () ->
+        let result, wa =
+          WorkspaceAnalysis.references p.Uri p.Pos p.IncludeDecl current
 
-      let result =
-        LspLangService.references rootUriOpt p.Uri p.Pos p.IncludeDecl
-
-      let result =
         result
         |> List.map (fun (Uri uri, range) ->
           jOfObj [ "uri", JString uri
                    "range", jOfRange range ])
-        |> JArray
+        |> JArray)
 
-      jsonRpcWriteWithResult msgId result
       Continue
 
     | DocumentHighlightRequest (msgId, p) ->
-      // <https://microsoft.github.io/language-server-protocol/specifications/specification-current/#textDocument_documentHighlight>
+      handleRequestWith "documentHighlight" msgId (fun () ->
+        let reads, writes, wa =
+          WorkspaceAnalysis.documentHighlight p.Uri p.Pos current
 
-      let reads, writes =
-        LspLangService.documentHighlight rootUriOpt p.Uri p.Pos
+        current <- wa
 
-      let result =
         let toHighlights kind posList =
           posList
           |> Seq.map (fun (start, endPos) ->
@@ -511,16 +608,13 @@ let private processNext () : LspIncome -> ProcessResult =
                      "kind", jOfInt kind ])
 
         JArray [ yield! toHighlights 2 reads
-                 yield! toHighlights 3 writes ]
+                 yield! toHighlights 3 writes ])
 
-      jsonRpcWriteWithResult msgId result
       Continue
 
     | FormattingRequest (msgId, uri) ->
-      // https://microsoft.github.io/language-server-protocol/specifications/specification-current/#textDocument_formatting
-
-      let result =
-        match LspLangService.formatting uri with
+      handleRequestWith "formatting" msgId (fun () ->
+        match LspLangService.formatting uri current with
         | None -> JNull
         | Some result ->
           result.Edits
@@ -528,27 +622,25 @@ let private processNext () : LspIncome -> ProcessResult =
             // TextEdit
             jOfObj [ "range", jOfRange range
                      "newText", JString text ])
-          |> JArray
+          |> JArray)
 
-      jsonRpcWriteWithResult msgId result
       Continue
 
     | HoverRequest (msgId, p) ->
-      // https://microsoft.github.io/language-server-protocol/specifications/specification-current/#textDocument_hover
+      handleRequestWith "hover" msgId (fun () ->
+        let contents, wa =
+          WorkspaceAnalysis.hover p.Uri p.Pos current
 
-      let contents =
-        LspLangService.hover rootUriOpt p.Uri p.Pos
+        current <- wa
 
-      let result =
         match contents with
         | [] -> JNull
 
         | _ ->
           jOfObj [ "contents", contents |> List.map jOfMarkdownString |> JArray
                    // "range", jOfRange range
-                    ]
+                    ])
 
-      jsonRpcWriteWithResult msgId result
       Continue
 
     | RegisterCapabilityResponse _
@@ -596,7 +688,7 @@ let private dedupChanges (incomes: LspIncome list) : LspIncome list =
          (last, [ last ])
     |> snd
 
-/// Automatically update diagnostics by appending diagnostics request
+/// Automatically update diagnostics by appending diagnostics notification
 /// if some document changed.
 let private autoUpdateDiagnostics (incomes: LspIncome list) : LspIncome list =
   let doesUpdateDiagnostics income =
@@ -609,17 +701,17 @@ let private autoUpdateDiagnostics (incomes: LspIncome list) : LspIncome list =
 
     | _ -> false
 
-  let isDiagnosticRequest income =
+  let isDiagnosticsNotification income =
     match income with
-    | DiagnosticsRequest -> true
+    | DiagnosticsNotification -> true
     | _ -> false
 
   if incomes |> List.exists doesUpdateDiagnostics then
     let incomes =
       incomes
-      |> List.filter (isDiagnosticRequest >> not)
+      |> List.filter (isDiagnosticsNotification >> not)
 
-    List.append incomes [ DiagnosticsRequest ]
+    List.append incomes [ DiagnosticsNotification ]
   else
     incomes
 

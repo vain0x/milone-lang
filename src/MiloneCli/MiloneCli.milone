@@ -96,7 +96,9 @@ let main _ =
     | Platform.Unix _ -> getEnv "HOME"
     | Platform.Windows _ -> getEnv "USERPROFILE"
 
-  let miloneHome = getEnv "MILONE_HOME"
+  let miloneHome =
+    let s = getEnv "MILONE_HOME"
+    if s <> "" then Some s else None
 
   let host: CliHost =
     { Args = args

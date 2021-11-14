@@ -2,8 +2,11 @@
 module rec MiloneLspServer.LspTests
 
 open MiloneLspServer.Lsp
+open MiloneLspServer.LspUtil
 
 module S = MiloneStd.StdString
+module LLS = MiloneLspServer.LspLangService
+module WorkspaceAnalysis = LLS.WorkspaceAnalysis
 
 let private expect msg opt =
   match opt with
@@ -39,43 +42,24 @@ let private assertEqual (title: string) (expected: string) (actual: string) : bo
     true
   else
     eprintfn "Assertion violation: %s\n  actual = %s\n  expected = %s" title actual expected
+    assert false
     false
 
-let private testRefsSingleFile title text : bool =
-  let projectDir = "./TestProject"
-  let docId = "TestProject.TestProject"
-  let docMap = Map.ofList [ docId, (1, text) ]
+let private projectDir = "/example.com/TestProject"
+let private projectName = "TestProject"
+let private docId = "TestProject.TestProject"
 
-  let docs: LangServiceDocs =
-    { FindDocId =
-        fun p m ->
-          let docId = sprintf "%s.%s" p m
+let private createSingleFileProject text action =
+  let p: LLS.ProjectInfo =
+    { ProjectDir = projectDir
+      ProjectName = projectName
+      EntryFileExt = ".milone" }
 
-          if docMap |> Map.containsKey docId then
-            Some docId
-          else
-            None
+  LLS.WorkspaceAnalysis.empty
+  |> LLS.WorkspaceAnalysis.didOpenDoc (Uri "file:///example.com/TestProject/TestProject.milone") 1 text
+  |> LLS.doWithProjectAnalysis p action
 
-      GetVersion =
-        fun docId ->
-          match docMap |> Map.tryFind docId with
-          | Some (version, _) -> version
-          | _ -> 0
-
-      GetText =
-        fun docId ->
-          match docMap |> Map.tryFind docId with
-          | Some it -> it
-          | _ -> (0, "// Missing")
-
-      GetProjectName = fun docId -> Some(docId.Split(".").[0]) }
-
-  let host: Lsp.LangServiceHost =
-    { MiloneHome = "?unexisting"
-      Docs = docs }
-
-  let ls = LangService.create host
-
+let private doTestRefsSingleFile title text (ls: ProjectAnalysis) : bool * ProjectAnalysis =
   let anchors =
     let lines = text |> toLines
 
@@ -107,66 +91,42 @@ let private testRefsSingleFile title text : bool =
 
   let expected = anchors |> debug
 
-  let actual =
+  let actual, ls =
     let row, column, _ = firstAnchor
 
     match ls
-          |> LangService.findRefs projectDir docId (row, column)
+          |> LLS.ProjectAnalysis.findRefs docId (row, column)
       with
-    | None ->
-      let errors =
-        ls |> LangService.validateProject projectDir
+    | None, ls ->
+      let errors, ls =
+        ls |> LLS.ProjectAnalysis.validateProject
 
-      if errors |> List.isEmpty then
-        "No result."
-      else
-        sprintf "Compile error: %A" errors
+      let msg =
+        if errors |> List.isEmpty then
+          "No result."
+        else
+          sprintf "Compile error: %A" errors
 
-    | Some (defs, uses) ->
+      msg, ls
+
+    | Some (defs, uses), _ ->
       let collect kind xs =
         xs |> Seq.map (fun (_, (y, x)) -> y, x, kind)
 
-      Seq.append (collect "def" defs) (collect "use" uses)
-      |> Seq.toList
-      |> debug
+      let a =
+        Seq.append (collect "def" defs) (collect "use" uses)
+        |> Seq.toList
+        |> debug
 
-  actual |> assertEqual title expected
+      a, ls
 
-let private testHoverSingleFile title text expected : bool =
-  let projectDir = "./TestProject"
-  let docId = "TestProject.TestProject"
-  let docMap = Map.ofList [ docId, (1, text) ]
+  actual |> assertEqual title expected, ls
 
-  let docs: LangServiceDocs =
-    { FindDocId =
-        fun p m ->
-          let docId = sprintf "%s.%s" p m
+let private testRefsSingleFile title text : bool =
+  createSingleFileProject text (doTestRefsSingleFile title text)
+  |> fst
 
-          if docMap |> Map.containsKey docId then
-            Some docId
-          else
-            None
-
-      GetVersion =
-        fun docId ->
-          match docMap |> Map.tryFind docId with
-          | Some (version, _) -> version
-          | _ -> 0
-
-      GetText =
-        fun docId ->
-          match docMap |> Map.tryFind docId with
-          | Some it -> it
-          | _ -> (0, "// Missing")
-
-      GetProjectName = fun docId -> Some(docId.Split(".").[0]) }
-
-  let host: Lsp.LangServiceHost =
-    { MiloneHome = "?unexisting"
-      Docs = docs }
-
-  let ls = LangService.create host
-
+let private doTestHoverSingleFile title text expected ls : bool * _ =
   let targetPos =
     let lines = text |> toLines
 
@@ -187,20 +147,27 @@ let private testHoverSingleFile title text expected : bool =
     |> List.map (fun (row, column, anchor) -> sprintf "%d:%d %s" row column anchor)
     |> S.concat "\n"
 
-  let actual =
-    match ls |> LangService.hover projectDir docId targetPos with
-    | None ->
-      let errors =
-        ls |> LangService.validateProject projectDir
+  let actual, ls =
+    match ls |> LLS.ProjectAnalysis.hover docId targetPos with
+    | None, ls ->
+      let errors, ls =
+        ls |> LLS.ProjectAnalysis.validateProject
 
-      if errors |> List.isEmpty then
-        "No result."
-      else
-        sprintf "Compile error: %A" errors
+      let msg =
+        if errors |> List.isEmpty then
+          "No result."
+        else
+          sprintf "Compile error: %A" errors
 
-    | Some it -> it
+      msg, ls
 
-  actual |> assertEqual title expected
+    | Some it, ls -> it, ls
+
+  actual |> assertEqual title expected, ls
+
+let private testHoverSingleFile title text expected : bool =
+  createSingleFileProject text (doTestHoverSingleFile title text expected)
+  |> fst
 
 // -----------------------------------------------
 // Refs
@@ -457,10 +424,76 @@ let private testHover () =
       "No result." ]
 
 // -----------------------------------------------
+// Diagnostics
+// -----------------------------------------------
+
+// Run server (stateful).
+
+let private testDiagnostics () =
+  let workDir = System.Environment.CurrentDirectory
+
+  let rootUri =
+    workDir |> LLS.uriOfFilePath |> Uri.toString
+
+  let projectDir = "tests/DiagnosticsTest"
+
+  let p: LLS.ProjectInfo =
+    { ProjectDir = projectDir
+      ProjectName = "DiagnosticsTest"
+      EntryFileExt = ".milone" }
+
+  let wa = WorkspaceAnalysis.empty
+  let wa = LLS.onInitialized (Some rootUri) wa
+
+  let result, wa = WorkspaceAnalysis.diagnostics wa
+  assert (List.length result = 0)
+
+  let filename =
+    System.IO.Path.Combine(workDir, "tests/DiagnosticsTest/DiagnosticsTest.milone")
+
+  let fileUri = LLS.uriOfFilePath filename
+  let initialText = System.IO.File.ReadAllText(filename)
+
+  let result, wa =
+    try
+      let text =
+        initialText.Replace("// let x 0", "let x 0")
+
+      System.IO.File.WriteAllText(filename, text)
+
+      let wa =
+        WorkspaceAnalysis.didChangeFile fileUri wa
+
+      WorkspaceAnalysis.diagnostics wa
+    finally
+      System.IO.File.WriteAllText(filename, initialText)
+
+  assert (List.length result = 1)
+
+  for uri, errors in result do
+    for msg, (y1, x1), (y2, x2) in errors do
+      printfn "error: \"%s\" %s:%d:%d..%d:%d" msg (Uri.toString uri) (y1 + 1) (x1 + 1) (y2 + 1) (x2 + 1)
+
+  // highlight (main function)
+  let wa =
+    WorkspaceAnalysis.didChangeFile fileUri wa
+
+  let reads, writes, wa =
+    WorkspaceAnalysis.documentHighlight fileUri (2, 4) wa
+
+  printfn "reads: %A" reads
+  printfn "writes: %A" writes
+  assert (List.length writes = 1)
+
+// -----------------------------------------------
 // Interface
 // -----------------------------------------------
 
 let lspTests () =
-  List.collect id [ testRefs (); testHover () ]
-  |> runTests
-  |> exit
+  let code =
+    List.collect id [ testRefs (); testHover () ]
+    |> runTests
+
+  if code = 0 then testDiagnostics ()
+
+  exit code
