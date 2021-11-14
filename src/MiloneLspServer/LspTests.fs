@@ -474,6 +474,17 @@ let private testDiagnostics () =
     for msg, (y1, x1), (y2, x2) in errors do
       printfn "error: \"%s\" %s:%d:%d..%d:%d" msg (Uri.toString uri) (y1 + 1) (x1 + 1) (y2 + 1) (x2 + 1)
 
+  // highlight (main function)
+  let wa =
+    WorkspaceAnalysis.didChangeFile fileUri wa
+
+  let reads, writes, wa =
+    WorkspaceAnalysis.documentHighlight fileUri (2, 4) wa
+
+  printfn "reads: %A" reads
+  printfn "writes: %A" writes
+  assert (List.length writes = 1)
+
 // -----------------------------------------------
 // Interface
 // -----------------------------------------------
