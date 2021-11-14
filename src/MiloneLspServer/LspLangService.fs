@@ -1,7 +1,6 @@
 module MiloneLspServer.LspLangService
 
 open System
-open System.Collections.Generic
 open System.IO
 open MiloneShared.SharedTypes
 open MiloneStd.StdMap
@@ -84,6 +83,13 @@ let private basename (path: string) =
   match S.findLastIndex "/" path with
   | Some i -> S.skip (i + 1) path
   | None -> path
+
+let private getExt (path: string) =
+  let path = basename path
+
+  match S.findLastIndex "." path with
+  | Some i when 0 < i && i < path.Length -> Some(S.skip i path)
+  | _ -> None
 
 let private stem (path: string) =
   let path = basename path
@@ -183,31 +189,41 @@ let private dirIsExcluded (dir: string) =
 // ---------------------------------------------
 
 let private findModulesRecursively (maxDepth: int) (rootDir: string) : (string * string) list =
-  let mutable files = ResizeArray()
-  let mutable stack = Stack()
-  stack.Push(0, rootDir)
+  let rec bfs acc stack =
+    match stack with
+    | [] -> acc
 
-  while stack.Count <> 0 do
-    let depth, dir = stack.Pop()
-    traceFn "in %d:%s" depth dir
-    assert (depth <= maxDepth)
+    | (depth, dir) :: stack ->
+      traceFn "in %d:%s" depth dir
+      assert (depth <= maxDepth)
 
-    let projectName = Path.GetFileNameWithoutExtension(dir)
+      let acc =
+        let projectName = stem dir
 
-    for file in Directory.GetFiles(dir) do
-      let ext = Path.GetExtension(file)
+        Directory.GetFiles(dir)
+        |> Seq.fold
+             (fun acc file ->
+               match getExt file with
+               | Some ".milone"
+               | Some ".fs" ->
+                 let moduleName = stem file
+                 traceFn "in %s" moduleName
+                 (projectName, moduleName) :: acc
 
-      if ext = ".milone" || ext = ".fs" then
-        let moduleName = Path.GetFileNameWithoutExtension(file)
-        traceFn "in %s" moduleName
-        files.Add(projectName, moduleName)
+               | _ -> acc)
+             acc
 
-    if depth < maxDepth then
-      for subdir in Directory.GetDirectories(dir) do
-        if subdir |> dirIsExcluded |> not then
-          stack.Push(depth + 1, subdir)
+      let stack =
+        if depth < maxDepth then
+          Directory.GetDirectories(dir)
+          |> Seq.filter (fun subdir -> subdir |> dirIsExcluded |> not)
+          |> Seq.fold (fun stack subdir -> (depth + 1, subdir) :: stack) stack
+        else
+          stack
 
-  files |> Seq.toList
+      bfs acc stack
+
+  bfs [] [ 0, rootDir ]
 
 let private findModulesInDir projectDir = findModulesRecursively 0 projectDir
 
@@ -223,39 +239,44 @@ type ProjectInfo =
 
 /// Finds all projects inside of the workspace.
 let private doFindProjects (rootUri: string) : ProjectInfo list =
-  let projects = ResizeArray()
-
   let rootDir = Uri rootUri |> uriToFilePath
 
   // Find projects recursively.
-  let mutable stack = Stack()
-  stack.Push((0, rootDir))
+  let rec bfs acc stack =
+    match stack with
+    | [] -> acc
 
-  while stack.Count <> 0 do
-    let depth, dir = stack.Pop()
+    | (depth, dir) :: stack ->
 
-    let projectName = Path.GetFileNameWithoutExtension(dir)
+      let acc =
+        let projectName = stem dir
 
-    let tryAddProject ext =
-      if File.Exists(Path.Combine(dir, projectName + ext)) then
-        let project: ProjectInfo =
-          { ProjectDir = dir
-            ProjectName = projectName
-            EntryFileExt = ext }
+        let tryAddProject ext acc =
+          if File.Exists(Path.Combine(dir, projectName + ext)) then
+            let project: ProjectInfo =
+              { ProjectDir = dir
+                ProjectName = projectName
+                EntryFileExt = ext }
 
-        projects.Add(project)
+            project :: acc
+          else
+            acc
 
-    tryAddProject ".milone"
-    tryAddProject ".fs"
+        acc
+        |> tryAddProject ".milone"
+        |> tryAddProject ".fs"
 
-    if depth < 3 then
-      let subdirs = Directory.GetDirectories(dir)
+      let stack =
+        if depth < 3 then
+          Directory.GetDirectories(dir)
+          |> Seq.filter (fun subdir -> subdir |> dirIsExcluded |> not)
+          |> Seq.fold (fun stack subdir -> (depth + 1, subdir) :: stack) stack
+        else
+          stack
 
-      for subdir in subdirs do
-        if subdir |> dirIsExcluded |> not then
-          stack.Push((depth + 1, subdir))
+      bfs acc stack
 
-  List.ofSeq projects
+  bfs [] [ 0, rootDir ]
 
 let private filePathToDocId (path: string) : DocId =
   let projectName =
