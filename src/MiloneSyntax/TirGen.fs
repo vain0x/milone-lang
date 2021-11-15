@@ -386,7 +386,7 @@ let private tgExpr (docId: DocId) (expr: AExpr, ctx: NameCtx) : TExpr * NameCtx 
   let onPat x = tgPat docId x
   let onExpr x = tgExpr docId x
 
-  let toName (Name(ident, pos)): TName = ident, toLoc docId pos
+  let toName (Name (ident, pos)) : TName = ident, toLoc docId pos
 
   match expr with
   | AMissingExpr pos ->

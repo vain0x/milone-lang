@@ -276,6 +276,7 @@ let intFromHex (l: int) (r: int) (s: string) =
 // Char
 // -----------------------------------------------
 
+// FIXME: escape unicode control chars
 let charNeedsEscaping (c: char) =
   C.isControl c || c = '\\' || c = '"' || c = '\''
 

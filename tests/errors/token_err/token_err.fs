@@ -27,9 +27,6 @@ trait
 // unknown escape sequence in string literal
 "\+"
 
-// unimplemented: hex escape
-"\x7f"
-
 // invalid hex escape
 "\x--"
 

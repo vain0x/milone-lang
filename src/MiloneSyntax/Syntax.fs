@@ -49,7 +49,6 @@ type TokenizeError =
   | UndefinedOpTokenError
   | ReservedWordError
   | UnimplNumberSuffixError
-  | UnimplHexEscapeError
   | OtherTokenizeError of msg: string
 
 let tokenizeErrorToString error =
@@ -60,7 +59,7 @@ let tokenizeErrorToString error =
   | BadTokenError -> "Invalid characters."
 
   | UnknownEscapeSequenceError ->
-    "Unknown escape sequence. After `\\`, one of these chars is only allowed: `\\` `'` `\"` t r n x. `\\xHH` other than `\\x00` is unimplemented."
+    "Unknown escape sequence. After `\\`, one of these chars is only allowed: `\\` `'` `\"` t r n x."
 
   | UndefinedOpTokenError -> "Undefined operator."
 
@@ -68,7 +67,6 @@ let tokenizeErrorToString error =
     "This word can't be used as identifier, because it's reserved for future expansion of the language."
 
   | UnimplNumberSuffixError -> "Number literal suffix is unimplemented yet."
-  | UnimplHexEscapeError -> "`\\xHH` escape sequence is unimplemented yet, except for `\\x00`."
   | OtherTokenizeError msg -> msg
 
 // -----------------------------------------------

@@ -468,10 +468,7 @@ let private evalCharLit (text: string) (l: int) (r: int) : Token =
     && text.[l + 2] = 'x'
     && text.[l + 5] = '\''
     ->
-    if text.[l + 3] = '0' && text.[l + 4] = '0' then
-      CharToken '\x00'
-    else
-      ErrorToken UnimplHexEscapeError
+    CharToken(char (intFromHex (l + 3) (l + 5) text))
 
   | _ -> ErrorToken InvalidCharLitError
 
@@ -507,10 +504,20 @@ let private evalStrLit (text: string) (l: int) (r: int) : Token =
       match text.[i + 1] with
       | 'x' when
         i + 4 < r
-        && text.[i + 2] = '0'
-        && text.[i + 3] = '0'
+        && C.isHex text.[i + 2]
+        && C.isHex text.[i + 3]
         ->
-        go ("\x00" :: acc) (i + 4)
+        let acc =
+          let n = intFromHex (i + 2) (i + 4) text
+
+          (if n = 0 then
+             "\x00"
+           else
+             string (char (byte n)))
+          :: acc
+
+        go acc (i + 4)
+
       | 't' when i + 2 < r -> go ("	" :: acc) (i + 2)
       | 'r' when i + 2 < r -> go ("\r" :: acc) (i + 2)
       | 'n' when i + 2 < r -> go ("\n" :: acc) (i + 2)

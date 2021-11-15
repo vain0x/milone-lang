@@ -5,10 +5,9 @@
 #error token_err.token_err:16:1 Invalid characters.
 #error token_err.token_err:19:1 Number literal suffix is unimplemented yet.
 #error token_err.token_err:22:1 Number literal suffix is unimplemented yet.
-#error token_err.token_err:25:1 Unknown escape sequence. After `\`, one of these chars is only allowed: `\` `'` `"` t r n x. `\xHH` other than `\x00` is unimplemented.
-#error token_err.token_err:28:1 Unknown escape sequence. After `\`, one of these chars is only allowed: `\` `'` `"` t r n x. `\xHH` other than `\x00` is unimplemented.
-#error token_err.token_err:31:1 Unknown escape sequence. After `\`, one of these chars is only allowed: `\` `'` `"` t r n x. `\xHH` other than `\x00` is unimplemented.
-#error token_err.token_err:34:1 Unknown escape sequence. After `\`, one of these chars is only allowed: `\` `'` `"` t r n x. `\xHH` other than `\x00` is unimplemented.
-#error token_err.token_err:37:1 Invalid char literal.
-#error token_err.token_err:39:1 Invalid string literal.
-#error token_err.token_err:41:1 Invalid string literal.
+#error token_err.token_err:25:1 Unknown escape sequence. After `\`, one of these chars is only allowed: `\` `'` `"` t r n x.
+#error token_err.token_err:28:1 Unknown escape sequence. After `\`, one of these chars is only allowed: `\` `'` `"` t r n x.
+#error token_err.token_err:31:1 Unknown escape sequence. After `\`, one of these chars is only allowed: `\` `'` `"` t r n x.
+#error token_err.token_err:34:1 Invalid char literal.
+#error token_err.token_err:36:1 Invalid string literal.
+#error token_err.token_err:38:1 Invalid string literal.

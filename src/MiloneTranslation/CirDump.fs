@@ -8,6 +8,7 @@ open MiloneShared.TypeIntegers
 open MiloneShared.Util
 open MiloneTranslation.Cir
 
+module C = MiloneStd.StdChar
 module S = MiloneStd.StdString
 
 let private eol = "\n"
@@ -217,6 +218,12 @@ let private cpExpr expr acc : string list =
   match expr with
   | CIntExpr value -> acc |> cpIntLit value
   | CDoubleExpr value -> acc |> cons (string value)
+
+  | CCharExpr value when C.isAscii value |> not ->
+    acc
+    |> cons "(char)'\\x"
+    |> cons (intToHexWithPadding 2 (int (byte value)))
+    |> cons "'"
 
   | CCharExpr value ->
     acc
