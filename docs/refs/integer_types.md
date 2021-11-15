@@ -48,20 +48,28 @@ When string-to-int conversion failed, the program ends with runtime error.
 
 ### Integer types other than `int`
 
-| name          | signedness    | width     | alias |
-|:--------------|--------------:|----------:|:------|
-| int8          | signed        | 8 bits    | sbyte |
-| int16         | signed        | 16 bits   | - |
-| int32         | signed        | 32 bits   | int |
-| int64         | signed        | 64 bits   | - |
-| nativeint     | signed        | 1 word    | - |
-| uint8         | unsigned      | 8 bits    | byte |
-| uint16        | unsigned      | 16 bits   | - |
-| uint32        | unsigned      | 32 bits   | uint |
-| uint64        | unsigned      | 64 bits   | - |
-| unativeint    | unsigned      | 1 word    | - |
+| name          | signedness    | width     | suffix | alias |
+|:--------------|--------------:|----------:|:-------|:------|
+| int8          | signed        | 8 bits    | y      | sbyte |
+| int16         | signed        | 16 bits   | s      | - |
+| int32         | signed        | 32 bits   | -      | int |
+| int64         | signed        | 64 bits   | L      | - |
+| nativeint     | signed        | 1 word    | n      | - |
+| uint8         | unsigned      | 8 bits    | uy     | byte |
+| uint16        | unsigned      | 16 bits   | us     | - |
+| uint32        | unsigned      | 32 bits   | u      | uint |
+| uint64        | unsigned      | 64 bits   | UL     | - |
+| unativeint    | unsigned      | 1 word    | un     | - |
 
 `1 word` means a size of pointer: 64 bits on 64-bit platform, 32 bits on 32-bit platform, and so on.
+
+Integer literal needs to have *suffix* to specify their type (except for int).
+
+```fsharp
+    let b = 127uy       // uy for Unsigned bYte
+    let s = 65535us     // us for Unsigned Short
+    let n = 100100100100100100L // L for Long
+```
 
 There are built-in functions with same name as every integer type to convert an integer to that type.
 

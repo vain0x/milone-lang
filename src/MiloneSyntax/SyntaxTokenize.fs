@@ -54,6 +54,7 @@
 module rec MiloneSyntax.SyntaxTokenize
 
 open MiloneShared.SharedTypes
+open MiloneShared.TypeIntegers
 open MiloneShared.Util
 open MiloneSyntax.Syntax
 
@@ -741,16 +742,18 @@ let private doNext (host: TokenizeHost) allowPrefix (text: string) (index: int) 
     CommentToken, r
 
   | LNumber ->
+    // Value can be too large or too small. Range should be checked in Typing.
     let isFloat, m, r = scanNumberLit text (index + len)
 
-    // Value can be too large or too small; range should be checked in Typing.
-    // m: before suffix
-    if m < r then
-      ErrorToken UnimplNumberSuffixError, r
-    else if isFloat then
-      FloatToken text.[index..r - 1], r
+    if isFloat then
+      if m < r then
+        ErrorToken UnimplNumberSuffixError, r
+      else
+        FloatToken text.[index..r - 1], r
     else
-      IntToken(S.slice index r text), r
+      match intFlavorOfSuffix (text |> S.slice m r) with
+      | None when m < r -> ErrorToken UnimplNumberSuffixError, r
+      | suffixOpt -> IntToken(S.slice index m text, suffixOpt), r
 
   | LZeroX ->
     let l = index + len
@@ -759,7 +762,9 @@ let private doNext (host: TokenizeHost) allowPrefix (text: string) (index: int) 
     if m < r then
       ErrorToken UnimplNumberSuffixError, r
     else
-      IntToken(strToAsciiLower (S.slice index r text)), r
+      match intFlavorOfSuffix (text |> S.slice m r) with
+      | None when m < r -> ErrorToken UnimplNumberSuffixError, r
+      | suffixOpt -> IntToken(strToAsciiLower (S.slice index m text), suffixOpt), r
 
   | LNonKeywordIdent ->
     let r = scanIdent text (index + len)

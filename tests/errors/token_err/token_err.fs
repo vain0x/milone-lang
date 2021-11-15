@@ -15,9 +15,6 @@ trait
 // invalid characters outside of comments/quotes
 こんにちは〜！
 
-// unimplemented: int with suffix
-1L
-
 // unknown number suffix
 9mm
 

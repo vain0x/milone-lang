@@ -677,7 +677,8 @@ let private cBinaryOf op =
 
 let private genLit lit =
   match lit with
-  | IntLit text -> CIntExpr text
+  | IntLit text -> CIntExpr(text, IntFlavor(Signed, I32))
+  | IntLitWithFlavor (text, flavor) -> CIntExpr(text, flavor)
   | FloatLit text -> CDoubleExpr text
   | BoolLit false -> CVarExpr "false"
   | BoolLit true -> CVarExpr "true"
@@ -884,7 +885,7 @@ let private cgActionStmt ctx itself action args =
 
   | MPtrWriteAction ->
     match cgExprList ctx args with
-    | [ ptr; CIntExpr "0"; value ], ctx -> addStmt ctx (CSetStmt(CUnaryExpr(CDerefUnary, ptr), value))
+    | [ ptr; CIntExpr ("0", _); value ], ctx -> addStmt ctx (CSetStmt(CUnaryExpr(CDerefUnary, ptr), value))
     | [ ptr; index; value ], ctx -> addStmt ctx (CSetStmt(CIndexExpr(ptr, index), value))
     | _ -> unreachable ()
 
@@ -1117,7 +1118,7 @@ let private cgPrimStmt (ctx: CirCtx) itself prim args serial resultTy =
   | MPtrReadPrim ->
     regular ctx (fun args ->
       match args with
-      | [ ptr; CIntExpr "0" ] -> CUnaryExpr(CDerefUnary, ptr)
+      | [ ptr; CIntExpr ("0", _) ] -> CUnaryExpr(CDerefUnary, ptr)
       | [ ptr; index ] -> CIndexExpr(ptr, index)
       | _ -> unreachable ())
 

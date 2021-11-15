@@ -11,6 +11,7 @@
 module rec MiloneSyntax.Syntax
 
 open MiloneShared.SharedTypes
+open MiloneShared.TypeIntegers
 open MiloneStd.StdMap
 
 /// Name with ID.
@@ -66,7 +67,7 @@ let tokenizeErrorToString error =
   | ReservedWordError ->
     "This word can't be used as identifier, because it's reserved for future expansion of the language."
 
-  | UnimplNumberSuffixError -> "Number literal suffix is unimplemented yet."
+  | UnimplNumberSuffixError -> "Some of number literal suffixes are unimplemented yet."
   | OtherTokenizeError msg -> msg
 
 // -----------------------------------------------
@@ -81,7 +82,7 @@ type Token =
   | NewlinesToken
   | CommentToken
 
-  | IntToken of intText: string
+  | IntToken of intText: string * IntFlavor option
   | FloatToken of floatText: string
   | CharToken of char
   | StrToken of string

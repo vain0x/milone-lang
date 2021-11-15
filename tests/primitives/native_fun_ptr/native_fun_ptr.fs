@@ -15,13 +15,7 @@ let private sortIntArray (array: nativeptr<int>) (len: int) : unit =
   let intCompare (l: obj) (r: obj) =
     compare (__ptrRead (__nativeCast l) 0: int) (__ptrRead (__nativeCast r) 0: int)
 
-  __nativeFun (
-    "qsort",
-    (__nativeCast array: voidptr),
-    unativeint len,
-    unativeint 4,
-    (__nativeFun intCompare: CompareFun)
-  )
+  __nativeFun ("qsort", (__nativeCast array: voidptr), unativeint len, 4un, (__nativeFun intCompare: CompareFun))
 
 let private testSort () =
   let len = 5

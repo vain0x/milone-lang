@@ -31,7 +31,7 @@ void char_operators_Program_comparisonOperatorsTest(void) {
 void char_operators_Program_conversionTest(void) {
     milone_assert(('A' == 'A'), 29, 2);
     milone_assert((((char)65) == 'A'), 30, 2);
-    milone_assert((((char)((uint32_t)65)) == 'A'), 31, 2);
+    milone_assert((((char)(uint32_t)65U) == 'A'), 31, 2);
     milone_assert((((char)65.5) == 'A'), 32, 2);
     char char_of_string = str_to_char((struct String){.str = "A", .len = 1});
     milone_assert((char_of_string == 'A'), 33, 2);

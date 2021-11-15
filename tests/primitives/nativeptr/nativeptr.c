@@ -32,9 +32,9 @@ char* nativeptr_Program_strcpy(char* dest_1, char const* src_) {
 int milone_main(void) {
     void* call_ = nativeptr_Program_memAlloc(1, 8);
     void* buf_ = call_;
-    nativeptr_Program_memSet(buf_, ((uint8_t)255), 8);
+    nativeptr_Program_memSet(buf_, (uint8_t)255U, 8);
     int read_ = (*(((int const*)buf_)));
     milone_assert((read_ == -1), 22, 2);
-    milone_assert((((uintptr_t)buf_) != ((uintptr_t)0)), 25, 2);
+    milone_assert((((uintptr_t)buf_) != (size_t)0ULL), 25, 2);
     return 0;
 }

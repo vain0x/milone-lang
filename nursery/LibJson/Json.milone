@@ -10,8 +10,8 @@ type JsonValue =
   | JArray of items: JsonValue list
   | JObject of entries: (string * JsonValue) list
 
-let jsonParseFromString (s: string) : JsonValue =
-  __nativeFun ("json_parse_from_string", s)
+// let jsonParseFromString (s: string) : JsonValue =
+//   __nativeFun ("json_parse_from_string", s)
 
 // FIXME: fix escape, make it efficient
 let jsonToString (value: JsonValue) : string =

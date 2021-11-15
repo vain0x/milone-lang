@@ -3,7 +3,6 @@ module rec int_types.Program
 // Integer types other than int.
 // See also: <https://docs.microsoft.com/en-us/dotnet/fsharp/language-reference/basic-types>
 
-// FIXME: Support integer literal with suffix.
 // Integer literal without suffix is of int.
 
 let signedCases () =
@@ -17,40 +16,40 @@ let signedCases () =
   // except for shift operators. Right-hand side of shift operator is of int.
 
   // Arithmetic operations.
-  assert (int8 2 + int8 3 = int8 5)
-  assert (int16 7 - int16 11 = int16 (-4))
-  assert (int (int16 (-4)) = -4)
+  assert (2y + 3y = 5y)
+  assert (7s - 11s = -4s)
+  assert (int (-4s) = -4)
 
   // Bit operations.
-  assert (int8 (1 + 2 + 4) &&& int8 (2 + 4 + 8) = int8 (2 + 4))
+  assert ((1y + 2y + 4y) &&& (2y + 4y + 8y) = (2y + 4y))
 
-  assert (int16 (1 + 2 + 4) ||| int16 (2 + 4 + 8) = int16 (1 + 2 + 4 + 8))
+  assert ((1s + 2s + 4s) ||| (2s + 4s + 8s) = (1s + 2s + 4s + 8s))
 
-  assert (int64 (1 + 2 + 4) ^^^ int64 (2 + 4 + 8) = int64 (1 + 8))
+  assert ((1L + 2L + 4L) ^^^ (2L + 4L + 8L) = (1L + 8L))
 
-  assert ((int8 (1 + 4 + 16) <<< 1) = int8 (2 + 8 + 32))
-  assert ((int16 (1 + 4 + 16) >>> 1) = int16 (0 + 2 + 8))
+  assert (((1y + 4y + 16y) <<< 1) = (2y + 8y + 32y))
+  assert (((1s + 4s + 16s) >>> 1) = (0s + 2s + 8s))
 
-  assert ((int8 (-1) >>> 1) = int8 (-1))
+  assert ((-1y >>> 1) = (-1y))
 
   // Comparison.
   assert (int32 13 = 13)
-  assert (int64 17 = int64 17)
-  assert (nativeint (-23) < nativeint 19)
+  assert (17L = 17L)
+  assert (-23n < 19n)
 
-  assert (compare (int8 2) (int8 2) = 0)
-  assert (compare (int8 2) (int8 3) < 0)
-  assert (compare (int8 2) (int8 (-1)) > 0)
+  assert (compare 2y 2y = 0)
+  assert (compare 2y 3y < 0)
+  assert (compare 2y (-1y) > 0)
 
-  assert (compare (int64 1231231231 * int64 2) (int64 1231231231 * int64 3) < 0)
-  assert (compare (int64 1231231231 * int64 3) (int64 1231231231 * int64 2) > 0)
+  assert (compare (1231231231L * 2L) (1231231231L * 3L) < 0)
+  assert (compare (1231231231L * 3L) (1231231231L * 2L) > 0)
 
   // Conversion to string.
-  assert (string (int8 (-1)) = "-1")
-  assert (string (int64 1231231231 * int64 3) = "3693693693")
+  assert (string (-1y) = "-1")
+  assert (string (1231231231L * 3L) = "3693693693")
 
   // Conversion from string.
-  assert (int (int64 "-3693693693" / int64 3) = -1231231231)
+  assert (int (int64 "-3693693693" / 3L) = -1231231231)
 
 let unsignedCases () =
   // byte is same as uint8.
@@ -60,37 +59,50 @@ let unsignedCases () =
   assert (uint 1 = uint32 1)
 
   // Arithmetic operations.
-  assert (uint8 2 + uint8 3 = uint8 5)
-  assert (uint16 11 - uint16 7 = uint16 4)
+  assert (2uy + 3uy = 5uy)
+  assert (11us - 7us = 4us)
 
   // Bit operations.
-  assert (uint8 (1 + 2 + 4) &&& uint8 (2 + 4 + 8) = uint8 (2 + 4))
+  assert ((1uy + 2uy + 4uy) &&& (2uy + 4uy + 8uy) = (2uy + 4uy))
 
-  assert (uint16 (1 + 2 + 4) ||| uint16 (2 + 4 + 8) = uint16 (1 + 2 + 4 + 8))
+  assert ((1us + 2us + 4us) ||| (2us + 4us + 8us) = (1us + 2us + 4us + 8us))
 
-  assert (uint64 (1 + 2 + 4) ^^^ uint64 (2 + 4 + 8) = uint64 (1 + 8))
+  assert ((1UL + 2UL + 4UL) ^^^ (2UL + 4UL + 8UL) = (1UL + 8UL))
 
-  assert ((uint8 (1 + 4 + 16) <<< 1) = uint8 (2 + 8 + 32))
-  assert ((uint16 (1 + 4 + 16) >>> 1) = uint16 (0 + 2 + 8))
+  assert (((1uy + 4uy + 16uy) <<< 1) = (2uy + 8uy + 32uy))
+  assert (((1us + 4us + 16us) >>> 1) = (0us + 2us + 8us))
 
   // Comparison.
-  assert (uint 13 = uint32 13)
-  assert (uint64 17 = uint64 17)
-  assert (unativeint 19 < unativeint 23)
+  assert (uint 13 = 13u)
+  assert (17UL = 17UL)
+  assert (19un < 23un)
 
-  assert (compare (uint64 2) (uint64 2) = 0)
-  assert (compare (uint64 1231231231 * uint64 2) (uint64 1231231231 * uint64 3) < 0)
-  assert (compare (uint64 1231231231 * uint64 3) (uint64 1231231231 * uint64 2) > 0)
+  assert (compare 2UL 2UL = 0)
+  assert (compare (1231231231UL * 2UL) (1231231231UL * 3UL) < 0)
+  assert (compare (1231231231UL * 3UL) (1231231231UL * 2UL) > 0)
 
   // Conversion to string.
-  assert (string (uint8 0) = "0")
-  assert (string (uint64 1231231231 * uint64 3) = "3693693693")
+  assert (string 0uy = "0")
+  assert (string (1231231231UL * 3UL) = "3693693693")
 
   // Conversion from string.
-  assert (uint8 "255" = uint8 255)
-  assert (int (uint64 "3693693693" / uint64 3) = 1231231231)
+  assert (uint8 "255" = 255uy)
+  assert (int (uint64 "3693693693" / 3UL) = 1231231231)
+
+let private suffix () =
+  assert (64L = int64 64)
+
+  assert (8uy = uint8 8)
+  assert (16us = uint16 16)
+  assert (32u = uint32 32)
+  assert (32ul = uint32 32)
+  assert (64UL = uint64 64)
+  assert (99un = unativeint 99)
+
+  assert (string 180150120900600300L = "180150120900600300")
 
 let main _ =
   signedCases ()
   unsignedCases ()
+  suffix ()
   0

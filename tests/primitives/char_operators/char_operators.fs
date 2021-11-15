@@ -29,7 +29,7 @@ let comparisonOperatorsTest () =
 let conversionTest () =
   assert (char 'A' = 'A')
   assert (char 65 = 'A')
-  assert (char (uint 65) = 'A')
+  assert (char 65u = 'A')
   assert (char 65.5 = 'A')
   assert (char "A" = 'A')
 

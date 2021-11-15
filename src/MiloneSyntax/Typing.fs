@@ -164,26 +164,52 @@ let private freshMetaTyForExpr expr ctx =
 let private validateLit ctx lit loc =
   // FIXME: validate float too
 
-  match lit with
-  | IntLit text ->
+  let validateIntLit text flavor =
+    let (IntFlavor (signedness, precision)) = flavor
+
     let nonNeg =
       if S.startsWith "-" text then
         S.skip 1 text
       else
         text
 
-    if S.startsWith "0x" nonNeg then
-      let digits = S.skip 2 nonNeg
+    let ok =
+      match signedness with
+      | Unsigned when S.startsWith "-" text -> false
 
-      if digits.Length <= 8 then
-        ctx
-      else
-        addLog ctx Log.LiteralRangeError loc
+      | _ when S.startsWith "0x" nonNeg ->
+        let digits = S.skip 2 nonNeg
+
+        let maxLength =
+          match precision with
+          | I8 -> 2
+          | I16 -> 4
+          | I32 -> 8
+          | I64
+          | IPtr -> 16
+
+        digits.Length <= maxLength
+
+      | _ ->
+        // FIXME: validate precisely
+        match signedness, precision with
+        | Signed, I8
+        | Signed, I16
+        | Signed, I32 -> Option.isSome (StdInt.tryParse text)
+
+        | Signed, I64
+        | Signed, IPtr -> Option.isSome (StdInt.Ext.tryParseInt64 text)
+
+        | Unsigned, _ -> Option.isSome (StdInt.Ext.tryParseUInt64 text)
+
+    if ok then
+      ctx
     else
-      match StdInt.tryParse text with
-      | Some _ -> ctx
-      | None -> addLog ctx Log.LiteralRangeError loc
+      addLog ctx Log.LiteralRangeError loc
 
+  match lit with
+  | IntLit text -> validateIntLit text (IntFlavor(Signed, I32))
+  | IntLitWithFlavor (text, flavor) -> validateIntLit text flavor
   | _ -> ctx
 
 // -----------------------------------------------

@@ -201,6 +201,10 @@ let private desugarMinusUnary arg =
 
   | ALitExpr (IntLit text, pos) -> ALitExpr(IntLit("-" + text), pos) |> Some
 
+  | ALitExpr (IntLitWithFlavor (text, flavor), pos) ->
+    ALitExpr(IntLitWithFlavor("-" + text, flavor), pos)
+    |> Some
+
   | ALitExpr (FloatLit text, pos) -> ALitExpr(FloatLit("-" + text), pos) |> Some
 
   | _ -> None

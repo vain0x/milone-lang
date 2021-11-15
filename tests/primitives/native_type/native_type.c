@@ -34,7 +34,7 @@ int native_type_Program_fclose(FILE* fp_) {
 int milone_main(void) {
     FILE* call_2 = native_type_Program_fopen((struct String){.str = "LICENSE", .len = 7}, (struct String){.str = "r", .len = 1});
     FILE* fp_1 = call_2;
-    milone_assert((((uintptr_t)fp_1) != ((uintptr_t)0)), 15, 2);
+    milone_assert((((uintptr_t)fp_1) != (size_t)0ULL), 15, 2);
     int call_3 = native_type_Program_fclose(fp_1);
     int stat_ = call_3;
     milone_assert((stat_ == 0), 18, 2);
