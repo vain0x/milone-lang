@@ -1,0 +1,3 @@
+module rec MiloneStd.StdStringBase
+
+let __stringJoin (sep: string) (xs: string list) : string = __nativeFun ("str_concat", sep, xs)

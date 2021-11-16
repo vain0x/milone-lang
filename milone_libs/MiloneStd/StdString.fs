@@ -5,6 +5,8 @@
 /// See also: <https://github.com/fsharp/fslang-design/blob/e50f1bcd5f9824e287a9e70d03b37f07d170d25f/RFCs/FS-1033-extend-string-module.md>
 module rec MiloneStd.StdString
 
+open MiloneStd.StdStringBase
+
 module C = MiloneStd.StdChar
 
 /// Ensures `minValue <= value <= maxValue`.

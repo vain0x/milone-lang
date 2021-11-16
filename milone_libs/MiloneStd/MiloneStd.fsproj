@@ -10,6 +10,7 @@
     <Compile Include="StdOption.fs" />
     <Compile Include="StdResult.fs" />
     <Compile Include="StdChar.fs" />
+    <Compile Include="StdStringBase.fs" />
     <Compile Include="StdString.fs" />
     <Compile Include="StdLoop.fs" />
     <Compile Include="StdIter.fs" />
