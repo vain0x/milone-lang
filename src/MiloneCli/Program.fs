@@ -2,8 +2,8 @@
 module rec MiloneCli.Program
 
 open MiloneStd.StdError
-open MiloneShared.Util
 open MiloneShared.UtilParallel
+open MiloneShared.UtilProfiler
 open MiloneCli.Cli
 
 let private dirCreate (baseDir: string) (dir: string) =

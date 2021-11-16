@@ -12,5 +12,3 @@ let failwith msg = E.failwith msg
 let failwithf msg _ = E.failwithf msg ()
 let unreachable _ = E.unreachable ()
 let todo _ = E.todo ()
-
-type Profiler = Profiler of voidptr
