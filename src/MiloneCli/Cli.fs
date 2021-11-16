@@ -2,6 +2,7 @@
 module rec MiloneCli.Cli
 
 open MiloneShared.Util
+open MiloneStd.StdError
 open MiloneStd.StdPath
 open MiloneSyntax.Syntax
 

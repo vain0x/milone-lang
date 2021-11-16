@@ -3,22 +3,17 @@
 /// Not used in F#.
 module rec MiloneShared.MiloneOnly
 
-let failwith (str: string) =
-  printfn "FATAL ERROR: %s" str
-  exit 1
-
-let failwithf (str: string) =
-  printfn "FATAL ERROR: %s" str
-  exit 1
-
-let objToString _ = "<objToString not supported>"
+module E = MiloneStd.StdError
 
 let __stringLengthInUtf8Bytes (s: string) = s.Length
 
-let __trace (s: string) : unit =
-  __nativeStmt ("fwrite({0}.str, sizeof(char), (size_t){0}.len, stderr);", s + "\n")
-
-let __context _ action = action ()
+let __dump value = E.__dump value
+let __trace msg = E.__trace msg
+let __context _ action = E.__context () action
+let failwith msg = E.failwith msg
+let failwithf msg _ = E.failwithf msg ()
+let unreachable _ = E.unreachable ()
+let todo _ = E.todo ()
 
 type Profiler = Profiler of voidptr
 

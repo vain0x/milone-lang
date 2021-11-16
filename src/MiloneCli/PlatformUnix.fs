@@ -1,5 +1,6 @@
 module rec MiloneCli.PlatformUnix
 
+open MiloneStd.StdError
 open MiloneStd.StdPath
 open MiloneShared.Util
 

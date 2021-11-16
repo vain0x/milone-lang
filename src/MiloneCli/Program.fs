@@ -1,6 +1,7 @@
 /// Entry point of the compiler.
 module rec MiloneCli.Program
 
+open MiloneStd.StdError
 open MiloneShared.Util
 open MiloneCli.Cli
 

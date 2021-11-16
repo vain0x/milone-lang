@@ -2,22 +2,18 @@
 [<AutoOpen>]
 module FSharpOnly
 
-let objToString (value: _) = string (value :> obj)
+module E = MiloneStd.StdError
 
 let __inRegion (f: unit -> int) : int = f ()
 
 let __stringLengthInUtf8Bytes (s: string) : int =
   System.Text.Encoding.UTF8.GetByteCount(s)
 
-/// Only for debugging.
-let __trace (s: string) : unit = eprintf "%s" (s + "\n")
-
-/// Only for debugging.
-let __context (info: obj) (action: unit -> 'A) : 'A =
-  try
-    action ()
-  with
-  | ex -> raise (exn (sprintf "%O" info, ex))
+let __dump value = E.__dump value
+let __trace msg = E.__trace msg
+let __context info action = E.__context info action
+let unreachable (info: obj) = E.unreachable info
+let todo (info: obj) = E.todo info
 
 // -----------------------------------------------
 // Concurrency

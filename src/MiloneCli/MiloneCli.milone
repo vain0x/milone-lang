@@ -3,6 +3,7 @@ module rec MiloneCli.Program
 
 // See milone_libs for implementations.
 open MiloneStd.StdChar
+open MiloneStd.StdError
 open MiloneStd.StdString
 
 open MiloneShared.Util
