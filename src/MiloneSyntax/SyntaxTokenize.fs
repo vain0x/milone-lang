@@ -54,6 +54,7 @@
 module rec MiloneSyntax.SyntaxTokenize
 
 open MiloneShared.SharedTypes
+open MiloneShared.TypeIntegers
 open MiloneShared.Util
 open MiloneSyntax.Syntax
 
@@ -112,15 +113,6 @@ let private isFollowedByBackticks (i: int) (s: string) : bool =
   && (match s.[i], s.[i + 1] with
       | '`', '`' -> true
       | _ -> false)
-
-let private strToAsciiLower (s: string) : string =
-  let rec go (i: int) acc =
-    if i < s.Length then
-      go (i + 1) (string (C.toLower s.[i]) :: acc)
-    else
-      List.rev acc
-
-  go 0 [] |> S.concat ""
 
 // -----------------------------------------------
 // Pos
@@ -468,10 +460,7 @@ let private evalCharLit (text: string) (l: int) (r: int) : Token =
     && text.[l + 2] = 'x'
     && text.[l + 5] = '\''
     ->
-    if text.[l + 3] = '0' && text.[l + 4] = '0' then
-      CharToken '\x00'
-    else
-      ErrorToken UnimplHexEscapeError
+    CharToken(char (intFromHex (l + 3) (l + 5) text))
 
   | _ -> ErrorToken InvalidCharLitError
 
@@ -507,10 +496,20 @@ let private evalStrLit (text: string) (l: int) (r: int) : Token =
       match text.[i + 1] with
       | 'x' when
         i + 4 < r
-        && text.[i + 2] = '0'
-        && text.[i + 3] = '0'
+        && C.isHex text.[i + 2]
+        && C.isHex text.[i + 3]
         ->
-        go ("\x00" :: acc) (i + 4)
+        let acc =
+          let n = intFromHex (i + 2) (i + 4) text
+
+          (if n = 0 then
+             "\x00"
+           else
+             string (char (byte n)))
+          :: acc
+
+        go acc (i + 4)
+
       | 't' when i + 2 < r -> go ("	" :: acc) (i + 2)
       | 'r' when i + 2 < r -> go ("\r" :: acc) (i + 2)
       | 'n' when i + 2 < r -> go ("\n" :: acc) (i + 2)
@@ -734,16 +733,18 @@ let private doNext (host: TokenizeHost) allowPrefix (text: string) (index: int) 
     CommentToken, r
 
   | LNumber ->
+    // Value can be too large or too small. Range should be checked in Typing.
     let isFloat, m, r = scanNumberLit text (index + len)
 
-    // Value can be too large or too small; range should be checked in Typing.
-    // m: before suffix
-    if m < r then
-      ErrorToken UnimplNumberSuffixError, r
-    else if isFloat then
-      FloatToken text.[index..r - 1], r
+    if isFloat then
+      if m < r then
+        ErrorToken UnimplNumberSuffixError, r
+      else
+        FloatToken text.[index..r - 1], r
     else
-      IntToken(S.slice index r text), r
+      match intFlavorOfSuffix (text |> S.slice m r) with
+      | None when m < r -> ErrorToken UnimplNumberSuffixError, r
+      | suffixOpt -> IntToken(S.slice index m text, suffixOpt), r
 
   | LZeroX ->
     let l = index + len
@@ -752,7 +753,9 @@ let private doNext (host: TokenizeHost) allowPrefix (text: string) (index: int) 
     if m < r then
       ErrorToken UnimplNumberSuffixError, r
     else
-      IntToken(strToAsciiLower (S.slice index r text)), r
+      match intFlavorOfSuffix (text |> S.slice m r) with
+      | None when m < r -> ErrorToken UnimplNumberSuffixError, r
+      | suffixOpt -> IntToken(S.toLower (S.slice index m text), suffixOpt), r
 
   | LNonKeywordIdent ->
     let r = scanIdent text (index + len)

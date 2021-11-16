@@ -201,6 +201,10 @@ let private desugarMinusUnary arg =
 
   | ALitExpr (IntLit text, pos) -> ALitExpr(IntLit("-" + text), pos) |> Some
 
+  | ALitExpr (IntLitWithFlavor (text, flavor), pos) ->
+    ALitExpr(IntLitWithFlavor("-" + text, flavor), pos)
+    |> Some
+
   | ALitExpr (FloatLit text, pos) -> ALitExpr(FloatLit("-" + text), pos) |> Some
 
   | _ -> None
@@ -386,7 +390,7 @@ let private tgExpr (docId: DocId) (expr: AExpr, ctx: NameCtx) : TExpr * NameCtx 
   let onPat x = tgPat docId x
   let onExpr x = tgExpr docId x
 
-  let toName (Name(ident, pos)): TName = ident, toLoc docId pos
+  let toName (Name (ident, pos)) : TName = ident, toLoc docId pos
 
   match expr with
   | AMissingExpr pos ->

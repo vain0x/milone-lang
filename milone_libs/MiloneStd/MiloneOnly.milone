@@ -111,6 +111,40 @@ let __intOfStr (s: string) : int option =
   else
     None
 
+let __int64OfStr (s: string) : int64 option =
+  __nativeStmt (
+    """
+      bool str_to_int64_checked(struct String, int64_t *);
+
+      int64_t value;
+      bool ok = str_to_int64_checked({0}, &value);
+    """,
+    s
+  )
+
+  if __nativeExpr "ok" then
+    let value: int64 = __nativeExpr "value"
+    Some value
+  else
+    None
+
+let __uint64OfStr (s: string) : uint64 option =
+  __nativeStmt (
+    """
+      bool str_to_uint64_checked(struct String, uint64_t *);
+
+      uint64_t value;
+      bool ok = str_to_uint64_checked({0}, &value);
+    """,
+    s
+  )
+
+  if __nativeExpr "ok" then
+    let value: uint64 = __nativeExpr "value"
+    Some value
+  else
+    None
+
 // -----------------------------------------------
 // StdEnv
 // -----------------------------------------------

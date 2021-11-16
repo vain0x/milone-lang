@@ -12,8 +12,7 @@ let main _ =
   assert (unbox stringBox = "one")
 
   // write to array
-  let buf: nativeptr<char> =
-    (uint64 0, uint64 0) |> box |> __nativeCast
+  let buf: nativeptr<char> = (0UL, 0UL) |> box |> __nativeCast
 
   __ptrWrite buf 0 'H'
   __ptrWrite buf 1 'i'

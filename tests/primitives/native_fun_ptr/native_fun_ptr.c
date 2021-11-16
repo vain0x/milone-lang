@@ -38,7 +38,7 @@ int native_fun_ptr_native_fun_ptr_sortIntArray_intCompare(void const* l_, void c
 }
 
 void native_fun_ptr_native_fun_ptr_sortIntArray(int* array_, int len_1) {
-    qsort(((void*)array_), ((uintptr_t)len_1), ((uintptr_t)4), native_fun_ptr_native_fun_ptr_sortIntArray_intCompare);
+    qsort(((void*)array_), ((uintptr_t)len_1), (size_t)4ULL, native_fun_ptr_native_fun_ptr_sortIntArray_intCompare);
     return;
 }
 
@@ -54,15 +54,15 @@ void native_fun_ptr_native_fun_ptr_testSort(void) {
     native_fun_ptr_native_fun_ptr_sortIntArray(array_1, len_2);
     int const* array_2 = ((int const*)array_1);
     int read_2 = (*(array_2));
-    milone_assert((read_2 == 1), 40, 2);
+    milone_assert((read_2 == 1), 34, 2);
     int read_3 = array_2[1];
-    milone_assert((read_3 == 1), 41, 2);
+    milone_assert((read_3 == 1), 35, 2);
     int read_4 = array_2[2];
-    milone_assert((read_4 == 3), 42, 2);
+    milone_assert((read_4 == 3), 36, 2);
     int read_5 = array_2[3];
-    milone_assert((read_5 == 4), 43, 2);
+    milone_assert((read_5 == 4), 37, 2);
     int read_6 = array_2[4];
-    milone_assert((read_6 == 5), 44, 2);
+    milone_assert((read_6 == 5), 38, 2);
     return;
 }
 
@@ -73,7 +73,7 @@ int native_fun_ptr_native_fun_ptr_testUnitFun_answer(void) {
 void native_fun_ptr_native_fun_ptr_testUnitFun(void) {
     int(*fp_)(void) = ((int(*)(void))native_fun_ptr_native_fun_ptr_testUnitFun_answer);
 int (*unit_fun)(void) = fp_;    int value_ = unit_fun();
-    milone_assert((value_ == 42), 55, 2);
+    milone_assert((value_ == 42), 49, 2);
     return;
 }
 
@@ -84,7 +84,7 @@ int native_fun_ptr_native_fun_ptr_testUnaryFun_inc(int n_) {
 void native_fun_ptr_native_fun_ptr_testUnaryFun(void) {
     int(*fp_1)(int) = native_fun_ptr_native_fun_ptr_testUnaryFun_inc;
 int (*unary_fun)(int) = fp_1;    int value_1 = unary_fun(41);
-    milone_assert((value_1 == 42), 66, 2);
+    milone_assert((value_1 == 42), 60, 2);
     return;
 }
 

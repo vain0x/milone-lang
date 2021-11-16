@@ -9,7 +9,7 @@ int milone_main(void) {
     struct String message_ = str_add(hello_, world_);
     milone_assert((message_.len == 10), 11, 2);
     milone_assert((hello_.len == 5), 13, 2);
-    milone_assert((5 == 5), 17, 2);
-    milone_assert((3 == 3), 20, 2);
+    milone_assert((5 == 5), 15, 2);
+    milone_assert((3 == 3), 18, 2);
     return 0;
 }

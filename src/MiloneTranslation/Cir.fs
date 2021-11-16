@@ -76,7 +76,7 @@ type CBinary =
 /// Expression in CIR.
 [<NoEquality; NoComparison>]
 type CExpr =
-  | CIntExpr of text: string
+  | CIntExpr of text: string * IntFlavor
   | CDoubleExpr of text: string
   | CCharExpr of char
 

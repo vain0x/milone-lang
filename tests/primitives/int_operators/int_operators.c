@@ -15,15 +15,15 @@ void int_operators_Program_toIntTest(void);
 int milone_main(void);
 
 void int_operators_Program_literalTest(void) {
-    milone_assert(((-(((int)0x80000000 + 1))) == 2147483647), 4, 2);
+    milone_assert(((-(((int32_t)0x80000000 + 1))) == 2147483647), 4, 2);
     return;
 }
 
 void int_operators_Program_hexLiteralTest(void) {
-    milone_assert((0x00000000 == 0), 7, 2);
-    milone_assert((0x10 == 16), 8, 2);
-    milone_assert((0x7fffffff == 2147483647), 9, 2);
-    milone_assert(((int)0xffffffff == -1), 10, 2);
+    milone_assert(((int32_t)0x00000000 == 0), 7, 2);
+    milone_assert(((int32_t)0x10 == 16), 8, 2);
+    milone_assert(((int32_t)0x7fffffff == 2147483647), 9, 2);
+    milone_assert(((int32_t)0xffffffff == -1), 10, 2);
     return;
 }
 

@@ -8,6 +8,7 @@ open MiloneShared.TypeIntegers
 open MiloneShared.Util
 open MiloneTranslation.Cir
 
+module C = MiloneStd.StdChar
 module S = MiloneStd.StdString
 
 let private eol = "\n"
@@ -133,17 +134,91 @@ let private cpParams ps acc : string list =
 // Literals
 // -----------------------------------------------
 
-let private cpIntLit (text: string) acc =
-  if S.startsWith "0x" text
-     && text.Length >= 10
-     && intFromHex 2 3 text >= 8 then
-    // Since hex literal `>=0x80000000` is unsigned in C.
-    acc |> cons "(int)" |> cons text
-  else if text = "-2147483648" then
-    // Since `-2147483648` is int64_t in C.
-    acc |> cons "(int)0x80000000"
+let private evalHexDigit (c: char) : int =
+  if '0' <= c && c <= '9' then
+    int (byte c - byte '0')
+  else if 'A' <= c && c <= 'F' then
+    int (byte c - byte 'A') + 10
+  else if 'a' <= c && c <= 'f' then
+    int (byte c - byte 'a') + 10
   else
-    acc |> cons text
+    assert false
+    0
+
+let private uint64FromHex (l: int) (r: int) (s: string) =
+  assert (0 <= l && l < r && r <= s.Length)
+
+  let rec go acc (i: int) =
+    if i = r then
+      acc
+    else
+      let d = uint64 (evalHexDigit s.[i])
+      go (acc * uint64 16 + d) (i + 1)
+
+  go (uint64 0) l
+
+let private uint64ToHex (len: int) (value: uint64) =
+  assert (len >= 0)
+
+  let rec go acc len (n: uint64) =
+    if n = uint64 0 && len <= 0 then
+      acc
+    else
+      let d = int (n % uint64 16)
+      let acc = "0123456789abcdef".[d..d] + acc
+      let len = if len >= 1 then len - 1 else 0
+      let n = n / uint64 16
+      go acc len n
+
+  if value = uint64 0 && len = 0 then
+    "0"
+  else
+    go "" len value
+
+// See also: https://en.cppreference.com/w/c/language/integer_constant
+//
+// Remarks: When signed hex literal is >=2^(N-1), it's negative in milone-lang, but positive (larger type) in C.
+//          So (int32_t)0x80000000 must need casting.
+let private cpIntLit flavor (text: string) =
+  let (IntFlavor (signedness, precision)) = flavor
+
+  // s: -?<digit>+ or 0x<hex>+
+  let withFlavor force (s: string) =
+    match signedness, precision with
+    | Signed, I8 -> "(int8_t)" + s
+    | Signed, I16 -> "(int16_t)" + s
+    | Signed, I32 when force -> "(int32_t)" + s
+    | Signed, I32 -> s
+    | Signed, I64
+    | Signed, IPtr -> s + "LL"
+
+    | Unsigned, I8 -> "(uint8_t)" + s + "U"
+    | Unsigned, I16 -> "(uint16_t)" + s + "U"
+    | Unsigned, I32 -> "(uint32_t)" + s + "U" // U suffix can be 64-bit
+    | Unsigned, I64 -> s + "ULL"
+    | Unsigned, IPtr -> "(size_t)" + s + "ULL" // size_t can be 32-bit
+
+  if S.startsWith "-0x" text then
+    assert (text.Length >= 4)
+    let text = text.[3..text.Length - 1]
+
+    let value =
+      /// FIXME: (~~~) is unimplemented
+      let a = uint64FromHex 0 text.Length text
+
+      if a = uint64 0 then
+        a
+      else
+        a ^^^ (uint64 (int64 (-1))) + uint64 1
+
+    withFlavor true ("0x" + uint64ToHex 1 value)
+  else if S.startsWith "0x" text then
+    assert (text.Length >= 3)
+    withFlavor true text
+  else
+    match precision, text with
+    | I32, "-2147483648" -> "(int32_t)0x80000000"
+    | _ -> withFlavor false text
 
 let private cpCharLit value =
   if value |> charNeedsEscaping then
@@ -215,8 +290,14 @@ let private cpExpr expr acc : string list =
     |> snd
 
   match expr with
-  | CIntExpr value -> acc |> cpIntLit value
+  | CIntExpr (value, flavor) -> acc |> cons (cpIntLit flavor value)
   | CDoubleExpr value -> acc |> cons (string value)
+
+  | CCharExpr value when C.isAscii value |> not ->
+    acc
+    |> cons "(char)'\\x"
+    |> cons (intToHexWithPadding 2 (int (byte value)))
+    |> cons "'"
 
   | CCharExpr value ->
     acc

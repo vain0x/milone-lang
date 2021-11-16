@@ -507,6 +507,11 @@ let tyError loc = Ty(ErrorTk loc, [])
 let noTy = tyError noLoc
 
 let tyInt = Ty(IntTk(IntFlavor(Signed, I32)), [])
+let tyInt64 = Ty(IntTk(IntFlavor(Signed, I64)), [])
+let tyUint8 = Ty(IntTk(IntFlavor(Unsigned, I8)), [])
+let tyUInt16 = Ty(IntTk(IntFlavor(Unsigned, I16)), [])
+let tyUInt64 = Ty(IntTk(IntFlavor(Unsigned, I32)), [])
+let tyUNativeInt = Ty(IntTk(IntFlavor(Unsigned, IPtr)), [])
 
 let tyBool = Ty(BoolTk, [])
 
@@ -593,6 +598,7 @@ let litToTy (lit: Lit) : Ty =
   match lit with
   | BoolLit _ -> tyBool
   | IntLit _ -> tyInt
+  | IntLitWithFlavor (_, flavor) -> Ty(IntTk flavor, [])
   | FloatLit _ -> tyFloat
   | CharLit _ -> tyChar
   | StrLit _ -> tyStr

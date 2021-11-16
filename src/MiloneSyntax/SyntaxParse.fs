@@ -72,6 +72,11 @@ open MiloneSyntax.Syntax
 
 module Int = MiloneStd.StdInt
 
+let private newIntLit text flavorOpt =
+  match flavorOpt with
+  | None -> IntLit text
+  | Some flavor -> IntLitWithFlavor(text, flavor)
+
 // -----------------------------------------------
 // Position
 // -----------------------------------------------
@@ -481,7 +486,7 @@ let private parsePatAtom basePos (tokens, errors) : PR<APat> =
   | _ when not (nextInside basePos tokens && leadsPat tokens) ->
     parsePatError "Expected a pattern atom" (tokens, errors)
 
-  | (IntToken text, pos) :: tokens -> ALitPat(IntLit text, pos), tokens, errors
+  | (IntToken (text, flavorOpt), pos) :: tokens -> ALitPat(newIntLit text flavorOpt, pos), tokens, errors
   | (FloatToken text, pos) :: tokens -> ALitPat(FloatLit text, pos), tokens, errors
   | (CharToken value, pos) :: tokens -> ALitPat(CharLit value, pos), tokens, errors
   | (StrToken value, pos) :: tokens -> ALitPat(StrLit value, pos), tokens, errors
@@ -499,7 +504,8 @@ let private parsePatAtom basePos (tokens, errors) : PR<APat> =
   | (PublicToken, _) :: tokens -> onVis PublicVis tokens
   | (PrivateToken, _) :: tokens -> onVis PrivateVis tokens
 
-  | (MinusToken _, pos) :: (IntToken text, _) :: tokens -> ALitPat(IntLit("-" + text), pos), tokens, errors
+  | (MinusToken _, pos) :: (IntToken (text, flavorOpt), _) :: tokens ->
+    ALitPat(newIntLit ("-" + text) flavorOpt, pos), tokens, errors
   | (MinusToken _, _) :: tokens -> parsePatError "Expected negative literal pattern" (tokens, errors)
 
   | _ ->
@@ -675,7 +681,7 @@ let private parseAtom basePos (tokens, errors) : PR<AExpr> =
   match tokens with
   | _ when not (nextInside basePos tokens) -> parseExprError "Expected an expression" (tokens, errors)
 
-  | (IntToken text, pos) :: tokens -> ALitExpr(IntLit text, pos), tokens, errors
+  | (IntToken (text, flavorOpt), pos) :: tokens -> ALitExpr(newIntLit text flavorOpt, pos), tokens, errors
   | (FloatToken text, pos) :: tokens -> ALitExpr(FloatLit text, pos), tokens, errors
   | (CharToken value, pos) :: tokens -> ALitExpr(CharLit value, pos), tokens, errors
   | (StrToken value, pos) :: tokens -> ALitExpr(StrLit value, pos), tokens, errors
