@@ -1,8 +1,4 @@
-/// Provides functions, whose implementations use C FFI and work only in milone-lang.
-/// Public interface of this module should be compatible with file://./FSharpOnly.fs .
-module rec MiloneStd.MiloneOnly
-
-let __stringJoin (sep: string) (xs: string list) : string = __nativeFun ("str_concat", sep, xs)
+module rec MiloneStd.StdArrayBase
 
 // -----------------------------------------------
 // Pointer util
@@ -94,61 +90,3 @@ let __constArraySlice (start: int) (endIndex: int) (array: __ConstArray<_>) : __
   assert (0 <= start && start <= endIndex && endIndex <= len)
 
   __ptrAdd start ptr, endIndex - start
-
-// -----------------------------------------------
-// StdInt
-// -----------------------------------------------
-
-let __intOfStr (s: string) : int option =
-  let valueRef: nativeptr<int> =
-    __nativeCast (memAlloc 1 (unativeint (__sizeOfVal 0)))
-
-  let ok: bool =
-    __nativeFun ("str_to_int_checked", s, valueRef)
-
-  if ok then
-    Some(__ptrRead (__ptrAsConst valueRef) 0)
-  else
-    None
-
-let __int64OfStr (s: string) : int64 option =
-  __nativeStmt (
-    """
-      bool str_to_int64_checked(struct String, int64_t *);
-
-      int64_t value;
-      bool ok = str_to_int64_checked({0}, &value);
-    """,
-    s
-  )
-
-  if __nativeExpr "ok" then
-    let value: int64 = __nativeExpr "value"
-    Some value
-  else
-    None
-
-let __uint64OfStr (s: string) : uint64 option =
-  __nativeStmt (
-    """
-      bool str_to_uint64_checked(struct String, uint64_t *);
-
-      uint64_t value;
-      bool ok = str_to_uint64_checked({0}, &value);
-    """,
-    s
-  )
-
-  if __nativeExpr "ok" then
-    let value: uint64 = __nativeExpr "value"
-    Some value
-  else
-    None
-
-// -----------------------------------------------
-// StdEnv
-// -----------------------------------------------
-
-let __argCount () : int = __nativeFun "milone_get_arg_count"
-
-let __argGet (index: int) : string = __nativeFun ("milone_get_arg", index)

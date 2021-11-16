@@ -7,6 +7,7 @@ module rec MiloneSyntax.NameRes
 
 open MiloneShared.SharedTypes
 open MiloneShared.TypeIntegers
+open MiloneShared.UtilParallel
 open MiloneStd.StdMap
 open MiloneStd.StdSet
 open MiloneShared.Util

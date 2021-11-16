@@ -7,10 +7,12 @@
 
   <ItemGroup>
     <Compile Include="FSharpOnly.fs" />
+    <Compile Include="UtilParallel.fs" />
     <Compile Include="TypeFloat.fs" />
     <Compile Include="TypeIntegers.fs" />
     <Compile Include="SharedTypes.fs" />
     <Compile Include="Util.fs" />
+    <Compile Include="UtilProfiler.fs" />
   </ItemGroup>
 
   <ItemGroup>

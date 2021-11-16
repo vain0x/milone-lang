@@ -254,10 +254,10 @@ let private generateMonomorphizedFun
         "assertion violation\n  %s at %s\n  : %s => %s\n  tyArgs %s\n  monoTy = %s"
         genericFunDef.Name
         (locToString genericFunDef.Loc)
-        (objToString tyVars)
-        (objToString genericFunTy)
-        (objToString monoTyArgs)
-        (objToString monoFunTy)
+        (__dump tyVars)
+        (__dump genericFunTy)
+        (__dump monoTyArgs)
+        (__dump monoFunTy)
 
       assert (tyIsMonomorphic monoFunTy)
 
@@ -378,7 +378,7 @@ let monify (modules: HProgram, hirCtx: HirCtx) : HProgram * HirCtx =
     match hirCtx.Tys |> TMap.tryFind tySerial with
     | Some (MetaTyDef ty) ->
       // FIXME: remove this
-      printfn "meta #%d %s" tySerial (objToString ty)
+      printfn "meta #%d %s" tySerial (__dump ty)
       assert false
       true
 

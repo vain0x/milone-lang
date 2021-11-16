@@ -1,0 +1,52 @@
+module rec MiloneStd.StdIntBase
+
+let tryParseInt32 (s: string) : int option =
+  __nativeStmt (
+    """
+      bool str_to_int_checked(struct String, int32_t *);
+
+      int32_t value;
+      bool ok = str_to_int_checked({0}, &value);
+    """,
+    s
+  )
+
+  if __nativeExpr "ok" then
+    let value: int = __nativeExpr "value"
+    Some value
+  else
+    None
+
+let tryParseInt64 (s: string) : int64 option =
+  __nativeStmt (
+    """
+      bool str_to_int64_checked(struct String, int64_t *);
+
+      int64_t value;
+      bool ok = str_to_int64_checked({0}, &value);
+    """,
+    s
+  )
+
+  if __nativeExpr "ok" then
+    let value: int64 = __nativeExpr "value"
+    Some value
+  else
+    None
+
+let tryParseUInt64 (s: string) : uint64 option =
+  __nativeStmt (
+    """
+      bool str_to_uint64_checked(struct String, uint64_t *);
+
+      uint64_t value;
+      bool ok = str_to_uint64_checked({0}, &value);
+    """,
+    s
+  )
+
+  if __nativeExpr "ok" then
+    let value: uint64 = __nativeExpr "value"
+    Some value
+  else
+    None

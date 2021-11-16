@@ -5,16 +5,21 @@
   </PropertyGroup>
 
   <ItemGroup>
-    <Compile Include="FSharpOnly.fs" />
+    <Compile Include="StdError.fs" />
+    <Compile Include="StdOption.fs" />
     <Compile Include="StdResult.fs" />
     <Compile Include="StdChar.fs" />
+    <Compile Include="StdStringBase.fs" />
     <Compile Include="StdString.fs" />
     <Compile Include="StdLoop.fs" />
     <Compile Include="StdIter.fs" />
+    <Compile Include="StdArrayBase.fs" />
     <Compile Include="StdArray.fs" />
     <Compile Include="StdMap.fs" />
     <Compile Include="StdSet.fs" />
+    <Compile Include="StdIntBase.fs" />
     <Compile Include="StdInt.fs" />
+    <Compile Include="StdEnvBase.fs" />
     <Compile Include="StdEnv.fs" />
     <Compile Include="StdPath.fs" />
   </ItemGroup>

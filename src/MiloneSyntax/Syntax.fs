@@ -11,6 +11,7 @@
 module rec MiloneSyntax.Syntax
 
 open MiloneShared.SharedTypes
+open MiloneShared.UtilParallel
 open MiloneShared.TypeIntegers
 open MiloneStd.StdMap
 

@@ -1,7 +1,9 @@
 /// Entry point of the compiler.
 module rec MiloneCli.Program
 
-open MiloneShared.Util
+open MiloneStd.StdError
+open MiloneShared.UtilParallel
+open MiloneShared.UtilProfiler
 open MiloneCli.Cli
 
 let private dirCreate (baseDir: string) (dir: string) =
