@@ -4,21 +4,21 @@ struct IntList;
 
 struct IntList;
 
-struct IntList const* newStack_(char arg_);
+struct IntList const* ty_synonym_generic_ty_synonym_generic_UnitIntListFun1_newStack(void);
 
-int milone_main();
+int milone_main(void);
 
 struct IntList {
     int head;
     struct IntList const* tail;
 };
 
-struct IntList const* newStack_(char arg_) {
+struct IntList const* ty_synonym_generic_ty_synonym_generic_UnitIntListFun1_newStack(void) {
     return NULL;
 }
 
-int milone_main() {
-    struct IntList const* call_ = newStack_(0);
+int milone_main(void) {
+    struct IntList const* call_ = ty_synonym_generic_ty_synonym_generic_UnitIntListFun1_newStack();
     struct IntList const* list_ = milone_mem_alloc(1, sizeof(struct IntList));
     (*(((struct IntList*)list_))) = (struct IntList){.head = 1, .tail = call_};
     struct IntList const* _stack = list_;

@@ -46,370 +46,422 @@
 ///    The cloned function is referred as monomorphized instance of (`f`, `t`).
 ///
 /// NOTE: The algorithm seems inefficient and the finiteness is unproven.
+///
+/// ## Remarks
+///
+/// - Currently monomorphized instances don't duplicate local variable definitions.
 module rec MiloneTranslation.Monomorphizing
 
 open MiloneShared.SharedTypes
 open MiloneShared.Util
+open MiloneStd.StdMap
 open MiloneTranslation.Hir
 
-module TMap = MiloneStd.StdMap
+// #tyAssign?
+let private getTyAssignment tyVars tyArgs : TreeMap<TySerial, Ty> =
+  match listTryZip tyVars tyArgs with
+  | zipped, [], [] -> TMap.ofList compare zipped
+  | _ -> unreachable () // Arity mismatch.
 
-let private funSerialTyPairCompare l r =
-  pairCompare funSerialCompare tyCompare l r
+// #tyAssign
+let private tyAssign tyScheme (tyArgs: Ty list) =
+  let (TyScheme (tyVars, genericTy)) = tyScheme
 
-let private emptyBinding : AssocMap<TySerial, Ty> = TMap.empty compare
+  let assignment =
+    match listTryZip tyVars tyArgs with
+    | zipped, [], [] -> TMap.ofList compare zipped
+    | _ -> unreachable () // Arity mismatch.
+
+  tySubst (fun tySerial -> assignment |> TMap.tryFind tySerial) genericTy
+
+type private ModuleId = int
+
+[<NoEquality; NoComparison>]
+type private FunBody = FunBody of argPats: HPat list * body: HExpr
+
+/// Monomorphic use of generic function.
+type private MonoUse = FunSerial * Ty list
+
+let private monoUseCompare =
+  pairCompare funSerialCompare (listCompare tyCompare)
 
 // -----------------------------------------------
-// Context
+// Collect
 // -----------------------------------------------
 
+// Collect step folds expression to find all:
+//
+//  - monomorphic use-site of generic functions
+//  - body of generic functions.
+
+/// Read-only context of collect step.
+type private CollectRx =
+  { Funs: TreeMap<FunSerial, FunDef>
+    CurrentModuleId: ModuleId }
+
+/// Mutable context of collect step.
 [<RequireQualifiedAccess; NoEquality; NoComparison>]
-type private MonoCtx =
-  { Serial: Serial
+type private CollectWx =
+  { GenericFunBody: TreeMap<FunSerial, ModuleId * FunBody>
+    UseSiteTys: MonoUse list }
 
-    Funs: AssocMap<FunSerial, FunDef>
-    Tys: AssocMap<TySerial, TyDef>
+let private emptyCollectWx: CollectWx =
+  { GenericFunBody = TMap.empty funSerialCompare
+    UseSiteTys = [] }
 
-    /// Map from
-    /// - generic function serial
-    ///
-    /// to:
-    /// - found use-site types
-    GenericFunUseSiteTys: AssocMap<FunSerial, Ty list>
+let private collectOnExpr (rx: CollectRx) (wx: CollectWx) expr : CollectWx =
+  let onExpr expr ctx = collectOnExpr rx ctx expr
 
-    /// Map from pairs:
-    /// - generic function's serial
-    /// - monomorphic type
-    ///
-    /// to:
-    /// - monomorphized function's serial
-    GenericFunMonoSerials: AssocMap<FunSerial * Ty, FunSerial>
+  let onExprs exprs ctx =
+    exprs |> List.fold (collectOnExpr rx) ctx
 
-    Mode: MonoMode
-    SomethingHappened: bool
-    InfiniteLoopDetector: int }
+  let getFunDef funSerial = rx.Funs |> mapFind funSerial
 
-let private ofTyCtx (tyCtx: TyCtx) : MonoCtx =
-  { Serial = tyCtx.Serial
-
-    Funs = tyCtx.Funs
-    Tys = tyCtx.Tys
-
-    GenericFunUseSiteTys = TMap.empty funSerialCompare
-    GenericFunMonoSerials = TMap.empty funSerialTyPairCompare
-    Mode = MonoMode.Monify
-    SomethingHappened = true
-    InfiniteLoopDetector = 0 }
-
-let private unifyTy (monoCtx: MonoCtx) (lTy: Ty) (rTy: Ty) loc =
-  let ctx = monoCtx
-
-  let expandMeta binding tySerial =
-    match binding |> TMap.tryFind tySerial with
-    | (Some _) as it -> it
-    | _ ->
-      match ctx.Tys |> TMap.tryFind tySerial with
-      | Some (MetaTyDef ty) -> Some ty
-      | _ -> None
-
-  let substTy binding ty = tySubst (expandMeta binding) ty
-
-  let rec go lTy rTy loc binding =
-    match unifyNext lTy rTy loc with
-    | UnifyOk
-    | UnifyError _ ->
-      // NOTE: Unification may fail due to auto boxing.
-      //       This is not fatal problem since all type errors are already handled in typing phase.
-      binding
-
-    | UnifyOkWithStack stack -> List.fold (fun binding (l, r) -> go l r loc binding) binding stack
-
-    | UnifyExpandMeta (tySerial, otherTy) ->
-      match expandMeta binding tySerial with
-      | Some ty -> go ty otherTy loc binding
-
-      | None ->
-        match unifyAfterExpandMeta tySerial (substTy binding otherTy) loc with
-        | UnifyAfterExpandMetaResult.OkNoBind -> binding
-
-        | UnifyAfterExpandMetaResult.OkBind -> binding |> TMap.add tySerial otherTy
-
-        | UnifyAfterExpandMetaResult.Error _ -> binding
-
-    | UnifyExpandSynonym _ -> unreachable () // Resolved in Typing.
-
-  go lTy rTy loc emptyBinding
-
-let private markAsSomethingHappened (ctx: MonoCtx) =
-  if ctx.SomethingHappened then
-    ctx
-  else
-    { ctx with SomethingHappened = true }
-
-let private findFun (ctx: MonoCtx) funSerial = ctx.Funs |> mapFind funSerial
-
-let private findGenericFun (ctx: MonoCtx) funSerial =
-  let funDef = ctx.Funs |> mapFind funSerial
-  let (TyScheme (tyVars, funTy)) = funDef.Ty
-
-  if List.isEmpty tyVars then
-    None
-  else
-    Some(funDef.Name, funDef.Arity, funTy, funDef.Loc)
-
-/// Generalizes all functions that has type variables.
-let private forceGeneralizeFuns (ctx: MonoCtx) =
-  let funs =
-    ctx.Funs
-    |> TMap.map
-         (fun funSerial (funDef: FunDef) ->
-           let (TyScheme (_, ty)) = funDef.Ty
-           let fvs = ty |> tyCollectFreeVars
-
-           { funDef with Ty = TyScheme(fvs, ty) })
-
-  { ctx with Funs = funs }
-
-let private addMonomorphizedFun (ctx: MonoCtx) genericFunSerial arity useSiteTy loc =
-  assert (tryFindMonomorphizedFun ctx genericFunSerial useSiteTy
-          |> Option.isNone)
-
-  let funDef : FunDef =
-    let def : FunDef = ctx.Funs |> mapFind genericFunSerial
-
-    { def with
-        Arity = arity
-        Ty = TyScheme([], useSiteTy)
-        Linkage = InternalLinkage // Generic function can't have stable linkage.
-        Loc = loc }
-
-  let monoFunSerial = FunSerial(ctx.Serial + 1)
-
-  let ctx =
-    { ctx with
-        Serial = ctx.Serial + 1
-        Funs = ctx.Funs |> TMap.add monoFunSerial funDef
-        GenericFunMonoSerials =
-          ctx.GenericFunMonoSerials
-          |> TMap.add (genericFunSerial, useSiteTy) monoFunSerial }
-
-  let ctx = markAsSomethingHappened ctx
-  monoFunSerial, ctx
-
-/// Tries to find a monomorphized instance of generic function with use-site type.
-let private tryFindMonomorphizedFun (ctx: MonoCtx) funSerial useSiteTy =
-  ctx.GenericFunMonoSerials
-  |> TMap.tryFind (funSerial, useSiteTy)
-
-let private markUseSite (ctx: MonoCtx) funSerial useSiteTy =
-  let useSiteTyIsMonomorphic = useSiteTy |> tyIsMonomorphic
-
-  let notMonomorphizedYet =
-    tryFindMonomorphizedFun ctx funSerial useSiteTy
-    |> Option.isNone
-
-  let canMark =
-    useSiteTyIsMonomorphic && notMonomorphizedYet
-
-  if not canMark then
-    ctx
-  else
-    let useSiteTys =
-      let useSiteTys =
-        match ctx.GenericFunUseSiteTys |> TMap.tryFind funSerial with
-        | None -> []
-        | Some useSiteTys -> useSiteTys
-
-      useSiteTy :: useSiteTys
-
-    { ctx with
-        GenericFunUseSiteTys =
-          ctx.GenericFunUseSiteTys
-          |> TMap.add funSerial useSiteTys }
-    |> markAsSomethingHappened
-
-let private takeMarkedTys (ctx: MonoCtx) funSerial =
-  match ctx.GenericFunUseSiteTys |> TMap.tryFind funSerial with
-  | None
-  | Some [] -> [], ctx
-
-  | Some useSiteTys ->
-    let ctx =
-      { ctx with
-          GenericFunUseSiteTys =
-            ctx.GenericFunUseSiteTys
-            |> TMap.remove funSerial
-            |> snd }
-      |> markAsSomethingHappened
-
-    useSiteTys, ctx
-
-// -----------------------------------------------
-// Featured transformations
-// -----------------------------------------------
-
-/// Replaces the variable serial to monomorphized function serial if possible.
-/// Or marks an use of generic function if possible.
-/// Does nothing if the serial is NOT a generic function.
-let private monifyFunExpr ctx funSerial useSiteTy =
-  let funDef = findFun ctx funSerial
-  let (TyScheme (tyVars, _)) = funDef.Ty
-
-  if List.isEmpty tyVars then
-    funSerial, ctx
-  else
-    match tryFindMonomorphizedFun ctx funSerial useSiteTy with
-    | Some monoFunSerial -> monoFunSerial, ctx
-
-    | None ->
-      let ctx = markUseSite ctx funSerial useSiteTy
-
-      funSerial, ctx
-
-let private monifyLetFunExpr (ctx: MonoCtx) callee isRec vis args body next ty loc =
-  let genericFunSerial = callee
-
-  let letGenericFunExpr =
-    HLetFunExpr(callee, isRec, vis, args, body, next, ty, loc)
-
-  let rec go next arity genericFunTy useSiteTys ctx =
-    match useSiteTys with
-    | [] -> next, ctx
-    | useSiteTy :: useSiteTys ->
-      match tryFindMonomorphizedFun ctx genericFunSerial useSiteTy with
-      | Some _ -> go next arity genericFunTy useSiteTys ctx
-      | None ->
-        // Unify genericFunTy and useSiteTy to build a mapping
-        // from type variable to use-site type.
-        let binding = unifyTy ctx genericFunTy useSiteTy loc
-
-        let substOrDegenerateTy ty =
-          let substMeta tySerial =
-            match binding |> TMap.tryFind tySerial with
-            | (Some _) as it -> it
-            | None ->
-              match ctx.Tys |> TMap.tryFind tySerial with
-              | Some (MetaTyDef ty) -> Some ty
-              | _ -> Some tyUnit
-
-          tySubst substMeta ty
-
-        let monoArgs =
-          args |> List.map (patMap substOrDegenerateTy id)
-
-        let monoBody = body |> exprMap substOrDegenerateTy id
-
-        let monoFunSerial, ctx =
-          addMonomorphizedFun ctx genericFunSerial arity useSiteTy loc
-
-        let next =
-          HLetFunExpr(monoFunSerial, isRec, vis, monoArgs, monoBody, next, ty, loc)
-
-        go next arity genericFunTy useSiteTys ctx
-
-  match findGenericFun ctx genericFunSerial, ctx.Mode with
-  | None, _ -> letGenericFunExpr, ctx
-  | Some _, MonoMode.RemoveGenerics -> next, ctx
-  | Some (_, arity, genericFunTy, _), _ ->
-    let useSiteTys, ctx = takeMarkedTys ctx genericFunSerial
-
-    go letGenericFunExpr arity genericFunTy useSiteTys ctx
-
-// -----------------------------------------------
-// Control
-// -----------------------------------------------
-
-let private monifyExpr (expr, ctx) =
   match expr with
   | HLitExpr _
   | HVarExpr _
   | HVariantExpr _
-  | HPrimExpr _ -> expr, ctx
+  | HPrimExpr _ -> wx
 
-  | HFunExpr (funSerial, useSiteTy, loc) ->
-    invoke
-      (fun () ->
-        let funSerial, ctx = monifyFunExpr ctx funSerial useSiteTy
+  | HFunExpr (funSerial, _, tyArgs, _) ->
+    if tyArgs |> List.isEmpty |> not
+       && tyArgs |> List.forall tyIsMonomorphic then
+      { wx with UseSiteTys = (funSerial, tyArgs) :: wx.UseSiteTys }
+    else
+      wx
 
-        HFunExpr(funSerial, useSiteTy, loc), ctx)
+  | HMatchExpr (cond, arms, _, _) ->
+    wx
+    |> onExpr cond
+    |> forList (fun (_, guard, body) ctx -> ctx |> onExpr guard |> onExpr body) arms
 
-  | HMatchExpr (cond, arms, ty, loc) ->
-    invoke
-      (fun () ->
-        let cond, ctx = (cond, ctx) |> monifyExpr
+  | HNodeExpr (_, items, _, _) -> wx |> onExprs items
+  | HBlockExpr (stmts, last) -> collectOnExpr rx (wx |> onExprs stmts) last
+  | HLetValExpr (_, body, next, _, _) -> collectOnExpr rx (wx |> onExpr body) next
 
-        let arms, ctx =
-          (arms, ctx)
-          |> stMap
-               (fun ((pat, guard, body), ctx) ->
-                 let guard, ctx = (guard, ctx) |> monifyExpr
-                 let body, ctx = (body, ctx) |> monifyExpr
-                 (pat, guard, body), ctx)
+  | HLetFunExpr (funSerial, args, body, next, _, _) ->
+    let funDef = getFunDef funSerial
+    let (TyScheme (tyVars, _)) = funDef.Ty
 
-        HMatchExpr(cond, arms, ty, loc), ctx)
+    let wx =
+      if tyVars |> List.isEmpty |> not then
+        { wx with
+            GenericFunBody =
+              wx.GenericFunBody
+              |> TMap.add funSerial (rx.CurrentModuleId, FunBody(args, body)) }
+      else
+        wx
 
-  | HNodeExpr (kind, args, ty, loc) ->
-    invoke
-      (fun () ->
-        let args, ctx = (args, ctx) |> stMap monifyExpr
-        HNodeExpr(kind, args, ty, loc), ctx)
-
-  | HBlockExpr (stmts, last) ->
-    invoke
-      (fun () ->
-        let stmts, ctx = (stmts, ctx) |> stMap monifyExpr
-        let last, ctx = (last, ctx) |> monifyExpr
-        HBlockExpr(stmts, last), ctx)
-
-  | HLetValExpr (pat, init, next, ty, loc) ->
-    invoke
-      (fun () ->
-        let init, ctx = (init, ctx) |> monifyExpr
-        let next, ctx = (next, ctx) |> monifyExpr
-        HLetValExpr(pat, init, next, ty, loc), ctx)
-
-  | HLetFunExpr (callee, isRec, vis, args, body, next, ty, loc) ->
-    invoke
-      (fun () ->
-        let body, ctx = (body, ctx) |> monifyExpr
-        let next, ctx = (next, ctx) |> monifyExpr
-        monifyLetFunExpr ctx callee isRec vis args body next ty loc)
+    collectOnExpr rx (wx |> onExpr body) next
 
   | HNavExpr _ -> unreachable () // HNavExpr is resolved in NameRes, Typing, or RecordRes.
   | HRecordExpr _ -> unreachable () // HRecordExpr is resolved in RecordRes.
 
-let monify (decls: HExpr list, tyCtx: TyCtx) : HExpr list * TyCtx =
-  let monoCtx = ofTyCtx tyCtx |> forceGeneralizeFuns
+let private collectMonoUse (rx: CollectRx) (wx: CollectWx) expr : CollectWx = collectOnExpr rx wx expr
 
-  // Monomorphization.
-  let rec go (decls, ctx: MonoCtx) =
-    if not ctx.SomethingHappened then
-      decls, ctx
-    else if ctx.InfiniteLoopDetector > 1000000 then
-      failwith "Infinite loop in monomorphization"
+// -----------------------------------------------
+// Rewrite
+// -----------------------------------------------
+
+// Rewrite step does:
+//
+// - replace all use of generic functions with monomorphized instance
+// - remove all let-fun of generic functions.
+
+/// Read-only context of rewrite step.
+type private RewriteRx =
+  { GetFunIdent: FunSerial -> Ident
+    IsGenericFun: FunSerial -> bool
+    InstanceMap: TreeMap<MonoUse, FunSerial> }
+
+let private rewriteExpr (rx: RewriteRx) expr : HExpr =
+  let onExpr expr = rewriteExpr rx expr
+  let onExprs exprs = exprs |> List.map (rewriteExpr rx)
+
+  let isGenericFun funSerial = rx.IsGenericFun funSerial
+
+  let getGenericInstance monoUse loc : FunSerial =
+    match rx.InstanceMap |> TMap.tryFind monoUse with
+    | Some it -> it
+
+    | None ->
+      let funSerial, _ = monoUse
+
+      printfn
+        "assertion violation: monomorphized instance should have been generated for %s #%d at %s"
+        (rx.GetFunIdent funSerial)
+        (funSerialToInt funSerial)
+        (locToString loc)
+
+      assert false
+      exit 1
+
+  match expr with
+  | HLitExpr _
+  | HVarExpr _
+  | HVariantExpr _
+  | HPrimExpr _ -> expr
+
+  | HFunExpr (_, _, [], _) -> expr
+
+  | HFunExpr (funSerial, ty, tyArgs, loc) ->
+    let monoFunSerial =
+      getGenericInstance (funSerial, tyArgs) loc
+
+    HFunExpr(monoFunSerial, ty, [], loc)
+
+  | HMatchExpr (cond, arms, ty, loc) ->
+    let arms = arms |> List.map (hArmMap id onExpr)
+    HMatchExpr(onExpr cond, arms, ty, loc)
+
+  | HNodeExpr (kind, items, ty, loc) -> HNodeExpr(kind, onExprs items, ty, loc)
+  | HBlockExpr (stmts, last) -> HBlockExpr(onExprs stmts, onExpr last)
+
+  | HLetValExpr (pat, body, next, ty, loc) -> HLetValExpr(pat, onExpr body, onExpr next, ty, loc)
+
+  | HLetFunExpr (callee, args, body, next, ty, loc) ->
+    if isGenericFun callee then
+      onExpr next
     else
-      let ctx =
-        { ctx with
-            SomethingHappened = false
-            InfiniteLoopDetector = ctx.InfiniteLoopDetector + 1 }
+      HLetFunExpr(callee, args, onExpr body, onExpr next, ty, loc)
 
-      (decls, ctx) |> stMap monifyExpr |> go
+  | HNavExpr _ -> unreachable () // HNavExpr is resolved in NameRes, Typing, or RecordRes.
+  | HRecordExpr _ -> unreachable () // HRecordExpr is resolved in RecordRes.
 
-  let decls, monoCtx = go (decls, monoCtx)
+// -----------------------------------------------
+// Generation
+// -----------------------------------------------
 
-  // Remove generic function definitions.
-  // WARNING: Bad kind of code reuse.
-  let decls, monoCtx =
-    let monoCtx =
-      { monoCtx with
-          Mode = MonoMode.RemoveGenerics }
+/// State of monomorphization.
+type private MonoCtx =
+  { Serial: Serial
+    NewFuns: (FunSerial * FunDef * FunBody * FunSerial * Loc) list
+    InstanceMap: TreeMap<MonoUse, FunSerial>
+    WorkList: MonoUse list }
 
-    (decls, monoCtx) |> stMap monifyExpr
+let private generateMonomorphizedFun
+  isMetaTy
+  mangle
+  (genericFunDef: FunDef)
+  (genericFunBody: FunBody)
+  (monoTyArgs: Ty list)
+  =
+  let assertNoMetaTy monoFunTy =
+    if monoFunTy |> tyIsMonomorphic |> not then
+      let (TyScheme (tyVars, genericFunTy)) = genericFunDef.Ty
 
-  let tyCtx =
-    { tyCtx with
-        Serial = monoCtx.Serial
-        Funs = monoCtx.Funs
-        Tys = monoCtx.Tys }
+      printfn
+        "assertion violation\n  %s at %s\n  : %s => %s\n  tyArgs %s\n  monoTy = %s"
+        genericFunDef.Name
+        (locToString genericFunDef.Loc)
+        (objToString tyVars)
+        (objToString genericFunTy)
+        (objToString monoTyArgs)
+        (objToString monoFunTy)
 
-  decls, tyCtx
+      assert (tyIsMonomorphic monoFunTy)
+
+  let monoFunDef: FunDef =
+    let monoFunTy = tyAssign genericFunDef.Ty monoTyArgs
+    assertNoMetaTy monoFunTy
+
+    { genericFunDef with
+        Prefix = mangle monoFunTy :: genericFunDef.Prefix
+        Ty = TyScheme([], monoFunTy)
+        Linkage = InternalLinkage } // Generic function can't have stable linkage.
+
+  let monoFunBody =
+    let (FunBody (genericArgPats, genericBody)) = genericFunBody
+
+    let assignment =
+      let (TyScheme (tyVars, _)) = genericFunDef.Ty
+      getTyAssignment tyVars monoTyArgs
+
+    let substOrDegenerateTy ty =
+      let substMeta tySerial =
+        match assignment |> TMap.tryFind tySerial with
+        | (Some _) as it -> it
+        | None -> Some(if isMetaTy tySerial then ty else tyUnit)
+
+      tySubst substMeta ty
+
+    let monoArgPats =
+      genericArgPats
+      |> List.map (patMap substOrDegenerateTy)
+
+    let monoBody =
+      genericBody |> exprMap substOrDegenerateTy
+
+    FunBody(monoArgPats, monoBody)
+
+  monoFunDef, monoFunBody
+
+let private generate isMetaTy mangle (rx: CollectRx) genericFunBodyMap (ctx: MonoCtx) (entry: MonoUse) : MonoCtx =
+  let funSerial, monoTyArgs = entry
+
+  match ctx.InstanceMap |> TMap.tryFind entry with
+  | Some _ -> ctx
+
+  | None ->
+    let genericFunDef = rx.Funs |> mapFind funSerial
+
+    let monoFunDef, monoFunBody =
+      let _, genericFunBody = genericFunBodyMap |> mapFind funSerial
+      generateMonomorphizedFun isMetaTy mangle genericFunDef genericFunBody monoTyArgs
+
+    let workList =
+      let (FunBody (_, body)) = monoFunBody
+
+      let wx =
+        { emptyCollectWx with UseSiteTys = ctx.WorkList }
+
+      let wx = collectMonoUse rx wx body
+      wx.UseSiteTys
+
+    let monoFunSerial = FunSerial(ctx.Serial + 1)
+
+    { ctx with
+        Serial = ctx.Serial + 1
+        NewFuns =
+          (monoFunSerial, monoFunDef, monoFunBody, funSerial, genericFunDef.Loc)
+          :: ctx.NewFuns
+        InstanceMap = ctx.InstanceMap |> TMap.add entry monoFunSerial
+        WorkList = workList }
+
+// -----------------------------------------------
+// Interface
+// -----------------------------------------------
+
+let monify (modules: HProgram, hirCtx: HirCtx) : HProgram * HirCtx =
+  let getFunIdent funSerial =
+    let funDef = hirCtx.Funs |> mapFind funSerial
+    let serial = string (funSerialToInt funSerial)
+    let loc = locToString funDef.Loc
+
+    funDef.Name + " #" + serial + " " + loc
+
+  // #tyNames
+  let tyNames =
+    hirCtx.Tys
+    |> TMap.fold
+         (fun tyNames tySerial tyDef ->
+           let tk, name =
+             match tyDef with
+             | UnionTyDef (ident, _, _, _) -> UnionTk tySerial, ident
+             | RecordTyDef (ident, _, _, _) -> RecordTk tySerial, ident
+             | MetaTyDef _ -> unreachable () // Resolved in Typing.
+
+           tyNames |> TMap.add (Ty(tk, [])) name)
+         (TMap.empty tyCompare)
+
+  // Analyze initially.
+  let initialWorkList, genericFunBodyMap =
+    let collectWx =
+      modules
+      |> List.mapi (fun moduleId (m: HModule) -> moduleId, m)
+      |> List.fold
+           (fun wx (moduleId, m: HModule) ->
+             let collectRx: CollectRx =
+               { CurrentModuleId = moduleId
+                 Funs = hirCtx.Funs }
+
+             m.Stmts |> List.fold (collectMonoUse collectRx) wx)
+           emptyCollectWx
+
+    collectWx.UseSiteTys, collectWx.GenericFunBody
+
+  let isGenericFun funSerial =
+    genericFunBodyMap |> TMap.containsKey funSerial
+
+  // Repeat to generate.
+  let isMetaTy tySerial =
+    match hirCtx.Tys |> TMap.tryFind tySerial with
+    | Some (MetaTyDef ty) ->
+      // FIXME: remove this
+      printfn "meta #%d %s" tySerial (objToString ty)
+      assert false
+      true
+
+    | _ -> false
+
+  let rec go workList (ctx: MonoCtx) : MonoCtx =
+    match workList with
+    | [] ->
+      if ctx.WorkList |> List.isEmpty then
+        ctx
+      else
+        let workList, ctx =
+          ctx.WorkList, { ctx with WorkList = [] }
+
+        go workList ctx
+
+    | item :: workList ->
+      // Module id is unused.
+      let collectRx: CollectRx =
+        { CurrentModuleId = -1
+          Funs = hirCtx.Funs }
+
+      let mangle ty =
+        // FIXME: keep memoization state of mangle
+        tyMangle (ty, tyNames) |> fst
+
+      go workList (generate isMetaTy mangle collectRx genericFunBodyMap ctx item)
+
+  let ctx =
+    let ctx: MonoCtx =
+      { Serial = hirCtx.Serial
+        NewFuns = []
+        InstanceMap = TMap.empty monoUseCompare
+        WorkList = [] }
+
+    go initialWorkList ctx
+
+  // Split monomorphized instances into modules.
+  let newFunsPerModule =
+    ctx.NewFuns
+    |> List.map (fun (funSerial, _, body, genericFunSerial, loc) ->
+      let moduleId, _ =
+        genericFunBodyMap |> mapFind genericFunSerial
+
+      moduleId, (funSerial, body, loc))
+    |> multimapOfList compare
+
+  // Rewrite.
+  let modules =
+    modules
+    |> List.mapi (fun moduleId (m: HModule) ->
+      let funBodies =
+        newFunsPerModule
+        |> multimapFind moduleId
+        |> List.map (fun (funSerial, body, loc) ->
+          let (FunBody (args, body)) = body
+          HLetFunExpr(funSerial, args, body, hxUnit loc, tyUnit, loc))
+
+      let stmts = List.append funBodies m.Stmts
+
+      let stmts =
+        let rx: RewriteRx =
+          { GetFunIdent = getFunIdent
+            IsGenericFun = isGenericFun
+            InstanceMap = ctx.InstanceMap }
+
+        stmts |> List.map (rewriteExpr rx)
+
+      { m with Stmts = stmts })
+
+  // Merge.
+  let hirCtx: HirCtx =
+    let funs =
+      hirCtx.Funs
+      |> TMap.filter (fun funSerial _ -> funSerial |> isGenericFun |> not)
+
+    // #map_merge
+    let funs =
+      ctx.NewFuns
+      |> List.fold (fun funs (funSerial, funDef, _, _, _) -> funs |> TMap.add funSerial funDef) funs
+
+    { hirCtx with
+        Serial = ctx.Serial
+        Funs = funs }
+
+  modules, hirCtx

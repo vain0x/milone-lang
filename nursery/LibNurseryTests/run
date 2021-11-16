@@ -1,0 +1,7 @@
+#!/bin/sh
+
+set -eu
+
+TARGET=$PWD/../target/LibNurseryTests
+
+milone run --target-dir "$TARGET" $PWD

@@ -3,26 +3,14 @@
 /// Provides types and functions for high-level intermediate representation (HIR).
 ///
 /// HIR is functional-style. Similar to milone-lang's syntax.
-///
-/// ## Lifecycle
-///
-/// HIR is generated in `AstToHir` for each file
-/// and all modules of a project are *concatenated* in `AstBundle`.
-///
-/// Most of analysis (for error reporting and soundness)
-/// and transformations (for code generation) are performed on it.
-///
-/// Finally HIR is converted to MIR in `MirGen`.
-///
-/// See `Cli.fs` for details.
 module rec MiloneTranslation.Hir
 
 open MiloneShared.SharedTypes
 open MiloneShared.TypeFloat
 open MiloneShared.TypeIntegers
 open MiloneShared.Util
+open MiloneStd.StdMap
 
-module TMap = MiloneStd.StdMap
 module S = MiloneStd.StdString
 
 // -----------------------------------------------
@@ -45,7 +33,7 @@ type FunSerial = FunSerial of Serial
 type VariantSerial = VariantSerial of Serial
 
 /// Type constructor.
-[<Struct; NoEquality; NoComparison>]
+[<NoEquality; NoComparison>]
 type Tk =
   | IntTk of intFlavor: IntFlavor
   | FloatTk of floatFlavor: FloatFlavor
@@ -60,7 +48,6 @@ type Tk =
   | TupleTk
 
   /// Ty args must be `[t]`.
-  | OptionTk
   | ListTk
 
   // FFI types.
@@ -81,8 +68,7 @@ type Ty =
   | Ty of Tk * tyArgs: Ty list
 
 /// Potentially polymorphic type.
-[<Struct>]
-[<NoEquality; NoComparison>]
+[<Struct; NoEquality; NoComparison>]
 type TyScheme = TyScheme of tyVars: TySerial list * Ty
 
 /// Type definition.
@@ -91,9 +77,9 @@ type TyDef =
   /// Bound type variable.
   | MetaTyDef of Ty
 
-  | UnionTyDef of Ident * VariantSerial list * Loc
+  | UnionTyDef of Ident * tyArgs: TySerial list * VariantSerial list * Loc
 
-  | RecordTyDef of Ident * fields: (Ident * Ty * Loc) list * Loc
+  | RecordTyDef of Ident * fields: (Ident * Ty * Loc) list * IsCRepr * Loc
 
 /// Definition of named value in HIR.
 [<RequireQualifiedAccess; NoEquality; NoComparison>]
@@ -101,7 +87,11 @@ type VarDef =
   { Name: Ident
     IsStatic: IsStatic
     Linkage: Linkage
+
+    /// Remark: After monomorphization, variables occur in multiple monomorphized instances
+    ///         and Ty field can contain undefined type variables. It shouldn't be used.
     Ty: Ty
+
     Loc: Loc }
 
 [<RequireQualifiedAccess; NoEquality; NoComparison>]
@@ -111,6 +101,7 @@ type FunDef =
     Ty: TyScheme
     Abi: FunAbi
     Linkage: Linkage
+    Prefix: string list
     Loc: Loc }
 
 [<RequireQualifiedAccess; NoEquality; NoComparison>]
@@ -125,25 +116,14 @@ type VariantDef =
     PayloadTy: Ty
     Loc: Loc }
 
-[<Struct; NoComparison>]
-type ValueSymbol =
-  | VarSymbol of varSerial: VarSerial
-  | FunSymbol of funSerial: FunSerial
-  | VariantSymbol of variantSerial: VariantSerial
-
 /// Kind of HNodePat.
-[<Struct; NoEquality; NoComparison>]
+[<NoEquality; NoComparison>]
 type HPatKind =
   /// `[]`.
   | HNilPN
 
   /// `p1 :: p2`.
   | HConsPN
-
-  | HNonePN
-
-  /// `Some p1`.
-  | HSomeAppPN
 
   /// `Variant p1`.
   | HVariantAppPN of variantApp: VariantSerial
@@ -173,7 +153,7 @@ type HPat =
   | HDiscardPat of Ty * Loc
 
   /// Variable pattern.
-  | HVarPat of Vis * VarSerial * Ty * Loc
+  | HVarPat of VarSerial * Ty * Loc
 
   /// Variant name pattern.
   | HVariantPat of VariantSerial * Ty * Loc
@@ -215,10 +195,6 @@ type HPrim =
   // string:
   | StrLength
 
-  // option:
-  | OptionNone
-  | OptionSome
-
   // list:
   | Nil
   | Cons
@@ -232,7 +208,7 @@ type HPrim =
   | PtrRead
   | PtrWrite
 
-[<Struct; NoEquality; NoComparison>]
+[<NoEquality; NoComparison>]
 type HExprKind =
   | HAbortEN
 
@@ -298,7 +274,7 @@ type HExpr =
   | HVarExpr of VarSerial * Ty * Loc
 
   /// Name of function.
-  | HFunExpr of FunSerial * Ty * Loc
+  | HFunExpr of FunSerial * Ty * tyArgs: Ty list * Loc
 
   /// Name of variant.
   | HVariantExpr of VariantSerial * Ty * Loc
@@ -320,22 +296,58 @@ type HExpr =
   | HBlockExpr of HExpr list * HExpr
 
   | HLetValExpr of pat: HPat * init: HExpr * next: HExpr * Ty * Loc
-  | HLetFunExpr of FunSerial * IsRec * Vis * args: HPat list * body: HExpr * next: HExpr * Ty * Loc
+  | HLetFunExpr of FunSerial * args: HPat list * body: HExpr * next: HExpr * Ty * Loc
+
+type VarMap = TreeMap<VarSerial, VarDef>
+type VarNameMap = TreeMap<VarSerial, Ident>
+
+[<RequireQualifiedAccess; NoEquality; NoComparison>]
+type HModule =
+  { DocId: DocId
+
+    /// Non-static variables.
+    Vars: VarMap
+
+    Stmts: HExpr list }
+
+/// Module. Variable info is reduced.
+[<RequireQualifiedAccess; NoEquality; NoComparison>]
+type HModule2 =
+  { DocId: DocId
+
+    /// Non-static variables.
+    Vars: VarNameMap
+
+    Stmts: HExpr list }
 
 /// HIR program. (project name, module name, decls) list.
-type HProgram = (string * string * HExpr list) list
+type HProgram = HModule list
 
-[<RequireQualifiedAccess>]
-[<NoEquality; NoComparison>]
-type MonoMode =
-  | Monify
-  | RemoveGenerics
+// -----------------------------------------------
+// HirCtx
+// -----------------------------------------------
+
+/// Context of HIR program.
+[<RequireQualifiedAccess; NoEquality; NoComparison>]
+type HirCtx =
+  { /// Next serial number.
+    Serial: Serial
+
+    Vars: TreeMap<VarSerial, VarDef>
+    Funs: TreeMap<FunSerial, FunDef>
+    Variants: TreeMap<VariantSerial, VariantDef>
+
+    MainFunOpt: FunSerial option
+
+    Tys: TreeMap<TySerial, TyDef> }
 
 // -----------------------------------------------
 // Types (HIR/MIR)
 // -----------------------------------------------
 
 let tyInt = Ty(IntTk(IntFlavor(Signed, I32)), [])
+
+let tyNativeInt = Ty(IntTk(IntFlavor(Signed, IPtr)), [])
 
 let tyBool = Ty(BoolTk, [])
 
@@ -348,8 +360,6 @@ let tyStr = Ty(StrTk, [])
 let tyObj = Ty(ObjTk, [])
 
 let tyTuple tys = Ty(TupleTk, tys)
-
-let tyOption ty = Ty(OptionTk, [ ty ])
 
 let tyList ty = Ty(ListTk, [ ty ])
 
@@ -366,7 +376,7 @@ let tyUnit = tyTuple []
 
 let tyMeta serial loc = Ty(MetaTk(serial, loc), [])
 
-let tyUnion tySerial = Ty(UnionTk tySerial, [])
+let tyUnion tySerial tyArgs = Ty(UnionTk tySerial, tyArgs)
 
 let tyRecord tySerial = Ty(RecordTk tySerial, [])
 
@@ -377,8 +387,8 @@ let tyRecord tySerial = Ty(RecordTk tySerial, [])
 let tyDefToName tyDef =
   match tyDef with
   | MetaTyDef _ -> "{bound}"
-  | UnionTyDef (name, _, _) -> name
-  | RecordTyDef (name, _, _) -> name
+  | UnionTyDef (name, _, _, _) -> name
+  | RecordTyDef (name, _, _, _) -> name
 
 // -----------------------------------------------
 // Variable definitions (HIR)
@@ -399,14 +409,6 @@ let variantSerialToInt (VariantSerial serial) = serial
 let variantSerialCompare l r =
   compare (variantSerialToInt l) (variantSerialToInt r)
 
-let variantDefToVariantTy (variantDef: VariantDef) : Ty =
-  let unionTy = tyUnion variantDef.UnionTySerial
-
-  if variantDef.HasPayload then
-    tyFun variantDef.PayloadTy unionTy
-  else
-    unionTy
-
 // -----------------------------------------------
 // Literals
 // -----------------------------------------------
@@ -415,6 +417,7 @@ let litToTy (lit: Lit) : Ty =
   match lit with
   | BoolLit _ -> tyBool
   | IntLit _ -> tyInt
+  | IntLitWithFlavor (_, flavor) -> Ty(IntTk flavor, [])
   | FloatLit _ -> tyFloat
   | CharLit _ -> tyChar
   | StrLit _ -> tyStr
@@ -425,6 +428,11 @@ let litToTy (lit: Lit) : Ty =
 
 let hpAbort ty loc = HNodePat(HAbortPN, [], ty, loc)
 
+let hpVar varSerial ty loc = HVarPat(varSerial, ty, loc)
+
+let hpVariantApp variantSerial payloadPat ty loc =
+  HNodePat(HVariantAppPN variantSerial, [ payloadPat ], ty, loc)
+
 let hpTuple itemPats loc =
   let tupleTy = itemPats |> List.map patToTy |> tyTuple
   HNodePat(HTuplePN, itemPats, tupleTy, loc)
@@ -433,7 +441,7 @@ let patExtract (pat: HPat) : Ty * Loc =
   match pat with
   | HLitPat (lit, a) -> litToTy lit, a
   | HDiscardPat (ty, a) -> ty, a
-  | HVarPat (_, _, ty, a) -> ty, a
+  | HVarPat (_, ty, a) -> ty, a
   | HVariantPat (_, ty, a) -> ty, a
 
   | HNodePat (_, _, ty, a) -> ty, a
@@ -444,17 +452,31 @@ let patToTy pat = pat |> patExtract |> fst
 
 let patToLoc pat = pat |> patExtract |> snd
 
-let patMap (f: Ty -> Ty) (g: Loc -> Loc) (pat: HPat) : HPat =
+let patFold (onVar: 'S -> VarSerial -> Ty -> 'S) (state: 'S) (pat: HPat) : 'S =
+  let rec go state pat =
+    match pat with
+    | HLitPat _
+    | HDiscardPat _
+    | HVariantPat _ -> state
+
+    | HVarPat (serial, ty, _) -> onVar state serial ty
+    | HNodePat (_, args, _, _) -> List.fold go state args
+    | HAsPat (bodyPat, serial, _) -> go (onVar state serial (patToTy bodyPat)) bodyPat
+    | HOrPat (l, r, _) -> go (go state l) r
+
+  go state pat
+
+let patMap (f: Ty -> Ty) (pat: HPat) : HPat =
   let rec go pat =
     match pat with
-    | HLitPat (lit, a) -> HLitPat(lit, g a)
-    | HDiscardPat (ty, a) -> HDiscardPat(f ty, g a)
-    | HVarPat (vis, serial, ty, a) -> HVarPat(vis, serial, f ty, g a)
-    | HVariantPat (serial, ty, a) -> HVariantPat(serial, f ty, g a)
+    | HLitPat (lit, a) -> HLitPat(lit, a)
+    | HDiscardPat (ty, a) -> HDiscardPat(f ty, a)
+    | HVarPat (serial, ty, a) -> HVarPat(serial, f ty, a)
+    | HVariantPat (serial, ty, a) -> HVariantPat(serial, f ty, a)
 
-    | HNodePat (kind, args, ty, a) -> HNodePat(kind, List.map go args, f ty, g a)
-    | HAsPat (bodyPat, serial, a) -> HAsPat(go bodyPat, serial, g a)
-    | HOrPat (l, r, a) -> HOrPat(go l, go r, g a)
+    | HNodePat (kind, args, ty, a) -> HNodePat(kind, List.map go args, f ty, a)
+    | HAsPat (bodyPat, serial, a) -> HAsPat(go bodyPat, serial, a)
+    | HOrPat (l, r, a) -> HOrPat(go l, go r, a)
 
   go pat
 
@@ -489,10 +511,9 @@ let private doNormalizePats pats =
     let headPats = patNormalize headPat
 
     doNormalizePats tailPats
-    |> List.collect
-         (fun tailPats ->
-           headPats
-           |> List.map (fun headPat -> headPat :: tailPats))
+    |> List.collect (fun tailPats ->
+      headPats
+      |> List.map (fun headPat -> headPat :: tailPats))
 
 /// Gets whether a pattern is clearly exhaustive, that is,
 /// pattern matching on it always succeeds (assuming type check is passing).
@@ -514,8 +535,6 @@ let patIsClearlyExhaustive isNewtypeVariant pat =
 
       | HNilPN, _
       | HConsPN, _
-      | HNonePN, _
-      | HSomeAppPN, _
       | HVariantAppPN _, _ -> false
 
       | HTuplePN, _
@@ -564,7 +583,7 @@ let exprExtract (expr: HExpr) : Ty * Loc =
   match expr with
   | HLitExpr (lit, a) -> litToTy lit, a
   | HVarExpr (_, ty, a) -> ty, a
-  | HFunExpr (_, ty, a) -> ty, a
+  | HFunExpr (_, ty, _, a) -> ty, a
   | HVariantExpr (_, ty, a) -> ty, a
   | HPrimExpr (_, ty, a) -> ty, a
   | HRecordExpr (_, _, ty, a) -> ty, a
@@ -573,40 +592,41 @@ let exprExtract (expr: HExpr) : Ty * Loc =
   | HNodeExpr (_, _, ty, a) -> ty, a
   | HBlockExpr (_, last) -> exprExtract last
   | HLetValExpr (_, _, _, ty, a) -> ty, a
-  | HLetFunExpr (_, _, _, _, _, _, ty, a) -> ty, a
+  | HLetFunExpr (_, _, _, _, ty, a) -> ty, a
 
-let exprMap (f: Ty -> Ty) (g: Loc -> Loc) (expr: HExpr) : HExpr =
-  let goPat pat = patMap f g pat
+let hArmMap (onPat: HPat -> HPat) (onExpr: HExpr -> HExpr) (arm: HPat * HExpr * HExpr) =
+  let pat, guard, body = arm
+  onPat pat, onExpr guard, onExpr body
+
+let exprMap (f: Ty -> Ty) (expr: HExpr) : HExpr =
+  let goPat pat = patMap f pat
 
   let rec go expr =
     match expr with
-    | HLitExpr (lit, a) -> HLitExpr(lit, g a)
-    | HVarExpr (serial, ty, a) -> HVarExpr(serial, f ty, g a)
-    | HFunExpr (serial, ty, a) -> HFunExpr(serial, f ty, g a)
-    | HVariantExpr (serial, ty, a) -> HVariantExpr(serial, f ty, g a)
-    | HPrimExpr (prim, ty, a) -> HPrimExpr(prim, f ty, g a)
+    | HLitExpr (lit, a) -> HLitExpr(lit, a)
+    | HVarExpr (serial, ty, a) -> HVarExpr(serial, f ty, a)
+    | HFunExpr (serial, ty, tyArgs, a) -> HFunExpr(serial, f ty, List.map f tyArgs, a)
+    | HVariantExpr (serial, ty, a) -> HVariantExpr(serial, f ty, a)
+    | HPrimExpr (prim, ty, a) -> HPrimExpr(prim, f ty, a)
 
     | HRecordExpr (baseOpt, fields, ty, a) ->
       let baseOpt = baseOpt |> Option.map go
 
       let fields =
         fields
-        |> List.map (fun (name, init, a) -> name, go init, g a)
+        |> List.map (fun (name, init, a) -> name, go init, a)
 
-      HRecordExpr(baseOpt, fields, f ty, g a)
+      HRecordExpr(baseOpt, fields, f ty, a)
 
     | HMatchExpr (cond, arms, ty, a) ->
-      let arms =
-        arms
-        |> List.map (fun (pat, guard, body) -> goPat pat, go guard, go body)
-
-      HMatchExpr(go cond, arms, f ty, g a)
-    | HNavExpr (sub, mes, ty, a) -> HNavExpr(go sub, mes, f ty, g a)
-    | HNodeExpr (kind, args, resultTy, a) -> HNodeExpr(kind, List.map go args, f resultTy, g a)
+      let arms = arms |> List.map (hArmMap goPat go)
+      HMatchExpr(go cond, arms, f ty, a)
+    | HNavExpr (sub, mes, ty, a) -> HNavExpr(go sub, mes, f ty, a)
+    | HNodeExpr (kind, args, resultTy, a) -> HNodeExpr(kind, List.map go args, f resultTy, a)
     | HBlockExpr (stmts, last) -> HBlockExpr(List.map go stmts, go last)
-    | HLetValExpr (pat, init, next, ty, a) -> HLetValExpr(goPat pat, go init, go next, f ty, g a)
-    | HLetFunExpr (serial, isRec, vis, args, body, next, ty, a) ->
-      HLetFunExpr(serial, isRec, vis, List.map goPat args, go body, go next, f ty, g a)
+    | HLetValExpr (pat, init, next, ty, a) -> HLetValExpr(goPat pat, go init, go next, f ty, a)
+    | HLetFunExpr (serial, args, body, next, ty, a) ->
+      HLetFunExpr(serial, List.map goPat args, go body, go next, f ty, a)
 
   go expr
 
@@ -618,26 +638,20 @@ let exprToLoc expr =
   let _, loc = exprExtract expr
   loc
 
-// ===============================================
-// patchwork
+// -----------------------------------------------
+// HProgram
+// -----------------------------------------------
 
-[<RequireQualifiedAccess; NoEquality; NoComparison>]
-type TyCtx =
-  {
-    /// Next serial number.
-    /// We need to identify variables by serial number rather than names
-    /// due to scope locality and shadowing.
-    Serial: Serial
+let emptyVars: TreeMap<VarSerial, VarDef> = TMap.empty varSerialCompare
 
-    /// Variable serial to variable definition.
-    Vars: AssocMap<VarSerial, VarDef>
-    Funs: AssocMap<FunSerial, FunDef>
-    Variants: AssocMap<VariantSerial, VariantDef>
+module HProgram =
+  let mapExpr (f: HExpr -> HExpr) (program: HProgram) : HProgram =
+    program
+    |> List.map (fun (m: HModule) -> { m with Stmts = m.Stmts |> List.map f })
 
-    MainFunOpt: FunSerial option
-
-    /// Type serial to type definition.
-    Tys: AssocMap<TySerial, TyDef> }
+  let foldExpr (f: 'S -> HExpr -> 'S) (state: 'S) (program: HProgram) : 'S =
+    program
+    |> List.fold (fun (state: 'S) (m: HModule) -> m.Stmts |> List.fold f state) state
 
 // -----------------------------------------------
 // Tk
@@ -664,7 +678,6 @@ let private tkEncode tk : int =
   | ObjTk -> just 6
   | FunTk -> just 7
   | TupleTk -> just 8
-  | OptionTk -> just 9
   | ListTk -> just 10
 
   | VoidTk -> just 11
@@ -698,7 +711,6 @@ let tkDisplay getTyName tk =
   | ObjTk -> "obj"
   | FunTk -> "fun"
   | TupleTk -> "tuple"
-  | OptionTk -> "option"
   | ListTk -> "list"
   | VoidTk -> "void"
   | NativePtrTk IsMut -> "nativeptr"
@@ -712,6 +724,8 @@ let tkDisplay getTyName tk =
 // -----------------------------------------------
 // Types (HIR/MIR)
 // -----------------------------------------------
+
+let noTy: Ty = Ty(NativeTypeTk "__no_use", [])
 
 let tyIsUnit ty =
   match ty with
@@ -819,7 +833,7 @@ let tyGeneralize (isOwned: TySerial -> bool) (ty: Ty) : TyScheme =
 /// Generates a unique name from a type.
 ///
 /// Must be used after successful Typing.
-let tyMangle (ty: Ty, memo: AssocMap<Ty, string>) : string * AssocMap<Ty, string> =
+let tyMangle (ty: Ty, memo: TreeMap<Ty, string>) : string * TreeMap<Ty, string> =
   let rec go ty ctx =
     let (Ty (tk, tyArgs)) = ty
 
@@ -836,7 +850,7 @@ let tyMangle (ty: Ty, memo: AssocMap<Ty, string>) : string * AssocMap<Ty, string
       let tyArgs, ctx = mangleList tyArgs ctx
       S.concat "" tyArgs + (name + string arity), ctx
 
-    let doMangle () : string * AssocMap<_, _> =
+    let doMangle () : string * TreeMap<_, _> =
       match tk with
       | IntTk flavor -> cIntegerTyPascalName flavor, ctx
       | FloatTk flavor -> cFloatTyPascalName flavor, ctx
@@ -850,7 +864,6 @@ let tyMangle (ty: Ty, memo: AssocMap<Ty, string>) : string * AssocMap<Ty, string
       | TupleTk when List.isEmpty tyArgs -> "Unit", ctx
       | TupleTk -> variadicGeneric "Tuple"
 
-      | OptionTk -> fixedGeneric "Option"
       | ListTk -> fixedGeneric "List"
 
       | VoidTk -> "Void", ctx
@@ -874,7 +887,11 @@ let tyMangle (ty: Ty, memo: AssocMap<Ty, string>) : string * AssocMap<Ty, string
         funTy, ctx
 
       | UnionTk _
-      | RecordTk _ -> unreachable () // Must be stored in memo.
+      | RecordTk _ ->
+        // Name must be stored in memo if monomorphic.
+        assert (List.isEmpty tyArgs |> not)
+        let name = memo |> mapFind (Ty(tk, []))
+        variadicGeneric name
 
     // Memoization.
     match TMap.tryFind ty ctx with
@@ -890,6 +907,7 @@ let tyMangle (ty: Ty, memo: AssocMap<Ty, string>) : string * AssocMap<Ty, string
 // Unification
 // -----------------------------------------------
 
+[<NoEquality; NoComparison>]
 type UnifyResult =
   | UnifyOk
   | UnifyOkWithStack of (Ty * Ty) list

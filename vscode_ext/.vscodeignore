@@ -1,4 +1,5 @@
 .vscode
+Makefile
 node_modules
 out
 src

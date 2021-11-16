@@ -39,11 +39,17 @@
 /// so that chain of let expressions to be flat.
 module rec MiloneTranslation.Hoist
 
+// FIXME: Wording should be fixed.
+//        "Declarations" above denotes to syntaxes that
+//        introduce some symbols (and don't compute things)
+//        such as let-val, let-fun and type-stmt.
+//        Now I'm using "statements" for such syntax now.
+
 open MiloneShared.SharedTypes
 open MiloneShared.Util
 open MiloneTranslation.Hir
 
-let private hxDummy : HExpr = hxUnit noLoc
+let private hxDummy: HExpr = hxUnit noLoc
 
 let private hxBlock stmts last : HExpr =
   match stmts with
@@ -60,7 +66,7 @@ type private HoistCtx =
     Stmts: HExpr list
     MainFunOpt: FunSerial option }
 
-let private hoistCtxEmpty : HoistCtx =
+let private hoistCtxEmpty: HoistCtx =
   { Decls = []
     Stmts = []
     MainFunOpt = None }
@@ -86,23 +92,23 @@ let private takeDecls (ctx: HoistCtx) : HExpr list * HoistCtx =
 /// Processes a let-fun of non-main function.
 /// Returns `next`, which is not processed.
 let private hoistExprLetFunForNonMainFun (expr, ctx) : HExpr * HoistCtx =
-  let callee, isRec, vis, args, body, next, loc =
+  let callee, args, body, next, loc =
     match expr with
-    | HLetFunExpr (callee, isRec, vis, args, body, next, _, loc) -> callee, isRec, vis, args, body, next, loc
+    | HLetFunExpr (callee, args, body, next, _, loc) -> callee, args, body, next, loc
     | _ -> unreachable ()
 
   let body, ctx = (body, ctx) |> hoistBlock
 
   let ctx =
     ctx
-    |> addDecl (HLetFunExpr(callee, isRec, vis, args, body, hxDummy, tyUnit, loc))
+    |> addDecl (HLetFunExpr(callee, args, body, hxDummy, tyUnit, loc))
 
   next, ctx
 
 /// Checks if an expression is let-fun of main function.
 let private isMainFun expr (ctx: HoistCtx) : bool =
   match expr with
-  | HLetFunExpr (callee, _, _, _, _, _, _, _) ->
+  | HLetFunExpr (callee, _, _, _, _, _) ->
     match ctx.MainFunOpt with
     | Some mainFun -> funSerialCompare mainFun callee = 0
     | _ -> false
@@ -111,22 +117,22 @@ let private isMainFun expr (ctx: HoistCtx) : bool =
 
 /// Processes a let-fun of the main function.
 let private hoistExprLetFunForMainFun (expr, ctx: HoistCtx) : HoistCtx =
-  let callee, isRec, vis, args, body, next, loc =
+  let callee, args, body, next, loc =
     match expr with
-    | HLetFunExpr (callee, isRec, vis, args, body, next, _, loc) -> callee, isRec, vis, args, body, next, loc
+    | HLetFunExpr (callee, args, body, next, _, loc) -> callee, args, body, next, loc
     | _ -> unreachable ()
 
   let body, (ctx: HoistCtx) = (body, ctx) |> hoistBlock
 
   // Go to the end to process all toplevel expressions.
-  let ctx : HoistCtx = (next, ctx) |> hoistExprToplevel
+  let ctx: HoistCtx = (next, ctx) |> hoistExprToplevel
 
   // Body of the main function starts with a sequence of toplevel non-declaration expressions.
   let stmts, ctx = takeStmts ctx
   let body = hxBlock stmts body
 
   ctx
-  |> addDecl (HLetFunExpr(callee, isRec, vis, args, body, hxDummy, tyUnit, loc))
+  |> addDecl (HLetFunExpr(callee, args, body, hxDummy, tyUnit, loc))
 
 // -----------------------------------------------
 // Control
@@ -141,43 +147,31 @@ let private hoistExpr (expr, ctx) : HExpr * HoistCtx =
   | HPrimExpr _ -> expr, ctx
 
   | HMatchExpr (cond, arms, ty, loc) ->
-    invoke
-      (fun () ->
-        let go ((pat, guard, body), ctx) =
-          let guard, ctx = hoistBlock (guard, ctx)
-          let body, ctx = hoistBlock (body, ctx)
-          (pat, guard, body), ctx
+    let go ((pat, guard, body), ctx) =
+      let guard, ctx = hoistBlock (guard, ctx)
+      let body, ctx = hoistBlock (body, ctx)
+      (pat, guard, body), ctx
 
-        let cond, ctx = hoistExpr (cond, ctx)
-        let arms, ctx = (arms, ctx) |> stMap go
-        HMatchExpr(cond, arms, ty, loc), ctx)
+    let cond, ctx = hoistExpr (cond, ctx)
+    let arms, ctx = (arms, ctx) |> stMap go
+    HMatchExpr(cond, arms, ty, loc), ctx
 
   | HNodeExpr (kind, items, ty, loc) ->
-    invoke
-      (fun () ->
-        let items, ctx = (items, ctx) |> stMap hoistExpr
-        HNodeExpr(kind, items, ty, loc), ctx)
+    let items, ctx = (items, ctx) |> stMap hoistExpr
+    HNodeExpr(kind, items, ty, loc), ctx
 
   | HBlockExpr (stmts, last) ->
     let ctx = stmts |> List.fold hoistStmt ctx
     (last, ctx) |> hoistExpr
 
-  | HLetValExpr _ ->
-    invoke
-      (fun () ->
-        let pat, init, next, loc =
-          match expr with
-          | HLetValExpr (pat, init, next, _, loc) -> pat, init, next, loc
-          | _ -> unreachable ()
+  | HLetValExpr (pat, init, next, _, loc) ->
+    let init, ctx = (init, ctx) |> hoistExpr
 
-        let init, ctx = (init, ctx) |> hoistExpr
+    let ctx =
+      ctx
+      |> addStmt (HLetValExpr(pat, init, hxDummy, tyUnit, loc))
 
-        let ctx =
-          ctx
-          |> addStmt (HLetValExpr(pat, init, hxDummy, tyUnit, loc))
-
-        next, ctx)
-    |> hoistExpr
+    hoistExpr (next, ctx)
 
   | HLetFunExpr _ ->
     (expr, ctx)
@@ -190,28 +184,20 @@ let private hoistExpr (expr, ctx) : HExpr * HoistCtx =
 let private hoistExprToplevel (expr, ctx) : HoistCtx =
   match expr with
   | HBlockExpr (stmts, last) ->
-    invoke
-      (fun () ->
-        let ctx = stmts |> List.fold hoistStmt ctx
-        last, ctx)
-    |> hoistExprToplevel
+    let ctx =
+      stmts
+      |> List.fold (fun ctx stmt -> hoistExprToplevel (stmt, ctx)) ctx
 
-  | HLetValExpr _ ->
-    invoke
-      (fun () ->
-        let pat, init, next, loc =
-          match expr with
-          | HLetValExpr (pat, init, next, _, loc) -> pat, init, next, loc
-          | _ -> unreachable ()
+    hoistExprToplevel (last, ctx)
 
-        let init, ctx = (init, ctx) |> hoistBlock
+  | HLetValExpr (pat, init, next, _, loc) ->
+    let init, ctx = (init, ctx) |> hoistBlock
 
-        let ctx =
-          ctx
-          |> addStmt (HLetValExpr(pat, init, hxDummy, tyUnit, loc))
+    let ctx =
+      ctx
+      |> addStmt (HLetValExpr(pat, init, hxDummy, tyUnit, loc))
 
-        next, ctx)
-    |> hoistExprToplevel
+    hoistExprToplevel (next, ctx)
 
   | HLetFunExpr _ when isMainFun expr ctx -> hoistExprLetFunForMainFun (expr, ctx)
 
@@ -240,21 +226,29 @@ let private hoistBlock (expr, ctx: HoistCtx) : HExpr * HoistCtx =
 
   hxBlock stmts expr, ctx
 
+let private hoistModule (ctx: HoistCtx) (m: HModule) : HModule * HoistCtx =
+  let ctx =
+    m.Stmts
+    |> List.fold (fun ctx stmt -> hoistExprToplevel (stmt, ctx)) ctx
+
+  let stmts, ctx = takeDecls ctx
+
+  let m = { m with Stmts = stmts }
+  m, ctx
+
 // -----------------------------------------------
 // Interface
 // -----------------------------------------------
 
-let hoist (expr: HExpr, tyCtx: TyCtx) : HExpr list * TyCtx =
+let hoist (modules: HProgram, hirCtx: HirCtx) : HProgram * HirCtx =
   let hoistCtx =
-    { hoistCtxEmpty with
-        MainFunOpt = tyCtx.MainFunOpt }
+    { hoistCtxEmpty with MainFunOpt = hirCtx.MainFunOpt }
 
-  let hoistCtx = (expr, hoistCtx) |> hoistExprToplevel
+  let modules, hoistCtx =
+    modules |> List.mapFold hoistModule hoistCtx
 
   // Toplevel statements should have been moved into the main function.
   if hoistCtx.Stmts |> List.isEmpty |> not then
     unreachable () // Main function not found?
 
-  let decls, _ = takeDecls hoistCtx
-
-  decls, tyCtx
+  modules, hirCtx

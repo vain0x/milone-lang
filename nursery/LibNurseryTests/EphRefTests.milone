@@ -1,0 +1,44 @@
+module rec LibNurseryTests.EphRefTests
+
+open LibNursery.EphArray
+open LibNursery.EphRef
+open LibNursery.EphSerial
+open LibNursery.Impure
+
+module S = MiloneStd.StdString
+
+let private testItWorks (ss: EphSerial) : EphSerial =
+  let (r: EphRef<int>), ss = EphRef.create 2 ss
+  let ok, r = EphRef.alive r
+  assert ok
+
+  // Initial value is stored.
+  let n, r = EphRef.read r
+  assert (n = 2)
+
+  // Update the value.
+  let init = r
+  let r = EphRef.write 3 r
+
+  let n, _ = EphRef.read r
+  assert (n = 3)
+
+  // Old reference is outdated.
+  let initIsAlive, _ = EphRef.alive init
+  assert (not initIsAlive)
+  ss
+
+let private testReplace (ss: EphSerial) : EphSerial =
+  let r, ss = EphRef.create "hello" ss
+  let prev, r = EphRef.replace "bye" r
+  assert (prev = "hello")
+
+  let next, _ = EphRef.read r
+  assert (next = "bye")
+  ss
+
+let testEphRefModule () =
+  EphSerial.run (fun (ss: EphSerial) ->
+    let ss: EphSerial = ss |> testItWorks |> testReplace
+
+    (), ss)

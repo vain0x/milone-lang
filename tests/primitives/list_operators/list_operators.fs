@@ -3,14 +3,14 @@ module rec list_cons.Program
 // List nil constant ([]), cons operator (::), and list literals.
 
 let nilTest () =
-  let nil : int list = []
+  let nil: int list = []
 
   match nil with
   | [] -> ()
   | _ -> assert false
 
 let cons1Test () =
-  let xs : int list = 1 :: []
+  let xs: int list = 1 :: []
 
   match xs with
   | x :: [] -> assert (x = 1)

@@ -1,0 +1,6 @@
+#!/bin/sh
+
+set -eu
+
+# send mail?
+echo 'ERROR: !!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!'

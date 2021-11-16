@@ -2,19 +2,7 @@
 
 set -eu
 
-CC=${CC:-gcc}
-MILONE_HOME=${MILONE_HOME:-$HOME/.milone}
-TARGET="$PWD/target"
+TARGET=$PWD/../target/CmdJsonGet
 
-mkdir -p $TARGET
-
-milone compile $PWD >$TARGET/cmd_json_get.c
-
-$CC -std=gnu11 -fsanitize=address,undefined \
-    -I$MILONE_HOME/runtime \
-    ../vendor/pdjson/pdjson.o \
-    $MILONE_HOME/runtime/milone.c \
-    ../LibJson/lib_json_runtime.c \
-    cmd_json_get_runtime.c \
-    $TARGET/cmd_json_get.c \
-    -o $TARGET/json_get
+milone build --target-dir "$TARGET" $PWD
+cp -f "$TARGET/x86_64-unknown-linux-gnu-debug/CmdJsonGet" "$TARGET/json_get"

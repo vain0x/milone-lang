@@ -3,19 +3,21 @@
 
 set -eu
 
+CC=${CC:-gcc}
+
 mkdir -p vendor
 
 if test -f vendor/sqlite3/sqlite3.o
 then
     echo 'warn: sqlite3 already exists. Remove vendor/sqlite3 to force redo.'
-    exit 0
+    exit
 fi
 
 (
     cd vendor
-    wget 'https://sqlite.org/2021/sqlite-amalgamation-3340100.zip' -O - | busybox unzip -
+    busybox wget 'https://sqlite.org/2021/sqlite-amalgamation-3340100.zip' -O - | busybox unzip -
     mv 'sqlite-amalgamation-3340100' sqlite3
 
     cd sqlite3
-    gcc -O2 -c sqlite3.c -o sqlite3.o
+    CC -O2 -c sqlite3.c -o sqlite3.o
 )

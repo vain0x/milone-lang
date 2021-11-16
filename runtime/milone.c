@@ -3,6 +3,13 @@
 // Some of functions are not declared in milone.h
 // but usable with __nativeFun.
 
+// Use C standard functions only.
+// Other functions that require platform-specific functions are defined in
+// `milone_platform.c`.
+
+// Customization:
+//      Define MILONE_NO_DEFAULT_ALLOCATOR to disable memory allocator API.
+
 #include <assert.h>
 #include <ctype.h>
 #include <errno.h>
@@ -14,15 +21,14 @@
 #include <string.h>
 #include <time.h>
 
-#include <sys/stat.h> // for mkdir; FIXME: portable way
-#include <sys/types.h>
-#include <unistd.h> // for exec
-
 #include <milone.h>
 
 // -----------------------------------------------
 // memory management (memory pool)
 // -----------------------------------------------
+
+size_t milone_mem_heap_size(void);
+size_t milone_mem_alloc_cost(void);
 
 // structure for memory management. poor implementation. thread unsafe.
 struct MemoryChunk {
@@ -50,6 +56,7 @@ static struct MemoryChunk s_heap;
 static size_t s_heap_level; // depth of current region
 static size_t s_heap_size;  // consumed size in all regions
 static size_t s_heap_alloc; // allocated size in all regions
+static size_t s_alloc_cost; // allocation count
 
 _Noreturn static void oom(void) {
     fprintf(stderr, "Out of memory.\n");
@@ -66,7 +73,7 @@ static void free_chunk(struct MemoryChunk *chunk) {
     s_heap_alloc -= chunk->cap;
 }
 
-void milone_enter_region(void) {
+static void do_enter_region(void) {
     // fprintf(stderr, "debug: enter_region level=%d size=%d\n", s_heap_level +
     // 1, s_heap_size);
 
@@ -74,6 +81,7 @@ void milone_enter_region(void) {
     if (parent == NULL) {
         oom();
     }
+    s_alloc_cost++;
 
     *parent = s_heap;
     s_heap = (struct MemoryChunk){.parent = parent};
@@ -81,7 +89,7 @@ void milone_enter_region(void) {
     s_heap_level++;
 }
 
-void milone_leave_region(void) {
+static void do_leave_region(void) {
     // fprintf(stderr, "debug: leave_region level=%d size=%d\n", s_heap_level,
     // s_heap_size);
 
@@ -125,6 +133,7 @@ static void *milone_mem_alloc_slow(size_t total) {
         if (used == NULL) {
             oom();
         }
+        s_alloc_cost++;
 
         *used = s_heap;
         s_heap.used = used;
@@ -141,6 +150,7 @@ static void *milone_mem_alloc_slow(size_t total) {
     if (ptr == NULL) {
         oom();
     }
+    s_alloc_cost++;
     s_heap.ptr = ptr;
     s_heap.len = total;
     s_heap.cap = cap;
@@ -153,7 +163,7 @@ static void *milone_mem_alloc_slow(size_t total) {
     return ptr;
 }
 
-void *milone_mem_alloc(int count, size_t size) {
+static void *do_mem_alloc(int count, size_t size) {
     assert(count > 0 && size > 0);
 
     size_t total = (size_t)count * size;
@@ -170,11 +180,26 @@ void *milone_mem_alloc(int count, size_t size) {
     void *ptr = (char *)s_heap.ptr + s_heap.len;
     s_heap.len += total;
     s_heap_size += total;
+    s_alloc_cost++;
 
     // fprintf(stderr, "debug: alloc level=%d size=%d (%dx%d)\n", s_heap_level,
     // (int)((size_t)count * size), (int)count, (int)size);
     return ptr;
 }
+
+#ifndef MILONE_NO_DEFAULT_ALLOCATOR
+
+size_t milone_mem_heap_size(void) { return s_heap_size; }
+size_t milone_mem_alloc_cost(void) { return s_alloc_cost; }
+
+void milone_enter_region(void) { do_enter_region(); }
+void milone_leave_region(void) { do_leave_region(); }
+
+void *milone_mem_alloc(int count, size_t size) {
+    return do_mem_alloc(count, size);
+}
+
+#endif // MILONE_NO_DEFAULT_ALLOCATOR
 
 // -----------------------------------------------
 // int
@@ -494,6 +519,10 @@ struct String str_of_double(double value) {
     return str_of_raw_parts(buf, n);
 }
 
+struct String str_of_bool(bool value) {
+    return value ? str_borrow("True") : str_borrow("False");
+}
+
 char str_to_char(struct String s) { return s.len >= 1 ? *s.str : '\0'; }
 
 struct String str_of_char(char value) {
@@ -529,6 +558,7 @@ struct String str_concat(struct String sep, struct StringList const *strings) {
         string_builder_append_string(sb, head);
     }
 
+    // #sb_finish
     // Null termination. Technically unnecessary but can skip some cloning.
     assert(sb->len < sb->cap);
     sb->buf[sb->len] = '\0';
@@ -563,67 +593,6 @@ int file_exists(struct String file_name) {
     }
 
     return ok;
-}
-
-// Prepend `base_path` as prefix to the path if it's relative.
-// For absolute path, just return `path`.
-struct String path_join(struct String base_path, struct String path) {
-    assert(base_path.len >= 1 && *base_path.str == '/');
-
-    if (path.len >= 1 && *path.str == '/') {
-        return path;
-    }
-
-    if (base_path.len >= 1 && base_path.str[base_path.len - 1] != '/') {
-        base_path = str_add(base_path, str_borrow("/"));
-    }
-    return str_add(base_path, path);
-}
-
-// Create a directory unless it exists.
-bool dir_create(struct String dir, struct String base_dir) {
-    assert(dir.len != 0);
-
-    dir = path_join(base_dir, dir);
-
-    // Span of absolute path.
-    char const *const al = dir.str;
-    char const *const ar = dir.str + (size_t)dir.len;
-
-    // Start of basename.
-    char const *bl = al;
-
-    while (bl - al < dir.len) {
-        if (*bl == '/') {
-            bl++;
-            continue;
-        }
-
-        // Assume a directory at `dir[..bl]` exists.
-        // Find the range of basename: `bl..br`.
-        char const *br = bl + 1;
-        while (br != ar && *br != '/') {
-            br++;
-        }
-
-        if ((br - bl == 1 && *bl == '.') ||
-            (br - bl == 2 && strncmp(bl, "..", 2) == 0)) {
-            bl = br;
-            continue;
-        }
-
-        // Create the directory at `al..br`.
-        {
-            // FIXME: Unnecessary copying
-            const char *d = str_to_c_str(str_slice(dir, 0, (int)(br - al)));
-
-            if (mkdir(d, 0774) != 0 && errno != EEXIST) {
-                return false;
-            }
-            bl = br;
-        }
-    }
-    return true;
 }
 
 struct String file_read_all_text(struct String file_name) {
@@ -704,6 +673,36 @@ END:
     fclose(fp);
 }
 
+struct String milone_read_stdin_all(void) {
+    char buf[0x1000] = "";
+    struct StringBuilder *sb = string_builder_new_with_capacity(sizeof buf);
+
+    while (true) {
+        if (sb->cap > 10100100) {
+            fprintf(stderr, "error: stdin too long\n");
+            exit(1);
+        }
+
+        size_t read_len = fread(buf, 1, sizeof buf, stdin);
+        if (read_len == 0)
+            break;
+
+        string_builder_append_string(
+            sb, (struct String){.str = buf, .len = (int)read_len});
+    }
+
+    // #sb_finish
+    // Null termination. Technically unnecessary but can skip some cloning.
+    assert(sb->len < sb->cap);
+    sb->buf[sb->len] = '\0';
+
+    return (struct String){.str = sb->buf, .len = sb->len};
+}
+
+// -----------------------------------------------
+// environment
+// -----------------------------------------------
+
 struct String milone_get_env(struct String name) {
     name = str_ensure_null_terminated(name);
 
@@ -713,17 +712,6 @@ struct String milone_get_env(struct String name) {
     }
 
     return str_of_c_str(value);
-}
-
-void execute_into(struct String cmd) {
-    char *argv[] = {
-        "/bin/sh",
-        "-c",
-        (char *)str_to_c_str(cmd),
-        0,
-    };
-
-    execv("/bin/sh", argv);
 }
 
 // -----------------------------------------------
@@ -736,50 +724,87 @@ static long milone_get_time_millis(void) {
     return (long)(t.tv_sec * 1000L + t.tv_nsec / (1000L * 1000L));
 }
 
+static void thousand_sep(long value, char *buf, size_t buf_size) {
+    assert(buf_size >= 14);
+
+    bool neg = value < 0;
+    if (neg)
+        value = -value;
+
+    long kilo = value / 1000;
+    value %= 1000;
+
+    long mega = kilo / 1000;
+    kilo %= 1000;
+
+    size_t written = snprintf(buf, buf_size, "%3u,%03u,%03u", (uint32_t)mega,
+                              (uint32_t)kilo, (uint32_t)value);
+    assert(written < buf_size);
+}
+
 struct Profiler {
+    struct String msg;
+    long start_epoch;
     long epoch;
     size_t heap_size;
+    size_t alloc_cost;
 };
 
 void *milone_profile_init(void) {
     struct Profiler *p = milone_mem_alloc(1, sizeof(struct Profiler));
+    p->msg = str_borrow("start");
     p->epoch = milone_get_time_millis();
-    p->heap_size = s_heap_size;
+    p->start_epoch = p->epoch;
+    p->heap_size = milone_mem_heap_size();
+    p->alloc_cost = milone_mem_alloc_cost();
     return p;
+}
+
+static void milone_profile_print_log(struct String msg, long millis,
+                                     long mem_bytes, long alloc_cost) {
+    msg = str_ensure_null_terminated(msg);
+
+    if (millis < 0) {
+        millis = 0;
+    }
+    long sec = millis / 1000;
+    millis %= 1000;
+    millis /= 10; // 10 ms
+
+    char mem[16];
+    thousand_sep(mem_bytes, mem, sizeof(mem));
+
+    char cost[16];
+    thousand_sep(alloc_cost, cost, sizeof(cost));
+
+    fprintf(stderr, "profile: %-17s time=%4d.%02d mem=%s cost=%s\n", msg.str,
+            (int)sec, (int)millis, mem, cost);
 }
 
 void milone_profile_log(struct String msg, void *profiler) {
     struct Profiler *p = (struct Profiler *)profiler;
 
     long t = milone_get_time_millis();
-    long s = p->epoch;
+    long heap_size = (long)milone_mem_heap_size();
+    long alloc_cost = (long)milone_mem_alloc_cost();
 
-    long millis = t - s;
-    if (millis < 0) {
-        millis = 0;
-    }
+    long time_delta = t - p->epoch;
+    long mem_delta = heap_size - (long)p->heap_size;
+    long alloc_delta = alloc_cost - (long)p->alloc_cost;
 
-    long sec = millis / 1000;
-    millis %= 1000;
+    milone_profile_print_log(p->msg, time_delta, mem_delta, alloc_delta);
 
-    long bytes = (long)s_heap_size - (long)p->heap_size;
-    if (bytes < 0) {
-        bytes = 0;
-    }
-
-    long kilo = bytes / 1000;
-    bytes %= 1000;
-
-    long mega = kilo / 1000;
-    kilo %= 1000;
-
-    double usage = s_heap_alloc == 0 ? 0.0 : (double)s_heap_size / s_heap_alloc;
-    fprintf(stderr, "profile: time=%4d.%03d mem=%5d,%03d,%03d use=%.03f\n%s\n",
-            (int)sec, (int)millis, (int)mega, (int)kilo, (int)bytes, usage,
-            msg.str);
-
+    p->msg = msg;
     p->epoch = t;
-    p->heap_size = s_heap_size;
+    p->heap_size = heap_size;
+    p->alloc_cost = alloc_cost;
+
+    if (str_compare(msg, str_borrow("Finish")) == 0) {
+        fprintf(stderr, "profile: Finish\n");
+        long millis = t - p->start_epoch;
+        milone_profile_print_log(str_borrow("total"), millis, heap_size,
+                                 alloc_cost);
+    }
 }
 
 // -----------------------------------------------

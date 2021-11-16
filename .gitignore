@@ -22,4 +22,8 @@ target
 *.out
 
 tests/**/MiloneCore_*.c
+tests/**/MiloneDerive_*.c
 tests/**/MiloneStd_*.c
+
+tests/examples/*/*.c
+tests/primitives/std_*/*.c

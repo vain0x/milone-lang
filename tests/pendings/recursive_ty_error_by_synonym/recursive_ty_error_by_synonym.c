@@ -1,0 +1,1 @@
+#error recursive_ty_error_by_synonym.recursive_ty_error_by_synonym:5:22 Recursive type occurred while unifying '{?6}@recursive_ty_error_by_synonym.recursive_ty_error_by_synonym:5:18' to '?1<{?6}@recursive_ty_error_by_synonym.recursive_ty_error_by_synonym:5:32>'.

@@ -1,4 +1,4 @@
-// Check if `inRegion` primitive deallocates memories correctly
+// Check if `__inRegion` primitive deallocates memories correctly
 // by running this program with address sanitizer enabled.
 
 // Produce a large list to allocate some memory. (Using Collatz conjecture.)
@@ -27,7 +27,7 @@ let main _ =
       h
     else
       printfn "go i=%d" i
-      let h = h + (inRegion (fun () -> stress i))
+      let h = h + (__inRegion (fun () -> stress i))
       go h (i - 1)
 
-  inRegion (fun () -> (go 0 10 % 100) - 84)
+  __inRegion (fun () -> (go 0 10 % 100) - 84)

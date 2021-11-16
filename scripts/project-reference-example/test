@@ -12,8 +12,6 @@ APP_EXE="$TARGET_DIR/project_reference_example_app.exe"
 APP_OUT="$TARGET_DIR/project_reference_example_app.txt"
 APP_NINJA="$TARGET_DIR/project_reference_example_app.ninja"
 
-mkdir -p $TARGET_DIR
-
 C_FILES=$(milone compile "$PROJECT_DIR/App" --target-dir $TARGET_DIR)
 if test $? -ne 0
 then
@@ -31,4 +29,4 @@ $CC -std=c11 -O2 \
 
 $APP_EXE >$APP_OUT
 
-diff "$APP_OUT" "$PROJECT_DIR/app.out"
+diff "$APP_OUT" "$PROJECT_DIR/app.output"

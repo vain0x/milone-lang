@@ -33,7 +33,7 @@ let testProject (categoryDir: string, projectDir, projectName, sources) =
     TargetDir = targetDir
     FilesTxt = $"{targetDir}/files.txt"
     Exe = $"{targetDir}/{projectName}.exe"
-    ExpectedOut = $"{projectDir}/{projectName}.out"
+    ExpectedOut = $"{projectDir}/{projectName}.output"
     ErrorTxt = $"{projectDir}/{projectName}_error.txt"
     GeneratedOut = $"{targetDir}/generated.txt"
     Sources = sources }
@@ -67,7 +67,7 @@ let render () =
   let runTests, errorTests =
     let readExpectedOutput t =
       let _, projectDir, name, _ = t
-      let path = sprintf "%s/%s.out" projectDir name
+      let path = sprintf "%s/%s.output" projectDir name
 
       try
         if File.Exists(path) then
@@ -78,20 +78,19 @@ let render () =
       | _ -> None
 
     testProjects
-    |> List.choose
-         (fun t ->
-           match readExpectedOutput t with
-           | None ->
-             let _, projectDir, _, _ = t
-             eprintfn "warn: '%s' skipped." projectDir
-             None
+    |> List.choose (fun t ->
+      match readExpectedOutput t with
+      | None ->
+        let _, projectDir, _, _ = t
+        eprintfn "warn: '%s' skipped." projectDir
+        None
 
-           | Some output ->
-             let shouldRun =
-               output.Contains("milone-lang compile error.")
-               |> not
+      | Some output ->
+        let shouldRun =
+          output.Contains("milone-lang compile error.")
+          |> not
 
-             Some(shouldRun, t))
+        Some(shouldRun, t))
     |> List.partition fst
     |> (fun (x, y) -> List.map (snd >> testProject) x, List.map (snd >> testProject) y)
 
@@ -209,7 +208,7 @@ rule build_run_tests
     ninja -f target/tests2-build.ninja
 build {exeFiles}: $
   build_run_tests $
-    | $my_build_tool runtime/milone.o runtime/milone.h $
+    | $my_build_tool runtime/milone.o runtime/milone_platform.o runtime/milone.h $
       {runTestInputs}
   pool = console
 rule summarize_tests

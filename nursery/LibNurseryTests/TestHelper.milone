@@ -1,0 +1,10 @@
+module rec LibNurseryTests.TestHelper
+
+let private doEqual (expected: string) (actual: string) : bool =
+  if actual = expected then
+    true
+  else
+    printfn "Assertion error.\nExpected: %s\nActual: %s" expected actual
+    false
+
+let eq (debug: 'T -> string) (expected: 'T) (actual: 'T) : bool = doEqual (debug expected) (debug actual)

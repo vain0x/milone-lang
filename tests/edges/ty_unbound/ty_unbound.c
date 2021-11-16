@@ -2,19 +2,19 @@
 
 struct UnitList;
 
-bool isEmpty_(struct UnitList const*);
+bool MiloneCore_List_UnitListBoolFun1_isEmpty(struct UnitList const* );
 
-char assertIsEmpty_(struct UnitList const* xs_64);
+void ty_unbound_ty_unbound_UnitListUnitFun1_assertIsEmpty(struct UnitList const* xs_);
 
-int milone_main();
+int milone_main(void);
 
-char assertIsEmpty_(struct UnitList const* xs_64) {
-    bool call_ = isEmpty_(xs_64);
+void ty_unbound_ty_unbound_UnitListUnitFun1_assertIsEmpty(struct UnitList const* xs_) {
+    bool call_ = MiloneCore_List_UnitListBoolFun1_isEmpty(xs_);
     milone_assert(call_, 4, 23);
-    return 0;
+    return;
 }
 
-int milone_main() {
-    char call_1 = assertIsEmpty_(NULL);
+int milone_main(void) {
+    ty_unbound_ty_unbound_UnitListUnitFun1_assertIsEmpty(NULL);
     return 0;
 }

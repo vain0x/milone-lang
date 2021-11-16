@@ -12,7 +12,7 @@ let useStringIndexWithoutAscription x =
   x.[0]
 
 let useTyVarInBody (x: 'T) =
-  let xs : 'T list = []
+  let xs: 'T list = []
   x, xs
 
 let main _ =

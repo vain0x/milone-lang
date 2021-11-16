@@ -37,6 +37,19 @@ let testSkipWhile (gen: int -> int list) =
 
 // ===============================================
 
+let testUnzip () =
+  let xs, ys =
+    List.unzip [ 0, 1
+                 1, 1
+                 2, 2
+                 3, 3
+                 4, 5 ]
+
+  assert (xs |> eq [ 0; 1; 2; 3; 4 ])
+  assert (ys |> eq [ 1; 1; 2; 3; 5 ])
+
+// ===============================================
+
 let main _ =
   /// Generates 0..n-1
   let rec gen n =
@@ -57,4 +70,5 @@ let main _ =
   let gen = gen
 
   testSkipWhile gen
+  testUnzip ()
   0

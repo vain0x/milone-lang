@@ -1,79 +1,73 @@
 #include "milone.h"
 
-struct IntTuple1;
-
 struct UnitIntFun1;
 
-int sub_(int step_, int x_);
+int fun_closure_fun_closure_innerFunCase_IntIntFun1_zf2(int x_5);
 
-char fun_closure_Program_basicCase(char arg_2);
+int fun_closure_fun_closure_innerFunCase_zf2_IntUnitIntFun2_zf22(int x_5);
 
-int inc_(int step_1, int x_1);
+int fun_closure_fun_closure_innerFunCase_IntIntFun1_zf1(int x_4);
 
-int incTwice_(int step_1, int x_2);
+int fun_closure_fun_closure_innerFunCase_zf1_IntUnitIntFun2_zf11(int x_4);
 
-char fun_closure_Program_transitiveCase(char arg_3);
+int fun_closure_fun_closure_basicCase_sub(int step_, int x_);
 
-int inc_1(int step_2, int x_3);
+void fun_closure_Program_basicCase(void);
 
-bool go_(int step_2, int n_);
+int fun_closure_fun_closure_transitiveCase_inc(int step_1, int x_1);
 
-char fun_closure_Program_recursiveCase(char arg_6);
+int fun_closure_fun_closure_transitiveCase_incTwice(int step_1, int x_2);
 
-int lg_(int lx_, char arg_7);
+void fun_closure_Program_transitiveCase(void);
 
-int fun_(int lx_, char arg_8);
+int fun_closure_fun_closure_recursiveCase_inc(int step_2, int x_3);
 
-int fun_1(void const* env_, char arg_);
+bool fun_closure_fun_closure_recursiveCase_go(int step_2, int n_);
 
-int lf_(int lx_, char arg_9);
+void fun_closure_Program_recursiveCase(void);
 
-char fun_closure_Program_lambdaCase(char arg_10);
+int fun_closure_fun_closure_lambdaCase_lf_lg(int lx_);
 
-int xf4_(int x1_, int x2_, int x3_, char arg_11);
+int fun_closure_fun_closure_lambdaCase_lf_fun(int lx_);
 
-int xf3_(int x1_, int x2_, int x3_);
+int fun_closure_fun_closure_eta2_lambdaCase_lf_fun(void const* env_);
 
-int xf2_(int x1_, int x2_);
+int fun_closure_fun_closure_lambdaCase_lf(int lx_);
 
-int xf1_(int x1_);
+void fun_closure_Program_lambdaCase(void);
 
-char fun_closure_Program_escapeCase(char arg_12);
+int fun_closure_fun_closure_escapeCase_xf1_xf2_xf3_xf4(int x3_, int x2_, int x1_);
 
-int zf11_1(int x_4, char arg_13);
+int fun_closure_fun_closure_escapeCase_xf1_xf2_xf3(int x2_, int x1_, int x3_);
 
-int zf1_1(int x_4);
+int fun_closure_fun_closure_escapeCase_xf1_xf2(int x1_, int x2_);
 
-int zf22_1(int x_5, char arg_14);
+int fun_closure_fun_closure_escapeCase_xf1(int x1_);
 
-int zf2_1(int x_5);
+void fun_closure_Program_escapeCase(void);
 
-char fun_closure_Program_innerFunCase(char arg_15);
+void fun_closure_Program_innerFunCase(void);
 
-char fun_closure_Program_mutuallyRecursiveCase(char arg_16);
+void fun_closure_Program_mutuallyRecursiveCase(void);
 
-int fun_closure_Program_f1(char arg_17);
+int fun_closure_Program_f1(void);
 
-int fun_closure_Program_f2(char arg_18);
+int fun_closure_Program_f2(void);
 
-int fun_closure_Program_f3(char arg_19);
+int fun_closure_Program_f3(void);
 
-int fun_closure_Program_f4(char arg_20);
+int fun_closure_Program_f4(void);
 
-int fun_closure_Program_f5(char arg_21);
+int fun_closure_Program_f5(void);
 
-int fun_closure_Program_f6(char arg_22);
+int fun_closure_Program_f6(void);
 
-int fun_closure_Program_f7(char arg_23);
+int fun_closure_Program_f7(void);
 
-int milone_main();
-
-struct IntTuple1 {
-    int t0;
-};
+int milone_main(void);
 
 struct UnitIntFun1 {
-    int(*fun)(void const*, char);
+    int(*fun)(void const*);
     void const* env;
 };
 
@@ -81,39 +75,58 @@ extern int fun_closure_Program_a;
 
 int fun_closure_Program_a;
 
-int sub_(int step_, int x_) {
-    return (x_ - step_);
+int fun_closure_fun_closure_innerFunCase_IntIntFun1_zf2(int x_5) {
+    int call_ = fun_closure_fun_closure_innerFunCase_zf2_IntUnitIntFun2_zf22(x_5);
+    return call_;
 }
 
-char fun_closure_Program_basicCase(char arg_2) {
-    int step_ = 3;
-    int call_ = sub_(step_, 8);
-    milone_assert((call_ == 5), 7, 2);
-    return 0;
+int fun_closure_fun_closure_innerFunCase_zf2_IntUnitIntFun2_zf22(int x_5) {
+    int call_1 = fun_closure_fun_closure_innerFunCase_IntIntFun1_zf1(x_5);
+    return call_1;
 }
 
-int inc_(int step_1, int x_1) {
-    return (x_1 + step_1);
-}
-
-int incTwice_(int step_1, int x_2) {
-    int call_1 = inc_(step_1, x_2);
-    int call_2 = inc_(step_1, call_1);
+int fun_closure_fun_closure_innerFunCase_IntIntFun1_zf1(int x_4) {
+    int call_2 = fun_closure_fun_closure_innerFunCase_zf1_IntUnitIntFun2_zf11(x_4);
     return call_2;
 }
 
-char fun_closure_Program_transitiveCase(char arg_3) {
-    int step_1 = 1;
-    int call_3 = incTwice_(step_1, 0);
-    milone_assert((call_3 == 2), 13, 2);
-    return 0;
+int fun_closure_fun_closure_innerFunCase_zf1_IntUnitIntFun2_zf11(int x_4) {
+    return x_4;
 }
 
-int inc_1(int step_2, int x_3) {
+int fun_closure_fun_closure_basicCase_sub(int step_, int x_) {
+    return (x_ - step_);
+}
+
+void fun_closure_Program_basicCase(void) {
+    int step_ = 3;
+    int call_3 = fun_closure_fun_closure_basicCase_sub(step_, 8);
+    milone_assert((call_3 == 5), 7, 2);
+    return;
+}
+
+int fun_closure_fun_closure_transitiveCase_inc(int step_1, int x_1) {
+    return (x_1 + step_1);
+}
+
+int fun_closure_fun_closure_transitiveCase_incTwice(int step_1, int x_2) {
+    int call_4 = fun_closure_fun_closure_transitiveCase_inc(step_1, x_2);
+    int call_5 = fun_closure_fun_closure_transitiveCase_inc(step_1, call_4);
+    return call_5;
+}
+
+void fun_closure_Program_transitiveCase(void) {
+    int step_1 = 1;
+    int call_6 = fun_closure_fun_closure_transitiveCase_incTwice(step_1, 0);
+    milone_assert((call_6 == 2), 13, 2);
+    return;
+}
+
+int fun_closure_fun_closure_recursiveCase_inc(int step_2, int x_3) {
     return (x_3 + step_2);
 }
 
-bool go_(int step_2, int n_) {
+bool fun_closure_fun_closure_recursiveCase_go(int step_2, int n_) {
 tailrec_1:;
     bool if_;
     if ((n_ >= 10)) {
@@ -125,60 +138,57 @@ then_3:;
     if_ = true;
     goto if_next_2;
 else_4:;
-    int arg_4 = step_2;
-    int call_4 = inc_1(step_2, n_);
-    int arg_5 = call_4;
-    step_2 = arg_4;
-    n_ = arg_5;
+    int call_7 = fun_closure_fun_closure_recursiveCase_inc(step_2, n_);
+    int arg_2 = step_2;
+    int arg_3 = call_7;
+    step_2 = arg_2;
+    n_ = arg_3;
     goto tailrec_1;
 if_next_2:;
     return if_;
 }
 
-char fun_closure_Program_recursiveCase(char arg_6) {
+void fun_closure_Program_recursiveCase(void) {
     int step_2 = 1;
-    bool call_5 = go_(step_2, 0);
-    milone_assert(call_5, 21, 2);
-    return 0;
+    bool call_8 = fun_closure_fun_closure_recursiveCase_go(step_2, 0);
+    milone_assert(call_8, 21, 2);
+    return;
 }
 
-int lg_(int lx_, char arg_7) {
+int fun_closure_fun_closure_lambdaCase_lf_lg(int lx_) {
     return lx_;
 }
 
-int fun_(int lx_, char arg_8) {
-    int call_6 = lg_(lx_, 0);
-    return call_6;
-}
-
-int fun_1(void const* env_, char arg_) {
-    int arg_1 = (*(((struct IntTuple1 const*)env_))).t0;
-    int call_7 = fun_(arg_1, 0);
-    return call_7;
-}
-
-int lf_(int lx_, char arg_9) {
-    struct IntTuple1 tuple_ = (struct IntTuple1){.t0 = lx_};
-    void const* box_ = milone_mem_alloc(1, sizeof(struct IntTuple1));
-    (*(((struct IntTuple1*)box_))) = tuple_;
-    struct UnitIntFun1 fun_2 = (struct UnitIntFun1){.fun = fun_1, .env = box_};
-    int app_ = fun_2.fun(fun_2.env, 0);
-    return app_;
-}
-
-char fun_closure_Program_lambdaCase(char arg_10) {
-    int lx_ = 7;
-    int call_8 = lf_(lx_, 0);
-    milone_assert((call_8 == lx_), 30, 2);
-    return 0;
-}
-
-int xf4_(int x1_, int x2_, int x3_, char arg_11) {
-    int call_9 = xf1_(((x1_ + x2_) + x3_));
+int fun_closure_fun_closure_lambdaCase_lf_fun(int lx_) {
+    int call_9 = fun_closure_fun_closure_lambdaCase_lf_lg(lx_);
     return call_9;
 }
 
-int xf3_(int x1_, int x2_, int x3_) {
+int fun_closure_fun_closure_eta2_lambdaCase_lf_fun(void const* env_) {
+    int arg_1 = ((int)((intptr_t)env_));
+    int call_10 = fun_closure_fun_closure_lambdaCase_lf_fun(arg_1);
+    return call_10;
+}
+
+int fun_closure_fun_closure_lambdaCase_lf(int lx_) {
+    struct UnitIntFun1 fun_ = (struct UnitIntFun1){.fun = fun_closure_fun_closure_eta2_lambdaCase_lf_fun, .env = ((void const*)((intptr_t)lx_))};
+    int app_ = fun_.fun(fun_.env);
+    return app_;
+}
+
+void fun_closure_Program_lambdaCase(void) {
+    int lx_ = 7;
+    int call_11 = fun_closure_fun_closure_lambdaCase_lf(lx_);
+    milone_assert((call_11 == lx_), 30, 2);
+    return;
+}
+
+int fun_closure_fun_closure_escapeCase_xf1_xf2_xf3_xf4(int x3_, int x2_, int x1_) {
+    int call_12 = fun_closure_fun_closure_escapeCase_xf1(((x1_ + x2_) + x3_));
+    return call_12;
+}
+
+int fun_closure_fun_closure_escapeCase_xf1_xf2_xf3(int x2_, int x1_, int x3_) {
     int if_1;
     if ((x3_ == 3)) {
         goto then_6;
@@ -186,8 +196,8 @@ int xf3_(int x1_, int x2_, int x3_) {
         goto else_7;
     }
 then_6:;
-    int call_10 = xf4_(x1_, x2_, x3_, 0);
-    if_1 = call_10;
+    int call_13 = fun_closure_fun_closure_escapeCase_xf1_xf2_xf3_xf4(x3_, x2_, x1_);
+    if_1 = call_13;
     goto if_next_5;
 else_7:;
     if_1 = x3_;
@@ -196,7 +206,7 @@ if_next_5:;
     return if_1;
 }
 
-int xf2_(int x1_, int x2_) {
+int fun_closure_fun_closure_escapeCase_xf1_xf2(int x1_, int x2_) {
     int if_2;
     if ((x2_ == 2)) {
         goto then_9;
@@ -204,8 +214,8 @@ int xf2_(int x1_, int x2_) {
         goto else_10;
     }
 then_9:;
-    int call_11 = xf3_(x1_, x2_, 3);
-    if_2 = call_11;
+    int call_14 = fun_closure_fun_closure_escapeCase_xf1_xf2_xf3(x2_, x1_, 3);
+    if_2 = call_14;
     goto if_next_8;
 else_10:;
     if_2 = x2_;
@@ -214,7 +224,7 @@ if_next_8:;
     return if_2;
 }
 
-int xf1_(int x1_) {
+int fun_closure_fun_closure_escapeCase_xf1(int x1_) {
     int if_3;
     if ((x1_ == 1)) {
         goto then_12;
@@ -222,8 +232,8 @@ int xf1_(int x1_) {
         goto else_13;
     }
 then_12:;
-    int call_12 = xf2_(x1_, 2);
-    if_3 = call_12;
+    int call_15 = fun_closure_fun_closure_escapeCase_xf1_xf2(x1_, 2);
+    if_3 = call_15;
     goto if_next_11;
 else_13:;
     if_3 = x1_;
@@ -232,85 +242,66 @@ if_next_11:;
     return if_3;
 }
 
-char fun_closure_Program_escapeCase(char arg_12) {
-    int call_13 = xf1_(1);
-    milone_assert((call_13 == ((1 + 2) + 3)), 50, 2);
-    return 0;
+void fun_closure_Program_escapeCase(void) {
+    int call_16 = fun_closure_fun_closure_escapeCase_xf1(1);
+    milone_assert((call_16 == ((1 + 2) + 3)), 50, 2);
+    return;
 }
 
-int zf11_1(int x_4, char arg_13) {
-    return x_4;
-}
-
-int zf1_1(int x_4) {
-    int call_14 = zf11_1(x_4, 0);
-    return call_14;
-}
-
-int zf22_1(int x_5, char arg_14) {
-    int call_15 = zf1_1(x_5);
-    return call_15;
-}
-
-int zf2_1(int x_5) {
-    int call_16 = zf22_1(x_5, 0);
-    return call_16;
-}
-
-char fun_closure_Program_innerFunCase(char arg_15) {
-    int call_17 = zf2_1(1);
+void fun_closure_Program_innerFunCase(void) {
+    int call_17 = fun_closure_fun_closure_innerFunCase_IntIntFun1_zf2(1);
     milone_assert((call_17 == 1), 61, 2);
-    return 0;
+    return;
 }
 
-char fun_closure_Program_mutuallyRecursiveCase(char arg_16) {
-    int call_18 = fun_closure_Program_f1(0);
+void fun_closure_Program_mutuallyRecursiveCase(void) {
+    int call_18 = fun_closure_Program_f1();
     milone_assert((call_18 == 1), 64, 31);
-    return 0;
+    return;
 }
 
-int fun_closure_Program_f1(char arg_17) {
-    int call_19 = fun_closure_Program_f2(0);
+int fun_closure_Program_f1(void) {
+    int call_19 = fun_closure_Program_f2();
     return call_19;
 }
 
-int fun_closure_Program_f2(char arg_18) {
-    int call_20 = fun_closure_Program_f3(0);
+int fun_closure_Program_f2(void) {
+    int call_20 = fun_closure_Program_f3();
     return call_20;
 }
 
-int fun_closure_Program_f3(char arg_19) {
-    int call_21 = fun_closure_Program_f4(0);
+int fun_closure_Program_f3(void) {
+    int call_21 = fun_closure_Program_f4();
     return call_21;
 }
 
-int fun_closure_Program_f4(char arg_20) {
-    int call_22 = fun_closure_Program_f5(0);
+int fun_closure_Program_f4(void) {
+    int call_22 = fun_closure_Program_f5();
     return call_22;
 }
 
-int fun_closure_Program_f5(char arg_21) {
-    int call_23 = fun_closure_Program_f6(0);
+int fun_closure_Program_f5(void) {
+    int call_23 = fun_closure_Program_f6();
     return call_23;
 }
 
-int fun_closure_Program_f6(char arg_22) {
-    int call_24 = fun_closure_Program_f7(0);
+int fun_closure_Program_f6(void) {
+    int call_24 = fun_closure_Program_f7();
     return call_24;
 }
 
-int fun_closure_Program_f7(char arg_23) {
+int fun_closure_Program_f7(void) {
     return fun_closure_Program_a;
 }
 
-int milone_main() {
+int milone_main(void) {
     fun_closure_Program_a = 1;
-    char call_25 = fun_closure_Program_basicCase(0);
-    char call_26 = fun_closure_Program_transitiveCase(0);
-    char call_27 = fun_closure_Program_recursiveCase(0);
-    char call_28 = fun_closure_Program_lambdaCase(0);
-    char call_29 = fun_closure_Program_escapeCase(0);
-    char call_30 = fun_closure_Program_innerFunCase(0);
-    char call_31 = fun_closure_Program_mutuallyRecursiveCase(0);
+    fun_closure_Program_basicCase();
+    fun_closure_Program_transitiveCase();
+    fun_closure_Program_recursiveCase();
+    fun_closure_Program_lambdaCase();
+    fun_closure_Program_escapeCase();
+    fun_closure_Program_innerFunCase();
+    fun_closure_Program_mutuallyRecursiveCase();
     return 0;
 }

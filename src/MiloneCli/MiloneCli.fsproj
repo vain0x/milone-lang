@@ -6,6 +6,9 @@
   </PropertyGroup>
 
   <ItemGroup>
+    <Compile Include="Lower.fs" />
+    <Compile Include="PlatformUnix.fs" />
+    <Compile Include="PlatformWindows.fs" />
     <Compile Include="Cli.fs" />
     <Compile Include="Program.fs" />
   </ItemGroup>

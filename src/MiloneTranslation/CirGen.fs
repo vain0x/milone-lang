@@ -14,30 +14,52 @@ open MiloneShared.SharedTypes
 open MiloneShared.TypeFloat
 open MiloneShared.TypeIntegers
 open MiloneShared.Util
+open MiloneStd.StdMap
+open MiloneStd.StdSet
 open MiloneTranslation.Cir
 open MiloneTranslation.Hir
 open MiloneTranslation.Mir
 open MiloneTranslation.MirGen
 
-module TMap = MiloneStd.StdMap
-module TSet = MiloneStd.StdSet
 module S = MiloneStd.StdString
-
-let private valueSymbolCompare l r =
-  let encode symbol =
-    match symbol with
-    | VarSymbol (VarSerial serial) -> serial
-    | FunSymbol (FunSerial serial) -> serial
-    | VariantSymbol (VariantSerial serial) -> serial
-
-  compare (encode l) (encode r)
 
 let private unwrapListTy ty =
   match ty with
   | Ty (ListTk, [ itemTy ]) -> itemTy
   | _ -> unreachable ()
 
-let private renameIdents toIdent toKey mapFuns (defMap: AssocMap<_, _>) =
+let private tupleField (i: int) = "t" + string i
+
+/// Calculates discriminant type's name of union type.
+let private toDiscriminantEnumName (name: string) = name + "Discriminant"
+
+// -----------------------------------------------
+// Renaming idents
+// -----------------------------------------------
+
+/// Frequencies. Mapping from key to multiplicity. (Multi-set.)
+type private Freq<'K> = TreeMap<'K, int>
+
+let private freqEmpty compareFun : Freq<_> = TMap.empty compareFun
+
+let private freqAdd key map : int * Freq<_> =
+  let i =
+    map |> TMap.tryFind key |> Option.defaultValue 0
+
+  let map = map |> TMap.add key (i + 1)
+  i, map
+
+/// Computes renamed ident for the index-th occurrence of the same ident.
+let private renameIdent (ident: Ident) (index: int) : Ident =
+  if index = 0 then
+    if ident |> S.contains "_" then
+      ident
+    else
+      ident + "_"
+  else
+    ident + "_" + string index
+
+let private renameIdents toIdent toKey mapFuns (defMap: TreeMap<_, _>) =
   let rename (ident: string) (index: int) =
     if index = 0 then
       if ident |> S.contains "_" then
@@ -69,10 +91,78 @@ let private renameIdents toIdent toKey mapFuns (defMap: AssocMap<_, _>) =
   serialsMap
   |> TMap.fold addIdents (TMap.empty mapFuns)
 
-let private tupleField (i: int) = "t" + string i
+let private renameIdents2
+  (defMap: TreeMap<_, 'T>)
+  (toIdent: 'T -> bool * string)
+  (nameMap: TreeMap<'K, Ident>)
+  (freq: Freq<Ident>)
+  : TreeMap<'K, Ident> * Freq<Ident> =
+  defMap
+  |> TMap.fold
+       (fun (nameMap, freq) key (value: 'T) ->
+         let allowRename, name = toIdent value
 
-/// Calculates discriminant type's name of union type.
-let private toDiscriminantEnumName (name: string) = name + "Discriminant"
+         if allowRename then
+           let i, freq = freq |> freqAdd name
+           let name = renameIdent name i
+           let nameMap = nameMap |> TMap.add key name
+
+           nameMap, freq
+         else
+           assert (freq |> TMap.containsKey name |> not)
+           let nameMap = nameMap |> TMap.add key name
+           nameMap, freq)
+       (nameMap, freq)
+
+let private linkageToIdent rawName linkage =
+  match linkage with
+  | InternalLinkage -> true, rawName
+  | ExternalLinkage name -> false, name
+
+let private varDefToName (varDef: VarDef) =
+  linkageToIdent varDef.Name varDef.Linkage
+
+let private funDefToName (funDef: FunDef) =
+  match funDef.Linkage with
+  | InternalLinkage ->
+    let name =
+      // FIXME: avoid abusing docId
+      let (Loc (docId, _, _)) = funDef.Loc
+      let doc = docId |> S.replace "." "_"
+
+      doc
+      + "_"
+      + (funDef.Name :: funDef.Prefix
+         |> List.rev
+         |> S.concat "_")
+
+    true, name
+
+  | ExternalLinkage name -> false, name
+
+// -----------------------------------------------
+// Rx
+// -----------------------------------------------
+
+/// Read-only context of the pass.
+[<RequireQualifiedAccess; NoEquality; NoComparison>]
+type private Rx =
+  { StaticVars: TreeMap<VarSerial, VarDef>
+    Funs: TreeMap<FunSerial, FunDef>
+    Variants: TreeMap<VariantSerial, VariantDef>
+    Tys: TreeMap<TySerial, TyDef>
+    MainFunOpt: FunSerial option
+
+    FunLocals: TreeMap<FunSerial, (VarSerial * Ty) list>
+    ReplacingVars: TreeSet<VarSerial>
+
+    ValueNameFreq: TreeMap<Ident, int>
+    VarUniqueNames: TreeMap<VarSerial, Ident>
+    FunUniqueNames: TreeMap<FunSerial, Ident>
+    VariantUniqueNames: TreeMap<VariantSerial, Ident>
+
+    /// Doc ID of current module.
+    DocIdOpt: DocId option }
 
 // -----------------------------------------------
 // Context
@@ -80,65 +170,37 @@ let private toDiscriminantEnumName (name: string) = name + "Discriminant"
 
 [<RequireQualifiedAccess; NoEquality; NoComparison>]
 type private CirCtx =
-  { Vars: AssocMap<VarSerial, VarDef>
-    Funs: AssocMap<FunSerial, FunDef>
-    Variants: AssocMap<VariantSerial, VariantDef>
-    MainFunOpt: FunSerial option
-    ValueUniqueNames: AssocMap<ValueSymbol, Ident>
-    TyEnv: AssocMap<Ty, CTyInstance * CTy>
-    Tys: AssocMap<TySerial, TyDef>
-    TyUniqueNames: AssocMap<Ty, Ident>
+  { Rx: Rx
+
+    TyEnv: TreeMap<Ty, CTyInstance * CTy>
+    TyUniqueNames: TreeMap<Ty, Ident>
     Stmts: CStmt list
     Decls: CDecl list
 
-    /// Doc ID of current module.
-    DocId: DocId
     /// Already-declared functions.
-    VarDecls: AssocSet<VarSerial>
-    FunDecls: AssocSet<FunSerial> }
+    VarDecls: TreeSet<VarSerial>
+    FunDecls: TreeSet<FunSerial> }
 
-let private ofMirCtx (mirCtx: MirCtx) : CirCtx =
-  let valueUniqueNames =
-    let m = TMap.empty valueSymbolCompare
+let private ofMirResult (mirCtx: MirResult) : CirCtx =
+  let freq = freqEmpty compare
 
-    let m =
-      mirCtx.Vars
-      |> TMap.fold
-           (fun acc varSerial (varDef: VarDef) ->
-             let name =
-               match varDef.Linkage with
-               | InternalLinkage -> varDef.Name
-               | ExternalLinkage name -> name
+  let varUniqueNames, freq =
+    renameIdents2 mirCtx.StaticVars varDefToName (TMap.empty varSerialCompare) freq
 
-             acc |> TMap.add (VarSymbol varSerial) name)
-           m
+  let funUniqueNames, freq =
+    renameIdents2 mirCtx.Funs funDefToName (TMap.empty funSerialCompare) freq
 
-    let m =
-      mirCtx.Funs
-      |> TMap.fold
-           (fun acc funSerial (funDef: FunDef) ->
-             let name =
-               match funDef.Linkage with
-               | InternalLinkage -> funDef.Name
-               | ExternalLinkage name -> name
-
-             acc |> TMap.add (FunSymbol funSerial) name)
-           m
-
-    let m =
+  let variantUniqueNames, freq =
+    renameIdents2
       mirCtx.Variants
-      |> TMap.fold
-           (fun acc variantSerial (variantDef: VariantDef) ->
-             acc
-             |> TMap.add (VariantSymbol variantSerial) variantDef.Name)
-           m
-
-    m |> renameIdents id fst valueSymbolCompare
+      (fun (variantDef: VariantDef) -> true, variantDef.Name)
+      (TMap.empty variantSerialCompare)
+      freq
 
   let tyNames =
     let toKey (serial, tyDef) =
       match tyDef with
-      | UnionTyDef _ -> tyUnion serial
+      | UnionTyDef _ -> tyUnion serial []
       | RecordTyDef _ -> tyRecord serial
 
       | MetaTyDef _ -> unreachable () // Resolved in Typing.
@@ -146,35 +208,52 @@ let private ofMirCtx (mirCtx: MirCtx) : CirCtx =
     mirCtx.Tys
     |> renameIdents tyDefToName toKey tyCompare
 
-  { Vars = mirCtx.Vars
-    Funs = mirCtx.Funs
-    Variants = mirCtx.Variants
-    MainFunOpt = mirCtx.MainFunOpt
-    ValueUniqueNames = valueUniqueNames
+  let rx: Rx =
+    { StaticVars = mirCtx.StaticVars
+      Funs = mirCtx.Funs
+      Variants = mirCtx.Variants
+      Tys = mirCtx.Tys
+      MainFunOpt = mirCtx.MainFunOpt
+
+      FunLocals = mirCtx.FunLocals
+      ReplacingVars = mirCtx.ReplacingVars
+
+      ValueNameFreq = freq
+      VarUniqueNames = varUniqueNames
+      FunUniqueNames = funUniqueNames
+      VariantUniqueNames = variantUniqueNames
+      DocIdOpt = None }
+
+  { Rx = rx
     TyEnv = TMap.empty tyCompare
-    Tys = mirCtx.Tys
     TyUniqueNames = tyNames
     Stmts = []
     Decls = []
-
-    DocId = ""
     VarDecls = TSet.empty varSerialCompare
     FunDecls = TSet.empty funSerialCompare }
 
+let private currentDocId (ctx: CirCtx) : DocId =
+  match ctx.Rx.DocIdOpt with
+  | Some it -> it
+  | None -> unreachable () // Must be filled before starting work.
+
 let private findStorageModifier (ctx: CirCtx) varSerial =
-  match ctx.Vars |> TMap.tryFind varSerial with
+  match ctx.Rx.StaticVars |> TMap.tryFind varSerial with
   | Some varDef -> varDef.IsStatic
 
-  | _ -> IsStatic
+  | _ -> NotStatic
 
 let private findVarLinkage (ctx: CirCtx) varSerial =
-  match ctx.Vars |> TMap.tryFind varSerial with
+  match ctx.Rx.StaticVars |> TMap.tryFind varSerial with
   | Some varDef -> varDef.Linkage
 
   | _ -> InternalLinkage
 
+let private isReplacing (ctx: CirCtx) varSerial =
+  ctx.Rx.ReplacingVars |> TSet.contains varSerial
+
 let private isMainFun (ctx: CirCtx) funSerial =
-  match ctx.MainFunOpt with
+  match ctx.Rx.MainFunOpt with
   | Some mainFun -> funSerialCompare mainFun funSerial = 0
   | _ -> false
 
@@ -189,6 +268,20 @@ let private addDecl (ctx: CirCtx) decl = { ctx with Decls = decl :: ctx.Decls }
 // -----------------------------------------------
 // Type definition generation
 // -----------------------------------------------
+
+let private cgArgTys ctx argTys : CTy list * CirCtx =
+  let argTys =
+    argTys
+    |> List.filter (fun ty -> tyIsUnit ty |> not)
+
+  (argTys, ctx)
+  |> stMap (fun (ty, ctx) -> cgTyComplete ctx ty)
+
+let private cgResultTy ctx resultTy : CTy * CirCtx =
+  if tyIsUnit resultTy then
+    CVoidTy, ctx
+  else
+    cgTyComplete ctx resultTy
 
 let private genIncompleteFunTyDecl (ctx: CirCtx) sTy tTy =
   let funTy = tyFun sTy tTy
@@ -221,11 +314,8 @@ let private genFunTyDef (ctx: CirCtx) sTy tTy =
     let envTy = CConstPtrTy CVoidTy
     let _, argTys, resultTy = tyToArgList funTy
 
-    let argTys, ctx =
-      (argTys, ctx)
-      |> stMap (fun (ty, ctx) -> cgTyComplete ctx ty)
-
-    let resultTy, (ctx: CirCtx) = cgTyComplete ctx resultTy
+    let argTys, ctx = cgArgTys ctx argTys
+    let resultTy, ctx = cgResultTy ctx resultTy
 
     let fields =
       [ "fun", CFunPtrTy(envTy :: argTys, resultTy)
@@ -235,46 +325,6 @@ let private genFunTyDef (ctx: CirCtx) sTy tTy =
       { ctx with
           Decls = CStructDecl(structName, fields, []) :: ctx.Decls
           TyEnv = ctx.TyEnv |> TMap.add funTy (CTyDefined, selfTy) }
-
-    selfTy, ctx
-
-let private genIncompleteOptionTyDecl (ctx: CirCtx) itemTy =
-  let optionTy = tyOption itemTy
-
-  match ctx.TyEnv |> TMap.tryFind optionTy with
-  | Some (_, ty) -> ty, ctx
-
-  | None ->
-    let structName, ctx = getUniqueTyName ctx optionTy
-    let selfTy = CStructTy structName
-
-    let ctx =
-      { ctx with
-          TyEnv =
-            ctx.TyEnv
-            |> TMap.add optionTy (CTyDeclared, selfTy) }
-
-    selfTy, ctx
-
-let private genOptionTyDef (ctx: CirCtx) itemTy =
-  let optionTy = tyOption itemTy
-
-  match ctx.TyEnv |> TMap.tryFind optionTy with
-  | Some (CTyDefined, ty) -> ty, ctx
-
-  | _ ->
-    let structName, ctx = getUniqueTyName ctx optionTy
-    let selfTy, ctx = genIncompleteOptionTyDecl ctx itemTy
-
-    let itemTy, (ctx: CirCtx) = cgTyComplete ctx itemTy
-    let fields = [ "some", CBoolTy; "value", itemTy ]
-
-    let ctx =
-      { ctx with
-          Decls = CStructDecl(structName, fields, []) :: ctx.Decls
-          TyEnv =
-            ctx.TyEnv
-            |> TMap.add optionTy (CTyDefined, selfTy) }
 
     selfTy, ctx
 
@@ -315,59 +365,8 @@ let private genListTyDef (ctx: CirCtx) itemTy =
 
     selfTy, ctx
 
-let private genIncompleteTupleTyDecl (ctx: CirCtx) itemTys =
-  let tupleTy = tyTuple itemTys
-
-  match ctx.TyEnv |> TMap.tryFind tupleTy with
-  | Some (_, ty) -> ty, ctx
-
-  | None ->
-    let structName, ctx = getUniqueTyName ctx tupleTy
-    let selfTy = CStructTy structName
-
-    let ctx =
-      { ctx with
-          TyEnv =
-            ctx.TyEnv
-            |> TMap.add tupleTy (CTyDeclared, selfTy) }
-
-    selfTy, ctx
-
-let private genTupleTyDef (ctx: CirCtx) itemTys =
-  let tupleTy = tyTuple itemTys
-
-  match ctx.TyEnv |> TMap.tryFind tupleTy with
-  | Some (CTyDefined, ty) -> ty, ctx
-
-  | _ ->
-    let structName, ctx = getUniqueTyName ctx tupleTy
-    let selfTy, ctx = genIncompleteTupleTyDecl ctx itemTys
-
-    let rec go i itemTys =
-      match itemTys with
-      | [] -> []
-
-      | itemTy :: itemTys ->
-        let field = tupleField i, itemTy
-        field :: go (i + 1) itemTys
-
-    let itemTys, (ctx: CirCtx) =
-      (itemTys, ctx)
-      |> stMap (fun (ty, ctx) -> cgTyComplete ctx ty)
-
-    let fields = go 0 itemTys
-
-    let tupleDecl = CStructDecl(structName, fields, [])
-
-    let ctx =
-      { ctx with
-          Decls = tupleDecl :: ctx.Decls
-          TyEnv = ctx.TyEnv |> TMap.add tupleTy (CTyDefined, selfTy) }
-
-    selfTy, ctx
-
 let private genIncompleteUnionTyDecl (ctx: CirCtx) tySerial =
-  let unionTyRef = tyUnion tySerial
+  let unionTyRef = tyUnion tySerial []
 
   match ctx.TyEnv |> TMap.tryFind unionTyRef with
   | Some (_, ty) -> ty, ctx
@@ -385,7 +384,7 @@ let private genIncompleteUnionTyDecl (ctx: CirCtx) tySerial =
     selfTy, ctx
 
 let private genUnionTyDef (ctx: CirCtx) tySerial variants =
-  let unionTyRef = tyUnion tySerial
+  let unionTyRef = tyUnion tySerial []
 
   match ctx.TyEnv |> TMap.tryFind unionTyRef with
   | Some (CTyDefined, ty) -> ty, ctx
@@ -399,10 +398,9 @@ let private genUnionTyDef (ctx: CirCtx) tySerial variants =
 
     let variants =
       variants
-      |> List.map
-           (fun variantSerial ->
-             let v = ctx.Variants |> mapFind variantSerial
-             v.Name, variantSerial, v.HasPayload, v.PayloadTy)
+      |> List.map (fun variantSerial ->
+        let v = ctx.Rx.Variants |> mapFind variantSerial
+        v.Name, variantSerial, v.HasPayload, v.PayloadTy)
 
     let discriminants =
       variants
@@ -410,16 +408,15 @@ let private genUnionTyDef (ctx: CirCtx) tySerial variants =
 
     let variants, ctx =
       (variants, ctx)
-      |> stFlatMap
-           (fun ((_, serial, hasPayload, payloadTy), acc, ctx) ->
-             if hasPayload then
-               let payloadTy, ctx = cgTyComplete ctx payloadTy
+      |> stFlatMap (fun ((_, serial, hasPayload, payloadTy), acc, ctx) ->
+        if hasPayload then
+          let payloadTy, ctx = cgTyComplete ctx payloadTy
 
-               (getUniqueVariantName ctx serial, payloadTy)
-               :: acc,
-               ctx
-             else
-               acc, ctx)
+          (getUniqueVariantName ctx serial, payloadTy)
+          :: acc,
+          ctx
+        else
+          acc, ctx)
 
     let discriminantEnumDecl =
       CEnumDecl(discriminantEnumName, discriminants)
@@ -465,10 +462,9 @@ let private genRecordTyDef ctx tySerial fields =
   | _ ->
     let fieldTys, (ctx: CirCtx) =
       (fields, ctx)
-      |> stMap
-           (fun ((_, ty, _), ctx) ->
-             let ty, ctx = cgTyComplete ctx ty
-             ty, ctx)
+      |> stMap (fun ((_, ty, _), ctx) ->
+        let ty, ctx = cgTyComplete ctx ty
+        ty, ctx)
 
     let fields =
       fieldTys
@@ -488,16 +484,13 @@ let private genRecordTyDef ctx tySerial fields =
 // -----------------------------------------------
 
 let private getUniqueVarName (ctx: CirCtx) varSerial =
-  ctx.ValueUniqueNames
-  |> mapFind (VarSymbol varSerial)
+  ctx.Rx.VarUniqueNames |> mapFind varSerial
 
 let private getUniqueFunName (ctx: CirCtx) funSerial =
-  ctx.ValueUniqueNames
-  |> mapFind (FunSymbol funSerial)
+  ctx.Rx.FunUniqueNames |> mapFind funSerial
 
 let private getUniqueVariantName (ctx: CirCtx) variantSerial =
-  ctx.ValueUniqueNames
-  |> mapFind (VariantSymbol variantSerial)
+  ctx.Rx.VariantUniqueNames |> mapFind variantSerial
 
 let private getUniqueTyName (ctx: CirCtx) ty : _ * CirCtx =
   let memo = ctx.TyUniqueNames
@@ -514,13 +507,10 @@ let private cgNativePtrTy ctx isMut itemTy =
 let private cgNativeFunTy ctx tys =
   match splitLast tys with
   | None -> unreachable ()
-  | Some (paramTys, resultTy) ->
-    let paramTys, ctx =
-      (paramTys, ctx)
-      |> stMap (fun (ty, ctx) -> cgTyComplete ctx ty)
-
-    let resultTy, ctx = cgTyComplete ctx resultTy
-    CFunPtrTy(paramTys, resultTy), ctx
+  | Some (argTys, resultTy) ->
+    let argTys, ctx = cgArgTys ctx argTys
+    let resultTy, ctx = cgResultTy ctx resultTy
+    CFunPtrTy(argTys, resultTy), ctx
 
 /// Converts a type to incomplete type.
 /// whose type definition is not necessary to be visible.
@@ -539,10 +529,7 @@ let private cgTyIncomplete (ctx: CirCtx) (ty: Ty) : CTy * CirCtx =
   | FunTk, _ -> unreachable ()
 
   | TupleTk, [] -> CCharTy, ctx
-  | TupleTk, _ -> genIncompleteTupleTyDecl ctx tyArgs
-
-  | OptionTk, [ itemTy ] -> genIncompleteOptionTyDecl ctx itemTy
-  | OptionTk, _ -> unreachable ()
+  | TupleTk, _ -> unreachable () // Non-unit TupleTk is resolved in MonoTy.
 
   | ListTk, [ itemTy ] -> genIncompleteListTyDecl ctx itemTy
   | ListTk, _ -> unreachable ()
@@ -576,10 +563,7 @@ let private cgTyComplete (ctx: CirCtx) (ty: Ty) : CTy * CirCtx =
   | FunTk, _ -> unreachable ()
 
   | TupleTk, [] -> CCharTy, ctx
-  | TupleTk, _ -> genTupleTyDef ctx tyArgs
-
-  | OptionTk, [ itemTy ] -> genOptionTyDef ctx itemTy
-  | OptionTk, _ -> unreachable ()
+  | TupleTk, _ -> unreachable () // Non-unit TupleTk is resolved in MonoTy.
 
   | ListTk, [ itemTy ] ->
     // Complete definition of the underlying struct type is unnecessary yet
@@ -596,14 +580,14 @@ let private cgTyComplete (ctx: CirCtx) (ty: Ty) : CTy * CirCtx =
   | NativeTypeTk code, _ -> CEmbedTy code, ctx
 
   | UnionTk serial, _ ->
-    match ctx.Tys |> TMap.tryFind serial with
-    | Some (UnionTyDef (_, variants, _)) -> genUnionTyDef ctx serial variants
+    match ctx.Rx.Tys |> TMap.tryFind serial with
+    | Some (UnionTyDef (_, _, variants, _)) -> genUnionTyDef ctx serial variants
 
     | _ -> unreachable () // Union type undefined?
 
   | RecordTk serial, _ ->
-    match ctx.Tys |> TMap.tryFind serial with
-    | Some (RecordTyDef (_, fields, _)) -> genRecordTyDef ctx serial fields
+    match ctx.Rx.Tys |> TMap.tryFind serial with
+    | Some (RecordTyDef (_, fields, _, _)) -> genRecordTyDef ctx serial fields
 
     | _ -> unreachable () // Record type undefined?
 
@@ -613,28 +597,25 @@ let private cgTyComplete (ctx: CirCtx) (ty: Ty) : CTy * CirCtx =
 // Extern decl
 // -----------------------------------------------
 
-let private cgExternVarDecl (ctx: CirCtx) varSerial =
+let private cgExternVarDecl (ctx: CirCtx) varSerial ty =
   if TSet.contains varSerial ctx.VarDecls then
     ctx
   else
-    let varDef = ctx.Vars |> mapFind varSerial
-
     let name = getUniqueVarName ctx varSerial
-    let ty, ctx = cgTyComplete ctx varDef.Ty
+    let ty, ctx = cgTyComplete ctx ty
 
     let ctx = addDecl ctx (CExternVarDecl(name, ty))
 
-    { ctx with
-        VarDecls = ctx.VarDecls |> TSet.add varSerial }
+    { ctx with VarDecls = ctx.VarDecls |> TSet.add varSerial }
 
 let private cgExternFunDecl (ctx: CirCtx) funSerial =
   if TSet.contains funSerial ctx.FunDecls then
     ctx
   else
-    let funDef = ctx.Funs |> mapFind funSerial
+    let funDef = ctx.Rx.Funs |> mapFind funSerial
     let (Loc (docId, _, _)) = funDef.Loc
 
-    if docId = ctx.DocId then
+    if docId = currentDocId ctx then
       ctx
     else
       let (TyScheme (_, ty)) = funDef.Ty
@@ -654,18 +635,13 @@ let private cgExternFunDecl (ctx: CirCtx) funSerial =
         go funDef.Arity ty
 
       let name = getUniqueFunName ctx funSerial
+      let argTys, ctx = cgArgTys ctx argTys
+      let resultTy, ctx = cgResultTy ctx resultTy
 
-      let argTys, ctx =
-        (argTys, ctx)
-        |> stMap (fun (argTy, ctx) -> cgTyComplete ctx argTy)
-
-      let resultTy, ctx = cgTyComplete ctx resultTy
-
-      let ctx : CirCtx =
+      let ctx: CirCtx =
         addDecl ctx (CFunForwardDecl(name, argTys, resultTy))
 
-      { ctx with
-          FunDecls = TSet.add funSerial ctx.FunDecls }
+      { ctx with FunDecls = TSet.add funSerial ctx.FunDecls }
 
 // -----------------------------------------------
 // Expressions
@@ -699,7 +675,8 @@ let private cBinaryOf op =
 
 let private genLit lit =
   match lit with
-  | IntLit text -> CIntExpr text
+  | IntLit text -> CIntExpr(text, IntFlavor(Signed, I32))
+  | IntLitWithFlavor (text, flavor) -> CIntExpr(text, flavor)
   | FloatLit text -> CDoubleExpr text
   | BoolLit false -> CVarExpr "false"
   | BoolLit true -> CVarExpr "true"
@@ -724,10 +701,6 @@ let private genVariantNameExpr ctx serial ty =
 
 let private genGenericValue ctx genericValue ty =
   match genericValue with
-  | MNoneGv ->
-    let ty, ctx = cgTyComplete ctx ty
-    CInitExpr([ "some", CVarExpr "false" ], ty), ctx
-
   | MNilGv -> CVarExpr "NULL", ctx
 
   | MSizeOfGv ->
@@ -771,14 +744,6 @@ let private genUnaryExpr ctx op arg ty _ =
     CDotExpr(arg, getUniqueVariantName ctx serial), ctx
 
   | MRecordItemUnary index -> CDotExpr(arg, tupleField index), ctx
-
-  | MOptionIsSomeUnary ->
-    let _, ctx = cgTyComplete ctx ty
-    CDotExpr(arg, "some"), ctx
-
-  | MOptionToValueUnary ->
-    let _, ctx = cgTyComplete ctx ty
-    CDotExpr(arg, "value"), ctx
 
   | MListIsEmptyUnary -> CUnaryExpr(CNotUnary, arg), ctx
 
@@ -829,15 +794,13 @@ let private cgExpr (ctx: CirCtx) (arg: MExpr) : CExpr * CirCtx =
   | MUnitExpr _ -> CVarExpr "0", ctx
   | MNeverExpr loc -> unreachable ("MNeverExpr " + locToString loc)
 
-  | MVarExpr (serial, _, _) ->
-    invoke
-      (fun () ->
-        let ctx =
-          match findStorageModifier ctx serial with
-          | IsStatic -> cgExternVarDecl ctx serial
-          | NotStatic -> ctx
+  | MVarExpr (serial, ty, _) ->
+    let ctx =
+      match findStorageModifier ctx serial with
+      | IsStatic -> cgExternVarDecl ctx serial ty
+      | NotStatic -> ctx
 
-        CVarExpr(getUniqueVarName ctx serial), ctx)
+    CVarExpr(getUniqueVarName ctx serial), ctx
 
   | MProcExpr (serial, _, _) -> CVarExpr(getUniqueFunName ctx serial), ctx
 
@@ -847,16 +810,17 @@ let private cgExpr (ctx: CirCtx) (arg: MExpr) : CExpr * CirCtx =
   | MUnaryExpr (op, arg, ty, loc) -> genUnaryExpr ctx op arg ty loc
   | MBinaryExpr (op, l, r, _, _) -> genExprBin ctx op l r
 
-  | MNativeExpr (code, _, _) -> CNativeExpr code, ctx
+  | MNativeExpr (code, args, _, _) ->
+    let args, ctx = cgExprList ctx args
+    CNativeExpr(code, args), ctx
 
 // -----------------------------------------------
 // Statements
 // -----------------------------------------------
 
 let private addNativeFunDecl ctx funName args resultTy =
-  let argTys, ctx =
-    (args, ctx)
-    |> stMap (fun (arg, ctx) -> cgTyComplete ctx (mexprToTy arg))
+  let argTys, ctx = cgArgTys ctx (List.map mexprToTy args)
+  let resultTy, ctx = cgResultTy ctx resultTy
 
   addDecl ctx (CFunForwardDecl(funName, argTys, resultTy))
 
@@ -876,16 +840,50 @@ let private cgActionStmt ctx itself action args =
     assert (List.isEmpty args)
     addStmt ctx (CExprStmt(CCallExpr(CVarExpr "milone_leave_region", [])))
 
-  | MCallNativeAction funName ->
+  | MCallProcAction ->
     let ctx =
-      addNativeFunDecl ctx funName args CVoidTy
+      match args with
+      | MProcExpr (funSerial, _, _) :: _ -> cgExternFunDecl ctx funSerial
+      | _ -> ctx
+
+    let args, ctx =
+      (args, ctx)
+      |> stMap (fun (arg, ctx) -> cgExpr ctx arg)
+
+    match args with
+    | callee :: args -> addStmt ctx (CExprStmt(CCallExpr(callee, args)))
+    | _ -> unreachable itself
+
+  | MCallClosureAction ->
+    let ctx =
+      match args with
+      | MProcExpr (funSerial, _, _) :: _ -> cgExternFunDecl ctx funSerial
+      | _ -> ctx
+
+    let args, ctx =
+      (args, ctx)
+      |> stMap (fun (arg, ctx) -> cgExpr ctx arg)
+
+    match args with
+    | callee :: args ->
+      let callExpr =
+        let funPtr = CDotExpr(callee, "fun")
+        let envArg = CDotExpr(callee, "env")
+        CCallExpr(funPtr, envArg :: args)
+
+      addStmt ctx (CExprStmt callExpr)
+
+    | _ -> unreachable itself
+
+  | MCallNativeAction funName ->
+    let ctx = addNativeFunDecl ctx funName args tyUnit
 
     let args, ctx = cgExprList ctx args
     addStmt ctx (CExprStmt(CCallExpr(CVarExpr funName, args)))
 
   | MPtrWriteAction ->
     match cgExprList ctx args with
-    | [ ptr; CIntExpr "0"; value ], ctx -> addStmt ctx (CSetStmt(CUnaryExpr(CDerefUnary, ptr), value))
+    | [ ptr; CIntExpr ("0", _); value ], ctx -> addStmt ctx (CSetStmt(CUnaryExpr(CDerefUnary, ptr), value))
     | [ ptr; index; value ], ctx -> addStmt ctx (CSetStmt(CIndexExpr(ptr, index), value))
     | _ -> unreachable ()
 
@@ -896,23 +894,22 @@ let private cgPrintfnActionStmt ctx itself args =
 
     let args, ctx =
       (args, ctx)
-      |> stMap
-           (fun (arg, ctx) ->
-             match arg with
-             | MLitExpr (StrLit value, _) -> CStrRawExpr value, ctx
+      |> stMap (fun (arg, ctx) ->
+        match arg with
+        | MLitExpr (StrLit value, _) -> CStrRawExpr value, ctx
 
-             | _ when tyEqual (mexprToTy arg) tyStr ->
-               // Insert implicit cast from str to str ptr.
-               let arg, ctx = cgExpr ctx arg
-               CCallExpr(CVarExpr "str_to_c_str", [ arg ]), ctx
+        | _ when tyEqual (mexprToTy arg) tyStr ->
+          // Insert implicit cast from str to str ptr.
+          let arg, ctx = cgExpr ctx arg
+          CCallExpr(CVarExpr "str_to_c_str", [ arg ]), ctx
 
-             | _ -> cgExpr ctx arg)
+        | _ -> cgExpr ctx arg)
 
     addStmt ctx (CExprStmt(CCallExpr(CVarExpr "printf", format :: args)))
 
   | _ -> unreachable itself
 
-let private addLetStmt ctx name expr cty isStatic linkage =
+let private addLetStmt (ctx: CirCtx) name expr cty isStatic linkage replacing =
   match isStatic with
   | IsStatic ->
     let ctx =
@@ -920,6 +917,11 @@ let private addLetStmt ctx name expr cty isStatic linkage =
       | InternalLinkage -> addDecl ctx (CInternalStaticVarDecl(name, cty))
       | ExternalLinkage _ -> addDecl ctx (CStaticVarDecl(name, cty))
 
+    match expr with
+    | Some expr -> addStmt ctx (CSetStmt(CVarExpr name, expr))
+    | _ -> ctx
+
+  | NotStatic when replacing ->
     match expr with
     | Some expr -> addStmt ctx (CSetStmt(CVarExpr name, expr))
     | _ -> ctx
@@ -935,21 +937,21 @@ let private doGenLetValStmt ctx serial expr ty =
   let name = getUniqueVarName ctx serial
   let isStatic = findStorageModifier ctx serial
   let linkage = findVarLinkage ctx serial
+  let replacing = isReplacing ctx serial
   let cty, ctx = cgTyComplete ctx ty
-  addLetStmt ctx name expr cty isStatic linkage
+  addLetStmt ctx name expr cty isStatic linkage replacing
 
-let private cgPrimStmt (ctx: CirCtx) itself prim args serial =
-  let resultTy = (ctx.Vars |> mapFind serial).Ty
-
+let private cgPrimStmt (ctx: CirCtx) itself prim args serial resultTy =
   let conversion ctx makeExpr =
     match args with
     | [ arg ] ->
       let name = getUniqueVarName ctx serial
       let isStatic = findStorageModifier ctx serial
       let linkage = findVarLinkage ctx serial
+      let replacing = isReplacing ctx serial
       let ty, ctx = cgTyComplete ctx resultTy
       let arg, ctx = cgExpr ctx arg
-      addLetStmt ctx name (Some(makeExpr arg)) ty isStatic linkage
+      addLetStmt ctx name (Some(makeExpr arg)) ty isStatic linkage replacing
 
     | _ -> unreachable itself
 
@@ -957,25 +959,27 @@ let private cgPrimStmt (ctx: CirCtx) itself prim args serial =
     let name = getUniqueVarName ctx serial
     let isStatic = findStorageModifier ctx serial
     let linkage = findVarLinkage ctx serial
+    let replacing = isReplacing ctx serial
     let ty, ctx = cgTyComplete ctx resultTy
 
     let args, ctx =
       (args, ctx)
       |> stMap (fun (arg, ctx) -> cgExpr ctx arg)
 
-    addLetStmt ctx name (Some(makeExpr args)) ty isStatic linkage
+    addLetStmt ctx name (Some(makeExpr args)) ty isStatic linkage replacing
 
   let regularWithTy ctx makeExpr =
     let name = getUniqueVarName ctx serial
     let isStatic = findStorageModifier ctx serial
     let linkage = findVarLinkage ctx serial
+    let replacing = isReplacing ctx serial
     let ty, ctx = cgTyComplete ctx resultTy
 
     let args, ctx =
       (args, ctx)
       |> stMap (fun (arg, ctx) -> cgExpr ctx arg)
 
-    addLetStmt ctx name (Some(makeExpr args ty)) ty isStatic linkage
+    addLetStmt ctx name (Some(makeExpr args ty)) ty isStatic linkage replacing
 
   match prim with
   | MIntOfStrPrim flavor ->
@@ -988,7 +992,7 @@ let private cgPrimStmt (ctx: CirCtx) itself prim args serial =
 
   | MCharOfStrPrim -> conversion ctx (fun arg -> CCallExpr(CVarExpr "str_to_char", [ arg ]))
 
-  | MStrOfBoolPrim -> todo ()
+  | MStrOfBoolPrim -> conversion ctx (fun arg -> CCallExpr(CVarExpr "str_of_bool", [ arg ]))
   | MStrOfCharPrim -> conversion ctx (fun arg -> CCallExpr(CVarExpr "str_of_char", [ arg ]))
 
   | MStrOfIntPrim flavor ->
@@ -1005,6 +1009,7 @@ let private cgPrimStmt (ctx: CirCtx) itself prim args serial =
     let name = getUniqueVarName ctx serial
     let isStatic = findStorageModifier ctx serial
     let linkage = findVarLinkage ctx serial
+    let replacing = isReplacing ctx serial
     let ty, ctx = cgTyComplete ctx resultTy
 
     let args, ctx =
@@ -1019,74 +1024,49 @@ let private cgPrimStmt (ctx: CirCtx) itself prim args serial =
       | [ env ] -> CInitExpr([ "fun", funExpr; "env", env ], ty), ctx
       | _ -> unreachable itself
 
-    addLetStmt ctx name (Some expr) ty isStatic linkage
+    addLetStmt ctx name (Some expr) ty isStatic linkage replacing
 
   | MBoxPrim ->
     match args with
     | [ arg ] -> cgBoxStmt ctx serial arg
     | _ -> unreachable itself
 
-  | MOptionSomePrim ->
-    regularWithTy
-      ctx
-      (fun args optionTy ->
-        match args with
-        | [ item ] ->
-          let fields =
-            [ "some", CVarExpr "true"
-              "value", item ]
-
-          CInitExpr(fields, optionTy)
-        | _ -> unreachable itself)
-
   | MConsPrim ->
     match args with
     | [ l; r ] -> cgConsStmt ctx serial l r
     | _ -> unreachable itself
 
-  | MTuplePrim ->
-    regularWithTy
-      ctx
-      (fun args tupleTy ->
-        let fields =
-          args |> List.mapi (fun i arg -> tupleField i, arg)
-
-        CInitExpr(fields, tupleTy))
-
   | MVariantPrim variantSerial ->
-    regularWithTy
-      ctx
-      (fun args unionTy ->
-        match args with
-        | [ payload ] ->
-          let variantName = getUniqueVariantName ctx variantSerial
+    regularWithTy ctx (fun args unionTy ->
+      match args with
+      | [ payload ] ->
+        let variantName = getUniqueVariantName ctx variantSerial
 
-          let fields =
-            [ "discriminant", CVarExpr variantName
-              variantName, payload ]
+        let fields =
+          [ "discriminant", CVarExpr variantName
+            variantName, payload ]
 
-          CInitExpr(fields, unionTy)
+        CInitExpr(fields, unionTy)
 
-        | _ -> unreachable itself)
+      | _ -> unreachable itself)
 
   | MRecordPrim ->
-    regularWithTy
-      ctx
-      (fun args recordTy ->
-        let fields =
-          args |> List.mapi (fun i arg -> tupleField i, arg)
+    regularWithTy ctx (fun args recordTy ->
+      let fields =
+        args |> List.mapi (fun i arg -> tupleField i, arg)
 
-        CInitExpr(fields, recordTy))
+      CInitExpr(fields, recordTy))
 
   | MCallProcPrim ->
     let name = getUniqueVarName ctx serial
     let isStatic = findStorageModifier ctx serial
     let linkage = findVarLinkage ctx serial
+    let replacing = isReplacing ctx serial
     let ty, ctx = cgTyComplete ctx resultTy
 
     let ctx =
       match args with
-      | MProcExpr (funSerial, _, loc) :: _ -> cgExternFunDecl ctx funSerial
+      | MProcExpr (funSerial, _, _) :: _ -> cgExternFunDecl ctx funSerial
       | _ -> ctx
 
     let args, ctx =
@@ -1096,7 +1076,7 @@ let private cgPrimStmt (ctx: CirCtx) itself prim args serial =
     match args with
     | callee :: args ->
       let expr = CCallExpr(callee, args)
-      addLetStmt ctx name (Some expr) ty isStatic linkage
+      addLetStmt ctx name (Some expr) ty isStatic linkage replacing
 
     | [] -> unreachable itself
 
@@ -1104,6 +1084,7 @@ let private cgPrimStmt (ctx: CirCtx) itself prim args serial =
     let name = getUniqueVarName ctx serial
     let isStatic = findStorageModifier ctx serial
     let linkage = findVarLinkage ctx serial
+    let replacing = isReplacing ctx serial
     let ty, ctx = cgTyComplete ctx resultTy
 
     let ctx =
@@ -1122,27 +1103,22 @@ let private cgPrimStmt (ctx: CirCtx) itself prim args serial =
         let envArg = CDotExpr(callee, "env")
         CCallExpr(funPtr, envArg :: args)
 
-      addLetStmt ctx name (Some expr) ty isStatic linkage
+      addLetStmt ctx name (Some expr) ty isStatic linkage replacing
 
     | [] -> unreachable itself
 
   | MCallNativePrim funName ->
     let ctx =
-      let resultTy, ctx = cgTyComplete ctx resultTy
       addNativeFunDecl ctx funName args resultTy
 
     regular ctx (fun args -> (CCallExpr(CVarExpr funName, args)))
 
   | MPtrReadPrim ->
-    regular
-      ctx
-      (fun args ->
-        match args with
-        | [ ptr; CIntExpr "0" ] -> CUnaryExpr(CDerefUnary, ptr)
-        | [ ptr; index ] -> CIndexExpr(ptr, index)
-        | _ -> unreachable ())
-
-let private cgCallPrimExpr ctx itself serial prim args = cgPrimStmt ctx itself prim args serial
+    regular ctx (fun args ->
+      match args with
+      | [ ptr; CIntExpr ("0", _) ] -> CUnaryExpr(CDerefUnary, ptr)
+      | [ ptr; index ] -> CIndexExpr(ptr, index)
+      | _ -> unreachable ())
 
 let private cgBoxStmt ctx serial arg =
   let argTy, ctx = cgTyComplete ctx (mexprToTy arg)
@@ -1201,8 +1177,11 @@ let private cgSetStmt ctx serial right =
   addStmt ctx (CSetStmt(left, right))
 
 let private cgReturnStmt ctx expr =
-  let expr, ctx = cgExpr ctx expr
-  addStmt ctx (CReturnStmt(Some expr))
+  if expr |> mexprToTy |> tyIsUnit then
+    addStmt ctx (CReturnStmt None)
+  else
+    let expr, ctx = cgExpr ctx expr
+    addStmt ctx (CReturnStmt(Some expr))
 
 // FIXME: Without the result type ascription, invalid code is generated for some reason.
 let private cgTerminatorAsBlock ctx terminator : CStmt list * CirCtx =
@@ -1224,29 +1203,26 @@ let private cgTerminatorStmt ctx stmt =
 
     let clauses, ctx =
       (clauses, ctx)
-      |> stMap
-           (fun (clause: MSwitchClause, ctx) ->
-             let cases =
-               clause.Cases
-               |> List.map (fun cond -> cgConst ctx cond)
+      |> stMap (fun (clause: MSwitchClause, ctx) ->
+        let cases =
+          clause.Cases
+          |> List.map (fun cond -> cgConst ctx cond)
 
-             let stmts, ctx =
-               cgTerminatorAsBlock ctx clause.Terminator
+        let stmts, ctx =
+          cgTerminatorAsBlock ctx clause.Terminator
 
-             (cases, clause.IsDefault, stmts), ctx)
+        (cases, clause.IsDefault, stmts), ctx)
 
     addStmt ctx (CSwitchStmt(cond, clauses))
 
   | MExitTerminator arg ->
-    invoke
-      (fun () ->
-        let arg, ctx = cgExpr ctx arg
-        addStmt ctx (CExprStmt(CCallExpr(CVarExpr "exit", [ arg ]))))
+    let arg, ctx = cgExpr ctx arg
+    addStmt ctx (CExprStmt(CCallExpr(CVarExpr "exit", [ arg ])))
 
 let private cgStmt ctx stmt =
   match stmt with
   | MActionStmt (action, args, _) -> cgActionStmt ctx stmt action args
-  | MPrimStmt (prim, args, temp, _) -> cgPrimStmt ctx stmt prim args temp
+  | MPrimStmt (prim, args, temp, resultTy, _) -> cgPrimStmt ctx stmt prim args temp resultTy
   | MLetValStmt (serial, init, ty, _) -> cgLetValStmt ctx serial init ty
   | MSetStmt (serial, right, _) -> cgSetStmt ctx serial right
   | MLabelStmt (label, _) -> addStmt ctx (CLabelStmt label)
@@ -1263,7 +1239,7 @@ let private cgStmt ctx stmt =
     addStmt ctx (CNativeStmt(code, args))
 
 let private cgBlock (ctx: CirCtx) (stmts: MStmt list) =
-  let bodyCtx : CirCtx = cgStmts (enterBlock ctx) stmts
+  let bodyCtx: CirCtx = cgStmts (enterBlock ctx) stmts
   let stmts = bodyCtx.Stmts
   let ctx = rollback ctx bodyCtx
   List.rev stmts, ctx
@@ -1271,8 +1247,7 @@ let private cgBlock (ctx: CirCtx) (stmts: MStmt list) =
 let private cgBlocks (ctx: CirCtx) (blocks: MBlock list) =
   match blocks with
   | [ block ] -> cgBlock ctx block.Stmts
-
-  | _ -> todo ()
+  | _ -> unreachable () // not implemented yet
 
 let private cgStmts (ctx: CirCtx) (stmts: MStmt list) : CirCtx =
   let rec go ctx stmts =
@@ -1289,7 +1264,7 @@ let private cgDecls (ctx: CirCtx) decls =
   | [] -> ctx
 
   | MProcDecl (callee, args, body, resultTy, _) :: decls ->
-    let def : FunDef = ctx.Funs |> mapFind callee
+    let def: FunDef = ctx.Rx.Funs |> mapFind callee
 
     let funName, args =
       if isMainFun ctx callee then
@@ -1297,19 +1272,32 @@ let private cgDecls (ctx: CirCtx) decls =
       else
         getUniqueFunName ctx callee, args
 
-    let rec go acc ctx args =
+    let rec collectArgs acc ctx args =
       match args with
       | [] -> List.rev acc, ctx
       | (arg, ty, _) :: args ->
         let name = getUniqueVarName ctx arg
         let cty, ctx = cgTyComplete ctx ty
-        go ((name, cty) :: acc) ctx args
+        collectArgs ((name, cty) :: acc) ctx args
 
-    let args, ctx = go [] ctx args
+    let collectFunLocalStmts (ctx: CirCtx) =
+      ctx.Rx.FunLocals
+      |> multimapFind callee
+      |> List.mapFold
+           (fun (ctx: CirCtx) (varSerial, ty) ->
+             let name = getUniqueVarName ctx varSerial
+             let cty, ctx = cgTyComplete ctx ty
+             CLetStmt(name, None, cty), ctx)
+           ctx
+
+    let args, ctx = collectArgs [] ctx args
+    let stmts, ctx = collectFunLocalStmts ctx
     let body, ctx = cgBlocks ctx body
-    let resultTy, ctx = cgTyComplete ctx resultTy
+    let resultTy, ctx = cgResultTy ctx resultTy
 
     let funDecl =
+      let body = List.append stmts body
+
       match def.Linkage with
       | InternalLinkage -> CStaticFunDecl(funName, args, resultTy, body)
       | ExternalLinkage _ -> CFunDecl(funName, args, resultTy, body)
@@ -1346,40 +1334,35 @@ let private sortDecls (decls: CDecl list) : CDecl list =
 
   List.collect List.rev [ types; vars; bodies ]
 
+let private cgModule (ctx: CirCtx) (m: MModule) : DocId * CDecl list =
+  let varUniqueNames, _ =
+    renameIdents2 m.Vars (fun name -> true, name) ctx.Rx.VarUniqueNames ctx.Rx.ValueNameFreq
+
+  let ctx: CirCtx =
+    { Rx =
+        { ctx.Rx with
+            DocIdOpt = Some m.DocId
+            VarUniqueNames = varUniqueNames }
+      TyEnv = TMap.empty tyCompare
+      TyUniqueNames = ctx.TyUniqueNames
+      Stmts = []
+      Decls = []
+      VarDecls = TSet.empty varSerialCompare
+      FunDecls = TSet.empty funSerialCompare }
+
+  // Generate decls.
+  let ctx = cgDecls ctx m.Decls
+  let decls = List.rev ctx.Decls |> sortDecls
+
+  m.DocId, decls
+
 // -----------------------------------------------
 // Interface
 // -----------------------------------------------
 
-let genCir (decls, mirCtx: MirCtx) : (DocId * CDecl list) list =
-  let ctx = ofMirCtx mirCtx
+let genCir (modules: MModule list, mirResult: MirResult) : (DocId * CDecl list) list =
+  let ctx = ofMirResult mirResult
 
-  // Split into modules based on docId.
-  let acc, _ =
-    decls
-    |> List.fold
-         (fun moduleMap decl ->
-           let (Loc (docId, _, _)) = mDeclToLoc decl
-
-           moduleMap |> multimapAdd docId decl)
-         (TMap.empty compare)
-    |> TMap.fold
-         (fun (acc, ctx: CirCtx) docId declAcc ->
-           // Reset state.
-           let ctx =
-             { ctx with
-                 TyEnv = TMap.empty tyCompare
-                 Stmts = []
-                 Decls = []
-                 VarDecls = TSet.empty varSerialCompare
-                 FunDecls = TSet.empty funSerialCompare
-                 DocId = docId }
-
-           // Generate decls.
-           let decls = List.rev declAcc
-           let ctx = cgDecls ctx decls
-           let decls = List.rev ctx.Decls |> sortDecls
-
-           (docId, decls) :: acc, ctx)
-         ([], ctx)
-
-  List.rev acc
+  modules
+  |> __parallelMap (cgModule ctx)
+  |> List.filter (fun (_, decls) -> decls |> List.isEmpty |> not)

@@ -4,299 +4,239 @@
 /// Requires comparison of keys.
 module rec MiloneStd.StdMap
 
-let private unreachable () =
-  printfn "FATAL ERROR: unreachable"
-  exit 1
-
-let private fst (x, _) = x
-
-let private snd (_, y) = y
-
 // -----------------------------------------------
 // Nodes
 // -----------------------------------------------
 
 [<NoEquality; NoComparison>]
-type TreeMapColor =
+type Color =
   | R
   | B
 
 [<NoEquality; NoComparison>]
-type TreeMapRawNode =
+type Node<'K, 'T> =
   | E
-  | T of TreeMapColor * left: TreeMapRawNode * keyValuePair: obj * right: TreeMapRawNode
+  | T of Color * left: Node<'K, 'T> * key: 'K * value: 'T * right: Node<'K, 'T>
 
-// keyCompare kv = compare theKey (fst (unbox kv))
-let private doTryFind (keyCompare: obj -> int) node : obj option =
-  let rec go node =
-    match node with
-    | E -> None
+module private TreeNode =
+  let private balanceL body =
+    match body with
+    | B, T (R, T (R, a, xk, xv, b), yk, yv, c), zk, zv, d -> R, T(B, a, xk, xv, b), yk, yv, T(B, c, zk, zv, d)
+    | B, T (R, a, xk, xv, T (R, b, yk, yv, c)), zk, zv, d -> R, T(B, a, xk, xv, b), yk, yv, T(B, c, zk, zv, d)
+    | _ -> body
 
-    | T (_, a, kv, b) ->
-      let c = keyCompare kv
+  let private balanceR body =
+    match body with
+    | B, a, xk, xv, T (R, T (R, b, yk, yv, c), zk, zv, d) -> R, T(B, a, xk, xv, b), yk, yv, T(B, c, zk, zv, d)
+    | B, a, xk, xv, T (R, b, yk, yv, T (R, c, zk, zv, d)) -> R, T(B, a, xk, xv, b), yk, yv, T(B, c, zk, zv, d)
+    | _ -> body
 
-      if c < 0 then
-        // key < k
-        go a
-      else if c > 0 then
-        // k < key
-        go b
-      else
-        // key = k
-        Some kv
+  let findFromNode (keyCompare: 'K -> 'K -> int) key node : 'T option =
+    let rec go node =
+      match node with
+      | E -> None
 
-  go node
+      | T (_, a, k, v, b) ->
+        let c = keyCompare key k
 
-let private balanceL body =
-  match body with
-  | B, T (R, T (R, a, x, b), y, c), z, d -> R, T(B, a, x, b), y, T(B, c, z, d)
-  | B, T (R, a, x, T (R, b, y, c)), z, d -> R, T(B, a, x, b), y, T(B, c, z, d)
-  | _ -> body
+        if c < 0 then
+          // key < k
+          go a
+        else if c > 0 then
+          // k < key
+          go b
+        else
+          // key = k
+          Some v
 
-let private balanceR body =
-  match body with
-  | B, a, x, T (R, T (R, b, y, c), z, d) -> R, T(B, a, x, b), y, T(B, c, z, d)
-  | B, a, x, T (R, b, y, T (R, c, z, d)) -> R, T(B, a, x, b), y, T(B, c, z, d)
-  | _ -> body
+    go node
 
-// keyCompare kv = compare (fst (unbox newKv)) (fst (unbox kv))
-let private doInsert (keyCompare: obj -> int) (newKv: obj) node =
-  let rec go node =
-    match node with
-    | E -> R, E, newKv, E
+  let insertNode (keyCompare: 'K -> 'K -> int) (newKey: 'K) (newValue: 'T) node : Node<'K, 'T> =
+    let rec go node : Color * Node<'K, 'T> * 'K * 'T * Node<'K, 'T> =
+      match node with
+      | E -> R, E, newKey, newValue, E
 
-    | T (color, l, kv, r) ->
-      let c = keyCompare kv
+      | T (color, l, k, v, r) ->
+        let c = keyCompare newKey k
 
-      if c < 0 then
-        // key < k
-        balanceL (color, T(go l), kv, r)
-      else if c > 0 then
-        // k < key
-        balanceR (color, l, kv, T(go r))
-      else
-        // key = k
-        color, l, newKv, r
+        if c < 0 then
+          // key < k
+          balanceL (color, T(go l), k, v, r)
+        else if c > 0 then
+          // k < key
+          balanceR (color, l, k, v, T(go r))
+        else
+          // key = k
+          color, l, newKey, newValue, r
 
-  let _, y, a, b = go node
-  T(B, y, a, b)
+    let _, yk, yv, a, b = go node
+    T(B, yk, yv, a, b)
 
-let private setBlack node =
-  match node with
-  | E -> E
-  | T (_, l, kv, r) -> T(B, l, kv, r)
-
-let private findMinItem node =
-  let rec go node =
-    match node with
-    | E -> None
-
-    | T (_, E, kv, _) -> Some kv
-
-    | T (_, l, _, _) -> go l
-
-  go node
-
-// keyCompare kv = compare theKey k
-// keyCompareTo l r = compare (fst l) (fst r)
-let private doRemove (keyCompare: obj -> int) (keyCompareTo: obj -> obj -> int) node : obj option * _ =
-  let rec go keyCompare node =
-    match node with
-    | E -> None, E
-
-    | T (color, l, kv, r) ->
-      let c = keyCompare kv
-
-      if c < 0 then
-        // key < k
-        let removed, l = go keyCompare l
-        removed, T(balanceL (color, l, kv, r))
-      else if c > 0 then
-        // k < key
-        let removed, r = go keyCompare r
-        removed, T(balanceR (color, l, kv, r))
-      else
-        // key = k
-        let rest =
-          match l, r with
-          | E, _ -> setBlack r
-          | _, E -> setBlack l
-          | _ ->
-            match findMinItem r with
-            | None -> unreachable ()
-            | Some rkv ->
-              let _, r = go (keyCompareTo rkv) r
-              T(balanceR (color, l, rkv, r))
-
-        Some kv, rest
-
-  go keyCompare node
-
-// f: kv -> kv
-let private doMap f node =
-  let rec go node =
+  let private setBlack node =
     match node with
     | E -> E
+    | T (_, l, k, v, r) -> T(B, l, k, v, r)
 
-    | T (color, l, kv, r) ->
-      let l = go l
-      let kv = f kv
-      let r = go r
-      T(color, l, kv, r)
+  let private findMinItem node =
+    let rec go node =
+      match node with
+      | E -> None
 
-  go node
+      | T (_, E, k, v, _) -> Some(k, v)
 
-// folder: state kv -> state
-let private doFold folder state node =
-  let rec go state node =
-    match node with
-    | E -> state
+      | T (_, l, _, _, _) -> go l
 
-    | T (_, l, kv, r) ->
-      let state = go state l
-      let state = folder state kv
-      go state r
+    go node
 
-  go state node
+  let removeNode (keyCompare: 'K -> 'K -> int) key node : 'T option * Node<'K, 'T> =
+    let rec go node =
+      match node with
+      | E -> None, E
 
-// folder: state kv -> kv * state
-let private doMapFold folder state node =
-  let rec go state node =
-    match node with
-    | E -> E, state
+      | T (color, l, k, v, r) ->
+        let c = keyCompare key k
 
-    | T (color, l, kv, r) ->
-      let l, state = go state l
-      let kv, state = folder state kv
-      let r, state = go state r
-      T(color, l, kv, r), state
+        if c < 0 then
+          // key < k
+          let removed, l = go l
+          removed, T(balanceL (color, l, k, v, r))
+        else if c > 0 then
+          // k < key
+          let removed, r = go r
+          removed, T(balanceR (color, l, k, v, r))
+        else
+          // key = k
+          let rest =
+            match l, r with
+            | E, _ -> setBlack r
+            | _ ->
+              match findMinItem r with
+              | None -> setBlack l
+              | Some (rk, rv) ->
+                let _, r = removeNode keyCompare rk r
+                T(balanceR (color, l, rk, rv, r))
 
-  go state node
+          Some v, rest
+
+    go node
+
+  let mapNode (f: 'K -> 'T -> 'U) (node: Node<'K, 'T>) : Node<'K, 'U> =
+    let rec go node =
+      match node with
+      | E -> E
+
+      | T (color, l, k, v, r) ->
+        let l = go l
+        let v = f k v
+        let r = go r
+        T(color, l, k, v, r)
+
+    go node
+
+  let foldNode (folder: 'S -> 'K -> 'T -> 'S) (state: 'S) (node: Node<'K, 'T>) : 'S =
+    let rec go state node =
+      match node with
+      | E -> state
+
+      | T (_, l, k, v, r) ->
+        let state = go state l
+        let state = folder state k v
+        go state r
+
+    go state node
+
+  let mapFoldNode (folder: 'S -> 'K -> 'T -> 'U * 'S) (state: 'S) (node: Node<'K, 'T>) : Node<'K, 'U> * 'S =
+    let rec go state node =
+      match node with
+      | E -> E, state
+
+      | T (color, l, k, v, r) ->
+        let l, state = go state l
+        let v, state = folder state k v
+        let r, state = go state r
+        T(color, l, k, v, r), state
+
+    go state node
 
 // -----------------------------------------------
 // Interface
 // -----------------------------------------------
 
-// Third item is always None. This is just for "phantom" type parameter 'T.
-type TreeMap<'K, 'T> = TreeMapRawNode * ('K -> 'K -> int) * ('T option)
+type TreeMap<'K, 'T> = TreeMap of Node<'K, 'T> * ('K -> 'K -> int)
 
-let empty (keyCompare: 'K -> 'K -> int) : TreeMap<'K, 'T> = E, keyCompare, None
+module TMap =
+  let empty (keyCompare: 'K -> 'K -> int) : TreeMap<'K, 'T> = TreeMap(E, keyCompare)
 
-let isEmpty (map: TreeMap<_, _>) : bool =
-  let node, _, _ = map
+  let isEmpty (map: TreeMap<_, _>) : bool =
+    let (TreeMap (node, _)) = map
 
-  match node with
-  | E -> true
-  | _ -> false
+    match node with
+    | E -> true
+    | _ -> false
 
-let tryFind (key: 'K) (map: TreeMap<'K, 'T>) : 'T option =
-  let node, keyCompare, _ = map
+  let tryFind (key: 'K) (map: TreeMap<'K, 'T>) : 'T option =
+    let (TreeMap (node, keyCompare)) = map
+    TreeNode.findFromNode keyCompare key node
 
-  let kvOpt =
-    node
-    |> doTryFind (fun kv -> keyCompare key (fst (unbox kv: 'K * 'T)))
+  let containsKey (key: 'K) (map: TreeMap<'K, _>) : bool =
+    let (TreeMap (node, keyCompare)) = map
 
-  match kvOpt with
-  | Some kv -> Some(snd (unbox kv: 'K * 'T))
-  | None -> None
+    match TreeNode.findFromNode keyCompare key node with
+    | Some _ -> true
+    | None -> false
 
-let containsKey (key: 'K) (map: TreeMap<'K, _>) : bool =
-  match tryFind key map with
-  | Some _ -> true
-  | None -> false
+  let add (key: 'K) (value: 'T) (map: TreeMap<'K, 'T>) : TreeMap<'K, 'T> =
+    let (TreeMap (node, keyCompare)) = map
 
-let add (key: 'K) (value: 'T) (map: TreeMap<'K, 'T>) : TreeMap<'K, 'T> =
-  let node, keyCompare, none = map
+    let node =
+      TreeNode.insertNode keyCompare key value node
 
-  let node =
-    doInsert (fun kv -> keyCompare key (fst (unbox kv: 'K * 'T))) (box (key, value)) node
+    TreeMap(node, keyCompare)
 
-  node, keyCompare, none
+  let remove (key: 'K) (map: TreeMap<'K, 'T>) : 'T option * TreeMap<'K, 'T> =
+    let (TreeMap (node, keyCompare)) = map
+    let valueOpt, node = TreeNode.removeNode keyCompare key node
+    valueOpt, TreeMap(node, keyCompare)
 
-let remove (key: 'K) (map: TreeMap<'K, 'T>) : 'T option * TreeMap<'K, 'T> =
-  let node, keyCompare, none = map
+  let map (f: 'K -> 'T -> 'U) (map: TreeMap<'K, 'T>) : TreeMap<'K, 'U> =
+    let (TreeMap (node, keyCompare)) = map
+    let node = node |> TreeNode.mapNode f
+    TreeMap(node, keyCompare)
 
-  let kvOpt, node =
-    doRemove
-      (fun kv -> keyCompare key (fst (unbox kv: 'K * 'T)))
-      (fun l r -> keyCompare (fst (unbox l: 'K * 'T)) (fst (unbox r: 'K * 'T)))
+  let fold (folder: 'S -> 'K -> 'T -> 'S) (state: 'S) (map: TreeMap<'K, 'T>) : 'S =
+    let (TreeMap (node, keyCompare)) = map
+    TreeNode.foldNode folder state node
+
+  let mapFold (folder: 'S -> 'K -> 'T -> 'U * 'S) (state: 'S) (map: TreeMap<'K, 'T>) : TreeMap<'K, 'U> * 'S =
+    let (TreeMap (node, keyCompare)) = map
+    let node, state = TreeNode.mapFoldNode folder state node
+    TreeMap(node, keyCompare), state
+
+  let filter (pred: 'K -> 'T -> bool) (map: TreeMap<'K, 'T>) : TreeMap<'K, 'T> =
+    let (TreeMap (node, keyCompare)) = map
+
+    let node =
       node
+      |> TreeNode.foldNode
+           (fun node k v ->
+             if pred k v then
+               TreeNode.insertNode keyCompare k v node
+             else
+               node)
+           E
 
-  let valueOpt =
-    match kvOpt with
-    | Some kv -> Some(snd (unbox kv: 'K * 'T))
-    | None -> None
+    TreeMap(node, keyCompare)
 
-  valueOpt, (node, keyCompare, none)
+  let ofList keyCompare (assoc: ('K * 'T) list) : TreeMap<'K, 'T> =
+    let node =
+      assoc
+      |> List.fold (fun node (k, v) -> TreeNode.insertNode keyCompare k v node) E
 
-let map (f: 'K -> 'T -> 'U) (map: TreeMap<'K, 'T>) : TreeMap<'K, 'U> =
-  let node, keyCompare, _ = map
+    TreeMap(node, keyCompare)
 
-  let node =
-    node
-    |> doMap
-         (fun kv ->
-           let k, v = unbox kv
-           let v = f k v
-           box (k, v))
+  let toList (map: TreeMap<'K, 'T>) : ('K * 'T) list =
+    map
+    |> fold (fun acc key value -> (key, value) :: acc) []
+    |> List.rev
 
-  node, keyCompare, None
-
-/// Maps both keys and values. Keys must preserve their relative ordering (unchecked).
-let stableMap (f: 'K -> 'T -> 'H * 'U) (otherKeyCompare: 'H -> 'H -> int) (map: TreeMap<'K, 'T>) : TreeMap<'H, 'U> =
-  let node, keyCompare, _ = map
-
-  let node =
-    node
-    |> doMap
-         (fun kv ->
-           let k, v = unbox kv
-           let kv = f k v
-           box kv)
-
-  node, otherKeyCompare, None
-
-let fold (folder: 'S -> 'K -> 'T -> 'S) (state: 'S) (map: TreeMap<'K, 'T>) : 'S =
-  let node, keyCompare, _ = map
-
-  doFold
-    (fun state kv ->
-      let k, v = unbox kv
-      folder state k v)
-    state
-    node
-
-let mapFold (folder: 'S -> 'K -> 'T -> 'U * 'S) (state: 'S) (map: TreeMap<'K, 'T>) : TreeMap<'K, 'U> * 'S =
-  let node, keyCompare, _ = map
-
-  let node, state =
-    doMapFold
-      (fun state kv ->
-        let k, v = unbox kv
-        let v, state = folder state k v
-        box (k, v), state)
-      state
-      node
-
-  (node, keyCompare, None), state
-
-let filter (pred: 'K -> 'T -> bool) (map: TreeMap<'K, 'T>) : TreeMap<'K, 'T> =
-  let _, keyCompare, _ = map
-
-  map
-  |> fold (fun acc k v -> if pred k v then (k, v) :: acc else acc) []
-  |> ofList keyCompare
-
-let ofList keyCompare (assoc: ('K * 'T) list) : TreeMap<'K, 'T> =
-  let node =
-    assoc
-    |> List.fold (fun node kv -> doInsert (fun r -> keyCompare (fst kv) (fst (unbox r: 'K * 'T))) (box kv) node) E
-
-  node, keyCompare, None
-
-let toList (map: TreeMap<'K, 'T>) : ('K * 'T) list =
-  map
-  |> fold (fun acc key value -> (key, value) :: acc) []
-  |> List.rev
-
-let toKeys (map: TreeMap<'K, 'T>) : 'K list = List.map fst (toList map)
+  let toKeys (map: TreeMap<'K, 'T>) : 'K list = map |> toList |> List.map fst

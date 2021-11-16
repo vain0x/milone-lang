@@ -1,302 +1,352 @@
-/// # AST Bundle
+/// # AstBundle
 ///
 /// Resolves dependencies between modules.
 /// This stage determines the set of modules in the project and the ordering of them.
 ///
-/// These modules are combined into single HIR expression.
+/// These modules are combined into single TIR program.
 module rec MiloneSyntax.AstBundle
 
 open MiloneShared.SharedTypes
 open MiloneShared.Util
-open MiloneSyntax.AstToHir
+open MiloneStd.StdSet
+open MiloneStd.StdMap
 open MiloneSyntax.Syntax
 open MiloneSyntax.Tir
 
-module TSet = MiloneStd.StdSet
-module TMap = MiloneStd.StdMap
 module S = MiloneStd.StdString
+module TirGen = MiloneSyntax.TirGen
 
-type private ProjectName = string
-type private ModuleName = string
-type private ModuleRef = int * ModuleName
+// -----------------------------------------------
+// Utils
+// -----------------------------------------------
+
+/// Splits vertices in a tree into a list of layers.
+///
+/// Result (list of layers) satisfies a condition:
+///   vertices in a layer depend only vertices in strictly lower layers.
+let private computeLayer
+  (compareVertices: 'T -> 'T -> int)
+  (getChildren: 'T -> 'T list)
+  (vertices: 'T list)
+  : 'T list list =
+  let rec collect prevSet (okAcc: 'T list, ngAcc: 'T list) (v: 'T) =
+    assert (TSet.contains v prevSet |> not)
+
+    let ok =
+      getChildren v
+      |> List.forall (fun u -> TSet.contains u prevSet)
+
+    if ok then
+      v :: okAcc, ngAcc
+    else
+      okAcc, v :: ngAcc
+
+  let rec go prevSet (rest: 'T list) (acc: 'T list list) =
+    if List.isEmpty rest then
+      List.rev acc
+    else
+      let okAcc, ngAcc =
+        rest |> List.fold (collect prevSet) ([], [])
+
+      assert (List.isEmpty okAcc |> not) // Cyclic dependencies might exist.
+
+      let prevSet =
+        List.fold (fun prevSet v -> TSet.add v prevSet) prevSet okAcc
+
+      go prevSet ngAcc (okAcc :: acc)
+
+  go (TSet.empty compareVertices) vertices []
+
+// -----------------------------------------------
+// Types
+// -----------------------------------------------
+
+type private Error = string * Loc
 
 [<RequireQualifiedAccess; NoEquality; NoComparison>]
-type ModuleRequest =
-  { ProjectName: string
-    ModuleName: string
-    OriginOpt: (ModuleRef * Pos) option
+type private ModuleRequest =
+  { ProjectName: ProjectName
+    ModuleName: ModuleName
+    Origin: Loc
     Optional: bool }
 
 [<RequireQualifiedAccess; NoEquality; NoComparison>]
-type ModuleInfo =
-  { Ref: ModuleRef
+type private ModuleData =
+  { Name: ModuleName
     Project: ProjectName
-    DocId: DocId
-    AstOpt: ARoot option }
+    SyntaxData: ModuleSyntaxData
+    Deps: ModuleRequest list
+    SymbolCount: SymbolCount
+    Errors: Error list }
 
 [<RequireQualifiedAccess; NoEquality; NoComparison>]
-type BundleCtx =
-  { Projects: TSet.TreeSet<ProjectName>
-    Modules: TMap.TreeMap<ModuleRef, ModuleInfo>
-    ModuleMap: TMap.TreeMap<ProjectName * ModuleName, ModuleInfo>
+type private RequestResult =
+  | Requested
+  | Resolved of ModuleData
+  | Failed
 
-    ModuleStack: ModuleRequest list
-    ModuleDeps: TMap.TreeMap<ModuleRef, (ProjectName * ModuleName) list> }
+type private RequestMap = TreeMap<ProjectName * ModuleName, RequestResult>
 
-[<NoEquality; NoComparison>]
-type BundleStatus =
-  | NoRequest
-  | ModuleInfoRequested of ModuleRequest
-  | ModuleBundled of ModuleRef
-
-[<RequireQualifiedAccess; NoEquality; NoComparison>]
-type BundleResult = { Modules: ModuleInfo list }
-
-let private compareRef (l: int * string) (r: int * string) : int =
-  let c = compare (fst l) (fst r)
-
-  if c <> 0 then
-    c
-  else
-    assert (snd l = snd r)
-    0
+// note: avoid using this function so that DocId can be computed by clients.
+let computeDocId (p: ProjectName) (m: ModuleName) : DocId = p + "." + m
 
 // -----------------------------------------------
 // ModuleRequest
 // -----------------------------------------------
 
-let private newRootRequest (projectName: ProjectName) (moduleName: string) : ModuleRequest =
-  { ProjectName = projectName
-    ModuleName = moduleName
-    OriginOpt = None
+let private newRootRequest (docId: DocId) (p: ProjectName) (m: ModuleName) : ModuleRequest =
+  { ProjectName = p
+    ModuleName = m
+    Origin = Loc(docId, 0, 0)
     Optional = false }
 
-let private newMiloneOnlyRequest (projectName: ProjectName) : ModuleRequest =
-  { ProjectName = projectName
+let private newMiloneOnlyRequest (p: ProjectName) (originDocId: DocId) : ModuleRequest =
+  { ProjectName = p
     ModuleName = "MiloneOnly"
-    OriginOpt = None
+    Origin = Loc(originDocId, 0, 0)
     Optional = true }
 
-let private newDepRequest
-  (projectName: ProjectName)
-  (moduleName: ModuleName)
-  (originRef: ModuleRef)
-  (pos: Pos)
-  : ModuleRequest =
-  { ProjectName = projectName
-    ModuleName = moduleName
-    OriginOpt = Some(originRef, pos)
+let private newDepRequest (p: ProjectName) (m: ModuleName) (originLoc: Loc) : ModuleRequest =
+  { ProjectName = p
+    ModuleName = m
+    Origin = originLoc
     Optional = false }
 
-// -----------------------------------------------
-// Context
-// -----------------------------------------------
-
-let private requestDeps (moduleInfo: ModuleInfo) (ctx: BundleCtx) : BundleCtx =
-  match moduleInfo.AstOpt with
-  | None -> ctx
-
-  | Some root ->
-    // All modules depend on MiloneOnly implicitly.
-    let deps, stack =
-      let r = newMiloneOnlyRequest moduleInfo.Project
-      [ r.ProjectName, r.ModuleName ], r :: ctx.ModuleStack
-
-    let deps, stack =
-      findDependentModules root
-      |> List.fold
-           (fun (deps, stack) (projectName, moduleName, pos) ->
-             let deps = (projectName, moduleName) :: deps
-
-             let stack =
-               newDepRequest projectName moduleName moduleInfo.Ref pos
-               :: stack
-
-             deps, stack)
-           (deps, stack)
-
-    { ctx with
-        ModuleDeps = ctx.ModuleDeps |> TMap.add moduleInfo.Ref deps
-        ModuleStack = stack }
+let private requestToNotFoundError (r: ModuleRequest) : Error option =
+  if not r.Optional then
+    Some("Module not found.", r.Origin)
+  else
+    None
 
 // -----------------------------------------------
 // Interface
 // -----------------------------------------------
 
-/// Starts bundle process.
-///
-/// You should call `bundleNext` to process requests.
-/// Once it returned `NoRequest`, call `bundleFinish`.
-let bundleStart () : BundleCtx =
-  { Projects = TSet.empty compare
-    Modules = TMap.empty compareRef
-    ModuleMap = TMap.empty (pairCompare compare compare)
+[<RequireQualifiedAccess; NoEquality; NoComparison>]
+type private State =
+  { RequestMap: RequestMap
+    Errors: Error list }
 
-    ModuleStack = []
-    ModuleDeps = TMap.empty compareRef }
+let private initialState: State =
+  { RequestMap = TMap.empty (pairCompare compare compare)
+    Errors = [] }
 
-let bundleFinish (ctx: BundleCtx) : BundleResult =
-  assert (ctx.ModuleStack |> List.isEmpty)
+let private addRequest (state: State) (request: ModuleRequest) : ModuleRequest option * State =
+  let requestMap = state.RequestMap
+  let key = request.ProjectName, request.ModuleName
 
-  let rec folder (doneSet, acc) (moduleRef, deps) =
-    if doneSet |> TSet.contains moduleRef then
-      doneSet, acc
-    else
-      let doneSet = doneSet |> TSet.add moduleRef
-      let moduleInfo = ctx.Modules |> mapFind moduleRef
+  if not (TMap.containsKey key requestMap) then
+    let state =
+      { state with RequestMap = TMap.add key RequestResult.Requested requestMap }
 
-      let doneSet, acc =
-        deps
-        |> List.choose
-             (fun dep ->
-               match ctx.ModuleMap |> TMap.tryFind dep with
-               | None -> None
-               | Some depInfo ->
-                 ctx.ModuleDeps
-                 |> TMap.tryFind depInfo.Ref
-                 |> Option.map (fun deps -> depInfo.Ref, deps))
-        |> List.fold folder (doneSet, acc)
+    Some request, state
+  else
+    None, state
 
-      doneSet, moduleInfo :: acc
+let private toModules (state: State) : ModuleData list =
+  state.RequestMap
+  |> TMap.toList
+  |> List.choose (fun (_, r: RequestResult) ->
+    match r with
+    | RequestResult.Resolved moduleData -> Some moduleData
+    | RequestResult.Failed -> None
+    | RequestResult.Requested -> unreachable ())
 
-  let _, acc =
-    ctx.ModuleDeps
-    |> TMap.fold
-         (fun (doneSet, acc) moduleRef deps -> folder (doneSet, acc) (moduleRef, deps))
-         (TSet.empty compareRef, [])
+let private toErrors (state: State) : Error list =
+  state
+  |> toModules
+  |> List.collect (fun (m: ModuleData) -> m.Errors)
+  |> List.append state.Errors
 
-  { Modules = List.rev acc }
+[<RequireQualifiedAccess; NoEquality; NoComparison>]
+type private Action =
+  | DidFetchOk of ModuleData
+  | DidFetchFail of ModuleRequest
 
-/// Tries to resolve next request from stack.
-let bundleNext (ctx: BundleCtx) : BundleStatus * BundleCtx =
-  match ctx.ModuleStack with
-  | [] -> NoRequest, ctx
+let private consumer (state: State) action : State * ModuleRequest list =
+  let requestMap = state.RequestMap
 
-  | r :: stack ->
-    match ctx.ModuleMap
-          |> TMap.tryFind (r.ProjectName, r.ModuleName) with
-    | None -> ModuleInfoRequested r, ctx
+  match action with
+  | Action.DidFetchOk m ->
+    let key = m.Project, m.Name
 
-    | Some moduleInfo ->
-      // Request is resolved.
-      let ctx = { ctx with ModuleStack = stack }
+    match TMap.tryFind key requestMap with
+    | Some RequestResult.Requested ->
+      let state =
+        { state with RequestMap = TMap.add key (RequestResult.Resolved m) requestMap }
 
-      if ctx.ModuleDeps |> TMap.containsKey moduleInfo.Ref then
-        // Already bundled.
-        bundleNext ctx
-      else
-        let ctx = ctx |> requestDeps moduleInfo
-        ModuleBundled moduleInfo.Ref, ctx
+      let requests, state = m.Deps |> List.mapFold addRequest state
 
-let bundleSkip (ctx: BundleCtx) : BundleCtx =
-  match ctx.ModuleStack with
-  | [] -> ctx
-  | _ :: stack -> { ctx with ModuleStack = stack }
+      state, List.choose id requests
 
-let bundleAddRequest (projectName: ProjectName) (moduleName: ModuleName) (ctx: BundleCtx) : BundleCtx =
-  let stack =
-    newRootRequest projectName moduleName
-    :: ctx.ModuleStack
+    | _ -> unreachable ()
 
-  { ctx with ModuleStack = stack }
+  | Action.DidFetchFail request ->
+    let key = request.ProjectName, request.ModuleName
 
-/// Tells module info to the bundler.
-let bundleAddModuleInfo (moduleInfo: ModuleInfo) (ctx: BundleCtx) : BundleCtx =
-  assert (ctx.Modules
-          |> TMap.containsKey moduleInfo.Ref
-          |> not)
+    match TMap.tryFind key requestMap with
+    | Some RequestResult.Requested ->
+      let requestMap =
+        TMap.add key RequestResult.Failed requestMap
 
-  { ctx with
-      Modules = ctx.Modules |> TMap.add moduleInfo.Ref moduleInfo
-      ModuleMap =
-        ctx.ModuleMap
-        |> TMap.add (moduleInfo.Project, snd moduleInfo.Ref) moduleInfo }
+      let errors =
+        match requestToNotFoundError request with
+        | Some error -> error :: state.Errors
+        | None -> state.Errors
 
-// -----------------------------------------------
-// Compatibility
-// -----------------------------------------------
+      let state =
+        { state with
+            RequestMap = requestMap
+            Errors = errors }
 
-// Compatible with old bundler.
+      state, []
 
-let bundleCompatible
-  (fetchModule: ProjectName -> ModuleName -> (DocId * ARoot * (string * Pos) list) option)
-  (entryProjectName: string)
-  : TProgram * NameCtx * (string * Loc) list =
-  let rec go (serial: int) errorAcc bundleCtx =
-    let status, bundleCtx = bundleNext bundleCtx
+    | _ -> unreachable ()
 
-    match status with
-    | NoRequest -> bundleFinish bundleCtx, errorAcc
+let private producer (fetchModule: FetchModuleFun) (_: State) (r: ModuleRequest) : Future<Action> =
+  fetchModule r.ProjectName r.ModuleName
+  |> Future.map (fun result ->
+    match result with
+    | Some syntaxData ->
+      let docId, _, ast, errors = syntaxData
 
-    | ModuleInfoRequested r ->
-      let projectName = r.ProjectName
-      let moduleName = r.ModuleName
-
-      // Fetch module.
-      let moduleInfoOpt, serial, errorAcc =
-        match fetchModule projectName moduleName with
-        | None -> None, serial, errorAcc
-
-        | Some (docId, ast, errors) ->
-          let serial = serial + 1
-
-          let moduleInfo : ModuleInfo =
-            { Ref = (serial, moduleName)
-              Project = projectName
-              DocId = docId
-              AstOpt = Some ast }
-
-          let errorAcc =
-            errors
-            |> List.fold (fun errorAcc (msg, (y, x)) -> (msg, Loc(docId, y, x)) :: errorAcc) errorAcc
-
-          Some moduleInfo, serial, errorAcc
-
-      // Tell or discard.
-      match moduleInfoOpt with
-      | None ->
-        let errorAcc =
-          if r.Optional then
-            errorAcc
+      let deps =
+        let dep1 =
+          if r.ModuleName <> "MiloneOnly" then
+            [ newMiloneOnlyRequest r.ProjectName docId ]
           else
+            []
+
+        let otherDeps =
+          findDependentModules ast
+          |> List.map (fun (projectName, moduleName, pos) ->
             let originLoc =
-              match r.OriginOpt with
-              | None -> Loc(entryProjectName, 0, 0)
-              | Some (moduleRef, (y, x)) -> Loc(snd moduleRef, y, x)
+              let y, x = pos
+              Loc(docId, y, x)
 
-            ("Module not found.", originLoc) :: errorAcc
+            newDepRequest projectName moduleName originLoc)
 
-        go serial errorAcc (bundleSkip bundleCtx)
+        List.append dep1 otherDeps
 
-      | Some moduleInfo -> go serial errorAcc (bundleAddModuleInfo moduleInfo bundleCtx)
+      let errors =
+        errors
+        |> List.map (fun (msg, (y, x)) -> (msg, Loc(docId, y, x)))
 
-    | ModuleBundled _ -> go serial errorAcc bundleCtx
+      let m: ModuleData =
+        { Name = r.ModuleName
+          Project = r.ProjectName
+          SyntaxData = syntaxData
+          Deps = deps
+          SymbolCount = TirGen.countSymbols ast
+          Errors = errors }
 
-  let bundleResult, errors =
-    bundleStart ()
-    |> bundleAddRequest entryProjectName entryProjectName
-    |> go 0 []
+      Action.DidFetchOk m
 
-  let moduleAcc, nameCtx =
-    bundleResult.Modules
-    |> List.fold
-         (fun (moduleAcc, nameCtx) (moduleInfo: ModuleInfo) ->
-           match moduleInfo.AstOpt with
-           | None -> moduleAcc, nameCtx
+    | None -> Action.DidFetchFail r)
 
-           | Some ast ->
-             // Compute docId.
-             let docId : DocId =
-               moduleInfo.Project + "." + snd moduleInfo.Ref
+// -----------------------------------------------
+// Interface
+// -----------------------------------------------
 
-             let exprs, nameCtx =
-               astToHir moduleInfo.Project docId (ast, nameCtx)
+type private SymbolCount = int
 
-             (moduleInfo.Project, snd moduleInfo.Ref, exprs)
-             :: moduleAcc,
-             nameCtx)
-         ([], nameCtxEmpty ())
+type private BundleResult = (ModuleSyntaxData * TModule) list list * NameCtx * Error list
 
-  let modules : TProgram = List.rev moduleAcc
+let bundle (fetchModule: FetchModuleFun) (entryProjectName: ProjectName) : BundleResult =
+  let entryRequest =
+    let p = entryProjectName
+    let docId = computeDocId p p
+    newRootRequest docId p p
 
-  modules, nameCtx, errors
+  let state = initialState
+  let _, state = addRequest state entryRequest
+
+  let state =
+    mpscConcurrent consumer (producer fetchModule) state [ entryRequest ]
+
+  let layers =
+    let comparer (l: ModuleData) (r: ModuleData) =
+      let l, _, _, _ = l.SyntaxData
+      let r, _, _, _ = r.SyntaxData
+      compare l r
+
+    let getDeps (m: ModuleData) =
+      m.Deps
+      |> List.choose (fun (r: ModuleRequest) ->
+        match TMap.tryFind (r.ProjectName, r.ModuleName) state.RequestMap with
+        | Some (RequestResult.Resolved m) -> Some m
+        | _ -> None)
+
+    state
+    |> toModules
+    |> computeLayer comparer getDeps
+
+  let errors = state |> toErrors
+
+  // Allocate serials for all modules.
+  let layers, lastSerial =
+    layers
+    |> List.mapFold
+         (fun (serial: int) layer ->
+           layer
+           |> List.mapFold
+                (fun (serial: int) (moduleData: ModuleData) ->
+                  let endSerial = serial + moduleData.SymbolCount
+                  (serial, moduleData), endSerial)
+                serial)
+         0
+
+  // Convert to TIR.
+  let layers =
+    layers
+    |> __parallelMap (fun modules ->
+      modules
+      |> __parallelMap (fun (serial: Serial, moduleData: ModuleData) ->
+        let projectName = moduleData.Project
+        let syntaxData = moduleData.SyntaxData
+        let symbolCount = moduleData.SymbolCount
+        let docId, _, ast, _ = syntaxData
+
+        let exprs, nameCtx =
+          let nameCtx = TirGen.TgNameCtx(serial, [])
+          TirGen.genTir projectName docId (ast, nameCtx)
+
+        let (TirGen.TgNameCtx (lastSerial, _)) = nameCtx
+
+        //  printfn
+        //    "%s expect: %d..%d (%d) actual: %d..%d (%d)"
+        //    docId
+        //    serial
+        //    (serial + symbolCount)
+        //    symbolCount
+        //    serial
+        //    lastSerial
+        //    (lastSerial - serial)
+
+        assert (lastSerial - serial = symbolCount)
+
+        let m: TModule =
+          { DocId = docId
+            Vars = emptyVars
+            Stmts = exprs }
+
+        syntaxData, m, nameCtx))
+
+  let layers, identMap =
+    layers
+    |> List.mapFold
+         (fun nameCtx modules ->
+           modules
+           |> List.mapFold
+                (fun identMap (parseResult, m, nameCtx) ->
+                  let _, identMap =
+                    nameCtx
+                    |> TirGen.nameCtxFold (fun map serial ident -> TMap.add serial ident map) identMap
+
+                  (parseResult, m), identMap)
+                nameCtx)
+         (TMap.empty compare)
+
+  let nameCtx = NameCtx(identMap, lastSerial)
+
+  layers, nameCtx, errors

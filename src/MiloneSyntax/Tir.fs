@@ -7,12 +7,15 @@ module rec MiloneSyntax.Tir
 
 open MiloneShared.Util
 open MiloneShared.SharedTypes
-open MiloneSyntax.Syntax
 open MiloneShared.TypeFloat
 open MiloneShared.TypeIntegers
+open MiloneStd.StdMap
 
-module TMap = MiloneStd.StdMap
 module S = MiloneStd.StdString
+
+// from syntax
+type private ProjectName = string
+type private ModuleName = string
 
 /// Level.
 ///
@@ -27,6 +30,8 @@ module S = MiloneStd.StdString
 ///
 /// Only one exception: recursive function has level higher by 1.
 type Level = int
+
+type TName = Ident * Loc
 
 // -----------------------------------------------
 // TIR types
@@ -45,12 +50,11 @@ type FunSerial = FunSerial of Serial
 [<Struct; NoComparison>]
 type VariantSerial = VariantSerial of Serial
 
-[<Struct>]
-[<NoEquality; NoComparison>]
-type NameCtx = NameCtx of map: AssocMap<Serial, Ident> * lastSerial: Serial
+[<Struct; NoEquality; NoComparison>]
+type NameCtx = NameCtx of identMap: TreeMap<Serial, Ident> * lastSerial: Serial
 
 /// Type constructor.
-[<Struct; NoEquality; NoComparison>]
+[<NoEquality; NoComparison>]
 type Tk =
   | ErrorTk of errorLoc: Loc
 
@@ -67,7 +71,6 @@ type Tk =
   | TupleTk
 
   /// Ty args must be `[t]`.
-  | OptionTk
   | ListTk
 
   // FFI types.
@@ -79,11 +82,11 @@ type Tk =
   // Nominal types.
   | MetaTk of metaTy: TySerial * metaLoc: Loc
   | SynonymTk of synonymTy: TySerial
-  | UnionTk of unionTy: TySerial
-  | RecordTk of recordTy: TySerial
+  | UnionTk of unionTy: TySerial * Loc option
+  | RecordTk of recordTy: TySerial * Loc option
 
-  /// Unresolved type. Generated in AstToHir, resolved in NameRes.
-  | UnresolvedTk of quals: Serial list * unresolvedSerial: Serial
+  /// Unresolved type. Generated in TirGen, resolved in NameRes.
+  | UnresolvedTk of quals: Serial list * unresolvedSerial: Serial * Loc
   | UnresolvedVarTk of unresolvedVarTySerial: (Serial * Loc)
 
 /// Type of expressions.
@@ -93,13 +96,11 @@ type Ty =
   | Ty of Tk * tyArgs: Ty list
 
 /// Potentially polymorphic type.
-[<Struct>]
-[<NoEquality; NoComparison>]
+[<Struct; NoEquality; NoComparison>]
 type TyScheme = TyScheme of tyVars: TySerial list * Ty
 
 /// Type specification.
-[<Struct>]
-[<NoEquality; NoComparison>]
+[<Struct; NoEquality; NoComparison>]
 type TySpec = TySpec of Ty * Trait list
 
 /// Trait, a constraint about types.
@@ -143,10 +144,10 @@ type TyDecl =
   | TySynonymDecl of Ty * Loc
 
   /// Union type.
-  /// Variants: (ident, serial, has-payload, payload type).
-  | UnionTyDecl of Ident * variants: (Ident * VariantSerial * bool * Ty) list * Loc
+  /// Variants: (ident, serial, has-payload, payload type, loc).
+  | UnionTyDecl of Ident * variants: (Ident * VariantSerial * bool * Ty * Loc) list * Loc
 
-  | RecordTyDecl of Ident * fields: (Ident * Ty * Loc) list * Loc
+  | RecordTyDecl of Ident * fields: (Ident * Ty * Loc) list * IsCRepr * Loc
 
 /// Type definition.
 [<NoEquality; NoComparison>]
@@ -156,11 +157,11 @@ type TyDef =
 
   | UniversalTyDef of Ident * Loc
 
-  | SynonymTyDef of Ident * TySerial list * Ty * Loc
+  | SynonymTyDef of Ident * tyArgs: TySerial list * Ty * Loc
 
-  | UnionTyDef of Ident * VariantSerial list * Loc
+  | UnionTyDef of Ident * tyArgs: TySerial list * VariantSerial list * Loc
 
-  | RecordTyDef of Ident * fields: (Ident * Ty * Loc) list * Loc
+  | RecordTyDef of Ident * tyArgs: TySerial list * fields: (Ident * Ty * Loc) list * IsCRepr * Loc
 
 [<Struct; NoComparison>]
 type ModuleTySerial = ModuleTySerial of Serial
@@ -180,7 +181,7 @@ type ModuleSynonymDef =
     Bound: ModuleTySerial list
     Loc: Loc }
 
-/// Definition of named value in HIR.
+/// Definition of named value.
 [<RequireQualifiedAccess; NoEquality; NoComparison>]
 type VarDef =
   { Name: Ident
@@ -196,6 +197,10 @@ type FunDef =
     Ty: TyScheme
     Abi: FunAbi
     Linkage: Linkage
+
+    /// Represents a context of function (in reversed order.) Function name is finally prefixed to be unique.
+    Prefix: string list
+
     Loc: Loc }
 
 [<RequireQualifiedAccess; NoEquality; NoComparison>]
@@ -210,13 +215,13 @@ type VariantDef =
     PayloadTy: Ty
     Loc: Loc }
 
-[<Struct; NoComparison>]
+[<NoComparison>]
 type ValueSymbol =
   | VarSymbol of varSerial: VarSerial
   | FunSymbol of funSerial: FunSerial
   | VariantSymbol of variantSerial: VariantSerial
 
-[<Struct; NoComparison>]
+[<NoComparison>]
 type TySymbol =
   | MetaTySymbol of tySerial: TySerial
   | UnivTySymbol of univTySerial: TySerial
@@ -224,8 +229,23 @@ type TySymbol =
   | UnionTySymbol of unionTySerial: TySerial
   | RecordTySymbol of recordTySerial: TySerial
 
+/// Context of TIR program.
+[<RequireQualifiedAccess; NoEquality; NoComparison>]
+type TirCtx =
+  { /// Last serial number.
+    Serial: Serial
+
+    Vars: TreeMap<VarSerial, VarDef>
+    Funs: TreeMap<FunSerial, FunDef>
+    Variants: TreeMap<VariantSerial, VariantDef>
+
+    MainFunOpt: FunSerial option
+
+    Tys: TreeMap<TySerial, TyDef>
+    Logs: (Log * Loc) list }
+
 /// Kind of TNodePat.
-[<Struct; NoEquality; NoComparison>]
+[<NoEquality; NoComparison>]
 type TPatKind =
   /// `[]`.
   | TNilPN
@@ -233,16 +253,8 @@ type TPatKind =
   /// `p1 :: p2`.
   | TConsPN
 
-  | TNonePN
-
-  /// `Some`.
-  | TSomePN
-
   /// `p1 p2`.
   | TAppPN
-
-  /// `Some p1`.
-  | TSomeAppPN
 
   /// `Variant p1`.
   | TVariantAppPN of variantApp: VariantSerial
@@ -259,7 +271,7 @@ type TPatKind =
   /// Generated after compile error occurred while processing a pattern.
   | TAbortPN
 
-/// Pattern in HIR.
+/// Pattern.
 [<NoEquality; NoComparison>]
 type TPat =
   | TLitPat of Lit * Loc
@@ -280,7 +292,7 @@ type TPat =
   /// Disjunction.
   | TOrPat of TPat * TPat * Loc
 
-/// Primitive in HIR.
+/// Primitive.
 [<RequireQualifiedAccess; Struct; NoComparison>]
 type TPrim =
   // operator:
@@ -310,10 +322,6 @@ type TPrim =
   // string:
   | StrLength
 
-  // option:
-  | OptionNone
-  | OptionSome
-
   // list:
   | Nil
   | Cons
@@ -332,7 +340,7 @@ type TPrim =
   | PtrRead
   | PtrWrite
 
-[<Struct; NoEquality; NoComparison>]
+[<NoEquality; NoComparison>]
 type TExprKind =
   | TAbortEN
 
@@ -371,7 +379,7 @@ type TExprKind =
   /// Size of type.
   | TSizeOfValEN
 
-/// Expression in HIR.
+/// Expression.
 [<NoEquality; NoComparison>]
 type TExpr =
   | TLitExpr of Lit * Loc
@@ -393,25 +401,40 @@ type TExpr =
   | TMatchExpr of cond: TExpr * arms: (TPat * TExpr * TExpr) list * Ty * Loc
 
   /// E.g. `List.isEmpty`, `str.Length`
-  | TNavExpr of TExpr * Ident * Ty * Loc
+  | TNavExpr of TExpr * TName * Ty * Loc
 
   /// Some built-in operation.
   | TNodeExpr of TExprKind * TExpr list * Ty * Loc
 
-  /// Evaluate a list of expressions and returns the last, e.g. `x1; x2; ...; y`.
-  | TBlockExpr of TExpr list * TExpr
+  /// Statements and last expression.
+  ///
+  /// - Statements might define symbols locally for the last expression.
+  /// - If recursive, local definitions are mutually recursive.
+  | TBlockExpr of IsRec * TStmt list * last: TExpr
 
-  | TLetValExpr of pat: TPat * init: TExpr * next: TExpr * Ty * Loc
-  | TLetFunExpr of FunSerial * IsRec * Vis * args: TPat list * body: TExpr * next: TExpr * Ty * Loc
+/// Statement.
+[<NoEquality; NoComparison>]
+type TStmt =
+  | TExprStmt of TExpr
+  | TLetValStmt of TPat * TExpr * Loc
+  | TLetFunStmt of FunSerial * IsRec * Vis * args: TPat list * body: TExpr * Loc
+  | TTyDeclStmt of TySerial * Vis * tyArgs: TySerial list * TyDecl * Loc
+  | TOpenStmt of Ident list * Loc
+  | TModuleStmt of ModuleTySerial * body: TStmt list * Loc
+  | TModuleSynonymStmt of ModuleSynonymSerial * path: Ident list * Loc
 
-  /// Type declaration.
-  | TTyDeclExpr of TySerial * Vis * tyArgs: TySerial list * TyDecl * Loc
-  | TOpenExpr of Ident list * Loc
-  | TModuleExpr of ModuleTySerial * body: TExpr list * Loc
-  | TModuleSynonymExpr of ModuleSynonymSerial * path: Ident list * Loc
+type private VarMap = TreeMap<VarSerial, VarDef>
 
-/// TIR program. (project name, module name, decls) list.
-type TProgram = (string * string * TExpr list) list
+[<RequireQualifiedAccess; NoEquality; NoComparison>]
+type TModule =
+  { DocId: DocId
+
+    /// Non-static variables.
+    Vars: VarMap
+
+    Stmts: TStmt list }
+
+type TProgram = TModule list
 
 // -----------------------------------------------
 // Errors
@@ -437,6 +460,7 @@ type NameResLog =
   // other
   | ModulePathNotFoundError
 
+  | UnimplGenericTyError
   | UnimplOrPatBindingError
   | OtherNameResLog of msg: string
 
@@ -461,18 +485,7 @@ type Log =
   | Error of string
 
 // -----------------------------------------------
-// Name context
-// -----------------------------------------------
-
-let nameCtxEmpty () = NameCtx(TMap.empty compare, 0)
-
-let nameCtxAdd (Name (name, _)) (NameCtx (map, serial)) =
-  let serial = serial + 1
-  let map = map |> TMap.add serial name
-  serial, NameCtx(map, serial)
-
-// -----------------------------------------------
-// Types (HIR/MIR)
+// Ty
 // -----------------------------------------------
 
 let tyError loc = Ty(ErrorTk loc, [])
@@ -481,6 +494,11 @@ let tyError loc = Ty(ErrorTk loc, [])
 let noTy = tyError noLoc
 
 let tyInt = Ty(IntTk(IntFlavor(Signed, I32)), [])
+let tyInt64 = Ty(IntTk(IntFlavor(Signed, I64)), [])
+let tyUint8 = Ty(IntTk(IntFlavor(Unsigned, I8)), [])
+let tyUInt16 = Ty(IntTk(IntFlavor(Unsigned, I16)), [])
+let tyUInt64 = Ty(IntTk(IntFlavor(Unsigned, I32)), [])
+let tyUNativeInt = Ty(IntTk(IntFlavor(Unsigned, IPtr)), [])
 
 let tyBool = Ty(BoolTk, [])
 
@@ -493,8 +511,6 @@ let tyStr = Ty(StrTk, [])
 let tyObj = Ty(ObjTk, [])
 
 let tyTuple tys = Ty(TupleTk, tys)
-
-let tyOption ty = Ty(OptionTk, [ ty ])
 
 let tyList ty = Ty(ListTk, [ ty ])
 
@@ -513,12 +529,12 @@ let tyMeta serial loc = Ty(MetaTk(serial, loc), [])
 
 let tySynonym tySerial tyArgs = Ty(SynonymTk tySerial, tyArgs)
 
-let tyUnion tySerial = Ty(UnionTk tySerial, [])
+let tyUnion tySerial tyArgs loc = Ty(UnionTk(tySerial, Some loc), tyArgs)
 
-let tyRecord tySerial = Ty(RecordTk tySerial, [])
+let tyRecord tySerial loc = Ty(RecordTk(tySerial, Some loc), [])
 
 // -----------------------------------------------
-// Type definitions (HIR)
+// TyDef
 // -----------------------------------------------
 
 let moduleTySerialToInt (ModuleTySerial serial) = serial
@@ -537,11 +553,11 @@ let tyDefToName tyDef =
   | MetaTyDef _ -> "{bound}"
   | UniversalTyDef (name, _) -> name
   | SynonymTyDef (name, _, _, _) -> name
-  | UnionTyDef (name, _, _) -> name
-  | RecordTyDef (name, _, _) -> name
+  | UnionTyDef (name, _, _, _) -> name
+  | RecordTyDef (name, _, _, _, _) -> name
 
 // -----------------------------------------------
-// Variable definitions (HIR)
+// VarDef
 // -----------------------------------------------
 
 let varSerialToInt (VarSerial serial) = serial
@@ -559,28 +575,21 @@ let variantSerialToInt (VariantSerial serial) = serial
 let variantSerialCompare l r =
   compare (variantSerialToInt l) (variantSerialToInt r)
 
-let variantDefToVariantTy (variantDef: VariantDef) : Ty =
-  let unionTy = tyUnion variantDef.UnionTySerial
-
-  if variantDef.HasPayload then
-    tyFun variantDef.PayloadTy unionTy
-  else
-    unionTy
-
 // -----------------------------------------------
-// Literals
+// Lit
 // -----------------------------------------------
 
 let litToTy (lit: Lit) : Ty =
   match lit with
   | BoolLit _ -> tyBool
   | IntLit _ -> tyInt
+  | IntLitWithFlavor (_, flavor) -> Ty(IntTk flavor, [])
   | FloatLit _ -> tyFloat
   | CharLit _ -> tyChar
   | StrLit _ -> tyStr
 
 // -----------------------------------------------
-// Primitives (TIR)
+// TPrim
 // -----------------------------------------------
 
 let primFromIdent ident =
@@ -622,11 +631,7 @@ let primFromIdent ident =
 
   | "string" -> TPrim.String |> Some
 
-  | "None" -> TPrim.OptionNone |> Some
-
-  | "Some" -> TPrim.OptionSome |> Some
-
-  | "inRegion" -> TPrim.InRegion |> Some
+  | "__inRegion" -> TPrim.InRegion |> Some
 
   | "__nativeFun" -> TPrim.NativeFun |> Some
   | "__nativeCast" -> TPrim.NativeCast |> Some
@@ -687,15 +692,6 @@ let primToTySpec prim =
     let itemTy = meta 1
     let listTy = tyList itemTy
     poly (tyFun itemTy (tyFun listTy listTy)) []
-
-  | TPrim.OptionNone ->
-    let itemTy = meta 1
-    poly (tyOption itemTy) []
-
-  | TPrim.OptionSome ->
-    let itemTy = meta 1
-    let listTy = tyOption itemTy
-    poly (tyFun itemTy listTy) []
 
   | TPrim.Not -> mono (tyFun tyBool tyBool)
 
@@ -761,10 +757,10 @@ let primToTySpec prim =
     poly (tyFun (tyNativePtr valueTy) (tyFun tyInt (tyFun valueTy tyUnit))) []
 
 // -----------------------------------------------
-// Patterns (HIR)
+// TPat
 // -----------------------------------------------
 
-let hpAbort ty loc = TNodePat(TAbortPN, [], ty, loc)
+let tpAbort ty loc = TNodePat(TAbortPN, [], ty, loc)
 
 let patExtract (pat: TPat) : Ty * Loc =
   match pat with
@@ -781,17 +777,17 @@ let patToTy pat = pat |> patExtract |> fst
 
 let patToLoc pat = pat |> patExtract |> snd
 
-let patMap (f: Ty -> Ty) (g: Loc -> Loc) (pat: TPat) : TPat =
+let patMap (f: Ty -> Ty) (pat: TPat) : TPat =
   let rec go pat =
     match pat with
-    | TLitPat (lit, a) -> TLitPat(lit, g a)
-    | TDiscardPat (ty, a) -> TDiscardPat(f ty, g a)
-    | TVarPat (vis, serial, ty, a) -> TVarPat(vis, serial, f ty, g a)
-    | TVariantPat (serial, ty, a) -> TVariantPat(serial, f ty, g a)
+    | TLitPat (lit, a) -> TLitPat(lit, a)
+    | TDiscardPat (ty, a) -> TDiscardPat(f ty, a)
+    | TVarPat (vis, serial, ty, a) -> TVarPat(vis, serial, f ty, a)
+    | TVariantPat (serial, ty, a) -> TVariantPat(serial, f ty, a)
 
-    | TNodePat (kind, args, ty, a) -> TNodePat(kind, List.map go args, f ty, g a)
-    | TAsPat (bodyPat, serial, a) -> TAsPat(go bodyPat, serial, g a)
-    | TOrPat (l, r, a) -> TOrPat(go l, go r, g a)
+    | TNodePat (kind, args, ty, a) -> TNodePat(kind, List.map go args, f ty, a)
+    | TAsPat (bodyPat, serial, a) -> TAsPat(go bodyPat, serial, a)
+    | TOrPat (l, r, a) -> TOrPat(go l, go r, a)
 
   go pat
 
@@ -826,10 +822,9 @@ let private doNormalizePats pats =
     let headPats = patNormalize headPat
 
     doNormalizePats tailPats
-    |> List.collect
-         (fun tailPats ->
-           headPats
-           |> List.map (fun headPat -> headPat :: tailPats))
+    |> List.collect (fun tailPats ->
+      headPats
+      |> List.map (fun headPat -> headPat :: tailPats))
 
 /// Gets whether a pattern is clearly exhaustive, that is,
 /// pattern matching on it always succeeds (assuming type check is passing).
@@ -851,9 +846,6 @@ let patIsClearlyExhaustive isNewtypeVariant pat =
 
       | TNilPN, _
       | TConsPN, _
-      | TNonePN, _
-      | TSomePN, _
-      | TSomeAppPN, _
       | TAppPN, _
       | TVariantAppPN _, _
       | TNavPN _, _ -> false
@@ -867,28 +859,15 @@ let patIsClearlyExhaustive isNewtypeVariant pat =
   go pat
 
 // -----------------------------------------------
-// Expressions (HIR)
+// TExpr
 // -----------------------------------------------
 
-let hxTrue loc = TLitExpr(BoolLit true, loc)
+let txLetIn stmt next = TBlockExpr(NotRec, [ stmt ], next)
 
-let hxApp f x ty loc = TNodeExpr(TAppEN, [ f; x ], ty, loc)
-
-let hxAscribe expr ty loc =
-  TNodeExpr(TAscribeEN, [ expr ], ty, loc)
-
-let hxSemi items loc =
-  match splitLast items with
-  | Some (stmts, last) -> TBlockExpr(stmts, last)
-  | None -> TNodeExpr(TTupleEN, [], tyUnit, loc)
-
-let hxTuple items loc =
+let txTuple items loc =
   TNodeExpr(TTupleEN, items, tyTuple (List.map exprToTy items), loc)
 
-let hxUnit loc = hxTuple [] loc
-
-let hxNil itemTy loc =
-  TPrimExpr(TPrim.Nil, tyList itemTy, loc)
+let txUnit loc = txTuple [] loc
 
 let exprExtract (expr: TExpr) : Ty * Loc =
   match expr with
@@ -901,86 +880,88 @@ let exprExtract (expr: TExpr) : Ty * Loc =
   | TMatchExpr (_, _, ty, a) -> ty, a
   | TNavExpr (_, _, ty, a) -> ty, a
   | TNodeExpr (_, _, ty, a) -> ty, a
-  | TBlockExpr (_, last) -> exprExtract last
-  | TLetValExpr (_, _, _, ty, a) -> ty, a
-  | TLetFunExpr (_, _, _, _, _, _, ty, a) -> ty, a
-  | TTyDeclExpr (_, _, _, _, a) -> tyUnit, a
-  | TOpenExpr (_, a) -> tyUnit, a
-  | TModuleExpr (_, _, a) -> tyUnit, a
-  | TModuleSynonymExpr (_, _, a) -> tyUnit, a
+  | TBlockExpr (_, _, last) -> exprExtract last
 
-let exprMap (f: Ty -> Ty) (g: Loc -> Loc) (expr: TExpr) : TExpr =
-  let goPat pat = patMap f g pat
+let exprMap (f: Ty -> Ty) (expr: TExpr) : TExpr =
+  let goPat pat = patMap f pat
 
   let rec go expr =
     match expr with
-    | TLitExpr (lit, a) -> TLitExpr(lit, g a)
-    | TVarExpr (serial, ty, a) -> TVarExpr(serial, f ty, g a)
-    | TFunExpr (serial, ty, a) -> TFunExpr(serial, f ty, g a)
-    | TVariantExpr (serial, ty, a) -> TVariantExpr(serial, f ty, g a)
-    | TPrimExpr (prim, ty, a) -> TPrimExpr(prim, f ty, g a)
+    | TLitExpr (lit, a) -> TLitExpr(lit, a)
+    | TVarExpr (serial, ty, a) -> TVarExpr(serial, f ty, a)
+    | TFunExpr (serial, ty, a) -> TFunExpr(serial, f ty, a)
+    | TVariantExpr (serial, ty, a) -> TVariantExpr(serial, f ty, a)
+    | TPrimExpr (prim, ty, a) -> TPrimExpr(prim, f ty, a)
 
     | TRecordExpr (baseOpt, fields, ty, a) ->
       let baseOpt = baseOpt |> Option.map go
 
       let fields =
         fields
-        |> List.map (fun (name, init, a) -> name, go init, g a)
+        |> List.map (fun (name, init, a) -> name, go init, a)
 
-      TRecordExpr(baseOpt, fields, f ty, g a)
+      TRecordExpr(baseOpt, fields, f ty, a)
 
     | TMatchExpr (cond, arms, ty, a) ->
       let arms =
         arms
         |> List.map (fun (pat, guard, body) -> goPat pat, go guard, go body)
 
-      TMatchExpr(go cond, arms, f ty, g a)
-    | TNavExpr (sub, mes, ty, a) -> TNavExpr(go sub, mes, f ty, g a)
-    | TNodeExpr (kind, args, resultTy, a) -> TNodeExpr(kind, List.map go args, f resultTy, g a)
-    | TBlockExpr (stmts, last) -> TBlockExpr(List.map go stmts, go last)
-    | TLetValExpr (pat, init, next, ty, a) -> TLetValExpr(goPat pat, go init, go next, f ty, g a)
-    | TLetFunExpr (serial, isRec, vis, args, body, next, ty, a) ->
-      TLetFunExpr(serial, isRec, vis, List.map goPat args, go body, go next, f ty, g a)
-    | TTyDeclExpr (serial, vis, tyArgs, tyDef, a) -> TTyDeclExpr(serial, vis, tyArgs, tyDef, g a)
-    | TOpenExpr (path, a) -> TOpenExpr(path, g a)
-    | TModuleExpr (name, body, a) -> TModuleExpr(name, List.map go body, g a)
-    | TModuleSynonymExpr (name, path, a) -> TModuleSynonymExpr(name, path, g a)
+      TMatchExpr(go cond, arms, f ty, a)
+    | TNavExpr (sub, mes, ty, a) -> TNavExpr(go sub, mes, f ty, a)
+    | TNodeExpr (kind, args, resultTy, a) -> TNodeExpr(kind, List.map go args, f resultTy, a)
+    | TBlockExpr (isRec, stmts, last) -> TBlockExpr(isRec, List.map (stmtMap f) stmts, go last)
 
   go expr
 
-let exprToTy expr =
-  let ty, _ = exprExtract expr
-  ty
+let exprToTy expr = exprExtract expr |> fst
 
-let exprToLoc expr =
-  let _, loc = exprExtract expr
-  loc
+let exprToLoc expr = exprExtract expr |> snd
 
 // -----------------------------------------------
-// HProgram
+// TStmt
 // -----------------------------------------------
 
-/// Does something for each module in program, updating a state.
-let hirProgramEachModule (mutator: TExpr list * 'S -> TExpr list * 'S) (modules: TProgram, state: 'S) : TProgram * 'S =
-  (modules, state)
-  |> stMap
-       (fun ((p, m, decls), state) ->
-         let decls, state = (decls, state) |> mutator
-         (p, m, decls), state)
+let stmtToLoc (stmt: TStmt) : Loc =
+  match stmt with
+  | TExprStmt expr -> exprToLoc expr
+  | TLetValStmt (_, _, loc) -> loc
+  | TLetFunStmt (_, _, _, _, _, loc) -> loc
+  | TTyDeclStmt (_, _, _, _, loc) -> loc
+  | TOpenStmt (_, loc) -> loc
+  | TModuleStmt (_, _, loc) -> loc
+  | TModuleSynonymStmt (_, _, loc) -> loc
 
-/// Does something for each toplevel expression in program, updating a state.
-let hirProgramEachExpr (mutator: TExpr * 'S -> TExpr * 'S) (modules: TProgram, state: 'S) : TProgram * 'S =
-  (modules, state)
-  |> hirProgramEachModule (stMap mutator)
+let stmtMap (onTy: Ty -> Ty) (stmt: TStmt) : TStmt =
+  let onPat pat = patMap onTy pat
+  let onPats pats = List.map (patMap onTy) pats
+  let onExpr expr = exprMap onTy expr
+  let onStmt stmt = stmtMap onTy stmt
+  let onStmts stmts = List.map (stmtMap onTy) stmts
 
-/// Iterates over toplevel expressions in program to update a state.
-let hirProgramFoldExpr (folder: TExpr * 'S -> 'S) (state: 'S) (modules: TProgram) : 'S =
-  modules
-  |> List.fold
-       (fun state (_, _, decls) ->
-         decls
-         |> List.fold (fun state decl -> folder (decl, state)) state)
-       state
+  match stmt with
+  | TExprStmt expr -> TExprStmt(onExpr expr)
+  | TLetValStmt (pat, init, loc) -> TLetValStmt(onPat pat, onExpr init, loc)
+  | TLetFunStmt (serial, isRec, vis, args, body, loc) -> TLetFunStmt(serial, isRec, vis, onPats args, onExpr body, loc)
+  | TTyDeclStmt (serial, vis, tyArgs, tyDef, loc) -> TTyDeclStmt(serial, vis, tyArgs, tyDef, loc)
+  | TOpenStmt (path, loc) -> TOpenStmt(path, loc)
+  | TModuleStmt (name, body, loc) -> TModuleStmt(name, onStmts body, loc)
+  | TModuleSynonymStmt (name, path, loc) -> TModuleSynonymStmt(name, path, loc)
+
+// -----------------------------------------------
+// TModule
+// -----------------------------------------------
+
+let emptyVars: TreeMap<VarSerial, VarDef> = TMap.empty varSerialCompare
+
+// -----------------------------------------------
+// TProgram
+// ----------------------------------------------
+
+module TProgram =
+  let foldStmt (folder: 'S -> TStmt -> 'S) (state: 'S) (modules: TProgram) : 'S =
+    modules
+    |> List.fold (fun state (m: TModule) -> m.Stmts |> List.fold folder state) state
 
 // -----------------------------------------------
 // Print Formats
@@ -1046,6 +1027,7 @@ let nameResLogToString log =
 
   | ModulePathNotFoundError -> "Module not found for this path"
 
+  | UnimplGenericTyError -> "Generic record type is unimplemented."
   | UnimplOrPatBindingError -> "OR pattern including some bindings is unimplemented."
 
   | OtherNameResLog msg -> msg

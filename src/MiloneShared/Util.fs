@@ -1,19 +1,11 @@
 /// Defines utility types and functions used in multiple modules.
 module rec MiloneShared.Util
 
+open MiloneStd.StdMap
+
 module C = MiloneStd.StdChar
 module S = MiloneStd.StdString
 module Int = MiloneStd.StdInt
-module TMap = MiloneStd.StdMap
-module TSet = MiloneStd.StdSet
-
-// -----------------------------------------------
-// Collections
-// -----------------------------------------------
-
-type AssocMap<'K, 'V> = TMap.TreeMap<'K, 'V>
-
-type AssocSet<'T> = TSet.TreeSet<'T>
 
 // -----------------------------------------------
 // Error
@@ -25,16 +17,11 @@ let unreachable context = failwithf "NEVER: %A" context
 /// Not implemented.
 let todo context = failwithf "Not implemented: %A" context
 
-// -----------------------------------------------
-// Combinator
-// -----------------------------------------------
+/// Placeholder of result type of diverging function.
+type Never = private | Never
 
-/// Just calls a function.
-///
-/// HACK: This is mainly used to wrap a match clause in a separate function
-///       to reduce the size of stack frame; without this,
-///       deeply recursive calls cause stack overflow.
-let invoke (f: unit -> 'A) : 'A = f ()
+/// Never happens.
+let never Never : 'A = unreachable ()
 
 // -----------------------------------------------
 // Pair
@@ -64,6 +51,18 @@ let cons head tail = head :: tail
 
 let forList folder xs state =
   List.fold (fun state x -> folder x state) state xs
+
+/// Skips initial `count` items.
+///
+/// Unlike `List.skip`, just returns `[]` when `count` is negative or too large.
+let listSkip (count: int) (xs: _ list) : _ list =
+  let rec listSkipLoop count xs =
+    match xs with
+    | [] -> []
+    | _ when count <= 0 -> xs
+    | _ :: xs -> listSkipLoop (count - 1) xs
+
+  listSkipLoop count xs
 
 /// Tries to "zip" two lists by pairing every i'th item from both lists.
 ///
@@ -153,7 +152,7 @@ let listSortCore unique compare xs =
   // and `d` is the number of duplicated items.
   let rec go (xs, n) =
     if n <= 1 then
-      (xs, n), List.skip n xs, 0
+      (xs, n), listSkip n xs, 0
     else
       let m = n / 2
       let (xs, xn), xs1, d1 = go (xs, m)
@@ -198,7 +197,7 @@ let assocTryFind compare key assoc =
   go assoc
 
 // -----------------------------------------------
-// AssocMap
+// TreeMap
 // -----------------------------------------------
 
 let mapFind key map =
@@ -211,7 +210,7 @@ let mapFind key map =
 // Multimap
 // -----------------------------------------------
 
-type Multimap<'K, 'T> = TMap.TreeMap<'K, 'T list>
+type Multimap<'K, 'T> = TreeMap<'K, 'T list>
 
 let multimapFind (key: 'K) (multimap: Multimap<'K, 'T>) : 'T list =
   multimap
@@ -221,6 +220,10 @@ let multimapFind (key: 'K) (multimap: Multimap<'K, 'T>) : 'T list =
 let multimapAdd (key: 'K) (item: 'T) (multimap: Multimap<'K, 'T>) : Multimap<'K, 'T> =
   let items = multimap |> multimapFind key
   TMap.add key (item :: items) multimap
+
+let multimapOfList compareFun (entries: ('K * 'T) list) : Multimap<'K, 'T> =
+  entries
+  |> List.fold (fun map (key, value) -> multimapAdd key value map) (TMap.empty compareFun)
 
 // -----------------------------------------------
 // Int
@@ -273,6 +276,7 @@ let intFromHex (l: int) (r: int) (s: string) =
 // Char
 // -----------------------------------------------
 
+// FIXME: escape unicode control chars
 let charNeedsEscaping (c: char) =
   C.isControl c || c = '\\' || c = '"' || c = '\''
 

@@ -79,11 +79,11 @@ module rec MiloneTranslation.EtaExpansion
 
 open MiloneShared.SharedTypes
 open MiloneShared.Util
+open MiloneStd.StdMap
 open MiloneTranslation.Hir
 
-module TMap = MiloneStd.StdMap
-module S = MiloneStd.StdString
 module Int = MiloneStd.StdInt
+module S = MiloneStd.StdString
 
 [<RequireQualifiedAccess>]
 [<NoEquality; NoComparison>]
@@ -92,13 +92,14 @@ type private CalleeKind =
   | Obj
 
 let private listSplitAt i xs =
-  List.truncate i xs, List.skip (Int.min i (List.length xs)) xs
+  List.truncate i xs, listSkip (Int.min i (List.length xs)) xs
 
 let private tyToArity ty =
   match ty with
   | Ty (FunTk, [ _; ty ]) -> 1 + tyToArity ty
   | _ -> 0
 
+// #tyAppliedBy
 let private tyAppliedBy n ty =
   match ty with
   | Ty (FunTk, [ _; ty ]) when n > 0 -> tyAppliedBy (n - 1) ty
@@ -118,10 +119,8 @@ let private hxCallTo calleeKind callee args resultTy loc =
 
 let private primToArity ty prim =
   match prim with
-  | HPrim.Nil
-  | HPrim.OptionNone -> 0
+  | HPrim.Nil -> 0
 
-  | HPrim.OptionSome
   | HPrim.Not
   | HPrim.Exit
   | HPrim.Assert
@@ -162,27 +161,29 @@ let private primToArity ty prim =
 [<RequireQualifiedAccess; NoEquality; NoComparison>]
 type private EtaCtx =
   { Serial: Serial
-    Vars: AssocMap<VarSerial, VarDef>
-    Funs: AssocMap<FunSerial, FunDef>
-    Tys: AssocMap<TySerial, TyDef> }
+    StaticVars: VarMap
+    Vars: VarMap
+    Funs: TreeMap<FunSerial, FunDef>
+    Variants: TreeMap<VariantSerial, VariantDef>
+    ParentFun: string list }
 
-let private ofTyCtx (tyCtx: TyCtx) : EtaCtx =
-  { Serial = tyCtx.Serial
-    Vars = tyCtx.Vars
-    Funs = tyCtx.Funs
-    Tys = tyCtx.Tys }
+let private ofHirCtx (hirCtx: HirCtx) : EtaCtx =
+  { Serial = hirCtx.Serial
+    StaticVars = hirCtx.Vars
+    Vars = emptyVars
+    Funs = hirCtx.Funs
+    Variants = hirCtx.Variants
+    ParentFun = [] }
 
-let private toTyCtx (tyCtx: TyCtx) (ctx: EtaCtx) =
-  { tyCtx with
+let private toHirCtx (hirCtx: HirCtx) (ctx: EtaCtx) =
+  { hirCtx with
       Serial = ctx.Serial
-      Vars = ctx.Vars
-      Funs = ctx.Funs
-      Tys = ctx.Tys }
+      Funs = ctx.Funs }
 
 let private freshFun name arity (ty: Ty) loc (ctx: EtaCtx) =
   let funSerial = FunSerial(ctx.Serial + 1)
 
-  let funDef : FunDef =
+  let funDef: FunDef =
     let tyScheme =
       let isOwned (_: Serial) = true // FIXME: is it okay?
       tyGeneralize isOwned ty
@@ -192,6 +193,7 @@ let private freshFun name arity (ty: Ty) loc (ctx: EtaCtx) =
       Ty = tyScheme
       Abi = MiloneAbi
       Linkage = InternalLinkage
+      Prefix = [ "eta" + string arity ]
       Loc = loc }
 
   let ctx =
@@ -199,13 +201,13 @@ let private freshFun name arity (ty: Ty) loc (ctx: EtaCtx) =
         Serial = ctx.Serial + 1
         Funs = ctx.Funs |> TMap.add funSerial funDef }
 
-  let funExpr = HFunExpr(funSerial, ty, loc)
+  let funExpr = HFunExpr(funSerial, ty, [], loc) // FIXME: unimpl ty args
   funExpr, funSerial, ctx
 
 let private freshVar name (ty: Ty) loc (ctx: EtaCtx) =
   let serial = VarSerial(ctx.Serial + 1)
 
-  let varDef : VarDef =
+  let varDef: VarDef =
     { Name = name
       IsStatic = NotStatic
       Ty = ty
@@ -232,8 +234,7 @@ let private createRestArgsAndPats callee arity argLen callLoc ctx =
       let argExpr, argSerial, ctx = freshVar "arg" argTy callLoc ctx
       let restArgPats, restArgs, ctx = go (n - 1) restTy ctx
 
-      let restArgPat =
-        HVarPat(PrivateVis, argSerial, argTy, callLoc)
+      let restArgPat = HVarPat(argSerial, argTy, callLoc)
 
       restArgPat :: restArgPats, argExpr :: restArgs, ctx
 
@@ -242,99 +243,116 @@ let private createRestArgsAndPats callee arity argLen callLoc ctx =
   let restTy = callee |> exprToTy |> tyAppliedBy argLen
   go (arity - argLen) restTy ctx
 
-let private createEnvPatAndTy items callLoc ctx =
-  let rec go items ctx =
-    match items with
+/// args: given args to be packed as env and set to fun obj
+let private createEnvPatAndTy args callLoc ctx =
+  let rec go args ctx =
+    match args with
     | [] -> [], [], [], ctx
 
-    | item :: items ->
-      let itemTy, itemLoc = exprExtract item
-      let itemExpr, itemSerial, ctx = freshVar "arg" itemTy itemLoc ctx
+    | arg :: args ->
+      let argTy, argLoc = exprExtract arg
+      let itemExpr, varSerial, ctx = freshVar "arg" argTy argLoc ctx
 
-      let itemPat =
-        HVarPat(PrivateVis, itemSerial, itemTy, itemLoc)
+      let itemPat = HVarPat(varSerial, argTy, argLoc)
 
-      let itemPats, argTys, argExprs, ctx = go items ctx
-      itemPat :: itemPats, itemTy :: argTys, itemExpr :: argExprs, ctx
+      let itemPats, itemTys, itemExprs, ctx = go args ctx
+      itemPat :: itemPats, argTy :: itemTys, itemExpr :: itemExprs, ctx
 
-  let itemPats, itemTys, itemExprs, ctx = go items ctx
-  let envTy = tyTuple itemTys
-  let envPat = hpTuple itemPats callLoc
-  envPat, envTy, itemExprs, ctx
+  // itemExprs: each is var expr bound to an item of unpacked env tuple.
+  let itemPats, itemTys, itemExprs, ctx = go args ctx
 
-let private createEnvDeconstructLetExpr envPat envTy envArgExpr next callLoc =
-  let unboxPrim =
-    HPrimExpr(HPrim.Unbox, tyFun tyObj envTy, callLoc)
+  // envPat: pat to unpack env arg (given to underlying function).
+  // envTy: type of env pat
+  // envExpr: expr to be boxed and set to fun object
+  let envPat, envTy, envExpr =
+    match itemPats, itemTys, args with
+    | [ itemPat ], [ itemTy ], [ arg ] -> itemPat, itemTy, arg
 
-  let unboxExpr =
+    | pats, tys, _ ->
+      let envPat = hpTuple pats callLoc
+      let envTy = tyTuple tys
+      let envExpr = hxTuple args callLoc
+      envPat, envTy, envExpr
+
+  let boxedEnvExpr =
+    let boxPrim =
+      HPrimExpr(HPrim.Box, tyFun envTy tyObj, callLoc)
+
+    hxCallProc boxPrim [ envExpr ] tyObj callLoc
+
+  let unboxedEnvExpr envArgExpr = // envArgExpr: expr of env arg, given to underlying function
+    let unboxPrim =
+      HPrimExpr(HPrim.Unbox, tyFun tyObj envTy, callLoc)
+
     hxCallProc unboxPrim [ envArgExpr ] envTy callLoc
 
-  HLetValExpr(envPat, unboxExpr, next, exprToTy next, callLoc)
+  envPat, envTy, itemExprs, boxedEnvExpr, unboxedEnvExpr, ctx
 
 /// Creates a let expression to define an underlying function.
 /// It takes an environment and rest parameters
 /// and calls the partial-applied callee with full arguments.
-let private createUnderlyingFunDef funTy arity envPat envTy forwardCall restArgPats callLoc ctx =
+let private createUnderlyingFunDef name funTy arity envPat envTy forwardCall restArgPats unboxedEnvExpr callLoc ctx =
   let envArgExpr, envArgSerial, ctx = freshVar "env" tyObj callLoc ctx
 
-  let envArgPat =
-    HVarPat(PrivateVis, envArgSerial, tyObj, callLoc)
+  let envArgPat = HVarPat(envArgSerial, tyObj, callLoc)
 
   let underlyingFunTy = tyFun tyObj funTy
 
   let _, funSerial, ctx =
-    freshFun "fun" (arity + 1) underlyingFunTy callLoc ctx
+    freshFun name (arity + 1) underlyingFunTy callLoc ctx
 
   let argPats = envArgPat :: restArgPats
 
   let body =
-    createEnvDeconstructLetExpr envPat envTy envArgExpr forwardCall callLoc
+    let next = forwardCall
+    HLetValExpr(envPat, unboxedEnvExpr envArgExpr, next, exprToTy next, callLoc)
 
   let funLet next =
-    HLetFunExpr(funSerial, NotRec, PrivateVis, argPats, body, next, exprToTy next, callLoc)
+    HLetFunExpr(funSerial, argPats, body, next, exprToTy next, callLoc)
 
   let funExpr =
-    HFunExpr(funSerial, underlyingFunTy, callLoc)
+    HFunExpr(funSerial, underlyingFunTy, [], callLoc)
 
   funLet, funExpr, ctx
 
-let private createEnvBoxExpr args envTy callLoc =
-  let tuple = hxTuple args callLoc
-
-  let boxPrim =
-    HPrimExpr(HPrim.Box, tyFun envTy tyObj, callLoc)
-
-  hxCallProc boxPrim [ tuple ] tyObj callLoc
-
 /// In the case the callee is a function.
-let private resolvePartialAppFun callee arity args argLen callLoc ctx =
+let private resolvePartialAppFun name callee arity args argLen callLoc ctx =
   let funTy = exprToTy callee
   let resultTy = tyAppliedBy arity funTy
-  let envItems = args
 
   let restArgPats, restArgs, ctx =
     createRestArgsAndPats callee arity argLen callLoc ctx
 
-  let envPat, envTy, envExprs, ctx = createEnvPatAndTy envItems callLoc ctx
-  let forwardArgs = List.append envExprs restArgs
+  let envPat, envTy, itemExprs, boxedEnvExpr, unboxedEnvExpr, ctx = createEnvPatAndTy args callLoc ctx
 
   let forwardExpr =
+    let forwardArgs = List.append itemExprs restArgs
     hxCallProc callee forwardArgs resultTy callLoc
 
   let funLet, funExpr, ctx =
-    createUnderlyingFunDef funTy arity envPat envTy forwardExpr restArgPats callLoc ctx
+    let appliedTy = tyAppliedBy argLen funTy
 
-  let envBoxExpr = createEnvBoxExpr envItems envTy callLoc
+    createUnderlyingFunDef
+      name
+      appliedTy
+      (arity - argLen)
+      envPat
+      envTy
+      forwardExpr
+      restArgPats
+      unboxedEnvExpr
+      callLoc
+      ctx
 
   let funObjExpr =
-    HNodeExpr(HClosureEN, [ funExpr; envBoxExpr ], tyAppliedBy argLen funTy, callLoc)
+    HNodeExpr(HClosureEN, [ funExpr; boxedEnvExpr ], tyAppliedBy argLen funTy, callLoc)
 
   let expr = funLet funObjExpr
   expr, ctx
 
 /// In the case that the callee is a function object.
 /// We need to include it to the environment.
-let private resolvePartialAppObj callee arity args argLen callLoc ctx =
+let private resolvePartialAppObj name callee arity args argLen callLoc ctx =
   let funTy = exprToTy callee
   let resultTy = tyAppliedBy arity funTy
 
@@ -342,23 +360,22 @@ let private resolvePartialAppObj callee arity args argLen callLoc ctx =
   let calleeExpr, calleeLet, ctx =
     let calleeExpr, calleeSerial, ctx = freshVar "callee" funTy callLoc ctx
 
-    let calleePat =
-      HVarPat(PrivateVis, calleeSerial, funTy, callLoc)
+    let calleePat = HVarPat(calleeSerial, funTy, callLoc)
 
     let calleeLet next =
       HLetValExpr(calleePat, callee, next, exprToTy next, callLoc)
 
     calleeExpr, calleeLet, ctx
 
-  let envItems = calleeExpr :: args
-
   let restArgPats, restArgs, ctx =
     createRestArgsAndPats callee arity argLen callLoc ctx
 
-  let envPat, envTy, envExprs, ctx = createEnvPatAndTy envItems callLoc ctx
+  // callee itself is also a kind of hidden arg to be packed into env obj.
+  let envPat, envTy, itemExprs, boxedEnvExpr, unboxedEnvExpr, ctx =
+    createEnvPatAndTy (calleeExpr :: args) callLoc ctx
 
   let calleeExpr, forwardArgs =
-    match List.append envExprs restArgs with
+    match List.append itemExprs restArgs with
     | calleeExpr :: forwardArgs -> calleeExpr, forwardArgs
     | _ -> unreachable ()
 
@@ -366,32 +383,42 @@ let private resolvePartialAppObj callee arity args argLen callLoc ctx =
     hxCallClosure calleeExpr forwardArgs resultTy callLoc
 
   let funLet, funExpr, ctx =
-    createUnderlyingFunDef funTy arity envPat envTy forwardExpr restArgPats callLoc ctx
+    let appliedTy = tyAppliedBy argLen funTy
 
-  let envBoxExpr = createEnvBoxExpr envItems envTy callLoc
+    createUnderlyingFunDef
+      name
+      appliedTy
+      (arity - argLen)
+      envPat
+      envTy
+      forwardExpr
+      restArgPats
+      unboxedEnvExpr
+      callLoc
+      ctx
 
   let closureExpr =
-    HNodeExpr(HClosureEN, [ funExpr; envBoxExpr ], tyAppliedBy argLen funTy, callLoc)
+    HNodeExpr(HClosureEN, [ funExpr; boxedEnvExpr ], tyAppliedBy argLen funTy, callLoc)
 
   let expr = calleeLet (funLet closureExpr)
   expr, ctx
 
-let private resolvePartialApp calleeKind callee arity args argLen callLoc ctx =
+let private resolvePartialApp name calleeKind callee arity args argLen callLoc ctx =
   assert (argLen < arity)
 
   match calleeKind with
-  | CalleeKind.Fun -> resolvePartialAppFun callee arity args argLen callLoc ctx
-  | CalleeKind.Obj -> resolvePartialAppObj callee arity args argLen callLoc ctx
+  | CalleeKind.Fun -> resolvePartialAppFun name callee arity args argLen callLoc ctx
+  | CalleeKind.Obj -> resolvePartialAppObj name callee arity args argLen callLoc ctx
 
 // -----------------------------------------------
 // Featured transformations
 // -----------------------------------------------
 
-let private doExpandCall calleeKind callee arity calleeLoc args resultTy callLoc ctx =
+let private doExpandCall name calleeKind callee arity calleeLoc args resultTy callLoc ctx =
   let argLen = List.length args
 
   if argLen < arity then
-    resolvePartialApp calleeKind callee arity args argLen callLoc ctx
+    resolvePartialApp name calleeKind callee arity args argLen callLoc ctx
   else
     let callArgs, restArgs = listSplitAt arity args
     let callResultTy = tyAppliedBy arity (exprToTy callee)
@@ -403,39 +430,61 @@ let private doExpandCall calleeKind callee arity calleeLoc args resultTy callLoc
 
 let private expandCallExpr callee args resultTy loc (ctx: EtaCtx) =
   match callee, args with
-  | HFunExpr (funSerial, _, calleeLoc), _ ->
-    let arity = (ctx.Funs |> mapFind funSerial).Arity
-    let args, ctx = (args, ctx) |> stMap exExpr
-    doExpandCall CalleeKind.Fun callee arity calleeLoc args resultTy loc ctx
+  | HFunExpr (funSerial, _, _, calleeLoc), _ ->
+    let funDef = ctx.Funs |> mapFind funSerial
+    let arity = funDef.Arity
 
-  | HVariantExpr (_, variantTy, calleeLoc), _ ->
+    let name =
+      (ctx.ParentFun |> List.rev |> S.concat "_")
+      + "_"
+      + funDef.Name
+
+    let args, ctx = (args, ctx) |> stMap exExpr
+    doExpandCall name CalleeKind.Fun callee arity calleeLoc args resultTy loc ctx
+
+  | HVariantExpr (variantSerial, variantTy, calleeLoc), _ ->
     assert (tyIsFun variantTy)
+
+    let name =
+      (ctx.Variants |> mapFind variantSerial).Name
+
     let arity = 1
     let args, ctx = (args, ctx) |> stMap exExpr
-    doExpandCall CalleeKind.Fun callee arity calleeLoc args resultTy loc ctx
+    doExpandCall name CalleeKind.Fun callee arity calleeLoc args resultTy loc ctx
 
   | HPrimExpr (prim, primTy, calleeLoc), _ ->
+    // FIXME: prim to name
     let arity = prim |> primToArity primTy
     let args, ctx = (args, ctx) |> stMap exExpr
-    doExpandCall CalleeKind.Fun callee arity calleeLoc args resultTy loc ctx
+    doExpandCall "prim" CalleeKind.Fun callee arity calleeLoc args resultTy loc ctx
 
   | _, args ->
     let calleeTy, calleeLoc = exprExtract callee
     let callee, ctx = (callee, ctx) |> exExpr
     let args, ctx = (args, ctx) |> stMap exExpr
     let arity = tyToArity calleeTy // FIXME: maybe wrong
-    doExpandCall CalleeKind.Obj callee arity calleeLoc args resultTy loc ctx
+    doExpandCall "obj" CalleeKind.Obj callee arity calleeLoc args resultTy loc ctx
 
 let private exFunName expr funSerial calleeLoc (ctx: EtaCtx) =
-  let arity = (ctx.Funs |> mapFind funSerial).Arity
-  resolvePartialApp CalleeKind.Fun expr arity [] 0 calleeLoc ctx
+  let funDef = ctx.Funs |> mapFind funSerial
+
+  let name =
+    (ctx.ParentFun |> List.rev |> S.concat "_")
+    + "_"
+    + funDef.Name
+
+  let arity = funDef.Arity
+  resolvePartialApp name CalleeKind.Fun expr arity [] 0 calleeLoc ctx
 
 // This is used only when variant is not applied syntactically.
 // Value-carrying variant is transformed as partial app.
-let private exVariantName expr variantTy loc (ctx: EtaCtx) =
+let private exVariantName expr variantSerial variantTy loc (ctx: EtaCtx) =
   if tyIsFun variantTy then
+    let name =
+      (ctx.Variants |> mapFind variantSerial).Name
+
     let arity = 1
-    resolvePartialApp CalleeKind.Fun expr arity [] 0 loc ctx
+    resolvePartialApp name CalleeKind.Fun expr arity [] 0 loc ctx
   else
     expr, ctx
 
@@ -445,7 +494,7 @@ let private exPrimExpr expr prim primTy calleeLoc (ctx: EtaCtx) =
   if arity = 0 then
     expr, ctx
   else
-    resolvePartialApp CalleeKind.Fun expr arity [] 0 calleeLoc ctx
+    resolvePartialApp "prim" CalleeKind.Fun expr arity [] 0 calleeLoc ctx
 
 let private exInfExpr expr kind args ty loc ctx =
   match kind with
@@ -463,10 +512,19 @@ let private exInfExpr expr kind args ty loc ctx =
     let args, ctx = (args, ctx) |> stMap exExpr
     HNodeExpr(kind, args, ty, loc), ctx
 
-let private exLetFunExpr callee isRec vis argPats body next ty loc ctx =
-  let body, ctx = (body, ctx) |> exExpr
+let private exLetFunExpr callee argPats body next ty loc (ctx: EtaCtx) =
+  let body, ctx =
+    let name = (ctx.Funs |> mapFind callee).Name
+
+    let parent, ctx =
+      ctx.ParentFun, { ctx with ParentFun = name :: ctx.ParentFun }
+
+    let body, ctx = (body, ctx) |> exExpr
+    let ctx = { ctx with ParentFun = parent }
+    body, ctx
+
   let next, ctx = (next, ctx) |> exExpr
-  HLetFunExpr(callee, isRec, vis, argPats, body, next, ty, loc), ctx
+  HLetFunExpr(callee, argPats, body, next, ty, loc), ctx
 
 // -----------------------------------------------
 // Control
@@ -477,8 +535,8 @@ let private exExpr (expr, ctx) =
   | HLitExpr _
   | HVarExpr _ -> expr, ctx
 
-  | HFunExpr (serial, _, calleeLoc) -> exFunName expr serial calleeLoc ctx
-  | HVariantExpr (_, ty, loc) -> exVariantName expr ty loc ctx
+  | HFunExpr (funSerial, _, _, calleeLoc) -> exFunName expr funSerial calleeLoc ctx
+  | HVariantExpr (variantSerial, ty, loc) -> exVariantName expr variantSerial ty loc ctx
   | HPrimExpr (prim, primTy, calleeLoc) -> exPrimExpr expr prim primTy calleeLoc ctx
 
   | HMatchExpr (cond, arms, ty, loc) ->
@@ -486,36 +544,50 @@ let private exExpr (expr, ctx) =
 
     let arms, ctx =
       (arms, ctx)
-      |> stMap
-           (fun ((pat, guard, body), ctx) ->
-             let guard, ctx = (guard, ctx) |> exExpr
-             let body, ctx = (body, ctx) |> exExpr
-             (pat, guard, body), ctx)
+      |> stMap (fun ((pat, guard, body), ctx) ->
+        let guard, ctx = (guard, ctx) |> exExpr
+        let body, ctx = (body, ctx) |> exExpr
+        (pat, guard, body), ctx)
 
     HMatchExpr(cond, arms, ty, loc), ctx
 
   | HNodeExpr (kind, args, ty, loc) -> exInfExpr expr kind args ty loc ctx
 
   | HBlockExpr (stmts, last) ->
-    invoke
-      (fun () ->
-        let stmts, ctx = (stmts, ctx) |> stMap exExpr
-        let last, ctx = (last, ctx) |> exExpr
-        HBlockExpr(stmts, last), ctx)
+    let stmts, ctx = (stmts, ctx) |> stMap exExpr
+    let last, ctx = (last, ctx) |> exExpr
+    HBlockExpr(stmts, last), ctx
 
   | HLetValExpr (pat, init, next, ty, loc) ->
     let init, ctx = (init, ctx) |> exExpr
     let next, ctx = (next, ctx) |> exExpr
     HLetValExpr(pat, init, next, ty, loc), ctx
 
-  | HLetFunExpr (callee, isRec, vis, args, body, next, ty, loc) ->
-    exLetFunExpr callee isRec vis args body next ty loc ctx
+  | HLetFunExpr (callee, args, body, next, ty, loc) -> exLetFunExpr callee args body next ty loc ctx
 
   | HNavExpr _ -> unreachable () // HNavExpr is resolved in NameRes, Typing, or RecordRes.
   | HRecordExpr _ -> unreachable () // HRecordExpr is resolved in RecordRes.
 
-let etaExpansion (expr, tyCtx: TyCtx) =
-  let etaCtx = ofTyCtx tyCtx
-  let expr, etaCtx = (expr, etaCtx) |> exExpr
-  let tyCtx = etaCtx |> toTyCtx tyCtx
-  expr, tyCtx
+let private exModule (m: HModule, ctx: EtaCtx) =
+  let ctx = { ctx with Vars = m.Vars }
+
+  let stmts, ctx =
+    m.Stmts
+    |> List.mapFold (fun ctx stmt -> exExpr (stmt, ctx)) ctx
+
+  let m =
+    { m with
+        Vars = ctx.Vars
+        Stmts = stmts }
+
+  m, ctx
+
+let etaExpansion (modules: HProgram, hirCtx: HirCtx) : HProgram * HirCtx =
+  let etaCtx = ofHirCtx hirCtx
+
+  let modules, etaCtx =
+    modules
+    |> List.mapFold (fun ctx m -> exModule (m, ctx)) etaCtx
+
+  let hirCtx = etaCtx |> toHirCtx hirCtx
+  modules, hirCtx

@@ -5,7 +5,7 @@ open MiloneLspServer.JsonSerialization
 
 /// Writes a string (that represents a body of single message)
 /// to STDOUT in the format of JSON-RPC.
-let private jsonRpcWriteString : string -> unit =
+let private jsonRpcWriteString: string -> unit =
   let buf = System.Console.OpenStandardOutput()
   let writer = new System.IO.BinaryWriter(buf)
 
@@ -23,6 +23,18 @@ let jsonRpcWriteWithResult (id: JsonValue) (result: JsonValue) : unit =
     [ "jsonrpc", JString "2.0"
       "id", id
       "result", result ]
+    |> Map.ofList
+    |> JObject
+
+  jsonRpcWriteString (jsonDisplay jsonValue + "\n")
+
+/// Writes a JSON-RPC message with params field. (For LSP requests.)
+let jsonRpcWriteWithIdParams (methodName: string) (msgId: JsonValue) (paramsValue: JsonValue) : unit =
+  let jsonValue =
+    [ "jsonrpc", JString "2.0"
+      "id", msgId
+      "method", JString methodName
+      "params", paramsValue ]
     |> Map.ofList
     |> JObject
 

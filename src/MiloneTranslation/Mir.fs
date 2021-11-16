@@ -15,7 +15,6 @@ module rec MiloneTranslation.Mir
 open MiloneShared.SharedTypes
 open MiloneShared.TypeFloat
 open MiloneShared.TypeIntegers
-open MiloneShared.Util
 open MiloneTranslation.Hir
 
 // -----------------------------------------------
@@ -37,12 +36,10 @@ type MatchIR =
 
 [<NoEquality; NoComparison>]
 type MGenericValue =
-  | MNoneGv
   | MNilGv
   | MSizeOfGv
 
 /// Built-in 1-arity operation in middle IR.
-[<Struct>]
 [<NoEquality; NoComparison>]
 type MUnary =
   | MMinusUnary
@@ -73,9 +70,6 @@ type MUnary =
 
   /// Gets a field of record.
   | MRecordItemUnary of recordItemIndex: int
-
-  | MOptionIsSomeUnary
-  | MOptionToValueUnary
 
   | MListIsEmptyUnary
 
@@ -119,10 +113,12 @@ type MAction =
   | MPrintfnAction
   | MEnterRegionAction
   | MLeaveRegionAction
+  | MCallProcAction
+  | MCallClosureAction
   | MCallNativeAction of funName: string
   | MPtrWriteAction
 
-[<Struct; NoEquality; NoComparison>]
+[<NoEquality; NoComparison>]
 type MPrim =
   /// string -> int
   | MIntOfStrPrim of intOfStrFlavor: IntFlavor
@@ -140,9 +136,7 @@ type MPrim =
   | MClosurePrim of closureFunSerial: FunSerial
 
   | MBoxPrim
-  | MOptionSomePrim
   | MConsPrim
-  | MTuplePrim
   | MVariantPrim of variantSerial: VariantSerial
   | MRecordPrim
 
@@ -179,9 +173,8 @@ type MExpr =
   | MUnaryExpr of MUnary * arg: MExpr * resultTy: Ty * Loc
   | MBinaryExpr of MBinary * MExpr * MExpr * resultTy: Ty * Loc
 
-  | MNativeExpr of code: string * Ty * Loc
+  | MNativeExpr of code: string * MExpr list * Ty * Loc
 
-[<Struct>]
 [<NoEquality; NoComparison>]
 type MConst =
   | MLitConst of l: Lit
@@ -206,7 +199,7 @@ type MTerminator =
 type MStmt =
   | MActionStmt of MAction * MExpr list * Loc
 
-  | MPrimStmt of MPrim * MExpr list * result: VarSerial * Loc
+  | MPrimStmt of MPrim * MExpr list * result: VarSerial * resultTy: Ty * Loc
 
   /// Declare a local variable.
   | MLetValStmt of VarSerial * MExpr option * Ty * Loc
@@ -230,6 +223,12 @@ type MDecl =
   | MProcDecl of FunSerial * args: (VarSerial * Ty * Loc) list * body: MBlock list * resultTy: Ty * Loc
   | MNativeDecl of code: string * Loc
 
+[<RequireQualifiedAccess; NoEquality; NoComparison>]
+type MModule =
+  { DocId: DocId
+    Vars: VarNameMap
+    Decls: MDecl list }
+
 // -----------------------------------------------
 // Expressions (MIR)
 // -----------------------------------------------
@@ -246,13 +245,12 @@ let mexprExtract expr =
 
   | MGenericValueExpr (genericValue, ty, loc) ->
     match genericValue with
-    | MNoneGv
     | MNilGv -> ty, loc
     | MSizeOfGv -> tyInt, loc
 
   | MUnaryExpr (_, _, ty, loc) -> ty, loc
   | MBinaryExpr (_, _, _, ty, loc) -> ty, loc
-  | MNativeExpr (_, ty, loc) -> ty, loc
+  | MNativeExpr (_, _, ty, loc) -> ty, loc
 
 let mexprToTy expr = expr |> mexprExtract |> fst
 
@@ -270,7 +268,7 @@ let mDeclToLoc (decl: MDecl) : Loc =
 // -----------------------------------------------
 
 let mxSugar expr =
-  let mxSugarUni op l ty loc =
+  let mxSugarNot l ty loc =
     match l with
     // SUGAR: `not true` ==> `false`
     // SUGAR: `not false` ==> `true`
@@ -291,14 +289,14 @@ let mxSugar expr =
     // SUGAR: `not (x >= y)` ==> `x < y`
     | MBinaryExpr (MGreaterEqualBinary, l, r, ty, loc) -> MBinaryExpr(MLessBinary, l, r, ty, loc)
 
-    | _ -> MUnaryExpr(op, l, ty, loc)
+    | _ -> MUnaryExpr(MNotUnary, l, ty, loc)
 
   let mxSugarBin op l r ty loc =
     match op, l, r with
     // SUGAR: `x = false` ==> `not x`
-    | MEqualBinary, MLitExpr (BoolLit false, _), _ -> mxSugarUni MNotUnary r ty loc
+    | MEqualBinary, MLitExpr (BoolLit false, _), _ -> mxSugarNot r ty loc
 
-    | MEqualBinary, _, MLitExpr (BoolLit false, _) -> mxSugarUni MNotUnary l ty loc
+    | MEqualBinary, _, MLitExpr (BoolLit false, _) -> mxSugarNot l ty loc
 
     // SUGAR: `x = true` ==> `x`
     | MEqualBinary, MLitExpr (BoolLit true, _), _ -> r
@@ -311,9 +309,9 @@ let mxSugar expr =
   // SUGAR: `x: unit` ==> `()`
   | MVarExpr (_, Ty (TupleTk, []), loc) -> MUnitExpr loc
 
-  | MUnaryExpr (op, l, ty, loc) ->
+  | MUnaryExpr (MNotUnary, l, ty, loc) ->
     let l = mxSugar l
-    mxSugarUni op l ty loc
+    mxSugarNot l ty loc
 
   | MBinaryExpr (op, l, r, ty, loc) ->
     let l = mxSugar l

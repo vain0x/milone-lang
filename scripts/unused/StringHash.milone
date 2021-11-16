@@ -1,0 +1,36 @@
+let private hashCombine (n: uint64) (h: uint64) =
+  let x = (h <<< 5) ||| (h >>> 57)
+  (h + x) ^^^ n
+
+let rec strHash (s: string) =
+  let rec go (i: int) (h: uint64) =
+    if i = s.Length then
+      h
+    else
+      go (i + 1) (hashCombine (uint64 s.[i]) h)
+
+  go 0 (uint64 31)
+
+let private strListHash (xs: string list) =
+  xs
+  |> List.fold
+       (fun (i, h) s ->
+         i + 1,
+         h
+         |> hashCombine (uint64 i)
+         |> hashCombine (strHash s))
+       (0, uint64 33)
+  |> snd
+
+let private alpha = "abcdefghijklmnopqrstuvwxyzABCDEF"
+
+let private hex64 (n: uint64) =
+  let rec go acc (n: uint64) =
+    if n = uint64 0 then
+      acc
+    else
+      let d = int (n % uint64 32)
+      let s = alpha |> S.slice d (d + 1)
+      go (s + acc) (n / uint64 32)
+
+  if n = uint64 0 then "0" else go "" n

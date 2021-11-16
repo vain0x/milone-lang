@@ -4,38 +4,38 @@ struct IntList;
 
 struct IntList;
 
-struct IntIntTuple2;
+struct IntIntTuple2_;
 
-char match_complicated_Program_testTrivialCase(char arg_);
+void match_complicated_Program_testTrivialCase(void);
 
-char match_complicated_Program_testListMatching(char arg_1);
+void match_complicated_Program_testListMatching(void);
 
-char match_complicated_Program_testMatchArmsMakeScope(char arg_2);
+void match_complicated_Program_testMatchArmsMakeScope(void);
 
-char match_complicated_Program_testNestedMatchesParseCorrectly(char arg_3);
+void match_complicated_Program_testNestedMatchesParseCorrectly(void);
 
-int milone_main();
+int milone_main(void);
 
 struct IntList {
     int head;
     struct IntList const* tail;
 };
 
-struct IntIntTuple2 {
+struct IntIntTuple2_ {
     int t0;
     int t1;
 };
 
-char match_complicated_Program_testTrivialCase(char arg_) {
+void match_complicated_Program_testTrivialCase(void) {
     char match_;
     match_ = 0;
     goto end_match_1;
 next_2:;
 end_match_1:;
-    return 0;
+    return;
 }
 
-char match_complicated_Program_testListMatching(char arg_1) {
+void match_complicated_Program_testListMatching(void) {
     char match_1;
     struct IntList const* list_ = milone_mem_alloc(1, sizeof(struct IntList));
     (*(((struct IntList*)list_))) = (struct IntList){.head = 0, .tail = NULL};
@@ -57,20 +57,21 @@ next_5:;
 next_6:;
     exit(1);
 end_match_3:;
-    return 0;
+    return;
 }
 
-char match_complicated_Program_testMatchArmsMakeScope(char arg_2) {
+void match_complicated_Program_testMatchArmsMakeScope(void) {
+    int x_1;
     int x_ = 2;
     char match_2;
-    struct IntIntTuple2 tuple_ = (struct IntIntTuple2){.t0 = x_, .t1 = 1};
-    if ((tuple_.t0 != 1)) goto next_8;
-    int x_1 = tuple_.t1;
+    struct IntIntTuple2_ IntIntTuple2_ = (struct IntIntTuple2_){.t0 = x_, .t1 = 1};
+    if ((IntIntTuple2_.t0 != 1)) goto next_8;
+    x_1 = IntIntTuple2_.t1;
     milone_assert(false, 18, 12);
     match_2 = 0;
     goto end_match_7;
 next_8:;
-    if ((tuple_.t0 != 2)) goto next_9;
+    if ((IntIntTuple2_.t0 != 2)) goto next_9;
     char if_;
     if ((x_ != 2)) {
         goto then_12;
@@ -93,10 +94,10 @@ next_9:;
     goto end_match_7;
 next_10:;
 end_match_7:;
-    return 0;
+    return;
 }
 
-char match_complicated_Program_testNestedMatchesParseCorrectly(char arg_3) {
+void match_complicated_Program_testNestedMatchesParseCorrectly(void) {
     char match_3;
     if (true) goto next_15;
     char switch_;
@@ -116,13 +117,13 @@ next_15:;
     goto end_match_14;
 next_16:;
 end_match_14:;
-    return 0;
+    return;
 }
 
-int milone_main() {
-    char call_ = match_complicated_Program_testTrivialCase(0);
-    char call_1 = match_complicated_Program_testListMatching(0);
-    char call_2 = match_complicated_Program_testMatchArmsMakeScope(0);
-    char call_3 = match_complicated_Program_testNestedMatchesParseCorrectly(0);
+int milone_main(void) {
+    match_complicated_Program_testTrivialCase();
+    match_complicated_Program_testListMatching();
+    match_complicated_Program_testMatchArmsMakeScope();
+    match_complicated_Program_testNestedMatchesParseCorrectly();
     return 0;
 }

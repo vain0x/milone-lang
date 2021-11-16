@@ -1,5 +1,7 @@
 #!/bin/sh
 
+# FIXME: update
+
 set -eu
 
 CC=${CC:-gcc}
@@ -16,6 +18,7 @@ mkdir -p $TARGET
 $CC -std=gnu11 -fsanitize=address,undefined \
     -I$MILONE_HOME/runtime \
     $MILONE_HOME/runtime/milone.c \
+    $MILONE_HOME/runtime/milone_platform.c \
     ../LibSpan/lib_span_runtime.c \
     $TARGET/lib_span_tests.c \
     -o $TARGET/lib_span_tests

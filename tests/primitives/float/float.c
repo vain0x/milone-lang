@@ -6,19 +6,19 @@ struct F64List;
 
 struct F64List;
 
-bool go_1(struct F64BoolFun1 pred_, struct F64List const* xs_1);
+bool float_float_F64BoolFun1F64ListBoolFun2_all(struct F64BoolFun1 pred_, struct F64List const* xs_);
 
-bool all_(struct F64BoolFun1 pred_, struct F64List const* xs_);
+bool float_float_all_F64BoolFun1F64ListBoolFun2_go(struct F64BoolFun1 pred_, struct F64List const* xs_1);
 
-bool fun_(double x_1);
+bool float_float_main_fun(double x_1);
 
-bool fun_2(void const* env_, double arg_);
+bool float_float_eta2_main_fun(void const* env_, double arg_);
 
-bool fun_1(double x_2);
+bool float_float_main_fun_1(double x_2);
 
-bool fun_3(void const* env_1, double arg_1);
+bool float_float_eta2_main_fun_1(void const* env_1, double arg_1);
 
-int milone_main();
+int milone_main(void);
 
 struct F64BoolFun1 {
     bool(*fun)(void const*, double);
@@ -30,7 +30,14 @@ struct F64List {
     struct F64List const* tail;
 };
 
-bool go_1(struct F64BoolFun1 pred_, struct F64List const* xs_1) {
+bool float_float_F64BoolFun1F64ListBoolFun2_all(struct F64BoolFun1 pred_, struct F64List const* xs_) {
+    bool call_ = float_float_all_F64BoolFun1F64ListBoolFun2_go(pred_, xs_);
+    return call_;
+}
+
+bool float_float_all_F64BoolFun1F64ListBoolFun2_go(struct F64BoolFun1 pred_, struct F64List const* xs_1) {
+    struct F64List const* xs_2;
+    double x_;
 tailrec_1:;
     bool match_;
     if ((!((!(xs_1))))) goto next_3;
@@ -38,8 +45,8 @@ tailrec_1:;
     goto end_match_2;
 next_3:;
     if ((!(xs_1))) goto next_4;
-    double x_ = xs_1->head;
-    struct F64List const* xs_2 = xs_1->tail;
+    x_ = xs_1->head;
+    xs_2 = xs_1->tail;
     bool app_ = pred_.fun(pred_.env, x_);
     bool if_;
     if (app_) {
@@ -65,30 +72,25 @@ end_match_2:;
     return match_;
 }
 
-bool all_(struct F64BoolFun1 pred_, struct F64List const* xs_) {
-    bool call_ = go_1(pred_, xs_);
-    return call_;
-}
-
-bool fun_(double x_1) {
+bool float_float_main_fun(double x_1) {
     return (x_1 == 0.0);
 }
 
-bool fun_2(void const* env_, double arg_) {
-    bool call_1 = fun_(arg_);
+bool float_float_eta2_main_fun(void const* env_, double arg_) {
+    bool call_1 = float_float_main_fun(arg_);
     return call_1;
 }
 
-bool fun_1(double x_2) {
+bool float_float_main_fun_1(double x_2) {
     return (0.0 < x_2);
 }
 
-bool fun_3(void const* env_1, double arg_1) {
-    bool call_2 = fun_1(arg_1);
+bool float_float_eta2_main_fun_1(void const* env_1, double arg_1) {
+    bool call_2 = float_float_main_fun_1(arg_1);
     return call_2;
 }
 
-int milone_main() {
+int milone_main(void) {
     struct F64List const* list_7 = milone_mem_alloc(1, sizeof(struct F64List));
     (*(((struct F64List*)list_7))) = (struct F64List){.head = 00.00e-00, .tail = NULL};
     struct F64List const* list_6 = milone_mem_alloc(1, sizeof(struct F64List));
@@ -106,8 +108,8 @@ int milone_main() {
     struct F64List const* list_ = milone_mem_alloc(1, sizeof(struct F64List));
     (*(((struct F64List*)list_))) = (struct F64List){.head = 0.0, .tail = list_1};
     struct F64List const* zeros_ = list_;
-    struct F64BoolFun1 fun_4 = (struct F64BoolFun1){.fun = fun_2, .env = NULL};
-    bool call_3 = all_(fun_4, zeros_);
+    struct F64BoolFun1 fun_ = (struct F64BoolFun1){.fun = float_float_eta2_main_fun, .env = NULL};
+    bool call_3 = float_float_F64BoolFun1F64ListBoolFun2_all(fun_, zeros_);
     milone_assert(call_3, 24, 2);
     struct F64List const* list_18 = milone_mem_alloc(1, sizeof(struct F64List));
     (*(((struct F64List*)list_18))) = (struct F64List){.head = 6.02e-23, .tail = NULL};
@@ -132,8 +134,8 @@ int milone_main() {
     struct F64List const* list_8 = milone_mem_alloc(1, sizeof(struct F64List));
     (*(((struct F64List*)list_8))) = (struct F64List){.head = 1.0, .tail = list_9};
     struct F64List const* values_ = list_8;
-    struct F64BoolFun1 fun_5 = (struct F64BoolFun1){.fun = fun_3, .env = NULL};
-    bool call_4 = all_(fun_5, values_);
+    struct F64BoolFun1 fun_1 = (struct F64BoolFun1){.fun = float_float_eta2_main_fun_1, .env = NULL};
+    bool call_4 = float_float_F64BoolFun1F64ListBoolFun2_all(fun_1, values_);
     milone_assert(call_4, 39, 2);
     milone_assert((6.0 < (2.3 + 4.5)), 42, 2);
     milone_assert(((44.0 - 2.0) == 42.0), 43, 2);

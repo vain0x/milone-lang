@@ -8,15 +8,14 @@
   <ItemGroup>
     <Compile Include="JsonValue.fs" />
     <Compile Include="JsonSerialization.fs" />
-    <Compile Include="JsonRpcReaderForStdIn.fs" />
-    <Compile Include="JsonRpcReaderForAbstractStream.fs" />
+    <Compile Include="JsonRpcReader.fs" />
     <Compile Include="JsonRpcWriter.fs" />
     <Compile Include="Util.fs" />
-    <Compile Include="LspCacheLayer.fs" />
+    <Compile Include="LspUtil.fs" />
     <Compile Include="Lsp.fs" />
-    <Compile Include="LspDocCache.fs" />
     <Compile Include="LspLangService.fs" />
     <Compile Include="LspServer.fs" />
+    <Compile Include="LspTests.fs" />
     <Compile Include="Program.fs" />
   </ItemGroup>
 
@@ -25,7 +24,7 @@
   </ItemGroup>
 
   <ItemGroup>
-    <ProjectReference Include="..\MiloneCli\MiloneCli.fsproj" />
+    <ProjectReference Include="..\MiloneSyntax\MiloneSyntax.fsproj" />
   </ItemGroup>
 
 </Project>

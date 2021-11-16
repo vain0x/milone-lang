@@ -7,6 +7,8 @@
 /// Partial functions, which could throw exceptions, are unavailable intentionally.
 module rec MiloneCore.List
 
+open MiloneCore.Option
+
 // Make sure every function is tail-recursive.
 // Inner functions have verbose name for readability of output code.
 
@@ -113,17 +115,6 @@ let collect (f: _ -> _ list) (xs: _ list) : _ list =
 
   listCollectOuterLoop [] xs
 
-let skip (count: int) (xs: _ list) : _ list =
-  let rec listSkipLoop count xs =
-    match xs with
-    | [] -> []
-
-    | _ when count <= 0 -> xs
-
-    | _ :: xs -> listSkipLoop (count - 1) xs
-
-  listSkipLoop count xs
-
 let truncate (count: int) (xs: _ list) : _ list =
   let rec listTruncateLoop acc count xs =
     match xs with
@@ -217,7 +208,17 @@ let tryLast (xs: _ list) : _ option =
 /// Gets the i'th item if exists.
 ///
 /// Spends O(N) time at worst. Avoid using this as possible.
-let tryItem (i: int) (xs: _ list) : _ option = xs |> skip i |> tryHead
+let tryItem (i: int) (xs: _ list) : _ option =
+  let rec listTryItemLoop (i: int) xs =
+    match xs with
+    | [] -> None
+    | x :: _ when i = 0 -> Some x
+    | _ :: xs -> listTryItemLoop (i - 1) xs
+
+  if i >= 0 then
+    listTryItemLoop i xs
+  else
+    None
 
 let tryFind (pred: _ -> bool) (xs: _ list) : _ option =
   let rec listTryFindLoop xs =
@@ -260,6 +261,14 @@ let partition (pred: _ -> bool) (xs: _ list) : _ list * _ list =
         listPartitionLoop trueAcc (x :: falseAcc) xs
 
   listPartitionLoop [] [] xs
+
+let unzip (xs: ('T * 'U) list) : 'T list * 'U list =
+  let rec listUnzipLoop lAcc rAcc xs =
+    match xs with
+    | [] -> rev lAcc, rev rAcc
+    | (l, r) :: xs -> listUnzipLoop (l :: lAcc) (r :: rAcc) xs
+
+  listUnzipLoop [] [] xs
 
 /// Creates a list with specified length. i'th element is filled by `f i`.
 /// That is, `[ f 0; f 1; ...; f (len - 1) ]`.

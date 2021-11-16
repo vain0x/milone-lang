@@ -1,8 +1,8 @@
 #include "milone.h"
 
-int milone_main();
+int milone_main(void);
 
-int milone_main() {
+int milone_main(void) {
     char match_;
     match_ = 0;
     goto end_match_1;

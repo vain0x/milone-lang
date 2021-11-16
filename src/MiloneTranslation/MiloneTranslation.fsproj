@@ -8,12 +8,15 @@
   <ItemGroup>
     <Compile Include="Hir.fs" />
     <Compile Include="Hoist.fs" />
+    <Compile Include="Derive.fs" />
     <Compile Include="AutoBoxing.fs" />
     <Compile Include="RecordRes.fs" />
     <Compile Include="ClosureConversion.fs" />
     <Compile Include="EtaExpansion.fs" />
     <Compile Include="TailRecOptimizing.fs" />
     <Compile Include="Monomorphizing.fs" />
+    <Compile Include="MonoTyIr.fs" />
+    <Compile Include="MonoTy.fs" />
     <Compile Include="Mir.fs" />
     <Compile Include="MirGen.fs" />
     <Compile Include="PatCompile.fs" />
@@ -24,6 +27,7 @@
     <Compile Include="XirToCir.fs" />
     <Compile Include="CirGen.fs" />
     <Compile Include="CirDump.fs" />
+    <Compile Include="TranslationApi.fs" />
   </ItemGroup>
 
   <ItemGroup>

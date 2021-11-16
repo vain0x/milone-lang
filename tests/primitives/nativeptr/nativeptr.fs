@@ -19,9 +19,9 @@ let strcpy (dest: nativeptr<char>) (src: __constptr<char>) : nativeptr<char> = _
 
 let main _ =
   let buf = memAlloc 1 8
-  memSet buf (uint8 255) 8
-  assert ((unbox (__nativeCast buf: obj): int) = -1)
+  memSet buf 255uy 8
+  assert (__ptrRead (__nativeCast buf: __constptr<int>) 0 = -1)
 
   // Conversion to int.
-  assert (unativeint buf <> unativeint 0)
+  assert (unativeint buf <> 0un)
   0

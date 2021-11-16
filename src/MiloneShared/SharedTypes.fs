@@ -3,6 +3,8 @@
 /// Provides types that are commonly used in syntax part and semantics part.
 module rec MiloneShared.SharedTypes
 
+open MiloneShared.TypeIntegers
+
 // -----------------------------------------------
 // Vocabulary types
 // -----------------------------------------------
@@ -57,11 +59,17 @@ type IsMut =
   | IsConst
   | IsMut
 
+[<NoEquality; NoComparison>]
+type IsCRepr = IsCRepr of bool
+
+let isCRepr (IsCRepr x) = x
+
 /// Literal of primitive, non-generic value.
-[<Struct; NoEquality; NoComparison>]
+[<NoEquality; NoComparison>]
 type Lit =
   | BoolLit of boolValue: bool
   | IntLit of intText: string
+  | IntLitWithFlavor of string * IntFlavor
   | FloatLit of floatText: string
   | CharLit of charValue: char
   | StrLit of stringValue: string

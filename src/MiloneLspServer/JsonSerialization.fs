@@ -143,7 +143,7 @@ type private JsonValueFormatter() =
 
       | token -> failwithf "Invalid JSON input %A." token
 
-let private jsonResolver : IJsonFormatterResolver =
+let private jsonResolver: IJsonFormatterResolver =
   let formatters =
     [| JsonValueFormatter() :> IJsonFormatter |]
 

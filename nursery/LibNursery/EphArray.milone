@@ -1,0 +1,235 @@
+module rec LibNursery.EphArray
+
+open LibNursery.EphSerial
+open LibNursery.NativeInterop
+open LibNursery.Runtime
+
+/// Copies memory block. Does range checks.
+///
+/// itemSize: size of the item type
+/// destLen: number of items (total capacity of dest)
+/// destStart: start index of dest part to be written
+/// destEnd: end index of dest part to be written
+/// src etc.: same
+let private rawCopySlice
+  (itemSize: int)
+  (dest: voidptr)
+  (destLen: int)
+  (destStart: int)
+  (destEnd: int)
+  (src: obj)
+  (srcLen: int)
+  (srcStart: int)
+  (srcEnd: int)
+  : unit =
+  let itemSize = unativeint itemSize
+
+  let dl, dr = destStart, destEnd
+  assert (0 <= dl)
+  assert (dl <= dr)
+  assert (dr <= destLen)
+
+  let sl, sr = srcStart, srcEnd
+  assert (0 <= sl)
+  assert (sl <= sr)
+  assert (sr <= srcLen)
+
+  assert (dr - dl = sr - sl)
+  let len = unativeint (sr - sl)
+
+  if len <> unativeint 0 then
+    let d: voidptr =
+      __nativeCast (unativeint dest + unativeint dl * itemSize)
+
+    let s: obj =
+      __nativeCast (__nativeCast src + unativeint sl * itemSize)
+
+    let _ = memcpy d s (len * itemSize)
+    ()
+
+// buffer ptr, length, serial
+/// Ephemeral mutable array.
+type EphArray<'T> = nativeptr<'T> * int * EphSerial
+
+module EphArray =
+  module Unsafe =
+    /// Allocates an array with specified length.
+    ///
+    /// SAFETY: Contents are zero-filled.
+    ///         All of contents must be written before the array is exposed
+    ///         if zero-fill is invalid for the type.
+    let zeroCreate (len: int) (serial: EphSerial) : EphArray<'T> * EphSerial =
+      if len <= 0 then
+        assert (len = 0 || violate "negative length")
+        empty serial
+      else
+        let size =
+          NativePtr.sizeOf (NativePtr.getNullPtr (): nativeptr<'T>)
+          |> unativeint
+
+        let ptr = memAlloc len size |> __nativeCast
+
+        // TASK: should use single allocation
+        let arraySerial, parentSerial = EphSerial.create serial
+
+        (ptr, len, arraySerial), parentSerial
+
+    let ofRawParts (ptr: nativeptr<'T>) (len: int) (serial: EphSerial) : EphArray<'T> * EphSerial =
+      if len <= 0 then
+        assert (len = 0 || violate "negative length")
+        empty serial
+      else
+        let arraySerial, parentSerial = EphSerial.create serial
+        (ptr, len, arraySerial), parentSerial
+
+    let asMut (array: EphArray<'T>) : nativeptr<'T> * EphArray<'T> =
+      let array = assertAlive array
+      let ptr, _, _ = array
+      ptr, array
+
+    let asPtr (array: EphArray<'T>) : __constptr<'T> * EphArray<'T> =
+      let array = assertAlive array
+      let ptr, _, _ = array
+      ConstPtr.ofNativePtr ptr, array
+
+  let alive (array: EphArray<'T>) : bool * EphArray<'T> =
+    let ptr, len, serial = array
+    let ok, serial = EphSerial.alive serial
+    ok, (ptr, len, serial)
+
+  let private assertAlive (array: EphArray<_>) : EphArray<_> =
+    let ok, array = alive array
+    assert (ok || violate "no longer alive")
+    array
+
+  let refresh (array: EphArray<'T>) : EphArray<'T> =
+    let ptr, len, serial = array
+    ptr, len, EphSerial.refresh serial
+
+  /// Gets an ephemeral array with length 0.
+  let empty (serial: EphSerial) : EphArray<_> * EphSerial =
+    let arraySerial, parentSerial = EphSerial.create serial
+    (NativePtr.getNullPtr (), 0, arraySerial), parentSerial // TASK: should not allocate
+
+  /// Creates an array with specified length.
+  /// `i`'th item is initialized with `f i`.
+  ///
+  /// That is, `[| f 0; f 1; ...; f (len - 1) |]` is created.
+  let init (len: int) (f: int -> 'T) (serial: EphSerial) : EphArray<'T> * EphSerial =
+    let output, serial = Unsafe.zeroCreate len serial
+    let ptr, _, _ = output
+
+    let rec go i =
+      if i < len then
+        NativePtr.set ptr i (f i)
+        go (i + 1)
+
+    go 0
+    output, serial
+
+  /// Creates an array with specified length and filled by specified value.
+  ///
+  /// That is, `[| item; item; ...; item |]` is created.
+  let replicate (len: int) (item: 'T) (serial: EphSerial) : EphArray<'T> * EphSerial =
+    let output, serial = Unsafe.zeroCreate len serial
+    let ptr, _, _ = output
+
+    let rec ephArrayReplicateLoop i =
+      if i < len then
+        NativePtr.set ptr i item
+        ephArrayReplicateLoop (i + 1)
+
+    ephArrayReplicateLoop 0
+    output, serial
+
+  /// Gets length.
+  ///
+  /// (This doesn't outdate the array reference because length never changes.)
+  let length (array: EphArray<_>) : int =
+    let _, len, _ = assertAlive array
+    len
+
+  /// Gets i'th item. Out of range is fatal error.
+  let item (i: int) (array: EphArray<'T>) : 'T * EphArray<'T> =
+    assert (unativeint i < unativeint (length array)
+            || violate "out of range")
+
+    let array = assertAlive array
+    let ptr, _, _ = array
+    NativePtr.get ptr i, array
+
+  /// Gets i'th item. Returns None if out of range. Fatal error if outdated.
+  let tryItem (i: int) (array: EphArray<'T>) : 'T option * EphArray<'T> =
+    let array = assertAlive array
+
+    if unativeint i < unativeint (length array) then
+      let ptr, _, _ = array
+      Some(NativePtr.get ptr i), array
+    else
+      None, array
+
+  /// Writes to i'th item. Out of range is fatal error.
+  let setItem (i: int) (value: 'T) (array: EphArray<'T>) : EphArray<'T> =
+    assert (unativeint i < unativeint (length array))
+
+    let array = refresh array
+    let ptr, _, _ = array
+    NativePtr.set ptr i value
+    array
+
+  /// Converts a list to array.
+  let ofList (xs: 'T list) (serial: EphSerial) : EphArray<'T> * EphSerial =
+    let len = List.length xs
+    let output, serial = Unsafe.zeroCreate len serial
+    let ptr, _, _ = output
+
+    let rec writeAll i (xs: _ list) =
+      match xs with
+      | [] -> ()
+
+      | x :: xs ->
+        NativePtr.set ptr i x
+        writeAll (i + 1) xs
+
+    writeAll 0 xs
+    output, serial
+
+  /// Converts an array to list.
+  let toList (array: EphArray<'T>) : 'T list * EphArray<'T> =
+    let array = refresh array
+    let ptr, len, _ = array
+
+    let rec readAll acc i =
+      if i = 0 then
+        acc
+      else
+        readAll (NativePtr.get ptr (i - 1) :: acc) (i - 1)
+
+    readAll [] len, array
+
+  /// Copies some part of items to another array. Returns (dest, src).
+  let copyTo
+    (dest: EphArray<'T>)
+    (destStart: int)
+    (src: EphArray<'T>)
+    (srcStart: int)
+    (len: int)
+    : EphArray<'T> * EphArray<'T> =
+    let dest = refresh dest
+    let src = refresh src
+
+    let destPtr, destLen, _ = dest
+    let srcPtr, srcLen, _ = src
+
+    rawCopySlice
+      (NativePtr.sizeOf destPtr)
+      (__nativeCast destPtr)
+      destLen
+      destStart
+      (destStart + len)
+      (__nativeCast srcPtr)
+      srcLen
+      srcStart
+      (srcStart + len)
+
+    dest, src

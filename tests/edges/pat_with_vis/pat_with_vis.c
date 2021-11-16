@@ -1,10 +1,10 @@
 #include "milone.h"
 
-struct IntIntTuple2;
+struct IntIntTuple2_;
 
-int milone_main();
+int milone_main(void);
 
-struct IntIntTuple2 {
+struct IntIntTuple2_ {
     int t0;
     int t1;
 };
@@ -17,10 +17,10 @@ extern int pat_with_vis_Program_x;
 
 extern int y_;
 
-int milone_main() {
-    struct IntIntTuple2 tuple_ = (struct IntIntTuple2){.t0 = 2, .t1 = 3};
-    pat_with_vis_Program_x = tuple_.t0;
-    y_ = tuple_.t1;
+int milone_main(void) {
+    struct IntIntTuple2_ IntIntTuple2_ = (struct IntIntTuple2_){.t0 = 2, .t1 = 3};
+    pat_with_vis_Program_x = IntIntTuple2_.t0;
+    y_ = IntIntTuple2_.t1;
     milone_assert((pat_with_vis_Program_x == 2), 7, 2);
     milone_assert((y_ == 3), 8, 2);
     return 0;

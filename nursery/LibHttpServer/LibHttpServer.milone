@@ -1,0 +1,799 @@
+// Toy HTTP server written in milone-lang and C.
+//
+// Support only Linux.
+// Impure things need replacing by ephemeral objects.
+// WARN: Don't expose to Internet.
+module rec LibHttpServer.Program
+
+open MiloneStd.StdMap
+
+module I = MiloneStd.StdInt
+module C = MiloneStd.StdChar
+module S = MiloneStd.StdString
+module StdEnv = MiloneStd.StdEnv
+
+module ExtString = LibNursery.ExtString
+
+type private Map<'K, 'V> = TreeMap<'K, 'V>
+
+__nativeDecl
+  """
+    // Linux headers.
+    #include <sys/stat.h>
+    #include <sys/types.h>
+    #include <unistd.h>
+  """
+
+let private todo () : 'A =
+  assert false
+  exit 1
+
+// -----------------------------------------------
+// Runtime interface
+// -----------------------------------------------
+
+// lib_http_server.c
+
+let private installSignalHandlers () : unit = __nativeFun ("install_signal_handlers")
+
+let private setCurrentFd (fd: int) : unit = __nativeFun ("set_current_fd", fd)
+
+let private closeCurrentFdAtExit (currentFd: int) : unit =
+  __nativeFun ("set_current_fd", currentFd)
+
+  __nativeStmt
+    """
+      void close_current_fd(void);
+      atexit(close_current_fd);
+    """
+
+let private listenSocket (port: string) : int = __nativeFun ("listen_socket", port)
+
+let private acceptClient (serverFd: int) : int = __nativeFun ("accept_client", serverFd)
+
+let private getDate () : string option =
+  __nativeStmt
+    """
+      bool get_date(char *buf, size_t buf_size, size_t *len);
+
+      char buf[64];
+      size_t len;
+      bool ok = get_date(buf, sizeof buf, &len);
+    """
+
+  let ok: bool = __nativeExpr "ok"
+
+  if ok then
+    let date: string =
+      __nativeExpr "str_of_raw_parts(buf, (int)len)"
+
+    Some date
+  else
+    None
+
+let private getEnv (name: string) : string = __nativeFun ("get_env", name)
+
+let private getCwd () : string = __nativeFun "get_cwd"
+
+// -----------------------------------------------
+// Native code
+// -----------------------------------------------
+
+/// Writes to standard error. Adds LF.
+let private printError (msg: string) : unit =
+  __nativeStmt ("""fprintf(stderr, "%s\n", str_to_c_str({0}));""", msg)
+
+/// Exits as error.
+let private logExit (msg: string) : 'A =
+  printError ("error: " + msg)
+  exit 1
+
+// ptr, capacity
+type private Buffer = nativeptr<byte> * int
+
+/// Allocates new buffer with specified size of capacity.
+let private newBuffer (capacity: int) : Buffer =
+  assert (capacity >= 1)
+
+  __nativeStmt ("unsigned char *buf = milone_mem_alloc({0}, sizeof(unsigned char));", capacity)
+
+  let ptr: nativeptr<byte> = __nativeExpr "buf"
+
+  ptr, capacity
+
+/// Converts a buffer to string.
+///
+/// Use this only when the contents of buffer are valid as UTF-8 (not checked).
+let private bufToString (len: int) (buf: Buffer) : string =
+  let ptr, _ = buf
+  __nativeStmt ("struct String s = str_of_raw_parts({0}, {1});", ptr, len)
+  __nativeExpr "s"
+
+/// File stream. (`FILE *`)
+type private Stream = nativeptr<__nativeType<FILE>>
+
+/// `fopen(_, "r")`
+let private openFileForRead (filename: string) : Stream option =
+  __nativeStmt (
+    """
+      FILE *fp = fopen(str_to_c_str({0}), "r");
+      bool ok = fp != NULL;
+    """,
+    filename
+  )
+
+  let fp: Stream = __nativeExpr "fp"
+  let ok: bool = __nativeExpr "ok"
+
+  if ok then Some fp else None
+
+/// `fclose`
+let private closeFile (fp: Stream) : unit = __nativeStmt ("fclose({0});", fp)
+
+/// `fdopen(_, "r")`
+let private openFdForRead (fd: int) : Stream =
+  __nativeStmt ("""FILE *input = fdopen({0}, "r");""", fd)
+  __nativeExpr "input"
+
+/// `fdopen(_, "w")`
+let private openFdForWrite (fd: int) : Stream =
+  __nativeStmt ("""FILE *output = fdopen({0}, "w");""", fd)
+  __nativeExpr "output"
+
+/// `close`
+let private closeFd (fd: int) : unit = __nativeStmt ("close({0});", fd)
+
+/// Reads from stream to fill the buffer.
+///
+/// Returns size of read data. (Maybe less than capacity.)
+let private readBlock (buf: Buffer) (input: Stream) : int * Buffer * Stream =
+  let bufPtr, bufSize = buf
+
+  __nativeStmt ("int len = (int)fread({1}, 1, (size_t){2}, {0});", input, bufPtr, bufSize)
+
+  let len: int = __nativeExpr "len"
+  len, buf, input
+
+/// Reads a block of bytes equal to specified size.
+///
+/// Blocks to wait for the buffer to fill.
+/// Returns whether read data is of specified size.
+let private readExact (buf: Buffer) (size: int) (input: Stream) : bool * Buffer * Stream =
+  let bufPtr, bufSize = buf
+  assert (size >= 0)
+  assert (size <= bufSize)
+
+  __nativeStmt (
+    """
+      size_t result = fread({1}, (size_t){2}, 1, {0});
+      bool ok = result == 1;
+    """,
+    input,
+    bufPtr,
+    size
+  )
+
+  let ok: bool = __nativeExpr "ok"
+
+  ok, buf, input
+
+/// Reads a line.
+let private readLine (input: Stream) : string option * Stream =
+  __nativeStmt (
+    """
+      char buf[8000]; // FIXME: fixed length
+      bool ok = fgets(buf, sizeof buf, {0}) != NULL;
+    """,
+    input
+  )
+
+  if __nativeExpr "ok" then
+    let line: string = __nativeExpr "str_of_c_str(buf)"
+    Some line, input
+  else
+    None, input
+
+let private doWriteExact (ptr: __constptr<byte>) (len: int) (output: Stream) : unit =
+  assert (len >= 1)
+
+  __nativeStmt (
+    """
+      size_t written = fwrite({1}, {2}, 1, {0});
+      bool ok = written == 1;
+    """,
+    output,
+    ptr,
+    len
+  )
+
+  let ok: bool = __nativeExpr "ok"
+  if not ok then logExit "writeExact"
+
+/// Writes data to stream. Blocks to wait for all data to be written.
+let private writeExact (buf: Buffer) (len: int) (output: Stream) : Buffer * Stream =
+  assert (len >= 0)
+
+  let bufPtr, bufSize = buf
+  assert (len <= bufSize)
+
+  doWriteExact (__nativeCast bufPtr) len output
+  buf, output
+
+/// Writes a string to stream. Blocks to wait for all data to be written.
+let private writeStringExact (s: string) (output: Stream) : Stream =
+  if s.Length > 0 then
+    __nativeStmt ("char const *ptr = {0}.str;", s)
+    let ptr: __constptr<char> = __nativeExpr "ptr"
+    doWriteExact (__nativeCast ptr: __constptr<byte>) s.Length output
+
+  output
+
+/// Reads a text file.
+///
+/// Use this only for text file.
+let private readAllText (filePath: string) : string option =
+  match openFileForRead filePath with
+  | None -> None
+  | Some fp ->
+    // Get file size.
+    __nativeStmt (
+      """
+          struct stat st;
+          int result = fstat(fileno({0}), &st);
+          bool ok = result == 0 && S_ISREG(st.st_mode) && st.st_size < (1L << 30);
+          int len = ok ? (int)st.st_size : 0;
+        """,
+      fp
+    )
+
+    let size: int = __nativeExpr "len"
+    let ok: bool = __nativeExpr "ok"
+
+    if not ok then
+      closeFile fp
+      None
+    else if size = 0 then
+      closeFile fp
+      Some ""
+    else
+      let buf = newBuffer size
+      let ok, buf, fp = readExact buf size fp
+      closeFile fp
+
+      if ok then
+        Some(bufToString size buf)
+      else
+        None
+
+let private flushStream (output: Stream) : Stream =
+  __nativeStmt ("fflush({0});", output)
+  output
+
+// ===============================================
+
+// These things should be in standard library.
+
+module Option =
+  let orElse other opt =
+    match opt with
+    | Some _ -> opt
+    | None -> other ()
+
+// FIXME: use S.toLower, toUpper
+
+/// Converts all ASCII latin letters to lowercase.
+let private toAsciiLower (s: string) : string =
+  let f = C.toLower
+
+  let rec go (i: int) acc =
+    if i < s.Length then
+      go (i + 1) (string (f s.[i]) :: acc)
+    else
+      List.rev acc
+
+  go 0 [] |> S.concat ""
+
+/// Converts all ASCII latin letters to uppercase.
+let private toAsciiUpper (s: string) : string =
+  let f = C.toUpper
+
+  let rec go (i: int) acc =
+    if i < s.Length then
+      go (i + 1) (string (f s.[i]) :: acc)
+    else
+      List.rev acc
+
+  go 0 [] |> S.concat ""
+
+// FIXME: use S.stripStart
+/// Tries to strip a prefix if the string starts with that prefix.
+let private tryStripPrefix (prefix: string) (s: string) : string option =
+  if S.startsWith prefix s then
+    Some s.[prefix.Length..s.Length - 1]
+  else
+    None
+
+/// Invokes a function repeatedly.
+/// Each call is wrapped by a dynamic memory region
+/// so that the loop doesn't run into out of memory.
+///
+/// When that function returned non-zero code,
+/// the loop stops and returns that code.
+/// (Therefore, this function never returns 0.)
+let private loopInRegion (f: unit -> int) : int =
+  let rec go () =
+    let code = __inRegion f
+    if code = 0 then go () else code
+
+  go ()
+
+// -----------------------------------------------
+// Types
+// -----------------------------------------------
+
+type private HttpMethod =
+  | GET
+  | HEAD
+  | POST // etc.
+
+type private HttpActionContext =
+  { Method: HttpMethod
+    Pathname: string
+
+    /// HTTP protocol minor version. (x in HTTP 1.x)
+    Minor: int
+
+    /// Value of Date header in response.
+    Date: string
+
+    /// Writes to output (header and body).
+    Write: string -> unit
+
+    /// Writes trace log to standard error.
+    Trace: string -> unit }
+
+type private HttpResponseContext =
+  { StatusText: string
+    Content: string option
+    Headers: (string * string) list
+    WriteFirst: string -> unit
+    WriteHeader: string -> string -> unit
+    WriteBodyAll: string -> unit
+    Action: HttpActionContext }
+
+// -----------------------------------------------
+// HTTP request handling
+// -----------------------------------------------
+
+// Reading, parsing requests
+// and writing responses.
+
+let private parseHttpMethod (s: string) : HttpMethod option =
+  match toAsciiUpper s with
+  | "GET" -> Some HttpMethod.GET
+  | "POST" -> Some HttpMethod.POST
+  | "HEAD" -> Some HttpMethod.HEAD
+  | _ -> None
+
+let private httpMethodToString (m: HttpMethod) =
+  match m with
+  | HttpMethod.GET -> "GET"
+  | HttpMethod.POST -> "POST"
+  | HttpMethod.HEAD -> "HEAD"
+
+/// Parses first line of HTTP request. Fatal error on error.
+let private parseRequestLine (line: string) : HttpMethod option * string * int option =
+  let methodOpt, line =
+    match ExtString.divide " " line with
+    | methodName, Some line -> parseHttpMethod methodName, line
+    | _ -> logExit "parseLine"
+
+  let pathname, line =
+    match ExtString.divide " " line with
+    | pathname, Some line -> pathname, line
+    | _ -> logExit "parseLine"
+
+  let minorOpt =
+    match tryStripPrefix "HTTP/1." line with
+    | Some it -> I.tryParse it
+    | None -> logExit "HTTP 1.x is only supported"
+
+  methodOpt, pathname, minorOpt
+
+/// Reads first line of HTTP request, e.g. `GET /pathname HTTP/1.1`.
+let private readRequestLine (input: Stream) =
+  let lineOpt, input = readLine input
+
+  match lineOpt with
+  | None -> None, input
+  | Some line -> Some(parseRequestLine line), input
+
+/// Entry of HTTP headers.
+// name, value
+type private Entry = string * string
+
+/// Parses an HTTP header line.
+let private parseHeaderField (line: string) : Entry option =
+  if S.trimEnd line = "" then
+    None
+  else
+    match ExtString.divide ":" line with
+    | _, None -> logExit "parseHeaderField: expected ':' in header line."
+
+    | name, Some value -> Some(toAsciiLower name, S.trim value)
+
+/// Reads HTTP header lines.
+let private readHeaderField (input: Stream) : Map<string, string> option * Stream =
+  let rec go input i acc =
+    assert (i < 1000)
+    let lineOpt, input = readLine input
+
+    match lineOpt with
+    | None when i = 0 -> None, input
+
+    | None ->
+      // Hit on "\r\n\r\n".
+      Some acc, input
+
+    | Some line ->
+      match parseHeaderField line with
+      | None -> Some acc, input
+      | Some (name, value) -> go input (i + 1) (TMap.add name value acc)
+
+  go input 0 (TMap.empty compare)
+
+/// Reads HTTP request body of specified size.
+// data is discarded
+let private readReqBody (input: Stream) (size: int) : Stream =
+  if size > 1100100100 then
+    logExit "body too long"
+
+  let bufSize = 8000
+  let buf = newBuffer bufSize
+
+  let rec go input buf size =
+    if size = 0 then
+      input
+    else
+      let blockSize = I.min bufSize size
+      let ok, buf, input = readExact buf blockSize input
+      if not ok then logExit "readExact"
+      go input buf (size - blockSize)
+
+  go input buf size
+
+let private writeAccess (res: HttpResponseContext) : unit =
+  let methodName = httpMethodToString res.Action.Method
+  let pathname = res.Action.Pathname
+  let statusText = res.StatusText
+
+  printError (
+    "["
+    + methodName
+    + "] "
+    + pathname
+    + " - "
+    + statusText
+    + "\n"
+  )
+
+let private newResponseContext (context: HttpActionContext) (data: HttpResponseData) : HttpResponseContext =
+  let writeLine (line: string) =
+    if S.contains "\n" line then
+      logExit ("illegal line:" + line)
+
+    context.Write(line + "\r\n")
+
+  let writeHeader (name: string) (value: string) = writeLine (name + ": " + value)
+
+  let writeBodyAll contents = context.Write("\r\n" + contents)
+
+  { StatusText = data.StatusText
+    Content = data.Content
+    Headers = data.Headers
+    WriteFirst = writeLine
+    WriteHeader = writeHeader
+    WriteBodyAll = writeBodyAll
+    Action = context }
+
+let private writeResponse (res: HttpResponseContext) : unit =
+  let statusText = res.StatusText
+
+  let minor, date =
+    let a = res.Action
+    a.Minor, a.Date
+
+  res.WriteFirst("HTTP/1." + string minor + " " + statusText)
+
+  res.WriteHeader "Date" date
+  res.WriteHeader "Connection" "close"
+  res.WriteHeader "Server" (serverName + "/" + serverVersion)
+
+  List.fold (fun () (name, value) -> res.WriteHeader name value) () res.Headers
+
+  match res.Content with
+  | None -> ()
+  | Some content -> res.WriteHeader "Content-Length" (string content.Length)
+
+  match res.Action.Method, res.Content with
+  | HttpMethod.HEAD, _ -> res.WriteBodyAll ""
+  | _, Some content -> res.WriteBodyAll content
+  | _ -> res.WriteBodyAll ""
+
+  writeAccess res
+
+/// Reads an HTTP request and processes it with specified handler.
+///
+/// Returns:
+///
+/// - None: stream ends
+/// - Some 0: a request is gracefully processed
+/// - Some code when `code <> 0`: error
+let private readReq (handler: HttpActionContext -> unit) (input: Stream) (output: Stream) : int option =
+  printError "reading request line"
+  let reqLineOpt, input = readRequestLine input
+
+  match reqLineOpt with
+  | None ->
+    printError "trace: Requests end."
+    None
+
+  | Some (methodOpt, pathname, minorOpt) ->
+    let headersOpt, input = readHeaderField input
+
+    match headersOpt with
+    | None ->
+      printError "no headers"
+      Some 1
+
+    | Some headers ->
+      match methodOpt, minorOpt with
+      | _, None ->
+        // send error response
+        printError "HTTP version not supported."
+        Some 1
+
+      | None, _ ->
+        // send error response
+        printError "method not supported"
+        Some 1
+
+      | Some httpMethod, Some minor ->
+        let contentLength =
+          headers
+          |> TMap.tryFind "content-length"
+          |> Option.bind I.tryParse
+          |> Option.defaultValue 0
+
+        let _input = readReqBody input contentLength
+
+        let date =
+          getDate ()
+          |> Option.defaultWith (fun () -> logExit "get_date")
+
+        let context: HttpActionContext =
+          { Date = date
+            Method = httpMethod
+            Minor = minor
+            Pathname = pathname
+            Write = fun (data: string) -> writeStringExact data output |> ignore
+            Trace = fun (text: string) -> printError ("trace: " + text) }
+
+        handler context
+
+        flushStream output |> ignore
+        Some 0
+
+// -----------------------------------------------
+// HTTP file server
+// -----------------------------------------------
+
+// Static file server over HTTP.
+
+type private HfsError =
+  | BadRequestError
+  | NotFoundError
+  | NotImplementedError
+  | FoundError of location: string
+
+type private HfsResult =
+  | Ok of okContent: string * okContentType: string
+  | Error of status: HfsError * message: string
+
+let private serverName = "httpd"
+let private serverVersion = "0.1.0"
+
+type private HttpResponseData =
+  { StatusText: string
+    Content: string option
+    Headers: (string * string) list }
+
+let private newResponseData (statusText: string) : HttpResponseData =
+  { StatusText = statusText
+    Content = None
+    Headers = [] }
+
+let private resultToResponseData (result: HfsResult) : HttpResponseData =
+  match result with
+  | Ok (content, contentType) ->
+    { newResponseData "200 OK" with
+        Content = Some content
+        Headers = [ "Content-Type", contentType ] }
+
+  | Error (err, _) ->
+    let statusText, headers =
+      match err with
+      | FoundError location -> "302 Found", [ "Location", location ]
+      | BadRequestError -> "400 Bad Request", []
+      | NotFoundError -> "404 Not Found", []
+      | NotImplementedError -> "501 Not Implemented", []
+
+    { newResponseData statusText with
+        Headers =
+          ("Content-Type", "text/plain; charset=utf-8")
+          :: headers }
+
+/// Gets extension of filename, e.g. `.txt`.
+let private getExt (pathname: string) : string =
+  match S.findLastIndex "." pathname with
+  | Some i when i >= 1 -> S.skip i pathname
+  | _ -> ""
+
+/// Gets Content-Type header value for file extension,
+/// e.g. `.txt` → `text/plain; charset=utf-8`.
+let private contentType (ext: string) =
+  match ext with
+  | ".css" -> "text/css; charset=utf-8"
+  | ".html" -> "text/html; charset=utf-8"
+  | ".js"
+  | ".mjs" -> "text/javascript; charset=utf-8"
+
+  | ".jpeg"
+  | ".jpg" -> "image/jpeg"
+  | ".png" -> "image/png"
+  | ".woff" -> "font/woff"
+
+  | ".json" -> "application/json; charset=utf-8"
+  | _ -> "text/plain; charset=utf-8"
+
+let private doServeStatic (distDir: string) (m: HttpMethod) (pathname: string) : HfsResult =
+  let filePath = distDir + "/" + pathname
+
+  match m with
+  | _ when S.contains ".." pathname -> Error(BadRequestError, "Path may not include '..'.")
+
+  | HttpMethod.GET ->
+    let readIt () =
+      readAllText filePath
+      |> Option.map (fun text -> Ok(text, contentType (getExt filePath)))
+
+    let readIndex () =
+      let pathname =
+        S.trimEndIf (fun c -> c = '/') pathname + "/"
+
+      readAllText (filePath + "/index.html")
+      |> Option.map (fun text -> Error(FoundError(pathname + "index.html"), "Redirect."))
+
+    readIt ()
+    |> Option.orElse readIndex
+    |> Option.defaultWith (fun () -> Error(NotFoundError, "File cannot read."))
+
+  // | HttpMethod.HEAD ->
+
+  | _ -> Error(NotImplementedError, "Method not implemented.")
+
+/// Creates an HTTP request handler for static file server.
+let private staticFileHandler () : HttpActionContext -> unit =
+  let distDir =
+    let s = getEnv "DIST_DIR"
+
+    if s <> "" then
+      s
+    else
+      printError "trace: $DIST_DIR is empty or unset."
+      getCwd () + "/dist"
+
+  fun (context: HttpActionContext) ->
+    let methodOpt =
+      match context.Method with
+      | HttpMethod.GET
+      | HttpMethod.HEAD -> Some context.Method
+
+      | _ ->
+        // send error response
+        printError "trace: method not supported by static file handler"
+        None
+
+    let resultOpt: HfsResult option =
+      match methodOpt with
+      | None -> None
+      | Some m -> Some(doServeStatic distDir m context.Pathname)
+
+    let contextOpt: HttpResponseContext option =
+      match resultOpt with
+      | None -> None
+      | Some result ->
+        let data = resultToResponseData result
+        Some(newResponseContext context data)
+
+    match contextOpt with
+    | None -> ()
+    | Some context -> writeResponse context
+
+// -----------------------------------------------
+// Entrypoint
+// -----------------------------------------------
+
+let private test () =
+  assert (toAsciiUpper "" = "")
+  assert (toAsciiUpper "a-z A-Z" = "A-Z A-Z")
+
+  match parseRequestLine "GET /foo/bar HTTP/1.1" with
+  | Some HttpMethod.GET, pathname, Some minor ->
+    assert (pathname = "/foo/bar")
+    assert (minor = 1)
+  | _ -> assert false
+
+let private runWithStdio () : int =
+  let input: Stream = __nativeExpr "stdin"
+  let output: Stream = __nativeExpr "stdout"
+  let handler = staticFileHandler ()
+
+  printError "info: Reading requests from standard input."
+
+  loopInRegion (fun () ->
+    match readReq handler input output with
+    | None -> exit 0
+    | Some code -> code)
+
+let private runWithSocket () : int =
+  let port = "8080"
+
+  let serverFd = listenSocket port
+  closeCurrentFdAtExit serverFd
+
+  printError ("info: Listening to http://localhost:" + port)
+
+  let handler = staticFileHandler ()
+
+  let waitClient () : int =
+    let sock = acceptClient serverFd
+
+    __nativeStmt "int pid = fork();"
+    let pid: int = __nativeExpr "pid"
+
+    if pid < 0 then
+      logExit "fork"
+    else if pid = 0 then
+      // child process
+      setCurrentFd sock
+      let input = openFdForRead sock
+      let output = openFdForWrite sock
+      readReq handler input output |> ignore
+      exit 0
+    else
+      // parent process
+      closeFd sock
+      0
+
+  loopInRegion waitClient
+
+let main _ =
+  // test ()
+  // printError "All tests passed."
+  // printError ("$HOME = '" + getEnv "HOME" + "'")
+  // printError ("$PWD = '" + getCwd () + "'")
+
+  installSignalHandlers ()
+
+  let args = StdEnv.commandLineArgs ()
+
+  let useStdio =
+    args
+    |> List.tryFind (fun arg -> arg = "--stdio")
+    |> Option.isSome
+
+  if useStdio then
+    runWithStdio ()
+  else
+    runWithSocket ()

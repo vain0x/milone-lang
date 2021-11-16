@@ -9,10 +9,9 @@ open MiloneShared.SharedTypes
 open MiloneShared.TypeFloat
 open MiloneShared.TypeIntegers
 open MiloneShared.Util
-open MiloneSyntax.Syntax
+open MiloneStd.StdMap
 open MiloneSyntax.Tir
 
-module TMap = MiloneStd.StdMap
 module S = MiloneStd.StdString
 
 // -----------------------------------------------
@@ -41,7 +40,6 @@ let private tkEncode tk : int =
   | ObjTk -> just 6
   | FunTk -> just 7
   | TupleTk -> just 8
-  | OptionTk -> just 9
   | ListTk -> just 10
 
   | VoidTk -> just 11
@@ -50,8 +48,8 @@ let private tkEncode tk : int =
 
   | MetaTk (tySerial, _) -> pair 20 tySerial
   | SynonymTk tySerial -> pair 21 tySerial
-  | UnionTk tySerial -> pair 22 tySerial
-  | RecordTk tySerial -> pair 23 tySerial
+  | UnionTk (tySerial, _) -> pair 22 tySerial
+  | RecordTk (tySerial, _) -> pair 23 tySerial
 
   | NativeTypeTk _
   | UnresolvedTk _
@@ -64,7 +62,7 @@ let tkCompare l r : int =
   | NativeTypeTk _, _ -> -1
   | _, NativeTypeTk _ -> 1
 
-  | UnresolvedTk (lQuals, lSerial), UnresolvedTk (rQuals, rSerial) ->
+  | UnresolvedTk (lQuals, lSerial, _), UnresolvedTk (rQuals, rSerial, _) ->
     pairCompare (listCompare compare) compare (lQuals, lSerial) (rQuals, rSerial)
 
   | UnresolvedTk _, _ -> -1
@@ -85,7 +83,6 @@ let tkDisplay getTyName tk =
   | ObjTk -> "obj"
   | FunTk -> "fun"
   | TupleTk -> "tuple"
-  | OptionTk -> "option"
   | ListTk -> "list"
   | VoidTk -> "void"
   | NativePtrTk IsMut -> "nativeptr"
@@ -94,9 +91,9 @@ let tkDisplay getTyName tk =
   | NativeTypeTk _ -> "__nativeType"
   | MetaTk (tySerial, _) -> getTyName tySerial
   | SynonymTk tySerial -> getTyName tySerial
-  | RecordTk tySerial -> getTyName tySerial
-  | UnionTk tySerial -> getTyName tySerial
-  | UnresolvedTk (_, serial) -> "?" + string serial
+  | RecordTk (tySerial, _) -> getTyName tySerial
+  | UnionTk (tySerial, _) -> getTyName tySerial
+  | UnresolvedTk (_, serial, _) -> "?" + string serial
   | UnresolvedVarTk (serial, _) -> "'" + string serial
 
 // -----------------------------------------------
@@ -263,8 +260,6 @@ let tyDisplay getTyName ty =
       + (itemTys |> List.map (go 20) |> S.concat " * ")
       + ")"
 
-    | Ty (OptionTk, [ itemTy ]) -> paren 30 (go 30 itemTy + " option")
-
     | Ty (ListTk, [ itemTy ]) -> paren 30 (go 30 itemTy + " list")
 
     | Ty (MetaTk (tySerial, loc), _) ->
@@ -273,8 +268,8 @@ let tyDisplay getTyName ty =
       | None -> "{?" + string tySerial + "}@" + locToString loc
 
     | Ty (SynonymTk tySerial, args) -> nominal tySerial args
-    | Ty (UnionTk tySerial, args) -> nominal tySerial args
-    | Ty (RecordTk tySerial, args) -> nominal tySerial args
+    | Ty (UnionTk (tySerial, _), args) -> nominal tySerial args
+    | Ty (RecordTk (tySerial, _), args) -> nominal tySerial args
 
     | Ty (tk, args) ->
       let tk = tkDisplay (fun _ -> unreachable ()) tk
@@ -290,7 +285,7 @@ let tyDisplay getTyName ty =
 /// Generates a unique name from a type.
 ///
 /// Must be used after successful Typing.
-let tyMangle (ty: Ty, memo: AssocMap<Ty, string>) : string * AssocMap<Ty, string> =
+let tyMangle (ty: Ty, memo: TreeMap<Ty, string>) : string * TreeMap<Ty, string> =
   let rec go ty ctx =
     let (Ty (tk, tyArgs)) = ty
 
@@ -307,7 +302,7 @@ let tyMangle (ty: Ty, memo: AssocMap<Ty, string>) : string * AssocMap<Ty, string
       let tyArgs, ctx = mangleList tyArgs ctx
       S.concat "" tyArgs + (name + string arity), ctx
 
-    let doMangle () : string * AssocMap<_, _> =
+    let doMangle () : string * TreeMap<_, _> =
       match tk with
       | IntTk flavor -> cIntegerTyPascalName flavor, ctx
       | FloatTk flavor -> cFloatTyPascalName flavor, ctx
@@ -321,7 +316,6 @@ let tyMangle (ty: Ty, memo: AssocMap<Ty, string>) : string * AssocMap<Ty, string
       | TupleTk when List.isEmpty tyArgs -> "Unit", ctx
       | TupleTk -> variadicGeneric "Tuple"
 
-      | OptionTk -> fixedGeneric "Option"
       | ListTk -> fixedGeneric "List"
 
       | VoidTk -> "Void", ctx
@@ -392,7 +386,7 @@ let private tyExpandMeta tys binding tySerial : Ty option =
 let doInstantiateTyScheme
   (serial: int)
   (level: Level)
-  (tyLevels: AssocMap<TySerial, Level>)
+  (tyLevels: TreeMap<TySerial, Level>)
   (tySerials: TySerial list)
   (ty: Ty)
   (loc: Loc)

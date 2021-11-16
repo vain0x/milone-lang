@@ -30,8 +30,6 @@ let rawMemoryCopy (dest: voidptr) (src: voidptr) (size: int) : unit =
 // Polyfills
 // -----------------------------------------------
 
-let ignore _ = ()
-
 let listIsEmpty xs =
   match xs with
   | [] -> true

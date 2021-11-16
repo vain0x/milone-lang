@@ -1,12 +1,12 @@
 #include "milone.h"
 
-char bool_operators_Program_test(bool t_, bool f_);
+void bool_operators_Program_test(bool t_, bool f_);
 
-char bool_operators_Program_testShortCircuit(bool t_1, bool f_1);
+void bool_operators_Program_testShortCircuit(bool t_1, bool f_1);
 
-int milone_main();
+int milone_main(void);
 
-char bool_operators_Program_test(bool t_, bool f_) {
+void bool_operators_Program_test(bool t_, bool f_) {
     milone_assert(t_, 6, 2);
     milone_assert((!(f_)), 9, 2);
     milone_assert(t_, 10, 2);
@@ -128,10 +128,14 @@ if_next_22:;
     milone_assert((true >= false), 29, 2);
     milone_assert((true >= true), 30, 2);
     milone_assert((false < true), 32, 2);
-    return 0;
+    struct String call_ = str_of_bool(t_);
+    milone_assert((str_compare(call_, (struct String){.str = "True", .len = 4}) == 0), 38, 2);
+    struct String call_1 = str_of_bool(f_);
+    milone_assert((str_compare(call_1, (struct String){.str = "False", .len = 5}) == 0), 39, 2);
+    return;
 }
 
-char bool_operators_Program_testShortCircuit(bool t_1, bool f_1) {
+void bool_operators_Program_testShortCircuit(bool t_1, bool f_1) {
     bool if_8;
     if (f_1) {
         goto then_26;
@@ -144,7 +148,7 @@ else_27:;
     if_8 = false;
     goto if_next_25;
 if_next_25:;
-    milone_assert((!(if_8)), 44, 2);
+    milone_assert((!(if_8)), 42, 2);
     bool if_9;
     if (t_1) {
         goto then_29;
@@ -157,12 +161,12 @@ then_29:;
 else_30:;
     exit(1);
 if_next_28:;
-    milone_assert(if_9, 50, 2);
-    return 0;
+    milone_assert(if_9, 48, 2);
+    return;
 }
 
-int milone_main() {
-    char call_ = bool_operators_Program_test(true, false);
-    char call_1 = bool_operators_Program_testShortCircuit(true, false);
+int milone_main(void) {
+    bool_operators_Program_test(true, false);
+    bool_operators_Program_testShortCircuit(true, false);
     return 0;
 }

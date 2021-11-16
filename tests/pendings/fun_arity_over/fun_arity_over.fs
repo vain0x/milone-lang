@@ -1,5 +1,5 @@
 let main _ =
-  let f : int -> int -> int =
+  let f: int -> int -> int =
     // `add` is 1-arity.
     let add (x: int) : int -> int =
       let inc () (y: int) : int = x + y

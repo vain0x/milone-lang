@@ -1,0 +1,10 @@
+#!/bin/sh
+
+set -eu
+
+TARGET=$PWD/../target/LibHttpServer
+
+./build
+
+set -x
+$TARGET/httpd "$@"

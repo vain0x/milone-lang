@@ -6,15 +6,15 @@ struct IntList;
 
 struct UnitIntFun1;
 
-struct IntList const* go_(struct IntList const* acc_, int i_);
+struct IntList const* effect_region_effect_region_doAction_fun_go(struct IntList const* acc_, int i_);
 
-int fun_(char arg_3);
+int effect_region_effect_region_doAction_fun(void);
 
-int fun_1(void const* env_, char arg_);
+int effect_region_effect_region_eta2_doAction_fun(void const* env_);
 
-int effect_region_Program_doAction(char arg_4);
+int effect_region_Program_doAction(void);
 
-int milone_main();
+int milone_main(void);
 
 struct IntList {
     int head;
@@ -22,11 +22,11 @@ struct IntList {
 };
 
 struct UnitIntFun1 {
-    int(*fun)(void const*, char);
+    int(*fun)(void const*);
     void const* env;
 };
 
-struct IntList const* go_(struct IntList const* acc_, int i_) {
+struct IntList const* effect_region_effect_region_doAction_fun_go(struct IntList const* acc_, int i_) {
 tailrec_1:;
     struct IntList const* if_;
     if ((i_ >= 0)) {
@@ -49,26 +49,26 @@ if_next_2:;
     return if_;
 }
 
-int fun_(char arg_3) {
-    struct IntList const* call_ = go_(NULL, 0);
+int effect_region_effect_region_doAction_fun(void) {
+    struct IntList const* call_ = effect_region_effect_region_doAction_fun_go(NULL, 0);
     struct IntList const* result_ = call_;
     return 0;
 }
 
-int fun_1(void const* env_, char arg_) {
-    int call_1 = fun_(0);
+int effect_region_effect_region_eta2_doAction_fun(void const* env_) {
+    int call_1 = effect_region_effect_region_doAction_fun();
     return call_1;
 }
 
-int effect_region_Program_doAction(char arg_4) {
-    struct UnitIntFun1 fun_2 = (struct UnitIntFun1){.fun = fun_1, .env = NULL};
+int effect_region_Program_doAction(void) {
+    struct UnitIntFun1 fun_ = (struct UnitIntFun1){.fun = effect_region_effect_region_eta2_doAction_fun, .env = NULL};
     milone_enter_region();
-    int region_result = fun_2.fun(fun_2.env, 0);
+    int region_result = fun_.fun(fun_.env);
     milone_leave_region();
     return region_result;
 }
 
-int milone_main() {
-    int call_2 = effect_region_Program_doAction(0);
+int milone_main(void) {
+    int call_2 = effect_region_Program_doAction();
     return 0;
 }

@@ -13,7 +13,7 @@ let fclose (fp: nativeptr<FILE>) : int = __nativeFun ("fclose", fp)
 
 let main _ =
   let fp = fopen "LICENSE" "r"
-  assert (unativeint fp <> unativeint 0)
+  assert (unativeint fp <> 0un)
 
   let stat = fclose fp
   assert (stat = 0)

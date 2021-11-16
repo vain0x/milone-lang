@@ -84,8 +84,8 @@ let private cmdList () =
          | [ DInt todoId; DString text ] -> printfn "%d: %s" todoId text
 
          | _ ->
-             assert false
-             exit 1)
+           assert false
+           exit 1)
        ()
 
 // -----------------------------------------------
@@ -93,27 +93,31 @@ let private cmdList () =
 // -----------------------------------------------
 
 let main _ =
-  let args = E.commandLineArgs () |> List.skip 1
+  let args =
+    // wants List.skip
+    match E.commandLineArgs () with
+    | [] -> exit 1
+    | _ :: xs -> xs
 
   match args with
   | "-h" :: _
   | "--help" :: _ ->
-      printfn "%s" (helpText ())
-      0
+    printfn "%s" (helpText ())
+    0
 
   | [ "add"; text ] ->
-      cmdAdd text
-      0
+    cmdAdd text
+    0
 
   | [ "remove"; word ] ->
-      cmdRemove word
-      0
+    cmdRemove word
+    0
 
   | []
   | [ "list" ] ->
-      cmdList ()
-      0
+    cmdList ()
+    0
 
   | _ ->
-      printfn "error: Unknown arguments. Run with --help for usage."
-      1
+    printfn "error: Unknown arguments. Run with --help for usage."
+    1

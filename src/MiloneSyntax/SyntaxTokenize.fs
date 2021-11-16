@@ -54,6 +54,7 @@
 module rec MiloneSyntax.SyntaxTokenize
 
 open MiloneShared.SharedTypes
+open MiloneShared.TypeIntegers
 open MiloneShared.Util
 open MiloneSyntax.Syntax
 
@@ -236,6 +237,20 @@ let private scanRawIdent (text: string) (i: int) =
   else
     None
 
+let private scanHex (text: string) (i: int) : int * int =
+  let rec scanDigits (i: int) =
+    if at text i |> C.isHex then
+      scanDigits (i + 1)
+    else
+      i
+
+  let m = scanDigits i
+
+  // Suffix.
+  let r = scanIdent text m
+
+  m, r
+
 let private scanNumberLit (text: string) (i: int) =
   let rec scanDigits (i: int) =
     if at text i |> C.isDigit then
@@ -342,7 +357,7 @@ let private scanStrLitRaw (text: string) (i: int) =
 // Evaluation
 // -----------------------------------------------
 
-let private tokenOfOp (text: string) l r : Token =
+let private tokenOfOp allowPrefix (text: string) l r : Token =
   let s = text |> S.slice l r
 
   let error () = ErrorToken UndefinedOpTokenError
@@ -361,7 +376,7 @@ let private tokenOfOp (text: string) l r : Token =
   | '-' ->
     match s with
     | "->" -> ArrowToken
-    | "-" -> MinusToken
+    | "-" -> MinusToken(allowPrefix && not (atSpace text r))
     | _ -> error ()
 
   | ':' ->
@@ -445,10 +460,7 @@ let private evalCharLit (text: string) (l: int) (r: int) : Token =
     && text.[l + 2] = 'x'
     && text.[l + 5] = '\''
     ->
-    if text.[l + 3] = '0' && text.[l + 4] = '0' then
-      CharToken '\x00'
-    else
-      ErrorToken UnimplHexEscapeError
+    CharToken(char (intFromHex (l + 3) (l + 5) text))
 
   | _ -> ErrorToken InvalidCharLitError
 
@@ -484,10 +496,20 @@ let private evalStrLit (text: string) (l: int) (r: int) : Token =
       match text.[i + 1] with
       | 'x' when
         i + 4 < r
-        && text.[i + 2] = '0'
-        && text.[i + 3] = '0'
+        && C.isHex text.[i + 2]
+        && C.isHex text.[i + 3]
         ->
-        go ("\x00" :: acc) (i + 4)
+        let acc =
+          let n = intFromHex (i + 2) (i + 4) text
+
+          (if n = 0 then
+             "\x00"
+           else
+             string (char (byte n)))
+          :: acc
+
+        go acc (i + 4)
+
       | 't' when i + 2 < r -> go ("	" :: acc) (i + 2)
       | 'r' when i + 2 < r -> go ("\r" :: acc) (i + 2)
       | 'n' when i + 2 < r -> go ("\n" :: acc) (i + 2)
@@ -515,7 +537,16 @@ let private evalStrLitRaw (text: string) l r =
 // Tokenize routines
 // -----------------------------------------------
 
-[<Struct>]
+let private atSpace (text: string) i : bool = C.isSpace (at text i)
+
+let private leadsPrefix token : bool =
+  match token with
+  | BlankToken
+  | NewlinesToken
+  | CommentToken -> true
+
+  | _ -> false
+
 [<NoEquality; NoComparison>]
 type private Lookahead =
   | LEof
@@ -523,6 +554,7 @@ type private Lookahead =
   | LNewline
   | LComment
   | LNumber
+  | LZeroX
   | LNonKeywordIdent
   | LIdent
   | LRawIdent
@@ -553,7 +585,12 @@ let private lookahead (text: string) (i: int) =
   | '\r'
   | '\n' -> LNewline, 1
 
-  | '0'
+  | '0' ->
+    match at (i + 1) with
+    | 'x'
+    | 'X' -> LZeroX, 2
+    | _ -> LNumber, 1
+
   | '1'
   | '2'
   | '3'
@@ -677,7 +714,7 @@ let private lookahead (text: string) (i: int) =
 
   | _ -> LBad, 1
 
-let private doNext (host: TokenizeHost) (text: string) (index: int) : Token * int =
+let private doNext (host: TokenizeHost) allowPrefix (text: string) (index: int) : Token * int =
   let look, len = lookahead text index
 
   match look with
@@ -696,16 +733,29 @@ let private doNext (host: TokenizeHost) (text: string) (index: int) : Token * in
     CommentToken, r
 
   | LNumber ->
+    // Value can be too large or too small. Range should be checked in Typing.
     let isFloat, m, r = scanNumberLit text (index + len)
 
-    // Value can be too large or too small; range should be checked in Typing.
-    // m: before suffix
+    if isFloat then
+      if m < r then
+        ErrorToken UnimplNumberSuffixError, r
+      else
+        FloatToken text.[index..r - 1], r
+    else
+      match intFlavorOfSuffix (text |> S.slice m r) with
+      | None when m < r -> ErrorToken UnimplNumberSuffixError, r
+      | suffixOpt -> IntToken(S.slice index m text, suffixOpt), r
+
+  | LZeroX ->
+    let l = index + len
+    let m, r = scanHex text l
+
     if m < r then
       ErrorToken UnimplNumberSuffixError, r
-    else if isFloat then
-      FloatToken text.[index..r - 1], r
     else
-      IntToken(S.slice index r text), r
+      match intFlavorOfSuffix (text |> S.slice m r) with
+      | None when m < r -> ErrorToken UnimplNumberSuffixError, r
+      | suffixOpt -> IntToken(S.toLower (S.slice index m text), suffixOpt), r
 
   | LNonKeywordIdent ->
     let r = scanIdent text (index + len)
@@ -749,7 +799,7 @@ let private doNext (host: TokenizeHost) (text: string) (index: int) : Token * in
 
   | LOp ->
     let r = scanOp text (index + len)
-    tokenOfOp text index r, r
+    tokenOfOp allowPrefix text index r, r
 
   | LToken _ ->
     match look with
@@ -761,10 +811,11 @@ let private doNext (host: TokenizeHost) (text: string) (index: int) : Token * in
     ErrorToken BadTokenError, r
 
 /// Tokenizes a string. Trivias are removed.
-let tokenize (host: TokenizeHost) (text: string) : (Token * Pos) list =
-  let rec go acc (i: int) (pos: Pos) =
+let tokenize (host: TokenizeHost) (text: string) : TokenizeResult =
+  // allowPrefix: preceded by space?
+  let rec go acc allowPrefix (i: int) (pos: Pos) =
     if i < text.Length then
-      let token, r = doNext host text i
+      let token, r = doNext host allowPrefix text i
 
       assert (i < r)
 
@@ -777,24 +828,24 @@ let tokenize (host: TokenizeHost) (text: string) : (Token * Pos) list =
         | _ -> (token, pos) :: acc
 
       let pos = posShift text i r pos
-      go acc r pos
+      go acc (leadsPrefix token) r pos
     else
       acc
 
-  go [] 0 (0, 0) |> List.rev
+  go [] true 0 (0, 0) |> List.rev
 
 /// Tokenizes a string. Trivias are preserved.
-let tokenizeAll (host: TokenizeHost) (text: string) : (Token * Pos) list =
-  let rec go acc (i: int) (pos: Pos) =
+let tokenizeAll (host: TokenizeHost) (text: string) : TokenizeFullResult =
+  let rec go acc allowPrefix (i: int) (pos: Pos) =
     if i < text.Length then
-      let token, r = doNext host text i
+      let token, r = doNext host allowPrefix text i
       assert (i < r)
 
       let acc = (token, pos) :: acc
 
       let pos = posShift text i r pos
-      go acc r pos
+      go acc (leadsPrefix token) r pos
     else
       acc
 
-  go [] 0 (0, 0) |> List.rev
+  go [] true 0 (0, 0) |> List.rev

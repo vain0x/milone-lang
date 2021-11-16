@@ -7,9 +7,9 @@
 
   <ItemGroup>
     <Compile Include="FSharpOnly.fs" />
-    <Compile Include="SharedTypes.fs" />
     <Compile Include="TypeFloat.fs" />
     <Compile Include="TypeIntegers.fs" />
+    <Compile Include="SharedTypes.fs" />
     <Compile Include="Util.fs" />
   </ItemGroup>
 

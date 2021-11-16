@@ -54,49 +54,51 @@ let split sep s =
 // -----------------------------------------------
 
 let main _ =
-  let args = E.commandLineArgs () |> List.skip 1
+  let args =
+    // wants List.skip
+    match E.commandLineArgs () with
+    | [] -> exit 1
+    | _ :: xs -> xs
 
   match args with
   | []
   | "-h" :: _
   | "--help" :: _ ->
-      printfn "%s" (helpText ())
-      0
+    printfn "%s" (helpText ())
+    0
 
   | path :: _ ->
-      let path = path |> split "."
-      // printfn "// path.length: %d\n" (List.length path)
+    let path = path |> split "."
+    // printfn "// path.length: %d\n" (List.length path)
 
-      let root = stdinReadAll () |> jsonParseFromString
-      // printfn "// input: %s\n" (jsonToString root)
+    let root = stdinReadAll () |> jsonParseFromString
+    // printfn "// input: %s\n" (jsonToString root)
 
-      path
-      |> List.fold
-           (fun obj key ->
-             match key, obj with
-             | ".", _ -> obj
+    path
+    |> List.fold
+         (fun obj key ->
+           match key, obj with
+           | ".", _ -> obj
 
-             | "length", JArray items -> items |> List.length |> float |> JNumber
+           | "length", JArray items -> items |> List.length |> float |> JNumber
 
-             | _, JArray items ->
-                 items
-                 |> List.tryItem (int key)
-                 |> Option.defaultWith
-                      (fun () ->
-                        // printfn "// %s missing" key
-                        JNull)
+           | _, JArray items ->
+             items
+             |> List.tryItem (int key)
+             |> Option.defaultWith (fun () ->
+               // printfn "// %s missing" key
+               JNull)
 
-             | _, JObject entries ->
-                 entries
-                 |> List.tryPick (fun (k, value) -> if k = key then Some value else None)
-                 |> Option.defaultWith
-                      (fun () ->
-                        // printfn "// %s missing" key
-                        JNull)
+           | _, JObject entries ->
+             entries
+             |> List.tryPick (fun (k, value) -> if k = key then Some value else None)
+             |> Option.defaultWith (fun () ->
+               // printfn "// %s missing" key
+               JNull)
 
-             | _ -> JNull)
-           root
-      |> jsonToString
-      |> printfn "%s"
+           | _ -> JNull)
+         root
+    |> jsonToString
+    |> printfn "%s"
 
-      0
+    0

@@ -10,7 +10,7 @@ struct DayRange_ newtype_in_records_Program_newDayRange(int start_, int endDay_)
 
 bool newtype_in_records_Program_between(int day_, struct DayRange_ range_);
 
-int milone_main();
+int milone_main(void);
 
 struct DayRange_ {
     int t0;
@@ -68,7 +68,7 @@ if_next_4:;
     return if_1;
 }
 
-int milone_main() {
+int milone_main(void) {
     int call_6 = newtype_in_records_Program_newDay(13);
     int call_7 = newtype_in_records_Program_newDay(10);
     int call_8 = newtype_in_records_Program_newDay(20);

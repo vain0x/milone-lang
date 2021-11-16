@@ -1,0 +1,6 @@
+module rec DiagnosticsTest.Program
+
+let main _ = 0
+
+// syntax error
+// let x 0

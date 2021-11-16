@@ -4,10 +4,205 @@ module FSharpOnly
 
 let objToString (value: _) = string (value :> obj)
 
-let inRegion (f: unit -> int) : int = f ()
+let __inRegion (f: unit -> int) : int = f ()
 
 let __stringLengthInUtf8Bytes (s: string) : int =
   System.Text.Encoding.UTF8.GetByteCount(s)
+
+/// Only for debugging.
+let __trace (s: string) : unit = eprintf "%s" (s + "\n")
+
+/// Only for debugging.
+let __context (info: obj) (action: unit -> 'A) : 'A =
+  try
+    action ()
+  with
+  | ex -> raise (exn (sprintf "%O" info, ex))
+
+// -----------------------------------------------
+// Concurrency
+// -----------------------------------------------
+
+/// Whether parallel primitives work actually in parallel.
+let mutable AllowParallel = false
+
+type Future<'T> = System.Threading.Tasks.ValueTask<'T>
+
+module Future =
+  open System
+  open System.Threading.Tasks
+
+  // .NET only
+  let ofTask (task: Task<'T>) : Future<'T> = ValueTask<'T>(task)
+
+  // .NET only
+  let internal unwrap (future: Future<'T>) =
+    assert (not AllowParallel)
+    assert future.IsCompletedSuccessfully
+    future.Result
+
+  let just (value: 'T) : Future<'T> = ValueTask.FromResult(value)
+
+  let map (f: 'T -> 'U) (task: Future<'T>) : Future<'U> =
+    if not AllowParallel || task.IsCompletedSuccessfully then
+      ValueTask.FromResult(f task.Result)
+    else
+      task
+        .AsTask()
+        .ContinueWith((fun (task: Task<_>) -> f task.Result), TaskContinuationOptions.OnlyOnRanToCompletion)
+      |> ofTask
+
+  let andThen (f: 'T -> Future<'U>) (task: Future<'T>) : Future<'U> =
+    if not AllowParallel || task.IsCompletedSuccessfully then
+      f task.Result
+    else
+      task
+        .AsTask()
+        .ContinueWith((fun (task: Task<_>) -> (f task.Result).AsTask()), TaskContinuationOptions.OnlyOnRanToCompletion)
+        .Unwrap()
+      |> ofTask
+
+  /// Waits for a future to complete.
+  let wait (future: Future<'T>) : 'T = future.AsTask().Result
+
+  // .NET only
+  let internal ofUnitValueTask (task: ValueTask) : ValueTask<unit> =
+    if not AllowParallel || task.IsCompletedSuccessfully then
+      ValueTask<unit>(())
+    else
+      ValueTask<unit>(
+        task
+          .AsTask()
+          .ContinueWith(Func<_, unit>(fun _ -> ()), TaskContinuationOptions.OnlyOnRanToCompletion)
+      )
+
+  /// Spawns a task to run a complex computation. (.NET only)
+  let internal spawn (f: unit -> Future<'T>) : Future<'T> =
+    if not AllowParallel then
+      f ()
+    else
+      Task.Run<'T>(fun () -> (f ()).AsTask()) |> ofTask
+
+  // .NET only
+  let internal catch (f: exn -> unit) (future: Future<'T>) : Future<unit> =
+    if not AllowParallel then
+      if future.IsFaulted then
+        let ex = future.AsTask().Exception
+        f ex
+
+      just ()
+    else
+      future
+        .AsTask()
+        .ContinueWith((fun (task: Task<_>) -> f task.Exception), TaskContinuationOptions.OnlyOnFaulted)
+      |> ofTask
+
+// #mpscSync
+let private mpscSync
+  (consumer: 'S -> 'A -> 'S * 'T list)
+  (producer: 'S -> 'T -> Future<'A>)
+  (initialState: 'S)
+  (initialCommands: 'T list)
+  : 'S =
+  let rec folder state commands =
+    let state, commandListList =
+      commands
+      |> List.fold
+           (fun (state, acc) command ->
+             let action = producer state command |> Future.unwrap
+             let state, newCommands = consumer state action
+             state, newCommands :: acc)
+           (state, [])
+
+    List.fold folder state (List.rev commandListList)
+
+  folder initialState initialCommands
+
+let private mpscParallel
+  (consumer: 'S -> 'A -> 'S * 'T list)
+  (producer: 'S -> 'T -> Future<'A>)
+  (initialState: 'S)
+  (initialCommands: 'T list)
+  : 'S =
+  assert AllowParallel
+
+  let chan =
+    System.Threading.Channels.Channel.CreateBounded<'A>(256)
+
+  let producerWork (state: 'S) (command: 'T) =
+    Future.spawn (fun () ->
+      producer state command
+      |> Future.andThen (fun action ->
+        chan.Writer.WriteAsync(action)
+        |> Future.ofUnitValueTask))
+    |> Future.catch (fun ex -> chan.Writer.Complete(ex))
+    |> ignore
+
+  let consumerWork () =
+    let mutable state = initialState
+    let mutable commandCount = 0
+
+    let spawn commands =
+      for command in commands do
+        commandCount <- commandCount + 1
+        producerWork state command
+
+    let update action =
+      let newState, newCommands = consumer state action
+      state <- newState
+      spawn newCommands
+      commandCount <- commandCount - 1
+
+    spawn initialCommands
+
+    while commandCount <> 0 do
+      let action =
+        let task = chan.Reader.ReadAsync()
+
+        if task.IsCompletedSuccessfully then
+          task.Result
+        else
+          // Block.
+          task.AsTask().Result
+
+      update action
+
+    state
+
+  consumerWork ()
+
+/// Performs a concurrent work.
+/// (mpsc: multiple producers single consumer)
+///
+/// What happens:
+///
+/// - For each `command`, a worker is spawned to compute `producer` function.
+/// - Once a worker end, state is updated by `consumer` function.
+/// - Final state is returned. (Function continues while any worker is running.)
+let mpscConcurrent
+  (consumer: 'S -> 'A -> 'S * 'T list)
+  (producer: 'S -> 'T -> Future<'A>)
+  (initialState: 'S)
+  (initialCommands: 'T list)
+  : 'S =
+  if AllowParallel then
+    mpscParallel consumer producer initialState initialCommands
+  else
+    mpscSync consumer producer initialState initialCommands
+
+/// `List.map` in parallel.
+let __parallelMap (f: 'T -> 'U) (xs: 'T list) : 'U list =
+  if AllowParallel then
+    xs
+    |> List.toArray
+    |> Array.Parallel.map f
+    |> Array.toList
+  else
+    List.map f xs
+
+let __allowParallel () =
+  AllowParallel <- true
+  eprintf "info: Parallel compilation enabled. "
 
 // -----------------------------------------------
 // C FFI
@@ -50,31 +245,54 @@ let __ptrWrite (_ptr: nativeptr<'a>) (_index: int) (_value: 'a) : unit =
 // -----------------------------------------------
 
 [<NoEquality; NoComparison>]
-type Profiler = Profiler of System.Diagnostics.Stopwatch * int64 ref
+type Profiler =
+  private
+    { Stopwatch: System.Diagnostics.Stopwatch
 
-let private getAllocatedBytes () : int64 =
+      /// Message specified at the time of the previous logging.
+      mutable Msg: string
+
+      /// Elapsed milliseconds at the time of the previous logging.
+      mutable Epoch: int
+
+      /// Heap size (bytes) at the time of the previous logging.
+      mutable Mem: int64 }
+
+let private getAllocatedBytes () =
   System.GC.GetAllocatedBytesForCurrentThread()
 
 let profileInit () : Profiler =
-  let bytesRef = getAllocatedBytes () |> ref
-  Profiler(System.Diagnostics.Stopwatch.StartNew(), bytesRef)
+  { Stopwatch = System.Diagnostics.Stopwatch.StartNew()
+    Msg = "start"
+    Epoch = 0
+    Mem = getAllocatedBytes () }
 
-let profileLog (msg: string) (Profiler (stopwatch, bytesRef)) : unit =
-  let millis = int stopwatch.ElapsedMilliseconds
+let private profilePrint (msg: string) (millis: int) (mem: int64) =
+  let thousandSep (n: int64) =
+    if n < 0L then
+      " -0,000,000"
+    else
+      let k, n = n / 1000L, n % 1000L // kilo
+      let m, k = k / 1000L, k % 1000L // mega
+      sprintf "%3d,%03d,%03d" m k n
+
   let sec = millis / 1000
-  let millis = millis % 1000
+  let millis = millis % 1000 / 10 // per 10 ms
 
-  let totalBytes = getAllocatedBytes ()
+  eprintfn "profile: %-17s time=%4d.%02d mem=%s" msg sec millis (thousandSep mem)
 
-  let bytes =
-    (totalBytes - (!bytesRef)) |> int |> max 0
+let profileLog (msg: string) (p: Profiler) : unit =
+  let epoch = int p.Stopwatch.ElapsedMilliseconds
+  let mem = getAllocatedBytes ()
 
-  let kilo = bytes / 1000
-  let bytes = bytes % 1000
-  let mega = kilo / 1000
-  let kilo = kilo % 1000
+  let epochDelta = epoch - p.Epoch
+  let memDelta = mem - p.Mem
+  profilePrint p.Msg epochDelta memDelta
 
-  eprintfn "profile: time=%4d.%03d mem=%5d,%03d,%03d\n%s" sec millis mega kilo bytes msg
+  p.Msg <- msg
+  p.Epoch <- epoch
+  p.Mem <- mem
 
-  stopwatch.Restart()
-  bytesRef := totalBytes
+  if msg = "Finish" then
+    eprintfn "profile: Finish"
+    profilePrint "total" epoch mem

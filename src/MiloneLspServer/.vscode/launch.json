@@ -2,24 +2,41 @@
     "version": "0.2.0",
     "configurations": [
         {
-            "type": "extensionHost",
+            "type": "pwa-extensionHost",
             "request": "launch",
             "name": "Launch Extension Host",
             "runtimeExecutable": "${execPath}",
             "args": [
-                "--extensionDevelopmentPath=${workspaceFolder}/../vscode_ext"
+                "--extensionDevelopmentPath=${workspaceFolder}/../../vscode_ext"
             ],
-            "env": {
-                "MILONE_LSP_COMMAND": "${workspaceFolder}/bin/Debug/net5.0/MiloneLsp",
-                "MILONE_HOME": "${workspaceFolder}/.."
-            },
-            "windows": {
+            "linux": {
+                "name": "Launch (windows)",
+                "type": "pwa-extensionHost",
+                "request": "launch",
+                "args": [
+                    "--extensionDevelopmentPath=${workspaceFolder}/../../vscode_ext"
+                ],
                 "env": {
-                    "MILONE_LSP_COMMAND": "${workspaceFolder}/bin/Debug/net5.0/MiloneLspServer.exe",
-                    "MILONE_HOME": "${workspaceFolder}/.."
+                    "MILONE_LSP_COMMAND": "${workspaceFolder}/bin/Debug/net5.0/MiloneLspServer",
+                    "MILONE_LSP_SERVER_DEV": "1",
+                    "MILONE_LSP_SERVER_LOG_LEVEL": "debug",
+                    "MILONE_HOME": "${workspaceFolder}/../.."
                 }
             },
-            "preLaunchTask": "vscode_ext_build"
+            "windows": {
+                "name": "Launch (windows)",
+                "type": "pwa-extensionHost",
+                "request": "launch",
+                "args": [
+                    "--extensionDevelopmentPath=${workspaceFolder}/../../vscode_ext"
+                ],
+                "env": {
+                    "MILONE_LSP_COMMAND": "${workspaceFolder}/bin/Debug/net5.0/MiloneLspServer.exe",
+                    "MILONE_LSP_SERVER_DEV": "1",
+                    "MILONE_LSP_SERVER_LOG_LEVEL": "debug",
+                    "MILONE_HOME": "${workspaceFolder}/../.."
+                }
+            }
         }
     ],
     "compounds": []

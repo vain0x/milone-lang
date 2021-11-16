@@ -2,13 +2,13 @@
 
 struct MyList_;
 
-struct MyList_Option;
+struct MyListoption1_;
 
-struct IntMyList_OptionTuple2;
+struct IntMyListoption1Tuple2_;
 
-struct MyList_ myCons_(int head_, struct MyList_ tail_);
+struct MyList_ union_newtype_rec_union_newtype_rec_main_myCons(int head_, struct MyList_ tail_);
 
-int milone_main();
+int milone_main(void);
 
 enum MyList_Discriminant {
     MyList_,
@@ -21,36 +21,44 @@ struct MyList_ {
     };
 };
 
-struct MyList_Option {
-    bool some;
-    struct MyList_ value;
+enum MyListoption1_Discriminant {
+    None_,
+    Some_,
 };
 
-struct IntMyList_OptionTuple2 {
+struct MyListoption1_ {
+    enum MyListoption1_Discriminant discriminant;
+    union {
+        struct MyList_ Some_;
+    };
+};
+
+struct IntMyListoption1Tuple2_ {
     int t0;
-    struct MyList_Option t1;
+    struct MyListoption1_ t1;
 };
 
-struct MyList_ myCons_(int head_, struct MyList_ tail_) {
-    struct MyList_Option some_ = (struct MyList_Option){.some = true, .value = tail_};
-    struct IntMyList_OptionTuple2 tuple_ = (struct IntMyList_OptionTuple2){.t0 = head_, .t1 = some_};
-    void const* box_ = milone_mem_alloc(1, sizeof(struct IntMyList_OptionTuple2));
-    (*(((struct IntMyList_OptionTuple2*)box_))) = tuple_;
-    struct MyList_ variant_ = (struct MyList_){.discriminant = MyList_, .MyList_ = box_};
-    return variant_;
+struct MyList_ union_newtype_rec_union_newtype_rec_main_myCons(int head_, struct MyList_ tail_) {
+    struct MyListoption1_ variant_ = (struct MyListoption1_){.discriminant = Some_, .Some_ = tail_};
+    struct IntMyListoption1Tuple2_ IntMyListoption1Tuple2_ = (struct IntMyListoption1Tuple2_){.t0 = head_, .t1 = variant_};
+    void const* box_ = milone_mem_alloc(1, sizeof(struct IntMyListoption1Tuple2_));
+    (*(((struct IntMyListoption1Tuple2_*)box_))) = IntMyListoption1Tuple2_;
+    struct MyList_ variant_1 = (struct MyList_){.discriminant = MyList_, .MyList_ = box_};
+    return variant_1;
 }
 
-int milone_main() {
-    struct IntMyList_OptionTuple2 tuple_1 = (struct IntMyList_OptionTuple2){.t0 = 0, .t1 = (struct MyList_Option){.some = false}};
-    void const* box_1 = milone_mem_alloc(1, sizeof(struct IntMyList_OptionTuple2));
-    (*(((struct IntMyList_OptionTuple2*)box_1))) = tuple_1;
-    struct MyList_ variant_1 = (struct MyList_){.discriminant = MyList_, .MyList_ = box_1};
-    struct MyList_ first_ = variant_1;
-    struct MyList_ call_ = myCons_(1, first_);
+int milone_main(void) {
+    int value_;
+    struct IntMyListoption1Tuple2_ IntMyListoption1Tuple2_1 = (struct IntMyListoption1Tuple2_){.t0 = 0, .t1 = (struct MyListoption1_){.discriminant = None_}};
+    void const* box_1 = milone_mem_alloc(1, sizeof(struct IntMyListoption1Tuple2_));
+    (*(((struct IntMyListoption1Tuple2_*)box_1))) = IntMyListoption1Tuple2_1;
+    struct MyList_ variant_2 = (struct MyList_){.discriminant = MyList_, .MyList_ = box_1};
+    struct MyList_ first_ = variant_2;
+    struct MyList_ call_ = union_newtype_rec_union_newtype_rec_main_myCons(1, first_);
     struct MyList_ second_ = call_;
     char match_;
-    if (((*(((struct IntMyList_OptionTuple2 const*)first_.MyList_))).t0 != 0)) goto next_2;
-    if ((*(((struct IntMyList_OptionTuple2 const*)first_.MyList_))).t1.some) goto next_2;
+    if (((*(((struct IntMyListoption1Tuple2_ const*)first_.MyList_))).t0 != 0)) goto next_2;
+    if (((*(((struct IntMyListoption1Tuple2_ const*)first_.MyList_))).t1.discriminant != None_)) goto next_2;
     match_ = 0;
     goto end_match_1;
 next_2:;
@@ -60,8 +68,8 @@ next_2:;
 next_3:;
 end_match_1:;
     char match_1;
-    if ((!((*(((struct IntMyList_OptionTuple2 const*)second_.MyList_))).t1.some))) goto next_5;
-    int value_ = (*(((struct IntMyList_OptionTuple2 const*)(*(((struct IntMyList_OptionTuple2 const*)second_.MyList_))).t1.value.MyList_))).t0;
+    if (((*(((struct IntMyListoption1Tuple2_ const*)second_.MyList_))).t1.discriminant != Some_)) goto next_5;
+    value_ = (*(((struct IntMyListoption1Tuple2_ const*)(*(((struct IntMyListoption1Tuple2_ const*)second_.MyList_))).t1.Some_.MyList_))).t0;
     milone_assert((value_ == 0), 17, 44);
     match_1 = 0;
     goto end_match_4;

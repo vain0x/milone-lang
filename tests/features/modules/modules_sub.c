@@ -1,7 +1,7 @@
 #include "milone.h"
 
-int f_(int x_);
+int modules_sub_IntIntFun1_f(int x_);
 
-int f_(int x_) {
+int modules_sub_IntIntFun1_f(int x_) {
     return x_;
 }

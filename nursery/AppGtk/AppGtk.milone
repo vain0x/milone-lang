@@ -1,4 +1,4 @@
-module rec AppGtk.EntryPoint
+module rec AppGtk.Program
 
 module S = MiloneStd.StdString
 
@@ -37,34 +37,34 @@ let diff oldUI newUI : UIDiff list =
     | [], [] -> List.rev acc
 
     | Label t1 :: ls, Label t2 :: rs ->
-        let acc =
-          if t1 <> t2 then
-            SetLabel(i, t2) :: acc
-          else
-            acc
+      let acc =
+        if t1 <> t2 then
+          SetLabel(i, t2) :: acc
+        else
+          acc
 
-        go (i + 1) acc ls rs
+      go (i + 1) acc ls rs
 
     | Button (_, t1) :: ls, Button (_, t2) :: rs ->
-        let acc =
-          if t1 <> t2 then
-            SetButtonText(i, t2) :: acc
-          else
-            acc
+      let acc =
+        if t1 <> t2 then
+          SetButtonText(i, t2) :: acc
+        else
+          acc
 
-        go (i + 1) acc ls rs
+      go (i + 1) acc ls rs
 
     | [], Label text :: rs ->
-        let acc = AddLabel(i, text) :: acc
-        go (i + 1) acc ls rs
+      let acc = AddLabel(i, text) :: acc
+      go (i + 1) acc ls rs
 
     | [], Button (msg, text) :: rs ->
-        let acc = AddButton(i, msg, text) :: acc
-        go (i + 1) acc ls rs
+      let acc = AddButton(i, msg, text) :: acc
+      go (i + 1) acc ls rs
 
     | _ :: ls, _ ->
-        let acc = Delete i :: acc
-        go (i + 1) acc ls rs
+      let acc = Delete i :: acc
+      go (i + 1) acc ls rs
 
   let (UI ls) = oldUI
   let (UI rs) = newUI
@@ -77,38 +77,38 @@ let dumpDiff (diffList: UIDiff list) : string =
   let render acc diff =
     match diff with
     | AddLabel (index, text) ->
-        acc
-        |> str "ADD_LABEL"
-        |> num index
-        |> str text
-        |> cons "\n"
+      acc
+      |> str "ADD_LABEL"
+      |> num index
+      |> str text
+      |> cons "\n"
 
     | AddButton (index, msg, text) ->
-        acc
-        |> str "ADD_BUTTON"
-        |> num index
-        |> num msg
-        |> str text
-        |> cons "\n"
+      acc
+      |> str "ADD_BUTTON"
+      |> num index
+      |> num msg
+      |> str text
+      |> cons "\n"
 
     | SetLabel (index, text) ->
-        acc
-        |> str "SET_LABEL"
-        |> num index
-        |> str text
-        |> cons "\n"
+      acc
+      |> str "SET_LABEL"
+      |> num index
+      |> str text
+      |> cons "\n"
 
     | SetButtonText (index, text) ->
-        acc
-        |> str "SET_BUTTON_TEXT"
-        |> num index
-        |> str text
-        |> cons "\n"
+      acc
+      |> str "SET_BUTTON_TEXT"
+      |> num index
+      |> str text
+      |> cons "\n"
 
     | Delete index ->
-        // TODO
-        // acc |> str "DELETE" |> num index |> cons "\n"
-        acc
+      // TODO
+      // acc |> str "DELETE" |> num index |> cons "\n"
+      acc
 
   List.fold render [] diffList
   |> List.rev
@@ -127,14 +127,14 @@ let gtkRun (init: 'S) (update: 'S -> 'M -> 'S) (view: 'S -> UI) : int =
 
   setUI (stack [])
 
-  let initObj : obj = box init
+  let initObj: obj = box init
 
-  let updateObj : obj -> obj -> obj =
+  let updateObj: obj -> obj -> obj =
     fun (state: obj) (msg: obj) -> update (unbox state) (unbox msg) |> box
 
-  let viewObj : obj -> obj =
+  let viewObj: obj -> obj =
     fun (state: obj) ->
-      let oldUI : UI = getUI ()
+      let oldUI: UI = getUI ()
       let newUI = view (unbox state)
 
       let d = dumpDiff (diff oldUI newUI)
@@ -153,7 +153,7 @@ type MyState =
   { Count: int
     History: int option list }
 
-let private init : MyState = { Count = 0; History = [] }
+let private init: MyState = { Count = 0; History = [] }
 
 type MyMsg = int
 
@@ -182,4 +182,4 @@ let private view (state: MyState) : UI =
   stack (List.append buttons labels)
 
 let main _ : int =
-  inRegion (fun () -> gtkRun init update view)
+  __inRegion (fun () -> gtkRun init update view)

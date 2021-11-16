@@ -24,9 +24,15 @@ let freshId () : int =
 
   __nativeExpr "++s_last"
 
+let private nativeExprWithPlaceholder () =
+  let s = "hello"
+  let n: int = __nativeExpr ("{0}.len", s)
+  assert (n = 5)
+
 let main _ =
   writeLine "HEY!"
   writeLine "YO!"
   writeLine (freshId () |> string)
   writeLine (freshId () |> string)
+  nativeExprWithPlaceholder ()
   0

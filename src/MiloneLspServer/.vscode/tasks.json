@@ -25,7 +25,7 @@
                 "isDefault": true
             },
             "options": {
-                "cwd": "${workspaceFolder}/../vscode_ext"
+                "cwd": "${workspaceFolder}/../../vscode_ext"
             },
             "dependsOn": "milone_lsp_build"
         }

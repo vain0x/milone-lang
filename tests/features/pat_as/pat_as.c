@@ -1,21 +1,22 @@
 #include "milone.h"
 
-struct IntIntTuple2;
+struct IntIntTuple2_;
 
-char pat_as_Program_simpleCase(char arg_);
+void pat_as_Program_simpleCase(void);
 
-char pat_as_Program_shadowingCase(char arg_1);
+void pat_as_Program_shadowingCase(void);
 
-int milone_main();
+int milone_main(void);
 
-struct IntIntTuple2 {
+struct IntIntTuple2_ {
     int t0;
     int t1;
 };
 
-char pat_as_Program_simpleCase(char arg_) {
+void pat_as_Program_simpleCase(void) {
+    int x_;
     char match_;
-    int x_ = 1;
+    x_ = 1;
     if ((x_ != 1)) goto next_2;
     milone_assert((x_ == 1), 6, 14);
     match_ = 0;
@@ -26,15 +27,17 @@ next_2:;
     goto end_match_1;
 next_3:;
 end_match_1:;
-    return 0;
+    return;
 }
 
-char pat_as_Program_shadowingCase(char arg_1) {
+void pat_as_Program_shadowingCase(void) {
+    int x_2;
+    struct IntIntTuple2_ y_;
     int x_1 = 1;
     char match_1;
-    struct IntIntTuple2 tuple_ = (struct IntIntTuple2){.t0 = x_1, .t1 = 2};
-    struct IntIntTuple2 y_ = tuple_;
-    int x_2 = y_.t1;
+    struct IntIntTuple2_ IntIntTuple2_ = (struct IntIntTuple2_){.t0 = x_1, .t1 = 2};
+    y_ = IntIntTuple2_;
+    x_2 = y_.t1;
     int y1_ = y_.t0;
     int y2_ = y_.t1;
     bool if_;
@@ -68,11 +71,11 @@ if_next_9:;
     goto end_match_4;
 next_5:;
 end_match_4:;
-    return 0;
+    return;
 }
 
-int milone_main() {
-    char call_ = pat_as_Program_simpleCase(0);
-    char call_1 = pat_as_Program_shadowingCase(0);
+int milone_main(void) {
+    pat_as_Program_simpleCase();
+    pat_as_Program_shadowingCase();
     return 0;
 }

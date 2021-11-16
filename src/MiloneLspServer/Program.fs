@@ -1,20 +1,43 @@
 module rec MiloneLspServer.Program
 
-open MiloneLspServer.JsonRpcReaderForAbstractStream
-open MiloneLspServer.JsonRpcReaderForStdIn
+open MiloneLspServer.JsonRpcReader
 open MiloneLspServer.LspServer
 
+module LspTests = MiloneLspServer.LspTests
+
 [<EntryPoint>]
-let main _ =
+let main (args: string array) =
+  match args with
+  | [| "test" |] -> LspTests.lspTests ()
+  | _ -> ()
+
   async {
-    let readLine, readBytes = jsonRpcReaderForStdIn ()
+    use reader = openStdin ()
+    let mutable queueLength = 0
+    let requestReceivedEvent = Event<_>()
 
-    let requestReader, drainRequests =
-      startJsonRpcReader
-        { ReadLine = readLine
-          ReadBytes = readBytes }
+    let onMessage (msg: JsonValue) =
+      System.Threading.Interlocked.Increment(&queueLength)
+      |> ignore
 
-    Async.Start(requestReader)
-    return! lspServer { DrainRequests = drainRequests }
+      requestReceivedEvent.Trigger(msg)
+
+    let! consumerWork =
+      lspServer
+        { RequestReceived = requestReceivedEvent.Publish
+
+          OnQueueLengthChanged =
+            fun len ->
+              System.Threading.Interlocked.Exchange(&queueLength, len)
+              |> ignore }
+      |> Async.StartChild
+
+    startJsonRpcReader
+      { Reader = reader
+        GetQueueLength = fun () -> queueLength
+        OnMessage = onMessage }
+    |> Async.Start
+
+    return! consumerWork
   }
   |> Async.RunSynchronously

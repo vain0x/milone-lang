@@ -46,7 +46,7 @@ let __mutArrayCreate (len: int) : __MutArray<_> =
   if len = 0 then
     __nativeCast (unativeint 0), 0
   else
-    let nullPtr : __constptr<_> = __nativeCast (unativeint 0)
+    let nullPtr: __constptr<_> = __nativeCast (unativeint 0)
 
     let ptr =
       __nativeCast (memAlloc len (unativeint (__pointeeSize nullPtr)))
@@ -100,14 +100,48 @@ let __constArraySlice (start: int) (endIndex: int) (array: __ConstArray<_>) : __
 // -----------------------------------------------
 
 let __intOfStr (s: string) : int option =
-  let valueRef : nativeptr<int> =
+  let valueRef: nativeptr<int> =
     __nativeCast (memAlloc 1 (unativeint (__sizeOfVal 0)))
 
-  let ok : bool =
+  let ok: bool =
     __nativeFun ("str_to_int_checked", s, valueRef)
 
   if ok then
     Some(__ptrRead (__ptrAsConst valueRef) 0)
+  else
+    None
+
+let __int64OfStr (s: string) : int64 option =
+  __nativeStmt (
+    """
+      bool str_to_int64_checked(struct String, int64_t *);
+
+      int64_t value;
+      bool ok = str_to_int64_checked({0}, &value);
+    """,
+    s
+  )
+
+  if __nativeExpr "ok" then
+    let value: int64 = __nativeExpr "value"
+    Some value
+  else
+    None
+
+let __uint64OfStr (s: string) : uint64 option =
+  __nativeStmt (
+    """
+      bool str_to_uint64_checked(struct String, uint64_t *);
+
+      uint64_t value;
+      bool ok = str_to_uint64_checked({0}, &value);
+    """,
+    s
+  )
+
+  if __nativeExpr "ok" then
+    let value: uint64 = __nativeExpr "value"
+    Some value
   else
     None
 

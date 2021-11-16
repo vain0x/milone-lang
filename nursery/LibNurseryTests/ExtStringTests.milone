@@ -1,0 +1,37 @@
+module rec LibNurseryTests.ExtStringTests
+
+open LibNurseryTests.TestHelper
+
+module S = MiloneStd.StdString
+module XS = LibNursery.ExtString
+module Debug = LibNurseryTests.Debug
+
+let testDivide () =
+  let run expected sep input =
+    let head, tail = XS.divide sep input
+    let xHead, xTail = expected
+    eq id xHead head && eq (Debug.opt id) xTail tail
+
+  assert (run ("one", Some "two,three") "," "one,two,three")
+  assert (run ("", Some ",") "," ",,")
+  assert (run ("foo", None) "," "foo") // not separated
+  assert (run ("foo", Some "") "," "foo,") // trailing separator
+  assert (run ("", Some ",") ",," ",,,") // overlapping separator
+  assert (run ("+", Some "-\x00") "\x00" "+\x00-\x00") // binary
+
+let testSplit () =
+  let run expected sep input =
+    input
+    |> XS.split sep
+    |> eq (S.concat "; ") expected
+
+  assert (run [ "" ] "," "")
+  assert (run [ "one"; "two"; "three" ] "," "one,two,three")
+  assert (run [ "" ] "," "")
+  assert (run [ "foo" ] "," "foo") // not separated
+  assert (run [ ""; "foo"; "" ] "," ",foo,") // leading/trailing separators
+  assert (run [ ""; "," ] ",," ",,,") // overlapping separator
+
+let testExtStringModule () =
+  testDivide ()
+  testSplit ()

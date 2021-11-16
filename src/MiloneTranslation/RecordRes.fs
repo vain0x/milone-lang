@@ -5,9 +5,8 @@ module rec MiloneTranslation.RecordRes
 
 open MiloneShared.SharedTypes
 open MiloneShared.Util
+open MiloneStd.StdMap
 open MiloneTranslation.Hir
-
-module TMap = MiloneStd.StdMap
 
 let private hxIsVarOrUnboxingVar expr =
   match expr with
@@ -21,22 +20,14 @@ let private hxIsVarOrUnboxingVar expr =
 
 [<RequireQualifiedAccess; NoEquality; NoComparison>]
 type private RrCtx =
-  { Vars: AssocMap<VarSerial, VarDef>
-    Funs: AssocMap<FunSerial, FunDef>
-    Variants: AssocMap<VariantSerial, VariantDef>
-    Tys: AssocMap<TySerial, TyDef>
+  { Tys: TreeMap<TySerial, TyDef>
 
     /// recordTySerial -> (fieldTys, (field -> (fieldIndex, fieldTy)))
-    RecordMap: AssocMap<TySerial, (Ty list * AssocMap<Ident, int * Ty>)> }
+    RecordMap: TreeMap<TySerial, (Ty list * TreeMap<Ident, int * Ty>)> }
 
-let private ofTyCtx (tyCtx: TyCtx) : RrCtx =
-  { Vars = tyCtx.Vars
-    Funs = tyCtx.Funs
-    Variants = tyCtx.Variants
-    Tys = tyCtx.Tys
+let private ofHirCtx (hirCtx: HirCtx) : RrCtx =
+  { Tys = hirCtx.Tys
     RecordMap = TMap.empty compare }
-
-let private toTyCtx (tyCtx: TyCtx) (ctx: RrCtx) : TyCtx = tyCtx
 
 /// ## Resolution of records and fields
 ///
@@ -95,7 +86,7 @@ let private buildRecordMap (ctx: RrCtx) =
   |> TMap.fold
        (fun acc tySerial tyDef ->
          match tyDef with
-         | RecordTyDef (_, fields, _) ->
+         | RecordTyDef (_, fields, _, _) ->
            let fieldTys =
              fields |> List.map (fun (_, ty, _) -> ty)
 
@@ -127,11 +118,10 @@ let private rewriteRecordExpr (ctx: RrCtx) itself baseOpt fields ty loc =
 
   let fields =
     fields
-    |> List.map
-         (fun (name, init, _) ->
-           let init = init |> teExpr ctx
-           let index, _ = fieldMap |> mapFind name
-           index, init)
+    |> List.map (fun (name, init, _) ->
+      let init = init |> teExpr ctx
+      let index, _ = fieldMap |> mapFind name
+      index, init)
     |> listSort (fun (l: int, _) (r: int, _) -> compare l r)
 
   match baseOpt with
@@ -182,25 +172,20 @@ let private teExpr (ctx: RrCtx) expr =
 
     let fields =
       fields
-      |> List.map
-           (fun (name, init, loc) ->
-             let init = init |> teExpr ctx
-             name, init, loc)
+      |> List.map (fun (name, init, loc) ->
+        let init = init |> teExpr ctx
+        name, init, loc)
 
     rewriteRecordExpr ctx expr baseOpt fields ty loc
 
   | HNavExpr (l, r, ty, loc) ->
-    invoke
-      (fun () ->
-        let recordTy = exprToTy l
-        let l = l |> teExpr ctx
-        rewriteFieldExpr ctx expr recordTy l r ty loc)
+    let recordTy = exprToTy l
+    let l = l |> teExpr ctx
+    rewriteFieldExpr ctx expr recordTy l r ty loc
 
   | HNodeExpr (kind, items, ty, loc) ->
-    invoke
-      (fun () ->
-        let items = items |> List.map (teExpr ctx)
-        HNodeExpr(kind, items, ty, loc))
+    let items = items |> List.map (teExpr ctx)
+    HNodeExpr(kind, items, ty, loc)
 
   | HLitExpr _
   | HVarExpr _
@@ -209,47 +194,35 @@ let private teExpr (ctx: RrCtx) expr =
   | HPrimExpr _ -> expr
 
   | HMatchExpr (cond, arms, ty, loc) ->
-    invoke
-      (fun () ->
-        let cond = cond |> teExpr ctx
+    let cond = cond |> teExpr ctx
 
-        let go (pat, guard, body) =
-          let guard = guard |> teExpr ctx
-          let body = body |> teExpr ctx
-          pat, guard, body
+    let arms =
+      arms |> List.map (hArmMap id (teExpr ctx))
 
-        let arms = arms |> List.map go
-        HMatchExpr(cond, arms, ty, loc))
+    HMatchExpr(cond, arms, ty, loc)
 
   | HBlockExpr (stmts, last) ->
-    invoke
-      (fun () ->
-        let stmts = stmts |> List.map (teExpr ctx)
-        let last = last |> teExpr ctx
-        HBlockExpr(stmts, last))
+    let stmts = stmts |> List.map (teExpr ctx)
+    let last = last |> teExpr ctx
+    HBlockExpr(stmts, last)
 
   | HLetValExpr (pat, init, next, ty, loc) ->
-    invoke
-      (fun () ->
-        let init = init |> teExpr ctx
-        let next = next |> teExpr ctx
-        HLetValExpr(pat, init, next, ty, loc))
+    let init = init |> teExpr ctx
+    let next = next |> teExpr ctx
+    HLetValExpr(pat, init, next, ty, loc)
 
-  | HLetFunExpr (callee, isRec, vis, args, body, next, ty, loc) ->
-    invoke
-      (fun () ->
-        let body = body |> teExpr ctx
-        let next = next |> teExpr ctx
-        HLetFunExpr(callee, isRec, vis, args, body, next, ty, loc))
+  | HLetFunExpr (callee, args, body, next, ty, loc) ->
+    let body = body |> teExpr ctx
+    let next = next |> teExpr ctx
+    HLetFunExpr(callee, args, body, next, ty, loc)
 
-let recordRes (expr: HExpr, tyCtx: TyCtx) =
-  let ctx = ofTyCtx tyCtx
+let recordRes (modules: HProgram, hirCtx: HirCtx) : HProgram * HirCtx =
+  let ctx = ofHirCtx hirCtx
 
   let ctx =
-    { ctx with
-        RecordMap = buildRecordMap ctx }
+    { ctx with RecordMap = buildRecordMap ctx }
 
-  let expr = expr |> teExpr ctx
+  let modules = modules |> HProgram.mapExpr (teExpr ctx)
 
-  let tyCtx = ctx |> toTyCtx tyCtx
-  expr, tyCtx
+  // HirCtx doesn't change.
+  modules, hirCtx

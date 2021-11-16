@@ -7,9 +7,15 @@ CC=${CC:-gcc}
 
 mkdir -p vendor
 
+if test -f vendor/pdjson/pdjson.c
+then
+    echo 'warn: pdjson already installed. Remove vendor/pdjson to force redo.'
+    exit
+fi
+
 (
     cd vendor
-    wget -q 'https://github.com/skeeto/pdjson/archive/67108d883061043e55d0fb13961ac1b6fc8a485c.tar.gz' -O - | tar xz
+    busybox wget -q 'https://github.com/skeeto/pdjson/archive/67108d883061043e55d0fb13961ac1b6fc8a485c.tar.gz' -O - | tar xz
     mv pdjson-67108d883061043e55d0fb13961ac1b6fc8a485c pdjson
     
     cd pdjson

@@ -23,6 +23,7 @@ Built-in container types:
 
 - [tuple types](tuple_types.md)
 - [option type](option_type.md)
+- [result type](result_type.md)
 - [list type](list_type.md)
 
 User-defined types:

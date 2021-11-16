@@ -47,6 +47,21 @@ let intFlavorToOrdinary flavor =
 let intFlavorEqual l r =
   intFlavorToOrdinary l = intFlavorToOrdinary r
 
+/// https://docs.microsoft.com/en-us/dotnet/fsharp/language-reference/literals
+let intFlavorOfSuffix (s: string) : IntFlavor option =
+  match s with
+  | "y" -> Some(IntFlavor(Signed, I8))
+  | "s" -> Some(IntFlavor(Signed, I16))
+  | "L" -> Some(IntFlavor(Signed, I64))
+  | "n" -> Some(IntFlavor(Signed, IPtr))
+  | "uy" -> Some(IntFlavor(Unsigned, I8))
+  | "us" -> Some(IntFlavor(Unsigned, I16))
+  | "u"
+  | "ul" -> Some(IntFlavor(Unsigned, I32))
+  | "UL" -> Some(IntFlavor(Unsigned, I64))
+  | "un" -> Some(IntFlavor(Unsigned, IPtr))
+  | _ -> None
+
 let fsharpIntegerTyName flavor =
   let (IntFlavor (signedness, precision)) = flavor
 

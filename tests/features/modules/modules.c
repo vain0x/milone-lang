@@ -2,9 +2,9 @@
 
 struct Val_;
 
-int f_(int);
+int modules_sub_IntIntFun1_f(int );
 
-int milone_main();
+int milone_main(void);
 
 enum Val_Discriminant {
     Int_,
@@ -19,12 +19,13 @@ struct Val_ {
     };
 };
 
-int milone_main() {
+int milone_main(void) {
+    int x_;
     int match_;
     struct Val_ variant_ = (struct Val_){.discriminant = Int_, .Int_ = 0};
     if ((variant_.discriminant != Int_)) goto next_2;
-    int x_1 = variant_.Int_;
-    match_ = x_1;
+    x_ = variant_.Int_;
+    match_ = x_;
     goto end_match_1;
 next_2:;
     if ((variant_.discriminant != Str_)) goto next_3;
@@ -34,7 +35,7 @@ next_3:;
     exit(1);
 end_match_1:;
     int n_ = match_;
-    int call_ = f_(n_);
+    int call_ = modules_sub_IntIntFun1_f(n_);
     int m_ = call_;
     return m_;
 }
