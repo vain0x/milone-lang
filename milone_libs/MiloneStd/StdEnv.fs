@@ -1,6 +1,8 @@
 /// Functions for execution environment.
 module rec MiloneStd.StdEnv
 
+open MiloneStd.StdEnvBase
+
 /// Gets a list of command line arguments.
 let commandLineArgs () =
   let count = __argCount ()
