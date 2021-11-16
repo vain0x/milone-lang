@@ -347,6 +347,7 @@ let private tyToUnionDef (ty: Ty, ctx: MtCtx) : (UnionDef * MtCtx) option =
   match ty with
   | Ty (UnionTk polyTySerial, ((_ :: _) as tyArgs)) ->
     let tyArgs, ctx = (tyArgs, ctx) |> stMap mtTy
+    let _, ctx = (ty, ctx) |> mtTy
 
     match
       ctx.Map
