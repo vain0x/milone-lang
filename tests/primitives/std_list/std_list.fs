@@ -19,6 +19,15 @@ let private eq (expected: int list) actual : bool =
 
 // ===============================================
 
+let testTakeWhile (gen: int -> int list) =
+  assert (gen 3
+          |> List.takeWhile (fun _ -> true)
+          |> eq [ 0; 1; 2 ])
+
+  assert (gen 6
+          |> List.takeWhile (fun n -> n % 3 <> 2)
+          |> eq [ 0; 1 ])
+
 let testSkipWhile (gen: int -> int list) =
   assert (gen 5 |> List.skipWhile (fun _ -> true) |> eq [])
 

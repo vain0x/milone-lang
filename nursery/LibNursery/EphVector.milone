@@ -1,0 +1,50 @@
+module rec LibNursery.EphVector
+
+// WIP
+
+open LibNursery.EphArray
+open LibNursery.EphSerial
+open LibNursery.Runtime
+
+// array (ptr, capacity, serial), len
+type EphVector<'T> = EphArray<'T> * int
+
+module EphVector =
+  /// Creates an empty vector.
+  // should not allocate
+  let empty (serial: EphSerial) : EphVector<'T> * EphSerial =
+    let array, serial = EphArray.empty serial
+    (array, 0) serial
+
+  /// Creates an empty vector with specified capacity.
+  let alloc (capacity: int) (serial: EphSerial) : EphVector<'T> * EphSerial =
+    let array, serial = EphArray.Unsafe.zeroCreate capacity serial
+    (array, 0), serial
+
+  let refresh (vector: EphVector<'T>) : EphVector<'T> =
+    let array, len = vector
+    EphArray.refresh array, len
+
+//  let private resize (newCapacity: int) (vector: EphVector<'T>) : EphVector<'T> =
+//    let oldArray, len = refresh vector
+//    assert (len < 1100100100)
+//
+//    let oldCapacity = EphArray.length oldArray
+//    let newArray = EphArray.Unsafe.zeroCreate capacity serial
+//
+//    let copy = min oldCapacity newCapacity
+//    memcpy dest oldArray (min oldCapacity newCapacity * size)
+//
+//    len * 2
+
+//  let add (item: 'T) (vector: EphVector<'T>) : EphVector<'T> =
+//    let array, len = refresh vector
+//    assert (EphArray.alive array)
+//
+//    let array, len = todo ()
+//
+//    if EphArray.length array < len then
+//      let array = EphArray.setItem item len array
+//      array, len + 1
+//    else
+//      let vector = grow vector

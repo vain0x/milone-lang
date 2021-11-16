@@ -1,0 +1,8 @@
+module rec LibNurseryTests.EphVectorTests
+
+open LibNursery.EphArray
+open LibNursery.EphSerial
+open LibNursery.EphVector
+open LibNursery.Runtime
+
+let testEphVectorModule () = ()
