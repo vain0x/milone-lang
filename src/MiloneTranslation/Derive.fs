@@ -411,14 +411,21 @@ let private deriveOnExpr (hirCtx: HirCtx) (ctx: DCtx) expr : DCtx =
 
   // l = r := match l, r with | T1 l, T1 r -> l = r | ... | _ -> false
   let deriveEqualForUnion ty (ctx: DCtx) : DCtx =
-    let tySerial =
+    let tySerial, tyArgs =
       match ty with
-      | Ty (UnionTk tySerial, _) -> tySerial
+      | Ty (UnionTk tySerial, tyArgs) -> tySerial, tyArgs
       | _ -> unreachable ()
 
-    let ident, variantSerials, loc =
+    let ident, tyVars, variantSerials, loc =
       match findTy tySerial with
-      | UnionTyDef (ident, _, variantSerials, loc) -> ident, variantSerials, loc
+      | UnionTyDef (ident, tyVars, variantSerials, loc) -> ident, tyVars, variantSerials, loc
+      | _ -> unreachable ()
+
+    // #tyAssign
+    let tyAssign =
+      match listTryZip tyVars tyArgs with
+      | [], [], [] -> id
+      | assignment, [], [] -> tySubst (fun tySerial -> assocTryFind compare tySerial assignment)
       | _ -> unreachable ()
 
     let trueExpr = hxTrue loc
@@ -452,7 +459,7 @@ let private deriveOnExpr (hirCtx: HirCtx) (ctx: DCtx) expr : DCtx =
                (pat, trueExpr, trueExpr), ctx
              else
                // | T l, T r -> l = r
-               let payloadTy = variantDef.PayloadTy
+               let payloadTy = tyAssign variantDef.PayloadTy
                let lv, ctx = addVar "l" payloadTy loc ctx
                let rv, ctx = addVar "r" payloadTy loc ctx
 
@@ -522,7 +529,7 @@ let private deriveOnExpr (hirCtx: HirCtx) (ctx: DCtx) expr : DCtx =
 
     | OptionTk _, _ -> deriveEqualForOption ty ctx
     | ListTk _, _ -> deriveEqualForList ty ctx
-    | UnionTk _, [] -> deriveEqualForUnion ty ctx
+    | UnionTk _, _ -> deriveEqualForUnion ty ctx
 
     | _ -> ctx
 

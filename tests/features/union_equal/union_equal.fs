@@ -1,5 +1,7 @@
 module rec union_equal.Program
 
+open MiloneStd.Equal
+
 // No payload.
 type private MyBool =
   | MyTrue
@@ -51,8 +53,19 @@ let private testMyResult () =
   assert (hello <> ok2)
   assert (hello <> MyErr "hello")
 
+// Generic and recursive one.
+type private MyNode<'T> = MyNode of 'T * MyNode<'T> list
+
+let private testMyNode () =
+  let v =
+    MyNode(5, [ MyNode(2, []); MyNode(3, []) ])
+
+  assert (v = v)
+  assert (v <> MyNode(5, []))
+
 let main _ =
   testMyBool ()
   testMyInt ()
   testMyResult ()
+  testMyNode ()
   0

@@ -701,8 +701,10 @@ let private abTy ctx ty =
     | Some ty -> ty
     | None -> ty
 
-  | Ty (UnionTk _, tyArgs) ->
-    let tyArgs = tyArgs |> List.map (abTy ctx)
+  | Ty (UnionTk tySerial, tyArgs) ->
+    let ty =
+      let tyArgs = tyArgs |> List.map (abTy ctx)
+      Ty(UnionTk tySerial, tyArgs)
 
     match unwrapNewtypeUnionTy ctx ty tyArgs with
     | Some ty -> ty
