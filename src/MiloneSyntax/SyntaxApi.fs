@@ -4,6 +4,7 @@
 module rec MiloneSyntax.SyntaxApi
 
 open MiloneShared.SharedTypes
+open MiloneShared.UtilParallel
 open MiloneShared.Util
 open MiloneSyntax.Syntax
 open MiloneStd.StdMap
