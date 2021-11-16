@@ -439,36 +439,47 @@ let private doResolveTraitBound (ctx: TyCtx) theTrait loc : TyCtx =
                  ok && ok1, memo)
              (true, memo)
 
+      let allowRec memo action =
+        if memo |> TSet.contains ty then
+          true, memo
+        else
+          // Put memo to prevent recursion. Suppose `ty` is okay here.
+          let memo = memo |> TSet.add ty
+
+          // If not ok, `ty` and other tys (that are newly added and depend on `ty`)
+          // should be removed from memo. But no need to do here because
+          // (1) memo is no longer used if not ok and (2) memo is discarded later.
+          action memo
+
       match tk, tyArgs with
-      | _ when isBasic ty || memo |> TSet.contains ty -> true, memo
+      | _ when isBasic ty -> true, memo
 
       | TupleTk, [] -> true, memo
 
-      | TupleTk, _ ->
-        let memo = memo |> TSet.add ty
-        onTys memo tyArgs
-
+      // Don't memoize structural types
+      // because it doesn't cause infinite recursion
+      // and unfortunately memo is discarded.
+      | TupleTk, _ -> onTys memo tyArgs
       | OptionTk, [ itemTy ] -> go memo itemTy
       | ListTk, [ itemTy ] -> go memo itemTy
 
       | UnionTk (tySerial, _), [] ->
-        let memo = memo |> TSet.add ty
+        allowRec memo (fun memo ->
+          match ctx.Tys |> mapFind tySerial with
+          | UnionTyDef (_, [], variants, _) ->
+            let payloadTys =
+              variants
+              |> List.choose (fun variantSerial ->
+                let variantDef = ctx.Variants |> mapFind variantSerial
 
-        match ctx.Tys |> mapFind tySerial with
-        | UnionTyDef (_, [], variants, _) ->
-          let payloadTys =
-            variants
-            |> List.choose (fun variantSerial ->
-              let variantDef = ctx.Variants |> mapFind variantSerial
+                if variantDef.HasPayload then
+                  Some variantDef.PayloadTy
+                else
+                  None)
 
-              if variantDef.HasPayload then
-                Some variantDef.PayloadTy
-              else
-                None)
+            onTys memo payloadTys
 
-          onTys memo payloadTys
-
-        | _ -> false, memo
+          | _ -> false, memo)
 
       | _ -> false, memo
 
