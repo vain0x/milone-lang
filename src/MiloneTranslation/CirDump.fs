@@ -10,6 +10,7 @@ open MiloneTranslation.Cir
 
 module C = MiloneStd.StdChar
 module S = MiloneStd.StdString
+module SB = MiloneStd.StdStringBase
 
 let private eol = "\n"
 
@@ -237,7 +238,7 @@ let private cpStrObjLit (value: string) acc =
   |> cons "(struct String){.str = "
   |> cpStrRawLit value
   |> cons ", .len = "
-  |> cons (string (__stringLengthInUtf8Bytes value))
+  |> cons (string (SB.__stringLengthInUtf8Bytes value))
   |> cons "}"
 
 let private cpStructLit fields ty acc =
@@ -312,7 +313,7 @@ let private cpExpr expr acc : string list =
 
   | CDotExpr (CStrObjExpr value, "len") ->
     acc
-    |> cons (string (__stringLengthInUtf8Bytes value))
+    |> cons (string (SB.__stringLengthInUtf8Bytes value))
 
   | CVarExpr name -> acc |> cons name
 

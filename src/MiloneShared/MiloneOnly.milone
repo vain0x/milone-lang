@@ -5,8 +5,6 @@ module rec MiloneShared.MiloneOnly
 
 module E = MiloneStd.StdError
 
-let __stringLengthInUtf8Bytes (s: string) = s.Length
-
 let __dump value = E.__dump value
 let __trace msg = E.__trace msg
 let __context _ action = E.__context () action

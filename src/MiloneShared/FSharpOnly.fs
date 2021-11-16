@@ -6,9 +6,6 @@ module E = MiloneStd.StdError
 
 let __inRegion (f: unit -> int) : int = f ()
 
-let __stringLengthInUtf8Bytes (s: string) : int =
-  System.Text.Encoding.UTF8.GetByteCount(s)
-
 let __dump value = E.__dump value
 let __trace msg = E.__trace msg
 let __context info action = E.__context info action
