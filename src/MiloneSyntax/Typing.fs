@@ -428,15 +428,8 @@ let private doResolveTraitBound (ctx: TyCtx) theTrait loc : TyCtx =
     let rec go memo ty =
       let (Ty (tk, tyArgs)) = ty
 
-      match tk, tyArgs with
-      | _ when isBasic ty || memo |> TSet.contains ty -> true, memo
-
-      | TupleTk, [] -> true, memo
-
-      | TupleTk, _ ->
-        let memo = memo |> TSet.add ty
-
-        tyArgs
+      let onTys memo tys =
+        tys
         |> List.fold
              (fun (ok, memo) tyArg ->
                if not ok then
@@ -446,6 +439,15 @@ let private doResolveTraitBound (ctx: TyCtx) theTrait loc : TyCtx =
                  ok && ok1, memo)
              (true, memo)
 
+      match tk, tyArgs with
+      | _ when isBasic ty || memo |> TSet.contains ty -> true, memo
+
+      | TupleTk, [] -> true, memo
+
+      | TupleTk, _ ->
+        let memo = memo |> TSet.add ty
+        onTys memo tyArgs
+
       | OptionTk, [ itemTy ] -> go memo itemTy
       | ListTk, [ itemTy ] -> go memo itemTy
 
@@ -454,17 +456,18 @@ let private doResolveTraitBound (ctx: TyCtx) theTrait loc : TyCtx =
 
         match ctx.Tys |> mapFind tySerial with
         | UnionTyDef (_, [], variants, _) ->
-          variants
-          |> List.fold
-               (fun (ok, memo) variantSerial ->
-                 let variantDef = ctx.Variants |> mapFind variantSerial
+          let payloadTys =
+            variants
+            |> List.choose (fun variantSerial ->
+              let variantDef = ctx.Variants |> mapFind variantSerial
 
-                 if not ok || not variantDef.HasPayload then
-                   ok, memo
-                 else
-                   let ok1, memo = go memo variantDef.PayloadTy
-                   ok && ok1, memo)
-               (true, memo)
+              if variantDef.HasPayload then
+                Some variantDef.PayloadTy
+              else
+                None)
+
+          onTys memo payloadTys
+
         | _ -> false, memo
 
       | _ -> false, memo
