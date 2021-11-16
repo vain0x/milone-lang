@@ -48,7 +48,6 @@ type Tk =
   | TupleTk
 
   /// Ty args must be `[t]`.
-  | OptionTk
   | ListTk
 
   // FFI types.
@@ -126,11 +125,6 @@ type HPatKind =
   /// `p1 :: p2`.
   | HConsPN
 
-  | HNonePN
-
-  /// `Some p1`.
-  | HSomeAppPN
-
   /// `Variant p1`.
   | HVariantAppPN of variantApp: VariantSerial
 
@@ -200,10 +194,6 @@ type HPrim =
 
   // string:
   | StrLength
-
-  // option:
-  | OptionNone
-  | OptionSome
 
   // list:
   | Nil
@@ -370,8 +360,6 @@ let tyStr = Ty(StrTk, [])
 let tyObj = Ty(ObjTk, [])
 
 let tyTuple tys = Ty(TupleTk, tys)
-
-let tyOption ty = Ty(OptionTk, [ ty ])
 
 let tyList ty = Ty(ListTk, [ ty ])
 
@@ -547,8 +535,6 @@ let patIsClearlyExhaustive isNewtypeVariant pat =
 
       | HNilPN, _
       | HConsPN, _
-      | HNonePN, _
-      | HSomeAppPN, _
       | HVariantAppPN _, _ -> false
 
       | HTuplePN, _
@@ -692,7 +678,6 @@ let private tkEncode tk : int =
   | ObjTk -> just 6
   | FunTk -> just 7
   | TupleTk -> just 8
-  | OptionTk -> just 9
   | ListTk -> just 10
 
   | VoidTk -> just 11
@@ -726,7 +711,6 @@ let tkDisplay getTyName tk =
   | ObjTk -> "obj"
   | FunTk -> "fun"
   | TupleTk -> "tuple"
-  | OptionTk -> "option"
   | ListTk -> "list"
   | VoidTk -> "void"
   | NativePtrTk IsMut -> "nativeptr"
@@ -880,7 +864,6 @@ let tyMangle (ty: Ty, memo: TreeMap<Ty, string>) : string * TreeMap<Ty, string> 
       | TupleTk when List.isEmpty tyArgs -> "Unit", ctx
       | TupleTk -> variadicGeneric "Tuple"
 
-      | OptionTk -> fixedGeneric "Option"
       | ListTk -> fixedGeneric "List"
 
       | VoidTk -> "Void", ctx

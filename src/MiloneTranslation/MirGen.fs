@@ -13,11 +13,6 @@ open MiloneStd.StdSet
 open MiloneTranslation.Hir
 open MiloneTranslation.Mir
 
-let private unwrapOptionTy ty =
-  match ty with
-  | Ty (OptionTk, [ it ]) -> it
-  | _ -> unreachable ()
-
 let private unwrapListTy ty =
   match ty with
   | Ty (ListTk, [ it ]) -> it
@@ -455,9 +450,6 @@ let private mirifyPat ctx (endLabel: string) (pat: HPat) (expr: MExpr) : MirCtx 
 
     | HAbortPN, _ -> mirifyPatAbort ctx loc
 
-    | HNonePN, _
-    | HSomeAppPN, _ -> unreachable () // Resolved in MonoTy.
-
   | HAsPat (pat, serial, loc) -> mirifyPatAs ctx endLabel pat serial expr loc
 
   | HOrPat _ ->
@@ -475,8 +467,6 @@ let private mirifyExprVariant (ctx: MirCtx) itself serial ty loc =
 let private mirifyExprPrim (ctx: MirCtx) prim ty loc =
   match prim with
   | HPrim.Nil -> MGenericValueExpr(MNilGv, ty, loc), ctx
-
-  | HPrim.OptionNone -> unreachable () // Resolved in MonoTy.
   | _ -> unreachable () // Primitives must appear as callee.
 
 let private doEmitIfStmt ctx cond thenHint body altHint alt targetTy loc =
@@ -1354,9 +1344,7 @@ let private mirifyCallPrimExpr ctx itself prim args ty loc =
   | HPrim.PtrRead, _ -> regularPrim "read" MPtrReadPrim
   | HPrim.PtrWrite, _ -> regularAction MPtrWriteAction
 
-  | HPrim.Nil, _
-  | HPrim.OptionNone, _ -> fail () // Can't be called.
-  | HPrim.OptionSome, _ -> unreachable () // Resolved in MonoTy.
+  | HPrim.Nil, _ -> fail () // Can't be called.
 
 let private mirifyExprInfCallClosure ctx callee args resultTy loc =
   let callee, ctx = mirifyExpr ctx callee

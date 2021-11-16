@@ -119,10 +119,8 @@ let private hxCallTo calleeKind callee args resultTy loc =
 
 let private primToArity ty prim =
   match prim with
-  | HPrim.Nil
-  | HPrim.OptionNone -> 0
+  | HPrim.Nil -> 0
 
-  | HPrim.OptionSome
   | HPrim.Not
   | HPrim.Exit
   | HPrim.Assert

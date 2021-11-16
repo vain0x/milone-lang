@@ -1,5 +1,9 @@
 module rec MiloneCore.Option
 
+type option<'T> =
+  | None
+  | Some of 'T
+
 let isNone opt =
   match opt with
   | None -> true

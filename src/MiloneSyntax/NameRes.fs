@@ -46,7 +46,6 @@ let private tyPrimOfName name tys =
   | "string", [] -> Some tyStr
   | "obj", [] -> Some tyObj
 
-  | "option", [ itemTy ] -> Some(tyOption itemTy)
   | "list", [ itemTy ] -> Some(tyList itemTy)
 
   | "voidptr", [] -> Ty(NativePtrTk IsMut, [ Ty(VoidTk, []) ]) |> Some
@@ -1182,15 +1181,10 @@ let private nameResVarPat vis serial ty loc ctx =
     | Some (VariantSymbol variantSerial) -> TVariantPat(variantSerial, ty, loc), ctx
 
     | _ ->
-      match name with
-      | "None" -> TNodePat(TNonePN, [], ty, loc), ctx
-      | "Some" -> TNodePat(TSomePN, [], ty, loc), ctx
+      let varSerial, ctx =
+        doResolveVarInPat serial name ty loc ctx
 
-      | _ ->
-        let varSerial, ctx =
-          doResolveVarInPat serial name ty loc ctx
-
-        TVarPat(vis, varSerial, ty, loc), ctx
+      TVarPat(vis, varSerial, ty, loc), ctx
 
 let private nameResNavPat pat ctx =
   /// Resolves a pattern as scope.
@@ -1236,12 +1230,11 @@ let private nameResAppPat l r loc ctx =
   let r, ctx = (r, ctx) |> nameResPat
 
   match l with
-  | TNodePat (TSomePN, [], _, _) -> TNodePat(TSomeAppPN, [ r ], noTy, loc), ctx
   | TVariantPat (variantSerial, _, _) -> TNodePat(TVariantAppPN variantSerial, [ r ], noTy, loc), ctx
   | _ ->
     let ctx =
       ctx
-      |> addLog (OtherNameResLog "Pattern can apply to Some or a variant that takes a payload.") loc
+      |> addLog (OtherNameResLog "Pattern can apply to a variant that takes a payload.") loc
 
     tpAbort noTy loc, ctx
 
@@ -1272,8 +1265,6 @@ let private nameResPat (pat: TPat, ctx: ScopeCtx) =
 
     match kind, argPats with
     | TNilPN, _
-    | TNonePN, _
-    | TSomePN, _
     | TAbortPN, _ ->
       assert (List.isEmpty argPats)
       pat, ctx
@@ -1282,7 +1273,6 @@ let private nameResPat (pat: TPat, ctx: ScopeCtx) =
     | TAppPN, _ -> fail ()
 
     | TConsPN, _
-    | TSomeAppPN, _
     | TVariantAppPN _, _
     | TTuplePN, _ ->
       let argPats, ctx = (argPats, ctx) |> stMap nameResPat

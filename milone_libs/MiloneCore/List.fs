@@ -7,6 +7,8 @@
 /// Partial functions, which could throw exceptions, are unavailable intentionally.
 module rec MiloneCore.List
 
+open MiloneCore.Option
+
 // Make sure every function is tail-recursive.
 // Inner functions have verbose name for readability of output code.
 

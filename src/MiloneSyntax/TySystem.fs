@@ -40,7 +40,6 @@ let private tkEncode tk : int =
   | ObjTk -> just 6
   | FunTk -> just 7
   | TupleTk -> just 8
-  | OptionTk -> just 9
   | ListTk -> just 10
 
   | VoidTk -> just 11
@@ -84,7 +83,6 @@ let tkDisplay getTyName tk =
   | ObjTk -> "obj"
   | FunTk -> "fun"
   | TupleTk -> "tuple"
-  | OptionTk -> "option"
   | ListTk -> "list"
   | VoidTk -> "void"
   | NativePtrTk IsMut -> "nativeptr"
@@ -262,8 +260,6 @@ let tyDisplay getTyName ty =
       + (itemTys |> List.map (go 20) |> S.concat " * ")
       + ")"
 
-    | Ty (OptionTk, [ itemTy ]) -> paren 30 (go 30 itemTy + " option")
-
     | Ty (ListTk, [ itemTy ]) -> paren 30 (go 30 itemTy + " list")
 
     | Ty (MetaTk (tySerial, loc), _) ->
@@ -320,7 +316,6 @@ let tyMangle (ty: Ty, memo: TreeMap<Ty, string>) : string * TreeMap<Ty, string> 
       | TupleTk when List.isEmpty tyArgs -> "Unit", ctx
       | TupleTk -> variadicGeneric "Tuple"
 
-      | OptionTk -> fixedGeneric "Option"
       | ListTk -> fixedGeneric "List"
 
       | VoidTk -> "Void", ctx

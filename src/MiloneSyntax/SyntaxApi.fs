@@ -77,6 +77,8 @@ let getModuleKind projectName _moduleName =
 
 let private preludeFuns = [ "ignore"; "id"; "fst"; "snd" ]
 
+let private optionIdents = [ "option"; "None"; "Some" ]
+
 let private knownModules =
   [ "List"
     "Option"
@@ -87,6 +89,9 @@ let private isPreludeFun funName =
   preludeFuns
   |> List.exists (fun name -> name = funName)
 
+let private isOptionIdent ident =
+  optionIdents |> List.exists (fun x -> x = ident)
+
 let private isKnownModule moduleName =
   knownModules
   |> List.exists (fun name -> name = moduleName)
@@ -95,17 +100,22 @@ let private isKnownModule moduleName =
 /// whose name appears in the token stream.
 let private resolveMiloneCoreDeps kind tokens ast =
   let analyze tokens =
-    let rec go preludeOpt acc tokens =
+    let rec go preludeOpt optionOpt acc tokens =
       match tokens with
-      | [] -> preludeOpt, acc
+      | [] -> preludeOpt, optionOpt, acc
 
-      | (IdentToken name, pos) :: tokens when Option.isNone preludeOpt && isPreludeFun name -> go (Some pos) acc tokens
+      | (IdentToken name, pos) :: tokens when Option.isNone preludeOpt && isPreludeFun name ->
+        go (Some pos) optionOpt acc tokens
 
-      | (IdentToken moduleName, pos) :: (DotToken, _) :: tokens -> go preludeOpt ((moduleName, pos) :: acc) tokens
+      | (IdentToken name, pos) :: tokens when Option.isNone optionOpt && isOptionIdent name ->
+        go preludeOpt (Some pos) acc tokens
 
-      | _ :: tokens -> go preludeOpt acc tokens
+      | (IdentToken moduleName, pos) :: (DotToken, _) :: tokens ->
+        go preludeOpt optionOpt ((moduleName, pos) :: acc) tokens
 
-    let preludeOpt, moduleNames = go None [] tokens
+      | _ :: tokens -> go preludeOpt optionOpt acc tokens
+
+    let preludeOpt, optionOpt, moduleNames = go None None [] tokens
 
     let add acc (moduleName, pos) =
       if (acc |> TMap.containsKey moduleName |> not)
@@ -117,10 +127,10 @@ let private resolveMiloneCoreDeps kind tokens ast =
     let moduleMap =
       moduleNames |> List.fold add (TMap.empty compare)
 
-    preludeOpt, moduleMap
+    preludeOpt, optionOpt, moduleMap
 
   let insertOpenDecls decls =
-    let preludeOpt, moduleMap = analyze tokens
+    let preludeOpt, optionOpt, moduleMap = analyze tokens
 
     let decls =
       moduleMap
@@ -135,11 +145,22 @@ let private resolveMiloneCoreDeps kind tokens ast =
              :: decls)
            decls
 
-    match preludeOpt with
+    let decls =
+      match preludeOpt with
+      | Some pos ->
+        AOpenDecl(
+          [ Name("MiloneCore", pos)
+            Name("Prelude", pos) ],
+          pos
+        )
+        :: decls
+      | None -> decls
+
+    match optionOpt with
     | Some pos ->
       AOpenDecl(
         [ Name("MiloneCore", pos)
-          Name("Prelude", pos) ],
+          Name("Option", pos) ],
         pos
       )
       :: decls

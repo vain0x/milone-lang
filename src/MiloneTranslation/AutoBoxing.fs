@@ -209,7 +209,6 @@ let private trdTy isDirect (ctx: TrdCtx) ty : TrdCtx =
 
     | ListTk -> tyArgs |> List.fold (trdTy IsIndirect) ctx
 
-    | OptionTk
     | FunTk
     | TupleTk
     | NativePtrTk _
@@ -402,14 +401,6 @@ let private tsmTy (ctx: TsmCtx) ty =
 
     | StrTk
     | FunTk -> 16, ctx
-
-    | OptionTk ->
-      match tyArgs with
-      | [ itemTy ] ->
-        let size, ctx = tsmTy ctx itemTy
-        1 + size, ctx
-
-      | _ -> unreachable ()
 
     | TupleTk ->
       let size, ctx =

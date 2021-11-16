@@ -71,7 +71,6 @@ type Tk =
   | TupleTk
 
   /// Ty args must be `[t]`.
-  | OptionTk
   | ListTk
 
   // FFI types.
@@ -254,16 +253,8 @@ type TPatKind =
   /// `p1 :: p2`.
   | TConsPN
 
-  | TNonePN
-
-  /// `Some`.
-  | TSomePN
-
   /// `p1 p2`.
   | TAppPN
-
-  /// `Some p1`.
-  | TSomeAppPN
 
   /// `Variant p1`.
   | TVariantAppPN of variantApp: VariantSerial
@@ -330,10 +321,6 @@ type TPrim =
 
   // string:
   | StrLength
-
-  // option:
-  | OptionNone
-  | OptionSome
 
   // list:
   | Nil
@@ -525,8 +512,6 @@ let tyObj = Ty(ObjTk, [])
 
 let tyTuple tys = Ty(TupleTk, tys)
 
-let tyOption ty = Ty(OptionTk, [ ty ])
-
 let tyList ty = Ty(ListTk, [ ty ])
 
 let tyFun sourceTy targetTy = Ty(FunTk, [ sourceTy; targetTy ])
@@ -646,10 +631,6 @@ let primFromIdent ident =
 
   | "string" -> TPrim.String |> Some
 
-  | "None" -> TPrim.OptionNone |> Some
-
-  | "Some" -> TPrim.OptionSome |> Some
-
   | "__inRegion" -> TPrim.InRegion |> Some
 
   | "__nativeFun" -> TPrim.NativeFun |> Some
@@ -711,15 +692,6 @@ let primToTySpec prim =
     let itemTy = meta 1
     let listTy = tyList itemTy
     poly (tyFun itemTy (tyFun listTy listTy)) []
-
-  | TPrim.OptionNone ->
-    let itemTy = meta 1
-    poly (tyOption itemTy) []
-
-  | TPrim.OptionSome ->
-    let itemTy = meta 1
-    let listTy = tyOption itemTy
-    poly (tyFun itemTy listTy) []
 
   | TPrim.Not -> mono (tyFun tyBool tyBool)
 
@@ -874,9 +846,6 @@ let patIsClearlyExhaustive isNewtypeVariant pat =
 
       | TNilPN, _
       | TConsPN, _
-      | TNonePN, _
-      | TSomePN, _
-      | TSomeAppPN, _
       | TAppPN, _
       | TVariantAppPN _, _
       | TNavPN _, _ -> false

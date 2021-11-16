@@ -28,7 +28,6 @@ let private lowerTk (tk: Tir.Tk) : Hir.Tk =
 
   | Tir.FunTk -> Hir.FunTk
   | Tir.TupleTk -> Hir.TupleTk
-  | Tir.OptionTk -> Hir.OptionTk
   | Tir.ListTk -> Hir.ListTk
 
   | Tir.VoidTk -> Hir.VoidTk
@@ -120,8 +119,6 @@ let private lowerPrim (prim: Tir.TPrim) : Hir.HPrim =
   | Tir.TPrim.Box -> Hir.HPrim.Box
   | Tir.TPrim.Unbox -> Hir.HPrim.Unbox
   | Tir.TPrim.StrLength -> Hir.HPrim.StrLength
-  | Tir.TPrim.OptionNone -> Hir.HPrim.OptionNone
-  | Tir.TPrim.OptionSome -> Hir.HPrim.OptionSome
   | Tir.TPrim.Nil -> Hir.HPrim.Nil
   | Tir.TPrim.Cons -> Hir.HPrim.Cons
   | Tir.TPrim.Exit -> Hir.HPrim.Exit
@@ -142,8 +139,6 @@ let private lowerPatKind (kind: Tir.TPatKind) : Hir.HPatKind =
   match kind with
   | Tir.TNilPN -> Hir.HNilPN
   | Tir.TConsPN -> Hir.HConsPN
-  | Tir.TNonePN -> Hir.HNonePN
-  | Tir.TSomeAppPN -> Hir.HSomeAppPN
   | Tir.TVariantAppPN serial -> Hir.HVariantAppPN(lowerVariantSerial serial)
   | Tir.TTuplePN -> Hir.HTuplePN
   | Tir.TAbortPN -> Hir.HAbortPN
@@ -151,7 +146,6 @@ let private lowerPatKind (kind: Tir.TPatKind) : Hir.HPatKind =
   | Tir.TAppPN
   | Tir.TNavPN _ -> unreachable () // Resolved in NameRes.
 
-  | Tir.TSomePN
   | Tir.TAscribePN -> unreachable () // Resolved in Typing.
 
 let private lowerExprKind (kind: Tir.TExprKind) : Hir.HExprKind =

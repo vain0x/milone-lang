@@ -263,93 +263,6 @@ let private deriveOnExpr (hirCtx: HirCtx) (ctx: DCtx) expr : DCtx =
     ctx
 
   // l = r :=
-  //    match l, r with
-  //    | None, None -> true
-  //    | Some l, Some r -> l = r
-  //    | _ -> false
-  let deriveEqualForOption ty (ctx: DCtx) : DCtx =
-    let loc = Loc("MiloneDerive.OptionEqual", 0, 0)
-
-    let itemTy =
-      match ty with
-      | Ty (OptionTk, [ itemTy ]) -> itemTy
-      | _ -> unreachable ()
-
-    let funSerial, ctx =
-      FunSerial(ctx.Serial + 1), { ctx with Serial = ctx.Serial + 1 }
-
-    let funDef: FunDef =
-      { Name = "optionEqual"
-        Arity = 2
-        Ty = TyScheme([], tyFun ty (tyFun ty tyBool))
-        Abi = MiloneAbi
-        Linkage = InternalLinkage
-        Prefix = []
-        Loc = loc }
-
-    let lArg, ctx = addVar "l" ty loc ctx
-    let rArg, ctx = addVar "r" ty loc ctx
-
-    let trueExpr = hxTrue loc
-    let falseExpr = HLitExpr(BoolLit false, loc)
-
-    let noneArm, ctx =
-      // | None, None -> true
-      let nonePat = HNodePat(HNonePN, [], ty, loc)
-      let pat = hpTuple [ nonePat; nonePat ] loc
-      (pat, trueExpr, trueExpr), ctx
-
-    let someArm, ctx =
-      // | Some l, Some r -> l = r
-      let lItem, ctx = addVar "l" itemTy loc ctx
-      let rItem, ctx = addVar "r" itemTy loc ctx
-
-      let appPat v =
-        let varPat = hpVar v itemTy loc
-        HNodePat(HSomeAppPN, [ varPat ], ty, loc)
-
-      let pat =
-        hpTuple [ appPat lItem; appPat rItem ] loc
-
-      let body =
-        let equal =
-          HPrimExpr(HPrim.Equal, tyFun2 itemTy itemTy tyBool, loc)
-
-        let l = HVarExpr(lItem, itemTy, loc)
-        let r = HVarExpr(rItem, itemTy, loc)
-        hxApp2 equal l r
-
-      (pat, trueExpr, body), ctx
-
-    let lastArm =
-      // | _ -> false
-      HDiscardPat(ty, loc), trueExpr, falseExpr
-
-    let body =
-      let cond =
-        hxTuple
-          [ HVarExpr(lArg, ty, loc)
-            HVarExpr(rArg, ty, loc) ]
-          loc
-
-      let arms = [ noneArm; someArm; lastArm ]
-      HMatchExpr(cond, arms, tyBool, loc)
-
-    let letFunExpr =
-      let lPat = hpVar lArg ty loc
-      let rPat = hpVar rArg ty loc
-      HLetFunExpr(funSerial, [ lPat; rPat ], body, hxUnit loc, tyUnit, loc)
-
-    let ctx =
-      { ctx with
-          NewFuns = (funSerial, funDef) :: ctx.NewFuns
-          NewLetFuns = (ty, letFunExpr) :: ctx.NewLetFuns
-          WorkList = itemTy :: ctx.WorkList
-          EqualFunInstances = ctx.EqualFunInstances |> TMap.add ty funSerial }
-
-    ctx
-
-  // l = r :=
   //    MiloneStd.Equal.genericListEqual compare l r
   let deriveEqualForList ty (ctx: DCtx) : DCtx =
     let loc = Loc("MiloneDerive.ListEqual", 0, 0)
@@ -527,7 +440,6 @@ let private deriveOnExpr (hirCtx: HirCtx) (ctx: DCtx) expr : DCtx =
     | TupleTk _, [] -> ctx
     | TupleTk _, _ -> deriveEqualForTuple ty ctx
 
-    | OptionTk _, _ -> deriveEqualForOption ty ctx
     | ListTk _, _ -> deriveEqualForList ty ctx
     | UnionTk _, _ -> deriveEqualForUnion ty ctx
 

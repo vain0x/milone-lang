@@ -1,10 +1,10 @@
 #include "milone.h"
 
-struct IntOption_;
+struct Intoption1_;
 
-struct StringOption_;
+struct Stringoption1_;
 
-struct UnitOption_;
+struct Unitoption1_;
 
 void option_Program_basicSomeCase(void);
 
@@ -14,37 +14,37 @@ void option_Program_basicMatchCase(void);
 
 int milone_main(void);
 
-enum IntOption_Discriminant {
+enum Intoption1_Discriminant {
     None_,
     Some_,
 };
 
-struct IntOption_ {
-    enum IntOption_Discriminant discriminant;
+struct Intoption1_ {
+    enum Intoption1_Discriminant discriminant;
     union {
         int Some_;
     };
 };
 
-enum StringOption_Discriminant {
+enum Stringoption1_Discriminant {
     None_1,
     Some_1,
 };
 
-struct StringOption_ {
-    enum StringOption_Discriminant discriminant;
+struct Stringoption1_ {
+    enum Stringoption1_Discriminant discriminant;
     union {
         struct String Some_1;
     };
 };
 
-enum UnitOption_Discriminant {
+enum Unitoption1_Discriminant {
     None_2,
     Some_2,
 };
 
-struct UnitOption_ {
-    enum UnitOption_Discriminant discriminant;
+struct Unitoption1_ {
+    enum Unitoption1_Discriminant discriminant;
     union {
         char Some_2;
     };
@@ -52,7 +52,7 @@ struct UnitOption_ {
 
 void option_Program_basicSomeCase(void) {
     char match_;
-    struct IntOption_ variant_ = (struct IntOption_){.discriminant = Some_, .Some_ = 1};
+    struct Intoption1_ variant_ = (struct Intoption1_){.discriminant = Some_, .Some_ = 1};
     if ((variant_.discriminant != None_)) goto next_2;
     milone_assert(false, 6, 12);
     match_ = 0;
@@ -72,7 +72,7 @@ end_match_1:;
 }
 
 void option_Program_basicNoneCase(void) {
-    struct StringOption_ none_ = (struct StringOption_){.discriminant = None_1};
+    struct Stringoption1_ none_ = (struct Stringoption1_){.discriminant = None_1};
     char match_1;
     if ((none_.discriminant != Some_1)) goto next_6;
     if ((str_compare(none_.Some_1, (struct String){.str = "a", .len = 1}) != 0)) goto next_6;
@@ -94,7 +94,7 @@ end_match_5:;
 
 void option_Program_basicMatchCase(void) {
     char switch_;
-    struct UnitOption_ variant_1 = (struct UnitOption_){.discriminant = Some_2, .Some_2 = 0};
+    struct Unitoption1_ variant_1 = (struct Unitoption1_){.discriminant = Some_2, .Some_2 = 0};
     switch (variant_1.discriminant) {
         case None_2:
             goto clause_10;

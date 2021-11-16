@@ -22,18 +22,12 @@ let private tyAssign assignment ty =
   tySubst (fun tySerial -> assignment |> TMap.tryFind tySerial) ty
 
 [<RequireQualifiedAccess; NoEquality; NoComparison>]
-type private OptionDef =
-  { NoneSerial: VariantSerial
-    SomeSerial: VariantSerial }
-
-[<RequireQualifiedAccess; NoEquality; NoComparison>]
 type private UnionDef =
   { VariantMap: TreeMap<VariantSerial, VariantSerial> }
 
 [<NoEquality; NoComparison>]
 type private GeneratedTy =
   | TupleGT
-  | OptionGT of OptionDef
   | UnionGT of UnionDef
 
 let private tupleField (i: int) : string = "t" + string i
@@ -201,59 +195,6 @@ let private mtTy (ty: Ty, ctx: MtCtx) : M.MonoTy * MtCtx =
       let name, ctx = mangle (tk, polyTyArgs, ctx)
       addTupleDef name tyArgs ctx
 
-  | OptionTk, [ itemTy ] ->
-    match ctx.Map |> TMap.tryFind (tk, tyArgs) with
-    | Some (ty, _) -> ty, ctx
-
-    | None ->
-      let name, ctx = mangle (tk, polyTyArgs, ctx)
-
-      let tySerial = ctx.Serial + 1
-      let noneSerial = VariantSerial(ctx.Serial + 2)
-      let someSerial = VariantSerial(ctx.Serial + 3)
-      let unionTy = Ty(UnionTk tySerial, [])
-      let unionMt = M.UnionMt tySerial
-
-      let noneDef: M.VariantDef =
-        { Name = "None"
-          UnionTySerial = tySerial
-          IsNewtype = false
-          HasPayload = false
-          PayloadTy = M.UnitMt
-          Loc = noLoc }
-
-      let someDef: M.VariantDef =
-        { Name = "Some"
-          UnionTySerial = tySerial
-          IsNewtype = false
-          HasPayload = true
-          PayloadTy = itemTy
-          Loc = noLoc }
-
-      let unionTyDef =
-        M.UnionTyDef(name, [], [ noneSerial; someSerial ], noLoc)
-
-      let optionDef: OptionDef =
-        { NoneSerial = noneSerial
-          SomeSerial = someSerial }
-
-      let ctx =
-        { ctx with
-            Serial = ctx.Serial + 3
-            TyNames = ctx.TyNames |> TMap.add unionTy name
-            Map =
-              ctx.Map
-              |> TMap.add (tk, tyArgs) (unionMt, OptionGT optionDef)
-              |> TMap.add (UnionTk tySerial, []) (unionMt, OptionGT optionDef)
-            NewTys = (tySerial, unionTyDef) :: ctx.NewTys
-            NewVariants =
-              (someSerial, someDef)
-              :: (noneSerial, noneDef) :: ctx.NewVariants }
-
-      unionMt, ctx
-
-  | OptionTk, _ -> unreachable ()
-
   | FunTk, _ -> M.FunMt(tyArgs), ctx
 
   | ListTk, [ itemTy ] -> M.ListMt itemTy, ctx
@@ -335,14 +276,6 @@ let private mtTy (ty: Ty, ctx: MtCtx) : M.MonoTy * MtCtx =
 
   | MetaTk _, _ -> unreachable () // Resolved in Typing.
 
-let private tyToOptionDef (ty: Ty, ctx: MtCtx) =
-  let (Ty (_, tyArgs)) = ty
-  let tyArgs, ctx = (tyArgs, ctx) |> stMap mtTy
-
-  match ctx.Map |> TMap.tryFind (OptionTk, tyArgs) with
-  | Some (_, OptionGT it) -> it, ctx
-  | _ -> unreachable ()
-
 let private tyToUnionDef (ty: Ty, ctx: MtCtx) : (UnionDef * MtCtx) option =
   match ty with
   | Ty (UnionTk polyTySerial, ((_ :: _) as tyArgs)) ->
@@ -389,19 +322,6 @@ let private mtPat (pat, ctx) : M.HPat * MtCtx =
     | _ ->
       let ty, ctx = (ty, ctx) |> mtTy
       M.HVariantPat(variantSerial, ty, loc), ctx
-
-  | HNodePat (HNonePN, _, ty, loc) ->
-    let optionDef, ctx = tyToOptionDef (ty, ctx)
-
-    let ty, ctx = (ty, ctx) |> mtTy
-    M.HVariantPat(optionDef.NoneSerial, ty, loc), ctx
-
-  | HNodePat (HSomeAppPN, [ itemPat ], ty, loc) ->
-    let optionDef, ctx = tyToOptionDef (ty, ctx)
-
-    let itemPat, ctx = (itemPat, ctx) |> mtPat
-    let ty, ctx = (ty, ctx) |> mtTy
-    M.HNodePat(HVariantAppPN optionDef.SomeSerial, [ itemPat ], ty, loc), ctx
 
   | HNodePat (((HVariantAppPN variantSerial) as kind), ([ payloadPat ] as argPats), ty, loc) ->
     match asMonoVariant variantSerial ty ctx with
@@ -452,25 +372,8 @@ let private mtExpr (expr, ctx) : M.HExpr * MtCtx =
       M.HVariantExpr(variantSerial, ty, loc), ctx
 
   | HPrimExpr (prim, ty, loc) ->
-    let hTy = ty
     let ty, ctx = (ty, ctx) |> mtTy
-
-    let regular () = M.HPrimExpr(prim, ty, loc), ctx
-
-    match prim with
-    | HPrim.OptionNone ->
-      let optionDef, ctx = tyToOptionDef (hTy, ctx)
-      M.HVariantExpr(optionDef.NoneSerial, ty, loc), ctx
-
-    | HPrim.OptionSome ->
-      let optionDef, ctx =
-        match hTy with
-        | Ty (FunTk, [ _; ty ]) -> tyToOptionDef (ty, ctx)
-        | _ -> unreachable ()
-
-      M.HVariantExpr(optionDef.SomeSerial, ty, loc), ctx
-
-    | _ -> regular ()
+    M.HPrimExpr(prim, ty, loc), ctx
 
   | HMatchExpr (cond, arms, ty, loc) ->
     let cond, ctx = (cond, ctx) |> mtExpr

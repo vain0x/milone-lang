@@ -460,7 +460,6 @@ let private doResolveTraitBound (ctx: TyCtx) theTrait loc : TyCtx =
       // because it doesn't cause infinite recursion
       // and unfortunately memo is discarded.
       | TupleTk, _ -> onTys memo tyArgs
-      | OptionTk, [ itemTy ] -> go memo itemTy
       | ListTk, [ itemTy ] -> go memo itemTy
 
       | UnionTk (tySerial, _), _ ->
@@ -752,11 +751,6 @@ let private inferNilPat ctx pat loc =
   let ty = tyList itemTy
   TNodePat(TNilPN, [], ty, loc), ty, ctx
 
-let private inferNonePat ctx pat loc =
-  let itemTy, ctx = ctx |> freshMetaTyForPat pat
-  let ty = tyOption itemTy
-  TNodePat(TNonePN, [], ty, loc), ty, ctx
-
 let private inferSomePat ctx pat loc =
   let unknownTy, ctx = ctx |> freshMetaTyForPat pat
 
@@ -786,11 +780,6 @@ let private inferVariantPat (ctx: TyCtx) variantSerial loc =
       ctx
 
   TVariantPat(variantSerial, unionTy, loc), unionTy, ctx
-
-let private inferSomeAppPat ctx payloadPat loc =
-  let payloadPat, payloadTy, ctx = inferPat ctx payloadPat
-  let targetTy = tyOption payloadTy
-  TNodePat(TSomeAppPN, [ payloadPat ], targetTy, loc), targetTy, ctx
 
 let private inferVariantAppPat (ctx: TyCtx) variantSerial payloadPat loc =
   let expectedPayloadTy, unionTy, _, ctx =
@@ -867,14 +856,9 @@ let private inferPat ctx pat : TPat * Ty * TyCtx =
 
     match kind, argPats with
     | TNilPN, _ -> inferNilPat ctx pat loc
-    | TNonePN, _ -> inferNonePat ctx pat loc
-    | TSomePN, _ -> inferSomePat ctx pat loc
 
     | TConsPN, [ l; r ] -> inferConsPat ctx l r loc
     | TConsPN, _ -> fail ()
-
-    | TSomeAppPN, [ payloadPat ] -> inferSomeAppPat ctx payloadPat loc
-    | TSomeAppPN, _ -> fail ()
 
     | TVariantAppPN variantSerial, [ payloadPat ] -> inferVariantAppPat ctx variantSerial payloadPat loc
     | TVariantAppPN _, _ -> fail ()

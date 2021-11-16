@@ -543,7 +543,6 @@ let private cgTyIncomplete (ctx: CirCtx) (ty: Ty) : CTy * CirCtx =
   | UnionTk tySerial, _ -> genIncompleteUnionTyDecl ctx tySerial
   | RecordTk tySerial, _ -> genIncompleteRecordTyDecl ctx tySerial
 
-  | OptionTk, _ // OptionTk is resolved in MonoTy.
   | MetaTk _, _ -> unreachable () // Resolved in Typing.
 
 /// Converts a type to complete C type.
@@ -592,7 +591,6 @@ let private cgTyComplete (ctx: CirCtx) (ty: Ty) : CTy * CirCtx =
 
     | _ -> unreachable () // Record type undefined?
 
-  | OptionTk, _ // OptionTk is resolved in MonoTy.
   | MetaTk _, _ -> unreachable () // Resolved in Typing.
 
 // -----------------------------------------------

@@ -2,7 +2,7 @@
 
 struct IntGU1_;
 
-struct IntGU1Option_;
+struct IntGU1option1_;
 
 int milone_main(void);
 
@@ -17,21 +17,21 @@ struct IntGU1_ {
     };
 };
 
-enum IntGU1Option_Discriminant {
+enum IntGU1option1_Discriminant {
     None_,
     Some_,
 };
 
-struct IntGU1Option_ {
-    enum IntGU1Option_Discriminant discriminant;
+struct IntGU1option1_ {
+    enum IntGU1option1_Discriminant discriminant;
     union {
         struct IntGU1_ Some_;
     };
 };
 
 int milone_main(void) {
-    void const* box_ = milone_mem_alloc(1, sizeof(struct IntGU1Option_));
-    (*(((struct IntGU1Option_*)box_))) = (struct IntGU1Option_){.discriminant = None_};
+    void const* box_ = milone_mem_alloc(1, sizeof(struct IntGU1option1_));
+    (*(((struct IntGU1option1_*)box_))) = (struct IntGU1option1_){.discriminant = None_};
     struct IntGU1_ variant_ = (struct IntGU1_){.discriminant = GU_, .GU_ = box_};
     return 0;
 }

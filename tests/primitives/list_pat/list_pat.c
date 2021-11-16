@@ -1,67 +1,67 @@
 #include "milone.h"
 
-struct IntOption_;
+struct Intoption1_;
 
-struct IntOptionOption_;
+struct Intoption1option1_;
 
-struct IntOptionOptionOption_;
+struct Intoption1option1option1_;
 
-struct IntIntOptionOptionOption_Fun1;
-
-struct IntList;
+struct IntIntoption1option1option1_Fun1;
 
 struct IntList;
 
-struct IntOptionOptionOption_List;
+struct IntList;
 
-struct IntOptionOptionOption_List;
+struct Intoption1option1option1_List;
 
-struct IntOptionOptionOption_ list_pat_list_pat_main_IntIntOptionOptionOptionFun1_fun(int x_);
+struct Intoption1option1option1_List;
 
-struct IntOptionOptionOption_ list_pat_list_pat_eta2_main_fun(void const* env_, int arg_);
+struct Intoption1option1option1_ list_pat_list_pat_main_IntIntoption1option1option1Fun1_fun(int x_);
 
-struct IntOptionOptionOption_List const* MiloneCore_List_IntIntOptionOptionOptionFun1IntListIntOptionOptionOptionListFun2_map(struct IntIntOptionOptionOption_Fun1 , struct IntList const* );
+struct Intoption1option1option1_ list_pat_list_pat_eta2_main_fun(void const* env_, int arg_);
+
+struct Intoption1option1option1_List const* MiloneCore_List_IntIntoption1option1option1Fun1IntListIntoption1option1option1ListFun2_map(struct IntIntoption1option1option1_Fun1 , struct IntList const* );
 
 int milone_main(void);
 
-enum IntOption_Discriminant {
+enum Intoption1_Discriminant {
     None_,
     Some_,
 };
 
-struct IntOption_ {
-    enum IntOption_Discriminant discriminant;
+struct Intoption1_ {
+    enum Intoption1_Discriminant discriminant;
     union {
         int Some_;
     };
 };
 
-enum IntOptionOption_Discriminant {
+enum Intoption1option1_Discriminant {
     None_1,
     Some_1,
 };
 
-struct IntOptionOption_ {
-    enum IntOptionOption_Discriminant discriminant;
+struct Intoption1option1_ {
+    enum Intoption1option1_Discriminant discriminant;
     union {
-        struct IntOption_ Some_1;
+        struct Intoption1_ Some_1;
     };
 };
 
-enum IntOptionOptionOption_Discriminant {
+enum Intoption1option1option1_Discriminant {
     None_2,
     Some_2,
 };
 
-struct IntOptionOptionOption_ {
-    enum IntOptionOptionOption_Discriminant discriminant;
+struct Intoption1option1option1_ {
+    enum Intoption1option1option1_Discriminant discriminant;
     union {
-        struct IntOptionOption_ Some_2;
+        struct Intoption1option1_ Some_2;
     };
 };
 
-struct IntIntOptionOptionOption_Fun1 {
-    struct IntOptionOptionOption_(*fun)(void const*, int);
+struct IntIntoption1option1option1_Fun1 {
+    struct Intoption1option1option1_(*fun)(void const*, int);
     void const* env;
 };
 
@@ -70,20 +70,20 @@ struct IntList {
     struct IntList const* tail;
 };
 
-struct IntOptionOptionOption_List {
-    struct IntOptionOptionOption_ head;
-    struct IntOptionOptionOption_List const* tail;
+struct Intoption1option1option1_List {
+    struct Intoption1option1option1_ head;
+    struct Intoption1option1option1_List const* tail;
 };
 
-struct IntOptionOptionOption_ list_pat_list_pat_main_IntIntOptionOptionOptionFun1_fun(int x_) {
-    struct IntOption_ variant_ = (struct IntOption_){.discriminant = Some_, .Some_ = x_};
-    struct IntOptionOption_ variant_1 = (struct IntOptionOption_){.discriminant = Some_1, .Some_1 = variant_};
-    struct IntOptionOptionOption_ variant_2 = (struct IntOptionOptionOption_){.discriminant = Some_2, .Some_2 = variant_1};
+struct Intoption1option1option1_ list_pat_list_pat_main_IntIntoption1option1option1Fun1_fun(int x_) {
+    struct Intoption1_ variant_ = (struct Intoption1_){.discriminant = Some_, .Some_ = x_};
+    struct Intoption1option1_ variant_1 = (struct Intoption1option1_){.discriminant = Some_1, .Some_1 = variant_};
+    struct Intoption1option1option1_ variant_2 = (struct Intoption1option1option1_){.discriminant = Some_2, .Some_2 = variant_1};
     return variant_2;
 }
 
-struct IntOptionOptionOption_ list_pat_list_pat_eta2_main_fun(void const* env_, int arg_) {
-    struct IntOptionOptionOption_ call_ = list_pat_list_pat_main_IntIntOptionOptionOptionFun1_fun(arg_);
+struct Intoption1option1option1_ list_pat_list_pat_eta2_main_fun(void const* env_, int arg_) {
+    struct Intoption1option1option1_ call_ = list_pat_list_pat_main_IntIntoption1option1option1Fun1_fun(arg_);
     return call_;
 }
 
@@ -96,7 +96,7 @@ int milone_main(void) {
     int x2_;
     int x1_;
     char match_;
-    struct IntIntOptionOptionOption_Fun1 fun_ = (struct IntIntOptionOptionOption_Fun1){.fun = list_pat_list_pat_eta2_main_fun, .env = NULL};
+    struct IntIntoption1option1option1_Fun1 fun_ = (struct IntIntoption1option1option1_Fun1){.fun = list_pat_list_pat_eta2_main_fun, .env = NULL};
     struct IntList const* list_6 = milone_mem_alloc(1, sizeof(struct IntList));
     (*(((struct IntList*)list_6))) = (struct IntList){.head = 7, .tail = NULL};
     struct IntList const* list_5 = milone_mem_alloc(1, sizeof(struct IntList));
@@ -111,7 +111,7 @@ int milone_main(void) {
     (*(((struct IntList*)list_1))) = (struct IntList){.head = 2, .tail = list_2};
     struct IntList const* list_ = milone_mem_alloc(1, sizeof(struct IntList));
     (*(((struct IntList*)list_))) = (struct IntList){.head = 1, .tail = list_1};
-    struct IntOptionOptionOption_List const* call_1 = MiloneCore_List_IntIntOptionOptionOptionFun1IntListIntOptionOptionOptionListFun2_map(fun_, list_);
+    struct Intoption1option1option1_List const* call_1 = MiloneCore_List_IntIntoption1option1option1Fun1IntListIntoption1option1option1ListFun2_map(fun_, list_);
     if ((!(call_1))) goto next_10;
     if ((call_1->head.discriminant != Some_2)) goto next_10;
     if ((call_1->head.Some_2.discriminant != Some_1)) goto next_10;
