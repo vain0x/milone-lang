@@ -1,6 +1,8 @@
 /// Immutable array implementation.
 module rec MiloneStd.StdArray
 
+open MiloneStd.StdArrayBase
+
 // This is safe wrapper of mutable array.
 // Public functions should be written carefully so that they are pure,
 // i.e. observable side-effects don't happen.
