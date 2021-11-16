@@ -238,7 +238,7 @@ let private cpStrObjLit (value: string) acc =
   |> cons "(struct String){.str = "
   |> cpStrRawLit value
   |> cons ", .len = "
-  |> cons (string (SB.__stringLengthInUtf8Bytes value))
+  |> cons (string (SB.utf8Length value))
   |> cons "}"
 
 let private cpStructLit fields ty acc =
@@ -311,9 +311,7 @@ let private cpExpr expr acc : string list =
 
   | CInitExpr (fields, ty) -> acc |> cpStructLit fields ty
 
-  | CDotExpr (CStrObjExpr value, "len") ->
-    acc
-    |> cons (string (SB.__stringLengthInUtf8Bytes value))
+  | CDotExpr (CStrObjExpr value, "len") -> acc |> cons (string (SB.utf8Length value))
 
   | CVarExpr name -> acc |> cons name
 

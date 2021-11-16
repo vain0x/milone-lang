@@ -5,8 +5,7 @@
 /// See also: <https://github.com/fsharp/fslang-design/blob/e50f1bcd5f9824e287a9e70d03b37f07d170d25f/RFCs/FS-1033-extend-string-module.md>
 module rec MiloneStd.StdString
 
-open MiloneStd.StdStringBase
-
+module B = MiloneStd.StdStringBase
 module C = MiloneStd.StdChar
 
 /// Ensures `minValue <= value <= maxValue`.
@@ -371,4 +370,4 @@ let toLines (s: string) : string list =
 ///
 /// This function is almost same as `String.concat` in F#
 /// but takes a list rather than seq, which is unimplemented in milone-lang.
-let concat (sep: string) (xs: string list) : string = __stringJoin sep xs
+let concat (sep: string) (xs: string list) : string = B.concat sep xs

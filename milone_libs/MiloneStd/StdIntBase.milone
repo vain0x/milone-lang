@@ -1,6 +1,6 @@
 module rec MiloneStd.StdIntBase
 
-let __intOfStr (s: string) : int option =
+let tryParseInt32 (s: string) : int option =
   __nativeStmt (
     """
       bool str_to_int_checked(struct String, int32_t *);
@@ -17,7 +17,7 @@ let __intOfStr (s: string) : int option =
   else
     None
 
-let __int64OfStr (s: string) : int64 option =
+let tryParseInt64 (s: string) : int64 option =
   __nativeStmt (
     """
       bool str_to_int64_checked(struct String, int64_t *);
@@ -34,7 +34,7 @@ let __int64OfStr (s: string) : int64 option =
   else
     None
 
-let __uint64OfStr (s: string) : uint64 option =
+let tryParseUInt64 (s: string) : uint64 option =
   __nativeStmt (
     """
       bool str_to_uint64_checked(struct String, uint64_t *);
