@@ -184,20 +184,20 @@ bool MiloneDerive_ListEqual_listEqual(struct IntMyNode1_List const* l_14, struct
 bool union_equal_union_equal_MyBoolEqual(struct MyBool_ l_, struct MyBool_ r_) {
     bool match_;
     struct MyBoolMyBoolTuple2_ MyBoolMyBoolTuple2_ = (struct MyBoolMyBoolTuple2_){.t0 = l_, .t1 = r_};
-    if ((MyBoolMyBoolTuple2_.t0.discriminant != MyTrue_)) goto next_16;
-    if ((MyBoolMyBoolTuple2_.t1.discriminant != MyTrue_)) goto next_16;
+    if ((MyBoolMyBoolTuple2_.t0.discriminant != MyTrue_)) goto next_7;
+    if ((MyBoolMyBoolTuple2_.t1.discriminant != MyTrue_)) goto next_7;
     match_ = true;
-    goto end_match_15;
-next_16:;
-    if ((MyBoolMyBoolTuple2_.t0.discriminant != MyFalse_)) goto next_17;
-    if ((MyBoolMyBoolTuple2_.t1.discriminant != MyFalse_)) goto next_17;
+    goto end_match_6;
+next_7:;
+    if ((MyBoolMyBoolTuple2_.t0.discriminant != MyFalse_)) goto next_8;
+    if ((MyBoolMyBoolTuple2_.t1.discriminant != MyFalse_)) goto next_8;
     match_ = true;
-    goto end_match_15;
-next_17:;
+    goto end_match_6;
+next_8:;
     match_ = false;
-    goto end_match_15;
-next_18:;
-end_match_15:;
+    goto end_match_6;
+next_9:;
+end_match_6:;
     return match_;
 }
 
@@ -206,22 +206,22 @@ bool union_equal_union_equal_MyIntOptionEqual(struct MyIntOption_ l_1, struct My
     int l_2;
     bool match_1;
     struct MyIntOptionMyIntOptionTuple2_ MyIntOptionMyIntOptionTuple2_ = (struct MyIntOptionMyIntOptionTuple2_){.t0 = l_1, .t1 = r_1};
-    if ((MyIntOptionMyIntOptionTuple2_.t0.discriminant != MySome_)) goto next_20;
+    if ((MyIntOptionMyIntOptionTuple2_.t0.discriminant != MySome_)) goto next_11;
     l_2 = MyIntOptionMyIntOptionTuple2_.t0.MySome_;
-    if ((MyIntOptionMyIntOptionTuple2_.t1.discriminant != MySome_)) goto next_20;
+    if ((MyIntOptionMyIntOptionTuple2_.t1.discriminant != MySome_)) goto next_11;
     r_2 = MyIntOptionMyIntOptionTuple2_.t1.MySome_;
     match_1 = (l_2 == r_2);
-    goto end_match_19;
-next_20:;
-    if ((MyIntOptionMyIntOptionTuple2_.t0.discriminant != MyNone_)) goto next_21;
-    if ((MyIntOptionMyIntOptionTuple2_.t1.discriminant != MyNone_)) goto next_21;
+    goto end_match_10;
+next_11:;
+    if ((MyIntOptionMyIntOptionTuple2_.t0.discriminant != MyNone_)) goto next_12;
+    if ((MyIntOptionMyIntOptionTuple2_.t1.discriminant != MyNone_)) goto next_12;
     match_1 = true;
-    goto end_match_19;
-next_21:;
+    goto end_match_10;
+next_12:;
     match_1 = false;
-    goto end_match_19;
-next_22:;
-end_match_19:;
+    goto end_match_10;
+next_13:;
+end_match_10:;
     return match_1;
 }
 
@@ -232,29 +232,29 @@ bool union_equal_union_equal_MyValueEqual(struct MyValue_ l_11, struct MyValue_ 
     int l_12;
     bool match_2;
     struct MyValueMyValueTuple2_ MyValueMyValueTuple2_ = (struct MyValueMyValueTuple2_){.t0 = l_11, .t1 = r_11};
-    if ((MyValueMyValueTuple2_.t0.discriminant != MyUnit_)) goto next_24;
-    if ((MyValueMyValueTuple2_.t1.discriminant != MyUnit_)) goto next_24;
+    if ((MyValueMyValueTuple2_.t0.discriminant != MyUnit_)) goto next_15;
+    if ((MyValueMyValueTuple2_.t1.discriminant != MyUnit_)) goto next_15;
     match_2 = true;
-    goto end_match_23;
-next_24:;
-    if ((MyValueMyValueTuple2_.t0.discriminant != MyInt_)) goto next_25;
+    goto end_match_14;
+next_15:;
+    if ((MyValueMyValueTuple2_.t0.discriminant != MyInt_)) goto next_16;
     l_12 = MyValueMyValueTuple2_.t0.MyInt_;
-    if ((MyValueMyValueTuple2_.t1.discriminant != MyInt_)) goto next_25;
+    if ((MyValueMyValueTuple2_.t1.discriminant != MyInt_)) goto next_16;
     r_12 = MyValueMyValueTuple2_.t1.MyInt_;
     match_2 = (l_12 == r_12);
-    goto end_match_23;
-next_25:;
-    if ((MyValueMyValueTuple2_.t0.discriminant != MyString_)) goto next_26;
+    goto end_match_14;
+next_16:;
+    if ((MyValueMyValueTuple2_.t0.discriminant != MyString_)) goto next_17;
     l_13 = MyValueMyValueTuple2_.t0.MyString_;
-    if ((MyValueMyValueTuple2_.t1.discriminant != MyString_)) goto next_26;
+    if ((MyValueMyValueTuple2_.t1.discriminant != MyString_)) goto next_17;
     r_13 = MyValueMyValueTuple2_.t1.MyString_;
     match_2 = (str_compare(l_13, r_13) == 0);
-    goto end_match_23;
-next_26:;
+    goto end_match_14;
+next_17:;
     match_2 = false;
-    goto end_match_23;
-next_27:;
-end_match_23:;
+    goto end_match_14;
+next_18:;
+end_match_14:;
     return match_2;
 }
 
@@ -265,25 +265,25 @@ bool union_equal_union_equal_MyResultEqual(struct MyResult_ l_3, struct MyResult
     struct MyValue_ l_4;
     bool match_3;
     struct MyResultMyResultTuple2_ MyResultMyResultTuple2_ = (struct MyResultMyResultTuple2_){.t0 = l_3, .t1 = r_3};
-    if ((MyResultMyResultTuple2_.t0.discriminant != MyOk_)) goto next_29;
+    if ((MyResultMyResultTuple2_.t0.discriminant != MyOk_)) goto next_20;
     l_4 = MyResultMyResultTuple2_.t0.MyOk_;
-    if ((MyResultMyResultTuple2_.t1.discriminant != MyOk_)) goto next_29;
+    if ((MyResultMyResultTuple2_.t1.discriminant != MyOk_)) goto next_20;
     r_4 = MyResultMyResultTuple2_.t1.MyOk_;
     bool call_3 = union_equal_union_equal_MyValueEqual(l_4, r_4);
     match_3 = call_3;
-    goto end_match_28;
-next_29:;
-    if ((MyResultMyResultTuple2_.t0.discriminant != MyErr_)) goto next_30;
+    goto end_match_19;
+next_20:;
+    if ((MyResultMyResultTuple2_.t0.discriminant != MyErr_)) goto next_21;
     l_5 = MyResultMyResultTuple2_.t0.MyErr_;
-    if ((MyResultMyResultTuple2_.t1.discriminant != MyErr_)) goto next_30;
+    if ((MyResultMyResultTuple2_.t1.discriminant != MyErr_)) goto next_21;
     r_5 = MyResultMyResultTuple2_.t1.MyErr_;
     match_3 = (str_compare(l_5, r_5) == 0);
-    goto end_match_28;
-next_30:;
+    goto end_match_19;
+next_21:;
     match_3 = false;
-    goto end_match_28;
-next_31:;
-end_match_28:;
+    goto end_match_19;
+next_22:;
+end_match_19:;
     return match_3;
 }
 
@@ -296,12 +296,12 @@ bool union_equal_union_equal_MyNodeEqual(struct IntMyNode1_ l_6, struct IntMyNod
     r_7 = IntMyNode1IntMyNode1Tuple2_.t1.MyNode_;
     bool call_4 = MiloneDerive_TupleEqual_tuple2Equal(l_7, r_7);
     match_4 = call_4;
-    goto end_match_32;
-next_33:;
+    goto end_match_23;
+next_24:;
     match_4 = false;
-    goto end_match_32;
-next_34:;
-end_match_32:;
+    goto end_match_23;
+next_25:;
+end_match_23:;
     return match_4;
 }
 

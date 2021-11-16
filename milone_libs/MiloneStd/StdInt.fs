@@ -1,5 +1,7 @@
 module rec MiloneStd.StdInt
 
+open MiloneStd.StdIntBase
+
 [<Literal>]
 let MinValue = 0x80000000
 

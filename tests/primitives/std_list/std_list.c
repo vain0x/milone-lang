@@ -143,18 +143,18 @@ bool std_list_std_list_eq(struct IntList const* expected_, struct IntList const*
     struct String actual_1 = call_4;
     bool if_;
     if ((str_compare(expected_1, actual_1) == 0)) {
-        goto then_293;
+        goto then_284;
     } else {
-        goto else_294;
+        goto else_285;
     }
-then_293:;
+then_284:;
     if_ = true;
-    goto if_next_292;
-else_294:;
+    goto if_next_283;
+else_285:;
     printf("expected: %s\nactual: %s\n\n", str_to_c_str(expected_1), str_to_c_str(actual_1));
     if_ = false;
-    goto if_next_292;
-if_next_292:;
+    goto if_next_283;
+if_next_283:;
     return if_;
 }
 
@@ -279,17 +279,17 @@ void std_list_Program_testUnzip(void) {
 }
 
 struct IntList const* std_list_std_list_main_gen_go(struct IntList const* acc_, int i_) {
-tailrec_295:;
+tailrec_286:;
     struct IntList const* if_1;
     if ((i_ == 0)) {
-        goto then_297;
+        goto then_288;
     } else {
-        goto else_298;
+        goto else_289;
     }
-then_297:;
+then_288:;
     if_1 = acc_;
-    goto if_next_296;
-else_298:;
+    goto if_next_287;
+else_289:;
     int i_1 = (i_ - 1);
     struct IntList const* list_24 = milone_mem_alloc(1, sizeof(struct IntList));
     (*(((struct IntList*)list_24))) = (struct IntList){.head = i_1, .tail = acc_};
@@ -297,8 +297,8 @@ else_298:;
     int arg_11 = i_1;
     acc_ = arg_10;
     i_ = arg_11;
-    goto tailrec_295;
-if_next_296:;
+    goto tailrec_286;
+if_next_287:;
     return if_1;
 }
 

@@ -17,6 +17,7 @@
     <Compile Include="StdArray.fs" />
     <Compile Include="StdMap.fs" />
     <Compile Include="StdSet.fs" />
+    <Compile Include="StdIntBase.fs" />
     <Compile Include="StdInt.fs" />
     <Compile Include="StdEnv.fs" />
     <Compile Include="StdPath.fs" />
