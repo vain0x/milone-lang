@@ -6,6 +6,7 @@ open LibNurseryTests.ExtStringTests
 open LibNurseryTests.EphArrayTests
 open LibNurseryTests.EphRefTests
 open LibNurseryTests.EphSerialTests
+open LibNurseryTests.EphVectorTests
 open LibNurseryTests.ImpureTests
 
 let main _ =
@@ -15,6 +16,7 @@ let main _ =
   testEphArrayModule ()
   testEphRefModule ()
   testEphSerialModule ()
+  testEphVectorModule ()
 
   // Exits.
   testImpureModule ()
