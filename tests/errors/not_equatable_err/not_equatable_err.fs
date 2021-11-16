@@ -16,7 +16,11 @@ let private testUnionContainingFun () = assert (UF f = UF f)
 
 type private GU<'T> = GU of 'T
 
-let private testGenericUnion () = assert (GU 0 = GU 0)
+let private testGenericUnion () = assert (GU f = GU f)
+
+type private MyNode<'T> = MyNode of 'T * MyNode<'T> list
+
+let private testRecursiveGenericUnion () = assert (MyNode(f, []) = MyNode(f, []))
 
 type private RecordWithFun = { F: unit -> int }
 
@@ -29,6 +33,7 @@ let main _ =
   testFun ()
   testTupleWithObj ()
   testUnionContainingFun ()
+  testRecursiveGenericUnion ()
   testGenericUnion ()
   testRecordWithFun ()
   1
