@@ -426,7 +426,7 @@ let private deriveOnExpr (hirCtx: HirCtx) (ctx: DCtx) expr : DCtx =
       match listTryZip tyVars tyArgs with
       | [], [], [] -> id
       | assignment, [], [] -> tySubst (fun tySerial -> assocTryFind compare tySerial assignment)
-      | _ -> unreachable ()
+      | _ -> fun (_: Ty) -> unreachable ()
 
     let trueExpr = hxTrue loc
     let falseExpr = HLitExpr(BoolLit false, loc)
