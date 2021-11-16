@@ -6,6 +6,7 @@
 
   <ItemGroup>
     <Compile Include="FSharpOnly.fs" />
+    <Compile Include="StdOption.fs" />
     <Compile Include="StdResult.fs" />
     <Compile Include="StdChar.fs" />
     <Compile Include="StdString.fs" />
