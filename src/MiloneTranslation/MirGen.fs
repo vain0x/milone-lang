@@ -239,7 +239,10 @@ let private mxCompare ctx (op: MBinary) (l: MExpr) r (ty: Ty) loc =
 
     MLitExpr(BoolLit value, loc), ctx
 
-  | _ -> unreachable ()
+  | _ ->
+    // This also occurs when a type is equatable/comparable in typing
+    // but Drive doesn't implement it.
+    unreachable (box (op, l, r, ty))
 
 /// How `box`/`unbox` works for the type.
 [<RequireQualifiedAccess; NoEquality; NoComparisonAttribute>]

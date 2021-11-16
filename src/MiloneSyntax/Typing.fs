@@ -463,22 +463,34 @@ let private doResolveTraitBound (ctx: TyCtx) theTrait loc : TyCtx =
       | OptionTk, [ itemTy ] -> go memo itemTy
       | ListTk, [ itemTy ] -> go memo itemTy
 
-      | UnionTk (tySerial, _), [] ->
+      | UnionTk (tySerial, _), _ ->
         allowRec memo (fun memo ->
           match ctx.Tys |> mapFind tySerial with
-          | UnionTyDef (_, [], variants, _) ->
-            let payloadTys =
-              variants
-              |> List.choose (fun variantSerial ->
-                let variantDef = ctx.Variants |> mapFind variantSerial
+          | UnionTyDef (_, tyVars, variants, _) ->
+            let assignmentOpt =
+              match listTryZip tyVars tyArgs with
+              | assignment, [], [] -> Some assignment
+              | _ -> None
 
-                if variantDef.HasPayload then
-                  Some variantDef.PayloadTy
-                else
-                  None)
+            let payloadTysOpt =
+              match assignmentOpt with
+              | Some assignment ->
+                variants
+                |> List.choose (fun variantSerial ->
+                  let variantDef = ctx.Variants |> mapFind variantSerial
 
-            onTys memo payloadTys
+                  if variantDef.HasPayload then
+                    variantDef.PayloadTy
+                    |> tySubst (fun tySerial -> assocTryFind compare tySerial assignment)
+                    |> Some
+                  else
+                    None)
+                |> Some
+              | _ -> None
 
+            match payloadTysOpt with
+            | Some payloadTys -> onTys memo payloadTys
+            | _ -> false, memo
           | _ -> false, memo)
 
       | _ -> false, memo
