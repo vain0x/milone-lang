@@ -424,6 +424,69 @@ let private testHover () =
       "No result." ]
 
 // -----------------------------------------------
+// Completion
+// -----------------------------------------------
+
+let private doTestCompletionSingleFile title text expected ls : bool * _ =
+  let targetPos =
+    let lines = text |> toLines
+
+    lines
+    |> List.tryPick (fun (row, line) ->
+      if row >= 1
+         && line |> S.trimStart |> S.startsWith "//" then
+        match line |> S.findIndex "^" with
+        | Some column -> Some(row - 1, column)
+        | _ -> None
+      else
+        None)
+    |> expect (title + " should have cursor")
+
+  let debug xs = xs |> List.sort |> S.concat "\n"
+
+  let actual, ls =
+    match ls
+          |> LLS.ProjectAnalysis.completion projectDir docId targetPos
+      with
+    | [], ls ->
+      let errors, ls =
+        ls |> LLS.ProjectAnalysis.validateProject
+
+      let msg =
+        if errors |> List.isEmpty then
+          "No result."
+        else
+          sprintf "Compile error: %A" errors
+
+      msg, ls
+
+    | result, ls -> debug result, ls
+
+  actual |> assertEqual title (debug expected), ls
+
+let private testCompletionSingleFile title text expected : bool =
+  createSingleFileProject text (doTestCompletionSingleFile title text expected)
+  |> fst
+
+let private testCompletion () =
+  [ testCompletionSingleFile
+      "local var"
+      """
+        module rec TestProject.Program
+
+        let main _ =
+          let () =
+            let y = ()
+            y
+
+          let x = 1
+
+      //  ^cursor
+          0
+      """
+      [ "main"; "x" ] ]
+
+// -----------------------------------------------
 // Diagnostics
 // -----------------------------------------------
 
@@ -491,7 +554,10 @@ let private testDiagnostics () =
 
 let lspTests () =
   let code =
-    List.collect id [ testRefs (); testHover () ]
+    [ testRefs ()
+      testHover ()
+      testCompletion () ]
+    |> List.collect id
     |> runTests
 
   if code = 0 then testDiagnostics ()
