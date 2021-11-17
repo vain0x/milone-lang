@@ -1,5 +1,7 @@
 module MiloneLspServer.Util
 
+open MiloneShared.UtilParallel
+
 // -----------------------------------------------
 // IO
 // -----------------------------------------------

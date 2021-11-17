@@ -3,6 +3,7 @@ module MiloneLspServer.LspLangService
 open System
 open System.IO
 open MiloneShared.SharedTypes
+open MiloneShared.UtilParallel
 open MiloneStd.StdMap
 open MiloneStd.StdSet
 open MiloneLspServer.Lsp

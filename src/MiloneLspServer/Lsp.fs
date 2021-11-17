@@ -2,6 +2,7 @@
 module rec MiloneLspServer.Lsp
 
 open MiloneShared.SharedTypes
+open MiloneShared.UtilParallel
 open MiloneStd.StdMap
 open MiloneStd.StdSet
 open MiloneSyntax.Syntax
