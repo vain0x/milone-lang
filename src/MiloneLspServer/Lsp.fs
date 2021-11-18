@@ -188,14 +188,24 @@ let private tyDisplayFn (tirCtx: TirCtx) ty =
 module LToken =
   let getPos (LToken (_, pos)) : Pos = pos
 
-  /// FIXME: too specific
+  // FIXME: too specific
+
+  let asIdent (LToken (token, _)) =
+    match token with
+    | IdentToken name -> Some name
+    | _ -> None
+
+  let isDot (LToken (token, _)) =
+    match token with
+    | DotToken -> true
+    | _ -> false
+
   let isModuleOrOpenKeyword (LToken (token, _)) =
     match token with
     | ModuleToken
     | OpenToken -> true
     | _ -> false
 
-  /// FIXME: too specific
   let isBindingKeyword (LToken (token, _)) =
     match token with
     | LetToken

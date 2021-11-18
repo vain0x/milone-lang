@@ -484,7 +484,19 @@ let private testCompletion () =
       //  ^cursor
           0
       """
-      [ "main"; "x" ] ]
+      [ "main"; "x" ]
+
+    testCompletionSingleFile
+      "dot"
+      """
+        module rec TestProject.Program
+
+        let main _ =
+          List.   (x.y)
+      //       ^cursor
+          0
+      """
+      [ "List.*" ] ]
 
 // -----------------------------------------------
 // Diagnostics

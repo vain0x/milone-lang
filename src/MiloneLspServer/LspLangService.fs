@@ -485,76 +485,101 @@ module ProjectAnalysis =
       |> LTokenList.filterByLine y
       |> List.exists LToken.isModuleOrOpenKeyword
 
-    let result, pa =
-      if inModuleLine then
-        List.append (Map.toList stdLibProjects) (findModulesInDir projectDir)
-        |> List.collect (fun (p, m) -> [ p; m ])
-        |> listUnique,
-        pa
-      else
-        let hint = "completion"
+    let collectModuleNames pa =
+      List.append (Map.toList stdLibProjects) (findModulesInDir projectDir)
+      |> List.collect (fun (p, m) -> [ p; m ])
+      |> listUnique,
+      pa
 
-        let drop y2 x2 stack exclusion =
-          let rec go stack exclusion =
-            match stack with
-            | [] -> stack, exclusion
-            | t :: ts ->
-              let y1, x1 = t |> LToken.getPos
+    let beforeDot () =
+      let y, x = targetPos
 
-              if x1 <= x2 then
-                stack, exclusion
-              else
-                go ts ((y1, y2) :: exclusion)
+      let isTouched t =
+        let _, x1 = t |> LToken.getPos
+        x1 = x - 1 || x1 = x
 
-          go stack exclusion
+      let rec go tokens =
+        match tokens with
+        | t1 :: t2 :: _ when t2 |> LToken.isDot && t2 |> isTouched -> t1 |> LToken.asIdent
 
-        let rec go stack exclusion tokens =
-          match tokens with
-          | [] -> drop 0x7fff -1 stack exclusion |> snd
+        | [] -> None
+        | _ :: ts -> go ts
 
-          | token :: tokens ->
-            let y2, x2 = token |> LToken.getPos
+      tokens |> LTokenList.filterByLine y |> go
 
-            if y2 > (fst targetPos) then
-              exclusion
-            else if token |> LToken.isBindingKeyword then
-              let stack, exclusion = drop y2 x2 stack exclusion
-              go (token :: stack) exclusion tokens
+    let collectNsSymbols qual pa =
+      // FIXME: resolve `qual` as qualifier and collect symbols in its namespace
+      [ qual + ".*" ], pa
+
+    let collectLocalSymbols pa =
+      let hint = "completion"
+
+      let drop y2 x2 stack exclusion =
+        let rec go stack exclusion =
+          match stack with
+          | [] -> stack, exclusion
+          | t :: ts ->
+            let y1, x1 = t |> LToken.getPos
+
+            if x1 <= x2 then
+              stack, exclusion
             else
-              go stack exclusion tokens
+              go ts ((y1, y2) :: exclusion)
 
-        let exclusion = go [] [] (tokens |> LTokenList.toList)
+        go stack exclusion
 
-        let bundleResult, pa = pa |> ProjectAnalysis1.bundle
+      let rec go stack exclusion tokens =
+        match tokens with
+        | [] -> drop 0x7fff -1 stack exclusion |> snd
 
-        match pa |> ProjectAnalysis1.collectSymbols bundleResult with
-        | None ->
-          let errorCount =
-            bundleResult
-            |> BundleResult.getErrors
-            |> List.length
+        | token :: tokens ->
+          let y2, x2 = token |> LToken.getPos
 
-          debugFn "%s: no bundle result: errors %d" hint errorCount
-          [], pa
+          if y2 > (fst targetPos) then
+            exclusion
+          else if token |> LToken.isBindingKeyword then
+            let stack, exclusion = drop y2 x2 stack exclusion
+            go (token :: stack) exclusion tokens
+          else
+            go stack exclusion tokens
 
-        | Some symbols ->
-          let result =
-            symbols
-            |> List.choose (fun (symbol, _, loc) ->
-              let (Loc (d, y, _)) = loc
+      let exclusion = go [] [] (tokens |> LTokenList.toList)
 
-              if d = docId
-                 && exclusion
-                    |> List.exists (fun (y1, y2) -> y1 <= y && y < y2)
-                    |> not then
-                Some symbol
-              else
-                None)
-            |> List.choose (fun symbol -> symbol |> Symbol.name bundleResult)
+      let bundleResult, pa = pa |> ProjectAnalysis1.bundle
 
-          result, pa
+      match pa |> ProjectAnalysis1.collectSymbols bundleResult with
+      | None ->
+        let errorCount =
+          bundleResult
+          |> BundleResult.getErrors
+          |> List.length
 
-    result, pa
+        debugFn "%s: no bundle result: errors %d" hint errorCount
+        [], pa
+
+      | Some symbols ->
+        let result =
+          symbols
+          |> List.choose (fun (symbol, _, loc) ->
+            let (Loc (d, y, _)) = loc
+
+            if d = docId
+               && exclusion
+                  |> List.exists (fun (y1, y2) -> y1 <= y && y < y2)
+                  |> not then
+              Some symbol
+            else
+              None)
+          |> List.choose (fun symbol -> symbol |> Symbol.name bundleResult)
+
+        result, pa
+
+    if inModuleLine then
+      collectModuleNames pa
+    else
+      match beforeDot () with
+      | Some token -> collectNsSymbols token pa
+      | None -> collectLocalSymbols pa
 
   /// `(defs, uses) option`
   let findRefs
