@@ -188,11 +188,29 @@ let private tyDisplayFn (tirCtx: TirCtx) ty =
 module LToken =
   let getPos (LToken (_, pos)) : Pos = pos
 
-  /// FIXME: too specific
+  // FIXME: too specific
+
+  let asIdent (LToken (token, _)) =
+    match token with
+    | IdentToken name -> Some name
+    | _ -> None
+
+  let isDot (LToken (token, _)) =
+    match token with
+    | DotToken -> true
+    | _ -> false
+
   let isModuleOrOpenKeyword (LToken (token, _)) =
     match token with
     | ModuleToken
     | OpenToken -> true
+    | _ -> false
+
+  let isBindingKeyword (LToken (token, _)) =
+    match token with
+    | LetToken
+    | TypeToken
+    | ModuleToken -> true
     | _ -> false
 
 module LTokenList =
@@ -212,6 +230,8 @@ module LTokenList =
     | None -> None
 
   let resolveRanges (posList: Pos list) (LTokenList tokens) : Range list = resolveTokenRanges tokens posList
+
+  let toList (LTokenList tokens) = tokens |> List.map LToken
 
   let filterByLine (y: int) (LTokenList tokens) : LToken list =
     tokens
@@ -793,6 +813,51 @@ let private collectSymbolsInExpr (pa: ProjectAnalysis) (modules: TProgram) =
   |> up lowerTModules modules
   |> (fun acc -> resolveLoc acc pa)
   |> List.map (fun (symbol, defOrUse, _, loc) -> symbol, defOrUse, loc)
+
+module Symbol =
+  let name (b: BundleResult) (symbol: Symbol) =
+    match b.ProgramOpt with
+    | Some (modules, tirCtx) ->
+      match symbol with
+      | DiscardSymbol _
+      | PrimSymbol _ -> None // not implemented, completion need filter out
+
+      | FieldSymbol _ -> None
+
+      | ValueSymbol (VarSymbol varSerial) ->
+        (match tirCtx.Vars |> TMap.tryFind varSerial with
+         | Some t -> Some t
+         | None ->
+           modules
+           |> List.tryPick (fun (m: TModule) -> m.Vars |> TMap.tryFind varSerial))
+        |> Option.map (fun (t: VarDef) -> t.Name)
+
+      | ValueSymbol (FunSymbol funSerial) ->
+        tirCtx.Funs
+        |> TMap.tryFind funSerial
+        |> Option.map (fun (d: FunDef) -> d.Name)
+
+      | ValueSymbol (VariantSymbol variantSerial) ->
+        tirCtx.Variants
+        |> TMap.tryFind variantSerial
+        |> Option.map (fun (d: VariantDef) -> d.Name)
+
+      | TySymbol tySymbol ->
+        (match tySymbol with
+         | MetaTySymbol _
+         | UnivTySymbol _
+         | SynonymTySymbol _ -> None
+         | UnionTySymbol tySerial -> Some tySerial
+         | RecordTySymbol tySerial -> Some tySerial)
+        |> Option.bind (fun tySerial -> tirCtx.Tys |> TMap.tryFind tySerial)
+        |> Option.bind (fun (d: TyDef) ->
+          match d with
+          | UnionTyDef (name, _, _, _) -> Some name
+          | RecordTyDef (name, _, _, _, _) -> Some name
+          | _ -> None)
+
+      | ModuleSymbol (_) -> None // unimplemented
+    | None -> None
 
 // Provides fundamental operations as building block of queries.
 // FIXME: name?
