@@ -577,9 +577,10 @@ module ProjectAnalysis =
     if inModuleLine then
       collectModuleNames pa
     else
-      match beforeDot () with
-      | Some token -> collectNsSymbols token pa
-      | None -> collectLocalSymbols pa
+      // match beforeDot () with
+      // | Some token -> collectNsSymbols token pa
+      // | None -> collectLocalSymbols pa
+      collectLocalSymbols pa
 
   /// `(defs, uses) option`
   let findRefs
