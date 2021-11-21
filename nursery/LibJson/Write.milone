@@ -21,7 +21,7 @@ let private at (i: int) (s: string) =
 let private charNeedsEscaping (c: char) =
   c = '"'
   || c = '\\'
-  || (byte c <= byte 0x78 && byte c < byte 0x20) // FIXME: hex literal with suffix
+  || (byte c <= 0x78uy && byte c < 0x20uy)
 
 // FIXME: move to standard lib
 let private writeHex (value: uint) =
@@ -29,7 +29,7 @@ let private writeHex (value: uint) =
     if n = uint 0 && len = 0 then
       acc
     else
-      let d = int (n &&& uint 0xf)
+      let d = int (n &&& 0x0fu)
       let s = "0123456789abcdef".[d..d]
       go (s + acc) (len - 1) (n >>> 4)
 
