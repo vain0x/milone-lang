@@ -44,13 +44,13 @@ let private parseForTest (args: string list) (hasParam: string -> bool) : string
 
   let acc =
     match result with
-    | Result.Ok -> acc
+    | ParseResult.Ok -> acc
 
-    | Result.NoValueError name ->
+    | ParseResult.NoValueError name ->
       format "error (no-value) {0}" [ ofName name ]
       :: acc
 
-    | Result.RedundantValueError (name, value) ->
+    | ParseResult.RedundantValueError (name, value) ->
       format "error (invalid-value) {0} = `{1}`" [ ofName name; value ]
       :: acc
 
