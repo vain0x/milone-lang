@@ -750,12 +750,9 @@ let private doNext (host: TokenizeHost) allowPrefix (text: string) (index: int) 
     let l = index + len
     let m, r = scanHex text l
 
-    if m < r then
-      ErrorToken UnimplNumberSuffixError, r
-    else
-      match intFlavorOfSuffix (text |> S.slice m r) with
-      | None when m < r -> ErrorToken UnimplNumberSuffixError, r
-      | suffixOpt -> IntToken(S.toLower (S.slice index m text), suffixOpt), r
+    match intFlavorOfSuffix (text |> S.slice m r) with
+    | None when m < r -> ErrorToken UnimplNumberSuffixError, r
+    | suffixOpt -> IntToken(S.toLower (S.slice index m text), suffixOpt), r
 
   | LNonKeywordIdent ->
     let r = scanIdent text (index + len)

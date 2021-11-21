@@ -66,14 +66,15 @@ void int_flavors_Program_unsignedCases(void) {
 
 void int_flavors_int_flavors_suffix(void) {
     milone_assert((64LL == ((int64_t)64)), 92, 2);
-    milone_assert(((uint8_t)8U == ((uint8_t)8)), 94, 2);
-    milone_assert(((uint16_t)16U == ((uint16_t)16)), 95, 2);
-    milone_assert(((uint32_t)32U == ((uint32_t)32)), 96, 2);
+    milone_assert((0x7fLL == ((int64_t)127)), 93, 2);
+    milone_assert(((uint8_t)8U == ((uint8_t)8)), 95, 2);
+    milone_assert(((uint16_t)16U == ((uint16_t)16)), 96, 2);
     milone_assert(((uint32_t)32U == ((uint32_t)32)), 97, 2);
-    milone_assert((64ULL == ((uint64_t)64)), 98, 2);
-    milone_assert(((size_t)99ULL == ((uintptr_t)99)), 99, 2);
+    milone_assert(((uint32_t)32U == ((uint32_t)32)), 98, 2);
+    milone_assert((64ULL == ((uint64_t)64)), 99, 2);
+    milone_assert(((size_t)99ULL == ((uintptr_t)99)), 100, 2);
     struct String call_7 = str_of_int64(180150120900600300LL);
-    milone_assert((str_compare(call_7, (struct String){.str = "180150120900600300", .len = 18}) == 0), 101, 2);
+    milone_assert((str_compare(call_7, (struct String){.str = "180150120900600300", .len = 18}) == 0), 102, 2);
     return;
 }
 
