@@ -1,0 +1,428 @@
+/// Provides JSON parser.
+///
+/// - Create a tree
+/// - Bail out on error
+
+// Non-goals:
+//    - Optimization
+//    - Streaming
+//    - Error recovery
+//    - Error reporting
+//    - Non-standard JSON
+
+// Thanks: pdjson is referred to implement this.
+// <https://github.com/skeeto/pdjson/blob/67108d883061043e55d0fb13961ac1b6fc8a485c/pdjson.c>
+// (Unlike pdjson, this module does trust input is valid utf-8.)
+
+module rec LibJson.Parse
+
+open LibJson.Json
+
+module C = MiloneStd.StdChar
+module S = MiloneStd.StdString
+
+// Just to suppress link error.
+__nativeDecl """
+  struct JsonValue *json_parse_from_string(struct String s) {
+    fprintf(stderr, "unimplemented\n");
+    exit(1);
+  }
+"""
+
+// -----------------------------------------------
+// Public types
+// -----------------------------------------------
+
+type JsonErrorKind =
+  | ExpectedKey
+  | ExpectedValue
+  | ExpectedColon
+  | ExpectedCommaOrRightBracket
+  | ExpectedCommaOrRightBrace
+  | UnterminatedString
+  | UnescapedControlChar
+  | InvalidEscapeSequence
+
+type JsonParseResult =
+  | ParseOk of JsonValue * endIndex: int
+  | ParseErr of index: int * JsonErrorKind
+
+// -----------------------------------------------
+// Util
+// -----------------------------------------------
+
+let private unreachable () =
+  printfn "unreachable"
+  assert false
+  exit 1
+
+// -----------------------------------------------
+// String
+// -----------------------------------------------
+
+let private at (i: int) (s: string) =
+  if i < s.Length then
+    s.[i]
+  else
+    assert (i = s.Length)
+    '\x00'
+
+let private evalHexDigit (c: char) =
+  if '0' <= c && c <= '9' then
+    int c - int '0'
+  else if 'a' <= c && c <= 'f' then
+    int c - int 'a' + 10
+  else if 'A' <= c && c <= 'F' then
+    int c - int 'A' + 10
+  else
+    unreachable ()
+
+let private ofChars (charList: char list) =
+  charList |> List.map string |> S.concat ""
+
+// -----------------------------------------------
+// Unicode
+// -----------------------------------------------
+
+let private encodeUtf8 (codePoint: int) : string option =
+  let c = codePoint
+
+  if c < 0x80 then
+    string c |> Some
+  else if c < 0x800 then
+    let c1 =
+      char (((c >>> 6) &&& 0x1f) ||| 0xc0)
+
+    let c2 =
+      char (((c >>> 0) &&& 0x3f) ||| 0x80)
+
+    ofChars [ c1; c2 ] |> Some
+  else if c < 0x10000 then
+    if 0xd800 <= c && c <= 0xdfff then
+      None
+    else
+      let c1 =
+        char (((c >>> 12) &&& 0x0f) ||| 0xe0)
+
+      let c2 =
+        char (((c >>> 6) &&& 0x3f) ||| 0x80)
+
+      let c3 =
+        char (((c >>> 0) &&& 0x3f) ||| 0x80)
+
+      ofChars [ c1; c2; c3 ] |> Some
+
+  else if c < 0x110000 then
+    let c1 =
+      char (((c >>> 18) &&& 0x07) ||| 0xf0)
+
+    let c2 =
+      char (((c >>> 12) &&& 0x3f) ||| 0x80)
+
+    let c3 =
+      char (((c >>> 6) &&& 0x3f) ||| 0x80)
+
+    let c4 =
+      char (((c >>> 0) &&& 0x3f) ||| 0x80)
+
+    ofChars [ c1; c2; c3; c4 ] |> Some
+  else
+    // printfn "warn: invalid code point %s" (string c)
+    None
+
+let private evalUnicode (s: string) : string option =
+  let rec allHex i =
+    i = s.Length || (C.isHex s.[i] && allHex (i + 1))
+
+  if s.Length < 4 || not (allHex 0) then
+    // printfn "warn: \\u is not followed by four hex digits '%s'" s
+    None
+  else
+    let codePoint =
+      let rec go (n: int) i =
+        if i = 4 then
+          n
+        else
+          let shift = 12 - i * 4
+
+          let n =
+            n ||| ((evalHexDigit s.[i]) <<< shift)
+
+          go n (i + 1)
+
+      go 0 0
+
+    encodeUtf8 codePoint
+
+// -----------------------------------------------
+// Escape sequence
+// -----------------------------------------------
+
+type private VerbatimSep =
+  | Eof
+  | Control
+  | Quote
+  | Backslash
+
+let private readVerbatim (i: int) text =
+  let rec go i =
+    match at i text with
+    | '"' -> i, VerbatimSep.Quote
+    | '\\' -> i, VerbatimSep.Backslash
+
+    | '\x00' when i >= text.Length -> i, VerbatimSep.Eof
+
+    // #charNeedsEscaping
+    | c when byte c <= byte 0x7f && byte c < byte 0x20 -> i, VerbatimSep.Control
+
+    | _ -> go (i + 1)
+
+  go i
+
+let private readEscape (i: int) (text: string) =
+  assert (at i text = '\\')
+
+  let ok i (s: string) =
+    if i <= text.Length then
+      Some(i, s)
+    else
+      None
+
+  match at (i + 1) text with
+  | 't' -> ok (i + 2) "\t"
+  | 'r' -> ok (i + 2) "\r"
+  | 'n' -> ok (i + 2) "\n"
+
+  | 'b' -> ok (i + 2) "\x08" // backspace
+  | 'f' -> ok (i + 2) "\x0c" // formfeed
+
+  | '\\'
+  | '/'
+  | '\''
+  | '"' -> ok (i + 2) text.[i + 1..i + 1]
+
+  | 'u' ->
+    let hex = text |> S.slice (i + 2) (i + 6)
+
+    match evalUnicode hex with
+    | Some s -> ok (i + 6) s
+    | None -> None
+
+  | _ -> None
+
+// -----------------------------------------------
+// Parse
+// -----------------------------------------------
+
+let private skipSpaces (i: int) (text: string) =
+  match at i text with
+  | ' ' when
+    i + 4 <= text.Length
+    && text.[i + 1] = ' '
+    && text.[i + 2] = ' '
+    && text.[i + 3] = ' '
+    ->
+    skipSpaces (i + 4) text
+
+  | ' '
+  | '\t'
+  | '\r'
+  | '\n' -> skipSpaces (i + 1) text
+
+  | _ -> i
+
+let private parseString (i: int) (text: string) =
+  let rec go acc (i: int) =
+    assert (i <= text.Length)
+
+    let endIndex, sep = readVerbatim i text
+
+    let acc =
+      if i < endIndex then
+        (text |> S.slice i endIndex) :: acc
+      else
+        acc
+
+    let i = endIndex
+
+    match sep with
+    | VerbatimSep.Eof -> ParseErr(i, UnterminatedString)
+    | VerbatimSep.Control -> ParseErr(i, UnescapedControlChar)
+
+    | VerbatimSep.Quote ->
+      let value =
+        acc |> List.rev |> S.concat "" |> JString
+
+      assert(at i text = '"')
+      ParseOk(value, i + 1)
+
+    | VerbatimSep.Backslash ->
+      let start = i
+
+      match readEscape i text with
+      | Some (i, s) -> go (s :: acc) i
+      | None -> ParseErr(i, InvalidEscapeSequence)
+
+  assert(at i text = '"')
+  go [] (i + 1)
+
+let private scanDigits (i: int) (text: string) =
+  let rec go i =
+    if C.isDigit (at i text) then
+      go (i + 1)
+    else
+      i
+
+  go i
+
+let private parseNumber (i: int) (text: string) =
+  let start = i
+
+  let i = if at i text = '-' then i + 1 else i
+
+  let i = scanDigits i text
+
+  let i =
+    if at i text = '.' then
+      scanDigits (i + 1) text
+    else
+      i
+
+  let i =
+    match at i text with
+    | 'e'
+    | 'E' ->
+      let i =
+        match at (i + 1) text with
+        | '-'
+        | '+' -> i + 2
+        | _ -> i + 1
+
+      scanDigits i text
+
+    | _ -> i
+
+  let value =
+    text |> S.slice start i |> float |> JNumber
+
+  value, i
+
+let parseArray (i: int) (text: string) =
+  let rec go acc i =
+    let i = skipSpaces i text
+
+    match parseValue i text with
+    | ParseOk (item, i) ->
+      let i = skipSpaces i text
+      let acc = item :: acc
+
+      match at i text with
+      | ',' -> go acc (i + 1)
+
+      | ']' ->
+        let value = JArray(List.rev acc)
+        ParseOk(value, i + 1)
+
+      | _ -> ParseErr(i, ExpectedCommaOrRightBracket)
+
+    | err -> err
+
+  assert (text.[i] = '[')
+  let i = skipSpaces (i + 1) text
+
+  match at i text with
+  | ']' -> ParseOk(JArray [], i + 1)
+  | _ -> go [] i
+
+let parseObject i (text: string) =
+  let rec go acc i =
+    let i = skipSpaces i text
+
+    match at i text with
+    | '"' ->
+      match parseString i text with
+      | ParseOk (JString key, i) ->
+        let i = skipSpaces i text
+
+        match at i text with
+        | ':' ->
+          let i = skipSpaces (i + 1) text
+
+          match parseValue i text with
+          | ParseOk (value, i) ->
+            let i = skipSpaces i text
+            let acc = (key, value) :: acc
+
+            match at i text with
+            | ',' -> go acc (i + 1)
+
+            | '}' ->
+              let value = JObject(List.rev acc)
+              ParseOk(value, i + 1)
+
+            | _ -> ParseErr(i, ExpectedCommaOrRightBrace)
+
+        | _ -> ParseErr(i, ExpectedColon)
+
+      | ParseOk _ -> unreachable () // parseString should return JString
+
+      | err -> err
+
+    | _ -> ParseErr(i, ExpectedKey)
+
+  assert (text.[i] = '{')
+  let i = skipSpaces (i + 1) text
+
+  match at i text with
+  | '}' -> ParseOk(JObject [], i + 1)
+  | _ -> go [] i
+
+let private parseValue (i: int) (text: string) : JsonParseResult =
+  let ok endIndex value =
+    if endIndex <= text.Length then
+      ParseOk(value, endIndex)
+    else
+      ParseErr(i, ExpectedValue)
+
+  match at i text with
+  | '[' -> parseArray i text
+  | '{' -> parseObject i text
+
+  | '"' -> parseString i text
+
+  | '-'
+  | '.'
+  | '0'
+  | '1'
+  | '2'
+  | '3'
+  | '4'
+  | '5'
+  | '6'
+  | '7'
+  | '8'
+  | '9' -> parseNumber i text |> ParseOk
+
+  | 'f' -> ok (i + 5) (JBoolean false)
+  | 't' -> ok (i + 4) (JBoolean true)
+  | 'n' -> ok (i + 4) JNull
+
+  | _ -> ParseErr(i, ExpectedValue)
+
+// -----------------------------------------------
+// Interface
+// -----------------------------------------------
+
+/// Parses a JSON document.
+let parse (text: string) : JsonValue option =
+  let i = skipSpaces 0 text
+
+  match parseValue i text with
+  | ParseOk (value, i) when skipSpaces i text = text.Length -> Some value
+  | _ -> None
+
+/// Parses a JSON value that appears in some part of text.
+let parsePartial (l: int) (r: int) (text: string) : JsonParseResult =
+  let text = text |> S.truncate r
+  let i = skipSpaces l text
+  parseValue i text
