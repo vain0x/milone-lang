@@ -14,7 +14,7 @@ module EphVector =
   // should not allocate
   let empty (serial: EphSerial) : EphVector<'T> * EphSerial =
     let array, serial = EphArray.empty serial
-    (array, 0) serial
+    (array, 0), serial
 
   /// Creates an empty vector with specified capacity.
   let alloc (capacity: int) (serial: EphSerial) : EphVector<'T> * EphSerial =
