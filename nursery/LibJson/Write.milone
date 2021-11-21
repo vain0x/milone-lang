@@ -1,0 +1,184 @@
+/// Provides JSON writer.
+module rec LibJson.Write
+
+open LibJson.Json
+
+module C = MiloneStd.StdChar
+module S = MiloneStd.StdString
+
+let private cons x y = x :: y
+
+// #dup
+let private at (i: int) (s: string) =
+  if i < s.Length then
+    s.[i]
+  else
+    assert (i = s.Length)
+    '\x00'
+
+// #charNeedsEscaping
+// FIXME: bytes invalid as UTF-8 also need escaping
+let private charNeedsEscaping (c: char) =
+  c = '"'
+  || c = '\\'
+  || (byte c <= byte 0x78 && byte c < byte 0x20) // FIXME: hex literal with suffix
+
+// FIXME: move to standard lib
+let private writeHex (value: uint) =
+  let rec go acc len (n: uint) =
+    if n = uint 0 && len = 0 then
+      acc
+    else
+      let d = int (n &&& uint 0xf)
+      let s = "0123456789abcdef".[d..d]
+      go (s + acc) (len - 1) (n >>> 4)
+
+  go "" 4 value
+
+// -----------------------------------------------
+// Writers
+// -----------------------------------------------
+
+let private writeVerbatim i (text: string) =
+  if i < text.Length then
+    let c = text.[i]
+
+    if charNeedsEscaping c then
+      i, false
+    else
+      writeVerbatim (i + 1) text
+  else
+    i, true
+
+let private writeEscape acc c =
+  match c with
+  | '"' -> acc |> cons "\\\""
+  | '\\' -> acc |> cons "\\\\"
+
+  | '\r' -> acc |> cons "\\r"
+  | '\n' -> acc |> cons "\\n"
+  | '\t' -> acc |> cons "\\t"
+  | '\x08' -> acc |> cons "\\b" // backspace
+  | '\x0c' -> acc |> cons "\\f" // formfeed
+
+  | _ ->
+    assert (charNeedsEscaping c)
+    acc |> cons "\\u" |> cons (writeHex (uint (byte c)))
+
+let private writeString acc (text: string) =
+  let rec go acc i =
+    let endIndex, eof = writeVerbatim i text
+
+    let acc =
+      if i < endIndex then
+        acc |> cons (text |> S.slice i endIndex)
+      else
+        acc
+
+    let i = endIndex
+
+    if eof then
+      acc
+    else
+      let c =
+        assert (i < text.Length)
+        text.[i]
+
+      let acc = writeEscape acc c
+      go acc (i + 1)
+
+  go (acc |> cons "\"") 0 |> cons "\""
+
+// -----------------------------------------------
+// Number
+// -----------------------------------------------
+
+let private writeNumber acc (n: float) =
+  // FIXME: error if NaN or inf
+
+  // FIXME: dirty process of floating point numbers
+  let printPrecisely (n: float) =
+    __nativeStmt (
+      """
+        double n = {0};
+      """,
+      n
+    )
+
+    __nativeStmt
+      """
+        char buf[32] = ""; {
+        double fabs(double);
+        double round(double);
+
+        bool small = fabs(n) < (double)1e-15 && n != 0.0;
+        bool large = fabs(n) > (double)1e15;
+        if (small || large) {
+          sprintf(buf, "%e", n);
+        } else {
+          bool integral = fabs(n - round(n)) < 1e-15;
+          if (integral) {
+            n = round(n);
+          }
+
+          size_t len = sprintf(buf, "%.15f", n);
+          // Remove trailing zeros.
+          while (len >= 3 && buf[len - 2] != '.' && buf[len - 1] == '0') {
+            len--;
+          }
+          // Remove ".0".
+          if (len >= 3 && buf[len - 2] == '.' && buf[len - 1] == '0') {
+            len -= 2;
+          }
+          buf[len] = '\0';
+        }
+      }
+      """
+
+    __nativeExpr "str_of_c_str(buf)"
+
+  acc |> cons (printPrecisely n)
+
+let private writeArray acc items =
+  let rec go acc first items =
+    match items with
+    | [] -> acc
+
+    | item :: items ->
+      let acc = if first then acc else acc |> cons ","
+      let acc = writeValue acc item
+      go acc false items
+
+  go (acc |> cons "[") true items |> cons "]"
+
+let private writeObject acc entries =
+  let rec go acc first entries =
+    match entries with
+    | [] -> acc
+
+    | (key, value) :: entries ->
+      let acc = if first then acc else acc |> cons ","
+      let acc = writeString acc key |> cons ":"
+      let acc = writeValue acc value
+      go acc false entries
+
+  go (acc |> cons "{") true entries |> cons "}"
+
+let private writeValue acc value : string list =
+  match value with
+  | JString value -> writeString acc value
+  | JNumber value -> writeNumber acc value
+
+  | JBoolean true -> "true" :: acc
+  | JBoolean false -> "false" :: acc
+  | JNull -> "null" :: acc
+
+  | JArray items -> writeArray acc items
+  | JObject entries -> writeObject acc entries
+
+// -----------------------------------------------
+// Interface
+// -----------------------------------------------
+
+let write (value: JsonValue) : string =
+  writeValue [] value |> List.rev |> S.concat ""
