@@ -173,7 +173,7 @@ let private readVerbatim (i: int) text =
     | '\x00' when i >= text.Length -> i, VerbatimSep.Eof
 
     // #charNeedsEscaping
-    | c when byte c <= byte 0x7f && byte c < byte 0x20 -> i, VerbatimSep.Control
+    | c when byte c <= 0x7fuy && byte c < 0x20uy -> i, VerbatimSep.Control
 
     | _ -> go (i + 1)
 
