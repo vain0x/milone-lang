@@ -165,7 +165,7 @@ let private hoistModule (hirCtx: HirCtx) (m: HModule) : (HModule * HStmt option)
 
       // Move toplevel statements to a function that is called on start.
       let funDef: FunDef =
-        { Name = "_start"
+        { Name = "start"
           Arity = 1
           Ty = TyScheme([], funTy)
           Abi = MiloneAbi
