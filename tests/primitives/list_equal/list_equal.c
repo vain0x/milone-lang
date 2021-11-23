@@ -1,4 +1,4 @@
-#include "milone.h"
+#include <milone.h>
 
 struct IntStringTuple2_;
 
@@ -42,7 +42,7 @@ bool MiloneDerive_ListEqual_listEqual_1(struct IntStringTuple2_List const* , str
 
 void list_equal_list_equal_testPairList(void);
 
-int milone_main(void);
+int main(int argc, char** argv);
 
 struct IntStringTuple2_ {
     int t0;
@@ -116,14 +116,14 @@ void list_equal_list_equal_testIntList(void) {
     struct IntList const* list_4 = milone_mem_alloc(1, sizeof(struct IntList));
     (*(((struct IntList*)list_4))) = (struct IntList){.head = 2, .tail = list_5};
     bool call_3 = MiloneDerive_ListEqual_listEqual(list_, list_4);
-    milone_assert(call_3, 8, 2);
+    milone_assert(call_3, (struct String){.str = "list_equal/list_equal.milone", .len = 28}, 8, 2);
     struct IntList const* nil_ = NULL;
     bool call_4 = MiloneDerive_ListEqual_listEqual(nil_, NULL);
-    milone_assert(call_4, 11, 2);
+    milone_assert(call_4, (struct String){.str = "list_equal/list_equal.milone", .len = 28}, 11, 2);
     struct IntList const* list_8 = milone_mem_alloc(1, sizeof(struct IntList));
     (*(((struct IntList*)list_8))) = (struct IntList){.head = 0, .tail = NULL};
     bool call_5 = MiloneDerive_ListEqual_listEqual(nil_, list_8);
-    milone_assert((!(call_5)), 12, 2);
+    milone_assert((!(call_5)), (struct String){.str = "list_equal/list_equal.milone", .len = 28}, 12, 2);
     struct IntList const* list_12 = milone_mem_alloc(1, sizeof(struct IntList));
     (*(((struct IntList*)list_12))) = (struct IntList){.head = 5, .tail = NULL};
     struct IntList const* list_11 = milone_mem_alloc(1, sizeof(struct IntList));
@@ -141,7 +141,7 @@ void list_equal_list_equal_testIntList(void) {
     struct IntList const* list_13 = milone_mem_alloc(1, sizeof(struct IntList));
     (*(((struct IntList*)list_13))) = (struct IntList){.head = 2, .tail = list_14};
     bool call_6 = MiloneDerive_ListEqual_listEqual(list_9, list_13);
-    milone_assert((!(call_6)), 15, 2);
+    milone_assert((!(call_6)), (struct String){.str = "list_equal/list_equal.milone", .len = 28}, 15, 2);
     struct IntList const* list_19 = milone_mem_alloc(1, sizeof(struct IntList));
     (*(((struct IntList*)list_19))) = (struct IntList){.head = 3, .tail = NULL};
     struct IntList const* list_18 = milone_mem_alloc(1, sizeof(struct IntList));
@@ -157,7 +157,7 @@ void list_equal_list_equal_testIntList(void) {
     struct IntList const* list_20 = milone_mem_alloc(1, sizeof(struct IntList));
     (*(((struct IntList*)list_20))) = (struct IntList){.head = 2, .tail = list_21};
     bool call_7 = MiloneDerive_ListEqual_listEqual(list_17, list_20);
-    milone_assert((!(call_7)), 17, 2);
+    milone_assert((!(call_7)), (struct String){.str = "list_equal/list_equal.milone", .len = 28}, 17, 2);
     struct IntList const* list_26 = milone_mem_alloc(1, sizeof(struct IntList));
     (*(((struct IntList*)list_26))) = (struct IntList){.head = 5, .tail = NULL};
     struct IntList const* list_25 = milone_mem_alloc(1, sizeof(struct IntList));
@@ -173,7 +173,7 @@ void list_equal_list_equal_testIntList(void) {
     struct IntList const* list_27 = milone_mem_alloc(1, sizeof(struct IntList));
     (*(((struct IntList*)list_27))) = (struct IntList){.head = 2, .tail = list_28};
     bool call_8 = MiloneDerive_ListEqual_listEqual(list_24, list_27);
-    milone_assert((!(call_8)), 19, 2);
+    milone_assert((!(call_8)), (struct String){.str = "list_equal/list_equal.milone", .len = 28}, 19, 2);
     return;
 }
 
@@ -191,11 +191,12 @@ void list_equal_list_equal_testPairList(void) {
     struct IntStringTuple2_List const* list_33 = milone_mem_alloc(1, sizeof(struct IntStringTuple2_List));
     (*(((struct IntStringTuple2_List*)list_33))) = (struct IntStringTuple2_List){.head = IntStringTuple2_2, .tail = list_34};
     bool call_9 = MiloneDerive_ListEqual_listEqual_1(list_31, list_33);
-    milone_assert(call_9, 22, 2);
+    milone_assert(call_9, (struct String){.str = "list_equal/list_equal.milone", .len = 28}, 22, 2);
     return;
 }
 
-int milone_main(void) {
+int main(int argc, char** argv) {
+    milone_start(argc, argv);
     list_equal_list_equal_testIntList();
     list_equal_list_equal_testPairList();
     return 0;

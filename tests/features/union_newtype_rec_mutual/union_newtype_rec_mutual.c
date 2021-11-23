@@ -1,4 +1,4 @@
-#include "milone.h"
+#include <milone.h>
 
 struct Odd_;
 
@@ -10,7 +10,7 @@ struct StringOddoption1Tuple2option1_;
 
 struct IntStringOddoption1Tuple2option1Tuple2_;
 
-int milone_main(void);
+int main(int argc, char** argv);
 
 enum Odd_Discriminant {
     Odd_,
@@ -57,7 +57,8 @@ struct IntStringOddoption1Tuple2option1Tuple2_ {
     struct StringOddoption1Tuple2option1_ t1;
 };
 
-int milone_main(void) {
+int main(int argc, char** argv) {
+    milone_start(argc, argv);
     int n1_;
     struct String s2_;
     int n3_;
@@ -88,14 +89,14 @@ int milone_main(void) {
     if (((*(((struct IntStringOddoption1Tuple2option1Tuple2_ const*)four_.t1.Some_1.Odd_))).t1.Some_2.t1.discriminant != Some_1)) goto next_2;
     n1_ = (*(((struct IntStringOddoption1Tuple2option1Tuple2_ const*)(*(((struct IntStringOddoption1Tuple2option1Tuple2_ const*)four_.t1.Some_1.Odd_))).t1.Some_2.t1.Some_1.Odd_))).t0;
     if (((*(((struct IntStringOddoption1Tuple2option1Tuple2_ const*)(*(((struct IntStringOddoption1Tuple2option1Tuple2_ const*)four_.t1.Some_1.Odd_))).t1.Some_2.t1.Some_1.Odd_))).t1.discriminant != None_2)) goto next_2;
-    milone_assert((n1_ == 1), 15, 4);
-    milone_assert((str_compare(s2_, (struct String){.str = "two", .len = 3}) == 0), 16, 4);
-    milone_assert((n3_ == 3), 17, 4);
-    milone_assert((str_compare(s4_, (struct String){.str = "four", .len = 4}) == 0), 18, 4);
+    milone_assert((n1_ == 1), (struct String){.str = "union_newtype_rec_mutual/union_newtype_rec_mutual.milone", .len = 56}, 15, 4);
+    milone_assert((str_compare(s2_, (struct String){.str = "two", .len = 3}) == 0), (struct String){.str = "union_newtype_rec_mutual/union_newtype_rec_mutual.milone", .len = 56}, 16, 4);
+    milone_assert((n3_ == 3), (struct String){.str = "union_newtype_rec_mutual/union_newtype_rec_mutual.milone", .len = 56}, 17, 4);
+    milone_assert((str_compare(s4_, (struct String){.str = "four", .len = 4}) == 0), (struct String){.str = "union_newtype_rec_mutual/union_newtype_rec_mutual.milone", .len = 56}, 18, 4);
     match_ = 0;
     goto end_match_1;
 next_2:;
-    milone_assert(false, 20, 9);
+    milone_assert(false, (struct String){.str = "union_newtype_rec_mutual/union_newtype_rec_mutual.milone", .len = 56}, 20, 9);
     match_ = 0;
     goto end_match_1;
 next_3:;

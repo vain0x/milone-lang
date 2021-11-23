@@ -1,4 +1,4 @@
-#include "milone.h"
+#include <milone.h>
 
 struct IntList;
 
@@ -74,7 +74,7 @@ bool MiloneCore_List_IntListBoolFun1_isEmpty(struct IntList const* );
 
 int MiloneCore_List_IntIntIntFun2IntIntListIntFun3_fold(struct IntIntIntFun2 , int , struct IntList const* );
 
-int milone_main(void);
+int main(int argc, char** argv);
 
 struct IntStringFun1 {
     struct String(*fun)(void const*, int);
@@ -183,7 +183,7 @@ void std_list_Program_testTakeWhile(struct IntIntListFun1 gen_) {
     struct IntList const* app_ = gen_.fun(gen_.env, 3);
     struct IntList const* call_7 = MiloneCore_List_IntBoolFun1IntListIntListFun2_takeWhile(fun_1, app_);
     bool call_8 = std_list_std_list_eq(list_, call_7);
-    milone_assert(call_8, 22, 2);
+    milone_assert(call_8, (struct String){.str = "std_list/std_list.milone", .len = 24}, 22, 2);
     struct IntList const* list_4 = milone_mem_alloc(1, sizeof(struct IntList));
     (*(((struct IntList*)list_4))) = (struct IntList){.head = 1, .tail = NULL};
     struct IntList const* list_3 = milone_mem_alloc(1, sizeof(struct IntList));
@@ -192,7 +192,7 @@ void std_list_Program_testTakeWhile(struct IntIntListFun1 gen_) {
     struct IntList const* app_1 = gen_.fun(gen_.env, 6);
     struct IntList const* call_9 = MiloneCore_List_IntBoolFun1IntListIntListFun2_takeWhile(fun_2, app_1);
     bool call_10 = std_list_std_list_eq(list_3, call_9);
-    milone_assert(call_10, 26, 2);
+    milone_assert(call_10, (struct String){.str = "std_list/std_list.milone", .len = 24}, 26, 2);
     return;
 }
 
@@ -215,7 +215,7 @@ void std_list_Program_testSkipWhile(struct IntIntListFun1 gen_1) {
     struct IntList const* app_2 = gen_1.fun(gen_1.env, 5);
     struct IntList const* call_13 = MiloneCore_List_IntBoolFun1IntListIntListFun2_skipWhile(fun_3, app_2);
     bool call_14 = std_list_std_list_eq(NULL, call_13);
-    milone_assert(call_14, 31, 2);
+    milone_assert(call_14, (struct String){.str = "std_list/std_list.milone", .len = 24}, 31, 2);
     struct IntList const* list_8 = milone_mem_alloc(1, sizeof(struct IntList));
     (*(((struct IntList*)list_8))) = (struct IntList){.head = 4, .tail = NULL};
     struct IntList const* list_7 = milone_mem_alloc(1, sizeof(struct IntList));
@@ -228,7 +228,7 @@ void std_list_Program_testSkipWhile(struct IntIntListFun1 gen_1) {
     struct IntList const* app_3 = gen_1.fun(gen_1.env, 5);
     struct IntList const* call_15 = MiloneCore_List_IntBoolFun1IntListIntListFun2_skipWhile(fun_4, app_3);
     bool call_16 = std_list_std_list_eq(list_5, call_15);
-    milone_assert(call_16, 33, 2);
+    milone_assert(call_16, (struct String){.str = "std_list/std_list.milone", .len = 24}, 33, 2);
     return;
 }
 
@@ -262,7 +262,7 @@ void std_list_Program_testUnzip(void) {
     struct IntList const* list_14 = milone_mem_alloc(1, sizeof(struct IntList));
     (*(((struct IntList*)list_14))) = (struct IntList){.head = 0, .tail = list_15};
     bool call_18 = std_list_std_list_eq(list_14, xs_1);
-    milone_assert(call_18, 47, 2);
+    milone_assert(call_18, (struct String){.str = "std_list/std_list.milone", .len = 24}, 47, 2);
     struct IntList const* list_23 = milone_mem_alloc(1, sizeof(struct IntList));
     (*(((struct IntList*)list_23))) = (struct IntList){.head = 5, .tail = NULL};
     struct IntList const* list_22 = milone_mem_alloc(1, sizeof(struct IntList));
@@ -274,7 +274,7 @@ void std_list_Program_testUnzip(void) {
     struct IntList const* list_19 = milone_mem_alloc(1, sizeof(struct IntList));
     (*(((struct IntList*)list_19))) = (struct IntList){.head = 1, .tail = list_20};
     bool call_19 = std_list_std_list_eq(list_19, ys_);
-    milone_assert(call_19, 48, 2);
+    milone_assert(call_19, (struct String){.str = "std_list/std_list.milone", .len = 24}, 48, 2);
     return;
 }
 
@@ -321,14 +321,15 @@ struct IntList const* std_list_std_list_eta2_main_gen(void const* env_6, int arg
     return call_22;
 }
 
-int milone_main(void) {
+int main(int argc, char** argv) {
+    milone_start(argc, argv);
     struct IntList const* call_23 = std_list_std_list_main_gen(0);
     bool call_24 = MiloneCore_List_IntListBoolFun1_isEmpty(call_23);
-    milone_assert(call_24, 64, 2);
+    milone_assert(call_24, (struct String){.str = "std_list/std_list.milone", .len = 24}, 64, 2);
     struct IntIntIntFun2 fun_5 = (struct IntIntIntFun2){.fun = std_list_std_list_eta3_main_fun, .env = NULL};
     struct IntList const* call_25 = std_list_std_list_main_gen(5);
     int call_26 = MiloneCore_List_IntIntIntFun2IntIntListIntFun3_fold(fun_5, 0, call_25);
-    milone_assert((call_26 == ((((0 + 1) + 2) + 3) + 4)), 66, 2);
+    milone_assert((call_26 == ((((0 + 1) + 2) + 3) + 4)), (struct String){.str = "std_list/std_list.milone", .len = 24}, 66, 2);
     struct IntIntListFun1 fun_6 = (struct IntIntListFun1){.fun = std_list_std_list_eta2_main_gen, .env = NULL};
     struct IntIntListFun1 gen_2 = fun_6;
     std_list_Program_testSkipWhile(gen_2);

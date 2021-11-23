@@ -10,6 +10,8 @@
 #include <stdint.h>
 #include <stdio.h>
 
+void milone_start(int, char **);
+
 // -----------------------------------------------
 // memory management
 // -----------------------------------------------

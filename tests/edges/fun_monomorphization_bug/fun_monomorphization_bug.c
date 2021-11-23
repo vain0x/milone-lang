@@ -1,4 +1,4 @@
-#include "milone.h"
+#include <milone.h>
 
 struct IntIntTuple2_;
 
@@ -6,7 +6,7 @@ void const* fun_monomorphization_bug_fun_monomorphization_bug_IntIntTuple2Object
 
 void const* fun_monomorphization_bug_fun_monomorphization_bug_myFst_ObjectObjectFun1_g(void const* pair_1);
 
-int milone_main(void);
+int main(int argc, char** argv);
 
 struct IntIntTuple2_ {
     int t0;
@@ -25,9 +25,10 @@ void const* fun_monomorphization_bug_fun_monomorphization_bug_myFst_ObjectObject
     return ((void const*)((intptr_t)x_));
 }
 
-int milone_main(void) {
+int main(int argc, char** argv) {
+    milone_start(argc, argv);
     struct IntIntTuple2_ IntIntTuple2_ = (struct IntIntTuple2_){.t0 = 2, .t1 = 3};
     void const* call_1 = fun_monomorphization_bug_fun_monomorphization_bug_IntIntTuple2ObjectFun1_myFst(IntIntTuple2_);
-    milone_assert((((int)((intptr_t)call_1)) == 2), 18, 2);
+    milone_assert((((int)((intptr_t)call_1)) == 2), (struct String){.str = "fun_monomorphization_bug/fun_monomorphization_bug.milone", .len = 56}, 18, 2);
     return 0;
 }

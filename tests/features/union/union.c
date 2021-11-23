@@ -1,4 +1,4 @@
-#include "milone.h"
+#include <milone.h>
 
 struct Status_;
 
@@ -8,7 +8,7 @@ struct IntStringTuple2_;
 
 struct ApiResponse_;
 
-int milone_main(void);
+int main(int argc, char** argv);
 
 enum Status_Discriminant {
     Ok_1,
@@ -53,7 +53,8 @@ struct ApiResponse_ {
     };
 };
 
-int milone_main(void) {
+int main(int argc, char** argv) {
+    milone_start(argc, argv);
     struct String statusText_;
     int statusCode_;
     int x_;
@@ -65,13 +66,13 @@ int milone_main(void) {
     struct Status_ err2_ = variant_1;
     char match_;
     if ((err1_.discriminant != Ok_1)) goto next_2;
-    milone_assert(false, 28, 12);
+    milone_assert(false, (struct String){.str = "union/union.milone", .len = 18}, 28, 12);
     match_ = 0;
     goto end_match_1;
 next_2:;
     if ((err1_.discriminant != Err_)) goto next_3;
     e_ = err1_.Err_;
-    milone_assert((str_compare(e_, (struct String){.str = "No such file or directory.", .len = 26}) == 0), 29, 15);
+    milone_assert((str_compare(e_, (struct String){.str = "No such file or directory.", .len = 26}) == 0), (struct String){.str = "union/union.milone", .len = 18}, 29, 15);
     match_ = 0;
     goto end_match_1;
 next_3:;
@@ -81,7 +82,7 @@ end_match_1:;
     struct Limit_ variant_2 = (struct Limit_){.discriminant = LimitVal_, .LimitVal_ = 1};
     if ((variant_2.discriminant != LimitVal_)) goto next_5;
     x_ = variant_2.LimitVal_;
-    milone_assert((x_ == 1), 33, 20);
+    milone_assert((x_ == 1), (struct String){.str = "union/union.milone", .len = 18}, 33, 20);
     match_1 = 0;
     goto end_match_4;
 next_5:;
@@ -102,7 +103,7 @@ clause_8:;
     switch_ = 0;
     goto switch_next_7;
 clause_9:;
-    milone_assert(false, 39, 11);
+    milone_assert(false, (struct String){.str = "union/union.milone", .len = 18}, 39, 11);
     switch_ = 0;
     goto switch_next_7;
 switch_next_7:;
@@ -125,11 +126,11 @@ else_15:;
     if_ = false;
     goto if_next_13;
 if_next_13:;
-    milone_assert(if_, 43, 42);
+    milone_assert(if_, (struct String){.str = "union/union.milone", .len = 18}, 43, 42);
     match_2 = 0;
     goto end_match_10;
 next_11:;
-    milone_assert(false, 44, 11);
+    milone_assert(false, (struct String){.str = "union/union.milone", .len = 18}, 44, 11);
     match_2 = 0;
     goto end_match_10;
 next_12:;
@@ -152,7 +153,7 @@ clause_17:;
     switch_1 = 0;
     goto switch_next_16;
 clause_18:;
-    milone_assert(false, 55, 20);
+    milone_assert(false, (struct String){.str = "union/union.milone", .len = 18}, 55, 20);
     switch_1 = 0;
     goto switch_next_16;
 switch_next_16:;

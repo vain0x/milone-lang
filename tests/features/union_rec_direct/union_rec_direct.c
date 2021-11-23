@@ -1,4 +1,4 @@
-#include "milone.h"
+#include <milone.h>
 
 struct Expr_;
 
@@ -6,7 +6,7 @@ struct ExprExprTuple2_;
 
 int union_rec_direct_union_rec_direct_main_eval(struct Expr_ expr_);
 
-int milone_main(void);
+int main(int argc, char** argv);
 
 enum Expr_Discriminant {
     Int_,
@@ -49,7 +49,8 @@ end_match_1:;
     return match_;
 }
 
-int milone_main(void) {
+int main(int argc, char** argv) {
+    milone_start(argc, argv);
     struct Expr_ variant_ = (struct Expr_){.discriminant = Int_, .Int_ = 11};
     struct Expr_ variant_1 = (struct Expr_){.discriminant = Int_, .Int_ = 22};
     struct Expr_ variant_2 = (struct Expr_){.discriminant = Int_, .Int_ = 9};
@@ -63,6 +64,6 @@ int milone_main(void) {
     struct Expr_ variant_4 = (struct Expr_){.discriminant = Add_, .Add_ = box_1};
     struct Expr_ expr_1 = variant_4;
     int call_2 = union_rec_direct_union_rec_direct_main_eval(expr_1);
-    milone_assert((call_2 == 42), 17, 2);
+    milone_assert((call_2 == 42), (struct String){.str = "union_rec_direct/union_rec_direct.milone", .len = 40}, 17, 2);
     return 0;
 }

@@ -1,4 +1,4 @@
-#include "milone.h"
+#include <milone.h>
 
 struct StringStringFun1;
 
@@ -6,7 +6,7 @@ struct String fun_underlying_fun_forward_decl_issue_sub_f(int x_, struct String 
 
 struct String fun_underlying_fun_forward_decl_issue_sub_eta2__f(void const* env_, struct String arg_);
 
-void fun_underlying_fun_forward_decl_issue_sub__start(void);
+void fun_underlying_fun_forward_decl_issue_sub_start(void);
 
 struct StringStringFun1 {
     struct String(*fun)(void const*, struct String);
@@ -26,7 +26,7 @@ struct String fun_underlying_fun_forward_decl_issue_sub_eta2__f(void const* env_
     return call_1;
 }
 
-void fun_underlying_fun_forward_decl_issue_sub__start(void) {
+void fun_underlying_fun_forward_decl_issue_sub_start(void) {
     struct StringStringFun1 fun_ = (struct StringStringFun1){.fun = fun_underlying_fun_forward_decl_issue_sub_eta2__f, .env = ((void const*)((intptr_t)2))};
     fun_underlying_fun_forward_decl_issue_sub_f2 = fun_;
     return;

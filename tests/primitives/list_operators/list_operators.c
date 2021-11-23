@@ -1,4 +1,4 @@
-#include "milone.h"
+#include <milone.h>
 
 struct IntList;
 
@@ -12,7 +12,7 @@ void list_operators_Program_cons2Test(void);
 
 void list_operators_Program_literalTest(void);
 
-int milone_main(void);
+int main(int argc, char** argv);
 
 struct IntList {
     int head;
@@ -31,7 +31,7 @@ nil_cl_2:;
     if_ = 0;
     goto if_next_1;
 cons_cl_3:;
-    milone_assert(false, 9, 9);
+    milone_assert(false, (struct String){.str = "list_operators/list_operators.milone", .len = 36}, 9, 9);
     if_ = 0;
     goto if_next_1;
 if_next_1:;
@@ -47,11 +47,11 @@ void list_operators_Program_cons1Test(void) {
     if ((!(xs_))) goto next_5;
     x_ = xs_->head;
     if ((!((!(xs_->tail))))) goto next_5;
-    milone_assert((x_ == 1), 15, 15);
+    milone_assert((x_ == 1), (struct String){.str = "list_operators/list_operators.milone", .len = 36}, 15, 15);
     match_ = 0;
     goto end_match_4;
 next_5:;
-    milone_assert(false, 16, 9);
+    milone_assert(false, (struct String){.str = "list_operators/list_operators.milone", .len = 36}, 16, 9);
     match_ = 0;
     goto end_match_4;
 next_6:;
@@ -86,11 +86,11 @@ else_12:;
     if_1 = false;
     goto if_next_10;
 if_next_10:;
-    milone_assert(if_1, 22, 22);
+    milone_assert(if_1, (struct String){.str = "list_operators/list_operators.milone", .len = 36}, 22, 22);
     match_1 = 0;
     goto end_match_7;
 next_8:;
-    milone_assert(false, 23, 9);
+    milone_assert(false, (struct String){.str = "list_operators/list_operators.milone", .len = 36}, 23, 9);
     match_1 = 0;
     goto end_match_7;
 next_9:;
@@ -122,14 +122,14 @@ void list_operators_Program_literalTest(void) {
     if ((!(zs_->tail->tail->tail))) goto next_14;
     z7_ = zs_->tail->tail->tail->head;
     if ((!((!(zs_->tail->tail->tail->tail))))) goto next_14;
-    milone_assert((z2_ == 2), 30, 4);
-    milone_assert((z3_ == 3), 31, 4);
-    milone_assert((z5_ == 5), 32, 4);
-    milone_assert((z7_ == 7), 33, 4);
+    milone_assert((z2_ == 2), (struct String){.str = "list_operators/list_operators.milone", .len = 36}, 30, 4);
+    milone_assert((z3_ == 3), (struct String){.str = "list_operators/list_operators.milone", .len = 36}, 31, 4);
+    milone_assert((z5_ == 5), (struct String){.str = "list_operators/list_operators.milone", .len = 36}, 32, 4);
+    milone_assert((z7_ == 7), (struct String){.str = "list_operators/list_operators.milone", .len = 36}, 33, 4);
     match_2 = 0;
     goto end_match_13;
 next_14:;
-    milone_assert(false, 35, 9);
+    milone_assert(false, (struct String){.str = "list_operators/list_operators.milone", .len = 36}, 35, 9);
     match_2 = 0;
     goto end_match_13;
 next_15:;
@@ -137,7 +137,8 @@ end_match_13:;
     return;
 }
 
-int milone_main(void) {
+int main(int argc, char** argv) {
+    milone_start(argc, argv);
     list_operators_Program_nilTest();
     list_operators_Program_cons1Test();
     list_operators_Program_cons2Test();

@@ -1,4 +1,4 @@
-#include "milone.h"
+#include <milone.h>
 
 void* milone_mem_alloc(int , uintptr_t );
 
@@ -24,7 +24,7 @@ void native_fun_ptr_native_fun_ptr_testVoidFun_log(int n_1);
 
 void native_fun_ptr_native_fun_ptr_testVoidFun(void);
 
-int milone_main(void);
+int main(int argc, char** argv);
 
 void* native_fun_ptr_native_fun_ptr_memAlloc(int len_, int size_) {
     void* milone_mem_alloc_result = milone_mem_alloc(len_, ((uintptr_t)size_));
@@ -54,15 +54,15 @@ void native_fun_ptr_native_fun_ptr_testSort(void) {
     native_fun_ptr_native_fun_ptr_sortIntArray(array_1, len_2);
     int const* array_2 = ((int const*)array_1);
     int read_2 = (*(array_2));
-    milone_assert((read_2 == 1), 34, 2);
+    milone_assert((read_2 == 1), (struct String){.str = "native_fun_ptr/native_fun_ptr.milone", .len = 36}, 34, 2);
     int read_3 = array_2[1];
-    milone_assert((read_3 == 1), 35, 2);
+    milone_assert((read_3 == 1), (struct String){.str = "native_fun_ptr/native_fun_ptr.milone", .len = 36}, 35, 2);
     int read_4 = array_2[2];
-    milone_assert((read_4 == 3), 36, 2);
+    milone_assert((read_4 == 3), (struct String){.str = "native_fun_ptr/native_fun_ptr.milone", .len = 36}, 36, 2);
     int read_5 = array_2[3];
-    milone_assert((read_5 == 4), 37, 2);
+    milone_assert((read_5 == 4), (struct String){.str = "native_fun_ptr/native_fun_ptr.milone", .len = 36}, 37, 2);
     int read_6 = array_2[4];
-    milone_assert((read_6 == 5), 38, 2);
+    milone_assert((read_6 == 5), (struct String){.str = "native_fun_ptr/native_fun_ptr.milone", .len = 36}, 38, 2);
     return;
 }
 
@@ -73,7 +73,7 @@ int native_fun_ptr_native_fun_ptr_testUnitFun_answer(void) {
 void native_fun_ptr_native_fun_ptr_testUnitFun(void) {
     int(*fp_)(void) = ((int(*)(void))native_fun_ptr_native_fun_ptr_testUnitFun_answer);
 int (*unit_fun)(void) = fp_;    int value_ = unit_fun();
-    milone_assert((value_ == 42), 49, 2);
+    milone_assert((value_ == 42), (struct String){.str = "native_fun_ptr/native_fun_ptr.milone", .len = 36}, 49, 2);
     return;
 }
 
@@ -84,7 +84,7 @@ int native_fun_ptr_native_fun_ptr_testUnaryFun_inc(int n_) {
 void native_fun_ptr_native_fun_ptr_testUnaryFun(void) {
     int(*fp_1)(int) = native_fun_ptr_native_fun_ptr_testUnaryFun_inc;
 int (*unary_fun)(int) = fp_1;    int value_1 = unary_fun(41);
-    milone_assert((value_1 == 42), 60, 2);
+    milone_assert((value_1 == 42), (struct String){.str = "native_fun_ptr/native_fun_ptr.milone", .len = 36}, 60, 2);
     return;
 }
 
@@ -97,7 +97,8 @@ void native_fun_ptr_native_fun_ptr_testVoidFun(void) {
 void(*void_fun)(int) = fp_2; void_fun(42);    return;
 }
 
-int milone_main(void) {
+int main(int argc, char** argv) {
+    milone_start(argc, argv);
     native_fun_ptr_native_fun_ptr_testSort();
     native_fun_ptr_native_fun_ptr_testUnitFun();
     native_fun_ptr_native_fun_ptr_testUnaryFun();

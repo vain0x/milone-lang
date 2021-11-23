@@ -1,4 +1,4 @@
-#include "milone.h"
+#include <milone.h>
 
 struct StringList;
 
@@ -18,7 +18,7 @@ int ty_var_ty_var_StringStringTuple2IntFun1_pair(struct StringStringTuple2_ arg_
 
 int ty_var_ty_var_IntIntTuple2IntFun1_pair(struct IntIntTuple2_ arg_1);
 
-int milone_main(void);
+int main(int argc, char** argv);
 
 struct StringStringListTuple2_ {
     struct String t0;
@@ -60,21 +60,22 @@ int ty_var_ty_var_IntIntTuple2IntFun1_pair(struct IntIntTuple2_ arg_1) {
     return 2;
 }
 
-int milone_main(void) {
+int main(int argc, char** argv) {
+    milone_start(argc, argv);
     struct String s_;
     struct IntIntTuple2_ IntIntTuple2_ = (struct IntIntTuple2_){.t0 = 0, .t1 = 0};
     int call_1 = ty_var_ty_var_IntIntTuple2IntFun1_pair(IntIntTuple2_);
-    milone_assert((call_1 == 2), 18, 2);
+    milone_assert((call_1 == 2), (struct String){.str = "ty_var/ty_var.milone", .len = 20}, 18, 2);
     struct StringStringTuple2_ StringStringTuple2_1 = (struct StringStringTuple2_){.t0 = (struct String){.str = "", .len = 0}, .t1 = (struct String){.str = "", .len = 0}};
     int call_2 = ty_var_ty_var_StringStringTuple2IntFun1_pair(StringStringTuple2_1);
-    milone_assert((call_2 == 2), 19, 2);
+    milone_assert((call_2 == 2), (struct String){.str = "ty_var/ty_var.milone", .len = 20}, 19, 2);
     char call_3 = ty_var_ty_var_StringCharFun1_useStringIndexWithoutAscription((struct String){.str = "a", .len = 1});
-    milone_assert((call_3 == 'a'), 21, 2);
+    milone_assert((call_3 == 'a'), (struct String){.str = "ty_var/ty_var.milone", .len = 20}, 21, 2);
     char match_;
     struct StringStringListTuple2_ call_4 = ty_var_ty_var_StringStringStringListTuple2Fun1_useTyVarInBody((struct String){.str = "b", .len = 1});
     if ((!(call_4.t1))) goto next_2;
     s_ = call_4.t1->head;
-    milone_assert((s_.str[0] == 'b'), 24, 17);
+    milone_assert((s_.str[0] == 'b'), (struct String){.str = "ty_var/ty_var.milone", .len = 20}, 24, 17);
     match_ = 0;
     goto end_match_1;
 next_2:;

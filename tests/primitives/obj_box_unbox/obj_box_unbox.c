@@ -1,4 +1,4 @@
-#include "milone.h"
+#include <milone.h>
 
 struct IntList;
 
@@ -6,7 +6,7 @@ struct IntList;
 
 void obj_box_unbox_obj_box_unbox_main_printIntOrStr(bool isInt_, void const* value_);
 
-int milone_main(void);
+int main(int argc, char** argv);
 
 struct IntList {
     int head;
@@ -32,7 +32,8 @@ if_next_1:;
     return;
 }
 
-int milone_main(void) {
+int main(int argc, char** argv) {
+    milone_start(argc, argv);
     int b_;
     int a_;
     obj_box_unbox_obj_box_unbox_main_printIntOrStr(true, ((void const*)((intptr_t)2)));
@@ -40,7 +41,7 @@ int milone_main(void) {
     (*(((struct String*)box_))) = (struct String){.str = "Fizz", .len = 4};
     obj_box_unbox_obj_box_unbox_main_printIntOrStr(false, box_);
     void const* n_ = ((void const*)((intptr_t)42));
-    milone_assert((((int)((intptr_t)n_)) == 42), 19, 2);
+    milone_assert((((int)((intptr_t)n_)) == 42), (struct String){.str = "obj_box_unbox/obj_box_unbox.milone", .len = 34}, 19, 2);
     struct IntList const* list_1 = milone_mem_alloc(1, sizeof(struct IntList));
     (*(((struct IntList*)list_1))) = (struct IntList){.head = 2, .tail = NULL};
     struct IntList const* list_ = milone_mem_alloc(1, sizeof(struct IntList));
@@ -52,11 +53,11 @@ int milone_main(void) {
     if ((!(((struct IntList const*)((intptr_t)xs_))->tail))) goto next_5;
     b_ = ((struct IntList const*)((intptr_t)xs_))->tail->head;
     if ((!((!(((struct IntList const*)((intptr_t)xs_))->tail->tail))))) goto next_5;
-    milone_assert((((a_ * 10) + b_) == 42), 24, 16);
+    milone_assert((((a_ * 10) + b_) == 42), (struct String){.str = "obj_box_unbox/obj_box_unbox.milone", .len = 34}, 24, 16);
     match_ = 0;
     goto end_match_4;
 next_5:;
-    milone_assert(false, 25, 9);
+    milone_assert(false, (struct String){.str = "obj_box_unbox/obj_box_unbox.milone", .len = 34}, 25, 9);
     match_ = 0;
     goto end_match_4;
 next_6:;

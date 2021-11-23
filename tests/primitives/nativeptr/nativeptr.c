@@ -1,4 +1,4 @@
-#include "milone.h"
+#include <milone.h>
 
 void* milone_mem_alloc(int , uintptr_t );
 
@@ -12,7 +12,7 @@ char* strcpy(char* , char const* );
 
 char* nativeptr_Program_strcpy(char* dest_1, char const* src_);
 
-int milone_main(void);
+int main(int argc, char** argv);
 
 void* nativeptr_Program_memAlloc(int count_, int size_) {
     void* milone_mem_alloc_result = milone_mem_alloc(count_, ((uintptr_t)size_));
@@ -29,12 +29,13 @@ char* nativeptr_Program_strcpy(char* dest_1, char const* src_) {
     return strcpy_result;
 }
 
-int milone_main(void) {
+int main(int argc, char** argv) {
+    milone_start(argc, argv);
     void* call_ = nativeptr_Program_memAlloc(1, 8);
     void* buf_ = call_;
     nativeptr_Program_memSet(buf_, (uint8_t)255U, 8);
     int read_ = (*(((int const*)buf_)));
-    milone_assert((read_ == -1), 22, 2);
-    milone_assert((((uintptr_t)buf_) != (size_t)0ULL), 25, 2);
+    milone_assert((read_ == -1), (struct String){.str = "nativeptr/nativeptr.milone", .len = 26}, 22, 2);
+    milone_assert((((uintptr_t)buf_) != (size_t)0ULL), (struct String){.str = "nativeptr/nativeptr.milone", .len = 26}, 25, 2);
     return 0;
 }

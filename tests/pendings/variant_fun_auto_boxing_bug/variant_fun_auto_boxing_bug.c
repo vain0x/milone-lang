@@ -1,4 +1,4 @@
-#include "milone.h"
+#include <milone.h>
 
 struct BoxedVariant_;
 
@@ -8,7 +8,7 @@ struct BoxedVariantoption1_BoxedVariant_Fun1;
 
 struct BoxedVariant_ variant_fun_auto_boxing_bug_Program_feedNil(struct BoxedVariantoption1_BoxedVariant_Fun1 f_);
 
-int milone_main(void);
+int main(int argc, char** argv);
 
 enum BoxedVariant_Discriminant {
     A_,
@@ -43,6 +43,7 @@ struct BoxedVariant_ variant_fun_auto_boxing_bug_Program_feedNil(struct BoxedVar
     return app_;
 }
 
-int milone_main(void) {
+int main(int argc, char** argv) {
+    milone_start(argc, argv);
     return 0;
 }

@@ -1,9 +1,10 @@
-#include "milone.h"
+#include <milone.h>
 
-int milone_main(void);
+int main(int argc, char** argv);
 
-int milone_main(void) {
+int main(int argc, char** argv) {
+    milone_start(argc, argv);
     int inner_ = 1;
-    milone_assert((inner_ == 1), 8, 2);
+    milone_assert((inner_ == 1), (struct String){.str = "union_newtype/union_newtype.milone", .len = 34}, 8, 2);
     return 0;
 }

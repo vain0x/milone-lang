@@ -1,4 +1,4 @@
-#include "milone.h"
+#include <milone.h>
 
 struct F64BoolFun1;
 
@@ -18,7 +18,7 @@ bool float_float_main_fun_1(double x_2);
 
 bool float_float_eta2_main_fun_1(void const* env_1, double arg_1);
 
-int milone_main(void);
+int main(int argc, char** argv);
 
 struct F64BoolFun1 {
     bool(*fun)(void const*, double);
@@ -90,7 +90,8 @@ bool float_float_eta2_main_fun_1(void const* env_1, double arg_1) {
     return call_2;
 }
 
-int milone_main(void) {
+int main(int argc, char** argv) {
+    milone_start(argc, argv);
     struct F64List const* list_7 = milone_mem_alloc(1, sizeof(struct F64List));
     (*(((struct F64List*)list_7))) = (struct F64List){.head = 00.00e-00, .tail = NULL};
     struct F64List const* list_6 = milone_mem_alloc(1, sizeof(struct F64List));
@@ -110,7 +111,7 @@ int milone_main(void) {
     struct F64List const* zeros_ = list_;
     struct F64BoolFun1 fun_ = (struct F64BoolFun1){.fun = float_float_eta2_main_fun, .env = NULL};
     bool call_3 = float_float_F64BoolFun1F64ListBoolFun2_all(fun_, zeros_);
-    milone_assert(call_3, 24, 2);
+    milone_assert(call_3, (struct String){.str = "float/float.milone", .len = 18}, 24, 2);
     struct F64List const* list_18 = milone_mem_alloc(1, sizeof(struct F64List));
     (*(((struct F64List*)list_18))) = (struct F64List){.head = 6.02e-23, .tail = NULL};
     struct F64List const* list_17 = milone_mem_alloc(1, sizeof(struct F64List));
@@ -136,25 +137,25 @@ int milone_main(void) {
     struct F64List const* values_ = list_8;
     struct F64BoolFun1 fun_1 = (struct F64BoolFun1){.fun = float_float_eta2_main_fun_1, .env = NULL};
     bool call_4 = float_float_F64BoolFun1F64ListBoolFun2_all(fun_1, values_);
-    milone_assert(call_4, 39, 2);
-    milone_assert((6.0 < (2.3 + 4.5)), 42, 2);
-    milone_assert(((44.0 - 2.0) == 42.0), 43, 2);
-    milone_assert(((2.25 * 2.0) == 4.5), 44, 2);
-    milone_assert(((8.0 / 2.0) == 4.0), 45, 2);
-    milone_assert((0.0 == 0.0), 48, 2);
-    milone_assert((0.0 != 1.0), 49, 2);
-    milone_assert((2.0 < 3.0), 51, 2);
-    milone_assert((2.0 >= 2.0), 52, 2);
-    milone_assert((3.0 >= 2.0), 53, 2);
-    milone_assert((2.0 < 3.0), 55, 2);
-    milone_assert((2.0 >= 2.0), 56, 2);
-    milone_assert((3.0 >= 2.0), 57, 2);
-    milone_assert((((int)3.14) == 3), 60, 2);
-    milone_assert((((double)3) == 3.0), 61, 2);
+    milone_assert(call_4, (struct String){.str = "float/float.milone", .len = 18}, 39, 2);
+    milone_assert((6.0 < (2.3 + 4.5)), (struct String){.str = "float/float.milone", .len = 18}, 42, 2);
+    milone_assert(((44.0 - 2.0) == 42.0), (struct String){.str = "float/float.milone", .len = 18}, 43, 2);
+    milone_assert(((2.25 * 2.0) == 4.5), (struct String){.str = "float/float.milone", .len = 18}, 44, 2);
+    milone_assert(((8.0 / 2.0) == 4.0), (struct String){.str = "float/float.milone", .len = 18}, 45, 2);
+    milone_assert((0.0 == 0.0), (struct String){.str = "float/float.milone", .len = 18}, 48, 2);
+    milone_assert((0.0 != 1.0), (struct String){.str = "float/float.milone", .len = 18}, 49, 2);
+    milone_assert((2.0 < 3.0), (struct String){.str = "float/float.milone", .len = 18}, 51, 2);
+    milone_assert((2.0 >= 2.0), (struct String){.str = "float/float.milone", .len = 18}, 52, 2);
+    milone_assert((3.0 >= 2.0), (struct String){.str = "float/float.milone", .len = 18}, 53, 2);
+    milone_assert((2.0 < 3.0), (struct String){.str = "float/float.milone", .len = 18}, 55, 2);
+    milone_assert((2.0 >= 2.0), (struct String){.str = "float/float.milone", .len = 18}, 56, 2);
+    milone_assert((3.0 >= 2.0), (struct String){.str = "float/float.milone", .len = 18}, 57, 2);
+    milone_assert((((int)3.14) == 3), (struct String){.str = "float/float.milone", .len = 18}, 60, 2);
+    milone_assert((((double)3) == 3.0), (struct String){.str = "float/float.milone", .len = 18}, 61, 2);
     struct String call_5 = str_of_double(3.14);
-    milone_assert((str_compare(call_5, (struct String){.str = "3.140000", .len = 8}) == 0), 65, 2);
+    milone_assert((str_compare(call_5, (struct String){.str = "3.140000", .len = 8}) == 0), (struct String){.str = "float/float.milone", .len = 18}, 65, 2);
     double call_6 = str_to_double((struct String){.str = "3.14", .len = 4});
-    milone_assert((call_6 == 3.14), 68, 2);
+    milone_assert((call_6 == 3.14), (struct String){.str = "float/float.milone", .len = 18}, 68, 2);
     printf("Assume PI is %f.\n", 3.14);
     return 0;
 }

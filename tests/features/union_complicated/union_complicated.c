@@ -1,4 +1,4 @@
-#include "milone.h"
+#include <milone.h>
 
 struct FirstSecondTuple2_List;
 
@@ -36,7 +36,7 @@ struct FirstListSecondListTuple2_ union_complicated_union_complicated_eta2_main_
 
 struct FirstListSecondListTuple2_ union_complicated_union_complicated_eta2_main_f_1(void const* env_1, struct FirstSecondTuple2_List const* arg_1);
 
-int milone_main(void);
+int main(int argc, char** argv);
 
 struct FirstListSecondListTuple2_ {
     struct First_List const* t0;
@@ -130,7 +130,8 @@ struct FirstListSecondListTuple2_ union_complicated_union_complicated_eta2_main_
     return call_1;
 }
 
-int milone_main(void) {
+int main(int argc, char** argv) {
+    milone_start(argc, argv);
     int z_;
     int y_;
     int x_;
@@ -200,11 +201,11 @@ else_9:;
     if_1 = false;
     goto if_next_7;
 if_next_7:;
-    milone_assert(if_1, 23, 84);
+    milone_assert(if_1, (struct String){.str = "union_complicated/union_complicated.milone", .len = 42}, 23, 84);
     match_ = 0;
     goto end_match_1;
 next_2:;
-    milone_assert(false, 24, 9);
+    milone_assert(false, (struct String){.str = "union_complicated/union_complicated.milone", .len = 42}, 24, 9);
     match_ = 0;
     goto end_match_1;
 next_3:;
@@ -227,7 +228,7 @@ end_match_1:;
     match_1 = 0;
     goto end_match_10;
 next_11:;
-    milone_assert(false, 32, 9);
+    milone_assert(false, (struct String){.str = "union_complicated/union_complicated.milone", .len = 42}, 32, 9);
     match_1 = 0;
     goto end_match_10;
 next_12:;

@@ -1,4 +1,4 @@
-#include "milone.h"
+#include <milone.h>
 
 struct IntList;
 
@@ -14,7 +14,7 @@ int effect_region_effect_region_eta2_doAction_fun(void const* env_);
 
 int effect_region_Program_doAction(void);
 
-int milone_main(void);
+int main(int argc, char** argv);
 
 struct IntList {
     int head;
@@ -68,7 +68,8 @@ int effect_region_Program_doAction(void) {
     return region_result;
 }
 
-int milone_main(void) {
+int main(int argc, char** argv) {
+    milone_start(argc, argv);
     int call_2 = effect_region_Program_doAction();
     return 0;
 }

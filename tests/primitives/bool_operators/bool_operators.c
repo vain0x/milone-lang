@@ -1,15 +1,15 @@
-#include "milone.h"
+#include <milone.h>
 
 void bool_operators_Program_test(bool t_, bool f_);
 
 void bool_operators_Program_testShortCircuit(bool t_1, bool f_1);
 
-int milone_main(void);
+int main(int argc, char** argv);
 
 void bool_operators_Program_test(bool t_, bool f_) {
-    milone_assert(t_, 6, 2);
-    milone_assert((!(f_)), 9, 2);
-    milone_assert(t_, 10, 2);
+    milone_assert(t_, (struct String){.str = "bool_operators/bool_operators.milone", .len = 36}, 6, 2);
+    milone_assert((!(f_)), (struct String){.str = "bool_operators/bool_operators.milone", .len = 36}, 9, 2);
+    milone_assert(t_, (struct String){.str = "bool_operators/bool_operators.milone", .len = 36}, 10, 2);
     bool if_;
     if (t_) {
         goto then_2;
@@ -23,7 +23,7 @@ else_3:;
     if_ = false;
     goto if_next_1;
 if_next_1:;
-    milone_assert(if_, 13, 2);
+    milone_assert(if_, (struct String){.str = "bool_operators/bool_operators.milone", .len = 36}, 13, 2);
     bool if_1;
     if (t_) {
         goto then_5;
@@ -37,7 +37,7 @@ else_6:;
     if_1 = false;
     goto if_next_4;
 if_next_4:;
-    milone_assert((!(if_1)), 14, 2);
+    milone_assert((!(if_1)), (struct String){.str = "bool_operators/bool_operators.milone", .len = 36}, 14, 2);
     bool if_2;
     if (f_) {
         goto then_8;
@@ -51,7 +51,7 @@ else_9:;
     if_2 = false;
     goto if_next_7;
 if_next_7:;
-    milone_assert((!(if_2)), 15, 2);
+    milone_assert((!(if_2)), (struct String){.str = "bool_operators/bool_operators.milone", .len = 36}, 15, 2);
     bool if_3;
     if (f_) {
         goto then_11;
@@ -65,7 +65,7 @@ else_12:;
     if_3 = false;
     goto if_next_10;
 if_next_10:;
-    milone_assert((!(if_3)), 16, 2);
+    milone_assert((!(if_3)), (struct String){.str = "bool_operators/bool_operators.milone", .len = 36}, 16, 2);
     bool if_4;
     if (t_) {
         goto then_14;
@@ -79,7 +79,7 @@ else_15:;
     if_4 = t_;
     goto if_next_13;
 if_next_13:;
-    milone_assert(if_4, 19, 2);
+    milone_assert(if_4, (struct String){.str = "bool_operators/bool_operators.milone", .len = 36}, 19, 2);
     bool if_5;
     if (t_) {
         goto then_17;
@@ -93,7 +93,7 @@ else_18:;
     if_5 = f_;
     goto if_next_16;
 if_next_16:;
-    milone_assert(if_5, 20, 2);
+    milone_assert(if_5, (struct String){.str = "bool_operators/bool_operators.milone", .len = 36}, 20, 2);
     bool if_6;
     if (f_) {
         goto then_20;
@@ -107,7 +107,7 @@ else_21:;
     if_6 = t_;
     goto if_next_19;
 if_next_19:;
-    milone_assert(if_6, 21, 2);
+    milone_assert(if_6, (struct String){.str = "bool_operators/bool_operators.milone", .len = 36}, 21, 2);
     bool if_7;
     if (f_) {
         goto then_23;
@@ -121,17 +121,17 @@ else_24:;
     if_7 = f_;
     goto if_next_22;
 if_next_22:;
-    milone_assert((!(if_7)), 22, 2);
-    milone_assert(true, 25, 2);
-    milone_assert(true, 26, 2);
-    milone_assert((false < true), 28, 2);
-    milone_assert((true >= false), 29, 2);
-    milone_assert((true >= true), 30, 2);
-    milone_assert((false < true), 32, 2);
+    milone_assert((!(if_7)), (struct String){.str = "bool_operators/bool_operators.milone", .len = 36}, 22, 2);
+    milone_assert(true, (struct String){.str = "bool_operators/bool_operators.milone", .len = 36}, 25, 2);
+    milone_assert(true, (struct String){.str = "bool_operators/bool_operators.milone", .len = 36}, 26, 2);
+    milone_assert((false < true), (struct String){.str = "bool_operators/bool_operators.milone", .len = 36}, 28, 2);
+    milone_assert((true >= false), (struct String){.str = "bool_operators/bool_operators.milone", .len = 36}, 29, 2);
+    milone_assert((true >= true), (struct String){.str = "bool_operators/bool_operators.milone", .len = 36}, 30, 2);
+    milone_assert((false < true), (struct String){.str = "bool_operators/bool_operators.milone", .len = 36}, 32, 2);
     struct String call_ = str_of_bool(t_);
-    milone_assert((str_compare(call_, (struct String){.str = "True", .len = 4}) == 0), 38, 2);
+    milone_assert((str_compare(call_, (struct String){.str = "True", .len = 4}) == 0), (struct String){.str = "bool_operators/bool_operators.milone", .len = 36}, 38, 2);
     struct String call_1 = str_of_bool(f_);
-    milone_assert((str_compare(call_1, (struct String){.str = "False", .len = 5}) == 0), 39, 2);
+    milone_assert((str_compare(call_1, (struct String){.str = "False", .len = 5}) == 0), (struct String){.str = "bool_operators/bool_operators.milone", .len = 36}, 39, 2);
     return;
 }
 
@@ -148,7 +148,7 @@ else_27:;
     if_8 = false;
     goto if_next_25;
 if_next_25:;
-    milone_assert((!(if_8)), 42, 2);
+    milone_assert((!(if_8)), (struct String){.str = "bool_operators/bool_operators.milone", .len = 36}, 42, 2);
     bool if_9;
     if (t_1) {
         goto then_29;
@@ -161,11 +161,12 @@ then_29:;
 else_30:;
     exit(1);
 if_next_28:;
-    milone_assert(if_9, 48, 2);
+    milone_assert(if_9, (struct String){.str = "bool_operators/bool_operators.milone", .len = 36}, 48, 2);
     return;
 }
 
-int milone_main(void) {
+int main(int argc, char** argv) {
+    milone_start(argc, argv);
     bool_operators_Program_test(true, false);
     bool_operators_Program_testShortCircuit(true, false);
     return 0;

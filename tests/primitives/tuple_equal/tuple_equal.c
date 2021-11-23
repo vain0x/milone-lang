@@ -1,4 +1,4 @@
-#include "milone.h"
+#include <milone.h>
 
 struct IntIntTuple2_;
 
@@ -26,7 +26,7 @@ void tuple_equal_tuple_equal_testNested(void);
 
 void tuple_equal_tuple_equal_testUnitCompare(void);
 
-int milone_main(void);
+int main(int argc, char** argv);
 
 struct IntIntTuple2_ {
     int t0;
@@ -72,20 +72,20 @@ void tuple_equal_tuple_equal_testPair(void) {
     struct IntStringTuple2_ IntStringTuple2_ = (struct IntStringTuple2_){.t0 = 0, .t1 = (struct String){.str = "zero", .len = 4}};
     struct IntStringTuple2_ IntStringTuple2_1 = (struct IntStringTuple2_){.t0 = 0, .t1 = (struct String){.str = "zero", .len = 4}};
     bool call_1 = MiloneDerive_TupleEqual_tuple2Equal(IntStringTuple2_, IntStringTuple2_1);
-    milone_assert(call_1, 5, 2);
+    milone_assert(call_1, (struct String){.str = "tuple_equal/tuple_equal.milone", .len = 30}, 5, 2);
     struct IntStringTuple2_ IntStringTuple2_2 = (struct IntStringTuple2_){.t0 = 0, .t1 = (struct String){.str = "zero", .len = 4}};
     struct IntStringTuple2_ IntStringTuple2_3 = (struct IntStringTuple2_){.t0 = 1, .t1 = (struct String){.str = "zero", .len = 4}};
     bool call_2 = MiloneDerive_TupleEqual_tuple2Equal(IntStringTuple2_2, IntStringTuple2_3);
-    milone_assert((!(call_2)), 7, 2);
+    milone_assert((!(call_2)), (struct String){.str = "tuple_equal/tuple_equal.milone", .len = 30}, 7, 2);
     struct IntStringTuple2_ IntStringTuple2_4 = (struct IntStringTuple2_){.t0 = 0, .t1 = (struct String){.str = "zero", .len = 4}};
     struct IntStringTuple2_ IntStringTuple2_5 = (struct IntStringTuple2_){.t0 = 0, .t1 = (struct String){.str = "one", .len = 3}};
     bool call_3 = MiloneDerive_TupleEqual_tuple2Equal(IntStringTuple2_4, IntStringTuple2_5);
-    milone_assert((!(call_3)), 8, 2);
+    milone_assert((!(call_3)), (struct String){.str = "tuple_equal/tuple_equal.milone", .len = 30}, 8, 2);
     return;
 }
 
 void tuple_equal_tuple_equal_testUnit(void) {
-    milone_assert(true, 10, 26);
+    milone_assert(true, (struct String){.str = "tuple_equal/tuple_equal.milone", .len = 30}, 10, 26);
     return;
 }
 
@@ -95,31 +95,32 @@ void tuple_equal_tuple_equal_testNested(void) {
     struct IntIntTuple2_ IntIntTuple2_1 = (struct IntIntTuple2_){.t0 = 2, .t1 = 3};
     struct IntIntIntTuple2Tuple2_ IntIntIntTuple2Tuple2_1 = (struct IntIntIntTuple2Tuple2_){.t0 = 1, .t1 = IntIntTuple2_1};
     bool call_4 = MiloneDerive_TupleEqual_tuple2Equal_1(IntIntIntTuple2Tuple2_, IntIntIntTuple2Tuple2_1);
-    milone_assert(call_4, 13, 2);
+    milone_assert(call_4, (struct String){.str = "tuple_equal/tuple_equal.milone", .len = 30}, 13, 2);
     struct IntIntTuple2_ IntIntTuple2_2 = (struct IntIntTuple2_){.t0 = 2, .t1 = 3};
     struct IntIntIntTuple2Tuple2_ IntIntIntTuple2Tuple2_2 = (struct IntIntIntTuple2Tuple2_){.t0 = 1, .t1 = IntIntTuple2_2};
     struct IntIntTuple2_ IntIntTuple2_3 = (struct IntIntTuple2_){.t0 = 2, .t1 = 3};
     struct IntIntIntTuple2Tuple2_ IntIntIntTuple2Tuple2_3 = (struct IntIntIntTuple2Tuple2_){.t0 = 0, .t1 = IntIntTuple2_3};
     bool call_5 = MiloneDerive_TupleEqual_tuple2Equal_1(IntIntIntTuple2Tuple2_2, IntIntIntTuple2Tuple2_3);
-    milone_assert((!(call_5)), 15, 2);
+    milone_assert((!(call_5)), (struct String){.str = "tuple_equal/tuple_equal.milone", .len = 30}, 15, 2);
     struct IntIntTuple2_ IntIntTuple2_4 = (struct IntIntTuple2_){.t0 = 2, .t1 = 3};
     struct IntIntIntTuple2Tuple2_ IntIntIntTuple2Tuple2_4 = (struct IntIntIntTuple2Tuple2_){.t0 = 1, .t1 = IntIntTuple2_4};
     struct IntIntTuple2_ IntIntTuple2_5 = (struct IntIntTuple2_){.t0 = 2, .t1 = 0};
     struct IntIntIntTuple2Tuple2_ IntIntIntTuple2Tuple2_5 = (struct IntIntIntTuple2Tuple2_){.t0 = 1, .t1 = IntIntTuple2_5};
     bool call_6 = MiloneDerive_TupleEqual_tuple2Equal_1(IntIntIntTuple2Tuple2_4, IntIntIntTuple2Tuple2_5);
-    milone_assert((!(call_6)), 16, 2);
+    milone_assert((!(call_6)), (struct String){.str = "tuple_equal/tuple_equal.milone", .len = 30}, 16, 2);
     return;
 }
 
 void tuple_equal_tuple_equal_testUnitCompare(void) {
-    milone_assert(true, 20, 2);
-    milone_assert(true, 21, 2);
-    milone_assert(true, 22, 2);
-    milone_assert(true, 23, 2);
+    milone_assert(true, (struct String){.str = "tuple_equal/tuple_equal.milone", .len = 30}, 20, 2);
+    milone_assert(true, (struct String){.str = "tuple_equal/tuple_equal.milone", .len = 30}, 21, 2);
+    milone_assert(true, (struct String){.str = "tuple_equal/tuple_equal.milone", .len = 30}, 22, 2);
+    milone_assert(true, (struct String){.str = "tuple_equal/tuple_equal.milone", .len = 30}, 23, 2);
     return;
 }
 
-int milone_main(void) {
+int main(int argc, char** argv) {
+    milone_start(argc, argv);
     tuple_equal_tuple_equal_testUnit();
     tuple_equal_tuple_equal_testPair();
     tuple_equal_tuple_equal_testNested();
