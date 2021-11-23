@@ -863,10 +863,7 @@ struct String milone_get_arg(int index) {
     return str_borrow(s_argv[index]);
 }
 
-int milone_main(void);
-
-int main(int argc, char **argv) {
+void milone_start(int argc, char **argv) {
     s_argc = argc;
     s_argv = argv;
-    return milone_main();
 }

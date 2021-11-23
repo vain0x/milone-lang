@@ -1260,6 +1260,20 @@ let private cgStmts (ctx: CirCtx) (stmts: MStmt list) : CirCtx =
 
   go ctx stmts
 
+let private genMainFun stmts : CDecl =
+  let intTy = CEmbedTy "int"
+
+  let args =
+    [ "argc", intTy
+      "argv", CEmbedTy "char **" ]
+
+  let stmts =
+    CNativeStmt("    void milone_start(int, char **);\n", [])
+    :: CExprStmt(CCallExpr(CVarExpr "milone_start", [ CVarExpr "argc"; CVarExpr "argv" ]))
+       :: stmts
+
+  CFunDecl("main", args, intTy, stmts)
+
 let private cgDecls (ctx: CirCtx) decls =
   match decls with
   | [] -> ctx
@@ -1267,11 +1281,11 @@ let private cgDecls (ctx: CirCtx) decls =
   | MProcDecl (callee, args, body, resultTy, _) :: decls ->
     let def: FunDef = ctx.Rx.Funs |> mapFind callee
 
-    let funName, args =
+    let main, funName, args =
       if isMainFun ctx callee then
-        "milone_main", []
+        true, "main", []
       else
-        getUniqueFunName ctx callee, args
+        false, getUniqueFunName ctx callee, args
 
     let rec collectArgs acc ctx args =
       match args with
@@ -1299,9 +1313,12 @@ let private cgDecls (ctx: CirCtx) decls =
     let funDecl =
       let body = List.append stmts body
 
-      match def.Linkage with
-      | InternalLinkage -> CStaticFunDecl(funName, args, resultTy, body)
-      | ExternalLinkage _ -> CFunDecl(funName, args, resultTy, body)
+      if main then
+        genMainFun body
+      else
+        match def.Linkage with
+        | InternalLinkage -> CStaticFunDecl(funName, args, resultTy, body)
+        | ExternalLinkage _ -> CFunDecl(funName, args, resultTy, body)
 
     let ctx = addDecl ctx funDecl
     cgDecls ctx decls
