@@ -1,7 +1,8 @@
-#include "milone.h"
+#include <milone.h>
 
-int milone_main(void);
+int main(int argc, char** argv);
 
-int milone_main(void) {
+int main(int argc, char** argv) {
+    milone_start(argc, argv);
     exit(1);
 }

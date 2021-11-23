@@ -1,4 +1,4 @@
-#include "milone.h"
+#include <milone.h>
 
 struct Pat_;
 
@@ -16,7 +16,7 @@ struct Pat_List const* generalize_bug_generalize_bug_doInferPats(struct Pat_List
 
 struct Pat_ generalize_bug_Program_inferPat(struct Pat_ pat_3);
 
-int milone_main(void);
+int main(int argc, char** argv);
 
 enum Pat_Discriminant {
     Pat_,
@@ -73,7 +73,8 @@ struct Pat_ generalize_bug_Program_inferPat(struct Pat_ pat_3) {
     return pat_3;
 }
 
-int milone_main(void) {
+int main(int argc, char** argv) {
+    milone_start(argc, argv);
     struct Pat_List const* list_1 = milone_mem_alloc(1, sizeof(struct Pat_List));
     (*(((struct Pat_List*)list_1))) = (struct Pat_List){.head = (struct Pat_){.discriminant = Pat_}, .tail = NULL};
     struct UnitList const* call_3 = generalize_bug_generalize_bug_doInferPats(list_1);

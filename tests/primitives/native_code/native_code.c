@@ -1,4 +1,4 @@
-#include "milone.h"
+#include <milone.h>
 
 
       // Embedded by __nativeDecl.
@@ -10,7 +10,7 @@ int native_code_Program_freshId(void);
 
 void native_code_native_code_nativeExprWithPlaceholder(void);
 
-int milone_main(void);
+int main(int argc, char** argv);
 
 
 void native_code_Program_writeLine(struct String msg_) {
@@ -28,11 +28,12 @@ int native_code_Program_freshId(void) {
 void native_code_native_code_nativeExprWithPlaceholder(void) {
     struct String s_ = (struct String){.str = "hello", .len = 5};
     int n_ = s_.len;
-    milone_assert((n_ == 5), 29, 2);
+    milone_assert((n_ == 5), (struct String){.str = "native_code/native_code.milone", .len = 30}, 29, 2);
     return;
 }
 
-int milone_main(void) {
+int main(int argc, char** argv) {
+    milone_start(argc, argv);
     native_code_Program_writeLine((struct String){.str = "HEY!", .len = 4});
     native_code_Program_writeLine((struct String){.str = "YO!", .len = 3});
     int call_ = native_code_Program_freshId();

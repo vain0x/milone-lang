@@ -1,4 +1,4 @@
-#include "milone.h"
+#include <milone.h>
 
 struct Node_;
 
@@ -8,7 +8,7 @@ struct Node_ nav_ty_nav_ty_main_leaf(int n_);
 
 struct Node_ nav_ty_nav_ty_main_node(struct Node_ l_, struct Node_ r_);
 
-int milone_main(void);
+int main(int argc, char** argv);
 
 enum Node_Discriminant {
     Leaf_,
@@ -41,7 +41,8 @@ struct Node_ nav_ty_nav_ty_main_node(struct Node_ l_, struct Node_ r_) {
     return variant_1;
 }
 
-int milone_main(void) {
+int main(int argc, char** argv) {
+    milone_start(argc, argv);
     int x_;
     struct Node_ call_ = nav_ty_nav_ty_main_leaf(2);
     struct Node_ call_1 = nav_ty_nav_ty_main_leaf(3);
@@ -53,11 +54,11 @@ int milone_main(void) {
     if ((t_.discriminant != Node_)) goto next_2;
     if (((*(((struct NodeNodeTuple2_ const*)t_.Node_))).t0.discriminant != Leaf_)) goto next_2;
     x_ = (*(((struct NodeNodeTuple2_ const*)t_.Node_))).t0.Leaf_;
-    milone_assert((x_ == 2), 22, 24);
+    milone_assert((x_ == 2), (struct String){.str = "nav_ty/nav_ty.milone", .len = 20}, 22, 24);
     match_ = 0;
     goto end_match_1;
 next_2:;
-    milone_assert(false, 23, 9);
+    milone_assert(false, (struct String){.str = "nav_ty/nav_ty.milone", .len = 20}, 23, 9);
     match_ = 0;
     goto end_match_1;
 next_3:;

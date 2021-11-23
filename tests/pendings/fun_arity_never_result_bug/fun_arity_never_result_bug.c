@@ -1,4 +1,4 @@
-#include "milone.h"
+#include <milone.h>
 
 struct UnitIntFun1;
 
@@ -16,7 +16,7 @@ int fun_arity_never_result_bug_fun_arity_never_result_bug_eta2_main_id(void cons
 
 int fun_arity_never_result_bug_fun_arity_never_result_bug_eta2_main_fun(void const* env_1, int arg_1);
 
-int milone_main(void);
+int main(int argc, char** argv);
 
 struct UnitIntFun1 {
     int(*fun)(void const*);
@@ -54,7 +54,8 @@ int fun_arity_never_result_bug_fun_arity_never_result_bug_eta2_main_fun(void con
     return call_3;
 }
 
-int milone_main(void) {
+int main(int argc, char** argv) {
+    milone_start(argc, argv);
     struct IntIntFun1 switch_;
     switch (1) {
         case 1:
@@ -74,6 +75,6 @@ clause_3:;
 switch_next_1:;
     struct IntIntFun1 f_ = switch_;
     int app_1 = f_.fun(f_.env, 2);
-    milone_assert((app_1 == 2), 38, 2);
+    milone_assert((app_1 == 2), (struct String){.str = "fun_arity_never_result_bug/fun_arity_never_result_bug.milone", .len = 60}, 38, 2);
     return 0;
 }

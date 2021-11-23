@@ -1,4 +1,4 @@
-#include "milone.h"
+#include <milone.h>
 
 struct StringStringTuple2_;
 
@@ -6,7 +6,7 @@ struct StringStringTuple2_ monomorphization_bug_1_monomorphization_bug_1_StringS
 
 struct StringStringTuple2_ monomorphization_bug_1_monomorphization_bug_1_bug(struct String b_);
 
-int milone_main(void);
+int main(int argc, char** argv);
 
 struct StringStringTuple2_ {
     struct String t0;
@@ -23,7 +23,8 @@ struct StringStringTuple2_ monomorphization_bug_1_monomorphization_bug_1_bug(str
     return call_;
 }
 
-int milone_main(void) {
+int main(int argc, char** argv) {
+    milone_start(argc, argv);
     struct StringStringTuple2_ call_1 = monomorphization_bug_1_monomorphization_bug_1_bug((struct String){.str = "a", .len = 1});
     struct String x1_ = call_1.t0;
     struct String x2_ = call_1.t1;

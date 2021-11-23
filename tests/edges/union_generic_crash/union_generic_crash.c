@@ -1,10 +1,10 @@
-#include "milone.h"
+#include <milone.h>
 
 struct IntGU1_;
 
 struct IntGU1option1_;
 
-int milone_main(void);
+int main(int argc, char** argv);
 
 enum IntGU1_Discriminant {
     GU_,
@@ -29,7 +29,8 @@ struct IntGU1option1_ {
     };
 };
 
-int milone_main(void) {
+int main(int argc, char** argv) {
+    milone_start(argc, argv);
     void const* box_ = milone_mem_alloc(1, sizeof(struct IntGU1option1_));
     (*(((struct IntGU1option1_*)box_))) = (struct IntGU1option1_){.discriminant = None_};
     struct IntGU1_ variant_ = (struct IntGU1_){.discriminant = GU_, .GU_ = box_};

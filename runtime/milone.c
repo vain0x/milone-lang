@@ -570,9 +570,9 @@ struct String str_concat(struct String sep, struct StringList const *strings) {
 // assertion
 // -----------------------------------------------
 
-void milone_assert(bool cond, int y, int x) {
+void milone_assert(bool cond, struct String name, int y, int x) {
     if (!cond) {
-        fprintf(stderr, "Assertion failed at (%d, %d)\n", y + 1, x + 1);
+        fprintf(stderr, "Assertion failed at %s:%d:%d\n", str_to_c_str(name), y + 1, x + 1);
         exit(1);
     }
 }
@@ -863,10 +863,7 @@ struct String milone_get_arg(int index) {
     return str_borrow(s_argv[index]);
 }
 
-int milone_main(void);
-
-int main(int argc, char **argv) {
+void milone_start(int argc, char **argv) {
     s_argc = argc;
     s_argv = argv;
-    return milone_main();
 }

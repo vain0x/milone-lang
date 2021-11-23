@@ -1,4 +1,4 @@
-#include "milone.h"
+#include <milone.h>
 
 struct MyList_;
 
@@ -8,7 +8,7 @@ struct IntMyListoption1Tuple2_;
 
 struct MyList_ union_newtype_rec_union_newtype_rec_main_myCons(int head_, struct MyList_ tail_);
 
-int milone_main(void);
+int main(int argc, char** argv);
 
 enum MyList_Discriminant {
     MyList_,
@@ -47,7 +47,8 @@ struct MyList_ union_newtype_rec_union_newtype_rec_main_myCons(int head_, struct
     return variant_1;
 }
 
-int milone_main(void) {
+int main(int argc, char** argv) {
+    milone_start(argc, argv);
     int value_;
     struct IntMyListoption1Tuple2_ IntMyListoption1Tuple2_1 = (struct IntMyListoption1Tuple2_){.t0 = 0, .t1 = (struct MyListoption1_){.discriminant = None_}};
     void const* box_1 = milone_mem_alloc(1, sizeof(struct IntMyListoption1Tuple2_));
@@ -62,7 +63,7 @@ int milone_main(void) {
     match_ = 0;
     goto end_match_1;
 next_2:;
-    milone_assert(false, 14, 9);
+    milone_assert(false, (struct String){.str = "union_newtype_rec/union_newtype_rec.milone", .len = 42}, 14, 9);
     match_ = 0;
     goto end_match_1;
 next_3:;
@@ -70,11 +71,11 @@ end_match_1:;
     char match_1;
     if (((*(((struct IntMyListoption1Tuple2_ const*)second_.MyList_))).t1.discriminant != Some_)) goto next_5;
     value_ = (*(((struct IntMyListoption1Tuple2_ const*)(*(((struct IntMyListoption1Tuple2_ const*)second_.MyList_))).t1.Some_.MyList_))).t0;
-    milone_assert((value_ == 0), 17, 44);
+    milone_assert((value_ == 0), (struct String){.str = "union_newtype_rec/union_newtype_rec.milone", .len = 42}, 17, 44);
     match_1 = 0;
     goto end_match_4;
 next_5:;
-    milone_assert(false, 18, 9);
+    milone_assert(false, (struct String){.str = "union_newtype_rec/union_newtype_rec.milone", .len = 42}, 18, 9);
     match_1 = 0;
     goto end_match_4;
 next_6:;

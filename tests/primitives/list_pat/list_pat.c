@@ -1,4 +1,4 @@
-#include "milone.h"
+#include <milone.h>
 
 struct Intoption1_;
 
@@ -22,7 +22,7 @@ struct Intoption1option1option1_ list_pat_list_pat_eta2_main_fun(void const* env
 
 struct Intoption1option1option1_List const* MiloneCore_List_IntIntoption1option1option1Fun1IntListIntoption1option1option1ListFun2_map(struct IntIntoption1option1option1_Fun1 , struct IntList const* );
 
-int milone_main(void);
+int main(int argc, char** argv);
 
 enum Intoption1_Discriminant {
     None_,
@@ -87,7 +87,8 @@ struct Intoption1option1option1_ list_pat_list_pat_eta2_main_fun(void const* env
     return call_;
 }
 
-int milone_main(void) {
+int main(int argc, char** argv) {
+    milone_start(argc, argv);
     int x7_;
     int x6_;
     int x5_;
@@ -148,17 +149,17 @@ int milone_main(void) {
     if ((call_1->tail->tail->tail->tail->tail->tail->head.Some_2.Some_1.discriminant != Some_)) goto next_10;
     x7_ = call_1->tail->tail->tail->tail->tail->tail->head.Some_2.Some_1.Some_;
     if ((!((!(call_1->tail->tail->tail->tail->tail->tail->tail))))) goto next_10;
-    milone_assert((x1_ == 1), 15, 4);
-    milone_assert((x2_ == 2), 16, 4);
-    milone_assert((x3_ == 3), 17, 4);
-    milone_assert((x4_ == 4), 18, 4);
-    milone_assert((x5_ == 5), 19, 4);
-    milone_assert((x6_ == 6), 20, 4);
-    milone_assert((x7_ == 7), 21, 4);
+    milone_assert((x1_ == 1), (struct String){.str = "list_pat/list_pat.milone", .len = 24}, 15, 4);
+    milone_assert((x2_ == 2), (struct String){.str = "list_pat/list_pat.milone", .len = 24}, 16, 4);
+    milone_assert((x3_ == 3), (struct String){.str = "list_pat/list_pat.milone", .len = 24}, 17, 4);
+    milone_assert((x4_ == 4), (struct String){.str = "list_pat/list_pat.milone", .len = 24}, 18, 4);
+    milone_assert((x5_ == 5), (struct String){.str = "list_pat/list_pat.milone", .len = 24}, 19, 4);
+    milone_assert((x6_ == 6), (struct String){.str = "list_pat/list_pat.milone", .len = 24}, 20, 4);
+    milone_assert((x7_ == 7), (struct String){.str = "list_pat/list_pat.milone", .len = 24}, 21, 4);
     match_ = 0;
     goto end_match_9;
 next_10:;
-    milone_assert(false, 23, 9);
+    milone_assert(false, (struct String){.str = "list_pat/list_pat.milone", .len = 24}, 23, 9);
     match_ = 0;
     goto end_match_9;
 next_11:;

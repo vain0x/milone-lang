@@ -714,7 +714,7 @@ let private cpDecls decls acc =
 // -----------------------------------------------
 
 let private cpHeader acc =
-  let header = "#include \"milone.h\""
+  let header = "#include <milone.h>"
   acc |> cons header |> cons eol |> cons eol
 
 let cirDump (decls: CDecl list) : string =

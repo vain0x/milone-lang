@@ -1,8 +1,8 @@
-#include "milone.h"
+#include <milone.h>
 
 void fun_rec_fun_rec_main_go(int len_, struct String source_, int i_);
 
-int milone_main(void);
+int main(int argc, char** argv);
 
 void fun_rec_fun_rec_main_go(int len_, struct String source_, int i_) {
 tailrec_1:;
@@ -41,7 +41,8 @@ if_next_2:;
     return;
 }
 
-int milone_main(void) {
+int main(int argc, char** argv) {
+    milone_start(argc, argv);
     struct String source_ = (struct String){.str = "hello world", .len = 11};
     int len_ = source_.len;
     fun_rec_fun_rec_main_go(len_, source_, 0);

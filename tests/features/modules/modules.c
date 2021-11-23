@@ -1,10 +1,10 @@
-#include "milone.h"
+#include <milone.h>
 
 struct Val_;
 
 int modules_sub_IntIntFun1_f(int );
 
-int milone_main(void);
+int main(int argc, char** argv);
 
 enum Val_Discriminant {
     Int_,
@@ -19,7 +19,8 @@ struct Val_ {
     };
 };
 
-int milone_main(void) {
+int main(int argc, char** argv) {
+    milone_start(argc, argv);
     int x_;
     int match_;
     struct Val_ variant_ = (struct Val_){.discriminant = Int_, .Int_ = 0};

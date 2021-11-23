@@ -1,10 +1,10 @@
-#include "milone.h"
+#include <milone.h>
 
 void str_literal_escape_Program_f(char arg_);
 
 void str_literal_escape_Program_g(struct String arg_1);
 
-int milone_main(void);
+int main(int argc, char** argv);
 
 void str_literal_escape_Program_f(char arg_) {
     return;
@@ -14,7 +14,8 @@ void str_literal_escape_Program_g(struct String arg_1) {
     return;
 }
 
-int milone_main(void) {
+int main(int argc, char** argv) {
+    milone_start(argc, argv);
     str_literal_escape_Program_f('\'');
     str_literal_escape_Program_f('\\');
     str_literal_escape_Program_f('\0');

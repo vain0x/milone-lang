@@ -1,4 +1,4 @@
-#include "milone.h"
+#include <milone.h>
 
 struct IntStringResult2_;
 
@@ -48,7 +48,7 @@ struct IntStringResult2_ MiloneCore_Result_StringStringFun1IntStringResult2IntSt
 
 void result_result_testMapError(void);
 
-int milone_main(void);
+int main(int argc, char** argv);
 
 enum IntStringResult2_Discriminant {
     Error_,
@@ -96,7 +96,7 @@ next_11:;
 next_12:;
     exit(1);
 end_match_10:;
-    milone_assert(false, 9, 2);
+    milone_assert(false, (struct String){.str = "result/result.milone", .len = 20}, 9, 2);
     exit(1);
 }
 
@@ -118,7 +118,7 @@ next_14:;
 next_15:;
     exit(1);
 end_match_13:;
-    milone_assert(false, 9, 2);
+    milone_assert(false, (struct String){.str = "result/result.milone", .len = 20}, 9, 2);
     exit(1);
 }
 
@@ -193,17 +193,17 @@ void result_result_testBind(void) {
     struct IntStringResult2_ variant_2 = (struct IntStringResult2_){.discriminant = Ok_, .Ok_ = 2};
     struct IntStringResult2_ call_5 = MiloneCore_Result_IntIntStringResult2Fun1IntStringResult2IntStringResult2Fun2_bind(fun_, variant_2);
     int call_6 = result_result_unwrapOk(call_5);
-    milone_assert((call_6 == 1), 29, 2);
+    milone_assert((call_6 == 1), (struct String){.str = "result/result.milone", .len = 20}, 29, 2);
     struct IntIntStringResult2_Fun1 fun_1 = (struct IntIntStringResult2_Fun1){.fun = result_result_eta2_testBind_divBy2_1, .env = NULL};
     struct IntStringResult2_ variant_3 = (struct IntStringResult2_){.discriminant = Ok_, .Ok_ = 3};
     struct IntStringResult2_ call_7 = MiloneCore_Result_IntIntStringResult2Fun1IntStringResult2IntStringResult2Fun2_bind(fun_1, variant_3);
     struct String call_8 = result_result_unwrapError(call_7);
-    milone_assert((str_compare(call_8, (struct String){.str = "Odd", .len = 3}) == 0), 30, 2);
+    milone_assert((str_compare(call_8, (struct String){.str = "Odd", .len = 3}) == 0), (struct String){.str = "result/result.milone", .len = 20}, 30, 2);
     struct IntIntStringResult2_Fun1 fun_2 = (struct IntIntStringResult2_Fun1){.fun = result_result_eta2_testBind_divBy2_2, .env = NULL};
     struct IntStringResult2_ variant_4 = (struct IntStringResult2_){.discriminant = Error_, .Error_ = (struct String){.str = "Bad", .len = 3}};
     struct IntStringResult2_ call_9 = MiloneCore_Result_IntIntStringResult2Fun1IntStringResult2IntStringResult2Fun2_bind(fun_2, variant_4);
     struct String call_10 = result_result_unwrapError(call_9);
-    milone_assert((str_compare(call_10, (struct String){.str = "Bad", .len = 3}) == 0), 31, 2);
+    milone_assert((str_compare(call_10, (struct String){.str = "Bad", .len = 3}) == 0), (struct String){.str = "result/result.milone", .len = 20}, 31, 2);
     return;
 }
 
@@ -226,12 +226,12 @@ void result_result_testMap(void) {
     struct IntStringResult2_ variant_5 = (struct IntStringResult2_){.discriminant = Ok_, .Ok_ = 2};
     struct IntStringResult2_ call_13 = MiloneCore_Result_IntIntFun1IntStringResult2IntStringResult2Fun2_map(fun_3, variant_5);
     int call_14 = result_result_unwrapOk(call_13);
-    milone_assert((call_14 == 3), 36, 2);
+    milone_assert((call_14 == 3), (struct String){.str = "result/result.milone", .len = 20}, 36, 2);
     struct IntIntFun1 fun_4 = (struct IntIntFun1){.fun = result_result_eta2_testMap_inc_1, .env = NULL};
     struct IntStringResult2_ variant_6 = (struct IntStringResult2_){.discriminant = Error_, .Error_ = (struct String){.str = "Bad", .len = 3}};
     struct IntStringResult2_ call_15 = MiloneCore_Result_IntIntFun1IntStringResult2IntStringResult2Fun2_map(fun_4, variant_6);
     struct String call_16 = result_result_unwrapError(call_15);
-    milone_assert((str_compare(call_16, (struct String){.str = "Bad", .len = 3}) == 0), 37, 2);
+    milone_assert((str_compare(call_16, (struct String){.str = "Bad", .len = 3}) == 0), (struct String){.str = "result/result.milone", .len = 20}, 37, 2);
     return;
 }
 
@@ -254,16 +254,17 @@ void result_result_testMapError(void) {
     struct IntStringResult2_ variant_7 = (struct IntStringResult2_){.discriminant = Ok_, .Ok_ = 2};
     struct IntStringResult2_ call_19 = MiloneCore_Result_StringStringFun1IntStringResult2IntStringResult2Fun2_mapError(fun_5, variant_7);
     int call_20 = result_result_unwrapOk(call_19);
-    milone_assert((call_20 == 2), 42, 2);
+    milone_assert((call_20 == 2), (struct String){.str = "result/result.milone", .len = 20}, 42, 2);
     struct StringStringFun1 fun_6 = (struct StringStringFun1){.fun = result_result_eta2_testMapError_bang_1, .env = NULL};
     struct IntStringResult2_ variant_8 = (struct IntStringResult2_){.discriminant = Error_, .Error_ = (struct String){.str = "Bad", .len = 3}};
     struct IntStringResult2_ call_21 = MiloneCore_Result_StringStringFun1IntStringResult2IntStringResult2Fun2_mapError(fun_6, variant_8);
     struct String call_22 = result_result_unwrapError(call_21);
-    milone_assert((str_compare(call_22, (struct String){.str = "Bad!", .len = 4}) == 0), 43, 2);
+    milone_assert((str_compare(call_22, (struct String){.str = "Bad!", .len = 4}) == 0), (struct String){.str = "result/result.milone", .len = 20}, 43, 2);
     return;
 }
 
-int milone_main(void) {
+int main(int argc, char** argv) {
+    milone_start(argc, argv);
     result_result_testBind();
     result_result_testMap();
     result_result_testMapError();

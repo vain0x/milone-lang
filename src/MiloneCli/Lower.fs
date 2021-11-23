@@ -3,7 +3,6 @@
 /// Conversion from TIR to HIR.
 module rec MiloneCli.Lower
 
-open MiloneShared.Util
 open MiloneStd.StdMap
 
 module Hir = MiloneTranslation.Hir

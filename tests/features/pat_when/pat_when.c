@@ -1,10 +1,10 @@
-#include "milone.h"
+#include <milone.h>
 
 struct IntIntTuple2_;
 
 bool pat_when_Program_equal(struct IntIntTuple2_ t_);
 
-int milone_main(void);
+int main(int argc, char** argv);
 
 struct IntIntTuple2_ {
     int t0;
@@ -28,12 +28,13 @@ end_match_1:;
     return match_;
 }
 
-int milone_main(void) {
+int main(int argc, char** argv) {
+    milone_start(argc, argv);
     struct IntIntTuple2_ IntIntTuple2_ = (struct IntIntTuple2_){.t0 = 1, .t1 = 1};
     bool call_ = pat_when_Program_equal(IntIntTuple2_);
-    milone_assert(call_, 10, 2);
+    milone_assert(call_, (struct String){.str = "pat_when/pat_when.milone", .len = 24}, 10, 2);
     struct IntIntTuple2_ IntIntTuple2_1 = (struct IntIntTuple2_){.t0 = 1, .t1 = 2};
     bool call_1 = pat_when_Program_equal(IntIntTuple2_1);
-    milone_assert((!(call_1)), 11, 2);
+    milone_assert((!(call_1)), (struct String){.str = "pat_when/pat_when.milone", .len = 24}, 11, 2);
     return 0;
 }
