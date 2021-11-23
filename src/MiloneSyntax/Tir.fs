@@ -377,6 +377,9 @@ type TExprKind =
   /// Size of type.
   | TSizeOfValEN
 
+  /// Name of type.
+  | TTyPlaceholderEN
+
 /// Expression.
 [<NoEquality; NoComparison>]
 type TExpr =

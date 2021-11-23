@@ -708,6 +708,10 @@ let private genGenericValue ctx genericValue ty =
     let ty, ctx = cgTyComplete ctx ty
     CSizeOfExpr ty, ctx
 
+  | MTyPlaceholderGv ->
+    let ty, ctx = cgTyComplete ctx ty
+    CTyPlaceholderExpr ty, ctx
+
 /// Converts a binary expression to a runtime function call.
 let private genBinaryExprAsCall ctx funName l r =
   let l, ctx = cgExpr ctx l

@@ -343,6 +343,8 @@ let private cpExpr expr acc : string list =
 
   | CSizeOfExpr ty -> acc |> cons "sizeof(" |> cpTy ty |> cons ")"
 
+  | CTyPlaceholderExpr ty -> acc |> cpTy ty
+
   | CUnaryExpr (op, arg) ->
     acc
     |> cons "("

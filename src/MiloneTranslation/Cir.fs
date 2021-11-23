@@ -106,6 +106,7 @@ type CExpr =
 
   | CCallExpr of CExpr * args: CExpr list
   | CSizeOfExpr of CTy
+  | CTyPlaceholderExpr of CTy
   | CUnaryExpr of CUnary * CExpr
   | CBinaryExpr of CBinary * CExpr * CExpr
   | CNativeExpr of string * CExpr list

@@ -1297,8 +1297,15 @@ let private inferAppExpr ctx itself callee arg loc =
   let inferUntypedExprs ctx exprs =
     (exprs, ctx)
     |> stMap (fun (expr, ctx) ->
-      let exprs, _, ctx = inferExpr ctx None expr
-      exprs, ctx)
+      let expr, _, ctx =
+        match expr with
+        | TNodeExpr (TTyPlaceholderEN, [], ty, loc) ->
+          let ty, ctx = resolveAscriptionTy ctx ty
+          TNodeExpr(TTyPlaceholderEN, [], ty, loc), ty, ctx
+
+        | _ -> inferExpr ctx None expr
+
+      expr, ctx)
 
   // Special forms must be handled before recursion.
   match callee, arg with
@@ -1622,6 +1629,9 @@ let private inferExpr (ctx: TyCtx) (expectOpt: Ty option) (expr: TExpr) : TExpr 
   | TNodeExpr (TSliceEN, _, _, _) -> fail ()
 
   | TBlockExpr (mutuallyRec, stmts, last) -> inferBlockExpr ctx expectOpt mutuallyRec stmts last
+
+  | TNodeExpr (TTyPlaceholderEN, _, _, loc) ->
+    txUnit loc, tyUnit, addError ctx "Type placeholder can appear in argument of __nativeExpr or __nativeStmt." loc
 
   | TNodeExpr (TMinusEN, _, _, _)
   | TNodeExpr (TAscribeEN, _, _, _)

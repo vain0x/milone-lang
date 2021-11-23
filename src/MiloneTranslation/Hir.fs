@@ -265,6 +265,9 @@ type HExprKind =
   /// Size of type.
   | HSizeOfValEN
 
+  /// Name of type.
+  | HTyPlaceholderEN
+
 /// Expression in HIR.
 [<NoEquality; NoComparison>]
 type HExpr =

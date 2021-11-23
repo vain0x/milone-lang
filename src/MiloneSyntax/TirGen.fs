@@ -528,6 +528,12 @@ let private tgExpr (docId: DocId) (expr: AExpr, ctx: NameCtx) : TExpr * NameCtx 
     let items, ctx = (items, ctx) |> stMap onExpr
     txTuple items loc, ctx
 
+  // (_: 'T)
+  | AAscribeExpr (AIdentExpr (Name ("_", _)), ty, pos) ->
+    let ty, ctx = (ty, ctx) |> onTy
+    let loc = toLoc docId pos
+    TNodeExpr(TTyPlaceholderEN, [], ty, loc), ctx
+
   | AAscribeExpr (body, ty, pos) ->
     let body, ctx = (body, ctx) |> onExpr
     let ty, ctx = (ty, ctx) |> onTy
@@ -784,6 +790,7 @@ let private ocExpr (expr: AExpr) : int =
   | AUnaryExpr (_, arg, _) -> ocExpr arg
   | ABinaryExpr (_, l, r, _) -> ocExpr l + ocExpr r
   | ATupleExpr (items, _) -> ocExprs items
+  | AAscribeExpr (AIdentExpr (Name ("_", _)), ty, _) -> ocTy ty
   | AAscribeExpr (body, ty, _) -> ocExpr body + ocTy ty
   | ASemiExpr (stmts, last, _) -> ocExprs stmts + ocExpr last
   | ALetExpr (_, pat, body, next, _) -> ocPat pat + ocExpr body + ocExpr next

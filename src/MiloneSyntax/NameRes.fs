@@ -1566,7 +1566,7 @@ let private nameResExpr (expr: TExpr, ctx: ScopeCtx) : TExpr * ScopeCtx =
   | TNavExpr _ -> nameResNavExpr expr ctx
 
   | TNodeExpr (op, items, ty, loc) ->
-    // Necessary in case of ascribe expression.
+    // Necessary in case of TAscribeEN/TTyPlaceholderEN.
     let ty, ctx = ctx |> resolveTy ty loc
 
     let items, ctx = (items, ctx) |> stMap nameResExpr

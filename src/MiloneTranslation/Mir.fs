@@ -38,6 +38,7 @@ type MatchIR =
 type MGenericValue =
   | MNilGv
   | MSizeOfGv
+  | MTyPlaceholderGv
 
 /// Built-in 1-arity operation in middle IR.
 [<NoEquality; NoComparison>]
@@ -247,6 +248,7 @@ let mexprExtract expr =
     match genericValue with
     | MNilGv -> ty, loc
     | MSizeOfGv -> tyInt, loc
+    | MTyPlaceholderGv -> ty, loc
 
   | MUnaryExpr (_, _, ty, loc) -> ty, loc
   | MBinaryExpr (_, _, _, ty, loc) -> ty, loc

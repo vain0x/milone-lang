@@ -161,6 +161,7 @@ let private lowerExprKind (kind: Tir.TExprKind) : Hir.HExprKind =
   | Tir.TNativeStmtEN code -> Hir.HNativeStmtEN code
   | Tir.TNativeDeclEN code -> Hir.HNativeDeclEN code
   | Tir.TSizeOfValEN -> Hir.HSizeOfValEN
+  | Tir.TTyPlaceholderEN -> Hir.HTyPlaceholderEN
 
   | Tir.TAscribeEN -> unreachable () // Resolved in Typing.
 
