@@ -929,10 +929,8 @@ let private addLetStmt (ctx: CirCtx) name expr cty isStatic linkage replacing =
 
   | NotStatic -> addStmt ctx (CLetStmt(name, expr, cty))
 
-let private addLetAllocStmt ctx name valTy varTy isStatic =
-  match isStatic with
-  | IsStatic -> unreachable () // let-alloc is used only for temporary variables.
-  | NotStatic -> addStmt ctx (CLetAllocStmt(name, valTy, varTy))
+let private addLetAllocStmt ctx name valTy varTy =
+  addStmt ctx (CLetAllocStmt(name, valTy, varTy))
 
 let private doGenLetValStmt ctx serial expr ty =
   let name = getUniqueVarName ctx serial
@@ -1127,10 +1125,9 @@ let private cgBoxStmt ctx serial arg =
 
   // void const* p = malloc(sizeof T);
   let temp = getUniqueVarName ctx serial
-  let isStatic = findStorageModifier ctx serial
 
   let ctx =
-    addLetAllocStmt ctx temp argTy (CConstPtrTy CVoidTy) isStatic
+    addLetAllocStmt ctx temp argTy (CConstPtrTy CVoidTy)
 
   // *(T*)p = t;
   let left =
@@ -1140,7 +1137,6 @@ let private cgBoxStmt ctx serial arg =
 
 let private cgConsStmt ctx serial head tail =
   let temp = getUniqueVarName ctx serial
-  let isStatic = findStorageModifier ctx serial
   let listTy, ctx = genListTyDef ctx (mexprToTy head)
 
   let listStructTy =
@@ -1149,7 +1145,7 @@ let private cgConsStmt ctx serial head tail =
     | _ -> unreachable ()
 
   let ctx =
-    addLetAllocStmt ctx temp listStructTy listTy isStatic
+    addLetAllocStmt ctx temp listStructTy listTy
 
   let head, ctx = cgExpr ctx head
   let tail, ctx = cgExpr ctx tail
