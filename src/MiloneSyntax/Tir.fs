@@ -5,7 +5,6 @@
 /// TIR is functional-style. Similar to milone-lang's syntax.
 module rec MiloneSyntax.Tir
 
-open MiloneShared.Util
 open MiloneShared.SharedTypes
 open MiloneShared.TypeFloat
 open MiloneShared.TypeIntegers
@@ -99,9 +98,8 @@ type Ty =
 [<Struct; NoEquality; NoComparison>]
 type TyScheme = TyScheme of tyVars: TySerial list * Ty
 
-/// Type specification.
 [<Struct; NoEquality; NoComparison>]
-type TySpec = TySpec of Ty * Trait list
+type BoundedTyScheme = BoundedTyScheme of tyVars: TySerial list * Ty * Trait list
 
 /// Trait, a constraint about types.
 // NOTE: `trait` is a reserved word in F#.
@@ -643,118 +641,6 @@ let primFromIdent ident =
   | "__ptrWrite" -> TPrim.PtrWrite |> Some
 
   | _ -> None
-
-let primToTySpec prim =
-  let meta id = tyMeta id noLoc
-  let mono ty = TySpec(ty, [])
-  let poly ty traits = TySpec(ty, traits)
-
-  match prim with
-  | TPrim.Add ->
-    let addTy = meta 1
-    poly (tyFun addTy (tyFun addTy addTy)) [ AddTrait addTy ]
-
-  | TPrim.Sub
-  | TPrim.Mul
-  | TPrim.Div
-  | TPrim.Modulo ->
-    let ty = meta 1
-    poly (tyFun ty (tyFun ty ty)) [ IsNumberTrait ty ]
-
-  | TPrim.BitAnd
-  | TPrim.BitOr
-  | TPrim.BitXor ->
-    let ty = meta 1
-    poly (tyFun ty (tyFun ty ty)) [ IsIntTrait ty ]
-
-  | TPrim.LeftShift
-  | TPrim.RightShift ->
-    let ty = meta 1
-    poly (tyFun ty (tyFun tyInt ty)) [ IsIntTrait ty ]
-
-  | TPrim.Equal ->
-    let argTy = meta 1
-    poly (tyFun argTy (tyFun argTy tyBool)) [ EqualTrait argTy ]
-
-  | TPrim.Less ->
-    let compareTy = meta 1
-    poly (tyFun compareTy (tyFun compareTy tyBool)) [ CompareTrait compareTy ]
-
-  | TPrim.Compare ->
-    let compareTy = meta 1
-    poly (tyFun compareTy (tyFun compareTy tyInt)) [ CompareTrait compareTy ]
-
-  | TPrim.Nil ->
-    let itemTy = meta 1
-    poly (tyList itemTy) []
-
-  | TPrim.Cons ->
-    let itemTy = meta 1
-    let listTy = tyList itemTy
-    poly (tyFun itemTy (tyFun listTy listTy)) []
-
-  | TPrim.Not -> mono (tyFun tyBool tyBool)
-
-  | TPrim.Exit ->
-    let resultTy = meta 1
-    poly (tyFun tyInt resultTy) []
-
-  | TPrim.Assert -> mono (tyFun tyBool tyUnit)
-
-  | TPrim.Box ->
-    let itemTy = meta 1
-    poly (tyFun itemTy tyObj) []
-
-  | TPrim.Unbox ->
-    let itemTy = meta 1
-    poly (tyFun tyObj itemTy) []
-
-  | TPrim.Char ->
-    let srcTy = meta 1
-    poly (tyFun srcTy tyChar) [ ToCharTrait srcTy ]
-
-  | TPrim.ToInt flavor ->
-    let toIntTy = meta 1
-    let resultTy = Ty(IntTk flavor, [])
-    poly (tyFun toIntTy resultTy) [ ToIntTrait toIntTy ]
-
-  | TPrim.ToFloat flavor ->
-    let srcTy = meta 1
-    let resultTy = Ty(FloatTk flavor, [])
-    poly (tyFun srcTy resultTy) [ ToFloatTrait srcTy ]
-
-  | TPrim.String ->
-    let toStrTy = meta 1
-    poly (tyFun toStrTy tyStr) [ ToStringTrait toStrTy ]
-
-  | TPrim.StrLength -> mono (tyFun tyStr tyInt)
-
-  | TPrim.InRegion -> mono (tyFun (tyFun tyUnit tyInt) tyInt)
-
-  | TPrim.Printfn
-  | TPrim.NativeFun
-  | TPrim.NativeExpr
-  | TPrim.NativeStmt
-  | TPrim.NativeDecl ->
-    // Incorrect use of this primitive is handled as error before instantiating its type.
-    unreachable ()
-
-  | TPrim.NativeCast ->
-    let srcTy = meta 1
-    let destTy = meta 2
-    poly (tyFun srcTy destTy) [ PtrTrait srcTy; PtrTrait destTy ]
-
-  | TPrim.SizeOfVal -> poly (tyFun (meta 1) tyInt) []
-
-  | TPrim.PtrRead ->
-    // __constptr<'p> -> int -> 'a
-    let valueTy = meta 1
-    poly (tyFun (tyConstPtr valueTy) (tyFun tyInt valueTy)) []
-
-  | TPrim.PtrWrite ->
-    // nativeptr<'a> -> int -> 'a -> unit
-    let valueTy = meta 1
-    poly (tyFun (tyNativePtr valueTy) (tyFun tyInt (tyFun valueTy tyUnit))) []
 
 // -----------------------------------------------
 // TPat

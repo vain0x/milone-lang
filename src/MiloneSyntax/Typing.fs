@@ -332,21 +332,24 @@ let private instantiateTyScheme (ctx: TyCtx) (tyScheme: TyScheme) loc : Ty * (Ty
         Serial = serial
         TyLevels = tyLevels }
 
-let private instantiateTySpec loc (TySpec (polyTy, traits), ctx: TyCtx) =
-  let polyTy, assignment, ctx =
-    let tyScheme =
-      TyScheme(tyCollectFreeVars polyTy, polyTy)
+let private instantiateBoundedTyScheme (ctx: TyCtx) (tyScheme: BoundedTyScheme) loc : Ty * TyCtx =
+  let (BoundedTyScheme (fvs, ty, traits)) = tyScheme
+  assert (List.isEmpty fvs |> not)
 
-    instantiateTyScheme ctx tyScheme loc
+  let serial, tyLevels, ty, assignment =
+    doInstantiateTyScheme ctx.Serial ctx.Level ctx.TyLevels fvs ty loc
 
-  // Replace type variables also in trait bounds.
   let traits =
     let substMeta = tyAssign assignment
 
     traits
     |> List.map (fun theTrait -> theTrait |> traitMapTys substMeta, loc)
 
-  polyTy, traits, ctx
+  ty,
+  { ctx with
+      Serial = serial
+      TyLevels = tyLevels
+      TraitBounds = List.append traits ctx.TraitBounds }
 
 // #generalizeFun
 let private generalizeFun (ctx: TyCtx) (outerLevel: Level) funSerial =
@@ -926,8 +929,202 @@ let private inferVariantExpr (ctx: TyCtx) variantSerial loc =
 
   TVariantExpr(variantSerial, ty, loc), ty, ctx
 
+// FIXME: existing local variable in initializer - compiler crashes
+let private primNotTy = tyFun tyBool tyBool
+
+let private primAddScheme =
+  (fun () ->
+    let meta id = tyMeta id noLoc
+    let addTy = meta 1
+    BoundedTyScheme([ 1 ], tyFun addTy (tyFun addTy addTy), [ AddTrait addTy ]))
+    ()
+
+let private primSubEtcScheme =
+  (fun () ->
+    let meta id = tyMeta id noLoc
+    let ty = meta 1
+    BoundedTyScheme([ 1 ], tyFun ty (tyFun ty ty), [ IsNumberTrait ty ]))
+    ()
+
+let private primBitAndEtcScheme =
+  (fun () ->
+    let meta id = tyMeta id noLoc
+    let ty = meta 1
+    BoundedTyScheme([ 1 ], tyFun ty (tyFun ty ty), [ IsIntTrait ty ]))
+    ()
+
+let private primShiftScheme =
+  (fun () ->
+    let meta id = tyMeta id noLoc
+    let ty = meta 1
+    BoundedTyScheme([ 1 ], tyFun ty (tyFun tyInt ty), [ IsIntTrait ty ]))
+    ()
+
+let private primEqualScheme =
+  (fun () ->
+    let meta id = tyMeta id noLoc
+    let argTy = meta 1
+    BoundedTyScheme([ 1 ], tyFun argTy (tyFun argTy tyBool), [ EqualTrait argTy ]))
+    ()
+
+let private primLessScheme =
+  (fun () ->
+    let meta id = tyMeta id noLoc
+    let compareTy = meta 1
+    BoundedTyScheme([ 1 ], tyFun compareTy (tyFun compareTy tyBool), [ CompareTrait compareTy ]))
+    ()
+
+let private primCompareScheme =
+  (fun () ->
+    let meta id = tyMeta id noLoc
+    let compareTy = meta 1
+    BoundedTyScheme([ 1 ], tyFun compareTy (tyFun compareTy tyInt), [ CompareTrait compareTy ]))
+    ()
+
+let private primIntScheme flavor =
+  (fun () ->
+    let meta id = tyMeta id noLoc
+    let srcTy = meta 1
+    let resultTy = Ty(IntTk flavor, [])
+    BoundedTyScheme([ 1 ], tyFun srcTy resultTy, [ ToIntTrait srcTy ]))
+    ()
+
+let private primFloatScheme flavor =
+  (fun () ->
+    let meta id = tyMeta id noLoc
+    let srcTy = meta 1
+    let resultTy = Ty(FloatTk flavor, [])
+    BoundedTyScheme([ 1 ], tyFun srcTy resultTy, [ ToFloatTrait srcTy ]))
+    ()
+
+let private primCharScheme =
+  (fun () ->
+    let meta id = tyMeta id noLoc
+    let srcTy = meta 1
+    BoundedTyScheme([ 1 ], tyFun srcTy tyChar, [ ToCharTrait srcTy ]))
+    ()
+
+let private primStringScheme =
+  (fun () ->
+    let meta id = tyMeta id noLoc
+    let srcTy = meta 1
+    BoundedTyScheme([ 1 ], tyFun srcTy tyStr, [ ToStringTrait srcTy ]))
+    ()
+
+let private primBoxScheme =
+  (fun () ->
+    let meta id = tyMeta id noLoc
+    let itemTy = meta 1
+    TyScheme([ 1 ], tyFun itemTy tyObj))
+    ()
+
+let private primUnboxScheme =
+  (fun () ->
+    let meta id = tyMeta id noLoc
+    let resultTy = meta 1
+    TyScheme([ 1 ], tyFun tyObj resultTy))
+    ()
+
+let private primStrLengthTy = tyFun tyStr tyInt
+
+let private primNilScheme =
+  (fun () ->
+    let meta id = tyMeta id noLoc
+    let itemTy = meta 1
+    TyScheme([ 1 ], tyList itemTy))
+    ()
+
+let private primConsScheme =
+  (fun () ->
+    let meta id = tyMeta id noLoc
+    let itemTy = meta 1
+    let listTy = tyList itemTy
+    TyScheme([ 1 ], tyFun itemTy (tyFun listTy listTy)))
+    ()
+
+let private primExitScheme =
+  (fun () ->
+    let meta id = tyMeta id noLoc
+    let resultTy = meta 1
+    TyScheme([ 1 ], tyFun tyInt resultTy))
+    ()
+
+let private primAssertTy = tyFun tyBool tyUnit
+
+let private primInRegionTy = tyFun (tyFun tyUnit tyInt) tyInt
+
+let private primNativeCastScheme =
+  (fun () ->
+    let meta id = tyMeta id noLoc
+    let srcTy = meta 1
+    let destTy = meta 2
+    BoundedTyScheme([ 1; 2 ], tyFun srcTy destTy, [ PtrTrait srcTy; PtrTrait destTy ]))
+    ()
+
+let private primPtrReadScheme =
+  (fun () ->
+    let meta id = tyMeta id noLoc
+    // __constptr<'p> -> int -> 'a
+    let valueTy = meta 1
+    TyScheme([ 1 ], tyFun (tyConstPtr valueTy) (tyFun tyInt valueTy)))
+    ()
+
+let private primPtrWriteScheme =
+  (fun () ->
+    let meta id = tyMeta id noLoc
+    // nativeptr<'a> -> int -> 'a -> unit
+    let valueTy = meta 1
+    TyScheme([ 1 ], tyFun (tyNativePtr valueTy) (tyFun tyInt (tyFun valueTy tyUnit))))
+    ()
+
 let private inferPrimExpr ctx prim loc =
+  let onMono ty = TPrimExpr(prim, ty, loc), ty, ctx
+
+  let onUnbounded scheme =
+    let primTy, _, ctx = instantiateTyScheme ctx scheme loc
+    TPrimExpr(prim, primTy, loc), primTy, ctx
+
+  let onBounded scheme =
+    let primTy, ctx =
+      instantiateBoundedTyScheme ctx scheme loc
+
+    TPrimExpr(prim, primTy, loc), primTy, ctx
+
   match prim with
+  | TPrim.Not -> onMono primNotTy
+  | TPrim.Add -> onBounded primAddScheme
+
+  | TPrim.Sub
+  | TPrim.Mul
+  | TPrim.Div
+  | TPrim.Modulo -> onBounded primSubEtcScheme
+
+  | TPrim.BitAnd
+  | TPrim.BitOr
+  | TPrim.BitXor -> onBounded primBitAndEtcScheme
+
+  | TPrim.LeftShift
+  | TPrim.RightShift -> onBounded primShiftScheme
+
+  | TPrim.Equal -> onBounded primEqualScheme
+  | TPrim.Less -> onBounded primLessScheme
+  | TPrim.Compare -> onBounded primCompareScheme
+
+  | TPrim.ToInt flavor -> onBounded (primIntScheme flavor)
+  | TPrim.ToFloat flavor -> onBounded (primFloatScheme flavor)
+  | TPrim.Char -> onBounded primCharScheme
+  | TPrim.String -> onBounded primStringScheme
+  | TPrim.Box -> onUnbounded primBoxScheme
+  | TPrim.Unbox -> onUnbounded primUnboxScheme
+
+  | TPrim.StrLength -> onMono primStrLengthTy
+
+  | TPrim.Nil -> onUnbounded primNilScheme
+  | TPrim.Cons -> onUnbounded primConsScheme
+
+  | TPrim.Exit -> onUnbounded primExitScheme
+  | TPrim.Assert -> onMono primAssertTy
+
   | TPrim.Printfn ->
     let ctx =
       addError
@@ -937,9 +1134,25 @@ let private inferPrimExpr ctx prim loc =
 
     txAbort ctx loc
 
+  | TPrim.InRegion -> onMono primInRegionTy
+
   | TPrim.NativeFun ->
     let ctx =
       addError ctx "Illegal use of __nativeFun. Hint: `__nativeFun (\"funName\", arg1, arg2, ...): ResultType`." loc
+
+    txAbort ctx loc
+
+  | TPrim.NativeCast -> onBounded primNativeCastScheme
+
+  | TPrim.NativeExpr ->
+    let ctx =
+      addError ctx "Illegal use of __nativeExpr. Hint: `__nativeExpr \"Some C code here.\"`." loc
+
+    txAbort ctx loc
+
+  | TPrim.NativeStmt ->
+    let ctx =
+      addError ctx "Illegal use of __nativeStmt. Hint: `__nativeStmt \"Some C code here.\"`." loc
 
     txAbort ctx loc
 
@@ -955,11 +1168,8 @@ let private inferPrimExpr ctx prim loc =
 
     txAbort ctx loc
 
-  | _ ->
-    let tySpec = prim |> primToTySpec
-    let primTy, traits, ctx = (tySpec, ctx) |> instantiateTySpec loc
-    let ctx = ctx |> addTraitBounds traits
-    TPrimExpr(prim, primTy, loc), primTy, ctx
+  | TPrim.PtrRead -> onUnbounded primPtrReadScheme
+  | TPrim.PtrWrite -> onUnbounded primPtrWriteScheme
 
 let private inferRecordExpr ctx expectOpt baseOpt fields loc =
   // First, infer base if exists.
