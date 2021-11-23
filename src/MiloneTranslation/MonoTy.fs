@@ -415,29 +415,31 @@ let private mtExpr (expr, ctx) : M.HExpr * MtCtx =
     | _ -> onDefault kind
 
   | HBlockExpr (stmts, last) ->
-    let stmts, ctx = (stmts, ctx) |> stMap mtExpr
+    let stmts, ctx = (stmts, ctx) |> stMap mtStmt
     let last, ctx = (last, ctx) |> mtExpr
     M.HBlockExpr(stmts, last), ctx
-
-  | HLetValExpr (pat, init, next, ty, loc) ->
-    let pat, ctx = (pat, ctx) |> mtPat
-    let init, ctx = (init, ctx) |> mtExpr
-    let ty, ctx = (ty, ctx) |> mtTy
-    let next, ctx = (next, ctx) |> mtExpr
-    M.HLetValExpr(pat, init, next, ty, loc), ctx
-
-  | HLetFunExpr (callee, args, body, next, ty, loc) ->
-    let args, ctx = (args, ctx) |> stMap mtPat
-    let body, ctx = (body, ctx) |> mtExpr
-    let ty, ctx = (ty, ctx) |> mtTy
-    let next, ctx = (next, ctx) |> mtExpr
-    M.HLetFunExpr(callee, args, body, next, ty, loc), ctx
 
   | HNavExpr _ -> unreachable () // HNavExpr is resolved in NameRes, Typing, or RecordRes.
   | HRecordExpr _ -> unreachable () // HRecordExpr is resolved in RecordRes.
 
+let private mtStmt (stmt, ctx) : M.HStmt * MtCtx =
+  match stmt with
+  | HExprStmt expr ->
+    let expr, ctx = mtExpr (expr, ctx)
+    M.HExprStmt expr, ctx
+
+  | HLetValStmt (pat, init, loc) ->
+    let pat, ctx = (pat, ctx) |> mtPat
+    let init, ctx = (init, ctx) |> mtExpr
+    M.HLetValStmt(pat, init, loc), ctx
+
+  | HLetFunStmt (callee, args, body, loc) ->
+    let args, ctx = (args, ctx) |> stMap mtPat
+    let body, ctx = (body, ctx) |> mtExpr
+    M.HLetFunStmt(callee, args, body, loc), ctx
+
 let private mtModule (m: HModule2, ctx) =
-  let stmts, ctx = (m.Stmts, ctx) |> stMap mtExpr
+  let stmts, ctx = (m.Stmts, ctx) |> stMap mtStmt
 
   let m: M.HModule2 =
     { DocId = m.DocId
@@ -587,6 +589,7 @@ let private bthExpr (expr: M.HExpr) : HExpr =
   let ofPats pats = List.map bthPat pats
   let ofExpr expr = bthExpr expr
   let ofExprs exprs = List.map bthExpr exprs
+  let ofStmts stmts = List.map bthStmt stmts
 
   match expr with
   | M.HLitExpr (lit, loc) -> HLitExpr(lit, loc)
@@ -603,15 +606,24 @@ let private bthExpr (expr: M.HExpr) : HExpr =
     HMatchExpr(ofExpr cond, arms, ofTy ty, loc)
 
   | M.HNodeExpr (kind, args, ty, loc) -> HNodeExpr(kind, ofExprs args, ofTy ty, loc)
-  | M.HBlockExpr (stmts, last) -> HBlockExpr(ofExprs stmts, ofExpr last)
-  | M.HLetValExpr (pat, init, next, ty, loc) -> HLetValExpr(ofPat pat, ofExpr init, ofExpr next, ofTy ty, loc)
-  | M.HLetFunExpr (funSerial, args, body, next, ty, loc) ->
-    HLetFunExpr(funSerial, ofPats args, ofExpr body, ofExpr next, ofTy ty, loc)
+  | M.HBlockExpr (stmts, last) -> HBlockExpr(ofStmts stmts, ofExpr last)
+
+let private bthStmt stmt =
+  let ofTy ty = bthTy ty
+  let ofPat pat = bthPat pat
+  let ofPats pats = List.map bthPat pats
+  let ofExpr expr = bthExpr expr
+  let ofExprs exprs = List.map bthExpr exprs
+
+  match stmt with
+  | M.HExprStmt expr -> HExprStmt(bthExpr expr)
+  | M.HLetValStmt (pat, init, loc) -> HLetValStmt(ofPat pat, ofExpr init, loc)
+  | M.HLetFunStmt (funSerial, args, body, loc) -> HLetFunStmt(funSerial, ofPats args, ofExpr body, loc)
 
 let private bthModule (m: M.HModule2) : HModule2 =
   { DocId = m.DocId
     Vars = m.Vars
-    Stmts = m.Stmts |> List.map bthExpr }
+    Stmts = m.Stmts |> List.map bthStmt }
 
 let private bthFunDef (funDef: M.FunDef) : FunDef =
   { Name = funDef.Name

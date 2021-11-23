@@ -115,7 +115,8 @@ let private collectOnExpr (rx: CollectRx) (wx: CollectWx) expr : CollectWx =
   let onExprs exprs ctx =
     exprs |> List.fold (collectOnExpr rx) ctx
 
-  let getFunDef funSerial = rx.Funs |> mapFind funSerial
+  let onStmts stmts wx =
+    stmts |> List.fold (collectOnStmt rx) wx
 
   match expr with
   | HLitExpr _
@@ -136,10 +137,22 @@ let private collectOnExpr (rx: CollectRx) (wx: CollectWx) expr : CollectWx =
     |> forList (fun (_, guard, body) ctx -> ctx |> onExpr guard |> onExpr body) arms
 
   | HNodeExpr (_, items, _, _) -> wx |> onExprs items
-  | HBlockExpr (stmts, last) -> collectOnExpr rx (wx |> onExprs stmts) last
-  | HLetValExpr (_, body, next, _, _) -> collectOnExpr rx (wx |> onExpr body) next
+  | HBlockExpr (stmts, last) -> collectOnExpr rx (wx |> onStmts stmts) last
 
-  | HLetFunExpr (funSerial, args, body, next, _, _) ->
+  | HNavExpr _ -> unreachable () // HNavExpr is resolved in NameRes, Typing, or RecordRes.
+  | HRecordExpr _ -> unreachable () // HRecordExpr is resolved in RecordRes.
+
+let private collectOnStmt (rx: CollectRx) (wx: CollectWx) stmt : CollectWx =
+  let onExpr expr wx = collectOnExpr rx wx expr
+
+  let getFunDef funSerial = rx.Funs |> mapFind funSerial
+
+  match stmt with
+  | HExprStmt expr -> wx |> onExpr expr
+
+  | HLetValStmt (_, body, _) -> wx |> onExpr body
+
+  | HLetFunStmt (funSerial, args, body, _) ->
     let funDef = getFunDef funSerial
     let (TyScheme (tyVars, _)) = funDef.Ty
 
@@ -152,12 +165,7 @@ let private collectOnExpr (rx: CollectRx) (wx: CollectWx) expr : CollectWx =
       else
         wx
 
-    collectOnExpr rx (wx |> onExpr body) next
-
-  | HNavExpr _ -> unreachable () // HNavExpr is resolved in NameRes, Typing, or RecordRes.
-  | HRecordExpr _ -> unreachable () // HRecordExpr is resolved in RecordRes.
-
-let private collectMonoUse (rx: CollectRx) (wx: CollectWx) expr : CollectWx = collectOnExpr rx wx expr
+    wx |> onExpr body
 
 // -----------------------------------------------
 // Rewrite
@@ -177,8 +185,7 @@ type private RewriteRx =
 let private rewriteExpr (rx: RewriteRx) expr : HExpr =
   let onExpr expr = rewriteExpr rx expr
   let onExprs exprs = exprs |> List.map (rewriteExpr rx)
-
-  let isGenericFun funSerial = rx.IsGenericFun funSerial
+  let onStmts stmts = stmts |> List.choose (rewriteStmt rx)
 
   let getGenericInstance monoUse loc : FunSerial =
     match rx.InstanceMap |> TMap.tryFind monoUse with
@@ -215,18 +222,29 @@ let private rewriteExpr (rx: RewriteRx) expr : HExpr =
     HMatchExpr(onExpr cond, arms, ty, loc)
 
   | HNodeExpr (kind, items, ty, loc) -> HNodeExpr(kind, onExprs items, ty, loc)
-  | HBlockExpr (stmts, last) -> HBlockExpr(onExprs stmts, onExpr last)
-
-  | HLetValExpr (pat, body, next, ty, loc) -> HLetValExpr(pat, onExpr body, onExpr next, ty, loc)
-
-  | HLetFunExpr (callee, args, body, next, ty, loc) ->
-    if isGenericFun callee then
-      onExpr next
-    else
-      HLetFunExpr(callee, args, onExpr body, onExpr next, ty, loc)
+  | HBlockExpr (stmts, last) -> HBlockExpr(onStmts stmts, onExpr last)
 
   | HNavExpr _ -> unreachable () // HNavExpr is resolved in NameRes, Typing, or RecordRes.
   | HRecordExpr _ -> unreachable () // HRecordExpr is resolved in RecordRes.
+
+let private rewriteStmt (rx: RewriteRx) stmt : HStmt option =
+  let onExpr expr = rewriteExpr rx expr
+  let onExprs exprs = exprs |> List.map (rewriteExpr rx)
+  let onStmts stmts = stmts |> List.map (rewriteStmt rx)
+
+  let isGenericFun funSerial = rx.IsGenericFun funSerial
+
+  match stmt with
+  | HExprStmt expr -> HExprStmt(rewriteExpr rx expr) |> Some
+
+  | HLetValStmt (pat, body, loc) -> HLetValStmt(pat, onExpr body, loc) |> Some
+
+  | HLetFunStmt (callee, args, body, loc) ->
+    if isGenericFun callee then
+      None
+    else
+      HLetFunStmt(callee, args, onExpr body, loc)
+      |> Some
 
 // -----------------------------------------------
 // Generation
@@ -315,7 +333,7 @@ let private generate isMetaTy mangle (rx: CollectRx) genericFunBodyMap (ctx: Mon
       let wx =
         { emptyCollectWx with UseSiteTys = ctx.WorkList }
 
-      let wx = collectMonoUse rx wx body
+      let wx = collectOnExpr rx wx body
       wx.UseSiteTys
 
     let monoFunSerial = FunSerial(ctx.Serial + 1)
@@ -365,7 +383,7 @@ let monify (modules: HProgram, hirCtx: HirCtx) : HProgram * HirCtx =
                { CurrentModuleId = moduleId
                  Funs = hirCtx.Funs }
 
-             m.Stmts |> List.fold (collectMonoUse collectRx) wx)
+             m.Stmts |> List.fold (collectOnStmt collectRx) wx)
            emptyCollectWx
 
     collectWx.UseSiteTys, collectWx.GenericFunBody
@@ -435,7 +453,7 @@ let monify (modules: HProgram, hirCtx: HirCtx) : HProgram * HirCtx =
         |> multimapFind moduleId
         |> List.map (fun (funSerial, body, loc) ->
           let (FunBody (args, body)) = body
-          HLetFunExpr(funSerial, args, body, hxUnit loc, tyUnit, loc))
+          HLetFunStmt(funSerial, args, body, loc))
 
       let stmts = List.append funBodies m.Stmts
 
@@ -445,7 +463,7 @@ let monify (modules: HProgram, hirCtx: HirCtx) : HProgram * HirCtx =
             IsGenericFun = isGenericFun
             InstanceMap = ctx.InstanceMap }
 
-        stmts |> List.map (rewriteExpr rx)
+        stmts |> List.choose (rewriteStmt rx)
 
       { m with Stmts = stmts })
 

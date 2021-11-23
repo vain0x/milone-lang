@@ -808,15 +808,15 @@ let exprToLoc expr = exprExtract expr |> snd
 // TStmt
 // -----------------------------------------------
 
-let stmtToLoc (stmt: TStmt) : Loc =
-  match stmt with
-  | TExprStmt expr -> exprToLoc expr
-  | TLetValStmt (_, _, loc) -> loc
-  | TLetFunStmt (_, _, _, _, _, loc) -> loc
-  | TTyDeclStmt (_, _, _, _, loc) -> loc
-  | TOpenStmt (_, loc) -> loc
-  | TModuleStmt (_, _, loc) -> loc
-  | TModuleSynonymStmt (_, _, loc) -> loc
+// let stmtToLoc (stmt: TStmt) : Loc =
+//   match stmt with
+//   | TExprStmt expr -> exprToLoc expr
+//   | TLetValStmt (_, _, loc) -> loc
+//   | TLetFunStmt (_, _, _, _, _, loc) -> loc
+//   | TTyDeclStmt (_, _, _, _, loc) -> loc
+//   | TOpenStmt (_, loc) -> loc
+//   | TModuleStmt (_, _, loc) -> loc
+//   | TModuleSynonymStmt (_, _, loc) -> loc
 
 let stmtMap (onTy: Ty -> Ty) (stmt: TStmt) : TStmt =
   let onPat pat = patMap onTy pat
