@@ -66,6 +66,8 @@ int fun_closure_Program_f7(void);
 
 int milone_main(void);
 
+void fun_closure_fun_closure__start(void);
+
 struct UnitIntFun1 {
     int(*fun)(void const*);
     void const* env;
@@ -295,7 +297,7 @@ int fun_closure_Program_f7(void) {
 }
 
 int milone_main(void) {
-    fun_closure_Program_a = 1;
+    fun_closure_fun_closure__start();
     fun_closure_Program_basicCase();
     fun_closure_Program_transitiveCase();
     fun_closure_Program_recursiveCase();
@@ -304,4 +306,9 @@ int milone_main(void) {
     fun_closure_Program_innerFunCase();
     fun_closure_Program_mutuallyRecursiveCase();
     return 0;
+}
+
+void fun_closure_fun_closure__start(void) {
+    fun_closure_Program_a = 1;
+    return;
 }
