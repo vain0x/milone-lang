@@ -11,12 +11,6 @@
 #include <stdio.h>
 
 // -----------------------------------------------
-// assertion
-// -----------------------------------------------
-
-void milone_assert(bool cond, int row, int column);
-
-// -----------------------------------------------
 // memory management
 // -----------------------------------------------
 
@@ -105,5 +99,11 @@ struct String str_concat(struct String sep, struct StringList const *strings);
 // Low level operations.
 
 inline char const *str_as_ptr(struct String s) { return s.str; }
+
+// -----------------------------------------------
+// assertion
+// -----------------------------------------------
+
+void milone_assert(bool cond, struct String name, int row, int column);
 
 #endif

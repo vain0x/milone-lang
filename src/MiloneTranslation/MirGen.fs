@@ -13,6 +13,8 @@ open MiloneStd.StdSet
 open MiloneTranslation.Hir
 open MiloneTranslation.Mir
 
+module S = MiloneStd.StdString
+
 let private unwrapListTy ty =
   match ty with
   | Ty (ListTk, [ it ]) -> it
@@ -1203,9 +1205,13 @@ let private mirifyCallAssertExpr ctx arg loc =
 
   // Embed the source location information.
   let args =
-    let (Loc (_, y, x)) = loc
+    let (Loc (docId, y, x)) = loc
+
+    // FIXME: avoid abusing docId
+    let name = (docId |> S.replace "." "/") + ".milone"
 
     [ arg
+      MLitExpr(StrLit name, loc)
       MLitExpr(IntLit(string y), loc)
       MLitExpr(IntLit(string x), loc) ]
 
