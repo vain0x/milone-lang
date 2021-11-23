@@ -202,19 +202,21 @@ let private teExpr (ctx: RrCtx) expr =
     HMatchExpr(cond, arms, ty, loc)
 
   | HBlockExpr (stmts, last) ->
-    let stmts = stmts |> List.map (teExpr ctx)
+    let stmts = stmts |> List.map (teStmt ctx)
     let last = last |> teExpr ctx
     HBlockExpr(stmts, last)
 
-  | HLetValExpr (pat, init, next, ty, loc) ->
-    let init = init |> teExpr ctx
-    let next = next |> teExpr ctx
-    HLetValExpr(pat, init, next, ty, loc)
+let private teStmt ctx stmt =
+  match stmt with
+  | HExprStmt expr -> HExprStmt(teExpr ctx expr)
 
-  | HLetFunExpr (callee, args, body, next, ty, loc) ->
+  | HLetValStmt (pat, init, loc) ->
+    let init = init |> teExpr ctx
+    HLetValStmt(pat, init, loc)
+
+  | HLetFunStmt (callee, args, body, loc) ->
     let body = body |> teExpr ctx
-    let next = next |> teExpr ctx
-    HLetFunExpr(callee, args, body, next, ty, loc)
+    HLetFunStmt(callee, args, body, loc)
 
 let recordRes (modules: HProgram, hirCtx: HirCtx) : HProgram * HirCtx =
   let ctx = ofHirCtx hirCtx

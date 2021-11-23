@@ -336,7 +336,12 @@ let private ccFunExpr funSerial tyArgs funTy funLoc ctx =
   |> genFunCaps funSerial
   |> capsMakeApp funSerial tyArgs funTy funLoc
 
-let private ccLetFunExpr callee args body next ty loc ctx =
+let private ccLetFunStmt stmt ctx =
+  let callee, args, body, loc =
+    match stmt with
+    | HLetFunStmt (funSerial, argPats, body, loc) -> funSerial, argPats, body, loc
+    | _ -> unreachable ()
+
   let args, body, ctx =
     let baseCtx = ctx
     let ctx = ctx |> enterFunDecl
@@ -350,8 +355,7 @@ let private ccLetFunExpr callee args body next ty loc ctx =
   let args =
     ctx |> genFunCaps callee |> capsAddToFunPats args
 
-  let next, ctx = (next, ctx) |> ccExpr
-  HLetFunExpr(callee, args, body, next, ty, loc), ctx
+  HLetFunStmt(callee, args, body, loc), ctx
 
 // -----------------------------------------------
 // Control
@@ -371,7 +375,7 @@ let private ccPat ctx pat : CcCtx =
   | HAsPat (bodyPat, serial, _) -> ctx |> addLocal serial |> onPat bodyPat
   | HOrPat (l, r, _) -> ctx |> onPat l |> onPat r
 
-let private ccExpr (expr, ctx) =
+let private ccExpr (expr, ctx) : HExpr * CcCtx =
   match expr with
   | HLitExpr _
   | HVariantExpr _
@@ -402,23 +406,28 @@ let private ccExpr (expr, ctx) =
     HNodeExpr(kind, items, ty, loc), ctx
 
   | HBlockExpr (stmts, last) ->
-    let stmts, ctx = (stmts, ctx) |> stMap ccExpr
+    let stmts, ctx = (stmts, ctx) |> stMap ccStmt
     let last, ctx = (last, ctx) |> ccExpr
     HBlockExpr(stmts, last), ctx
-
-  | HLetValExpr (pat, body, next, ty, loc) ->
-    let ctx = ccPat ctx pat
-    let body, ctx = ccExpr (body, ctx)
-    let next, ctx = ccExpr (next, ctx)
-    HLetValExpr(pat, body, next, ty, loc), ctx
-
-  | HLetFunExpr (callee, args, body, next, ty, loc) -> ccLetFunExpr callee args body next ty loc ctx
 
   | HNavExpr _ -> unreachable () // HNavExpr is resolved in NameRes, Typing, or RecordRes.
   | HRecordExpr _ -> unreachable () // HRecordExpr is resolved in RecordRes.
 
+let private ccStmt (stmt, ctx) : HStmt * CcCtx =
+  match stmt with
+  | HExprStmt expr ->
+    let expr, ctx = ccExpr (expr, ctx)
+    HExprStmt expr, ctx
+
+  | HLetValStmt (pat, body, loc) ->
+    let ctx = ccPat ctx pat
+    let body, ctx = ccExpr (body, ctx)
+    HLetValStmt(pat, body, loc), ctx
+
+  | HLetFunStmt _ -> ccLetFunStmt stmt ctx
+
 let private ccModule1 (m: HModule, ctx: CcCtx) =
-  let stmts, ctx = (m.Stmts, ctx) |> stMap ccExpr
+  let stmts, ctx = (m.Stmts, ctx) |> stMap ccStmt
   let m = { m with Stmts = stmts }
   m, ctx
 

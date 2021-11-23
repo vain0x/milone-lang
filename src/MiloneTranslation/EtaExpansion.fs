@@ -304,11 +304,10 @@ let private createUnderlyingFunDef name funTy arity envPat envTy forwardCall res
   let argPats = envArgPat :: restArgPats
 
   let body =
-    let next = forwardCall
-    HLetValExpr(envPat, unboxedEnvExpr envArgExpr, next, exprToTy next, callLoc)
+    hxLetIn (HLetValStmt(envPat, unboxedEnvExpr envArgExpr, callLoc)) forwardCall
 
   let funLet next =
-    HLetFunExpr(funSerial, argPats, body, next, exprToTy next, callLoc)
+    hxLetIn (HLetFunStmt(funSerial, argPats, body, callLoc)) next
 
   let funExpr =
     HFunExpr(funSerial, underlyingFunTy, [], callLoc)
@@ -363,7 +362,7 @@ let private resolvePartialAppObj name callee arity args argLen callLoc ctx =
     let calleePat = HVarPat(calleeSerial, funTy, callLoc)
 
     let calleeLet next =
-      HLetValExpr(calleePat, callee, next, exprToTy next, callLoc)
+      hxLetIn (HLetValStmt(calleePat, callee, callLoc)) next
 
     calleeExpr, calleeLet, ctx
 
@@ -512,7 +511,12 @@ let private exInfExpr expr kind args ty loc ctx =
     let args, ctx = (args, ctx) |> stMap exExpr
     HNodeExpr(kind, args, ty, loc), ctx
 
-let private exLetFunExpr callee argPats body next ty loc (ctx: EtaCtx) =
+let private exLetFunStmt stmt (ctx: EtaCtx) =
+  let callee, argPats, body, loc =
+    match stmt with
+    | HLetFunStmt (callee, argPats, body, loc) -> callee, argPats, body, loc
+    | _ -> unreachable ()
+
   let body, ctx =
     let name = (ctx.Funs |> mapFind callee).Name
 
@@ -523,8 +527,7 @@ let private exLetFunExpr callee argPats body next ty loc (ctx: EtaCtx) =
     let ctx = { ctx with ParentFun = parent }
     body, ctx
 
-  let next, ctx = (next, ctx) |> exExpr
-  HLetFunExpr(callee, argPats, body, next, ty, loc), ctx
+  HLetFunStmt(callee, argPats, body, loc), ctx
 
 // -----------------------------------------------
 // Control
@@ -554,26 +557,31 @@ let private exExpr (expr, ctx) =
   | HNodeExpr (kind, args, ty, loc) -> exInfExpr expr kind args ty loc ctx
 
   | HBlockExpr (stmts, last) ->
-    let stmts, ctx = (stmts, ctx) |> stMap exExpr
+    let stmts, ctx = (stmts, ctx) |> stMap exStmt
     let last, ctx = (last, ctx) |> exExpr
     HBlockExpr(stmts, last), ctx
 
-  | HLetValExpr (pat, init, next, ty, loc) ->
-    let init, ctx = (init, ctx) |> exExpr
-    let next, ctx = (next, ctx) |> exExpr
-    HLetValExpr(pat, init, next, ty, loc), ctx
-
-  | HLetFunExpr (callee, args, body, next, ty, loc) -> exLetFunExpr callee args body next ty loc ctx
-
   | HNavExpr _ -> unreachable () // HNavExpr is resolved in NameRes, Typing, or RecordRes.
   | HRecordExpr _ -> unreachable () // HRecordExpr is resolved in RecordRes.
+
+let private exStmt (stmt, ctx) : HStmt * EtaCtx =
+  match stmt with
+  | HExprStmt expr ->
+    let expr, ctx = exExpr (expr, ctx)
+    HExprStmt expr, ctx
+
+  | HLetValStmt (pat, init, loc) ->
+    let init, ctx = (init, ctx) |> exExpr
+    HLetValStmt(pat, init, loc), ctx
+
+  | HLetFunStmt _ -> exLetFunStmt stmt ctx
 
 let private exModule (m: HModule, ctx: EtaCtx) =
   let ctx = { ctx with Vars = m.Vars }
 
   let stmts, ctx =
     m.Stmts
-    |> List.mapFold (fun ctx stmt -> exExpr (stmt, ctx)) ctx
+    |> List.mapFold (fun ctx stmt -> exStmt (stmt, ctx)) ctx
 
   let m =
     { m with

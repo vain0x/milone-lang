@@ -35,6 +35,7 @@ type private FCtx = TreeSet<Ty>
 let private fuExpr ctx expr : FCtx =
   let onExpr expr ctx = fuExpr ctx expr
   let onExprs exprs ctx = exprs |> List.fold fuExpr ctx
+  let onStmts stmts ctx = stmts |> List.fold fuStmt ctx
 
   match expr with
   | HLitExpr _
@@ -58,12 +59,16 @@ let private fuExpr ctx expr : FCtx =
     |> forList (fun (_, guard, body) ctx -> ctx |> onExpr guard |> onExpr body) arms
 
   | HNodeExpr (_, items, _, _) -> ctx |> onExprs items
-  | HBlockExpr (stmts, last) -> fuExpr (ctx |> onExprs stmts) last
-  | HLetValExpr (_, body, next, _, _) -> fuExpr (ctx |> onExpr body) next
-  | HLetFunExpr (_, _, body, next, _, _) -> fuExpr (ctx |> onExpr body) next
+  | HBlockExpr (stmts, last) -> fuExpr (ctx |> onStmts stmts) last
 
   | HNavExpr _ -> unreachable () // HNavExpr is resolved in NameRes, Typing, or RecordRes.
   | HRecordExpr _ -> unreachable ()
+
+let private fuStmt ctx stmt : FCtx =
+  match stmt with
+  | HExprStmt expr -> fuExpr ctx expr
+  | HLetValStmt (_, init, _) -> fuExpr ctx init
+  | HLetFunStmt (_, _, body, _) -> fuExpr ctx body
 
 // -----------------------------------------------
 // Apply changes
@@ -72,6 +77,7 @@ let private fuExpr ctx expr : FCtx =
 let private rewriteExpr (ctx: TreeMap<Ty, FunSerial>) expr : HExpr =
   let onExpr expr = rewriteExpr ctx expr
   let onExprs exprs = exprs |> List.map (rewriteExpr ctx)
+  let onStmts stmts = stmts |> List.map (rewriteStmt ctx)
 
   match expr with
   | HLitExpr _
@@ -96,14 +102,18 @@ let private rewriteExpr (ctx: TreeMap<Ty, FunSerial>) expr : HExpr =
     HMatchExpr(onExpr cond, arms, ty, loc)
 
   | HNodeExpr (kind, items, ty, loc) -> HNodeExpr(kind, onExprs items, ty, loc)
-  | HBlockExpr (stmts, last) -> HBlockExpr(onExprs stmts, onExpr last)
-
-  | HLetValExpr (pat, body, next, ty, loc) -> HLetValExpr(pat, onExpr body, onExpr next, ty, loc)
-
-  | HLetFunExpr (callee, args, body, next, ty, loc) -> HLetFunExpr(callee, args, onExpr body, onExpr next, ty, loc)
+  | HBlockExpr (stmts, last) -> HBlockExpr(onStmts stmts, onExpr last)
 
   | HNavExpr _ -> unreachable () // HNavExpr is resolved in NameRes, Typing, or RecordRes.
   | HRecordExpr _ -> unreachable () // HRecordExpr is resolved in RecordRes.
+
+let private rewriteStmt ctx stmt : HStmt =
+  let onExpr expr = rewriteExpr ctx expr
+
+  match stmt with
+  | HExprStmt expr -> HExprStmt(onExpr expr)
+  | HLetValStmt (pat, init, loc) -> HLetValStmt(pat, onExpr init, loc)
+  | HLetFunStmt (callee, args, body, loc) -> HLetFunStmt(callee, args, onExpr body, loc)
 
 // -----------------------------------------------
 // Generation
@@ -113,7 +123,7 @@ type private DCtx =
   { Serial: Serial
     NewVars: (VarSerial * VarDef) list
     NewFuns: (FunSerial * FunDef) list
-    NewLetFuns: (Ty * HExpr) list
+    NewLetFuns: (Ty * HStmt) list
     WorkList: Ty list
     GenericListEqualFunOpt: FunSerial option
     EqualFunInstances: TreeMap<Ty, FunSerial> }
@@ -127,7 +137,7 @@ let private ofHirCtx (hirCtx: HirCtx) : DCtx =
     GenericListEqualFunOpt = None
     EqualFunInstances = TMap.empty tyCompare }
 
-let private deriveOnExpr (hirCtx: HirCtx) (ctx: DCtx) expr : DCtx =
+let private deriveOnStmt (hirCtx: HirCtx) (ctx: DCtx) stmt : DCtx =
   let findTy tySerial = hirCtx.Tys |> mapFind tySerial
 
   let findVariant variantSerial =
@@ -243,20 +253,20 @@ let private deriveOnExpr (hirCtx: HirCtx) (ctx: DCtx) expr : DCtx =
 
     let body =
       HBlockExpr(
-        [ HLetValExpr(lPat, HVarExpr(lArg, ty, loc), hxUnit loc, tyUnit, loc)
-          HLetValExpr(rPat, HVarExpr(rArg, ty, loc), hxUnit loc, tyUnit, loc) ],
+        [ HLetValStmt(lPat, HVarExpr(lArg, ty, loc), loc)
+          HLetValStmt(rPat, HVarExpr(rArg, ty, loc), loc) ],
         prod
       )
 
-    let letFunExpr =
+    let letFunStmt =
       let lPat = hpVar lArg ty loc
       let rPat = hpVar rArg ty loc
-      HLetFunExpr(funSerial, [ lPat; rPat ], body, hxUnit loc, tyUnit, loc)
+      HLetFunStmt(funSerial, [ lPat; rPat ], body, loc)
 
     let ctx =
       { ctx with
           NewFuns = (funSerial, funDef) :: ctx.NewFuns
-          NewLetFuns = (ty, letFunExpr) :: ctx.NewLetFuns
+          NewLetFuns = (ty, letFunStmt) :: ctx.NewLetFuns
           WorkList = List.append tyArgs ctx.WorkList
           EqualFunInstances = ctx.EqualFunInstances |> TMap.add ty funSerial }
 
@@ -308,15 +318,15 @@ let private deriveOnExpr (hirCtx: HirCtx) (ctx: DCtx) expr : DCtx =
 
       hxApp3 callee equalPrim l r
 
-    let letFunExpr =
+    let letFunStmt =
       let lPat = hpVar lArg ty loc
       let rPat = hpVar rArg ty loc
-      HLetFunExpr(funSerial, [ lPat; rPat ], body, hxUnit loc, tyUnit, loc)
+      HLetFunStmt(funSerial, [ lPat; rPat ], body, loc)
 
     let ctx =
       { ctx with
           NewFuns = (funSerial, funDef) :: ctx.NewFuns
-          NewLetFuns = (ty, letFunExpr) :: ctx.NewLetFuns
+          NewLetFuns = (ty, letFunStmt) :: ctx.NewLetFuns
           WorkList = itemTy :: ctx.WorkList
           EqualFunInstances = ctx.EqualFunInstances |> TMap.add ty funSerial }
 
@@ -410,15 +420,15 @@ let private deriveOnExpr (hirCtx: HirCtx) (ctx: DCtx) expr : DCtx =
       let arms = List.append arms [ lastArm ]
       HMatchExpr(cond, arms, tyBool, loc)
 
-    let letFunExpr =
+    let letFunStmt =
       let lPat = hpVar lArg ty loc
       let rPat = hpVar rArg ty loc
-      HLetFunExpr(funSerial, [ lPat; rPat ], matchExpr, hxUnit loc, tyUnit, loc)
+      HLetFunStmt(funSerial, [ lPat; rPat ], matchExpr, loc)
 
     let ctx =
       { ctx with
           NewFuns = (funSerial, funDef) :: ctx.NewFuns
-          NewLetFuns = (ty, letFunExpr) :: ctx.NewLetFuns
+          NewLetFuns = (ty, letFunStmt) :: ctx.NewLetFuns
           EqualFunInstances = ctx.EqualFunInstances |> TMap.add ty funSerial }
 
     ctx
@@ -446,7 +456,7 @@ let private deriveOnExpr (hirCtx: HirCtx) (ctx: DCtx) expr : DCtx =
     | _ -> ctx
 
   let ctx =
-    fuExpr (TSet.empty tyCompare) expr
+    fuStmt (TSet.empty tyCompare) stmt
     |> TSet.fold generate ctx
 
   let rec go workList (ctx: DCtx) : DCtx =
@@ -470,7 +480,7 @@ let private deriveOnExpr (hirCtx: HirCtx) (ctx: DCtx) expr : DCtx =
 let private deriveOnModule (m: HModule, hirCtx: HirCtx) : HModule * HirCtx =
   let ctx =
     m.Stmts
-    |> List.fold (deriveOnExpr hirCtx) (ofHirCtx hirCtx)
+    |> List.fold (deriveOnStmt hirCtx) (ofHirCtx hirCtx)
 
   assert (List.isEmpty ctx.WorkList)
 
@@ -484,7 +494,7 @@ let private deriveOnModule (m: HModule, hirCtx: HirCtx) : HModule * HirCtx =
     let stmts = List.append letFunStmts m.Stmts
 
     stmts
-    |> List.map (rewriteExpr ctx.EqualFunInstances)
+    |> List.map (rewriteStmt ctx.EqualFunInstances)
 
   // Merge.
   let localVars =

@@ -8,6 +8,8 @@ struct IntIntTuple2IntIntTuple2Tuple2_ module_along_with_type_Program_Range_pair
 
 struct String module_along_with_type_Program_Range_toString(struct IntIntTuple2IntIntTuple2Tuple2_ arg_);
 
+void module_along_with_type_sub__start(void);
+
 struct IntIntTuple2_ module_along_with_type_sub_Pos_add(struct IntIntTuple2_ , struct IntIntTuple2_ );
 
 struct String module_along_with_type_sub_Pos_toString(struct IntIntTuple2_ );
@@ -23,8 +25,6 @@ struct IntIntTuple2IntIntTuple2Tuple2_ {
     struct IntIntTuple2_ t0;
     struct IntIntTuple2_ t1;
 };
-
-struct IntIntTuple2_ module_along_with_type_sub_Pos_eol;
 
 extern struct IntIntTuple2_ module_along_with_type_sub_Pos_eol;
 
@@ -48,8 +48,7 @@ struct String module_along_with_type_Program_Range_toString(struct IntIntTuple2I
 }
 
 int milone_main(void) {
-    struct IntIntTuple2_ IntIntTuple2_ = (struct IntIntTuple2_){.t0 = 1, .t1 = 0};
-    module_along_with_type_sub_Pos_eol = IntIntTuple2_;
+    module_along_with_type_sub__start();
     struct IntIntTuple2_ p_ = module_along_with_type_sub_Pos_eol;
     struct IntIntTuple2_ call_4 = module_along_with_type_sub_Pos_add(p_, p_);
     struct IntIntTuple2IntIntTuple2Tuple2_ IntIntTuple2IntIntTuple2Tuple2_1 = (struct IntIntTuple2IntIntTuple2Tuple2_){.t0 = p_, .t1 = call_4};

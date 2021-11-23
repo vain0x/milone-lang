@@ -929,153 +929,114 @@ let private inferVariantExpr (ctx: TyCtx) variantSerial loc =
 
   TVariantExpr(variantSerial, ty, loc), ty, ctx
 
-// FIXME: existing local variable in initializer - compiler crashes
 let private primNotTy = tyFun tyBool tyBool
 
 let private primAddScheme =
-  (fun () ->
-    let meta id = tyMeta id noLoc
-    let addTy = meta 1
-    BoundedTyScheme([ 1 ], tyFun addTy (tyFun addTy addTy), [ AddTrait addTy ]))
-    ()
+  let meta id = tyMeta id noLoc
+  let addTy = meta 1
+  BoundedTyScheme([ 1 ], tyFun addTy (tyFun addTy addTy), [ AddTrait addTy ])
 
 let private primSubEtcScheme =
-  (fun () ->
-    let meta id = tyMeta id noLoc
-    let ty = meta 1
-    BoundedTyScheme([ 1 ], tyFun ty (tyFun ty ty), [ IsNumberTrait ty ]))
-    ()
+  let meta id = tyMeta id noLoc
+  let ty = meta 1
+  BoundedTyScheme([ 1 ], tyFun ty (tyFun ty ty), [ IsNumberTrait ty ])
 
 let private primBitAndEtcScheme =
-  (fun () ->
-    let meta id = tyMeta id noLoc
-    let ty = meta 1
-    BoundedTyScheme([ 1 ], tyFun ty (tyFun ty ty), [ IsIntTrait ty ]))
-    ()
+  let meta id = tyMeta id noLoc
+  let ty = meta 1
+  BoundedTyScheme([ 1 ], tyFun ty (tyFun ty ty), [ IsIntTrait ty ])
 
 let private primShiftScheme =
-  (fun () ->
-    let meta id = tyMeta id noLoc
-    let ty = meta 1
-    BoundedTyScheme([ 1 ], tyFun ty (tyFun tyInt ty), [ IsIntTrait ty ]))
-    ()
+  let meta id = tyMeta id noLoc
+  let ty = meta 1
+  BoundedTyScheme([ 1 ], tyFun ty (tyFun tyInt ty), [ IsIntTrait ty ])
 
 let private primEqualScheme =
-  (fun () ->
-    let meta id = tyMeta id noLoc
-    let argTy = meta 1
-    BoundedTyScheme([ 1 ], tyFun argTy (tyFun argTy tyBool), [ EqualTrait argTy ]))
-    ()
+  let meta id = tyMeta id noLoc
+  let argTy = meta 1
+  BoundedTyScheme([ 1 ], tyFun argTy (tyFun argTy tyBool), [ EqualTrait argTy ])
 
 let private primLessScheme =
-  (fun () ->
-    let meta id = tyMeta id noLoc
-    let compareTy = meta 1
-    BoundedTyScheme([ 1 ], tyFun compareTy (tyFun compareTy tyBool), [ CompareTrait compareTy ]))
-    ()
+  let meta id = tyMeta id noLoc
+  let compareTy = meta 1
+  BoundedTyScheme([ 1 ], tyFun compareTy (tyFun compareTy tyBool), [ CompareTrait compareTy ])
 
 let private primCompareScheme =
-  (fun () ->
-    let meta id = tyMeta id noLoc
-    let compareTy = meta 1
-    BoundedTyScheme([ 1 ], tyFun compareTy (tyFun compareTy tyInt), [ CompareTrait compareTy ]))
-    ()
+  let meta id = tyMeta id noLoc
+  let compareTy = meta 1
+  BoundedTyScheme([ 1 ], tyFun compareTy (tyFun compareTy tyInt), [ CompareTrait compareTy ])
 
 let private primIntScheme flavor =
-  (fun () ->
-    let meta id = tyMeta id noLoc
-    let srcTy = meta 1
-    let resultTy = Ty(IntTk flavor, [])
-    BoundedTyScheme([ 1 ], tyFun srcTy resultTy, [ ToIntTrait srcTy ]))
-    ()
+  let meta id = tyMeta id noLoc
+  let srcTy = meta 1
+  let resultTy = Ty(IntTk flavor, [])
+  BoundedTyScheme([ 1 ], tyFun srcTy resultTy, [ ToIntTrait srcTy ])
 
 let private primFloatScheme flavor =
-  (fun () ->
-    let meta id = tyMeta id noLoc
-    let srcTy = meta 1
-    let resultTy = Ty(FloatTk flavor, [])
-    BoundedTyScheme([ 1 ], tyFun srcTy resultTy, [ ToFloatTrait srcTy ]))
-    ()
+  let meta id = tyMeta id noLoc
+  let srcTy = meta 1
+  let resultTy = Ty(FloatTk flavor, [])
+  BoundedTyScheme([ 1 ], tyFun srcTy resultTy, [ ToFloatTrait srcTy ])
 
 let private primCharScheme =
-  (fun () ->
-    let meta id = tyMeta id noLoc
-    let srcTy = meta 1
-    BoundedTyScheme([ 1 ], tyFun srcTy tyChar, [ ToCharTrait srcTy ]))
-    ()
+  let meta id = tyMeta id noLoc
+  let srcTy = meta 1
+  BoundedTyScheme([ 1 ], tyFun srcTy tyChar, [ ToCharTrait srcTy ])
 
 let private primStringScheme =
-  (fun () ->
-    let meta id = tyMeta id noLoc
-    let srcTy = meta 1
-    BoundedTyScheme([ 1 ], tyFun srcTy tyStr, [ ToStringTrait srcTy ]))
-    ()
+  let meta id = tyMeta id noLoc
+  let srcTy = meta 1
+  BoundedTyScheme([ 1 ], tyFun srcTy tyStr, [ ToStringTrait srcTy ])
 
 let private primBoxScheme =
-  (fun () ->
-    let meta id = tyMeta id noLoc
-    let itemTy = meta 1
-    TyScheme([ 1 ], tyFun itemTy tyObj))
-    ()
+  let meta id = tyMeta id noLoc
+  let itemTy = meta 1
+  TyScheme([ 1 ], tyFun itemTy tyObj)
 
 let private primUnboxScheme =
-  (fun () ->
-    let meta id = tyMeta id noLoc
-    let resultTy = meta 1
-    TyScheme([ 1 ], tyFun tyObj resultTy))
-    ()
+  let meta id = tyMeta id noLoc
+  let resultTy = meta 1
+  TyScheme([ 1 ], tyFun tyObj resultTy)
 
 let private primStrLengthTy = tyFun tyStr tyInt
 
 let private primNilScheme =
-  (fun () ->
-    let meta id = tyMeta id noLoc
-    let itemTy = meta 1
-    TyScheme([ 1 ], tyList itemTy))
-    ()
+  let meta id = tyMeta id noLoc
+  let itemTy = meta 1
+  TyScheme([ 1 ], tyList itemTy)
 
 let private primConsScheme =
-  (fun () ->
-    let meta id = tyMeta id noLoc
-    let itemTy = meta 1
-    let listTy = tyList itemTy
-    TyScheme([ 1 ], tyFun itemTy (tyFun listTy listTy)))
-    ()
+  let meta id = tyMeta id noLoc
+  let itemTy = meta 1
+  let listTy = tyList itemTy
+  TyScheme([ 1 ], tyFun itemTy (tyFun listTy listTy))
 
 let private primExitScheme =
-  (fun () ->
-    let meta id = tyMeta id noLoc
-    let resultTy = meta 1
-    TyScheme([ 1 ], tyFun tyInt resultTy))
-    ()
+  let meta id = tyMeta id noLoc
+  let resultTy = meta 1
+  TyScheme([ 1 ], tyFun tyInt resultTy)
 
 let private primAssertTy = tyFun tyBool tyUnit
 
 let private primInRegionTy = tyFun (tyFun tyUnit tyInt) tyInt
 
 let private primNativeCastScheme =
-  (fun () ->
-    let meta id = tyMeta id noLoc
-    let srcTy = meta 1
-    let destTy = meta 2
-    BoundedTyScheme([ 1; 2 ], tyFun srcTy destTy, [ PtrTrait srcTy; PtrTrait destTy ]))
-    ()
+  let meta id = tyMeta id noLoc
+  let srcTy = meta 1
+  let destTy = meta 2
+  BoundedTyScheme([ 1; 2 ], tyFun srcTy destTy, [ PtrTrait srcTy; PtrTrait destTy ])
 
 let private primPtrReadScheme =
-  (fun () ->
-    let meta id = tyMeta id noLoc
-    // __constptr<'p> -> int -> 'a
-    let valueTy = meta 1
-    TyScheme([ 1 ], tyFun (tyConstPtr valueTy) (tyFun tyInt valueTy)))
-    ()
+  let meta id = tyMeta id noLoc
+  // __constptr<'a> -> int -> 'a
+  let valueTy = meta 1
+  TyScheme([ 1 ], tyFun (tyConstPtr valueTy) (tyFun tyInt valueTy))
 
 let private primPtrWriteScheme =
-  (fun () ->
-    let meta id = tyMeta id noLoc
-    // nativeptr<'a> -> int -> 'a -> unit
-    let valueTy = meta 1
-    TyScheme([ 1 ], tyFun (tyNativePtr valueTy) (tyFun tyInt (tyFun valueTy tyUnit))))
-    ()
+  let meta id = tyMeta id noLoc
+  // nativeptr<'a> -> int -> 'a -> unit
+  let valueTy = meta 1
+  TyScheme([ 1 ], tyFun (tyNativePtr valueTy) (tyFun tyInt (tyFun valueTy tyUnit)))
 
 let private inferPrimExpr ctx prim loc =
   let onMono ty = TPrimExpr(prim, ty, loc), ty, ctx
@@ -1268,7 +1229,7 @@ let private inferRecordExpr ctx expectOpt baseOpt fields loc =
 
       txLetIn (TLetValStmt(varPat, baseExpr, loc)) recordExpr, recordTy, ctx
 
-/// match 'a with ( | 'aT-> 'b )*
+/// match 'a with ( | 'a -> 'b )*
 let private inferMatchExpr ctx expectOpt itself cond arms loc =
   let targetTy, ctx = freshMetaTyForExpr itself ctx
 

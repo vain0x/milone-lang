@@ -198,29 +198,25 @@ let private lowerExpr (expr: Tir.TExpr) : Hir.HExpr =
     )
   | Tir.TNavExpr (l, (r, _), ty, loc) -> Hir.HNavExpr(lowerExpr l, r, lowerTy ty, loc)
   | Tir.TNodeExpr (kind, args, ty, loc) -> Hir.HNodeExpr(lowerExprKind kind, List.map lowerExpr args, lowerTy ty, loc)
-  | Tir.TBlockExpr (_, stmts, last) -> Hir.HBlockExpr(List.map lowerStmt stmts, lowerExpr last)
+  | Tir.TBlockExpr (_, stmts, last) -> Hir.HBlockExpr(List.choose lowerStmt stmts, lowerExpr last)
 
-let private lowerStmt (stmt: Tir.TStmt) : Hir.HExpr =
+let private lowerStmt (stmt: Tir.TStmt) : Hir.HStmt option =
   match stmt with
-  | Tir.TExprStmt expr -> lowerExpr expr
+  | Tir.TExprStmt expr -> Hir.HExprStmt(lowerExpr expr) |> Some
 
-  | Tir.TLetValStmt (pat, init, loc) -> Hir.HLetValExpr(lowerPat pat, lowerExpr init, Hir.hxUnit loc, Hir.tyUnit, loc)
+  | Tir.TLetValStmt (pat, init, loc) ->
+    Hir.HLetValStmt(lowerPat pat, lowerExpr init, loc)
+    |> Some
 
   | Tir.TLetFunStmt (funSerial, _, _, argPats, body, loc) ->
-    Hir.HLetFunExpr(
-      lowerFunSerial funSerial,
-      List.map lowerPat argPats,
-      lowerExpr body,
-      Hir.hxUnit loc,
-      Hir.tyUnit,
-      loc
-    )
+    Hir.HLetFunStmt(lowerFunSerial funSerial, List.map lowerPat argPats, lowerExpr body, loc)
+    |> Some
 
   // These statements are removed. Already used in NameRes.
   | Tir.TTyDeclStmt _
   | Tir.TOpenStmt _
   | Tir.TModuleStmt _
-  | Tir.TModuleSynonymStmt _ -> Hir.hxUnit (Tir.stmtToLoc stmt)
+  | Tir.TModuleSynonymStmt _ -> None
 
 let private lowerModules (modules: Tir.TProgram) : Hir.HProgram =
   modules
@@ -228,7 +224,7 @@ let private lowerModules (modules: Tir.TProgram) : Hir.HProgram =
     let m: Hir.HModule =
       { DocId = m.DocId
         Vars = lowerVarMap m.Vars
-        Stmts = List.map lowerStmt m.Stmts }
+        Stmts = List.choose lowerStmt m.Stmts }
 
     m)
 

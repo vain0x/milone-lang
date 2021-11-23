@@ -114,10 +114,14 @@ type HExpr =
   | HNodeExpr of HExprKind * HExpr list * Ty * Loc
 
   /// Evaluate a list of expressions and returns the last, e.g. `x1; x2; ...; y`.
-  | HBlockExpr of HExpr list * HExpr
+  | HBlockExpr of HStmt list * HExpr
 
-  | HLetValExpr of pat: HPat * init: HExpr * next: HExpr * Ty * Loc
-  | HLetFunExpr of FunSerial * args: HPat list * body: HExpr * next: HExpr * Ty * Loc
+/// Statement in HIR.
+[<NoEquality; NoComparison>]
+type HStmt =
+  | HExprStmt of HExpr
+  | HLetValStmt of HPat * init: HExpr * Loc
+  | HLetFunStmt of FunSerial * argPats: HPat list * body: HExpr * Loc
 
 /// Module. Variable info is reduced.
 [<RequireQualifiedAccess; NoEquality; NoComparison>]
@@ -127,4 +131,4 @@ type HModule2 =
     /// Non-static variables.
     Vars: TreeMap<VarSerial, Ident>
 
-    Stmts: HExpr list }
+    Stmts: HStmt list }
