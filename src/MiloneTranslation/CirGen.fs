@@ -1261,12 +1261,11 @@ let private genMainFun stmts : CDecl =
 
   let args =
     [ "argc", intTy
-      "argv", CEmbedTy "char **" ]
+      "argv", CEmbedTy "char**" ]
 
   let stmts =
-    CNativeStmt("    void milone_start(int, char **);\n", [])
-    :: CExprStmt(CCallExpr(CVarExpr "milone_start", [ CVarExpr "argc"; CVarExpr "argv" ]))
-       :: stmts
+    CExprStmt(CCallExpr(CVarExpr "milone_start", [ CVarExpr "argc"; CVarExpr "argv" ]))
+    :: stmts
 
   CFunDecl("main", args, intTy, stmts)
 
