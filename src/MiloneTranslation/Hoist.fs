@@ -196,6 +196,49 @@ let private hoistModule (hirCtx: HirCtx) (m: HModule) : (HModule * HStmt option)
   (m, startOpt), hirCtx
 
 // -----------------------------------------------
+// Main function
+// -----------------------------------------------
+
+let private genMainFun (hirCtx: HirCtx) (modules: HProgram) =
+  match hirCtx.MainFunOpt with
+  | Some it -> it, modules, hirCtx
+
+  | None ->
+    let modules, m =
+      match splitLast modules with
+      | Some it -> it
+      | None -> unreachable ()
+
+    let funSerial = FunSerial(hirCtx.Serial + 1)
+    let loc = Loc(m.DocId, 0, 0)
+
+    let funDef: FunDef =
+      { Name = "main"
+        Arity = 1
+        Ty = TyScheme([], tyFun tyUnit tyInt)
+        Abi = CAbi
+        Linkage = ExternalLinkage "main"
+        Prefix = []
+        Loc = loc }
+
+    let hirCtx =
+      { hirCtx with
+          Serial = hirCtx.Serial + 1
+          Funs = hirCtx.Funs |> TMap.add funSerial funDef
+          MainFunOpt = Some funSerial }
+
+    let modules =
+      let stmt =
+        HLetFunStmt(funSerial, [ hpUnit loc ], HLitExpr(IntLit "0", loc), loc)
+
+      let m =
+        { m with Stmts = List.append m.Stmts [ stmt ] }
+
+      List.append modules [ m ]
+
+    funSerial, modules, hirCtx
+
+// -----------------------------------------------
 // Interface
 // -----------------------------------------------
 
@@ -208,14 +251,17 @@ let hoist (modules: HProgram, hirCtx: HirCtx) : HProgram * HirCtx =
     let startStmts = startStmtOpts |> List.choose id
     modules, startStmts, hirCtx
 
-  // Mutate main function.
+  // Generate main function.
+  let mainFunSerial, modules, hirCtx = genMainFun hirCtx modules
+
+  // Mutate main function to call all start functions.
   let modules =
     if List.isEmpty startStmts then
       modules
     else
       let isMain stmt =
-        match hirCtx.MainFunOpt, stmt with
-        | Some s, HLetFunStmt (t, _, _, _) -> funSerialCompare s t = 0
+        match stmt with
+        | HLetFunStmt (s, _, _, _) -> funSerialCompare s mainFunSerial = 0
         | _ -> false
 
       modules
