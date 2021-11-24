@@ -1,5 +1,6 @@
 module rec CmdLspServer.Program
 
+open MiloneStd.StdError
 open LibSqlite3.Db
 open LibJson.Json
 
@@ -11,21 +12,14 @@ __nativeDecl
     #include <errno.h>
   """
 
-let private unreachable () =
-  assert false
-  exit 1
-
 let private trace (s: string) : unit =
   __nativeStmt ("fwrite({0}.str, sizeof(char), (size_t){0}.len, stderr);", s + "\n")
 
-let private failwith (msg: string) =
-  printfn "ERROR: %s" msg
-  exit 1
-
 let private loopInRegion (action: unit -> unit) : int =
-  let f () =
-    action ()
-    0
+  let f =
+    fun () ->
+      action ()
+      0
 
   let rec go () =
     let code = __inRegion f
@@ -257,7 +251,7 @@ let private parseDidCloseParam j : DidCloseParam =
   { Uri = uri }
 
 type private LspRequest =
-  | InitializeRequest of MsgId
+  | InitializeRequest of MsgId * rootOpt: Uri option
   | InitializedNotification
   | ShutdownRequest of MsgId
   | ExitNotification
@@ -331,7 +325,14 @@ let private readRequest () : LspRequest =
   let p = req |> J.get "params"
 
   match m with
-  | JString "initialize" -> InitializeRequest msgId
+  | JString "initialize" ->
+    let rootOpt =
+      match p |> J.get "rootUri" with
+      | JString it -> Some(Uri it)
+      | _ -> None
+
+    InitializeRequest(msgId, rootOpt)
+
   | JString "initialized" -> InitializedNotification
 
   | JString "shutdown" -> ShutdownRequest msgId
@@ -462,7 +463,14 @@ let main _ =
 
   loopInRegion (fun () ->
     match readRequest () with
-    | InitializeRequest msgId ->
+    | InitializeRequest (msgId, rootOpt) ->
+      let root =
+        match rootOpt with
+        | Some uri -> uri |> Uri.toString
+        | _ -> "null"
+
+      trace ("rootUri = " + root)
+
       let response =
         ("""{ "jsonrpc": "2.0", "id": ${MSG_ID}, "result": ${RESULT} }"""
          + "\n")
@@ -477,8 +485,7 @@ let main _ =
         output
       |> ignore
 
-    | InitializedNotification ->
-      dbInit ()
+    | InitializedNotification -> dbInit ()
 
     | ShutdownRequest msgId ->
       let response =
@@ -513,5 +520,4 @@ let main _ =
       let uri = p.Uri |> Uri.toString
       dbRemoveDoc uri
 
-    | UnknownRequest ->
-      trace "Ignore unknown request.")
+    | UnknownRequest -> trace "Ignore unknown request.")

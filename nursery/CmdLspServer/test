@@ -9,8 +9,11 @@ send() {
     printf "Content-Length: %d\r\n\r\n%s\n" "$LEN" "$BODY"
 }
 
+ROOT_URI="file://$PWD"
+INITIALIZE_PARAMS="{\"rootUri\": \"$ROOT_URI\"}"
+
 {
-    send '{"method": "initialize", "id": 1}'
+    send "{\"method\": \"initialize\", \"id\": 1, \"params\": $INITIALIZE_PARAMS}"
     send '{"method": "initialized"}'
 
     send '{
