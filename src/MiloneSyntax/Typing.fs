@@ -1436,89 +1436,14 @@ let private inferAscribeExpr ctx body ascriptionTy loc =
   let ctx = unifyTy ctx loc bodyTy ascriptionTy
   body, ascriptionTy, ctx
 
-let private inferBlockExpr ctx expectOpt mutuallyRec stmts last =
+let private inferBlockExpr ctx expectOpt stmts last =
   let stmts, ctx =
-    match mutuallyRec with
-    | IsRec ->
-      let outerLevel = (ctx: TyCtx).Level
-      let parentCtx = ctx
-
-      let stmts, ctx =
-        (stmts, ctx)
-        |> stMap (fun (stmt, ctx) -> inferStmt ctx mutuallyRec stmt)
-
-      // Generalize these funs again.
-      // Ty scheme of these funs might try to quantify meta tys that are bound later.
-      let ctx =
-        stmts
-        |> List.fold
-             (fun (ctx: TyCtx) stmt ->
-               match stmt with
-               | TLetFunStmt (funSerial, _, _, _, _, _) ->
-                 let funDef: FunDef = ctx.Funs |> mapFind funSerial
-                 let (TyScheme (tyVars, funTy)) = funDef.Ty
-
-                 match tyVars with
-                 | [] -> ctx
-
-                 | _ ->
-                   // #generalizeFun
-                   let isOwned tySerial =
-                     let highLevel () =
-                       let level = getTyLevel tySerial ctx
-                       level > outerLevel
-
-                     let alreadyQuantified () =
-                       tyVars |> List.exists (fun t -> t = tySerial)
-
-                     highLevel () || alreadyQuantified ()
-
-                   let funTy = substTy ctx funTy
-                   let funTyScheme = tyGeneralize isOwned funTy
-
-                   let funs =
-                     ctx.Funs
-                     |> TMap.add funSerial { funDef with Ty = funTyScheme }
-
-                   let quantifiedTys =
-                     tyVars
-                     |> List.fold (fun quantifiedTys tyVar -> TSet.add tyVar quantifiedTys) ctx.QuantifiedTys
-
-                   let instantiations, grayInstantiations =
-                     ctx.GrayInstantiations |> TMap.remove funSerial
-
-                   let ctx =
-                     { ctx with
-                         Funs = funs
-                         QuantifiedTys = quantifiedTys
-                         GrayInstantiations = grayInstantiations }
-
-                   let ctx =
-                     instantiations
-                     |> Option.defaultValue []
-                     |> List.fold
-                          (fun (ctx: TyCtx) (useSiteTy, loc) ->
-                            let funTy, _, ctx = instantiateTyScheme ctx funTyScheme loc
-                            let newCtx = unifyTy ctx loc funTy useSiteTy
-                            { ctx with Logs = newCtx.Logs })
-                          ctx
-
-                   ctx
-               | _ -> ctx)
-             ctx
-
-      let ctx =
-        { ctx with GrayFuns = parentCtx.GrayFuns }
-
-      stmts, ctx
-
-    | NotRec ->
-      (stmts, ctx)
-      |> stMap (fun (stmt, ctx) -> inferStmt ctx mutuallyRec stmt)
+    (stmts, ctx)
+    |> stMap (fun (stmt, ctx) -> inferStmt ctx NotRec stmt)
 
   let last, lastTy, ctx = inferExpr ctx expectOpt last
 
-  TBlockExpr(mutuallyRec, stmts, last), lastTy, ctx
+  TBlockExpr(stmts, last), lastTy, ctx
 
 // -----------------------------------------------
 // Statement
@@ -1628,7 +1553,7 @@ let private inferExpr (ctx: TyCtx) (expectOpt: Ty option) (expr: TExpr) : TExpr 
   | TNodeExpr (TSliceEN, [ l; r; x ], _, loc) -> inferSliceExpr ctx l r x loc
   | TNodeExpr (TSliceEN, _, _, _) -> fail ()
 
-  | TBlockExpr (mutuallyRec, stmts, last) -> inferBlockExpr ctx expectOpt mutuallyRec stmts last
+  | TBlockExpr (stmts, last) -> inferBlockExpr ctx expectOpt stmts last
 
   | TNodeExpr (TTyPlaceholderEN, _, _, loc) ->
     txUnit loc, tyUnit, addError ctx "Type placeholder can appear in argument of __nativeExpr or __nativeStmt." loc
@@ -1643,11 +1568,85 @@ let private inferExpr (ctx: TyCtx) (expectOpt: Ty option) (expr: TExpr) : TExpr 
   | TNodeExpr (TNativeDeclEN _, _, _, _)
   | TNodeExpr (TSizeOfValEN, _, _, _) -> unreachable ()
 
+let private inferBlockStmt (ctx: TyCtx) mutuallyRec stmts : TStmt * TyCtx =
+  let outerLevel = ctx.Level
+  let parentCtx = ctx
+
+  let stmts, ctx =
+    (stmts, ctx)
+    |> stMap (fun (stmt, ctx) -> inferStmt ctx mutuallyRec stmt)
+
+  // Generalize these funs again.
+  // Ty scheme of these funs might try to quantify meta tys that are bound later.
+  let ctx =
+    stmts
+    |> List.fold
+         (fun (ctx: TyCtx) stmt ->
+           match stmt with
+           | TLetFunStmt (funSerial, _, _, _, _, _) ->
+             let funDef: FunDef = ctx.Funs |> mapFind funSerial
+             let (TyScheme (tyVars, funTy)) = funDef.Ty
+
+             match tyVars with
+             | [] -> ctx
+
+             | _ ->
+               // #generalizeFun
+               let isOwned tySerial =
+                 let highLevel () =
+                   let level = getTyLevel tySerial ctx
+                   level > outerLevel
+
+                 let alreadyQuantified () =
+                   tyVars |> List.exists (fun t -> t = tySerial)
+
+                 highLevel () || alreadyQuantified ()
+
+               let funTy = substTy ctx funTy
+               let funTyScheme = tyGeneralize isOwned funTy
+
+               let funs =
+                 ctx.Funs
+                 |> TMap.add funSerial { funDef with Ty = funTyScheme }
+
+               let quantifiedTys =
+                 tyVars
+                 |> List.fold (fun quantifiedTys tyVar -> TSet.add tyVar quantifiedTys) ctx.QuantifiedTys
+
+               let instantiations, grayInstantiations =
+                 ctx.GrayInstantiations |> TMap.remove funSerial
+
+               let ctx =
+                 { ctx with
+                     Funs = funs
+                     QuantifiedTys = quantifiedTys
+                     GrayInstantiations = grayInstantiations }
+
+               let ctx =
+                 instantiations
+                 |> Option.defaultValue []
+                 |> List.fold
+                      (fun (ctx: TyCtx) (useSiteTy, loc) ->
+                        let funTy, _, ctx = instantiateTyScheme ctx funTyScheme loc
+                        let newCtx = unifyTy ctx loc funTy useSiteTy
+                        { ctx with Logs = newCtx.Logs })
+                      ctx
+
+               ctx
+           | _ -> ctx)
+         ctx
+
+  let ctx =
+    { ctx with GrayFuns = parentCtx.GrayFuns }
+
+  TBlockStmt(mutuallyRec, stmts), ctx
+
 let private inferStmt ctx mutuallyRec stmt : TStmt * TyCtx =
   match stmt with
   | TExprStmt expr -> inferExprStmt ctx expr
   | TLetValStmt (pat, init, loc) -> inferLetValStmt ctx pat init loc
   | TLetFunStmt (oldSerial, _, vis, args, body, loc) -> inferLetFunStmt ctx mutuallyRec oldSerial vis args body loc
+  | TBlockStmt (mutuallyRec, stmts) -> inferBlockStmt ctx mutuallyRec stmts
 
   | TTyDeclStmt _
   | TOpenStmt _ -> stmt, ctx

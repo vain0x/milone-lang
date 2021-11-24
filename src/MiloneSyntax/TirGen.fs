@@ -548,7 +548,7 @@ let private tgExpr (docId: DocId) (expr: AExpr, ctx: NameCtx) : TExpr * NameCtx 
         TExprStmt expr, ctx)
 
     let last, ctx = (last, ctx) |> onExpr
-    TBlockExpr(NotRec, stmts, last), ctx
+    TBlockExpr(stmts, last), ctx
 
   | ALetExpr (isRec, pat, body, next, pos) ->
     match desugarLet isRec pat body next pos with

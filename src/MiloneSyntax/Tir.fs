@@ -410,8 +410,7 @@ type TExpr =
   /// Statements and last expression.
   ///
   /// - Statements might define symbols locally for the last expression.
-  /// - If recursive, local definitions are mutually recursive.
-  | TBlockExpr of IsRec * TStmt list * last: TExpr
+  | TBlockExpr of TStmt list * last: TExpr
 
 /// Statement.
 [<NoEquality; NoComparison>]
@@ -423,6 +422,9 @@ type TStmt =
   | TOpenStmt of Ident list * Loc
   | TModuleStmt of ModuleTySerial * body: TStmt list * Loc
   | TModuleSynonymStmt of ModuleSynonymSerial * path: Ident list * Loc
+
+  /// If recursive, local definitions are mutually recursive.
+  | TBlockStmt of IsRec * TStmt list
 
 type private VarMap = TreeMap<VarSerial, VarDef>
 
@@ -751,7 +753,7 @@ let patIsClearlyExhaustive isNewtypeVariant pat =
 // TExpr
 // -----------------------------------------------
 
-let txLetIn stmt next = TBlockExpr(NotRec, [ stmt ], next)
+let txLetIn stmt next = TBlockExpr([ stmt ], next)
 
 let txTuple items loc =
   TNodeExpr(TTupleEN, items, tyTuple (List.map exprToTy items), loc)
@@ -769,7 +771,7 @@ let exprExtract (expr: TExpr) : Ty * Loc =
   | TMatchExpr (_, _, ty, a) -> ty, a
   | TNavExpr (_, _, ty, a) -> ty, a
   | TNodeExpr (_, _, ty, a) -> ty, a
-  | TBlockExpr (_, _, last) -> exprExtract last
+  | TBlockExpr (_, last) -> exprExtract last
 
 let exprMap (f: Ty -> Ty) (expr: TExpr) : TExpr =
   let goPat pat = patMap f pat
@@ -799,7 +801,7 @@ let exprMap (f: Ty -> Ty) (expr: TExpr) : TExpr =
       TMatchExpr(go cond, arms, f ty, a)
     | TNavExpr (sub, mes, ty, a) -> TNavExpr(go sub, mes, f ty, a)
     | TNodeExpr (kind, args, resultTy, a) -> TNodeExpr(kind, List.map go args, f resultTy, a)
-    | TBlockExpr (isRec, stmts, last) -> TBlockExpr(isRec, List.map (stmtMap f) stmts, go last)
+    | TBlockExpr (stmts, last) -> TBlockExpr(List.map (stmtMap f) stmts, go last)
 
   go expr
 
@@ -836,6 +838,7 @@ let stmtMap (onTy: Ty -> Ty) (stmt: TStmt) : TStmt =
   | TOpenStmt (path, loc) -> TOpenStmt(path, loc)
   | TModuleStmt (name, body, loc) -> TModuleStmt(name, onStmts body, loc)
   | TModuleSynonymStmt (name, path, loc) -> TModuleSynonymStmt(name, path, loc)
+  | TBlockStmt (isRec, stmts) -> TBlockStmt(isRec, onStmts stmts)
 
 // -----------------------------------------------
 // TModule

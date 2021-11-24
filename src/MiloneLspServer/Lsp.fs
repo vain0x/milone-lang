@@ -663,7 +663,7 @@ let private lowerTExpr acc expr =
 
   | TNodeExpr (_, args, _, _) -> acc |> up (List.fold lowerTExpr) args
 
-  | TBlockExpr (_, stmts, last) ->
+  | TBlockExpr (stmts, last) ->
     acc
     |> up (List.fold lowerTStmt) stmts
     |> up lowerTExpr last
@@ -747,6 +747,7 @@ let private lowerTStmt acc stmt =
            fields
 
   | TModuleStmt (_, stmts, _) -> acc |> up (List.fold lowerTStmt) stmts
+  | TBlockStmt (_, stmts) -> acc |> up (List.fold lowerTStmt) stmts
 
   | TTyDeclStmt _
   | TOpenStmt _

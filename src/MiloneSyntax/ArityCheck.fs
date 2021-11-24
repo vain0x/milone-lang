@@ -167,7 +167,7 @@ let private acExpr (expr, ctx: ArityCheckCtx) : ArityEx * ArityCheckCtx =
     let ctx = acExprs items ctx
     tyToArityEx ty, ctx
 
-  | TBlockExpr (_, stmts, last) ->
+  | TBlockExpr (stmts, last) ->
     let ctx = acStmts stmts ctx
     acExpr (last, ctx)
 
@@ -180,6 +180,7 @@ let private acStmt (stmt, ctx: ArityCheckCtx) : ArityCheckCtx =
   | TExprStmt expr -> acExprChecked expr ctx
   | TLetValStmt (_, init, _) -> acExprChecked init ctx
   | TLetFunStmt (_, _, _, _, body, _) -> acExprChecked body ctx
+  | TBlockStmt (_, stmts) -> acStmts stmts ctx
 
   | TTyDeclStmt _
   | TOpenStmt _ -> ctx

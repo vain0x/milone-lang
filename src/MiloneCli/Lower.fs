@@ -4,6 +4,7 @@
 module rec MiloneCli.Lower
 
 open MiloneStd.StdMap
+open MiloneShared.SharedTypes
 
 module Hir = MiloneTranslation.Hir
 module Tir = MiloneSyntax.Tir
@@ -198,7 +199,7 @@ let private lowerExpr (expr: Tir.TExpr) : Hir.HExpr =
     )
   | Tir.TNavExpr (l, (r, _), ty, loc) -> Hir.HNavExpr(lowerExpr l, r, lowerTy ty, loc)
   | Tir.TNodeExpr (kind, args, ty, loc) -> Hir.HNodeExpr(lowerExprKind kind, List.map lowerExpr args, lowerTy ty, loc)
-  | Tir.TBlockExpr (_, stmts, last) -> Hir.HBlockExpr(List.choose lowerStmt stmts, lowerExpr last)
+  | Tir.TBlockExpr (stmts, last) -> Hir.HBlockExpr(List.choose lowerStmt stmts, lowerExpr last)
 
 let private lowerStmt (stmt: Tir.TStmt) : Hir.HStmt option =
   match stmt with
@@ -210,6 +211,14 @@ let private lowerStmt (stmt: Tir.TStmt) : Hir.HStmt option =
 
   | Tir.TLetFunStmt (funSerial, _, _, argPats, body, loc) ->
     Hir.HLetFunStmt(lowerFunSerial funSerial, List.map lowerPat argPats, lowerExpr body, loc)
+    |> Some
+
+  // note: if flatten all blocks, compile fails (invalid code generated). Does them need being nested or wrapped by HExprStmt?
+  | Tir.TBlockStmt (_, stmts) ->
+    let stmts = stmts |> List.choose lowerStmt
+
+    Hir.HBlockExpr(stmts, Hir.hxUnit noLoc)
+    |> Hir.HExprStmt
     |> Some
 
   // These statements are removed. Already used in NameRes.

@@ -1137,6 +1137,8 @@ let private collectDecls moduleSerialOpt (stmt, ctx) : TStmt * ScopeCtx =
 
         stmt, ctx
 
+    | TBlockStmt _ -> unreachable () // TBlockStmt is generated in NameRes.
+
   goStmt (stmt, ctx)
 
 // -----------------------------------------------
@@ -1572,16 +1574,15 @@ let private nameResExpr (expr: TExpr, ctx: ScopeCtx) : TExpr * ScopeCtx =
     let items, ctx = (items, ctx) |> stMap nameResExpr
     TNodeExpr(op, items, ty, loc), ctx
 
-  | TBlockExpr (NotRec, stmts, last) ->
+  | TBlockExpr (stmts, last) ->
     let ctx = ctx |> startScope ExprScope
     let stmts, ctx = (stmts, ctx) |> stMap nameResStmt
     let last, ctx = (last, ctx) |> nameResExpr
     let ctx = ctx |> finishScope
-    TBlockExpr(NotRec, stmts, last), ctx
+    TBlockExpr(stmts, last), ctx
 
   | TFunExpr _ // TFunExpr is generated in NameRes.
-  | TVariantExpr _ // TVariantExpr is generated in NameRes.
-  | TBlockExpr (IsRec, _, _) -> // Recursive TBlockExpr is generated in NameRes.
+  | TVariantExpr _ -> // TVariantExpr is generated in NameRes.
     unreachable ()
 
 let private nameResStmt (stmt, ctx) : TStmt * ScopeCtx =
@@ -1666,7 +1667,7 @@ let private nameResStmt (stmt, ctx) : TStmt * ScopeCtx =
       else
         ctx
 
-    TExprStmt(TBlockExpr(IsRec, stmts, txUnit loc)), ctx
+    TBlockStmt(IsRec, stmts), ctx
 
   | TModuleSynonymStmt (serial, path, loc) ->
     let name =
@@ -1687,7 +1688,9 @@ let private nameResStmt (stmt, ctx) : TStmt * ScopeCtx =
           |> forList (fun moduleSerial ctx -> doImportNsWithAlias name (ModuleNsOwner moduleSerial) ctx) moduleSerials
 
     // No longer necessary.
-    TExprStmt(txUnit loc), ctx
+    TBlockStmt(NotRec, []), ctx
+
+  | TBlockStmt _ -> unreachable () // TBlockStmt is generated in NameRes.
 
 let private nameResModuleBody serialOpt (stmts, ctx) : TStmt list * ScopeCtx =
   (stmts, ctx)
