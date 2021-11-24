@@ -1236,8 +1236,7 @@ let private nameResAppPat l r loc ctx =
   | TVariantPat (variantSerial, _, _) -> TNodePat(TVariantAppPN variantSerial, [ r ], noTy, loc), ctx
   | _ ->
     let ctx =
-      ctx
-      |> addLog (OtherNameResLog "Pattern can apply to a variant that takes a payload.") loc
+      ctx |> addLog VariantAppPatArityError loc
 
     tpAbort noTy loc, ctx
 

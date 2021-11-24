@@ -450,6 +450,7 @@ type NameResLog =
   | TyUsedAsValueError
 
   // in pat
+  | VariantAppPatArityError
   | UnresolvedNavPatError
   | IllegalOrPatError
   | OrPatInconsistentBindingError
@@ -465,7 +466,6 @@ type NameResLog =
 
   | UnimplGenericTyError
   | UnimplOrPatBindingError
-  | OtherNameResLog of msg: string
 
 [<RequireQualifiedAccess>]
 [<NoEquality; NoComparison>]
@@ -895,6 +895,8 @@ let nameResLogToString log =
 
   | VarNameConflictError -> "Variable name conflicts"
 
+  | VariantAppPatArityError -> "Pattern can apply to a variant that takes a payload."
+
   | UnresolvedNavPatError -> "Couldn't resolve nav pattern."
 
   | IllegalOrPatError -> "OR pattern is disallowed in let expressions."
@@ -921,8 +923,6 @@ let nameResLogToString log =
 
   | UnimplGenericTyError -> "Generic record type is unimplemented."
   | UnimplOrPatBindingError -> "OR pattern including some bindings is unimplemented."
-
-  | OtherNameResLog msg -> msg
 
 let private traitBoundErrorToString tyDisplay it =
   match it with
