@@ -28,6 +28,15 @@ let private loopInRegion (action: unit -> unit) : int =
   go ()
 
 // -----------------------------------------------
+// Path
+// -----------------------------------------------
+
+let private basename (path: string) =
+  match S.findLastIndex "/" path with
+  | Some i -> S.skip (i + 1) path
+  | None -> path
+
+// -----------------------------------------------
 // IO
 // -----------------------------------------------
 
@@ -145,6 +154,86 @@ let private writeString (s: string) (output: Stream) : Stream =
     output
 
   output
+
+// -----------------------------------------------
+// File system
+// -----------------------------------------------
+
+// FIXME: using `DirIter option`, compiler fails. Invalid code generated.
+type private DirIter = __nativeType<``struct DirIter``>
+
+let private excluded name =
+  let name = basename name
+
+  match name with
+  | "."
+  | ".." -> true
+
+  | "node_modules"
+  | "target"
+  | "bin"
+  | "obj" -> false
+
+  | _ -> name |> S.contains "~" || name |> S.startsWith "."
+
+type private FileKind =
+  | Regular
+  | Dir
+  | Link
+  | Other
+
+let private miloneLStat (path: string) =
+  let n: int = __nativeFun ("milone_lstat", path)
+
+  match n with
+  | 1 -> Some FileKind.Regular
+  | 2 -> Some FileKind.Dir
+  | 3 -> Some FileKind.Link
+  | _ when n >= 0 -> Some FileKind.Other
+  | _ -> None
+
+// maybe null
+let private miloneDirOpen (dir: string) : nativeptr<DirIter> =
+  __nativeFun ("milone_dir_open", dir)
+
+let private miloneDirClose (di: nativeptr<DirIter>) : unit = __nativeFun ("milone_dir_close", di)
+
+let private miloneDirNext (di: nativeptr<DirIter>) : string option =
+  __nativeStmt """struct String name = str_borrow("");"""
+  let np: nativeptr<string> = __nativeExpr "&name"
+  let ok: bool = __nativeFun ("milone_dir_next", di, np)
+  let name: string = __nativeExpr "name"
+
+  if ok then Some name else None
+
+/// Retrieves all entries of dir. (Except for `.`, `..`.)
+let private miloneDirEntries (dir: string) : string list option =
+  let di  = miloneDirOpen dir
+
+  if nativeint di <> 0n then
+    let rec go acc =
+      match miloneDirNext di with
+      | None -> acc
+      | Some name -> go (name :: acc)
+
+    let names = go []
+    miloneDirClose di
+    Some names
+  else None
+
+/// Reads a dir entries. Files and dirs.
+let private dirAllEntries (dir: string) : string list * string list =
+  miloneDirEntries dir
+  |> Option.defaultValue []
+  |> List.fold
+       (fun (fileAcc, dirAcc) name ->
+         let path = dir + "/" + name
+
+         match miloneLStat path with
+         | Some FileKind.Regular -> path :: fileAcc, dirAcc
+         | Some FileKind.Dir -> fileAcc, path :: dirAcc
+         | _ -> fileAcc, dirAcc)
+       ([], [])
 
 // -----------------------------------------------
 // JSON
