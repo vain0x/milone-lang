@@ -1,9 +1,11 @@
 module rec CmdLspServer.Program
 
+open MiloneStd.Equal
 open MiloneStd.StdError
 open LibSqlite3.Db
 open LibJson.Json
 
+module C = MiloneStd.StdChar
 module I = MiloneStd.StdInt
 module S = MiloneStd.StdString
 
@@ -14,6 +16,16 @@ __nativeDecl
 
 let private trace (s: string) : unit =
   __nativeStmt ("fwrite({0}.str, sizeof(char), (size_t){0}.len, stderr);", s + "\n")
+
+let private debug (s: string) : unit = trace ("debug: " + s)
+
+let private debugN (s: string) (args: string list) : unit =
+  let s =
+    args
+    |> List.mapi (fun (i: int) arg -> "{" + string i + "}", arg)
+    |> List.fold (fun s (k, v) -> s |> S.replace k v) s
+
+  debug s
 
 let private loopInRegion (action: unit -> unit) : int =
   let f =
@@ -28,13 +40,223 @@ let private loopInRegion (action: unit -> unit) : int =
   go ()
 
 // -----------------------------------------------
+// Option
+// -----------------------------------------------
+
+let private defaultTo alt opt = Option.defaultValue alt opt
+
+// -----------------------------------------------
+// String
+// -----------------------------------------------
+
+module private String =
+  let equals (l: string) r = l = r
+
+let private splitAt (i: int) (s: string) =
+  if i <= 0 then "", s
+  else if s.Length <= i then s, ""
+  else s.[0..i - 1], s.[i..s.Length - 1]
+
+let private upperFirst (s: string) =
+  if s.Length >= 1 && C.isLower s.[0] then
+    string (C.toUpper s.[0]) + s.[1..s.Length - 1]
+  else
+    s
+
+let private lowerFirst (s: string) =
+  if s.Length >= 1 && C.isUpper s.[0] then
+    string (C.toLower s.[0]) + s.[1..s.Length - 1]
+  else
+    s
+
+let private testSplitAt () =
+  let s = "hello"
+  assert (splitAt 2 s = ("he", "llo"))
+  assert (splitAt (-1) s = ("", s))
+  assert (splitAt 0 s = ("", s))
+  assert (splitAt 5 s = (s, ""))
+  assert (splitAt 6 s = (s, ""))
+
+let private testUpperFirst () =
+  assert (upperFirst "macOS" = "MacOS")
+  assert (upperFirst "CentOS" = "CentOS")
+  assert (upperFirst "" = "")
+  assert (upperFirst "🐧" = "🐧")
+
+let private testLowerFirst () =
+  assert (lowerFirst "CentOS" = "centOS")
+  assert (lowerFirst "macOS" = "macOS")
+  assert (lowerFirst "" = "")
+  assert (lowerFirst "🐧" = "🐧")
+
+let private tryReplace (pattern: string) (target: string) (s: string) =
+  if s |> S.contains pattern then
+    s |> S.replace pattern target, true
+  else
+    s, false
+
+let private testTryReplace () =
+  let s, ok = tryReplace "//" "/" "file:///foo"
+  assert (s = "file://foo")
+  assert ok
+
+  let s, ok = tryReplace "//" "/" "./relative"
+  assert (s = "./relative")
+  assert (not ok)
+
+let private testString () =
+  testSplitAt ()
+  testUpperFirst ()
+  testLowerFirst ()
+  testTryReplace ()
+
+testString ()
+
+// -----------------------------------------------
 // Path
 // -----------------------------------------------
 
+let private pathJoin l r = l + "/" + r
+
 let private basename (path: string) =
   match S.findLastIndex "/" path with
-  | Some i -> S.skip (i + 1) path
-  | None -> path
+  | Some i when path <> "/" -> S.skip (i + 1) path
+  | _ -> path
+
+let private stem (path: string) =
+  let path = basename path
+
+  match S.findLastIndex "." path with
+  | Some i when 0 < i && i + 1 < path.Length -> S.slice 0 i path
+  | _ -> path
+
+let private hasDriveLetter (path: string) =
+  path.Length >= 2
+  && C.isAlphabetic path.[0]
+  && path.[1] = ':'
+
+let private isRooted (path: string) =
+  path |> S.startsWith "/" || hasDriveLetter path
+
+let private stripRoot (path: string) =
+  let path, rooted = path |> S.stripStart "/"
+
+  if rooted then
+    Some "/", path
+  else if path.Length >= 3
+          && hasDriveLetter path
+          && path.[2] = '/' then
+    let root, rest = splitAt 3 path
+    Some root, rest
+  else
+    None, path
+
+let private pathContract (path: string) =
+  let rec go acc (xs: string list) =
+    match acc, xs with
+    | _, "." :: xs -> go acc xs
+    | x :: acc, ".." :: xs -> go acc xs
+
+    | _, [] -> acc
+    | _, x :: xs -> go (x :: acc) xs
+
+  match stripRoot path with
+  | _, "" -> path
+
+  | rootOpt, path ->
+    let path =
+      path
+      |> S.split "/"
+      |> go []
+      |> List.rev
+      |> S.concat "/"
+
+    (rootOpt |> defaultTo "") + path
+
+/// Normalizes path syntactically. Note some of Windows prefix is unsupported yet.
+let private normalize (path: string) =
+  let path = path |> S.replace "\\" "/"
+
+  let path =
+    let rec removeDoubleSlashes (s: string) =
+      let s, ok = s |> tryReplace "//" "/"
+      if ok then removeDoubleSlashes s else s
+
+    removeDoubleSlashes path
+
+  // Upper drive letter.
+  let path =
+    if path |> hasDriveLetter then
+      upperFirst path
+    else
+      path
+
+  pathContract path
+
+let private testBasename () =
+  assert (basename "/root/rooted.milone" = "rooted.milone")
+  assert (basename "./parent/relative.milone" = "relative.milone")
+  assert (basename "../." = ".")
+  assert (basename "/" = "/")
+  assert (basename "" = "")
+  assert (basename "base" = "base")
+
+let private testStem () =
+  assert (stem "/root/rooted.milone" = "rooted")
+  assert (stem "../relative.milone" = "relative")
+  assert (stem ".git" = ".git")
+  assert (stem "." = ".")
+  assert (stem ".." = "..")
+  assert (stem "./no-ext" = "no-ext")
+  assert (stem "stem" = "stem")
+  assert (stem "ends-with-dot." = "ends-with-dot.")
+
+let private testStripRoot () =
+  assert (stripRoot "/" = (Some "/", ""))
+  assert (stripRoot "/rooted/path" = (Some "/", "rooted/path"))
+  assert (stripRoot "C:/drive/path" = (Some "C:/", "drive/path"))
+  assert (stripRoot "./relative/path" = (None, "./relative/path"))
+
+let private testContract () =
+  assert (pathContract "parent/./it" = "parent/it")
+  assert (pathContract "parent/sibling/../it" = "parent/it")
+  assert (pathContract "parent/s/t/../../it" = "parent/it")
+
+  assert (pathContract "./it" = "it")
+  assert (pathContract "../it" = "../it")
+
+  assert (pathContract "/./." = "/")
+  assert (pathContract "/.." = "/..")
+  assert (pathContract "/" = "/")
+  assert (pathContract "C:/.." = "C:/..")
+
+let private testNormalize () =
+  assert (normalize "double//slash" = "double/slash")
+  assert (normalize "back\\slash" = "back/slash")
+  assert (normalize "parent/two/../dots" = "parent/dots")
+  assert (normalize "single/./dot" = "single/dot")
+  assert (normalize "" = "")
+  assert (normalize "/regular/rooted.ext" = "/regular/rooted.ext")
+  assert (normalize "a\\b/\\c\\..\\\\d" = "a/b/d")
+  assert (normalize "c:\\Program Files\\Git" = "C:/Program Files/Git")
+
+let private testPath () =
+  testBasename ()
+  testStem ()
+  testStripRoot ()
+  testContract ()
+  testNormalize ()
+
+testPath ()
+
+// -----------------------------------------------
+// Uri
+// -----------------------------------------------
+
+type private Uri = Uri of string
+
+module private Uri =
+  let toString (Uri s) = s
 
 // -----------------------------------------------
 // IO
@@ -162,20 +384,6 @@ let private writeString (s: string) (output: Stream) : Stream =
 // FIXME: using `DirIter option`, compiler fails. Invalid code generated.
 type private DirIter = __nativeType<``struct DirIter``>
 
-let private excluded name =
-  let name = basename name
-
-  match name with
-  | "."
-  | ".." -> true
-
-  | "node_modules"
-  | "target"
-  | "bin"
-  | "obj" -> false
-
-  | _ -> name |> S.contains "~" || name |> S.startsWith "."
-
 type private FileKind =
   | Regular
   | Dir
@@ -192,9 +400,10 @@ let private miloneLStat (path: string) =
   | _ when n >= 0 -> Some FileKind.Other
   | _ -> None
 
+let private fileExists (path: string) = miloneLStat path |> Option.isSome
+
 // maybe null
-let private miloneDirOpen (dir: string) : nativeptr<DirIter> =
-  __nativeFun ("milone_dir_open", dir)
+let private miloneDirOpen (dir: string) : nativeptr<DirIter> = __nativeFun ("milone_dir_open", dir)
 
 let private miloneDirClose (di: nativeptr<DirIter>) : unit = __nativeFun ("milone_dir_close", di)
 
@@ -208,7 +417,7 @@ let private miloneDirNext (di: nativeptr<DirIter>) : string option =
 
 /// Retrieves all entries of dir. (Except for `.`, `..`.)
 let private miloneDirEntries (dir: string) : string list option =
-  let di  = miloneDirOpen dir
+  let di = miloneDirOpen dir
 
   if nativeint di <> 0n then
     let rec go acc =
@@ -219,7 +428,8 @@ let private miloneDirEntries (dir: string) : string list option =
     let names = go []
     miloneDirClose di
     Some names
-  else None
+  else
+    None
 
 /// Reads a dir entries. Files and dirs.
 let private dirAllEntries (dir: string) : string list * string list =
@@ -234,6 +444,131 @@ let private dirAllEntries (dir: string) : string list * string list =
          | Some FileKind.Dir -> fileAcc, path :: dirAcc
          | _ -> fileAcc, dirAcc)
        ([], [])
+
+// -----------------------------------------------
+// Docs
+// -----------------------------------------------
+
+let uriOfFilePath (path: string) =
+  let path = normalize path
+
+  if path |> S.startsWith "/" then
+    Uri("file://" + path)
+  else if hasDriveLetter path then
+    let path =
+      path |> lowerFirst |> S.replace ":" "%3A"
+
+    Uri("file:///" + path)
+  else
+    // unlikely used
+    Uri("file://./" + path)
+
+// Note: pathname contains backslashes even on Linux, provided by VSCode.
+let private uriToFilePath (uri: Uri) =
+  let path, fileScheme =
+    uri |> Uri.toString |> S.stripStart "file://"
+
+  if fileScheme then
+    let path =
+      // Windows path.
+      if path |> S.skip 2 |> S.startsWith "%3A" then
+        path |> S.skip 1 |> S.replace "%3A" ":"
+      else
+        path
+
+    path |> normalize |> Some
+  else
+    // Not a file scheme.
+    None
+
+let private testUriOfFilePath () =
+  let f a x = uriOfFilePath a |> Uri.toString = x
+
+  assert (f "/rooted/path" "file:///rooted/path")
+  assert (f "slashed/path" "file://./slashed/path")
+  assert (f "C:\\windows\\path" "file:///c%3A/windows/path")
+
+let private testUriToFilePath () =
+  let f s x = uriToFilePath (Uri s) = Some x
+
+  assert (f "file:///rooted/path" "/rooted/path")
+  assert (f "file://\\backslash\\path" "/backslash/path")
+  assert (f "file:///c%3A\\windows\\path" "C:/windows/path")
+
+testUriOfFilePath ()
+testUriToFilePath ()
+
+// -----------------------------------------------
+// Projects
+// -----------------------------------------------
+
+let private dirIsExcluded name =
+  let name = basename name
+
+  match name with
+  | "node_modules"
+  | "target"
+  | "bin"
+  | "obj" -> true
+
+  | _ -> name |> S.contains "~" || name |> S.startsWith "."
+
+[<RequireQualifiedAccess; NoEquality; NoComparison>]
+type private ProjectInfo =
+  { ProjectDir: string
+    ProjectName: string }
+
+type private FileExistsFun = string -> bool
+type private DirEntriesFun = string -> string list * string list
+
+type FindProjectsHost =
+  { FileExists: FileExistsFun
+    GetDirEntries: DirEntriesFun }
+
+/// Finds all projects inside of the workspace.
+let private findProjects (host: FindProjectsHost) (rootUri: Uri) : ProjectInfo list =
+  let maxDepth = 3
+
+  let rec bfs acc stack =
+    match stack with
+    | [] -> acc
+
+    | (depth, dir) :: stack ->
+      let acc =
+        let projectName = stem dir
+
+        let tryAddProject ext acc =
+          let entrypoint = dir + "/" + projectName + ext
+
+          if host.FileExists entrypoint then
+            let project: ProjectInfo =
+              { ProjectDir = dir
+                ProjectName = projectName }
+
+            project :: acc
+          else
+            acc
+
+        acc
+        |> tryAddProject ".milone"
+        |> tryAddProject ".fs"
+
+      let stack =
+        if depth < maxDepth then
+          host.GetDirEntries dir
+          |> fst
+          |> List.filter (fun subdir -> subdir |> dirIsExcluded |> not)
+          |> List.fold (fun stack subdir -> (depth + 1, subdir) :: stack) stack
+        else
+          stack
+
+      bfs acc stack
+
+  match rootUri |> uriToFilePath with
+  | Some rootDir -> bfs [] [ 0, rootDir ]
+  | None ->
+    trace "rootUri invalid."
+    []
 
 // -----------------------------------------------
 // JSON
@@ -280,10 +615,6 @@ module private J =
 // -----------------------------------------------
 
 type private MsgId = JsonValue
-type private Uri = Uri of string
-
-module private Uri =
-  let toString (Uri s) = s
 
 type private DidOpenParam =
   { Uri: Uri
@@ -553,12 +884,30 @@ let main _ =
   loopInRegion (fun () ->
     match readRequest () with
     | InitializeRequest (msgId, rootOpt) ->
-      let root =
+      let projects =
         match rootOpt with
-        | Some uri -> uri |> Uri.toString
-        | _ -> "null"
+        | Some rootUri ->
+          debugN "rootUri = '{0}'" [ rootUri |> Uri.toString ]
 
-      trace ("rootUri = " + root)
+          let host: FindProjectsHost =
+            { FileExists = fileExists
+              GetDirEntries = dirAllEntries }
+
+          findProjects host rootUri
+
+        | None ->
+          debug "rootUri is not provided."
+          []
+
+      let () =
+        let n = projects |> List.length |> string
+
+        let p =
+          projects
+          |> List.map (fun (p: ProjectInfo) -> p.ProjectName)
+          |> S.concat ";"
+
+        debugN "Found {0} projects: '{1}'." [ n; p ]
 
       let response =
         ("""{ "jsonrpc": "2.0", "id": ${MSG_ID}, "result": ${RESULT} }"""
