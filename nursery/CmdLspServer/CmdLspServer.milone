@@ -761,6 +761,7 @@ type private LspRequest =
   | ShutdownRequest of MsgId
   | ExitNotification
 
+  | DiagnosticsNotification
   | DidOpenNotification of DidOpenParam
   | DidChangeNotification of DidChangeParam
   | DidCloseNotification of DidCloseParam
@@ -849,6 +850,8 @@ let private parseRawRequest (req: JsonValue) : LspRequest =
   | JString "textDocument/didChange" -> DidChangeNotification(parseDidChangeParam p)
   | JString "textDocument/didClose" -> DidCloseNotification(parseDidCloseParam p)
 
+  | JString "$/diagnostics" -> DiagnosticsNotification
+
   | JString m ->
     debug ("unknown method: '" + m + "'")
     UnknownRequest
@@ -905,6 +908,13 @@ let private dbInit () =
 
   dbExec
     """
+      create table if not exists globals(
+        global_id int primary key,
+        dirty int default 1
+      );
+
+      insert into globals(global_id) values (1);
+
       create table if not exists projects(
         project_dir varchar(300) primary key
       );
@@ -922,6 +932,20 @@ let private dbInit () =
         json text not null
       );
     """
+
+let private dbSetDirty (value: bool) =
+  let value = if value then 1 else 0
+
+  dbMutate "update globals set dirty = :dirty where global_id = 1" [ ":dirty", DInt value ]
+
+let private dbTakeDirty () =
+  match dbSelect "select dirty from globals where global_id = 1" [] with
+  | [ [ DInt value ] ] ->
+    let value = value <> 0
+    if value then dbSetDirty false
+    value
+
+  | _ -> unreachable ()
 
 let private dbGetProjects () =
   dbSelect "select project_dir from projects" []
@@ -980,7 +1004,7 @@ let private dbPopMessage () : JsonValue option =
     dbSelect
       """
         select message_id, json from messages
-        order by message_id desc limit 1
+        order by message_id limit 1
       """
       []
 
@@ -1045,6 +1069,19 @@ let private serverLoop () =
           ProjectName = stem projectDir }
 
       project)
+
+  let markAsDirty () = dbSetDirty true
+
+  let pushDiagnosticsRequest () =
+    dbAddMessage (
+      jsonParseFromString
+        """
+          {
+            "jsonrpc": "2.0",
+            "method": "$/diagnostics"
+          }
+        """
+    )
 
   let processMessage msg =
     match msg with
@@ -1112,17 +1149,22 @@ let private serverLoop () =
       trace "dump docs:"
       dumpDbTable "docs"
 
+    | DiagnosticsNotification -> debug "diagnostics"
+
     | DidOpenNotification p ->
       let uri = p.Uri |> Uri.toString
       dbAddDoc uri p.Version p.Text
+      markAsDirty ()
 
     | DidChangeNotification p ->
       let uri = p.Uri |> Uri.toString
       dbUpdateDoc uri p.Version p.Text
+      markAsDirty ()
 
     | DidCloseNotification p ->
       let uri = p.Uri |> Uri.toString
       dbRemoveDoc uri
+      markAsDirty ()
 
     | ExitNotification -> unreachable () // Handled outside.
 
@@ -1130,17 +1172,20 @@ let private serverLoop () =
 
   whileInRegion (fun () ->
     match dbPopMessage () |> Option.map parseRawRequest with
-    | Some ExitNotification ->
-      debug "Exit gracefully."
-      false
+    | Some ExitNotification -> false
 
     | Some msg ->
       processMessage msg
       true
 
     | _ ->
-      // use synchronization mechanism to wait for next request
-      amortizedSleep 10
+      // on idle
+      if dbTakeDirty () then
+        pushDiagnosticsRequest ()
+      else
+        // use synchronization mechanism to wait for next request
+        amortizedSleep 10
+
       true)
 
   trace "server exited"
@@ -1151,6 +1196,7 @@ let main _ =
     trace "Hello, lsp server!"
     dbInit ()
 
-    concurrent readerLoop serverLoop)
+    concurrent readerLoop serverLoop
+    debug "Exit gracefully.")
 
   0
