@@ -835,6 +835,12 @@ let private dbInit () =
 
   dbExec
     """
+      -- Table to generate monotonically increasing unique numbers.
+      -- https://sqlite.org/autoinc.html
+      create table if not exists serials(
+        serial_id integer primary key autoincrement
+      );
+
       create table if not exists projects(
         project_dir varchar(300) primary key
       );
@@ -845,6 +851,15 @@ let private dbInit () =
         text text not null
       );
     """
+
+let private dbNextId () =
+  // question: more performant way?
+  dbMutate "delete from serials;" []
+  dbMutate "insert into serials(serial_id) values(null);" []
+
+  match dbSelect "select serial_id from serials" [] with
+  | [ [ DInt value ] ] -> value
+  | _ -> unreachable ()
 
 let private dbGetProjects () =
   dbSelect "select project_dir from projects" []
@@ -918,6 +933,7 @@ let private initializeResponse () =
 [<EntryPoint>]
 let main _ =
   trace "Hello, lsp server!"
+  dbInit ()
 
   let output = getStdout ()
 
@@ -957,8 +973,6 @@ let main _ =
           |> S.concat ";"
 
         debugN "Found {0} projects: '{1}'." [ n; p ]
-
-      dbInit ()
 
       dbAddProjects (
         projects
