@@ -1,3 +1,7 @@
+// Milone-lang LSP server written in milone-lang.
+//
+// ENV:
+//    VERBOSE=1   Enable trace logging.
 module rec CmdLspServer.Program
 
 open MiloneStd.Equal
@@ -14,18 +18,31 @@ __nativeDecl
     #include <errno.h>
   """
 
-let private trace (s: string) : unit =
+let private writeErrorLine (s: string) : unit =
   __nativeStmt ("fwrite({0}.str, sizeof(char), (size_t){0}.len, stderr);", s + "\n")
 
-let private debug (s: string) : unit = trace ("debug: " + s)
+let private formatN (s: string) (args: string list) : string =
+  args
+  |> List.mapi (fun (i: int) arg -> "{" + string i + "}", arg)
+  |> List.fold (fun s (k, v) -> s |> S.replace k v) s
 
-let private debugN (s: string) (args: string list) : unit =
-  let s =
-    args
-    |> List.mapi (fun (i: int) arg -> "{" + string i + "}", arg)
-    |> List.fold (fun s (k, v) -> s |> S.replace k v) s
+let private trace (s: string) : unit =
+  __nativeStmt (
+    """
+      char const *s = getenv("VERBOSE");
+      if (s == NULL) s = "";
+    """
+  )
+  let verbose : string = __nativeExpr "str_of_c_str(s)"
+  if verbose <> "" then
+    writeErrorLine ("trace: " + s )
 
-  debug s
+let private traceN (s: string) (args: string list) : unit =
+  trace (formatN s args)
+
+let private debug (s: string) : unit = writeErrorLine ("debug: " + s)
+
+let private debugN (s: string) (args: string list) : unit = debug (formatN s args)
 
 let private loopInRegion (action: unit -> unit) : int =
   let f =
@@ -567,7 +584,7 @@ let private findProjects (host: FindProjectsHost) (rootUri: Uri) : ProjectInfo l
   match rootUri |> uriToFilePath with
   | Some rootDir -> bfs [] [ 0, rootDir ]
   | None ->
-    trace "rootUri invalid."
+    debug "rootUri invalid."
     []
 
 // -----------------------------------------------
@@ -763,11 +780,11 @@ let private readRequest () : LspRequest =
   | JString "textDocument/didClose" -> DidCloseNotification(parseDidCloseParam p)
 
   | JString m ->
-    trace ("unknown method: '" + m + "'")
+    debug ("unknown method: '" + m + "'")
     UnknownRequest
 
   | _ ->
-    trace ("unknown method without method")
+    debug ("unknown method without method")
     UnknownRequest
 
 // -----------------------------------------------
