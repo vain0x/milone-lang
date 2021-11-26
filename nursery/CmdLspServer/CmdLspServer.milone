@@ -818,12 +818,35 @@ let private dbInit () =
 
   dbExec
     """
+      create table if not exists projects(
+        project_dir varchar(300) primary key
+      );
+
       create table if not exists docs(
         uri varchar(300) primary key,
         version int not null,
         text text not null
       );
     """
+
+let private dbGetProjects () =
+  dbSelect "select project_dir from projects" []
+  |> List.map (fun row ->
+    match row with
+    | [ DString projectDir ] -> projectDir
+    | _ -> unreachable ())
+
+let private dbAddProjects projectDirList =
+  projectDirList
+  |> List.fold
+       (fun () projectDir ->
+         dbMutate
+           """
+        insert into projects(project_dir) values
+          (:dir)
+      """
+           [ ":dir", DString projectDir ])
+       ()
 
 let private dbAddDoc uri version text =
   dbMutate
@@ -855,7 +878,7 @@ let private dbRemoveDoc uri =
 // Interface
 // -----------------------------------------------
 
-let private initializedResponse () =
+let private initializeResponse () =
   """{
     "capabilities": {
         "textDocumentSync": {
@@ -880,6 +903,15 @@ let main _ =
   trace "Hello, lsp server!"
 
   let output = getStdout ()
+
+  let getProjects () =
+    dbGetProjects ()
+    |> List.map (fun projectDir ->
+      let project: ProjectInfo =
+        { ProjectDir = projectDir
+          ProjectName = stem projectDir }
+
+      project)
 
   loopInRegion (fun () ->
     match readRequest () with
@@ -909,11 +941,18 @@ let main _ =
 
         debugN "Found {0} projects: '{1}'." [ n; p ]
 
+      dbInit ()
+
+      dbAddProjects (
+        projects
+        |> List.map (fun (p: ProjectInfo) -> p.ProjectDir)
+      )
+
       let response =
         ("""{ "jsonrpc": "2.0", "id": ${MSG_ID}, "result": ${RESULT} }"""
          + "\n")
         |> S.replace "${MSG_ID}" (jsonToString msgId)
-        |> S.replace "${RESULT}" (initializedResponse ())
+        |> S.replace "${RESULT}" (initializeResponse ())
 
       writeString
         ("Content-Length: "
@@ -923,7 +962,7 @@ let main _ =
         output
       |> ignore
 
-    | InitializedNotification -> dbInit ()
+    | InitializedNotification -> ()
 
     | ShutdownRequest msgId ->
       let response =
