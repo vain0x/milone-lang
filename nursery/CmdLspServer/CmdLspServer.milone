@@ -1,3 +1,5 @@
+// REMARK: needs milone-lang with multi-threaded runtime. (see w-thread branch)
+
 // Milone-lang LSP server written in milone-lang.
 //
 // ENV:
@@ -15,7 +17,10 @@ module S = MiloneStd.StdString
 
 __nativeDecl
   """
+    #include <assert.h>
     #include <errno.h>
+
+    #include <unistd.h> // for sleep
   """
 
 let private writeErrorLine (s: string) : unit =
@@ -26,35 +31,48 @@ let private formatN (s: string) (args: string list) : string =
   |> List.mapi (fun (i: int) arg -> "{" + string i + "}", arg)
   |> List.fold (fun s (k, v) -> s |> S.replace k v) s
 
-let private trace (s: string) : unit =
-  __nativeStmt (
-    """
-      char const *s = getenv("VERBOSE");
-      if (s == NULL) s = "";
-    """
-  )
-  let verbose : string = __nativeExpr "str_of_c_str(s)"
-  if verbose <> "" then
-    writeErrorLine ("trace: " + s )
+__nativeDecl "static bool s_verbose = false;"
 
-let private traceN (s: string) (args: string list) : unit =
-  trace (formatN s args)
+__nativeStmt
+  """
+    char const *s = getenv("VERBOSE");
+    s_verbose = s != NULL && *s != '\0';
+  """
+
+let private trace (s: string) : unit =
+  let verbose: bool = __nativeExpr "s_verbose"
+
+  if verbose then
+    writeErrorLine ("trace: " + s)
+
+let private traceN (s: string) (args: string list) : unit = trace (formatN s args)
 
 let private debug (s: string) : unit = writeErrorLine ("debug: " + s)
 
 let private debugN (s: string) (args: string list) : unit = debug (formatN s args)
 
-let private loopInRegion (action: unit -> unit) : int =
-  let f =
-    fun () ->
-      action ()
-      0
+// note: to not trigger leak sanitizer, don't do `__inRegion (fun () -> ... action ...)`
+let private doInRegion (action: unit -> unit) =
+  __nativeStmt (
+    """
+      milone_enter_region();
+      {0}.fun({0}.env);
+      milone_leave_region();
+    """,
+    action
+  )
 
-  let rec go () =
-    let code = __inRegion f
-    if code = 0 then go () else code
-
-  go ()
+let private whileInRegion (cond: unit -> bool) : unit =
+  __nativeStmt (
+    """
+      milone_enter_region();
+      while ({0}.fun({0}.env)) {
+        // Pass.
+      }
+      milone_leave_region();
+    """,
+    cond
+  )
 
 // -----------------------------------------------
 // Option
@@ -127,7 +145,7 @@ let private testString () =
   testLowerFirst ()
   testTryReplace ()
 
-testString ()
+doInRegion testString
 
 // -----------------------------------------------
 // Path
@@ -264,7 +282,7 @@ let private testPath () =
   testContract ()
   testNormalize ()
 
-testPath ()
+doInRegion testPath
 
 // -----------------------------------------------
 // Uri
@@ -274,6 +292,55 @@ type private Uri = Uri of string
 
 module private Uri =
   let toString (Uri s) = s
+
+// -----------------------------------------------
+// threading
+// -----------------------------------------------
+
+let private amortizedSleep (millis: int) : unit =
+  assert (millis >= 0)
+
+  __nativeDecl
+    """
+      _Thread_local int t_sleep_millis = 0;
+    """
+
+  __nativeStmt (
+    """
+      t_sleep_millis += {0};
+      if (t_sleep_millis >= 1000) {
+        t_sleep_millis -= 1000;
+        if (s_verbose) fprintf(stderr, "trace: sleep in 1s\n");
+        sleep(1);
+      }
+    """,
+    millis
+  )
+
+let private concurrent (p1: unit -> obj) (p2: unit -> unit) : unit =
+  __nativeDecl
+    """
+      #include <pthread.h>
+    """
+
+  __nativeStmt (
+    """
+      typedef void const *(*StartFun)(void const *);
+      typedef void *(*NonConstStartFun)(void *);
+      void const *env = ({0}).env;
+      StartFun fun = ({0}).fun;
+
+      pthread_t thread;
+      int status = pthread_create(&thread, NULL, (NonConstStartFun)fun, (void *)env);
+      assert(status == 0);
+
+      {1}.fun({1}.env);
+
+      pthread_join(thread, NULL);
+    """,
+    p1,
+    p2
+  )
 
 // -----------------------------------------------
 // IO
@@ -466,7 +533,7 @@ let private dirAllEntries (dir: string) : string list * string list =
 // Docs
 // -----------------------------------------------
 
-let uriOfFilePath (path: string) =
+let private uriOfFilePath (path: string) =
   let path = normalize path
 
   if path |> S.startsWith "/" then
@@ -512,8 +579,9 @@ let private testUriToFilePath () =
   assert (f "file://\\backslash\\path" "/backslash/path")
   assert (f "file:///c%3A\\windows\\path" "C:/windows/path")
 
-testUriOfFilePath ()
-testUriToFilePath ()
+doInRegion (fun () ->
+  testUriOfFilePath ()
+  testUriToFilePath ())
 
 // -----------------------------------------------
 // Projects
@@ -538,7 +606,7 @@ type private ProjectInfo =
 type private FileExistsFun = string -> bool
 type private DirEntriesFun = string -> string list * string list
 
-type FindProjectsHost =
+type private FindProjectsHost =
   { FileExists: FileExistsFun
     GetDirEntries: DirEntriesFun }
 
@@ -699,7 +767,7 @@ type private LspRequest =
 
   | UnknownRequest
 
-let private readRequest () : LspRequest =
+let private readRawRequest () : JsonValue =
   trace "readRequest"
 
   let input = getStdin ()
@@ -756,7 +824,9 @@ let private readRequest () : LspRequest =
 
   let len = readHeader None
   let body = readBody len
-  let req = jsonParseFromString body
+  jsonParseFromString body
+
+let private parseRawRequest (req: JsonValue) : LspRequest =
   let msgId = req |> J.get "id"
   let m = req |> J.get "method"
   let p = req |> J.get "params"
@@ -835,12 +905,6 @@ let private dbInit () =
 
   dbExec
     """
-      -- Table to generate monotonically increasing unique numbers.
-      -- https://sqlite.org/autoinc.html
-      create table if not exists serials(
-        serial_id integer primary key autoincrement
-      );
-
       create table if not exists projects(
         project_dir varchar(300) primary key
       );
@@ -850,16 +914,14 @@ let private dbInit () =
         version int not null,
         text text not null
       );
+
+      create table if not exists messages(
+        -- auto-increment ensures monotonicity
+        -- https://sqlite.org/autoinc.html
+        message_id integer primary key autoincrement,
+        json text not null
+      );
     """
-
-let private dbNextId () =
-  // question: more performant way?
-  dbMutate "delete from serials;" []
-  dbMutate "insert into serials(serial_id) values(null);" []
-
-  match dbSelect "select serial_id from serials" [] with
-  | [ [ DInt value ] ] -> value
-  | _ -> unreachable ()
 
 let private dbGetProjects () =
   dbSelect "select project_dir from projects" []
@@ -906,6 +968,34 @@ let private dbUpdateDoc uri version text =
 let private dbRemoveDoc uri =
   dbMutate "delete from docs where uri = :uri" [ ":uri", DString uri ]
 
+let private dbAddMessage (message: JsonValue) : unit =
+  dbMutate
+    """
+      insert into messages(json) values (:json);
+    """
+    [ ":json", DString(jsonToString message) ]
+
+let private dbPopMessage () : JsonValue option =
+  let rows =
+    dbSelect
+      """
+        select message_id, json from messages
+        order by message_id desc limit 1
+      """
+      []
+
+  match rows with
+  | [ [ messageId; DString json ] ] ->
+    dbMutate
+      """
+        delete from messages
+        where message_id = :message_id
+      """
+      [ ":message_id", messageId ]
+
+    json |> jsonParseFromString |> Some
+  | _ -> None
+
 // -----------------------------------------------
 // Interface
 // -----------------------------------------------
@@ -930,11 +1020,19 @@ let private initializeResponse () =
     }
   }"""
 
-[<EntryPoint>]
-let main _ =
-  trace "Hello, lsp server!"
-  dbInit ()
+let private readerLoop () : obj =
+  whileInRegion (fun () ->
+    let request = readRawRequest ()
+    dbAddMessage request
 
+    match parseRawRequest request with
+    | ExitNotification -> false
+    | _ -> true)
+
+  trace "reader exited"
+  __nativeCast 0n
+
+let private serverLoop () =
   let output = getStdout ()
 
   let getProjects () =
@@ -946,8 +1044,8 @@ let main _ =
 
       project)
 
-  loopInRegion (fun () ->
-    match readRequest () with
+  let processMessage msg =
+    match msg with
     | InitializeRequest (msgId, rootOpt) ->
       let projects =
         match rootOpt with
@@ -1012,10 +1110,6 @@ let main _ =
       trace "dump docs:"
       dumpDbTable "docs"
 
-    | ExitNotification ->
-      trace "Exit gracefully."
-      exit 0
-
     | DidOpenNotification p ->
       let uri = p.Uri |> Uri.toString
       dbAddDoc uri p.Version p.Text
@@ -1028,4 +1122,32 @@ let main _ =
       let uri = p.Uri |> Uri.toString
       dbRemoveDoc uri
 
-    | UnknownRequest -> trace "Ignore unknown request.")
+    | ExitNotification -> unreachable () // Handled outside.
+
+    | UnknownRequest -> trace "Ignore unknown request."
+
+  whileInRegion (fun () ->
+    match dbPopMessage () |> Option.map parseRawRequest with
+    | Some ExitNotification ->
+      debug "Exit gracefully."
+      false
+
+    | Some msg ->
+      processMessage msg
+      true
+
+    | _ ->
+      amortizedSleep 10
+      true)
+
+  trace "server exited"
+
+[<EntryPoint>]
+let main _ =
+  doInRegion (fun () ->
+    trace "Hello, lsp server!"
+    dbInit ()
+
+    concurrent readerLoop serverLoop)
+
+  0
