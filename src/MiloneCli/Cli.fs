@@ -18,6 +18,7 @@ module TranslationApi = MiloneTranslation.TranslationApi
 module Lower = MiloneCli.Lower
 module PU = MiloneCli.PlatformUnix
 module PW = MiloneCli.PlatformWindows
+module CMake = MiloneCli.BackendCMake
 
 let private currentVersion () = "0.4.0"
 
@@ -332,6 +333,44 @@ type private BuildOptions =
   { CompileOptions: CompileOptions
     IsRelease: bool }
 
+let private toBuildWithCMakeParams
+  (host: CliHost)
+  (u: UnixApi)
+  (options: BuildOptions)
+  (ctx: CompileCtx)
+  (cFiles: (CFilename * CCode) list)
+  : CMake.BuildWithCMakeParams =
+  let miloneHome = Path(hostToMiloneHome host)
+
+  let compileOptions = options.CompileOptions
+  let projectDir = compileOptions.ProjectDir
+  let targetDir = compileOptions.TargetDir
+  let isRelease = options.IsRelease
+  let projectName = ctx.EntryProjectName
+
+  let targetDir = host.WorkDir + "/" + targetDir
+
+  let manifest =
+    ctx.SyntaxCtx |> SyntaxApi.SyntaxCtx.getManifest
+
+  { TargetDir = Path targetDir
+    IsRelease = isRelease
+    ExeFile = computeExePath (Path targetDir) host.Platform isRelease projectName
+    CFiles = cFiles |> List.map (fun (name, _) -> Path name)
+    MiloneHome = miloneHome
+    CSanitize = manifest.CSanitize
+    CStd = manifest.CStd
+    CcList =
+      manifest.CcList
+      |> List.map (fun (Path name, _) -> Path(projectDir + "/" + name))
+    ObjList =
+      manifest.ObjList
+      |> List.map (fun (Path name, _) -> Path(projectDir + "/" + name))
+    Libs = manifest.Libs |> List.map fst
+    DirCreate = dirCreateOrFail host
+    FileWrite = fileWrite host
+    ExecuteInto = u.ExecuteInto }
+
 let private toBuildOnUnixParams
   (host: CliHost)
   (u: UnixApi)
@@ -413,7 +452,8 @@ let private cliBuild (host: CliHost) (options: BuildOptions) =
 
     match host.Platform with
     | Platform.Unix u ->
-      PU.buildOnUnix (toBuildOnUnixParams host u options ctx cFiles)
+      CMake.buildWithCMake (toBuildWithCMakeParams host u options ctx cFiles)
+      // PU.buildOnUnix (toBuildOnUnixParams host u options ctx cFiles)
       |> never
 
     | Platform.Windows w ->
@@ -438,10 +478,14 @@ let private cliRun (host: CliHost) (options: BuildOptions) (restArgs: string lis
 
     match host.Platform with
     | Platform.Unix u ->
-      let p =
-        toBuildOnUnixParams host u options ctx cFiles
+      // let p =
+      //   toBuildOnUnixParams host u options ctx cFiles
 
-      PU.runOnUnix p restArgs |> never
+      // PU.runOnUnix p restArgs |> never
+      let p =
+        toBuildWithCMakeParams host u options ctx cFiles
+
+      CMake.runWithCMake p restArgs |> never
 
     | Platform.Windows w ->
       let p =

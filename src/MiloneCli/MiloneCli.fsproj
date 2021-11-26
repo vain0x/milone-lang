@@ -9,6 +9,7 @@
     <Compile Include="Lower.fs" />
     <Compile Include="PlatformUnix.fs" />
     <Compile Include="PlatformWindows.fs" />
+    <Compile Include="BackendCMake.fs" />
     <Compile Include="Cli.fs" />
     <Compile Include="Program.fs" />
   </ItemGroup>
