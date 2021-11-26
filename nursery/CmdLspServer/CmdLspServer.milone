@@ -1021,15 +1021,17 @@ let private initializeResponse () =
   }"""
 
 let private readerLoop () : obj =
-  whileInRegion (fun () ->
-    let request = readRawRequest ()
-    dbAddMessage request
+  doInRegion (fun () ->
+    whileInRegion (fun () ->
+      let request = readRawRequest ()
+      dbAddMessage request
 
-    match parseRawRequest request with
-    | ExitNotification -> false
-    | _ -> true)
+      match parseRawRequest request with
+      | ExitNotification -> false
+      | _ -> true)
 
-  trace "reader exited"
+    trace "reader exited")
+
   __nativeCast 0n
 
 let private serverLoop () =
@@ -1137,6 +1139,7 @@ let private serverLoop () =
       true
 
     | _ ->
+      // use synchronization mechanism to wait for next request
       amortizedSleep 10
       true)
 
