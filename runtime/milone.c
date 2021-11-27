@@ -598,7 +598,7 @@ int file_exists(struct String file_name) {
 struct String file_read_all_text(struct String file_name) {
     file_name = str_ensure_null_terminated(file_name);
 
-    FILE *fp = fopen(file_name.str, "r");
+    FILE *fp = fopen(file_name.str, "rb");
     if (!fp) {
         fprintf(stderr, "File '%s' not found.", file_name.str);
         exit(1);
@@ -632,7 +632,7 @@ void file_write_all_text(struct String file_name, struct String content) {
 
     // Skip writing if unchanged.
     {
-        fp = fopen(file_name.str, "r");
+        fp = fopen(file_name.str, "rb");
         if (fp) {
             fseek(fp, 0, SEEK_END);
             long size = ftell(fp);
