@@ -78,6 +78,9 @@ type BuildOnWindowsParams =
     TargetDir: Path
     IsRelease: bool
     ExeFile: Path
+    // FIXME: support csanitize, cstd, objList
+    CcList: Path list
+    Libs: string list
 
     NewGuid: NewGuidFun
     DirCreate: Path -> unit
@@ -117,7 +120,8 @@ let buildOnWindows (p: BuildOnWindowsParams) : unit =
 
     let p: VcxProjectParams =
       { MiloneTargetDir = p.TargetDir
-        CFiles = p.CFiles
+        CFiles = p.CFiles |> List.append p.CcList
+        Libs = p.Libs |> List.map Path
         ProjectGuid = projectGuid
         ProjectName = p.ProjectName
         IncludeDir = runtimeDir
@@ -207,6 +211,7 @@ EndGlobal
 type private VcxProjectParams =
   { MiloneTargetDir: Path
     CFiles: Path list
+    Libs: Path list
 
     ProjectGuid: Guid
     ProjectName: string
@@ -325,6 +330,7 @@ let private renderVcxProjectXml (p: VcxProjectParams) : string =
     <Link>
       <SubSystem>Console</SubSystem>
       <GenerateDebugInformation>true</GenerateDebugInformation>
+      <AdditionalDependencies>${LIBS};kernel32.lib;user32.lib;gdi32.lib;winspool.lib;comdlg32.lib;advapi32.lib;shell32.lib;ole32.lib;oleaut32.lib;uuid.lib;odbc32.lib;odbccp32.lib;%(AdditionalDependencies)</AdditionalDependencies>
     </Link>
   </ItemDefinitionGroup>
   <ItemDefinitionGroup Condition="'$(Configuration)|$(Platform)'=='Release|Win32'">
@@ -346,6 +352,7 @@ let private renderVcxProjectXml (p: VcxProjectParams) : string =
       <EnableCOMDATFolding>true</EnableCOMDATFolding>
       <OptimizeReferences>true</OptimizeReferences>
       <GenerateDebugInformation>true</GenerateDebugInformation>
+      <AdditionalDependencies>${LIBS};kernel32.lib;user32.lib;gdi32.lib;winspool.lib;comdlg32.lib;advapi32.lib;shell32.lib;ole32.lib;oleaut32.lib;uuid.lib;odbc32.lib;odbccp32.lib;%(AdditionalDependencies)</AdditionalDependencies>
     </Link>
   </ItemDefinitionGroup>"""
   + """
@@ -363,6 +370,7 @@ let private renderVcxProjectXml (p: VcxProjectParams) : string =
     <Link>
       <SubSystem>Console</SubSystem>
       <GenerateDebugInformation>true</GenerateDebugInformation>
+      <AdditionalDependencies>${LIBS};kernel32.lib;user32.lib;gdi32.lib;winspool.lib;comdlg32.lib;advapi32.lib;shell32.lib;ole32.lib;oleaut32.lib;uuid.lib;odbc32.lib;odbccp32.lib;%(AdditionalDependencies)</AdditionalDependencies>
     </Link>
   </ItemDefinitionGroup>
   <ItemDefinitionGroup Condition="'$(Configuration)|$(Platform)'=='Release|x64'">
@@ -384,6 +392,7 @@ let private renderVcxProjectXml (p: VcxProjectParams) : string =
       <EnableCOMDATFolding>true</EnableCOMDATFolding>
       <OptimizeReferences>true</OptimizeReferences>
       <GenerateDebugInformation>true</GenerateDebugInformation>
+      <AdditionalDependencies>${LIBS};kernel32.lib;user32.lib;gdi32.lib;winspool.lib;comdlg32.lib;advapi32.lib;shell32.lib;ole32.lib;oleaut32.lib;uuid.lib;odbc32.lib;odbccp32.lib;%(AdditionalDependencies)</AdditionalDependencies>
     </Link>
   </ItemDefinitionGroup>
   <ItemGroup>
@@ -411,3 +420,6 @@ let private renderVcxProjectXml (p: VcxProjectParams) : string =
 
           "<ClCompile Include=\"../" + path + "\"/>")
         |> S.concat "\n  ")
+
+  |> S.replace "${LIBS}"
+    (p.Libs |> List.map  Path.toString |> S.concat ";")

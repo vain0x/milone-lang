@@ -381,6 +381,10 @@ let private toBuildOnWindowsParams
   let targetDir = compileOptions.TargetDir
   let isRelease = options.IsRelease
   let projectName = ctx.EntryProjectName
+  let projectDir = compileOptions.ProjectDir
+
+  let manifest =
+    ctx.SyntaxCtx |> SyntaxApi.SyntaxCtx.getManifest
 
   { ProjectName = projectName
     CFiles = cFiles |> List.map (fun (name, _) -> Path name)
@@ -388,6 +392,11 @@ let private toBuildOnWindowsParams
     TargetDir = Path targetDir
     IsRelease = isRelease
     ExeFile = computeExePath (Path targetDir) host.Platform isRelease projectName
+
+    CcList =
+      manifest.CcList
+      |> List.map (fun (Path name, _) -> Path(projectDir + "/" + name))
+    Libs = manifest.Libs |> List.map fst
 
     NewGuid = fun () -> PW.Guid(w.NewGuid())
     DirCreate = dirCreateOrFail host
