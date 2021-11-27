@@ -42,6 +42,7 @@ static bool path_is_absolute(struct String path) {
 #endif
 }
 
+// #pathJoin
 // Prepend `base_path` as prefix to the path if it's relative.
 // For absolute path, just return `path`.
 static struct String path_join(struct String base_path, struct String path) {

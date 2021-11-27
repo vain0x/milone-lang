@@ -28,6 +28,7 @@ module private Path =
 
     path |> Path.trimEndSep |> Path.toString |> go
 
+  // #pathJoin
   let join (basePath: Path) (name: Path) : Path =
     let isRooted =
       (name |> Path.toString |> S.startsWith "/")
@@ -120,7 +121,7 @@ let buildOnWindows (p: BuildOnWindowsParams) : unit =
 
     let p: VcxProjectParams =
       { MiloneTargetDir = p.TargetDir
-        CFiles = p.CFiles |> List.append p.CcList
+        CFiles = List.append p.CFiles p.CcList
         Libs = p.Libs |> List.map Path
         ProjectGuid = projectGuid
         ProjectName = p.ProjectName
@@ -418,8 +419,7 @@ let private renderVcxProjectXml (p: VcxProjectParams) : string =
         |> List.map (fun cFile ->
           let path = Path.toString cFile
 
-          "<ClCompile Include=\"../" + path + "\"/>")
+          "<ClCompile Include=\"" + path + "\"/>")
         |> S.concat "\n  ")
 
-  |> S.replace "${LIBS}"
-    (p.Libs |> List.map  Path.toString |> S.concat ";")
+  |> S.replace "${LIBS}" (p.Libs |> List.map Path.toString |> S.concat ";")
