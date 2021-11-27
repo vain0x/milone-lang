@@ -137,6 +137,18 @@ let private pathStrToFileName (s: string) : string =
   |> Path.basename
   |> Path.toString
 
+// #pathJoin
+let private pathJoin (l: string) (r: string) =
+  let slash (s: string) = s |> S.replace "\\" "/"
+
+  let isRooted (s: string) =
+    s |> S.startsWith "/"
+    || s.Length >= 3 && s.[1] = ':' && s.[2] = '/'
+
+  let l = slash l
+  let r = slash r
+  if isRooted r then r else l + "/" + r
+
 let private hostToMiloneHome (host: CliHost) =
   SyntaxApi.getMiloneHomeFromEnv (fun () -> host.MiloneHome) (fun () -> Some host.Home)
 
@@ -387,7 +399,7 @@ let private toBuildOnWindowsParams
     ctx.SyntaxCtx |> SyntaxApi.SyntaxCtx.getManifest
 
   { ProjectName = projectName
-    CFiles = cFiles |> List.map (fun (name, _) -> Path name)
+    CFiles = cFiles |> List.map (fun (name, _) -> Path(pathJoin targetDir name))
     MiloneHome = miloneHome
     TargetDir = Path targetDir
     IsRelease = isRelease
@@ -395,7 +407,7 @@ let private toBuildOnWindowsParams
 
     CcList =
       manifest.CcList
-      |> List.map (fun (Path name, _) -> Path(projectDir + "/" + name))
+      |> List.map (fun (Path name, _) -> Path(pathJoin projectDir name))
     Libs = manifest.Libs |> List.map fst
 
     NewGuid = fun () -> PW.Guid(w.NewGuid())
@@ -654,8 +666,8 @@ let private parseBuildLikeOptions host args : BuildLikeOptions * string list =
     | None -> defaultTargetDir projectDir
 
   let options: BuildLikeOptions =
-    { ProjectDir = projectDir
-      TargetDir = targetDir
+    { ProjectDir = pathJoin host.WorkDir projectDir
+      TargetDir = pathJoin host.WorkDir targetDir
       IsRelease = Option.defaultValue false isReleaseOpt
       Verbosity = verbosity }
 
