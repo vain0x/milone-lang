@@ -641,7 +641,7 @@ let private findProjects (host: FindProjectsHost) (rootUri: Uri) : ProjectInfo l
       let stack =
         if depth < maxDepth then
           host.GetDirEntries dir
-          |> fst
+          |> snd
           |> List.filter (fun subdir -> subdir |> dirIsExcluded |> not)
           |> List.fold (fun stack subdir -> (depth + 1, subdir) :: stack) stack
         else
