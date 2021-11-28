@@ -27,6 +27,7 @@ INITIALIZE_PARAMS="{\"rootUri\": \"$ROOT_URI\"}"
             "contentChanges": [{"text": "hey!"}]
         }
     }'
+    sleep 1s
     send '{
         "method": "textDocument/didOpen",
         "params": {"textDocument": {"uri": "b.txt", "version": 1, "text": "bbb"}}

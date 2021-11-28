@@ -8,6 +8,7 @@ module rec CmdLspServer.Program
 
 open MiloneStd.Equal
 open MiloneStd.StdError
+open MiloneStd.StdMap
 open LibSqlite3.Db
 open LibJson.Json
 
@@ -79,6 +80,21 @@ let private whileInRegion (cond: unit -> bool) : unit =
 // -----------------------------------------------
 
 let private defaultTo alt opt = Option.defaultValue alt opt
+
+// -----------------------------------------------
+// List
+// -----------------------------------------------
+
+let private groupBy toKey keyCompare xs =
+  xs
+  |> List.fold
+       (fun map x ->
+         let key = toKey x
+
+         map
+         |> TMap.add key (x :: (map |> TMap.tryFind key |> defaultTo [])))
+       (TMap.empty keyCompare)
+  |> TMap.toList
 
 // -----------------------------------------------
 // String
@@ -290,8 +306,12 @@ doInRegion testPath
 
 type private Uri = Uri of string
 
+let private compareString (l: string) r = compare l r
+
 module private Uri =
   let toString (Uri s) = s
+
+  let compare l r = compareString (toString l) (toString r)
 
 // -----------------------------------------------
 // threading
@@ -530,6 +550,29 @@ let private dirAllEntries (dir: string) : string list * string list =
        ([], [])
 
 // -----------------------------------------------
+// process
+// -----------------------------------------------
+
+/// Executes a subprocess and waits for it to exit.
+/// Retrieves exit code and stdout.
+let private runSubprocess (cmd: string) (args: string list) : int * string =
+  debug (
+    "subprocess: "
+    + ((cmd :: args)
+       |> List.map (fun s -> "'" + s + "'")
+       |> S.concat ";")
+  )
+
+  __nativeStmt "struct String output;"
+  let pOutput: nativeptr<string> = __nativeExpr "&output"
+
+  let exitCode: int =
+    __nativeFun ("milone_subprocess_run2", cmd, args, pOutput)
+
+  let output: string = __nativeExpr "output"
+  exitCode, output
+
+// -----------------------------------------------
 // Docs
 // -----------------------------------------------
 
@@ -700,6 +743,14 @@ module private J =
 // -----------------------------------------------
 
 type private MsgId = JsonValue
+
+let private jPos (y: int, x: int) =
+  JObject [ "line", JNumber(float y)
+            "character", JNumber(float x) ]
+
+let private jRange (start, endPos) =
+  JObject [ "start", jPos start
+            "end", jPos endPos ]
 
 type private DidOpenParam =
   { Uri: Uri
@@ -1149,7 +1200,76 @@ let private serverLoop () =
       trace "dump docs:"
       dumpDbTable "docs"
 
-    | DiagnosticsNotification -> debug "diagnostics"
+    | DiagnosticsNotification ->
+      debug "diagnostics"
+
+      let runCheck projectDir =
+        let sh = "/bin/sh"
+
+        let _, output =
+          runSubprocess
+            sh
+            [ "-c"
+              "milone check '" + projectDir + "'" ]
+
+        output
+        |> S.toLines
+        |> List.filter (fun s -> s |> S.isEmpty |> not)
+        |> List.map (fun s ->
+          let f1, message, _ = s |> S.cut " "
+          let docId, f2, _ = f1 |> S.cut ":"
+          let y, x, _ = f2 |> S.cut ":"
+
+          // #abusingDocId
+          let path =
+            (docId
+             |> S.split "."
+             |> List.tryLast
+             |> Option.defaultWith unreachable)
+            + ".milone"
+
+          let pos = int y, int x
+
+          path, pos, message)
+
+      let diagnostics =
+        getProjects ()
+        |> List.collect (fun (p: ProjectInfo) ->
+          runCheck p.ProjectDir
+          |> List.map (fun (path, (y, x), message) ->
+            let range = (y, x), (y, x + 2)
+
+            let uri =
+              uriOfFilePath (pathJoin p.ProjectDir path)
+
+            uri, range, message))
+        |> groupBy (fun (uri, _, _) -> uri) Uri.compare
+        |> List.map (fun (uri, diagnostics) ->
+          let diagnostics =
+            diagnostics
+            |> List.map (fun (_, range, message) ->
+              JObject [ "range", jRange range
+                        "message", JString message
+                        "source", JString "milone-lang" ])
+            |> JArray
+
+          JObject [ "uri", JString(Uri.toString uri)
+                    "diagnostics", diagnostics ])
+        |> JArray
+        |> jsonToString
+
+      let response =
+        ("""{ "jsonrpc": "2.0", "method": "textDocument/publishDiagnostics", "params": ${PARAMS} }"""
+         + "\n")
+        |> S.replace "${PARAMS}" diagnostics
+
+      writeString
+        ("Content-Length: "
+         + string response.Length
+         + "\r\n\r\n"
+         + response)
+        output
+      |> ignore
 
     | DidOpenNotification p ->
       let uri = p.Uri |> Uri.toString
