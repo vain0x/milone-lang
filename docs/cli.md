@@ -293,8 +293,8 @@ Notes:
 
 ## Less Important Features
 
-- `-p <PROJECT-DIR>`, `--project-dir <PROJECT-DIR>`
-    - Subcommands that take `<PROJECT-DIR>` as positional argument also support `-p`/`--project-dir` option instead.
+- `--project <PROJECT-DIR>`
+    - Subcommands that take `<PROJECT-DIR>` as positional argument also support `--project` option instead.
     - That's to match behavior with `dotnet run`.
 - `--release` and `--target-dir`
     - `check` and `compile` subcommands accept these flags but ignore. (So that you can replace `build` subcommand with `check` without changing other args.)

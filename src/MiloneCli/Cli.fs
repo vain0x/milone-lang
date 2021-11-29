@@ -646,7 +646,7 @@ let private parseBuildLikeOptions host args : BuildLikeOptions * string list =
 
   let projectDirOpt, args =
     let projectDirOpt, args =
-      parseOption (fun x -> x = "-p" || x = "--project-dir") args
+      parseOption (fun x -> x = "--project") args
 
     match projectDirOpt, args with
     | Some it, _ -> Some it, args

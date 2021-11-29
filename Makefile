@@ -26,7 +26,7 @@ bin/ninja:
 # MyBuildTool wrapper
 # ------------------------------------------------
 
-MY_BUILD := scripts/MyBuildTool/bin/Debug/net5.0/MyBuildTool
+MY_BUILD := scripts/MyBuildTool/bin/Debug/net6.0/MyBuildTool
 MY_BUILD_TIMESTAMP := target/.timestamp/my_build_tool
 
 .PHONY: dotnet_restore gen2 gen3 integration_tests my_build self test_self

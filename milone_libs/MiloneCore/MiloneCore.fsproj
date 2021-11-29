@@ -1,16 +1,14 @@
 ﻿<Project Sdk="Microsoft.NET.Sdk">
 
   <PropertyGroup>
-    <OutputType>Exe</OutputType>
     <TargetFramework>net6.0</TargetFramework>
   </PropertyGroup>
 
   <ItemGroup>
-    <Compile Include="Program.fs" />
-  </ItemGroup>
-
-  <ItemGroup>
-    <PackageReference Include="Utf8Json" Version="1.3.7" />
+    <Compile Include="Option.fs" />
+    <Compile Include="List.fs" />
+    <Compile Include="Result.fs" />
+    <Compile Include="String.fs" />
   </ItemGroup>
 
 </Project>
