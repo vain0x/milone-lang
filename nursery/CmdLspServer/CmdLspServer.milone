@@ -1,5 +1,1322 @@
+// REMARK: needs milone-lang with multi-threaded runtime. (see w-thread branch)
+
+// Milone-lang LSP server written in milone-lang.
+//
+// ENV:
+//    VERBOSE=1   Enable trace logging.
 module rec CmdLspServer.Program
 
+open MiloneStd.Equal
+open MiloneStd.StdError
+open MiloneStd.StdMap
+open LibSqlite3.Db
+open LibJson.Json
+
+module C = MiloneStd.StdChar
+module I = MiloneStd.StdInt
+module S = MiloneStd.StdString
+
+__nativeDecl
+  """
+    #include <assert.h>
+    #include <errno.h>
+
+    #include <unistd.h> // for sleep
+  """
+
+let private writeErrorLine (s: string) : unit =
+  __nativeStmt ("fwrite({0}.str, sizeof(char), (size_t){0}.len, stderr);", s + "\n")
+
+let private formatN (s: string) (args: string list) : string =
+  args
+  |> List.mapi (fun (i: int) arg -> "{" + string i + "}", arg)
+  |> List.fold (fun s (k, v) -> s |> S.replace k v) s
+
+__nativeDecl "static bool s_verbose = false;"
+
+__nativeStmt
+  """
+    char const *s = getenv("VERBOSE");
+    s_verbose = s != NULL && *s != '\0';
+  """
+
+let private trace (s: string) : unit =
+  let verbose: bool = __nativeExpr "s_verbose"
+
+  if verbose then
+    writeErrorLine ("trace: " + s)
+
+let private traceN (s: string) (args: string list) : unit = trace (formatN s args)
+
+let private debug (s: string) : unit = writeErrorLine ("debug: " + s)
+
+let private debugN (s: string) (args: string list) : unit = debug (formatN s args)
+
+// note: to not trigger leak sanitizer, don't do `__inRegion (fun () -> ... action ...)`
+let private doInRegion (action: unit -> unit) =
+  __nativeStmt (
+    """
+      milone_enter_region();
+      {0}.fun({0}.env);
+      milone_leave_region();
+    """,
+    action
+  )
+
+let private whileInRegion (cond: unit -> bool) : unit =
+  __nativeStmt (
+    """
+      milone_enter_region();
+      while ({0}.fun({0}.env)) {
+        // Pass.
+      }
+      milone_leave_region();
+    """,
+    cond
+  )
+
+// -----------------------------------------------
+// Option
+// -----------------------------------------------
+
+let private defaultTo alt opt = Option.defaultValue alt opt
+
+// -----------------------------------------------
+// List
+// -----------------------------------------------
+
+let private groupBy toKey keyCompare xs =
+  xs
+  |> List.fold
+       (fun map x ->
+         let key = toKey x
+
+         map
+         |> TMap.add key (x :: (map |> TMap.tryFind key |> defaultTo [])))
+       (TMap.empty keyCompare)
+  |> TMap.toList
+
+// -----------------------------------------------
+// String
+// -----------------------------------------------
+
+module private String =
+  let equals (l: string) r = l = r
+
+let private splitAt (i: int) (s: string) =
+  if i <= 0 then "", s
+  else if s.Length <= i then s, ""
+  else s.[0..i - 1], s.[i..s.Length - 1]
+
+let private upperFirst (s: string) =
+  if s.Length >= 1 && C.isLower s.[0] then
+    string (C.toUpper s.[0]) + s.[1..s.Length - 1]
+  else
+    s
+
+let private lowerFirst (s: string) =
+  if s.Length >= 1 && C.isUpper s.[0] then
+    string (C.toLower s.[0]) + s.[1..s.Length - 1]
+  else
+    s
+
+let private testSplitAt () =
+  let s = "hello"
+  assert (splitAt 2 s = ("he", "llo"))
+  assert (splitAt (-1) s = ("", s))
+  assert (splitAt 0 s = ("", s))
+  assert (splitAt 5 s = (s, ""))
+  assert (splitAt 6 s = (s, ""))
+
+let private testUpperFirst () =
+  assert (upperFirst "macOS" = "MacOS")
+  assert (upperFirst "CentOS" = "CentOS")
+  assert (upperFirst "" = "")
+  assert (upperFirst "🐧" = "🐧")
+
+let private testLowerFirst () =
+  assert (lowerFirst "CentOS" = "centOS")
+  assert (lowerFirst "macOS" = "macOS")
+  assert (lowerFirst "" = "")
+  assert (lowerFirst "🐧" = "🐧")
+
+let private tryReplace (pattern: string) (target: string) (s: string) =
+  if s |> S.contains pattern then
+    s |> S.replace pattern target, true
+  else
+    s, false
+
+let private testTryReplace () =
+  let s, ok = tryReplace "//" "/" "file:///foo"
+  assert (s = "file://foo")
+  assert ok
+
+  let s, ok = tryReplace "//" "/" "./relative"
+  assert (s = "./relative")
+  assert (not ok)
+
+let private testString () =
+  testSplitAt ()
+  testUpperFirst ()
+  testLowerFirst ()
+  testTryReplace ()
+
+doInRegion testString
+
+// -----------------------------------------------
+// Path
+// -----------------------------------------------
+
+let private pathJoin l r = l + "/" + r
+
+let private basename (path: string) =
+  match S.findLastIndex "/" path with
+  | Some i when path <> "/" -> S.skip (i + 1) path
+  | _ -> path
+
+let private stem (path: string) =
+  let path = basename path
+
+  match S.findLastIndex "." path with
+  | Some i when 0 < i && i + 1 < path.Length -> S.slice 0 i path
+  | _ -> path
+
+let private hasDriveLetter (path: string) =
+  path.Length >= 2
+  && C.isAlphabetic path.[0]
+  && path.[1] = ':'
+
+let private isRooted (path: string) =
+  path |> S.startsWith "/" || hasDriveLetter path
+
+let private stripRoot (path: string) =
+  let path, rooted = path |> S.stripStart "/"
+
+  if rooted then
+    Some "/", path
+  else if path.Length >= 3
+          && hasDriveLetter path
+          && path.[2] = '/' then
+    let root, rest = splitAt 3 path
+    Some root, rest
+  else
+    None, path
+
+let private pathContract (path: string) =
+  let rec go acc (xs: string list) =
+    match acc, xs with
+    | _, "." :: xs -> go acc xs
+    | x :: acc, ".." :: xs -> go acc xs
+
+    | _, [] -> acc
+    | _, x :: xs -> go (x :: acc) xs
+
+  match stripRoot path with
+  | _, "" -> path
+
+  | rootOpt, path ->
+    let path =
+      path
+      |> S.split "/"
+      |> go []
+      |> List.rev
+      |> S.concat "/"
+
+    (rootOpt |> defaultTo "") + path
+
+/// Normalizes path syntactically. Note some of Windows prefix is unsupported yet.
+let private normalize (path: string) =
+  let path = path |> S.replace "\\" "/"
+
+  let path =
+    let rec removeDoubleSlashes (s: string) =
+      let s, ok = s |> tryReplace "//" "/"
+      if ok then removeDoubleSlashes s else s
+
+    removeDoubleSlashes path
+
+  // Upper drive letter.
+  let path =
+    if path |> hasDriveLetter then
+      upperFirst path
+    else
+      path
+
+  pathContract path
+
+let private testBasename () =
+  assert (basename "/root/rooted.milone" = "rooted.milone")
+  assert (basename "./parent/relative.milone" = "relative.milone")
+  assert (basename "../." = ".")
+  assert (basename "/" = "/")
+  assert (basename "" = "")
+  assert (basename "base" = "base")
+
+let private testStem () =
+  assert (stem "/root/rooted.milone" = "rooted")
+  assert (stem "../relative.milone" = "relative")
+  assert (stem ".git" = ".git")
+  assert (stem "." = ".")
+  assert (stem ".." = "..")
+  assert (stem "./no-ext" = "no-ext")
+  assert (stem "stem" = "stem")
+  assert (stem "ends-with-dot." = "ends-with-dot.")
+
+let private testStripRoot () =
+  assert (stripRoot "/" = (Some "/", ""))
+  assert (stripRoot "/rooted/path" = (Some "/", "rooted/path"))
+  assert (stripRoot "C:/drive/path" = (Some "C:/", "drive/path"))
+  assert (stripRoot "./relative/path" = (None, "./relative/path"))
+
+let private testContract () =
+  assert (pathContract "parent/./it" = "parent/it")
+  assert (pathContract "parent/sibling/../it" = "parent/it")
+  assert (pathContract "parent/s/t/../../it" = "parent/it")
+
+  assert (pathContract "./it" = "it")
+  assert (pathContract "../it" = "../it")
+
+  assert (pathContract "/./." = "/")
+  assert (pathContract "/.." = "/..")
+  assert (pathContract "/" = "/")
+  assert (pathContract "C:/.." = "C:/..")
+
+let private testNormalize () =
+  assert (normalize "double//slash" = "double/slash")
+  assert (normalize "back\\slash" = "back/slash")
+  assert (normalize "parent/two/../dots" = "parent/dots")
+  assert (normalize "single/./dot" = "single/dot")
+  assert (normalize "" = "")
+  assert (normalize "/regular/rooted.ext" = "/regular/rooted.ext")
+  assert (normalize "a\\b/\\c\\..\\\\d" = "a/b/d")
+  assert (normalize "c:\\Program Files\\Git" = "C:/Program Files/Git")
+
+let private testPath () =
+  testBasename ()
+  testStem ()
+  testStripRoot ()
+  testContract ()
+  testNormalize ()
+
+doInRegion testPath
+
+// -----------------------------------------------
+// Uri
+// -----------------------------------------------
+
+type private Uri = Uri of string
+
+let private compareString (l: string) r = compare l r
+
+module private Uri =
+  let toString (Uri s) = s
+
+  let compare l r = compareString (toString l) (toString r)
+
+// -----------------------------------------------
+// threading
+// -----------------------------------------------
+
+let private amortizedSleep (millis: int) : unit =
+  assert (millis >= 0)
+
+  __nativeDecl
+    """
+      _Thread_local int t_sleep_millis = 0;
+    """
+
+  __nativeStmt (
+    """
+      t_sleep_millis += {0};
+      if (t_sleep_millis >= 1000) {
+        t_sleep_millis -= 1000;
+        if (s_verbose) fprintf(stderr, "trace: sleep in 1s\n");
+        sleep(1);
+      }
+    """,
+    millis
+  )
+
+let private concurrent (p1: unit -> obj) (p2: unit -> unit) : unit =
+  __nativeDecl
+    """
+      #include <pthread.h>
+    """
+
+  __nativeStmt (
+    """
+      typedef void const *(*StartFun)(void const *);
+      typedef void *(*NonConstStartFun)(void *);
+      void const *env = ({0}).env;
+      StartFun fun = ({0}).fun;
+
+      pthread_t thread;
+      int status = pthread_create(&thread, NULL, (NonConstStartFun)fun, (void *)env);
+      assert(status == 0);
+
+      {1}.fun({1}.env);
+
+      pthread_join(thread, NULL);
+    """,
+    p1,
+    p2
+  )
+
+// -----------------------------------------------
+// IO
+// -----------------------------------------------
+
+// notes: Buffer, Stream are copied from LibHttpServer
+
+// ptr, capacity
+type private Buffer = nativeptr<byte> * int
+
+module private Buffer =
+  let allocate (capacity: int) : Buffer =
+    if capacity = 0 then
+      __nativeCast (unativeint 1), 0
+    else
+      assert (capacity >= 1)
+
+      __nativeStmt ("unsigned char *buf = milone_mem_alloc({0}, sizeof(unsigned char));", capacity)
+
+      let ptr: nativeptr<byte> = __nativeExpr "buf"
+
+      ptr, capacity
+
+  /// Converts a buffer to string.
+  ///
+  /// Use this only when the contents of buffer are valid as UTF-8 (not checked).
+  /// Given buffer should never be mutated.
+  let toString (len: int) (buf: Buffer) : string =
+    let ptr, capacity = buf
+    assert (len >= 0)
+    assert (len < capacity)
+    __nativeStmt ("struct String s = str_of_raw_parts({0}, {1});", ptr, len)
+    __nativeExpr "s"
+
+type private Stream = nativeptr<__nativeType<FILE>>
+
+let private getStdin () : Stream = __nativeExpr "stdin"
+let private getStdout () : Stream = __nativeExpr "stdout"
+
+/// Reads from stream to fill the buffer.
+///
+/// Returns size of read data. (Maybe less than capacity.)
+let private readBlock (buf: Buffer) (input: Stream) : int * Buffer * Stream =
+  let bufPtr, bufSize = buf
+
+  __nativeStmt ("int len = (int)fread({1}, 1, (size_t){2}, {0});", input, bufPtr, bufSize)
+
+  let len: int = __nativeExpr "len"
+  len, buf, input
+
+/// Reads a block of bytes equal to specified size.
+///
+/// Blocks to wait for the buffer to fill.
+/// Returns whether read data is of specified size.
+let private readExact (buf: Buffer) (size: int) (input: Stream) : bool * Buffer * Stream =
+  let bufPtr, bufSize = buf
+  assert (size >= 0)
+  assert (size <= bufSize)
+
+  __nativeStmt (
+    """
+      size_t result = fread({1}, (size_t){2}, 1, {0});
+      bool ok = result == 1;
+    """,
+    input,
+    bufPtr,
+    size
+  )
+
+  let ok: bool = __nativeExpr "ok"
+
+  if not ok then
+    // let s: nativeptr<char> = __nativeExpr("strerror(errno)")
+    // let s: string = __nativeExpr ("str_borrow({0})", s)
+    // printfn "%s" s
+    printfn "%d" ((__nativeExpr "result": unativeint) |> int)
+
+  ok, buf, input
+
+let private readLine (input: Stream) : string option * Stream =
+  __nativeStmt (
+    """
+      char buf[4000] = "";
+      bool ok = fgets(buf, sizeof buf, {0}) != NULL;
+    """,
+    input
+  )
+
+  if __nativeExpr "ok" then
+    let line: string = __nativeExpr "str_of_c_str(buf)"
+    Some line, input
+  else
+    None, input
+
+let private doWriteExact (ptr: __constptr<byte>) (len: int) (output: Stream) : unit =
+  assert (len >= 1)
+
+  __nativeStmt (
+    """
+      size_t written = fwrite({1}, {2}, 1, {0});
+      bool ok = written == 1;
+    """,
+    output,
+    ptr,
+    unativeint len
+  )
+
+  let ok: bool = __nativeExpr "ok"
+  if not ok then failwith "writeExact"
+
+let private writeString (s: string) (output: Stream) : Stream =
+  if s.Length <> 0 then
+    let ptr: __constptr<char> = __nativeExpr ("({0}.str)", s)
+    let ptr: __constptr<byte> = __nativeCast ptr
+    let output = doWriteExact ptr s.Length output
+    __nativeStmt ("fflush({0});", output)
+    output
+
+  output
+
+// -----------------------------------------------
+// File system
+// -----------------------------------------------
+
+// FIXME: using `DirIter option`, compiler fails. Invalid code generated.
+type private DirIter = __nativeType<``struct DirIter``>
+
+type private FileKind =
+  | Regular
+  | Dir
+  | Link
+  | Other
+
+let private miloneLStat (path: string) =
+  let n: int = __nativeFun ("milone_lstat", path)
+
+  match n with
+  | 1 -> Some FileKind.Regular
+  | 2 -> Some FileKind.Dir
+  | 3 -> Some FileKind.Link
+  | _ when n >= 0 -> Some FileKind.Other
+  | _ -> None
+
+let private fileExists (path: string) = miloneLStat path |> Option.isSome
+
+// maybe null
+let private miloneDirOpen (dir: string) : nativeptr<DirIter> = __nativeFun ("milone_dir_open", dir)
+
+let private miloneDirClose (di: nativeptr<DirIter>) : unit = __nativeFun ("milone_dir_close", di)
+
+let private miloneDirNext (di: nativeptr<DirIter>) : string option =
+  __nativeStmt """struct String name = str_borrow("");"""
+  let np: nativeptr<string> = __nativeExpr "&name"
+  let ok: bool = __nativeFun ("milone_dir_next", di, np)
+  let name: string = __nativeExpr "name"
+
+  if ok then Some name else None
+
+/// Retrieves all entries of dir. (Except for `.`, `..`.)
+let private miloneDirEntries (dir: string) : string list option =
+  let di = miloneDirOpen dir
+
+  if nativeint di <> 0n then
+    let rec go acc =
+      match miloneDirNext di with
+      | None -> acc
+      | Some name -> go (name :: acc)
+
+    let names = go []
+    miloneDirClose di
+    Some names
+  else
+    None
+
+/// Reads a dir entries. Files and dirs.
+let private dirAllEntries (dir: string) : string list * string list =
+  miloneDirEntries dir
+  |> Option.defaultValue []
+  |> List.fold
+       (fun (fileAcc, dirAcc) name ->
+         let path = dir + "/" + name
+
+         match miloneLStat path with
+         | Some FileKind.Regular -> path :: fileAcc, dirAcc
+         | Some FileKind.Dir -> fileAcc, path :: dirAcc
+         | _ -> fileAcc, dirAcc)
+       ([], [])
+
+// -----------------------------------------------
+// process
+// -----------------------------------------------
+
+/// Executes a subprocess and waits for it to exit.
+/// Retrieves exit code and stdout.
+let private runSubprocess (cmd: string) (args: string list) : int * string =
+  debug (
+    "subprocess: "
+    + ((cmd :: args)
+       |> List.map (fun s -> "'" + s + "'")
+       |> S.concat ";")
+  )
+
+  __nativeStmt "struct String output;"
+  let pOutput: nativeptr<string> = __nativeExpr "&output"
+
+  let exitCode: int =
+    __nativeFun ("milone_subprocess_run2", cmd, args, pOutput)
+
+  let output: string = __nativeExpr "output"
+  exitCode, output
+
+// -----------------------------------------------
+// Docs
+// -----------------------------------------------
+
+let private uriOfFilePath (path: string) =
+  let path = normalize path
+
+  if path |> S.startsWith "/" then
+    Uri("file://" + path)
+  else if hasDriveLetter path then
+    let path =
+      path |> lowerFirst |> S.replace ":" "%3A"
+
+    Uri("file:///" + path)
+  else
+    // unlikely used
+    Uri("file://./" + path)
+
+// Note: pathname contains backslashes even on Linux, provided by VSCode.
+let private uriToFilePath (uri: Uri) =
+  let path, fileScheme =
+    uri |> Uri.toString |> S.stripStart "file://"
+
+  if fileScheme then
+    let path =
+      // Windows path.
+      if path |> S.skip 2 |> S.startsWith "%3A" then
+        path |> S.skip 1 |> S.replace "%3A" ":"
+      else
+        path
+
+    path |> normalize |> Some
+  else
+    // Not a file scheme.
+    None
+
+let private testUriOfFilePath () =
+  let f a x = uriOfFilePath a |> Uri.toString = x
+
+  assert (f "/rooted/path" "file:///rooted/path")
+  assert (f "slashed/path" "file://./slashed/path")
+  assert (f "C:\\windows\\path" "file:///c%3A/windows/path")
+
+let private testUriToFilePath () =
+  let f s x = uriToFilePath (Uri s) = Some x
+
+  assert (f "file:///rooted/path" "/rooted/path")
+  assert (f "file://\\backslash\\path" "/backslash/path")
+  assert (f "file:///c%3A\\windows\\path" "C:/windows/path")
+
+doInRegion (fun () ->
+  testUriOfFilePath ()
+  testUriToFilePath ())
+
+// -----------------------------------------------
+// Projects
+// -----------------------------------------------
+
+let private dirIsExcluded name =
+  let name = basename name
+
+  match name with
+  | "node_modules"
+  | "target"
+  | "bin"
+  | "obj" -> true
+
+  | _ -> name |> S.contains "~" || name |> S.startsWith "."
+
+[<RequireQualifiedAccess; NoEquality; NoComparison>]
+type private ProjectInfo =
+  { ProjectDir: string
+    ProjectName: string }
+
+type private FileExistsFun = string -> bool
+type private DirEntriesFun = string -> string list * string list
+
+type private FindProjectsHost =
+  { FileExists: FileExistsFun
+    GetDirEntries: DirEntriesFun }
+
+/// Finds all projects inside of the workspace.
+let private findProjects (host: FindProjectsHost) (rootUri: Uri) : ProjectInfo list =
+  let maxDepth = 3
+
+  let rec bfs acc stack =
+    match stack with
+    | [] -> acc
+
+    | (depth, dir) :: stack ->
+      let acc =
+        let projectName = stem dir
+
+        let tryAddProject ext acc =
+          let entrypoint = dir + "/" + projectName + ext
+
+          if host.FileExists entrypoint then
+            let project: ProjectInfo =
+              { ProjectDir = dir
+                ProjectName = projectName }
+
+            project :: acc
+          else
+            acc
+
+        acc
+        |> tryAddProject ".milone"
+        |> tryAddProject ".fs"
+
+      let stack =
+        if depth < maxDepth then
+          host.GetDirEntries dir
+          |> snd
+          |> List.filter (fun subdir -> subdir |> dirIsExcluded |> not)
+          |> List.fold (fun stack subdir -> (depth + 1, subdir) :: stack) stack
+        else
+          stack
+
+      bfs acc stack
+
+  match rootUri |> uriToFilePath with
+  | Some rootDir -> bfs [] [ 0, rootDir ]
+  | None ->
+    debug "rootUri invalid."
+    []
+
+// -----------------------------------------------
+// JSON
+// -----------------------------------------------
+
+module private J =
+  let asString j =
+    match j with
+    | JString value -> value
+    | _ -> failwith "expected a string"
+
+  let asInt j =
+    match j with
+    | JNumber value -> int value
+    | _ -> failwith "expected an int"
+
+  let at index (j: JsonValue) : JsonValue =
+    match j with
+    | JArray items ->
+      match items |> List.tryItem index with
+      | Some value -> value
+      | None -> failwith "out of range"
+    | _ -> failwith "expected an array"
+
+  let get key (j: JsonValue) : JsonValue =
+    match j with
+    | JObject entries ->
+      entries
+      |> List.tryPick (fun (k, value) -> if k = key then Some value else None)
+      |> Option.defaultWith (fun () ->
+        // printfn "// %s missing" key
+        JNull)
+
+    | _ -> JNull
+
+  let dig keys (j: JsonValue) =
+    keys |> List.fold (fun j key -> get key j) j
+
+  let getT2 k1 k2 (j: JsonValue) = get k1 j, get k2 j
+  let getT3 k1 k2 k3 (j: JsonValue) = get k1 j, get k2 j, get k3 j
+
+// -----------------------------------------------
+// LSP
+// -----------------------------------------------
+
+type private MsgId = JsonValue
+
+let private jPos (y: int, x: int) =
+  JObject [ "line", JNumber(float y)
+            "character", JNumber(float x) ]
+
+let private jRange (start, endPos) =
+  JObject [ "start", jPos start
+            "end", jPos endPos ]
+
+type private DidOpenParam =
+  { Uri: Uri
+    Version: int
+    Text: string }
+
+let private parseDidOpenParam j : DidOpenParam =
+  let uri, version, text =
+    j
+    |> J.get "textDocument"
+    |> J.getT3 "uri" "version" "text"
+
+  let uri, version, text =
+    Uri(J.asString uri), J.asInt version, J.asString text
+
+  { Uri = uri
+    Version = version
+    Text = text }
+
+type private DidChangeParam =
+  { Uri: Uri
+    Version: int
+    Text: string }
+
+let private parseDidChangeParam j : DidChangeParam =
+  let uri, version =
+    let uri, version =
+      j
+      |> J.get "textDocument"
+      |> J.getT2 "uri" "version"
+
+    Uri(J.asString uri), J.asInt version
+
+  let text =
+    j
+    |> J.get "contentChanges"
+    |> J.at 0
+    |> J.get "text"
+    |> J.asString
+
+  { Uri = uri
+    Version = version
+    Text = text }
+
+type private DidCloseParam = { Uri: Uri }
+
+let private parseDidCloseParam j : DidCloseParam =
+  let uri =
+    j
+    |> J.dig [ "textDocument"; "uri" ]
+    |> J.asString
+    |> Uri
+
+  { Uri = uri }
+
+type private LspRequest =
+  | InitializeRequest of MsgId * rootOpt: Uri option
+  | InitializedNotification
+  | ShutdownRequest of MsgId
+  | ExitNotification
+
+  | DiagnosticsNotification
+  | DidOpenNotification of DidOpenParam
+  | DidChangeNotification of DidChangeParam
+  | DidCloseNotification of DidCloseParam
+
+  | UnknownRequest
+
+let private readRawRequest () : JsonValue =
+  trace "readRequest"
+
+  let input = getStdin ()
+
+  let rec readHeader lenOpt =
+    trace (
+      "readHeader len="
+      + (lenOpt
+         |> Option.map string
+         |> Option.defaultValue "None")
+    )
+
+    match readLine input with
+    | None, _ -> failwith "Unexpected EOF"
+
+    | Some line, _ when line |> S.trimEnd = "" ->
+      // Hit "\r\n\r\n".
+      match lenOpt with
+      | None -> failwith "Content-Length header missed."
+      | Some len -> len
+
+    | Some header, _ ->
+      let key, value, colon = S.cut ":" header
+
+      if not colon then
+        failwith ("Illegal header: '" + header + "'")
+
+      let key = S.trim key
+      let value = S.trim value
+
+      match key with
+      | "Content-Length" ->
+        match I.tryParse value with
+        | None -> failwith ("Can't parse length as integer: '" + value + "'")
+        | Some len -> readHeader (Some len)
+
+      | _ ->
+        trace ("Ignore header: '" + key + "'")
+        readHeader lenOpt
+
+  let readBody (len: int) : string =
+    trace ("readBody len=" + string len)
+
+    if len >= 10100100 then
+      failwith ("Content-length too large: '" + string len + "'")
+
+    let body = Buffer.allocate (len + 1)
+    let ok, body, _ = readExact body len input
+
+    if not ok then
+      failwith ("Couldn't read request body.")
+
+    body |> Buffer.toString len
+
+  let len = readHeader None
+  let body = readBody len
+  jsonParseFromString body
+
+let private parseRawRequest (req: JsonValue) : LspRequest =
+  let msgId = req |> J.get "id"
+  let m = req |> J.get "method"
+  let p = req |> J.get "params"
+
+  match m with
+  | JString "initialize" ->
+    let rootOpt =
+      match p |> J.get "rootUri" with
+      | JString it -> Some(Uri it)
+      | _ -> None
+
+    InitializeRequest(msgId, rootOpt)
+
+  | JString "initialized" -> InitializedNotification
+
+  | JString "shutdown" -> ShutdownRequest msgId
+  | JString "exit" -> ExitNotification
+
+  | JString "textDocument/didOpen" -> DidOpenNotification(parseDidOpenParam p)
+  | JString "textDocument/didChange" -> DidChangeNotification(parseDidChangeParam p)
+  | JString "textDocument/didClose" -> DidCloseNotification(parseDidCloseParam p)
+
+  | JString "$/diagnostics" -> DiagnosticsNotification
+
+  | JString m ->
+    debug ("unknown method: '" + m + "'")
+    UnknownRequest
+
+  | _ ->
+    debug ("unknown method without method")
+    UnknownRequest
+
+// -----------------------------------------------
+// Persistent
+// -----------------------------------------------
+
+let private dumpDbTable tableName =
+  let cons h t = h :: t
+  let consBetween l r x acc = r :: x :: l :: acc
+
+  let dumpRow row acc =
+    row
+    |> List.mapi (fun i value -> i, value)
+    |> List.fold
+         (fun acc (i, value) ->
+           let acc = if i = 0 then acc else acc |> cons ", "
+
+           match value with
+           | DNull -> acc |> cons "null"
+           | DInt n -> acc |> cons (string n)
+           | DString s ->
+             if s.Length <= 32 && s |> S.contains "\n" |> not then
+               acc |> consBetween "\"" "\"" s
+             else
+               acc
+               |> consBetween "<string " ">" (string s.Length))
+         acc
+
+  let dumpRows rows acc =
+    rows
+    |> List.mapi (fun i row -> i, row)
+    |> List.fold
+         (fun acc (i, row) ->
+           let acc = if i = 0 then acc else acc |> cons "\n"
+           dumpRow row acc)
+         acc
+
+  let rows =
+    dbSelect ("select * from " + tableName) []
+
+  dumpRows rows []
+  |> List.rev
+  |> S.concat ""
+  |> printfn "%s"
+
+let private dbInit () =
+  dbOpen ":memory:"
+
+  dbExec
+    """
+      create table if not exists globals(
+        global_id int primary key,
+        dirty int default 1
+      );
+
+      insert into globals(global_id) values (1);
+
+      create table if not exists projects(
+        project_dir varchar(300) primary key
+      );
+
+      create table if not exists docs(
+        uri varchar(300) primary key,
+        version int not null,
+        text text not null
+      );
+
+      create table if not exists messages(
+        -- auto-increment ensures monotonicity
+        -- https://sqlite.org/autoinc.html
+        message_id integer primary key autoincrement,
+        json text not null
+      );
+    """
+
+let private dbSetDirty (value: bool) =
+  let value = if value then 1 else 0
+
+  dbMutate "update globals set dirty = :dirty where global_id = 1" [ ":dirty", DInt value ]
+
+let private dbTakeDirty () =
+  match dbSelect "select dirty from globals where global_id = 1" [] with
+  | [ [ DInt value ] ] ->
+    let value = value <> 0
+    if value then dbSetDirty false
+    value
+
+  | _ -> unreachable ()
+
+let private dbGetProjects () =
+  dbSelect "select project_dir from projects" []
+  |> List.map (fun row ->
+    match row with
+    | [ DString projectDir ] -> projectDir
+    | _ -> unreachable ())
+
+let private dbAddProjects projectDirList =
+  projectDirList
+  |> List.fold
+       (fun () projectDir ->
+         dbMutate
+           """
+        insert into projects(project_dir) values
+          (:dir)
+      """
+           [ ":dir", DString projectDir ])
+       ()
+
+let private dbAddDoc uri version text =
+  dbMutate
+    """
+      insert into docs(uri, version, text) values
+        (:uri, :version, :text)
+    """
+    [ ":uri", DString uri
+      ":version", DInt version
+      ":text", DString text ]
+
+let private dbUpdateDoc uri version text =
+  dbMutate
+    """
+      update docs set
+          version = :version,
+          text = :text
+      where
+          uri = :uri
+    """
+    [ ":uri", DString uri
+      ":version", DInt version
+      ":text", DString text ]
+
+let private dbRemoveDoc uri =
+  dbMutate "delete from docs where uri = :uri" [ ":uri", DString uri ]
+
+let private dbAddMessage (message: JsonValue) : unit =
+  dbMutate
+    """
+      insert into messages(json) values (:json);
+    """
+    [ ":json", DString(jsonToString message) ]
+
+let private dbPopMessage () : JsonValue option =
+  let rows =
+    dbSelect
+      """
+        select message_id, json from messages
+        order by message_id limit 1
+      """
+      []
+
+  match rows with
+  | [ [ messageId; DString json ] ] ->
+    dbMutate
+      """
+        delete from messages
+        where message_id = :message_id
+      """
+      [ ":message_id", messageId ]
+
+    json |> jsonParseFromString |> Some
+  | _ -> None
+
+// -----------------------------------------------
+// Interface
+// -----------------------------------------------
+
+let private initializeResponse () =
+  """{
+    "capabilities": {
+        "textDocumentSync": {
+            "openClose": true,
+            "change": 1
+        },
+        "definitionProvider": true,
+        "documentHighlightProvider": true,
+        "documentFormattingProvider": true,
+        "hoverProvider": true,
+        "referencesProvider": true,
+        "renameProvider": false
+    },
+    "serverInfo": {
+        "name": "milone_lsp",
+        "version": "0.1.0"
+    }
+  }"""
+
+let private readerLoop () : obj =
+  doInRegion (fun () ->
+    whileInRegion (fun () ->
+      let request = readRawRequest ()
+      dbAddMessage request
+
+      match parseRawRequest request with
+      | ExitNotification -> false
+      | _ -> true)
+
+    trace "reader exited")
+
+  __nativeCast 0n
+
+let private serverLoop () =
+  let output = getStdout ()
+
+  let getProjects () =
+    dbGetProjects ()
+    |> List.map (fun projectDir ->
+      let project: ProjectInfo =
+        { ProjectDir = projectDir
+          ProjectName = stem projectDir }
+
+      project)
+
+  let markAsDirty () = dbSetDirty true
+
+  let pushDiagnosticsRequest () =
+    dbAddMessage (
+      jsonParseFromString
+        """
+          {
+            "jsonrpc": "2.0",
+            "method": "$/diagnostics"
+          }
+        """
+    )
+
+  let processMessage msg =
+    match msg with
+    | InitializeRequest (msgId, rootOpt) ->
+      let projects =
+        match rootOpt with
+        | Some rootUri ->
+          debugN "rootUri = '{0}'" [ rootUri |> Uri.toString ]
+
+          let host: FindProjectsHost =
+            { FileExists = fileExists
+              GetDirEntries = dirAllEntries }
+
+          findProjects host rootUri
+
+        | None ->
+          debug "rootUri is not provided."
+          []
+
+      let () =
+        let n = projects |> List.length |> string
+
+        let p =
+          projects
+          |> List.map (fun (p: ProjectInfo) -> p.ProjectName)
+          |> S.concat ";"
+
+        debugN "Found {0} projects: '{1}'." [ n; p ]
+
+      dbAddProjects (
+        projects
+        |> List.map (fun (p: ProjectInfo) -> p.ProjectDir)
+      )
+
+      let response =
+        ("""{ "jsonrpc": "2.0", "id": ${MSG_ID}, "result": ${RESULT} }"""
+         + "\n")
+        |> S.replace "${MSG_ID}" (jsonToString msgId)
+        |> S.replace "${RESULT}" (initializeResponse ())
+
+      writeString
+        ("Content-Length: "
+         + string response.Length
+         + "\r\n\r\n"
+         + response)
+        output
+      |> ignore
+
+    | InitializedNotification -> ()
+
+    | ShutdownRequest msgId ->
+      let response =
+        ("""{ "jsonrpc": "2.0", "id": ${MSG_ID}, "result": null }"""
+         + "\n")
+        |> S.replace "${MSG_ID}" (jsonToString msgId)
+
+      writeString
+        ("Content-Length: "
+         + string response.Length
+         + "\r\n\r\n"
+         + response)
+        output
+      |> ignore
+
+      trace "dump docs:"
+      dumpDbTable "docs"
+
+    | DiagnosticsNotification ->
+      debug "diagnostics"
+
+      let runCheck projectDir =
+        let sh = "/bin/sh"
+
+        let _, output =
+          runSubprocess
+            sh
+            [ "-c"
+              "milone check '" + projectDir + "'" ]
+
+        output
+        |> S.toLines
+        |> List.filter (fun s -> s |> S.isEmpty |> not)
+        |> List.map (fun s ->
+          let f1, message, _ = s |> S.cut " "
+          let docId, f2, _ = f1 |> S.cut ":"
+          let y, x, _ = f2 |> S.cut ":"
+
+          // #abusingDocId
+          let path =
+            (docId
+             |> S.split "."
+             |> List.tryLast
+             |> Option.defaultWith unreachable)
+            + ".milone"
+
+          let pos = int y, int x
+
+          path, pos, message)
+
+      let diagnostics =
+        getProjects ()
+        |> List.collect (fun (p: ProjectInfo) ->
+          runCheck p.ProjectDir
+          |> List.map (fun (path, (y, x), message) ->
+            let range = (y, x), (y, x + 2)
+
+            let uri =
+              uriOfFilePath (pathJoin p.ProjectDir path)
+
+            uri, range, message))
+        |> groupBy (fun (uri, _, _) -> uri) Uri.compare
+        |> List.map (fun (uri, diagnostics) ->
+          let diagnostics =
+            diagnostics
+            |> List.map (fun (_, range, message) ->
+              JObject [ "range", jRange range
+                        "message", JString message
+                        "source", JString "milone-lang" ])
+            |> JArray
+
+          JObject [ "uri", JString(Uri.toString uri)
+                    "diagnostics", diagnostics ])
+        |> JArray
+        |> jsonToString
+
+      let response =
+        ("""{ "jsonrpc": "2.0", "method": "textDocument/publishDiagnostics", "params": ${PARAMS} }"""
+         + "\n")
+        |> S.replace "${PARAMS}" diagnostics
+
+      writeString
+        ("Content-Length: "
+         + string response.Length
+         + "\r\n\r\n"
+         + response)
+        output
+      |> ignore
+
+    | DidOpenNotification p ->
+      let uri = p.Uri |> Uri.toString
+      dbAddDoc uri p.Version p.Text
+      markAsDirty ()
+
+    | DidChangeNotification p ->
+      let uri = p.Uri |> Uri.toString
+      dbUpdateDoc uri p.Version p.Text
+      markAsDirty ()
+
+    | DidCloseNotification p ->
+      let uri = p.Uri |> Uri.toString
+      dbRemoveDoc uri
+      markAsDirty ()
+
+    | ExitNotification -> unreachable () // Handled outside.
+
+    | UnknownRequest -> trace "Ignore unknown request."
+
+  whileInRegion (fun () ->
+    match dbPopMessage () |> Option.map parseRawRequest with
+    | Some ExitNotification -> false
+
+    | Some msg ->
+      processMessage msg
+      true
+
+    | _ ->
+      // on idle
+      if dbTakeDirty () then
+        pushDiagnosticsRequest ()
+      else
+        // use synchronization mechanism to wait for next request
+        amortizedSleep 10
+
+      true)
+
+  trace "server exited"
+
+[<EntryPoint>]
 let main _ =
-  printfn "Hello, lsp server!"
+  doInRegion (fun () ->
+    trace "Hello, lsp server!"
+    dbInit ()
+
+    concurrent readerLoop serverLoop
+    debug "Exit gracefully.")
+
   0
