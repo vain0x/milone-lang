@@ -672,6 +672,40 @@ module ProjectAnalysis =
 
     Option.defaultValue [] resultOpt, pa
 
+  let documentSymbol docId pa =
+    let syntaxOpt, pa = ProjectAnalysis1.parse docId pa
+
+    let symbols =
+      let pathToName path =
+        path
+        |> List.tryLast
+        |> Option.defaultValue "<module>"
+
+      syntaxOpt
+      |> Option.map (fun syntax -> ProjectAnalysis1.documentSymbols syntax pa)
+      |> Option.defaultValue []
+      |> List.map (fun (symbol, _, Loc (_, y, x)) ->
+        let name, kind =
+          match symbol with
+          | DFunSymbol name -> name, 12 // 12
+          | DTySymbol name -> name, 5 // class
+          | DModuleSymbol path -> pathToName path, 2 // module
+
+        (name, kind), (y, x))
+
+    let symbols, pa =
+      let kinds, posList = List.unzip symbols
+
+      let ranges, pa =
+        let tokens, pa = ProjectAnalysis1.tokenize docId pa
+        tokens |> LTokenList.resolveRanges posList, pa
+
+      List.zip kinds ranges
+      |> List.map (fun ((name, kind), range) -> name, kind, range),
+      pa
+
+    symbols, pa
+
 // ---------------------------------------------
 // WorkspaceAnalysis
 // ---------------------------------------------
@@ -997,6 +1031,13 @@ module WorkspaceAnalysis =
         |> List.map (fun (docId, range) -> docIdToUri p docId wa, range))
 
     result, wa
+
+  let documentSymbol (uri: Uri) (wa: WorkspaceAnalysis) =
+    let symbolListList, wa =
+      wa.ProjectList
+      |> List.mapFold (fun wa p -> doWithProjectAnalysis p (ProjectAnalysis.documentSymbol (uriToDocId uri)) wa) wa
+
+    List.collect id symbolListList, wa
 
 let onInitialized rootUriOpt (wa: WorkspaceAnalysis) : WorkspaceAnalysis =
   let projects =

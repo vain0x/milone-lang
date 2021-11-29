@@ -144,6 +144,7 @@ let private createInitializeResult () =
           "documentFormattingProvider": true,
           "hoverProvider": true,
           "referencesProvider": true,
+          "documentSymbolProvider": true,
           "renameProvider": false
       },
       "serverInfo": {
@@ -286,6 +287,12 @@ let private parseReferencesParam jsonValue : ReferencesParam =
     Pos = pos
     IncludeDecl = includeDecl }
 
+let private parseDocumentSymbolParam jsonValue =
+  jsonValue
+  |> jFind3 "params" "textDocument" "uri"
+  |> jToString
+  |> Uri
+
 // -----------------------------------------------
 // LspError
 // -----------------------------------------------
@@ -387,6 +394,7 @@ type private LspIncome =
   | ReferencesRequest of MsgId * ReferencesParam
   /// https://microsoft.github.io/language-server-protocol/specifications/specification-current/#tetDocument_documentHighlight
   | DocumentHighlightRequest of MsgId * DocumentPositionParam
+  | DocumentSymbolRequest of MsgId * Uri
   /// https://microsoft.github.io/language-server-protocol/specifications/specification-current/#textDocument_formatting
   | FormattingRequest of MsgId * Uri
   /// https://microsoft.github.io/language-server-protocol/specifications/specification-current/#textDocument_hover
@@ -426,6 +434,7 @@ let private parseIncome (jsonValue: JsonValue) : LspIncome =
   | "textDocument/definition" -> DefinitionRequest(getMsgId (), parseDocumentPositionParam jsonValue)
   | "textDocument/references" -> ReferencesRequest(getMsgId (), parseReferencesParam jsonValue)
   | "textDocument/documentHighlight" -> DocumentHighlightRequest(getMsgId (), parseDocumentPositionParam jsonValue)
+  | "textDocument/documentSymbol" -> DocumentSymbolRequest(getMsgId (), parseDocumentSymbolParam jsonValue)
   | "textDocument/formatting" -> FormattingRequest(getMsgId (), getUriParam jsonValue)
   | "textDocument/hover" -> HoverRequest(getMsgId (), parseDocumentPositionParam jsonValue)
 
@@ -609,6 +618,27 @@ let private processNext () : LspIncome -> ProcessResult =
 
         JArray [ yield! toHighlights 2 reads
                  yield! toHighlights 3 writes ])
+
+      Continue
+
+    | DocumentSymbolRequest (msgId, uri) ->
+      handleRequestWith "documentSymbol" msgId (fun () ->
+        let symbols, wa =
+          WorkspaceAnalysis.documentSymbol uri current
+
+        current <- wa
+
+        // SymbolInformation[]
+        symbols
+        |> List.map (fun (name, kind, range) ->
+          let location =
+            jOfObj [ "uri", JString(Uri.toString uri)
+                     "range", jOfRange range ]
+
+          jOfObj [ "name", JString name
+                   "kind", jOfInt kind
+                   "location", location ])
+        |> JArray)
 
       Continue
 

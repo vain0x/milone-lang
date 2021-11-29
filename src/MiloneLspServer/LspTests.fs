@@ -424,6 +424,68 @@ let private testHover () =
       "No result." ]
 
 // -----------------------------------------------
+// DocumentSymbol
+// -----------------------------------------------
+
+let private doTestDocumentSymbolSingleFile title expected (ls: ProjectAnalysis) : bool * ProjectAnalysis =
+  let debug xs =
+    xs
+    |> List.sortBy (fun (_, _, pos) -> pos)
+    |> List.map (fun (name, kind, (y, x)) -> sprintf "%d:%d %s (%d)" y x name kind)
+    |> S.concat "\n"
+
+  let actual, _ =
+    ls |> LLS.ProjectAnalysis.documentSymbol docId
+
+  actual
+  |> List.map (fun (name, kind, (pos, _)) -> name, kind, pos)
+  |> debug
+  |> assertEqual title expected,
+  ls
+
+let private testDocumentSymbolSingleFile title text expected : bool =
+  createSingleFileProject text (doTestDocumentSymbolSingleFile title expected)
+  |> fst
+
+let private testDocumentSymbol () =
+  [ testDocumentSymbolSingleFile
+      "documentSymbol"
+      """
+        module rec TestProject.Program
+
+        open MiloneStd.StdMap
+
+        module S = MiloneStd.StdString
+
+        type Int = int
+
+        type Record = { F: int }
+
+        type Union =
+          | V of int
+
+        let f () =
+          ()
+
+        let main _ =
+          let localVar =
+            1
+
+          let localFun () =
+            ()
+
+          0
+      """
+      """1:31 Program (2)
+5:15 S (2)
+7:13 Int (5)
+9:13 Record (5)
+11:13 Union (5)
+14:12 f (12)
+17:12 main (12)
+21:14 localFun (12)""" ]
+
+// -----------------------------------------------
 // Completion
 // -----------------------------------------------
 
@@ -486,17 +548,18 @@ let private testCompletion () =
       """
       [ "main"; "x" ]
 
-    testCompletionSingleFile
-      "dot"
-      """
-        module rec TestProject.Program
+  // testCompletionSingleFile
+  //   "dot"
+  //   """
+  //     module rec TestProject.Program
 
-        let main _ =
-          List.   (x.y)
-      //       ^cursor
-          0
-      """
-      [ "List.*" ] ]
+  //     let main _ =
+  //       List.   (x.y)
+  //   //       ^cursor
+  //       0
+  //   """
+  //   [ "List.*" ]
+   ]
 
 // -----------------------------------------------
 // Diagnostics
@@ -553,7 +616,7 @@ let private testDiagnostics () =
   let wa =
     WorkspaceAnalysis.didChangeFile fileUri wa
 
-  let reads, writes, wa =
+  let reads, writes, _ =
     WorkspaceAnalysis.documentHighlight fileUri (2, 4) wa
 
   printfn "reads: %A" reads
@@ -568,6 +631,7 @@ let lspTests () =
   let code =
     [ testRefs ()
       testHover ()
+      testDocumentSymbol ()
       testCompletion () ]
     |> List.collect id
     |> runTests
