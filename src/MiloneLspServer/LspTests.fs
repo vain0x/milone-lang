@@ -331,8 +331,7 @@ let testRefs () =
           | MySome of int
 
         let some x : MyOption = MySome x
-        //                      ^use
-        // FIXME: incorrect range
+        //           ^use
 
         let main _ = 0
       """
@@ -353,13 +352,13 @@ let testRefs () =
             Second = y }
 
         let first (pair: MyPair) =
-        // FIXME: detect this
+        //               ^use
           pair.First
 
         let second (pair: MyPair) =
         //                ^use
           let _ : unit -> MyPair * int = fun () -> pair, 0
-          // FIXME: detect this
+          //              ^use
           pair.Second
 
         let main _ = 0
