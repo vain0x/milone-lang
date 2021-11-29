@@ -235,8 +235,7 @@ let private findModulesInDir projectDir = findModulesRecursively 0 projectDir
 [<RequireQualifiedAccess; NoEquality; NoComparison>]
 type ProjectInfo =
   { ProjectDir: string
-    ProjectName: string
-    EntryFileExt: string }
+    ProjectName: string }
 
 /// Finds all projects inside of the workspace.
 let private doFindProjects (rootUri: string) : ProjectInfo list =
@@ -256,8 +255,7 @@ let private doFindProjects (rootUri: string) : ProjectInfo list =
           if File.Exists(Path.Combine(dir, projectName + ext)) then
             let project: ProjectInfo =
               { ProjectDir = dir
-                ProjectName = projectName
-                EntryFileExt = ext }
+                ProjectName = projectName }
 
             project :: acc
           else

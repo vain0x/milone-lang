@@ -52,11 +52,10 @@ let private docId = "TestProject.TestProject"
 let private createSingleFileProject text action =
   let p: LLS.ProjectInfo =
     { ProjectDir = projectDir
-      ProjectName = projectName
-      EntryFileExt = ".milone" }
+      ProjectName = projectName }
 
-  LLS.WorkspaceAnalysis.empty
-  |> LLS.WorkspaceAnalysis.didOpenDoc (Uri "file:///example.com/TestProject/TestProject.milone") 1 text
+  WorkspaceAnalysis.empty
+  |> WorkspaceAnalysis.didOpenDoc (Uri "file:///example.com/TestProject/TestProject.milone") 1 text
   |> LLS.doWithProjectAnalysis p action
 
 let private doTestRefsSingleFile title text (ls: ProjectAnalysis) : bool * ProjectAnalysis =
@@ -577,8 +576,7 @@ let private testDiagnostics () =
 
   let p: LLS.ProjectInfo =
     { ProjectDir = projectDir
-      ProjectName = "DiagnosticsTest"
-      EntryFileExt = ".milone" }
+      ProjectName = "DiagnosticsTest" }
 
   let wa = WorkspaceAnalysis.empty
   let wa = LLS.onInitialized (Some rootUri) wa
