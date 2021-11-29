@@ -17,7 +17,7 @@
                     "--extensionDevelopmentPath=${workspaceFolder}/../../vscode_ext"
                 ],
                 "env": {
-                    "MILONE_LSP_COMMAND": "${workspaceFolder}/bin/Debug/net5.0/MiloneLspServer",
+                    "MILONE_LSP_COMMAND": "${workspaceFolder}/bin/Debug/net6.0/MiloneLspServer",
                     "MILONE_LSP_SERVER_DEV": "1",
                     "MILONE_LSP_SERVER_LOG_LEVEL": "debug",
                     "MILONE_HOME": "${workspaceFolder}/../.."
@@ -31,7 +31,7 @@
                     "--extensionDevelopmentPath=${workspaceFolder}/../../vscode_ext"
                 ],
                 "env": {
-                    "MILONE_LSP_COMMAND": "${workspaceFolder}/bin/Debug/net5.0/MiloneLspServer.exe",
+                    "MILONE_LSP_COMMAND": "${workspaceFolder}/bin/Debug/net6.0/MiloneLspServer.exe",
                     "MILONE_LSP_SERVER_DEV": "1",
                     "MILONE_LSP_SERVER_LOG_LEVEL": "debug",
                     "MILONE_HOME": "${workspaceFolder}/../.."
