@@ -404,23 +404,6 @@ let private bundleWithCache (pa: ProjectAnalysis) : BundleResult * ProjectAnalys
 // Find references
 // -----------------------------------------------
 
-/// Path of module names.
-///
-/// - File module: `[projectName; moduleName]`
-/// - Inner module: `[projectName; moduleName; name1; name2; ...]`
-/// - Module synonym: `[docId; name]`
-type private ModulePath = string list
-
-[<NoComparison>]
-type Symbol =
-  private
-  | DiscardSymbol
-  | PrimSymbol of TPrim
-  | FieldSymbol of tySerial: TySerial * Ident
-  | ValueSymbol of ValueSymbol
-  | TySymbol of TySymbol
-  | ModuleSymbol of ModulePath
-
 [<NoEquality; NoComparison>]
 type DefOrUse =
   | Def
@@ -432,11 +415,39 @@ type private Loc2 =
   | PreviousIdent of Loc
   | NextIdent of Loc
 
+/// Path of module names.
+///
+/// - File module: `[projectName; moduleName]`
+/// - Inner module: `[projectName; moduleName; name1; name2; ...]`
+/// - Module synonym: `[docId; name]`
+type private ModulePath = string list
+
+/// Symbol collected by lowering AST.
+[<NoComparison>]
+type DSymbol =
+  private
+  | DFunSymbol
+  | DVariantSymbol
+  | DTySymbol
+  | DModuleSymbol of ModulePath
+
+type private DSymbolOccurrence = DSymbol * DefOrUse * Loc2
+
+[<NoComparison>]
+type Symbol =
+  private
+  | DiscardSymbol
+  | PrimSymbol of TPrim
+  | FieldSymbol of tySerial: TySerial * Ident
+  | ValueSymbol of ValueSymbol
+  | TySymbol of TySymbol
+  | ModuleSymbol of ModulePath
+
 // FIXME: name
 type private SymbolOccurrence1 = Symbol * DefOrUse * Loc
 type private SymbolOccurrence = Symbol * DefOrUse * Ty option * Loc2
 
-let private lowerAExpr docId acc expr : SymbolOccurrence list =
+let private lowerAExpr docId acc expr : DSymbolOccurrence list =
   let onExpr acc expr = lowerAExpr docId acc expr
   let onExprOpt acc exprOpt = exprOpt |> Option.fold onExpr acc
   let onExprs acc exprs = exprs |> List.fold onExpr acc
@@ -478,14 +489,14 @@ let private lowerAExpr docId acc expr : SymbolOccurrence list =
   | ANavExpr (l, _, _) ->
     match l with
     | AIdentExpr (Name (l, pos)) when l.Length = 1 && C.isUpper l.[0] ->
-      (ModuleSymbol [ docId; l ], Use, None, toLoc pos)
+      (DModuleSymbol [ docId; l ], Use, toLoc pos)
       :: acc
 
     | ANavExpr (AIdentExpr p, m, _) ->
       let path = [ p; m ] |> List.map nameToIdent
 
       if isModulePathLike path then
-        (ModuleSymbol path, Use, None, toLoc (nameToPos m))
+        (DModuleSymbol path, Use, toLoc (nameToPos m))
         :: acc
       else
         acc
@@ -505,7 +516,7 @@ let private lowerAExpr docId acc expr : SymbolOccurrence list =
 
   | ALetExpr (_, _, init, next, _) -> lowerAExpr docId (onExpr acc init) next
 
-let private lowerADecl docId acc decl : SymbolOccurrence list =
+let private lowerADecl docId acc decl : DSymbolOccurrence list =
   let onExpr acc expr = lowerAExpr docId acc expr
   let onDecl acc decl = lowerADecl docId acc decl
   let toLoc (y, x) = At(Loc(docId, y, x))
@@ -521,24 +532,24 @@ let private lowerADecl docId acc decl : SymbolOccurrence list =
   | AOpenDecl (path, pos) ->
     let pos = path |> pathToPos pos
 
-    (ModuleSymbol(path |> List.map nameToIdent), Use, None, toLoc pos)
+    (DModuleSymbol(path |> List.map nameToIdent), Use, toLoc pos)
     :: acc
 
   | AModuleSynonymDecl (Name (synonym, identPos), path, pos) ->
     let acc =
-      (ModuleSymbol [ docId; synonym ], Def, None, toLoc identPos)
+      (DModuleSymbol [ docId; synonym ], Def, toLoc identPos)
       :: acc
 
     let pos = path |> pathToPos pos
 
-    (ModuleSymbol(path |> List.map nameToIdent), Use, None, toLoc pos)
+    (DModuleSymbol(path |> List.map nameToIdent), Use, toLoc pos)
     :: acc
 
   | AModuleDecl (_, _, _, decls, _) -> acc |> up (List.fold onDecl) decls
 
   | AAttrDecl (_, next, _) -> lowerADecl docId acc next
 
-let private lowerARoot (docId: DocId) acc root : SymbolOccurrence list =
+let private lowerARoot (docId: DocId) acc root : DSymbolOccurrence list =
   let toLoc (y, x) = At(Loc(docId, y, x))
   let (ARoot (headOpt, decls)) = root
 
@@ -547,13 +558,13 @@ let private lowerARoot (docId: DocId) acc root : SymbolOccurrence list =
     | Some (path, pos) ->
       let pos = path |> pathToPos pos
 
-      (ModuleSymbol(path |> List.map nameToIdent), Def, None, toLoc pos)
+      (DModuleSymbol(path |> List.map nameToIdent), Def, toLoc pos)
       :: acc
 
     | _ ->
       let path = docId.Split(".") |> Array.toList
 
-      (ModuleSymbol path, Def, None, toLoc (0, 0))
+      (DModuleSymbol path, Def, toLoc (0, 0))
       :: acc
 
   acc |> up (List.fold (lowerADecl docId)) decls
@@ -805,12 +816,19 @@ let private collectSymbolsInExpr (pa: ProjectAnalysis) (modules: TProgram) =
     | Some (LSyntaxData (_, _, ast, _)) -> docId, ast
     | None -> failwith "must be parsed"
 
-  []
-  |> up
-       (List.fold (fun acc m ->
-         let docId, ast = parseModule m
-         lowerARoot docId acc ast))
-       modules
+  let moduleSymbols =
+    modules
+    |> List.fold
+      (fun acc m ->
+        let docId, ast = parseModule m
+        lowerARoot docId acc ast)
+      []
+    |> List.choose (fun (symbol, defOrUse, loc) ->
+      match symbol with
+      | DModuleSymbol path -> Some(ModuleSymbol path, defOrUse, None, loc)
+      | _ -> None)
+
+  moduleSymbols
   |> up lowerTModules modules
   |> (fun acc -> resolveLoc acc pa)
   |> List.map (fun (symbol, defOrUse, _, loc) -> symbol, defOrUse, loc)
