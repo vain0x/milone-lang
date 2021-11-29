@@ -197,7 +197,7 @@ let private commandGen2 () =
     runToOut
       "dotnet"
       [ "run"
-        "-p"
+        "--project"
         "src/MiloneCli"
         "--"
         "compile"
@@ -380,7 +380,7 @@ let private getExt platform : string =
 let private buildSelf () : unit =
   run
     "dotnet"
-    ("run -p src/MiloneCli -- build --release src/MiloneCli"
+    ("run --project src/MiloneCli -- build --release src/MiloneCli"
      |> StringExt.split " ")
 
 let private windowsBinaryPath =
