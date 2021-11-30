@@ -486,8 +486,8 @@ let private enableDidChangedWatchedFiles () =
 
   jsonRpcWriteWithIdParams "client/registerCapability" msgId param
 
-let private processNext () : LspIncome -> ProcessResult =
-  let mutable current = WorkspaceAnalysis.empty
+let private processNext miloneHome : LspIncome -> ProcessResult =
+  let mutable current = WorkspaceAnalysis.empty miloneHome
   let mutable exitCode: int = 1
   let mutable rootUriOpt: string option = None
 
@@ -833,11 +833,12 @@ let private preprocess (incomes: LspIncome list) : LspIncome list =
 
 [<RequireQualifiedAccess; NoEquality; NoComparison>]
 type LspServerHost =
-  { RequestReceived: IEvent<JsonValue>
+  { MiloneHome: string
+    RequestReceived: IEvent<JsonValue>
     OnQueueLengthChanged: int -> unit }
 
 let lspServer (host: LspServerHost) : Async<int> =
-  let onRequest = processNext ()
+  let onRequest = processNext host.MiloneHome
 
   let queue = ConcurrentQueue<LspIncome>()
   let queueChangedEvent = Event<unit>()

@@ -54,7 +54,7 @@ let private createSingleFileProject text action =
     { ProjectDir = projectDir
       ProjectName = projectName }
 
-  WorkspaceAnalysis.empty
+  WorkspaceAnalysis.empty "/example.com/.milone"
   |> WorkspaceAnalysis.didOpenDoc (Uri "file:///example.com/TestProject/TestProject.milone") 1 text
   |> LLS.doWithProjectAnalysis p action
 
@@ -643,7 +643,7 @@ let private testCompletion () =
 
 // Run server (stateful).
 
-let private testDiagnostics () =
+let private testDiagnostics miloneHome =
   let workDir = System.Environment.CurrentDirectory
 
   let rootUri =
@@ -655,7 +655,7 @@ let private testDiagnostics () =
     { ProjectDir = projectDir
       ProjectName = "DiagnosticsTest" }
 
-  let wa = WorkspaceAnalysis.empty
+  let wa = WorkspaceAnalysis.empty miloneHome
   let wa = LLS.onInitialized (Some rootUri) wa
 
   let result, wa = WorkspaceAnalysis.diagnostics wa
@@ -702,7 +702,7 @@ let private testDiagnostics () =
 // Interface
 // -----------------------------------------------
 
-let lspTests () =
+let lspTests miloneHome =
   let code =
     [ testRefs ()
       testHover ()
@@ -712,6 +712,7 @@ let lspTests () =
     |> List.collect id
     |> runTests
 
-  if code = 0 then testDiagnostics ()
+  if code = 0 then
+    testDiagnostics miloneHome
 
   exit code

@@ -153,23 +153,6 @@ let private uriToFilePath (uri: Uri) =
 // Globals
 // -----------------------------------------------
 
-let private miloneHome =
-  let opt (s: string) =
-    match s with
-    | null
-    | "" -> None
-    | _ -> Some s
-
-  let getMiloneHomeEnv () =
-    Environment.GetEnvironmentVariable("MILONE_HOME")
-    |> opt
-
-  let getHomeEnv () =
-    Environment.GetFolderPath(Environment.SpecialFolder.UserProfile)
-    |> opt
-
-  SyntaxApi.getMiloneHomeFromEnv getMiloneHomeEnv getHomeEnv
-
 /// Whether dir is excluded in traversal?
 let private dirIsExcluded (dir: string) =
   let name = basename dir
@@ -757,7 +740,7 @@ type WorkspaceAnalysis =
 
     Host: WorkspaceAnalysisHost }
 
-let private emptyWorkspaceAnalysis: WorkspaceAnalysis =
+let private emptyWorkspaceAnalysis (miloneHome: MiloneHome): WorkspaceAnalysis =
   let stdLibProjects = SyntaxApi.getStdLibProjects miloneHome
 
   let stdLibModules =
@@ -937,7 +920,7 @@ let doWithProjectAnalysis
   result, wa
 
 module WorkspaceAnalysis =
-  let empty: WorkspaceAnalysis = emptyWorkspaceAnalysis
+  let empty (miloneHome: MiloneHome): WorkspaceAnalysis = emptyWorkspaceAnalysis miloneHome
 
   let didOpenDoc (uri: Uri) (version: int) (text: string) (wa: WorkspaceAnalysis) =
     traceFn "didOpenDoc %s v:%d" (Uri.toString uri) version
