@@ -1,12 +1,14 @@
 module rec MiloneLspServer.Program
 
 open System
+open System.IO
 open MiloneLspServer.JsonRpcReader
 open MiloneLspServer.LspServer
 
 // FIXME: shouldn't depend
 module SyntaxApi = MiloneSyntax.SyntaxApi
 
+module LLS = MiloneLspServer.LspLangService
 module LspTests = MiloneLspServer.LspTests
 
 // -----------------------------------------------
@@ -30,6 +32,11 @@ let private getHomeEnv () =
 let private miloneHome =
   SyntaxApi.getMiloneHomeFromEnv getMiloneHomeEnv getHomeEnv
 
+let private getHost () : LLS.WorkspaceAnalysisHost =
+  { MiloneHome = miloneHome
+    FileExists = File.Exists
+    DirEntries = fun dir -> List.ofArray (Directory.GetFiles(dir)), List.ofArray (Directory.GetDirectories(dir)) }
+
 // -----------------------------------------------
 // Entrypoint
 // -----------------------------------------------
@@ -37,7 +44,7 @@ let private miloneHome =
 [<EntryPoint>]
 let main (args: string array) =
   match args with
-  | [| "test" |] -> LspTests.lspTests miloneHome
+  | [| "test" |] -> LspTests.lspTests (getHost ())
   | _ -> ()
 
   async {
@@ -53,13 +60,14 @@ let main (args: string array) =
 
     let! consumerWork =
       lspServer
-        { MiloneHome = miloneHome
-          RequestReceived = requestReceivedEvent.Publish
+        { RequestReceived = requestReceivedEvent.Publish
 
           OnQueueLengthChanged =
             fun len ->
               System.Threading.Interlocked.Exchange(&queueLength, len)
-              |> ignore }
+              |> ignore
+
+          Host = getHost () }
       |> Async.StartChild
 
     startJsonRpcReader

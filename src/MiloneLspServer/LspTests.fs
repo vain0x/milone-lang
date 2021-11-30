@@ -49,13 +49,25 @@ let private projectDir = "/example.com/TestProject"
 let private projectName = "TestProject"
 let private docId = "TestProject.TestProject"
 
+let private getDirEntries _ = [], []
+
 let private createSingleFileProject text action =
   let p: LLS.ProjectInfo =
     { ProjectDir = projectDir
       ProjectName = projectName }
 
-  WorkspaceAnalysis.empty "/example.com/.milone"
-  |> WorkspaceAnalysis.didOpenDoc (Uri "file:///example.com/TestProject/TestProject.milone") 1 text
+  let filePath =
+    "/example.com/TestProject/TestProject.milone"
+
+  let uri = LLS.uriOfFilePath filePath
+
+  let host: LLS.WorkspaceAnalysisHost =
+    { MiloneHome = "/example.com/.milone"
+      FileExists = fun name -> name = filePath
+      DirEntries = getDirEntries }
+
+  WorkspaceAnalysis.empty host
+  |> WorkspaceAnalysis.didOpenDoc uri 1 text
   |> LLS.doWithProjectAnalysis p action
 
 let private doTestRefsSingleFile title text (ls: ProjectAnalysis) : bool * ProjectAnalysis =
@@ -584,7 +596,7 @@ let private doTestCompletionSingleFile title text expected ls : bool * _ =
 
   let actual, ls =
     match ls
-          |> LLS.ProjectAnalysis.completion [] projectDir docId targetPos
+          |> LLS.ProjectAnalysis.completion [] getDirEntries projectDir docId targetPos
       with
     | [], ls ->
       let errors, ls =

@@ -661,7 +661,7 @@ let private processNext miloneHome : LspIncome -> ProcessResult =
 
     | FormattingRequest (msgId, uri) ->
       handleRequestWith "formatting" msgId (fun () ->
-        match LspLangService.formatting uri current with
+        match LspLangService.Formatting.formatting uri current with
         | None -> JNull
         | Some result ->
           result.Edits
@@ -833,12 +833,12 @@ let private preprocess (incomes: LspIncome list) : LspIncome list =
 
 [<RequireQualifiedAccess; NoEquality; NoComparison>]
 type LspServerHost =
-  { MiloneHome: string
-    RequestReceived: IEvent<JsonValue>
-    OnQueueLengthChanged: int -> unit }
+  { RequestReceived: IEvent<JsonValue>
+    OnQueueLengthChanged: int -> unit
+    Host: LspLangService.WorkspaceAnalysisHost }
 
 let lspServer (host: LspServerHost) : Async<int> =
-  let onRequest = processNext host.MiloneHome
+  let onRequest = processNext host.Host
 
   let queue = ConcurrentQueue<LspIncome>()
   let queueChangedEvent = Event<unit>()

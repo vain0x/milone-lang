@@ -1,7 +1,5 @@
 module MiloneLspServer.LspLangService
 
-open System
-open System.IO
 open MiloneShared.SharedTypes
 open MiloneShared.UtilParallel
 open MiloneStd.StdMap
@@ -21,6 +19,7 @@ type private ProjectDir = string
 type private MiloneHome = string
 type private FileExistsFun = FilePath -> bool
 type private DocIdToFilePathFun = ProjectDir -> DocId -> string
+type private DirEntriesFun = string -> string list * string list
 type private ReadSourceFileFun = FilePath -> Future<string option>
 
 // -----------------------------------------------
@@ -168,7 +167,7 @@ let private dirIsExcluded (dir: string) =
 // Standard libs
 // ---------------------------------------------
 
-let private findModulesRecursively (maxDepth: int) (rootDir: string) : (string * string) list =
+let private findModulesRecursively getDirEntries (maxDepth: int) (rootDir: string) : (string * string) list =
   let rec bfs acc stack =
     match stack with
     | [] -> acc
@@ -177,10 +176,12 @@ let private findModulesRecursively (maxDepth: int) (rootDir: string) : (string *
       traceFn "in %d:%s" depth dir
       assert (depth <= maxDepth)
 
+      let files, subdirs = getDirEntries dir
+
       let acc =
         let projectName = stem dir
 
-        Directory.GetFiles(dir)
+        files
         |> Seq.fold
              (fun acc file ->
                match getExt file with
@@ -195,7 +196,7 @@ let private findModulesRecursively (maxDepth: int) (rootDir: string) : (string *
 
       let stack =
         if depth < maxDepth then
-          Directory.GetDirectories(dir)
+          subdirs
           |> Seq.filter (fun subdir -> subdir |> dirIsExcluded |> not)
           |> Seq.fold (fun stack subdir -> (depth + 1, subdir) :: stack) stack
         else
@@ -205,7 +206,8 @@ let private findModulesRecursively (maxDepth: int) (rootDir: string) : (string *
 
   bfs [] [ 0, rootDir ]
 
-let private findModulesInDir projectDir = findModulesRecursively 0 projectDir
+let private findModulesInDir getDirEntries projectDir =
+  findModulesRecursively getDirEntries 0 projectDir
 
 // ---------------------------------------------
 // Project
@@ -217,7 +219,7 @@ type ProjectInfo =
     ProjectName: string }
 
 /// Finds all projects inside of the workspace.
-let private doFindProjects (rootUri: string) : ProjectInfo list =
+let private doFindProjects fileExists getDirEntries (rootUri: string) : ProjectInfo list =
   let rootDir = Uri rootUri |> uriToFilePath
 
   // Find projects recursively.
@@ -226,12 +228,11 @@ let private doFindProjects (rootUri: string) : ProjectInfo list =
     | [] -> acc
 
     | (depth, dir) :: stack ->
-
       let acc =
         let projectName = stem dir
 
         let tryAddProject ext acc =
-          if File.Exists(Path.Combine(dir, projectName + ext)) then
+          if fileExists (dir + "/" + projectName + ext) then
             let project: ProjectInfo =
               { ProjectDir = dir
                 ProjectName = projectName }
@@ -246,7 +247,9 @@ let private doFindProjects (rootUri: string) : ProjectInfo list =
 
       let stack =
         if depth < 3 then
-          Directory.GetDirectories(dir)
+          let _, subdirs = getDirEntries dir
+
+          subdirs
           |> Seq.filter (fun subdir -> subdir |> dirIsExcluded |> not)
           |> Seq.fold (fun stack subdir -> (depth + 1, subdir) :: stack) stack
         else
@@ -454,6 +457,7 @@ module ProjectAnalysis =
 
   let completion
     stdLibModules
+    getDirEntries
     (projectDir: ProjectDir)
     (docId: DocId)
     (targetPos: Pos)
@@ -469,7 +473,7 @@ module ProjectAnalysis =
       |> List.exists LToken.isModuleOrOpenKeyword
 
     let collectModuleNames pa =
-      List.append stdLibModules (findModulesInDir projectDir)
+      List.append stdLibModules (findModulesInDir getDirEntries projectDir)
       |> List.collect (fun (p, m) -> [ p; m ])
       |> listUnique,
       pa
@@ -715,9 +719,8 @@ module ProjectAnalysis =
 [<RequireQualifiedAccess; NoEquality; NoComparison>]
 type WorkspaceAnalysisHost =
   { MiloneHome: MiloneHome
-    StdLibModules: (string * ProjectDir) list
-    DocIdToFilePath: DocIdToFilePathFun
-    ReadSourceFile: ReadSourceFileFun }
+    FileExists: FileExistsFun
+    DirEntries: DirEntriesFun }
 
 /// State of workspace-wide analysis.
 /// That is, this is basically the root of state of LSP server.
@@ -738,14 +741,19 @@ type WorkspaceAnalysis =
     DiagnosticsKeys: Uri list
     DiagnosticsCache: DiagnosticsCache<byte array>
 
+    StdLibModules: (string * ProjectDir) list
+    DocIdToFilePath: DocIdToFilePathFun
+    ReadSourceFile: ReadSourceFileFun
+
     Host: WorkspaceAnalysisHost }
 
-let private emptyWorkspaceAnalysis (miloneHome: MiloneHome): WorkspaceAnalysis =
+let private emptyWorkspaceAnalysis (host: WorkspaceAnalysisHost) : WorkspaceAnalysis =
+  let miloneHome = host.MiloneHome
   let stdLibProjects = SyntaxApi.getStdLibProjects miloneHome
 
   let stdLibModules =
     stdLibProjects
-    |> List.collect (fun (_, projectDir) -> findModulesInDir projectDir)
+    |> List.collect (fun (_, projectDir) -> findModulesInDir host.DirEntries projectDir)
 
   { LastId = 0
     Docs = TMap.empty Uri.compare
@@ -758,23 +766,22 @@ let private emptyWorkspaceAnalysis (miloneHome: MiloneHome): WorkspaceAnalysis =
     DiagnosticsKeys = []
     DiagnosticsCache = DiagnosticsCache.empty Md5Helper.ofString Md5Helper.equals
 
-    Host =
-      { MiloneHome = miloneHome
-        StdLibModules = stdLibModules
-        DocIdToFilePath = convertDocIdToFilePath File.Exists (Map.ofList stdLibProjects)
-        ReadSourceFile = SyntaxApi.readSourceFile File.readTextFile } }
+    StdLibModules = stdLibModules
+    DocIdToFilePath = convertDocIdToFilePath host.FileExists (Map.ofList stdLibProjects)
+    ReadSourceFile = SyntaxApi.readSourceFile File.readTextFile
+
+    Host = host }
 
 let private freshId (wa: WorkspaceAnalysis) =
   wa.LastId + 1, { wa with LastId = wa.LastId + 1 }
 
-let private docIdToFilePath (p: ProjectInfo) docId (wa: WorkspaceAnalysis) =
-  wa.Host.DocIdToFilePath p.ProjectDir docId
+let private docIdToFilePath (p: ProjectInfo) docId (wa: WorkspaceAnalysis) = wa.DocIdToFilePath p.ProjectDir docId
 
 let private docIdToUri p docId (wa: WorkspaceAnalysis) =
   docIdToFilePath p docId wa |> uriOfFilePath
 
 let private readSourceFile p docId (wa: WorkspaceAnalysis) =
-  wa.Host.ReadSourceFile(docIdToFilePath p docId wa)
+  wa.ReadSourceFile(docIdToFilePath p docId wa)
 
 /// Can send edits to a file?
 ///
@@ -920,7 +927,7 @@ let doWithProjectAnalysis
   result, wa
 
 module WorkspaceAnalysis =
-  let empty (miloneHome: MiloneHome): WorkspaceAnalysis = emptyWorkspaceAnalysis miloneHome
+  let empty (host: WorkspaceAnalysisHost) : WorkspaceAnalysis = emptyWorkspaceAnalysis host
 
   let didOpenDoc (uri: Uri) (version: int) (text: string) (wa: WorkspaceAnalysis) =
     traceFn "didOpenDoc %s v:%d" (Uri.toString uri) version
@@ -997,7 +1004,7 @@ module WorkspaceAnalysis =
            (fun wa p ->
              doWithProjectAnalysis
                p
-               (ProjectAnalysis.completion wa.Host.StdLibModules p.ProjectDir (uriToDocId uri) pos)
+               (ProjectAnalysis.completion wa.StdLibModules wa.Host.DirEntries p.ProjectDir (uriToDocId uri) pos)
                wa)
            wa
 
@@ -1096,7 +1103,7 @@ module WorkspaceAnalysis =
 let onInitialized rootUriOpt (wa: WorkspaceAnalysis) : WorkspaceAnalysis =
   let projects =
     match rootUriOpt with
-    | Some rootUri -> doFindProjects rootUri
+    | Some rootUri -> doFindProjects wa.Host.FileExists wa.Host.DirEntries rootUri
     | None -> []
 
   infoFn "findProjects: %A" (List.map (fun (p: ProjectInfo) -> p.ProjectDir) projects)
@@ -1115,62 +1122,68 @@ type FormattingResult = { Edits: (Range * string) list }
 let private formattingResultOfDiff _prev next : FormattingResult =
   { Edits = [ ((0, 0), (1100100100, 0)), next ] }
 
-let formatting (uri: Uri) (wa: WorkspaceAnalysis) : FormattingResult option =
-  let filePath = uriToFilePath uri
-  let dir = Path.GetDirectoryName(filePath)
+module Formatting =
+  open System.Diagnostics
+  open System.IO
 
-  let temp =
-    let basename =
-      Path.GetFileNameWithoutExtension(filePath)
+  type E = System.Environment
 
-    let suffix = Guid.NewGuid().ToString()
+  let formatting (uri: Uri) (wa: WorkspaceAnalysis) : FormattingResult option =
+    let filePath = uriToFilePath uri
+    let dir = Path.GetDirectoryName(filePath)
 
-    // Create temporary file alongside the file for .editorconfig.
-    Path.Combine(dir, sprintf "%s_%s.ignored.fs" basename suffix)
+    let temp =
+      let basename =
+        Path.GetFileNameWithoutExtension(filePath)
 
-  let textOpt =
-    match wa.Docs |> TMap.tryFind uri with
-    | Some (_, text) -> Some text
-    | _ -> None
+      let suffix = System.Guid.NewGuid().ToString()
 
-  try
-    let text =
-      match textOpt with
-      | Some text ->
-        File.WriteAllText(temp, text)
-        text
+      // Create temporary file alongside the file for .editorconfig.
+      Path.Combine(dir, sprintf "%s_%s.ignored.fs" basename suffix)
 
-      | None ->
-        File.Copy(filePath, temp)
-        File.ReadAllText(filePath)
+    let textOpt =
+      match wa.Docs |> TMap.tryFind uri with
+      | Some (_, text) -> Some text
+      | _ -> None
 
-    use proc =
-      // When the server is executed as VSCode extension,
-      // some environment variables are not inherited.
-
-      let homeDir =
-        Environment.GetFolderPath(Environment.SpecialFolder.UserProfile)
-
-      let startInfo = Diagnostics.ProcessStartInfo()
-      startInfo.FileName <- "/usr/bin/dotnet"
-      startInfo.ArgumentList.Add("fantomas")
-      startInfo.ArgumentList.Add(temp)
-      startInfo.WorkingDirectory <- dir
-      startInfo.EnvironmentVariables.Add("DOTNET_CLI_HOME", homeDir)
-      startInfo.EnvironmentVariables.Add("PATH", "/usr/bin")
-      startInfo.RedirectStandardOutput <- true
-      Diagnostics.Process.Start(startInfo)
-
-    let exited = proc.WaitForExit(30 * 1000)
-
-    if not exited then
-      proc.Kill(entireProcessTree = true)
-      None
-    else
-      let newText = File.ReadAllText(temp)
-      formattingResultOfDiff text newText |> Some
-  finally
     try
-      File.Delete(temp)
-    with
-    | ex -> warnFn "failed deleting temporary file '%s': %O" temp ex
+      let text =
+        match textOpt with
+        | Some text ->
+          File.WriteAllText(temp, text)
+          text
+
+        | None ->
+          File.Copy(filePath, temp)
+          File.ReadAllText(filePath)
+
+      use proc =
+        // When the server is executed as VSCode extension,
+        // some environment variables are not inherited.
+
+        let homeDir =
+          E.GetFolderPath(E.SpecialFolder.UserProfile)
+
+        let startInfo = ProcessStartInfo()
+        startInfo.FileName <- "/usr/bin/dotnet"
+        startInfo.ArgumentList.Add("fantomas")
+        startInfo.ArgumentList.Add(temp)
+        startInfo.WorkingDirectory <- dir
+        startInfo.EnvironmentVariables.Add("DOTNET_CLI_HOME", homeDir)
+        startInfo.EnvironmentVariables.Add("PATH", "/usr/bin")
+        startInfo.RedirectStandardOutput <- true
+        Process.Start(startInfo)
+
+      let exited = proc.WaitForExit(30 * 1000)
+
+      if not exited then
+        proc.Kill(entireProcessTree = true)
+        None
+      else
+        let newText = File.ReadAllText(temp)
+        formattingResultOfDiff text newText |> Some
+    finally
+      try
+        File.Delete(temp)
+      with
+      | ex -> warnFn "failed deleting temporary file '%s': %O" temp ex
