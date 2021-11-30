@@ -11,6 +11,7 @@ open MiloneLspServer.Util
 // FIXME: shouldn't depend
 module SyntaxApi = MiloneSyntax.SyntaxApi
 
+module C = MiloneStd.StdChar
 module S = MiloneStd.StdString
 
 type private DocVersion = int
@@ -59,6 +60,11 @@ let private listCutWith equals item xs : 'T RevList * 'T list * bool =
   | Some (_, rest) -> acc, rest, true
   | None -> acc, [], false
 
+let private splitAt (i: int) (s: string) =
+  if i <= 0 then "", s
+  else if s.Length <= i then s, ""
+  else s.[0..i - 1], s.[i..s.Length - 1]
+
 let private tryReplace (pattern: string) (target: string) (s: string) =
   if s |> S.contains pattern then
     s |> S.replace pattern target, true
@@ -67,7 +73,9 @@ let private tryReplace (pattern: string) (target: string) (s: string) =
 
 let private trimEndSep (path: string) = S.trimEndIf (fun c -> c = '/') path
 
-let private dirname (path: string) =
+let private pathJoin l r = l + "/" + r
+
+let dirname (path: string) =
   let rec go (s: string) =
     match S.findLastIndex "/" s with
     | None
@@ -81,25 +89,61 @@ let private dirname (path: string) =
 
 let private basename (path: string) =
   match S.findLastIndex "/" path with
-  | Some i -> S.skip (i + 1) path
-  | None -> path
-
-let private getExt (path: string) =
-  let path = basename path
-
-  match S.findLastIndex "." path with
-  | Some i when 0 < i && i < path.Length -> Some(S.skip i path)
-  | _ -> None
+  | Some i when path <> "/" -> S.skip (i + 1) path
+  | _ -> path
 
 let private stem (path: string) =
   let path = basename path
 
   match S.findLastIndex "." path with
-  | Some i when 0 < i && i < path.Length -> S.slice 0 i path
+  | Some i when 0 < i && i + 1 < path.Length -> S.slice 0 i path
   | _ -> path
 
-/// Normalizes path syntactically. Note Windows prefix is unsupported yet.
-let private normalize (path: string) =
+let private hasDriveLetter (path: string) =
+  path.Length >= 2
+  && C.isAlphabetic path.[0]
+  && path.[1] = ':'
+
+let private isRooted (path: string) =
+  path |> S.startsWith "/" || hasDriveLetter path
+
+let private stripRoot (path: string) =
+  let path, rooted = path |> S.stripStart "/"
+
+  if rooted then
+    Some "/", path
+  else if path.Length >= 3
+          && hasDriveLetter path
+          && path.[2] = '/' then
+    let root, rest = splitAt 3 path
+    Some root, rest
+  else
+    None, path
+
+let private pathContract (path: string) =
+  let rec go acc (xs: string list) =
+    match acc, xs with
+    | _, "." :: xs -> go acc xs
+    | _ :: acc, ".." :: xs -> go acc xs
+
+    | _, [] -> acc
+    | _, x :: xs -> go (x :: acc) xs
+
+  match stripRoot path with
+  | _, "" -> path
+
+  | rootOpt, path ->
+    let path =
+      path
+      |> S.split "/"
+      |> go []
+      |> List.rev
+      |> S.concat "/"
+
+    (rootOpt |> Option.defaultValue "") + path
+
+/// Normalizes path syntactically. Note some of Windows prefix is unsupported yet.
+let normalize (path: string) =
   let path = path |> S.replace "\\" "/"
 
   let path =
@@ -109,21 +153,16 @@ let private normalize (path: string) =
 
     removeDoubleSlashes path
 
-  let path =
-    if path |> S.startsWith "/" then
-      path
-    else
-      "/" + path
+  let path = path |> trimEndSep
 
-  let rec collapseTwoDots (segments: string list) =
-    match segments |> listCutWith (=) ".." with
-    | _ :: acc, rest, true -> collapseTwoDots (listAppend acc rest)
-    | _ -> segments
+  pathContract path
 
-  path
-  |> S.split "/"
-  |> collapseTwoDots
-  |> S.concat "/"
+let private getExt (path: string) =
+  let path = basename path
+
+  match S.findLastIndex "." path with
+  | Some i when 0 < i && i < path.Length -> Some(S.skip i path)
+  | _ -> None
 
 let uriOfFilePath (filePath: string) =
   let pathname =

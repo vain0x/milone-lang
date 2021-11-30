@@ -49,26 +49,120 @@ let private projectDir = "/example.com/TestProject"
 let private projectName = "TestProject"
 let private docId = "TestProject.TestProject"
 
-let private getDirEntries _ = [], []
+let private components (path: string) =
+  if path = "/" then
+    []
+  else
+    let pathname, ok = path |> S.stripStart "/"
 
-let private createSingleFileProject text action =
-  let p: LLS.ProjectInfo =
-    { ProjectDir = projectDir
-      ProjectName = projectName }
+    if not ok then
+      failwithf "not supported relative path: %s" path
 
-  let filePath =
-    "/example.com/TestProject/TestProject.milone"
+    S.split "/" pathname
 
-  let uri = LLS.uriOfFilePath filePath
+let private stripCommonPrefix equals prefix xs =
+  match prefix, xs with
+  | p :: ps, x :: xs when equals p x -> stripCommonPrefix equals ps xs
+  | _ -> prefix, xs
+
+let private ensureNormalization hint path =
+  let normalized = LLS.normalize path
+
+  if path <> normalized then
+    eprintfn "warn: %s non-normal filepath used.\n  given: %s\n  normal: %s" hint path normalized
+
+  normalized
+
+let private dirEntriesIn files dir =
+  let dir = ensureNormalization "DirEntries" dir
+  let dirComponents = components dir
+
+  let files, subdirs =
+    files
+    |> List.filter (fun (path, _) -> path |> S.startsWith dir)
+    |> List.fold
+         (fun (fileAcc, subdirAcc) (path, _) ->
+           let _, x =
+             stripCommonPrefix (=) dirComponents (components path)
+
+           match x with
+           | [ filename ] -> dir + "/" + filename :: fileAcc, subdirAcc
+           | subdir :: _ -> fileAcc, dir + "/" + subdir :: subdirAcc
+           | _ -> fileAcc, subdirAcc)
+         ([], [])
+
+  let files = files |> List.sort
+  let subdirs = subdirs |> set |> Set.toList // unique
+
+  files, subdirs
+
+let private testDirEntries () =
+  let files =
+    [ "/$/CmdFoo/CmdFoo.milone"
+      "/$/CmdFoo/Types.milone"
+      "/$/LibBar/Types.milone"
+      "/$/LibBar/Domain.milone"
+      "/$/README.md" ]
+    |> List.map (fun path -> path, "")
+
+  let f dir expected =
+    let actual = dirEntriesIn files dir
+
+    if actual <> expected then
+      eprintfn "actual: %A\nexpected: %A" actual expected
+      assert false
+
+  f "/$" ([ "/$/README.md" ], [ "/$/CmdFoo"; "/$/LibBar" ])
+
+  f
+    "/$/CmdFoo"
+    ([ "/$/CmdFoo/CmdFoo.milone"
+       "/$/CmdFoo/Types.milone" ],
+     [])
+
+let private createWorkspaceAnalysisWithFiles miloneHome rootDir files =
+  let fileMap =
+    files
+    |> List.map (fun (name, contents) -> LLS.normalize name, contents)
+    |> Map.ofList
 
   let host: LLS.WorkspaceAnalysisHost =
-    { MiloneHome = "/example.com/.milone"
-      FileExists = fun name -> name = filePath
-      DirEntries = getDirEntries }
+    { MiloneHome = miloneHome
 
-  WorkspaceAnalysis.empty host
-  |> WorkspaceAnalysis.didOpenDoc uri 1 text
-  |> LLS.doWithProjectAnalysis p action
+      FileExists =
+        fun path ->
+          let path = ensureNormalization "FileEntries" path
+          fileMap |> Map.containsKey (LLS.normalize path)
+
+      DirEntries = dirEntriesIn files }
+
+  let wa =
+    WorkspaceAnalysis.empty host
+    |> LLS.onInitialized (
+      rootDir
+      |> LLS.uriOfFilePath
+      |> Uri.toString
+      |> Some
+    )
+
+  files
+  |> List.fold
+       (fun wa (path, contents) ->
+         wa
+         |> WorkspaceAnalysis.didOpenDoc (LLS.uriOfFilePath path) 1 contents)
+       wa
+
+let private getProject name (wa: LLS.WorkspaceAnalysis) =
+  wa.ProjectList
+  |> List.tryFind (fun (p: LLS.ProjectInfo) -> p.ProjectName = name)
+  |> expect ("project " + name)
+
+let private createSingleFileProject text action =
+  let wa =
+    createWorkspaceAnalysisWithFiles "/$/.milone" "/$" [ "/$/root/TestProject/TestProject.milone", text ]
+
+  wa
+  |> LLS.doWithProjectAnalysis (getProject "TestProject" wa) action
 
 let private doTestRefsSingleFile title text (ls: ProjectAnalysis) : bool * ProjectAnalysis =
   let anchors =
@@ -577,6 +671,8 @@ let private testDocumentSymbol () =
 // Completion
 // -----------------------------------------------
 
+let private getDirEntries _ = [], []
+
 let private doTestCompletionSingleFile title text expected ls : bool * _ =
   let targetPos =
     let lines = text |> toLines
@@ -715,6 +811,8 @@ let private testDiagnostics miloneHome =
 // -----------------------------------------------
 
 let lspTests miloneHome =
+  testDirEntries ()
+
   let code =
     [ testRefs ()
       testHover ()
