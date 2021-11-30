@@ -170,10 +170,6 @@ let private miloneHome =
 
   SyntaxApi.getMiloneHomeFromEnv getMiloneHomeEnv getHomeEnv
 
-let private stdLibProjects =
-  SyntaxApi.getStdLibProjects miloneHome
-  |> Map.ofList
-
 /// Whether dir is excluded in traversal?
 let private dirIsExcluded (dir: string) =
   let name = basename dir
@@ -297,7 +293,12 @@ let private docIdToModulePath (docId: DocId) =
     traceFn "Not a docId of module file: '%s'" docId
     None
 
-let private convertDocIdToFilePath (fileExists: FileExistsFun) (projectDir: ProjectDir) (docId: DocId) =
+let private convertDocIdToFilePath
+  (fileExists: FileExistsFun)
+  stdLibProjectMap
+  (projectDir: ProjectDir)
+  (docId: DocId)
+  =
   let fixExt path =
     SyntaxApi.chooseSourceExt fileExists path
 
@@ -305,7 +306,7 @@ let private convertDocIdToFilePath (fileExists: FileExistsFun) (projectDir: Proj
     match docIdToModulePath docId with
     | Some (projectName, moduleName) ->
       let projectDir =
-        match stdLibProjects |> Map.tryFind projectName with
+        match stdLibProjectMap |> Map.tryFind projectName with
         | Some it -> it
         | None -> projectDir + "/../" + projectName
 
@@ -469,6 +470,7 @@ module ProjectAnalysis =
     List.collect id errorListList, pa
 
   let completion
+    stdLibModules
     (projectDir: ProjectDir)
     (docId: DocId)
     (targetPos: Pos)
@@ -484,7 +486,7 @@ module ProjectAnalysis =
       |> List.exists LToken.isModuleOrOpenKeyword
 
     let collectModuleNames pa =
-      List.append (Map.toList stdLibProjects) (findModulesInDir projectDir)
+      List.append stdLibModules (findModulesInDir projectDir)
       |> List.collect (fun (p, m) -> [ p; m ])
       |> listUnique,
       pa
@@ -730,6 +732,7 @@ module ProjectAnalysis =
 [<RequireQualifiedAccess; NoEquality; NoComparison>]
 type WorkspaceAnalysisHost =
   { MiloneHome: MiloneHome
+    StdLibModules: (string * ProjectDir) list
     DocIdToFilePath: DocIdToFilePathFun
     ReadSourceFile: ReadSourceFileFun }
 
@@ -755,6 +758,12 @@ type WorkspaceAnalysis =
     Host: WorkspaceAnalysisHost }
 
 let private emptyWorkspaceAnalysis: WorkspaceAnalysis =
+  let stdLibProjects = SyntaxApi.getStdLibProjects miloneHome
+
+  let stdLibModules =
+    stdLibProjects
+    |> List.collect (fun (_, projectDir) -> findModulesInDir projectDir)
+
   { LastId = 0
     Docs = TMap.empty Uri.compare
     ProjectList = []
@@ -768,7 +777,8 @@ let private emptyWorkspaceAnalysis: WorkspaceAnalysis =
 
     Host =
       { MiloneHome = miloneHome
-        DocIdToFilePath = convertDocIdToFilePath File.Exists
+        StdLibModules = stdLibModules
+        DocIdToFilePath = convertDocIdToFilePath File.Exists (Map.ofList stdLibProjects)
         ReadSourceFile = SyntaxApi.readSourceFile File.readTextFile } }
 
 let private freshId (wa: WorkspaceAnalysis) =
@@ -1001,7 +1011,11 @@ module WorkspaceAnalysis =
     let results, wa =
       wa.ProjectList
       |> List.mapFold
-           (fun wa p -> doWithProjectAnalysis p (ProjectAnalysis.completion p.ProjectDir (uriToDocId uri) pos) wa)
+           (fun wa p ->
+             doWithProjectAnalysis
+               p
+               (ProjectAnalysis.completion wa.Host.StdLibModules p.ProjectDir (uriToDocId uri) pos)
+               wa)
            wa
 
     List.collect id results, wa

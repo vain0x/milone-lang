@@ -584,7 +584,7 @@ let private doTestCompletionSingleFile title text expected ls : bool * _ =
 
   let actual, ls =
     match ls
-          |> LLS.ProjectAnalysis.completion projectDir docId targetPos
+          |> LLS.ProjectAnalysis.completion [] projectDir docId targetPos
       with
     | [], ls ->
       let errors, ls =
