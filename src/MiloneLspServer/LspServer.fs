@@ -140,12 +140,12 @@ let private createInitializeResult () =
             "triggerCharacters": ["."]
           },
           "definitionProvider": true,
-          "documentHighlightProvider": true,
           "documentFormattingProvider": true,
+          "documentHighlightProvider": true,
+          "documentSymbolProvider": true,
           "hoverProvider": true,
           "referencesProvider": true,
-          "documentSymbolProvider": true,
-          "renameProvider": false
+          "renameProvider": true
       },
       "serverInfo": {
           "name": "milone_lsp",
@@ -293,6 +293,21 @@ let private parseDocumentSymbolParam jsonValue =
   |> jToString
   |> Uri
 
+[<RequireQualifiedAccess; NoEquality; NoComparison>]
+type private RenameParam = { Uri: Uri; Pos: Pos; NewName: string }
+
+let private parseRenameParam jsonValue : RenameParam =
+  let p = parseDocumentPositionParam jsonValue
+
+  let newName =
+    jsonValue
+    |> jFind2 "params" "newName"
+    |> jToString
+
+  { Uri = p.Uri
+    Pos = p.Pos
+    NewName = newName }
+
 // -----------------------------------------------
 // LspError
 // -----------------------------------------------
@@ -399,6 +414,7 @@ type private LspIncome =
   | FormattingRequest of MsgId * Uri
   /// https://microsoft.github.io/language-server-protocol/specifications/specification-current/#textDocument_hover
   | HoverRequest of MsgId * DocumentPositionParam
+  | RenameRequest of MsgId * RenameParam
 
   // Others.
   | RegisterCapabilityResponse of MsgId
@@ -437,6 +453,7 @@ let private parseIncome (jsonValue: JsonValue) : LspIncome =
   | "textDocument/documentSymbol" -> DocumentSymbolRequest(getMsgId (), parseDocumentSymbolParam jsonValue)
   | "textDocument/formatting" -> FormattingRequest(getMsgId (), getUriParam jsonValue)
   | "textDocument/hover" -> HoverRequest(getMsgId (), parseDocumentPositionParam jsonValue)
+  | "textDocument/rename" -> RenameRequest(getMsgId (), parseRenameParam jsonValue)
 
   | "$/response" -> RegisterCapabilityResponse(getMsgId ())
   | "$/cancelRequest" -> CancelRequestNotification(jsonValue |> jFind2 "params" "id")
@@ -670,6 +687,31 @@ let private processNext () : LspIncome -> ProcessResult =
           jOfObj [ "contents", contents |> List.map jOfMarkdownString |> JArray
                    // "range", jOfRange range
                     ])
+
+      Continue
+
+    | RenameRequest (msgId, p) ->
+      handleRequestWith "rename" msgId (fun () ->
+        let changes, wa =
+          WorkspaceAnalysis.rename p.Uri p.Pos p.NewName current
+
+        current <- wa
+
+        let jTextEdit (range, newText) =
+          jOfObj [ "range", jOfRange range
+                   "newText", JString newText ]
+
+        let jWorkspaceEdit changes =
+          let changes =
+            changes
+            |> List.map (fun (uri, edits) -> Uri.toString uri, edits |> List.map jTextEdit |> JArray)
+
+          jOfObj [ "changes", jOfObj changes ]
+
+        if changes |> List.isEmpty |> not then
+          jWorkspaceEdit changes
+        else
+          JNull)
 
       Continue
 

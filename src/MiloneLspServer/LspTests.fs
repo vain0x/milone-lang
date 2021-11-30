@@ -168,6 +168,63 @@ let private testHoverSingleFile title text expected : bool =
   createSingleFileProject text (doTestHoverSingleFile title text expected)
   |> fst
 
+let private doTestRenameSingleFile title text newName expected ls : bool * _ =
+  let anchors =
+    let lines = text |> toLines
+
+    lines
+    |> List.choose (fun (row, line) ->
+      if row >= 1
+         && line |> S.trimStart |> S.startsWith "//" then
+        match line |> S.cut "^" with
+        | leading, rest, true ->
+          let column = leading.Length
+          Some(row - 1, column, rest)
+
+        | _ -> None
+      else
+        None)
+
+  let targetPos =
+    anchors
+    |> List.tryHead
+    |> Option.defaultWith (fun () -> failwith "expected an anchor")
+    |> (fun (y, x, _) -> y, x)
+
+  let debug xs =
+    xs
+    |> List.sort
+    |> List.map (fun (row, column, newName) -> sprintf "%d:%d %s" row column newName)
+    |> S.concat "\n"
+
+  let actual, ls =
+    match ls
+          |> LLS.ProjectAnalysis.rename docId targetPos newName
+      with
+    | [], ls ->
+      let errors, ls =
+        ls |> LLS.ProjectAnalysis.validateProject
+
+      let msg =
+        if errors |> List.isEmpty then
+          "No result."
+        else
+          sprintf "Compile error: %A" errors
+
+      msg, ls
+
+    | changes, ls ->
+      changes
+      |> List.map (fun (_, (((y, x), _), newName)) -> y, x, newName)
+      |> debug,
+      ls
+
+  actual |> assertEqual title expected, ls
+
+let private testRenameSingleFile title text newName expected : bool =
+  createSingleFileProject text (doTestRenameSingleFile title text newName expected)
+  |> fst
+
 // -----------------------------------------------
 // Refs
 // -----------------------------------------------
@@ -422,6 +479,27 @@ let private testHover () =
       "No result." ]
 
 // -----------------------------------------------
+// Rename
+// -----------------------------------------------
+
+let private testRename () =
+  [ testRenameSingleFile
+      "var"
+      """
+        module rec TestProject.Program
+
+        let main _ =
+          let foo = 42
+          //  ^baz
+
+          foo
+      //  ^baz
+      """
+      "baz"
+      """4:14 baz
+7:10 baz""" ]
+
+// -----------------------------------------------
 // DocumentSymbol
 // -----------------------------------------------
 
@@ -628,6 +706,7 @@ let lspTests () =
   let code =
     [ testRefs ()
       testHover ()
+      testRename ()
       testDocumentSymbol ()
       testCompletion () ]
     |> List.collect id

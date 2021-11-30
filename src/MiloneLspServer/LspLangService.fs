@@ -704,6 +704,20 @@ module ProjectAnalysis =
 
     symbols, pa
 
+  let rename (docId: DocId) (targetPos: Pos) (newName: string) (pa: ProjectAnalysis) =
+    let includeDef = true
+    let includeUse = true
+
+    let resultOpt, pa =
+      doFindDefsOrUses "rename" docId targetPos includeDef includeUse pa
+
+    let changes =
+      resultOpt
+      |> Option.defaultValue []
+      |> List.map (fun (docId, range) -> docId, (range, newName))
+
+    changes, pa
+
 // ---------------------------------------------
 // WorkspaceAnalysis
 // ---------------------------------------------
@@ -763,6 +777,21 @@ let private docIdToUri p docId (wa: WorkspaceAnalysis) =
 
 let private readSourceFile p docId (wa: WorkspaceAnalysis) =
   wa.Host.ReadSourceFile(docIdToFilePath p docId wa)
+
+/// Can send edits to a file?
+///
+/// Files inside a project directory can be edited.
+let private isSafeToEdit (uri: Uri) (wa: WorkspaceAnalysis) =
+  let dir =
+    uriToFilePath uri
+    |> dirname
+    |> Option.map stem
+    |> Option.defaultValue ""
+
+  wa.ProjectList
+  |> List.exists (fun (p: ProjectInfo) ->
+    p.ProjectName |> S.startsWith "Milone" |> not
+    && dir = p.ProjectName)
 
 let doWithProjectAnalysis
   (p: ProjectInfo)
@@ -1036,6 +1065,31 @@ module WorkspaceAnalysis =
       |> List.mapFold (fun wa p -> doWithProjectAnalysis p (ProjectAnalysis.documentSymbol (uriToDocId uri)) wa) wa
 
     List.collect id symbolListList, wa
+
+  let rename (uri: Uri) (pos: Pos) (newName: string) (wa: WorkspaceAnalysis) =
+    let results, wa =
+      wa.ProjectList
+      |> List.mapFold
+           (fun wa p ->
+             let edits, wa =
+               doWithProjectAnalysis p (ProjectAnalysis.rename (uriToDocId uri) pos newName) wa
+
+             edits
+             |> List.map (fun (docId, edit) -> docIdToUri p docId wa, edit),
+             wa)
+           wa
+
+    let changes =
+      results
+      |> List.collect id
+      |> List.groupBy fst
+      |> List.map (fun (uri, edits) -> uri, List.map snd edits)
+
+    let ok =
+      changes
+      |> List.forall (fun (uri, _) -> isSafeToEdit uri wa)
+
+    (if ok then changes else []), wa
 
 let onInitialized rootUriOpt (wa: WorkspaceAnalysis) : WorkspaceAnalysis =
   let projects =
