@@ -18,6 +18,15 @@ let private toLines (s: string) =
   |> Array.mapi (fun i item -> i, item)
   |> Array.toList
 
+let private splitLast xs =
+  match xs |> List.rev with
+  | last :: nonLast -> Some(List.rev nonLast, last)
+  | [] -> None
+
+// -----------------------------------------------
+// tests
+// -----------------------------------------------
+
 let private runTests cases =
   let pass, fail =
     cases
@@ -44,6 +53,134 @@ let private assertEqual (title: string) (expected: string) (actual: string) : bo
     eprintfn "Assertion violation: %s\n  actual = %s\n  expected = %s" title actual expected
     assert false
     false
+
+/// Parses a text as multiple files.
+///
+/// Each file is separated by header line `# file: ...`.
+///
+/// ```
+/// # file: /path/to/File1.txt
+/// This is contents of `File1.txt`.
+///
+/// # file: /path/to/File2.yml
+/// - This is
+/// - contents of
+/// - 'File2.yml'
+/// ```
+let private parseFiles text : (string * string) list =
+  let lines = text |> toLines |> List.map snd
+
+  let rec goBody acc xs =
+    match xs with
+    | x :: _ when x |> S.startsWith "# file:" |> not -> goBody (x :: acc) xs
+    | _ -> acc, xs
+
+  let rec goFiles acc lines =
+    match lines with
+    | [] -> acc
+
+    | line :: lines ->
+      let dir, ok = line |> S.stripStart "# file:"
+
+      if not ok then
+        failwith "should start with `# file:`"
+
+      let bodyAcc, lines = goBody [] lines
+
+      let file =
+        dir, bodyAcc |> List.rev |> S.concat "\n"
+
+      goFiles (file :: acc) lines
+
+  goFiles [] lines
+
+/// Collects all anchors which represent a position in text with label.
+///
+/// ## Single anchor
+///
+/// Typically an anchor is written as:
+///
+/// ```fs
+///     let f () = 42   // arbitrary code here
+///     //  ^def
+/// ```
+///
+/// In the example, `^def` is an anchor that points to `f` in the previous line and is labeled with `def`.
+///
+/// ## Multiple anchors
+///
+/// In rare case, a line contains multiple anchors.
+/// There are two ways to write labels.
+/// First, each caret is followed by its label.
+///
+/// ```fs
+///     let foo () = goo ()
+///     //  ^def     ^use
+/// ```
+///
+/// In the example, `foo` is pointed by an anchor with label `def`,
+/// and `goo` is pointed by anchor with label `use`.
+///
+/// Alternatively, after the final anchor on the line,
+/// put all labels separated by semicolon `;`s.
+///
+/// ```fs
+///     let x, y, z = triple
+///     //  ^  ^  ^   ^     def; def; def; use
+/// ```
+///
+/// In the example `x`, `y`, `z`, `triple` are pointed by anchors.
+/// Label of them are, respectively, `def`, `def`, `def`, `use`.
+let private parseAnchors text : ((int * int) * string) list =
+  let lines = text |> toLines
+
+  lines
+  |> List.collect (fun (row, line) ->
+    if row >= 1
+       && line |> S.trimStart |> S.startsWith "//"
+       && line |> S.contains "^" then
+      let parts = line |> S.split "^"
+
+      let posList, rest =
+        match splitLast parts with
+        | None -> [], ""
+        | Some (nonLastParts, rest) ->
+          let posList, _ =
+            nonLastParts
+            |> List.mapFold
+                 (fun column (part: string) ->
+                   let column = column + part.Length
+                   let pos = row - 1, column
+                   pos, column + "^".Length)
+                 0
+
+          posList, rest
+
+      let labels =
+        let parts = parts |> List.skip 1 |> List.map S.trim
+        let rest = rest |> S.trim
+
+        if parts
+           |> List.forall (fun s -> s |> S.isEmpty |> not) then
+          parts
+        else if rest <> "" then
+          rest |> S.split ";"
+        else
+          []
+
+      let caretCount = List.length posList
+      let labelCount = List.length labels
+
+      if caretCount <> labelCount then
+        failwithf "Mismatch number of anchor labels: %d carets, %d labels at row %d" caretCount labelCount row
+
+      List.zip posList labels
+    else
+      [])
+
+// -----------------------------------------------
+// in-memory project
+// -----------------------------------------------
 
 let private projectDir = "/example.com/TestProject"
 let private projectName = "TestProject"
@@ -165,43 +302,23 @@ let private createSingleFileProject text action =
   |> LLS.doWithProjectAnalysis (getProject "TestProject" wa) action
 
 let private doTestRefsSingleFile title text (ls: ProjectAnalysis) : bool * ProjectAnalysis =
-  let anchors =
-    let lines = text |> toLines
-
-    lines
-    |> List.collect (fun (row, line) ->
-      if row >= 1
-         && line |> S.trimStart |> S.startsWith "//" then
-        match line |> S.cut "^" with
-        | leading, rest, true ->
-          let column = leading.Length
-
-          rest
-          |> S.split ","
-          |> List.map (fun anchor -> row - 1, column, anchor)
-        | _ -> []
-      else
-        [])
+  let anchors = parseAnchors text
 
   let firstAnchor =
-    anchors
-    |> List.tryHead
-    |> expect (title + " should have anchor")
+    anchors |> List.tryHead |> expect "anchor"
 
   let debug xs =
     xs
     |> List.sort
-    |> List.map (fun (row, column, anchor) -> sprintf "%d:%d %s" row column anchor)
+    |> List.map (fun ((y, x), anchor) -> sprintf "%d:%d %s" y x anchor)
     |> S.concat "\n"
 
   let expected = anchors |> debug
 
   let actual, ls =
-    let row, column, _ = firstAnchor
+    let pos, _ = firstAnchor
 
-    match ls
-          |> LLS.ProjectAnalysis.findRefs docId (row, column)
-      with
+    match ls |> LLS.ProjectAnalysis.findRefs docId pos with
     | None, ls ->
       let errors, ls =
         ls |> LLS.ProjectAnalysis.validateProject
@@ -216,7 +333,7 @@ let private doTestRefsSingleFile title text (ls: ProjectAnalysis) : bool * Proje
 
     | Some (defs, uses), _ ->
       let collect kind xs =
-        xs |> Seq.map (fun (_, (y, x)) -> y, x, kind)
+        xs |> Seq.map (fun (_, pos) -> pos, kind)
 
       let a =
         Seq.append (collect "def" defs) (collect "use" uses)
@@ -232,19 +349,10 @@ let private testRefsSingleFile title text : bool =
   |> fst
 
 let private doTestHoverSingleFile title text expected ls : bool * _ =
-  let targetPos =
-    let lines = text |> toLines
-
-    lines
-    |> List.tryPick (fun (row, line) ->
-      if row >= 1
-         && line |> S.trimStart |> S.startsWith "//" then
-        match line |> S.findIndex "^" with
-        | Some column -> Some(row - 1, column)
-        | _ -> None
-      else
-        None)
-    |> expect (title + " should have cursor")
+  let targetPos, _ =
+    parseAnchors text
+    |> List.tryHead
+    |> expect "anchor"
 
   let debug xs =
     xs
@@ -275,27 +383,10 @@ let private testHoverSingleFile title text expected : bool =
   |> fst
 
 let private doTestRenameSingleFile title text newName expected ls : bool * _ =
-  let anchors =
-    let lines = text |> toLines
-
-    lines
-    |> List.choose (fun (row, line) ->
-      if row >= 1
-         && line |> S.trimStart |> S.startsWith "//" then
-        match line |> S.cut "^" with
-        | leading, rest, true ->
-          let column = leading.Length
-          Some(row - 1, column, rest)
-
-        | _ -> None
-      else
-        None)
-
-  let targetPos =
-    anchors
+  let targetPos, _ =
+    parseAnchors text
     |> List.tryHead
-    |> Option.defaultWith (fun () -> failwith "expected an anchor")
-    |> (fun (y, x, _) -> y, x)
+    |> expect "anchor"
 
   let debug xs =
     xs
@@ -674,19 +765,10 @@ let private testDocumentSymbol () =
 let private getDirEntries _ = [], []
 
 let private doTestCompletionSingleFile title text expected ls : bool * _ =
-  let targetPos =
-    let lines = text |> toLines
-
-    lines
-    |> List.tryPick (fun (row, line) ->
-      if row >= 1
-         && line |> S.trimStart |> S.startsWith "//" then
-        match line |> S.findIndex "^" with
-        | Some column -> Some(row - 1, column)
-        | _ -> None
-      else
-        None)
-    |> expect (title + " should have cursor")
+  let targetPos, _ =
+    parseAnchors text
+    |> List.tryHead
+    |> expect "anchor"
 
   let debug xs = xs |> List.sort |> S.concat "\n"
 
@@ -756,12 +838,6 @@ let private testDiagnostics miloneHome =
 
   let rootUri =
     workDir |> LLS.uriOfFilePath |> Uri.toString
-
-  let projectDir = "tests/DiagnosticsTest"
-
-  let p: LLS.ProjectInfo =
-    { ProjectDir = projectDir
-      ProjectName = "DiagnosticsTest" }
 
   let wa = WorkspaceAnalysis.empty miloneHome
   let wa = LLS.onInitialized (Some rootUri) wa
