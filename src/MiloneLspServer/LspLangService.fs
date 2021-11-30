@@ -698,9 +698,14 @@ module ProjectAnalysis =
         let tokens, pa = ProjectAnalysis1.tokenize docId pa
         tokens |> LTokenList.resolveRanges posList, pa
 
-      List.zip kinds ranges
-      |> List.map (fun ((name, kind), range) -> name, kind, range),
-      pa
+      let symbols =
+        if List.length kinds = List.length ranges then
+          List.zip kinds ranges
+          |> List.map (fun ((name, kind), range) -> name, kind, range)
+        else
+          []
+
+      symbols, pa
 
     symbols, pa
 
