@@ -87,7 +87,7 @@ let dirname (path: string) =
 
   path |> trimEndSep |> go
 
-let private basename (path: string) =
+let basename (path: string) =
   match S.findLastIndex "/" path with
   | Some i when path <> "/" -> S.skip (i + 1) path
   | _ -> path

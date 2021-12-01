@@ -257,7 +257,10 @@ let private testDirEntries () =
        "/$/CmdFoo/Types.milone" ],
      [])
 
-let private createWorkspaceAnalysisWithFiles miloneHome rootDir files =
+let private createWorkspaceAnalysisWithFiles files =
+  let miloneHome = "/$/.milone"
+  let rootDir = "/$/root"
+
   let fileMap =
     files
     |> List.map (fun (name, contents) -> LLS.normalize name, contents)
@@ -296,7 +299,7 @@ let private getProject name (wa: LLS.WorkspaceAnalysis) =
 
 let private createSingleFileProject text action =
   let wa =
-    createWorkspaceAnalysisWithFiles "/$/.milone" "/$" [ "/$/root/TestProject/TestProject.milone", text ]
+    createWorkspaceAnalysisWithFiles [ "/$/root/TestProject/TestProject.milone", text ]
 
   wa
   |> LLS.doWithProjectAnalysis (getProject "TestProject" wa) action
@@ -762,9 +765,7 @@ let private testDocumentSymbol () =
 // Completion
 // -----------------------------------------------
 
-let private getDirEntries _ = [], []
-
-let private doTestCompletionSingleFile title text expected ls : bool * _ =
+let private doTestCompletion (p: LLS.ProjectInfo) (wa: LLS.WorkspaceAnalysis) title text expected ls : bool * _ =
   let targetPos, _ =
     parseAnchors text
     |> List.tryHead
@@ -774,7 +775,7 @@ let private doTestCompletionSingleFile title text expected ls : bool * _ =
 
   let actual, ls =
     match ls
-          |> LLS.ProjectAnalysis.completion [] getDirEntries projectDir docId targetPos
+          |> LLS.ProjectAnalysis.completion wa.StdLibModules wa.Host.DirEntries p.ProjectDir docId targetPos
       with
     | [], ls ->
       let errors, ls =
@@ -792,9 +793,28 @@ let private doTestCompletionSingleFile title text expected ls : bool * _ =
 
   actual |> assertEqual title (debug expected), ls
 
-let private testCompletionSingleFile title text expected : bool =
-  createSingleFileProject text (doTestCompletionSingleFile title text expected)
+let private testCompletionMultipleFiles title files expected : bool =
+  let wa = createWorkspaceAnalysisWithFiles files
+
+  let path, text =
+    files
+    |> List.tryFind (fun (_, text) -> parseAnchors text |> List.isEmpty |> not)
+    |> expect "anchor"
+
+  let p =
+    let projectName =
+      path
+      |> LLS.dirname
+      |> Option.map LLS.basename
+      |> expect "project"
+
+    getProject projectName wa
+
+  LLS.doWithProjectAnalysis p (doTestCompletion p wa title text expected) wa
   |> fst
+
+let private testCompletionSingleFile title text expected : bool =
+  testCompletionMultipleFiles title [ "/$/root/TestProject/TestProject.milone", text ] expected
 
 let private testCompletion () =
   [ testCompletionSingleFile
