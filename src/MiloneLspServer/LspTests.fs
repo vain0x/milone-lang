@@ -834,18 +834,30 @@ let private testCompletion () =
       """
       [ "main"; "x" ]
 
-  // testCompletionSingleFile
-  //   "dot"
-  //   """
-  //     module rec TestProject.Program
+    testCompletionMultipleFiles
+      "module name"
+      [ "/$/.milone/milone_libs/MiloneStd/StdFoo.milone", ""
+        "/$/root/TestProject/TestProject.milone",
+        """
+            module rec TestProject.TestProject
 
-  //     let main _ =
-  //       List.   (x.y)
-  //   //       ^cursor
-  //       0
-  //   """
-  //   [ "List.*" ]
-   ]
+            module M =
+            //        ^cursor
+          """ ]
+      [ "MiloneStd"; "StdFoo"; "TestProject" ]
+
+    // testCompletionSingleFile
+    //   "dot"
+    //   """
+    //     module rec TestProject.Program
+
+    //     let main _ =
+    //       List.   (x.y)
+    //   //       ^cursor
+    //       0
+    //   """
+    //   [ "List.*" ]
+    ]
 
 // -----------------------------------------------
 // Diagnostics
