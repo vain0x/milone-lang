@@ -487,8 +487,8 @@ let private enableDidChangedWatchedFiles () =
 
   jsonRpcWriteWithIdParams "client/registerCapability" msgId param
 
-let private processNext miloneHome : LspIncome -> ProcessResult =
-  let mutable current = WorkspaceAnalysis.empty miloneHome
+let private processNext host : LspIncome -> ProcessResult =
+  let mutable current = WorkspaceAnalysis.create host
   let mutable exitCode: int = 1
   let mutable rootUriOpt: Uri option = None
 

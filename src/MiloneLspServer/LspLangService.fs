@@ -2,6 +2,7 @@ module MiloneLspServer.LspLangService
 
 open MiloneShared.SharedTypes
 open MiloneShared.UtilParallel
+open MiloneStd.StdError
 open MiloneStd.StdMap
 open MiloneStd.StdSet
 open MiloneLspServer.Lsp
@@ -761,6 +762,12 @@ type WorkspaceAnalysisHost =
     FileExists: FileExistsFun
     DirEntries: DirEntriesFun }
 
+module WorkspaceAnalysisHost =
+  let dummy: WorkspaceAnalysisHost =
+    { MiloneHome = "/$/.milone"
+      FileExists = fun _ -> false
+      DirEntries = fun _ -> [], [] }
+
 /// State of workspace-wide analysis.
 /// That is, this is basically the root of state of LSP server.
 ///
@@ -786,14 +793,7 @@ type WorkspaceAnalysis =
 
     Host: WorkspaceAnalysisHost }
 
-let private emptyWorkspaceAnalysis (host: WorkspaceAnalysisHost) : WorkspaceAnalysis =
-  let miloneHome = host.MiloneHome
-  let stdLibProjects = SyntaxApi.getStdLibProjects miloneHome
-
-  let stdLibModules =
-    stdLibProjects
-    |> List.collect (fun (_, projectDir) -> findModulesInDir host.DirEntries projectDir)
-
+let private createWorkspaceAnalysis (host: WorkspaceAnalysisHost) : WorkspaceAnalysis =
   { LastId = 0
     Docs = TMap.empty Uri.compare
     ProjectList = []
@@ -805,8 +805,8 @@ let private emptyWorkspaceAnalysis (host: WorkspaceAnalysisHost) : WorkspaceAnal
     DiagnosticsKeys = []
     DiagnosticsCache = DiagnosticsCache.empty Md5Helper.ofString Md5Helper.equals
 
-    StdLibModules = stdLibModules
-    DocIdToFilePath = convertDocIdToFilePath host.FileExists (Map.ofList stdLibProjects)
+    StdLibModules = []
+    DocIdToFilePath = fun _ _ -> unreachable ()
     ReadSourceFile = SyntaxApi.readSourceFile File.readTextFile
 
     Host = host }
@@ -966,7 +966,27 @@ let doWithProjectAnalysis
   result, wa
 
 module WorkspaceAnalysis =
-  let empty (host: WorkspaceAnalysisHost) : WorkspaceAnalysis = emptyWorkspaceAnalysis host
+  let dummy: WorkspaceAnalysis =
+    createWorkspaceAnalysis WorkspaceAnalysisHost.dummy
+
+  let withHost (host: WorkspaceAnalysisHost) (wa: WorkspaceAnalysis) : WorkspaceAnalysis =
+    let miloneHome = host.MiloneHome
+
+    let stdLibProjects = SyntaxApi.getStdLibProjects miloneHome
+
+    let stdLibModules =
+      stdLibProjects
+      |> List.collect (fun (_, projectDir) -> findModulesInDir host.DirEntries projectDir)
+
+    let readTextFile = File.readTextFile // FIXME: host
+
+    { wa with
+        StdLibModules = stdLibModules
+        DocIdToFilePath = convertDocIdToFilePath host.FileExists (Map.ofList stdLibProjects)
+        ReadSourceFile = SyntaxApi.readSourceFile readTextFile
+        Host = host }
+
+  let create (host: WorkspaceAnalysisHost) : WorkspaceAnalysis = dummy |> withHost host
 
   let getProjectDirs (wa: WorkspaceAnalysis) =
     wa.ProjectList

@@ -262,17 +262,18 @@ let private testDirEntries () =
        "/$/CmdFoo/Types.milone" ],
      [])
 
-let private createWorkspaceAnalysisWithFiles files =
-  let miloneHome = "/$/.milone"
-  let rootDir = "/$/root"
+let private dummyMiloneHome = "/$/.milone"
+let private dummyRootDir = "/$/root"
+let private dummyRootUri = LLS.uriOfFilePath dummyRootDir
 
+let private createWorkspaceAnalysisHostWithFiles files : LLS.WorkspaceAnalysisHost =
   let fileMap =
     files
     |> List.map (fun (name, contents) -> LLS.normalize name, contents)
     |> Map.ofList
 
   let host: LLS.WorkspaceAnalysisHost =
-    { MiloneHome = miloneHome
+    { MiloneHome = dummyMiloneHome
 
       FileExists =
         fun path ->
@@ -281,9 +282,15 @@ let private createWorkspaceAnalysisWithFiles files =
 
       DirEntries = dirEntriesIn files }
 
+  host
+
+let private createWorkspaceAnalysisWithFiles files =
+  let host =
+    createWorkspaceAnalysisHostWithFiles files
+
   let wa =
-    WorkspaceAnalysis.empty host
-    |> WorkspaceAnalysis.onInitialized (rootDir |> LLS.uriOfFilePath |> Some)
+    WorkspaceAnalysis.create host
+    |> WorkspaceAnalysis.onInitialized (Some dummyRootUri)
 
   files
   |> List.fold
@@ -786,15 +793,15 @@ let private testCompletion () =
 
 // Run server (stateful).
 
-let private testDiagnostics miloneHome =
+let private testDiagnostics host =
   let workDir =
     System.Environment.CurrentDirectory
     |> LLS.normalize
 
-  let rootUri = workDir |> LLS.uriOfFilePath
-
   let wa =
-    WorkspaceAnalysis.empty miloneHome
+    let rootUri = workDir |> LLS.uriOfFilePath
+
+    WorkspaceAnalysis.create host
     |> WorkspaceAnalysis.onInitialized (Some rootUri)
 
   let result, wa = WorkspaceAnalysis.diagnostics wa
@@ -855,7 +862,7 @@ writes: [((2, 4), (2, 8))]""")
 // Interface
 // -----------------------------------------------
 
-let lspTests miloneHome =
+let lspTests host =
   testDirEntries ()
 
   let code =
@@ -867,7 +874,6 @@ let lspTests miloneHome =
     |> List.collect id
     |> runTests
 
-  if code = 0 then
-    testDiagnostics miloneHome
+  if code = 0 then testDiagnostics host
 
   exit code
