@@ -720,6 +720,51 @@ let private testDocumentSymbol () =
 21:14 localFun (12)""" ]
 
 // -----------------------------------------------
+// CodeAction
+// -----------------------------------------------
+
+let private testCodeAction () =
+  let path = "/$/root/TestProject/TestProject.milone"
+
+  let wa =
+    createWorkspaceAnalysisWithFiles [ path, "" ]
+
+  let range: Range = (0, 0), (0, 0)
+
+  let result, _ =
+    wa
+    |> WorkspaceAnalysis.codeAction (LLS.uriOfFilePath path) range
+
+  let actual =
+    result
+    |> List.choose (fun (title, edit) ->
+      let edit =
+        edit
+        |> List.collect (fun (_, changes) ->
+          changes
+          |> List.filter (fun (_, text) -> text |> S.contains "module rec")
+          |> List.map snd)
+
+      if edit |> List.isEmpty |> not then
+        Some(title, edit |> S.concat "\n")
+      else
+        None)
+
+  let debug xs =
+    xs
+    |> List.sort
+    |> List.map (fun (x, y) -> x + ": " + y)
+    |> S.concat "\n"
+
+  let expected =
+    """Generate module head: module rec TestProject.TestProject
+"""
+
+  [ actual
+    |> debug
+    |> assertEqual "module head" expected ]
+
+// -----------------------------------------------
 // Completion
 // -----------------------------------------------
 
@@ -904,6 +949,7 @@ let lspTests host =
       testHover ()
       testRename ()
       testDocumentSymbol ()
+      testCodeAction ()
       testCompletion ()
       testFindProjects () ]
     |> List.collect id

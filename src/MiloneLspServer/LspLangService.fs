@@ -1097,6 +1097,40 @@ module WorkspaceAnalysis =
 
     diagnostics, wa
 
+  let codeAction (uri: Uri) (_range: Range) (wa: WorkspaceAnalysis) =
+    let generateModuleHeadAction () =
+      let title = "Generate module head"
+      let front: Range = (0, 0), (0, 0)
+
+      let isEmpty =
+        match wa.Docs |> TMap.tryFind uri with
+        | Some (_, text) -> text |> S.trimEnd |> S.isEmpty
+        | None -> false
+
+      let textOpt =
+        if isEmpty then
+          let path = uri |> uriToFilePath
+          let parentOpt = dirname path
+          let projectNameOpt = parentOpt |> Option.map basename
+          let moduleName = path |> stem
+
+          match projectNameOpt with
+          | Some projectName ->
+            sprintf "module rec %s.%s\n" projectName moduleName
+            |> Some
+          | None -> None
+        else
+          None
+
+      match textOpt with
+      | Some text -> Some(title, [ uri, [ front, text ] ])
+      | None -> None
+
+    let actions =
+      generateModuleHeadAction () |> Option.toList
+
+    actions, wa
+
   let completion (uri: Uri) (pos: Pos) (wa: WorkspaceAnalysis) =
     let results, wa =
       wa.ProjectList

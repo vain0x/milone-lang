@@ -90,6 +90,12 @@ let private jToArray jsonValue : JsonValue list =
 
   | _ -> failwithf "Expected an array but: %s" (jsonDisplay jsonValue)
 
+let private jArrayOrNull items =
+  if items |> List.isEmpty |> not then
+    JArray items
+  else
+    JNull
+
 let private jToPos jsonValue : Position =
   let row, column =
     jsonValue |> jFields2 "line" "character"
@@ -108,6 +114,17 @@ let private jToRange jsonValue : Range =
 let private jOfMarkdownString (text: string) =
   jOfObj [ "language", JString "markdown"
            "value", JString text ]
+
+let private jTextEdit (range, newText) =
+  jOfObj [ "range", jOfRange range
+           "newText", JString newText ]
+
+let private jWorkspaceEdit changes =
+  let changes =
+    changes
+    |> List.map (fun (uri, edits) -> Uri.toString uri, edits |> List.map jTextEdit |> JArray)
+
+  jOfObj [ "changes", jOfObj changes ]
 
 // -----------------------------------------------
 // LSP types
@@ -137,6 +154,7 @@ let private createInitializeResult () =
               "openClose": true,
               "change": 1
           },
+          "codeActionProvider": true,
           "completionProvider": {
             "triggerCharacters": ["."]
           },
@@ -267,6 +285,21 @@ let private parseDocumentPositionParam jsonValue : DocumentPositionParam =
     jsonValue |> jFind2 "params" "position" |> jToPos
 
   { Uri = uri; Pos = pos }
+
+[<RequireQualifiedAccess; NoEquality; NoComparison>]
+type private DocumentRangeParam = { Uri: Uri; Range: Range }
+
+let private parseDocumentRangeParam jsonValue : DocumentRangeParam =
+  let uri =
+    jsonValue
+    |> jFind3 "params" "textDocument" "uri"
+    |> jToString
+    |> Uri
+
+  let range =
+    jsonValue |> jFind2 "params" "range" |> jToRange
+
+  { Uri = uri; Range = range }
 
 [<RequireQualifiedAccess; NoEquality; NoComparison>]
 type private ReferencesParam =
@@ -403,6 +436,7 @@ type private LspIncome =
   /// This notification is NOT sent by LSP client but is generated inside the server
   /// whenever server receives a kind of requests that invalidate previous diagnostics.
   | DiagnosticsNotification
+  | CodeActionRequest of MsgId * DocumentRangeParam
   | CompletionRequest of MsgId * DocumentPositionParam
   /// https://microsoft.github.io/language-server-protocol/specifications/specification-current/#textDocument_definition
   | DefinitionRequest of MsgId * DocumentPositionParam
@@ -447,6 +481,7 @@ let private parseIncome (jsonValue: JsonValue) : LspIncome =
   | "textDocument/didClose" -> DidCloseNotification(parseDidCloseParam jsonValue)
   | "workspace/didChangeWatchedFiles" -> DidChangeWatchedFiles(parseDidChangeWatchedFilesParam jsonValue)
 
+  | "textDocument/codeAction" -> CodeActionRequest(getMsgId (), parseDocumentRangeParam jsonValue)
   | "textDocument/completion" -> CompletionRequest(getMsgId (), parseDocumentPositionParam jsonValue)
   | "textDocument/definition" -> DefinitionRequest(getMsgId (), parseDocumentPositionParam jsonValue)
   | "textDocument/references" -> ReferencesRequest(getMsgId (), parseReferencesParam jsonValue)
@@ -580,21 +615,34 @@ let private processNext host : LspIncome -> ProcessResult =
 
       Continue
 
+    | CodeActionRequest (msgId, p) ->
+      /// Code action with edit.
+      let jEditAction title edit =
+        jOfObj [ "title", JString title
+                 "edit", jWorkspaceEdit edit ]
+
+      handleRequestWith "codeAction" msgId (fun () ->
+        let result, wa =
+          WorkspaceAnalysis.codeAction p.Uri p.Range current
+
+        current <- wa
+
+        result
+        |> List.map (fun (title, edit) -> jEditAction title edit)
+        |> jArrayOrNull)
+
+      Continue
+
     | CompletionRequest (msgId, p) ->
       handleRequestWith "completion" msgId (fun () ->
-        let items =
-          let result, wa =
-            WorkspaceAnalysis.completion p.Uri p.Pos current
+        let result, wa =
+          WorkspaceAnalysis.completion p.Uri p.Pos current
 
-          current <- wa
+        current <- wa
 
-          result
-          |> List.map (fun text -> jOfObj [ "label", JString text ])
-          |> JArray
-
-        match items with
-        | JArray [] -> JNull
-        | _ -> items)
+        result
+        |> List.map (fun text -> jOfObj [ "label", JString text ])
+        |> jArrayOrNull)
 
       Continue
 
@@ -702,17 +750,6 @@ let private processNext host : LspIncome -> ProcessResult =
           WorkspaceAnalysis.rename p.Uri p.Pos p.NewName current
 
         current <- wa
-
-        let jTextEdit (range, newText) =
-          jOfObj [ "range", jOfRange range
-                   "newText", JString newText ]
-
-        let jWorkspaceEdit changes =
-          let changes =
-            changes
-            |> List.map (fun (uri, edits) -> Uri.toString uri, edits |> List.map jTextEdit |> JArray)
-
-          jOfObj [ "changes", jOfObj changes ]
 
         if changes |> List.isEmpty |> not then
           jWorkspaceEdit changes
