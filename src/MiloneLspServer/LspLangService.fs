@@ -258,8 +258,8 @@ type ProjectInfo =
     ProjectName: string }
 
 /// Finds all projects inside of the workspace.
-let private doFindProjects fileExists getDirEntries (rootUri: string) : ProjectInfo list =
-  let rootDir = Uri rootUri |> uriToFilePath
+let private doFindProjects fileExists getDirEntries (rootUri: Uri) : ProjectInfo list =
+  let rootDir = rootUri |> uriToFilePath
 
   // Find projects recursively.
   let rec bfs acc stack =

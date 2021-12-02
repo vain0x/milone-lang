@@ -114,7 +114,7 @@ let private jOfMarkdownString (text: string) =
 // -----------------------------------------------
 
 [<RequireQualifiedAccess; NoEquality; NoComparison>]
-type private InitializeParam = { RootUriOpt: string option }
+type private InitializeParam = { RootUriOpt: Uri option }
 
 let private parseInitializeParam jsonValue : InitializeParam =
   let rootUriOpt =
@@ -122,6 +122,7 @@ let private parseInitializeParam jsonValue : InitializeParam =
       jsonValue
       |> jFind2 "params" "rootUri"
       |> jToString
+      |> Uri
       |> Some
     with
     | _ -> None
@@ -489,7 +490,7 @@ let private enableDidChangedWatchedFiles () =
 let private processNext miloneHome : LspIncome -> ProcessResult =
   let mutable current = WorkspaceAnalysis.empty miloneHome
   let mutable exitCode: int = 1
-  let mutable rootUriOpt: string option = None
+  let mutable rootUriOpt: Uri option = None
 
   fun (income: LspIncome) ->
     match income with
