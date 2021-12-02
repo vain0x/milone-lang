@@ -298,7 +298,7 @@ let private doFindProjects fileExists getDirEntries (rootUri: string) : ProjectI
 
   bfs [] [ 0, rootDir ]
 
-let private filePathToDocId (path: string) : DocId =
+let filePathToDocId (path: string) : DocId =
   let projectName =
     match dirname path with
     | Some path -> basename path

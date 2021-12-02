@@ -191,8 +191,6 @@ let private firstPos anchors =
 // in-memory project
 // -----------------------------------------------
 
-let private docId = "TestProject.TestProject"
-
 let private components (path: string) =
   if path = "/" then
     []
@@ -308,8 +306,10 @@ let private createSingleFileProject text action =
   let wa =
     createWorkspaceAnalysisWithFiles [ "/$/root/TestProject/TestProject.milone", text ]
 
+  let docId = "TestProject.TestProject"
+
   wa
-  |> LLS.doWithProjectAnalysis (getProject "TestProject" wa) action
+  |> LLS.doWithProjectAnalysis (getProject "TestProject" wa) (action docId)
 
 /// Gets compilation errors or `No result.`.
 /// Use this when analysis result is empty.
@@ -325,7 +325,7 @@ let private debugProject pa : string * ProjectAnalysis =
 
   msg, pa
 
-let private doTestRefsSingleFile title text (ls: ProjectAnalysis) : bool * ProjectAnalysis =
+let private doTestRefsSingleFile title text docId (ls: ProjectAnalysis) : bool * ProjectAnalysis =
   let anchors = parseAnchors text
   let targetPos = firstPos anchors
 
@@ -358,7 +358,7 @@ let private testRefsSingleFile title text : bool =
   createSingleFileProject text (doTestRefsSingleFile title text)
   |> fst
 
-let private doTestHoverSingleFile title text expected ls : bool * _ =
+let private doTestHoverSingleFile title text expected docId ls : bool * _ =
   let targetPos = firstPos (parseAnchors text)
 
   let debug xs =
@@ -378,7 +378,7 @@ let private testHoverSingleFile title text expected : bool =
   createSingleFileProject text (doTestHoverSingleFile title text expected)
   |> fst
 
-let private doTestRenameSingleFile title text newName expected ls : bool * _ =
+let private doTestRenameSingleFile title text newName expected docId ls : bool * _ =
   let targetPos = firstPos (parseAnchors text)
 
   let debug xs =
@@ -683,7 +683,7 @@ let private testRename () =
 // DocumentSymbol
 // -----------------------------------------------
 
-let private doTestDocumentSymbolSingleFile title expected (ls: ProjectAnalysis) : bool * ProjectAnalysis =
+let private doTestDocumentSymbolSingleFile title expected docId (ls: ProjectAnalysis) : bool * ProjectAnalysis =
   let debug xs =
     xs
     |> List.sortBy (fun (_, _, pos) -> pos)
@@ -745,7 +745,7 @@ let private testDocumentSymbol () =
 // Completion
 // -----------------------------------------------
 
-let private doTestCompletion (p: LLS.ProjectInfo) (wa: LLS.WorkspaceAnalysis) title text expected ls : bool * _ =
+let private doTestCompletion (p: LLS.ProjectInfo) (wa: LLS.WorkspaceAnalysis) title text expected docId ls : bool * _ =
   let targetPos = firstPos (parseAnchors text)
 
   let debug xs = xs |> List.sort |> S.concat "\n"
@@ -767,9 +767,10 @@ let private testCompletionMultipleFiles title files expected : bool =
     |> List.tryFind (fun (_, text) -> parseAnchors text |> List.isEmpty |> not)
     |> expect "anchor"
 
+  let docId = LLS.filePathToDocId path
   let p = getProject (pathToProjectName path) wa
 
-  LLS.doWithProjectAnalysis p (doTestCompletion p wa title text expected) wa
+  LLS.doWithProjectAnalysis p (doTestCompletion p wa title text expected docId) wa
   |> fst
 
 let private testCompletionSingleFile title text expected : bool =
