@@ -369,7 +369,7 @@ let private locToDocPos (loc: Loc) : DocId * Pos =
   docId, (y, x)
 
 let private doFindRefs hint docId targetPos pa =
-  debugFn "doFindRefs %s" hint
+  traceFn "doFindRefs %s" hint
   let tokens, pa = ProjectAnalysis1.tokenize docId pa
   let tokenOpt = tokens |> LTokenList.findAt targetPos
 
@@ -380,7 +380,7 @@ let private doFindRefs hint docId targetPos pa =
 
   | Some token ->
     let tokenLoc = locOfDocPos docId (LToken.getPos token)
-    debugFn "%s: tokenLoc=%A" hint tokenLoc
+    traceFn "%s: tokenLoc=%A" hint tokenLoc
 
     let result, pa = pa |> ProjectAnalysis1.bundle
 
