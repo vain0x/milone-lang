@@ -47,9 +47,21 @@ let private readTextFile (filePath: string) : Future<string option> =
 
 let private getHost () : LLS.WorkspaceAnalysisHost =
   { MiloneHome = miloneHome
-    FileExists = File.Exists
-    ReadTextFile = readTextFile
-    DirEntries = fun dir -> List.ofArray (Directory.GetFiles(dir)), List.ofArray (Directory.GetDirectories(dir)) }
+
+    FileExists =
+      fun path ->
+        traceFn "FileExists (%s)" path
+        File.Exists path
+
+    ReadTextFile =
+      fun path ->
+        traceFn "ReadTextFile (%s)" path
+        readTextFile path
+
+    DirEntries =
+      fun dir ->
+        traceFn "DirEntries (%s)" dir
+        List.ofArray (Directory.GetFiles(dir)), List.ofArray (Directory.GetDirectories(dir)) }
 
 // -----------------------------------------------
 // Entrypoint
