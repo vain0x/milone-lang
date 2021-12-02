@@ -325,7 +325,7 @@ let private debugProject pa : string * ProjectAnalysis =
 
   msg, pa
 
-let private doTestRefsSingleFile title text docId (ls: ProjectAnalysis) : bool * ProjectAnalysis =
+let private doTestRefsSingleFile title text docId (pa: ProjectAnalysis) : bool * ProjectAnalysis =
   let anchors = parseAnchors text
   let targetPos = firstPos anchors
 
@@ -337,9 +337,9 @@ let private doTestRefsSingleFile title text docId (ls: ProjectAnalysis) : bool *
 
   let expected = anchors |> debug
 
-  let actual, ls =
-    match ls |> LLS.ProjectAnalysis.findRefs docId targetPos with
-    | None, ls -> debugProject ls
+  let actual, pa =
+    match pa |> LLS.ProjectAnalysis.findRefs docId targetPos with
+    | None, pa -> debugProject pa
 
     | Some (defs, uses), _ ->
       let collect kind xs =
@@ -350,15 +350,15 @@ let private doTestRefsSingleFile title text docId (ls: ProjectAnalysis) : bool *
         |> Seq.toList
         |> debug
 
-      a, ls
+      a, pa
 
-  actual |> assertEqual title expected, ls
+  actual |> assertEqual title expected, pa
 
 let private testRefsSingleFile title text : bool =
   createSingleFileProject text (doTestRefsSingleFile title text)
   |> fst
 
-let private doTestHoverSingleFile title text expected docId ls : bool * _ =
+let private doTestHoverSingleFile title text expected docId pa : bool * _ =
   let targetPos = firstPos (parseAnchors text)
 
   let debug xs =
@@ -367,18 +367,18 @@ let private doTestHoverSingleFile title text expected docId ls : bool * _ =
     |> List.map (fun (row, column, anchor) -> sprintf "%d:%d %s" row column anchor)
     |> S.concat "\n"
 
-  let actual, ls =
-    match ls |> LLS.ProjectAnalysis.hover docId targetPos with
-    | None, ls -> debugProject ls
-    | Some it, ls -> it, ls
+  let actual, pa =
+    match pa |> LLS.ProjectAnalysis.hover docId targetPos with
+    | None, pa -> debugProject pa
+    | Some it, pa -> it, pa
 
-  actual |> assertEqual title expected, ls
+  actual |> assertEqual title expected, pa
 
 let private testHoverSingleFile title text expected : bool =
   createSingleFileProject text (doTestHoverSingleFile title text expected)
   |> fst
 
-let private doTestRenameSingleFile title text newName expected docId ls : bool * _ =
+let private doTestRenameSingleFile title text newName expected docId pa : bool * _ =
   let targetPos = firstPos (parseAnchors text)
 
   let debug xs =
@@ -387,19 +387,19 @@ let private doTestRenameSingleFile title text newName expected docId ls : bool *
     |> List.map (fun (row, column, newName) -> sprintf "%d:%d %s" row column newName)
     |> S.concat "\n"
 
-  let actual, ls =
-    match ls
+  let actual, pa =
+    match pa
           |> LLS.ProjectAnalysis.rename docId targetPos newName
       with
-    | [], ls -> debugProject ls
+    | [], pa -> debugProject pa
 
-    | changes, ls ->
+    | changes, pa ->
       changes
       |> List.map (fun (_, (((y, x), _), newName)) -> y, x, newName)
       |> debug,
-      ls
+      pa
 
-  actual |> assertEqual title expected, ls
+  actual |> assertEqual title expected, pa
 
 let private testRenameSingleFile title text newName expected : bool =
   createSingleFileProject text (doTestRenameSingleFile title text newName expected)
@@ -683,7 +683,7 @@ let private testRename () =
 // DocumentSymbol
 // -----------------------------------------------
 
-let private doTestDocumentSymbolSingleFile title expected docId (ls: ProjectAnalysis) : bool * ProjectAnalysis =
+let private doTestDocumentSymbolSingleFile title expected docId (pa: ProjectAnalysis) : bool * ProjectAnalysis =
   let debug xs =
     xs
     |> List.sortBy (fun (_, _, pos) -> pos)
@@ -691,13 +691,13 @@ let private doTestDocumentSymbolSingleFile title expected docId (ls: ProjectAnal
     |> S.concat "\n"
 
   let actual, _ =
-    ls |> LLS.ProjectAnalysis.documentSymbol docId
+    pa |> LLS.ProjectAnalysis.documentSymbol docId
 
   actual
   |> List.map (fun (name, kind, (pos, _)) -> name, kind, pos)
   |> debug
   |> assertEqual title expected,
-  ls
+  pa
 
 let private testDocumentSymbolSingleFile title text expected : bool =
   createSingleFileProject text (doTestDocumentSymbolSingleFile title expected)
@@ -745,19 +745,19 @@ let private testDocumentSymbol () =
 // Completion
 // -----------------------------------------------
 
-let private doTestCompletion (p: LLS.ProjectInfo) (wa: LLS.WorkspaceAnalysis) title text expected docId ls : bool * _ =
+let private doTestCompletion (p: LLS.ProjectInfo) (wa: LLS.WorkspaceAnalysis) title text expected docId pa : bool * _ =
   let targetPos = firstPos (parseAnchors text)
 
   let debug xs = xs |> List.sort |> S.concat "\n"
 
-  let actual, ls =
-    match ls
+  let actual, pa =
+    match pa
           |> LLS.ProjectAnalysis.completion wa.StdLibModules wa.Host.DirEntries p.ProjectDir docId targetPos
       with
-    | [], ls -> debugProject ls
-    | result, ls -> debug result, ls
+    | [], pa -> debugProject pa
+    | result, pa -> debug result, pa
 
-  actual |> assertEqual title (debug expected), ls
+  actual |> assertEqual title (debug expected), pa
 
 let private testCompletionMultipleFiles title files expected : bool =
   let wa = createWorkspaceAnalysisWithFiles files
