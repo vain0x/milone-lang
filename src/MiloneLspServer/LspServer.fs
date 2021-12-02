@@ -505,7 +505,12 @@ let private processNext miloneHome : LspIncome -> ProcessResult =
       handleNotificationWith
         "initialized"
         (fun () ->
-          current <- LspLangService.onInitialized rootUriOpt current
+          let wa =
+            WorkspaceAnalysis.onInitialized rootUriOpt current
+
+          current <- wa
+
+          infoFn "findProjects: %A" (WorkspaceAnalysis.getProjectDirs wa)
           enableDidChangedWatchedFiles ())
         id
 

@@ -968,6 +968,18 @@ let doWithProjectAnalysis
 module WorkspaceAnalysis =
   let empty (host: WorkspaceAnalysisHost) : WorkspaceAnalysis = emptyWorkspaceAnalysis host
 
+  let getProjectDirs (wa: WorkspaceAnalysis) =
+    wa.ProjectList
+    |> List.map (fun (p: ProjectInfo) -> p.ProjectDir)
+
+  let onInitialized rootUriOpt (wa: WorkspaceAnalysis) : WorkspaceAnalysis =
+    let projects =
+      match rootUriOpt with
+      | Some rootUri -> doFindProjects wa.Host.FileExists wa.Host.DirEntries rootUri
+      | None -> []
+
+    { wa with ProjectList = projects }
+
   let didOpenDoc (uri: Uri) (version: int) (text: string) (wa: WorkspaceAnalysis) =
     traceFn "didOpenDoc %s v:%d" (Uri.toString uri) version
     { wa with Docs = wa.Docs |> TMap.add uri (version, text) }
@@ -1138,15 +1150,6 @@ module WorkspaceAnalysis =
       |> List.forall (fun (uri, _) -> isSafeToEdit uri wa)
 
     (if ok then changes else []), wa
-
-let onInitialized rootUriOpt (wa: WorkspaceAnalysis) : WorkspaceAnalysis =
-  let projects =
-    match rootUriOpt with
-    | Some rootUri -> doFindProjects wa.Host.FileExists wa.Host.DirEntries rootUri
-    | None -> []
-
-  infoFn "findProjects: %A" (List.map (fun (p: ProjectInfo) -> p.ProjectDir) projects)
-  { wa with ProjectList = projects }
 
 // -----------------------------------------------
 // Formatting

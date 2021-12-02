@@ -283,7 +283,7 @@ let private createWorkspaceAnalysisWithFiles files =
 
   let wa =
     WorkspaceAnalysis.empty host
-    |> LLS.onInitialized (rootDir |> LLS.uriOfFilePath |> Some)
+    |> WorkspaceAnalysis.onInitialized (rootDir |> LLS.uriOfFilePath |> Some)
 
   files
   |> List.fold
@@ -790,8 +790,9 @@ let private testDiagnostics miloneHome =
   let workDir = System.Environment.CurrentDirectory
   let rootUri = workDir |> LLS.uriOfFilePath
 
-  let wa = WorkspaceAnalysis.empty miloneHome
-  let wa = LLS.onInitialized (Some rootUri) wa
+  let wa =
+    WorkspaceAnalysis.empty miloneHome
+    |> WorkspaceAnalysis.onInitialized (Some rootUri)
 
   let result, wa = WorkspaceAnalysis.diagnostics wa
   assert (List.length result = 0)
