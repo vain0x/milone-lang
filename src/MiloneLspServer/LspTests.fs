@@ -23,6 +23,12 @@ let private splitLast xs =
   | last :: nonLast -> Some(List.rev nonLast, last)
   | [] -> None
 
+let private pathToProjectName path =
+  path
+  |> LLS.dirname
+  |> Option.map LLS.basename
+  |> expect "project"
+
 // -----------------------------------------------
 // tests
 // -----------------------------------------------
@@ -178,12 +184,13 @@ let private parseAnchors text : ((int * int) * string) list =
     else
       [])
 
+let private firstPos anchors =
+  anchors |> List.tryHead |> expect "anchor" |> fst
+
 // -----------------------------------------------
 // in-memory project
 // -----------------------------------------------
 
-let private projectDir = "/example.com/TestProject"
-let private projectName = "TestProject"
 let private docId = "TestProject.TestProject"
 
 let private components (path: string) =
@@ -304,11 +311,23 @@ let private createSingleFileProject text action =
   wa
   |> LLS.doWithProjectAnalysis (getProject "TestProject" wa) action
 
+/// Gets compilation errors or `No result.`.
+/// Use this when analysis result is empty.
+let private debugProject pa : string * ProjectAnalysis =
+  let errors, pa =
+    pa |> LLS.ProjectAnalysis.validateProject
+
+  let msg =
+    if errors |> List.isEmpty then
+      "No result."
+    else
+      sprintf "Compile error: %A" errors
+
+  msg, pa
+
 let private doTestRefsSingleFile title text (ls: ProjectAnalysis) : bool * ProjectAnalysis =
   let anchors = parseAnchors text
-
-  let firstAnchor =
-    anchors |> List.tryHead |> expect "anchor"
+  let targetPos = firstPos anchors
 
   let debug xs =
     xs
@@ -319,20 +338,8 @@ let private doTestRefsSingleFile title text (ls: ProjectAnalysis) : bool * Proje
   let expected = anchors |> debug
 
   let actual, ls =
-    let pos, _ = firstAnchor
-
-    match ls |> LLS.ProjectAnalysis.findRefs docId pos with
-    | None, ls ->
-      let errors, ls =
-        ls |> LLS.ProjectAnalysis.validateProject
-
-      let msg =
-        if errors |> List.isEmpty then
-          "No result."
-        else
-          sprintf "Compile error: %A" errors
-
-      msg, ls
+    match ls |> LLS.ProjectAnalysis.findRefs docId targetPos with
+    | None, ls -> debugProject ls
 
     | Some (defs, uses), _ ->
       let collect kind xs =
@@ -352,10 +359,7 @@ let private testRefsSingleFile title text : bool =
   |> fst
 
 let private doTestHoverSingleFile title text expected ls : bool * _ =
-  let targetPos, _ =
-    parseAnchors text
-    |> List.tryHead
-    |> expect "anchor"
+  let targetPos = firstPos (parseAnchors text)
 
   let debug xs =
     xs
@@ -365,18 +369,7 @@ let private doTestHoverSingleFile title text expected ls : bool * _ =
 
   let actual, ls =
     match ls |> LLS.ProjectAnalysis.hover docId targetPos with
-    | None, ls ->
-      let errors, ls =
-        ls |> LLS.ProjectAnalysis.validateProject
-
-      let msg =
-        if errors |> List.isEmpty then
-          "No result."
-        else
-          sprintf "Compile error: %A" errors
-
-      msg, ls
-
+    | None, ls -> debugProject ls
     | Some it, ls -> it, ls
 
   actual |> assertEqual title expected, ls
@@ -386,10 +379,7 @@ let private testHoverSingleFile title text expected : bool =
   |> fst
 
 let private doTestRenameSingleFile title text newName expected ls : bool * _ =
-  let targetPos, _ =
-    parseAnchors text
-    |> List.tryHead
-    |> expect "anchor"
+  let targetPos = firstPos (parseAnchors text)
 
   let debug xs =
     xs
@@ -401,17 +391,7 @@ let private doTestRenameSingleFile title text newName expected ls : bool * _ =
     match ls
           |> LLS.ProjectAnalysis.rename docId targetPos newName
       with
-    | [], ls ->
-      let errors, ls =
-        ls |> LLS.ProjectAnalysis.validateProject
-
-      let msg =
-        if errors |> List.isEmpty then
-          "No result."
-        else
-          sprintf "Compile error: %A" errors
-
-      msg, ls
+    | [], ls -> debugProject ls
 
     | changes, ls ->
       changes
@@ -766,10 +746,7 @@ let private testDocumentSymbol () =
 // -----------------------------------------------
 
 let private doTestCompletion (p: LLS.ProjectInfo) (wa: LLS.WorkspaceAnalysis) title text expected ls : bool * _ =
-  let targetPos, _ =
-    parseAnchors text
-    |> List.tryHead
-    |> expect "anchor"
+  let targetPos = firstPos (parseAnchors text)
 
   let debug xs = xs |> List.sort |> S.concat "\n"
 
@@ -777,18 +754,7 @@ let private doTestCompletion (p: LLS.ProjectInfo) (wa: LLS.WorkspaceAnalysis) ti
     match ls
           |> LLS.ProjectAnalysis.completion wa.StdLibModules wa.Host.DirEntries p.ProjectDir docId targetPos
       with
-    | [], ls ->
-      let errors, ls =
-        ls |> LLS.ProjectAnalysis.validateProject
-
-      let msg =
-        if errors |> List.isEmpty then
-          "No result."
-        else
-          sprintf "Compile error: %A" errors
-
-      msg, ls
-
+    | [], ls -> debugProject ls
     | result, ls -> debug result, ls
 
   actual |> assertEqual title (debug expected), ls
@@ -801,14 +767,7 @@ let private testCompletionMultipleFiles title files expected : bool =
     |> List.tryFind (fun (_, text) -> parseAnchors text |> List.isEmpty |> not)
     |> expect "anchor"
 
-  let p =
-    let projectName =
-      path
-      |> LLS.dirname
-      |> Option.map LLS.basename
-      |> expect "project"
-
-    getProject projectName wa
+  let p = getProject (pathToProjectName path) wa
 
   LLS.doWithProjectAnalysis p (doTestCompletion p wa title text expected) wa
   |> fst
