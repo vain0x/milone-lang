@@ -2,8 +2,10 @@ module rec MiloneLspServer.Program
 
 open System
 open System.IO
+open MiloneShared.UtilParallel
 open MiloneLspServer.JsonRpcReader
 open MiloneLspServer.LspServer
+open MiloneLspServer.Util
 
 // FIXME: shouldn't depend
 module SyntaxApi = MiloneSyntax.SyntaxApi
@@ -32,9 +34,21 @@ let private getHomeEnv () =
 let private miloneHome =
   SyntaxApi.getMiloneHomeFromEnv getMiloneHomeEnv getHomeEnv
 
+let private readTextFile (filePath: string) : Future<string option> =
+  try
+    if File.Exists(filePath) then
+      File.ReadAllTextAsync(filePath)
+      |> Future.ofTask
+      |> Future.map Some
+    else
+      Future.just None
+  with
+  | _ -> Future.just None
+
 let private getHost () : LLS.WorkspaceAnalysisHost =
   { MiloneHome = miloneHome
     FileExists = File.Exists
+    ReadTextFile = readTextFile
     DirEntries = fun dir -> List.ofArray (Directory.GetFiles(dir)), List.ofArray (Directory.GetDirectories(dir)) }
 
 // -----------------------------------------------

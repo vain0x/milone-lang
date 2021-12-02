@@ -20,6 +20,7 @@ type private FilePath = string
 type private ProjectDir = string
 type private MiloneHome = string
 type private FileExistsFun = FilePath -> bool
+type private ReadTextFileFun = FilePath -> Future<string option>
 type private DocIdToFilePathFun = ProjectDir -> DocId -> string
 type private DirEntriesFun = string -> string list * string list
 type private ReadSourceFileFun = FilePath -> Future<string option>
@@ -760,12 +761,14 @@ module ProjectAnalysis =
 type WorkspaceAnalysisHost =
   { MiloneHome: MiloneHome
     FileExists: FileExistsFun
+    ReadTextFile: ReadTextFileFun
     DirEntries: DirEntriesFun }
 
 module WorkspaceAnalysisHost =
   let dummy: WorkspaceAnalysisHost =
     { MiloneHome = "/$/.milone"
       FileExists = fun _ -> false
+      ReadTextFile = fun _ -> Future.just None
       DirEntries = fun _ -> [], [] }
 
 /// State of workspace-wide analysis.
@@ -807,7 +810,7 @@ let private createWorkspaceAnalysis (host: WorkspaceAnalysisHost) : WorkspaceAna
 
     StdLibModules = []
     DocIdToFilePath = fun _ _ -> unreachable ()
-    ReadSourceFile = SyntaxApi.readSourceFile File.readTextFile
+    ReadSourceFile = fun _ -> Future.just None
 
     Host = host }
 
@@ -818,6 +821,9 @@ let private docIdToFilePath (p: ProjectInfo) docId (wa: WorkspaceAnalysis) = wa.
 
 let private docIdToUri p docId (wa: WorkspaceAnalysis) =
   docIdToFilePath p docId wa |> uriOfFilePath
+
+let private readTextFile path (wa: WorkspaceAnalysis) =
+  wa.Host.ReadTextFile path |> Future.wait
 
 let private readSourceFile p docId (wa: WorkspaceAnalysis) =
   wa.ReadSourceFile(docIdToFilePath p docId wa)
@@ -918,7 +924,7 @@ let doWithProjectAnalysis
       Parse = parse1
 
       MiloneHome = wa.Host.MiloneHome
-      ReadTextFile = File.readTextFile }
+      ReadTextFile = wa.Host.ReadTextFile }
 
   let pa =
     match wa.Projects |> TMap.tryFind p.ProjectName with
@@ -952,7 +958,7 @@ let doWithProjectAnalysis
          (fun (wa: WorkspaceAnalysis) uri ->
            // FIXME: don't read file
            // same as didOpenFile
-           match uriToFilePath uri |> File.tryReadFile with
+           match readTextFile (uriToFilePath uri) wa with
            | Some text ->
              traceFn "file '%s' opened after bundle" (Uri.toString uri)
              { wa with Docs = wa.Docs |> TMap.add uri (0, text) }
@@ -978,12 +984,10 @@ module WorkspaceAnalysis =
       stdLibProjects
       |> List.collect (fun (_, projectDir) -> findModulesInDir host.DirEntries projectDir)
 
-    let readTextFile = File.readTextFile // FIXME: host
-
     { wa with
         StdLibModules = stdLibModules
         DocIdToFilePath = convertDocIdToFilePath host.FileExists (Map.ofList stdLibProjects)
-        ReadSourceFile = SyntaxApi.readSourceFile readTextFile
+        ReadSourceFile = SyntaxApi.readSourceFile host.ReadTextFile
         Host = host }
 
   let create (host: WorkspaceAnalysisHost) : WorkspaceAnalysis = dummy |> withHost host
@@ -1017,7 +1021,7 @@ module WorkspaceAnalysis =
   let didOpenFile (uri: Uri) (wa: WorkspaceAnalysis) =
     traceFn "didOpenFile %s" (Uri.toString uri)
     // FIXME: don't read file
-    match uriToFilePath uri |> File.tryReadFile with
+    match readTextFile (uriToFilePath uri) wa with
     | Some text ->
       let version, wa = freshId wa
       didOpenDoc uri version text wa
@@ -1027,7 +1031,7 @@ module WorkspaceAnalysis =
   let didChangeFile (uri: Uri) (wa: WorkspaceAnalysis) =
     traceFn "didChangeFile %s" (Uri.toString uri)
     // FIXME: don't read file
-    match uriToFilePath uri |> File.tryReadFile with
+    match readTextFile (uriToFilePath uri) wa with
     | Some text ->
       let version, wa = freshId wa
       didChangeDoc uri version text wa

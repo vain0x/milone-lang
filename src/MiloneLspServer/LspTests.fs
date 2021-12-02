@@ -1,6 +1,7 @@
 // FIXME: separate project
 module rec MiloneLspServer.LspTests
 
+open MiloneShared.UtilParallel
 open MiloneLspServer.Lsp
 open MiloneLspServer.LspUtil
 
@@ -278,7 +279,12 @@ let private createWorkspaceAnalysisHostWithFiles files : LLS.WorkspaceAnalysisHo
       FileExists =
         fun path ->
           let path = ensureNormalization "FileEntries" path
-          fileMap |> Map.containsKey (LLS.normalize path)
+          fileMap |> Map.containsKey path
+
+      ReadTextFile =
+        fun path ->
+          let path = ensureNormalization "ReadTextFile" path
+          fileMap |> Map.tryFind path |> Future.just
 
       DirEntries = dirEntriesIn files }
 
