@@ -787,7 +787,10 @@ let private testCompletion () =
 // Run server (stateful).
 
 let private testDiagnostics miloneHome =
-  let workDir = System.Environment.CurrentDirectory
+  let workDir =
+    System.Environment.CurrentDirectory
+    |> LLS.normalize
+
   let rootUri = workDir |> LLS.uriOfFilePath
 
   let wa =
@@ -819,9 +822,12 @@ let private testDiagnostics miloneHome =
 
   assert (List.length result = 1)
 
-  for uri, errors in result do
-    for msg, (y1, x1), (y2, x2) in errors do
-      printfn "error: \"%s\" %s:%d:%d..%d:%d" msg (Uri.toString uri) (y1 + 1) (x1 + 1) (y2 + 1) (x2 + 1)
+  let errors =
+    result
+    |> List.collect (fun (uri, errors) ->
+      errors
+      |> List.map (fun (msg, (y1, x1), (y2, x2)) ->
+        sprintf "error: \"%s\" %s:%d:%d..%d:%d" msg (Uri.toString uri) (y1 + 1) (x1 + 1) (y2 + 1) (x2 + 1)))
 
   // highlight (main function)
   let wa =
@@ -830,9 +836,20 @@ let private testDiagnostics miloneHome =
   let reads, writes, _ =
     WorkspaceAnalysis.documentHighlight fileUri (2, 4) wa
 
-  printfn "reads: %A" reads
-  printfn "writes: %A" writes
-  assert (List.length writes = 1)
+  let actual =
+    List.append
+      errors
+      [ sprintf "reads: %A" reads
+        sprintf "writes: %A" writes ]
+
+  assert (actual
+          |> S.concat "\n"
+          |> S.replace workDir "$HOME"
+          |> assertEqual
+               "testDiagnostics"
+               """error: "PARSE ERROR: Missing '=' (0:1)" file://$HOME/tests/DiagnosticsTest/DiagnosticsTest.milone:7:1..7:1
+reads: []
+writes: [((2, 4), (2, 8))]""")
 
 // -----------------------------------------------
 // Interface
