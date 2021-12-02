@@ -794,6 +794,34 @@ let private testCompletion () =
     ]
 
 // -----------------------------------------------
+// Find projects
+// -----------------------------------------------
+
+let private testFindProjects () =
+  let files =
+    [ "/$/.milone/milone_libs/MiloneStd/StdFoo.milone", "" ]
+
+  let newFile = "/$/root/TestProject/TestProject.milone"
+  let newFiles = (newFile, "") :: files
+
+  let wa =
+    createWorkspaceAnalysisWithFiles files
+    |> WorkspaceAnalysis.withHost (createWorkspaceAnalysisHostWithFiles newFiles)
+    |> WorkspaceAnalysis.didOpenFile (LLS.uriOfFilePath newFile)
+
+  [ wa
+    |> WorkspaceAnalysis.getProjectDirs
+    |> S.concat "; "
+    |> assertEqual "after open" "/$/root/TestProject"
+
+    wa
+    |> WorkspaceAnalysis.withHost (createWorkspaceAnalysisHostWithFiles files)
+    |> WorkspaceAnalysis.didCloseFile (LLS.uriOfFilePath newFile)
+    |> WorkspaceAnalysis.getProjectDirs
+    |> S.concat "; "
+    |> assertEqual "after close" "" ]
+
+// -----------------------------------------------
 // Diagnostics
 // -----------------------------------------------
 
@@ -876,7 +904,8 @@ let lspTests host =
       testHover ()
       testRename ()
       testDocumentSymbol ()
-      testCompletion () ]
+      testCompletion ()
+      testFindProjects () ]
     |> List.collect id
     |> runTests
 

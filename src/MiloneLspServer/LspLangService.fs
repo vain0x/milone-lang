@@ -300,6 +300,11 @@ let private doFindProjects fileExists getDirEntries (rootUri: Uri) : ProjectInfo
 
   bfs [] [ 0, rootDir ]
 
+let private isEntrypoint (path: string) =
+  match dirname path with
+  | Some parent -> basename parent = stem path
+  | None -> false
+
 let filePathToDocId (path: string) : DocId =
   let projectName =
     match dirname path with
@@ -790,6 +795,7 @@ type WorkspaceAnalysis =
     DiagnosticsKeys: Uri list
     DiagnosticsCache: DiagnosticsCache<byte array>
 
+    RootUriOpt: Uri option
     StdLibModules: (string * ProjectDir) list
     DocIdToFilePath: DocIdToFilePathFun
     ReadSourceFile: ReadSourceFileFun
@@ -808,6 +814,7 @@ let private createWorkspaceAnalysis (host: WorkspaceAnalysisHost) : WorkspaceAna
     DiagnosticsKeys = []
     DiagnosticsCache = DiagnosticsCache.empty Md5Helper.ofString Md5Helper.equals
 
+    RootUriOpt = None
     StdLibModules = []
     DocIdToFilePath = fun _ _ -> unreachable ()
     ReadSourceFile = fun _ -> Future.just None
@@ -842,6 +849,14 @@ let private isSafeToEdit (uri: Uri) (wa: WorkspaceAnalysis) =
   |> List.exists (fun (p: ProjectInfo) ->
     p.ProjectName |> S.startsWith "Milone" |> not
     && dir = p.ProjectName)
+
+let private findProjects (wa: WorkspaceAnalysis) =
+  let projects =
+    match wa.RootUriOpt with
+    | Some rootUri -> doFindProjects wa.Host.FileExists wa.Host.DirEntries rootUri
+    | None -> []
+
+  { wa with ProjectList = projects }
 
 let doWithProjectAnalysis
   (p: ProjectInfo)
@@ -997,12 +1012,8 @@ module WorkspaceAnalysis =
     |> List.map (fun (p: ProjectInfo) -> p.ProjectDir)
 
   let onInitialized rootUriOpt (wa: WorkspaceAnalysis) : WorkspaceAnalysis =
-    let projects =
-      match rootUriOpt with
-      | Some rootUri -> doFindProjects wa.Host.FileExists wa.Host.DirEntries rootUri
-      | None -> []
-
-    { wa with ProjectList = projects }
+    let wa = { wa with RootUriOpt = rootUriOpt }
+    findProjects wa
 
   let didOpenDoc (uri: Uri) (version: int) (text: string) (wa: WorkspaceAnalysis) =
     traceFn "didOpenDoc %s v:%d" (Uri.toString uri) version
@@ -1020,6 +1031,13 @@ module WorkspaceAnalysis =
 
   let didOpenFile (uri: Uri) (wa: WorkspaceAnalysis) =
     traceFn "didOpenFile %s" (Uri.toString uri)
+
+    let wa =
+      if uriToFilePath uri |> isEntrypoint then
+        findProjects wa
+      else
+        wa
+
     // FIXME: don't read file
     match readTextFile (uriToFilePath uri) wa with
     | Some text ->
@@ -1040,6 +1058,13 @@ module WorkspaceAnalysis =
 
   let didCloseFile (uri: Uri) (wa: WorkspaceAnalysis) =
     traceFn "didCloseFile %s" (Uri.toString uri)
+
+    let wa =
+      if uriToFilePath uri |> isEntrypoint then
+        findProjects wa
+      else
+        wa
+
     didCloseDoc uri wa
 
   let diagnostics (wa: WorkspaceAnalysis) =
