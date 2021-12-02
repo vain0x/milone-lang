@@ -408,8 +408,6 @@ let testRefs () =
   [ testRefsSingleFile
       "local var"
       """
-        module rec TestProject.Program
-
         let main _ =
           let foo = 0
           //  ^def
@@ -421,8 +419,6 @@ let testRefs () =
     testRefsSingleFile
       "static var"
       """
-        module rec TestProject.Program
-
         let constant = 42
         //  ^def
 
@@ -442,8 +438,6 @@ let testRefs () =
     testRefsSingleFile
       "local fun"
       """
-        module rec TestProject.Program
-
         let main _ =
           let f () = 0
           //  ^def
@@ -462,8 +456,6 @@ let testRefs () =
     testRefsSingleFile
       "static fun"
       """
-        module rec TestProject.Program
-
         let fact (n: int): int =
         //  ^def
           if n = 0 then 1 else fact (n - 1) * n
@@ -476,8 +468,6 @@ let testRefs () =
     testRefsSingleFile
       "unit-like variant"
       """
-        module rec TestProject.Program
-
         type MyOption =
           | MyNone
         //  ^def
@@ -496,8 +486,6 @@ let testRefs () =
     testRefsSingleFile
       "primitive"
       """
-        module rec TestProject.Program
-
         let main _ =
           // FIXME: it fails without whitespace
           printfn "%s" ( string 42)
@@ -510,8 +498,6 @@ let testRefs () =
     testRefsSingleFile
       "value-carrying variant"
       """
-        module rec TestProject.Program
-
         type MyOption =
           | MyNone
           | MySome of int
@@ -533,8 +519,6 @@ let testRefs () =
     testRefsSingleFile
       "field"
       """
-        module rec TestProject.Program
-
         type MyPair =
           { First: int
         //  ^def
@@ -555,8 +539,6 @@ let testRefs () =
     testRefsSingleFile
       "union type"
       """
-        module rec TestProject.Program
-
         type MyOption =
         //   ^def
           | MyNone
@@ -571,8 +553,6 @@ let testRefs () =
     testRefsSingleFile
       "record type"
       """
-        module rec TestProject.Program
-
         type MyPair =
         //   ^def
           { First: int
@@ -604,8 +584,6 @@ let private testHover () =
   [ testHoverSingleFile
       "var"
       """
-        module rec TestProject.Program
-
         let main _ =
           let foo = 42
           //  ^cursor
@@ -617,8 +595,6 @@ let private testHover () =
     testHoverSingleFile
       "fun"
       """
-        module rec TestProject.Program
-
         let pair (x: int) (y: string) : int * string = x, y
         //  ^cursor
 
@@ -629,8 +605,6 @@ let private testHover () =
     testHoverSingleFile
       "user-defined type var"
       """
-        module rec TestProject.Program
-
         type MyUnit = | MyUnit
         type MyBox = { Value: int }
 
@@ -646,8 +620,6 @@ let private testHover () =
     testHoverSingleFile
       "no hover"
       """
-        module rec TestProject.Program
-
         let main _ = 0
         //         ^cursor
       """
@@ -661,8 +633,6 @@ let private testRename () =
   [ testRenameSingleFile
       "var"
       """
-        module rec TestProject.Program
-
         let main _ =
           let foo = 42
           //  ^baz
@@ -671,8 +641,8 @@ let private testRename () =
       //  ^baz
       """
       "baz"
-      """4:14 baz
-7:10 baz""" ]
+      """2:14 baz
+5:10 baz""" ]
 
 // -----------------------------------------------
 // DocumentSymbol
@@ -775,19 +745,17 @@ let private testCompletion () =
   [ testCompletionSingleFile
       "local var"
       """
-        module rec TestProject.Program
+        let localFun () = ()
 
-        let main _ =
-          let () =
-            let y = ()
-            y
+        let () =
+          let invisible = ()
+          invisible
 
-          let x = 1
-
-      //  ^cursor
-          0
+        let localVar = 1
+                          //
+      //^cursor
       """
-      [ "main"; "x" ]
+      [ "localFun"; "localVar" ]
 
     testCompletionMultipleFiles
       "module name"
@@ -804,8 +772,6 @@ let private testCompletion () =
     // testCompletionSingleFile
     //   "dot"
     //   """
-    //     module rec TestProject.Program
-
     //     let main _ =
     //       List.   (x.y)
     //   //       ^cursor
