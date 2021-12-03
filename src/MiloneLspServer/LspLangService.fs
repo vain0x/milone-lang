@@ -788,8 +788,8 @@ type WorkspaceAnalysis =
     Projects: TreeMap<string, ProjectAnalysis>
 
     // Per-file cache.
-    TokenizeCache: TreeMap<DocId, DocVersion * LTokenList>
-    ParseCache: TreeMap<DocId, DocVersion * LSyntaxData>
+    TokenizeCache: TreeMap<Uri, DocVersion * LTokenList>
+    ParseCache: TreeMap<Uri, DocVersion * LSyntaxData>
 
     // Diagnostics.
     DiagnosticsKeys: Uri list
@@ -808,8 +808,8 @@ let private createWorkspaceAnalysis (host: WorkspaceAnalysisHost) : WorkspaceAna
     ProjectList = []
     Projects = TMap.empty compare
 
-    TokenizeCache = TMap.empty compare
-    ParseCache = TMap.empty compare
+    TokenizeCache = TMap.empty Uri.compare
+    ParseCache = TMap.empty Uri.compare
 
     DiagnosticsKeys = []
     DiagnosticsCache = DiagnosticsCache.empty Md5Helper.ofString Md5Helper.equals
@@ -875,11 +875,13 @@ let doWithProjectAnalysis
     let version =
       getVersion docId |> Option.defaultValue 0
 
-    match wa.ParseCache |> TMap.tryFind docId with
+    let uri = docIdToUri p docId wa
+
+    match wa.ParseCache |> TMap.tryFind uri with
     | Some (v, syntaxData) when v >= version -> v, LSyntaxData.getTokens syntaxData
 
     | _ ->
-      match wa.TokenizeCache |> TMap.tryFind docId with
+      match wa.TokenizeCache |> TMap.tryFind uri with
       | Some ((v, _) as it) when v >= version -> it
 
       | _ ->
@@ -912,9 +914,10 @@ let doWithProjectAnalysis
         | Some (v, text) -> ok v text
 
   let parse1 docId =
+    let uri = docIdToUri p docId wa
     let version, tokens = tokenize1 docId
 
-    match wa.ParseCache |> TMap.tryFind docId with
+    match wa.ParseCache |> TMap.tryFind uri with
     | Some ((v, _) as it) when v >= version -> Some it
 
     | _ ->
@@ -957,10 +960,11 @@ let doWithProjectAnalysis
          (fun (wa: WorkspaceAnalysis) (v, syntaxData) ->
            let docId = LSyntaxData.getDocId syntaxData
            let tokens = LSyntaxData.getTokens syntaxData
+           let uri = docIdToUri p docId wa
 
            { wa with
-               TokenizeCache = wa.TokenizeCache |> TMap.add docId (v, tokens)
-               ParseCache = wa.ParseCache |> TMap.add docId (v, syntaxData) })
+               TokenizeCache = wa.TokenizeCache |> TMap.add uri (v, tokens)
+               ParseCache = wa.ParseCache |> TMap.add uri (v, syntaxData) })
          wa
 
   let wa =
