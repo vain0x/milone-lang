@@ -858,88 +858,90 @@ let private findProjects (wa: WorkspaceAnalysis) =
 
   { wa with ProjectList = projects }
 
+let private getDocVersion uri (wa: WorkspaceAnalysis) =
+  match wa.Docs |> TMap.tryFind uri with
+  | Some (v, _) -> Some v
+
+  | None ->
+    traceFn "docs don't have '%s'" (uri |> Uri.toString)
+    None
+
+let private tokenizeDoc uri (wa: WorkspaceAnalysis) =
+  let version =
+    getDocVersion uri wa |> Option.defaultValue 0
+
+  match wa.ParseCache |> TMap.tryFind uri with
+  | Some (v, syntaxData) when v >= version ->
+    let tokens = LSyntaxData.getTokens syntaxData
+    Some(v, tokens)
+
+  | _ ->
+    match wa.TokenizeCache |> TMap.tryFind uri with
+    | (Some (v, _)) as it when v >= version -> it
+
+    | _ ->
+      let ok v text =
+        traceFn "tokenize: '%s' v:%d" (Uri.toString uri) v
+        let tokens = LTokenList.tokenizeAll text
+        Some(v, tokens)
+
+      match wa.Docs |> TMap.tryFind uri with
+      | Some (v, text) -> ok v text
+
+      | None ->
+        traceFn "tokenize: '%s' not found, fallback to file" (Uri.toString uri)
+
+        // FIXME: LSP server should add all files to docs before processing queries.
+        let textOpt =
+          wa.Host.ReadTextFile(uriToFilePath uri)
+          |> Future.wait
+
+        match textOpt with
+        | Some text -> ok 0 text
+        | None -> None
+
+let private parseDoc (uri: Uri) (wa: WorkspaceAnalysis) =
+  match tokenizeDoc uri wa with
+  | Some (version, tokens) ->
+    match wa.ParseCache |> TMap.tryFind uri with
+    | (Some (v, _)) as it when v >= version -> it
+
+    | _ ->
+      let v = version
+      let docId = uri |> uriToFilePath |> filePathToDocId
+
+      let projectName, moduleName =
+        match docId |> docIdToModulePath with
+        | Some it -> it
+        | None -> unreachable () // docId is created in `p.m` format explicitly
+
+      traceFn "parse '%s' v:%d" docId v
+
+      let syntaxData =
+        LSyntaxData.parse projectName moduleName docId tokens
+
+      Some(v, syntaxData)
+
+  | None -> None
+
 let doWithProjectAnalysis
   (p: ProjectInfo)
   (action: ProjectAnalysis -> 'A * ProjectAnalysis)
   (wa: WorkspaceAnalysis)
   : 'A * WorkspaceAnalysis =
-  let getVersion docId =
-    match wa.Docs |> TMap.tryFind (docIdToUri p docId wa) with
-    | Some (v, _) -> Some v
-
-    | None ->
-      traceFn "docs don't have '%s'" (docIdToUri p docId wa |> Uri.toString)
-      None
-
-  let tokenize1 docId =
-    let version =
-      getVersion docId |> Option.defaultValue 0
-
-    let uri = docIdToUri p docId wa
-
-    match wa.ParseCache |> TMap.tryFind uri with
-    | Some (v, syntaxData) when v >= version -> v, LSyntaxData.getTokens syntaxData
-
-    | _ ->
-      match wa.TokenizeCache |> TMap.tryFind uri with
-      | Some ((v, _) as it) when v >= version -> it
-
-      | _ ->
-        let ok v text =
-          traceFn "tokenize '%s' v:%d" docId v
-
-          let tokens = LTokenList.tokenizeAll text
-
-          v, tokens
-
-        match wa.Docs |> TMap.tryFind (docIdToUri p docId wa) with
-        | None ->
-          traceFn
-            "tokenize: docId:'%s' uri:'%s' not found -- fallback to file"
-            docId
-            (docIdToUri p docId wa |> Uri.toString)
-
-          // FIXME: LSP server should add all files to docs before processing queries.
-          let textOpt = readSourceFile p docId wa |> Future.wait
-
-          match textOpt with
-          | None ->
-            if docIdIsOptional docId |> not then
-              warnFn "missing docId '%s' to be tokenized" docId
-
-            -1, LTokenList.empty
-
-          | Some text -> ok 0 text
-
-        | Some (v, text) -> ok v text
-
-  let parse1 docId =
-    let uri = docIdToUri p docId wa
-    let version, tokens = tokenize1 docId
-
-    match wa.ParseCache |> TMap.tryFind uri with
-    | Some ((v, _) as it) when v >= version -> Some it
-
-    | _ ->
-      let v = version
-
-      match docIdToModulePath docId with
-      | None ->
-        warnFn "illegal docId '%s'" docId
-        None
-
-      | Some (projectName, moduleName) ->
-        traceFn "parse '%s' v:%d" docId v
-
-        let syntaxData =
-          LSyntaxData.parse projectName moduleName docId tokens
-
-        Some(v, syntaxData)
-
   let host: ProjectAnalysisHost =
-    { GetDocVersion = getVersion
-      Tokenize = tokenize1
-      Parse = parse1
+    { GetDocVersion = fun docId -> getDocVersion (docIdToUri p docId wa) wa
+
+      Tokenize =
+        fun docId ->
+          let uri = docIdToUri p docId wa
+          tokenizeDoc uri wa
+          |> Option.defaultValue (0, LTokenList.empty)
+
+      Parse =
+        fun docId ->
+          let uri = docIdToUri p docId wa
+          parseDoc uri wa
 
       MiloneHome = wa.Host.MiloneHome
       ReadTextFile = wa.Host.ReadTextFile }
