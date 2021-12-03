@@ -231,6 +231,11 @@ module LToken =
     | EqualToken -> true
     | _ -> false
 
+  let isOpen (LToken (token, _)) =
+    match token with
+    | OpenToken -> true
+    | _ -> false
+
   let isModule (LToken (token, _)) =
     match token with
     | ModuleToken -> true
@@ -290,6 +295,15 @@ module LSyntaxData =
   let getTokens syntaxData =
     let (LSyntaxData (_, tokens, _, _)) = syntaxData
     LTokenList tokens
+
+  let findModuleDefs (s: LSyntaxData) : string list =
+    let (LSyntaxData (docId, _, ast, _)) = s
+
+    lowerARoot docId [] ast
+    |> List.choose (fun (symbol, defOrUse, _) ->
+      match symbol, defOrUse with
+      | DModuleSymbol ([ name ]), Def -> Some name
+      | _ -> None)
 
   let findModuleSynonyms (s: LSyntaxData) : (string * ModulePath * Loc) list =
     let (LSyntaxData (docId, tokens, ast, _)) = s
@@ -476,6 +490,7 @@ type DSymbol =
   | DFunSymbol of string
   | DTySymbol of string
   | DModuleSymbol of ModulePath
+  | DOpenUse of ModulePath
   | DModuleSynonymDef of synonym: string * ModulePath
 
 type private DSymbolOccurrence = DSymbol * DefOrUse * Loc2
@@ -636,8 +651,9 @@ let private lowerADecl docId acc decl : DSymbolOccurrence list =
   | AOpenDecl (path, pos) ->
     let pos = path |> pathToPos pos
 
-    (DModuleSymbol(path |> List.map nameToIdent), Use, toLoc pos)
-    :: acc
+    (DOpenUse(path |> List.map nameToIdent), Use, toLoc pos)
+    :: (DModuleSymbol(path |> List.map nameToIdent), Use, toLoc pos)
+       :: acc
 
   | AModuleSynonymDecl (Name (synonym, identPos), path, pos) ->
     let acc =

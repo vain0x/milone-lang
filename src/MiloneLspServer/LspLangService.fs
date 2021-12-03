@@ -1127,6 +1127,93 @@ module WorkspaceAnalysis =
       | None -> None
 
     // FIXME: use parse cache
+    let generateOpenAction () =
+      let title = "Generate open"
+
+      // detect cursor is at `ident.`
+      // find a module that defines module of the name
+      // generate open statement of the module
+
+      let parseDoc uri text =
+        let docId = uri |> uriToFilePath |> filePathToDocId
+
+        match docId |> docIdToModulePath with
+        | Some (projectName, moduleName) ->
+          text
+          |> LTokenList.tokenizeAll
+          |> LSyntaxData.parse projectName moduleName docId
+          |> Some
+
+        | _ -> None
+
+      let syntaxOpt =
+        match wa.Docs |> TMap.tryFind uri with
+        | Some (_, text) -> parseDoc uri text
+        | None -> None
+
+      let opt =
+        match syntaxOpt with
+        | Some syntax ->
+          let pos, _ = range
+          let row, _ = pos
+
+          let tokens = syntax |> LSyntaxData.getTokens
+
+          let dotPosOpt =
+            tokens
+            |> LTokenList.findAdjacent pos
+            |> List.tryFind LToken.isDot
+
+          let identOpt =
+            tokens
+            |> LTokenList.filterByLine row
+            |> List.rev
+            |> List.skipWhile (fun token -> LToken.getPos token > pos)
+            |> List.tryPick LToken.asIdent
+
+          let nextOpenRow () =
+            tokens
+            |> LTokenList.toList
+            |> List.groupBy (fun token -> token |> LToken.getPos |> fst)
+            |> List.rev
+            |> List.tryFind (fun (_, tokens) -> tokens |> List.exists LToken.isOpen)
+            |> Option.map (fun (row, _) -> row + 1)
+            |> Option.defaultValue 0
+
+          match dotPosOpt, identOpt with
+          | Some _, Some ident ->
+            wa.Docs
+            |> TMap.toList
+            |> List.tryPick (fun (uri, (_, text)) ->
+              match parseDoc uri text with
+              | Some syntax ->
+                if syntax
+                   |> LSyntaxData.findModuleDefs
+                   |> List.exists (fun name -> name = ident) then
+                  match uriToDocId uri |> docIdToModulePath with
+                  | Some (projectName, moduleName) ->
+                    let text =
+                      "open " + projectName + "." + moduleName + "\n"
+
+                    Some(nextOpenRow (), text)
+
+                  | None -> None
+                else
+                  None
+
+              | None -> None)
+          | _ -> None
+
+        | None -> None
+
+      match opt with
+      | Some (row, text) ->
+        let range: Range = (row, 0), (row, 0)
+        Some(title, [ uri, [ range, text ] ])
+
+      | None -> None
+
+    // FIXME: use parse cache
     let generateModuleSynonymAction () =
       let title = "Generate module synonym"
 
@@ -1212,6 +1299,7 @@ module WorkspaceAnalysis =
 
     let actions =
       [ generateModuleHeadAction ()
+        generateOpenAction ()
         generateModuleSynonymAction () ]
       |> List.choose id
 

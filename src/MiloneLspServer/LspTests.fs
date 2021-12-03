@@ -724,7 +724,7 @@ let private testDocumentSymbol () =
 // -----------------------------------------------
 
 // generate module head
-let private testCodeAction1 () =
+let private testCodeActionGenerateModuleHead () =
   let path = "/$/root/TestProject/TestProject.milone"
 
   let wa =
@@ -765,7 +765,68 @@ let private testCodeAction1 () =
   |> debug
   |> assertEqual "module head" expected
 
-let private testCodeAction2 () =
+let private testCodeActionGenerateOpen () =
+  let path = "/$/root/TestProject/TestProject.milone"
+
+  let text =
+    """
+      open MiloneStd.StdMap
+
+      let f = X.
+      //        ^cursor
+    """
+
+  let files =
+    [ "/$/root/TestProject/Other.milone",
+      """
+        module X =
+          let foo () = ()
+      """
+
+      path, text ]
+
+  let wa = createWorkspaceAnalysisWithFiles files
+
+  let cursorPos = text |> parseAnchors |> firstPos
+
+  let result, _ =
+    let range: Range = cursorPos, cursorPos
+
+    wa
+    |> WorkspaceAnalysis.codeAction (LLS.uriOfFilePath path) range
+
+  let actual =
+    result
+    |> List.choose (fun (title, edit) ->
+      if title |> S.contains "open" then
+        let edit =
+          edit
+          |> List.collect (fun (_, changes) ->
+            changes
+            |> List.map (fun (((row, _), _), text) -> string row + ": " + text))
+
+        if edit |> List.isEmpty |> not then
+          Some(title, edit |> S.concat "\n")
+        else
+          None
+      else
+        None)
+
+  let debug xs =
+    xs
+    |> List.sort
+    |> List.map (fun (x, y) -> x + ": " + y)
+    |> S.concat "\n"
+
+  let expected =
+    """Generate open: 2: open TestProject.Other
+"""
+
+  actual
+  |> debug
+  |> assertEqual "generate open" expected
+
+let private testCodeActionGenerateModuleSynonym () =
   let path = "/$/root/TestProject/TestProject.milone"
 
   let text =
@@ -824,8 +885,9 @@ let private testCodeAction2 () =
   |> assertEqual "generate module synonym" expected
 
 let private testCodeAction () =
-  [ testCodeAction1 ()
-    testCodeAction2 () ]
+  [ testCodeActionGenerateModuleHead ()
+    testCodeActionGenerateOpen ()
+    testCodeActionGenerateModuleSynonym () ]
 
 // -----------------------------------------------
 // Completion
