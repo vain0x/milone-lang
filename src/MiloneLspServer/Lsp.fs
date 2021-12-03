@@ -96,6 +96,7 @@ let private isTrivia token =
 
   | _ -> false
 
+// #findTokenAt
 let private findTokenAt tokens (targetPos: Pos) =
   let rec go tokens =
     match tokens with
@@ -110,6 +111,25 @@ let private findTokenAt tokens (targetPos: Pos) =
         Some(token, p1)
       else if p1 > targetPos then
         None
+      else
+        go tokens
+
+  go tokens
+
+// #findTokenAt
+let private findTokensAt tokens (targetPos: Pos) =
+  let rec go tokens =
+    match tokens with
+    | []
+    | [ _ ] -> []
+
+    | (token, p1) :: (((_, p2) :: _) as tokens) ->
+      if not (isTrivia token)
+         && p1 <= targetPos
+         && targetPos <= p2 then
+        (token, p1) :: go tokens
+      else if p1 > targetPos then
+        []
       else
         go tokens
 
@@ -235,6 +255,9 @@ module LTokenList =
     | Some (token, pos) -> Some(LToken(token, pos))
     | None -> None
 
+  let findAdjacent (pos: Pos) (LTokenList tokens) : LToken list =
+    findTokensAt tokens pos |> List.map LToken
+
   let resolveRanges (posList: Pos list) (LTokenList tokens) : Range list = resolveTokenRanges tokens posList
 
   let toList (LTokenList tokens) = tokens |> List.map LToken
@@ -257,6 +280,15 @@ module LSyntaxData =
   let getTokens syntaxData =
     let (LSyntaxData (_, tokens, _, _)) = syntaxData
     LTokenList tokens
+
+  let findModuleSynonyms (s: LSyntaxData) : (string * ModulePath * Loc) list =
+    let (LSyntaxData (docId, tokens, ast, _)) = s
+
+    lowerARoot docId [] ast
+    |> List.choose (fun (symbol, _, loc2) ->
+      match symbol, resolveLoc2 docId tokens loc2 with
+      | DModuleSynonymDef (synonym, modulePath), Some loc -> Some(synonym, modulePath, loc)
+      | _ -> None)
 
 module BundleResult =
   let getErrors (b: BundleResult) = b.Errors
@@ -434,6 +466,7 @@ type DSymbol =
   | DFunSymbol of string
   | DTySymbol of string
   | DModuleSymbol of ModulePath
+  | DModuleSynonymDef of synonym: string * ModulePath
 
 type private DSymbolOccurrence = DSymbol * DefOrUse * Loc2
 
@@ -602,9 +635,10 @@ let private lowerADecl docId acc decl : DSymbolOccurrence list =
       :: acc
 
     let pos = path |> pathToPos pos
+    let path = path |> List.map nameToIdent
 
-    (DModuleSymbol(path |> List.map nameToIdent), Use, toLoc pos)
-    :: acc
+    (DModuleSynonymDef(synonym, path), Use, toLoc pos)
+    :: (DModuleSymbol path, Use, toLoc pos) :: acc
 
   | AModuleDecl (_, _, Name (name, pos), decls, _) ->
     let acc =

@@ -717,14 +717,14 @@ module ProjectAnalysis =
       syntaxOpt
       |> Option.map (fun syntax -> ProjectAnalysis1.documentSymbols syntax pa)
       |> Option.defaultValue []
-      |> List.map (fun (symbol, _, Loc (_, y, x)) ->
-        let name, kind =
-          match symbol with
-          | DFunSymbol name -> name, 12 // 12
-          | DTySymbol name -> name, 5 // class
-          | DModuleSymbol path -> pathToName path, 2 // module
+      |> List.choose (fun (symbol, _, Loc (_, y, x)) ->
+        let ok name kind = Some((name, kind), (y, x))
 
-        (name, kind), (y, x))
+        match symbol with
+        | DFunSymbol name -> ok name 12 // 12
+        | DTySymbol name -> ok name 5 // class
+        | DModuleSymbol path -> ok (pathToName path) 2 // module
+        | _ -> None)
 
     let symbols, pa =
       let kinds, posList = List.unzip symbols
@@ -1097,7 +1097,7 @@ module WorkspaceAnalysis =
 
     diagnostics, wa
 
-  let codeAction (uri: Uri) (_range: Range) (wa: WorkspaceAnalysis) =
+  let codeAction (uri: Uri) (range: Range) (wa: WorkspaceAnalysis) =
     let generateModuleHeadAction () =
       let title = "Generate module head"
       let front: Range = (0, 0), (0, 0)
@@ -1126,8 +1126,78 @@ module WorkspaceAnalysis =
       | Some text -> Some(title, [ uri, [ front, text ] ])
       | None -> None
 
+    // FIXME: use parse cache
+    let generateModuleSynonymAction () =
+      let title = "Generate module synonym"
+      let front: Range = (0, 0), (0, 0)
+
+      let parseDoc uri text =
+        let docId = uri |> uriToFilePath |> filePathToDocId
+
+        match docId |> docIdToModulePath with
+        | Some (projectName, moduleName) ->
+          text
+          |> LTokenList.tokenizeAll
+          |> LSyntaxData.parse projectName moduleName docId
+          |> Some
+
+        | _ -> None
+
+      let syntaxOpt =
+        match wa.Docs |> TMap.tryFind uri with
+        | Some (_, text) -> parseDoc uri text
+        | None -> None
+
+      let textOpt =
+        match syntaxOpt with
+        | Some syntax ->
+          let pos, _ = range
+          let row, _ = pos
+
+          let tokens = syntax |> LSyntaxData.getTokens
+
+          let dotPosOpt =
+            tokens
+            |> LTokenList.findAdjacent pos
+            |> List.tryFind LToken.isDot
+
+          let identOpt =
+            tokens
+            |> LTokenList.filterByLine row
+            |> List.rev
+            |> List.skipWhile (fun token -> LToken.getPos token > pos)
+            |> List.tryPick LToken.asIdent
+
+          match dotPosOpt, identOpt with
+          | Some _, Some ident ->
+            wa.Docs
+            |> TMap.toList
+            |> List.tryPick (fun (uri, (_, text)) ->
+              match parseDoc uri text with
+              | Some syntax ->
+                syntax
+                |> LSyntaxData.findModuleSynonyms
+                |> List.tryFind (fun (name, _, _) -> name = ident)
+                |> Option.map (fun (_, path, _) ->
+                  "module "
+                  + ident
+                  + " = "
+                  + (path |> S.concat ".")
+                  + "\n")
+
+              | None -> None)
+          | _ -> None
+
+        | None -> None
+
+      match textOpt with
+      | Some text -> Some(title, [ uri, [ front, text ] ])
+      | None -> None
+
     let actions =
-      generateModuleHeadAction () |> Option.toList
+      [ generateModuleHeadAction ()
+        generateModuleSynonymAction () ]
+      |> List.choose id
 
     actions, wa
 

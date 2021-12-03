@@ -723,7 +723,8 @@ let private testDocumentSymbol () =
 // CodeAction
 // -----------------------------------------------
 
-let private testCodeAction () =
+// generate module head
+let private testCodeAction1 () =
   let path = "/$/root/TestProject/TestProject.milone"
 
   let wa =
@@ -760,9 +761,71 @@ let private testCodeAction () =
     """Generate module head: module rec TestProject.TestProject
 """
 
-  [ actual
-    |> debug
-    |> assertEqual "module head" expected ]
+  actual
+  |> debug
+  |> assertEqual "module head" expected
+
+let private testCodeAction2 () =
+  let path = "/$/root/TestProject/TestProject.milone"
+
+  let text =
+    """
+      module C = MiloneStd.StdChar
+
+      let f = S.
+      //        ^cursor
+    """
+
+  let files =
+    [ "/$/root/TestProject/Other.milone",
+      """
+        module S = MiloneStd.StdString
+      """
+
+      path, text ]
+
+  let wa = createWorkspaceAnalysisWithFiles files
+
+  let cursorPos = text |> parseAnchors |> firstPos
+
+  let result, _ =
+    let range: Range = cursorPos, cursorPos
+
+    wa
+    |> WorkspaceAnalysis.codeAction (LLS.uriOfFilePath path) range
+
+  let actual =
+    result
+    |> List.choose (fun (title, edit) ->
+      let edit =
+        edit
+        |> List.collect (fun (_, changes) ->
+          changes
+          |> List.filter (fun (_, text) -> text |> S.contains "module S")
+          |> List.map (fun (((row, _), _), text) -> string row + " " + text))
+
+      if edit |> List.isEmpty |> not then
+        Some(title, edit |> S.concat "\n")
+      else
+        None)
+
+  let debug xs =
+    xs
+    |> List.sort
+    |> List.map (fun (x, y) -> x + ": " + y)
+    |> S.concat "\n"
+
+  let expected =
+    """Generate module synonym: 0 module S = MiloneStd.StdString
+"""
+
+  actual
+  |> debug
+  |> assertEqual "generate module synonym" expected
+
+let private testCodeAction () =
+  [ testCodeAction1 ()
+    testCodeAction2 () ]
 
 // -----------------------------------------------
 // Completion
