@@ -816,7 +816,7 @@ let private testCodeAction2 () =
     |> S.concat "\n"
 
   let expected =
-    """Generate module synonym: 0 module S = MiloneStd.StdString
+    """Generate module synonym: 2 module S = MiloneStd.StdString
 """
 
   actual

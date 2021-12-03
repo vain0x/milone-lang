@@ -226,6 +226,16 @@ module LToken =
     | DotToken -> true
     | _ -> false
 
+  let isEqual (LToken (token, _)) =
+    match token with
+    | EqualToken -> true
+    | _ -> false
+
+  let isModule (LToken (token, _)) =
+    match token with
+    | ModuleToken -> true
+    | _ -> false
+
   let isModuleOrOpenKeyword (LToken (token, _)) =
     match token with
     | ModuleToken

@@ -1129,7 +1129,6 @@ module WorkspaceAnalysis =
     // FIXME: use parse cache
     let generateModuleSynonymAction () =
       let title = "Generate module synonym"
-      let front: Range = (0, 0), (0, 0)
 
       let parseDoc uri text =
         let docId = uri |> uriToFilePath |> filePathToDocId
@@ -1148,7 +1147,7 @@ module WorkspaceAnalysis =
         | Some (_, text) -> parseDoc uri text
         | None -> None
 
-      let textOpt =
+      let opt =
         match syntaxOpt with
         | Some syntax ->
           let pos, _ = range
@@ -1168,6 +1167,17 @@ module WorkspaceAnalysis =
             |> List.skipWhile (fun token -> LToken.getPos token > pos)
             |> List.tryPick LToken.asIdent
 
+          let lastModuleRow () =
+            tokens
+            |> LTokenList.toList
+            |> List.groupBy (fun token -> token |> LToken.getPos |> fst)
+            |> List.rev
+            |> List.tryFind (fun (_, tokens) ->
+              tokens |> List.exists LToken.isModule
+              && tokens |> List.exists LToken.isEqual)
+            |> Option.map (fun (row, _) -> row + 1)
+            |> Option.defaultValue 0
+
           match dotPosOpt, identOpt with
           | Some _, Some ident ->
             wa.Docs
@@ -1184,14 +1194,20 @@ module WorkspaceAnalysis =
                   + " = "
                   + (path |> S.concat ".")
                   + "\n")
+                |> Option.map (fun text ->
+                  let row = lastModuleRow ()
+                  row, text)
 
               | None -> None)
           | _ -> None
 
         | None -> None
 
-      match textOpt with
-      | Some text -> Some(title, [ uri, [ front, text ] ])
+      match opt with
+      | Some (row, text) ->
+        let range: Range = (row, 0), (row, 0)
+        Some(title, [ uri, [ range, text ] ])
+
       | None -> None
 
     let actions =
