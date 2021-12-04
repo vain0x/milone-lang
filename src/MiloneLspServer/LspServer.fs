@@ -514,7 +514,10 @@ let private enableDidChangedWatchedFiles () =
             "id": "1",
             "method": "workspace/didChangeWatchedFiles",
             "registerOptions": {
-              "watchers": [{ "globPattern": "**/*.{fs,milone}" }]
+              "watchers": [
+                { "globPattern": "**/*.{fs,milone}" },
+                { "globPattern": "**/milone_manifest" }
+              ]
             }
           }
         ] }

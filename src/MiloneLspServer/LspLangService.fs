@@ -300,6 +300,8 @@ let private doFindProjects fileExists getDirEntries (rootUri: Uri) : ProjectInfo
 
   bfs [] [ 0, rootDir ]
 
+let private isManifest (path: string) = basename path = "milone_manifest"
+
 let private isEntrypoint (path: string) =
   match dirname path with
   | Some parent -> basename parent = stem path
@@ -1039,40 +1041,56 @@ module WorkspaceAnalysis =
   let didOpenFile (uri: Uri) (wa: WorkspaceAnalysis) =
     traceFn "didOpenFile %s" (Uri.toString uri)
 
+    let path = uriToFilePath uri
+
     let wa =
-      if uriToFilePath uri |> isEntrypoint then
+      if isEntrypoint path || isManifest path then
         findProjects wa
       else
         wa
 
     // FIXME: don't read file
-    match readTextFile (uriToFilePath uri) wa with
-    | Some text ->
-      let version, wa = freshId wa
-      didOpenDoc uri version text wa
+    if isManifest path |> not then
+      match readTextFile (uriToFilePath uri) wa with
+      | Some text ->
+        let version, wa = freshId wa
+        didOpenDoc uri version text wa
 
-    | None -> wa
+      | None -> wa
+    else
+      wa
 
   let didChangeFile (uri: Uri) (wa: WorkspaceAnalysis) =
     traceFn "didChangeFile %s" (Uri.toString uri)
-    // FIXME: don't read file
-    match readTextFile (uriToFilePath uri) wa with
-    | Some text ->
-      let version, wa = freshId wa
-      didChangeDoc uri version text wa
 
-    | None -> wa
+    let path = uriToFilePath uri
+
+    if isManifest path |> not then
+      // FIXME: don't read file
+      match readTextFile path wa with
+      | Some text ->
+        let version, wa = freshId wa
+        didChangeDoc uri version text wa
+
+      | None -> wa
+    else
+      wa
 
   let didCloseFile (uri: Uri) (wa: WorkspaceAnalysis) =
     traceFn "didCloseFile %s" (Uri.toString uri)
 
+    let path = uriToFilePath uri
+
     let wa =
-      if uriToFilePath uri |> isEntrypoint then
+      if isEntrypoint path || isManifest path then
         findProjects wa
       else
         wa
 
-    didCloseDoc uri wa
+    if isManifest path |> not then
+      didCloseDoc uri wa
+    else
+      wa
 
   let diagnostics (wa: WorkspaceAnalysis) =
     let results, wa =
