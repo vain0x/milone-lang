@@ -1,0 +1,9 @@
+#!/bin/sh
+
+set -eu
+
+# PIC: position-independent-code
+gcc -fPIC -c libplus.c -o libplus.o
+gcc -shared -o libplus.so libplus.o
+
+milone run $PWD

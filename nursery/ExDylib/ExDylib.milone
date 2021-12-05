@@ -1,0 +1,20 @@
+
+__nativeDecl """
+#include <assert.h>
+#include <dlfcn.h>
+"""
+
+__nativeStmt """
+    void *lib = dlopen("./libplus.so", RTLD_LAZY);
+    if (lib == NULL) {
+      fprintf(stderr, "ERROR: dlopen: %s\n", dlerror());
+      exit(1);
+    }
+
+    typedef int (*MyPlusFn)(int, int);
+    MyPlusFn my_plus = (MyPlusFn)dlsym(lib, "my_plus");
+    printf("%d\n", my_plus(40, 2));
+
+    bool ok = dlclose(lib) == 0;
+    assert(ok && "dlclose");
+"""
