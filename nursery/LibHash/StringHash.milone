@@ -1,0 +1,38 @@
+module rec LibHash.StringHash
+
+let private hashCombine (n: uint64) (h: uint64) =
+  let x = (h <<< 5) ||| (h >>> 57)
+  (h + x) ^^^ n
+
+let stringHash (s: string) : uint64 =
+  let rec go (i: int) (h: uint64) =
+    if i = s.Length then
+      h
+    else
+      let b = uint64 (byte s.[i])
+      go (i + 1) (hashCombine b h)
+
+  go 0 31UL
+
+let private stringListHash (xs: string list) =
+  xs
+  |> List.fold (fun (i, h) s -> i + 1UL, h |> hashCombine i |> hashCombine (stringHash s)) (0UL, 33UL)
+  |> snd
+
+let private digits = "0123456789"
+let private alpha = "abcdef"
+
+let hex64 (n: uint64) =
+  let rec go acc (n: uint64) =
+    if n = 0UL then
+      acc
+    else
+      let d = int(byte(n % 16UL))
+      let s =
+        if d < 10 then digits.[d..d]
+        else
+          let d = d - 10
+          alpha.[d..d]
+      go (s + acc) (n / 16UL)
+
+  if n = 0UL then "0" else go "" n
