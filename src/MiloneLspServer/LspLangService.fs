@@ -955,16 +955,8 @@ let private tokenizeDoc uri (wa: WorkspaceAnalysis) =
       | Some (v, text) -> ok v text
 
       | None ->
-        traceFn "tokenize: '%s' not found, fallback to file" (Uri.toString uri)
-
-        // FIXME: LSP server should add all files to docs before processing queries.
-        let textOpt =
-          wa.Host.ReadTextFile(uriToFilePath uri)
-          |> Future.wait
-
-        match textOpt with
-        | Some text -> ok 0 text
-        | None -> None
+        debugFn "tokenize: '%s' not open" (Uri.toString uri)
+        None
 
 let private parseDoc (uri: Uri) (wa: WorkspaceAnalysis) =
   match tokenizeDoc uri wa with
@@ -1034,24 +1026,6 @@ let doWithProjectAnalysis
            { wa with
                TokenizeCache = wa.TokenizeCache |> TMap.add uri (v, tokens)
                ParseCache = wa.ParseCache |> TMap.add uri (v, syntaxData) })
-         wa
-
-  let wa =
-    newParseResults
-    |> List.map (fun (_, syntaxData) ->
-      let docId = LSyntaxData.getDocId syntaxData
-      docIdToUri p docId wa)
-    |> List.filter (fun uri -> wa.Docs |> TMap.containsKey uri |> not)
-    |> List.fold
-         (fun (wa: WorkspaceAnalysis) uri ->
-           // FIXME: don't read file
-           // same as didOpenFile
-           match readTextFile (uriToFilePath uri) wa with
-           | Some text ->
-             traceFn "file '%s' opened after bundle" (Uri.toString uri)
-             { wa with Docs = wa.Docs |> TMap.add uri (0, text) }
-
-           | None -> wa)
          wa
 
   let wa =
