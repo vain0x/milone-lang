@@ -430,7 +430,7 @@ let private doBundle (pa: ProjectAnalysis) : BundleResult =
 let private bundleWithCache (pa: ProjectAnalysis) : BundleResult * ProjectAnalysis =
   let docsAreAllFresh docVersions =
     docVersions
-    |> List.forall (fun (docId, version) -> getVersion docId pa <= version)
+    |> List.forall (fun (docId, version) -> getVersion docId pa = version)
 
   let cacheOpt = pa.BundleCache
 

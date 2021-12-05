@@ -906,13 +906,13 @@ let private tokenizeDoc uri (wa: WorkspaceAnalysis) =
   let version = getDocVersion uri wa
 
   match wa.ParseCache |> TMap.tryFind uri with
-  | Some (v, syntaxData) when v >= version ->
+  | Some (v, syntaxData) when v = version ->
     let tokens = LSyntaxData.getTokens syntaxData
     Some(v, tokens)
 
   | _ ->
     match wa.TokenizeCache |> TMap.tryFind uri with
-    | (Some (v, _)) as it when v >= version -> it
+    | (Some (v, _)) as it when v = version -> it
 
     | _ ->
       let ok v text =
@@ -933,7 +933,7 @@ let private parseDoc (uri: Uri) (wa: WorkspaceAnalysis) =
   match tokenizeDoc uri wa with
   | Some (version, tokens) ->
     match wa.ParseCache |> TMap.tryFind uri with
-    | (Some (v, _)) as it when v >= version -> it
+    | (Some (v, _)) as it when v = version -> it
 
     | _ ->
       let v = version
@@ -1055,7 +1055,6 @@ module WorkspaceAnalysis =
       { wa with Docs = wa.Docs |> TMap.add uri (version, text) }
 
     | None ->
-      // FIXME: open as file if exists
       // FIXME: drop tokenize/parse result
       let _, docs = wa.Docs |> TMap.remove uri
       { wa with Docs = docs }

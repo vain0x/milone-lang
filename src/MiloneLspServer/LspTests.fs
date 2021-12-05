@@ -472,25 +472,26 @@ let private testDocChange () =
           |> diagnosticsToVersion
           |> assertEqual "v5" "v5")
 
-  // FIXME: since doc versions are higher than file versions, cache doesn't get invalidated.
   // After doc is closed, file is open.
-  // let d6, wa =
-  //   wa
-  //   |> WorkspaceAnalysis.didCloseDoc uri
-  //   |> WorkspaceAnalysis.diagnostics
+  let d6, wa =
+    wa
+    |> WorkspaceAnalysis.didCloseDoc uri
+    |> WorkspaceAnalysis.diagnostics
 
-  // assert (d6
-  //         |> diagnosticsToVersion
-  //         |> assertEqual "v6" "v6")
+  assert (d6
+          |> diagnosticsToVersion
+          |> assertEqual "v6" "v6")
 
-  // // After file is also closed.
-  // let d7, _ =
-  //   wa
-  //   |> withFiles []
-  //   |> WorkspaceAnalysis.didCloseFile uri
-  //   |> WorkspaceAnalysis.diagnostics
+  // After file is also closed.
+  let d7, _ =
+    wa
+    |> withFiles []
+    |> WorkspaceAnalysis.didCloseFile uri
+    |> WorkspaceAnalysis.diagnostics
 
-  // assert (d7 |> List.isEmpty)
+  match d7 with
+  | [ _, [] ] -> () // OK, diagnostics cleared.
+  | _ -> failwithf "diagnostics %A" d7
 
   [ true ]
 
