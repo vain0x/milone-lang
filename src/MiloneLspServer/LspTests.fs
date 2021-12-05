@@ -294,16 +294,8 @@ let private createWorkspaceAnalysisWithFiles files =
   let host =
     createWorkspaceAnalysisHostWithFiles files
 
-  let wa =
-    WorkspaceAnalysis.create host
-    |> WorkspaceAnalysis.onInitialized (Some dummyRootUri)
-
-  files
-  |> List.fold
-       (fun wa (path, contents) ->
-         wa
-         |> WorkspaceAnalysis.didOpenDoc (LLS.uriOfFilePath path) 1 contents)
-       wa
+  WorkspaceAnalysis.create host
+  |> WorkspaceAnalysis.onInitialized (Some dummyRootUri)
 
 let private getProject name (wa: LLS.WorkspaceAnalysis) =
   wa.ProjectList
