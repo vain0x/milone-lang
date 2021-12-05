@@ -498,7 +498,7 @@ let private testDocChange () =
 // Refs
 // -----------------------------------------------
 
-let testRefs () =
+let private testRefs () =
   [ testRefsSingleFile
       "local var"
       """
