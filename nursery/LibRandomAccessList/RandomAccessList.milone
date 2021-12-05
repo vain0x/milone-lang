@@ -7,7 +7,9 @@
 ///
 /// - ["Purely Functional Data Structures" by Chris Okasaki](https://www.cambridge.org/jp/academic/subjects/computer-science/programming-languages-and-applied-logic/purely-functional-data-structures?format=PB)
 ///     - or [its Japanese translation](https://asciidwango.jp/post/160831986220/%E7%B4%94%E7%B2%8B%E9%96%A2%E6%95%B0%E5%9E%8B%E3%83%87%E3%83%BC%E3%82%BF%E6%A7%8B%E9%80%A0).
-module rec MiloneLang.RandomAccessList
+module rec LibRandomAccessList.RandomAccessList
+
+open MiloneStd.StdError
 
 type RawNode =
   | Leaf of value: obj
