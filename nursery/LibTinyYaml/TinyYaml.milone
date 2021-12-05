@@ -1,4 +1,8 @@
-module rec MiloneLang.UtilStrictYaml
+module rec LibTinyYaml.TinyYaml
+
+open MiloneStd.StdError
+
+module C = MiloneStd.StdChar
 
 let private stateMap f (x, s) = f x, s
 
@@ -11,44 +15,6 @@ let private pairThen f (x, s) =
   (x, y), t
 
 let private cons head tail = head :: tail
-
-let private listRev xs =
-  let rec go acc xs =
-    match xs with
-    | [] -> acc
-
-    | x :: xs -> go (x :: acc) xs
-
-  go [] xs
-
-// -----------------------------------------------
-// char
-// -----------------------------------------------
-
-let private charIsSpace (c: char) : bool =
-  c = ' ' || c = '\t' || c = '\r' || c = '\n'
-
-let private charIsDigit (c: char) : bool = '0' <= c && c <= '9'
-
-let private charIsAlpha (c: char) : bool =
-  ('A' <= c && c <= 'Z') || ('a' <= c && c <= 'z')
-
-let private charToLower (c: char) =
-  assert ('A' <= c && c <= 'Z')
-  char (int c - int 'A' + int 'a')
-
-// -----------------------------------------------
-// string
-// -----------------------------------------------
-
-let private strConcat (xs: string list) =
-  match xs with
-  | [] -> ""
-  | x :: xs -> x + strConcat xs
-
-let private toLowerCamel (str: string) =
-  string (charToLower str.[0])
-  + str.[1..str.Length - 1]
 
 // -----------------------------------------------
 // YamlValue
@@ -63,16 +29,13 @@ type YamlValue =
 // Yaml parser
 // -----------------------------------------------
 
-type RowIndex = int
-
-type ColumnIndex = int
-
-type Pos = RowIndex * ColumnIndex
+type private RowIndex = int
+type private ColumnIndex = int
+type private Pos = RowIndex * ColumnIndex
 
 let private pError msg (_, _, y, x) =
   printfn "ERROR: %s (%d:%d)" msg (y + 1) (x + 1)
-  assert false
-  exit 1
+  failwith "Parse error"
 
 let private pBump (text: string, i: int, y, x) =
   assert (i < text.Length)
@@ -133,7 +96,7 @@ let private pBlank p =
 let private pSpace p =
   let p = p |> pBlank
 
-  if pLook p |> charIsSpace then
+  if pLook p |> C.isSpace then
     p |> pBump |> pSpace
   else
     p
@@ -141,7 +104,7 @@ let private pSpace p =
 let private pIdent p =
   let q =
     p
-    |> pWhile (fun c -> c = '_' || charIsDigit c || charIsAlpha c)
+    |> pWhile (fun c -> c = '_' || C.isAlphanumeric c)
 
   pSlice p q, q
 
@@ -164,7 +127,7 @@ let private pTable basePos p =
       |> stateMap (fun entry -> entry :: entries)
       |> go
     else
-      YamlTable(listRev entries), p
+      YamlTable(List.rev entries), p
 
   go ([], p)
 
