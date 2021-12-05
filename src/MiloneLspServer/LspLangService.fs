@@ -194,7 +194,7 @@ let private uriToFilePath (uri: Uri) =
     path
 
 // -----------------------------------------------
-// Globals
+// File search
 // -----------------------------------------------
 
 /// Whether dir is excluded in traversal?
@@ -208,55 +208,7 @@ let private dirIsExcluded (dir: string) =
   || name = "bin"
   || name = "obj"
 
-// ---------------------------------------------
-// Standard libs
-// ---------------------------------------------
-
-/// (projectName, moduleName) list
-let private findModulesRecursively
-  (getDirEntries: DirEntriesFun)
-  (maxDepth: int)
-  (rootDir: string)
-  : (string * string) list =
-  let rec bfs acc stack =
-    match stack with
-    | [] -> acc
-
-    | (depth, dir) :: stack ->
-      traceFn "in %d:%s" depth dir
-      assert (depth <= maxDepth)
-
-      let files, subdirs = getDirEntries dir
-
-      let acc =
-        let projectName = stem dir
-
-        files
-        |> Seq.fold
-             (fun acc file ->
-               match getExt file with
-               | Some ".milone"
-               | Some ".fs" ->
-                 let moduleName = stem file
-                 traceFn "in %s" moduleName
-                 (projectName, moduleName) :: acc
-
-               | _ -> acc)
-             acc
-
-      let stack =
-        if depth < maxDepth then
-          subdirs
-          |> Seq.filter (fun subdir -> subdir |> dirIsExcluded |> not)
-          |> Seq.fold (fun stack subdir -> (depth + 1, subdir) :: stack) stack
-        else
-          stack
-
-      bfs acc stack
-
-  bfs [] [ 0, rootDir ]
-
-let private findModulesRecursively2 (getDirEntries: DirEntriesFun) (maxDepth: int) (rootDir: string) : FilePath list =
+let private findModulesRecursively (getDirEntries: DirEntriesFun) (maxDepth: int) (rootDir: string) : FilePath list =
   let rec bfs acc stack =
     match stack with
     | [] -> acc
@@ -288,9 +240,6 @@ let private findModulesRecursively2 (getDirEntries: DirEntriesFun) (maxDepth: in
       bfs acc stack
 
   bfs [] [ 0, rootDir ]
-
-let private findModulesInDir getDirEntries projectDir =
-  findModulesRecursively getDirEntries 0 projectDir
 
 // ---------------------------------------------
 // Project
@@ -348,6 +297,11 @@ let private isEntrypoint (path: string) =
   match dirname path with
   | Some parent -> basename parent = stem path
   | None -> false
+
+let private filePathToModulePath path =
+  match dirname path with
+  | Some parent -> Some(basename parent, stem path)
+  | None -> None
 
 let filePathToDocId (path: string) : DocId =
   let projectName =
@@ -545,14 +499,7 @@ module ProjectAnalysis =
 
     List.collect id errorListList, pa
 
-  let completion
-    stdLibModules
-    getDirEntries
-    (projectDir: ProjectDir)
-    (docId: DocId)
-    (targetPos: Pos)
-    (pa: ProjectAnalysis)
-    : string list * ProjectAnalysis =
+  let completion modules (docId: DocId) (targetPos: Pos) (pa: ProjectAnalysis) : string list * ProjectAnalysis =
     let tokens, pa = ProjectAnalysis1.tokenize docId pa
 
     let inModuleLine =
@@ -562,11 +509,11 @@ module ProjectAnalysis =
       |> LTokenList.filterByLine y
       |> List.exists LToken.isModuleOrOpenKeyword
 
-    let collectModuleNames pa =
-      List.append stdLibModules (findModulesInDir getDirEntries projectDir)
+    /// All project names and module names.
+    let collectModuleNames () =
+      modules
       |> List.collect (fun (p, m) -> [ p; m ])
-      |> listUnique,
-      pa
+      |> listUnique
 
     let beforeDot () =
       let y, x = targetPos
@@ -652,7 +599,7 @@ module ProjectAnalysis =
         result, pa
 
     if inModuleLine then
-      collectModuleNames pa
+      collectModuleNames (), pa
     else
       // match beforeDot () with
       // | Some token -> collectNsSymbols token pa
@@ -933,7 +880,7 @@ let private findProjects (wa: WorkspaceAnalysis) =
 let private openAllModules version (wa: WorkspaceAnalysis) =
   let filesInRoot =
     wa.RootUriOpt
-    |> Option.map (fun rootUri -> findModulesRecursively2 wa.Host.DirEntries 3 (uriToFilePath rootUri))
+    |> Option.map (fun rootUri -> findModulesRecursively wa.Host.DirEntries 3 (uriToFilePath rootUri))
     |> Option.defaultValue []
 
   List.append wa.StdLibFiles filesInRoot
@@ -1068,7 +1015,7 @@ module WorkspaceAnalysis =
 
     let stdLibFiles =
       stdLibProjects
-      |> List.collect (fun (_, projectDir) -> findModulesRecursively2 host.DirEntries 3 projectDir)
+      |> List.collect (fun (_, projectDir) -> findModulesRecursively host.DirEntries 3 projectDir)
 
     let stdLibModules =
       stdLibFiles
@@ -1363,15 +1310,19 @@ module WorkspaceAnalysis =
 
     actions, wa
 
+  /// (projectName, moduleName) list
+  let getModules (p: ProjectInfo) (wa: WorkspaceAnalysis) =
+    wa.Docs
+    |> TMap.toKeys
+    |> List.choose (fun uri -> uri |> uriToFilePath |> filePathToModulePath)
+    |> List.filter (fun (name, _) -> name = p.ProjectName)
+    |> List.append wa.StdLibModules
+
   let completion (uri: Uri) (pos: Pos) (wa: WorkspaceAnalysis) =
     let results, wa =
       wa.ProjectList
       |> List.mapFold
-           (fun wa p ->
-             doWithProjectAnalysis
-               p
-               (ProjectAnalysis.completion wa.StdLibModules wa.Host.DirEntries p.ProjectDir (uriToDocId uri) pos)
-               wa)
+           (fun wa p -> doWithProjectAnalysis p (ProjectAnalysis.completion (getModules p wa) (uriToDocId uri) pos) wa)
            wa
 
     List.collect id results, wa

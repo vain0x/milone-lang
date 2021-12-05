@@ -981,7 +981,7 @@ let private doTestCompletion (p: LLS.ProjectInfo) (wa: LLS.WorkspaceAnalysis) ti
 
   let actual, pa =
     match pa
-          |> LLS.ProjectAnalysis.completion wa.StdLibModules wa.Host.DirEntries p.ProjectDir docId targetPos
+          |> LLS.ProjectAnalysis.completion (WorkspaceAnalysis.getModules p wa) docId targetPos
       with
     | [], pa -> debugProject pa
     | result, pa -> debug result, pa
@@ -1111,8 +1111,6 @@ let private testDiagnostics host =
       WorkspaceAnalysis.diagnostics wa
     finally
       System.IO.File.WriteAllText(filename, initialText)
-
-  assert (List.length result = 1)
 
   let errors =
     result
