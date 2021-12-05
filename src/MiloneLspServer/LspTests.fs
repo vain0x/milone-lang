@@ -297,6 +297,13 @@ let private createWorkspaceAnalysisWithFiles files =
   WorkspaceAnalysis.create host
   |> WorkspaceAnalysis.onInitialized (Some dummyRootUri)
 
+// Update underlying file system.
+//
+// File changes aren't notified. Call didOpenFile etc.
+let private withFiles files wa =
+  wa
+  |> WorkspaceAnalysis.withHost (createWorkspaceAnalysisHostWithFiles files)
+
 let private getProject name (wa: LLS.WorkspaceAnalysis) =
   wa.ProjectList
   |> List.tryFind (fun (p: LLS.ProjectInfo) -> p.ProjectName = name)
@@ -404,6 +411,88 @@ let private doTestRenameSingleFile title text newName expected docId pa : bool *
 let private testRenameSingleFile title text newName expected : bool =
   createSingleFileProject text (doTestRenameSingleFile title text newName expected)
   |> fst
+
+// -----------------------------------------------
+// DocChange
+// -----------------------------------------------
+
+let private testDocChange () =
+  let path = "/$/root/TestProject/TestProject.milone"
+  let uri = LLS.uriOfFilePath path
+
+  // (File of version N has a diagnostic at row N.)
+  let diagnosticsToVersion diagnostics =
+    match diagnostics with
+    | [ _, [ _, (row, _), _ ] ] -> "v" + string row
+    | _ -> failwithf "diagnostics: %A" diagnostics
+
+  let d2, wa =
+    createWorkspaceAnalysisWithFiles [ path, "\nv1" ]
+    |> withFiles [ path, "\n\nv2" ]
+    |> WorkspaceAnalysis.didChangeFile uri
+    |> WorkspaceAnalysis.diagnostics
+
+  assert (d2
+          |> diagnosticsToVersion
+          |> assertEqual "v2" "v2")
+
+  // Open doc is used.
+  let d3, wa =
+    wa
+    |> WorkspaceAnalysis.didOpenDoc uri 3 "\n\n\nv3"
+    |> WorkspaceAnalysis.diagnostics
+
+  assert (d3
+          |> diagnosticsToVersion
+          |> assertEqual "v3" "v3")
+
+  // Change doc is affected.
+  let d4, wa =
+    wa
+    |> WorkspaceAnalysis.didChangeDoc uri 4 "\n\n\n\nv4"
+    |> WorkspaceAnalysis.diagnostics
+
+  assert (d4
+          |> diagnosticsToVersion
+          |> assertEqual "v4" "v4")
+
+  // Change doc so that next diagnostics aren't suppressed.
+  let wa =
+    wa
+    |> WorkspaceAnalysis.didChangeDoc uri 5 "\n\n\n\n\nv5"
+
+  // Change of file is ignored when doc is open.
+  let d5, wa =
+    wa
+    |> withFiles [ path, "\n\n\n\n\n\nv6" ]
+    |> WorkspaceAnalysis.didChangeFile uri
+    |> WorkspaceAnalysis.diagnostics
+
+  assert (d5
+          |> diagnosticsToVersion
+          |> assertEqual "v5" "v5")
+
+  // FIXME: since doc versions are higher than file versions, cache doesn't get invalidated.
+  // After doc is closed, file is open.
+  // let d6, wa =
+  //   wa
+  //   |> WorkspaceAnalysis.didCloseDoc uri
+  //   |> WorkspaceAnalysis.diagnostics
+
+  // assert (d6
+  //         |> diagnosticsToVersion
+  //         |> assertEqual "v6" "v6")
+
+  // // After file is also closed.
+  // let d7, _ =
+  //   wa
+  //   |> withFiles []
+  //   |> WorkspaceAnalysis.didCloseFile uri
+  //   |> WorkspaceAnalysis.diagnostics
+
+  // assert (d7 |> List.isEmpty)
+
+  [ true ]
 
 // -----------------------------------------------
 // Refs
@@ -1062,7 +1151,8 @@ let lspTests host =
   testDirEntries ()
 
   let code =
-    [ testRefs ()
+    [ testDocChange ()
+      testRefs ()
       testHover ()
       testRename ()
       testDocumentSymbol ()

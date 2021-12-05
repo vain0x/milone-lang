@@ -324,7 +324,7 @@ module BundleResult =
 /// Operations for project analysis.
 [<RequireQualifiedAccess; NoEquality; NoComparison>]
 type ProjectAnalysisHost =
-  { GetDocVersion: DocId -> DocVersion option
+  { GetDocVersion: DocId -> DocVersion
     Tokenize: DocId -> DocVersion * LTokenList
     Parse: DocId -> (DocVersion * LSyntaxData) option
 
@@ -344,9 +344,7 @@ type ProjectAnalysis =
 
 let private emptyTokenizeCache: TreeMap<DocId, LTokenList> = TMap.empty compare
 
-let private getVersion docId (pa: ProjectAnalysis) =
-  pa.Host.GetDocVersion docId
-  |> Option.defaultValue 0
+let private getVersion docId (pa: ProjectAnalysis) = pa.Host.GetDocVersion docId
 
 let private tokenizeWithCache docId (pa: ProjectAnalysis) =
   match pa.NewTokenizeCache |> TMap.tryFind docId with

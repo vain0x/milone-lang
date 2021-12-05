@@ -25,6 +25,10 @@ type private DocIdToFilePathFun = ProjectDir -> DocId -> string
 type private DirEntriesFun = string -> string list * string list
 type private ReadSourceFileFun = FilePath -> Future<string option>
 
+let MinVersion: DocVersion = 0
+let InitialVersion: DocVersion = 1
+let DocBaseVersion: DocVersion = 0x8000
+
 // -----------------------------------------------
 // Util
 // -----------------------------------------------
@@ -894,7 +898,29 @@ let private isSafeToEdit (uri: Uri) (wa: WorkspaceAnalysis) =
 
 let private doDidOpenDoc (uri: Uri) (version: int) (text: string) (wa: WorkspaceAnalysis) =
   traceFn "didOpenDoc %s v:%d" (Uri.toString uri) version
+
+  let version = version + DocBaseVersion
   { wa with Docs = wa.Docs |> TMap.add uri (version, text) }
+
+let private doDidOpenFile (uri: Uri) (version: int) (text: string) (wa: WorkspaceAnalysis) =
+  traceFn "didOpenFile %s v:%d" (Uri.toString uri) version
+
+  match wa.Docs |> TMap.tryFind uri with
+  | Some (v, _) when v >= version -> wa
+  | _ -> { wa with Docs = wa.Docs |> TMap.add uri (version, text) }
+
+let doDidChangeDoc (uri: Uri) (version: int) (text: string) (wa: WorkspaceAnalysis) =
+  traceFn "didChangeDoc %s v:%d" (Uri.toString uri) version
+
+  let version = version + DocBaseVersion
+  { wa with Docs = wa.Docs |> TMap.add uri (version, text) }
+
+let doDidChangeFile (uri: Uri) (version: int) (text: string) (wa: WorkspaceAnalysis) =
+  traceFn "didChangeFile %s v:%d" (Uri.toString uri) version
+
+  match wa.Docs |> TMap.tryFind uri with
+  | Some (v, _) when v >= version -> wa
+  | _ -> { wa with Docs = wa.Docs |> TMap.add uri (version, text) }
 
 let private findProjects (wa: WorkspaceAnalysis) =
   let projects =
@@ -904,7 +930,7 @@ let private findProjects (wa: WorkspaceAnalysis) =
 
   { wa with ProjectList = projects }
 
-let private openAllModules (wa: WorkspaceAnalysis) =
+let private openAllModules version (wa: WorkspaceAnalysis) =
   let filesInRoot =
     wa.RootUriOpt
     |> Option.map (fun rootUri -> findModulesRecursively2 wa.Host.DirEntries 3 (uriToFilePath rootUri))
@@ -919,19 +945,18 @@ let private openAllModules (wa: WorkspaceAnalysis) =
     textFut
     |> Future.map (fun textOpt -> textOpt |> Option.map (fun text -> uri, text)))
   |> List.choose Future.wait // #avoidBlocking
-  |> List.fold (fun (wa: WorkspaceAnalysis) (uri, text) -> doDidOpenDoc uri 1 text wa) wa
+  |> List.fold (fun (wa: WorkspaceAnalysis) (uri, text) -> doDidOpenFile uri version text wa) wa
 
 let private getDocVersion uri (wa: WorkspaceAnalysis) =
   match wa.Docs |> TMap.tryFind uri with
-  | Some (v, _) -> Some v
+  | Some (v, _) -> v
 
   | None ->
     traceFn "docs don't have '%s'" (uri |> Uri.toString)
-    None
+    MinVersion
 
 let private tokenizeDoc uri (wa: WorkspaceAnalysis) =
-  let version =
-    getDocVersion uri wa |> Option.defaultValue 0
+  let version = getDocVersion uri wa
 
   match wa.ParseCache |> TMap.tryFind uri with
   | Some (v, syntaxData) when v >= version ->
@@ -994,7 +1019,7 @@ let doWithProjectAnalysis
           let uri = docIdToUri p docId wa
 
           tokenizeDoc uri wa
-          |> Option.defaultValue (0, LTokenList.empty)
+          |> Option.defaultValue (MinVersion, LTokenList.empty)
 
       Parse =
         fun docId ->
@@ -1064,19 +1089,29 @@ module WorkspaceAnalysis =
 
   let onInitialized rootUriOpt (wa: WorkspaceAnalysis) : WorkspaceAnalysis =
     let wa = { wa with RootUriOpt = rootUriOpt }
-    wa |> findProjects |> openAllModules
+    let version, wa = freshId wa
+    wa |> findProjects |> openAllModules version
 
   let didOpenDoc (uri: Uri) (version: int) (text: string) (wa: WorkspaceAnalysis) = doDidOpenDoc uri version text wa
 
-  let didChangeDoc (uri: Uri) (version: int) (text: string) (wa: WorkspaceAnalysis) =
-    traceFn "didChangeDoc %s v:%d" (Uri.toString uri) version
-    { wa with Docs = wa.Docs |> TMap.add uri (version, text) }
+  let didChangeDoc (uri: Uri) (version: int) (text: string) (wa: WorkspaceAnalysis) = doDidChangeDoc uri version text wa
 
   let didCloseDoc (uri: Uri) (wa: WorkspaceAnalysis) =
     traceFn "didCloseDoc %s" (Uri.toString uri)
-    // FIXME: drop tokenize/parse result
-    let _, docs = wa.Docs |> TMap.remove uri
-    { wa with Docs = docs }
+
+    let path = uriToFilePath uri
+
+    match wa.Host.ReadTextFile path |> Future.wait with
+    | Some text ->
+      // Re-open as file if exists.
+      let version, wa = freshId wa
+      { wa with Docs = wa.Docs |> TMap.add uri (version, text) }
+
+    | None ->
+      // FIXME: open as file if exists
+      // FIXME: drop tokenize/parse result
+      let _, docs = wa.Docs |> TMap.remove uri
+      { wa with Docs = docs }
 
   let didOpenFile (uri: Uri) (wa: WorkspaceAnalysis) =
     traceFn "didOpenFile %s" (Uri.toString uri)
@@ -1094,7 +1129,7 @@ module WorkspaceAnalysis =
       match readTextFile (uriToFilePath uri) wa with
       | Some text ->
         let version, wa = freshId wa
-        didOpenDoc uri version text wa
+        doDidOpenFile uri version text wa
 
       | None -> wa
     else
@@ -1110,7 +1145,7 @@ module WorkspaceAnalysis =
       match readTextFile path wa with
       | Some text ->
         let version, wa = freshId wa
-        didChangeDoc uri version text wa
+        doDidChangeFile uri version text wa
 
       | None -> wa
     else
@@ -1128,7 +1163,8 @@ module WorkspaceAnalysis =
         wa
 
     if isManifest path |> not then
-      didCloseDoc uri wa
+      // FIXME: remove tokenize/parse cache, same as closeDoc
+      { wa with Docs = wa.Docs |> TMap.remove uri |> snd }
     else
       wa
 
