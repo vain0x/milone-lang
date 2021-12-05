@@ -208,7 +208,12 @@ let private dirIsExcluded (dir: string) =
 // Standard libs
 // ---------------------------------------------
 
-let private findModulesRecursively getDirEntries (maxDepth: int) (rootDir: string) : (string * string) list =
+/// (projectName, moduleName) list
+let private findModulesRecursively
+  (getDirEntries: DirEntriesFun)
+  (maxDepth: int)
+  (rootDir: string)
+  : (string * string) list =
   let rec bfs acc stack =
     match stack with
     | [] -> acc
@@ -231,6 +236,39 @@ let private findModulesRecursively getDirEntries (maxDepth: int) (rootDir: strin
                  let moduleName = stem file
                  traceFn "in %s" moduleName
                  (projectName, moduleName) :: acc
+
+               | _ -> acc)
+             acc
+
+      let stack =
+        if depth < maxDepth then
+          subdirs
+          |> Seq.filter (fun subdir -> subdir |> dirIsExcluded |> not)
+          |> Seq.fold (fun stack subdir -> (depth + 1, subdir) :: stack) stack
+        else
+          stack
+
+      bfs acc stack
+
+  bfs [] [ 0, rootDir ]
+
+let private findModulesRecursively2 (getDirEntries: DirEntriesFun) (maxDepth: int) (rootDir: string) : FilePath list =
+  let rec bfs acc stack =
+    match stack with
+    | [] -> acc
+
+    | (depth, dir) :: stack ->
+      assert (depth <= maxDepth)
+
+      let files, subdirs = getDirEntries dir
+
+      let acc =
+        files
+        |> Seq.fold
+             (fun acc file ->
+               match getExt file with
+               | Some ".milone"
+               | Some ".fs" -> file :: acc
 
                | _ -> acc)
              acc
@@ -852,6 +890,10 @@ let private isSafeToEdit (uri: Uri) (wa: WorkspaceAnalysis) =
     p.ProjectName |> S.startsWith "Milone" |> not
     && dir = p.ProjectName)
 
+let private doDidOpenDoc (uri: Uri) (version: int) (text: string) (wa: WorkspaceAnalysis) =
+  traceFn "didOpenDoc %s v:%d" (Uri.toString uri) version
+  { wa with Docs = wa.Docs |> TMap.add uri (version, text) }
+
 let private findProjects (wa: WorkspaceAnalysis) =
   let projects =
     match wa.RootUriOpt with
@@ -859,6 +901,28 @@ let private findProjects (wa: WorkspaceAnalysis) =
     | None -> []
 
   { wa with ProjectList = projects }
+
+let private openAllModules (wa: WorkspaceAnalysis) =
+  // work duplicated with StdLibModules
+  let filesInMiloneHome =
+    let dir = wa.Host.MiloneHome + "/milone_libs"
+    findModulesRecursively2 wa.Host.DirEntries 3 dir
+
+  let filesInRoot =
+    wa.RootUriOpt
+    |> Option.map (fun rootUri -> findModulesRecursively2 wa.Host.DirEntries 3 (uriToFilePath rootUri))
+    |> Option.defaultValue []
+
+  List.append filesInMiloneHome filesInRoot
+  |> listUnique
+  |> List.map (fun path ->
+    let uri = uriOfFilePath path
+    let textFut = wa.ReadSourceFile path
+
+    textFut
+    |> Future.map (fun textOpt -> textOpt |> Option.map (fun text -> uri, text)))
+  |> List.choose Future.wait // #avoidBlocking
+  |> List.fold (fun (wa: WorkspaceAnalysis) (uri, text) -> doDidOpenDoc uri 1 text wa) wa
 
 let private getDocVersion uri (wa: WorkspaceAnalysis) =
   match wa.Docs |> TMap.tryFind uri with
@@ -1022,11 +1086,9 @@ module WorkspaceAnalysis =
 
   let onInitialized rootUriOpt (wa: WorkspaceAnalysis) : WorkspaceAnalysis =
     let wa = { wa with RootUriOpt = rootUriOpt }
-    findProjects wa
+    wa |> findProjects |> openAllModules
 
-  let didOpenDoc (uri: Uri) (version: int) (text: string) (wa: WorkspaceAnalysis) =
-    traceFn "didOpenDoc %s v:%d" (Uri.toString uri) version
-    { wa with Docs = wa.Docs |> TMap.add uri (version, text) }
+  let didOpenDoc (uri: Uri) (version: int) (text: string) (wa: WorkspaceAnalysis) = doDidOpenDoc uri version text wa
 
   let didChangeDoc (uri: Uri) (version: int) (text: string) (wa: WorkspaceAnalysis) =
     traceFn "didChangeDoc %s v:%d" (Uri.toString uri) version

@@ -586,6 +586,8 @@ let private processNext host : LspIncome -> ProcessResult =
         "didChangeWatchedFile"
         (fun () ->
           for c in p.Changes do
+            debugFn "change %A %s" c.Type (Uri.toString c.Uri)
+
             match c.Type with
             | FileChangeType.Created -> current <- WorkspaceAnalysis.didOpenFile c.Uri current
             | FileChangeType.Changed -> current <- WorkspaceAnalysis.didChangeFile c.Uri current
@@ -598,6 +600,8 @@ let private processNext host : LspIncome -> ProcessResult =
       handleNotificationWith
         "diagnostics"
         (fun () ->
+          debugFn "diagnostics"
+
           let result, wa = WorkspaceAnalysis.diagnostics current
           current <- wa
 
