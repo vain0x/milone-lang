@@ -6,4 +6,9 @@ set -eu
 gcc -fPIC -c libplus.c -o libplus.o
 gcc -shared -o libplus.so libplus.o
 
+(
+    cd hello
+    cargo build
+)
+
 milone run $PWD

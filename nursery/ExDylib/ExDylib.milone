@@ -4,7 +4,9 @@ __nativeDecl """
 #include <dlfcn.h>
 """
 
+// Use so written in C.
 __nativeStmt """
+  {
     void *lib = dlopen("./libplus.so", RTLD_LAZY);
     if (lib == NULL) {
       fprintf(stderr, "ERROR: dlopen: %s\n", dlerror());
@@ -13,8 +15,31 @@ __nativeStmt """
 
     typedef int (*MyPlusFn)(int, int);
     MyPlusFn my_plus = (MyPlusFn)dlsym(lib, "my_plus");
-    printf("%d\n", my_plus(40, 2));
+    printf("c: %d\n", my_plus(40, 2));
 
     bool ok = dlclose(lib) == 0;
     assert(ok && "dlclose");
+  }
+"""
+
+// Use so written in Rust.
+__nativeStmt """
+  {
+    void *lib = dlopen("./hello/target/debug/libhello.so", RTLD_LAZY);
+    if (lib == NULL) {
+      fprintf(stderr, "ERROR: dlopen: %s\n", dlerror());
+      exit(1);
+    }
+
+    typedef int (*MyPlusFn)(int, int);
+    MyPlusFn my_plus = (MyPlusFn)dlsym(lib, "my_plus2");
+    printf("rust: %d\n", my_plus(40, 2));
+
+    typedef void (*MyHelloFn)(void);
+    MyHelloFn my_hello = (MyHelloFn)dlsym(lib, "my_hello");
+    my_hello();
+
+    bool ok = dlclose(lib) == 0;
+    assert(ok && "dlclose");
+  }
 """
