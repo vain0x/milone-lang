@@ -90,6 +90,12 @@ let private jToArray jsonValue : JsonValue list =
 
   | _ -> failwithf "Expected an array but: %s" (jsonDisplay jsonValue)
 
+let private jArrayOrNull items =
+  if items |> List.isEmpty |> not then
+    JArray items
+  else
+    JNull
+
 let private jToPos jsonValue : Position =
   let row, column =
     jsonValue |> jFields2 "line" "character"
@@ -109,12 +115,23 @@ let private jOfMarkdownString (text: string) =
   jOfObj [ "language", JString "markdown"
            "value", JString text ]
 
+let private jTextEdit (range, newText) =
+  jOfObj [ "range", jOfRange range
+           "newText", JString newText ]
+
+let private jWorkspaceEdit changes =
+  let changes =
+    changes
+    |> List.map (fun (uri, edits) -> Uri.toString uri, edits |> List.map jTextEdit |> JArray)
+
+  jOfObj [ "changes", jOfObj changes ]
+
 // -----------------------------------------------
 // LSP types
 // -----------------------------------------------
 
 [<RequireQualifiedAccess; NoEquality; NoComparison>]
-type private InitializeParam = { RootUriOpt: string option }
+type private InitializeParam = { RootUriOpt: Uri option }
 
 let private parseInitializeParam jsonValue : InitializeParam =
   let rootUriOpt =
@@ -122,6 +139,7 @@ let private parseInitializeParam jsonValue : InitializeParam =
       jsonValue
       |> jFind2 "params" "rootUri"
       |> jToString
+      |> Uri
       |> Some
     with
     | _ -> None
@@ -136,15 +154,17 @@ let private createInitializeResult () =
               "openClose": true,
               "change": 1
           },
+          "codeActionProvider": true,
           "completionProvider": {
             "triggerCharacters": ["."]
           },
           "definitionProvider": true,
-          "documentHighlightProvider": true,
           "documentFormattingProvider": true,
+          "documentHighlightProvider": true,
+          "documentSymbolProvider": true,
           "hoverProvider": true,
           "referencesProvider": true,
-          "renameProvider": false
+          "renameProvider": true
       },
       "serverInfo": {
           "name": "milone_lsp",
@@ -267,6 +287,21 @@ let private parseDocumentPositionParam jsonValue : DocumentPositionParam =
   { Uri = uri; Pos = pos }
 
 [<RequireQualifiedAccess; NoEquality; NoComparison>]
+type private DocumentRangeParam = { Uri: Uri; Range: Range }
+
+let private parseDocumentRangeParam jsonValue : DocumentRangeParam =
+  let uri =
+    jsonValue
+    |> jFind3 "params" "textDocument" "uri"
+    |> jToString
+    |> Uri
+
+  let range =
+    jsonValue |> jFind2 "params" "range" |> jToRange
+
+  { Uri = uri; Range = range }
+
+[<RequireQualifiedAccess; NoEquality; NoComparison>]
 type private ReferencesParam =
   { Uri: Uri
     Pos: Pos
@@ -285,6 +320,27 @@ let private parseReferencesParam jsonValue : ReferencesParam =
   { Uri = uri
     Pos = pos
     IncludeDecl = includeDecl }
+
+let private parseDocumentSymbolParam jsonValue =
+  jsonValue
+  |> jFind3 "params" "textDocument" "uri"
+  |> jToString
+  |> Uri
+
+[<RequireQualifiedAccess; NoEquality; NoComparison>]
+type private RenameParam = { Uri: Uri; Pos: Pos; NewName: string }
+
+let private parseRenameParam jsonValue : RenameParam =
+  let p = parseDocumentPositionParam jsonValue
+
+  let newName =
+    jsonValue
+    |> jFind2 "params" "newName"
+    |> jToString
+
+  { Uri = p.Uri
+    Pos = p.Pos
+    NewName = newName }
 
 // -----------------------------------------------
 // LspError
@@ -380,6 +436,7 @@ type private LspIncome =
   /// This notification is NOT sent by LSP client but is generated inside the server
   /// whenever server receives a kind of requests that invalidate previous diagnostics.
   | DiagnosticsNotification
+  | CodeActionRequest of MsgId * DocumentRangeParam
   | CompletionRequest of MsgId * DocumentPositionParam
   /// https://microsoft.github.io/language-server-protocol/specifications/specification-current/#textDocument_definition
   | DefinitionRequest of MsgId * DocumentPositionParam
@@ -387,10 +444,12 @@ type private LspIncome =
   | ReferencesRequest of MsgId * ReferencesParam
   /// https://microsoft.github.io/language-server-protocol/specifications/specification-current/#tetDocument_documentHighlight
   | DocumentHighlightRequest of MsgId * DocumentPositionParam
+  | DocumentSymbolRequest of MsgId * Uri
   /// https://microsoft.github.io/language-server-protocol/specifications/specification-current/#textDocument_formatting
   | FormattingRequest of MsgId * Uri
   /// https://microsoft.github.io/language-server-protocol/specifications/specification-current/#textDocument_hover
   | HoverRequest of MsgId * DocumentPositionParam
+  | RenameRequest of MsgId * RenameParam
 
   // Others.
   | RegisterCapabilityResponse of MsgId
@@ -422,12 +481,15 @@ let private parseIncome (jsonValue: JsonValue) : LspIncome =
   | "textDocument/didClose" -> DidCloseNotification(parseDidCloseParam jsonValue)
   | "workspace/didChangeWatchedFiles" -> DidChangeWatchedFiles(parseDidChangeWatchedFilesParam jsonValue)
 
+  | "textDocument/codeAction" -> CodeActionRequest(getMsgId (), parseDocumentRangeParam jsonValue)
   | "textDocument/completion" -> CompletionRequest(getMsgId (), parseDocumentPositionParam jsonValue)
   | "textDocument/definition" -> DefinitionRequest(getMsgId (), parseDocumentPositionParam jsonValue)
   | "textDocument/references" -> ReferencesRequest(getMsgId (), parseReferencesParam jsonValue)
   | "textDocument/documentHighlight" -> DocumentHighlightRequest(getMsgId (), parseDocumentPositionParam jsonValue)
+  | "textDocument/documentSymbol" -> DocumentSymbolRequest(getMsgId (), parseDocumentSymbolParam jsonValue)
   | "textDocument/formatting" -> FormattingRequest(getMsgId (), getUriParam jsonValue)
   | "textDocument/hover" -> HoverRequest(getMsgId (), parseDocumentPositionParam jsonValue)
+  | "textDocument/rename" -> RenameRequest(getMsgId (), parseRenameParam jsonValue)
 
   | "$/response" -> RegisterCapabilityResponse(getMsgId ())
   | "$/cancelRequest" -> CancelRequestNotification(jsonValue |> jFind2 "params" "id")
@@ -452,7 +514,10 @@ let private enableDidChangedWatchedFiles () =
             "id": "1",
             "method": "workspace/didChangeWatchedFiles",
             "registerOptions": {
-              "watchers": [{ "globPattern": "**/*.{fs,milone}" }]
+              "watchers": [
+                { "globPattern": "**/*.{fs,milone}" },
+                { "globPattern": "**/milone_manifest" }
+              ]
             }
           }
         ] }
@@ -460,10 +525,10 @@ let private enableDidChangedWatchedFiles () =
 
   jsonRpcWriteWithIdParams "client/registerCapability" msgId param
 
-let private processNext () : LspIncome -> ProcessResult =
-  let mutable current = WorkspaceAnalysis.empty
+let private processNext host : LspIncome -> ProcessResult =
+  let mutable current = WorkspaceAnalysis.create host
   let mutable exitCode: int = 1
-  let mutable rootUriOpt: string option = None
+  let mutable rootUriOpt: Uri option = None
 
   fun (income: LspIncome) ->
     match income with
@@ -478,7 +543,12 @@ let private processNext () : LspIncome -> ProcessResult =
       handleNotificationWith
         "initialized"
         (fun () ->
-          current <- LspLangService.onInitialized rootUriOpt current
+          let wa =
+            WorkspaceAnalysis.onInitialized rootUriOpt current
+
+          current <- wa
+
+          infoFn "findProjects: %A" (WorkspaceAnalysis.getProjectDirs wa)
           enableDidChangedWatchedFiles ())
         id
 
@@ -516,6 +586,8 @@ let private processNext () : LspIncome -> ProcessResult =
         "didChangeWatchedFile"
         (fun () ->
           for c in p.Changes do
+            debugFn "change %A %s" c.Type (Uri.toString c.Uri)
+
             match c.Type with
             | FileChangeType.Created -> current <- WorkspaceAnalysis.didOpenFile c.Uri current
             | FileChangeType.Changed -> current <- WorkspaceAnalysis.didChangeFile c.Uri current
@@ -528,6 +600,8 @@ let private processNext () : LspIncome -> ProcessResult =
       handleNotificationWith
         "diagnostics"
         (fun () ->
+          debugFn "diagnostics"
+
           let result, wa = WorkspaceAnalysis.diagnostics current
           current <- wa
 
@@ -548,21 +622,34 @@ let private processNext () : LspIncome -> ProcessResult =
 
       Continue
 
+    | CodeActionRequest (msgId, p) ->
+      /// Code action with edit.
+      let jEditAction title edit =
+        jOfObj [ "title", JString title
+                 "edit", jWorkspaceEdit edit ]
+
+      handleRequestWith "codeAction" msgId (fun () ->
+        let result, wa =
+          WorkspaceAnalysis.codeAction p.Uri p.Range current
+
+        current <- wa
+
+        result
+        |> List.map (fun (title, edit) -> jEditAction title edit)
+        |> jArrayOrNull)
+
+      Continue
+
     | CompletionRequest (msgId, p) ->
       handleRequestWith "completion" msgId (fun () ->
-        let items =
-          let result, wa =
-            WorkspaceAnalysis.completion p.Uri p.Pos current
+        let result, wa =
+          WorkspaceAnalysis.completion p.Uri p.Pos current
 
-          current <- wa
+        current <- wa
 
-          result
-          |> List.map (fun text -> jOfObj [ "label", JString text ])
-          |> JArray
-
-        match items with
-        | JArray [] -> JNull
-        | _ -> items)
+        result
+        |> List.map (fun text -> jOfObj [ "label", JString text ])
+        |> jArrayOrNull)
 
       Continue
 
@@ -612,9 +699,30 @@ let private processNext () : LspIncome -> ProcessResult =
 
       Continue
 
+    | DocumentSymbolRequest (msgId, uri) ->
+      handleRequestWith "documentSymbol" msgId (fun () ->
+        let symbols, wa =
+          WorkspaceAnalysis.documentSymbol uri current
+
+        current <- wa
+
+        // SymbolInformation[]
+        symbols
+        |> List.map (fun (name, kind, range) ->
+          let location =
+            jOfObj [ "uri", JString(Uri.toString uri)
+                     "range", jOfRange range ]
+
+          jOfObj [ "name", JString name
+                   "kind", jOfInt kind
+                   "location", location ])
+        |> JArray)
+
+      Continue
+
     | FormattingRequest (msgId, uri) ->
       handleRequestWith "formatting" msgId (fun () ->
-        match LspLangService.formatting uri current with
+        match LspLangService.Formatting.formatting uri current with
         | None -> JNull
         | Some result ->
           result.Edits
@@ -640,6 +748,20 @@ let private processNext () : LspIncome -> ProcessResult =
           jOfObj [ "contents", contents |> List.map jOfMarkdownString |> JArray
                    // "range", jOfRange range
                     ])
+
+      Continue
+
+    | RenameRequest (msgId, p) ->
+      handleRequestWith "rename" msgId (fun () ->
+        let changes, wa =
+          WorkspaceAnalysis.rename p.Uri p.Pos p.NewName current
+
+        current <- wa
+
+        if changes |> List.isEmpty |> not then
+          jWorkspaceEdit changes
+        else
+          JNull)
 
       Continue
 
@@ -762,10 +884,11 @@ let private preprocess (incomes: LspIncome list) : LspIncome list =
 [<RequireQualifiedAccess; NoEquality; NoComparison>]
 type LspServerHost =
   { RequestReceived: IEvent<JsonValue>
-    OnQueueLengthChanged: int -> unit }
+    OnQueueLengthChanged: int -> unit
+    Host: LspLangService.WorkspaceAnalysisHost }
 
 let lspServer (host: LspServerHost) : Async<int> =
-  let onRequest = processNext ()
+  let onRequest = processNext host.Host
 
   let queue = ConcurrentQueue<LspIncome>()
   let queueChangedEvent = Event<unit>()

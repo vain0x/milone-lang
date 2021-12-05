@@ -1,14 +1,76 @@
 module rec MiloneLspServer.Program
 
+open System
+open System.IO
+open MiloneShared.UtilParallel
 open MiloneLspServer.JsonRpcReader
 open MiloneLspServer.LspServer
+open MiloneLspServer.Util
 
+// FIXME: shouldn't depend
+module SyntaxApi = MiloneSyntax.SyntaxApi
+
+module LLS = MiloneLspServer.LspLangService
 module LspTests = MiloneLspServer.LspTests
+
+// -----------------------------------------------
+// .NET functions
+// -----------------------------------------------
+
+let private opt (s: string) =
+  match s with
+  | null
+  | "" -> None
+  | _ -> Some s
+
+let private getMiloneHomeEnv () =
+  Environment.GetEnvironmentVariable("MILONE_HOME")
+  |> opt
+
+let private getHomeEnv () =
+  Environment.GetFolderPath(Environment.SpecialFolder.UserProfile)
+  |> opt
+
+let private miloneHome =
+  SyntaxApi.getMiloneHomeFromEnv getMiloneHomeEnv getHomeEnv
+
+let private readTextFile (filePath: string) : Future<string option> =
+  try
+    if File.Exists(filePath) then
+      File.ReadAllTextAsync(filePath)
+      |> Future.ofTask
+      |> Future.map Some
+    else
+      Future.just None
+  with
+  | _ -> Future.just None
+
+let private getHost () : LLS.WorkspaceAnalysisHost =
+  { MiloneHome = miloneHome
+
+    FileExists =
+      fun path ->
+        traceFn "FileExists (%s)" path
+        File.Exists path
+
+    ReadTextFile =
+      fun path ->
+        traceFn "ReadTextFile (%s)" path
+        readTextFile path
+
+    DirEntries =
+      fun dir ->
+        traceFn "DirEntries (%s)" dir
+        List.ofArray (Directory.GetFiles(dir)), List.ofArray (Directory.GetDirectories(dir)) }
+
+// -----------------------------------------------
+// Entrypoint
+// -----------------------------------------------
 
 [<EntryPoint>]
 let main (args: string array) =
   match args with
-  | [| "test" |] -> LspTests.lspTests ()
+  | [| "test" |] -> LspTests.lspTests (getHost ())
   | _ -> ()
 
   async {
@@ -29,7 +91,9 @@ let main (args: string array) =
           OnQueueLengthChanged =
             fun len ->
               System.Threading.Interlocked.Exchange(&queueLength, len)
-              |> ignore }
+              |> ignore
+
+          Host = getHost () }
       |> Async.StartChild
 
     startJsonRpcReader
