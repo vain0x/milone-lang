@@ -952,7 +952,9 @@ let private tokenizeDoc uri (wa: WorkspaceAnalysis) =
       | Some (v, text) -> ok v text
 
       | None ->
-        debugFn "tokenize: '%s' not open" (Uri.toString uri)
+        if (uri |> uriToFilePath |> stem) <> "MiloneOnly" then
+          debugFn "tokenize: '%s' not open" (Uri.toString uri)
+
         None
 
 let private parseDoc (uri: Uri) (wa: WorkspaceAnalysis) =
