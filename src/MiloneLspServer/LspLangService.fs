@@ -836,6 +836,7 @@ type WorkspaceAnalysis =
     DiagnosticsCache: DiagnosticsCache<byte array>
 
     RootUriOpt: Uri option
+    StdLibFiles: FilePath list
     StdLibModules: (string * ProjectDir) list
     DocIdToFilePath: DocIdToFilePathFun
     ReadSourceFile: ReadSourceFileFun
@@ -855,6 +856,7 @@ let private createWorkspaceAnalysis (host: WorkspaceAnalysisHost) : WorkspaceAna
     DiagnosticsCache = DiagnosticsCache.empty Md5Helper.ofString Md5Helper.equals
 
     RootUriOpt = None
+    StdLibFiles = []
     StdLibModules = []
     DocIdToFilePath = fun _ _ -> unreachable ()
     ReadSourceFile = fun _ -> Future.just None
@@ -903,17 +905,12 @@ let private findProjects (wa: WorkspaceAnalysis) =
   { wa with ProjectList = projects }
 
 let private openAllModules (wa: WorkspaceAnalysis) =
-  // work duplicated with StdLibModules
-  let filesInMiloneHome =
-    let dir = wa.Host.MiloneHome + "/milone_libs"
-    findModulesRecursively2 wa.Host.DirEntries 3 dir
-
   let filesInRoot =
     wa.RootUriOpt
     |> Option.map (fun rootUri -> findModulesRecursively2 wa.Host.DirEntries 3 (uriToFilePath rootUri))
     |> Option.defaultValue []
 
-  List.append filesInMiloneHome filesInRoot
+  List.append wa.StdLibFiles filesInRoot
   |> listUnique
   |> List.map (fun path ->
     let uri = uriOfFilePath path
@@ -1042,11 +1039,16 @@ module WorkspaceAnalysis =
 
     let stdLibProjects = SyntaxApi.getStdLibProjects miloneHome
 
-    let stdLibModules =
+    let stdLibFiles =
       stdLibProjects
-      |> List.collect (fun (_, projectDir) -> findModulesInDir host.DirEntries projectDir)
+      |> List.collect (fun (_, projectDir) -> findModulesRecursively2 host.DirEntries 3 projectDir)
+
+    let stdLibModules =
+      stdLibFiles
+      |> List.choose (fun path -> path |> filePathToDocId |> docIdToModulePath)
 
     { wa with
+        StdLibFiles = stdLibFiles
         StdLibModules = stdLibModules
         DocIdToFilePath = convertDocIdToFilePath host.FileExists (Map.ofList stdLibProjects)
         ReadSourceFile = SyntaxApi.readSourceFile host.ReadTextFile
