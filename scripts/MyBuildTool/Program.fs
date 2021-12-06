@@ -431,6 +431,8 @@ let private commandSelfInstall () : unit =
       "src/MiloneCli"
       "--runtime"
       runtimeIdentifier
+      "--self-contained"
+      "true"
       "-c"
       "Release"
       "-o"
@@ -444,6 +446,8 @@ let private commandSelfInstall () : unit =
       "src/MiloneLspServer"
       "--runtime"
       runtimeIdentifier
+      "--self-contained"
+      "true"
       "-c"
       "Release"
       "-o"
@@ -570,6 +574,8 @@ let private commandPack () =
       "src/MiloneCli"
       "--runtime"
       runtimeIdentifier
+      "--self-contained"
+      "true"
       "-c"
       "Release"
       "-o"
@@ -583,6 +589,8 @@ let private commandPack () =
       "src/MiloneLspServer"
       "--runtime"
       runtimeIdentifier
+      "--self-contained"
+      "true"
       "-c"
       "Release"
       "-o"
