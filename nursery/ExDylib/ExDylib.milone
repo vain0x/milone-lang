@@ -1,45 +1,38 @@
 
-__nativeDecl """
-#include <assert.h>
-#include <dlfcn.h>
-"""
+// FIXME: when function return type is function pointer,
+//        invalid code is generated:
+//    void(*milone_dylib_get_symbol)(void)(struct Dylib* , struct String );
 
-// Use so written in C.
-__nativeStmt """
-  {
-    void *lib = dlopen("./libplus.so", RTLD_LAZY);
-    if (lib == NULL) {
-      fprintf(stderr, "ERROR: dlopen: %s\n", dlerror());
-      exit(1);
-    }
+module Dylib =
+  type private DylibPtr = nativeptr<__nativeType<``struct Dylib``>>
 
+  let load (path: string): DylibPtr = __nativeFun("milone_dylib_open", path)
+
+  let dispose (lib: DylibPtr) : unit = __nativeFun("milone_dylib_close", lib)
+
+  let getSymbol (name: string) (lib: DylibPtr) : voidptr = __nativeFun("milone_dylib_get_symbol", lib, name)
+
+let libHello = Dylib.load "./hello/target/debug/hello.dll"
+
+__nativeDecl
+  """
     typedef int (*MyPlusFn)(int, int);
-    MyPlusFn my_plus = (MyPlusFn)dlsym(lib, "my_plus");
-    printf("c: %d\n", my_plus(40, 2));
-
-    bool ok = dlclose(lib) == 0;
-    assert(ok && "dlclose");
-  }
-"""
-
-// Use so written in Rust.
-__nativeStmt """
-  {
-    void *lib = dlopen("./hello/target/debug/libhello.so", RTLD_LAZY);
-    if (lib == NULL) {
-      fprintf(stderr, "ERROR: dlopen: %s\n", dlerror());
-      exit(1);
-    }
-
-    typedef int (*MyPlusFn)(int, int);
-    MyPlusFn my_plus = (MyPlusFn)dlsym(lib, "my_plus2");
-    printf("rust: %d\n", my_plus(40, 2));
-
     typedef void (*MyHelloFn)(void);
-    MyHelloFn my_hello = (MyHelloFn)dlsym(lib, "my_hello");
-    my_hello();
+  """
 
-    bool ok = dlclose(lib) == 0;
-    assert(ok && "dlclose");
-  }
-"""
+// FIXME: can't cast to MyHelloFn with __nativeCast
+let myPlusPtr : __nativeFun<int * int , int> =
+  let p = Dylib.getSymbol "my_plus2" libHello
+  __nativeExpr ("(MyPlusFn){0}", p)
+
+let myPlus (x: int) (y: int): int = __nativeExpr("{0}({1}, {2})", myPlusPtr, x, y)
+printfn "my_plus %d" (myPlus 40 2)
+
+let myHello : __nativeType<MyHelloFn> =
+  let p = Dylib.getSymbol "my_hello" libHello
+  __nativeExpr ("(MyHelloFn){0}", p)
+
+// FIXME: can't call to function pointer
+__nativeStmt ("{0}();", myHello)
+
+Dylib.dispose libHello
