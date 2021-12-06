@@ -2,9 +2,15 @@
 
 struct IntStringResult2_;
 
+typedef struct IntStringResult2_(*VoidConstPtrIntIntStringResult2_FunPtr2)(void const*, int);
+
 struct IntIntStringResult2_Fun1;
 
+typedef int(*VoidConstPtrIntIntFunPtr2)(void const*, int);
+
 struct IntIntFun1;
+
+typedef struct String(*VoidConstPtrStringStringFunPtr2)(void const*, struct String);
 
 struct StringStringFun1;
 
@@ -64,17 +70,17 @@ struct IntStringResult2_ {
 };
 
 struct IntIntStringResult2_Fun1 {
-    struct IntStringResult2_(*fun)(void const*, int);
+    VoidConstPtrIntIntStringResult2_FunPtr2 fun;
     void const* env;
 };
 
 struct IntIntFun1 {
-    int(*fun)(void const*, int);
+    VoidConstPtrIntIntFunPtr2 fun;
     void const* env;
 };
 
 struct StringStringFun1 {
-    struct String(*fun)(void const*, struct String);
+    VoidConstPtrStringStringFunPtr2 fun;
     void const* env;
 };
 

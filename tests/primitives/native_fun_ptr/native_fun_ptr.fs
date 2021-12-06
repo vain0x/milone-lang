@@ -70,9 +70,16 @@ let private testVoidFun () =
 
   __nativeStmt ("""void(*void_fun)(int) = {0}; void_fun(42);""", fp)
 
+let private testFunPtrCanBeResult () =
+  let plus (x: int) (y: int) = x + y
+  let getFunPtr () = __nativeFun plus
+  let p = getFunPtr ()
+  assert (__nativeCast p <> 0un)
+
 let main _ =
   testSort ()
   testUnitFun ()
   testUnaryFun ()
   testVoidFun ()
+  testFunPtrCanBeResult ()
   0

@@ -2,6 +2,8 @@
 
 struct IntWrapper_;
 
+typedef struct IntWrapper_(*VoidConstPtrIntWrapper_FunPtr1)(void const*);
+
 struct UnitIntWrapper_Fun1;
 
 struct IntWrapper_ record_vs_generics_record_vs_generics_IntWrapperUnitIntWrapperFun2_constant(struct IntWrapper_ value_);
@@ -15,7 +17,7 @@ struct IntWrapper_ {
 };
 
 struct UnitIntWrapper_Fun1 {
-    struct IntWrapper_(*fun)(void const*);
+    VoidConstPtrIntWrapper_FunPtr1 fun;
     void const* env;
 };
 

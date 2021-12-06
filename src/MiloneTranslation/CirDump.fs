@@ -37,6 +37,7 @@ let private isFirst first =
 
 let private declIsForwardOnly decl =
   match decl with
+  | CFunPtrTyDef _
   | CStructForwardDecl _
   | CFunForwardDecl _ -> true
   | _ -> false
@@ -74,24 +75,6 @@ let private binaryToString op =
 // Types
 // -----------------------------------------------
 
-let private cpFunPtrTy name argTys resultTy acc =
-  match argTys with
-  | [] ->
-    acc
-    |> cpTy resultTy
-    |> cons "(*"
-    |> cons name
-    |> cons ")(void)"
-
-  | _ ->
-    acc
-    |> cpTy resultTy
-    |> cons "(*"
-    |> cons name
-    |> cons ")("
-    |> join ", " argTys cpTy
-    |> cons ")"
-
 let private cpTy ty acc : string list =
   match ty with
   | CVoidTy -> acc |> cons "void"
@@ -101,16 +84,12 @@ let private cpTy ty acc : string list =
   | CCharTy -> acc |> cons "char"
   | CPtrTy ty -> acc |> cpTy ty |> cons "*"
   | CConstPtrTy ty -> acc |> cpTy ty |> cons " const*"
-  | CFunPtrTy (argTys, resultTy) -> acc |> cpFunPtrTy "" argTys resultTy
   | CStructTy name -> acc |> cons "struct " |> cons name
   | CEnumTy name -> acc |> cons "enum " |> cons name
   | CEmbedTy code -> acc |> cons code
 
-/// `T x` or `T (*x)(..)`
-let private cpTyWithName name ty acc =
-  match ty with
-  | CFunPtrTy (argTys, resultTy) -> acc |> cpFunPtrTy name argTys resultTy
-  | _ -> acc |> cpTy ty |> cons " " |> cons name
+/// `T x` or `T (*x)(..)`. FIXME: remove this
+let private cpTyWithName name ty acc = acc |> cpTy ty |> cons " " |> cons name
 
 let private cpParams ps acc : string list =
   let rec go ps acc =
@@ -633,6 +612,7 @@ let private cpDecl decl acc =
     |> cons "}"
     |> cons eol
 
+  | CFunPtrTyDef _
   | CStructForwardDecl _
   | CFunForwardDecl _
   | CNativeDecl _ -> acc
@@ -654,6 +634,29 @@ let private cpForwardDecl decl acc =
   | CStaticVarDecl _
   | CInternalStaticVarDecl _
   | CExternVarDecl _ -> acc
+
+  | CFunPtrTyDef (ident, argTys, resultTy) ->
+    let acc = acc |> cons "typedef "
+
+    let acc =
+      match argTys with
+      | [] ->
+        acc
+        |> cpTy resultTy
+        |> cons "(*"
+        |> cons ident
+        |> cons ")(void)"
+
+      | _ ->
+        acc
+        |> cpTy resultTy
+        |> cons "(*"
+        |> cons ident
+        |> cons ")("
+        |> join ", " argTys cpTy
+        |> cons ")"
+
+    acc |> cons ";" |> cons eol |> cons eol
 
   | CStructDecl (name, _, _) ->
     acc

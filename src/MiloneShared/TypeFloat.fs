@@ -15,6 +15,9 @@ let floatFlavorToOrdinary flavor =
   | F32 -> 1
   | F64 -> 2
 
+let floatFlavorCompare l r =
+  compare (floatFlavorToOrdinary l) (floatFlavorToOrdinary r)
+
 let fsharpFloatTyName flavor =
   match flavor with
   | F32 -> "float32"

@@ -6,6 +6,8 @@ struct IntIntMyNode1ListTuple2_;
 
 struct IntMyNode1_;
 
+typedef bool(*VoidConstPtrIntMyNode1_IntMyNode1_BoolFunPtr3)(void const*, struct IntMyNode1_, struct IntMyNode1_);
+
 struct IntMyNode1_IntMyNode1_BoolFun2;
 
 struct MyBool_;
@@ -79,7 +81,7 @@ struct IntMyNode1_ {
 };
 
 struct IntMyNode1_IntMyNode1_BoolFun2 {
-    bool(*fun)(void const*, struct IntMyNode1_, struct IntMyNode1_);
+    VoidConstPtrIntMyNode1_IntMyNode1_BoolFunPtr3 fun;
     void const* env;
 };
 

@@ -1,10 +1,16 @@
 #include <milone.h>
 
+typedef int(*VoidConstPtrIntIntFunPtr2)(void const*, int);
+
 struct IntIntFun1;
 
 struct IntIntTuple2_;
 
+typedef int(*VoidConstPtrIntIntIntFunPtr3)(void const*, int, int);
+
 struct IntIntIntFun2;
+
+typedef int(*VoidConstPtrIntIntIntIntIntFunPtr5)(void const*, int, int, int, int);
 
 struct IntIntIntIntIntFun4;
 
@@ -23,7 +29,7 @@ int fun_partial_app_fun_partial_app_eta5_main_add4(void const* env_2, int arg_6,
 int main(int argc, char** argv);
 
 struct IntIntFun1 {
-    int(*fun)(void const*, int);
+    VoidConstPtrIntIntFunPtr2 fun;
     void const* env;
 };
 
@@ -33,12 +39,12 @@ struct IntIntTuple2_ {
 };
 
 struct IntIntIntFun2 {
-    int(*fun)(void const*, int, int);
+    VoidConstPtrIntIntIntFunPtr3 fun;
     void const* env;
 };
 
 struct IntIntIntIntIntFun4 {
-    int(*fun)(void const*, int, int, int, int);
+    VoidConstPtrIntIntIntIntIntFunPtr5 fun;
     void const* env;
 };
 

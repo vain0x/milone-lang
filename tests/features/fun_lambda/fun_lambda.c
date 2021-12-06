@@ -1,6 +1,10 @@
 #include <milone.h>
 
+typedef int(*VoidConstPtrIntIntFunPtr2)(void const*, int);
+
 struct IntIntFun1;
+
+typedef int(*VoidConstPtrIntIntIntFunPtr3)(void const*, int, int);
 
 struct IntIntIntFun2;
 
@@ -25,12 +29,12 @@ int fun_lambda_fun_lambda_eta3_main_fun(void const* env_2, int arg_2, int arg_3)
 int main(int argc, char** argv);
 
 struct IntIntFun1 {
-    int(*fun)(void const*, int);
+    VoidConstPtrIntIntFunPtr2 fun;
     void const* env;
 };
 
 struct IntIntIntFun2 {
-    int(*fun)(void const*, int, int);
+    VoidConstPtrIntIntIntFunPtr3 fun;
     void const* env;
 };
 

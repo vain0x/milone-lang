@@ -1,6 +1,10 @@
 #include <milone.h>
 
+typedef int(*VoidConstPtrIntFunPtr1)(void const*);
+
 struct UnitIntFun1;
+
+typedef int(*VoidConstPtrIntIntFunPtr2)(void const*, int);
 
 struct IntIntFun1;
 
@@ -19,12 +23,12 @@ int fun_arity_never_result_bug_fun_arity_never_result_bug_eta2_main_fun(void con
 int main(int argc, char** argv);
 
 struct UnitIntFun1 {
-    int(*fun)(void const*);
+    VoidConstPtrIntFunPtr1 fun;
     void const* env;
 };
 
 struct IntIntFun1 {
-    int(*fun)(void const*, int);
+    VoidConstPtrIntIntFunPtr2 fun;
     void const* env;
 };
 

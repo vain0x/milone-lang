@@ -1,5 +1,7 @@
 #include <milone.h>
 
+typedef int(*VoidConstPtrIntFunPtr1)(void const*);
+
 struct UnitIntFun1;
 
 int fun_closure_fun_closure_innerFunCase_IntIntFun1_zf2(int x_5);
@@ -69,7 +71,7 @@ int main(int argc, char** argv);
 void fun_closure_fun_closure_start(void);
 
 struct UnitIntFun1 {
-    int(*fun)(void const*);
+    VoidConstPtrIntFunPtr1 fun;
     void const* env;
 };
 

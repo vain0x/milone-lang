@@ -2,6 +2,8 @@
 
 struct LazyList_;
 
+typedef struct LazyList_(*VoidConstPtrLazyList_FunPtr1)(void const*);
+
 struct UnitLazyList_Fun1;
 
 struct IntUnitLazyListFun1Tuple2_;
@@ -33,7 +35,7 @@ struct LazyList_ {
 };
 
 struct UnitLazyList_Fun1 {
-    struct LazyList_(*fun)(void const*);
+    VoidConstPtrLazyList_FunPtr1 fun;
     void const* env;
 };
 

@@ -4,9 +4,13 @@ struct IntStringTuple2_;
 
 struct IntList;
 
+typedef bool(*VoidConstPtrIntIntBoolFunPtr3)(void const*, int, int);
+
 struct IntIntBoolFun2;
 
 struct IntStringTuple2_List;
+
+typedef bool(*VoidConstPtrIntStringTuple2_IntStringTuple2_BoolFunPtr3)(void const*, struct IntStringTuple2_, struct IntStringTuple2_);
 
 struct IntStringTuple2_IntStringTuple2_BoolFun2;
 
@@ -50,12 +54,12 @@ struct IntStringTuple2_ {
 };
 
 struct IntIntBoolFun2 {
-    bool(*fun)(void const*, int, int);
+    VoidConstPtrIntIntBoolFunPtr3 fun;
     void const* env;
 };
 
 struct IntStringTuple2_IntStringTuple2_BoolFun2 {
-    bool(*fun)(void const*, struct IntStringTuple2_, struct IntStringTuple2_);
+    VoidConstPtrIntStringTuple2_IntStringTuple2_BoolFunPtr3 fun;
     void const* env;
 };
 

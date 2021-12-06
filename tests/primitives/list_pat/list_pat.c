@@ -6,6 +6,8 @@ struct Intoption1option1_;
 
 struct Intoption1option1option1_;
 
+typedef struct Intoption1option1option1_(*VoidConstPtrIntIntoption1option1option1_FunPtr2)(void const*, int);
+
 struct IntIntoption1option1option1_Fun1;
 
 struct IntList;
@@ -61,7 +63,7 @@ struct Intoption1option1option1_ {
 };
 
 struct IntIntoption1option1option1_Fun1 {
-    struct Intoption1option1option1_(*fun)(void const*, int);
+    VoidConstPtrIntIntoption1option1option1_FunPtr2 fun;
     void const* env;
 };
 

@@ -34,6 +34,46 @@ let private tupleField (i: int) = "t" + string i
 /// Calculates discriminant type's name of union type.
 let private toDiscriminantEnumName (name: string) = name + "Discriminant"
 
+let private cTyEncode ty =
+  match ty with
+  | CVoidTy _ -> 1
+  | CIntTy _ -> 2
+  | CFloatTy _ -> 3
+  | CBoolTy _ -> 4
+  | CCharTy _ -> 5
+  | CPtrTy _ -> 11
+  | CConstPtrTy _ -> 12
+  | CStructTy _ -> 21
+  | CEnumTy _ -> 22
+  | CEmbedTy _ -> 31
+
+let private cTyCompare l r =
+  match l, r with
+  | CIntTy lFlavor, CIntTy rFlavor -> intFlavorCompare lFlavor rFlavor
+  | CFloatTy lFlavor, CFloatTy rFlavor -> floatFlavorCompare lFlavor rFlavor
+
+  | CPtrTy lTy, CPtrTy rTy -> cTyCompare lTy rTy
+  | CConstPtrTy lTy, CConstPtrTy rTy -> cTyCompare lTy rTy
+
+  | CStructTy l, CStructTy r -> compare l r
+  | CEnumTy l, CEnumTy r -> compare l r
+  | CEmbedTy l, CEmbedTy r -> compare l r
+
+  | _ -> compare (cTyEncode l) (cTyEncode r)
+
+let private cTyToIdent ty =
+  match ty with
+  | CVoidTy -> "Void"
+  | CIntTy flavor -> cIntegerTyPascalName flavor
+  | CFloatTy flavor -> cFloatTyPascalName flavor
+  | CBoolTy -> "Bool"
+  | CCharTy -> "Char"
+  | CPtrTy uTy -> cTyToIdent uTy + "MutPtr"
+  | CConstPtrTy uTy -> cTyToIdent uTy + "ConstPtr"
+  | CStructTy name -> name
+  | CEnumTy name -> name
+  | CEmbedTy embed -> embed // FIXME: code might contain spaces
+
 // -----------------------------------------------
 // Renaming idents
 // -----------------------------------------------
@@ -180,7 +220,10 @@ type private CirCtx =
 
     /// Already-declared functions.
     VarDecls: TreeSet<VarSerial>
-    FunDecls: TreeSet<FunSerial> }
+    FunDecls: TreeSet<FunSerial>
+
+    /// Nominalized fun pointer types.
+    FunPtrTys: TreeMap<CTy list * CTy, string> }
 
 let private ofMirResult (mirCtx: MirResult) : CirCtx =
   let freq = freqEmpty compare
@@ -231,7 +274,8 @@ let private ofMirResult (mirCtx: MirResult) : CirCtx =
     Stmts = []
     Decls = []
     VarDecls = TSet.empty varSerialCompare
-    FunDecls = TSet.empty funSerialCompare }
+    FunDecls = TSet.empty funSerialCompare
+    FunPtrTys = TMap.empty (pairCompare (listCompare cTyCompare) cTyCompare) }
 
 let private currentDocId (ctx: CirCtx) : DocId =
   match ctx.Rx.DocIdOpt with
@@ -284,6 +328,29 @@ let private cgResultTy ctx resultTy : CTy * CirCtx =
   else
     cgTyComplete ctx resultTy
 
+let private cgFunPtrTy (ctx: CirCtx) argTys resultTy : CTy * CirCtx =
+  match ctx.FunPtrTys |> TMap.tryFind (argTys, resultTy) with
+  | Some it -> CEmbedTy it, ctx
+
+  | None ->
+    let arity = argTys |> List.length |> string
+
+    let ident =
+      List.append
+        (argTys |> List.map cTyToIdent)
+        [ resultTy |> cTyToIdent
+          "FunPtr"
+          arity ]
+      |> S.concat ""
+
+    let ctx =
+      { ctx with FunPtrTys = ctx.FunPtrTys |> TMap.add (argTys, resultTy) ident }
+
+    let ctx =
+      addDecl ctx (CFunPtrTyDef(ident, argTys, resultTy))
+
+    CEmbedTy ident, ctx
+
 let private genIncompleteFunTyDecl (ctx: CirCtx) sTy tTy =
   let funTy = tyFun sTy tTy
 
@@ -313,14 +380,14 @@ let private genFunTyDef (ctx: CirCtx) sTy tTy =
     let selfTy, ctx = genIncompleteFunTyDecl ctx sTy tTy
 
     let envTy = CConstPtrTy CVoidTy
-    let _, argTys, resultTy = tyToArgList funTy
 
-    let argTys, ctx = cgArgTys ctx argTys
-    let resultTy, ctx = cgResultTy ctx resultTy
+    let funPtrTy, ctx =
+      let _, argTys, resultTy = tyToArgList funTy
+      let argTys, ctx = cgArgTys ctx argTys
+      let resultTy, ctx = cgResultTy ctx resultTy
+      cgFunPtrTy ctx (envTy :: argTys) resultTy
 
-    let fields =
-      [ "fun", CFunPtrTy(envTy :: argTys, resultTy)
-        "env", envTy ]
+    let fields = [ "fun", funPtrTy; "env", envTy ]
 
     let ctx =
       { ctx with
@@ -511,7 +578,7 @@ let private cgNativeFunTy ctx tys =
   | Some (argTys, resultTy) ->
     let argTys, ctx = cgArgTys ctx argTys
     let resultTy, ctx = cgResultTy ctx resultTy
-    CFunPtrTy(argTys, resultTy), ctx
+    cgFunPtrTy ctx argTys resultTy
 
 /// Converts a type to incomplete type.
 /// whose type definition is not necessary to be visible.
@@ -1335,6 +1402,7 @@ let private sortDecls (decls: CDecl list) : CDecl list =
          (fun (types, vars, bodies) decl ->
            match decl with
            | CErrorDecl _
+           | CFunPtrTyDef _
            | CStructForwardDecl _
            | CStructDecl _
            | CEnumDecl _ -> decl :: types, vars, bodies
@@ -1365,7 +1433,8 @@ let private cgModule (ctx: CirCtx) (m: MModule) : DocId * CDecl list =
       Stmts = []
       Decls = []
       VarDecls = TSet.empty varSerialCompare
-      FunDecls = TSet.empty funSerialCompare }
+      FunDecls = TSet.empty funSerialCompare
+      FunPtrTys = TMap.empty (pairCompare (listCompare cTyCompare) cTyCompare) }
 
   // Generate decls.
   let ctx = cgDecls ctx m.Decls

@@ -4,6 +4,8 @@ struct IntList;
 
 struct IntList;
 
+typedef int(*VoidConstPtrIntFunPtr1)(void const*);
+
 struct UnitIntFun1;
 
 struct IntList const* effect_region_effect_region_doAction_fun_go(struct IntList const* acc_, int i_);
@@ -22,7 +24,7 @@ struct IntList {
 };
 
 struct UnitIntFun1 {
-    int(*fun)(void const*);
+    VoidConstPtrIntFunPtr1 fun;
     void const* env;
 };
 

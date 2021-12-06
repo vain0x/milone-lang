@@ -1,5 +1,7 @@
 #include <milone.h>
 
+typedef struct String(*VoidConstPtrStringStringFunPtr2)(void const*, struct String);
+
 struct StringStringFun1;
 
 struct String fun_underlying_fun_forward_decl_issue_sub_f(int x_, struct String y_);
@@ -9,7 +11,7 @@ struct String fun_underlying_fun_forward_decl_issue_sub_eta2__f(void const* env_
 void fun_underlying_fun_forward_decl_issue_sub_start(void);
 
 struct StringStringFun1 {
-    struct String(*fun)(void const*, struct String);
+    VoidConstPtrStringStringFunPtr2 fun;
     void const* env;
 };
 

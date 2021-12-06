@@ -2,13 +2,19 @@
 
 struct IntList;
 
+typedef struct String(*VoidConstPtrIntStringFunPtr2)(void const*, int);
+
 struct IntStringFun1;
 
 struct StringList;
 
+typedef struct IntList const*(*VoidConstPtrIntIntListConstPtrFunPtr2)(void const*, int);
+
 struct IntIntListFun1;
 
 struct IntList;
+
+typedef bool(*VoidConstPtrIntBoolFunPtr2)(void const*, int);
 
 struct IntBoolFun1;
 
@@ -19,6 +25,8 @@ struct IntIntTuple2_List;
 struct IntIntTuple2_List;
 
 struct IntListIntListTuple2_;
+
+typedef int(*VoidConstPtrIntIntIntFunPtr3)(void const*, int, int);
 
 struct IntIntIntFun2;
 
@@ -77,12 +85,12 @@ int MiloneCore_List_IntIntIntFun2IntIntListIntFun3_fold(struct IntIntIntFun2 , i
 int main(int argc, char** argv);
 
 struct IntStringFun1 {
-    struct String(*fun)(void const*, int);
+    VoidConstPtrIntStringFunPtr2 fun;
     void const* env;
 };
 
 struct IntIntListFun1 {
-    struct IntList const*(*fun)(void const*, int);
+    VoidConstPtrIntIntListConstPtrFunPtr2 fun;
     void const* env;
 };
 
@@ -92,7 +100,7 @@ struct IntList {
 };
 
 struct IntBoolFun1 {
-    bool(*fun)(void const*, int);
+    VoidConstPtrIntBoolFunPtr2 fun;
     void const* env;
 };
 
@@ -112,7 +120,7 @@ struct IntListIntListTuple2_ {
 };
 
 struct IntIntIntFun2 {
-    int(*fun)(void const*, int, int);
+    VoidConstPtrIntIntIntFunPtr3 fun;
     void const* env;
 };
 

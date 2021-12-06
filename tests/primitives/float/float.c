@@ -1,5 +1,7 @@
 #include <milone.h>
 
+typedef bool(*VoidConstPtrF64BoolFunPtr2)(void const*, double);
+
 struct F64BoolFun1;
 
 struct F64List;
@@ -21,7 +23,7 @@ bool float_float_eta2_main_fun_1(void const* env_1, double arg_1);
 int main(int argc, char** argv);
 
 struct F64BoolFun1 {
-    bool(*fun)(void const*, double);
+    VoidConstPtrF64BoolFunPtr2 fun;
     void const* env;
 };
 

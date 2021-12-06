@@ -4,6 +4,8 @@ struct IntStringTuple2_;
 
 struct StringIntTuple2_;
 
+typedef struct StringIntTuple2_(*VoidConstPtrIntStringTuple2_StringIntTuple2_FunPtr2)(void const*, struct IntStringTuple2_);
+
 struct IntStringTuple2_StringIntTuple2_Fun1;
 
 struct IntStringTuple2_List;
@@ -17,6 +19,8 @@ struct StringIntTuple2_List;
 struct StringList;
 
 struct IntList;
+
+typedef int(*VoidConstPtrIntIntFunPtr2)(void const*, int);
 
 struct IntIntFun1;
 
@@ -67,7 +71,7 @@ struct StringIntTuple2_ {
 };
 
 struct IntStringTuple2_StringIntTuple2_Fun1 {
-    struct StringIntTuple2_(*fun)(void const*, struct IntStringTuple2_);
+    VoidConstPtrIntStringTuple2_StringIntTuple2_FunPtr2 fun;
     void const* env;
 };
 
@@ -82,7 +86,7 @@ struct StringIntTuple2_List {
 };
 
 struct IntIntFun1 {
-    int(*fun)(void const*, int);
+    VoidConstPtrIntIntFunPtr2 fun;
     void const* env;
 };
 

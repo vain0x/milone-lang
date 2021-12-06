@@ -14,6 +14,8 @@ struct Node_;
 
 struct Node_List;
 
+typedef struct FirstListSecondListTuple2_(*VoidConstPtrFirstSecondTuple2_ListConstPtrFirstListSecondListTuple2_FunPtr2)(void const*, struct FirstSecondTuple2_List const*);
+
 struct FirstSecondTuple2_ListFirstListSecondListTuple2_Fun1;
 
 struct First_;
@@ -62,7 +64,7 @@ struct Node_List {
 };
 
 struct FirstSecondTuple2_ListFirstListSecondListTuple2_Fun1 {
-    struct FirstListSecondListTuple2_(*fun)(void const*, struct FirstSecondTuple2_List const*);
+    VoidConstPtrFirstSecondTuple2_ListConstPtrFirstListSecondListTuple2_FunPtr2 fun;
     void const* env;
 };
 

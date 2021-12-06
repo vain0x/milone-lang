@@ -47,6 +47,9 @@ let intFlavorToOrdinary flavor =
 let intFlavorEqual l r =
   intFlavorToOrdinary l = intFlavorToOrdinary r
 
+let intFlavorCompare l r =
+  compare (intFlavorToOrdinary l) (intFlavorToOrdinary r)
+
 /// https://docs.microsoft.com/en-us/dotnet/fsharp/language-reference/literals
 let intFlavorOfSuffix (s: string) : IntFlavor option =
   match s with

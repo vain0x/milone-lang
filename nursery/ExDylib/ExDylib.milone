@@ -22,8 +22,7 @@ __nativeDecl
 
 // FIXME: can't cast to MyHelloFn with __nativeCast
 let myPlusPtr : __nativeFun<int * int , int> =
-  let p = Dylib.getSymbol "my_plus2" libHello
-  __nativeExpr ("(MyPlusFn){0}", p)
+  Dylib.getSymbol "my_plus2" libHello
 
 let myPlus (x: int) (y: int): int = __nativeExpr("{0}({1}, {2})", myPlusPtr, x, y)
 printfn "my_plus %d" (myPlus 40 2)

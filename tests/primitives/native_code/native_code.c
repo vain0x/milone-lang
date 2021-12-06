@@ -1,5 +1,7 @@
 #include <milone.h>
 
+typedef void(*VoidConstPtrIntVoidFunPtr2)(void const*, int);
+
 struct IntUnitFun1;
 
 uintptr_t native_code_native_code_nativeStmtWithTyPlaceholder_IntUnitFun1MutPtrUIntPtrFun1_alignOf(struct IntUnitFun1* arg_);
@@ -23,7 +25,7 @@ void native_code_native_code_nativeStmtWithTyPlaceholder(void);
 int main(int argc, char** argv);
 
 struct IntUnitFun1 {
-    void(*fun)(void const*, int);
+    VoidConstPtrIntVoidFunPtr2 fun;
     void const* env;
 };
 

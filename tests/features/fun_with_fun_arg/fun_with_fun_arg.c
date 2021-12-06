@@ -1,8 +1,12 @@
 #include <milone.h>
 
+typedef void(*VoidConstPtrIntStringVoidFunPtr3)(void const*, int, struct String);
+
 struct IntStringUnitFun2;
 
 struct IntStringUnitFun2IntTuple2_;
+
+typedef void(*VoidConstPtrStringVoidFunPtr2)(void const*, struct String);
 
 struct StringUnitFun1;
 
@@ -21,7 +25,7 @@ void fun_with_fun_arg_fun_with_fun_arg_eta3_main_der(void const* env_2, int arg_
 int main(int argc, char** argv);
 
 struct IntStringUnitFun2 {
-    void(*fun)(void const*, int, struct String);
+    VoidConstPtrIntStringVoidFunPtr3 fun;
     void const* env;
 };
 
@@ -31,7 +35,7 @@ struct IntStringUnitFun2IntTuple2_ {
 };
 
 struct StringUnitFun1 {
-    void(*fun)(void const*, struct String);
+    VoidConstPtrStringVoidFunPtr2 fun;
     void const* env;
 };
 
