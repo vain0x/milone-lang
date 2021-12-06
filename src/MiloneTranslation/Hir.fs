@@ -223,6 +223,8 @@ type HExprKind =
   /// `s.[l .. r]`
   | HSliceEN
 
+  | HDiscriminantEN of VariantSerial
+
   /// Direct call to procedure or primitive.
   | HCallProcEN
 

@@ -1030,6 +1030,23 @@ let private mirifyCallStrGetSliceExpr ctx args loc =
 
   temp, ctx
 
+let private mirifyDiscriminantExpr (ctx: MirCtx) variantSerial loc =
+  let tySerial =
+    (ctx.Rx.Variants |> mapFind variantSerial)
+      .UnionTySerial
+
+  let discriminant =
+    match ctx.Rx.Tys |> mapFind tySerial with
+    | UnionTyDef (_, _, variants, _) ->
+      match variants
+            |> List.tryFindIndex (fun v -> variantSerialCompare v variantSerial = 0)
+        with
+      | Some i -> i
+      | None -> unreachable ()
+    | _ -> unreachable ()
+
+  MLitExpr(IntLit(string discriminant), loc), ctx
+
 let private mirifyCallVariantExpr (ctx: MirCtx) serial payload ty loc =
   let payload, ctx = mirifyExpr ctx payload
 
@@ -1455,6 +1472,8 @@ let private mirifyExprInf ctx itself kind args ty loc =
 
   | HIndexEN, [ l; r ], _ -> mirifyCallStrIndexExpr ctx l r ty loc
   | HSliceEN, _, _ -> mirifyCallStrGetSliceExpr ctx args loc
+
+  | HDiscriminantEN variantSerial, _, _ -> mirifyDiscriminantExpr ctx variantSerial loc
 
   | HCallProcEN, [ HVariantExpr (variantSerial, _, _); arg ], _ -> mirifyCallVariantExpr ctx variantSerial arg ty loc
   | HCallProcEN, HPrimExpr (prim, _, _) :: args, _ -> mirifyCallPrimExpr ctx itself prim args ty loc

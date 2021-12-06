@@ -324,6 +324,9 @@ type TPrim =
   | Nil
   | Cons
 
+  // union:
+  | Discriminant
+
   // effects:
   | Exit
   | Assert
@@ -361,6 +364,8 @@ type TExprKind =
 
   /// Tuple constructor, e.g. `x, y, z`.
   | TTupleEN
+
+  | TDiscriminantEN of VariantSerial
 
   /// Use function as function pointer.
   | TNativeFunEN of FunSerial
@@ -635,6 +640,7 @@ let primFromIdent ident =
   | "string" -> TPrim.String |> Some
 
   | "__inRegion" -> TPrim.InRegion |> Some
+  | "__discriminant" -> TPrim.Discriminant |> Some
 
   | "__nativeFun" -> TPrim.NativeFun |> Some
   | "__nativeCast" -> TPrim.NativeCast |> Some

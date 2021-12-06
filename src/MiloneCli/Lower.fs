@@ -129,6 +129,7 @@ let private lowerPrim (prim: Tir.TPrim) : Hir.HPrim =
   | Tir.TPrim.PtrRead -> Hir.HPrim.PtrRead
   | Tir.TPrim.PtrWrite -> Hir.HPrim.PtrWrite
 
+  | Tir.TPrim.Discriminant
   | Tir.TPrim.NativeFun
   | Tir.TPrim.NativeExpr
   | Tir.TPrim.NativeStmt
@@ -155,6 +156,7 @@ let private lowerExprKind (kind: Tir.TExprKind) : Hir.HExprKind =
   | Tir.TAppEN -> Hir.HAppEN
   | Tir.TIndexEN -> Hir.HIndexEN
   | Tir.TSliceEN -> Hir.HSliceEN
+  | Tir.TDiscriminantEN variantSerial -> Hir.HDiscriminantEN(lowerVariantSerial variantSerial)
   | Tir.TCallNativeEN funName -> Hir.HCallNativeEN funName
   | Tir.TTupleEN -> Hir.HTupleEN
   | Tir.TNativeFunEN funSerial -> Hir.HNativeFunEN(lowerFunSerial funSerial)

@@ -1083,6 +1083,12 @@ let private inferPrimExpr ctx prim loc =
   | TPrim.Nil -> onUnbounded primNilScheme
   | TPrim.Cons -> onUnbounded primConsScheme
 
+  | TPrim.Discriminant _ ->
+    let ctx =
+      addError ctx "Illegal use of __discriminant. Hint: `__discriminant Variant`." loc
+
+    txAbort ctx loc
+
   | TPrim.Exit -> onUnbounded primExitScheme
   | TPrim.Assert -> onMono primAssertTy
 
@@ -1309,6 +1315,10 @@ let private inferAppExpr ctx itself callee arg loc =
 
   // Special forms must be handled before recursion.
   match callee, arg with
+  // __discriminant Variant
+  | TPrimExpr (TPrim.Discriminant, _, loc), TVariantExpr (variantSerial, _, _) ->
+    TNodeExpr(TDiscriminantEN variantSerial, [], tyInt, loc), tyInt, ctx
+
   // printfn "..."
   | TPrimExpr (TPrim.Printfn, _, _), TLitExpr (StrLit format, _) ->
     let funTy, targetTy =
@@ -1561,6 +1571,7 @@ let private inferExpr (ctx: TyCtx) (expectOpt: Ty option) (expr: TExpr) : TExpr 
   | TNodeExpr (TMinusEN, _, _, _)
   | TNodeExpr (TAscribeEN, _, _, _)
   | TNodeExpr (TAppEN, _, _, _)
+  | TNodeExpr (TDiscriminantEN _, _, _, _)
   | TNodeExpr (TCallNativeEN _, _, _, _)
   | TNodeExpr (TNativeFunEN _, _, _, _)
   | TNodeExpr (TNativeExprEN _, _, _, _)
