@@ -33,6 +33,7 @@ let private getHomeEnv () =
 
 let private miloneHome =
   SyntaxApi.getMiloneHomeFromEnv getMiloneHomeEnv getHomeEnv
+  |> LLS.normalize
 
 let private readTextFile (filePath: string) : Future<string option> =
   try
@@ -61,7 +62,11 @@ let private getHost () : LLS.WorkspaceAnalysisHost =
     DirEntries =
       fun dir ->
         traceFn "DirEntries (%s)" dir
-        List.ofArray (Directory.GetFiles(dir)), List.ofArray (Directory.GetDirectories(dir)) }
+
+        let collect paths =
+          paths |> Array.map LLS.normalize |> Array.toList
+
+        collect (Directory.GetFiles(dir)), collect (Directory.GetDirectories(dir)) }
 
 // -----------------------------------------------
 // Entrypoint

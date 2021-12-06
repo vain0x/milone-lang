@@ -71,6 +71,18 @@ let private splitAt (i: int) (s: string) =
   else if s.Length <= i then s, ""
   else s.[0..i - 1], s.[i..s.Length - 1]
 
+let private upperFirst (s: string) =
+  if s.Length >= 1 && C.isLower s.[0] then
+    string (C.toUpper s.[0]) + s.[1..s.Length - 1]
+  else
+    s
+
+let private lowerFirst (s: string) =
+  if s.Length >= 1 && C.isUpper s.[0] then
+    string (C.toLower s.[0]) + s.[1..s.Length - 1]
+  else
+    s
+
 let private tryReplace (pattern: string) (target: string) (s: string) =
   if s |> S.contains pattern then
     s |> S.replace pattern target, true
@@ -161,6 +173,13 @@ let normalize (path: string) =
 
   let path = path |> trimEndSep
 
+  // Upper drive letter.
+  let path =
+    if path |> hasDriveLetter then
+      upperFirst path
+    else
+      path
+
   pathContract path
 
 let private getExt (path: string) =
@@ -170,27 +189,37 @@ let private getExt (path: string) =
   | Some i when 0 < i && i < path.Length -> Some(S.skip i path)
   | _ -> None
 
-let uriOfFilePath (filePath: string) =
-  let pathname =
-    filePath |> normalize |> S.replace ":" "%3A"
+let uriOfFilePath (path: string) =
+  let path = normalize path
 
-  Uri("file://" + pathname)
+  if path |> S.startsWith "/" then
+    Uri("file://" + path)
+  else if hasDriveLetter path then
+    let path =
+      path |> lowerFirst |> S.replace ":" "%3A"
 
+    Uri("file:///" + path)
+  else
+    // unlikely used
+    Uri("file://./" + path)
+
+// Note: pathname contains backslashes even on Linux, provided by VSCode.
 let private uriToFilePath (uri: Uri) =
-  let path, file =
+  let path, fileScheme =
     uri |> Uri.toString |> S.stripStart "file://"
 
-  if file then
-    // HOTFIX: On linux, path starts with \\ and is separated by \ for some reason.
+  if fileScheme then
     let path =
-      path |> S.replace "\\\\" "/" |> S.replace "\\" "/"
+      // Windows path.
+      if path |> S.skip 2 |> S.startsWith "%3A" then
+        path |> S.skip 1 |> S.replace "%3A" ":"
+      else
+        path
 
-    // HOTFIX: On Windows, path sometimes starts with an extra / and then it's invalid as file path; e.g. `/c:/Users/john/Foo/Foo.milone`.
-    if path |> S.contains ":" then
-      path |> S.stripStart "/" |> fst
-    else
-      path
+    path |> normalize
   else
+    // Not a file scheme.
+    warnFn "Not file scheme: %s" path
     path
 
 // -----------------------------------------------
