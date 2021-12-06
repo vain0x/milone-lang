@@ -160,6 +160,10 @@ let private dirCreateOrFail (host: CliHost) (dirPath: Path) : unit =
     printfn "error: couldn't create directory at %s" (Path.toString dirPath)
     exit 1
 
+let private fileRead (host: CliHost) (filePath: Path) =
+  host.FileReadAllText(Path.toString filePath)
+  |> Future.wait // avoid blocking
+
 let private fileWrite (host: CliHost) (filePath: Path) (contents: string) : unit =
   host.FileWriteAllText(Path.toString filePath) contents
 
@@ -413,6 +417,7 @@ let private toBuildOnWindowsParams
     NewGuid = fun () -> PW.Guid(w.NewGuid())
     DirCreate = dirCreateOrFail host
     FileExists = fun filePath -> host.FileExists(Path.toString filePath)
+    FileRead = fileRead host
     FileWrite = fileWrite host
     RunCommand = runCommand w }
 

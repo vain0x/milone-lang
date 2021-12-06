@@ -86,6 +86,7 @@ type BuildOnWindowsParams =
     NewGuid: NewGuidFun
     DirCreate: Path -> unit
     FileExists: FileExistsFun
+    FileRead: Path -> string option
     FileWrite: Path -> string -> unit
     RunCommand: Path -> string list -> unit }
 
@@ -96,8 +97,29 @@ let buildOnWindows (p: BuildOnWindowsParams) : unit =
     else
       "Debug"
 
-  // Generate solution/project files for VC++ project.
-  let projectGuid = p.NewGuid()
+  // Retrieve or generate GUID for solution and VC++ projects.
+  let projectGuid, guid1, guid2 =
+    let path = Path.join p.TargetDir (Path "guid.txt")
+
+    match path
+          |> p.FileRead
+          |> Option.defaultValue ""
+          |> S.trimEnd
+          |> S.split ";"
+      with
+    | [ g1; g2; g3 ] -> Guid g1, Guid g2, Guid g3
+
+    | _ ->
+      let projectGuid = p.NewGuid()
+      let guid1 = p.NewGuid()
+      let guid2 = p.NewGuid()
+
+      [ projectGuid; guid1; guid2 ]
+      |> List.map Guid.toString
+      |> S.concat ";"
+      |> p.FileWrite path
+
+      projectGuid, guid1, guid2
 
   let slnFile =
     Path.join p.TargetDir (Path(p.ProjectName + ".sln"))
@@ -106,8 +128,8 @@ let buildOnWindows (p: BuildOnWindowsParams) : unit =
     let p: SolutionXmlParams =
       { ProjectGuid = projectGuid
         ProjectName = p.ProjectName
-        Guid1 = p.NewGuid()
-        Guid2 = p.NewGuid() }
+        Guid1 = guid1
+        Guid2 = guid2 }
 
     renderSolutionXml p
 
