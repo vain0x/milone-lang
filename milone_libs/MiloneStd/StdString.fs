@@ -400,6 +400,46 @@ let concat (sep: string) (xs: string list) : string = B.concat sep xs
 // Formatting
 // -----------------------------------------------
 
+let parseHexAsUInt64 (s: string) : uint64 option =
+  let rec go acc (i: int) =
+    if i = s.Length then
+      Some acc
+    else if C.isHex s.[i] then
+      let d = uint64 (C.evalHex s.[i])
+
+      // Overflow check.
+      let m = uint64 1 <<< 63
+
+      if acc <= (m - uint64 d) / uint64 16 then
+        go (acc * uint64 16 + d) (i + 1)
+      else
+        None
+    else
+      None
+
+  if s.Length <> 0 then
+    go (uint64 0) 0
+  else
+    None
+
+let uint64ToHex (len: int) (value: uint64) =
+  assert (len >= 0)
+
+  let rec go acc len (n: uint64) =
+    if n = uint64 0 && len <= 0 then
+      acc
+    else
+      let d = int (n % uint64 16)
+      let acc = "0123456789abcdef".[d..d] + acc
+      let len = if len >= 1 then len - 1 else 0
+      let n = n / uint64 16
+      go acc len n
+
+  if value = uint64 0 && len = 0 then
+    "0"
+  else
+    go "" len value
+
 // bad implementation
 let format (s: string) (args: string list) =
   args

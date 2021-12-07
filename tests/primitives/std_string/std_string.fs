@@ -251,6 +251,33 @@ let concatTest () =
   assert (S.concat ", " [ "ab"; "cd"; "ef" ] = "ab, cd, ef")
   assert (S.concat "" [] = "")
 
+let private hexTest () =
+  // from:
+  let run1 s expected =
+    let debug (opt: uint64 option) = debugOpt string opt
+    debug (S.parseHexAsUInt64 s) = debug expected
+
+  // Basic.
+  assert (run1 "2a" (Some 42UL))
+  // Empty input.
+  assert (run1 "" None)
+  // Zeroes.
+  assert (run1 "0" (Some 0UL))
+  assert (run1 "0000" (Some 0UL))
+  // Invalid character.
+  assert (run1 "42g" None)
+  // Overflow.
+  assert (run1 "1000000000000000000000000" None)
+
+  // to:
+  // Basic.
+  assert (S.uint64ToHex 8 0xdeadbeefUL = "deadbeef")
+  // Padded.
+  assert (S.uint64ToHex 8 0x00007fffUL = "00007fff")
+  // Zero.
+  assert (S.uint64ToHex 0 0UL = "0")
+  assert (S.uint64ToHex 8 0UL = "00000000")
+
 let private formatTest () =
   assert (S.format "{0}, {1}, {2}" [ "a"; "b"; "c" ] = "a, b, c")
   assert (S.format "{0}-{1}-{0}" [ "S"; "O" ] = "S-O-S")
@@ -293,6 +320,9 @@ let main _ =
 
   // Concat.
   concatTest ()
+
+  // Hex.
+  hexTest ()
 
   // Formatting.
   formatTest ()
