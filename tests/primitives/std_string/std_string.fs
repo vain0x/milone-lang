@@ -123,6 +123,18 @@ let private toUpperTest () =
   assert (S.toUpper "a To Z 🐧" = "A TO Z 🐧")
   assert (S.toUpper "" = "")
 
+let private lowerFirstTest () =
+  assert (S.lowerFirst "CentOS" = "centOS")
+  assert (S.lowerFirst "macOS" = "macOS")
+  assert (S.lowerFirst "" = "")
+  assert (S.lowerFirst "🐧" = "🐧")
+
+let private upperFirstTest () =
+  assert (S.upperFirst "macOS" = "MacOS")
+  assert (S.upperFirst "CentOS" = "CentOS")
+  assert (S.upperFirst "" = "")
+  assert (S.upperFirst "🐧" = "🐧")
+
 let private cutTest () =
   let run sep s expected =
     let debug (s1, s2, ok: bool) = s1 + ";" + s2 + ";" + string ok
@@ -267,6 +279,8 @@ let main _ =
   replaceTest ()
   toLowerTest ()
   toUpperTest ()
+  lowerFirstTest ()
+  upperFirstTest ()
 
   // Split.
   cutTest ()

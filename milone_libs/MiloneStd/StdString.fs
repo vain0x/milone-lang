@@ -247,6 +247,20 @@ let private transformByBytes (f: char -> char) (s: string) : string =
 let toLower (s: string) : string = transformByBytes C.toLower s
 let toUpper (s: string) : string = transformByBytes C.toUpper s
 
+/// Changes first letter to lowercase (if ASCII uppercase).
+let lowerFirst (s: string) : string =
+  if s.Length >= 1 && C.isUpper s.[0] then
+    string (C.toLower s.[0]) + s.[1..s.Length - 1]
+  else
+    s
+
+/// Changes first letter to uppercase (if ASCII lowercase).
+let upperFirst (s: string) : string =
+  if s.Length >= 1 && C.isLower s.[0] then
+    string (C.toUpper s.[0]) + s.[1..s.Length - 1]
+  else
+    s
+
 // -----------------------------------------------
 // Split
 // -----------------------------------------------
