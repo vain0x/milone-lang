@@ -210,6 +210,9 @@ let private cutLineTest () =
   // String ending without newline.
   assert (run "hello" ("hello", "", None))
 
+  // Binary safe.
+  assert (run "\x00" ("\x00", "", None))
+
 let private toLinesTest () =
   assert ((S.toLines "a\nb\nc" |> S.concat ";") = "a;b;c")
   assert ((S.toLines "a\nb\nc\n" |> S.concat ";") = "a;b;c;")

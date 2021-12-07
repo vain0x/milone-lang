@@ -295,17 +295,17 @@ let stripEnd (suffix: string) (s: string) : string * bool =
   else
     s, false
 
+/// Finds first index of newline. Returns total length if missing.
 let private findNewline (start: int) (s: string) =
   let i = start
 
-  if i < s.Length
-     && (s.[i] <> '\x00' && s.[i] <> '\r' && s.[i] <> '\n') then
+  if i < s.Length && (s.[i] <> '\r' && s.[i] <> '\n') then
     findNewline (i + 1) s
   else
     i
 
 /// Splits a string into first line and rest.
-/// Line ends with a `\r`, `\n`, `\x00`, or end of string.
+/// Line ends with a `\r\n`, `\n`, or end of string.
 ///
 /// Returns `(lineContents, rest, newlineOpt)`, where:
 ///
@@ -327,7 +327,7 @@ let cutLine (s: string) : string * string * string option =
          && s.[m + 1] = '\n' then
         2
       else
-        assert (s.[m] = '\x00' || s.[m] = '\r' || s.[m] = '\n')
+        assert (m = s.Length || s.[m] = '\r' || s.[m] = '\n')
         1
 
     let r = m + sepLen
