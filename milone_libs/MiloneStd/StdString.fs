@@ -304,21 +304,22 @@ let private findNewline (start: int) (s: string) =
   else
     i
 
-/// Scans a line of string. A line ends with a `\r`, `\n`, `\x00`, or end of string.
+/// Splits a string into first line and rest.
+/// Line ends with a `\r`, `\n`, `\x00`, or end of string.
 ///
-/// Returns `(lineContents, newlineOpt, rest)`, where:
+/// Returns `(lineContents, rest, newlineOpt)`, where:
 ///
 /// - `lineContents` is the contents of the line.
 ///     Empty if string starts with newline or is empty.
-/// - `newlineOpt` is "\n" or "\r\n" (or perhaps "\r"), which is actually found.
 /// - `rest` is the string after the newline.
-///     Empty if it ends with the newline or no newline found.
-let scanLine (s: string) : string * string option * string =
+///     Empty if it ends with the newline. Otherwise no newline found.
+/// - `newlineOpt` is "\n" or "\r\n" (or perhaps "\r"), which is actually found.
+let cutLine (s: string) : string * string * string option =
   let m = findNewline 0 s
   let lineContents = if m > 0 then s.[0..m - 1] else ""
 
   if m = s.Length then
-    lineContents, None, ""
+    lineContents, "", None
   else
     let sepLen =
       if (m + 1) < s.Length
@@ -338,7 +339,7 @@ let scanLine (s: string) : string * string option * string =
       else
         ""
 
-    lineContents, Some sep, rest
+    lineContents, rest, Some sep
 
 /// Splits a string to lines.
 let toLines (s: string) : string list =

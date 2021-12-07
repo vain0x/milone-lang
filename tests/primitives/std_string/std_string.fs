@@ -4,6 +4,18 @@ module rec std_string.Program
 
 module S = MiloneStd.StdString
 
+// Not using Option.debug to avoid depending on other modules.
+let private debugOpt debug opt =
+  match opt with
+  | Some it -> "Some(" + debug it + ")"
+  | None -> "None"
+
+let private debugList debug xs =
+  xs
+  |> List.map debug
+  |> S.concat "; "
+  |> (fun x -> "[" + x + "]")
+
 let unwrap opt =
   match opt with
   | Some value -> value
@@ -173,6 +185,31 @@ let private stripEndTest () =
   assert (run "sep" "" ("", false))
   assert (run "" "" ("", true))
 
+let private cutLineTest () =
+  let run s expected =
+    let debug (contents, rest, sepOpt) =
+      [ contents; rest; debugOpt id sepOpt ]
+      |> debugList id
+
+    debug (S.cutLine s) = debug expected
+
+  // Basic use-case.
+  assert (run "hello\nworld\nbye\n" ("hello", "world\nbye\n", Some "\n"))
+
+  // Empty input.
+  assert (run "" ("", "", None))
+
+  // String with CRLF.
+  assert (run "Windows\r\nWorld.\r\n" ("Windows", "World.\r\n", Some "\r\n"))
+
+  // String starting with newline.
+  assert (run "\nrest" ("", "rest", Some "\n"))
+  assert (run "\n" ("", "", Some "\n"))
+  assert (run "\r\n" ("", "", Some "\r\n"))
+
+  // String ending without newline.
+  assert (run "hello" ("hello", "", None))
+
 let private toLinesTest () =
   assert ((S.toLines "a\nb\nc" |> S.concat ";") = "a;b;c")
   assert ((S.toLines "a\nb\nc\n" |> S.concat ";") = "a;b;c;")
@@ -214,6 +251,7 @@ let main _ =
   splitTest ()
   stripStartTest ()
   stripEndTest ()
+  cutLineTest ()
   toLinesTest ()
 
   // Concat.
