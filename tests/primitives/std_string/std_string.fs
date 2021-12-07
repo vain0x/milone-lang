@@ -89,6 +89,21 @@ let sliceTest () =
   assert (S.slice 1 3 "ab" = "b")
   assert (S.slice 2 3 "ab" = "")
 
+let private splitAtTest () =
+  let run s i expected =
+    let debug (l, r) = l + ";" + r
+    debug (S.splitAt i s) = debug expected
+
+  // Basic.
+  assert (run "hello" 2 ("he", "llo"))
+
+  // Empty.
+  assert (run "" 0 ("", ""))
+
+  // Out of range.
+  assert (run "ab" (-1) ("", "ab"))
+  assert (run "ab" 3 ("ab", ""))
+
 let trimTest () =
   assert (S.trim "  ab  " = "ab")
   assert (S.trimStart "  ab  " = "ab  ")
@@ -243,6 +258,7 @@ let main _ =
   truncateTest ()
   skipTest ()
   sliceTest ()
+  splitAtTest ()
 
   // Trim.
   trimTest ()

@@ -137,6 +137,15 @@ let slice (start: int) (endIndex: int) (s: string) : string =
   else
     ""
 
+/// Splits a string into two parts at the specified index.
+///
+/// Index is tolerant.
+/// If `i < 0`, use `0`. If `i > s.Length`, use length.
+let splitAt (i: int) (s: string) : string * string =
+  if i <= 0 then "", s
+  else if s.Length <= i then s, ""
+  else s.[0..i - 1], s.[i..s.Length - 1]
+
 // -----------------------------------------------
 // Trim
 // -----------------------------------------------
