@@ -55,3 +55,20 @@ let toLower (c: char) : char =
     subtract c 'A' + 'a'
   else
     c
+
+// -----------------------------------------------
+// Other
+// -----------------------------------------------
+
+let evalDigit (c: char) : int =
+  assert ('0' <= c && c <= '9')
+  int (byte c - byte '0')
+
+let evalHex (c: char) : int =
+  if '0' <= c && c <= '9' then
+    int (byte c - byte '0')
+  else if 'a' <= c && c <= 'f' then
+    int (byte c - byte 'a') + 10
+  else
+    assert ('A' <= c && c <= 'F')
+    int (byte c - byte 'A') + 10

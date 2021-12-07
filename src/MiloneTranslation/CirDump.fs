@@ -114,17 +114,6 @@ let private cpParams ps acc : string list =
 // Literals
 // -----------------------------------------------
 
-let private evalHexDigit (c: char) : int =
-  if '0' <= c && c <= '9' then
-    int (byte c - byte '0')
-  else if 'A' <= c && c <= 'F' then
-    int (byte c - byte 'A') + 10
-  else if 'a' <= c && c <= 'f' then
-    int (byte c - byte 'a') + 10
-  else
-    assert false
-    0
-
 let private uint64FromHex (l: int) (r: int) (s: string) =
   assert (0 <= l && l < r && r <= s.Length)
 
@@ -132,7 +121,7 @@ let private uint64FromHex (l: int) (r: int) (s: string) =
     if i = r then
       acc
     else
-      let d = uint64 (evalHexDigit s.[i])
+      let d = uint64 (C.evalHex s.[i])
       go (acc * uint64 16 + d) (i + 1)
 
   go (uint64 0) l

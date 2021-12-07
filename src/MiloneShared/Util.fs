@@ -236,22 +236,11 @@ let intToHexWithPadding (len: int) (value: int) =
 let intFromHex (l: int) (r: int) (s: string) =
   assert (0 <= l && l < r && r <= s.Length)
 
-  let hexDigitToInt (c: char) =
-    if '0' <= c && c <= '9' then
-      int c - int '0'
-    else if 'A' <= c && c <= 'F' then
-      int c - int 'A' + 10
-    else if 'a' <= c && c <= 'f' then
-      int c - int 'a' + 10
-    else
-      assert false
-      0
-
   let rec go (acc: int) (i: int) =
     if i = r then
       acc
     else
-      let d = hexDigitToInt s.[i]
+      let d = C.evalHex s.[i]
       go (acc * 16 + d) (i + 1)
 
   go 0 l
