@@ -372,3 +372,17 @@ let toLines (s: string) : string list =
 /// This function is almost same as `String.concat` in F#
 /// but takes a list rather than seq, which is unimplemented in milone-lang.
 let concat (sep: string) (xs: string list) : string = B.concat sep xs
+
+// -----------------------------------------------
+// Formatting
+// -----------------------------------------------
+
+// bad implementation
+let format (s: string) (args: string list) =
+  args
+  |> List.fold
+       (fun (i, s) arg ->
+         let s = s |> replace ("{" + string i + "}") arg
+         i + 1, s)
+       (0, s)
+  |> snd

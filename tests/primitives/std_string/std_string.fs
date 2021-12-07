@@ -224,6 +224,10 @@ let concatTest () =
   assert (S.concat ", " [ "ab"; "cd"; "ef" ] = "ab, cd, ef")
   assert (S.concat "" [] = "")
 
+let private formatTest () =
+  assert (S.format "{0}, {1}, {2}" [ "a"; "b"; "c" ] = "a, b, c")
+  assert (S.format "{0}-{1}-{0}" [ "S"; "O" ] = "S-O-S")
+
 let main _ =
   isEmptyTest ()
   tryItemTest ()
@@ -259,4 +263,7 @@ let main _ =
 
   // Concat.
   concatTest ()
+
+  // Formatting.
+  formatTest ()
   0
