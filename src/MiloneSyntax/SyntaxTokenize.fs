@@ -494,7 +494,7 @@ let private evalStrLit (text: string) (l: int) (r: int) : Token =
 
     // Take an escape sequence or halt.
     if i = r - 1 then
-      StrToken(acc |> List.rev |> strConcat)
+      StrToken(acc |> List.rev |> S.concat "")
     else
       assert (i < r - 1 && text.[i] = '\\')
 

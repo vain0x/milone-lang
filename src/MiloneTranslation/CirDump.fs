@@ -695,11 +695,11 @@ let cirDump (decls: CDecl list) : string =
   |> cpForwardDecls decls
   |> cpDecls decls
   |> List.rev
-  |> strConcat
+  |> S.concat ""
 
 let cirDumpHeader (decls: CDecl list) : string =
   []
   |> cpHeader
   |> cpForwardDecls decls
   |> List.rev
-  |> strConcat
+  |> S.concat ""

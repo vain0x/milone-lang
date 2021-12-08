@@ -239,8 +239,6 @@ let charEscape (c: char) =
 // String
 // -----------------------------------------------
 
-let strConcat (xs: string list) = S.concat "" xs
-
 let strNeedsEscaping (str: string) =
   let rec go i =
     i < str.Length
@@ -272,4 +270,4 @@ let strEscape (str: string) =
   if str |> strNeedsEscaping |> not then
     str
   else
-    go [] 0 |> List.rev |> strConcat
+    go [] 0 |> List.rev |> S.concat ""
