@@ -1,6 +1,7 @@
 /// Defines utility types and functions used in multiple modules.
 module rec MiloneShared.Util
 
+open MiloneStd.StdList
 open MiloneStd.StdMap
 
 module C = MiloneStd.StdChar
@@ -36,32 +37,11 @@ let cons head tail = head :: tail
 let forList folder xs state =
   List.fold (fun state x -> folder x state) state xs
 
-/// Skips initial `count` items.
-///
-/// Unlike `List.skip`, just returns `[]` when `count` is negative or too large.
-let listSkip (count: int) (xs: _ list) : _ list =
-  let rec listSkipLoop count xs =
-    match xs with
-    | [] -> []
-    | _ when count <= 0 -> xs
-    | _ :: xs -> listSkipLoop (count - 1) xs
-
-  listSkipLoop count xs
-
-/// Tries to "zip" two lists by pairing every i'th item from both lists.
-///
-/// If two lists have different length, some elements have no pair.
-/// These items are returns as third result.
-/// The second result indicates which list is longer.
-let listTryZip (xs: _ list) (ys: _ list) : (_ * _) list * _ list * _ list =
-  let rec listTryZipLoop acc xs ys =
-    match xs, ys with
-    | _, []
-    | [], _ -> List.rev acc, xs, ys
-
-    | x :: xs, y :: ys -> listTryZipLoop ((x, y) :: acc) xs ys
-
-  listTryZipLoop [] xs ys
+let listSkip count xs = List.drop count xs
+let listTryZip xs ys = List.zipEx xs ys
+let listSort itemCompare xs = List.sortWith itemCompare xs
+let listUnique itemCompare xs = List.sortUniqueWith itemCompare xs
+let listCompare itemCompare ls rs = List.compare itemCompare ls rs
 
 /// `List.map`, modifying context.
 ///
@@ -85,74 +65,6 @@ let stFlatMap f (xs, ctx) =
       go acc xs ctx
 
   go [] xs ctx
-
-let listCompare compare ls rs =
-  let rec go ls rs =
-    match ls, rs with
-    | [], [] -> 0
-    | [], _ -> -1
-    | _, [] -> 1
-    | l :: ls, r :: rs ->
-      let c = compare l r
-      if c <> 0 then c else go ls rs
-
-  go ls rs
-
-let listSortCore unique compare xs =
-  let rec appendRev acc xs =
-    match xs with
-    | [] -> acc
-
-    | x :: xs -> appendRev (x :: acc) xs
-
-  // `merge (xs, xn) (ys, yn) = (zs, zn), d` where
-  // `zs.[0..zn - 1]` is the merge of `xs.[0..xn - 1]` and `ys.[0..yn - 1]`,
-  // and `d` is the number of duplicated items.
-  let rec merge (zs, zn) d (xs, xn) (ys, yn) =
-    if xn = 0 then
-      (appendRev ys zs, zn + yn), d
-    else
-
-    if yn = 0 then
-      (appendRev xs zs, zn + xn), d
-    else
-      match xs, ys with
-      | [], _
-      | _, [] -> unreachable () // wrong list length.
-
-      | x :: xs1, y :: ys1 ->
-        let c = compare x y
-
-        if c > 0 then
-          merge (y :: zs, zn + 1) d (xs, xn) (ys1, yn - 1)
-        else if c = 0 && unique then
-          merge (zs, zn) (d + 1) (xs, xn) (ys1, yn - 1)
-        else
-          merge (x :: zs, zn + 1) d (xs1, xn - 1) (ys, yn)
-
-  // `go (xs, xn) = (zs, zn), xs1, d` where
-  // `zs.[0..xn - 1]` is the sort of `xs.[0..xn - 1]`,
-  // `xs1 = xs.[xn..]`,
-  // and `d` is the number of duplicated items.
-  let rec go (xs, n) =
-    if n <= 1 then
-      (xs, n), listSkip n xs, 0
-    else
-      let m = n / 2
-      let (xs, xn), xs1, d1 = go (xs, m)
-      let (ys, yn), ys1, d2 = go (xs1, n - m)
-      let (zs, zn), d3 = merge ([], 0) 0 (xs, xn) (ys, yn)
-      (zs, zn), ys1, d1 + d2 + d3
-
-  let xn = List.length xs
-  let (zs, zn), ws, d = go (xs, xn)
-  assert (zn + d = xn)
-  assert (ws |> List.isEmpty)
-  List.truncate zn zs
-
-let listSort compare xs = listSortCore false compare xs
-
-let listUnique compare xs = listSortCore true compare xs
 
 /// Tries to split a list to pair of non-last items and the last item.
 let splitLast xs =

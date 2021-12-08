@@ -1,18 +1,17 @@
 // Toy HTTP server written in milone-lang and C.
+// WARN: Don't expose to Internet.
 //
 // Support only Linux.
 // Impure things need replacing by ephemeral objects.
-// WARN: Don't expose to Internet.
 module rec LibHttpServer.Program
 
+open MiloneStd.StdError
 open MiloneStd.StdMap
 
 module I = MiloneStd.StdInt
 module C = MiloneStd.StdChar
 module S = MiloneStd.StdString
 module StdEnv = MiloneStd.StdEnv
-
-module ExtString = LibNursery.ExtString
 
 type private Map<'K, 'V> = TreeMap<'K, 'V>
 
@@ -23,10 +22,6 @@ __nativeDecl
     #include <sys/types.h>
     #include <unistd.h>
   """
-
-let private todo () : 'A =
-  assert false
-  exit 1
 
 // -----------------------------------------------
 // Runtime interface
@@ -78,15 +73,6 @@ let private getCwd () : string = __nativeFun "get_cwd"
 // -----------------------------------------------
 // Native code
 // -----------------------------------------------
-
-/// Writes to standard error. Adds LF.
-let private printError (msg: string) : unit =
-  __nativeStmt ("""fprintf(stderr, "%s\n", str_to_c_str({0}));""", msg)
-
-/// Exits as error.
-let private logExit (msg: string) : 'A =
-  printError ("error: " + msg)
-  exit 1
 
 // ptr, capacity
 type private Buffer = nativeptr<byte> * int
@@ -208,7 +194,7 @@ let private doWriteExact (ptr: __constptr<byte>) (len: int) (output: Stream) : u
   )
 
   let ok: bool = __nativeExpr "ok"
-  if not ok then logExit "writeExact"
+  if not ok then failwith "writeExact"
 
 /// Writes data to stream. Blocks to wait for all data to be written.
 let private writeExact (buf: Buffer) (len: int) (output: Stream) : Buffer * Stream =
@@ -280,40 +266,6 @@ module Option =
     | Some _ -> opt
     | None -> other ()
 
-// FIXME: use S.toLower, toUpper
-
-/// Converts all ASCII latin letters to lowercase.
-let private toAsciiLower (s: string) : string =
-  let f = C.toLower
-
-  let rec go (i: int) acc =
-    if i < s.Length then
-      go (i + 1) (string (f s.[i]) :: acc)
-    else
-      List.rev acc
-
-  go 0 [] |> S.concat ""
-
-/// Converts all ASCII latin letters to uppercase.
-let private toAsciiUpper (s: string) : string =
-  let f = C.toUpper
-
-  let rec go (i: int) acc =
-    if i < s.Length then
-      go (i + 1) (string (f s.[i]) :: acc)
-    else
-      List.rev acc
-
-  go 0 [] |> S.concat ""
-
-// FIXME: use S.stripStart
-/// Tries to strip a prefix if the string starts with that prefix.
-let private tryStripPrefix (prefix: string) (s: string) : string option =
-  if S.startsWith prefix s then
-    Some s.[prefix.Length..s.Length - 1]
-  else
-    None
-
 /// Invokes a function repeatedly.
 /// Each call is wrapped by a dynamic memory region
 /// so that the loop doesn't run into out of memory.
@@ -370,7 +322,7 @@ type private HttpResponseContext =
 // and writing responses.
 
 let private parseHttpMethod (s: string) : HttpMethod option =
-  match toAsciiUpper s with
+  match S.toUpper s with
   | "GET" -> Some HttpMethod.GET
   | "POST" -> Some HttpMethod.POST
   | "HEAD" -> Some HttpMethod.HEAD
@@ -385,19 +337,19 @@ let private httpMethodToString (m: HttpMethod) =
 /// Parses first line of HTTP request. Fatal error on error.
 let private parseRequestLine (line: string) : HttpMethod option * string * int option =
   let methodOpt, line =
-    match ExtString.divide " " line with
-    | methodName, Some line -> parseHttpMethod methodName, line
-    | _ -> logExit "parseLine"
+    match S.cut " " line with
+    | methodName, line, true -> parseHttpMethod methodName, line
+    | _ -> failwith "parseLine"
 
   let pathname, line =
-    match ExtString.divide " " line with
-    | pathname, Some line -> pathname, line
-    | _ -> logExit "parseLine"
+    match S.cut " " line with
+    | pathname, line, true -> pathname, line
+    | _ -> failwith "parseLine"
 
   let minorOpt =
-    match tryStripPrefix "HTTP/1." line with
-    | Some it -> I.tryParse it
-    | None -> logExit "HTTP 1.x is only supported"
+    match S.stripStart "HTTP/1." line with
+    | it, true -> I.tryParse it
+    | _ -> failwith "HTTP 1.x is only supported"
 
   methodOpt, pathname, minorOpt
 
@@ -418,10 +370,9 @@ let private parseHeaderField (line: string) : Entry option =
   if S.trimEnd line = "" then
     None
   else
-    match ExtString.divide ":" line with
-    | _, None -> logExit "parseHeaderField: expected ':' in header line."
-
-    | name, Some value -> Some(toAsciiLower name, S.trim value)
+    match S.cut ":" line with
+    | name, value, true -> Some(S.toLower name, S.trim value)
+    | _ -> failwith "parseHeaderField: expected ':' in header line."
 
 /// Reads HTTP header lines.
 let private readHeaderField (input: Stream) : Map<string, string> option * Stream =
@@ -447,7 +398,7 @@ let private readHeaderField (input: Stream) : Map<string, string> option * Strea
 // data is discarded
 let private readReqBody (input: Stream) (size: int) : Stream =
   if size > 1100100100 then
-    logExit "body too long"
+    failwith "body too long"
 
   let bufSize = 8000
   let buf = newBuffer bufSize
@@ -458,7 +409,7 @@ let private readReqBody (input: Stream) (size: int) : Stream =
     else
       let blockSize = I.min bufSize size
       let ok, buf, input = readExact buf blockSize input
-      if not ok then logExit "readExact"
+      if not ok then failwith "readExact"
       go input buf (size - blockSize)
 
   go input buf size
@@ -468,7 +419,7 @@ let private writeAccess (res: HttpResponseContext) : unit =
   let pathname = res.Action.Pathname
   let statusText = res.StatusText
 
-  printError (
+  __trace (
     "["
     + methodName
     + "] "
@@ -481,7 +432,7 @@ let private writeAccess (res: HttpResponseContext) : unit =
 let private newResponseContext (context: HttpActionContext) (data: HttpResponseData) : HttpResponseContext =
   let writeLine (line: string) =
     if S.contains "\n" line then
-      logExit ("illegal line:" + line)
+      failwith ("illegal line:" + line)
 
     context.Write(line + "\r\n")
 
@@ -531,12 +482,12 @@ let private writeResponse (res: HttpResponseContext) : unit =
 /// - Some 0: a request is gracefully processed
 /// - Some code when `code <> 0`: error
 let private readReq (handler: HttpActionContext -> unit) (input: Stream) (output: Stream) : int option =
-  printError "reading request line"
+  __trace "reading request line"
   let reqLineOpt, input = readRequestLine input
 
   match reqLineOpt with
   | None ->
-    printError "trace: Requests end."
+    __trace "requests end"
     None
 
   | Some (methodOpt, pathname, minorOpt) ->
@@ -544,19 +495,19 @@ let private readReq (handler: HttpActionContext -> unit) (input: Stream) (output
 
     match headersOpt with
     | None ->
-      printError "no headers"
+      __trace "no headers"
       Some 1
 
     | Some headers ->
       match methodOpt, minorOpt with
       | _, None ->
         // send error response
-        printError "HTTP version not supported."
+        __trace "HTTP version not supported."
         Some 1
 
       | None, _ ->
         // send error response
-        printError "method not supported"
+        __trace "method not supported"
         Some 1
 
       | Some httpMethod, Some minor ->
@@ -570,7 +521,7 @@ let private readReq (handler: HttpActionContext -> unit) (input: Stream) (output
 
         let date =
           getDate ()
-          |> Option.defaultWith (fun () -> logExit "get_date")
+          |> Option.defaultWith (fun () -> failwith "get_date")
 
         let context: HttpActionContext =
           { Date = date
@@ -578,7 +529,7 @@ let private readReq (handler: HttpActionContext -> unit) (input: Stream) (output
             Minor = minor
             Pathname = pathname
             Write = fun (data: string) -> writeStringExact data output |> ignore
-            Trace = fun (text: string) -> printError ("trace: " + text) }
+            Trace = fun (text: string) -> __trace ("trace: " + text) }
 
         handler context
 
@@ -691,7 +642,7 @@ let private staticFileHandler () : HttpActionContext -> unit =
     if s <> "" then
       s
     else
-      printError "trace: $DIST_DIR is empty or unset."
+      __trace "trace: $DIST_DIR is empty or unset."
       getCwd () + "/dist"
 
   fun (context: HttpActionContext) ->
@@ -702,7 +653,7 @@ let private staticFileHandler () : HttpActionContext -> unit =
 
       | _ ->
         // send error response
-        printError "trace: method not supported by static file handler"
+        __trace "trace: method not supported by static file handler"
         None
 
     let resultOpt: HfsResult option =
@@ -726,9 +677,6 @@ let private staticFileHandler () : HttpActionContext -> unit =
 // -----------------------------------------------
 
 let private test () =
-  assert (toAsciiUpper "" = "")
-  assert (toAsciiUpper "a-z A-Z" = "A-Z A-Z")
-
   match parseRequestLine "GET /foo/bar HTTP/1.1" with
   | Some HttpMethod.GET, pathname, Some minor ->
     assert (pathname = "/foo/bar")
@@ -740,7 +688,7 @@ let private runWithStdio () : int =
   let output: Stream = __nativeExpr "stdout"
   let handler = staticFileHandler ()
 
-  printError "info: Reading requests from standard input."
+  __trace "info: Reading requests from standard input."
 
   loopInRegion (fun () ->
     match readReq handler input output with
@@ -753,7 +701,7 @@ let private runWithSocket () : int =
   let serverFd = listenSocket port
   closeCurrentFdAtExit serverFd
 
-  printError ("info: Listening to http://localhost:" + port)
+  __trace ("info: Listening to http://localhost:" + port)
 
   let handler = staticFileHandler ()
 
@@ -764,7 +712,7 @@ let private runWithSocket () : int =
     let pid: int = __nativeExpr "pid"
 
     if pid < 0 then
-      logExit "fork"
+      failwith "fork"
     else if pid = 0 then
       // child process
       setCurrentFd sock
@@ -781,9 +729,9 @@ let private runWithSocket () : int =
 
 let main _ =
   // test ()
-  // printError "All tests passed."
-  // printError ("$HOME = '" + getEnv "HOME" + "'")
-  // printError ("$PWD = '" + getCwd () + "'")
+  // __trace "All tests passed."
+  // __trace ("$HOME = '" + getEnv "HOME" + "'")
+  // __trace ("$PWD = '" + getCwd () + "'")
 
   installSignalHandlers ()
 
