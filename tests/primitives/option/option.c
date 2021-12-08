@@ -72,19 +72,18 @@ end_match_1:;
 }
 
 void option_Program_basicNoneCase(void) {
-    struct Stringoption1_ none_ = (struct Stringoption1_){.discriminant = None_1};
     char match_1;
-    if ((none_.discriminant != Some_1)) goto next_6;
-    if ((str_compare(none_.Some_1, (struct String){.str = "a", .len = 1}) != 0)) goto next_6;
-    milone_assert(false, (struct String){.str = "option/option.milone", .len = 20}, 17, 16);
+    if (((struct Stringoption1_){.discriminant = None_1}.discriminant != Some_1)) goto next_6;
+    if ((str_compare((struct Stringoption1_){.discriminant = None_1}.Some_1, (struct String){.str = "a", .len = 1}) != 0)) goto next_6;
+    milone_assert(false, (struct String){.str = "option/option.milone", .len = 20}, 14, 16);
     match_1 = 0;
     goto end_match_5;
 next_6:;
-    if ((none_.discriminant != None_1)) goto next_7;
+    if (((struct Stringoption1_){.discriminant = None_1}.discriminant != None_1)) goto next_7;
     match_1 = 0;
     goto end_match_5;
 next_7:;
-    milone_assert(false, (struct String){.str = "option/option.milone", .len = 20}, 21, 9);
+    milone_assert(false, (struct String){.str = "option/option.milone", .len = 20}, 18, 9);
     match_1 = 0;
     goto end_match_5;
 next_8:;
@@ -103,7 +102,7 @@ void option_Program_basicMatchCase(void) {
             goto clause_11;
     }
 clause_10:;
-    milone_assert(false, (struct String){.str = "option/option.milone", .len = 20}, 27, 12);
+    milone_assert(false, (struct String){.str = "option/option.milone", .len = 20}, 24, 12);
     switch_ = 0;
     goto switch_next_9;
 clause_11:;
