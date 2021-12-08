@@ -16,6 +16,28 @@ module List =
 
     listDropLoop count xs
 
+  /// Pairs two items in same position from two lists.
+  ///
+  /// If two lists have different length, some elements have no pair.
+  /// These items are returns as second and third result.
+  ///
+  /// To check two list has same length, do:
+  ///
+  /// ```fsharp
+  ///   match List.zipEx xs ys with
+  ///   | it, [], [] -> Some it
+  ///   | _ -> None
+  /// ```
+  let zipEx (xs: 'T list) (ys: 'U list) : ('T * 'U) list * 'T list * 'U list =
+    let rec listZipLoop acc xs ys =
+      match xs, ys with
+      | _, []
+      | [], _ -> List.rev acc, xs, ys
+
+      | x :: xs, y :: ys -> listZipLoop ((x, y) :: acc) xs ys
+
+    listZipLoop [] xs ys
+
   // Structural operations:
 
   let equals (itemEquals: 'T -> 'T -> bool) (ls: 'T list) (rs: 'T list) : bool =
