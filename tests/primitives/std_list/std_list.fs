@@ -78,6 +78,15 @@ let private testZipEx (gen: int -> int list) =
 
   | _ -> assert false
 
+let private testSort (gen: int -> int list) =
+  assert ([ 3; 1; 4; 1; 5; 9 ]
+          |> List.sortWith compare
+          |> eq [ 1; 1; 3; 4; 5; 9 ])
+
+  assert ([ 3; 1; 4; 1; 5; 9 ]
+          |> List.sortUniqueWith compare
+          |> eq [ 1; 3; 4; 5; 9 ])
+
 let private testEquals (gen: int -> int list) =
   let intNil: int list = []
   let intEquals (x: int) y = x = y
