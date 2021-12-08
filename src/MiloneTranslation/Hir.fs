@@ -912,7 +912,7 @@ let tyMangle (ty: Ty, memo: TreeMap<Ty, string>) : string * TreeMap<Ty, string> 
         let resultTy, ctx = ctx |> go resultTy
 
         let funTy =
-          (argTys |> strConcat)
+          (argTys |> S.concat "")
           + resultTy
           + "Fun"
           + string arity

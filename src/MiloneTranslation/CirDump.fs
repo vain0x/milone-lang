@@ -114,46 +114,13 @@ let private cpParams ps acc : string list =
 // Literals
 // -----------------------------------------------
 
-let private evalHexDigit (c: char) : int =
-  if '0' <= c && c <= '9' then
-    int (byte c - byte '0')
-  else if 'A' <= c && c <= 'F' then
-    int (byte c - byte 'A') + 10
-  else if 'a' <= c && c <= 'f' then
-    int (byte c - byte 'a') + 10
-  else
-    assert false
-    0
-
 let private uint64FromHex (l: int) (r: int) (s: string) =
   assert (0 <= l && l < r && r <= s.Length)
 
-  let rec go acc (i: int) =
-    if i = r then
-      acc
-    else
-      let d = uint64 (evalHexDigit s.[i])
-      go (acc * uint64 16 + d) (i + 1)
+  S.parseHexAsUInt64 s.[l..r - 1]
+  |> Option.defaultWith unreachable
 
-  go (uint64 0) l
-
-let private uint64ToHex (len: int) (value: uint64) =
-  assert (len >= 0)
-
-  let rec go acc len (n: uint64) =
-    if n = uint64 0 && len <= 0 then
-      acc
-    else
-      let d = int (n % uint64 16)
-      let acc = "0123456789abcdef".[d..d] + acc
-      let len = if len >= 1 then len - 1 else 0
-      let n = n / uint64 16
-      go acc len n
-
-  if value = uint64 0 && len = 0 then
-    "0"
-  else
-    go "" len value
+let private uint64ToHex (len: int) (value: uint64) = S.uint64ToHex len value
 
 // See also: https://en.cppreference.com/w/c/language/integer_constant
 //
@@ -276,7 +243,7 @@ let private cpExpr expr acc : string list =
   | CCharExpr value when C.isAscii value |> not ->
     acc
     |> cons "(char)'\\x"
-    |> cons (intToHexWithPadding 2 (int (byte value)))
+    |> cons (S.uint64ToHex 2 (uint64 (byte value)))
     |> cons "'"
 
   | CCharExpr value ->
@@ -728,11 +695,11 @@ let cirDump (decls: CDecl list) : string =
   |> cpForwardDecls decls
   |> cpDecls decls
   |> List.rev
-  |> strConcat
+  |> S.concat ""
 
 let cirDumpHeader (decls: CDecl list) : string =
   []
   |> cpHeader
   |> cpForwardDecls decls
   |> List.rev
-  |> strConcat
+  |> S.concat ""

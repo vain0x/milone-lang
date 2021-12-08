@@ -67,6 +67,7 @@ let private at (i: int) (s: string) =
     assert (i = s.Length)
     '\x00'
 
+// FIXME: StdChar.evalHex
 let private evalHexDigit (c: char) =
   if '0' <= c && c <= '9' then
     int c - int '0'
