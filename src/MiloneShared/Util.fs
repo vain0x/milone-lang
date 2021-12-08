@@ -210,42 +210,6 @@ let multimapOfList compareFun (entries: ('K * 'T) list) : Multimap<'K, 'T> =
   |> List.fold (fun map (key, value) -> multimapAdd key value map) (TMap.empty compareFun)
 
 // -----------------------------------------------
-// Int
-// -----------------------------------------------
-
-let intToHexWithPadding (len: int) (value: int) =
-  if value < 0 then
-    failwith "intToHexWithPadding: unimplemented negative"
-  else
-
-    assert (len >= 0)
-
-    let rec go acc len (n: int) =
-      if n = 0 && len <= 0 then
-        acc
-      else
-        let d = n % 16
-        let s = "0123456789abcdef" |> S.slice d (d + 1)
-        go (s + acc) (len - 1) (n / 16)
-
-    if value = 0 && len = 0 then
-      "0"
-    else
-      go "" len value
-
-let intFromHex (l: int) (r: int) (s: string) =
-  assert (0 <= l && l < r && r <= s.Length)
-
-  let rec go (acc: int) (i: int) =
-    if i = r then
-      acc
-    else
-      let d = C.evalHex s.[i]
-      go (acc * 16 + d) (i + 1)
-
-  go 0 l
-
-// -----------------------------------------------
 // Char
 // -----------------------------------------------
 
@@ -257,25 +221,19 @@ let charEscape (c: char) =
   assert (c |> charNeedsEscaping)
 
   match c with
-  | '\x00' ->
-    // C-style.
-    "\\0"
+  // C-style.
+  | '\x00' -> "\\0"
 
   | '\t' -> "\\t"
-
   | '\n' -> "\\n"
-
   | '\r' -> "\\r"
-
   | '\'' -> "\\\'"
-
   | '"' -> "\\\""
-
   | '\\' -> "\\\\"
 
   | c ->
-    let h = c |> int |> intToHexWithPadding 2
-    "\\x" + h
+    let hh = S.uint64ToHex 2 (uint64 (byte c))
+    "\\x" + hh
 
 // -----------------------------------------------
 // String

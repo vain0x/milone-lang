@@ -243,7 +243,7 @@ let private cpExpr expr acc : string list =
   | CCharExpr value when C.isAscii value |> not ->
     acc
     |> cons "(char)'\\x"
-    |> cons (intToHexWithPadding 2 (int (byte value)))
+    |> cons (S.uint64ToHex 2 (uint64 (byte value)))
     |> cons "'"
 
   | CCharExpr value ->
