@@ -1,7 +1,4 @@
-
-// FIXME: when function return type is function pointer,
-//        invalid code is generated:
-//    void(*milone_dylib_get_symbol)(void)(struct Dylib* , struct String );
+// note: update this for recent compiler changes
 
 module Dylib =
   type private DylibPtr = nativeptr<__nativeType<``struct Dylib``>>
@@ -20,9 +17,10 @@ __nativeDecl
     typedef void (*MyHelloFn)(void);
   """
 
-// FIXME: can't cast to MyHelloFn with __nativeCast
-let myPlusPtr : __nativeFun<int * int , int> =
+// __nativeCast doesn't allow to cast to MyHelloFn
+let myPlusPtr : __nativeFun<int * int, int> =
   Dylib.getSymbol "my_plus2" libHello
+  |> __nativeCast
 
 let myPlus (x: int) (y: int): int = __nativeExpr("{0}({1}, {2})", myPlusPtr, x, y)
 printfn "my_plus %d" (myPlus 40 2)
@@ -31,7 +29,7 @@ let myHello : __nativeType<MyHelloFn> =
   let p = Dylib.getSymbol "my_hello" libHello
   __nativeExpr ("(MyHelloFn){0}", p)
 
-// FIXME: can't call to function pointer
+// no syntax to call to function pointer
 __nativeStmt ("{0}();", myHello)
 
 Dylib.dispose libHello

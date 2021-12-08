@@ -1173,8 +1173,6 @@ let private doResolveVarInPat serial name ty loc (ctx: ScopeCtx) =
     varSerial, ctx
 
 let private nameResVarPat vis serial ty loc ctx =
-  // FIXME: report error on `public _`, `public Variant` or `public None`.
-
   let name = ctx |> findName serial
 
   if name = "_" then

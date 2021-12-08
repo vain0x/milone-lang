@@ -37,7 +37,7 @@ static bool path_is_absolute(struct String path) {
 #if defined(MILONE_PLATFORM_UNIX)
     return path.len >= 1 && *path.str == '/';
 #elif defined(MILONE_PLATFORM_WINDOWS)
-    // FIXME: support UNC style path
+    // UNC style path isn't supported
     return (path.len >= 1 && *path.str == '/') ||
            (path.len >= 2 && path.str[1] == ':');
 #else
@@ -381,7 +381,7 @@ static void milone_subprocess_run_windows(struct String cmdline, int *code) {
 int milone_subprocess_run(struct String command,
                           struct StringCons const *args) {
 #if defined(MILONE_PLATFORM_UNIX)
-    // FIXME: implement
+    // FIXME: see CmdLspServer
     fprintf(stderr, "ERROR: subprocess not implemented on Unix.\n");
     exit(1);
 #elif defined(MILONE_PLATFORM_WINDOWS)
@@ -412,9 +412,7 @@ void execute_into(struct String cmd) {
     fprintf(stderr, "ERROR: Failed to execute '%s'.\n", str_to_c_str(cmd));
     exit(code);
 #elif defined(MILONE_PLATFORM_WINDOWS)
-    // FIXME: implement
-    fprintf(stdout, "Please execute: %s\n", str_to_c_str(cmd));
-    exit(0);
+    assert(false && "execute_into isn't supported on Windows\n");
 #else
 #error no platform
 #endif

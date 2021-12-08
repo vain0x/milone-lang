@@ -491,7 +491,7 @@ module ProjectAnalysis =
            (fun pa (docId, errorList) ->
              let tokens, pa = ProjectAnalysis1.tokenize docId pa
 
-             // FIXME: parser reports error at EOF as y=-1. Fix up that here.
+             // parser reports error at EOF as y=-1. Fix up that here.
              let errorList =
                errorList
                |> List.map (fun (msg, pos) ->
@@ -852,7 +852,7 @@ let private docIdToUri p docId (wa: WorkspaceAnalysis) =
   docIdToFilePath p docId wa |> uriOfFilePath
 
 let private readTextFile path (wa: WorkspaceAnalysis) =
-  wa.Host.ReadTextFile path |> Future.wait
+  wa.Host.ReadTextFile path |> Future.wait // #avoidBlocking
 
 let private readSourceFile p docId (wa: WorkspaceAnalysis) =
   wa.ReadSourceFile(docIdToFilePath p docId wa)
@@ -1077,6 +1077,7 @@ module WorkspaceAnalysis =
 
     let path = uriToFilePath uri
 
+    // #avoidBlocking
     match wa.Host.ReadTextFile path |> Future.wait with
     | Some text ->
       // Re-open as file if exists.
@@ -1099,7 +1100,7 @@ module WorkspaceAnalysis =
       else
         wa
 
-    // FIXME: don't read file
+    // delay reading file
     if isManifest path |> not then
       match readTextFile (uriToFilePath uri) wa with
       | Some text ->
@@ -1116,7 +1117,7 @@ module WorkspaceAnalysis =
     let path = uriToFilePath uri
 
     if isManifest path |> not then
-      // FIXME: don't read file
+      // delay reading file
       match readTextFile path wa with
       | Some text ->
         let version, wa = freshId wa
@@ -1263,7 +1264,7 @@ module WorkspaceAnalysis =
         | _ -> None
       | _ -> None
 
-    // FIXME: use parse cache
+    // FIXME: store parse cache
     let generateModuleSynonymAction () =
       let title = "Generate module synonym"
 
@@ -1302,7 +1303,7 @@ module WorkspaceAnalysis =
           | Some _, Some ident ->
             wa.Docs
             |> TMap.toList
-            |> List.tryPick (fun (uri, (_, text)) ->
+            |> List.tryPick (fun (uri, _) ->
               match parseDoc uri wa with
               | Some (_, syntax) ->
                 syntax
@@ -1454,7 +1455,7 @@ module WorkspaceAnalysis =
 [<RequireQualifiedAccess; NoEquality; NoComparison>]
 type FormattingResult = { Edits: (Range * string) list }
 
-// FIXME: compute diff
+// should compute diff
 let private formattingResultOfDiff _prev next : FormattingResult =
   { Edits = [ ((0, 0), (1100100100, 0)), next ] }
 

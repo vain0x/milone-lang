@@ -1022,7 +1022,7 @@ let private tvStmt stmt ctx =
 
       { ctx with
           Funs = funs
-          // FIXME: TreeSet.union
+          // #TSetUnion
           UsedTyVars =
             TSet.fold
               (fun tySerial tyVars ->
@@ -1102,8 +1102,8 @@ let private processFunExpr (ctx: TaCtx) funSerial useSiteTy loc : HExpr =
         if ctx.QuantifiedTys |> TSet.contains tySerial then
           tyMeta tySerial loc
         else
-          // FIXME: This should be unreachable but does happen in some cases,
-          //        e.g. `fun x y -> x - y` (tests/primitives/tuple_arg).
+          // This should be unreachable but does happen in some cases,
+          // e.g. `fun x y -> x - y` (tests/primitives/tuple_arg).
           tyUnit))
 
   HFunExpr(funSerial, useSiteTy, tyArgs, loc)

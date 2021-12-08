@@ -162,7 +162,7 @@ let private dirCreateOrFail (host: CliHost) (dirPath: Path) : unit =
 
 let private fileRead (host: CliHost) (filePath: Path) =
   host.FileReadAllText(Path.toString filePath)
-  |> Future.wait // avoid blocking
+  |> Future.wait // #avoidBlocking
 
 let private fileWrite (host: CliHost) (filePath: Path) (contents: string) : unit =
   host.FileWriteAllText(Path.toString filePath) contents
@@ -403,7 +403,9 @@ let private toBuildOnWindowsParams
     ctx.SyntaxCtx |> SyntaxApi.SyntaxCtx.getManifest
 
   { ProjectName = projectName
-    CFiles = cFiles |> List.map (fun (name, _) -> Path(pathJoin targetDir name))
+    CFiles =
+      cFiles
+      |> List.map (fun (name, _) -> Path(pathJoin targetDir name))
     MiloneHome = miloneHome
     TargetDir = Path targetDir
     IsRelease = isRelease

@@ -1224,7 +1224,7 @@ let private mirifyCallAssertExpr ctx arg loc =
   let args =
     let (Loc (docId, y, x)) = loc
 
-    // FIXME: avoid abusing docId
+    // #abusingDocId
     let name = (docId |> S.replace "." "/") + ".milone"
 
     [ arg

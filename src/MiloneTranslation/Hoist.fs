@@ -39,11 +39,11 @@
 /// so that chain of let expressions to be flat.
 module rec MiloneTranslation.Hoist
 
-// FIXME: Wording should be fixed.
-//        "Declarations" above denotes to syntaxes that
-//        introduce some symbols (and don't compute things)
-//        such as let-val, let-fun and type-stmt.
-//        Now I'm using "statements" for such syntax now.
+// Wording should be fixed.
+// "Declarations" above denotes to syntaxes that
+// introduce some symbols (and don't compute things)
+// such as let-val, let-fun and type-stmt.
+// Now I'm using "statements" for such syntax now.
 
 open MiloneShared.SharedTypes
 open MiloneShared.Util

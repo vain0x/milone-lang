@@ -571,7 +571,7 @@ let private tgExpr (docId: DocId) (expr: AExpr, ctx: NameCtx) : TExpr * NameCtx 
 
       let stmt =
         let loc = toLoc docId pos
-        // FIXME: let rec for let-val is error.
+        // let rec for let-val should be error.
         TLetValStmt(pat, body, loc)
 
       txLetIn stmt next, ctx
@@ -606,7 +606,7 @@ let private tgDecl docId attrs (decl, ctx) : TStmt * NameCtx =
       let pat, ctx = (pat, ctx) |> onPat
       let body, ctx = (body, ctx) |> onExpr
       let loc = toLoc docId pos
-      // FIXME: let rec for let-val is error.
+      // let rec for let-val should be error.
       TLetValStmt(pat, body, loc), ctx
 
   | ATySynonymDecl (vis, name, tyArgs, ty, pos) ->
@@ -668,8 +668,8 @@ let private tgDecl docId attrs (decl, ctx) : TStmt * NameCtx =
 
     TModuleSynonymStmt(ModuleSynonymSerial serial, List.map nameToIdent path, loc), ctx
 
-  | AModuleDecl (_isRec, _vis, name, decls, pos) ->
-    // FIXME: use rec, vis
+  | AModuleDecl (_, _, name, decls, pos) ->
+    // should use rec, vis
     let serial, ctx = ctx |> nameCtxAdd name
     let body, ctx = (decls, ctx) |> tgDecls docId
     let loc = toLoc docId pos

@@ -24,7 +24,7 @@ Result is a container type for value that might be failed with error.
 
 A computation that can abort with an error returns a value of result type.
 
-*FIXME: add intuitive example where there are two kind of non-logical failure*
+*WIP: add intuitive example where there are two kind of non-logical failure*
 
 ### Difference from option type
 

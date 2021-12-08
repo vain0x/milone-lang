@@ -2,7 +2,7 @@ module rec MiloneStd.StdPath
 
 module S = MiloneStd.StdString
 
-// FIXME: support Windows paths, such as UNC
+// note: support Windows paths, such as UNC
 
 /// Any kind of file path or name.
 ///

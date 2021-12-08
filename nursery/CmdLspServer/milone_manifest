@@ -1,8 +1,5 @@
 std gnu11
 
-# FIXME: Project name can't start with 'Milone'
-# project ../../MiloneSyntax
-
 cc cmd_lsp_server_runtime.c
 
 # json

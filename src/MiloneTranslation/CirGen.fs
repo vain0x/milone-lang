@@ -72,7 +72,7 @@ let private cTyToIdent ty =
   | CConstPtrTy uTy -> cTyToIdent uTy + "ConstPtr"
   | CStructTy name -> name
   | CEnumTy name -> name
-  | CEmbedTy embed -> embed // FIXME: code might contain spaces
+  | CEmbedTy embed -> embed // should sanitize
 
 // -----------------------------------------------
 // Renaming idents
@@ -167,7 +167,7 @@ let private funDefToName (funDef: FunDef) =
   match funDef.Linkage with
   | InternalLinkage ->
     let name =
-      // FIXME: avoid abusing docId
+      // #avoidAbusingDocId
       let (Loc (docId, _, _)) = funDef.Loc
       let doc = docId |> S.replace "." "_"
 

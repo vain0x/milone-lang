@@ -214,7 +214,7 @@ let private tyDisplayFn (tirCtx: TirCtx) ty =
 module LToken =
   let getPos (LToken (_, pos)) : Pos = pos
 
-  // FIXME: too specific
+  // poorly designed:
 
   let asIdent (LToken (token, _)) =
     match token with
@@ -503,8 +503,6 @@ type Symbol =
   | TySymbol of TySymbol
   | ModuleSymbol of ModulePath
 
-// FIXME: name
-type private SymbolOccurrence1 = Symbol * DefOrUse * Loc
 type private SymbolOccurrence = Symbol * DefOrUse * Ty option * Loc2
 
 let private lowerATy docId acc ty : DSymbolOccurrence list =
@@ -1023,7 +1021,6 @@ module Symbol =
     | None -> None
 
 // Provides fundamental operations as building block of queries.
-// FIXME: name?
 module ProjectAnalysis1 =
   let create (projectDir: ProjectDir) (projectName: ProjectName) (host: ProjectAnalysisHost) : ProjectAnalysis =
     { ProjectDir = projectDir

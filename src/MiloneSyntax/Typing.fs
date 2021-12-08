@@ -162,7 +162,7 @@ let private freshMetaTyForExpr expr ctx =
   ty, ctx
 
 let private validateLit ctx lit loc =
-  // FIXME: validate float too
+  // should validate float too
 
   let validateIntLit text flavor =
     let (IntFlavor (signedness, precision)) = flavor
@@ -191,7 +191,7 @@ let private validateLit ctx lit loc =
         digits.Length <= maxLength
 
       | _ ->
-        // FIXME: validate precisely
+        // should validate precisely
         match signedness, precision with
         | Signed, I8
         | Signed, I16
@@ -1485,7 +1485,7 @@ let private inferLetFunStmt ctx mutuallyRec callee vis argPats body loc =
         | [ TDiscardPat _ ] -> ctx
         | _ -> addError ctx "main function must be defined in the form of: `let main _ = ...`." loc
 
-      // FIXME: argument type is string[]
+      // argument type should be string[]
       Some(tyFun tyUnit tyInt), ctx
     else
       None, ctx

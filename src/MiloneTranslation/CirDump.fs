@@ -150,7 +150,7 @@ let private cpIntLit flavor (text: string) =
     let text = text.[3..text.Length - 1]
 
     let value =
-      /// FIXME: (~~~) is unimplemented
+      // (~~~) is unimplemented
       let a = uint64FromHex 0 text.Length text
 
       if a = uint64 0 then
@@ -540,7 +540,7 @@ let private cpDecl decl acc =
 
   | CInternalStaticVarDecl (name, ty) ->
     acc
-    // FIXME: global variable is now defined in entry module no matter where it is.
+    // FIXME: global variable is now defined in entry module no matter where it is. (this might be resolved)
     // |> cons "static "
     |> cpTyWithName name ty
     |> cons ";"

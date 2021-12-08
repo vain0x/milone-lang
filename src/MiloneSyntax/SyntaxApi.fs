@@ -277,7 +277,7 @@ let private prepareFetchModule (host: FetchModuleHost) : Manifest.ManifestData *
 
   let manifest =
     readManifestFile readTextFile entryProjectDir
-    |> Future.wait // FIXME: avoid blocking
+    |> Future.wait // #avoidBlocking
 
   let projects =
     let manifestProjects =

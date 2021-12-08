@@ -213,7 +213,6 @@ let multimapOfList compareFun (entries: ('K * 'T) list) : Multimap<'K, 'T> =
 // Char
 // -----------------------------------------------
 
-// FIXME: escape unicode control chars
 let charNeedsEscaping (c: char) =
   C.isControl c || c = '\\' || c = '"' || c = '\''
 

@@ -185,7 +185,7 @@ let private freshFun name arity (ty: Ty) loc (ctx: EtaCtx) =
 
   let funDef: FunDef =
     let tyScheme =
-      let isOwned (_: Serial) = true // FIXME: is it okay?
+      let isOwned (_: Serial) = true // unsure it's okay or not
       tyGeneralize isOwned ty
 
     { Name = name
@@ -461,7 +461,7 @@ let private expandCallExpr callee args resultTy loc (ctx: EtaCtx) =
     let calleeTy, calleeLoc = exprExtract callee
     let callee, ctx = (callee, ctx) |> exExpr
     let args, ctx = (args, ctx) |> stMap exExpr
-    let arity = tyToArity calleeTy // FIXME: maybe wrong
+    let arity = tyToArity calleeTy // unsure it's okay or not
     doExpandCall "obj" CalleeKind.Obj callee arity calleeLoc args resultTy loc ctx
 
 let private exFunName expr funSerial calleeLoc (ctx: EtaCtx) =

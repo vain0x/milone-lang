@@ -17,13 +17,13 @@ let private at (i: int) (s: string) =
     '\x00'
 
 // #charNeedsEscaping
-// FIXME: bytes invalid as UTF-8 also need escaping
+// bytes invalid as UTF-8 also need escaping
 let private charNeedsEscaping (c: char) =
   c = '"'
   || c = '\\'
   || (byte c <= 0x78uy && byte c < 0x20uy)
 
-// FIXME: move to standard lib
+// FIXME: use StdString.uint64ToHex
 let private writeHex (value: uint) =
   let rec go acc len (n: uint) =
     if n = uint 0 && len = 0 then
@@ -93,10 +93,8 @@ let private writeString acc (text: string) =
 // Number
 // -----------------------------------------------
 
+// rough implementation. NaN and inf should be error
 let private writeNumber acc (n: float) =
-  // FIXME: error if NaN or inf
-
-  // FIXME: dirty process of floating point numbers
   let printPrecisely (n: float) =
     __nativeStmt (
       """

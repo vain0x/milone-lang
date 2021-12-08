@@ -13,7 +13,7 @@ type JsonValue =
 let jsonParseFromString (s: string) : JsonValue =
   __nativeFun ("json_parse_from_string", s)
 
-// FIXME: fix escape, make it efficient
+// rough implementation
 let jsonToString (value: JsonValue) : string =
   match value with
   | JNull -> "null"

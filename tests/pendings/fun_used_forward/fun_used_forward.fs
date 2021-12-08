@@ -18,6 +18,6 @@ let main _ =
   assert (f () = 0)
 
   // Since f is inferred too generic, f can return any type.
-  // FIXME: With this assertion, illegal code is generated and C compiler fails.
+  // ISSUE: With this assertion, illegal code is generated and C compiler fails.
   // assert (f () = "")
   0

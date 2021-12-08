@@ -18,7 +18,7 @@ let __context _ (action: unit -> 'A) : 'A = action ()
 // F# primitives
 // -----------------------------------------------
 
-// FIXME: add to prelude
+// add to prelude?
 
 let failwith (msg: string) : 'A =
   __writeErrorLine ("FATAL ERROR: " + msg)

@@ -485,7 +485,7 @@ let private writeString (s: string) (output: Stream) : Stream =
 // File system
 // -----------------------------------------------
 
-// FIXME: using `DirIter option`, compiler fails. Invalid code generated.
+// note: don't use `DirIter option`. compiler invalid code generated for that.
 type private DirIter = __nativeType<``struct DirIter``>
 
 type private FileKind =

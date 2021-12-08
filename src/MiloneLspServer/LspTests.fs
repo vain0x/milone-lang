@@ -1,4 +1,4 @@
-// FIXME: separate project
+// should be separate project
 module rec MiloneLspServer.LspTests
 
 open MiloneShared.UtilParallel

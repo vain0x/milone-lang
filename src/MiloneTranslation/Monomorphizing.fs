@@ -395,7 +395,7 @@ let monify (modules: HProgram, hirCtx: HirCtx) : HProgram * HirCtx =
   let isMetaTy tySerial =
     match hirCtx.Tys |> TMap.tryFind tySerial with
     | Some (MetaTyDef ty) ->
-      // FIXME: remove this
+      // remove this!
       printfn "meta #%d %s" tySerial (__dump ty)
       assert false
       true
@@ -420,7 +420,7 @@ let monify (modules: HProgram, hirCtx: HirCtx) : HProgram * HirCtx =
           Funs = hirCtx.Funs }
 
       let mangle ty =
-        // FIXME: keep memoization state of mangle
+        // don't drop memoization state
         tyMangle (ty, tyNames) |> fst
 
       go workList (generate isMetaTy mangle collectRx genericFunBodyMap ctx item)

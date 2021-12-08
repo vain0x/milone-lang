@@ -179,9 +179,10 @@ let private readExact (buf: Buffer) (size: int) (input: Stream) : bool * Buffer 
 
 /// Reads a line.
 let private readLine (input: Stream) : string option * Stream =
+  // allocate dynamically!
   __nativeStmt (
     """
-      char buf[8000]; // FIXME: fixed length
+      char buf[8000];
       bool ok = fgets(buf, sizeof buf, {0}) != NULL;
     """,
     input

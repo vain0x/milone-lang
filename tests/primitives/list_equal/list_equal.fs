@@ -2,7 +2,7 @@ module rec list_equal.Program
 
 // List type supports structural equality (=).
 
-// FIXME: it's necessary to open a library manually for now.
+// it's necessary to open a library manually for now.
 module StdEqual = MiloneStd.Equal
 
 let private testIntList () =
