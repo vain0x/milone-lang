@@ -407,10 +407,11 @@ let parseHexAsUInt64 (s: string) : uint64 option =
     else if C.isHex s.[i] then
       let d = uint64 (C.evalHex s.[i])
 
-      // Overflow check.
-      let m = uint64 1 <<< 63
+      let overflow =
+        let m = uint64 (int64 (-1))
+        acc <= (m - uint64 d) / uint64 16
 
-      if acc <= (m - uint64 d) / uint64 16 then
+      if overflow then
         go (acc * uint64 16 + d) (i + 1)
       else
         None
