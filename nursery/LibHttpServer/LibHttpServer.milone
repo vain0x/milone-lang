@@ -13,8 +13,6 @@ module C = MiloneStd.StdChar
 module S = MiloneStd.StdString
 module StdEnv = MiloneStd.StdEnv
 
-module ExtString = LibNursery.ExtString
-
 type private Map<'K, 'V> = TreeMap<'K, 'V>
 
 __nativeDecl
@@ -339,13 +337,13 @@ let private httpMethodToString (m: HttpMethod) =
 /// Parses first line of HTTP request. Fatal error on error.
 let private parseRequestLine (line: string) : HttpMethod option * string * int option =
   let methodOpt, line =
-    match ExtString.divide " " line with
-    | methodName, Some line -> parseHttpMethod methodName, line
+    match S.cut " " line with
+    | methodName, line, true -> parseHttpMethod methodName, line
     | _ -> failwith "parseLine"
 
   let pathname, line =
-    match ExtString.divide " " line with
-    | pathname, Some line -> pathname, line
+    match S.cut " " line with
+    | pathname, line, true -> pathname, line
     | _ -> failwith "parseLine"
 
   let minorOpt =
@@ -372,10 +370,9 @@ let private parseHeaderField (line: string) : Entry option =
   if S.trimEnd line = "" then
     None
   else
-    match ExtString.divide ":" line with
-    | _, None -> failwith "parseHeaderField: expected ':' in header line."
-
-    | name, Some value -> Some(S.toLower name, S.trim value)
+    match S.cut ":" line with
+    | name, value, true -> Some(S.toLower name, S.trim value)
+    | _ -> failwith "parseHeaderField: expected ':' in header line."
 
 /// Reads HTTP header lines.
 let private readHeaderField (input: Stream) : Map<string, string> option * Stream =
