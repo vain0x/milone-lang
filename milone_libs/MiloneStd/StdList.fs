@@ -4,6 +4,18 @@ module rec MiloneStd.StdList
 module SB = MiloneStd.StdStringBase
 
 module List =
+  /// Removes initial `count` items.
+  ///
+  /// Count is tolerant. When `count` is negative or exceeds length, returns `[]` unlike `List.skip`.
+  let drop (count: int) (xs: 'T list) : 'T list =
+    let rec listDropLoop count xs =
+      match xs with
+      | [] -> []
+      | _ when count <= 0 -> xs
+      | _ :: xs -> listDropLoop (count - 1) xs
+
+    listDropLoop count xs
+
   // Structural operations:
 
   let equals (itemEquals: 'T -> 'T -> bool) (ls: 'T list) (rs: 'T list) : bool =

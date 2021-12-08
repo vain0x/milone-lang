@@ -37,17 +37,7 @@ let cons head tail = head :: tail
 let forList folder xs state =
   List.fold (fun state x -> folder x state) state xs
 
-/// Skips initial `count` items.
-///
-/// Unlike `List.skip`, just returns `[]` when `count` is negative or too large.
-let listSkip (count: int) (xs: _ list) : _ list =
-  let rec listSkipLoop count xs =
-    match xs with
-    | [] -> []
-    | _ when count <= 0 -> xs
-    | _ :: xs -> listSkipLoop (count - 1) xs
-
-  listSkipLoop count xs
+let listSkip (count: int) (xs: _ list) : _ list = List.drop count xs
 
 /// Tries to "zip" two lists by pairing every i'th item from both lists.
 ///

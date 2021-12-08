@@ -54,6 +54,15 @@ let testUnzip () =
 
 // ===============================================
 
+let private testDrop (gen: int -> int list) =
+  assert (gen 5 |> List.drop 0 |> eq (gen 5))
+  assert (gen 5 |> List.drop 2 |> eq [ 2; 3; 4 ])
+  assert (gen 5 |> List.drop 5 |> eq [])
+
+  // Boundary exceeding.
+  assert (gen 5 |> List.drop (-1) |> eq (gen 5))
+  assert (gen 5 |> List.drop 6 |> eq [])
+
 let private testEquals (gen: int -> int list) =
   let intNil : int list = []
   let intEquals (x: int) y = x = y
@@ -103,6 +112,7 @@ let main _ =
 
   testSkipWhile gen
   testUnzip ()
+  testDrop gen
   testEquals gen
   testCompare gen
   testDebug gen
