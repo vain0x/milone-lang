@@ -126,3 +126,12 @@ let locCompare (Loc (lDoc, ly, lx)) (Loc (rDoc, ry, rx)) =
   if c <> 0 then c
   else if ly <> ry then compare ly ry
   else compare lx rx
+
+module Loc =
+  let ofDocPos (docId: DocId) (pos: Pos) : Loc =
+    let y, x = pos
+    Loc(docId, y, x)
+
+  let toDocPos (loc: Loc) : DocId * Pos =
+    let (Loc (docId, y, x)) = loc
+    docId, (y, x)

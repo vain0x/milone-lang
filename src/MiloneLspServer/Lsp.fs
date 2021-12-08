@@ -72,22 +72,6 @@ let private pathToPos altPos path =
   | Some name -> name |> nameToPos
   | None -> altPos
 
-let private locOfDocPos (docId: DocId) (pos: Pos) : Loc =
-  let y, x = pos
-  Loc(docId, y, x)
-
-let private locToDoc (loc: Loc) : DocId =
-  let (Loc (docId, _, _)) = loc
-  docId
-
-let private locToPos (loc: Loc) : Pos =
-  let (Loc (_, y, x)) = loc
-  y, x
-
-let private locToDocPos (loc: Loc) : DocId * Pos =
-  let (Loc (docId, y, x)) = loc
-  docId, (y, x)
-
 let private isTrivia token =
   match token with
   | BlankToken
@@ -515,7 +499,7 @@ let private lowerATy docId acc ty : DSymbolOccurrence list =
 
   | AAppTy (_, Name (name, pos), tyArgs, _) ->
     let acc =
-      (DTySymbol name, Use, At(locOfDocPos docId pos))
+      (DTySymbol name, Use, At(Loc.ofDocPos docId pos))
       :: acc
 
     onTys acc tyArgs

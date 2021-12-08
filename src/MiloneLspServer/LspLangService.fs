@@ -385,23 +385,6 @@ let private docIdIsOptional docId =
 // ProjectAnalysis
 // ---------------------------------------------
 
-// FIXME: remove doc helpers
-let private locOfDocPos (docId: DocId) (pos: Pos) : Loc =
-  let y, x = pos
-  Loc(docId, y, x)
-
-let private locToDoc (loc: Loc) : DocId =
-  let (Loc (docId, _, _)) = loc
-  docId
-
-let private locToPos (loc: Loc) : Pos =
-  let (Loc (_, y, x)) = loc
-  y, x
-
-let private locToDocPos (loc: Loc) : DocId * Pos =
-  let (Loc (docId, y, x)) = loc
-  docId, (y, x)
-
 let private doFindRefs hint docId targetPos pa =
   traceFn "doFindRefs %s" hint
   let tokens, pa = ProjectAnalysis1.tokenize docId pa
@@ -413,7 +396,7 @@ let private doFindRefs hint docId targetPos pa =
     None, pa
 
   | Some token ->
-    let tokenLoc = locOfDocPos docId (LToken.getPos token)
+    let tokenLoc = Loc.ofDocPos docId (LToken.getPos token)
     traceFn "%s: tokenLoc=%A" hint tokenLoc
 
     let result, pa = pa |> ProjectAnalysis1.bundle
@@ -455,7 +438,9 @@ let private doFindDefsOrUses hint docId targetPos includeDef includeUse pa =
              | Def when not includeDef -> map
              | Use when not includeUse -> map
 
-             | _ -> map |> Multimap.add (locToDoc loc) (locToPos loc))
+             | _ ->
+               let docId, pos = Loc.toDocPos loc
+               map |> Multimap.add docId pos)
            (TMap.empty compare)
       |> TMap.toList
       |> List.mapFold
@@ -483,7 +468,7 @@ module ProjectAnalysis =
       |> BundleResult.getErrors
       |> List.fold
            (fun map (msg, loc) ->
-             let docId, pos = locToDocPos loc
+             let docId, pos = Loc.toDocPos loc
              map |> Multimap.add docId (msg, pos))
            (TMap.empty compare)
       |> TMap.toList
@@ -664,9 +649,9 @@ module ProjectAnalysis =
         symbols
         |> List.fold
              (fun (readAcc, writeAcc) (_, defOrUse, loc) ->
-               if locToDoc loc = docId then
-                 let pos = loc |> locToPos
+               let d, pos = loc |> Loc.toDocPos
 
+               if d = docId then
                  match defOrUse with
                  | Def -> readAcc, pos :: writeAcc
                  | Use -> pos :: readAcc, writeAcc
@@ -693,7 +678,7 @@ module ProjectAnalysis =
       None, pa
 
     | Some token ->
-      let tokenLoc = locOfDocPos docId (LToken.getPos token)
+      let tokenLoc = Loc.ofDocPos docId (LToken.getPos token)
       // eprintfn "hover: %A, tokenLoc=%A" token tokenLoc
 
       let result, pa = pa |> ProjectAnalysis1.bundle
