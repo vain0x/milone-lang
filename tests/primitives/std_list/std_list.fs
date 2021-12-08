@@ -1,6 +1,10 @@
 module rec std_list.Program
 
-// Tests MiloneStd/List.fs (incomplete)
+// incomplete
+
+// Tests MiloneCore/List.fs and MiloneStd/StdList.fs
+
+open MiloneStd.StdList
 
 module S = MiloneStd.StdString
 
@@ -50,6 +54,34 @@ let testUnzip () =
 
 // ===============================================
 
+let private testEquals (gen: int -> int list) =
+  let intNil : int list = []
+  let intEquals (x: int) y = x = y
+
+  assert (gen 3 |> List.equals intEquals (gen 3))
+  assert (intNil |> List.equals intEquals intNil)
+  assert ([ 2 ] |> List.equals intEquals [ 3 ] |> not)
+
+let private testCompare (gen: int -> int list) =
+  let intNil : int list = []
+  let intCompare : int -> _ -> _ = compare
+
+  assert (gen 3 |> List.compare compare (gen 3) = 0)
+  assert (intNil |> List.compare compare intNil = 0)
+
+  assert (List.compare compare intNil (gen 1) < 0)
+  assert (List.compare compare (gen 1) intNil > 0)
+  assert (List.compare compare (gen 2) (gen 3) < 0)
+  assert (List.compare compare [ 1 ] (gen 3) > 0)
+
+let private testDebug (gen: int -> int list) =
+  let xs : int list = []
+
+  assert (gen 3 |> List.debug string = "[ 0; 1; 2 ]")
+  assert ([] |> List.debug id = "[]")
+
+// ===============================================
+
 let main _ =
   /// Generates 0..n-1
   let rec gen n =
@@ -71,4 +103,7 @@ let main _ =
 
   testSkipWhile gen
   testUnzip ()
+  testEquals gen
+  testCompare gen
+  testDebug gen
   0

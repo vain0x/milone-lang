@@ -1,6 +1,7 @@
 /// Defines utility types and functions used in multiple modules.
 module rec MiloneShared.Util
 
+open MiloneStd.StdList
 open MiloneStd.StdMap
 
 module C = MiloneStd.StdChar
@@ -86,17 +87,7 @@ let stFlatMap f (xs, ctx) =
 
   go [] xs ctx
 
-let listCompare compare ls rs =
-  let rec go ls rs =
-    match ls, rs with
-    | [], [] -> 0
-    | [], _ -> -1
-    | _, [] -> 1
-    | l :: ls, r :: rs ->
-      let c = compare l r
-      if c <> 0 then c else go ls rs
-
-  go ls rs
+let listCompare itemCompare ls rs = List.compare itemCompare ls rs
 
 let listSortCore unique compare xs =
   let rec appendRev acc xs =
