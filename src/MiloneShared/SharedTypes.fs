@@ -6,6 +6,9 @@ module rec MiloneShared.SharedTypes
 open MiloneShared.TypeIntegers
 open MiloneStd.StdPair
 
+let private compareInt (l: int) r = compare l r
+let private compareString (l: string) r = compare l r
+
 // -----------------------------------------------
 // Vocabulary types
 // -----------------------------------------------
@@ -99,9 +102,12 @@ type Loc = Loc of DocId * RowIndex * ColumnIndex
 // Position
 // -----------------------------------------------
 
-let posCompare (l: Pos) (r: Pos) = Pair.compare compare compare l r
+module Pos =
+  let compare (l: Pos) (r: Pos) = Pair.compare compareInt compareInt l r
 
-let posToString ((y, x): Pos) = string (y + 1) + ":" + string (x + 1)
+  let toString (pos: Pos) =
+    let (y, x) = pos
+    string (y + 1) + ":" + string (x + 1)
 
 // -----------------------------------------------
 // Location
@@ -109,9 +115,6 @@ let posToString ((y, x): Pos) = string (y + 1) + ":" + string (x + 1)
 
 /// No location information. Should be fixed.
 let noLoc = Loc("<noLoc>", 0, 0)
-
-let private compareString (l: string) r = compare l r
-let private compareInt (l: int) r = compare l r
 
 module Loc =
   let ofDocPos (docId: DocId) (pos: Pos) : Loc =

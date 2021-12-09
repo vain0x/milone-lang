@@ -392,7 +392,7 @@ let private doFindRefs hint docId targetPos pa =
 
   match tokenOpt with
   | None ->
-    debugFn "%s: token not found on position: docId=%s pos=%s" hint docId (posToString targetPos)
+    debugFn "%s: token not found on position: docId=%s pos=%s" hint docId (Pos.toString targetPos)
     None, pa
 
   | Some token ->
@@ -674,7 +674,7 @@ module ProjectAnalysis =
 
     match tokenOpt with
     | None ->
-      debugFn "hover: token not found on position: docId=%s pos=%s" docId (posToString targetPos)
+      debugFn "hover: token not found on position: docId=%s pos=%s" docId (Pos.toString targetPos)
       None, pa
 
     | Some token ->
