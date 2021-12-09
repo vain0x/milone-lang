@@ -89,25 +89,6 @@ let mapFind key map =
   | None -> failwithf "mapFind: Missing key: %A." key
 
 // -----------------------------------------------
-// Multimap
-// -----------------------------------------------
-
-type Multimap<'K, 'T> = TreeMap<'K, 'T list>
-
-let multimapFind (key: 'K) (multimap: Multimap<'K, 'T>) : 'T list =
-  multimap
-  |> TMap.tryFind key
-  |> Option.defaultValue []
-
-let multimapAdd (key: 'K) (item: 'T) (multimap: Multimap<'K, 'T>) : Multimap<'K, 'T> =
-  let items = multimap |> multimapFind key
-  TMap.add key (item :: items) multimap
-
-let multimapOfList compareFun (entries: ('K * 'T) list) : Multimap<'K, 'T> =
-  entries
-  |> List.fold (fun map (key, value) -> multimapAdd key value map) (TMap.empty compareFun)
-
-// -----------------------------------------------
 // Char
 // -----------------------------------------------
 

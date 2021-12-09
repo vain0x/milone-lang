@@ -55,6 +55,7 @@ module rec MiloneTranslation.Monomorphizing
 open MiloneShared.SharedTypes
 open MiloneShared.Util
 open MiloneStd.StdMap
+open MiloneStd.StdMultimap
 open MiloneTranslation.Hir
 
 // #tyAssign?
@@ -442,7 +443,7 @@ let monify (modules: HProgram, hirCtx: HirCtx) : HProgram * HirCtx =
         genericFunBodyMap |> mapFind genericFunSerial
 
       moduleId, (funSerial, body, loc))
-    |> multimapOfList compare
+    |> Multimap.ofList compare
 
   // Rewrite.
   let modules =
@@ -450,7 +451,7 @@ let monify (modules: HProgram, hirCtx: HirCtx) : HProgram * HirCtx =
     |> List.mapi (fun moduleId (m: HModule) ->
       let funBodies =
         newFunsPerModule
-        |> multimapFind moduleId
+        |> Multimap.find moduleId
         |> List.map (fun (funSerial, body, loc) ->
           let (FunBody (args, body)) = body
           HLetFunStmt(funSerial, args, body, loc))

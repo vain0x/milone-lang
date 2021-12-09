@@ -16,6 +16,7 @@ open MiloneShared.TypeIntegers
 open MiloneShared.Util
 open MiloneShared.UtilParallel
 open MiloneStd.StdMap
+open MiloneStd.StdMultimap
 open MiloneStd.StdSet
 open MiloneTranslation.Cir
 open MiloneTranslation.Hir
@@ -114,7 +115,7 @@ let private renameIdents toIdent toKey mapFuns (defMap: TreeMap<_, _>) =
   let serialsMap =
     let folder acc serial def =
       let ident = toIdent def
-      acc |> multimapAdd ident (serial, def)
+      acc |> Multimap.add ident (serial, def)
 
     defMap |> TMap.fold folder (TMap.empty compare)
 
@@ -1361,7 +1362,7 @@ let private cgDecls (ctx: CirCtx) decls =
 
     let collectFunLocalStmts (ctx: CirCtx) =
       ctx.Rx.FunLocals
-      |> multimapFind callee
+      |> Multimap.find callee
       |> List.mapFold
            (fun (ctx: CirCtx) (varSerial, ty) ->
              let name = getUniqueVarName ctx varSerial
