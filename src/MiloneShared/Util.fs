@@ -1,6 +1,7 @@
 /// Defines utility types and functions used in multiple modules.
 module rec MiloneShared.Util
 
+open MiloneStd.StdAssoc
 open MiloneStd.StdList
 open MiloneStd.StdMap
 
@@ -63,20 +64,7 @@ let splitLast xs =
   | [] -> None
   | x :: xs -> Some(go [] x xs)
 
-// -----------------------------------------------
-// Assoc
-// -----------------------------------------------
-
-let assocTryFind compare key assoc =
-  let rec go assoc =
-    match assoc with
-    | [] -> None
-
-    | (k, v) :: _ when compare k key = 0 -> Some v
-
-    | _ :: assoc -> go assoc
-
-  go assoc
+let assocTryFind compare key assoc = Assoc.tryFind compare key assoc
 
 // -----------------------------------------------
 // TreeMap
