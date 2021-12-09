@@ -110,19 +110,8 @@ let posToString ((y, x): Pos) = string (y + 1) + ":" + string (x + 1)
 /// No location information. Should be fixed.
 let noLoc = Loc("<noLoc>", 0, 0)
 
-let locToString (Loc (docId, y, x)) =
-  docId
-  + ":"
-  + string (y + 1)
-  + ":"
-  + string (x + 1)
-
-let locCompare (Loc (lDoc, ly, lx)) (Loc (rDoc, ry, rx)) =
-  let c = compare lDoc rDoc
-
-  if c <> 0 then c
-  else if ly <> ry then compare ly ry
-  else compare lx rx
+let private compareString (l: string) r = compare l r
+let private compareInt (l: int) r = compare l r
 
 module Loc =
   let ofDocPos (docId: DocId) (pos: Pos) : Loc =
@@ -132,3 +121,20 @@ module Loc =
   let toDocPos (loc: Loc) : DocId * Pos =
     let (Loc (docId, y, x)) = loc
     docId, (y, x)
+
+  let toString (Loc (docId, y, x)) =
+    docId
+    + ":"
+    + string (y + 1)
+    + ":"
+    + string (x + 1)
+
+  let compare l r =
+    let (Loc (lDoc, ly, lx)) = l
+    let (Loc (rDoc, ry, rx)) = r
+
+    let c = compareString lDoc rDoc
+
+    if c <> 0 then c
+    else if ly <> ry then compareInt ly ry
+    else compareInt lx rx

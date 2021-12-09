@@ -863,7 +863,7 @@ let private cgExpr (ctx: CirCtx) (arg: MExpr) : CExpr * CirCtx =
   match arg |> mxSugar with
   | MLitExpr (lit, _) -> genLit lit, ctx
   | MUnitExpr _ -> CVarExpr "0", ctx
-  | MNeverExpr loc -> unreachable ("MNeverExpr " + locToString loc)
+  | MNeverExpr loc -> unreachable ("MNeverExpr " + Loc.toString loc)
 
   | MVarExpr (serial, ty, _) ->
     let ctx =

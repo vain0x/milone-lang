@@ -74,7 +74,7 @@ let tkEqual l r : bool = tkCompare l r = 0
 
 let tkDisplay getTyName tk =
   match tk with
-  | ErrorTk loc -> "{error}@" + locToString loc
+  | ErrorTk loc -> "{error}@" + Loc.toString loc
   | IntTk flavor -> fsharpIntegerTyName flavor
   | FloatTk flavor -> fsharpFloatTyName flavor
   | BoolTk -> "bool"
@@ -264,8 +264,8 @@ let tyDisplay getTyName ty =
 
     | Ty (MetaTk (tySerial, loc), _) ->
       match getTyName tySerial with
-      | Some name -> "{" + name + "}@" + locToString loc
-      | None -> "{?" + string tySerial + "}@" + locToString loc
+      | Some name -> "{" + name + "}@" + Loc.toString loc
+      | None -> "{?" + string tySerial + "}@" + Loc.toString loc
 
     | Ty (SynonymTk tySerial, args) -> nominal tySerial args
     | Ty (UnionTk (tySerial, _), args) -> nominal tySerial args
