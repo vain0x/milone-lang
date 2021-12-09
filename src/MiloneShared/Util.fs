@@ -3,6 +3,7 @@ module rec MiloneShared.Util
 
 open MiloneStd.StdAssoc
 open MiloneStd.StdList
+open MiloneStd.StdPair
 open MiloneStd.StdMap
 
 module C = MiloneStd.StdChar
@@ -13,9 +14,7 @@ module Int = MiloneStd.StdInt
 // Pair
 // -----------------------------------------------
 
-let pairCompare compare1 compare2 (l1, l2) (r1, r2) =
-  let c = compare1 l1 r1
-  if c <> 0 then c else compare2 l2 r2
+let pairCompare compare1 compare2 l r = Pair.compare compare1 compare2 l r
 
 // -----------------------------------------------
 // Option

@@ -4,6 +4,7 @@
 module rec MiloneShared.SharedTypes
 
 open MiloneShared.TypeIntegers
+open MiloneStd.StdPair
 
 // -----------------------------------------------
 // Vocabulary types
@@ -98,11 +99,7 @@ type Loc = Loc of DocId * RowIndex * ColumnIndex
 // Position
 // -----------------------------------------------
 
-let private pairCompare compare1 compare2 (l1, l2) (r1, r2) =
-  let c = compare1 l1 r1
-  if c <> 0 then c else compare2 l2 r2
-
-let posCompare (l: Pos) (r: Pos) = pairCompare compare compare l r
+let posCompare (l: Pos) (r: Pos) = Pair.compare compare compare l r
 
 let posToString ((y, x): Pos) = string (y + 1) + ":" + string (x + 1)
 

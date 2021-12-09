@@ -7,6 +7,7 @@
   <ItemGroup>
     <Compile Include="StdError.fs" />
     <Compile Include="StdTesting.fs" />
+    <Compile Include="StdPair.fs" />
     <Compile Include="StdOption.fs" />
     <Compile Include="StdResult.fs" />
     <Compile Include="StdChar.fs" />
