@@ -475,16 +475,14 @@ let private genUnionTyDef (ctx: CirCtx) tySerial variants =
       |> List.map (fun (_, serial, _, _) -> getUniqueVariantName ctx serial)
 
     let variants, ctx =
-      (variants, ctx)
-      |> stFlatMap (fun ((_, serial, hasPayload, payloadTy), acc, ctx) ->
-        if hasPayload then
-          let payloadTy, ctx = cgTyComplete ctx payloadTy
-
-          (getUniqueVariantName ctx serial, payloadTy)
-          :: acc,
-          ctx
-        else
-          acc, ctx)
+      variants
+      |> List.filter (fun (_, _, hasPayload, _) -> hasPayload)
+      |> List.mapFold
+           (fun ctx (_, serial, _, payloadTy) ->
+             let payloadTy, ctx = cgTyComplete ctx payloadTy
+             let name = getUniqueVariantName ctx serial
+             (name, payloadTy), ctx)
+           ctx
 
     let discriminantEnumDecl =
       CEnumDecl(discriminantEnumName, discriminants)

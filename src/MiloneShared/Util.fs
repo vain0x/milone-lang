@@ -52,20 +52,6 @@ let listCompare itemCompare ls rs = List.compare itemCompare ls rs
 let stMap f (xs, ctx) =
   xs |> List.mapFold (fun ctx x -> f (x, ctx)) ctx
 
-/// `List.bind`, modifying context.
-///
-/// USAGE:
-///   let ys, ctx = (xs, ctx) |> stFlatMap (fun (x, ctx) -> ys, ctx)
-let stFlatMap f (xs, ctx) =
-  let rec go acc xs ctx =
-    match xs with
-    | [] -> List.rev acc, ctx
-    | x :: xs ->
-      let acc, ctx = f (x, acc, ctx)
-      go acc xs ctx
-
-  go [] xs ctx
-
 /// Tries to split a list to pair of non-last items and the last item.
 let splitLast xs =
   let rec go acc last xs =
