@@ -682,7 +682,7 @@ let private tgDecl docId attrs (decl, ctx) : TStmt * NameCtx =
       | ASemiExpr (stmts, last, _) -> List.append stmts (last :: acc)
       | _ -> attr :: acc
 
-    // printfn "/* attribute: %s %s */" (pos |> toLoc docId |> locToString) (objToString contents)
+    // printfn "/* attribute: %s %s */" (pos |> toLoc docId |> Loc.toString) (objToString contents)
     tgDecl docId (prepend attr attrs) (next, ctx)
 
 let private tgDecls docId (decls, ctx) : TStmt list * NameCtx = (decls, ctx) |> stMap (tgDecl docId [])

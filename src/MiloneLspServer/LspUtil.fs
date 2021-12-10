@@ -2,6 +2,7 @@ module rec MiloneLspServer.LspUtil
 
 open MiloneShared.Util
 open MiloneStd.StdMap
+open MiloneStd.StdMultimap
 
 module S = MiloneStd.StdString
 
@@ -128,7 +129,7 @@ let aggregateDiagnostics diagnosticsKeys diagnosticsCache diagnostics =
       |> TMap.ofList Uri.compare
 
     diagnostics
-    |> List.fold (fun map (msg, uri, l, r) -> map |> multimapAdd uri (msg, l, r)) initMap
+    |> List.fold (fun map (msg, uri, l, r) -> map |> Multimap.add uri (msg, l, r)) initMap
     |> TMap.toList
     |> List.map (fun (uri, entries) -> uri, entries |> listSort compareError)
 

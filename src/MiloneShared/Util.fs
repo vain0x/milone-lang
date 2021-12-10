@@ -1,7 +1,9 @@
 /// Defines utility types and functions used in multiple modules.
 module rec MiloneShared.Util
 
+open MiloneStd.StdAssoc
 open MiloneStd.StdList
+open MiloneStd.StdPair
 open MiloneStd.StdMap
 
 module C = MiloneStd.StdChar
@@ -12,9 +14,7 @@ module Int = MiloneStd.StdInt
 // Pair
 // -----------------------------------------------
 
-let pairCompare compare1 compare2 (l1, l2) (r1, r2) =
-  let c = compare1 l1 r1
-  if c <> 0 then c else compare2 l2 r2
+let pairCompare compare1 compare2 l r = Pair.compare compare1 compare2 l r
 
 // -----------------------------------------------
 // Option
@@ -52,20 +52,6 @@ let listCompare itemCompare ls rs = List.compare itemCompare ls rs
 let stMap f (xs, ctx) =
   xs |> List.mapFold (fun ctx x -> f (x, ctx)) ctx
 
-/// `List.bind`, modifying context.
-///
-/// USAGE:
-///   let ys, ctx = (xs, ctx) |> stFlatMap (fun (x, ctx) -> ys, ctx)
-let stFlatMap f (xs, ctx) =
-  let rec go acc xs ctx =
-    match xs with
-    | [] -> List.rev acc, ctx
-    | x :: xs ->
-      let acc, ctx = f (x, acc, ctx)
-      go acc xs ctx
-
-  go [] xs ctx
-
 /// Tries to split a list to pair of non-last items and the last item.
 let splitLast xs =
   let rec go acc last xs =
@@ -77,20 +63,7 @@ let splitLast xs =
   | [] -> None
   | x :: xs -> Some(go [] x xs)
 
-// -----------------------------------------------
-// Assoc
-// -----------------------------------------------
-
-let assocTryFind compare key assoc =
-  let rec go assoc =
-    match assoc with
-    | [] -> None
-
-    | (k, v) :: _ when compare k key = 0 -> Some v
-
-    | _ :: assoc -> go assoc
-
-  go assoc
+let assocTryFind compare key assoc = Assoc.tryFind compare key assoc
 
 // -----------------------------------------------
 // TreeMap
@@ -101,25 +74,6 @@ let mapFind key map =
   | Some value -> value
 
   | None -> failwithf "mapFind: Missing key: %A." key
-
-// -----------------------------------------------
-// Multimap
-// -----------------------------------------------
-
-type Multimap<'K, 'T> = TreeMap<'K, 'T list>
-
-let multimapFind (key: 'K) (multimap: Multimap<'K, 'T>) : 'T list =
-  multimap
-  |> TMap.tryFind key
-  |> Option.defaultValue []
-
-let multimapAdd (key: 'K) (item: 'T) (multimap: Multimap<'K, 'T>) : Multimap<'K, 'T> =
-  let items = multimap |> multimapFind key
-  TMap.add key (item :: items) multimap
-
-let multimapOfList compareFun (entries: ('K * 'T) list) : Multimap<'K, 'T> =
-  entries
-  |> List.fold (fun map (key, value) -> multimapAdd key value map) (TMap.empty compareFun)
 
 // -----------------------------------------------
 // Char

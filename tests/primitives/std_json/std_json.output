@@ -1,0 +1,39 @@
+OK: spaces
+OK: empty array
+OK: constants
+OK: string
+OK: string (empty)
+OK: string (escape)
+OK: int
+OK: int (negative)
+OK: int array
+OK: float
+OK: float (starts with point)
+OK: float (exponential)
+OK: float (exponential of minus)
+OK: float (full)
+OK: float with exp
+OK: empty object
+OK: singleton object
+OK: object
+OK: nested object
+OK: null
+OK: true
+OK: false
+OK: string (empty)
+OK: string (escape)
+OK: string (control)
+OK: float (zero)
+OK: float (positive int)
+OK: float (negative int)
+OK: float (positive float)
+OK: float (negative float)
+OK: float (int+eps)
+OK: float (int-eps)
+OK: float (too small)
+OK: float (too large)
+OK: array (empty)
+OK: array
+OK: object (empty)
+OK: object
+$? = 0

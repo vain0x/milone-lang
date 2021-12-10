@@ -15,6 +15,7 @@ open MiloneShared.SharedTypes
 open MiloneShared.TypeIntegers
 open MiloneShared.Util
 open MiloneStd.StdMap
+open MiloneStd.StdMultimap
 open MiloneStd.StdSet
 open MiloneSyntax.NameRes
 open MiloneSyntax.Tir
@@ -917,7 +918,7 @@ let private inferFunExpr (ctx: TyCtx) funSerial loc =
       { ctx with
           GrayInstantiations =
             ctx.GrayInstantiations
-            |> multimapAdd funSerial (ty, loc) }
+            |> Multimap.add funSerial (ty, loc) }
     else
       ctx
 

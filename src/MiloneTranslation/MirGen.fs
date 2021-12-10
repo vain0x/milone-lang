@@ -9,6 +9,7 @@ open MiloneShared.SharedTypes
 open MiloneShared.TypeIntegers
 open MiloneShared.Util
 open MiloneStd.StdMap
+open MiloneStd.StdMultimap
 open MiloneStd.StdSet
 open MiloneTranslation.Hir
 open MiloneTranslation.Mir
@@ -961,7 +962,7 @@ let private doReuseArmLocals funSerial arms (ctx: MirCtx) : _ * MirCtx =
       reuseMap
       |> TMap.fold
            (fun (funLocals, replacingVars) varSerial (_, ty) ->
-             multimapAdd funSerial (varSerial, ty) funLocals, TSet.add varSerial replacingVars)
+             Multimap.add funSerial (varSerial, ty) funLocals, TSet.add varSerial replacingVars)
            (ctx.FunLocals, ctx.ReplacingVars)
 
     { ctx with

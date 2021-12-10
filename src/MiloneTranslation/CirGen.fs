@@ -16,6 +16,7 @@ open MiloneShared.TypeIntegers
 open MiloneShared.Util
 open MiloneShared.UtilParallel
 open MiloneStd.StdMap
+open MiloneStd.StdMultimap
 open MiloneStd.StdSet
 open MiloneTranslation.Cir
 open MiloneTranslation.Hir
@@ -114,7 +115,7 @@ let private renameIdents toIdent toKey mapFuns (defMap: TreeMap<_, _>) =
   let serialsMap =
     let folder acc serial def =
       let ident = toIdent def
-      acc |> multimapAdd ident (serial, def)
+      acc |> Multimap.add ident (serial, def)
 
     defMap |> TMap.fold folder (TMap.empty compare)
 
@@ -475,16 +476,14 @@ let private genUnionTyDef (ctx: CirCtx) tySerial variants =
       |> List.map (fun (_, serial, _, _) -> getUniqueVariantName ctx serial)
 
     let variants, ctx =
-      (variants, ctx)
-      |> stFlatMap (fun ((_, serial, hasPayload, payloadTy), acc, ctx) ->
-        if hasPayload then
-          let payloadTy, ctx = cgTyComplete ctx payloadTy
-
-          (getUniqueVariantName ctx serial, payloadTy)
-          :: acc,
-          ctx
-        else
-          acc, ctx)
+      variants
+      |> List.filter (fun (_, _, hasPayload, _) -> hasPayload)
+      |> List.mapFold
+           (fun ctx (_, serial, _, payloadTy) ->
+             let payloadTy, ctx = cgTyComplete ctx payloadTy
+             let name = getUniqueVariantName ctx serial
+             (name, payloadTy), ctx)
+           ctx
 
     let discriminantEnumDecl =
       CEnumDecl(discriminantEnumName, discriminants)
@@ -864,7 +863,7 @@ let private cgExpr (ctx: CirCtx) (arg: MExpr) : CExpr * CirCtx =
   match arg |> mxSugar with
   | MLitExpr (lit, _) -> genLit lit, ctx
   | MUnitExpr _ -> CVarExpr "0", ctx
-  | MNeverExpr loc -> unreachable ("MNeverExpr " + locToString loc)
+  | MNeverExpr loc -> unreachable ("MNeverExpr " + Loc.toString loc)
 
   | MVarExpr (serial, ty, _) ->
     let ctx =
@@ -1363,7 +1362,7 @@ let private cgDecls (ctx: CirCtx) decls =
 
     let collectFunLocalStmts (ctx: CirCtx) =
       ctx.Rx.FunLocals
-      |> multimapFind callee
+      |> Multimap.find callee
       |> List.mapFold
            (fun (ctx: CirCtx) (varSerial, ty) ->
              let name = getUniqueVarName ctx varSerial

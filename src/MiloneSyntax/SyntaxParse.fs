@@ -253,7 +253,7 @@ let private parseErrorCore msg pos errors : Errors =
     "PARSE ERROR: "
     + msg
     + " ("
-    + posToString pos
+    + Pos.toString pos
     + ")"
 
   (msg, pos) :: errors

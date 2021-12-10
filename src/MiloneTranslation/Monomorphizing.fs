@@ -55,6 +55,7 @@ module rec MiloneTranslation.Monomorphizing
 open MiloneShared.SharedTypes
 open MiloneShared.Util
 open MiloneStd.StdMap
+open MiloneStd.StdMultimap
 open MiloneTranslation.Hir
 
 // #tyAssign?
@@ -198,7 +199,7 @@ let private rewriteExpr (rx: RewriteRx) expr : HExpr =
         "assertion violation: monomorphized instance should have been generated for %s #%d at %s"
         (rx.GetFunIdent funSerial)
         (funSerialToInt funSerial)
-        (locToString loc)
+        (Loc.toString loc)
 
       assert false
       exit 1
@@ -271,7 +272,7 @@ let private generateMonomorphizedFun
       printfn
         "assertion violation\n  %s at %s\n  : %s => %s\n  tyArgs %s\n  monoTy = %s"
         genericFunDef.Name
-        (locToString genericFunDef.Loc)
+        (Loc.toString genericFunDef.Loc)
         (__dump tyVars)
         (__dump genericFunTy)
         (__dump monoTyArgs)
@@ -354,7 +355,7 @@ let monify (modules: HProgram, hirCtx: HirCtx) : HProgram * HirCtx =
   let getFunIdent funSerial =
     let funDef = hirCtx.Funs |> mapFind funSerial
     let serial = string (funSerialToInt funSerial)
-    let loc = locToString funDef.Loc
+    let loc = Loc.toString funDef.Loc
 
     funDef.Name + " #" + serial + " " + loc
 
@@ -442,7 +443,7 @@ let monify (modules: HProgram, hirCtx: HirCtx) : HProgram * HirCtx =
         genericFunBodyMap |> mapFind genericFunSerial
 
       moduleId, (funSerial, body, loc))
-    |> multimapOfList compare
+    |> Multimap.ofList compare
 
   // Rewrite.
   let modules =
@@ -450,7 +451,7 @@ let monify (modules: HProgram, hirCtx: HirCtx) : HProgram * HirCtx =
     |> List.mapi (fun moduleId (m: HModule) ->
       let funBodies =
         newFunsPerModule
-        |> multimapFind moduleId
+        |> Multimap.find moduleId
         |> List.map (fun (funSerial, body, loc) ->
           let (FunBody (args, body)) = body
           HLetFunStmt(funSerial, args, body, loc))

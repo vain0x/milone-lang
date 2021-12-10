@@ -364,8 +364,8 @@ let private collectTypingErrors (tirCtx: Tir.TirCtx) : SyntaxError list option =
 
 let syntaxErrorsToString (errors: SyntaxError list) : string =
   errors
-  |> listSort (fun (_, l) (_, r) -> locCompare l r)
-  |> List.map (fun (msg, loc) -> "#error " + locToString loc + " " + msg + "\n")
+  |> listSort (fun (_, l) (_, r) -> Loc.compare l r)
+  |> List.map (fun (msg, loc) -> "#error " + Loc.toString loc + " " + msg + "\n")
   |> S.concat ""
 
 // -----------------------------------------------

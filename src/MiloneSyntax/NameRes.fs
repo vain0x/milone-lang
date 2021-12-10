@@ -5,6 +5,7 @@
 /// and assign the same serials to the same symbols.
 module rec MiloneSyntax.NameRes
 
+open MiloneStd.StdMultimap
 open MiloneShared.SharedTypes
 open MiloneShared.TypeIntegers
 open MiloneShared.UtilParallel
@@ -119,7 +120,7 @@ let private nsAdd (key: NsOwner) (ident: Ident) value (ns: Ns<_>) : Ns<_> =
 
 let private nsMerge (key: NsOwner) (ident: Ident) value (ns: Ns<_>) : Ns<_> =
   let submap =
-    ns |> nsFind key |> multimapAdd ident value
+    ns |> nsFind key |> Multimap.add ident value
 
   ns |> TMap.add key submap
 
@@ -474,7 +475,7 @@ let private doImportTyWithAlias alias (symbol: TySymbol) (scopeCtx: ScopeCtx) : 
 
       let nsMap =
         nsMap
-        |> multimapAdd alias (nsOwnerOfTySymbol symbol)
+        |> Multimap.add alias (nsOwnerOfTySymbol symbol)
 
       kinds, varScopes, tyMap :: tyScopes, nsMap :: nsScopes
 
@@ -653,7 +654,7 @@ let private resolveScopedTyName nsOwner name (scopeCtx: ScopeCtx) : TySymbol opt
 let private resolveSubNsOwners nsOwner name (scopeCtx: ScopeCtx) : NsOwner list =
   scopeCtx.NsNs
   |> nsFind nsOwner
-  |> multimapFind name
+  |> Multimap.find name
 
 let private resolveLocalVarName name (scopeCtx: ScopeCtx) =
   let _, varScopes, _, _ = scopeCtx.Local
