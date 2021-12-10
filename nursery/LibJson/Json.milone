@@ -1,3 +1,5 @@
+// FIXME: use StdJson
+
 module rec MiloneLspServer.Json
 
 module S = MiloneStd.StdString
