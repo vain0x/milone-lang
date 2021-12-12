@@ -8,26 +8,17 @@ TODO := ${PWD}/target/CmdSqliteTodo/todo
 
 build: ${JSON_GET} ${LSP_SERVER} ${TODO}
 
-target/lib_json.c: LibJson/Json.milone 
-	(cd LibJson; ./build)
-
 ${JSON_GET}: \
 	CmdJsonGet/CmdJsonGet.milone \
 	CmdJsonGet/cmd_json_get_runtime.c \
-	CmdJsonGet/milone_manifest \
-	LibJson/lib_json_runtime.c \
-	LibJson/Json.milone \
-	vendor/pdjson/pdjson.o
+	CmdJsonGet/milone_manifest
 	(cd CmdJsonGet; ./build)
 
 json_get: ${JSON_GET}
 
 ${LSP_SERVER}: \
 	CmdLspServer/milone_manifest \
-	$(wildcard CmdLspServer/*.milone) \
-	LibJson/lib_json_runtime.c \
-	LibJson/Json.milone \
-	vendor/pdjson/pdjson.o
+	$(wildcard CmdLspServer/*.milone)
 	(cd CmdLspServer; ./build)
 
 lsp_server: ${LSP_SERVER}
@@ -91,10 +82,7 @@ test: target/lib_span_tests \
 # Deps
 # ------------------------------------------------
 
-restore: vendor/pdjson/pdjson.o vendor/sqlite3/sqlite3.o
-
-vendor/pdjson/pdjson.o:
-	./install-pdjson
+restore: vendor/sqlite3/sqlite3.o
 
 vendor/sqlite3/sqlite3.o:
 	./install-sqlite3

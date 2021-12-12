@@ -1,11 +1,12 @@
 module rec CmdJsonGet.Program
 
+open MiloneStd.StdError
+open MiloneStd.StdJson
+
 module E = MiloneStd.StdEnv
 module S = MiloneStd.StdString
 
-open LibJson.Json
-
-let helpText () =
+let private helpText () =
   """json_get <PATH>
 
 Extracts a value of property in JSON.
@@ -71,7 +72,10 @@ let main _ =
     let path = path |> split "."
     // printfn "// path.length: %d\n" (List.length path)
 
-    let root = stdinReadAll () |> jsonParseFromString
+    let root =
+      stdinReadAll ()
+      |> Json.parse
+      |> Option.defaultWith (fun () -> failwith "Invalid JSON.")
     // printfn "// input: %s\n" (jsonToString root)
 
     path
@@ -98,7 +102,7 @@ let main _ =
 
            | _ -> JNull)
          root
-    |> jsonToString
+    |> Json.dump
     |> printfn "%s"
 
     0

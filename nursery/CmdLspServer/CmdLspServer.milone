@@ -8,9 +8,9 @@ module rec CmdLspServer.Program
 
 open MiloneStd.Equal
 open MiloneStd.StdError
+open MiloneStd.StdJson
 open MiloneStd.StdMap
 open LibSqlite3.Db
-open LibJson.Json
 
 module C = MiloneStd.StdChar
 module I = MiloneStd.StdInt
@@ -876,7 +876,9 @@ let private readRawRequest () : JsonValue =
 
   let len = readHeader None
   let body = readBody len
-  jsonParseFromString body
+
+  Json.parse body
+  |> Option.defaultWith (fun () -> failwith "Incoming message is invalid as JSON.")
 
 let private parseRawRequest (req: JsonValue) : LspRequest =
   let msgId = req |> J.get "id"
@@ -1048,7 +1050,7 @@ let private dbAddMessage (message: JsonValue) : unit =
     """
       insert into messages(json) values (:json);
     """
-    [ ":json", DString(jsonToString message) ]
+    [ ":json", DString(Json.dump message) ]
 
 let private dbPopMessage () : JsonValue option =
   let rows =
@@ -1068,7 +1070,7 @@ let private dbPopMessage () : JsonValue option =
       """
       [ ":message_id", messageId ]
 
-    json |> jsonParseFromString |> Some
+    json |> Json.parse
   | _ -> None
 
 // -----------------------------------------------
@@ -1125,13 +1127,14 @@ let private serverLoop () =
 
   let pushDiagnosticsRequest () =
     dbAddMessage (
-      jsonParseFromString
+      Json.parse
         """
           {
             "jsonrpc": "2.0",
             "method": "$/diagnostics"
           }
         """
+      |> Option.defaultWith unreachable
     )
 
   let processMessage msg =
@@ -1170,7 +1173,7 @@ let private serverLoop () =
       let response =
         ("""{ "jsonrpc": "2.0", "id": ${MSG_ID}, "result": ${RESULT} }"""
          + "\n")
-        |> S.replace "${MSG_ID}" (jsonToString msgId)
+        |> S.replace "${MSG_ID}" (Json.dump msgId)
         |> S.replace "${RESULT}" (initializeResponse ())
 
       writeString
@@ -1187,7 +1190,7 @@ let private serverLoop () =
       let response =
         ("""{ "jsonrpc": "2.0", "id": ${MSG_ID}, "result": null }"""
          + "\n")
-        |> S.replace "${MSG_ID}" (jsonToString msgId)
+        |> S.replace "${MSG_ID}" (Json.dump msgId)
 
       writeString
         ("Content-Length: "
@@ -1256,7 +1259,7 @@ let private serverLoop () =
           JObject [ "uri", JString(Uri.toString uri)
                     "diagnostics", diagnostics ])
         |> JArray
-        |> jsonToString
+        |> Json.dump
 
       let response =
         ("""{ "jsonrpc": "2.0", "method": "textDocument/publishDiagnostics", "params": ${PARAMS} }"""
