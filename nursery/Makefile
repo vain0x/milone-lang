@@ -36,25 +36,25 @@ ${TODO}: \
 
 todo: ${TODO}
 
-target/lib_span_tests: \
-	LibSpan/lib_span_runtime.c \
-	LibSpan/lib_span_runtime.h \
-	$(wildcard LibSpan/*.milone) \
-	$(wildcard LibSpanTests/*.milone)
-	(cd LibSpanTests; ./build)
+# target/lib_span_tests: \
+# 	LibSpan/lib_span_runtime.c \
+# 	LibSpan/lib_span_runtime.h \
+# 	$(wildcard LibSpan/*.milone) \
+# 	$(wildcard LibSpanTests/*.milone)
+# 	(cd LibSpanTests; ./build)
 
-target/lib_file_system_tests: \
-	LibSpan/lib_span_runtime.c \
-	LibSpan/lib_span_runtime.h \
-	$(wildcard LibSpan/*.milone) \
-	$(wildcard LibFileSystem/*.milone) \
-	$(wildcard LibFileSystemTests/*.milone)
-	(cd LibFileSystemTests; ./build)
+# target/lib_file_system_tests: \
+# 	LibSpan/lib_span_runtime.c \
+# 	LibSpan/lib_span_runtime.h \
+# 	$(wildcard LibSpan/*.milone) \
+# 	$(wildcard LibFileSystem/*.milone) \
+# 	$(wildcard LibFileSystemTests/*.milone)
+# 	(cd LibFileSystemTests; ./build)
 
 target/LibNurseryTests/.timestamp: \
-	LibNursery/milone_manifest \
 	$(wildcard LibNursery/*.milone) \
-	$(wildcard LibNurseryTests/*.milone)
+	$(wildcard LibNurseryTests/*.milone) \
+	LibNurseryTests/milone_manifest
 	(cd LibNurseryTests; ./run) && \
 		mkdir -p $(shell dirname $@) && \
 		touch $@
@@ -72,11 +72,13 @@ run: build
 	${TODO} remove 'up'
 	${TODO}
 
-test: target/lib_span_tests \
-		target/lib_file_system_tests \
-		target/LibNurseryTests/.timestamp
-	if target/lib_span_tests; then echo OK; else echo FAIL=$?; fi
-	if target/lib_file_system_tests; then echo OK; else echo FAIL=$?; fi
+test: target/LibNurseryTests/.timestamp
+
+# test: target/lib_span_tests \
+# 		target/lib_file_system_tests \
+# 		target/LibNurseryTests/.timestamp
+# 	if target/lib_span_tests; then echo OK; else echo FAIL=$?; fi
+# 	if target/lib_file_system_tests; then echo OK; else echo FAIL=$?; fi
 
 # ------------------------------------------------
 # Deps
