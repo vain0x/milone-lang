@@ -1339,7 +1339,9 @@ module WorkspaceAnalysis =
            (fun wa p -> doWithProjectAnalysis p (ProjectAnalysis.completion (getModules p wa) (uriToDocId uri) pos) wa)
            wa
 
-    List.collect id results, wa
+    let items = results |> List.collect id |> listUnique
+
+    items, wa
 
   let documentHighlight (uri: Uri) (pos: Pos) (wa: WorkspaceAnalysis) =
     let results, wa =
