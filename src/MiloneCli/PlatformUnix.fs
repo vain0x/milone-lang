@@ -137,7 +137,7 @@ milone_h = ${MILONE_HOME}/runtime/milone.h
 milone_c = ${MILONE_HOME}/runtime/milone.c
 milone_o = ${TARGET_DIR}/milone.o
 milone_platform_c = ${MILONE_HOME}/runtime/milone_platform.c
-milone_platform_o = ${TARGET_DIR}/runtime/milone_platform.o
+milone_platform_o = ${TARGET_DIR}/milone_platform.o
 exe_file = ${EXE_FILE}
 
 rule cc
