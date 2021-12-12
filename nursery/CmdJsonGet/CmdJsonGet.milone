@@ -31,26 +31,6 @@ OPTIONS:
 let private stdinReadAll () : string = __nativeFun "stdin_read_all"
 
 // -----------------------------------------------
-// String helpers
-// -----------------------------------------------
-
-let divide (sep: string) (s: string) : string * string option =
-  match S.findIndex sep s with
-  | None -> s, None
-  | Some i -> s.[0..i - 1], Some s.[i + sep.Length..s.Length - 1]
-
-let split sep s =
-  let rec go acc s =
-    let part, s = s |> divide sep
-    let acc = part :: acc
-
-    match s with
-    | None -> acc
-    | Some s -> go acc s
-
-  go [] s |> List.rev
-
-// -----------------------------------------------
 // Entrypoint
 // -----------------------------------------------
 
@@ -69,7 +49,7 @@ let main _ =
     0
 
   | path :: _ ->
-    let path = path |> split "."
+    let path = path |> S.split "."
     // printfn "// path.length: %d\n" (List.length path)
 
     let root =

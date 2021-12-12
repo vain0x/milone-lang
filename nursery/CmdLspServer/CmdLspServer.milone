@@ -103,43 +103,6 @@ let private groupBy toKey keyCompare xs =
 module private String =
   let equals (l: string) r = l = r
 
-let private splitAt (i: int) (s: string) =
-  if i <= 0 then "", s
-  else if s.Length <= i then s, ""
-  else s.[0..i - 1], s.[i..s.Length - 1]
-
-let private upperFirst (s: string) =
-  if s.Length >= 1 && C.isLower s.[0] then
-    string (C.toUpper s.[0]) + s.[1..s.Length - 1]
-  else
-    s
-
-let private lowerFirst (s: string) =
-  if s.Length >= 1 && C.isUpper s.[0] then
-    string (C.toLower s.[0]) + s.[1..s.Length - 1]
-  else
-    s
-
-let private testSplitAt () =
-  let s = "hello"
-  assert (splitAt 2 s = ("he", "llo"))
-  assert (splitAt (-1) s = ("", s))
-  assert (splitAt 0 s = ("", s))
-  assert (splitAt 5 s = (s, ""))
-  assert (splitAt 6 s = (s, ""))
-
-let private testUpperFirst () =
-  assert (upperFirst "macOS" = "MacOS")
-  assert (upperFirst "CentOS" = "CentOS")
-  assert (upperFirst "" = "")
-  assert (upperFirst "🐧" = "🐧")
-
-let private testLowerFirst () =
-  assert (lowerFirst "CentOS" = "centOS")
-  assert (lowerFirst "macOS" = "macOS")
-  assert (lowerFirst "" = "")
-  assert (lowerFirst "🐧" = "🐧")
-
 let private tryReplace (pattern: string) (target: string) (s: string) =
   if s |> S.contains pattern then
     s |> S.replace pattern target, true
@@ -156,9 +119,6 @@ let private testTryReplace () =
   assert (not ok)
 
 let private testString () =
-  testSplitAt ()
-  testUpperFirst ()
-  testLowerFirst ()
   testTryReplace ()
 
 doInRegion testString
@@ -197,7 +157,7 @@ let private stripRoot (path: string) =
   else if path.Length >= 3
           && hasDriveLetter path
           && path.[2] = '/' then
-    let root, rest = splitAt 3 path
+    let root, rest = S.splitAt 3 path
     Some root, rest
   else
     None, path
@@ -238,7 +198,7 @@ let private normalize (path: string) =
   // Upper drive letter.
   let path =
     if path |> hasDriveLetter then
-      upperFirst path
+      S.upperFirst path
     else
       path
 
@@ -583,7 +543,7 @@ let private uriOfFilePath (path: string) =
     Uri("file://" + path)
   else if hasDriveLetter path then
     let path =
-      path |> lowerFirst |> S.replace ":" "%3A"
+      path |> S.lowerFirst |> S.replace ":" "%3A"
 
     Uri("file:///" + path)
   else
