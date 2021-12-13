@@ -1169,6 +1169,7 @@ let private serverLoop () =
       let runCheck projectDir =
         let sh = "/bin/sh"
 
+        // FIXME: When LSP server is executed as VSCode extension, PATH isn't derived, so milone can't be found.
         let _, output =
           runSubprocess
             sh
@@ -1191,11 +1192,11 @@ let private serverLoop () =
              |> Option.defaultWith unreachable)
             + ".milone"
 
-          let pos = int y, int x
+          let pos = int y - 1, int x - 1
 
           path, pos, message)
 
-      let diagnostics =
+      let paramsList =
         getProjects ()
         |> List.collect (fun (p: ProjectInfo) ->
           runCheck p.ProjectDir
@@ -1218,21 +1219,21 @@ let private serverLoop () =
 
           JObject [ "uri", JString(Uri.toString uri)
                     "diagnostics", diagnostics ])
-        |> JArray
-        |> Json.dump
 
-      let response =
-        ("""{ "jsonrpc": "2.0", "method": "textDocument/publishDiagnostics", "params": ${PARAMS} }"""
-         + "\n")
-        |> S.replace "${PARAMS}" diagnostics
+      paramsList |> List.fold (fun () paramsObject ->
+        let response =
+          ("""{ "jsonrpc": "2.0", "method": "textDocument/publishDiagnostics", "params": ${PARAMS} }"""
+          + "\n")
+          |> S.replace "${PARAMS}" (Json.dump paramsObject)
 
-      writeString
-        ("Content-Length: "
-         + string response.Length
-         + "\r\n\r\n"
-         + response)
-        output
-      |> ignore
+        writeString
+          ("Content-Length: "
+          + string response.Length
+          + "\r\n\r\n"
+          + response)
+          output
+        |> ignore
+      ) ()
 
     | DidOpenNotification p ->
       let uri = p.Uri |> Uri.toString
