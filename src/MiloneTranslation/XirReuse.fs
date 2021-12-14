@@ -4,11 +4,11 @@ open MiloneShared.SharedTypes
 open MiloneShared.TypeFloat
 open MiloneShared.TypeIntegers
 open MiloneShared.Util
+open MiloneStd.StdMap
+open MiloneStd.StdSet
 open MiloneTranslation.Xir
 
 module S = MiloneStd.StdString
-module TMap = MiloneStd.StdMap
-module TSet = MiloneStd.StdSet
 
 type private TraceFun = string -> string list -> unit
 
@@ -91,9 +91,7 @@ type private Rewriter =
 
 let private newRewriterOfLocalMapper onLocal : Rewriter =
   let onPlace =
-    fun (place: XPlace) ->
-      { place with
-          Local = onLocal place.Local }
+    fun (place: XPlace) -> { place with Local = onLocal place.Local }
 
   let onArg =
     fun arg ->
@@ -145,14 +143,14 @@ let private xTerminatorMap (rewriter: Rewriter) (terminator: XTerminator) : XTer
 // -----------------------------------------------
 
 type private Ctx =
-  { Blocks: AssocMap<XBlockId, XBlockDef>
+  { Blocks: TreeMap<XBlockId, XBlockDef>
     EntryBlock: XBlockId
     ResultLocal: XLocalId
 
     CurrentLocal: XLocalId
 
-    LiveIn: AssocSet<XBlockId * XLocalId>
-    LiveOut: AssocSet<XBlockId * XLocalId>
+    LiveIn: TreeSet<XBlockId * XLocalId>
+    LiveOut: TreeSet<XBlockId * XLocalId>
     SomethingHappened: bool
 
     Trace: TraceFun }
@@ -233,15 +231,14 @@ let private xrBlock (blockId: XBlockId) (ctx: Ctx) : Ctx =
   let liveIn =
     let isDefined () =
       blockDef.Stmts
-      |> List.exists
-           (fun stmt ->
-             //  ctx.Trace
-             //    "stmt ({}) def({}) use({})"
-             //    [ objToString stmt
-             //      List.map string (xStmtToDef stmt) |> S.concat ","
-             //      List.map string (xStmtToUse stmt) |> S.concat "," ]
+      |> List.exists (fun stmt ->
+        //  ctx.Trace
+        //    "stmt ({}) def({}) use({})"
+        //    [ objToString stmt
+        //      List.map string (xStmtToDef stmt) |> S.concat ","
+        //      List.map string (xStmtToUse stmt) |> S.concat "," ]
 
-             xStmtToDef stmt |> listContains local)
+        xStmtToDef stmt |> listContains local)
 
     let isUsedBeforeDef () =
       blockDef.Stmts
@@ -298,23 +295,21 @@ let private xrBody (trace: TraceFun) (bodyDef: XBodyDef) : XBodyDef =
            let liveIn =
              ctx.LiveIn
              |> TSet.toList
-             |> List.choose
-                  (fun (b, l) ->
-                    if b = blockId then
-                      Some(displayLocal l)
-                    else
-                      None)
+             |> List.choose (fun (b, l) ->
+               if b = blockId then
+                 Some(displayLocal l)
+               else
+                 None)
              |> S.concat ", "
 
            let liveOut =
              ctx.LiveOut
              |> TSet.toList
-             |> List.choose
-                  (fun (b, l) ->
-                    if b = blockId then
-                      Some(displayLocal l)
-                    else
-                      None)
+             |> List.choose (fun (b, l) ->
+               if b = blockId then
+                 Some(displayLocal l)
+               else
+                 None)
              |> S.concat ", "
 
            trace "  #{}" [ string blockId ]

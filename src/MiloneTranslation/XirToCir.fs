@@ -2,12 +2,13 @@ module rec MiloneTranslation.XirToCir
 
 open MiloneShared.SharedTypes
 open MiloneShared.Util
+open MiloneStd.StdMap
+open MiloneStd.StdMultimap
+open MiloneStd.StdSet
 open MiloneTranslation.Cir
 open MiloneTranslation.Xir
 
 module S = MiloneStd.StdString
-module TMap = MiloneStd.StdMap
-module TSet = MiloneStd.StdSet
 
 type private TraceFun = string -> string list -> unit
 
@@ -20,7 +21,7 @@ type private Rx = { BodyDef: XBodyDef; Trace: TraceFun }
 
 // Write context.
 type private Wx =
-  { Done: AssocSet<XBlockId>
+  { Done: TreeSet<XBlockId>
     Stmts: CStmt list
     Decls: CDecl list }
 
@@ -32,15 +33,14 @@ let private newWx () : Wx =
     Decls = [] }
 
 let private xcBody (rx: Rx) (wx: Wx) : Wx =
-  let rec go blockId wx : Wx =
+  let rec go blockId (wx: Wx) : Wx =
     if wx.Done |> TSet.contains blockId then
       wx
     else
       let blockDef = rx.BodyDef.Blocks |> mapFind blockId
 
       let wx =
-        { wx with
-            Done = wx.Done |> TSet.add blockId }
+        { wx with Done = wx.Done |> TSet.add blockId }
 
       // let wx = xcBlock blockId rx wx
 
@@ -60,24 +60,23 @@ let private splitByDoc (program: XProgram) : (DocId * (XBodyId * XBodyDef) list)
   |> TMap.fold
        (fun map bodyId (bodyDef: XBodyDef) ->
          let doc = locToDoc bodyDef.Loc
-         map |> multimapAdd doc (bodyId, bodyDef))
+         map |> Multimap.add doc (bodyId, bodyDef))
        (TMap.empty compare)
   |> TMap.toList
 
 let xirToCir (trace: TraceFun) (program: XProgram) : (DocId * CDecl list) list =
   program
   |> splitByDoc
-  |> List.map
-       (fun (doc, bodiesRev) ->
-         let wx = newWx ()
+  |> List.map (fun (doc, bodiesRev) ->
+    let wx = newWx ()
 
-         let wx =
-           bodiesRev
-           |> List.rev
-           |> List.fold
-                (fun wx (_bodyId, bodyDef) ->
-                  let rx = newRx trace bodyDef
-                  xcBody rx wx)
-                wx
+    let wx =
+      bodiesRev
+      |> List.rev
+      |> List.fold
+           (fun wx (_bodyId, bodyDef) ->
+             let rx = newRx trace bodyDef
+             xcBody rx wx)
+           wx
 
-         doc, List.rev wx.Decls)
+    doc, List.rev wx.Decls)

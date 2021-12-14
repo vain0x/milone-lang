@@ -1,7 +1,6 @@
 module rec MiloneTranslation.PatCompile
 
 open MiloneShared.SharedTypes
-open MiloneShared.Util
 open MiloneTranslation.Hir
 
 /// Constant value to be compared.
@@ -74,8 +73,8 @@ let private pcNodePat pat body alt =
     | _ -> unreachable ()
 
   match kind, argPats with
-  | HNonePN, _ -> PMatchOptionTerm([], body, alt)
-  | HSomeAppPN, [ itemPat ] -> PMatchOptionTerm([], alt, PSelectTerm(PSomeContentPart, pcPat itemPat body alt))
+  // | HNonePN, _ -> PMatchOptionTerm([], body, alt)
+  // | HSomeAppPN, [ itemPat ] -> PMatchOptionTerm([], alt, PSelectTerm(PSomeContentPart, pcPat itemPat body alt))
 
   | HAbortPN, _ -> PAbortTerm
 
@@ -86,7 +85,7 @@ let private pcPat pat body alt : PTerm =
   | HLitPat (lit, loc) -> PSwitchTerm([], [ PLitConst(lit, loc), body ], alt)
 
   | HDiscardPat _ -> body
-  | HVarPat (_, varSerial, _, _) -> PLetTerm(varSerial, [], body)
+  | HVarPat (varSerial, _, _) -> PLetTerm(varSerial, [], body)
 
   | HVariantPat _ -> todo ()
   | HNodePat _ -> pcNodePat pat body alt
@@ -103,13 +102,12 @@ let patCompileForMatchExprToBlocks (pats: HPat list) : PTerm list =
   let n = List.length pats
 
   pats
-  |> List.mapi
-       (fun (i: int) (pat: HPat) ->
-         let alt =
-           if i + 1 < n then
-             PFallbackTerm(i + 1)
-           else
-             // exhaust
-             PAbortTerm
+  |> List.mapi (fun (i: int) (pat: HPat) ->
+    let alt =
+      if i + 1 < n then
+        PFallbackTerm(i + 1)
+      else
+        // exhaust
+        PAbortTerm
 
-         pcPat pat (PGuardTerm(i, PBodyTerm i, alt)) alt)
+    pcPat pat (PGuardTerm(i, PBodyTerm i, alt)) alt)

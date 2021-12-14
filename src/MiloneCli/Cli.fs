@@ -794,81 +794,41 @@ let cli (host: CliHost) =
 
   | XCmd, args ->
     let verbosity, args = parseVerbosity host args
-
-    let targetDir, args =
-      parseOption (fun x -> x = "--target-dir") args
-
-    let trace (fmt: string) (args: string list) : unit =
-      let rec go fmt args acc =
-        match args with
-        | [] -> fmt :: acc
-
-        | arg :: args ->
-          match fmt |> S.findIndex "{}" with
-          | Some i ->
-            acc
-            |> cons (fmt |> S.truncate i)
-            |> cons arg
-            |> go (fmt |> S.skip (i + 2)) args
-
-          | None -> fmt :: acc
-
-      go fmt args []
-      |> cons "\n"
-      |> List.rev
-      |> S.concat ""
-      |> host.WriteStderr
+    let writeLog s = writeLog host verbosity s
 
     let compileWithX (ctx: CompileCtx) =
-      let host = ctx.Host
-      let v = ctx.Verbosity
-
       match SyntaxApi.performSyntaxAnalysis ctx.SyntaxCtx with
-      | SyntaxApi.SyntaxAnalysisError (errors, _) -> CompileError(SyntaxApi.syntaxErrorsToString errors)
+      | _, SyntaxApi.SyntaxAnalysisError (errors, _) -> CompileError(SyntaxApi.syntaxErrorsToString errors)
 
-      | SyntaxApi.SyntaxAnalysisOk (modules, tyCtx) ->
-        let decls, tyCtx = transformHir host v (modules, tyCtx)
-        // CompileOk(codeGenHirViaMir host v ctx.EntryProjectName ctx.HeaderOnly (decls, tyCtx))
-        let program = xirGen trace (decls, tyCtx)
-        // xirReuse trace program |> ignore
-        xirToCir trace program |> ignore
-        trace "OK" [ objToString program ]
+      | _, SyntaxApi.SyntaxAnalysisOk (modules, tirCtx) ->
+        writeLog "Lower"
+        let modules, hirCtx = Lower.lower (modules, tirCtx)
+
+        TranslationApi.codeGenUsingXir writeLog (modules, hirCtx)
         CompileOk []
 
-    match args with
-    | projectDir :: _ ->
-      let options : CompileOptions =
-        { ProjectDir = projectDir
-          TargetDir = Option.defaultValue (defaultTargetDir projectDir) targetDir
-          HeaderOnly = false
-          Verbosity = verbosity }
+    let b, args = parseBuildLikeOptions host args
+    endArgs args
 
-      let ctx =
-        compileCtxNew host options.Verbosity options.ProjectDir
+    let options = BuildLikeOptions.toBuildOptions b
+    let projectDir = options.CompileOptions.ProjectDir
+    let targetDir = options.CompileOptions.TargetDir
 
-      let ctx =
-        { ctx with
-            HeaderOnly = options.HeaderOnly }
+    let ctx = compileCtxNew host verbosity projectDir
 
-      let result = compileWithX ctx
+    match compileWithX ctx with
+    | CompileOk files ->
+      List.fold
+        (fun () (name, contents) ->
+          printfn "%s" name
+          host.FileWriteAllText(targetDir + "/" + name) contents)
+        ()
+        files
 
-      match result with
-      | CompileOk files ->
-        List.fold
-          (fun () (name, contents) ->
-            printfn "%s" name
-            host.FileWriteAllText(options.TargetDir + "/" + name) contents)
-          ()
-          files
+      0
 
-        0
-
-      | CompileError output ->
-        host.WriteStdout output
-        1
-
-    | _ ->
-      printfn "expected project dir"
+    | CompileError output ->
+      host.WriteStdout output
       1
 
   | BadCmd subcommand, _ ->

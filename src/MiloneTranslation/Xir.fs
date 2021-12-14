@@ -4,6 +4,7 @@ open MiloneShared.SharedTypes
 open MiloneShared.TypeFloat
 open MiloneShared.TypeIntegers
 open MiloneShared.Util
+open MiloneStd.StdMap
 open MiloneTranslation.Hir
 
 type XBodyId = int
@@ -126,17 +127,17 @@ type XBodyDef =
     ArgTys: XTy list
     ResultTy: XTy
 
-    Locals: AssocMap<XLocalId, XLocalDef>
+    Locals: TreeMap<XLocalId, XLocalDef>
     ArgLocals: XLocalId list
     ResultLocal: XLocalId
-    Blocks: AssocMap<XBlockId, XBlockDef>
+    Blocks: TreeMap<XBlockId, XBlockDef>
     EntryBlockId: XBlockId
 
     Loc: Loc }
 
 [<RequireQualifiedAccess>]
 type XProgram =
-  { Bodies: AssocMap<XBodyId, XBodyDef>
+  { Bodies: TreeMap<XBodyId, XBodyDef>
     MainId: XBodyId }
 
 // -----------------------------------------------

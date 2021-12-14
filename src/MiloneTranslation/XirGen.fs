@@ -4,13 +4,13 @@ open MiloneShared.SharedTypes
 open MiloneShared.TypeFloat
 open MiloneShared.TypeIntegers
 open MiloneShared.Util
+open MiloneStd.StdMap
+open MiloneStd.StdSet
 open MiloneTranslation.Hir
 open MiloneTranslation.Xir
 open MiloneTranslation.PatCompile
 
 module S = MiloneStd.StdString
-module TMap = MiloneStd.StdMap
-module TSet = MiloneStd.StdSet
 
 type private TraceFun = string -> string list -> unit
 
@@ -50,11 +50,6 @@ let private primTyInfo (prim: HPrim) (args: HExpr list) (targetTy: Ty) : PrimTyI
   | HPrim.Less, l :: _, _ -> onScalarOrStr l
   | HPrim.Compare, l :: _, _ -> onScalarOrStr l
 
-  | HPrim.OptionSome, arg :: _, _ -> PrimTyInfo.Option(exprToTy arg)
-  | HPrim.OptionSome, _, _ -> unreachable ()
-  | HPrim.OptionNone, [], Ty (OptionTk, [ itemTy ]) -> PrimTyInfo.Option(itemTy)
-  | HPrim.OptionNone, _, _ -> unreachable ()
-
   | _ -> PrimTyInfo.NoInfo
 
 // -----------------------------------------------
@@ -69,12 +64,12 @@ type private XTarget = XLocalId * XBlockId
 
 let private xtInt = XIntTy(IntFlavor(Signed, I32))
 
-let private unreachableBlockDef : XBlockDef =
+let private unreachableBlockDef: XBlockDef =
   { Stmts = []
     Terminator = XUnreachableTk }
 
-let private emptyLocals : AssocMap<XLocalId, XLocalDef> = TMap.empty compare
-let private emptyBlocks : AssocMap<XBlockId, XBlockDef> = TMap.empty compare
+let private emptyLocals: TreeMap<XLocalId, XLocalDef> = TMap.empty compare
+let private emptyBlocks: TreeMap<XBlockId, XBlockDef> = TMap.empty compare
 
 let private xLocalPlace (local: XLocalId) : XPlace = { Local = local; Path = [] }
 
@@ -103,22 +98,22 @@ let private xAssignStmtToLocalFromRval local rval loc =
 [<RequireQualifiedAccess; NoEquality; NoComparison>]
 type private Ctx =
   { Serial: Serial
-    Vars: AssocMap<VarSerial, VarDef>
-    Funs: AssocMap<FunSerial, FunDef>
-    // Variants: AssocMap<VariantSerial, VariantDef>
-    Tys: AssocMap<TySerial, TyDef>
+    Vars: TreeMap<VarSerial, VarDef>
+    Funs: TreeMap<FunSerial, FunDef>
+    // Variants: TreeMap<VariantSerial, VariantDef>
+    Tys: TreeMap<TySerial, TyDef>
 
     MainFunOpt: FunSerial option
 
-    TyMangleMemo: AssocMap<Ty, string>
-    OptionTyMap: AssocMap<Ty, XUnionTyId>
-    ListTyMap: AssocMap<Ty, XUnionTyId>
-    XRecords: AssocMap<XRecordTyId, XRecordDef>
-    XVariants: AssocMap<XVariantId, XVariantDef>
-    XUnions: AssocMap<XUnionTyId, XUnionDef>
+    TyMangleMemo: TreeMap<Ty, string>
+    OptionTyMap: TreeMap<Ty, XUnionTyId>
+    ListTyMap: TreeMap<Ty, XUnionTyId>
+    XRecords: TreeMap<XRecordTyId, XRecordDef>
+    XVariants: TreeMap<XVariantId, XVariantDef>
+    XUnions: TreeMap<XUnionTyId, XUnionDef>
 
     // Done bodies.
-    Bodies: AssocMap<XBodyId, XBodyDef>
+    Bodies: TreeMap<XBodyId, XBodyDef>
     MainBodyIdOpt: XBodyId option
 
     // Current block:
@@ -129,18 +124,18 @@ type private Ctx =
     // Current body:
     CurrentBodyOpt: XBodyDef option
     ResultLocalOpt: XLocalId option
-    Locals: AssocMap<XLocalId, XLocalDef>
-    Blocks: AssocMap<XBlockId, XBlockDef>
+    Locals: TreeMap<XLocalId, XLocalDef>
+    Blocks: TreeMap<XBlockId, XBlockDef>
 
     Trace: TraceFun }
 
-let private ofTyCtx (trace: TraceFun) (tyCtx: TyCtx) : Ctx =
-  { Serial = tyCtx.Serial
-    Vars = tyCtx.Vars
-    Funs = tyCtx.Funs
+let private ofTyCtx (trace: TraceFun) (hirCtx: HirCtx) : Ctx =
+  { Serial = hirCtx.Serial
+    Vars = hirCtx.Vars
+    Funs = hirCtx.Funs
     // Variants = tyCtx.Variants
-    MainFunOpt = tyCtx.MainFunOpt
-    Tys = tyCtx.Tys
+    MainFunOpt = hirCtx.MainFunOpt
+    Tys = hirCtx.Tys
     TyMangleMemo = TMap.empty tyCompare
     OptionTyMap = TMap.empty tyCompare
     ListTyMap = TMap.empty tyCompare
@@ -149,7 +144,7 @@ let private ofTyCtx (trace: TraceFun) (tyCtx: TyCtx) : Ctx =
     XUnions = TMap.empty compare
 
     Bodies = TMap.empty compare
-    MainBodyIdOpt = tyCtx.MainFunOpt |> Option.map funSerialToBodyId
+    MainBodyIdOpt = hirCtx.MainFunOpt |> Option.map funSerialToBodyId
     CurrentBlockOpt = None
     Stmts = []
     TerminatorOpt = None
@@ -166,10 +161,10 @@ let private toProgram (ctx: Ctx) : XProgram =
 
   TMap.fold
     (fun () _ (body: XBodyDef) ->
-      ctx.Trace "\nbody \"{}\" {}" [ body.Name; locToString body.Loc ]
+      ctx.Trace "\nbody \"{0}\" {1}" [ body.Name; Loc.toString body.Loc ]
 
       ctx.Trace
-        "  locals({})"
+        "  locals({0})"
         [ body.Locals
           |> TMap.toList
           |> List.length
@@ -178,14 +173,14 @@ let private toProgram (ctx: Ctx) : XProgram =
       TMap.fold
         (fun () (localId: XLocalId) (local: XLocalDef) ->
           ctx.Trace
-            "    {}#{}"
+            "    {0}#{1}"
             [ Option.defaultValue "" local.Name
               string localId ])
         ()
         body.Locals
 
       ctx.Trace
-        "  blocks ({})"
+        "  blocks ({0})"
         [ body.Blocks
           |> TMap.toList
           |> List.length
@@ -193,10 +188,10 @@ let private toProgram (ctx: Ctx) : XProgram =
 
       TMap.fold
         (fun () (blockId: XBlockId) (block: XBlockDef) ->
-          ctx.Trace "    #{}" [ string blockId ]
+          ctx.Trace "    #{0}" [ string blockId ]
 
-          List.fold (fun () stmt -> ctx.Trace "  ;{}" [ objToString stmt ]) () block.Stmts
-          ctx.Trace "    !{}" [ objToString block.Terminator ])
+          List.fold (fun () stmt -> ctx.Trace "  ;{0}" [ __dump stmt ]) () block.Stmts
+          ctx.Trace "    !{0}" [ __dump block.Terminator ])
         ()
         body.Blocks)
     ()
@@ -222,15 +217,14 @@ let private funSerialToBodyId (funSerial: FunSerial) : XBodyId = funSerialToInt 
 let private addLocal (name: string) (ty: XTy) (loc: Loc) (ctx: Ctx) : XLocalId * Ctx =
   let localId, ctx = freshSerial ctx
 
-  let localDef : XLocalDef =
+  let localDef: XLocalDef =
     { Name = Some name
       Id = localId
       Ty = ty
       Loc = loc }
 
   let ctx =
-    { ctx with
-        Locals = ctx.Locals |> TMap.add localId localDef }
+    { ctx with Locals = ctx.Locals |> TMap.add localId localDef }
 
   localId, ctx
 
@@ -282,15 +276,13 @@ let private setTerminator terminator (ctx: Ctx) =
   if ctx.TerminatorOpt |> Option.isSome then
     ctx
   else
-    { ctx with
-        TerminatorOpt = Some terminator }
+    { ctx with TerminatorOpt = Some terminator }
 
 let private freshBlock (ctx: Ctx) =
   let blockId, ctx = freshSerial ctx
 
   let ctx =
-    { ctx with
-        Blocks = ctx.Blocks |> TMap.add blockId unreachableBlockDef }
+    { ctx with Blocks = ctx.Blocks |> TMap.add blockId unreachableBlockDef }
 
   blockId, ctx
 
@@ -320,12 +312,11 @@ let private leaveBlock parent (ctx: Ctx) =
         TerminatorOpt = terminatorOpt }
 
   let ctx =
-    let blockDef : XBlockDef =
+    let blockDef: XBlockDef =
       { Stmts = stmts
         Terminator = terminator }
 
-    { ctx with
-        Blocks = ctx.Blocks |> TMap.add exitBlockId blockDef }
+    { ctx with Blocks = ctx.Blocks |> TMap.add exitBlockId blockDef }
 
   ctx
 
@@ -348,8 +339,7 @@ let private finishBranching terminator targetBlock (ctx: Ctx) =
           Stmts = stmts
           Terminator = Option.defaultValue terminator terminatorOpt }
 
-    { ctx with
-        Blocks = ctx.Blocks |> TMap.add blockId blockDef }
+    { ctx with Blocks = ctx.Blocks |> TMap.add blockId blockDef }
 
   { ctx with
       CurrentBlockOpt = Some targetBlock
@@ -404,22 +394,21 @@ let private xgVar varSerial (ctx: Ctx) : XLocalId * Ctx =
   | IsStatic -> todo ()
 
   | NotStatic ->
-    let localId : XLocalId = varSerial |> varSerialToInt
+    let localId: XLocalId = varSerial |> varSerialToInt
 
     if ctx.Locals |> TMap.containsKey localId then
       localId, ctx
     else
       let ty, (ctx: Ctx) = xgTy varDef.Ty ctx
 
-      let localDef : XLocalDef =
+      let localDef: XLocalDef =
         { Name = Some varDef.Name
           Id = localId
           Ty = ty
           Loc = varDef.Loc }
 
       let ctx =
-        { ctx with
-            Locals = ctx.Locals |> TMap.add localId localDef }
+        { ctx with Locals = ctx.Locals |> TMap.add localId localDef }
 
       localId, ctx
 
@@ -447,48 +436,48 @@ let private computeNoneVariantId (unionTyId: XUnionTyId) : XVariantId = unionTyI
 
 let private computeSomeVariantId (unionTyId: XUnionTyId) : XVariantId = unionTyId + 2
 
-let private xgOptionTy (itemTy: Ty) (ctx: Ctx) : XUnionTyId * Ctx =
-  match ctx.OptionTyMap |> TMap.tryFind itemTy with
-  | Some it -> it, ctx
+// let private xgOptionTy (itemTy: Ty) (ctx: Ctx) : XUnionTyId * Ctx =
+//   match ctx.OptionTyMap |> TMap.tryFind itemTy with
+//   | Some it -> it, ctx
 
-  | None ->
-    let n, ctx = freshSerialBy 3 ctx
-    let unionTyId = n
-    let noneVariantId = n + 1
-    let someVariantId = n + 2
-    assert (computeNoneVariantId unionTyId = noneVariantId)
-    assert (computeSomeVariantId unionTyId = someVariantId)
+//   | None ->
+//     let n, ctx = freshSerialBy 3 ctx
+//     let unionTyId = n
+//     let noneVariantId = n + 1
+//     let someVariantId = n + 2
+//     assert (computeNoneVariantId unionTyId = noneVariantId)
+//     assert (computeSomeVariantId unionTyId = someVariantId)
 
-    let optionTy = tyOption itemTy
-    let name, ctx = ctxTyMangle optionTy ctx
-    let someTy, ctx = xgTy itemTy ctx
+//     let optionTy = tyOption itemTy
+//     let name, ctx = ctxTyMangle optionTy ctx
+//     let someTy, ctx = xgTy itemTy ctx
 
-    let noneVariant : XVariantDef =
-      { Name = "None"
-        HasPayload = false
-        PayloadTy = XUnitTy
-        IsNewtype = false }
+//     let noneVariant: XVariantDef =
+//       { Name = "None"
+//         HasPayload = false
+//         PayloadTy = XUnitTy
+//         IsNewtype = false }
 
-    let someVariant : XVariantDef =
-      { Name = "Some"
-        HasPayload = true
-        PayloadTy = someTy
-        IsNewtype = false }
+//     let someVariant: XVariantDef =
+//       { Name = "Some"
+//         HasPayload = true
+//         PayloadTy = someTy
+//         IsNewtype = false }
 
-    let unionDef : XUnionDef =
-      { Name = name
-        Variants = [ noneVariantId; someVariantId ] }
+//     let unionDef: XUnionDef =
+//       { Name = name
+//         Variants = [ noneVariantId; someVariantId ] }
 
-    let ctx =
-      { ctx with
-          OptionTyMap = ctx.OptionTyMap |> TMap.add itemTy unionTyId
-          XVariants =
-            ctx.XVariants
-            |> TMap.add noneVariantId noneVariant
-            |> TMap.add someVariantId someVariant
-          XUnions = ctx.XUnions |> TMap.add unionTyId unionDef }
+//     let ctx =
+//       { ctx with
+//           OptionTyMap = ctx.OptionTyMap |> TMap.add itemTy unionTyId
+//           XVariants =
+//             ctx.XVariants
+//             |> TMap.add noneVariantId noneVariant
+//             |> TMap.add someVariantId someVariant
+//           XUnions = ctx.XUnions |> TMap.add unionTyId unionDef }
 
-    unionTyId, ctx
+//     unionTyId, ctx
 
 let private xgTy (ty: Ty) (ctx: Ctx) : XTy * Ctx =
   let (Ty (tk, tyArgs)) = ty
@@ -499,10 +488,10 @@ let private xgTy (ty: Ty) (ctx: Ctx) : XTy * Ctx =
   | BoolTk, _ -> XBoolTy, ctx
   | TupleTk, [] -> XUnitTy, ctx
 
-  | OptionTk, [ itemTy ] ->
-    let unionTyId, ctx = xgOptionTy itemTy ctx
-    XUnionTy unionTyId, ctx
-  | OptionTk, _ -> unreachable ()
+  // | OptionTk, [ itemTy ] ->
+  //   let unionTyId, ctx = xgOptionTy itemTy ctx
+  //   XUnionTy unionTyId, ctx
+  // | OptionTk, _ -> unreachable ()
 
   | _ -> todo ty
 
@@ -515,32 +504,32 @@ type private PatTermHost =
     Body: int -> Ctx -> Ctx
     Fallback: int -> Ctx -> Ctx }
 
-let private optionTyToItemTy (ty: XTy) (ctx: Ctx) =
-  match ty with
-  | XUnionTy unionTyId ->
-    let variantId = computeSomeVariantId unionTyId
-    let variantDef = ctx.XVariants |> mapFind variantId
-    assert (variantDef.Name = "Some")
-    unionTyId, variantDef.PayloadTy
+// let private optionTyToItemTy (ty: XTy) (ctx: Ctx) =
+//   match ty with
+//   | XUnionTy unionTyId ->
+//     let variantId = computeSomeVariantId unionTyId
+//     let variantDef = ctx.XVariants |> mapFind variantId
+//     assert (variantDef.Name = "Some")
+//     unionTyId, variantDef.PayloadTy
 
-  | _ -> unreachable () // not an option type
+//   | _ -> unreachable () // not an option type
 
-let private isNoneRval (arg: XRval) argTy loc ctx =
-  let unionTyId, _itemTy = optionTyToItemTy argTy ctx
+// let private isNoneRval (arg: XRval) argTy loc ctx =
+//   let unionTyId, _itemTy = optionTyToItemTy argTy ctx
 
-  let argLocal, ctx = rvalToLocal arg argTy loc ctx
+//   let argLocal, ctx = rvalToLocal arg argTy loc ctx
 
-  let place : XPlace =
-    { Local = argLocal
-      Path = [ XPart.Discriminant ] }
+//   let place: XPlace =
+//     { Local = argLocal
+//       Path = [ XPart.Discriminant ] }
 
-  let l, ctx =
-    rvalToArg (XPlaceRval(place, loc)) xtInt loc ctx
+//   let l, ctx =
+//     rvalToArg (XPlaceRval(place, loc)) xtInt loc ctx
 
-  let r =
-    XDiscriminantArg(computeNoneVariantId unionTyId, loc)
+//   let r =
+//     XDiscriminantArg(computeNoneVariantId unionTyId, loc)
 
-  XBinaryRval(XScalarEqualBinary, l, r, loc), ctx
+//   XBinaryRval(XScalarEqualBinary, l, r, loc), ctx
 
 let private xgPatTerm (host: PatTermHost) (term: PTerm) (cond: XRval) condTy loc ctx : Ctx =
   match term with
@@ -548,18 +537,18 @@ let private xgPatTerm (host: PatTermHost) (term: PTerm) (cond: XRval) condTy loc
 
   | PSelectTerm (part, term) ->
     match part with
-    | PSomeContentPart ->
-      let local, ctx = rvalToLocal cond condTy loc ctx
-      let unionTyId, condTy = optionTyToItemTy condTy ctx
+    // | PSomeContentPart ->
+    //   let local, ctx = rvalToLocal cond condTy loc ctx
+    //   let unionTyId, condTy = optionTyToItemTy condTy ctx
 
-      let cond =
-        let place : XPlace =
-          { Local = local
-            Path = [ XPart.Payload(computeSomeVariantId unionTyId) ] }
+    //   let cond =
+    //     let place: XPlace =
+    //       { Local = local
+    //         Path = [ XPart.Payload(computeSomeVariantId unionTyId) ] }
 
-        XPlaceRval(place, loc)
+    //     XPlaceRval(place, loc)
 
-      xgPatTerm host term cond condTy loc ctx
+    //   xgPatTerm host term cond condTy loc ctx
 
     | _ -> todo ()
 
@@ -589,19 +578,19 @@ let private xgPatTerm (host: PatTermHost) (term: PTerm) (cond: XRval) condTy loc
     let cond, ctx = xgVarWithRval varSerial cond loc ctx
     xgPatTerm host term cond condTy loc ctx
 
-  | PMatchOptionTerm (_, termOnNone, termOnSome) ->
-    let isNoneArg, ctx =
-      let rval, ctx = isNoneRval cond condTy loc ctx
-      rvalToArg rval XBoolTy loc ctx
+  // | PMatchOptionTerm (_, termOnNone, termOnSome) ->
+  //   let isNoneArg, ctx =
+  //     let rval, ctx = isNoneRval cond condTy loc ctx
+  //     rvalToArg rval XBoolTy loc ctx
 
-    let bodyBlock, ctx =
-      xgPatTermAsFreshBranch host termOnNone cond condTy loc ctx
+  //   let bodyBlock, ctx =
+  //     xgPatTermAsFreshBranch host termOnNone cond condTy loc ctx
 
-    let altBlock, ctx =
-      xgPatTermAsFreshBranch host termOnSome cond condTy loc ctx
+  //   let altBlock, ctx =
+  //     xgPatTermAsFreshBranch host termOnSome cond condTy loc ctx
 
-    ctx
-    |> setTerminator (XIfTk(isNoneArg, bodyBlock, altBlock, loc))
+  //   ctx
+  //   |> setTerminator (XIfTk(isNoneArg, bodyBlock, altBlock, loc))
 
   | _ -> todo ()
 
@@ -623,7 +612,7 @@ let private xgPatAsIrrefutable (pat: HPat) (cond: XRval) (ctx: Ctx) : Ctx =
   | HDiscardPat _
   | HNodePat (HTuplePN, [], _, _) -> ctx
 
-  | HVarPat (_, varSerial, _, loc) ->
+  | HVarPat (varSerial, _, loc) ->
     let _, ctx = xgVarWithRval varSerial cond loc ctx
     ctx
 
@@ -636,7 +625,7 @@ let private xgPatAsIrrefutable (pat: HPat) (cond: XRval) (ctx: Ctx) : Ctx =
 /// Processes an arg-site pattern to local.
 let private xgArgPat funName (i: int) pat ctx : XLocalId * Ctx =
   match pat with
-  | HVarPat (_, varSerial, _, _) -> xgVar varSerial ctx
+  | HVarPat (varSerial, _, _) -> xgVar varSerial ctx
 
   | _ ->
     let ty, loc = patExtract pat
@@ -670,7 +659,7 @@ let private mcToIf (cond: XArg) (condTy: Ty) arms target loc (ctx: Ctx) : Ctx op
   match condTy, arms with
   // | true -> ... | false -> ...
   | Ty (BoolTk, []),
-    [ HLitPat (BoolLit true, _), HLitExpr (BoolLit true, _), body;
+    [ HLitPat (BoolLit true, _), HLitExpr (BoolLit true, _), body
       HLitPat (BoolLit false, _), HLitExpr (BoolLit true, _), alt ] ->
 
     ctx
@@ -678,31 +667,31 @@ let private mcToIf (cond: XArg) (condTy: Ty) arms target loc (ctx: Ctx) : Ctx op
     |> Some
 
   // | None -> ... | _ -> ...
-  | Ty (OptionTk, [ itemTy ]),
-    [ HNodePat (HNonePN, _, _, _), HLitExpr (BoolLit true, _), noneCl; HDiscardPat _, HLitExpr (BoolLit true, _), someCl ] ->
+  // | Ty (OptionTk, [ itemTy ]),
+  //   [ HNodePat (HNonePN, _, _, _), HLitExpr (BoolLit true, _), noneCl; HDiscardPat _, HLitExpr (BoolLit true, _), someCl ] ->
 
-    let cond, ctx =
-      let unionTyId, ctx = xgOptionTy itemTy ctx
+  //   let cond, ctx =
+  //     let unionTyId, ctx = xgOptionTy itemTy ctx
 
-      let condLocal, ctx =
-        let condTy, ctx = xgTy condTy ctx
-        rvalToLocal (xRvalOfArg cond) condTy loc ctx
+  //     let condLocal, ctx =
+  //       let condTy, ctx = xgTy condTy ctx
+  //       rvalToLocal (xRvalOfArg cond) condTy loc ctx
 
-      let l, ctx =
-        let place : XPlace =
-          { Local = condLocal
-            Path = [ XPart.Discriminant ] }
+  //     let l, ctx =
+  //       let place: XPlace =
+  //         { Local = condLocal
+  //           Path = [ XPart.Discriminant ] }
 
-        rvalToArg (XPlaceRval(place, loc)) xtInt loc ctx
+  //       rvalToArg (XPlaceRval(place, loc)) xtInt loc ctx
 
-      let r =
-        XDiscriminantArg(computeNoneVariantId unionTyId, loc)
+  //     let r =
+  //       XDiscriminantArg(computeNoneVariantId unionTyId, loc)
 
-      rvalToArg (XBinaryRval(XScalarEqualBinary, l, r, loc)) XBoolTy loc ctx
+  //     rvalToArg (XBinaryRval(XScalarEqualBinary, l, r, loc)) XBoolTy loc ctx
 
-    ctx
-    |> emitIf cond (fun ctx -> xgExprToRval noneCl ctx) (fun ctx -> xgExprToRval someCl ctx) target loc
-    |> Some
+  //   ctx
+  //   |> emitIf cond (fun ctx -> xgExprToRval noneCl ctx) (fun ctx -> xgExprToRval someCl ctx) target loc
+  //   |> Some
 
   | _ -> None
 
@@ -721,7 +710,7 @@ let private xgMatchExpr (expr: HExpr) (ctx: Ctx) : XArg * Ctx =
 
   let targetLocal, ctx = addTempLocal "match" targetTy loc ctx
   let targetBlock, ctx = freshBlock ctx
-  let target : XTarget = targetLocal, targetBlock
+  let target: XTarget = targetLocal, targetBlock
 
   match mcToIf cond condTy arms target loc ctx with
   | Some ctx ->
@@ -741,7 +730,7 @@ let private xgMatchExpr (expr: HExpr) (ctx: Ctx) : XArg * Ctx =
     let nthArmId (i: int) : XBlockId = serial + i * 4
     let nthBodyId (i: int) : XBlockId = serial + i * 4 + 1
 
-    let host : PatTermHost =
+    let host: PatTermHost =
       { Guard =
           fun i ctx ->
             let guard =
@@ -788,10 +777,10 @@ let private xgMatchExpr (expr: HExpr) (ctx: Ctx) : XArg * Ctx =
 
     XLocalArg(targetLocal, loc), ctx
 
-let private xgLetValExpr (expr: HExpr) (ctx: Ctx) : Ctx =
+let private xgLetValStmt (letValStmt: HStmt) (ctx: Ctx) : Ctx =
   let pat, init =
-    match expr with
-    | HLetValExpr (pat, init, _, _, _) -> pat, init
+    match letValStmt with
+    | HLetValStmt (pat, init, _) -> pat, init
     | _ -> unreachable ()
 
   let init, ctx = xgExprToRval init ctx
@@ -803,9 +792,9 @@ let private xgLetValExpr (expr: HExpr) (ctx: Ctx) : Ctx =
 
 let private xgPrimExpr (prim: HPrim) (tyInfo: PrimTyInfo) loc ctx : XRval * Ctx =
   match prim, tyInfo with
-  | HPrim.OptionNone, PrimTyInfo.Option itemTy ->
-    let unionId, ctx = xgOptionTy itemTy ctx
-    XAggregateRval(XUnionAk unionId, [], loc), ctx
+  // | HPrim.OptionNone, PrimTyInfo.Option itemTy ->
+  //   let unionId, ctx = xgOptionTy itemTy ctx
+  //   XAggregateRval(XUnionAk unionId, [], loc), ctx
 
   | HPrim.Nil, _ -> todo ()
 
@@ -833,9 +822,9 @@ let private xgCallPrim (prim: HPrim) (tyInfo: PrimTyInfo) (args: XArg list) loc 
   | HPrim.Compare, [ l; r ], PrimTyInfo.StrOperation -> XBinaryRval(XStrCompareBinary, l, r, loc), ctx
 
   // constructor:
-  | HPrim.OptionSome, [ arg ], PrimTyInfo.Option itemTy ->
-    let ty, ctx = xgOptionTy itemTy ctx
-    XAggregateRval(XUnionAk ty, [ arg ], loc), ctx
+  // | HPrim.OptionSome, [ arg ], PrimTyInfo.Option itemTy ->
+  //   let ty, ctx = xgOptionTy itemTy ctx
+  //   XAggregateRval(XUnionAk ty, [ arg ], loc), ctx
 
   // effects:
   | HPrim.Exit, [ arg ], _ -> XUnitRval loc, setTerminator (XExitTk arg) ctx
@@ -846,8 +835,7 @@ let private xgCallPrim (prim: HPrim) (tyInfo: PrimTyInfo) (args: XArg list) loc 
   | HPrim.PtrWrite, [ l; r ], _ -> regularAction (XPtrWriteStmt(l, r, loc)) ctx
   | HPrim.PtrWrite, _, _ -> unreachable ()
 
-  | HPrim.Nil, _, _
-  | HPrim.OptionNone, _, _ -> unreachable () // Can't be called.
+  | HPrim.Nil, _, _ // Can't be called.
 
   | _ -> todo ()
 
@@ -862,7 +850,7 @@ let private xgNodeExpr (expr: HExpr) (ctx: Ctx) : XRval * Ctx =
     let arg, ctx = xgExprToArg (arg, ctx)
     XUnaryRval(XMinusUnary, arg, loc), ctx
 
-  | HCallProcEN, HFunExpr (funSerial, _, _) :: args ->
+  | HCallProcEN, HFunExpr (funSerial, _, _, _) :: args ->
     let bodyId = funSerialToBodyId funSerial
     let args, ctx = (args, ctx) |> stMap xgExprToArg
 
@@ -884,7 +872,7 @@ let private xgNodeExpr (expr: HExpr) (ctx: Ctx) : XRval * Ctx =
     xgCallPrim prim tyInfo args loc ctx
 
   | _ ->
-    ctx.Trace "unimplemented node expr {} ({})" [ objToString kind; locToString loc ]
+    ctx.Trace "unimplemented node expr {0} ({1})" [ __dump kind; Loc.toString loc ]
     let args, ctx = (args, ctx) |> stMap xgExprToArg
     // todo
     XUnitRval loc, ctx
@@ -930,11 +918,6 @@ let private xgExprToRval (expr: HExpr) (ctx: Ctx) : XRval * Ctx =
     let ctx = xgStmts stmts ctx
     xgExprToRval last ctx
 
-  | HLetValExpr _ ->
-    let ctx = xgLetValExpr expr ctx
-    XUnitRval(exprToLoc expr), ctx
-
-  | HLetFunExpr _ // Nested HLetFunExpr is resolved in Hoist.
   | HNavExpr _ // HNavExpr is resolved in RecordRes.
   | HRecordExpr _ -> unreachable () // HRecordExpr is resolved in RecordRes.
 
@@ -947,9 +930,9 @@ let private xgExprAsStmt (expr: HExpr) (ctx: Ctx) : Ctx =
 
   | _ when ctx.TerminatorOpt |> Option.isSome ->
     ctx.Trace
-      "unreachable expr deleted {} {}"
-      [ locToString (exprToLoc expr)
-        objToString expr ]
+      "unreachable expr deleted {0} {1}"
+      [ Loc.toString (exprToLoc expr)
+        __dump expr ]
 
     ctx
 
@@ -957,20 +940,17 @@ let private xgExprAsStmt (expr: HExpr) (ctx: Ctx) : Ctx =
     let ctx = xgStmts stmts ctx
     xgExprAsStmt last ctx
 
-  | HLetValExpr _ -> xgLetValExpr expr ctx
-
   | _ ->
     let _, ctx = xgExprToArg (expr, ctx)
     ctx
 
-let private xgStmts (stmts: HExpr list) (ctx: Ctx) : Ctx =
-  List.fold (fun ctx expr -> xgExprAsStmt expr ctx) ctx stmts
+let private xgStmts (stmts: HStmt list) (ctx: Ctx) : Ctx = List.fold xgStmt ctx stmts
 
 // -----------------------------------------------
 // decls
 // -----------------------------------------------
 
-let private xgLetFunDeclContents (decl: HExpr, ctx: Ctx) =
+let private xgLetFunStmt (letFunStmt: HStmt) (ctx: Ctx) : Ctx =
   assert (ctx.CurrentBlockOpt |> Option.isNone)
   assert (ctx.Stmts |> List.isEmpty)
   assert (ctx.TerminatorOpt |> Option.isNone)
@@ -979,14 +959,14 @@ let private xgLetFunDeclContents (decl: HExpr, ctx: Ctx) =
   assert (ctx.Blocks |> TMap.isEmpty)
 
   let funSerial, argPats, bodyExpr, loc =
-    match decl with
-    | HLetFunExpr (funSerial, _, _, argPats, body, _, _, loc) -> funSerial, argPats, body, loc
+    match letFunStmt with
+    | HLetFunStmt (funSerial, argPats, body, loc) -> funSerial, argPats, body, loc
     | _ -> unreachable ()
 
   let funDef = ctx.Funs |> mapFind funSerial
   let bodyTy, bodyLoc = exprExtract bodyExpr
 
-  let bodyDef : XBodyDef =
+  let bodyDef: XBodyDef =
     { Name = funDef.Name
       Loc = funDef.Loc
 
@@ -999,8 +979,7 @@ let private xgLetFunDeclContents (decl: HExpr, ctx: Ctx) =
       EntryBlockId = -1 }
 
   let ctx =
-    { ctx with
-        CurrentBodyOpt = Some bodyDef }
+    { ctx with CurrentBodyOpt = Some bodyDef }
 
   let argTys, resultTy, ctx =
     let argTys, ctx =
@@ -1048,37 +1027,34 @@ let private xgLetFunDeclContents (decl: HExpr, ctx: Ctx) =
       Locals = emptyLocals
       Blocks = emptyBlocks }
 
-let private xgDecl (decl: HExpr, ctx: Ctx) =
-  match decl with
-  | HBlockExpr (stmts, last) ->
-    if stmts |> List.forall hxIsUnitLit |> not then
-      ctx.Trace "// top-level block: {}" [ objToString stmts ]
+let private xgStmt (ctx: Ctx) (stmt: HStmt) : Ctx =
+  match stmt with
+  | HExprStmt expr -> xgExprAsStmt expr ctx
+  | HLetValStmt _ -> xgLetValStmt stmt ctx
+  | HLetFunStmt _ -> xgLetFunStmt stmt ctx
 
-    xgDecl (last, ctx)
+let private xgDecl (ctx: Ctx) (stmt: HStmt) : Ctx =
+  match stmt with
+  | HExprStmt expr when hxIsUnitLit expr -> ()
 
-  | HLetValExpr (pat, _, next, _, loc) ->
-    ctx.Trace "// top-level let-val: {} ({})" [ objToString pat; locToString loc ]
-    xgDecl (next, ctx)
+  | HExprStmt expr ->
+    ctx.Trace
+      "// top-level non-fun: {0} {1}"
+      [ exprToLoc expr |> Loc.toString
+        __dump expr ]
 
-  | HLetFunExpr (_, _, _, _, _, next, _, _) ->
-    ctx.Trace "// top-level fun: {}" [ exprToLoc decl |> locToString ]
+  | HLetValStmt (pat, _, loc) -> ctx.Trace "// top-level let-val: {0} ({1})" [ __dump pat; Loc.toString loc ]
 
-    let ctx = xgLetFunDeclContents (decl, ctx)
-    xgDecl (next, ctx)
+  | HLetFunStmt (_, _, _, loc) -> ctx.Trace "// top-level fun: {0}" [ Loc.toString loc ]
 
-  | _ ->
-    if hxIsUnitLit decl |> not then
-      ctx.Trace
-        "// top-level non-fun: {} {}"
-        [ exprToLoc decl |> locToString
-          objToString decl ]
+  xgStmt ctx stmt
 
-    ctx
+let private xgModule (ctx: Ctx) (m: HModule2) =
+  let ctx = m.Stmts |> List.fold xgDecl ctx
 
-let xirGen (trace: TraceFun) (decls: HExpr list, tyCtx: TyCtx) : XProgram =
-  let ctx = ofTyCtx trace tyCtx
+  ctx
 
-  let ctx =
-    List.fold (fun ctx decl -> xgDecl (decl, ctx)) ctx decls
+let xirGen (trace: TraceFun) (modules: HModule2 list, hirCtx: HirCtx) : XProgram =
+  let ctx = ofTyCtx trace hirCtx
 
-  ctx |> toProgram
+  modules |> List.fold xgModule ctx |> toProgram
