@@ -3,7 +3,6 @@ module rec MiloneTranslation.Xir
 open MiloneShared.SharedTypes
 open MiloneShared.TypeFloat
 open MiloneShared.TypeIntegers
-open MiloneShared.Util
 open MiloneStd.StdMap
 open MiloneTranslation.Hir
 
@@ -52,7 +51,7 @@ type XTy =
 type XPart =
   | Deref
   | Discriminant
-  | Field of XFieldId
+  | Field of index: int
   | Payload of XVariantId
 
 [<RequireQualifiedAccess>]
@@ -78,8 +77,13 @@ type XBinary =
   | XScalarCompareBinary
   | XStrCompareBinary
 
+  | XStrIndexBinary
+
+[<RequireQualifiedAccess>]
+type XRvalKind = | StrSlice
+
 type XAggregateKind =
-  | XUnionAk of XUnionTyId
+  | XVariantAk of XVariantId
   | XRecordAk of XRecordTyId
 
 type XRval =
@@ -92,11 +96,13 @@ type XRval =
 
   | XUnaryRval of XUnary * XArg * Loc
   | XBinaryRval of XBinary * XArg * XArg * Loc
+  | XNodeRval of XRvalKind * XArg list * Loc
   | XAggregateRval of XAggregateKind * XArg list * Loc
 
 type XStmt =
   | XAssignStmt of XPlace * XRval * Loc
   | XCallStmt of XBodyId * XArg list * XPlace * Loc
+  | XNativeCallStmt of FunSerial * XArg list * XPlace * Loc
   | XPrintfnStmt of XArg list * Loc
   | XPtrWriteStmt of XArg * XArg * Loc
 

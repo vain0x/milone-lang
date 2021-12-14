@@ -28,7 +28,6 @@ type private PrimTyInfo =
   | NoInfo
   | ScalarOperation
   | StrOperation
-  | Option of optionItemTy: Ty
 
 let private primTyInfo (prim: HPrim) (args: HExpr list) (targetTy: Ty) : PrimTyInfo =
   let onScalarOrStr expr =
@@ -100,13 +99,12 @@ type private Ctx =
   { Serial: Serial
     Vars: TreeMap<VarSerial, VarDef>
     Funs: TreeMap<FunSerial, FunDef>
-    // Variants: TreeMap<VariantSerial, VariantDef>
+    Variants: TreeMap<VariantSerial, VariantDef>
     Tys: TreeMap<TySerial, TyDef>
 
     MainFunOpt: FunSerial option
 
     TyMangleMemo: TreeMap<Ty, string>
-    OptionTyMap: TreeMap<Ty, XUnionTyId>
     ListTyMap: TreeMap<Ty, XUnionTyId>
     XRecords: TreeMap<XRecordTyId, XRecordDef>
     XVariants: TreeMap<XVariantId, XVariantDef>
@@ -133,11 +131,10 @@ let private ofTyCtx (trace: TraceFun) (hirCtx: HirCtx) : Ctx =
   { Serial = hirCtx.Serial
     Vars = hirCtx.Vars
     Funs = hirCtx.Funs
-    // Variants = tyCtx.Variants
+    Variants = hirCtx.Variants
     MainFunOpt = hirCtx.MainFunOpt
     Tys = hirCtx.Tys
     TyMangleMemo = TMap.empty tyCompare
-    OptionTyMap = TMap.empty tyCompare
     ListTyMap = TMap.empty tyCompare
     XRecords = TMap.empty compare
     XVariants = TMap.empty compare
@@ -422,6 +419,26 @@ let private xgVarWithRval varSerial (init: XRval) loc ctx =
 
   XPlaceRval(xLocalPlace local, loc), ctx
 
+let private xgVariantExpr expr ctx =
+  let variantSerial, ty, loc =
+    match expr with
+    | HVariantExpr (variantSerial, ty, loc) -> variantSerial, ty, loc
+    | _ -> unreachable ()
+
+  let ty, ctx = xgTy ty ctx
+
+  let xUnionId =
+    match ty with
+    | XUnionTy it -> it
+    | _ -> unreachable () // Variant must be a union. (Resolved in )
+
+  assert (ctx.XUnions |> TMap.containsKey xUnionId)
+
+  let xVariantId = variantSerialToInt variantSerial
+  assert (ctx.XVariants |> TMap.containsKey xVariantId)
+
+  XAggregateRval(XVariantAk xVariantId, [], loc), ctx
+
 // -----------------------------------------------
 // tys
 // -----------------------------------------------
@@ -432,52 +449,45 @@ let private ctxTyMangle (ty: Ty) (ctx: Ctx) =
   let name, memo = tyMangle (ty, ctx.TyMangleMemo)
   name, { ctx with TyMangleMemo = memo }
 
-let private computeNoneVariantId (unionTyId: XUnionTyId) : XVariantId = unionTyId + 1
+let private xgUnionTy (tySerial: TySerial) (ctx: Ctx) : XTy * Ctx =
+  if ctx.XUnions |> TMap.containsKey tySerial then
+    XUnionTy tySerial, ctx
+  else
+    let ident, _, variants, loc =
+      match ctx.Tys |> TMap.tryFind tySerial with
+      | Some (UnionTyDef (ident, tyVars, variants, loc)) -> ident, tyVars, variants, loc
+      | _ -> unreachable ()
 
-let private computeSomeVariantId (unionTyId: XUnionTyId) : XVariantId = unionTyId + 2
+    let ctx =
+      variants
+      |> List.fold
+           (fun (ctx: Ctx) variantSerial ->
+             let variantDef = ctx.Variants |> mapFind variantSerial
+             let payloadTy, ctx = xgTy variantDef.PayloadTy ctx
 
-// let private xgOptionTy (itemTy: Ty) (ctx: Ctx) : XUnionTyId * Ctx =
-//   match ctx.OptionTyMap |> TMap.tryFind itemTy with
-//   | Some it -> it, ctx
+             let xVariantDef: XVariantDef =
+               { Name = variantDef.Name
+                 HasPayload = variantDef.HasPayload
+                 PayloadTy = payloadTy
+                 IsNewtype = variantDef.IsNewtype }
 
-//   | None ->
-//     let n, ctx = freshSerialBy 3 ctx
-//     let unionTyId = n
-//     let noneVariantId = n + 1
-//     let someVariantId = n + 2
-//     assert (computeNoneVariantId unionTyId = noneVariantId)
-//     assert (computeSomeVariantId unionTyId = someVariantId)
+             let ctx =
+               { ctx with
+                   XVariants =
+                     ctx.XVariants
+                     |> TMap.add (variantSerial |> variantSerialToInt) xVariantDef }
 
-//     let optionTy = tyOption itemTy
-//     let name, ctx = ctxTyMangle optionTy ctx
-//     let someTy, ctx = xgTy itemTy ctx
+             ctx)
+           ctx
 
-//     let noneVariant: XVariantDef =
-//       { Name = "None"
-//         HasPayload = false
-//         PayloadTy = XUnitTy
-//         IsNewtype = false }
+    let xUnionDef: XUnionDef =
+      let variants = variants |> List.map variantSerialToInt
+      { Name = ident; Variants = variants }
 
-//     let someVariant: XVariantDef =
-//       { Name = "Some"
-//         HasPayload = true
-//         PayloadTy = someTy
-//         IsNewtype = false }
+    let ctx =
+      { ctx with XUnions = ctx.XUnions |> TMap.add tySerial xUnionDef }
 
-//     let unionDef: XUnionDef =
-//       { Name = name
-//         Variants = [ noneVariantId; someVariantId ] }
-
-//     let ctx =
-//       { ctx with
-//           OptionTyMap = ctx.OptionTyMap |> TMap.add itemTy unionTyId
-//           XVariants =
-//             ctx.XVariants
-//             |> TMap.add noneVariantId noneVariant
-//             |> TMap.add someVariantId someVariant
-//           XUnions = ctx.XUnions |> TMap.add unionTyId unionDef }
-
-//     unionTyId, ctx
+    XUnionTy tySerial, ctx
 
 let private xgTy (ty: Ty) (ctx: Ctx) : XTy * Ctx =
   let (Ty (tk, tyArgs)) = ty
@@ -488,10 +498,7 @@ let private xgTy (ty: Ty) (ctx: Ctx) : XTy * Ctx =
   | BoolTk, _ -> XBoolTy, ctx
   | TupleTk, [] -> XUnitTy, ctx
 
-  // | OptionTk, [ itemTy ] ->
-  //   let unionTyId, ctx = xgOptionTy itemTy ctx
-  //   XUnionTy unionTyId, ctx
-  // | OptionTk, _ -> unreachable ()
+  | UnionTk tySerial, _ -> xgUnionTy tySerial ctx
 
   | _ -> todo ty
 
@@ -787,6 +794,40 @@ let private xgLetValStmt (letValStmt: HStmt) (ctx: Ctx) : Ctx =
   xgPatAsIrrefutable pat init ctx
 
 // -----------------------------------------------
+// expr: objects
+// -----------------------------------------------
+
+let private xgRecordExpr args ty loc (ctx: Ctx) =
+  let ty, ctx = xgTy ty ctx
+
+  let recordId =
+    match ty with
+    | XRecordTy it -> it
+    | _ -> unreachable ()
+
+  let fields, ctx = (args, ctx) |> stMap xgExprToArg
+
+  XAggregateRval(XRecordAk recordId, fields, loc), ctx
+
+let private xgRecordItemExpr index record ty loc (ctx: Ctx) =
+  let recordTy, ctx = xgTy (record |> exprToTy) ctx
+  let record, ctx = (record, ctx) |> xgExprToLocal
+  let _, ctx = xgTy ty ctx
+
+  let recordId =
+    match recordTy with
+    | XRecordTy it -> it
+    | _ -> unreachable ()
+
+  assert (ctx.XRecords |> TMap.containsKey recordId)
+
+  let place: XPlace =
+    { Local = record
+      Path = [ XPart.Field index ] }
+
+  XPlaceRval(place, loc), ctx
+
+// -----------------------------------------------
 // expr: prim and node
 // -----------------------------------------------
 
@@ -845,10 +886,38 @@ let private xgNodeExpr (expr: HExpr) (ctx: Ctx) : XRval * Ctx =
     | HNodeExpr (kind, args, ty, loc) -> kind, args, ty, loc
     | _ -> unreachable ()
 
+  let toUnary (kind: XUnary) arg ctx =
+    let arg, ctx = xgExprToArg (arg, ctx)
+    XUnaryRval(kind, arg, loc), ctx
+
+  let toBinary (kind: XBinary) arg1 arg2 ctx =
+    let arg1, ctx = xgExprToArg (arg1, ctx)
+    let arg2, ctx = xgExprToArg (arg2, ctx)
+    XBinaryRval(kind, arg1, arg2, loc), ctx
+
+  let toNode (kind: XRvalKind) args ctx =
+    let args, ctx = (args, ctx) |> stMap xgExprToArg
+    XNodeRval(kind, args, loc), ctx
+
   match kind, args with
   | HMinusEN, [ arg ] ->
     let arg, ctx = xgExprToArg (arg, ctx)
     XUnaryRval(XMinusUnary, arg, loc), ctx
+
+  | HTupleEN, [] -> XUnitRval loc, ctx
+  | HTupleEN, _ -> unreachable () // Non-unit HTupleEN is resolved in MonoTy.
+
+  | HRecordEN, _ -> xgRecordExpr args targetTy loc ctx
+  | HRecordItemEN index, [ record ] -> xgRecordItemExpr index record targetTy loc ctx
+  | HRecordItemEN _, _ -> unreachable ()
+
+  | HIndexEN, [ l; r ] -> toBinary XStrIndexBinary l r ctx
+  | HIndexEN, _ -> unreachable ()
+  | HSliceEN, _ -> toNode XRvalKind.StrSlice args ctx
+
+  | HDiscriminantEN variantSerial, _ ->
+    let variantId = variantSerialToInt variantSerial
+    XDiscriminantRval(variantId, loc), ctx
 
   | HCallProcEN, HFunExpr (funSerial, _, _, _) :: args ->
     let bodyId = funSerialToBodyId funSerial
@@ -871,6 +940,17 @@ let private xgNodeExpr (expr: HExpr) (ctx: Ctx) : XRval * Ctx =
     let args, ctx = (args, ctx) |> stMap xgExprToArg
     xgCallPrim prim tyInfo args loc ctx
 
+  | HCallProcEN, HNodeExpr (HNativeFunEN funSerial, _, _, _) :: args ->
+    let args, ctx = (args, ctx) |> stMap xgExprToArg
+    let result, ctx = addTempLocal "call" targetTy loc ctx
+
+    let ctx =
+      addStmt (XNativeCallStmt(funSerial, args, xLocalPlace result, loc)) ctx
+
+    XLocalRval(result, loc), ctx
+
+  | HCallProcEN _, _ -> unreachable expr
+
   | _ ->
     ctx.Trace "unimplemented node expr {0} ({1})" [ __dump kind; Loc.toString loc ]
     let args, ctx = (args, ctx) |> stMap xgExprToArg
@@ -880,6 +960,12 @@ let private xgNodeExpr (expr: HExpr) (ctx: Ctx) : XRval * Ctx =
 // -----------------------------------------------
 // expr: exprToXxx flavors
 // -----------------------------------------------
+
+let private xgExprToLocal (expr: HExpr, ctx: Ctx) : XLocalId * Ctx =
+  let ty, loc = expr |> exprExtract
+  let ty, ctx = xgTy ty ctx
+  let rval, ctx = xgExprToRval expr ctx
+  rvalToLocal rval ty loc ctx
 
 let private xgExprToArg (expr: HExpr, ctx: Ctx) : XArg * Ctx =
   let rval, ctx = xgExprToRval expr ctx
@@ -901,8 +987,7 @@ let private xgExprToRval (expr: HExpr) (ctx: Ctx) : XRval * Ctx =
     XLocalRval(localId, loc), ctx
 
   | HFunExpr _ -> failwith "fun expr must occur as callee or arg of closure"
-
-  | HVariantExpr (serial, ty, loc) -> todo ()
+  | HVariantExpr _ -> xgVariantExpr expr ctx
 
   | HPrimExpr (prim, targetTy, loc) ->
     let tyInfo = primTyInfo prim [] targetTy
