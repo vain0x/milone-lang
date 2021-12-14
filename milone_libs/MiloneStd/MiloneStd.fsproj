@@ -1,20 +1,32 @@
 ﻿<Project Sdk="Microsoft.NET.Sdk">
 
   <PropertyGroup>
-    <TargetFramework>netstandard2.1</TargetFramework>
+    <TargetFramework>net6.0</TargetFramework>
   </PropertyGroup>
 
   <ItemGroup>
-    <Compile Include="FSharpOnly.fs" />
+    <Compile Include="StdError.fs" />
+    <Compile Include="StdTesting.fs" />
+    <Compile Include="StdPair.fs" />
+    <Compile Include="StdOption.fs" />
     <Compile Include="StdResult.fs" />
     <Compile Include="StdChar.fs" />
+    <Compile Include="StdStringBase.fs" />
     <Compile Include="StdString.fs" />
+    <Compile Include="StdList.fs" />
     <Compile Include="StdLoop.fs" />
     <Compile Include="StdIter.fs" />
+    <Compile Include="StdAssoc.fs" />
+    <Compile Include="StdArrayBase.fs" />
     <Compile Include="StdArray.fs" />
     <Compile Include="StdMap.fs" />
     <Compile Include="StdSet.fs" />
+    <Compile Include="StdMultimap.fs" />
+    <Compile Include="StdIntBase.fs" />
     <Compile Include="StdInt.fs" />
+    <Compile Include="StdJsonBase.fs" />
+    <Compile Include="StdJson.fs" />
+    <Compile Include="StdEnvBase.fs" />
     <Compile Include="StdEnv.fs" />
     <Compile Include="StdPath.fs" />
   </ItemGroup>

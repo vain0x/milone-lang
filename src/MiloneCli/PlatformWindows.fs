@@ -28,6 +28,7 @@ module private Path =
 
     path |> Path.trimEndSep |> Path.toString |> go
 
+  // #pathJoin
   let join (basePath: Path) (name: Path) : Path =
     let isRooted =
       (name |> Path.toString |> S.startsWith "/")
@@ -78,10 +79,14 @@ type BuildOnWindowsParams =
     TargetDir: Path
     IsRelease: bool
     ExeFile: Path
+    // FIXME: support csanitize, cstd, objList
+    CcList: Path list
+    Libs: string list
 
     NewGuid: NewGuidFun
     DirCreate: Path -> unit
     FileExists: FileExistsFun
+    FileRead: Path -> string option
     FileWrite: Path -> string -> unit
     RunCommand: Path -> string list -> unit }
 
@@ -92,8 +97,29 @@ let buildOnWindows (p: BuildOnWindowsParams) : unit =
     else
       "Debug"
 
-  // Generate solution/project files for VC++ project.
-  let projectGuid = p.NewGuid()
+  // Retrieve or generate GUID for solution and VC++ projects.
+  let projectGuid, guid1, guid2 =
+    let path = Path.join p.TargetDir (Path "guid.txt")
+
+    match path
+          |> p.FileRead
+          |> Option.defaultValue ""
+          |> S.trimEnd
+          |> S.split ";"
+      with
+    | [ g1; g2; g3 ] -> Guid g1, Guid g2, Guid g3
+
+    | _ ->
+      let projectGuid = p.NewGuid()
+      let guid1 = p.NewGuid()
+      let guid2 = p.NewGuid()
+
+      [ projectGuid; guid1; guid2 ]
+      |> List.map Guid.toString
+      |> S.concat ";"
+      |> p.FileWrite path
+
+      projectGuid, guid1, guid2
 
   let slnFile =
     Path.join p.TargetDir (Path(p.ProjectName + ".sln"))
@@ -102,8 +128,8 @@ let buildOnWindows (p: BuildOnWindowsParams) : unit =
     let p: SolutionXmlParams =
       { ProjectGuid = projectGuid
         ProjectName = p.ProjectName
-        Guid1 = p.NewGuid()
-        Guid2 = p.NewGuid() }
+        Guid1 = guid1
+        Guid2 = guid2 }
 
     renderSolutionXml p
 
@@ -117,7 +143,8 @@ let buildOnWindows (p: BuildOnWindowsParams) : unit =
 
     let p: VcxProjectParams =
       { MiloneTargetDir = p.TargetDir
-        CFiles = p.CFiles
+        CFiles = List.append p.CFiles p.CcList
+        Libs = p.Libs |> List.map Path
         ProjectGuid = projectGuid
         ProjectName = p.ProjectName
         IncludeDir = runtimeDir
@@ -207,6 +234,7 @@ EndGlobal
 type private VcxProjectParams =
   { MiloneTargetDir: Path
     CFiles: Path list
+    Libs: Path list
 
     ProjectGuid: Guid
     ProjectName: string
@@ -325,6 +353,7 @@ let private renderVcxProjectXml (p: VcxProjectParams) : string =
     <Link>
       <SubSystem>Console</SubSystem>
       <GenerateDebugInformation>true</GenerateDebugInformation>
+      <AdditionalDependencies>${LIBS};kernel32.lib;user32.lib;gdi32.lib;winspool.lib;comdlg32.lib;advapi32.lib;shell32.lib;ole32.lib;oleaut32.lib;uuid.lib;odbc32.lib;odbccp32.lib;%(AdditionalDependencies)</AdditionalDependencies>
     </Link>
   </ItemDefinitionGroup>
   <ItemDefinitionGroup Condition="'$(Configuration)|$(Platform)'=='Release|Win32'">
@@ -346,6 +375,7 @@ let private renderVcxProjectXml (p: VcxProjectParams) : string =
       <EnableCOMDATFolding>true</EnableCOMDATFolding>
       <OptimizeReferences>true</OptimizeReferences>
       <GenerateDebugInformation>true</GenerateDebugInformation>
+      <AdditionalDependencies>${LIBS};kernel32.lib;user32.lib;gdi32.lib;winspool.lib;comdlg32.lib;advapi32.lib;shell32.lib;ole32.lib;oleaut32.lib;uuid.lib;odbc32.lib;odbccp32.lib;%(AdditionalDependencies)</AdditionalDependencies>
     </Link>
   </ItemDefinitionGroup>"""
   + """
@@ -363,6 +393,7 @@ let private renderVcxProjectXml (p: VcxProjectParams) : string =
     <Link>
       <SubSystem>Console</SubSystem>
       <GenerateDebugInformation>true</GenerateDebugInformation>
+      <AdditionalDependencies>${LIBS};kernel32.lib;user32.lib;gdi32.lib;winspool.lib;comdlg32.lib;advapi32.lib;shell32.lib;ole32.lib;oleaut32.lib;uuid.lib;odbc32.lib;odbccp32.lib;%(AdditionalDependencies)</AdditionalDependencies>
     </Link>
   </ItemDefinitionGroup>
   <ItemDefinitionGroup Condition="'$(Configuration)|$(Platform)'=='Release|x64'">
@@ -384,6 +415,7 @@ let private renderVcxProjectXml (p: VcxProjectParams) : string =
       <EnableCOMDATFolding>true</EnableCOMDATFolding>
       <OptimizeReferences>true</OptimizeReferences>
       <GenerateDebugInformation>true</GenerateDebugInformation>
+      <AdditionalDependencies>${LIBS};kernel32.lib;user32.lib;gdi32.lib;winspool.lib;comdlg32.lib;advapi32.lib;shell32.lib;ole32.lib;oleaut32.lib;uuid.lib;odbc32.lib;odbccp32.lib;%(AdditionalDependencies)</AdditionalDependencies>
     </Link>
   </ItemDefinitionGroup>
   <ItemGroup>
@@ -409,5 +441,7 @@ let private renderVcxProjectXml (p: VcxProjectParams) : string =
         |> List.map (fun cFile ->
           let path = Path.toString cFile
 
-          "<ClCompile Include=\"../" + path + "\"/>")
+          "<ClCompile Include=\"" + path + "\"/>")
         |> S.concat "\n  ")
+
+  |> S.replace "${LIBS}" (p.Libs |> List.map Path.toString |> S.concat ";")

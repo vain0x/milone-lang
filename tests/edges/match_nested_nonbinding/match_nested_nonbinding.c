@@ -1,10 +1,10 @@
-#include "milone.h"
+#include <milone.h>
 
 struct MyBool_;
 
 struct MyOption_;
 
-int milone_main(void);
+int main(int argc, char** argv);
 
 enum MyBool_Discriminant {
     MyFalse_,
@@ -27,7 +27,8 @@ struct MyOption_ {
     };
 };
 
-int milone_main(void) {
+int main(int argc, char** argv) {
+    milone_start(argc, argv);
     char match_;
     struct MyOption_ variant_ = (struct MyOption_){.discriminant = MySome_, .MySome_ = (struct MyBool_){.discriminant = MyTrue_}};
     if ((variant_.discriminant != MySome_)) goto next_2;
@@ -36,12 +37,12 @@ int milone_main(void) {
     goto end_match_1;
 next_2:;
     if ((variant_.discriminant != MySome_)) goto next_3;
-    milone_assert(false, 16, 16);
+    milone_assert(false, (struct String){.str = "match_nested_nonbinding/match_nested_nonbinding.milone", .len = 54}, 16, 16);
     match_ = 0;
     goto end_match_1;
 next_3:;
     if ((variant_.discriminant != MyNone_)) goto next_4;
-    milone_assert(false, 17, 14);
+    milone_assert(false, (struct String){.str = "match_nested_nonbinding/match_nested_nonbinding.milone", .len = 54}, 17, 14);
     match_ = 0;
     goto end_match_1;
 next_4:;

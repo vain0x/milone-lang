@@ -1,4 +1,4 @@
-#include "milone.h"
+#include <milone.h>
 
 char const* str_as_ptr(struct String );
 
@@ -12,7 +12,7 @@ int fclose(FILE* );
 
 int native_type_Program_fclose(FILE* fp_);
 
-int milone_main(void);
+int main(int argc, char** argv);
 
 char const* native_type_Program_strAsPtr(struct String s_) {
     char const* str_as_ptr_result = str_as_ptr(s_);
@@ -31,12 +31,13 @@ int native_type_Program_fclose(FILE* fp_) {
     return fclose_result;
 }
 
-int milone_main(void) {
+int main(int argc, char** argv) {
+    milone_start(argc, argv);
     FILE* call_2 = native_type_Program_fopen((struct String){.str = "LICENSE", .len = 7}, (struct String){.str = "r", .len = 1});
     FILE* fp_1 = call_2;
-    milone_assert((((uintptr_t)fp_1) != (size_t)0ULL), 15, 2);
+    milone_assert((((uintptr_t)fp_1) != (size_t)0ULL), (struct String){.str = "native_type/native_type.milone", .len = 30}, 15, 2);
     int call_3 = native_type_Program_fclose(fp_1);
     int stat_ = call_3;
-    milone_assert((stat_ == 0), 18, 2);
+    milone_assert((stat_ == 0), (struct String){.str = "native_type/native_type.milone", .len = 30}, 18, 2);
     return 0;
 }

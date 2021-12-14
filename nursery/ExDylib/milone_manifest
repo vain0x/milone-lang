@@ -1,0 +1,4 @@
+cc dylib_runtime.c
+
+# linux only
+# lib dl

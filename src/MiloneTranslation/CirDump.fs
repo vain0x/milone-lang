@@ -10,6 +10,7 @@ open MiloneTranslation.Cir
 
 module C = MiloneStd.StdChar
 module S = MiloneStd.StdString
+module SB = MiloneStd.StdStringBase
 
 let private eol = "\n"
 
@@ -36,6 +37,7 @@ let private isFirst first =
 
 let private declIsForwardOnly decl =
   match decl with
+  | CFunPtrTyDef _
   | CStructForwardDecl _
   | CFunForwardDecl _ -> true
   | _ -> false
@@ -73,24 +75,6 @@ let private binaryToString op =
 // Types
 // -----------------------------------------------
 
-let private cpFunPtrTy name argTys resultTy acc =
-  match argTys with
-  | [] ->
-    acc
-    |> cpTy resultTy
-    |> cons "(*"
-    |> cons name
-    |> cons ")(void)"
-
-  | _ ->
-    acc
-    |> cpTy resultTy
-    |> cons "(*"
-    |> cons name
-    |> cons ")("
-    |> join ", " argTys cpTy
-    |> cons ")"
-
 let private cpTy ty acc : string list =
   match ty with
   | CVoidTy -> acc |> cons "void"
@@ -100,16 +84,12 @@ let private cpTy ty acc : string list =
   | CCharTy -> acc |> cons "char"
   | CPtrTy ty -> acc |> cpTy ty |> cons "*"
   | CConstPtrTy ty -> acc |> cpTy ty |> cons " const*"
-  | CFunPtrTy (argTys, resultTy) -> acc |> cpFunPtrTy "" argTys resultTy
   | CStructTy name -> acc |> cons "struct " |> cons name
   | CEnumTy name -> acc |> cons "enum " |> cons name
   | CEmbedTy code -> acc |> cons code
 
-/// `T x` or `T (*x)(..)`
-let private cpTyWithName name ty acc =
-  match ty with
-  | CFunPtrTy (argTys, resultTy) -> acc |> cpFunPtrTy name argTys resultTy
-  | _ -> acc |> cpTy ty |> cons " " |> cons name
+/// `T x` or `T (*x)(..)`. FIXME: remove this
+let private cpTyWithName name ty acc = acc |> cpTy ty |> cons " " |> cons name
 
 let private cpParams ps acc : string list =
   let rec go ps acc =
@@ -134,46 +114,13 @@ let private cpParams ps acc : string list =
 // Literals
 // -----------------------------------------------
 
-let private evalHexDigit (c: char) : int =
-  if '0' <= c && c <= '9' then
-    int (byte c - byte '0')
-  else if 'A' <= c && c <= 'F' then
-    int (byte c - byte 'A') + 10
-  else if 'a' <= c && c <= 'f' then
-    int (byte c - byte 'a') + 10
-  else
-    assert false
-    0
-
 let private uint64FromHex (l: int) (r: int) (s: string) =
   assert (0 <= l && l < r && r <= s.Length)
 
-  let rec go acc (i: int) =
-    if i = r then
-      acc
-    else
-      let d = uint64 (evalHexDigit s.[i])
-      go (acc * uint64 16 + d) (i + 1)
+  S.parseHexAsUInt64 s.[l..r - 1]
+  |> Option.defaultWith unreachable
 
-  go (uint64 0) l
-
-let private uint64ToHex (len: int) (value: uint64) =
-  assert (len >= 0)
-
-  let rec go acc len (n: uint64) =
-    if n = uint64 0 && len <= 0 then
-      acc
-    else
-      let d = int (n % uint64 16)
-      let acc = "0123456789abcdef".[d..d] + acc
-      let len = if len >= 1 then len - 1 else 0
-      let n = n / uint64 16
-      go acc len n
-
-  if value = uint64 0 && len = 0 then
-    "0"
-  else
-    go "" len value
+let private uint64ToHex (len: int) (value: uint64) = S.uint64ToHex len value
 
 // See also: https://en.cppreference.com/w/c/language/integer_constant
 //
@@ -203,7 +150,7 @@ let private cpIntLit flavor (text: string) =
     let text = text.[3..text.Length - 1]
 
     let value =
-      /// FIXME: (~~~) is unimplemented
+      // (~~~) is unimplemented
       let a = uint64FromHex 0 text.Length text
 
       if a = uint64 0 then
@@ -237,7 +184,7 @@ let private cpStrObjLit (value: string) acc =
   |> cons "(struct String){.str = "
   |> cpStrRawLit value
   |> cons ", .len = "
-  |> cons (string (__stringLengthInUtf8Bytes value))
+  |> cons (string (SB.utf8Length value))
   |> cons "}"
 
 let private cpStructLit fields ty acc =
@@ -296,7 +243,7 @@ let private cpExpr expr acc : string list =
   | CCharExpr value when C.isAscii value |> not ->
     acc
     |> cons "(char)'\\x"
-    |> cons (intToHexWithPadding 2 (int (byte value)))
+    |> cons (S.uint64ToHex 2 (uint64 (byte value)))
     |> cons "'"
 
   | CCharExpr value ->
@@ -310,9 +257,7 @@ let private cpExpr expr acc : string list =
 
   | CInitExpr (fields, ty) -> acc |> cpStructLit fields ty
 
-  | CDotExpr (CStrObjExpr value, "len") ->
-    acc
-    |> cons (string (__stringLengthInUtf8Bytes value))
+  | CDotExpr (CStrObjExpr value, "len") -> acc |> cons (string (SB.utf8Length value))
 
   | CVarExpr name -> acc |> cons name
 
@@ -343,6 +288,8 @@ let private cpExpr expr acc : string list =
     |> cons ")"
 
   | CSizeOfExpr ty -> acc |> cons "sizeof(" |> cpTy ty |> cons ")"
+
+  | CTyPlaceholderExpr ty -> acc |> cpTy ty
 
   | CUnaryExpr (op, arg) ->
     acc
@@ -593,7 +540,7 @@ let private cpDecl decl acc =
 
   | CInternalStaticVarDecl (name, ty) ->
     acc
-    // FIXME: global variable is now defined in entry module no matter where it is.
+    // FIXME: global variable is now defined in entry module no matter where it is. (this might be resolved)
     // |> cons "static "
     |> cpTyWithName name ty
     |> cons ";"
@@ -632,6 +579,7 @@ let private cpDecl decl acc =
     |> cons "}"
     |> cons eol
 
+  | CFunPtrTyDef _
   | CStructForwardDecl _
   | CFunForwardDecl _
   | CNativeDecl _ -> acc
@@ -653,6 +601,29 @@ let private cpForwardDecl decl acc =
   | CStaticVarDecl _
   | CInternalStaticVarDecl _
   | CExternVarDecl _ -> acc
+
+  | CFunPtrTyDef (ident, argTys, resultTy) ->
+    let acc = acc |> cons "typedef "
+
+    let acc =
+      match argTys with
+      | [] ->
+        acc
+        |> cpTy resultTy
+        |> cons "(*"
+        |> cons ident
+        |> cons ")(void)"
+
+      | _ ->
+        acc
+        |> cpTy resultTy
+        |> cons "(*"
+        |> cons ident
+        |> cons ")("
+        |> join ", " argTys cpTy
+        |> cons ")"
+
+    acc |> cons ";" |> cons eol |> cons eol
 
   | CStructDecl (name, _, _) ->
     acc
@@ -715,7 +686,7 @@ let private cpDecls decls acc =
 // -----------------------------------------------
 
 let private cpHeader acc =
-  let header = "#include \"milone.h\""
+  let header = "#include <milone.h>"
   acc |> cons header |> cons eol |> cons eol
 
 let cirDump (decls: CDecl list) : string =
@@ -724,11 +695,11 @@ let cirDump (decls: CDecl list) : string =
   |> cpForwardDecls decls
   |> cpDecls decls
   |> List.rev
-  |> strConcat
+  |> S.concat ""
 
 let cirDumpHeader (decls: CDecl list) : string =
   []
   |> cpHeader
   |> cpForwardDecls decls
   |> List.rev
-  |> strConcat
+  |> S.concat ""

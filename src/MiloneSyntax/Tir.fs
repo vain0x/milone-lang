@@ -5,7 +5,6 @@
 /// TIR is functional-style. Similar to milone-lang's syntax.
 module rec MiloneSyntax.Tir
 
-open MiloneShared.Util
 open MiloneShared.SharedTypes
 open MiloneShared.TypeFloat
 open MiloneShared.TypeIntegers
@@ -99,9 +98,8 @@ type Ty =
 [<Struct; NoEquality; NoComparison>]
 type TyScheme = TyScheme of tyVars: TySerial list * Ty
 
-/// Type specification.
 [<Struct; NoEquality; NoComparison>]
-type TySpec = TySpec of Ty * Trait list
+type BoundedTyScheme = BoundedTyScheme of tyVars: TySerial list * Ty * Trait list
 
 /// Trait, a constraint about types.
 // NOTE: `trait` is a reserved word in F#.
@@ -326,6 +324,9 @@ type TPrim =
   | Nil
   | Cons
 
+  // union:
+  | Discriminant
+
   // effects:
   | Exit
   | Assert
@@ -364,6 +365,8 @@ type TExprKind =
   /// Tuple constructor, e.g. `x, y, z`.
   | TTupleEN
 
+  | TDiscriminantEN of VariantSerial
+
   /// Use function as function pointer.
   | TNativeFunEN of FunSerial
 
@@ -378,6 +381,9 @@ type TExprKind =
 
   /// Size of type.
   | TSizeOfValEN
+
+  /// Name of type.
+  | TTyPlaceholderEN
 
 /// Expression.
 [<NoEquality; NoComparison>]
@@ -409,8 +415,7 @@ type TExpr =
   /// Statements and last expression.
   ///
   /// - Statements might define symbols locally for the last expression.
-  /// - If recursive, local definitions are mutually recursive.
-  | TBlockExpr of IsRec * TStmt list * last: TExpr
+  | TBlockExpr of TStmt list * last: TExpr
 
 /// Statement.
 [<NoEquality; NoComparison>]
@@ -422,6 +427,9 @@ type TStmt =
   | TOpenStmt of Ident list * Loc
   | TModuleStmt of ModuleTySerial * body: TStmt list * Loc
   | TModuleSynonymStmt of ModuleSynonymSerial * path: Ident list * Loc
+
+  /// If recursive, local definitions are mutually recursive.
+  | TBlockStmt of IsRec * TStmt list
 
 type private VarMap = TreeMap<VarSerial, VarDef>
 
@@ -447,6 +455,7 @@ type NameResLog =
   | TyUsedAsValueError
 
   // in pat
+  | VariantAppPatArityError
   | UnresolvedNavPatError
   | IllegalOrPatError
   | OrPatInconsistentBindingError
@@ -462,7 +471,6 @@ type NameResLog =
 
   | UnimplGenericTyError
   | UnimplOrPatBindingError
-  | OtherNameResLog of msg: string
 
 [<RequireQualifiedAccess>]
 [<NoEquality; NoComparison>]
@@ -632,6 +640,7 @@ let primFromIdent ident =
   | "string" -> TPrim.String |> Some
 
   | "__inRegion" -> TPrim.InRegion |> Some
+  | "__discriminant" -> TPrim.Discriminant |> Some
 
   | "__nativeFun" -> TPrim.NativeFun |> Some
   | "__nativeCast" -> TPrim.NativeCast |> Some
@@ -643,118 +652,6 @@ let primFromIdent ident =
   | "__ptrWrite" -> TPrim.PtrWrite |> Some
 
   | _ -> None
-
-let primToTySpec prim =
-  let meta id = tyMeta id noLoc
-  let mono ty = TySpec(ty, [])
-  let poly ty traits = TySpec(ty, traits)
-
-  match prim with
-  | TPrim.Add ->
-    let addTy = meta 1
-    poly (tyFun addTy (tyFun addTy addTy)) [ AddTrait addTy ]
-
-  | TPrim.Sub
-  | TPrim.Mul
-  | TPrim.Div
-  | TPrim.Modulo ->
-    let ty = meta 1
-    poly (tyFun ty (tyFun ty ty)) [ IsNumberTrait ty ]
-
-  | TPrim.BitAnd
-  | TPrim.BitOr
-  | TPrim.BitXor ->
-    let ty = meta 1
-    poly (tyFun ty (tyFun ty ty)) [ IsIntTrait ty ]
-
-  | TPrim.LeftShift
-  | TPrim.RightShift ->
-    let ty = meta 1
-    poly (tyFun ty (tyFun tyInt ty)) [ IsIntTrait ty ]
-
-  | TPrim.Equal ->
-    let argTy = meta 1
-    poly (tyFun argTy (tyFun argTy tyBool)) [ EqualTrait argTy ]
-
-  | TPrim.Less ->
-    let compareTy = meta 1
-    poly (tyFun compareTy (tyFun compareTy tyBool)) [ CompareTrait compareTy ]
-
-  | TPrim.Compare ->
-    let compareTy = meta 1
-    poly (tyFun compareTy (tyFun compareTy tyInt)) [ CompareTrait compareTy ]
-
-  | TPrim.Nil ->
-    let itemTy = meta 1
-    poly (tyList itemTy) []
-
-  | TPrim.Cons ->
-    let itemTy = meta 1
-    let listTy = tyList itemTy
-    poly (tyFun itemTy (tyFun listTy listTy)) []
-
-  | TPrim.Not -> mono (tyFun tyBool tyBool)
-
-  | TPrim.Exit ->
-    let resultTy = meta 1
-    poly (tyFun tyInt resultTy) []
-
-  | TPrim.Assert -> mono (tyFun tyBool tyUnit)
-
-  | TPrim.Box ->
-    let itemTy = meta 1
-    poly (tyFun itemTy tyObj) []
-
-  | TPrim.Unbox ->
-    let itemTy = meta 1
-    poly (tyFun tyObj itemTy) []
-
-  | TPrim.Char ->
-    let srcTy = meta 1
-    poly (tyFun srcTy tyChar) [ ToCharTrait srcTy ]
-
-  | TPrim.ToInt flavor ->
-    let toIntTy = meta 1
-    let resultTy = Ty(IntTk flavor, [])
-    poly (tyFun toIntTy resultTy) [ ToIntTrait toIntTy ]
-
-  | TPrim.ToFloat flavor ->
-    let srcTy = meta 1
-    let resultTy = Ty(FloatTk flavor, [])
-    poly (tyFun srcTy resultTy) [ ToFloatTrait srcTy ]
-
-  | TPrim.String ->
-    let toStrTy = meta 1
-    poly (tyFun toStrTy tyStr) [ ToStringTrait toStrTy ]
-
-  | TPrim.StrLength -> mono (tyFun tyStr tyInt)
-
-  | TPrim.InRegion -> mono (tyFun (tyFun tyUnit tyInt) tyInt)
-
-  | TPrim.Printfn
-  | TPrim.NativeFun
-  | TPrim.NativeExpr
-  | TPrim.NativeStmt
-  | TPrim.NativeDecl ->
-    // Incorrect use of this primitive is handled as error before instantiating its type.
-    unreachable ()
-
-  | TPrim.NativeCast ->
-    let srcTy = meta 1
-    let destTy = meta 2
-    poly (tyFun srcTy destTy) [ PtrTrait srcTy; PtrTrait destTy ]
-
-  | TPrim.SizeOfVal -> poly (tyFun (meta 1) tyInt) []
-
-  | TPrim.PtrRead ->
-    // __constptr<'p> -> int -> 'a
-    let valueTy = meta 1
-    poly (tyFun (tyConstPtr valueTy) (tyFun tyInt valueTy)) []
-
-  | TPrim.PtrWrite ->
-    // nativeptr<'a> -> int -> 'a -> unit
-    let valueTy = meta 1
-    poly (tyFun (tyNativePtr valueTy) (tyFun tyInt (tyFun valueTy tyUnit))) []
 
 // -----------------------------------------------
 // TPat
@@ -862,7 +759,7 @@ let patIsClearlyExhaustive isNewtypeVariant pat =
 // TExpr
 // -----------------------------------------------
 
-let txLetIn stmt next = TBlockExpr(NotRec, [ stmt ], next)
+let txLetIn stmt next = TBlockExpr([ stmt ], next)
 
 let txTuple items loc =
   TNodeExpr(TTupleEN, items, tyTuple (List.map exprToTy items), loc)
@@ -880,7 +777,7 @@ let exprExtract (expr: TExpr) : Ty * Loc =
   | TMatchExpr (_, _, ty, a) -> ty, a
   | TNavExpr (_, _, ty, a) -> ty, a
   | TNodeExpr (_, _, ty, a) -> ty, a
-  | TBlockExpr (_, _, last) -> exprExtract last
+  | TBlockExpr (_, last) -> exprExtract last
 
 let exprMap (f: Ty -> Ty) (expr: TExpr) : TExpr =
   let goPat pat = patMap f pat
@@ -910,7 +807,7 @@ let exprMap (f: Ty -> Ty) (expr: TExpr) : TExpr =
       TMatchExpr(go cond, arms, f ty, a)
     | TNavExpr (sub, mes, ty, a) -> TNavExpr(go sub, mes, f ty, a)
     | TNodeExpr (kind, args, resultTy, a) -> TNodeExpr(kind, List.map go args, f resultTy, a)
-    | TBlockExpr (isRec, stmts, last) -> TBlockExpr(isRec, List.map (stmtMap f) stmts, go last)
+    | TBlockExpr (stmts, last) -> TBlockExpr(List.map (stmtMap f) stmts, go last)
 
   go expr
 
@@ -922,15 +819,15 @@ let exprToLoc expr = exprExtract expr |> snd
 // TStmt
 // -----------------------------------------------
 
-let stmtToLoc (stmt: TStmt) : Loc =
-  match stmt with
-  | TExprStmt expr -> exprToLoc expr
-  | TLetValStmt (_, _, loc) -> loc
-  | TLetFunStmt (_, _, _, _, _, loc) -> loc
-  | TTyDeclStmt (_, _, _, _, loc) -> loc
-  | TOpenStmt (_, loc) -> loc
-  | TModuleStmt (_, _, loc) -> loc
-  | TModuleSynonymStmt (_, _, loc) -> loc
+// let stmtToLoc (stmt: TStmt) : Loc =
+//   match stmt with
+//   | TExprStmt expr -> exprToLoc expr
+//   | TLetValStmt (_, _, loc) -> loc
+//   | TLetFunStmt (_, _, _, _, _, loc) -> loc
+//   | TTyDeclStmt (_, _, _, _, loc) -> loc
+//   | TOpenStmt (_, loc) -> loc
+//   | TModuleStmt (_, _, loc) -> loc
+//   | TModuleSynonymStmt (_, _, loc) -> loc
 
 let stmtMap (onTy: Ty -> Ty) (stmt: TStmt) : TStmt =
   let onPat pat = patMap onTy pat
@@ -947,6 +844,7 @@ let stmtMap (onTy: Ty -> Ty) (stmt: TStmt) : TStmt =
   | TOpenStmt (path, loc) -> TOpenStmt(path, loc)
   | TModuleStmt (name, body, loc) -> TModuleStmt(name, onStmts body, loc)
   | TModuleSynonymStmt (name, path, loc) -> TModuleSynonymStmt(name, path, loc)
+  | TBlockStmt (isRec, stmts) -> TBlockStmt(isRec, onStmts stmts)
 
 // -----------------------------------------------
 // TModule
@@ -1003,6 +901,8 @@ let nameResLogToString log =
 
   | VarNameConflictError -> "Variable name conflicts"
 
+  | VariantAppPatArityError -> "Pattern can apply to a variant that takes a payload."
+
   | UnresolvedNavPatError -> "Couldn't resolve nav pattern."
 
   | IllegalOrPatError -> "OR pattern is disallowed in let expressions."
@@ -1029,8 +929,6 @@ let nameResLogToString log =
 
   | UnimplGenericTyError -> "Generic record type is unimplemented."
   | UnimplOrPatBindingError -> "OR pattern including some bindings is unimplemented."
-
-  | OtherNameResLog msg -> msg
 
 let private traitBoundErrorToString tyDisplay it =
   match it with

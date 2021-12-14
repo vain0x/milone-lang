@@ -1,4 +1,4 @@
-#include "milone.h"
+#include <milone.h>
 
 struct IntList;
 
@@ -12,7 +12,7 @@ int ty_ascribe_ty_ascribe_main_f(int x_);
 
 int ty_ascribe_ty_ascribe_main_g(int x_1);
 
-int milone_main(void);
+int main(int argc, char** argv);
 
 struct IntList {
     int head;
@@ -32,7 +32,8 @@ int ty_ascribe_ty_ascribe_main_g(int x_1) {
     return x_1;
 }
 
-int milone_main(void) {
+int main(int argc, char** argv) {
+    milone_start(argc, argv);
     int call_ = ty_ascribe_ty_ascribe_main_f(1);
     int call_1 = ty_ascribe_ty_ascribe_main_g(1);
     int zero_ = (call_ - call_1);

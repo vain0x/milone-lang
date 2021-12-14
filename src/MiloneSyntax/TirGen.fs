@@ -528,6 +528,12 @@ let private tgExpr (docId: DocId) (expr: AExpr, ctx: NameCtx) : TExpr * NameCtx 
     let items, ctx = (items, ctx) |> stMap onExpr
     txTuple items loc, ctx
 
+  // (_: 'T)
+  | AAscribeExpr (AIdentExpr (Name ("_", _)), ty, pos) ->
+    let ty, ctx = (ty, ctx) |> onTy
+    let loc = toLoc docId pos
+    TNodeExpr(TTyPlaceholderEN, [], ty, loc), ctx
+
   | AAscribeExpr (body, ty, pos) ->
     let body, ctx = (body, ctx) |> onExpr
     let ty, ctx = (ty, ctx) |> onTy
@@ -542,7 +548,7 @@ let private tgExpr (docId: DocId) (expr: AExpr, ctx: NameCtx) : TExpr * NameCtx 
         TExprStmt expr, ctx)
 
     let last, ctx = (last, ctx) |> onExpr
-    TBlockExpr(NotRec, stmts, last), ctx
+    TBlockExpr(stmts, last), ctx
 
   | ALetExpr (isRec, pat, body, next, pos) ->
     match desugarLet isRec pat body next pos with
@@ -565,7 +571,7 @@ let private tgExpr (docId: DocId) (expr: AExpr, ctx: NameCtx) : TExpr * NameCtx 
 
       let stmt =
         let loc = toLoc docId pos
-        // FIXME: let rec for let-val is error.
+        // let rec for let-val should be error.
         TLetValStmt(pat, body, loc)
 
       txLetIn stmt next, ctx
@@ -600,7 +606,7 @@ let private tgDecl docId attrs (decl, ctx) : TStmt * NameCtx =
       let pat, ctx = (pat, ctx) |> onPat
       let body, ctx = (body, ctx) |> onExpr
       let loc = toLoc docId pos
-      // FIXME: let rec for let-val is error.
+      // let rec for let-val should be error.
       TLetValStmt(pat, body, loc), ctx
 
   | ATySynonymDecl (vis, name, tyArgs, ty, pos) ->
@@ -662,8 +668,8 @@ let private tgDecl docId attrs (decl, ctx) : TStmt * NameCtx =
 
     TModuleSynonymStmt(ModuleSynonymSerial serial, List.map nameToIdent path, loc), ctx
 
-  | AModuleDecl (_isRec, _vis, name, decls, pos) ->
-    // FIXME: use rec, vis
+  | AModuleDecl (_, _, name, decls, pos) ->
+    // should use rec, vis
     let serial, ctx = ctx |> nameCtxAdd name
     let body, ctx = (decls, ctx) |> tgDecls docId
     let loc = toLoc docId pos
@@ -676,7 +682,7 @@ let private tgDecl docId attrs (decl, ctx) : TStmt * NameCtx =
       | ASemiExpr (stmts, last, _) -> List.append stmts (last :: acc)
       | _ -> attr :: acc
 
-    // printfn "/* attribute: %s %s */" (pos |> toLoc docId |> locToString) (objToString contents)
+    // printfn "/* attribute: %s %s */" (pos |> toLoc docId |> Loc.toString) (objToString contents)
     tgDecl docId (prepend attr attrs) (next, ctx)
 
 let private tgDecls docId (decls, ctx) : TStmt list * NameCtx = (decls, ctx) |> stMap (tgDecl docId [])
@@ -784,6 +790,7 @@ let private ocExpr (expr: AExpr) : int =
   | AUnaryExpr (_, arg, _) -> ocExpr arg
   | ABinaryExpr (_, l, r, _) -> ocExpr l + ocExpr r
   | ATupleExpr (items, _) -> ocExprs items
+  | AAscribeExpr (AIdentExpr (Name ("_", _)), ty, _) -> ocTy ty
   | AAscribeExpr (body, ty, _) -> ocExpr body + ocTy ty
   | ASemiExpr (stmts, last, _) -> ocExprs stmts + ocExpr last
   | ALetExpr (_, pat, body, next, _) -> ocPat pat + ocExpr body + ocExpr next

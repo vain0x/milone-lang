@@ -231,6 +231,17 @@ let tryFind (pred: _ -> bool) (xs: _ list) : _ option =
 
   listTryFindLoop xs
 
+let tryFindIndex (pred: _ -> bool) (xs: _ list) : int option =
+  let rec listTryFindIndexLoop i xs =
+    match xs with
+    | [] -> None
+
+    | x :: _ when pred x -> Some i
+
+    | _ :: xs -> listTryFindIndexLoop (i + 1) xs
+
+  listTryFindIndexLoop 0 xs
+
 let tryPick (f: _ -> _ option) (xs: _ list) : _ option =
   let rec listTryPickLoop xs =
     match xs with

@@ -14,7 +14,9 @@ open MiloneShared.SharedTypes
 open MiloneShared.TypeFloat
 open MiloneShared.TypeIntegers
 open MiloneShared.Util
+open MiloneShared.UtilParallel
 open MiloneStd.StdMap
+open MiloneStd.StdMultimap
 open MiloneStd.StdSet
 open MiloneTranslation.Cir
 open MiloneTranslation.Hir
@@ -32,6 +34,46 @@ let private tupleField (i: int) = "t" + string i
 
 /// Calculates discriminant type's name of union type.
 let private toDiscriminantEnumName (name: string) = name + "Discriminant"
+
+let private cTyEncode ty =
+  match ty with
+  | CVoidTy _ -> 1
+  | CIntTy _ -> 2
+  | CFloatTy _ -> 3
+  | CBoolTy _ -> 4
+  | CCharTy _ -> 5
+  | CPtrTy _ -> 11
+  | CConstPtrTy _ -> 12
+  | CStructTy _ -> 21
+  | CEnumTy _ -> 22
+  | CEmbedTy _ -> 31
+
+let private cTyCompare l r =
+  match l, r with
+  | CIntTy lFlavor, CIntTy rFlavor -> intFlavorCompare lFlavor rFlavor
+  | CFloatTy lFlavor, CFloatTy rFlavor -> floatFlavorCompare lFlavor rFlavor
+
+  | CPtrTy lTy, CPtrTy rTy -> cTyCompare lTy rTy
+  | CConstPtrTy lTy, CConstPtrTy rTy -> cTyCompare lTy rTy
+
+  | CStructTy l, CStructTy r -> compare l r
+  | CEnumTy l, CEnumTy r -> compare l r
+  | CEmbedTy l, CEmbedTy r -> compare l r
+
+  | _ -> compare (cTyEncode l) (cTyEncode r)
+
+let private cTyToIdent ty =
+  match ty with
+  | CVoidTy -> "Void"
+  | CIntTy flavor -> cIntegerTyPascalName flavor
+  | CFloatTy flavor -> cFloatTyPascalName flavor
+  | CBoolTy -> "Bool"
+  | CCharTy -> "Char"
+  | CPtrTy uTy -> cTyToIdent uTy + "MutPtr"
+  | CConstPtrTy uTy -> cTyToIdent uTy + "ConstPtr"
+  | CStructTy name -> name
+  | CEnumTy name -> name
+  | CEmbedTy embed -> embed // should sanitize
 
 // -----------------------------------------------
 // Renaming idents
@@ -73,7 +115,7 @@ let private renameIdents toIdent toKey mapFuns (defMap: TreeMap<_, _>) =
   let serialsMap =
     let folder acc serial def =
       let ident = toIdent def
-      acc |> multimapAdd ident (serial, def)
+      acc |> Multimap.add ident (serial, def)
 
     defMap |> TMap.fold folder (TMap.empty compare)
 
@@ -126,7 +168,7 @@ let private funDefToName (funDef: FunDef) =
   match funDef.Linkage with
   | InternalLinkage ->
     let name =
-      // FIXME: avoid abusing docId
+      // #avoidAbusingDocId
       let (Loc (docId, _, _)) = funDef.Loc
       let doc = docId |> S.replace "." "_"
 
@@ -179,7 +221,10 @@ type private CirCtx =
 
     /// Already-declared functions.
     VarDecls: TreeSet<VarSerial>
-    FunDecls: TreeSet<FunSerial> }
+    FunDecls: TreeSet<FunSerial>
+
+    /// Nominalized fun pointer types.
+    FunPtrTys: TreeMap<CTy list * CTy, string> }
 
 let private ofMirResult (mirCtx: MirResult) : CirCtx =
   let freq = freqEmpty compare
@@ -230,7 +275,8 @@ let private ofMirResult (mirCtx: MirResult) : CirCtx =
     Stmts = []
     Decls = []
     VarDecls = TSet.empty varSerialCompare
-    FunDecls = TSet.empty funSerialCompare }
+    FunDecls = TSet.empty funSerialCompare
+    FunPtrTys = TMap.empty (pairCompare (listCompare cTyCompare) cTyCompare) }
 
 let private currentDocId (ctx: CirCtx) : DocId =
   match ctx.Rx.DocIdOpt with
@@ -283,6 +329,29 @@ let private cgResultTy ctx resultTy : CTy * CirCtx =
   else
     cgTyComplete ctx resultTy
 
+let private cgFunPtrTy (ctx: CirCtx) argTys resultTy : CTy * CirCtx =
+  match ctx.FunPtrTys |> TMap.tryFind (argTys, resultTy) with
+  | Some it -> CEmbedTy it, ctx
+
+  | None ->
+    let arity = argTys |> List.length |> string
+
+    let ident =
+      List.append
+        (argTys |> List.map cTyToIdent)
+        [ resultTy |> cTyToIdent
+          "FunPtr"
+          arity ]
+      |> S.concat ""
+
+    let ctx =
+      { ctx with FunPtrTys = ctx.FunPtrTys |> TMap.add (argTys, resultTy) ident }
+
+    let ctx =
+      addDecl ctx (CFunPtrTyDef(ident, argTys, resultTy))
+
+    CEmbedTy ident, ctx
+
 let private genIncompleteFunTyDecl (ctx: CirCtx) sTy tTy =
   let funTy = tyFun sTy tTy
 
@@ -312,14 +381,14 @@ let private genFunTyDef (ctx: CirCtx) sTy tTy =
     let selfTy, ctx = genIncompleteFunTyDecl ctx sTy tTy
 
     let envTy = CConstPtrTy CVoidTy
-    let _, argTys, resultTy = tyToArgList funTy
 
-    let argTys, ctx = cgArgTys ctx argTys
-    let resultTy, ctx = cgResultTy ctx resultTy
+    let funPtrTy, ctx =
+      let _, argTys, resultTy = tyToArgList funTy
+      let argTys, ctx = cgArgTys ctx argTys
+      let resultTy, ctx = cgResultTy ctx resultTy
+      cgFunPtrTy ctx (envTy :: argTys) resultTy
 
-    let fields =
-      [ "fun", CFunPtrTy(envTy :: argTys, resultTy)
-        "env", envTy ]
+    let fields = [ "fun", funPtrTy; "env", envTy ]
 
     let ctx =
       { ctx with
@@ -407,16 +476,14 @@ let private genUnionTyDef (ctx: CirCtx) tySerial variants =
       |> List.map (fun (_, serial, _, _) -> getUniqueVariantName ctx serial)
 
     let variants, ctx =
-      (variants, ctx)
-      |> stFlatMap (fun ((_, serial, hasPayload, payloadTy), acc, ctx) ->
-        if hasPayload then
-          let payloadTy, ctx = cgTyComplete ctx payloadTy
-
-          (getUniqueVariantName ctx serial, payloadTy)
-          :: acc,
-          ctx
-        else
-          acc, ctx)
+      variants
+      |> List.filter (fun (_, _, hasPayload, _) -> hasPayload)
+      |> List.mapFold
+           (fun ctx (_, serial, _, payloadTy) ->
+             let payloadTy, ctx = cgTyComplete ctx payloadTy
+             let name = getUniqueVariantName ctx serial
+             (name, payloadTy), ctx)
+           ctx
 
     let discriminantEnumDecl =
       CEnumDecl(discriminantEnumName, discriminants)
@@ -510,7 +577,7 @@ let private cgNativeFunTy ctx tys =
   | Some (argTys, resultTy) ->
     let argTys, ctx = cgArgTys ctx argTys
     let resultTy, ctx = cgResultTy ctx resultTy
-    CFunPtrTy(argTys, resultTy), ctx
+    cgFunPtrTy ctx argTys resultTy
 
 /// Converts a type to incomplete type.
 /// whose type definition is not necessary to be visible.
@@ -707,6 +774,10 @@ let private genGenericValue ctx genericValue ty =
     let ty, ctx = cgTyComplete ctx ty
     CSizeOfExpr ty, ctx
 
+  | MTyPlaceholderGv ->
+    let ty, ctx = cgTyComplete ctx ty
+    CTyPlaceholderExpr ty, ctx
+
 /// Converts a binary expression to a runtime function call.
 let private genBinaryExprAsCall ctx funName l r =
   let l, ctx = cgExpr ctx l
@@ -792,7 +863,7 @@ let private cgExpr (ctx: CirCtx) (arg: MExpr) : CExpr * CirCtx =
   match arg |> mxSugar with
   | MLitExpr (lit, _) -> genLit lit, ctx
   | MUnitExpr _ -> CVarExpr "0", ctx
-  | MNeverExpr loc -> unreachable ("MNeverExpr " + locToString loc)
+  | MNeverExpr loc -> unreachable ("MNeverExpr " + Loc.toString loc)
 
   | MVarExpr (serial, ty, _) ->
     let ctx =
@@ -928,10 +999,8 @@ let private addLetStmt (ctx: CirCtx) name expr cty isStatic linkage replacing =
 
   | NotStatic -> addStmt ctx (CLetStmt(name, expr, cty))
 
-let private addLetAllocStmt ctx name valTy varTy isStatic =
-  match isStatic with
-  | IsStatic -> unreachable () // let-alloc is used only for temporary variables.
-  | NotStatic -> addStmt ctx (CLetAllocStmt(name, valTy, varTy))
+let private addLetAllocStmt ctx name valTy varTy =
+  addStmt ctx (CLetAllocStmt(name, valTy, varTy))
 
 let private doGenLetValStmt ctx serial expr ty =
   let name = getUniqueVarName ctx serial
@@ -1126,10 +1195,9 @@ let private cgBoxStmt ctx serial arg =
 
   // void const* p = malloc(sizeof T);
   let temp = getUniqueVarName ctx serial
-  let isStatic = findStorageModifier ctx serial
 
   let ctx =
-    addLetAllocStmt ctx temp argTy (CConstPtrTy CVoidTy) isStatic
+    addLetAllocStmt ctx temp argTy (CConstPtrTy CVoidTy)
 
   // *(T*)p = t;
   let left =
@@ -1139,7 +1207,6 @@ let private cgBoxStmt ctx serial arg =
 
 let private cgConsStmt ctx serial head tail =
   let temp = getUniqueVarName ctx serial
-  let isStatic = findStorageModifier ctx serial
   let listTy, ctx = genListTyDef ctx (mexprToTy head)
 
   let listStructTy =
@@ -1148,7 +1215,7 @@ let private cgConsStmt ctx serial head tail =
     | _ -> unreachable ()
 
   let ctx =
-    addLetAllocStmt ctx temp listStructTy listTy isStatic
+    addLetAllocStmt ctx temp listStructTy listTy
 
   let head, ctx = cgExpr ctx head
   let tail, ctx = cgExpr ctx tail
@@ -1259,6 +1326,19 @@ let private cgStmts (ctx: CirCtx) (stmts: MStmt list) : CirCtx =
 
   go ctx stmts
 
+let private genMainFun stmts : CDecl =
+  let intTy = CEmbedTy "int"
+
+  let args =
+    [ "argc", intTy
+      "argv", CEmbedTy "char**" ]
+
+  let stmts =
+    CExprStmt(CCallExpr(CVarExpr "milone_start", [ CVarExpr "argc"; CVarExpr "argv" ]))
+    :: stmts
+
+  CFunDecl("main", args, intTy, stmts)
+
 let private cgDecls (ctx: CirCtx) decls =
   match decls with
   | [] -> ctx
@@ -1266,11 +1346,11 @@ let private cgDecls (ctx: CirCtx) decls =
   | MProcDecl (callee, args, body, resultTy, _) :: decls ->
     let def: FunDef = ctx.Rx.Funs |> mapFind callee
 
-    let funName, args =
+    let main, funName, args =
       if isMainFun ctx callee then
-        "milone_main", []
+        true, "main", []
       else
-        getUniqueFunName ctx callee, args
+        false, getUniqueFunName ctx callee, args
 
     let rec collectArgs acc ctx args =
       match args with
@@ -1282,7 +1362,7 @@ let private cgDecls (ctx: CirCtx) decls =
 
     let collectFunLocalStmts (ctx: CirCtx) =
       ctx.Rx.FunLocals
-      |> multimapFind callee
+      |> Multimap.find callee
       |> List.mapFold
            (fun (ctx: CirCtx) (varSerial, ty) ->
              let name = getUniqueVarName ctx varSerial
@@ -1298,9 +1378,12 @@ let private cgDecls (ctx: CirCtx) decls =
     let funDecl =
       let body = List.append stmts body
 
-      match def.Linkage with
-      | InternalLinkage -> CStaticFunDecl(funName, args, resultTy, body)
-      | ExternalLinkage _ -> CFunDecl(funName, args, resultTy, body)
+      if main then
+        genMainFun body
+      else
+        match def.Linkage with
+        | InternalLinkage -> CStaticFunDecl(funName, args, resultTy, body)
+        | ExternalLinkage _ -> CFunDecl(funName, args, resultTy, body)
 
     let ctx = addDecl ctx funDecl
     cgDecls ctx decls
@@ -1318,6 +1401,7 @@ let private sortDecls (decls: CDecl list) : CDecl list =
          (fun (types, vars, bodies) decl ->
            match decl with
            | CErrorDecl _
+           | CFunPtrTyDef _
            | CStructForwardDecl _
            | CStructDecl _
            | CEnumDecl _ -> decl :: types, vars, bodies
@@ -1348,7 +1432,8 @@ let private cgModule (ctx: CirCtx) (m: MModule) : DocId * CDecl list =
       Stmts = []
       Decls = []
       VarDecls = TSet.empty varSerialCompare
-      FunDecls = TSet.empty funSerialCompare }
+      FunDecls = TSet.empty funSerialCompare
+      FunPtrTys = TMap.empty (pairCompare (listCompare cTyCompare) cTyCompare) }
 
   // Generate decls.
   let ctx = cgDecls ctx m.Decls

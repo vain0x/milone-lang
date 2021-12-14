@@ -1,0 +1,23 @@
+#!/bin/sh
+
+set -eu
+
+TARGET="$PWD/../target/BenchLoopIter"
+APP="$TARGET/x86_64-unknown-linux-gnu-release/BenchLoopIter"
+
+hyperfine --version
+
+milone build --release --target-dir "$TARGET" "$PWD"
+
+(
+    # 1e7, 1e8
+
+    PATH="$(dirname $APP):$PATH" \
+    hyperfine -i --warmup 1 \
+        --export-markdown "$TARGET/bench.md" --show-output \
+        -L 'kind' 'native,loop,iter' \
+        -L 'count' '10000000,100000000' \
+        -- "BenchLoopIter {kind} {count}"
+)
+
+echo "Exported to $TARGET/bench.md"

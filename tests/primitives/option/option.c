@@ -1,4 +1,4 @@
-#include "milone.h"
+#include <milone.h>
 
 struct Intoption1_;
 
@@ -12,7 +12,7 @@ void option_Program_basicNoneCase(void);
 
 void option_Program_basicMatchCase(void);
 
-int milone_main(void);
+int main(int argc, char** argv);
 
 enum Intoption1_Discriminant {
     None_,
@@ -54,7 +54,7 @@ void option_Program_basicSomeCase(void) {
     char match_;
     struct Intoption1_ variant_ = (struct Intoption1_){.discriminant = Some_, .Some_ = 1};
     if ((variant_.discriminant != None_)) goto next_2;
-    milone_assert(false, 6, 12);
+    milone_assert(false, (struct String){.str = "option/option.milone", .len = 20}, 6, 12);
     match_ = 0;
     goto end_match_1;
 next_2:;
@@ -63,7 +63,7 @@ next_2:;
     match_ = 0;
     goto end_match_1;
 next_3:;
-    milone_assert(false, 10, 9);
+    milone_assert(false, (struct String){.str = "option/option.milone", .len = 20}, 10, 9);
     match_ = 0;
     goto end_match_1;
 next_4:;
@@ -72,19 +72,18 @@ end_match_1:;
 }
 
 void option_Program_basicNoneCase(void) {
-    struct Stringoption1_ none_ = (struct Stringoption1_){.discriminant = None_1};
     char match_1;
-    if ((none_.discriminant != Some_1)) goto next_6;
-    if ((str_compare(none_.Some_1, (struct String){.str = "a", .len = 1}) != 0)) goto next_6;
-    milone_assert(false, 17, 16);
+    if (((struct Stringoption1_){.discriminant = None_1}.discriminant != Some_1)) goto next_6;
+    if ((str_compare((struct Stringoption1_){.discriminant = None_1}.Some_1, (struct String){.str = "a", .len = 1}) != 0)) goto next_6;
+    milone_assert(false, (struct String){.str = "option/option.milone", .len = 20}, 14, 16);
     match_1 = 0;
     goto end_match_5;
 next_6:;
-    if ((none_.discriminant != None_1)) goto next_7;
+    if (((struct Stringoption1_){.discriminant = None_1}.discriminant != None_1)) goto next_7;
     match_1 = 0;
     goto end_match_5;
 next_7:;
-    milone_assert(false, 21, 9);
+    milone_assert(false, (struct String){.str = "option/option.milone", .len = 20}, 18, 9);
     match_1 = 0;
     goto end_match_5;
 next_8:;
@@ -103,7 +102,7 @@ void option_Program_basicMatchCase(void) {
             goto clause_11;
     }
 clause_10:;
-    milone_assert(false, 27, 12);
+    milone_assert(false, (struct String){.str = "option/option.milone", .len = 20}, 24, 12);
     switch_ = 0;
     goto switch_next_9;
 clause_11:;
@@ -113,7 +112,8 @@ switch_next_9:;
     return;
 }
 
-int milone_main(void) {
+int main(int argc, char** argv) {
+    milone_start(argc, argv);
     option_Program_basicSomeCase();
     option_Program_basicNoneCase();
     option_Program_basicMatchCase();

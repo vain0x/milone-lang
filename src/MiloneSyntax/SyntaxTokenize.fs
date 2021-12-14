@@ -460,7 +460,12 @@ let private evalCharLit (text: string) (l: int) (r: int) : Token =
     && text.[l + 2] = 'x'
     && text.[l + 5] = '\''
     ->
-    CharToken(char (intFromHex (l + 3) (l + 5) text))
+    let hex =
+      text.[l + 3..l + 4]
+      |> S.parseHexAsUInt64
+      |> Option.defaultWith unreachable
+
+    CharToken(char (byte hex))
 
   | _ -> ErrorToken InvalidCharLitError
 
@@ -489,7 +494,7 @@ let private evalStrLit (text: string) (l: int) (r: int) : Token =
 
     // Take an escape sequence or halt.
     if i = r - 1 then
-      StrToken(acc |> List.rev |> strConcat)
+      StrToken(acc |> List.rev |> S.concat "")
     else
       assert (i < r - 1 && text.[i] = '\\')
 
@@ -500,13 +505,19 @@ let private evalStrLit (text: string) (l: int) (r: int) : Token =
         && C.isHex text.[i + 3]
         ->
         let acc =
-          let n = intFromHex (i + 2) (i + 4) text
+          let hex =
+            text.[i + 2..i + 3]
+            |> S.parseHexAsUInt64
+            |> Option.defaultWith unreachable
+            |> byte
 
-          (if n = 0 then
-             "\x00"
-           else
-             string (char (byte n)))
-          :: acc
+          let s =
+            if hex = 0uy then
+              "\x00"
+            else
+              string (char hex)
+
+          s :: acc
 
         go acc (i + 4)
 
@@ -750,12 +761,9 @@ let private doNext (host: TokenizeHost) allowPrefix (text: string) (index: int) 
     let l = index + len
     let m, r = scanHex text l
 
-    if m < r then
-      ErrorToken UnimplNumberSuffixError, r
-    else
-      match intFlavorOfSuffix (text |> S.slice m r) with
-      | None when m < r -> ErrorToken UnimplNumberSuffixError, r
-      | suffixOpt -> IntToken(S.toLower (S.slice index m text), suffixOpt), r
+    match intFlavorOfSuffix (text |> S.slice m r) with
+    | None when m < r -> ErrorToken UnimplNumberSuffixError, r
+    | suffixOpt -> IntToken(S.toLower (S.slice index m text), suffixOpt), r
 
   | LNonKeywordIdent ->
     let r = scanIdent text (index + len)

@@ -1,8 +1,8 @@
 module MiloneLspServer.LspLangService
 
-open System
-open System.IO
 open MiloneShared.SharedTypes
+open MiloneShared.UtilParallel
+open MiloneStd.StdError
 open MiloneStd.StdMap
 open MiloneStd.StdSet
 open MiloneLspServer.Lsp
@@ -12,6 +12,7 @@ open MiloneLspServer.Util
 // FIXME: shouldn't depend
 module SyntaxApi = MiloneSyntax.SyntaxApi
 
+module C = MiloneStd.StdChar
 module S = MiloneStd.StdString
 
 type private DocVersion = int
@@ -19,8 +20,14 @@ type private FilePath = string
 type private ProjectDir = string
 type private MiloneHome = string
 type private FileExistsFun = FilePath -> bool
+type private ReadTextFileFun = FilePath -> Future<string option>
 type private DocIdToFilePathFun = ProjectDir -> DocId -> string
+type private DirEntriesFun = string -> string list * string list
 type private ReadSourceFileFun = FilePath -> Future<string option>
+
+let MinVersion: DocVersion = 0
+let InitialVersion: DocVersion = 1
+let DocBaseVersion: DocVersion = 0x8000
 
 // -----------------------------------------------
 // Util
@@ -59,6 +66,23 @@ let private listCutWith equals item xs : 'T RevList * 'T list * bool =
   | Some (_, rest) -> acc, rest, true
   | None -> acc, [], false
 
+let private splitAt (i: int) (s: string) =
+  if i <= 0 then "", s
+  else if s.Length <= i then s, ""
+  else s.[0..i - 1], s.[i..s.Length - 1]
+
+let private upperFirst (s: string) =
+  if s.Length >= 1 && C.isLower s.[0] then
+    string (C.toUpper s.[0]) + s.[1..s.Length - 1]
+  else
+    s
+
+let private lowerFirst (s: string) =
+  if s.Length >= 1 && C.isUpper s.[0] then
+    string (C.toLower s.[0]) + s.[1..s.Length - 1]
+  else
+    s
+
 let private tryReplace (pattern: string) (target: string) (s: string) =
   if s |> S.contains pattern then
     s |> S.replace pattern target, true
@@ -67,7 +91,9 @@ let private tryReplace (pattern: string) (target: string) (s: string) =
 
 let private trimEndSep (path: string) = S.trimEndIf (fun c -> c = '/') path
 
-let private dirname (path: string) =
+let private pathJoin l r = l + "/" + r
+
+let dirname (path: string) =
   let rec go (s: string) =
     match S.findLastIndex "/" s with
     | None
@@ -79,27 +105,63 @@ let private dirname (path: string) =
 
   path |> trimEndSep |> go
 
-let private basename (path: string) =
+let basename (path: string) =
   match S.findLastIndex "/" path with
-  | Some i -> S.skip (i + 1) path
-  | None -> path
-
-let private getExt (path: string) =
-  let path = basename path
-
-  match S.findLastIndex "." path with
-  | Some i when 0 < i && i < path.Length -> Some(S.skip i path)
-  | _ -> None
+  | Some i when path <> "/" -> S.skip (i + 1) path
+  | _ -> path
 
 let private stem (path: string) =
   let path = basename path
 
   match S.findLastIndex "." path with
-  | Some i when 0 < i && i < path.Length -> S.slice 0 i path
+  | Some i when 0 < i && i + 1 < path.Length -> S.slice 0 i path
   | _ -> path
 
-/// Normalizes path syntactically. Note Windows prefix is unsupported yet.
-let private normalize (path: string) =
+let private hasDriveLetter (path: string) =
+  path.Length >= 2
+  && C.isAlphabetic path.[0]
+  && path.[1] = ':'
+
+let private isRooted (path: string) =
+  path |> S.startsWith "/" || hasDriveLetter path
+
+let private stripRoot (path: string) =
+  let path, rooted = path |> S.stripStart "/"
+
+  if rooted then
+    Some "/", path
+  else if path.Length >= 3
+          && hasDriveLetter path
+          && path.[2] = '/' then
+    let root, rest = splitAt 3 path
+    Some root, rest
+  else
+    None, path
+
+let private pathContract (path: string) =
+  let rec go acc (xs: string list) =
+    match acc, xs with
+    | _, "." :: xs -> go acc xs
+    | _ :: acc, ".." :: xs -> go acc xs
+
+    | _, [] -> acc
+    | _, x :: xs -> go (x :: acc) xs
+
+  match stripRoot path with
+  | _, "" -> path
+
+  | rootOpt, path ->
+    let path =
+      path
+      |> S.split "/"
+      |> go []
+      |> List.rev
+      |> S.concat "/"
+
+    (rootOpt |> Option.defaultValue "") + path
+
+/// Normalizes path syntactically. Note some of Windows prefix is unsupported yet.
+let normalize (path: string) =
   let path = path |> S.replace "\\" "/"
 
   let path =
@@ -109,69 +171,60 @@ let private normalize (path: string) =
 
     removeDoubleSlashes path
 
+  let path = path |> trimEndSep
+
+  // Upper drive letter.
   let path =
-    if path |> S.startsWith "/" then
-      path
+    if path |> hasDriveLetter then
+      upperFirst path
     else
-      "/" + path
+      path
 
-  let rec collapseTwoDots (segments: string list) =
-    match segments |> listCutWith (=) ".." with
-    | _ :: acc, rest, true -> collapseTwoDots (listAppend acc rest)
-    | _ -> segments
+  pathContract path
 
-  path
-  |> S.split "/"
-  |> collapseTwoDots
-  |> S.concat "/"
+let private getExt (path: string) =
+  let path = basename path
 
-let uriOfFilePath (filePath: string) =
-  let pathname =
-    filePath |> normalize |> S.replace ":" "%3A"
+  match S.findLastIndex "." path with
+  | Some i when 0 < i && i < path.Length -> Some(S.skip i path)
+  | _ -> None
 
-  Uri("file://" + pathname)
+let uriOfFilePath (path: string) =
+  let path = normalize path
 
+  if path |> S.startsWith "/" then
+    Uri("file://" + path)
+  else if hasDriveLetter path then
+    let path =
+      path |> lowerFirst |> S.replace ":" "%3A"
+
+    Uri("file:///" + path)
+  else
+    // unlikely used
+    Uri("file://./" + path)
+
+// Note: pathname contains backslashes even on Linux, provided by VSCode.
 let private uriToFilePath (uri: Uri) =
-  let path, file =
+  let path, fileScheme =
     uri |> Uri.toString |> S.stripStart "file://"
 
-  if file then
-    // HOTFIX: On linux, path starts with \\ and is separated by \ for some reason.
+  if fileScheme then
     let path =
-      path |> S.replace "\\\\" "/" |> S.replace "\\" "/"
+      // Windows path.
+      if path |> S.skip 2 |> S.startsWith "%3A" then
+        path |> S.skip 1 |> S.replace "%3A" ":"
+      else
+        path
 
-    // HOTFIX: On Windows, path sometimes starts with an extra / and then it's invalid as file path; e.g. `/c:/Users/john/Foo/Foo.milone`.
-    if path |> S.contains ":" then
-      path |> S.stripStart "/" |> fst
-    else
-      path
+    path |> normalize
   else
+    // Not a file scheme.
+    warnFn "Not file scheme: %s" path
     path
 
 // -----------------------------------------------
-// Globals
+// File search
 // -----------------------------------------------
-
-let private miloneHome =
-  let opt (s: string) =
-    match s with
-    | null
-    | "" -> None
-    | _ -> Some s
-
-  let getMiloneHomeEnv () =
-    Environment.GetEnvironmentVariable("MILONE_HOME")
-    |> opt
-
-  let getHomeEnv () =
-    Environment.GetFolderPath(Environment.SpecialFolder.UserProfile)
-    |> opt
-
-  SyntaxApi.getMiloneHomeFromEnv getMiloneHomeEnv getHomeEnv
-
-let private stdLibProjects =
-  SyntaxApi.getStdLibProjects miloneHome
-  |> Map.ofList
 
 /// Whether dir is excluded in traversal?
 let private dirIsExcluded (dir: string) =
@@ -184,38 +237,30 @@ let private dirIsExcluded (dir: string) =
   || name = "bin"
   || name = "obj"
 
-// ---------------------------------------------
-// Standard libs
-// ---------------------------------------------
-
-let private findModulesRecursively (maxDepth: int) (rootDir: string) : (string * string) list =
+let private findModulesRecursively (getDirEntries: DirEntriesFun) (maxDepth: int) (rootDir: string) : FilePath list =
   let rec bfs acc stack =
     match stack with
     | [] -> acc
 
     | (depth, dir) :: stack ->
-      traceFn "in %d:%s" depth dir
       assert (depth <= maxDepth)
 
-      let acc =
-        let projectName = stem dir
+      let files, subdirs = getDirEntries dir
 
-        Directory.GetFiles(dir)
+      let acc =
+        files
         |> Seq.fold
              (fun acc file ->
                match getExt file with
                | Some ".milone"
-               | Some ".fs" ->
-                 let moduleName = stem file
-                 traceFn "in %s" moduleName
-                 (projectName, moduleName) :: acc
+               | Some ".fs" -> file :: acc
 
                | _ -> acc)
              acc
 
       let stack =
         if depth < maxDepth then
-          Directory.GetDirectories(dir)
+          subdirs
           |> Seq.filter (fun subdir -> subdir |> dirIsExcluded |> not)
           |> Seq.fold (fun stack subdir -> (depth + 1, subdir) :: stack) stack
         else
@@ -225,8 +270,6 @@ let private findModulesRecursively (maxDepth: int) (rootDir: string) : (string *
 
   bfs [] [ 0, rootDir ]
 
-let private findModulesInDir projectDir = findModulesRecursively 0 projectDir
-
 // ---------------------------------------------
 // Project
 // ---------------------------------------------
@@ -234,12 +277,11 @@ let private findModulesInDir projectDir = findModulesRecursively 0 projectDir
 [<RequireQualifiedAccess; NoEquality; NoComparison>]
 type ProjectInfo =
   { ProjectDir: string
-    ProjectName: string
-    EntryFileExt: string }
+    ProjectName: string }
 
 /// Finds all projects inside of the workspace.
-let private doFindProjects (rootUri: string) : ProjectInfo list =
-  let rootDir = Uri rootUri |> uriToFilePath
+let private doFindProjects fileExists getDirEntries (rootUri: Uri) : ProjectInfo list =
+  let rootDir = rootUri |> uriToFilePath
 
   // Find projects recursively.
   let rec bfs acc stack =
@@ -247,16 +289,14 @@ let private doFindProjects (rootUri: string) : ProjectInfo list =
     | [] -> acc
 
     | (depth, dir) :: stack ->
-
       let acc =
         let projectName = stem dir
 
         let tryAddProject ext acc =
-          if File.Exists(Path.Combine(dir, projectName + ext)) then
+          if fileExists (dir + "/" + projectName + ext) then
             let project: ProjectInfo =
               { ProjectDir = dir
-                ProjectName = projectName
-                EntryFileExt = ext }
+                ProjectName = projectName }
 
             project :: acc
           else
@@ -268,7 +308,9 @@ let private doFindProjects (rootUri: string) : ProjectInfo list =
 
       let stack =
         if depth < 3 then
-          Directory.GetDirectories(dir)
+          let _, subdirs = getDirEntries dir
+
+          subdirs
           |> Seq.filter (fun subdir -> subdir |> dirIsExcluded |> not)
           |> Seq.fold (fun stack subdir -> (depth + 1, subdir) :: stack) stack
         else
@@ -278,7 +320,19 @@ let private doFindProjects (rootUri: string) : ProjectInfo list =
 
   bfs [] [ 0, rootDir ]
 
-let private filePathToDocId (path: string) : DocId =
+let private isManifest (path: string) = basename path = "milone_manifest"
+
+let private isEntrypoint (path: string) =
+  match dirname path with
+  | Some parent -> basename parent = stem path
+  | None -> false
+
+let private filePathToModulePath path =
+  match dirname path with
+  | Some parent -> Some(basename parent, stem path)
+  | None -> None
+
+let filePathToDocId (path: string) : DocId =
   let projectName =
     match dirname path with
     | Some path -> basename path
@@ -298,7 +352,12 @@ let private docIdToModulePath (docId: DocId) =
     traceFn "Not a docId of module file: '%s'" docId
     None
 
-let private convertDocIdToFilePath (fileExists: FileExistsFun) (projectDir: ProjectDir) (docId: DocId) =
+let private convertDocIdToFilePath
+  (fileExists: FileExistsFun)
+  stdLibProjectMap
+  (projectDir: ProjectDir)
+  (docId: DocId)
+  =
   let fixExt path =
     SyntaxApi.chooseSourceExt fileExists path
 
@@ -306,7 +365,7 @@ let private convertDocIdToFilePath (fileExists: FileExistsFun) (projectDir: Proj
     match docIdToModulePath docId with
     | Some (projectName, moduleName) ->
       let projectDir =
-        match stdLibProjects |> Map.tryFind projectName with
+        match stdLibProjectMap |> Map.tryFind projectName with
         | Some it -> it
         | None -> projectDir + "/../" + projectName
 
@@ -326,36 +385,19 @@ let private docIdIsOptional docId =
 // ProjectAnalysis
 // ---------------------------------------------
 
-// FIXME: remove doc helpers
-let private locOfDocPos (docId: DocId) (pos: Pos) : Loc =
-  let y, x = pos
-  Loc(docId, y, x)
-
-let private locToDoc (loc: Loc) : DocId =
-  let (Loc (docId, _, _)) = loc
-  docId
-
-let private locToPos (loc: Loc) : Pos =
-  let (Loc (_, y, x)) = loc
-  y, x
-
-let private locToDocPos (loc: Loc) : DocId * Pos =
-  let (Loc (docId, y, x)) = loc
-  docId, (y, x)
-
 let private doFindRefs hint docId targetPos pa =
-  debugFn "doFindRefs %s" hint
+  traceFn "doFindRefs %s" hint
   let tokens, pa = ProjectAnalysis1.tokenize docId pa
   let tokenOpt = tokens |> LTokenList.findAt targetPos
 
   match tokenOpt with
   | None ->
-    debugFn "%s: token not found on position: docId=%s pos=%s" hint docId (posToString targetPos)
+    debugFn "%s: token not found on position: docId=%s pos=%s" hint docId (Pos.toString targetPos)
     None, pa
 
   | Some token ->
-    let tokenLoc = locOfDocPos docId (LToken.getPos token)
-    debugFn "%s: tokenLoc=%A" hint tokenLoc
+    let tokenLoc = Loc.ofDocPos docId (LToken.getPos token)
+    traceFn "%s: tokenLoc=%A" hint tokenLoc
 
     let result, pa = pa |> ProjectAnalysis1.bundle
 
@@ -396,7 +438,9 @@ let private doFindDefsOrUses hint docId targetPos includeDef includeUse pa =
              | Def when not includeDef -> map
              | Use when not includeUse -> map
 
-             | _ -> map |> Multimap.add (locToDoc loc) (locToPos loc))
+             | _ ->
+               let docId, pos = Loc.toDocPos loc
+               map |> Multimap.add docId pos)
            (TMap.empty compare)
       |> TMap.toList
       |> List.mapFold
@@ -424,7 +468,7 @@ module ProjectAnalysis =
       |> BundleResult.getErrors
       |> List.fold
            (fun map (msg, loc) ->
-             let docId, pos = locToDocPos loc
+             let docId, pos = Loc.toDocPos loc
              map |> Multimap.add docId (msg, pos))
            (TMap.empty compare)
       |> TMap.toList
@@ -432,7 +476,7 @@ module ProjectAnalysis =
            (fun pa (docId, errorList) ->
              let tokens, pa = ProjectAnalysis1.tokenize docId pa
 
-             // FIXME: parser reports error at EOF as y=-1. Fix up that here.
+             // parser reports error at EOF as y=-1. Fix up that here.
              let errorList =
                errorList
                |> List.map (fun (msg, pos) ->
@@ -469,12 +513,7 @@ module ProjectAnalysis =
 
     List.collect id errorListList, pa
 
-  let completion
-    (projectDir: ProjectDir)
-    (docId: DocId)
-    (targetPos: Pos)
-    (pa: ProjectAnalysis)
-    : string list * ProjectAnalysis =
+  let completion modules (docId: DocId) (targetPos: Pos) (pa: ProjectAnalysis) : string list * ProjectAnalysis =
     let tokens, pa = ProjectAnalysis1.tokenize docId pa
 
     let inModuleLine =
@@ -484,15 +523,102 @@ module ProjectAnalysis =
       |> LTokenList.filterByLine y
       |> List.exists LToken.isModuleOrOpenKeyword
 
-    let result =
-      if inModuleLine then
-        List.append (Map.toList stdLibProjects) (findModulesInDir projectDir)
-        |> List.collect (fun (p, m) -> [ p; m ])
-        |> listUnique
-      else
-        []
+    /// All project names and module names.
+    let collectModuleNames () =
+      modules
+      |> List.collect (fun (p, m) -> [ p; m ])
+      |> listUnique
 
-    result, pa
+    let beforeDot () =
+      let y, x = targetPos
+
+      let isTouched t =
+        let _, x1 = t |> LToken.getPos
+        x1 = x - 1 || x1 = x
+
+      let rec go tokens =
+        match tokens with
+        | t1 :: t2 :: _ when t2 |> LToken.isDot && t2 |> isTouched -> t1 |> LToken.asIdent
+
+        | [] -> None
+        | _ :: ts -> go ts
+
+      tokens |> LTokenList.filterByLine y |> go
+
+    let collectNsSymbols qual pa =
+      // FIXME: resolve `qual` as qualifier and collect symbols in its namespace
+      [ qual + ".*" ], pa
+
+    let collectLocalSymbols pa =
+      let hint = "completion"
+
+      let drop y2 x2 stack exclusion =
+        let rec go stack exclusion =
+          match stack with
+          | [] -> stack, exclusion
+          | t :: ts ->
+            let y1, x1 = t |> LToken.getPos
+
+            if x1 <= x2 then
+              stack, exclusion
+            else
+              go ts ((y1, y2) :: exclusion)
+
+        go stack exclusion
+
+      let rec go stack exclusion tokens =
+        match tokens with
+        | [] -> drop 0x7fff -1 stack exclusion |> snd
+
+        | token :: tokens ->
+          let y2, x2 = token |> LToken.getPos
+
+          if y2 > (fst targetPos) then
+            exclusion
+          else if token |> LToken.isBindingKeyword then
+            let stack, exclusion = drop y2 x2 stack exclusion
+            go (token :: stack) exclusion tokens
+          else
+            go stack exclusion tokens
+
+      let exclusion = go [] [] (tokens |> LTokenList.toList)
+
+      let bundleResult, pa = pa |> ProjectAnalysis1.bundle
+
+      match pa |> ProjectAnalysis1.collectSymbols bundleResult with
+      | None ->
+        let errorCount =
+          bundleResult
+          |> BundleResult.getErrors
+          |> List.length
+
+        debugFn "%s: no bundle result: errors %d" hint errorCount
+        [], pa
+
+      | Some symbols ->
+        let result =
+          symbols
+          |> List.choose (fun (symbol, _, loc) ->
+            let (Loc (d, y, _)) = loc
+
+            if d = docId
+               && exclusion
+                  |> List.exists (fun (y1, y2) -> y1 <= y && y < y2)
+                  |> not then
+              Some symbol
+            else
+              None)
+          |> List.choose (fun symbol -> symbol |> Symbol.name bundleResult)
+
+        result, pa
+
+    if inModuleLine then
+      collectModuleNames (), pa
+    else
+      // match beforeDot () with
+      // | Some token -> collectNsSymbols token pa
+      // | None -> collectLocalSymbols pa
+      collectLocalSymbols pa
 
   /// `(defs, uses) option`
   let findRefs
@@ -523,9 +649,9 @@ module ProjectAnalysis =
         symbols
         |> List.fold
              (fun (readAcc, writeAcc) (_, defOrUse, loc) ->
-               if locToDoc loc = docId then
-                 let pos = loc |> locToPos
+               let d, pos = loc |> Loc.toDocPos
 
+               if d = docId then
                  match defOrUse with
                  | Def -> readAcc, pos :: writeAcc
                  | Use -> pos :: readAcc, writeAcc
@@ -548,11 +674,11 @@ module ProjectAnalysis =
 
     match tokenOpt with
     | None ->
-      debugFn "hover: token not found on position: docId=%s pos=%s" docId (posToString targetPos)
+      debugFn "hover: token not found on position: docId=%s pos=%s" docId (Pos.toString targetPos)
       None, pa
 
     | Some token ->
-      let tokenLoc = locOfDocPos docId (LToken.getPos token)
+      let tokenLoc = Loc.ofDocPos docId (LToken.getPos token)
       // eprintfn "hover: %A, tokenLoc=%A" token tokenLoc
 
       let result, pa = pa |> ProjectAnalysis1.bundle
@@ -584,6 +710,59 @@ module ProjectAnalysis =
 
     Option.defaultValue [] resultOpt, pa
 
+  let documentSymbol docId pa =
+    let syntaxOpt, pa = ProjectAnalysis1.parse docId pa
+
+    let symbols =
+      let pathToName path =
+        path
+        |> List.tryLast
+        |> Option.defaultValue "<module>"
+
+      syntaxOpt
+      |> Option.map (fun syntax -> ProjectAnalysis1.documentSymbols syntax pa)
+      |> Option.defaultValue []
+      |> List.choose (fun (symbol, _, Loc (_, y, x)) ->
+        let ok name kind = Some((name, kind), (y, x))
+
+        match symbol with
+        | DFunSymbol name -> ok name 12 // 12
+        | DTySymbol name -> ok name 5 // class
+        | DModuleSymbol path -> ok (pathToName path) 2 // module
+        | _ -> None)
+
+    let symbols, pa =
+      let kinds, posList = List.unzip symbols
+
+      let ranges, pa =
+        let tokens, pa = ProjectAnalysis1.tokenize docId pa
+        tokens |> LTokenList.resolveRanges posList, pa
+
+      let symbols =
+        if List.length kinds = List.length ranges then
+          List.zip kinds ranges
+          |> List.map (fun ((name, kind), range) -> name, kind, range)
+        else
+          []
+
+      symbols, pa
+
+    symbols, pa
+
+  let rename (docId: DocId) (targetPos: Pos) (newName: string) (pa: ProjectAnalysis) =
+    let includeDef = true
+    let includeUse = true
+
+    let resultOpt, pa =
+      doFindDefsOrUses "rename" docId targetPos includeDef includeUse pa
+
+    let changes =
+      resultOpt
+      |> Option.defaultValue []
+      |> List.map (fun (docId, range) -> docId, (range, newName))
+
+    changes, pa
+
 // ---------------------------------------------
 // WorkspaceAnalysis
 // ---------------------------------------------
@@ -591,8 +770,16 @@ module ProjectAnalysis =
 [<RequireQualifiedAccess; NoEquality; NoComparison>]
 type WorkspaceAnalysisHost =
   { MiloneHome: MiloneHome
-    DocIdToFilePath: DocIdToFilePathFun
-    ReadSourceFile: ReadSourceFileFun }
+    FileExists: FileExistsFun
+    ReadTextFile: ReadTextFileFun
+    DirEntries: DirEntriesFun }
+
+module WorkspaceAnalysisHost =
+  let dummy: WorkspaceAnalysisHost =
+    { MiloneHome = "/$/.milone"
+      FileExists = fun _ -> false
+      ReadTextFile = fun _ -> Future.just None
+      DirEntries = fun _ -> [], [] }
 
 /// State of workspace-wide analysis.
 /// That is, this is basically the root of state of LSP server.
@@ -606,126 +793,202 @@ type WorkspaceAnalysis =
     Projects: TreeMap<string, ProjectAnalysis>
 
     // Per-file cache.
-    TokenizeCache: TreeMap<DocId, DocVersion * LTokenList>
-    ParseCache: TreeMap<DocId, DocVersion * LSyntaxData>
+    TokenizeCache: TreeMap<Uri, DocVersion * LTokenList>
+    ParseCache: TreeMap<Uri, DocVersion * LSyntaxData>
 
     // Diagnostics.
     DiagnosticsKeys: Uri list
     DiagnosticsCache: DiagnosticsCache<byte array>
 
+    RootUriOpt: Uri option
+    StdLibFiles: FilePath list
+    StdLibModules: (string * ProjectDir) list
+    DocIdToFilePath: DocIdToFilePathFun
+    ReadSourceFile: ReadSourceFileFun
+
     Host: WorkspaceAnalysisHost }
 
-let private emptyWorkspaceAnalysis: WorkspaceAnalysis =
+let private createWorkspaceAnalysis (host: WorkspaceAnalysisHost) : WorkspaceAnalysis =
   { LastId = 0
     Docs = TMap.empty Uri.compare
     ProjectList = []
     Projects = TMap.empty compare
 
-    TokenizeCache = TMap.empty compare
-    ParseCache = TMap.empty compare
+    TokenizeCache = TMap.empty Uri.compare
+    ParseCache = TMap.empty Uri.compare
 
     DiagnosticsKeys = []
     DiagnosticsCache = DiagnosticsCache.empty Md5Helper.ofString Md5Helper.equals
 
-    Host =
-      { MiloneHome = miloneHome
-        DocIdToFilePath = convertDocIdToFilePath File.Exists
-        ReadSourceFile = SyntaxApi.readSourceFile File.readTextFile } }
+    RootUriOpt = None
+    StdLibFiles = []
+    StdLibModules = []
+    DocIdToFilePath = fun _ _ -> unreachable ()
+    ReadSourceFile = fun _ -> Future.just None
+
+    Host = host }
 
 let private freshId (wa: WorkspaceAnalysis) =
   wa.LastId + 1, { wa with LastId = wa.LastId + 1 }
 
-let private docIdToFilePath (p: ProjectInfo) docId (wa: WorkspaceAnalysis) =
-  wa.Host.DocIdToFilePath p.ProjectDir docId
+let private docIdToFilePath (p: ProjectInfo) docId (wa: WorkspaceAnalysis) = wa.DocIdToFilePath p.ProjectDir docId
 
 let private docIdToUri p docId (wa: WorkspaceAnalysis) =
   docIdToFilePath p docId wa |> uriOfFilePath
 
+let private readTextFile path (wa: WorkspaceAnalysis) =
+  wa.Host.ReadTextFile path |> Future.wait // #avoidBlocking
+
 let private readSourceFile p docId (wa: WorkspaceAnalysis) =
-  wa.Host.ReadSourceFile(docIdToFilePath p docId wa)
+  wa.ReadSourceFile(docIdToFilePath p docId wa)
+
+/// Can send edits to a file?
+///
+/// Files inside a project directory can be edited.
+let private isSafeToEdit (uri: Uri) (wa: WorkspaceAnalysis) =
+  let dir =
+    uriToFilePath uri
+    |> dirname
+    |> Option.map stem
+    |> Option.defaultValue ""
+
+  wa.ProjectList
+  |> List.exists (fun (p: ProjectInfo) ->
+    p.ProjectName |> S.startsWith "Milone" |> not
+    && dir = p.ProjectName)
+
+let private doDidOpenDoc (uri: Uri) (version: int) (text: string) (wa: WorkspaceAnalysis) =
+  traceFn "didOpenDoc %s v:%d" (Uri.toString uri) version
+
+  let version = version + DocBaseVersion
+  { wa with Docs = wa.Docs |> TMap.add uri (version, text) }
+
+let private doDidOpenFile (uri: Uri) (version: int) (text: string) (wa: WorkspaceAnalysis) =
+  traceFn "didOpenFile %s v:%d" (Uri.toString uri) version
+
+  match wa.Docs |> TMap.tryFind uri with
+  | Some (v, _) when v >= version -> wa
+  | _ -> { wa with Docs = wa.Docs |> TMap.add uri (version, text) }
+
+let doDidChangeDoc (uri: Uri) (version: int) (text: string) (wa: WorkspaceAnalysis) =
+  traceFn "didChangeDoc %s v:%d" (Uri.toString uri) version
+
+  let version = version + DocBaseVersion
+  { wa with Docs = wa.Docs |> TMap.add uri (version, text) }
+
+let doDidChangeFile (uri: Uri) (version: int) (text: string) (wa: WorkspaceAnalysis) =
+  traceFn "didChangeFile %s v:%d" (Uri.toString uri) version
+
+  match wa.Docs |> TMap.tryFind uri with
+  | Some (v, _) when v >= version -> wa
+  | _ -> { wa with Docs = wa.Docs |> TMap.add uri (version, text) }
+
+let private findProjects (wa: WorkspaceAnalysis) =
+  let projects =
+    match wa.RootUriOpt with
+    | Some rootUri -> doFindProjects wa.Host.FileExists wa.Host.DirEntries rootUri
+    | None -> []
+
+  { wa with ProjectList = projects }
+
+let private openAllModules version (wa: WorkspaceAnalysis) =
+  let filesInRoot =
+    wa.RootUriOpt
+    |> Option.map (fun rootUri -> findModulesRecursively wa.Host.DirEntries 3 (uriToFilePath rootUri))
+    |> Option.defaultValue []
+
+  List.append wa.StdLibFiles filesInRoot
+  |> listUnique
+  |> List.map (fun path ->
+    let uri = uriOfFilePath path
+    let textFut = wa.ReadSourceFile path
+
+    textFut
+    |> Future.map (fun textOpt -> textOpt |> Option.map (fun text -> uri, text)))
+  |> List.choose Future.wait // #avoidBlocking
+  |> List.fold (fun (wa: WorkspaceAnalysis) (uri, text) -> doDidOpenFile uri version text wa) wa
+
+let private getDocVersion uri (wa: WorkspaceAnalysis) =
+  match wa.Docs |> TMap.tryFind uri with
+  | Some (v, _) -> v
+
+  | None ->
+    traceFn "docs don't have '%s'" (uri |> Uri.toString)
+    MinVersion
+
+let private tokenizeDoc uri (wa: WorkspaceAnalysis) =
+  let version = getDocVersion uri wa
+
+  match wa.ParseCache |> TMap.tryFind uri with
+  | Some (v, syntaxData) when v = version ->
+    let tokens = LSyntaxData.getTokens syntaxData
+    Some(v, tokens)
+
+  | _ ->
+    match wa.TokenizeCache |> TMap.tryFind uri with
+    | (Some (v, _)) as it when v = version -> it
+
+    | _ ->
+      let ok v text =
+        traceFn "tokenize: '%s' v:%d" (Uri.toString uri) v
+        let tokens = LTokenList.tokenizeAll text
+        Some(v, tokens)
+
+      match wa.Docs |> TMap.tryFind uri with
+      | Some (v, text) -> ok v text
+
+      | None ->
+        if (uri |> uriToFilePath |> stem) <> "MiloneOnly" then
+          debugFn "tokenize: '%s' not open" (Uri.toString uri)
+
+        None
+
+let private parseDoc (uri: Uri) (wa: WorkspaceAnalysis) =
+  match tokenizeDoc uri wa with
+  | Some (version, tokens) ->
+    match wa.ParseCache |> TMap.tryFind uri with
+    | (Some (v, _)) as it when v = version -> it
+
+    | _ ->
+      let v = version
+      let docId = uri |> uriToFilePath |> filePathToDocId
+
+      let projectName, moduleName =
+        match docId |> docIdToModulePath with
+        | Some it -> it
+        | None -> unreachable () // docId is created in `p.m` format explicitly
+
+      traceFn "parse '%s' v:%d" docId v
+
+      let syntaxData =
+        LSyntaxData.parse projectName moduleName docId tokens
+
+      Some(v, syntaxData)
+
+  | None -> None
 
 let doWithProjectAnalysis
   (p: ProjectInfo)
   (action: ProjectAnalysis -> 'A * ProjectAnalysis)
   (wa: WorkspaceAnalysis)
   : 'A * WorkspaceAnalysis =
-  let getVersion docId =
-    match wa.Docs |> TMap.tryFind (docIdToUri p docId wa) with
-    | Some (v, _) -> Some v
-
-    | None ->
-      traceFn "docs don't have '%s'" (docIdToUri p docId wa |> Uri.toString)
-      None
-
-  let tokenize1 docId =
-    let version =
-      getVersion docId |> Option.defaultValue 0
-
-    match wa.ParseCache |> TMap.tryFind docId with
-    | Some (v, syntaxData) when v >= version -> v, LSyntaxData.getTokens syntaxData
-
-    | _ ->
-      match wa.TokenizeCache |> TMap.tryFind docId with
-      | Some ((v, _) as it) when v >= version -> it
-
-      | _ ->
-        let ok v text =
-          traceFn "tokenize '%s' v:%d" docId v
-
-          let tokens = LTokenList.tokenizeAll text
-
-          v, tokens
-
-        match wa.Docs |> TMap.tryFind (docIdToUri p docId wa) with
-        | None ->
-          traceFn
-            "tokenize: docId:'%s' uri:'%s' not found -- fallback to file"
-            docId
-            (docIdToUri p docId wa |> Uri.toString)
-
-          // FIXME: LSP server should add all files to docs before processing queries.
-          let textOpt = readSourceFile p docId wa |> Future.wait
-
-          match textOpt with
-          | None ->
-            if docIdIsOptional docId |> not then
-              warnFn "missing docId '%s' to be tokenized" docId
-
-            -1, LTokenList.empty
-
-          | Some text -> ok 0 text
-
-        | Some (v, text) -> ok v text
-
-  let parse1 docId =
-    let version, tokens = tokenize1 docId
-
-    match wa.ParseCache |> TMap.tryFind docId with
-    | Some ((v, _) as it) when v >= version -> Some it
-
-    | _ ->
-      let v = version
-
-      match docIdToModulePath docId with
-      | None ->
-        warnFn "illegal docId '%s'" docId
-        None
-
-      | Some (projectName, moduleName) ->
-        traceFn "parse '%s' v:%d" docId v
-
-        let syntaxData =
-          LSyntaxData.parse projectName moduleName docId tokens
-
-        Some(v, syntaxData)
-
   let host: ProjectAnalysisHost =
-    { GetDocVersion = getVersion
-      Tokenize = tokenize1
-      Parse = parse1
+    { GetDocVersion = fun docId -> getDocVersion (docIdToUri p docId wa) wa
+
+      Tokenize =
+        fun docId ->
+          let uri = docIdToUri p docId wa
+
+          tokenizeDoc uri wa
+          |> Option.defaultValue (MinVersion, LTokenList.empty)
+
+      Parse =
+        fun docId ->
+          let uri = docIdToUri p docId wa
+          parseDoc uri wa
 
       MiloneHome = wa.Host.MiloneHome
-      ReadTextFile = File.readTextFile }
+      ReadTextFile = wa.Host.ReadTextFile }
 
   let pa =
     match wa.Projects |> TMap.tryFind p.ProjectName with
@@ -743,28 +1006,11 @@ let doWithProjectAnalysis
          (fun (wa: WorkspaceAnalysis) (v, syntaxData) ->
            let docId = LSyntaxData.getDocId syntaxData
            let tokens = LSyntaxData.getTokens syntaxData
+           let uri = docIdToUri p docId wa
 
            { wa with
-               TokenizeCache = wa.TokenizeCache |> TMap.add docId (v, tokens)
-               ParseCache = wa.ParseCache |> TMap.add docId (v, syntaxData) })
-         wa
-
-  let wa =
-    newParseResults
-    |> List.map (fun (_, syntaxData) ->
-      let docId = LSyntaxData.getDocId syntaxData
-      docIdToUri p docId wa)
-    |> List.filter (fun uri -> wa.Docs |> TMap.containsKey uri |> not)
-    |> List.fold
-         (fun (wa: WorkspaceAnalysis) uri ->
-           // FIXME: don't read file
-           // same as didOpenFile
-           match uriToFilePath uri |> File.tryReadFile with
-           | Some text ->
-             traceFn "file '%s' opened after bundle" (Uri.toString uri)
-             { wa with Docs = wa.Docs |> TMap.add uri (0, text) }
-
-           | None -> wa)
+               TokenizeCache = wa.TokenizeCache |> TMap.add uri (v, tokens)
+               ParseCache = wa.ParseCache |> TMap.add uri (v, syntaxData) })
          wa
 
   let wa =
@@ -773,45 +1019,115 @@ let doWithProjectAnalysis
   result, wa
 
 module WorkspaceAnalysis =
-  let empty: WorkspaceAnalysis = emptyWorkspaceAnalysis
+  let dummy: WorkspaceAnalysis =
+    createWorkspaceAnalysis WorkspaceAnalysisHost.dummy
 
-  let didOpenDoc (uri: Uri) (version: int) (text: string) (wa: WorkspaceAnalysis) =
-    traceFn "didOpenDoc %s v:%d" (Uri.toString uri) version
-    { wa with Docs = wa.Docs |> TMap.add uri (version, text) }
+  let withHost (host: WorkspaceAnalysisHost) (wa: WorkspaceAnalysis) : WorkspaceAnalysis =
+    let miloneHome = host.MiloneHome
 
-  let didChangeDoc (uri: Uri) (version: int) (text: string) (wa: WorkspaceAnalysis) =
-    traceFn "didChangeDoc %s v:%d" (Uri.toString uri) version
-    { wa with Docs = wa.Docs |> TMap.add uri (version, text) }
+    let stdLibProjects = SyntaxApi.getStdLibProjects miloneHome
+
+    let stdLibFiles =
+      stdLibProjects
+      |> List.collect (fun (_, projectDir) -> findModulesRecursively host.DirEntries 3 projectDir)
+
+    let stdLibModules =
+      stdLibFiles
+      |> List.choose (fun path -> path |> filePathToDocId |> docIdToModulePath)
+
+    { wa with
+        StdLibFiles = stdLibFiles
+        StdLibModules = stdLibModules
+        DocIdToFilePath = convertDocIdToFilePath host.FileExists (Map.ofList stdLibProjects)
+        ReadSourceFile = SyntaxApi.readSourceFile host.ReadTextFile
+        Host = host }
+
+  let create (host: WorkspaceAnalysisHost) : WorkspaceAnalysis = dummy |> withHost host
+
+  let getProjectDirs (wa: WorkspaceAnalysis) =
+    wa.ProjectList
+    |> List.map (fun (p: ProjectInfo) -> p.ProjectDir)
+
+  let onInitialized rootUriOpt (wa: WorkspaceAnalysis) : WorkspaceAnalysis =
+    let wa = { wa with RootUriOpt = rootUriOpt }
+    let version, wa = freshId wa
+    wa |> findProjects |> openAllModules version
+
+  let didOpenDoc (uri: Uri) (version: int) (text: string) (wa: WorkspaceAnalysis) = doDidOpenDoc uri version text wa
+
+  let didChangeDoc (uri: Uri) (version: int) (text: string) (wa: WorkspaceAnalysis) = doDidChangeDoc uri version text wa
 
   let didCloseDoc (uri: Uri) (wa: WorkspaceAnalysis) =
     traceFn "didCloseDoc %s" (Uri.toString uri)
-    // FIXME: drop tokenize/parse result
-    let _, docs = wa.Docs |> TMap.remove uri
-    { wa with Docs = docs }
+
+    let path = uriToFilePath uri
+
+    // #avoidBlocking
+    match wa.Host.ReadTextFile path |> Future.wait with
+    | Some text ->
+      // Re-open as file if exists.
+      let version, wa = freshId wa
+      { wa with Docs = wa.Docs |> TMap.add uri (version, text) }
+
+    | None ->
+      // FIXME: drop tokenize/parse result
+      let _, docs = wa.Docs |> TMap.remove uri
+      { wa with Docs = docs }
 
   let didOpenFile (uri: Uri) (wa: WorkspaceAnalysis) =
     traceFn "didOpenFile %s" (Uri.toString uri)
-    // FIXME: don't read file
-    match uriToFilePath uri |> File.tryReadFile with
-    | Some text ->
-      let version, wa = freshId wa
-      didOpenDoc uri version text wa
 
-    | None -> wa
+    let path = uriToFilePath uri
+
+    let wa =
+      if isEntrypoint path || isManifest path then
+        findProjects wa
+      else
+        wa
+
+    // delay reading file
+    if isManifest path |> not then
+      match readTextFile (uriToFilePath uri) wa with
+      | Some text ->
+        let version, wa = freshId wa
+        doDidOpenFile uri version text wa
+
+      | None -> wa
+    else
+      wa
 
   let didChangeFile (uri: Uri) (wa: WorkspaceAnalysis) =
     traceFn "didChangeFile %s" (Uri.toString uri)
-    // FIXME: don't read file
-    match uriToFilePath uri |> File.tryReadFile with
-    | Some text ->
-      let version, wa = freshId wa
-      didChangeDoc uri version text wa
 
-    | None -> wa
+    let path = uriToFilePath uri
+
+    if isManifest path |> not then
+      // delay reading file
+      match readTextFile path wa with
+      | Some text ->
+        let version, wa = freshId wa
+        doDidChangeFile uri version text wa
+
+      | None -> wa
+    else
+      wa
 
   let didCloseFile (uri: Uri) (wa: WorkspaceAnalysis) =
     traceFn "didCloseFile %s" (Uri.toString uri)
-    didCloseDoc uri wa
+
+    let path = uriToFilePath uri
+
+    let wa =
+      if isEntrypoint path || isManifest path then
+        findProjects wa
+      else
+        wa
+
+    if isManifest path |> not then
+      // FIXME: remove tokenize/parse cache, same as closeDoc
+      { wa with Docs = wa.Docs |> TMap.remove uri |> snd }
+    else
+      wa
 
   let diagnostics (wa: WorkspaceAnalysis) =
     let results, wa =
@@ -843,14 +1159,189 @@ module WorkspaceAnalysis =
 
     diagnostics, wa
 
+  let codeAction (uri: Uri) (range: Range) (wa: WorkspaceAnalysis) =
+    let generateModuleHeadAction () =
+      let title = "Generate module head"
+      let front: Range = (0, 0), (0, 0)
+
+      let isEmpty =
+        match wa.Docs |> TMap.tryFind uri with
+        | Some (_, text) -> text |> S.trimEnd |> S.isEmpty
+        | None -> false
+
+      let textOpt =
+        if isEmpty then
+          let path = uri |> uriToFilePath
+          let parentOpt = dirname path
+          let projectNameOpt = parentOpt |> Option.map basename
+          let moduleName = path |> stem
+
+          match projectNameOpt with
+          | Some projectName ->
+            sprintf "module rec %s.%s\n" projectName moduleName
+            |> Some
+          | None -> None
+        else
+          None
+
+      match textOpt with
+      | Some text -> Some(title, [ uri, [ front, text ] ])
+      | None -> None
+
+    // FIXME: store parse result to cache
+    let generateOpenAction () =
+      let title = "Generate open"
+      let pos, _ = range
+      let row, _ = pos
+
+      let dotPosOpt tokens =
+        tokens
+        |> LTokenList.findAdjacent pos
+        |> List.tryFind LToken.isDot
+
+      let identOpt tokens =
+        tokens
+        |> LTokenList.filterByLine row
+        |> List.rev
+        |> List.skipWhile (fun token -> LToken.getPos token > pos)
+        |> List.tryPick LToken.asIdent
+
+      let nextOpenRow tokens =
+        tokens
+        |> LTokenList.toList
+        |> List.groupBy (fun token -> token |> LToken.getPos |> fst)
+        |> List.rev
+        |> List.tryFind (fun (_, tokens) -> tokens |> List.exists LToken.isOpen)
+        |> Option.map (fun (row, _) -> row + 1)
+        |> Option.defaultValue 0
+
+      let asOpenedModule usedModule uri =
+        match parseDoc uri wa, uriToDocId uri |> docIdToModulePath with
+        | Some (_, syntax), Some (projectName, moduleName) ->
+          if syntax
+             |> LSyntaxData.findModuleDefs
+             |> List.exists (fun name -> name = usedModule) then
+            Some(projectName, moduleName)
+          else
+            None
+
+        | _ -> None
+
+      let newEdit tokens (projectName, moduleName) =
+        let text =
+          "open " + projectName + "." + moduleName + "\n"
+
+        let row = nextOpenRow tokens
+
+        let range: Range = (row, 0), (row, 0)
+        title, [ uri, [ range, text ] ]
+
+      match parseDoc uri wa with
+      | Some (_, syntax) ->
+        let tokens = syntax |> LSyntaxData.getTokens
+
+        match dotPosOpt tokens, identOpt tokens with
+        | Some _, Some usedModule ->
+          wa.Docs
+          |> TMap.toList
+          |> List.tryPick (fun (uri, _) -> asOpenedModule usedModule uri)
+          |> Option.map (newEdit tokens)
+        | _ -> None
+      | _ -> None
+
+    // FIXME: store parse cache
+    let generateModuleSynonymAction () =
+      let title = "Generate module synonym"
+
+      let opt =
+        match parseDoc uri wa with
+        | Some (_, syntax) ->
+          let pos, _ = range
+          let row, _ = pos
+
+          let tokens = syntax |> LSyntaxData.getTokens
+
+          let dotPosOpt =
+            tokens
+            |> LTokenList.findAdjacent pos
+            |> List.tryFind LToken.isDot
+
+          let identOpt =
+            tokens
+            |> LTokenList.filterByLine row
+            |> List.rev
+            |> List.skipWhile (fun token -> LToken.getPos token > pos)
+            |> List.tryPick LToken.asIdent
+
+          let lastModuleRow () =
+            tokens
+            |> LTokenList.toList
+            |> List.groupBy (fun token -> token |> LToken.getPos |> fst)
+            |> List.rev
+            |> List.tryFind (fun (_, tokens) ->
+              tokens |> List.exists LToken.isModule
+              && tokens |> List.exists LToken.isEqual)
+            |> Option.map (fun (row, _) -> row + 1)
+            |> Option.defaultValue 0
+
+          match dotPosOpt, identOpt with
+          | Some _, Some ident ->
+            wa.Docs
+            |> TMap.toList
+            |> List.tryPick (fun (uri, _) ->
+              match parseDoc uri wa with
+              | Some (_, syntax) ->
+                syntax
+                |> LSyntaxData.findModuleSynonyms
+                |> List.tryFind (fun (name, _, _) -> name = ident)
+                |> Option.map (fun (_, path, _) ->
+                  "module "
+                  + ident
+                  + " = "
+                  + (path |> S.concat ".")
+                  + "\n")
+                |> Option.map (fun text ->
+                  let row = lastModuleRow ()
+                  row, text)
+
+              | None -> None)
+          | _ -> None
+
+        | None -> None
+
+      match opt with
+      | Some (row, text) ->
+        let range: Range = (row, 0), (row, 0)
+        Some(title, [ uri, [ range, text ] ])
+
+      | None -> None
+
+    let actions =
+      [ generateModuleHeadAction ()
+        generateOpenAction ()
+        generateModuleSynonymAction () ]
+      |> List.choose id
+
+    actions, wa
+
+  /// (projectName, moduleName) list
+  let getModules (p: ProjectInfo) (wa: WorkspaceAnalysis) =
+    wa.Docs
+    |> TMap.toKeys
+    |> List.choose (fun uri -> uri |> uriToFilePath |> filePathToModulePath)
+    |> List.filter (fun (name, _) -> name = p.ProjectName)
+    |> List.append wa.StdLibModules
+
   let completion (uri: Uri) (pos: Pos) (wa: WorkspaceAnalysis) =
     let results, wa =
       wa.ProjectList
       |> List.mapFold
-           (fun wa p -> doWithProjectAnalysis p (ProjectAnalysis.completion p.ProjectDir (uriToDocId uri) pos) wa)
+           (fun wa p -> doWithProjectAnalysis p (ProjectAnalysis.completion (getModules p wa) (uriToDocId uri) pos) wa)
            wa
 
-    List.collect id results, wa
+    let items = results |> List.collect id |> listUnique
+
+    items, wa
 
   let documentHighlight (uri: Uri) (pos: Pos) (wa: WorkspaceAnalysis) =
     let results, wa =
@@ -910,14 +1401,37 @@ module WorkspaceAnalysis =
 
     result, wa
 
-let onInitialized rootUriOpt (wa: WorkspaceAnalysis) : WorkspaceAnalysis =
-  let projects =
-    match rootUriOpt with
-    | Some rootUri -> doFindProjects rootUri
-    | None -> []
+  let documentSymbol (uri: Uri) (wa: WorkspaceAnalysis) =
+    let symbolListList, wa =
+      wa.ProjectList
+      |> List.mapFold (fun wa p -> doWithProjectAnalysis p (ProjectAnalysis.documentSymbol (uriToDocId uri)) wa) wa
 
-  infoFn "findProjects: %A" (List.map (fun (p: ProjectInfo) -> p.ProjectDir) projects)
-  { wa with ProjectList = projects }
+    List.collect id symbolListList, wa
+
+  let rename (uri: Uri) (pos: Pos) (newName: string) (wa: WorkspaceAnalysis) =
+    let results, wa =
+      wa.ProjectList
+      |> List.mapFold
+           (fun wa p ->
+             let edits, wa =
+               doWithProjectAnalysis p (ProjectAnalysis.rename (uriToDocId uri) pos newName) wa
+
+             edits
+             |> List.map (fun (docId, edit) -> docIdToUri p docId wa, edit),
+             wa)
+           wa
+
+    let changes =
+      results
+      |> List.collect id
+      |> List.groupBy fst
+      |> List.map (fun (uri, edits) -> uri, List.map snd edits)
+
+    let ok =
+      changes
+      |> List.forall (fun (uri, _) -> isSafeToEdit uri wa)
+
+    (if ok then changes else []), wa
 
 // -----------------------------------------------
 // Formatting
@@ -928,66 +1442,72 @@ let onInitialized rootUriOpt (wa: WorkspaceAnalysis) : WorkspaceAnalysis =
 [<RequireQualifiedAccess; NoEquality; NoComparison>]
 type FormattingResult = { Edits: (Range * string) list }
 
-// FIXME: compute diff
+// should compute diff
 let private formattingResultOfDiff _prev next : FormattingResult =
   { Edits = [ ((0, 0), (1100100100, 0)), next ] }
 
-let formatting (uri: Uri) (wa: WorkspaceAnalysis) : FormattingResult option =
-  let filePath = uriToFilePath uri
-  let dir = Path.GetDirectoryName(filePath)
+module Formatting =
+  open System.Diagnostics
+  open System.IO
 
-  let temp =
-    let basename =
-      Path.GetFileNameWithoutExtension(filePath)
+  type E = System.Environment
 
-    let suffix = Guid.NewGuid().ToString()
+  let formatting (uri: Uri) (wa: WorkspaceAnalysis) : FormattingResult option =
+    let filePath = uriToFilePath uri
+    let dir = Path.GetDirectoryName(filePath)
 
-    // Create temporary file alongside the file for .editorconfig.
-    Path.Combine(dir, sprintf "%s_%s.ignored.fs" basename suffix)
+    let temp =
+      let basename =
+        Path.GetFileNameWithoutExtension(filePath)
 
-  let textOpt =
-    match wa.Docs |> TMap.tryFind uri with
-    | Some (_, text) -> Some text
-    | _ -> None
+      let suffix = System.Guid.NewGuid().ToString()
 
-  try
-    let text =
-      match textOpt with
-      | Some text ->
-        File.WriteAllText(temp, text)
-        text
+      // Create temporary file alongside the file for .editorconfig.
+      Path.Combine(dir, sprintf "%s_%s.ignored.fs" basename suffix)
 
-      | None ->
-        File.Copy(filePath, temp)
-        File.ReadAllText(filePath)
+    let textOpt =
+      match wa.Docs |> TMap.tryFind uri with
+      | Some (_, text) -> Some text
+      | _ -> None
 
-    use proc =
-      // When the server is executed as VSCode extension,
-      // some environment variables are not inherited.
-
-      let homeDir =
-        Environment.GetFolderPath(Environment.SpecialFolder.UserProfile)
-
-      let startInfo = Diagnostics.ProcessStartInfo()
-      startInfo.FileName <- "/usr/bin/dotnet"
-      startInfo.ArgumentList.Add("fantomas")
-      startInfo.ArgumentList.Add(temp)
-      startInfo.WorkingDirectory <- dir
-      startInfo.EnvironmentVariables.Add("DOTNET_CLI_HOME", homeDir)
-      startInfo.EnvironmentVariables.Add("PATH", "/usr/bin")
-      startInfo.RedirectStandardOutput <- true
-      Diagnostics.Process.Start(startInfo)
-
-    let exited = proc.WaitForExit(30 * 1000)
-
-    if not exited then
-      proc.Kill(entireProcessTree = true)
-      None
-    else
-      let newText = File.ReadAllText(temp)
-      formattingResultOfDiff text newText |> Some
-  finally
     try
-      File.Delete(temp)
-    with
-    | ex -> warnFn "failed deleting temporary file '%s': %O" temp ex
+      let text =
+        match textOpt with
+        | Some text ->
+          File.WriteAllText(temp, text)
+          text
+
+        | None ->
+          File.Copy(filePath, temp)
+          File.ReadAllText(filePath)
+
+      use proc =
+        // When the server is executed as VSCode extension,
+        // some environment variables are not inherited.
+
+        let homeDir =
+          E.GetFolderPath(E.SpecialFolder.UserProfile)
+
+        let startInfo = ProcessStartInfo()
+        startInfo.FileName <- "/usr/bin/dotnet"
+        startInfo.ArgumentList.Add("fantomas")
+        startInfo.ArgumentList.Add(temp)
+        startInfo.WorkingDirectory <- dir
+        startInfo.EnvironmentVariables.Add("DOTNET_CLI_HOME", homeDir)
+        startInfo.EnvironmentVariables.Add("PATH", "/usr/bin")
+        startInfo.RedirectStandardOutput <- true
+        Process.Start(startInfo)
+
+      let exited = proc.WaitForExit(30 * 1000)
+
+      if not exited then
+        proc.Kill(entireProcessTree = true)
+        None
+      else
+        let newText = File.ReadAllText(temp)
+        formattingResultOfDiff text newText |> Some
+    finally
+      try
+        File.Delete(temp)
+      with
+      | ex -> warnFn "failed deleting temporary file '%s': %O" temp ex

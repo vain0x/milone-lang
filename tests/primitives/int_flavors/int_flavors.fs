@@ -91,6 +91,7 @@ let unsignedCases () =
 
 let private suffix () =
   assert (64L = int64 64)
+  assert (0x7fL = int64 127)
 
   assert (8uy = uint8 8)
   assert (16us = uint16 16)

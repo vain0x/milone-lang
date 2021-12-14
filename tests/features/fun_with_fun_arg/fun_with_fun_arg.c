@@ -1,8 +1,12 @@
-#include "milone.h"
+#include <milone.h>
+
+typedef void(*VoidConstPtrIntStringVoidFunPtr3)(void const*, int, struct String);
 
 struct IntStringUnitFun2;
 
 struct IntStringUnitFun2IntTuple2_;
+
+typedef void(*VoidConstPtrStringVoidFunPtr2)(void const*, struct String);
 
 struct StringUnitFun1;
 
@@ -18,10 +22,10 @@ void fun_with_fun_arg_fun_with_fun_arg_main_der(struct String d_, int n_, struct
 
 void fun_with_fun_arg_fun_with_fun_arg_eta3_main_der(void const* env_2, int arg_5, struct String arg_6);
 
-int milone_main(void);
+int main(int argc, char** argv);
 
 struct IntStringUnitFun2 {
-    void(*fun)(void const*, int, struct String);
+    VoidConstPtrIntStringVoidFunPtr3 fun;
     void const* env;
 };
 
@@ -31,7 +35,7 @@ struct IntStringUnitFun2IntTuple2_ {
 };
 
 struct StringUnitFun1 {
-    void(*fun)(void const*, struct String);
+    VoidConstPtrStringVoidFunPtr2 fun;
     void const* env;
 };
 
@@ -91,7 +95,8 @@ void fun_with_fun_arg_fun_with_fun_arg_eta3_main_der(void const* env_2, int arg_
     return;
 }
 
-int milone_main(void) {
+int main(int argc, char** argv) {
+    milone_start(argc, argv);
     struct IntStringUnitFun2 fun_1 = (struct IntStringUnitFun2){.fun = fun_with_fun_arg_fun_with_fun_arg_eta3_main_printInt, .env = NULL};
     struct StringUnitFun1 call_ = fun_with_fun_arg_Program_bindInt(fun_1, 42);
     struct StringUnitFun1 print42_ = call_;

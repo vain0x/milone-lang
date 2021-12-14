@@ -11,10 +11,7 @@ let basicSomeCase () =
   | _ -> assert false
 
 let basicNoneCase () =
-  // FIXME: directly using None emits invalid codes (e.g. `NULL->head`)
-  let none: string option = None
-
-  match none with
+  match None with
   | Some "a" -> assert false
 
   | None -> ()

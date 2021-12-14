@@ -1,10 +1,16 @@
-#include "milone.h"
+#include <milone.h>
+
+typedef int(*VoidConstPtrIntIntFunPtr2)(void const*, int);
 
 struct IntIntFun1;
 
 struct IntIntTuple2_;
 
+typedef int(*VoidConstPtrIntIntIntFunPtr3)(void const*, int, int);
+
 struct IntIntIntFun2;
+
+typedef int(*VoidConstPtrIntIntIntIntIntFunPtr5)(void const*, int, int, int, int);
 
 struct IntIntIntIntIntFun4;
 
@@ -20,10 +26,10 @@ int fun_partial_app_fun_partial_app_eta3_main_add4(void const* env_1, int arg_2,
 
 int fun_partial_app_fun_partial_app_eta5_main_add4(void const* env_2, int arg_6, int arg_7, int arg_8, int arg_9);
 
-int milone_main(void);
+int main(int argc, char** argv);
 
 struct IntIntFun1 {
-    int(*fun)(void const*, int);
+    VoidConstPtrIntIntFunPtr2 fun;
     void const* env;
 };
 
@@ -33,12 +39,12 @@ struct IntIntTuple2_ {
 };
 
 struct IntIntIntFun2 {
-    int(*fun)(void const*, int, int);
+    VoidConstPtrIntIntIntFunPtr3 fun;
     void const* env;
 };
 
 struct IntIntIntIntIntFun4 {
-    int(*fun)(void const*, int, int, int, int);
+    VoidConstPtrIntIntIntIntIntFunPtr5 fun;
     void const* env;
 };
 
@@ -74,21 +80,22 @@ int fun_partial_app_fun_partial_app_eta5_main_add4(void const* env_2, int arg_6,
     return call_2;
 }
 
-int milone_main(void) {
+int main(int argc, char** argv) {
+    milone_start(argc, argv);
     struct IntIntFun1 fun_ = (struct IntIntFun1){.fun = fun_partial_app_fun_partial_app_eta2_main_dec, .env = ((void const*)((intptr_t)3))};
     struct IntIntFun1 dec3_ = fun_;
     int call_3 = fun_partial_app_Program_twice(dec3_, 8);
-    milone_assert((call_3 == 2), 12, 2);
+    milone_assert((call_3 == 2), (struct String){.str = "fun_partial_app/fun_partial_app.milone", .len = 38}, 12, 2);
     struct IntIntTuple2_ IntIntTuple2_ = (struct IntIntTuple2_){.t0 = 2, .t1 = 3};
     void const* box_ = milone_mem_alloc(1, sizeof(struct IntIntTuple2_));
     (*(((struct IntIntTuple2_*)box_))) = IntIntTuple2_;
     struct IntIntIntFun2 fun_1 = (struct IntIntIntFun2){.fun = fun_partial_app_fun_partial_app_eta3_main_add4, .env = box_};
     struct IntIntIntFun2 add2_ = fun_1;
     int app_2 = add2_.fun(add2_.env, 5, 7);
-    milone_assert((app_2 == (((2 + 3) + 5) + 7)), 15, 2);
+    milone_assert((app_2 == (((2 + 3) + 5) + 7)), (struct String){.str = "fun_partial_app/fun_partial_app.milone", .len = 38}, 15, 2);
     struct IntIntIntIntIntFun4 fun_2 = (struct IntIntIntIntIntFun4){.fun = fun_partial_app_fun_partial_app_eta5_main_add4, .env = NULL};
     struct IntIntIntIntIntFun4 f_1 = fun_2;
     int app_3 = f_1.fun(f_1.env, 1, 2, 3, 4);
-    milone_assert((app_3 == (((1 + 2) + 3) + 4)), 18, 2);
+    milone_assert((app_3 == (((1 + 2) + 3) + 4)), (struct String){.str = "fun_partial_app/fun_partial_app.milone", .len = 38}, 18, 2);
     return 0;
 }

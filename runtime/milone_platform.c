@@ -13,6 +13,9 @@
 #include <Windows.h>
 #include <tchar.h>
 
+#include <bcrypt.h> // for uuid
+#pragma comment(lib, "bcrypt.lib")
+
 #else
 
 #define MILONE_PLATFORM_UNIX 1
@@ -34,7 +37,7 @@ static bool path_is_absolute(struct String path) {
 #if defined(MILONE_PLATFORM_UNIX)
     return path.len >= 1 && *path.str == '/';
 #elif defined(MILONE_PLATFORM_WINDOWS)
-    // FIXME: support UNC style path
+    // UNC style path isn't supported
     return (path.len >= 1 && *path.str == '/') ||
            (path.len >= 2 && path.str[1] == ':');
 #else
@@ -42,6 +45,7 @@ static bool path_is_absolute(struct String path) {
 #endif
 }
 
+// #pathJoin
 // Prepend `base_path` as prefix to the path if it's relative.
 // For absolute path, just return `path`.
 static struct String path_join(struct String base_path, struct String path) {
@@ -58,7 +62,7 @@ static struct String path_join(struct String base_path, struct String path) {
 }
 
 // -----------------------------------------------
-// windows
+// OSString
 // -----------------------------------------------
 
 #ifdef MILONE_PLATFORM_WINDOWS
@@ -139,6 +143,7 @@ static struct String os_string_to(struct OsString s) {
     assert(buf[(size_t)n] == '\0');
     return (struct String){.str = buf, .len = (size_t)n};
 }
+
 #endif // windows
 
 // -----------------------------------------------
@@ -376,7 +381,7 @@ static void milone_subprocess_run_windows(struct String cmdline, int *code) {
 int milone_subprocess_run(struct String command,
                           struct StringCons const *args) {
 #if defined(MILONE_PLATFORM_UNIX)
-    // FIXME: implement
+    // FIXME: see CmdLspServer
     fprintf(stderr, "ERROR: subprocess not implemented on Unix.\n");
     exit(1);
 #elif defined(MILONE_PLATFORM_WINDOWS)
@@ -407,10 +412,69 @@ void execute_into(struct String cmd) {
     fprintf(stderr, "ERROR: Failed to execute '%s'.\n", str_to_c_str(cmd));
     exit(code);
 #elif defined(MILONE_PLATFORM_WINDOWS)
-    // FIXME: implement
-    fprintf(stdout, "Please execute: %s\n", str_to_c_str(cmd));
-    exit(0);
+    assert(false && "execute_into isn't supported on Windows\n");
 #else
 #error no platform
 #endif
 }
+
+// -----------------------------------------------
+// [Windows] UUID generation
+// -----------------------------------------------
+
+#if defined(MILONE_PLATFORM_WINDOWS)
+
+// https://docs.microsoft.com/en-us/windows/win32/seccng/cng-portal
+// https://docs.microsoft.com/en-us/windows/win32/seccng/cng-algorithm-identifiers
+
+static BCRYPT_ALG_HANDLE rng_create() {
+    BCRYPT_ALG_HANDLE h_alg;
+    if (BCryptOpenAlgorithmProvider(&h_alg, BCRYPT_RNG_ALGORITHM, NULL, 0) != 0) {
+        failwith("BCryptCloseAlgorithmProvider");
+    }
+    return h_alg;
+}
+
+static void rng_destroy(BCRYPT_ALG_HANDLE h_alg) {
+    BCryptCloseAlgorithmProvider(h_alg, 0);
+}
+
+static void rng_random_bytes(BCRYPT_ALG_HANDLE h_alg, uint8_t *buf, int len) {
+    assert(len >= 0);
+    if (len == 0) return;
+
+    assert(buf != NULL);
+
+    if (BCryptGenRandom(h_alg, (PUCHAR)buf, (ULONG)len, 0) != 0) {
+        failwith("BCryptGenRandom");
+    }
+}
+
+struct String milone_uuid(void) {
+    BCRYPT_ALG_HANDLE rng = rng_create();
+    uint8_t buf[16];
+    rng_random_bytes(rng, buf, sizeof(buf));
+    rng_destroy(rng);
+
+    buf[6] = buf[6] & 0b01001111 | 0b01000000; // version
+    buf[8] = buf[8] & 0b10111111 | 0b10000000; // variant
+
+    char s[36 + 1] = "";
+    sprintf(
+        s,
+        "%02x%02x%02x%02x-%02x%02x-%02x%02x-%02x%02x-%02x%02x%02x%02x%02x%02x",
+        buf[0x0], buf[0x1], buf[0x2], buf[0x3],
+        buf[0x4], buf[0x5], buf[0x6], buf[0x7],
+        buf[0x8], buf[0x9], buf[0xa], buf[0xb],
+        buf[0xc], buf[0xd], buf[0xe], buf[0xf]
+    );
+    return str_of_c_str(s);
+}
+
+#else
+
+_Noreturn struct String milone_uuid(void) {
+    failwith("uuid not supported on linux");
+}
+
+#endif

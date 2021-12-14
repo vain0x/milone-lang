@@ -1,0 +1,3 @@
+module rec MiloneShared.UtilProfiler
+
+type Profiler = Profiler of voidptr

@@ -1,4 +1,4 @@
-#include "milone.h"
+#include <milone.h>
 
 struct IntList;
 
@@ -14,7 +14,7 @@ bool fun_pipeline_operator_Program_between(int l_, int r_, int x_3);
 
 int fun_pipeline_operator_fun_pipeline_operator_main_len(struct IntList const* xs_);
 
-int milone_main(void);
+int main(int argc, char** argv);
 
 struct IntList {
     int head;
@@ -67,18 +67,19 @@ if_next_4:;
     return if_1;
 }
 
-int milone_main(void) {
+int main(int argc, char** argv) {
+    milone_start(argc, argv);
     int call_ = fun_pipeline_operator_Program_inc(1);
     int call_1 = fun_pipeline_operator_Program_twice(call_);
     int call_2 = fun_pipeline_operator_Program_twice(call_1);
     int n_ = call_2;
-    milone_assert((n_ == 16), 9, 2);
+    milone_assert((n_ == 16), (struct String){.str = "fun_pipeline_operator/fun_pipeline_operator.milone", .len = 50}, 9, 2);
     int call_3 = fun_pipeline_operator_Program_sub(100, 98);
     bool call_4 = fun_pipeline_operator_Program_between(2, 3, call_3);
-    milone_assert(call_4, 11, 2);
+    milone_assert(call_4, (struct String){.str = "fun_pipeline_operator/fun_pipeline_operator.milone", .len = 50}, 11, 2);
     struct IntList const* list_ = milone_mem_alloc(1, sizeof(struct IntList));
     (*(((struct IntList*)list_))) = (struct IntList){.head = 1, .tail = NULL};
     int call_5 = fun_pipeline_operator_fun_pipeline_operator_main_len(list_);
-    milone_assert((call_5 != 0), 19, 2);
+    milone_assert((call_5 != 0), (struct String){.str = "fun_pipeline_operator/fun_pipeline_operator.milone", .len = 50}, 19, 2);
     return 0;
 }

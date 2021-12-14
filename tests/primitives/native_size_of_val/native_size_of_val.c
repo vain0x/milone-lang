@@ -1,4 +1,4 @@
-#include "milone.h"
+#include <milone.h>
 
 struct StringList;
 
@@ -16,7 +16,7 @@ int native_size_of_val_native_size_of_val_listToArraySize_IntIntListIntFun2_go(i
 
 int native_size_of_val_native_size_of_val_listToArraySize_IntStringListIntFun2_go(int n_, struct StringList const* xs_1);
 
-int milone_main(void);
+int main(int argc, char** argv);
 
 struct StringList {
     struct String head;
@@ -110,7 +110,8 @@ end_match_12:;
     return match_3;
 }
 
-int milone_main(void) {
+int main(int argc, char** argv) {
+    milone_start(argc, argv);
     struct IntList const* list_2 = milone_mem_alloc(1, sizeof(struct IntList));
     (*(((struct IntList*)list_2))) = (struct IntList){.head = 5, .tail = NULL};
     struct IntList const* list_1 = milone_mem_alloc(1, sizeof(struct IntList));
@@ -118,12 +119,12 @@ int milone_main(void) {
     struct IntList const* list_ = milone_mem_alloc(1, sizeof(struct IntList));
     (*(((struct IntList*)list_))) = (struct IntList){.head = 2, .tail = list_1};
     int call_2 = native_size_of_val_native_size_of_val_IntListIntFun1_listToArraySize(list_);
-    milone_assert((call_2 == (3 * 4)), 21, 2);
+    milone_assert((call_2 == (3 * 4)), (struct String){.str = "native_size_of_val/native_size_of_val.milone", .len = 44}, 21, 2);
     struct StringList const* list_4 = milone_mem_alloc(1, sizeof(struct StringList));
     (*(((struct StringList*)list_4))) = (struct StringList){.head = (struct String){.str = "y", .len = 1}, .tail = NULL};
     struct StringList const* list_3 = milone_mem_alloc(1, sizeof(struct StringList));
     (*(((struct StringList*)list_3))) = (struct StringList){.head = (struct String){.str = "x", .len = 1}, .tail = list_4};
     int call_3 = native_size_of_val_native_size_of_val_StringListIntFun1_listToArraySize(list_3);
-    milone_assert((call_3 == (2 * 16)), 22, 2);
+    milone_assert((call_3 == (2 * 16)), (struct String){.str = "native_size_of_val/native_size_of_val.milone", .len = 44}, 22, 2);
     return 0;
 }

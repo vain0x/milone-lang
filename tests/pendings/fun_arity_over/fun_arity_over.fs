@@ -6,7 +6,7 @@ let main _ =
       // Return a function object with arity 1.
       inc ()
 
-    // FIXME: `f`'s result should be a function object with arity 2,
+    // ISSUE: `f`'s result should be a function object with arity 2,
     //        however, the actual result is 1-arity for now.
     add
 

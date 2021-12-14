@@ -223,6 +223,8 @@ type HExprKind =
   /// `s.[l .. r]`
   | HSliceEN
 
+  | HDiscriminantEN of VariantSerial
+
   /// Direct call to procedure or primitive.
   | HCallProcEN
 
@@ -265,6 +267,9 @@ type HExprKind =
   /// Size of type.
   | HSizeOfValEN
 
+  /// Name of type.
+  | HTyPlaceholderEN
+
 /// Expression in HIR.
 [<NoEquality; NoComparison>]
 type HExpr =
@@ -293,10 +298,14 @@ type HExpr =
   | HNodeExpr of HExprKind * HExpr list * Ty * Loc
 
   /// Evaluate a list of expressions and returns the last, e.g. `x1; x2; ...; y`.
-  | HBlockExpr of HExpr list * HExpr
+  | HBlockExpr of HStmt list * HExpr
 
-  | HLetValExpr of pat: HPat * init: HExpr * next: HExpr * Ty * Loc
-  | HLetFunExpr of FunSerial * args: HPat list * body: HExpr * next: HExpr * Ty * Loc
+/// Statement in HIR.
+[<NoEquality; NoComparison>]
+type HStmt =
+  | HExprStmt of HExpr
+  | HLetValStmt of HPat * init: HExpr * Loc
+  | HLetFunStmt of FunSerial * argPats: HPat list * body: HExpr * Loc
 
 type VarMap = TreeMap<VarSerial, VarDef>
 type VarNameMap = TreeMap<VarSerial, Ident>
@@ -308,7 +317,7 @@ type HModule =
     /// Non-static variables.
     Vars: VarMap
 
-    Stmts: HExpr list }
+    Stmts: HStmt list }
 
 /// Module. Variable info is reduced.
 [<RequireQualifiedAccess; NoEquality; NoComparison>]
@@ -318,7 +327,7 @@ type HModule2 =
     /// Non-static variables.
     Vars: VarNameMap
 
-    Stmts: HExpr list }
+    Stmts: HStmt list }
 
 /// HIR program. (project name, module name, decls) list.
 type HProgram = HModule list
@@ -549,14 +558,11 @@ let patIsClearlyExhaustive isNewtypeVariant pat =
 // Expressions (HIR)
 // -----------------------------------------------
 
+let hxLetIn stmt next = HBlockExpr([ stmt ], next)
+
 let hxTrue loc = HLitExpr(BoolLit true, loc)
 
 let hxApp f x ty loc = HNodeExpr(HAppEN, [ f; x ], ty, loc)
-
-let hxSemi items loc =
-  match splitLast items with
-  | Some (stmts, last) -> HBlockExpr(stmts, last)
-  | None -> HNodeExpr(HTupleEN, [], tyUnit, loc)
 
 let hxCallProc callee args resultTy loc =
   HNodeExpr(HCallProcEN, callee :: args, resultTy, loc)
@@ -591,8 +597,6 @@ let exprExtract (expr: HExpr) : Ty * Loc =
   | HNavExpr (_, _, ty, a) -> ty, a
   | HNodeExpr (_, _, ty, a) -> ty, a
   | HBlockExpr (_, last) -> exprExtract last
-  | HLetValExpr (_, _, _, ty, a) -> ty, a
-  | HLetFunExpr (_, _, _, _, ty, a) -> ty, a
 
 let hArmMap (onPat: HPat -> HPat) (onExpr: HExpr -> HExpr) (arm: HPat * HExpr * HExpr) =
   let pat, guard, body = arm
@@ -600,6 +604,7 @@ let hArmMap (onPat: HPat -> HPat) (onExpr: HExpr -> HExpr) (arm: HPat * HExpr * 
 
 let exprMap (f: Ty -> Ty) (expr: HExpr) : HExpr =
   let goPat pat = patMap f pat
+  let goStmt stmt = stmtMap f stmt
 
   let rec go expr =
     match expr with
@@ -623,10 +628,7 @@ let exprMap (f: Ty -> Ty) (expr: HExpr) : HExpr =
       HMatchExpr(go cond, arms, f ty, a)
     | HNavExpr (sub, mes, ty, a) -> HNavExpr(go sub, mes, f ty, a)
     | HNodeExpr (kind, args, resultTy, a) -> HNodeExpr(kind, List.map go args, f resultTy, a)
-    | HBlockExpr (stmts, last) -> HBlockExpr(List.map go stmts, go last)
-    | HLetValExpr (pat, init, next, ty, a) -> HLetValExpr(goPat pat, go init, go next, f ty, a)
-    | HLetFunExpr (serial, args, body, next, ty, a) ->
-      HLetFunExpr(serial, List.map goPat args, go body, go next, f ty, a)
+    | HBlockExpr (stmts, last) -> HBlockExpr(List.map goStmt stmts, go last)
 
   go expr
 
@@ -639,6 +641,37 @@ let exprToLoc expr =
   loc
 
 // -----------------------------------------------
+// HStmt
+// -----------------------------------------------
+
+// let stmtToLoc stmt : Loc =
+//   match stmt with
+//   | HExprStmt expr -> exprToLoc expr
+//   | HLetValStmt (_, _, a) -> a
+//   | HLetFunStmt (_, _, _, a) -> a
+
+let stmtMap (f: Ty -> Ty) stmt =
+  let onPat pat = patMap f pat
+  let onExpr expr = exprMap f expr
+
+  match stmt with
+  | HExprStmt expr -> HExprStmt(onExpr expr)
+  | HLetValStmt (pat, init, loc) -> HLetValStmt(onPat pat, onExpr init, loc)
+  | HLetFunStmt (funSerial, argPats, body, loc) -> HLetFunStmt(funSerial, List.map onPat argPats, onExpr body, loc)
+
+let private stmtMapExpr (f: HExpr -> HExpr) stmt =
+  match stmt with
+  | HExprStmt expr -> HExprStmt(f expr)
+  | HLetValStmt (pat, init, loc) -> HLetValStmt(pat, f init, loc)
+  | HLetFunStmt (funSerial, argPats, body, loc) -> HLetFunStmt(funSerial, argPats, f body, loc)
+
+let private stmtFoldExpr (folder: 'S -> HExpr -> 'S) (state: 'S) stmt =
+  match stmt with
+  | HExprStmt expr -> folder state expr
+  | HLetValStmt (_, init, _) -> folder state init
+  | HLetFunStmt (_, _, body, _) -> folder state body
+
+// -----------------------------------------------
 // HProgram
 // -----------------------------------------------
 
@@ -647,11 +680,11 @@ let emptyVars: TreeMap<VarSerial, VarDef> = TMap.empty varSerialCompare
 module HProgram =
   let mapExpr (f: HExpr -> HExpr) (program: HProgram) : HProgram =
     program
-    |> List.map (fun (m: HModule) -> { m with Stmts = m.Stmts |> List.map f })
+    |> List.map (fun (m: HModule) -> { m with Stmts = m.Stmts |> List.map (stmtMapExpr f) })
 
   let foldExpr (f: 'S -> HExpr -> 'S) (state: 'S) (program: HProgram) : 'S =
     program
-    |> List.fold (fun (state: 'S) (m: HModule) -> m.Stmts |> List.fold f state) state
+    |> List.fold (fun (state: 'S) (m: HModule) -> m.Stmts |> List.fold (stmtFoldExpr f) state) state
 
 // -----------------------------------------------
 // Tk
@@ -879,7 +912,7 @@ let tyMangle (ty: Ty, memo: TreeMap<Ty, string>) : string * TreeMap<Ty, string> 
         let resultTy, ctx = ctx |> go resultTy
 
         let funTy =
-          (argTys |> strConcat)
+          (argTys |> S.concat "")
           + resultTy
           + "Fun"
           + string arity

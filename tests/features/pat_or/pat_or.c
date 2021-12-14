@@ -1,4 +1,4 @@
-#include "milone.h"
+#include <milone.h>
 
 struct IntList;
 
@@ -18,7 +18,7 @@ bool pat_or_Program_performComplexMatching(struct IntIntTuple2_ expr_);
 
 void pat_or_Program_complexCase(void);
 
-int milone_main(void);
+int main(int argc, char** argv);
 
 struct IntList {
     int head;
@@ -66,9 +66,9 @@ else_6:;
     if_ = false;
     goto if_next_4;
 if_next_4:;
-    milone_assert(if_, 12, 2);
+    milone_assert(if_, (struct String){.str = "pat_or/pat_or.milone", .len = 20}, 12, 2);
     bool call_2 = pat_or_Program_isZeroOrOne(2);
-    milone_assert((!(call_2)), 13, 2);
+    milone_assert((!(call_2)), (struct String){.str = "pat_or/pat_or.milone", .len = 20}, 13, 2);
     return;
 }
 
@@ -116,13 +116,13 @@ void pat_or_Program_nestedCase(void) {
     struct IntList const* list_ = milone_mem_alloc(1, sizeof(struct IntList));
     (*(((struct IntList*)list_))) = (struct IntList){.head = 0, .tail = list_1};
     bool call_3 = pat_or_Program_startsWithDoubleBits(list_);
-    milone_assert(call_3, 24, 2);
+    milone_assert(call_3, (struct String){.str = "pat_or/pat_or.milone", .len = 20}, 24, 2);
     struct IntList const* list_4 = milone_mem_alloc(1, sizeof(struct IntList));
     (*(((struct IntList*)list_4))) = (struct IntList){.head = 2, .tail = NULL};
     struct IntList const* list_3 = milone_mem_alloc(1, sizeof(struct IntList));
     (*(((struct IntList*)list_3))) = (struct IntList){.head = 1, .tail = list_4};
     bool call_4 = pat_or_Program_startsWithDoubleBits(list_3);
-    milone_assert((!(call_4)), 25, 2);
+    milone_assert((!(call_4)), (struct String){.str = "pat_or/pat_or.milone", .len = 20}, 25, 2);
     return;
 }
 
@@ -149,14 +149,15 @@ end_match_14:;
 void pat_or_Program_complexCase(void) {
     struct IntIntTuple2_ IntIntTuple2_ = (struct IntIntTuple2_){.t0 = 0, .t1 = 1};
     bool call_5 = pat_or_Program_performComplexMatching(IntIntTuple2_);
-    milone_assert(call_5, 38, 2);
+    milone_assert(call_5, (struct String){.str = "pat_or/pat_or.milone", .len = 20}, 38, 2);
     struct IntIntTuple2_ IntIntTuple2_1 = (struct IntIntTuple2_){.t0 = 1, .t1 = 2};
     bool call_6 = pat_or_Program_performComplexMatching(IntIntTuple2_1);
-    milone_assert((!(call_6)), 39, 2);
+    milone_assert((!(call_6)), (struct String){.str = "pat_or/pat_or.milone", .len = 20}, 39, 2);
     return;
 }
 
-int milone_main(void) {
+int main(int argc, char** argv) {
+    milone_start(argc, argv);
     pat_or_Program_simpleCase();
     pat_or_Program_nestedCase();
     pat_or_Program_complexCase();

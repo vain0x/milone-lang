@@ -1,8 +1,10 @@
-#include "milone.h"
+#include <milone.h>
 
 struct IntStringTuple2_;
 
 struct StringIntTuple2_;
+
+typedef struct StringIntTuple2_(*VoidConstPtrIntStringTuple2_StringIntTuple2_FunPtr2)(void const*, struct IntStringTuple2_);
 
 struct IntStringTuple2_StringIntTuple2_Fun1;
 
@@ -17,6 +19,8 @@ struct StringIntTuple2_List;
 struct StringList;
 
 struct IntList;
+
+typedef int(*VoidConstPtrIntIntFunPtr2)(void const*, int);
 
 struct IntIntFun1;
 
@@ -54,7 +58,7 @@ int fun_generic_fun_generic_eta2_main_f_1(void const* env_1, int arg_1);
 
 struct StringIntTuple2_ fun_generic_fun_generic_eta2_main_flip(void const* env_2, struct IntStringTuple2_ arg_2);
 
-int milone_main(void);
+int main(int argc, char** argv);
 
 struct IntStringTuple2_ {
     int t0;
@@ -67,7 +71,7 @@ struct StringIntTuple2_ {
 };
 
 struct IntStringTuple2_StringIntTuple2_Fun1 {
-    struct StringIntTuple2_(*fun)(void const*, struct IntStringTuple2_);
+    VoidConstPtrIntStringTuple2_StringIntTuple2_FunPtr2 fun;
     void const* env;
 };
 
@@ -82,7 +86,7 @@ struct StringIntTuple2_List {
 };
 
 struct IntIntFun1 {
-    int(*fun)(void const*, int);
+    VoidConstPtrIntIntFunPtr2 fun;
     void const* env;
 };
 
@@ -249,7 +253,8 @@ struct StringIntTuple2_ fun_generic_fun_generic_eta2_main_flip(void const* env_2
     return call_6;
 }
 
-int milone_main(void) {
+int main(int argc, char** argv) {
+    milone_start(argc, argv);
     int call_7 = fun_generic_fun_generic_main_IntIntFun1_id(42);
     int call_8 = fun_generic_fun_generic_main_IntIntFun1_id(1);
     struct StringList const* list_4 = milone_mem_alloc(1, sizeof(struct StringList));
@@ -274,7 +279,7 @@ int milone_main(void) {
     match_4 = 0;
     goto end_match_15;
 next_16:;
-    milone_assert(false, 38, 9);
+    milone_assert(false, (struct String){.str = "fun_generic/fun_generic.milone", .len = 30}, 38, 9);
     match_4 = 0;
     goto end_match_15;
 next_17:;
@@ -304,7 +309,7 @@ end_match_15:;
     match_5 = 0;
     goto end_match_18;
 next_19:;
-    milone_assert(false, 42, 9);
+    milone_assert(false, (struct String){.str = "fun_generic/fun_generic.milone", .len = 30}, 42, 9);
     match_5 = 0;
     goto end_match_18;
 next_20:;
@@ -328,7 +333,7 @@ end_match_18:;
     match_6 = 0;
     goto end_match_21;
 next_22:;
-    milone_assert(false, 46, 9);
+    milone_assert(false, (struct String){.str = "fun_generic/fun_generic.milone", .len = 30}, 46, 9);
     match_6 = 0;
     goto end_match_21;
 next_23:;

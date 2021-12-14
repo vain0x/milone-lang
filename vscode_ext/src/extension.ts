@@ -94,6 +94,7 @@ const newLanguageClient = (lspCommand: string, miloneHome: string, logger: Logge
       fileEvents: [
         workspace.createFileSystemWatcher("**/*.fs"),
         workspace.createFileSystemWatcher("**/*.milone"),
+        workspace.createFileSystemWatcher("**/milone_manifest"),
       ],
     },
   }

@@ -1,0 +1,22 @@
+[package]
+name = "hello"
+version = "0.1.0"
+edition = "2021"
+
+# See more keys and their definitions at https://doc.rust-lang.org/cargo/reference/manifest.html
+
+[lib]
+# For shared object or dynamic link library.
+crate-type = ["cdylib"]
+
+[profile.release]
+# Optimize for size.
+opt-level = "z"
+
+# Abort on panic.
+panic = "abort"
+
+# Link time optimization.
+lto = true
+
+[dependencies]

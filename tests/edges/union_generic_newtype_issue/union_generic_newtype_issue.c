@@ -1,4 +1,4 @@
-#include "milone.h"
+#include <milone.h>
 
 struct IntIntTuple2_;
 
@@ -6,7 +6,7 @@ struct IntIntTuple2MyOption1_;
 
 struct IntIntTuple2MyOption1_ union_generic_newtype_issue_union_generic_newtype_issue_f(void);
 
-int milone_main(void);
+int main(int argc, char** argv);
 
 struct IntIntTuple2_ {
     int t0;
@@ -31,7 +31,8 @@ struct IntIntTuple2MyOption1_ union_generic_newtype_issue_union_generic_newtype_
     return variant_;
 }
 
-int milone_main(void) {
+int main(int argc, char** argv) {
+    milone_start(argc, argv);
     char switch_;
     struct IntIntTuple2MyOption1_ call_ = union_generic_newtype_issue_union_generic_newtype_issue_f();
     switch (call_.discriminant) {
@@ -48,7 +49,7 @@ clause_2:;
     switch_ = 0;
     goto switch_next_1;
 clause_3:;
-    milone_assert(false, 16, 16);
+    milone_assert(false, (struct String){.str = "union_generic_newtype_issue/union_generic_newtype_issue.milone", .len = 62}, 16, 16);
     switch_ = 0;
     goto switch_next_1;
 switch_next_1:;

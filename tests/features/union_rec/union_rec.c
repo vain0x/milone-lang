@@ -1,6 +1,8 @@
-#include "milone.h"
+#include <milone.h>
 
 struct LazyList_;
+
+typedef struct LazyList_(*VoidConstPtrLazyList_FunPtr1)(void const*);
 
 struct UnitLazyList_Fun1;
 
@@ -18,7 +20,7 @@ struct LazyList_ union_rec_union_rec_eta2_main_makeTail_makeTail(void const* env
 
 struct LazyList_ union_rec_union_rec_main_makeTail(int n_2, int prev_);
 
-int milone_main(void);
+int main(int argc, char** argv);
 
 enum LazyList_Discriminant {
     Nil_,
@@ -33,7 +35,7 @@ struct LazyList_ {
 };
 
 struct UnitLazyList_Fun1 {
-    struct LazyList_(*fun)(void const*);
+    VoidConstPtrLazyList_FunPtr1 fun;
     void const* env;
 };
 
@@ -115,7 +117,8 @@ struct LazyList_ union_rec_union_rec_main_makeTail(int n_2, int prev_) {
     return call_1;
 }
 
-int milone_main(void) {
+int main(int argc, char** argv) {
+    milone_start(argc, argv);
     struct LazyList_ call_2 = union_rec_union_rec_main_makeTail(1, 1);
     struct LazyList_ fact_ = call_2;
     union_rec_union_rec_main_lazyListPrint(5, fact_);

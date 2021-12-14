@@ -4,6 +4,18 @@ module rec std_string.Program
 
 module S = MiloneStd.StdString
 
+// Not using Option.debug to avoid depending on other modules.
+let private debugOpt debug opt =
+  match opt with
+  | Some it -> "Some(" + debug it + ")"
+  | None -> "None"
+
+let private debugList debug xs =
+  xs
+  |> List.map debug
+  |> S.concat "; "
+  |> (fun x -> "[" + x + "]")
+
 let unwrap opt =
   match opt with
   | Some value -> value
@@ -77,6 +89,21 @@ let sliceTest () =
   assert (S.slice 1 3 "ab" = "b")
   assert (S.slice 2 3 "ab" = "")
 
+let private splitAtTest () =
+  let run s i expected =
+    let debug (l, r) = l + ";" + r
+    debug (S.splitAt i s) = debug expected
+
+  // Basic.
+  assert (run "hello" 2 ("he", "llo"))
+
+  // Empty.
+  assert (run "" 0 ("", ""))
+
+  // Out of range.
+  assert (run "ab" (-1) ("", "ab"))
+  assert (run "ab" 3 ("ab", ""))
+
 let trimTest () =
   assert (S.trim "  ab  " = "ab")
   assert (S.trimStart "  ab  " = "ab  ")
@@ -95,6 +122,18 @@ let private toLowerTest () =
 let private toUpperTest () =
   assert (S.toUpper "a To Z 🐧" = "A TO Z 🐧")
   assert (S.toUpper "" = "")
+
+let private lowerFirstTest () =
+  assert (S.lowerFirst "CentOS" = "centOS")
+  assert (S.lowerFirst "macOS" = "macOS")
+  assert (S.lowerFirst "" = "")
+  assert (S.lowerFirst "🐧" = "🐧")
+
+let private upperFirstTest () =
+  assert (S.upperFirst "macOS" = "MacOS")
+  assert (S.upperFirst "CentOS" = "CentOS")
+  assert (S.upperFirst "" = "")
+  assert (S.upperFirst "🐧" = "🐧")
 
 let private cutTest () =
   let run sep s expected =
@@ -173,6 +212,34 @@ let private stripEndTest () =
   assert (run "sep" "" ("", false))
   assert (run "" "" ("", true))
 
+let private cutLineTest () =
+  let run s expected =
+    let debug (contents, rest, sepOpt) =
+      [ contents; rest; debugOpt id sepOpt ]
+      |> debugList id
+
+    debug (S.cutLine s) = debug expected
+
+  // Basic use-case.
+  assert (run "hello\nworld\nbye\n" ("hello", "world\nbye\n", Some "\n"))
+
+  // Empty input.
+  assert (run "" ("", "", None))
+
+  // String with CRLF.
+  assert (run "Windows\r\nWorld.\r\n" ("Windows", "World.\r\n", Some "\r\n"))
+
+  // String starting with newline.
+  assert (run "\nrest" ("", "rest", Some "\n"))
+  assert (run "\n" ("", "", Some "\n"))
+  assert (run "\r\n" ("", "", Some "\r\n"))
+
+  // String ending without newline.
+  assert (run "hello" ("hello", "", None))
+
+  // Binary safe.
+  assert (run "\x00" ("\x00", "", None))
+
 let private toLinesTest () =
   assert ((S.toLines "a\nb\nc" |> S.concat ";") = "a;b;c")
   assert ((S.toLines "a\nb\nc\n" |> S.concat ";") = "a;b;c;")
@@ -183,6 +250,37 @@ let private toLinesTest () =
 let concatTest () =
   assert (S.concat ", " [ "ab"; "cd"; "ef" ] = "ab, cd, ef")
   assert (S.concat "" [] = "")
+
+let private hexTest () =
+  // from:
+  let run1 s expected =
+    let debug (opt: uint64 option) = debugOpt string opt
+    debug (S.parseHexAsUInt64 s) = debug expected
+
+  // Basic.
+  assert (run1 "2a" (Some 42UL))
+  // Empty input.
+  assert (run1 "" None)
+  // Zeroes.
+  assert (run1 "0" (Some 0UL))
+  assert (run1 "0000" (Some 0UL))
+  // Invalid character.
+  assert (run1 "42g" None)
+  // Overflow.
+  assert (run1 "1000000000000000000000000" None)
+
+  // to:
+  // Basic.
+  assert (S.uint64ToHex 8 0xdeadbeefUL = "deadbeef")
+  // Padded.
+  assert (S.uint64ToHex 8 0x00007fffUL = "00007fff")
+  // Zero.
+  assert (S.uint64ToHex 0 0UL = "0")
+  assert (S.uint64ToHex 8 0UL = "00000000")
+
+let private formatTest () =
+  assert (S.format "{0}, {1}, {2}" [ "a"; "b"; "c" ] = "a, b, c")
+  assert (S.format "{0}-{1}-{0}" [ "S"; "O" ] = "S-O-S")
 
 let main _ =
   isEmptyTest ()
@@ -199,6 +297,7 @@ let main _ =
   truncateTest ()
   skipTest ()
   sliceTest ()
+  splitAtTest ()
 
   // Trim.
   trimTest ()
@@ -207,6 +306,8 @@ let main _ =
   replaceTest ()
   toLowerTest ()
   toUpperTest ()
+  lowerFirstTest ()
+  upperFirstTest ()
 
   // Split.
   cutTest ()
@@ -214,8 +315,15 @@ let main _ =
   splitTest ()
   stripStartTest ()
   stripEndTest ()
+  cutLineTest ()
   toLinesTest ()
 
   // Concat.
   concatTest ()
+
+  // Hex.
+  hexTest ()
+
+  // Formatting.
+  formatTest ()
   0

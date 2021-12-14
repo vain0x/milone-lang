@@ -1,9 +1,0 @@
-#!/bin/sh
-
-set -eu
-
-MILONE_HOME="${MILONE_HOME:-$HOME/.milone}"
-
-mkdir -p target
-
-milone compile "$PWD" >target/milone_lsp_server.c

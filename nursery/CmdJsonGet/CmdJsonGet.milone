@@ -1,11 +1,12 @@
 module rec CmdJsonGet.Program
 
+open MiloneStd.StdError
+open MiloneStd.StdJson
+
 module E = MiloneStd.StdEnv
 module S = MiloneStd.StdString
 
-open LibJson.Json
-
-let helpText () =
+let private helpText () =
   """json_get <PATH>
 
 Extracts a value of property in JSON.
@@ -30,26 +31,6 @@ OPTIONS:
 let private stdinReadAll () : string = __nativeFun "stdin_read_all"
 
 // -----------------------------------------------
-// String helpers
-// -----------------------------------------------
-
-let divide (sep: string) (s: string) : string * string option =
-  match S.findIndex sep s with
-  | None -> s, None
-  | Some i -> s.[0..i - 1], Some s.[i + sep.Length..s.Length - 1]
-
-let split sep s =
-  let rec go acc s =
-    let part, s = s |> divide sep
-    let acc = part :: acc
-
-    match s with
-    | None -> acc
-    | Some s -> go acc s
-
-  go [] s |> List.rev
-
-// -----------------------------------------------
 // Entrypoint
 // -----------------------------------------------
 
@@ -68,10 +49,13 @@ let main _ =
     0
 
   | path :: _ ->
-    let path = path |> split "."
+    let path = path |> S.split "."
     // printfn "// path.length: %d\n" (List.length path)
 
-    let root = stdinReadAll () |> jsonParseFromString
+    let root =
+      stdinReadAll ()
+      |> Json.parse
+      |> Option.defaultWith (fun () -> failwith "Invalid JSON.")
     // printfn "// input: %s\n" (jsonToString root)
 
     path
@@ -98,7 +82,7 @@ let main _ =
 
            | _ -> JNull)
          root
-    |> jsonToString
+    |> Json.dump
     |> printfn "%s"
 
     0

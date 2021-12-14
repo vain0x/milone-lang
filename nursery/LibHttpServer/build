@@ -7,13 +7,6 @@ MILONE_HOME=${MILONE_HOME:-$HOME/.milone}
 TARGET=$PWD/../target/LibHttpServer
 
 milone build --target-dir "$TARGET" $PWD
-
-$CC -std=gnu11 \
-    -I$MILONE_HOME/runtime \
-    $MILONE_HOME/runtime/milone.c \
-    $MILONE_HOME/runtime/milone_platform.c \
-    ../LibHttpServer/lib_http_server.c \
-    $(find "$TARGET" -name '*.c') \
-    -o $TARGET/httpd
+mv -f "$TARGET/x86_64-unknown-linux-gnu-debug/LibHttpServer" "$TARGET/httpd"
 
 echo "trace: Built. '$TARGET/httpd'" >&2

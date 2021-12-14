@@ -2,6 +2,9 @@
 module rec MiloneCli.Cli
 
 open MiloneShared.Util
+open MiloneShared.UtilParallel
+open MiloneShared.UtilProfiler
+open MiloneStd.StdError
 open MiloneStd.StdPath
 open MiloneSyntax.Syntax
 
@@ -138,6 +141,18 @@ let private pathStrToFileName (s: string) : string =
   |> Path.basename
   |> Path.toString
 
+// #pathJoin
+let private pathJoin (l: string) (r: string) =
+  let slash (s: string) = s |> S.replace "\\" "/"
+
+  let isRooted (s: string) =
+    s |> S.startsWith "/"
+    || s.Length >= 3 && s.[1] = ':' && s.[2] = '/'
+
+  let l = slash l
+  let r = slash r
+  if isRooted r then r else l + "/" + r
+
 let private hostToMiloneHome (host: CliHost) =
   SyntaxApi.getMiloneHomeFromEnv (fun () -> host.MiloneHome) (fun () -> Some host.Home)
 
@@ -148,6 +163,10 @@ let private dirCreateOrFail (host: CliHost) (dirPath: Path) : unit =
   if not ok then
     printfn "error: couldn't create directory at %s" (Path.toString dirPath)
     exit 1
+
+let private fileRead (host: CliHost) (filePath: Path) =
+  host.FileReadAllText(Path.toString filePath)
+  |> Future.wait // #avoidBlocking
 
 let private fileWrite (host: CliHost) (filePath: Path) (contents: string) : unit =
   host.FileWriteAllText(Path.toString filePath) contents
@@ -382,17 +401,29 @@ let private toBuildOnWindowsParams
   let targetDir = compileOptions.TargetDir
   let isRelease = options.IsRelease
   let projectName = ctx.EntryProjectName
+  let projectDir = compileOptions.ProjectDir
+
+  let manifest =
+    ctx.SyntaxCtx |> SyntaxApi.SyntaxCtx.getManifest
 
   { ProjectName = projectName
-    CFiles = cFiles |> List.map (fun (name, _) -> Path name)
+    CFiles =
+      cFiles
+      |> List.map (fun (name, _) -> Path(pathJoin targetDir name))
     MiloneHome = miloneHome
     TargetDir = Path targetDir
     IsRelease = isRelease
     ExeFile = computeExePath (Path targetDir) host.Platform isRelease projectName
 
+    CcList =
+      manifest.CcList
+      |> List.map (fun (Path name, _) -> Path(pathJoin projectDir name))
+    Libs = manifest.Libs |> List.map fst
+
     NewGuid = fun () -> PW.Guid(w.NewGuid())
     DirCreate = dirCreateOrFail host
     FileExists = fun filePath -> host.FileExists(Path.toString filePath)
+    FileRead = fileRead host
     FileWrite = fileWrite host
     RunCommand = runCommand w }
 
@@ -626,7 +657,7 @@ let private parseBuildLikeOptions host args : BuildLikeOptions * string list =
 
   let projectDirOpt, args =
     let projectDirOpt, args =
-      parseOption (fun x -> x = "-p" || x = "--project-dir") args
+      parseOption (fun x -> x = "--project") args
 
     match projectDirOpt, args with
     | Some it, _ -> Some it, args
@@ -646,8 +677,8 @@ let private parseBuildLikeOptions host args : BuildLikeOptions * string list =
     | None -> defaultTargetDir projectDir
 
   let options: BuildLikeOptions =
-    { ProjectDir = projectDir
-      TargetDir = targetDir
+    { ProjectDir = pathJoin host.WorkDir projectDir
+      TargetDir = pathJoin host.WorkDir targetDir
       IsRelease = Option.defaultValue false isReleaseOpt
       Verbosity = verbosity }
 

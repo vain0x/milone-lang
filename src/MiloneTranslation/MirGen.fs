@@ -9,9 +9,12 @@ open MiloneShared.SharedTypes
 open MiloneShared.TypeIntegers
 open MiloneShared.Util
 open MiloneStd.StdMap
+open MiloneStd.StdMultimap
 open MiloneStd.StdSet
 open MiloneTranslation.Hir
 open MiloneTranslation.Mir
+
+module S = MiloneStd.StdString
 
 let private unwrapListTy ty =
   match ty with
@@ -300,10 +303,6 @@ let private containsTailRec expr =
     |> List.exists (fun (_, _, body) -> body |> containsTailRec)
 
   | HBlockExpr (_, last) -> last |> containsTailRec
-
-  | HLetValExpr (_, _, next, _, _) -> next |> containsTailRec
-
-  | HLetFunExpr (_, _, _, next, _, _) -> next |> containsTailRec
 
   | HRecordExpr _ -> unreachable () // Resolved in RecordRes.
 
@@ -870,31 +869,36 @@ let private reuseVarOnPat (reuseMap: VarReuseMap) (pat: HPat) : HPat =
   go pat
 
 let private reuseVarOnExpr (reuseMap: VarReuseMap) (expr: HExpr) : HExpr =
-  let goPat pat = reuseVarOnPat reuseMap pat
+  let onPat pat = reuseVarOnPat reuseMap pat
+  let onExpr expr = reuseVarOnExpr reuseMap expr
+  let onStmt stmt = reuseVarOnStmt reuseMap stmt
 
-  let rec go expr =
-    match expr with
-    | HLitExpr _
-    | HFunExpr _
-    | HVariantExpr _
-    | HPrimExpr _ -> expr
+  match expr with
+  | HLitExpr _
+  | HFunExpr _
+  | HVariantExpr _
+  | HPrimExpr _ -> expr
 
-    | HVarExpr (serial, ty, loc) -> HVarExpr(reuseVarSerial reuseMap serial, ty, loc)
+  | HVarExpr (serial, ty, loc) -> HVarExpr(reuseVarSerial reuseMap serial, ty, loc)
 
-    | HMatchExpr (cond, arms, ty, loc) ->
-      let arms = arms |> List.map (hArmMap goPat go)
-      HMatchExpr(go cond, arms, ty, loc)
+  | HMatchExpr (cond, arms, ty, loc) ->
+    let arms = arms |> List.map (hArmMap onPat onExpr)
+    HMatchExpr(onExpr cond, arms, ty, loc)
 
-    | HNodeExpr (kind, args, ty, loc) -> HNodeExpr(kind, List.map go args, ty, loc)
-    | HBlockExpr (stmts, last) -> HBlockExpr(List.map go stmts, go last)
-    | HLetValExpr (pat, init, next, ty, loc) -> HLetValExpr(goPat pat, go init, go next, ty, loc)
-    | HLetFunExpr (serial, args, body, next, ty, loc) ->
-      HLetFunExpr(serial, List.map goPat args, go body, go next, ty, loc)
+  | HNodeExpr (kind, args, ty, loc) -> HNodeExpr(kind, List.map onExpr args, ty, loc)
+  | HBlockExpr (stmts, last) -> HBlockExpr(List.map onStmt stmts, onExpr last)
 
-    | HNavExpr _ -> unreachable () // HNavExpr is resolved in NameRes, Typing, or RecordRes.
-    | HRecordExpr _ -> unreachable () // HRecordExpr is resolved in RecordRes.
+  | HNavExpr _ -> unreachable () // HNavExpr is resolved in NameRes, Typing, or RecordRes.
+  | HRecordExpr _ -> unreachable () // HRecordExpr is resolved in RecordRes.
 
-  go expr
+let private reuseVarOnStmt (reuseMap: VarReuseMap) stmt =
+  let onPat pat = reuseVarOnPat reuseMap pat
+  let onExpr expr = reuseVarOnExpr reuseMap expr
+
+  match stmt with
+  | HExprStmt expr -> HExprStmt(onExpr expr)
+  | HLetValStmt (pat, init, loc) -> HLetValStmt(onPat pat, onExpr init, loc)
+  | HLetFunStmt (serial, args, body, loc) -> HLetFunStmt(serial, List.map onPat args, onExpr body, loc)
 
 let private doReuseArmLocals funSerial arms (ctx: MirCtx) : _ * MirCtx =
   let emptyReuseMap: VarReuseMap = TMap.empty varSerialCompare
@@ -958,7 +962,7 @@ let private doReuseArmLocals funSerial arms (ctx: MirCtx) : _ * MirCtx =
       reuseMap
       |> TMap.fold
            (fun (funLocals, replacingVars) varSerial (_, ty) ->
-             multimapAdd funSerial (varSerial, ty) funLocals, TSet.add varSerial replacingVars)
+             Multimap.add funSerial (varSerial, ty) funLocals, TSet.add varSerial replacingVars)
            (ctx.FunLocals, ctx.ReplacingVars)
 
     { ctx with
@@ -1026,6 +1030,23 @@ let private mirifyCallStrGetSliceExpr ctx args loc =
     addStmt ctx (MPrimStmt(MStrGetSlicePrim, args, tempSerial, tyStr, loc))
 
   temp, ctx
+
+let private mirifyDiscriminantExpr (ctx: MirCtx) variantSerial loc =
+  let tySerial =
+    (ctx.Rx.Variants |> mapFind variantSerial)
+      .UnionTySerial
+
+  let discriminant =
+    match ctx.Rx.Tys |> mapFind tySerial with
+    | UnionTyDef (_, _, variants, _) ->
+      match variants
+            |> List.tryFindIndex (fun v -> variantSerialCompare v variantSerial = 0)
+        with
+      | Some i -> i
+      | None -> unreachable ()
+    | _ -> unreachable ()
+
+  MLitExpr(IntLit(string discriminant), loc), ctx
 
 let private mirifyCallVariantExpr (ctx: MirCtx) serial payload ty loc =
   let payload, ctx = mirifyExpr ctx payload
@@ -1202,9 +1223,13 @@ let private mirifyCallAssertExpr ctx arg loc =
 
   // Embed the source location information.
   let args =
-    let (Loc (_, y, x)) = loc
+    let (Loc (docId, y, x)) = loc
+
+    // #abusingDocId
+    let name = (docId |> S.replace "." "/") + ".milone"
 
     [ arg
+      MLitExpr(StrLit name, loc)
       MLitExpr(IntLit(string y), loc)
       MLitExpr(IntLit(string x), loc) ]
 
@@ -1449,6 +1474,8 @@ let private mirifyExprInf ctx itself kind args ty loc =
   | HIndexEN, [ l; r ], _ -> mirifyCallStrIndexExpr ctx l r ty loc
   | HSliceEN, _, _ -> mirifyCallStrGetSliceExpr ctx args loc
 
+  | HDiscriminantEN variantSerial, _, _ -> mirifyDiscriminantExpr ctx variantSerial loc
+
   | HCallProcEN, [ HVariantExpr (variantSerial, _, _); arg ], _ -> mirifyCallVariantExpr ctx variantSerial arg ty loc
   | HCallProcEN, HPrimExpr (prim, _, _) :: args, _ -> mirifyCallPrimExpr ctx itself prim args ty loc
   | HCallProcEN, callee :: args, _ -> mirifyCallProcExpr ctx callee args ty loc
@@ -1477,6 +1504,7 @@ let private mirifyExprInf ctx itself kind args ty loc =
     MUnitExpr loc, ctx
 
   | HSizeOfValEN, [ HNodeExpr (_, _, ty, _) ], _ -> MGenericValueExpr(MSizeOfGv, ty, loc), ctx
+  | HTyPlaceholderEN, _, _ -> MGenericValueExpr(MTyPlaceholderGv, ty, loc), ctx
 
   | t -> unreachable t
 
@@ -1566,7 +1594,7 @@ let private mirifyExprLetFunContents (ctx: MirCtx) calleeSerial argPats body let
 
   core ()
 
-let private mirifyOtherExprWrapper ctx expr =
+let private mirifyExpr (ctx: MirCtx) (expr: HExpr) : MExpr * MirCtx =
   match expr with
   | HLitExpr (lit, loc) -> MLitExpr(lit, loc), ctx
   | HVarExpr (serial, ty, loc) -> MVarExpr(serial, ty, loc), ctx
@@ -1577,41 +1605,13 @@ let private mirifyOtherExprWrapper ctx expr =
   | HMatchExpr (cond, arms, ty, loc) -> mirifyExprMatch ctx cond arms ty loc
   | HNodeExpr (kind, args, ty, loc) -> mirifyExprInf ctx expr kind args ty loc
 
-  | HBlockExpr _
-  | HLetValExpr _
-  | HLetFunExpr _ -> unreachable () // See mirifyExpr below.
-
-  | HNavExpr _ -> unreachable () // HNavExpr is resolved in NameRes, Typing, or RecordRes.
-  | HRecordExpr _ -> unreachable () // HRecordExpr is resolved in RecordRes.
-
-let private mirifyExpr (ctx: MirCtx) (expr: HExpr) : MExpr * MirCtx =
-  match expr with
   | HBlockExpr (stmts, last) ->
-    let ctx =
-      stmts
-      |> List.fold
-           (fun ctx stmt ->
-             // Discard intermediate results.
-             let _, ctx = mirifyExpr ctx stmt
-             ctx)
-           ctx
+    let ctx = stmts |> List.fold mirifyStmt ctx
 
     mirifyExpr ctx last
 
-  | HLetValExpr (pat, init, next, _, _) ->
-    let ctx = mirifyExprLetValContents ctx pat init
-    mirifyExpr ctx next
-
-  | HLetFunExpr (funSerial, argPats, body, next, _, loc) ->
-    let ctx =
-      mirifyExprLetFunContents ctx funSerial argPats body loc
-
-    mirifyExpr ctx next
-
-  | _ ->
-    // Split function to reduce stack size.
-    // (This was required to avoid stack overflow previously but it might be non-issue now?)
-    mirifyOtherExprWrapper ctx expr
+  | HNavExpr _ -> unreachable () // HNavExpr is resolved in NameRes, Typing, or RecordRes.
+  | HRecordExpr _ -> unreachable () // HRecordExpr is resolved in RecordRes.
 
 let private mirifyExprs ctx exprs =
   (exprs, ctx)
@@ -1626,15 +1626,21 @@ let private mirifyArgs ctx args =
 
   args, ctx
 
-let private mirifyModule (m: HModule2, ctx: MirCtx) =
-  let ctx = { ctx with VarNameMap = m.Vars }
+let private mirifyStmt (ctx: MirCtx) (stmt: HStmt) : MirCtx =
+  match stmt with
+  | HExprStmt expr ->
+    // It's safe to discard expression because MExpr is pure.
+    let _, ctx = mirifyExpr ctx expr
+    ctx
 
-  // OK: It's safe to discard expressions because
-  //     toplevel expressions that involves side-effects
-  //     have already moved into main function in Hoist.
-  let (_: MExpr list), ctx =
-    (m.Stmts, ctx)
-    |> stMap (fun (stmt, ctx) -> mirifyExpr ctx stmt)
+  | HLetValStmt (pat, init, _) -> mirifyExprLetValContents ctx pat init
+
+  | HLetFunStmt (funSerial, argPats, body, loc) -> mirifyExprLetFunContents ctx funSerial argPats body loc
+
+let private mirifyModule (m: HModule2, ctx: MirCtx) =
+  let ctx =
+    let ctx = { ctx with VarNameMap = m.Vars }
+    m.Stmts |> List.fold mirifyStmt ctx
 
   let decls, ctx = takeDecls ctx
 

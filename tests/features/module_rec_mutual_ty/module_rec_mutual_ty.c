@@ -1,4 +1,4 @@
-#include "milone.h"
+#include <milone.h>
 
 struct UnitList;
 
@@ -10,7 +10,7 @@ struct RecA_ListList;
 
 struct RecA_;
 
-int milone_main(void);
+int main(int argc, char** argv);
 
 struct UnitList {
     char head;
@@ -37,7 +37,8 @@ struct RecA_ {
     };
 };
 
-int milone_main(void) {
+int main(int argc, char** argv) {
+    milone_start(argc, argv);
     struct UnitList const* list_ = milone_mem_alloc(1, sizeof(struct UnitList));
     (*(((struct UnitList*)list_))) = (struct UnitList){.head = 0, .tail = NULL};
     char switch_;
@@ -49,7 +50,7 @@ int milone_main(void) {
             goto clause_3;
     }
 clause_2:;
-    milone_assert(false, 19, 4);
+    milone_assert(false, (struct String){.str = "module_rec_mutual_ty/module_rec_mutual_ty.milone", .len = 48}, 19, 4);
     switch_ = 0;
     goto switch_next_1;
 clause_3:;
@@ -63,7 +64,7 @@ switch_next_1:;
     match_ = 0;
     goto end_match_4;
 next_5:;
-    milone_assert(false, 26, 9);
+    milone_assert(false, (struct String){.str = "module_rec_mutual_ty/module_rec_mutual_ty.milone", .len = 48}, 26, 9);
     match_ = 0;
     goto end_match_4;
 next_6:;

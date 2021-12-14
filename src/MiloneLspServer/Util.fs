@@ -1,33 +1,6 @@
 module MiloneLspServer.Util
 
 // -----------------------------------------------
-// IO
-// -----------------------------------------------
-
-module File =
-  open System.IO
-
-  let tryReadFile (filePath: string) =
-    try
-      if File.Exists(filePath) then
-        System.IO.File.ReadAllText(filePath) |> Some
-      else
-        None
-    with
-    | _ -> None
-
-  let readTextFile (filePath: string) : Future<string option> =
-    try
-      if System.IO.File.Exists(filePath) then
-        System.IO.File.ReadAllTextAsync(filePath)
-        |> Future.ofTask
-        |> Future.map Some
-      else
-        Future.just None
-    with
-    | _ -> Future.just None
-
-// -----------------------------------------------
 // MD5
 // -----------------------------------------------
 

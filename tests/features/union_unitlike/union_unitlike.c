@@ -1,4 +1,4 @@
-#include "milone.h"
+#include <milone.h>
 
 struct MyBool_;
 
@@ -16,7 +16,7 @@ void union_unitlike_Program_usedInOtherSumTypeCase(void);
 
 void union_unitlike_Program_usedInRecordTypeCase(void);
 
-int milone_main(void);
+int main(int argc, char** argv);
 
 enum MyBool_Discriminant {
     MyFalse_,
@@ -70,7 +70,7 @@ void union_unitlike_Program_usedInOtherSumTypeCase(void) {
     struct MyBool_ variant_ = (struct MyBool_){.discriminant = MyTrue_, .MyTrue_ = 0};
     struct MyBool_ myBool_ = variant_;
     bool call_ = union_unitlike_union_unitlike_usedInOtherSumTypeCase_toBool(myBool_);
-    milone_assert(call_, 27, 2);
+    milone_assert(call_, (struct String){.str = "union_unitlike/union_unitlike.milone", .len = 36}, 27, 2);
     return;
 }
 
@@ -85,7 +85,7 @@ void union_unitlike_Program_usedInRecordTypeCase(void) {
     match_2 = 0;
     goto end_match_6;
 next_7:;
-    milone_assert(false, 37, 9);
+    milone_assert(false, (struct String){.str = "union_unitlike/union_unitlike.milone", .len = 36}, 37, 9);
     match_2 = 0;
     goto end_match_6;
 next_8:;
@@ -93,7 +93,8 @@ end_match_6:;
     return;
 }
 
-int milone_main(void) {
+int main(int argc, char** argv) {
+    milone_start(argc, argv);
     union_unitlike_Program_basicCase();
     union_unitlike_Program_usedInOtherSumTypeCase();
     union_unitlike_Program_usedInRecordTypeCase();

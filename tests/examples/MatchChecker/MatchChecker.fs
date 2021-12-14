@@ -158,7 +158,6 @@ let spaceRef tag thunk = Space.Ref(tag, thunk)
 let spaceEmpty = Space.Union []
 
 /// Union of spaces.
-/// FIXME: Merge spaces of ctors with the same tag?
 let spaceUnion spaces =
   let rec go spaces acc =
     match spaces with
@@ -257,7 +256,7 @@ let rec spaceExclude first second =
       spaceEmpty
     else
 
-      // FIXME: disjoint case
+      // add disjoint case here!
 
       // `(s, t) - (u, v) = (s - u, t) + (s, t - v)`.
       // For example, the space of bool^2 excluded by the `false, true` pattern

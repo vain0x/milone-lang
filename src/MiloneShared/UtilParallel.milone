@@ -1,0 +1,57 @@
+module rec MiloneShared.UtilParallel
+
+// Since runtime doesn't support concurrent programming yet,
+// these functions work synchronously.
+
+// note: synonym doesn't work due to an issue of type checker
+// type Future<'T> = 'T
+type Future<'T> = Future of 'T
+
+module Future =
+  let just (value: 'T) : Future<'T> = Future value
+
+  let map (f: 'T -> 'U) (future: Future<'T>) : Future<'U> =
+    let (Future x) = future
+    Future(f x)
+
+  let andThen (f: 'T -> Future<'U>) (future: Future<'T>) : Future<'U> =
+    let (Future x) = future
+    f x
+
+  let wait (future: Future<'T>) : 'T =
+    let (Future x) = future
+    x
+
+// #mpscSync
+let private mpscSync
+  (consumer: 'S -> 'A -> 'S * 'T list)
+  (producer: 'S -> 'T -> Future<'A>)
+  (initialState: 'S)
+  (initialCommands: 'T list)
+  : 'S =
+  let rec folder state commands =
+    let state, commandListList =
+      commands
+      |> List.fold
+           (fun (state, acc) command ->
+             let action = producer state command |> Future.wait
+             let state, newCommands = consumer state action
+             state, newCommands :: acc)
+           (state, [])
+
+    List.fold folder state (List.rev commandListList)
+
+  folder initialState initialCommands
+
+// #mpscSync
+let mpscConcurrent
+  (consumer: 'S -> 'A -> 'S * 'T list)
+  (producer: 'S -> 'T -> Future<'A>)
+  (initialState: 'S)
+  (initialCommands: 'T list)
+  : 'S =
+  mpscSync consumer producer initialState initialCommands
+
+let __parallelMap (f: 'T -> 'U) (xs: 'T list) : 'U list = List.map f xs
+
+let __allowParallel () = ()

@@ -1,14 +1,16 @@
-#include "milone.h"
+#include <milone.h>
 
 struct BoxedVariant_;
 
 struct BoxedVariantoption1_;
 
+typedef struct BoxedVariant_(*VoidConstPtrBoxedVariantoption1_BoxedVariant_FunPtr2)(void const*, struct BoxedVariantoption1_);
+
 struct BoxedVariantoption1_BoxedVariant_Fun1;
 
 struct BoxedVariant_ variant_fun_auto_boxing_bug_Program_feedNil(struct BoxedVariantoption1_BoxedVariant_Fun1 f_);
 
-int milone_main(void);
+int main(int argc, char** argv);
 
 enum BoxedVariant_Discriminant {
     A_,
@@ -34,7 +36,7 @@ struct BoxedVariantoption1_ {
 };
 
 struct BoxedVariantoption1_BoxedVariant_Fun1 {
-    struct BoxedVariant_(*fun)(void const*, struct BoxedVariantoption1_);
+    VoidConstPtrBoxedVariantoption1_BoxedVariant_FunPtr2 fun;
     void const* env;
 };
 
@@ -43,6 +45,7 @@ struct BoxedVariant_ variant_fun_auto_boxing_bug_Program_feedNil(struct BoxedVar
     return app_;
 }
 
-int milone_main(void) {
+int main(int argc, char** argv) {
+    milone_start(argc, argv);
     return 0;
 }

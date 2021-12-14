@@ -1,4 +1,4 @@
-#include "milone.h"
+#include <milone.h>
 
 struct IntIntTuple2_;
 
@@ -6,7 +6,7 @@ struct IntIntIntIntTuple2Tuple3_;
 
 struct IntIntIntIntIntIntIntIntIntIntIntTuple11_;
 
-int milone_main(void);
+int main(int argc, char** argv);
 
 struct IntIntTuple2_ {
     int t0;
@@ -33,7 +33,8 @@ struct IntIntIntIntIntIntIntIntIntIntIntTuple11_ {
     int t10;
 };
 
-int milone_main(void) {
+int main(int argc, char** argv) {
+    milone_start(argc, argv);
     struct IntIntTuple2_ IntIntTuple2_ = (struct IntIntTuple2_){.t0 = 3, .t1 = 4};
     struct IntIntIntIntTuple2Tuple3_ IntIntIntIntTuple2Tuple3_ = (struct IntIntIntIntTuple2Tuple3_){.t0 = 1, .t1 = 2, .t2 = IntIntTuple2_};
     int x_ = IntIntIntIntTuple2Tuple3_.t0;
@@ -79,7 +80,7 @@ else_9:;
     if_2 = false;
     goto if_next_7;
 if_next_7:;
-    milone_assert(if_2, 6, 2);
+    milone_assert(if_2, (struct String){.str = "tuple_large/tuple_large.milone", .len = 30}, 6, 2);
     struct IntIntIntIntIntIntIntIntIntIntIntTuple11_ IntIntIntIntIntIntIntIntIntIntIntTuple11_ = (struct IntIntIntIntIntIntIntIntIntIntIntTuple11_){.t0 = 1, .t1 = 2, .t2 = 3, .t3 = 4, .t4 = 5, .t5 = 6, .t6 = 7, .t7 = 8, .t8 = 9, .t9 = 10, .t10 = 11};
     struct IntIntIntIntIntIntIntIntIntIntIntTuple11_ _t11 = IntIntIntIntIntIntIntIntIntIntIntTuple11_;
     return 0;

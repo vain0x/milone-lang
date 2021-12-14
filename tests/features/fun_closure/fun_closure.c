@@ -1,4 +1,6 @@
-#include "milone.h"
+#include <milone.h>
+
+typedef int(*VoidConstPtrIntFunPtr1)(void const*);
 
 struct UnitIntFun1;
 
@@ -64,10 +66,12 @@ int fun_closure_Program_f6(void);
 
 int fun_closure_Program_f7(void);
 
-int milone_main(void);
+int main(int argc, char** argv);
+
+void fun_closure_fun_closure_start(void);
 
 struct UnitIntFun1 {
-    int(*fun)(void const*);
+    VoidConstPtrIntFunPtr1 fun;
     void const* env;
 };
 
@@ -101,7 +105,7 @@ int fun_closure_fun_closure_basicCase_sub(int step_, int x_) {
 void fun_closure_Program_basicCase(void) {
     int step_ = 3;
     int call_3 = fun_closure_fun_closure_basicCase_sub(step_, 8);
-    milone_assert((call_3 == 5), 7, 2);
+    milone_assert((call_3 == 5), (struct String){.str = "fun_closure/fun_closure.milone", .len = 30}, 7, 2);
     return;
 }
 
@@ -118,7 +122,7 @@ int fun_closure_fun_closure_transitiveCase_incTwice(int step_1, int x_2) {
 void fun_closure_Program_transitiveCase(void) {
     int step_1 = 1;
     int call_6 = fun_closure_fun_closure_transitiveCase_incTwice(step_1, 0);
-    milone_assert((call_6 == 2), 13, 2);
+    milone_assert((call_6 == 2), (struct String){.str = "fun_closure/fun_closure.milone", .len = 30}, 13, 2);
     return;
 }
 
@@ -151,7 +155,7 @@ if_next_2:;
 void fun_closure_Program_recursiveCase(void) {
     int step_2 = 1;
     bool call_8 = fun_closure_fun_closure_recursiveCase_go(step_2, 0);
-    milone_assert(call_8, 21, 2);
+    milone_assert(call_8, (struct String){.str = "fun_closure/fun_closure.milone", .len = 30}, 21, 2);
     return;
 }
 
@@ -179,7 +183,7 @@ int fun_closure_fun_closure_lambdaCase_lf(int lx_) {
 void fun_closure_Program_lambdaCase(void) {
     int lx_ = 7;
     int call_11 = fun_closure_fun_closure_lambdaCase_lf(lx_);
-    milone_assert((call_11 == lx_), 30, 2);
+    milone_assert((call_11 == lx_), (struct String){.str = "fun_closure/fun_closure.milone", .len = 30}, 30, 2);
     return;
 }
 
@@ -244,19 +248,19 @@ if_next_11:;
 
 void fun_closure_Program_escapeCase(void) {
     int call_16 = fun_closure_fun_closure_escapeCase_xf1(1);
-    milone_assert((call_16 == ((1 + 2) + 3)), 50, 2);
+    milone_assert((call_16 == ((1 + 2) + 3)), (struct String){.str = "fun_closure/fun_closure.milone", .len = 30}, 50, 2);
     return;
 }
 
 void fun_closure_Program_innerFunCase(void) {
     int call_17 = fun_closure_fun_closure_innerFunCase_IntIntFun1_zf2(1);
-    milone_assert((call_17 == 1), 61, 2);
+    milone_assert((call_17 == 1), (struct String){.str = "fun_closure/fun_closure.milone", .len = 30}, 61, 2);
     return;
 }
 
 void fun_closure_Program_mutuallyRecursiveCase(void) {
     int call_18 = fun_closure_Program_f1();
-    milone_assert((call_18 == 1), 64, 31);
+    milone_assert((call_18 == 1), (struct String){.str = "fun_closure/fun_closure.milone", .len = 30}, 64, 31);
     return;
 }
 
@@ -294,8 +298,9 @@ int fun_closure_Program_f7(void) {
     return fun_closure_Program_a;
 }
 
-int milone_main(void) {
-    fun_closure_Program_a = 1;
+int main(int argc, char** argv) {
+    milone_start(argc, argv);
+    fun_closure_fun_closure_start();
     fun_closure_Program_basicCase();
     fun_closure_Program_transitiveCase();
     fun_closure_Program_recursiveCase();
@@ -304,4 +309,9 @@ int milone_main(void) {
     fun_closure_Program_innerFunCase();
     fun_closure_Program_mutuallyRecursiveCase();
     return 0;
+}
+
+void fun_closure_fun_closure_start(void) {
+    fun_closure_Program_a = 1;
+    return;
 }

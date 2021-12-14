@@ -253,7 +253,7 @@ let private parseErrorCore msg pos errors : Errors =
     "PARSE ERROR: "
     + msg
     + " ("
-    + posToString pos
+    + Pos.toString pos
     + ")"
 
   (msg, pos) :: errors
@@ -1152,7 +1152,6 @@ let private parseTyDeclRecord basePos (tokens, errors) : PR<ATyDeclBody> =
 /// Parses after `type .. =`.
 /// NOTE: Unlike F#, it can't parse `type A = A` as definition of discriminated union.
 let private parseTyDeclBody basePos (tokens, errors) : PR<ATyDeclBody> =
-  // FIXME: implement visibility of fields and variants
   let _, tokens = eatVis tokens
 
   match tokens with
@@ -1368,7 +1367,6 @@ let private parseModuleDecl modulePos (tokens, errors) : PR<ADecl option> =
 
   match tokens with
   | (EqualToken, _) :: (((IdentToken _, _) :: _) as tokens) ->
-    // FIXME: error if rec/vis is specified
     let path, tokens, errors = parsePath (tokens, errors)
     Some(AModuleSynonymDecl(moduleName, path, modulePos)), tokens, errors
 

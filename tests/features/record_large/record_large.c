@@ -1,4 +1,4 @@
-#include "milone.h"
+#include <milone.h>
 
 struct Stringoption1_;
 
@@ -6,7 +6,7 @@ struct GitCommitOptions_;
 
 void const* record_large_Program_defaultOptions(void);
 
-int milone_main(void);
+int main(int argc, char** argv);
 
 enum Stringoption1_Discriminant {
     None_,
@@ -37,7 +37,8 @@ void const* record_large_Program_defaultOptions(void) {
     return box_;
 }
 
-int milone_main(void) {
+int main(int argc, char** argv) {
+    milone_start(argc, argv);
     void const* call_ = record_large_Program_defaultOptions();
     void const* _options = call_;
     return 0;

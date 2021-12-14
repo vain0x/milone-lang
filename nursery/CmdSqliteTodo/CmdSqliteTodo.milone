@@ -57,7 +57,7 @@ let private cmdAdd text =
 let private cmdRemove word =
   dbInit ()
 
-  // FIXME: escape '%' and '_'
+  // escape '%' and '_'!
   dbMutate
     """
     delete from todos

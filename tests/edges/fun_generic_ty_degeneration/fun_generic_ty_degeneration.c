@@ -1,4 +1,4 @@
-#include "milone.h"
+#include <milone.h>
 
 struct IntStringTuple2_;
 
@@ -12,7 +12,7 @@ int fun_generic_ty_degeneration_fun_generic_ty_degeneration_IntStringTuple2IntFu
 
 void fun_generic_ty_degeneration_Program_testCase(struct IntStringTuple2_ kv_);
 
-int milone_main(void);
+int main(int argc, char** argv);
 
 struct IntStringTuple2_ {
     int t0;
@@ -50,11 +50,12 @@ void fun_generic_ty_degeneration_Program_testCase(struct IntStringTuple2_ kv_) {
     void const* box_ = milone_mem_alloc(1, sizeof(struct IntStringTuple2_));
     (*(((struct IntStringTuple2_*)box_))) = kv_;
     int call_2 = fun_generic_ty_degeneration_fun_generic_ty_degeneration_ObjectIntStringTuple2option1IntFun2_fstUnbox(box_, (struct IntStringTuple2option1_){.discriminant = None_});
-    milone_assert((call_2 == 0), 20, 2);
+    milone_assert((call_2 == 0), (struct String){.str = "fun_generic_ty_degeneration/fun_generic_ty_degeneration.milone", .len = 62}, 20, 2);
     return;
 }
 
-int milone_main(void) {
+int main(int argc, char** argv) {
+    milone_start(argc, argv);
     struct IntStringTuple2_ IntStringTuple2_ = (struct IntStringTuple2_){.t0 = 0, .t1 = (struct String){.str = "right", .len = 5}};
     fun_generic_ty_degeneration_Program_testCase(IntStringTuple2_);
     return 0;

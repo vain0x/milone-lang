@@ -16,7 +16,7 @@ type Msg =
   | Positional of string
 
 [<RequireQualifiedAccess; NoEquality; NoComparison>]
-type Result =
+type ParseResult =
   | Ok
   | NoValueError of PropName
   | RedundantValueError of PropName * string
@@ -44,7 +44,7 @@ let runClapCore
   (init: 'S)
   (hasParam: PropName -> 'S -> bool)
   (update: Msg -> 'S -> 'S)
-  : 'S * Result =
+  : 'S * ParseResult =
   let addPositional (state: 'S) value = update (Msg.Positional value) state
 
   let addPositionalList (state: 'S) args = args |> List.fold addPositional state
@@ -59,25 +59,25 @@ let runClapCore
     | value :: args when isValueArg value -> Some value, args
     | _ -> None, args
 
-  let addWithValueOpt (state: 'S) name valueOpt args : 'S * string list * Result =
+  let addWithValueOpt (state: 'S) name valueOpt args : 'S * string list * ParseResult =
     match hasParam name state, valueOpt with
     | true, Some _
-    | false, None -> addBinding state name valueOpt, args, Result.Ok
+    | false, None -> addBinding state name valueOpt, args, ParseResult.Ok
 
-    | false, Some value -> state, args, Result.RedundantValueError(name, value)
+    | false, Some value -> state, args, ParseResult.RedundantValueError(name, value)
 
     | true, None ->
       let valueOpt, args = take args
 
       match valueOpt with
-      | Some _ -> addBinding state name valueOpt, args, Result.Ok
-      | None -> state, args, Result.NoValueError name
+      | Some _ -> addBinding state name valueOpt, args, ParseResult.Ok
+      | None -> state, args, ParseResult.NoValueError name
 
-  let rec go args (state: 'S) : 'S * Result =
+  let rec go args (state: 'S) : 'S * ParseResult =
     match args with
-    | [] -> state, Result.Ok
+    | [] -> state, ParseResult.Ok
 
-    | "--" :: args -> args |> List.fold addPositional state, Result.Ok
+    | "--" :: args -> args |> List.fold addPositional state, ParseResult.Ok
 
     // Long option.
     | arg :: args when S.startsWith "--" arg ->
@@ -92,7 +92,7 @@ let runClapCore
         addWithValueOpt state (PropName.Long name) valueOpt args
 
       match result with
-      | Result.Ok -> go args state
+      | ParseResult.Ok -> go args state
       | _ -> state, result
 
     // Short option.
@@ -105,14 +105,14 @@ let runClapCore
         | None -> arg.[0..arg.Length - 2], arg.[arg.Length - 1], None
 
       let state, result =
-        let rec gogo (i: int) (state: 'S) : 'S * Result =
+        let rec gogo (i: int) (state: 'S) : 'S * ParseResult =
           if i = flags.Length then
-            state, Result.Ok
+            state, ParseResult.Ok
           else
             let name = PropName.Short flags.[i]
 
             if hasParam name state then
-              state, Result.NoValueError name
+              state, ParseResult.NoValueError name
             else
               addBinding state name None |> gogo (i + 1)
 
@@ -120,11 +120,11 @@ let runClapCore
 
       let state, args, result =
         match result with
-        | Result.Ok -> addWithValueOpt state (PropName.Short last) valueOpt args
+        | ParseResult.Ok -> addWithValueOpt state (PropName.Short last) valueOpt args
         | _ -> state, args, result
 
       match result with
-      | Result.Ok -> go args state
+      | ParseResult.Ok -> go args state
       | _ -> state, result
 
     | value :: args -> addPositional state value |> go args

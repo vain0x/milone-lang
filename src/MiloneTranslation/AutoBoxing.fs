@@ -811,26 +811,26 @@ let private abExpr ctx expr =
     HMatchExpr(cond, arms, ty, loc)
 
   | HBlockExpr (stmts, last) ->
-    let stmts = stmts |> List.map (abExpr ctx)
+    let stmts = stmts |> List.map (abStmt ctx)
     let last = last |> abExpr ctx
     HBlockExpr(stmts, last)
 
-  | HLetValExpr (pat, init, next, ty, loc) ->
-    let pat = pat |> abPat ctx
-    let init = init |> abExpr ctx
-    let next = next |> abExpr ctx
-    let ty = ty |> abTy ctx
-    HLetValExpr(pat, init, next, ty, loc)
-
-  | HLetFunExpr (callee, args, body, next, ty, loc) ->
-    let args = args |> List.map (abPat ctx)
-    let body = body |> abExpr ctx
-    let next = next |> abExpr ctx
-    let ty = ty |> abTy ctx
-    HLetFunExpr(callee, args, body, next, ty, loc)
-
   | HNavExpr _ -> unreachable () // HNavExpr is resolved in NameRes, Typing, or RecordRes.
   | HRecordExpr _ -> unreachable () // HRecordExpr is resolved in RecordRes.
+
+let private abStmt ctx stmt =
+  match stmt with
+  | HExprStmt expr -> HExprStmt(abExpr ctx expr)
+
+  | HLetValStmt (pat, init, loc) ->
+    let pat = pat |> abPat ctx
+    let init = init |> abExpr ctx
+    HLetValStmt(pat, init, loc)
+
+  | HLetFunStmt (callee, args, body, loc) ->
+    let args = args |> List.map (abPat ctx)
+    let body = body |> abExpr ctx
+    HLetFunStmt(callee, args, body, loc)
 
 let autoBox (modules: HProgram, hirCtx: HirCtx) : HProgram * HirCtx =
   // Detect recursion.
@@ -903,7 +903,7 @@ let autoBox (modules: HProgram, hirCtx: HirCtx) : HProgram * HirCtx =
     modules
     |> List.map (fun (m: HModule) ->
       let vars = abVars m.Vars
-      let stmts = m.Stmts |> List.map (abExpr ctx)
+      let stmts = m.Stmts |> List.map (abStmt ctx)
       { m with Vars = vars; Stmts = stmts })
 
   let hirCtx = ctx |> toHirCtx hirCtx
@@ -959,6 +959,7 @@ let private tvExpr (expr: HExpr) (ctx: TvCtx) : TvCtx =
   let onPats pats ctx = forList onPat pats ctx
   let onExpr expr ctx = tvExpr expr ctx
   let onExprs exprs ctx = forList tvExpr exprs ctx
+  let onStmts stmts ctx = forList tvStmt stmts ctx
 
   match expr with
   | HLitExpr _ -> ctx
@@ -976,16 +977,24 @@ let private tvExpr (expr: HExpr) (ctx: TvCtx) : TvCtx =
 
   | HNodeExpr (_, args, ty, _) -> ctx |> onExprs args |> onTy ty
 
-  | HBlockExpr (stmts, last) -> ctx |> onExprs stmts |> tvExpr last
+  | HBlockExpr (stmts, last) -> ctx |> onStmts stmts |> tvExpr last
 
-  | HLetValExpr (pat, init, next, ty, _) ->
-    ctx
-    |> onExpr init
-    |> onPat pat
-    |> onTy ty
-    |> tvExpr next
+  | HNavExpr _ -> unreachable () // HNavExpr is resolved in NameRes, Typing, or RecordRes.
+  | HRecordExpr _ -> unreachable () // HRecordExpr is resolved in RecordRes.
 
-  | HLetFunExpr (funSerial, args, body, next, ty, _) ->
+let private tvStmt stmt ctx =
+  let onTy ty ctx = tvTy ty ctx
+  let onPat pat ctx = tvPat pat ctx
+  let onPats pats ctx = forList onPat pats ctx
+  let onExpr expr ctx = tvExpr expr ctx
+  let onExprs exprs ctx = forList tvExpr exprs ctx
+
+  match stmt with
+  | HExprStmt expr -> onExpr expr ctx
+
+  | HLetValStmt (pat, init, _) -> ctx |> onExpr init |> onPat pat
+
+  | HLetFunStmt (funSerial, args, body, _) ->
     let parent, ctx =
       ctx.UsedTyVars, { ctx with UsedTyVars = emptyTyVarSet }
 
@@ -1013,7 +1022,7 @@ let private tvExpr (expr: HExpr) (ctx: TvCtx) : TvCtx =
 
       { ctx with
           Funs = funs
-          // FIXME: TreeSet.union
+          // #TSetUnion
           UsedTyVars =
             TSet.fold
               (fun tySerial tyVars ->
@@ -1024,10 +1033,7 @@ let private tvExpr (expr: HExpr) (ctx: TvCtx) : TvCtx =
               parent
               ctx.UsedTyVars }
 
-    ctx |> onTy ty |> tvExpr next
-
-  | HNavExpr _ -> unreachable () // HNavExpr is resolved in NameRes, Typing, or RecordRes.
-  | HRecordExpr _ -> unreachable () // HRecordExpr is resolved in RecordRes.
+    ctx
 
 // -----------------------------------------------
 // Compute ty args
@@ -1096,8 +1102,8 @@ let private processFunExpr (ctx: TaCtx) funSerial useSiteTy loc : HExpr =
         if ctx.QuantifiedTys |> TSet.contains tySerial then
           tyMeta tySerial loc
         else
-          // FIXME: This should be unreachable but does happen in some cases,
-          //        e.g. `fun x y -> x - y` (tests/primitives/tuple_arg).
+          // This should be unreachable but does happen in some cases,
+          // e.g. `fun x y -> x - y` (tests/primitives/tuple_arg).
           tyUnit))
 
   HFunExpr(funSerial, useSiteTy, tyArgs, loc)
@@ -1105,6 +1111,7 @@ let private processFunExpr (ctx: TaCtx) funSerial useSiteTy loc : HExpr =
 let private taExpr (ctx: TaCtx) (expr: HExpr) : HExpr =
   let onExpr expr = taExpr ctx expr
   let onExprs exprs = List.map (taExpr ctx) exprs
+  let onStmts stmts = List.map (taStmt ctx) stmts
 
   match expr with
   | HLitExpr _
@@ -1122,10 +1129,20 @@ let private taExpr (ctx: TaCtx) (expr: HExpr) : HExpr =
     HMatchExpr(cond, arms, ty, loc)
 
   | HNodeExpr (kind, args, ty, loc) -> HNodeExpr(kind, onExprs args, ty, loc)
-  | HBlockExpr (stmts, last) -> HBlockExpr(onExprs stmts, onExpr last)
-  | HLetValExpr (pat, init, next, ty, loc) -> HLetValExpr(pat, onExpr init, onExpr next, ty, loc)
+  | HBlockExpr (stmts, last) -> HBlockExpr(onStmts stmts, onExpr last)
 
-  | HLetFunExpr (callee, args, body, next, ty, loc) ->
+  | HNavExpr _ -> unreachable () // HNavExpr is resolved in NameRes, Typing, or RecordRes.
+  | HRecordExpr _ -> unreachable () // HRecordExpr is resolved in RecordRes.
+
+let private taStmt ctx stmt =
+  let onExpr expr = taExpr ctx expr
+
+  match stmt with
+  | HExprStmt expr -> HExprStmt(onExpr expr)
+
+  | HLetValStmt (pat, init, loc) -> HLetValStmt(pat, onExpr init, loc)
+
+  | HLetFunStmt (callee, args, body, loc) ->
     let ctx =
       let funDef = ctx.Funs |> mapFind callee
 
@@ -1138,10 +1155,7 @@ let private taExpr (ctx: TaCtx) (expr: HExpr) : HExpr =
 
         { ctx with QuantifiedTys = quantifiedTys }
 
-    HLetFunExpr(callee, args, taExpr ctx body, onExpr next, ty, loc)
-
-  | HNavExpr _ -> unreachable () // HNavExpr is resolved in NameRes, Typing, or RecordRes.
-  | HRecordExpr _ -> unreachable () // HRecordExpr is resolved in RecordRes.
+    HLetFunStmt(callee, args, taExpr ctx body, loc)
 
 let computeFunTyArgs (modules: HProgram, hirCtx: HirCtx) : HProgram * HirCtx =
   let hirCtx =

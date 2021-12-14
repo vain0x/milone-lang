@@ -5,6 +5,7 @@
 /// See also: <https://github.com/fsharp/fslang-design/blob/e50f1bcd5f9824e287a9e70d03b37f07d170d25f/RFCs/FS-1033-extend-string-module.md>
 module rec MiloneStd.StdString
 
+module B = MiloneStd.StdStringBase
 module C = MiloneStd.StdChar
 
 /// Ensures `minValue <= value <= maxValue`.
@@ -136,6 +137,15 @@ let slice (start: int) (endIndex: int) (s: string) : string =
   else
     ""
 
+/// Splits a string into two parts at the specified index.
+///
+/// Index is tolerant.
+/// If `i < 0`, use `0`. If `i > s.Length`, use length.
+let splitAt (i: int) (s: string) : string * string =
+  if i <= 0 then "", s
+  else if s.Length <= i then s, ""
+  else s.[0..i - 1], s.[i..s.Length - 1]
+
 // -----------------------------------------------
 // Trim
 // -----------------------------------------------
@@ -237,6 +247,20 @@ let private transformByBytes (f: char -> char) (s: string) : string =
 let toLower (s: string) : string = transformByBytes C.toLower s
 let toUpper (s: string) : string = transformByBytes C.toUpper s
 
+/// Changes first letter to lowercase (if ASCII uppercase).
+let lowerFirst (s: string) : string =
+  if s.Length >= 1 && C.isUpper s.[0] then
+    string (C.toLower s.[0]) + s.[1..s.Length - 1]
+  else
+    s
+
+/// Changes first letter to uppercase (if ASCII lowercase).
+let upperFirst (s: string) : string =
+  if s.Length >= 1 && C.isLower s.[0] then
+    string (C.toUpper s.[0]) + s.[1..s.Length - 1]
+  else
+    s
+
 // -----------------------------------------------
 // Split
 // -----------------------------------------------
@@ -294,30 +318,31 @@ let stripEnd (suffix: string) (s: string) : string * bool =
   else
     s, false
 
+/// Finds first index of newline. Returns total length if missing.
 let private findNewline (start: int) (s: string) =
   let i = start
 
-  if i < s.Length
-     && (s.[i] <> '\x00' && s.[i] <> '\r' && s.[i] <> '\n') then
+  if i < s.Length && (s.[i] <> '\r' && s.[i] <> '\n') then
     findNewline (i + 1) s
   else
     i
 
-/// Scans a line of string. A line ends with a `\r`, `\n`, `\x00`, or end of string.
+/// Splits a string into first line and rest.
+/// Line ends with a `\r\n`, `\n`, or end of string.
 ///
-/// Returns `(lineContents, newlineOpt, rest)`, where:
+/// Returns `(lineContents, rest, newlineOpt)`, where:
 ///
 /// - `lineContents` is the contents of the line.
 ///     Empty if string starts with newline or is empty.
-/// - `newlineOpt` is "\n" or "\r\n" (or perhaps "\r"), which is actually found.
 /// - `rest` is the string after the newline.
-///     Empty if it ends with the newline or no newline found.
-let scanLine (s: string) : string * string option * string =
+///     Empty if it ends with the newline. Otherwise no newline found.
+/// - `newlineOpt` is "\n" or "\r\n" (or perhaps "\r"), which is actually found.
+let cutLine (s: string) : string * string * string option =
   let m = findNewline 0 s
   let lineContents = if m > 0 then s.[0..m - 1] else ""
 
   if m = s.Length then
-    lineContents, None, ""
+    lineContents, "", None
   else
     let sepLen =
       if (m + 1) < s.Length
@@ -325,7 +350,7 @@ let scanLine (s: string) : string * string option * string =
          && s.[m + 1] = '\n' then
         2
       else
-        assert (s.[m] = '\x00' || s.[m] = '\r' || s.[m] = '\n')
+        assert (m = s.Length || s.[m] = '\r' || s.[m] = '\n')
         1
 
     let r = m + sepLen
@@ -337,7 +362,7 @@ let scanLine (s: string) : string * string option * string =
       else
         ""
 
-    lineContents, Some sep, rest
+    lineContents, rest, Some sep
 
 /// Splits a string to lines.
 let toLines (s: string) : string list =
@@ -369,4 +394,59 @@ let toLines (s: string) : string list =
 ///
 /// This function is almost same as `String.concat` in F#
 /// but takes a list rather than seq, which is unimplemented in milone-lang.
-let concat (sep: string) (xs: string list) : string = __stringJoin sep xs
+let concat (sep: string) (xs: string list) : string = B.concat sep xs
+
+// -----------------------------------------------
+// Formatting
+// -----------------------------------------------
+
+let parseHexAsUInt64 (s: string) : uint64 option =
+  let rec go acc (i: int) =
+    if i = s.Length then
+      Some acc
+    else if C.isHex s.[i] then
+      let d = uint64 (C.evalHex s.[i])
+
+      let overflow =
+        let m = uint64 (int64 (-1))
+        acc <= (m - uint64 d) / uint64 16
+
+      if overflow then
+        go (acc * uint64 16 + d) (i + 1)
+      else
+        None
+    else
+      None
+
+  if s.Length <> 0 then
+    go (uint64 0) 0
+  else
+    None
+
+let uint64ToHex (len: int) (value: uint64) =
+  assert (len >= 0)
+
+  let rec go acc len (n: uint64) =
+    if n = uint64 0 && len <= 0 then
+      acc
+    else
+      let d = int (n % uint64 16)
+      let acc = "0123456789abcdef".[d..d] + acc
+      let len = if len >= 1 then len - 1 else 0
+      let n = n / uint64 16
+      go acc len n
+
+  if value = uint64 0 && len = 0 then
+    "0"
+  else
+    go "" len value
+
+// bad implementation
+let format (s: string) (args: string list) =
+  args
+  |> List.fold
+       (fun (i, s) arg ->
+         let s = s |> replace ("{" + string i + "}") arg
+         i + 1, s)
+       (0, s)
+  |> snd

@@ -102,8 +102,8 @@ let render () =
 builddir = target/tests
 timestamp = target/.timestamp
 
-my_build_tool = scripts/MyBuildTool/bin/Debug/net5.0/MyBuildTool
-milone_dotnet = src/MiloneCli/bin/Debug/net5.0/MiloneCli
+my_build_tool = scripts/MyBuildTool/bin/Debug/net6.0/MyBuildTool
+milone_dotnet = src/MiloneCli/bin/Debug/net6.0/MiloneCli
 
 rule build_my_build_tool
   description = build_my_build_tool

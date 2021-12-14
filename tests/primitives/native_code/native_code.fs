@@ -29,10 +29,21 @@ let private nativeExprWithPlaceholder () =
   let n: int = __nativeExpr ("{0}.len", s)
   assert (n = 5)
 
+let private nativeStmtWithTyPlaceholder () =
+  // (_: T) is type placeholder. Embed type name.
+  let alignOf (_: nativeptr<'T>) : unativeint =
+    __nativeStmt ("typedef {0} T;", (_: 'T))
+    __nativeExpr "_Alignof(T)"
+
+  assert (alignOf (__nativeCast 0n: nativeptr<char>) = 1un)
+  assert (alignOf (__nativeCast 0n: nativeptr<int>) = 4un)
+  assert (alignOf (__nativeCast 0n: nativeptr<int -> unit>) = 8un)
+
 let main _ =
   writeLine "HEY!"
   writeLine "YO!"
   writeLine (freshId () |> string)
   writeLine (freshId () |> string)
   nativeExprWithPlaceholder ()
+  nativeStmtWithTyPlaceholder ()
   0

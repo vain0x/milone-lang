@@ -2,4 +2,4 @@
 
 set -eu
 
-cat ./milone.ungram | dotnet run -p Ungrammar.fsproj
+cat ./milone.ungram | dotnet run --project Ungrammar.fsproj

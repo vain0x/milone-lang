@@ -81,29 +81,32 @@ let private troExpr isTail (expr, ctx) =
   | HNodeExpr (kind, items, ty, loc) -> ctx |> troInfExpr isTail kind items ty loc
 
   | HBlockExpr (stmts, last) ->
-    let stmts, ctx = (stmts, ctx) |> stMap (troExpr NotTail)
+    let stmts, ctx = stmts |> List.mapFold troStmt ctx
     let last, ctx = (last, ctx) |> troExpr isTail
     HBlockExpr(stmts, last), ctx
-
-  | HLetValExpr (pat, init, next, ty, loc) ->
-    let init, ctx = troExpr NotTail (init, ctx)
-    let next, ctx = troExpr isTail (next, ctx)
-    HLetValExpr(pat, init, next, ty, loc), ctx
-
-  | HLetFunExpr (callee, args, body, next, ty, loc) ->
-    let body, ctx =
-      ctx
-      |> withCurrentFun callee (fun ctx -> troExpr IsTail (body, ctx))
-
-    let next, ctx = troExpr isTail (next, ctx)
-    HLetFunExpr(callee, args, body, next, ty, loc), ctx
 
   | HNavExpr _ -> unreachable () // HNavExpr is resolved in NameRes, Typing, or RecordRes.
   | HRecordExpr _ -> unreachable () // HRecordExpr is resolved in RecordRes.
 
+let private troStmt ctx stmt =
+  match stmt with
+  | HExprStmt expr ->
+    let expr, ctx = troExpr NotTail (expr, ctx)
+    HExprStmt expr, ctx
+
+  | HLetValStmt (pat, init, loc) ->
+    let init, ctx = troExpr NotTail (init, ctx)
+    HLetValStmt(pat, init, loc), ctx
+
+  | HLetFunStmt (callee, args, body, loc) ->
+    let body, ctx =
+      ctx
+      |> withCurrentFun callee (fun ctx -> troExpr IsTail (body, ctx))
+
+    HLetFunStmt(callee, args, body, loc), ctx
+
 let private troModule (m: HModule, ctx: TailRecCtx) : HModule * TailRecCtx =
-  let stmts, ctx =
-    (m.Stmts, ctx) |> stMap (troExpr IsTail)
+  let stmts, ctx = m.Stmts |> List.mapFold troStmt ctx
 
   let m = { m with Stmts = stmts }
   m, ctx

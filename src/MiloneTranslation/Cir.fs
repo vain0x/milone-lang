@@ -36,7 +36,6 @@ type CTy =
   | CCharTy
   | CPtrTy of CTy
   | CConstPtrTy of CTy
-  | CFunPtrTy of argTys: CTy list * resultTy: CTy
   | CStructTy of Ident
   | CEnumTy of Ident
   | CEmbedTy of string
@@ -106,6 +105,7 @@ type CExpr =
 
   | CCallExpr of CExpr * args: CExpr list
   | CSizeOfExpr of CTy
+  | CTyPlaceholderExpr of CTy
   | CUnaryExpr of CUnary * CExpr
   | CBinaryExpr of CBinary * CExpr * CExpr
   | CNativeExpr of string * CExpr list
@@ -141,6 +141,9 @@ type CStmt =
 type CDecl =
   /// `#error` directive to cause compile error manually.
   | CErrorDecl of message: string * line: int
+
+  /// `typedef ResultTy (*Ident)(ArgTy1, ArgTy2, ..);`
+  | CFunPtrTyDef of Ident * argTys: CTy list * resultTy: CTy
 
   /// Definition of struct type including anonymous union.
   /// ```c
