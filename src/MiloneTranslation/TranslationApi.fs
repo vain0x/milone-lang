@@ -149,5 +149,7 @@ let codeGenUsingXir (writeLog: WriteLogFun) (modules: Hir.HProgram, hirCtx: HirC
   let trace fmt args = __trace (S.format fmt args)
   let program = XirGen.xirGen trace (modules, hirCtx)
   // xirReuse trace program |> ignore
-  XirToCir.xirToCir trace program |> ignore
-  trace "OK" [ __dump program ]
+  let cFiles = XirToCir.xirToCir trace program
+
+  cFiles
+  |> List.fold (fun () (filename, text) -> trace "file: {0}\n{1}" [ filename; CirDump.cirDump text ]) ()

@@ -66,10 +66,16 @@ type XArg =
 type XUnary =
   | XMinusUnary
   | XNotUnary
+  | XStrLengthUnary
 
 type XBinary =
-  | XAddBinary
+  | XScalarAddBinary
   | XStrAddBinary
+  | XPtrAddBinary
+  | XScalarSubBinary
+  | XScalarMulBinary
+  | XScalarDivBinary
+  | XScalarModuloBinary
   | XScalarEqualBinary
   | XStrEqualBinary
   | XScalarLessBinary
@@ -103,8 +109,9 @@ type XStmt =
   | XAssignStmt of XPlace * XRval * Loc
   | XCallStmt of XBodyId * XArg list * XPlace * Loc
   | XNativeCallStmt of FunSerial * XArg list * XPlace * Loc
+  | XAssertStmt of XArg * Loc
+  | XInRegionStmt of XArg * Loc
   | XPrintfnStmt of XArg list * Loc
-  | XPtrWriteStmt of XArg * XArg * Loc
 
 type XTerminator =
   | XUnreachableTk

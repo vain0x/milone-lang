@@ -64,15 +64,13 @@ let private xStmtToDef (stmt: XStmt) : XLocalId list =
   | XAssignStmt (place, _, _) -> [ place.Local ]
   | XCallStmt (_, _, place, _) -> [ place.Local ]
 
-  | XPrintfnStmt _
-  | XPtrWriteStmt _ -> []
+  | XPrintfnStmt _ -> []
 
 let private xStmtToUse (stmt: XStmt) : XLocalId list =
   match stmt with
   | XAssignStmt (_, rval, _) -> xRvalToUse rval
   | XCallStmt (_, args, _, _) -> List.collect xArgToUse args
   | XPrintfnStmt (args, _) -> List.collect xArgToUse args
-  | XPtrWriteStmt (l, r, _) -> List.collect xArgToUse [ l; r ]
 
 let private xTerminatorToUse (terminator: XTerminator) : XLocalId list =
   match terminator with
@@ -126,8 +124,6 @@ let private xStmtMap (rewriter: Rewriter) (stmt: XStmt) : XStmt =
   | XCallStmt (body, args, result, loc) -> XCallStmt(body, List.map rewriter.OnArg args, rewriter.OnPlace result, loc)
 
   | XPrintfnStmt (args, loc) -> XPrintfnStmt(List.map rewriter.OnArg args, loc)
-
-  | XPtrWriteStmt (l, r, loc) -> XPtrWriteStmt(rewriter.OnArg l, rewriter.OnArg r, loc)
 
 let private xTerminatorMap (rewriter: Rewriter) (terminator: XTerminator) : XTerminator =
   match terminator with

@@ -230,6 +230,9 @@ let private addTempLocal (name: string) (ty: Ty) (loc: Loc) (ctx: Ctx) : XLocalI
   let ty, ctx = xgTy ty ctx
   addLocal name ty loc ctx
 
+let private argToLocal (arg: XArg) (ty: XTy) (loc: Loc) (ctx: Ctx) : XLocalId * Ctx =
+  rvalToLocal (xRvalOfArg arg) ty loc ctx
+
 /// Converts an rval to a local (fresh temporary).
 let private rvalToLocal (rval: XRval) (ty: XTy) (loc: Loc) (ctx: Ctx) : XLocalId * Ctx =
   let localOpt =
@@ -846,14 +849,24 @@ let private xgCallPrim (prim: HPrim) (tyInfo: PrimTyInfo) (args: XArg list) loc 
     let ctx = ctx |> addStmt stmt
     XUnitRval loc, ctx
 
+  let toBinary binary ctx =
+    match args with
+    | [ l; r ] -> XBinaryRval(binary, l, r, loc), ctx
+    | _ -> unreachable ()
+
   match prim, args, tyInfo with
   // operator:
   | HPrim.Not, [ arg ], _ -> XUnaryRval(XNotUnary, arg, loc), ctx
   | HPrim.Not, _, _ -> unreachable ()
 
-  | HPrim.Add, [ l; r ], PrimTyInfo.ScalarOperation -> XBinaryRval(XAddBinary, l, r, loc), ctx
+  | HPrim.Add, [ l; r ], PrimTyInfo.ScalarOperation -> XBinaryRval(XScalarAddBinary, l, r, loc), ctx
   | HPrim.Add, [ l; r ], PrimTyInfo.StrOperation -> XBinaryRval(XStrAddBinary, l, r, loc), ctx
   | HPrim.Add, _, _ -> unreachable ()
+
+  | HPrim.Sub, _, _ -> toBinary XScalarSubBinary ctx
+  | HPrim.Mul, _, _ -> toBinary XScalarMulBinary ctx
+  | HPrim.Div, _, _ -> toBinary XScalarDivBinary ctx
+  | HPrim.Modulo, _, _ -> toBinary XScalarModuloBinary ctx
 
   | HPrim.Equal, [ l; r ], PrimTyInfo.ScalarOperation -> XBinaryRval(XScalarEqualBinary, l, r, loc), ctx
   | HPrim.Equal, [ l; r ], PrimTyInfo.StrOperation -> XBinaryRval(XStrEqualBinary, l, r, loc), ctx
@@ -861,6 +874,9 @@ let private xgCallPrim (prim: HPrim) (tyInfo: PrimTyInfo) (args: XArg list) loc 
   | HPrim.Less, [ l; r ], PrimTyInfo.StrOperation -> XBinaryRval(XStrLessBinary, l, r, loc), ctx
   | HPrim.Compare, [ l; r ], PrimTyInfo.ScalarOperation -> XBinaryRval(XScalarCompareBinary, l, r, loc), ctx
   | HPrim.Compare, [ l; r ], PrimTyInfo.StrOperation -> XBinaryRval(XStrCompareBinary, l, r, loc), ctx
+
+  // string
+  | HPrim.StrLength, [ s ], _ -> XUnaryRval(XStrLengthUnary, s, loc), ctx
 
   // constructor:
   // | HPrim.OptionSome, [ arg ], PrimTyInfo.Option itemTy ->
@@ -871,9 +887,30 @@ let private xgCallPrim (prim: HPrim) (tyInfo: PrimTyInfo) (args: XArg list) loc 
   | HPrim.Exit, [ arg ], _ -> XUnitRval loc, setTerminator (XExitTk arg) ctx
   | HPrim.Exit, _, _ -> unreachable ()
 
+  | HPrim.Assert, [ arg ], _ -> regularAction (XAssertStmt(arg, loc)) ctx
+  | HPrim.Assert, _, _ -> unreachable ()
   | HPrim.Printfn, _, _ -> regularAction (XPrintfnStmt(args, loc)) ctx
+  | HPrim.InRegion, [ arg ], _ -> regularAction (XInRegionStmt(arg, loc)) ctx
+  | HPrim.InRegion, _, _ -> unreachable ()
 
-  | HPrim.PtrWrite, [ l; r ], _ -> regularAction (XPtrWriteStmt(l, r, loc)) ctx
+  | HPrim.NativeCast, [ arg ], _ -> xRvalOfArg arg, ctx // FIXME: insert cast
+
+  | HPrim.PtrRead, [ p; i ], _ ->
+    let q, ctx =
+      let q = XBinaryRval(XPtrAddBinary, p, i, loc)
+      rvalToLocal q XUnitTy loc ctx // FIXME: ty info
+
+    let place: XPlace = { Local = q; Path = [ XPart.Deref ] }
+    XPlaceRval(place, loc), ctx
+
+  | HPrim.PtrWrite, [ p; i; arg ], _ ->
+    let q, ctx =
+      let q = XBinaryRval(XPtrAddBinary, p, i, loc)
+      rvalToLocal q XUnitTy loc ctx // FIXME: ty info
+
+    let place: XPlace = { Local = q; Path = [ XPart.Deref ] }
+    regularAction (XAssignStmt(place, xRvalOfArg arg, loc)) ctx
+
   | HPrim.PtrWrite, _, _ -> unreachable ()
 
   | HPrim.Nil, _, _ // Can't be called.
@@ -934,6 +971,11 @@ let private xgNodeExpr (expr: HExpr) (ctx: Ctx) : XRval * Ctx =
       |> addStmt (XCallStmt(bodyId, args, xLocalPlace resultLocal, loc))
 
     XLocalRval(resultLocal, loc), ctx
+
+  | HCallProcEN, [ HVariantExpr (variantSerial, _, _); payload ] ->
+    let payload, ctx = xgExprToArg (payload, ctx)
+    let variantId = variantSerialToInt variantSerial
+    XAggregateRval(XVariantAk variantId, [ payload ], loc), ctx
 
   | HCallProcEN, HPrimExpr (prim, _, _) :: args ->
     let tyInfo = primTyInfo prim args targetTy
