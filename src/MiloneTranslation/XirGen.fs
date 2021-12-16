@@ -216,6 +216,7 @@ let private addLocal (name: string) (ty: XTy) (loc: Loc) (ctx: Ctx) : XLocalId *
 
   let localDef: XLocalDef =
     { Name = Some name
+      Arg = false
       Id = localId
       Ty = ty
       Loc = loc }
@@ -404,6 +405,7 @@ let private xgVar varSerial (ctx: Ctx) : XLocalId * Ctx =
       let localDef: XLocalDef =
         { Name = Some varDef.Name
           Id = localId
+          Arg = false
           Ty = ty
           Loc = varDef.Loc }
 
@@ -1137,8 +1139,16 @@ let private xgLetFunStmt (letFunStmt: HStmt) (ctx: Ctx) : Ctx =
     entryBlockId, resultLocal, argLocals, ctx
 
   let bodyDef =
+    let locals =
+      ctx.Locals
+      |> TMap.map (fun localId (localDef: XLocalDef) ->
+        if argLocals |> List.exists (fun a -> a = localId) then
+          { localDef with Arg = true }
+        else
+          localDef)
+
     { bodyDef with
-        Locals = ctx.Locals
+        Locals = locals
         Blocks = ctx.Blocks
         ArgTys = argTys
         ResultTy = resultTy

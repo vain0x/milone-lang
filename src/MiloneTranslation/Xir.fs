@@ -41,6 +41,7 @@ type XRecordDef = { Name: string; Fields: XFieldId list }
 type XTy =
   | XUnitTy
   | XIntTy of IntFlavor
+  | XCharTy
   | XStrTy
   | XBoolTy
   | XUnionTy of XUnionTyId
@@ -125,6 +126,7 @@ type XTerminator =
 type XLocalDef =
   { Name: string option
     Id: XLocalId
+    Arg: bool
     Ty: XTy
     Loc: Loc }
 

@@ -13,7 +13,7 @@ module S = MiloneStd.StdString
 
 type private TraceFun = string -> string list -> unit
 
-let private cInt = CIntTy(IntFlavor(Signed, I32))
+let private cStrTy = CStructTy "String"
 
 let private cUnitExpr: CExpr =
   CIntExpr("/*unit*/0", IntFlavor(Signed, I32))
@@ -31,7 +31,12 @@ let private cUnreachableFun = CVarExpr "/*unreachable*/abort"
 let private cExitFun = CVarExpr "exit"
 let private cAssertFun = CVarExpr "milone_assert"
 
+let private cLocalName (localId: XLocalId) = "l" + string localId
 let private cLabelOf (blockId: XBlockId) : CLabel = "L" + string blockId
+let private cBodyToName (bodyId: XBodyId) : string = "f" + string bodyId
+let private cVariantName (variantId: XVariantId) = "V" + string variantId
+let private cRecordName (recordId: XRecordTyId) = "R" + string recordId
+let private cFieldName (index: int) = "t" + string index
 
 let private cLocStmt (loc: Loc) =
   CNativeStmt("    // loc: " + Loc.toString loc + "\n", [])
@@ -41,14 +46,20 @@ let private cLocStmt (loc: Loc) =
 // -----------------------------------------------
 
 // Read context.
-type private Rx = { BodyDef: XBodyDef; Trace: TraceFun }
+type private Rx =
+  { Variants: TreeMap<XVariantId, XVariantDef>
+    BodyDef: XBodyDef
+    Trace: TraceFun }
 
 // Write context.
 type private Wx =
   { Stmts: CStmt list
     Decls: CDecl list }
 
-let private newRx trace (bodyDef: XBodyDef) : Rx = { BodyDef = bodyDef; Trace = trace }
+let private newRx trace variants (bodyDef: XBodyDef) : Rx =
+  { Variants = variants
+    BodyDef = bodyDef
+    Trace = trace }
 
 let private newWx () : Wx = { Stmts = []; Decls = [] }
 
@@ -66,8 +77,8 @@ let private xcLit lit : CExpr =
   | CharLit value -> CCharExpr value
   | StrLit value -> CStrObjExpr value
 
-let private xcDiscriminantConst variantId = todo ()
-let private xcLocal (localId: XLocalId) = CVarExpr("l" + string localId) // FIXME: impl
+let private xcDiscriminantConst variantId = cIntExpr variantId // FIXME: impl
+let private xcLocal (localId: XLocalId) = CVarExpr(cLocalName localId) // FIXME: impl
 
 let private xcPlace (place: XPlace) =
   let rec go l path =
@@ -78,8 +89,8 @@ let private xcPlace (place: XPlace) =
         match part with
         | XPart.Deref -> CUnaryExpr(CDerefUnary, l)
         | XPart.Discriminant -> CDotExpr(l, "discriminant")
-        | XPart.Field index -> CDotExpr(l, "t" + string index)
-        | XPart.Payload variantId -> todo ()
+        | XPart.Field index -> CDotExpr(l, cFieldName index)
+        | XPart.Payload variantId -> CDotExpr(l, cVariantName variantId)
 
       go l path
 
@@ -92,13 +103,12 @@ let private xcArg (arg: XArg) =
   | XDiscriminantArg (variantId, _) -> xcDiscriminantConst variantId
   | XLocalArg (localId, _) -> xcLocal localId
 
-let private xcRval (rval: XRval) =
+let private xcRval (rx: Rx) (rval: XRval) =
   match rval with
   | XLitRval (lit, _) -> xcLit lit
   | XUnitRval _ -> cUnitExpr
   | XDiscriminantRval (variantId, _) -> xcDiscriminantConst variantId
   | XLocalRval (localId, _) -> xcLocal localId
-
   | XPlaceRval (place, _) -> xcPlace place
 
   | XUnaryRval (unary, xArg, _) ->
@@ -140,17 +150,29 @@ let private xcRval (rval: XRval) =
 
   | XAggregateRval (kind, args, _) ->
     match kind, args with
-    | XVariantAk variantId, [ payload ] -> todo () // (struct K){.d = d, .payload = arg}
+    | XVariantAk variantId, [ payload ] ->
+      // FIXME: wants unionId
+      CInitExpr(
+        [ "discriminant", cIntExpr variantId
+          cVariantName variantId, xcArg payload ],
+        CEmbedTy "SomeUnion"
+      )
+
     | XVariantAk _, _ -> unreachable ()
 
-    | XRecordAk recordId, _ -> todo () // (struct K){.t0 = a0, ...}
+    | XRecordAk recordId, _ ->
+      CInitExpr(
+        args
+        |> List.mapi (fun i arg -> cFieldName i, xcArg arg),
+        CEmbedTy(cRecordName recordId)
+      )
 
-let private xcStmt (wx: Wx) stmt : Wx =
+let private xcStmt rx (wx: Wx) stmt : Wx =
   match stmt with
-  | XAssignStmt (place, rval, _) -> addStmt (CSetStmt(xcPlace place, xcRval rval)) wx
+  | XAssignStmt (place, rval, _) -> addStmt (CSetStmt(xcPlace place, xcRval rx rval)) wx
 
   | XCallStmt (bodyId, args, result, _) ->
-    let callee = CVarExpr("body_" + string bodyId) // FIXME: bodyId to function name
+    let callee = CVarExpr(cBodyToName bodyId) // FIXME: wants function name
     let args = args |> List.map xcArg
 
     wx
@@ -183,7 +205,7 @@ let private xcStmt (wx: Wx) stmt : Wx =
     wx
     |> addStmt (CExprStmt(CCallExpr(CVarExpr "printf", args |> List.map xcArg)))
 
-let private xcTerminator (wx: Wx) (terminator: XTerminator) : Wx =
+let private xcTerminator (rx: Rx) (wx: Wx) (terminator: XTerminator) : Wx =
   match terminator with
   | XExitTk arg ->
     wx
@@ -194,8 +216,14 @@ let private xcTerminator (wx: Wx) (terminator: XTerminator) : Wx =
     |> addStmt (CExprStmt(CCallExpr(cUnreachableFun, [])))
 
   | XReturnTk ->
-    // FIXME: return ResultLocal unless void
-    wx |> addStmt (CReturnStmt None)
+    let resultOpt =
+      let resultLocal = rx.BodyDef.ResultLocal
+
+      match rx.BodyDef.ResultTy with
+      | XUnitTy -> None
+      | _ -> Some(xcLocal resultLocal)
+
+    wx |> addStmt (CReturnStmt resultOpt)
 
   | XJumpTk blockId -> wx |> addStmt (CGotoStmt(cLabelOf blockId))
 
@@ -206,15 +234,30 @@ let private xcTerminator (wx: Wx) (terminator: XTerminator) : Wx =
     wx
     |> addStmt (CIfStmt(xcArg cond, [ CGotoStmt body ], [ CGotoStmt alt ]))
 
-let private xcBlock (wx: Wx) (blockId: XBlockId) (blockDef: XBlockDef) : Wx =
-  // emit C label
+let private xcBlock rx (wx: Wx) (blockId: XBlockId) (blockDef: XBlockDef) : Wx =
   let wx =
     addStmt (CLabelStmt(cLabelOf blockId)) wx
 
-  let wx = blockDef.Stmts |> List.fold xcStmt wx
-  xcTerminator wx blockDef.Terminator
+  let wx =
+    blockDef.Stmts |> List.fold (xcStmt rx) wx
 
-let private xcBody (rx: Rx) (wx: Wx) : Wx =
+  xcTerminator rx wx blockDef.Terminator
+
+let private xcTy ty =
+  match ty with
+  | XIntTy flavor -> CIntTy flavor
+
+  | XUnitTy
+  | XCharTy -> CCharTy
+
+  | XBoolTy -> CBoolTy
+  | XStrTy -> cStrTy
+
+  | XUnionTy unionId -> CStructTy("U" + string unionId)
+  | XRecordTy recordTy -> CStructTy(cRecordName recordTy)
+  | XFunTy funTyId -> CStructTy("F" + string funTyId)
+
+let private xcBody (rx: Rx) (wx: Wx) bodyId : Wx =
   let rec go doneSet blockId (wx: Wx) : Wx * _ =
     if doneSet |> TSet.contains blockId then
       wx, doneSet
@@ -222,29 +265,50 @@ let private xcBody (rx: Rx) (wx: Wx) : Wx =
       let doneSet = doneSet |> TSet.add blockId
       let blockDef = rx.BodyDef.Blocks |> mapFind blockId
 
-      // FIXME: declare locals
+      let wx =
+        rx.BodyDef.Locals
+        |> TMap.fold
+             (fun wx localId (localDef: XLocalDef) ->
+               if localDef.Arg then
+                 wx
+               else
+                 wx
+                 |> addStmt (CLetStmt(cLocalName localId, None, xcTy localDef.Ty)))
+             wx
       // FIXME: compute blockId-label relations
-      let wx = xcBlock wx blockId blockDef
+      let wx = xcBlock rx wx blockId blockDef
 
       xTerminatorToSuccessors blockDef.Terminator
       |> List.fold (fun (wx, doneSet) blockId -> go doneSet blockId wx) (wx, doneSet)
 
   assert (List.isEmpty wx.Stmts)
 
+  let bodyDef = rx.BodyDef
+
   // Generate body.
   let wx =
-    let wx = wx |> addStmt (cLocStmt rx.BodyDef.Loc)
+    let wx = wx |> addStmt (cLocStmt bodyDef.Loc)
 
-    go (TSet.empty compare) rx.BodyDef.EntryBlockId wx
+    go (TSet.empty compare) bodyDef.EntryBlockId wx
     |> fst
 
   // Emit decl.
   let wx =
+    let args =
+      bodyDef.ArgLocals
+      |> List.map (fun localId ->
+        let ident = cLocalName localId
+
+        let ty =
+          (bodyDef.Locals |> mapFind localId).Ty |> xcTy
+
+        ident, ty)
+
     let stmts, wx =
       List.rev wx.Stmts, { wx with Stmts = [] }
 
     let funDecl =
-      CFunDecl(rx.BodyDef.Name, [], CVoidTy, stmts)
+      CFunDecl(cBodyToName bodyId, args, xcTy bodyDef.ResultTy, stmts)
 
     addDecl funDecl wx
 
@@ -266,6 +330,8 @@ let private splitByDoc (program: XProgram) : (DocId * (XBodyId * XBodyDef) list)
   |> TMap.toList
 
 let xirToCir (trace: TraceFun) (program: XProgram) : (DocId * CDecl list) list =
+  let variants = TMap.empty compare // FIXME: variant defs
+
   program
   |> splitByDoc
   |> List.map (fun (docId, bodiesRev) ->
@@ -275,10 +341,26 @@ let xirToCir (trace: TraceFun) (program: XProgram) : (DocId * CDecl list) list =
       bodiesRev
       |> List.rev
       |> List.fold
-           (fun wx (_bodyId, bodyDef) ->
-             let rx = newRx trace bodyDef
-             xcBody rx wx)
+           (fun wx (bodyId, bodyDef) ->
+             let rx = newRx trace variants bodyDef
+             xcBody rx wx bodyId)
            wx
+
+    let wx =
+      let cInt = CEmbedTy "int"
+      let mainFun = CVarExpr(cBodyToName program.MainId)
+
+      let mainDecl =
+        CFunDecl(
+          "main",
+          [ "argc", cInt
+            "argv", CEmbedTy "char**" ],
+          cInt,
+          [ CExprStmt(CCallExpr(CVarExpr "milone_start", [ CVarExpr "argc"; CVarExpr "argv" ]))
+            CReturnStmt(Some(CCallExpr(mainFun, []))) ]
+        )
+
+      wx |> addDecl mainDecl
 
     assert (List.isEmpty wx.Stmts)
     docId, List.rev wx.Decls)
