@@ -8,13 +8,9 @@ type PConst =
   | PLitConst of Lit * Loc
   | PDiscriminantConst of VariantSerial
 
-type PConstVariant =
-  | PNoneVariant
-  | PConstVariant of VariantSerial
+type PConstVariant = PConstVariant of VariantSerial
 
-type PFunVariant =
-  | PSomeVariant
-  | PFunVariant of VariantSerial
+type PFunVariant = PFunVariant of VariantSerial
 
 type PPatKind =
   | WildcardPat
@@ -28,7 +24,6 @@ type PPatKind =
 type private PPat = PPatKind * VarSerial option
 
 type PPart =
-  | PSomeContentPart
   | PHeadPart
   | PTailPart
   | PVariantTagPart
@@ -61,7 +56,7 @@ type PTerm =
 
   | PIfTerm of PPath * PConst * body: PTerm * alt: PTerm
 
-  | PMatchOptionTerm of cond: PCond * noneCl: PTerm * someCl: PTerm
+  | PMatchListTerm of cond: PCond * nilCl: PTerm * consCl: PTerm
 
 /// Index of clause in match expression.
 type private ClauseIndex = int
@@ -73,12 +68,23 @@ let private pcNodePat pat body alt =
     | _ -> unreachable ()
 
   match kind, argPats with
-  // | HNonePN, _ -> PMatchOptionTerm([], body, alt)
-  // | HSomeAppPN, [ itemPat ] -> PMatchOptionTerm([], alt, PSelectTerm(PSomeContentPart, pcPat itemPat body alt))
-
   | HAbortPN, _ -> PAbortTerm
 
-  | _ -> todo ()
+  | HNilPN, _ -> PMatchListTerm([], body, alt)
+
+  | HConsPN, [ headPat; tailPat ] -> todo ()
+  | HConsPN, _ -> unreachable ()
+
+  | HVariantAppPN variantSerial, [ payloadPat ] -> todo ()
+  | HVariantAppPN _, _ -> unreachable ()
+
+  | HTuplePN, [] -> todo ()
+  | HTuplePN, _ -> todo ()
+
+  | HBoxPN, [ itemPat ] -> todo ()
+  | HBoxPN, _ -> unreachable ()
+// | HNonePN, _ -> PMatchOptionTerm([], body, alt)
+// | HSomeAppPN, [ itemPat ] -> PMatchOptionTerm([], alt, PSelectTerm(PSomeContentPart, pcPat itemPat body alt))
 
 let private pcPat pat body alt : PTerm =
   match pat with

@@ -9,12 +9,17 @@ open MiloneTranslation.Hir
 type XBodyId = int
 type XBlockId = int
 type XLocalId = int
-type XPtrTyId = int
+type XFunTyId = int
+type XListTyId = int
+type XNativePtrTyId = int
+type XNativeFunTyId = int
+type XNativeEmbedTy = int
 type XVariantId = int
 type XUnionTyId = int
-type XFieldId = int
 type XRecordTyId = int
-type XFunTyId = int
+
+/// (record, index)
+type XFieldId = XRecordTyId * int
 
 type XVariantDef =
   { Name: string
@@ -36,17 +41,28 @@ type XUnionDef =
 //   | XUserRc
 
 [<RequireQualifiedAccess>]
-type XRecordDef = { Name: string; Fields: XFieldId list }
+type XRecordDef =
+  { Name: string
+    Fields: (string * XTy) list }
 
 type XTy =
-  | XUnitTy
   | XIntTy of IntFlavor
+  | XFloatTy of FloatFlavor
+  | XUnitTy
+  | XBoolTy
   | XCharTy
   | XStrTy
-  | XBoolTy
   | XUnionTy of XUnionTyId
   | XRecordTy of XRecordTyId
+
   | XFunTy of XFunTyId
+  | XListTy of XListTyId
+
+  // FFI types.
+  | XVoidPtrTy of IsMut
+  | XNativePtrTy of IsMut * XNativePtrTyId
+  | XNativeFunTy of XNativeFunTyId
+  | XNativeEmbedTy of XNativeEmbedTy
 
 [<RequireQualifiedAccess>]
 type XPart =
@@ -154,6 +170,39 @@ type XBodyDef =
 type XProgram =
   { Bodies: TreeMap<XBodyId, XBodyDef>
     MainId: XBodyId }
+
+// -----------------------------------------------
+// ty
+// -----------------------------------------------
+
+let private compareInt (l: int) r = compare l r
+
+module XTy =
+  let toOrder ty =
+    let ofPair (x: int) (y: int) = (x <<< 25) ||| y
+    let ofSingle x = ofPair x 0
+
+    match ty with
+    | XIntTy flavor -> ofPair 1 (intFlavorToOrdinary flavor)
+    | XFloatTy flavor -> ofPair 2 (floatFlavorToOrdinary flavor)
+    | XUnitTy -> ofSingle 3
+    | XBoolTy -> ofSingle 4
+    | XCharTy -> ofSingle 5
+    | XStrTy -> ofSingle 6
+
+    | XUnionTy unionTyId -> ofPair 11 unionTyId
+    | XRecordTy recordTyId -> ofPair 12 recordTyId
+    | XFunTy funTyId -> ofPair 13 funTyId
+    | XListTy listTyId -> ofPair 14 listTyId
+
+    | XVoidPtrTy IsMut -> ofSingle 21
+    | XVoidPtrTy IsConst -> ofSingle 22
+    | XNativePtrTy (IsMut, nativePtrTyId) -> ofPair 23 nativePtrTyId
+    | XNativePtrTy (IsConst, nativePtrTyId) -> ofPair 24 nativePtrTyId
+    | XNativeFunTy nativeFunTyId -> ofPair 25 nativeFunTyId
+    | XNativeEmbedTy nativeEmbedTyId -> ofPair 26 nativeEmbedTyId
+
+  let compare l r = compareInt (toOrder l) (toOrder r)
 
 // -----------------------------------------------
 // terminator

@@ -4,7 +4,9 @@ open MiloneShared.SharedTypes
 open MiloneShared.TypeFloat
 open MiloneShared.TypeIntegers
 open MiloneShared.Util
+open MiloneStd.StdList
 open MiloneStd.StdMap
+open MiloneStd.StdPair
 open MiloneStd.StdSet
 open MiloneTranslation.Hir
 open MiloneTranslation.Xir
@@ -18,6 +20,14 @@ let private expect (context: _) (opt: 'T option) : 'T =
   match opt with
   | Some it -> it
   | None -> unreachable context
+
+module IsMut =
+  let toOrdinary isMut =
+    match isMut with
+    | IsMut -> 1
+    | IsConst -> 0
+
+  let compare l r = toOrdinary l - toOrdinary r
 
 // -----------------------------------------------
 // HIR helpers
@@ -105,7 +115,11 @@ type private Ctx =
     MainFunOpt: FunSerial option
 
     TyMangleMemo: TreeMap<Ty, string>
-    ListTyMap: TreeMap<Ty, XUnionTyId>
+    FunTyMap: TreeMap<XTy * XTy, XTy>
+    ListTyMap: TreeMap<XTy, XTy>
+    NativePtrTyMap: TreeMap<IsMut * XTy, XTy>
+    NativeFunTyMap: TreeMap<XTy list * XTy, XTy>
+    NativeEmbedTyMap: TreeMap<string, XTy>
     XRecords: TreeMap<XRecordTyId, XRecordDef>
     XVariants: TreeMap<XVariantId, XVariantDef>
     XUnions: TreeMap<XUnionTyId, XUnionDef>
@@ -121,6 +135,7 @@ type private Ctx =
 
     // Current body:
     CurrentBodyOpt: XBodyDef option
+    ArgLocals: XLocalId list
     ResultLocalOpt: XLocalId option
     Locals: TreeMap<XLocalId, XLocalDef>
     Blocks: TreeMap<XBlockId, XBlockDef>
@@ -134,8 +149,14 @@ let private ofTyCtx (trace: TraceFun) (hirCtx: HirCtx) : Ctx =
     Variants = hirCtx.Variants
     MainFunOpt = hirCtx.MainFunOpt
     Tys = hirCtx.Tys
+
     TyMangleMemo = TMap.empty tyCompare
-    ListTyMap = TMap.empty tyCompare
+    FunTyMap = TMap.empty (Pair.compare XTy.compare XTy.compare)
+    ListTyMap = TMap.empty XTy.compare
+    NativePtrTyMap = TMap.empty (Pair.compare IsMut.compare XTy.compare)
+    NativeFunTyMap = TMap.empty (Pair.compare (List.compare XTy.compare) XTy.compare)
+    NativeEmbedTyMap = TMap.empty compare
+
     XRecords = TMap.empty compare
     XVariants = TMap.empty compare
     XUnions = TMap.empty compare
@@ -146,11 +167,62 @@ let private ofTyCtx (trace: TraceFun) (hirCtx: HirCtx) : Ctx =
     Stmts = []
     TerminatorOpt = None
     CurrentBodyOpt = None
+    ArgLocals = []
     ResultLocalOpt = None
     Locals = emptyLocals
     Blocks = emptyBlocks
 
     Trace = trace }
+
+let private initializeCtx (hirCtx: HirCtx) (ctx: Ctx) : Ctx =
+  let xVariants, ctx =
+    hirCtx.Variants
+    |> TMap.fold
+         (fun (variants, ctx) variantSerial (variantDef: VariantDef) ->
+           let variantId: XVariantId = variantSerial |> variantSerialToInt
+           let payloadTy, ctx = xgTy variantDef.PayloadTy ctx
+
+           let xVariantDef: XVariantDef =
+             { Name = variantDef.Name
+               IsNewtype = variantDef.IsNewtype
+               HasPayload = variantDef.HasPayload
+               PayloadTy = payloadTy }
+
+           variants |> TMap.add variantId xVariantDef, ctx)
+         (TMap.empty compare, ctx)
+
+  let xUnions, xRecords, ctx =
+    hirCtx.Tys
+    |> TMap.fold
+         (fun (unions, records, ctx) tySerial (tyDef: TyDef) ->
+           match tyDef with
+           | UnionTyDef (ident, _, variants, _) ->
+             let xUnionDef: XUnionDef =
+               { Name = ident
+                 Variants = variants |> List.map variantSerialToInt }
+
+             unions |> TMap.add tySerial xUnionDef, records, ctx
+
+           | RecordTyDef (ident, fields, _, _) ->
+             let fields, ctx =
+               fields
+               |> List.mapFold
+                    (fun ctx (ident, ty, _) ->
+                      let ty, ctx = xgTy ty ctx
+                      (ident, ty), ctx)
+                    ctx
+
+             let xRecordDef: XRecordDef = { Name = ident; Fields = fields }
+             unions, records |> TMap.add tySerial xRecordDef, ctx
+
+           | MetaTyDef _ -> unions, records, ctx // Resolved in Typing, Monomorphizing, MonoTy.
+           )
+         (TMap.empty compare, TMap.empty compare, ctx)
+
+  { ctx with
+      XVariants = xVariants
+      XUnions = xUnions
+      XRecords = xRecords }
 
 let private toProgram (ctx: Ctx) : XProgram =
   // instead of generating XProgram, print debug info...
@@ -388,26 +460,24 @@ let private emitIf (cond: XArg) (body: Ctx -> XRval * Ctx) (alt: Ctx -> XRval * 
 // symbols
 // -----------------------------------------------
 
-let private xgVar varSerial (ctx: Ctx) : XLocalId * Ctx =
-  let varDef = mapFind varSerial ctx.Vars
+let private xgVar varSerial ty (ctx: Ctx) : XLocalId * Ctx =
+  let isStatic = false
 
-  match varDef.IsStatic with
-  | IsStatic -> todo ()
-
-  | NotStatic ->
+  if isStatic then
+    // FIXME: static var
+    todo ()
+  else
     let localId: XLocalId = varSerial |> varSerialToInt
 
     if ctx.Locals |> TMap.containsKey localId then
       localId, ctx
     else
-      let ty, (ctx: Ctx) = xgTy varDef.Ty ctx
-
       let localDef: XLocalDef =
-        { Name = Some varDef.Name
+        { Name = None
           Id = localId
           Arg = false
           Ty = ty
-          Loc = varDef.Loc }
+          Loc = noLoc }
 
       let ctx =
         { ctx with Locals = ctx.Locals |> TMap.add localId localDef }
@@ -415,8 +485,8 @@ let private xgVar varSerial (ctx: Ctx) : XLocalId * Ctx =
       localId, ctx
 
 /// Converts a var to place, assigned an initial value.
-let private xgVarWithRval varSerial (init: XRval) loc ctx =
-  let local, ctx = xgVar varSerial ctx
+let private xgVarWithRval varSerial (init: XRval) ty loc ctx =
+  let local, ctx = xgVar varSerial ty ctx
 
   let ctx =
     ctx
@@ -454,58 +524,120 @@ let private ctxTyMangle (ty: Ty) (ctx: Ctx) =
   let name, memo = tyMangle (ty, ctx.TyMangleMemo)
   name, { ctx with TyMangleMemo = memo }
 
-let private xgUnionTy (tySerial: TySerial) (ctx: Ctx) : XTy * Ctx =
-  if ctx.XUnions |> TMap.containsKey tySerial then
-    XUnionTy tySerial, ctx
-  else
-    let ident, _, variants, loc =
-      match ctx.Tys |> TMap.tryFind tySerial with
-      | Some (UnionTyDef (ident, tyVars, variants, loc)) -> ident, tyVars, variants, loc
-      | _ -> unreachable ()
+let private xgFunTy sTy tTy (ctx: Ctx) : XTy * Ctx =
+  match ctx.FunTyMap |> TMap.tryFind (sTy, tTy) with
+  | Some it -> it, ctx
+  | None ->
+    let funTyId, ctx = freshSerial ctx
+    let ty = XFunTy funTyId
 
     let ctx =
-      variants
-      |> List.fold
-           (fun (ctx: Ctx) variantSerial ->
-             let variantDef = ctx.Variants |> mapFind variantSerial
-             let payloadTy, ctx = xgTy variantDef.PayloadTy ctx
+      { ctx with FunTyMap = ctx.FunTyMap |> TMap.add (sTy, tTy) ty }
 
-             let xVariantDef: XVariantDef =
-               { Name = variantDef.Name
-                 HasPayload = variantDef.HasPayload
-                 PayloadTy = payloadTy
-                 IsNewtype = variantDef.IsNewtype }
+    ty, ctx
 
-             let ctx =
-               { ctx with
-                   XVariants =
-                     ctx.XVariants
-                     |> TMap.add (variantSerial |> variantSerialToInt) xVariantDef }
-
-             ctx)
-           ctx
-
-    let xUnionDef: XUnionDef =
-      let variants = variants |> List.map variantSerialToInt
-      { Name = ident; Variants = variants }
+let private xgListTy itemTy (ctx: Ctx) : XTy * Ctx =
+  match ctx.ListTyMap |> TMap.tryFind itemTy with
+  | Some it -> it, ctx
+  | None ->
+    let listTyId, ctx = freshSerial ctx
+    let ty = XListTy listTyId
 
     let ctx =
-      { ctx with XUnions = ctx.XUnions |> TMap.add tySerial xUnionDef }
+      { ctx with ListTyMap = ctx.ListTyMap |> TMap.add itemTy ty }
 
-    XUnionTy tySerial, ctx
+    ty, ctx
+
+let private xgNativePtrTy isMut targetTy (ctx: Ctx) : XTy * Ctx =
+  match
+    ctx.NativePtrTyMap
+    |> TMap.tryFind (isMut, targetTy)
+    with
+  | Some it -> it, ctx
+  | None ->
+    let nativePtrTyId, ctx = freshSerial ctx
+    let ty = XNativePtrTy(isMut, nativePtrTyId)
+
+    let ctx =
+      { ctx with
+          NativePtrTyMap =
+            ctx.NativePtrTyMap
+            |> TMap.add (isMut, targetTy) ty }
+
+    ty, ctx
+
+let private xgNativeFunTy tyArgs (ctx: Ctx) : XTy * Ctx =
+  let argTys, resultTy =
+    match splitLast tyArgs with
+    | Some it -> it
+    | None -> unreachable ()
+
+  match
+    ctx.NativeFunTyMap
+    |> TMap.tryFind (argTys, resultTy)
+    with
+  | Some it -> it, ctx
+  | None ->
+    let nativeFunTyId, ctx = freshSerial ctx
+    let ty = XNativeFunTy nativeFunTyId
+
+    let ctx =
+      { ctx with
+          NativeFunTyMap =
+            ctx.NativeFunTyMap
+            |> TMap.add (argTys, resultTy) ty }
+
+    ty, ctx
+
+let private xgNativeEmbedTy embed (ctx: Ctx) : XTy * Ctx =
+  match ctx.NativeEmbedTyMap |> TMap.tryFind embed with
+  | Some it -> it, ctx
+  | None ->
+    let nativeEmbedTyId, ctx = freshSerial ctx
+    let ty = XNativeEmbedTy nativeEmbedTyId
+
+    let ctx =
+      { ctx with NativeEmbedTyMap = ctx.NativeEmbedTyMap |> TMap.add embed ty }
+
+    ty, ctx
 
 let private xgTy (ty: Ty) (ctx: Ctx) : XTy * Ctx =
   let (Ty (tk, tyArgs)) = ty
 
   match tk, tyArgs with
-  | IntTk flavor, _ -> XIntTy flavor, ctx
-  | StrTk, _ -> XStrTy, ctx
-  | BoolTk, _ -> XBoolTy, ctx
-  | TupleTk, [] -> XUnitTy, ctx
+  | NativePtrTk isMut, [ Ty (VoidTk, _) ] -> XVoidPtrTy isMut, ctx
+  | _ ->
+    let tyArgs, ctx =
+      tyArgs
+      |> List.mapFold (fun ctx ty -> xgTy ty ctx) ctx
 
-  | UnionTk tySerial, _ -> xgUnionTy tySerial ctx
+    match tk, tyArgs with
+    | IntTk flavor, _ -> XIntTy flavor, ctx
+    | FloatTk flavor, _ -> XFloatTy flavor, ctx
+    | BoolTk, _ -> XBoolTy, ctx
+    | CharTk, _ -> XCharTy, ctx
+    | StrTk, _ -> XStrTy, ctx
+    | ObjTk, _ -> XVoidPtrTy IsConst, ctx
 
-  | _ -> todo ty
+    | TupleTk, [] -> XUnitTy, ctx
+    | TupleTk, _ -> unreachable () // Resolved in MonoTy.
+
+    | FunTk, [ sTy; tTy ] -> xgFunTy sTy tTy ctx
+    | FunTk, _ -> unreachable ()
+
+    | ListTk, [ itemTy ] -> xgListTy itemTy ctx
+    | ListTk, _ -> unreachable ()
+
+    | UnionTk tySerial, _ -> XUnionTy tySerial, ctx
+    | RecordTk tySerial, _ -> XRecordTy tySerial, ctx
+
+    | NativePtrTk isMut, [ targetTy ] -> xgNativePtrTy isMut targetTy ctx
+    | NativePtrTk _, _ -> unreachable ()
+    | NativeFunTk, _ -> xgNativeFunTy tyArgs ctx
+    | NativeTypeTk embed, _ -> xgNativeEmbedTy embed ctx
+
+    | VoidTk, _ -> unreachable () // Void type must appear in pointer.
+    | MetaTk _, _ -> unreachable () // Resolved in Typing, Monomorphizing and MonoTy.
 
 // -----------------------------------------------
 // pats
@@ -587,7 +719,9 @@ let private xgPatTerm (host: PatTermHost) (term: PTerm) (cond: XRval) condTy loc
     ctx
 
   | PLetTerm (varSerial, _, term) ->
-    let cond, ctx = xgVarWithRval varSerial cond loc ctx
+    let cond, ctx =
+      xgVarWithRval varSerial cond condTy loc ctx
+
     xgPatTerm host term cond condTy loc ctx
 
   // | PMatchOptionTerm (_, termOnNone, termOnSome) ->
@@ -619,25 +753,31 @@ let private xgPatTermAsFreshBranch (host: PatTermHost) (term: PTerm) (cond: XRva
 
   entryBlockId, ctx
 
-let private xgPatAsIrrefutable (pat: HPat) (cond: XRval) (ctx: Ctx) : Ctx =
+let private xgPatAsIrrefutable (pat: HPat) (cond: XRval) condTy (ctx: Ctx) : Ctx =
   match pat with
   | HDiscardPat _
   | HNodePat (HTuplePN, [], _, _) -> ctx
 
   | HVarPat (varSerial, _, loc) ->
-    let _, ctx = xgVarWithRval varSerial cond loc ctx
+    let _, ctx =
+      xgVarWithRval varSerial cond condTy loc ctx
+
     ctx
 
   | HAsPat (innerPat, varSerial, loc) ->
-    let cond, ctx = xgVarWithRval varSerial cond loc ctx
-    xgPatAsIrrefutable innerPat cond ctx
+    let cond, ctx =
+      xgVarWithRval varSerial cond condTy loc ctx
+
+    xgPatAsIrrefutable innerPat cond condTy ctx
 
   | _ -> todo ()
 
 /// Processes an arg-site pattern to local.
 let private xgArgPat funName (i: int) pat ctx : XLocalId * Ctx =
   match pat with
-  | HVarPat (varSerial, _, _) -> xgVar varSerial ctx
+  | HVarPat (varSerial, ty, _) ->
+    let ty, ctx = xgTy ty ctx
+    xgVar varSerial ty ctx
 
   | _ ->
     let ty, loc = patExtract pat
@@ -646,7 +786,8 @@ let private xgArgPat funName (i: int) pat ctx : XLocalId * Ctx =
       addTempLocal (funName + "_arg_" + string i) ty loc ctx
 
     let ctx =
-      xgPatAsIrrefutable pat (XLocalRval(local, loc)) ctx
+      let ty, ctx = xgTy ty ctx
+      xgPatAsIrrefutable pat (XLocalRval(local, loc)) ty ctx
 
     local, ctx
 
@@ -795,8 +936,9 @@ let private xgLetValStmt (letValStmt: HStmt) (ctx: Ctx) : Ctx =
     | HLetValStmt (pat, init, _) -> pat, init
     | _ -> unreachable ()
 
+  let initTy, ctx = xgTy (exprToTy init) ctx
   let init, ctx = xgExprToRval init ctx
-  xgPatAsIrrefutable pat init ctx
+  xgPatAsIrrefutable pat init initTy ctx
 
 // -----------------------------------------------
 // expr: objects
@@ -995,6 +1137,33 @@ let private xgNodeExpr (expr: HExpr) (ctx: Ctx) : XRval * Ctx =
 
   | HCallProcEN _, _ -> unreachable expr
 
+  | HCallTailRecEN, _ :: args ->
+    let bodyDef =
+      ctx.CurrentBodyOpt
+      |> Option.defaultWith unreachable
+
+    let entryBlockId = bodyDef.EntryBlockId
+    assert (entryBlockId <> -1)
+
+    let _, ctx = xgExprsToRval args ctx
+
+    // FIXME: assign to args
+    // let ctx =
+    //   match listTryZip bodyDef.ArgLocals args with
+    //   | zipped, [], [] ->
+    //     zipped
+    //     |> List.fold
+    //          (fun ctx (localId, arg) ->
+    //            ctx
+    //            |> addStmt (XAssignStmt(xLocalPlace localId, arg, loc)))
+    //          ctx
+    //   | _ -> unreachable ()
+
+    let ctx =
+      ctx |> setTerminator (XJumpTk entryBlockId)
+
+    XUnitRval loc, ctx
+
   | _ ->
     ctx.Trace "unimplemented node expr {0} ({1})" [ __dump kind; Loc.toString loc ]
     let args, ctx = (args, ctx) |> stMap xgExprToArg
@@ -1026,8 +1195,9 @@ let private xgExprToRval (expr: HExpr) (ctx: Ctx) : XRval * Ctx =
   match expr with
   | HLitExpr (lit, loc) -> XLitRval(lit, loc), ctx
 
-  | HVarExpr (varSerial, _, loc) ->
-    let localId, ctx = xgVar varSerial ctx
+  | HVarExpr (varSerial, ty, loc) ->
+    let ty, ctx = xgTy ty ctx
+    let localId, ctx = xgVar varSerial ty ctx
     XLocalRval(localId, loc), ctx
 
   | HFunExpr _ -> failwith "fun expr must occur as callee or arg of closure"
@@ -1049,6 +1219,10 @@ let private xgExprToRval (expr: HExpr) (ctx: Ctx) : XRval * Ctx =
 
   | HNavExpr _ // HNavExpr is resolved in RecordRes.
   | HRecordExpr _ -> unreachable () // HRecordExpr is resolved in RecordRes.
+
+let private xgExprsToRval exprs ctx =
+  exprs
+  |> List.mapFold (fun ctx expr -> xgExprToRval expr ctx) ctx
 
 let private xgExprAsStmt (expr: HExpr) (ctx: Ctx) : Ctx =
   match expr with
@@ -1122,6 +1296,9 @@ let private xgLetFunStmt (letFunStmt: HStmt) (ctx: Ctx) : Ctx =
     let entryBlockId, ctx = freshBlock ctx
     let noBlock, ctx = enterBlock entryBlockId ctx
 
+    let ctx =
+      { ctx with CurrentBodyOpt = Some { bodyDef with EntryBlockId = entryBlockId } }
+
     let resultLocal, ctx =
       let name = (funDef.Name + "_result")
       addTempLocal name bodyTy bodyLoc ctx
@@ -1192,6 +1369,7 @@ let private xgModule (ctx: Ctx) (m: HModule2) =
   ctx
 
 let xirGen (trace: TraceFun) (modules: HModule2 list, hirCtx: HirCtx) : XProgram =
-  let ctx = ofTyCtx trace hirCtx
+  let ctx =
+    ofTyCtx trace hirCtx |> initializeCtx hirCtx
 
   modules |> List.fold xgModule ctx |> toProgram

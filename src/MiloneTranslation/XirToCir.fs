@@ -243,19 +243,24 @@ let private xcBlock rx (wx: Wx) (blockId: XBlockId) (blockDef: XBlockDef) : Wx =
 
   xcTerminator rx wx blockDef.Terminator
 
-let private xcTy ty =
+let private xcTy ty : CTy =
   match ty with
   | XIntTy flavor -> CIntTy flavor
-
+  | XFloatTy flavor -> CFloatTy flavor
+  | XBoolTy -> CBoolTy
   | XUnitTy
   | XCharTy -> CCharTy
-
-  | XBoolTy -> CBoolTy
   | XStrTy -> cStrTy
 
   | XUnionTy unionId -> CStructTy("U" + string unionId)
   | XRecordTy recordTy -> CStructTy(cRecordName recordTy)
-  | XFunTy funTyId -> CStructTy("F" + string funTyId)
+  | XFunTy funId -> CStructTy("FunTy" + string funId)
+  | XListTy listId -> CStructTy("ListTy" + string listId)
+
+  | XVoidPtrTy _
+  | XNativePtrTy _
+  | XNativeFunTy _
+  | XNativeEmbedTy _ -> todo ()
 
 let private xcBody (rx: Rx) (wx: Wx) bodyId : Wx =
   let rec go doneSet blockId (wx: Wx) : Wx * _ =
@@ -265,17 +270,6 @@ let private xcBody (rx: Rx) (wx: Wx) bodyId : Wx =
       let doneSet = doneSet |> TSet.add blockId
       let blockDef = rx.BodyDef.Blocks |> mapFind blockId
 
-      let wx =
-        rx.BodyDef.Locals
-        |> TMap.fold
-             (fun wx localId (localDef: XLocalDef) ->
-               if localDef.Arg then
-                 wx
-               else
-                 wx
-                 |> addStmt (CLetStmt(cLocalName localId, None, xcTy localDef.Ty)))
-             wx
-      // FIXME: compute blockId-label relations
       let wx = xcBlock rx wx blockId blockDef
 
       xTerminatorToSuccessors blockDef.Terminator
@@ -285,9 +279,21 @@ let private xcBody (rx: Rx) (wx: Wx) bodyId : Wx =
 
   let bodyDef = rx.BodyDef
 
+  // FIXME: compute blockId-label relations
   // Generate body.
   let wx =
     let wx = wx |> addStmt (cLocStmt bodyDef.Loc)
+
+    let wx =
+      rx.BodyDef.Locals
+      |> TMap.fold
+           (fun wx localId (localDef: XLocalDef) ->
+             if localDef.Arg then
+               wx
+             else
+               wx
+               |> addStmt (CLetStmt(cLocalName localId, None, xcTy localDef.Ty)))
+           wx
 
     go (TSet.empty compare) bodyDef.EntryBlockId wx
     |> fst
@@ -315,10 +321,6 @@ let private xcBody (rx: Rx) (wx: Wx) bodyId : Wx =
   wx
 
 // ===============================================
-
-let private locToDoc (loc: Loc) : DocId =
-  let (Loc (doc, _, _)) = loc
-  doc
 
 let private splitByDoc (program: XProgram) : (DocId * (XBodyId * XBodyDef) list) list =
   program.Bodies

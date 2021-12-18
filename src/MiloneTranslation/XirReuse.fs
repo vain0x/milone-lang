@@ -18,23 +18,7 @@ let private listContains (x: int) (xs: int list) = xs |> List.exists (fun y -> x
 // XIR helpers
 // -----------------------------------------------
 
-let private xtEncode (ty: XTy) : int =
-  let pair (l: int) (r: int) =
-    assert (l < 30 && r < 10000000)
-    l * 10000000 + r
-
-  let just (x: int) = pair x 0
-
-  match ty with
-  | XUnitTy -> just 1
-  | XIntTy flavor -> pair 2 (intFlavorToOrdinary flavor)
-  | XStrTy -> just 2
-  | XBoolTy -> just 3
-  | XUnionTy id -> pair 4 id
-  | XRecordTy id -> pair 5 id
-  | XFunTy id -> pair 6 id
-
-let xtCompare (l: XTy) (r: XTy) : int = compare (xtEncode l) (xtEncode r)
+let private xtCompare (l: XTy) (r: XTy) : int = XTy.compare l r
 
 let xtEqual (l: XTy) (r: XTy) : bool = xtCompare l r = 0
 
