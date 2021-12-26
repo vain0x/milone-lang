@@ -61,13 +61,17 @@ let buildOnUnix (p: BuildOnUnixParams) : Never =
   let ninjaFile =
     Path(Path.toString targetDir + "/build.ninja")
 
+  let ninjaExe =
+    Path.toString p.MiloneHome + "/bin/ninja"
+
   let ninjaScript = renderNinjaFile (toRenderNinjaParams p)
 
   p.DirCreate targetDir
   p.FileWrite ninjaFile ninjaScript
 
   p.ExecuteInto(
-    "ninja -f "
+    quoteShellWord ninjaExe
+    + " -f "
     + quoteShellWord (Path.toString ninjaFile)
     + " "
     + quoteShellWord (Path.toString p.ExeFile)
@@ -76,6 +80,9 @@ let buildOnUnix (p: BuildOnUnixParams) : Never =
 let runOnUnix (p: BuildOnUnixParams) (args: string list) : Never =
   let targetDir = p.TargetDir
   let exeFile = p.ExeFile
+
+  let ninjaExe =
+    Path.toString p.MiloneHome + "/bin/ninja"
 
   let ninjaFile =
     Path(Path.toString targetDir + "/build.ninja")
@@ -86,7 +93,8 @@ let runOnUnix (p: BuildOnUnixParams) (args: string list) : Never =
   p.FileWrite ninjaFile buildScript
 
   p.ExecuteInto(
-    "ninja -f "
+    quoteShellWord ninjaExe
+    + " -f "
     + quoteShellWord (Path.toString ninjaFile)
     + " 1>&2 && "
     + quoteShellWord (Path.toString exeFile)
