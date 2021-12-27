@@ -205,7 +205,7 @@ rule build_run_tests
   description = build_run_tests
   command = $
     $my_build_tool --build-run-tests {runTestProjectDirs} && $
-    ninja -f target/tests2-build.ninja
+    bin/ninja -f target/tests2-build.ninja
 build {exeFiles}: $
   build_run_tests $
     | $my_build_tool runtime/milone.o runtime/milone_platform.o runtime/milone.h $
