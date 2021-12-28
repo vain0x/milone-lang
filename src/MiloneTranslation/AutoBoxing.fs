@@ -663,7 +663,7 @@ let private postProcessRecordExpr ctx recordTySerial args loc =
   else
     None
 
-let private postProcessFieldExpr2 ctx recordTySerial recordExpr index fieldTy loc =
+let private postProcessFieldExpr ctx recordTySerial recordExpr index fieldTy loc =
   if needsBoxedRecordTySerial ctx recordTySerial then
     let ty = tyRecord recordTySerial
 
@@ -777,7 +777,7 @@ let private abExpr ctx expr =
       let recordExpr = recordExpr |> abExpr ctx
       let ty = ty |> abTy ctx
 
-      match postProcessFieldExpr2 ctx recordTySerial recordExpr index ty loc with
+      match postProcessFieldExpr ctx recordTySerial recordExpr index ty loc with
       | Some expr -> expr
       | None -> HNodeExpr(HRecordItemEN index, [ recordExpr ], ty, loc)
 
