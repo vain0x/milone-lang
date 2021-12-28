@@ -663,14 +663,6 @@ let private postProcessRecordExpr ctx recordTySerial args loc =
   else
     None
 
-let private postProcessFieldExpr ctx recordExpr recordTy fieldName fieldTy loc =
-  if needsBoxedRecordTy ctx recordTy then
-    assert (recordExpr |> exprToTy |> tyEqual tyObj)
-
-    Some(HNavExpr(hxUnbox recordExpr recordTy loc, fieldName, fieldTy, loc))
-  else
-    None
-
 let private postProcessFieldExpr2 ctx recordTySerial recordExpr index fieldTy loc =
   if needsBoxedRecordTySerial ctx recordTySerial then
     let ty = tyRecord recordTySerial
