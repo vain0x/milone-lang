@@ -13,6 +13,11 @@ open MiloneTranslation.Hir
 
 module Int = MiloneStd.StdInt
 
+let private isFunTy ty =
+  match ty with
+  | Ty (FunTk, _) -> true
+  | _ -> false
+
 let private tyIsRecord ty =
   match ty with
   | Ty (RecordTk _, tyArgs) ->
@@ -491,9 +496,12 @@ let private needsBoxedVariant (ctx: AbCtx) variantSerial =
 let private needsBoxedRecordTySerial (ctx: AbCtx) tySerial =
   ctx.BoxedRecordTys |> TSet.contains tySerial
 
+// HOTFIX: Don't unwrap newtype of function to not confuse ArityCheck and EtaExpansion. See also newtype_of_fun_ty_bug.
 let private isRecursiveVariant (ctx: AbCtx) variantSerial =
-  ctx.RecursiveVariants
-  |> TSet.contains variantSerial
+  (ctx.RecursiveVariants
+   |> TSet.contains variantSerial)
+  || ((ctx.Variants |> mapFind variantSerial).PayloadTy
+      |> isFunTy)
 
 let private needsBoxedRecordTy ctx ty =
   match ty with
