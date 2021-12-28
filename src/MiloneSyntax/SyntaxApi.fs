@@ -6,8 +6,9 @@ module rec MiloneSyntax.SyntaxApi
 open MiloneShared.SharedTypes
 open MiloneShared.UtilParallel
 open MiloneShared.Util
-open MiloneSyntax.Syntax
+open MiloneStd.StdError
 open MiloneStd.StdMap
+open MiloneSyntax.Syntax
 
 module ArityCheck = MiloneSyntax.ArityCheck
 module AstBundle = MiloneSyntax.AstBundle

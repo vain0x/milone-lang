@@ -2,13 +2,3 @@
 ///
 /// Not used in F#.
 module rec MiloneShared.MiloneOnly
-
-module E = MiloneStd.StdError
-
-let __dump value = E.__dump value
-let __trace msg = E.__trace msg
-let __context _ action = E.__context () action
-let failwith msg = E.failwith msg
-let failwithf msg _ = E.failwithf msg ()
-let unreachable _ = E.unreachable ()
-let todo _ = E.todo ()

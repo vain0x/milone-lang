@@ -8,6 +8,7 @@ module rec MiloneTranslation.MirGen
 open MiloneShared.SharedTypes
 open MiloneShared.TypeIntegers
 open MiloneShared.Util
+open MiloneStd.StdError
 open MiloneStd.StdMap
 open MiloneStd.StdMultimap
 open MiloneStd.StdSet

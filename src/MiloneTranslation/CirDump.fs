@@ -6,6 +6,7 @@ module rec MiloneTranslation.CirDump
 open MiloneShared.TypeFloat
 open MiloneShared.TypeIntegers
 open MiloneShared.Util
+open MiloneStd.StdError
 open MiloneTranslation.Cir
 
 module C = MiloneStd.StdChar

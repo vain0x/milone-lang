@@ -2,6 +2,7 @@ module rec MiloneSyntax.ArityCheck
 
 open MiloneShared.SharedTypes
 open MiloneShared.Util
+open MiloneStd.StdError
 open MiloneSyntax.Tir
 open MiloneSyntax.TySystem
 

@@ -5,6 +5,7 @@ module rec MiloneTranslation.Derive
 
 open MiloneShared.SharedTypes
 open MiloneShared.Util
+open MiloneStd.StdError
 open MiloneStd.StdMap
 open MiloneStd.StdSet
 open MiloneTranslation.Hir

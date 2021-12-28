@@ -24,6 +24,7 @@ module rec MiloneSyntax.TirGen
 
 open MiloneShared.SharedTypes
 open MiloneShared.Util
+open MiloneStd.StdError
 open MiloneSyntax.Syntax
 open MiloneSyntax.Tir
 

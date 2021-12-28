@@ -79,6 +79,7 @@ module rec MiloneTranslation.EtaExpansion
 
 open MiloneShared.SharedTypes
 open MiloneShared.Util
+open MiloneStd.StdError
 open MiloneStd.StdMap
 open MiloneTranslation.Hir
 

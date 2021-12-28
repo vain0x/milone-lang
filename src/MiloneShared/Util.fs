@@ -2,6 +2,7 @@
 module rec MiloneShared.Util
 
 open MiloneStd.StdAssoc
+open MiloneStd.StdError
 open MiloneStd.StdList
 open MiloneStd.StdPair
 open MiloneStd.StdMap
@@ -72,8 +73,7 @@ let assocTryFind compare key assoc = Assoc.tryFind compare key assoc
 let mapFind key map =
   match TMap.tryFind key map with
   | Some value -> value
-
-  | None -> failwithf "mapFind: Missing key: %A." key
+  | None -> failwith ("mapFind: Missing key: " + __dump key)
 
 // -----------------------------------------------
 // Char

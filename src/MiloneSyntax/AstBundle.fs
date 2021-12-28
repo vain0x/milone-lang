@@ -9,6 +9,7 @@ module rec MiloneSyntax.AstBundle
 open MiloneShared.SharedTypes
 open MiloneShared.Util
 open MiloneShared.UtilParallel
+open MiloneStd.StdError
 open MiloneStd.StdSet
 open MiloneStd.StdMap
 open MiloneSyntax.Syntax

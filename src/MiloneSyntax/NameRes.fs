@@ -5,13 +5,14 @@
 /// and assign the same serials to the same symbols.
 module rec MiloneSyntax.NameRes
 
-open MiloneStd.StdMultimap
 open MiloneShared.SharedTypes
 open MiloneShared.TypeIntegers
-open MiloneShared.UtilParallel
-open MiloneStd.StdMap
-open MiloneStd.StdSet
 open MiloneShared.Util
+open MiloneShared.UtilParallel
+open MiloneStd.StdError
+open MiloneStd.StdMap
+open MiloneStd.StdMultimap
+open MiloneStd.StdSet
 open MiloneSyntax.Tir
 
 module S = MiloneStd.StdString
