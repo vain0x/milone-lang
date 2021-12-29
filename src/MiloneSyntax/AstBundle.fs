@@ -69,9 +69,7 @@ type private Error = string * Loc
 type private ModuleRequest =
   { ProjectName: ProjectName
     ModuleName: ModuleName
-    Origin: Loc
-    // FIXME: always false now
-    Optional: bool }
+    Origin: Loc }
 
 [<RequireQualifiedAccess; NoEquality; NoComparison>]
 type private ModuleData =
@@ -100,20 +98,14 @@ let computeDocId (p: ProjectName) (m: ModuleName) : DocId = p + "." + m
 let private newRootRequest (docId: DocId) (p: ProjectName) (m: ModuleName) : ModuleRequest =
   { ProjectName = p
     ModuleName = m
-    Origin = Loc(docId, 0, 0)
-    Optional = false }
+    Origin = Loc(docId, 0, 0) }
 
 let private newDepRequest (p: ProjectName) (m: ModuleName) (originLoc: Loc) : ModuleRequest =
   { ProjectName = p
     ModuleName = m
-    Origin = originLoc
-    Optional = false }
+    Origin = originLoc }
 
-let private requestToNotFoundError (r: ModuleRequest) : Error option =
-  if not r.Optional then
-    Some("Module not found.", r.Origin)
-  else
-    None
+let private requestToNotFoundError (r: ModuleRequest) : Error = "Module not found.", r.Origin
 
 // -----------------------------------------------
 // Interface
@@ -187,9 +179,7 @@ let private consumer (state: State) action : State * ModuleRequest list =
         TMap.add key RequestResult.Failed requestMap
 
       let errors =
-        match requestToNotFoundError request with
-        | Some error -> error :: state.Errors
-        | None -> state.Errors
+        requestToNotFoundError request :: state.Errors
 
       let state =
         { state with
