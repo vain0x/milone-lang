@@ -70,6 +70,7 @@ type private ModuleRequest =
   { ProjectName: ProjectName
     ModuleName: ModuleName
     Origin: Loc
+    // FIXME: always false now
     Optional: bool }
 
 [<RequireQualifiedAccess; NoEquality; NoComparison>]
@@ -101,12 +102,6 @@ let private newRootRequest (docId: DocId) (p: ProjectName) (m: ModuleName) : Mod
     ModuleName = m
     Origin = Loc(docId, 0, 0)
     Optional = false }
-
-let private newMiloneOnlyRequest (p: ProjectName) (originDocId: DocId) : ModuleRequest =
-  { ProjectName = p
-    ModuleName = "MiloneOnly"
-    Origin = Loc(originDocId, 0, 0)
-    Optional = true }
 
 let private newDepRequest (p: ProjectName) (m: ModuleName) (originLoc: Loc) : ModuleRequest =
   { ProjectName = p
@@ -213,22 +208,13 @@ let private producer (fetchModule: FetchModuleFun) (_: State) (r: ModuleRequest)
       let docId, _, ast, errors = syntaxData
 
       let deps =
-        let dep1 =
-          if r.ModuleName <> "MiloneOnly" then
-            [ newMiloneOnlyRequest r.ProjectName docId ]
-          else
-            []
+        findDependentModules ast
+        |> List.map (fun (projectName, moduleName, pos) ->
+          let originLoc =
+            let y, x = pos
+            Loc(docId, y, x)
 
-        let otherDeps =
-          findDependentModules ast
-          |> List.map (fun (projectName, moduleName, pos) ->
-            let originLoc =
-              let y, x = pos
-              Loc(docId, y, x)
-
-            newDepRequest projectName moduleName originLoc)
-
-        List.append dep1 otherDeps
+          newDepRequest projectName moduleName originLoc)
 
       let errors =
         errors

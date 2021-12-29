@@ -1659,13 +1659,6 @@ let private nameResStmt (stmt, ctx) : TStmt * ScopeCtx =
 
     let ctx = ctx |> finishScope |> leaveModule parent
 
-    // HACK: MiloneOnly is auto-open.
-    let ctx =
-      if moduleName = "MiloneOnly" then
-        ctx |> openModule serial
-      else
-        ctx
-
     TBlockStmt(IsRec, stmts), ctx
 
   | TModuleSynonymStmt (serial, path, loc) ->

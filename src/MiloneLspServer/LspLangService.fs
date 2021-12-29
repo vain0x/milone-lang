@@ -376,11 +376,6 @@ let private convertDocIdToFilePath
 
   path |> normalize |> fixExt
 
-let private docIdIsOptional docId =
-  match docIdToModulePath docId with
-  | Some (_, "MiloneOnly") -> true
-  | _ -> false
-
 // ---------------------------------------------
 // ProjectAnalysis
 // ---------------------------------------------
@@ -938,8 +933,7 @@ let private tokenizeDoc uri (wa: WorkspaceAnalysis) =
       | Some (v, text) -> ok v text
 
       | None ->
-        if (uri |> uriToFilePath |> stem) <> "MiloneOnly" then
-          debugFn "tokenize: '%s' not open" (Uri.toString uri)
+        debugFn "tokenize: '%s' not open" (Uri.toString uri)
 
         None
 

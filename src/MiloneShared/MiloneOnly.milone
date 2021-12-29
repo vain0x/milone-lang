@@ -1,4 +1,0 @@
-/// Defines F# primitives for milone-lang.
-///
-/// Not used in F#.
-module rec MiloneShared.MiloneOnly

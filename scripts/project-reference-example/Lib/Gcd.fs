@@ -1,9 +1,6 @@
 module rec Lib.Gcd
 
 let gcd (x: int) (y: int) =
-  // Check if MiloneOnly is loaded.
-  assert (__someBuiltInFun () = 42)
-
   assert (x >= 0)
   assert (y >= 0)
 
