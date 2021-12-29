@@ -18,6 +18,7 @@
 module rec MiloneTranslation.TailRecOptimizing
 
 open MiloneShared.Util
+open MiloneStd.StdError
 open MiloneTranslation.Hir
 
 [<NoEquality; NoComparison>]

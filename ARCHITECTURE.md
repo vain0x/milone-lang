@@ -78,7 +78,6 @@ Diagram of data flow.
 ### Language-Specific Files
 
 - FSharpOnly and Program.fs are F# only part.
-- MiloneOnly and `*.milone` are milone-lang only part.
 
 ## Cross-Cutting Concerns
 

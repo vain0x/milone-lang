@@ -9,6 +9,7 @@ open MiloneShared.SharedTypes
 open MiloneShared.TypeFloat
 open MiloneShared.TypeIntegers
 open MiloneShared.Util
+open MiloneStd.StdError
 open MiloneStd.StdMap
 
 module S = MiloneStd.StdString

@@ -9,6 +9,7 @@ module rec MiloneSyntax.AstBundle
 open MiloneShared.SharedTypes
 open MiloneShared.Util
 open MiloneShared.UtilParallel
+open MiloneStd.StdError
 open MiloneStd.StdSet
 open MiloneStd.StdMap
 open MiloneSyntax.Syntax
@@ -68,8 +69,7 @@ type private Error = string * Loc
 type private ModuleRequest =
   { ProjectName: ProjectName
     ModuleName: ModuleName
-    Origin: Loc
-    Optional: bool }
+    Origin: Loc }
 
 [<RequireQualifiedAccess; NoEquality; NoComparison>]
 type private ModuleData =
@@ -98,26 +98,14 @@ let computeDocId (p: ProjectName) (m: ModuleName) : DocId = p + "." + m
 let private newRootRequest (docId: DocId) (p: ProjectName) (m: ModuleName) : ModuleRequest =
   { ProjectName = p
     ModuleName = m
-    Origin = Loc(docId, 0, 0)
-    Optional = false }
-
-let private newMiloneOnlyRequest (p: ProjectName) (originDocId: DocId) : ModuleRequest =
-  { ProjectName = p
-    ModuleName = "MiloneOnly"
-    Origin = Loc(originDocId, 0, 0)
-    Optional = true }
+    Origin = Loc(docId, 0, 0) }
 
 let private newDepRequest (p: ProjectName) (m: ModuleName) (originLoc: Loc) : ModuleRequest =
   { ProjectName = p
     ModuleName = m
-    Origin = originLoc
-    Optional = false }
+    Origin = originLoc }
 
-let private requestToNotFoundError (r: ModuleRequest) : Error option =
-  if not r.Optional then
-    Some("Module not found.", r.Origin)
-  else
-    None
+let private requestToNotFoundError (r: ModuleRequest) : Error = "Module not found.", r.Origin
 
 // -----------------------------------------------
 // Interface
@@ -191,9 +179,7 @@ let private consumer (state: State) action : State * ModuleRequest list =
         TMap.add key RequestResult.Failed requestMap
 
       let errors =
-        match requestToNotFoundError request with
-        | Some error -> error :: state.Errors
-        | None -> state.Errors
+        requestToNotFoundError request :: state.Errors
 
       let state =
         { state with
@@ -212,22 +198,13 @@ let private producer (fetchModule: FetchModuleFun) (_: State) (r: ModuleRequest)
       let docId, _, ast, errors = syntaxData
 
       let deps =
-        let dep1 =
-          if r.ModuleName <> "MiloneOnly" then
-            [ newMiloneOnlyRequest r.ProjectName docId ]
-          else
-            []
+        findDependentModules ast
+        |> List.map (fun (projectName, moduleName, pos) ->
+          let originLoc =
+            let y, x = pos
+            Loc(docId, y, x)
 
-        let otherDeps =
-          findDependentModules ast
-          |> List.map (fun (projectName, moduleName, pos) ->
-            let originLoc =
-              let y, x = pos
-              Loc(docId, y, x)
-
-            newDepRequest projectName moduleName originLoc)
-
-        List.append dep1 otherDeps
+          newDepRequest projectName moduleName originLoc)
 
       let errors =
         errors

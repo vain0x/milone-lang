@@ -24,6 +24,7 @@ module rec MiloneSyntax.TirGen
 
 open MiloneShared.SharedTypes
 open MiloneShared.Util
+open MiloneStd.StdError
 open MiloneSyntax.Syntax
 open MiloneSyntax.Tir
 
@@ -707,8 +708,6 @@ let genTir (projectName: string) (docId: DocId) (root: ARoot, ctx: NameCtx) : TS
   let (ARoot (headOpt, decls)) = root
 
   match headOpt with
-  | Some ([ _; (Name ("MiloneOnly", _) as moduleName) ], pos) -> onModuleRoot moduleName decls pos
-
   | Some ([ _; moduleName ], pos) ->
     onModuleRoot moduleName decls pos
     |> wrapWithProjectModule
@@ -832,10 +831,6 @@ let countSymbols (root: ARoot) : int =
   let (ARoot (headOpt, decls)) = root
 
   match headOpt with
-  | Some ([ _; Name ("MiloneOnly", _) ], _) ->
-    // +1 for project
-    ocDecls decls + 1
-
   | Some ([ _; _ ], _) ->
     // +2 for project and module
     ocDecls decls + 2

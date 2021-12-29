@@ -2,15 +2,7 @@
 [<AutoOpen>]
 module FSharpOnly
 
-module E = MiloneStd.StdError
-
 let __inRegion (f: unit -> int) : int = f ()
-
-let __dump value = E.__dump value
-let __trace msg = E.__trace msg
-let __context info action = E.__context info action
-let unreachable (info: obj) = E.unreachable info
-let todo (info: obj) = E.todo info
 
 // -----------------------------------------------
 // C FFI

@@ -47,6 +47,7 @@ module rec MiloneTranslation.Hoist
 
 open MiloneShared.SharedTypes
 open MiloneShared.Util
+open MiloneStd.StdError
 open MiloneTranslation.Hir
 
 open MiloneStd.StdMap

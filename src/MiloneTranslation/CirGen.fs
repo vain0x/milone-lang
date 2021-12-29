@@ -15,6 +15,7 @@ open MiloneShared.TypeFloat
 open MiloneShared.TypeIntegers
 open MiloneShared.Util
 open MiloneShared.UtilParallel
+open MiloneStd.StdError
 open MiloneStd.StdMap
 open MiloneStd.StdMultimap
 open MiloneStd.StdSet
