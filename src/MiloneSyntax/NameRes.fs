@@ -747,8 +747,6 @@ let private resolveTy ty loc scopeCtx =
       let symbolOpt, scopeCtx = resolveNavTy quals name scopeCtx
 
       match symbolOpt with
-      | Some (UnivTySymbol tySerial) -> tyMeta tySerial loc, scopeCtx
-
       | Some (SynonymTySymbol tySerial) ->
         // Arity check. #tyaritycheck
         match scopeCtx.Tys |> TMap.tryFind tySerial with
@@ -787,7 +785,8 @@ let private resolveTy ty loc scopeCtx =
 
         | _ -> tyRecord tySerial loc, scopeCtx
 
-      | Some (MetaTySymbol _) -> unreachable (serial, name, loc)
+      | Some (MetaTySymbol _)
+      | Some (UnivTySymbol _) -> unreachable () // UnivTySymbol is only resolved from UnresolvedVarTk.
 
       | None ->
         match tyPrimOfName name tys with
