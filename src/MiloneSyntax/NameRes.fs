@@ -75,7 +75,6 @@ let private valueSymbolToSerial symbol =
 
 let private tySymbolToSerial symbol =
   match symbol with
-  | MetaTySymbol s -> s
   | UnivTySymbol s -> s
   | SynonymTySymbol s -> s
   | UnionTySymbol s -> s
@@ -785,7 +784,6 @@ let private resolveTy ty loc scopeCtx =
 
         | _ -> tyRecord tySerial loc, scopeCtx
 
-      | Some (MetaTySymbol _)
       | Some (UnivTySymbol _) -> unreachable () // UnivTySymbol is only resolved from UnresolvedVarTk.
 
       | None ->

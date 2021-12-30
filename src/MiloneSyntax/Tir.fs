@@ -223,7 +223,6 @@ type ValueSymbol =
 
 [<NoComparison>]
 type TySymbol =
-  | MetaTySymbol of tySerial: TySerial
   | UnivTySymbol of univTySerial: TySerial
   | SynonymTySymbol of synonymTySerial: TySerial
   | UnionTySymbol of unionTySerial: TySerial
