@@ -75,9 +75,6 @@ type TyScheme = TyScheme of tyVars: TySerial list * Ty
 /// Type definition.
 [<NoEquality; NoComparison>]
 type TyDef =
-  /// Bound type variable.
-  | MetaTyDef of Ty
-
   | UnionTyDef of Ident * tyArgs: TySerial list * VariantSerial list * Loc
 
   | RecordTyDef of Ident * fields: (Ident * Ty * Loc) list * IsCRepr * Loc
@@ -396,7 +393,6 @@ let tyRecord tySerial = Ty(RecordTk tySerial, [])
 
 let tyDefToName tyDef =
   match tyDef with
-  | MetaTyDef _ -> "{bound}"
   | UnionTyDef (name, _, _, _) -> name
   | RecordTyDef (name, _, _, _) -> name
 

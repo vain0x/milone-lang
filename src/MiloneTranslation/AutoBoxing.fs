@@ -193,8 +193,6 @@ let private trdTyDef isDirect (ctx: TrdCtx) tySerial tyDef : TrdCtx =
 
   | RecordTyDef _ -> trdRecordTyDef isDirect ctx tySerial tyDef
 
-  | MetaTyDef _ -> unreachable () // Resolved in Typing.
-
 let private trdTy isDirect (ctx: TrdCtx) ty : TrdCtx =
   match ty with
   | Ty (tk, tyArgs) ->
@@ -383,8 +381,6 @@ let private tsmTyDef (ctx: TsmCtx) tySerial tyDef =
     4 + payloadSize, ctx
 
   | RecordTyDef _ -> tsmRecordTyDef ctx tySerial tyDef
-
-  | MetaTyDef _ -> unreachable () // Resolved in Typing.
 
 let private tsmTy (ctx: TsmCtx) ty =
   match ty with
@@ -1042,18 +1038,11 @@ let private tvStmt stmt ctx =
 
 type private TyMap = TreeMap<TySerial, TyDef>
 
-let private emptyTys: TyMap = TMap.empty compare
 let private emptyBinding: TreeMap<TySerial, Ty> = TMap.empty compare
 
 /// Generates a binding (from meta ty to ty) by unifying.
-let private unifyTy (tys: TyMap) (lTy: Ty) (rTy: Ty) loc : TreeMap<TySerial, Ty> =
-  let expandMeta binding tySerial =
-    match binding |> TMap.tryFind tySerial with
-    | (Some _) as it -> it
-    | _ ->
-      match tys |> TMap.tryFind tySerial with
-      | Some (MetaTyDef ty) -> Some ty
-      | _ -> None
+let private unifyTy (lTy: Ty) (rTy: Ty) loc : TreeMap<TySerial, Ty> =
+  let expandMeta binding tySerial = binding |> TMap.tryFind tySerial
 
   let substTy binding ty = tySubst (expandMeta binding) ty
 
@@ -1092,7 +1081,7 @@ let private processFunExpr (ctx: TaCtx) funSerial useSiteTy loc : HExpr =
   let def: FunDef = ctx.Funs |> mapFind funSerial
   let (TyScheme (tyVars, genericTy)) = def.Ty
 
-  let binding = unifyTy emptyTys genericTy useSiteTy loc
+  let binding = unifyTy genericTy useSiteTy loc
 
   let tyArgs =
     tyVars
