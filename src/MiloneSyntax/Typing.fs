@@ -1944,17 +1944,14 @@ let infer (modules: TProgram, nameRes: NameResResult) : TProgram * TirCtx =
 
         { funDef with Ty = TyScheme(tyVars, ty) })
 
+    { ctx with Vars = vars; Funs = funs }
+
+  let ctx =
     let variants =
       ctx.Variants
       |> TMap.map (fun _ (variantDef: VariantDef) ->
-        { variantDef with PayloadTy = substOrDegenerate variantDef.PayloadTy })
+        { variantDef with PayloadTy = expandSynonyms ctx variantDef.PayloadTy })
 
-    { ctx with
-        Vars = vars
-        Funs = funs
-        Variants = variants }
-
-  let ctx =
     let tys =
       ctx.Tys
       |> TMap.fold
@@ -1968,7 +1965,7 @@ let infer (modules: TProgram, nameRes: NameResResult) : TProgram * TirCtx =
                let fields =
                  fields
                  |> List.map (fun (name, ty, loc) ->
-                   let ty = substOrDegenerate ty
+                   let ty = expandSynonyms ctx ty
                    name, ty, loc)
 
                acc
@@ -1977,7 +1974,9 @@ let infer (modules: TProgram, nameRes: NameResResult) : TProgram * TirCtx =
              | _ -> acc |> TMap.add tySerial tyDef)
            (TMap.empty compare)
 
-    { ctx with Tys = tys }
+    { ctx with
+        Variants = variants
+        Tys = tys }
 
   let tirCtx = toTirCtx ctx
   modules, tirCtx
