@@ -51,6 +51,8 @@ type private TyCtx =
     QuantifiedTys: TreeSet<TySerial>
     Level: Level
 
+    NewFuns: FunSerial list
+
     /// Funs that are mutually recursive and defined in the current block.
     ///
     /// These funs might have incorrect ty scheme
@@ -76,6 +78,7 @@ let private newTyCtx (nr: NameResResult) : TyCtx =
     TyLevels = TMap.empty compare
     QuantifiedTys = TSet.empty compare
     Level = 0
+    NewFuns = []
     GrayFuns = TSet.empty funSerialCompare
     GrayInstantiations = TMap.empty funSerialCompare
     TraitBounds = []
@@ -1622,6 +1625,9 @@ let private inferLetFunStmt ctx mutuallyRec callee vis argPats body loc =
     | IsRec -> { ctx with GrayFuns = ctx.GrayFuns |> TSet.add callee }
     | _ -> ctx
 
+  let ctx =
+    { ctx with NewFuns = callee :: ctx.NewFuns }
+
   TLetFunStmt(callee, NotRec, vis, argPats, body, loc), ctx
 
 let private inferExpr (ctx: TyCtx) (expectOpt: Ty option) (expr: TExpr) : TExpr * Ty * TyCtx =
@@ -1855,6 +1861,21 @@ let private synonymCycleCheck (tyCtx: TyCtx) =
 let infer (modules: TProgram, nameRes: NameResResult) : TProgram * TirCtx =
   let ctx = newTyCtx nameRes
 
+  let substOrDegenerate ctx ty =
+    ty
+    |> substOrDegenerateTy ctx
+    |> expandSynonyms ctx
+
+  let substOrDegenerateVars ctx vars =
+    vars
+    |> TMap.map (fun _ (varDef: VarDef) ->
+      let ty = substOrDegenerate ctx varDef.Ty
+      { varDef with Ty = ty })
+
+  let substOrDegenerateStmts ctx stmts =
+    stmts
+    |> List.map (fun stmt -> stmtMap (substOrDegenerate ctx) stmt)
+
   let modules, ctx =
     let oldStaticVars = ctx.Vars
 
@@ -1875,11 +1896,13 @@ let infer (modules: TProgram, nameRes: NameResResult) : TProgram * TirCtx =
 
            let ctx = { ctx with Vars = vars }
 
-           let ctx = collectVarsAndFuns ctx m.Stmts
-
            let stmts, ctx =
+             let ctx = collectVarsAndFuns ctx m.Stmts
+
              m.Stmts
              |> List.mapFold (fun ctx stmt -> inferStmt ctx NotRec stmt) ctx
+
+           let ctx = ctx |> resolveTraitBounds
 
            let staticVars, localVars =
              ctx.Vars
@@ -1895,6 +1918,46 @@ let infer (modules: TProgram, nameRes: NameResResult) : TProgram * TirCtx =
                       staticVars, localVars)
                   (emptyVars, emptyVars)
 
+           // Resolve meta types.
+           let stmts, staticVars, localVars, ctx =
+             let stmts = substOrDegenerateStmts ctx stmts
+             let staticVars = substOrDegenerateVars ctx staticVars
+             let localVars = substOrDegenerateVars ctx localVars
+
+             let funs =
+               ctx.NewFuns
+               |> List.fold
+                    (fun funs funSerial ->
+                      let funDef: FunDef = funs |> mapFind funSerial
+
+                      let (TyScheme (tyVars, ty)) = funDef.Ty
+                      let ty = substOrDegenerate ctx ty
+
+                      let funDef =
+                        { funDef with Ty = TyScheme(tyVars, ty) }
+
+                      funs |> TMap.add funSerial funDef)
+                    ctx.Funs
+
+             let tys =
+               ctx.Tys
+               |> TMap.filter (fun _ tyDef ->
+                 match tyDef with
+                 | MetaTyDef _ -> false
+
+                 | UniversalTyDef _
+                 | SynonymTyDef _
+                 | UnionTyDef _
+                 | RecordTyDef _ -> true)
+
+             let ctx =
+               { ctx with
+                   Funs = funs
+                   NewFuns = []
+                   Tys = tys }
+
+             stmts, staticVars, localVars, ctx
+
            let m =
              { m with
                  Vars = localVars
@@ -1904,48 +1967,9 @@ let infer (modules: TProgram, nameRes: NameResResult) : TProgram * TirCtx =
            m, ctx)
          ctx
 
-  let ctx = ctx |> resolveTraitBounds
-
   let ctx = synonymCycleCheck ctx
 
-  // Substitute all types. Unbound types are degenerated here.
-  let substOrDegenerate ty =
-    ty
-    |> substOrDegenerateTy ctx
-    |> expandSynonyms ctx
-
-  let substOrDegenerateVars vars =
-    vars
-    |> TMap.map (fun _ (varDef: VarDef) ->
-      let ty = substOrDegenerate varDef.Ty
-      { varDef with Ty = ty })
-
-  let modules, ctx =
-    modules
-    |> List.mapFold
-         (fun ctx (m: TModule) ->
-           let vars = substOrDegenerateVars m.Vars
-
-           let stmts =
-             m.Stmts
-             |> List.map (fun stmt -> stmtMap substOrDegenerate stmt)
-
-           { m with Vars = vars; Stmts = stmts }, ctx)
-         ctx
-
-  let ctx =
-    let vars = substOrDegenerateVars ctx.Vars
-
-    let funs =
-      ctx.Funs
-      |> TMap.map (fun _ (funDef: FunDef) ->
-        let (TyScheme (tyVars, ty)) = funDef.Ty
-        let ty = substOrDegenerate ty
-
-        { funDef with Ty = TyScheme(tyVars, ty) })
-
-    { ctx with Vars = vars; Funs = funs }
-
+  // Expand synonyms.
   let ctx =
     let variants =
       ctx.Variants
