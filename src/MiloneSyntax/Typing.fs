@@ -1839,7 +1839,7 @@ let private synonymCycleCheck (tyCtx: TyCtx) =
                // from running into stack overflow.
                let tys =
                  tys
-                 |> TMap.add tySerial (SynonymTyDef(ident, tyArgs, tyUnit, loc))
+                 |> TMap.add tySerial (SynonymTyDef(ident, tyArgs, tyError loc, loc))
 
                let logs = (Log.TySynonymCycleError, loc) :: logs
                tys, logs
@@ -1856,6 +1856,8 @@ let private synonymCycleCheck (tyCtx: TyCtx) =
 
 let infer (modules: TProgram, nameRes: NameResResult) : TProgram * TirCtx =
   let ctx = newTyCtx nameRes
+
+  let ctx = synonymCycleCheck ctx
 
   let substOrDegenerate ctx ty =
     ty
@@ -1953,8 +1955,6 @@ let infer (modules: TProgram, nameRes: NameResResult) : TProgram * TirCtx =
            let ctx = { ctx with Vars = staticVars }
            m, ctx)
          ctx
-
-  let ctx = synonymCycleCheck ctx
 
   // Expand synonyms.
   let ctx =
