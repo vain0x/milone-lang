@@ -304,84 +304,6 @@ let tyDisplay getTyName ty =
 
   go 0 ty
 
-/// Generates a unique name from a type.
-///
-/// Must be used after successful Typing.
-let tyMangle (ty: Ty, memo: TreeMap<Ty, string>) : string * TreeMap<Ty, string> =
-  let rec go ty ctx =
-    let (Ty (tk, tyArgs)) = ty
-
-    let mangleList tys ctx =
-      (tys, ctx)
-      |> stMap (fun (ty, ctx) -> ctx |> go ty)
-
-    let fixedGeneric (name: string) =
-      let tyArgs, ctx = mangleList tyArgs ctx
-      S.concat "" tyArgs + name, ctx
-
-    let variadicGeneric (name: string) =
-      let arity = List.length tyArgs
-      let tyArgs, ctx = mangleList tyArgs ctx
-      S.concat "" tyArgs + (name + string arity), ctx
-
-    let doMangle () : string * TreeMap<_, _> =
-      match tk with
-      | IntTk flavor -> cIntegerTyPascalName flavor, ctx
-      | FloatTk flavor -> cFloatTyPascalName flavor, ctx
-      | BoolTk -> "Bool", ctx
-      | CharTk -> "Char", ctx
-      | StrTk -> "String", ctx
-
-      | MetaTk _
-      | ObjTk -> "Object", ctx
-
-      | TupleTk when List.isEmpty tyArgs -> "Unit", ctx
-      | TupleTk -> variadicGeneric "Tuple"
-
-      | ListTk -> fixedGeneric "List"
-
-      | VoidTk -> "Void", ctx
-      | NativePtrTk IsConst -> fixedGeneric "ConstPtr"
-      | NativePtrTk IsMut -> fixedGeneric "MutPtr"
-      | NativeFunTk -> variadicGeneric "NativeFun"
-      | NativeTypeTk name -> name, ctx
-
-      | FunTk ->
-        let arity, argTys, resultTy = tyToArgList ty
-
-        let argTys, ctx = mangleList argTys ctx
-        let resultTy, ctx = ctx |> go resultTy
-
-        let funTy =
-          (argTys |> S.concat "")
-          + resultTy
-          + "Fun"
-          + string arity
-
-        funTy, ctx
-
-      | UnivTk (_, name, _) -> name, ctx
-
-      | UnionTk _
-      | RecordTk _ -> unreachable () // Must be stored in memo.
-
-      | ErrorTk _
-      | SynonymTk _
-      | InferTk _ -> unreachable () // Resolved in Typing.
-
-      | UnresolvedTk _
-      | UnresolvedVarTk _ -> unreachable () // Resolved in NameRes..
-
-    // Memoization.
-    match TMap.tryFind ty ctx with
-    | Some name -> name, ctx
-
-    | None ->
-      let name, ctx = doMangle ()
-      name, TMap.add ty name ctx
-
-  go ty memo
-
 // -----------------------------------------------
 // Context-free functions
 // -----------------------------------------------
@@ -491,8 +413,6 @@ let unifyAfterExpandMeta lTy rTy tySerial otherTy loc =
     UnifyAfterExpandMetaResult.Error(Log.TyUnify(TyUnifyLog.SelfRec, lTy, rTy), loc)
 
   | _ -> UnifyAfterExpandMetaResult.OkBind
-
-let typingSubst tys binding ty : Ty = tySubst (tyExpandMeta tys binding) ty
 
 let typingExpandSynonyms tys ty =
   tyExpandSynonyms (fun tySerial -> tys |> TMap.tryFind tySerial) ty

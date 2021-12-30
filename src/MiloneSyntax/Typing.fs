@@ -760,14 +760,6 @@ let private inferNilPat ctx pat loc =
   let ty = tyList itemTy
   TNodePat(TNilPN, [], ty, loc), ty, ctx
 
-let private inferSomePat ctx pat loc =
-  let unknownTy, ctx = ctx |> freshMetaTyForPat pat
-
-  let ctx =
-    addError ctx "Some pattern must be used in the form of: `Some pattern`." loc
-
-  tpAbort unknownTy loc, unknownTy, ctx
-
 let private inferDiscardPat ctx pat loc =
   let ty, ctx = ctx |> freshMetaTyForPat pat
   TDiscardPat(ty, loc), ty, ctx
