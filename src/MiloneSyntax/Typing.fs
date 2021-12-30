@@ -237,8 +237,7 @@ let private validateLit ctx lit loc =
 
 // And meta type resolution by substitution or degeneration.
 
-let private expandMeta (ctx: TyCtx) tySerial : Ty option =
-  ctx.MetaTys |> TMap.tryFind tySerial
+let private expandMeta (ctx: TyCtx) tySerial : Ty option = ctx.MetaTys |> TMap.tryFind tySerial
 
 let private substTy (ctx: TyCtx) ty : Ty = tySubst (expandMeta ctx) ty
 
@@ -1940,7 +1939,9 @@ let infer (modules: TProgram, nameRes: NameResResult) : TProgram * TirCtx =
                { ctx with
                    Funs = funs
                    NewFuns = []
-                   MetaTys = TMap.empty compare }
+                   MetaTys = TMap.empty compare
+                   TyLevels = TMap.empty compare
+                   QuantifiedTys = TMap.empty compare }
 
              stmts, staticVars, localVars, ctx
 
