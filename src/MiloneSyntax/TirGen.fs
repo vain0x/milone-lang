@@ -331,6 +331,10 @@ let private tgPat (docId: DocId) (pat: APat, ctx: NameCtx) : TPat * NameCtx =
     let loc = toLoc docId pos
     TLitPat(lit, loc), ctx
 
+  | AIdentPat (_, Name ("_", pos)) ->
+    let loc = toLoc docId pos
+    TDiscardPat(noTy, loc), ctx
+
   | AIdentPat (vis, name) ->
     let serial, ctx = ctx |> nameCtxAdd name
     let loc = toLoc docId (nameToPos name)
@@ -746,7 +750,8 @@ let private ocPat (pat: APat) : int =
   | AMissingPat _
   | ALitPat _ -> 0
 
-  | AIdentPat (_name, _) -> 1
+  | AIdentPat (_, Name ("_", _)) -> 0
+  | AIdentPat _ -> 1
   | AListPat (pats, _) -> ocPats pats
   | ANavPat (l, _, _) -> ocPat l
   | AAppPat (calleePat, argPat, _) -> ocPat calleePat + ocPat argPat
