@@ -48,6 +48,7 @@ let private tkEncode tk : int =
   | NativeFunTk -> just 13
 
   | MetaTk (tySerial, _) -> pair 20 tySerial
+  | UnivTk (tySerial, _, _) -> pair 24 tySerial
   | SynonymTk tySerial -> pair 21 tySerial
   | UnionTk (tySerial, _) -> pair 22 tySerial
   | RecordTk (tySerial, _) -> pair 23 tySerial
@@ -95,6 +96,7 @@ let tkDisplay getTyName tk =
   | NativeFunTk -> "__nativeFun"
   | NativeTypeTk _ -> "__nativeType"
   | MetaTk (tySerial, _) -> getTyName tySerial
+  | UnivTk (_, name, _) -> name
   | SynonymTk tySerial -> getTyName tySerial
   | RecordTk (tySerial, _) -> getTyName tySerial
   | UnionTk (tySerial, _) -> getTyName tySerial
@@ -184,7 +186,11 @@ let tySubst (substMeta: TySerial -> Ty option) ty =
     | Ty (MetaTk (tySerial, _), _) ->
       match substMeta tySerial with
       | Some ty -> go ty
+      | None -> ty
 
+    | Ty (UnivTk (tySerial, _, _), _) ->
+      match substMeta tySerial with
+      | Some ty -> go ty
       | None -> ty
 
     | Ty (_, []) -> ty
@@ -230,10 +236,19 @@ let tyExpandSynonyms (expand: TySerial -> TyDef option) ty : Ty =
 /// For example, `let f x = (let g = f in g x)` will have too generic type
 /// without this checking (according to TaPL).
 let tyGeneralize (isOwned: TySerial -> bool) (ty: Ty) : TyScheme =
-  let fvs =
-    tyCollectFreeVars ty |> List.filter isOwned
+  let collectMetaAndUniv ty =
+    let rec go acc ty =
+      match ty with
+      | Ty (MetaTk (serial, _), _) -> serial :: acc
+      | Ty (UnivTk (serial, _, _), _) -> serial :: acc
+      | Ty (_, tyArgs) -> tyArgs |> List.fold go acc
 
-  TyScheme(fvs, ty)
+    go [] ty |> listUnique compare
+
+  let tyVars =
+    collectMetaAndUniv ty |> List.filter isOwned
+
+  TyScheme(tyVars, ty)
 
 /// Converts a type to human readable string.
 let tyDisplay getTyName ty =
@@ -273,6 +288,7 @@ let tyDisplay getTyName ty =
       | Some name -> "{" + name + "}@" + Loc.toString loc
       | None -> "{?" + string tySerial + "}@" + Loc.toString loc
 
+    | Ty (UnivTk (_, name, _), _) -> name
     | Ty (SynonymTk tySerial, args) -> nominal tySerial args
     | Ty (UnionTk (tySerial, _), args) -> nominal tySerial args
     | Ty (RecordTk (tySerial, _), args) -> nominal tySerial args
@@ -343,6 +359,8 @@ let tyMangle (ty: Ty, memo: TreeMap<Ty, string>) : string * TreeMap<Ty, string> 
           + string arity
 
         funTy, ctx
+
+      | UnivTk (_, name, _) -> name, ctx
 
       | UnionTk _
       | RecordTk _ -> unreachable () // Must be stored in memo.

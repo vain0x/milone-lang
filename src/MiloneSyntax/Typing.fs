@@ -699,13 +699,13 @@ let private resolveAscriptionTy ctx ascriptionTy =
       let serial, ctx = freshTySerial ctx
       tyMeta serial loc, ctx
 
-    | Ty (MetaTk (serial, loc), _) when ctx.TyLevels |> TMap.containsKey serial |> not ->
+    | Ty (UnivTk (serial, _, _), _) when ctx.TyLevels |> TMap.containsKey serial |> not ->
       let ctx =
         { ctx with TyLevels = ctx.TyLevels |> TMap.add serial ctx.Level }
 
-      tyMeta serial loc, ctx
+      ty, ctx
 
-    | Ty (MetaTk _, _) -> ty, ctx
+    | Ty (UnivTk _, _) -> ty, ctx
 
     | Ty (_, []) -> ty, ctx
 

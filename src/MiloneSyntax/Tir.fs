@@ -80,6 +80,7 @@ type Tk =
 
   // Nominal types.
   | MetaTk of metaTy: TySerial * metaLoc: Loc
+  | UnivTk of univTy: TySerial * name: string * univLoc: Loc
   | SynonymTk of synonymTy: TySerial
   | UnionTk of unionTy: TySerial * Loc option
   | RecordTk of recordTy: TySerial * Loc option
@@ -510,36 +511,26 @@ let tyUInt64 = Ty(IntTk(IntFlavor(Unsigned, I32)), [])
 let tyUNativeInt = Ty(IntTk(IntFlavor(Unsigned, IPtr)), [])
 
 let tyBool = Ty(BoolTk, [])
-
 let tyFloat = Ty(FloatTk F64, [])
-
 let tyChar = Ty(CharTk, [])
-
 let tyStr = Ty(StrTk, [])
-
 let tyObj = Ty(ObjTk, [])
 
-let tyTuple tys = Ty(TupleTk, tys)
-
-let tyList ty = Ty(ListTk, [ ty ])
-
 let tyFun sourceTy targetTy = Ty(FunTk, [ sourceTy; targetTy ])
+let tyList itemTy = Ty(ListTk, [ itemTy ])
+let tyTuple itemTys = Ty(TupleTk, itemTys)
+let tyUnit = tyTuple []
 
 let tyConstPtr itemTy = Ty(NativePtrTk IsConst, [ itemTy ])
-
 let tyNativePtr itemTy = Ty(NativePtrTk IsMut, [ itemTy ])
 
 let tyNativeFun paramTys resultTy =
   Ty(NativeFunTk, List.append paramTys [ resultTy ])
 
-let tyUnit = tyTuple []
-
+let tyUniv serial name loc = Ty(UnivTk(serial, name, loc), [])
 let tyMeta serial loc = Ty(MetaTk(serial, loc), [])
-
 let tySynonym tySerial tyArgs = Ty(SynonymTk tySerial, tyArgs)
-
 let tyUnion tySerial tyArgs loc = Ty(UnionTk(tySerial, Some loc), tyArgs)
-
 let tyRecord tySerial loc = Ty(RecordTk(tySerial, Some loc), [])
 
 // -----------------------------------------------

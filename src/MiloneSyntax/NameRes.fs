@@ -723,7 +723,7 @@ let private resolveTy ty loc scopeCtx =
       let name = scopeCtx |> findName serial
 
       match resolveLocalTyName name scopeCtx with
-      | Some (UnivTySymbol tySerial) -> tyMeta tySerial loc, scopeCtx
+      | Some (UnivTySymbol tySerial) -> tyUniv tySerial name loc, scopeCtx
 
       | _ when scopeCtx |> isTyDeclScope ->
         let scopeCtx =
@@ -736,7 +736,7 @@ let private resolveTy ty loc scopeCtx =
           scopeCtx
           |> addLocalTy (UnivTySymbol serial) (UniversalTyDef(name, loc))
 
-        tyMeta serial loc, scopeCtx
+        tyUniv serial name loc, scopeCtx
 
     | Ty (UnresolvedTk (quals, serial, loc), tys) ->
       let name = scopeCtx |> findName serial
