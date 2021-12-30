@@ -146,6 +146,18 @@ let private freshTySerial (ctx: TyCtx) =
 
   serial, ctx
 
+let private freshTySerialWithLevel levelDelta (ctx: TyCtx) =
+  let serial = ctx.Serial + 1
+
+  let ctx =
+    { ctx with
+        Serial = ctx.Serial + 1
+        TyLevels =
+          ctx.TyLevels
+          |> TMap.add serial (ctx.Level + levelDelta) }
+
+  serial, ctx
+
 let private freshMetaTy loc (ctx: TyCtx) : Ty * TyCtx =
   let serial, ctx = freshTySerial ctx
   let ty = tyMeta serial loc
@@ -308,6 +320,7 @@ let private unifyTy (ctx: TyCtx) loc (lTy: Ty) (rTy: Ty) : TyCtx =
 
 let private unifyVarTy varSerial tyOpt loc ctx =
   let varTy = (findVar ctx varSerial).Ty
+  assert (isNoTy varTy |> not)
 
   match tyOpt with
   | Some ty ->
@@ -359,6 +372,8 @@ let private generalizeFun (ctx: TyCtx) (outerLevel: Level) funSerial =
 
   match funDef.Ty with
   | TyScheme ([], funTy) ->
+    assert (isNoTy funTy |> not)
+
     let isOwned tySerial =
       let level = getTyLevel tySerial ctx
       level > outerLevel
@@ -614,6 +629,65 @@ let private resolveTraitBounds (ctx: TyCtx) =
 // -----------------------------------------------
 // Others
 // -----------------------------------------------
+
+let private isNoTy ty =
+  match ty with
+  | Ty (ErrorTk _, _) -> true
+  | _ -> false
+
+let private addVarLevels ctx pat =
+  let onVar (ctx: TyCtx) varSerial loc =
+    let varDef = ctx.Vars |> mapFind varSerial
+
+    if isNoTy varDef.Ty then
+      let metaTy, ctx = freshMetaTy loc ctx
+      let varDef = { varDef with Ty = metaTy }
+      { ctx with Vars = ctx.Vars |> TMap.add varSerial varDef }
+    else
+      ctx
+
+  match pat with
+  | TLitPat _
+  | TDiscardPat _
+  | TVariantPat _ -> ctx
+
+  | TVarPat (_, varSerial, _, loc) -> onVar ctx varSerial loc
+  | TNodePat (_, argPats, _, _) -> argPats |> List.fold addVarLevels ctx
+
+  | TAsPat (bodyPat, varSerial, loc) ->
+    let ctx = addVarLevels ctx bodyPat
+    onVar ctx varSerial loc
+
+  | TOrPat (l, r, _) ->
+    let ctx = addVarLevels ctx l
+    addVarLevels ctx r
+
+let private initializeFunTy (ctx: TyCtx) funSerial =
+  let funDef = ctx.Funs |> mapFind funSerial
+
+  match funDef.Ty with
+  | TyScheme ([], funTy) when isNoTy funTy ->
+    let tySerial, ctx = freshTySerialWithLevel 1 ctx
+    let metaTy = tyMeta tySerial funDef.Loc
+
+    let funDef =
+      { funDef with Ty = TyScheme([], metaTy) }
+
+    { ctx with Funs = ctx.Funs |> TMap.add funSerial funDef }
+
+  | _ -> ctx
+
+let private collectVarsAndFuns ctx stmts =
+  stmts
+  |> List.fold
+       (fun ctx stmt ->
+         match stmt with
+         | TLetValStmt (pat, _, _) -> addVarLevels ctx pat
+         | TLetFunStmt (funSerial, _, _, _, _, _) -> initializeFunTy ctx funSerial
+         | _ -> ctx)
+       ctx
+
+let private collectVarsInPats ctx pats = pats |> List.fold addVarLevels ctx
 
 // payloadTy, unionTy, variantTy
 let private instantiateVariant variantSerial loc (ctx: TyCtx) : Ty * Ty * Ty * TyCtx =
@@ -1239,6 +1313,10 @@ let private inferMatchExpr ctx expectOpt itself cond arms loc =
 
   let cond, condTy, ctx = inferExpr ctx None cond
 
+  let ctx =
+    arms
+    |> List.fold (fun ctx (pat, _, _) -> addVarLevels ctx pat) ctx
+
   let arms, ctx =
     (arms, ctx)
     |> stMap (fun ((pat, guard, body), ctx) ->
@@ -1444,7 +1522,9 @@ let private inferAscribeExpr ctx body ascriptionTy loc =
   let ctx = unifyTy ctx loc bodyTy ascriptionTy
   body, ascriptionTy, ctx
 
-let private inferBlockExpr ctx expectOpt stmts last =
+let private inferBlockExpr ctx expectOpt (stmts: TStmt list) last =
+  let ctx = collectVarsAndFuns ctx stmts
+
   let stmts, ctx =
     (stmts, ctx)
     |> stMap (fun (stmt, ctx) -> inferStmt ctx NotRec stmt)
@@ -1518,6 +1598,7 @@ let private inferLetFunStmt ctx mutuallyRec callee vis argPats body loc =
   let provisionalResultTy, ctx = ctx |> freshMetaTyForExpr body
 
   let argPats, funTy, ctx =
+    let ctx = argPats |> collectVarsInPats ctx
     inferArgs ctx provisionalResultTy argPats
 
   let ctx = unifyTy ctx loc calleeTy funTy
@@ -1580,6 +1661,8 @@ let private inferExpr (ctx: TyCtx) (expectOpt: Ty option) (expr: TExpr) : TExpr 
 let private inferBlockStmt (ctx: TyCtx) mutuallyRec stmts : TStmt * TyCtx =
   let outerLevel = ctx.Level
   let parentCtx = ctx
+
+  let ctx = collectVarsAndFuns ctx stmts
 
   let stmts, ctx =
     (stmts, ctx)
@@ -1767,52 +1850,6 @@ let private synonymCycleCheck (tyCtx: TyCtx) =
 let infer (modules: TProgram, nameRes: NameResResult) : TProgram * TirCtx =
   let ctx = newTyCtx nameRes
 
-  let withLevel level (ctx: TyCtx) =
-    if ctx.Level <> level then
-      { ctx with Level = level }
-    else
-      ctx
-
-  // Assign type vars to var/fun definitions.
-  let ctx =
-    let vars, ctx =
-      ctx.Vars
-      |> TMap.mapFold
-           (fun (ctx: TyCtx) varSerial (varDef: VarDef) ->
-             let ctx =
-               let level =
-                 nameRes.VarLevels
-                 |> mapFind (varSerialToInt varSerial)
-
-               ctx |> withLevel level
-
-             let varDef, ctx =
-               let ty, ctx = freshMetaTy varDef.Loc ctx
-               { varDef with Ty = ty }, ctx
-
-             varDef, ctx)
-           ctx
-
-    { ctx with Vars = vars; Level = 0 }
-
-  let funs, ctx =
-    ctx.Funs
-    |> TMap.mapFold
-         (fun (ctx: TyCtx) funSerial (funDef: FunDef) ->
-           let ctx =
-             let level =
-               nameRes.VarLevels
-               |> mapFind (funSerialToInt funSerial)
-
-             ctx |> withLevel level
-
-           let ty, ctx = freshMetaTy funDef.Loc ctx
-
-           { funDef with Ty = TyScheme([], ty) }, ctx)
-         ctx
-
-  let ctx = { ctx with Funs = funs; Level = 0 }
-
   let modules, ctx =
     let oldStaticVars = ctx.Vars
 
@@ -1822,26 +1859,18 @@ let infer (modules: TProgram, nameRes: NameResResult) : TProgram * TirCtx =
     modules
     |> List.mapFold
          (fun (ctx: TyCtx) (m: TModule) ->
+           // #map_merge
            let vars, ctx =
              m.Vars
              |> TMap.fold
                   (fun (vars, ctx: TyCtx) varSerial (varDef: VarDef) ->
-                    let ctx =
-                      let level =
-                        nameRes.VarLevels
-                        |> mapFind (varSerialToInt varSerial)
-
-                      ctx |> withLevel level
-
-                    let varDef, ctx =
-                      let ty, ctx = freshMetaTy varDef.Loc ctx
-                      { varDef with Ty = ty }, ctx
-
                     let vars = TMap.add varSerial varDef vars
                     vars, ctx)
                   (ctx.Vars, ctx)
 
-           let ctx = { ctx with Vars = vars; Level = 0 }
+           let ctx = { ctx with Vars = vars }
+
+           let ctx = collectVarsAndFuns ctx m.Stmts
 
            let stmts, ctx =
              m.Stmts

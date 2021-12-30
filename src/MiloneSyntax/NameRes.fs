@@ -160,7 +160,6 @@ type private NameResState =
     Vars: TreeMap<VarSerial, VarDef>
     Funs: TreeMap<FunSerial, FunDef>
     Variants: TreeMap<VariantSerial, VariantDef>
-    VarLevels: TreeMap<Serial, Level>
     Logs: (NameResLog * Loc) list }
 
 let private sInit (nameCtx: NameCtx) : NameResState =
@@ -169,7 +168,6 @@ let private sInit (nameCtx: NameCtx) : NameResState =
     Vars = emptyVars
     Funs = TMap.empty funSerialCompare
     Variants = TMap.empty variantSerialCompare
-    VarLevels = TMap.empty compare
     Logs = [] }
 
 let private optionMerge first second : _ option =
@@ -237,7 +235,6 @@ let private sMerge (state: NameResState) (scopeCtx: ScopeCtx) : NameResState * _
       Vars = globalVars
       Funs = mapAddEntries scopeCtx.NewFuns state.Funs
       Variants = mapMerge state.Variants scopeCtx.NewVariants
-      VarLevels = mapAddEntries scopeCtx.NewVarLevels state.VarLevels
       Logs = List.append scopeCtx.NewLogs state.Logs },
   localVars
 
@@ -250,7 +247,6 @@ let private sToResult (state: NameResState) : NameResResult =
     Funs = state.Funs
     Variants = state.Variants
     Tys = scopeCtx.Tys
-    VarLevels = state.VarLevels
     MainFunOpt = scopeCtx.MainFunOpt
     Logs = state.Logs }
 
@@ -266,7 +262,6 @@ type NameResResult =
     Funs: TreeMap<FunSerial, FunDef>
     Variants: TreeMap<VariantSerial, VariantDef>
     Tys: TreeMap<TySerial, TyDef>
-    VarLevels: TreeMap<Serial, Level>
     MainFunOpt: FunSerial option
     Logs: (NameResLog * Loc) list }
 
@@ -283,8 +278,6 @@ type private ScopeCtx =
     NewFunSet: TreeSet<FunSerial>
     NewVariants: TreeMap<VariantSerial, VariantDef>
 
-    /// Vars/funs and levels.
-    NewVarLevels: (Serial * Level) list
     NewVarMeta: TreeMap<VarSerial, IsStatic * Linkage>
 
     MainFunOpt: FunSerial option
@@ -322,7 +315,6 @@ let private emptyScopeCtx: ScopeCtx =
     NewFuns = []
     NewFunSet = TMap.empty funSerialCompare
     NewVariants = TMap.empty variantSerialCompare
-    NewVarLevels = []
     NewVarMeta = TMap.empty varSerialCompare
     MainFunOpt = None
     Tys = TMap.empty compare
@@ -385,10 +377,6 @@ let private addVar varSerial (varDef: VarDef) (scopeCtx: ScopeCtx) : ScopeCtx =
   { scopeCtx with
       NewVars = (varSerial, varDef) :: scopeCtx.NewVars
 
-      NewVarLevels =
-        (varSerialToInt varSerial, scopeCtx.Level)
-        :: scopeCtx.NewVarLevels
-
       // Store metadata separately not to be overridden on late definition.
       NewVarMeta =
         match varDef.IsStatic, varDef.Linkage with
@@ -400,11 +388,7 @@ let private addVar varSerial (varDef: VarDef) (scopeCtx: ScopeCtx) : ScopeCtx =
 let private addFunDef funSerial funDef (scopeCtx: ScopeCtx) : ScopeCtx =
   { scopeCtx with
       NewFuns = (funSerial, funDef) :: scopeCtx.NewFuns
-      NewFunSet = scopeCtx.NewFunSet |> TSet.add funSerial
-
-      NewVarLevels =
-        (funSerialToInt funSerial, scopeCtx.Level)
-        :: scopeCtx.NewVarLevels }
+      NewFunSet = scopeCtx.NewFunSet |> TSet.add funSerial }
 
 let private addVariantDef variantSerial variantDef (scopeCtx: ScopeCtx) : ScopeCtx =
   { scopeCtx with
