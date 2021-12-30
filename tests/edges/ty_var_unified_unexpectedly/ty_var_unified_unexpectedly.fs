@@ -1,7 +1,7 @@
 module rec ty_var_unified_unexpectedly.Program
 
-// Explicitly named type variables such as `'T` shouldn't unify.
-// In F# it's allowed with warning. I hope milone-lang to reject this as error.
+// Explicitly named type variables such as `'T` can't unify to another type.
+// In F# it's allowed with warning.
 
 let f () : 'T =
   // this unify 'T = int but shouldn't.

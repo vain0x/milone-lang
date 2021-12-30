@@ -249,8 +249,6 @@ let private ofMirResult (mirCtx: MirResult) : CirCtx =
       | UnionTyDef _ -> tyUnion serial []
       | RecordTyDef _ -> tyRecord serial
 
-      | MetaTyDef _ -> unreachable () // Resolved in Typing.
-
     mirCtx.Tys
     |> renameIdents tyDefToName toKey tyCompare
 

@@ -989,7 +989,6 @@ module Symbol =
 
       | TySymbol tySymbol ->
         (match tySymbol with
-         | MetaTySymbol _
          | UnivTySymbol _
          | SynonymTySymbol _ -> None
          | UnionTySymbol tySerial -> Some tySerial

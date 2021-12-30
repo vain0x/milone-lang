@@ -34,6 +34,8 @@
 - ident (identifier)
     - A kind of token. Name of something.
     - Note ident doesn't include `.`s in contrast to name, path or nav.
+- infer type:
+    - Name of `_` type, which is a placeholder of some type to be inferred.
 - init (initialize)
 - lit (literal)
     - A kind of token and expression that represent a specific value.

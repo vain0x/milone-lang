@@ -291,6 +291,10 @@ let private tgTy (docId: DocId) (ty: ATy, ctx: NameCtx) : Ty * NameCtx =
     let loc = toLoc docId pos
     tyError loc, ctx
 
+  | AAppTy ([], Name ("_", pos), [], _) ->
+    let loc = toLoc docId pos
+    Ty(InferTk loc, []), ctx
+
   | AAppTy (quals, name, argTys, pos) ->
     let quals, ctx = (quals, ctx) |> addPath
     let serial, ctx = ctx |> nameCtxAdd name
@@ -330,6 +334,10 @@ let private tgPat (docId: DocId) (pat: APat, ctx: NameCtx) : TPat * NameCtx =
   | ALitPat (lit, pos) ->
     let loc = toLoc docId pos
     TLitPat(lit, loc), ctx
+
+  | AIdentPat (_, Name ("_", pos)) ->
+    let loc = toLoc docId pos
+    TDiscardPat(noTy, loc), ctx
 
   | AIdentPat (vis, name) ->
     let serial, ctx = ctx |> nameCtxAdd name
@@ -727,8 +735,9 @@ let private sumBy count xs =
 let private ocTy (ty: ATy) : int =
   match ty with
   | AMissingTy _ -> 0
-  | AVarTy _name -> 1
+  | AVarTy _ -> 1
 
+  | AAppTy ([], Name ("_", _), [], _) -> 0
   | AAppTy (quals, _name, argTys, _) -> List.length quals + 1 + ocTys argTys
   | ASuffixTy (lTy, _suffix) -> ocTy lTy + 1
   | ATupleTy (itemTys, _) -> ocTys itemTys
@@ -746,7 +755,8 @@ let private ocPat (pat: APat) : int =
   | AMissingPat _
   | ALitPat _ -> 0
 
-  | AIdentPat (_name, _) -> 1
+  | AIdentPat (_, Name ("_", _)) -> 0
+  | AIdentPat _ -> 1
   | AListPat (pats, _) -> ocPats pats
   | ANavPat (l, _, _) -> ocPat l
   | AAppPat (calleePat, argPat, _) -> ocPat calleePat + ocPat argPat

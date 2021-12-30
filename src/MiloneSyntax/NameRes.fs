@@ -75,7 +75,6 @@ let private valueSymbolToSerial symbol =
 
 let private tySymbolToSerial symbol =
   match symbol with
-  | MetaTySymbol s -> s
   | UnivTySymbol s -> s
   | SynonymTySymbol s -> s
   | UnionTySymbol s -> s
@@ -161,7 +160,6 @@ type private NameResState =
     Vars: TreeMap<VarSerial, VarDef>
     Funs: TreeMap<FunSerial, FunDef>
     Variants: TreeMap<VariantSerial, VariantDef>
-    VarLevels: TreeMap<Serial, Level>
     Logs: (NameResLog * Loc) list }
 
 let private sInit (nameCtx: NameCtx) : NameResState =
@@ -170,7 +168,6 @@ let private sInit (nameCtx: NameCtx) : NameResState =
     Vars = emptyVars
     Funs = TMap.empty funSerialCompare
     Variants = TMap.empty variantSerialCompare
-    VarLevels = TMap.empty compare
     Logs = [] }
 
 let private optionMerge first second : _ option =
@@ -238,7 +235,6 @@ let private sMerge (state: NameResState) (scopeCtx: ScopeCtx) : NameResState * _
       Vars = globalVars
       Funs = mapAddEntries scopeCtx.NewFuns state.Funs
       Variants = mapMerge state.Variants scopeCtx.NewVariants
-      VarLevels = mapAddEntries scopeCtx.NewVarLevels state.VarLevels
       Logs = List.append scopeCtx.NewLogs state.Logs },
   localVars
 
@@ -251,7 +247,6 @@ let private sToResult (state: NameResState) : NameResResult =
     Funs = state.Funs
     Variants = state.Variants
     Tys = scopeCtx.Tys
-    VarLevels = state.VarLevels
     MainFunOpt = scopeCtx.MainFunOpt
     Logs = state.Logs }
 
@@ -267,7 +262,6 @@ type NameResResult =
     Funs: TreeMap<FunSerial, FunDef>
     Variants: TreeMap<VariantSerial, VariantDef>
     Tys: TreeMap<TySerial, TyDef>
-    VarLevels: TreeMap<Serial, Level>
     MainFunOpt: FunSerial option
     Logs: (NameResLog * Loc) list }
 
@@ -284,8 +278,6 @@ type private ScopeCtx =
     NewFunSet: TreeSet<FunSerial>
     NewVariants: TreeMap<VariantSerial, VariantDef>
 
-    /// Vars/funs and levels.
-    NewVarLevels: (Serial * Level) list
     NewVarMeta: TreeMap<VarSerial, IsStatic * Linkage>
 
     MainFunOpt: FunSerial option
@@ -323,7 +315,6 @@ let private emptyScopeCtx: ScopeCtx =
     NewFuns = []
     NewFunSet = TMap.empty funSerialCompare
     NewVariants = TMap.empty variantSerialCompare
-    NewVarLevels = []
     NewVarMeta = TMap.empty varSerialCompare
     MainFunOpt = None
     Tys = TMap.empty compare
@@ -386,10 +377,6 @@ let private addVar varSerial (varDef: VarDef) (scopeCtx: ScopeCtx) : ScopeCtx =
   { scopeCtx with
       NewVars = (varSerial, varDef) :: scopeCtx.NewVars
 
-      NewVarLevels =
-        (varSerialToInt varSerial, scopeCtx.Level)
-        :: scopeCtx.NewVarLevels
-
       // Store metadata separately not to be overridden on late definition.
       NewVarMeta =
         match varDef.IsStatic, varDef.Linkage with
@@ -401,11 +388,7 @@ let private addVar varSerial (varDef: VarDef) (scopeCtx: ScopeCtx) : ScopeCtx =
 let private addFunDef funSerial funDef (scopeCtx: ScopeCtx) : ScopeCtx =
   { scopeCtx with
       NewFuns = (funSerial, funDef) :: scopeCtx.NewFuns
-      NewFunSet = scopeCtx.NewFunSet |> TSet.add funSerial
-
-      NewVarLevels =
-        (funSerialToInt funSerial, scopeCtx.Level)
-        :: scopeCtx.NewVarLevels }
+      NewFunSet = scopeCtx.NewFunSet |> TSet.add funSerial }
 
 let private addVariantDef variantSerial variantDef (scopeCtx: ScopeCtx) : ScopeCtx =
   { scopeCtx with
@@ -712,8 +695,7 @@ let private resolveTy ty loc scopeCtx =
     match ty with
     | Ty (ErrorTk _, _) -> ty, scopeCtx
 
-    | Ty (UnresolvedTk ([], serial, loc), []) when (scopeCtx |> findName serial) = "_" -> tyMeta serial loc, scopeCtx
-
+    // `__nativeType<T>`
     | Ty (UnresolvedTk ([], serial, _), [ Ty (UnresolvedTk ([], itemSerial, _), _) ]) when
       (scopeCtx |> findName serial = "__nativeType")
       ->
@@ -725,7 +707,7 @@ let private resolveTy ty loc scopeCtx =
       let name = scopeCtx |> findName serial
 
       match resolveLocalTyName name scopeCtx with
-      | Some (UnivTySymbol tySerial) -> tyMeta tySerial loc, scopeCtx
+      | Some (UnivTySymbol tySerial) -> tyUniv tySerial name loc, scopeCtx
 
       | _ when scopeCtx |> isTyDeclScope ->
         let scopeCtx =
@@ -738,7 +720,7 @@ let private resolveTy ty loc scopeCtx =
           scopeCtx
           |> addLocalTy (UnivTySymbol serial) (UniversalTyDef(name, loc))
 
-        tyMeta serial loc, scopeCtx
+        tyUniv serial name loc, scopeCtx
 
     | Ty (UnresolvedTk (quals, serial, loc), tys) ->
       let name = scopeCtx |> findName serial
@@ -748,8 +730,6 @@ let private resolveTy ty loc scopeCtx =
       let symbolOpt, scopeCtx = resolveNavTy quals name scopeCtx
 
       match symbolOpt with
-      | Some (UnivTySymbol tySerial) -> tyMeta tySerial loc, scopeCtx
-
       | Some (SynonymTySymbol tySerial) ->
         // Arity check. #tyaritycheck
         match scopeCtx.Tys |> TMap.tryFind tySerial with
@@ -788,7 +768,7 @@ let private resolveTy ty loc scopeCtx =
 
         | _ -> tyRecord tySerial loc, scopeCtx
 
-      | Some (MetaTySymbol _) -> unreachable (serial, name, loc)
+      | Some (UnivTySymbol _) -> unreachable () // UnivTySymbol is only resolved from UnresolvedVarTk.
 
       | None ->
         match tyPrimOfName name tys with
@@ -1176,18 +1156,16 @@ let private doResolveVarInPat serial name ty loc (ctx: ScopeCtx) =
 
 let private nameResVarPat vis serial ty loc ctx =
   let name = ctx |> findName serial
+  assert (name <> "_")
 
-  if name = "_" then
-    TDiscardPat(ty, loc), ctx
-  else
-    match ctx |> resolveLocalVarName name with
-    | Some (VariantSymbol variantSerial) -> TVariantPat(variantSerial, ty, loc), ctx
+  match ctx |> resolveLocalVarName name with
+  | Some (VariantSymbol variantSerial) -> TVariantPat(variantSerial, ty, loc), ctx
 
-    | _ ->
-      let varSerial, ctx =
-        doResolveVarInPat serial name ty loc ctx
+  | _ ->
+    let varSerial, ctx =
+      doResolveVarInPat serial name ty loc ctx
 
-      TVarPat(vis, varSerial, ty, loc), ctx
+    TVarPat(vis, varSerial, ty, loc), ctx
 
 let private nameResNavPat pat ctx =
   /// Resolves a pattern as scope.

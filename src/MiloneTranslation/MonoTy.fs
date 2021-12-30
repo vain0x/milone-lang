@@ -103,7 +103,6 @@ let private ofHirCtx (hirCtx: HirCtx) : MtCtx =
              match tyDef with
              | UnionTyDef (ident, _, _, _) -> UnionTk tySerial, ident
              | RecordTyDef (ident, _, _, _) -> RecordTk tySerial, ident
-             | MetaTyDef _ -> unreachable () // Resolved in Typing.
 
            tyNames |> TMap.add (Ty(tk, [])) name)
          (TMap.empty tyCompare)
@@ -528,9 +527,7 @@ let private mtDefs (hirCtx: HirCtx) (mtCtx: MtCtx) =
                  (ident, ty, loc), ctx)
 
              let tyDef = M.RecordTyDef(ident, fields, repr, loc)
-             tys |> TMap.add tySerial tyDef, ctx
-
-           | MetaTyDef _ -> unreachable ()) // Resolve in Typing.
+             tys |> TMap.add tySerial tyDef, ctx)
          (TMap.empty compare, mtCtx)
 
   let variants =

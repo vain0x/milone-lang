@@ -48,20 +48,25 @@ let private tkEncode tk : int =
   | NativeFunTk -> just 13
 
   | MetaTk (tySerial, _) -> pair 20 tySerial
+  | UnivTk (tySerial, _, _) -> pair 24 tySerial
   | SynonymTk tySerial -> pair 21 tySerial
   | UnionTk (tySerial, _) -> pair 22 tySerial
   | RecordTk (tySerial, _) -> pair 23 tySerial
 
   | NativeTypeTk _
+  | InferTk _
   | UnresolvedTk _
   | UnresolvedVarTk _ -> unreachable ()
 
 let tkCompare l r : int =
   match l, r with
   | NativeTypeTk l, NativeTypeTk r -> compare l r
-
   | NativeTypeTk _, _ -> -1
   | _, NativeTypeTk _ -> 1
+
+  | InferTk _, InferTk _ -> 0
+  | InferTk _, _ -> -1
+  | _, InferTk _ -> 1
 
   | UnresolvedTk (lQuals, lSerial, _), UnresolvedTk (rQuals, rSerial, _) ->
     pairCompare (listCompare compare) compare (lQuals, lSerial) (rQuals, rSerial)
@@ -91,9 +96,11 @@ let tkDisplay getTyName tk =
   | NativeFunTk -> "__nativeFun"
   | NativeTypeTk _ -> "__nativeType"
   | MetaTk (tySerial, _) -> getTyName tySerial
+  | UnivTk (_, name, _) -> name
   | SynonymTk tySerial -> getTyName tySerial
   | RecordTk (tySerial, _) -> getTyName tySerial
   | UnionTk (tySerial, _) -> getTyName tySerial
+  | InferTk _ -> "_"
   | UnresolvedTk (_, serial, _) -> "?" + string serial
   | UnresolvedVarTk (serial, _) -> "'" + string serial
 
@@ -179,7 +186,11 @@ let tySubst (substMeta: TySerial -> Ty option) ty =
     | Ty (MetaTk (tySerial, _), _) ->
       match substMeta tySerial with
       | Some ty -> go ty
+      | None -> ty
 
+    | Ty (UnivTk (tySerial, _, _), _) ->
+      match substMeta tySerial with
+      | Some ty -> go ty
       | None -> ty
 
     | Ty (_, []) -> ty
@@ -225,10 +236,19 @@ let tyExpandSynonyms (expand: TySerial -> TyDef option) ty : Ty =
 /// For example, `let f x = (let g = f in g x)` will have too generic type
 /// without this checking (according to TaPL).
 let tyGeneralize (isOwned: TySerial -> bool) (ty: Ty) : TyScheme =
-  let fvs =
-    tyCollectFreeVars ty |> List.filter isOwned
+  let collectMetaAndUniv ty =
+    let rec go acc ty =
+      match ty with
+      | Ty (MetaTk (serial, _), _) -> serial :: acc
+      | Ty (UnivTk (serial, _, _), _) -> serial :: acc
+      | Ty (_, tyArgs) -> tyArgs |> List.fold go acc
 
-  TyScheme(fvs, ty)
+    go [] ty |> listUnique compare
+
+  let tyVars =
+    collectMetaAndUniv ty |> List.filter isOwned
+
+  TyScheme(tyVars, ty)
 
 /// Converts a type to human readable string.
 let tyDisplay getTyName ty =
@@ -268,6 +288,7 @@ let tyDisplay getTyName ty =
       | Some name -> "{" + name + "}@" + Loc.toString loc
       | None -> "{?" + string tySerial + "}@" + Loc.toString loc
 
+    | Ty (UnivTk (_, name, _), _) -> name
     | Ty (SynonymTk tySerial, args) -> nominal tySerial args
     | Ty (UnionTk (tySerial, _), args) -> nominal tySerial args
     | Ty (RecordTk (tySerial, _), args) -> nominal tySerial args
@@ -282,81 +303,6 @@ let tyDisplay getTyName ty =
         tk + "<" + args + ">"
 
   go 0 ty
-
-/// Generates a unique name from a type.
-///
-/// Must be used after successful Typing.
-let tyMangle (ty: Ty, memo: TreeMap<Ty, string>) : string * TreeMap<Ty, string> =
-  let rec go ty ctx =
-    let (Ty (tk, tyArgs)) = ty
-
-    let mangleList tys ctx =
-      (tys, ctx)
-      |> stMap (fun (ty, ctx) -> ctx |> go ty)
-
-    let fixedGeneric (name: string) =
-      let tyArgs, ctx = mangleList tyArgs ctx
-      S.concat "" tyArgs + name, ctx
-
-    let variadicGeneric (name: string) =
-      let arity = List.length tyArgs
-      let tyArgs, ctx = mangleList tyArgs ctx
-      S.concat "" tyArgs + (name + string arity), ctx
-
-    let doMangle () : string * TreeMap<_, _> =
-      match tk with
-      | IntTk flavor -> cIntegerTyPascalName flavor, ctx
-      | FloatTk flavor -> cFloatTyPascalName flavor, ctx
-      | BoolTk -> "Bool", ctx
-      | CharTk -> "Char", ctx
-      | StrTk -> "String", ctx
-
-      | MetaTk _
-      | ObjTk -> "Object", ctx
-
-      | TupleTk when List.isEmpty tyArgs -> "Unit", ctx
-      | TupleTk -> variadicGeneric "Tuple"
-
-      | ListTk -> fixedGeneric "List"
-
-      | VoidTk -> "Void", ctx
-      | NativePtrTk IsConst -> fixedGeneric "ConstPtr"
-      | NativePtrTk IsMut -> fixedGeneric "MutPtr"
-      | NativeFunTk -> variadicGeneric "NativeFun"
-      | NativeTypeTk name -> name, ctx
-
-      | FunTk ->
-        let arity, argTys, resultTy = tyToArgList ty
-
-        let argTys, ctx = mangleList argTys ctx
-        let resultTy, ctx = ctx |> go resultTy
-
-        let funTy =
-          (argTys |> S.concat "")
-          + resultTy
-          + "Fun"
-          + string arity
-
-        funTy, ctx
-
-      | UnionTk _
-      | RecordTk _ -> unreachable () // Must be stored in memo.
-
-      | ErrorTk _
-      | SynonymTk _ -> unreachable () // Resolved in Typing.
-
-      | UnresolvedTk _
-      | UnresolvedVarTk _ -> unreachable () // Resolved in NameRes..
-
-    // Memoization.
-    match TMap.tryFind ty ctx with
-    | Some name -> name, ctx
-
-    | None ->
-      let name, ctx = doMangle ()
-      name, TMap.add ty name ctx
-
-  go ty memo
 
 // -----------------------------------------------
 // Context-free functions
@@ -467,8 +413,6 @@ let unifyAfterExpandMeta lTy rTy tySerial otherTy loc =
     UnifyAfterExpandMetaResult.Error(Log.TyUnify(TyUnifyLog.SelfRec, lTy, rTy), loc)
 
   | _ -> UnifyAfterExpandMetaResult.OkBind
-
-let typingSubst tys binding ty : Ty = tySubst (tyExpandMeta tys binding) ty
 
 let typingExpandSynonyms tys ty =
   tyExpandSynonyms (fun tySerial -> tys |> TMap.tryFind tySerial) ty
