@@ -153,9 +153,6 @@ type TyDecl =
 /// Type definition.
 [<NoEquality; NoComparison>]
 type TyDef =
-  /// Bound type variable.
-  | MetaTyDef of Ty
-
   | UniversalTyDef of Ident * Loc
 
   | SynonymTyDef of Ident * tyArgs: TySerial list * Ty * Loc
@@ -550,7 +547,6 @@ let moduleSynonymSerialCompare l r =
 
 let tyDefToName tyDef =
   match tyDef with
-  | MetaTyDef _ -> "{bound}"
   | UniversalTyDef (name, _) -> name
   | SynonymTyDef (name, _, _, _) -> name
   | UnionTyDef (name, _, _, _) -> name

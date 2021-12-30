@@ -48,6 +48,7 @@ type private TyCtx =
     Tys: TreeMap<TySerial, TyDef>
 
     TyLevels: TreeMap<TySerial, Level>
+    MetaTys: TreeMap<TySerial, Ty>
     QuantifiedTys: TreeSet<TySerial>
     Level: Level
 
@@ -76,6 +77,7 @@ let private newTyCtx (nr: NameResResult) : TyCtx =
     MainFunOpt = nr.MainFunOpt
     Tys = nr.Tys
     TyLevels = TMap.empty compare
+    MetaTys = TMap.empty compare
     QuantifiedTys = TSet.empty compare
     Level = 0
     NewFuns = []
@@ -236,9 +238,7 @@ let private validateLit ctx lit loc =
 // And meta type resolution by substitution or degeneration.
 
 let private expandMeta (ctx: TyCtx) tySerial : Ty option =
-  match ctx.Tys |> TMap.tryFind tySerial with
-  | Some (MetaTyDef ty) -> Some ty
-  | _ -> None
+  ctx.MetaTys |> TMap.tryFind tySerial
 
 let private substTy (ctx: TyCtx) ty : Ty = tySubst (expandMeta ctx) ty
 
@@ -246,10 +246,8 @@ let private substTy (ctx: TyCtx) ty : Ty = tySubst (expandMeta ctx) ty
 /// Unbound meta tys are degenerated, i.e. replaced with unit.
 let private substOrDegenerateTy (ctx: TyCtx) ty =
   let substMeta tySerial =
-    match ctx.Tys |> TMap.tryFind tySerial with
-    | Some (MetaTyDef ty) -> Some ty
-
-    | Some (UniversalTyDef _) -> None
+    match ctx.MetaTys |> TMap.tryFind tySerial with
+    | Some ty -> Some ty
 
     | _ ->
       // Degenerate unless quantified.
@@ -299,7 +297,7 @@ let private unifyTy (ctx: TyCtx) loc (lTy: Ty) (rTy: Ty) : TyCtx =
 
         | UnifyAfterExpandMetaResult.OkBind ->
           { ctx with
-              Tys = ctx.Tys |> TMap.add tySerial (MetaTyDef otherTy)
+              MetaTys = ctx.MetaTys |> TMap.add tySerial otherTy
               TyLevels = levelUp ctx tySerial otherTy }
 
         | UnifyAfterExpandMetaResult.Error (log, loc) -> addLog ctx log loc
@@ -1816,7 +1814,6 @@ let private synonymCycleCheck (tyCtx: TyCtx) =
     { ExpandMetaOrSynonymTy =
         fun tySerial ->
           match findTy tySerial tyCtx with
-          | MetaTyDef bodyTy -> Some bodyTy
           | SynonymTyDef (_, _, bodyTy, _) -> Some bodyTy
           | _ -> None
 
@@ -1939,22 +1936,11 @@ let infer (modules: TProgram, nameRes: NameResResult) : TProgram * TirCtx =
                       funs |> TMap.add funSerial funDef)
                     ctx.Funs
 
-             let tys =
-               ctx.Tys
-               |> TMap.filter (fun _ tyDef ->
-                 match tyDef with
-                 | MetaTyDef _ -> false
-
-                 | UniversalTyDef _
-                 | SynonymTyDef _
-                 | UnionTyDef _
-                 | RecordTyDef _ -> true)
-
              let ctx =
                { ctx with
                    Funs = funs
                    NewFuns = []
-                   Tys = tys }
+                   MetaTys = TMap.empty compare }
 
              stmts, staticVars, localVars, ctx
 
@@ -1981,7 +1967,6 @@ let infer (modules: TProgram, nameRes: NameResResult) : TProgram * TirCtx =
       |> TMap.fold
            (fun acc tySerial tyDef ->
              match tyDef with
-             | MetaTyDef _
              | UniversalTyDef _
              | SynonymTyDef _ -> acc
 
