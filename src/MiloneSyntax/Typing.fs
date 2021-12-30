@@ -624,7 +624,12 @@ let private resolveTraitBounds (ctx: TyCtx) =
 
   let ctx = go ctx
 
-  { ctx with Logs = List.append logs ctx.Logs }
+  assert (not (List.isEmpty ctx.Logs)
+          || List.isEmpty ctx.TraitBounds)
+
+  { ctx with
+      Logs = List.append logs ctx.Logs
+      TraitBounds = [] }
 
 // -----------------------------------------------
 // Others
