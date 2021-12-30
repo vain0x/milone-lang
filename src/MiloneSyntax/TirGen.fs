@@ -291,6 +291,10 @@ let private tgTy (docId: DocId) (ty: ATy, ctx: NameCtx) : Ty * NameCtx =
     let loc = toLoc docId pos
     tyError loc, ctx
 
+  | AAppTy ([], Name ("_", pos), [], _) ->
+    let loc = toLoc docId pos
+    Ty(InferTk loc, []), ctx
+
   | AAppTy (quals, name, argTys, pos) ->
     let quals, ctx = (quals, ctx) |> addPath
     let serial, ctx = ctx |> nameCtxAdd name
@@ -731,8 +735,9 @@ let private sumBy count xs =
 let private ocTy (ty: ATy) : int =
   match ty with
   | AMissingTy _ -> 0
-  | AVarTy _name -> 1
+  | AVarTy _ -> 1
 
+  | AAppTy ([], Name ("_", _), [], _) -> 0
   | AAppTy (quals, _name, argTys, _) -> List.length quals + 1 + ocTys argTys
   | ASuffixTy (lTy, _suffix) -> ocTy lTy + 1
   | ATupleTy (itemTys, _) -> ocTys itemTys

@@ -695,6 +695,10 @@ let private resolveAscriptionTy ctx ascriptionTy =
     match ty with
     | Ty (ErrorTk _, _) -> ty, ctx
 
+    | Ty (InferTk loc, _) ->
+      let serial, ctx = freshTySerial ctx
+      tyMeta serial loc, ctx
+
     | Ty (MetaTk (serial, loc), _) when ctx.TyLevels |> TMap.containsKey serial |> not ->
       let ctx =
         { ctx with TyLevels = ctx.TyLevels |> TMap.add serial ctx.Level }

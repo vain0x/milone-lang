@@ -712,8 +712,7 @@ let private resolveTy ty loc scopeCtx =
     match ty with
     | Ty (ErrorTk _, _) -> ty, scopeCtx
 
-    | Ty (UnresolvedTk ([], serial, loc), []) when (scopeCtx |> findName serial) = "_" -> tyMeta serial loc, scopeCtx
-
+    // `__nativeType<T>`
     | Ty (UnresolvedTk ([], serial, _), [ Ty (UnresolvedTk ([], itemSerial, _), _) ]) when
       (scopeCtx |> findName serial = "__nativeType")
       ->
@@ -1176,7 +1175,7 @@ let private doResolveVarInPat serial name ty loc (ctx: ScopeCtx) =
 
 let private nameResVarPat vis serial ty loc ctx =
   let name = ctx |> findName serial
-  assert(name <> "_")
+  assert (name <> "_")
 
   match ctx |> resolveLocalVarName name with
   | Some (VariantSymbol variantSerial) -> TVariantPat(variantSerial, ty, loc), ctx

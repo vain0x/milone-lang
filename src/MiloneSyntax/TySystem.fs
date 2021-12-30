@@ -53,15 +53,19 @@ let private tkEncode tk : int =
   | RecordTk (tySerial, _) -> pair 23 tySerial
 
   | NativeTypeTk _
+  | InferTk _
   | UnresolvedTk _
   | UnresolvedVarTk _ -> unreachable ()
 
 let tkCompare l r : int =
   match l, r with
   | NativeTypeTk l, NativeTypeTk r -> compare l r
-
   | NativeTypeTk _, _ -> -1
   | _, NativeTypeTk _ -> 1
+
+  | InferTk _, InferTk _ -> 0
+  | InferTk _, _ -> -1
+  | _, InferTk _ -> 1
 
   | UnresolvedTk (lQuals, lSerial, _), UnresolvedTk (rQuals, rSerial, _) ->
     pairCompare (listCompare compare) compare (lQuals, lSerial) (rQuals, rSerial)
@@ -94,6 +98,7 @@ let tkDisplay getTyName tk =
   | SynonymTk tySerial -> getTyName tySerial
   | RecordTk (tySerial, _) -> getTyName tySerial
   | UnionTk (tySerial, _) -> getTyName tySerial
+  | InferTk _ -> "_"
   | UnresolvedTk (_, serial, _) -> "?" + string serial
   | UnresolvedVarTk (serial, _) -> "'" + string serial
 
@@ -343,7 +348,8 @@ let tyMangle (ty: Ty, memo: TreeMap<Ty, string>) : string * TreeMap<Ty, string> 
       | RecordTk _ -> unreachable () // Must be stored in memo.
 
       | ErrorTk _
-      | SynonymTk _ -> unreachable () // Resolved in Typing.
+      | SynonymTk _
+      | InferTk _ -> unreachable () // Resolved in Typing.
 
       | UnresolvedTk _
       | UnresolvedVarTk _ -> unreachable () // Resolved in NameRes..
