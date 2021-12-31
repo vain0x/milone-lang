@@ -1075,26 +1075,29 @@ type private TaCtx =
   { Funs: TreeMap<FunSerial, FunDef>
     QuantifiedTys: TreeSet<TySerial> }
 
-let private processFunExpr (ctx: TaCtx) funSerial useSiteTy loc : HExpr =
+let private processFunExpr (ctx: TaCtx) itself funSerial useSiteTy loc : HExpr =
   let def: FunDef = ctx.Funs |> mapFind funSerial
   let (TyScheme (tyVars, genericTy)) = def.Ty
 
-  let binding = unifyTy genericTy useSiteTy loc
+  if List.isEmpty tyVars then
+    itself
+  else
+    let binding = unifyTy genericTy useSiteTy loc
 
-  let tyArgs =
-    tyVars
-    |> List.map (fun tySerial ->
-      binding
-      |> TMap.tryFind tySerial
-      |> Option.defaultWith (fun () ->
-        if ctx.QuantifiedTys |> TSet.contains tySerial then
-          tyMeta tySerial loc
-        else
-          // This should be unreachable but does happen in some cases,
-          // e.g. `fun x y -> x - y` (tests/primitives/tuple_arg).
-          tyUnit))
+    let tyArgs =
+      tyVars
+      |> List.map (fun tySerial ->
+        binding
+        |> TMap.tryFind tySerial
+        |> Option.defaultWith (fun () ->
+          if ctx.QuantifiedTys |> TSet.contains tySerial then
+            tyMeta tySerial loc
+          else
+            // This should be unreachable but does happen in some cases,
+            // e.g. `fun x y -> x - y` (tests/primitives/tuple_arg).
+            tyUnit))
 
-  HFunExpr(funSerial, useSiteTy, tyArgs, loc)
+    HFunExpr(funSerial, useSiteTy, tyArgs, loc)
 
 let private taExpr (ctx: TaCtx) (expr: HExpr) : HExpr =
   let onExpr expr = taExpr ctx expr
@@ -1109,7 +1112,7 @@ let private taExpr (ctx: TaCtx) (expr: HExpr) : HExpr =
 
   | HFunExpr (funSerial, useSiteTy, tyArgs, loc) ->
     assert (List.isEmpty tyArgs) // No computed.
-    processFunExpr ctx funSerial useSiteTy loc
+    processFunExpr ctx expr funSerial useSiteTy loc
 
   | HMatchExpr (cond, arms, ty, loc) ->
     let cond = onExpr cond
