@@ -1068,8 +1068,6 @@ let private unifyTy (lTy: Ty) (rTy: Ty) loc : TreeMap<TySerial, Ty> =
 
         | UnifyAfterExpandMetaResult.Error _ -> binding
 
-    | UnifyExpandSynonym _ -> unreachable () // Resolved in Typing.
-
   go lTy rTy loc emptyBinding
 
 [<RequireQualifiedAccess; NoEquality; NoComparison>]

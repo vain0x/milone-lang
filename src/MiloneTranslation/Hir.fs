@@ -943,7 +943,6 @@ type UnifyResult =
   | UnifyOkWithStack of (Ty * Ty) list
   | UnifyError of Loc
   | UnifyExpandMeta of metaSerial: TySerial * other: Ty
-  | UnifyExpandSynonym of synonymSerial: TySerial * synonymArgs: Ty list * other: Ty
 
 let unifyNext (lTy: Ty) (rTy: Ty) (loc: Loc) : UnifyResult =
   let mismatchError () = UnifyError loc
