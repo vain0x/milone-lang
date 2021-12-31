@@ -51,7 +51,7 @@ let private tyPrimOfName name tys =
 
   | "list", [ itemTy ] -> Some(tyList itemTy)
 
-  | "voidptr", [] -> Ty(NativePtrTk IsMut, [ Ty(VoidTk, []) ]) |> Some
+  | "voidptr", [] -> Ty(VoidPtrTk, []) |> Some
   | "nativeptr", [ itemTy ] -> Ty(NativePtrTk IsMut, [ itemTy ]) |> Some
   | "__constptr", [ itemTy ] -> Ty(NativePtrTk IsConst, [ itemTy ]) |> Some
 

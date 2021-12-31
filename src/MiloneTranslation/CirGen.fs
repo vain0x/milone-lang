@@ -600,7 +600,7 @@ let private cgTyIncomplete (ctx: CirCtx) (ty: Ty) : CTy * CirCtx =
   | ListTk, [ itemTy ] -> genIncompleteListTyDecl ctx itemTy
   | ListTk, _ -> unreachable ()
 
-  | VoidTk, _ -> CVoidTy, ctx
+  | VoidPtrTk, _ -> CPtrTy CVoidTy, ctx
   | NativePtrTk isMut, [ itemTy ] -> cgNativePtrTy ctx isMut itemTy
   | NativePtrTk _, _ -> unreachable ()
   | NativeFunTk, _ -> cgNativeFunTy ctx tyArgs
@@ -637,7 +637,7 @@ let private cgTyComplete (ctx: CirCtx) (ty: Ty) : CTy * CirCtx =
     genIncompleteListTyDecl ctx itemTy
   | ListTk, _ -> unreachable ()
 
-  | VoidTk, _ -> CVoidTy, ctx
+  | VoidPtrTk, _ -> CPtrTy CVoidTy, ctx
 
   | NativePtrTk isMut, [ itemTy ] -> cgNativePtrTy ctx isMut itemTy
   | NativePtrTk _, _ -> unreachable ()

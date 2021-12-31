@@ -206,7 +206,7 @@ let private trdTy isDirect (ctx: TrdCtx) ty : TrdCtx =
     | CharTk
     | StrTk
     | ObjTk
-    | VoidTk
+    | VoidPtrTk
     | MetaTk _ ->
       assert (List.isEmpty tyArgs)
       ctx
@@ -390,14 +390,14 @@ let private tsmTy (ctx: TsmCtx) ty =
 
     match tk with
     | BoolTk
-    | CharTk
-    | VoidTk -> 1, ctx
+    | CharTk -> 1, ctx
 
     | IntTk flavor -> intFlavorToBytes flavor, ctx
     | FloatTk flavor -> floatFlavorToBytes flavor, ctx
 
     | ObjTk
     | ListTk
+    | VoidPtrTk
     | NativePtrTk _
     | NativeFunTk -> 8, ctx
 

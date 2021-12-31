@@ -52,7 +52,7 @@ type Tk =
   | ListTk
 
   // FFI types.
-  | VoidTk
+  | VoidPtrTk
   | NativePtrTk of nativePtrIsMut: IsMut
   | NativeFunTk
   | NativeTypeTk of cCode: string
@@ -710,7 +710,7 @@ let private tkEncode tk : int =
   | TupleTk -> just 8
   | ListTk -> just 10
 
-  | VoidTk -> just 11
+  | VoidPtrTk -> just 11
   | NativePtrTk isMut -> pair 12 (isMutToInt isMut)
   | NativeFunTk -> just 13
 
@@ -742,7 +742,7 @@ let tkDisplay getTyName tk =
   | FunTk -> "fun"
   | TupleTk -> "tuple"
   | ListTk -> "list"
-  | VoidTk -> "void"
+  | VoidPtrTk -> "voidptr"
   | NativePtrTk IsMut -> "nativeptr"
   | NativePtrTk IsConst -> "__constptr"
   | NativeFunTk -> "__nativeFun"
@@ -884,7 +884,7 @@ let tyMangle (ty: Ty, memo: TreeMap<Ty, string>) : string * TreeMap<Ty, string> 
 
       | ListTk -> fixedGeneric "List"
 
-      | VoidTk -> "Void", ctx
+      | VoidPtrTk -> "VoidPtr", ctx
       | NativePtrTk IsConst -> fixedGeneric "ConstPtr"
       | NativePtrTk IsMut -> fixedGeneric "MutPtr"
       | NativeFunTk -> variadicGeneric "NativeFun"

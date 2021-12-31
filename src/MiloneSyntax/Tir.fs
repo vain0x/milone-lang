@@ -73,7 +73,7 @@ type Tk =
   | ListTk
 
   // FFI types.
-  | VoidTk
+  | VoidPtrTk
   | NativePtrTk of nativePtrIsMut: IsMut
   | NativeFunTk
   | NativeTypeTk of cCode: string

@@ -260,6 +260,7 @@ let private toBoxMode (ty: Ty) : BoxMode =
   | Ty (CharTk, _)
   | Ty (ObjTk, _)
   | Ty (ListTk, _)
+  | Ty (VoidPtrTk, _)
   | Ty (NativePtrTk _, _)
   | Ty (NativeFunTk, _) -> BoxMode.Cast
 
@@ -1125,6 +1126,7 @@ let private mirifyCallCompareExpr ctx itself l r ty loc =
 
   | Ty ((IntTk (IntFlavor (Signed, I64))
         | IntTk (IntFlavor (Signed, IPtr))
+        | VoidPtrTk
         | NativePtrTk _),
         _) -> MBinaryExpr(MInt64CompareBinary, l, r, tyInt, loc), ctx
 
@@ -1144,6 +1146,7 @@ let private mirifyCallToIntExpr ctx itself flavor arg ty loc =
   | Ty ((IntTk _
         | FloatTk _
         | CharTk
+        | VoidPtrTk
         | NativePtrTk _),
         _) -> MUnaryExpr(MIntOfScalarUnary flavor, arg, Ty(IntTk flavor, []), loc), ctx
 

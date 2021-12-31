@@ -422,6 +422,7 @@ let private doResolveTraitBound (ctx: TyCtx) theTrait loc : TyCtx =
     | Ty (BoolTk, _)
     | Ty (CharTk, _)
     | Ty (StrTk, _)
+    | Ty (VoidPtrTk, _)
     | Ty (NativePtrTk _, _) -> true
     | _ -> false
 
@@ -567,6 +568,7 @@ let private doResolveTraitBound (ctx: TyCtx) theTrait loc : TyCtx =
     | Ty (FloatTk _, [])
     | Ty (CharTk, [])
     | Ty (StrTk, [])
+    | Ty (VoidPtrTk, _)
     | Ty (NativePtrTk _, _) -> ctx
 
     | _ -> addBoundError ctx
@@ -588,6 +590,7 @@ let private doResolveTraitBound (ctx: TyCtx) theTrait loc : TyCtx =
     | Ty (IntTk (IntFlavor (_, IPtr)), [])
     | Ty (ObjTk, [])
     | Ty (ListTk, _)
+    | Ty (VoidPtrTk, _)
     | Ty (NativePtrTk _, _)
     | Ty (NativeFunTk, _) -> ctx
 
