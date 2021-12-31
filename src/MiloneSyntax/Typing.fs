@@ -1380,28 +1380,55 @@ let private inferNavExpr ctx l (r: Ident, rLoc) loc =
 
   | _ -> fail ctx
 
-let private inferAppExpr ctx itself callee arg loc =
-  let inferUntypedExprs ctx exprs =
-    (exprs, ctx)
-    |> stMap (fun (expr, ctx) ->
-      let expr, _, ctx =
-        match expr with
-        | TNodeExpr (TTyPlaceholderEN, [], ty, loc) ->
-          let ty, ctx = resolveAscriptionTy ctx ty
-          TNodeExpr(TTyPlaceholderEN, [], ty, loc), ty, ctx
+let private inferUntypedExprs ctx exprs =
+  (exprs, ctx)
+  |> stMap (fun (expr, ctx) ->
+    let expr, _, ctx =
+      match expr with
+      | TNodeExpr (TTyPlaceholderEN, [], ty, loc) ->
+        let ty, ctx = resolveAscriptionTy ctx ty
+        TNodeExpr(TTyPlaceholderEN, [], ty, loc), ty, ctx
 
-        | _ -> inferExpr ctx None expr
+      | _ -> inferExpr ctx None expr
 
-      expr, ctx)
+    expr, ctx)
 
-  // Special forms must be handled before recursion.
-  match callee, arg with
+let private inferAppExpr ctx itself =
+  let callee, arg, loc =
+    match itself with
+    | TNodeExpr (TAppEN, [ callee; arg ], _, loc) -> callee, arg, loc
+    | _ -> unreachable ()
+
+  let targetTy, ctx = ctx |> freshMetaTyForExpr itself
+
+  let callee, calleeTy, ctx = inferExpr ctx None callee
+
+  let arg, argTy, ctx =
+    let tyAsFunArg ty =
+      match ty with
+      | Ty (FunTk, it :: _) -> Some it
+      | _ -> None
+
+    inferExpr ctx (tyAsFunArg calleeTy) arg
+
+  let ctx =
+    unifyTy ctx loc calleeTy (tyFun argTy targetTy)
+
+  txApp callee arg targetTy loc, targetTy, ctx
+
+let private inferPrimAppExpr ctx itself =
+  let prim, arg, loc =
+    match itself with
+    | TNodeExpr (TAppEN, [ TPrimExpr (prim, _, loc); arg ], _, _) -> prim, arg, loc
+    | _ -> unreachable ()
+
+  match prim, arg with
   // __discriminant Variant
-  | TPrimExpr (TPrim.Discriminant, _, loc), TVariantExpr (variantSerial, _, _) ->
+  | TPrim.Discriminant, TVariantExpr (variantSerial, _, _) ->
     TNodeExpr(TDiscriminantEN variantSerial, [], tyInt, loc), tyInt, ctx
 
   // printfn "..."
-  | TPrimExpr (TPrim.Printfn, _, _), TLitExpr (StrLit format, _) ->
+  | TPrim.Printfn, TLitExpr (StrLit format, _) ->
     let funTy, targetTy =
       match analyzeFormat format with
       | (Ty (FunTk, [ _; targetTy ])) as funTy -> funTy, targetTy
@@ -1410,17 +1437,17 @@ let private inferAppExpr ctx itself callee arg loc =
     txApp (TPrimExpr(TPrim.Printfn, funTy, loc)) arg targetTy loc, targetTy, ctx
 
   // __nativeFun f
-  | TPrimExpr (TPrim.NativeFun, _, loc), TFunExpr (funSerial, _, _) ->
+  | TPrim.NativeFun, TFunExpr (funSerial, _, _) ->
     let targetTy, ctx = castFunAsNativeFun funSerial ctx
     TNodeExpr(TNativeFunEN funSerial, [], targetTy, loc), targetTy, ctx
 
   // __nativeFun "funName"
-  | TPrimExpr (TPrim.NativeFun, _, loc), TLitExpr (StrLit funName, _) ->
+  | TPrim.NativeFun, TLitExpr (StrLit funName, _) ->
     let targetTy, ctx = ctx |> freshMetaTyForExpr itself
     TNodeExpr(TCallNativeEN funName, [], targetTy, loc), targetTy, ctx
 
   // __nativeFun ("funName", arg1, arg2, ...)
-  | TPrimExpr (TPrim.NativeFun, _, loc), TNodeExpr (TTupleEN, TLitExpr (StrLit funName, _) :: args, _, _) ->
+  | TPrim.NativeFun, TNodeExpr (TTupleEN, TLitExpr (StrLit funName, _) :: args, _, _) ->
     // Type of native function is unchecked. Type ascriptions must be written correctly.
     let targetTy, ctx = ctx |> freshMetaTyForExpr itself
     let args, ctx = inferUntypedExprs ctx args
@@ -1428,50 +1455,32 @@ let private inferAppExpr ctx itself callee arg loc =
     TNodeExpr(TCallNativeEN funName, args, targetTy, loc), targetTy, ctx
 
   // __nativeExpr "code"
-  | TPrimExpr (TPrim.NativeExpr, _, loc), TLitExpr (StrLit code, _) ->
+  | TPrim.NativeExpr, TLitExpr (StrLit code, _) ->
     let targetTy, ctx = ctx |> freshMetaTyForExpr itself
     TNodeExpr(TNativeExprEN code, [], targetTy, loc), targetTy, ctx
 
   // __nativeExpr ("code", args...)
-  | TPrimExpr (TPrim.NativeExpr, _, loc), TNodeExpr (TTupleEN, TLitExpr (StrLit code, _) :: args, _, _) ->
+  | TPrim.NativeExpr, TNodeExpr (TTupleEN, TLitExpr (StrLit code, _) :: args, _, _) ->
     let args, ctx = inferUntypedExprs ctx args
     let targetTy, ctx = ctx |> freshMetaTyForExpr itself
     TNodeExpr(TNativeExprEN code, args, targetTy, loc), targetTy, ctx
 
   // __nativeStmt "code"
-  | TPrimExpr (TPrim.NativeStmt, _, loc), TLitExpr (StrLit code, _) ->
-    TNodeExpr(TNativeStmtEN code, [], tyUnit, loc), tyUnit, ctx
+  | TPrim.NativeStmt, TLitExpr (StrLit code, _) -> TNodeExpr(TNativeStmtEN code, [], tyUnit, loc), tyUnit, ctx
 
   // __nativeStmt ("code", args...)
-  | TPrimExpr (TPrim.NativeStmt, _, loc), TNodeExpr (TTupleEN, TLitExpr (StrLit code, _) :: args, _, _) ->
+  | TPrim.NativeStmt, TNodeExpr (TTupleEN, TLitExpr (StrLit code, _) :: args, _, _) ->
     let args, ctx = inferUntypedExprs ctx args
     TNodeExpr(TNativeStmtEN code, args, tyUnit, loc), tyUnit, ctx
 
   // __nativeDecl "code"
-  | TPrimExpr (TPrim.NativeDecl, _, loc), TLitExpr (StrLit code, _) ->
-    TNodeExpr(TNativeDeclEN code, [], tyUnit, loc), tyUnit, ctx
+  | TPrim.NativeDecl, TLitExpr (StrLit code, _) -> TNodeExpr(TNativeDeclEN code, [], tyUnit, loc), tyUnit, ctx
 
-  | TPrimExpr (TPrim.SizeOfVal, _, loc), _ ->
+  | TPrim.SizeOfVal, _ ->
     let arg, argTy, ctx = inferExpr ctx None arg
     TNodeExpr(TSizeOfValEN, [ TNodeExpr(TAbortEN, [], argTy, exprToLoc arg) ], tyInt, loc), tyInt, ctx
 
-  | _ ->
-    let targetTy, ctx = ctx |> freshMetaTyForExpr itself
-
-    let callee, calleeTy, ctx = inferExpr ctx None callee
-
-    let arg, argTy, ctx =
-      let tyAsFunArg ty =
-        match ty with
-        | Ty (FunTk, it :: _) -> Some it
-        | _ -> None
-
-      inferExpr ctx (tyAsFunArg calleeTy) arg
-
-    let ctx =
-      unifyTy ctx loc calleeTy (tyFun argTy targetTy)
-
-    txApp callee arg targetTy loc, targetTy, ctx
+  | _ -> inferAppExpr ctx itself
 
 let private inferMinusExpr ctx arg loc =
   let arg, argTy, ctx = inferExpr ctx None arg
@@ -1526,6 +1535,47 @@ let private inferAscribeExpr ctx body ascriptionTy loc =
 
   let ctx = unifyTy ctx loc bodyTy ascriptionTy
   body, ascriptionTy, ctx
+
+let private inferNodeExpr ctx expr : TExpr * Ty * TyCtx =
+  let kind, args, loc =
+    match expr with
+    | TNodeExpr (kind, args, _, loc) -> kind, args, loc
+    | _ -> unreachable ()
+
+  let getTy () =
+    match expr with
+    | TNodeExpr (_, _, ty, _) -> ty
+    | _ -> unreachable ()
+
+  match kind, args with
+  | TAppEN, [ TPrimExpr _; _ ] -> inferPrimAppExpr ctx expr
+  | TAppEN, [ _; _ ] -> inferAppExpr ctx expr
+  | TAppEN, _ -> unreachable ()
+
+  | TMinusEN, [ arg ] -> inferMinusExpr ctx arg loc
+  | TMinusEN, _ -> unreachable ()
+  | TIndexEN, [ l; r ] -> inferIndexExpr ctx l r loc
+  | TIndexEN, _ -> unreachable ()
+  | TSliceEN, [ l; r; x ] -> inferSliceExpr ctx l r x loc
+  | TSliceEN, _ -> unreachable ()
+
+  | TTupleEN, _ -> inferTupleExpr ctx args loc
+
+  | TAbortEN, _ -> txAbort ctx loc
+
+  | TAscribeEN, [ expr ] -> inferAscribeExpr ctx expr (getTy ()) loc
+  | TAscribeEN, _ -> unreachable ()
+
+  | TTyPlaceholderEN, _ ->
+    txUnit loc, tyUnit, addError ctx "Type placeholder can appear in argument of __nativeExpr or __nativeStmt." loc
+
+  | TDiscriminantEN _, _
+  | TCallNativeEN _, _
+  | TNativeFunEN _, _
+  | TNativeExprEN _, _
+  | TNativeStmtEN _, _
+  | TNativeDeclEN _, _
+  | TSizeOfValEN, _ -> unreachable ()
 
 let private inferBlockExpr ctx expectOpt (stmts: TStmt list) last =
   let ctx = collectVarsAndFuns ctx stmts
@@ -1639,32 +1689,8 @@ let private inferExpr (ctx: TyCtx) (expectOpt: Ty option) (expr: TExpr) : TExpr 
   | TRecordExpr (baseOpt, fields, _, loc) -> inferRecordExpr ctx expectOpt baseOpt fields loc
   | TMatchExpr (cond, arms, _, loc) -> inferMatchExpr ctx expectOpt expr cond arms loc
   | TNavExpr (receiver, field, _, loc) -> inferNavExpr ctx receiver field loc
-  | TNodeExpr (TAbortEN, _, _, loc) -> txAbort ctx loc
-  | TNodeExpr (TMinusEN, [ arg ], _, loc) -> inferMinusExpr ctx arg loc
-  | TNodeExpr (TAppEN, [ callee; arg ], _, loc) -> inferAppExpr ctx expr callee arg loc
-  | TNodeExpr (TTupleEN, items, _, loc) -> inferTupleExpr ctx items loc
-  | TNodeExpr (TAscribeEN, [ expr ], ascriptionTy, loc) -> inferAscribeExpr ctx expr ascriptionTy loc
-
-  | TNodeExpr (TIndexEN, [ l; r ], _, loc) -> inferIndexExpr ctx l r loc
-  | TNodeExpr (TIndexEN, _, _, _) -> fail ()
-  | TNodeExpr (TSliceEN, [ l; r; x ], _, loc) -> inferSliceExpr ctx l r x loc
-  | TNodeExpr (TSliceEN, _, _, _) -> fail ()
-
+  | TNodeExpr _ -> inferNodeExpr ctx expr
   | TBlockExpr (stmts, last) -> inferBlockExpr ctx expectOpt stmts last
-
-  | TNodeExpr (TTyPlaceholderEN, _, _, loc) ->
-    txUnit loc, tyUnit, addError ctx "Type placeholder can appear in argument of __nativeExpr or __nativeStmt." loc
-
-  | TNodeExpr (TMinusEN, _, _, _)
-  | TNodeExpr (TAscribeEN, _, _, _)
-  | TNodeExpr (TAppEN, _, _, _)
-  | TNodeExpr (TDiscriminantEN _, _, _, _)
-  | TNodeExpr (TCallNativeEN _, _, _, _)
-  | TNodeExpr (TNativeFunEN _, _, _, _)
-  | TNodeExpr (TNativeExprEN _, _, _, _)
-  | TNodeExpr (TNativeStmtEN _, _, _, _)
-  | TNodeExpr (TNativeDeclEN _, _, _, _)
-  | TNodeExpr (TSizeOfValEN, _, _, _) -> unreachable ()
 
 let private inferBlockStmt (ctx: TyCtx) mutuallyRec stmts : TStmt * TyCtx =
   let outerLevel = ctx.Level
