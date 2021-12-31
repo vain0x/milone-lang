@@ -1041,34 +1041,8 @@ type private TyMap = TreeMap<TySerial, TyDef>
 let private emptyBinding: TreeMap<TySerial, Ty> = TMap.empty compare
 
 /// Generates a binding (from meta ty to ty) by unifying.
-let private unifyTy (lTy: Ty) (rTy: Ty) loc : TreeMap<TySerial, Ty> =
-  let expandMeta binding tySerial = binding |> TMap.tryFind tySerial
-
-  let substTy binding ty = tySubst (expandMeta binding) ty
-
-  let rec go lTy rTy loc binding =
-    match unifyNext lTy rTy loc with
-    | UnifyOk
-    | UnifyError _ ->
-      // NOTE: Unification may fail due to auto boxing.
-      //       This is not fatal problem since all type errors are already handled in typing phase.
-      binding
-
-    | UnifyOkWithStack stack -> List.fold (fun binding (l, r) -> go l r loc binding) binding stack
-
-    | UnifyExpandMeta (tySerial, otherTy) ->
-      match expandMeta binding tySerial with
-      | Some ty -> go ty otherTy loc binding
-
-      | None ->
-        match unifyAfterExpandMeta tySerial (substTy binding otherTy) loc with
-        | UnifyAfterExpandMetaResult.OkNoBind -> binding
-
-        | UnifyAfterExpandMetaResult.OkBind -> binding |> TMap.add tySerial otherTy
-
-        | UnifyAfterExpandMetaResult.Error _ -> binding
-
-  go lTy rTy loc emptyBinding
+let private unifyTy (lTy: Ty) (rTy: Ty) : TreeMap<TySerial, Ty> =
+  unifyOneWay (fun binding (tySerial: TySerial) ty -> binding |> TMap.add tySerial ty) emptyBinding lTy rTy
 
 [<RequireQualifiedAccess; NoEquality; NoComparison>]
 type private TaCtx =
@@ -1082,7 +1056,7 @@ let private processFunExpr (ctx: TaCtx) itself funSerial useSiteTy loc : HExpr =
   if List.isEmpty tyVars then
     itself
   else
-    let binding = unifyTy genericTy useSiteTy loc
+    let binding = unifyTy genericTy useSiteTy
 
     let tyArgs =
       tyVars
