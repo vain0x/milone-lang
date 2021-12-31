@@ -308,28 +308,6 @@ let tyDisplay getTyName ty =
 // Context-free functions
 // -----------------------------------------------
 
-let private getLevel tyLevels levelChanges tySerial : Level =
-  match levelChanges |> TMap.tryFind tySerial with
-  | Some level -> level
-  | _ ->
-    tyLevels
-    |> TMap.tryFind tySerial
-    |> Option.defaultValue 0
-
-let private metaTyIsBound tys binding tySerial : bool =
-  TMap.containsKey tySerial binding
-  || (match tys |> TMap.tryFind tySerial with
-      | Some (MetaTyDef _) -> true
-      | _ -> false)
-
-let private tyExpandMeta tys binding tySerial : Ty option =
-  match binding |> TMap.tryFind tySerial with
-  | (Some _) as it -> it
-  | _ ->
-    match tys |> TMap.tryFind tySerial with
-    | Some (MetaTyDef ty) -> Some ty
-    | _ -> None
-
 let doInstantiateTyScheme
   (serial: int)
   (level: Level)

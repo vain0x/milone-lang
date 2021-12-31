@@ -48,8 +48,11 @@ type private TyCtx =
     Tys: TreeMap<TySerial, TyDef>
 
     TyLevels: TreeMap<TySerial, Level>
+    MetaTys: TreeMap<TySerial, Ty>
     QuantifiedTys: TreeSet<TySerial>
     Level: Level
+
+    NewFuns: FunSerial list
 
     /// Funs that are mutually recursive and defined in the current block.
     ///
@@ -74,8 +77,10 @@ let private newTyCtx (nr: NameResResult) : TyCtx =
     MainFunOpt = nr.MainFunOpt
     Tys = nr.Tys
     TyLevels = TMap.empty compare
+    MetaTys = TMap.empty compare
     QuantifiedTys = TSet.empty compare
     Level = 0
+    NewFuns = []
     GrayFuns = TSet.empty funSerialCompare
     GrayInstantiations = TMap.empty funSerialCompare
     TraitBounds = []
@@ -232,10 +237,7 @@ let private validateLit ctx lit loc =
 
 // And meta type resolution by substitution or degeneration.
 
-let private expandMeta (ctx: TyCtx) tySerial : Ty option =
-  match ctx.Tys |> TMap.tryFind tySerial with
-  | Some (MetaTyDef ty) -> Some ty
-  | _ -> None
+let private expandMeta (ctx: TyCtx) tySerial : Ty option = ctx.MetaTys |> TMap.tryFind tySerial
 
 let private substTy (ctx: TyCtx) ty : Ty = tySubst (expandMeta ctx) ty
 
@@ -243,10 +245,8 @@ let private substTy (ctx: TyCtx) ty : Ty = tySubst (expandMeta ctx) ty
 /// Unbound meta tys are degenerated, i.e. replaced with unit.
 let private substOrDegenerateTy (ctx: TyCtx) ty =
   let substMeta tySerial =
-    match ctx.Tys |> TMap.tryFind tySerial with
-    | Some (MetaTyDef ty) -> Some ty
-
-    | Some (UniversalTyDef _) -> None
+    match ctx.MetaTys |> TMap.tryFind tySerial with
+    | Some ty -> Some ty
 
     | _ ->
       // Degenerate unless quantified.
@@ -296,7 +296,7 @@ let private unifyTy (ctx: TyCtx) loc (lTy: Ty) (rTy: Ty) : TyCtx =
 
         | UnifyAfterExpandMetaResult.OkBind ->
           { ctx with
-              Tys = ctx.Tys |> TMap.add tySerial (MetaTyDef otherTy)
+              MetaTys = ctx.MetaTys |> TMap.add tySerial otherTy
               TyLevels = levelUp ctx tySerial otherTy }
 
         | UnifyAfterExpandMetaResult.Error (log, loc) -> addLog ctx log loc
@@ -624,7 +624,12 @@ let private resolveTraitBounds (ctx: TyCtx) =
 
   let ctx = go ctx
 
-  { ctx with Logs = List.append logs ctx.Logs }
+  assert (not (List.isEmpty ctx.Logs)
+          || List.isEmpty ctx.TraitBounds)
+
+  { ctx with
+      Logs = List.append logs ctx.Logs
+      TraitBounds = [] }
 
 // -----------------------------------------------
 // Others
@@ -919,35 +924,42 @@ let private doInferPats ctx pats =
 
   go ctx [] [] pats
 
+let private inferNodePat ctx pat =
+  let kind, argPats, loc =
+    match pat with
+    | TNodePat (kind, argPats, _, loc) -> kind, argPats, loc
+    | _ -> unreachable ()
+
+  let getTy () =
+    match pat with
+    | TNodePat (_, _, ty, _) -> ty
+    | _ -> unreachable ()
+
+  match kind, argPats with
+  | TNilPN, _ -> inferNilPat ctx pat loc
+  | TConsPN, [ l; r ] -> inferConsPat ctx l r loc
+  | TConsPN, _ -> unreachable ()
+
+  | TVariantAppPN variantSerial, [ payloadPat ] -> inferVariantAppPat ctx variantSerial payloadPat loc
+  | TVariantAppPN _, _ -> unreachable ()
+
+  | TTuplePN, _ -> inferTuplePat ctx argPats loc
+
+  | TAbortPN, _ -> inferAbortPat ctx pat loc
+
+  | TAscribePN, [ bodyPat ] -> inferAscribePat ctx bodyPat (getTy ()) loc
+  | TAscribePN, _ -> unreachable ()
+
+  | TAppPN, _ // Error in NameRes.
+  | TNavPN _, _ -> unreachable () // Resolved in NameRes.
+
 let private inferPat ctx pat : TPat * Ty * TyCtx =
   match pat with
   | TLitPat (lit, _) -> inferLitPat ctx pat lit
   | TDiscardPat (_, loc) -> inferDiscardPat ctx pat loc
   | TVarPat (_, varSerial, _, loc) -> inferVarPat ctx varSerial loc
   | TVariantPat (variantSerial, _, loc) -> inferVariantPat ctx variantSerial loc
-
-  | TNodePat (kind, argPats, nodeTy, loc) ->
-    let fail () = unreachable pat
-
-    match kind, argPats with
-    | TNilPN, _ -> inferNilPat ctx pat loc
-
-    | TConsPN, [ l; r ] -> inferConsPat ctx l r loc
-    | TConsPN, _ -> fail ()
-
-    | TVariantAppPN variantSerial, [ payloadPat ] -> inferVariantAppPat ctx variantSerial payloadPat loc
-    | TVariantAppPN _, _ -> fail ()
-
-    | TTuplePN, _ -> inferTuplePat ctx argPats loc
-
-    | TAscribePN, [ bodyPat ] -> inferAscribePat ctx bodyPat nodeTy loc
-    | TAscribePN, _ -> fail ()
-
-    | TAbortPN, _ -> inferAbortPat ctx pat loc
-
-    | TAppPN, _ -> fail () // Error in NameRes.
-    | TNavPN _, _ -> fail () // Resolved in NameRes.
-
+  | TNodePat _ -> inferNodePat ctx pat
   | TAsPat (bodyPat, serial, loc) -> inferAsPat ctx bodyPat serial loc
   | TOrPat (l, r, loc) -> inferOrPat ctx l r loc
 
@@ -1375,28 +1387,55 @@ let private inferNavExpr ctx l (r: Ident, rLoc) loc =
 
   | _ -> fail ctx
 
-let private inferAppExpr ctx itself callee arg loc =
-  let inferUntypedExprs ctx exprs =
-    (exprs, ctx)
-    |> stMap (fun (expr, ctx) ->
-      let expr, _, ctx =
-        match expr with
-        | TNodeExpr (TTyPlaceholderEN, [], ty, loc) ->
-          let ty, ctx = resolveAscriptionTy ctx ty
-          TNodeExpr(TTyPlaceholderEN, [], ty, loc), ty, ctx
+let private inferUntypedExprs ctx exprs =
+  (exprs, ctx)
+  |> stMap (fun (expr, ctx) ->
+    let expr, _, ctx =
+      match expr with
+      | TNodeExpr (TTyPlaceholderEN, [], ty, loc) ->
+        let ty, ctx = resolveAscriptionTy ctx ty
+        TNodeExpr(TTyPlaceholderEN, [], ty, loc), ty, ctx
 
-        | _ -> inferExpr ctx None expr
+      | _ -> inferExpr ctx None expr
 
-      expr, ctx)
+    expr, ctx)
 
-  // Special forms must be handled before recursion.
-  match callee, arg with
+let private inferAppExpr ctx itself =
+  let callee, arg, loc =
+    match itself with
+    | TNodeExpr (TAppEN, [ callee; arg ], _, loc) -> callee, arg, loc
+    | _ -> unreachable ()
+
+  let targetTy, ctx = ctx |> freshMetaTyForExpr itself
+
+  let callee, calleeTy, ctx = inferExpr ctx None callee
+
+  let arg, argTy, ctx =
+    let tyAsFunArg ty =
+      match ty with
+      | Ty (FunTk, it :: _) -> Some it
+      | _ -> None
+
+    inferExpr ctx (tyAsFunArg calleeTy) arg
+
+  let ctx =
+    unifyTy ctx loc calleeTy (tyFun argTy targetTy)
+
+  txApp callee arg targetTy loc, targetTy, ctx
+
+let private inferPrimAppExpr ctx itself =
+  let prim, arg, loc =
+    match itself with
+    | TNodeExpr (TAppEN, [ TPrimExpr (prim, _, loc); arg ], _, _) -> prim, arg, loc
+    | _ -> unreachable ()
+
+  match prim, arg with
   // __discriminant Variant
-  | TPrimExpr (TPrim.Discriminant, _, loc), TVariantExpr (variantSerial, _, _) ->
+  | TPrim.Discriminant, TVariantExpr (variantSerial, _, _) ->
     TNodeExpr(TDiscriminantEN variantSerial, [], tyInt, loc), tyInt, ctx
 
   // printfn "..."
-  | TPrimExpr (TPrim.Printfn, _, _), TLitExpr (StrLit format, _) ->
+  | TPrim.Printfn, TLitExpr (StrLit format, _) ->
     let funTy, targetTy =
       match analyzeFormat format with
       | (Ty (FunTk, [ _; targetTy ])) as funTy -> funTy, targetTy
@@ -1405,17 +1444,17 @@ let private inferAppExpr ctx itself callee arg loc =
     txApp (TPrimExpr(TPrim.Printfn, funTy, loc)) arg targetTy loc, targetTy, ctx
 
   // __nativeFun f
-  | TPrimExpr (TPrim.NativeFun, _, loc), TFunExpr (funSerial, _, _) ->
+  | TPrim.NativeFun, TFunExpr (funSerial, _, _) ->
     let targetTy, ctx = castFunAsNativeFun funSerial ctx
     TNodeExpr(TNativeFunEN funSerial, [], targetTy, loc), targetTy, ctx
 
   // __nativeFun "funName"
-  | TPrimExpr (TPrim.NativeFun, _, loc), TLitExpr (StrLit funName, _) ->
+  | TPrim.NativeFun, TLitExpr (StrLit funName, _) ->
     let targetTy, ctx = ctx |> freshMetaTyForExpr itself
     TNodeExpr(TCallNativeEN funName, [], targetTy, loc), targetTy, ctx
 
   // __nativeFun ("funName", arg1, arg2, ...)
-  | TPrimExpr (TPrim.NativeFun, _, loc), TNodeExpr (TTupleEN, TLitExpr (StrLit funName, _) :: args, _, _) ->
+  | TPrim.NativeFun, TNodeExpr (TTupleEN, TLitExpr (StrLit funName, _) :: args, _, _) ->
     // Type of native function is unchecked. Type ascriptions must be written correctly.
     let targetTy, ctx = ctx |> freshMetaTyForExpr itself
     let args, ctx = inferUntypedExprs ctx args
@@ -1423,50 +1462,32 @@ let private inferAppExpr ctx itself callee arg loc =
     TNodeExpr(TCallNativeEN funName, args, targetTy, loc), targetTy, ctx
 
   // __nativeExpr "code"
-  | TPrimExpr (TPrim.NativeExpr, _, loc), TLitExpr (StrLit code, _) ->
+  | TPrim.NativeExpr, TLitExpr (StrLit code, _) ->
     let targetTy, ctx = ctx |> freshMetaTyForExpr itself
     TNodeExpr(TNativeExprEN code, [], targetTy, loc), targetTy, ctx
 
   // __nativeExpr ("code", args...)
-  | TPrimExpr (TPrim.NativeExpr, _, loc), TNodeExpr (TTupleEN, TLitExpr (StrLit code, _) :: args, _, _) ->
+  | TPrim.NativeExpr, TNodeExpr (TTupleEN, TLitExpr (StrLit code, _) :: args, _, _) ->
     let args, ctx = inferUntypedExprs ctx args
     let targetTy, ctx = ctx |> freshMetaTyForExpr itself
     TNodeExpr(TNativeExprEN code, args, targetTy, loc), targetTy, ctx
 
   // __nativeStmt "code"
-  | TPrimExpr (TPrim.NativeStmt, _, loc), TLitExpr (StrLit code, _) ->
-    TNodeExpr(TNativeStmtEN code, [], tyUnit, loc), tyUnit, ctx
+  | TPrim.NativeStmt, TLitExpr (StrLit code, _) -> TNodeExpr(TNativeStmtEN code, [], tyUnit, loc), tyUnit, ctx
 
   // __nativeStmt ("code", args...)
-  | TPrimExpr (TPrim.NativeStmt, _, loc), TNodeExpr (TTupleEN, TLitExpr (StrLit code, _) :: args, _, _) ->
+  | TPrim.NativeStmt, TNodeExpr (TTupleEN, TLitExpr (StrLit code, _) :: args, _, _) ->
     let args, ctx = inferUntypedExprs ctx args
     TNodeExpr(TNativeStmtEN code, args, tyUnit, loc), tyUnit, ctx
 
   // __nativeDecl "code"
-  | TPrimExpr (TPrim.NativeDecl, _, loc), TLitExpr (StrLit code, _) ->
-    TNodeExpr(TNativeDeclEN code, [], tyUnit, loc), tyUnit, ctx
+  | TPrim.NativeDecl, TLitExpr (StrLit code, _) -> TNodeExpr(TNativeDeclEN code, [], tyUnit, loc), tyUnit, ctx
 
-  | TPrimExpr (TPrim.SizeOfVal, _, loc), _ ->
+  | TPrim.SizeOfVal, _ ->
     let arg, argTy, ctx = inferExpr ctx None arg
     TNodeExpr(TSizeOfValEN, [ TNodeExpr(TAbortEN, [], argTy, exprToLoc arg) ], tyInt, loc), tyInt, ctx
 
-  | _ ->
-    let targetTy, ctx = ctx |> freshMetaTyForExpr itself
-
-    let callee, calleeTy, ctx = inferExpr ctx None callee
-
-    let arg, argTy, ctx =
-      let tyAsFunArg ty =
-        match ty with
-        | Ty (FunTk, it :: _) -> Some it
-        | _ -> None
-
-      inferExpr ctx (tyAsFunArg calleeTy) arg
-
-    let ctx =
-      unifyTy ctx loc calleeTy (tyFun argTy targetTy)
-
-    txApp callee arg targetTy loc, targetTy, ctx
+  | _ -> inferAppExpr ctx itself
 
 let private inferMinusExpr ctx arg loc =
   let arg, argTy, ctx = inferExpr ctx None arg
@@ -1521,6 +1542,47 @@ let private inferAscribeExpr ctx body ascriptionTy loc =
 
   let ctx = unifyTy ctx loc bodyTy ascriptionTy
   body, ascriptionTy, ctx
+
+let private inferNodeExpr ctx expr : TExpr * Ty * TyCtx =
+  let kind, args, loc =
+    match expr with
+    | TNodeExpr (kind, args, _, loc) -> kind, args, loc
+    | _ -> unreachable ()
+
+  let getTy () =
+    match expr with
+    | TNodeExpr (_, _, ty, _) -> ty
+    | _ -> unreachable ()
+
+  match kind, args with
+  | TAppEN, [ TPrimExpr _; _ ] -> inferPrimAppExpr ctx expr
+  | TAppEN, [ _; _ ] -> inferAppExpr ctx expr
+  | TAppEN, _ -> unreachable ()
+
+  | TMinusEN, [ arg ] -> inferMinusExpr ctx arg loc
+  | TMinusEN, _ -> unreachable ()
+  | TIndexEN, [ l; r ] -> inferIndexExpr ctx l r loc
+  | TIndexEN, _ -> unreachable ()
+  | TSliceEN, [ l; r; x ] -> inferSliceExpr ctx l r x loc
+  | TSliceEN, _ -> unreachable ()
+
+  | TTupleEN, _ -> inferTupleExpr ctx args loc
+
+  | TAbortEN, _ -> txAbort ctx loc
+
+  | TAscribeEN, [ expr ] -> inferAscribeExpr ctx expr (getTy ()) loc
+  | TAscribeEN, _ -> unreachable ()
+
+  | TTyPlaceholderEN, _ ->
+    txUnit loc, tyUnit, addError ctx "Type placeholder can appear in argument of __nativeExpr or __nativeStmt." loc
+
+  | TDiscriminantEN _, _
+  | TCallNativeEN _, _
+  | TNativeFunEN _, _
+  | TNativeExprEN _, _
+  | TNativeStmtEN _, _
+  | TNativeDeclEN _, _
+  | TSizeOfValEN, _ -> unreachable ()
 
 let private inferBlockExpr ctx expectOpt (stmts: TStmt list) last =
   let ctx = collectVarsAndFuns ctx stmts
@@ -1617,6 +1679,9 @@ let private inferLetFunStmt ctx mutuallyRec callee vis argPats body loc =
     | IsRec -> { ctx with GrayFuns = ctx.GrayFuns |> TSet.add callee }
     | _ -> ctx
 
+  let ctx =
+    { ctx with NewFuns = callee :: ctx.NewFuns }
+
   TLetFunStmt(callee, NotRec, vis, argPats, body, loc), ctx
 
 let private inferExpr (ctx: TyCtx) (expectOpt: Ty option) (expr: TExpr) : TExpr * Ty * TyCtx =
@@ -1631,32 +1696,8 @@ let private inferExpr (ctx: TyCtx) (expectOpt: Ty option) (expr: TExpr) : TExpr 
   | TRecordExpr (baseOpt, fields, _, loc) -> inferRecordExpr ctx expectOpt baseOpt fields loc
   | TMatchExpr (cond, arms, _, loc) -> inferMatchExpr ctx expectOpt expr cond arms loc
   | TNavExpr (receiver, field, _, loc) -> inferNavExpr ctx receiver field loc
-  | TNodeExpr (TAbortEN, _, _, loc) -> txAbort ctx loc
-  | TNodeExpr (TMinusEN, [ arg ], _, loc) -> inferMinusExpr ctx arg loc
-  | TNodeExpr (TAppEN, [ callee; arg ], _, loc) -> inferAppExpr ctx expr callee arg loc
-  | TNodeExpr (TTupleEN, items, _, loc) -> inferTupleExpr ctx items loc
-  | TNodeExpr (TAscribeEN, [ expr ], ascriptionTy, loc) -> inferAscribeExpr ctx expr ascriptionTy loc
-
-  | TNodeExpr (TIndexEN, [ l; r ], _, loc) -> inferIndexExpr ctx l r loc
-  | TNodeExpr (TIndexEN, _, _, _) -> fail ()
-  | TNodeExpr (TSliceEN, [ l; r; x ], _, loc) -> inferSliceExpr ctx l r x loc
-  | TNodeExpr (TSliceEN, _, _, _) -> fail ()
-
+  | TNodeExpr _ -> inferNodeExpr ctx expr
   | TBlockExpr (stmts, last) -> inferBlockExpr ctx expectOpt stmts last
-
-  | TNodeExpr (TTyPlaceholderEN, _, _, loc) ->
-    txUnit loc, tyUnit, addError ctx "Type placeholder can appear in argument of __nativeExpr or __nativeStmt." loc
-
-  | TNodeExpr (TMinusEN, _, _, _)
-  | TNodeExpr (TAscribeEN, _, _, _)
-  | TNodeExpr (TAppEN, _, _, _)
-  | TNodeExpr (TDiscriminantEN _, _, _, _)
-  | TNodeExpr (TCallNativeEN _, _, _, _)
-  | TNodeExpr (TNativeFunEN _, _, _, _)
-  | TNodeExpr (TNativeExprEN _, _, _, _)
-  | TNodeExpr (TNativeStmtEN _, _, _, _)
-  | TNodeExpr (TNativeDeclEN _, _, _, _)
-  | TNodeExpr (TSizeOfValEN, _, _, _) -> unreachable ()
 
 let private inferBlockStmt (ctx: TyCtx) mutuallyRec stmts : TStmt * TyCtx =
   let outerLevel = ctx.Level
@@ -1805,7 +1846,6 @@ let private synonymCycleCheck (tyCtx: TyCtx) =
     { ExpandMetaOrSynonymTy =
         fun tySerial ->
           match findTy tySerial tyCtx with
-          | MetaTyDef bodyTy -> Some bodyTy
           | SynonymTyDef (_, _, bodyTy, _) -> Some bodyTy
           | _ -> None
 
@@ -1832,7 +1872,7 @@ let private synonymCycleCheck (tyCtx: TyCtx) =
                // from running into stack overflow.
                let tys =
                  tys
-                 |> TMap.add tySerial (SynonymTyDef(ident, tyArgs, tyUnit, loc))
+                 |> TMap.add tySerial (SynonymTyDef(ident, tyArgs, tyError loc, loc))
 
                let logs = (Log.TySynonymCycleError, loc) :: logs
                tys, logs
@@ -1849,6 +1889,23 @@ let private synonymCycleCheck (tyCtx: TyCtx) =
 
 let infer (modules: TProgram, nameRes: NameResResult) : TProgram * TirCtx =
   let ctx = newTyCtx nameRes
+
+  let ctx = synonymCycleCheck ctx
+
+  let substOrDegenerate ctx ty =
+    ty
+    |> substOrDegenerateTy ctx
+    |> expandSynonyms ctx
+
+  let substOrDegenerateVars ctx vars =
+    vars
+    |> TMap.map (fun _ (varDef: VarDef) ->
+      let ty = substOrDegenerate ctx varDef.Ty
+      { varDef with Ty = ty })
+
+  let substOrDegenerateStmts ctx stmts =
+    stmts
+    |> List.map (fun stmt -> stmtMap (substOrDegenerate ctx) stmt)
 
   let modules, ctx =
     let oldStaticVars = ctx.Vars
@@ -1870,11 +1927,13 @@ let infer (modules: TProgram, nameRes: NameResResult) : TProgram * TirCtx =
 
            let ctx = { ctx with Vars = vars }
 
-           let ctx = collectVarsAndFuns ctx m.Stmts
-
            let stmts, ctx =
+             let ctx = collectVarsAndFuns ctx m.Stmts
+
              m.Stmts
              |> List.mapFold (fun ctx stmt -> inferStmt ctx NotRec stmt) ctx
+
+           let ctx = ctx |> resolveTraitBounds
 
            let staticVars, localVars =
              ctx.Vars
@@ -1890,6 +1949,37 @@ let infer (modules: TProgram, nameRes: NameResResult) : TProgram * TirCtx =
                       staticVars, localVars)
                   (emptyVars, emptyVars)
 
+           // Resolve meta types.
+           let stmts, staticVars, localVars, ctx =
+             let stmts = substOrDegenerateStmts ctx stmts
+             let staticVars = substOrDegenerateVars ctx staticVars
+             let localVars = substOrDegenerateVars ctx localVars
+
+             let funs =
+               ctx.NewFuns
+               |> List.fold
+                    (fun funs funSerial ->
+                      let funDef: FunDef = funs |> mapFind funSerial
+
+                      let (TyScheme (tyVars, ty)) = funDef.Ty
+                      let ty = substOrDegenerate ctx ty
+
+                      let funDef =
+                        { funDef with Ty = TyScheme(tyVars, ty) }
+
+                      funs |> TMap.add funSerial funDef)
+                    ctx.Funs
+
+             let ctx =
+               { ctx with
+                   Funs = funs
+                   NewFuns = []
+                   MetaTys = TMap.empty compare
+                   TyLevels = TMap.empty compare
+                   QuantifiedTys = TMap.empty compare }
+
+             stmts, staticVars, localVars, ctx
+
            let m =
              { m with
                  Vars = localVars
@@ -1899,63 +1989,18 @@ let infer (modules: TProgram, nameRes: NameResResult) : TProgram * TirCtx =
            m, ctx)
          ctx
 
-  let ctx = ctx |> resolveTraitBounds
-
-  let ctx = synonymCycleCheck ctx
-
-  // Substitute all types. Unbound types are degenerated here.
-  let substOrDegenerate ty =
-    ty
-    |> substOrDegenerateTy ctx
-    |> expandSynonyms ctx
-
-  let substOrDegenerateVars vars =
-    vars
-    |> TMap.map (fun _ (varDef: VarDef) ->
-      let ty = substOrDegenerate varDef.Ty
-      { varDef with Ty = ty })
-
-  let modules, ctx =
-    modules
-    |> List.mapFold
-         (fun ctx (m: TModule) ->
-           let vars = substOrDegenerateVars m.Vars
-
-           let stmts =
-             m.Stmts
-             |> List.map (fun stmt -> stmtMap substOrDegenerate stmt)
-
-           { m with Vars = vars; Stmts = stmts }, ctx)
-         ctx
-
+  // Expand synonyms.
   let ctx =
-    let vars = substOrDegenerateVars ctx.Vars
-
-    let funs =
-      ctx.Funs
-      |> TMap.map (fun _ (funDef: FunDef) ->
-        let (TyScheme (tyVars, ty)) = funDef.Ty
-        let ty = substOrDegenerate ty
-
-        { funDef with Ty = TyScheme(tyVars, ty) })
-
     let variants =
       ctx.Variants
       |> TMap.map (fun _ (variantDef: VariantDef) ->
-        { variantDef with PayloadTy = substOrDegenerate variantDef.PayloadTy })
+        { variantDef with PayloadTy = expandSynonyms ctx variantDef.PayloadTy })
 
-    { ctx with
-        Vars = vars
-        Funs = funs
-        Variants = variants }
-
-  let ctx =
     let tys =
       ctx.Tys
       |> TMap.fold
            (fun acc tySerial tyDef ->
              match tyDef with
-             | MetaTyDef _
              | UniversalTyDef _
              | SynonymTyDef _ -> acc
 
@@ -1963,7 +2008,7 @@ let infer (modules: TProgram, nameRes: NameResResult) : TProgram * TirCtx =
                let fields =
                  fields
                  |> List.map (fun (name, ty, loc) ->
-                   let ty = substOrDegenerate ty
+                   let ty = expandSynonyms ctx ty
                    name, ty, loc)
 
                acc
@@ -1972,7 +2017,9 @@ let infer (modules: TProgram, nameRes: NameResResult) : TProgram * TirCtx =
              | _ -> acc |> TMap.add tySerial tyDef)
            (TMap.empty compare)
 
-    { ctx with Tys = tys }
+    { ctx with
+        Variants = variants
+        Tys = tys }
 
   let tirCtx = toTirCtx ctx
   modules, tirCtx

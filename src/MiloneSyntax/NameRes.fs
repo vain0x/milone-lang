@@ -968,8 +968,6 @@ let private finishDefineTy tySerial tyArgs tyDecl loc ctx =
     ctx
     |> addTy (RecordTySymbol tySerial) (RecordTyDef(tyName, tyArgs, fields, repr, loc))
 
-  | MetaTyDef _ -> unreachable tyDecl // Bound meta types don't happen in NameRes.
-
 // -----------------------------------------------
 // Collect declarations
 // -----------------------------------------------
