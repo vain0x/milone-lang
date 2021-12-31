@@ -924,35 +924,42 @@ let private doInferPats ctx pats =
 
   go ctx [] [] pats
 
+let private inferNodePat ctx pat =
+  let kind, argPats, loc =
+    match pat with
+    | TNodePat (kind, argPats, _, loc) -> kind, argPats, loc
+    | _ -> unreachable ()
+
+  let getTy () =
+    match pat with
+    | TNodePat (_, _, ty, _) -> ty
+    | _ -> unreachable ()
+
+  match kind, argPats with
+  | TNilPN, _ -> inferNilPat ctx pat loc
+  | TConsPN, [ l; r ] -> inferConsPat ctx l r loc
+  | TConsPN, _ -> unreachable ()
+
+  | TVariantAppPN variantSerial, [ payloadPat ] -> inferVariantAppPat ctx variantSerial payloadPat loc
+  | TVariantAppPN _, _ -> unreachable ()
+
+  | TTuplePN, _ -> inferTuplePat ctx argPats loc
+
+  | TAbortPN, _ -> inferAbortPat ctx pat loc
+
+  | TAscribePN, [ bodyPat ] -> inferAscribePat ctx bodyPat (getTy ()) loc
+  | TAscribePN, _ -> unreachable ()
+
+  | TAppPN, _ // Error in NameRes.
+  | TNavPN _, _ -> unreachable () // Resolved in NameRes.
+
 let private inferPat ctx pat : TPat * Ty * TyCtx =
   match pat with
   | TLitPat (lit, _) -> inferLitPat ctx pat lit
   | TDiscardPat (_, loc) -> inferDiscardPat ctx pat loc
   | TVarPat (_, varSerial, _, loc) -> inferVarPat ctx varSerial loc
   | TVariantPat (variantSerial, _, loc) -> inferVariantPat ctx variantSerial loc
-
-  | TNodePat (kind, argPats, nodeTy, loc) ->
-    let fail () = unreachable pat
-
-    match kind, argPats with
-    | TNilPN, _ -> inferNilPat ctx pat loc
-
-    | TConsPN, [ l; r ] -> inferConsPat ctx l r loc
-    | TConsPN, _ -> fail ()
-
-    | TVariantAppPN variantSerial, [ payloadPat ] -> inferVariantAppPat ctx variantSerial payloadPat loc
-    | TVariantAppPN _, _ -> fail ()
-
-    | TTuplePN, _ -> inferTuplePat ctx argPats loc
-
-    | TAscribePN, [ bodyPat ] -> inferAscribePat ctx bodyPat nodeTy loc
-    | TAscribePN, _ -> fail ()
-
-    | TAbortPN, _ -> inferAbortPat ctx pat loc
-
-    | TAppPN, _ -> fail () // Error in NameRes.
-    | TNavPN _, _ -> fail () // Resolved in NameRes.
-
+  | TNodePat _ -> inferNodePat ctx pat
   | TAsPat (bodyPat, serial, loc) -> inferAsPat ctx bodyPat serial loc
   | TOrPat (l, r, loc) -> inferOrPat ctx l r loc
 
