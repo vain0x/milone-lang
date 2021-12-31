@@ -1041,62 +1041,37 @@ type private TyMap = TreeMap<TySerial, TyDef>
 let private emptyBinding: TreeMap<TySerial, Ty> = TMap.empty compare
 
 /// Generates a binding (from meta ty to ty) by unifying.
-let private unifyTy (lTy: Ty) (rTy: Ty) loc : TreeMap<TySerial, Ty> =
-  let expandMeta binding tySerial = binding |> TMap.tryFind tySerial
-
-  let substTy binding ty = tySubst (expandMeta binding) ty
-
-  let rec go lTy rTy loc binding =
-    match unifyNext lTy rTy loc with
-    | UnifyOk
-    | UnifyError _ ->
-      // NOTE: Unification may fail due to auto boxing.
-      //       This is not fatal problem since all type errors are already handled in typing phase.
-      binding
-
-    | UnifyOkWithStack stack -> List.fold (fun binding (l, r) -> go l r loc binding) binding stack
-
-    | UnifyExpandMeta (tySerial, otherTy) ->
-      match expandMeta binding tySerial with
-      | Some ty -> go ty otherTy loc binding
-
-      | None ->
-        match unifyAfterExpandMeta tySerial (substTy binding otherTy) loc with
-        | UnifyAfterExpandMetaResult.OkNoBind -> binding
-
-        | UnifyAfterExpandMetaResult.OkBind -> binding |> TMap.add tySerial otherTy
-
-        | UnifyAfterExpandMetaResult.Error _ -> binding
-
-    | UnifyExpandSynonym _ -> unreachable () // Resolved in Typing.
-
-  go lTy rTy loc emptyBinding
+let private unifyTy (lTy: Ty) (rTy: Ty) : TreeMap<TySerial, Ty> =
+  unifyOneWay (fun binding (tySerial: TySerial) ty -> binding |> TMap.add tySerial ty) emptyBinding lTy rTy
 
 [<RequireQualifiedAccess; NoEquality; NoComparison>]
 type private TaCtx =
   { Funs: TreeMap<FunSerial, FunDef>
     QuantifiedTys: TreeSet<TySerial> }
 
-let private processFunExpr (ctx: TaCtx) funSerial useSiteTy loc : HExpr =
+let private processFunExpr (ctx: TaCtx) itself funSerial useSiteTy loc : HExpr =
   let def: FunDef = ctx.Funs |> mapFind funSerial
   let (TyScheme (tyVars, genericTy)) = def.Ty
 
-  let binding = unifyTy genericTy useSiteTy loc
+  if List.isEmpty tyVars then
+    itself
+  else
+    let binding = unifyTy genericTy useSiteTy
 
-  let tyArgs =
-    tyVars
-    |> List.map (fun tySerial ->
-      binding
-      |> TMap.tryFind tySerial
-      |> Option.defaultWith (fun () ->
-        if ctx.QuantifiedTys |> TSet.contains tySerial then
-          tyMeta tySerial loc
-        else
-          // This should be unreachable but does happen in some cases,
-          // e.g. `fun x y -> x - y` (tests/primitives/tuple_arg).
-          tyUnit))
+    let tyArgs =
+      tyVars
+      |> List.map (fun tySerial ->
+        binding
+        |> TMap.tryFind tySerial
+        |> Option.defaultWith (fun () ->
+          if ctx.QuantifiedTys |> TSet.contains tySerial then
+            tyMeta tySerial loc
+          else
+            // This should be unreachable but does happen in some cases,
+            // e.g. `fun x y -> x - y` (tests/primitives/tuple_arg).
+            tyUnit))
 
-  HFunExpr(funSerial, useSiteTy, tyArgs, loc)
+    HFunExpr(funSerial, useSiteTy, tyArgs, loc)
 
 let private taExpr (ctx: TaCtx) (expr: HExpr) : HExpr =
   let onExpr expr = taExpr ctx expr
@@ -1111,7 +1086,7 @@ let private taExpr (ctx: TaCtx) (expr: HExpr) : HExpr =
 
   | HFunExpr (funSerial, useSiteTy, tyArgs, loc) ->
     assert (List.isEmpty tyArgs) // No computed.
-    processFunExpr ctx funSerial useSiteTy loc
+    processFunExpr ctx expr funSerial useSiteTy loc
 
   | HMatchExpr (cond, arms, ty, loc) ->
     let cond = onExpr cond

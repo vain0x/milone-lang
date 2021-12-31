@@ -779,18 +779,6 @@ let tyCompare l r =
 
 let tyEqual l r = tyCompare l r = 0
 
-/// Gets if the specified type variable doesn't appear in a type.
-let private tyIsFreeIn ty tySerial : bool =
-  let rec go ty =
-    match ty with
-    | Ty (MetaTk (s, _), _) -> s <> tySerial
-
-    | Ty (_, []) -> true
-
-    | Ty (tk, ty :: tys) -> go ty && go (Ty(tk, tys))
-
-  go ty
-
 /// Gets if the type is monomorphic.
 /// Assume all bound type variables are substituted.
 let tyIsMonomorphic ty : bool =
@@ -937,51 +925,26 @@ let tyMangle (ty: Ty, memo: TreeMap<Ty, string>) : string * TreeMap<Ty, string> 
 // Unification
 // -----------------------------------------------
 
-[<NoEquality; NoComparison>]
-type UnifyResult =
-  | UnifyOk
-  | UnifyOkWithStack of (Ty * Ty) list
-  | UnifyError of Loc
-  | UnifyExpandMeta of metaSerial: TySerial * other: Ty
-  | UnifyExpandSynonym of synonymSerial: TySerial * synonymArgs: Ty list * other: Ty
+// Unification here is one-way, unlike unification for type inference.
+// Unification must succeeds. That is, there is a substitution that holds s(lTy) = rTy.
 
-let unifyNext (lTy: Ty) (rTy: Ty) (loc: Loc) : UnifyResult =
-  let mismatchError () = UnifyError loc
-
-  match lTy, rTy with
-  | Ty (MetaTk _, _), _
-  | _, Ty (MetaTk _, _) ->
+let unifyOneWay folder state (lTy: Ty) (rTy: Ty) =
+  let rec go state lTy rTy =
     match lTy, rTy with
-    | Ty (MetaTk (l, _), _), Ty (MetaTk (r, _), _) when l = r -> UnifyOk
+    | Ty (MetaTk (l, _), _), Ty (MetaTk (r, _), _) when l = r -> state
 
-    | Ty (MetaTk (lSerial, _), _), _ -> UnifyExpandMeta(lSerial, rTy)
-    | _, Ty (MetaTk (rSerial, _), _) -> UnifyExpandMeta(rSerial, lTy)
+    | Ty (MetaTk (tySerial, _), _), _ -> folder state tySerial rTy
+    | _, Ty (MetaTk (_, _), _) -> state // Allowed. (GrayInstantiation ensures the meta type is consistent with lTy.)
 
-    | _ -> unreachable ()
+    | Ty (lTk, lTyArgs), Ty (rTk, rTyArgs) ->
+      assert (tkEqual lTk rTk)
 
-  | Ty (lTk, lTyArgs), Ty (rTk, rTyArgs) when tkEqual lTk rTk ->
-    match lTyArgs, rTyArgs with
-    | [], [] -> UnifyOk
+      let pairs =
+        match listTryZip lTyArgs rTyArgs with
+        | it, [], [] -> it
+        | _ -> unreachable ()
 
-    | _ ->
-      match listTryZip lTyArgs rTyArgs with
-      | tyPairs, [], [] -> UnifyOkWithStack(tyPairs)
-      | _ -> mismatchError ()
+      pairs
+      |> List.fold (fun acc (lTy, rTy) -> go acc lTy rTy) state
 
-  | _ -> mismatchError ()
-
-[<RequireQualifiedAccess>]
-type UnifyAfterExpandMetaResult =
-  | OkNoBind
-  | OkBind
-  | Error of Loc
-
-let unifyAfterExpandMeta tySerial otherTy loc =
-  match otherTy with
-  | Ty (MetaTk (otherSerial, _), _) when otherSerial = tySerial -> UnifyAfterExpandMetaResult.OkNoBind
-
-  | _ when tyIsFreeIn otherTy tySerial |> not ->
-    // ^ Occurrence check.
-    UnifyAfterExpandMetaResult.Error loc
-
-  | _ -> UnifyAfterExpandMetaResult.OkBind
+  go state lTy rTy

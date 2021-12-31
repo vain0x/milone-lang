@@ -311,7 +311,7 @@ let private deriveOnStmt (hirCtx: HirCtx) (ctx: DCtx) stmt : DCtx =
       let equalTy = tyFun2 itemTy itemTy tyBool
 
       let callee =
-        HFunExpr(underlyingFun, tyFun3 equalTy itemTy itemTy tyBool, [], loc)
+        HFunExpr(underlyingFun, tyFun3 equalTy ty ty tyBool, [], loc)
 
       let equalPrim = HPrimExpr(HPrim.Equal, equalTy, loc)
       let l = HVarExpr(lArg, ty, loc)
