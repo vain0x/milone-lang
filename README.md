@@ -11,7 +11,7 @@
 - Documentation
     - Language -> [docs/refs](docs/refs)
     - CLI -> [docs/cli.md](docs/cli.md)
-- Examples -> [examples](examples)
+- Examples -> [tests/examples](tests/examples)
 - Internals -> [internals.md](internals.md)
 
 ## About
