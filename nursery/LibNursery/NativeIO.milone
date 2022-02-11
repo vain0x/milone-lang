@@ -23,6 +23,10 @@ module Span =
     let _, len = span
     len
 
+  let ofString (s: string) : Span =
+    let ptr: __constptr<byte> = __nativeExpr ("(uint8_t *)({0}.str)", s)
+    ptr, unativeint s.Length
+
   // Slice
   // ================
 
@@ -129,6 +133,14 @@ module MutableSpan =
     else
       empty
 
+  let asPtr (span: MutableSpan) : nativeptr<byte> =
+    let ptr, _ = span
+    ptr
+
+  let length (span: MutableSpan) : unativeint =
+    let _, len = span
+    len
+
   // Span (ReadOnly)
   // ================
 
@@ -190,6 +202,92 @@ module MutableSpan =
     assert (offset + 8un <= spanSize)
 
     __nativeStmt ("""*((uint64_t *){0} + {1}) = {2};""", spanPtr, offset, value)
+
+  let copyFrom (src: Span) (dest: MutableSpan) : unit =
+    let srcPtr, srcSize = src
+    let destPtr, destSize = dest
+    assert (srcSize <= destSize)
+
+    __nativeStmt (
+      """
+        memcpy({0}, {1}, {2});
+      """,
+      srcPtr,
+      srcSize,
+      destPtr
+    )
+
+  // ================
+
+  let cloneToString span : string =
+    span |> asReadOnly |> Span.cloneToString
+
+// -----------------------------------------------
+// StringBuf
+// -----------------------------------------------
+
+/// (span, len).
+type StringBuf = private StringBuf of MutableSpan * unativeint
+
+module StringBuf =
+  let empty () : StringBuf = StringBuf(MutableSpan.empty, 0un)
+
+  let allocate (capacity: unativeint) : StringBuf =
+    StringBuf(MutableSpan.allocate capacity, 0un)
+
+  let length (StringBuf (_, len)) = len
+
+  let toString (StringBuf (span, len)) : string = span |> MutableSpan.cloneToString
+
+  // Internals
+  // ================
+
+  let private grow capacity (StringBuf (oldSpan, len)) =
+    assert (len <= capacity)
+
+    let newSpan = MutableSpan.allocate capacity
+
+    newSpan
+    |> MutableSpan.take len
+    |> MutableSpan.copyFrom (oldSpan |> MutableSpan.takeAsReadOnly len)
+
+    StringBuf(newSpan, len)
+
+  let private reserveBy (additionalLen: unativeint) (buf: StringBuf) =
+    let (StringBuf (span, oldLen)) = buf
+    let oldCapacity = MutableSpan.length span
+    let newLen = oldLen + additionalLen
+
+    if newLen <= oldCapacity then
+      buf
+    else
+      let newCapacity =
+        oldCapacity + (oldCapacity >>> 2) + newLen
+
+      grow newCapacity buf
+
+  // Write
+  // ================
+
+  let push (s: string) (buf: StringBuf) : StringBuf =
+    let n = unativeint s.Length
+    let buf = reserveBy n buf
+
+    let (StringBuf (span, oldLen)) = buf
+
+    span
+    |> MutableSpan.skip oldLen
+    |> MutableSpan.copyFrom (Span.ofString s)
+
+    StringBuf(span, oldLen + n)
+
+  let pushChar (c: char) (buf: StringBuf) : StringBuf =
+    let buf = reserveBy 1un buf
+    let (StringBuf (span, oldLen)) = buf
+
+    span |> MutableSpan.writeByte oldLen (byte c)
+
+    StringBuf(span, oldLen + 1un)
 
 // -----------------------------------------------
 // Stream
