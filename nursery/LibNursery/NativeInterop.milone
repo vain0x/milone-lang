@@ -4,6 +4,11 @@ module rec LibNursery.NativeInterop
 
 open LibNursery.Runtime
 
+let private nativeptrSizeOf (p: nativeptr<'T>) : int =
+  __sizeOfVal (__ptrRead (__nativeCast p: __constptr<'T>))
+
+let private constptrSizeOf (p: __constptr<_>) : int = __sizeOfVal (__ptrRead p)
+
 // See also:
 //
 // - https://github.com/dotnet/fsharp/blob/main/src/fsharp/FSharp.Core/nativeptr.fs
@@ -19,7 +24,10 @@ module rec NativePtr =
   let ofVoidPtr (p: voidptr) : nativeptr<_> = __nativeCast p
 
   let add (p: nativeptr<'T>) (i: int) : nativeptr<'T> =
-    __nativeCast (nativeint p + nativeint i * nativeint (sizeOf p))
+    __nativeCast (
+      nativeint p
+      + nativeint i * nativeint (nativeptrSizeOf p)
+    )
 
   let get (p: nativeptr<'T>) (i: int) : 'T =
     __ptrRead (__nativeCast p: __constptr<'T>) i
@@ -45,7 +53,7 @@ module rec NativePtr =
     assert (isNullPtr src |> not)
 
     let _ =
-      memcpy (__nativeCast dest) (__nativeCast src) (unativeint (sizeOf dest))
+      memcpy (__nativeCast dest) (__nativeCast src) (unativeint (nativeptrSizeOf dest))
 
     ()
 
@@ -56,7 +64,7 @@ module rec NativePtr =
     assert (len >= 0)
 
     let _ =
-      memcpy (__nativeCast dest) (__nativeCast src) (unativeint (sizeOf dest * len))
+      memcpy (__nativeCast dest) (__nativeCast src) (unativeint (nativeptrSizeOf dest * len))
 
     ()
 
@@ -66,7 +74,7 @@ module rec NativePtr =
   // =============================================
 
   /// Gets size of the underlying type. (`sizeof(*p)`)
-  let sizeOf (p: nativeptr<'T>) : int = __sizeOfVal (read p: 'T)
+  let sizeOf (p: nativeptr<'T>) : int = nativeptrSizeOf p
 
   let getNullPtr () : nativeptr<_> = __nativeCast (unativeint 0)
 
@@ -82,7 +90,7 @@ module rec ConstPtr =
   let ofObj (p: obj) : __constptr<_> = __nativeCast p
 
   let add (p: __constptr<'T>) (i: int) : __constptr<'T> =
-    __nativeCast (nativeint p + nativeint i * nativeint (sizeOf p))
+    __nativeCast (nativeint p + nativeint i * nativeint (constptrSizeOf p))
 
   let get (p: __constptr<'T>) (i: int) : 'T = __ptrRead p i
   let read (p: __constptr<'T>) : 'T = __ptrRead p 0
@@ -95,7 +103,7 @@ module rec ConstPtr =
   // =============================================
 
   /// Gets size of the underlying type. (`sizeof(*p)`)
-  let sizeOf (p: __constptr<'T>) : int = __sizeOfVal (read p: 'T)
+  let sizeOf (p: __constptr<'T>) : int = constptrSizeOf p
 
   let getNullPtr () : __constptr<_> = __nativeCast (unativeint 0)
 
