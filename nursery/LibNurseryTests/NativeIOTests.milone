@@ -1,0 +1,5 @@
+module rec LibNurseryTests.NativeIOTests
+
+open LibNursery.NativeIO
+
+let testNativeIO () = ()

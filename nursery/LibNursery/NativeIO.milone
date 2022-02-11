@@ -1,0 +1,124 @@
+// IO library: experimental, libc-based, unsafe
+
+module rec LibNursery.NativeIO
+
+open MiloneStd.StdError
+
+// notes: Buffer, Stream are copied from LibHttpServer and shared with CmdLspServer
+
+// -----------------------------------------------
+// Buffer
+// -----------------------------------------------
+
+/// (ptr, capacity)
+type Buffer = nativeptr<byte> * unativeint
+
+module Buffer =
+  let allocate (capacity: unativeint) : Buffer =
+    if capacity = 0un then
+      __nativeCast 1un, 0un
+    else
+      __nativeStmt ("unsigned char *ptr = milone_mem_alloc({0}, sizeof(unsigned char));", capacity)
+      __nativeExpr "ptr", capacity
+
+  /// Converts a buffer to string.
+  ///
+  /// Use this only when the contents of buffer are valid as UTF-8 (not checked).
+  /// Given buffer should never be mutated.
+  let toString (len: unativeint) (buf: Buffer) : string =
+    let ptr, capacity = buf
+    assert (len < capacity)
+    __nativeStmt ("struct String s = str_of_raw_parts({0}, {1});", ptr, len)
+    __nativeExpr "s"
+
+// -----------------------------------------------
+// Stream
+// -----------------------------------------------
+
+/// `FILE *`
+type Stream = nativeptr<__nativeType<FILE>>
+
+module Stream =
+  let getStdin () : Stream = __nativeExpr "stdin"
+  let getStdout () : Stream = __nativeExpr "stdout"
+
+  let flush (output: Stream) : Stream =
+    __nativeStmt ("fflush({0});", output)
+    output
+
+  /// Reads from stream to fill the buffer.
+  ///
+  /// Returns size of read data. (Maybe less than capacity.)
+  let readBlock (buf: Buffer) (input: Stream) : unativeint * Buffer * Stream =
+    let bufPtr, bufSize = buf
+
+    __nativeStmt (
+      """
+        size_t len = fread({1}, 1, (size_t){2}, {0});
+      """,
+      input,
+      bufPtr,
+      bufSize
+    )
+
+    let len: unativeint = __nativeExpr "len"
+    len, buf, input
+
+  /// Reads a block of bytes equal to specified size.
+  ///
+  /// Blocks to wait for the buffer to fill.
+  /// Returns whether read data is of specified size.
+  let readExact (buf: Buffer) (size: unativeint) (input: Stream) : bool * Buffer * Stream =
+    let bufPtr, bufSize = buf
+    assert (size <= bufSize)
+
+    let ok: bool =
+      __nativeExpr (
+        """
+        fread({1}, (size_t){2}, 1, {0}) == 1;
+      """,
+        input,
+        bufPtr,
+        size
+      )
+
+    ok, buf, input
+
+  let readLine (input: Stream) : string option * Stream =
+    __nativeStmt (
+      """
+        char buf[4000] = "";
+        bool ok = fgets(buf, sizeof buf, {0}) != NULL;
+      """,
+      input
+    )
+
+    if __nativeExpr "ok" then
+      let line: string = __nativeExpr "str_of_c_str(buf)"
+      Some line, input
+    else
+      None, input
+
+  let writeExact (ptr: __constptr<byte>) (len: unativeint) (output: Stream) : Stream =
+    if len >= 1un then
+      __nativeStmt (
+        """
+        bool ok = fwrite({1}, {2}, 1, {0}) == 1;
+        if (!ok) {
+          fprintf("ERROR: writeExact\n");
+          exit(1);
+        }
+      """,
+        output,
+        ptr,
+        len
+      )
+
+    output
+
+  let writeString (s: string) (output: Stream) : Stream =
+    let ptr: __constptr<byte> =
+      __nativeExpr ("(unsigned char *)({0}.str)", s)
+
+    let len = unativeint s.Length
+    writeExact ptr len output
