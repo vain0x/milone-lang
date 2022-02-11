@@ -1,0 +1,70 @@
+#!/bin/sh
+# (Only for Linux.)
+# Generate a wrapper script
+# to install milone compiler in bin/
+# so that dev-version milone is available.
+
+set -eu
+
+QUAD='x86_64-unknown-linux-gnu-release'
+MILONE_REPO=$PWD
+MILONE_CLI=$MILONE_REPO/src/MiloneCli
+MILONE_TARGET_DEV=$MILONE_REPO/target/dev
+MILONE_DEV=$MILONE_TARGET_DEV/$QUAD/MiloneCli
+MILONE_TARGET_LATEST=$MILONE_REPO/target/MiloneCli
+MILONE_LATEST=$MILONE_TARGET_LATEST/$QUAD/MiloneCli
+
+
+
+cat >'bin/milone-dev' <<END
+#!/bin/bash
+
+set -eu
+
+if ! test -f $MILONE_DEV
+then
+    echo 'Building milone-dev'
+    MILONE_HOME=$MILONE_REPO \
+        dotnet run --project $MILONE_CLI -- \
+        build -v --target-dir $MILONE_TARGET_DEV --release $MILONE_CLI
+fi
+
+MILONE_HOME=$MILONE_REPO exec $MILONE_DEV "\$@"
+END
+
+chmod +x 'bin/milone-dev'
+
+
+
+cat >'bin/milone-latest' <<END
+#!/bin/bash
+
+set -eu
+
+if ! test -f $MILONE_LATEST
+then
+    echo 'Building milone-latest'
+    MILONE_HOME=$MILONE_REPO \
+        dotnet run --project $MILONE_CLI -- \
+        build -v --target-dir $MILONE_TARGET_LATEST --release $MILONE_CLI
+fi
+
+MILONE_HOME=$MILONE_REPO exec $MILONE_LATEST "\$@"
+END
+
+chmod +x 'bin/milone-latest'
+
+
+
+# .envrc:
+#
+# milone-dev() {
+#     $MILONE_REPO/bin/milone-dev $@
+# }
+# 
+# milone-latest() {
+#     $MILONE_REPO/bin/milone-latest $@
+# }
+# 
+# milone-dev -V >/dev/null 2>/dev/null &
+# milone-latest -V >/dev/null 2>/dev/null &
