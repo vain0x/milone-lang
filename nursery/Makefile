@@ -18,7 +18,8 @@ json_get: ${JSON_GET}
 
 ${LSP_SERVER}: \
 	CmdLspServer/milone_manifest \
-	$(wildcard CmdLspServer/*.milone)
+	$(wildcard CmdLspServer/*.milone) \
+	vendor/sqlite3/sqlite3.o
 	(cd CmdLspServer; ./build)
 
 lsp_server: ${LSP_SERVER}
