@@ -157,7 +157,7 @@ let private cpIntLit flavor (text: string) =
       if a = uint64 0 then
         a
       else
-        a ^^^ (uint64 (int64 (-1))) + uint64 1
+        (a ^^^ (uint64 (int64 (-1)))) + uint64 1
 
     withFlavor true ("0x" + uint64ToHex 1 value)
   else if S.startsWith "0x" text then

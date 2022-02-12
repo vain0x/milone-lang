@@ -49,9 +49,9 @@ module DiagnosticsCache =
            (fun acc (msg, l, r) ->
              let ly, lx = l
              let ry, rx = r
-             let n1 = ly <<< 16 ||| lx
-             let n2 = ry <<< 16 ||| rx
-             let n = uint64 n1 <<< 32 ||| uint64 n2
+             let n1 = (ly <<< 16) ||| lx
+             let n2 = (ry <<< 16) ||| rx
+             let n = (uint64 n1 <<< 32) ||| uint64 n2
 
              acc
              |> cons (string n)

@@ -21,11 +21,11 @@ let signedCases () =
   assert (int (-4s) = -4)
 
   // Bit operations.
-  assert ((1y + 2y + 4y) &&& (2y + 4y + 8y) = (2y + 4y))
+  assert (((1y + 2y + 4y) &&& (2y + 4y + 8y)) = (2y + 4y))
 
-  assert ((1s + 2s + 4s) ||| (2s + 4s + 8s) = (1s + 2s + 4s + 8s))
+  assert (((1s + 2s + 4s) ||| (2s + 4s + 8s)) = (1s + 2s + 4s + 8s))
 
-  assert ((1L + 2L + 4L) ^^^ (2L + 4L + 8L) = (1L + 8L))
+  assert (((1L + 2L + 4L) ^^^ (2L + 4L + 8L)) = (1L + 8L))
 
   assert (((1y + 4y + 16y) <<< 1) = (2y + 8y + 32y))
   assert (((1s + 4s + 16s) >>> 1) = (0s + 2s + 8s))
@@ -63,11 +63,11 @@ let unsignedCases () =
   assert (11us - 7us = 4us)
 
   // Bit operations.
-  assert ((1uy + 2uy + 4uy) &&& (2uy + 4uy + 8uy) = (2uy + 4uy))
+  assert (((1uy + 2uy + 4uy) &&& (2uy + 4uy + 8uy)) = (2uy + 4uy))
 
-  assert ((1us + 2us + 4us) ||| (2us + 4us + 8us) = (1us + 2us + 4us + 8us))
+  assert (((1us + 2us + 4us) ||| (2us + 4us + 8us)) = (1us + 2us + 4us + 8us))
 
-  assert ((1UL + 2UL + 4UL) ^^^ (2UL + 4UL + 8UL) = (1UL + 8UL))
+  assert (((1UL + 2UL + 4UL) ^^^ (2UL + 4UL + 8UL)) = (1UL + 8UL))
 
   assert (((1uy + 4uy + 16uy) <<< 1) = (2uy + 8uy + 32uy))
   assert (((1us + 4us + 16us) >>> 1) = (0us + 2us + 8us))

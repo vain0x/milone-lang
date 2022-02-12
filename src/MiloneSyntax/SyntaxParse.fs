@@ -121,12 +121,9 @@ type private Bp =
   | AddBp
   | ConsBp
   | XorBp
-  | BitBp
 
-  /// `|>`
-  | PipeBp
-
-  | CompareBp
+  /// `<`, `>`, `=`, `|>`, `|||`, `&&&`
+  | SigilBp
 
   | AndBp
   | OrBp
@@ -134,10 +131,8 @@ type private Bp =
 let private bpNext bp =
   match bp with
   | OrBp -> AndBp
-  | AndBp -> CompareBp
-  | CompareBp -> PipeBp
-  | PipeBp -> BitBp
-  | BitBp -> XorBp
+  | AndBp -> SigilBp
+  | SigilBp -> XorBp
   | XorBp -> ConsBp
   | ConsBp -> AddBp
   | AddBp -> MulBp
@@ -779,24 +774,25 @@ let private parseOps bp basePos l (tokens, errors) : PR<AExpr> =
 
   | AndBp, (AmpAmpToken, opPos) :: tokens -> nextL l LogicalAndBinary opPos (tokens, errors)
 
-  | CompareBp, (EqualToken, opPos) :: tokens -> nextL l EqualBinary opPos (tokens, errors)
-  | CompareBp, (LeftRightToken, opPos) :: tokens -> nextL l NotEqualBinary opPos (tokens, errors)
-  | CompareBp, (LeftAngleToken, opPos) :: tokens -> nextL l LessBinary opPos (tokens, errors)
-  | CompareBp, (LeftEqualToken, opPos) :: tokens -> nextL l LessEqualBinary opPos (tokens, errors)
-  | CompareBp, (RightAngleToken, opPos) :: tokens -> nextL l GreaterBinary opPos (tokens, errors)
-  | CompareBp, (RightEqualToken, opPos) :: tokens -> nextL l GreaterEqualBinary opPos (tokens, errors)
-
-  | PipeBp, (PipeRightToken, opPos) :: tokens -> nextL l PipeBinary opPos (tokens, errors)
-
-  | XorBp, (HatHatHatToken, opPos) :: tokens -> nextR l BitXorBinary opPos (tokens, errors)
-
-  | BitBp, (AmpAmpAmpToken, opPos) :: tokens -> nextL l BitAndBinary opPos (tokens, errors)
-  | BitBp, (PipePipePipeToken, opPos) :: tokens -> nextL l BitOrBinary opPos (tokens, errors)
-  | BitBp, (LeftLeftLeftToken, opPos) :: tokens -> nextL l LeftShiftBinary opPos (tokens, errors)
-  | BitBp, (RightAngleToken, opPos) :: (RightAngleToken, pos2) :: (RightAngleToken, pos3) :: tokens when
+  | SigilBp, (RightAngleToken, opPos) :: (RightAngleToken, pos2) :: (RightAngleToken, pos3) :: tokens when
     canMerge3 opPos pos2 pos3
     ->
     nextL l RightShiftBinary opPos (tokens, errors)
+
+  | SigilBp, (EqualToken, opPos) :: tokens -> nextL l EqualBinary opPos (tokens, errors)
+  | SigilBp, (LeftRightToken, opPos) :: tokens -> nextL l NotEqualBinary opPos (tokens, errors)
+  | SigilBp, (LeftAngleToken, opPos) :: tokens -> nextL l LessBinary opPos (tokens, errors)
+  | SigilBp, (LeftEqualToken, opPos) :: tokens -> nextL l LessEqualBinary opPos (tokens, errors)
+  | SigilBp, (RightAngleToken, opPos) :: tokens -> nextL l GreaterBinary opPos (tokens, errors)
+  | SigilBp, (RightEqualToken, opPos) :: tokens -> nextL l GreaterEqualBinary opPos (tokens, errors)
+
+  | SigilBp, (PipeRightToken, opPos) :: tokens -> nextL l PipeBinary opPos (tokens, errors)
+
+  | SigilBp, (AmpAmpAmpToken, opPos) :: tokens -> nextL l BitAndBinary opPos (tokens, errors)
+  | SigilBp, (PipePipePipeToken, opPos) :: tokens -> nextL l BitOrBinary opPos (tokens, errors)
+  | SigilBp, (LeftLeftLeftToken, opPos) :: tokens -> nextL l LeftShiftBinary opPos (tokens, errors)
+
+  | XorBp, (HatHatHatToken, opPos) :: tokens -> nextR l BitXorBinary opPos (tokens, errors)
 
   | ConsBp, (ColonColonToken, opPos) :: tokens -> nextR l ConsBinary opPos (tokens, errors)
 
