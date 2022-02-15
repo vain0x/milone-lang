@@ -346,7 +346,8 @@ let private cliCompile (host: CliHost) (options: CompileOptions) =
 [<RequireQualifiedAccess; NoEquality; NoComparison>]
 type private BuildOptions =
   { CompileOptions: CompileOptions
-    IsRelease: bool }
+    IsRelease: bool
+    OutputOpt: string option }
 
 let private toBuildOnUnixParams
   (host: CliHost)
@@ -361,6 +362,7 @@ let private toBuildOnUnixParams
   let projectDir = compileOptions.ProjectDir
   let targetDir = compileOptions.TargetDir
   let isRelease = options.IsRelease
+  let outputOpt = options.OutputOpt
   let projectName = ctx.EntryProjectName
 
   let manifest =
@@ -369,6 +371,7 @@ let private toBuildOnUnixParams
   { TargetDir = Path targetDir
     IsRelease = isRelease
     ExeFile = computeExePath (Path targetDir) host.Platform isRelease projectName
+    OutputOpt = outputOpt |> Option.map Path
     CFiles = cFiles |> List.map (fun (name, _) -> Path name)
     MiloneHome = miloneHome
     CSanitize = manifest.CSanitize
@@ -396,6 +399,7 @@ let private toBuildOnWindowsParams
   let compileOptions = options.CompileOptions
   let targetDir = compileOptions.TargetDir
   let isRelease = options.IsRelease
+  let outputOpt = options.OutputOpt
   let projectName = ctx.EntryProjectName
   let projectDir = compileOptions.ProjectDir
 
@@ -410,6 +414,7 @@ let private toBuildOnWindowsParams
     TargetDir = Path targetDir
     IsRelease = isRelease
     ExeFile = computeExePath (Path targetDir) host.Platform isRelease projectName
+    OutputOpt = outputOpt |> Option.map Path
 
     CcList =
       manifest.CcList
@@ -502,7 +507,8 @@ let main _ =
         { ProjectDir = projectDir
           TargetDir = targetDir
           Verbosity = verbosity }
-      IsRelease = false }
+      IsRelease = false
+      OutputOpt = None }
 
   let ctx = compileCtxNew host verbosity projectDir
 
@@ -623,6 +629,7 @@ type private BuildLikeOptions =
   { ProjectDir: ProjectDir
     TargetDir: string
     IsRelease: bool
+    OutputOpt: string option
     Verbosity: Verbosity }
 
 module private BuildLikeOptions =
@@ -633,7 +640,8 @@ module private BuildLikeOptions =
 
   let toBuildOptions (b: BuildLikeOptions) : BuildOptions =
     { CompileOptions = toCompileOptions b
-      IsRelease = b.IsRelease }
+      IsRelease = b.IsRelease
+      OutputOpt = b.OutputOpt }
 
 let private parseBuildLikeOptions host args : BuildLikeOptions * string list =
   let verbosity, args = parseVerbosity host args
@@ -650,6 +658,9 @@ let private parseBuildLikeOptions host args : BuildLikeOptions * string list =
         | _ -> None)
       None
       args
+
+  let outputFileOpt, args =
+    parseOption (fun x -> x = "-o" || x = "--output") args
 
   let projectDirOpt, args =
     let projectDirOpt, args =
@@ -672,10 +683,16 @@ let private parseBuildLikeOptions host args : BuildLikeOptions * string list =
     | Some it -> it
     | None -> defaultTargetDir projectDir
 
+  let outputFileOpt =
+    match outputFileOpt with
+    | Some it -> pathJoin host.WorkDir it |> Some
+    | None -> None
+
   let options: BuildLikeOptions =
     { ProjectDir = pathJoin host.WorkDir projectDir
       TargetDir = pathJoin host.WorkDir targetDir
       IsRelease = Option.defaultValue false isReleaseOpt
+      OutputOpt = outputFileOpt
       Verbosity = verbosity }
 
   options, args

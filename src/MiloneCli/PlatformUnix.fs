@@ -20,6 +20,20 @@ let private escapeShellWord (s: string) : string =
 
 let private quoteShellWord (s: string) : string = "\"" + escapeShellWord s + "\""
 
+/// Formats a string of shell command fragment:
+///   `&& mkdir -p <OUTPUT-DIR> && cp <EXE> <OUTPUT>`
+let private andCopyCommand exeFile outputOpt =
+  match outputOpt with
+  | None -> ""
+
+  | Some output ->
+    "&& mkdir -p $(dirname "
+    + quoteShellWord (Path.toString output)
+    + ") && cp -f "
+    + quoteShellWord (Path.toString exeFile)
+    + " "
+    + quoteShellWord (Path.toString output)
+
 // -----------------------------------------------
 // Interface
 // -----------------------------------------------
@@ -30,6 +44,7 @@ type BuildOnUnixParams =
     TargetDir: Path
     IsRelease: bool
     ExeFile: Path
+    OutputOpt: Path option
     MiloneHome: Path
     CSanitize: string option
     CStd: string
@@ -75,6 +90,7 @@ let buildOnUnix (p: BuildOnUnixParams) : Never =
     + quoteShellWord (Path.toString ninjaFile)
     + " "
     + quoteShellWord (Path.toString p.ExeFile)
+    + andCopyCommand p.ExeFile p.OutputOpt
   )
 
 let runOnUnix (p: BuildOnUnixParams) (args: string list) : Never =
@@ -98,6 +114,7 @@ let runOnUnix (p: BuildOnUnixParams) (args: string list) : Never =
     + quoteShellWord (Path.toString ninjaFile)
     + " 1>&2 && "
     + quoteShellWord (Path.toString exeFile)
+    + andCopyCommand exeFile p.OutputOpt
     + (args
        |> List.map (fun arg -> " " + quoteShellWord arg)
        |> S.concat "")

@@ -88,6 +88,8 @@ Options:
     - Specify target directory.
     - That directory contains intermediate files and output files.
     - Note that `<PROJECT-NAME>` is basename of project directory.
+- `--output <FILE>`, `-o <FILE>`
+    - Copy the output file to specified destination after successful build.
 
 Output:
 
@@ -97,6 +99,7 @@ Output:
     - `<TARGET-DIR>/*.c`: C files (if success)
     - `<TARGET-DIR>/<PROJECT-NAME>.exe`: Executable (if success)
     - where `TARGET-DIR` is specified by `--target-dir` option
+    - `<FILE>` specified by `-o`/`--output` (if success)
     - On linux:
         - `<TARGET-DIR>/build.ninja`
     - On windows:

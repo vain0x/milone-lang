@@ -79,6 +79,7 @@ type BuildOnWindowsParams =
     TargetDir: Path
     IsRelease: bool
     ExeFile: Path
+    OutputOpt: Path option
     // FIXME: support csanitize, cstd, objList
     CcList: Path list
     Libs: string list
@@ -171,6 +172,23 @@ let buildOnWindows (p: BuildOnWindowsParams) : unit =
       + ";Platform=x64"
       "-v:quiet"
       "-nologo" ]
+
+  // Copy output.
+  match p.OutputOpt with
+  | Some output ->
+    p.DirCreate(Path.dirname output)
+
+    // FIXME: use CopyFile API
+    p.RunCommand
+      (Path "cmd.exe")
+      [ "/c"
+        "copy \""
+        + Path.toString p.ExeFile
+        + "\" \""
+        + Path.toString output
+        + "\"" ]
+
+  | None -> ()
 
 let runOnWindows (p: BuildOnWindowsParams) (args: string list) : unit =
   buildOnWindows p
