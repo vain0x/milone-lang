@@ -20,6 +20,7 @@ module rec MiloneTranslation.TailRecOptimizing
 open MiloneShared.Util
 open MiloneStd.StdError
 open MiloneTranslation.Hir
+open MiloneTranslationTypes.HirTypes
 
 [<NoEquality; NoComparison>]
 type private IsTail =

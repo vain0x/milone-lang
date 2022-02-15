@@ -1,15 +1,24 @@
 /// # Lower
 ///
 /// Conversion from TIR to HIR.
-module rec MiloneCli.Lower
+module rec MiloneCliCore.Lower
 
+open MiloneShared.SharedTypes
 open MiloneStd.StdError
 open MiloneStd.StdMap
-open MiloneShared.SharedTypes
 
-module Hir = MiloneTranslation.Hir
-module Tir = MiloneSyntax.Tir
-module Typing = MiloneSyntax.Typing
+module Hir = MiloneTranslationTypes.HirTypes
+module Tir = MiloneSyntaxTypes.TirTypes
+
+module private Hir =
+  let hxUnit loc =
+    Hir.HNodeExpr(Hir.HTupleEN, [], Hir.Ty(Hir.TupleTk, []), loc)
+
+  let varSerialCompare (Hir.VarSerial l) (Hir.VarSerial r) = compare l r
+
+  let funSerialCompare (Hir.FunSerial l) (Hir.FunSerial r) = compare l r
+
+  let variantSerialCompare (Hir.VariantSerial l) (Hir.VariantSerial r) = compare l r
 
 /// Converts a map by transforming key and value.
 let private convertMap f compareFun (map: TreeMap<'K, 'T>) : TreeMap<'H, 'U> =

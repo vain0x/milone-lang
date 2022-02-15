@@ -1,0 +1,16 @@
+<Project Sdk="Microsoft.NET.Sdk">
+
+  <PropertyGroup>
+    <TargetFramework>net6.0</TargetFramework>
+  </PropertyGroup>
+
+  <ItemGroup>
+    <Compile Include="HirTypes.fs" />
+    <Compile Include="TranslationApiTypes.fs" />
+  </ItemGroup>
+
+  <ItemGroup>
+    <ProjectReference Include="..\MiloneShared\MiloneShared.fsproj" />
+  </ItemGroup>
+
+</Project>

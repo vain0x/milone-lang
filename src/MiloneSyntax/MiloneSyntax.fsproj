@@ -1,8 +1,7 @@
-﻿<Project Sdk="Microsoft.NET.Sdk">
+<Project Sdk="Microsoft.NET.Sdk">
 
   <PropertyGroup>
     <TargetFramework>net6.0</TargetFramework>
-    <GenerateDocumentationFile>true</GenerateDocumentationFile>
   </PropertyGroup>
 
   <ItemGroup>
@@ -23,6 +22,7 @@
   <ItemGroup>
     <ProjectReference Include="..\..\milone_libs\MiloneStd\MiloneStd.fsproj" />
     <ProjectReference Include="..\MiloneShared\MiloneShared.fsproj" />
+    <ProjectReference Include="..\MiloneSyntaxTypes\MiloneSyntaxTypes.fsproj" />
   </ItemGroup>
 
 </Project>

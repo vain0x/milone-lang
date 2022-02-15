@@ -9,6 +9,8 @@ open MiloneShared.Util
 open MiloneStd.StdError
 open MiloneStd.StdMap
 open MiloneSyntax.Syntax
+open MiloneSyntaxTypes.SyntaxTypes
+open MiloneSyntaxTypes.SyntaxApiTypes
 
 module ArityCheck = MiloneSyntax.ArityCheck
 module AstBundle = MiloneSyntax.AstBundle
@@ -20,6 +22,7 @@ module SyntaxTokenize = MiloneSyntax.SyntaxTokenize
 module Tir = MiloneSyntax.Tir
 module Typing = MiloneSyntax.Typing
 module TySystem = MiloneSyntax.TySystem
+module TirTypes = MiloneSyntaxTypes.TirTypes
 
 /// `.fs` or `.milone`.
 type private SourceExt = string
@@ -27,11 +30,7 @@ type private SourceExt = string
 /// File extension. Starts with `.`.
 type private FileExt = string
 
-/// `MILONE_HOME`
-type private MiloneHome = string
-
 type private FileExistsFun = string -> bool
-type private WriteLogFun = string -> unit
 
 let private changeExt (ext: FileExt) (path: string) : string =
   assert (ext |> S.startsWith "." && ext <> ".")
@@ -246,18 +245,9 @@ let parseModule (docId: DocId) (kind: ModuleKind) (tokens: TokenizeResult) : Mod
 // -----------------------------------------------
 
 [<RequireQualifiedAccess; NoEquality; NoComparison>]
-type FetchModuleHost =
-  { EntryProjectDir: ProjectDir
-    EntryProjectName: ProjectName
-    MiloneHome: MiloneHome
-
-    ReadTextFile: ReadTextFileFun
-    WriteLog: WriteLogFun }
-
-[<RequireQualifiedAccess; NoEquality; NoComparison>]
 type private FetchModuleCtx =
   { Projects: TreeMap<ProjectName, ProjectDir>
-    Manifest: Manifest.ManifestData
+    Manifest: ManifestData
     TokenizeHost: TokenizeHost
     Host: FetchModuleHost }
 
@@ -269,7 +259,7 @@ let private readManifestFile (readTextFile: ReadTextFileFun) projectDir =
   |> readTextFile
   |> Future.map (Manifest.parseManifestOpt docId)
 
-let private prepareFetchModule (host: FetchModuleHost) : Manifest.ManifestData * FetchModuleFun =
+let private prepareFetchModule (host: FetchModuleHost) : ManifestData * FetchModuleFun =
   let entryProjectName = host.EntryProjectName
   let entryProjectDir = host.EntryProjectDir
   let miloneHome = host.MiloneHome
@@ -345,7 +335,7 @@ let private collectNameResErrors logs : SyntaxError list option =
     |> List.map (fun (log, loc) -> Tir.nameResLogToString log, loc)
     |> Some
 
-let private collectTypingErrors (tirCtx: Tir.TirCtx) : SyntaxError list option =
+let private collectTypingErrors (tirCtx: TirTypes.TirCtx) : SyntaxError list option =
   let logs = tirCtx.Logs
 
   if List.isEmpty logs then
@@ -377,7 +367,7 @@ let syntaxErrorsToString (errors: SyntaxError list) : string =
 type SyntaxCtx =
   private
     { EntryProjectName: ProjectName
-      Manifest: Manifest.ManifestData
+      Manifest: ManifestData
       FetchModule: FetchModuleFun
       WriteLog: WriteLogFun }
 
@@ -399,13 +389,6 @@ module SyntaxCtx =
 // -----------------------------------------------
 // Analysis
 // -----------------------------------------------
-
-type SyntaxLayers = ModuleSyntaxData list list
-
-[<NoEquality; NoComparison>]
-type SyntaxAnalysisResult =
-  | SyntaxAnalysisOk of Tir.TProgram * Tir.TirCtx
-  | SyntaxAnalysisError of SyntaxError list * Tir.TirCtx option
 
 /// Creates a TIR and collects errors
 /// by loading source files and processing.
@@ -447,3 +430,17 @@ let performSyntaxAnalysis (ctx: SyntaxCtx) : SyntaxLayers * SyntaxAnalysisResult
       match collectTypingErrors tirCtx with
       | Some errors -> syntaxLayers, SyntaxAnalysisError(errors, Some tirCtx)
       | None -> syntaxLayers, SyntaxAnalysisOk(modules, tirCtx)
+
+// -----------------------------------------------
+// Interface
+// -----------------------------------------------
+
+let newSyntaxApi () : SyntaxApi =
+  let wrap (ctx: SyntaxCtx) = SyntaxCtx(box ctx)
+  let unwrap (SyntaxCtx ctx) : SyntaxCtx = unbox ctx
+
+  { GetMiloneHomeFromEnv = getMiloneHomeFromEnv
+    SyntaxErrorsToString = syntaxErrorsToString
+    NewSyntaxCtx = fun host -> newSyntaxCtx host |> wrap
+    GetManifest = fun ctx -> ctx |> unwrap |> SyntaxCtx.getManifest
+    PerformSyntaxAnalysis = fun ctx -> ctx |> unwrap |> performSyntaxAnalysis }

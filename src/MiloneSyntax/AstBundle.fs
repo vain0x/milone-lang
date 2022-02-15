@@ -14,6 +14,8 @@ open MiloneStd.StdSet
 open MiloneStd.StdMap
 open MiloneSyntax.Syntax
 open MiloneSyntax.Tir
+open MiloneSyntaxTypes.SyntaxTypes
+open MiloneSyntaxTypes.TirTypes
 
 module S = MiloneStd.StdString
 module TirGen = MiloneSyntax.TirGen

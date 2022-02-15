@@ -25,8 +25,9 @@ module rec MiloneSyntax.TirGen
 open MiloneShared.SharedTypes
 open MiloneShared.Util
 open MiloneStd.StdError
-open MiloneSyntax.Syntax
 open MiloneSyntax.Tir
+open MiloneSyntaxTypes.SyntaxTypes
+open MiloneSyntaxTypes.TirTypes
 
 module S = MiloneStd.StdString
 

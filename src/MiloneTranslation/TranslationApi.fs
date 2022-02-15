@@ -5,7 +5,8 @@ module rec MiloneTranslation.TranslationApi
 
 open MiloneShared.SharedTypes
 open MiloneStd.StdMap
-open MiloneTranslation.Hir
+open MiloneTranslationTypes.HirTypes
+open MiloneTranslationTypes.TranslationApiTypes
 
 module S = MiloneStd.StdString
 module AutoBoxing = MiloneTranslation.AutoBoxing
@@ -21,10 +22,7 @@ module MonoTy = MiloneTranslation.MonoTy
 module RecordRes = MiloneTranslation.RecordRes
 module TailRecOptimizing = MiloneTranslation.TailRecOptimizing
 
-type private WriteLogFun = string -> unit
-type private CCode = string
-
-let codeGenHir (writeLog: WriteLogFun) (modules: Hir.HProgram, hirCtx: HirCtx) : (DocId * CCode) list =
+let private codeGenHir (writeLog: WriteLogFun) (modules: HProgram, hirCtx: HirCtx) : (DocId * CCode) list =
   writeLog "RecordRes"
   let modules, hirCtx = RecordRes.recordRes (modules, hirCtx)
 
@@ -61,14 +59,14 @@ let codeGenHir (writeLog: WriteLogFun) (modules: Hir.HProgram, hirCtx: HirCtx) :
   let modules, hirCtx = Monomorphizing.monify (modules, hirCtx)
 
   // Reduce info of variables.
-  let modules: Hir.HModule2 list =
+  let modules: HModule2 list =
     modules
-    |> List.map (fun (m: Hir.HModule) ->
+    |> List.map (fun (m: HModule) ->
       let varNameMap =
         m.Vars
-        |> TMap.map (fun _ (varDef: Hir.VarDef) -> varDef.Name)
+        |> TMap.map (fun _ (varDef: VarDef) -> varDef.Name)
 
-      let m: Hir.HModule2 =
+      let m: HModule2 =
         { DocId = m.DocId
           Vars = varNameMap
           Stmts = m.Stmts }
@@ -91,3 +89,5 @@ let codeGenHir (writeLog: WriteLogFun) (modules: Hir.HProgram, hirCtx: HirCtx) :
     |> List.map (fun (docId, cir) -> docId, CirDump.cirDump cir)
 
   cFiles
+
+let newTranslationApi () : TranslationApi = { CodeGenHir = codeGenHir }

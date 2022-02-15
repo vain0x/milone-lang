@@ -7,6 +7,9 @@ open MiloneStd.StdMap
 open MiloneStd.StdSet
 open MiloneSyntax.Syntax
 open MiloneSyntax.Tir
+open MiloneSyntaxTypes.SyntaxTypes
+open MiloneSyntaxTypes.TirTypes
+open MiloneSyntaxTypes.SyntaxApiTypes
 
 module U = MiloneLspServer.Util // FIXME: don't depend
 
@@ -367,7 +370,7 @@ let private doBundle (pa: ProjectAnalysis) : BundleResult =
     | Some (LSyntaxData syntaxData) -> Future.just (Some syntaxData)
 
   let syntaxCtx =
-    let host: SyntaxApi.FetchModuleHost =
+    let host: FetchModuleHost =
       { EntryProjectDir = projectDir
         EntryProjectName = projectName
         MiloneHome = miloneHome
@@ -395,13 +398,13 @@ let private doBundle (pa: ProjectAnalysis) : BundleResult =
         v, LSyntaxData syntaxData))
 
   match result with
-  | SyntaxApi.SyntaxAnalysisOk (modules, tirCtx) ->
+  | SyntaxAnalysisOk (modules, tirCtx) ->
     { ProgramOpt = Some(modules, tirCtx)
       Errors = []
       DocVersions = docVersions
       ParseResults = parseResults }
 
-  | SyntaxApi.SyntaxAnalysisError (errors, tirCtxOpt) ->
+  | SyntaxAnalysisError (errors, tirCtxOpt) ->
     { ProgramOpt =
         match tirCtxOpt with
         | Some tirCtx -> Some([], tirCtx)

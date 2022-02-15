@@ -48,9 +48,9 @@ module rec MiloneTranslation.Hoist
 open MiloneShared.SharedTypes
 open MiloneShared.Util
 open MiloneStd.StdError
-open MiloneTranslation.Hir
-
 open MiloneStd.StdMap
+open MiloneTranslation.Hir
+open MiloneTranslationTypes.HirTypes
 
 let private hxDummy: HExpr = hxUnit noLoc
 

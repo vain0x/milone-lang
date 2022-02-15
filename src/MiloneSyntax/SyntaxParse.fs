@@ -68,7 +68,7 @@ module rec MiloneSyntax.SyntaxParse
 
 open MiloneShared.SharedTypes
 open MiloneShared.Util
-open MiloneSyntax.Syntax
+open MiloneSyntaxTypes.SyntaxTypes
 
 module Int = MiloneStd.StdInt
 

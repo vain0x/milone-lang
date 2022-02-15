@@ -14,6 +14,7 @@ open MiloneStd.StdMultimap
 open MiloneStd.StdSet
 open MiloneTranslation.Hir
 open MiloneTranslation.Mir
+open MiloneTranslationTypes.HirTypes
 
 module S = MiloneStd.StdString
 

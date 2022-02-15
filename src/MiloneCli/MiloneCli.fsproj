@@ -1,4 +1,4 @@
-﻿<Project Sdk="Microsoft.NET.Sdk">
+<Project Sdk="Microsoft.NET.Sdk">
 
   <PropertyGroup>
     <OutputType>Exe</OutputType>
@@ -6,16 +6,11 @@
   </PropertyGroup>
 
   <ItemGroup>
-    <Compile Include="Lower.fs" />
-    <Compile Include="PlatformUnix.fs" />
-    <Compile Include="PlatformWindows.fs" />
-    <Compile Include="Cli.fs" />
-    <Compile Include="Program.fs" />
+    <Compile Include="MiloneCli.fs" />
   </ItemGroup>
 
   <ItemGroup>
-    <ProjectReference Include="..\..\milone_libs\MiloneStd\MiloneStd.fsproj" />
-    <ProjectReference Include="..\MiloneShared\MiloneShared.fsproj" />
+    <ProjectReference Include="..\MiloneCliCore\MiloneCliCore.fsproj" />
     <ProjectReference Include="..\MiloneSyntax\MiloneSyntax.fsproj" />
     <ProjectReference Include="..\MiloneTranslation\MiloneTranslation.fsproj" />
   </ItemGroup>

@@ -8,6 +8,7 @@ open MiloneShared.Util
 open MiloneStd.StdError
 open MiloneStd.StdMap
 open MiloneTranslation.Hir
+open MiloneTranslationTypes.HirTypes
 
 let private hxIsVarOrUnboxingVar expr =
   match expr with

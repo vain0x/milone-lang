@@ -82,6 +82,7 @@ open MiloneShared.Util
 open MiloneStd.StdError
 open MiloneStd.StdMap
 open MiloneTranslation.Hir
+open MiloneTranslationTypes.HirTypes
 
 module Int = MiloneStd.StdInt
 module S = MiloneStd.StdString

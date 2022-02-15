@@ -1,4 +1,4 @@
-module rec MiloneCli.PlatformUnix
+module rec MiloneCliCore.PlatformUnix
 
 open MiloneStd.StdError
 open MiloneStd.StdPath

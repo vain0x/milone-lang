@@ -1,23 +1,20 @@
 /// Front end of the compiler.
-module rec MiloneCli.Cli
+module rec MiloneCliCore.Cli
 
 open MiloneShared.Util
 open MiloneShared.UtilParallel
 open MiloneShared.UtilProfiler
 open MiloneStd.StdError
 open MiloneStd.StdPath
-open MiloneSyntax.Syntax
+open MiloneSyntaxTypes.SyntaxTypes
+open MiloneSyntaxTypes.SyntaxApiTypes
+open MiloneTranslationTypes.TranslationApiTypes
 
 module C = MiloneStd.StdChar
 module S = MiloneStd.StdString
-module Tir = MiloneSyntax.Tir
-module Typing = MiloneSyntax.Typing
-module SyntaxApi = MiloneSyntax.SyntaxApi
-module Hir = MiloneTranslation.Hir
-module TranslationApi = MiloneTranslation.TranslationApi
-module Lower = MiloneCli.Lower
-module PU = MiloneCli.PlatformUnix
-module PW = MiloneCli.PlatformWindows
+module Lower = MiloneCliCore.Lower
+module PU = MiloneCliCore.PlatformUnix
+module PW = MiloneCliCore.PlatformWindows
 
 let private currentVersion () = "0.4.0"
 
@@ -76,8 +73,7 @@ type Platform =
 /// Abstraction layer of CLI program.
 [<RequireQualifiedAccess; NoEquality; NoComparison>]
 type CliHost =
-  {
-    /// Command line args.
+  { /// Command line args.
     Args: string list
 
     WorkDir: string
@@ -149,8 +145,8 @@ let private pathJoin (l: string) (r: string) =
   let r = slash r
   if isRooted r then r else l + "/" + r
 
-let private hostToMiloneHome (host: CliHost) =
-  SyntaxApi.getMiloneHomeFromEnv (fun () -> host.MiloneHome) (fun () -> Some host.Home)
+let private hostToMiloneHome (sApi: SyntaxApi) (host: CliHost) =
+  sApi.GetMiloneHomeFromEnv(fun () -> host.MiloneHome) (fun () -> Some host.Home)
 
 let private dirCreateOrFail (host: CliHost) (dirPath: Path) : unit =
   let ok =
@@ -215,23 +211,23 @@ let private computeExePath targetDir platform isRelease name : Path =
 [<RequireQualifiedAccess; NoEquality; NoComparison>]
 type private CompileCtx =
   { EntryProjectName: ProjectName
-    SyntaxCtx: SyntaxApi.SyntaxCtx
+    SyntaxCtx: SyntaxCtx
     WriteLog: string -> unit }
 
-let private compileCtxNew (host: CliHost) verbosity projectDir : CompileCtx =
-  let miloneHome = hostToMiloneHome host
+let private compileCtxNew (sApi: SyntaxApi) (host: CliHost) verbosity projectDir : CompileCtx =
+  let miloneHome = hostToMiloneHome sApi host
   let projectDir = projectDir |> pathStrTrimEndPathSep
   let projectName = projectDir |> pathStrToStem
 
-  let syntaxCtx: SyntaxApi.SyntaxCtx =
-    let host: SyntaxApi.FetchModuleHost =
+  let syntaxCtx: SyntaxCtx =
+    let host: FetchModuleHost =
       { EntryProjectDir = projectDir
         EntryProjectName = projectName
         MiloneHome = miloneHome
         ReadTextFile = host.FileReadAllText
         WriteLog = writeLog host verbosity }
 
-    SyntaxApi.newSyntaxCtx host
+    sApi.NewSyntaxCtx host
 
   { EntryProjectName = projectName
     SyntaxCtx = syntaxCtx
@@ -259,30 +255,30 @@ let private computeCFilename projectName docId : CFilename =
   else
     S.replace "." "_" docId + ".c"
 
-let private check (ctx: CompileCtx) : bool * string =
+let private check (sApi: SyntaxApi) (ctx: CompileCtx) : bool * string =
   let _, result =
-    SyntaxApi.performSyntaxAnalysis ctx.SyntaxCtx
+    sApi.PerformSyntaxAnalysis ctx.SyntaxCtx
 
   match result with
-  | SyntaxApi.SyntaxAnalysisOk _ -> true, ""
-  | SyntaxApi.SyntaxAnalysisError (errors, _) -> false, SyntaxApi.syntaxErrorsToString errors
+  | SyntaxAnalysisOk _ -> true, ""
+  | SyntaxAnalysisError (errors, _) -> false, sApi.SyntaxErrorsToString errors
 
-let private compile (ctx: CompileCtx) : CompileResult =
+let private compile (sApi: SyntaxApi) (tApi: TranslationApi) (ctx: CompileCtx) : CompileResult =
   let projectName = ctx.EntryProjectName
   let writeLog = ctx.WriteLog
 
   let _, result =
-    SyntaxApi.performSyntaxAnalysis ctx.SyntaxCtx
+    sApi.PerformSyntaxAnalysis ctx.SyntaxCtx
 
   match result with
-  | SyntaxApi.SyntaxAnalysisError (errors, _) -> CompileError(SyntaxApi.syntaxErrorsToString errors)
+  | SyntaxAnalysisError (errors, _) -> CompileError(sApi.SyntaxErrorsToString errors)
 
-  | SyntaxApi.SyntaxAnalysisOk (modules, tirCtx) ->
+  | SyntaxAnalysisOk (modules, tirCtx) ->
     writeLog "Lower"
     let modules, hirCtx = Lower.lower (modules, tirCtx)
 
     let cFiles =
-      TranslationApi.codeGenHir writeLog (modules, hirCtx)
+      tApi.CodeGenHir writeLog (modules, hirCtx)
 
     let cFiles =
       cFiles
@@ -303,10 +299,11 @@ let private writeCFiles (host: CliHost) (targetDir: string) (cFiles: (CFilename 
 // Actions
 // -----------------------------------------------
 
-let private cliCheck (host: CliHost) verbosity projectDir =
-  let ctx = compileCtxNew host verbosity projectDir
+let private cliCheck sApi (host: CliHost) verbosity projectDir =
+  let ctx =
+    compileCtxNew sApi host verbosity projectDir
 
-  let ok, output = check ctx
+  let ok, output = check sApi ctx
   let exitCode = if ok then 0 else 1
 
   if output <> "" then
@@ -320,14 +317,15 @@ type private CompileOptions =
     TargetDir: string
     Verbosity: Verbosity }
 
-let private cliCompile (host: CliHost) (options: CompileOptions) =
+let private cliCompile sApi tApi (host: CliHost) (options: CompileOptions) =
   let projectDir = options.ProjectDir
   let targetDir = options.TargetDir
   let verbosity = options.Verbosity
 
-  let ctx = compileCtxNew host verbosity projectDir
+  let ctx =
+    compileCtxNew sApi host verbosity projectDir
 
-  match compile ctx with
+  match compile sApi tApi ctx with
   | CompileError output ->
     host.WriteStdout output
     1
@@ -350,13 +348,14 @@ type private BuildOptions =
     OutputOpt: string option }
 
 let private toBuildOnUnixParams
+  sApi
   (host: CliHost)
   (u: UnixApi)
   (options: BuildOptions)
   (ctx: CompileCtx)
   (cFiles: (CFilename * CCode) list)
   : PU.BuildOnUnixParams =
-  let miloneHome = Path(hostToMiloneHome host)
+  let miloneHome = Path(hostToMiloneHome sApi host)
 
   let compileOptions = options.CompileOptions
   let projectDir = compileOptions.ProjectDir
@@ -365,8 +364,7 @@ let private toBuildOnUnixParams
   let outputOpt = options.OutputOpt
   let projectName = ctx.EntryProjectName
 
-  let manifest =
-    ctx.SyntaxCtx |> SyntaxApi.SyntaxCtx.getManifest
+  let manifest = ctx.SyntaxCtx |> sApi.GetManifest
 
   { TargetDir = Path targetDir
     IsRelease = isRelease
@@ -388,13 +386,14 @@ let private toBuildOnUnixParams
     ExecuteInto = u.ExecuteInto }
 
 let private toBuildOnWindowsParams
+  sApi
   (host: CliHost)
   (w: WindowsApi)
   (options: BuildOptions)
   (ctx: CompileCtx)
   (cFiles: (CFilename * CCode) list)
   : PW.BuildOnWindowsParams =
-  let miloneHome = Path(hostToMiloneHome host)
+  let miloneHome = Path(hostToMiloneHome sApi host)
 
   let compileOptions = options.CompileOptions
   let targetDir = compileOptions.TargetDir
@@ -403,8 +402,7 @@ let private toBuildOnWindowsParams
   let projectName = ctx.EntryProjectName
   let projectDir = compileOptions.ProjectDir
 
-  let manifest =
-    ctx.SyntaxCtx |> SyntaxApi.SyntaxCtx.getManifest
+  let manifest = ctx.SyntaxCtx |> sApi.GetManifest
 
   { ProjectName = projectName
     CFiles =
@@ -428,15 +426,16 @@ let private toBuildOnWindowsParams
     FileWrite = fileWrite host
     RunCommand = runCommand w }
 
-let private cliBuild (host: CliHost) (options: BuildOptions) =
+let private cliBuild sApi tApi (host: CliHost) (options: BuildOptions) =
   let compileOptions = options.CompileOptions
   let projectDir = compileOptions.ProjectDir
   let targetDir = compileOptions.TargetDir
   let verbosity = compileOptions.Verbosity
 
-  let ctx = compileCtxNew host verbosity projectDir
+  let ctx =
+    compileCtxNew sApi host verbosity projectDir
 
-  match compile ctx with
+  match compile sApi tApi ctx with
   | CompileError output ->
     host.WriteStdout output
     1
@@ -446,22 +445,23 @@ let private cliBuild (host: CliHost) (options: BuildOptions) =
 
     match host.Platform with
     | Platform.Unix u ->
-      PU.buildOnUnix (toBuildOnUnixParams host u options ctx cFiles)
+      PU.buildOnUnix (toBuildOnUnixParams sApi host u options ctx cFiles)
       |> never
 
     | Platform.Windows w ->
-      PW.buildOnWindows (toBuildOnWindowsParams host w options ctx cFiles)
+      PW.buildOnWindows (toBuildOnWindowsParams sApi host w options ctx cFiles)
       0
 
-let private cliRun (host: CliHost) (options: BuildOptions) (restArgs: string list) =
+let private cliRun sApi tApi (host: CliHost) (options: BuildOptions) (restArgs: string list) =
   let compileOptions = options.CompileOptions
   let projectDir = compileOptions.ProjectDir
   let targetDir = compileOptions.TargetDir
   let verbosity = compileOptions.Verbosity
 
-  let ctx = compileCtxNew host verbosity projectDir
+  let ctx =
+    compileCtxNew sApi host verbosity projectDir
 
-  match compile ctx with
+  match compile sApi tApi ctx with
   | CompileError output ->
     host.WriteStdout output
     1
@@ -472,18 +472,18 @@ let private cliRun (host: CliHost) (options: BuildOptions) (restArgs: string lis
     match host.Platform with
     | Platform.Unix u ->
       let p =
-        toBuildOnUnixParams host u options ctx cFiles
+        toBuildOnUnixParams sApi host u options ctx cFiles
 
       PU.runOnUnix p restArgs |> never
 
     | Platform.Windows w ->
       let p =
-        toBuildOnWindowsParams host w options ctx cFiles
+        toBuildOnWindowsParams sApi host w options ctx cFiles
 
       PW.runOnWindows p restArgs
       0
 
-let private cliEval (host: CliHost) (sourceCode: string) =
+let private cliEval sApi tApi (host: CliHost) (sourceCode: string) =
   let sourceCode =
     """module rec Eval.Program
 
@@ -510,12 +510,13 @@ let main _ =
       IsRelease = false
       OutputOpt = None }
 
-  let ctx = compileCtxNew host verbosity projectDir
+  let ctx =
+    compileCtxNew sApi host verbosity projectDir
 
   dirCreateOrFail host (Path targetDir)
   fileWrite host (Path(projectDir + "/Eval.milone")) sourceCode
 
-  match compile ctx with
+  match compile sApi tApi ctx with
   | CompileError output ->
     host.WriteStdout output
     1
@@ -526,13 +527,13 @@ let main _ =
     match host.Platform with
     | Platform.Unix u ->
       let p =
-        toBuildOnUnixParams host u options ctx cFiles
+        toBuildOnUnixParams sApi host u options ctx cFiles
 
       PU.runOnUnix p [] |> never
 
     | Platform.Windows w ->
       let p =
-        toBuildOnWindowsParams host w options ctx cFiles
+        toBuildOnWindowsParams sApi host w options ctx cFiles
 
       PW.runOnWindows p []
       0
@@ -742,7 +743,7 @@ let private parseArgs args =
 // Entrypoint
 // -----------------------------------------------
 
-let cli (host: CliHost) =
+let cli (sApi: SyntaxApi) (tApi: TranslationApi) (host: CliHost) =
   match host.Args |> parseArgs with
   | HelpCmd, _ ->
     printfn "%s" (helpText ())
@@ -758,21 +759,21 @@ let cli (host: CliHost) =
 
     let projectDir = b.ProjectDir
     let verbosity = b.Verbosity
-    cliCheck host verbosity projectDir
+    cliCheck sApi host verbosity projectDir
 
   | CompileCmd, args ->
     let args = eatParallelFlag args
     let b, args = parseBuildLikeOptions host args
     endArgs args
 
-    cliCompile host (BuildLikeOptions.toCompileOptions b)
+    cliCompile sApi tApi host (BuildLikeOptions.toCompileOptions b)
 
   | BuildCmd, args ->
     let args = eatParallelFlag args
     let b, args = parseBuildLikeOptions host args
     endArgs args
 
-    cliBuild host (BuildLikeOptions.toBuildOptions b)
+    cliBuild sApi tApi host (BuildLikeOptions.toBuildOptions b)
 
   | RunCmd, args ->
     let args = eatParallelFlag args
@@ -786,7 +787,7 @@ let cli (host: CliHost) =
     endArgs args
 
     let options = BuildLikeOptions.toBuildOptions b
-    cliRun host options runArgs
+    cliRun sApi tApi host options runArgs
 
   | EvalCmd, args ->
     let sourceCode =
@@ -798,7 +799,7 @@ let cli (host: CliHost) =
         printfn "ERROR: Invalid args: `milone eval 'expression'`"
         exit 1
 
-    cliEval host sourceCode
+    cliEval sApi tApi host sourceCode
 
   | BadCmd subcommand, _ ->
     printfn "ERROR: Unknown subcommand '%s'." subcommand

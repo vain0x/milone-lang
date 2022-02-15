@@ -1,10 +1,9 @@
-/// Entry point of the compiler.
-module rec MiloneCli.Program
+module rec MiloneCliCore.FSharpOnly
 
 open MiloneStd.StdError
 open MiloneShared.UtilParallel
 open MiloneShared.UtilProfiler
-open MiloneCli.Cli
+open MiloneCliCore.Cli
 
 let private dirCreate (baseDir: string) (dir: string) =
   try
@@ -101,6 +100,3 @@ let dotnetCliHost () : CliHost =
     FileWriteAllText = writeFile
     ReadStdinAll = stdin.ReadToEnd
     WriteStdout = printf "%s" }
-
-[<EntryPoint>]
-let main _ = cli (dotnetCliHost ())

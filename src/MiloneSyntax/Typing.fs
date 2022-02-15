@@ -21,6 +21,7 @@ open MiloneStd.StdSet
 open MiloneSyntax.NameRes
 open MiloneSyntax.Tir
 open MiloneSyntax.TySystem
+open MiloneSyntaxTypes.TirTypes
 
 module S = MiloneStd.StdString
 module StdInt = MiloneStd.StdInt

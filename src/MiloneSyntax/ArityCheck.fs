@@ -5,6 +5,7 @@ open MiloneShared.Util
 open MiloneStd.StdError
 open MiloneSyntax.Tir
 open MiloneSyntax.TySystem
+open MiloneSyntaxTypes.TirTypes
 
 module StdInt = MiloneStd.StdInt
 module S = MiloneStd.StdString

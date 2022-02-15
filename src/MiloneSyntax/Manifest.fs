@@ -5,25 +5,12 @@
 /// E.g. .fsproj (F#), Cargo.toml (Rust/cargo), package.json (Node.js)
 module rec MiloneSyntax.Manifest
 
-open MiloneStd.StdPath
 open MiloneShared.SharedTypes
-open MiloneSyntax.Syntax
+open MiloneStd.StdPath
+open MiloneSyntaxTypes.SyntaxApiTypes
+open MiloneSyntaxTypes.SyntaxTypes
 
 module S = MiloneStd.StdString
-
-[<RequireQualifiedAccess; NoEquality; NoComparison>]
-type ManifestData =
-  { /// Referenced non-entry projects.
-    /// Path is relative to current project directory (where the manifest is).
-    Projects: (ProjectName * ProjectDir * Loc) list
-    Errors: (string * Loc) list
-
-    // #experimental
-    CSanitize: string option
-    CStd: string
-    CcList: (Path * Loc) list
-    ObjList: (Path * Loc) list
-    Libs: (string * Loc) list }
 
 let emptyManifest: ManifestData =
   { Projects = []

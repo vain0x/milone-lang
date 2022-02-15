@@ -87,6 +87,7 @@ open MiloneStd.StdError
 open MiloneStd.StdMap
 open MiloneStd.StdSet
 open MiloneTranslation.Hir
+open MiloneTranslationTypes.HirTypes
 
 // -----------------------------------------------
 // KnownCtx

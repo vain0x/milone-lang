@@ -16,6 +16,7 @@ open MiloneShared.SharedTypes
 open MiloneShared.TypeFloat
 open MiloneShared.TypeIntegers
 open MiloneTranslation.Hir
+open MiloneTranslationTypes.HirTypes
 
 // -----------------------------------------------
 // MIR types

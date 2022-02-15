@@ -1,4 +1,4 @@
-module rec MiloneCli.PlatformWindows
+module rec MiloneCliCore.PlatformWindows
 
 open MiloneStd.StdPath
 

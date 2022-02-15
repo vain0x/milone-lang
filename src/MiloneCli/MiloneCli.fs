@@ -1,10 +1,11 @@
 /// Entry point of the milone-lang compiler.
-module rec MiloneCli.Program
+module MiloneCli.Program
 
 open MiloneCliCore.Cli
-open MiloneCliCore.MiloneOnly
+open MiloneCliCore.FSharpOnly
 open MiloneSyntax.SyntaxApi
 open MiloneTranslation.TranslationApi
 
+[<EntryPoint>]
 let main _ =
-  cli (newSyntaxApi ()) (newTranslationApi ()) (miloneCliHost ())
+  cli (newSyntaxApi ()) (newTranslationApi ()) (dotnetCliHost ())
