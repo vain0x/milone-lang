@@ -9,6 +9,7 @@ module rec MiloneSyntax.AstBundle
 open MiloneShared.SharedTypes
 open MiloneShared.Util
 open MiloneShared.UtilParallel
+open MiloneShared.UtilSymbol
 open MiloneStd.StdError
 open MiloneStd.StdSet
 open MiloneStd.StdMap
@@ -91,7 +92,7 @@ type private RequestResult =
 type private RequestMap = TreeMap<ProjectName * ModuleName, RequestResult>
 
 // note: avoid using this function so that DocId can be computed by clients.
-let computeDocId (p: ProjectName) (m: ModuleName) : DocId = p + "." + m
+let computeDocId (p: ProjectName) (m: ModuleName) : DocId = Symbol.intern (p + "." + m)
 
 // -----------------------------------------------
 // ModuleRequest
@@ -248,7 +249,7 @@ let bundle (fetchModule: FetchModuleFun) (entryProjectName: ProjectName) : Bundl
     let comparer (l: ModuleData) (r: ModuleData) =
       let l, _, _, _ = l.SyntaxData
       let r, _, _, _ = r.SyntaxData
-      compare l r
+      Symbol.compare l r
 
     let getDeps (m: ModuleData) =
       m.Deps

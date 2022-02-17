@@ -15,6 +15,7 @@ open MiloneShared.TypeFloat
 open MiloneShared.TypeIntegers
 open MiloneShared.Util
 open MiloneShared.UtilParallel
+open MiloneShared.UtilSymbol
 open MiloneStd.StdError
 open MiloneStd.StdMap
 open MiloneStd.StdMultimap
@@ -172,7 +173,9 @@ let private funDefToName (funDef: FunDef) =
     let name =
       // #avoidAbusingDocId
       let (Loc (docId, _, _)) = funDef.Loc
-      let doc = docId |> S.replace "." "_"
+
+      let doc =
+        Symbol.toString docId |> S.replace "." "_"
 
       doc
       + "_"
@@ -682,7 +685,7 @@ let private cgExternFunDecl (ctx: CirCtx) funSerial =
     let funDef = ctx.Rx.Funs |> mapFind funSerial
     let (Loc (docId, _, _)) = funDef.Loc
 
-    if docId = currentDocId ctx then
+    if Symbol.equals docId (currentDocId ctx) then
       ctx
     else
       let (TyScheme (_, ty)) = funDef.Ty

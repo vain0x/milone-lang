@@ -6,6 +6,7 @@ module rec MiloneSyntax.SyntaxApi
 open MiloneShared.SharedTypes
 open MiloneShared.UtilParallel
 open MiloneShared.Util
+open MiloneShared.UtilSymbol
 open MiloneStd.StdError
 open MiloneStd.StdMap
 open MiloneSyntax.Syntax
@@ -253,7 +254,7 @@ type private FetchModuleCtx =
 
 let private readManifestFile (readTextFile: ReadTextFileFun) projectDir =
   let manifestFile = projectDir |> Manifest.getManifestPath
-  let docId: DocId = manifestFile
+  let docId: DocId = Symbol.intern manifestFile
 
   manifestFile
   |> readTextFile

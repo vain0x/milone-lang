@@ -3,6 +3,7 @@ module rec MiloneLspServer.Lsp
 
 open MiloneShared.SharedTypes
 open MiloneShared.UtilParallel
+open MiloneShared.UtilSymbol
 open MiloneStd.StdMap
 open MiloneStd.StdSet
 open MiloneSyntax.Syntax
@@ -14,6 +15,7 @@ open MiloneSyntaxTypes.SyntaxApiTypes
 module U = MiloneLspServer.Util // FIXME: don't depend
 
 module C = MiloneStd.StdChar
+module S = MiloneStd.StdString
 module AstBundle = MiloneSyntax.AstBundle
 module SyntaxApi = MiloneSyntax.SyntaxApi
 module SyntaxTokenize = MiloneSyntax.SyntaxTokenize
@@ -329,7 +331,7 @@ type ProjectAnalysis =
       BundleCache: BundleResult option
       Host: ProjectAnalysisHost }
 
-let private emptyTokenizeCache: TreeMap<DocId, LTokenList> = TMap.empty compare
+let private emptyTokenizeCache: TreeMap<DocId, LTokenList> = TMap.empty Symbol.compare
 
 let private getVersion docId (pa: ProjectAnalysis) = pa.Host.GetDocVersion docId
 
@@ -584,7 +586,10 @@ let private lowerAExpr docId acc expr : DSymbolOccurrence list =
   | ANavExpr (l, _, _) ->
     match l with
     | AIdentExpr (Name (l, pos)) when l.Length = 1 && C.isUpper l.[0] ->
-      (DModuleSymbol [ docId; l ], Use, toLoc pos)
+      (DModuleSymbol [ Symbol.toString docId
+                       l ],
+       Use,
+       toLoc pos)
       :: acc
 
     | ANavExpr (AIdentExpr p, m, _) ->
@@ -640,7 +645,10 @@ let private lowerADecl docId acc decl : DSymbolOccurrence list =
 
   | AModuleSynonymDecl (Name (synonym, identPos), path, pos) ->
     let acc =
-      (DModuleSymbol [ docId; synonym ], Def, toLoc identPos)
+      (DModuleSymbol [ Symbol.toString docId
+                       synonym ],
+       Def,
+       toLoc identPos)
       :: acc
 
     let pos = path |> pathToPos pos
@@ -671,7 +679,7 @@ let private lowerARoot (docId: DocId) acc root : DSymbolOccurrence list =
 
     | _ ->
       // #abusingDocId
-      let path = docId.Split(".") |> Array.toList
+      let path = Symbol.toString docId |> S.split "."
 
       (DModuleSymbol path, Def, toLoc (0, 0)) :: acc
 
@@ -898,7 +906,7 @@ let private findTyInStmt (pa: ProjectAnalysis) (modules: TProgram) (tokenLoc: Lo
   resolveLoc symbols pa
   |> List.tryPick (fun (_, _, tyOpt, loc) ->
     match tyOpt with
-    | Some ty when loc = tokenLoc -> Some ty
+    | Some ty when Loc.equals loc tokenLoc -> Some ty
     | _ -> None)
 
 let private collectSymbolsInExpr (pa: ProjectAnalysis) (modules: TProgram) (tirCtx: TirCtx) =

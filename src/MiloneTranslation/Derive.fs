@@ -5,6 +5,7 @@ module rec MiloneTranslation.Derive
 
 open MiloneShared.SharedTypes
 open MiloneShared.Util
+open MiloneShared.UtilSymbol
 open MiloneStd.StdError
 open MiloneStd.StdMap
 open MiloneStd.StdSet
@@ -173,7 +174,7 @@ let private deriveOnStmt (hirCtx: HirCtx) (ctx: DCtx) stmt : DCtx =
              (fun opt funSerial (funDef: FunDef) ->
                let (Loc (docId, _, _)) = funDef.Loc
 
-               if docId = "MiloneStd.Equal"
+               if Symbol.equals docId (Symbol.intern "MiloneStd.Equal")
                   && funDef.Name = "genericListEqual" then
                  Some funSerial
                else
@@ -192,7 +193,8 @@ let private deriveOnStmt (hirCtx: HirCtx) (ctx: DCtx) stmt : DCtx =
   //    let (l1, l2, ...), (r1, r2, ...) = l, r
   //    (l1 = r1) & (l2 = r2) & ...
   let deriveEqualForTuple ty (ctx: DCtx) : DCtx =
-    let loc = Loc("MiloneDerive.TupleEqual", 0, 0)
+    let loc =
+      Loc(Symbol.intern "MiloneDerive.TupleEqual", 0, 0)
 
     let tyArgs =
       match ty with
@@ -277,7 +279,8 @@ let private deriveOnStmt (hirCtx: HirCtx) (ctx: DCtx) stmt : DCtx =
   // l = r :=
   //    MiloneStd.Equal.genericListEqual compare l r
   let deriveEqualForList ty (ctx: DCtx) : DCtx =
-    let loc = Loc("MiloneDerive.ListEqual", 0, 0)
+    let loc =
+      Loc(Symbol.intern "MiloneDerive.ListEqual", 0, 0)
 
     let itemTy =
       match ty with

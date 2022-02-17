@@ -22,6 +22,9 @@ install-dev:
 bin/ninja:
 	scripts/install-ninja
 
+runtime/hashmap.h:
+	scripts/install-hashmap
+
 # ------------------------------------------------
 # MyBuildTool wrapper
 # ------------------------------------------------
@@ -52,6 +55,7 @@ pack: ${MY_BUILD_TIMESTAMP}
 	${MY_BUILD} pack
 
 target/milone: bin/ninja ${MY_BUILD_TIMESTAMP} \
+		runtime/hashmap.h \
 		runtime/milone.h \
 		runtime/milone.c \
 		runtime/milone_platform.c \

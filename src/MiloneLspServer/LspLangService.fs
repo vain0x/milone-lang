@@ -2,6 +2,7 @@ module MiloneLspServer.LspLangService
 
 open MiloneShared.SharedTypes
 open MiloneShared.UtilParallel
+open MiloneShared.UtilSymbol
 open MiloneStd.StdError
 open MiloneStd.StdMap
 open MiloneStd.StdSet
@@ -340,16 +341,16 @@ let filePathToDocId (path: string) : DocId =
 
   let moduleName = stem path
 
-  projectName + "." + moduleName
+  Symbol.intern (projectName + "." + moduleName)
 
 let private uriToDocId (uri: Uri) : DocId = uri |> uriToFilePath |> filePathToDocId
 
 let private docIdToModulePath (docId: DocId) =
-  match docId.Split(".") with
-  | [| p; m |] -> Some(p, m)
+  match Symbol.toString docId |> S.split "." with
+  | [ p; m ] -> Some(p, m)
 
   | _ ->
-    traceFn "Not a docId of module file: '%s'" docId
+    traceFn "Not a docId of module file: '%s'" (Symbol.toString docId)
     None
 
 let private convertDocIdToFilePath
@@ -371,8 +372,8 @@ let private convertDocIdToFilePath
 
       projectDir + "/" + moduleName + ".milone"
 
-    | _ when fileExists docId -> docId
-    | _ -> failwithf "Bad docId: '%s'" docId
+    | _ when fileExists (Symbol.toString docId) -> Symbol.toString docId
+    | _ -> failwithf "Bad docId: '%A'" docId
 
   path |> normalize |> fixExt
 
@@ -387,7 +388,7 @@ let private doFindRefs hint docId targetPos pa =
 
   match tokenOpt with
   | None ->
-    debugFn "%s: token not found on position: docId=%s pos=%s" hint docId (Pos.toString targetPos)
+    debugFn "%s: token not found on position: docId=%A pos=%s" hint docId (Pos.toString targetPos)
     None, pa
 
   | Some token ->
@@ -406,7 +407,7 @@ let private doFindRefs hint docId targetPos pa =
 
     | Some symbols ->
       match symbols
-            |> List.tryFind (fun (_, _, loc) -> loc = tokenLoc)
+            |> List.tryFind (fun (_, _, loc) -> Loc.equals loc tokenLoc)
         with
       | None ->
         debugFn "%s: no symbol" hint
@@ -436,7 +437,7 @@ let private doFindDefsOrUses hint docId targetPos includeDef includeUse pa =
              | _ ->
                let docId, pos = Loc.toDocPos loc
                map |> Multimap.add docId pos)
-           (TMap.empty compare)
+           (TMap.empty Symbol.compare)
       |> TMap.toList
       |> List.mapFold
            (fun pa (docId, posList) ->
@@ -465,7 +466,7 @@ module ProjectAnalysis =
            (fun map (msg, loc) ->
              let docId, pos = Loc.toDocPos loc
              map |> Multimap.add docId (msg, pos))
-           (TMap.empty compare)
+           (TMap.empty Symbol.compare)
       |> TMap.toList
       |> List.mapFold
            (fun pa (docId, errorList) ->
@@ -596,7 +597,7 @@ module ProjectAnalysis =
           |> List.choose (fun (symbol, _, loc) ->
             let (Loc (d, y, _)) = loc
 
-            if d = docId
+            if Symbol.equals d docId
                && exclusion
                   |> List.exists (fun (y1, y2) -> y1 <= y && y < y2)
                   |> not then
@@ -646,7 +647,7 @@ module ProjectAnalysis =
              (fun (readAcc, writeAcc) (_, defOrUse, loc) ->
                let d, pos = loc |> Loc.toDocPos
 
-               if d = docId then
+               if Symbol.equals d docId then
                  match defOrUse with
                  | Def -> readAcc, pos :: writeAcc
                  | Use -> pos :: readAcc, writeAcc
@@ -669,7 +670,7 @@ module ProjectAnalysis =
 
     match tokenOpt with
     | None ->
-      debugFn "hover: token not found on position: docId=%s pos=%s" docId (Pos.toString targetPos)
+      debugFn "hover: token not found on position: docId=%A pos=%s" docId (Pos.toString targetPos)
       None, pa
 
     | Some token ->
@@ -952,7 +953,7 @@ let private parseDoc (uri: Uri) (wa: WorkspaceAnalysis) =
         | Some it -> it
         | None -> unreachable () // docId is created in `p.m` format explicitly
 
-      traceFn "parse '%s' v:%d" docId v
+      traceFn "parse '%A' v:%d" docId v
 
       let syntaxData =
         LSyntaxData.parse projectName moduleName docId tokens

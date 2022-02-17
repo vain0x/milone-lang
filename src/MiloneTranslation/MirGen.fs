@@ -8,6 +8,7 @@ module rec MiloneTranslation.MirGen
 open MiloneShared.SharedTypes
 open MiloneShared.TypeIntegers
 open MiloneShared.Util
+open MiloneShared.UtilSymbol
 open MiloneStd.StdError
 open MiloneStd.StdMap
 open MiloneStd.StdMultimap
@@ -1231,7 +1232,9 @@ let private mirifyCallAssertExpr ctx arg loc =
     let (Loc (docId, y, x)) = loc
 
     // #abusingDocId
-    let name = (docId |> S.replace "." "/") + ".milone"
+    let name =
+      (Symbol.toString docId |> S.replace "." "/")
+      + ".milone"
 
     [ arg
       MLitExpr(StrLit name, loc)

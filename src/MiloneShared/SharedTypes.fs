@@ -4,6 +4,7 @@
 module rec MiloneShared.SharedTypes
 
 open MiloneShared.TypeIntegers
+open MiloneShared.UtilSymbol
 open MiloneStd.StdPair
 
 let private compareInt (l: int) r = compare l r
@@ -93,7 +94,7 @@ type Pos = RowIndex * ColumnIndex
 
 /// Identity of documents.
 /// Document can be a source file, an editor tab, or something else.
-type DocId = string
+type DocId = Symbol
 
 /// Location.
 type Loc = Loc of DocId * RowIndex * ColumnIndex
@@ -114,7 +115,7 @@ module Pos =
 // -----------------------------------------------
 
 /// No location information. Should be fixed.
-let noLoc = Loc("<noLoc>", 0, 0)
+let noLoc = Loc(Symbol.intern "<noLoc>", 0, 0)
 
 module Loc =
   let ofDocPos (docId: DocId) (pos: Pos) : Loc =
@@ -126,17 +127,22 @@ module Loc =
     docId, (y, x)
 
   let toString (Loc (docId, y, x)) =
-    docId
+    Symbol.toString docId
     + ":"
     + string (y + 1)
     + ":"
     + string (x + 1)
 
+  let equals l r =
+    let (Loc (lDoc, ly, lx)) = l
+    let (Loc (rDoc, ry, rx)) = r
+    Symbol.equals lDoc rDoc && ly = ry && lx = rx
+
   let compare l r =
     let (Loc (lDoc, ly, lx)) = l
     let (Loc (rDoc, ry, rx)) = r
 
-    let c = compareString lDoc rDoc
+    let c = Symbol.compare lDoc rDoc
 
     if c <> 0 then c
     else if ly <> ry then compareInt ly ry

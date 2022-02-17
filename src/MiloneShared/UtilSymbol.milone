@@ -1,0 +1,58 @@
+module rec MiloneShared.UtilSymbol
+
+__nativeDecl
+  """
+#include <assert.h>
+#include <milone.h>
+
+#include <hashmap.h>
+
+_Thread_local bool t_initialized;
+_Thread_local struct hashmap_s t_hashmap;
+_Thread_local struct String t_entries[4000];
+_Thread_local uint32_t t_entries_len;
+_Thread_local uint32_t t_rank;
+
+static void _initialize(void) {
+  if (!t_initialized) {
+    hashmap_create(64, &t_hashmap);
+    t_entries_len = 1;
+    t_initialized = true;
+  }
+}
+
+static uint32_t symbol_intern(struct String s) {
+  _initialize();
+
+  void *p = hashmap_get(&t_hashmap, (char const *)s.str, (unsigned)s.len);
+  if (p == NULL) {
+    uint32_t id = t_entries_len;
+    assert(t_entries_len < 4000);
+    t_entries_len++;
+    t_entries[id] = s;
+    hashmap_put(&t_hashmap, (char const *)s.str, (unsigned)s.len, (void *)(uintptr_t)id);
+    return id;
+  }
+  return (uint32_t)(uintptr_t)p;
+}
+
+static struct String symbol_to_string(uint32_t id) {
+  // assert(id < t_entries_len && t_entries[id].str != NULL);
+  return t_entries[id];
+}
+"""
+
+let private symbolIntern (s: string): uint = __nativeExpr ("symbol_intern({0})", s)
+let private symbolToString (n: uint): string = __nativeExpr ("symbol_to_string({0})", n)
+
+let private compareUInt (l: uint) r = compare l r
+
+type Symbol =
+  private
+  | Symbol of uint
+
+module Symbol =
+  let intern (s: string) = Symbol(symbolIntern s)
+  let equals (Symbol l) (Symbol r) = l = r
+  let compare (Symbol l) (Symbol r) = compareUInt l r
+  let toString (Symbol n) : string = symbolToString n

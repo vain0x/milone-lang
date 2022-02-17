@@ -1,9 +1,11 @@
 /// Front end of the compiler.
 module rec MiloneCliCore.Cli
 
+open MiloneShared.SharedTypes
 open MiloneShared.Util
 open MiloneShared.UtilParallel
 open MiloneShared.UtilProfiler
+open MiloneShared.UtilSymbol
 open MiloneStd.StdError
 open MiloneStd.StdPath
 open MiloneSyntaxTypes.SyntaxTypes
@@ -249,11 +251,11 @@ type private CompileResult =
   | CompileOk of CodeGenResult
   | CompileError of string
 
-let private computeCFilename projectName docId : CFilename =
-  if docId = projectName + "." + projectName then
+let private computeCFilename projectName (docId: DocId) : CFilename =
+  if Symbol.toString docId = projectName + "." + projectName then
     projectName + ".c"
   else
-    S.replace "." "_" docId + ".c"
+    S.replace "." "_" (Symbol.toString docId) + ".c"
 
 let private check (sApi: SyntaxApi) (ctx: CompileCtx) : bool * string =
   let _, result =
