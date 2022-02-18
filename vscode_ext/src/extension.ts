@@ -56,7 +56,7 @@ const getLspCommand = (miloneHome: string, logger: Logger): string | undefined =
   return path.join(miloneHome, "bin/milone_lsp/MiloneLspServer")
 }
 
-const newLanguageClient = (lspCommand: string, miloneHome: string, logger: Logger): LanguageClient => {
+const newLanguageClient = (lspCommand: string, miloneHome: string, dotnetCommand: string | undefined, logger: Logger): LanguageClient => {
   let server: ChildProcess | undefined
   let clientDisposable: Disposable | undefined
 
@@ -65,6 +65,7 @@ const newLanguageClient = (lspCommand: string, miloneHome: string, logger: Logge
       env: {
         MILONE_HOME: miloneHome,
         MILONE_LSP_SERVER_LOG_LEVEL,
+        MILONE_LSP_SERVER_DOTNET_COMMAND: dotnetCommand,
       },
     })
     server = p
@@ -130,14 +131,17 @@ const startLspSession = (context: ExtensionContext, logger: Logger) => {
   logger.info("lspCommand =", lspCommand)
   if (lspCommand == undefined) return
 
+  const dotnetCommand = workspace.getConfiguration("milone-lang").get<string>("dotnet-command") ?? undefined
+  logger.info("dotnetCommand = ", dotnetCommand)
+
   if (DEV) {
     startLspSessionDev({
       lspCommand,
       context,
-      newLanguageClient: command => newLanguageClient(command, miloneHome, logger),
+      newLanguageClient: command => newLanguageClient(command, miloneHome, dotnetCommand, logger),
     })
   } else {
-    const client = newLanguageClient(lspCommand, miloneHome, logger)
+    const client = newLanguageClient(lspCommand, miloneHome, dotnetCommand, logger)
     context.subscriptions.push(client.start())
   }
 }

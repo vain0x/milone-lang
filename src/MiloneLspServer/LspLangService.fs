@@ -1432,7 +1432,10 @@ module WorkspaceAnalysis =
 // Formatting
 // -----------------------------------------------
 
-// spawns fantomas
+// To format, just spawns fantomas.
+// Remarks:
+//    When the server is executed as VSCode extension,
+//    some environment variables are not inherited.
 
 [<RequireQualifiedAccess; NoEquality; NoComparison>]
 type FormattingResult = { Edits: (Range * string) list }
@@ -1442,10 +1445,99 @@ let private formattingResultOfDiff _prev next : FormattingResult =
   { Edits = [ ((0, 0), (1100100100, 0)), next ] }
 
 module Formatting =
+  open System.Collections.Generic
   open System.Diagnostics
   open System.IO
 
-  type E = System.Environment
+  type private E = System.Environment
+
+  let private dotnetCommand () =
+    let c =
+      E.GetEnvironmentVariable("MILONE_LSP_SERVER_DOTNET_COMMAND")
+
+    if not (isNull c) then
+      c
+    else
+      match E.OSVersion.Platform with
+      | System.PlatformID.Win32NT -> "C:/Program Files/dotnet/dotnet.exe"
+      | _ -> "/usr/share/dotnet/dotnet"
+
+  let private homeDir () =
+    E.GetFolderPath(E.SpecialFolder.UserProfile)
+
+  let private toolDir () =
+    Path.Combine(homeDir (), ".dotnet/tools")
+
+  /// Don't invoke locally-installed fantomas-tool
+  /// when working directory is in this set.
+  let private denySet = HashSet<string>()
+
+  let private runLocalFantomas (workDir: string) (temp: string) : bool =
+    if denySet.Contains(workDir) |> not then
+      try
+        use proc =
+          let startInfo = ProcessStartInfo()
+          startInfo.FileName <- dotnetCommand ()
+          startInfo.ArgumentList.Add("fantomas")
+          startInfo.ArgumentList.Add(temp)
+          startInfo.WorkingDirectory <- workDir
+          startInfo.EnvironmentVariables.Add("DOTNET_CLI_HOME", homeDir ())
+          startInfo.EnvironmentVariables.Add("PATH", "")
+          startInfo.RedirectStandardOutput <- true
+          Process.Start(startInfo)
+
+        let exited = proc.WaitForExit(10 * 1000)
+        let ok = exited && proc.ExitCode = 0
+
+        if not exited then
+          warnFn "Killing locally-installed fantomas as timeout."
+          proc.Kill(entireProcessTree = true)
+
+        if not ok then
+          warnFn "Locally-installed fantomas failed."
+
+        ok
+      with
+      | ex ->
+        warnFn
+          "fantomas-tool isn't locally installed. (%s)\nTo install: `dotnet new tool-manifest` and `dotnet tool install fantomas-tool`."
+          ex.Message
+
+        denySet.Add(workDir) |> ignore
+        false
+    else
+      false
+
+  let private runGlobalFantomas (workDir: string) (temp: string) : bool =
+    try
+      use proc =
+        let startInfo = ProcessStartInfo()
+        startInfo.FileName <- Path.Combine(toolDir (), "fantomas")
+        startInfo.ArgumentList.Add(temp)
+        startInfo.WorkingDirectory <- workDir
+        startInfo.EnvironmentVariables.Add("DOTNET_CLI_HOME", homeDir ())
+        startInfo.EnvironmentVariables.Add("PATH", "")
+        startInfo.RedirectStandardOutput <- true
+        Process.Start(startInfo)
+
+      let exited = proc.WaitForExit(10 * 1000)
+      let ok = exited && proc.ExitCode = 0
+
+      if not exited then
+        warnFn "Killing globally-installed fantomas as timeout."
+        proc.Kill(entireProcessTree = true)
+
+      if not ok then
+        warnFn "Globally-installed fantomas failed."
+
+      ok
+    with
+    | ex ->
+      warnFn
+        "fantomas-tool isn't globally installed. (%s)\nTo install globally, `dotnet tool -g install fantomas-tool`."
+        ex.Message
+
+      reraise ()
 
   let formatting (uri: Uri) (wa: WorkspaceAnalysis) : FormattingResult option =
     let filePath = uriToFilePath uri
@@ -1476,31 +1568,15 @@ module Formatting =
           File.Copy(filePath, temp)
           File.ReadAllText(filePath)
 
-      use proc =
-        // When the server is executed as VSCode extension,
-        // some environment variables are not inherited.
+      let ok =
+        runLocalFantomas dir temp
+        || runGlobalFantomas dir temp
 
-        let homeDir =
-          E.GetFolderPath(E.SpecialFolder.UserProfile)
-
-        let startInfo = ProcessStartInfo()
-        startInfo.FileName <- "/usr/bin/dotnet"
-        startInfo.ArgumentList.Add("fantomas")
-        startInfo.ArgumentList.Add(temp)
-        startInfo.WorkingDirectory <- dir
-        startInfo.EnvironmentVariables.Add("DOTNET_CLI_HOME", homeDir)
-        startInfo.EnvironmentVariables.Add("PATH", "/usr/bin")
-        startInfo.RedirectStandardOutput <- true
-        Process.Start(startInfo)
-
-      let exited = proc.WaitForExit(30 * 1000)
-
-      if not exited then
-        proc.Kill(entireProcessTree = true)
-        None
-      else
+      if ok then
         let newText = File.ReadAllText(temp)
         formattingResultOfDiff text newText |> Some
+      else
+        None
     finally
       try
         File.Delete(temp)

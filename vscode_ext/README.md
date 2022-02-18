@@ -25,6 +25,8 @@ npm ci
     - [ ] Find field references
 - [ ] Rename
 - [ ] Completion
+- [x] Formatting
+    - `fantomas-tool` is required. See also documentation about LSP server.
 
 ----
 
