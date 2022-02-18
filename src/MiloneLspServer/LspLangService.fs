@@ -1451,6 +1451,17 @@ module Formatting =
 
   type private E = System.Environment
 
+  let private dotnetCommand () =
+    let c =
+      E.GetEnvironmentVariable("MILONE_LSP_SERVER_DOTNET_COMMAND")
+
+    if not (isNull c) then
+      c
+    else
+      match E.OSVersion.Platform with
+      | System.PlatformID.Win32NT -> "C:/Program Files/dotnet/dotnet.exe"
+      | _ -> "/usr/share/dotnet/dotnet"
+
   let private homeDir () =
     E.GetFolderPath(E.SpecialFolder.UserProfile)
 
@@ -1466,12 +1477,12 @@ module Formatting =
       try
         use proc =
           let startInfo = ProcessStartInfo()
-          startInfo.FileName <- "/usr/bin/dotnet"
+          startInfo.FileName <- dotnetCommand ()
           startInfo.ArgumentList.Add("fantomas")
           startInfo.ArgumentList.Add(temp)
           startInfo.WorkingDirectory <- workDir
           startInfo.EnvironmentVariables.Add("DOTNET_CLI_HOME", homeDir ())
-          startInfo.EnvironmentVariables.Add("PATH", "/usr/bin")
+          startInfo.EnvironmentVariables.Add("PATH", "")
           startInfo.RedirectStandardOutput <- true
           Process.Start(startInfo)
 
@@ -1479,7 +1490,11 @@ module Formatting =
         let ok = exited && proc.ExitCode = 0
 
         if not exited then
+          warnFn "Killing locally-installed fantomas as timeout."
           proc.Kill(entireProcessTree = true)
+
+        if not ok then
+          warnFn "Locally-installed fantomas failed."
 
         ok
       with
@@ -1501,7 +1516,7 @@ module Formatting =
         startInfo.ArgumentList.Add(temp)
         startInfo.WorkingDirectory <- workDir
         startInfo.EnvironmentVariables.Add("DOTNET_CLI_HOME", homeDir ())
-        startInfo.EnvironmentVariables.Add("PATH", "/usr/bin")
+        startInfo.EnvironmentVariables.Add("PATH", "")
         startInfo.RedirectStandardOutput <- true
         Process.Start(startInfo)
 
@@ -1509,7 +1524,11 @@ module Formatting =
       let ok = exited && proc.ExitCode = 0
 
       if not exited then
+        warnFn "Killing globally-installed fantomas as timeout."
         proc.Kill(entireProcessTree = true)
+
+      if not ok then
+        warnFn "Globally-installed fantomas failed."
 
       ok
     with
