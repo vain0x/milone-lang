@@ -701,7 +701,14 @@ let private tgDecls docId (decls, ctx) : TStmt list * NameCtx = (decls, ctx) |> 
 // Interface
 // -----------------------------------------------
 
-let genTir (projectName: string) (docId: DocId) (root: ARoot, ctx: NameCtx) : TStmt list * NameCtx =
+let genTir
+  (projectName: ProjectName)
+  (moduleName: ModuleName)
+  (docId: DocId)
+  (root: ARoot, ctx: NameCtx)
+  : TStmt list * NameCtx =
+  let zeroPos = 0, 0
+
   let onModuleRoot moduleName body pos =
     let body, ctx = (body, ctx) |> tgDecls docId
     let serial, ctx = ctx |> nameCtxAdd moduleName
@@ -710,18 +717,19 @@ let genTir (projectName: string) (docId: DocId) (root: ARoot, ctx: NameCtx) : TS
 
   let wrapWithProjectModule (body, ctx) =
     let serial, ctx =
-      ctx |> nameCtxAdd (Name(projectName, (0, 0)))
+      ctx |> nameCtxAdd (Name(projectName, zeroPos))
 
     [ TModuleStmt(ModuleTySerial serial, body, noLoc) ], ctx
 
   let (ARoot (headOpt, decls)) = root
 
-  match headOpt with
-  | Some ([ _; moduleName ], pos) ->
-    onModuleRoot moduleName decls pos
-    |> wrapWithProjectModule
+  let moduleName, pos =
+    match headOpt with
+    | Some ([ _; moduleName ], pos) -> moduleName, pos
+    | _ -> Name(moduleName, zeroPos), zeroPos
 
-  | _ -> (decls, ctx) |> tgDecls docId
+  onModuleRoot moduleName decls pos
+  |> wrapWithProjectModule
 
 // ===============================================
 // Experimental
@@ -839,11 +847,7 @@ let private ocDecl (decl: ADecl) : int =
 let private ocDecls = sumBy ocDecl
 
 let countSymbols (root: ARoot) : int =
-  let (ARoot (headOpt, decls)) = root
+  let (ARoot (_, decls)) = root
 
-  match headOpt with
-  | Some ([ _; _ ], _) ->
-    // +2 for project and module
-    ocDecls decls + 2
-
-  | _ -> ocDecls decls
+  // +2 for project and module
+  ocDecls decls + 2

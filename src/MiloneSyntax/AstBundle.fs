@@ -284,13 +284,14 @@ let bundle (fetchModule: FetchModuleFun) (entryProjectName: ProjectName) : Bundl
       modules
       |> __parallelMap (fun (serial: Serial, moduleData: ModuleData) ->
         let projectName = moduleData.Project
+        let moduleName = moduleData.Name
         let syntaxData = moduleData.SyntaxData
         let symbolCount = moduleData.SymbolCount
         let docId, _, ast, _ = syntaxData
 
         let exprs, nameCtx =
           let nameCtx = TirGen.TgNameCtx(serial, [])
-          TirGen.genTir projectName docId (ast, nameCtx)
+          TirGen.genTir projectName moduleName docId (ast, nameCtx)
 
         let (TirGen.TgNameCtx (lastSerial, _)) = nameCtx
 
