@@ -1,8 +1,8 @@
 module rec std_string.Program
 
-// Tests for MiloneStd.StdString.
+// Tests for Std.StdString.
 
-module S = MiloneStd.StdString
+module S = Std.StdString
 
 // Not using Option.debug to avoid depending on other modules.
 let private debugOpt debug opt =

@@ -15,8 +15,8 @@ services:
       - "milone_lang_obj:/mnt/milone-lang/MiloneLang/obj"
       - "milone_lsp_bin:/mnt/milone-lang/milone_lsp/bin"
       - "milone_lsp_obj:/mnt/milone-lang/milone_lsp/obj"
-      - "milone_std_bin:/mnt/milone-lang/milone_libs/MiloneStd/bin"
-      - "milone_std_obj:/mnt/milone-lang/milone_libs/MiloneStd/obj"
+      - "milone_std_bin:/mnt/milone-lang/milone_libs/Std/bin"
+      - "milone_std_obj:/mnt/milone-lang/milone_libs/Std/obj"
       - "milone_tests_bin:/mnt/milone-lang/MiloneTests/bin"
       - "milone_tests_obj:/mnt/milone-lang/MiloneTests/obj"
 

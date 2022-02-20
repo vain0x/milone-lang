@@ -70,7 +70,7 @@ open MiloneShared.SharedTypes
 open MiloneShared.Util
 open MiloneSyntaxTypes.SyntaxTypes
 
-module Int = MiloneStd.StdInt
+module Int = Std.StdInt
 
 let private newIntLit text flavorOpt =
   match flavorOpt with

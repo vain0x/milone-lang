@@ -3,9 +3,9 @@ module MiloneLspServer.LspLangService
 open MiloneShared.SharedTypes
 open MiloneShared.UtilParallel
 open MiloneShared.UtilSymbol
-open MiloneStd.StdError
-open MiloneStd.StdMap
-open MiloneStd.StdSet
+open Std.StdError
+open Std.StdMap
+open Std.StdSet
 open MiloneLspServer.Lsp
 open MiloneLspServer.LspUtil
 open MiloneLspServer.Util
@@ -13,8 +13,8 @@ open MiloneLspServer.Util
 // FIXME: shouldn't depend
 module SyntaxApi = MiloneSyntax.SyntaxApi
 
-module C = MiloneStd.StdChar
-module S = MiloneStd.StdString
+module C = Std.StdChar
+module S = Std.StdString
 
 type private DocVersion = int
 type private FilePath = string

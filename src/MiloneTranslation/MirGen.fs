@@ -9,15 +9,15 @@ open MiloneShared.SharedTypes
 open MiloneShared.TypeIntegers
 open MiloneShared.Util
 open MiloneShared.UtilSymbol
-open MiloneStd.StdError
-open MiloneStd.StdMap
-open MiloneStd.StdMultimap
-open MiloneStd.StdSet
+open Std.StdError
+open Std.StdMap
+open Std.StdMultimap
+open Std.StdSet
 open MiloneTranslation.Hir
 open MiloneTranslation.Mir
 open MiloneTranslationTypes.HirTypes
 
-module S = MiloneStd.StdString
+module S = Std.StdString
 
 let private unwrapListTy ty =
   match ty with

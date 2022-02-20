@@ -24,12 +24,12 @@ module rec MiloneSyntax.TirGen
 
 open MiloneShared.SharedTypes
 open MiloneShared.Util
-open MiloneStd.StdError
+open Std.StdError
 open MiloneSyntax.Tir
 open MiloneSyntaxTypes.SyntaxTypes
 open MiloneSyntaxTypes.TirTypes
 
-module S = MiloneStd.StdString
+module S = Std.StdString
 
 let private greek (Name (ident, pos)) = Name("'" + ident, pos)
 

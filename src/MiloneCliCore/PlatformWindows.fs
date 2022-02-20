@@ -1,8 +1,8 @@
 module rec MiloneCliCore.PlatformWindows
 
-open MiloneStd.StdPath
+open Std.StdPath
 
-module S = MiloneStd.StdString
+module S = Std.StdString
 
 // -----------------------------------------------
 // Utils

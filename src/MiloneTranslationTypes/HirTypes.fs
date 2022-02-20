@@ -8,9 +8,9 @@ module rec MiloneTranslationTypes.HirTypes
 open MiloneShared.SharedTypes
 open MiloneShared.TypeFloat
 open MiloneShared.TypeIntegers
-open MiloneStd.StdMap
+open Std.StdMap
 
-module S = MiloneStd.StdString
+module S = Std.StdString
 
 // -----------------------------------------------
 // HIR types

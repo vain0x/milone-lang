@@ -1,7 +1,7 @@
 /// Core parts of clap (command line arguments parser).
 module rec LibNursery.ClapCore
 
-module S = MiloneStd.StdString
+module S = Std.StdString
 
 /// Property name. Long or short (one letter).
 [<RequireQualifiedAccess; NoEquality; NoComparison>]

@@ -4,11 +4,11 @@
 module rec MiloneTranslation.TranslationApi
 
 open MiloneShared.SharedTypes
-open MiloneStd.StdMap
+open Std.StdMap
 open MiloneTranslationTypes.HirTypes
 open MiloneTranslationTypes.TranslationApiTypes
 
-module S = MiloneStd.StdString
+module S = Std.StdString
 module AutoBoxing = MiloneTranslation.AutoBoxing
 module CirDump = MiloneTranslation.CirDump
 module CirGen = MiloneTranslation.CirGen

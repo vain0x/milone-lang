@@ -461,8 +461,8 @@ let private commandSelfInstall () : unit =
   // FIXME: Exclude files
   removeFile $"{destRuntimeDir}/milone.o"
   removeFile $"{destRuntimeDir}/milone_platform.o"
-  removeDir $"{destMiloneLibsDir}/MiloneStd/bin"
-  removeDir $"{destMiloneLibsDir}/MiloneStd/obj"
+  removeDir $"{destMiloneLibsDir}/Std/bin"
+  removeDir $"{destMiloneLibsDir}/Std/obj"
 
   // Record version.
   let version =
@@ -603,8 +603,8 @@ let private commandPack () =
   // FIXME: Exclude files
   removeFile $"{destRuntimeDir}/milone.o"
   removeFile $"{destRuntimeDir}/milone_platform.o"
-  removeDir $"{destMiloneLibsDir}/MiloneStd/bin"
-  removeDir $"{destMiloneLibsDir}/MiloneStd/obj"
+  removeDir $"{destMiloneLibsDir}/Std/bin"
+  removeDir $"{destMiloneLibsDir}/Std/obj"
 
   // Add documents.
   copyFilesTo

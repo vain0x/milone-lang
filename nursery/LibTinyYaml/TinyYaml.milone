@@ -1,8 +1,8 @@
 module rec LibTinyYaml.TinyYaml
 
-open MiloneStd.StdError
+open Std.StdError
 
-module C = MiloneStd.StdChar
+module C = Std.StdChar
 
 let private stateMap f (x, s) = f x, s
 

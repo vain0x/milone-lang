@@ -1,6 +1,6 @@
 module rec MiloneCliCore.FSharpOnly
 
-open MiloneStd.StdError
+open Std.StdError
 open MiloneShared.UtilParallel
 open MiloneShared.UtilProfiler
 open MiloneCliCore.Cli

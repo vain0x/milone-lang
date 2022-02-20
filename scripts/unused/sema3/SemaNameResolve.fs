@@ -4,7 +4,7 @@ open MiloneLang.Util
 open MiloneLang.Syntax
 open MiloneLang.Sema
 
-module M = MiloneStd.StdMap
+module M = Std.StdMap
 
 let private desugarLetDecl isRec vis pat body pos =
   match pat with

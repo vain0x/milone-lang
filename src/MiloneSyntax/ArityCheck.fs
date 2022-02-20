@@ -2,13 +2,13 @@ module rec MiloneSyntax.ArityCheck
 
 open MiloneShared.SharedTypes
 open MiloneShared.Util
-open MiloneStd.StdError
+open Std.StdError
 open MiloneSyntax.Tir
 open MiloneSyntax.TySystem
 open MiloneSyntaxTypes.TirTypes
 
-module StdInt = MiloneStd.StdInt
-module S = MiloneStd.StdString
+module StdInt = Std.StdInt
+module S = Std.StdString
 
 // -----------------------------------------------
 // ArityEx

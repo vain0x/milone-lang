@@ -1,8 +1,8 @@
 module rec std_option.Program
 
-open MiloneStd.StdOption
+open Std.StdOption
 
-module S = MiloneStd.StdString
+module S = Std.StdString
 
 let private some = Some 42
 let private none: int option = None

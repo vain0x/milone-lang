@@ -4,7 +4,7 @@
 module rec MiloneSyntax.Syntax
 
 open MiloneShared.SharedTypes
-open MiloneStd.StdMap
+open Std.StdMap
 open MiloneSyntaxTypes.SyntaxTypes
 
 // -----------------------------------------------

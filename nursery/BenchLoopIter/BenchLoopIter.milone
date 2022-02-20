@@ -1,9 +1,9 @@
 // Benchmark of loop and iter.
 
-open MiloneStd.StdIter
-open MiloneStd.StdLoop
+open Std.StdIter
+open Std.StdLoop
 
-module Env = MiloneStd.StdEnv
+module Env = Std.StdEnv
 
 let private xor (l: int) (r: int) = l ^^^ r
 

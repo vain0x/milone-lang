@@ -1,9 +1,9 @@
 module rec LibNurseryTests.ClapTests
 
-open MiloneStd.StdMap
+open Std.StdMap
 open LibNursery.ClapCore
 
-module S = MiloneStd.StdString
+module S = Std.StdString
 module Clap = LibNursery.Clap
 
 let private format (s: string) (args: string list) =

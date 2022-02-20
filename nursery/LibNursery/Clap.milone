@@ -1,11 +1,11 @@
 /// Command line arguments parser.
 module rec LibNursery.Clap
 
-open MiloneStd.StdMap
-open MiloneStd.StdSet
+open Std.StdMap
+open Std.StdSet
 open LibNursery.ClapCore
 
-module S = MiloneStd.StdString
+module S = Std.StdString
 
 type private Kind =
   | Flag

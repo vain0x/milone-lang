@@ -1,16 +1,16 @@
 module rec MiloneCliCore.MiloneOnly
 
 // See milone_libs for implementations.
-open MiloneStd.StdChar
-open MiloneStd.StdError
-open MiloneStd.StdString
+open Std.StdChar
+open Std.StdError
+open Std.StdString
 
 open MiloneShared.Util
 open MiloneShared.UtilParallel
 open MiloneShared.UtilProfiler
 open MiloneCliCore.Cli
 
-module Env = MiloneStd.StdEnv
+module Env = Std.StdEnv
 
 let private newGuid () : string = __nativeFun "milone_uuid"
 

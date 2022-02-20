@@ -1,6 +1,6 @@
 module rec union_equal.Program
 
-open MiloneStd.Equal
+open Std.Equal
 
 // No payload.
 type private MyBool =

@@ -9,8 +9,8 @@ open MiloneLang.TypeFloat
 open MiloneLang.TypeIntegers
 open MiloneLang.Hir
 
-module TMap = MiloneStd.StdMap
-module S = MiloneStd.StdString
+module TMap = Std.StdMap
+module S = Std.StdString
 
 /// Identity. Unique number to identify such as variables.
 type Id = int

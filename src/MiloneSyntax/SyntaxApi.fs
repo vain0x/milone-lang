@@ -7,8 +7,8 @@ open MiloneShared.SharedTypes
 open MiloneShared.UtilParallel
 open MiloneShared.Util
 open MiloneShared.UtilSymbol
-open MiloneStd.StdError
-open MiloneStd.StdMap
+open Std.StdError
+open Std.StdMap
 open MiloneSyntax.Syntax
 open MiloneSyntaxTypes.SyntaxTypes
 open MiloneSyntaxTypes.SyntaxApiTypes
@@ -17,7 +17,7 @@ module ArityCheck = MiloneSyntax.ArityCheck
 module AstBundle = MiloneSyntax.AstBundle
 module NameRes = MiloneSyntax.NameRes
 module Manifest = MiloneSyntax.Manifest
-module S = MiloneStd.StdString
+module S = Std.StdString
 module SyntaxParse = MiloneSyntax.SyntaxParse
 module SyntaxTokenize = MiloneSyntax.SyntaxTokenize
 module Tir = MiloneSyntax.Tir
@@ -54,7 +54,7 @@ let private changeExt (ext: FileExt) (path: string) : string =
 // Std library
 // -----------------------------------------------
 
-let private getStdLibNames () = [ "MiloneCore"; "MiloneStd" ]
+let private getStdLibNames () = [ "MiloneCore"; "Std" ]
 
 let private computeStdLibProjectDir (miloneHome: MiloneHome) (projectName: ProjectName) : ProjectDir =
   miloneHome + "/milone_libs/" + projectName

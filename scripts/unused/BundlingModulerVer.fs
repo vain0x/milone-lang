@@ -73,7 +73,7 @@ open MiloneLang.Util
 open MiloneLang.Syntax
 open MiloneLang.Hir
 
-module S = MiloneStd.StdString
+module S = Std.StdString
 
 type private ProjectName = string
 

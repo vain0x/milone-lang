@@ -4,8 +4,8 @@ module rec MiloneLspServer.Lsp
 open MiloneShared.SharedTypes
 open MiloneShared.UtilParallel
 open MiloneShared.UtilSymbol
-open MiloneStd.StdMap
-open MiloneStd.StdSet
+open Std.StdMap
+open Std.StdSet
 open MiloneSyntax.Syntax
 open MiloneSyntax.Tir
 open MiloneSyntaxTypes.SyntaxTypes
@@ -14,8 +14,8 @@ open MiloneSyntaxTypes.SyntaxApiTypes
 
 module U = MiloneLspServer.Util // FIXME: don't depend
 
-module C = MiloneStd.StdChar
-module S = MiloneStd.StdString
+module C = Std.StdChar
+module S = Std.StdString
 module AstBundle = MiloneSyntax.AstBundle
 module SyntaxApi = MiloneSyntax.SyntaxApi
 module SyntaxTokenize = MiloneSyntax.SyntaxTokenize

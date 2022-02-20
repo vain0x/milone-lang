@@ -1,5 +1,0 @@
-module rec MiloneStd.StdEnvBase
-
-let getArgCount () : int = __nativeFun "milone_get_arg_count"
-
-let getArg (index: int) : string = __nativeFun ("milone_get_arg", index)

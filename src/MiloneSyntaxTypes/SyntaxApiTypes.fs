@@ -1,7 +1,7 @@
 module rec MiloneSyntaxTypes.SyntaxApiTypes
 
 open MiloneShared.SharedTypes
-open MiloneStd.StdPath
+open Std.StdPath
 open MiloneSyntaxTypes.SyntaxTypes
 open MiloneSyntaxTypes.TirTypes
 

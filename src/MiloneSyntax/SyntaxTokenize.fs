@@ -55,11 +55,11 @@ module rec MiloneSyntax.SyntaxTokenize
 
 open MiloneShared.SharedTypes
 open MiloneShared.TypeIntegers
-open MiloneStd.StdError
+open Std.StdError
 open MiloneSyntaxTypes.SyntaxTypes
 
-module C = MiloneStd.StdChar
-module S = MiloneStd.StdString
+module C = Std.StdChar
+module S = Std.StdString
 
 // -----------------------------------------------
 // Char

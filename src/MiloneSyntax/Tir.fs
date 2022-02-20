@@ -6,10 +6,10 @@ module rec MiloneSyntax.Tir
 open MiloneShared.SharedTypes
 open MiloneShared.TypeFloat
 open MiloneShared.TypeIntegers
-open MiloneStd.StdMap
+open Std.StdMap
 open MiloneSyntaxTypes.TirTypes
 
-module S = MiloneStd.StdString
+module S = Std.StdString
 
 // -----------------------------------------------
 // Ty

@@ -3,7 +3,7 @@ module rec LibNurseryTests.EphArrayTests
 open LibNursery.EphArray
 open LibNursery.EphSerial
 
-module S = MiloneStd.StdString
+module S = Std.StdString
 
 let private testEmpty (ss: EphSerial) : EphSerial =
   let (a: EphArray<int>), ss = EphArray.empty ss

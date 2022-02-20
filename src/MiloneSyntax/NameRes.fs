@@ -9,14 +9,14 @@ open MiloneShared.SharedTypes
 open MiloneShared.TypeIntegers
 open MiloneShared.Util
 open MiloneShared.UtilParallel
-open MiloneStd.StdError
-open MiloneStd.StdMap
-open MiloneStd.StdMultimap
-open MiloneStd.StdSet
+open Std.StdError
+open Std.StdMap
+open Std.StdMultimap
+open Std.StdSet
 open MiloneSyntax.Tir
 open MiloneSyntaxTypes.TirTypes
 
-module S = MiloneStd.StdString
+module S = Std.StdString
 
 let private txAbort loc = TNodeExpr(TAbortEN, [], noTy, loc)
 

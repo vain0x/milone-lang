@@ -5,7 +5,7 @@ module rec MiloneShared.SharedTypes
 
 open MiloneShared.TypeIntegers
 open MiloneShared.UtilSymbol
-open MiloneStd.StdPair
+open Std.StdPair
 
 let private compareInt (l: int) r = compare l r
 let private compareString (l: string) r = compare l r

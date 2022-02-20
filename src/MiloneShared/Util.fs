@@ -1,15 +1,15 @@
 /// Defines utility types and functions used in multiple modules.
 module rec MiloneShared.Util
 
-open MiloneStd.StdAssoc
-open MiloneStd.StdError
-open MiloneStd.StdList
-open MiloneStd.StdPair
-open MiloneStd.StdMap
+open Std.StdAssoc
+open Std.StdError
+open Std.StdList
+open Std.StdPair
+open Std.StdMap
 
-module C = MiloneStd.StdChar
-module S = MiloneStd.StdString
-module Int = MiloneStd.StdInt
+module C = Std.StdChar
+module S = Std.StdString
+module Int = Std.StdInt
 
 // -----------------------------------------------
 // Pair

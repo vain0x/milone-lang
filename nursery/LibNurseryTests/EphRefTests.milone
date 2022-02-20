@@ -5,7 +5,7 @@ open LibNursery.EphRef
 open LibNursery.EphSerial
 open LibNursery.Impure
 
-module S = MiloneStd.StdString
+module S = Std.StdString
 
 let private testItWorks (ss: EphSerial) : EphSerial =
   let (r: EphRef<int>), ss = EphRef.create 2 ss

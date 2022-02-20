@@ -6,15 +6,15 @@
 //    VERBOSE=1   Enable trace logging.
 module rec CmdLspServer.Program
 
-open MiloneStd.Equal
-open MiloneStd.StdError
-open MiloneStd.StdJson
-open MiloneStd.StdMap
+open Std.Equal
+open Std.StdError
+open Std.StdJson
+open Std.StdMap
 open LibSqlite3.Db
 
-module C = MiloneStd.StdChar
-module I = MiloneStd.StdInt
-module S = MiloneStd.StdString
+module C = Std.StdChar
+module I = Std.StdInt
+module S = Std.StdString
 
 __nativeDecl
   """
