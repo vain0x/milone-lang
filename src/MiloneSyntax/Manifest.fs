@@ -6,11 +6,11 @@
 module rec MiloneSyntax.Manifest
 
 open MiloneShared.SharedTypes
-open MiloneStd.StdPath
+open Std.StdPath
 open MiloneSyntaxTypes.SyntaxApiTypes
 open MiloneSyntaxTypes.SyntaxTypes
 
-module S = MiloneStd.StdString
+module S = Std.StdString
 
 let emptyManifest: ManifestData =
   { Projects = []

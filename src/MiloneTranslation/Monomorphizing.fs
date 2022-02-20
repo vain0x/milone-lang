@@ -54,9 +54,9 @@ module rec MiloneTranslation.Monomorphizing
 
 open MiloneShared.SharedTypes
 open MiloneShared.Util
-open MiloneStd.StdError
-open MiloneStd.StdMap
-open MiloneStd.StdMultimap
+open Std.StdError
+open Std.StdMap
+open Std.StdMultimap
 open MiloneTranslation.Hir
 open MiloneTranslationTypes.HirTypes
 

@@ -1,6 +1,6 @@
 module rec std_native_interop.Program
 
-open MiloneStd.NativeInterop
+open Std.NativeInterop
 
 module private NativePtrTests =
   let private testOfNativeInt () =

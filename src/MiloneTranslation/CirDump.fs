@@ -6,12 +6,12 @@ module rec MiloneTranslation.CirDump
 open MiloneShared.TypeFloat
 open MiloneShared.TypeIntegers
 open MiloneShared.Util
-open MiloneStd.StdError
+open Std.StdError
 open MiloneTranslation.Cir
 
-module C = MiloneStd.StdChar
-module S = MiloneStd.StdString
-module SB = MiloneStd.StdStringBase
+module C = Std.StdChar
+module S = Std.StdString
+module SB = Std.StdStringBase
 
 let private eol = "\n"
 

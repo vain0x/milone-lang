@@ -18,7 +18,7 @@
 module rec MiloneTranslation.TailRecOptimizing
 
 open MiloneShared.Util
-open MiloneStd.StdError
+open Std.StdError
 open MiloneTranslation.Hir
 open MiloneTranslationTypes.HirTypes
 

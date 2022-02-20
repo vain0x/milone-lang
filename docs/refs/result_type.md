@@ -51,7 +51,7 @@ Milone-lang doesn't support exceptions.
 
 Result is a generic discriminated union type.
 
-- See definition in `MiloneStd.Result`
+- See definition in `Std.Result`
 - See details in [discriminated union types#Runtime representation](discriminated_union_types.md#Runtime-representation)
 
 ### History of name

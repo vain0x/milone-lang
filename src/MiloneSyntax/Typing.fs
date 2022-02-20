@@ -14,17 +14,17 @@ module rec MiloneSyntax.Typing
 open MiloneShared.SharedTypes
 open MiloneShared.TypeIntegers
 open MiloneShared.Util
-open MiloneStd.StdError
-open MiloneStd.StdMap
-open MiloneStd.StdMultimap
-open MiloneStd.StdSet
+open Std.StdError
+open Std.StdMap
+open Std.StdMultimap
+open Std.StdSet
 open MiloneSyntax.NameRes
 open MiloneSyntax.Tir
 open MiloneSyntax.TySystem
 open MiloneSyntaxTypes.TirTypes
 
-module S = MiloneStd.StdString
-module StdInt = MiloneStd.StdInt
+module S = Std.StdString
+module StdInt = Std.StdInt
 
 // -----------------------------------------------
 // Context

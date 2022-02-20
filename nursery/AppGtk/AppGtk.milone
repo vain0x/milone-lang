@@ -1,6 +1,6 @@
 module rec AppGtk.Program
 
-module S = MiloneStd.StdString
+module S = Std.StdString
 
 let cons head tail = head :: tail
 

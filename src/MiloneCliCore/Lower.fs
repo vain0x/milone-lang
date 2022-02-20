@@ -4,8 +4,8 @@
 module rec MiloneCliCore.Lower
 
 open MiloneShared.SharedTypes
-open MiloneStd.StdError
-open MiloneStd.StdMap
+open Std.StdError
+open Std.StdMap
 
 module Hir = MiloneTranslationTypes.HirTypes
 module Tir = MiloneSyntaxTypes.TirTypes

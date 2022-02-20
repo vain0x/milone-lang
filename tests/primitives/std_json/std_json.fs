@@ -1,9 +1,9 @@
 module rec std_json.Program
 
-open MiloneStd.StdJson
+open Std.StdJson
 
-module C = MiloneStd.StdChar
-module S = MiloneStd.StdString
+module C = Std.StdChar
+module S = Std.StdString
 
 let private success title (text: string) expected =
   match Json.parsePartial 0 text.Length text with

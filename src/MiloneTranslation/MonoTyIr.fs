@@ -4,7 +4,7 @@ module rec MiloneTranslation.MonoTyIr
 open MiloneShared.SharedTypes
 open MiloneShared.TypeIntegers
 open MiloneShared.TypeFloat
-open MiloneStd.StdMap
+open Std.StdMap
 
 module Hir = MiloneTranslationTypes.HirTypes
 

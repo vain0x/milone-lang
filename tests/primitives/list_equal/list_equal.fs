@@ -3,7 +3,7 @@ module rec list_equal.Program
 // List type supports structural equality (=).
 
 // it's necessary to open a library manually for now.
-module StdEqual = MiloneStd.Equal
+module StdEqual = Std.Equal
 
 let private testIntList () =
   assert ([ 2; 2; 3; 5 ] = [ 2; 2; 3; 5 ])

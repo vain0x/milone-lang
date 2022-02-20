@@ -24,7 +24,7 @@ bool MiloneDerive_ListEqual_eta3_prim(void const* env_, int arg_, int arg_1);
 
 bool MiloneDerive_ListEqual_eta3_prim(void const* , int , int );
 
-bool MiloneStd_Equal_IntIntBoolFun2IntListIntListBoolFun3_genericListEqual(struct IntIntBoolFun2 , struct IntList const* , struct IntList const* );
+bool Std_Equal_IntIntBoolFun2IntListIntListBoolFun3_genericListEqual(struct IntIntBoolFun2 , struct IntList const* , struct IntList const* );
 
 bool MiloneDerive_ListEqual_listEqual(struct IntList const* l_, struct IntList const* r_);
 
@@ -34,7 +34,7 @@ bool MiloneDerive_ListEqual_eta3_listEqual_tuple2Equal(void const* env_1, struct
 
 bool MiloneDerive_ListEqual_eta3_listEqual_tuple2Equal(void const* , struct IntStringTuple2_ , struct IntStringTuple2_ );
 
-bool MiloneStd_Equal_IntStringTuple2IntStringTuple2BoolFun2IntStringTuple2ListIntStringTuple2ListBoolFun3_genericListEqual(struct IntStringTuple2_IntStringTuple2_BoolFun2 , struct IntStringTuple2_List const* , struct IntStringTuple2_List const* );
+bool Std_Equal_IntStringTuple2IntStringTuple2BoolFun2IntStringTuple2ListIntStringTuple2ListBoolFun3_genericListEqual(struct IntStringTuple2_IntStringTuple2_BoolFun2 , struct IntStringTuple2_List const* , struct IntStringTuple2_List const* );
 
 bool MiloneDerive_ListEqual_listEqual_1(struct IntStringTuple2_List const* l_1, struct IntStringTuple2_List const* r_1);
 
@@ -87,7 +87,7 @@ bool MiloneDerive_ListEqual_eta3_prim(void const* env_, int arg_, int arg_1) {
 
 bool MiloneDerive_ListEqual_listEqual(struct IntList const* l_, struct IntList const* r_) {
     struct IntIntBoolFun2 fun_ = (struct IntIntBoolFun2){.fun = MiloneDerive_ListEqual_eta3_prim, .env = NULL};
-    bool call_ = MiloneStd_Equal_IntIntBoolFun2IntListIntListBoolFun3_genericListEqual(fun_, l_, r_);
+    bool call_ = Std_Equal_IntIntBoolFun2IntListIntListBoolFun3_genericListEqual(fun_, l_, r_);
     return call_;
 }
 
@@ -98,7 +98,7 @@ bool MiloneDerive_ListEqual_eta3_listEqual_tuple2Equal(void const* env_1, struct
 
 bool MiloneDerive_ListEqual_listEqual_1(struct IntStringTuple2_List const* l_1, struct IntStringTuple2_List const* r_1) {
     struct IntStringTuple2_IntStringTuple2_BoolFun2 fun_1 = (struct IntStringTuple2_IntStringTuple2_BoolFun2){.fun = MiloneDerive_ListEqual_eta3_listEqual_tuple2Equal, .env = NULL};
-    bool call_2 = MiloneStd_Equal_IntStringTuple2IntStringTuple2BoolFun2IntStringTuple2ListIntStringTuple2ListBoolFun3_genericListEqual(fun_1, l_1, r_1);
+    bool call_2 = Std_Equal_IntStringTuple2IntStringTuple2BoolFun2IntStringTuple2ListIntStringTuple2ListBoolFun3_genericListEqual(fun_1, l_1, r_1);
     return call_2;
 }
 

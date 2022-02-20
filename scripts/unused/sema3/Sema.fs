@@ -2,7 +2,7 @@ module rec MiloneLang.Sema
 
 open MiloneLang.Syntax
 
-module M = MiloneStd.StdMap
+module M = Std.StdMap
 
 type ProjectName = string
 

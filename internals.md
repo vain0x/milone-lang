@@ -66,9 +66,9 @@ In tests, there are some categories of test cases:
 
 - [TODO list](https://github.com/vain0x/milone-lang/projects/1)
 - [notes.md](notes.md): Notes on future works.
-- [milone_libs](milone_libs): Standard library for milone-lang.
-    - [MiloneCore](milone_libs/MiloneCore): Core library that is a subset of F# with compatible behavior.
-    - [MiloneStd](milone_libs/MiloneStd): Standard library for milone-lang, not compatible with F#.
+- Standard libraries for milone-lang.
+    - [src/MiloneCore](src/MiloneCore): Core library that is a subset of F# with compatible behavior.
+    - [src/Std](src/Std): Standard library for milone-lang, not compatible with F#.
 - [nursery](nursery): Experimental projects written in milone-lang
 
 ## Deployment

@@ -79,13 +79,13 @@ module rec MiloneTranslation.EtaExpansion
 
 open MiloneShared.SharedTypes
 open MiloneShared.Util
-open MiloneStd.StdError
-open MiloneStd.StdMap
+open Std.StdError
+open Std.StdMap
 open MiloneTranslation.Hir
 open MiloneTranslationTypes.HirTypes
 
-module Int = MiloneStd.StdInt
-module S = MiloneStd.StdString
+module Int = Std.StdInt
+module S = Std.StdString
 
 [<RequireQualifiedAccess>]
 [<NoEquality; NoComparison>]

@@ -9,11 +9,11 @@ open MiloneShared.SharedTypes
 open MiloneShared.TypeFloat
 open MiloneShared.TypeIntegers
 open MiloneShared.Util
-open MiloneStd.StdError
-open MiloneStd.StdMap
+open Std.StdError
+open Std.StdMap
 open MiloneTranslationTypes.HirTypes
 
-module S = MiloneStd.StdString
+module S = Std.StdString
 
 // -----------------------------------------------
 // Types (HIR/MIR)

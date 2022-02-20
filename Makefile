@@ -34,8 +34,7 @@ MY_BUILD_TIMESTAMP := target/.timestamp/my_build_tool
 
 .PHONY: dotnet_restore gen2 gen3 integration_tests my_build self test_self
 
-target/.timestamp/dotnet_restore: \
-		$(shell find src milone_libs -maxdepth 3 -name '*.fsproj')
+target/.timestamp/dotnet_restore: $(wildcard src/*/*.fsproj)
 	dotnet restore && mkdir -p $(shell dirname $@) && touch $@
 
 ${MY_BUILD_TIMESTAMP}: target/.timestamp/dotnet_restore \
@@ -59,8 +58,6 @@ target/milone: bin/ninja ${MY_BUILD_TIMESTAMP} \
 		runtime/milone.h \
 		runtime/milone.c \
 		runtime/milone_platform.c \
-		$(wildcard milone_libs/*/*.fs) \
-		$(wildcard milone_libs/*/*.milone) \
 		$(wildcard src/*/*.fs) \
 		$(wildcard src/*/*.fsproj) \
 		$(wildcard src/*/*.milone)

@@ -1,8 +1,8 @@
 module rec std_iter.Program
 
-module S = MiloneStd.StdString
+module S = Std.StdString
 
-open MiloneStd.StdIter
+open Std.StdIter
 
 let private bang () = exit 1
 

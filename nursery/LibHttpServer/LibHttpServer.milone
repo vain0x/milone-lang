@@ -5,13 +5,13 @@
 // Impure things need replacing by ephemeral objects.
 module rec LibHttpServer.Program
 
-open MiloneStd.StdError
-open MiloneStd.StdMap
+open Std.StdError
+open Std.StdMap
 
-module I = MiloneStd.StdInt
-module C = MiloneStd.StdChar
-module S = MiloneStd.StdString
-module StdEnv = MiloneStd.StdEnv
+module I = Std.StdInt
+module C = Std.StdChar
+module S = Std.StdString
+module StdEnv = Std.StdEnv
 
 type private Map<'K, 'V> = TreeMap<'K, 'V>
 

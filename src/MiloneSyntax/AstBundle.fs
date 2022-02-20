@@ -10,15 +10,15 @@ open MiloneShared.SharedTypes
 open MiloneShared.Util
 open MiloneShared.UtilParallel
 open MiloneShared.UtilSymbol
-open MiloneStd.StdError
-open MiloneStd.StdSet
-open MiloneStd.StdMap
+open Std.StdError
+open Std.StdSet
+open Std.StdMap
 open MiloneSyntax.Syntax
 open MiloneSyntax.Tir
 open MiloneSyntaxTypes.SyntaxTypes
 open MiloneSyntaxTypes.TirTypes
 
-module S = MiloneStd.StdString
+module S = Std.StdString
 module TirGen = MiloneSyntax.TirGen
 
 // -----------------------------------------------

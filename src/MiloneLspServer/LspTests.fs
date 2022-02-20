@@ -6,7 +6,7 @@ open MiloneShared.UtilSymbol
 open MiloneLspServer.Lsp
 open MiloneLspServer.LspUtil
 
-module S = MiloneStd.StdString
+module S = Std.StdString
 module LLS = MiloneLspServer.LspLangService
 module WorkspaceAnalysis = LLS.WorkspaceAnalysis
 
@@ -770,9 +770,9 @@ let private testDocumentSymbol () =
       """
         module rec TestProject.Program
 
-        open MiloneStd.StdMap
+        open Std.StdMap
 
-        module S = MiloneStd.StdString
+        module S = Std.StdString
 
         type Int = int
 
@@ -853,7 +853,7 @@ let private testCodeActionGenerateOpen () =
 
   let text =
     """
-      open MiloneStd.StdMap
+      open Std.StdMap
 
       let f = X.
       //        ^cursor
@@ -914,7 +914,7 @@ let private testCodeActionGenerateModuleSynonym () =
 
   let text =
     """
-      module C = MiloneStd.StdChar
+      module C = Std.StdChar
 
       let f = S.
       //        ^cursor
@@ -923,7 +923,7 @@ let private testCodeActionGenerateModuleSynonym () =
   let files =
     [ "/$/root/TestProject/Other.milone",
       """
-        module S = MiloneStd.StdString
+        module S = Std.StdString
       """
 
       path, text ]
@@ -960,7 +960,7 @@ let private testCodeActionGenerateModuleSynonym () =
     |> S.concat "\n"
 
   let expected =
-    """Generate module synonym: 2 module S = MiloneStd.StdString
+    """Generate module synonym: 2 module S = Std.StdString
 """
 
   actual
@@ -1025,7 +1025,7 @@ let private testCompletion () =
 
     testCompletionMultipleFiles
       "module name"
-      [ "/$/.milone/milone_libs/MiloneStd/StdFoo.milone", ""
+      [ "/$/.milone/src/Std/StdFoo.milone", ""
         "/$/root/TestProject/TestProject.milone",
         """
             module rec TestProject.TestProject
@@ -1033,7 +1033,7 @@ let private testCompletion () =
             module M =
             //        ^cursor
           """ ]
-      [ "MiloneStd"; "StdFoo"; "TestProject" ]
+      [ "Std"; "StdFoo"; "TestProject" ]
 
     // testCompletionSingleFile
     //   "dot"
@@ -1052,7 +1052,7 @@ let private testCompletion () =
 
 let private testFindProjects () =
   let files =
-    [ "/$/.milone/milone_libs/MiloneStd/StdFoo.milone", "" ]
+    [ "/$/.milone/src/Std/StdFoo.milone", "" ]
 
   let newFile = "/$/root/TestProject/TestProject.milone"
   let newFiles = (newFile, "") :: files

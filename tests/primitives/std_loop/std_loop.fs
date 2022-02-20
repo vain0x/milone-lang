@@ -1,8 +1,8 @@
 module rec std_loop.Program
 
-open MiloneStd.StdLoop
+open Std.StdLoop
 
-module S = MiloneStd.StdString
+module S = Std.StdString
 
 /// `0..n-1`
 let private gen (n: int) : Loop<_, int> = Loop.range 0 n

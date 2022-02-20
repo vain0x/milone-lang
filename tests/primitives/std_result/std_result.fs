@@ -1,8 +1,8 @@
 module rec std_result.Program
 
-open MiloneStd.StdResult
+open Std.StdResult
 
-module S = MiloneStd.StdString
+module S = Std.StdString
 
 let private ok: Result<int, string> = Ok 42
 let private error: Result<int, string> = Error "Bad"

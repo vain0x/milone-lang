@@ -38,7 +38,7 @@ bool MiloneDerive_ListEqual_eta3_listEqual_MyNodeEqual(void const* env_, struct 
 
 bool MiloneDerive_ListEqual_eta3_listEqual_MyNodeEqual(void const* , struct IntMyNode1_ , struct IntMyNode1_ );
 
-bool MiloneStd_Equal_IntMyNode1IntMyNode1BoolFun2IntMyNode1ListIntMyNode1ListBoolFun3_genericListEqual(struct IntMyNode1_IntMyNode1_BoolFun2 , struct IntMyNode1_List const* , struct IntMyNode1_List const* );
+bool Std_Equal_IntMyNode1IntMyNode1BoolFun2IntMyNode1ListIntMyNode1ListBoolFun3_genericListEqual(struct IntMyNode1_IntMyNode1_BoolFun2 , struct IntMyNode1_List const* , struct IntMyNode1_List const* );
 
 bool MiloneDerive_ListEqual_listEqual(struct IntMyNode1_List const* l_14, struct IntMyNode1_List const* r_14);
 
@@ -179,7 +179,7 @@ bool MiloneDerive_ListEqual_eta3_listEqual_MyNodeEqual(void const* env_, struct 
 
 bool MiloneDerive_ListEqual_listEqual(struct IntMyNode1_List const* l_14, struct IntMyNode1_List const* r_14) {
     struct IntMyNode1_IntMyNode1_BoolFun2 fun_ = (struct IntMyNode1_IntMyNode1_BoolFun2){.fun = MiloneDerive_ListEqual_eta3_listEqual_MyNodeEqual, .env = NULL};
-    bool call_2 = MiloneStd_Equal_IntMyNode1IntMyNode1BoolFun2IntMyNode1ListIntMyNode1ListBoolFun3_genericListEqual(fun_, l_14, r_14);
+    bool call_2 = Std_Equal_IntMyNode1IntMyNode1BoolFun2IntMyNode1ListIntMyNode1ListBoolFun3_genericListEqual(fun_, l_14, r_14);
     return call_2;
 }
 

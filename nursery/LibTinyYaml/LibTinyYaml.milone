@@ -1,6 +1,6 @@
 open LibTinyYaml.TinyYaml
 
-module S = MiloneStd.StdString
+module S = Std.StdString
 
 let private dump y =
   match y with

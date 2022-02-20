@@ -20,7 +20,7 @@
   </ItemGroup>
 
   <ItemGroup>
-    <ProjectReference Include="..\..\milone_libs\MiloneStd\MiloneStd.fsproj" />
+    <ProjectReference Include="..\Std\Std.fsproj" />
     <ProjectReference Include="..\MiloneShared\MiloneShared.fsproj" />
     <ProjectReference Include="..\MiloneSyntaxTypes\MiloneSyntaxTypes.fsproj" />
   </ItemGroup>

@@ -1,6 +1,6 @@
 module rec LibSpan.Path
 
-module S = MiloneStd.StdString
+module S = Std.StdString
 
 type Path = Path of string
 

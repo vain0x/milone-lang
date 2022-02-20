@@ -1,10 +1,10 @@
 module rec MiloneCliCore.PlatformUnix
 
-open MiloneStd.StdError
-open MiloneStd.StdPath
+open Std.StdError
+open Std.StdPath
 open MiloneShared.Util
 
-module S = MiloneStd.StdString
+module S = Std.StdString
 
 // -----------------------------------------------
 // Utils

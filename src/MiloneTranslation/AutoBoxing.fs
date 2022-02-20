@@ -7,13 +7,13 @@ open MiloneShared.SharedTypes
 open MiloneShared.TypeFloat
 open MiloneShared.TypeIntegers
 open MiloneShared.Util
-open MiloneStd.StdError
-open MiloneStd.StdMap
-open MiloneStd.StdSet
+open Std.StdError
+open Std.StdMap
+open Std.StdSet
 open MiloneTranslation.Hir
 open MiloneTranslationTypes.HirTypes
 
-module Int = MiloneStd.StdInt
+module Int = Std.StdInt
 
 let private isFunTy ty =
   match ty with

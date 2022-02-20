@@ -2,11 +2,11 @@ module rec std_list.Program
 
 // incomplete
 
-// Tests MiloneCore/List.fs and MiloneStd/StdList.fs
+// Tests MiloneCore/List.fs and Std/StdList.fs
 
-open MiloneStd.StdList
+open Std.StdList
 
-module S = MiloneStd.StdString
+module S = Std.StdString
 
 /// Expects two `int-list`s are equal.
 let private eq (expected: int list) actual : bool =

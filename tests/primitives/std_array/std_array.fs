@@ -1,6 +1,6 @@
 module rec std_array.Program
 
-module A = MiloneStd.StdArray
+module A = Std.StdArray
 
 let get (i: int) (array: A.Array<_>) =
   match A.tryItem i array with

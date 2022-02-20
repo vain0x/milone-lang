@@ -6,8 +6,8 @@ open MiloneShared.SharedTypes
 open MiloneShared.TypeIntegers
 open MiloneShared.TypeFloat
 open MiloneShared.Util
-open MiloneStd.StdError
-open MiloneStd.StdMap
+open Std.StdError
+open Std.StdMap
 open MiloneTranslation.Hir
 open MiloneTranslationTypes.HirTypes
 

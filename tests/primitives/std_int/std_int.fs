@@ -1,6 +1,6 @@
 module rec std_int.Program
 
-module I = MiloneStd.StdInt
+module I = Std.StdInt
 
 let tryParseTest () =
   let parseOk (s: string) =

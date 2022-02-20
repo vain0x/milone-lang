@@ -1,0 +1,5 @@
+module rec Std.StdStringBase
+
+let utf8Length (s: string) = s.Length
+
+let concat (sep: string) (xs: string list) : string = __nativeFun ("str_concat", sep, xs)

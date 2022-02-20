@@ -158,4 +158,4 @@ Milone-lang tools (compiler and LSP server) are distributed under either:
 - the Apache 2.0 license, or
 - the MIT license.
 
-Others including documentation, examples, libraries, runtime code, scripts, tests, etc. are distributed under [CC0-1.0](https://creativecommons.org/publicdomain/zero/1.0/).
+Others including documentation, examples, standard libraries, runtime code, scripts, tests, etc. are distributed under [CC0-1.0](https://creativecommons.org/publicdomain/zero/1.0/).

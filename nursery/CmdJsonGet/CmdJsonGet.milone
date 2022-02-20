@@ -1,10 +1,10 @@
 module rec CmdJsonGet.Program
 
-open MiloneStd.StdError
-open MiloneStd.StdJson
+open Std.StdError
+open Std.StdJson
 
-module E = MiloneStd.StdEnv
-module S = MiloneStd.StdString
+module E = Std.StdEnv
+module S = Std.StdString
 
 let private helpText () =
   """json_get <PATH>

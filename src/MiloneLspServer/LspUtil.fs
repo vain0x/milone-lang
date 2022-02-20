@@ -1,10 +1,10 @@
 module rec MiloneLspServer.LspUtil
 
 open MiloneShared.Util
-open MiloneStd.StdMap
-open MiloneStd.StdMultimap
+open Std.StdMap
+open Std.StdMultimap
 
-module S = MiloneStd.StdString
+module S = Std.StdString
 
 let private cons x y = x :: y
 

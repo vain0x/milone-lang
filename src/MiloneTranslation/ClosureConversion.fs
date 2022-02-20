@@ -83,9 +83,9 @@ module rec MiloneTranslation.ClosureConversion
 
 open MiloneShared.SharedTypes
 open MiloneShared.Util
-open MiloneStd.StdError
-open MiloneStd.StdMap
-open MiloneStd.StdSet
+open Std.StdError
+open Std.StdMap
+open Std.StdSet
 open MiloneTranslation.Hir
 open MiloneTranslationTypes.HirTypes
 

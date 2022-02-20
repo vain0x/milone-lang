@@ -1,0 +1,121 @@
+module rec Std.NativeInterop
+
+let private memcpy (dest: voidptr) (src: obj) (size: unativeint) : voidptr = __nativeFun ("memcpy", dest, src, size)
+
+let private npPointeeSize (p: nativeptr<'T> ) : unativeint =
+  __nativeExpr ("sizeof(*({0}))", p)
+
+let private cpPointeeSize (p: __constptr<'T> ) : unativeint =
+  __nativeExpr ("sizeof(*({0}))", p)
+
+// See also:
+//
+// - https://github.com/dotnet/fsharp/blob/main/src/fsharp/FSharp.Core/nativeptr.fs
+// - https://github.com/fsharp/fslang-design/blob/main/RFCs/FS-1109-Additional-intrinsics-for-the-NativePtr-module.md
+module NativePtr =
+  // ---------------------------------------------
+  // NativePtr at F# 5.0
+  // ---------------------------------------------
+
+  let ofNativeInt (p: nativeint) : nativeptr<'T> = __nativeCast p
+  let toNativeInt (p: nativeptr<_>) : nativeint = nativeint p
+  let toVoidPtr (p: nativeptr<_>) : voidptr = __nativeCast p
+  let ofVoidPtr (p: voidptr) : nativeptr<_> = __nativeCast p
+
+  let add (p: nativeptr<'T>) (i: int) : nativeptr<'T> =
+    __nativeExpr ("(&({0})[{1}])", p, i)
+
+  let get (p: nativeptr<'T>) (i: int) : 'T =
+    __nativeExpr ("(({0})[{1}])", p, unativeint(uint i))
+
+  let set (p: nativeptr<'T>) (i: int) (value: 'T) : unit =
+    __nativeStmt ("({0})[{1}] = {2};", p, i, value)
+
+  let read (p: nativeptr<'T>) : 'T =
+    assert (__nativeCast p <> 0n)
+    __nativeExpr ("(*({0}))", p)
+
+  let write (p: nativeptr<'T>) (value: 'T) : unit =
+    assert (__nativeCast p <> 0n)
+    __nativeStmt ("*({0}) = {1};", p, value)
+
+  // not supported: stackalloc, toByRef
+
+  // ---------------------------------------------
+  // NativePtr at F# RFC FS-1109
+  // ---------------------------------------------
+
+  let isNullPtr (p: nativeptr<_>) : bool = nativeint p = 0n
+
+  /// Copies single value. (`*dest = *src`)
+  let copy (dest: nativeptr<'T>) (src: nativeptr<'T>) : unit =
+    assert (__nativeCast dest <> 0n)
+    assert (__nativeCast src <> 0n)
+
+    let _ =
+      memcpy (__nativeCast dest) (__nativeCast src) (npPointeeSize dest)
+
+    ()
+
+  /// Copies a number of values.
+  let copyBlock (dest: nativeptr<'T>) (src: nativeptr<'T>) (len: int) : unit =
+    if len > 0 then
+      assert (__nativeCast dest <> 0n)
+      assert (__nativeCast src <> 0n)
+
+      let _ =
+        memcpy (__nativeCast dest) (__nativeCast src) (npPointeeSize dest * unativeint len)
+
+      ()
+
+  // not supported: nullPtr (generic constant isn't supported)
+  // unimplemented: initBlock, clear
+
+  // =============================================
+
+  // Extension.
+
+  /// Gets size of the underlying type. (`sizeof(*p)`)
+  let __sizeOf (p: nativeptr<'T>) : int = int(uint(npPointeeSize p))
+
+  let __getNullPtr () : nativeptr<_> = __nativeCast 0n
+
+// =============================================================================
+
+module __ConstPtr =
+  // F# 5.0
+  // not supported: stackalloc, toByRef, set, write
+
+  let ofNativeInt (p: nativeint) : __constptr<'T> = __nativeCast p
+  let toNativeInt (p: __constptr<_>) : nativeint = nativeint p
+  let toObj (p: __constptr<_>) : obj = __nativeCast p
+  let ofObj (p: obj) : __constptr<_> = __nativeCast p
+
+  let add (p: __constptr<'T>) (i: int) : __constptr<'T> =
+    __nativeExpr ("(&({0})[{1}])", p, i)
+
+  let get (p: __constptr<'T>) (i: int) : 'T =
+    assert (i >= 0)
+    __nativeExpr ("(({0})[{1}])", p, unativeint(uint i))
+
+  let read (p: __constptr<'T>) : 'T =
+    assert (__nativeCast p <> 0un)
+    __nativeExpr ("(*({0}))", p)
+
+  // F# RFC FS-1109
+  // not supported: nullPtr (generic constant isn't supported)
+
+  let isNullPtr (p: __constptr<_>) : bool = unativeint p = 0un
+
+  // =============================================
+
+  /// Gets size of the underlying type. (`sizeof(*p)`)
+  let sizeOf (p: __constptr<'T>) : int = int(uint(cpPointeeSize p))
+
+  let getNullPtr () : __constptr<_> = __nativeCast 0un
+
+  /// Adds const qualifier.
+  let ofNativePtr (p: nativeptr<'T>) : __constptr<'T> = __nativeCast p
+
+  /// Drops const qualifier.
+  let toNativePtr (p: __constptr<'T>) : nativeptr<'T> = __nativeCast p

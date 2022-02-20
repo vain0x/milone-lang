@@ -1,6 +1,6 @@
 module rec CmdCat.Ffi
 
-module Env = MiloneStd.StdEnv
+module Env = Std.StdEnv
 
 let strAsPtr (s: string) : __constptr<char> = __nativeFun ("str_as_ptr", s)
 

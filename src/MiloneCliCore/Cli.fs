@@ -6,14 +6,14 @@ open MiloneShared.Util
 open MiloneShared.UtilParallel
 open MiloneShared.UtilProfiler
 open MiloneShared.UtilSymbol
-open MiloneStd.StdError
-open MiloneStd.StdPath
+open Std.StdError
+open Std.StdPath
 open MiloneSyntaxTypes.SyntaxTypes
 open MiloneSyntaxTypes.SyntaxApiTypes
 open MiloneTranslationTypes.TranslationApiTypes
 
-module C = MiloneStd.StdChar
-module S = MiloneStd.StdString
+module C = Std.StdChar
+module S = Std.StdString
 module Lower = MiloneCliCore.Lower
 module PU = MiloneCliCore.PlatformUnix
 module PW = MiloneCliCore.PlatformWindows
@@ -489,7 +489,7 @@ let private cliEval sApi tApi (host: CliHost) (sourceCode: string) =
   let sourceCode =
     """module rec Eval.Program
 
-module S = MiloneStd.StdString
+module S = Std.StdString
 
 let main _ =
   (

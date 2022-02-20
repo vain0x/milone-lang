@@ -1,7 +1,7 @@
 module rec CmdSqliteTodo.Program
 
-module E = MiloneStd.StdEnv
-module S = MiloneStd.StdString
+module E = Std.StdEnv
+module S = Std.StdString
 
 open LibSqlite3.Db
 

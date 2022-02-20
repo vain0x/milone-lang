@@ -6,9 +6,9 @@ module rec MiloneTranslation.Derive
 open MiloneShared.SharedTypes
 open MiloneShared.Util
 open MiloneShared.UtilSymbol
-open MiloneStd.StdError
-open MiloneStd.StdMap
-open MiloneStd.StdSet
+open Std.StdError
+open Std.StdMap
+open Std.StdSet
 open MiloneTranslation.Hir
 open MiloneTranslationTypes.HirTypes
 
@@ -174,7 +174,7 @@ let private deriveOnStmt (hirCtx: HirCtx) (ctx: DCtx) stmt : DCtx =
              (fun opt funSerial (funDef: FunDef) ->
                let (Loc (docId, _, _)) = funDef.Loc
 
-               if Symbol.equals docId (Symbol.intern "MiloneStd.Equal")
+               if Symbol.equals docId (Symbol.intern "Std.Equal")
                   && funDef.Name = "genericListEqual" then
                  Some funSerial
                else
@@ -277,7 +277,7 @@ let private deriveOnStmt (hirCtx: HirCtx) (ctx: DCtx) stmt : DCtx =
     ctx
 
   // l = r :=
-  //    MiloneStd.Equal.genericListEqual compare l r
+  //    Std.Equal.genericListEqual compare l r
   let deriveEqualForList ty (ctx: DCtx) : DCtx =
     let loc =
       Loc(Symbol.intern "MiloneDerive.ListEqual", 0, 0)
@@ -293,7 +293,7 @@ let private deriveOnStmt (hirCtx: HirCtx) (ctx: DCtx) stmt : DCtx =
 
       | _ ->
         // FIXME: don't crash it
-        printfn "ERROR: open MiloneStd.Equal to enable list equality"
+        printfn "ERROR: open Std.Equal to enable list equality"
         exit 1
 
     let funSerial, ctx =
