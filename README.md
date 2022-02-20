@@ -67,7 +67,7 @@ Instructions:
 
 - Download a binary package from [GitHub Releases](https://github.com/vain0x/milone-lang/releases)
 - Unarchive it somewhere
-- Follow instructions written in [INSTALL.md](scripts/MyBuildTool/assets/INSTALL.md)
+- Follow instructions written in [INSTALL.md](src/MyBuildTool/assets/INSTALL.md)
 
 See also [docs/binary_package.md](docs/binary_package.md).
 

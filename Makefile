@@ -1,4 +1,4 @@
-# Makefile as a thin wrapper of MyBuildTool.
+# Makefile as a thin(?) wrapper of MyBuildTool and scripts in `scripts/`.
 #
 # USAGE:
 #    make
@@ -29,7 +29,7 @@ runtime/hashmap.h:
 # MyBuildTool wrapper
 # ------------------------------------------------
 
-MY_BUILD := scripts/MyBuildTool/bin/Debug/net6.0/MyBuildTool
+MY_BUILD := src/MyBuildTool/bin/Debug/net6.0/MyBuildTool
 MY_BUILD_TIMESTAMP := target/.timestamp/my_build_tool
 
 .PHONY: dotnet_restore gen2 gen3 integration_tests my_build self test_self
@@ -39,9 +39,9 @@ target/.timestamp/dotnet_restore: \
 	dotnet restore && mkdir -p $(shell dirname $@) && touch $@
 
 ${MY_BUILD_TIMESTAMP}: target/.timestamp/dotnet_restore \
-		$(wildcard scripts/MyBuildTool/*.fs) \
-		$(wildcard scripts/MyBuildTool/*.fsproj)
-	dotnet build -nologo scripts/MyBuildTool && mkdir -p $(shell dirname $@) && touch $@
+		$(wildcard src/MyBuildTool/*.fs) \
+		$(wildcard src/MyBuildTool/*.fsproj)
+	dotnet build -nologo src/MyBuildTool && mkdir -p $(shell dirname $@) && touch $@
 
 my_build: ${MY_BUILD_TIMESTAMP}
 

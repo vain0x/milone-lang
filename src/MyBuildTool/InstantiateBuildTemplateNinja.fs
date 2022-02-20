@@ -46,7 +46,7 @@ let render () =
   let myBuildToolInput =
     seq {
       for proj, src in fsProjects do
-        if proj.StartsWith("scripts/MyBuildTool") then
+        if proj.StartsWith("src/MyBuildTool") then
           yield proj
           yield! src
     }
@@ -102,12 +102,12 @@ let render () =
 builddir = target/tests
 timestamp = target/.timestamp
 
-my_build_tool = scripts/MyBuildTool/bin/Debug/net6.0/MyBuildTool
+my_build_tool = src/MyBuildTool/bin/Debug/net6.0/MyBuildTool
 milone_dotnet = src/MiloneCli/bin/Debug/net6.0/MiloneCli
 
 rule build_my_build_tool
   description = build_my_build_tool
-  command = dotnet build -nologo scripts/MyBuildTool
+  command = dotnet build -nologo src/MyBuildTool
 
 rule build_milone_dotnet
   description = build_milone_dotnet
