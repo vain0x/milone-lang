@@ -2,10 +2,10 @@
 // Reads from standard input, writes to standard output.
 //
 // USAGE:
-//    ... | dotnet fsi scripts/JsonEncode.fsx
+//    ... | dotnet fsi src/JsonEncode.fsx
 //
 // EXAMPLES:
-//    $ printf 'Hello,\nworld!\n' | dotnet fsi scripts/JsonEncode.fsx
+//    $ printf 'Hello,\nworld!\n' | dotnet fsi src/JsonEncode.fsx
 //    "Hello,\nworld\n"
 
 module JsonEncode.Program
