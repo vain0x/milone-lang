@@ -8,7 +8,7 @@
   <ItemGroup>
     <Compile Include="FileSearch.fs" />
     <Compile Include="InstantiateBuildTemplateNinja.fs" />
-    <Compile Include="Program.fs" />
+    <Compile Include="MyBuildTool.fs" />
   </ItemGroup>
 
 </Project>
