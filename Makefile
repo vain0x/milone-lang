@@ -22,7 +22,7 @@ install-dev:
 bin/ninja:
 	scripts/install-ninja
 
-runtime/hashmap.h:
+src/libmilonert/hashmap.h:
 	scripts/install-hashmap
 
 # ------------------------------------------------
@@ -54,10 +54,10 @@ pack: ${MY_BUILD_TIMESTAMP}
 	${MY_BUILD} pack
 
 target/milone: bin/ninja ${MY_BUILD_TIMESTAMP} \
-		runtime/hashmap.h \
-		runtime/milone.h \
-		runtime/milone.c \
-		runtime/milone_platform.c \
+		src/libmilonert/hashmap.h \
+		src/libmilonert/milone.h \
+		src/libmilonert/milone.c \
+		src/libmilonert/milone_platform.c \
 		$(wildcard src/*/*.fs) \
 		$(wildcard src/*/*.fsproj) \
 		$(wildcard src/*/*.milone)

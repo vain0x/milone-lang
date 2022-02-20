@@ -3,7 +3,7 @@
         {
             "name": "Linux",
             "includePath": [
-                "${workspaceFolder}/runtime"
+                "${workspaceFolder}/src/libmilonert"
             ],
             "defines": [],
             "cStandard": "c11",
@@ -13,7 +13,7 @@
         {
             "name": "Win32",
             "includePath": [
-                "${workspaceFolder}/runtime"
+                "${workspaceFolder}/src/libmilonert"
             ],
             "defines": [
                 "_DEBUG",

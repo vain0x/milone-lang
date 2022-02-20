@@ -205,7 +205,7 @@ rule build_run_tests
     bin/ninja -f target/tests2-build.ninja
 build {exeFiles}: $
   build_run_tests $
-    | $my_build_tool runtime/milone.o runtime/milone_platform.o runtime/milone.h $
+    | $my_build_tool src/libmilonert/milone.o src/libmilonert/milone_platform.o src/libmilonert/milone.h $
       {runTestInputs}
   pool = console
 rule summarize_tests

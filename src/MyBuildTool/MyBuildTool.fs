@@ -44,21 +44,21 @@ warning_flags = $
 
 rule compile_c_to_obj
   description = compile_c_to_obj $in
-  command = $${CC:-gcc} -std=c11 $warning_flags -O1 -g -c -Iruntime $in -o $out
+  command = $${CC:-gcc} -std=c11 $warning_flags -O1 -g -c -I./src/libmilonert $in -o $out
 
 rule link_objs_to_exe
   description = link_objs_to_exe $out
   command = $${CC:-gcc} $in -o $out
 
-build runtime/milone.o: $
+build src/libmilonert/milone.o: $
   compile_c_to_obj $
-    runtime/milone.c $
-    | runtime/milone.h
+    src/libmilonert/milone.c $
+    | src/libmilonert/milone.h
 
-build runtime/milone_platform.o: $
+build src/libmilonert/milone_platform.o: $
   compile_c_to_obj $
-    runtime/milone_platform.c $
-    | runtime/milone.h
+    src/libmilonert/milone_platform.c $
+    | src/libmilonert/milone.h
 """
 
 module StringExt =
@@ -222,11 +222,11 @@ let private commandGen2 () =
       let o = $"target/gen2/{name}.o"
       oFiles.Add(o)
 
-      w $"build {o}: compile_c_to_obj {c} | runtime/milone.h"
+      w $"build {o}: compile_c_to_obj {c} | src/libmilonert/milone.h"
 
   let input = oFiles |> String.concat " "
 
-  w $"build target/milone: link_objs_to_exe runtime/milone.o runtime/milone_platform.o {input}"
+  w $"build target/milone: link_objs_to_exe src/libmilonert/milone.o src/libmilonert/milone_platform.o {input}"
 
   writeTo (ninja.ToString()) "target/gen2/build.ninja"
 
@@ -318,11 +318,11 @@ let private commandTestsBuild (testProjectDirs: string list) =
         let o = $"{targetDir}/{name}.o"
         oFiles.Add(o)
 
-        w $"build {o}: compile_c_to_obj {c} | runtime/milone.h"
+        w $"build {o}: compile_c_to_obj {c} | src/libmilonert/milone.h"
 
     let input = oFiles |> String.concat " "
 
-    w $"build {exe}: link_objs_to_exe runtime/milone.o runtime/milone_platform.o {input}"
+    w $"build {exe}: link_objs_to_exe src/libmilonert/milone.o src/libmilonert/milone_platform.o {input}"
 
   let exeFiles = String.concat " " exeFiles
 
@@ -396,7 +396,6 @@ let private commandSelfInstall () : unit =
   let destMiloneExe = $"{binDir}/milone{ext}"
   let destMiloneDotnetDir = $"{miloneHome}/bin/milone_dotnet"
   let destMiloneLspDir = $"{miloneHome}/bin/milone_lsp"
-  let destRuntimeDir = $"{miloneHome}/runtime"
   let destSrcDir = $"{miloneHome}/src"
   let destVersionFile = $"{miloneHome}/version"
 
@@ -455,13 +454,13 @@ let private commandSelfInstall () : unit =
       "-nologo" ]
 
   // Copy files.
-  copyDir "runtime" destRuntimeDir
+  copyDir "src/libmilonert" $"{destSrcDir}/libmilonert"
   copyDir "src/MiloneCore" $"{destSrcDir}/MiloneCore"
   copyDir "src/Std" $"{destSrcDir}/Std"
 
   // FIXME: Exclude files
-  removeFile $"{destRuntimeDir}/milone.o"
-  removeFile $"{destRuntimeDir}/milone_platform.o"
+  removeFile $"{destSrcDir}/libmilonert/milone.o"
+  removeFile $"{destSrcDir}/libmilonert/milone_platform.o"
   removeDir $"{destSrcDir}/MiloneCore/bin"
   removeDir $"{destSrcDir}/MiloneCore/obj"
   removeDir $"{destSrcDir}/Std/bin"
@@ -536,7 +535,6 @@ let private commandPack () =
   let destMiloneExe = $"{destBinDir}/milone{ext}"
   let destMiloneDotnetDir = $"{destMiloneHome}/bin/milone_dotnet"
   let destMiloneLspDir = $"{destMiloneHome}/bin/milone_lsp"
-  let destRuntimeDir = $"{destMiloneHome}/runtime"
   let destSrcDir = $"{destMiloneHome}/projects"
   let destVersionFile = $"{destMiloneHome}/version"
 
@@ -601,13 +599,13 @@ let private commandPack () =
       "-nologo" ]
 
   // Copy runtime files.
-  copyDir "runtime" destRuntimeDir
+  copyDir "src/libmilonert" $"{destSrcDir}/libmilonert"
   copyDir "src/MiloneCore" $"{destSrcDir}/MiloneCore"
   copyDir "src/Std" $"{destSrcDir}/Std"
 
   // FIXME: Exclude files
-  removeFile $"{destRuntimeDir}/milone.o"
-  removeFile $"{destRuntimeDir}/milone_platform.o"
+  removeFile $"{destSrcDir}/libmilonert/milone.o"
+  removeFile $"{destSrcDir}/libmilonert/milone_platform.o"
   removeDir $"{destSrcDir}/MiloneCore/bin"
   removeDir $"{destSrcDir}/MiloneCore/obj"
   removeDir $"{destSrcDir}/Std/bin"

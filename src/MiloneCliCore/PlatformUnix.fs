@@ -157,11 +157,11 @@ let private renderNinjaFile (p: RenderNinjaFileParams) : string =
 
 builddir = ${TARGET_DIR}
 
-include_flag = -I${MILONE_HOME}/runtime
-milone_h = ${MILONE_HOME}/runtime/milone.h
-milone_c = ${MILONE_HOME}/runtime/milone.c
+include_flag = -I${MILONE_HOME}/src/libmilonert
+milone_h = ${MILONE_HOME}/src/libmilonert/milone.h
+milone_c = ${MILONE_HOME}/src/libmilonert/milone.c
 milone_o = ${TARGET_DIR}/milone.o
-milone_platform_c = ${MILONE_HOME}/runtime/milone_platform.c
+milone_platform_c = ${MILONE_HOME}/src/libmilonert/milone_platform.c
 milone_platform_o = ${TARGET_DIR}/milone_platform.o
 exe_file = ${EXE_FILE}
 

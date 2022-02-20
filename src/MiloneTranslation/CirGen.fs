@@ -4,7 +4,7 @@
 ///
 /// Milone-lang's primitives are converted to corresponding C's operator
 /// or function all defined in runtime.
-/// See `runtime` for runtime codes.
+/// See `libmilonert` for runtime codes.
 ///
 /// Milone-lang's types are converted to
 /// C-style struct/union types.

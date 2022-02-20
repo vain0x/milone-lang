@@ -5,7 +5,7 @@
 #    $ make test
 
 CC ?= gcc
-MILONE_RUNTIME := ${HOME}/.milone/runtime
+MILONE_RUNTIME := ${HOME}/.milone/src/libmilonert
 
 cat: cmd_cat.generated.c cmd_cat.c
 	${CC} -std=c11 -g \

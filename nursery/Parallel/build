@@ -11,7 +11,7 @@ TBB_INCLUDE=/usr/local/include/tbb/
 CXX_FLAGS="\
     -std=c++11 \
     -g \
-    -I$MILONE_HOME/runtime \
+    -I$MILONE_HOME/src/libmilonert \
     -I$TBB_INCLUDE \
 "
 
@@ -20,9 +20,9 @@ milone build --target-dir "$TARGET" $PWD
 $CXX $CXX_FLAGS -c lib_parallel.cpp -o $TARGET/lib_parallel.o
 $CXX $CXX_FLAGS -c milone_multithread_allocator.cpp -o $TARGET/milone_multithread_allocator.o
 
-$CC -I$MILONE_HOME/runtime -g -c milone_multithread_runtime.c -o $TARGET/milone_multithread_runtime.o
+$CC -I$MILONE_HOME/src/libmilonert -g -c milone_multithread_runtime.c -o $TARGET/milone_multithread_runtime.o
 
-$CXX -I$MILONE_HOME/runtime \
+$CXX -I$MILONE_HOME/src/libmilonert \
     -g \
     $TARGET/lib_parallel.o \
     $TARGET/milone_multithread_allocator.o \

@@ -5,7 +5,7 @@ set -eu
 
 CC=${CC:-gcc}
 
-MILONE_RUNTIME="$PWD/runtime"
+MILONE_RUNTIME="$PWD/src/libmilonert"
 DIR="$PWD/scripts/region_primitive_checks"
 OUT_C="$DIR/region_primitive_checks.c"
 

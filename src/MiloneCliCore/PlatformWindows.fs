@@ -139,7 +139,7 @@ let buildOnWindows (p: BuildOnWindowsParams) : unit =
 
   let vcxprojXml =
     let runtimeDir =
-      Path.join p.MiloneHome (Path "runtime")
+      Path.join p.MiloneHome (Path "src/libmilonert")
       |> Path.toString
 
     let p: VcxProjectParams =

@@ -4,29 +4,30 @@
 
 
 
-# Third-party tools.
+# Fetched files.
 /bin/
+src/libmilonert/hashmap.h
 
 
 
-# Build caches.
-*.generated.*
-*.timestamp
-build.ninja
-target
-
-runtime/hashmap.h
-
-
-
-# Build outputs.
+# Generated files.
 *.o
 *.out
 
+target/
+
 tests/**/MiloneCore_*.c
 tests/**/MiloneDerive_*.c
-tests/**/MiloneStd_*.c
 tests/**/Std_*.c
 
 tests/examples/*/*.c
 tests/primitives/std_*/*.c
+
+
+
+# Deprecated: These rules are no longer used.
+*.generated.*
+*.timestamp
+build.ninja
+runtime/hashmap.h
+tests/**/MiloneStd_*.c

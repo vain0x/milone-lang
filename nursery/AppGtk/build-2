@@ -4,7 +4,7 @@ set -eu
 
 CC=${CC:-gcc}
 MILONE_HOME=${MILONE_HOME:-"${HOME}/.milone"}
-MILONE_RUNTIME="$MILONE_HOME/runtime"
+MILONE_RUNTIME="$MILONE_HOME/src/libmilonert"
 
 $CC -std=gnu11 -g \
     -fsanitize=undefined \
