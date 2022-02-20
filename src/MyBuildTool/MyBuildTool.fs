@@ -397,7 +397,7 @@ let private commandSelfInstall () : unit =
   let destMiloneDotnetDir = $"{miloneHome}/bin/milone_dotnet"
   let destMiloneLspDir = $"{miloneHome}/bin/milone_lsp"
   let destRuntimeDir = $"{miloneHome}/runtime"
-  let destMiloneLibsDir = $"{miloneHome}/milone_libs"
+  let destSrcDir = $"{miloneHome}/src"
   let destVersionFile = $"{miloneHome}/version"
 
   doUninstall () |> ignore
@@ -456,13 +456,16 @@ let private commandSelfInstall () : unit =
 
   // Copy files.
   copyDir "runtime" destRuntimeDir
-  copyDir "milone_libs" destMiloneLibsDir
+  copyDir "src/MiloneCore" $"{destSrcDir}/MiloneCore"
+  copyDir "src/Std" $"{destSrcDir}/Std"
 
   // FIXME: Exclude files
   removeFile $"{destRuntimeDir}/milone.o"
   removeFile $"{destRuntimeDir}/milone_platform.o"
-  removeDir $"{destMiloneLibsDir}/Std/bin"
-  removeDir $"{destMiloneLibsDir}/Std/obj"
+  removeDir $"{destSrcDir}/MiloneCore/bin"
+  removeDir $"{destSrcDir}/MiloneCore/obj"
+  removeDir $"{destSrcDir}/Std/bin"
+  removeDir $"{destSrcDir}/Std/obj"
 
   // Record version.
   let version =
@@ -534,7 +537,7 @@ let private commandPack () =
   let destMiloneDotnetDir = $"{destMiloneHome}/bin/milone_dotnet"
   let destMiloneLspDir = $"{destMiloneHome}/bin/milone_lsp"
   let destRuntimeDir = $"{destMiloneHome}/runtime"
-  let destMiloneLibsDir = $"{destMiloneHome}/milone_libs"
+  let destSrcDir = $"{destMiloneHome}/projects"
   let destVersionFile = $"{destMiloneHome}/version"
 
   // Make structure.
@@ -599,12 +602,16 @@ let private commandPack () =
 
   // Copy runtime files.
   copyDir "runtime" destRuntimeDir
-  copyDir "milone_libs" destMiloneLibsDir
+  copyDir "src/MiloneCore" $"{destSrcDir}/MiloneCore"
+  copyDir "src/Std" $"{destSrcDir}/Std"
+
   // FIXME: Exclude files
   removeFile $"{destRuntimeDir}/milone.o"
   removeFile $"{destRuntimeDir}/milone_platform.o"
-  removeDir $"{destMiloneLibsDir}/Std/bin"
-  removeDir $"{destMiloneLibsDir}/Std/obj"
+  removeDir $"{destSrcDir}/MiloneCore/bin"
+  removeDir $"{destSrcDir}/MiloneCore/obj"
+  removeDir $"{destSrcDir}/Std/bin"
+  removeDir $"{destSrcDir}/Std/obj"
 
   // Add documents.
   copyFilesTo

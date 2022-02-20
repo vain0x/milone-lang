@@ -1025,7 +1025,7 @@ let private testCompletion () =
 
     testCompletionMultipleFiles
       "module name"
-      [ "/$/.milone/milone_libs/Std/StdFoo.milone", ""
+      [ "/$/.milone/src/Std/StdFoo.milone", ""
         "/$/root/TestProject/TestProject.milone",
         """
             module rec TestProject.TestProject
@@ -1052,7 +1052,7 @@ let private testCompletion () =
 
 let private testFindProjects () =
   let files =
-    [ "/$/.milone/milone_libs/Std/StdFoo.milone", "" ]
+    [ "/$/.milone/src/Std/StdFoo.milone", "" ]
 
   let newFile = "/$/root/TestProject/TestProject.milone"
   let newFiles = (newFile, "") :: files

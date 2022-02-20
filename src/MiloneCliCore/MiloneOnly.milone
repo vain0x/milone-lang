@@ -1,10 +1,8 @@
 module rec MiloneCliCore.MiloneOnly
 
-// See milone_libs for implementations.
 open Std.StdChar
 open Std.StdError
 open Std.StdString
-
 open MiloneShared.Util
 open MiloneShared.UtilParallel
 open MiloneShared.UtilProfiler

@@ -55,10 +55,7 @@ let render () =
   let miloneCliInput =
     seq {
       for proj, src in fsProjects do
-        if
-          proj.StartsWith("src")
-          || proj.StartsWith("milone_libs")
-        then
+        if proj.StartsWith("src") then
           yield proj
           yield! src
     }

@@ -33,7 +33,9 @@ Installation script should place these files (and these files only):
     - `bin/`
         - `milone_dotnet/`
         - `milone_lsp/`
-    - `milone_libs/`
+    - `src/`
+        - `MiloneCore`
+        - `Std/`
     - `version`
 
 where `$HOME` is your home directory.

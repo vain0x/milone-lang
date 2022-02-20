@@ -57,7 +57,7 @@ let private changeExt (ext: FileExt) (path: string) : string =
 let private getStdLibNames () = [ "MiloneCore"; "Std" ]
 
 let private computeStdLibProjectDir (miloneHome: MiloneHome) (projectName: ProjectName) : ProjectDir =
-  miloneHome + "/milone_libs/" + projectName
+  miloneHome + "/src/" + projectName
 
 let getStdLibProjects (miloneHome: MiloneHome) : (ProjectName * ProjectDir) list =
   getStdLibNames ()

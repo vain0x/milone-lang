@@ -16,7 +16,7 @@
   </ItemGroup>
 
   <ItemGroup>
-    <ProjectReference Include="..\..\milone_libs\Std\Std.fsproj" />
+    <ProjectReference Include="..\Std\Std.fsproj" />
   </ItemGroup>
 
 </Project>
