@@ -521,7 +521,7 @@ let private commandPack () =
   let platform = getPlatform ()
   let ext = getExt platform
 
-  let assetsDir = "scripts/MyBuildTool/assets"
+  let assetsDir = "src/MyBuildTool/assets"
 
   let workDir =
     let n = tRng.Value.Next()

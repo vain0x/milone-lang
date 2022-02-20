@@ -6,11 +6,9 @@
   </PropertyGroup>
 
   <ItemGroup>
-    <Compile Include="Program.fs" />
-  </ItemGroup>
-
-  <ItemGroup>
-    <PackageReference Include="Utf8Json" Version="1.3.7" />
+    <Compile Include="FileSearch.fs" />
+    <Compile Include="InstantiateBuildTemplateNinja.fs" />
+    <Compile Include="MyBuildTool.fs" />
   </ItemGroup>
 
 </Project>
