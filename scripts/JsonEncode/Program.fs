@@ -1,8 +1,16 @@
+// Encodes an input as JSON string.
+// Reads from standard input, writes to standard output.
+//
+// USAGE:
+//    ... | dotnet fsi scripts/JsonEncode.fsx
+//
+// EXAMPLES:
+//    $ printf 'Hello,\nworld!\n' | dotnet fsi scripts/JsonEncode.fsx
+//    "Hello,\nworld\n"
+
 module JsonEncode.Program
 
 open System
-open System.IO
-open Utf8Json
 
 [<EntryPoint>]
 let main _ =
