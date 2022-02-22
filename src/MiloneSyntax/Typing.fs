@@ -184,8 +184,6 @@ let private validateLit ctx lit loc =
   // should validate float too
 
   let validateIntLit text flavor =
-    let (IntFlavor (signedness, precision)) = flavor
-
     let nonNeg =
       if S.startsWith "-" text then
         S.skip 1 text
@@ -193,33 +191,25 @@ let private validateLit ctx lit loc =
         text
 
     let ok =
-      match signedness with
+      match intFlavorToSignedness flavor with
       | Unsigned when S.startsWith "-" text -> false
 
       | _ when S.startsWith "0x" nonNeg ->
         let digits = S.skip 2 nonNeg
-
-        let maxLength =
-          match precision with
-          | I8 -> 2
-          | I16 -> 4
-          | I32 -> 8
-          | I64
-          | IPtr -> 16
-
+        let maxLength = intFlavorToBytes flavor * 2
         digits.Length <= maxLength
 
       | _ ->
         // should validate precisely
-        match signedness, precision with
-        | Signed, I8
-        | Signed, I16
-        | Signed, I32 -> Option.isSome (StdInt.tryParse text)
+        match flavor with
+        | I8
+        | I16
+        | I32 -> Option.isSome (StdInt.tryParse text)
 
-        | Signed, I64
-        | Signed, IPtr -> Option.isSome (StdInt.Ext.tryParseInt64 text)
+        | I64
+        | IPtr -> Option.isSome (StdInt.Ext.tryParseInt64 text)
 
-        | Unsigned, _ -> Option.isSome (StdInt.Ext.tryParseUInt64 text)
+        | _ -> Option.isSome (StdInt.Ext.tryParseUInt64 text)
 
     if ok then
       ctx
@@ -227,7 +217,7 @@ let private validateLit ctx lit loc =
       addLog ctx Log.LiteralRangeError loc
 
   match lit with
-  | IntLit text -> validateIntLit text (IntFlavor(Signed, I32))
+  | IntLit text -> validateIntLit text I32
   | IntLitWithFlavor (text, flavor) -> validateIntLit text flavor
   | _ -> ctx
 
@@ -587,7 +577,8 @@ let private doResolveTraitBound (ctx: TyCtx) theTrait loc : TyCtx =
   | PtrTrait ty ->
     match ty with
     | Ty (ErrorTk _, _)
-    | Ty (IntTk (IntFlavor (_, IPtr)), [])
+    | Ty (IntTk IPtr, _)
+    | Ty (IntTk UPtr, _)
     | Ty (ObjTk, [])
     | Ty (ListTk, _)
     | Ty (VoidPtrTk, _)

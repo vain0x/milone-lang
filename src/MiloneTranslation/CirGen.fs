@@ -745,7 +745,7 @@ let private cBinaryOf op =
 
 let private genLit lit =
   match lit with
-  | IntLit text -> CIntExpr(text, IntFlavor(Signed, I32))
+  | IntLit text -> CIntExpr(text, I32)
   | IntLitWithFlavor (text, flavor) -> CIntExpr(text, flavor)
   | FloatLit text -> CDoubleExpr text
   | BoolLit false -> CVarExpr "false"

@@ -19,9 +19,9 @@ module S = Std.StdString
 // Types (HIR/MIR)
 // -----------------------------------------------
 
-let tyInt = Ty(IntTk(IntFlavor(Signed, I32)), [])
+let tyInt = Ty(IntTk I32, [])
 
-let tyNativeInt = Ty(IntTk(IntFlavor(Signed, IPtr)), [])
+let tyNativeInt = Ty(IntTk IPtr, [])
 
 let tyBool = Ty(BoolTk, [])
 

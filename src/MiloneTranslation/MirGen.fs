@@ -254,7 +254,8 @@ type private BoxMode =
 
 let private toBoxMode (ty: Ty) : BoxMode =
   match ty with
-  | Ty (IntTk (IntFlavor (_, IPtr)), _) -> BoxMode.Alloc
+  | Ty (IntTk I64, _)
+  | Ty (IntTk U64, _) -> BoxMode.Alloc
   | Ty (TupleTk, []) -> BoxMode.Null
 
   | Ty (IntTk _, _)
@@ -1118,21 +1119,23 @@ let private mirifyCallCompareExpr ctx itself l r ty loc =
 
   match mexprToTy l with
   // Comparison of small or unsigned integers is just `-` for not overflow.
-  | Ty ((IntTk (IntFlavor (_, I8))
-        | IntTk (IntFlavor (_, I16))
+  | Ty ((IntTk I8
+        | IntTk I16
+        | IntTk U8
+        | IntTk U16
         | BoolTk
         | CharTk),
         _) -> MBinaryExpr(MSubBinary, l, r, tyInt, loc), ctx
 
-  | Ty (IntTk (IntFlavor (Signed, I32)), _) -> MBinaryExpr(MIntCompareBinary, l, r, tyInt, loc), ctx
+  | Ty (IntTk I32, _) -> MBinaryExpr(MIntCompareBinary, l, r, tyInt, loc), ctx
 
-  | Ty ((IntTk (IntFlavor (Signed, I64))
-        | IntTk (IntFlavor (Signed, IPtr))
+  | Ty ((IntTk I64
+        | IntTk IPtr
         | VoidPtrTk
         | NativePtrTk _),
         _) -> MBinaryExpr(MInt64CompareBinary, l, r, tyInt, loc), ctx
 
-  | Ty ((IntTk (IntFlavor (Unsigned, _))), _) -> MBinaryExpr(MUInt64CompareBinary, l, r, tyInt, loc), ctx
+  | Ty (IntTk flavor, _) when intFlavorIsUnsigned flavor -> MBinaryExpr(MUInt64CompareBinary, l, r, tyInt, loc), ctx
 
   | Ty (StrTk, _) -> MBinaryExpr(MStrCompareBinary, l, r, tyInt, loc), ctx
 

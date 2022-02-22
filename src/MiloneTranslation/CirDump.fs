@@ -128,23 +128,21 @@ let private uint64ToHex (len: int) (value: uint64) = S.uint64ToHex len value
 // Remarks: When signed hex literal is >=2^(N-1), it's negative in milone-lang, but positive (larger type) in C.
 //          So (int32_t)0x80000000 must need casting.
 let private cpIntLit flavor (text: string) =
-  let (IntFlavor (signedness, precision)) = flavor
-
   // s: -?<digit>+ or 0x<hex>+
   let withFlavor force (s: string) =
-    match signedness, precision with
-    | Signed, I8 -> "(int8_t)" + s
-    | Signed, I16 -> "(int16_t)" + s
-    | Signed, I32 when force -> "(int32_t)" + s
-    | Signed, I32 -> s
-    | Signed, I64
-    | Signed, IPtr -> s + "LL"
+    match flavor with
+    | I8 -> "(int8_t)" + s
+    | I16 -> "(int16_t)" + s
+    | I32 when force -> "(int32_t)" + s
+    | I32 -> s
+    | I64
+    | IPtr -> s + "LL"
 
-    | Unsigned, I8 -> "(uint8_t)" + s + "U"
-    | Unsigned, I16 -> "(uint16_t)" + s + "U"
-    | Unsigned, I32 -> "(uint32_t)" + s + "U" // U suffix can be 64-bit
-    | Unsigned, I64 -> s + "ULL"
-    | Unsigned, IPtr -> "(size_t)" + s + "ULL" // size_t can be 32-bit
+    | U8 -> "(uint8_t)" + s + "U"
+    | U16 -> "(uint16_t)" + s + "U"
+    | U32 -> "(uint32_t)" + s + "U" // U suffix can be 64-bit
+    | U64 -> s + "ULL"
+    | UPtr -> "(size_t)" + s + "ULL" // size_t can be 32-bit
 
   if S.startsWith "-0x" text then
     assert (text.Length >= 4)
@@ -164,7 +162,7 @@ let private cpIntLit flavor (text: string) =
     assert (text.Length >= 3)
     withFlavor true text
   else
-    match precision, text with
+    match flavor, text with
     | I32, "-2147483648" -> "(int32_t)0x80000000"
     | _ -> withFlavor false text
 
