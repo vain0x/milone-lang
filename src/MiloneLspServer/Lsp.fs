@@ -49,6 +49,8 @@ type LSyntaxData = private LSyntaxData of ModuleSyntaxData
 /// Usage: `state |> up folder item1 |> up folder item2 |> ...`
 let private up (folder: 'S -> 'T -> 'S) (item: 'T) (state: 'S) : 'S = folder state item
 
+let private upOpt (folder: 'S -> 'T -> 'S) (itemOpt: 'T option) (state: 'S) : 'S = Option.fold folder state itemOpt
+
 let private upList (folder: 'S -> 'T -> 'S) (items: 'T list) (state: 'S) : 'S = List.fold folder state items
 
 module Multimap =
@@ -535,10 +537,24 @@ let private lowerAPat docId acc pat : DSymbolOccurrence list =
   | AAscribePat (l, r, _) -> acc |> up onPat l |> up onTy r
   | AOrPat (l, r, _) -> acc |> up onPat l |> up onPat r
 
-  | AFunDeclPat (_, name, argPats) ->
+let private lowerALetContents docId acc contents =
+  let onTy acc ty = lowerATy docId acc ty
+  let onPat acc pat = lowerAPat docId acc pat
+  let onPats acc pats = pats |> List.fold onPat acc
+  let onExpr acc expr = lowerAExpr docId acc expr
+  let toLoc (y, x) = At(Loc(docId, y, x))
+
+  match contents with
+  | ALetContents.LetFun (_, _, name, argPats, resultTyOpt, body) ->
     let (Name (name, pos)) = name
     let acc = (DFunSymbol name, Def, toLoc pos) :: acc
-    acc |> up onPats argPats
+
+    let acc =
+      acc |> upOpt onTy (resultTyOpt |> Option.map fst)
+
+    acc |> up onPats argPats |> up onExpr body
+
+  | ALetContents.LetVal (_, pat, init) -> acc |> up onPat pat |> up onExpr init
 
 let private lowerAExpr docId acc expr : DSymbolOccurrence list =
   let onTy acc ty = lowerATy docId acc ty
@@ -614,8 +630,8 @@ let private lowerAExpr docId acc expr : DSymbolOccurrence list =
   | AAscribeExpr (l, r, _) -> acc |> up onExpr l |> up onTy r
   | ASemiExpr (stmts, last, _) -> acc |> up onExprs stmts |> up onExpr last
 
-  | ALetExpr (_, pat, init, next, _) ->
-    let acc = acc |> up onPat pat |> up onExpr init
+  | ALetExpr (contents, next, _) ->
+    let acc = lowerALetContents docId acc contents
     lowerAExpr docId acc next
 
 let private lowerADecl docId acc decl : DSymbolOccurrence list =
@@ -628,7 +644,7 @@ let private lowerADecl docId acc decl : DSymbolOccurrence list =
   match decl with
   | AExprDecl expr -> onExpr acc expr
 
-  | ALetDecl (_, pat, init, _) -> acc |> up onPat pat |> up onExpr init
+  | ALetDecl (contents, _) -> lowerALetContents docId acc contents
 
   | ATySynonymDecl (_, name, _, _, _)
   | AUnionTyDecl (_, name, _, _, _)

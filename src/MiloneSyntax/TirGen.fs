@@ -186,12 +186,8 @@ let private desugarIf cond body altOpt pos =
 /// `fun x y .. -> z` ==> `let f x y .. = z in f`
 let private desugarFun pats body pos =
   let name = "fun"
-
-  let pat =
-    AFunDeclPat(PrivateVis, Name(name, pos), pats)
-
   let next = AIdentExpr(Name(name, pos))
-  ALetExpr(NotRec, pat, body, next, pos)
+  ALetExpr(ALetContents.LetFun(NotRec, PrivateVis, Name(name, pos), pats, None, body), next, pos)
 
 /// Desugar `-x`.
 ///
@@ -241,42 +237,11 @@ let private desugarBinOr l r pos = desugarIf l (axTrue pos) (Some r) pos
 /// NOTE: Evaluation order does change.
 let private desugarBinPipe l r pos = ABinaryExpr(AppBinary, r, l, pos)
 
-/// Analyzes let syntax.
-///
-/// Ascription move just for simplification:
-/// `let p : ty = body` ==>
-///   `let p = body : ty`
-///
-/// Let to let-fun:
-/// `let f x = body` ==>
-///   `let-fun f(x) = body`
-///
-/// Let to let-val:
-/// `let pat = body` ==>
-///   `let-val pat = body`
-let private desugarLet isRec pat body next pos =
-  match pat with
-  | AAscribePat (pat, ascriptionTy, ascriptionLoc) ->
-    let body =
-      AAscribeExpr(body, ascriptionTy, ascriptionLoc)
-
-    desugarLet isRec pat body next pos
-
-  | AFunDeclPat (vis, name, args) -> ALetFun(isRec, vis, name, args, body, next, pos)
-
-  | _ -> ALetVal(isRec, pat, body, next, pos)
-
-let private desugarLetDecl isRec pat body pos =
-  match pat with
-  | AAscribePat (pat, ascriptionTy, ascriptionLoc) ->
-    let body =
-      AAscribeExpr(body, ascriptionTy, ascriptionLoc)
-
-    desugarLetDecl isRec pat body pos
-
-  | AFunDeclPat (vis, name, args) -> ALetFunDecl(isRec, vis, name, args, body, pos)
-
-  | _ -> ALetValDecl(isRec, pat, body, pos)
+/// `let f ... : ty = body` ==> `let f ... = body : ty`
+let private desugarResultTy expr resultTyOpt =
+  match resultTyOpt with
+  | Some (ascriptionTy, ascriptionPos) -> AAscribeExpr(expr, ascriptionTy, ascriptionPos)
+  | None -> expr
 
 let private tyUnresolved serial argTys = Ty(UnresolvedTk serial, argTys)
 
@@ -392,8 +357,6 @@ let private tgPat (docId: DocId) (pat: APat, ctx: NameCtx) : TPat * NameCtx =
     let r, ctx = (r, ctx) |> onPat
     let loc = toLoc docId pos
     TOrPat(l, r, loc), ctx
-
-  | AFunDeclPat _ -> unreachable () // Invalid occurrence of fun pattern.
 
 let private tgExpr (docId: DocId) (expr: AExpr, ctx: NameCtx) : TExpr * NameCtx =
   let onTy x = tgTy docId x
@@ -560,12 +523,15 @@ let private tgExpr (docId: DocId) (expr: AExpr, ctx: NameCtx) : TExpr * NameCtx 
     let last, ctx = (last, ctx) |> onExpr
     TBlockExpr(stmts, last), ctx
 
-  | ALetExpr (isRec, pat, body, next, pos) ->
-    match desugarLet isRec pat body next pos with
-    | ALetFun (isRec, vis, name, args, body, next, pos) ->
+  | ALetExpr (contents, next, pos) ->
+    match contents with
+    | ALetContents.LetFun (isRec, vis, name, args, resultTyOpt, body) ->
       let serial, ctx = ctx |> nameCtxAdd name
       let args, ctx = (args, ctx) |> stMap onPat
-      let body, ctx = (body, ctx) |> onExpr
+
+      let body, ctx =
+        (desugarResultTy body resultTyOpt, ctx) |> onExpr
+
       let next, ctx = (next, ctx) |> onExpr
 
       let stmt =
@@ -574,7 +540,7 @@ let private tgExpr (docId: DocId) (expr: AExpr, ctx: NameCtx) : TExpr * NameCtx 
 
       txLetIn stmt next, ctx
 
-    | ALetVal (_, pat, body, next, pos) ->
+    | ALetContents.LetVal (_, pat, body) ->
       let pat, ctx = (pat, ctx) |> onPat
       let body, ctx = (body, ctx) |> onExpr
       let next, ctx = (next, ctx) |> onExpr
@@ -602,17 +568,20 @@ let private tgDecl docId attrs (decl, ctx) : TStmt * NameCtx =
     let expr, ctx = (expr, ctx) |> onExpr
     TExprStmt expr, ctx
 
-  | ALetDecl (isRec, pat, body, pos) ->
-    match desugarLetDecl isRec pat body pos with
-    | ALetFunDecl (isRec, vis, name, args, body, pos) ->
+  | ALetDecl (contents, pos) ->
+    match contents with
+    | ALetContents.LetFun (isRec, vis, name, args, resultTyOpt, body) ->
       let serial, ctx = ctx |> nameCtxAdd name
       let args, ctx = (args, ctx) |> stMap onPat
-      let body, ctx = (body, ctx) |> onExpr
+
+      let body, ctx =
+        (desugarResultTy body resultTyOpt, ctx) |> onExpr
+
       let loc = toLoc docId pos
 
       TLetFunStmt(FunSerial serial, isRec, vis, args, body, loc), ctx
 
-    | ALetValDecl (_, pat, body, pos) ->
+    | ALetContents.LetVal (_, pat, body) ->
       let pat, ctx = (pat, ctx) |> onPat
       let body, ctx = (body, ctx) |> onExpr
       let loc = toLoc docId pos
@@ -774,9 +743,19 @@ let private ocPat (pat: APat) : int =
   | AAsPat (bodyPat, _name, _) -> ocPat bodyPat + 1
   | AAscribePat (bodyPat, ty, _) -> ocPat bodyPat + ocTy ty
   | AOrPat (l, r, _) -> ocPat l + ocPat r
-  | AFunDeclPat (_, _name, argPats) -> 1 + ocPats argPats
 
 let private ocPats = sumBy ocPat
+
+let private ocLetContents contents : int =
+  match contents with
+  | ALetContents.LetFun (_, _, _, args, resultTyOpt, body) ->
+    // +1 for name
+    1
+    + ocPats args
+    + ocTyOpt (resultTyOpt |> Option.map fst)
+    + ocExpr body
+
+  | ALetContents.LetVal (_, pat, body) -> ocPat pat + ocExpr body
 
 let private ocExpr (expr: AExpr) : int =
   match expr with
@@ -811,7 +790,7 @@ let private ocExpr (expr: AExpr) : int =
   | AAscribeExpr (AIdentExpr (Name ("_", _)), ty, _) -> ocTy ty
   | AAscribeExpr (body, ty, _) -> ocExpr body + ocTy ty
   | ASemiExpr (stmts, last, _) -> ocExprs stmts + ocExpr last
-  | ALetExpr (_, pat, body, next, _) -> ocPat pat + ocExpr body + ocExpr next
+  | ALetExpr (contents, next, _) -> ocLetContents contents + ocExpr next
 
   | ARangeExpr _ -> unreachable () // Generated only inside of AIndexExpr.
 
@@ -825,7 +804,7 @@ let private ocExprs = sumBy ocExpr
 let private ocDecl (decl: ADecl) : int =
   match decl with
   | AExprDecl expr -> ocExpr expr
-  | ALetDecl (_, pat, body, _) -> ocPat pat + ocExpr body
+  | ALetDecl (contents, _) -> ocLetContents contents
 
   | ATySynonymDecl (_, _name, tyArgs, ty, _) -> 1 + List.length tyArgs + ocTy ty
 

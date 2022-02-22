@@ -289,10 +289,6 @@ type APat =
   /// E.g. `l | r`
   | AOrPat of APat * APat * Pos
 
-  /// Function declaration pattern, e.g. `f x y`.
-  /// Syntactically distinct from the app pattern for technically reason.
-  | AFunDeclPat of Vis * Name * APat list
-
 /// Arm of match expression in AST.
 ///
 /// `| pat when guard -> body`
@@ -312,10 +308,10 @@ type AVariant = AVariant of Name * payloadTyOpt: ATy option * Pos
 type AFieldDecl = Name * ATy * Pos
 
 /// Let expression in AST.
-[<NoEquality; NoComparison>]
-type ALet =
-  | ALetVal of IsRec * APat * AExpr * AExpr * Pos
-  | ALetFun of IsRec * Vis * Name * args: APat list * AExpr * AExpr * Pos
+[<RequireQualifiedAccess; NoEquality; NoComparison>]
+type ALetContents =
+  | LetVal of IsRec * pat: APat * init: AExpr
+  | LetFun of IsRec * Vis * Name * argPats: APat list * resultTyOpt: (ATy * Pos) option * body: AExpr
 
 /// Body of type declaration in AST.
 [<NoEquality; NoComparison>]
@@ -379,19 +375,13 @@ type AExpr =
   /// Semicolon-separated expressions.
   | ASemiExpr of AExpr list * AExpr * Pos
 
-  /// (pattern, initializer, next). Let-in expression.
-  | ALetExpr of IsRec * APat * AExpr * AExpr * Pos
-
-[<NoEquality; NoComparison>]
-type ALetDecl =
-  | ALetFunDecl of IsRec * Vis * Name * APat list * AExpr * Pos
-  | ALetValDecl of IsRec * APat * AExpr * Pos
+  | ALetExpr of ALetContents * next: AExpr * Pos
 
 [<NoEquality; NoComparison>]
 type ADecl =
   | AExprDecl of AExpr
 
-  | ALetDecl of IsRec * APat * AExpr * Pos
+  | ALetDecl of ALetContents * Pos
 
   /// Type synonym declaration, e.g. `type UserId = int`.
   | ATySynonymDecl of Vis * Name * tyArgs: Name list * ATy * Pos
