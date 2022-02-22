@@ -305,9 +305,6 @@ type private ScopeCtx =
     /// name -> (varSerial, definedLoc, usedLoc list)
     PatScope: TreeMap<Ident, VarSerial * Loc * Loc list>
 
-    /// Current level.
-    Level: Level
-
     NewLogs: (NameResLog * Loc) list }
 
 let private emptyScopeCtx: ScopeCtx =
@@ -330,7 +327,6 @@ let private emptyScopeCtx: ScopeCtx =
     NsNs = TMap.empty nsOwnerCompare
     Local = scopeEmpty ()
     PatScope = TMap.empty compare
-    Level = 0
     NewLogs = [] }
 
 let private ofNameCtx (nameCtx: NameCtx) : ScopeCtx =
@@ -535,12 +531,10 @@ let private addLocalTy tySymbol tyDef (scopeCtx: ScopeCtx) : ScopeCtx =
 /// Called on enter the init of let-fun expressions.
 let private enterLetInit funSerial (scopeCtx: ScopeCtx) : ScopeCtx =
   { scopeCtx with
-      Level = scopeCtx.Level + 1
       AncestralFuns = funSerial :: scopeCtx.AncestralFuns }
 
 let private leaveLetInit (scopeCtx: ScopeCtx) : ScopeCtx =
   { scopeCtx with
-      Level = scopeCtx.Level - 1
       AncestralFuns = listSkip 1 scopeCtx.AncestralFuns }
 
 /// Starts a new scope.

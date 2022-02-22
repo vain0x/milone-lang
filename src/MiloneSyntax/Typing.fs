@@ -102,7 +102,6 @@ let private addLog (ctx: TyCtx) log loc =
 let private addError (ctx: TyCtx) message loc =
   { ctx with Logs = (Log.Error message, loc) :: ctx.Logs }
 
-/// Be carefully. Levels must be counted the same as name resolution.
 let private incLevel (ctx: TyCtx) = { ctx with Level = ctx.Level + 1 }
 
 let private decLevel (ctx: TyCtx) = { ctx with Level = ctx.Level - 1 }
