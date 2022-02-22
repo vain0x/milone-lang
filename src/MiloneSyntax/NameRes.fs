@@ -32,18 +32,18 @@ let private tyPrimOfName name tys =
   | "int", []
   | "int32", [] -> Some tyInt
   | "uint", []
-  | "uint32", [] -> Ty(IntTk(IntFlavor(Unsigned, I32)), []) |> Some
+  | "uint32", [] -> Ty(IntTk U32, []) |> Some
   | "sbyte", []
-  | "int8", [] -> Ty(IntTk(IntFlavor(Signed, I8)), []) |> Some
+  | "int8", [] -> Ty(IntTk I8, []) |> Some
   | "byte", []
-  | "uint8", [] -> Ty(IntTk(IntFlavor(Unsigned, I8)), []) |> Some
+  | "uint8", [] -> Ty(IntTk U8, []) |> Some
 
-  | "int16", [] -> Ty(IntTk(IntFlavor(Signed, I16)), []) |> Some
-  | "int64", [] -> Ty(IntTk(IntFlavor(Signed, I64)), []) |> Some
-  | "nativeint", [] -> Ty(IntTk(IntFlavor(Signed, IPtr)), []) |> Some
-  | "uint16", [] -> Ty(IntTk(IntFlavor(Unsigned, I16)), []) |> Some
-  | "uint64", [] -> Ty(IntTk(IntFlavor(Unsigned, I64)), []) |> Some
-  | "unativeint", [] -> Ty(IntTk(IntFlavor(Unsigned, IPtr)), []) |> Some
+  | "int16", [] -> Ty(IntTk I16, []) |> Some
+  | "int64", [] -> Ty(IntTk I64, []) |> Some
+  | "nativeint", [] -> Ty(IntTk IPtr, []) |> Some
+  | "uint16", [] -> Ty(IntTk U16, []) |> Some
+  | "uint64", [] -> Ty(IntTk U64, []) |> Some
+  | "unativeint", [] -> Ty(IntTk UPtr, []) |> Some
 
   | "float", [] -> Some tyFloat
   | "char", [] -> Some tyChar
@@ -305,9 +305,6 @@ type private ScopeCtx =
     /// name -> (varSerial, definedLoc, usedLoc list)
     PatScope: TreeMap<Ident, VarSerial * Loc * Loc list>
 
-    /// Current level.
-    Level: Level
-
     NewLogs: (NameResLog * Loc) list }
 
 let private emptyScopeCtx: ScopeCtx =
@@ -330,7 +327,6 @@ let private emptyScopeCtx: ScopeCtx =
     NsNs = TMap.empty nsOwnerCompare
     Local = scopeEmpty ()
     PatScope = TMap.empty compare
-    Level = 0
     NewLogs = [] }
 
 let private ofNameCtx (nameCtx: NameCtx) : ScopeCtx =
@@ -534,14 +530,10 @@ let private addLocalTy tySymbol tyDef (scopeCtx: ScopeCtx) : ScopeCtx =
 
 /// Called on enter the init of let-fun expressions.
 let private enterLetInit funSerial (scopeCtx: ScopeCtx) : ScopeCtx =
-  { scopeCtx with
-      Level = scopeCtx.Level + 1
-      AncestralFuns = funSerial :: scopeCtx.AncestralFuns }
+  { scopeCtx with AncestralFuns = funSerial :: scopeCtx.AncestralFuns }
 
 let private leaveLetInit (scopeCtx: ScopeCtx) : ScopeCtx =
-  { scopeCtx with
-      Level = scopeCtx.Level - 1
-      AncestralFuns = listSkip 1 scopeCtx.AncestralFuns }
+  { scopeCtx with AncestralFuns = listSkip 1 scopeCtx.AncestralFuns }
 
 /// Starts a new scope.
 let private startScope kind (scopeCtx: ScopeCtx) : ScopeCtx =

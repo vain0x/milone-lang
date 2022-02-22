@@ -621,10 +621,18 @@ let private parsePatOr basePos (tokens, errors) : PR<APat> =
 
   | _ -> lPat, tokens, errors
 
-/// Parse a pattern of let expressions.
-/// `pat-fun = vis? ident pat-nav+ ( ':' ty )?`
-/// `pat-let = pat-fun / pat`
-let private parsePatLet basePos (tokens, errors) : PR<APat> =
+[<RequireQualifiedAccess; NoEquality; NoComparison>]
+type private ALetHead =
+  | LetVal of IsRec * APat
+  | LetFun of IsRec * Vis * Name * argPats: APat list * resultTyOpt: (ATy * Pos) option
+
+/// Parses head of let expressions.
+///
+/// `let-fun = vis? ident pat-av+ ( ':' ty )? = ...`
+/// `let-val = pat ...`
+let private parseLetHead basePos (tokens, errors) : PR<ALetHead> =
+  let isRec, tokens = eatRec tokens
+
   let asLetFun () =
     let vis, tokens = eatVis tokens
 
@@ -638,17 +646,19 @@ let private parsePatLet basePos (tokens, errors) : PR<APat> =
     let args, tokens, errors =
       parsePatCallArgs basePos (tokens, errors)
 
-    let pat =
-      AFunDeclPat(vis, Name(callee, calleePos), args)
+    let resultTyOpt, tokens, errors =
+      match tokens with
+      | (ColonToken, pos) :: tokens ->
+        let ty, tokens, errors = parseTy basePos (tokens, errors)
+        Some(ty, pos), tokens, errors
 
-    match tokens with
-    | (ColonToken, pos) :: tokens ->
-      let ty, tokens, errors = parseTy basePos (tokens, errors)
-      AAscribePat(pat, ty, pos), tokens, errors
+      | _ -> None, tokens, errors
 
-    | _ -> pat, tokens, errors
+    ALetHead.LetFun(isRec, vis, Name(callee, calleePos), args, resultTyOpt), tokens, errors
 
-  | _ -> parsePat basePos (tokens, errors)
+  | _ ->
+    let pat, tokens, errors = parsePat basePos (tokens, errors)
+    ALetHead.LetVal(isRec, pat), tokens, errors
 
 /// `pat = pat-or`
 let private parsePat basePos (tokens, errors) : PR<APat> =
@@ -1039,10 +1049,8 @@ let private parseFun basePos funPos (tokens, errors) : PR<AExpr> =
 let private parseLet letPos (tokens, errors) : PR<AExpr> =
   let innerBasePos = letPos |> posAddX 1
 
-  let isRec, tokens = eatRec tokens
-
-  let pat, tokens, errors =
-    parsePatLet innerBasePos (tokens, errors)
+  let head, tokens, errors =
+    parseLetHead innerBasePos (tokens, errors)
 
   let body, tokens, errors =
     match tokens with
@@ -1060,7 +1068,11 @@ let private parseLet letPos (tokens, errors) : PR<AExpr> =
 
     | tokens -> ATupleExpr([], letPos), tokens, errors
 
-  ALetExpr(isRec, pat, body, next, letPos), tokens, errors
+  match head with
+  | ALetHead.LetVal (isRec, pat) -> ALetExpr(ALetContents.LetVal(isRec, pat, body), next, letPos), tokens, errors
+
+  | ALetHead.LetFun (isRec, vis, callee, argPats, resultTyOpt) ->
+    ALetExpr(ALetContents.LetFun(isRec, vis, callee, argPats, resultTyOpt, body), next, letPos), tokens, errors
 
 /// `payload-ty = labeled-ty ( '*' labeled-ty )*`
 /// `labeled-ty = ( ident ':' )? ty-suffix`
@@ -1261,17 +1273,22 @@ let private parseTyParams identPos (tokens, errors) : PR<Name list> =
 let private parseLetDecl letPos (tokens, errors) : PR<ADecl option> =
   let innerBasePos = letPos |> posAddX 1
 
-  let isRec, tokens = eatRec tokens
-
-  let pat, tokens, errors =
-    parsePatLet innerBasePos (tokens, errors)
+  let head, tokens, errors =
+    parseLetHead innerBasePos (tokens, errors)
 
   let init, tokens, errors =
     match tokens with
     | (EqualToken, equalPos) :: tokens -> parseSemi innerBasePos equalPos (tokens, errors)
     | _ -> parseExprError "Missing '='" (tokens, errors)
 
-  Some(ALetDecl(isRec, pat, init, letPos)), tokens, errors
+  let decl, tokens, errors =
+    match head with
+    | ALetHead.LetVal (isRec, pat) -> ALetDecl(ALetContents.LetVal(isRec, pat, init), letPos), tokens, errors
+
+    | ALetHead.LetFun (isRec, vis, callee, argPats, resultTyOpt) ->
+      ALetDecl(ALetContents.LetFun(isRec, vis, callee, argPats, resultTyOpt, init), letPos), tokens, errors
+
+  Some decl, tokens, errors
 
 let private parseTyDecl typePos (tokens, errors) : PR<ADecl option> =
   let basePos = typePos |> posAddX 1
