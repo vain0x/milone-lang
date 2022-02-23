@@ -66,6 +66,7 @@ type private TyCtx =
     GrayInstantiations: TreeMap<FunSerial, (Ty * Loc) list>
 
     TraitBounds: (Trait * Loc) list
+    NewTraitBounds: (Trait * Loc) list list
     Logs: (Log * Loc) list }
 
 let private newTyCtx (nr: NameResResult) : TyCtx =
@@ -85,6 +86,7 @@ let private newTyCtx (nr: NameResResult) : TyCtx =
     GrayFuns = TSet.empty funSerialCompare
     GrayInstantiations = TMap.empty funSerialCompare
     TraitBounds = []
+    NewTraitBounds = []
     Logs = [] }
 
 let private toTirCtx (ctx: TyCtx) : TirCtx =
@@ -376,7 +378,7 @@ let private instantiateBoundedTyScheme (ctx: TyCtx) (tyScheme: BoundedTyScheme) 
   { ctx with
       Serial = serial
       TyLevels = tyLevels
-      TraitBounds = List.append traits ctx.TraitBounds }
+      NewTraitBounds = traits :: ctx.NewTraitBounds }
 
 // #generalizeFun
 let private generalizeFun (ctx: TyCtx) (outerLevel: Level) funSerial =
@@ -417,7 +419,7 @@ let private generalizeFun (ctx: TyCtx) (outerLevel: Level) funSerial =
 // -----------------------------------------------
 
 let private addTraitBounds traits (ctx: TyCtx) =
-  { ctx with TraitBounds = List.append traits ctx.TraitBounds }
+  { ctx with NewTraitBounds = traits :: ctx.NewTraitBounds }
 
 let private doResolveTraitBound (ctx: TyCtx) theTrait loc : TyCtx =
   let unify lTy rTy loc ctx : TyCtx = unifyTy ctx loc lTy rTy
@@ -609,7 +611,48 @@ let private doResolveTraitBound (ctx: TyCtx) theTrait loc : TyCtx =
 
     | _ -> addBoundError ctx
 
-let private resolveTraitBounds (ctx: TyCtx) =
+let private attemptResolveTraitBounds (ctx: TyCtx) =
+  let subst (ctx: TyCtx) ty =
+    ty |> substTy ctx |> typingExpandSynonyms ctx.Tys
+
+  let logs, ctx = ctx.Logs, { ctx with Logs = [] }
+
+  let traitAcc, (ctx: TyCtx) =
+    ctx.NewTraitBounds
+    |> List.fold
+         (fun (traitAcc, ctx) traits ->
+           traits
+           |> List.fold
+                (fun (traitAcc, ctx) (theTrait, loc) ->
+                  let oldCtx = ctx
+                  let theTrait = traitMapTys (subst ctx) theTrait
+                  let ctx = doResolveTraitBound ctx theTrait loc
+
+                  if ctx.Logs |> List.isEmpty |> not then
+                    (theTrait, loc) :: traitAcc, oldCtx
+                  else
+                    // __trace (
+                    //   "resolved "
+                    //   + (__dump theTrait)
+                    //   + " "
+                    //   + (Loc.toString loc)
+                    // )
+
+                    traitAcc, ctx)
+                (traitAcc, ctx))
+         ([], ctx)
+
+  // __trace (
+  //   "unresolved traits: "
+  //   + (List.length traitAcc |> string)
+  // )
+
+  { ctx with
+      TraitBounds = List.append traitAcc ctx.TraitBounds
+      NewTraitBounds = []
+      Logs = logs }
+
+let private resolveTraitBoundsAll (ctx: TyCtx) =
   let subst (ctx: TyCtx) ty =
     ty |> substTy ctx |> typingExpandSynonyms ctx.Tys
 
@@ -618,7 +661,7 @@ let private resolveTraitBounds (ctx: TyCtx) =
   // so try to resolve all bounds repeatedly until no bound is resolved.
   let rec go (ctx: TyCtx) =
     let traits, ctx =
-      List.rev ctx.TraitBounds, { ctx with TraitBounds = [] }
+      List.collect id ctx.NewTraitBounds, { ctx with NewTraitBounds = [] }
 
     let n = List.length traits
 
@@ -630,13 +673,20 @@ let private resolveTraitBounds (ctx: TyCtx) =
              doResolveTraitBound ctx theTrait loc)
            ctx
 
-    if List.length ctx.TraitBounds < n then
+    if (ctx.NewTraitBounds
+        |> List.map List.length
+        |> List.fold (fun (x: int) y -> x + y) 0) < n then
       let ctx = { ctx with Logs = [] }
       go ctx
     else
       ctx
 
   let logs, ctx = ctx.Logs, { ctx with Logs = [] }
+
+  let ctx =
+    { ctx with
+        TraitBounds = []
+        NewTraitBounds = ctx.TraitBounds :: ctx.NewTraitBounds }
 
   let ctx = go ctx
 
@@ -1688,6 +1738,7 @@ let private inferLetFunStmt ctx mutuallyRec callee vis argPats body loc =
 
   let ctx = ctx |> decLevel
 
+  let ctx = attemptResolveTraitBounds ctx
   let ctx = generalizeFun ctx outerLevel callee
 
   let ctx =
@@ -1949,7 +2000,7 @@ let infer (modules: TProgram, nameRes: NameResResult) : TProgram * TirCtx =
              m.Stmts
              |> List.mapFold (fun ctx stmt -> inferStmt ctx NotRec stmt) ctx
 
-           let ctx = ctx |> resolveTraitBounds
+           let ctx = ctx |> resolveTraitBoundsAll
 
            let staticVars, localVars =
              ctx.Vars
