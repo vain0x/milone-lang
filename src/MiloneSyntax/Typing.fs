@@ -350,6 +350,28 @@ let private instantiateBoundedTyScheme (ctx: TyCtx) (tyScheme: BoundedTyScheme) 
     traits
     |> List.map (fun theTrait -> theTrait |> traitMapTys substMeta, loc)
 
+  // Reset level of meta types that move over monomorphic types due to trait bounds
+  // so that these meta types aren't get generalized.
+  let tyLevels =
+    traits
+    |> List.fold
+         (fun tyLevels (theTrait, _) ->
+           let asInnerTy theTrait =
+             match theTrait with
+             | AddTrait ty -> Some ty
+             | IsIntTrait ty -> Some ty
+             | IsNumberTrait ty -> Some ty
+             | ToCharTrait ty -> Some ty
+             | ToIntTrait ty -> Some ty
+             | ToFloatTrait ty -> Some ty
+             | ToStringTrait ty -> Some ty
+             | _ -> None
+
+           match asInnerTy theTrait with
+           | Some (Ty (MetaTk (serial, _), _)) -> tyLevels |> TMap.remove serial |> snd
+           | _ -> tyLevels)
+         tyLevels
+
   ty,
   { ctx with
       Serial = serial
