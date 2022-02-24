@@ -65,8 +65,17 @@ type private TyCtx =
     GrayFuns: TreeSet<FunSerial>
     GrayInstantiations: TreeMap<FunSerial, (Ty * Loc) list>
 
+    // TraitBoundResolution:
+    //    Trait bounds are produced by some primitives that are polymorphic and have constraints.
+    //    Trait bounds are first added to `NewTraitBounds` to wait for resolution.
+    //    Whenever we are about to generalize a function, try to resolve all new bounds
+    //    to prevent bounded meta types from getting generalized as possible.
+    //    Unresolved bounds are pushed to `TraitBounds` for follow-up resolution
+    //    (and resolution errors are just discarded here).
+    //    At the end of each module, all `TraitBounds` are resolved.
     TraitBounds: (Trait * Loc) list
     NewTraitBounds: (Trait * Loc) list
+
     Logs: (Log * Loc) list }
 
 let private newTyCtx (nr: NameResResult) : TyCtx =
