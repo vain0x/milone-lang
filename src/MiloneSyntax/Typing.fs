@@ -419,7 +419,7 @@ let private generalizeFun (ctx: TyCtx) (outerLevel: Level) funSerial =
 // -----------------------------------------------
 
 let private tyIsBasic ty =
-  let (Ty(tk, _)) = ty
+  let (Ty (tk, _)) = ty
 
   match tk with
   | ErrorTk _
@@ -433,20 +433,25 @@ let private tyIsBasic ty =
 
   | _ -> false
 
+[<NoEquality; NoComparison>]
+type private TraitBoundResolutionResult =
+  | BoundOk
+  | BoundError
+  | BoundUnify of (Ty * Ty) list
+
 let private addTraitBounds traits (ctx: TyCtx) =
   { ctx with NewTraitBounds = traits :: ctx.NewTraitBounds }
 
-let private doResolveTraitBound (ctx: TyCtx) theTrait loc : TyCtx =
-  let unify lTy rTy loc ctx : TyCtx = unifyTy ctx loc lTy rTy
-
-  let addBoundError (ctx: TyCtx) : TyCtx =
-    addLog ctx (Log.TyBoundError theTrait) loc
-    |> addTraitBounds [ theTrait, loc ]
+let private resolveTraitBound (ctx: TyCtx) theTrait : TraitBoundResolutionResult =
+  let ok = BoundOk
+  let addBoundError _ctx = BoundError
+  let unify lTy rTy = BoundUnify [ lTy, rTy ]
+  let unifyAll tyPairs = BoundUnify tyPairs
 
   /// integer, bool, char, or string
   let expectBasic ty (ctx: TyCtx) =
     if tyIsBasic ty then
-      ctx
+      BoundOk
     else
       addBoundError ctx
 
@@ -457,10 +462,10 @@ let private doResolveTraitBound (ctx: TyCtx) theTrait loc : TyCtx =
     | Ty (IntTk _, [])
     | Ty (FloatTk _, [])
     | Ty (CharTk, [])
-    | Ty (StrTk, []) -> ctx
+    | Ty (StrTk, []) -> ok
 
     // Coerce to int by default.
-    | _ -> unify ty tyInt loc ctx
+    | _ -> unify ty tyInt
 
   | EqualTrait ty ->
     let rec go memo ty =
@@ -532,41 +537,38 @@ let private doResolveTraitBound (ctx: TyCtx) theTrait loc : TyCtx =
 
       | _ -> false, memo
 
-    let ok, _ = go (TSet.empty tyCompare) ty
-    if ok then ctx else addBoundError ctx
+    let resolved, _ = go (TSet.empty tyCompare) ty
+
+    if resolved then
+      ok
+    else
+      addBoundError ctx
 
   | CompareTrait ty ->
     match ty with
-    | Ty (TupleTk, []) -> ctx
+    | Ty (TupleTk, []) -> ok
     | _ -> ctx |> expectBasic ty
 
   | IndexTrait (lTy, rTy, resultTy) ->
     match lTy with
-    | Ty (ErrorTk _, _) -> ctx
-
+    | Ty (ErrorTk _, _) -> ok
     | Ty (StrTk, []) ->
-      ctx
-      |> unify rTy tyInt loc
-      |> unify resultTy tyChar loc
-
+      unifyAll [ rTy, tyInt
+                 resultTy, tyChar ]
     | _ -> addBoundError ctx
 
   | IsIntTrait ty ->
     match ty with
     | Ty (ErrorTk _, _)
-    | Ty (IntTk _, []) -> ctx
-
-    // Coerce to int by default.
-    | _ -> unify ty tyInt loc ctx
+    | Ty (IntTk _, []) -> ok
+    | _ -> unify ty tyInt
 
   | IsNumberTrait ty ->
     match ty with
     | Ty (ErrorTk _, _)
     | Ty (IntTk _, [])
-    | Ty (FloatTk _, []) -> ctx
-
-    // Coerce to int by default.
-    | _ -> unify ty tyInt loc ctx
+    | Ty (FloatTk _, []) -> ok
+    | _ -> unify ty tyInt
 
   | ToCharTrait ty ->
     match ty with
@@ -574,7 +576,7 @@ let private doResolveTraitBound (ctx: TyCtx) theTrait loc : TyCtx =
     | Ty (IntTk _, [])
     | Ty (FloatTk _, [])
     | Ty (CharTk, [])
-    | Ty (StrTk, []) -> ctx
+    | Ty (StrTk, []) -> ok
 
     | _ -> addBoundError ctx
 
@@ -586,7 +588,7 @@ let private doResolveTraitBound (ctx: TyCtx) theTrait loc : TyCtx =
     | Ty (CharTk, [])
     | Ty (StrTk, [])
     | Ty (VoidPtrTk, _)
-    | Ty (NativePtrTk _, _) -> ctx
+    | Ty (NativePtrTk _, _) -> ok
 
     | _ -> addBoundError ctx
 
@@ -595,7 +597,7 @@ let private doResolveTraitBound (ctx: TyCtx) theTrait loc : TyCtx =
     | Ty (ErrorTk _, _)
     | Ty (IntTk _, [])
     | Ty (FloatTk _, [])
-    | Ty (StrTk, []) -> ctx
+    | Ty (StrTk, []) -> ok
 
     | _ -> addBoundError ctx
 
@@ -610,9 +612,21 @@ let private doResolveTraitBound (ctx: TyCtx) theTrait loc : TyCtx =
     | Ty (ListTk, _)
     | Ty (VoidPtrTk, _)
     | Ty (NativePtrTk _, _)
-    | Ty (NativeFunTk, _) -> ctx
+    | Ty (NativeFunTk, _) -> ok
 
     | _ -> addBoundError ctx
+
+let private doResolveTraitBound (ctx: TyCtx) theTrait loc : TyCtx =
+  match resolveTraitBound ctx theTrait with
+  | BoundOk -> ctx
+
+  | BoundError ->
+    addLog ctx (Log.TyBoundError theTrait) loc
+    |> addTraitBounds [ theTrait, loc ]
+
+  | BoundUnify tyPairs ->
+    tyPairs
+    |> List.fold (fun ctx (lTy, tTy) -> unifyTy ctx loc lTy tTy) ctx
 
 let private attemptResolveTraitBounds (ctx: TyCtx) =
   let subst (ctx: TyCtx) ty =
