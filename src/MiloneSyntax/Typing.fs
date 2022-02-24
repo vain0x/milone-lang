@@ -450,7 +450,7 @@ let private tyIsBasic ty =
 let private addTraitBound theTrait loc (ctx: TyCtx) =
   { ctx with NewTraitBounds = (theTrait, loc) :: ctx.NewTraitBounds }
 
-let private doResolveTraitBound (ctx: TyCtx) theTrait loc : TyCtx =
+let private resolveTraitBound (ctx: TyCtx) theTrait loc : TyCtx =
   let ok ctx = ctx
 
   let error ctx =
@@ -645,7 +645,7 @@ let private attemptResolveTraitBounds (ctx: TyCtx) : TyCtx =
            let oldCtx = ctx
            assert (List.isEmpty oldCtx.Logs)
 
-           let ctx = doResolveTraitBound ctx theTrait loc
+           let ctx = resolveTraitBound ctx theTrait loc
 
            if ctx.Logs |> List.isEmpty then
              traitAcc, ctx
@@ -676,7 +676,7 @@ let private resolveTraitBoundsAll (ctx: TyCtx) =
       |> List.fold
            (fun ctx (theTrait, loc) ->
              let theTrait = traitMapTys (subst ctx) theTrait
-             doResolveTraitBound ctx theTrait loc)
+             resolveTraitBound ctx theTrait loc)
            ctx
 
     if List.length ctx.NewTraitBounds < n then
