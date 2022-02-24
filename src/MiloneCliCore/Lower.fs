@@ -100,7 +100,7 @@ let private lowerTyDef (def: Tir.TyDef) : Hir.TyDef =
   | Tir.RecordTyDef (ident, unimplTyArgs, fields, repr, loc) ->
     Hir.RecordTyDef(ident, List.map (fun (ident, ty, loc) -> ident, lowerTy ty, loc) fields, repr, loc)
 
-  | Tir.UniversalTyDef _
+  | Tir.UnivTyDef _
   | Tir.SynonymTyDef _ -> unreachable () // Resolved in Typing.
 
 let private lowerVarMap vars =

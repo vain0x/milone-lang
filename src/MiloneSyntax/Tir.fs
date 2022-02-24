@@ -67,7 +67,7 @@ let moduleSynonymSerialCompare l r =
 
 let tyDefToName tyDef =
   match tyDef with
-  | UniversalTyDef (name, _) -> name
+  | UnivTyDef (name, _) -> name
   | SynonymTyDef (name, _, _, _) -> name
   | UnionTyDef (name, _, _, _) -> name
   | RecordTyDef (name, _, _, _, _) -> name

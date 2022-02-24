@@ -82,18 +82,16 @@ type MetaTyData =
     Loc: Loc }
 
 [<Struct; NoEquality; NoComparison>]
-type UniversalTyId = UniversalTyId of Symbol
+type UnivTyId = UnivTyId of Symbol
 
 [<NoEquality; NoComparison>]
-type UniversalTyData = { Name: Ident; Loc: Loc }
+type UnivTyData = { Name: Ident; Loc: Loc }
 
 [<Struct; NoEquality; NoComparison>]
 type SynonymTyId = SynonymTyId of Symbol
 
 [<NoEquality; NoComparison>]
-type SynonymTyData =
-  { TyArgs: UniversalTyId list
-    Body: BTy }
+type SynonymTyData = { TyArgs: UnivTyId list; Body: BTy }
 
 [<Struct; NoEquality; NoComparison>]
 type UnionTyId = UnionTyId of Symbol
@@ -152,7 +150,7 @@ type BTk =
 
   // Nominal types.
   | BMetaTk of metaTyId: MetaTyId
-  | BUnivTk of universalTyId: UniversalTyId
+  | BUnivTk of univTyId: UnivTyId
   | BSynonymTk of synonymTyId: SynonymTyId
   | BUnionTk of unionTyId: UnionTyId
   | BRecordTk of recordTyId: RecordTyId
@@ -221,7 +219,7 @@ type SemaCtx =
     Funs: AssocMap<FunId, FunData>
     Variants: AssocMap<VariantId, VariantData>
     MetaTys: AssocMap<MetaTyId, MetaTyData>
-    UniversalTys: AssocMap<UniversalTyId, UniversalTyData>
+    UnivTys: AssocMap<UnivTyId, UnivTyData>
     SynonymTys: AssocMap<SynonymTyId, SynonymTyData>
     UnionTys: AssocMap<UnionTyId, UnionTyData>
     RecordTys: AssocMap<RecordTyId, RecordTyData> }

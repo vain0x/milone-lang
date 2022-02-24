@@ -55,6 +55,8 @@
 - stmt (statement)
     - Note that I feel this spelling awful but it's commonly used.
 - ty (type)
+- univ (universal)
+    - "Universal" in "universally quantified variable" (`∀a`, `'A`).
 
 ### Policy
 

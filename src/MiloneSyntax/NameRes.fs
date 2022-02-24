@@ -711,7 +711,7 @@ let private resolveTy ty loc scopeCtx =
       | _ ->
         let scopeCtx =
           scopeCtx
-          |> addLocalTy (UnivTySymbol serial) (UniversalTyDef(name, loc))
+          |> addLocalTy (UnivTySymbol serial) (UnivTyDef(name, loc))
 
         tyUniv serial name loc, scopeCtx
 
@@ -900,7 +900,7 @@ let private withTyArgsImported tyArgs loc (body: ScopeCtx -> 'A * ScopeCtx) ctx 
          let name = ctx |> findName tyArg
 
          ctx
-         |> addLocalTy (UnivTySymbol tyArg) (UniversalTyDef(name, loc)))
+         |> addLocalTy (UnivTySymbol tyArg) (UnivTyDef(name, loc)))
        tyArgs
   |> body
   |> (fun (result, ctx) -> result, finishScope ctx)
@@ -918,7 +918,7 @@ let private finishDefineTy tySerial tyArgs tyDecl loc ctx =
   let tyDef = ctx |> findTy tySerial
 
   match tyDef with
-  | UniversalTyDef _ -> ctx
+  | UnivTyDef _ -> ctx
 
   | SynonymTyDef (tyName, tyArgs, bodyTy, loc) ->
     let bodyTy, ctx =

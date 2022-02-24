@@ -147,7 +147,7 @@ type TyDecl =
 /// Type definition.
 [<NoEquality; NoComparison>]
 type TyDef =
-  | UniversalTyDef of Ident * Loc
+  | UnivTyDef of Ident * Loc
 
   | SynonymTyDef of Ident * tyArgs: TySerial list * Ty * Loc
 

@@ -2097,7 +2097,7 @@ let infer (modules: TProgram, nameRes: NameResResult) : TProgram * TirCtx =
       |> TMap.fold
            (fun acc tySerial tyDef ->
              match tyDef with
-             | UniversalTyDef _
+             | UnivTyDef _
              | SynonymTyDef _ -> acc
 
              | RecordTyDef (recordName, unimplTyArgs, fields, repr, loc) ->
