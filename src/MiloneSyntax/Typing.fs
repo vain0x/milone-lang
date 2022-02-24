@@ -439,8 +439,8 @@ type private TraitBoundResolutionResult =
   | BoundError
   | BoundUnify of (Ty * Ty) list
 
-let private addTraitBounds traits (ctx: TyCtx) =
-  { ctx with NewTraitBounds = traits :: ctx.NewTraitBounds }
+let private addTraitBound theTrait loc (ctx: TyCtx) =
+  { ctx with NewTraitBounds = [ theTrait, loc ] :: ctx.NewTraitBounds }
 
 let private resolveTraitBound (ctx: TyCtx) theTrait : TraitBoundResolutionResult =
   let ok = BoundOk
@@ -622,7 +622,7 @@ let private doResolveTraitBound (ctx: TyCtx) theTrait loc : TyCtx =
 
   | BoundError ->
     addLog ctx (Log.TyBoundError theTrait) loc
-    |> addTraitBounds [ theTrait, loc ]
+    |> addTraitBound theTrait loc
 
   | BoundUnify tyPairs ->
     tyPairs
@@ -1576,7 +1576,7 @@ let private inferMinusExpr ctx arg loc =
   let arg, argTy, ctx = inferExpr ctx None arg
 
   let ctx =
-    ctx |> addTraitBounds [ IsNumberTrait argTy, loc ]
+    ctx |> addTraitBound (IsNumberTrait argTy) loc
 
   TNodeExpr(TMinusEN, [ arg ], argTy, loc), argTy, ctx
 
@@ -1587,7 +1587,7 @@ let private inferIndexExpr ctx l r loc =
 
   let ctx =
     ctx
-    |> addTraitBounds [ IndexTrait(lTy, rTy, tTy), loc ]
+    |> addTraitBound (IndexTrait(lTy, rTy, tTy)) loc
 
   TNodeExpr(TIndexEN, [ l; r ], tTy, loc), tTy, ctx
 
