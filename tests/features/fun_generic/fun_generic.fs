@@ -2,7 +2,7 @@ module rec fun_generic.Program
 
 // Function defined with let expression is generalized automatically.
 
-let listRev xs =
+let private listRev xs =
   let rec go acc xs =
     match xs with
     | [] -> acc
@@ -11,9 +11,20 @@ let listRev xs =
 
   go [] xs
 
-let main _ =
-  let id x = x
+let rec private listMap f xs =
+  match xs with
+  | [] -> []
+  | x :: xs -> f x :: listMap f xs
 
+let private id x = x
+
+let private f x =
+  printfn "%d" x
+  x * x
+
+let private flip (x, y) = y, x
+
+let main _ =
   // id<int> instance
   let _: int = id 42
   // id<int> should be reused
@@ -21,18 +32,7 @@ let main _ =
   // Another instance of id
   let _: string list = id [ "A" ]
 
-  let rec listMap f xs =
-    match xs with
-    | [] -> []
-    | x :: xs -> f x :: listMap f xs
-
-  let f x =
-    printfn "%d" x
-    x * x
-
   let _ = [ 1; 2; 3 ] |> listMap f |> listMap f
-
-  let flip (x, y) = y, x
 
   match (1, "a") |> flip |> flip with
   | 1, "a" -> ()

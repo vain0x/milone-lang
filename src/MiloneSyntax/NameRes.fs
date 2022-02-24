@@ -186,12 +186,12 @@ let private mapAddEntries (entries: ('K * 'T) list) (map: TreeMap<'K, 'T>) : Tre
   |> List.rev
   |> List.fold (fun map (key, value) -> TMap.add key value map) map
 
+let private mergeChain xs1 xs2 : ScopeChain<_> =
+  [ List.append xs1 xs2
+    |> List.fold mapMerge (scopeMapEmpty ()) ]
+
 /// Merges two scopes into flattened scope.
 let private scopeMerge (first: Scope) (second: Scope) : Scope =
-  let mergeChain xs1 xs2 : ScopeChain<_> =
-    [ List.append xs1 xs2
-      |> List.fold mapMerge (scopeMapEmpty ()) ]
-
   let _, values1, tys1, nss1 = first
   let _, values2, tys2, nss2 = second
   [], mergeChain values1 values2, mergeChain tys1 tys2, mergeChain nss1 nss2
@@ -892,24 +892,24 @@ let private startDefineTy moduleSerialOpt tySerial vis tyArgs tyDecl loc ctx =
       |> addLocalTy tySymbol tyDef
       |> addTyToModule tySymbol
 
+let private withTyArgsImported tyArgs loc (body: ScopeCtx -> 'A * ScopeCtx) ctx : 'A * ScopeCtx =
+  ctx
+  |> startScope TyDeclScope
+  |> forList
+       (fun tyArg ctx ->
+         let name = ctx |> findName tyArg
+
+         ctx
+         |> addLocalTy (UnivTySymbol tyArg) (UniversalTyDef(name, loc)))
+       tyArgs
+  |> body
+  |> (fun (result, ctx) -> result, finishScope ctx)
+
 /// Completes the type definition.
 ///
 /// - No need to call `startDefineTy` first.
 /// - This resolves inner type expressions.
 let private finishDefineTy tySerial tyArgs tyDecl loc ctx =
-  let withTyArgsImported tyArgs (body: ScopeCtx -> 'A * ScopeCtx) ctx : 'A * ScopeCtx =
-    ctx
-    |> startScope TyDeclScope
-    |> forList
-         (fun tyArg ctx ->
-           let name = ctx |> findName tyArg
-
-           ctx
-           |> addLocalTy (UnivTySymbol tyArg) (UniversalTyDef(name, loc)))
-         tyArgs
-    |> body
-    |> (fun (result, ctx) -> result, finishScope ctx)
-
   let ctx =
     // Pass in PrivateVis because if this type is not pre-declared here, it's local to function.
     ctx
@@ -923,14 +923,14 @@ let private finishDefineTy tySerial tyArgs tyDecl loc ctx =
   | SynonymTyDef (tyName, tyArgs, bodyTy, loc) ->
     let bodyTy, ctx =
       ctx
-      |> withTyArgsImported tyArgs (resolveTy bodyTy loc)
+      |> withTyArgsImported tyArgs loc (resolveTy bodyTy loc)
 
     ctx
     |> addTy (SynonymTySymbol tySerial) (SynonymTyDef(tyName, tyArgs, bodyTy, loc))
 
   | UnionTyDef (_, tyArgs, variantSerials, _) ->
     ctx
-    |> withTyArgsImported tyArgs (fun ctx ->
+    |> withTyArgsImported tyArgs loc (fun ctx ->
       let ctx =
         variantSerials
         |> List.fold

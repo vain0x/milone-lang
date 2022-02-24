@@ -139,6 +139,7 @@ Not all of F# features are supported. Features for functional-style programming 
     - Function objects
 - Types
     - Polymorphic type inference
+        - Only top-level functions are generalized
     - Primitive types: int, float, string, tuples, lists, functions, etc.
     - Discriminated unions
     - Records (non-generic ones only)

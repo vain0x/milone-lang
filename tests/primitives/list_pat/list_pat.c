@@ -18,7 +18,7 @@ struct Intoption1option1option1_List;
 
 struct Intoption1option1option1_List;
 
-struct Intoption1option1option1_ list_pat_list_pat_main_IntIntoption1option1option1Fun1_fun(int x_);
+struct Intoption1option1option1_ list_pat_list_pat_main_fun(int x_);
 
 struct Intoption1option1option1_ list_pat_list_pat_eta2_main_fun(void const* env_, int arg_);
 
@@ -77,7 +77,7 @@ struct Intoption1option1option1_List {
     struct Intoption1option1option1_List const* tail;
 };
 
-struct Intoption1option1option1_ list_pat_list_pat_main_IntIntoption1option1option1Fun1_fun(int x_) {
+struct Intoption1option1option1_ list_pat_list_pat_main_fun(int x_) {
     struct Intoption1_ variant_ = (struct Intoption1_){.discriminant = Some_, .Some_ = x_};
     struct Intoption1option1_ variant_1 = (struct Intoption1option1_){.discriminant = Some_1, .Some_1 = variant_};
     struct Intoption1option1option1_ variant_2 = (struct Intoption1option1option1_){.discriminant = Some_2, .Some_2 = variant_1};
@@ -85,7 +85,7 @@ struct Intoption1option1option1_ list_pat_list_pat_main_IntIntoption1option1opti
 }
 
 struct Intoption1option1option1_ list_pat_list_pat_eta2_main_fun(void const* env_, int arg_) {
-    struct Intoption1option1option1_ call_ = list_pat_list_pat_main_IntIntoption1option1option1Fun1_fun(arg_);
+    struct Intoption1option1option1_ call_ = list_pat_list_pat_main_fun(arg_);
     return call_;
 }
 

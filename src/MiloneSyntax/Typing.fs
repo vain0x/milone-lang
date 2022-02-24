@@ -8,6 +8,9 @@
 ///
 /// and this one (written in Japanese) too:
 ///   - [OCaml でも採用されているレベルベースの多相型型推論とは](https://rhysd.hatenablog.com/entry/2017/12/16/002048)
+///
+/// Only top-level functions are generalized. See also:
+///   - [Let Should Not Be Generalised](https://www.microsoft.com/en-us/research/publication/let-should-not-be-generalised/)
 
 module rec MiloneSyntax.Typing
 
@@ -427,6 +430,24 @@ let private generalizeFun (ctx: TyCtx) (outerLevel: Level) funSerial =
     ctx
 
   | _ -> unreachable () // Can't generalize already-generalized functions.
+
+let private finishLocalFun (ctx: TyCtx) funSerial =
+  let funDef = ctx.Funs |> mapFind funSerial
+
+  let funTy =
+    match funDef.Ty with
+    | TyScheme ([], funTy) ->
+      assert (isNoTy funTy |> not)
+      funTy
+
+    | _ -> unreachable ()
+
+  let funTy = substTy ctx funTy
+
+  { ctx with
+      Funs =
+        ctx.Funs
+        |> TMap.add funSerial { funDef with Ty = TyScheme([], funTy) } }
 
 // -----------------------------------------------
 // Trait bounds
@@ -1742,8 +1763,12 @@ let private inferLetFunStmt ctx mutuallyRec callee vis argPats body loc =
 
   let ctx = ctx |> decLevel
 
-  let ctx = attemptResolveTraitBounds ctx
-  let ctx = generalizeFun ctx outerLevel callee
+  let ctx =
+    if outerLevel = 0 then
+      let ctx = attemptResolveTraitBounds ctx
+      generalizeFun ctx outerLevel callee
+    else
+      finishLocalFun ctx callee
 
   let ctx =
     match mutuallyRec with

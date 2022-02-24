@@ -8,8 +8,6 @@ typedef int(*VoidConstPtrIntIntFunPtr2)(void const*, int);
 
 struct IntIntFun1;
 
-int fun_arity_never_result_bug_fun_arity_never_result_bug_main_IntIntFun1_fun(int arg_2);
-
 int fun_arity_never_result_bug_fun_arity_never_result_bug_UnitIntFun1_unreachable(void);
 
 struct UnitIntFun1 fun_arity_never_result_bug_fun_arity_never_result_bug_StringUnitIntFun2_failwithf(struct String msg_);
@@ -17,6 +15,8 @@ struct UnitIntFun1 fun_arity_never_result_bug_fun_arity_never_result_bug_StringU
 int MiloneCore_Prelude_IntIntFun1_id(int );
 
 int fun_arity_never_result_bug_fun_arity_never_result_bug_eta2_main_id(void const* env_, int arg_);
+
+int fun_arity_never_result_bug_fun_arity_never_result_bug_main_fun(int arg_2);
 
 int fun_arity_never_result_bug_fun_arity_never_result_bug_eta2_main_fun(void const* env_1, int arg_1);
 
@@ -32,14 +32,9 @@ struct IntIntFun1 {
     void const* env;
 };
 
-int fun_arity_never_result_bug_fun_arity_never_result_bug_main_IntIntFun1_fun(int arg_2) {
-    int call_ = fun_arity_never_result_bug_fun_arity_never_result_bug_UnitIntFun1_unreachable();
-    return call_;
-}
-
 int fun_arity_never_result_bug_fun_arity_never_result_bug_UnitIntFun1_unreachable(void) {
-    struct UnitIntFun1 call_1 = fun_arity_never_result_bug_fun_arity_never_result_bug_StringUnitIntFun2_failwithf((struct String){.str = "NEVER: %A", .len = 9});
-    int app_ = call_1.fun(call_1.env);
+    struct UnitIntFun1 call_ = fun_arity_never_result_bug_fun_arity_never_result_bug_StringUnitIntFun2_failwithf((struct String){.str = "NEVER: %A", .len = 9});
+    int app_ = call_.fun(call_.env);
     return app_;
 }
 
@@ -49,12 +44,17 @@ struct UnitIntFun1 fun_arity_never_result_bug_fun_arity_never_result_bug_StringU
 }
 
 int fun_arity_never_result_bug_fun_arity_never_result_bug_eta2_main_id(void const* env_, int arg_) {
-    int call_2 = MiloneCore_Prelude_IntIntFun1_id(arg_);
+    int call_1 = MiloneCore_Prelude_IntIntFun1_id(arg_);
+    return call_1;
+}
+
+int fun_arity_never_result_bug_fun_arity_never_result_bug_main_fun(int arg_2) {
+    int call_2 = fun_arity_never_result_bug_fun_arity_never_result_bug_UnitIntFun1_unreachable();
     return call_2;
 }
 
 int fun_arity_never_result_bug_fun_arity_never_result_bug_eta2_main_fun(void const* env_1, int arg_1) {
-    int call_3 = fun_arity_never_result_bug_fun_arity_never_result_bug_main_IntIntFun1_fun(arg_1);
+    int call_3 = fun_arity_never_result_bug_fun_arity_never_result_bug_main_fun(arg_1);
     return call_3;
 }
 
