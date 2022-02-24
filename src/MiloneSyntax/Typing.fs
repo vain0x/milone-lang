@@ -66,7 +66,7 @@ type private TyCtx =
     GrayInstantiations: TreeMap<FunSerial, (Ty * Loc) list>
 
     TraitBounds: (Trait * Loc) list
-    NewTraitBounds: (Trait * Loc) list list
+    NewTraitBounds: (Trait * Loc) list
     Logs: (Log * Loc) list }
 
 let private newTyCtx (nr: NameResResult) : TyCtx =
@@ -378,7 +378,7 @@ let private instantiateBoundedTyScheme (ctx: TyCtx) (tyScheme: BoundedTyScheme) 
   { ctx with
       Serial = serial
       TyLevels = tyLevels
-      NewTraitBounds = traits :: ctx.NewTraitBounds }
+      NewTraitBounds = List.append traits ctx.NewTraitBounds }
 
 // #generalizeFun
 let private generalizeFun (ctx: TyCtx) (outerLevel: Level) funSerial =
@@ -440,7 +440,7 @@ type private TraitBoundResolutionResult =
   | BoundUnify of (Ty * Ty) list
 
 let private addTraitBound theTrait loc (ctx: TyCtx) =
-  { ctx with NewTraitBounds = [ theTrait, loc ] :: ctx.NewTraitBounds }
+  { ctx with NewTraitBounds = (theTrait, loc) :: ctx.NewTraitBounds }
 
 let private resolveTraitBound (ctx: TyCtx) theTrait : TraitBoundResolutionResult =
   let ok = BoundOk
@@ -637,26 +637,23 @@ let private attemptResolveTraitBounds (ctx: TyCtx) =
   let traitAcc, (ctx: TyCtx) =
     ctx.NewTraitBounds
     |> List.fold
-         (fun (traitAcc, ctx) traits ->
-           traits
-           |> List.fold
-                (fun (traitAcc, ctx) (theTrait, loc) ->
-                  let oldCtx = ctx
-                  let theTrait = traitMapTys (subst ctx) theTrait
-                  let ctx = doResolveTraitBound ctx theTrait loc
+         (fun (traitAcc, ctx) bound ->
+           let theTrait, loc = bound
+           let oldCtx = ctx
+           let theTrait = traitMapTys (subst ctx) theTrait
+           let ctx = doResolveTraitBound ctx theTrait loc
 
-                  if ctx.Logs |> List.isEmpty |> not then
-                    (theTrait, loc) :: traitAcc, oldCtx
-                  else
-                    // __trace (
-                    //   "resolved "
-                    //   + (__dump theTrait)
-                    //   + " "
-                    //   + (Loc.toString loc)
-                    // )
+           if ctx.Logs |> List.isEmpty |> not then
+             bound :: traitAcc, oldCtx
+           else
+             // __trace (
+             //   "resolved "
+             //   + (__dump theTrait)
+             //   + " "
+             //   + (Loc.toString loc)
+             // )
 
-                    traitAcc, ctx)
-                (traitAcc, ctx))
+             traitAcc, ctx)
          ([], ctx)
 
   // __trace (
@@ -678,7 +675,7 @@ let private resolveTraitBoundsAll (ctx: TyCtx) =
   // so try to resolve all bounds repeatedly until no bound is resolved.
   let rec go (ctx: TyCtx) =
     let traits, ctx =
-      List.collect id ctx.NewTraitBounds, { ctx with NewTraitBounds = [] }
+      ctx.NewTraitBounds, { ctx with NewTraitBounds = [] }
 
     let n = List.length traits
 
@@ -690,9 +687,7 @@ let private resolveTraitBoundsAll (ctx: TyCtx) =
              doResolveTraitBound ctx theTrait loc)
            ctx
 
-    if (ctx.NewTraitBounds
-        |> List.map List.length
-        |> List.fold (fun (x: int) y -> x + y) 0) < n then
+    if List.length ctx.NewTraitBounds < n then
       let ctx = { ctx with Logs = [] }
       go ctx
     else
@@ -703,7 +698,7 @@ let private resolveTraitBoundsAll (ctx: TyCtx) =
   let ctx =
     { ctx with
         TraitBounds = []
-        NewTraitBounds = ctx.TraitBounds :: ctx.NewTraitBounds }
+        NewTraitBounds = List.append ctx.NewTraitBounds ctx.TraitBounds }
 
   let ctx = go ctx
 
