@@ -252,22 +252,32 @@ let private substOrDegenerateTy (ctx: TyCtx) ty =
 let private expandSynonyms (ctx: TyCtx) ty : Ty =
   tyExpandSynonyms (fun tySerial -> ctx.Tys |> TMap.tryFind tySerial) ty
 
+/// Does level-up a meta type.
+let private levelUp (ctx: TyCtx) tySerial ty =
+  let level = getTyLevel tySerial ctx
+
+  ty
+  |> tyCollectFreeVars
+  |> List.fold
+       (fun tyLevels tySerial ->
+         if getTyLevel tySerial ctx <= level then
+           // Already non-deep enough.
+           tyLevels
+         else
+           // Prevent this meta ty from getting generalized until level of the bound meta ty.
+           tyLevels |> TMap.add tySerial level)
+       ctx.TyLevels
+
+/// Binds a type to a meta type.
+///
+/// As a precondition, that meta type must be free (not bound)
+/// and must not occur in that type (no recursion).
+let private bindMetaTy (ctx: TyCtx) tySerial otherTy : TyCtx =
+  { ctx with
+      MetaTys = ctx.MetaTys |> TMap.add tySerial otherTy
+      TyLevels = levelUp ctx tySerial otherTy }
+
 let private unifyTy (ctx: TyCtx) loc (lTy: Ty) (rTy: Ty) : TyCtx =
-  let levelUp (ctx: TyCtx) tySerial ty =
-    let level = getTyLevel tySerial ctx
-
-    ty
-    |> tyCollectFreeVars
-    |> List.fold
-         (fun tyLevels tySerial ->
-           if getTyLevel tySerial ctx <= level then
-             // Already non-deep enough.
-             tyLevels
-           else
-             // Prevent this meta ty from getting generalized until level of the bound meta ty.
-             tyLevels |> TMap.add tySerial level)
-         ctx.TyLevels
-
   let rec go lTy rTy loc (ctx: TyCtx) =
     match unifyNext lTy rTy loc with
     | UnifyOk -> ctx
@@ -285,12 +295,7 @@ let private unifyTy (ctx: TyCtx) loc (lTy: Ty) (rTy: Ty) : TyCtx =
 
         match unifyAfterExpandMeta lTy rTy tySerial otherTy loc with
         | UnifyAfterExpandMetaResult.OkNoBind -> ctx
-
-        | UnifyAfterExpandMetaResult.OkBind ->
-          { ctx with
-              MetaTys = ctx.MetaTys |> TMap.add tySerial otherTy
-              TyLevels = levelUp ctx tySerial otherTy }
-
+        | UnifyAfterExpandMetaResult.OkBind -> bindMetaTy ctx tySerial otherTy
         | UnifyAfterExpandMetaResult.Error (log, loc) -> addLog ctx log loc
 
     | UnifyExpandSynonym (tySerial, useTyArgs, otherTy) ->
