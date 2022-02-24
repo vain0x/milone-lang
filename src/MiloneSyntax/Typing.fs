@@ -457,9 +457,9 @@ let private doResolveTraitBound (ctx: TyCtx) theTrait loc : TyCtx =
     addLog ctx (Log.TyBoundError theTrait) loc
     |> addTraitBound theTrait loc
 
-  let unifyAll tyPairs =
-    tyPairs
-    |> List.fold (fun ctx (lTy, tTy) -> unifyTy ctx loc lTy tTy) ctx
+  let unify2 (lTy1, rTy1) (lTy2, rTy2) =
+    let ctx = unifyTy ctx loc lTy1 rTy1
+    unifyTy ctx loc lTy2 rTy2
 
   // Coerce to int as default.
   let defaultToInt ctx ty = unifyTy ctx loc ty tyInt
@@ -473,12 +473,14 @@ let private doResolveTraitBound (ctx: TyCtx) theTrait loc : TyCtx =
 
   match theTrait with
   | AddTrait ty ->
-    match ty with
-    | Ty (ErrorTk _, _)
-    | Ty (IntTk _, [])
-    | Ty (FloatTk _, [])
-    | Ty (CharTk, [])
-    | Ty (StrTk, []) -> ok ctx
+    let (Ty (tk, _)) = ty
+
+    match tk with
+    | ErrorTk _
+    | IntTk _
+    | FloatTk _
+    | CharTk
+    | StrTk -> ok ctx
 
     | _ -> defaultToInt ctx ty
 
@@ -564,70 +566,67 @@ let private doResolveTraitBound (ctx: TyCtx) theTrait loc : TyCtx =
   | IndexTrait (lTy, rTy, resultTy) ->
     match lTy with
     | Ty (ErrorTk _, _) -> ok ctx
-    | Ty (StrTk, []) ->
-      unifyAll [ rTy, tyInt
-                 resultTy, tyChar ]
-
+    | Ty (StrTk, _) -> unify2 (rTy, tyInt) (resultTy, tyChar)
     | _ -> error ctx
 
   | IsIntTrait ty ->
     match ty with
     | Ty (ErrorTk _, _)
-    | Ty (IntTk _, []) -> ok ctx
+    | Ty (IntTk _, _) -> ok ctx
 
     | _ -> defaultToInt ctx ty
 
   | IsNumberTrait ty ->
     match ty with
     | Ty (ErrorTk _, _)
-    | Ty (IntTk _, [])
-    | Ty (FloatTk _, []) -> ok ctx
+    | Ty (IntTk _, _)
+    | Ty (FloatTk _, _) -> ok ctx
 
     | _ -> defaultToInt ctx ty
 
-  | ToCharTrait ty ->
-    match ty with
-    | Ty (ErrorTk _, _)
-    | Ty (IntTk _, [])
-    | Ty (FloatTk _, [])
-    | Ty (CharTk, [])
-    | Ty (StrTk, []) -> ok ctx
+  | ToCharTrait (Ty (tk, _)) ->
+    match tk with
+    | ErrorTk _
+    | IntTk _
+    | FloatTk _
+    | CharTk
+    | StrTk -> ok ctx
 
     | _ -> error ctx
 
-  | ToIntTrait ty ->
-    match ty with
-    | Ty (ErrorTk _, _)
-    | Ty (IntTk _, [])
-    | Ty (FloatTk _, [])
-    | Ty (CharTk, [])
-    | Ty (StrTk, [])
-    | Ty (VoidPtrTk, _)
-    | Ty (NativePtrTk _, _) -> ok ctx
+  | ToIntTrait (Ty (tk, _)) ->
+    match tk with
+    | ErrorTk _
+    | IntTk _
+    | FloatTk _
+    | CharTk
+    | StrTk
+    | VoidPtrTk
+    | NativePtrTk _ -> ok ctx
 
     | _ -> error ctx
 
-  | ToFloatTrait ty ->
-    match ty with
-    | Ty (ErrorTk _, _)
-    | Ty (IntTk _, [])
-    | Ty (FloatTk _, [])
-    | Ty (StrTk, []) -> ok ctx
+  | ToFloatTrait (Ty (tk, _)) ->
+    match tk with
+    | ErrorTk _
+    | IntTk _
+    | FloatTk _
+    | StrTk -> ok ctx
 
     | _ -> error ctx
 
   | ToStringTrait ty -> expectBasic ctx ty
 
-  | PtrTrait ty ->
-    match ty with
-    | Ty (ErrorTk _, _)
-    | Ty (IntTk IPtr, _)
-    | Ty (IntTk UPtr, _)
-    | Ty (ObjTk, [])
-    | Ty (ListTk, _)
-    | Ty (VoidPtrTk, _)
-    | Ty (NativePtrTk _, _)
-    | Ty (NativeFunTk, _) -> ok ctx
+  | PtrTrait (Ty (tk, _)) ->
+    match tk with
+    | ErrorTk _
+    | IntTk IPtr
+    | IntTk UPtr
+    | ObjTk
+    | ListTk
+    | VoidPtrTk
+    | NativePtrTk _
+    | NativeFunTk -> ok ctx
 
     | _ -> error ctx
 
