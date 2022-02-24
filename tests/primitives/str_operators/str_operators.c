@@ -1,20 +1,16 @@
 #include <milone.h>
 
-char str_operators_str_operators_indexOperatorTest_IntStringCharFun2_at(int i_, struct String s_);
-
 void str_operators_Program_addTest(void);
 
 void str_operators_Program_compareTest(void);
+
+char str_operators_str_operators_indexOperatorTest_at(int i_, struct String s_);
 
 void str_operators_Program_indexOperatorTest(void);
 
 void str_operators_Program_subscriptOperatorTest(void);
 
 int main(int argc, char** argv);
-
-char str_operators_str_operators_indexOperatorTest_IntStringCharFun2_at(int i_, struct String s_) {
-    return s_.str[i_];
-}
 
 void str_operators_Program_addTest(void) {
     struct String hello_ = (struct String){.str = "Hello", .len = 5};
@@ -38,6 +34,10 @@ void str_operators_Program_compareTest(void) {
     return;
 }
 
+char str_operators_str_operators_indexOperatorTest_at(int i_, struct String s_) {
+    return s_.str[i_];
+}
+
 void str_operators_Program_indexOperatorTest(void) {
     struct String hello_1 = (struct String){.str = "hello", .len = 5};
     bool if_;
@@ -54,7 +54,7 @@ else_3:;
     goto if_next_1;
 if_next_1:;
     milone_assert(if_, (struct String){.str = "str_operators/str_operators.milone", .len = 34}, 33, 2);
-    char call_ = str_operators_str_operators_indexOperatorTest_IntStringCharFun2_at(0, hello_1);
+    char call_ = str_operators_str_operators_indexOperatorTest_at(0, hello_1);
     milone_assert((call_ == 'h'), (struct String){.str = "str_operators/str_operators.milone", .len = 34}, 38, 2);
     return;
 }

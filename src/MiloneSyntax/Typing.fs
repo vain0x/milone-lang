@@ -418,6 +418,21 @@ let private generalizeFun (ctx: TyCtx) (outerLevel: Level) funSerial =
 // Trait bounds
 // -----------------------------------------------
 
+let private tyIsBasic ty =
+  let (Ty(tk, _)) = ty
+
+  match tk with
+  | ErrorTk _
+  | IntTk _
+  | FloatTk _
+  | BoolTk
+  | CharTk
+  | StrTk
+  | VoidPtrTk
+  | NativePtrTk _ -> true
+
+  | _ -> false
+
 let private addTraitBounds traits (ctx: TyCtx) =
   { ctx with NewTraitBounds = traits :: ctx.NewTraitBounds }
 
@@ -428,21 +443,9 @@ let private doResolveTraitBound (ctx: TyCtx) theTrait loc : TyCtx =
     addLog ctx (Log.TyBoundError theTrait) loc
     |> addTraitBounds [ theTrait, loc ]
 
-  let isBasic ty =
-    match ty with
-    | Ty (ErrorTk _, _)
-    | Ty (IntTk _, _)
-    | Ty (FloatTk _, _)
-    | Ty (BoolTk, _)
-    | Ty (CharTk, _)
-    | Ty (StrTk, _)
-    | Ty (VoidPtrTk, _)
-    | Ty (NativePtrTk _, _) -> true
-    | _ -> false
-
   /// integer, bool, char, or string
   let expectBasic ty (ctx: TyCtx) =
-    if isBasic ty then
+    if tyIsBasic ty then
       ctx
     else
       addBoundError ctx
@@ -487,7 +490,7 @@ let private doResolveTraitBound (ctx: TyCtx) theTrait loc : TyCtx =
           action memo
 
       match tk, tyArgs with
-      | _ when isBasic ty -> true, memo
+      | _ when tyIsBasic ty -> true, memo
 
       | TupleTk, [] -> true, memo
 
