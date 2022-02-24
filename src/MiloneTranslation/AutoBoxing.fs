@@ -1046,9 +1046,7 @@ let private unifyTy (lTy: Ty) (rTy: Ty) : TreeMap<TySerial, Ty> =
   unifyOneWay (fun binding (tySerial: TySerial) ty -> binding |> TMap.add tySerial ty) emptyBinding lTy rTy
 
 [<RequireQualifiedAccess; NoEquality; NoComparison>]
-type private TaCtx =
-  { Funs: TreeMap<FunSerial, FunDef>
-    QuantifiedTys: TreeSet<TySerial> }
+type private TaCtx = { Funs: TreeMap<FunSerial, FunDef> }
 
 let private processFunExpr (ctx: TaCtx) itself funSerial useSiteTy loc : HExpr =
   let def: FunDef = ctx.Funs |> mapFind funSerial
@@ -1064,13 +1062,7 @@ let private processFunExpr (ctx: TaCtx) itself funSerial useSiteTy loc : HExpr =
       |> List.map (fun tySerial ->
         binding
         |> TMap.tryFind tySerial
-        |> Option.defaultWith (fun () ->
-          if ctx.QuantifiedTys |> TSet.contains tySerial then
-            tyMeta tySerial loc
-          else
-            // This should be unreachable but does happen in some cases,
-            // e.g. `fun x y -> x - y` (tests/primitives/tuple_arg).
-            tyUnit))
+        |> Option.defaultWith (fun () -> tyMeta tySerial loc))
 
     HFunExpr(funSerial, useSiteTy, tyArgs, loc)
 
@@ -1105,23 +1097,8 @@ let private taStmt ctx stmt =
 
   match stmt with
   | HExprStmt expr -> HExprStmt(onExpr expr)
-
   | HLetValStmt (pat, init, loc) -> HLetValStmt(pat, onExpr init, loc)
-
-  | HLetFunStmt (callee, args, body, loc) ->
-    let ctx =
-      let funDef = ctx.Funs |> mapFind callee
-
-      match funDef.Ty with
-      | TyScheme ([], _) -> ctx
-      | TyScheme (tyVars, _) ->
-        let quantifiedTys =
-          tyVars
-          |> List.fold (fun quantifiedTys tySerial -> TSet.add tySerial quantifiedTys) ctx.QuantifiedTys
-
-        { ctx with QuantifiedTys = quantifiedTys }
-
-    HLetFunStmt(callee, args, taExpr ctx body, loc)
+  | HLetFunStmt (callee, args, body, loc) -> HLetFunStmt(callee, args, taExpr ctx body, loc)
 
 let computeFunTyArgs (modules: HProgram, hirCtx: HirCtx) : HProgram * HirCtx =
   let hirCtx =
@@ -1136,10 +1113,7 @@ let computeFunTyArgs (modules: HProgram, hirCtx: HirCtx) : HProgram * HirCtx =
     { hirCtx with Funs = ctx.Funs }
 
   let modules =
-    let ctx: TaCtx =
-      { Funs = hirCtx.Funs
-        QuantifiedTys = TSet.empty compare }
-
+    let ctx: TaCtx = { Funs = hirCtx.Funs }
     modules |> HProgram.mapExpr (taExpr ctx)
 
   modules, hirCtx
