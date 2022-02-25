@@ -410,3 +410,83 @@ type AModuleHead = Name list * Pos
 /// Root of AST, a result of parsing single source file.
 [<NoEquality; NoComparison>]
 type ARoot = ARoot of AModuleHead option * ADecl list
+
+// -----------------------------------------------
+// NIR: IR for NameRes
+// -----------------------------------------------
+
+/// Type term in NIR.
+[<NoEquality; NoComparison>]
+type NTy =
+  | Missing of Pos
+  | App of quals: Name list * Name * NTy list * Pos
+  | Var of Name
+
+  | Fun of NTy * NTy * Pos
+  | Tuple of NTy list * Pos
+
+/// Pattern in NIR.
+[<RequireQualifiedAccess; NoEquality; NoComparison>]
+type NPat =
+  // Fundamental:
+  | Missing of Pos
+  | Ident of Vis * Name
+  | Wildcard of Vis * Pos
+  | Nav of NPat * Name * Pos
+  | As of NPat * Name * Pos
+  | Ascribe of NPat * NTy * Pos
+  | Or of NPat * NPat * Pos
+
+  // Type-specific:
+  | Lit of Lit * Pos
+  | Cons of NPat * NPat * Pos
+  | Tuple of NPat list * Pos
+  | VariantApp of NPat * NPat * Pos
+
+type NArm = NPat * NExpr option * NExpr * Pos
+type NField = Name * NExpr * Pos
+
+/// Expression in NIR.
+[<RequireQualifiedAccess; NoEquality; NoComparison>]
+type NExpr =
+  // Fundamental:
+  | Missing of Pos
+  | Ident of Name
+  | Nav of NExpr * Name * Pos
+  | Ascribe of NExpr * NTy * Pos
+  | Block of NStmt list * last: NExpr
+
+  // Type-specific:
+  | Lit of Lit * Pos
+  | Match of cond: NExpr * arms: NArm list * Pos
+  | Record of NExpr option * NField list * Pos
+  | Tuple of NExpr list * Pos
+
+  // Primitive:
+  | Unary of Unary * NExpr * Pos
+  | Binary of Binary * NExpr * NExpr * Pos
+  | Index of NExpr * NExpr * Pos
+  | Slice of NExpr * NExpr * NExpr * Pos
+
+[<RequireQualifiedAccess; NoEquality; NoComparison>]
+type NStmt =
+  | Expr of NExpr
+  | LetVal of IsRec * pat: NPat * init: NExpr * Pos
+  | LetFun of IsRec * Vis * Name * argPats: NPat list * resultTyOpt: (NTy * Pos) option * body: NExpr
+
+type NVariantDecl = Name * NTy option * Pos
+type NFieldDecl = Name * NTy * Pos
+
+[<NoEquality; NoComparison>]
+type NModuleDecl = NModuleDecl of IsRec * Vis * Name * NDecl list * NStmt list * Pos
+
+[<RequireQualifiedAccess; NoEquality; NoComparison>]
+type NDecl =
+  | TySynonym of Vis * Name * tyArgs: Name list * NTy * Pos
+  | Union of Vis * Name * tyArgs: Name list * AVariant list * Pos
+  | Record of Vis * Name * tyArgs: Name list * AFieldDecl list * IsCRepr * Pos
+  | Open of Name list * Pos
+  | ModuleSynonym of Name * Name list * Pos
+  | Module of NModuleDecl
+
+type NRoot = NModuleDecl
