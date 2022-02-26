@@ -415,78 +415,91 @@ type ARoot = ARoot of AModuleHead option * ADecl list
 // NIR: IR for NameRes
 // -----------------------------------------------
 
-/// Type term in NIR.
-[<NoEquality; NoComparison>]
-type NTy =
-  | Missing of Pos
-  | App of quals: Name list * Name * NTy list * Pos
-  | Var of Name
+type NLoc = Loc
+type NName = Ident * NLoc
 
-  | Fun of NTy * NTy * Pos
-  | Tuple of NTy list * Pos
+[<NoEquality; NoComparison>]
+type NirGenLog =
+  | InvalidVisError
+  | NirGenError of string
+
+/// Type term in NIR.
+[<RequireQualifiedAccess; NoEquality; NoComparison>]
+type NTy =
+  | Bad of NLoc
+  | App of quals: NName list * NName * NTy list * NLoc
+  | Var of NName
+  | Infer of NLoc
+
+  | Fun of NTy * NTy * NLoc
+  | Tuple of NTy list * NLoc
 
 /// Pattern in NIR.
 [<RequireQualifiedAccess; NoEquality; NoComparison>]
 type NPat =
   // Fundamental:
-  | Missing of Pos
-  | Ident of Vis * Name
-  | Wildcard of Vis * Pos
-  | Nav of NPat * Name * Pos
-  | As of NPat * Name * Pos
-  | Ascribe of NPat * NTy * Pos
-  | Or of NPat * NPat * Pos
+  | Bad of NLoc
+  | Ident of Vis * NName
+  | Discard of NLoc
+  | Nav of NPat * NName * NLoc
+  | As of NPat * NName * NLoc
+  | Ascribe of NPat * NTy * NLoc
+  | Or of NPat * NPat * NLoc
 
   // Type-specific:
-  | Lit of Lit * Pos
-  | Cons of NPat * NPat * Pos
-  | Tuple of NPat list * Pos
-  | VariantApp of NPat * NPat * Pos
+  | Lit of Lit * NLoc
+  | Nil of NLoc
+  | Cons of NPat * NPat * NLoc
+  | Tuple of NPat list * NLoc
+  | VariantApp of NPat * NPat * NLoc
 
-type NArm = NPat * NExpr option * NExpr * Pos
-type NField = Name * NExpr * Pos
+type NArm = NPat * NExpr option * NExpr * NLoc
+type NField = NName * NExpr * NLoc
 
 /// Expression in NIR.
 [<RequireQualifiedAccess; NoEquality; NoComparison>]
 type NExpr =
   // Fundamental:
-  | Missing of Pos
-  | Ident of Name
-  | Nav of NExpr * Name * Pos
-  | Ascribe of NExpr * NTy * Pos
+  | Bad of NLoc
+  | Ident of NName
+  | Nav of NExpr * NName * NLoc
+  | Ascribe of NExpr * NTy * NLoc
   | Block of NStmt list * last: NExpr
 
   // Type-specific:
-  | Lit of Lit * Pos
-  | Match of cond: NExpr * arms: NArm list * Pos
-  | Record of NExpr option * NField list * Pos
-  | Tuple of NExpr list * Pos
+  | Lit of Lit * NLoc
+  | Match of cond: NExpr * NArm list * NLoc
+  | Nil of NLoc
+  | Record of NExpr option * NField list * NLoc
+  | Tuple of NExpr list * NLoc
 
   // Primitive:
-  | Unary of Unary * NExpr * Pos
-  | Binary of Binary * NExpr * NExpr * Pos
-  | Index of NExpr * NExpr * Pos
-  | Slice of NExpr * NExpr * NExpr * Pos
+  | Unary of Unary * NExpr * NLoc
+  | Binary of Binary * NExpr * NExpr * NLoc
+  | Index of NExpr * NExpr * NLoc
+  | Slice of NExpr * NExpr * NExpr * NLoc
+  | TyPlaceholder of NTy * NLoc
 
 [<RequireQualifiedAccess; NoEquality; NoComparison>]
 type NStmt =
   | Expr of NExpr
-  | LetVal of IsRec * pat: NPat * init: NExpr * Pos
-  | LetFun of IsRec * Vis * Name * argPats: NPat list * resultTyOpt: (NTy * Pos) option * body: NExpr
+  | LetVal of pat: NPat * init: NExpr * NLoc
+  | LetFun of IsRec * Vis * NName * argPats: NPat list * body: NExpr * NLoc
 
-type NVariantDecl = Name * NTy option * Pos
-type NFieldDecl = Name * NTy * Pos
+type NVariantDecl = NName * NTy option * NLoc
+type NFieldDecl = NName * NTy * NLoc
 
 [<NoEquality; NoComparison>]
-type NModuleDecl = NModuleDecl of IsRec * Vis * Name * NDecl list * NStmt list * Pos
+type NModuleDecl = NModuleDecl of IsRec * Vis * NName * NDecl list * NLoc
 
 [<RequireQualifiedAccess; NoEquality; NoComparison>]
 type NDecl =
-  | TySynonym of Vis * Name * tyArgs: Name list * NTy * Pos
-  | Union of Vis * Name * tyArgs: Name list * AVariant list * Pos
-  | Record of Vis * Name * tyArgs: Name list * AFieldDecl list * IsCRepr * Pos
-  | Open of Name list * Pos
-  | ModuleSynonym of Name * Name list * Pos
+  | Stmt of NStmt
+  | TySynonym of Vis * NName * tyArgs: NName list * NTy * NLoc
+  | Union of Vis * NName * tyArgs: NName list * NVariantDecl list * NLoc
+  | Record of Vis * NName * tyArgs: NName list * NFieldDecl list * IsCRepr * NLoc
+  | Open of NName list * NLoc
+  | ModuleSynonym of NName * NName list * NLoc
   | Module of NModuleDecl
 
 type NRoot = NModuleDecl
