@@ -165,6 +165,7 @@ type ModuleTyDef = { Name: Ident; Loc: Loc }
 [<Struct; NoComparison>]
 type ModuleSynonymSerial = ModuleSynonymSerial of Serial
 
+// not used
 //// Module is a type so that it can be used as namespace.
 [<RequireQualifiedAccess; NoEquality; NoComparison>]
 type ModuleSynonymDef =

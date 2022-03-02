@@ -464,6 +464,7 @@ type NExpr =
   | Ident of NName
   | Nav of NExpr * NName * NLoc
   | Ascribe of NExpr * NTy * NLoc
+  | TyPlaceholder of NTy * NLoc
   | Block of NStmt list * last: NExpr
 
   // Type-specific:
@@ -477,8 +478,7 @@ type NExpr =
   | Unary of Unary * NExpr * NLoc
   | Binary of Binary * NExpr * NExpr * NLoc
   | Index of NExpr * NExpr * NLoc
-  | Slice of NExpr * NExpr * NExpr * NLoc
-  | TyPlaceholder of NTy * NLoc
+  | Slice of arg: NExpr * start: NExpr * endIndex: NExpr * NLoc
 
 [<RequireQualifiedAccess; NoEquality; NoComparison>]
 type NStmt =
@@ -503,3 +503,5 @@ type NDecl =
   | Module of NModuleDecl
 
 type NRoot = NModuleDecl
+
+type NModuleRoot = DocId * NRoot

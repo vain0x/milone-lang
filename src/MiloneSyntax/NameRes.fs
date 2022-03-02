@@ -1,3 +1,5 @@
+/// # Name resolution
+///
 /// Resolves symbols as possible.
 ///
 /// This stage traverses the expressions twice
@@ -8,17 +10,63 @@ module rec MiloneSyntax.NameRes
 open MiloneShared.SharedTypes
 open MiloneShared.TypeIntegers
 open MiloneShared.Util
-open MiloneShared.UtilParallel
 open Std.StdError
 open Std.StdMap
 open Std.StdMultimap
 open Std.StdSet
 open MiloneSyntax.Tir
+open MiloneSyntaxTypes.SyntaxTypes
 open MiloneSyntaxTypes.TirTypes
 
 module S = Std.StdString
 
+let private optionMapFold (mapFolder: 'S -> 'T -> 'U * 'S) (state: 'S) (opt: 'T option) : 'U option * 'S =
+  match opt with
+  | Some item ->
+    let item, state = mapFolder state item
+    Some item, state
+
+  | None -> None, state
+
+let private listChooseFold (mapFolder: 'S -> 'T -> 'U option * 'S) (state: 'S) (xs: 'T list) : 'U list * 'S =
+  let yss, state = List.mapFold mapFolder state xs
+  yss |> List.choose id, state
+
+let private listCollectFold (mapFolder: 'S -> 'T -> 'U list * 'S) (state: 'S) (xs: 'T list) : 'U list * 'S =
+  let yss, state = List.mapFold mapFolder state xs
+  yss |> List.collect id, state
+
+let private identOf (name: NName) = fst name
+
+type private PosId = int64
+
+let private posOf (name: NName) : PosId =
+  let _, (Loc (_, y, x)) = name
+  ((int64 y) <<< 32) ||| int64 x
+
+let private npLoc pat : Loc =
+  match pat with
+  | NPat.Bad loc -> loc
+  | NPat.Ident (_, (_, loc)) -> loc
+  | NPat.Discard loc -> loc
+  | NPat.Nav (_, _, loc) -> loc
+  | NPat.As (_, _, loc) -> loc
+  | NPat.Ascribe (_, _, loc) -> loc
+  | NPat.Or (_, _, loc) -> loc
+  | NPat.Lit (_, loc) -> loc
+  | NPat.Nil loc -> loc
+  | NPat.Cons (_, _, loc) -> loc
+  | NPat.Tuple (_, loc) -> loc
+  | NPat.VariantApp (_, _, loc) -> loc
+
+type private ModuleTySerial = Serial
+type private ModuleSynonymSerial = Serial
+
+let private noTy = tyError noLoc
+let private txTrue loc = TLitExpr(BoolLit true, loc)
 let private txAbort loc = TNodeExpr(TAbortEN, [], noTy, loc)
+let private txApp f x loc = TNodeExpr(TAppEN, [ f; x ], noTy, loc)
+let private txApp2 f x1 x2 loc = txApp (txApp f x1 loc) x2 loc
 
 // -----------------------------------------------
 // Type primitives
@@ -64,6 +112,32 @@ let private tyPrimOfName name tys =
 
   | _ -> None
 
+let private binaryToPrim op : TPrim =
+  match op with
+  | AddBinary -> TPrim.Add
+  | SubBinary -> TPrim.Sub
+  | MulBinary -> TPrim.Mul
+  | DivBinary -> TPrim.Div
+  | ModuloBinary -> TPrim.Modulo
+  | BitAndBinary -> TPrim.BitAnd
+  | BitOrBinary -> TPrim.BitOr
+  | BitXorBinary -> TPrim.BitXor
+  | LeftShiftBinary -> TPrim.LeftShift
+  | RightShiftBinary -> TPrim.RightShift
+  | EqualBinary -> TPrim.Equal
+  | LessBinary -> TPrim.Less
+  | ConsBinary -> TPrim.Cons
+
+  | AppBinary // Handled specially.
+
+  | NotEqualBinary
+  | LessEqualBinary
+  | GreaterBinary
+  | GreaterEqualBinary
+  | LogicalAndBinary
+  | LogicalOrBinary
+  | PipeBinary -> unreachable () // Desugared in NirGen.
+
 // -----------------------------------------------
 // Symbols
 // -----------------------------------------------
@@ -95,13 +169,15 @@ type private NsOwner =
 let private nsOwnerToInt (nsOwner: NsOwner) : int =
   match nsOwner with
   | TyNsOwner tySerial -> tySerial
-  | ModuleNsOwner serial -> moduleTySerialToInt serial
-  | ModuleSynonymNsOwner serial -> moduleSynonymSerialToInt serial
+  | ModuleNsOwner serial -> serial
+  | ModuleSynonymNsOwner serial -> serial
 
 let private nsOwnerCompare (l: NsOwner) r : int =
   compare (nsOwnerToInt l) (nsOwnerToInt r)
 
 let private nsOwnerOfTySymbol (tySymbol: TySymbol) : NsOwner = TyNsOwner(tySymbolToSerial tySymbol)
+
+let private nsOwnerDump nsOwner = nsOwnerToInt nsOwner |> string
 
 // -----------------------------------------------
 // Namespace
@@ -129,6 +205,7 @@ let private nsMerge (key: NsOwner) (ident: Ident) value (ns: Ns<_>) : Ns<_> =
 // Scopes
 // --------------------------------------------
 
+// In expr scope, type variable can be used and defined without explicit declaration.
 [<NoEquality; NoComparison>]
 type private ScopeKind =
   | ExprScope
@@ -156,16 +233,14 @@ let private scopeEmpty () : Scope =
 /// Intermediate state of NameRes pass.
 [<RequireQualifiedAccess; NoEquality; NoComparison>]
 type private NameResState =
-  { NameCtx: NameCtx
-    ScopeCtx: ScopeCtx
+  { ScopeCtx: ScopeCtx
     Vars: TreeMap<VarSerial, VarDef>
     Funs: TreeMap<FunSerial, FunDef>
     Variants: TreeMap<VariantSerial, VariantDef>
     Logs: (NameResLog * Loc) list }
 
-let private sInit (nameCtx: NameCtx) : NameResState =
-  { NameCtx = nameCtx
-    ScopeCtx = ofNameCtx nameCtx
+let private emptyState () : NameResState =
+  { ScopeCtx = emptyScopeCtx ()
     Vars = emptyVars
     Funs = TMap.empty funSerialCompare
     Variants = TMap.empty variantSerialCompare
@@ -223,6 +298,7 @@ let private sMerge (state: NameResState) (scopeCtx: ScopeCtx) : NameResState * _
   { state with
       ScopeCtx =
         { state.ScopeCtx with
+            Serial = scopeCtx.Serial
             Tys = mapAddEntries scopeCtx.NewTys s.Tys
             MainFunOpt = optionMerge scopeCtx.MainFunOpt s.MainFunOpt
             RootModules = List.append scopeCtx.NewRootModules s.RootModules
@@ -240,10 +316,9 @@ let private sMerge (state: NameResState) (scopeCtx: ScopeCtx) : NameResState * _
   localVars
 
 let private sToResult (state: NameResState) : NameResResult =
-  let (NameCtx (_, serial)) = state.NameCtx
   let scopeCtx = state.ScopeCtx
 
-  { Serial = serial
+  { Serial = scopeCtx.Serial
     Vars = state.Vars
     Funs = state.Funs
     Variants = state.Variants
@@ -272,7 +347,15 @@ type NameResResult =
 
 [<RequireQualifiedAccess; NoEquality; NoComparison>]
 type private ScopeCtx =
-  { NameMap: TreeMap<Serial, Ident>
+  { Serial: Serial
+
+    // Partial definitions created by collect declaration.
+    DeclaredVars: TreeMap<PosId, VarSerial>
+    DeclaredFuns: TreeMap<PosId, FunSerial>
+    DeclaredVariants: TreeMap<PosId, VariantSerial>
+    DeclaredTys: TreeMap<PosId, TySerial * TySymbol>
+    DeclaredTyArities: TreeMap<TySerial, Arity>
+    DeclaredModules: TreeMap<PosId, Serial>
 
     NewVars: (VarSerial * VarDef) list
     NewFuns: (FunSerial * FunDef) list
@@ -286,15 +369,15 @@ type private ScopeCtx =
     Tys: TreeMap<TySerial, TyDef>
     NewTys: (TySerial * TyDef) list
 
-    RootModules: ModuleTySerial list
-    NewRootModules: ModuleTySerial list
+    RootModules: (Ident * ModuleTySerial) list
+    NewRootModules: (Ident * ModuleTySerial) list
     CurrentModule: ModuleTySerial option
     CurrentPath: string list
-    AncestralFuns: FunSerial list
+    AncestralFuns: Ident list
 
     VarNs: Ns<ValueSymbol>
     TyNs: Ns<TySymbol>
-    /// Subnamespaces.
+    /// Subspaces.
     NsNs: Ns<NsOwner list>
 
     /// Current scope.
@@ -307,8 +390,14 @@ type private ScopeCtx =
 
     NewLogs: (NameResLog * Loc) list }
 
-let private emptyScopeCtx: ScopeCtx =
-  { NameMap = TMap.empty compare
+let private emptyScopeCtx () : ScopeCtx =
+  { Serial = 0
+    DeclaredVars = TMap.empty compare
+    DeclaredFuns = TMap.empty compare
+    DeclaredVariants = TMap.empty compare
+    DeclaredTys = TMap.empty compare
+    DeclaredTyArities = TMap.empty compare
+    DeclaredModules = TMap.empty compare
     NewVars = []
     NewFuns = []
     NewFunSet = TMap.empty funSerialCompare
@@ -329,51 +418,50 @@ let private emptyScopeCtx: ScopeCtx =
     PatScope = TMap.empty compare
     NewLogs = [] }
 
-let private ofNameCtx (nameCtx: NameCtx) : ScopeCtx =
-  let (NameCtx (nameMap, _)) = nameCtx
+let private freshSerial (ctx: ScopeCtx) =
+  let serial = ctx.Serial + 1
+  serial, { ctx with Serial = serial }
 
-  { emptyScopeCtx with NameMap = nameMap }
+let private freshVarSerial (ctx: ScopeCtx) =
+  let serial, ctx = freshSerial ctx
+  VarSerial serial, ctx
+
+let private freshFunSerial (ctx: ScopeCtx) =
+  let serial, ctx = freshSerial ctx
+  FunSerial serial, ctx
+
+let private freshVariantSerial (ctx: ScopeCtx) =
+  let serial, ctx = freshSerial ctx
+  VariantSerial serial, ctx
 
 let private addLog (log: NameResLog) (loc: Loc) (ctx: ScopeCtx) =
   { ctx with NewLogs = (log, loc) :: ctx.NewLogs }
+
+let private errorTy ctx log loc : Ty * ScopeCtx =
+  let ctx = ctx |> addLog log loc
+  tyError loc, ctx
+
+let private errorPat ctx log loc : TPat * ScopeCtx =
+  let ctx = addLog log loc ctx
+  tpAbort noTy loc, ctx
+
+let private errorExpr ctx log loc : TExpr * ScopeCtx =
+  let ctx = addLog log loc ctx
+  txAbort loc, ctx
 
 let private makeLinkage vis name (ctx: ScopeCtx) =
   match vis with
   | PublicVis -> ExternalLinkage(S.concat "_" ctx.CurrentPath + "_" + name)
   | PrivateVis -> InternalLinkage
 
-let private findName serial (scopeCtx: ScopeCtx) : Ident = scopeCtx.NameMap |> mapFind serial
-
-let private findVariant variantSerial (scopeCtx: ScopeCtx) =
-  assert (scopeCtx.NewVariants
-          |> TMap.containsKey variantSerial)
-
-  scopeCtx.NewVariants |> mapFind variantSerial
-
-let private findTy tySerial (scopeCtx: ScopeCtx) =
-  assert (scopeCtx.Tys |> TMap.containsKey tySerial)
-  scopeCtx.Tys |> mapFind tySerial
-
-let private findVarName varSerial (scopeCtx: ScopeCtx) =
-  scopeCtx |> findName (varSerialToInt varSerial)
-
-let private findValueSymbolName valueSymbol scopeCtx =
-  scopeCtx
-  |> findName (valueSymbolToSerial valueSymbol)
-
-let private findTySymbolName tySymbol (scopeCtx: ScopeCtx) =
-  scopeCtx
-  |> findTy (tySymbolToSerial tySymbol)
-  |> tyDefToName
-
-let private findNsOwnerName nsOwner (scopeCtx: ScopeCtx) =
-  findName (nsOwnerToInt nsOwner) scopeCtx
-
-/// Defines a variable, without adding to any scope.
+/// Adds a definition of var (not regarding static or not).
+///
+/// This doesn't imply it's added to any scope or namespace.
 let private addVar varSerial (varDef: VarDef) (scopeCtx: ScopeCtx) : ScopeCtx =
   { scopeCtx with
       NewVars = (varSerial, varDef) :: scopeCtx.NewVars
 
+      // FIXME: maybe var meta is already updated here? (collect decl should store it, nameRes don't need to do it)
       // Store metadata separately not to be overridden on late definition.
       NewVarMeta =
         match varDef.IsStatic, varDef.Linkage with
@@ -393,24 +481,35 @@ let private addVariantDef variantSerial variantDef (scopeCtx: ScopeCtx) : ScopeC
         scopeCtx.NewVariants
         |> TMap.add variantSerial variantDef }
 
-/// Defines a type, without adding to any scope.
-let private addTy tySymbol tyDef (scopeCtx: ScopeCtx) : ScopeCtx =
-  let tySerial = tySymbolToSerial tySymbol
-
+/// Adds a definition of type symbol.
+let private addTy tySerial tyDef (scopeCtx: ScopeCtx) : ScopeCtx =
   { scopeCtx with
       Tys = scopeCtx.Tys |> TMap.add tySerial tyDef
       NewTys = (tySerial, tyDef) :: scopeCtx.NewTys }
 
-/// Adds a variable to a namespace.
-let private addVarToNs (nsOwner: NsOwner) valueSymbol (scopeCtx: ScopeCtx) : ScopeCtx =
-  let name =
-    scopeCtx |> findValueSymbolName valueSymbol
+/// Makes a value symbol accessible from a namespace.
+let private addValueToNs (nsOwner: NsOwner) name valueSymbol (scopeCtx: ScopeCtx) : ScopeCtx =
+  // __trace (
+  //   "addVarToNs "
+  //   + nsOwnerDump nsOwner
+  //   + "."
+  //   + name
+  //   + " = "
+  //   + string (valueSymbolToSerial valueSymbol)
+  // )
 
   { scopeCtx with VarNs = scopeCtx.VarNs |> nsAdd nsOwner name valueSymbol }
 
-/// Adds a type to a namespace.
-let private addTyToNs (nsOwner: NsOwner) tySymbol (scopeCtx: ScopeCtx) : ScopeCtx =
-  let name = scopeCtx |> findTySymbolName tySymbol
+/// Makes a type symbol accessible from a namespace.
+let private addTyToNs (nsOwner: NsOwner) name tySymbol (scopeCtx: ScopeCtx) : ScopeCtx =
+  // __trace (
+  //   "addTyToNs "
+  //   + nsOwnerDump nsOwner
+  //   + "."
+  //   + name
+  //   + " = "
+  //   + string (tySymbolToSerial tySymbol)
+  // )
 
   { scopeCtx with
       TyNs = scopeCtx.TyNs |> nsAdd nsOwner name tySymbol
@@ -419,27 +518,33 @@ let private addTyToNs (nsOwner: NsOwner) tySymbol (scopeCtx: ScopeCtx) : ScopeCt
         scopeCtx.NsNs
         |> nsMerge nsOwner name (nsOwnerOfTySymbol tySymbol) }
 
-/// Adds a child namespace.
-let private addNsToNs (parentNsOwner: NsOwner) (childNsOwner: NsOwner) (scopeCtx: ScopeCtx) : ScopeCtx =
-  let name = scopeCtx |> findNsOwnerName childNsOwner
+/// Makes a child namespace accessible from a namespace.
+///
+/// `<parent>.<name>` can be resolved to `<child>`.
+let private addNsToNs (parentNsOwner: NsOwner) name (childNsOwner: NsOwner) (scopeCtx: ScopeCtx) : ScopeCtx =
+  // __trace (
+  //   "addNsToNs "
+  //   + nsOwnerDump parentNsOwner
+  //   + "."
+  //   + name
+  //   + " = "
+  //   + nsOwnerDump childNsOwner
+  // )
 
   { scopeCtx with
       NsNs =
         scopeCtx.NsNs
         |> nsMerge parentNsOwner name childNsOwner }
 
-/// Adds a variable to a scope.
-let private importVar symbol (scopeCtx: ScopeCtx) : ScopeCtx =
-  let varName =
-    findName (valueSymbolToSerial symbol) scopeCtx
-
-  assert (varName <> "_")
+/// Adds a value symbol to current scope.
+let private importValue alias (symbol: ValueSymbol) (scopeCtx: ScopeCtx) : ScopeCtx =
+  assert (alias <> "_")
 
   let scope: Scope =
     match scopeCtx.Local with
     | kinds, map :: varScopes, tyScopes, nsScopes ->
       let varScopes =
-        (map |> TMap.add varName symbol) :: varScopes
+        (map |> TMap.add alias symbol) :: varScopes
 
       kinds, varScopes, tyScopes, nsScopes
 
@@ -447,8 +552,8 @@ let private importVar symbol (scopeCtx: ScopeCtx) : ScopeCtx =
 
   { scopeCtx with Local = scope }
 
-/// Adds a type to a scope, aliasing a name.
-let private doImportTyWithAlias alias (symbol: TySymbol) (scopeCtx: ScopeCtx) : ScopeCtx =
+/// Adds a type symbol to current scope.
+let private importTy alias (symbol: TySymbol) (scopeCtx: ScopeCtx) : ScopeCtx =
   let scope: Scope =
     match scopeCtx.Local with
     | kinds, varScopes, (tyMap :: tyScopes), (nsMap :: nsScopes) ->
@@ -460,16 +565,12 @@ let private doImportTyWithAlias alias (symbol: TySymbol) (scopeCtx: ScopeCtx) : 
 
       kinds, varScopes, tyMap :: tyScopes, nsMap :: nsScopes
 
-    | _ -> unreachable () // Scope can't be empty..
+    | _ -> unreachable () // Scope can't be empty.
 
   { scopeCtx with Local = scope }
 
-let private importTy symbol (scopeCtx: ScopeCtx) : ScopeCtx =
-  let tyName = findTySymbolName symbol scopeCtx
-  doImportTyWithAlias tyName symbol scopeCtx
-
-/// Adds a type to a scope, aliasing a name.
-let private doImportNsWithAlias alias nsOwner (scopeCtx: ScopeCtx) : ScopeCtx =
+/// Adds an NsOwner to current scope.
+let private importNsOwner alias nsOwner (scopeCtx: ScopeCtx) : ScopeCtx =
   let scope: Scope =
     match scopeCtx.Local with
     | kinds, varScopes, tyScopes, ((map :: nsScopes) as allNsScopes) ->
@@ -483,32 +584,29 @@ let private doImportNsWithAlias alias nsOwner (scopeCtx: ScopeCtx) : ScopeCtx =
 
       kinds, varScopes, tyScopes, map :: nsScopes
 
-    | _ -> unreachable () // Scope can't be empty..
+    | _ -> unreachable () // Scope can't be empty.
 
   { scopeCtx with Local = scope }
 
-let private importNs nsOwner (scopeCtx: ScopeCtx) : ScopeCtx =
-  let name = findNsOwnerName nsOwner scopeCtx
-  doImportNsWithAlias name nsOwner scopeCtx
-
+/// Imports all members of the module to current scope.
 let private openModule moduleSerial (scopeCtx: ScopeCtx) =
   // Import vars.
   let scopeCtx =
     scopeCtx.VarNs
     |> nsFind (ModuleNsOwner moduleSerial)
-    |> TMap.fold (fun ctx _ symbol -> ctx |> importVar symbol) scopeCtx
+    |> TMap.fold (fun ctx name symbol -> ctx |> importValue name symbol) scopeCtx
 
   // Import tys.
   let scopeCtx =
     scopeCtx.TyNs
     |> nsFind (ModuleNsOwner moduleSerial)
-    |> TMap.fold (fun ctx _ symbol -> ctx |> importTy symbol) scopeCtx
+    |> TMap.fold (fun ctx name symbol -> ctx |> importTy name symbol) scopeCtx
 
   // Import subnamespaces.
   let scopeCtx =
     scopeCtx.NsNs
     |> nsFind (ModuleNsOwner moduleSerial)
-    |> TMap.fold (fun ctx _ nsOwners -> ctx |> forList importNs nsOwners) scopeCtx
+    |> TMap.fold (fun ctx name nsOwners -> ctx |> forList (importNsOwner name) nsOwners) scopeCtx
 
   scopeCtx
 
@@ -517,23 +615,28 @@ let private openModules moduleSerials ctx =
   |> List.fold (fun ctx moduleSerial -> ctx |> openModule moduleSerial) ctx
 
 /// Defines a variable in the local scope.
-let private addLocalVar varSerial varDef (scopeCtx: ScopeCtx) : ScopeCtx =
+let private addLocalVar name varSerial varDef (scopeCtx: ScopeCtx) : ScopeCtx =
   scopeCtx
   |> addVar varSerial varDef
-  |> importVar (VarSymbol varSerial)
+  |> importValue name (VarSymbol varSerial)
 
 /// Defines a type in the local scope.
-let private addLocalTy tySymbol tyDef (scopeCtx: ScopeCtx) : ScopeCtx =
+let private addLocalTy name tySymbol tyDef (scopeCtx: ScopeCtx) : ScopeCtx =
   scopeCtx
-  |> addTy tySymbol tyDef
-  |> importTy tySymbol
+  |> addTy (tySymbolToSerial tySymbol) tyDef
+  |> importTy name tySymbol
 
 /// Called on enter the init of let-fun expressions.
-let private enterLetInit funSerial (scopeCtx: ScopeCtx) : ScopeCtx =
-  { scopeCtx with AncestralFuns = funSerial :: scopeCtx.AncestralFuns }
+let private enterLetInit funName (scopeCtx: ScopeCtx) : ScopeCtx =
+  { scopeCtx with AncestralFuns = funName :: scopeCtx.AncestralFuns }
 
 let private leaveLetInit (scopeCtx: ScopeCtx) : ScopeCtx =
   { scopeCtx with AncestralFuns = listSkip 1 scopeCtx.AncestralFuns }
+
+let private isTyDeclScope (scopeCtx: ScopeCtx) =
+  match scopeCtx.Local with
+  | TyDeclScope :: _, _, _, _ -> true
+  | _ -> false
 
 /// Starts a new scope.
 let private startScope kind (scopeCtx: ScopeCtx) : ScopeCtx =
@@ -552,26 +655,7 @@ let private finishScope (scopeCtx: ScopeCtx) : ScopeCtx =
   | _ :: kinds, _ :: varScopes, _ :: tyScopes, _ :: nsScopes ->
     { scopeCtx with Local = kinds, varScopes, tyScopes, nsScopes }
 
-let private isTyDeclScope (scopeCtx: ScopeCtx) =
-  match scopeCtx.Local with
-  | TyDeclScope :: _, _, _, _ -> true
-  | _ -> false
-
-let private enterModule moduleTySerial (scopeCtx: ScopeCtx) =
-  let moduleName =
-    findName (moduleTySerialToInt moduleTySerial) scopeCtx
-
-  let scopeCtx =
-    match scopeCtx.CurrentModule with
-    | None ->
-      { scopeCtx with
-          RootModules = moduleTySerial :: scopeCtx.RootModules
-          NewRootModules = moduleTySerial :: scopeCtx.NewRootModules }
-
-    | Some parent ->
-      scopeCtx
-      |> addNsToNs (ModuleNsOwner parent) (ModuleNsOwner moduleTySerial)
-
+let private enterModule (moduleName: Ident) (moduleTySerial: Serial) (scopeCtx: ScopeCtx) =
   let parent =
     scopeCtx.CurrentModule, scopeCtx.CurrentPath
 
@@ -589,17 +673,25 @@ let private leaveModule parent (scopeCtx: ScopeCtx) =
       CurrentModule = currentModule
       CurrentPath = currentPath }
 
-let private resolveModulePath path (scopeCtx: ScopeCtx) : ModuleTySerial list =
+// -----------------------------------------------
+// Resolve
+// -----------------------------------------------
+
+/// Resolves a module path to all modules
+/// that can be accessible by the path.
+///
+/// Remarks: Multiple module with same name can exist at a path.
+let private resolveModulePath (path: Ident list) (scopeCtx: ScopeCtx) : ModuleTySerial list =
   match path with
   | [] -> []
   | head :: tail ->
     let roots =
       scopeCtx.RootModules
-      |> List.filter (fun serial ->
-        let moduleName =
-          findName (moduleTySerialToInt serial) scopeCtx
-
-        moduleName = head)
+      |> List.choose (fun (moduleName, moduleSerial) ->
+        if moduleName = head then
+          Some moduleSerial
+        else
+          None)
 
     let rec go serial path =
       match path with
@@ -653,12 +745,8 @@ let private resolveLocalNsOwners name (scopeCtx: ScopeCtx) : NsOwner list =
   |> Option.defaultValue []
 
 /// Resolves qualifiers of type.
-let private resolveNavTy quals last ctx =
-  let path =
-    quals
-    |> List.map (fun qual -> ctx |> findName qual)
-
-  match path with
+let private resolveNavTy quals last ctx : TySymbol option * ScopeCtx =
+  match quals with
   | [] -> ctx |> resolveLocalTyName last, ctx
 
   | head :: tail ->
@@ -683,482 +771,617 @@ let private resolveNavTy quals last ctx =
     tySymbolOpt, ctx
 
 /// Resolves type names in a type expression.
-let private resolveTy ty loc scopeCtx =
-  let rec go (ty, scopeCtx) =
+///
+/// selfTyArgs: Type parameters defined by current type declaration.
+let private resolveTy scopeCtx ty selfTyArgs : Ty * ScopeCtx =
+  let rec go scopeCtx ty : Ty * ScopeCtx =
     match ty with
-    | Ty (ErrorTk _, _) -> ty, scopeCtx
+    | NTy.Bad loc -> tyError loc, scopeCtx
 
-    // `__nativeType<T>`
-    | Ty (UnresolvedTk ([], serial, _), [ Ty (UnresolvedTk ([], itemSerial, _), _) ]) when
-      (scopeCtx |> findName serial = "__nativeType")
-      ->
-      let code = scopeCtx |> findName itemSerial
-      Ty(NativeTypeTk code, []), scopeCtx
+    | NTy.Var (name, loc) ->
+      let resolved =
+        match selfTyArgs |> TMap.tryFind name with
+        | (Some _) as some -> some
+        | None -> resolveLocalTyName name scopeCtx
 
-    | Ty (UnresolvedVarTk (serial, loc), tys) ->
-      assert (List.isEmpty tys)
-      let name = scopeCtx |> findName serial
-
-      match resolveLocalTyName name scopeCtx with
+      match resolved with
       | Some (UnivTySymbol tySerial) -> tyUniv tySerial name loc, scopeCtx
 
-      | _ when scopeCtx |> isTyDeclScope ->
-        let scopeCtx =
-          scopeCtx |> addLog (UndefinedTyError name) loc
-
-        tyError loc, scopeCtx
+      | _ when scopeCtx |> isTyDeclScope -> errorTy scopeCtx (UndefinedTyError name) loc
 
       | _ ->
+        // Define new type variable on the fly.
+        let tySerial, scopeCtx = freshSerial scopeCtx
+
+        // __trace ("typeVar " + string tySerial + ":" + name)
+
         let scopeCtx =
           scopeCtx
-          |> addLocalTy (UnivTySymbol serial) (UnivTyDef(name, loc))
+          |> addLocalTy name (UnivTySymbol tySerial) (UnivTyDef(name, loc))
 
-        tyUniv serial name loc, scopeCtx
+        tyUniv tySerial name loc, scopeCtx
 
-    | Ty (UnresolvedTk (quals, serial, loc), tys) ->
-      let name = scopeCtx |> findName serial
-      let tys, scopeCtx = (tys, scopeCtx) |> stMap go
-      let arity = List.length tys
+    // `__nativeType<T>`
+    | NTy.App ([], ("__nativeType", _), [ NTy.App ([], (code, _), [], _) ], _) -> Ty(NativeTypeTk code, []), scopeCtx
 
-      let symbolOpt, scopeCtx = resolveNavTy quals name scopeCtx
+    | NTy.App (quals, name, tyArgs, loc) ->
+      let name = identOf name
+      let arity = List.length tyArgs
+      let tyArgs, scopeCtx = tyArgs |> List.mapFold go scopeCtx
+
+      let symbolOpt, scopeCtx =
+        let quals = quals |> List.map identOf
+        resolveNavTy quals name scopeCtx
+
+      let getArity tySerial =
+        match scopeCtx.DeclaredTyArities
+              |> TMap.tryFind tySerial
+          with
+        | Some arity -> arity
+        | None ->
+          match scopeCtx.Tys |> TMap.tryFind tySerial with
+          | Some (SynonymTyDef (_, tyArgs, _, _)) -> List.length tyArgs
+          | Some (UnionTyDef (_, tyArgs, _, _)) -> List.length tyArgs
+          | Some (RecordTyDef (_, tyArgs, _, _, _)) -> List.length tyArgs
+          | _ -> 0 // maybe unreachable?
 
       match symbolOpt with
       | Some (SynonymTySymbol tySerial) ->
-        // Arity check. #tyaritycheck
-        match scopeCtx.Tys |> TMap.tryFind tySerial with
-        | Some (SynonymTyDef (name, defTyArgs, _, _)) when List.length defTyArgs <> arity ->
-          let scopeCtx =
-            scopeCtx
-            |> addLog (TyArityError(name, arity, List.length defTyArgs)) loc
+        // #ty_arity_check
+        let defArity = getArity tySerial
 
-          tyError loc, scopeCtx
-
-        | _ -> tySynonym tySerial tys, scopeCtx
+        if defArity <> arity then
+          errorTy scopeCtx (TyArityError(name, arity, defArity)) loc
+        else
+          tySynonym tySerial tyArgs, scopeCtx
 
       | Some (UnionTySymbol tySerial) ->
-        // Arity check. #tyaritycheck
-        match scopeCtx.Tys |> TMap.tryFind tySerial with
-        | Some (UnionTyDef (name, defTyArgs, _, _)) when List.length defTyArgs <> arity ->
-          let scopeCtx =
-            scopeCtx
-            |> addLog (TyArityError(name, arity, List.length defTyArgs)) loc
+        // #ty_arity_check
+        let defArity = getArity tySerial
 
-          tyError loc, scopeCtx
-
-        | _ -> tyUnion tySerial tys loc, scopeCtx
+        if defArity <> arity then
+          errorTy scopeCtx (TyArityError(name, arity, defArity)) loc
+        else
+          tyUnion tySerial tyArgs loc, scopeCtx
 
       | Some (RecordTySymbol tySerial) ->
-        // Arity check. #tyaritycheck
-        match scopeCtx.Tys |> TMap.tryFind tySerial with
-        | Some (RecordTyDef _) when arity <> 0 ->
-          let defArity = 0 // generic record type is unimplemented
+        // #ty_arity_check
+        let defArity = 0 // generic record type is unimplemented
 
-          let scopeCtx =
-            scopeCtx
-            |> addLog (TyArityError(name, arity, defArity)) loc
+        if arity <> defArity then
+          errorTy scopeCtx (TyArityError(name, arity, defArity)) loc
+        else
+          tyRecord tySerial loc, scopeCtx
 
-          tyError loc, scopeCtx
-
-        | _ -> tyRecord tySerial loc, scopeCtx
-
-      | Some (UnivTySymbol _) -> unreachable () // UnivTySymbol is only resolved from UnresolvedVarTk.
+      | Some (UnivTySymbol _) -> unreachable () // UnivTySymbol is only resolved from type variable.
 
       | None ->
-        match tyPrimOfName name tys with
+        match tyPrimOfName name tyArgs with
         | Some ty -> ty, scopeCtx
-        | None ->
-          let scopeCtx =
-            scopeCtx |> addLog (UndefinedTyError name) loc
+        | None -> errorTy scopeCtx (UndefinedTyError name) loc
 
-          tyError loc, scopeCtx
+    | NTy.Infer loc -> Ty(InferTk loc, []), scopeCtx
 
-    | Ty (tk, tys) ->
-      let tys, scopeCtx = (tys, scopeCtx) |> stMap go
-      Ty(tk, tys), scopeCtx
+    | NTy.Fun (sTy, tTy, _) ->
+      let sTy, scopeCtx = sTy |> go scopeCtx
+      let tTy, scopeCtx = tTy |> go scopeCtx
+      tyFun sTy tTy, scopeCtx
 
-    | _ -> ty, scopeCtx
+    | NTy.Tuple (itemTys, _) ->
+      let itemTys, scopeCtx = itemTys |> List.mapFold go scopeCtx
+      tyTuple itemTys, scopeCtx
 
-  go (ty, scopeCtx)
-
-// -----------------------------------------------
-// Definitions
-// -----------------------------------------------
-
-let private defineFunUniquely vis funSerial args ty loc (scopeCtx: ScopeCtx) : ScopeCtx =
-  if scopeCtx.NewFunSet |> TSet.contains funSerial then
-    scopeCtx
-  else
-    let name =
-      scopeCtx |> findName (funSerialToInt funSerial)
-
-    let funDef: FunDef =
-      { Name = name
-        Arity = args |> List.length
-        Ty = TyScheme([], ty)
-        Abi = MiloneAbi
-        Linkage = makeLinkage vis name scopeCtx
-
-        Prefix =
-          // The function itself is registered as ancestor if `rec`. Use the second for that case.
-          scopeCtx.AncestralFuns
-          |> List.skipWhile (fun x -> funSerialCompare x funSerial = 0)
-          |> List.map (fun funSerial -> findName (funSerialToInt funSerial) scopeCtx)
-
-        Loc = loc }
-
-    let scopeCtx =
-      scopeCtx
-      |> addFunDef funSerial funDef
-      |> importVar (FunSymbol funSerial)
-
-    scopeCtx
-
-/// Defines a type based on a type declaration.
-///
-/// - This is idempotent. Duplicated calls are just ignored.
-/// - You need call `finishDefineTy` to complete the task.
-/// - This doesn't resolve inner type expressions
-///   because some type declarations are still unseen.
-let private startDefineTy moduleSerialOpt tySerial vis tyArgs tyDecl loc ctx =
-  let addVarToModule varSerial ctx =
-    match moduleSerialOpt, vis with
-    | Some moduleSerial, PublicVis ->
-      ctx
-      |> addVarToNs (ModuleNsOwner moduleSerial) varSerial
-
-    | _ -> ctx
-
-  let addTyToModule tySerial ctx =
-    match moduleSerialOpt, vis with
-    | Some moduleSerial, PublicVis ->
-      ctx
-      |> addTyToNs (ModuleNsOwner moduleSerial) tySerial
-
-    | _ -> ctx
-
-  let tyName = ctx |> findName tySerial
-
-  if ctx.Tys |> TMap.containsKey tySerial then
-    ctx
-  else
-    match tyDecl with
-    | TySynonymDecl (body, _) ->
-      let tySymbol = SynonymTySymbol tySerial
-
-      ctx
-      |> addLocalTy tySymbol (SynonymTyDef(tyName, tyArgs, body, loc))
-      |> addTyToModule tySymbol
-
-    | UnionTyDecl (_, variants, _unionLoc) ->
-      let defineVariant ctx (name, variantSerial, hasPayload, payloadTy, loc) =
-        let variantSymbol = VariantSymbol variantSerial
-
-        let variantDef: VariantDef =
-          { Name = name
-            UnionTySerial = tySerial
-            IsNewtype = List.length variants = 1
-            HasPayload = hasPayload
-            PayloadTy = payloadTy
-            Loc = loc }
-
-        ctx
-        |> addVariantDef variantSerial variantDef
-        |> addVarToNs (TyNsOwner tySerial) variantSymbol
-        |> importVar variantSymbol
-        |> addVarToModule variantSymbol
-
-      let ctx = variants |> List.fold defineVariant ctx
-
-      let tySymbol = UnionTySymbol tySerial
-
-      let tyDef =
-        let variantSerials =
-          variants
-          |> List.map (fun (_, variantSerial, _, _, _) -> variantSerial)
-
-        UnionTyDef(tyName, tyArgs, variantSerials, loc)
-
-      ctx
-      |> addLocalTy tySymbol tyDef
-      |> addTyToModule tySymbol
-
-    | RecordTyDecl (_, fields, repr, loc) ->
-      let tySymbol = RecordTySymbol tySerial
-
-      let tyDef =
-        RecordTyDef(tyName, tyArgs, fields, repr, loc)
-
-      ctx
-      |> addLocalTy tySymbol tyDef
-      |> addTyToModule tySymbol
-
-let private withTyArgsImported tyArgs loc (body: ScopeCtx -> 'A * ScopeCtx) ctx : 'A * ScopeCtx =
-  ctx
-  |> startScope TyDeclScope
-  |> forList
-       (fun tyArg ctx ->
-         let name = ctx |> findName tyArg
-
-         ctx
-         |> addLocalTy (UnivTySymbol tyArg) (UnivTyDef(name, loc)))
-       tyArgs
-  |> body
-  |> (fun (result, ctx) -> result, finishScope ctx)
-
-/// Completes the type definition.
-///
-/// - No need to call `startDefineTy` first.
-/// - This resolves inner type expressions.
-let private finishDefineTy tySerial tyArgs tyDecl loc ctx =
-  let ctx =
-    // Pass in PrivateVis because if this type is not pre-declared here, it's local to function.
-    ctx
-    |> startDefineTy None tySerial PrivateVis tyArgs tyDecl loc
-
-  let tyDef = ctx |> findTy tySerial
-
-  match tyDef with
-  | UnivTyDef _ -> ctx
-
-  | SynonymTyDef (tyName, tyArgs, bodyTy, loc) ->
-    let bodyTy, ctx =
-      ctx
-      |> withTyArgsImported tyArgs loc (resolveTy bodyTy loc)
-
-    ctx
-    |> addTy (SynonymTySymbol tySerial) (SynonymTyDef(tyName, tyArgs, bodyTy, loc))
-
-  | UnionTyDef (_, tyArgs, variantSerials, _) ->
-    ctx
-    |> withTyArgsImported tyArgs loc (fun ctx ->
-      let ctx =
-        variantSerials
-        |> List.fold
-             (fun ctx variantSerial ->
-               let def = ctx |> findVariant variantSerial
-               let payloadTy, ctx = ctx |> resolveTy def.PayloadTy loc
-
-               ctx
-               |> addVariantDef variantSerial { def with PayloadTy = payloadTy })
-             ctx
-
-      (), ctx)
-    |> snd
-
-  | RecordTyDef (tyName, tyArgs, fields, repr, loc) ->
-    let ctx =
-      if tyArgs |> List.isEmpty |> not then
-        addLog UnimplGenericTyError loc ctx
-      else
-        ctx
-
-    let resolveField ((name, ty, loc), ctx) =
-      let ty, ctx = ctx |> resolveTy ty loc
-      (name, ty, loc), ctx
-
-    let fields, ctx = (fields, ctx) |> stMap resolveField
-
-    ctx
-    |> addTy (RecordTySymbol tySerial) (RecordTyDef(tyName, tyArgs, fields, repr, loc))
+  go scopeCtx ty
 
 // -----------------------------------------------
 // Collect declarations
 // -----------------------------------------------
 
-// This stage, traverse declarations directly inside `module rec`s
-// to create variables/types pre-definitions
-// so that mutually recursive references resolve correctly.
+// Traverse declarations directly inside `module rec`s
+// to register symbol pre-definitions
+//    (provide serials, import to scope, add to namespace)
+// so that recursive references resolve correctly.
+// Complete definitions aren't generated here.
 
-let private collectDecls moduleSerialOpt (stmt, ctx) : TStmt * ScopeCtx =
-  let addVarToModule vis varSerial ctx =
-    match moduleSerialOpt, vis with
-    | Some moduleSerial, PublicVis ->
+let private isPublic vis =
+  match vis with
+  | PublicVis -> true
+  | _ -> false
+
+/// Exports a value symbol via current module if it's public.
+let private exportValue ctx (currentModule: NsOwner) vis name valueSymbol =
+  if isPublic vis then
+    ctx |> addValueToNs currentModule name valueSymbol
+  else
+    ctx
+
+let private exportTy ctx currentModule vis name tySerial =
+  if isPublic vis then
+    ctx |> addTyToNs currentModule name tySerial
+  else
+    ctx
+
+let private exportModule ctx currentModule vis name subNsOwner =
+  if isPublic vis then
+    ctx |> addNsToNs currentModule name subNsOwner
+  else
+    ctx
+
+let private cdPat (currentModule: NsOwner) (ctx: ScopeCtx) pat : ScopeCtx =
+  let onVar (ctx: ScopeCtx) vis name =
+    let varSerial, ctx = freshVarSerial ctx
+    let varSymbol = VarSymbol varSerial
+
+    // __trace (
+    //   "cdPatOnVar "
+    //   + string (varSerialToInt varSerial)
+    //   + ":"
+    //   + identOf name
+    // )
+
+    let ctx =
+      let linkage = makeLinkage vis (identOf name) ctx
+
+      { ctx with
+          DeclaredVars =
+            ctx.DeclaredVars
+            |> TMap.add (posOf name) varSerial
+          NewVarMeta =
+            ctx.NewVarMeta
+            |> TMap.add varSerial (IsStatic, linkage) }
+
+    let ctx =
+      ctx |> importValue (identOf name) varSymbol
+
+    exportValue ctx currentModule vis (identOf name) varSymbol
+
+  match pat with
+  | NPat.Ident (vis, name) ->
+    match ctx |> resolveLocalVarName (identOf name) with
+    | Some (VariantSymbol _) -> ctx
+    | _ -> onVar ctx vis name
+
+  | NPat.As (bodyPat, name, _) ->
+    let ctx = onVar ctx PublicVis name
+    bodyPat |> cdPat currentModule ctx
+
+  | NPat.Ascribe _
+  | NPat.Cons _
+  | NPat.Tuple _
+  | NPat.VariantApp _ ->
+    let pats =
+      match pat with
+      | NPat.Ascribe (bodyPat, _, _) -> [ bodyPat ]
+      | NPat.Cons (l, r, _) -> [ l; r ]
+      | NPat.Tuple (itemPats, _) -> itemPats
+      | NPat.VariantApp (l, r, _) -> [ l; r ]
+      | _ -> unreachable ()
+
+    pats |> List.fold (cdPat currentModule) ctx
+
+  | NPat.Or _ // No need to recurse into OR pats because they don't bind any symbol for now.
+
+  | NPat.Bad _
+  | NPat.Discard _
+  | NPat.Nav _
+  | NPat.Lit _
+  | NPat.Nil _ -> ctx
+
+let private cdStmt currentModule ctx stmt : ScopeCtx =
+  match stmt with
+  | NStmt.Expr _ -> ctx
+
+  | NStmt.LetVal (pat, _, _) -> cdPat currentModule ctx pat
+
+  | NStmt.LetFun (_, vis, name, _, _, _) ->
+    let funSerial, ctx = freshFunSerial ctx
+    let funSymbol = FunSymbol funSerial
+
+    // __trace (
+    //   "cdStmtLetFun "
+    //   + string (funSerialToInt funSerial)
+    //   + ":"
+    //   + identOf name
+    // )
+
+    let ctx =
+      { ctx with
+          DeclaredFuns =
+            ctx.DeclaredFuns
+            |> TMap.add (posOf name) funSerial }
+
+    let ctx =
+      ctx |> importValue (identOf name) funSymbol
+
+    exportValue ctx currentModule vis (identOf name) funSymbol
+
+let private cdAfterTyDecl (ctx: ScopeCtx) currentModule vis (name: NName) tySerial tySymbol arity : ScopeCtx =
+  // __trace (
+  //   "cdAfterTyDecl "
+  //   + string tySerial
+  //   + ":"
+  //   + identOf name
+  // )
+
+  let ctx =
+    { ctx with
+        DeclaredTys =
+          ctx.DeclaredTys
+          |> TMap.add (posOf name) (tySerial, tySymbol)
+        DeclaredTyArities = ctx.DeclaredTyArities |> TMap.add tySerial arity }
+
+  let ctx = ctx |> importTy (identOf name) tySymbol
+  exportTy ctx currentModule vis (identOf name) tySymbol
+
+let private cdTySynonymDecl currentModule (ctx: ScopeCtx) decl : ScopeCtx =
+  let vis, name, tyArgs =
+    match decl with
+    | NDecl.TySynonym (vis, name, tyArgs, _, _) -> vis, name, tyArgs
+    | _ -> unreachable ()
+
+  let tySerial, ctx = freshSerial ctx
+  let tySymbol = SynonymTySymbol tySerial
+  let arity = List.length tyArgs
+  cdAfterTyDecl ctx currentModule vis name tySerial tySymbol arity
+
+let private cdUnionTyDecl currentModule (ctx: ScopeCtx) decl : ScopeCtx =
+  let vis, name, tyArgs, variants =
+    match decl with
+    | NDecl.Union (vis, name, tyArgs, variants, _) -> vis, name, tyArgs, variants
+    | _ -> unreachable ()
+
+  let tySerial, ctx = freshSerial ctx
+  let tySymbol = UnionTySymbol tySerial
+  let arity = List.length tyArgs
+
+  let variants, ctx =
+    variants
+    |> List.mapFold
+         (fun ctx variant ->
+           let name, _, _ = variant
+           let variantSerial, ctx = freshVariantSerial ctx
+           let variantSymbol = VariantSymbol variantSerial
+
+           //  __trace (
+           //    "cdVariant "
+           //    + string (variantSerialToInt variantSerial)
+           //    + ":"
+           //    + identOf name
+           //  )
+
+           let ctx =
+             ctx
+             |> addValueToNs (TyNsOwner tySerial) (identOf name) variantSymbol
+             |> importValue (identOf name) variantSymbol
+
+           let ctx =
+             exportValue ctx currentModule vis (identOf name) (VariantSymbol variantSerial)
+
+           (variantSerial, posOf name), ctx)
+         ctx
+
+  let ctx =
+    { ctx with
+        DeclaredVariants =
+          variants
+          |> List.fold (fun map (variantSerial, pos) -> map |> TMap.add pos variantSerial) ctx.DeclaredVariants }
+
+  cdAfterTyDecl ctx currentModule vis name tySerial tySymbol arity
+
+let private cdRecordTyDecl currentModule ctx decl : ScopeCtx =
+  let vis, name, tyArgs, loc =
+    match decl with
+    | NDecl.Record (vis, name, tyArgs, _, _, loc) -> vis, name, tyArgs, loc
+    | _ -> unreachable ()
+
+  let ctx =
+    if tyArgs |> List.isEmpty |> not then
+      addLog UnimplGenericTyError loc ctx
+    else
       ctx
-      |> addVarToNs (ModuleNsOwner moduleSerial) varSerial
 
-    | _ -> ctx
+  let tySerial, ctx = freshSerial ctx
+  let tySymbol = RecordTySymbol tySerial
+  let arity = List.length tyArgs
+  cdAfterTyDecl ctx currentModule vis name tySerial tySymbol arity
 
-  let addTyToModule vis tySerial ctx =
-    match moduleSerialOpt, vis with
-    | Some moduleSerial, PublicVis ->
-      ctx
-      |> addTyToNs (ModuleNsOwner moduleSerial) tySerial
+let private cdOpenDecl ctx path loc : ScopeCtx =
+  let path = path |> List.map identOf
+  let moduleSerials = ctx |> resolveModulePath path
 
-    | _ -> ctx
+  // __trace (
+  //   "cdOpenDecl "
+  //   + S.concat "." path
+  //   + " -> "
+  //   + (moduleSerials |> List.map string |> S.concat ", ")
+  // )
 
-  let addNsToModule vis nsOwner ctx =
-    match moduleSerialOpt, vis with
-    | Some moduleSerial, PublicVis ->
-      ctx
-      |> addNsToNs (ModuleNsOwner moduleSerial) nsOwner
+  let ctx =
+    if List.isEmpty moduleSerials then
+      ctx |> addLog ModulePathNotFoundError loc
+    else
+      ctx |> openModules moduleSerials
 
-    | _ -> ctx
+  ctx
 
-  let rec goPat (pat, ctx) : TPat * ScopeCtx =
-    match pat with
-    | TLitPat _
-    | TDiscardPat _
-    | TVariantPat _
-    | TOrPat _ -> pat, ctx
+let private cdModuleSynonymDecl ctx name path : ScopeCtx =
+  match identOf name, path with
+  | "_", _
+  | _, [] -> ctx
 
-    | TVarPat (vis, varSerial, ty, loc) ->
-      let name =
-        ctx |> findName (varSerialToInt varSerial)
+  | _ ->
+    let moduleSerials =
+      let path = path |> List.map identOf
+      ctx |> resolveModulePath path
 
-      match ctx |> resolveLocalVarName name with
-      | Some (VariantSymbol variantSerial) -> TVariantPat(variantSerial, ty, loc), ctx
+    if List.isEmpty moduleSerials then
+      let _, loc = name
+      ctx |> addLog ModulePathNotFoundError loc
+    else
+      // Import all modules that are referred by the path via the specified alias.
+      moduleSerials
+      |> List.fold (fun ctx moduleSerial -> importNsOwner (identOf name) (ModuleNsOwner moduleSerial) ctx) ctx
 
-      | _ ->
-        let varDef: VarDef =
-          { Name = name
-            IsStatic = IsStatic
-            Ty = ty
-            Linkage = makeLinkage vis name ctx
-            Loc = loc }
+let private cdModuleDecl currentModule ctx decl : ScopeCtx =
+  let (NModuleDecl (_, vis, name, _, _)) = decl
 
-        let ctx =
-          ctx
-          |> addLocalVar varSerial varDef
-          |> addVarToModule vis (VarSymbol varSerial)
+  let moduleSerial, ctx = freshSerial ctx
+  let moduleNs = ModuleNsOwner moduleSerial
 
-        pat, ctx
+  // __trace (
+  //   "cdModuleDecl "
+  //   + string moduleSerial
+  //   + ":"
+  //   + identOf name
+  // )
 
-    | TNodePat (kind, argPats, ty, loc) ->
-      let argPats, ctx = (argPats, ctx) |> stMap goPat
-      TNodePat(kind, argPats, ty, loc), ctx
+  let ctx =
+    { ctx with
+        DeclaredModules =
+          ctx.DeclaredModules
+          |> TMap.add (posOf name) moduleSerial }
 
-    | TAsPat (pat, varSerial, loc) ->
-      let name =
-        ctx |> findName (varSerialToInt varSerial)
+  let ctx =
+    ctx |> importNsOwner (identOf name) moduleNs
 
-      let varDef: VarDef =
-        { Name = name
-          IsStatic = IsStatic
-          Ty = noTy
-          Linkage = InternalLinkage
-          Loc = loc }
+  exportModule ctx currentModule vis (identOf name) moduleNs
 
-      let ctx = ctx |> addLocalVar varSerial varDef
+let private cdDecl (currentModule: NsOwner) (ctx: ScopeCtx) decl : ScopeCtx =
+  match decl with
+  | NDecl.Stmt stmt -> cdStmt currentModule ctx stmt
 
-      let pat, ctx = (pat, ctx) |> goPat
-      TAsPat(pat, varSerial, loc), ctx
+  | NDecl.TySynonym _ -> cdTySynonymDecl currentModule ctx decl
+  | NDecl.Union _ -> cdUnionTyDecl currentModule ctx decl
+  | NDecl.Record _ -> cdRecordTyDecl currentModule ctx decl
 
-  let rec goStmt (stmt, ctx) : TStmt * ScopeCtx =
-    match stmt with
-    | TExprStmt _ -> stmt, ctx
+  | NDecl.Open (path, loc) -> cdOpenDecl ctx path loc
+  | NDecl.ModuleSynonym (name, path, _) -> cdModuleSynonymDecl ctx name path
+  | NDecl.Module decl -> cdModuleDecl currentModule ctx decl
 
-    | TLetValStmt (pat, init, loc) ->
-      let pat, ctx = (pat, ctx) |> goPat
-      TLetValStmt(pat, init, loc), ctx
+let private collectDecls (currentModule: NsOwner) ctx (decls: NDecl list) : ScopeCtx =
+  decls |> List.fold (cdDecl currentModule) ctx
 
-    | TLetFunStmt (funSerial, isRec, vis, args, body, loc) ->
-      let ctx =
-        let name =
-          ctx |> findName (funSerialToInt funSerial)
+// -----------------------------------------------
+// Resolve definitions
+// -----------------------------------------------
 
-        if name = "main" then
-          { ctx with MainFunOpt = Some funSerial }
-        else
-          ctx
+let private rdTySynonymDecl (ctx: ScopeCtx) decl : ScopeCtx =
+  let name, tyArgs, bodyTy, loc =
+    match decl with
+    | NDecl.TySynonym (_, name, tyArgs, bodyTy, loc) -> name, tyArgs, bodyTy, loc
+    | _ -> unreachable ()
 
-      let ctx =
-        ctx
-        |> enterLetInit funSerial
-        |> defineFunUniquely vis funSerial args noTy loc
-        |> leaveLetInit
-        |> addVarToModule vis (FunSymbol funSerial)
+  let tySerial, _ = ctx.DeclaredTys |> mapFind (posOf name)
 
-      TLetFunStmt(funSerial, isRec, vis, args, body, loc), ctx
+  let ctx = ctx |> startScope TyDeclScope
 
-    | TTyDeclStmt (serial, vis, tyArgs, tyDecl, loc) ->
-      let ctx =
-        ctx
-        |> startDefineTy moduleSerialOpt serial vis tyArgs tyDecl loc
+  // #define_ty_args
+  let tyArgToSerials, ctx =
+    tyArgs
+    |> List.mapFold
+         (fun ctx tyArg ->
+           let tySerial, ctx = freshSerial ctx
+           (identOf tyArg, tySerial), ctx)
+         ctx
 
-      TTyDeclStmt(serial, vis, tyArgs, tyDecl, loc), ctx
+  let bodyTy, ctx =
+    let tyArgs =
+      tyArgToSerials
+      |> List.map (fun (tyArg, univTySerial) -> tyArg, UnivTySymbol univTySerial)
+      |> TMap.ofList compare
 
-    | TOpenStmt (path, loc) ->
-      let ctx =
-        let moduleSerials = ctx |> resolveModulePath path
+    resolveTy ctx bodyTy tyArgs
 
-        if List.isEmpty moduleSerials then
-          ctx |> addLog ModulePathNotFoundError loc
-        else
-          ctx |> openModules moduleSerials
+  let tyDef =
+    let tyArgSerials = tyArgToSerials |> List.map snd
+    SynonymTyDef(identOf name, tyArgSerials, bodyTy, loc)
 
-      stmt, ctx
+  addTy tySerial tyDef ctx |> finishScope
 
-    | TModuleStmt (serial, body, loc) ->
-      let ctx =
-        ctx
-        |> addNsToModule PublicVis (ModuleNsOwner serial)
-        |> importNs (ModuleNsOwner serial)
+let private rdUnionTyDecl (ctx: ScopeCtx) decl : ScopeCtx =
+  let name, tyArgs, variants, loc =
+    match decl with
+    | NDecl.Union (_, name, tyArgs, variants, loc) -> name, tyArgs, variants, loc
+    | _ -> unreachable ()
 
-      TModuleStmt(serial, body, loc), ctx
+  let tySerial, _ = ctx.DeclaredTys |> mapFind (posOf name)
 
-    | TModuleSynonymStmt (serial, path, _) ->
-      let name =
-        ctx |> findName (moduleSynonymSerialToInt serial)
+  let ctx = ctx |> startScope TyDeclScope
 
-      match name, path with
-      | "_", _
-      | _, [] -> stmt, ctx
+  // #define_ty_args
+  let tyArgToSerials, ctx =
+    tyArgs
+    |> List.mapFold
+         (fun ctx tyArg ->
+           let tySerial, ctx = freshSerial ctx
+           (identOf tyArg, tySerial), ctx)
+         ctx
 
-      | _ ->
-        let ctx =
-          ctx |> importNs (ModuleSynonymNsOwner serial)
+  let variants, ctx =
+    let tyArgs =
+      tyArgToSerials
+      |> List.map (fun (tyArg, univTySerial) -> tyArg, UnivTySymbol univTySerial)
+      |> TMap.ofList compare
 
-        stmt, ctx
+    variants
+    |> List.mapFold
+         (fun (ctx: ScopeCtx) variant ->
+           let name, payloadTyOpt, loc = variant
 
-    | TBlockStmt _ -> unreachable () // TBlockStmt is generated in NameRes.
+           let variantSerial =
+             ctx.DeclaredVariants |> mapFind (posOf name)
 
-  goStmt (stmt, ctx)
+           let payloadTyOpt, ctx =
+             match payloadTyOpt with
+             | Some payloadTy ->
+               let payloadTy, ctx = resolveTy ctx payloadTy tyArgs
+               Some payloadTy, ctx
+             | None -> None, ctx
+
+           (variantSerial, (name, payloadTyOpt, loc)), ctx)
+         ctx
+
+  let ctx =
+    let newtype = List.length variants = 1
+
+    { ctx with
+        NewVariants =
+          variants
+          |> List.fold
+               (fun variants (variantSerial, (name, payloadTyOpt, loc)) ->
+                 let payloadTy =
+                   payloadTyOpt |> Option.defaultValue tyUnit
+
+                 let variantDef: VariantDef =
+                   { Name = identOf name
+                     UnionTySerial = tySerial
+                     IsNewtype = newtype
+                     HasPayload = Option.isSome payloadTyOpt
+                     PayloadTy = payloadTy
+                     Loc = loc }
+
+                 variants |> TMap.add variantSerial variantDef)
+               ctx.NewVariants }
+
+  let tyDef =
+    let variantSerials = variants |> List.map fst
+    let tyArgSerials = tyArgToSerials |> List.map snd
+    UnionTyDef(identOf name, tyArgSerials, variantSerials, loc)
+
+  addTy tySerial tyDef ctx |> finishScope
+
+let private rdRecordTyDecl (ctx: ScopeCtx) decl : ScopeCtx =
+  let name, tyArgs, fields, repr, loc =
+    match decl with
+    | NDecl.Record (_, name, tyArgs, fields, repr, loc) -> name, tyArgs, fields, repr, loc
+    | _ -> unreachable ()
+
+  let tySerial, _ = ctx.DeclaredTys |> mapFind (posOf name)
+
+  let ctx = ctx |> startScope TyDeclScope
+
+  // #define_ty_args
+  let tyArgToSerials, ctx =
+    tyArgs
+    |> List.mapFold
+         (fun ctx tyArg ->
+           let tySerial, ctx = freshSerial ctx
+           (identOf tyArg, tySerial), ctx)
+         ctx
+
+  let fields, ctx =
+    let tyArgs =
+      tyArgToSerials
+      |> List.map (fun (tyArg, univTySerial) -> tyArg, UnivTySymbol univTySerial)
+      |> TMap.ofList compare
+
+    fields
+    |> List.mapFold
+         (fun ctx field ->
+           let name, fieldTy, loc = field
+           let fieldTy, ctx = resolveTy ctx fieldTy tyArgs
+           (identOf name, fieldTy, loc), ctx)
+         ctx
+
+  let tyDef =
+    let tyArgSerials = tyArgToSerials |> List.map snd
+    RecordTyDef(identOf name, tyArgSerials, fields, repr, loc)
+
+  addTy tySerial tyDef ctx |> finishScope
+
+let private rdDecl ctx decl =
+  match decl with
+  | NDecl.TySynonym _ -> rdTySynonymDecl ctx decl
+  | NDecl.Union _ -> rdUnionTyDecl ctx decl
+  | NDecl.Record _ -> rdRecordTyDecl ctx decl
+
+  | NDecl.Stmt _
+  | NDecl.Open _
+  | NDecl.ModuleSynonym _
+  | NDecl.Module _ -> ctx
+
+let private resolveDefs (ctx: ScopeCtx) decls : ScopeCtx = decls |> List.fold rdDecl ctx
+
+// -----------------------------------------------
+// Ty
+// -----------------------------------------------
+
+let private nameResTyInAscription ctx ty : Ty * ScopeCtx =
+  let tyArgs = TMap.empty compare
+  resolveTy ctx ty tyArgs
 
 // -----------------------------------------------
 // Pattern
 // -----------------------------------------------
 
-let private doResolveVarInPat serial name ty loc (ctx: ScopeCtx) =
-  match ctx.PatScope |> TMap.tryFind name with
+let private doResolveVarInPat (ctx: ScopeCtx) name : VarSerial * ScopeCtx =
+  let ident, loc = name
+
+  match ctx.PatScope |> TMap.tryFind ident with
   | None ->
-    let varSerial = VarSerial serial
+    let varSerial, ctx =
+      match ctx.DeclaredVars |> TMap.tryFind (posOf name) with
+      | Some it -> it, ctx
+      | None -> freshVarSerial ctx
 
     let varDef: VarDef =
-      { Name = name
+      { Name = ident
         IsStatic = NotStatic
-        Ty = ty
+        Ty = noTy
         Linkage = InternalLinkage
         Loc = loc }
 
     let ctx =
-      { ctx with PatScope = ctx.PatScope |> TMap.add name (varSerial, loc, []) }
-      |> addLocalVar varSerial varDef
+      { ctx with
+          PatScope =
+            ctx.PatScope
+            |> TMap.add ident (varSerial, loc, []) }
+      |> addLocalVar ident varSerial varDef
 
     varSerial, ctx
 
+  // Duplicated var in a pattern.
   | Some (varSerial, defLoc, useLocs) ->
     let ctx =
       { ctx with
           PatScope =
             ctx.PatScope
-            |> TMap.add name (varSerial, defLoc, loc :: useLocs) }
+            |> TMap.add ident (varSerial, defLoc, loc :: useLocs) }
 
     varSerial, ctx
 
-let private nameResVarPat vis serial ty loc ctx =
-  let name = ctx |> findName serial
-  assert (name <> "_")
+let private nameResIdentPat ctx vis name : TPat * ScopeCtx =
+  assert (identOf name <> "_")
+  let _, loc = name
 
-  match ctx |> resolveLocalVarName name with
-  | Some (VariantSymbol variantSerial) -> TVariantPat(variantSerial, ty, loc), ctx
+  match ctx |> resolveLocalVarName (identOf name) with
+  | Some (VariantSymbol variantSerial) -> TVariantPat(variantSerial, noTy, loc), ctx
 
   | _ ->
-    let varSerial, ctx =
-      doResolveVarInPat serial name ty loc ctx
+    let varSerial, ctx = doResolveVarInPat ctx name
+    TVarPat(vis, varSerial, noTy, loc), ctx
 
-    TVarPat(vis, varSerial, ty, loc), ctx
-
-let private nameResNavPat pat ctx =
+let private nameResNavPat ctx pat : TPat * ScopeCtx =
   /// Resolves a pattern as scope.
   ///
   /// Returns (scopeOpt, pat).
@@ -1166,105 +1389,75 @@ let private nameResNavPat pat ctx =
   /// `pat` is also updated by resolving inner qualifiers as possible.
   let rec resolvePatAsNsOwners pat ctx : NsOwner list =
     match pat with
-    | TVarPat (_, varSerial, _, _) ->
-      let name = ctx |> findVarName varSerial
-      ctx |> resolveLocalNsOwners name
+    | NPat.Ident (_, name) -> ctx |> resolveLocalNsOwners (identOf name)
 
-    | TNodePat (TNavPN r, [ l ], _, _) ->
+    | NPat.Nav (l, r, _) ->
       ctx
       |> resolvePatAsNsOwners l
-      |> List.collect (fun nsOwner -> ctx |> resolveSubNsOwners nsOwner r)
+      |> List.collect (fun nsOwner -> ctx |> resolveSubNsOwners nsOwner (identOf r))
 
     | _ -> []
 
-  let l, r, ty, loc =
+  let l, r, loc =
     match pat with
-    | TNodePat (TNavPN r, [ l ], ty, loc) -> l, r, ty, loc
+    | NPat.Nav (l, r, loc) -> l, r, loc
     | _ -> unreachable ()
-
-  let notResolved ctx =
-    let ctx = ctx |> addLog UnresolvedNavPatError loc
-    tpAbort noTy loc, ctx
 
   let patOpt =
     resolvePatAsNsOwners l ctx
     |> List.tryPick (fun nsOwner ->
-      match ctx |> resolveScopedVarName nsOwner r with
-      | Some (VariantSymbol variantSerial) -> Some(TVariantPat(variantSerial, ty, loc))
+      match ctx |> resolveScopedVarName nsOwner (identOf r) with
+      | Some (VariantSymbol variantSerial) -> Some(TVariantPat(variantSerial, noTy, loc))
       | _ -> None)
 
   match patOpt with
   | Some pat -> pat, ctx
-  | None -> notResolved ctx
+  | None -> errorPat ctx UnresolvedNavPatError loc
 
-let private nameResAppPat l r loc ctx =
-  let l, ctx = (l, ctx) |> nameResPat
-  let r, ctx = (r, ctx) |> nameResPat
+let private nameResAscribePat ctx bodyPat ascriptionTy loc : TPat * ScopeCtx =
+  let ascriptionTy, ctx = nameResTyInAscription ctx ascriptionTy
 
-  match l with
-  | TVariantPat (variantSerial, _, _) -> TNodePat(TVariantAppPN variantSerial, [ r ], noTy, loc), ctx
-  | _ ->
-    let ctx =
-      ctx |> addLog VariantAppPatArityError loc
-
-    tpAbort noTy loc, ctx
-
-let private nameResAscribePat bodyPat ascriptionTy loc ctx =
-  let ascriptionTy, ctx = ctx |> resolveTy ascriptionTy loc
-  let bodyPat, ctx = (bodyPat, ctx) |> nameResPat
+  let bodyPat, ctx = bodyPat |> nameResPat ctx
   TNodePat(TAscribePN, [ bodyPat ], ascriptionTy, loc), ctx
 
-let private nameResAsPat bodyPat serial loc ctx =
-  let bodyPat, ctx = (bodyPat, ctx) |> nameResPat
-
-  let varSerial, ctx =
-    let name = ctx |> findName serial
-    doResolveVarInPat serial name noTy loc ctx
-
+let private nameResAsPat ctx bodyPat name loc : TPat * ScopeCtx =
+  let bodyPat, ctx = bodyPat |> nameResPat ctx
+  let varSerial, ctx = doResolveVarInPat ctx name
   TAsPat(bodyPat, varSerial, loc), ctx
 
-let private nameResPat (pat: TPat, ctx: ScopeCtx) =
+let private nameResPat (ctx: ScopeCtx) (pat: NPat) : TPat * ScopeCtx =
   match pat with
-  | TLitPat _
-  | TDiscardPat _
-  | TVariantPat _ -> pat, ctx
+  | NPat.Bad loc -> tpAbort noTy loc, ctx
+  | NPat.Ident (vis, name) -> nameResIdentPat ctx vis name
+  | NPat.Discard loc -> TDiscardPat(noTy, loc), ctx
+  | NPat.Nav _ -> nameResNavPat ctx pat
+  | NPat.As (bodyPat, name, loc) -> nameResAsPat ctx bodyPat name loc
+  | NPat.Ascribe (bodyPat, ty, loc) -> nameResAscribePat ctx bodyPat ty loc
 
-  | TVarPat (vis, VarSerial serial, ty, loc) -> nameResVarPat vis serial ty loc ctx
-
-  | TNodePat (kind, argPats, ty, loc) ->
-    let fail () = unreachable pat
-
-    match kind, argPats with
-    | TNilPN, _
-    | TAbortPN, _ ->
-      assert (List.isEmpty argPats)
-      pat, ctx
-
-    | TAppPN, [ l; r ] -> nameResAppPat l r loc ctx
-    | TAppPN, _ -> fail ()
-
-    | TConsPN, _
-    | TVariantAppPN _, _
-    | TTuplePN, _ ->
-      let argPats, ctx = (argPats, ctx) |> stMap nameResPat
-      TNodePat(kind, argPats, ty, loc), ctx
-
-    | TNavPN _, [ _ ] -> nameResNavPat pat ctx
-    | TNavPN _, _ -> fail ()
-
-    | TAscribePN, [ bodyPat ] -> nameResAscribePat bodyPat ty loc ctx
-    | TAscribePN, _ -> fail ()
-
-  | TAsPat (bodyPat, VarSerial serial, loc) -> nameResAsPat bodyPat serial loc ctx
-
-  | TOrPat (l, r, loc) ->
+  | NPat.Or (_, _, loc) ->
     // No OR patterns appear in arm patterns due to normalization.
     // So we can assume that it's inside of irrefutable pattern.
-    let ctx = ctx |> addLog IllegalOrPatError loc
+    errorPat ctx IllegalOrPatError loc
 
-    let l, ctx = (l, ctx) |> nameResPat
-    let r, ctx = (r, ctx) |> nameResPat
-    TOrPat(l, r, loc), ctx
+  | NPat.Lit (lit, loc) -> TLitPat(lit, loc), ctx
+  | NPat.Nil loc -> TNodePat(TNilPN, [], noTy, loc), ctx
+
+  | NPat.Cons (l, r, loc) ->
+    let l, ctx = l |> nameResPat ctx
+    let r, ctx = r |> nameResPat ctx
+    TNodePat(TConsPN, [ l; r ], noTy, loc), ctx
+
+  | NPat.Tuple (itemPats, loc) ->
+    let itemPats, ctx = itemPats |> List.mapFold nameResPat ctx
+    TNodePat(TTuplePN, itemPats, noTy, loc), ctx
+
+  | NPat.VariantApp (l, r, loc) ->
+    let l, ctx = l |> nameResPat ctx
+    let r, ctx = r |> nameResPat ctx
+
+    match l with
+    | TVariantPat (variantSerial, _, _) -> TNodePat(TVariantAppPN variantSerial, [ r ], noTy, loc), ctx
+    | _ -> errorPat ctx VariantAppPatArityError loc
 
 let private doWithPatScope patScopeOpt (f: ScopeCtx -> _ * ScopeCtx) (ctx: ScopeCtx) =
   let parentPatScope, ctx =
@@ -1281,17 +1474,116 @@ let private doWithPatScope patScopeOpt (f: ScopeCtx -> _ * ScopeCtx) (ctx: Scope
 
   (patScope, result), ctx
 
-let private nameResRefutablePat (pat: TPat, ctx: ScopeCtx) =
-  let loc = patToLoc pat
+let private npNormalize (pat: NPat) : NPat list =
+  /// Gets a pair of:
+  ///
+  /// - sub-patterns
+  /// - a function to update sub-patterns
+  ///
+  /// That is, `decompose Pat(P) = (P, fun P' -> Pat(P'))`
+  /// where P, P' are arguments of a particular pattern.
+  let decompose pat =
+    match pat with
+    | NPat.Nav (l, r, loc) ->
+      [ l ],
+      (fun pats ->
+        match pats with
+        | [ l ] -> NPat.Nav(l, r, loc)
+        | _ -> unreachable ())
+
+    | NPat.Ascribe (bodyPat, ty, loc) ->
+      [ bodyPat ],
+      (fun pats ->
+        match pats with
+        | [ bodyPat ] -> NPat.Ascribe(bodyPat, ty, loc)
+        | _ -> unreachable ())
+
+    | NPat.Cons (l, r, loc) ->
+      [ l; r ],
+      (fun pats ->
+        match pats with
+        | [ l; r ] -> NPat.Cons(l, r, loc)
+        | _ -> unreachable ())
+
+    | NPat.Tuple (itemPats, loc) ->
+      let arity = List.length itemPats
+
+      itemPats,
+      (fun itemPats ->
+        assert (List.length itemPats = arity)
+        NPat.Tuple(itemPats, loc))
+
+    | NPat.VariantApp (l, r, loc) ->
+      [ l; r ],
+      (fun pats ->
+        match pats with
+        | [ l; r ] -> NPat.VariantApp(l, r, loc)
+        | _ -> unreachable ())
+
+    | NPat.Bad _
+    | NPat.Ident _
+    | NPat.Discard _
+    | NPat.As _
+    | NPat.Or _
+    | NPat.Lit _
+    | NPat.Nil _ -> unreachable () // Never used.
+
+  // nf for normal form
+  let rec nf pat : NPat list =
+    match pat with
+    // e.g. `(p | q) | (r | s) -> [ p; q; r; s ]`
+    | NPat.Or (l, r, _) -> List.append (nf l) (nf r)
+
+    // e.g. `P(p | q, r | s) -> [ P(p, r); P(p, s); P(q, r); P(q, s) ]`
+    | NPat.Nav _
+    | NPat.Ascribe _
+    | NPat.Cons _
+    | NPat.Tuple _
+    | NPat.VariantApp _ ->
+      // acc: suffix of sub-patterns
+      // pats: prefix of sub-patterns in reversed order
+      //
+      // Let pat be `P(p | q, r | s)`.
+      // `bruteForce [] [ r | s; p | q ]`
+      // -> `[ ...bruteForce [ r] [ p | q ]; ...bruteForce [ s ] [ p | q ] ]`
+      // -> `[ ...bruteForce [ p; r ] []; ...bruteForce [ q; r ]; ...snip; ...snip ]`
+      // -> `[ p, r; p, s; q, r; q, s ]`.
+      let rec bruteForce acc pats : NPat list list =
+        match pats with
+        | [] -> [ acc ]
+        | p :: pats ->
+          nf p
+          |> List.collect (fun p -> bruteForce (p :: acc) pats)
+
+      let pats, create = decompose pat
+
+      bruteForce [] (List.rev pats) |> List.map create
+
+    | NPat.Bad _
+    | NPat.Ident _
+    | NPat.Discard _
+
+    // No need to normalize body of `as` pattern.
+    // Since OR patterns don't bind for now,
+    // the body doesn't contain OR pattern and therefore normal form is [ pat ].
+    | NPat.As _
+
+    | NPat.Lit _
+    | NPat.Nil _ -> [ pat ]
+
+  nf pat
+
+let private nameResRefutablePat (ctx: ScopeCtx) (pat: NPat) : TPat * ScopeCtx =
+  let loc = npLoc pat
 
   let pat, pats =
-    match patNormalize pat with
-    | [] -> unreachable ()
+    match npNormalize pat with
     | pat :: pats -> pat, pats
+    | [] -> unreachable ()
 
   let (lScope, pat), ctx =
     ctx
-    |> doWithPatScope None (fun ctx -> nameResPat (pat, ctx))
+    |> doWithPatScope None (fun ctx -> nameResPat ctx pat)
 
   let ctx =
     lScope
@@ -1314,7 +1606,7 @@ let private nameResRefutablePat (pat: TPat, ctx: ScopeCtx) =
     |> stMap (fun (pat, ctx) ->
       let (rScope, pat), ctx =
         ctx
-        |> doWithPatScope (Some lScope) (fun ctx -> nameResPat (pat, ctx))
+        |> doWithPatScope (Some lScope) (fun ctx -> nameResPat ctx pat)
 
       // Validate that each variable defined in the left-hand side
       // appears also right-hand side exactly once.
@@ -1356,10 +1648,10 @@ let private nameResRefutablePat (pat: TPat, ctx: ScopeCtx) =
 
   pat, ctx
 
-let private nameResIrrefutablePat (pat: TPat, ctx: ScopeCtx) =
+let private nameResIrrefutablePat (ctx: ScopeCtx) (pat: NPat) : TPat * ScopeCtx =
   let (scope, pat), ctx =
     ctx
-    |> doWithPatScope None (fun ctx -> nameResPat (pat, ctx))
+    |> doWithPatScope None (fun ctx -> nameResPat ctx pat)
 
   let ctx =
     scope
@@ -1383,59 +1675,49 @@ type private ResolvedExpr =
   | NotResolvedExpr of Ident * Loc
 
 /// Tries to resolve a name expression as value; or just return None.
-let private doNameResVarExpr expr ctx =
-  let serial, ty, loc =
-    match expr with
-    | TVarExpr (VarSerial serial, ty, loc) -> serial, ty, loc
-    | _ -> unreachable ()
-
-  let name = ctx |> findName serial
-
+let private doNameResVarExpr ctx name loc : TExpr option =
   match ctx |> resolveLocalVarName name with
-  | Some (VarSymbol serial) -> TVarExpr(serial, ty, loc) |> Some
-  | Some (FunSymbol serial) -> TFunExpr(serial, ty, loc) |> Some
-  | Some (VariantSymbol serial) -> TVariantExpr(serial, ty, loc) |> Some
+  | Some symbol ->
+    let expr =
+      match symbol with
+      | VarSymbol serial -> TVarExpr(serial, noTy, loc)
+      | FunSymbol serial -> TFunExpr(serial, noTy, loc)
+      | VariantSymbol serial -> TVariantExpr(serial, noTy, loc)
+
+    Some expr
 
   | None ->
     match primFromIdent name with
-    | Some prim -> TPrimExpr(prim, ty, loc) |> Some
+    | Some prim -> TPrimExpr(prim, noTy, loc) |> Some
     | None -> None
 
-let private nameResVarExpr expr ctx =
-  match doNameResVarExpr expr ctx with
+let private nameResUnqualifiedIdentExpr ctx name loc : TExpr * ScopeCtx =
+  match doNameResVarExpr ctx name loc with
   | Some expr -> expr, ctx
+  | None -> errorExpr ctx (UndefinedValueError name) loc
 
-  | None ->
-    let name, loc =
-      match expr with
-      | TVarExpr (VarSerial serial, _, loc) -> findName serial ctx, loc
-      | _ -> unreachable ()
+let private nameResNavExpr (ctx: ScopeCtx) (expr: NExpr) : TExpr * ScopeCtx =
+  let ty = noTy
 
-    let ctx =
-      ctx |> addLog (UndefinedValueError name) loc
-
-    txAbort loc, ctx
-
-let private nameResNavExpr expr ctx =
   /// Resolves an expressions as scope.
   ///
   /// Returns (scopeOpt, exprOpt).
   /// scopeOpt should eb some it can be resolved to scope.
   /// exprOpt is also obtained by resolving inner `nav`s as possible.
-  let rec resolveExprAsNsOwners expr ctx : ResolvedExpr * ScopeCtx =
+  let rec resolveExprAsNsOwners ctx expr : ResolvedExpr * ScopeCtx =
     match expr with
-    | TVarExpr (VarSerial serial, _, loc) ->
-      let name = ctx |> findName serial
-      let nsOwners = ctx |> resolveLocalNsOwners name
-      let exprOpt = doNameResVarExpr expr ctx
+    | NExpr.Ident (ident, loc) ->
+      let nsOwners = ctx |> resolveLocalNsOwners ident
+      let exprOpt = doNameResVarExpr ctx ident loc
 
       match nsOwners, exprOpt with
-      | [], None -> NotResolvedExpr(name, loc), ctx
+      | [], None -> NotResolvedExpr(ident, loc), ctx
       | [], Some expr -> ResolvedAsExpr expr, ctx
       | _ -> ResolvedAsScope(nsOwners, exprOpt, loc), ctx
 
-    | TNavExpr (l, ((r, identLoc) as rName), ty, dotLoc) ->
-      let l, ctx = ctx |> resolveExprAsNsOwners l
+    | NExpr.Nav (l, rName, dotLoc) ->
+      let l, ctx = resolveExprAsNsOwners ctx l
+      let r, identLoc = rName
 
       match l with
       | NotResolvedExpr _ -> l, ctx
@@ -1479,214 +1761,349 @@ let private nameResNavExpr expr ctx =
 
     | _ ->
       // l is clearly unresolvable as type, e.g. `(getStr ()).Length`.
-      let expr, ctx = nameResExpr (expr, ctx)
+      let expr, ctx = expr |> nameResExpr ctx
       ResolvedAsExpr expr, ctx
 
-  let result, ctx = resolveExprAsNsOwners expr ctx
+  let result, ctx = resolveExprAsNsOwners ctx expr
 
   match result with
   | ResolvedAsExpr expr -> expr, ctx
-
   | ResolvedAsScope (_, Some expr, _) -> expr, ctx
+  | ResolvedAsScope (_, None, loc) -> errorExpr ctx TyUsedAsValueError loc
+  | NotResolvedExpr (name, loc) -> errorExpr ctx (UndefinedValueError name) loc
 
-  | ResolvedAsScope (_, None, loc) ->
-    let ctx = ctx |> addLog TyUsedAsValueError loc
-    txAbort loc, ctx
-
-  | NotResolvedExpr (name, loc) ->
-    let ctx =
-      ctx |> addLog (UndefinedValueError name) loc
-
-    txAbort loc, ctx
-
-let private nameResExpr (expr: TExpr, ctx: ScopeCtx) : TExpr * ScopeCtx =
+let private nameResExpr (ctx: ScopeCtx) (expr: NExpr) : TExpr * ScopeCtx =
   match expr with
-  | TLitExpr _
-  | TPrimExpr _ -> expr, ctx
+  | NExpr.Bad loc -> txAbort loc, ctx
+  | NExpr.Lit (lit, loc) -> TLitExpr(lit, loc), ctx
 
-  | TVarExpr _ -> nameResVarExpr expr ctx
+  | NExpr.Ident (name, loc) -> nameResUnqualifiedIdentExpr ctx name loc
+  | NExpr.Nav _ -> nameResNavExpr ctx expr
 
-  | TRecordExpr (baseOpt, fields, ty, loc) ->
-    let baseOpt, ctx =
-      (baseOpt, ctx) |> stOptionMap nameResExpr
+  | NExpr.Ascribe (body, ty, loc) ->
+    // Resolve ascription first so that type variables are defined in current scope.
+    let ty, ctx = nameResTyInAscription ctx ty
 
-    let fields, ctx =
-      (fields, ctx)
-      |> stMap (fun ((name, init, loc), ctx) ->
-        let init, ctx = (init, ctx) |> nameResExpr
-        (name, init, loc), ctx)
+    let body, ctx = body |> nameResExpr ctx
+    TNodeExpr(TAscribeEN, [ body ], ty, loc), ctx
 
-    TRecordExpr(baseOpt, fields, ty, loc), ctx
+  | NExpr.TyPlaceholder (ty, loc) ->
+    let ty, ctx = nameResTyInAscription ctx ty
+    TNodeExpr(TTyPlaceholderEN, [], ty, loc), ctx
 
-  | TMatchExpr (cond, arms, ty, loc) ->
-    let cond, ctx = (cond, ctx) |> nameResExpr
-
-    let arms, ctx =
-      (arms, ctx)
-      |> stMap (fun ((pat, guard, body), ctx) ->
-        let ctx = ctx |> startScope ExprScope
-        let pat, ctx = (pat, ctx) |> nameResRefutablePat
-        let guard, ctx = (guard, ctx) |> nameResExpr
-        let body, ctx = (body, ctx) |> nameResExpr
-        let ctx = ctx |> finishScope
-        (pat, guard, body), ctx)
-
-    TMatchExpr(cond, arms, ty, loc), ctx
-
-  | TNavExpr _ -> nameResNavExpr expr ctx
-
-  | TNodeExpr (op, items, ty, loc) ->
-    // Necessary in case of TAscribeEN/TTyPlaceholderEN.
-    let ty, ctx = ctx |> resolveTy ty loc
-
-    let items, ctx = (items, ctx) |> stMap nameResExpr
-    TNodeExpr(op, items, ty, loc), ctx
-
-  | TBlockExpr (stmts, last) ->
+  | NExpr.Block (stmts, last) ->
     let ctx = ctx |> startScope ExprScope
-    let stmts, ctx = (stmts, ctx) |> stMap nameResStmt
-    let last, ctx = (last, ctx) |> nameResExpr
+    let stmts, ctx = stmts |> List.mapFold nameResStmt ctx
+    let last, ctx = last |> nameResExpr ctx
     let ctx = ctx |> finishScope
     TBlockExpr(stmts, last), ctx
 
-  | TFunExpr _ // TFunExpr is generated in NameRes.
-  | TVariantExpr _ -> // TVariantExpr is generated in NameRes.
-    unreachable ()
+  | NExpr.Match (cond, arms, loc) ->
+    let cond, ctx = cond |> nameResExpr ctx
 
-let private nameResStmt (stmt, ctx) : TStmt * ScopeCtx =
+    let arms, ctx =
+      arms
+      |> List.mapFold
+           (fun ctx (pat, guardOpt, body, loc) ->
+             let ctx = ctx |> startScope ExprScope
+             let pat, ctx = pat |> nameResRefutablePat ctx
+
+             // Default to `true` if guard is missing.
+             let guard, ctx =
+               match guardOpt with
+               | Some guard -> guard |> nameResExpr ctx
+               | None -> txTrue loc, ctx
+
+             let body, ctx = body |> nameResExpr ctx
+             let ctx = ctx |> finishScope
+             (pat, guard, body), ctx)
+           ctx
+
+    TMatchExpr(cond, arms, noTy, loc), ctx
+
+  | NExpr.Nil loc -> TPrimExpr(TPrim.Nil, noTy, loc), ctx
+
+  | NExpr.Record (baseOpt, fields, loc) ->
+    let baseOpt, ctx =
+      baseOpt |> optionMapFold nameResExpr ctx
+
+    let fields, ctx =
+      fields
+      |> List.mapFold
+           (fun ctx ((name, _), init, loc) ->
+             let init, ctx = init |> nameResExpr ctx
+             (name, init, loc), ctx)
+           ctx
+
+    TRecordExpr(baseOpt, fields, noTy, loc), ctx
+
+  | NExpr.Tuple (items, loc) ->
+    let items, ctx = items |> List.mapFold nameResExpr ctx
+    TNodeExpr(TTupleEN, items, noTy, loc), ctx
+
+  | NExpr.Unary (MinusUnary, arg, loc) ->
+    let arg, ctx = arg |> nameResExpr ctx
+    TNodeExpr(TMinusEN, [ arg ], noTy, loc), ctx
+
+  | NExpr.Binary (AppBinary, l, r, loc) ->
+    let l, ctx = l |> nameResExpr ctx
+    let r, ctx = r |> nameResExpr ctx
+    txApp l r loc, ctx
+
+  | NExpr.Binary (op, l, r, loc) ->
+    let primExpr = TPrimExpr(binaryToPrim op, noTy, loc)
+    let l, ctx = l |> nameResExpr ctx
+    let r, ctx = r |> nameResExpr ctx
+    txApp2 primExpr l r loc, ctx
+
+  | NExpr.Index (l, r, loc) ->
+    let l, ctx = l |> nameResExpr ctx
+    let r, ctx = r |> nameResExpr ctx
+    TNodeExpr(TIndexEN, [ l; r ], noTy, loc), ctx
+
+  | NExpr.Slice (x, l, r, loc) ->
+    let x, ctx = x |> nameResExpr ctx
+    let l, ctx = l |> nameResExpr ctx
+    let r, ctx = r |> nameResExpr ctx
+    TNodeExpr(TSliceEN, [ l; r; x ], noTy, loc), ctx
+
+let private nameResStmt ctx (stmt: NStmt) : TStmt * ScopeCtx =
   match stmt with
-  | TExprStmt expr ->
-    let expr, ctx = (expr, ctx) |> nameResExpr
+  | NStmt.Expr expr ->
+    let expr, ctx = expr |> nameResExpr ctx
     TExprStmt expr, ctx
 
-  | TLetValStmt (pat, body, loc) ->
+  | NStmt.LetVal (pat, body, loc) ->
     let ctx = ctx |> startScope ExprScope
-    let body, ctx = (body, ctx) |> nameResExpr
+    let body, ctx = body |> nameResExpr ctx
     let ctx = ctx |> finishScope
 
-    let pat, ctx = (pat, ctx) |> nameResIrrefutablePat
+    let pat, ctx = pat |> nameResIrrefutablePat ctx
     TLetValStmt(pat, body, loc), ctx
 
-  | TLetFunStmt (serial, IsRec, vis, pats, body, loc) ->
-    // Define the function itself for recursive referencing.
-    // (If this declaration is not written in module directly, visibility meaning less, so use PrivateVis.)
-    let ctx =
-      ctx
-      |> enterLetInit serial
-      |> defineFunUniquely PrivateVis serial pats noTy loc
-      |> startScope ExprScope
+  | NStmt.LetFun (IsRec, vis, name, argPats, body, loc) ->
+    // #defineFun
+    let defineFun (ctx: ScopeCtx) vis name arity loc : FunSerial * ScopeCtx =
+      let hoisted, vis, (funSerial, ctx) =
+        match ctx.DeclaredFuns |> TMap.tryFind (posOf name) with
+        | Some funSerial -> true, vis, (funSerial, ctx)
+        | None -> false, PrivateVis, freshFunSerial ctx
 
-    let pats, ctx =
-      (pats, ctx) |> stMap nameResIrrefutablePat
+      let funName = identOf name
 
-    let body, ctx = (body, ctx) |> nameResExpr
-    let ctx = ctx |> finishScope |> leaveLetInit
-    TLetFunStmt(serial, IsRec, vis, pats, body, loc), ctx
+      let funDef: FunDef =
+        { Name = funName
+          Arity = arity
+          Ty = TyScheme([], noTy)
+          Abi = MiloneAbi
+          Linkage = makeLinkage vis funName ctx
+          Prefix = ctx.AncestralFuns
+          Loc = loc }
 
-  | TLetFunStmt (serial, NotRec, vis, pats, body, loc) ->
-    let ctx =
-      ctx |> enterLetInit serial |> startScope ExprScope
+      let ctx = addFunDef funSerial funDef ctx
 
-    let pats, ctx =
-      (pats, ctx) |> stMap nameResIrrefutablePat
-
-    let body, ctx = (body, ctx) |> nameResExpr
-
-    let ctx =
-      ctx
-      |> finishScope
-      |> defineFunUniquely PrivateVis serial pats noTy loc
-      |> leaveLetInit
-
-    TLetFunStmt(serial, NotRec, vis, pats, body, loc), ctx
-
-  | TTyDeclStmt (serial, _, tyArgs, tyDecl, loc) ->
-    let ctx =
-      ctx |> finishDefineTy serial tyArgs tyDecl loc
-
-    stmt, ctx
-
-  | TOpenStmt _ -> stmt, ctx
-
-  | TModuleStmt (serial, body, loc) ->
-    let moduleName =
-      ctx |> findName (moduleTySerialToInt serial)
-
-    let ctx = ctx |> importNs (ModuleNsOwner serial)
-
-    let parent, ctx = ctx |> enterModule serial
-
-    let ctx = ctx |> startScope ExprScope
-
-    let ctx =
-      // Open the parent module (and modules with the same path).
-      ctx
-      |> forList (fun moduleTySerial ctx -> openModule moduleTySerial ctx) (ctx |> resolveModulePath (snd parent))
-
-    let stmts, ctx =
-      nameResModuleBody (Some serial) (body, ctx)
-
-    let ctx = ctx |> finishScope |> leaveModule parent
-
-    TBlockStmt(IsRec, stmts), ctx
-
-  | TModuleSynonymStmt (serial, path, loc) ->
-    let name =
-      ctx |> findName (moduleSynonymSerialToInt serial)
-
-    let ctx =
-      match name, path with
-      | "_", _
-      | _, [] -> ctx
-
-      | _, path ->
-        let moduleSerials = ctx |> resolveModulePath path
-
-        if List.isEmpty moduleSerials then
-          ctx |> addLog ModulePathNotFoundError loc
+      let ctx =
+        if not hoisted then
+          ctx |> importValue funName (FunSymbol funSerial)
         else
           ctx
-          |> forList (fun moduleSerial ctx -> doImportNsWithAlias name (ModuleNsOwner moduleSerial) ctx) moduleSerials
 
-    // No longer necessary.
-    TBlockStmt(NotRec, []), ctx
+      funSerial, ctx
 
-  | TBlockStmt _ -> unreachable () // TBlockStmt is generated in NameRes.
+    // Define the function itself for recursive referencing.
+    let funSerial, ctx =
+      let arity = List.length argPats
+      defineFun ctx vis name arity loc
 
-let private nameResModuleBody serialOpt (stmts, ctx) : TStmt list * ScopeCtx =
-  (stmts, ctx)
-  |> stMap (collectDecls serialOpt)
-  |> stMap nameResStmt
+    let funName = identOf name
+
+    // __trace ("enterLetFun " + funName)
+
+    let argPats, body, ctx =
+      let ctx =
+        ctx
+        |> enterLetInit funName
+        |> startScope ExprScope
+
+      let argPats, ctx =
+        argPats |> List.mapFold nameResIrrefutablePat ctx
+
+      let body, ctx = body |> nameResExpr ctx
+      let ctx = ctx |> finishScope |> leaveLetInit
+
+      argPats, body, ctx
+
+    // __trace ("leaveLetFun " + funName)
+
+    TLetFunStmt(funSerial, IsRec, vis, argPats, body, loc), ctx
+
+  | NStmt.LetFun (NotRec, vis, name, argPats, body, loc) ->
+    let arity = List.length argPats
+
+    // #defineFun
+    let hoisted, vis, (funSerial, ctx) =
+      match ctx.DeclaredFuns |> TMap.tryFind (posOf name) with
+      | Some funSerial -> true, vis, (funSerial, ctx)
+      | None -> false, PrivateVis, freshFunSerial ctx
+
+    let funName = identOf name
+
+    let funDef: FunDef =
+      { Name = funName
+        Arity = arity
+        Ty = TyScheme([], noTy)
+        Abi = MiloneAbi
+        Linkage = makeLinkage vis funName ctx
+        Prefix = ctx.AncestralFuns
+        Loc = loc }
+
+    let ctx = addFunDef funSerial funDef ctx
+
+    // __trace ("enterLetFun " + funName)
+
+    let argPats, body, ctx =
+      let ctx =
+        ctx
+        |> enterLetInit funName
+        |> startScope ExprScope
+
+      let argPats, ctx =
+        argPats |> List.mapFold nameResIrrefutablePat ctx
+
+      let body, ctx = body |> nameResExpr ctx
+      let ctx = ctx |> finishScope |> leaveLetInit
+
+      argPats, body, ctx
+
+    let ctx =
+      if not hoisted then
+        ctx |> importValue funName (FunSymbol funSerial)
+      else
+        ctx
+
+    // __trace ("leaveLetFun " + funName)
+
+    TLetFunStmt(funSerial, NotRec, vis, argPats, body, loc), ctx
+
+let private nameResModuleDecl (ctx: ScopeCtx) moduleDecl : TStmt * ScopeCtx =
+  let (NModuleDecl (_, _, name, decls, _)) = moduleDecl
+
+  let moduleSerial =
+    ctx.DeclaredModules |> mapFind (posOf name)
+
+  let parent, ctx =
+    ctx
+    |> startScope ExprScope
+    |> enterModule (identOf name) moduleSerial
+
+  let ctx =
+    // Open the parent module (and modules with the same path).
+    let _, parentPath = parent
+
+    resolveModulePath parentPath ctx
+    |> List.fold (fun ctx moduleTySerial -> openModule moduleTySerial ctx) ctx
+
+  let stmts, ctx =
+    nameResDecls (ModuleNsOwner moduleSerial) ctx decls
+
+  let ctx = ctx |> leaveModule parent |> finishScope
+
+  TBlockStmt(IsRec, stmts), ctx
+
+let private nameResDecl ctx (decl: NDecl) : TStmt option * ScopeCtx =
+  let some (value, ctx) = Some value, ctx
+
+  match decl with
+  | NDecl.Stmt stmt -> nameResStmt ctx stmt |> some
+  | NDecl.Module decl -> nameResModuleDecl ctx decl |> some
+
+  // Type declarations are only used in collectDecls and resolveDecls.
+  | NDecl.TySynonym _
+  | NDecl.Union _
+  | NDecl.Record _
+
+  // Open and module synonym statements are used in collectDecls and no longer necessary.
+  | NDecl.Open _
+  | NDecl.ModuleSynonym _ -> None, ctx
+
+let private nameResDecls (currentModule: NsOwner) ctx decls : TStmt list * ScopeCtx =
+  let ctx = collectDecls currentModule ctx decls
+
+  // Perform name resolution for statements and inner modules.
+  let stmts, ctx = decls |> listChooseFold nameResDecl ctx
+
+  let ctx = resolveDefs ctx decls
+  stmts, ctx
+
+let private nameResModuleRoot ctx (root: NModuleRoot) : TModule * ScopeCtx =
+  let docId, moduleDecl = root
+
+  let ctx =
+    let (NModuleDecl (_, _, name, _, _)) = moduleDecl
+    let moduleSerial, ctx = freshSerial ctx
+    let entry = identOf name, moduleSerial
+
+    // __trace (
+    //   "nameResModuleRoot "
+    //   + string moduleSerial
+    //   + ":"
+    //   + identOf name
+    // )
+
+    assert (ctx.NewRootModules |> List.isEmpty)
+
+    { ctx with
+        RootModules = entry :: ctx.RootModules
+        NewRootModules = [ entry ] // no need to be a list
+
+        DeclaredModules =
+          ctx.DeclaredModules
+          |> TMap.add (posOf name) moduleSerial }
+
+  let stmt, ctx = nameResModuleDecl ctx moduleDecl
+
+  let m: TModule =
+    { DocId = docId
+      Vars = emptyVars // Filled later.
+      Stmts = [ stmt ] }
+
+  m, ctx
 
 // -----------------------------------------------
 // Interface
 // -----------------------------------------------
 
-let nameRes (layers: TProgram list, nameCtx: NameCtx) : TProgram * NameResResult =
-  let layers, state =
+let nameRes (layers: NModuleRoot list list) : TProgram * NameResResult =
+  // note: NameRes should work per layer in parallel
+  //       but it doesn't so due to sequential serial generation for now.
+
+  let modules, state =
     layers
-    |> List.mapFold
-         (fun (state: NameResState) layer ->
-           // Single scopeCtx is used to do NameRes all modules in current layer.
-           let scopeCtx = state.ScopeCtx
-
-           let modulesCtxs =
-             layer
-             |> __parallelMap (fun (m: TModule) ->
-               let stmts, scopeCtx =
-                 nameResModuleBody None (m.Stmts, scopeCtx)
-
-               let m = { m with Stmts = stmts }
-               m, scopeCtx)
-
-           modulesCtxs
+    |> listCollectFold
+         (fun (state: NameResState) modules ->
+           modules
            |> List.mapFold
-                (fun state (m: TModule, scopeCtx) ->
+                (fun (state: NameResState) moduleRoot ->
+                  let m, scopeCtx =
+                    nameResModuleRoot state.ScopeCtx moduleRoot
+
                   let state, localVars = sMerge state scopeCtx
                   { m with Vars = localVars }, state)
                 state)
-         (sInit nameCtx)
+         (emptyState ())
 
-  let result = sToResult state
+  let state =
+    let mainFunOpt =
+      state.Funs
+      |> TMap.fold
+           (fun acc funSerial (funDef: FunDef) ->
+             if funDef.Name = "main" then
+               funSerial :: acc
+             else
+               acc)
+           []
+      |> List.tryLast
 
-  List.collect id layers, result
+    { state with ScopeCtx = { state.ScopeCtx with MainFunOpt = mainFunOpt } }
+
+  modules, sToResult state

@@ -17,9 +17,6 @@ module S = Std.StdString
 
 let tyError loc = Ty(ErrorTk loc, [])
 
-/// Placeholder. No type info in the parsing phase.
-let noTy = tyError noLoc
-
 let tyInt = Ty(IntTk I32, [])
 let tyInt64 = Ty(IntTk I64, [])
 let tyUint8 = Ty(IntTk U8, [])

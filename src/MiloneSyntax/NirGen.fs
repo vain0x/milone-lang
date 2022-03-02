@@ -564,3 +564,8 @@ let genNir
     NModuleDecl(IsRec, PublicVis, name, decls, zeroLoc), ctx
 
   projectModuleDecl, ctx
+
+let nirGenLogToString log =
+  match log with
+  | InvalidVisError -> "Invisible"
+  | NirGenError message -> message

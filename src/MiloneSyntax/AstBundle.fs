@@ -14,12 +14,10 @@ open Std.StdError
 open Std.StdSet
 open Std.StdMap
 open MiloneSyntax.Syntax
-open MiloneSyntax.Tir
 open MiloneSyntaxTypes.SyntaxTypes
-open MiloneSyntaxTypes.TirTypes
 
 module S = Std.StdString
-module TirGen = MiloneSyntax.TirGen
+module NirGen = MiloneSyntax.NirGen
 
 // -----------------------------------------------
 // Utils
@@ -80,7 +78,6 @@ type private ModuleData =
     Project: ProjectName
     SyntaxData: ModuleSyntaxData
     Deps: ModuleRequest list
-    SymbolCount: SymbolCount
     Errors: Error list }
 
 [<RequireQualifiedAccess; NoEquality; NoComparison>]
@@ -218,7 +215,6 @@ let private producer (fetchModule: FetchModuleFun) (_: State) (r: ModuleRequest)
           Project = r.ProjectName
           SyntaxData = syntaxData
           Deps = deps
-          SymbolCount = TirGen.countSymbols ast
           Errors = errors }
 
       Action.DidFetchOk m
@@ -231,7 +227,7 @@ let private producer (fetchModule: FetchModuleFun) (_: State) (r: ModuleRequest)
 
 type private SymbolCount = int
 
-type private BundleResult = (ModuleSyntaxData * TModule) list list * NameCtx * Error list
+type private BundleResult = (ModuleSyntaxData * NRoot) list list * Error list
 
 let bundle (fetchModule: FetchModuleFun) (entryProjectName: ProjectName) : BundleResult =
   let entryRequest =
@@ -264,71 +260,35 @@ let bundle (fetchModule: FetchModuleFun) (entryProjectName: ProjectName) : Bundl
 
   let errors = state |> toErrors
 
-  // Allocate serials for all modules.
-  let layers, lastSerial =
-    layers
-    |> List.mapFold
-         (fun (serial: int) layer ->
-           layer
-           |> List.mapFold
-                (fun (serial: int) (moduleData: ModuleData) ->
-                  let endSerial = serial + moduleData.SymbolCount
-                  (serial, moduleData), endSerial)
-                serial)
-         0
-
-  // Convert to TIR.
+  // Convert to NIR.
   let layers =
     layers
     |> __parallelMap (fun modules ->
       modules
-      |> __parallelMap (fun (serial: Serial, moduleData: ModuleData) ->
+      |> __parallelMap (fun (moduleData: ModuleData) ->
         let projectName = moduleData.Project
         let moduleName = moduleData.Name
         let syntaxData = moduleData.SyntaxData
-        let symbolCount = moduleData.SymbolCount
         let docId, _, ast, _ = syntaxData
 
-        let exprs, nameCtx =
-          let nameCtx = TirGen.TgNameCtx(serial, [])
-          TirGen.genTir projectName moduleName docId (ast, nameCtx)
+        let nir, logs =
+          NirGen.genNir projectName moduleName docId ast
 
-        let (TirGen.TgNameCtx (lastSerial, _)) = nameCtx
+        syntaxData, nir, logs))
 
-        //  printfn
-        //    "%s expect: %d..%d (%d) actual: %d..%d (%d)"
-        //    docId
-        //    serial
-        //    (serial + symbolCount)
-        //    symbolCount
-        //    serial
-        //    lastSerial
-        //    (lastSerial - serial)
+  let errors =
+    let errors2 =
+      layers
+      |> List.collect (
+        List.collect (fun (_, _, logs) ->
+          logs
+          |> List.map (fun (log, loc) -> NirGen.nirGenLogToString log, loc))
+      )
 
-        assert (lastSerial - serial = symbolCount)
+    List.append errors errors2
 
-        let m: TModule =
-          { DocId = docId
-            Vars = emptyVars
-            Stmts = exprs }
-
-        syntaxData, m, nameCtx))
-
-  let layers, identMap =
+  let layers =
     layers
-    |> List.mapFold
-         (fun nameCtx modules ->
-           modules
-           |> List.mapFold
-                (fun identMap (parseResult, m, nameCtx) ->
-                  let _, identMap =
-                    nameCtx
-                    |> TirGen.nameCtxFold (fun map serial ident -> TMap.add serial ident map) identMap
+    |> List.map (List.map (fun (syntaxData, nir, _) -> syntaxData, nir))
 
-                  (parseResult, m), identMap)
-                nameCtx)
-         (TMap.empty compare)
-
-  let nameCtx = NameCtx(identMap, lastSerial)
-
-  layers, nameCtx, errors
+  layers, errors

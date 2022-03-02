@@ -37,6 +37,8 @@ let private nameToIdent (Name (ident, _)) : string = ident
 
 let private nameToPos (Name (_, pos)) : Pos = pos
 
+let private noTy = tyError noLoc
+
 /// Convert pos to loc.
 let private toLoc (doc: DocId) (pos: Pos) : Loc =
   let row, column = pos
