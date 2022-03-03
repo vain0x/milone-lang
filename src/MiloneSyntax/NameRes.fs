@@ -592,12 +592,6 @@ let private openModules moduleSerials ctx =
   moduleSerials
   |> List.fold (fun ctx moduleSerial -> ctx |> openModule moduleSerial) ctx
 
-/// Defines a variable in the local scope.
-let private addLocalVar name varSerial varDef (scopeCtx: ScopeCtx) : ScopeCtx =
-  scopeCtx
-  |> addVarDef varSerial varDef
-  |> importValue name (VarSymbol varSerial)
-
 /// Defines a type in the local scope.
 let private addLocalTy name tySymbol tyDef (scopeCtx: ScopeCtx) : ScopeCtx =
   scopeCtx
@@ -1334,7 +1328,8 @@ let private doResolveVarInPat (ctx: ScopeCtx) name : VarSerial * ScopeCtx =
           PatScope =
             ctx.PatScope
             |> TMap.add ident (varSerial, loc, []) }
-      |> addLocalVar ident varSerial varDef
+      |> addVarDef varSerial varDef
+      |> importValue ident (VarSymbol varSerial)
 
     varSerial, ctx
 
