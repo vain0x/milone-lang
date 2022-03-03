@@ -592,12 +592,6 @@ let private openModules moduleSerials ctx =
   moduleSerials
   |> List.fold (fun ctx moduleSerial -> ctx |> openModule moduleSerial) ctx
 
-/// Defines a type in the local scope.
-let private addLocalTy name tySymbol tyDef (scopeCtx: ScopeCtx) : ScopeCtx =
-  scopeCtx
-  |> addTyDef (tySymbolToSerial tySymbol) tyDef
-  |> importTy name tySymbol
-
 /// Called on enter the init of let-fun expressions.
 let private enterLetInit funName (scopeCtx: ScopeCtx) : ScopeCtx =
   { scopeCtx with AncestralFuns = funName :: scopeCtx.AncestralFuns }
@@ -769,7 +763,8 @@ let private resolveTy scopeCtx ty selfTyArgs : Ty * ScopeCtx =
 
         let scopeCtx =
           scopeCtx
-          |> addLocalTy name (UnivTySymbol tySerial) (UnivTyDef(name, loc))
+          |> addTyDef tySerial (UnivTyDef(name, loc))
+          |> importTy name (UnivTySymbol tySerial)
 
         tyUniv tySerial name loc, scopeCtx
 
