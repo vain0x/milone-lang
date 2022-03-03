@@ -460,7 +460,7 @@ let private addVariantDef variantSerial variantDef (scopeCtx: ScopeCtx) : ScopeC
         :: scopeCtx.NewVariants }
 
 /// Adds a definition of type symbol.
-let private addTy tySerial tyDef (scopeCtx: ScopeCtx) : ScopeCtx =
+let private addTyDef tySerial tyDef (scopeCtx: ScopeCtx) : ScopeCtx =
   { scopeCtx with
       Tys = scopeCtx.Tys |> TMap.add tySerial tyDef
       NewTys = (tySerial, tyDef) :: scopeCtx.NewTys }
@@ -601,7 +601,7 @@ let private addLocalVar name varSerial varDef (scopeCtx: ScopeCtx) : ScopeCtx =
 /// Defines a type in the local scope.
 let private addLocalTy name tySymbol tyDef (scopeCtx: ScopeCtx) : ScopeCtx =
   scopeCtx
-  |> addTy (tySymbolToSerial tySymbol) tyDef
+  |> addTyDef (tySymbolToSerial tySymbol) tyDef
   |> importTy name tySymbol
 
 /// Called on enter the init of let-fun expressions.
@@ -1174,7 +1174,7 @@ let private rdTySynonymDecl (ctx: ScopeCtx) decl : ScopeCtx =
     let tyArgSerials = tyArgToSerials |> List.map snd
     SynonymTyDef(identOf name, tyArgSerials, bodyTy, loc)
 
-  addTy tySerial tyDef ctx |> finishScope
+  addTyDef tySerial tyDef ctx |> finishScope
 
 let private rdUnionTyDecl (ctx: ScopeCtx) decl : ScopeCtx =
   let name, tyArgs, variants, loc =
@@ -1246,7 +1246,7 @@ let private rdUnionTyDecl (ctx: ScopeCtx) decl : ScopeCtx =
     let tyArgSerials = tyArgToSerials |> List.map snd
     UnionTyDef(identOf name, tyArgSerials, variantSerials, loc)
 
-  addTy tySerial tyDef ctx |> finishScope
+  addTyDef tySerial tyDef ctx |> finishScope
 
 let private rdRecordTyDecl (ctx: ScopeCtx) decl : ScopeCtx =
   let name, tyArgs, fields, repr, loc =
@@ -1285,7 +1285,7 @@ let private rdRecordTyDecl (ctx: ScopeCtx) decl : ScopeCtx =
     let tyArgSerials = tyArgToSerials |> List.map snd
     RecordTyDef(identOf name, tyArgSerials, fields, repr, loc)
 
-  addTy tySerial tyDef ctx |> finishScope
+  addTyDef tySerial tyDef ctx |> finishScope
 
 let private rdDecl ctx decl =
   match decl with
