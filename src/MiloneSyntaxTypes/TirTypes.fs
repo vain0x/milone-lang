@@ -1,8 +1,6 @@
 /// # TirTypes
 ///
-/// Type-check intermediate representation (TIR).
-///
-/// TIR is functional-style. Similar to milone-lang's syntax.
+/// Provides public types about typed intermediate representation (TIR).
 module rec MiloneSyntaxTypes.TirTypes
 
 open MiloneShared.SharedTypes
@@ -81,9 +79,6 @@ type Tk =
 
   /// `_` in ascription.
   | InferTk of Loc
-  /// Unresolved type. Generated in TirGen, resolved in NameRes.
-  | UnresolvedTk of quals: Serial list * unresolvedSerial: Serial * Loc
-  | UnresolvedVarTk of unresolvedVarTySerial: (Serial * Loc)
 
 /// Type of expressions.
 [<Struct; NoEquality; NoComparison>]

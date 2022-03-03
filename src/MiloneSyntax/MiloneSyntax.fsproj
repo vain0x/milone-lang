@@ -12,7 +12,6 @@
     <Compile Include="SyntaxTokenize.fs" />
     <Compile Include="SyntaxParse.fs" />
     <Compile Include="NirGen.fs" />
-    <Compile Include="TirGen.fs" />
     <Compile Include="AstBundle.fs" />
     <Compile Include="NameRes.fs" />
     <Compile Include="Typing.fs" />

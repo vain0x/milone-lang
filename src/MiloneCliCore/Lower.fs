@@ -54,9 +54,6 @@ let private lowerTk (tk: Tir.Tk) : Hir.Tk =
   | Tir.SynonymTk _
   | Tir.InferTk _ -> unreachable () // Resolved in Typing.
 
-  | Tir.UnresolvedTk _
-  | Tir.UnresolvedVarTk _ -> unreachable () // Resolved in NameRes.
-
 let private lowerTy (ty: Tir.Ty) : Hir.Ty =
   let (Tir.Ty (tk, tyArgs)) = ty
   Hir.Ty(lowerTk tk, List.map lowerTy tyArgs)
