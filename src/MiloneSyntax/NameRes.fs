@@ -359,7 +359,6 @@ type private ScopeCtx =
 
     NewVars: (VarSerial * VarDef) list
     NewFuns: (FunSerial * FunDef) list
-    NewFunSet: TreeSet<FunSerial>
     NewVariants: TreeMap<VariantSerial, VariantDef>
 
     NewVarMeta: TreeMap<VarSerial, IsStatic * Linkage>
@@ -400,7 +399,6 @@ let private emptyScopeCtx () : ScopeCtx =
     DeclaredModules = TMap.empty compare
     NewVars = []
     NewFuns = []
-    NewFunSet = TMap.empty funSerialCompare
     NewVariants = TMap.empty variantSerialCompare
     NewVarMeta = TMap.empty varSerialCompare
     MainFunOpt = None
@@ -471,9 +469,7 @@ let private addVar varSerial (varDef: VarDef) (scopeCtx: ScopeCtx) : ScopeCtx =
           |> TMap.add varSerial (isStatic, linkage) }
 
 let private addFunDef funSerial funDef (scopeCtx: ScopeCtx) : ScopeCtx =
-  { scopeCtx with
-      NewFuns = (funSerial, funDef) :: scopeCtx.NewFuns
-      NewFunSet = scopeCtx.NewFunSet |> TSet.add funSerial }
+  { scopeCtx with NewFuns = (funSerial, funDef) :: scopeCtx.NewFuns }
 
 let private addVariantDef variantSerial variantDef (scopeCtx: ScopeCtx) : ScopeCtx =
   { scopeCtx with
