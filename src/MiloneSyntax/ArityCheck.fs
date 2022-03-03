@@ -184,12 +184,6 @@ let private acStmt (stmt, ctx: ArityCheckCtx) : ArityCheckCtx =
   | TLetFunStmt (_, _, _, _, body, _) -> acExprChecked body ctx
   | TBlockStmt (_, stmts) -> acStmts stmts ctx
 
-  | TTyDeclStmt _
-  | TOpenStmt _ -> ctx
-
-  | TModuleStmt _
-  | TModuleSynonymStmt _ -> unreachable () // Resolved in NameRes.
-
 let private acStmts stmts ctx =
   stmts
   |> List.fold (fun ctx stmt -> acStmt (stmt, ctx)) ctx

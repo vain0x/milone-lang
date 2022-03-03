@@ -393,10 +393,6 @@ type TStmt =
   | TExprStmt of TExpr
   | TLetValStmt of TPat * TExpr * Loc
   | TLetFunStmt of FunSerial * IsRec * Vis * args: TPat list * body: TExpr * Loc
-  | TTyDeclStmt of TySerial * Vis * tyArgs: TySerial list * TyDecl * Loc
-  | TOpenStmt of Ident list * Loc
-  | TModuleStmt of moduleTySerial: int * body: TStmt list * Loc
-  | TModuleSynonymStmt of moduleSynonymSerial: int * path: Ident list * Loc
 
   /// If recursive, local definitions are mutually recursive.
   | TBlockStmt of IsRec * TStmt list

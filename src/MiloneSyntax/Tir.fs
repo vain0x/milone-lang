@@ -318,10 +318,6 @@ let exprToLoc expr = exprExtract expr |> snd
 //   | TExprStmt expr -> exprToLoc expr
 //   | TLetValStmt (_, _, loc) -> loc
 //   | TLetFunStmt (_, _, _, _, _, loc) -> loc
-//   | TTyDeclStmt (_, _, _, _, loc) -> loc
-//   | TOpenStmt (_, loc) -> loc
-//   | TModuleStmt (_, _, loc) -> loc
-//   | TModuleSynonymStmt (_, _, loc) -> loc
 
 let stmtMap (onTy: Ty -> Ty) (stmt: TStmt) : TStmt =
   let onPat pat = patMap onTy pat
@@ -334,10 +330,6 @@ let stmtMap (onTy: Ty -> Ty) (stmt: TStmt) : TStmt =
   | TExprStmt expr -> TExprStmt(onExpr expr)
   | TLetValStmt (pat, init, loc) -> TLetValStmt(onPat pat, onExpr init, loc)
   | TLetFunStmt (serial, isRec, vis, args, body, loc) -> TLetFunStmt(serial, isRec, vis, onPats args, onExpr body, loc)
-  | TTyDeclStmt (serial, vis, tyArgs, tyDef, loc) -> TTyDeclStmt(serial, vis, tyArgs, tyDef, loc)
-  | TOpenStmt (path, loc) -> TOpenStmt(path, loc)
-  | TModuleStmt (name, body, loc) -> TModuleStmt(name, onStmts body, loc)
-  | TModuleSynonymStmt (name, path, loc) -> TModuleSynonymStmt(name, path, loc)
   | TBlockStmt (isRec, stmts) -> TBlockStmt(isRec, onStmts stmts)
 
 // -----------------------------------------------

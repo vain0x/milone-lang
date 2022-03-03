@@ -211,6 +211,7 @@ let private lowerExpr (expr: Tir.TExpr) : Hir.HExpr =
   | Tir.TNodeExpr (kind, args, ty, loc) -> Hir.HNodeExpr(lowerExprKind kind, List.map lowerExpr args, lowerTy ty, loc)
   | Tir.TBlockExpr (stmts, last) -> Hir.HBlockExpr(List.choose lowerStmt stmts, lowerExpr last)
 
+// FIXME: unwrap option
 let private lowerStmt (stmt: Tir.TStmt) : Hir.HStmt option =
   match stmt with
   | Tir.TExprStmt expr -> Hir.HExprStmt(lowerExpr expr) |> Some
@@ -230,12 +231,6 @@ let private lowerStmt (stmt: Tir.TStmt) : Hir.HStmt option =
     Hir.HBlockExpr(stmts, Hir.hxUnit noLoc)
     |> Hir.HExprStmt
     |> Some
-
-  // These statements are removed. Already used in NameRes.
-  | Tir.TTyDeclStmt _
-  | Tir.TOpenStmt _
-  | Tir.TModuleStmt _
-  | Tir.TModuleSynonymStmt _ -> None
 
 let private lowerModules (modules: Tir.TProgram) : Hir.HProgram =
   modules
