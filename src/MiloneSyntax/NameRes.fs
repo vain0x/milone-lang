@@ -665,7 +665,7 @@ let private resolveModulePath (path: Ident list) (scopeCtx: ScopeCtx) : ModuleTy
 
       | name :: tail ->
         scopeCtx
-        |> resolveSubNsOwners (ModuleNsOwner serial) name
+        |> resolveQualifiedNsOwner (ModuleNsOwner serial) name
         |> List.collect (fun nsOwner ->
           match nsOwner with
           | ModuleNsOwner serial -> go serial tail
@@ -674,36 +674,40 @@ let private resolveModulePath (path: Ident list) (scopeCtx: ScopeCtx) : ModuleTy
     roots
     |> List.collect (fun serial -> go serial tail)
 
-// Find from namespace of type (not local).
-let private resolveScopedVarName nsOwner name (scopeCtx: ScopeCtx) : ValueSymbol option =
+/// Resolves an ident qualified by the specified namespace to a value symbol.
+let private resolveQualifiedValue nsOwner name (scopeCtx: ScopeCtx) : ValueSymbol option =
   scopeCtx.VarNs
   |> nsFind nsOwner
   |> TMap.tryFind name
 
-// Find from namespace of type (not local).
-let private resolveScopedTyName nsOwner name (scopeCtx: ScopeCtx) : TySymbol option =
+/// Resolves an ident qualified by the specified namespace to a type symbol.
+let private resolveQualifiedTy nsOwner name (scopeCtx: ScopeCtx) : TySymbol option =
   scopeCtx.TyNs
   |> nsFind nsOwner
   |> TMap.tryFind name
 
-let private resolveSubNsOwners nsOwner name (scopeCtx: ScopeCtx) : NsOwner list =
+/// Resolves a qualified NsOwner to all candidates.
+let private resolveQualifiedNsOwner nsOwner name (scopeCtx: ScopeCtx) : NsOwner list =
   scopeCtx.NsNs
   |> nsFind nsOwner
   |> Multimap.find name
 
-let private resolveLocalVarName name (scopeCtx: ScopeCtx) =
+/// Resolves an unqualified ident to a value symbol from current scope.
+let private resolveUnqualifiedValue name (scopeCtx: ScopeCtx) =
   let _, varScopes, _, _ = scopeCtx.Local
 
   varScopes
   |> List.tryPick (fun map -> map |> TMap.tryFind name)
 
-let private resolveLocalTyName name (scopeCtx: ScopeCtx) : TySymbol option =
+/// Resolves an unqualified ident to a type symbol from current scope.
+let private resolveUnqualifiedTy name (scopeCtx: ScopeCtx) : TySymbol option =
   let _, _, tyScopes, _ = scopeCtx.Local
 
   tyScopes
   |> List.tryPick (fun map -> map |> TMap.tryFind name)
 
-let private resolveLocalNsOwners name (scopeCtx: ScopeCtx) : NsOwner list =
+/// Resolves an unqualified NsOwner to all candidates.
+let private resolveUnqualifiedNsOwner name (scopeCtx: ScopeCtx) : NsOwner list =
   let _, _, _, nsScopes = scopeCtx.Local
 
   nsScopes
@@ -713,11 +717,11 @@ let private resolveLocalNsOwners name (scopeCtx: ScopeCtx) : NsOwner list =
 /// Resolves qualifiers of type.
 let private resolveNavTy quals last ctx : TySymbol option * ScopeCtx =
   match quals with
-  | [] -> ctx |> resolveLocalTyName last, ctx
+  | [] -> ctx |> resolveUnqualifiedTy last, ctx
 
   | head :: tail ->
     // Resolve head.
-    let nsOwners = ctx |> resolveLocalNsOwners head
+    let nsOwners = ctx |> resolveUnqualifiedNsOwner head
 
     // Resolve tail.
     let rec resolveTyPath (nsOwner: NsOwner) path ctx =
@@ -726,13 +730,13 @@ let private resolveNavTy quals last ctx : TySymbol option * ScopeCtx =
 
       | name :: path ->
         ctx
-        |> resolveSubNsOwners nsOwner name
+        |> resolveQualifiedNsOwner nsOwner name
         |> List.collect (fun subNsOwner -> resolveTyPath subNsOwner path ctx)
 
     let tySymbolOpt =
       nsOwners
       |> List.collect (fun nsOwner -> resolveTyPath nsOwner tail ctx)
-      |> List.tryPick (fun nsOwner -> resolveScopedTyName nsOwner last ctx)
+      |> List.tryPick (fun nsOwner -> resolveQualifiedTy nsOwner last ctx)
 
     tySymbolOpt, ctx
 
@@ -748,7 +752,7 @@ let private resolveTy scopeCtx ty selfTyArgs : Ty * ScopeCtx =
       let resolved =
         match selfTyArgs |> TMap.tryFind name with
         | (Some _) as some -> some
-        | None -> resolveLocalTyName name scopeCtx
+        | None -> resolveUnqualifiedTy name scopeCtx
 
       match resolved with
       | Some (UnivTySymbol tySerial) -> tyUniv tySerial name loc, scopeCtx
@@ -904,7 +908,7 @@ let private cdPat (currentModule: NsOwner) (ctx: ScopeCtx) pat : ScopeCtx =
 
   match pat with
   | NPat.Ident (vis, name) ->
-    match ctx |> resolveLocalVarName (identOf name) with
+    match ctx |> resolveUnqualifiedValue (identOf name) with
     | Some (VariantSymbol _) -> ctx
     | _ -> onVar ctx vis name
 
@@ -1342,7 +1346,7 @@ let private nameResIdentPat ctx vis name : TPat * ScopeCtx =
   assert (identOf name <> "_")
   let _, loc = name
 
-  match ctx |> resolveLocalVarName (identOf name) with
+  match ctx |> resolveUnqualifiedValue (identOf name) with
   | Some (VariantSymbol variantSerial) -> TVariantPat(variantSerial, noTy, loc), ctx
 
   | _ ->
@@ -1357,12 +1361,12 @@ let private nameResNavPat ctx pat : TPat * ScopeCtx =
   /// `pat` is also updated by resolving inner qualifiers as possible.
   let rec resolvePatAsNsOwners pat ctx : NsOwner list =
     match pat with
-    | NPat.Ident (_, name) -> ctx |> resolveLocalNsOwners (identOf name)
+    | NPat.Ident (_, name) -> ctx |> resolveUnqualifiedNsOwner (identOf name)
 
     | NPat.Nav (l, r, _) ->
       ctx
       |> resolvePatAsNsOwners l
-      |> List.collect (fun nsOwner -> ctx |> resolveSubNsOwners nsOwner (identOf r))
+      |> List.collect (fun nsOwner -> ctx |> resolveQualifiedNsOwner nsOwner (identOf r))
 
     | _ -> []
 
@@ -1374,7 +1378,7 @@ let private nameResNavPat ctx pat : TPat * ScopeCtx =
   let patOpt =
     resolvePatAsNsOwners l ctx
     |> List.tryPick (fun nsOwner ->
-      match ctx |> resolveScopedVarName nsOwner (identOf r) with
+      match ctx |> resolveQualifiedValue nsOwner (identOf r) with
       | Some (VariantSymbol variantSerial) -> Some(TVariantPat(variantSerial, noTy, loc))
       | _ -> None)
 
@@ -1644,7 +1648,7 @@ type private ResolvedExpr =
 
 /// Tries to resolve a name expression as value; or just return None.
 let private doNameResVarExpr ctx name loc : TExpr option =
-  match ctx |> resolveLocalVarName name with
+  match ctx |> resolveUnqualifiedValue name with
   | Some symbol ->
     let expr =
       match symbol with
@@ -1675,7 +1679,7 @@ let private nameResNavExpr (ctx: ScopeCtx) (expr: NExpr) : TExpr * ScopeCtx =
   let rec resolveExprAsNsOwners ctx expr : ResolvedExpr * ScopeCtx =
     match expr with
     | NExpr.Ident (ident, loc) ->
-      let nsOwners = ctx |> resolveLocalNsOwners ident
+      let nsOwners = ctx |> resolveUnqualifiedNsOwner ident
       let exprOpt = doNameResVarExpr ctx ident loc
 
       match nsOwners, exprOpt with
@@ -1698,14 +1702,14 @@ let private nameResNavExpr (ctx: ScopeCtx) (expr: NExpr) : TExpr * ScopeCtx =
         // Resolve as namespaces.
         let nsOwners =
           superNsOwners
-          |> List.collect (fun nsOwner -> ctx |> resolveSubNsOwners nsOwner r)
+          |> List.collect (fun nsOwner -> ctx |> resolveQualifiedNsOwner nsOwner r)
 
         // Resolve as value.
         let exprOpt =
           let varSymbolOpt =
             superNsOwners
             |> List.tryPick (fun nsOwner ->
-              match ctx |> resolveScopedVarName nsOwner r with
+              match ctx |> resolveQualifiedValue nsOwner r with
               | None -> None
               | it -> it)
 
