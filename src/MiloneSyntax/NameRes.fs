@@ -142,12 +142,6 @@ let private binaryToPrim op : TPrim =
 // Symbols
 // -----------------------------------------------
 
-let private valueSymbolToSerial symbol =
-  match symbol with
-  | VarSymbol (VarSerial s) -> s
-  | FunSymbol (FunSerial s) -> s
-  | VariantSymbol (VariantSerial s) -> s
-
 let private tySymbolToSerial symbol =
   match symbol with
   | UnivTySymbol s -> s
