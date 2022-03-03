@@ -191,51 +191,19 @@ let private runToOut command (args: string list) : string =
 
 let private commandGen2 () =
   eprintfn "milone-compiling gen2"
-  makeDir "target/gen2"
-
-  let stdOut =
-    runToOut
-      "dotnet"
-      [ "run"
-        "--project"
-        "src/MiloneCli"
-        "--"
-        "compile"
-        "src/MiloneCli"
-        "--target-dir"
-        "target/gen2" ]
-
-  let ninja = StringBuilder()
-  let w (s: string) = ninja.AppendLine(s) |> ignore
-
-  w "builddir = target/gen2"
-  w cRules
-
-  let oFiles = ResizeArray()
-
-  for name in stdOut.Split("\n") do
-    let name =
-      Path.GetFileNameWithoutExtension(name.Trim())
-
-    if String.IsNullOrEmpty(name) |> not then
-      let c = $"target/gen2/{name}.c"
-      let o = $"target/gen2/{name}.o"
-      oFiles.Add(o)
-
-      w $"build {o}: compile_c_to_obj {c} | src/libmilonert/milone.h"
-
-  let input = oFiles |> String.concat " "
-
-  w $"build target/milone: link_objs_to_exe src/libmilonert/milone.o src/libmilonert/milone_platform.o {input}"
-
-  writeTo (ninja.ToString()) "target/gen2/build.ninja"
-
-  eprintfn "c-compiling gen2"
 
   run
-    "bin/ninja"
-    [ "-f"
-      "target/gen2/build.ninja"
+    "dotnet"
+    [ "run"
+      "--no-restore"
+      "--project"
+      "src/MiloneCli"
+      "--"
+      "build"
+      "src/MiloneCli"
+      "--target-dir"
+      "target/gen2"
+      "--output"
       "target/milone" ]
 
 // -----------------------------------------------
