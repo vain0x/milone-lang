@@ -51,17 +51,6 @@ let tyRecord tySerial loc = Ty(RecordTk(tySerial, Some loc), [])
 // TyDef
 // -----------------------------------------------
 
-let moduleTySerialToInt (ModuleTySerial serial) = serial
-
-let moduleTySerialCompare l r =
-  moduleTySerialToInt l - moduleTySerialToInt r
-
-let moduleSynonymSerialToInt (ModuleSynonymSerial serial) = serial
-
-let moduleSynonymSerialCompare l r =
-  moduleSynonymSerialToInt l
-  - moduleSynonymSerialToInt r
-
 let tyDefToName tyDef =
   match tyDef with
   | UnivTyDef (name, _) -> name

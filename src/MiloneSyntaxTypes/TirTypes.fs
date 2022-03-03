@@ -150,25 +150,6 @@ type TyDef =
 
   | RecordTyDef of Ident * tyArgs: TySerial list * fields: (Ident * Ty * Loc) list * IsCRepr * Loc
 
-[<Struct; NoComparison>]
-type ModuleTySerial = ModuleTySerial of Serial
-
-//// Module is a type so that it can be used as namespace.
-[<RequireQualifiedAccess; NoEquality; NoComparison>]
-type ModuleTyDef = { Name: Ident; Loc: Loc }
-
-[<Struct; NoComparison>]
-type ModuleSynonymSerial = ModuleSynonymSerial of Serial
-
-// not used
-//// Module is a type so that it can be used as namespace.
-[<RequireQualifiedAccess; NoEquality; NoComparison>]
-type ModuleSynonymDef =
-  { Name: Ident
-    // Not used.
-    Bound: ModuleTySerial list
-    Loc: Loc }
-
 /// Definition of named value.
 [<RequireQualifiedAccess; NoEquality; NoComparison>]
 type VarDef =
@@ -414,8 +395,8 @@ type TStmt =
   | TLetFunStmt of FunSerial * IsRec * Vis * args: TPat list * body: TExpr * Loc
   | TTyDeclStmt of TySerial * Vis * tyArgs: TySerial list * TyDecl * Loc
   | TOpenStmt of Ident list * Loc
-  | TModuleStmt of ModuleTySerial * body: TStmt list * Loc
-  | TModuleSynonymStmt of ModuleSynonymSerial * path: Ident list * Loc
+  | TModuleStmt of moduleTySerial: int * body: TStmt list * Loc
+  | TModuleSynonymStmt of moduleSynonymSerial: int * path: Ident list * Loc
 
   /// If recursive, local definitions are mutually recursive.
   | TBlockStmt of IsRec * TStmt list
