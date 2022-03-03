@@ -1673,8 +1673,6 @@ let private nameResUnqualifiedIdentExpr ctx name loc : TExpr * ScopeCtx =
   | None -> errorExpr ctx (UndefinedValueError name) loc
 
 let private nameResNavExpr (ctx: ScopeCtx) (expr: NExpr) : TExpr * ScopeCtx =
-  let ty = noTy
-
   /// Resolves an expressions as scope.
   ///
   /// Returns (scopeOpt, exprOpt).
@@ -1698,7 +1696,7 @@ let private nameResNavExpr (ctx: ScopeCtx) (expr: NExpr) : TExpr * ScopeCtx =
       match l with
       | NotResolvedExpr _ -> l, ctx
 
-      | ResolvedAsExpr l -> ResolvedAsExpr(TNavExpr(l, rName, ty, dotLoc)), ctx
+      | ResolvedAsExpr l -> ResolvedAsExpr(TNavExpr(l, rName, noTy, dotLoc)), ctx
 
       | ResolvedAsScope (superNsOwners, lExprOpt, _) ->
         assert (List.isEmpty superNsOwners |> not)
@@ -1718,16 +1716,18 @@ let private nameResNavExpr (ctx: ScopeCtx) (expr: NExpr) : TExpr * ScopeCtx =
               | it -> it)
 
           match varSymbolOpt with
-          | Some (VarSymbol varSerial) -> TVarExpr(varSerial, ty, identLoc) |> Some
-          | Some (FunSymbol funSerial) -> TFunExpr(funSerial, ty, identLoc) |> Some
-          | Some (VariantSymbol variantSerial) -> TVariantExpr(variantSerial, ty, identLoc) |> Some
+          | Some (VarSymbol varSerial) -> TVarExpr(varSerial, noTy, identLoc) |> Some
+          | Some (FunSymbol funSerial) -> TFunExpr(funSerial, noTy, identLoc) |> Some
+          | Some (VariantSymbol variantSerial) ->
+            TVariantExpr(variantSerial, noTy, identLoc)
+            |> Some
           | None -> None
 
         // If not resolved as value, keep try to unresolved.
         let exprOpt =
           match exprOpt, lExprOpt with
           | Some _, _ -> exprOpt
-          | None, Some l -> TNavExpr(l, rName, ty, dotLoc) |> Some
+          | None, Some l -> TNavExpr(l, rName, noTy, dotLoc) |> Some
           | None, None -> None
 
         match nsOwners, exprOpt with
