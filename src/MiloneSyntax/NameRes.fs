@@ -278,9 +278,9 @@ let private sMerge (state: NameResState) (scopeCtx: ScopeCtx) : NameResState * _
     scopeCtx.NewVars
     |> List.fold
          (fun (globalVars, localVars) (varSerial, varDef: VarDef) ->
-           // Var can replace old definition but metadata shouldn't change.
            match TMap.tryFind varSerial scopeCtx.NewVarMeta with
            | Some (isStatic, linkage) ->
+             // Definition is always for non-static. Inherits meta data here.
              let varDef =
                { varDef with
                    IsStatic = isStatic
@@ -456,17 +456,7 @@ let private makeLinkage vis name (ctx: ScopeCtx) =
 ///
 /// This doesn't imply it's added to any scope or namespace.
 let private addVar varSerial (varDef: VarDef) (scopeCtx: ScopeCtx) : ScopeCtx =
-  { scopeCtx with
-      NewVars = (varSerial, varDef) :: scopeCtx.NewVars
-
-      // FIXME: maybe var meta is already updated here? (collect decl should store it, nameRes don't need to do it)
-      // Store metadata separately not to be overridden on late definition.
-      NewVarMeta =
-        match varDef.IsStatic, varDef.Linkage with
-        | NotStatic, InternalLinkage -> scopeCtx.NewVarMeta
-        | isStatic, linkage ->
-          scopeCtx.NewVarMeta
-          |> TMap.add varSerial (isStatic, linkage) }
+  { scopeCtx with NewVars = (varSerial, varDef) :: scopeCtx.NewVars }
 
 let private addFunDef funSerial funDef (scopeCtx: ScopeCtx) : ScopeCtx =
   { scopeCtx with NewFuns = (funSerial, funDef) :: scopeCtx.NewFuns }
