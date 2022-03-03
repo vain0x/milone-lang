@@ -1136,6 +1136,10 @@ let private collectDecls (currentModule: NsOwner) ctx (decls: NDecl list) : Scop
 // Resolve definitions
 // -----------------------------------------------
 
+// Resolve definitions (rd) is a follow-up pass
+// to resolve all types in these definitions
+// and create a complete set of type definitions for TIR.
+
 let private rdTySynonymDecl (ctx: ScopeCtx) decl : ScopeCtx =
   let name, tyArgs, bodyTy, loc =
     match decl with
