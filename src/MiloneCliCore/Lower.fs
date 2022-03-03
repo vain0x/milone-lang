@@ -209,28 +209,23 @@ let private lowerExpr (expr: Tir.TExpr) : Hir.HExpr =
     )
   | Tir.TNavExpr (l, (r, _), ty, loc) -> Hir.HNavExpr(lowerExpr l, r, lowerTy ty, loc)
   | Tir.TNodeExpr (kind, args, ty, loc) -> Hir.HNodeExpr(lowerExprKind kind, List.map lowerExpr args, lowerTy ty, loc)
-  | Tir.TBlockExpr (stmts, last) -> Hir.HBlockExpr(List.choose lowerStmt stmts, lowerExpr last)
+  | Tir.TBlockExpr (stmts, last) -> Hir.HBlockExpr(List.map lowerStmt stmts, lowerExpr last)
 
-// FIXME: unwrap option
-let private lowerStmt (stmt: Tir.TStmt) : Hir.HStmt option =
+let private lowerStmt (stmt: Tir.TStmt) : Hir.HStmt =
   match stmt with
-  | Tir.TExprStmt expr -> Hir.HExprStmt(lowerExpr expr) |> Some
+  | Tir.TExprStmt expr -> Hir.HExprStmt(lowerExpr expr)
 
-  | Tir.TLetValStmt (pat, init, loc) ->
-    Hir.HLetValStmt(lowerPat pat, lowerExpr init, loc)
-    |> Some
+  | Tir.TLetValStmt (pat, init, loc) -> Hir.HLetValStmt(lowerPat pat, lowerExpr init, loc)
 
   | Tir.TLetFunStmt (funSerial, _, _, argPats, body, loc) ->
     Hir.HLetFunStmt(lowerFunSerial funSerial, List.map lowerPat argPats, lowerExpr body, loc)
-    |> Some
 
   // note: if flatten all blocks, compile fails (invalid code generated). Does them need being nested or wrapped by HExprStmt?
   | Tir.TBlockStmt (_, stmts) ->
-    let stmts = stmts |> List.choose lowerStmt
+    let stmts = stmts |> List.map lowerStmt
 
     Hir.HBlockExpr(stmts, Hir.hxUnit noLoc)
     |> Hir.HExprStmt
-    |> Some
 
 let private lowerModules (modules: Tir.TProgram) : Hir.HProgram =
   modules
@@ -238,7 +233,7 @@ let private lowerModules (modules: Tir.TProgram) : Hir.HProgram =
     let m: Hir.HModule =
       { DocId = m.DocId
         Vars = lowerVarMap m.Vars
-        Stmts = List.choose lowerStmt m.Stmts }
+        Stmts = List.map lowerStmt m.Stmts }
 
     m)
 
