@@ -311,7 +311,7 @@ let private sMerge (state: NameResState) (scopeCtx: ScopeCtx) : NameResState * _
 
       Vars = globalVars
       Funs = mapAddEntries scopeCtx.NewFuns state.Funs
-      Variants = mapMerge state.Variants scopeCtx.NewVariants
+      Variants = mapAddEntries scopeCtx.NewVariants state.Variants
       Logs = List.append scopeCtx.NewLogs state.Logs },
   localVars
 
@@ -359,7 +359,7 @@ type private ScopeCtx =
 
     NewVars: (VarSerial * VarDef) list
     NewFuns: (FunSerial * FunDef) list
-    NewVariants: TreeMap<VariantSerial, VariantDef>
+    NewVariants: (VariantSerial * VariantDef) list
 
     NewVarMeta: TreeMap<VarSerial, IsStatic * Linkage>
 
@@ -399,7 +399,7 @@ let private emptyScopeCtx () : ScopeCtx =
     DeclaredModules = TMap.empty compare
     NewVars = []
     NewFuns = []
-    NewVariants = TMap.empty variantSerialCompare
+    NewVariants = []
     NewVarMeta = TMap.empty varSerialCompare
     MainFunOpt = None
     Tys = TMap.empty compare
@@ -474,8 +474,8 @@ let private addFunDef funSerial funDef (scopeCtx: ScopeCtx) : ScopeCtx =
 let private addVariantDef variantSerial variantDef (scopeCtx: ScopeCtx) : ScopeCtx =
   { scopeCtx with
       NewVariants =
-        scopeCtx.NewVariants
-        |> TMap.add variantSerial variantDef }
+        (variantSerial, variantDef)
+        :: scopeCtx.NewVariants }
 
 /// Adds a definition of type symbol.
 let private addTy tySerial tyDef (scopeCtx: ScopeCtx) : ScopeCtx =
@@ -1256,7 +1256,7 @@ let private rdUnionTyDecl (ctx: ScopeCtx) decl : ScopeCtx =
                      PayloadTy = payloadTy
                      Loc = loc }
 
-                 variants |> TMap.add variantSerial variantDef)
+                 (variantSerial, variantDef) :: variants)
                ctx.NewVariants }
 
   let tyDef =
