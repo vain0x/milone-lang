@@ -158,13 +158,11 @@ let private tySymbolToSerial symbol =
 type private NsOwner =
   | TyNsOwner of TySerial
   | ModuleNsOwner of ModuleTySerial
-  | ModuleSynonymNsOwner of ModuleSynonymSerial
 
 let private nsOwnerToInt (nsOwner: NsOwner) : int =
   match nsOwner with
   | TyNsOwner tySerial -> tySerial
   | ModuleNsOwner serial -> serial
-  | ModuleSynonymNsOwner serial -> serial
 
 let private nsOwnerCompare (l: NsOwner) r : int =
   compare (nsOwnerToInt l) (nsOwnerToInt r)
