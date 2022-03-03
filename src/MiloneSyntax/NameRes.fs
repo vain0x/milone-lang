@@ -447,7 +447,7 @@ let private makeLinkage vis name (ctx: ScopeCtx) =
 /// Adds a definition of var (not regarding static or not).
 ///
 /// This doesn't imply it's added to any scope or namespace.
-let private addVar varSerial (varDef: VarDef) (scopeCtx: ScopeCtx) : ScopeCtx =
+let private addVarDef varSerial (varDef: VarDef) (scopeCtx: ScopeCtx) : ScopeCtx =
   { scopeCtx with NewVars = (varSerial, varDef) :: scopeCtx.NewVars }
 
 let private addFunDef funSerial funDef (scopeCtx: ScopeCtx) : ScopeCtx =
@@ -595,7 +595,7 @@ let private openModules moduleSerials ctx =
 /// Defines a variable in the local scope.
 let private addLocalVar name varSerial varDef (scopeCtx: ScopeCtx) : ScopeCtx =
   scopeCtx
-  |> addVar varSerial varDef
+  |> addVarDef varSerial varDef
   |> importValue name (VarSymbol varSerial)
 
 /// Defines a type in the local scope.
