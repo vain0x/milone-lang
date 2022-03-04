@@ -1122,6 +1122,19 @@ let private collectDecls (currentModule: NsOwner) ctx (decls: NDecl list) : Scop
 // to resolve all types in these definitions
 // and create a complete set of type definitions for TIR.
 
+let private defineTyArgs (ctx: ScopeCtx) tyArgs =
+  let tyArgToSerials, ctx =
+    tyArgs
+    |> List.mapFold
+         (fun ctx tyArg ->
+           let tySerial, ctx = freshSerial ctx
+           (identOf tyArg, tySerial), ctx)
+         ctx
+
+  let tyArgSerials = tyArgToSerials |> List.map snd
+
+  tyArgSerials, tyArgToSerials, ctx
+
 let private rdTySynonymDecl (ctx: ScopeCtx) decl : ScopeCtx =
   let name, tyArgs, bodyTy, loc =
     match decl with
@@ -1131,15 +1144,7 @@ let private rdTySynonymDecl (ctx: ScopeCtx) decl : ScopeCtx =
   let tySerial, _ = ctx.DeclaredTys |> mapFind (posOf name)
 
   let ctx = ctx |> startScope TyDeclScope
-
-  // #define_ty_args
-  let tyArgToSerials, ctx =
-    tyArgs
-    |> List.mapFold
-         (fun ctx tyArg ->
-           let tySerial, ctx = freshSerial ctx
-           (identOf tyArg, tySerial), ctx)
-         ctx
+  let tyArgSerials, tyArgToSerials, ctx = defineTyArgs ctx tyArgs
 
   let bodyTy, ctx =
     let tyArgs =
@@ -1150,7 +1155,6 @@ let private rdTySynonymDecl (ctx: ScopeCtx) decl : ScopeCtx =
     resolveTy ctx bodyTy tyArgs
 
   let tyDef =
-    let tyArgSerials = tyArgToSerials |> List.map snd
     SynonymTyDef(identOf name, tyArgSerials, bodyTy, loc)
 
   addTyDef tySerial tyDef ctx |> finishScope
@@ -1164,15 +1168,7 @@ let private rdUnionTyDecl (ctx: ScopeCtx) decl : ScopeCtx =
   let tySerial, _ = ctx.DeclaredTys |> mapFind (posOf name)
 
   let ctx = ctx |> startScope TyDeclScope
-
-  // #define_ty_args
-  let tyArgToSerials, ctx =
-    tyArgs
-    |> List.mapFold
-         (fun ctx tyArg ->
-           let tySerial, ctx = freshSerial ctx
-           (identOf tyArg, tySerial), ctx)
-         ctx
+  let tyArgSerials, tyArgToSerials, ctx = defineTyArgs ctx tyArgs
 
   let variants, ctx =
     let tyArgs =
@@ -1222,7 +1218,6 @@ let private rdUnionTyDecl (ctx: ScopeCtx) decl : ScopeCtx =
 
   let tyDef =
     let variantSerials = variants |> List.map fst
-    let tyArgSerials = tyArgToSerials |> List.map snd
     UnionTyDef(identOf name, tyArgSerials, variantSerials, loc)
 
   addTyDef tySerial tyDef ctx |> finishScope
@@ -1236,15 +1231,7 @@ let private rdRecordTyDecl (ctx: ScopeCtx) decl : ScopeCtx =
   let tySerial, _ = ctx.DeclaredTys |> mapFind (posOf name)
 
   let ctx = ctx |> startScope TyDeclScope
-
-  // #define_ty_args
-  let tyArgToSerials, ctx =
-    tyArgs
-    |> List.mapFold
-         (fun ctx tyArg ->
-           let tySerial, ctx = freshSerial ctx
-           (identOf tyArg, tySerial), ctx)
-         ctx
+  let tyArgSerials, tyArgToSerials, ctx = defineTyArgs ctx tyArgs
 
   let fields, ctx =
     let tyArgs =
@@ -1261,7 +1248,6 @@ let private rdRecordTyDecl (ctx: ScopeCtx) decl : ScopeCtx =
          ctx
 
   let tyDef =
-    let tyArgSerials = tyArgToSerials |> List.map snd
     RecordTyDef(identOf name, tyArgSerials, fields, repr, loc)
 
   addTyDef tySerial tyDef ctx |> finishScope
