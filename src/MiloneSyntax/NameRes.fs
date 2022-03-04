@@ -529,11 +529,11 @@ let private importValue alias (symbol: ValueSymbol) (ctx: ScopeCtx) : ScopeCtx =
 
   let scope: Scope =
     match ctx.Local with
-    | kinds, map :: varScopes, tyScopes, nsScopes ->
-      let varScopes =
-        (map |> TMap.add alias symbol) :: varScopes
+    | kinds, map :: valueScopes, tyScopes, nsScopes ->
+      let valueScopes =
+        (map |> TMap.add alias symbol) :: valueScopes
 
-      kinds, varScopes, tyScopes, nsScopes
+      kinds, valueScopes, tyScopes, nsScopes
 
     | _ -> unreachable () // Scope can't be empty..
 
@@ -543,14 +543,14 @@ let private importValue alias (symbol: ValueSymbol) (ctx: ScopeCtx) : ScopeCtx =
 let private importTy alias (symbol: TySymbol) (ctx: ScopeCtx) : ScopeCtx =
   let scope: Scope =
     match ctx.Local with
-    | kinds, varScopes, (tyMap :: tyScopes), (nsMap :: nsScopes) ->
+    | kinds, valueScopes, (tyMap :: tyScopes), (nsMap :: nsScopes) ->
       let tyMap = tyMap |> TMap.add alias symbol
 
       let nsMap =
         nsMap
         |> Multimap.add alias (nsOwnerOfTySymbol symbol)
 
-      kinds, varScopes, tyMap :: tyScopes, nsMap :: nsScopes
+      kinds, valueScopes, tyMap :: tyScopes, nsMap :: nsScopes
 
     | _ -> unreachable () // Scope can't be empty.
 
@@ -560,7 +560,7 @@ let private importTy alias (symbol: TySymbol) (ctx: ScopeCtx) : ScopeCtx =
 let private importNsOwner alias nsOwner (ctx: ScopeCtx) : ScopeCtx =
   let scope: Scope =
     match ctx.Local with
-    | kinds, varScopes, tyScopes, ((map :: nsScopes) as allNsScopes) ->
+    | kinds, valueScopes, tyScopes, ((map :: nsScopes) as allNsScopes) ->
       let shadowed =
         allNsScopes
         |> List.tryPick (fun map -> map |> TMap.tryFind alias)
@@ -569,7 +569,7 @@ let private importNsOwner alias nsOwner (ctx: ScopeCtx) : ScopeCtx =
       let map =
         map |> TMap.add alias (nsOwner :: shadowed)
 
-      kinds, varScopes, tyScopes, map :: nsScopes
+      kinds, valueScopes, tyScopes, map :: nsScopes
 
     | _ -> unreachable () // Scope can't be empty.
 
@@ -615,10 +615,10 @@ let private isTyDeclScope (ctx: ScopeCtx) =
 
 /// Starts a new scope.
 let private startScope kind (ctx: ScopeCtx) : ScopeCtx =
-  let kinds, varScopes, tyScopes, nsScopes = ctx.Local
+  let kinds, valueScopes, tyScopes, nsScopes = ctx.Local
 
   { ctx with
-      Local = kind :: kinds, scopeMapEmpty () :: varScopes, scopeMapEmpty () :: tyScopes, scopeMapEmpty () :: nsScopes }
+      Local = kind :: kinds, scopeMapEmpty () :: valueScopes, scopeMapEmpty () :: tyScopes, scopeMapEmpty () :: nsScopes }
 
 let private finishScope (ctx: ScopeCtx) : ScopeCtx =
   match ctx.Local with
@@ -627,8 +627,8 @@ let private finishScope (ctx: ScopeCtx) : ScopeCtx =
   | _, _, [], _
   | _, _, _, [] -> unreachable () // Scope can't be empty..
 
-  | _ :: kinds, _ :: varScopes, _ :: tyScopes, _ :: nsScopes ->
-    { ctx with Local = kinds, varScopes, tyScopes, nsScopes }
+  | _ :: kinds, _ :: valueScopes, _ :: tyScopes, _ :: nsScopes ->
+    { ctx with Local = kinds, valueScopes, tyScopes, nsScopes }
 
 let private enterModule (moduleName: Ident) (ctx: ScopeCtx) =
   let parent = ctx.CurrentPath
@@ -691,9 +691,9 @@ let private resolveQualifiedNsOwner nsOwner name (ctx: ScopeCtx) : NsOwner list 
 
 /// Resolves an unqualified ident to a value symbol from current scope.
 let private resolveUnqualifiedValue name (ctx: ScopeCtx) =
-  let _, varScopes, _, _ = ctx.Local
+  let _, valueScopes, _, _ = ctx.Local
 
-  varScopes
+  valueScopes
   |> List.tryPick (fun map -> map |> TMap.tryFind name)
 
 /// Resolves an unqualified ident to a type symbol from current scope.
