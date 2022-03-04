@@ -316,7 +316,7 @@ let private sMerge newRootModule (state: NameResState) (ctx: ScopeCtx) : NameRes
 
             // These seem inefficient but not.
             Local = scopeMerge ctx.Local s.Local
-            VarNs = mapMerge s.VarNs ctx.VarNs
+            ValueNs = mapMerge s.ValueNs ctx.ValueNs
             TyNs = mapMerge s.TyNs ctx.TyNs
             NsNs = mapMerge s.NsNs ctx.NsNs }
 
@@ -381,7 +381,7 @@ type private ScopeCtx =
     CurrentPath: string list
     AncestralFuns: Ident list
 
-    VarNs: Ns<ValueSymbol>
+    ValueNs: Ns<ValueSymbol>
     TyNs: Ns<TySymbol>
     /// Subspaces.
     NsNs: Ns<NsOwner list>
@@ -413,7 +413,7 @@ let private emptyScopeCtx () : ScopeCtx =
     RootModules = []
     CurrentPath = []
     AncestralFuns = []
-    VarNs = TMap.empty nsOwnerCompare
+    ValueNs = TMap.empty nsOwnerCompare
     TyNs = TMap.empty nsOwnerCompare
     NsNs = TMap.empty nsOwnerCompare
     Local = scopeEmpty ()
@@ -485,7 +485,7 @@ let private addValueToNs (nsOwner: NsOwner) name valueSymbol (ctx: ScopeCtx) : S
   //   + string (valueSymbolToSerial valueSymbol)
   // )
 
-  { ctx with VarNs = ctx.VarNs |> nsAdd nsOwner name valueSymbol }
+  { ctx with ValueNs = ctx.ValueNs |> nsAdd nsOwner name valueSymbol }
 
 /// Makes a type symbol accessible from a namespace.
 let private addTyToNs (nsOwner: NsOwner) name tySymbol (ctx: ScopeCtx) : ScopeCtx =
@@ -579,7 +579,7 @@ let private importNsOwner alias nsOwner (ctx: ScopeCtx) : ScopeCtx =
 let private openModule moduleSerial (ctx: ScopeCtx) =
   // Import vars.
   let ctx =
-    ctx.VarNs
+    ctx.ValueNs
     |> nsFind (nsOwnerOfModule moduleSerial)
     |> TMap.fold (fun ctx name symbol -> ctx |> importValue name symbol) ctx
 
@@ -679,7 +679,7 @@ let private resolveModulePath (path: Ident list) (ctx: ScopeCtx) : ModuleTySeria
 
 /// Resolves an ident qualified by the specified namespace to a value symbol.
 let private resolveQualifiedValue nsOwner name (ctx: ScopeCtx) : ValueSymbol option =
-  ctx.VarNs |> nsFind nsOwner |> TMap.tryFind name
+  ctx.ValueNs |> nsFind nsOwner |> TMap.tryFind name
 
 /// Resolves an ident qualified by the specified namespace to a type symbol.
 let private resolveQualifiedTy nsOwner name (ctx: ScopeCtx) : TySymbol option =
