@@ -167,22 +167,22 @@ let private tySymbolToSerial symbol =
 // -----------------------------------------------
 
 /// Identity of namespace owner.
-[<NoEquality; NoComparison>]
-type private NsOwner =
-  | TyNsOwner of TySerial
-  | ModuleNsOwner of ModuleTySerial
+type private NsOwner = uint
 
-let private nsOwnerToInt (nsOwner: NsOwner) : int =
-  match nsOwner with
-  | TyNsOwner tySerial -> tySerial
-  | ModuleNsOwner serial -> serial
+let private nsOwnerOfTy tySerial = uint tySerial <<< 1
+let private nsOwnerOfModule moduleSerial = (uint moduleSerial <<< 1) ||| 1u
 
-let private nsOwnerCompare (l: NsOwner) r : int =
-  compare (nsOwnerToInt l) (nsOwnerToInt r)
+let private nsOwnerAsModule (nsOwner: NsOwner) : ModuleTySerial option =
+  if (nsOwner &&& 1u) <> 0u then
+    Some(int (nsOwner >>> 1))
+  else
+    None
 
-let private nsOwnerOfTySymbol (tySymbol: TySymbol) : NsOwner = TyNsOwner(tySymbolToSerial tySymbol)
+let private nsOwnerCompare (l: NsOwner) r : int = compare l r
 
-let private nsOwnerDump nsOwner = nsOwnerToInt nsOwner |> string
+let private nsOwnerOfTySymbol (tySymbol: TySymbol) : NsOwner = nsOwnerOfTy (tySymbolToSerial tySymbol)
+
+let private nsOwnerDump (nsOwner: NsOwner) = nsOwner |> string
 
 // -----------------------------------------------
 // Namespace
@@ -572,19 +572,19 @@ let private openModule moduleSerial (scopeCtx: ScopeCtx) =
   // Import vars.
   let scopeCtx =
     scopeCtx.VarNs
-    |> nsFind (ModuleNsOwner moduleSerial)
+    |> nsFind (nsOwnerOfModule moduleSerial)
     |> TMap.fold (fun ctx name symbol -> ctx |> importValue name symbol) scopeCtx
 
   // Import tys.
   let scopeCtx =
     scopeCtx.TyNs
-    |> nsFind (ModuleNsOwner moduleSerial)
+    |> nsFind (nsOwnerOfModule moduleSerial)
     |> TMap.fold (fun ctx name symbol -> ctx |> importTy name symbol) scopeCtx
 
   // Import subnamespaces.
   let scopeCtx =
     scopeCtx.NsNs
-    |> nsFind (ModuleNsOwner moduleSerial)
+    |> nsFind (nsOwnerOfModule moduleSerial)
     |> TMap.fold (fun ctx name nsOwners -> ctx |> forList (importNsOwner name) nsOwners) scopeCtx
 
   scopeCtx
@@ -666,11 +666,11 @@ let private resolveModulePath (path: Ident list) (scopeCtx: ScopeCtx) : ModuleTy
 
       | name :: tail ->
         scopeCtx
-        |> resolveQualifiedNsOwner (ModuleNsOwner serial) name
+        |> resolveQualifiedNsOwner (nsOwnerOfModule serial) name
         |> List.collect (fun nsOwner ->
-          match nsOwner with
-          | ModuleNsOwner serial -> go serial tail
-          | _ -> [])
+          match nsOwnerAsModule nsOwner with
+          | Some serial -> go serial tail
+          | None -> [])
 
     roots
     |> List.collect (fun serial -> go serial tail)
@@ -1023,7 +1023,7 @@ let private cdUnionTyDecl currentModule (ctx: ScopeCtx) decl : ScopeCtx =
 
            let ctx =
              ctx
-             |> addValueToNs (TyNsOwner tySerial) (identOf name) variantSymbol
+             |> addValueToNs (nsOwnerOfTy tySerial) (identOf name) variantSymbol
              |> importValue (identOf name) variantSymbol
 
            let ctx =
@@ -1092,13 +1092,13 @@ let private cdModuleSynonymDecl ctx name path : ScopeCtx =
     else
       // Import all modules that are referred by the path via the specified alias.
       moduleSerials
-      |> List.fold (fun ctx moduleSerial -> importNsOwner (identOf name) (ModuleNsOwner moduleSerial) ctx) ctx
+      |> List.fold (fun ctx moduleSerial -> importNsOwner (identOf name) (nsOwnerOfModule moduleSerial) ctx) ctx
 
 let private cdModuleDecl currentModule ctx decl : ScopeCtx =
   let (NModuleDecl (_, vis, name, _, _)) = decl
 
   let moduleSerial, ctx = freshSerial ctx
-  let moduleNs = ModuleNsOwner moduleSerial
+  let moduleNs = nsOwnerOfModule moduleSerial
 
   // __trace (
   //   "cdModuleDecl "
@@ -1981,7 +1981,7 @@ let private nameResModuleDecl (ctx: ScopeCtx) moduleDecl : TStmt * ScopeCtx =
     |> List.fold (fun ctx moduleTySerial -> openModule moduleTySerial ctx) ctx
 
   let stmts, ctx =
-    nameResDecls (ModuleNsOwner moduleSerial) ctx decls
+    nameResDecls (nsOwnerOfModule moduleSerial) ctx decls
 
   let ctx = ctx |> leaveModule parent |> finishScope
 
