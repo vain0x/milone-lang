@@ -1825,45 +1825,35 @@ let private nameResStmt ctx (stmt: NStmt) : TStmt * ScopeCtx =
     let pat, ctx = pat |> nameResIrrefutablePat ctx
     TLetValStmt(pat, body, loc), ctx
 
-  | NStmt.LetFun (IsRec, vis, name, argPats, body, loc) ->
-    // #defineFun
-    let defineFun (ctx: ScopeCtx) vis name arity loc : FunSerial * ScopeCtx =
-      let hoisted, vis, (funSerial, ctx) =
-        match ctx.DeclaredFuns |> TMap.tryFind (posOf name) with
-        | Some funSerial -> true, vis, (funSerial, ctx)
-        | None -> false, PrivateVis, freshFunSerial ctx
+  | NStmt.LetFun (isRec, vis, name, argPats, body, loc) ->
+    let vis, (funSerial, ctx) =
+      match ctx.DeclaredFuns |> TMap.tryFind (posOf name) with
+      | Some funSerial -> vis, (funSerial, ctx)
+      | None -> PrivateVis, freshFunSerial ctx
 
-      let funName = identOf name
+    let funName = identOf name
 
+    let ctx =
       let funDef: FunDef =
         { Name = funName
-          Arity = arity
+          Arity = List.length argPats
           Ty = TyScheme([], noTy)
           Abi = MiloneAbi
           Linkage = makeLinkage vis funName ctx
           Prefix = ctx.AncestralFuns
           Loc = loc }
 
-      let ctx = addFunDef funSerial funDef ctx
+      addFunDef funSerial funDef ctx
 
-      let ctx =
-        if not hoisted then
-          ctx |> importValue funName (FunSymbol funSerial)
-        else
-          ctx
-
-      funSerial, ctx
-
-    // Define the function itself for recursive referencing.
-    let funSerial, ctx =
-      let arity = List.length argPats
-      defineFun ctx vis name arity loc
-
-    let funName = identOf name
-
-    // __trace ("enterLetFun " + funName)
+    // Import the function itself for recursive referencing.
+    let ctx =
+      match isRec with
+      | IsRec -> ctx |> importValue funName (FunSymbol funSerial)
+      | _ -> ctx
 
     let argPats, body, ctx =
+      // __trace ("enterLetFun " + funName)
+
       let ctx =
         ctx
         |> enterLetInit funName
@@ -1875,59 +1865,15 @@ let private nameResStmt ctx (stmt: NStmt) : TStmt * ScopeCtx =
       let body, ctx = body |> nameResExpr ctx
       let ctx = ctx |> finishScope |> leaveLetInit
 
-      argPats, body, ctx
-
-    // __trace ("leaveLetFun " + funName)
-
-    TLetFunStmt(funSerial, IsRec, vis, argPats, body, loc), ctx
-
-  | NStmt.LetFun (NotRec, vis, name, argPats, body, loc) ->
-    let arity = List.length argPats
-
-    // #defineFun
-    let hoisted, vis, (funSerial, ctx) =
-      match ctx.DeclaredFuns |> TMap.tryFind (posOf name) with
-      | Some funSerial -> true, vis, (funSerial, ctx)
-      | None -> false, PrivateVis, freshFunSerial ctx
-
-    let funName = identOf name
-
-    let funDef: FunDef =
-      { Name = funName
-        Arity = arity
-        Ty = TyScheme([], noTy)
-        Abi = MiloneAbi
-        Linkage = makeLinkage vis funName ctx
-        Prefix = ctx.AncestralFuns
-        Loc = loc }
-
-    let ctx = addFunDef funSerial funDef ctx
-
-    // __trace ("enterLetFun " + funName)
-
-    let argPats, body, ctx =
-      let ctx =
-        ctx
-        |> enterLetInit funName
-        |> startScope ExprScope
-
-      let argPats, ctx =
-        argPats |> List.mapFold nameResIrrefutablePat ctx
-
-      let body, ctx = body |> nameResExpr ctx
-      let ctx = ctx |> finishScope |> leaveLetInit
-
+      // __trace ("leaveLetFun " + funName)
       argPats, body, ctx
 
     let ctx =
-      if not hoisted then
-        ctx |> importValue funName (FunSymbol funSerial)
-      else
-        ctx
+      match isRec with
+      | NotRec -> ctx |> importValue funName (FunSymbol funSerial)
+      | _ -> ctx
 
-    // __trace ("leaveLetFun " + funName)
-
-    TLetFunStmt(funSerial, NotRec, vis, argPats, body, loc), ctx
+    TLetFunStmt(funSerial, isRec, vis, argPats, body, loc), ctx
 
 let private nameResModuleDecl (ctx: ScopeCtx) moduleDecl : TStmt * ScopeCtx =
   let (NModuleDecl (_, _, name, decls, _)) = moduleDecl
