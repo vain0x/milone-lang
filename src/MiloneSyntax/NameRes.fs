@@ -841,20 +841,20 @@ let private isPublic vis =
   | PublicVis -> true
   | _ -> false
 
-/// Exports a value symbol via current module if it's public.
-let private exportValue ctx (currentModule: NsOwner) vis name valueSymbol =
+/// Adds a value symbol to current module if public.
+let private addValueToModule ctx (currentModule: NsOwner) vis name valueSymbol =
   if isPublic vis then
     ctx |> addValueToNs currentModule name valueSymbol
   else
     ctx
 
-let private exportTy ctx currentModule vis name tySerial =
+let private addTyToModule ctx currentModule vis name tySerial =
   if isPublic vis then
     ctx |> addTyToNs currentModule name tySerial
   else
     ctx
 
-let private exportModule ctx currentModule vis name subNsOwner =
+let private addSubmoduleToModule ctx currentModule vis name subNsOwner =
   if isPublic vis then
     ctx |> addNsToNs currentModule name subNsOwner
   else
@@ -886,7 +886,7 @@ let private cdPat (currentModule: NsOwner) (ctx: ScopeCtx) pat : ScopeCtx =
     let ctx =
       ctx |> importValue (identOf name) varSymbol
 
-    exportValue ctx currentModule vis (identOf name) varSymbol
+    addValueToModule ctx currentModule vis (identOf name) varSymbol
 
   match pat with
   | NPat.Ident (vis, name) ->
@@ -946,7 +946,7 @@ let private cdStmt currentModule ctx stmt : ScopeCtx =
     let ctx =
       ctx |> importValue (identOf name) funSymbol
 
-    exportValue ctx currentModule vis (identOf name) funSymbol
+    addValueToModule ctx currentModule vis (identOf name) funSymbol
 
 let private cdAfterTyDecl (ctx: ScopeCtx) currentModule vis (name: NName) tySerial tySymbol arity : ScopeCtx =
   // __trace (
@@ -964,7 +964,7 @@ let private cdAfterTyDecl (ctx: ScopeCtx) currentModule vis (name: NName) tySeri
         DeclaredTyArities = ctx.DeclaredTyArities |> TMap.add tySerial arity }
 
   let ctx = ctx |> importTy (identOf name) tySymbol
-  exportTy ctx currentModule vis (identOf name) tySymbol
+  addTyToModule ctx currentModule vis (identOf name) tySymbol
 
 let private cdTySynonymDecl currentModule (ctx: ScopeCtx) decl : ScopeCtx =
   let vis, name, tyArgs =
@@ -1008,7 +1008,7 @@ let private cdUnionTyDecl currentModule (ctx: ScopeCtx) decl : ScopeCtx =
              |> importValue (identOf name) variantSymbol
 
            let ctx =
-             exportValue ctx currentModule vis (identOf name) (VariantSymbol variantSerial)
+             addValueToModule ctx currentModule vis (identOf name) (VariantSymbol variantSerial)
 
            (variantSerial, posOf name), ctx)
          ctx
@@ -1097,7 +1097,7 @@ let private cdModuleDecl currentModule ctx decl : ScopeCtx =
   let ctx =
     ctx |> importNsOwner (identOf name) moduleNs
 
-  exportModule ctx currentModule vis (identOf name) moduleNs
+  addSubmoduleToModule ctx currentModule vis (identOf name) moduleNs
 
 let private cdDecl (currentModule: NsOwner) (ctx: ScopeCtx) decl : ScopeCtx =
   match decl with
