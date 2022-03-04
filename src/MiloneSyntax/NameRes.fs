@@ -257,7 +257,7 @@ let private scopeMerge (first: Scope) (second: Scope) : Scope =
   let _, values2, tys2, nss2 = second
   [], mergeChain values1 values2, mergeChain tys1 tys2, mergeChain nss1 nss2
 
-let private sMerge (state: NameResState) (scopeCtx: ScopeCtx) : NameResState * _ =
+let private sMerge newRootModule (state: NameResState) (scopeCtx: ScopeCtx) : NameResState * _ =
   let s = state.ScopeCtx
 
   let globalVars, localVars =
@@ -286,7 +286,7 @@ let private sMerge (state: NameResState) (scopeCtx: ScopeCtx) : NameResState * _
         { state.ScopeCtx with
             Serial = scopeCtx.Serial
             Tys = mapAddEntries scopeCtx.NewTys s.Tys
-            RootModules = List.append scopeCtx.NewRootModules s.RootModules
+            RootModules = newRootModule :: s.RootModules
 
             // These seem inefficient but not.
             Local = scopeMerge scopeCtx.Local s.Local
@@ -352,7 +352,6 @@ type private ScopeCtx =
     NewTys: (TySerial * TyDef) list
 
     RootModules: (Ident * ModuleTySerial) list
-    NewRootModules: (Ident * ModuleTySerial) list
     CurrentModule: ModuleTySerial option
     CurrentPath: string list
     AncestralFuns: Ident list
@@ -387,7 +386,6 @@ let private emptyScopeCtx () : ScopeCtx =
     Tys = TMap.empty compare
     NewTys = []
     RootModules = []
-    NewRootModules = []
     CurrentModule = None
     CurrentPath = []
     AncestralFuns = []
@@ -2001,26 +1999,22 @@ let private nameResDecls (currentModule: NsOwner) ctx decls : TStmt list * Scope
   let ctx = resolveDefs ctx decls
   stmts, ctx
 
-let private nameResModuleRoot ctx (root: NModuleRoot) : TModule * ScopeCtx =
+let private nameResModuleRoot ctx (root: NModuleRoot) : _ * TModule * ScopeCtx =
   let docId, moduleDecl = root
+  let (NModuleDecl (_, _, name, _, _)) = moduleDecl
+  let moduleSerial, ctx = freshSerial ctx
+  let newRootModule = identOf name, moduleSerial
+
+  // __trace (
+  //   "nameResModuleRoot "
+  //   + string moduleSerial
+  //   + ":"
+  //   + identOf name
+  // )
 
   let ctx =
-    let (NModuleDecl (_, _, name, _, _)) = moduleDecl
-    let moduleSerial, ctx = freshSerial ctx
-    let entry = identOf name, moduleSerial
-
-    // __trace (
-    //   "nameResModuleRoot "
-    //   + string moduleSerial
-    //   + ":"
-    //   + identOf name
-    // )
-
-    assert (ctx.NewRootModules |> List.isEmpty)
-
     { ctx with
-        RootModules = entry :: ctx.RootModules
-        NewRootModules = [ entry ] // no need to be a list
+        RootModules = newRootModule :: ctx.RootModules
 
         DeclaredModules =
           ctx.DeclaredModules
@@ -2033,7 +2027,7 @@ let private nameResModuleRoot ctx (root: NModuleRoot) : TModule * ScopeCtx =
       Vars = emptyVars // Filled later.
       Stmts = [ stmt ] }
 
-  m, ctx
+  newRootModule, m, ctx
 
 // -----------------------------------------------
 // Interface
@@ -2050,10 +2044,10 @@ let nameRes (layers: NModuleRoot list list) : TProgram * NameResResult =
            modules
            |> List.mapFold
                 (fun (state: NameResState) moduleRoot ->
-                  let m, scopeCtx =
+                  let newModule, m, scopeCtx =
                     nameResModuleRoot state.ScopeCtx moduleRoot
 
-                  let state, localVars = sMerge state scopeCtx
+                  let state, localVars = sMerge newModule state scopeCtx
                   { m with Vars = localVars }, state)
                 state)
          (emptyState ())
