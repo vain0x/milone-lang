@@ -38,11 +38,24 @@ let private listCollectFold (mapFolder: 'S -> 'T -> 'U list * 'S) (state: 'S) (x
 
 let private identOf (name: NName) = fst name
 
-type private PosId = int64
+/// Identity of token based on its text position. (Byte index is better though.)
+///
+/// While both row number  and column number are 32-bit,
+/// PosId is compressed to 32-bit.
+///
+/// Heuristically most of source files follow either:
+///    1. y <= 2^23 and x <= 2^9 (manually written)
+///    2. x <= 2^23 and y <= 2^9 (machinery generated)
+/// (noting that 2^9 ~ 500, 2^23 ~ 8M.)
+///
+/// By rotating x by 23 bits up, y and x likely become orthogonal.
+type private PosId = uint
 
 let private posOf (name: NName) : PosId =
   let _, (Loc (_, y, x)) = name
-  ((int64 y) <<< 32) ||| int64 x
+  let y = uint y
+  let x = uint x
+  y ^^^ ((x <<< 23) ||| (x >>> 9))
 
 let private npLoc pat : Loc =
   match pat with
