@@ -365,7 +365,6 @@ type private ScopeCtx =
     NewTys: (TySerial * TyDef) list
 
     RootModules: (Ident * ModuleTySerial) list
-    CurrentModule: ModuleTySerial option
     CurrentPath: string list
     AncestralFuns: Ident list
 
@@ -399,7 +398,6 @@ let private emptyScopeCtx () : ScopeCtx =
     Tys = TMap.empty compare
     NewTys = []
     RootModules = []
-    CurrentModule = None
     CurrentPath = []
     AncestralFuns = []
     VarNs = TMap.empty nsOwnerCompare
@@ -619,22 +617,17 @@ let private finishScope (ctx: ScopeCtx) : ScopeCtx =
   | _ :: kinds, _ :: varScopes, _ :: tyScopes, _ :: nsScopes ->
     { ctx with Local = kinds, varScopes, tyScopes, nsScopes }
 
-let private enterModule (moduleName: Ident) (moduleTySerial: Serial) (ctx: ScopeCtx) =
-  let parent = ctx.CurrentModule, ctx.CurrentPath
+let private enterModule (moduleName: Ident) (ctx: ScopeCtx) =
+  let parent = ctx.CurrentPath
 
   let ctx =
-    { ctx with
-        CurrentModule = Some moduleTySerial
-        CurrentPath = List.append ctx.CurrentPath [ moduleName ] }
+    { ctx with CurrentPath = List.append ctx.CurrentPath [ moduleName ] }
 
   parent, ctx
 
 let private leaveModule parent (ctx: ScopeCtx) =
-  let currentModule, currentPath = parent
-
-  { ctx with
-      CurrentModule = currentModule
-      CurrentPath = currentPath }
+  let currentPath = parent
+  { ctx with CurrentPath = currentPath }
 
 // -----------------------------------------------
 // Resolve
@@ -1959,11 +1952,11 @@ let private nameResModuleDecl (ctx: ScopeCtx) moduleDecl : TStmt * ScopeCtx =
   let parent, ctx =
     ctx
     |> startScope ExprScope
-    |> enterModule (identOf name) moduleSerial
+    |> enterModule (identOf name)
 
   let ctx =
     // Open the parent module (and modules with the same path).
-    let _, parentPath = parent
+    let parentPath = parent
 
     resolveModulePath parentPath ctx
     |> List.fold (fun ctx moduleTySerial -> openModule moduleTySerial ctx) ctx
