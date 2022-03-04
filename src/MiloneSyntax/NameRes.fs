@@ -1983,10 +1983,10 @@ let nameRes (layers: NModuleRoot list list) : TProgram * NameResResult =
            modules
            |> List.mapFold
                 (fun (state: NameResState) moduleRoot ->
-                  let newModule, m, ctx =
+                  let newRootModule, m, ctx =
                     nameResModuleRoot state.ScopeCtx moduleRoot
 
-                  let state, localVars = sMerge newModule state ctx
+                  let state, localVars = sMerge newRootModule state ctx
                   { m with Vars = localVars }, state)
                 state)
          (emptyState ())
