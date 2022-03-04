@@ -1811,69 +1811,82 @@ let private nameResExpr (ctx: ScopeCtx) (expr: NExpr) : TExpr * ScopeCtx =
     let r, ctx = r |> nameResExpr ctx
     TNodeExpr(TSliceEN, [ l; r; x ], noTy, loc), ctx
 
+let private nameResLetValStmt (ctx: ScopeCtx) stmt : TStmt * ScopeCtx =
+  let pat, init, loc =
+    match stmt with
+    | NStmt.LetVal (pat, init, loc) -> pat, init, loc
+    | _ -> unreachable ()
+
+  let ctx = ctx |> startScope ExprScope
+  let init, ctx = init |> nameResExpr ctx
+  let ctx = ctx |> finishScope
+
+  let pat, ctx = pat |> nameResIrrefutablePat ctx
+  TLetValStmt(pat, init, loc), ctx
+
+let private nameResLetFunStmt (ctx: ScopeCtx) stmt : TStmt * ScopeCtx =
+  let isRec, vis, name, argPats, body, loc =
+    match stmt with
+    | NStmt.LetFun (isRec, vis, name, argPats, body, loc) -> isRec, vis, name, argPats, body, loc
+    | _ -> unreachable ()
+
+  let vis, (funSerial, ctx) =
+    match ctx.DeclaredFuns |> TMap.tryFind (posOf name) with
+    | Some funSerial -> vis, (funSerial, ctx)
+    | None -> PrivateVis, freshFunSerial ctx
+
+  let funName = identOf name
+
+  let ctx =
+    let funDef: FunDef =
+      { Name = funName
+        Arity = List.length argPats
+        Ty = TyScheme([], noTy)
+        Abi = MiloneAbi
+        Linkage = makeLinkage vis funName ctx
+        Prefix = ctx.AncestralFuns
+        Loc = loc }
+
+    addFunDef funSerial funDef ctx
+
+  // Import the function itself for recursive referencing.
+  let ctx =
+    match isRec with
+    | IsRec -> ctx |> importValue funName (FunSymbol funSerial)
+    | _ -> ctx
+
+  let argPats, body, ctx =
+    // __trace ("enterLetFun " + funName)
+
+    let ctx =
+      ctx
+      |> enterLetInit funName
+      |> startScope ExprScope
+
+    let argPats, ctx =
+      argPats |> List.mapFold nameResIrrefutablePat ctx
+
+    let body, ctx = body |> nameResExpr ctx
+    let ctx = ctx |> finishScope |> leaveLetInit
+
+    // __trace ("leaveLetFun " + funName)
+    argPats, body, ctx
+
+  let ctx =
+    match isRec with
+    | NotRec -> ctx |> importValue funName (FunSymbol funSerial)
+    | _ -> ctx
+
+  TLetFunStmt(funSerial, isRec, vis, argPats, body, loc), ctx
+
 let private nameResStmt ctx (stmt: NStmt) : TStmt * ScopeCtx =
   match stmt with
   | NStmt.Expr expr ->
     let expr, ctx = expr |> nameResExpr ctx
     TExprStmt expr, ctx
 
-  | NStmt.LetVal (pat, body, loc) ->
-    let ctx = ctx |> startScope ExprScope
-    let body, ctx = body |> nameResExpr ctx
-    let ctx = ctx |> finishScope
-
-    let pat, ctx = pat |> nameResIrrefutablePat ctx
-    TLetValStmt(pat, body, loc), ctx
-
-  | NStmt.LetFun (isRec, vis, name, argPats, body, loc) ->
-    let vis, (funSerial, ctx) =
-      match ctx.DeclaredFuns |> TMap.tryFind (posOf name) with
-      | Some funSerial -> vis, (funSerial, ctx)
-      | None -> PrivateVis, freshFunSerial ctx
-
-    let funName = identOf name
-
-    let ctx =
-      let funDef: FunDef =
-        { Name = funName
-          Arity = List.length argPats
-          Ty = TyScheme([], noTy)
-          Abi = MiloneAbi
-          Linkage = makeLinkage vis funName ctx
-          Prefix = ctx.AncestralFuns
-          Loc = loc }
-
-      addFunDef funSerial funDef ctx
-
-    // Import the function itself for recursive referencing.
-    let ctx =
-      match isRec with
-      | IsRec -> ctx |> importValue funName (FunSymbol funSerial)
-      | _ -> ctx
-
-    let argPats, body, ctx =
-      // __trace ("enterLetFun " + funName)
-
-      let ctx =
-        ctx
-        |> enterLetInit funName
-        |> startScope ExprScope
-
-      let argPats, ctx =
-        argPats |> List.mapFold nameResIrrefutablePat ctx
-
-      let body, ctx = body |> nameResExpr ctx
-      let ctx = ctx |> finishScope |> leaveLetInit
-
-      // __trace ("leaveLetFun " + funName)
-      argPats, body, ctx
-
-    let ctx =
-      match isRec with
-      | NotRec -> ctx |> importValue funName (FunSymbol funSerial)
-      | _ -> ctx
-
-    TLetFunStmt(funSerial, isRec, vis, argPats, body, loc), ctx
+  | NStmt.LetVal _ -> nameResLetValStmt ctx stmt
+  | NStmt.LetFun _ -> nameResLetFunStmt ctx stmt
 
 let private nameResModuleDecl (ctx: ScopeCtx) moduleDecl : TStmt * ScopeCtx =
   let (NModuleDecl (_, _, name, decls, _)) = moduleDecl
