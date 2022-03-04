@@ -485,6 +485,19 @@ type DSymbol =
 type private DSymbolOccurrence = DSymbol * DefOrUse * Loc2
 
 [<NoComparison>]
+type private ValueSymbol =
+  | VarSymbol of varSerial: VarSerial
+  | FunSymbol of funSerial: FunSerial
+  | VariantSymbol of variantSerial: VariantSerial
+
+[<NoComparison>]
+type private TySymbol =
+  | UnivTySymbol of univTySerial: TySerial
+  | SynonymTySymbol of synonymTySerial: TySerial
+  | UnionTySymbol of unionTySerial: TySerial
+  | RecordTySymbol of recordTySerial: TySerial
+
+[<NoComparison>]
 type Symbol =
   private
   | DiscardSymbol

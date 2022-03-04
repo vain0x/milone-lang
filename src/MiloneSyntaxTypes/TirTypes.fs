@@ -184,19 +184,6 @@ type VariantDef =
     PayloadTy: Ty
     Loc: Loc }
 
-[<NoComparison>]
-type ValueSymbol =
-  | VarSymbol of varSerial: VarSerial
-  | FunSymbol of funSerial: FunSerial
-  | VariantSymbol of variantSerial: VariantSerial
-
-[<NoComparison>]
-type TySymbol =
-  | UnivTySymbol of univTySerial: TySerial
-  | SynonymTySymbol of synonymTySerial: TySerial
-  | UnionTySymbol of unionTySerial: TySerial
-  | RecordTySymbol of recordTySerial: TySerial
-
 /// Context of TIR program.
 [<RequireQualifiedAccess; NoEquality; NoComparison>]
 type TirCtx =
