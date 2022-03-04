@@ -436,22 +436,22 @@ let private freshVariantSerial (ctx: ScopeCtx) =
   let serial, ctx = freshSerial ctx
   VariantSerial serial, ctx
 
-let private addLog (log: NameResLog) (loc: Loc) (ctx: ScopeCtx) =
+let private addLog (ctx: ScopeCtx) (log: NameResLog) (loc: Loc) =
   { ctx with NewLogs = (log, loc) :: ctx.NewLogs }
 
 let private errorTy ctx log loc : Ty * ScopeCtx =
-  let ctx = ctx |> addLog log loc
+  let ctx = addLog ctx log loc
   tyError loc, ctx
 
 let private errorPat ctx log loc : TPat * ScopeCtx =
-  let ctx = addLog log loc ctx
+  let ctx = addLog ctx log loc
   tpAbort noTy loc, ctx
 
 let private errorExpr ctx log loc : TExpr * ScopeCtx =
-  let ctx = addLog log loc ctx
+  let ctx = addLog ctx log loc
   txAbort loc, ctx
 
-let private makeLinkage vis ident (ctx: ScopeCtx) =
+let private makeLinkage (ctx: ScopeCtx) vis ident =
   match vis with
   | PublicVis -> ExternalLinkage(S.concat "_" ctx.CurrentPath + "_" + ident)
   | PrivateVis -> InternalLinkage
@@ -459,23 +459,23 @@ let private makeLinkage vis ident (ctx: ScopeCtx) =
 /// Adds a definition of var (not regarding static or not).
 ///
 /// This doesn't imply it's added to any scope or namespace.
-let private addVarDef varSerial (varDef: VarDef) (ctx: ScopeCtx) : ScopeCtx =
+let private addVarDef (ctx: ScopeCtx) varSerial (varDef: VarDef) : ScopeCtx =
   { ctx with NewVars = (varSerial, varDef) :: ctx.NewVars }
 
-let private addFunDef funSerial funDef (ctx: ScopeCtx) : ScopeCtx =
+let private addFunDef (ctx: ScopeCtx) funSerial funDef : ScopeCtx =
   { ctx with NewFuns = (funSerial, funDef) :: ctx.NewFuns }
 
-let private addVariantDef variantSerial variantDef (ctx: ScopeCtx) : ScopeCtx =
+let private addVariantDef (ctx: ScopeCtx) variantSerial variantDef : ScopeCtx =
   { ctx with NewVariants = (variantSerial, variantDef) :: ctx.NewVariants }
 
 /// Adds a definition of type symbol.
-let private addTyDef tySerial tyDef (ctx: ScopeCtx) : ScopeCtx =
+let private addTyDef (ctx: ScopeCtx) tySerial tyDef : ScopeCtx =
   { ctx with
       Tys = ctx.Tys |> TMap.add tySerial tyDef
       NewTys = (tySerial, tyDef) :: ctx.NewTys }
 
 /// Makes a value symbol accessible from a namespace.
-let private addValueToNs (nsOwner: NsOwner) alias valueSymbol (ctx: ScopeCtx) : ScopeCtx =
+let private addValueToNs (ctx: ScopeCtx) (nsOwner: NsOwner) alias valueSymbol : ScopeCtx =
   // __trace (
   //   "addVarToNs "
   //   + nsOwnerDump nsOwner
@@ -488,7 +488,7 @@ let private addValueToNs (nsOwner: NsOwner) alias valueSymbol (ctx: ScopeCtx) : 
   { ctx with ValueNs = ctx.ValueNs |> nsAdd nsOwner alias valueSymbol }
 
 /// Makes a type symbol accessible from a namespace.
-let private addTyToNs (nsOwner: NsOwner) alias tySymbol (ctx: ScopeCtx) : ScopeCtx =
+let private addTyToNs (ctx: ScopeCtx) (nsOwner: NsOwner) alias tySymbol : ScopeCtx =
   // __trace (
   //   "addTyToNs "
   //   + nsOwnerDump nsOwner
@@ -508,7 +508,7 @@ let private addTyToNs (nsOwner: NsOwner) alias tySymbol (ctx: ScopeCtx) : ScopeC
 /// Makes a child namespace accessible from a namespace.
 ///
 /// `<parent>.<alias>` can be resolved to `<child>`.
-let private addNsToNs (parentNsOwner: NsOwner) alias (childNsOwner: NsOwner) (ctx: ScopeCtx) : ScopeCtx =
+let private addNsToNs (ctx: ScopeCtx) (parentNsOwner: NsOwner) alias (childNsOwner: NsOwner) : ScopeCtx =
   // __trace (
   //   "addNsToNs "
   //   + nsOwnerDump parentNsOwner
@@ -524,7 +524,7 @@ let private addNsToNs (parentNsOwner: NsOwner) alias (childNsOwner: NsOwner) (ct
         |> nsMerge parentNsOwner alias childNsOwner }
 
 /// Adds a value symbol to current scope.
-let private importValue alias (symbol: ValueSymbol) (ctx: ScopeCtx) : ScopeCtx =
+let private importValue (ctx: ScopeCtx) alias (symbol: ValueSymbol) : ScopeCtx =
   assert (alias <> "_")
 
   let scope: Scope =
@@ -540,7 +540,7 @@ let private importValue alias (symbol: ValueSymbol) (ctx: ScopeCtx) : ScopeCtx =
   { ctx with Local = scope }
 
 /// Adds a type symbol to current scope.
-let private importTy alias (symbol: TySymbol) (ctx: ScopeCtx) : ScopeCtx =
+let private importTy (ctx: ScopeCtx) alias (symbol: TySymbol) : ScopeCtx =
   let scope: Scope =
     match ctx.Local with
     | kinds, valueScopes, (tyMap :: tyScopes), (nsMap :: nsScopes) ->
@@ -557,7 +557,7 @@ let private importTy alias (symbol: TySymbol) (ctx: ScopeCtx) : ScopeCtx =
   { ctx with Local = scope }
 
 /// Adds an NsOwner to current scope.
-let private importNsOwner alias nsOwner (ctx: ScopeCtx) : ScopeCtx =
+let private importNsOwner (ctx: ScopeCtx) alias nsOwner : ScopeCtx =
   let scope: Scope =
     match ctx.Local with
     | kinds, valueScopes, tyScopes, ((map :: nsScopes) as allNsScopes) ->
@@ -576,33 +576,36 @@ let private importNsOwner alias nsOwner (ctx: ScopeCtx) : ScopeCtx =
   { ctx with Local = scope }
 
 /// Imports all members of the module to current scope.
-let private openModule moduleSerial (ctx: ScopeCtx) =
+let private openModule (ctx: ScopeCtx) moduleSerial =
   // Import vars.
   let ctx =
     ctx.ValueNs
     |> nsFind (nsOwnerOfModule moduleSerial)
-    |> TMap.fold (fun ctx alias symbol -> ctx |> importValue alias symbol) ctx
+    |> TMap.fold importValue ctx
 
   // Import tys.
   let ctx =
     ctx.TyNs
     |> nsFind (nsOwnerOfModule moduleSerial)
-    |> TMap.fold (fun ctx alias symbol -> ctx |> importTy alias symbol) ctx
+    |> TMap.fold importTy ctx
 
   // Import subnamespaces.
   let ctx =
     ctx.NsNs
     |> nsFind (nsOwnerOfModule moduleSerial)
-    |> TMap.fold (fun ctx alias nsOwners -> ctx |> forList (importNsOwner alias) nsOwners) ctx
+    |> TMap.fold
+         (fun ctx alias nsOwners ->
+           nsOwners
+           |> List.fold (fun ctx nsOwner -> importNsOwner ctx alias nsOwner) ctx)
+         ctx
 
   ctx
 
-let private openModules moduleSerials ctx =
-  moduleSerials
-  |> List.fold (fun ctx moduleSerial -> ctx |> openModule moduleSerial) ctx
+let private openModules ctx moduleSerials  =
+  moduleSerials |> List.fold openModule ctx
 
 /// Called on enter the init of let-fun expressions.
-let private enterLetInit funName (ctx: ScopeCtx) : ScopeCtx =
+let private enterLetInit (ctx: ScopeCtx) funName : ScopeCtx =
   { ctx with AncestralFuns = funName :: ctx.AncestralFuns }
 
 let private leaveLetInit (ctx: ScopeCtx) : ScopeCtx =
@@ -614,7 +617,7 @@ let private isTyDeclScope (ctx: ScopeCtx) =
   | _ -> false
 
 /// Starts a new scope.
-let private startScope kind (ctx: ScopeCtx) : ScopeCtx =
+let private startScope (ctx: ScopeCtx) kind : ScopeCtx =
   let kinds, valueScopes, tyScopes, nsScopes = ctx.Local
 
   { ctx with
@@ -630,7 +633,7 @@ let private finishScope (ctx: ScopeCtx) : ScopeCtx =
   | _ :: kinds, _ :: valueScopes, _ :: tyScopes, _ :: nsScopes ->
     { ctx with Local = kinds, valueScopes, tyScopes, nsScopes }
 
-let private enterModule (moduleName: Ident) (ctx: ScopeCtx) =
+let private enterModule (ctx: ScopeCtx) (moduleName: Ident) =
   let parent = ctx.CurrentPath
 
   let ctx =
@@ -638,7 +641,7 @@ let private enterModule (moduleName: Ident) (ctx: ScopeCtx) =
 
   parent, ctx
 
-let private leaveModule parent (ctx: ScopeCtx) =
+let private leaveModule (ctx: ScopeCtx) parent =
   let currentPath = parent
   { ctx with CurrentPath = currentPath }
 
@@ -650,7 +653,7 @@ let private leaveModule parent (ctx: ScopeCtx) =
 /// that can be accessible by the path.
 ///
 /// Remarks: Multiple module with same name can exist at a path.
-let private resolveModulePath (path: Ident list) (ctx: ScopeCtx) : ModuleTySerial list =
+let private resolveModulePath (ctx: ScopeCtx) (path: Ident list) : ModuleTySerial list =
   match path with
   | [] -> []
   | head :: tail ->
@@ -667,8 +670,7 @@ let private resolveModulePath (path: Ident list) (ctx: ScopeCtx) : ModuleTySeria
       | [] -> [ serial ]
 
       | ident :: tail ->
-        ctx
-        |> resolveQualifiedNsOwner (nsOwnerOfModule serial) ident
+        resolveQualifiedNsOwner ctx (nsOwnerOfModule serial) ident
         |> List.collect (fun nsOwner ->
           match nsOwnerAsModule nsOwner with
           | Some serial -> go serial tail
@@ -678,35 +680,35 @@ let private resolveModulePath (path: Ident list) (ctx: ScopeCtx) : ModuleTySeria
     |> List.collect (fun serial -> go serial tail)
 
 /// Resolves an ident qualified by the specified namespace to a value symbol.
-let private resolveQualifiedValue nsOwner ident (ctx: ScopeCtx) : ValueSymbol option =
+let private resolveQualifiedValue (ctx: ScopeCtx) nsOwner ident : ValueSymbol option =
   ctx.ValueNs
   |> nsFind nsOwner
   |> TMap.tryFind ident
 
 /// Resolves an ident qualified by the specified namespace to a type symbol.
-let private resolveQualifiedTy nsOwner ident (ctx: ScopeCtx) : TySymbol option =
+let private resolveQualifiedTy (ctx: ScopeCtx) nsOwner ident : TySymbol option =
   ctx.TyNs |> nsFind nsOwner |> TMap.tryFind ident
 
 /// Resolves a qualified NsOwner to all candidates.
-let private resolveQualifiedNsOwner nsOwner ident (ctx: ScopeCtx) : NsOwner list =
+let private resolveQualifiedNsOwner (ctx: ScopeCtx) nsOwner ident : NsOwner list =
   ctx.NsNs |> nsFind nsOwner |> Multimap.find ident
 
 /// Resolves an unqualified ident to a value symbol from current scope.
-let private resolveUnqualifiedValue ident (ctx: ScopeCtx) =
+let private resolveUnqualifiedValue (ctx: ScopeCtx) ident =
   let _, valueScopes, _, _ = ctx.Local
 
   valueScopes
   |> List.tryPick (fun map -> map |> TMap.tryFind ident)
 
 /// Resolves an unqualified ident to a type symbol from current scope.
-let private resolveUnqualifiedTy ident (ctx: ScopeCtx) : TySymbol option =
+let private resolveUnqualifiedTy (ctx: ScopeCtx) ident : TySymbol option =
   let _, _, tyScopes, _ = ctx.Local
 
   tyScopes
   |> List.tryPick (fun map -> map |> TMap.tryFind ident)
 
 /// Resolves an unqualified NsOwner to all candidates.
-let private resolveUnqualifiedNsOwner ident (ctx: ScopeCtx) : NsOwner list =
+let private resolveUnqualifiedNsOwner (ctx: ScopeCtx) ident : NsOwner list =
   let _, _, _, nsScopes = ctx.Local
 
   nsScopes
@@ -714,28 +716,27 @@ let private resolveUnqualifiedNsOwner ident (ctx: ScopeCtx) : NsOwner list =
   |> Option.defaultValue []
 
 /// Resolves qualifiers of type.
-let private resolveNavTy quals last ctx : TySymbol option * ScopeCtx =
+let private resolveNavTy ctx quals last : TySymbol option * ScopeCtx =
   match quals with
-  | [] -> ctx |> resolveUnqualifiedTy last, ctx
+  | [] -> resolveUnqualifiedTy ctx last, ctx
 
   | head :: tail ->
     // Resolve head.
-    let nsOwners = ctx |> resolveUnqualifiedNsOwner head
+    let nsOwners = resolveUnqualifiedNsOwner ctx head
 
     // Resolve tail.
-    let rec resolveTyPath (nsOwner: NsOwner) path ctx =
+    let rec resolveTyPath ctx (nsOwner: NsOwner) path =
       match path with
       | [] -> [ nsOwner ]
 
       | ident :: path ->
-        ctx
-        |> resolveQualifiedNsOwner nsOwner ident
-        |> List.collect (fun subNsOwner -> resolveTyPath subNsOwner path ctx)
+        resolveQualifiedNsOwner ctx nsOwner ident
+        |> List.collect (fun subNsOwner -> resolveTyPath ctx subNsOwner path )
 
     let tySymbolOpt =
       nsOwners
-      |> List.collect (fun nsOwner -> resolveTyPath nsOwner tail ctx)
-      |> List.tryPick (fun nsOwner -> resolveQualifiedTy nsOwner last ctx)
+      |> List.collect (fun nsOwner -> resolveTyPath ctx nsOwner tail)
+      |> List.tryPick (fun nsOwner -> resolveQualifiedTy ctx nsOwner last)
 
     tySymbolOpt, ctx
 
@@ -751,12 +752,12 @@ let private resolveTy ctx ty selfTyArgs : Ty * ScopeCtx =
       let resolved =
         match selfTyArgs |> TMap.tryFind ident with
         | (Some _) as some -> some
-        | None -> resolveUnqualifiedTy ident ctx
+        | None -> resolveUnqualifiedTy ctx ident
 
       match resolved with
       | Some (UnivTySymbol tySerial) -> tyUniv tySerial ident loc, ctx
 
-      | _ when ctx |> isTyDeclScope -> errorTy ctx (UndefinedTyError ident) loc
+      | _ when isTyDeclScope ctx -> errorTy ctx (UndefinedTyError ident) loc
 
       | _ ->
         // Define new type variable on the fly.
@@ -765,9 +766,8 @@ let private resolveTy ctx ty selfTyArgs : Ty * ScopeCtx =
         // __trace ("typeVar " + string tySerial + ":" + ident)
 
         let ctx =
-          ctx
-          |> addTyDef tySerial (UnivTyDef(ident, loc))
-          |> importTy ident (UnivTySymbol tySerial)
+          let ctx = addTyDef ctx tySerial (UnivTyDef(ident, loc))
+          importTy ctx ident (UnivTySymbol tySerial)
 
         tyUniv tySerial ident loc, ctx
 
@@ -781,7 +781,7 @@ let private resolveTy ctx ty selfTyArgs : Ty * ScopeCtx =
 
       let symbolOpt, ctx =
         let quals = quals |> List.map identOf
-        resolveNavTy quals ident ctx
+        resolveNavTy ctx quals ident
 
       let getArity tySerial =
         match ctx.DeclaredTyArities |> TMap.tryFind tySerial with
@@ -859,20 +859,19 @@ let private isPublic vis =
 /// Adds a value symbol to current module if public.
 let private addValueToModule ctx (currentModule: NsOwner) vis alias valueSymbol =
   if isPublic vis then
-    ctx
-    |> addValueToNs currentModule alias valueSymbol
+    addValueToNs ctx currentModule alias valueSymbol
   else
     ctx
 
 let private addTyToModule ctx currentModule vis alias tySerial =
   if isPublic vis then
-    ctx |> addTyToNs currentModule alias tySerial
+    addTyToNs ctx currentModule alias tySerial
   else
     ctx
 
 let private addSubmoduleToModule ctx currentModule vis alias subNsOwner =
   if isPublic vis then
-    ctx |> addNsToNs currentModule alias subNsOwner
+    addNsToNs ctx currentModule alias subNsOwner
   else
     ctx
 
@@ -889,7 +888,7 @@ let private cdPat (currentModule: NsOwner) (ctx: ScopeCtx) pat : ScopeCtx =
     // )
 
     let ctx =
-      let linkage = makeLinkage vis (identOf name) ctx
+      let linkage = makeLinkage ctx vis (identOf name)
 
       { ctx with
           DeclaredVars =
@@ -899,14 +898,13 @@ let private cdPat (currentModule: NsOwner) (ctx: ScopeCtx) pat : ScopeCtx =
             ctx.NewVarMeta
             |> TMap.add varSerial (IsStatic, linkage) }
 
-    let ctx =
-      ctx |> importValue (identOf name) varSymbol
+    let ctx = importValue ctx (identOf name) varSymbol
 
     addValueToModule ctx currentModule vis (identOf name) varSymbol
 
   match pat with
   | NPat.Ident (vis, name) ->
-    match ctx |> resolveUnqualifiedValue (identOf name) with
+    match resolveUnqualifiedValue ctx (identOf name) with
     | Some (VariantSymbol _) -> ctx
     | _ -> onVar ctx vis name
 
@@ -960,7 +958,7 @@ let private cdStmt currentModule ctx stmt : ScopeCtx =
             |> TMap.add (posOf name) funSerial }
 
     let ctx =
-      ctx |> importValue (identOf name) funSymbol
+      importValue ctx (identOf name) funSymbol
 
     addValueToModule ctx currentModule vis (identOf name) funSymbol
 
@@ -979,7 +977,7 @@ let private cdAfterTyDecl (ctx: ScopeCtx) currentModule vis name tySerial tySymb
           |> TMap.add (posOf name) (tySerial, tySymbol)
         DeclaredTyArities = ctx.DeclaredTyArities |> TMap.add tySerial arity }
 
-  let ctx = ctx |> importTy (identOf name) tySymbol
+  let ctx = importTy ctx (identOf name) tySymbol
   addTyToModule ctx currentModule vis (identOf name) tySymbol
 
 let private cdTySynonymDecl currentModule (ctx: ScopeCtx) decl : ScopeCtx =
@@ -1019,9 +1017,8 @@ let private cdUnionTyDecl currentModule (ctx: ScopeCtx) decl : ScopeCtx =
            //  )
 
            let ctx =
-             ctx
-             |> addValueToNs (nsOwnerOfTy tySerial) (identOf name) variantSymbol
-             |> importValue (identOf name) variantSymbol
+             let ctx = addValueToNs ctx (nsOwnerOfTy tySerial) (identOf name) variantSymbol
+             importValue ctx (identOf name) variantSymbol
 
            let ctx =
              addValueToModule ctx currentModule vis (identOf name) (VariantSymbol variantSerial)
@@ -1045,7 +1042,7 @@ let private cdRecordTyDecl currentModule ctx decl : ScopeCtx =
 
   let ctx =
     if tyArgs |> List.isEmpty |> not then
-      addLog UnimplGenericTyError loc ctx
+      addLog ctx UnimplGenericTyError loc
     else
       ctx
 
@@ -1056,7 +1053,7 @@ let private cdRecordTyDecl currentModule ctx decl : ScopeCtx =
 
 let private cdOpenDecl ctx path loc : ScopeCtx =
   let path = path |> List.map identOf
-  let moduleSerials = ctx |> resolveModulePath path
+  let moduleSerials = resolveModulePath ctx path
 
   // __trace (
   //   "cdOpenDecl "
@@ -1067,9 +1064,9 @@ let private cdOpenDecl ctx path loc : ScopeCtx =
 
   let ctx =
     if List.isEmpty moduleSerials then
-      ctx |> addLog ModulePathNotFoundError loc
+      addLog ctx ModulePathNotFoundError loc
     else
-      ctx |> openModules moduleSerials
+      openModules ctx moduleSerials
 
   ctx
 
@@ -1081,15 +1078,15 @@ let private cdModuleSynonymDecl ctx name path : ScopeCtx =
   | _ ->
     let moduleSerials =
       let path = path |> List.map identOf
-      ctx |> resolveModulePath path
+      resolveModulePath ctx path
 
     if List.isEmpty moduleSerials then
       let _, loc = name
-      ctx |> addLog ModulePathNotFoundError loc
+      addLog ctx ModulePathNotFoundError loc
     else
       // Import all modules that are referred by the path via the specified alias.
       moduleSerials
-      |> List.fold (fun ctx moduleSerial -> importNsOwner (identOf name) (nsOwnerOfModule moduleSerial) ctx) ctx
+      |> List.fold (fun ctx moduleSerial -> importNsOwner ctx (identOf name) (nsOwnerOfModule moduleSerial)) ctx
 
 let private cdModuleDecl currentModule ctx decl : ScopeCtx =
   let (NModuleDecl (_, vis, name, _, _)) = decl
@@ -1111,7 +1108,7 @@ let private cdModuleDecl currentModule ctx decl : ScopeCtx =
           |> TMap.add (posOf name) moduleSerial }
 
   let ctx =
-    ctx |> importNsOwner (identOf name) moduleNs
+    importNsOwner ctx (identOf name) moduleNs
 
   addSubmoduleToModule ctx currentModule vis (identOf name) moduleNs
 
@@ -1159,7 +1156,7 @@ let private rdTySynonymDecl (ctx: ScopeCtx) decl : ScopeCtx =
 
   let tySerial, _ = ctx.DeclaredTys |> mapFind (posOf name)
 
-  let ctx = ctx |> startScope TyDeclScope
+  let ctx = startScope ctx TyDeclScope
   let tyArgSerials, tyArgToSerials, ctx = defineTyArgs ctx tyArgs
 
   let bodyTy, ctx =
@@ -1173,7 +1170,8 @@ let private rdTySynonymDecl (ctx: ScopeCtx) decl : ScopeCtx =
   let tyDef =
     SynonymTyDef(identOf name, tyArgSerials, bodyTy, loc)
 
-  addTyDef tySerial tyDef ctx |> finishScope
+  let ctx = addTyDef ctx tySerial tyDef
+  finishScope ctx
 
 let private rdUnionTyDecl (ctx: ScopeCtx) decl : ScopeCtx =
   let name, tyArgs, variants, loc =
@@ -1183,7 +1181,7 @@ let private rdUnionTyDecl (ctx: ScopeCtx) decl : ScopeCtx =
 
   let tySerial, _ = ctx.DeclaredTys |> mapFind (posOf name)
 
-  let ctx = ctx |> startScope TyDeclScope
+  let ctx = startScope ctx TyDeclScope
   let tyArgSerials, tyArgToSerials, ctx = defineTyArgs ctx tyArgs
 
   let variants, ctx =
@@ -1236,7 +1234,8 @@ let private rdUnionTyDecl (ctx: ScopeCtx) decl : ScopeCtx =
     let variantSerials = variants |> List.map fst
     UnionTyDef(identOf name, tyArgSerials, variantSerials, loc)
 
-  addTyDef tySerial tyDef ctx |> finishScope
+  let ctx = addTyDef ctx tySerial tyDef
+  finishScope ctx
 
 let private rdRecordTyDecl (ctx: ScopeCtx) decl : ScopeCtx =
   let name, tyArgs, fields, repr, loc =
@@ -1246,7 +1245,7 @@ let private rdRecordTyDecl (ctx: ScopeCtx) decl : ScopeCtx =
 
   let tySerial, _ = ctx.DeclaredTys |> mapFind (posOf name)
 
-  let ctx = ctx |> startScope TyDeclScope
+  let ctx = startScope ctx TyDeclScope
   let tyArgSerials, tyArgToSerials, ctx = defineTyArgs ctx tyArgs
 
   let fields, ctx =
@@ -1266,7 +1265,8 @@ let private rdRecordTyDecl (ctx: ScopeCtx) decl : ScopeCtx =
   let tyDef =
     RecordTyDef(identOf name, tyArgSerials, fields, repr, loc)
 
-  addTyDef tySerial tyDef ctx |> finishScope
+  let ctx = addTyDef ctx tySerial tyDef
+  finishScope ctx
 
 let private rdDecl ctx decl =
   match decl with
@@ -1311,12 +1311,13 @@ let private doResolveVarInPat (ctx: ScopeCtx) name : VarSerial * ScopeCtx =
         Loc = loc }
 
     let ctx =
-      { ctx with
-          PatScope =
-            ctx.PatScope
-            |> TMap.add ident (varSerial, loc, []) }
-      |> addVarDef varSerial varDef
-      |> importValue ident (VarSymbol varSerial)
+      let ctx =
+        { ctx with
+            PatScope =
+              ctx.PatScope
+              |> TMap.add ident (varSerial, loc, []) }
+      let ctx = addVarDef ctx varSerial varDef
+      importValue ctx ident (VarSymbol varSerial)
 
     varSerial, ctx
 
@@ -1334,7 +1335,7 @@ let private nameResIdentPat ctx vis name : TPat * ScopeCtx =
   assert (identOf name <> "_")
   let _, loc = name
 
-  match ctx |> resolveUnqualifiedValue (identOf name) with
+  match resolveUnqualifiedValue ctx (identOf name) with
   | Some (VariantSymbol variantSerial) -> TVariantPat(variantSerial, noTy, loc), ctx
 
   | _ ->
@@ -1347,14 +1348,13 @@ let private nameResNavPat ctx pat : TPat * ScopeCtx =
   /// Returns (scopeOpt, pat).
   /// scopeOpt is `Some s` if pat is resolved to scope `s`.
   /// `pat` is also updated by resolving inner qualifiers as possible.
-  let rec resolvePatAsNsOwners pat ctx : NsOwner list =
+  let rec resolvePatAsNsOwners ctx pat : NsOwner list =
     match pat with
-    | NPat.Ident (_, name) -> ctx |> resolveUnqualifiedNsOwner (identOf name)
+    | NPat.Ident (_, name) -> resolveUnqualifiedNsOwner ctx (identOf name)
 
     | NPat.Nav (l, r, _) ->
-      ctx
-      |> resolvePatAsNsOwners l
-      |> List.collect (fun nsOwner -> ctx |> resolveQualifiedNsOwner nsOwner (identOf r))
+      resolvePatAsNsOwners ctx l
+      |> List.collect (fun nsOwner -> resolveQualifiedNsOwner ctx nsOwner (identOf r))
 
     | _ -> []
 
@@ -1364,9 +1364,9 @@ let private nameResNavPat ctx pat : TPat * ScopeCtx =
     | _ -> unreachable ()
 
   let patOpt =
-    resolvePatAsNsOwners l ctx
+    resolvePatAsNsOwners ctx l
     |> List.tryPick (fun nsOwner ->
-      match ctx |> resolveQualifiedValue nsOwner (identOf r) with
+      match resolveQualifiedValue ctx nsOwner (identOf r) with
       | Some (VariantSymbol variantSerial) -> Some(TVariantPat(variantSerial, noTy, loc))
       | _ -> None)
 
@@ -1419,7 +1419,7 @@ let private nameResPat (ctx: ScopeCtx) (pat: NPat) : TPat * ScopeCtx =
     | TVariantPat (variantSerial, _, _) -> TNodePat(TVariantAppPN variantSerial, [ r ], noTy, loc), ctx
     | _ -> errorPat ctx VariantAppPatArityError loc
 
-let private doWithPatScope patScopeOpt (f: ScopeCtx -> _ * ScopeCtx) (ctx: ScopeCtx) =
+let private doWithPatScope (ctx: ScopeCtx) patScopeOpt (f: ScopeCtx -> _ * ScopeCtx)  =
   let parentPatScope, ctx =
     ctx.PatScope,
     { ctx with
@@ -1542,8 +1542,7 @@ let private nameResRefutablePat (ctx: ScopeCtx) (pat: NPat) : TPat * ScopeCtx =
     | [] -> unreachable ()
 
   let (lScope, pat), ctx =
-    ctx
-    |> doWithPatScope None (fun ctx -> nameResPat ctx pat)
+    doWithPatScope ctx None (fun ctx -> nameResPat ctx pat)
 
   let ctx =
     lScope
@@ -1551,7 +1550,7 @@ let private nameResRefutablePat (ctx: ScopeCtx) (pat: NPat) : TPat * ScopeCtx =
          (fun ctx (_: string) (_, _, useLocs) ->
            match useLocs with
            | [] -> ctx
-           | loc :: _ -> ctx |> addLog VarNameConflictError loc)
+           | loc :: _ -> addLog ctx VarNameConflictError loc)
          ctx
 
   // Set of variables defined in the left-hand side.
@@ -1565,8 +1564,7 @@ let private nameResRefutablePat (ctx: ScopeCtx) (pat: NPat) : TPat * ScopeCtx =
     (pats, ctx)
     |> stMap (fun (pat, ctx) ->
       let (rScope, pat), ctx =
-        ctx
-        |> doWithPatScope (Some lScope) (fun ctx -> nameResPat ctx pat)
+        doWithPatScope ctx (Some lScope) (fun ctx -> nameResPat ctx pat)
 
       // Validate that each variable defined in the left-hand side
       // appears also right-hand side exactly once.
@@ -1589,7 +1587,7 @@ let private nameResRefutablePat (ctx: ScopeCtx) (pat: NPat) : TPat * ScopeCtx =
         if ok then
           ctx
         else
-          ctx |> addLog OrPatInconsistentBindingError loc
+          addLog ctx OrPatInconsistentBindingError loc
 
       pat, ctx)
 
@@ -1599,7 +1597,7 @@ let private nameResRefutablePat (ctx: ScopeCtx) (pat: NPat) : TPat * ScopeCtx =
       not (List.isEmpty pats)
       && not (TSet.isEmpty varSerialSet)
     then
-      ctx |> addLog UnimplOrPatBindingError loc
+      addLog ctx UnimplOrPatBindingError loc
     else
       ctx
 
@@ -1610,8 +1608,7 @@ let private nameResRefutablePat (ctx: ScopeCtx) (pat: NPat) : TPat * ScopeCtx =
 
 let private nameResIrrefutablePat (ctx: ScopeCtx) (pat: NPat) : TPat * ScopeCtx =
   let (scope, pat), ctx =
-    ctx
-    |> doWithPatScope None (fun ctx -> nameResPat ctx pat)
+    doWithPatScope ctx None (fun ctx -> nameResPat ctx pat)
 
   let ctx =
     scope
@@ -1619,7 +1616,7 @@ let private nameResIrrefutablePat (ctx: ScopeCtx) (pat: NPat) : TPat * ScopeCtx 
          (fun ctx (_: string) (_, _, useLocs) ->
            match useLocs with
            | [] -> ctx
-           | loc :: _ -> ctx |> addLog VarNameConflictError loc)
+           | loc :: _ -> addLog ctx VarNameConflictError loc)
          ctx
 
   pat, ctx
@@ -1636,7 +1633,7 @@ type private ResolvedExpr =
 
 /// Tries to resolve a name expression as value; or just return None.
 let private doNameResVarExpr ctx ident loc : TExpr option =
-  match ctx |> resolveUnqualifiedValue ident with
+  match resolveUnqualifiedValue ctx ident with
   | Some symbol ->
     let expr =
       match symbol with
@@ -1665,7 +1662,7 @@ let private nameResNavExpr (ctx: ScopeCtx) (expr: NExpr) : TExpr * ScopeCtx =
   let rec resolveExprAsNsOwners ctx expr : ResolvedExpr * ScopeCtx =
     match expr with
     | NExpr.Ident (ident, loc) ->
-      let nsOwners = ctx |> resolveUnqualifiedNsOwner ident
+      let nsOwners = resolveUnqualifiedNsOwner ctx ident
       let exprOpt = doNameResVarExpr ctx ident loc
 
       match nsOwners, exprOpt with
@@ -1688,14 +1685,14 @@ let private nameResNavExpr (ctx: ScopeCtx) (expr: NExpr) : TExpr * ScopeCtx =
         // Resolve as namespaces.
         let nsOwners =
           superNsOwners
-          |> List.collect (fun nsOwner -> ctx |> resolveQualifiedNsOwner nsOwner r)
+          |> List.collect (fun nsOwner -> resolveQualifiedNsOwner ctx nsOwner r)
 
         // Resolve as value.
         let exprOpt =
           let varSymbolOpt =
             superNsOwners
             |> List.tryPick (fun nsOwner ->
-              match ctx |> resolveQualifiedValue nsOwner r with
+              match resolveQualifiedValue ctx nsOwner r with
               | None -> None
               | it -> it)
 
@@ -1752,10 +1749,10 @@ let private nameResExpr (ctx: ScopeCtx) (expr: NExpr) : TExpr * ScopeCtx =
     TNodeExpr(TTyPlaceholderEN, [], ty, loc), ctx
 
   | NExpr.Block (stmts, last) ->
-    let ctx = ctx |> startScope ExprScope
+    let ctx = startScope ctx ExprScope
     let stmts, ctx = stmts |> List.mapFold nameResStmt ctx
     let last, ctx = last |> nameResExpr ctx
-    let ctx = ctx |> finishScope
+    let ctx = finishScope ctx
     TBlockExpr(stmts, last), ctx
 
   | NExpr.Match (cond, arms, loc) ->
@@ -1765,7 +1762,7 @@ let private nameResExpr (ctx: ScopeCtx) (expr: NExpr) : TExpr * ScopeCtx =
       arms
       |> List.mapFold
            (fun ctx (pat, guardOpt, body, loc) ->
-             let ctx = ctx |> startScope ExprScope
+             let ctx = startScope ctx ExprScope
              let pat, ctx = pat |> nameResRefutablePat ctx
 
              // Default to `true` if guard is missing.
@@ -1775,7 +1772,7 @@ let private nameResExpr (ctx: ScopeCtx) (expr: NExpr) : TExpr * ScopeCtx =
                | None -> txTrue loc, ctx
 
              let body, ctx = body |> nameResExpr ctx
-             let ctx = ctx |> finishScope
+             let ctx = finishScope ctx
              (pat, guard, body), ctx)
            ctx
 
@@ -1833,9 +1830,9 @@ let private nameResLetValStmt (ctx: ScopeCtx) stmt : TStmt * ScopeCtx =
     | NStmt.LetVal (pat, init, loc) -> pat, init, loc
     | _ -> unreachable ()
 
-  let ctx = ctx |> startScope ExprScope
+  let ctx = startScope ctx ExprScope
   let init, ctx = init |> nameResExpr ctx
-  let ctx = ctx |> finishScope
+  let ctx = finishScope ctx
 
   let pat, ctx = pat |> nameResIrrefutablePat ctx
   TLetValStmt(pat, init, loc), ctx
@@ -1859,38 +1856,39 @@ let private nameResLetFunStmt (ctx: ScopeCtx) stmt : TStmt * ScopeCtx =
         Arity = List.length argPats
         Ty = TyScheme([], noTy)
         Abi = MiloneAbi
-        Linkage = makeLinkage vis funName ctx
+        Linkage = makeLinkage ctx vis funName
         Prefix = ctx.AncestralFuns
         Loc = loc }
 
-    addFunDef funSerial funDef ctx
+    addFunDef ctx funSerial funDef
 
   let ctx =
     // For recursive referencing.
     match isRec with
-    | IsRec -> ctx |> importValue funName (FunSymbol funSerial)
+    | IsRec -> importValue ctx funName (FunSymbol funSerial)
     | _ -> ctx
 
   let argPats, body, ctx =
     // __trace ("enterLetFun " + funName)
 
     let ctx =
-      ctx
-      |> enterLetInit funName
-      |> startScope ExprScope
+      let ctx = enterLetInit ctx funName
+      startScope ctx ExprScope
 
     let argPats, ctx =
       argPats |> List.mapFold nameResIrrefutablePat ctx
 
     let body, ctx = body |> nameResExpr ctx
-    let ctx = ctx |> finishScope |> leaveLetInit
+    let ctx =
+      let ctx = finishScope ctx
+      leaveLetInit ctx
 
     // __trace ("leaveLetFun " + funName)
     argPats, body, ctx
 
   let ctx =
     match isRec with
-    | NotRec -> ctx |> importValue funName (FunSymbol funSerial)
+    | NotRec -> importValue ctx funName (FunSymbol funSerial)
     | _ -> ctx
 
   TLetFunStmt(funSerial, isRec, vis, argPats, body, loc), ctx
@@ -1911,21 +1909,22 @@ let private nameResModuleDecl (ctx: ScopeCtx) moduleDecl : TStmt * ScopeCtx =
     ctx.DeclaredModules |> mapFind (posOf name)
 
   let parent, ctx =
-    ctx
-    |> startScope ExprScope
-    |> enterModule (identOf name)
+    let ctx = startScope ctx ExprScope
+    enterModule ctx (identOf name)
 
   let ctx =
     // Open the parent module (and modules with the same path).
     let parentPath = parent
 
-    resolveModulePath parentPath ctx
-    |> List.fold (fun ctx moduleTySerial -> openModule moduleTySerial ctx) ctx
+    resolveModulePath ctx parentPath
+    |> List.fold openModule ctx
 
   let stmts, ctx =
     nameResDecls (nsOwnerOfModule moduleSerial) ctx decls
 
-  let ctx = ctx |> leaveModule parent |> finishScope
+  let ctx =
+    let ctx = leaveModule ctx parent
+    finishScope ctx
 
   TBlockStmt(IsRec, stmts), ctx
 
