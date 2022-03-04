@@ -238,12 +238,6 @@ let private emptyState () : NameResState =
     Variants = TMap.empty variantSerialCompare
     Logs = [] }
 
-let private optionMerge first second : _ option =
-  match first, second with
-  | Some _, _ -> first
-  | _, Some _ -> second
-  | _ -> None
-
 let private mapMerge first second : TreeMap<_, _> =
   second
   |> TMap.fold (fun map key value -> TMap.add key value map) first
@@ -292,7 +286,6 @@ let private sMerge (state: NameResState) (scopeCtx: ScopeCtx) : NameResState * _
         { state.ScopeCtx with
             Serial = scopeCtx.Serial
             Tys = mapAddEntries scopeCtx.NewTys s.Tys
-            MainFunOpt = optionMerge scopeCtx.MainFunOpt s.MainFunOpt
             RootModules = List.append scopeCtx.NewRootModules s.RootModules
 
             // These seem inefficient but not.
@@ -307,7 +300,7 @@ let private sMerge (state: NameResState) (scopeCtx: ScopeCtx) : NameResState * _
       Logs = List.append scopeCtx.NewLogs state.Logs },
   localVars
 
-let private sToResult (state: NameResState) : NameResResult =
+let private sToResult mainFunOpt (state: NameResState) : NameResResult =
   let scopeCtx = state.ScopeCtx
 
   { Serial = scopeCtx.Serial
@@ -315,7 +308,7 @@ let private sToResult (state: NameResState) : NameResResult =
     Funs = state.Funs
     Variants = state.Variants
     Tys = scopeCtx.Tys
-    MainFunOpt = scopeCtx.MainFunOpt
+    MainFunOpt = mainFunOpt
     Logs = state.Logs }
 
 // -----------------------------------------------
@@ -355,8 +348,6 @@ type private ScopeCtx =
 
     NewVarMeta: TreeMap<VarSerial, IsStatic * Linkage>
 
-    MainFunOpt: FunSerial option
-
     Tys: TreeMap<TySerial, TyDef>
     NewTys: (TySerial * TyDef) list
 
@@ -393,7 +384,6 @@ let private emptyScopeCtx () : ScopeCtx =
     NewFuns = []
     NewVariants = []
     NewVarMeta = TMap.empty varSerialCompare
-    MainFunOpt = None
     Tys = TMap.empty compare
     NewTys = []
     RootModules = []
@@ -2068,18 +2058,15 @@ let nameRes (layers: NModuleRoot list list) : TProgram * NameResResult =
                 state)
          (emptyState ())
 
-  let state =
-    let mainFunOpt =
-      state.Funs
-      |> TMap.fold
-           (fun acc funSerial (funDef: FunDef) ->
-             if funDef.Name = "main" then
-               funSerial :: acc
-             else
-               acc)
-           []
-      |> List.tryLast
+  let mainFunOpt =
+    state.Funs
+    |> TMap.fold
+         (fun acc funSerial (funDef: FunDef) ->
+           if funDef.Name = "main" then
+             funSerial :: acc
+           else
+             acc)
+         []
+    |> List.tryLast
 
-    { state with ScopeCtx = { state.ScopeCtx with MainFunOpt = mainFunOpt } }
-
-  modules, sToResult state
+  modules, sToResult mainFunOpt state
