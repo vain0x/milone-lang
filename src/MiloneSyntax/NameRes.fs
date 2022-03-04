@@ -1849,8 +1849,8 @@ let private nameResLetFunStmt (ctx: ScopeCtx) stmt : TStmt * ScopeCtx =
 
     addFunDef funSerial funDef ctx
 
-  // Import the function itself for recursive referencing.
   let ctx =
+    // For recursive referencing.
     match isRec with
     | IsRec -> ctx |> importValue funName (FunSymbol funSerial)
     | _ -> ctx
