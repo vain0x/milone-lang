@@ -17,22 +17,6 @@ open MiloneSyntaxTypes.TirTypes
 
 module S = Std.StdString
 
-let private optionMapFold (mapFolder: 'S -> 'T -> 'U * 'S) (state: 'S) (opt: 'T option) : 'U option * 'S =
-  match opt with
-  | Some item ->
-    let item, state = mapFolder state item
-    Some item, state
-
-  | None -> None, state
-
-let private listChooseFold (mapFolder: 'S -> 'T -> 'U option * 'S) (state: 'S) (xs: 'T list) : 'U list * 'S =
-  let yss, state = List.mapFold mapFolder state xs
-  yss |> List.choose id, state
-
-let private listCollectFold (mapFolder: 'S -> 'T -> 'U list * 'S) (state: 'S) (xs: 'T list) : 'U list * 'S =
-  let yss, state = List.mapFold mapFolder state xs
-  yss |> List.collect id, state
-
 let private identOf (name: NName) = fst name
 
 /// Identity of token based on its text position. (Byte index is better though.)
