@@ -601,7 +601,7 @@ let private openModule (ctx: ScopeCtx) moduleSerial =
 
   ctx
 
-let private openModules ctx moduleSerials  =
+let private openModules ctx moduleSerials =
   moduleSerials |> List.fold openModule ctx
 
 /// Called on enter the init of let-fun expressions.
@@ -731,7 +731,7 @@ let private resolveNavTy ctx quals last : TySymbol option * ScopeCtx =
 
       | ident :: path ->
         resolveQualifiedNsOwner ctx nsOwner ident
-        |> List.collect (fun subNsOwner -> resolveTyPath ctx subNsOwner path )
+        |> List.collect (fun subNsOwner -> resolveTyPath ctx subNsOwner path)
 
     let tySymbolOpt =
       nsOwners
@@ -766,7 +766,9 @@ let private resolveTy ctx ty selfTyArgs : Ty * ScopeCtx =
         // __trace ("typeVar " + string tySerial + ":" + ident)
 
         let ctx =
-          let ctx = addTyDef ctx tySerial (UnivTyDef(ident, loc))
+          let ctx =
+            addTyDef ctx tySerial (UnivTyDef(ident, loc))
+
           importTy ctx ident (UnivTySymbol tySerial)
 
         tyUniv tySerial ident loc, ctx
@@ -957,8 +959,7 @@ let private cdStmt currentModule ctx stmt : ScopeCtx =
             ctx.DeclaredFuns
             |> TMap.add (posOf name) funSerial }
 
-    let ctx =
-      importValue ctx (identOf name) funSymbol
+    let ctx = importValue ctx (identOf name) funSymbol
 
     addValueToModule ctx currentModule vis (identOf name) funSymbol
 
@@ -1017,7 +1018,9 @@ let private cdUnionTyDecl currentModule (ctx: ScopeCtx) decl : ScopeCtx =
            //  )
 
            let ctx =
-             let ctx = addValueToNs ctx (nsOwnerOfTy tySerial) (identOf name) variantSymbol
+             let ctx =
+               addValueToNs ctx (nsOwnerOfTy tySerial) (identOf name) variantSymbol
+
              importValue ctx (identOf name) variantSymbol
 
            let ctx =
@@ -1316,6 +1319,7 @@ let private doResolveVarInPat (ctx: ScopeCtx) name : VarSerial * ScopeCtx =
             PatScope =
               ctx.PatScope
               |> TMap.add ident (varSerial, loc, []) }
+
       let ctx = addVarDef ctx varSerial varDef
       importValue ctx ident (VarSymbol varSerial)
 
@@ -1419,7 +1423,7 @@ let private nameResPat (ctx: ScopeCtx) (pat: NPat) : TPat * ScopeCtx =
     | TVariantPat (variantSerial, _, _) -> TNodePat(TVariantAppPN variantSerial, [ r ], noTy, loc), ctx
     | _ -> errorPat ctx VariantAppPatArityError loc
 
-let private doWithPatScope (ctx: ScopeCtx) patScopeOpt (f: ScopeCtx -> _ * ScopeCtx)  =
+let private doWithPatScope (ctx: ScopeCtx) patScopeOpt (f: ScopeCtx -> _ * ScopeCtx) =
   let parentPatScope, ctx =
     ctx.PatScope,
     { ctx with
@@ -1824,6 +1828,10 @@ let private nameResExpr (ctx: ScopeCtx) (expr: NExpr) : TExpr * ScopeCtx =
     let r, ctx = r |> nameResExpr ctx
     TNodeExpr(TSliceEN, [ l; r; x ], noTy, loc), ctx
 
+// -----------------------------------------------
+// Statement
+// -----------------------------------------------
+
 let private nameResLetValStmt (ctx: ScopeCtx) stmt : TStmt * ScopeCtx =
   let pat, init, loc =
     match stmt with
@@ -1879,6 +1887,7 @@ let private nameResLetFunStmt (ctx: ScopeCtx) stmt : TStmt * ScopeCtx =
       argPats |> List.mapFold nameResIrrefutablePat ctx
 
     let body, ctx = body |> nameResExpr ctx
+
     let ctx =
       let ctx = finishScope ctx
       leaveLetInit ctx
@@ -1901,6 +1910,10 @@ let private nameResStmt ctx (stmt: NStmt) : TStmt * ScopeCtx =
 
   | NStmt.LetVal _ -> nameResLetValStmt ctx stmt
   | NStmt.LetFun _ -> nameResLetFunStmt ctx stmt
+
+// -----------------------------------------------
+// Declaration
+// -----------------------------------------------
 
 let private nameResModuleDecl (ctx: ScopeCtx) moduleDecl : TStmt * ScopeCtx =
   let (NModuleDecl (_, _, name, decls, _)) = moduleDecl
