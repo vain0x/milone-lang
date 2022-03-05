@@ -1,10 +1,7 @@
-/// # Name resolution
+/// # Name Resolution
 ///
-/// Resolves symbols as possible.
-///
-/// This stage traverses the expressions twice
-/// to collect symbol information
-/// and assign the same serials to the same symbols.
+/// Name resolution is a pass to associate names with definitions.
+/// See also name-resolution.md in docs.
 module rec MiloneSyntax.NameRes
 
 open MiloneShared.SharedTypes

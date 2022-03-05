@@ -21,6 +21,8 @@
 - decl (declaration):
     - Kind of syntax that appears in module directly.
     - In milone-lang, declarations don't appear inside statements or expressions.
+- def (definition)
+    - Data of entities (such as variables and types).
 - deref (dereference)
     - Operation `*p` in C.
 - div (division)
@@ -40,12 +42,21 @@
 - lit (literal)
     - A kind of token and expression that represent a specific value.
 - mul (multiplication)
+- NameRes (name resolution)
+    - Particular pass
+- ns (namespace)
+    - (In NameRes) Set of symbols as children of other symbol.
+- NsOwner (namespace owner)
+    - (In NameRes) Reference of a symbol that owns a namespace.
 - op (operator)
     - Note: avoid using "op" for operation that is unrelated to operator.
 - opt (optional)
     - Note: Variable name `xOpt` indicates `option<T>` type.
 - param (parameter)
     - Note that `params` is keyword in F#. Use `paramList` or something.
+- symbol
+    - Token that denotes to a defined entity (such as variables and types).
+    - Value to identify a defined entity, similar to ID.
 - qual (qualifier)
     - Non-last segment of path of name.
 - ref (reference)
