@@ -520,7 +520,9 @@ let private doEmitIfStmt ctx cond thenHint body altHint alt targetTy loc =
 /// Tries to *sugar* a match expression to if expression
 /// when `match p with true -> body | false -> alt`.
 let private mirifyExprMatchAsIfStmt ctx cond arms ty loc =
-  match exprToTy cond, arms with
+  let condTy, condLoc = exprExtract cond
+
+  match condTy, arms with
   | Ty (BoolTk, []),
     [ HLitPat (BoolLit true, _), HLitExpr (BoolLit true, _), body
       HLitPat (BoolLit false, _), HLitExpr (BoolLit true, _), alt ] ->
@@ -535,8 +537,7 @@ let private mirifyExprMatchAsIfStmt ctx cond arms ty loc =
     let cond, ctx = mirifyExpr ctx cond
 
     let isNil =
-      let ty, loc = mexprExtract cond
-      MUnaryExpr(MListIsEmptyUnary, cond, ty, loc)
+      MUnaryExpr(MListIsEmptyUnary, cond, condTy, condLoc)
 
     doEmitIfStmt ctx isNil "nil_cl" nilCl "cons_cl" consCl ty loc
     |> Some
@@ -1410,11 +1411,10 @@ let private mirifyExprInfCallTailRec (ctx: MirCtx) _callee args _ty loc =
 
   // Evaluate args and assign to temp vars.
   let tempExprs, ctx =
-    let args, ctx = mirifyArgs ctx args
+    let args, ctx = mirifyArgsWithTys ctx args
 
     (args, ctx)
-    |> stMap (fun (arg, ctx) ->
-      let ty, loc = mexprExtract arg
+    |> stMap (fun ((arg, ty, loc), ctx) ->
       let tempVarExpr, tempVarSerial, ctx = freshVar ctx "arg" ty loc
 
       let ctx =
@@ -1634,6 +1634,20 @@ let private mirifyArgs ctx args =
   let args =
     args
     |> List.filter (fun arg -> arg |> mexprToTy |> tyIsUnit |> not)
+
+  args, ctx
+
+let private mirifyArgsWithTys ctx args =
+  let args, ctx =
+    (args, ctx)
+    |> stMap (fun (arg, ctx) ->
+      let ty, loc = exprExtract arg
+      let arg, ctx = mirifyExpr ctx arg
+      (arg, ty, loc), ctx)
+
+  let args =
+    args
+    |> List.filter (fun (_, ty, _) -> ty |> tyIsUnit |> not)
 
   args, ctx
 

@@ -235,27 +235,25 @@ type MModule =
 // Expressions (MIR)
 // -----------------------------------------------
 
-let mexprExtract expr =
+let mexprToTy expr =
   match expr with
-  | MLitExpr (lit, loc) -> litToTy lit, loc
-  | MUnitExpr loc -> tyUnit, loc
-  | MNeverExpr loc -> tyUnit, loc
-  | MVarExpr (_, ty, loc) -> ty, loc
-  | MProcExpr (_, ty, loc) -> ty, loc
-  | MVariantExpr (_, _, ty, loc) -> ty, loc
-  | MDiscriminantConstExpr (_, loc) -> tyInt, loc
+  | MLitExpr (lit, _) -> litToTy lit
+  | MUnitExpr _ -> tyUnit
+  | MNeverExpr _ -> tyUnit
+  | MVarExpr (_, ty, _) -> ty
+  | MProcExpr (_, ty, _) -> ty
+  | MVariantExpr (_, _, ty, _) -> ty
+  | MDiscriminantConstExpr (_, _) -> tyInt
 
-  | MGenericValueExpr (genericValue, ty, loc) ->
+  | MGenericValueExpr (genericValue, ty, _) ->
     match genericValue with
-    | MNilGv -> ty, loc
-    | MSizeOfGv -> tyInt, loc
-    | MTyPlaceholderGv -> ty, loc
+    | MNilGv -> ty
+    | MSizeOfGv -> tyInt
+    | MTyPlaceholderGv -> ty
 
-  | MUnaryExpr (_, _, ty, loc) -> ty, loc
-  | MBinaryExpr (_, _, _, ty, loc) -> ty, loc
-  | MNativeExpr (_, _, ty, loc) -> ty, loc
-
-let mexprToTy expr = expr |> mexprExtract |> fst
+  | MUnaryExpr (_, _, ty, _) -> ty
+  | MBinaryExpr (_, _, _, ty, _) -> ty
+  | MNativeExpr (_, _, ty, _) -> ty
 
 // -----------------------------------------------
 // Declarations (MIR)
