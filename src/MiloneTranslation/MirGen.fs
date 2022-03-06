@@ -1505,7 +1505,7 @@ let private mirifyExprInf ctx itself kind args ty loc =
   | HCallNativeEN funName, args, _ -> mirifyExprInfCallNative ctx funName args ty loc
   | HClosureEN, [ HFunExpr (funSerial, _, _, _); env ], _ -> mirifyExprInfClosure ctx funSerial env ty loc
 
-  | HNativeFunEN funSerial, _, _ -> MProcExpr(funSerial, ty, loc), ctx
+  | HNativeFunEN funSerial, _, _ -> MProcExpr(funSerial, loc), ctx
 
   | HNativeExprEN code, args, _ ->
     let args, ctx = mirifyExprs ctx args
@@ -1619,7 +1619,7 @@ let private mirifyExpr (ctx: MirCtx) (expr: HExpr) : MExpr * MirCtx =
   match expr with
   | HLitExpr (lit, loc) -> MLitExpr(lit, loc), ctx
   | HVarExpr (serial, ty, loc) -> MVarExpr(serial, ty, loc), ctx
-  | HFunExpr (serial, ty, _, loc) -> MProcExpr(serial, ty, loc), ctx
+  | HFunExpr (serial, ty, _, loc) -> MProcExpr(serial, loc), ctx
 
   | HVariantExpr (serial, ty, loc) -> mirifyExprVariant ctx expr serial ty loc
   | HPrimExpr (prim, ty, loc) -> mirifyExprPrim ctx prim ty loc

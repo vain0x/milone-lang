@@ -165,7 +165,7 @@ type MExpr =
   | MVarExpr of VarSerial * Ty * Loc
 
   /// Procedure.
-  | MProcExpr of FunSerial * Ty * Loc
+  | MProcExpr of FunSerial * Loc
 
   /// Variant constant.
   | MVariantExpr of TySerial * VariantSerial * Ty * Loc

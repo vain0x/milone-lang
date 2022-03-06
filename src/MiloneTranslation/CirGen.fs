@@ -888,7 +888,7 @@ let private cgExpr (ctx: CirCtx) (arg: MExpr) : CExpr * CirCtx =
 
     CVarExpr(getUniqueVarName ctx serial), ctx
 
-  | MProcExpr (serial, _, _) -> CVarExpr(getUniqueFunName ctx serial), ctx
+  | MProcExpr (serial, _) -> CVarExpr(getUniqueFunName ctx serial), ctx
 
   | MVariantExpr (_, serial, ty, _) -> genVariantNameExpr ctx serial ty
   | MDiscriminantConstExpr (variantSerial, _) -> genDiscriminant ctx variantSerial, ctx
@@ -929,7 +929,7 @@ let private cgActionStmt ctx itself action args =
   | MCallProcAction ->
     let ctx =
       match args with
-      | MProcExpr (funSerial, _, _) :: _ -> cgExternFunDecl ctx funSerial
+      | MProcExpr (funSerial, _) :: _ -> cgExternFunDecl ctx funSerial
       | _ -> ctx
 
     let args, ctx =
@@ -1152,7 +1152,7 @@ let private cgPrimStmt (ctx: CirCtx) itself prim args serial resultTy =
 
     let ctx =
       match args with
-      | MProcExpr (funSerial, _, _) :: _ -> cgExternFunDecl ctx funSerial
+      | MProcExpr (funSerial, _) :: _ -> cgExternFunDecl ctx funSerial
       | _ -> ctx
 
     let args, ctx =
