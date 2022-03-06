@@ -6,13 +6,13 @@ struct IntList;
 
 struct IntIntTuple2_;
 
-void match_complicated_Program_testTrivialCase(void);
+void match_complicated_match_complicated_testTrivialCase(void);
 
-void match_complicated_Program_testListMatching(void);
+void match_complicated_match_complicated_testListMatching(void);
 
-void match_complicated_Program_testMatchArmsMakeScope(void);
+void match_complicated_match_complicated_testMatchArmsMakeScope(void);
 
-void match_complicated_Program_testNestedMatchesParseCorrectly(void);
+void match_complicated_match_complicated_testNestedMatchesParseCorrectly(void);
 
 int main(int argc, char** argv);
 
@@ -26,7 +26,7 @@ struct IntIntTuple2_ {
     int t1;
 };
 
-void match_complicated_Program_testTrivialCase(void) {
+void match_complicated_match_complicated_testTrivialCase(void) {
     char match_;
     match_ = 0;
     goto end_match_1;
@@ -35,7 +35,7 @@ end_match_1:;
     return;
 }
 
-void match_complicated_Program_testListMatching(void) {
+void match_complicated_match_complicated_testListMatching(void) {
     char match_1;
     struct IntList const* list_ = milone_mem_alloc(1, sizeof(struct IntList));
     (*(((struct IntList*)list_))) = (struct IntList){.head = 0, .tail = NULL};
@@ -60,7 +60,7 @@ end_match_3:;
     return;
 }
 
-void match_complicated_Program_testMatchArmsMakeScope(void) {
+void match_complicated_match_complicated_testMatchArmsMakeScope(void) {
     int x_1;
     int x_ = 2;
     char match_2;
@@ -97,7 +97,7 @@ end_match_7:;
     return;
 }
 
-void match_complicated_Program_testNestedMatchesParseCorrectly(void) {
+void match_complicated_match_complicated_testNestedMatchesParseCorrectly(void) {
     char match_3;
     if (true) goto next_15;
     char switch_;
@@ -122,9 +122,9 @@ end_match_14:;
 
 int main(int argc, char** argv) {
     milone_start(argc, argv);
-    match_complicated_Program_testTrivialCase();
-    match_complicated_Program_testListMatching();
-    match_complicated_Program_testMatchArmsMakeScope();
-    match_complicated_Program_testNestedMatchesParseCorrectly();
+    match_complicated_match_complicated_testTrivialCase();
+    match_complicated_match_complicated_testListMatching();
+    match_complicated_match_complicated_testMatchArmsMakeScope();
+    match_complicated_match_complicated_testNestedMatchesParseCorrectly();
     return 0;
 }

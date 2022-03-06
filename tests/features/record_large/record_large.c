@@ -4,7 +4,7 @@ struct Stringoption1_;
 
 struct GitCommitOptions_;
 
-void const* record_large_Program_defaultOptions(void);
+void const* record_large_record_large_defaultOptions(void);
 
 int main(int argc, char** argv);
 
@@ -30,7 +30,7 @@ struct GitCommitOptions_ {
     bool t6;
 };
 
-void const* record_large_Program_defaultOptions(void) {
+void const* record_large_record_large_defaultOptions(void) {
     struct GitCommitOptions_ GitCommitOptions_ = (struct GitCommitOptions_){.t0 = false, .t1 = false, .t2 = (struct Stringoption1_){.discriminant = None_}, .t3 = (struct Stringoption1_){.discriminant = None_}, .t4 = (struct Stringoption1_){.discriminant = None_}, .t5 = (struct Stringoption1_){.discriminant = None_}, .t6 = false};
     void const* box_ = milone_mem_alloc(1, sizeof(struct GitCommitOptions_));
     (*(((struct GitCommitOptions_*)box_))) = GitCommitOptions_;
@@ -39,7 +39,7 @@ void const* record_large_Program_defaultOptions(void) {
 
 int main(int argc, char** argv) {
     milone_start(argc, argv);
-    void const* call_ = record_large_Program_defaultOptions();
+    void const* call_ = record_large_record_large_defaultOptions();
     void const* _options = call_;
     return 0;
 }

@@ -1,14 +1,14 @@
 #include <milone.h>
 
-void int_flavors_Program_signedCases(void);
+void int_flavors_int_flavors_signedCases(void);
 
-void int_flavors_Program_unsignedCases(void);
+void int_flavors_int_flavors_unsignedCases(void);
 
 void int_flavors_int_flavors_suffix(void);
 
 int main(int argc, char** argv);
 
-void int_flavors_Program_signedCases(void) {
+void int_flavors_int_flavors_signedCases(void) {
     milone_assert((1 == 1), (struct String){.str = "int_flavors/int_flavors.milone", .len = 30}, 9, 2);
     milone_assert((((int8_t)1) == ((int8_t)1)), (struct String){.str = "int_flavors/int_flavors.milone", .len = 30}, 12, 2);
     milone_assert((((int8_t)2 + (int8_t)3) == (int8_t)5), (struct String){.str = "int_flavors/int_flavors.milone", .len = 30}, 18, 2);
@@ -37,7 +37,7 @@ void int_flavors_Program_signedCases(void) {
     return;
 }
 
-void int_flavors_Program_unsignedCases(void) {
+void int_flavors_int_flavors_unsignedCases(void) {
     milone_assert((((uint8_t)1) == ((uint8_t)1)), (struct String){.str = "int_flavors/int_flavors.milone", .len = 30}, 55, 2);
     milone_assert((((uint32_t)1) == ((uint32_t)1)), (struct String){.str = "int_flavors/int_flavors.milone", .len = 30}, 58, 2);
     milone_assert((((uint8_t)2U + (uint8_t)3U) == (uint8_t)5U), (struct String){.str = "int_flavors/int_flavors.milone", .len = 30}, 61, 2);
@@ -80,8 +80,8 @@ void int_flavors_int_flavors_suffix(void) {
 
 int main(int argc, char** argv) {
     milone_start(argc, argv);
-    int_flavors_Program_signedCases();
-    int_flavors_Program_unsignedCases();
+    int_flavors_int_flavors_signedCases();
+    int_flavors_int_flavors_unsignedCases();
     int_flavors_int_flavors_suffix();
     return 0;
 }

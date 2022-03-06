@@ -55,9 +55,7 @@ let private tkEncode tk : int =
   | RecordTk (tySerial, _) -> pair 23 tySerial
 
   | NativeTypeTk _
-  | InferTk _
-  | UnresolvedTk _
-  | UnresolvedVarTk _ -> unreachable ()
+  | InferTk _ -> unreachable ()
 
 let tkCompare l r : int =
   match l, r with
@@ -68,12 +66,6 @@ let tkCompare l r : int =
   | InferTk _, InferTk _ -> 0
   | InferTk _, _ -> -1
   | _, InferTk _ -> 1
-
-  | UnresolvedTk (lQuals, lSerial, _), UnresolvedTk (rQuals, rSerial, _) ->
-    pairCompare (listCompare compare) compare (lQuals, lSerial) (rQuals, rSerial)
-
-  | UnresolvedTk _, _ -> -1
-  | _, UnresolvedTk _ -> 1
 
   | _ -> tkEncode l - tkEncode r
 
@@ -102,8 +94,6 @@ let tkDisplay getTyName tk =
   | RecordTk (tySerial, _) -> getTyName tySerial
   | UnionTk (tySerial, _) -> getTyName tySerial
   | InferTk _ -> "_"
-  | UnresolvedTk (_, serial, _) -> "?" + string serial
-  | UnresolvedVarTk (serial, _) -> "'" + string serial
 
 // -----------------------------------------------
 // Traits (HIR)

@@ -1877,12 +1877,6 @@ let private inferStmt ctx mutuallyRec stmt : TStmt * TyCtx =
   | TLetFunStmt (oldSerial, _, vis, args, body, loc) -> inferLetFunStmt ctx mutuallyRec oldSerial vis args body loc
   | TBlockStmt (mutuallyRec, stmts) -> inferBlockStmt ctx mutuallyRec stmts
 
-  | TTyDeclStmt _
-  | TOpenStmt _ -> stmt, ctx
-
-  | TModuleStmt _
-  | TModuleSynonymStmt _ -> unreachable () // Resolved in NameRes.
-
 // -----------------------------------------------
 // Reject cyclic synonyms
 // -----------------------------------------------

@@ -399,7 +399,7 @@ let performSyntaxAnalysis (ctx: SyntaxCtx) : SyntaxLayers * SyntaxAnalysisResult
 
   writeLog "AstBundle"
 
-  let layers, nameCtx, bundleErrors =
+  let layers, bundleErrors =
     AstBundle.bundle ctx.FetchModule ctx.EntryProjectName
 
   let syntaxLayers = layers |> List.map (List.map fst)
@@ -412,11 +412,15 @@ let performSyntaxAnalysis (ctx: SyntaxCtx) : SyntaxLayers * SyntaxAnalysisResult
     writeLog "NameRes"
 
     let modules, nameResResult =
-      let modules =
+      let modules: NModuleRoot list list =
         layers
-        |> List.map (fun modules -> modules |> List.map (fun (_, m) -> m))
+        |> List.map (fun modules ->
+          modules
+          |> List.map (fun (syntaxData, root) ->
+            let docId, _, _, _ = syntaxData
+            docId, root))
 
-      NameRes.nameRes (modules, nameCtx)
+      NameRes.nameRes modules
 
     match collectNameResErrors nameResResult.Logs with
     | Some errors -> syntaxLayers, SyntaxAnalysisError(errors, None)

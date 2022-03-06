@@ -485,6 +485,19 @@ type DSymbol =
 type private DSymbolOccurrence = DSymbol * DefOrUse * Loc2
 
 [<NoComparison>]
+type private ValueSymbol =
+  | VarSymbol of varSerial: VarSerial
+  | FunSymbol of funSerial: FunSerial
+  | VariantSymbol of variantSerial: VariantSerial
+
+[<NoComparison>]
+type private TySymbol =
+  | UnivTySymbol of univTySerial: TySerial
+  | SynonymTySymbol of synonymTySerial: TySerial
+  | UnionTySymbol of unionTySerial: TySerial
+  | RecordTySymbol of recordTySerial: TySerial
+
+[<NoComparison>]
 type Symbol =
   private
   | DiscardSymbol
@@ -822,61 +835,57 @@ let private lowerTStmt acc stmt =
     |> up (List.fold lowerTPat) argPats
     |> up lowerTExpr body
 
-  | TTyDeclStmt (tySerial, _, tyArgs, tyDecl, tyDeclLoc) ->
-    match tyDecl with
-    | TySynonymDecl _ -> acc
+  // FIXME: TTyDeclStmt is removed. Use AST instead.
+  // | TTyDeclStmt (tySerial, _, tyArgs, tyDecl, tyDeclLoc) ->
+  //   match tyDecl with
+  //   | TySynonymDecl _ -> acc
 
-    | UnionTyDecl (_, variants, _) ->
-      let acc =
-        // after 'type'
-        let loc = NextIdent tyDeclLoc
+  //   | UnionTyDecl (_, variants, _) ->
+  //     let acc =
+  //       // after 'type'
+  //       let loc = NextIdent tyDeclLoc
 
-        (TySymbol(UnionTySymbol tySerial), Def, None, loc)
-        :: acc
+  //       (TySymbol(UnionTySymbol tySerial), Def, None, loc)
+  //       :: acc
 
-      acc
-      |> up
-           (List.fold (fun acc v ->
-             let _, variantSerial, hasPayload, payloadTy, identLoc = v
+  //     acc
+  //     |> up
+  //          (List.fold (fun acc v ->
+  //            let _, variantSerial, hasPayload, payloadTy, identLoc = v
 
-             let ty =
-               let tyArgs =
-                 tyArgs
-                 |> List.map (fun tySerial -> tyMeta tySerial tyDeclLoc)
+  //            let ty =
+  //              let tyArgs =
+  //                tyArgs
+  //                |> List.map (fun tySerial -> tyMeta tySerial tyDeclLoc)
 
-               if hasPayload then
-                 tyFun payloadTy (tyUnion tySerial tyArgs identLoc)
-               else
-                 tyUnit
+  //              if hasPayload then
+  //                tyFun payloadTy (tyUnion tySerial tyArgs identLoc)
+  //              else
+  //                tyUnit
 
-             (ValueSymbol(VariantSymbol variantSerial), Def, Some ty, At identLoc)
-             :: acc))
-           variants
+  //            (ValueSymbol(VariantSymbol variantSerial), Def, Some ty, At identLoc)
+  //            :: acc))
+  //          variants
 
-    | RecordTyDecl (_, fields, _, _) ->
-      let acc =
-        // after 'type'
-        let loc = NextIdent tyDeclLoc
+  //   | RecordTyDecl (_, fields, _, _) ->
+  //     let acc =
+  //       // after 'type'
+  //       let loc = NextIdent tyDeclLoc
 
-        (TySymbol(RecordTySymbol tySerial), Def, None, loc)
-        :: acc
+  //       (TySymbol(RecordTySymbol tySerial), Def, None, loc)
+  //       :: acc
 
-      acc
-      |> up
-           (List.fold (fun acc (ident, ty, loc) ->
-             // before ':'
-             let loc = PreviousIdent loc
+  //     acc
+  //     |> up
+  //          (List.fold (fun acc (ident, ty, loc) ->
+  //            // before ':'
+  //            let loc = PreviousIdent loc
 
-             (FieldSymbol(tySerial, ident), Def, Some ty, loc)
-             :: acc))
-           fields
+  //            (FieldSymbol(tySerial, ident), Def, Some ty, loc)
+  //            :: acc))
+  //          fields
 
-  | TModuleStmt (_, stmts, _) -> acc |> up (List.fold lowerTStmt) stmts
   | TBlockStmt (_, stmts) -> acc |> up (List.fold lowerTStmt) stmts
-
-  | TTyDeclStmt _
-  | TOpenStmt _
-  | TModuleSynonymStmt _ -> acc
 
 let private lowerTModules acc modules =
   modules

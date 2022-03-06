@@ -7,7 +7,7 @@
 ///
 /// Source code (string) is split into a list of tokens in `SyntaxTokenize`
 /// and converted to an abstract syntax tree (AST) in `SyntaxParse`.
-/// Finally AST is converted to TIR in `TirGen`.
+/// Finally AST is converted to NIR in `NirGen`.
 module rec MiloneSyntaxTypes.SyntaxTypes
 
 open MiloneShared.SharedTypes
@@ -410,3 +410,98 @@ type AModuleHead = Name list * Pos
 /// Root of AST, a result of parsing single source file.
 [<NoEquality; NoComparison>]
 type ARoot = ARoot of AModuleHead option * ADecl list
+
+// -----------------------------------------------
+// NIR: IR for NameRes
+// -----------------------------------------------
+
+type NLoc = Loc
+type NName = Ident * NLoc
+
+[<NoEquality; NoComparison>]
+type NirGenLog =
+  | InvalidVisError
+  | NirGenError of string
+
+/// Type term in NIR.
+[<RequireQualifiedAccess; NoEquality; NoComparison>]
+type NTy =
+  | Bad of NLoc
+  | App of quals: NName list * NName * NTy list * NLoc
+  | Var of NName
+  | Infer of NLoc
+
+  | Fun of NTy * NTy * NLoc
+  | Tuple of NTy list * NLoc
+
+/// Pattern in NIR.
+[<RequireQualifiedAccess; NoEquality; NoComparison>]
+type NPat =
+  // Fundamental:
+  | Bad of NLoc
+  | Ident of Vis * NName
+  | Discard of NLoc
+  | Nav of NPat * NName * NLoc
+  | As of NPat * NName * NLoc
+  | Ascribe of NPat * NTy * NLoc
+  | Or of NPat * NPat * NLoc
+
+  // Type-specific:
+  | Lit of Lit * NLoc
+  | Nil of NLoc
+  | Cons of NPat * NPat * NLoc
+  | Tuple of NPat list * NLoc
+  | VariantApp of NPat * NPat * NLoc
+
+type NArm = NPat * NExpr option * NExpr * NLoc
+type NField = NName * NExpr * NLoc
+
+/// Expression in NIR.
+[<RequireQualifiedAccess; NoEquality; NoComparison>]
+type NExpr =
+  // Fundamental:
+  | Bad of NLoc
+  | Ident of NName
+  | Nav of NExpr * NName * NLoc
+  | Ascribe of NExpr * NTy * NLoc
+  | TyPlaceholder of NTy * NLoc
+  | Block of NStmt list * last: NExpr
+
+  // Type-specific:
+  | Lit of Lit * NLoc
+  | Match of cond: NExpr * NArm list * NLoc
+  | Nil of NLoc
+  | Record of NExpr option * NField list * NLoc
+  | Tuple of NExpr list * NLoc
+
+  // Primitive:
+  | Unary of Unary * NExpr * NLoc
+  | Binary of Binary * NExpr * NExpr * NLoc
+  | Index of NExpr * NExpr * NLoc
+  | Slice of arg: NExpr * start: NExpr * endIndex: NExpr * NLoc
+
+[<RequireQualifiedAccess; NoEquality; NoComparison>]
+type NStmt =
+  | Expr of NExpr
+  | LetVal of pat: NPat * init: NExpr * NLoc
+  | LetFun of IsRec * Vis * NName * argPats: NPat list * body: NExpr * NLoc
+
+type NVariantDecl = NName * NTy option * NLoc
+type NFieldDecl = NName * NTy * NLoc
+
+[<NoEquality; NoComparison>]
+type NModuleDecl = NModuleDecl of IsRec * Vis * NName * NDecl list * NLoc
+
+[<RequireQualifiedAccess; NoEquality; NoComparison>]
+type NDecl =
+  | Stmt of NStmt
+  | TySynonym of Vis * NName * tyArgs: NName list * NTy * NLoc
+  | Union of Vis * NName * tyArgs: NName list * NVariantDecl list * NLoc
+  | Record of Vis * NName * tyArgs: NName list * NFieldDecl list * IsCRepr * NLoc
+  | Open of NName list * NLoc
+  | ModuleSynonym of NName * NName list * NLoc
+  | Module of NModuleDecl
+
+type NRoot = NModuleDecl
+
+type NModuleRoot = DocId * NRoot

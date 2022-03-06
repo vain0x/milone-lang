@@ -12,9 +12,9 @@ struct StringUnitFun1;
 
 void fun_with_fun_arg_fun_with_fun_arg_eta2_obj(void const* env_, struct String arg_);
 
-struct StringUnitFun1 fun_with_fun_arg_Program_bindInt(struct IntStringUnitFun2 f_, int x_);
+struct StringUnitFun1 fun_with_fun_arg_fun_with_fun_arg_bindInt(struct IntStringUnitFun2 f_, int x_);
 
-void fun_with_fun_arg_Program_printInt(int value_, struct String label_);
+void fun_with_fun_arg_fun_with_fun_arg_printInt(int value_, struct String label_);
 
 void fun_with_fun_arg_fun_with_fun_arg_eta3_main_printInt(void const* env_1, int arg_3, struct String arg_4);
 
@@ -46,7 +46,7 @@ void fun_with_fun_arg_fun_with_fun_arg_eta2_obj(void const* env_, struct String 
     return;
 }
 
-struct StringUnitFun1 fun_with_fun_arg_Program_bindInt(struct IntStringUnitFun2 f_, int x_) {
+struct StringUnitFun1 fun_with_fun_arg_fun_with_fun_arg_bindInt(struct IntStringUnitFun2 f_, int x_) {
     struct IntStringUnitFun2 callee_ = f_;
     struct IntStringUnitFun2IntTuple2_ IntStringUnitFun2IntTuple2_ = (struct IntStringUnitFun2IntTuple2_){.t0 = callee_, .t1 = x_};
     void const* box_ = milone_mem_alloc(1, sizeof(struct IntStringUnitFun2IntTuple2_));
@@ -55,13 +55,13 @@ struct StringUnitFun1 fun_with_fun_arg_Program_bindInt(struct IntStringUnitFun2 
     return fun_;
 }
 
-void fun_with_fun_arg_Program_printInt(int value_, struct String label_) {
+void fun_with_fun_arg_fun_with_fun_arg_printInt(int value_, struct String label_) {
     printf("%d: %s\n", value_, str_to_c_str(label_));
     return;
 }
 
 void fun_with_fun_arg_fun_with_fun_arg_eta3_main_printInt(void const* env_1, int arg_3, struct String arg_4) {
-    fun_with_fun_arg_Program_printInt(arg_3, arg_4);
+    fun_with_fun_arg_fun_with_fun_arg_printInt(arg_3, arg_4);
     return;
 }
 
@@ -98,14 +98,14 @@ void fun_with_fun_arg_fun_with_fun_arg_eta3_main_der(void const* env_2, int arg_
 int main(int argc, char** argv) {
     milone_start(argc, argv);
     struct IntStringUnitFun2 fun_1 = (struct IntStringUnitFun2){.fun = fun_with_fun_arg_fun_with_fun_arg_eta3_main_printInt, .env = NULL};
-    struct StringUnitFun1 call_ = fun_with_fun_arg_Program_bindInt(fun_1, 42);
+    struct StringUnitFun1 call_ = fun_with_fun_arg_fun_with_fun_arg_bindInt(fun_1, 42);
     struct StringUnitFun1 print42_ = call_;
     print42_.fun(print42_.env, (struct String){.str = "The answer", .len = 10});
     struct String d_ = (struct String){.str = "\'", .len = 1};
     void const* box_1 = milone_mem_alloc(1, sizeof(struct String));
     (*(((struct String*)box_1))) = d_;
     struct IntStringUnitFun2 fun_2 = (struct IntStringUnitFun2){.fun = fun_with_fun_arg_fun_with_fun_arg_eta3_main_der, .env = box_1};
-    struct StringUnitFun1 call_1 = fun_with_fun_arg_Program_bindInt(fun_2, 2);
+    struct StringUnitFun1 call_1 = fun_with_fun_arg_fun_with_fun_arg_bindInt(fun_2, 2);
     struct StringUnitFun1 der2_ = call_1;
     der2_.fun(der2_.env, (struct String){.str = "f", .len = 1});
     return 0;

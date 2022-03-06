@@ -4,13 +4,13 @@ struct IntList;
 
 struct IntList;
 
-void list_operators_Program_nilTest(void);
+void list_operators_list_operators_nilTest(void);
 
-void list_operators_Program_cons1Test(void);
+void list_operators_list_operators_cons1Test(void);
 
-void list_operators_Program_cons2Test(void);
+void list_operators_list_operators_cons2Test(void);
 
-void list_operators_Program_literalTest(void);
+void list_operators_list_operators_literalTest(void);
 
 int main(int argc, char** argv);
 
@@ -19,7 +19,7 @@ struct IntList {
     struct IntList const* tail;
 };
 
-void list_operators_Program_nilTest(void) {
+void list_operators_list_operators_nilTest(void) {
     struct IntList const* nil_ = NULL;
     char if_;
     if ((!(nil_))) {
@@ -38,7 +38,7 @@ if_next_1:;
     return;
 }
 
-void list_operators_Program_cons1Test(void) {
+void list_operators_list_operators_cons1Test(void) {
     int x_;
     struct IntList const* list_ = milone_mem_alloc(1, sizeof(struct IntList));
     (*(((struct IntList*)list_))) = (struct IntList){.head = 1, .tail = NULL};
@@ -59,7 +59,7 @@ end_match_4:;
     return;
 }
 
-void list_operators_Program_cons2Test(void) {
+void list_operators_list_operators_cons2Test(void) {
     int y3_;
     int y2_;
     struct IntList const* list_2 = milone_mem_alloc(1, sizeof(struct IntList));
@@ -98,7 +98,7 @@ end_match_7:;
     return;
 }
 
-void list_operators_Program_literalTest(void) {
+void list_operators_list_operators_literalTest(void) {
     int z7_;
     int z5_;
     int z3_;
@@ -139,9 +139,9 @@ end_match_13:;
 
 int main(int argc, char** argv) {
     milone_start(argc, argv);
-    list_operators_Program_nilTest();
-    list_operators_Program_cons1Test();
-    list_operators_Program_cons2Test();
-    list_operators_Program_literalTest();
+    list_operators_list_operators_nilTest();
+    list_operators_list_operators_cons1Test();
+    list_operators_list_operators_cons2Test();
+    list_operators_list_operators_literalTest();
     return 0;
 }

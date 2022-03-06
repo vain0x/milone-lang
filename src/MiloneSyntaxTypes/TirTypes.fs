@@ -1,8 +1,6 @@
 /// # TirTypes
 ///
-/// Type-check intermediate representation (TIR).
-///
-/// TIR is functional-style. Similar to milone-lang's syntax.
+/// Provides public types about typed intermediate representation (TIR).
 module rec MiloneSyntaxTypes.TirTypes
 
 open MiloneShared.SharedTypes
@@ -81,9 +79,6 @@ type Tk =
 
   /// `_` in ascription.
   | InferTk of Loc
-  /// Unresolved type. Generated in TirGen, resolved in NameRes.
-  | UnresolvedTk of quals: Serial list * unresolvedSerial: Serial * Loc
-  | UnresolvedVarTk of unresolvedVarTySerial: (Serial * Loc)
 
 /// Type of expressions.
 [<Struct; NoEquality; NoComparison>]
@@ -155,24 +150,6 @@ type TyDef =
 
   | RecordTyDef of Ident * tyArgs: TySerial list * fields: (Ident * Ty * Loc) list * IsCRepr * Loc
 
-[<Struct; NoComparison>]
-type ModuleTySerial = ModuleTySerial of Serial
-
-//// Module is a type so that it can be used as namespace.
-[<RequireQualifiedAccess; NoEquality; NoComparison>]
-type ModuleTyDef = { Name: Ident; Loc: Loc }
-
-[<Struct; NoComparison>]
-type ModuleSynonymSerial = ModuleSynonymSerial of Serial
-
-//// Module is a type so that it can be used as namespace.
-[<RequireQualifiedAccess; NoEquality; NoComparison>]
-type ModuleSynonymDef =
-  { Name: Ident
-    // Not used.
-    Bound: ModuleTySerial list
-    Loc: Loc }
-
 /// Definition of named value.
 [<RequireQualifiedAccess; NoEquality; NoComparison>]
 type VarDef =
@@ -206,19 +183,6 @@ type VariantDef =
     HasPayload: bool
     PayloadTy: Ty
     Loc: Loc }
-
-[<NoComparison>]
-type ValueSymbol =
-  | VarSymbol of varSerial: VarSerial
-  | FunSymbol of funSerial: FunSerial
-  | VariantSymbol of variantSerial: VariantSerial
-
-[<NoComparison>]
-type TySymbol =
-  | UnivTySymbol of univTySerial: TySerial
-  | SynonymTySymbol of synonymTySerial: TySerial
-  | UnionTySymbol of unionTySerial: TySerial
-  | RecordTySymbol of recordTySerial: TySerial
 
 /// Context of TIR program.
 [<RequireQualifiedAccess; NoEquality; NoComparison>]
@@ -416,10 +380,6 @@ type TStmt =
   | TExprStmt of TExpr
   | TLetValStmt of TPat * TExpr * Loc
   | TLetFunStmt of FunSerial * IsRec * Vis * args: TPat list * body: TExpr * Loc
-  | TTyDeclStmt of TySerial * Vis * tyArgs: TySerial list * TyDecl * Loc
-  | TOpenStmt of Ident list * Loc
-  | TModuleStmt of ModuleTySerial * body: TStmt list * Loc
-  | TModuleSynonymStmt of ModuleSynonymSerial * path: Ident list * Loc
 
   /// If recursive, local definitions are mutually recursive.
   | TBlockStmt of IsRec * TStmt list
