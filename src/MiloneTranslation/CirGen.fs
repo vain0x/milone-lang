@@ -792,7 +792,7 @@ let private genBinaryExprAsCall ctx funName l r =
   let callExpr = CCallExpr(CVarExpr funName, [ l; r ])
   callExpr, ctx
 
-let private genUnaryExpr ctx op arg argTy ty _ =
+let private genUnaryExpr ctx op arg =
   let arg, ctx = cgExpr ctx arg
 
   match op with
@@ -804,20 +804,20 @@ let private genUnaryExpr ctx op arg argTy ty _ =
   | MStrPtrUnary -> CDotExpr(arg, "str"), ctx
   | MStrLenUnary -> CDotExpr(arg, "len"), ctx
 
-  | MUnboxUnary ->
-    let valTy, ctx = cgTyComplete ctx ty
+  | MUnboxUnary itemTy ->
+    let itemTy, ctx = cgTyComplete ctx itemTy
 
     let deref =
-      CUnaryExpr(CDerefUnary, CCastExpr(arg, CConstPtrTy valTy))
+      CUnaryExpr(CDerefUnary, CCastExpr(arg, CConstPtrTy itemTy))
 
     deref, ctx
 
-  | MTupleItemUnary index ->
-    let _, ctx = cgTyComplete ctx argTy
+  | MTupleItemUnary (index, tupleTy) ->
+    let _, ctx = cgTyComplete ctx tupleTy
     CDotExpr(arg, tupleField index), ctx
 
-  | MGetDiscriminantUnary ->
-    let _, ctx = cgTyComplete ctx argTy
+  | MGetDiscriminantUnary unionTy ->
+    let _, ctx = cgTyComplete ctx unionTy
     CDotExpr(arg, "discriminant"), ctx
 
   | MGetVariantUnary variantSerial ->
@@ -827,22 +827,22 @@ let private genUnaryExpr ctx op arg argTy ty _ =
 
     CDotExpr(arg, getUniqueVariantName ctx variantSerial), ctx
 
-  | MRecordItemUnary index ->
-    let _, ctx = cgTyComplete ctx argTy
+  | MRecordItemUnary (index, recordTy) ->
+    let _, ctx = cgTyComplete ctx recordTy
     CDotExpr(arg, tupleField index), ctx
 
   | MListIsEmptyUnary -> CUnaryExpr(CNotUnary, arg), ctx
 
-  | MListHeadUnary ->
-    let _, ctx = genListTyDef ctx (unwrapListTy argTy)
+  | MListHeadUnary itemTy ->
+    let _, ctx = genListTyDef ctx itemTy
     CArrowExpr(arg, "head"), ctx
 
-  | MListTailUnary ->
-    let _, ctx = genListTyDef ctx (unwrapListTy argTy)
+  | MListTailUnary itemTy ->
+    let _, ctx = genListTyDef ctx itemTy
     CArrowExpr(arg, "tail"), ctx
 
-  | MNativeCastUnary ->
-    let ty, ctx = cgTyComplete ctx ty
+  | MNativeCastUnary targetTy ->
+    let ty, ctx = cgTyComplete ctx targetTy
     CCastExpr(arg, ty), ctx
 
 let private genExprBin ctx op l r =
@@ -893,7 +893,7 @@ let private cgExpr (ctx: CirCtx) (arg: MExpr) : CExpr * CirCtx =
   | MVariantExpr (_, serial, ty, _) -> genVariantNameExpr ctx serial ty
   | MDiscriminantConstExpr (variantSerial, _) -> genDiscriminant ctx variantSerial, ctx
   | MGenericValueExpr (genericValue, ty, _) -> genGenericValue ctx genericValue ty
-  | MUnaryExpr (op, arg, argTy, ty, loc) -> genUnaryExpr ctx op arg argTy ty loc
+  | MUnaryExpr (op, arg, _) -> genUnaryExpr ctx op arg
   | MBinaryExpr (op, l, r, _, _) -> genExprBin ctx op l r
 
   | MNativeExpr (code, args, _, _) ->
