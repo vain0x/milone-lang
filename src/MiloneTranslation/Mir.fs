@@ -175,7 +175,7 @@ type MExpr =
 
   | MUnaryExpr of MUnary * arg: MExpr * Loc
 
-  | MBinaryExpr of MBinary * MExpr * MExpr * resultTy: Ty * Loc
+  | MBinaryExpr of MBinary * MExpr * MExpr * Loc
 
   | MNativeExpr of code: string * MExpr list * Ty * Loc
 
@@ -257,20 +257,20 @@ let mxSugar expr =
     | MUnaryExpr (MNotUnary, l, _) -> l
 
     // SUGAR: `not (x = y)` ==> `x <> y`
-    | MBinaryExpr (MEqualBinary, l, r, ty, loc) -> MBinaryExpr(MNotEqualBinary, l, r, ty, loc)
+    | MBinaryExpr (MEqualBinary, l, r, loc) -> MBinaryExpr(MNotEqualBinary, l, r, loc)
 
     // SUGAR: `not (x <> y)` ==> `x = y`
-    | MBinaryExpr (MNotEqualBinary, l, r, ty, loc) -> MBinaryExpr(MEqualBinary, l, r, ty, loc)
+    | MBinaryExpr (MNotEqualBinary, l, r, loc) -> MBinaryExpr(MEqualBinary, l, r, loc)
 
     // SUGAR: `not (x < y)` ==> `x >= y`
-    | MBinaryExpr (MLessBinary, l, r, ty, loc) -> MBinaryExpr(MGreaterEqualBinary, l, r, ty, loc)
+    | MBinaryExpr (MLessBinary, l, r, loc) -> MBinaryExpr(MGreaterEqualBinary, l, r, loc)
 
     // SUGAR: `not (x >= y)` ==> `x < y`
-    | MBinaryExpr (MGreaterEqualBinary, l, r, ty, loc) -> MBinaryExpr(MLessBinary, l, r, ty, loc)
+    | MBinaryExpr (MGreaterEqualBinary, l, r, loc) -> MBinaryExpr(MLessBinary, l, r, loc)
 
     | _ -> MUnaryExpr(MNotUnary, l, loc)
 
-  let mxSugarBin op l r ty loc =
+  let mxSugarBin op l r loc =
     match op, l, r with
     // SUGAR: `x = false` ==> `not x`
     | MEqualBinary, MLitExpr (BoolLit false, _), _ -> mxSugarNot r loc
@@ -282,7 +282,7 @@ let mxSugar expr =
 
     | MEqualBinary, _, MLitExpr (BoolLit true, _) -> l
 
-    | _ -> MBinaryExpr(op, l, r, ty, loc)
+    | _ -> MBinaryExpr(op, l, r, loc)
 
   match expr with
   // SUGAR: `x: unit` ==> `()`
@@ -292,9 +292,9 @@ let mxSugar expr =
     let l = mxSugar l
     mxSugarNot l loc
 
-  | MBinaryExpr (op, l, r, ty, loc) ->
+  | MBinaryExpr (op, l, r, loc) ->
     let l = mxSugar l
     let r = mxSugar r
-    mxSugarBin op l r ty loc
+    mxSugarBin op l r loc
 
   | _ -> expr

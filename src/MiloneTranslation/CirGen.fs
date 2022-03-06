@@ -894,7 +894,7 @@ let private cgExpr (ctx: CirCtx) (arg: MExpr) : CExpr * CirCtx =
   | MDiscriminantConstExpr (variantSerial, _) -> genDiscriminant ctx variantSerial, ctx
   | MGenericValueExpr (genericValue, ty, _) -> genGenericValue ctx genericValue ty
   | MUnaryExpr (op, arg, _) -> genUnaryExpr ctx op arg
-  | MBinaryExpr (op, l, r, _, _) -> genExprBin ctx op l r
+  | MBinaryExpr (op, l, r, _) -> genExprBin ctx op l r
 
   | MNativeExpr (code, args, _, _) ->
     let args, ctx = cgExprList ctx args
