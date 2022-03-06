@@ -814,7 +814,9 @@ let private genUnaryExpr ctx op arg argTy ty _ =
 
   | MTupleItemUnary index -> CDotExpr(arg, tupleField index), ctx
 
-  | MGetDiscriminantUnary -> CDotExpr(arg, "discriminant"), ctx
+  | MGetDiscriminantUnary ->
+    let _, ctx = cgTyComplete ctx argTy
+    CDotExpr(arg, "discriminant"), ctx
 
   | MGetVariantUnary variantSerial ->
     let _, ctx =
