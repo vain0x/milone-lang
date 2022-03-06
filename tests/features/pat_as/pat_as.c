@@ -2,9 +2,9 @@
 
 struct IntIntTuple2_;
 
-void pat_as_Program_simpleCase(void);
+void pat_as_pat_as_simpleCase(void);
 
-void pat_as_Program_shadowingCase(void);
+void pat_as_pat_as_shadowingCase(void);
 
 int main(int argc, char** argv);
 
@@ -13,7 +13,7 @@ struct IntIntTuple2_ {
     int t1;
 };
 
-void pat_as_Program_simpleCase(void) {
+void pat_as_pat_as_simpleCase(void) {
     int x_;
     char match_;
     x_ = 1;
@@ -30,9 +30,9 @@ end_match_1:;
     return;
 }
 
-void pat_as_Program_shadowingCase(void) {
-    int x_2;
+void pat_as_pat_as_shadowingCase(void) {
     struct IntIntTuple2_ y_;
+    int x_2;
     int x_1 = 1;
     char match_1;
     struct IntIntTuple2_ IntIntTuple2_ = (struct IntIntTuple2_){.t0 = x_1, .t1 = 2};
@@ -76,7 +76,7 @@ end_match_4:;
 
 int main(int argc, char** argv) {
     milone_start(argc, argv);
-    pat_as_Program_simpleCase();
-    pat_as_Program_shadowingCase();
+    pat_as_pat_as_simpleCase();
+    pat_as_pat_as_shadowingCase();
     return 0;
 }

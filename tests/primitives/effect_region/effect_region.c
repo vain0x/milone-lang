@@ -14,7 +14,7 @@ int effect_region_effect_region_doAction_fun(void);
 
 int effect_region_effect_region_eta2_doAction_fun(void const* env_);
 
-int effect_region_Program_doAction(void);
+int effect_region_effect_region_doAction(void);
 
 int main(int argc, char** argv);
 
@@ -62,7 +62,7 @@ int effect_region_effect_region_eta2_doAction_fun(void const* env_) {
     return call_1;
 }
 
-int effect_region_Program_doAction(void) {
+int effect_region_effect_region_doAction(void) {
     struct UnitIntFun1 fun_ = (struct UnitIntFun1){.fun = effect_region_effect_region_eta2_doAction_fun, .env = NULL};
     milone_enter_region();
     int region_result = fun_.fun(fun_.env);
@@ -72,6 +72,6 @@ int effect_region_Program_doAction(void) {
 
 int main(int argc, char** argv) {
     milone_start(argc, argv);
-    int call_2 = effect_region_Program_doAction();
+    int call_2 = effect_region_effect_region_doAction();
     return 0;
 }

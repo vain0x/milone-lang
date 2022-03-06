@@ -8,11 +8,11 @@ struct String ty_synonym_ty_synonym_BoolStringStringStringFun3_proj(bool cond_, 
 
 int ty_synonym_ty_synonym_BoolIntIntIntFun3_proj(bool cond_, int body_, int alt_);
 
-void ty_synonym_Program_baseCase(void);
+void ty_synonym_ty_synonym_baseCase(void);
 
-void ty_synonym_Program_yodaCase(int exitCode_);
+void ty_synonym_ty_synonym_yodaCase(int exitCode_);
 
-void ty_synonym_Program_polymorphicFunCase(void);
+void ty_synonym_ty_synonym_polymorphicFunCase(void);
 
 int main(int argc, char** argv);
 
@@ -55,7 +55,7 @@ if_next_4:;
     return if_1;
 }
 
-void ty_synonym_Program_baseCase(void) {
+void ty_synonym_ty_synonym_baseCase(void) {
     int success_ = 0;
     int failure_ = 1;
     struct IntList const* list_1 = milone_mem_alloc(1, sizeof(struct IntList));
@@ -67,12 +67,12 @@ void ty_synonym_Program_baseCase(void) {
     return;
 }
 
-void ty_synonym_Program_yodaCase(int exitCode_) {
+void ty_synonym_ty_synonym_yodaCase(int exitCode_) {
     milone_assert((0 == exitCode_), (struct String){.str = "ty_synonym/ty_synonym.milone", .len = 28}, 16, 36);
     return;
 }
 
-void ty_synonym_Program_polymorphicFunCase(void) {
+void ty_synonym_ty_synonym_polymorphicFunCase(void) {
     int call_ = ty_synonym_ty_synonym_BoolIntIntIntFun3_proj(true, 1, 0);
     milone_assert((call_ == 1), (struct String){.str = "ty_synonym/ty_synonym.milone", .len = 28}, 21, 2);
     struct String call_1 = ty_synonym_ty_synonym_BoolStringStringStringFun3_proj(false, (struct String){.str = "T", .len = 1}, (struct String){.str = "F", .len = 1});
@@ -82,8 +82,8 @@ void ty_synonym_Program_polymorphicFunCase(void) {
 
 int main(int argc, char** argv) {
     milone_start(argc, argv);
-    ty_synonym_Program_baseCase();
-    ty_synonym_Program_yodaCase(0);
-    ty_synonym_Program_polymorphicFunCase();
+    ty_synonym_ty_synonym_baseCase();
+    ty_synonym_ty_synonym_yodaCase(0);
+    ty_synonym_ty_synonym_polymorphicFunCase();
     return 0;
 }

@@ -8,7 +8,7 @@ typedef struct BoxedVariant_(*VoidConstPtrBoxedVariantoption1_BoxedVariant_FunPt
 
 struct BoxedVariantoption1_BoxedVariant_Fun1;
 
-struct BoxedVariant_ variant_fun_auto_boxing_bug_Program_feedNil(struct BoxedVariantoption1_BoxedVariant_Fun1 f_);
+struct BoxedVariant_ variant_fun_auto_boxing_bug_variant_fun_auto_boxing_bug_feedNil(struct BoxedVariantoption1_BoxedVariant_Fun1 f_);
 
 int main(int argc, char** argv);
 
@@ -40,7 +40,7 @@ struct BoxedVariantoption1_BoxedVariant_Fun1 {
     void const* env;
 };
 
-struct BoxedVariant_ variant_fun_auto_boxing_bug_Program_feedNil(struct BoxedVariantoption1_BoxedVariant_Fun1 f_) {
+struct BoxedVariant_ variant_fun_auto_boxing_bug_variant_fun_auto_boxing_bug_feedNil(struct BoxedVariantoption1_BoxedVariant_Fun1 f_) {
     struct BoxedVariant_ app_ = f_.fun(f_.env, (struct BoxedVariantoption1_){.discriminant = None_});
     return app_;
 }

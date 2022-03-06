@@ -14,11 +14,11 @@ int fun_lambda_fun_lambda_layoutTest_fun(int x_1);
 
 int fun_lambda_fun_lambda_eta2_layoutTest_fun(void const* env_, int arg_);
 
-void fun_lambda_Program_layoutTest(void);
+void fun_lambda_fun_lambda_layoutTest(void);
 
 int fun_lambda_fun_lambda_main_twice(struct IntIntFun1 f_1, int x_2);
 
-int fun_lambda_fun_lambda_main_fun(int x_4);
+int fun_lambda_fun_lambda_main_fun(int x_3);
 
 int fun_lambda_fun_lambda_eta2_main_fun(void const* env_1, int arg_1);
 
@@ -52,7 +52,7 @@ int fun_lambda_fun_lambda_eta2_layoutTest_fun(void const* env_, int arg_) {
     return call_;
 }
 
-void fun_lambda_Program_layoutTest(void) {
+void fun_lambda_fun_lambda_layoutTest(void) {
     struct IntIntFun1 fun_ = (struct IntIntFun1){.fun = fun_lambda_fun_lambda_eta2_layoutTest_fun, .env = NULL};
     int call_1 = fun_lambda_fun_lambda_layoutTest_apply(fun_, 2);
     int a_ = call_1;
@@ -66,8 +66,8 @@ int fun_lambda_fun_lambda_main_twice(struct IntIntFun1 f_1, int x_2) {
     return app_2;
 }
 
-int fun_lambda_fun_lambda_main_fun(int x_4) {
-    int y_ = (x_4 + 1);
+int fun_lambda_fun_lambda_main_fun(int x_3) {
+    int y_ = (x_3 + 1);
     return y_;
 }
 
@@ -89,11 +89,11 @@ int main(int argc, char** argv) {
     milone_start(argc, argv);
     struct IntIntFun1 fun_1 = (struct IntIntFun1){.fun = fun_lambda_fun_lambda_eta2_main_fun, .env = NULL};
     int call_4 = fun_lambda_fun_lambda_main_twice(fun_1, 40);
-    int x_3 = call_4;
-    milone_assert((x_3 == 42), (struct String){.str = "fun_lambda/fun_lambda.milone", .len = 28}, 24, 2);
+    int x_4 = call_4;
+    milone_assert((x_4 == 42), (struct String){.str = "fun_lambda/fun_lambda.milone", .len = 28}, 24, 2);
     struct IntIntIntFun2 fun_2 = (struct IntIntIntFun2){.fun = fun_lambda_fun_lambda_eta3_main_fun, .env = NULL};
     int app_3 = fun_2.fun(fun_2.env, 84, 2);
     milone_assert((app_3 == 42), (struct String){.str = "fun_lambda/fun_lambda.milone", .len = 28}, 26, 2);
-    fun_lambda_Program_layoutTest();
+    fun_lambda_fun_lambda_layoutTest();
     return 0;
 }

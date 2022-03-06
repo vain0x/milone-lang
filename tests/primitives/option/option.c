@@ -6,11 +6,11 @@ struct Stringoption1_;
 
 struct Unitoption1_;
 
-void option_Program_basicSomeCase(void);
+void option_option_basicSomeCase(void);
 
-void option_Program_basicNoneCase(void);
+void option_option_basicNoneCase(void);
 
-void option_Program_basicMatchCase(void);
+void option_option_basicMatchCase(void);
 
 int main(int argc, char** argv);
 
@@ -50,7 +50,7 @@ struct Unitoption1_ {
     };
 };
 
-void option_Program_basicSomeCase(void) {
+void option_option_basicSomeCase(void) {
     char match_;
     struct Intoption1_ variant_ = (struct Intoption1_){.discriminant = Some_, .Some_ = 1};
     if ((variant_.discriminant != None_)) goto next_2;
@@ -71,7 +71,7 @@ end_match_1:;
     return;
 }
 
-void option_Program_basicNoneCase(void) {
+void option_option_basicNoneCase(void) {
     char match_1;
     if (((struct Stringoption1_){.discriminant = None_1}.discriminant != Some_1)) goto next_6;
     if ((str_compare((struct Stringoption1_){.discriminant = None_1}.Some_1, (struct String){.str = "a", .len = 1}) != 0)) goto next_6;
@@ -91,7 +91,7 @@ end_match_5:;
     return;
 }
 
-void option_Program_basicMatchCase(void) {
+void option_option_basicMatchCase(void) {
     char switch_;
     struct Unitoption1_ variant_1 = (struct Unitoption1_){.discriminant = Some_2, .Some_2 = 0};
     switch (variant_1.discriminant) {
@@ -114,8 +114,8 @@ switch_next_9:;
 
 int main(int argc, char** argv) {
     milone_start(argc, argv);
-    option_Program_basicSomeCase();
-    option_Program_basicNoneCase();
-    option_Program_basicMatchCase();
+    option_option_basicSomeCase();
+    option_option_basicNoneCase();
+    option_option_basicMatchCase();
     return 0;
 }

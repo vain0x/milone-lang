@@ -1,25 +1,25 @@
 #include <milone.h>
 
-void int_operators_Program_literalTest(void);
+void int_operators_int_operators_literalTest(void);
 
-void int_operators_Program_hexLiteralTest(void);
+void int_operators_int_operators_hexLiteralTest(void);
 
-void int_operators_Program_arithmeticOperatorsTest(int two_, int three_, int thirtyNine_);
+void int_operators_int_operators_arithmeticOperatorsTest(int two_, int three_, int thirtyNine_);
 
-void int_operators_Program_bitOperatorsTest(int n1_);
+void int_operators_int_operators_bitOperatorsTest(int n1_);
 
-void int_operators_Program_compareTest(int n2_1, int n3_);
+void int_operators_int_operators_compareTest(int n2_1, int n3_);
 
-void int_operators_Program_toIntTest(void);
+void int_operators_int_operators_toIntTest(void);
 
 int main(int argc, char** argv);
 
-void int_operators_Program_literalTest(void) {
+void int_operators_int_operators_literalTest(void) {
     milone_assert(((-(((int32_t)0x80000000 + 1))) == 2147483647), (struct String){.str = "int_operators/int_operators.milone", .len = 34}, 4, 2);
     return;
 }
 
-void int_operators_Program_hexLiteralTest(void) {
+void int_operators_int_operators_hexLiteralTest(void) {
     milone_assert(((int32_t)0x00000000 == 0), (struct String){.str = "int_operators/int_operators.milone", .len = 34}, 7, 2);
     milone_assert(((int32_t)0x10 == 16), (struct String){.str = "int_operators/int_operators.milone", .len = 34}, 8, 2);
     milone_assert(((int32_t)0x7fffffff == 2147483647), (struct String){.str = "int_operators/int_operators.milone", .len = 34}, 9, 2);
@@ -27,7 +27,7 @@ void int_operators_Program_hexLiteralTest(void) {
     return;
 }
 
-void int_operators_Program_arithmeticOperatorsTest(int two_, int three_, int thirtyNine_) {
+void int_operators_int_operators_arithmeticOperatorsTest(int two_, int three_, int thirtyNine_) {
     milone_assert(((two_ + three_) == 5), (struct String){.str = "int_operators/int_operators.milone", .len = 34}, 13, 2);
     milone_assert(((three_ - two_) == 1), (struct String){.str = "int_operators/int_operators.milone", .len = 34}, 14, 2);
     milone_assert(((two_ * three_) == 6), (struct String){.str = "int_operators/int_operators.milone", .len = 34}, 15, 2);
@@ -39,7 +39,7 @@ void int_operators_Program_arithmeticOperatorsTest(int two_, int three_, int thi
     return;
 }
 
-void int_operators_Program_bitOperatorsTest(int n1_) {
+void int_operators_int_operators_bitOperatorsTest(int n1_) {
     int n2_ = (n1_ * 2);
     int n4_ = (n2_ * 2);
     int n8_ = (n4_ * 2);
@@ -58,7 +58,7 @@ void int_operators_Program_bitOperatorsTest(int n1_) {
     return;
 }
 
-void int_operators_Program_compareTest(int n2_1, int n3_) {
+void int_operators_int_operators_compareTest(int n2_1, int n3_) {
     milone_assert((n2_1 == 2), (struct String){.str = "int_operators/int_operators.milone", .len = 34}, 44, 2);
     milone_assert((n3_ != 2), (struct String){.str = "int_operators/int_operators.milone", .len = 34}, 45, 2);
     milone_assert((2 >= n2_1), (struct String){.str = "int_operators/int_operators.milone", .len = 34}, 47, 2);
@@ -71,7 +71,7 @@ void int_operators_Program_compareTest(int n2_1, int n3_) {
     return;
 }
 
-void int_operators_Program_toIntTest(void) {
+void int_operators_int_operators_toIntTest(void) {
     milone_assert((0 == 0), (struct String){.str = "int_operators/int_operators.milone", .len = 34}, 58, 2);
     milone_assert((((int)'a') == 97), (struct String){.str = "int_operators/int_operators.milone", .len = 34}, 59, 2);
     int call_ = str_to_int((struct String){.str = "42", .len = 2});
@@ -83,11 +83,11 @@ void int_operators_Program_toIntTest(void) {
 
 int main(int argc, char** argv) {
     milone_start(argc, argv);
-    int_operators_Program_literalTest();
-    int_operators_Program_hexLiteralTest();
-    int_operators_Program_arithmeticOperatorsTest(2, 3, 39);
-    int_operators_Program_bitOperatorsTest(1);
-    int_operators_Program_compareTest(2, 3);
-    int_operators_Program_toIntTest();
+    int_operators_int_operators_literalTest();
+    int_operators_int_operators_hexLiteralTest();
+    int_operators_int_operators_arithmeticOperatorsTest(2, 3, 39);
+    int_operators_int_operators_bitOperatorsTest(1);
+    int_operators_int_operators_compareTest(2, 3);
+    int_operators_int_operators_toIntTest();
     return 0;
 }

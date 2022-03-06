@@ -1,12 +1,12 @@
 #include <milone.h>
 
-void bool_operators_Program_test(bool t_, bool f_);
+void bool_operators_bool_operators_test(bool t_, bool f_);
 
-void bool_operators_Program_testShortCircuit(bool t_1, bool f_1);
+void bool_operators_bool_operators_testShortCircuit(bool t_1, bool f_1);
 
 int main(int argc, char** argv);
 
-void bool_operators_Program_test(bool t_, bool f_) {
+void bool_operators_bool_operators_test(bool t_, bool f_) {
     milone_assert(t_, (struct String){.str = "bool_operators/bool_operators.milone", .len = 36}, 6, 2);
     milone_assert((!(f_)), (struct String){.str = "bool_operators/bool_operators.milone", .len = 36}, 9, 2);
     milone_assert(t_, (struct String){.str = "bool_operators/bool_operators.milone", .len = 36}, 10, 2);
@@ -135,7 +135,7 @@ if_next_22:;
     return;
 }
 
-void bool_operators_Program_testShortCircuit(bool t_1, bool f_1) {
+void bool_operators_bool_operators_testShortCircuit(bool t_1, bool f_1) {
     bool if_8;
     if (f_1) {
         goto then_26;
@@ -167,7 +167,7 @@ if_next_28:;
 
 int main(int argc, char** argv) {
     milone_start(argc, argv);
-    bool_operators_Program_test(true, false);
-    bool_operators_Program_testShortCircuit(true, false);
+    bool_operators_bool_operators_test(true, false);
+    bool_operators_bool_operators_testShortCircuit(true, false);
     return 0;
 }
