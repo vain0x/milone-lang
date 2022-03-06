@@ -112,12 +112,12 @@ type MBinary =
 [<NoEquality; NoComparison>]
 type MAction =
   | MAssertAction
-  | MPrintfnAction
+  | MPrintfnAction of argTys: Ty list
   | MEnterRegionAction
   | MLeaveRegionAction
   | MCallProcAction
   | MCallClosureAction
-  | MCallNativeAction of funName: string
+  | MCallNativeAction of funName: string * argTys: Ty list
   | MPtrWriteAction
 
 [<NoEquality; NoComparison>]
@@ -137,8 +137,8 @@ type MPrim =
   /// Construct a closure, packing environment.
   | MClosurePrim of closureFunSerial: FunSerial
 
-  | MBoxPrim
-  | MConsPrim
+  | MBoxPrim of argTy: Ty
+  | MConsPrim of itemTy: Ty
   | MVariantPrim of variantSerial: VariantSerial
   | MRecordPrim
 
@@ -148,7 +148,7 @@ type MPrim =
   /// Indirect call to closure.
   | MCallClosurePrim
 
-  | MCallNativePrim of funName: string
+  | MCallNativePrim of funName: string * argTys: Ty list
   | MPtrReadPrim
 
 /// Expression in middle IR.
@@ -172,7 +172,7 @@ type MExpr =
   | MDiscriminantConstExpr of VariantSerial * Loc
   | MGenericValueExpr of MGenericValue * Ty * Loc
 
-  | MUnaryExpr of MUnary * arg: MExpr * resultTy: Ty * Loc
+  | MUnaryExpr of MUnary * arg: MExpr * argTy: Ty * resultTy: Ty * Loc
   | MBinaryExpr of MBinary * MExpr * MExpr * resultTy: Ty * Loc
 
   | MNativeExpr of code: string * MExpr list * Ty * Loc
@@ -191,7 +191,7 @@ type MSwitchClause =
 [<NoEquality; NoComparison>]
 type MTerminator =
   | MExitTerminator of exitCode: MExpr
-  | MReturnTerminator of result: MExpr
+  | MReturnTerminator of result: MExpr * resultTy: Ty
   | MGotoTerminator of Label
   | MIfTerminator of cond: MExpr * thenCl: MTerminator * elseCl: MTerminator
   | MSwitchTerminator of cond: MExpr * MSwitchClause list
@@ -232,30 +232,6 @@ type MModule =
     Decls: MDecl list }
 
 // -----------------------------------------------
-// Expressions (MIR)
-// -----------------------------------------------
-
-let mexprToTy expr =
-  match expr with
-  | MLitExpr (lit, _) -> litToTy lit
-  | MUnitExpr _ -> tyUnit
-  | MNeverExpr _ -> tyUnit
-  | MVarExpr (_, ty, _) -> ty
-  | MProcExpr (_, ty, _) -> ty
-  | MVariantExpr (_, _, ty, _) -> ty
-  | MDiscriminantConstExpr (_, _) -> tyInt
-
-  | MGenericValueExpr (genericValue, ty, _) ->
-    match genericValue with
-    | MNilGv -> ty
-    | MSizeOfGv -> tyInt
-    | MTyPlaceholderGv -> ty
-
-  | MUnaryExpr (_, _, ty, _) -> ty
-  | MBinaryExpr (_, _, _, ty, _) -> ty
-  | MNativeExpr (_, _, ty, _) -> ty
-
-// -----------------------------------------------
 // Declarations (MIR)
 // -----------------------------------------------
 
@@ -276,7 +252,7 @@ let mxSugar expr =
     | MLitExpr (BoolLit value, loc) -> MLitExpr(BoolLit(not value), loc)
 
     // SUGAR: `not (not x)` ==> `x`
-    | MUnaryExpr (MNotUnary, l, _, _) -> l
+    | MUnaryExpr (MNotUnary, l, _, _, _) -> l
 
     // SUGAR: `not (x = y)` ==> `x <> y`
     | MBinaryExpr (MEqualBinary, l, r, ty, loc) -> MBinaryExpr(MNotEqualBinary, l, r, ty, loc)
@@ -290,7 +266,7 @@ let mxSugar expr =
     // SUGAR: `not (x >= y)` ==> `x < y`
     | MBinaryExpr (MGreaterEqualBinary, l, r, ty, loc) -> MBinaryExpr(MLessBinary, l, r, ty, loc)
 
-    | _ -> MUnaryExpr(MNotUnary, l, ty, loc)
+    | _ -> MUnaryExpr(MNotUnary, l, tyBool, ty, loc)
 
   let mxSugarBin op l r ty loc =
     match op, l, r with
@@ -310,7 +286,7 @@ let mxSugar expr =
   // SUGAR: `x: unit` ==> `()`
   | MVarExpr (_, Ty (TupleTk, []), loc) -> MUnitExpr loc
 
-  | MUnaryExpr (MNotUnary, l, ty, loc) ->
+  | MUnaryExpr (MNotUnary, l, _, ty, loc) ->
     let l = mxSugar l
     mxSugarNot l ty loc
 

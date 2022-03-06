@@ -788,8 +788,7 @@ let private genBinaryExprAsCall ctx funName l r =
   let callExpr = CCallExpr(CVarExpr funName, [ l; r ])
   callExpr, ctx
 
-let private genUnaryExpr ctx op arg ty _ =
-  let argTy = arg |> mexprToTy
+let private genUnaryExpr ctx op arg argTy ty _ =
   let arg, ctx = cgExpr ctx arg
 
   match op with
@@ -881,7 +880,7 @@ let private cgExpr (ctx: CirCtx) (arg: MExpr) : CExpr * CirCtx =
   | MVariantExpr (_, serial, ty, _) -> genVariantNameExpr ctx serial ty
   | MDiscriminantConstExpr (variantSerial, _) -> genDiscriminant ctx variantSerial, ctx
   | MGenericValueExpr (genericValue, ty, _) -> genGenericValue ctx genericValue ty
-  | MUnaryExpr (op, arg, ty, loc) -> genUnaryExpr ctx op arg ty loc
+  | MUnaryExpr (op, arg, argTy, ty, loc) -> genUnaryExpr ctx op arg argTy ty loc
   | MBinaryExpr (op, l, r, _, _) -> genExprBin ctx op l r
 
   | MNativeExpr (code, args, _, _) ->
@@ -892,8 +891,8 @@ let private cgExpr (ctx: CirCtx) (arg: MExpr) : CExpr * CirCtx =
 // Statements
 // -----------------------------------------------
 
-let private addNativeFunDecl ctx funName args resultTy =
-  let argTys, ctx = cgArgTys ctx (List.map mexprToTy args)
+let private addNativeFunDecl ctx funName argTys resultTy =
+  let argTys, ctx = cgArgTys ctx argTys
   let resultTy, ctx = cgResultTy ctx resultTy
 
   addDecl ctx (CFunForwardDecl(funName, argTys, resultTy))
@@ -904,7 +903,7 @@ let private cgActionStmt ctx itself action args =
     let args, ctx = cgExprList ctx args
     addStmt ctx (CExprStmt(CCallExpr(CVarExpr "milone_assert", args)))
 
-  | MPrintfnAction -> cgPrintfnActionStmt ctx itself args
+  | MPrintfnAction argTys -> cgPrintfnActionStmt ctx itself args argTys
 
   | MEnterRegionAction ->
     assert (List.isEmpty args)
@@ -949,8 +948,9 @@ let private cgActionStmt ctx itself action args =
 
     | _ -> unreachable itself
 
-  | MCallNativeAction funName ->
-    let ctx = addNativeFunDecl ctx funName args tyUnit
+  | MCallNativeAction (funName, argTys) ->
+    let ctx =
+      addNativeFunDecl ctx funName argTys tyUnit
 
     let args, ctx = cgExprList ctx args
     addStmt ctx (CExprStmt(CCallExpr(CVarExpr funName, args)))
@@ -961,18 +961,23 @@ let private cgActionStmt ctx itself action args =
     | [ ptr; index; value ], ctx -> addStmt ctx (CSetStmt(CIndexExpr(ptr, index), value))
     | _ -> unreachable ()
 
-let private cgPrintfnActionStmt ctx itself args =
+let private cgPrintfnActionStmt ctx itself args argTys =
+  let args =
+    match listTryZip args argTys with
+    | it, [], [] -> it
+    | _ -> unreachable ()
+
   match args with
-  | (MLitExpr (StrLit format, _)) :: args ->
+  | (MLitExpr (StrLit format, _), _) :: args ->
     let format = CStrRawExpr(format + "\n")
 
     let args, ctx =
       (args, ctx)
-      |> stMap (fun (arg, ctx) ->
+      |> stMap (fun ((arg, argTy), ctx) ->
         match arg with
         | MLitExpr (StrLit value, _) -> CStrRawExpr value, ctx
 
-        | _ when tyEqual (mexprToTy arg) tyStr ->
+        | _ when tyEqual argTy tyStr ->
           // Insert implicit cast from str to str ptr.
           let arg, ctx = cgExpr ctx arg
           CCallExpr(CVarExpr "str_to_c_str", [ arg ]), ctx
@@ -1098,14 +1103,14 @@ let private cgPrimStmt (ctx: CirCtx) itself prim args serial resultTy =
 
     addLetStmt ctx name (Some expr) ty isStatic linkage replacing
 
-  | MBoxPrim ->
+  | MBoxPrim argTy ->
     match args with
-    | [ arg ] -> cgBoxStmt ctx serial arg
+    | [ arg ] -> cgBoxStmt ctx serial arg argTy
     | _ -> unreachable itself
 
-  | MConsPrim ->
+  | MConsPrim itemTy ->
     match args with
-    | [ l; r ] -> cgConsStmt ctx serial l r
+    | [ l; r ] -> cgConsStmt ctx serial l r itemTy
     | _ -> unreachable itself
 
   | MVariantPrim variantSerial ->
@@ -1179,9 +1184,9 @@ let private cgPrimStmt (ctx: CirCtx) itself prim args serial resultTy =
 
     | [] -> unreachable itself
 
-  | MCallNativePrim funName ->
+  | MCallNativePrim (funName, argTys) ->
     let ctx =
-      addNativeFunDecl ctx funName args resultTy
+      addNativeFunDecl ctx funName argTys resultTy
 
     regular ctx (fun args -> (CCallExpr(CVarExpr funName, args)))
 
@@ -1192,8 +1197,8 @@ let private cgPrimStmt (ctx: CirCtx) itself prim args serial resultTy =
       | [ ptr; index ] -> CIndexExpr(ptr, index)
       | _ -> unreachable ())
 
-let private cgBoxStmt ctx serial arg =
-  let argTy, ctx = cgTyComplete ctx (mexprToTy arg)
+let private cgBoxStmt ctx serial arg argTy =
+  let argTy, ctx = cgTyComplete ctx argTy
   let arg, ctx = cgExpr ctx arg
 
   // void const* p = malloc(sizeof T);
@@ -1208,9 +1213,9 @@ let private cgBoxStmt ctx serial arg =
 
   addStmt ctx (CSetStmt(left, arg))
 
-let private cgConsStmt ctx serial head tail =
+let private cgConsStmt ctx serial head tail itemTy =
   let temp = getUniqueVarName ctx serial
-  let listTy, ctx = genListTyDef ctx (mexprToTy head)
+  let listTy, ctx = genListTyDef ctx itemTy
 
   let listStructTy =
     match listTy with
@@ -1246,8 +1251,8 @@ let private cgSetStmt ctx serial right =
   let left = CVarExpr(name)
   addStmt ctx (CSetStmt(left, right))
 
-let private cgReturnStmt ctx expr =
-  if expr |> mexprToTy |> tyIsUnit then
+let private cgReturnStmt ctx expr argTy =
+  if tyIsUnit argTy then
     addStmt ctx (CReturnStmt None)
   else
     let expr, ctx = cgExpr ctx expr
@@ -1259,7 +1264,7 @@ let private cgTerminatorAsBlock ctx terminator : CStmt list * CirCtx =
 
 let private cgTerminatorStmt ctx stmt =
   match stmt with
-  | MReturnTerminator expr -> cgReturnStmt ctx expr
+  | MReturnTerminator (expr, argTy) -> cgReturnStmt ctx expr argTy
   | MGotoTerminator label -> addStmt ctx (CGotoStmt label)
 
   | MIfTerminator (cond, thenCl, elseCl) ->
