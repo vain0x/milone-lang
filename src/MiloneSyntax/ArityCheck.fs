@@ -2,7 +2,6 @@ module rec MiloneSyntax.ArityCheck
 
 open MiloneShared.SharedTypes
 open MiloneShared.Util
-open Std.StdError
 open MiloneSyntax.Tir
 open MiloneSyntax.TySystem
 open MiloneSyntaxTypes.TirTypes
@@ -69,6 +68,7 @@ let private tyToArityEx ty =
       let args, result = goFun tTy
       sTy :: args, result
 
+    | Ty (ErrorTk _, _) -> [], HungryAx
     | _ -> [], UnitAx
 
   let args, result = goFun ty

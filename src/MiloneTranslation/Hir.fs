@@ -99,8 +99,6 @@ let litToTy (lit: Lit) : Ty =
 // Patterns (HIR)
 // -----------------------------------------------
 
-let hpAbort ty loc = HNodePat(HAbortPN, [], ty, loc)
-
 let hpVar varSerial ty loc = HVarPat(varSerial, ty, loc)
 
 let hpVariantApp variantSerial payloadPat ty loc =
@@ -203,8 +201,6 @@ let patIsClearlyExhaustive isNewtypeVariant pat =
     | HNodePat (kind, argPats, _, _) ->
       match kind, argPats with
       | HVariantAppPN variantSerial, [ payloadPat ] -> isNewtypeVariant variantSerial && go payloadPat
-
-      | HAbortPN, _ -> true
 
       | HNilPN, _
       | HConsPN, _

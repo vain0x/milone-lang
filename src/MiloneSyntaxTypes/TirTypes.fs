@@ -300,8 +300,6 @@ type TPrim =
 
 [<NoEquality; NoComparison>]
 type TExprKind =
-  | TAbortEN
-
   /// `-x`.
   | TMinusEN
 
@@ -341,6 +339,9 @@ type TExprKind =
 
   /// Name of type.
   | TTyPlaceholderEN
+
+  /// Generated after compile error occurred while processing an expression.
+  | TAbortEN
 
 /// Expression.
 [<NoEquality; NoComparison>]

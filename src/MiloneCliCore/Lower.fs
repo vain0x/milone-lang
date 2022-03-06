@@ -150,16 +150,16 @@ let private lowerPatKind (kind: Tir.TPatKind) : Hir.HPatKind =
   | Tir.TConsPN -> Hir.HConsPN
   | Tir.TVariantAppPN serial -> Hir.HVariantAppPN(lowerVariantSerial serial)
   | Tir.TTuplePN -> Hir.HTuplePN
-  | Tir.TAbortPN -> Hir.HAbortPN
 
   | Tir.TAppPN
   | Tir.TNavPN _ -> unreachable () // Resolved in NameRes.
 
   | Tir.TAscribePN -> unreachable () // Resolved in Typing.
 
+  | Tir.TAbortPN -> unreachable () // Compile error occurred.
+
 let private lowerExprKind (kind: Tir.TExprKind) : Hir.HExprKind =
   match kind with
-  | Tir.TAbortEN -> Hir.HAbortEN
   | Tir.TMinusEN -> Hir.HMinusEN
   | Tir.TAppEN -> Hir.HAppEN
   | Tir.TIndexEN -> Hir.HIndexEN
@@ -174,6 +174,7 @@ let private lowerExprKind (kind: Tir.TExprKind) : Hir.HExprKind =
   | Tir.TSizeOfValEN -> Hir.HSizeOfValEN
   | Tir.TTyPlaceholderEN -> Hir.HTyPlaceholderEN
 
+  | Tir.TAbortEN -> unreachable () // Compile error occurred.
   | Tir.TAscribeEN -> unreachable () // Resolved in Typing.
 
 let private lowerPat (pat: Tir.TPat) : Hir.HPat =

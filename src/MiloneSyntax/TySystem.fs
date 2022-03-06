@@ -365,6 +365,9 @@ let unifyNext (lTy: Ty) (rTy: Ty) (loc: Loc) : UnifyResult =
     | _, Ty (SynonymTk tySerial, tyArgs) -> UnifyExpandSynonym(tySerial, tyArgs, lTy)
     | _ -> unreachable ()
 
+  | Ty (ErrorTk _, _), _
+  | _, Ty (ErrorTk _, _) -> UnifyOk
+
   | _ -> mismatchError ()
 
 [<RequireQualifiedAccess>]
