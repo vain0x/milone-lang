@@ -465,7 +465,7 @@ let private mirifyPat ctx (endLabel: string) (pat: HPat) (expr: MExpr) exprTy : 
 // Expression
 // -----------------------------------------------
 
-let private mirifyExprVariant (ctx: MirCtx) itself serial ty loc =
+let private mirifyExprVariant (ctx: MirCtx) serial ty loc =
   let variantDef = ctx.Rx.Variants |> mapFind serial
   MVariantExpr(variantDef.UnionTySerial, serial, ty, loc), ctx
 
@@ -988,7 +988,7 @@ let private reuseArmLocals arms (ctx: MirCtx) : _ * MirCtx =
 // Expressions
 // -----------------------------------------------
 
-let private mirifyExprCallExit ctx arg ty loc =
+let private mirifyExprCallExit ctx arg loc =
   let arg, ctx = mirifyExpr ctx arg
 
   let ctx =
@@ -996,7 +996,7 @@ let private mirifyExprCallExit ctx arg ty loc =
 
   MNeverExpr loc, ctx
 
-let private mirifyExprCallBox ctx arg _ loc =
+let private mirifyExprCallBox ctx arg loc =
   let argTy = exprToTy arg
   let arg, ctx = mirifyExpr ctx arg
 
@@ -1099,7 +1099,7 @@ let private mirifyExprRecordItem ctx index record loc =
   let record, ctx = mirifyExpr ctx record
   MUnaryExpr(MRecordItemUnary(index, recordTy), record, loc), ctx
 
-let private mirifyExprOpArith ctx itself op l r ty loc =
+let private mirifyExprOpArith ctx itself op l r loc =
   let lTy = exprToTy l
   let l, ctx = mirifyExpr ctx l
   let r, ctx = mirifyExpr ctx r
@@ -1331,15 +1331,15 @@ let private mirifyCallPrimExpr ctx itself prim args ty loc =
     MUnitExpr loc, ctx
 
   match prim, args with
-  | HPrim.Add, [ l; r ] -> mirifyExprOpArith ctx itself MAddBinary l r ty loc
+  | HPrim.Add, [ l; r ] -> mirifyExprOpArith ctx itself MAddBinary l r loc
   | HPrim.Add, _ -> fail ()
-  | HPrim.Sub, [ l; r ] -> mirifyExprOpArith ctx itself MSubBinary l r ty loc
+  | HPrim.Sub, [ l; r ] -> mirifyExprOpArith ctx itself MSubBinary l r loc
   | HPrim.Sub, _ -> fail ()
-  | HPrim.Mul, [ l; r ] -> mirifyExprOpArith ctx itself MMulBinary l r ty loc
+  | HPrim.Mul, [ l; r ] -> mirifyExprOpArith ctx itself MMulBinary l r loc
   | HPrim.Mul, _ -> fail ()
-  | HPrim.Div, [ l; r ] -> mirifyExprOpArith ctx itself MDivBinary l r ty loc
+  | HPrim.Div, [ l; r ] -> mirifyExprOpArith ctx itself MDivBinary l r loc
   | HPrim.Div, _ -> fail ()
-  | HPrim.Modulo, [ l; r ] -> mirifyExprOpArith ctx itself MModuloBinary l r ty loc
+  | HPrim.Modulo, [ l; r ] -> mirifyExprOpArith ctx itself MModuloBinary l r loc
   | HPrim.Modulo, _ -> fail ()
 
   | HPrim.BitAnd, [ l; r ] -> regularBinary MBitAndBinary l r
@@ -1363,9 +1363,9 @@ let private mirifyCallPrimExpr ctx itself prim args ty loc =
   | HPrim.Cons, _ -> fail ()
   | HPrim.Not, [ arg ] -> regularUnary MNotUnary arg
   | HPrim.Not, _ -> fail ()
-  | HPrim.Exit, [ arg ] -> mirifyExprCallExit ctx arg ty loc
+  | HPrim.Exit, [ arg ] -> mirifyExprCallExit ctx arg loc
   | HPrim.Exit, _ -> fail ()
-  | HPrim.Box, [ arg ] -> mirifyExprCallBox ctx arg ty loc
+  | HPrim.Box, [ arg ] -> mirifyExprCallBox ctx arg loc
   | HPrim.Box, _ -> fail ()
   | HPrim.Unbox, [ arg ] -> mirifyCallUnbox ctx arg ty loc
   | HPrim.Unbox, _ -> fail ()
@@ -1408,7 +1408,7 @@ let private mirifyExprInfCallClosure ctx callee args resultTy loc =
 
     tempRef, ctx
 
-let private mirifyExprInfCallTailRec (ctx: MirCtx) _callee args _ty loc =
+let private mirifyExprInfCallTailRec (ctx: MirCtx) args loc =
   // It's guaranteed that callee points to the current fun,
   // but it's serial can now be wrong due to monomorphization.
 
@@ -1500,7 +1500,7 @@ let private mirifyExprInf ctx itself kind args ty loc =
   | HCallProcEN, HPrimExpr (prim, _, _) :: args, _ -> mirifyCallPrimExpr ctx itself prim args ty loc
   | HCallProcEN, callee :: args, _ -> mirifyCallProcExpr ctx callee args ty loc
 
-  | HCallTailRecEN, callee :: args, _ -> mirifyExprInfCallTailRec ctx callee args ty loc
+  | HCallTailRecEN, _ :: args, _ -> mirifyExprInfCallTailRec ctx args loc
   | HCallClosureEN, callee :: args, _ -> mirifyExprInfCallClosure ctx callee args ty loc
   | HCallNativeEN funName, args, _ -> mirifyExprInfCallNative ctx funName args ty loc
   | HClosureEN, [ HFunExpr (funSerial, _, _, _); env ], _ -> mirifyExprInfClosure ctx funSerial env ty loc
@@ -1619,9 +1619,9 @@ let private mirifyExpr (ctx: MirCtx) (expr: HExpr) : MExpr * MirCtx =
   match expr with
   | HLitExpr (lit, loc) -> MLitExpr(lit, loc), ctx
   | HVarExpr (serial, ty, loc) -> MVarExpr(serial, ty, loc), ctx
-  | HFunExpr (serial, ty, _, loc) -> MProcExpr(serial, loc), ctx
+  | HFunExpr (serial, _, _, loc) -> MProcExpr(serial, loc), ctx
 
-  | HVariantExpr (serial, ty, loc) -> mirifyExprVariant ctx expr serial ty loc
+  | HVariantExpr (serial, ty, loc) -> mirifyExprVariant ctx serial ty loc
   | HPrimExpr (prim, ty, loc) -> mirifyExprPrim ctx prim ty loc
   | HMatchExpr (cond, arms, ty, loc) -> mirifyExprMatch ctx cond arms ty loc
   | HNodeExpr (kind, args, ty, loc) -> mirifyExprInf ctx expr kind args ty loc
