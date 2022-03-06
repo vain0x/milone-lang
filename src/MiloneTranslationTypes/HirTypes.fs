@@ -203,8 +203,6 @@ type HPrim =
 
 [<NoEquality; NoComparison>]
 type HExprKind =
-  | HAbortEN
-
   /// `-x`.
   | HMinusEN
 

@@ -892,16 +892,12 @@ let private resolveAscriptionTy ctx ascriptionTy =
 let private txApp f x resultTy loc =
   TNodeExpr(TAppEN, [ f; x ], resultTy, loc)
 
-/// Creates an expression to abort.
+/// Must be used after error occurred.
 let private txAbort (ctx: TyCtx) loc =
-  let ty, ctx = ctx |> freshMetaTy loc
-  let funTy = tyFun tyInt ty
-  let exitExpr = TPrimExpr(TPrim.Exit, funTy, loc)
+  assert (ctx.Logs |> List.isEmpty |> not)
 
-  let callExpr =
-    txApp exitExpr (TLitExpr(IntLit "1", loc)) ty loc
-
-  callExpr, ty, ctx
+  let ty = tyError loc
+  TNodeExpr(TAbortEN, [], ty, loc), ty, ctx
 
 // -----------------------------------------------
 // Pattern
@@ -1576,7 +1572,7 @@ let private inferPrimAppExpr ctx itself =
 
   | TPrim.SizeOfVal, _ ->
     let arg, argTy, ctx = inferExpr ctx None arg
-    TNodeExpr(TSizeOfValEN, [ TNodeExpr(TAbortEN, [], argTy, exprToLoc arg) ], tyInt, loc), tyInt, ctx
+    TNodeExpr(TSizeOfValEN, [ TNodeExpr(TTyPlaceholderEN, [], argTy, exprToLoc arg) ], tyInt, loc), tyInt, ctx
 
   | _ -> inferAppExpr ctx itself
 
@@ -1659,13 +1655,13 @@ let private inferNodeExpr ctx expr : TExpr * Ty * TyCtx =
 
   | TTupleEN, _ -> inferTupleExpr ctx args loc
 
-  | TAbortEN, _ -> txAbort ctx loc
-
   | TAscribeEN, [ expr ] -> inferAscribeExpr ctx expr (getTy ()) loc
   | TAscribeEN, _ -> unreachable ()
 
   | TTyPlaceholderEN, _ ->
     txUnit loc, tyUnit, addError ctx "Type placeholder can appear in argument of __nativeExpr or __nativeStmt." loc
+
+  | TAbortEN, _ -> txAbort ctx loc
 
   | TDiscriminantEN _, _
   | TCallNativeEN _, _

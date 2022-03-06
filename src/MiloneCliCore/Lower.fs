@@ -160,7 +160,6 @@ let private lowerPatKind (kind: Tir.TPatKind) : Hir.HPatKind =
 
 let private lowerExprKind (kind: Tir.TExprKind) : Hir.HExprKind =
   match kind with
-  | Tir.TAbortEN -> Hir.HAbortEN
   | Tir.TMinusEN -> Hir.HMinusEN
   | Tir.TAppEN -> Hir.HAppEN
   | Tir.TIndexEN -> Hir.HIndexEN
@@ -175,6 +174,7 @@ let private lowerExprKind (kind: Tir.TExprKind) : Hir.HExprKind =
   | Tir.TSizeOfValEN -> Hir.HSizeOfValEN
   | Tir.TTyPlaceholderEN -> Hir.HTyPlaceholderEN
 
+  | Tir.TAbortEN -> unreachable () // Compile error occurred.
   | Tir.TAscribeEN -> unreachable () // Resolved in Typing.
 
 let private lowerPat (pat: Tir.TPat) : Hir.HPat =
