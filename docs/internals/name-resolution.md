@@ -82,19 +82,16 @@ Recursive module *hoists* all declarations in it so that they can refer to each 
 
 ## Control of Name Resolution
 
-Name resolution consists of the three parts:
+Name resolution consists of the two parts:
 
 - Collect declarations (`collectDecls` or `cdXxx` in code)
 - Resolve expressions (`resolveXxx` or `nameResXxx` in code)
-- Resolve definitions (`resolveDefs` or `rdXxx` in code)
 
 The separation is necessary so that symbols can occur *before* their declaration (*forward referencing*).
 
 **Collect declaration** is a preparation routine to traverse declarations and collect information enough to resolve forward referencing names. It doesn't create complete symbol definitions.
 
-**Resolve expressions** is the main routine of name resolution. It traverses entire program to resolve all names that occur in a program; type ascriptions, patterns, and expressions. It creates some of symbol definitions such as variables and functions but doesn't for types.
-
-**Resolve definitions** is a follow-up routine to resolve all types that appear in type definitions such as variant types. It creates type symbol definitions.
+**Resolve expressions** is the main routine of name resolution. It traverses entire program to resolve all names that occur in a program; type ascriptions, patterns, expressions, type declarations. It creates symbol definitions such as variables and types.
 
 ## Details of Resolution
 

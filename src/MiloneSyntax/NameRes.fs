@@ -1112,160 +1112,6 @@ let private collectDecls (currentModule: NsOwner) ctx (decls: NDecl list) : Scop
   decls |> List.fold (cdDecl currentModule) ctx
 
 // -----------------------------------------------
-// Resolve definitions
-// -----------------------------------------------
-
-// Resolve definitions (rd) is a follow-up pass
-// to resolve all types in these definitions
-// and create a complete set of type definitions for TIR.
-
-let private defineTyArgs (ctx: ScopeCtx) tyArgs =
-  let tyArgToSerials, ctx =
-    tyArgs
-    |> List.mapFold
-         (fun ctx tyArg ->
-           let tySerial, ctx = freshSerial ctx
-           (identOf tyArg, tySerial), ctx)
-         ctx
-
-  let tyArgSerials = tyArgToSerials |> List.map snd
-
-  tyArgSerials, tyArgToSerials, ctx
-
-let private rdTySynonymDecl (ctx: ScopeCtx) decl : ScopeCtx =
-  let name, tyArgs, bodyTy, loc =
-    match decl with
-    | NDecl.TySynonym (_, name, tyArgs, bodyTy, loc) -> name, tyArgs, bodyTy, loc
-    | _ -> unreachable ()
-
-  let tySerial, _ = ctx.DeclaredTys |> mapFind (posOf name)
-
-  let ctx = startScope ctx TyDeclScope
-  let tyArgSerials, tyArgToSerials, ctx = defineTyArgs ctx tyArgs
-
-  let bodyTy, ctx =
-    let tyArgs =
-      tyArgToSerials
-      |> List.map (fun (tyArg, univTySerial) -> tyArg, UnivTySymbol univTySerial)
-      |> TMap.ofList compare
-
-    resolveTy ctx bodyTy tyArgs
-
-  let tyDef =
-    SynonymTyDef(identOf name, tyArgSerials, bodyTy, loc)
-
-  let ctx = addTyDef ctx tySerial tyDef
-  finishScope ctx
-
-let private rdUnionTyDecl (ctx: ScopeCtx) decl : ScopeCtx =
-  let name, tyArgs, variants, loc =
-    match decl with
-    | NDecl.Union (_, name, tyArgs, variants, loc) -> name, tyArgs, variants, loc
-    | _ -> unreachable ()
-
-  let tySerial, _ = ctx.DeclaredTys |> mapFind (posOf name)
-
-  let ctx = startScope ctx TyDeclScope
-  let tyArgSerials, tyArgToSerials, ctx = defineTyArgs ctx tyArgs
-
-  let variants, ctx =
-    let tyArgs =
-      tyArgToSerials
-      |> List.map (fun (tyArg, univTySerial) -> tyArg, UnivTySymbol univTySerial)
-      |> TMap.ofList compare
-
-    variants
-    |> List.mapFold
-         (fun (ctx: ScopeCtx) variant ->
-           let name, payloadTyOpt, loc = variant
-
-           let variantSerial =
-             ctx.DeclaredVariants |> mapFind (posOf name)
-
-           let payloadTyOpt, ctx =
-             match payloadTyOpt with
-             | Some payloadTy ->
-               let payloadTy, ctx = resolveTy ctx payloadTy tyArgs
-               Some payloadTy, ctx
-             | None -> None, ctx
-
-           (variantSerial, (name, payloadTyOpt, loc)), ctx)
-         ctx
-
-  let ctx =
-    let newtype = List.length variants = 1
-
-    { ctx with
-        NewVariants =
-          variants
-          |> List.fold
-               (fun variants (variantSerial, (name, payloadTyOpt, loc)) ->
-                 let payloadTy =
-                   payloadTyOpt |> Option.defaultValue tyUnit
-
-                 let variantDef: VariantDef =
-                   { Name = identOf name
-                     UnionTySerial = tySerial
-                     IsNewtype = newtype
-                     HasPayload = Option.isSome payloadTyOpt
-                     PayloadTy = payloadTy
-                     Loc = loc }
-
-                 (variantSerial, variantDef) :: variants)
-               ctx.NewVariants }
-
-  let tyDef =
-    let variantSerials = variants |> List.map fst
-    UnionTyDef(identOf name, tyArgSerials, variantSerials, loc)
-
-  let ctx = addTyDef ctx tySerial tyDef
-  finishScope ctx
-
-let private rdRecordTyDecl (ctx: ScopeCtx) decl : ScopeCtx =
-  let name, tyArgs, fields, repr, loc =
-    match decl with
-    | NDecl.Record (_, name, tyArgs, fields, repr, loc) -> name, tyArgs, fields, repr, loc
-    | _ -> unreachable ()
-
-  let tySerial, _ = ctx.DeclaredTys |> mapFind (posOf name)
-
-  let ctx = startScope ctx TyDeclScope
-  let tyArgSerials, tyArgToSerials, ctx = defineTyArgs ctx tyArgs
-
-  let fields, ctx =
-    let tyArgs =
-      tyArgToSerials
-      |> List.map (fun (tyArg, univTySerial) -> tyArg, UnivTySymbol univTySerial)
-      |> TMap.ofList compare
-
-    fields
-    |> List.mapFold
-         (fun ctx field ->
-           let name, fieldTy, loc = field
-           let fieldTy, ctx = resolveTy ctx fieldTy tyArgs
-           (identOf name, fieldTy, loc), ctx)
-         ctx
-
-  let tyDef =
-    RecordTyDef(identOf name, tyArgSerials, fields, repr, loc)
-
-  let ctx = addTyDef ctx tySerial tyDef
-  finishScope ctx
-
-let private rdDecl ctx decl =
-  match decl with
-  | NDecl.TySynonym _ -> rdTySynonymDecl ctx decl
-  | NDecl.Union _ -> rdUnionTyDecl ctx decl
-  | NDecl.Record _ -> rdRecordTyDecl ctx decl
-
-  | NDecl.Stmt _
-  | NDecl.Open _
-  | NDecl.ModuleSynonym _
-  | NDecl.Module _ -> ctx
-
-let private resolveDefs (ctx: ScopeCtx) decls : ScopeCtx = decls |> List.fold rdDecl ctx
-
-// -----------------------------------------------
 // Ty
 // -----------------------------------------------
 
@@ -1896,6 +1742,140 @@ let private nameResStmt ctx (stmt: NStmt) : TStmt * ScopeCtx =
 // Declaration
 // -----------------------------------------------
 
+/// Defines type arguments declared in a type declaration.
+let private defineTyArgs (ctx: ScopeCtx) tyArgs =
+  let tyArgToSerials, ctx =
+    tyArgs
+    |> List.mapFold
+         (fun ctx tyArg ->
+           let tySerial, ctx = freshSerial ctx
+           (identOf tyArg, tySerial), ctx)
+         ctx
+
+  let tyArgSerials = tyArgToSerials |> List.map snd
+
+  tyArgSerials, tyArgToSerials, ctx
+
+let private nameResTySynonymDecl (ctx: ScopeCtx) decl : ScopeCtx =
+  let name, tyArgs, bodyTy, loc =
+    match decl with
+    | NDecl.TySynonym (_, name, tyArgs, bodyTy, loc) -> name, tyArgs, bodyTy, loc
+    | _ -> unreachable ()
+
+  let tySerial, _ = ctx.DeclaredTys |> mapFind (posOf name)
+
+  let ctx = startScope ctx TyDeclScope
+  let tyArgSerials, tyArgToSerials, ctx = defineTyArgs ctx tyArgs
+
+  let bodyTy, ctx =
+    let tyArgs =
+      tyArgToSerials
+      |> List.map (fun (tyArg, univTySerial) -> tyArg, UnivTySymbol univTySerial)
+      |> TMap.ofList compare
+
+    resolveTy ctx bodyTy tyArgs
+
+  let tyDef =
+    SynonymTyDef(identOf name, tyArgSerials, bodyTy, loc)
+
+  let ctx = addTyDef ctx tySerial tyDef
+  finishScope ctx
+
+let private nameResUnionTyDecl (ctx: ScopeCtx) decl : ScopeCtx =
+  let name, tyArgs, variants, loc =
+    match decl with
+    | NDecl.Union (_, name, tyArgs, variants, loc) -> name, tyArgs, variants, loc
+    | _ -> unreachable ()
+
+  let tySerial, _ = ctx.DeclaredTys |> mapFind (posOf name)
+
+  let ctx = startScope ctx TyDeclScope
+  let tyArgSerials, tyArgToSerials, ctx = defineTyArgs ctx tyArgs
+
+  let variants, ctx =
+    let tyArgs =
+      tyArgToSerials
+      |> List.map (fun (tyArg, univTySerial) -> tyArg, UnivTySymbol univTySerial)
+      |> TMap.ofList compare
+
+    variants
+    |> List.mapFold
+         (fun (ctx: ScopeCtx) variant ->
+           let name, payloadTyOpt, loc = variant
+
+           let variantSerial =
+             ctx.DeclaredVariants |> mapFind (posOf name)
+
+           let payloadTyOpt, ctx =
+             match payloadTyOpt with
+             | Some payloadTy ->
+               let payloadTy, ctx = resolveTy ctx payloadTy tyArgs
+               Some payloadTy, ctx
+             | None -> None, ctx
+
+           (variantSerial, (name, payloadTyOpt, loc)), ctx)
+         ctx
+
+  let ctx =
+    let newtype = List.length variants = 1
+
+    { ctx with
+        NewVariants =
+          variants
+          |> List.fold
+               (fun variants (variantSerial, (name, payloadTyOpt, loc)) ->
+                 let payloadTy =
+                   payloadTyOpt |> Option.defaultValue tyUnit
+
+                 let variantDef: VariantDef =
+                   { Name = identOf name
+                     UnionTySerial = tySerial
+                     IsNewtype = newtype
+                     HasPayload = Option.isSome payloadTyOpt
+                     PayloadTy = payloadTy
+                     Loc = loc }
+
+                 (variantSerial, variantDef) :: variants)
+               ctx.NewVariants }
+
+  let tyDef =
+    let variantSerials = variants |> List.map fst
+    UnionTyDef(identOf name, tyArgSerials, variantSerials, loc)
+
+  let ctx = addTyDef ctx tySerial tyDef
+  finishScope ctx
+
+let private nameResRecordTyDecl (ctx: ScopeCtx) decl : ScopeCtx =
+  let name, tyArgs, fields, repr, loc =
+    match decl with
+    | NDecl.Record (_, name, tyArgs, fields, repr, loc) -> name, tyArgs, fields, repr, loc
+    | _ -> unreachable ()
+
+  let tySerial, _ = ctx.DeclaredTys |> mapFind (posOf name)
+
+  let ctx = startScope ctx TyDeclScope
+  let tyArgSerials, tyArgToSerials, ctx = defineTyArgs ctx tyArgs
+
+  let fields, ctx =
+    let tyArgs =
+      tyArgToSerials
+      |> List.map (fun (tyArg, univTySerial) -> tyArg, UnivTySymbol univTySerial)
+      |> TMap.ofList compare
+
+    fields
+    |> List.mapFold
+         (fun ctx field ->
+           let name, fieldTy, loc = field
+           let fieldTy, ctx = resolveTy ctx fieldTy tyArgs
+           (identOf name, fieldTy, loc), ctx)
+         ctx
+
+  let tyDef =
+    RecordTyDef(identOf name, tyArgSerials, fields, repr, loc)
+
+  let ctx = addTyDef ctx tySerial tyDef
+  finishScope ctx
+
 let private nameResModuleDecl (ctx: ScopeCtx) moduleDecl : TStmt * ScopeCtx =
   let (NModuleDecl (_, _, name, decls, _)) = moduleDecl
 
@@ -1923,16 +1903,15 @@ let private nameResModuleDecl (ctx: ScopeCtx) moduleDecl : TStmt * ScopeCtx =
   TBlockStmt(IsRec, stmts), ctx
 
 let private nameResDecl ctx (decl: NDecl) : TStmt option * ScopeCtx =
-  let some (value, ctx) = Some value, ctx
+  let some (stmt, ctx) = Some stmt, ctx
+  let none ctx = None, ctx
 
   match decl with
   | NDecl.Stmt stmt -> nameResStmt ctx stmt |> some
+  | NDecl.TySynonym _ -> nameResTySynonymDecl ctx decl |> none
+  | NDecl.Union _ -> nameResUnionTyDecl ctx decl |> none
+  | NDecl.Record _ -> nameResRecordTyDecl ctx decl |> none
   | NDecl.Module decl -> nameResModuleDecl ctx decl |> some
-
-  // Type declarations are only used in collectDecls and resolveDecls.
-  | NDecl.TySynonym _
-  | NDecl.Union _
-  | NDecl.Record _
 
   // Open and module synonym statements are used in collectDecls and no longer necessary.
   | NDecl.Open _
@@ -1940,12 +1919,7 @@ let private nameResDecl ctx (decl: NDecl) : TStmt option * ScopeCtx =
 
 let private nameResDecls (currentModule: NsOwner) ctx decls : TStmt list * ScopeCtx =
   let ctx = collectDecls currentModule ctx decls
-
-  // Perform name resolution for statements and inner modules.
-  let stmts, ctx = decls |> listChooseFold nameResDecl ctx
-
-  let ctx = resolveDefs ctx decls
-  stmts, ctx
+  decls |> listChooseFold nameResDecl ctx
 
 let private nameResModuleRoot ctx (root: NModuleRoot) : _ * TModule * ScopeCtx =
   let docId, moduleDecl = root
