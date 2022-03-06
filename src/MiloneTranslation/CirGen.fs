@@ -941,11 +941,6 @@ let private cgActionStmt ctx itself action args =
     | _ -> unreachable itself
 
   | MCallClosureAction ->
-    let ctx =
-      match args with
-      | MProcExpr (funSerial, _, _) :: _ -> cgExternFunDecl ctx funSerial
-      | _ -> ctx
-
     let args, ctx =
       (args, ctx)
       |> stMap (fun (arg, ctx) -> cgExpr ctx arg)
@@ -1177,11 +1172,6 @@ let private cgPrimStmt (ctx: CirCtx) itself prim args serial resultTy =
     let linkage = findVarLinkage ctx serial
     let replacing = isReplacing ctx serial
     let ty, ctx = cgTyComplete ctx resultTy
-
-    let ctx =
-      match args with
-      | MProcExpr (funSerial, _, _) :: _ -> cgExternFunDecl ctx funSerial
-      | _ -> ctx
 
     let args, ctx =
       (args, ctx)
