@@ -137,9 +137,6 @@ type HPatKind =
   /// Unlike `:? T`, unboxing is unchecked.
   | HBoxPN
 
-  /// Generated after compile error occurred while processing a pattern.
-  | HAbortPN
-
 /// Pattern in HIR.
 [<NoEquality; NoComparison>]
 type HPat =

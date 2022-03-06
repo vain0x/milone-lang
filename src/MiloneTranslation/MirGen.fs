@@ -453,8 +453,6 @@ let private mirifyPat ctx (endLabel: string) (pat: HPat) (expr: MExpr) exprTy : 
     | HBoxPN, [ itemPat ] -> mirifyPatBox ctx endLabel itemPat expr loc
     | HBoxPN, _ -> fail ()
 
-    | HAbortPN, _ -> mirifyPatAbort ctx loc
-
   | HAsPat (pat, serial, loc) -> mirifyPatAs ctx endLabel pat serial expr loc
 
   | HOrPat _ ->

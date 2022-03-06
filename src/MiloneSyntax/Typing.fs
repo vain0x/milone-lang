@@ -1000,8 +1000,8 @@ let private inferOrPat ctx l r loc =
   let ctx = unifyTy ctx loc lTy rTy
   TOrPat(l, r, loc), lTy, ctx
 
-let private inferAbortPat ctx pat loc =
-  let targetTy, ctx = freshMetaTyForPat pat ctx
+let private inferAbortPat ctx loc =
+  let targetTy = tyError loc
   tpAbort targetTy loc, targetTy, ctx
 
 let private doInferPats ctx pats =
@@ -1036,7 +1036,7 @@ let private inferNodePat ctx pat =
 
   | TTuplePN, _ -> inferTuplePat ctx argPats loc
 
-  | TAbortPN, _ -> inferAbortPat ctx pat loc
+  | TAbortPN, _ -> inferAbortPat ctx loc
 
   | TAscribePN, [ bodyPat ] -> inferAscribePat ctx bodyPat (getTy ()) loc
   | TAscribePN, _ -> unreachable ()
