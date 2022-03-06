@@ -812,7 +812,9 @@ let private genUnaryExpr ctx op arg argTy ty _ =
 
     deref, ctx
 
-  | MTupleItemUnary index -> CDotExpr(arg, tupleField index), ctx
+  | MTupleItemUnary index ->
+    let _, ctx = cgTyComplete ctx argTy
+    CDotExpr(arg, tupleField index), ctx
 
   | MGetDiscriminantUnary ->
     let _, ctx = cgTyComplete ctx argTy
@@ -825,7 +827,9 @@ let private genUnaryExpr ctx op arg argTy ty _ =
 
     CDotExpr(arg, getUniqueVariantName ctx variantSerial), ctx
 
-  | MRecordItemUnary index -> CDotExpr(arg, tupleField index), ctx
+  | MRecordItemUnary index ->
+    let _, ctx = cgTyComplete ctx argTy
+    CDotExpr(arg, tupleField index), ctx
 
   | MListIsEmptyUnary -> CUnaryExpr(CNotUnary, arg), ctx
 
