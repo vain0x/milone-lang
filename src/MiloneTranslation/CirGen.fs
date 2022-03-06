@@ -952,6 +952,7 @@ let private cgActionStmt ctx itself action args =
 
     match args with
     | callee :: args ->
+      // FIXME: is it ensured that the closure type is complete here?
       let callExpr =
         let funPtr = CDotExpr(callee, "fun")
         let envArg = CDotExpr(callee, "env")
