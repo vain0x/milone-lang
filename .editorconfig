@@ -6,11 +6,20 @@ insert_final_newline = true
 trim_trailing_whitespace = true
 charset = utf-8
 
-[*.{fs,fsx,milone,milone_project,yml}]
+[*.{fs,fsx,milone}]
 indent_size = 2
 insert_final_newline = true
 trim_trailing_whitespace = true
 charset = utf-8
+
+[*.json]
+insert_final_newline = true
+trim_trailing_whitespace = true
+
+[*.md]
+indent_size = 4
+insert_final_newline = true
+trim_trailing_whitespace = true
 
 [*.ninja]
 indent_size = 2
@@ -18,7 +27,23 @@ insert_final_newline = true
 trim_trailing_whitespace = true
 charset = utf-8
 
+[*.{sln,fsproj}]
+indent_size = 2
+insert_final_newline = true
+trim_trailing_whitespace = true
+charset = utf-8
+
 [*.ungram]
+indent_size = 2
+insert_final_newline = true
+trim_trailing_whitespace = true
+
+[*.yml]
+indent_size = 2
+insert_final_newline = true
+trim_trailing_whitespace = true
+
+[milone_manifest]
 indent_size = 2
 insert_final_newline = true
 trim_trailing_whitespace = true
