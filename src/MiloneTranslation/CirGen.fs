@@ -765,7 +765,8 @@ let private cgConst ctx mConst =
   | MLitConst lit -> genLit lit
   | MDiscriminantConst variantSerial -> genDiscriminant ctx variantSerial
 
-let private genVariantNameExpr ctx serial ty =
+let private genVariantNameExpr ctx serial =
+  let ty = getUnionTyOfVariant ctx serial
   let ty, ctx = cgTyComplete ctx ty
 
   let discriminant =
@@ -890,7 +891,7 @@ let private cgExpr (ctx: CirCtx) (arg: MExpr) : CExpr * CirCtx =
 
   | MProcExpr (serial, _) -> CVarExpr(getUniqueFunName ctx serial), ctx
 
-  | MVariantExpr (_, serial, ty, _) -> genVariantNameExpr ctx serial ty
+  | MVariantExpr (_, serial, _) -> genVariantNameExpr ctx serial
   | MDiscriminantConstExpr (variantSerial, _) -> genDiscriminant ctx variantSerial, ctx
   | MGenericValueExpr (genericValue, ty, _) -> genGenericValue ctx genericValue ty
   | MUnaryExpr (op, arg, _) -> genUnaryExpr ctx op arg

@@ -465,9 +465,9 @@ let private mirifyPat ctx (endLabel: string) (pat: HPat) (expr: MExpr) exprTy : 
 // Expression
 // -----------------------------------------------
 
-let private mirifyExprVariant (ctx: MirCtx) serial ty loc =
+let private mirifyExprVariant (ctx: MirCtx) serial loc =
   let variantDef = ctx.Rx.Variants |> mapFind serial
-  MVariantExpr(variantDef.UnionTySerial, serial, ty, loc), ctx
+  MVariantExpr(variantDef.UnionTySerial, serial, loc), ctx
 
 let private mirifyExprPrim (ctx: MirCtx) prim ty loc =
   match prim with
@@ -1621,7 +1621,7 @@ let private mirifyExpr (ctx: MirCtx) (expr: HExpr) : MExpr * MirCtx =
   | HVarExpr (serial, ty, loc) -> MVarExpr(serial, ty, loc), ctx
   | HFunExpr (serial, _, _, loc) -> MProcExpr(serial, loc), ctx
 
-  | HVariantExpr (serial, ty, loc) -> mirifyExprVariant ctx serial ty loc
+  | HVariantExpr (serial, _, loc) -> mirifyExprVariant ctx serial loc
   | HPrimExpr (prim, ty, loc) -> mirifyExprPrim ctx prim ty loc
   | HMatchExpr (cond, arms, ty, loc) -> mirifyExprMatch ctx cond arms ty loc
   | HNodeExpr (kind, args, ty, loc) -> mirifyExprInf ctx expr kind args ty loc

@@ -15,7 +15,6 @@ module rec MiloneTranslation.Mir
 open MiloneShared.SharedTypes
 open MiloneShared.TypeFloat
 open MiloneShared.TypeIntegers
-open MiloneTranslation.Hir
 open MiloneTranslationTypes.HirTypes
 
 // -----------------------------------------------
@@ -168,7 +167,7 @@ type MExpr =
   | MProcExpr of FunSerial * Loc
 
   /// Variant constant.
-  | MVariantExpr of TySerial * VariantSerial * Ty * Loc
+  | MVariantExpr of TySerial * VariantSerial * Loc
 
   | MDiscriminantConstExpr of VariantSerial * Loc
   | MGenericValueExpr of MGenericValue * Ty * Loc
