@@ -306,6 +306,10 @@ let private isMainFun (ctx: CirCtx) funSerial =
   | Some mainFun -> funSerialCompare mainFun funSerial = 0
   | _ -> false
 
+let private getUnionTyOfVariant (ctx: CirCtx) variantSerial =
+  let variantDef = ctx.Rx.Variants |> mapFind variantSerial
+  tyUnion (variantDef.UnionTySerial) []
+
 let private enterBlock (ctx: CirCtx) = { ctx with Stmts = [] }
 
 let private rollback (bCtx: CirCtx) (dCtx: CirCtx) = { dCtx with Stmts = bCtx.Stmts }
@@ -812,9 +816,12 @@ let private genUnaryExpr ctx op arg argTy ty _ =
 
   | MGetDiscriminantUnary -> CDotExpr(arg, "discriminant"), ctx
 
-  | MGetVariantUnary serial ->
-    let _, ctx = cgTyComplete ctx ty
-    CDotExpr(arg, getUniqueVariantName ctx serial), ctx
+  | MGetVariantUnary variantSerial ->
+    let _, ctx =
+      let unionTy = getUnionTyOfVariant ctx variantSerial
+      cgTyComplete ctx unionTy
+
+    CDotExpr(arg, getUniqueVariantName ctx variantSerial), ctx
 
   | MRecordItemUnary index -> CDotExpr(arg, tupleField index), ctx
 
