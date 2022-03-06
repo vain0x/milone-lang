@@ -412,8 +412,8 @@ let private ngExpr (docId: DocId) (ctx: NameCtx) (expr: AExpr) : NExpr * NameCtx
     let items, ctx = items |> onExprs ctx
     NExpr.Tuple(items, toLoc pos), ctx
 
-  // (_: 'T)
-  | AAscribeExpr (AIdentExpr (Name ("_", _)), ty, pos) ->
+  // (__type: 'T)
+  | AAscribeExpr (AIdentExpr (Name ("__type", _)), ty, pos) ->
     let ty, ctx = ty |> onTy ctx
     NExpr.TyPlaceholder(ty, toLoc pos), ctx
 

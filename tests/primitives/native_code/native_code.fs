@@ -29,9 +29,9 @@ let private nativeExprWithPlaceholder () =
   let n: int = __nativeExpr ("{0}.len", s)
   assert (n = 5)
 
-// (_: T) is type placeholder. Embed type name.
+// (__type: T) is type placeholder. Embed type name.
 let private alignOf (_: nativeptr<'T>) : unativeint =
-  __nativeStmt ("typedef {0} T;", (_: 'T))
+  __nativeStmt ("typedef {0} T;", (__type: 'T))
   __nativeExpr "_Alignof(T)"
 
 let private nativeStmtWithTyPlaceholder () =
