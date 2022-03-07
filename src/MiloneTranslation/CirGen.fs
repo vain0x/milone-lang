@@ -28,11 +28,6 @@ open MiloneTranslationTypes.HirTypes
 
 module S = Std.StdString
 
-let private unwrapListTy ty =
-  match ty with
-  | Ty (ListTk, [ itemTy ]) -> itemTy
-  | _ -> unreachable ()
-
 let private tupleField (i: int) = "t" + string i
 
 /// Calculates discriminant type's name of union type.
