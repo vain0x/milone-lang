@@ -1253,25 +1253,21 @@ let private cgSetStmt ctx serial right =
 
 let private cgReturnStmt ctx expr argTy =
   if tyIsUnit argTy then
-    addStmt ctx (CReturnStmt None)
+    CReturnStmt None, ctx
   else
     let expr, ctx = cgExpr ctx expr
-    addStmt ctx (CReturnStmt(Some expr))
+    CReturnStmt(Some expr), ctx
 
-// FIXME: Without the result type ascription, invalid code is generated for some reason.
-let private cgTerminatorAsBlock ctx terminator : CStmt list * CirCtx =
-  cgBlock ctx [ MTerminatorStmt(terminator, noLoc) ]
-
-let private cgTerminatorStmt ctx stmt =
+let private cgTerminatorStmt ctx stmt : CStmt * CirCtx =
   match stmt with
   | MReturnTerminator (expr, argTy) -> cgReturnStmt ctx expr argTy
-  | MGotoTerminator label -> addStmt ctx (CGotoStmt label)
+  | MGotoTerminator label -> CGotoStmt label, ctx
 
   | MIfTerminator (cond, thenCl, elseCl) ->
     let cond, ctx = cgExpr ctx cond
-    let thenCl, ctx = cgTerminatorAsBlock ctx thenCl
-    let elseCl, ctx = cgTerminatorAsBlock ctx elseCl
-    addStmt ctx (CIfStmt(cond, thenCl, elseCl))
+    let thenCl, ctx = cgTerminatorStmt ctx thenCl
+    let elseCl, ctx = cgTerminatorStmt ctx elseCl
+    CIfStmt(cond, thenCl, elseCl), ctx
 
   | MSwitchTerminator (cond, clauses) ->
     let cond, ctx = cgExpr ctx cond
@@ -1283,16 +1279,15 @@ let private cgTerminatorStmt ctx stmt =
           clause.Cases
           |> List.map (fun cond -> cgConst ctx cond)
 
-        let stmts, ctx =
-          cgTerminatorAsBlock ctx clause.Terminator
+        let stmt, ctx = cgTerminatorStmt ctx clause.Terminator
 
-        (cases, clause.IsDefault, stmts), ctx)
+        (cases, clause.IsDefault, stmt), ctx)
 
-    addStmt ctx (CSwitchStmt(cond, clauses))
+    CSwitchStmt(cond, clauses), ctx
 
   | MExitTerminator arg ->
     let arg, ctx = cgExpr ctx arg
-    addStmt ctx (CExprStmt(CCallExpr(CVarExpr "exit", [ arg ])))
+    CExprStmt(CCallExpr(CVarExpr "exit", [ arg ])), ctx
 
 let private cgStmt ctx stmt =
   match stmt with
@@ -1306,7 +1301,9 @@ let private cgStmt ctx stmt =
     let cond, ctx = cgExpr ctx cond
     addStmt ctx (CGotoIfStmt(cond, label))
 
-  | MTerminatorStmt (terminator, _loc) -> cgTerminatorStmt ctx terminator
+  | MTerminatorStmt (terminator, _loc) ->
+    let stmt, ctx = cgTerminatorStmt ctx terminator
+    addStmt ctx stmt
 
   | MNativeStmt (code, args, _) ->
     let args, ctx = cgExprList ctx args
