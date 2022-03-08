@@ -223,7 +223,13 @@ type MBlock = { Stmts: MStmt list }
 
 [<NoEquality; NoComparison>]
 type MDecl =
-  | MProcDecl of FunSerial * args: (VarSerial * Ty * Loc) list * body: MBlock list * resultTy: Ty * Loc
+  | MProcDecl of
+    FunSerial *
+    args: (VarSerial * Ty * Loc) list *
+    body: MBlock list *
+    resultTy: Ty *
+    localVars: (VarSerial * Ty * Loc) list *
+    Loc
   | MNativeDecl of code: string * Loc
 
 [<RequireQualifiedAccess; NoEquality; NoComparison>]
@@ -238,7 +244,7 @@ type MModule =
 
 let mDeclToLoc (decl: MDecl) : Loc =
   match decl with
-  | MProcDecl (_, _, _, _, loc) -> loc
+  | MProcDecl (_, _, _, _, _, loc) -> loc
   | MNativeDecl (_, loc) -> loc
 
 // -----------------------------------------------

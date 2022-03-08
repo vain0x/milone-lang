@@ -50,7 +50,8 @@ type MirResult =
 /// Read-only context of the pass.
 [<RequireQualifiedAccess; NoEquality; NoComparison>]
 type private MirRx =
-  { Funs: TreeMap<FunSerial, FunDef>
+  { StaticVars: TreeMap<VarSerial, VarDef>
+    Funs: TreeMap<FunSerial, FunDef>
     Variants: TreeMap<VariantSerial, VariantDef>
     Tys: TreeMap<TySerial, TyDef> }
 
@@ -79,7 +80,8 @@ type private MirCtx =
 
 let private ofHirCtx (hirCtx: HirCtx) : MirCtx =
   let rx: MirRx =
-    { Funs = hirCtx.Funs
+    { StaticVars = hirCtx.Vars
+      Funs = hirCtx.Funs
       Variants = hirCtx.Variants
       Tys = hirCtx.Tys }
 
@@ -1599,15 +1601,31 @@ let private mirifyExprLetFunContents (ctx: MirCtx) calleeSerial argPats body let
       let block: MBlock = { Stmts = stmts }
       [ block ], ctx
 
-    args, blockTy, body, ctx
+    // Local variables defined in the body.
+    let localVars =
+      body
+      |> List.collect (fun (block: MBlock) ->
+        block.Stmts
+        |> List.choose (fun stmt ->
+          match stmt with
+          | MLetValStmt (varSerial, _, ty, loc) -> Some(varSerial, ty, loc)
+          | MPrimStmt (_, _, varSerial, ty, loc) -> Some(varSerial, ty, loc)
+          | _ -> None))
+      |> List.filter (fun (varSerial, _, _) ->
+        ctx.Rx.StaticVars
+        |> TMap.containsKey varSerial
+        |> not)
+      |> listUnique (fun (l, _, _) (r, _, _) -> varSerialCompare l r)
+
+    args, blockTy, body, localVars, ctx
 
   let core () =
     let bodyCtx = startBlock ctx
-    let args, resultTy, body, bodyCtx = mirifyFunBody bodyCtx argPats body
+    let args, resultTy, body, localVars, bodyCtx = mirifyFunBody bodyCtx argPats body
     let ctx = rollback ctx bodyCtx
 
     let ctx =
-      addDecl ctx (MProcDecl(calleeSerial, args, body, resultTy, letLoc))
+      addDecl ctx (MProcDecl(calleeSerial, args, body, resultTy, localVars, letLoc))
 
     ctx
 

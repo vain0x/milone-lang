@@ -993,7 +993,7 @@ let private cgPrintfnActionStmt ctx itself args argTys =
 
   | _ -> unreachable itself
 
-let private addLetStmt (ctx: CirCtx) name expr cty isStatic linkage replacing =
+let private addLetStmt (ctx: CirCtx) name expr cty isStatic linkage (_replacing: bool) =
   match isStatic with
   | IsStatic ->
     let ctx =
@@ -1005,15 +1005,30 @@ let private addLetStmt (ctx: CirCtx) name expr cty isStatic linkage replacing =
     | Some expr -> addStmt ctx (CSetStmt(CVarExpr name, expr))
     | _ -> ctx
 
-  | NotStatic when replacing ->
+  | NotStatic ->
+    // whether ever replacing or not
     match expr with
     | Some expr -> addStmt ctx (CSetStmt(CVarExpr name, expr))
-    | _ -> ctx
-
-  | NotStatic -> addStmt ctx (CLetStmt(name, expr, cty))
+    | None -> ctx
 
 let private addLetAllocStmt ctx name valTy varTy =
-  addStmt ctx (CLetAllocStmt(name, valTy, varTy))
+  // addStmt ctx (CLetAllocStmt(name, valTy, varTy))
+
+  /// `U* x = (U*)malloc(sizeof T);`
+  let stmt =
+    let init =
+      CCastExpr(
+        CCallExpr(
+          CVarExpr "milone_mem_alloc",
+          [ CIntExpr("1", I32)
+            CSizeOfExpr valTy ]
+        ),
+        varTy
+      )
+
+    CSetStmt(CVarExpr name, init)
+
+  addStmt ctx stmt
 
 let private doGenLetValStmt ctx serial expr ty =
   let name = getUniqueVarName ctx serial
@@ -1348,7 +1363,7 @@ let private cgDecls (ctx: CirCtx) decls =
   match decls with
   | [] -> ctx
 
-  | MProcDecl (callee, args, body, resultTy, _) :: decls ->
+  | MProcDecl (callee, args, body, resultTy, localVars, _) :: decls ->
     let def: FunDef = ctx.Rx.Funs |> mapFind callee
 
     let main, funName, args =
@@ -1366,10 +1381,9 @@ let private cgDecls (ctx: CirCtx) decls =
         collectArgs ((name, cty) :: acc) ctx args
 
     let collectFunLocalStmts (ctx: CirCtx) =
-      ctx.Rx.FunLocals
-      |> Multimap.find callee
+      localVars
       |> List.mapFold
-           (fun (ctx: CirCtx) (varSerial, ty) ->
+           (fun (ctx: CirCtx) (varSerial, ty, _) ->
              let name = getUniqueVarName ctx varSerial
              let cty, ctx = cgTyComplete ctx ty
              CLetStmt(name, None, cty), ctx)
