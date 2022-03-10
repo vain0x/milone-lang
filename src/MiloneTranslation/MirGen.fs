@@ -28,6 +28,8 @@ let private patIsUnit pat = pat |> patToTy |> tyIsUnit
 
 let private exprIsUnit expr = expr |> exprToTy |> tyIsUnit
 
+let private emptyExternVars: TreeMap<VarSerial, Ty> = TMap.empty varSerialCompare
+
 // -----------------------------------------------
 // Result
 // -----------------------------------------------
@@ -66,6 +68,9 @@ type private MirCtx =
 
     CurrentFunSerial: FunSerial option
 
+    /// Extern variables that are referred to in the module.
+    ExternVars: TreeMap<VarSerial, Ty>
+
     /// (label, parameters), where the label is the entrypoint of current fun.
     /// For tail-rec (tail-call) optimization.
     CurrentFun: (Label * VarSerial list) option
@@ -89,6 +94,7 @@ let private ofHirCtx (hirCtx: HirCtx) : MirCtx =
     Serial = hirCtx.Serial
     VarNameMap = TMap.empty varSerialCompare
     LabelSerial = 0
+    ExternVars = emptyExternVars
     CurrentFunSerial = None
     CurrentFun = None
     IsReachable = true
@@ -464,6 +470,27 @@ let private mirifyPat ctx (endLabel: string) (pat: HPat) (expr: MExpr) exprTy : 
 // -----------------------------------------------
 // Expression
 // -----------------------------------------------
+
+let private mirifyExprVar (ctx: MirCtx) varSerial ty loc =
+  let ctx =
+    match ctx.Rx.StaticVars |> TMap.tryFind varSerial with
+    | Some varDef ->
+      let (Loc (defDocId, _, _)) = varDef.Loc
+      let (Loc (useDocId, _, _)) = loc
+
+      if Symbol.equals defDocId useDocId |> not then
+        if ctx.ExternVars
+           |> TMap.containsKey varSerial
+           |> not then
+          { ctx with ExternVars = ctx.ExternVars |> TMap.add varSerial ty }
+        else
+          ctx
+      else
+        ctx
+
+    | None -> ctx
+
+  MVarExpr(varSerial, ty, loc), ctx
 
 let private mirifyExprVariant (ctx: MirCtx) serial loc =
   let variantDef = ctx.Rx.Variants |> mapFind serial
@@ -1634,7 +1661,7 @@ let private mirifyExprLetFunContents (ctx: MirCtx) calleeSerial argPats body let
 let private mirifyExpr (ctx: MirCtx) (expr: HExpr) : MExpr * MirCtx =
   match expr with
   | HLitExpr (lit, loc) -> MLitExpr(lit, loc), ctx
-  | HVarExpr (serial, ty, loc) -> MVarExpr(serial, ty, loc), ctx
+  | HVarExpr (serial, ty, loc) -> mirifyExprVar ctx serial ty loc
   | HFunExpr (serial, _, _, loc) -> MProcExpr(serial, loc), ctx
 
   | HVariantExpr (serial, _, loc) -> mirifyExprVariant ctx serial loc
@@ -1696,7 +1723,11 @@ let private mirifyStmt (ctx: MirCtx) (stmt: HStmt) : MirCtx =
 
 let private mirifyModule (m: HModule2, ctx: MirCtx) =
   let ctx =
-    let ctx = { ctx with VarNameMap = m.Vars }
+    let ctx =
+      { ctx with
+          VarNameMap = m.Vars
+          ExternVars = emptyExternVars }
+
     m.Stmts |> List.fold mirifyStmt ctx
 
   let decls, ctx = takeDecls ctx
@@ -1704,6 +1735,7 @@ let private mirifyModule (m: HModule2, ctx: MirCtx) =
   let m: MModule =
     { DocId = m.DocId
       Vars = ctx.VarNameMap
+      ExternVars = ctx.ExternVars
       Decls = decls }
 
   m, ctx

@@ -220,7 +220,6 @@ type private CirCtx =
     Decls: CDecl list
 
     /// Already-declared functions.
-    VarDecls: TreeSet<VarSerial>
     FunDecls: TreeSet<FunSerial>
 
     /// Nominalized fun pointer types.
@@ -272,7 +271,6 @@ let private ofMirResult (mirCtx: MirResult) : CirCtx =
     TyUniqueNames = tyNames
     Stmts = []
     Decls = []
-    VarDecls = TSet.empty varSerialCompare
     FunDecls = TSet.empty funSerialCompare
     FunPtrTys = TMap.empty (pairCompare (listCompare cTyCompare) cTyCompare) }
 
@@ -666,17 +664,6 @@ let private cgTyComplete (ctx: CirCtx) (ty: Ty) : CTy * CirCtx =
 // Extern decl
 // -----------------------------------------------
 
-let private cgExternVarDecl (ctx: CirCtx) varSerial ty =
-  if TSet.contains varSerial ctx.VarDecls then
-    ctx
-  else
-    let name = getUniqueVarName ctx varSerial
-    let ty, ctx = cgTyComplete ctx ty
-
-    let ctx = addDecl ctx (CExternVarDecl(name, ty))
-
-    { ctx with VarDecls = ctx.VarDecls |> TSet.add varSerial }
-
 let private cgExternFunDecl (ctx: CirCtx) funSerial =
   if TSet.contains funSerial ctx.FunDecls then
     ctx
@@ -876,16 +863,8 @@ let private cgExpr (ctx: CirCtx) (arg: MExpr) : CExpr * CirCtx =
   | MUnitExpr _ -> CVarExpr "0", ctx
   | MNeverExpr loc -> unreachable ("MNeverExpr " + Loc.toString loc)
 
-  | MVarExpr (serial, ty, _) ->
-    let ctx =
-      match findStorageModifier ctx serial with
-      | IsStatic -> cgExternVarDecl ctx serial ty
-      | NotStatic -> ctx
-
-    CVarExpr(getUniqueVarName ctx serial), ctx
-
+  | MVarExpr (serial, _, _) -> CVarExpr(getUniqueVarName ctx serial), ctx
   | MProcExpr (serial, _) -> CVarExpr(getUniqueFunName ctx serial), ctx
-
   | MVariantExpr (_, serial, _) -> genVariantNameExpr ctx serial
   | MDiscriminantConstExpr (variantSerial, _) -> genDiscriminant ctx variantSerial, ctx
   | MGenericValueExpr (genericValue, ty, _) -> genGenericValue ctx genericValue ty
@@ -1450,9 +1429,18 @@ let private cgModule (ctx: CirCtx) (m: MModule) : DocId * CDecl list =
       TyUniqueNames = ctx.TyUniqueNames
       Stmts = []
       Decls = []
-      VarDecls = TSet.empty varSerialCompare
       FunDecls = TSet.empty funSerialCompare
       FunPtrTys = TMap.empty (pairCompare (listCompare cTyCompare) cTyCompare) }
+
+  // Generate extern var decls.
+  let ctx =
+    m.ExternVars
+    |> TMap.fold
+         (fun ctx varSerial ty ->
+           let name = getUniqueVarName ctx varSerial
+           let ty, ctx = cgTyComplete ctx ty
+           addDecl ctx (CExternVarDecl(name, ty)))
+         ctx
 
   // Generate decls.
   let ctx = cgDecls ctx m.Decls

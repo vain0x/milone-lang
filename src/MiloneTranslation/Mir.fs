@@ -16,6 +16,7 @@ open MiloneShared.SharedTypes
 open MiloneShared.TypeFloat
 open MiloneShared.TypeIntegers
 open MiloneTranslationTypes.HirTypes
+open Std.StdMap
 
 // -----------------------------------------------
 // MIR types
@@ -235,7 +236,10 @@ type MDecl =
 [<RequireQualifiedAccess; NoEquality; NoComparison>]
 type MModule =
   { DocId: DocId
+    /// Name of local variables.
     Vars: VarNameMap
+    /// Extern variables that are referred to in the module.
+    ExternVars: TreeMap<VarSerial, Ty>
     Decls: MDecl list }
 
 // -----------------------------------------------
