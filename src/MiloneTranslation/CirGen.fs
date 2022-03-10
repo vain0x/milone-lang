@@ -279,21 +279,6 @@ let private currentDocId (ctx: CirCtx) : DocId =
   | Some it -> it
   | None -> unreachable () // Must be filled before starting work.
 
-let private findStorageModifier (ctx: CirCtx) varSerial =
-  match ctx.Rx.StaticVars |> TMap.tryFind varSerial with
-  | Some varDef -> varDef.IsStatic
-
-  | _ -> NotStatic
-
-let private findVarLinkage (ctx: CirCtx) varSerial =
-  match ctx.Rx.StaticVars |> TMap.tryFind varSerial with
-  | Some varDef -> varDef.Linkage
-
-  | _ -> InternalLinkage
-
-let private isReplacing (ctx: CirCtx) varSerial =
-  ctx.Rx.ReplacingVars |> TSet.contains varSerial
-
 let private isMainFun (ctx: CirCtx) funSerial =
   match ctx.Rx.MainFunOpt with
   | Some mainFun -> funSerialCompare mainFun funSerial = 0
@@ -972,10 +957,13 @@ let private cgPrintfnActionStmt ctx itself args argTys =
 
   | _ -> unreachable itself
 
-let private addLetStmt (ctx: CirCtx) name expr _cty _isStatic _linkage (_replacing: bool) =
+let private addLetStmt (ctx: CirCtx) name expr =
   match expr with
   | Some expr -> addStmt ctx (CSetStmt(CVarExpr name, expr))
   | None -> ctx
+
+let private addSetStmt (ctx: CirCtx) name expr =
+  addStmt ctx (CSetStmt(CVarExpr name, expr))
 
 let private addLetAllocStmt ctx name valTy varTy =
   // addStmt ctx (CLetAllocStmt(name, valTy, varTy))
@@ -996,53 +984,34 @@ let private addLetAllocStmt ctx name valTy varTy =
 
   addStmt ctx stmt
 
-let private doGenLetValStmt ctx serial expr ty =
-  let name = getUniqueVarName ctx serial
-  let isStatic = findStorageModifier ctx serial
-  let linkage = findVarLinkage ctx serial
-  let replacing = isReplacing ctx serial
-  let cty, ctx = cgTyComplete ctx ty
-  addLetStmt ctx name expr cty isStatic linkage replacing
-
 let private cgPrimStmt (ctx: CirCtx) itself prim args serial resultTy =
   let conversion ctx makeExpr =
     match args with
     | [ arg ] ->
       let name = getUniqueVarName ctx serial
-      let isStatic = findStorageModifier ctx serial
-      let linkage = findVarLinkage ctx serial
-      let replacing = isReplacing ctx serial
-      let ty, ctx = cgTyComplete ctx resultTy
       let arg, ctx = cgExpr ctx arg
-      addLetStmt ctx name (Some(makeExpr arg)) ty isStatic linkage replacing
+      addSetStmt ctx name (makeExpr arg)
 
     | _ -> unreachable itself
 
   let regular ctx makeExpr =
     let name = getUniqueVarName ctx serial
-    let isStatic = findStorageModifier ctx serial
-    let linkage = findVarLinkage ctx serial
-    let replacing = isReplacing ctx serial
-    let ty, ctx = cgTyComplete ctx resultTy
 
     let args, ctx =
       (args, ctx)
       |> stMap (fun (arg, ctx) -> cgExpr ctx arg)
 
-    addLetStmt ctx name (Some(makeExpr args)) ty isStatic linkage replacing
+    addSetStmt ctx name (makeExpr args)
 
   let regularWithTy ctx makeExpr =
     let name = getUniqueVarName ctx serial
-    let isStatic = findStorageModifier ctx serial
-    let linkage = findVarLinkage ctx serial
-    let replacing = isReplacing ctx serial
     let ty, ctx = cgTyComplete ctx resultTy
 
     let args, ctx =
       (args, ctx)
       |> stMap (fun (arg, ctx) -> cgExpr ctx arg)
 
-    addLetStmt ctx name (Some(makeExpr args ty)) ty isStatic linkage replacing
+    addSetStmt ctx name (makeExpr args ty)
 
   match prim with
   | MIntOfStrPrim flavor ->
@@ -1070,9 +1039,6 @@ let private cgPrimStmt (ctx: CirCtx) itself prim args serial resultTy =
 
   | MClosurePrim funSerial ->
     let name = getUniqueVarName ctx serial
-    let isStatic = findStorageModifier ctx serial
-    let linkage = findVarLinkage ctx serial
-    let replacing = isReplacing ctx serial
     let ty, ctx = cgTyComplete ctx resultTy
 
     let args, ctx =
@@ -1087,7 +1053,7 @@ let private cgPrimStmt (ctx: CirCtx) itself prim args serial resultTy =
       | [ env ] -> CInitExpr([ "fun", funExpr; "env", env ], ty), ctx
       | _ -> unreachable itself
 
-    addLetStmt ctx name (Some expr) ty isStatic linkage replacing
+    addSetStmt ctx name expr
 
   | MBoxPrim argTy ->
     match args with
@@ -1122,10 +1088,6 @@ let private cgPrimStmt (ctx: CirCtx) itself prim args serial resultTy =
 
   | MCallProcPrim ->
     let name = getUniqueVarName ctx serial
-    let isStatic = findStorageModifier ctx serial
-    let linkage = findVarLinkage ctx serial
-    let replacing = isReplacing ctx serial
-    let ty, ctx = cgTyComplete ctx resultTy
 
     let ctx =
       match args with
@@ -1137,18 +1099,12 @@ let private cgPrimStmt (ctx: CirCtx) itself prim args serial resultTy =
       |> stMap (fun (arg, ctx) -> cgExpr ctx arg)
 
     match args with
-    | callee :: args ->
-      let expr = CCallExpr(callee, args)
-      addLetStmt ctx name (Some expr) ty isStatic linkage replacing
+    | callee :: args -> addSetStmt ctx name (CCallExpr(callee, args))
 
     | [] -> unreachable itself
 
   | MCallClosurePrim ->
     let name = getUniqueVarName ctx serial
-    let isStatic = findStorageModifier ctx serial
-    let linkage = findVarLinkage ctx serial
-    let replacing = isReplacing ctx serial
-    let ty, ctx = cgTyComplete ctx resultTy
 
     let args, ctx =
       (args, ctx)
@@ -1161,7 +1117,7 @@ let private cgPrimStmt (ctx: CirCtx) itself prim args serial resultTy =
         let envArg = CDotExpr(callee, "env")
         CCallExpr(funPtr, envArg :: args)
 
-      addLetStmt ctx name (Some expr) ty isStatic linkage replacing
+      addSetStmt ctx name expr
 
     | [] -> unreachable itself
 
@@ -1215,7 +1171,9 @@ let private cgConsStmt ctx serial head tail itemTy =
 
   addStmt ctx stmt
 
-let private cgLetValStmt ctx serial init ty =
+let private cgLetValStmt ctx serial init =
+  let name = getUniqueVarName ctx serial
+
   let init, ctx =
     match init with
     | None -> None, ctx
@@ -1224,7 +1182,7 @@ let private cgLetValStmt ctx serial init ty =
       let init, ctx = cgExpr ctx init
       Some init, ctx
 
-  doGenLetValStmt ctx serial init ty
+  addLetStmt ctx name init
 
 let private cgSetStmt ctx serial right =
   let right, ctx = cgExpr ctx right
@@ -1274,7 +1232,7 @@ let private cgStmt ctx stmt =
   match stmt with
   | MActionStmt (action, args, _) -> cgActionStmt ctx stmt action args
   | MPrimStmt (prim, args, temp, resultTy, _) -> cgPrimStmt ctx stmt prim args temp resultTy
-  | MLetValStmt (serial, init, ty, _) -> cgLetValStmt ctx serial init ty
+  | MLetValStmt (serial, init, _, _) -> cgLetValStmt ctx serial init
   | MSetStmt (serial, right, _) -> cgSetStmt ctx serial right
   | MLabelStmt (label, _) -> addStmt ctx (CLabelStmt label)
 
