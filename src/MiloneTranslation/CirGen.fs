@@ -966,9 +966,7 @@ let private addSetStmt (ctx: CirCtx) name expr =
   addStmt ctx (CSetStmt(CVarExpr name, expr))
 
 let private addLetAllocStmt ctx name valTy varTy =
-  // addStmt ctx (CLetAllocStmt(name, valTy, varTy))
-
-  /// `U* x = (U*)malloc(sizeof T);`
+  // `U* x = (U*)malloc(sizeof T);`
   let stmt =
     let init =
       CCastExpr(

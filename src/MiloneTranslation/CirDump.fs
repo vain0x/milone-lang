@@ -348,15 +348,6 @@ let private cpStmt indent stmt acc : string list =
     |> cons ";"
     |> cons eol
 
-  | CLetAllocStmt (name, valTy, varTy) ->
-    acc
-    |> cons indent
-    |> cpTyWithName name varTy
-    |> cons " = milone_mem_alloc(1, sizeof("
-    |> cpTy valTy
-    |> cons "));"
-    |> cons eol
-
   | CSetStmt (l, r) ->
     acc
     |> cons indent
