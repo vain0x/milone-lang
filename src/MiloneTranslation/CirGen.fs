@@ -972,23 +972,10 @@ let private cgPrintfnActionStmt ctx itself args argTys =
 
   | _ -> unreachable itself
 
-let private addLetStmt (ctx: CirCtx) name expr cty isStatic linkage (_replacing: bool) =
-  match isStatic with
-  | IsStatic ->
-    let ctx =
-      match linkage with
-      | InternalLinkage -> addDecl ctx (CInternalStaticVarDecl(name, cty))
-      | ExternalLinkage _ -> addDecl ctx (CStaticVarDecl(name, cty))
-
-    match expr with
-    | Some expr -> addStmt ctx (CSetStmt(CVarExpr name, expr))
-    | _ -> ctx
-
-  | NotStatic ->
-    // whether ever replacing or not
-    match expr with
-    | Some expr -> addStmt ctx (CSetStmt(CVarExpr name, expr))
-    | None -> ctx
+let private addLetStmt (ctx: CirCtx) name expr _cty _isStatic _linkage (_replacing: bool) =
+  match expr with
+  | Some expr -> addStmt ctx (CSetStmt(CVarExpr name, expr))
+  | None -> ctx
 
 let private addLetAllocStmt ctx name valTy varTy =
   // addStmt ctx (CLetAllocStmt(name, valTy, varTy))
@@ -1440,6 +1427,16 @@ let private cgModule (ctx: CirCtx) (m: MModule) : DocId * CDecl list =
            let name = getUniqueVarName ctx varSerial
            let ty, ctx = cgTyComplete ctx ty
            addDecl ctx (CExternVarDecl(name, ty)))
+         ctx
+
+  // Generate static var decls.
+  let ctx =
+    m.StaticVars
+    |> List.fold
+         (fun ctx (varSerial, ty) ->
+           let name = getUniqueVarName ctx varSerial
+           let ty, ctx = cgTyComplete ctx ty
+           addDecl ctx (CStaticVarDecl(name, ty)))
          ctx
 
   // Generate decls.

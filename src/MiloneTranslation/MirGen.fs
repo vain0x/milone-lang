@@ -28,7 +28,7 @@ let private patIsUnit pat = pat |> patToTy |> tyIsUnit
 
 let private exprIsUnit expr = expr |> exprToTy |> tyIsUnit
 
-let private emptyExternVars: TreeMap<VarSerial, Ty> = TMap.empty varSerialCompare
+let private emptyVarTyMap: TreeMap<VarSerial, Ty> = TMap.empty varSerialCompare
 
 // -----------------------------------------------
 // Result
@@ -94,7 +94,7 @@ let private ofHirCtx (hirCtx: HirCtx) : MirCtx =
     Serial = hirCtx.Serial
     VarNameMap = TMap.empty varSerialCompare
     LabelSerial = 0
-    ExternVars = emptyExternVars
+    ExternVars = emptyVarTyMap
     CurrentFunSerial = None
     CurrentFun = None
     IsReachable = true
@@ -1726,15 +1726,29 @@ let private mirifyModule (m: HModule2, ctx: MirCtx) =
     let ctx =
       { ctx with
           VarNameMap = m.Vars
-          ExternVars = emptyExternVars }
+          ExternVars = emptyVarTyMap }
 
     m.Stmts |> List.fold mirifyStmt ctx
 
   let decls, ctx = takeDecls ctx
 
+  let staticVars =
+    ctx.Rx.StaticVars
+    |> TMap.fold
+         (fun staticVars varSerial (varDef: VarDef) ->
+           let (Loc (defDocId, _, _)) = varDef.Loc
+
+           if Symbol.equals defDocId m.DocId then
+             (varSerial, varDef.Ty) :: staticVars
+           else
+             staticVars)
+         []
+    |> List.rev
+
   let m: MModule =
     { DocId = m.DocId
       Vars = ctx.VarNameMap
+      StaticVars = staticVars
       ExternVars = ctx.ExternVars
       Decls = decls }
 

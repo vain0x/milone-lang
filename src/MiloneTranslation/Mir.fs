@@ -238,6 +238,8 @@ type MModule =
   { DocId: DocId
     /// Name of local variables.
     Vars: VarNameMap
+    /// Static variables that are defined to in the module.
+    StaticVars: (VarSerial * Ty) list
     /// Extern variables that are referred to in the module.
     ExternVars: TreeMap<VarSerial, Ty>
     Decls: MDecl list }
