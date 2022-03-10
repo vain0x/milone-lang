@@ -333,7 +333,7 @@ type HirCtx =
   { /// Next serial number.
     Serial: Serial
 
-    Vars: TreeMap<VarSerial, VarDef>
+    StaticVars: TreeMap<VarSerial, VarDef>
     Funs: TreeMap<FunSerial, FunDef>
     Variants: TreeMap<VariantSerial, VariantDef>
 

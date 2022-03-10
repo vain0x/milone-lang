@@ -1006,7 +1006,7 @@ module Symbol =
       | FieldSymbol _ -> None
 
       | ValueSymbol (VarSymbol varSerial) ->
-        (match tirCtx.Vars |> TMap.tryFind varSerial with
+        (match tirCtx.StaticVars |> TMap.tryFind varSerial with
          | Some t -> Some t
          | None ->
            modules

@@ -473,7 +473,7 @@ type private AbCtx =
     RecursiveVariants: TreeSet<VariantSerial> }
 
 let private ofHirCtx (hirCtx: HirCtx) : AbCtx =
-  { Vars = hirCtx.Vars
+  { Vars = hirCtx.StaticVars
     Funs = hirCtx.Funs
     Variants = hirCtx.Variants
     Tys = hirCtx.Tys
@@ -483,7 +483,7 @@ let private ofHirCtx (hirCtx: HirCtx) : AbCtx =
 
 let private toHirCtx (hirCtx: HirCtx) (ctx: AbCtx) =
   { hirCtx with
-      Vars = ctx.Vars
+      StaticVars = ctx.Vars
       Funs = ctx.Funs
       Variants = ctx.Variants
       Tys = ctx.Tys }

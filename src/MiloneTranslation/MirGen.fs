@@ -85,7 +85,7 @@ type private MirCtx =
 
 let private ofHirCtx (hirCtx: HirCtx) : MirCtx =
   let rx: MirRx =
-    { StaticVars = hirCtx.Vars
+    { StaticVars = hirCtx.StaticVars
       Funs = hirCtx.Funs
       Variants = hirCtx.Variants
       Tys = hirCtx.Tys }
@@ -1746,7 +1746,7 @@ let mirify (modules: HModule2 list, hirCtx: HirCtx) : MModule list * MirResult =
   let modules, ctx = (modules, ctx) |> stMap mirifyModule
 
   let result: MirResult =
-    { StaticVars = hirCtx.Vars
+    { StaticVars = hirCtx.StaticVars
       Funs = hirCtx.Funs
       Variants = hirCtx.Variants
       Tys = hirCtx.Tys

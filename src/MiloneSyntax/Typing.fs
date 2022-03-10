@@ -41,7 +41,7 @@ type private TyCtx =
     /// due to scope locality and shadowing.
     Serial: Serial
 
-    /// Variable serial to variable definition.
+    /// Static and non-static variables.
     Vars: TreeMap<VarSerial, VarDef>
     Funs: TreeMap<FunSerial, FunDef>
     Variants: TreeMap<VariantSerial, VariantDef>
@@ -85,7 +85,7 @@ let private newTyCtx (nr: NameResResult) : TyCtx =
   assert (List.isEmpty nr.Logs)
 
   { Serial = nr.Serial
-    Vars = nr.Vars
+    Vars = nr.StaticVars
     Funs = nr.Funs
     Variants = nr.Variants
     MainFunOpt = nr.MainFunOpt
@@ -103,7 +103,7 @@ let private newTyCtx (nr: NameResResult) : TyCtx =
 
 let private toTirCtx (ctx: TyCtx) : TirCtx =
   { Serial = ctx.Serial
-    Vars = ctx.Vars
+    StaticVars = ctx.Vars
     Funs = ctx.Funs
     Variants = ctx.Variants
     Tys = ctx.Tys
