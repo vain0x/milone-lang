@@ -2108,4 +2108,13 @@ let infer (modules: TProgram, nameRes: NameResResult) : TProgram * TirCtx =
         Tys = tys }
 
   let tirCtx = toTirCtx ctx
+
+  // Enforce.
+  assert (tirCtx.StaticVars
+          |> TMap.toList
+          |> List.forall (fun (_, varDef: VarDef) ->
+            match varDef.IsStatic with
+            | IsStatic -> tyIsMonomorphic varDef.Ty
+            | NotStatic -> false))
+
   modules, tirCtx
