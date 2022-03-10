@@ -444,7 +444,10 @@ let private mtModule (m: HModule2, ctx) =
 
   let m: M.HModule2 =
     { DocId = m.DocId
+
+      // Not updated, because Ty fields are no longer used.
       Vars = m.Vars
+
       Stmts = stmts }
 
   m, ctx
@@ -454,7 +457,20 @@ let private mtModule (m: HModule2, ctx) =
 // -----------------------------------------------
 
 let private mtDefs (hirCtx: HirCtx) (mtCtx: MtCtx) =
-  // Remark: `VarDef`s don't need updating because Ty fields are no longer used.
+  let staticVars, mtCtx =
+    hirCtx.StaticVars
+    |> TMap.fold
+         (fun (staticVars, ctx) varSerial (varDef: VarDef) ->
+           let ty, ctx = (varDef.Ty, ctx) |> mtTy
+
+           let varDef: M.VarDef =
+             { Name = varDef.Name
+               Ty = ty
+               Linkage = varDef.Linkage
+               Loc = varDef.Loc }
+
+           staticVars |> TMap.add varSerial varDef, ctx)
+         (TMap.empty varSerialCompare, mtCtx)
 
   let funs, mtCtx =
     hirCtx.Funs
@@ -539,7 +555,7 @@ let private mtDefs (hirCtx: HirCtx) (mtCtx: MtCtx) =
     mtCtx.NewTys
     |> List.fold (fun tys (tySerial, tyDef) -> tys |> TMap.add tySerial tyDef) tys
 
-  funs, variants, tys, mtCtx
+  staticVars, funs, variants, tys, mtCtx
 
 // -----------------------------------------------
 // Back to HIR
@@ -624,6 +640,13 @@ let private bthModule (m: M.HModule2) : HModule2 =
     Vars = m.Vars
     Stmts = m.Stmts |> List.map bthStmt }
 
+let private bthVarDef (varDef: M.VarDef) : VarDef =
+  { Name = varDef.Name
+    IsStatic = IsStatic
+    Linkage = varDef.Linkage
+    Ty = bthTy varDef.Ty
+    Loc = varDef.Loc }
+
 let private bthFunDef (funDef: M.FunDef) : FunDef =
   { Name = funDef.Name
     Arity = funDef.Arity
@@ -661,10 +684,14 @@ let monoTy (modules: HModule2 list, hirCtx: HirCtx) : HModule2 list * HirCtx =
 
   // Convert to IR.
   let modules, mtCtx = (modules, mtCtx) |> stMap mtModule
-  let funs, variants, tys, mtCtx = mtDefs hirCtx mtCtx
+  let staticVars, funs, variants, tys, mtCtx = mtDefs hirCtx mtCtx
 
   // Back to HIR.
   let modules = modules |> List.map bthModule
+
+  let staticVars =
+    staticVars
+    |> TMap.map (fun _ varDef -> bthVarDef varDef)
 
   let funs =
     funs
@@ -680,6 +707,7 @@ let monoTy (modules: HModule2 list, hirCtx: HirCtx) : HModule2 list * HirCtx =
   let hirCtx =
     { hirCtx with
         Serial = mtCtx.Serial
+        StaticVars = staticVars
         Funs = funs
         Variants = variants
         Tys = tys }
