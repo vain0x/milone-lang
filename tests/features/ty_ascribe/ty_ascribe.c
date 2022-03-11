@@ -2,9 +2,9 @@
 
 struct IntList;
 
-struct IntList;
-
 struct StringList;
+
+struct IntList;
 
 struct StringList;
 
@@ -34,14 +34,21 @@ int ty_ascribe_ty_ascribe_main_g(int x_1) {
 
 int main(int argc, char** argv) {
     milone_start(argc, argv);
-    int call_ = ty_ascribe_ty_ascribe_main_f(1);
-    int call_1 = ty_ascribe_ty_ascribe_main_g(1);
-    int zero_ = (call_ - call_1);
-    struct IntList const* list_ = milone_mem_alloc(1, sizeof(struct IntList));
+    int zero_;
+    struct IntList const* xs_;
+    struct StringList const* ys_;
+    int call_;
+    int call_1;
+    struct IntList const* list_;
+    struct StringList const* list_1;
+    call_ = ty_ascribe_ty_ascribe_main_f(1);
+    call_1 = ty_ascribe_ty_ascribe_main_g(1);
+    zero_ = (call_ - call_1);
+    list_ = ((struct IntList const*)milone_mem_alloc(1, sizeof(struct IntList)));
     (*(((struct IntList*)list_))) = (struct IntList){.head = 1, .tail = NULL};
-    struct IntList const* xs_ = list_;
-    struct StringList const* list_1 = milone_mem_alloc(1, sizeof(struct StringList));
+    xs_ = list_;
+    list_1 = ((struct StringList const*)milone_mem_alloc(1, sizeof(struct StringList)));
     (*(((struct StringList*)list_1))) = (struct StringList){.head = (struct String){.str = "a", .len = 1}, .tail = NULL};
-    struct StringList const* ys_ = list_1;
+    ys_ = list_1;
     return zero_;
 }

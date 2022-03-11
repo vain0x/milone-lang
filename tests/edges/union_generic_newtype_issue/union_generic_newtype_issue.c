@@ -26,15 +26,18 @@ struct IntIntTuple2MyOption1_ {
 };
 
 struct IntIntTuple2MyOption1_ union_generic_newtype_issue_union_generic_newtype_issue_f(void) {
-    struct IntIntTuple2_ IntIntTuple2_ = (struct IntIntTuple2_){.t0 = 1, .t1 = 0};
-    struct IntIntTuple2MyOption1_ variant_ = (struct IntIntTuple2MyOption1_){.discriminant = MySome_, .MySome_ = IntIntTuple2_};
+    struct IntIntTuple2_ IntIntTuple2_;
+    struct IntIntTuple2MyOption1_ variant_;
+    IntIntTuple2_ = (struct IntIntTuple2_){.t0 = 1, .t1 = 0};
+    variant_ = (struct IntIntTuple2MyOption1_){.discriminant = MySome_, .MySome_ = IntIntTuple2_};
     return variant_;
 }
 
 int main(int argc, char** argv) {
     milone_start(argc, argv);
     char switch_;
-    struct IntIntTuple2MyOption1_ call_ = union_generic_newtype_issue_union_generic_newtype_issue_f();
+    struct IntIntTuple2MyOption1_ call_;
+    call_ = union_generic_newtype_issue_union_generic_newtype_issue_f();
     switch (call_.discriminant) {
         case MySome_:
             goto clause_2;

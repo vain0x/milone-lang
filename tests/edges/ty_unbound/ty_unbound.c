@@ -9,7 +9,8 @@ void ty_unbound_ty_unbound_UnitListUnitFun1_assertIsEmpty(struct UnitList const*
 int main(int argc, char** argv);
 
 void ty_unbound_ty_unbound_UnitListUnitFun1_assertIsEmpty(struct UnitList const* xs_) {
-    bool call_ = MiloneCore_List_UnitListBoolFun1_isEmpty(xs_);
+    bool call_;
+    call_ = MiloneCore_List_UnitListBoolFun1_isEmpty(xs_);
     milone_assert(call_, (struct String){.str = "ty_unbound/ty_unbound.milone", .len = 28}, 4, 23);
     return;
 }

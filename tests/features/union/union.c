@@ -55,16 +55,33 @@ struct ApiResponse_ {
 
 int main(int argc, char** argv) {
     milone_start(argc, argv);
-    struct String statusText_;
-    int statusCode_;
-    int x_;
+    struct Status_ ok_;
+    struct Status_ err1_;
+    struct Status_ err2_;
     struct String e_;
-    struct Status_ ok_ = (struct Status_){.discriminant = Ok_1};
-    struct Status_ variant_ = (struct Status_){.discriminant = Err_, .Err_ = (struct String){.str = "No such file or directory.", .len = 26}};
-    struct Status_ err1_ = variant_;
-    struct Status_ variant_1 = (struct Status_){.discriminant = Err_, .Err_ = (struct String){.str = "Access denied.", .len = 14}};
-    struct Status_ err2_ = variant_1;
+    int x_;
+    int statusCode_;
+    struct String statusText_;
+    struct Status_ ok_1;
+    char okOk_;
+    struct Status_ statusOk_;
+    char okWrapper_;
+    struct Status_ variant_;
+    struct Status_ variant_1;
     char match_;
+    char match_1;
+    struct Limit_ variant_2;
+    char switch_;
+    char match_2;
+    struct IntStringTuple2_ IntStringTuple2_;
+    struct ApiResponse_ variant_3;
+    bool if_;
+    char switch_1;
+    ok_ = (struct Status_){.discriminant = Ok_1};
+    variant_ = (struct Status_){.discriminant = Err_, .Err_ = (struct String){.str = "No such file or directory.", .len = 26}};
+    err1_ = variant_;
+    variant_1 = (struct Status_){.discriminant = Err_, .Err_ = (struct String){.str = "Access denied.", .len = 14}};
+    err2_ = variant_1;
     if ((err1_.discriminant != Ok_1)) goto next_2;
     milone_assert(false, (struct String){.str = "union/union.milone", .len = 18}, 28, 12);
     match_ = 0;
@@ -78,8 +95,7 @@ next_2:;
 next_3:;
     exit(1);
 end_match_1:;
-    char match_1;
-    struct Limit_ variant_2 = (struct Limit_){.discriminant = LimitVal_, .LimitVal_ = 1};
+    variant_2 = (struct Limit_){.discriminant = LimitVal_, .LimitVal_ = 1};
     if ((variant_2.discriminant != LimitVal_)) goto next_5;
     x_ = variant_2.LimitVal_;
     milone_assert((x_ == 1), (struct String){.str = "union/union.milone", .len = 18}, 33, 20);
@@ -91,7 +107,6 @@ next_5:;
 next_6:;
     exit(1);
 end_match_4:;
-    char switch_;
     switch ((struct ApiResponse_){.discriminant = ARCancel_}.discriminant) {
         case ARCancel_:
             goto clause_8;
@@ -107,13 +122,11 @@ clause_9:;
     switch_ = 0;
     goto switch_next_7;
 switch_next_7:;
-    char match_2;
-    struct IntStringTuple2_ IntStringTuple2_ = (struct IntStringTuple2_){.t0 = 404, .t1 = (struct String){.str = "Not Found", .len = 9}};
-    struct ApiResponse_ variant_3 = (struct ApiResponse_){.discriminant = ARError_, .ARError_ = IntStringTuple2_};
+    IntStringTuple2_ = (struct IntStringTuple2_){.t0 = 404, .t1 = (struct String){.str = "Not Found", .len = 9}};
+    variant_3 = (struct ApiResponse_){.discriminant = ARError_, .ARError_ = IntStringTuple2_};
     if ((variant_3.discriminant != ARError_)) goto next_11;
     statusCode_ = variant_3.ARError_.t0;
     statusText_ = variant_3.ARError_.t1;
-    bool if_;
     if ((statusCode_ == 404)) {
         goto then_14;
     } else {
@@ -135,10 +148,9 @@ next_11:;
     goto end_match_10;
 next_12:;
 end_match_10:;
-    struct Status_ ok_1 = (struct Status_){.discriminant = Ok_1};
-    char okOk_ = 0;
-    struct Status_ statusOk_ = (struct Status_){.discriminant = Ok_1};
-    char switch_1;
+    ok_1 = (struct Status_){.discriminant = Ok_1};
+    okOk_ = 0;
+    statusOk_ = (struct Status_){.discriminant = Ok_1};
     switch ((struct Status_){.discriminant = Ok_1}.discriminant) {
         case Ok_1:
             goto clause_17;
@@ -157,6 +169,6 @@ clause_18:;
     switch_1 = 0;
     goto switch_next_16;
 switch_next_16:;
-    char okWrapper_ = 0;
+    okWrapper_ = 0;
     return 0;
 }

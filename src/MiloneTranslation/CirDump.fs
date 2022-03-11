@@ -348,15 +348,6 @@ let private cpStmt indent stmt acc : string list =
     |> cons ";"
     |> cons eol
 
-  | CLetAllocStmt (name, valTy, varTy) ->
-    acc
-    |> cons indent
-    |> cpTyWithName name varTy
-    |> cons " = milone_mem_alloc(1, sizeof("
-    |> cpTy valTy
-    |> cons "));"
-    |> cons eol
-
   | CSetStmt (l, r) ->
     acc
     |> cons indent
@@ -393,11 +384,11 @@ let private cpStmt indent stmt acc : string list =
     |> cpExpr cond
     |> cons ") {"
     |> cons eol
-    |> cpStmtList (deeper indent) thenCl
+    |> cpStmt (deeper indent) thenCl
     |> cons indent
     |> cons "} else {"
     |> cons eol
-    |> cpStmtList (deeper indent) elseCl
+    |> cpStmt (deeper indent) elseCl
     |> cons indent
     |> cons "}"
     |> cons eol
@@ -435,7 +426,7 @@ let private cpStmt indent stmt acc : string list =
                   acc |> cons eol)
                |> cpCaseLabels cases
                |> cpDefaultLabel isDefault
-               |> cpStmtList (deeper (deeper indent)) body
+               |> cpStmt (deeper (deeper indent)) body
 
              NotFirst, acc)
            (First, acc)

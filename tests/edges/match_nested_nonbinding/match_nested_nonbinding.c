@@ -30,7 +30,8 @@ struct MyOption_ {
 int main(int argc, char** argv) {
     milone_start(argc, argv);
     char match_;
-    struct MyOption_ variant_ = (struct MyOption_){.discriminant = MySome_, .MySome_ = (struct MyBool_){.discriminant = MyTrue_}};
+    struct MyOption_ variant_;
+    variant_ = (struct MyOption_){.discriminant = MySome_, .MySome_ = (struct MyBool_){.discriminant = MyTrue_}};
     if ((variant_.discriminant != MySome_)) goto next_2;
     if ((variant_.MySome_.discriminant != MyTrue_)) goto next_2;
     match_ = 0;

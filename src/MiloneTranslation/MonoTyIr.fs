@@ -49,6 +49,13 @@ type TyDef =
   | RecordTyDef of Ident * fields: (Ident * Ty * Loc) list * IsCRepr * Loc
 
 [<RequireQualifiedAccess; NoEquality; NoComparison>]
+type VarDef =
+  { Name: Ident
+    Ty: Ty
+    Linkage: Linkage
+    Loc: Loc }
+
+[<RequireQualifiedAccess; NoEquality; NoComparison>]
 type FunDef =
   { Name: Ident
     Arity: Arity

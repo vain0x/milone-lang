@@ -46,28 +46,37 @@ int newtype_of_fun_ty_bug_newtype_of_fun_ty_bug_main_fun_fun(void) {
 }
 
 int newtype_of_fun_ty_bug_newtype_of_fun_ty_bug_eta2_main_fun_fun(void const* env_) {
-    int call_ = newtype_of_fun_ty_bug_newtype_of_fun_ty_bug_main_fun_fun();
+    int call_;
+    call_ = newtype_of_fun_ty_bug_newtype_of_fun_ty_bug_main_fun_fun();
     return call_;
 }
 
 struct F_ newtype_of_fun_ty_bug_newtype_of_fun_ty_bug_main_fun(void) {
-    struct UnitIntFun1 fun_ = (struct UnitIntFun1){.fun = newtype_of_fun_ty_bug_newtype_of_fun_ty_bug_eta2_main_fun_fun, .env = NULL};
-    struct F_ variant_ = (struct F_){.discriminant = F_, .F_ = fun_};
+    struct UnitIntFun1 fun_;
+    struct F_ variant_;
+    fun_ = (struct UnitIntFun1){.fun = newtype_of_fun_ty_bug_newtype_of_fun_ty_bug_eta2_main_fun_fun, .env = NULL};
+    variant_ = (struct F_){.discriminant = F_, .F_ = fun_};
     return variant_;
 }
 
 struct F_ newtype_of_fun_ty_bug_newtype_of_fun_ty_bug_eta2_main_fun(void const* env_1) {
-    struct F_ call_1 = newtype_of_fun_ty_bug_newtype_of_fun_ty_bug_main_fun();
+    struct F_ call_1;
+    call_1 = newtype_of_fun_ty_bug_newtype_of_fun_ty_bug_main_fun();
     return call_1;
 }
 
 int main(int argc, char** argv) {
     milone_start(argc, argv);
-    struct UnitF_Fun1 fun_1 = (struct UnitF_Fun1){.fun = newtype_of_fun_ty_bug_newtype_of_fun_ty_bug_eta2_main_fun, .env = NULL};
-    struct UnitF_Fun1 getF_ = fun_1;
-    struct F_ app_ = getF_.fun(getF_.env);
-    struct UnitIntFun1 f_ = app_.F_;
-    int app_1 = f_.fun(f_.env);
+    struct UnitF_Fun1 getF_;
+    struct UnitIntFun1 f_;
+    struct UnitF_Fun1 fun_1;
+    struct F_ app_;
+    int app_1;
+    fun_1 = (struct UnitF_Fun1){.fun = newtype_of_fun_ty_bug_newtype_of_fun_ty_bug_eta2_main_fun, .env = NULL};
+    getF_ = fun_1;
+    app_ = getF_.fun(getF_.env);
+    f_ = app_.F_;
+    app_1 = f_.fun(f_.env);
     milone_assert((app_1 == 42), (struct String){.str = "newtype_of_fun_ty_bug/newtype_of_fun_ty_bug.milone", .len = 50}, 10, 2);
     return 0;
 }

@@ -6,8 +6,10 @@ int main(int argc, char** argv);
 
 int main(int argc, char** argv) {
     milone_start(argc, argv);
-    struct IntListListList const* n_ = NULL;
+    struct IntListListList const* n_;
+    bool ok_;
     bool if_;
+    n_ = NULL;
     if ((!(n_))) {
         goto nil_cl_2;
     } else {
@@ -20,7 +22,7 @@ cons_cl_3:;
     if_ = false;
     goto if_next_1;
 if_next_1:;
-    bool ok_ = if_;
+    ok_ = if_;
     milone_assert(ok_, (struct String){.str = "generic_right_angles/generic_right_angles.milone", .len = 48}, 16, 2);
     milone_assert((3 >= 2), (struct String){.str = "generic_right_angles/generic_right_angles.milone", .len = 48}, 19, 2);
     milone_assert(((2 << 3) == 16), (struct String){.str = "generic_right_angles/generic_right_angles.milone", .len = 48}, 22, 2);

@@ -13,7 +13,8 @@ int main(int argc, char** argv) {
     milone_start(argc, argv);
     int y_;
     int match_;
-    struct IntIntTuple2_ IntIntTuple2_ = (struct IntIntTuple2_){.t0 = (2 * 2), .t1 = (3 * 3)};
+    struct IntIntTuple2_ IntIntTuple2_;
+    IntIntTuple2_ = (struct IntIntTuple2_){.t0 = (2 * 2), .t1 = (3 * 3)};
     if ((IntIntTuple2_.t0 != 4)) goto next_2;
     if ((IntIntTuple2_.t1 != 9)) goto next_2;
     match_ = 0;

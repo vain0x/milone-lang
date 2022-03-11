@@ -7,8 +7,9 @@ void str_literal_raw_str_literal_raw_testNoEscape(void);
 int main(int argc, char** argv);
 
 void str_literal_raw_str_literal_raw_testEol(void) {
-    struct String eol_ = (struct String){.str = "\n", .len = 1};
+    struct String eol_;
     bool if_;
+    eol_ = (struct String){.str = "\n", .len = 1};
     if ((str_compare(eol_, (struct String){.str = "\n", .len = 1}) == 0)) {
         goto then_2;
     } else {

@@ -19,9 +19,12 @@ struct IntList const* ty_synonym_generic_ty_synonym_generic_UnitIntListFun1_newS
 
 int main(int argc, char** argv) {
     milone_start(argc, argv);
-    struct IntList const* call_ = ty_synonym_generic_ty_synonym_generic_UnitIntListFun1_newStack();
-    struct IntList const* list_ = milone_mem_alloc(1, sizeof(struct IntList));
+    struct IntList const* _stack;
+    struct IntList const* list_;
+    struct IntList const* call_;
+    call_ = ty_synonym_generic_ty_synonym_generic_UnitIntListFun1_newStack();
+    list_ = ((struct IntList const*)milone_mem_alloc(1, sizeof(struct IntList)));
     (*(((struct IntList*)list_))) = (struct IntList){.head = 1, .tail = call_};
-    struct IntList const* _stack = list_;
+    _stack = list_;
     return 0;
 }

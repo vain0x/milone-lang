@@ -171,7 +171,7 @@ type private EtaCtx =
 
 let private ofHirCtx (hirCtx: HirCtx) : EtaCtx =
   { Serial = hirCtx.Serial
-    StaticVars = hirCtx.Vars
+    StaticVars = hirCtx.StaticVars
     Vars = emptyVars
     Funs = hirCtx.Funs
     Variants = hirCtx.Variants

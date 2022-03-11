@@ -233,14 +233,14 @@ let private scopeEmpty () : Scope =
 [<RequireQualifiedAccess; NoEquality; NoComparison>]
 type private NameResState =
   { ScopeCtx: ScopeCtx
-    Vars: TreeMap<VarSerial, VarDef>
+    StaticVars: TreeMap<VarSerial, VarDef>
     Funs: TreeMap<FunSerial, FunDef>
     Variants: TreeMap<VariantSerial, VariantDef>
     Logs: (NameResLog * Loc) list }
 
 let private emptyState () : NameResState =
   { ScopeCtx = emptyScopeCtx ()
-    Vars = emptyVars
+    StaticVars = emptyVars
     Funs = TMap.empty funSerialCompare
     Variants = TMap.empty variantSerialCompare
     Logs = [] }
@@ -285,7 +285,7 @@ let private sMerge newRootModule (state: NameResState) (ctx: ScopeCtx) : NameRes
            | None ->
              let localVars = localVars |> TMap.add varSerial varDef
              globalVars, localVars)
-         (state.Vars, emptyVars)
+         (state.StaticVars, emptyVars)
 
   // Other fields are intermediate state.
   { state with
@@ -301,7 +301,7 @@ let private sMerge newRootModule (state: NameResState) (ctx: ScopeCtx) : NameRes
             TyNs = mapMerge s.TyNs ctx.TyNs
             NsNs = mapMerge s.NsNs ctx.NsNs }
 
-      Vars = globalVars
+      StaticVars = globalVars
       Funs = mapAddEntries ctx.NewFuns state.Funs
       Variants = mapAddEntries ctx.NewVariants state.Variants
       Logs = List.append ctx.NewLogs state.Logs },
@@ -311,7 +311,7 @@ let private sToResult mainFunOpt (state: NameResState) : NameResResult =
   let ctx = state.ScopeCtx
 
   { Serial = ctx.Serial
-    Vars = state.Vars
+    StaticVars = state.StaticVars
     Funs = state.Funs
     Variants = state.Variants
     Tys = ctx.Tys
@@ -326,7 +326,7 @@ let private sToResult mainFunOpt (state: NameResState) : NameResResult =
 [<RequireQualifiedAccess; NoEquality; NoComparison>]
 type NameResResult =
   { Serial: Serial
-    Vars: TreeMap<VarSerial, VarDef>
+    StaticVars: TreeMap<VarSerial, VarDef>
     Funs: TreeMap<FunSerial, FunDef>
     Variants: TreeMap<VariantSerial, VariantDef>
     Tys: TreeMap<TySerial, TyDef>

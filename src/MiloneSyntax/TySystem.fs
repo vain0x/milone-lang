@@ -129,6 +129,19 @@ let tyCompare l r =
 
 let tyEqual l r = tyCompare l r = 0
 
+/// Gets if the type is monomorphic.
+/// Assume all bound type variables are substituted.
+let tyIsMonomorphic ty : bool =
+  let rec go tys =
+    match tys with
+    | [] -> true
+
+    | Ty (MetaTk _, _) :: _ -> false
+
+    | Ty (_, tys1) :: tys2 -> go tys1 && go tys2
+
+  go [ ty ]
+
 /// Gets if the specified type variable doesn't appear in a type.
 let private tyIsFreeIn ty tySerial : bool =
   let rec go ty =

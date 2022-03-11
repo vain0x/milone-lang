@@ -40,10 +40,14 @@ void int_operators_int_operators_arithmeticOperatorsTest(int two_, int three_, i
 }
 
 void int_operators_int_operators_bitOperatorsTest(int n1_) {
-    int n2_ = (n1_ * 2);
-    int n4_ = (n2_ * 2);
-    int n8_ = (n4_ * 2);
-    int n16_ = (n8_ * 2);
+    int n2_;
+    int n4_;
+    int n8_;
+    int n16_;
+    n2_ = (n1_ * 2);
+    n4_ = (n2_ * 2);
+    n8_ = (n4_ * 2);
+    n16_ = (n8_ * 2);
     milone_assert(((((n1_ + n2_) + n4_) & ((n2_ + n4_) + n8_)) == (n2_ + n4_)), (struct String){.str = "int_operators/int_operators.milone", .len = 34}, 29, 2);
     milone_assert(((((n1_ + n2_) + n4_) | ((n2_ + n4_) + n8_)) == (((n1_ + n2_) + n4_) + n8_)), (struct String){.str = "int_operators/int_operators.milone", .len = 34}, 30, 2);
     milone_assert(((((n1_ + n2_) + n4_) ^ ((n2_ + n4_) + n8_)) == (n1_ + n8_)), (struct String){.str = "int_operators/int_operators.milone", .len = 34}, 31, 2);
@@ -72,11 +76,13 @@ void int_operators_int_operators_compareTest(int n2_1, int n3_) {
 }
 
 void int_operators_int_operators_toIntTest(void) {
+    int call_;
+    int call_1;
     milone_assert((0 == 0), (struct String){.str = "int_operators/int_operators.milone", .len = 34}, 58, 2);
     milone_assert((((int)'a') == 97), (struct String){.str = "int_operators/int_operators.milone", .len = 34}, 59, 2);
-    int call_ = str_to_int((struct String){.str = "42", .len = 2});
+    call_ = str_to_int((struct String){.str = "42", .len = 2});
     milone_assert((call_ == 42), (struct String){.str = "int_operators/int_operators.milone", .len = 34}, 60, 2);
-    int call_1 = str_to_int((struct String){.str = "-1", .len = 2});
+    call_1 = str_to_int((struct String){.str = "-1", .len = 2});
     milone_assert(((call_1 + 1) == 0), (struct String){.str = "int_operators/int_operators.milone", .len = 34}, 61, 2);
     return;
 }

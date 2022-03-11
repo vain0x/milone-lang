@@ -241,7 +241,7 @@ let private lowerModules (modules: Tir.TProgram) : Hir.HProgram =
 let private lowerTirCtx (ctx: Tir.TirCtx) : Hir.HirCtx =
   { Serial = ctx.Serial
 
-    Vars = lowerVarMap ctx.Vars
+    StaticVars = lowerVarMap ctx.StaticVars
 
     Funs =
       ctx.Funs

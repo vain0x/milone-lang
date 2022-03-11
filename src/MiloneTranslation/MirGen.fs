@@ -11,8 +11,6 @@ open MiloneShared.Util
 open MiloneShared.UtilSymbol
 open Std.StdError
 open Std.StdMap
-open Std.StdMultimap
-open Std.StdSet
 open MiloneTranslation.Hir
 open MiloneTranslation.Mir
 open MiloneTranslationTypes.HirTypes
@@ -28,6 +26,8 @@ let private patIsUnit pat = pat |> patToTy |> tyIsUnit
 
 let private exprIsUnit expr = expr |> exprToTy |> tyIsUnit
 
+let private emptyVarTyMap: TreeMap<VarSerial, Ty> = TMap.empty varSerialCompare
+
 // -----------------------------------------------
 // Result
 // -----------------------------------------------
@@ -39,9 +39,7 @@ type MirResult =
     Variants: TreeMap<VariantSerial, VariantDef>
     Tys: TreeMap<TySerial, TyDef>
 
-    MainFunOpt: FunSerial option
-    FunLocals: TreeMap<FunSerial, (VarSerial * Ty) list>
-    ReplacingVars: TreeSet<VarSerial> }
+    MainFunOpt: FunSerial option }
 
 // -----------------------------------------------
 // Context
@@ -50,7 +48,8 @@ type MirResult =
 /// Read-only context of the pass.
 [<RequireQualifiedAccess; NoEquality; NoComparison>]
 type private MirRx =
-  { Funs: TreeMap<FunSerial, FunDef>
+  { StaticVars: TreeMap<VarSerial, VarDef>
+    Funs: TreeMap<FunSerial, FunDef>
     Variants: TreeMap<VariantSerial, VariantDef>
     Tys: TreeMap<TySerial, TyDef> }
 
@@ -65,21 +64,22 @@ type private MirCtx =
 
     CurrentFunSerial: FunSerial option
 
+    /// Extern variables that are referred to in the module.
+    ExternVars: TreeMap<VarSerial, Ty>
+
     /// (label, parameters), where the label is the entrypoint of current fun.
     /// For tail-rec (tail-call) optimization.
     CurrentFun: (Label * VarSerial list) option
 
     IsReachable: bool
 
-    FunLocals: TreeMap<FunSerial, (VarSerial * Ty) list>
-    ReplacingVars: TreeSet<VarSerial>
-
     Stmts: MStmt list
     Decls: MDecl list }
 
 let private ofHirCtx (hirCtx: HirCtx) : MirCtx =
   let rx: MirRx =
-    { Funs = hirCtx.Funs
+    { StaticVars = hirCtx.StaticVars
+      Funs = hirCtx.Funs
       Variants = hirCtx.Variants
       Tys = hirCtx.Tys }
 
@@ -87,11 +87,10 @@ let private ofHirCtx (hirCtx: HirCtx) : MirCtx =
     Serial = hirCtx.Serial
     VarNameMap = TMap.empty varSerialCompare
     LabelSerial = 0
+    ExternVars = emptyVarTyMap
     CurrentFunSerial = None
     CurrentFun = None
     IsReachable = true
-    FunLocals = TMap.empty funSerialCompare
-    ReplacingVars = TSet.empty varSerialCompare
     Stmts = []
     Decls = [] }
 
@@ -462,6 +461,27 @@ let private mirifyPat ctx (endLabel: string) (pat: HPat) (expr: MExpr) exprTy : 
 // -----------------------------------------------
 // Expression
 // -----------------------------------------------
+
+let private mirifyExprVar (ctx: MirCtx) varSerial ty loc =
+  let ctx =
+    match ctx.Rx.StaticVars |> TMap.tryFind varSerial with
+    | Some varDef ->
+      let (Loc (defDocId, _, _)) = varDef.Loc
+      let (Loc (useDocId, _, _)) = loc
+
+      if Symbol.equals defDocId useDocId |> not then
+        if ctx.ExternVars
+           |> TMap.containsKey varSerial
+           |> not then
+          { ctx with ExternVars = ctx.ExternVars |> TMap.add varSerial ty }
+        else
+          ctx
+      else
+        ctx
+
+    | None -> ctx
+
+  MVarExpr(varSerial, ty, loc), ctx
 
 let private mirifyExprVariant (ctx: MirCtx) serial loc =
   let variantDef = ctx.Rx.Variants |> mapFind serial
@@ -962,18 +982,6 @@ let private doReuseArmLocals funSerial arms (ctx: MirCtx) : _ * MirCtx =
     arms
     |> List.map (fun (pat, guard, body) ->
       reuseVarOnPat reuseMap pat, reuseVarOnExpr reuseMap guard, reuseVarOnExpr reuseMap body)
-
-  let ctx: MirCtx =
-    let funLocals, replacingVars =
-      reuseMap
-      |> TMap.fold
-           (fun (funLocals, replacingVars) varSerial (_, ty) ->
-             Multimap.add funSerial (varSerial, ty) funLocals, TSet.add varSerial replacingVars)
-           (ctx.FunLocals, ctx.ReplacingVars)
-
-    { ctx with
-        FunLocals = funLocals
-        ReplacingVars = replacingVars }
 
   arms, ctx
 
@@ -1599,15 +1607,31 @@ let private mirifyExprLetFunContents (ctx: MirCtx) calleeSerial argPats body let
       let block: MBlock = { Stmts = stmts }
       [ block ], ctx
 
-    args, blockTy, body, ctx
+    // Local variables defined in the body.
+    let localVars =
+      body
+      |> List.collect (fun (block: MBlock) ->
+        block.Stmts
+        |> List.choose (fun stmt ->
+          match stmt with
+          | MLetValStmt (varSerial, _, ty, loc) -> Some(varSerial, ty, loc)
+          | MPrimStmt (_, _, varSerial, ty, loc) -> Some(varSerial, ty, loc)
+          | _ -> None))
+      |> List.filter (fun (varSerial, _, _) ->
+        ctx.Rx.StaticVars
+        |> TMap.containsKey varSerial
+        |> not)
+      |> listUnique (fun (l, _, _) (r, _, _) -> varSerialCompare l r)
+
+    args, blockTy, body, localVars, ctx
 
   let core () =
     let bodyCtx = startBlock ctx
-    let args, resultTy, body, bodyCtx = mirifyFunBody bodyCtx argPats body
+    let args, resultTy, body, localVars, bodyCtx = mirifyFunBody bodyCtx argPats body
     let ctx = rollback ctx bodyCtx
 
     let ctx =
-      addDecl ctx (MProcDecl(calleeSerial, args, body, resultTy, letLoc))
+      addDecl ctx (MProcDecl(calleeSerial, args, body, resultTy, localVars, letLoc))
 
     ctx
 
@@ -1616,7 +1640,7 @@ let private mirifyExprLetFunContents (ctx: MirCtx) calleeSerial argPats body let
 let private mirifyExpr (ctx: MirCtx) (expr: HExpr) : MExpr * MirCtx =
   match expr with
   | HLitExpr (lit, loc) -> MLitExpr(lit, loc), ctx
-  | HVarExpr (serial, ty, loc) -> MVarExpr(serial, ty, loc), ctx
+  | HVarExpr (serial, ty, loc) -> mirifyExprVar ctx serial ty loc
   | HFunExpr (serial, _, _, loc) -> MProcExpr(serial, loc), ctx
 
   | HVariantExpr (serial, _, loc) -> mirifyExprVariant ctx serial loc
@@ -1678,14 +1702,33 @@ let private mirifyStmt (ctx: MirCtx) (stmt: HStmt) : MirCtx =
 
 let private mirifyModule (m: HModule2, ctx: MirCtx) =
   let ctx =
-    let ctx = { ctx with VarNameMap = m.Vars }
+    let ctx =
+      { ctx with
+          VarNameMap = m.Vars
+          ExternVars = emptyVarTyMap }
+
     m.Stmts |> List.fold mirifyStmt ctx
 
   let decls, ctx = takeDecls ctx
 
+  let staticVars =
+    ctx.Rx.StaticVars
+    |> TMap.fold
+         (fun staticVars varSerial (varDef: VarDef) ->
+           let (Loc (defDocId, _, _)) = varDef.Loc
+
+           if Symbol.equals defDocId m.DocId then
+             (varSerial, varDef.Ty) :: staticVars
+           else
+             staticVars)
+         []
+    |> List.rev
+
   let m: MModule =
     { DocId = m.DocId
       Vars = ctx.VarNameMap
+      StaticVars = staticVars
+      ExternVars = ctx.ExternVars
       Decls = decls }
 
   m, ctx
@@ -1693,16 +1736,14 @@ let private mirifyModule (m: HModule2, ctx: MirCtx) =
 let mirify (modules: HModule2 list, hirCtx: HirCtx) : MModule list * MirResult =
   let ctx = ofHirCtx hirCtx
 
-  let modules, ctx = (modules, ctx) |> stMap mirifyModule
+  let modules, _ = (modules, ctx) |> stMap mirifyModule
 
   let result: MirResult =
-    { StaticVars = hirCtx.Vars
+    { StaticVars = hirCtx.StaticVars
       Funs = hirCtx.Funs
       Variants = hirCtx.Variants
       Tys = hirCtx.Tys
 
-      MainFunOpt = hirCtx.MainFunOpt
-      FunLocals = ctx.FunLocals
-      ReplacingVars = ctx.ReplacingVars }
+      MainFunOpt = hirCtx.MainFunOpt }
 
   modules, result

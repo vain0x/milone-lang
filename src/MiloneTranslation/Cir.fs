@@ -119,19 +119,16 @@ type CStmt =
   /// `T x = a;`
   | CLetStmt of Ident * init: CExpr option * CTy
 
-  /// `U* x = (U*)malloc(sizeof T);`
-  | CLetAllocStmt of Ident * valTy: CTy * varTy: CTy
-
   /// `x = a;`
   | CSetStmt of CExpr * CExpr
 
   | CLabelStmt of CLabel
   | CGotoStmt of CLabel
   | CGotoIfStmt of CExpr * CLabel
-  | CIfStmt of CExpr * CStmt list * CStmt list
+  | CIfStmt of CExpr * CStmt * CStmt
 
   /// clause: (caseLiterals, isDefault, body).
-  | CSwitchStmt of cond: CExpr * clauses: (CExpr list * bool * CStmt list) list
+  | CSwitchStmt of cond: CExpr * clauses: (CExpr list * bool * CStmt) list
 
   | CReturnStmt of CExpr option
   | CNativeStmt of string * args: CExpr list

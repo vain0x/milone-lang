@@ -20,8 +20,9 @@ struct IntList {
 };
 
 void list_operators_list_operators_nilTest(void) {
-    struct IntList const* nil_ = NULL;
+    struct IntList const* nil_;
     char if_;
+    nil_ = NULL;
     if ((!(nil_))) {
         goto nil_cl_2;
     } else {
@@ -39,11 +40,13 @@ if_next_1:;
 }
 
 void list_operators_list_operators_cons1Test(void) {
+    struct IntList const* xs_;
     int x_;
-    struct IntList const* list_ = milone_mem_alloc(1, sizeof(struct IntList));
-    (*(((struct IntList*)list_))) = (struct IntList){.head = 1, .tail = NULL};
-    struct IntList const* xs_ = list_;
+    struct IntList const* list_;
     char match_;
+    list_ = ((struct IntList const*)milone_mem_alloc(1, sizeof(struct IntList)));
+    (*(((struct IntList*)list_))) = (struct IntList){.head = 1, .tail = NULL};
+    xs_ = list_;
     if ((!(xs_))) goto next_5;
     x_ = xs_->head;
     if ((!((!(xs_->tail))))) goto next_5;
@@ -60,20 +63,23 @@ end_match_4:;
 }
 
 void list_operators_list_operators_cons2Test(void) {
-    int y3_;
+    struct IntList const* ys_;
     int y2_;
-    struct IntList const* list_2 = milone_mem_alloc(1, sizeof(struct IntList));
-    (*(((struct IntList*)list_2))) = (struct IntList){.head = 3, .tail = NULL};
-    struct IntList const* list_1 = milone_mem_alloc(1, sizeof(struct IntList));
-    (*(((struct IntList*)list_1))) = (struct IntList){.head = 2, .tail = list_2};
-    struct IntList const* ys_ = list_1;
+    int y3_;
+    struct IntList const* list_1;
+    struct IntList const* list_2;
     char match_1;
+    bool if_1;
+    list_2 = ((struct IntList const*)milone_mem_alloc(1, sizeof(struct IntList)));
+    (*(((struct IntList*)list_2))) = (struct IntList){.head = 3, .tail = NULL};
+    list_1 = ((struct IntList const*)milone_mem_alloc(1, sizeof(struct IntList)));
+    (*(((struct IntList*)list_1))) = (struct IntList){.head = 2, .tail = list_2};
+    ys_ = list_1;
     if ((!(ys_))) goto next_8;
     y2_ = ys_->head;
     if ((!(ys_->tail))) goto next_8;
     y3_ = ys_->tail->head;
     if ((!((!(ys_->tail->tail))))) goto next_8;
-    bool if_1;
     if ((y2_ == 2)) {
         goto then_11;
     } else {
@@ -99,20 +105,25 @@ end_match_7:;
 }
 
 void list_operators_list_operators_literalTest(void) {
-    int z7_;
-    int z5_;
-    int z3_;
+    struct IntList const* zs_;
     int z2_;
-    struct IntList const* list_6 = milone_mem_alloc(1, sizeof(struct IntList));
-    (*(((struct IntList*)list_6))) = (struct IntList){.head = 7, .tail = NULL};
-    struct IntList const* list_5 = milone_mem_alloc(1, sizeof(struct IntList));
-    (*(((struct IntList*)list_5))) = (struct IntList){.head = 5, .tail = list_6};
-    struct IntList const* list_4 = milone_mem_alloc(1, sizeof(struct IntList));
-    (*(((struct IntList*)list_4))) = (struct IntList){.head = 3, .tail = list_5};
-    struct IntList const* list_3 = milone_mem_alloc(1, sizeof(struct IntList));
-    (*(((struct IntList*)list_3))) = (struct IntList){.head = 2, .tail = list_4};
-    struct IntList const* zs_ = list_3;
+    int z3_;
+    int z5_;
+    int z7_;
+    struct IntList const* list_3;
+    struct IntList const* list_4;
+    struct IntList const* list_5;
+    struct IntList const* list_6;
     char match_2;
+    list_6 = ((struct IntList const*)milone_mem_alloc(1, sizeof(struct IntList)));
+    (*(((struct IntList*)list_6))) = (struct IntList){.head = 7, .tail = NULL};
+    list_5 = ((struct IntList const*)milone_mem_alloc(1, sizeof(struct IntList)));
+    (*(((struct IntList*)list_5))) = (struct IntList){.head = 5, .tail = list_6};
+    list_4 = ((struct IntList const*)milone_mem_alloc(1, sizeof(struct IntList)));
+    (*(((struct IntList*)list_4))) = (struct IntList){.head = 3, .tail = list_5};
+    list_3 = ((struct IntList const*)milone_mem_alloc(1, sizeof(struct IntList)));
+    (*(((struct IntList*)list_3))) = (struct IntList){.head = 2, .tail = list_4};
+    zs_ = list_3;
     if ((!(zs_))) goto next_14;
     z2_ = zs_->head;
     if ((!(zs_->tail))) goto next_14;

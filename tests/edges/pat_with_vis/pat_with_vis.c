@@ -11,10 +11,6 @@ struct IntIntTuple2_ {
     int t1;
 };
 
-extern int pat_with_vis_pat_with_vis_x;
-
-extern int y_;
-
 int pat_with_vis_pat_with_vis_x;
 
 int y_;
@@ -28,7 +24,8 @@ int main(int argc, char** argv) {
 }
 
 void pat_with_vis_pat_with_vis_start(void) {
-    struct IntIntTuple2_ IntIntTuple2_ = (struct IntIntTuple2_){.t0 = 2, .t1 = 3};
+    struct IntIntTuple2_ IntIntTuple2_;
+    IntIntTuple2_ = (struct IntIntTuple2_){.t0 = 2, .t1 = 3};
     pat_with_vis_pat_with_vis_x = IntIntTuple2_.t0;
     y_ = IntIntTuple2_.t1;
     return;

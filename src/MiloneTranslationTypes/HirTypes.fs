@@ -84,8 +84,9 @@ type VarDef =
     IsStatic: IsStatic
     Linkage: Linkage
 
-    /// Remark: After monomorphization, variables occur in multiple monomorphized instances
-    ///         and Ty field can contain undefined type variables. It shouldn't be used.
+    /// Remark:
+    ///   After monomorphization, local variables occur in multiple monomorphized instances
+    ///   and their Ty contain undefined type variables. It shouldn't be used.
     Ty: Ty
 
     Loc: Loc }
@@ -333,7 +334,7 @@ type HirCtx =
   { /// Next serial number.
     Serial: Serial
 
-    Vars: TreeMap<VarSerial, VarDef>
+    StaticVars: TreeMap<VarSerial, VarDef>
     Funs: TreeMap<FunSerial, FunDef>
     Variants: TreeMap<VariantSerial, VariantDef>
 

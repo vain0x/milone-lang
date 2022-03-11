@@ -12,7 +12,8 @@ int main(int argc, char** argv) {
     milone_start(argc, argv);
     int y_;
     int match_;
-    int call_ = match_exhaustive_match_exhaustive_main_f(3);
+    int call_;
+    call_ = match_exhaustive_match_exhaustive_main_f(3);
     if ((call_ != 1)) goto next_2;
     milone_assert(false, (struct String){.str = "match_exhaustive/match_exhaustive.milone", .len = 40}, 9, 4);
     match_ = 1;

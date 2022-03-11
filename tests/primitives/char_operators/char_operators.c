@@ -29,11 +29,12 @@ void char_operators_char_operators_comparisonOperatorsTest(void) {
 }
 
 void char_operators_char_operators_conversionTest(void) {
+    char char_of_string;
     milone_assert(('A' == 'A'), (struct String){.str = "char_operators/char_operators.milone", .len = 36}, 29, 2);
     milone_assert((((char)65) == 'A'), (struct String){.str = "char_operators/char_operators.milone", .len = 36}, 30, 2);
     milone_assert((((char)(uint32_t)65U) == 'A'), (struct String){.str = "char_operators/char_operators.milone", .len = 36}, 31, 2);
     milone_assert((((char)65.5) == 'A'), (struct String){.str = "char_operators/char_operators.milone", .len = 36}, 32, 2);
-    char char_of_string = str_to_char((struct String){.str = "A", .len = 1});
+    char_of_string = str_to_char((struct String){.str = "A", .len = 1});
     milone_assert((char_of_string == 'A'), (struct String){.str = "char_operators/char_operators.milone", .len = 36}, 33, 2);
     return;
 }

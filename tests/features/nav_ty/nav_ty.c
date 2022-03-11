@@ -29,28 +29,38 @@ struct NodeNodeTuple2_ {
 };
 
 struct Node_ nav_ty_nav_ty_main_leaf(int n_) {
-    struct Node_ variant_ = (struct Node_){.discriminant = Leaf_, .Leaf_ = n_};
+    struct Node_ variant_;
+    variant_ = (struct Node_){.discriminant = Leaf_, .Leaf_ = n_};
     return variant_;
 }
 
 struct Node_ nav_ty_nav_ty_main_node(struct Node_ l_, struct Node_ r_) {
-    struct NodeNodeTuple2_ NodeNodeTuple2_ = (struct NodeNodeTuple2_){.t0 = l_, .t1 = r_};
-    void const* box_ = milone_mem_alloc(1, sizeof(struct NodeNodeTuple2_));
+    struct NodeNodeTuple2_ NodeNodeTuple2_;
+    void const* box_;
+    struct Node_ variant_1;
+    NodeNodeTuple2_ = (struct NodeNodeTuple2_){.t0 = l_, .t1 = r_};
+    box_ = ((void const*)milone_mem_alloc(1, sizeof(struct NodeNodeTuple2_)));
     (*(((struct NodeNodeTuple2_*)box_))) = NodeNodeTuple2_;
-    struct Node_ variant_1 = (struct Node_){.discriminant = Node_, .Node_ = box_};
+    variant_1 = (struct Node_){.discriminant = Node_, .Node_ = box_};
     return variant_1;
 }
 
 int main(int argc, char** argv) {
     milone_start(argc, argv);
+    struct Node_ t_;
     int x_;
-    struct Node_ call_ = nav_ty_nav_ty_main_leaf(2);
-    struct Node_ call_1 = nav_ty_nav_ty_main_leaf(3);
-    struct Node_ call_2 = nav_ty_nav_ty_main_leaf(5);
-    struct Node_ call_3 = nav_ty_nav_ty_main_node(call_1, call_2);
-    struct Node_ call_4 = nav_ty_nav_ty_main_node(call_, call_3);
-    struct Node_ t_ = call_4;
+    struct Node_ call_;
+    struct Node_ call_1;
+    struct Node_ call_2;
+    struct Node_ call_3;
+    struct Node_ call_4;
     char match_;
+    call_ = nav_ty_nav_ty_main_leaf(2);
+    call_1 = nav_ty_nav_ty_main_leaf(3);
+    call_2 = nav_ty_nav_ty_main_leaf(5);
+    call_3 = nav_ty_nav_ty_main_node(call_1, call_2);
+    call_4 = nav_ty_nav_ty_main_node(call_, call_3);
+    t_ = call_4;
     if ((t_.discriminant != Node_)) goto next_2;
     if (((*(((struct NodeNodeTuple2_ const*)t_.Node_))).t0.discriminant != Leaf_)) goto next_2;
     x_ = (*(((struct NodeNodeTuple2_ const*)t_.Node_))).t0.Leaf_;

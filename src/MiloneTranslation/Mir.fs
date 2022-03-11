@@ -16,6 +16,7 @@ open MiloneShared.SharedTypes
 open MiloneShared.TypeFloat
 open MiloneShared.TypeIntegers
 open MiloneTranslationTypes.HirTypes
+open Std.StdMap
 
 // -----------------------------------------------
 // MIR types
@@ -223,13 +224,24 @@ type MBlock = { Stmts: MStmt list }
 
 [<NoEquality; NoComparison>]
 type MDecl =
-  | MProcDecl of FunSerial * args: (VarSerial * Ty * Loc) list * body: MBlock list * resultTy: Ty * Loc
+  | MProcDecl of
+    FunSerial *
+    args: (VarSerial * Ty * Loc) list *
+    body: MBlock list *
+    resultTy: Ty *
+    localVars: (VarSerial * Ty * Loc) list *
+    Loc
   | MNativeDecl of code: string * Loc
 
 [<RequireQualifiedAccess; NoEquality; NoComparison>]
 type MModule =
   { DocId: DocId
+    /// Name of local variables.
     Vars: VarNameMap
+    /// Static variables that are defined to in the module.
+    StaticVars: (VarSerial * Ty) list
+    /// Extern variables that are referred to in the module.
+    ExternVars: TreeMap<VarSerial, Ty>
     Decls: MDecl list }
 
 // -----------------------------------------------
@@ -238,7 +250,7 @@ type MModule =
 
 let mDeclToLoc (decl: MDecl) : Loc =
   match decl with
-  | MProcDecl (_, _, _, _, loc) -> loc
+  | MProcDecl (_, _, _, _, _, loc) -> loc
   | MNativeDecl (_, loc) -> loc
 
 // -----------------------------------------------

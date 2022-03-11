@@ -4,9 +4,9 @@ struct MyBool_;
 
 struct UnitList;
 
-struct UnitList;
-
 struct RecordUsingMyUnit_;
+
+struct UnitList;
 
 void union_unitlike_union_unitlike_basicCase(void);
 
@@ -31,19 +31,20 @@ struct MyBool_ {
     };
 };
 
-struct UnitList {
-    char head;
-    struct UnitList const* tail;
-};
-
 struct RecordUsingMyUnit_ {
     char t0;
     struct UnitList const* t1;
 };
 
+struct UnitList {
+    char head;
+    struct UnitList const* tail;
+};
+
 void union_unitlike_union_unitlike_basicCase(void) {
-    char myUnit_ = 0;
+    char myUnit_;
     char match_;
+    myUnit_ = 0;
     match_ = 0;
     goto end_match_1;
 next_2:;
@@ -67,19 +68,25 @@ end_match_3:;
 }
 
 void union_unitlike_union_unitlike_usedInOtherSumTypeCase(void) {
-    struct MyBool_ variant_ = (struct MyBool_){.discriminant = MyTrue_, .MyTrue_ = 0};
-    struct MyBool_ myBool_ = variant_;
-    bool call_ = union_unitlike_union_unitlike_usedInOtherSumTypeCase_toBool(myBool_);
+    struct MyBool_ myBool_;
+    struct MyBool_ variant_;
+    bool call_;
+    variant_ = (struct MyBool_){.discriminant = MyTrue_, .MyTrue_ = 0};
+    myBool_ = variant_;
+    call_ = union_unitlike_union_unitlike_usedInOtherSumTypeCase_toBool(myBool_);
     milone_assert(call_, (struct String){.str = "union_unitlike/union_unitlike.milone", .len = 36}, 27, 2);
     return;
 }
 
 void union_unitlike_union_unitlike_usedInRecordTypeCase(void) {
-    struct UnitList const* list_ = milone_mem_alloc(1, sizeof(struct UnitList));
-    (*(((struct UnitList*)list_))) = (struct UnitList){.head = 0, .tail = NULL};
-    struct RecordUsingMyUnit_ RecordUsingMyUnit_ = (struct RecordUsingMyUnit_){.t0 = 0, .t1 = list_};
-    struct RecordUsingMyUnit_ record_ = RecordUsingMyUnit_;
+    struct RecordUsingMyUnit_ record_;
+    struct RecordUsingMyUnit_ RecordUsingMyUnit_;
+    struct UnitList const* list_;
     char match_2;
+    list_ = ((struct UnitList const*)milone_mem_alloc(1, sizeof(struct UnitList)));
+    (*(((struct UnitList*)list_))) = (struct UnitList){.head = 0, .tail = NULL};
+    RecordUsingMyUnit_ = (struct RecordUsingMyUnit_){.t0 = 0, .t1 = list_};
+    record_ = RecordUsingMyUnit_;
     if ((!(record_.t1))) goto next_7;
     if ((!((!(record_.t1->tail))))) goto next_7;
     match_2 = 0;

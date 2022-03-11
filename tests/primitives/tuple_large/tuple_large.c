@@ -1,23 +1,12 @@
 #include <milone.h>
 
+struct IntIntIntIntIntIntIntIntIntIntIntTuple11_;
+
 struct IntIntTuple2_;
 
 struct IntIntIntIntTuple2Tuple3_;
 
-struct IntIntIntIntIntIntIntIntIntIntIntTuple11_;
-
 int main(int argc, char** argv);
-
-struct IntIntTuple2_ {
-    int t0;
-    int t1;
-};
-
-struct IntIntIntIntTuple2Tuple3_ {
-    int t0;
-    int t1;
-    struct IntIntTuple2_ t2;
-};
 
 struct IntIntIntIntIntIntIntIntIntIntIntTuple11_ {
     int t0;
@@ -33,15 +22,36 @@ struct IntIntIntIntIntIntIntIntIntIntIntTuple11_ {
     int t10;
 };
 
+struct IntIntTuple2_ {
+    int t0;
+    int t1;
+};
+
+struct IntIntIntIntTuple2Tuple3_ {
+    int t0;
+    int t1;
+    struct IntIntTuple2_ t2;
+};
+
 int main(int argc, char** argv) {
     milone_start(argc, argv);
-    struct IntIntTuple2_ IntIntTuple2_ = (struct IntIntTuple2_){.t0 = 3, .t1 = 4};
-    struct IntIntIntIntTuple2Tuple3_ IntIntIntIntTuple2Tuple3_ = (struct IntIntIntIntTuple2Tuple3_){.t0 = 1, .t1 = 2, .t2 = IntIntTuple2_};
-    int x_ = IntIntIntIntTuple2Tuple3_.t0;
-    int y_ = IntIntIntIntTuple2Tuple3_.t1;
-    int z_ = IntIntIntIntTuple2Tuple3_.t2.t0;
-    int w_ = IntIntIntIntTuple2Tuple3_.t2.t1;
+    int x_;
+    int y_;
+    int z_;
+    int w_;
+    struct IntIntIntIntIntIntIntIntIntIntIntTuple11_ _t11;
+    struct IntIntIntIntTuple2Tuple3_ IntIntIntIntTuple2Tuple3_;
+    struct IntIntTuple2_ IntIntTuple2_;
     bool if_;
+    bool if_1;
+    bool if_2;
+    struct IntIntIntIntIntIntIntIntIntIntIntTuple11_ IntIntIntIntIntIntIntIntIntIntIntTuple11_;
+    IntIntTuple2_ = (struct IntIntTuple2_){.t0 = 3, .t1 = 4};
+    IntIntIntIntTuple2Tuple3_ = (struct IntIntIntIntTuple2Tuple3_){.t0 = 1, .t1 = 2, .t2 = IntIntTuple2_};
+    x_ = IntIntIntIntTuple2Tuple3_.t0;
+    y_ = IntIntIntIntTuple2Tuple3_.t1;
+    z_ = IntIntIntIntTuple2Tuple3_.t2.t0;
+    w_ = IntIntIntIntTuple2Tuple3_.t2.t1;
     if ((x_ == 1)) {
         goto then_2;
     } else {
@@ -54,7 +64,6 @@ else_3:;
     if_ = false;
     goto if_next_1;
 if_next_1:;
-    bool if_1;
     if (if_) {
         goto then_5;
     } else {
@@ -67,7 +76,6 @@ else_6:;
     if_1 = false;
     goto if_next_4;
 if_next_4:;
-    bool if_2;
     if (if_1) {
         goto then_8;
     } else {
@@ -81,7 +89,7 @@ else_9:;
     goto if_next_7;
 if_next_7:;
     milone_assert(if_2, (struct String){.str = "tuple_large/tuple_large.milone", .len = 30}, 6, 2);
-    struct IntIntIntIntIntIntIntIntIntIntIntTuple11_ IntIntIntIntIntIntIntIntIntIntIntTuple11_ = (struct IntIntIntIntIntIntIntIntIntIntIntTuple11_){.t0 = 1, .t1 = 2, .t2 = 3, .t3 = 4, .t4 = 5, .t5 = 6, .t6 = 7, .t7 = 8, .t8 = 9, .t9 = 10, .t10 = 11};
-    struct IntIntIntIntIntIntIntIntIntIntIntTuple11_ _t11 = IntIntIntIntIntIntIntIntIntIntIntTuple11_;
+    IntIntIntIntIntIntIntIntIntIntIntTuple11_ = (struct IntIntIntIntIntIntIntIntIntIntIntTuple11_){.t0 = 1, .t1 = 2, .t2 = 3, .t3 = 4, .t4 = 5, .t5 = 6, .t6 = 7, .t7 = 8, .t8 = 9, .t9 = 10, .t10 = 11};
+    _t11 = IntIntIntIntIntIntIntIntIntIntIntTuple11_;
     return 0;
 }

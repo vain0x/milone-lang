@@ -31,16 +31,21 @@ end_match_1:;
 }
 
 void pat_as_pat_as_shadowingCase(void) {
-    struct IntIntTuple2_ y_;
+    int x_1;
     int x_2;
-    int x_1 = 1;
+    struct IntIntTuple2_ y_;
+    int y1_;
+    int y2_;
     char match_1;
-    struct IntIntTuple2_ IntIntTuple2_ = (struct IntIntTuple2_){.t0 = x_1, .t1 = 2};
+    struct IntIntTuple2_ IntIntTuple2_;
+    bool if_;
+    bool if_1;
+    x_1 = 1;
+    IntIntTuple2_ = (struct IntIntTuple2_){.t0 = x_1, .t1 = 2};
     y_ = IntIntTuple2_;
     x_2 = y_.t1;
-    int y1_ = y_.t0;
-    int y2_ = y_.t1;
-    bool if_;
+    y1_ = y_.t0;
+    y2_ = y_.t1;
     if ((x_2 == 2)) {
         goto then_7;
     } else {
@@ -53,7 +58,6 @@ else_8:;
     if_ = false;
     goto if_next_6;
 if_next_6:;
-    bool if_1;
     if (if_) {
         goto then_10;
     } else {

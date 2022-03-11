@@ -190,7 +190,7 @@ type private CcCtx =
     FunUpvars: TreeMap<FunSerial, TreeSet<VarSerial>> }
 
 let private ofHirCtx (hirCtx: HirCtx) : CcCtx =
-  { StaticVars = hirCtx.Vars
+  { StaticVars = hirCtx.StaticVars
     Vars = emptyVars
     Funs = hirCtx.Funs
 
