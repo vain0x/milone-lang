@@ -11,8 +11,6 @@ open MiloneShared.Util
 open MiloneShared.UtilSymbol
 open Std.StdError
 open Std.StdMap
-open Std.StdMultimap
-open Std.StdSet
 open MiloneTranslation.Hir
 open MiloneTranslation.Mir
 open MiloneTranslationTypes.HirTypes
@@ -41,9 +39,7 @@ type MirResult =
     Variants: TreeMap<VariantSerial, VariantDef>
     Tys: TreeMap<TySerial, TyDef>
 
-    MainFunOpt: FunSerial option
-    FunLocals: TreeMap<FunSerial, (VarSerial * Ty) list>
-    ReplacingVars: TreeSet<VarSerial> }
+    MainFunOpt: FunSerial option }
 
 // -----------------------------------------------
 // Context
@@ -77,9 +73,6 @@ type private MirCtx =
 
     IsReachable: bool
 
-    FunLocals: TreeMap<FunSerial, (VarSerial * Ty) list>
-    ReplacingVars: TreeSet<VarSerial>
-
     Stmts: MStmt list
     Decls: MDecl list }
 
@@ -98,8 +91,6 @@ let private ofHirCtx (hirCtx: HirCtx) : MirCtx =
     CurrentFunSerial = None
     CurrentFun = None
     IsReachable = true
-    FunLocals = TMap.empty funSerialCompare
-    ReplacingVars = TSet.empty varSerialCompare
     Stmts = []
     Decls = [] }
 
@@ -992,18 +983,6 @@ let private doReuseArmLocals funSerial arms (ctx: MirCtx) : _ * MirCtx =
     |> List.map (fun (pat, guard, body) ->
       reuseVarOnPat reuseMap pat, reuseVarOnExpr reuseMap guard, reuseVarOnExpr reuseMap body)
 
-  let ctx: MirCtx =
-    let funLocals, replacingVars =
-      reuseMap
-      |> TMap.fold
-           (fun (funLocals, replacingVars) varSerial (_, ty) ->
-             Multimap.add funSerial (varSerial, ty) funLocals, TSet.add varSerial replacingVars)
-           (ctx.FunLocals, ctx.ReplacingVars)
-
-    { ctx with
-        FunLocals = funLocals
-        ReplacingVars = replacingVars }
-
   arms, ctx
 
 let private reuseArmLocals arms (ctx: MirCtx) : _ * MirCtx =
@@ -1757,7 +1736,7 @@ let private mirifyModule (m: HModule2, ctx: MirCtx) =
 let mirify (modules: HModule2 list, hirCtx: HirCtx) : MModule list * MirResult =
   let ctx = ofHirCtx hirCtx
 
-  let modules, ctx = (modules, ctx) |> stMap mirifyModule
+  let modules, _ = (modules, ctx) |> stMap mirifyModule
 
   let result: MirResult =
     { StaticVars = hirCtx.StaticVars
@@ -1765,8 +1744,6 @@ let mirify (modules: HModule2 list, hirCtx: HirCtx) : MModule list * MirResult =
       Variants = hirCtx.Variants
       Tys = hirCtx.Tys
 
-      MainFunOpt = hirCtx.MainFunOpt
-      FunLocals = ctx.FunLocals
-      ReplacingVars = ctx.ReplacingVars }
+      MainFunOpt = hirCtx.MainFunOpt }
 
   modules, result

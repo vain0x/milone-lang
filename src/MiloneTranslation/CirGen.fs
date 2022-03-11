@@ -195,9 +195,6 @@ type private Rx =
     Tys: TreeMap<TySerial, TyDef>
     MainFunOpt: FunSerial option
 
-    FunLocals: TreeMap<FunSerial, (VarSerial * Ty) list>
-    ReplacingVars: TreeSet<VarSerial>
-
     ValueNameFreq: TreeMap<Ident, int>
     VarUniqueNames: TreeMap<VarSerial, Ident>
     FunUniqueNames: TreeMap<FunSerial, Ident>
@@ -256,9 +253,6 @@ let private ofMirResult (mirCtx: MirResult) : CirCtx =
       Variants = mirCtx.Variants
       Tys = mirCtx.Tys
       MainFunOpt = mirCtx.MainFunOpt
-
-      FunLocals = mirCtx.FunLocals
-      ReplacingVars = mirCtx.ReplacingVars
 
       ValueNameFreq = freq
       VarUniqueNames = varUniqueNames
