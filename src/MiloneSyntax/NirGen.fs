@@ -185,9 +185,9 @@ let private desugarResultTy expr resultTyOpt : AExpr =
 // Context
 // -----------------------------------------------
 
-type private NameCtx = (NirGenLog * Loc) list
+type private NirGenCtx = (NirGenLog * Loc) list
 
-let private emptyNameCtx: NameCtx = []
+let private emptyCtx: NirGenCtx = []
 
 // -----------------------------------------------
 // Control
@@ -197,7 +197,7 @@ let private ngName docId name : NName =
   let (Name (ident, pos)) = name
   ident, toLoc docId pos
 
-let private ngTy (docId: DocId) (ctx: NameCtx) (ty: ATy) : NTy * NameCtx =
+let private ngTy (docId: DocId) (ctx: NirGenCtx) (ty: ATy) : NTy * NirGenCtx =
   let onTy ctx ty = ngTy docId ctx ty
   let onTys ctx tys = tys |> List.mapFold (ngTy docId) ctx
   let toLoc (y, x) = Loc(docId, y, x)
@@ -231,7 +231,7 @@ let private ngTy (docId: DocId) (ctx: NameCtx) (ty: ATy) : NTy * NameCtx =
     let tTy, ctx = onTy ctx tTy
     NTy.Fun(sTy, tTy, toLoc pos), ctx
 
-let private ngPat (docId: DocId) (ctx: NameCtx) (pat: APat) : NPat * NameCtx =
+let private ngPat (docId: DocId) (ctx: NirGenCtx) (pat: APat) : NPat * NirGenCtx =
   let onTy ctx ty = ngTy docId ctx ty
   let onPat ctx pat = ngPat docId ctx pat
   let onPats ctx pats = pats |> List.mapFold (ngPat docId) ctx
@@ -290,7 +290,7 @@ let private ngPat (docId: DocId) (ctx: NameCtx) (pat: APat) : NPat * NameCtx =
     let loc = toLoc pos
     NPat.Or(l, r, loc), ctx
 
-let private ngLetContents docId ctx (contents: ALetContents) pos : NStmt * NameCtx =
+let private ngLetContents docId ctx (contents: ALetContents) pos : NStmt * NirGenCtx =
   let onPat ctx pat = ngPat docId ctx pat
   let onPats ctx pats = List.mapFold (ngPat docId) ctx pats
   let onExpr ctx expr = ngExpr docId ctx expr
@@ -313,7 +313,7 @@ let private ngLetContents docId ctx (contents: ALetContents) pos : NStmt * NameC
     let body, ctx = body |> onExpr ctx
     NStmt.LetVal(pat, body, toLoc pos), ctx
 
-let private ngExpr (docId: DocId) (ctx: NameCtx) (expr: AExpr) : NExpr * NameCtx =
+let private ngExpr (docId: DocId) (ctx: NirGenCtx) (expr: AExpr) : NExpr * NirGenCtx =
   let onTy ctx ty = ngTy docId ctx ty
   let onPat ctx pat = ngPat docId ctx pat
   let onExpr ctx expr = ngExpr docId ctx expr
@@ -445,7 +445,7 @@ let private ngTyArgs docId tyArgs =
   tyArgs
   |> List.map (fun (Name (ident, pos)) -> "'" + ident, toLoc docId pos)
 
-let private ngDecl docId attrs ctx decl : NDecl * NameCtx =
+let private ngDecl docId attrs ctx decl : NDecl * NirGenCtx =
   let onTy ctx ty = ngTy docId ctx ty
   let onTyOpt ctx tyOpt = optionMapFold (ngTy docId) ctx tyOpt
   let onPat ctx pat = ngPat docId ctx pat
@@ -545,7 +545,7 @@ let genNir
 
   let zeroPos = 0, 0
   let zeroLoc = toLoc docId zeroPos
-  let ctx = emptyNameCtx
+  let ctx = emptyCtx
 
   let fileModuleDecl, ctx =
     let namePos, headPos =
