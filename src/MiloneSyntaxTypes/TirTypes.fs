@@ -41,9 +41,6 @@ type FunSerial = FunSerial of Serial
 [<Struct; NoComparison>]
 type VariantSerial = VariantSerial of Serial
 
-[<Struct; NoEquality; NoComparison>]
-type NameCtx = NameCtx of identMap: TreeMap<Serial, Ident> * lastSerial: Serial
-
 /// Type constructor.
 [<NoEquality; NoComparison>]
 type Tk =
@@ -127,17 +124,6 @@ type Trait =
   | ToStringTrait of Ty
 
   | PtrTrait of Ty
-
-/// Type declaration.
-[<NoEquality; NoComparison>]
-type TyDecl =
-  | TySynonymDecl of Ty * Loc
-
-  /// Union type.
-  /// Variants: (ident, serial, has-payload, payload type, loc).
-  | UnionTyDecl of Ident * variants: (Ident * VariantSerial * bool * Ty * Loc) list * Loc
-
-  | RecordTyDecl of Ident * fields: (Ident * Ty * Loc) list * IsCRepr * Loc
 
 /// Type definition.
 [<NoEquality; NoComparison>]
