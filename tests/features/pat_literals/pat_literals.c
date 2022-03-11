@@ -5,11 +5,15 @@ int main(int argc, char** argv);
 int main(int argc, char** argv) {
     milone_start(argc, argv);
     char match_;
+    char match_1;
+    char switch_;
+    char switch_1;
+    char switch_2;
+    char match_2;
     match_ = 0;
     goto end_match_1;
 next_2:;
 end_match_1:;
-    char match_1;
     if (true) goto next_4;
     milone_assert(false, (struct String){.str = "pat_literals/pat_literals.milone", .len = 32}, 9, 13);
     match_1 = 0;
@@ -21,7 +25,6 @@ next_4:;
 next_5:;
     exit(1);
 end_match_3:;
-    char switch_;
     switch (1) {
         case 0:
             goto clause_7;
@@ -44,7 +47,6 @@ clause_9:;
     switch_ = 0;
     goto switch_next_6;
 switch_next_6:;
-    char switch_1;
     switch (-2) {
         case 2:
             goto clause_11;
@@ -67,7 +69,6 @@ clause_13:;
     switch_1 = 0;
     goto switch_next_10;
 switch_next_10:;
-    char switch_2;
     switch ('a') {
         case 'A':
             goto clause_15;
@@ -90,7 +91,6 @@ clause_17:;
     switch_2 = 0;
     goto switch_next_14;
 switch_next_14:;
-    char match_2;
     if ((str_compare((struct String){.str = "a", .len = 1}, (struct String){.str = "an", .len = 2}) != 0)) goto next_19;
     milone_assert(false, (struct String){.str = "pat_literals/pat_literals.milone", .len = 32}, 28, 12);
     match_2 = 0;

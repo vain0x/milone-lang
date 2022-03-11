@@ -37,7 +37,8 @@ end_match_1:;
 
 void match_complicated_match_complicated_testListMatching(void) {
     char match_1;
-    struct IntList const* list_ = milone_mem_alloc(1, sizeof(struct IntList));
+    struct IntList const* list_;
+    list_ = ((struct IntList const*)milone_mem_alloc(1, sizeof(struct IntList)));
     (*(((struct IntList*)list_))) = (struct IntList){.head = 0, .tail = NULL};
     if ((!(list_))) goto next_4;
     if ((!(list_->tail))) goto next_4;
@@ -61,10 +62,13 @@ end_match_3:;
 }
 
 void match_complicated_match_complicated_testMatchArmsMakeScope(void) {
+    int x_;
     int x_1;
-    int x_ = 2;
     char match_2;
-    struct IntIntTuple2_ IntIntTuple2_ = (struct IntIntTuple2_){.t0 = x_, .t1 = 1};
+    struct IntIntTuple2_ IntIntTuple2_;
+    char if_;
+    x_ = 2;
+    IntIntTuple2_ = (struct IntIntTuple2_){.t0 = x_, .t1 = 1};
     if ((IntIntTuple2_.t0 != 1)) goto next_8;
     x_1 = IntIntTuple2_.t1;
     milone_assert(false, (struct String){.str = "match_complicated/match_complicated.milone", .len = 42}, 18, 12);
@@ -72,7 +76,6 @@ void match_complicated_match_complicated_testMatchArmsMakeScope(void) {
     goto end_match_7;
 next_8:;
     if ((IntIntTuple2_.t0 != 2)) goto next_9;
-    char if_;
     if ((x_ != 2)) {
         goto then_12;
     } else {
@@ -99,8 +102,8 @@ end_match_7:;
 
 void match_complicated_match_complicated_testNestedMatchesParseCorrectly(void) {
     char match_3;
-    if (true) goto next_15;
     char switch_;
+    if (true) goto next_15;
     switch (1) {
         default:
             goto clause_18;

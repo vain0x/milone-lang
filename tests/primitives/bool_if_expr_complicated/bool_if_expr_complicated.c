@@ -4,7 +4,9 @@ int main(int argc, char** argv);
 
 int main(int argc, char** argv) {
     milone_start(argc, argv);
+    struct String hello_;
     int if_;
+    int if_1;
     if (true) {
         goto then_2;
     } else {
@@ -12,8 +14,7 @@ int main(int argc, char** argv) {
     }
 then_2:;
     printf("then\n");
-    struct String hello_ = (struct String){.str = "hello", .len = 5};
-    int if_1;
+    hello_ = (struct String){.str = "hello", .len = 5};
     if (true) {
         goto then_4;
     } else {

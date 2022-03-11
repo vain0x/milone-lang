@@ -51,15 +51,18 @@ switch_next_1:;
 }
 
 void pat_or_pat_or_simpleCase(void) {
-    bool call_ = pat_or_pat_or_isZeroOrOne(0);
+    bool call_;
     bool if_;
+    bool call_1;
+    bool call_2;
+    call_ = pat_or_pat_or_isZeroOrOne(0);
     if (call_) {
         goto then_5;
     } else {
         goto else_6;
     }
 then_5:;
-    bool call_1 = pat_or_pat_or_isZeroOrOne(1);
+    call_1 = pat_or_pat_or_isZeroOrOne(1);
     if_ = call_1;
     goto if_next_4;
 else_6:;
@@ -67,7 +70,7 @@ else_6:;
     goto if_next_4;
 if_next_4:;
     milone_assert(if_, (struct String){.str = "pat_or/pat_or.milone", .len = 20}, 12, 2);
-    bool call_2 = pat_or_pat_or_isZeroOrOne(2);
+    call_2 = pat_or_pat_or_isZeroOrOne(2);
     milone_assert((!(call_2)), (struct String){.str = "pat_or/pat_or.milone", .len = 20}, 13, 2);
     return;
 }
@@ -109,19 +112,26 @@ end_match_7:;
 }
 
 void pat_or_pat_or_nestedCase(void) {
-    struct IntList const* list_2 = milone_mem_alloc(1, sizeof(struct IntList));
+    struct IntList const* list_;
+    struct IntList const* list_1;
+    struct IntList const* list_2;
+    bool call_3;
+    struct IntList const* list_3;
+    struct IntList const* list_4;
+    bool call_4;
+    list_2 = ((struct IntList const*)milone_mem_alloc(1, sizeof(struct IntList)));
     (*(((struct IntList*)list_2))) = (struct IntList){.head = 2, .tail = NULL};
-    struct IntList const* list_1 = milone_mem_alloc(1, sizeof(struct IntList));
+    list_1 = ((struct IntList const*)milone_mem_alloc(1, sizeof(struct IntList)));
     (*(((struct IntList*)list_1))) = (struct IntList){.head = 1, .tail = list_2};
-    struct IntList const* list_ = milone_mem_alloc(1, sizeof(struct IntList));
+    list_ = ((struct IntList const*)milone_mem_alloc(1, sizeof(struct IntList)));
     (*(((struct IntList*)list_))) = (struct IntList){.head = 0, .tail = list_1};
-    bool call_3 = pat_or_pat_or_startsWithDoubleBits(list_);
+    call_3 = pat_or_pat_or_startsWithDoubleBits(list_);
     milone_assert(call_3, (struct String){.str = "pat_or/pat_or.milone", .len = 20}, 24, 2);
-    struct IntList const* list_4 = milone_mem_alloc(1, sizeof(struct IntList));
+    list_4 = ((struct IntList const*)milone_mem_alloc(1, sizeof(struct IntList)));
     (*(((struct IntList*)list_4))) = (struct IntList){.head = 2, .tail = NULL};
-    struct IntList const* list_3 = milone_mem_alloc(1, sizeof(struct IntList));
+    list_3 = ((struct IntList const*)milone_mem_alloc(1, sizeof(struct IntList)));
     (*(((struct IntList*)list_3))) = (struct IntList){.head = 1, .tail = list_4};
-    bool call_4 = pat_or_pat_or_startsWithDoubleBits(list_3);
+    call_4 = pat_or_pat_or_startsWithDoubleBits(list_3);
     milone_assert((!(call_4)), (struct String){.str = "pat_or/pat_or.milone", .len = 20}, 25, 2);
     return;
 }
@@ -147,11 +157,15 @@ end_match_14:;
 }
 
 void pat_or_pat_or_complexCase(void) {
-    struct IntIntTuple2_ IntIntTuple2_ = (struct IntIntTuple2_){.t0 = 0, .t1 = 1};
-    bool call_5 = pat_or_pat_or_performComplexMatching(IntIntTuple2_);
+    struct IntIntTuple2_ IntIntTuple2_;
+    bool call_5;
+    struct IntIntTuple2_ IntIntTuple2_1;
+    bool call_6;
+    IntIntTuple2_ = (struct IntIntTuple2_){.t0 = 0, .t1 = 1};
+    call_5 = pat_or_pat_or_performComplexMatching(IntIntTuple2_);
     milone_assert(call_5, (struct String){.str = "pat_or/pat_or.milone", .len = 20}, 38, 2);
-    struct IntIntTuple2_ IntIntTuple2_1 = (struct IntIntTuple2_){.t0 = 1, .t1 = 2};
-    bool call_6 = pat_or_pat_or_performComplexMatching(IntIntTuple2_1);
+    IntIntTuple2_1 = (struct IntIntTuple2_){.t0 = 1, .t1 = 2};
+    call_6 = pat_or_pat_or_performComplexMatching(IntIntTuple2_1);
     milone_assert((!(call_6)), (struct String){.str = "pat_or/pat_or.milone", .len = 20}, 39, 2);
     return;
 }

@@ -13,8 +13,10 @@ void str_operators_str_operators_subscriptOperatorTest(void);
 int main(int argc, char** argv);
 
 void str_operators_str_operators_addTest(void) {
-    struct String hello_ = (struct String){.str = "Hello", .len = 5};
-    struct String world_ = (struct String){.str = ", world!", .len = 8};
+    struct String hello_;
+    struct String world_;
+    hello_ = (struct String){.str = "Hello", .len = 5};
+    world_ = (struct String){.str = ", world!", .len = 8};
     milone_assert((str_compare(str_add(hello_, world_), (struct String){.str = "Hello, world!", .len = 13}) == 0), (struct String){.str = "str_operators/str_operators.milone", .len = 34}, 5, 2);
     milone_assert((str_add((struct String){.str = "a", .len = 1}, (struct String){.str = "\0b", .len = 2}).str[2] == 'b'), (struct String){.str = "str_operators/str_operators.milone", .len = 34}, 8, 2);
     return;
@@ -39,8 +41,10 @@ char str_operators_str_operators_indexOperatorTest_at(int i_, struct String s_) 
 }
 
 void str_operators_str_operators_indexOperatorTest(void) {
-    struct String hello_1 = (struct String){.str = "hello", .len = 5};
+    struct String hello_1;
     bool if_;
+    char call_;
+    hello_1 = (struct String){.str = "hello", .len = 5};
     if ((hello_1.str[0] == 'h')) {
         goto then_2;
     } else {
@@ -54,18 +58,22 @@ else_3:;
     goto if_next_1;
 if_next_1:;
     milone_assert(if_, (struct String){.str = "str_operators/str_operators.milone", .len = 34}, 33, 2);
-    char call_ = str_operators_str_operators_indexOperatorTest_at(0, hello_1);
+    call_ = str_operators_str_operators_indexOperatorTest_at(0, hello_1);
     milone_assert((call_ == 'h'), (struct String){.str = "str_operators/str_operators.milone", .len = 34}, 38, 2);
     return;
 }
 
 void str_operators_str_operators_subscriptOperatorTest(void) {
-    struct String str_ = (struct String){.str = "Hello, John!", .len = 12};
-    struct String slice_ = str_get_slice(0, 4, str_);
+    struct String str_;
+    struct String slice_;
+    struct String slice_1;
+    struct String slice_2;
+    str_ = (struct String){.str = "Hello, John!", .len = 12};
+    slice_ = str_get_slice(0, 4, str_);
     milone_assert((str_compare(slice_, (struct String){.str = "Hello", .len = 5}) == 0), (struct String){.str = "str_operators/str_operators.milone", .len = 34}, 42, 2);
-    struct String slice_1 = str_get_slice(7, 10, str_);
+    slice_1 = str_get_slice(7, 10, str_);
     milone_assert((str_compare(slice_1, (struct String){.str = "John", .len = 4}) == 0), (struct String){.str = "str_operators/str_operators.milone", .len = 34}, 43, 2);
-    struct String slice_2 = str_get_slice(11, 11, str_);
+    slice_2 = str_get_slice(11, 11, str_);
     milone_assert((str_compare(slice_2, (struct String){.str = "!", .len = 1}) == 0), (struct String){.str = "str_operators/str_operators.milone", .len = 34}, 44, 2);
     return;
 }

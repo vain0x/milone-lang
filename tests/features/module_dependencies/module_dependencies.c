@@ -8,7 +8,9 @@ int main(int argc, char** argv);
 
 int main(int argc, char** argv) {
     milone_start(argc, argv);
-    int call_ = module_dependencies_second_second();
-    int call_1 = module_dependencies_third_third();
+    int call_;
+    int call_1;
+    call_ = module_dependencies_second_second();
+    call_1 = module_dependencies_third_third();
     return (call_ + call_1);
 }

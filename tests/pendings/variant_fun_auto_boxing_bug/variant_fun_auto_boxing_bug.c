@@ -41,7 +41,8 @@ struct BoxedVariantoption1_BoxedVariant_Fun1 {
 };
 
 struct BoxedVariant_ variant_fun_auto_boxing_bug_variant_fun_auto_boxing_bug_feedNil(struct BoxedVariantoption1_BoxedVariant_Fun1 f_) {
-    struct BoxedVariant_ app_ = f_.fun(f_.env, (struct BoxedVariantoption1_){.discriminant = None_});
+    struct BoxedVariant_ app_;
+    app_ = f_.fun(f_.env, (struct BoxedVariantoption1_){.discriminant = None_});
     return app_;
 }
 

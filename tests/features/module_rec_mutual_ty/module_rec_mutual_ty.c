@@ -1,16 +1,27 @@
 #include <milone.h>
 
+struct RecA_ListList;
+
+struct RecA_;
+
 struct UnitList;
 
 struct UnitList;
 
 struct UnionX_;
 
-struct RecA_ListList;
-
-struct RecA_;
-
 int main(int argc, char** argv);
+
+enum RecA_Discriminant {
+    T_2,
+};
+
+struct RecA_ {
+    enum RecA_Discriminant discriminant;
+    union {
+        struct RecA_ListList const* T_2;
+    };
+};
 
 struct UnitList {
     char head;
@@ -26,22 +37,15 @@ struct UnionX_ {
     enum UnionX_Discriminant discriminant;
 };
 
-enum RecA_Discriminant {
-    T_2,
-};
-
-struct RecA_ {
-    enum RecA_Discriminant discriminant;
-    union {
-        struct RecA_ListList const* T_2;
-    };
-};
-
 int main(int argc, char** argv) {
     milone_start(argc, argv);
-    struct UnitList const* list_ = milone_mem_alloc(1, sizeof(struct UnitList));
-    (*(((struct UnitList*)list_))) = (struct UnitList){.head = 0, .tail = NULL};
+    struct RecA_ useRecA_;
+    struct UnitList const* list_;
     char switch_;
+    struct RecA_ variant_;
+    char match_;
+    list_ = ((struct UnitList const*)milone_mem_alloc(1, sizeof(struct UnitList)));
+    (*(((struct UnitList*)list_))) = (struct UnitList){.head = 0, .tail = NULL};
     switch ((struct UnionX_){.discriminant = VariantY_}.discriminant) {
         case VariantX_:
             goto clause_2;
@@ -57,9 +61,8 @@ clause_3:;
     switch_ = 0;
     goto switch_next_1;
 switch_next_1:;
-    struct RecA_ variant_ = (struct RecA_){.discriminant = T_2, .T_2 = NULL};
-    struct RecA_ useRecA_ = variant_;
-    char match_;
+    variant_ = (struct RecA_){.discriminant = T_2, .T_2 = NULL};
+    useRecA_ = variant_;
     if ((!((!(useRecA_.T_2))))) goto next_5;
     match_ = 0;
     goto end_match_4;

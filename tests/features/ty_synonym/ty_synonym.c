@@ -56,13 +56,18 @@ if_next_4:;
 }
 
 void ty_synonym_ty_synonym_baseCase(void) {
-    int success_ = 0;
-    int failure_ = 1;
-    struct IntList const* list_1 = milone_mem_alloc(1, sizeof(struct IntList));
+    int success_;
+    int failure_;
+    struct IntList const* codes_;
+    struct IntList const* list_;
+    struct IntList const* list_1;
+    success_ = 0;
+    failure_ = 1;
+    list_1 = ((struct IntList const*)milone_mem_alloc(1, sizeof(struct IntList)));
     (*(((struct IntList*)list_1))) = (struct IntList){.head = failure_, .tail = NULL};
-    struct IntList const* list_ = milone_mem_alloc(1, sizeof(struct IntList));
+    list_ = ((struct IntList const*)milone_mem_alloc(1, sizeof(struct IntList)));
     (*(((struct IntList*)list_))) = (struct IntList){.head = success_, .tail = list_1};
-    struct IntList const* codes_ = list_;
+    codes_ = list_;
     milone_assert((success_ == 0), (struct String){.str = "ty_synonym/ty_synonym.milone", .len = 28}, 13, 2);
     return;
 }
@@ -73,9 +78,11 @@ void ty_synonym_ty_synonym_yodaCase(int exitCode_) {
 }
 
 void ty_synonym_ty_synonym_polymorphicFunCase(void) {
-    int call_ = ty_synonym_ty_synonym_BoolIntIntIntFun3_proj(true, 1, 0);
+    int call_;
+    struct String call_1;
+    call_ = ty_synonym_ty_synonym_BoolIntIntIntFun3_proj(true, 1, 0);
     milone_assert((call_ == 1), (struct String){.str = "ty_synonym/ty_synonym.milone", .len = 28}, 21, 2);
-    struct String call_1 = ty_synonym_ty_synonym_BoolStringStringStringFun3_proj(false, (struct String){.str = "T", .len = 1}, (struct String){.str = "F", .len = 1});
+    call_1 = ty_synonym_ty_synonym_BoolStringStringStringFun3_proj(false, (struct String){.str = "T", .len = 1}, (struct String){.str = "F", .len = 1});
     milone_assert((str_compare(call_1, (struct String){.str = "F", .len = 1}) == 0), (struct String){.str = "ty_synonym/ty_synonym.milone", .len = 28}, 22, 2);
     return;
 }

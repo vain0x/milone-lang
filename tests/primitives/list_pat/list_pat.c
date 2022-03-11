@@ -12,9 +12,9 @@ struct IntIntoption1option1option1_Fun1;
 
 struct IntList;
 
-struct IntList;
-
 struct Intoption1option1option1_List;
+
+struct IntList;
 
 struct Intoption1option1option1_List;
 
@@ -78,43 +78,56 @@ struct Intoption1option1option1_List {
 };
 
 struct Intoption1option1option1_ list_pat_list_pat_main_fun(int x_) {
-    struct Intoption1_ variant_ = (struct Intoption1_){.discriminant = Some_, .Some_ = x_};
-    struct Intoption1option1_ variant_1 = (struct Intoption1option1_){.discriminant = Some_1, .Some_1 = variant_};
-    struct Intoption1option1option1_ variant_2 = (struct Intoption1option1option1_){.discriminant = Some_2, .Some_2 = variant_1};
+    struct Intoption1_ variant_;
+    struct Intoption1option1_ variant_1;
+    struct Intoption1option1option1_ variant_2;
+    variant_ = (struct Intoption1_){.discriminant = Some_, .Some_ = x_};
+    variant_1 = (struct Intoption1option1_){.discriminant = Some_1, .Some_1 = variant_};
+    variant_2 = (struct Intoption1option1option1_){.discriminant = Some_2, .Some_2 = variant_1};
     return variant_2;
 }
 
 struct Intoption1option1option1_ list_pat_list_pat_eta2_main_fun(void const* env_, int arg_) {
-    struct Intoption1option1option1_ call_ = list_pat_list_pat_main_fun(arg_);
+    struct Intoption1option1option1_ call_;
+    call_ = list_pat_list_pat_main_fun(arg_);
     return call_;
 }
 
 int main(int argc, char** argv) {
     milone_start(argc, argv);
-    int x7_;
-    int x6_;
-    int x5_;
-    int x4_;
-    int x3_;
-    int x2_;
     int x1_;
+    int x2_;
+    int x3_;
+    int x4_;
+    int x5_;
+    int x6_;
+    int x7_;
     char match_;
-    struct IntIntoption1option1option1_Fun1 fun_ = (struct IntIntoption1option1option1_Fun1){.fun = list_pat_list_pat_eta2_main_fun, .env = NULL};
-    struct IntList const* list_6 = milone_mem_alloc(1, sizeof(struct IntList));
+    struct IntIntoption1option1option1_Fun1 fun_;
+    struct IntList const* list_;
+    struct IntList const* list_1;
+    struct IntList const* list_2;
+    struct IntList const* list_3;
+    struct IntList const* list_4;
+    struct IntList const* list_5;
+    struct IntList const* list_6;
+    struct Intoption1option1option1_List const* call_1;
+    fun_ = (struct IntIntoption1option1option1_Fun1){.fun = list_pat_list_pat_eta2_main_fun, .env = NULL};
+    list_6 = ((struct IntList const*)milone_mem_alloc(1, sizeof(struct IntList)));
     (*(((struct IntList*)list_6))) = (struct IntList){.head = 7, .tail = NULL};
-    struct IntList const* list_5 = milone_mem_alloc(1, sizeof(struct IntList));
+    list_5 = ((struct IntList const*)milone_mem_alloc(1, sizeof(struct IntList)));
     (*(((struct IntList*)list_5))) = (struct IntList){.head = 6, .tail = list_6};
-    struct IntList const* list_4 = milone_mem_alloc(1, sizeof(struct IntList));
+    list_4 = ((struct IntList const*)milone_mem_alloc(1, sizeof(struct IntList)));
     (*(((struct IntList*)list_4))) = (struct IntList){.head = 5, .tail = list_5};
-    struct IntList const* list_3 = milone_mem_alloc(1, sizeof(struct IntList));
+    list_3 = ((struct IntList const*)milone_mem_alloc(1, sizeof(struct IntList)));
     (*(((struct IntList*)list_3))) = (struct IntList){.head = 4, .tail = list_4};
-    struct IntList const* list_2 = milone_mem_alloc(1, sizeof(struct IntList));
+    list_2 = ((struct IntList const*)milone_mem_alloc(1, sizeof(struct IntList)));
     (*(((struct IntList*)list_2))) = (struct IntList){.head = 3, .tail = list_3};
-    struct IntList const* list_1 = milone_mem_alloc(1, sizeof(struct IntList));
+    list_1 = ((struct IntList const*)milone_mem_alloc(1, sizeof(struct IntList)));
     (*(((struct IntList*)list_1))) = (struct IntList){.head = 2, .tail = list_2};
-    struct IntList const* list_ = milone_mem_alloc(1, sizeof(struct IntList));
+    list_ = ((struct IntList const*)milone_mem_alloc(1, sizeof(struct IntList)));
     (*(((struct IntList*)list_))) = (struct IntList){.head = 1, .tail = list_1};
-    struct Intoption1option1option1_List const* call_1 = MiloneCore_List_IntIntoption1option1option1Fun1IntListIntoption1option1option1ListFun2_map(fun_, list_);
+    call_1 = MiloneCore_List_IntIntoption1option1option1Fun1IntListIntoption1option1option1ListFun2_map(fun_, list_);
     if ((!(call_1))) goto next_10;
     if ((call_1->head.discriminant != Some_2)) goto next_10;
     if ((call_1->head.Some_2.discriminant != Some_1)) goto next_10;

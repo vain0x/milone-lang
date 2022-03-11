@@ -52,7 +52,8 @@ struct Unitoption1_ {
 
 void option_option_basicSomeCase(void) {
     char match_;
-    struct Intoption1_ variant_ = (struct Intoption1_){.discriminant = Some_, .Some_ = 1};
+    struct Intoption1_ variant_;
+    variant_ = (struct Intoption1_){.discriminant = Some_, .Some_ = 1};
     if ((variant_.discriminant != None_)) goto next_2;
     milone_assert(false, (struct String){.str = "option/option.milone", .len = 20}, 6, 12);
     match_ = 0;
@@ -93,7 +94,8 @@ end_match_5:;
 
 void option_option_basicMatchCase(void) {
     char switch_;
-    struct Unitoption1_ variant_1 = (struct Unitoption1_){.discriminant = Some_2, .Some_2 = 0};
+    struct Unitoption1_ variant_1;
+    variant_1 = (struct Unitoption1_){.discriminant = Some_2, .Some_2 = 0};
     switch (variant_1.discriminant) {
         case None_2:
             goto clause_10;
