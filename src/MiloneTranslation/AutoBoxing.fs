@@ -129,10 +129,11 @@ let private trdVariant isDirect (ctx: TrdCtx) variantSerial (variantDefOpt: Vari
     // printfn
     //   "// trd variant %s (%s) end: %s"
     //   (ctx.Variants |> mapFind variantSerial).Name
-    //   (objToString isDirect)
+    //   (__dump isDirect)
     //   (ctx.VariantMemo
     //    |> mapFind (variantSerial, isDirect)
-    //    |> objToString)
+    //    |> __dump)
+
     ctx
 
 let private trdRecordTyDef isDirect (ctx: TrdCtx) tySerial tyDef =
@@ -212,13 +213,16 @@ let private trdTy isDirect (ctx: TrdCtx) ty : TrdCtx =
       assert (List.isEmpty tyArgs)
       ctx
 
-    | ListTk -> tyArgs |> List.fold (trdTy IsIndirect) ctx
-
     | FunTk
     | TupleTk
-    | NativePtrTk _
     | NativeFunTk
     | NativeTypeTk _ -> tyArgs |> List.fold (trdTy isDirect) ctx
+
+    | ListTk
+    | NativePtrTk _ ->
+      match isDirect with
+      | IsDirect -> tyArgs |> List.fold (trdTy IsIndirect) ctx
+      | _ -> ctx
 
     | UnionTk tySerial ->
       let ctx = tyArgs |> List.fold (trdTy isDirect) ctx
