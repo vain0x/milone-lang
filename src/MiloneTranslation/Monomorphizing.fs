@@ -60,6 +60,8 @@ open Std.StdMultimap
 open MiloneTranslation.Hir
 open MiloneTranslationTypes.HirTypes
 
+module S = Std.StdString
+
 // #tyAssign?
 let private getTyAssignment tyVars tyArgs : TreeMap<TySerial, Ty> =
   match listTryZip tyVars tyArgs with
@@ -318,6 +320,15 @@ let private generate mangle (rx: CollectRx) genericFunBodyMap (ctx: MonoCtx) (en
   | Some _ -> ctx
 
   | None ->
+    // __trace (
+    //   let name = (rx.Funs |> mapFind funSerial).Name
+
+    //   let tyArgs =
+    //     monoTyArgs |> List.map __dump |> S.concat ", "
+
+    //   "Mono-fun " + name + "<" + tyArgs + ">"
+    // )
+
     let genericFunDef = rx.Funs |> mapFind funSerial
 
     let monoFunDef, monoFunBody =
