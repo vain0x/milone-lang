@@ -36,8 +36,6 @@ bool MiloneDerive_TupleEqual_tuple2Equal(struct IntIntMyNode1ListTuple2_ l_8, st
 
 bool MiloneDerive_ListEqual_eta3_listEqual_MyNodeEqual(void const* env_, struct IntMyNode1_ arg_, struct IntMyNode1_ arg_1);
 
-bool MiloneDerive_ListEqual_eta3_listEqual_MyNodeEqual(void const* , struct IntMyNode1_ , struct IntMyNode1_ );
-
 bool Std_Equal_IntMyNode1IntMyNode1BoolFun2IntMyNode1ListIntMyNode1ListBoolFun3_genericListEqual(struct IntMyNode1_IntMyNode1_BoolFun2 , struct IntMyNode1_List const* , struct IntMyNode1_List const* );
 
 bool MiloneDerive_ListEqual_listEqual(struct IntMyNode1_List const* l_14, struct IntMyNode1_List const* r_14);

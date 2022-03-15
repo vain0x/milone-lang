@@ -843,7 +843,11 @@ let private cgExpr (ctx: CirCtx) (arg: MExpr) : CExpr * CirCtx =
   | MNeverExpr loc -> unreachable ("MNeverExpr " + Loc.toString loc)
 
   | MVarExpr (serial, _, _) -> CVarExpr(getUniqueVarName ctx serial), ctx
-  | MProcExpr (serial, _) -> CVarExpr(getUniqueFunName ctx serial), ctx
+
+  | MProcExpr (serial, _) ->
+    let ctx = cgExternFunDecl ctx serial
+    CVarExpr(getUniqueFunName ctx serial), ctx
+
   | MVariantExpr (_, serial, _) -> genVariantNameExpr ctx serial
   | MDiscriminantConstExpr (variantSerial, _) -> genDiscriminant ctx variantSerial, ctx
   | MGenericValueExpr (genericValue, ty, _) -> genGenericValue ctx genericValue ty
@@ -881,11 +885,6 @@ let private cgActionStmt ctx itself action args =
     addStmt ctx (CExprStmt(CCallExpr(CVarExpr "milone_leave_region", [])))
 
   | MCallProcAction ->
-    let ctx =
-      match args with
-      | MProcExpr (funSerial, _) :: _ -> cgExternFunDecl ctx funSerial
-      | _ -> ctx
-
     let args, ctx =
       (args, ctx)
       |> stMap (fun (arg, ctx) -> cgExpr ctx arg)
@@ -1038,7 +1037,6 @@ let private cgPrimStmt (ctx: CirCtx) itself prim args serial resultTy =
       |> stMap (fun (arg, ctx) -> cgExpr ctx arg)
 
     let expr, ctx =
-      let ctx = cgExternFunDecl ctx funSerial
       let funExpr = CVarExpr(getUniqueFunName ctx funSerial)
 
       match args with
@@ -1080,11 +1078,6 @@ let private cgPrimStmt (ctx: CirCtx) itself prim args serial resultTy =
 
   | MCallProcPrim ->
     let name = getUniqueVarName ctx serial
-
-    let ctx =
-      match args with
-      | MProcExpr (funSerial, _) :: _ -> cgExternFunDecl ctx funSerial
-      | _ -> ctx
 
     let args, ctx =
       (args, ctx)
