@@ -1,6 +1,7 @@
 module rec native_type.Program
 
 // __nativeType<``ANY C TYPE``> is expanded to `ANY C TYPE` in C.
+// See also x_native_code.md in docs.
 
 type FILE = __nativeType<FILE>
 

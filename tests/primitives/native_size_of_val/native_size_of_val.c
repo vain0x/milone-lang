@@ -136,12 +136,12 @@ int main(int argc, char** argv) {
     list_ = ((struct IntList const*)milone_mem_alloc(1, sizeof(struct IntList)));
     (*(((struct IntList*)list_))) = (struct IntList){.head = 2, .tail = list_1};
     call_2 = native_size_of_val_native_size_of_val_IntListIntFun1_listToArraySize(list_);
-    milone_assert((call_2 == (3 * 4)), (struct String){.str = "native_size_of_val/native_size_of_val.milone", .len = 44}, 21, 2);
+    milone_assert((call_2 == (3 * 4)), (struct String){.str = "native_size_of_val/native_size_of_val.milone", .len = 44}, 22, 2);
     list_4 = ((struct StringList const*)milone_mem_alloc(1, sizeof(struct StringList)));
     (*(((struct StringList*)list_4))) = (struct StringList){.head = (struct String){.str = "y", .len = 1}, .tail = NULL};
     list_3 = ((struct StringList const*)milone_mem_alloc(1, sizeof(struct StringList)));
     (*(((struct StringList*)list_3))) = (struct StringList){.head = (struct String){.str = "x", .len = 1}, .tail = list_4};
     call_3 = native_size_of_val_native_size_of_val_StringListIntFun1_listToArraySize(list_3);
-    milone_assert((call_3 == (2 * 16)), (struct String){.str = "native_size_of_val/native_size_of_val.milone", .len = 44}, 22, 2);
+    milone_assert((call_3 == (2 * 16)), (struct String){.str = "native_size_of_val/native_size_of_val.milone", .len = 44}, 23, 2);
     return 0;
 }

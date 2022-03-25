@@ -3,8 +3,8 @@ module rec nativeptr.Program
 // nativeptr<T> is equivalent to pointer type `T *` in C.
 // voidptr is `void *` in C.
 // obj is `void const *` in C.
-
 // __constptr<T> is equivalent to `T const *` in C. (NOT exists in F#.)
+// See also x_native_code.md in docs.
 
 let memAlloc (count: int) (size: int) : voidptr =
   __nativeFun ("milone_mem_alloc", count, unativeint size)

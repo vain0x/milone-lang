@@ -1,6 +1,7 @@
 module rec native_code.Program
 
 // Embedding arbitrary C codes.
+// See also x_native_code.md in docs.
 
 let private writeLine (msg: string) : unit =
   __nativeDecl

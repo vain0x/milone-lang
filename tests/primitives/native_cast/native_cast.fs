@@ -1,6 +1,7 @@
 module rec native_cast.Program
 
 // Unsafe pointer casting.
+// See also x_native_code.md in docs.
 
 let main _ =
   let mutNull: voidptr = __nativeCast 0un

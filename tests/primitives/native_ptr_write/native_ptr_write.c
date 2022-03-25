@@ -32,7 +32,7 @@ int main(int argc, char** argv) {
     (*(((struct String*)box_))) = (struct String){.str = "zero", .len = 4};
     stringBox_ = box_;
     (*(((struct String*)stringBox_))) = (struct String){.str = "one", .len = 3};
-    milone_assert((str_compare((*(((struct String const*)stringBox_))), (struct String){.str = "one", .len = 3}) == 0), (struct String){.str = "native_ptr_write/native_ptr_write.milone", .len = 40}, 11, 2);
+    milone_assert((str_compare((*(((struct String const*)stringBox_))), (struct String){.str = "one", .len = 3}) == 0), (struct String){.str = "native_ptr_write/native_ptr_write.milone", .len = 40}, 12, 2);
     UInt64UInt64Tuple2_ = (struct UInt64UInt64Tuple2_){.t0 = 0ULL, .t1 = 0ULL};
     box_1 = ((void const*)milone_mem_alloc(1, sizeof(struct UInt64UInt64Tuple2_)));
     (*(((struct UInt64UInt64Tuple2_*)box_1))) = UInt64UInt64Tuple2_;
@@ -41,6 +41,6 @@ int main(int argc, char** argv) {
     buf_[1] = 'i';
     call_ = native_ptr_write_native_ptr_write_strOfRawParts(((char const*)buf_), 2);
     s_ = call_;
-    milone_assert((str_compare(s_, (struct String){.str = "Hi", .len = 2}) == 0), (struct String){.str = "native_ptr_write/native_ptr_write.milone", .len = 40}, 19, 2);
+    milone_assert((str_compare(s_, (struct String){.str = "Hi", .len = 2}) == 0), (struct String){.str = "native_ptr_write/native_ptr_write.milone", .len = 40}, 20, 2);
     return 0;
 }

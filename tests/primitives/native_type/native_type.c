@@ -44,9 +44,9 @@ int main(int argc, char** argv) {
     int call_3;
     call_2 = native_type_native_type_fopen((struct String){.str = "LICENSE", .len = 7}, (struct String){.str = "r", .len = 1});
     fp_1 = call_2;
-    milone_assert((((uintptr_t)fp_1) != (size_t)0ULL), (struct String){.str = "native_type/native_type.milone", .len = 30}, 15, 2);
+    milone_assert((((uintptr_t)fp_1) != (size_t)0ULL), (struct String){.str = "native_type/native_type.milone", .len = 30}, 16, 2);
     call_3 = native_type_native_type_fclose(fp_1);
     stat_ = call_3;
-    milone_assert((stat_ == 0), (struct String){.str = "native_type/native_type.milone", .len = 30}, 18, 2);
+    milone_assert((stat_ == 0), (struct String){.str = "native_type/native_type.milone", .len = 30}, 19, 2);
     return 0;
 }

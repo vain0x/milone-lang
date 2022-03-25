@@ -35,6 +35,10 @@ User-defined types:
 
 - [projects](projects.md)
 
+## Language extensions
+
+- [native code](x_native_code.md)
+
 ## Others
 
 - [milone_syntax_tree.ungram](milone_syntax_tree.ungram): The form of syntax tree described in ungrammar

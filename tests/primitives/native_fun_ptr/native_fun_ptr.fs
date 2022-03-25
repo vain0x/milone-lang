@@ -5,6 +5,7 @@ module rec native_fun_ptr.Program
 // For multi-parameter function, use tuple type as P.
 // For void-returning function, use unit as T.
 // (ABI is same as C.)
+// See also x_native_code.md in docs.
 
 type private CompareFun = __nativeFun<obj * obj, int>
 

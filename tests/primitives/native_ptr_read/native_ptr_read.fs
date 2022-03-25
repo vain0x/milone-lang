@@ -1,6 +1,7 @@
 module rec native_ptr_read.Program
 
 // Read memory as arbitrary type. Really unsafe.
+// See also x_native_code.md in docs.
 
 let main _ =
   let p: __constptr<string> = "hey" |> box |> __nativeCast

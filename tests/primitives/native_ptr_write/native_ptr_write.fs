@@ -1,6 +1,7 @@
 module rec native_ptr_write.Program
 
 // Writes an arbitrary value to memory. Really unsafe.
+// See also x_native_code.md in docs.
 
 let strOfRawParts (p: __constptr<char>) (len: int) : string =
   __nativeFun ("str_of_raw_parts", p, len)
