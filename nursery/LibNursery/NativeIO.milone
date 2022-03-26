@@ -1,0 +1,377 @@
+// IO library: experimental, libc-based, unsafe
+
+module rec LibNursery.NativeIO
+
+let private allocateBuffer (capacity: unativeint) : nativeptr<byte> =
+  __nativeExpr ("milone_mem_alloc({0}, sizeof(int8_t))", capacity)
+
+// -----------------------------------------------
+// Span
+// -----------------------------------------------
+
+/// (ptr, size). Read-only.
+type Span = __constptr<byte> * unativeint
+
+module Span =
+  let empty: Span = __nativeCast 1un, 0un
+
+  let asPtr (span: Span) : __constptr<byte> =
+    let ptr, _ = span
+    ptr
+
+  let length (span: Span) : unativeint =
+    let _, len = span
+    len
+
+  let ofString (s: string) : Span =
+    let ptr: __constptr<byte> = __nativeExpr ("(uint8_t *)({0}.str)", s)
+    ptr, unativeint s.Length
+
+  // Slice
+  // ================
+
+  let skip (start: unativeint) (span: Span) : Span =
+    let spanPtr, spanSize = span
+
+    if start < spanSize then
+      let spanPtr: __constptr<byte> =
+        __nativeExpr ("""(uint8_t *){0} + {1}""", spanPtr, start)
+
+      spanPtr, spanSize - start
+    else
+      empty
+
+  let take (len: unativeint) (span: Span) : Span =
+    let spanPtr, spanSize = span
+
+    if len < spanSize then
+      spanPtr, len
+    else
+      empty
+
+  let slice (start: unativeint) (endIndex: unativeint) (span: Span) : Span = span |> take endIndex |> skip start
+
+  // Read
+  // ================
+
+  let readByte (offset: unativeint) (span: Span) : byte =
+    let spanPtr, spanSize = span
+
+    __nativeExpr ("*((uint8_t *){0} + {1})", spanPtr, offset)
+
+  let readInt32 (offset: unativeint) (span: Span) : int =
+    let spanPtr, spanSize = span
+
+    __nativeExpr (
+      """
+        *(int32_t *)((uint8_t *){0} + {1})
+      """,
+      spanPtr,
+      offset
+    )
+
+  let readInt64 (offset: unativeint) (span: Span) : int64 =
+    let spanPtr, spanSize = span
+
+    __nativeExpr (
+      """
+        *(int64_t *)((uint8_t *){0} + {1})
+      """,
+      spanPtr,
+      offset
+    )
+
+  let readUint32 (offset: unativeint) (span: Span) : uint =
+    let spanPtr, spanSize = span
+
+    __nativeExpr (
+      """
+        *(uint32_t *)((uint8_t *){0} + {1})
+      """,
+      spanPtr,
+      offset
+    )
+
+  let readUint64 (offset: unativeint) (span: Span) : uint64 =
+    let spanPtr, spanSize = span
+
+    __nativeExpr (
+      """
+        *(uint64_t *)((uint8_t *){0} + {1})
+      """,
+      spanPtr,
+      offset
+    )
+
+  // ================
+
+  /// Copies contents as a string.
+  ///
+  /// Contents should be valid as UTF-8. (Not checked.)
+  /// It should NOT include `\0`.
+  let cloneToString (span: Span) : string =
+    let ptr, size = span
+    __nativeExpr ("str_of_raw_parts({0}, (int){1});", ptr, size)
+
+// -----------------------------------------------
+// MutableSpan
+// -----------------------------------------------
+
+/// (ptr, capacity). Writable.
+type MutableSpan = nativeptr<byte> * unativeint
+
+let private spanAsMutable (span: Span) : nativeptr<byte> * unativeint =
+  let ptr, size = span
+  __nativeCast ptr, size
+
+module MutableSpan =
+  let empty: MutableSpan = __nativeCast 1un, 0un
+
+  let allocate (capacity: unativeint) : MutableSpan =
+    if capacity <> 0un then
+      allocateBuffer capacity, capacity
+    else
+      empty
+
+  let asPtr (span: MutableSpan) : nativeptr<byte> =
+    let ptr, _ = span
+    ptr
+
+  let length (span: MutableSpan) : unativeint =
+    let _, len = span
+    len
+
+  // Span (ReadOnly)
+  // ================
+
+  let asReadOnly (buf: MutableSpan) : Span =
+    let bufPtr, bufSize = buf
+    __nativeCast bufPtr, bufSize
+
+  let skipAsReadOnly (start: unativeint) (buf: MutableSpan) : Span = buf |> asReadOnly |> Span.skip start
+
+  let takeAsReadOnly (len: unativeint) (buf: MutableSpan) : Span = buf |> asReadOnly |> Span.take len
+
+  let sliceAsReadOnly (start: unativeint) (endIndex: unativeint) (buf: MutableSpan) : Span =
+    buf |> asReadOnly |> Span.slice start endIndex
+
+  // Slice
+  // ================
+
+  let skip (start: unativeint) (span: MutableSpan) : MutableSpan =
+    span |> skipAsReadOnly start |> spanAsMutable
+
+  let take (len: unativeint) (span: MutableSpan) : MutableSpan =
+    span |> takeAsReadOnly len |> spanAsMutable
+
+  let slice (start: unativeint) (endIndex: unativeint) (span: MutableSpan) : MutableSpan =
+    span
+    |> asReadOnly
+    |> Span.slice start endIndex
+    |> spanAsMutable
+
+  // Write
+  // ================
+
+  let writeByte (offset: unativeint) (value: byte) (span: MutableSpan) : unit =
+    let spanPtr, spanSize = span
+    assert (offset < spanSize)
+
+    __nativeStmt ("""*((uint8_t *){0} + {1}) = {2};""", spanPtr, offset, value)
+
+  let writeInt32 (offset: unativeint) (value: int) (span: MutableSpan) : unit =
+    let spanPtr, spanSize = span
+    assert (offset + 4un <= spanSize)
+
+    __nativeStmt ("""*((int32_t *){0} + {1}) = {2};""", spanPtr, offset, value)
+
+  let writeInt64 (offset: unativeint) (value: int64) (span: MutableSpan) : unit =
+    let spanPtr, spanSize = span
+    assert (offset + 8un <= spanSize)
+
+    __nativeStmt ("""*((int64_t *){0} + {1}) = {2};""", spanPtr, offset, value)
+
+  let writeUint32 (offset: unativeint) (value: uint) (span: MutableSpan) : unit =
+    let spanPtr, spanSize = span
+    assert (offset + 4un <= spanSize)
+
+    __nativeStmt ("""*((uint32_t *){0} + {1}) = {2};""", spanPtr, offset, value)
+
+  let writeUint64 (offset: unativeint) (value: uint64) (span: MutableSpan) : unit =
+    let spanPtr, spanSize = span
+    assert (offset + 8un <= spanSize)
+
+    __nativeStmt ("""*((uint64_t *){0} + {1}) = {2};""", spanPtr, offset, value)
+
+  let copyFrom (src: Span) (dest: MutableSpan) : unit =
+    let srcPtr, srcSize = src
+    let destPtr, destSize = dest
+    assert (srcSize <= destSize)
+
+    __nativeStmt (
+      """
+        memcpy({0}, {1}, {2});
+      """,
+      srcPtr,
+      srcSize,
+      destPtr
+    )
+
+  // ================
+
+  let cloneToString span : string =
+    span |> asReadOnly |> Span.cloneToString
+
+// -----------------------------------------------
+// StringBuf
+// -----------------------------------------------
+
+/// (span, len).
+type StringBuf = private StringBuf of MutableSpan * unativeint
+
+module StringBuf =
+  let empty () : StringBuf = StringBuf(MutableSpan.empty, 0un)
+
+  let allocate (capacity: unativeint) : StringBuf =
+    StringBuf(MutableSpan.allocate capacity, 0un)
+
+  let length (StringBuf (_, len)) = len
+
+  let toString (StringBuf (span, len)) : string = span |> MutableSpan.cloneToString
+
+  // Internals
+  // ================
+
+  let private grow capacity (StringBuf (oldSpan, len)) =
+    assert (len <= capacity)
+
+    let newSpan = MutableSpan.allocate capacity
+
+    newSpan
+    |> MutableSpan.take len
+    |> MutableSpan.copyFrom (oldSpan |> MutableSpan.takeAsReadOnly len)
+
+    StringBuf(newSpan, len)
+
+  let private reserveBy (additionalLen: unativeint) (buf: StringBuf) =
+    let (StringBuf (span, oldLen)) = buf
+    let oldCapacity = MutableSpan.length span
+    let newLen = oldLen + additionalLen
+
+    if newLen <= oldCapacity then
+      buf
+    else
+      let newCapacity =
+        oldCapacity + (oldCapacity >>> 2) + newLen
+
+      grow newCapacity buf
+
+  // Write
+  // ================
+
+  let push (s: string) (buf: StringBuf) : StringBuf =
+    let n = unativeint s.Length
+    let buf = reserveBy n buf
+
+    let (StringBuf (span, oldLen)) = buf
+
+    span
+    |> MutableSpan.skip oldLen
+    |> MutableSpan.copyFrom (Span.ofString s)
+
+    StringBuf(span, oldLen + n)
+
+  let pushChar (c: char) (buf: StringBuf) : StringBuf =
+    let buf = reserveBy 1un buf
+    let (StringBuf (span, oldLen)) = buf
+
+    span |> MutableSpan.writeByte oldLen (byte c)
+
+    StringBuf(span, oldLen + 1un)
+
+// -----------------------------------------------
+// Stream
+// -----------------------------------------------
+
+/// `FILE *`
+type Stream = nativeptr<__nativeType<FILE>>
+
+module Stream =
+  let getStdin () : Stream = __nativeExpr "stdin"
+  let getStdout () : Stream = __nativeExpr "stdout"
+
+  let flush (output: Stream) : unit = __nativeStmt ("fflush({0});", output)
+
+  // Read
+  // ================
+
+  /// Reads from stream to fill the buffer.
+  ///
+  /// Returns size of read data. (Maybe less than capacity.)
+  let readBlock (span: MutableSpan) (input: Stream) : unativeint =
+    let spanPtr, spanSize = span
+
+    __nativeExpr (
+      """
+        fread({1}, 1, {2}, {0})
+      """,
+      input,
+      spanPtr,
+      spanSize
+    )
+
+  /// Reads a block of bytes equal to specified size.
+  ///
+  /// Blocks to wait for the buffer to fill.
+  /// Returns whether read data is of specified size.
+  let readExact (span: MutableSpan) (size: unativeint) (input: Stream) : bool =
+    let spanPtr, spanSize = span
+    assert (size <= spanSize)
+
+    __nativeExpr (
+      """
+        fread({1}, (size_t){2}, 1, {0}) == 1
+      """,
+      input,
+      spanPtr,
+      size
+    )
+
+  let readLine (input: Stream) : string option =
+    __nativeStmt (
+      """
+        char buf[4000] = "";
+        bool ok = fgets(buf, sizeof buf, {0}) != NULL;
+      """,
+      input
+    )
+
+    if __nativeExpr "ok" then
+      let line: string = __nativeExpr "str_of_c_str(buf)"
+      Some line
+    else
+      None
+
+  // Write
+  // ================
+
+  let writeExact (ptr: __constptr<byte>) (len: unativeint) (output: Stream) : unit =
+    if len >= 1un then
+      __nativeStmt (
+        """
+          bool ok = fwrite({1}, {2}, 1, {0}) == 1;
+          if (!ok) {
+            fprintf(stderr, "ERROR: writeExact\n");
+            exit(1);
+          }
+        """,
+        output,
+        ptr,
+        len
+      )
+
+  let writeString (s: string) (output: Stream) : unit =
+    let ptr: __constptr<byte> = __nativeExpr ("(uint8_t *)({0}.str)", s)
+
+    let len = unativeint s.Length
+    writeExact ptr len output

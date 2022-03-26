@@ -6,6 +6,7 @@ open LibNurseryTests.EphRefTests
 open LibNurseryTests.EphSerialTests
 open LibNurseryTests.EphVectorTests
 open LibNurseryTests.ImpureTests
+open LibNurseryTests.NativeIOTests
 
 let main _ =
   testClapModule ()
@@ -13,6 +14,7 @@ let main _ =
   testEphRefModule ()
   testEphSerialModule ()
   testEphVectorModule ()
+  testNativeIO ()
 
   // Exits.
   testImpureModule ()
