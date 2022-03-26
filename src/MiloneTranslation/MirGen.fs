@@ -1486,36 +1486,6 @@ let private mirifyExprInfCallNative ctx (funName: string) args ty loc =
 
     temp, ctx
 
-// same as callproc
-let private mirifyCallProcCastFunExpr ctx callee args ty loc =
-  let callee, origFunTy =
-    match callee with
-    | HNodeExpr (HCastFunEN, [ funExpr ], origFunTy, _) -> funExpr, origFunTy
-    | _ -> unreachable ()
-
-  let callee, ctx = mirifyExpr ctx callee
-  let args, ctx = mirifyArgs ctx args
-
-  let callee =
-    let funPtrTy =
-      let _, argTys, resultTy = tyToArgList origFunTy
-      Ty(NativeFunTk, List.append argTys [ resultTy ])
-
-    MUnaryExpr(MNativeCastUnary funPtrTy, callee, loc)
-
-  if tyIsUnit ty then
-    let ctx =
-      addStmt ctx (MActionStmt(MCallProcAction, callee :: args, loc))
-
-    MUnitExpr loc, ctx
-  else
-    let temp, tempSerial, ctx = freshVar ctx "call" ty loc
-
-    let ctx =
-      addStmt ctx (MPrimStmt(MCallProcPrim, callee :: args, tempSerial, ty, loc))
-
-    temp, ctx
-
 let private mirifyExprInf ctx itself kind args ty loc =
   match kind, args, ty with
   | HMinusEN, [ arg ], _ ->
@@ -1534,13 +1504,10 @@ let private mirifyExprInf ctx itself kind args ty loc =
 
   | HCallProcEN, [ HVariantExpr (variantSerial, _, _); arg ], _ -> mirifyCallVariantExpr ctx variantSerial arg ty loc
   | HCallProcEN, HPrimExpr (prim, _, _) :: args, _ -> mirifyCallPrimExpr ctx itself prim args ty loc
-  | HCallProcEN, (HNodeExpr (HCastFunEN, _, _, _) as callee) :: args, _ ->
-    mirifyCallProcCastFunExpr ctx callee args ty loc
   | HCallProcEN, callee :: args, _ -> mirifyCallProcExpr ctx callee args ty loc
 
   | HCallTailRecEN, _ :: args, _ -> mirifyExprInfCallTailRec ctx args loc
   | HCallClosureEN, callee :: args, _ -> mirifyExprInfCallClosure ctx callee args ty loc
-
   | HCallNativeEN funName, args, _ -> mirifyExprInfCallNative ctx funName args ty loc
   | HClosureEN, [ HFunExpr (funSerial, _, _, _); env ], _ -> mirifyExprInfClosure ctx funSerial env ty loc
 

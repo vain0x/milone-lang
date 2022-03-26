@@ -226,11 +226,6 @@ type HExprKind =
   /// Direct call to current procedure at the end of function (i.e. tail-call).
   | HCallTailRecEN
 
-  /// Cast of function.
-  ///
-  /// `(f as FunTy)`
-  | HCastFunEN
-
   /// Direct call to native fun.
   | HCallNativeEN of funName: string
 
