@@ -34,6 +34,11 @@ let bind f opt =
   | Some x -> f x
   | None -> None
 
+let fold folder state opt =
+  match opt with
+  | Some x -> folder state x
+  | None -> state
+
 let forall pred opt =
   match opt with
   | Some x -> pred x
