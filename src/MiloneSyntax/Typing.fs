@@ -1191,6 +1191,14 @@ let private primAssertTy = tyFun tyBool tyUnit
 
 let private primInRegionTy = tyFun (tyFun tyUnit tyInt) tyInt
 
+let private primAcquireTy =
+  let itemTy = tyMeta 1 noLoc
+  TyScheme([ 1 ], tyFun itemTy (tyLinear itemTy))
+
+let private primDisposeTy =
+  let itemTy = tyMeta 1 noLoc
+  TyScheme([ 1 ], tyFun (tyLinear itemTy) itemTy)
+
 let private primNativeCastScheme =
   let meta id = tyMeta id noLoc
   let srcTy = meta 1
@@ -1273,6 +1281,8 @@ let private inferPrimExpr ctx prim loc =
     txAbort ctx loc
 
   | TPrim.InRegion -> onMono primInRegionTy
+  | TPrim.Acquire -> onUnbounded primAcquireTy
+  | TPrim.Dispose -> onUnbounded primDisposeTy
 
   | TPrim.NativeFun ->
     let ctx =

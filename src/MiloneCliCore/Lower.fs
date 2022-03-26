@@ -52,7 +52,9 @@ let private lowerTk (tk: Tir.Tk) : Hir.Tk =
 
   | Tir.ErrorTk _
   | Tir.SynonymTk _
-  | Tir.InferTk _ -> unreachable () // Resolved in Typing.
+  | Tir.InferTk _ // Resolved in Typing.
+
+  | Tir.LinearTk -> unreachable () // Resolved in LinearCheck.
 
 let private lowerTy (ty: Tir.Ty) : Hir.Ty =
   let (Tir.Ty (tk, tyArgs)) = ty
@@ -138,6 +140,8 @@ let private lowerPrim (prim: Tir.TPrim) : Hir.HPrim =
   | Tir.TPrim.PtrWrite -> Hir.HPrim.PtrWrite
 
   | Tir.TPrim.Discriminant
+  | Tir.TPrim.Acquire
+  | Tir.TPrim.Dispose
   | Tir.TPrim.NativeFun
   | Tir.TPrim.NativeExpr
   | Tir.TPrim.NativeStmt

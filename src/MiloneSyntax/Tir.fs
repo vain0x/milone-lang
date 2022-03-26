@@ -35,6 +35,7 @@ let tyList itemTy = Ty(ListTk, [ itemTy ])
 let tyTuple itemTys = Ty(TupleTk, itemTys)
 let tyUnit = tyTuple []
 
+let tyLinear itemTy = Ty(LinearTk, [ itemTy ])
 let tyConstPtr itemTy = Ty(NativePtrTk IsConst, [ itemTy ])
 let tyNativePtr itemTy = Ty(NativePtrTk IsMut, [ itemTy ])
 
@@ -136,6 +137,8 @@ let primFromIdent ident =
   | "__inRegion" -> TPrim.InRegion |> Some
   | "__discriminant" -> TPrim.Discriminant |> Some
 
+  | "__acquire" -> TPrim.Acquire |> Some
+  | "__dispose" -> TPrim.Dispose |> Some
   | "__nativeFun" -> TPrim.NativeFun |> Some
   | "__nativeCast" -> TPrim.NativeCast |> Some
   | "__nativeExpr" -> TPrim.NativeExpr |> Some
