@@ -60,6 +60,8 @@ open Std.StdMultimap
 open MiloneTranslation.Hir
 open MiloneTranslationTypes.HirTypes
 
+module S = Std.StdString
+
 // #tyAssign?
 let private getTyAssignment tyVars tyArgs : TreeMap<TySerial, Ty> =
   match listTryZip tyVars tyArgs with
@@ -348,6 +350,8 @@ let private generate mangle (rx: CollectRx) genericFunBodyMap (ctx: MonoCtx) (en
 // -----------------------------------------------
 
 let monify (modules: HProgram, hirCtx: HirCtx) : HProgram * HirCtx =
+  let modules, (hirCtx: HirCtx) = autoBoxingPhase2 (modules, hirCtx)
+
   let getFunIdent funSerial =
     let funDef = hirCtx.Funs |> mapFind funSerial
     let serial = string (funSerialToInt funSerial)
@@ -467,5 +471,153 @@ let monify (modules: HProgram, hirCtx: HirCtx) : HProgram * HirCtx =
     { hirCtx with
         Serial = ctx.Serial
         Funs = funs }
+
+  modules, hirCtx
+
+// =============================================================================
+// auto boxing phase 2
+
+// For polymorphic function
+//    f<'T> : F<'T>
+// If there is an use-site f<A>
+//    where type A is pointer-sized (obj, list, or nativeptr)
+// Then instantiate f<obj>
+//    and replace f<A> with (unbox (box f<obj>): F<A>)
+// This is okay because
+//    f is generic and it doesn't know details of 'T
+
+// this breaks when 'T is used in a function signature
+// such as let f g x = g x
+//    f: ('T -> 'U) -> 'T -> 'U
+//    g: 'T -> 'U
+//    x: 'U
+// f<'T> and f<obj> works differently.
+
+module AutoBoxingPhase2 =
+  [<RequireQualifiedAccess; NoEquality; NoComparison>]
+  type RewriteRx = { Funs: TreeMap<FunSerial, FunDef> }
+
+  /// Gets whether a type is ptr-sized excluding `obj`.
+  let private tyIsPtrSized ty =
+    let (Ty (tk, _)) = ty
+
+    match tk with
+    | ListTk
+    | VoidPtrTk
+    | NativePtrTk _ -> true
+    | _ -> false
+
+  let private canRewrite tyArgs =
+    tyArgs
+    |> List.exists (fun ty ->
+      match ty with
+      | Ty (FunTk, tyArgs) -> tyArgs |> List.exists tyIsPtrSized
+      | Ty (TupleTk, tyArgs) -> tyArgs |> List.exists tyIsPtrSized
+      | _ -> tyIsPtrSized ty)
+
+  let private rewriteTyArgs tyArgs =
+    let toObj ty = if tyIsPtrSized ty then tyObj else ty
+
+    tyArgs
+    |> List.map (fun ty ->
+      match ty with
+      | Ty (FunTk, tyArgs) -> Ty(FunTk, tyArgs |> List.map toObj)
+      | Ty (TupleTk, tyArgs) -> Ty(TupleTk, tyArgs |> List.map toObj)
+      | _ -> toObj ty)
+
+  // -----------------------------------------------
+  // Rewrite
+  // -----------------------------------------------
+
+  let private rewriteCallFunExpr (rx: RewriteRx) funExpr : HExpr =
+    let funSerial, useFunTy, useTyArgs, funLoc =
+      match funExpr with
+      | HFunExpr (funSerial, ty, tyArgs, loc) -> funSerial, ty, tyArgs, loc
+      | _ -> unreachable ()
+
+    assert (canRewrite useTyArgs)
+
+    let argsDump =
+      useTyArgs
+      |> List.map (fun ty ->
+        if canRewrite [ ty ] then
+          __dump ty + " => obj"
+        else
+          __dump ty)
+      |> S.concat ", "
+
+    let funDef = rx.Funs |> mapFind funSerial
+    let name = funDef.Name
+
+    // __trace (
+    //   "objTyArg "
+    //   + name
+    //   + "<"
+    //   + argsDump
+    //   + "> at "
+    //   + (Loc.toString funLoc)
+    // )
+
+    let objFunExpr =
+      let objTyArgs = rewriteTyArgs useTyArgs
+      let objFunTy = tyAssign funDef.Ty objTyArgs
+      HFunExpr(funSerial, objFunTy, objTyArgs, funLoc)
+
+    HNodeExpr(HCastFunEN, [ objFunExpr ], useFunTy, funLoc)
+
+  let private rewriteExpr (rx: RewriteRx) expr : HExpr =
+    let onExpr expr = rewriteExpr rx expr
+    let onExprs exprs = exprs |> List.map (rewriteExpr rx)
+    let onStmts stmts = stmts |> List.map (rewriteStmt rx)
+
+    match expr with
+    | HFunExpr (_, _, tyArgs, _) when canRewrite tyArgs -> rewriteCallFunExpr rx expr
+
+    | HLitExpr _
+    | HVarExpr _
+    | HFunExpr _
+    | HVariantExpr _
+    | HPrimExpr _ -> expr
+
+    | HMatchExpr (cond, arms, ty, loc) ->
+      let arms = arms |> List.map (hArmMap id onExpr)
+      HMatchExpr(onExpr cond, arms, ty, loc)
+
+    | HNodeExpr (kind, items, ty, loc) -> HNodeExpr(kind, onExprs items, ty, loc)
+
+    | HBlockExpr (stmts, last) -> HBlockExpr(onStmts stmts, onExpr last)
+
+    | HNavExpr _ -> unreachable () // HNavExpr is resolved in NameRes, Typing, or RecordRes.
+    | HRecordExpr _ -> unreachable () // HRecordExpr is resolved in RecordRes.
+
+  let rewriteStmt (rx: RewriteRx) stmt : HStmt =
+    let onExpr expr = rewriteExpr rx expr
+    let onExprs exprs = exprs |> List.map (rewriteExpr rx)
+    let onStmts stmts = stmts |> List.map (rewriteStmt rx)
+
+    // let isGenericFun funSerial =
+    //   let (TyScheme (tyVars, _)) = (rx.Funs |> mapFind funSerial).Ty
+    //   List.isEmpty tyVars |> not
+
+    match stmt with
+    | HExprStmt expr -> HExprStmt(rewriteExpr rx expr)
+    | HLetValStmt (pat, body, loc) -> HLetValStmt(pat, onExpr body, loc)
+    | HLetFunStmt (callee, args, body, loc) -> HLetFunStmt(callee, args, onExpr body, loc)
+
+// -----------------------------------------------
+// Interface
+// -----------------------------------------------
+
+let autoBoxingPhase2 (modules: HProgram, hirCtx: HirCtx) : HProgram * HirCtx =
+  let modules =
+    modules
+    |> List.map (fun (m: HModule) ->
+      let stmts =
+        let rx: AutoBoxingPhase2.RewriteRx = { Funs = hirCtx.Funs }
+
+        m.Stmts
+        |> List.map (AutoBoxingPhase2.rewriteStmt rx)
+
+      { m with Stmts = stmts })
 
   modules, hirCtx
