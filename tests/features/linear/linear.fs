@@ -7,7 +7,7 @@ let private create (init: int) : Counter = Counter(__acquire init)
 let private increment (counter: Counter) : int * Counter =
   let (Counter n) = counter
   let n = __dispose n + 1
-  n, Counter n
+  n, Counter(__acquire n)
 
 let private drop (counter: Counter) : unit =
   let (Counter n) = counter
@@ -16,11 +16,11 @@ let private drop (counter: Counter) : unit =
 
 let private acquireAndThenDispose () =
   let counter = create 0
-  let _ = counter
+  let _ = drop counter
   ()
 
 let private acquireAndUse () =
-  let counter = Counter 0
+  let counter = create 0
   let n, counter = increment counter
   assert (n = 1)
   let n, counter = increment counter
@@ -45,9 +45,33 @@ let private branchCase () =
 
   drop counter
 
+let private multipleMatches () =
+  let first = create 1
+  let second = create 2
+
+  match 1 with
+  | _ -> drop first
+
+  match 2 with
+  | _ -> drop second
+
+let private nestedMatches () =
+  let root = create 1
+
+  match 1 with
+  | _ ->
+    let inner = create 2
+
+    match 2 with
+    | _ ->
+      drop inner
+      drop root
+
 let main _ =
   acquireAndThenDispose ()
   acquireAndUse ()
   transfer ()
   branchCase ()
+  multipleMatches ()
+  nestedMatches ()
   0

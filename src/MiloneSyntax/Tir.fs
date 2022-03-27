@@ -346,6 +346,10 @@ let emptyVars: TreeMap<VarSerial, VarDef> = TMap.empty varSerialCompare
 // ----------------------------------------------
 
 module TProgram =
+  let mapStmt (mapping: TStmt -> TStmt) (modules: TProgram) : TProgram =
+    modules
+    |> List.map (fun (m: TModule) -> { m with Stmts = m.Stmts |> List.map mapping })
+
   let foldStmt (folder: 'S -> TStmt -> 'S) (state: 'S) (modules: TProgram) : 'S =
     modules
     |> List.fold (fun state (m: TModule) -> m.Stmts |> List.fold folder state) state
