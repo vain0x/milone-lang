@@ -31,6 +31,7 @@ let private emptyUsedMap: TreeMap<VarSerial, Loc> = TMap.empty varSerialCompare
 type private Rx =
   { GetVarName: VarSerial -> string
     GetVarLoc: VarSerial -> Loc
+    Funs: TreeMap<FunSerial, FunDef>
     LinearTySet: TreeSet<TySerial> }
 
 [<RequireQualifiedAccess; NoEquality; NoComparison>]
@@ -46,6 +47,11 @@ let private emptyCtx () : LinearCheckCtx =
     Used = emptyUsedMap
     Logs = [] }
 
+let private funIsGeneric (rx: Rx) funSerial =
+  let funDef = rx.Funs |> mapFind funSerial
+  let (TyScheme (tyVars, _)) = funDef.Ty
+  tyVars |> List.isEmpty |> not
+
 // -----------------------------------------------
 // Error
 // -----------------------------------------------
@@ -57,6 +63,7 @@ type private LinearError =
   | VariableAlreadyUsed
   | VariableCannotBeUsed
   | VariableCannotBeCaptured
+  | GenericFunCannotUseLinear
   | BranchMustUse of varNames: string list
 
 let private errorToString err =
@@ -72,6 +79,8 @@ let private errorToString err =
 
   | LinearError.VariableCannotBeCaptured ->
     "This linear variable must not be used in local functions and function expressions."
+
+  | LinearError.GenericFunCannotUseLinear -> "This generic function cannot take or return linear values."
 
   | LinearError.BranchMustUse varNames ->
     assert (varNames |> List.isEmpty |> not)
@@ -331,13 +340,24 @@ let private lcPat (rx: Rx) (ctx: LinearCheckCtx) pat : LinearCheckCtx =
 let private lcExpr (rx: Rx) (ctx: LinearCheckCtx) expr : LinearCheckCtx =
   match expr with
   | TLitExpr _
-  | TFunExpr _
   | TVariantExpr _
   | TPrimExpr _ -> ctx
 
   | TVarExpr (varSerial, ty, loc) ->
     if tyIsLinear rx ty then
       markAsUsed ctx varSerial loc
+    else
+      ctx
+
+  | TFunExpr (funSerial, ty, loc) ->
+    let rec funTyContainsLinear ty =
+      match ty with
+      | Ty (FunTk, [ sTy; tTy ]) -> tyIsLinear rx sTy || funTyContainsLinear tTy
+      | _ -> unreachable ()
+
+    if funIsGeneric rx funSerial
+       && funTyContainsLinear ty then
+      addError LinearError.GenericFunCannotUseLinear loc ctx
     else
       ctx
 
@@ -496,6 +516,7 @@ let linearCheck (modules: TProgram, tirCtx: TirCtx) : TProgram * TirCtx =
     let rx: Rx =
       { GetVarName = fun varSerial -> (findVar varSerial).Name
         GetVarLoc = fun varSerial -> (findVar varSerial).Loc
+        Funs = tirCtx.Funs
         LinearTySet = linearTys }
 
     rx
@@ -509,6 +530,7 @@ let linearCheck (modules: TProgram, tirCtx: TirCtx) : TProgram * TirCtx =
     let rx: Rx =
       { GetVarName = fun varSerial -> (findVar varSerial).Name
         GetVarLoc = fun varSerial -> (findVar varSerial).Loc
+        Funs = tirCtx.Funs
         LinearTySet = linearTys }
 
     rx
