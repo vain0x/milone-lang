@@ -56,12 +56,23 @@ let private cannotCapture () =
   f ()
   f ()
 
+// -----------------------------------------------
+// Wrapped
+// -----------------------------------------------
+
+// Linear check should also work for linear unions.
+
 type private Wrapped = Wrapped of __linear<int>
 let private wrap (n: int) = Wrapped(__acquire n)
 
 let private notDisposedWrappedUnionError () =
   let unused = wrap 0
   ()
+
+// -----------------------------------------------
+
+// Static variables can't be linear.
+let private staticLinear = __acquire 0
 
 let private dup x = x, x
 

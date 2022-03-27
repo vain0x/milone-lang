@@ -95,6 +95,7 @@ type private LinearError =
   | VariableAlreadyUsed
   | VariableCannotBeUsed
   | VariableCannotBeCaptured
+  | StaticVarCannotBeLinear
   | GenericFunCannotUseLinear
   | BranchMustUse of varNames: string list
 
@@ -111,6 +112,8 @@ let private errorToString err =
 
   | LinearError.VariableCannotBeCaptured ->
     "This linear variable must not be used in local functions and function expressions."
+
+  | LinearError.StaticVarCannotBeLinear -> "This static variable cannot be linear type."
 
   | LinearError.GenericFunCannotUseLinear -> "This generic function cannot take or return linear values."
 
@@ -198,9 +201,26 @@ let private computeLinearTys (tirCtx: TirCtx) =
 // -----------------------------------------------
 
 /// Performs linear check for definitions.
-let private lcDefs _linearTys (tirCtx: TirCtx) =
-  // WIP
-  tirCtx
+let private lcDefs linearTys (tirCtx: TirCtx) =
+  let logs, tirCtx = tirCtx.Logs, { tirCtx with Logs = [] }
+
+  let rx = newRxForToplevel linearTys tirCtx
+  let isLinear ty = tyIsLinear rx ty
+
+  let logs =
+    tirCtx.StaticVars
+    |> TMap.fold
+         (fun logs _ (varDef: VarDef) ->
+           if isLinear varDef.Ty then
+             let log =
+               Log.Error(errorToString LinearError.StaticVarCannotBeLinear)
+
+             (log, varDef.Loc) :: logs
+           else
+             logs)
+         logs
+
+  { tirCtx with Logs = logs }
 
 // -----------------------------------------------
 // Control
