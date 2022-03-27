@@ -172,34 +172,38 @@ let private enterBranches (ctx: LinearCheckCtx) =
 
   branch, ctx
 
-let private nextBranch (rx: Rx) (branch: Branch) (ctx: LinearCheckCtx) =
-  // All variables that are defined in the branch must be disposed.
-  let ctx =
-    let logs =
-      ctx.Current
-      |> TMap.fold
-           (fun logs varSerial owned ->
-             if owned then
-               let log =
-                 Log.Error(errorToString LinearError.VariableNotUsed)
-
-               let loc = rx.GetVarLoc varSerial
-               (log, loc) :: logs
-             else
-               logs)
-           ctx.Logs
-
+let private nextBranch (rx: Rx) (branch: Branch) (branchLoc: Loc) (ctx: LinearCheckCtx) =
+  let current, used, logs, ctx =
+    ctx.Current,
+    ctx.Used,
+    ctx.Logs,
     { ctx with
         Current = emptyMap
-        Logs = logs }
+        Used = emptySet
+        Logs = [] }
+
+  // All variables that are defined in the branch must be disposed.
+  let logs =
+    current
+    |> TMap.fold
+         (fun logs varSerial owned ->
+           if owned then
+             let log =
+               Log.Error(errorToString LinearError.VariableNotUsed)
+
+             let loc = rx.GetVarLoc varSerial
+             (log, loc) :: logs
+           else
+             logs)
+         logs
 
   // All variables that are disposed in the previous branch must be disposed
   // and others must not be disposed.
-  let ctx =
+  let logs =
     match branch.PrevOpt with
     | Some prev ->
       let logs =
-        ctx.Used
+        used
         |> TSet.fold
              (fun logs varSerial ->
                if prev |> TSet.contains varSerial |> not then
@@ -210,14 +214,14 @@ let private nextBranch (rx: Rx) (branch: Branch) (ctx: LinearCheckCtx) =
                  (log, loc) :: logs
                else
                  logs)
-             ctx.Logs
+             logs
 
       let logs =
         let unused =
           prev
           |> TSet.fold
                (fun acc varSerial ->
-                 if ctx.Used |> TSet.contains varSerial |> not then
+                 if used |> TSet.contains varSerial |> not then
                    varSerial :: acc
                  else
                    acc)
@@ -229,20 +233,21 @@ let private nextBranch (rx: Rx) (branch: Branch) (ctx: LinearCheckCtx) =
           let log =
             Log.Error(errorToString (LinearError.BranchMustUse names))
 
-          let loc = noLoc // FIXME: location of branch
-          (log, loc) :: logs
+          (log, branchLoc) :: logs
         else
           logs
 
-      { ctx with Logs = logs }
+      logs
 
-    | None -> ctx
+    | None -> logs
 
   let branch =
     if branch.PrevOpt |> Option.isNone then
-      { branch with PrevOpt = Some ctx.Used }
+      { branch with PrevOpt = Some used }
     else
       branch
+
+  let ctx = { ctx with Logs = logs }
 
   branch, ctx
 
@@ -277,8 +282,9 @@ let private enterBody (ctx: LinearCheckCtx) : _ * LinearCheckCtx =
 
   branch, ctx
 
-let private leaveBody rx (branch: Branch) (ctx: LinearCheckCtx) : LinearCheckCtx =
-  let branch, ctx = nextBranch rx branch ctx
+let private leaveBody rx (branch: Branch) bodyLoc (ctx: LinearCheckCtx) : LinearCheckCtx =
+  // reuse error checking mechanism. this is not ideal because error message talks about branching
+  let branch, ctx = nextBranch rx branch bodyLoc ctx
   leaveBranches branch ctx
 
 let private lcPat (rx: Rx) (ctx: LinearCheckCtx) pat : LinearCheckCtx =
@@ -348,7 +354,7 @@ let private lcExpr (rx: Rx) (ctx: LinearCheckCtx) expr : LinearCheckCtx =
            (fun (branch, ctx) (_, guard, body) ->
              let ctx = lcExpr rx ctx guard
              let ctx = lcExpr rx ctx body
-             nextBranch rx branch ctx)
+             nextBranch rx branch (exprToLoc body) ctx)
            (branch, ctx)
 
     leaveBranches branch ctx
@@ -371,11 +377,11 @@ let private lcStmt rx (ctx: LinearCheckCtx) stmt : LinearCheckCtx =
     let ctx = lcPat rx ctx pat
     lcExpr rx ctx init
 
-  | TLetFunStmt (_, _, _, argPats, body, _) ->
+  | TLetFunStmt (_, _, _, argPats, body, loc) ->
     let parent, ctx = enterBody ctx
     let ctx = argPats |> List.fold (lcPat rx) ctx
     let ctx = lcExpr rx ctx body
-    leaveBody rx parent ctx
+    leaveBody rx parent loc ctx
 
   | TBlockStmt (_, stmts) -> lcStmts rx ctx stmts
 
