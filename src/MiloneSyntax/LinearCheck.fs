@@ -563,7 +563,6 @@ let linearCheck (modules: TProgram, tirCtx: TirCtx) : TProgram * TirCtx =
   let tirCtx =
     let rx = makeRxGlobal ()
 
-    // Not updating Tys since record types can't be linear for now.
     { tirCtx with
         StaticVars =
           tirCtx.StaticVars
@@ -589,6 +588,20 @@ let linearCheck (modules: TProgram, tirCtx: TirCtx) : TProgram * TirCtx =
             if List.isEmpty tyArgs && tyIsLinear rx ty then
               { funDef with Ty = TyScheme([], lwTy ty) }
             else
-              funDef) }
+              funDef)
+        Tys =
+          tirCtx.Tys
+          |> TMap.map (fun _ (tyDef: TyDef) ->
+            match tyDef with
+            | RecordTyDef (ident, tyArgs, fields, repr, loc) ->
+              let fields =
+                fields
+                |> List.map (fun (ident, ty, loc) -> ident, lwTy ty, loc)
+
+              RecordTyDef(ident, tyArgs, fields, repr, loc)
+
+            | UnivTyDef _
+            | SynonymTyDef _
+            | UnionTyDef _ -> tyDef) }
 
   modules, { tirCtx with Logs = ctx.Logs }
