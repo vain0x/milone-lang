@@ -11,9 +11,7 @@ open Std.StdSet
 module StdInt = Std.StdInt
 module S = Std.StdString
 
-// -----------------------------------------------
-// Context
-// -----------------------------------------------
+let private emptyLinearTySet: TreeSet<TySerial> = TSet.empty compare
 
 /// varSerial -> (true = owned | false = disposed)
 type private OwnershipMap = TreeMap<VarSerial, bool>
@@ -27,12 +25,51 @@ type private UsedMap = TreeMap<VarSerial, Loc>
 
 let private emptyUsedMap: TreeMap<VarSerial, Loc> = TMap.empty varSerialCompare
 
+// -----------------------------------------------
+// Rx
+// -----------------------------------------------
+
+/// Read-only context for linear check.
 [<RequireQualifiedAccess; NoEquality; NoComparison>]
 type private Rx =
   { GetVarName: VarSerial -> string
     GetVarLoc: VarSerial -> Loc
     Funs: TreeMap<FunSerial, FunDef>
     LinearTySet: TreeSet<TySerial> }
+
+let private newRxForToplevel linearTys (tirCtx: TirCtx) : Rx =
+  let findVar varSerial = tirCtx.StaticVars |> mapFind varSerial
+
+  let rx: Rx =
+    { GetVarName = fun varSerial -> (findVar varSerial).Name
+      GetVarLoc = fun varSerial -> (findVar varSerial).Loc
+      Funs = tirCtx.Funs
+      LinearTySet = linearTys }
+
+  rx
+
+let private newRxForModule linearTys (m: TModule) (tirCtx: TirCtx) : Rx =
+  let findVar varSerial =
+    match m.Vars |> TMap.tryFind varSerial with
+    | Some varDef -> varDef
+    | None -> tirCtx.StaticVars |> mapFind varSerial
+
+  let rx: Rx =
+    { GetVarName = fun varSerial -> (findVar varSerial).Name
+      GetVarLoc = fun varSerial -> (findVar varSerial).Loc
+      Funs = tirCtx.Funs
+      LinearTySet = linearTys }
+
+  rx
+
+let private funIsGeneric (rx: Rx) funSerial =
+  let funDef = rx.Funs |> mapFind funSerial
+  let (TyScheme (tyVars, _)) = funDef.Ty
+  tyVars |> List.isEmpty |> not
+
+// -----------------------------------------------
+// Context
+// -----------------------------------------------
 
 [<RequireQualifiedAccess; NoEquality; NoComparison>]
 type private LinearCheckCtx =
@@ -46,11 +83,6 @@ let private emptyCtx () : LinearCheckCtx =
     Current = emptyMap
     Used = emptyUsedMap
     Logs = [] }
-
-let private funIsGeneric (rx: Rx) funSerial =
-  let funDef = rx.Funs |> mapFind funSerial
-  let (TyScheme (tyVars, _)) = funDef.Ty
-  tyVars |> List.isEmpty |> not
 
 // -----------------------------------------------
 // Error
@@ -132,6 +164,43 @@ let private tyIsLinearWith linearTySet ty : bool =
   go ty
 
 let private tyIsLinear (rx: Rx) ty = tyIsLinearWith rx.LinearTySet ty
+
+// FIXME: Union types that own __linear directly are linear for now.
+//        This should be transitive.
+let private computeLinearTys (tirCtx: TirCtx) =
+  let isLinear ty = tyIsLinearWith emptyLinearTySet ty
+
+  tirCtx.Tys
+  |> TMap.fold
+       (fun linearTySet tySerial (tyDef: TyDef) ->
+         match tyDef with
+         | UnionTyDef (_, [], variants, _) ->
+           // Polymorphic union can't be linear for now.
+
+           let linear =
+             variants
+             |> List.exists (fun variantSerial ->
+               let variantDef = tirCtx.Variants |> mapFind variantSerial
+
+               variantDef.HasPayload
+               && isLinear variantDef.PayloadTy)
+
+           if linear then
+             linearTySet |> TSet.add tySerial
+           else
+             linearTySet
+
+         | _ -> linearTySet)
+       emptyLinearTySet
+
+// -----------------------------------------------
+// Check definitions
+// -----------------------------------------------
+
+/// Performs linear check for definitions.
+let private lcDefs _linearTys (tirCtx: TirCtx) =
+  // WIP
+  tirCtx
 
 // -----------------------------------------------
 // Control
@@ -411,6 +480,20 @@ let private lcStmt rx (ctx: LinearCheckCtx) stmt : LinearCheckCtx =
 
 let private lcStmts rx ctx stmts : LinearCheckCtx = stmts |> List.fold (lcStmt rx) ctx
 
+let private lcProgram linearTys (modules: TProgram) (tirCtx: TirCtx) : TirCtx =
+  let ctx = { emptyCtx () with Logs = tirCtx.Logs }
+
+  let ctx =
+    modules
+    |> List.fold
+         (fun ctx (m: TModule) ->
+           let rx = newRxForModule linearTys m tirCtx
+
+           m.Stmts |> List.fold (lcStmt rx) ctx)
+         ctx
+
+  { tirCtx with Logs = ctx.Logs }
+
 // -----------------------------------------------
 // Rewrite
 // -----------------------------------------------
@@ -473,82 +556,11 @@ let private lwStmt stmt : TStmt =
 
   | TBlockStmt (isRec, stmts) -> TBlockStmt(isRec, List.map lwStmt stmts)
 
-// -----------------------------------------------
-// Interface
-// -----------------------------------------------
-
-let linearCheck (modules: TProgram, tirCtx: TirCtx) : TProgram * TirCtx =
-  let ctx = { emptyCtx () with Logs = tirCtx.Logs }
-
-  let emptyLinearTySet = TSet.empty compare
-
-  // FIXME: Union types that own __linear directly are linear for now.
-  //        This should be transitive.
-  let linearTys =
-    let isLinear ty = tyIsLinearWith emptyLinearTySet ty
-
-    tirCtx.Tys
-    |> TMap.fold
-         (fun linearTySet tySerial (tyDef: TyDef) ->
-           match tyDef with
-           | UnionTyDef (_, [], variants, _) ->
-             // Polymorphic union can't be linear for now.
-
-             let linear =
-               variants
-               |> List.exists (fun variantSerial ->
-                 let variantDef = tirCtx.Variants |> mapFind variantSerial
-
-                 variantDef.HasPayload
-                 && isLinear variantDef.PayloadTy)
-
-             if linear then
-               linearTySet |> TSet.add tySerial
-             else
-               linearTySet
-
-           | _ -> linearTySet)
-         emptyLinearTySet
-
-  let makeRxGlobal () : Rx =
-    let findVar varSerial = tirCtx.StaticVars |> mapFind varSerial
-
-    let rx: Rx =
-      { GetVarName = fun varSerial -> (findVar varSerial).Name
-        GetVarLoc = fun varSerial -> (findVar varSerial).Loc
-        Funs = tirCtx.Funs
-        LinearTySet = linearTys }
-
-    rx
-
-  let makeRx (m: TModule) : Rx =
-    let findVar varSerial =
-      match m.Vars |> TMap.tryFind varSerial with
-      | Some v -> v
-      | None -> tirCtx.StaticVars |> mapFind varSerial
-
-    let rx: Rx =
-      { GetVarName = fun varSerial -> (findVar varSerial).Name
-        GetVarLoc = fun varSerial -> (findVar varSerial).Loc
-        Funs = tirCtx.Funs
-        LinearTySet = linearTys }
-
-    rx
-
-  let ctx =
-    modules
-    |> List.fold
-         (fun ctx (m: TModule) ->
-           let rx = makeRx m
-
-           m.Stmts |> List.fold (lcStmt rx) ctx)
-         ctx
-
-  // Remove linear primitives.
+let private lwProgram linearTys modules tirCtx =
   let modules =
     modules
     |> List.map (fun (m: TModule) ->
-      let rx = makeRx m
+      let rx = newRxForModule linearTys m tirCtx
 
       { m with
           Vars =
@@ -561,7 +573,7 @@ let linearCheck (modules: TProgram, tirCtx: TirCtx) : TProgram * TirCtx =
           Stmts = m.Stmts |> List.map lwStmt })
 
   let tirCtx =
-    let rx = makeRxGlobal ()
+    let rx = newRxForToplevel linearTys tirCtx
 
     { tirCtx with
         StaticVars =
@@ -604,4 +616,19 @@ let linearCheck (modules: TProgram, tirCtx: TirCtx) : TProgram * TirCtx =
             | SynonymTyDef _
             | UnionTyDef _ -> tyDef) }
 
-  modules, { tirCtx with Logs = ctx.Logs }
+  modules, tirCtx
+
+// -----------------------------------------------
+// Interface
+// -----------------------------------------------
+
+let linearCheck (modules: TProgram, tirCtx: TirCtx) : TProgram * TirCtx =
+  let linearTys = computeLinearTys tirCtx
+
+  let tirCtx = lcDefs linearTys tirCtx
+  let tirCtx = lcProgram linearTys modules tirCtx
+
+  if tirCtx.Logs |> List.isEmpty then
+    lwProgram linearTys modules tirCtx
+  else
+    modules, tirCtx
