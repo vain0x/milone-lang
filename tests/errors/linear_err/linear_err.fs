@@ -91,6 +91,6 @@ type private LinearRecord = { Linear: __linear<int> }
 type private OwnLinear = OwnLinear of Wrapped
 
 // Generic union can't be linear for now.
-type private GenericLinear<'T> = GL of 'T * Wrapped
+type private GenericLinear<'T> = GL of __linear<'T>
 
 let main _ = 1

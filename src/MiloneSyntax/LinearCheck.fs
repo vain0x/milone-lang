@@ -90,7 +90,6 @@ let private emptyCtx () : LinearCheckCtx =
 
 [<RequireQualifiedAccess; NoEquality; NoComparison>]
 type private LinearError =
-  | TypeCannotBeLinear
   | VariableNotUsed
   | VariableAlreadyUsed
   | VariableCannotBeUsed
@@ -98,11 +97,12 @@ type private LinearError =
   | StaticVarCannotBeLinear
   | GenericFunCannotUseLinear
   | BranchMustUse of varNames: string list
+  | GenericTyCannotBeLinear
+  | VariantCannotOwnLinearUnion
+  | FieldCannotBeLinear
 
 let private errorToString err =
   match err with
-  | LinearError.TypeCannotBeLinear -> "This type cannot be linear."
-
   | LinearError.VariableNotUsed -> "This linear variable is not used."
 
   | LinearError.VariableAlreadyUsed -> "This linear variable is already used and cannot be used here."
@@ -123,6 +123,10 @@ let private errorToString err =
     "This branch must use a particular set of variables that are used in the previous branch. Variables: ["
     + S.concat "; " varNames
     + "]"
+
+  | LinearError.GenericTyCannotBeLinear -> "Generic types cannot be linear for now."
+  | LinearError.VariantCannotOwnLinearUnion -> "Variants cannot own linear union for now."
+  | LinearError.FieldCannotBeLinear -> "Fields cannot be linear for now."
 
 let private addError err (loc: Loc) (ctx: LinearCheckCtx) =
   { ctx with Logs = (Log.Error(errorToString err), loc) :: ctx.Logs }
@@ -218,6 +222,55 @@ let private lcDefs linearTys (tirCtx: TirCtx) =
              (log, varDef.Loc) :: logs
            else
              logs)
+         logs
+
+  let logs =
+    tirCtx.Variants
+    |> TMap.fold
+         (fun logs _ (variantDef: VariantDef) ->
+           if variantDef.HasPayload
+              && (linearTys
+                  |> TSet.contains variantDef.UnionTySerial
+                  |> not) then
+             if tyIsLinear rx variantDef.PayloadTy then
+               let err =
+                 match tirCtx.Tys |> mapFind variantDef.UnionTySerial with
+                 | UnionTyDef (_, tyArgs, _, _) ->
+                   if List.isEmpty tyArgs then
+                     LinearError.VariantCannotOwnLinearUnion
+                   else
+                     LinearError.GenericTyCannotBeLinear
+                 | _ -> unreachable ()
+
+               let log = Log.Error(errorToString err)
+               (log, variantDef.Loc) :: logs
+             else
+               logs
+           else
+             logs)
+         logs
+
+  let logs =
+    tirCtx.Tys
+    |> TMap.fold
+         (fun logs _ tyDef ->
+           match tyDef with
+           | RecordTyDef (_, _, fields, _, _) ->
+             fields
+             |> List.fold
+                  (fun logs (_, ty, loc) ->
+                    if isLinear ty then
+                      let log =
+                        Log.Error(errorToString LinearError.FieldCannotBeLinear)
+
+                      (log, loc) :: logs
+                    else
+                      logs)
+                  logs
+
+           | UnivTyDef _
+           | SynonymTyDef _
+           | UnionTyDef _ -> logs)
          logs
 
   { tirCtx with Logs = logs }
