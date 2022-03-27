@@ -15,12 +15,17 @@ module S = Std.StdString
 // Context
 // -----------------------------------------------
 
-let private emptySet: TreeSet<VarSerial> = TSet.empty varSerialCompare
-
 /// varSerial -> (true = owned | false = disposed)
 type private OwnershipMap = TreeMap<VarSerial, bool>
 
+/// Empty ownership map.
 let private emptyMap: OwnershipMap = TMap.empty varSerialCompare
+
+/// Map from variable to location where it's used.
+/// These variables are used (in a particular area such as branch.)
+type private UsedMap = TreeMap<VarSerial, Loc>
+
+let private emptyUsedMap: TreeMap<VarSerial, Loc> = TMap.empty varSerialCompare
 
 [<RequireQualifiedAccess; NoEquality; NoComparison>]
 type private Rx =
@@ -32,13 +37,13 @@ type private Rx =
 type private LinearCheckCtx =
   { Parent: OwnershipMap
     Current: OwnershipMap
-    Used: TreeSet<VarSerial>
+    Used: TreeMap<VarSerial, Loc>
     Logs: (Log * Loc) list }
 
 let private emptyCtx () : LinearCheckCtx =
   { Parent = emptyMap
     Current = emptyMap
-    Used = emptySet
+    Used = emptyUsedMap
     Logs = [] }
 
 // -----------------------------------------------
@@ -128,7 +133,7 @@ let private markAsDefined (ctx: LinearCheckCtx) varSerial : LinearCheckCtx =
 
 let private markAsUsed (ctx: LinearCheckCtx) varSerial loc : LinearCheckCtx =
   match ctx.Parent |> TMap.tryFind varSerial with
-  | Some true -> { ctx with Used = ctx.Used |> TSet.add varSerial }
+  | Some true -> { ctx with Used = ctx.Used |> TMap.add varSerial loc }
   | Some false -> addError LinearError.VariableAlreadyUsed loc ctx
   | None ->
     match ctx.Current |> TMap.tryFind varSerial with
@@ -141,12 +146,12 @@ type private Branch =
   { // Stashed state of the parent branch.
     Parent: OwnershipMap
     Current: OwnershipMap
-    Used: TreeSet<VarSerial>
+    Used: UsedMap
 
-    // The set of variables
+    // Set of variables
     //    that are defined outside the branches
     //    and used in the first branch.
-    PrevOpt: TreeSet<VarSerial> option }
+    PrevOpt: UsedMap option }
 
 let private enterBranches (ctx: LinearCheckCtx) =
   let branch: Branch =
@@ -158,7 +163,7 @@ let private enterBranches (ctx: LinearCheckCtx) =
   // Merge current and used into parent. this could be more efficient by improving data structure
   let parent =
     ctx.Used
-    |> TSet.fold (fun parent varSerial -> parent |> TMap.add varSerial false) ctx.Parent
+    |> TMap.fold (fun parent varSerial _ -> parent |> TMap.add varSerial false) ctx.Parent
 
   let parent =
     ctx.Current
@@ -168,7 +173,7 @@ let private enterBranches (ctx: LinearCheckCtx) =
     { ctx with
         Parent = parent
         Current = emptyMap
-        Used = emptySet }
+        Used = emptyUsedMap }
 
   branch, ctx
 
@@ -179,7 +184,7 @@ let private nextBranch (rx: Rx) (branch: Branch) (branchLoc: Loc) (ctx: LinearCh
     ctx.Logs,
     { ctx with
         Current = emptyMap
-        Used = emptySet
+        Used = emptyUsedMap
         Logs = [] }
 
   // All variables that are defined in the branch must be disposed.
@@ -204,13 +209,12 @@ let private nextBranch (rx: Rx) (branch: Branch) (branchLoc: Loc) (ctx: LinearCh
     | Some prev ->
       let logs =
         used
-        |> TSet.fold
-             (fun logs varSerial ->
-               if prev |> TSet.contains varSerial |> not then
+        |> TMap.fold
+             (fun logs varSerial loc ->
+               if prev |> TMap.containsKey varSerial |> not then
                  let log =
                    Log.Error(errorToString LinearError.VariableCannotBeUsed)
-                 // location is incorrect. Used should contain loc
-                 let loc = rx.GetVarLoc varSerial
+
                  (log, loc) :: logs
                else
                  logs)
@@ -219,9 +223,9 @@ let private nextBranch (rx: Rx) (branch: Branch) (branchLoc: Loc) (ctx: LinearCh
       let logs =
         let unused =
           prev
-          |> TSet.fold
-               (fun acc varSerial ->
-                 if used |> TSet.contains varSerial |> not then
+          |> TMap.fold
+               (fun acc varSerial _ ->
+                 if used |> TMap.containsKey varSerial |> not then
                    varSerial :: acc
                  else
                    acc)
@@ -255,17 +259,17 @@ let private leaveBranches (branch: Branch) (ctx: LinearCheckCtx) : LinearCheckCt
   // Propagate "used" marks to the parent branch.
   let current, used =
     let branchUsed =
-      branch.PrevOpt |> Option.defaultValue emptySet
+      branch.PrevOpt |> Option.defaultValue emptyUsedMap
 
     branchUsed
-    |> TSet.fold
-         (fun (current, used) varSerial ->
+    |> TMap.fold
+         (fun (current, used) varSerial loc ->
            match branch.Current |> TMap.tryFind varSerial with
            | Some owned ->
              assert owned
              current |> TMap.add varSerial false, used
 
-           | None -> current, used |> TSet.add varSerial)
+           | None -> current, used |> TMap.add varSerial loc)
          (branch.Current, branch.Used)
 
   // Rollback the state to the parent branch.
