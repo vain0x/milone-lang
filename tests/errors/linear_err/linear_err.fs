@@ -124,7 +124,7 @@ let private linearGenericError () =
 type private LinearRecord = { Linear: __linear<int> }
 
 // Union type can't have other linear unions.
-// (Cannot own linear values indirectly.)
+// (Must own __linear directly.)
 type private OwnLinear = OwnLinear of LinearInt
 
 let main _ = 1

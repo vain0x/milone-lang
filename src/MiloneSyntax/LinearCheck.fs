@@ -94,6 +94,7 @@ type private LinearError =
   | VariableAlreadyUsed
   | VariableCannotBeUsed
   | VariableCannotBeCaptured
+  | VariantInvalid
   | CannotUseAsPat
   | StaticVarCannotBeLinear
   | GenericFunCannotUseLinear
@@ -111,6 +112,9 @@ let private errorToString err =
 
   | LinearError.VariableCannotBeCaptured ->
     "This linear variable must not be used in local functions and function expressions."
+
+  | LinearError.VariantInvalid ->
+    "This linear variant is invalid for now. This error happens when a union contains another linear union types. Consider to use __linear directly."
 
   | LinearError.CannotUseAsPat -> "This linear variable cannot be defined by AS pattern."
 
@@ -223,6 +227,24 @@ let private lcDefs linearTys (tirCtx: TirCtx) =
                Log.Error(errorToString LinearError.StaticVarCannotBeLinear)
 
              (log, varDef.Loc) :: logs
+           else
+             logs)
+         logs
+
+  let logs =
+    tirCtx.Variants
+    |> TMap.fold
+         (fun logs _ (variantDef: VariantDef) ->
+           if tyIsLinear rx variantDef.PayloadTy then
+             if rx.LinearTySet
+                |> TSet.contains variantDef.UnionTySerial
+                |> not then
+               let log =
+                 Log.Error(errorToString LinearError.VariantInvalid)
+
+               (log, variantDef.Loc) :: logs
+             else
+               logs
            else
              logs)
          logs
