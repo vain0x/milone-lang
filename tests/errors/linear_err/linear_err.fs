@@ -65,6 +65,15 @@ let private cannotUseAsPattern () =
 
 let private linearOptionMustBeDisposed () =
   let _opt: __linear<int> option = None
+  ()
+
+let private linearPairPartiallyLeakedError () =
+  let pair = __acquire 2, __acquire 3
+
+  match pair with
+  | l, _ ->
+    let _ = __dispose l
+    ()
 
 // -----------------------------------------------
 // LinearInt

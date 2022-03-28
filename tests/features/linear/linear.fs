@@ -110,6 +110,12 @@ let private optionOfLinearCase () =
 
   | None -> ()
 
+let private nestedLinearCase () =
+  let nested = __acquire (__acquire 2)
+  let unwrapped = __dispose nested
+  let _ = __dispose unwrapped
+  ()
+
 let main _ =
   acquireAndThenDispose ()
   acquireAndUse ()
@@ -119,4 +125,5 @@ let main _ =
   nestedMatches ()
   genericWrapperCase ()
   genericLinearCase ()
+  nestedLinearCase ()
   0
