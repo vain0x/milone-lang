@@ -94,6 +94,7 @@ type private LinearError =
   | VariableAlreadyUsed
   | VariableCannotBeUsed
   | VariableCannotBeCaptured
+  | CannotUseAsPat
   | StaticVarCannotBeLinear
   | GenericFunCannotUseLinear
   | BranchMustUse of varNames: string list
@@ -112,6 +113,9 @@ let private errorToString err =
 
   | LinearError.VariableCannotBeCaptured ->
     "This linear variable must not be used in local functions and function expressions."
+
+  | LinearError.CannotUseAsPat ->
+    "This linear variable cannot be defined by AS pattern."
 
   | LinearError.StaticVarCannotBeLinear -> "This static variable cannot be linear type."
 
@@ -466,12 +470,13 @@ let private lcPat (rx: Rx) (ctx: LinearCheckCtx) pat : LinearCheckCtx =
 
   | TNodePat (_, argPats, _, _) -> argPats |> List.fold (lcPat rx) ctx
 
-  | TAsPat (bodyPat, varSerial, _) ->
+  | TAsPat (bodyPat, varSerial, loc) ->
     let ctx =
       let ty = patToTy bodyPat
 
       if tyIsLinear rx ty then
-        markAsDefined ctx varSerial
+        let ctx = markAsDefined ctx varSerial
+        addError LinearError.CannotUseAsPat loc ctx
       else
         ctx
 
@@ -495,7 +500,7 @@ let private lcExpr (rx: Rx) (ctx: LinearCheckCtx) expr : LinearCheckCtx =
     let rec funTyContainsLinear ty =
       match ty with
       | Ty (FunTk, [ sTy; tTy ]) -> tyIsLinear rx sTy || funTyContainsLinear tTy
-      | _ -> unreachable ()
+      | _ -> tyIsLinear rx ty
 
     if funIsGeneric rx funSerial
        && funTyContainsLinear ty then
@@ -517,7 +522,8 @@ let private lcExpr (rx: Rx) (ctx: LinearCheckCtx) expr : LinearCheckCtx =
     let branch, ctx =
       arms
       |> List.fold
-           (fun (branch, ctx) (_, guard, body) ->
+           (fun (branch, ctx) (pat, guard, body) ->
+             let ctx = lcPat rx ctx pat
              let ctx = lcExpr rx ctx guard
              let ctx = lcExpr rx ctx body
              nextBranch rx branch (exprToLoc body) ctx)
@@ -576,13 +582,9 @@ let private lcProgram linearTys (modules: TProgram) (tirCtx: TirCtx) : TirCtx =
 let private lwTy ty : Ty =
   let (Ty (tk, tyArgs)) = ty
 
-  match tk with
-  | LinearTk _ ->
-    match tyArgs with
-    | [ itemTy ] -> itemTy
-    | _ -> unreachable ()
-
-  | _ when List.isEmpty tyArgs -> ty
+  match tk, tyArgs with
+  | LinearTk, [ itemTy ] -> lwTy itemTy
+  | _, [] -> ty
   | _ -> Ty(tk, List.map lwTy tyArgs)
 
 let private lwPat pat : TPat = patMap lwTy pat

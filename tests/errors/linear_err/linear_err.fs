@@ -56,6 +56,13 @@ let private cannotCapture () =
   f ()
   f ()
 
+let private cannotUseAsPattern () =
+  let value = __acquire 0
+  let (first as second) = value
+  let _ = __dispose first
+  let _ = __dispose second
+  0
+
 // -----------------------------------------------
 // Wrapped
 // -----------------------------------------------

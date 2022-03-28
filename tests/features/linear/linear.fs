@@ -67,6 +67,22 @@ let private nestedMatches () =
       drop inner
       drop root
 
+let private loopCase () =
+  let rec acquireMany (n: int) =
+    let rec go acc i = if i < n then create i :: acc else acc
+    go [] 0
+
+  let rec disposeMany counters =
+    match counters with
+    | [] -> []
+
+    | c :: counters ->
+      drop c
+      disposeMany counters
+
+  let counters: Counter list = acquireMany 0
+  disposeMany counters
+
 let main _ =
   acquireAndThenDispose ()
   acquireAndUse ()
