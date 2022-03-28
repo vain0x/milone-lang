@@ -123,8 +123,9 @@ let private linearGenericError () =
 // Record type can't be linear for now.
 type private LinearRecord = { Linear: __linear<int> }
 
-// Union type can't have other linear unions.
+// Union type can't have other linear unions, especially they are forwardly referenced.
 // (Must own __linear directly.)
-type private OwnLinear = OwnLinear of LinearInt
+type private OwnLinear = OwnLinear of ForwardLinearUnion
+type private ForwardLinearUnion = FLU of __linear<int>
 
 let main _ = 1

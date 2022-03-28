@@ -185,8 +185,6 @@ let private tyIsLinear (rx: Rx) ty = tyIsLinearWith rx.LinearTySet ty
 // FIXME: Union types that own __linear directly are linear for now.
 //        This should be transitive.
 let private computeLinearTys (tirCtx: TirCtx) =
-  let isLinear ty = tyIsLinearWith emptyLinearTySet ty
-
   tirCtx.Tys
   |> TMap.fold
        (fun linearTySet tySerial (tyDef: TyDef) ->
@@ -198,7 +196,7 @@ let private computeLinearTys (tirCtx: TirCtx) =
                let variantDef = tirCtx.Variants |> mapFind variantSerial
 
                variantDef.HasPayload
-               && isLinear variantDef.PayloadTy)
+               && tyIsLinearWith linearTySet variantDef.PayloadTy)
 
            if linear then
              linearTySet |> TSet.add tySerial

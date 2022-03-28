@@ -129,6 +129,15 @@ let private nestedLinearCase () =
   let _ = __dispose unwrapped
   ()
 
+/// Union can be linear with subtle restriction.
+/// (Basically a union cannot forwardly reference to own another unions.)
+type private LinearWrapper = LinearWrapper of Counter
+
+let private linearWrapperCase () =
+  let w = LinearWrapper(create 0)
+  let (LinearWrapper c) = w
+  drop c
+
 let main _ =
   acquireAndThenDispose ()
   acquireAndUse ()
@@ -140,4 +149,5 @@ let main _ =
   genericLinearCase ()
   genericLinearFunCase ()
   nestedLinearCase ()
+  linearWrapperCase ()
   0
