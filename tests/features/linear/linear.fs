@@ -100,6 +100,19 @@ let private genericLinearCase () =
   let x, y = __dispose l
   assert (x = 2 && y = 3)
 
+let private linearMap (mapping: 'T -> 'U) (l: Linear<'T>) : Linear<'U> =
+  let (Linear l) = l
+  Linear(__acquire (mapping (__dispose l)))
+
+let private genericLinearFunCase () =
+  let l =
+    Linear(__acquire 2)
+    |> linearMap (fun (x: int) -> x + 1)
+
+  let (Linear l) = l
+  let n = __dispose l
+  assert (n = 3)
+
 let private optionOfLinearCase () =
   let linearOpt = Linear(__acquire (5, 7)) |> Some
 
@@ -125,5 +138,6 @@ let main _ =
   nestedMatches ()
   genericWrapperCase ()
   genericLinearCase ()
+  genericLinearFunCase ()
   nestedLinearCase ()
   0

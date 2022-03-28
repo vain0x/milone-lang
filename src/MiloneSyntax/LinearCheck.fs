@@ -3,6 +3,7 @@ module rec MiloneSyntax.LinearCheck
 open MiloneShared.SharedTypes
 open MiloneShared.Util
 open MiloneSyntax.Tir
+open MiloneSyntax.TySystem
 open MiloneSyntaxTypes.TirTypes
 open Std.StdError
 open Std.StdMap
@@ -120,7 +121,7 @@ let private errorToString err =
 
   | LinearError.StaticVarCannotBeLinear -> "This static variable cannot be linear type."
 
-  | LinearError.GenericFunCannotUseLinear -> "This generic function cannot take or return linear values."
+  | LinearError.GenericFunCannotUseLinear -> "This generic function cannot bind type variables to linear types."
 
   | LinearError.BranchMustUse varNames ->
     assert (varNames |> List.isEmpty |> not)
@@ -497,7 +498,72 @@ let private lcExpr (rx: Rx) (ctx: LinearCheckCtx) expr : LinearCheckCtx =
 
     if funIsGeneric rx funSerial
        && funTyContainsLinear ty then
-      addError LinearError.GenericFunCannotUseLinear loc ctx
+      let funDef = rx.Funs |> mapFind funSerial
+      let (TyScheme (_, defTy)) = funDef.Ty
+
+      let defTy =
+        // Replace univTy -> metaTy
+        let rec go ty =
+          match ty with
+          | Ty (UnivTk (tySerial, _, loc), _) -> tyMeta tySerial loc
+          | Ty (_, []) -> ty
+          | Ty (tk, tys) -> Ty(tk, List.map go tys)
+
+        go defTy
+
+      // Extraction of type assignment.
+      let rec go acc lTy rTy =
+        match unifyNext lTy rTy loc with
+        | UnifyOk -> Some acc
+
+        | UnifyOkWithStack stack ->
+          List.fold
+            (fun accOpt (l, r) ->
+              match accOpt with
+              | Some acc -> go acc l r
+              | None -> None)
+            (Some acc)
+            stack
+
+        | UnifyError (log, loc) ->
+          // __trace (__dump (log, loc))
+          None
+
+        | UnifyExpandMeta (tySerial, otherTy) ->
+          match acc |> assocTryFind compare tySerial with
+          | Some ty -> go acc ty otherTy
+
+          | None ->
+            let otherTy =
+              otherTy
+              |> tySubst (fun tySerial -> acc |> assocTryFind compare tySerial)
+
+            match unifyAfterExpandMeta lTy rTy tySerial otherTy loc with
+            | UnifyAfterExpandMetaResult.OkNoBind -> Some acc
+            | UnifyAfterExpandMetaResult.OkBind -> Some((tySerial, otherTy) :: acc)
+            | UnifyAfterExpandMetaResult.Error (log, loc) ->
+              // __trace (__dump (log, loc))
+              None
+
+        | UnifyExpandSynonym _ -> unreachable () // Synonym types are resolved in Typing.
+
+      let tyArgsOpt =
+        go [] ty defTy |> Option.map (List.map snd)
+
+      match tyArgsOpt with
+      | Some tyArgs ->
+        if tyArgs |> List.exists (tyIsLinear rx) then
+          addError LinearError.GenericFunCannotUseLinear loc ctx
+        else
+          ctx
+
+      | None ->
+        // Unification might fail when program doesn't type-check.
+        if ctx.Logs |> List.isEmpty then
+          unreachable (ty, defTy, loc)
+
+        assert (ctx.Logs |> List.isEmpty |> not)
+        ctx
     else
       ctx
 
@@ -661,10 +727,10 @@ let private lwProgram linearTys modules tirCtx =
         Funs =
           tirCtx.Funs
           |> TMap.map (fun _ (funDef: FunDef) ->
-            let (TyScheme (tyArgs, ty)) = funDef.Ty
+            let (TyScheme (tyVars, ty)) = funDef.Ty
 
-            if List.isEmpty tyArgs && tyIsLinear rx ty then
-              { funDef with Ty = TyScheme([], lwTy ty) }
+            if tyIsLinear rx ty then
+              { funDef with Ty = TyScheme(tyVars, lwTy ty) }
             else
               funDef)
         Tys =
