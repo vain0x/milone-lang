@@ -63,17 +63,38 @@ let private cannotUseAsPattern () =
   let _ = __dispose second
   0
 
+let private linearOptionMustBeDisposed () =
+  let _opt: __linear<int> option = None
+
 // -----------------------------------------------
-// Wrapped
+// LinearInt
 // -----------------------------------------------
 
 // Linear check should also work for linear unions.
 
-type private Wrapped = Wrapped of __linear<int>
-let private wrap (n: int) = Wrapped(__acquire n)
+type private LinearInt = LinearInt of __linear<int>
+let private wrap (n: int) = LinearInt(__acquire n)
+
+let private notDisposedLinearUnionError () =
+  let _unused = wrap 0
+  ()
 
 let private notDisposedWrappedUnionError () =
-  let unused = wrap 0
+  let _unused = wrap 0
+  ()
+
+/// Non-linear generic union.
+type private Identity<'T> = Identity of 'T
+
+let private notDisposedLinearlyUsedGenericUnionError () =
+  let _unused = Identity(__acquire 0)
+  ()
+
+/// Linear generic union.
+type private GenericLinear<'T> = GenericLinear of __linear<'T>
+
+let private notDisposedGenericLinearError () =
+  let _unused = GenericLinear(__acquire 0)
   ()
 
 // -----------------------------------------------
@@ -95,9 +116,6 @@ type private LinearRecord = { Linear: __linear<int> }
 
 // Union type can't have other linear unions.
 // (Cannot own linear values indirectly.)
-type private OwnLinear = OwnLinear of Wrapped
-
-// Generic union can't be linear for now.
-type private GenericLinear<'T> = GL of __linear<'T>
+type private OwnLinear = OwnLinear of LinearInt
 
 let main _ = 1

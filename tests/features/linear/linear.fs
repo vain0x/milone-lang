@@ -83,6 +83,33 @@ let private loopCase () =
   let counters: Counter list = acquireMany 0
   disposeMany counters
 
+/// Generic union with type variable bound to linear type.
+type private Wrapper<'T> = Wrapper of 'T
+
+let private genericWrapperCase () =
+  let w = Wrapper(__acquire "contents")
+  let (Wrapper value) = w
+  assert (__dispose value = "contents")
+
+/// Generic union that is always linear.
+type private Linear<'T> = Linear of __linear<'T>
+
+let private genericLinearCase () =
+  let linear = Linear(__acquire (2, 3))
+  let (Linear l) = linear
+  let x, y = __dispose l
+  assert (x = 2 && y = 3)
+
+let private optionOfLinearCase () =
+  let linearOpt = Linear(__acquire (5, 7)) |> Some
+
+  match linearOpt with
+  | Some (Linear l) ->
+    let x, y = __dispose l
+    assert (x = 5 && y = 3)
+
+  | None -> ()
+
 let main _ =
   acquireAndThenDispose ()
   acquireAndUse ()
@@ -90,4 +117,6 @@ let main _ =
   branchCase ()
   multipleMatches ()
   nestedMatches ()
+  genericWrapperCase ()
+  genericLinearCase ()
   0

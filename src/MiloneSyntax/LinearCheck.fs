@@ -98,8 +98,6 @@ type private LinearError =
   | StaticVarCannotBeLinear
   | GenericFunCannotUseLinear
   | BranchMustUse of varNames: string list
-  | GenericTyCannotBeLinear
-  | VariantCannotOwnLinearUnion
   | FieldCannotBeLinear
 
 let private errorToString err =
@@ -114,8 +112,7 @@ let private errorToString err =
   | LinearError.VariableCannotBeCaptured ->
     "This linear variable must not be used in local functions and function expressions."
 
-  | LinearError.CannotUseAsPat ->
-    "This linear variable cannot be defined by AS pattern."
+  | LinearError.CannotUseAsPat -> "This linear variable cannot be defined by AS pattern."
 
   | LinearError.StaticVarCannotBeLinear -> "This static variable cannot be linear type."
 
@@ -128,8 +125,6 @@ let private errorToString err =
     + S.concat "; " varNames
     + "]"
 
-  | LinearError.GenericTyCannotBeLinear -> "Generic types cannot be linear for now."
-  | LinearError.VariantCannotOwnLinearUnion -> "Variants cannot own linear union for now."
   | LinearError.FieldCannotBeLinear -> "Fields cannot be linear for now."
 
 let private addError err (loc: Loc) (ctx: LinearCheckCtx) =
@@ -157,8 +152,7 @@ let private tyIsLinearWith linearTySet ty : bool =
     | NativeFunTk
     | NativeTypeTk _
     | MetaTk _
-    | UnivTk _
-    | RecordTk _ -> false // Record can't be linear for now.
+    | UnivTk _ -> false
 
     | LinearTk -> true
 
@@ -166,8 +160,15 @@ let private tyIsLinearWith linearTySet ty : bool =
     | ListTk -> tyArgs |> List.exists go
 
     | UnionTk (tySerial, _) ->
-      List.isEmpty tyArgs
-      && TSet.contains tySerial linearTySet
+      // Note that it's unclear whether union is a linear when it has a linear type as argument
+      // since that type variable might not appear or not *owned*.
+      // (E.g. 'T in type U<'T> = V of ('T -> 'T) isn't owned.)
+      TSet.contains tySerial linearTySet
+      || tyArgs |> List.exists go
+
+    | RecordTk _ ->
+      assert (List.isEmpty tyArgs)
+      false // Record can't be linear nor generic for now.
 
     | SynonymTk _
     | InferTk _ -> unreachable () // SynonymTk, InferTk are resolved in Typing.
@@ -185,9 +186,7 @@ let private computeLinearTys (tirCtx: TirCtx) =
   |> TMap.fold
        (fun linearTySet tySerial (tyDef: TyDef) ->
          match tyDef with
-         | UnionTyDef (_, [], variants, _) ->
-           // Polymorphic union can't be linear for now.
-
+         | UnionTyDef (_, _, variants, _) ->
            let linear =
              variants
              |> List.exists (fun variantSerial ->
@@ -224,32 +223,6 @@ let private lcDefs linearTys (tirCtx: TirCtx) =
                Log.Error(errorToString LinearError.StaticVarCannotBeLinear)
 
              (log, varDef.Loc) :: logs
-           else
-             logs)
-         logs
-
-  let logs =
-    tirCtx.Variants
-    |> TMap.fold
-         (fun logs _ (variantDef: VariantDef) ->
-           if variantDef.HasPayload
-              && (linearTys
-                  |> TSet.contains variantDef.UnionTySerial
-                  |> not) then
-             if tyIsLinear rx variantDef.PayloadTy then
-               let err =
-                 match tirCtx.Tys |> mapFind variantDef.UnionTySerial with
-                 | UnionTyDef (_, tyArgs, _, _) ->
-                   if List.isEmpty tyArgs then
-                     LinearError.VariantCannotOwnLinearUnion
-                   else
-                     LinearError.GenericTyCannotBeLinear
-                 | _ -> unreachable ()
-
-               let log = Log.Error(errorToString err)
-               (log, variantDef.Loc) :: logs
-             else
-               logs
            else
              logs)
          logs
@@ -462,11 +435,9 @@ let private lcPat (rx: Rx) (ctx: LinearCheckCtx) pat : LinearCheckCtx =
     else
       ctx
 
-  | TVariantPat (_, ty, loc) ->
-    if tyIsLinear rx ty then
-      addError LinearError.VariableNotUsed loc ctx
-    else
-      ctx
+  | TVariantPat _ ->
+    // Matching to variant is considered a use, okay?
+    ctx
 
   | TNodePat (_, argPats, _, _) -> argPats |> List.fold (lcPat rx) ctx
 
@@ -661,9 +632,7 @@ let private lwProgram linearTys modules tirCtx =
         Variants =
           tirCtx.Variants
           |> TMap.map (fun _ (variantDef: VariantDef) ->
-            if rx.LinearTySet
-               |> TSet.contains variantDef.UnionTySerial
-               && tyIsLinear rx variantDef.PayloadTy then
+            if tyIsLinear rx variantDef.PayloadTy then
               { variantDef with PayloadTy = lwTy variantDef.PayloadTy }
             else
               variantDef)
