@@ -37,6 +37,7 @@ User-defined types:
 
 ## Language extensions
 
+- [linear type](x_linear_type.md)
 - [native code](x_native_code.md)
 
 ## Others
