@@ -37,7 +37,7 @@ This is a story about linearity and file system API.
 
 Consider a file handle, which is obtained by opening a file to operate on it.
 The handle must be passed in an API to close the file.
-By wrapping the handle in a linear type, linearity check ensures that all file handles are closed property.
+By wrapping the handle in a linear type, linearity check ensures that all file handles are closed.
 
 Let a module provide an API for file system manipulation, which consists of a FileHandle type and functions to operate on files:
 
@@ -146,7 +146,7 @@ Otherwise, it becomes unclear that a linear variable is disposed or not, dependi
 
 `if` expressions go same.
 
-## Future extensions
+## Immaturity and future extensions
 
 There are some restrictions due to maturity of language and implementation.
 
@@ -154,6 +154,7 @@ There are some restrictions due to maturity of language and implementation.
 - Record types can't be linear. In other words, field types can't be linear.
 - Generic function can't bind type variables to linear types.
     - Note that type variables of generic types can be linear; e.g. `option<__linear<int>>`.
+- Linear variables can't be used in local functions.
 
 ## Advanced topics
 
@@ -161,3 +162,8 @@ There are some restrictions due to maturity of language and implementation.
 
 Runtime representation of `__linear<T>` is same as `T`.
 `__acquire` and `__dispose` are noop at runtime.
+
+### Prior art
+
+- [linear types · Wiki · Glasgow Haskell Compiler / GHC · GitLab](https://gitlab.haskell.org/ghc/ghc/-/wikis/linear-types): Linear types in Haskell as compiler extension
+- [What is Ownership? - The Rust Programming Language](https://doc.rust-lang.org/book/ch04-01-what-is-ownership.html): "Ownership" in the Rust language. Ownership shares the motivation but is different than linear types.
