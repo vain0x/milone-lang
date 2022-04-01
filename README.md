@@ -152,6 +152,13 @@ See also:
 - [the tests/examples directory](tests/examples) for working codes
 - [the examples directory](examples) for more practical codes
 
+## Internals
+
+For compiler internals:
+
+- [docs/internals](docs/internals)
+- [src](src)
+
 ## License
 
 Milone-lang tools (compiler and LSP server) are distributed under either:
