@@ -1,3 +1,4 @@
+// See docs/internals/arity_check.md
 module rec MiloneSyntax.ArityCheck
 
 open MiloneShared.SharedTypes
