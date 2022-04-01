@@ -120,7 +120,7 @@ Function must NOT capture any local variables.
 
 ## Call statically-linked native function
 
-`__nativeFun ("name", args...)` is a special syntax to call a native function with the specified name.
+`__nativeFun ("name", args...)` is a special expression to call a native function with the specified name.
 
 An extern declaration of the function is also generated.
 
@@ -130,8 +130,8 @@ An extern declaration of the function is also generated.
     __nativeFun "abort"
 
     // void *calloc(size_t, size_t);
-    // calloc(4, sizeof(int))
-    let p: voidptr = __nativeFun ("calloc", unativeint 4, unativeint (__sizeOfVal 0))
+    // void *p = calloc(4, sizeof(int));
+    let p: voidptr = __nativeFun ("calloc", 4un, unativeint (__sizeOfVal 0))
     // ...
 ```
 
@@ -145,21 +145,21 @@ Restriction: Variadic parameter functions (e.g. `printf`) can't be called with t
 
 ## Call dynamically-linked native function
 
-(Not implemented yet. Use dlopen on Unix and link libdl. Use LoadLibrary on Windows.)
+(Not implemented yet. Use `dlopen` on Unix and link `libdl` (-lm). Use `LoadLibrary` on Windows.)
 
 ## Size of values
 
-`__sizeOfVal (expr: T)` is the size of a value of a type T in bytes.
-`expr` is not evaluated.
-
-This is similar to `sizeof(expr)` in C.
+`__sizeOfVal (expr: T)` is the size of type T in bytes. Equivalent to `sizeof(expr)` in C.
 
 ```fsharp
-    // If the type of `expr` is T, __sizeOfVal(expr) is compiled to sizeof(T).
-    __sizeOfVal expr
+    // If the type of `expr` is T, __sizeOfVal(expr) equals to (int)sizeof(T).
+    let _: int = __sizeOfVal expr
+```
 
-    // expr is guaranteed to not evaluate.
-    let nullptr: __constptr<int> = __nativeCast (unativeint 0)
+It's guaranteed that the argument isn't evaluated.
+
+```fsharp
+    let nullptr: __constptr<int> = __nativeCast 0un
     assert (__sizeOfVal (__ptrRead nullptr 0) = 4)
 ```
 
@@ -175,8 +175,13 @@ Other arguments are bound to placeholders (see below).
     let e: int = __nativeExpr "errno"
 ```
 
-Placeholder `{i}` (`i >= 0`) in the template is each replaced with the i'th placeholder argument.
-Warning: Currently there's no way to escape braces.
+`__nativeExpr` can be arbitrary type, i.e. `'A'`. Incorrect type would incur C compile error. Warning: Result type must NOT be `unit`; otherwise the expression might be erased during compilation.
+
+`__nativeExpr` should be used when the expression is *pure*. Use `__nativeStmt` for side-effect.
+
+### Placeholders
+
+Placeholder `{i}` (`i >= 0`) in the template is each replaced with the i'th placeholder argument. Remark: Currently there's no way to escape braces.
 
 ### Value placeholders
 
@@ -189,17 +194,17 @@ Placeholder argument is compiled to C normally and substitutes a placeholder in 
 
 ### Type placeholders
 
-`__type: T` is a special syntax for placeholder argument.
+`__type: T` is a special expression for placeholder argument.
 It represents a type rather than value.
 
 ```fsharp
     // size_t n = sizeof(struct String);
-    let n: unativeint = __nativeExpr ("sizeof({0})", __type: string)
+    let n: unativeint = __nativeExpr ("sizeof({0})", (__type: string))
 ```
 
 ## Embedded native statements
 
-`__nativeStmt ("statement", args...)` is a statement to embed a C statement into generated code.
+`__nativeStmt ("statement", args...)` is an expression to embed a C statement into generated code.
 The string literal `"statement"` contains arbitrary C statement.
 Other arguments are bound to placeholders (same as `__nativeExpr`.)
 
@@ -214,7 +219,7 @@ Other arguments are bound to placeholders (same as `__nativeExpr`.)
 
 ## Embedded native declarations
 
-`__nativeDecl ("declaration", args...)` is a declaration to embed a C declaration into generated code.
+`__nativeDecl ("declaration", args...)` is an expression to embed a C declaration into generated code.
 The string literal `"declaration"` contains arbitrary C declaration.
 Other arguments are bound to placeholders (same as `__nativeExpr`.)
 
@@ -224,16 +229,18 @@ Declarations are hoisted to top-level (even if `__nativeDecl` is used inside a f
     __nativeDecl "#include <errno.h>"
 ```
 
+Value of `__nativeDecl (...)` is `()`.
+
 ## Embedded native types
 
-`__nativeType<T>` is a type to embed a C type into generated code.
+`__nativeType<T>` is a special type to embed a C type into generated code.
 `T` is an identifier, which can be undefined.
 
 ```fsharp
     type F = __nativeType<FILE>
 
-    // FILE *stdin;
-    let stdin: nativeptr<F> = __nativeExpr "stdin"
+    // FILE *input = stdin;
+    let input: nativeptr<F> = __nativeExpr "stdin"
 ```
 
 ----
