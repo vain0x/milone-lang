@@ -636,6 +636,15 @@ let private lcProgram linearTys (modules: TProgram) (tirCtx: TirCtx) : TirCtx =
 
 // Remove linear primitives.
 
+let private tyContainsLinear ty =
+  let rec go ty =
+    match ty with
+    | Ty (LinearTk, _) -> true
+    | Ty (_, []) -> false
+    | Ty (_, tyArgs) -> tyArgs |> List.exists go
+
+  go ty
+
 let private lwTy ty : Ty =
   let (Ty (tk, tyArgs)) = ty
 
@@ -688,37 +697,33 @@ let private lwStmt stmt : TStmt =
 
   | TBlockStmt (isRec, stmts) -> TBlockStmt(isRec, List.map lwStmt stmts)
 
-let private lwProgram linearTys modules tirCtx =
+let private lwProgram modules (tirCtx: TirCtx) : TProgram * TirCtx =
   let modules =
     modules
     |> List.map (fun (m: TModule) ->
-      let rx = newRxForModule linearTys m tirCtx
-
       { m with
           Vars =
             m.Vars
             |> TMap.map (fun _ (varDef: VarDef) ->
-              if tyIsLinear rx varDef.Ty then
+              if tyContainsLinear varDef.Ty then
                 { varDef with Ty = lwTy varDef.Ty }
               else
                 varDef)
           Stmts = m.Stmts |> List.map lwStmt })
 
   let tirCtx =
-    let rx = newRxForToplevel linearTys tirCtx
-
     { tirCtx with
         StaticVars =
           tirCtx.StaticVars
           |> TMap.map (fun _ (varDef: VarDef) ->
-            if tyIsLinear rx varDef.Ty then
+            if tyContainsLinear varDef.Ty then
               { varDef with Ty = lwTy varDef.Ty }
             else
               varDef)
         Variants =
           tirCtx.Variants
           |> TMap.map (fun _ (variantDef: VariantDef) ->
-            if tyIsLinear rx variantDef.PayloadTy then
+            if tyContainsLinear variantDef.PayloadTy then
               { variantDef with PayloadTy = lwTy variantDef.PayloadTy }
             else
               variantDef)
@@ -727,7 +732,7 @@ let private lwProgram linearTys modules tirCtx =
           |> TMap.map (fun _ (funDef: FunDef) ->
             let (TyScheme (tyVars, ty)) = funDef.Ty
 
-            if tyIsLinear rx ty then
+            if tyContainsLinear ty then
               { funDef with Ty = TyScheme(tyVars, lwTy ty) }
             else
               funDef)
@@ -736,11 +741,15 @@ let private lwProgram linearTys modules tirCtx =
           |> TMap.map (fun _ (tyDef: TyDef) ->
             match tyDef with
             | RecordTyDef (ident, tyArgs, fields, repr, loc) ->
-              let fields =
-                fields
-                |> List.map (fun (ident, ty, loc) -> ident, lwTy ty, loc)
+              if fields
+                 |> List.exists (fun (_, ty, _) -> tyContainsLinear ty) then
+                let fields =
+                  fields
+                  |> List.map (fun (ident, ty, loc) -> ident, lwTy ty, loc)
 
-              RecordTyDef(ident, tyArgs, fields, repr, loc)
+                RecordTyDef(ident, tyArgs, fields, repr, loc)
+              else
+                tyDef
 
             | UnivTyDef _
             | SynonymTyDef _
@@ -759,6 +768,6 @@ let linearCheck (modules: TProgram, tirCtx: TirCtx) : TProgram * TirCtx =
   let tirCtx = lcProgram linearTys modules tirCtx
 
   if tirCtx.Logs |> List.isEmpty then
-    lwProgram linearTys modules tirCtx
+    lwProgram modules tirCtx
   else
     modules, tirCtx
