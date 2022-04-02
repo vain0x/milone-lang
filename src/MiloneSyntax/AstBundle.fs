@@ -220,8 +220,6 @@ let private producer (fetchModule: FetchModuleFun) (_: State) (r: ModuleRequest)
 // Interface
 // -----------------------------------------------
 
-type private SymbolCount = int
-
 type private BundleResult = (ModuleSyntaxData * NRoot) list list * Error list
 
 let bundle (fetchModule: FetchModuleFun) (entryProjectName: ProjectName) : BundleResult =
