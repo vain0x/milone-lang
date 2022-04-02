@@ -4,6 +4,7 @@ Language references.
 
 ## Syntax
 
+- [syntax.md](syntax.md)
 - [let_expressions](let_expressions.md)
 - [match_expressions](match_expressions.md)
 - [modules](modules.md)
