@@ -1,9 +1,4 @@
-/// # AstBundle
-///
-/// Resolves dependencies between modules.
-/// This stage determines the set of modules in the project and the ordering of them.
-///
-/// These modules are combined into single NIR program.
+// See docs/internals/ast_bundle.md
 module rec MiloneSyntax.AstBundle
 
 open MiloneShared.SharedTypes
