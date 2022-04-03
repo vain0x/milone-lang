@@ -1,0 +1,33 @@
+open Std.Vector
+
+let private basicCase () : unit =
+  let v = Vector.empty ()
+  let n, v = Vector.length v
+  assert (n = 0)
+
+  let v = Vector.push 31 v
+  let n, v = Vector.length v
+  assert (n = 1)
+
+  let v = Vector.push 42 v
+  let n, v = Vector.length v
+  assert (n = 2)
+
+  let itemOpt, v = Vector.pop v
+  assert (Option.defaultValue 0 itemOpt = 42)
+  let n, v = Vector.length v
+  assert (n = 1)
+
+  let itemOpt, v = Vector.pop v
+  assert (Option.defaultValue 0 itemOpt = 31)
+  let n, v = Vector.length v
+  assert (n = 0)
+
+  let itemOpt, v = Vector.pop v
+  assert (Option.defaultValue 0 itemOpt = 0)
+  let n, v = Vector.length v
+  assert (n = 0)
+
+  Vector.dispose v
+
+let testVector () = basicCase ()

@@ -1,0 +1,7 @@
+// Test Std library.
+
+open Std.VectorTests
+
+let main _ =
+  testVector ()
+  0

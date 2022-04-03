@@ -1,0 +1,144 @@
+module rec LibLinear.Vector
+
+open Std.StdError
+
+// For memcpy
+__nativeDecl "#include <string.h>"
+
+/// Linear dynamic array.
+type Vector<'T> = private Vector of ptr: __linear<nativeptr<'T>> * length: uint * capacity: uint
+
+/// Allocates an untyped dynamic array with `calloc`.
+///
+/// Returns NULL if count or size is zero.
+let private rawAllocate (count: uint) (size: uint) : __linear<voidptr> =
+  if (count ||| size) = 0u then
+    __trace "allocate 0"
+    __acquire (__nativeCast 0un)
+  else
+    assert (count < (1u <<< 31) / size)
+
+    let ptr: voidptr =
+      __nativeExpr ("calloc({0}, {1})", unativeint count, unativeint size)
+
+    __trace (
+      ("allocate " + string (unativeint ptr))
+      + (" " + string (count * size))
+    )
+
+    assert (__nativeExpr("{0} != NULL", ptr))
+    __acquire ptr
+
+/// Deallocates an untyped dynamic array with `free`.
+///
+/// If ptr is null, it's noop.
+let private rawDeallocate (ptr: __linear<voidptr>) : unit =
+  let ptr = __dispose ptr
+  __trace ("free " + string (unativeint ptr))
+  __nativeStmt ("free({0});", ptr)
+
+/// Grows an untyped vector.
+///
+/// Vector moves to newly reallocated memory.
+/// New memory must have a capacity `minLength` at least.
+let private rawGrow
+  (ptr: __linear<voidptr>)
+  (length: uint)
+  (minLength: uint)
+  (capacity: uint)
+  (size: uint)
+  : __linear<voidptr> * uint =
+  let oldPtr = __dispose ptr
+
+  // Exponentially grow.
+  // newCapacity >= max(capacity * 2, minLength, 15).
+  let newCapacity = (capacity <<< 1) ||| minLength ||| 15u
+
+  __trace (
+    ("grow len:" + string length)
+    + (" cap:" + string capacity)
+    + (" -> " + string newCapacity)
+  )
+
+  let newPtr = __dispose (rawAllocate newCapacity size)
+
+  if __nativeExpr ("{0} != NULL", oldPtr) then
+    if length <> 0u then
+      __nativeStmt ("memcpy({0}, {1}, {2});", newPtr, oldPtr, unativeint length * unativeint size)
+
+    rawDeallocate (__acquire oldPtr)
+
+  __acquire newPtr, newCapacity
+
+/// Appends an item to an untyped vector.
+///
+/// Returns new ptr and capacity since the vector grows if full.
+let private rawPush
+  (item: obj)
+  (ptr: __linear<voidptr>)
+  (length: uint)
+  (capacity: uint)
+  (size: uint)
+  : __linear<voidptr> * uint =
+  let ptr, capacity =
+    if length = capacity then
+      rawGrow ptr length (length + 1u) capacity size
+    else
+      ptr, capacity
+
+  let ptr = __dispose ptr
+
+  __nativeStmt (
+    "memcpy(&({0})[{1}], {2}, {3});",
+    (__nativeCast ptr: nativeptr<byte>),
+    unativeint length * unativeint size,
+    item,
+    unativeint size
+  )
+
+  __acquire ptr, capacity
+
+module Vector =
+  /// Gets an empty vector.
+  let empty () : Vector<'T> =
+    Vector(__acquire (__nativeCast 0un), 0u, 0u)
+
+  /// Disposes a vector.
+  let dispose (v: Vector<'T>) : unit =
+    let (Vector (ptr, _, _)) = v
+    let ptr: __linear<voidptr> = __acquire (__nativeCast (__dispose ptr))
+    rawDeallocate ptr
+
+  /// Gets the length.
+  let length (v: Vector<'T>) : int * Vector<'T> =
+    let (Vector (ptr, length, capacity)) = v
+    int length, Vector(ptr, length, capacity)
+
+  /// Appends an item to the end of vector.
+  let push (item: 'T) (v: Vector<'T>) : Vector<'T> =
+    let (Vector (ptr, length, capacity)) = v
+
+    let ptr, capacity =
+      let itemPtr: obj = __nativeExpr ("&({0})", item)
+      let ptr: __linear<voidptr> = __acquire (__nativeCast (__dispose ptr))
+      let size = uint (__sizeOfVal item)
+      rawPush itemPtr ptr length capacity size
+
+    let ptr: __linear<nativeptr<'T>> = __acquire (__nativeCast (__dispose ptr))
+    Vector(ptr, length + 1u, capacity)
+
+  /// Removes the last item from the vector unless empty.
+  ///
+  /// Remark: Allocated memory doesn't get freed.
+  let pop (v: Vector<'T>) : 'T option * Vector<'T> =
+    let (Vector (ptr, length, capacity)) = v
+
+    if length <> 0u then
+      let ptr = __dispose ptr
+
+      let item: 'T =
+        __ptrRead (__nativeCast ptr) (int (length - 1u))
+
+      Some item, Vector(__acquire ptr, length - 1u, capacity)
+    else
+      None, Vector(ptr, length, capacity)
