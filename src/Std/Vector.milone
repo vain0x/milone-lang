@@ -26,7 +26,7 @@ let private rawAllocate (count: uint) (size: uint) : __linear<voidptr> =
       + (" " + string (count * size))
     )
 
-    assert (__nativeExpr("{0} != NULL", ptr))
+    assert (__nativeExpr ("{0} != NULL", ptr))
     __acquire ptr
 
 /// Deallocates an untyped dynamic array with `free`.
@@ -103,6 +103,16 @@ module Vector =
   let empty () : Vector<'T> =
     Vector(__acquire (__nativeCast 0un), 0u, 0u)
 
+  /// Allocates an empty vector with the specified capacity.
+  let alloc (capacity: int) : Vector<'T> =
+    if capacity > 0 then
+      let size = __sizeOfVal (unbox (box ()): 'T)
+      let ptr = rawAllocate (uint capacity) (uint size)
+      let ptr: __linear<nativeptr<'T>> = __acquire (__nativeCast (__dispose ptr))
+      Vector(ptr, 0u, uint capacity)
+    else
+      empty ()
+
   /// Disposes a vector.
   let dispose (v: Vector<'T>) : unit =
     let (Vector (ptr, _, _)) = v
@@ -113,6 +123,11 @@ module Vector =
   let length (v: Vector<'T>) : int * Vector<'T> =
     let (Vector (ptr, length, capacity)) = v
     int length, Vector(ptr, length, capacity)
+
+  /// Gets the capacity.
+  let capacity (v: Vector<'T>) : int * Vector<'T> =
+    let (Vector (ptr, length, capacity)) = v
+    int capacity, Vector(ptr, length, capacity)
 
   /// Gets an item at the position. Out of bound causes crash.
   let forceGet (i: int) (v: Vector<'T>) : 'T * Vector<'T> =

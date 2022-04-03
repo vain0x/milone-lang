@@ -1,1 +1,1 @@
-sanitize address,undefined,leak
+sanitize address,leak,undefined

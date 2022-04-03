@@ -30,6 +30,12 @@ let private basicCase () : unit =
 
   Vector.dispose v
 
+let private allocCase () : unit =
+  let v = Vector.alloc 256
+  let capacity, v = Vector.capacity v
+  assert (capacity = 256)
+  Vector.dispose v
+
 let private forceGetCase () =
   let n = 8
 
@@ -91,5 +97,6 @@ let private forceSetCase () =
 
 let testVector () =
   basicCase ()
+  allocCase ()
   forceGetCase ()
   forceSetCase ()
