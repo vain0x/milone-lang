@@ -4,6 +4,7 @@ Language references.
 
 ## Syntax
 
+- [syntax](syntax.md)
 - [let_expressions](let_expressions.md)
 - [match_expressions](match_expressions.md)
 - [modules](modules.md)
@@ -42,3 +43,7 @@ User-defined types:
 ## Others
 
 - [milone_syntax_tree.ungram](milone_syntax_tree.ungram): The form of syntax tree described in ungrammar
+
+## See Also
+
+- F# language reference might be helpful: [Language Guide - F# | Microsoft Docs](https://docs.microsoft.com/en-us/dotnet/fsharp/language-reference/)
