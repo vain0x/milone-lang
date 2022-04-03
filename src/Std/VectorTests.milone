@@ -54,6 +54,42 @@ let private forceGetCase () =
 
   Vector.dispose v
 
+let private forceSetCase () =
+  let n = 10
+
+  // Make vector.
+  let v =
+    let rec go i v =
+      if i < n then
+        go (i + 1) (Vector.push 0 v)
+      else
+        v
+
+    go 0 (Vector.empty ())
+
+  // Compute frequency.
+  let v =
+    let rec go xs v =
+      match xs with
+      | [] -> v
+      | x :: xs ->
+        let n, v = Vector.forceGet x v
+        go xs (Vector.forceSet x (n + 1) v)
+
+    go [ 3; 1; 4; 1; 5; 9 ] v
+
+  let f0, v = Vector.forceGet 0 v
+  assert (f0 = 0)
+
+  let f2, v = Vector.forceGet 1 v
+  assert (f2 = 2)
+
+  let f9, v = Vector.forceGet 9 v
+  assert (f9 = 1)
+
+  Vector.dispose v
+
 let testVector () =
   basicCase ()
   forceGetCase ()
+  forceSetCase ()
