@@ -8,14 +8,26 @@ Documentation about design and implementation of the compiler.
 
 Validation:
 
-- ~~parse~~
+- Per-file:
+    - [tokenize](tokenize.md)
+    - ~~parse~~
+    - ~~nir_gen~~
+- [ast_bundle](ast_bundle.md)
 - [name_resolution](name_resolution.md)
 - ~~type_check~~
 - [arity_check](arity_check.md)
+- ~~linear_check~~
 
 Transformation:
 
 - ~~record_resolution~~
-- etc.
+- ~~derive~~
+- ~~closure_conversion~~
+- ~~eta_expansion~~
+- ~~auto_box~~
+- ~~monomorphization~~
+- ~~mir_gen~~
+- ~~cir_gen~~
+- ~~cir_dump~~
 
 See also header comments in implementation files.
