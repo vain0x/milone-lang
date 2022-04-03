@@ -114,6 +114,14 @@ module Vector =
     let (Vector (ptr, length, capacity)) = v
     int length, Vector(ptr, length, capacity)
 
+  /// Gets an item at the position. Out of bound causes crash.
+  let forceGet (i: int) (v: Vector<'T>) : 'T * Vector<'T> =
+    let (Vector (ptr, length, capacity)) = v
+    assert (uint i < length)
+    let ptr = __dispose ptr
+    let item: 'T = __ptrRead (__nativeCast ptr) i
+    item, Vector(__acquire ptr, length, capacity)
+
   /// Appends an item to the end of vector.
   let push (item: 'T) (v: Vector<'T>) : Vector<'T> =
     let (Vector (ptr, length, capacity)) = v

@@ -30,4 +30,30 @@ let private basicCase () : unit =
 
   Vector.dispose v
 
-let testVector () = basicCase ()
+let private forceGetCase () =
+  let n = 8
+
+  // Pre-compute factorial.
+  let v =
+    let rec go acc i v =
+      if i < n then
+        go (acc * (i + 1)) (i + 1) (Vector.push acc v)
+      else
+        v
+
+    go 1 0 (Vector.empty ())
+
+  let l, v = Vector.length v
+  assert (l = n)
+
+  let f5, v = Vector.forceGet 5 v
+  assert (f5 = 120)
+
+  let f7, v = Vector.forceGet 7 v
+  assert (f7 = 5040)
+
+  Vector.dispose v
+
+let testVector () =
+  basicCase ()
+  forceGetCase ()
