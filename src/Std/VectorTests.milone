@@ -1,5 +1,7 @@
 open Std.Vector
 
+module S = Std.StdString
+
 let private basicCase () : unit =
   let v = Vector.empty ()
   let n, v = Vector.length v
@@ -95,8 +97,32 @@ let private forceSetCase () =
 
   Vector.dispose v
 
+let private ofListCase () =
+  let v = Vector.ofList [ 3; 1; 4; 1; 5; 9 ]
+
+  let len, v = Vector.length v
+  assert (len = 6)
+
+  let n0, v = Vector.forceGet 0 v
+  let n1, v = Vector.forceGet 1 v
+  let n5, v = Vector.forceGet 5 v
+  assert (n0 = 3)
+  assert (n1 = 1)
+  assert (n5 = 9)
+
+  Vector.dispose v
+
+let private toListCase () =
+  let v = Vector.ofList [ 3; 1; 4; 1; 5; 9 ]
+  let xs, v = Vector.toList v
+  let xs = xs |> List.map string |> S.concat "; "
+  assert (xs = "3; 1; 4; 1; 5; 9")
+  Vector.dispose v
+
 let testVector () =
   basicCase ()
   allocCase ()
   forceGetCase ()
   forceSetCase ()
+  ofListCase ()
+  toListCase ()

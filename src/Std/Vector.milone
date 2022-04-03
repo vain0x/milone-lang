@@ -173,3 +173,45 @@ module Vector =
       Some item, Vector(__acquire ptr, length - 1u, capacity)
     else
       None, Vector(ptr, length, capacity)
+
+  /// Creates a vector from a list.
+  let ofList (xs: 'T list) : Vector<'T> =
+    match xs with
+    | [] -> empty ()
+
+    | x :: xs ->
+      let length = 1 + List.length xs
+      let size = __sizeOfVal (unbox (box ()): 'T)
+      let ptr = rawAllocate (uint length) (uint size)
+      let ptr: nativeptr<'T> = __nativeCast (__dispose ptr)
+
+      let rec ofListLoop i x xs =
+        __ptrWrite ptr i x
+
+        match xs with
+        | [] -> ()
+        | x :: xs -> ofListLoop (i + 1) x xs
+
+      ofListLoop 0 x xs
+      Vector(__acquire ptr, uint length, uint length)
+
+  /// Creates a list from a vector.
+  let toList (v: Vector<'T>) : 'T list * Vector<'T> =
+    let (Vector (ptr, length, capacity)) = v
+    let ptr = __dispose ptr
+
+    let xs =
+      let rec toListLoop acc i =
+        let acc = __ptrRead (__nativeCast ptr) i :: acc
+
+        if i = 0 then
+          acc
+        else
+          toListLoop acc (i - 1)
+
+      if length <> 0u then
+        toListLoop [] (int (length - 1u))
+      else
+        []
+
+    xs, Vector(__acquire ptr, length, capacity)
