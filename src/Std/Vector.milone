@@ -70,6 +70,19 @@ let private rawGrow
 
   __acquire newPtr, newCapacity
 
+/// Reserves more capacity for an untyped vector.
+///
+/// In result, `length + addition <= capacity`.
+let private rawReserve (addition: uint) ptr length capacity size =
+  assert (addition < (1u <<< 31) - length)
+
+  let minLength = length + uint addition
+
+  if minLength > capacity then
+    rawGrow ptr length minLength capacity size
+  else
+    ptr, capacity
+
 /// Appends an item to an untyped vector.
 ///
 /// Returns new ptr and capacity since the vector grows if full.
@@ -128,6 +141,23 @@ module Vector =
   let capacity (v: Vector<'T>) : int * Vector<'T> =
     let (Vector (ptr, length, capacity)) = v
     int capacity, Vector(ptr, length, capacity)
+
+  /// Reserves more memory for a vector.
+  ///
+  /// - If the vector already have plenty memory, it's noop.
+  /// - Result vector should satisfy `length + addition <= capacity`.
+  let reserve (addition: int) (v: Vector<'T>) : Vector<'T> =
+    assert (addition >= 0)
+
+    let (Vector (ptr, length, capacity)) = v
+    let ptr = __acquire (__nativeCast (__dispose ptr))
+    let size = uint (__sizeOfVal (unbox (box ()): 'T))
+
+    let ptr, capacity =
+      rawReserve (uint addition) ptr length capacity size
+
+    let ptr = __acquire (__nativeCast (__dispose ptr))
+    Vector(ptr, length, capacity)
 
   /// Gets an item at the position. Out of bound causes crash.
   let forceGet (i: int) (v: Vector<'T>) : 'T * Vector<'T> =
