@@ -112,6 +112,21 @@ let private ofListCase () =
 
   Vector.dispose v
 
+let private extendFromListCase () =
+  let v = Vector.empty () |> Vector.extendFromList [ 3; 1; 4; 1 ] |> Vector.extendFromList [ 5; 9 ]
+
+  let len, v = Vector.length v
+  assert (len = 6)
+  
+  let n0, v = Vector.forceGet 0 v
+  let n1, v = Vector.forceGet 1 v
+  let n5, v = Vector.forceGet 5 v
+  assert (n0 = 3)
+  assert (n1 = 1)
+  assert (n5 = 9)
+
+  Vector.dispose v
+
 let private toListCase () =
   let v = Vector.ofList [ 3; 1; 4; 1; 5; 9 ]
   let xs, v = Vector.toList v
@@ -182,6 +197,7 @@ let testVector () =
   forceGetCase ()
   forceSetCase ()
   ofListCase ()
+  extendFromListCase ()
   toListCase ()
 
   // Advanced cases.

@@ -109,7 +109,9 @@ let private rawPush
     if length = capacity then
       // #exponentially_grow
       // newCapacity >= max(capacity * 2, minLength, 15).
-      let newCapacity = (capacity <<< 1) ||| (length + 1u) ||| 15u
+      let newCapacity =
+        (capacity <<< 1) ||| (length + 1u) ||| 15u
+
       rawGrowExact newCapacity ptr length capacity size
     else
       ptr, capacity
@@ -221,26 +223,35 @@ module Vector =
     else
       None, Vector(ptr, length, capacity)
 
-  /// Creates a vector from a list.
-  let ofList (xs: 'T list) : Vector<'T> =
+  /// Appends all items in a list to the vector.
+  let extendFromList (xs: 'T list) (v: Vector<'T>) : Vector<'T> =
     match xs with
-    | [] -> empty ()
+    | [] -> v
 
     | x :: xs ->
-      let length = 1 + List.length xs
+      let (Vector (ptr, length, capacity)) = v
+      let ptr: __linear<voidptr> = __acquire (__nativeCast (__dispose ptr))
+
+      let addition = 1u + uint (List.length xs)
       let size = __sizeOfVal (unbox (box ()): 'T)
-      let ptr = rawAllocate (uint length) (uint size)
+
+      let ptr, capacity =
+        rawReserve addition ptr length capacity (uint size)
+
       let ptr: nativeptr<'T> = __nativeCast (__dispose ptr)
 
-      let rec ofListLoop i x xs =
+      let rec extendFromListLoop i x xs =
         __ptrWrite ptr i x
 
         match xs with
         | [] -> ()
-        | x :: xs -> ofListLoop (i + 1) x xs
+        | x :: xs -> extendFromListLoop (i + 1) x xs
 
-      ofListLoop 0 x xs
-      Vector(__acquire ptr, uint length, uint length)
+      extendFromListLoop (int length) x xs
+      Vector(__acquire ptr, length + addition, capacity)
+
+  /// Creates a vector from a list.
+  let ofList (xs: 'T list) : Vector<'T> = extendFromList xs (empty ())
 
   /// Creates a list from a vector.
   let toList (v: Vector<'T>) : 'T list * Vector<'T> =
