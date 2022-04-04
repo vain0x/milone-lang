@@ -194,30 +194,6 @@ module Vector =
     let (Vector (ptr, length, capacity)) = v
     int length, Vector(ptr, length, capacity)
 
-  /// Gets the capacity.
-  let capacity (v: Vector<'T>) : int * Vector<'T> =
-    let (Vector (ptr, length, capacity)) = v
-    int capacity, Vector(ptr, length, capacity)
-
-  /// Reserves more memory for a vector.
-  ///
-  /// - If the vector already have plenty memory, it's noop.
-  /// - Result vector should satisfy `length + addition <= capacity`.
-  ///   Note that new capacity may be greater than required size
-  ///   to ensure the number of reallocation is small (O(log N)).
-  let reserve (addition: int) (v: Vector<'T>) : Vector<'T> =
-    assert (addition >= 0)
-
-    let (Vector (ptr, length, capacity)) = v
-    let ptr = __acquire (__nativeCast (__dispose ptr))
-    let size = uint (__sizeOfVal (unbox (box ()): 'T))
-
-    let ptr, capacity =
-      rawReserve (uint addition) ptr length capacity size
-
-    let ptr = __acquire (__nativeCast (__dispose ptr))
-    Vector(ptr, length, capacity)
-
   /// Gets an item at the position. Out of bound causes crash.
   let forceGet (i: int) (v: Vector<'T>) : 'T * Vector<'T> =
     let (Vector (ptr, length, capacity)) = v
@@ -343,6 +319,30 @@ module Vector =
 
 /// Vector methods that are less frequently used.
 module VectorExt =
+  /// Gets the capacity.
+  let capacity (v: Vector<'T>) : int * Vector<'T> =
+    let (Vector (ptr, length, capacity)) = v
+    int capacity, Vector(ptr, length, capacity)
+
+  /// Reserves more memory for a vector.
+  ///
+  /// - If the vector already have plenty memory, it's noop.
+  /// - Result vector should satisfy `length + addition <= capacity`.
+  ///   Note that new capacity may be greater than required size
+  ///   to ensure the number of reallocation is small (O(log N)).
+  let reserve (addition: int) (v: Vector<'T>) : Vector<'T> =
+    assert (addition >= 0)
+
+    let (Vector (ptr, length, capacity)) = v
+    let ptr = __acquire (__nativeCast (__dispose ptr))
+    let size = uint (__sizeOfVal (unbox (box ()): 'T))
+
+    let ptr, capacity =
+      rawReserve (uint addition) ptr length capacity size
+
+    let ptr = __acquire (__nativeCast (__dispose ptr))
+    Vector(ptr, length, capacity)
+
   /// Reserves more memory for a vector.
   ///
   /// Prefer to use `reserve` instead of this in most of cases.

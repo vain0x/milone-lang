@@ -36,7 +36,7 @@ let private basicCase () : unit =
 
 let private allocCase () : unit =
   let v = Vector.alloc 256
-  let capacity, v = Vector.capacity v
+  let capacity, v = VectorExt.capacity v
   assert (capacity = 256)
   Vector.dispose v
 
@@ -158,6 +158,10 @@ let private sortCase () =
   assert (shouldEqual (List.debug string) xs [ 1; 1; 3; 4; 5; 9 ])
   Vector.dispose v
 
+// -----------------------------------------------
+// VectorExt
+// -----------------------------------------------
+
 let private reserveCase () =
   let v = Vector.empty ()
 
@@ -173,23 +177,19 @@ let private reserveCase () =
 
     go 0 v
 
-  let v = Vector.reserve 20 v
-  let capacity, v = Vector.capacity v
+  let v = VectorExt.reserve 20 v
+  let capacity, v = VectorExt.capacity v
   assert (capacity >= 10 + 20)
 
   // Reserving smaller size is noop.
-  let v = Vector.reserve 5 v
-  let unchanged, v = Vector.capacity v
+  let v = VectorExt.reserve 5 v
+  let unchanged, v = VectorExt.capacity v
   assert (unchanged = capacity)
 
   Vector.dispose v
 
-// -----------------------------------------------
-// VectorExt
-// -----------------------------------------------
-
 let private reserveExactCase () =
-  let v = Vector.reserve 15 (Vector.empty ())
+  let v = VectorExt.reserve 15 (Vector.empty ())
 
   // Push many elements.
   let n = 15
@@ -205,7 +205,7 @@ let private reserveExactCase () =
 
   let v = VectorExt.reserveExact 5 v
 
-  let capacity, v = Vector.capacity v
+  let capacity, v = VectorExt.capacity v
   assert (capacity = 15 + 5)
 
   Vector.dispose v
@@ -226,8 +226,6 @@ let testVector () =
   sliceToListCase ()
   sortCase ()
 
-  // Advanced cases.
-  reserveCase ()
-
   // VectorExt
+  reserveCase ()
   reserveExactCase ()
