@@ -115,7 +115,10 @@ let private ofListCase () =
   Vector.dispose v
 
 let private extendFromListCase () =
-  let v = Vector.empty () |> Vector.extendFromList [ 3; 1; 4; 1 ] |> Vector.extendFromList [ 5; 9 ]
+  let v =
+    Vector.empty ()
+    |> Vector.extendFromList [ 3; 1; 4; 1 ]
+    |> Vector.extendFromList [ 5; 9 ]
 
   let len, v = Vector.length v
   assert (len = 6)
@@ -146,6 +149,14 @@ let private sliceToListCase () =
   assert (shouldEqual (List.debug string) xs0 [])
   assert (shouldEqual (List.debug string) xs1 [ 1 ])
   assert (shouldEqual (List.debug string) xs3 [ 4; 1; 5 ])
+
+let private sortCase () =
+  let v = Vector.ofList [ 3; 1; 4; 1; 5; 9 ]
+  let v = Vector.sort compare v
+  let xs, v = Vector.toList v
+
+  assert (shouldEqual (List.debug string) xs [ 1; 1; 3; 4; 5; 9 ])
+  Vector.dispose v
 
 let private reserveCase () =
   let v = Vector.empty ()
@@ -213,6 +224,7 @@ let testVector () =
   extendFromListCase ()
   toListCase ()
   sliceToListCase ()
+  sortCase ()
 
   // Advanced cases.
   reserveCase ()

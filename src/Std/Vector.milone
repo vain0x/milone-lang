@@ -128,6 +128,46 @@ let private rawPush
 
   __acquire ptr, capacity
 
+/// Sorts an untyped vector in-place.
+///
+/// - Sort algorithm is an unstable sort.
+/// - `ptrComparer` is called with two pointers, each of them points to an item in the vector.
+let private rawSortUnstable
+  (ptrComparer: obj -> obj -> int)
+  (ptr: __linear<voidptr>)
+  (length: uint)
+  (size: uint)
+  : __linear<voidptr> =
+  let ptr = __dispose ptr
+
+  // Define a static function that captures the comparer via thread local.
+  __nativeDecl
+    """
+      struct ObjCompareFun {
+        int(*fun)(void const *, void const *, void const *);
+        void const *env;
+      };
+      _Thread_local struct ObjCompareFun t_compare_fun;
+      static int static_compare(void const *l, void const *r) {
+        return t_compare_fun.fun(t_compare_fun.env, l, r);
+      }
+    """
+
+  __nativeStmt (
+    """
+      struct ObjCompareFun prev = t_compare_fun;
+      t_compare_fun = (struct ObjCompareFun){.fun = {0}.fun, .env = {0}.env};
+      qsort({1}, {2}, {3}, static_compare);
+      t_compare_fun = prev;
+    """,
+    ptrComparer,
+    ptr,
+    length,
+    size
+  )
+
+  __acquire ptr
+
 module Vector =
   /// Gets an empty vector.
   let empty () : Vector<'T> =
@@ -281,6 +321,25 @@ module Vector =
   let toList (v: Vector<'T>) : 'T list * Vector<'T> =
     let length, v = length v
     sliceToList 0 length v
+
+  /// Sorts a vector in-place.
+  ///
+  /// (Currently unstable sort algorithm is used.
+  ///  This function in future version will use a stable sort algorithm.)
+  let sort (itemComparer: 'T -> 'T -> int) (v: Vector<'T>) : Vector<'T> =
+    // ptrComparer pl pr = itemComparer (*pl) (*pr)
+    let ptrComparer =
+      fun (l: obj) (r: obj) -> itemComparer (__ptrRead (__nativeCast l) 0: 'T) (__ptrRead (__nativeCast r) 0: 'T)
+
+    let (Vector (ptr, length, capacity)) = v
+    let ptr = __acquire (__nativeCast (__dispose ptr))
+    let size = __sizeOfVal (unbox (box ()): 'T)
+
+    let ptr =
+      rawSortUnstable ptrComparer ptr length (uint size)
+
+    let ptr = __acquire (__nativeCast (__dispose ptr))
+    Vector(ptr, length, capacity)
 
 /// Vector methods that are less frequently used.
 module VectorExt =
