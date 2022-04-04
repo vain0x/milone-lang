@@ -145,6 +145,36 @@ let private reserveCase () =
 
   Vector.dispose v
 
+// -----------------------------------------------
+// VectorExt
+// -----------------------------------------------
+
+let private reserveExactCase () =
+  let v = Vector.reserve 15 (Vector.empty ())
+
+  // Push many elements.
+  let n = 15
+
+  let v =
+    let rec go i v =
+      if i < n then
+        go (i + 1) (Vector.push i v)
+      else
+        v
+
+    go 0 v
+
+  let v = VectorExt.reserveExact 5 v
+
+  let capacity, v = Vector.capacity v
+  assert (capacity = 15 + 5)
+
+  Vector.dispose v
+
+// -----------------------------------------------
+// Entrypoint
+// -----------------------------------------------
+
 let testVector () =
   // Basic cases.
   basicCase ()
@@ -156,3 +186,6 @@ let testVector () =
 
   // Advanced cases.
   reserveCase ()
+
+  // VectorExt
+  reserveExactCase ()

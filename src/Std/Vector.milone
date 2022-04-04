@@ -41,18 +41,14 @@ let private rawDeallocate (ptr: __linear<voidptr>) : unit =
 ///
 /// Vector moves to newly reallocated memory.
 /// New memory must have a capacity `minLength` at least.
-let private rawGrow
+let private rawGrowExact
+  (newCapacity: uint)
   (ptr: __linear<voidptr>)
   (length: uint)
-  (minLength: uint)
   (capacity: uint)
   (size: uint)
   : __linear<voidptr> * uint =
   let oldPtr = __dispose ptr
-
-  // Exponentially grow.
-  // newCapacity >= max(capacity * 2, minLength, 15).
-  let newCapacity = (capacity <<< 1) ||| minLength ||| 15u
 
   __trace (
     ("grow len:" + string length)
@@ -79,7 +75,23 @@ let private rawReserve (addition: uint) ptr length capacity size =
   let minLength = length + uint addition
 
   if minLength > capacity then
-    rawGrow ptr length minLength capacity size
+    // #exponentially_grow
+    // newCapacity >= max(capacity * 2, minLength, 15).
+    let newCapacity = (capacity <<< 1) ||| minLength ||| 15u
+    rawGrowExact newCapacity ptr length capacity size
+  else
+    ptr, capacity
+
+/// Reserves more capacity for an untyped vector.
+///
+/// In result, `length + addition == capacity`.
+let private rawReserveExact (addition: uint) ptr length capacity size =
+  assert (addition < (1u <<< 31) - length)
+
+  let newCapacity = length + uint addition
+
+  if newCapacity > capacity then
+    rawGrowExact newCapacity ptr length capacity size
   else
     ptr, capacity
 
@@ -95,7 +107,10 @@ let private rawPush
   : __linear<voidptr> * uint =
   let ptr, capacity =
     if length = capacity then
-      rawGrow ptr length (length + 1u) capacity size
+      // #exponentially_grow
+      // newCapacity >= max(capacity * 2, minLength, 15).
+      let newCapacity = (capacity <<< 1) ||| (length + 1u) ||| 15u
+      rawGrowExact newCapacity ptr length capacity size
     else
       ptr, capacity
 
@@ -146,6 +161,8 @@ module Vector =
   ///
   /// - If the vector already have plenty memory, it's noop.
   /// - Result vector should satisfy `length + addition <= capacity`.
+  ///   Note that new capacity may be greater than required size
+  ///   to ensure the number of reallocation is small (O(log N)).
   let reserve (addition: int) (v: Vector<'T>) : Vector<'T> =
     assert (addition >= 0)
 
@@ -245,3 +262,24 @@ module Vector =
         []
 
     xs, Vector(__acquire ptr, length, capacity)
+
+/// Vector methods that are less frequently used.
+module VectorExt =
+  /// Reserves more memory for a vector.
+  ///
+  /// Prefer to use `reserve` instead of this in most of cases.
+  ///
+  /// - If the vector already have plenty memory, it's noop.
+  /// - Result vector should satisfy `length + addition = capacity`.
+  let reserveExact (addition: int) (v: Vector<'T>) : Vector<'T> =
+    assert (addition >= 0)
+
+    let (Vector (ptr, length, capacity)) = v
+    let ptr = __acquire (__nativeCast (__dispose ptr))
+    let size = uint (__sizeOfVal (unbox (box ()): 'T))
+
+    let ptr, capacity =
+      rawReserveExact (uint addition) ptr length capacity size
+
+    let ptr = __acquire (__nativeCast (__dispose ptr))
+    Vector(ptr, length, capacity)
