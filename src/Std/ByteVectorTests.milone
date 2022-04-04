@@ -1,0 +1,19 @@
+open Std.ByteVector
+open Std.Vector
+
+let private basicCase () =
+  let b = ByteVector.zeroCreate 3
+  let length, b = Vector.length b
+  assert (length = 3)
+
+  let b = Vector.forceSet 0 (byte 'H') b
+  let b = Vector.forceSet 1 (byte 'i') b
+  let b = Vector.forceSet 2 (byte '!') b
+
+  let s, b = ByteVector.sliceToString 0 3 b
+  assert (s = "Hi!")
+
+  Vector.dispose b
+
+let testByteVector () =
+  basicCase ()

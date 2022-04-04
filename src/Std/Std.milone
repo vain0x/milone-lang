@@ -1,7 +1,9 @@
 // Test Std library.
 
+open Std.ByteVectorTests
 open Std.VectorTests
 
 let main _ =
+  testByteVector ()
   testVector ()
   0

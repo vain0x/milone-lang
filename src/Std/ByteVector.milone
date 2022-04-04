@@ -1,0 +1,35 @@
+open Std.StdError
+open Std.Vector
+
+__nativeDecl "#include <string.h>" // for memcpy
+
+/// Functions for `Vector<byte>`.
+module ByteVector =
+  /// Creates a vector with the specified length and all elements are zero.
+  let zeroCreate (length: int) : Vector<byte> = VectorExt.unsafeZeroCreate length
+
+  /// Appends UTF-8 bytes of string to the vector.
+  let extendFromString (s: string) (v: Vector<byte>) : Vector<byte> =
+    let v = VectorExt.reserve s.Length v
+    let ptr, length, _, v = VectorExt.unsafeDup v
+
+    __nativeStmt ("memcpy(&{0}[{1}], {2}.str, {2}.len);", length, ptr, s)
+    v
+
+  /// Creates a vector and copies from a string.
+  let ofString (s: string) : Vector<byte> = extendFromString s (Vector.empty ())
+
+  /// Creates a string from the contents in the specified range of the vector.
+  ///
+  /// The contents must be valid as UTF-8. Otherwise, string functions don't work well.
+  /// See also invariants of the string type.
+  let sliceToString (start: int) (endIndex: int) (v: Vector<byte>) : string * Vector<byte> =
+    let ptr, length, capacity, v = VectorExt.unsafeDup v
+
+    assert (uint endIndex <= uint length)
+    assert (uint start <= uint endIndex)
+
+    let s: string =
+      __nativeExpr ("str_of_raw_parts(&({0})[{1}], {2})", ptr, start, endIndex - start)
+
+    s, v

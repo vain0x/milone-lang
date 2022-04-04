@@ -319,6 +319,24 @@ module Vector =
 
 /// Vector methods that are less frequently used.
 module VectorExt =
+  /// Creates a vector with the specified length and capacity. Contents are zero'ed.
+  ///
+  /// Prefer to use `alloc` to allocate and `push` contents to it.
+  ///
+  /// Item type must be one of: intNN, uintNN, float, unit, bool, char, obj, voidptr, nativeptr, __constptr.
+  let unsafeZeroCreate (length: int) : Vector<'T> =
+    assert (length >= 0)
+    let ptr = rawAllocate (uint length) 1u
+    Vector(__acquire (__nativeCast (__dispose ptr)), uint length, uint length)
+
+  /// Unsafely exposes the internal buffer of the vector.
+  ///
+  /// This function exists to build another type on the top of Vector efficiently.
+  let unsafeDup (v: Vector<'T>) : nativeptr<'T> * uint * uint * Vector<'T> =
+    let (Vector (ptr, length, capacity)) = v
+    let ptr = __dispose ptr
+    ptr, length, capacity, Vector (__acquire ptr, length, capacity)
+
   /// Gets the capacity.
   let capacity (v: Vector<'T>) : int * Vector<'T> =
     let (Vector (ptr, length, capacity)) = v
