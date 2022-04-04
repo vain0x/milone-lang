@@ -1,3 +1,5 @@
+open Std.StdList
+open Std.StdTesting
 open Std.Vector
 
 module S = Std.StdString
@@ -117,7 +119,7 @@ let private extendFromListCase () =
 
   let len, v = Vector.length v
   assert (len = 6)
-  
+
   let n0, v = Vector.forceGet 0 v
   let n1, v = Vector.forceGet 1 v
   let n5, v = Vector.forceGet 5 v
@@ -133,6 +135,17 @@ let private toListCase () =
   let xs = xs |> List.map string |> S.concat "; "
   assert (xs = "3; 1; 4; 1; 5; 9")
   Vector.dispose v
+
+let private sliceToListCase () =
+  let v = Vector.ofList [ 3; 1; 4; 1; 5; 9 ]
+  let xs0, v = Vector.sliceToList 0 0 v
+  let xs1, v = Vector.sliceToList 1 2 v
+  let xs3, v = Vector.sliceToList 2 5 v
+  Vector.dispose v
+
+  assert (shouldEqual (List.debug string) xs0 [])
+  assert (shouldEqual (List.debug string) xs1 [ 1 ])
+  assert (shouldEqual (List.debug string) xs3 [ 4; 1; 5 ])
 
 let private reserveCase () =
   let v = Vector.empty ()
@@ -199,6 +212,7 @@ let testVector () =
   ofListCase ()
   extendFromListCase ()
   toListCase ()
+  sliceToListCase ()
 
   // Advanced cases.
   reserveCase ()

@@ -253,26 +253,34 @@ module Vector =
   /// Creates a vector from a list.
   let ofList (xs: 'T list) : Vector<'T> = extendFromList xs (empty ())
 
-  /// Creates a list from a vector.
-  let toList (v: Vector<'T>) : 'T list * Vector<'T> =
+  /// Creates a list from a range of the vector.
+  let sliceToList (start: int) (endIndex: int) (v: Vector<'T>) : 'T list * Vector<'T> =
     let (Vector (ptr, length, capacity)) = v
     let ptr = __dispose ptr
+
+    assert (uint endIndex <= length)
+    assert (uint start <= uint endIndex)
 
     let xs =
       let rec toListLoop acc i =
         let acc = __ptrRead (__nativeCast ptr) i :: acc
 
-        if i = 0 then
+        if i = start then
           acc
         else
           toListLoop acc (i - 1)
 
-      if length <> 0u then
-        toListLoop [] (int (length - 1u))
+      if start < endIndex then
+        toListLoop [] (int (uint endIndex - 1u))
       else
         []
 
     xs, Vector(__acquire ptr, length, capacity)
+
+  /// Creates a list from a vector.
+  let toList (v: Vector<'T>) : 'T list * Vector<'T> =
+    let length, v = length v
+    sliceToList 0 length v
 
 /// Vector methods that are less frequently used.
 module VectorExt =
