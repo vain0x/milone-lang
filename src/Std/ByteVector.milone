@@ -54,3 +54,16 @@ module ByteVector =
 
     let buf: nativeptr<char> = __nativeExpr "buf"
     unsafeWriteRawParts (__nativeCast buf) (__nativeExpr "len") v
+
+  /// Writes a float to the vector. Format is unspecified yet.
+  let writeFloat (value: float) (v: Vector<byte>) =
+    __nativeStmt (
+      """
+        char buf[64] = "";
+        uint32_t len = (uint32_t)sprintf(buf, "%f", {0});
+      """,
+      value
+    )
+
+    let buf: nativeptr<char> = __nativeExpr "buf"
+    unsafeWriteRawParts (__nativeCast buf) (__nativeExpr "len") v
