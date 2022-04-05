@@ -41,3 +41,16 @@ module ByteVector =
       __nativeExpr ("str_of_raw_parts(&({0})[{1}], {2})", ptr, start, endIndex - start)
 
     s, v
+
+  /// Writes an int to the vector. (Decimal)
+  let writeInt (value: int) (v: Vector<byte>) =
+    __nativeStmt (
+      """
+        char buf[16] = "";
+        uint32_t len = (uint32_t)sprintf(buf, "%d", {0});
+      """,
+      value
+    )
+
+    let buf: nativeptr<char> = __nativeExpr "buf"
+    unsafeWriteRawParts (__nativeCast buf) (__nativeExpr "len") v

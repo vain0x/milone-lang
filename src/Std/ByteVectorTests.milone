@@ -1,4 +1,5 @@
 open Std.ByteVector
+open Std.StdTesting
 open Std.Vector
 
 let private basicCase () =
@@ -28,6 +29,18 @@ let private writeStringCase () =
 
   Vector.dispose b
 
+let private writeIntCase () =
+  let b =
+    Vector.empty ()
+    |> ByteVector.writeInt 42
+    |> Vector.push (byte ' ')
+    |> ByteVector.writeInt (-1)
+
+  let s, b = ByteVector.sliceToString 0 5 b
+  assert (shouldEqual id "42 -1" s)
+  Vector.dispose b
+
 let testByteVector () =
   basicCase ()
   writeStringCase ()
+  writeIntCase ()
