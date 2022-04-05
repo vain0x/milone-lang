@@ -9,7 +9,7 @@ module ByteVector =
   let zeroCreate (length: int) : Vector<byte> = VectorExt.unsafeZeroCreate length
 
   /// Appends contiguous part of memory to the vector.
-  let unsafeExtendFromRawParts (p: voidptr) (l: uint) (v: Vector<byte>) : Vector<byte> =
+  let unsafeWriteRawParts (p: voidptr) (l: uint) (v: Vector<byte>) : Vector<byte> =
     if l <> 0u then
       let v = VectorExt.reserve (int l) v
       let ptr, length, _, v = VectorExt.unsafeDup v
@@ -20,12 +20,12 @@ module ByteVector =
       v
 
   /// Appends UTF-8 bytes of string to the vector.
-  let extendFromString (s: string) (v: Vector<byte>) : Vector<byte> =
+  let writeString (s: string) (v: Vector<byte>) : Vector<byte> =
     let stringPtr: __constptr<char> = __nativeExpr ("{0}.str", s)
-    unsafeExtendFromRawParts (__nativeCast stringPtr) (uint s.Length) v
+    unsafeWriteRawParts (__nativeCast stringPtr) (uint s.Length) v
 
   /// Creates a vector and copies from a string.
-  let ofString (s: string) : Vector<byte> = extendFromString s (Vector.empty ())
+  let ofString (s: string) : Vector<byte> = writeString s (Vector.empty ())
 
   /// Creates a string from the contents in the specified range of the vector.
   ///

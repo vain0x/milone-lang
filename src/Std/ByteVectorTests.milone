@@ -15,5 +15,19 @@ let private basicCase () =
 
   Vector.dispose b
 
+let private writeStringCase () =
+  let b = ByteVector.zeroCreate 0
+
+  let b = ByteVector.writeString "Hello" b
+  let length, b = Vector.length b
+  assert (length = 5)
+
+  let b = ByteVector.writeString ", world!" b
+  let length, b = Vector.length b
+  assert (length = 13)
+
+  Vector.dispose b
+
 let testByteVector () =
   basicCase ()
+  writeStringCase ()
