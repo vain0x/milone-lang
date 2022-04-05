@@ -38,7 +38,10 @@ module ByteVector =
     assert (uint start <= uint endIndex)
 
     let s: string =
-      __nativeExpr ("str_of_raw_parts(&({0})[{1}], {2})", ptr, start, endIndex - start)
+      if length <> 0u then
+        __nativeExpr ("str_of_raw_parts(&({0})[{1}], {2})", ptr, start, endIndex - start)
+      else
+        ""
 
     s, v
 
