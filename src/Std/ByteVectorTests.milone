@@ -58,8 +58,21 @@ let private writeFloatCase () =
   assert (shouldEqual id "42.195000 1.428571 -12.500000 601999999999999995805696.000000 0.000000" s)
   Vector.dispose b
 
+let private writeBoolCase () =
+  let b =
+    Vector.empty ()
+    |> ByteVector.writeBool false
+    |> Vector.push (byte ' ')
+    |> ByteVector.writeBool true
+
+  let length, b = Vector.length b
+  let s, b = ByteVector.sliceToString 0 length b
+  assert (shouldEqual id "False True" s)
+  Vector.dispose b
+
 let testByteVector () =
   basicCase ()
   writeStringCase ()
   writeIntCase ()
   writeFloatCase ()
+  writeBoolCase ()

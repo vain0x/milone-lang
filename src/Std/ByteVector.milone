@@ -67,3 +67,6 @@ module ByteVector =
 
     let buf: nativeptr<char> = __nativeExpr "buf"
     unsafeWriteRawParts (__nativeCast buf) (__nativeExpr "len") v
+
+  /// Writes a boolean to the vector. "True" or "False".
+  let writeBool (value: bool) (v: Vector<byte>) = writeString (string value) v
