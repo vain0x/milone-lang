@@ -1,0 +1,112 @@
+open Std.ByteVector
+open Std.StdError
+open Std.Vector
+
+type private FilePtr = nativeptr<__nativeType<FILE>>
+type Stream = private Stream of __linear<FilePtr>
+
+let private unsafeDup (stream: Stream) : FilePtr * Stream =
+  let (Stream fp) = stream
+  let fp = __dispose fp
+  fp, Stream(__acquire fp)
+
+module Stream =
+  /// Reads from stream to fill the buffer.
+  ///
+  /// Returns size of read data. Maybe less than capacity.
+  let readBlock (dest: Vector<byte>) (input: Stream) : int * Vector<byte> * Stream =
+    let fp, input = unsafeDup input
+    let destPtr, destLength, destCapacity, dest = VectorExt.unsafeDup dest
+
+    __nativeStmt (
+      "int len = (int)fread(&{1}[{2}], 1, (size_t){3}, {0});",
+      fp,
+      destPtr,
+      destLength,
+      destCapacity - destLength
+    )
+
+    let len: int = __nativeExpr "len"
+    len, dest, input
+
+  /// Reads a block of bytes equal to specified size.
+  ///
+  /// Blocks to wait for the buffer to fill (if underlying buffer is blocking).
+  /// Returns whether read data is of specified size.
+  let readExact (dest: Vector<byte>) (size: int) (input: Stream) : bool * Vector<byte> * Stream =
+    assert (size >= 0)
+
+    let fp, input = unsafeDup input
+
+    let destPtr, destLength, destCapacity, dest =
+      VectorExt.unsafeDup (VectorExt.reserve size dest)
+
+    __nativeStmt ("bool ok = fread(&{1}[{2}], (size_t){3}, 1, {0}) == 1;", fp, destPtr, destLength, size)
+
+    let ok: bool = __nativeExpr "ok"
+    ok, dest, input
+
+  /// Reads all data to a buffer from the stream.
+  let readToEnd (dest: Vector<byte>) (input: Stream) : Vector<byte> * Stream =
+    let fp, input = unsafeDup input
+
+    let rec go dest input =
+      let dest = VectorExt.reserve 4000 dest
+      let destPtr, destLength, destCapacity, dest = VectorExt.unsafeDup dest
+
+      __nativeStmt (
+        "int len = (int)fread(&{1}[{2}], 1, (size_t){3}, {0});",
+        fp,
+        destPtr,
+        destLength,
+        destCapacity - destLength
+      )
+
+      let len: int = __nativeExpr "len"
+
+      if len = 0 then
+        dest, input
+      else
+        let dest =
+          VectorExt.unsafeSetLength (int destLength + len) dest
+
+        go dest input
+
+    go dest input
+
+  /// Unsafely write data to output. This blocks until all data are written.
+  let unsafeWriteExactFromRawParts (ptr: __constptr<byte>) (len: int) (output: Stream) : bool * Stream =
+    let fp, output = unsafeDup output
+    assert (len >= 1)
+
+    __nativeStmt ("bool ok = fwrite({1}, {2}, 1, {0}) == 1;", fp, ptr, uint len)
+
+    let ok: bool = __nativeExpr "ok"
+    ok, output
+
+  /// Writes a string to the stream.
+  let writeString (s: string) (output: Stream) : bool * Stream =
+    let fp, output = unsafeDup output
+
+    if s.Length <> 0 then
+      let ptr: __constptr<char> = __nativeExpr ("{0}.str", s)
+
+      let ok, output =
+        unsafeWriteExactFromRawParts (__nativeCast ptr) s.Length output
+
+      if ok then
+        __nativeStmt ("fflush({0});", fp)
+
+      ok, output
+    else
+      true, output
+
+module StreamExt =
+  /// Unsafely creates a stream from a ptr, which must be `FILE *`.
+  let unsafeWrap (fp: __linear<voidptr>) : Stream =
+    Stream(__acquire (__nativeCast (__dispose fp)))
+
+  /// Unsafely disposes a stream and returns a ptr, which is `FILE *`.
+  let unsafeUnwrap (stream: Stream) : __linear<voidptr> =
+    let (Stream fp) = stream
+    __acquire (__nativeCast (__dispose fp))

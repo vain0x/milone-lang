@@ -1,0 +1,46 @@
+open Std.StdTesting
+open Std.Stream
+open Std.Vector
+open Std.ByteVector
+
+__nativeDecl "#include <assert.h>"
+
+let private write () =
+  __nativeStmt
+    """
+      FILE *fp = fopen("output.ignored.txt", "wb+");
+      assert(fp != NULL);
+    """
+
+  let stream = StreamExt.unsafeWrap (__nativeExpr "fp")
+
+  let ok, stream = stream |> Stream.writeString "Hello, world!\n"
+  assert ok
+  let ok, stream = stream |> Stream.writeString "Good bye!\n"
+  assert ok
+
+  let fp = __dispose(StreamExt.unsafeUnwrap stream)
+  __nativeStmt "fclose(fp);"
+
+let private read () =
+  __nativeStmt
+    """
+      FILE *fp = fopen("output.ignored.txt", "rb+");
+      assert(fp != NULL);
+    """
+
+  let stream = StreamExt.unsafeWrap (__nativeExpr "fp")
+
+  let contents, stream = Stream.readToEnd (Vector.empty ()) stream
+  let length, contents = Vector.length contents
+  let s, contents = ByteVector.sliceToString 0 length contents
+  assert (shouldEqual id "Hello, world!\nGood bye!\n" s)
+  Vector.dispose contents
+
+  let fp = __dispose(StreamExt.unsafeUnwrap stream)
+  __nativeStmt "fclose(fp);"
+
+let testStream () =
+  write ()
+  read ()
+  __nativeStmt """remove("output.ignored.txt");"""

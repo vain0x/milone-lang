@@ -335,7 +335,12 @@ module VectorExt =
   let unsafeDup (v: Vector<'T>) : nativeptr<'T> * uint * uint * Vector<'T> =
     let (Vector (ptr, length, capacity)) = v
     let ptr = __dispose ptr
-    ptr, length, capacity, Vector (__acquire ptr, length, capacity)
+    ptr, length, capacity, Vector(__acquire ptr, length, capacity)
+
+  let unsafeSetLength (length: int) (v: Vector<'T>) : Vector<'T> =
+    let (Vector (ptr, _, capacity)) = v
+    assert (uint length <= capacity)
+    Vector(ptr, uint length, capacity)
 
   /// Gets the capacity.
   let capacity (v: Vector<'T>) : int * Vector<'T> =
