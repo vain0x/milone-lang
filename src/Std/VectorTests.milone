@@ -150,6 +150,12 @@ let private sliceToListCase () =
   assert (shouldEqual (List.debug string) xs1 [ 1 ])
   assert (shouldEqual (List.debug string) xs3 [ 4; 1; 5 ])
 
+let private foldCase () =
+  let v = Vector.ofList [ 3; 1; 4; 1; 5; 9 ]
+  let x, v = Vector.fold (fun x y -> x * 10 + y) 0 v
+  assert (shouldEqual string 314159 x)
+  Vector.dispose v
+
 let private sortCase () =
   let v = Vector.ofList [ 3; 1; 4; 1; 5; 9 ]
   let v = Vector.sort compare v
@@ -224,6 +230,7 @@ let testVector () =
   extendFromListCase ()
   toListCase ()
   sliceToListCase ()
+  foldCase ()
   sortCase ()
 
   // VectorExt

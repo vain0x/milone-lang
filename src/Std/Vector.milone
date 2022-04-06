@@ -298,6 +298,19 @@ module Vector =
     let length, v = length v
     sliceToList 0 length v
 
+  /// Folds a vector.
+  let fold (folder: 'S -> 'T -> 'S) (init: 'S) (v: Vector<'T>) : 'S * Vector<'T> =
+    let n, v = length v
+
+    let rec go i state v =
+      if i < n then
+        let item, v = forceGet i v
+        go (i + 1) (folder state item) v
+      else
+        state, v
+
+    go 0 init v
+
   /// Sorts a vector in-place.
   ///
   /// (Currently unstable sort algorithm is used.
