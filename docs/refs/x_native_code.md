@@ -36,7 +36,7 @@ Such program does anything weird with no error.
 
 ## Get pointer of value
 
-(Not implemented. Use `box` and cast it to pointer.)
+(Not implemented. Use `__nativeExpr("&{0}", v)`.)
 
 ## Pointer cast
 
