@@ -1,11 +1,12 @@
 // Test Std library.
 
 open Std.ByteVectorTests
+open Std.IO
 open Std.FileTests
+open Std.StdError
 open Std.VectorTests
 
 let main _ =
   testByteVector ()
   testVector ()
-  testFile ()
-  0
+  IO.run testFile |> never

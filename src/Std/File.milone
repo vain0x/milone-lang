@@ -2,6 +2,7 @@
 //
 // Currently functionality is designed similar to C standard library.
 open Std.ByteVector
+open Std.IO
 open Std.StdError
 open Std.Vector
 
@@ -24,32 +25,29 @@ let private unsafeDup (file: File) : FilePtr * File =
 
 module File =
   /// Gets the file abstraction of standard input.
-  let stdin () : File =
-    File(__acquire (__nativeExpr "stdin"))
+  let stdin () : File = File(__acquire (__nativeExpr "stdin"))
 
   /// Gets the file abstraction of standard output.
-  let stdout () : File =
-    File(__acquire (__nativeExpr "stdout"))
+  let stdout () : File = File(__acquire (__nativeExpr "stdout"))
 
   /// Gets the file abstraction of standard error.
-  let stderr () : File =
-    File(__acquire (__nativeExpr "stderr"))
+  let stderr () : File = File(__acquire (__nativeExpr "stderr"))
 
   /// Opens a regular file for reading.
-  let openRead (pathname: string) : File option =
+  let openRead (io: IO) (pathname: string) : File option * IO =
     let fp: FilePtr =
       __nativeFun ("fopen", toCStr pathname, toCStr "r")
 
     if __nativeExpr ("{0} != NULL", fp) then
-      Some(File(__acquire fp))
+      Some(File(__acquire fp)), io
     else
-      None
+      None, io
 
   /// Closes the file.
   ///
   /// The underlying file descriptor is closed.
   /// Remark: Closing stdin/stdout/stderr is noop. It's required to close such file due to the linearity check.
-  let close (file: File) : unit =
+  let close (io: IO) (file: File) : IO =
     let (File fp) = file
     let fp = __dispose fp
 
@@ -61,10 +59,12 @@ module File =
       fp
     )
 
+    io
+
   /// Reads a chunk from the file to append the buffer.
   ///
   /// Returns size of read data. Maybe less than capacity.
-  let readBlock (dest: Vector<byte>) (input: File) : int * Vector<byte> * File =
+  let readBlock (io: IO) (dest: Vector<byte>) (input: File) : int * Vector<byte> * File * IO =
     let fp, input = unsafeDup input
     let destPtr, destLength, destCapacity, dest = VectorExt.unsafeDup dest
 
@@ -77,13 +77,13 @@ module File =
     )
 
     let len: int = __nativeExpr "len"
-    len, dest, input
+    len, dest, input, io
 
   /// Reads a block of bytes equal to the specified size from the file to append the buffer.
   ///
   /// This function blocks to wait until the buffer is fill (unless the underlying file is asynchronous).
   /// Returns whether the size of read data equals to the specified size.
-  let readExact (dest: Vector<byte>) (size: int) (input: File) : bool * Vector<byte> * File =
+  let readExact (io: IO) (dest: Vector<byte>) (size: int) (input: File) : bool * Vector<byte> * File * IO =
     assert (size >= 0)
 
     let fp, input = unsafeDup input
@@ -94,13 +94,13 @@ module File =
     __nativeStmt ("bool ok = fread(&{1}[{2}], (size_t){3}, 1, {0}) == 1;", fp, destPtr, destLength, size)
 
     let ok: bool = __nativeExpr "ok"
-    ok, dest, input
+    ok, dest, input, io
 
   /// Reads all contents from the file to append the buffer.
-  let readToEnd (dest: Vector<byte>) (input: File) : Vector<byte> * File =
+  let readToEnd (io: IO) (dest: Vector<byte>) (input: File) : Vector<byte> * File * IO =
     let fp, input = unsafeDup input
 
-    let rec go dest input =
+    let rec go (io: IO) dest input =
       let dest = VectorExt.reserve 4000 dest
       let destPtr, destLength, destCapacity, dest = VectorExt.unsafeDup dest
 
@@ -115,14 +115,14 @@ module File =
       let len: int = __nativeExpr "len"
 
       if len = 0 then
-        dest, input
+        dest, input, io
       else
         let dest =
           VectorExt.unsafeSetLength (int destLength + len) dest
 
-        go dest input
+        go io dest input
 
-    go dest input
+    go io dest input
 
   /// Reads a line from the file to append the buffer.
   ///
@@ -132,7 +132,7 @@ module File =
   /// Returns false if empty or error.
   ///
   /// If the file read a newline character, it was also appended to the buffer.
-  let readLine (buf: Vector<byte>) (file: File) : bool * Vector<byte> * File =
+  let readLine (io: IO) (buf: Vector<byte>) (file: File) : bool * Vector<byte> * File * IO =
     let bufPtr, length, capacity, buf = VectorExt.unsafeDup buf
     let fp, file = unsafeDup file
 
@@ -154,36 +154,41 @@ module File =
     let buf =
       VectorExt.unsafeSetLength (int (length + size)) buf
 
-    size <> 0u, buf, file
+    size <> 0u, buf, file, io
 
   /// Unsafely writes a block of bytes to the file.
   ///
   /// This function blocks to wait until all data are written (unless the underlying file is asynchronous).
-  let unsafeWriteExactFromRawParts (ptr: __constptr<byte>) (len: int) (output: File) : bool * File =
+  let unsafeWriteExactFromRawParts (io: IO) (ptr: __constptr<byte>) (len: int) (output: File) : bool * File * IO =
     let fp, output = unsafeDup output
     assert (len >= 1)
 
     __nativeStmt ("bool ok = fwrite({1}, {2}, 1, {0}) == 1;", fp, ptr, uint len)
 
     let ok: bool = __nativeExpr "ok"
-    ok, output
+    ok, output, io
 
   /// Writes a string to the file.
-  let writeString (s: string) (output: File) : bool * File =
+  let writeString (io: IO) (s: string) (output: File) : bool * File * IO =
     let fp, output = unsafeDup output
 
     if s.Length <> 0 then
       let ptr: __constptr<char> = __nativeExpr ("{0}.str", s)
 
-      let ok, output =
-        unsafeWriteExactFromRawParts (__nativeCast ptr) s.Length output
+      let ok, output, io =
+        unsafeWriteExactFromRawParts io (__nativeCast ptr) s.Length output
 
       if ok then
         __nativeStmt ("fflush({0});", fp)
 
-      ok, output
+      ok, output, io
     else
-      true, output
+      true, output, io
+
+  /// Deletes a non-directory file.
+  let remove (io: IO) (pathname: string) : IO =
+    __nativeStmt ("remove({0});", toCStr pathname)
+    io
 
 /// Features rarely used or unsafe.
 module FileExt =

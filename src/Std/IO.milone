@@ -1,0 +1,10 @@
+open Std.StdError
+
+type IO = private IO of __linear<unit>
+
+module IO =
+  /// Runs an action that performs input/output (IO) operations.
+  let run (action: IO -> IO) : Never =
+    let (IO io) = action (IO(__acquire ()))
+    __dispose io
+    exit 0
