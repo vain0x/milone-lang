@@ -23,6 +23,34 @@ let private unsafeDup (file: File) : FilePtr * File =
   fp, File(__acquire fp)
 
 module File =
+  /// Gets the file abstraction of standard input.
+  let stdin () : File =
+    File(__acquire (__nativeExpr "stdin"))
+
+  /// Gets the file abstraction of standard output.
+  let stdout () : File =
+    File(__acquire (__nativeExpr "stdout"))
+
+  /// Gets the file abstraction of standard error.
+  let stderr () : File =
+    File(__acquire (__nativeExpr "stderr"))
+
+  /// Closes the file.
+  ///
+  /// The underlying file descriptor is closed.
+  /// Remark: Closing stdin/stdout/stderr is noop. It's required to close such file due to the linearity check.
+  let close (file: File) : unit =
+    let (File fp) = file
+    let fp = __dispose fp
+
+    __nativeStmt (
+      """
+        FILE *fp = {0};
+        if (fp != stdin && fp != stdout && fp != stderr) fclose(fp);
+      """,
+      fp
+    )
+
   /// Reads a chunk from the file to append the buffer.
   ///
   /// Returns size of read data. Maybe less than capacity.
