@@ -1,22 +1,32 @@
+// Provides file system API.
+//
+// Currently functionality is designed similar to C standard library.
 open Std.ByteVector
 open Std.StdError
 open Std.Vector
 
+// For strlen.
+__nativeDecl "#include <string.h>"
+
+let private toCStr (s: string) : __constptr<char> = __nativeFun ("str_to_c_str", s)
+
+/// `FILE *`
 type private FilePtr = nativeptr<__nativeType<FILE>>
-type Stream = private Stream of __linear<FilePtr>
 
-__nativeDecl "#include <string.h>" // for strlen
+/// Represents a connection to an opened file.
+type File = private File of __linear<FilePtr>
 
-let private unsafeDup (stream: Stream) : FilePtr * Stream =
-  let (Stream fp) = stream
+/// Unsafely retrieves a `FILE *` ptr, which must not outlive `File` value.
+let private unsafeDup (file: File) : FilePtr * File =
+  let (File fp) = file
   let fp = __dispose fp
-  fp, Stream(__acquire fp)
+  fp, File(__acquire fp)
 
-module Stream =
-  /// Reads from stream to fill the buffer.
+module File =
+  /// Reads a chunk from the file to append the buffer.
   ///
   /// Returns size of read data. Maybe less than capacity.
-  let readBlock (dest: Vector<byte>) (input: Stream) : int * Vector<byte> * Stream =
+  let readBlock (dest: Vector<byte>) (input: File) : int * Vector<byte> * File =
     let fp, input = unsafeDup input
     let destPtr, destLength, destCapacity, dest = VectorExt.unsafeDup dest
 
@@ -31,11 +41,11 @@ module Stream =
     let len: int = __nativeExpr "len"
     len, dest, input
 
-  /// Reads a block of bytes equal to specified size.
+  /// Reads a block of bytes equal to the specified size from the file to append the buffer.
   ///
-  /// Blocks to wait for the buffer to fill (if underlying buffer is blocking).
-  /// Returns whether read data is of specified size.
-  let readExact (dest: Vector<byte>) (size: int) (input: Stream) : bool * Vector<byte> * Stream =
+  /// This function blocks to wait until the buffer is fill (unless the underlying file is asynchronous).
+  /// Returns whether the size of read data equals to the specified size.
+  let readExact (dest: Vector<byte>) (size: int) (input: File) : bool * Vector<byte> * File =
     assert (size >= 0)
 
     let fp, input = unsafeDup input
@@ -48,8 +58,8 @@ module Stream =
     let ok: bool = __nativeExpr "ok"
     ok, dest, input
 
-  /// Reads all data to a buffer from the stream.
-  let readToEnd (dest: Vector<byte>) (input: Stream) : Vector<byte> * Stream =
+  /// Reads all contents from the file to append the buffer.
+  let readToEnd (dest: Vector<byte>) (input: File) : Vector<byte> * File =
     let fp, input = unsafeDup input
 
     let rec go dest input =
@@ -76,17 +86,17 @@ module Stream =
 
     go dest input
 
-  /// Reads a line from the stream to append the buffer.
+  /// Reads a line from the file to append the buffer.
   ///
   /// Input buffer must have capacity enough to contain a line.
   /// This function doesn't reserve.
   ///
   /// Returns false if empty or error.
   ///
-  /// If the stream did read a newline character, it was also appended to the buffer.
-  let readLine (buf: Vector<byte>) (stream: Stream) : bool * Vector<byte> * Stream =
+  /// If the file read a newline character, it was also appended to the buffer.
+  let readLine (buf: Vector<byte>) (file: File) : bool * Vector<byte> * File =
     let bufPtr, length, capacity, buf = VectorExt.unsafeDup buf
-    let fp, stream = unsafeDup stream
+    let fp, file = unsafeDup file
 
     assert (length < capacity)
 
@@ -106,10 +116,12 @@ module Stream =
     let buf =
       VectorExt.unsafeSetLength (int (length + size)) buf
 
-    size <> 0u, buf, stream
+    size <> 0u, buf, file
 
-  /// Unsafely write data to output. This blocks until all data are written.
-  let unsafeWriteExactFromRawParts (ptr: __constptr<byte>) (len: int) (output: Stream) : bool * Stream =
+  /// Unsafely writes a block of bytes to the file.
+  ///
+  /// This function blocks to wait until all data are written (unless the underlying file is asynchronous).
+  let unsafeWriteExactFromRawParts (ptr: __constptr<byte>) (len: int) (output: File) : bool * File =
     let fp, output = unsafeDup output
     assert (len >= 1)
 
@@ -118,8 +130,8 @@ module Stream =
     let ok: bool = __nativeExpr "ok"
     ok, output
 
-  /// Writes a string to the stream.
-  let writeString (s: string) (output: Stream) : bool * Stream =
+  /// Writes a string to the file.
+  let writeString (s: string) (output: File) : bool * File =
     let fp, output = unsafeDup output
 
     if s.Length <> 0 then
@@ -135,12 +147,16 @@ module Stream =
     else
       true, output
 
-module StreamExt =
-  /// Unsafely creates a stream from a ptr, which must be `FILE *`.
-  let unsafeWrap (fp: __linear<voidptr>) : Stream =
-    Stream(__acquire (__nativeCast (__dispose fp)))
+/// Features rarely used or unsafe.
+module FileExt =
+  /// `FILE *`
+  type FilePtr = nativeptr<__nativeType<FILE>>
 
-  /// Unsafely disposes a stream and returns a ptr, which is `FILE *`.
-  let unsafeUnwrap (stream: Stream) : __linear<voidptr> =
-    let (Stream fp) = stream
+  /// Unsafely wraps a `FILE *` ptr in an abstraction.
+  let unsafeWrap (fp: __linear<FilePtr>) : File =
+    File(__acquire (__nativeCast (__dispose fp)))
+
+  /// Unsafely unwraps an abstraction and returns a `File *` ptr.
+  let unsafeUnwrap (file: File) : __linear<FilePtr> =
+    let (File fp) = file
     __acquire (__nativeCast (__dispose fp))

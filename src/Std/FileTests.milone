@@ -12,14 +12,14 @@ let private writeCase () =
       assert(fp != NULL);
     """
 
-  let stream = StreamExt.unsafeWrap (__nativeExpr "fp")
+  let file = FileExt.unsafeWrap (__nativeExpr "fp")
 
-  let ok, stream = stream |> Stream.writeString "Hello, world!\n"
+  let ok, file = file |> File.writeString "Hello, world!\n"
   assert ok
-  let ok, stream = stream |> Stream.writeString "Good bye!\n"
+  let ok, file = file |> File.writeString "Good bye!\n"
   assert ok
 
-  let fp = __dispose(StreamExt.unsafeUnwrap stream)
+  let fp = __dispose(FileExt.unsafeUnwrap file)
   __nativeStmt "fclose(fp);"
 
 let private readCase () =
@@ -29,15 +29,15 @@ let private readCase () =
       assert(fp != NULL);
     """
 
-  let stream = StreamExt.unsafeWrap (__nativeExpr "fp")
+  let file = FileExt.unsafeWrap (__nativeExpr "fp")
 
-  let contents, stream = Stream.readToEnd (Vector.empty ()) stream
+  let contents, file = File.readToEnd (Vector.empty ()) file
   let length, contents = Vector.length contents
   let s, contents = ByteVector.sliceToString 0 length contents
   assert (shouldEqual id "Hello, world!\nGood bye!\n" s)
   Vector.dispose contents
 
-  let fp = __dispose(StreamExt.unsafeUnwrap stream)
+  let fp = __dispose(FileExt.unsafeUnwrap file)
   __nativeStmt "fclose(fp);"
 
 let private readLineCase () =
@@ -47,27 +47,27 @@ let private readLineCase () =
       assert(fp != NULL);
     """
 
-  let stream = StreamExt.unsafeWrap (__nativeExpr "fp")
+  let file = FileExt.unsafeWrap (__nativeExpr "fp")
 
   let buf = Vector.alloc 1024
-  let ok, buf, stream = Stream.readLine buf stream
+  let ok, buf, file = File.readLine buf file
   assert ok
   let length, buf = Vector.length buf
   let s, buf = ByteVector.sliceToString 0 length buf
   assert (shouldEqual id "Hello, world!\n" s)
 
-  let ok, buf, stream = Stream.readLine buf stream
+  let ok, buf, file = File.readLine buf file
   assert ok
   let length2, buf = Vector.length buf
   let s, buf = ByteVector.sliceToString length length2 buf
   assert (shouldEqual id "Good bye!\n" s)
 
-  let ok, buf, stream = Stream.readLine buf stream
+  let ok, buf, file = File.readLine buf file
   assert (not ok) // EOF.
 
   Vector.dispose buf
 
-  let fp = __dispose(StreamExt.unsafeUnwrap stream)
+  let fp = __dispose(FileExt.unsafeUnwrap file)
   __nativeStmt "fclose(fp);"
 
 let testFile () =
