@@ -1,7 +1,7 @@
-open Std.StdTesting
-open Std.Stream
-open Std.Vector
 open Std.ByteVector
+open Std.File
+open Std.StdTesting
+open Std.Vector
 
 __nativeDecl "#include <assert.h>"
 
@@ -70,7 +70,7 @@ let private readLineCase () =
   let fp = __dispose(StreamExt.unsafeUnwrap stream)
   __nativeStmt "fclose(fp);"
 
-let testStream () =
+let testFile () =
   write ()
   read ()
   readLineCase ()
