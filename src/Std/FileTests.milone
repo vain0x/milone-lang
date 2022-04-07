@@ -5,7 +5,7 @@ open Std.Vector
 
 __nativeDecl "#include <assert.h>"
 
-let private write () =
+let private writeCase () =
   __nativeStmt
     """
       FILE *fp = fopen("output.ignored.txt", "wb+");
@@ -22,7 +22,7 @@ let private write () =
   let fp = __dispose(StreamExt.unsafeUnwrap stream)
   __nativeStmt "fclose(fp);"
 
-let private read () =
+let private readCase () =
   __nativeStmt
     """
       FILE *fp = fopen("output.ignored.txt", "rb+");
@@ -71,7 +71,7 @@ let private readLineCase () =
   __nativeStmt "fclose(fp);"
 
 let testFile () =
-  write ()
-  read ()
+  writeCase ()
+  readCase ()
   readLineCase ()
   __nativeStmt """remove("output.ignored.txt");"""
