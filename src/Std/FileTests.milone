@@ -1,5 +1,6 @@
 open Std.ByteVector
 open Std.File
+open Std.StdError
 open Std.StdTesting
 open Std.Vector
 
@@ -18,36 +19,30 @@ let private writeCase () =
   assert ok
   let ok, file = file |> File.writeString "Good bye!\n"
   assert ok
-
-  let fp = __dispose(FileExt.unsafeUnwrap file)
-  __nativeStmt "fclose(fp);"
+  File.close file
 
 let private readCase () =
-  __nativeStmt
-    """
-      FILE *fp = fopen("output.ignored.txt", "rb+");
-      assert(fp != NULL);
-    """
-
-  let file = FileExt.unsafeWrap (__nativeExpr "fp")
+  let file =
+    match File.openRead "output.ignored.txt" with
+    | Some it -> it
+    | None ->
+      failwith "Not found"
+      File.stdin () // HACK: failwith "" can't be File
 
   let contents, file = File.readToEnd (Vector.empty ()) file
   let length, contents = Vector.length contents
   let s, contents = ByteVector.sliceToString 0 length contents
   assert (shouldEqual id "Hello, world!\nGood bye!\n" s)
   Vector.dispose contents
-
-  let fp = __dispose(FileExt.unsafeUnwrap file)
-  __nativeStmt "fclose(fp);"
+  File.close file
 
 let private readLineCase () =
-  __nativeStmt
-    """
-      FILE *fp = fopen("output.ignored.txt", "rb+");
-      assert(fp != NULL);
-    """
-
-  let file = FileExt.unsafeWrap (__nativeExpr "fp")
+  let file =
+    match File.openRead "output.ignored.txt" with
+    | Some it -> it
+    | None ->
+      failwith "Not found"
+      File.stdin () // HACK: failwith "" can't be File
 
   let buf = Vector.alloc 1024
   let ok, buf, file = File.readLine buf file
@@ -66,9 +61,7 @@ let private readLineCase () =
   assert (not ok) // EOF.
 
   Vector.dispose buf
-
-  let fp = __dispose(FileExt.unsafeUnwrap file)
-  __nativeStmt "fclose(fp);"
+  File.close file
 
 let testFile () =
   writeCase ()

@@ -35,6 +35,16 @@ module File =
   let stderr () : File =
     File(__acquire (__nativeExpr "stderr"))
 
+  /// Opens a regular file for reading.
+  let openRead (pathname: string) : File option =
+    let fp: FilePtr =
+      __nativeFun ("fopen", toCStr pathname, toCStr "r")
+
+    if __nativeExpr ("{0} != NULL", fp) then
+      Some(File(__acquire fp))
+    else
+      None
+
   /// Closes the file.
   ///
   /// The underlying file descriptor is closed.
