@@ -5,6 +5,8 @@ open Std.Vector
 type private FilePtr = nativeptr<__nativeType<FILE>>
 type Stream = private Stream of __linear<FilePtr>
 
+__nativeDecl "#include <string.h>" // for strlen
+
 let private unsafeDup (stream: Stream) : FilePtr * Stream =
   let (Stream fp) = stream
   let fp = __dispose fp
@@ -73,6 +75,38 @@ module Stream =
         go dest input
 
     go dest input
+
+  /// Reads a line from the stream to append the buffer.
+  ///
+  /// Input buffer must have capacity enough to contain a line.
+  /// This function doesn't reserve.
+  ///
+  /// Returns false if empty or error.
+  ///
+  /// If the stream did read a newline character, it was also appended to the buffer.
+  let readLine (buf: Vector<byte>) (stream: Stream) : bool * Vector<byte> * Stream =
+    let bufPtr, length, capacity, buf = VectorExt.unsafeDup buf
+    let fp, stream = unsafeDup stream
+
+    assert (length < capacity)
+
+    __nativeStmt (
+      """
+        char *p = fgets(&{0}[{1}], {2}, {3});
+        uint32_t size = p != NULL ? (uint32_t)strlen(p) : 0;
+      """,
+      bufPtr,
+      length,
+      unativeint (capacity - length),
+      fp
+    )
+
+    let size: uint = __nativeExpr "size"
+
+    let buf =
+      VectorExt.unsafeSetLength (int (length + size)) buf
+
+    size <> 0u, buf, stream
 
   /// Unsafely write data to output. This blocks until all data are written.
   let unsafeWriteExactFromRawParts (ptr: __constptr<byte>) (len: int) (output: Stream) : bool * Stream =
