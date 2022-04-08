@@ -75,6 +75,17 @@ let private linearPairPartiallyLeakedError () =
     let _ = __dispose l
     ()
 
+let private linearValueCannotBePartiallyAppliedError () =
+  let f (l: __linear<int>) () = l
+
+  let l = __acquire 0
+  let g = f l
+  let l1 = g ()
+  let l2 = g ()
+  let _ = __dispose l1
+  let _ = __dispose l2
+  ()
+
 // -----------------------------------------------
 // LinearInt
 // -----------------------------------------------

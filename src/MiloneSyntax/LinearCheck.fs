@@ -101,6 +101,7 @@ type private LinearError =
   | GenericFunCannotUseLinear
   | BranchMustUse of varNames: string list
   | FieldCannotBeLinear
+  | PartialApp
 
 let private errorToString err =
   match err with
@@ -131,6 +132,8 @@ let private errorToString err =
     + "]"
 
   | LinearError.FieldCannotBeLinear -> "Fields cannot be linear for now."
+
+  | LinearError.PartialApp -> "Functions that take a linear value can't be partially applied."
 
 let private addError err (loc: Loc) (ctx: LinearCheckCtx) =
   { ctx with Logs = (Log.Error(errorToString err), loc) :: ctx.Logs }
@@ -476,7 +479,8 @@ let private lcPat (rx: Rx) (ctx: LinearCheckCtx) pat : LinearCheckCtx =
 
   | TOrPat (lPat, _, _) -> lcPat rx ctx lPat
 
-let private lcExpr (rx: Rx) (ctx: LinearCheckCtx) expr : LinearCheckCtx =
+// applied: true if target of the expression is caller of function application. (It appears as `e` in `e x`.)
+let private lcExpr (rx: Rx) (applied: bool) (ctx: LinearCheckCtx) expr : LinearCheckCtx =
   match expr with
   | TLitExpr _
   | TVariantExpr _
@@ -566,13 +570,14 @@ let private lcExpr (rx: Rx) (ctx: LinearCheckCtx) expr : LinearCheckCtx =
       ctx
 
   | TRecordExpr (baseOpt, fields, _, _) ->
-    let ctx = Option.fold (lcExpr rx) ctx baseOpt
+    let ctx =
+      Option.fold (lcExpr rx false) ctx baseOpt
 
     fields
-    |> List.fold (fun ctx (_, init, _) -> lcExpr rx ctx init) ctx
+    |> List.fold (fun ctx (_, init, _) -> lcExpr rx false ctx init) ctx
 
   | TMatchExpr (cond, arms, _, _) ->
-    let ctx = lcExpr rx ctx cond
+    let ctx = lcExpr rx false ctx cond
 
     let branch, ctx = enterBranches ctx
 
@@ -581,35 +586,67 @@ let private lcExpr (rx: Rx) (ctx: LinearCheckCtx) expr : LinearCheckCtx =
       |> List.fold
            (fun (branch, ctx) (pat, guard, body) ->
              let ctx = lcPat rx ctx pat
-             let ctx = lcExpr rx ctx guard
-             let ctx = lcExpr rx ctx body
+             let ctx = lcExpr rx false ctx guard
+             let ctx = lcExpr rx false ctx body
              nextBranch rx branch (exprToLoc body) ctx)
            (branch, ctx)
 
     leaveBranches branch ctx
 
-  | TNavExpr (l, _, _, _) -> lcExpr rx ctx l
+  | TNavExpr (l, _, _, _) -> lcExpr rx false ctx l
 
-  | TNodeExpr (_, args, _, _) -> lcExprs rx ctx args
+  | TNodeExpr (kind, args, ty, loc) ->
+    match kind with
+    | TAppEN ->
+      let l, r =
+        match args with
+        | [ l; r ] -> l, r
+        | _ -> unreachable ()
+
+      let rec takesLinear ty =
+        match ty with
+        | Ty (FunTk, sTy :: _) when tyIsLinear rx sTy -> true
+        | Ty (FunTk, [ _; tTy ]) -> takesLinear tTy
+        | _ -> false
+
+      let tyIsFun ty =
+        match ty with
+        | Ty (FunTk, _) -> true
+        | _ -> false
+
+      let ctx =
+        if
+          not applied && tyIsFun ty
+          && takesLinear (exprToTy l)
+        then
+          addError LinearError.PartialApp loc ctx
+        else
+          ctx
+
+      let ctx = lcExpr rx true ctx l
+      lcExpr rx false ctx r
+
+    | _ -> lcExprs rx ctx args
 
   | TBlockExpr (stmts, last) ->
     let ctx = lcStmts rx ctx stmts
-    lcExpr rx ctx last
+    lcExpr rx applied ctx last
 
-let private lcExprs rx ctx exprs : LinearCheckCtx = exprs |> List.fold (lcExpr rx) ctx
+let private lcExprs rx ctx exprs : LinearCheckCtx =
+  exprs |> List.fold (lcExpr rx false) ctx
 
 let private lcStmt rx (ctx: LinearCheckCtx) stmt : LinearCheckCtx =
   match stmt with
-  | TExprStmt expr -> lcExpr rx ctx expr
+  | TExprStmt expr -> lcExpr rx false ctx expr
 
   | TLetValStmt (pat, init, _) ->
     let ctx = lcPat rx ctx pat
-    lcExpr rx ctx init
+    lcExpr rx false ctx init
 
   | TLetFunStmt (_, _, _, argPats, body, loc) ->
     let parent, ctx = enterBody ctx
     let ctx = argPats |> List.fold (lcPat rx) ctx
-    let ctx = lcExpr rx ctx body
+    let ctx = lcExpr rx false ctx body
     leaveBody rx parent loc ctx
 
   | TBlockStmt (_, stmts) -> lcStmts rx ctx stmts
