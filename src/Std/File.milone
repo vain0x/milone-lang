@@ -36,7 +36,17 @@ module File =
   /// Opens a regular file for reading.
   let openRead (io: IO) (pathname: string) : File option * IO =
     let fp: FilePtr =
-      __nativeFun ("fopen", toCStr pathname, toCStr "r")
+      __nativeFun ("fopen", toCStr pathname, toCStr "rb")
+
+    if __nativeExpr ("{0} != NULL", fp) then
+      Some(File(__acquire fp)), io
+    else
+      None, io
+
+  /// Creates or opens a regular file for writing.
+  let openWrite (io: IO) (pathname: string) : File option * IO =
+    let fp: FilePtr =
+      __nativeFun ("fopen", toCStr pathname, toCStr "wb")
 
     if __nativeExpr ("{0} != NULL", fp) then
       Some(File(__acquire fp)), io

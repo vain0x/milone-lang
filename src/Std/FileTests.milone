@@ -8,13 +8,12 @@ open Std.Vector
 __nativeDecl "#include <assert.h>"
 
 let private writeCase (io: IO) =
-  __nativeStmt
-    """
-      FILE *fp = fopen("output.ignored.txt", "wb+");
-      assert(fp != NULL);
-    """
-
-  let file = FileExt.unsafeWrap (__nativeExpr "fp")
+  let file, io =
+    match File.openWrite io "output.ignored.txt" with
+    | Some it, io -> it, io
+    | None, io ->
+      failwith "Not found"
+      File.stdin (), io // HACK: failwith "" can't be File
 
   let ok, file, io =
     file |> File.writeString io "Hello, world!\n"
