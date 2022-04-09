@@ -5,6 +5,8 @@
 #    make install
 #    make install-dev
 
+# FIXME: add scripts/test-std, scripts/test-stdio
+
 default: test
 
 .PHONY: build clean default install install-dev pack test uninstall
