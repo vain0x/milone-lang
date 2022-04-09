@@ -35,6 +35,7 @@ let tyList itemTy = Ty(ListTk, [ itemTy ])
 let tyTuple itemTys = Ty(TupleTk, itemTys)
 let tyUnit = tyTuple []
 
+let tyLinear itemTy = Ty(LinearTk, [ itemTy ])
 let tyConstPtr itemTy = Ty(NativePtrTk IsConst, [ itemTy ])
 let tyNativePtr itemTy = Ty(NativePtrTk IsMut, [ itemTy ])
 
@@ -136,6 +137,8 @@ let primFromIdent ident =
   | "__inRegion" -> TPrim.InRegion |> Some
   | "__discriminant" -> TPrim.Discriminant |> Some
 
+  | "__acquire" -> TPrim.Acquire |> Some
+  | "__dispose" -> TPrim.Dispose |> Some
   | "__nativeFun" -> TPrim.NativeFun |> Some
   | "__nativeCast" -> TPrim.NativeCast |> Some
   | "__nativeExpr" -> TPrim.NativeExpr |> Some
@@ -343,6 +346,10 @@ let emptyVars: TreeMap<VarSerial, VarDef> = TMap.empty varSerialCompare
 // ----------------------------------------------
 
 module TProgram =
+  let mapStmt (mapping: TStmt -> TStmt) (modules: TProgram) : TProgram =
+    modules
+    |> List.map (fun (m: TModule) -> { m with Stmts = m.Stmts |> List.map mapping })
+
   let foldStmt (folder: 'S -> TStmt -> 'S) (state: 'S) (modules: TProgram) : 'S =
     modules
     |> List.fold (fun state (m: TModule) -> m.Stmts |> List.fold folder state) state

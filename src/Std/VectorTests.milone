@@ -1,0 +1,238 @@
+open Std.StdList
+open Std.StdTesting
+open Std.Vector
+
+module S = Std.StdString
+
+let private basicCase () : unit =
+  let v = Vector.empty ()
+  let n, v = Vector.length v
+  assert (n = 0)
+
+  let v = Vector.push 31 v
+  let n, v = Vector.length v
+  assert (n = 1)
+
+  let v = Vector.push 42 v
+  let n, v = Vector.length v
+  assert (n = 2)
+
+  let itemOpt, v = Vector.pop v
+  assert (Option.defaultValue 0 itemOpt = 42)
+  let n, v = Vector.length v
+  assert (n = 1)
+
+  let itemOpt, v = Vector.pop v
+  assert (Option.defaultValue 0 itemOpt = 31)
+  let n, v = Vector.length v
+  assert (n = 0)
+
+  let itemOpt, v = Vector.pop v
+  assert (Option.defaultValue 0 itemOpt = 0)
+  let n, v = Vector.length v
+  assert (n = 0)
+
+  Vector.dispose v
+
+let private allocCase () : unit =
+  let v = Vector.alloc 256
+  let capacity, v = VectorExt.capacity v
+  assert (capacity = 256)
+  Vector.dispose v
+
+let private forceGetCase () =
+  let n = 8
+
+  // Pre-compute factorial.
+  let v =
+    let rec go acc i v =
+      if i < n then
+        go (acc * (i + 1)) (i + 1) (Vector.push acc v)
+      else
+        v
+
+    go 1 0 (Vector.empty ())
+
+  let l, v = Vector.length v
+  assert (l = n)
+
+  let f5, v = Vector.forceGet 5 v
+  assert (f5 = 120)
+
+  let f7, v = Vector.forceGet 7 v
+  assert (f7 = 5040)
+
+  Vector.dispose v
+
+let private forceSetCase () =
+  let n = 10
+
+  // Make vector.
+  let v =
+    let rec go i v =
+      if i < n then
+        go (i + 1) (Vector.push 0 v)
+      else
+        v
+
+    go 0 (Vector.empty ())
+
+  // Compute frequency.
+  let v =
+    let rec go xs v =
+      match xs with
+      | [] -> v
+      | x :: xs ->
+        let n, v = Vector.forceGet x v
+        go xs (Vector.forceSet x (n + 1) v)
+
+    go [ 3; 1; 4; 1; 5; 9 ] v
+
+  let f0, v = Vector.forceGet 0 v
+  assert (f0 = 0)
+
+  let f2, v = Vector.forceGet 1 v
+  assert (f2 = 2)
+
+  let f9, v = Vector.forceGet 9 v
+  assert (f9 = 1)
+
+  Vector.dispose v
+
+let private ofListCase () =
+  let v = Vector.ofList [ 3; 1; 4; 1; 5; 9 ]
+
+  let len, v = Vector.length v
+  assert (len = 6)
+
+  let n0, v = Vector.forceGet 0 v
+  let n1, v = Vector.forceGet 1 v
+  let n5, v = Vector.forceGet 5 v
+  assert (n0 = 3)
+  assert (n1 = 1)
+  assert (n5 = 9)
+
+  Vector.dispose v
+
+let private extendFromListCase () =
+  let v =
+    Vector.empty ()
+    |> Vector.extendFromList [ 3; 1; 4; 1 ]
+    |> Vector.extendFromList [ 5; 9 ]
+
+  let len, v = Vector.length v
+  assert (len = 6)
+
+  let n0, v = Vector.forceGet 0 v
+  let n1, v = Vector.forceGet 1 v
+  let n5, v = Vector.forceGet 5 v
+  assert (n0 = 3)
+  assert (n1 = 1)
+  assert (n5 = 9)
+
+  Vector.dispose v
+
+let private toListCase () =
+  let v = Vector.ofList [ 3; 1; 4; 1; 5; 9 ]
+  let xs, v = Vector.toList v
+  let xs = xs |> List.map string |> S.concat "; "
+  assert (xs = "3; 1; 4; 1; 5; 9")
+  Vector.dispose v
+
+let private sliceToListCase () =
+  let v = Vector.ofList [ 3; 1; 4; 1; 5; 9 ]
+  let xs0, v = Vector.sliceToList 0 0 v
+  let xs1, v = Vector.sliceToList 1 2 v
+  let xs3, v = Vector.sliceToList 2 5 v
+  Vector.dispose v
+
+  assert (shouldEqual (List.debug string) xs0 [])
+  assert (shouldEqual (List.debug string) xs1 [ 1 ])
+  assert (shouldEqual (List.debug string) xs3 [ 4; 1; 5 ])
+
+let private foldCase () =
+  let v = Vector.ofList [ 3; 1; 4; 1; 5; 9 ]
+  let x, v = Vector.fold (fun x y -> x * 10 + y) 0 v
+  assert (shouldEqual string 314159 x)
+  Vector.dispose v
+
+let private sortCase () =
+  let v = Vector.ofList [ 3; 1; 4; 1; 5; 9 ]
+  let v = Vector.sort compare v
+  let xs, v = Vector.toList v
+
+  assert (shouldEqual (List.debug string) xs [ 1; 1; 3; 4; 5; 9 ])
+  Vector.dispose v
+
+// -----------------------------------------------
+// VectorExt
+// -----------------------------------------------
+
+let private reserveCase () =
+  let v = Vector.empty ()
+
+  // Push many elements.
+  let n = 10
+
+  let v =
+    let rec go i v =
+      if i < n then
+        go (i + 1) (Vector.push i v)
+      else
+        v
+
+    go 0 v
+
+  let v = VectorExt.reserve 20 v
+  let capacity, v = VectorExt.capacity v
+  assert (capacity >= 10 + 20)
+
+  // Reserving smaller size is noop.
+  let v = VectorExt.reserve 5 v
+  let unchanged, v = VectorExt.capacity v
+  assert (unchanged = capacity)
+
+  Vector.dispose v
+
+let private reserveExactCase () =
+  let v = VectorExt.reserve 15 (Vector.empty ())
+
+  // Push many elements.
+  let n = 15
+
+  let v =
+    let rec go i v =
+      if i < n then
+        go (i + 1) (Vector.push i v)
+      else
+        v
+
+    go 0 v
+
+  let v = VectorExt.reserveExact 5 v
+
+  let capacity, v = VectorExt.capacity v
+  assert (capacity = 15 + 5)
+
+  Vector.dispose v
+
+// -----------------------------------------------
+// Entrypoint
+// -----------------------------------------------
+
+let testVector () =
+  // Basic cases.
+  basicCase ()
+  allocCase ()
+  forceGetCase ()
+  forceSetCase ()
+  ofListCase ()
+  extendFromListCase ()
+  toListCase ()
+  sliceToListCase ()
+  foldCase ()
+  sortCase ()
+
+  // VectorExt
+  reserveCase ()
+  reserveExactCase ()

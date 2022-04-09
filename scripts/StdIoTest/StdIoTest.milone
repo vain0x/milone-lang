@@ -1,0 +1,35 @@
+open Std.ByteVector
+open Std.File
+open Std.Vector
+
+module S = Std.StdString
+
+let main _ =
+  let input = File.stdin ()
+  let output = File.stdout ()
+  let buf = Vector.alloc 1024
+
+  let _, output =
+    File.writeString "What's your name?\n" output
+
+  let ok, buf, input = File.readLine buf input
+
+  let buf, output =
+    if ok then
+      let length, buf = Vector.length buf
+
+      let s, buf =
+        ByteVector.sliceToString 0 (length - 1) buf
+
+      let _, output =
+        File.writeString ("Hello, " + S.trimEnd s + "-san!\n") output
+
+      buf, output
+    else
+      let _, output = File.writeString "No input.\n" output
+      buf, output
+
+  File.close input
+  File.close output
+  Vector.dispose buf
+  0

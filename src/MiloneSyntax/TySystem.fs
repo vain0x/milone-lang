@@ -44,9 +44,10 @@ let private tkEncode tk : int =
   | TupleTk -> just 8
   | ListTk -> just 10
 
-  | VoidPtrTk -> just 11
-  | NativePtrTk isMut -> pair 12 (isMutToInt isMut)
-  | NativeFunTk -> just 13
+  | LinearTk -> just 11
+  | VoidPtrTk -> just 12
+  | NativePtrTk isMut -> pair 13 (isMutToInt isMut)
+  | NativeFunTk -> just 14
 
   | MetaTk (tySerial, _) -> pair 20 tySerial
   | UnivTk (tySerial, _, _) -> pair 24 tySerial
@@ -83,6 +84,7 @@ let tkDisplay getTyName tk =
   | FunTk -> "fun"
   | TupleTk -> "tuple"
   | ListTk -> "list"
+  | LinearTk -> "__linear"
   | VoidPtrTk -> "voidptr"
   | NativePtrTk IsMut -> "nativeptr"
   | NativePtrTk IsConst -> "__constptr"

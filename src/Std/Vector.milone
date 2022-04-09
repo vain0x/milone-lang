@@ -1,0 +1,399 @@
+module rec LibLinear.Vector
+
+open Std.StdError
+
+// For memcpy
+__nativeDecl "#include <string.h>"
+
+/// Linear dynamic array.
+type Vector<'T> = private Vector of ptr: __linear<nativeptr<'T>> * length: uint * capacity: uint
+
+/// Allocates an untyped dynamic array with `calloc`.
+///
+/// Returns NULL if count or size is zero.
+let private rawAllocate (count: uint) (size: uint) : __linear<voidptr> =
+  if (count ||| size) = 0u then
+    // __trace "allocate 0"
+    __acquire (__nativeCast 0un)
+  else
+    assert (count < (1u <<< 31) / size)
+
+    let ptr: voidptr =
+      __nativeExpr ("calloc({0}, {1})", unativeint count, unativeint size)
+
+    // __trace (
+    //   ("allocate " + string (unativeint ptr))
+    //   + (" " + string (count * size))
+    // )
+
+    assert (__nativeExpr ("{0} != NULL", ptr))
+    __acquire ptr
+
+/// Deallocates an untyped dynamic array with `free`.
+///
+/// If ptr is null, it's noop.
+let private rawDeallocate (ptr: __linear<voidptr>) : unit =
+  let ptr = __dispose ptr
+  // __trace ("free " + string (unativeint ptr))
+  __nativeStmt ("free({0});", ptr)
+
+/// Grows an untyped vector.
+///
+/// Vector moves to newly reallocated memory.
+/// New memory must have a capacity `minLength` at least.
+let private rawGrowExact
+  (newCapacity: uint)
+  (ptr: __linear<voidptr>)
+  (length: uint)
+  (capacity: uint)
+  (size: uint)
+  : __linear<voidptr> * uint =
+  let oldPtr = __dispose ptr
+
+  // __trace (
+  //   ("grow len:" + string length)
+  //   + (" cap:" + string capacity)
+  //   + (" -> " + string newCapacity)
+  // )
+
+  let newPtr = __dispose (rawAllocate newCapacity size)
+
+  if __nativeExpr ("{0} != NULL", oldPtr) then
+    if length <> 0u then
+      __nativeStmt ("memcpy({0}, {1}, {2});", newPtr, oldPtr, unativeint length * unativeint size)
+
+    rawDeallocate (__acquire oldPtr)
+
+  __acquire newPtr, newCapacity
+
+/// Reserves more capacity for an untyped vector.
+///
+/// In result, `length + addition <= capacity`.
+let private rawReserve (addition: uint) ptr length capacity size =
+  assert (addition < (1u <<< 31) - length)
+
+  let minLength = length + uint addition
+
+  if minLength > capacity then
+    // #exponentially_grow
+    // newCapacity >= max(capacity * 2, minLength, 15).
+    let newCapacity = (capacity <<< 1) ||| minLength ||| 15u
+    rawGrowExact newCapacity ptr length capacity size
+  else
+    ptr, capacity
+
+/// Reserves more capacity for an untyped vector.
+///
+/// In result, `length + addition == capacity`.
+let private rawReserveExact (addition: uint) ptr length capacity size =
+  assert (addition < (1u <<< 31) - length)
+
+  let newCapacity = length + uint addition
+
+  if newCapacity > capacity then
+    rawGrowExact newCapacity ptr length capacity size
+  else
+    ptr, capacity
+
+/// Appends an item to an untyped vector.
+///
+/// Returns new ptr and capacity since the vector grows if full.
+let private rawPush
+  (item: obj)
+  (ptr: __linear<voidptr>)
+  (length: uint)
+  (capacity: uint)
+  (size: uint)
+  : __linear<voidptr> * uint =
+  let ptr, capacity =
+    if length = capacity then
+      // #exponentially_grow
+      // newCapacity >= max(capacity * 2, minLength, 15).
+      let newCapacity =
+        (capacity <<< 1) ||| (length + 1u) ||| 15u
+
+      rawGrowExact newCapacity ptr length capacity size
+    else
+      ptr, capacity
+
+  let ptr = __dispose ptr
+
+  __nativeStmt (
+    "memcpy(&({0})[{1}], {2}, {3});",
+    (__nativeCast ptr: nativeptr<byte>),
+    unativeint length * unativeint size,
+    item,
+    unativeint size
+  )
+
+  __acquire ptr, capacity
+
+/// Sorts an untyped vector in-place.
+///
+/// - Sort algorithm is an unstable sort.
+/// - `ptrComparer` is called with two pointers, each of them points to an item in the vector.
+let private rawSortUnstable
+  (ptrComparer: obj -> obj -> int)
+  (ptr: __linear<voidptr>)
+  (length: uint)
+  (size: uint)
+  : __linear<voidptr> =
+  let ptr = __dispose ptr
+
+  // Define a static function that captures the comparer via thread local.
+  __nativeDecl
+    """
+      struct ObjCompareFun {
+        int(*fun)(void const *, void const *, void const *);
+        void const *env;
+      };
+      _Thread_local struct ObjCompareFun t_compare_fun;
+      static int static_compare(void const *l, void const *r) {
+        return t_compare_fun.fun(t_compare_fun.env, l, r);
+      }
+    """
+
+  __nativeStmt (
+    """
+      struct ObjCompareFun prev = t_compare_fun;
+      t_compare_fun = (struct ObjCompareFun){.fun = {0}.fun, .env = {0}.env};
+      qsort({1}, {2}, {3}, static_compare);
+      t_compare_fun = prev;
+    """,
+    ptrComparer,
+    ptr,
+    length,
+    size
+  )
+
+  __acquire ptr
+
+module Vector =
+  /// Gets an empty vector.
+  let empty () : Vector<'T> =
+    Vector(__acquire (__nativeCast 0un), 0u, 0u)
+
+  /// Allocates an empty vector with the specified capacity.
+  let alloc (capacity: int) : Vector<'T> =
+    if capacity > 0 then
+      let size = __sizeOfVal (unbox (box ()): 'T)
+      let ptr = rawAllocate (uint capacity) (uint size)
+      let ptr: __linear<nativeptr<'T>> = __acquire (__nativeCast (__dispose ptr))
+      Vector(ptr, 0u, uint capacity)
+    else
+      empty ()
+
+  /// Disposes a vector.
+  let dispose (v: Vector<'T>) : unit =
+    let (Vector (ptr, _, _)) = v
+    let ptr: __linear<voidptr> = __acquire (__nativeCast (__dispose ptr))
+    rawDeallocate ptr
+
+  /// Gets the length.
+  let length (v: Vector<'T>) : int * Vector<'T> =
+    let (Vector (ptr, length, capacity)) = v
+    int length, Vector(ptr, length, capacity)
+
+  /// Gets an item at the position. Out of bound causes crash.
+  let forceGet (i: int) (v: Vector<'T>) : 'T * Vector<'T> =
+    let (Vector (ptr, length, capacity)) = v
+    assert (uint i < length)
+    let ptr = __dispose ptr
+    let item: 'T = __ptrRead (__nativeCast ptr) i
+    item, Vector(__acquire ptr, length, capacity)
+
+  /// Sets an item at the position. Out of bound causes crash.
+  let forceSet (i: int) (item: 'T) (v: Vector<'T>) : Vector<'T> =
+    let (Vector (ptr, length, capacity)) = v
+    assert (uint i < length)
+    let ptr = __dispose ptr
+    __ptrWrite (__nativeCast ptr) i item
+    Vector(__acquire ptr, length, capacity)
+
+  /// Appends an item to the end of vector.
+  let push (item: 'T) (v: Vector<'T>) : Vector<'T> =
+    let (Vector (ptr, length, capacity)) = v
+
+    let ptr, capacity =
+      let itemPtr: obj = __nativeExpr ("&({0})", item)
+      let ptr: __linear<voidptr> = __acquire (__nativeCast (__dispose ptr))
+      let size = uint (__sizeOfVal item)
+      rawPush itemPtr ptr length capacity size
+
+    let ptr: __linear<nativeptr<'T>> = __acquire (__nativeCast (__dispose ptr))
+    Vector(ptr, length + 1u, capacity)
+
+  /// Removes the last item from the vector unless empty.
+  ///
+  /// Remark: Allocated memory doesn't get freed.
+  let pop (v: Vector<'T>) : 'T option * Vector<'T> =
+    let (Vector (ptr, length, capacity)) = v
+
+    if length <> 0u then
+      let ptr = __dispose ptr
+
+      let item: 'T =
+        __ptrRead (__nativeCast ptr) (int (length - 1u))
+
+      Some item, Vector(__acquire ptr, length - 1u, capacity)
+    else
+      None, Vector(ptr, length, capacity)
+
+  /// Appends all items in a list to the vector.
+  let extendFromList (xs: 'T list) (v: Vector<'T>) : Vector<'T> =
+    match xs with
+    | [] -> v
+
+    | x :: xs ->
+      let (Vector (ptr, length, capacity)) = v
+      let ptr: __linear<voidptr> = __acquire (__nativeCast (__dispose ptr))
+
+      let addition = 1u + uint (List.length xs)
+      let size = __sizeOfVal (unbox (box ()): 'T)
+
+      let ptr, capacity =
+        rawReserve addition ptr length capacity (uint size)
+
+      let ptr: nativeptr<'T> = __nativeCast (__dispose ptr)
+
+      let rec extendFromListLoop i x xs =
+        __ptrWrite ptr i x
+
+        match xs with
+        | [] -> ()
+        | x :: xs -> extendFromListLoop (i + 1) x xs
+
+      extendFromListLoop (int length) x xs
+      Vector(__acquire ptr, length + addition, capacity)
+
+  /// Creates a vector from a list.
+  let ofList (xs: 'T list) : Vector<'T> = extendFromList xs (empty ())
+
+  /// Creates a list from a range of the vector.
+  let sliceToList (start: int) (endIndex: int) (v: Vector<'T>) : 'T list * Vector<'T> =
+    let (Vector (ptr, length, capacity)) = v
+    let ptr = __dispose ptr
+
+    assert (uint endIndex <= length)
+    assert (uint start <= uint endIndex)
+
+    let xs =
+      let rec toListLoop acc i =
+        let acc = __ptrRead (__nativeCast ptr) i :: acc
+
+        if i = start then
+          acc
+        else
+          toListLoop acc (i - 1)
+
+      if start < endIndex then
+        toListLoop [] (int (uint endIndex - 1u))
+      else
+        []
+
+    xs, Vector(__acquire ptr, length, capacity)
+
+  /// Creates a list from a vector.
+  let toList (v: Vector<'T>) : 'T list * Vector<'T> =
+    let length, v = length v
+    sliceToList 0 length v
+
+  /// Folds a vector.
+  let fold (folder: 'S -> 'T -> 'S) (init: 'S) (v: Vector<'T>) : 'S * Vector<'T> =
+    let n, v = length v
+
+    let rec go i state v =
+      if i < n then
+        let item, v = forceGet i v
+        go (i + 1) (folder state item) v
+      else
+        state, v
+
+    go 0 init v
+
+  /// Sorts a vector in-place.
+  ///
+  /// (Currently unstable sort algorithm is used.
+  ///  This function in future version will use a stable sort algorithm.)
+  let sort (itemComparer: 'T -> 'T -> int) (v: Vector<'T>) : Vector<'T> =
+    // ptrComparer pl pr = itemComparer (*pl) (*pr)
+    let ptrComparer =
+      fun (l: obj) (r: obj) -> itemComparer (__ptrRead (__nativeCast l) 0: 'T) (__ptrRead (__nativeCast r) 0: 'T)
+
+    let (Vector (ptr, length, capacity)) = v
+    let ptr = __acquire (__nativeCast (__dispose ptr))
+    let size = __sizeOfVal (unbox (box ()): 'T)
+
+    let ptr =
+      rawSortUnstable ptrComparer ptr length (uint size)
+
+    let ptr = __acquire (__nativeCast (__dispose ptr))
+    Vector(ptr, length, capacity)
+
+/// Vector methods that are less frequently used.
+module VectorExt =
+  /// Creates a vector with the specified length and capacity. Contents are zero'ed.
+  ///
+  /// Prefer to use `alloc` to allocate and `push` contents to it.
+  ///
+  /// Item type must be one of: intNN, uintNN, float, unit, bool, char, obj, voidptr, nativeptr, __constptr.
+  let unsafeZeroCreate (length: int) : Vector<'T> =
+    assert (length >= 0)
+    let ptr = rawAllocate (uint length) 1u
+    Vector(__acquire (__nativeCast (__dispose ptr)), uint length, uint length)
+
+  /// Unsafely exposes the internal buffer of the vector.
+  ///
+  /// This function exists to build another type on the top of Vector efficiently.
+  let unsafeDup (v: Vector<'T>) : nativeptr<'T> * uint * uint * Vector<'T> =
+    let (Vector (ptr, length, capacity)) = v
+    let ptr = __dispose ptr
+    ptr, length, capacity, Vector(__acquire ptr, length, capacity)
+
+  let unsafeSetLength (length: int) (v: Vector<'T>) : Vector<'T> =
+    let (Vector (ptr, _, capacity)) = v
+    assert (uint length <= capacity)
+    Vector(ptr, uint length, capacity)
+
+  /// Gets the capacity.
+  let capacity (v: Vector<'T>) : int * Vector<'T> =
+    let (Vector (ptr, length, capacity)) = v
+    int capacity, Vector(ptr, length, capacity)
+
+  /// Reserves more memory for a vector.
+  ///
+  /// - If the vector already have plenty memory, it's noop.
+  /// - Result vector should satisfy `length + addition <= capacity`.
+  ///   Note that new capacity may be greater than required size
+  ///   to ensure the number of reallocation is small (O(log N)).
+  let reserve (addition: int) (v: Vector<'T>) : Vector<'T> =
+    assert (addition >= 0)
+
+    let (Vector (ptr, length, capacity)) = v
+    let ptr = __acquire (__nativeCast (__dispose ptr))
+    let size = uint (__sizeOfVal (unbox (box ()): 'T))
+
+    let ptr, capacity =
+      rawReserve (uint addition) ptr length capacity size
+
+    let ptr = __acquire (__nativeCast (__dispose ptr))
+    Vector(ptr, length, capacity)
+
+  /// Reserves more memory for a vector.
+  ///
+  /// Prefer to use `reserve` instead of this in most of cases.
+  ///
+  /// - If the vector already have plenty memory, it's noop.
+  /// - Result vector should satisfy `length + addition = capacity`.
+  let reserveExact (addition: int) (v: Vector<'T>) : Vector<'T> =
+    assert (addition >= 0)
+
+    let (Vector (ptr, length, capacity)) = v
+    let ptr = __acquire (__nativeCast (__dispose ptr))
+    let size = uint (__sizeOfVal (unbox (box ()): 'T))
+
+    let ptr, capacity =
+      rawReserveExact (uint addition) ptr length capacity size
+
+    let ptr = __acquire (__nativeCast (__dispose ptr))
+    Vector(ptr, length, capacity)

@@ -61,7 +61,9 @@ type Tk =
   /// Ty args must be `[t]`.
   | ListTk
 
-  // FFI types.
+  // Special types.
+  /// Ty args must be `[t]`.
+  | LinearTk
   | VoidPtrTk
   | NativePtrTk of nativePtrIsMut: IsMut
   | NativeFunTk
@@ -275,6 +277,8 @@ type TPrim =
   | Assert
   | Printfn
   | InRegion
+  | Acquire
+  | Dispose
   | NativeFun
   | NativeCast
   | NativeExpr
