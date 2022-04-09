@@ -6,6 +6,7 @@ Documentation about design and implementation of the compiler.
 - [ARCHITECTURE](../../ARCHITECTURE.md)
 - [#Passes](#Passes)
 - Also
+    - [Design Policy](design_policy.md)
     - [Glossary](glossary.md)
     - [nursery](nursery): Experimental projects written in milone-lang
 

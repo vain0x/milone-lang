@@ -1,20 +1,5 @@
 # Notes
 
-## Policy about language extensions
-
-Although some language extensions are necessary, milone-lang should be a subset of F# as possible. That is, language extensions should be used only in libraries, not application-wide.
-
-## Policy about F# language features
-
-No plan to implement complete set of F# features. Especially, these features below are unlikely implemented:
-
-- Code quotations
-- Custom computation expressions
-- Custom operators
-- Inheritance
-- Type provider
-- Units of measure
-
 ### FFI
 
 FFI is absolutely necessary to use milone-lang in somewhat practical purpose.
