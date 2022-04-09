@@ -12,6 +12,9 @@
     - Language -> [docs/refs](docs/refs)
     - CLI -> [docs/cli.md](docs/cli.md)
 - Examples -> [tests/examples](tests/examples)
+- Libraries
+    - Built-in -> [src/MiloneCore](src/MiloneCore)
+    - Standard library -> [src/Std](src/Std)
 - Internals -> [internals.md](internals.md)
 
 ## About

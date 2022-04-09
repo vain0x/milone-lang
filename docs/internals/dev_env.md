@@ -1,37 +1,33 @@
-# Internals
+# Development Environment
 
-Notes for milone-lang developers.
+This explains how to set up an environment to develop the milone-lang compiler.
 
-- Links:
-    - [ARCHITECTURE](ARCHITECTURE.md)
-    - [Glossary](docs/internals/glossary.md)
-
-## Development
-
-Scripts are written for `bash` because I use a Ubuntu desktop for development.
+Remark: Scripts are written for `bash` because I use a Ubuntu desktop.
 
 TODO: prepare scripts/unused/.devcontainer
 
-### Dev: Prerequisites
+### Prerequisites
 
-See the "install from sources" section in README.
-
-For incremental building and testing, `ninja` command is also used.
-
-`git` command is used in tests to generate diff.
+See also the "install" section in [README](../../README.md) in the root.
 
 - Install Git 2.30.0
 - Install GNU make
 - Install [ninja 1.10.2](https://github.com/ninja-build/ninja) (build tool)
     with `scripts/install-ninja`
 
-### Dev: Build
+Reasons:
+
+- `git` command is used in tests to generate diff.
+- `make` command is used to incremental building and wrapper of ninja.
+- `ninja` command is used for incremental building and testing.
+
+### Build
 
 ```sh
 make
 ```
 
-See also Makefile.
+See also [Makefile](../../Makefile) in the root.
 
 ### Dev: Testing
 
@@ -62,34 +58,7 @@ In tests, there are some categories of test cases:
 - `errors`: Tests of compile errors
 - `pendings`: Test cases pointing out flaw of the compiler
 
-### Dev: See also
-
-- [TODO list](https://github.com/vain0x/milone-lang/projects/1)
-- [notes.md](notes.md): Notes on future works.
-- Standard libraries for milone-lang.
-    - [src/MiloneCore](src/MiloneCore): Core library that is a subset of F# with compatible behavior.
-    - [src/Std](src/Std): Standard library for milone-lang, not compatible with F#.
-- [nursery](nursery): Experimental projects written in milone-lang
-
-## Deployment
-
-- Update version number in source for `milone --version`
-- Merge to master branch
-
-```sh
-# Make Git tag.
-git tag v0.0.0
-git push --tags
-
-# Create package.
-make pack
-```
-
-- Make a release in GitHub
-    - Add the package to release
-    - Build a package on Windows and add it to release too
-
-## Formatting
+### Notes on Formatting Code
 
 TODO: explain more
 
@@ -99,10 +68,7 @@ See also [FsAutoComplete/RELEASE_NOTES.md](https://github.com/fsharp/FsAutoCompl
 Install [fantomas](https://github.com/fsprojects/fantomas).
 
 ```sh
-# Install globally.
-# dotnet tool install fantomas-tool --version 4.5.0
-
-# Restore locally. (See also `./.config/dotnet-tools.json`.)
+# Restore fantomas. (See also `.config/dotnet-tools.json`.)
 dotnet tool restore
 
 # Execute for each F# file. Since fantomas crashes on error, avoid using --recursive mode.
@@ -121,3 +87,26 @@ find -type f -name '*.milone' | \
 ```
 
 - See also [F# code formatting guidelines | Microsoft Docs](https://docs.microsoft.com/en-us/dotnet/fsharp/style-guide/formatting#formatting-expressions).
+
+----
+
+## Less Interesting
+
+### Deployment - Tag and Pack
+
+- Make sure the develop branch is working
+- Update version number written in source
+- Merge to the main branch
+
+```sh
+# Make Git tag.
+git tag v0.0.0
+git push --tags
+
+# Create package.
+make pack
+```
+
+- Make a release in GitHub
+    - Add the package to the release
+    - Build a package on Windows and add it to the release

@@ -2,6 +2,13 @@
 
 Documentation about design and implementation of the compiler.
 
+- Development Environment -> [dev_env.md](dev_env.md)
+- [ARCHITECTURE](../../ARCHITECTURE.md)
+- [#Passes](#Passes)
+- Also
+    - [Glossary](glossary.md)
+    - [nursery](nursery): Experimental projects written in milone-lang
+
 ## Passes
 
 *Pass* is a routine to validate and/or transform a program.
@@ -31,3 +38,7 @@ Transformation:
 - ~~cir_dump~~
 
 See also header comments in implementation files.
+
+## See Also
+
+- [TODO list](https://github.com/vain0x/milone-lang/projects/1) (recently not updated)
