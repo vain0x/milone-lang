@@ -6,6 +6,7 @@ Documentation about design and implementation of the compiler.
 - [ARCHITECTURE](../../ARCHITECTURE.md)
 - [#Passes](#Passes)
 - Also
+    - [Plans](plans.md)
     - [Design Policy](design_policy.md)
     - [Glossary](glossary.md)
     - [nursery](nursery): Experimental projects written in milone-lang
@@ -40,6 +41,7 @@ Transformation:
 
 See also header comments in implementation files.
 
-## See Also
+----
 
+- [Misc](misc.md) (not interesting)
 - [TODO list](https://github.com/vain0x/milone-lang/projects/1) (recently not updated)
