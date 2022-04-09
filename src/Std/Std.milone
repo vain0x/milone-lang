@@ -7,6 +7,8 @@ open Std.StdError
 open Std.VectorTests
 
 let main _ =
-  testByteVector ()
-  testVector ()
-  IO.run testFile |> never
+  IO.exec (fun (io: IO) ->
+    testByteVector ()
+    testVector ()
+    testFile io)
+  |> never
