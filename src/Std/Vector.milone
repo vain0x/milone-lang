@@ -13,7 +13,7 @@ type Vector<'T> = private Vector of ptr: __linear<nativeptr<'T>> * length: uint 
 /// Returns NULL if count or size is zero.
 let private rawAllocate (count: uint) (size: uint) : __linear<voidptr> =
   if (count ||| size) = 0u then
-    __trace "allocate 0"
+    // __trace "allocate 0"
     __acquire (__nativeCast 0un)
   else
     assert (count < (1u <<< 31) / size)
@@ -21,10 +21,10 @@ let private rawAllocate (count: uint) (size: uint) : __linear<voidptr> =
     let ptr: voidptr =
       __nativeExpr ("calloc({0}, {1})", unativeint count, unativeint size)
 
-    __trace (
-      ("allocate " + string (unativeint ptr))
-      + (" " + string (count * size))
-    )
+    // __trace (
+    //   ("allocate " + string (unativeint ptr))
+    //   + (" " + string (count * size))
+    // )
 
     assert (__nativeExpr ("{0} != NULL", ptr))
     __acquire ptr
@@ -34,7 +34,7 @@ let private rawAllocate (count: uint) (size: uint) : __linear<voidptr> =
 /// If ptr is null, it's noop.
 let private rawDeallocate (ptr: __linear<voidptr>) : unit =
   let ptr = __dispose ptr
-  __trace ("free " + string (unativeint ptr))
+  // __trace ("free " + string (unativeint ptr))
   __nativeStmt ("free({0});", ptr)
 
 /// Grows an untyped vector.
@@ -50,11 +50,11 @@ let private rawGrowExact
   : __linear<voidptr> * uint =
   let oldPtr = __dispose ptr
 
-  __trace (
-    ("grow len:" + string length)
-    + (" cap:" + string capacity)
-    + (" -> " + string newCapacity)
-  )
+  // __trace (
+  //   ("grow len:" + string length)
+  //   + (" cap:" + string capacity)
+  //   + (" -> " + string newCapacity)
+  // )
 
   let newPtr = __dispose (rawAllocate newCapacity size)
 
