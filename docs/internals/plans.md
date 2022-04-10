@@ -1,28 +1,26 @@
 # Plans
 
-### FFI
+(Not fully designed yet.)
 
-FFI is absolutely necessary to use milone-lang in somewhat practical purpose.
+## FFI
 
-Open design spaces:
+Foreign function interface (FFI) is necessary to implement practical programs.
 
-- syntax to declare native functions (~~statically linked~~, dynamically linked)~~ (`__nativeFun` is now available for statically linked ones.)
-- C-compatible data types (~~void, int8_t, pointers,~~ enum, struct etc.)
-- design of safe wrappers (APIs to indirectly use "unsafe" features without risk of problems)
+To determine:
 
-Links:
+- Syntax to declare native functions
+- C-compatible data types (~~void, int8_t, pointers,~~ enum, struct, union etc.)
 
-- [External Functions - F# | Microsoft Docs](https://docs.microsoft.com/en-us/dotnet/fsharp/language-reference/functions/external-functions)
-- [fsharp/nativeptr.fs · dotnet/fsharp](https://github.com/dotnet/fsharp/blob/ec5bad3a391357e03ff2286a264f0e4faf7d840d/src/fsharp/FSharp.Core/nativeptr.fs)
+## Memory Management
 
-### Memory management
-
-*In short: No GC. Will support dynamic region-based memory management by deep cloning.*
+*In short: No GC. use dynamic region-based memory management and linear type.*
 
 Unlike F#, milone-lang doesn't support GC.
 Compiler is short-running application, so it doesn't need to free anything.
 
-Memory management is necessary for some of long-running programs such as web servers.
+Memory management is necessary for long-running programs.
+
+### Dynamic Region
 
 As an experiment, milone-lang now supports `__inRegion` primitive that takes a "region", a function (`() -> int`).
 `__inRegion` calls the region and returns the result, and then, *all memory allocated while running the region are freed*.
@@ -56,3 +54,11 @@ This should be done by deeply cloning the result value of the region: the copy i
 - By deeply cloning objects that need allocation, outside of region eventually runs into out of memory.
     - free copies manually? (`let x = __inRegion f in doSomething x; free x`)
     - prevent copies from escaping and free them at the end of scope? (`let x: inref<T> = __inRegion f in doSomething x`)
+
+### Linear Types
+
+Memory that can't be put on a region are considered general resource.
+
+## Resource Management
+
+General resource is manged using linear types.
