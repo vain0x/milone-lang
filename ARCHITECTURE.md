@@ -4,7 +4,7 @@
 
 ## Bird's Eye Overview
 
-Compiler does *parse* a program and then *transform*.
+Compiler does *parse* a program and then *codegen*.
 
     [ milone-lang code ]
         |
@@ -21,11 +21,15 @@ Compiler does *parse* a program and then *transform*.
 
 Projects:
 
-- MiloneShared: Shared types and utils
-- MiloneSyntax: Syntax analysis and type checking
-- MiloneTransform: Code generation
-- MiloneCli: CLI app
-- MiloneLspServer: LSP server implementation (F#)
+- lib: MiloneShared: Shared types, functions and utilities
+- lib: MiloneSyntaxTypes: Types for MiloneSyntax
+- lib: MiloneSyntax: Syntax analysis and semantic check
+- lib: MiloneTranslationTypes: Types for MiloneTranslation
+- lib: MiloneTranslation: Code generation actual logic
+- lib: MiloneCliCore: CLI client implementation
+- app: MiloneCli
+- lib: MiloneLspServerCore: LSP server implementation (F#)
+- app: MiloneLspServer
 
 Diagram of project dependencies:
 
@@ -33,28 +37,30 @@ Diagram of project dependencies:
             ^
           /   \
          /     \
-    Syntax   Transform
+    Syntax   Translation
      ^  ^       ^
      |   \     /
      |    \   /
      |     Cli
     LSP
 
-Note that Transform is not depended by Syntax and LSP server.
-That illustrates modification of Transform doesn't affect interface of the language.
+Note that Translation isn't depended by Syntax and LSP server.
+That illustrates modification of Translation doesn't affect the interface of language.
 
 ### Intermediate representations
 
 - Abstract Syntax Tree (AST)
+    - AST is well-known. IR for syntax.
+- Name resolution intermediate representation (NIR)
+    - Functional-style IR for semantic check. Symbols are strings.
 - Typed intermediate representation (TIR)
-    - Functional-style IR. For checking.
+    - Functional-style IR for semantic check. Symbols are internal IDs.
 - High-level intermediate representation (HIR)
-    - Functional-style IR. For transformation.
+    - Functional-style IR for transformation and codegen.
 - Mid-level intermediate representation (MIR)
-    - For C code generation.
-    - Imperative-style IR.
+    - Imperative-style IR for C code generation.
 - C intermediate representation (CIR)
-    - Similar to AST of C language.
+    - IR similar to AST of C language.
 
 Diagram of data flow.
 
@@ -62,18 +68,20 @@ Diagram of data flow.
       | tokenize & parse
       v
      AST
-      ↓
-     TIR -- type checking etc.
+    　↓
+     NIR
+      ↓  -- name resolution
+     TIR -- type check etc.
       |
       ~  -- boundary
-      ↓
-     HIR -- closure conversion etc.
-      ↓
+      ↓  -- lower
+     HIR
+      ↓  -- closure conversion etc.
      MIR
       ↓
      CIR
       ↓
-    Files (*.c)     
+    Files (*.c)
 
 ### Language-Specific Files
 
@@ -82,3 +90,10 @@ Diagram of data flow.
 ## Cross-Cutting Concerns
 
 *WIP*
+
+----
+
+## Less Interesting Notes
+
+- Reason why app project and lib project are separated (e.g. MiloneCliCore and MiloneCli.):
+    - I expected separation should reduce the compilation time. Improvement isn't observed though.

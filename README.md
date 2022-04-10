@@ -1,6 +1,18 @@
-# milone-lang
+# The Milone Language
 
-`milone-lang` is an F#-subset programming language.
+The *Milone* language is an F#-subset programming language. This is all-in-one repository.
+
+```fsharp
+let rec factorial n =
+  if n = 0 then
+    1
+  else
+    n * factorial (n - 1)
+
+printfn "5! = %d" (factorial 5) //=> 120
+```
+
+## Table of Contents
 
 - [#About](#about)
 - [#Install](#install)
@@ -11,40 +23,41 @@
 - Documentation
     - Language -> [docs/refs](docs/refs)
     - CLI -> [docs/cli.md](docs/cli.md)
-- Examples -> [tests/examples](tests/examples)
-- Internals -> [internals.md](internals.md)
+- Examples
+    - [tests/examples](tests/examples)
+    - Compiler itself -> [src/MiloneCliCore/Cli.fs](src/MiloneCliCore/Cli.fs)
+- Libraries
+    - Built-in library -> [src/MiloneCore](src/MiloneCore)
+    - Standard library -> [src/Std](src/Std)
+- Tools
+    - VSCode extension -> [vscode_ext](vscode_ext)
+- Internals -> [docs/internals](docs/internals)
 
 ## About
 
 *History*:
-The initial goal of the project was **[self-hosting](https://en.wikipedia.org/wiki/Self-hosting)**.
-That is, I just wanted to write a compiler that can compile the compiler itself.
-I achieved the goal at [v0.1.0](https://github.com/vain0x/milone-lang/tree/v0.1.0).
+The author started this project in 2018 just for fun. Initial goal was making a compiler that can compile itself (that is, **[self-hosting](https://en.wikipedia.org/wiki/Self-hosting)**). It was achieved at [v0.1.0](https://github.com/vain0x/milone-lang/tree/v0.1.0) in 2019.
 
-*Current*:
-I'm working toward initial release.
+*Status*: Currently this project is being developed for v1.0 release.
 
-*Remarks*:
-This is a hobby project.
-Don't use in production.
-Issues and pull requests are welcome.
-Feel free to ask anything in [discussions](https://github.com/vain0x/milone-lang/discussions/4) or something.
+*Disclaimer*:
+This is a hobby project. Don't use in production.
 
 ## Install
 
-### Install from sources on Linux
+### Install from Sources on Linux
 
 Prerequisites:
 
-- Ubuntu 18.04 (or similar platform)
-- Install [.NET SDK 5](https://dotnet.microsoft.com/download/dotnet/5.0)
-- Install GNU make
-- Install GCC 7.5.0
+- Ubuntu 20.04 (or similar)
+- Install [.NET SDK 6](https://dotnet.microsoft.com/download/dotnet/6.0)
+- Install GNU make 4.2.1
+- Install GCC 9.4.0
 
 Do:
 
 ```sh
-# Download the source code.
+# Download
 git clone 'https://github.com/vain0x/milone-lang' --filter=blob:none
 
 # Build and install.
@@ -54,28 +67,22 @@ make install
 
 - To uninstall, do `make uninstall`.
 
-### Install from binary package on Windows
+### Install from Binary Package on Windows
 
 Prerequisites:
 
 - Windows 10
-- Install `MSBuild.exe` in some way:
-    - install Visual Studio 2019 with "Desktop development with C++" option, *OR*
-    - install [Visual Studio 2019 Build Tools](https://visualstudio.microsoft.com/ja/downloads/?q=build+tools#build-tools-for-visual-studio-2019).
+- Install `MSBuild.exe` in either way:
+    - Install Visual Studio 2019 with "Desktop development with C++" enabled, *OR*
+    - Install [Visual Studio 2019 Build Tools](https://visualstudio.microsoft.com/ja/downloads/?q=build+tools#build-tools-for-visual-studio-2019).
 
 Instructions:
 
 - Download a binary package from [GitHub Releases](https://github.com/vain0x/milone-lang/releases)
-- Unarchive it somewhere
+- Unarchive it
 - Follow instructions written in [INSTALL.md](src/MyBuildTool/assets/INSTALL.md)
 
-See also [docs/binary_package.md](docs/binary_package.md).
-
-## Install VSCode Extension
-
-See [./vscode_ext](./vscode_ext)
-
-----
+See [docs/binary_package.md](docs/binary_package.md) for more details.
 
 ## How It Works
 
@@ -88,7 +95,7 @@ let main _ =
   factorial 5 - 120 // exit code
 ```
 
-Then the output is a C code that looks like the following.
+The compiler emits a C code that is equivalent to the following:
 
 ```c
 int factorial(int x) {
@@ -106,7 +113,7 @@ int main() {
 
 *The actual output is available at [factorial.c](tests/examples/factorial/factorial.c).*
 
-The diagram below illustrates how it does self-host finally.
+The diagram below illustrates how it does self-hosting.
 
 ```
     <milone-lang compiler>.fs
@@ -121,43 +128,10 @@ The diagram below illustrates how it does self-host finally.
                  ^ a native executable
 ```
 
-## Features
+## Contribute
 
-Not all of F# features are supported. Features for functional-style programming are selected to write a compiler easily.
-
-- Compile a CLI application (no libraries)
-- Expressions
-    - Literals: `42`, `3.14`, `"str"`, `"""raw str"""`
-    - Operations: `a + b`, `s.[i]`, `h :: t`, `(x, y)`, etc.
-    - Function calls: `f x y` and `y |> f x`
-    - Function definitions: `let f x y = ..` and `fun x y -> ..`
-    - Pattern matching
-- Functions
-    - Mutual recursion
-    - Local variable capturing
-    - Partial applications
-    - Function objects
-- Types
-    - Polymorphic type inference
-        - Only top-level functions are generalized
-    - Primitive types: int, float, string, tuples, lists, functions, etc.
-    - Discriminated unions
-    - Records (non-generic ones only)
-- IO
-    - `printfn` (`%s`, `%d`, `%f` only)
-
-See also:
-
-- [the docs/refs directory](docs/refs/) for detailed explanation
-- [the tests/examples directory](tests/examples) for working codes
-- [the examples directory](examples) for more practical codes
-
-## Internals
-
-For compiler internals:
-
-- [docs/internals](docs/internals)
-- [src](src)
+Issues and pull requests are welcome.
+Feel free to ask in [discussions](https://github.com/vain0x/milone-lang/discussions/4), twitter or something.
 
 ## License
 
