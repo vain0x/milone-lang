@@ -17,17 +17,14 @@ type File = File of FP
 /// Directory.
 type Dir = Dir of FP
 
-let private fpIsNull (fp: FP) : bool =
-  (__nativeCast fp: unativeint) = unativeint 0
-
 let private fpAsFileOption (fp: FP) : File option =
-  if not (fpIsNull fp) then
+  if fp <> __nullptr then
     Some(File fp)
   else
     None
 
 let private fpAsDirOption (fp: FP) : Dir option =
-  if not (fpIsNull fp) then
+  if fp <> __nullptr then
     Some(Dir fp)
   else
     None

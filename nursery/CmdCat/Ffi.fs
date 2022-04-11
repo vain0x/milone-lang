@@ -38,7 +38,7 @@ let fileReadBytes (size: int) (Fd fd) : Buffer option =
   let buf: __voidconstptr =
     __nativeFun ("file_read_bytes", fd, size)
 
-  if __nativeCast buf <> unativeint 0 then
+  if buf <> __nullptr then
     Some(bufferRefNew buf)
   else
     None

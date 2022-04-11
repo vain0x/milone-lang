@@ -4,7 +4,7 @@ module rec native_cast.Program
 // See also x_native_code.md in docs.
 
 let main _ =
-  let mutNull: voidptr = __nativeCast 0un
+  let mutNull: voidptr = __nullptr
   let constNull: __voidconstptr = __nativeCast mutNull
   let constIntPtr: __constptr<int> = __nativeCast constNull
   let intPtr: nativeptr<int> = __nativeCast constIntPtr

@@ -36,9 +36,9 @@ let private alignOf (_: nativeptr<'T>) : unativeint =
   __nativeExpr "_Alignof(T)"
 
 let private nativeStmtWithTyPlaceholder () =
-  assert (alignOf (__nativeCast 0n: nativeptr<char>) = 1un)
-  assert (alignOf (__nativeCast 0n: nativeptr<int>) = 4un)
-  assert (alignOf (__nativeCast 0n: nativeptr<int -> unit>) = 8un)
+  assert (alignOf (__nullptr: nativeptr<char>) = 1un)
+  assert (alignOf (__nullptr: nativeptr<int>) = 4un)
+  assert (alignOf (__nullptr: nativeptr<int -> unit>) = 8un)
 
 let main _ =
   writeLine "HEY!"

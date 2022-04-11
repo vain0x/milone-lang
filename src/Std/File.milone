@@ -38,7 +38,7 @@ module File =
     let fp: FilePtr =
       __nativeFun ("fopen", toCStr pathname, toCStr "rb")
 
-    if __nativeExpr ("{0} != NULL", fp) then
+    if fp <> __nullptr then
       Some(File(__acquire fp)), io
     else
       None, io
@@ -48,7 +48,7 @@ module File =
     let fp: FilePtr =
       __nativeFun ("fopen", toCStr pathname, toCStr "wb")
 
-    if __nativeExpr ("{0} != NULL", fp) then
+    if fp <> __nullptr then
       Some(File(__acquire fp)), io
     else
       None, io

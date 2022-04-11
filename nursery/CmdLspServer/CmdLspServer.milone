@@ -1069,7 +1069,7 @@ let private readerLoop () : __voidconstptr =
 
     trace "reader exited")
 
-  __nativeCast 0n
+  __nullptr
 
 let private serverLoop () =
   let output = getStdout ()

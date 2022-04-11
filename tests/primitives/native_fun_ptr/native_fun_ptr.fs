@@ -70,7 +70,7 @@ let private testFunPtrCanBeResult () =
   let plus (x: int) (y: int) = x + y
   let getFunPtr () = __nativeFun plus
   let p = getFunPtr ()
-  assert (__nativeCast p <> 0un)
+  assert (p <> __nullptr)
 
 let main _ =
   testSort ()

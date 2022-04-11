@@ -67,11 +67,11 @@ void native_code_native_code_nativeStmtWithTyPlaceholder(void) {
     uintptr_t call_;
     uintptr_t call_1;
     uintptr_t call_2;
-    call_ = native_code_native_code_CharMutPtrUIntPtrFun1_alignOf(((char*)0LL));
+    call_ = native_code_native_code_CharMutPtrUIntPtrFun1_alignOf(((char*)NULL));
     milone_assert((call_ == (size_t)1ULL), (struct String){.str = "native_code/native_code.milone", .len = 30}, 38, 2);
-    call_1 = native_code_native_code_IntMutPtrUIntPtrFun1_alignOf(((int*)0LL));
+    call_1 = native_code_native_code_IntMutPtrUIntPtrFun1_alignOf(((int*)NULL));
     milone_assert((call_1 == (size_t)4ULL), (struct String){.str = "native_code/native_code.milone", .len = 30}, 39, 2);
-    call_2 = native_code_native_code_IntUnitFun1MutPtrUIntPtrFun1_alignOf(((struct IntUnitFun1*)0LL));
+    call_2 = native_code_native_code_IntUnitFun1MutPtrUIntPtrFun1_alignOf(((struct IntUnitFun1*)NULL));
     milone_assert((call_2 == (size_t)8ULL), (struct String){.str = "native_code/native_code.milone", .len = 30}, 40, 2);
     return;
 }

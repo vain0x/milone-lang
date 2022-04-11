@@ -14,7 +14,7 @@ let fclose (fp: nativeptr<FILE>) : int = __nativeFun ("fclose", fp)
 
 let main _ =
   let fp = fopen "LICENSE" "r"
-  assert (unativeint fp <> 0un)
+  assert (fp <> __nullptr)
 
   let stat = fclose fp
   assert (stat = 0)

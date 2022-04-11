@@ -9,7 +9,7 @@ int main(int argc, char** argv) {
     int const* constIntPtr_;
     int* intPtr_;
     intptr_t address_;
-    mutNull_ = ((void*)(size_t)0ULL);
+    mutNull_ = NULL;
     constNull_ = ((void const*)mutNull_);
     constIntPtr_ = ((int const*)constNull_);
     intPtr_ = ((int*)constIntPtr_);

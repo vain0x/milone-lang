@@ -167,8 +167,7 @@ Restriction: Variadic parameter functions (e.g. `printf`) can't be called with t
 It's guaranteed that the argument isn't evaluated.
 
 ```fsharp
-    let nullptr: __constptr<int> = __nativeCast 0un
-    assert (__sizeOfVal (__ptrRead nullptr 0) = 4)
+    assert (__sizeOfVal (__ptrRead __nullptr 0) = 4)
 ```
 
 ## Embedded naive expressions
