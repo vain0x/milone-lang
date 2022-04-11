@@ -143,6 +143,7 @@ type private ValueSymbol =
   | VarSymbol of varSerial: VarSerial
   | FunSymbol of funSerial: FunSerial
   | VariantSymbol of variantSerial: VariantSerial
+  | PrimSymbol of TPrim
 
 [<NoEquality; NoComparison>]
 type private TySymbol =
@@ -1473,6 +1474,7 @@ let private doNameResVarExpr ctx ident loc : TExpr option =
       | VarSymbol serial -> TVarExpr(serial, noTy, loc)
       | FunSymbol serial -> TFunExpr(serial, noTy, loc)
       | VariantSymbol serial -> TVariantExpr(serial, noTy, loc)
+      | PrimSymbol prim -> TPrimExpr(prim, noTy, loc)
 
     Some expr
 
@@ -1535,6 +1537,7 @@ let private nameResNavExpr (ctx: ScopeCtx) (expr: NExpr) : TExpr * ScopeCtx =
           | Some (VariantSymbol variantSerial) ->
             TVariantExpr(variantSerial, noTy, identLoc)
             |> Some
+          | Some (PrimSymbol prim) -> TPrimExpr(prim, noTy, identLoc) |> Some
           | None -> None
 
         // If not resolved as value, keep try to unresolved.
@@ -1961,6 +1964,25 @@ let nameRes (layers: NModuleRoot list list) : TProgram * NameResResult =
   // note: NameRes should work per layer in parallel
   //       but it doesn't so due to sequential serial generation for now.
 
+  let state =
+    let stdModuleSerial: ModuleTySerial = 1000000001 // 10^8
+    let stdNs = nsOwnerOfModule stdModuleSerial
+    let ptrModuleSerial: ModuleTySerial = 1000000002
+    let ptrNs = nsOwnerOfModule ptrModuleSerial
+
+    let state = emptyState ()
+    let ctx = state.ScopeCtx
+    let ctx = addNsToNs ctx stdNs "Ptr" ptrNs
+
+    // Std.Ptr.cast -> __nativeCast
+    let ctx =
+      addValueToNs ctx ptrNs "cast" (PrimSymbol TPrim.NativeCast)
+
+    let ctx =
+      { ctx with RootModules = ("Std", stdModuleSerial) :: ctx.RootModules }
+
+    { state with ScopeCtx = ctx }
+
   let modules, state =
     layers
     |> listCollectFold
@@ -1974,7 +1996,7 @@ let nameRes (layers: NModuleRoot list list) : TProgram * NameResResult =
                   let state, localVars = sMerge newRootModule state ctx
                   { m with Vars = localVars }, state)
                 state)
-         (emptyState ())
+         state
 
   let mainFunOpt =
     state.Funs

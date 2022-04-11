@@ -2,6 +2,8 @@ module rec nativeptr.Program
 
 // See x_native_code.md in docs.
 
+module Ptr = Std.Ptr
+
 let memAlloc (count: int) (size: int) : voidptr =
   __nativeFun ("milone_mem_alloc", count, unativeint size)
 
@@ -51,4 +53,8 @@ let main _ =
 
   // Conversion to int.
   assert (unativeint buf <> 0un)
+
+  // Try namespace.
+  let np: voidptr = Ptr.cast 0un
+  assert (np = __nullptr)
   0
