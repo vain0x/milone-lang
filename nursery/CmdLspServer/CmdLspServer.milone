@@ -297,7 +297,7 @@ let private amortizedSleep (millis: int) : unit =
     millis
   )
 
-let private concurrent (p1: unit -> obj) (p2: unit -> unit) : unit =
+let private concurrent (p1: unit -> __voidconstptr) (p2: unit -> unit) : unit =
   __nativeDecl
     """
       #include <pthread.h>
@@ -1057,7 +1057,7 @@ let private initializeResponse () =
     }
   }"""
 
-let private readerLoop () : obj =
+let private readerLoop () : __voidconstptr =
   doInRegion (fun () ->
     whileInRegion (fun () ->
       let request = readRawRequest ()

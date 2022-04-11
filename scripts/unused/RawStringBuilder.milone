@@ -1,7 +1,7 @@
 // Raw string builder. Causes side effects.
 module rec LibNursery.RawStringBuilder
 
-let private stringAsPtr (s: string) : obj =
+let private stringAsPtr (s: string) : __voidconstptr =
   __nativeExpr ("{0}.str", s)
 
 let private __alloc (size: unativeint) : voidptr =

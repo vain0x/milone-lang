@@ -5,7 +5,7 @@ module rec native_cast.Program
 
 let main _ =
   let mutNull: voidptr = __nativeCast 0un
-  let constNull: obj = __nativeCast mutNull
+  let constNull: __voidconstptr = __nativeCast mutNull
   let constIntPtr: __constptr<int> = __nativeCast constNull
   let intPtr: nativeptr<int> = __nativeCast constIntPtr
 

@@ -99,7 +99,7 @@ let private rawReserveExact (addition: uint) ptr length capacity size =
 ///
 /// Returns new ptr and capacity since the vector grows if full.
 let private rawPush
-  (item: obj)
+  (item: __voidconstptr)
   (ptr: __linear<voidptr>)
   (length: uint)
   (capacity: uint)
@@ -133,7 +133,7 @@ let private rawPush
 /// - Sort algorithm is an unstable sort.
 /// - `ptrComparer` is called with two pointers, each of them points to an item in the vector.
 let private rawSortUnstable
-  (ptrComparer: obj -> obj -> int)
+  (ptrComparer: __voidconstptr -> __voidconstptr -> int)
   (ptr: __linear<voidptr>)
   (length: uint)
   (size: uint)
@@ -143,11 +143,11 @@ let private rawSortUnstable
   // Define a static function that captures the comparer via thread local.
   __nativeDecl
     """
-      struct ObjCompareFun {
+      struct PtrCompareFun {
         int(*fun)(void const *, void const *, void const *);
         void const *env;
       };
-      _Thread_local struct ObjCompareFun t_compare_fun;
+      _Thread_local struct PtrCompareFun t_compare_fun;
       static int static_compare(void const *l, void const *r) {
         return t_compare_fun.fun(t_compare_fun.env, l, r);
       }
@@ -155,8 +155,8 @@ let private rawSortUnstable
 
   __nativeStmt (
     """
-      struct ObjCompareFun prev = t_compare_fun;
-      t_compare_fun = (struct ObjCompareFun){.fun = {0}.fun, .env = {0}.env};
+      struct PtrCompareFun prev = t_compare_fun;
+      t_compare_fun = (struct PtrCompareFun){.fun = {0}.fun, .env = {0}.env};
       qsort({1}, {2}, {3}, static_compare);
       t_compare_fun = prev;
     """,
@@ -215,7 +215,7 @@ module Vector =
     let (Vector (ptr, length, capacity)) = v
 
     let ptr, capacity =
-      let itemPtr: obj = __nativeExpr ("&({0})", item)
+      let itemPtr: __voidconstptr = __nativeExpr ("&({0})", item)
       let ptr: __linear<voidptr> = __acquire (__nativeCast (__dispose ptr))
       let size = uint (__sizeOfVal item)
       rawPush itemPtr ptr length capacity size
@@ -318,7 +318,7 @@ module Vector =
   let sort (itemComparer: 'T -> 'T -> int) (v: Vector<'T>) : Vector<'T> =
     // ptrComparer pl pr = itemComparer (*pl) (*pr)
     let ptrComparer =
-      fun (l: obj) (r: obj) -> itemComparer (__ptrRead (__nativeCast l) 0: 'T) (__ptrRead (__nativeCast r) 0: 'T)
+      fun (l: __voidconstptr) (r: __voidconstptr) -> itemComparer (__ptrRead (__nativeCast l) 0: 'T) (__ptrRead (__nativeCast r) 0: 'T)
 
     let (Vector (ptr, length, capacity)) = v
     let ptr = __acquire (__nativeCast (__dispose ptr))

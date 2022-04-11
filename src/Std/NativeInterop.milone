@@ -1,6 +1,6 @@
 module rec Std.NativeInterop
 
-let private memcpy (dest: voidptr) (src: obj) (size: unativeint) : voidptr = __nativeFun ("memcpy", dest, src, size)
+let private memcpy (dest: voidptr) (src: __voidconstptr) (size: unativeint) : voidptr = __nativeFun ("memcpy", dest, src, size)
 
 let private npPointeeSize (p: nativeptr<'T> ) : unativeint =
   __nativeExpr ("sizeof(*({0}))", p)
@@ -88,8 +88,8 @@ module __ConstPtr =
 
   let ofNativeInt (p: nativeint) : __constptr<'T> = __nativeCast p
   let toNativeInt (p: __constptr<_>) : nativeint = nativeint p
-  let toObj (p: __constptr<_>) : obj = __nativeCast p
-  let ofObj (p: obj) : __constptr<_> = __nativeCast p
+  let toVoid (p: __constptr<_>) : __voidconstptr = __nativeCast p
+  let ofVoid (p: __voidconstptr) : __constptr<_> = __nativeCast p
 
   let add (p: __constptr<'T>) (i: int) : __constptr<'T> =
     __nativeExpr ("(&({0})[{1}])", p, i)

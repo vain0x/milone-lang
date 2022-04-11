@@ -7,7 +7,7 @@ module rec Competitive.Helpers
 let memAlloc (len: int) (size: int) : voidptr =
   __nativeFun ("milone_mem_alloc", len, unativeint size)
 
-let memCopy (dest: voidptr) (src: obj) (size: int) : voidptr =
+let memCopy (dest: voidptr) (src: __voidconstptr) (size: int) : voidptr =
   __nativeFun ("memcpy", dest, src, unativeint size)
 
 let scanInt () : int = __nativeFun "scan_int"

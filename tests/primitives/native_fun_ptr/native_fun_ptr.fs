@@ -1,19 +1,14 @@
 module rec native_fun_ptr.Program
 
-// __nativeFun<P, T> is a language extension to describe a function pointer type: P -> T.
-// For zero-parameter function, use unit as P.
-// For multi-parameter function, use tuple type as P.
-// For void-returning function, use unit as T.
-// (ABI is same as C.)
 // See also x_native_code.md in docs.
 
-type private CompareFun = __nativeFun<obj * obj, int>
+type private CompareFun = __nativeFun<__voidconstptr * __voidconstptr, int>
 
 let private memAlloc (len: int) (size: int) : voidptr =
   __nativeFun ("milone_mem_alloc", len, unativeint size)
 
 let private sortIntArray (array: nativeptr<int>) (len: int) : unit =
-  let intCompare (l: obj) (r: obj) =
+  let intCompare (l: __voidconstptr) (r: __voidconstptr) =
     compare (__ptrRead (__nativeCast l) 0: int) (__ptrRead (__nativeCast r) 0: int)
 
   __nativeFun ("qsort", (__nativeCast array: voidptr), unativeint len, 4un, (__nativeFun intCompare: CompareFun))
