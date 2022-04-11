@@ -652,6 +652,23 @@ let private resolveTraitBound (ctx: TyCtx) theTrait loc : TyCtx =
 
     | _ -> error ctx
 
+  | PtrDualTrait (constTy, mutTy) ->
+    let notMut m =
+      match m with
+      | IsMut -> IsConst
+      | IsConst -> IsMut
+
+    let dualTy ty =
+      match ty with
+      | Ty (VoidPtrTk isMut, _) -> Ty(VoidPtrTk(notMut isMut), []) |> Some
+      | Ty (NativePtrTk isMut, [ itemTy ]) -> Ty(NativePtrTk(notMut isMut), [ itemTy ]) |> Some
+      | _ -> None
+
+    match dualTy constTy, dualTy mutTy with
+    | Some expectedTy, _ -> unifyTy ctx loc mutTy expectedTy
+    | _, Some expectedTy -> unifyTy ctx loc constTy expectedTy
+    | _ -> error ctx
+
 let private attemptResolveTraitBounds (ctx: TyCtx) : TyCtx =
   let subst (ctx: TyCtx) ty =
     ty |> substTy ctx |> typingExpandSynonyms ctx.Tys
@@ -1205,6 +1222,16 @@ let private primNullPtrScheme =
   let ptrTy = tyMeta 1 noLoc
   BoundedTyScheme([ 1 ], ptrTy, [ PtrTrait ptrTy ])
 
+let private primPtrAsConstScheme =
+  let constTy = tyMeta 1 noLoc
+  let mutTy = tyMeta 2 noLoc
+  BoundedTyScheme([ 1; 2 ], tyFun constTy mutTy, [ PtrDualTrait(constTy, mutTy) ])
+
+let private primPtrAsMutableScheme =
+  let mutTy = tyMeta 1 noLoc
+  let constTy = tyMeta 2 noLoc
+  BoundedTyScheme([ 1; 2 ], tyFun mutTy constTy, [ PtrDualTrait(constTy, mutTy) ])
+
 let private primNativeCastScheme =
   let meta id = tyMeta id noLoc
   let srcTy = meta 1
@@ -1323,6 +1350,8 @@ let private inferPrimExpr ctx prim loc =
     txAbort ctx loc
 
   | TPrim.NullPtr -> onBounded primNullPtrScheme
+  | TPrim.PtrAsConst -> onBounded primPtrAsConstScheme
+  | TPrim.PtrAsMutable -> onBounded primPtrAsMutableScheme
   | TPrim.PtrRead -> onUnbounded primPtrReadScheme
   | TPrim.PtrWrite -> onUnbounded primPtrWriteScheme
 

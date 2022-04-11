@@ -1974,9 +1974,13 @@ let nameRes (layers: NModuleRoot list list) : TProgram * NameResResult =
     let ctx = state.ScopeCtx
     let ctx = addNsToNs ctx stdNs "Ptr" ptrNs
 
-    // Std.Ptr.cast -> __nativeCast
+    // Std.Ptr.asConst
     let ctx =
-      addValueToNs ctx ptrNs "cast" (PrimSymbol TPrim.NativeCast)
+      addValueToNs ctx ptrNs "asConst" (PrimSymbol TPrim.PtrAsConst)
+
+    // Std.Ptr.asMutable
+    let ctx =
+      addValueToNs ctx ptrNs "asMutable" (PrimSymbol TPrim.PtrAsMutable)
 
     let ctx =
       { ctx with RootModules = ("Std", stdModuleSerial) :: ctx.RootModules }

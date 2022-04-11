@@ -33,6 +33,28 @@ let private testNullPtr () =
   let nullConstPtr: __constptr<float> = __nullptr
   assert (__nativeCast nullConstPtr = 0un)
 
+let private testAsConst () =
+  let mp: nativeptr<int> = __nullptr
+  // __constptr<int>
+  let kp = Ptr.asConst mp
+  assert (kp = __nullptr)
+
+  let mq: voidptr = __nullptr
+  // __constptr<int>
+  let kq = Ptr.asConst mq
+  assert (kq = __nullptr)
+
+let private testAsMutable () =
+  let kp: __constptr<int> = __nullptr
+  // nativeptr<int>
+  let mp = Ptr.asConst kp
+  assert (mp = __nullptr)
+
+  let kq: __voidconstptr = __nullptr
+  // voidptr
+  let mq = Ptr.asConst kq
+  assert (mq = __nullptr)
+
 let private testEquality () =
   let np: nativeptr<int> = __nullptr
   let p: nativeptr<int> = __nativeCast 42un
@@ -45,6 +67,8 @@ let private testEquality () =
 let main _ =
   testVoidPtrAvailable ()
   testNullPtr ()
+  testAsConst ()
+  testAsMutable ()
   testEquality ()
 
   let buf = memAlloc 1 8
@@ -53,8 +77,4 @@ let main _ =
 
   // Conversion to int.
   assert (unativeint buf <> 0un)
-
-  // Try namespace.
-  let np: voidptr = Ptr.cast 0un
-  assert (np = __nullptr)
   0

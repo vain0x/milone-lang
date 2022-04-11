@@ -55,6 +55,9 @@ Hint: `T const *` is same as `const T *`.
     let q: __constptr<int> = __nativeCast p
 ```
 
+- `Std.Ptr.asConst` casts a non-const pointer to const (upcast)
+- `Std.Ptr.asMutable` casts a const pointer to non-const (unsafe cast)
+
 ### Read via pointer
 
 `__ptrRead p i` reads from a pointer `p` by offset `i` (that is, `p[i]`).
