@@ -7,11 +7,17 @@ __nativeDecl
 
 #include <hashmap.h>
 
-_Thread_local bool t_initialized;
-_Thread_local struct hashmap_s t_hashmap;
-_Thread_local struct String t_entries[4000];
-_Thread_local uint32_t t_entries_len;
-_Thread_local uint32_t t_rank;
+#if defined(_MSC_VER) // On Windows MSVC
+#define THREAD_LOCAL __declspec(thread)
+#else
+#define THREAD_LOCAL _Thread_local
+#endif
+
+THREAD_LOCAL bool t_initialized;
+THREAD_LOCAL struct hashmap_s t_hashmap;
+THREAD_LOCAL struct String t_entries[4000];
+THREAD_LOCAL uint32_t t_entries_len;
+THREAD_LOCAL uint32_t t_rank;
 
 static void _initialize(void) {
   if (!t_initialized) {
