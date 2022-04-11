@@ -1482,7 +1482,13 @@ module Formatting =
           startInfo.ArgumentList.Add(temp)
           startInfo.WorkingDirectory <- workDir
           startInfo.EnvironmentVariables.Add("DOTNET_CLI_HOME", homeDir ())
-          startInfo.EnvironmentVariables.Add("PATH", "")
+
+          // HOTFIX: This raises an exception on Windows.
+          try
+            startInfo.EnvironmentVariables.Add("PATH", "")
+          with
+          | _ -> ()
+
           startInfo.RedirectStandardOutput <- true
           Process.Start(startInfo)
 
@@ -1516,7 +1522,13 @@ module Formatting =
         startInfo.ArgumentList.Add(temp)
         startInfo.WorkingDirectory <- workDir
         startInfo.EnvironmentVariables.Add("DOTNET_CLI_HOME", homeDir ())
-        startInfo.EnvironmentVariables.Add("PATH", "")
+
+        // HOTFIX: This raises an exception on Windows.
+        try
+          startInfo.EnvironmentVariables.Add("PATH", "")
+        with
+        | _ -> ()
+
         startInfo.RedirectStandardOutput <- true
         Process.Start(startInfo)
 
