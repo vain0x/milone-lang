@@ -38,6 +38,7 @@ type MatchIR =
 [<NoEquality; NoComparison>]
 type MGenericValue =
   | MNilGv
+  | MNullPtrGv
   | MSizeOfGv
   | MTyPlaceholderGv
 

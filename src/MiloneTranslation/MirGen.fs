@@ -493,6 +493,7 @@ let private mirifyExprVariant (ctx: MirCtx) serial loc =
 let private mirifyExprPrim (ctx: MirCtx) prim ty loc =
   match prim with
   | HPrim.Nil -> MGenericValueExpr(MNilGv, ty, loc), ctx
+  | HPrim.NullPtr -> MGenericValueExpr(MNullPtrGv, ty, loc), ctx
   | _ -> unreachable () // Primitives must appear as callee.
 
 let private doEmitIfStmt ctx cond thenHint body altHint alt targetTy loc =
@@ -1398,7 +1399,8 @@ let private mirifyCallPrimExpr ctx itself prim args ty loc =
   | HPrim.PtrRead, _ -> regularPrim "read" MPtrReadPrim
   | HPrim.PtrWrite, _ -> regularAction MPtrWriteAction
 
-  | HPrim.Nil, _ -> fail () // Can't be called.
+  | HPrim.Nil, _
+  | HPrim.NullPtr, _ -> fail () // Can't be called.
 
 let private mirifyExprInfCallClosure ctx callee args resultTy loc =
   let callee, ctx = mirifyExpr ctx callee

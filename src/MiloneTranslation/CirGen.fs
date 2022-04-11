@@ -35,6 +35,7 @@ let private toDiscriminantEnumName (name: string) = name + "Discriminant"
 
 let private cVoidPtrTy = CPtrTy CVoidTy
 let private cVoidConstPtrTy = CConstPtrTy CVoidTy
+let private cNullExpr = CVarExpr "NULL"
 
 let private cTyEncode ty =
   match ty with
@@ -742,7 +743,15 @@ let private genVariantNameExpr ctx serial =
 
 let private genGenericValue ctx genericValue ty =
   match genericValue with
-  | MNilGv -> CVarExpr "NULL", ctx
+  | MNilGv -> cNullExpr, ctx
+
+  | MNullPtrGv ->
+    match ty with
+    | Ty (VoidPtrTk _, _) -> cNullExpr, ctx
+
+    | _ ->
+      let ty, ctx = cgTyIncomplete ctx ty
+      CCastExpr(cNullExpr, ty), ctx
 
   | MSizeOfGv ->
     let ty, ctx = cgTyComplete ctx ty

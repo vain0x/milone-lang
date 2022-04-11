@@ -18,17 +18,31 @@ let private testVoidPtrAvailable () =
   let constEnv: __voidconstptr = __nativeCast mutEnv
   assert (__nativeCast constEnv = 42un)
 
+let private testNullPtr () =
+  let nullVoidPtr: voidptr = __nullptr
+  assert (__nativeCast nullVoidPtr = 0un)
+
+  let nullVoidConstPtr: __voidconstptr = __nullptr
+  assert (__nativeCast nullVoidConstPtr = 0un)
+
+  let nullNativePtr: nativeptr<float> = __nullptr
+  assert (__nativeCast nullNativePtr = 0un)
+
+  let nullConstPtr: __constptr<float> = __nullptr
+  assert (__nativeCast nullConstPtr = 0un)
+
 let private testEquality () =
-  let np: nativeptr<int> = __nativeCast 0un
+  let np: nativeptr<int> = __nullptr
   let p: nativeptr<int> = __nativeCast 42un
   assert (p <> np)
 
-  let nq: __constptr<int> = __nativeCast 0un
+  let nq: __constptr<int> = __nullptr
   let q: __constptr<int> = __nativeCast 42un
   assert (q <> nq)
 
 let main _ =
   testVoidPtrAvailable ()
+  testNullPtr ()
   testEquality ()
 
   let buf = memAlloc 1 8

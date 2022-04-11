@@ -136,6 +136,7 @@ let private lowerPrim (prim: Tir.TPrim) : Hir.HPrim =
   | Tir.TPrim.Printfn -> Hir.HPrim.Printfn
   | Tir.TPrim.InRegion -> Hir.HPrim.InRegion
   | Tir.TPrim.NativeCast -> Hir.HPrim.NativeCast
+  | Tir.TPrim.NullPtr -> Hir.HPrim.NullPtr
   | Tir.TPrim.PtrRead -> Hir.HPrim.PtrRead
   | Tir.TPrim.PtrWrite -> Hir.HPrim.PtrWrite
 

@@ -36,6 +36,12 @@ Such program does anything weird with no error.
 
 Hint: `T const *` is same as `const T *`.
 
+## NullPtr
+
+`__nullptr` is the null value of any pointer type.
+
+(Currently it's not a pattern.)
+
 ## Get pointer of value
 
 (Not implemented. Use `__nativeExpr("&{0}", v)`.)
@@ -45,7 +51,7 @@ Hint: `T const *` is same as `const T *`.
 `__nativeCast` function converts pointers and pointer-sized integers (`nativeint` / `unativeint`) each other.
 
 ```fsharp
-    let p: nativeptr<int> = __nativeCast 0un
+    let p: nativeptr<int> = __nativeCast 8un
     let q: __constptr<int> = __nativeCast p
 ```
 

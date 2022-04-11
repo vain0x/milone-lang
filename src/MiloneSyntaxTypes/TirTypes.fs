@@ -285,6 +285,7 @@ type TPrim =
   | NativeStmt
   | NativeDecl
   | SizeOfVal
+  | NullPtr
   | PtrRead
   | PtrWrite
 

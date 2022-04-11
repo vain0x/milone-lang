@@ -1200,6 +1200,11 @@ let private primDisposeTy =
   let itemTy = tyMeta 1 noLoc
   TyScheme([ 1 ], tyFun (tyLinear itemTy) itemTy)
 
+let private primNullPtrScheme =
+  // FIXME: reject ptr-sized non-ptr types
+  let ptrTy = tyMeta 1 noLoc
+  BoundedTyScheme([ 1 ], ptrTy, [ PtrTrait ptrTy ])
+
 let private primNativeCastScheme =
   let meta id = tyMeta id noLoc
   let srcTy = meta 1
@@ -1317,6 +1322,7 @@ let private inferPrimExpr ctx prim loc =
 
     txAbort ctx loc
 
+  | TPrim.NullPtr -> onBounded primNullPtrScheme
   | TPrim.PtrRead -> onUnbounded primPtrReadScheme
   | TPrim.PtrWrite -> onUnbounded primPtrWriteScheme
 

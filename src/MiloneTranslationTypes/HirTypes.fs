@@ -199,6 +199,7 @@ type HPrim =
   | Printfn
   | InRegion
   | NativeCast
+  | NullPtr
   | PtrRead
   | PtrWrite
 
