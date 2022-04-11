@@ -17,7 +17,20 @@ let memSet (dest: voidptr) (value: uint8) (count: int) =
 
 let strcpy (dest: nativeptr<char>) (src: __constptr<char>) : nativeptr<char> = __nativeFun ("strcpy", dest, src)
 
+let private testEquality () =
+  let np : nativeptr<int> = __nativeCast 0un
+  let p : nativeptr<int> = __nativeCast 42un
+  assert (p = p)
+  assert (p <> np)
+
+  let nq : __constptr<int> = __nativeCast 0un
+  let q : __constptr<int> = __nativeCast 42un
+  assert (q = q)
+  assert (q <> nq)
+
 let main _ =
+  testEquality ()
+
   let buf = memAlloc 1 8
   memSet buf 255uy 8
   assert (__ptrRead (__nativeCast buf: __constptr<int>) 0 = -1)
