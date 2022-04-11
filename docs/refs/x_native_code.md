@@ -29,10 +29,12 @@ Such program does anything weird with no error.
 
 | milone-lang       | C                 |
 |:------------------|:------------------|
-| `__constptr<T>`   | `const T *`       |
+| `__constptr<T>`   | `T const *`       |
 | `nativeptr<T>`    | `T *`             |
-| `obj`             | `const void *`    |
+| `__voidconstptr`  | `void const *`    |
 | `voidptr`         | `void *`          |
+
+Hint: `T const *` is same as `const T *`.
 
 ## Get pointer of value
 

@@ -64,7 +64,8 @@ let private monoTyCompare (l: MonoTy) (r: MonoTy) : int =
     | M.FunMt _ -> just 8
     | M.ListMt _ -> just 9
 
-    | M.VoidPtrMt -> just 11
+    | M.VoidPtrMt IsConst -> pair 11 1
+    | M.VoidPtrMt IsMut -> pair 11 2
     | M.NativePtrMt (IsConst, _) -> pair 12 1
     | M.NativePtrMt (IsMut, _) -> pair 12 2
     | M.NativeFunMt _ -> just 13
@@ -180,7 +181,7 @@ let private mtTy (ty: Ty, ctx: MtCtx) : M.MonoTy * MtCtx =
   | CharTk, _ -> M.CharMt, ctx
   | StrTk, _ -> M.StrMt, ctx
   | ObjTk, _ -> M.ObjMt, ctx
-  | VoidPtrTk, _ -> M.VoidPtrMt, ctx
+  | VoidPtrTk isMut, _ -> M.VoidPtrMt isMut, ctx
   | NativeTypeTk cCode, _ -> M.NativeTypeMt cCode, ctx
   | RecordTk tySerial, _ -> M.RecordMt tySerial, ctx
 
@@ -576,7 +577,7 @@ let private bthTy (ty: MonoTy) : Ty =
   | M.ListMt itemTy -> newTyApp ListTk [ itemTy ]
   | M.FunMt tyArgs -> newTyApp FunTk tyArgs
 
-  | M.VoidPtrMt -> ofTk VoidPtrTk
+  | M.VoidPtrMt isMut -> ofTk (VoidPtrTk isMut)
   | M.NativePtrMt (isMut, itemTy) -> newTyApp (NativePtrTk isMut) [ itemTy ]
   | M.NativeFunMt tyArgs -> newTyApp NativeFunTk tyArgs
   | M.NativeTypeMt cCode -> ofTk (NativeTypeTk cCode)

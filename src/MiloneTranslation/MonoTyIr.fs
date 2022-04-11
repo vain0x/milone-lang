@@ -34,7 +34,7 @@ type MonoTy =
   | ListMt of MonoTy
 
   // FFI types.
-  | VoidPtrMt
+  | VoidPtrMt of IsMut
   | NativePtrMt of IsMut * MonoTy
   | NativeFunMt of MonoTy list
   | NativeTypeMt of cCode: string

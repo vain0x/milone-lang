@@ -463,7 +463,7 @@ let private tyIsBasic ty =
   | BoolTk
   | CharTk
   | StrTk
-  | VoidPtrTk
+  | VoidPtrTk _
   | NativePtrTk _ -> true
 
   | _ -> false
@@ -622,7 +622,7 @@ let private resolveTraitBound (ctx: TyCtx) theTrait loc : TyCtx =
     | FloatTk _
     | CharTk
     | StrTk
-    | VoidPtrTk
+    | VoidPtrTk _
     | NativePtrTk _ -> ok ctx
 
     | _ -> error ctx
@@ -645,7 +645,7 @@ let private resolveTraitBound (ctx: TyCtx) theTrait loc : TyCtx =
     | IntTk UPtr
     | ObjTk
     | ListTk
-    | VoidPtrTk
+    | VoidPtrTk _
     | NativePtrTk _
     | NativeFunTk -> ok ctx
 

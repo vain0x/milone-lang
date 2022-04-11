@@ -64,7 +64,7 @@ type Tk =
   // Special types.
   /// Ty args must be `[t]`.
   | LinearTk
-  | VoidPtrTk
+  | VoidPtrTk of voidPtrIsMut: IsMut
   | NativePtrTk of nativePtrIsMut: IsMut
   | NativeFunTk
   | NativeTypeTk of cCode: string

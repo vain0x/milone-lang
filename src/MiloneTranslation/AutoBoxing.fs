@@ -207,7 +207,7 @@ let private trdTy isDirect (ctx: TrdCtx) ty : TrdCtx =
     | CharTk
     | StrTk
     | ObjTk
-    | VoidPtrTk
+    | VoidPtrTk _
     | MetaTk _ ->
       assert (List.isEmpty tyArgs)
       ctx
@@ -398,7 +398,7 @@ let private tsmTy (ctx: TsmCtx) ty =
 
     | ObjTk
     | ListTk
-    | VoidPtrTk
+    | VoidPtrTk _
     | NativePtrTk _
     | NativeFunTk -> 8, ctx
 

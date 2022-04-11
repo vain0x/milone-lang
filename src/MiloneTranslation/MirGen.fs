@@ -223,7 +223,7 @@ let private mxCompare ctx (op: MBinary) lTy (l: MExpr) r loc =
         | FloatTk _
         | BoolTk
         | CharTk
-        | VoidPtrTk
+        | VoidPtrTk _
         | NativePtrTk _),
         _) -> mxBinOpScalar ctx op l r loc
 
@@ -261,7 +261,7 @@ let private toBoxMode (ty: Ty) : BoxMode =
   | Ty (CharTk, _)
   | Ty (ObjTk, _)
   | Ty (ListTk, _)
-  | Ty (VoidPtrTk, _)
+  | Ty (VoidPtrTk _, _)
   | Ty (NativePtrTk _, _)
   | Ty (NativeFunTk, _) -> BoxMode.Cast
 
@@ -1147,7 +1147,7 @@ let private mirifyCallCompareExpr ctx itself l r loc =
 
   | Ty ((IntTk I64
         | IntTk IPtr
-        | VoidPtrTk
+        | VoidPtrTk _
         | NativePtrTk _),
         _) -> MBinaryExpr(MInt64CompareBinary, l, r, loc), ctx
 
@@ -1167,7 +1167,7 @@ let private mirifyCallToIntExpr ctx itself flavor arg ty loc =
   | Ty ((IntTk _
         | FloatTk _
         | CharTk
-        | VoidPtrTk
+        | VoidPtrTk _
         | NativePtrTk _),
         _) -> MUnaryExpr(MIntOfScalarUnary flavor, arg, loc), ctx
 

@@ -33,6 +33,9 @@ let private tupleField (i: int) = "t" + string i
 /// Calculates discriminant type's name of union type.
 let private toDiscriminantEnumName (name: string) = name + "Discriminant"
 
+let private cVoidPtrTy = CPtrTy CVoidTy
+let private cVoidConstPtrTy = CConstPtrTy CVoidTy
+
 let private cTyEncode ty =
   match ty with
   | CVoidTy _ -> 1
@@ -580,7 +583,8 @@ let private cgTyIncomplete (ctx: CirCtx) (ty: Ty) : CTy * CirCtx =
   | ListTk, [ itemTy ] -> genIncompleteListTyDecl ctx itemTy
   | ListTk, _ -> unreachable ()
 
-  | VoidPtrTk, _ -> CPtrTy CVoidTy, ctx
+  | VoidPtrTk IsMut, _ -> cVoidPtrTy, ctx
+  | VoidPtrTk IsConst, _ -> cVoidConstPtrTy, ctx
   | NativePtrTk isMut, [ itemTy ] -> cgNativePtrTy ctx isMut itemTy
   | NativePtrTk _, _ -> unreachable ()
   | NativeFunTk, _ -> cgNativeFunTy ctx tyArgs
@@ -617,7 +621,8 @@ let private cgTyComplete (ctx: CirCtx) (ty: Ty) : CTy * CirCtx =
     genIncompleteListTyDecl ctx itemTy
   | ListTk, _ -> unreachable ()
 
-  | VoidPtrTk, _ -> CPtrTy CVoidTy, ctx
+  | VoidPtrTk IsMut, _ -> cVoidPtrTy, ctx
+  | VoidPtrTk IsConst, _ -> cVoidConstPtrTy, ctx
 
   | NativePtrTk isMut, [ itemTy ] -> cgNativePtrTy ctx isMut itemTy
   | NativePtrTk _, _ -> unreachable ()

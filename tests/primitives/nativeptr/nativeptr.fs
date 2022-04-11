@@ -1,10 +1,6 @@
 module rec nativeptr.Program
 
-// nativeptr<T> is equivalent to pointer type `T *` in C.
-// voidptr is `void *` in C.
-// obj is `void const *` in C.
-// __constptr<T> is equivalent to `T const *` in C. (NOT exists in F#.)
-// See also x_native_code.md in docs.
+// See x_native_code.md in docs.
 
 let memAlloc (count: int) (size: int) : voidptr =
   __nativeFun ("milone_mem_alloc", count, unativeint size)
@@ -17,18 +13,22 @@ let memSet (dest: voidptr) (value: uint8) (count: int) =
 
 let strcpy (dest: nativeptr<char>) (src: __constptr<char>) : nativeptr<char> = __nativeFun ("strcpy", dest, src)
 
+let private testVoidPtrAvailable () =
+  let mutEnv: voidptr = __nativeCast 42un
+  let constEnv: __voidconstptr = __nativeCast mutEnv
+  assert (__nativeCast constEnv = 42un)
+
 let private testEquality () =
-  let np : nativeptr<int> = __nativeCast 0un
-  let p : nativeptr<int> = __nativeCast 42un
-  assert (p = p)
+  let np: nativeptr<int> = __nativeCast 0un
+  let p: nativeptr<int> = __nativeCast 42un
   assert (p <> np)
 
-  let nq : __constptr<int> = __nativeCast 0un
-  let q : __constptr<int> = __nativeCast 42un
-  assert (q = q)
+  let nq: __constptr<int> = __nativeCast 0un
+  let q: __constptr<int> = __nativeCast 42un
   assert (q <> nq)
 
 let main _ =
+  testVoidPtrAvailable ()
   testEquality ()
 
   let buf = memAlloc 1 8

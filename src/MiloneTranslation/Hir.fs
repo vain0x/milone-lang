@@ -373,7 +373,7 @@ let private tkEncode tk : int =
   | TupleTk -> just 8
   | ListTk -> just 10
 
-  | VoidPtrTk -> just 11
+  | VoidPtrTk isMut -> pair 11 (isMutToInt isMut)
   | NativePtrTk isMut -> pair 12 (isMutToInt isMut)
   | NativeFunTk -> just 13
 
@@ -405,7 +405,8 @@ let tkDisplay getTyName tk =
   | FunTk -> "fun"
   | TupleTk -> "tuple"
   | ListTk -> "list"
-  | VoidPtrTk -> "voidptr"
+  | VoidPtrTk IsMut -> "voidptr"
+  | VoidPtrTk IsConst -> "__voidconstptr"
   | NativePtrTk IsMut -> "nativeptr"
   | NativePtrTk IsConst -> "__constptr"
   | NativeFunTk -> "__nativeFun"
@@ -547,7 +548,8 @@ let tyMangle (ty: Ty, memo: TreeMap<Ty, string>) : string * TreeMap<Ty, string> 
 
       | ListTk -> fixedGeneric "List"
 
-      | VoidPtrTk -> "VoidPtr", ctx
+      | VoidPtrTk IsMut -> "VoidPtr", ctx
+      | VoidPtrTk IsConst -> "VoidConstPtr", ctx
       | NativePtrTk IsConst -> fixedGeneric "ConstPtr"
       | NativePtrTk IsMut -> fixedGeneric "MutPtr"
       | NativeFunTk -> variadicGeneric "NativeFun"
