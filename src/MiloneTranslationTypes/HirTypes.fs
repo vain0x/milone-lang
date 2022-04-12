@@ -257,7 +257,7 @@ type HExprKind =
   /// Embed some C toplevel codes to output.
   | HNativeDeclEN of nativeDeclCode: string
 
-  /// Size of type.
+  /// Size of type. Argument is a type placeholder. The result type is int.
   | HSizeOfValEN
 
   /// Name of type.

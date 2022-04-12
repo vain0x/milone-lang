@@ -1489,7 +1489,16 @@ let private nameResUnqualifiedIdentExpr ctx ident loc tyArgs : TExpr * ScopeCtx 
     | Some expr -> expr, ctx
     | None -> errorExpr ctx (UndefinedValueError ident) loc
   else
-    errorExpr ctx UnimplTyArgListError loc
+    let tyArgs, ctx =
+      List.mapFold nameResTyInAscription ctx tyArgs
+
+    match resolveUnqualifiedValue ctx ident with
+    | None when ident = "__sizeOf" ->
+      match tyArgs with
+      | [ ty ] -> TNodeExpr(TSizeOfValEN, [ TNodeExpr(TTyPlaceholderEN, [], ty, loc) ], tyInt, loc), ctx
+      | _ -> errorExpr ctx (TyArityError(ident, List.length tyArgs, 1)) loc
+
+    | _ -> errorExpr ctx UnimplTyArgListError loc
 
 let private nameResNavExpr (ctx: ScopeCtx) (expr: NExpr) : TExpr * ScopeCtx =
   /// Resolves an expressions as scope.

@@ -1704,6 +1704,13 @@ let private inferNodeExpr ctx expr : TExpr * Ty * TyCtx =
   | TAscribeEN, [ expr ] -> inferAscribeExpr ctx expr (getTy ()) loc
   | TAscribeEN, _ -> unreachable ()
 
+  | TSizeOfValEN, [ TNodeExpr (TTyPlaceholderEN, _, ty, _) ] ->
+    assert (isNoTy ty |> not)
+    assert (getTy () |> tyEqual tyInt)
+    expr, tyInt, ctx
+
+  | TSizeOfValEN, _ -> unreachable ()
+
   | TTyPlaceholderEN, _ ->
     txUnit loc, tyUnit, addError ctx "Type placeholder can appear in argument of __nativeExpr or __nativeStmt." loc
 
@@ -1714,8 +1721,7 @@ let private inferNodeExpr ctx expr : TExpr * Ty * TyCtx =
   | TNativeFunEN _, _
   | TNativeExprEN _, _
   | TNativeStmtEN _, _
-  | TNativeDeclEN _, _
-  | TSizeOfValEN, _ -> unreachable ()
+  | TNativeDeclEN _, _ -> unreachable ()
 
 let private inferBlockExpr ctx expectOpt (stmts: TStmt list) last =
   let ctx = collectVarsAndFuns ctx stmts

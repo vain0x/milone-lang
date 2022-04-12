@@ -330,7 +330,7 @@ type TExprKind =
   /// Embed some C toplevel codes to output.
   | TNativeDeclEN of nativeDeclCode: string
 
-  /// Size of type.
+  /// Size of type. Argument is a type placeholder. The result type is int.
   | TSizeOfValEN
 
   /// Name of type.

@@ -158,7 +158,13 @@ Restriction: Variadic parameter functions (e.g. `printf`) can't be called with t
 
 (Not implemented yet. Use `dlopen` on Unix and link `libdl` (-lm). Use `LoadLibrary` on Windows.)
 
+## Size of type
+
+`__sizeOf<'T>` is the size of type T in bytes. Type is `int`. Equivalent to `sizeof(T)` in C.
+
 ## Size of values
+
+*Deprecated*: Use `__sizeOf<'T>`.
 
 `__sizeOfVal (expr: T)` is the size of type T in bytes. Equivalent to `sizeof(expr)` in C.
 

@@ -64,12 +64,33 @@ let private testEquality () =
   let q: __constptr<int> = __nativeCast 42un
   assert (q <> nq)
 
+let private sizeOfPointee (ptr: nativeptr<'T>) : int = __sizeOf<'T>
+
+let private testSizeOf () =
+  assert (__sizeOf<char> = 1)
+  assert (__sizeOf<byte> = 1)
+  assert (__sizeOf<int16> = 2)
+  assert (__sizeOf<int> = 4)
+  assert (__sizeOf<int64> = 8)
+
+  let w = __sizeOf<unativeint>
+  assert (__sizeOf<voidptr> = w)
+  assert (__sizeOf<nativeptr<obj * obj>> = w)
+  assert (__sizeOf<string> = w * 2)
+  assert (__sizeOf<unit -> unit> = w * 2)
+
+  assert (__sizeOf<int64 * byte * byte> = 16) // 8 + 1 + 1 + padding
+
+  // Size of generic type.
+  assert (sizeOfPointee (__nullptr: nativeptr<obj * obj>) = __sizeOf<obj * obj>)
+
 let main _ =
   testVoidPtrAvailable ()
   testNullPtr ()
   testAsConst ()
   testAsMutable ()
   testEquality ()
+  testSizeOf ()
 
   let buf = memAlloc 1 8
   memSet buf 255uy 8
