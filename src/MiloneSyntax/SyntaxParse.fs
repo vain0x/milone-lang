@@ -173,6 +173,7 @@ let private inFirstOfPat (token: Token) =
 /// Gets whether a token can be the first of an expression.
 let private inFirstOfExpr (token: Token) =
   match token with
+  | AmpAmpToken _
   | IfToken
   | MatchToken
   | FunToken
@@ -183,7 +184,8 @@ let private inFirstOfExpr (token: Token) =
 /// In the FIRST set of arguments?
 let private inFirstOfArg (token: Token) =
   match token with
-  | MinusToken false -> false
+  | MinusToken false
+  | AmpAmpToken false -> false
 
   | _ -> inFirstOfExpr token
 
@@ -755,12 +757,16 @@ let private parseApp basePos (tokens, errors) : PR<AExpr> =
 
   go callee (tokens, errors)
 
-/// `prefix = '-'? app`
+/// `prefix = ('-' | '&&')? app`
 let private parsePrefix basePos (tokens, errors) : PR<AExpr> =
   match tokens with
   | (MinusToken _, pos) :: tokens ->
     let arg, tokens, errors = parseSuffix basePos (tokens, errors)
     AUnaryExpr(MinusUnary, arg, pos), tokens, errors
+
+  | (AmpAmpToken _, pos) :: tokens ->
+    let arg, tokens, errors = parseSuffix basePos (tokens, errors)
+    AUnaryExpr(PtrUnary, arg, pos), tokens, errors
 
   | _ -> parseSuffix basePos (tokens, errors)
 
@@ -785,7 +791,7 @@ let private parseOps bp basePos l (tokens, errors) : PR<AExpr> =
   match bp, tokens with
   | OrBp, (PipePipeToken, opPos) :: tokens -> nextL l LogicalOrBinary opPos (tokens, errors)
 
-  | AndBp, (AmpAmpToken, opPos) :: tokens -> nextL l LogicalAndBinary opPos (tokens, errors)
+  | AndBp, (AmpAmpToken false, opPos) :: tokens -> nextL l LogicalAndBinary opPos (tokens, errors)
 
   | SigilBp, (RightAngleToken, opPos) :: (RightAngleToken, pos2) :: (RightAngleToken, pos3) :: tokens when
     canMerge3 opPos pos2 pos3

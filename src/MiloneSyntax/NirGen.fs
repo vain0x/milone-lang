@@ -399,6 +399,10 @@ let private ngExpr (docId: DocId) (ctx: NirGenCtx) (expr: AExpr) : NExpr * NirGe
       let arg, ctx = arg |> onExpr ctx
       NExpr.Unary(MinusUnary, arg, toLoc pos), ctx
 
+  | AUnaryExpr (op, arg, pos) ->
+    let arg, ctx = arg |> onExpr ctx
+    NExpr.Unary(op, arg, toLoc pos), ctx
+
   | ABinaryExpr (NotEqualBinary, l, r, pos) -> ngExpr docId ctx (desugarBinNe l r pos)
   | ABinaryExpr (LessEqualBinary, l, r, pos) -> ngExpr docId ctx (desugarBinLe l r pos)
   | ABinaryExpr (GreaterBinary, l, r, pos) -> ngExpr docId ctx (desugarBinGt l r pos)

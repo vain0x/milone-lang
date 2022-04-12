@@ -47,6 +47,7 @@ type MGenericValue =
 type MUnary =
   | MMinusUnary
   | MNotUnary
+  | MPtrUnary
 
   // Converts a scalar to int.
   | MIntOfScalarUnary of intOfScalarFlavor: IntFlavor

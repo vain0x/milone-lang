@@ -51,6 +51,7 @@ let private unaryToString op =
   match op with
   | CMinusUnary -> "-"
   | CNotUnary -> "!"
+  | CRefUnary -> "&"
   | CDerefUnary -> "*"
 
 let private binaryToString op =

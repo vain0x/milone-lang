@@ -44,7 +44,14 @@ Hint: `T const *` is same as `const T *`.
 
 ## Get pointer of value
 
-(Not implemented. Use `__nativeExpr("&{0}", v)`.)
+Unary `&&` operator makes a pointer to a variable.
+It's invalidated when the variable goes out of scope.
+Writing to the content is undefined behavior.
+
+```fsharp
+    let x = 42
+    let p: nativeptr<int> = &&x
+```
 
 ## Pointer cast
 

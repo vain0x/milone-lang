@@ -1620,6 +1620,17 @@ let private inferMinusExpr ctx arg loc =
 
   TNodeExpr(TMinusEN, [ arg ], argTy, loc), argTy, ctx
 
+let private inferPtrExpr ctx arg loc =
+  match arg with
+  | TVarExpr _ ->
+    let arg, argTy, ctx = inferExpr ctx None arg
+    let ty = Ty(NativePtrTk IsMut, [ argTy ])
+    TNodeExpr(TPtrEN, [ arg ], ty, loc), ty, ctx
+
+  | _ ->
+    let ctx = addError ctx "Expected a lval." loc
+    txAbort ctx loc
+
 let private inferIndexExpr ctx l r loc =
   let l, lTy, ctx = inferExpr ctx (Some tyStr) l
   let r, rTy, ctx = inferExpr ctx (Some tyInt) r
@@ -1684,6 +1695,8 @@ let private inferNodeExpr ctx expr : TExpr * Ty * TyCtx =
 
   | TMinusEN, [ arg ] -> inferMinusExpr ctx arg loc
   | TMinusEN, _ -> unreachable ()
+  | TPtrEN, [ arg ] -> inferPtrExpr ctx arg loc
+  | TPtrEN, _ -> unreachable ()
   | TIndexEN, [ l; r ] -> inferIndexExpr ctx l r loc
   | TIndexEN, _ -> unreachable ()
   | TSliceEN, [ l; r; x ] -> inferSliceExpr ctx l r x loc

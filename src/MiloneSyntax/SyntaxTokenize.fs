@@ -317,7 +317,7 @@ let private tokenOfOp allowPrefix (text: string) l r : Token =
   | '&' ->
     match s with
     | "&" -> AmpToken
-    | "&&" -> AmpAmpToken
+    | "&&" -> AmpAmpToken (allowPrefix && not (atSpace text r))
     | "&&&" -> AmpAmpAmpToken
     | _ -> error ()
 

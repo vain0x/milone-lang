@@ -49,6 +49,9 @@ type CUnary =
   /// `!p`
   | CNotUnary
 
+  /// `&x`
+  | CRefUnary
+
   /// `*p`
   | CDerefUnary
 

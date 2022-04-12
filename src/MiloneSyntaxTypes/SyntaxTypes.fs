@@ -97,7 +97,7 @@ type Token =
   /// `&`
   | AmpToken
   /// `&&`
-  | AmpAmpToken
+  | AmpAmpToken of prefix: bool
   /// `&&&`
   | AmpAmpAmpToken
   /// `->`
@@ -178,7 +178,10 @@ type TokenizeFullResult = (Token * Pos) list
 
 /// Unary operator.
 [<NoEquality; NoComparison>]
-type Unary = | MinusUnary
+type Unary =
+  | MinusUnary
+  /// `&&`
+  | PtrUnary
 
 /// Binary operator.
 [<NoEquality; NoComparison>]
@@ -355,7 +358,6 @@ type AExpr =
   | AIndexExpr of AExpr * AExpr * Pos
 
   /// Unary operation, e.g. `-x`.
-  /// Currently `-` is the only unary operation.
   | AUnaryExpr of Unary * AExpr * Pos
 
   /// Binary operation, e.g. `x + y`, `f x`.

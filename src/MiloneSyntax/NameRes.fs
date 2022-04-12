@@ -1650,6 +1650,10 @@ let private nameResExpr (ctx: ScopeCtx) (expr: NExpr) : TExpr * ScopeCtx =
     let arg, ctx = arg |> nameResExpr ctx
     TNodeExpr(TMinusEN, [ arg ], noTy, loc), ctx
 
+  | NExpr.Unary (PtrUnary, arg, loc) ->
+    let arg, ctx = arg |> nameResExpr ctx
+    TNodeExpr(TPtrEN, [ arg ], noTy, loc), ctx
+
   | NExpr.Binary (AppBinary, l, r, loc) ->
     let l, ctx = l |> nameResExpr ctx
     let r, ctx = r |> nameResExpr ctx

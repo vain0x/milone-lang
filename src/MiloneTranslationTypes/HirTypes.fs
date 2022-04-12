@@ -208,6 +208,9 @@ type HExprKind =
   /// `-x`.
   | HMinusEN
 
+  /// `&&x`.
+  | HPtrEN
+
   | HAppEN
 
   /// `s.[i]`

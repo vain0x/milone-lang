@@ -298,6 +298,9 @@ type TExprKind =
   /// `-x`.
   | TMinusEN
 
+  /// `&&x`.
+  | TPtrEN
+
   | TAppEN
 
   /// Type ascription `x : 'x`.

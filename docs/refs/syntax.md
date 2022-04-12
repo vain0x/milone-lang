@@ -394,9 +394,9 @@ Putting two expressions form a function application expression.
         app_expr suffix_expr
         | suffix_expr
 
-Minus `-` is unary operator. It is distinct from binary `-` operator buy putting it in front of argument without no space between them.
+Unary operators. It's distinct from infix notation by putting the operator in front of argument with no space between them.
 
-    minus_expr = '-' app_expr
+    prefix_expr = ('-' | '&&') app_expr
 
 Binary operators. Precedence from higher to lower:
 

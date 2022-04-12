@@ -84,6 +84,11 @@ let private testSizeOf () =
   // Size of generic type.
   assert (sizeOfPointee (__nullptr: nativeptr<obj * obj>) = __sizeOf<obj * obj>)
 
+let private testPtrOperator () =
+  let x = 42
+  let p: nativeptr<int> = &&x
+  assert (__ptrRead (Ptr.asConst p) 0 = 42)
+
 let main _ =
   testVoidPtrAvailable ()
   testNullPtr ()
@@ -91,6 +96,7 @@ let main _ =
   testAsMutable ()
   testEquality ()
   testSizeOf ()
+  testPtrOperator ()
 
   let buf = memAlloc 1 8
   memSet buf 255uy 8
