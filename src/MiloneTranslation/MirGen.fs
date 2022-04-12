@@ -224,7 +224,8 @@ let private mxCompare ctx (op: MBinary) lTy (l: MExpr) r loc =
         | BoolTk
         | CharTk
         | VoidPtrTk _
-        | NativePtrTk _),
+        | NativePtrTk _
+        | NativeFunTk),
         _) -> mxBinOpScalar ctx op l r loc
 
   | Ty (StrTk, _) -> mxStrCompare ctx op l r loc

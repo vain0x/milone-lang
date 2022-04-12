@@ -535,7 +535,8 @@ let private resolveTraitBound (ctx: TyCtx) theTrait loc : TyCtx =
       match tk, tyArgs with
       | _ when tyIsBasic ty -> true, memo
 
-      | TupleTk, [] -> true, memo
+      | TupleTk, []
+      | NativeFunTk, _ -> true, memo
 
       // Don't memoize structural types
       // because it doesn't cause infinite recursion
