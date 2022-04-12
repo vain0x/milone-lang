@@ -690,7 +690,10 @@ let private parseAtom basePos (tokens, errors) : PR<AExpr> =
   | (FloatToken text, pos) :: tokens -> ALitExpr(FloatLit text, pos), tokens, errors
   | (CharToken value, pos) :: tokens -> ALitExpr(CharLit value, pos), tokens, errors
   | (StrToken value, pos) :: tokens -> ALitExpr(StrLit value, pos), tokens, errors
-  | (IdentToken ident, pos) :: tokens -> AIdentExpr(Name(ident, pos)), tokens, errors
+
+  | (IdentToken ident, pos) :: tokens ->
+    let tyArgs, tokens, errors = parseTyArgs pos (tokens, errors)
+    AIdentExpr(Name(ident, pos), tyArgs), tokens, errors
 
   | (LeftParenToken, pos) :: (RightParenToken, _) :: tokens -> ATupleExpr([], pos), tokens, errors
   | (LeftParenToken, parenPos) :: tokens -> parseParenBody basePos parenPos (tokens, errors)

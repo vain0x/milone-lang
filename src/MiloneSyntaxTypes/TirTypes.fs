@@ -421,6 +421,7 @@ type NameResLog =
 
   | UnimplGenericTyError
   | UnimplOrPatBindingError
+  | UnimplTyArgListError
 
 [<RequireQualifiedAccess>]
 [<NoEquality; NoComparison>]

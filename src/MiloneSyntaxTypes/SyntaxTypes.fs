@@ -330,8 +330,8 @@ type AExpr =
 
   | ALitExpr of Lit * Pos
 
-  /// E.g. `x`.
-  | AIdentExpr of Name
+  /// E.g. `x`, `f<'T>`.
+  | AIdentExpr of Name * tyArgs: ATy list
 
   /// List literal, e.g. `[]`, `[2; 3]`.
   | AListExpr of AExpr list * Pos
@@ -461,7 +461,7 @@ type NField = NName * NExpr * NLoc
 type NExpr =
   // Fundamental:
   | Bad of NLoc
-  | Ident of NName
+  | Ident of NName * tyArgs: NTy list
   | Nav of NExpr * NName * NLoc
   | Ascribe of NExpr * NTy * NLoc
   | TyPlaceholder of NTy * NLoc

@@ -423,6 +423,7 @@ let nameResLogToString log =
 
   | UnimplGenericTyError -> "Generic record type is unimplemented."
   | UnimplOrPatBindingError -> "OR pattern including some bindings is unimplemented."
+  | UnimplTyArgListError -> "Type argument list is unimplemented."
 
 let private traitBoundErrorToString tyDisplay it =
   match it with

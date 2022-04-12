@@ -1483,10 +1483,13 @@ let private doNameResVarExpr ctx ident loc : TExpr option =
     | Some prim -> TPrimExpr(prim, noTy, loc) |> Some
     | None -> None
 
-let private nameResUnqualifiedIdentExpr ctx ident loc : TExpr * ScopeCtx =
-  match doNameResVarExpr ctx ident loc with
-  | Some expr -> expr, ctx
-  | None -> errorExpr ctx (UndefinedValueError ident) loc
+let private nameResUnqualifiedIdentExpr ctx ident loc tyArgs : TExpr * ScopeCtx =
+  if List.isEmpty tyArgs then
+    match doNameResVarExpr ctx ident loc with
+    | Some expr -> expr, ctx
+    | None -> errorExpr ctx (UndefinedValueError ident) loc
+  else
+    errorExpr ctx UnimplTyArgListError loc
 
 let private nameResNavExpr (ctx: ScopeCtx) (expr: NExpr) : TExpr * ScopeCtx =
   /// Resolves an expressions as scope.
@@ -1496,7 +1499,7 @@ let private nameResNavExpr (ctx: ScopeCtx) (expr: NExpr) : TExpr * ScopeCtx =
   /// exprOpt is also obtained by resolving inner `nav`s as possible.
   let rec resolveExprAsNsOwners ctx expr : ResolvedExpr * ScopeCtx =
     match expr with
-    | NExpr.Ident (ident, loc) ->
+    | NExpr.Ident ((ident, loc), []) ->
       let nsOwners = resolveUnqualifiedNsOwner ctx ident
       let exprOpt = doNameResVarExpr ctx ident loc
 
@@ -1570,7 +1573,7 @@ let private nameResExpr (ctx: ScopeCtx) (expr: NExpr) : TExpr * ScopeCtx =
   | NExpr.Bad loc -> txAbort loc, ctx
   | NExpr.Lit (lit, loc) -> TLitExpr(lit, loc), ctx
 
-  | NExpr.Ident (ident, loc) -> nameResUnqualifiedIdentExpr ctx ident loc
+  | NExpr.Ident ((ident, loc), tyArgs) -> nameResUnqualifiedIdentExpr ctx ident loc tyArgs
   | NExpr.Nav _ -> nameResNavExpr ctx expr
 
   | NExpr.Ascribe (body, ty, loc) ->
