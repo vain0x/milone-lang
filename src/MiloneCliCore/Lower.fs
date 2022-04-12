@@ -148,8 +148,7 @@ let private lowerPrim (prim: Tir.TPrim) : Hir.HPrim =
   | Tir.TPrim.NativeFun
   | Tir.TPrim.NativeExpr
   | Tir.TPrim.NativeStmt
-  | Tir.TPrim.NativeDecl
-  | Tir.TPrim.SizeOfVal -> unreachable () // Resolved in Typing.
+  | Tir.TPrim.NativeDecl -> unreachable () // Resolved in Typing.
 
 let private lowerPatKind (kind: Tir.TPatKind) : Hir.HPatKind =
   match kind with

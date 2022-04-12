@@ -1343,12 +1343,6 @@ let private inferPrimExpr ctx prim loc =
 
     txAbort ctx loc
 
-  | TPrim.SizeOfVal ->
-    let ctx =
-      addError ctx "Illegal use of __sizeOfVal. Hint: `__sizeOfVal expr`." loc
-
-    txAbort ctx loc
-
   | TPrim.NullPtr -> onBounded primNullPtrScheme
   | TPrim.PtrAsConst -> onBounded primPtrAsConstScheme
   | TPrim.PtrAsMutable -> onBounded primPtrAsMutableScheme
@@ -1615,10 +1609,6 @@ let private inferPrimAppExpr ctx itself =
 
   // __nativeDecl "code"
   | TPrim.NativeDecl, TLitExpr (StrLit code, _) -> TNodeExpr(TNativeDeclEN code, [], tyUnit, loc), tyUnit, ctx
-
-  | TPrim.SizeOfVal, _ ->
-    let arg, argTy, ctx = inferExpr ctx None arg
-    TNodeExpr(TSizeOfValEN, [ TNodeExpr(TTyPlaceholderEN, [], argTy, exprToLoc arg) ], tyInt, loc), tyInt, ctx
 
   | _ -> inferAppExpr ctx itself
 

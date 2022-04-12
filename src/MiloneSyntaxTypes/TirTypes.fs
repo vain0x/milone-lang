@@ -287,7 +287,6 @@ type TPrim =
   | NativeExpr
   | NativeStmt
   | NativeDecl
-  | SizeOfVal
   | NullPtr
   | PtrAsConst
   | PtrAsMutable
