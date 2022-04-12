@@ -143,7 +143,7 @@ void native_fun_ptr_native_fun_ptr_testFunPtrCanBeResult(void) {
     IntIntIntFunPtr2 call_1;
     call_1 = native_fun_ptr_native_fun_ptr_testFunPtrCanBeResult_getFunPtr();
     p_ = call_1;
-    milone_assert((((uintptr_t)p_) != (size_t)0ULL), (struct String){.str = "native_fun_ptr/native_fun_ptr.milone", .len = 36}, 72, 2);
+    milone_assert((p_ != ((IntIntIntFunPtr2)NULL)), (struct String){.str = "native_fun_ptr/native_fun_ptr.milone", .len = 36}, 72, 2);
     return;
 }
 
