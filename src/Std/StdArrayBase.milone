@@ -5,8 +5,7 @@ module rec Std.StdArrayBase
 // -----------------------------------------------
 
 /// Gets the size of pointee type.
-let private __pointeeSize (constPtr: __constptr<_>) : nativeint =
-  nativeint (__sizeOfVal (__ptrRead constPtr 0))
+let private __pointeeSize (constPtr: __constptr<'T>) : nativeint = nativeint __sizeOf<'T>
 
 let private __ptrAsMut (constPtr: __constptr<'T>) : nativeptr<'T> = __nativeCast constPtr
 

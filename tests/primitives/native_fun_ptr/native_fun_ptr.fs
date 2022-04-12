@@ -17,7 +17,7 @@ let private testSort () =
   let len = 5
 
   let array: nativeptr<int> =
-    memAlloc len (__sizeOfVal 0) |> __nativeCast
+    memAlloc len __sizeOf<int> |> __nativeCast
 
   __ptrWrite array 0 3
   __ptrWrite array 1 1

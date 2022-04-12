@@ -4,10 +4,11 @@ module rec LibNursery.NativeInterop
 
 open LibNursery.Runtime
 
-let private nativeptrSizeOf (p: nativeptr<'T>) : int =
-  __sizeOfVal (__ptrRead (__nativeCast p: __constptr<'T>))
+// FIXME: remove this
+let private nativeptrSizeOf (p: nativeptr<'T>) : int = __sizeOf<'T>
 
-let private constptrSizeOf (p: __constptr<_>) : int = __sizeOfVal (__ptrRead p)
+// FIXME: remove this
+let private constptrSizeOf (p: __constptr<'T>) : int = __sizeOf<'T>
 
 // See also:
 //

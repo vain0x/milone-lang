@@ -13,7 +13,7 @@ let memCopy (dest: voidptr) (src: __voidconstptr) (size: int) : voidptr =
 let scanInt () : int = __nativeFun "scan_int"
 
 let rawIntArrayNew (len: int) : voidptr =
-  memAlloc len (__sizeOfVal 0) |> __nativeCast
+  memAlloc len __sizeOf<int> |> __nativeCast
 
 let rawIntArrayGet (array: voidptr) (index: int) : int = __ptrRead (__nativeCast array) index
 
@@ -22,7 +22,7 @@ let rawIntArraySet (array: voidptr) (index: int) (value: int) : unit =
 
 let rawMemoryCopy (dest: voidptr) (src: voidptr) (size: int) : unit =
   let _ =
-    memCopy dest (__nativeCast src) (size * __sizeOfVal 0)
+    memCopy dest (__nativeCast src) (size * __sizeOf<int>)
 
   ()
 
