@@ -177,7 +177,7 @@ let private lowerExprKind (kind: Tir.TExprKind) : Hir.HExprKind =
   | Tir.TNativeExprEN code -> Hir.HNativeExprEN code
   | Tir.TNativeStmtEN code -> Hir.HNativeStmtEN code
   | Tir.TNativeDeclEN code -> Hir.HNativeDeclEN code
-  | Tir.TSizeOfValEN -> Hir.HSizeOfValEN
+  | Tir.TSizeOfEN -> Hir.HSizeOfEN
   | Tir.TTyPlaceholderEN -> Hir.HTyPlaceholderEN
 
   | Tir.TAbortEN -> unreachable () // Compile error occurred.

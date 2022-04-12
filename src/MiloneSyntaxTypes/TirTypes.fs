@@ -330,7 +330,7 @@ type TExprKind =
   | TNativeDeclEN of nativeDeclCode: string
 
   /// Size of type. Argument is a type placeholder. The result type is int.
-  | TSizeOfValEN
+  | TSizeOfEN
 
   /// Name of type.
   | TTyPlaceholderEN

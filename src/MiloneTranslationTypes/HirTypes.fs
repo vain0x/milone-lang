@@ -258,7 +258,7 @@ type HExprKind =
   | HNativeDeclEN of nativeDeclCode: string
 
   /// Size of type. Argument is a type placeholder. The result type is int.
-  | HSizeOfValEN
+  | HSizeOfEN
 
   /// Name of type.
   | HTyPlaceholderEN

@@ -1495,7 +1495,7 @@ let private nameResUnqualifiedIdentExpr ctx ident loc tyArgs : TExpr * ScopeCtx 
     match resolveUnqualifiedValue ctx ident with
     | None when ident = "__sizeOf" ->
       match tyArgs with
-      | [ ty ] -> TNodeExpr(TSizeOfValEN, [ TNodeExpr(TTyPlaceholderEN, [], ty, loc) ], tyInt, loc), ctx
+      | [ ty ] -> TNodeExpr(TSizeOfEN, [ TNodeExpr(TTyPlaceholderEN, [], ty, loc) ], tyInt, loc), ctx
       | _ -> errorExpr ctx (TyArityError(ident, List.length tyArgs, 1)) loc
 
     | _ -> errorExpr ctx UnimplTyArgListError loc

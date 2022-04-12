@@ -1534,7 +1534,7 @@ let private mirifyExprInf ctx itself kind args ty loc =
     let ctx = addDecl ctx (MNativeDecl(code, loc))
     MUnitExpr loc, ctx
 
-  | HSizeOfValEN, [ HNodeExpr (_, _, ty, _) ], _ -> MGenericValueExpr(MSizeOfGv, ty, loc), ctx
+  | HSizeOfEN, [ HNodeExpr (_, _, ty, _) ], _ -> MGenericValueExpr(MSizeOfGv, ty, loc), ctx
   | HTyPlaceholderEN, _, _ -> MGenericValueExpr(MTyPlaceholderGv, ty, loc), ctx
 
   | t -> unreachable t

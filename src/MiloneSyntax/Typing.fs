@@ -1694,12 +1694,12 @@ let private inferNodeExpr ctx expr : TExpr * Ty * TyCtx =
   | TAscribeEN, [ expr ] -> inferAscribeExpr ctx expr (getTy ()) loc
   | TAscribeEN, _ -> unreachable ()
 
-  | TSizeOfValEN, [ TNodeExpr (TTyPlaceholderEN, _, ty, _) ] ->
+  | TSizeOfEN, [ TNodeExpr (TTyPlaceholderEN, _, ty, _) ] ->
     assert (isNoTy ty |> not)
     assert (getTy () |> tyEqual tyInt)
     expr, tyInt, ctx
 
-  | TSizeOfValEN, _ -> unreachable ()
+  | TSizeOfEN, _ -> unreachable ()
 
   | TTyPlaceholderEN, _ ->
     txUnit loc, tyUnit, addError ctx "Type placeholder can appear in argument of __nativeExpr or __nativeStmt." loc
