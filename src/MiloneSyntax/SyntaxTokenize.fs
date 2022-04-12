@@ -341,7 +341,10 @@ let private tokenOfOp allowPrefix (text: string) l r : Token =
 
   | '<' ->
     match s with
-    | "<" -> LeftAngleToken
+    | "<" ->
+      // adjacent=true if the previous token is blank or newline.
+      LeftAngleToken(not allowPrefix)
+
     | "<=" -> LeftEqualToken
     | "<>" -> LeftRightToken
     | "<<" -> LeftLeftToken

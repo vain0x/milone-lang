@@ -87,7 +87,7 @@ type Token =
   /// `}`
   | RightBraceToken
   /// `<`
-  | LeftAngleToken
+  | LeftAngleToken of adjacent: bool
   /// `>`
   | RightAngleToken
   /// `[<`

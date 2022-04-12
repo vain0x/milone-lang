@@ -324,7 +324,7 @@ let private eatVis tokens : Vis * Tokens =
 /// `'<' ty '>'`
 let private parseTyArgs basePos (tokens, errors) : PR<ATy list> =
   match tokens with
-  | (LeftAngleToken, ltPos) :: tokens when posInside basePos ltPos ->
+  | (LeftAngleToken true, ltPos) :: tokens when posInside basePos ltPos ->
     let rec go acc (tokens, errors) =
       match tokens with
       | (CommaToken, _) :: tokens ->
@@ -791,7 +791,7 @@ let private parseOps bp basePos l (tokens, errors) : PR<AExpr> =
 
   | SigilBp, (EqualToken, opPos) :: tokens -> nextL l EqualBinary opPos (tokens, errors)
   | SigilBp, (LeftRightToken, opPos) :: tokens -> nextL l NotEqualBinary opPos (tokens, errors)
-  | SigilBp, (LeftAngleToken, opPos) :: tokens -> nextL l LessBinary opPos (tokens, errors)
+  | SigilBp, (LeftAngleToken false, opPos) :: tokens -> nextL l LessBinary opPos (tokens, errors)
   | SigilBp, (LeftEqualToken, opPos) :: tokens -> nextL l LessEqualBinary opPos (tokens, errors)
   | SigilBp, (RightAngleToken, opPos) :: tokens -> nextL l GreaterBinary opPos (tokens, errors)
   | SigilBp, (RightEqualToken, opPos) :: tokens -> nextL l GreaterEqualBinary opPos (tokens, errors)
@@ -1244,7 +1244,7 @@ let private parseItems (tokens, errors) : PR<AExpr list> =
 
 let private parseTyParams identPos (tokens, errors) : PR<Name list> =
   match tokens with
-  | (LeftAngleToken, anglePos) :: tokens when posIsSameRow identPos anglePos ->
+  | (LeftAngleToken true, anglePos) :: tokens when posIsSameRow identPos anglePos ->
     let rec go acc tokens =
       match tokens with
       | (TyVarToken ident, identPos) :: tokens ->
