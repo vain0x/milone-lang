@@ -111,6 +111,21 @@ let private testRead () =
   assert (__read p.[0] = 1)
   assert (__read p.[4] = 16)
 
+  let q: __constptr<int> = Ptr.asConst p
+  assert (__read q = 1)
+  assert (__read q.[2] = 4)
+
+let private testWrite () =
+  __nativeStmt ("int data[8] = { 0 };")
+  let p: nativeptr<int> = __nativeExpr "data"
+
+  __write p 42
+  assert (__read p = 42)
+  __write p.[0] 43
+  assert (__read p = 43)
+  __write p.[3] 39
+  assert (__read p.[3] = 39)
+
 let main _ =
   testBasic ()
   testVoidPtrAvailable ()
@@ -122,4 +137,5 @@ let main _ =
   testPtrOf ()
   testPtrOffset ()
   testRead ()
+  testWrite ()
   0

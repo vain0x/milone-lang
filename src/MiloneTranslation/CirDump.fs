@@ -291,6 +291,8 @@ let private cpExpr expr acc : string list =
 
   | CTyPlaceholderExpr ty -> acc |> cpTy ty
 
+  | CUnaryExpr (CDerefUnary, CUnaryExpr (CAddressOfUnary, arg)) -> acc |> cpExpr arg
+
   | CUnaryExpr (op, arg) ->
     acc
     |> cons "("

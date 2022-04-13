@@ -1534,7 +1534,15 @@ let private mirifyExprInf ctx itself kind args ty loc =
     let ptr, ctx = mirifyExpr ctx ptr
     MUnaryExpr(MUnboxUnary itemTy, ptr, loc), ctx
 
-  | HWriteEN, [], _ -> todo ()
+  | HWriteEN, [ ptr; item ], _ ->
+    let ptr, ctx = mirifyExpr ctx ptr
+    let item, ctx = mirifyExpr ctx item
+
+    let ctx =
+      let zeroExpr = MLitExpr(IntLit "0", loc)
+      addStmt ctx (MActionStmt(MPtrWriteAction, [ ptr; zeroExpr; item ], loc))
+
+    MUnitExpr loc, ctx
 
   | HNativeFunEN funSerial, _, _ -> MProcExpr(funSerial, loc), ctx
 

@@ -1561,7 +1561,7 @@ type private PtrProjectionInferError =
   | PtrProjectionError of msg: string * Loc * TyCtx
 
 /// (For argument of __ptr.)
-let private inferExprAsPtrProjection ctx allowMut expr : TExpr * Ty * TyCtx =
+let private inferExprAsPtrProjection ctx requireMut expr : TExpr * Ty * TyCtx =
   let rec go ctx expr =
     match expr with
     | TNodeExpr (TIndexEN, [ ptr; index ], _, loc) ->
@@ -1581,13 +1581,10 @@ let private inferExprAsPtrProjection ctx allowMut expr : TExpr * Ty * TyCtx =
       let ty = substTy ctx ty
 
       match ty with
-      | Ty (NativePtrTk isMut, [ itemTy ]) ->
-        let ty, ctx =
-          match isMut, allowMut with
-          | IsMut, false -> tyConstPtr itemTy, addError ctx "Expected __constptr but was nativeptr." (exprToLoc expr)
-          | _ -> ty, ctx
-
-        PtrProjectionOk(expr, ty, ctx)
+      | Ty (NativePtrTk isMut, _) ->
+        match isMut, requireMut with
+        | IsConst, true -> PtrProjectionError("Expected nativeptr but was __constptr.", exprToLoc expr, ctx)
+        | _ -> PtrProjectionOk(expr, ty, ctx)
 
       | _ -> PtrProjectionError("Expected pointer type.", exprToLoc expr, ctx)
 
@@ -1619,12 +1616,13 @@ let private inferPrimAppExpr ctx itself =
 
     txApp (TPrimExpr(TPrim.Printfn, funTy, loc)) arg targetTy loc, targetTy, ctx
 
-  | TPrim.Ptr, _ -> inferExprAsPtrProjection ctx true arg
+  | TPrim.Ptr, _ -> inferExprAsPtrProjection ctx false arg
 
   | TPrim.Read, _ ->
-    let expr, ty, ctx = inferExprAsPtrProjection ctx true arg
+    let expr, ty, ctx = inferExprAsPtrProjection ctx false arg
 
     let itemTy =
+      // #unwrap_ptr_ty
       match ty with
       | Ty (NativePtrTk _, [ item ]) -> item
       | Ty (ErrorTk _, _) -> ty
@@ -1674,19 +1672,25 @@ let private inferPrimAppExpr ctx itself =
 
   | _ -> inferAppExpr ctx itself
 
-let private inferWriteExpr ctx expr =
-  let arg =
+let private inferWriteExpr ctx expr : TExpr * Ty * TyCtx =
+  let ptr, item, loc =
     match expr with
-    | TNodeExpr (TAppEN, [ TNodeExpr (TAppEN, [ TPrimExpr (TPrim.Write, _, primLoc); accessPath ], _, _); item ], _, _) ->
-      // let accessPath, ctx = inferLval ctx accessPath
-      // let item, ctx = inferExpr ctx None item
-      // ()
-
-      todo ()
-
+    | TNodeExpr (TAppEN, [ TNodeExpr (TAppEN, [ TPrimExpr (TPrim.Write, _, loc); ptr ], _, _); item ], _, _) ->
+      ptr, item, loc
     | _ -> unreachable ()
 
-  todo ()
+  let ptr, ptrTy, ctx = inferExprAsPtrProjection ctx true ptr
+
+  let itemTy =
+    // #unwrap_ptr_ty
+    match ptrTy with
+    | Ty (NativePtrTk IsMut, [ item ]) -> item
+    | Ty (ErrorTk _, _) -> ptrTy
+    | _ -> unreachable ()
+
+  let item, actualItemTy, ctx = inferExpr ctx (Some itemTy) item
+  let ctx = unifyTy ctx loc actualItemTy itemTy
+  TNodeExpr(TWriteEN, [ ptr; item ], tyUnit, loc), tyUnit, ctx
 
 let private inferMinusExpr ctx arg loc =
   let arg, argTy, ctx = inferExpr ctx None arg
