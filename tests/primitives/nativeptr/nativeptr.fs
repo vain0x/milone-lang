@@ -89,6 +89,12 @@ let private testPtrOf () =
   let p: __constptr<int> = &&x
   assert (__ptrRead p 0 = 42)
 
+let private testPtrOffset () =
+  let p: nativeptr<int> = __nativeCast (memAlloc 4 __sizeOf<int>)
+
+  assert (__ptr p.[0] = p)
+  assert (unativeint (__ptr p.[1]) - unativeint p = unativeint __sizeOf<int>)
+
 let main _ =
   testVoidPtrAvailable ()
   testNullPtr ()
@@ -97,6 +103,7 @@ let main _ =
   testEquality ()
   testSizeOf ()
   testPtrOf ()
+  testPtrOffset ()
 
   let buf = memAlloc 1 8
   memSet buf 255uy 8

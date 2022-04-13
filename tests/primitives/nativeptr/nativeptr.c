@@ -36,6 +36,8 @@ void nativeptr_nativeptr_testSizeOf(void);
 
 void nativeptr_nativeptr_testPtrOf(void);
 
+void nativeptr_nativeptr_testPtrOffset(void);
+
 int main(int argc, char** argv);
 
 struct ObjectObjectTuple2_ {
@@ -173,10 +175,20 @@ void nativeptr_nativeptr_testPtrOf(void) {
     return;
 }
 
+void nativeptr_nativeptr_testPtrOffset(void) {
+    int* p_2;
+    void* call_1;
+    call_1 = nativeptr_nativeptr_memAlloc(4, sizeof(int));
+    p_2 = ((int*)call_1);
+    milone_assert(((&(p_2[0])) == p_2), (struct String){.str = "nativeptr/nativeptr.milone", .len = 26}, 94, 2);
+    milone_assert(((((uintptr_t)(&(p_2[1]))) - ((uintptr_t)p_2)) == ((uintptr_t)sizeof(int))), (struct String){.str = "nativeptr/nativeptr.milone", .len = 26}, 95, 2);
+    return;
+}
+
 int main(int argc, char** argv) {
     milone_start(argc, argv);
     void* buf_;
-    void* call_1;
+    void* call_2;
     int read_1;
     nativeptr_nativeptr_testVoidPtrAvailable();
     nativeptr_nativeptr_testNullPtr();
@@ -185,11 +197,12 @@ int main(int argc, char** argv) {
     nativeptr_nativeptr_testEquality();
     nativeptr_nativeptr_testSizeOf();
     nativeptr_nativeptr_testPtrOf();
-    call_1 = nativeptr_nativeptr_memAlloc(1, 8);
-    buf_ = call_1;
+    nativeptr_nativeptr_testPtrOffset();
+    call_2 = nativeptr_nativeptr_memAlloc(1, 8);
+    buf_ = call_2;
     nativeptr_nativeptr_memSet(buf_, (uint8_t)255U, 8);
     read_1 = (*(((int const*)buf_)));
-    milone_assert((read_1 == -1), (struct String){.str = "nativeptr/nativeptr.milone", .len = 26}, 102, 2);
-    milone_assert((((uintptr_t)buf_) != (size_t)0ULL), (struct String){.str = "nativeptr/nativeptr.milone", .len = 26}, 105, 2);
+    milone_assert((read_1 == -1), (struct String){.str = "nativeptr/nativeptr.milone", .len = 26}, 109, 2);
+    milone_assert((((uintptr_t)buf_) != (size_t)0ULL), (struct String){.str = "nativeptr/nativeptr.milone", .len = 26}, 112, 2);
     return 0;
 }

@@ -111,6 +111,8 @@ type MBinary =
 
   /// `s.str[i]`
   | MStrIndexBinary
+  /// `&p[i]`
+  | MPtrAddBinary
 
 [<NoEquality; NoComparison>]
 type MAction =

@@ -712,7 +712,8 @@ let private cBinaryOf op =
   | MUInt64CompareBinary
   | MStrAddBinary
   | MStrCompareBinary
-  | MStrIndexBinary -> unreachable ()
+  | MStrIndexBinary
+  | MPtrAddBinary -> unreachable ()
 
 let private genLit lit =
   match lit with
@@ -834,6 +835,11 @@ let private genExprBin ctx op l r =
     let l, ctx = cgExpr ctx l
     let r, ctx = cgExpr ctx r
     CIndexExpr(CDotExpr(l, "str"), r), ctx
+
+  | MPtrAddBinary ->
+    let l, ctx = cgExpr ctx l
+    let r, ctx = cgExpr ctx r
+    CUnaryExpr(CAddressOfUnary, CIndexExpr(l, r)), ctx
 
   | _ ->
     let l, ctx = cgExpr ctx l

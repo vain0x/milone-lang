@@ -292,6 +292,9 @@ type TPrim =
   | PtrAsMutable
   | PtrRead
   | PtrWrite
+  | Ptr
+  | Read
+  | Write
 
 [<NoEquality; NoComparison>]
 type TExprKind =
@@ -319,6 +322,13 @@ type TExprKind =
   | TTupleEN
 
   | TDiscriminantEN of VariantSerial
+
+  /// `p.[i]` in accessPath
+  | TPtrItemEN
+  /// __read accessPath
+  | TReadEN
+  /// __write accessPath value
+  | TWriteEN
 
   /// Use function as function pointer.
   | TNativeFunEN of FunSerial

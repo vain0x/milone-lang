@@ -1520,6 +1520,14 @@ let private mirifyExprInf ctx itself kind args ty loc =
   | HCallNativeEN funName, args, _ -> mirifyExprInfCallNative ctx funName args ty loc
   | HClosureEN, [ HFunExpr (funSerial, _, _, _); env ], _ -> mirifyExprInfClosure ctx funSerial env ty loc
 
+  | HPtrItemEN, [ ptr; index ], _ ->
+    let ptr, ctx = mirifyExpr ctx ptr
+    let index, ctx = mirifyExpr ctx index
+    mxBinOpScalar ctx MPtrAddBinary ptr index loc
+
+  | HReadEN, [], _ -> todo ()
+  | HWriteEN, [], _ -> todo ()
+
   | HNativeFunEN funSerial, _, _ -> MProcExpr(funSerial, loc), ctx
 
   | HNativeExprEN code, args, _ ->

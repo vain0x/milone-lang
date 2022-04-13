@@ -248,6 +248,13 @@ type HExprKind =
   /// Gets i'th field of record.
   | HRecordItemEN of index: int
 
+  /// `p.[i]` in accessPath
+  | HPtrItemEN
+  /// __read accessPath
+  | HReadEN
+  /// __write accessPath value
+  | HWriteEN
+
   /// Use function as function pointer.
   | HNativeFunEN of FunSerial
 
