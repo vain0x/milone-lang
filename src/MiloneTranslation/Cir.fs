@@ -50,7 +50,7 @@ type CUnary =
   | CNotUnary
 
   /// `&x`
-  | CRefUnary
+  | CAddressOfUnary
 
   /// `*p`
   | CDerefUnary

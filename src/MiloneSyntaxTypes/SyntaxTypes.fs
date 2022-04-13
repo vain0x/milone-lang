@@ -181,7 +181,7 @@ type TokenizeFullResult = (Token * Pos) list
 type Unary =
   | MinusUnary
   /// `&&`
-  | PtrUnary
+  | PtrOfUnary
 
 /// Binary operator.
 [<NoEquality; NoComparison>]

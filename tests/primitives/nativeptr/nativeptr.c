@@ -34,7 +34,7 @@ void nativeptr_nativeptr_testEquality(void);
 
 void nativeptr_nativeptr_testSizeOf(void);
 
-void nativeptr_nativeptr_testPtrOperator(void);
+void nativeptr_nativeptr_testPtrOf(void);
 
 int main(int argc, char** argv);
 
@@ -162,7 +162,7 @@ void nativeptr_nativeptr_testSizeOf(void) {
     return;
 }
 
-void nativeptr_nativeptr_testPtrOperator(void) {
+void nativeptr_nativeptr_testPtrOf(void) {
     int x_;
     int const* p_1;
     int read_;
@@ -184,7 +184,7 @@ int main(int argc, char** argv) {
     nativeptr_nativeptr_testAsMutable();
     nativeptr_nativeptr_testEquality();
     nativeptr_nativeptr_testSizeOf();
-    nativeptr_nativeptr_testPtrOperator();
+    nativeptr_nativeptr_testPtrOf();
     call_1 = nativeptr_nativeptr_memAlloc(1, 8);
     buf_ = call_1;
     nativeptr_nativeptr_memSet(buf_, (uint8_t)255U, 8);

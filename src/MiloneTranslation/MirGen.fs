@@ -1497,9 +1497,9 @@ let private mirifyExprInf ctx itself kind args ty loc =
     let arg, ctx = mirifyExpr ctx arg
     MUnaryExpr(MMinusUnary, arg, loc), ctx
 
-  | HPtrEN, [ arg ], _ ->
+  | HPtrOfEN, [ arg ], _ ->
     let arg, ctx = mirifyExpr ctx arg
-    MUnaryExpr(MPtrUnary, arg, loc), ctx
+    MUnaryExpr(MPtrOfUnary, arg, loc), ctx
 
   | HTupleEN, [], _ -> MUnitExpr loc, ctx
   | HTupleEN, _, _ -> unreachable () // Non-unit HTupleEN is resolved in MonoTy.

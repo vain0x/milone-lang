@@ -766,7 +766,7 @@ let private parsePrefix basePos (tokens, errors) : PR<AExpr> =
 
   | (AmpAmpToken _, pos) :: tokens ->
     let arg, tokens, errors = parseSuffix basePos (tokens, errors)
-    AUnaryExpr(PtrUnary, arg, pos), tokens, errors
+    AUnaryExpr(PtrOfUnary, arg, pos), tokens, errors
 
   | _ -> parseSuffix basePos (tokens, errors)
 

@@ -209,7 +209,7 @@ type HExprKind =
   | HMinusEN
 
   /// `&&x`.
-  | HPtrEN
+  | HPtrOfEN
 
   | HAppEN
 

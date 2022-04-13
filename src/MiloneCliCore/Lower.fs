@@ -167,7 +167,7 @@ let private lowerPatKind (kind: Tir.TPatKind) : Hir.HPatKind =
 let private lowerExprKind (kind: Tir.TExprKind) : Hir.HExprKind =
   match kind with
   | Tir.TMinusEN -> Hir.HMinusEN
-  | Tir.TPtrEN -> Hir.HPtrEN
+  | Tir.TPtrOfEN -> Hir.HPtrOfEN
   | Tir.TAppEN -> Hir.HAppEN
   | Tir.TIndexEN -> Hir.HIndexEN
   | Tir.TSliceEN -> Hir.HSliceEN

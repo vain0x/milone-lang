@@ -299,7 +299,7 @@ type TExprKind =
   | TMinusEN
 
   /// `&&x`.
-  | TPtrEN
+  | TPtrOfEN
 
   | TAppEN
 
