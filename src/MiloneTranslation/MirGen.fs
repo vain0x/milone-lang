@@ -1525,7 +1525,15 @@ let private mirifyExprInf ctx itself kind args ty loc =
     let index, ctx = mirifyExpr ctx index
     mxBinOpScalar ctx MPtrAddBinary ptr index loc
 
-  | HReadEN, [], _ -> todo ()
+  | HReadEN, [ ptr ], _ ->
+    let itemTy =
+      match exprToTy ptr with
+      | Ty (NativePtrTk _, [ itemTy ]) -> itemTy
+      | _ -> unreachable ()
+
+    let ptr, ctx = mirifyExpr ctx ptr
+    MUnaryExpr(MUnboxUnary itemTy, ptr, loc), ctx
+
   | HWriteEN, [], _ -> todo ()
 
   | HNativeFunEN funSerial, _, _ -> MProcExpr(funSerial, loc), ctx

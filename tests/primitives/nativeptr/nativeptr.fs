@@ -4,16 +4,24 @@ module rec nativeptr.Program
 
 module Ptr = Std.Ptr
 
-let memAlloc (count: int) (size: int) : voidptr =
+let private memAlloc (count: int) (size: int) : voidptr =
   __nativeFun ("milone_mem_alloc", count, unativeint size)
 
-let memSet (dest: voidptr) (value: uint8) (count: int) =
+let private memSet (dest: voidptr) (value: uint8) (count: int) =
   let _ =
     (__nativeFun ("memset", dest, int value, unativeint count): voidptr)
 
   ()
 
-let strcpy (dest: nativeptr<char>) (src: __constptr<char>) : nativeptr<char> = __nativeFun ("strcpy", dest, src)
+let private strcpy (dest: nativeptr<char>) (src: __constptr<char>) : nativeptr<char> = __nativeFun ("strcpy", dest, src)
+
+let private testBasic () =
+  let buf = memAlloc 1 8
+  memSet buf 255uy 8
+  assert (__ptrRead (__nativeCast buf: __constptr<int>) 0 = -1)
+
+  // Conversion to int.
+  assert (unativeint buf <> 0un)
 
 let private testVoidPtrAvailable () =
   let mutEnv: voidptr = __nativeCast 42un
@@ -95,7 +103,16 @@ let private testPtrOffset () =
   assert (__ptr p.[0] = p)
   assert (unativeint (__ptr p.[1]) - unativeint p = unativeint __sizeOf<int>)
 
+let private testRead () =
+  __nativeStmt ("int array[] = {1, 2, 4, 8, 16};")
+  let p: nativeptr<int> = __nativeExpr "array"
+
+  assert (__read p = 1)
+  assert (__read p.[0] = 1)
+  assert (__read p.[4] = 16)
+
 let main _ =
+  testBasic ()
   testVoidPtrAvailable ()
   testNullPtr ()
   testAsConst ()
@@ -104,11 +121,5 @@ let main _ =
   testSizeOf ()
   testPtrOf ()
   testPtrOffset ()
-
-  let buf = memAlloc 1 8
-  memSet buf 255uy 8
-  assert (__ptrRead (__nativeCast buf: __constptr<int>) 0 = -1)
-
-  // Conversion to int.
-  assert (unativeint buf <> 0un)
+  testRead ()
   0
