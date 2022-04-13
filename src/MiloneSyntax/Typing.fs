@@ -1624,7 +1624,7 @@ let private inferPtrExpr ctx arg loc =
   match arg with
   | TVarExpr _ ->
     let arg, argTy, ctx = inferExpr ctx None arg
-    let ty = Ty(NativePtrTk IsMut, [ argTy ])
+    let ty = tyConstPtr argTy
     TNodeExpr(TPtrEN, [ arg ], ty, loc), ty, ctx
 
   | _ ->

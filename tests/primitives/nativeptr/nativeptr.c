@@ -164,11 +164,11 @@ void nativeptr_nativeptr_testSizeOf(void) {
 
 void nativeptr_nativeptr_testPtrOperator(void) {
     int x_;
-    int* p_1;
+    int const* p_1;
     int read_;
     x_ = 42;
     p_1 = (&(x_));
-    read_ = (*(((int const*)p_1)));
+    read_ = (*(p_1));
     milone_assert((read_ == 42), (struct String){.str = "nativeptr/nativeptr.milone", .len = 26}, 89, 2);
     return;
 }

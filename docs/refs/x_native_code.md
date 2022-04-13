@@ -46,12 +46,14 @@ Hint: `T const *` is same as `const T *`.
 
 Unary `&&` operator makes a pointer to a variable.
 It's invalidated when the variable goes out of scope.
-Writing to the content is undefined behavior.
 
 ```fsharp
     let x = 42
-    let p: nativeptr<int> = &&x
+    let p: __constptr<int> = &&x
 ```
+
+- Writing to the content is undefined behavior.
+- Not compatible with F#, where `&&x` is `nativeptr<T>`.
 
 ## Pointer cast
 

@@ -86,8 +86,8 @@ let private testSizeOf () =
 
 let private testPtrOperator () =
   let x = 42
-  let p: nativeptr<int> = &&x
-  assert (__ptrRead (Ptr.asConst p) 0 = 42)
+  let p: __constptr<int> = &&x
+  assert (__ptrRead p 0 = 42)
 
 let main _ =
   testVoidPtrAvailable ()
