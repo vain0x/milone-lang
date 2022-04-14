@@ -49,7 +49,7 @@ void* native_fun_ptr_native_fun_ptr_memAlloc(int len_, int size_) {
 }
 
 int native_fun_ptr_native_fun_ptr_sortIntArray_intCompare(void const* l_, void const* r_) {
-    return int_compare((*(((int const*)((int const*)l_)))), (*(((int const*)((int const*)r_)))));
+    return int_compare((*(((int const*)l_))), (*(((int const*)r_))));
 }
 
 void native_fun_ptr_native_fun_ptr_sortIntArray(int* array_, int len_1) {
@@ -72,11 +72,11 @@ void native_fun_ptr_native_fun_ptr_testSort(void) {
     array_1[4] = 5;
     native_fun_ptr_native_fun_ptr_sortIntArray(array_1, len_2);
     array_2 = ((int const*)array_1);
-    milone_assert(((*(((int const*)(&(array_2[0]))))) == 1), (struct String){.str = "native_fun_ptr/native_fun_ptr.milone", .len = 36}, 32, 2);
-    milone_assert(((*(((int const*)(&(array_2[1]))))) == 1), (struct String){.str = "native_fun_ptr/native_fun_ptr.milone", .len = 36}, 33, 2);
-    milone_assert(((*(((int const*)(&(array_2[2]))))) == 3), (struct String){.str = "native_fun_ptr/native_fun_ptr.milone", .len = 36}, 34, 2);
-    milone_assert(((*(((int const*)(&(array_2[3]))))) == 4), (struct String){.str = "native_fun_ptr/native_fun_ptr.milone", .len = 36}, 35, 2);
-    milone_assert(((*(((int const*)(&(array_2[4]))))) == 5), (struct String){.str = "native_fun_ptr/native_fun_ptr.milone", .len = 36}, 36, 2);
+    milone_assert((array_2[0] == 1), (struct String){.str = "native_fun_ptr/native_fun_ptr.milone", .len = 36}, 32, 2);
+    milone_assert((array_2[1] == 1), (struct String){.str = "native_fun_ptr/native_fun_ptr.milone", .len = 36}, 33, 2);
+    milone_assert((array_2[2] == 3), (struct String){.str = "native_fun_ptr/native_fun_ptr.milone", .len = 36}, 34, 2);
+    milone_assert((array_2[3] == 4), (struct String){.str = "native_fun_ptr/native_fun_ptr.milone", .len = 36}, 35, 2);
+    milone_assert((array_2[4] == 5), (struct String){.str = "native_fun_ptr/native_fun_ptr.milone", .len = 36}, 36, 2);
     return;
 }
 

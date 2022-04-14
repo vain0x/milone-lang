@@ -84,6 +84,8 @@ type MUnary =
   /// Gets tail of list, unchecked.
   | MListTailUnary of itemTy: Ty
 
+  /// Dereference a typed pointer.
+  | MDerefUnary of itemTy: Ty
   | MNativeCastUnary of targetTy: Ty
 
 /// Built-in 2-arity operation in middle IR.
@@ -155,8 +157,6 @@ type MPrim =
   | MCallClosurePrim
 
   | MCallNativePrim of funName: string * argTys: Ty list
-  /// [ ptr ]
-  | MPtrReadPrim
 
 /// Expression in middle IR.
 [<NoEquality; NoComparison>]

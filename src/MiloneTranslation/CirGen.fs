@@ -819,6 +819,10 @@ let private genUnaryExpr ctx op arg =
     let _, ctx = genListTyDef ctx itemTy
     CArrowExpr(arg, "tail"), ctx
 
+  | MDerefUnary itemTy ->
+    let _, ctx = cgTyComplete ctx itemTy
+    CUnaryExpr(CDerefUnary, arg), ctx
+
   | MNativeCastUnary targetTy ->
     let ty, ctx = cgTyComplete ctx targetTy
     CCastExpr(arg, ty), ctx
@@ -1131,12 +1135,6 @@ let private cgPrimStmt (ctx: CirCtx) itself prim args serial resultTy =
       addNativeFunDecl ctx funName argTys resultTy
 
     regular ctx (fun args -> (CCallExpr(CVarExpr funName, args)))
-
-  | MPtrReadPrim ->
-    regular ctx (fun args ->
-      match args with
-      | [ ptr ] -> CUnaryExpr(CDerefUnary, ptr)
-      | _ -> unreachable ())
 
 let private cgBoxStmt ctx serial arg argTy =
   let argTy, ctx = cgTyComplete ctx argTy

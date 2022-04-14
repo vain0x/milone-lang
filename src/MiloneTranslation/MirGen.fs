@@ -1530,9 +1530,13 @@ let private mirifyExprInf ctx itself kind args ty loc =
       | _ -> unreachable ()
 
     let ptr, ctx = mirifyExpr ctx ptr
-    MUnaryExpr(MUnboxUnary itemTy, ptr, loc), ctx
+    MUnaryExpr(MDerefUnary itemTy, ptr, loc), ctx
 
   | HPtrWriteEN, [ ptr; item ], _ ->
+    assert (match exprToTy ptr with
+            | Ty (NativePtrTk IsMut, [ _ ]) -> true
+            | _ -> false)
+
     let ptr, ctx = mirifyExpr ctx ptr
     let item, ctx = mirifyExpr ctx item
 
