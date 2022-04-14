@@ -1348,9 +1348,7 @@ let private inferPrimExpr ctx prim loc =
 
   | TPrim.Ptr
   | TPrim.Read
-  | TPrim.Write ->
-    let ctx = addError ctx "Invalid use." loc
-    txAbort ctx loc
+  | TPrim.Write -> errorExpr ctx "This function misses some argument." loc
 
 let private inferRecordExpr ctx expectOpt baseOpt fields loc =
   // First, infer base if exists.
@@ -1731,7 +1729,7 @@ let private inferPtrOfExpr ctx arg loc =
     TNodeExpr(TPtrOfEN, [ arg ], ty, loc), ty, ctx
 
   | _ ->
-    let ctx = addError ctx "Expected a lval." loc
+    let ctx = addError ctx "Expected a variable." loc
     txAbort ctx loc
 
 let private inferIndexExpr ctx l r loc =
