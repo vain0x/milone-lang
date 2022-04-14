@@ -1996,9 +1996,9 @@ let nameRes (layers: NModuleRoot list list) : TProgram * NameResResult =
         addValueToNs ctx ptrNs alias (PrimSymbol prim)
 
       ctx
-      |> add "select" TPrim.Ptr
-      |> add "read" TPrim.Read
-      |> add "write" TPrim.Write
+      |> add "select" TPrim.PtrSelect
+      |> add "read" TPrim.PtrRead
+      |> add "write" TPrim.PtrWrite
       |> add "asConst" TPrim.PtrAsConst
       |> add "asMutable" TPrim.PtrAsMutable
 

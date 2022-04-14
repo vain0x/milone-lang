@@ -1328,12 +1328,11 @@ let private inferPrimExpr ctx prim loc =
 
   | TPrim.NullPtr -> onBounded primNullPtrScheme
 
+  | TPrim.PtrSelect
+  | TPrim.PtrRead
+  | TPrim.PtrWrite
   | TPrim.PtrAsConst
-  | TPrim.PtrAsMutable -> errorExpr ctx "This function must take an argument." loc
-
-  | TPrim.Ptr
-  | TPrim.Read
-  | TPrim.Write -> errorExpr ctx "This function misses some argument." loc
+  | TPrim.PtrAsMutable -> errorExpr ctx "This function misses some argument." loc
 
 let private inferRecordExpr ctx expectOpt baseOpt fields loc =
   // First, infer base if exists.
@@ -1552,7 +1551,7 @@ let private inferExprAsPtrProjection ctx requireMut expr : TExpr * Ty * TyCtx =
         let ctx =
           unifyTy ctx (exprToLoc index) indexTy tyInt
 
-        PtrProjectionOk(TNodeExpr(TPtrItemEN, [ ptr; index ], ptrTy, loc), ptrTy, ctx)
+        PtrProjectionOk(TNodeExpr(TPtrOffsetEN, [ ptr; index ], ptrTy, loc), ptrTy, ctx)
 
       | err -> err
 
@@ -1622,9 +1621,9 @@ let private inferPrimAppExpr ctx itself =
     | Ty (ErrorTk _, _) -> arg, argTy, ctx
     | _ -> errorExpr ctx "Expected __constptr type." loc
 
-  | TPrim.Ptr, _ -> inferExprAsPtrProjection ctx false arg
+  | TPrim.PtrSelect, _ -> inferExprAsPtrProjection ctx false arg
 
-  | TPrim.Read, _ ->
+  | TPrim.PtrRead, _ ->
     let expr, ty, ctx = inferExprAsPtrProjection ctx false arg
 
     let itemTy =
@@ -1634,7 +1633,7 @@ let private inferPrimAppExpr ctx itself =
       | Ty (ErrorTk _, _) -> ty
       | _ -> unreachable ()
 
-    TNodeExpr(TReadEN, [ expr ], itemTy, loc), itemTy, ctx
+    TNodeExpr(TPtrReadEN, [ expr ], itemTy, loc), itemTy, ctx
 
   // __nativeFun f
   | TPrim.NativeFun, TFunExpr (funSerial, _, _) ->
@@ -1681,7 +1680,7 @@ let private inferPrimAppExpr ctx itself =
 let private inferWriteExpr ctx expr : TExpr * Ty * TyCtx =
   let ptr, item, loc =
     match expr with
-    | TNodeExpr (TAppEN, [ TNodeExpr (TAppEN, [ TPrimExpr (TPrim.Write, _, loc); ptr ], _, _); item ], _, _) ->
+    | TNodeExpr (TAppEN, [ TNodeExpr (TAppEN, [ TPrimExpr (TPrim.PtrWrite, _, loc); ptr ], _, _); item ], _, _) ->
       ptr, item, loc
     | _ -> unreachable ()
 
@@ -1696,7 +1695,7 @@ let private inferWriteExpr ctx expr : TExpr * Ty * TyCtx =
 
   let item, actualItemTy, ctx = inferExpr ctx (Some itemTy) item
   let ctx = unifyTy ctx loc actualItemTy itemTy
-  TNodeExpr(TWriteEN, [ ptr; item ], tyUnit, loc), tyUnit, ctx
+  TNodeExpr(TPtrWriteEN, [ ptr; item ], tyUnit, loc), tyUnit, ctx
 
 let private inferMinusExpr ctx arg loc =
   let arg, argTy, ctx = inferExpr ctx None arg
@@ -1776,7 +1775,7 @@ let private inferNodeExpr ctx expr : TExpr * Ty * TyCtx =
 
   match kind, args with
   | TAppEN, [ TPrimExpr _; _ ] -> inferPrimAppExpr ctx expr
-  | TAppEN, [ TNodeExpr (TAppEN, [ TPrimExpr (TPrim.Write, _, _); _ ], _, _); _ ] -> inferWriteExpr ctx expr
+  | TAppEN, [ TNodeExpr (TAppEN, [ TPrimExpr (TPrim.PtrWrite, _, _); _ ], _, _); _ ] -> inferWriteExpr ctx expr
   | TAppEN, [ _; _ ] -> inferAppExpr ctx expr
   | TAppEN, _ -> unreachable ()
 
@@ -1808,9 +1807,9 @@ let private inferNodeExpr ctx expr : TExpr * Ty * TyCtx =
 
   | TDiscriminantEN _, _
   | TCallNativeEN _, _
-  | TPtrItemEN _, _
-  | TReadEN _, _
-  | TWriteEN _, _
+  | TPtrOffsetEN _, _
+  | TPtrReadEN _, _
+  | TPtrWriteEN _, _
   | TNativeFunEN _, _
   | TNativeExprEN _, _
   | TNativeStmtEN _, _

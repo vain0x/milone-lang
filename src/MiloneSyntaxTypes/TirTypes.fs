@@ -288,11 +288,11 @@ type TPrim =
   | NativeStmt
   | NativeDecl
   | NullPtr
+  | PtrSelect
+  | PtrRead
+  | PtrWrite
   | PtrAsConst
   | PtrAsMutable
-  | Ptr
-  | Read
-  | Write
 
 [<NoEquality; NoComparison>]
 type TExprKind =
@@ -322,11 +322,11 @@ type TExprKind =
   | TDiscriminantEN of VariantSerial
 
   /// `Ptr.select p.[i]`
-  | TPtrItemEN
+  | TPtrOffsetEN
   /// Ptr.read accessPath
-  | TReadEN
+  | TPtrReadEN
   /// Ptr.write accessPath value
-  | TWriteEN
+  | TPtrWriteEN
 
   /// Use function as function pointer.
   | TNativeFunEN of FunSerial

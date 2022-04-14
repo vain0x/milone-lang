@@ -1518,12 +1518,12 @@ let private mirifyExprInf ctx itself kind args ty loc =
   | HCallNativeEN funName, args, _ -> mirifyExprInfCallNative ctx funName args ty loc
   | HClosureEN, [ HFunExpr (funSerial, _, _, _); env ], _ -> mirifyExprInfClosure ctx funSerial env ty loc
 
-  | HPtrItemEN, [ ptr; index ], _ ->
+  | HPtrOffsetEN, [ ptr; index ], _ ->
     let ptr, ctx = mirifyExpr ctx ptr
     let index, ctx = mirifyExpr ctx index
     mxBinOpScalar ctx MPtrAddBinary ptr index loc
 
-  | HReadEN, [ ptr ], _ ->
+  | HPtrReadEN, [ ptr ], _ ->
     let itemTy =
       match exprToTy ptr with
       | Ty (NativePtrTk _, [ itemTy ]) -> itemTy
@@ -1532,7 +1532,7 @@ let private mirifyExprInf ctx itself kind args ty loc =
     let ptr, ctx = mirifyExpr ctx ptr
     MUnaryExpr(MUnboxUnary itemTy, ptr, loc), ctx
 
-  | HWriteEN, [ ptr; item ], _ ->
+  | HPtrWriteEN, [ ptr; item ], _ ->
     let ptr, ctx = mirifyExpr ctx ptr
     let item, ctx = mirifyExpr ctx item
 

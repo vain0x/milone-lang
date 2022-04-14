@@ -247,11 +247,11 @@ type HExprKind =
   | HRecordItemEN of index: int
 
   /// `Ptr.select p.[i]`
-  | HPtrItemEN
+  | HPtrOffsetEN
   /// Ptr.read accessPath
-  | HReadEN
+  | HPtrReadEN
   /// Ptr.write accessPath value
-  | HWriteEN
+  | HPtrWriteEN
 
   /// Use function as function pointer.
   | HNativeFunEN of FunSerial
