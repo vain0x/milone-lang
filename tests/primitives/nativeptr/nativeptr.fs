@@ -55,12 +55,12 @@ let private testAsConst () =
 let private testAsMutable () =
   let kp: __constptr<int> = __nullptr
   // nativeptr<int>
-  let mp = Ptr.asConst kp
+  let mp = Ptr.asMutable kp
   assert (mp = __nullptr)
 
   let kq: __voidconstptr = __nullptr
   // voidptr
-  let mq = Ptr.asConst kq
+  let mq = Ptr.asMutable kq
   assert (mq = __nullptr)
 
 let private testEquality () =
