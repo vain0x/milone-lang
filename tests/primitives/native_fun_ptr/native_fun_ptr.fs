@@ -2,6 +2,8 @@ module rec native_fun_ptr.Program
 
 // See also x_native_code.md in docs.
 
+module Ptr = Std.Ptr
+
 type private CompareFun = __nativeFun<__voidconstptr * __voidconstptr, int>
 
 let private memAlloc (len: int) (size: int) : voidptr =
@@ -9,7 +11,7 @@ let private memAlloc (len: int) (size: int) : voidptr =
 
 let private sortIntArray (array: nativeptr<int>) (len: int) : unit =
   let intCompare (l: __voidconstptr) (r: __voidconstptr) =
-    compare (__ptrRead (__nativeCast l) 0: int) (__ptrRead (__nativeCast r) 0: int)
+    compare (Ptr.read (__nativeCast l: __constptr<int>)) (Ptr.read (__nativeCast r: __constptr<int>))
 
   __nativeFun ("qsort", (__nativeCast array: voidptr), unativeint len, 4un, (__nativeFun intCompare: CompareFun))
 
@@ -19,20 +21,20 @@ let private testSort () =
   let array: nativeptr<int> =
     memAlloc len __sizeOf<int> |> __nativeCast
 
-  __ptrWrite array 0 3
-  __ptrWrite array 1 1
-  __ptrWrite array 2 4
-  __ptrWrite array 3 1
-  __ptrWrite array 4 5
+  Ptr.write array.[0] 3
+  Ptr.write array.[1] 1
+  Ptr.write array.[2] 4
+  Ptr.write array.[3] 1
+  Ptr.write array.[4] 5
 
   sortIntArray array len
 
   let array: __constptr<int> = __nativeCast array
-  assert (__ptrRead array 0 = 1)
-  assert (__ptrRead array 1 = 1)
-  assert (__ptrRead array 2 = 3)
-  assert (__ptrRead array 3 = 4)
-  assert (__ptrRead array 4 = 5)
+  assert (Ptr.read array.[0] = 1)
+  assert (Ptr.read array.[1] = 1)
+  assert (Ptr.read array.[2] = 3)
+  assert (Ptr.read array.[3] = 4)
+  assert (Ptr.read array.[4] = 5)
 
 type private UnitFun = __nativeFun<unit, int>
 

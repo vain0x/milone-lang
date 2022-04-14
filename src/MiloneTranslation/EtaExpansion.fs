@@ -150,10 +150,7 @@ let private primToArity ty prim =
   | HPrim.Equal
   | HPrim.Less
   | HPrim.Compare
-  | HPrim.Cons
-  | HPrim.PtrRead -> 2
-
-  | HPrim.PtrWrite -> 3
+  | HPrim.Cons -> 2
 
   | HPrim.Printfn -> ty |> tyToArity
 

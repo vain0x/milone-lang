@@ -2,6 +2,8 @@ module rec LibLinear.Vector
 
 open Std.StdError
 
+module Ptr = Std.Ptr
+
 // For memcpy
 __nativeDecl "#include <string.h>"
 
@@ -198,7 +200,7 @@ module Vector =
     let (Vector (ptr, length, capacity)) = v
     assert (uint i < length)
     let ptr = __dispose ptr
-    let item: 'T = __ptrRead (__nativeCast ptr) i
+    let item = Ptr.read (__nativeCast ptr: __constptr<'T>).[i]
     item, Vector(__acquire ptr, length, capacity)
 
   /// Sets an item at the position. Out of bound causes crash.
@@ -206,7 +208,7 @@ module Vector =
     let (Vector (ptr, length, capacity)) = v
     assert (uint i < length)
     let ptr = __dispose ptr
-    __ptrWrite (__nativeCast ptr) i item
+    Ptr.write ptr.[i] item
     Vector(__acquire ptr, length, capacity)
 
   /// Appends an item to the end of vector.
@@ -230,8 +232,8 @@ module Vector =
     if length <> 0u then
       let ptr = __dispose ptr
 
-      let item: 'T =
-        __ptrRead (__nativeCast ptr) (int (length - 1u))
+      let item =
+        Ptr.read (__nativeCast ptr: __constptr<'T>).[int (length - 1u)]
 
       Some item, Vector(__acquire ptr, length - 1u, capacity)
     else
@@ -254,7 +256,7 @@ module Vector =
       let ptr: nativeptr<'T> = __nativeCast (__dispose ptr)
 
       let rec extendFromListLoop i x xs =
-        __ptrWrite ptr i x
+        Ptr.write ptr.[i] x
 
         match xs with
         | [] -> ()
@@ -275,8 +277,10 @@ module Vector =
     assert (uint start <= uint endIndex)
 
     let xs =
+      let ptr: __constptr<'T> = __nativeCast ptr
+
       let rec toListLoop acc i =
-        let acc = __ptrRead (__nativeCast ptr) i :: acc
+        let acc = Ptr.read ptr.[i] :: acc
 
         if i = start then
           acc
@@ -315,7 +319,7 @@ module Vector =
   let sort (itemComparer: 'T -> 'T -> int) (v: Vector<'T>) : Vector<'T> =
     // ptrComparer pl pr = itemComparer (*pl) (*pr)
     let ptrComparer =
-      fun (l: __voidconstptr) (r: __voidconstptr) -> itemComparer (__ptrRead (__nativeCast l) 0: 'T) (__ptrRead (__nativeCast r) 0: 'T)
+      fun (l: __voidconstptr) (r: __voidconstptr) -> itemComparer (Ptr.read (__nativeCast l: __constptr<'T>)) (Ptr.read (__nativeCast r: __constptr<'T>))
 
     let (Vector (ptr, length, capacity)) = v
     let ptr = __acquire (__nativeCast (__dispose ptr))

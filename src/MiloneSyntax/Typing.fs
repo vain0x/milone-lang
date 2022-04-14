@@ -1233,18 +1233,6 @@ let private primNativeCastScheme =
   let destTy = meta 2
   BoundedTyScheme([ 1; 2 ], tyFun srcTy destTy, [ PtrTrait srcTy; PtrTrait destTy ])
 
-let private primPtrReadScheme =
-  let meta id = tyMeta id noLoc
-  // __constptr<'a> -> int -> 'a
-  let valueTy = meta 1
-  TyScheme([ 1 ], tyFun (tyConstPtr valueTy) (tyFun tyInt valueTy))
-
-let private primPtrWriteScheme =
-  let meta id = tyMeta id noLoc
-  // nativeptr<'a> -> int -> 'a -> unit
-  let valueTy = meta 1
-  TyScheme([ 1 ], tyFun (tyNativePtr valueTy) (tyFun tyInt (tyFun valueTy tyUnit)))
-
 let private inferPrimExpr ctx prim loc =
   let onMono ty = TPrimExpr(prim, ty, loc), ty, ctx
 
@@ -1342,9 +1330,6 @@ let private inferPrimExpr ctx prim loc =
 
   | TPrim.PtrAsConst
   | TPrim.PtrAsMutable -> errorExpr ctx "This function must take an argument." loc
-
-  | TPrim.PtrRead -> onUnbounded primPtrReadScheme
-  | TPrim.PtrWrite -> onUnbounded primPtrWriteScheme
 
   | TPrim.Ptr
   | TPrim.Read

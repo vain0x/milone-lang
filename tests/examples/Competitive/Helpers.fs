@@ -1,5 +1,7 @@
 module rec Competitive.Helpers
 
+module Ptr = Std.Ptr
+
 // -----------------------------------------------
 // Native functions
 // -----------------------------------------------
@@ -15,10 +17,11 @@ let scanInt () : int = __nativeFun "scan_int"
 let rawIntArrayNew (len: int) : voidptr =
   memAlloc len __sizeOf<int> |> __nativeCast
 
-let rawIntArrayGet (array: voidptr) (index: int) : int = __ptrRead (__nativeCast array) index
+let rawIntArrayGet (array: voidptr) (index: int) : int =
+  Ptr.read (__nativeCast array: __constptr<int>).[index]
 
 let rawIntArraySet (array: voidptr) (index: int) (value: int) : unit =
-  __ptrWrite (__nativeCast array) index value
+  Ptr.write (__nativeCast array: nativeptr<int>).[index] value
 
 let rawMemoryCopy (dest: voidptr) (src: voidptr) (size: int) : unit =
   let _ =

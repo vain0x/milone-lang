@@ -69,6 +69,8 @@ It's invalidated when the variable goes out of scope.
 
 ### Read via pointer
 
+*Deprecated*: Use `Std.Ptr.read p.[i]`.
+
 `__ptrRead p i` reads from a pointer `p` by offset `i` (that is, `p[i]`).
 Pointer type must be `__constptr<T>`.
 
@@ -81,6 +83,8 @@ Pointer type must be `__constptr<T>`.
 ```
 
 ### Write via pointer
+
+*Deprecated*: Use `Std.Ptr.write p.[i] value`.
 
 `__ptrWrite p i` writes to a pointer `p` by offset `i` (that is `p[i]`).
 Pointer type must be `nativeptr<T>`.

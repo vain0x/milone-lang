@@ -290,8 +290,6 @@ type TPrim =
   | NullPtr
   | PtrAsConst
   | PtrAsMutable
-  | PtrRead
-  | PtrWrite
   | Ptr
   | Read
   | Write

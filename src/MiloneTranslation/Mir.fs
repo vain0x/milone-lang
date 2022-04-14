@@ -123,6 +123,7 @@ type MAction =
   | MCallProcAction
   | MCallClosureAction
   | MCallNativeAction of funName: string * argTys: Ty list
+  /// [ ptr; value ]
   | MPtrWriteAction
 
 [<NoEquality; NoComparison>]
@@ -154,6 +155,7 @@ type MPrim =
   | MCallClosurePrim
 
   | MCallNativePrim of funName: string * argTys: Ty list
+  /// [ ptr ]
   | MPtrReadPrim
 
 /// Expression in middle IR.

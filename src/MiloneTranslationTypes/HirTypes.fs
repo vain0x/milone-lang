@@ -200,8 +200,6 @@ type HPrim =
   | InRegion
   | NativeCast
   | NullPtr
-  | PtrRead
-  | PtrWrite
 
 [<NoEquality; NoComparison>]
 type HExprKind =

@@ -32,10 +32,13 @@ let __nativeFun _ =
 let __nativeCast _ =
   failwith "__nativeCast is not available in F#"
 
-/// Accesses to `ptr[i]` to read a value.
-let __ptrRead (_ptr: __constptr<'a>) (_index: int) : 'a =
-  failwith "__ptrRead is not available in F#"
+module Std =
+  module Ptr =
+    /// Derives a pointer to its component.
+    let select (_ptr: _) = failwith "Ptr.select not available"
 
-/// Writes a value to `ptr[i]`.
-let __ptrWrite (_ptr: nativeptr<'a>) (_index: int) (_value: 'a) : unit =
-  failwith "__ptrWrite is not available in F#"
+    /// Reads a value from a pointer.
+    let read (_ptr: _) = failwith "Ptr.read not available"
+
+    /// Writes a value into a pointer.
+    let write (_ptr: nativeptr<'T>) (_: 'T) : unit = failwith "Ptr.write not available"

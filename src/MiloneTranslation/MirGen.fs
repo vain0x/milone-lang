@@ -1396,8 +1396,6 @@ let private mirifyCallPrimExpr ctx itself prim args ty loc =
   | HPrim.Printfn, _ -> mirifyCallPrintfnExpr ctx args loc
   | HPrim.NativeCast, [ arg ] -> regularUnary (MNativeCastUnary ty) arg
   | HPrim.NativeCast, _ -> fail ()
-  | HPrim.PtrRead, _ -> regularPrim "read" MPtrReadPrim
-  | HPrim.PtrWrite, _ -> regularAction MPtrWriteAction
 
   | HPrim.Nil, _
   | HPrim.NullPtr, _ -> fail () // Can't be called.
@@ -1539,8 +1537,7 @@ let private mirifyExprInf ctx itself kind args ty loc =
     let item, ctx = mirifyExpr ctx item
 
     let ctx =
-      let zeroExpr = MLitExpr(IntLit "0", loc)
-      addStmt ctx (MActionStmt(MPtrWriteAction, [ ptr; zeroExpr; item ], loc))
+      addStmt ctx (MActionStmt(MPtrWriteAction, [ ptr; item ], loc))
 
     MUnitExpr loc, ctx
 

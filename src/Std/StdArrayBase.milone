@@ -1,5 +1,7 @@
 module rec Std.StdArrayBase
 
+module Ptr = Std.Ptr
+
 // -----------------------------------------------
 // Pointer util
 // -----------------------------------------------
@@ -55,7 +57,7 @@ let __mutArraySet (index: int) value (array: __MutArray<_>) =
 
   assert (uint index < uint len)
 
-  __ptrWrite mutPtr index value
+  Ptr.write mutPtr.[index] value
 
 let __mutArraySlice (start: int) (endIndex: int) (array: __MutArray<_>) : __MutArray<_> =
   let mutPtr, len = array
@@ -81,7 +83,7 @@ let __constArrayLength (array: __ConstArray<_>) =
 let __constArrayGet (index: int) (array: __ConstArray<_>) =
   let ptr, len = array
   assert (uint index < uint len)
-  __ptrRead ptr index
+  Ptr.read ptr.[index]
 
 let __constArraySlice (start: int) (endIndex: int) (array: __ConstArray<_>) : __ConstArray<_> =
   let ptr, len = array
