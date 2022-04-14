@@ -917,6 +917,11 @@ let private txAbort (ctx: TyCtx) loc =
   let ty = tyError loc
   TNodeExpr(TAbortEN, [], ty, loc), ty, ctx
 
+/// Reports an error and makes a dummy expression.
+let private errorExpr (ctx: TyCtx) msg loc : TExpr * Ty * TyCtx =
+  let ctx = addError ctx msg loc
+  txAbort ctx loc
+
 // -----------------------------------------------
 // Pattern
 // -----------------------------------------------
@@ -1222,16 +1227,6 @@ let private primNullPtrScheme =
   let ptrTy = tyMeta 1 noLoc
   BoundedTyScheme([ 1 ], ptrTy, [ PtrTrait ptrTy ])
 
-let private primPtrAsConstScheme =
-  let constTy = tyMeta 1 noLoc
-  let mutTy = tyMeta 2 noLoc
-  BoundedTyScheme([ 1; 2 ], tyFun constTy mutTy, [ PtrDualTrait(constTy, mutTy) ])
-
-let private primPtrAsMutableScheme =
-  let mutTy = tyMeta 1 noLoc
-  let constTy = tyMeta 2 noLoc
-  BoundedTyScheme([ 1; 2 ], tyFun mutTy constTy, [ PtrDualTrait(constTy, mutTy) ])
-
 let private primNativeCastScheme =
   let meta id = tyMeta id noLoc
   let srcTy = meta 1
@@ -1344,8 +1339,10 @@ let private inferPrimExpr ctx prim loc =
     txAbort ctx loc
 
   | TPrim.NullPtr -> onBounded primNullPtrScheme
-  | TPrim.PtrAsConst -> onBounded primPtrAsConstScheme
-  | TPrim.PtrAsMutable -> onBounded primPtrAsMutableScheme
+
+  | TPrim.PtrAsConst
+  | TPrim.PtrAsMutable -> errorExpr ctx "This function must take an argument." loc
+
   | TPrim.PtrRead -> onUnbounded primPtrReadScheme
   | TPrim.PtrWrite -> onUnbounded primPtrWriteScheme
 
@@ -1615,6 +1612,32 @@ let private inferPrimAppExpr ctx itself =
       | _ -> unreachable ()
 
     txApp (TPrimExpr(TPrim.Printfn, funTy, loc)) arg targetTy loc, targetTy, ctx
+
+  | TPrim.PtrAsConst, _ ->
+    let arg, argTy, ctx = inferExpr ctx None arg
+    let argTy = substTy ctx argTy
+
+    let ok resultTy =
+      txApp (TPrimExpr(TPrim.NativeCast, tyFun argTy resultTy, loc)) arg resultTy loc, resultTy, ctx
+
+    match argTy with
+    | Ty (VoidPtrTk IsMut, _) -> ok tyVoidConstPtr
+    | Ty (NativePtrTk IsMut, [ itemTy ]) -> ok (tyConstPtr itemTy)
+    | Ty (ErrorTk _, _) -> arg, argTy, ctx
+    | _ -> errorExpr ctx "Expected nativeptr or voidptr type." loc
+
+  | TPrim.PtrAsMutable, _ ->
+    let arg, argTy, ctx = inferExpr ctx None arg
+    let argTy = substTy ctx argTy
+
+    let ok resultTy =
+      txApp (TPrimExpr(TPrim.NativeCast, tyFun argTy resultTy, loc)) arg resultTy loc, resultTy, ctx
+
+    match argTy with
+    | Ty (VoidPtrTk IsConst, _) -> ok tyVoidPtr
+    | Ty (NativePtrTk IsConst, [ itemTy ]) -> ok (tyNativePtr itemTy)
+    | Ty (ErrorTk _, _) -> arg, argTy, ctx
+    | _ -> errorExpr ctx "Expected __constptr type." loc
 
   | TPrim.Ptr, _ -> inferExprAsPtrProjection ctx false arg
 
