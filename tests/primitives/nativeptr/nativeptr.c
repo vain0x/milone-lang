@@ -38,11 +38,11 @@ void nativeptr_nativeptr_testSizeOf(void);
 
 void nativeptr_nativeptr_testPtrOf(void);
 
-void nativeptr_nativeptr_testPtrOffset(void);
+void nativeptr_nativeptr_testPtrSelect(void);
 
-void nativeptr_nativeptr_testRead(void);
+void nativeptr_nativeptr_testPtrRead(void);
 
-void nativeptr_nativeptr_testWrite(void);
+void nativeptr_nativeptr_testPtrWrite(void);
 
 int main(int argc, char** argv);
 
@@ -87,12 +87,10 @@ char* nativeptr_nativeptr_strcpy(char* dest_1, char const* src_) {
 void nativeptr_nativeptr_testBasic(void) {
     void* buf_;
     void* call_;
-    int read_;
     call_ = nativeptr_nativeptr_memAlloc(1, 8);
     buf_ = call_;
     nativeptr_nativeptr_memSet(buf_, (uint8_t)255U, 8);
-    read_ = (*(((int const*)buf_)));
-    milone_assert((read_ == -1), (struct String){.str = "nativeptr/nativeptr.milone", .len = 26}, 20, 2);
+    milone_assert(((*(((int const*)((int const*)buf_)))) == -1), (struct String){.str = "nativeptr/nativeptr.milone", .len = 26}, 20, 2);
     milone_assert((((uintptr_t)buf_) != (size_t)0ULL), (struct String){.str = "nativeptr/nativeptr.milone", .len = 26}, 23, 2);
     return;
 }
@@ -186,15 +184,13 @@ void nativeptr_nativeptr_testSizeOf(void) {
 void nativeptr_nativeptr_testPtrOf(void) {
     int x_;
     int const* p_1;
-    int read_1;
     x_ = 42;
     p_1 = (&(x_));
-    read_1 = (*(p_1));
-    milone_assert((read_1 == 42), (struct String){.str = "nativeptr/nativeptr.milone", .len = 26}, 97, 2);
+    milone_assert(((*(((int const*)p_1))) == 42), (struct String){.str = "nativeptr/nativeptr.milone", .len = 26}, 97, 2);
     return;
 }
 
-void nativeptr_nativeptr_testPtrOffset(void) {
+void nativeptr_nativeptr_testPtrSelect(void) {
     int* p_2;
     void* call_2;
     call_2 = nativeptr_nativeptr_memAlloc(4, sizeof(int));
@@ -204,7 +200,7 @@ void nativeptr_nativeptr_testPtrOffset(void) {
     return;
 }
 
-void nativeptr_nativeptr_testRead(void) {
+void nativeptr_nativeptr_testPtrRead(void) {
     int* p_3;
     int const* q_1;
 int array[] = {1, 2, 4, 8, 16};    p_3 = array;
@@ -217,7 +213,7 @@ int array[] = {1, 2, 4, 8, 16};    p_3 = array;
     return;
 }
 
-void nativeptr_nativeptr_testWrite(void) {
+void nativeptr_nativeptr_testPtrWrite(void) {
     int* p_4;
 int data[8] = { 0 };    p_4 = data;
     (*(p_4)) = 42;
@@ -239,8 +235,8 @@ int main(int argc, char** argv) {
     nativeptr_nativeptr_testEquality();
     nativeptr_nativeptr_testSizeOf();
     nativeptr_nativeptr_testPtrOf();
-    nativeptr_nativeptr_testPtrOffset();
-    nativeptr_nativeptr_testRead();
-    nativeptr_nativeptr_testWrite();
+    nativeptr_nativeptr_testPtrSelect();
+    nativeptr_nativeptr_testPtrRead();
+    nativeptr_nativeptr_testPtrWrite();
     return 0;
 }

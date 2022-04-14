@@ -323,11 +323,11 @@ type TExprKind =
 
   | TDiscriminantEN of VariantSerial
 
-  /// `p.[i]` in accessPath
+  /// `Ptr.select p.[i]`
   | TPtrItemEN
-  /// __read accessPath
+  /// Ptr.read accessPath
   | TReadEN
-  /// __write accessPath value
+  /// Ptr.write accessPath value
   | TWriteEN
 
   /// Use function as function pointer.

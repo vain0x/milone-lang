@@ -18,7 +18,7 @@ let private strcpy (dest: nativeptr<char>) (src: __constptr<char>) : nativeptr<c
 let private testBasic () =
   let buf = memAlloc 1 8
   memSet buf 255uy 8
-  assert (__ptrRead (__nativeCast buf: __constptr<int>) 0 = -1)
+  assert (Ptr.read (__nativeCast buf: __constptr<int>) = -1)
 
   // Conversion to int.
   assert (unativeint buf <> 0un)
@@ -95,36 +95,36 @@ let private testSizeOf () =
 let private testPtrOf () =
   let x = 42
   let p: __constptr<int> = &&x
-  assert (__ptrRead p 0 = 42)
+  assert (Ptr.read p = 42)
 
-let private testPtrOffset () =
+let private testPtrSelect () =
   let p: nativeptr<int> = __nativeCast (memAlloc 4 __sizeOf<int>)
 
-  assert (__ptr p.[0] = p)
-  assert (unativeint (__ptr p.[1]) - unativeint p = unativeint __sizeOf<int>)
+  assert (Ptr.select p.[0] = p)
+  assert (unativeint (Ptr.select p.[1]) - unativeint p = unativeint __sizeOf<int>)
 
-let private testRead () =
+let private testPtrRead () =
   __nativeStmt ("int array[] = {1, 2, 4, 8, 16};")
   let p: nativeptr<int> = __nativeExpr "array"
 
-  assert (__read p = 1)
-  assert (__read p.[0] = 1)
-  assert (__read p.[4] = 16)
+  assert (Ptr.read p = 1)
+  assert (Ptr.read p.[0] = 1)
+  assert (Ptr.read p.[4] = 16)
 
   let q: __constptr<int> = Ptr.asConst p
-  assert (__read q = 1)
-  assert (__read q.[2] = 4)
+  assert (Ptr.read q = 1)
+  assert (Ptr.read q.[2] = 4)
 
-let private testWrite () =
+let private testPtrWrite () =
   __nativeStmt ("int data[8] = { 0 };")
   let p: nativeptr<int> = __nativeExpr "data"
 
-  __write p 42
-  assert (__read p = 42)
-  __write p.[0] 43
-  assert (__read p = 43)
-  __write p.[3] 39
-  assert (__read p.[3] = 39)
+  Ptr.write p 42
+  assert (Ptr.read p = 42)
+  Ptr.write p.[0] 43
+  assert (Ptr.read p = 43)
+  Ptr.write p.[3] 39
+  assert (Ptr.read p.[3] = 39)
 
 let main _ =
   testBasic ()
@@ -135,7 +135,7 @@ let main _ =
   testEquality ()
   testSizeOf ()
   testPtrOf ()
-  testPtrOffset ()
-  testRead ()
-  testWrite ()
+  testPtrSelect ()
+  testPtrRead ()
+  testPtrWrite ()
   0

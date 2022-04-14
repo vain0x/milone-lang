@@ -147,9 +147,6 @@ let primFromIdent ident =
   | "__nativeStmt" -> TPrim.NativeStmt |> Some
   | "__nativeDecl" -> TPrim.NativeDecl |> Some
   | "__nullptr" -> TPrim.NullPtr |> Some
-  | "__ptr" -> TPrim.Ptr |> Some
-  | "__read" -> TPrim.Read |> Some
-  | "__write" -> TPrim.Write |> Some
   | "__ptrRead" -> TPrim.PtrRead |> Some
   | "__ptrWrite" -> TPrim.PtrWrite |> Some
 

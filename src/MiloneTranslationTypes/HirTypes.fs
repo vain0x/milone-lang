@@ -248,11 +248,11 @@ type HExprKind =
   /// Gets i'th field of record.
   | HRecordItemEN of index: int
 
-  /// `p.[i]` in accessPath
+  /// `Ptr.select p.[i]`
   | HPtrItemEN
-  /// __read accessPath
+  /// Ptr.read accessPath
   | HReadEN
-  /// __write accessPath value
+  /// Ptr.write accessPath value
   | HWriteEN
 
   /// Use function as function pointer.

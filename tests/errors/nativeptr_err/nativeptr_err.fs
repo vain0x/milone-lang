@@ -55,24 +55,24 @@ let private testPtrOfError () =
   let _ = &&s.[1] // error! argument can't be index
   ()
 
-let private testPtrOffsetError () =
-  let _ = __ptr 0 // error! argument must be pointer type
+let private testPtrSelectError () =
+  let _ = Ptr.select 0 // error! argument must be pointer type
 
-  let f p = __ptr p // error! argument type must be known at this point
+  let f p = Ptr.select p // error! argument type must be known at this point
   let n = 0
   let _ = f &&n
   ()
 
-let private testReadError () =
-  let _ = __read // error! missing arg
-  let _ = __read 0 // type error!
+let private testPtrReadError () =
+  let _ = Ptr.read // error! missing arg
+  let _ = Ptr.read 0 // type error!
   ()
 
-let private testWriteError () =
+let private testPtrWriteError () =
   let p: nativeptr<int> = __nullptr
-  let _ = __write // error! missing args
-  let _ = __write p // error! missing arg
-  let _ = __write (__nullptr: __constptr<int>) 0 // type error!
+  let _ = Ptr.write // error! missing args
+  let _ = Ptr.write p // error! missing arg
+  let _ = Ptr.write (__nullptr: __constptr<int>) 0 // type error!
   ()
 
 let main _ =
@@ -82,7 +82,7 @@ let main _ =
   testPtrEqualityError ()
   testSizeOfError ()
   testPtrOfError ()
-  testPtrOffsetError ()
-  testReadError ()
-  testWriteError ()
+  testPtrSelectError ()
+  testPtrReadError ()
+  testPtrWriteError ()
   1

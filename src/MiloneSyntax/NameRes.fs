@@ -1990,13 +1990,17 @@ let nameRes (layers: NModuleRoot list list) : TProgram * NameResResult =
     let ctx = state.ScopeCtx
     let ctx = addNsToNs ctx stdNs "Ptr" ptrNs
 
-    // Std.Ptr.asConst
+    // Std.Ptr.select etc.
     let ctx =
-      addValueToNs ctx ptrNs "asConst" (PrimSymbol TPrim.PtrAsConst)
+      let add alias prim ctx =
+        addValueToNs ctx ptrNs alias (PrimSymbol prim)
 
-    // Std.Ptr.asMutable
-    let ctx =
-      addValueToNs ctx ptrNs "asMutable" (PrimSymbol TPrim.PtrAsMutable)
+      ctx
+      |> add "select" TPrim.Ptr
+      |> add "read" TPrim.Read
+      |> add "write" TPrim.Write
+      |> add "asConst" TPrim.PtrAsConst
+      |> add "asMutable" TPrim.PtrAsMutable
 
     let ctx =
       { ctx with RootModules = ("Std", stdModuleSerial) :: ctx.RootModules }
