@@ -13,52 +13,52 @@ let private memSet (dest: voidptr) (value: uint8) (count: int) =
 
   ()
 
-let private strcpy (dest: nativeptr<char>) (src: __constptr<char>) : nativeptr<char> = __nativeFun ("strcpy", dest, src)
+let private strcpy (dest: nativeptr<char>) (src: __inptr<char>) : nativeptr<char> = __nativeFun ("strcpy", dest, src)
 
 let private testBasic () =
   let buf = memAlloc 1 8
   memSet buf 255uy 8
-  assert (Ptr.read (__nativeCast buf: __constptr<int>) = -1)
+  assert (Ptr.read (__nativeCast buf: __inptr<int>) = -1)
 
   // Conversion to int.
   assert (unativeint buf <> 0un)
 
 let private testVoidPtrAvailable () =
   let mutEnv: voidptr = __nativeCast 42un
-  let constEnv: __voidconstptr = __nativeCast mutEnv
+  let constEnv: __voidinptr = __nativeCast mutEnv
   assert (__nativeCast constEnv = 42un)
 
 let private testNullPtr () =
   let nullVoidPtr: voidptr = __nullptr
   assert (__nativeCast nullVoidPtr = 0un)
 
-  let nullVoidConstPtr: __voidconstptr = __nullptr
-  assert (__nativeCast nullVoidConstPtr = 0un)
+  let nullVoidInPtr: __voidinptr = __nullptr
+  assert (__nativeCast nullVoidInPtr = 0un)
 
   let nullNativePtr: nativeptr<float> = __nullptr
   assert (__nativeCast nullNativePtr = 0un)
 
-  let nullConstPtr: __constptr<float> = __nullptr
-  assert (__nativeCast nullConstPtr = 0un)
+  let nullInPtr: __inptr<float> = __nullptr
+  assert (__nativeCast nullInPtr = 0un)
 
 let private testAsConst () =
   let mp: nativeptr<int> = __nullptr
-  // __constptr<int>
+  // __inptr<int>
   let kp = Ptr.asConst mp
   assert (kp = __nullptr)
 
   let mq: voidptr = __nullptr
-  // __constptr<int>
+  // __inptr<int>
   let kq = Ptr.asConst mq
   assert (kq = __nullptr)
 
 let private testAsMutable () =
-  let kp: __constptr<int> = __nullptr
+  let kp: __inptr<int> = __nullptr
   // nativeptr<int>
   let mp = Ptr.asMutable kp
   assert (mp = __nullptr)
 
-  let kq: __voidconstptr = __nullptr
+  let kq: __voidinptr = __nullptr
   // voidptr
   let mq = Ptr.asMutable kq
   assert (mq = __nullptr)
@@ -68,8 +68,8 @@ let private testEquality () =
   let p: nativeptr<int> = __nativeCast 42un
   assert (p <> np)
 
-  let nq: __constptr<int> = __nullptr
-  let q: __constptr<int> = __nativeCast 42un
+  let nq: __inptr<int> = __nullptr
+  let q: __inptr<int> = __nativeCast 42un
   assert (q <> nq)
 
 let private sizeOfPointee (ptr: nativeptr<'T>) : int = __sizeOf<'T>
@@ -94,7 +94,7 @@ let private testSizeOf () =
 
 let private testPtrOf () =
   let x = 42
-  let p: __constptr<int> = &&x
+  let p: __inptr<int> = &&x
   assert (Ptr.read p = 42)
 
 let private testPtrSelect () =
@@ -111,7 +111,7 @@ let private testPtrRead () =
   assert (Ptr.read p.[0] = 1)
   assert (Ptr.read p.[4] = 16)
 
-  let q: __constptr<int> = Ptr.asConst p
+  let q: __inptr<int> = Ptr.asConst p
   assert (Ptr.read q = 1)
   assert (Ptr.read q.[2] = 4)
 

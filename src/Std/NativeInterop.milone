@@ -1,11 +1,11 @@
 module rec Std.NativeInterop
 
-let private memcpy (dest: voidptr) (src: __voidconstptr) (size: unativeint) : voidptr = __nativeFun ("memcpy", dest, src, size)
+let private memcpy (dest: voidptr) (src: __voidinptr) (size: unativeint) : voidptr = __nativeFun ("memcpy", dest, src, size)
 
 let private npPointeeSize (p: nativeptr<'T> ) : unativeint =
   __nativeExpr ("sizeof(*({0}))", p)
 
-let private cpPointeeSize (p: __constptr<'T> ) : unativeint =
+let private cpPointeeSize (p: __inptr<'T> ) : unativeint =
   __nativeExpr ("sizeof(*({0}))", p)
 
 // See also:
@@ -84,42 +84,42 @@ module NativePtr =
 
 // =============================================================================
 
-module __ConstPtr =
+module __InPtr =
   // F# 5.0
   // not supported: stackalloc, toByRef, set, write
 
-  let ofNativeInt (p: nativeint) : __constptr<'T> = __nativeCast p
-  let toNativeInt (p: __constptr<_>) : nativeint = nativeint p
-  let toVoid (p: __constptr<_>) : __voidconstptr = __nativeCast p
-  let ofVoid (p: __voidconstptr) : __constptr<_> = __nativeCast p
+  let ofNativeInt (p: nativeint) : __inptr<'T> = __nativeCast p
+  let toNativeInt (p: __inptr<_>) : nativeint = nativeint p
+  let toVoid (p: __inptr<_>) : __voidinptr = __nativeCast p
+  let ofVoid (p: __voidinptr) : __inptr<_> = __nativeCast p
 
-  let add (p: __constptr<'T>) (i: int) : __constptr<'T> =
+  let add (p: __inptr<'T>) (i: int) : __inptr<'T> =
     __nativeExpr ("(&({0})[{1}])", p, i)
 
-  let get (p: __constptr<'T>) (i: int) : 'T =
+  let get (p: __inptr<'T>) (i: int) : 'T =
     assert (i >= 0)
     __nativeExpr ("(({0})[{1}])", p, unativeint(uint i))
 
-  let read (p: __constptr<'T>) : 'T =
+  let read (p: __inptr<'T>) : 'T =
     assert (p <> __nullptr)
     __nativeExpr ("(*({0}))", p)
 
   // F# RFC FS-1109
   // not supported: nullPtr (generic constant isn't supported)
 
-  let isNullPtr (p: __constptr<_>) : bool = p = __nullptr
+  let isNullPtr (p: __inptr<_>) : bool = p = __nullptr
 
   // =============================================
 
   /// Gets size of the underlying type. (`sizeof(*p)`)
-  let sizeOf (p: __constptr<'T>) : int = int(uint(cpPointeeSize p))
+  let sizeOf (p: __inptr<'T>) : int = int(uint(cpPointeeSize p))
 
   // FIXME: remove this
   /// Deprecated: use __nullptr.
-  let getNullPtr () : __constptr<_> = __nullptr
+  let getNullPtr () : __inptr<_> = __nullptr
 
   /// Adds const qualifier.
-  let ofNativePtr (p: nativeptr<'T>) : __constptr<'T> = __nativeCast p
+  let ofNativePtr (p: nativeptr<'T>) : __inptr<'T> = __nativeCast p
 
   /// Drops const qualifier.
-  let toNativePtr (p: __constptr<'T>) : nativeptr<'T> = __nativeCast p
+  let toNativePtr (p: __inptr<'T>) : nativeptr<'T> = __nativeCast p

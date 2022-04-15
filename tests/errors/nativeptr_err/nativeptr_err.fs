@@ -14,7 +14,7 @@ let private testPtrAsConstError () =
   let _ = Ptr.asConst () // type error!
 
   // Argument type must be nativeptr or voidptr.
-  let _ = Ptr.asConst (__nullptr: __constptr<int>) // type error!
+  let _ = Ptr.asConst (__nullptr: __inptr<int>) // type error!
 
   let _: byte = Ptr.asConst (__nullptr: voidptr) // type error!
   let _: unit = Ptr.asConst (__nullptr: voidptr) // type error!
@@ -24,7 +24,7 @@ let private testPtrAsMutableError () =
   let _ = Ptr.asMutable // error! missing arg
   let _ = Ptr.asMutable "" // type error!
 
-  // Argument type must be __constptr or __voidconstptr.
+  // Argument type must be __inptr or __voidinptr.
   let _ =
     Ptr.asMutable (__nullptr: nativeptr<int>) // type error!
 
@@ -35,7 +35,7 @@ let private testPtrAsMutableError () =
 
 let private testPtrEqualityError () =
   let np: nativeptr<int> = __nullptr
-  let kp: __constptr<int> = __nullptr
+  let kp: __inptr<int> = __nullptr
   let vp: voidptr = __nullptr
 
   let _ = np = 0 // type error!
@@ -72,7 +72,7 @@ let private testPtrWriteError () =
   let p: nativeptr<int> = __nullptr
   let _ = Ptr.write // error! missing args
   let _ = Ptr.write p // error! missing arg
-  let _ = Ptr.write (__nullptr: __constptr<int>) 0 // type error!
+  let _ = Ptr.write (__nullptr: __inptr<int>) 0 // type error!
   ()
 
 let main _ =

@@ -86,9 +86,9 @@ let tkDisplay getTyName tk =
   | ListTk -> "list"
   | LinearTk -> "__linear"
   | VoidPtrTk IsMut -> "voidptr"
-  | VoidPtrTk IsConst -> "__voidconstptr"
+  | VoidPtrTk IsConst -> "__voidinptr"
   | NativePtrTk IsMut -> "nativeptr"
-  | NativePtrTk IsConst -> "__constptr"
+  | NativePtrTk IsConst -> "__inptr"
   | NativeFunTk -> "__nativeFun"
   | NativeTypeTk _ -> "__nativeType"
   | MetaTk (tySerial, _) -> getTyName tySerial

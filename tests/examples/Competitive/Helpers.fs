@@ -9,7 +9,7 @@ module Ptr = Std.Ptr
 let memAlloc (len: int) (size: int) : voidptr =
   __nativeFun ("milone_mem_alloc", len, unativeint size)
 
-let memCopy (dest: voidptr) (src: __voidconstptr) (size: int) : voidptr =
+let memCopy (dest: voidptr) (src: __voidinptr) (size: int) : voidptr =
   __nativeFun ("memcpy", dest, src, unativeint size)
 
 let scanInt () : int = __nativeFun "scan_int"
@@ -18,7 +18,7 @@ let rawIntArrayNew (len: int) : voidptr =
   memAlloc len __sizeOf<int> |> __nativeCast
 
 let rawIntArrayGet (array: voidptr) (index: int) : int =
-  Ptr.read (__nativeCast array: __constptr<int>).[index]
+  Ptr.read (__nativeCast array: __inptr<int>).[index]
 
 let rawIntArraySet (array: voidptr) (index: int) (value: int) : unit =
   Ptr.write (__nativeCast array: nativeptr<int>).[index] value

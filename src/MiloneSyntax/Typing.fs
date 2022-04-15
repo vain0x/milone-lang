@@ -1545,7 +1545,7 @@ let private inferExprAsPtrProjection ctx requireMut expr : TExpr * Ty * TyCtx =
       match ty with
       | Ty (NativePtrTk isMut, _) ->
         match isMut, requireMut with
-        | IsConst, true -> PtrProjectionError("Expected nativeptr but was __constptr.", exprToLoc expr, ctx)
+        | IsConst, true -> PtrProjectionError("Expected nativeptr but was __inptr.", exprToLoc expr, ctx)
         | _ -> PtrProjectionOk(expr, ty, ctx)
 
       | _ -> PtrProjectionError("Expected pointer type.", exprToLoc expr, ctx)
@@ -1586,8 +1586,8 @@ let private inferPrimAppExpr ctx itself =
       txApp (TPrimExpr(TPrim.NativeCast, tyFun argTy resultTy, loc)) arg resultTy loc, resultTy, ctx
 
     match argTy with
-    | Ty (VoidPtrTk IsMut, _) -> ok tyVoidConstPtr
-    | Ty (NativePtrTk IsMut, [ itemTy ]) -> ok (tyConstPtr itemTy)
+    | Ty (VoidPtrTk IsMut, _) -> ok tyVoidInPtr
+    | Ty (NativePtrTk IsMut, [ itemTy ]) -> ok (tyInPtr itemTy)
     | Ty (ErrorTk _, _) -> arg, argTy, ctx
     | _ -> errorExpr ctx "Expected nativeptr or voidptr type." loc
 
@@ -1602,7 +1602,7 @@ let private inferPrimAppExpr ctx itself =
     | Ty (VoidPtrTk IsConst, _) -> ok tyVoidPtr
     | Ty (NativePtrTk IsConst, [ itemTy ]) -> ok (tyNativePtr itemTy)
     | Ty (ErrorTk _, _) -> arg, argTy, ctx
-    | _ -> errorExpr ctx "Expected __constptr type." loc
+    | _ -> errorExpr ctx "Expected __inptr type." loc
 
   | TPrim.PtrSelect, _ -> inferExprAsPtrProjection ctx false arg
 
@@ -1692,7 +1692,7 @@ let private inferPtrOfExpr ctx arg loc =
   match arg with
   | TVarExpr _ ->
     let arg, argTy, ctx = inferExpr ctx None arg
-    let ty = tyConstPtr argTy
+    let ty = tyInPtr argTy
     TNodeExpr(TPtrOfEN, [ arg ], ty, loc), ty, ctx
 
   | _ ->

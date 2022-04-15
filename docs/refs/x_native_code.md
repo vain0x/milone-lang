@@ -29,9 +29,9 @@ Such program does anything weird with no error.
 
 | milone-lang       | C                 |
 |:------------------|:------------------|
-| `__constptr<T>`   | `T const *`       |
+| `__inptr<T>`      | `T const *`       |
 | `nativeptr<T>`    | `T *`             |
-| `__voidconstptr`  | `void const *`    |
+| `__voidinptr`     | `void const *`    |
 | `voidptr`         | `void *`          |
 
 Hint: `T const *` is same as `const T *`.
@@ -49,7 +49,7 @@ It's invalidated when the variable goes out of scope.
 
 ```fsharp
     let x = 42
-    let p: __constptr<int> = &&x
+    let p: __inptr<int> = &&x
 ```
 
 - Writing to the content is undefined behavior.
@@ -61,7 +61,7 @@ It's invalidated when the variable goes out of scope.
 
 ```fsharp
     let p: nativeptr<int> = __nativeCast 8un
-    let q: __constptr<int> = __nativeCast p
+    let q: __inptr<int> = __nativeCast p
 ```
 
 - `Std.Ptr.asConst` casts a non-const pointer to const (upcast)
@@ -72,10 +72,10 @@ It's invalidated when the variable goes out of scope.
 *Deprecated*: Use `Std.Ptr.read p.[i]`.
 
 `__ptrRead p i` reads from a pointer `p` by offset `i` (that is, `p[i]`).
-Pointer type must be `__constptr<T>`.
+Pointer type must be `__inptr<T>`.
 
 ```fsharp
-    //    p: __constptr<T>, i: int
+    //    p: __inptr<T>, i: int
     // => (__ptrRead p i): T
 
     __ptrRead p 0  //=> *p in C

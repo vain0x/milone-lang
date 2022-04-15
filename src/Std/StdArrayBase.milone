@@ -7,13 +7,13 @@ module Ptr = Std.Ptr
 // -----------------------------------------------
 
 /// Gets the size of pointee type.
-let private __pointeeSize (constPtr: __constptr<'T>) : nativeint = nativeint __sizeOf<'T>
+let private __pointeeSize (inPtr: __inptr<'T>) : nativeint = nativeint __sizeOf<'T>
 
-let private __ptrAsMut (constPtr: __constptr<'T>) : nativeptr<'T> = __nativeCast constPtr
+let private __ptrAsMut (inPtr: __inptr<'T>) : nativeptr<'T> = __nativeCast inPtr
 
-let private __ptrAsConst (mutPtr: nativeptr<'T>) : __constptr<'T> = __nativeCast mutPtr
+let private __ptrAsConst (mutPtr: nativeptr<'T>) : __inptr<'T> = __nativeCast mutPtr
 
-let private __ptrAdd (index: int) (ptr: __constptr<'T>) : __constptr<'T> =
+let private __ptrAdd (index: int) (ptr: __inptr<'T>) : __inptr<'T> =
   __nativeCast (
     nativeint ptr
     + nativeint index * __pointeeSize ptr
@@ -33,7 +33,7 @@ let private __mutPtrAdd (index: int) (mutPtr: nativeptr<'T>) : nativeptr<'T> =
 let private memAlloc (len: int) (size: unativeint) : voidptr =
   __nativeFun ("milone_mem_alloc", len, size)
 
-// let private memCopy (dest: voidptr) (src: __voidconstptr) (size: unativeint): voidptr =
+// let private memCopy (dest: voidptr) (src: __voidinptr) (size: unativeint): voidptr =
 //   __nativeFun ("memcpy", dest, src, size)
 
 // ptr, len
@@ -43,7 +43,7 @@ let __mutArrayCreate (len: int) : __MutArray<_> =
   if len = 0 then
     __nativeCast (unativeint 0), 0
   else
-    let nullPtr: __constptr<_> = __nativeCast (unativeint 0)
+    let nullPtr: __inptr<_> = __nativeCast (unativeint 0)
 
     let ptr =
       __nativeCast (memAlloc len (unativeint (__pointeeSize nullPtr)))
@@ -70,7 +70,7 @@ let __mutArraySlice (start: int) (endIndex: int) (array: __MutArray<_>) : __MutA
 // ConstArray
 // -----------------------------------------------
 
-type __ConstArray<'T> = __constptr<'T> * int
+type __ConstArray<'T> = __inptr<'T> * int
 
 let __constArrayOfMut (mutArray: __MutArray<_>) : __ConstArray<_> =
   let mutPtr, len = mutArray

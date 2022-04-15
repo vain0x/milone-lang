@@ -5,7 +5,7 @@ module rec native_ptr_write.Program
 
 module Ptr = Std.Ptr
 
-let strOfRawParts (p: __constptr<char>) (len: int) : string =
+let strOfRawParts (p: __inptr<char>) (len: int) : string =
   __nativeFun ("str_of_raw_parts", p, len)
 
 let main _ =

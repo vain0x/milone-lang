@@ -17,7 +17,7 @@ type EphRef<'T> = nativeptr<'T> * EphSerial
 module rec EphRef =
   /// Creates a reference cell, initialized with specified value.
   let create (value: 'T) (serial: EphSerial) : EphRef<'T> * EphSerial =
-    let size = unativeint (__sizeOf<__constptr<'T>>)
+    let size = unativeint (__sizeOf<__inptr<'T>>)
 
     let ptr = __nativeCast (memAlloc 1 size)
     Ptr.write (ptr: nativeptr<'T>) value
@@ -44,7 +44,7 @@ module rec EphRef =
     let serial = EphSerial.refresh serial
 
     let current =
-      Ptr.read (__nativeCast ptr: __constptr<'T>)
+      Ptr.read (__nativeCast ptr: __inptr<'T>)
 
     current, (ptr, serial)
 
@@ -66,7 +66,7 @@ module rec EphRef =
     let serial = EphSerial.refresh serial
 
     let prev =
-      Ptr.read (__nativeCast ptr: __constptr<'T>)
+      Ptr.read (__nativeCast ptr: __inptr<'T>)
 
     Ptr.write ptr next
     prev, (ptr, serial)

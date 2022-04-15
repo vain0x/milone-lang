@@ -10,11 +10,11 @@ let __inRegion (f: unit -> int) : int = f ()
 
 /// `T const *` in C.
 [<AbstractClass; Sealed>]
-type __constptr<'T> =
-  override _.ToString() = "__constptr is not available in F#"
+type __inptr<'T> =
+  override _.ToString() = "__inptr is not available in F#"
 
-  static member op_Implicit(_: __constptr<'T>) : int = 0
-  static member op_Implicit(_: __constptr<'T>) : unativeint = unativeint 0
+  static member op_Implicit(_: __inptr<'T>) : int = 0
+  static member op_Implicit(_: __inptr<'T>) : unativeint = unativeint 0
 
 /// C-ABI function pointer type: `T (*)(params...)` in C.
 ///

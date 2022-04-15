@@ -39,8 +39,7 @@ let tyList ty = Ty(ListTk, [ ty ])
 
 let tyFun sourceTy targetTy = Ty(FunTk, [ sourceTy; targetTy ])
 
-let tyConstPtr itemTy = Ty(NativePtrTk IsConst, [ itemTy ])
-
+let tyInPtr itemTy = Ty(NativePtrTk IsConst, [ itemTy ])
 let tyNativePtr itemTy = Ty(NativePtrTk IsMut, [ itemTy ])
 
 let tyNativeFun paramTys resultTy =
@@ -406,9 +405,9 @@ let tkDisplay getTyName tk =
   | TupleTk -> "tuple"
   | ListTk -> "list"
   | VoidPtrTk IsMut -> "voidptr"
-  | VoidPtrTk IsConst -> "__voidconstptr"
+  | VoidPtrTk IsConst -> "__voidinptr"
   | NativePtrTk IsMut -> "nativeptr"
-  | NativePtrTk IsConst -> "__constptr"
+  | NativePtrTk IsConst -> "__inptr"
   | NativeFunTk -> "__nativeFun"
   | NativeTypeTk _ -> "__nativeType"
   | MetaTk (tySerial, _) -> getTyName tySerial
@@ -549,8 +548,8 @@ let tyMangle (ty: Ty, memo: TreeMap<Ty, string>) : string * TreeMap<Ty, string> 
       | ListTk -> fixedGeneric "List"
 
       | VoidPtrTk IsMut -> "VoidPtr", ctx
-      | VoidPtrTk IsConst -> "VoidConstPtr", ctx
-      | NativePtrTk IsConst -> fixedGeneric "ConstPtr"
+      | VoidPtrTk IsConst -> "VoidInPtr", ctx
+      | NativePtrTk IsConst -> fixedGeneric "InPtr"
       | NativePtrTk IsMut -> fixedGeneric "MutPtr"
       | NativeFunTk -> variadicGeneric "NativeFun"
       | NativeTypeTk name -> name, ctx

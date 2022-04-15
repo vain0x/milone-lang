@@ -106,17 +106,17 @@ void nativeptr_nativeptr_testVoidPtrAvailable(void) {
 
 void nativeptr_nativeptr_testNullPtr(void) {
     void* nullVoidPtr_;
-    void const* nullVoidConstPtr_;
+    void const* nullVoidInPtr_;
     double* nullNativePtr_;
-    double const* nullConstPtr_;
+    double const* nullInPtr_;
     nullVoidPtr_ = NULL;
     milone_assert((((uintptr_t)nullVoidPtr_) == (size_t)0ULL), (struct String){.str = "nativeptr/nativeptr.milone", .len = 26}, 32, 2);
-    nullVoidConstPtr_ = NULL;
-    milone_assert((((uintptr_t)nullVoidConstPtr_) == (size_t)0ULL), (struct String){.str = "nativeptr/nativeptr.milone", .len = 26}, 35, 2);
+    nullVoidInPtr_ = NULL;
+    milone_assert((((uintptr_t)nullVoidInPtr_) == (size_t)0ULL), (struct String){.str = "nativeptr/nativeptr.milone", .len = 26}, 35, 2);
     nullNativePtr_ = ((double*)NULL);
     milone_assert((((uintptr_t)nullNativePtr_) == (size_t)0ULL), (struct String){.str = "nativeptr/nativeptr.milone", .len = 26}, 38, 2);
-    nullConstPtr_ = ((double const*)NULL);
-    milone_assert((((uintptr_t)nullConstPtr_) == (size_t)0ULL), (struct String){.str = "nativeptr/nativeptr.milone", .len = 26}, 41, 2);
+    nullInPtr_ = ((double const*)NULL);
+    milone_assert((((uintptr_t)nullInPtr_) == (size_t)0ULL), (struct String){.str = "nativeptr/nativeptr.milone", .len = 26}, 41, 2);
     return;
 }
 

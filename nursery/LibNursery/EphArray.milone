@@ -101,10 +101,10 @@ module EphArray =
       let ptr, _, _ = array
       ptr, array
 
-    let asPtr (array: EphArray<'T>) : __constptr<'T> * EphArray<'T> =
+    let asPtr (array: EphArray<'T>) : __inptr<'T> * EphArray<'T> =
       let array = assertAlive array
       let ptr, _, _ = array
-      ConstPtr.ofNativePtr ptr, array
+      InPtr.ofNativePtr ptr, array
 
   let alive (array: EphArray<'T>) : bool * EphArray<'T> = ephArrayIsAlive array
 

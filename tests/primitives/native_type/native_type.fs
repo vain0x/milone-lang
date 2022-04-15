@@ -5,7 +5,7 @@ module rec native_type.Program
 
 type FILE = __nativeType<FILE>
 
-let strAsPtr (s: string) : __constptr<char> = __nativeFun ("str_as_ptr", s)
+let strAsPtr (s: string) : __inptr<char> = __nativeFun ("str_as_ptr", s)
 
 let fopen (filename: string) (mode: string) : nativeptr<FILE> =
   __nativeFun ("fopen", strAsPtr filename, strAsPtr mode)
