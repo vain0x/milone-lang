@@ -65,7 +65,7 @@ type Tk =
   /// Ty args must be `[t]`.
   | LinearTk
   | VoidPtrTk of voidPtrIsMut: IsMut
-  | NativePtrTk of nativePtrIsMut: IsMut
+  | NativePtrTk of mode: RefMode
   | NativeFunTk
   | NativeTypeTk of cCode: string
 

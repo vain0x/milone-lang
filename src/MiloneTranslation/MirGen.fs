@@ -1534,7 +1534,7 @@ let private mirifyExprInf ctx itself kind args ty loc =
 
   | HPtrWriteEN, [ ptr; item ], _ ->
     assert (match exprToTy ptr with
-            | Ty (NativePtrTk IsMut, [ _ ]) -> true
+            | Ty (NativePtrTk RefMode.ReadWrite, [ _ ]) -> true
             | _ -> false)
 
     let ptr, ctx = mirifyExpr ctx ptr

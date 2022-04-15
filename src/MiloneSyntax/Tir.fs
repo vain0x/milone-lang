@@ -38,8 +38,12 @@ let tyUnit = tyTuple []
 let tyLinear itemTy = Ty(LinearTk, [ itemTy ])
 let tyVoidInPtr = Ty(VoidPtrTk IsConst, [])
 let tyVoidPtr = Ty(VoidPtrTk IsMut, [])
-let tyInPtr itemTy = Ty(NativePtrTk IsConst, [ itemTy ])
-let tyNativePtr itemTy = Ty(NativePtrTk IsMut, [ itemTy ])
+
+let tyInPtr itemTy =
+  Ty(NativePtrTk RefMode.ReadOnly, [ itemTy ])
+
+let tyNativePtr itemTy =
+  Ty(NativePtrTk RefMode.ReadWrite, [ itemTy ])
 
 let tyNativeFun paramTys resultTy =
   Ty(NativeFunTk, List.append paramTys [ resultTy ])

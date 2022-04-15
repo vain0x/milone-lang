@@ -51,7 +51,7 @@ type Tk =
 
   // FFI types.
   | VoidPtrTk of IsMut
-  | NativePtrTk of nativePtrIsMut: IsMut
+  | NativePtrTk of mode: RefMode
   | NativeFunTk
   | NativeTypeTk of cCode: string
 

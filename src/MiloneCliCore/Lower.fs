@@ -41,7 +41,7 @@ let private lowerTk (tk: Tir.Tk) : Hir.Tk =
   | Tir.ListTk -> Hir.ListTk
 
   | Tir.VoidPtrTk isMut -> Hir.VoidPtrTk isMut
-  | Tir.NativePtrTk isMut -> Hir.NativePtrTk isMut
+  | Tir.NativePtrTk mode -> Hir.NativePtrTk mode
   | Tir.NativeFunTk -> Hir.NativeFunTk
   | Tir.NativeTypeTk code -> Hir.NativeTypeTk code
 

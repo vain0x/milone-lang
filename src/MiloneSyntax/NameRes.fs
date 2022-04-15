@@ -96,9 +96,9 @@ let private tyPrimOfName ident tys =
 
   | "__linear", [ itemTy ] -> Ty(LinearTk, [ itemTy ]) |> Some
   | "voidptr", [] -> Ty(VoidPtrTk IsMut, []) |> Some
-  | "nativeptr", [ itemTy ] -> Ty(NativePtrTk IsMut, [ itemTy ]) |> Some
+  | "nativeptr", [ itemTy ] -> tyNativePtr itemTy |> Some
   | "__voidinptr", [] -> Ty(VoidPtrTk IsConst, []) |> Some
-  | "__inptr", [ itemTy ] -> Ty(NativePtrTk IsConst, [ itemTy ]) |> Some
+  | "__inptr", [ itemTy ] -> tyInPtr itemTy |> Some
 
   | "__nativeFun", [ Ty (TupleTk, itemTys); resultTy ] ->
     Ty(NativeFunTk, List.append itemTys [ resultTy ])

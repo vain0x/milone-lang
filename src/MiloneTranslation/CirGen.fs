@@ -547,12 +547,12 @@ let private getUniqueTyName (ctx: CirCtx) ty : _ * CirCtx =
   let name, memo = tyMangle (ty, memo)
   name, { ctx with TyUniqueNames = memo }
 
-let private cgNativePtrTy ctx isMut itemTy =
+let private cgNativePtrTy ctx mode itemTy =
   let itemTy, ctx = cgTyIncomplete ctx itemTy
 
-  match isMut with
-  | IsConst -> CConstPtrTy itemTy, ctx
-  | IsMut -> CPtrTy itemTy, ctx
+  match mode with
+  | RefMode.ReadOnly -> CConstPtrTy itemTy, ctx
+  | RefMode.ReadWrite -> CPtrTy itemTy, ctx
 
 let private cgNativeFunTy ctx tys =
   match splitLast tys with
@@ -586,7 +586,7 @@ let private cgTyIncomplete (ctx: CirCtx) (ty: Ty) : CTy * CirCtx =
 
   | VoidPtrTk IsMut, _ -> cVoidPtrTy, ctx
   | VoidPtrTk IsConst, _ -> cVoidConstPtrTy, ctx
-  | NativePtrTk isMut, [ itemTy ] -> cgNativePtrTy ctx isMut itemTy
+  | NativePtrTk mode, [ itemTy ] -> cgNativePtrTy ctx mode itemTy
   | NativePtrTk _, _ -> unreachable ()
   | NativeFunTk, _ -> cgNativeFunTy ctx tyArgs
   | NativeTypeTk code, _ -> CEmbedTy code, ctx
@@ -625,7 +625,7 @@ let private cgTyComplete (ctx: CirCtx) (ty: Ty) : CTy * CirCtx =
   | VoidPtrTk IsMut, _ -> cVoidPtrTy, ctx
   | VoidPtrTk IsConst, _ -> cVoidConstPtrTy, ctx
 
-  | NativePtrTk isMut, [ itemTy ] -> cgNativePtrTy ctx isMut itemTy
+  | NativePtrTk mode, [ itemTy ] -> cgNativePtrTy ctx mode itemTy
   | NativePtrTk _, _ -> unreachable ()
 
   | NativeFunTk, _ -> cgNativeFunTy ctx tyArgs

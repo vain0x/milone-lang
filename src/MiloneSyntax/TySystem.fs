@@ -46,7 +46,7 @@ let private tkEncode tk : int =
 
   | LinearTk -> just 11
   | VoidPtrTk isMut -> pair 12 (isMutToInt isMut)
-  | NativePtrTk isMut -> pair 13 (isMutToInt isMut)
+  | NativePtrTk mode -> pair 13 (RefMode.toInt mode)
   | NativeFunTk -> just 14
 
   | MetaTk (tySerial, _) -> pair 20 tySerial
@@ -87,8 +87,8 @@ let tkDisplay getTyName tk =
   | LinearTk -> "__linear"
   | VoidPtrTk IsMut -> "voidptr"
   | VoidPtrTk IsConst -> "__voidinptr"
-  | NativePtrTk IsMut -> "nativeptr"
-  | NativePtrTk IsConst -> "__inptr"
+  | NativePtrTk RefMode.ReadWrite -> "nativeptr"
+  | NativePtrTk RefMode.ReadOnly -> "__inptr"
   | NativeFunTk -> "__nativeFun"
   | NativeTypeTk _ -> "__nativeType"
   | MetaTk (tySerial, _) -> getTyName tySerial
