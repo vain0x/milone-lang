@@ -459,12 +459,6 @@ let private traitBoundErrorToString tyDisplay it =
   | ToStringTrait ty -> "Can't convert to string from: " + tyDisplay ty
   | PtrTrait ty -> "Expected a pointer type but was: " + tyDisplay ty
 
-  | PtrDualTrait (constTy, mutTy) ->
-    "Expected a pair of const/mutable ptr type: "
-    + tyDisplay constTy
-    + " and "
-    + tyDisplay mutTy
-
 let logToString tyDisplay log =
   match log with
   | Log.NameResLog log -> nameResLogToString log

@@ -652,23 +652,6 @@ let private resolveTraitBound (ctx: TyCtx) theTrait loc : TyCtx =
 
     | _ -> error ctx
 
-  | PtrDualTrait (constTy, mutTy) ->
-    let notMut m =
-      match m with
-      | IsMut -> IsConst
-      | IsConst -> IsMut
-
-    let dualTy ty =
-      match ty with
-      | Ty (VoidPtrTk isMut, _) -> Ty(VoidPtrTk(notMut isMut), []) |> Some
-      | Ty (NativePtrTk isMut, [ itemTy ]) -> Ty(NativePtrTk(notMut isMut), [ itemTy ]) |> Some
-      | _ -> None
-
-    match dualTy constTy, dualTy mutTy with
-    | Some expectedTy, _ -> unifyTy ctx loc mutTy expectedTy
-    | _, Some expectedTy -> unifyTy ctx loc constTy expectedTy
-    | _ -> error ctx
-
 let private attemptResolveTraitBounds (ctx: TyCtx) : TyCtx =
   let subst (ctx: TyCtx) ty =
     ty |> substTy ctx |> typingExpandSynonyms ctx.Tys

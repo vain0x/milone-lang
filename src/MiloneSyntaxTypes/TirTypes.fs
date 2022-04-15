@@ -127,9 +127,6 @@ type Trait =
 
   | PtrTrait of Ty
 
-  /// Two pointer types of the same kind. First one is const, second one is mutable.
-  | PtrDualTrait of constTy: Ty * mutTy: Ty
-
 /// Type definition.
 [<NoEquality; NoComparison>]
 type TyDef =
