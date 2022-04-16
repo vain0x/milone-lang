@@ -288,8 +288,8 @@ type TPrim =
   | PtrSelect
   | PtrRead
   | PtrWrite
-  | PtrAsConst
-  | PtrAsMutable
+  | PtrAsIn
+  | PtrAsNative
 
 [<NoEquality; NoComparison>]
 type TExprKind =

@@ -44,26 +44,26 @@ let private testNullPtr () =
   let nullOutPtr: __outptr<float> = __nullptr
   assert (__nativeCast nullOutPtr = 0un)
 
-let private testAsConst () =
+let private testAsIn () =
   let mp: nativeptr<int> = __nullptr
   // __inptr<int>
-  let kp = Ptr.asConst mp
+  let kp = Ptr.asIn mp
   assert (kp = __nullptr)
 
   let mq: voidptr = __nullptr
   // __inptr<int>
-  let kq = Ptr.asConst mq
+  let kq = Ptr.asIn mq
   assert (kq = __nullptr)
 
-let private testAsMutable () =
+let private testAsNative () =
   let kp: __inptr<int> = __nullptr
   // nativeptr<int>
-  let mp = Ptr.asMutable kp
+  let mp = Ptr.asNative kp
   assert (mp = __nullptr)
 
   let kq: __voidinptr = __nullptr
   // voidptr
-  let mq = Ptr.asMutable kq
+  let mq = Ptr.asNative kq
   assert (mq = __nullptr)
 
 let private testEquality () =
@@ -114,7 +114,7 @@ let private testPtrRead () =
   assert (Ptr.read p.[0] = 1)
   assert (Ptr.read p.[4] = 16)
 
-  let q: __inptr<int> = Ptr.asConst p
+  let q: __inptr<int> = Ptr.asIn p
   assert (Ptr.read q = 1)
   assert (Ptr.read q.[2] = 4)
 
@@ -131,7 +131,7 @@ let private testPtrWrite () =
 
   let q: __outptr<int> = __nativeExpr "&data[7]"
   Ptr.write q 77
-  let q = Ptr.asMutable q
+  let q = Ptr.asNative q
   assert (Ptr.read q = 77)
 
 let private testPoolAlloc () =
@@ -139,7 +139,7 @@ let private testPoolAlloc () =
   Ptr.write p.[0] 42
   Ptr.write p.[1] 43
   // It's now initialized.
-  let p: nativeptr<int> = Ptr.asMutable p
+  let p: nativeptr<int> = Ptr.asNative p
 
   assert (Ptr.read p = 42)
   assert (Ptr.read p.[1] = 43)
@@ -148,8 +148,8 @@ let main _ =
   testBasic ()
   testVoidPtrAvailable ()
   testNullPtr ()
-  testAsConst ()
-  testAsMutable ()
+  testAsIn ()
+  testAsNative ()
   testEquality ()
   testSizeOf ()
   testPtrOf ()

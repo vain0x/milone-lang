@@ -216,7 +216,7 @@ let private ngTy (docId: DocId) (ctx: NirGenCtx) (ty: ATy) : NTy * NirGenCtx =
 
   | AVarTy (Name (ident, pos)) -> NTy.Var("'" + ident, toLoc pos), ctx
 
-  /// `ty suffix` ===> `suffix<ty>`
+  // `ty suffix` ===> `suffix<ty>`
   | ASuffixTy (innerTy, Name (suffix, pos)) ->
     let innerTy, ctx = onTy ctx innerTy
     let loc = toLoc pos

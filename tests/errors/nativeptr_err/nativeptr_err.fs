@@ -9,28 +9,23 @@ let private testNullPtrError () =
   // let _: unativeint = __nullptr // type error!
   ()
 
-let private testPtrAsConstError () =
-  let _ = Ptr.asConst // error! missing arg
-  let _ = Ptr.asConst () // type error!
+let private testPtrAsInError () =
+  let _ = Ptr.asIn // error! missing arg
+  let _ = Ptr.asIn () // type error!
 
   // Argument type must be nativeptr or voidptr.
-  let _ = Ptr.asConst (__nullptr: __inptr<int>) // type error!
+  let _ = Ptr.asIn (__nullptr: __inptr<int>) // type error!
 
-  let _: byte = Ptr.asConst (__nullptr: voidptr) // type error!
-  let _: unit = Ptr.asConst (__nullptr: voidptr) // type error!
+  let _: byte = Ptr.asIn (__nullptr: voidptr) // type error!
+  let _: unit = Ptr.asIn (__nullptr: voidptr) // type error!
   ()
 
-let private testPtrAsMutableError () =
-  let _ = Ptr.asMutable // error! missing arg
-  let _ = Ptr.asMutable "" // type error!
+let private testPtrAsNativeError () =
+  let _ = Ptr.asNative // error! missing arg
+  let _ = Ptr.asNative "" // type error!
 
   // Argument type must be __inptr or __voidinptr.
-  let _ =
-    Ptr.asMutable (__nullptr: nativeptr<int>) // type error!
-
-  let _ =
-    Ptr.asMutable (__nullptr: nativeptr<int>) // type error!
-
+  let _ = Ptr.asNative (__nullptr: nativeptr<int>) // type error!
   ()
 
 let private testPtrEqualityError () =
@@ -78,8 +73,8 @@ let private testPtrWriteError () =
 
 let main _ =
   testNullPtrError ()
-  testPtrAsConstError ()
-  testPtrAsMutableError ()
+  testPtrAsInError ()
+  testPtrAsNativeError ()
   testPtrEqualityError ()
   testSizeOfError ()
   testPtrOfError ()

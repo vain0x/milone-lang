@@ -2000,8 +2000,8 @@ let nameRes (layers: NModuleRoot list list) : TProgram * NameResResult =
       |> add "select" TPrim.PtrSelect
       |> add "read" TPrim.PtrRead
       |> add "write" TPrim.PtrWrite
-      |> add "asConst" TPrim.PtrAsConst
-      |> add "asMutable" TPrim.PtrAsMutable
+      |> add "asIn" TPrim.PtrAsIn
+      |> add "asNative" TPrim.PtrAsNative
 
     let ctx =
       { ctx with RootModules = ("Std", stdModuleSerial) :: ctx.RootModules }

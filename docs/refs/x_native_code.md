@@ -64,8 +64,8 @@ It's invalidated when the variable goes out of scope.
     let q: __inptr<int> = __nativeCast p
 ```
 
-- `Std.Ptr.asConst` casts a non-const pointer to const (upcast)
-- `Std.Ptr.asMutable` casts a const pointer to non-const (unsafe cast)
+- `Std.Ptr.asIn` casts a non-const pointer to const (upcast)
+- `Std.Ptr.asNative` casts a const pointer to non-const (unsafe cast)
 
 ### Read via pointer
 

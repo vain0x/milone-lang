@@ -1314,8 +1314,8 @@ let private inferPrimExpr ctx prim loc =
   | TPrim.PtrSelect
   | TPrim.PtrRead
   | TPrim.PtrWrite
-  | TPrim.PtrAsConst
-  | TPrim.PtrAsMutable -> errorExpr ctx "This function misses some argument." loc
+  | TPrim.PtrAsIn
+  | TPrim.PtrAsNative -> errorExpr ctx "This function misses some argument." loc
 
 let private inferRecordExpr ctx expectOpt baseOpt fields loc =
   // First, infer base if exists.
@@ -1587,7 +1587,7 @@ let private inferPrimAppExpr ctx itself =
 
     txApp (TPrimExpr(TPrim.Printfn, funTy, loc)) arg targetTy loc, targetTy, ctx
 
-  | TPrim.PtrAsConst, _ ->
+  | TPrim.PtrAsIn, _ ->
     let arg, argTy, ctx = inferExpr ctx None arg
     let argTy = substTy ctx argTy
 
@@ -1601,7 +1601,7 @@ let private inferPrimAppExpr ctx itself =
     | Ty (ErrorTk _, _) -> arg, argTy, ctx
     | _ -> errorExpr ctx "Expected nativeptr, __outptr or voidptr type." loc
 
-  | TPrim.PtrAsMutable, _ ->
+  | TPrim.PtrAsNative, _ ->
     let arg, argTy, ctx = inferExpr ctx None arg
     let argTy = substTy ctx argTy
 

@@ -6,18 +6,17 @@
 #error nativeptr_err.nativeptr_err:20:3 Type mismatch: '__voidinptr' <> 'unit'.
 #error nativeptr_err.nativeptr_err:24:15 This function misses some argument.
 #error nativeptr_err.nativeptr_err:25:15 Expected __inptr, __voidinptr or __outptr type.
-#error nativeptr_err.nativeptr_err:29:9 Expected __inptr, __voidinptr or __outptr type.
-#error nativeptr_err.nativeptr_err:32:9 Expected __inptr, __voidinptr or __outptr type.
-#error nativeptr_err.nativeptr_err:41:14 Type mismatch: 'nativeptr<int>' <> 'int'.
-#error nativeptr_err.nativeptr_err:42:14 Type mismatch: '__inptr<int>' <> 'nativeptr<int>'.
-#error nativeptr_err.nativeptr_err:43:14 Type mismatch: 'voidptr' <> 'nativeptr<int>'.
-#error nativeptr_err.nativeptr_err:52:11 Expected a variable.
-#error nativeptr_err.nativeptr_err:55:11 Expected a variable.
-#error nativeptr_err.nativeptr_err:59:22 Expected pointer type.
-#error nativeptr_err.nativeptr_err:61:24 Expected pointer type.
-#error nativeptr_err.nativeptr_err:67:15 This function misses some argument.
-#error nativeptr_err.nativeptr_err:68:20 Expected pointer type.
-#error nativeptr_err.nativeptr_err:69:21 Expected nativeptr but was __outptr.
-#error nativeptr_err.nativeptr_err:74:15 This function misses some argument.
-#error nativeptr_err.nativeptr_err:75:15 This function misses some argument.
-#error nativeptr_err.nativeptr_err:76:22 Expected nativeptr but was __inptr.
+#error nativeptr_err.nativeptr_err:28:15 Expected __inptr, __voidinptr or __outptr type.
+#error nativeptr_err.nativeptr_err:36:14 Type mismatch: 'nativeptr<int>' <> 'int'.
+#error nativeptr_err.nativeptr_err:37:14 Type mismatch: '__inptr<int>' <> 'nativeptr<int>'.
+#error nativeptr_err.nativeptr_err:38:14 Type mismatch: 'voidptr' <> 'nativeptr<int>'.
+#error nativeptr_err.nativeptr_err:47:11 Expected a variable.
+#error nativeptr_err.nativeptr_err:50:11 Expected a variable.
+#error nativeptr_err.nativeptr_err:54:22 Expected pointer type.
+#error nativeptr_err.nativeptr_err:56:24 Expected pointer type.
+#error nativeptr_err.nativeptr_err:62:15 This function misses some argument.
+#error nativeptr_err.nativeptr_err:63:20 Expected pointer type.
+#error nativeptr_err.nativeptr_err:64:21 Expected nativeptr but was __outptr.
+#error nativeptr_err.nativeptr_err:69:15 This function misses some argument.
+#error nativeptr_err.nativeptr_err:70:15 This function misses some argument.
+#error nativeptr_err.nativeptr_err:71:22 Expected nativeptr but was __inptr.

@@ -28,9 +28,9 @@ void nativeptr_nativeptr_testVoidPtrAvailable(void);
 
 void nativeptr_nativeptr_testNullPtr(void);
 
-void nativeptr_nativeptr_testAsConst(void);
+void nativeptr_nativeptr_testAsIn(void);
 
-void nativeptr_nativeptr_testAsMutable(void);
+void nativeptr_nativeptr_testAsNative(void);
 
 void nativeptr_nativeptr_testEquality(void);
 
@@ -127,7 +127,7 @@ void nativeptr_nativeptr_testNullPtr(void) {
     return;
 }
 
-void nativeptr_nativeptr_testAsConst(void) {
+void nativeptr_nativeptr_testAsIn(void) {
     int* mp_;
     int const* kp_;
     void* mq_;
@@ -141,7 +141,7 @@ void nativeptr_nativeptr_testAsConst(void) {
     return;
 }
 
-void nativeptr_nativeptr_testAsMutable(void) {
+void nativeptr_nativeptr_testAsNative(void) {
     int const* kp_1;
     int* mp_1;
     void const* kq_1;
@@ -257,8 +257,8 @@ int main(int argc, char** argv) {
     nativeptr_nativeptr_testBasic();
     nativeptr_nativeptr_testVoidPtrAvailable();
     nativeptr_nativeptr_testNullPtr();
-    nativeptr_nativeptr_testAsConst();
-    nativeptr_nativeptr_testAsMutable();
+    nativeptr_nativeptr_testAsIn();
+    nativeptr_nativeptr_testAsNative();
     nativeptr_nativeptr_testEquality();
     nativeptr_nativeptr_testSizeOf();
     nativeptr_nativeptr_testPtrOf();
