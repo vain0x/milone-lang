@@ -89,6 +89,7 @@ let tkDisplay getTyName tk =
   | VoidPtrTk IsConst -> "__voidinptr"
   | NativePtrTk RefMode.ReadWrite -> "nativeptr"
   | NativePtrTk RefMode.ReadOnly -> "__inptr"
+  | NativePtrTk RefMode.WriteOnly -> "__outptr"
   | NativeFunTk -> "__nativeFun"
   | NativeTypeTk _ -> "__nativeType"
   | MetaTk (tySerial, _) -> getTyName tySerial

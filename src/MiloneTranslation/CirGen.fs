@@ -551,8 +551,9 @@ let private cgNativePtrTy ctx mode itemTy =
   let itemTy, ctx = cgTyIncomplete ctx itemTy
 
   match mode with
+  | RefMode.ReadWrite
+  | RefMode.WriteOnly -> CPtrTy itemTy, ctx
   | RefMode.ReadOnly -> CConstPtrTy itemTy, ctx
-  | RefMode.ReadWrite -> CPtrTy itemTy, ctx
 
 let private cgNativeFunTy ctx tys =
   match splitLast tys with

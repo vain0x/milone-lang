@@ -66,6 +66,7 @@ let private testPtrSelectError () =
 let private testPtrReadError () =
   let _ = Ptr.read // error! missing arg
   let _ = Ptr.read 0 // type error!
+  let _ = Ptr.read (__nullptr: __outptr<int>) // type error!
   ()
 
 let private testPtrWriteError () =

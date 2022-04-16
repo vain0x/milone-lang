@@ -67,8 +67,12 @@ type IsMut =
 /// Read-write permission.
 [<RequireQualifiedAccess; NoEquality; NoComparison>]
 type RefMode =
-  | ReadOnly
+  /// nativeptr
   | ReadWrite
+  /// __inptr
+  | ReadOnly
+  /// __outptr
+  | WriteOnly
 
 [<NoEquality; NoComparison>]
 type IsCRepr = IsCRepr of bool
@@ -112,8 +116,9 @@ type Loc = Loc of DocId * RowIndex * ColumnIndex
 module RefMode =
   let toInt mode =
     match mode with
-    | RefMode.ReadOnly -> 1
-    | RefMode.ReadWrite -> 2
+    | RefMode.ReadWrite -> 1
+    | RefMode.ReadOnly -> 2
+    | RefMode.WriteOnly -> 3
 
   let equals l r = toInt l = toInt r
 

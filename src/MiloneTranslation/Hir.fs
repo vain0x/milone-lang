@@ -405,6 +405,7 @@ let tkDisplay getTyName tk =
   | VoidPtrTk IsConst -> "__voidinptr"
   | NativePtrTk RefMode.ReadWrite -> "nativeptr"
   | NativePtrTk RefMode.ReadOnly -> "__inptr"
+  | NativePtrTk RefMode.WriteOnly -> "__outptr"
   | NativeFunTk -> "__nativeFun"
   | NativeTypeTk _ -> "__nativeType"
   | MetaTk (tySerial, _) -> getTyName tySerial
@@ -546,8 +547,9 @@ let tyMangle (ty: Ty, memo: TreeMap<Ty, string>) : string * TreeMap<Ty, string> 
 
       | VoidPtrTk IsMut -> "VoidPtr", ctx
       | VoidPtrTk IsConst -> "VoidInPtr", ctx
-      | NativePtrTk RefMode.ReadOnly -> fixedGeneric "InPtr"
       | NativePtrTk RefMode.ReadWrite -> fixedGeneric "MutPtr"
+      | NativePtrTk RefMode.ReadOnly -> fixedGeneric "InPtr"
+      | NativePtrTk RefMode.WriteOnly -> fixedGeneric "OutPtr"
       | NativeFunTk -> variadicGeneric "NativeFun"
       | NativeTypeTk name -> name, ctx
 

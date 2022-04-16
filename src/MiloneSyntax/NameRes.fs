@@ -99,6 +99,7 @@ let private tyPrimOfName ident tys =
   | "nativeptr", [ itemTy ] -> tyNativePtr itemTy |> Some
   | "__voidinptr", [] -> Ty(VoidPtrTk IsConst, []) |> Some
   | "__inptr", [ itemTy ] -> tyInPtr itemTy |> Some
+  | "__outptr", [ itemTy ] -> tyOutPtr itemTy |> Some
 
   | "__nativeFun", [ Ty (TupleTk, itemTys); resultTy ] ->
     Ty(NativeFunTk, List.append itemTys [ resultTy ])

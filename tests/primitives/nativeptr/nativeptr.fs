@@ -41,6 +41,9 @@ let private testNullPtr () =
   let nullInPtr: __inptr<float> = __nullptr
   assert (__nativeCast nullInPtr = 0un)
 
+  let nullOutPtr: __outptr<float> = __nullptr
+  assert (__nativeCast nullOutPtr = 0un)
+
 let private testAsConst () =
   let mp: nativeptr<int> = __nullptr
   // __inptr<int>
@@ -125,6 +128,11 @@ let private testPtrWrite () =
   assert (Ptr.read p = 43)
   Ptr.write p.[3] 39
   assert (Ptr.read p.[3] = 39)
+
+  let q: __outptr<int> = __nativeExpr "&data[7]"
+  Ptr.write q 77
+  let q = Ptr.asMutable q
+  assert (Ptr.read q = 77)
 
 let main _ =
   testBasic ()
