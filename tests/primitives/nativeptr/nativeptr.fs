@@ -134,6 +134,16 @@ let private testPtrWrite () =
   let q = Ptr.asMutable q
   assert (Ptr.read q = 77)
 
+let private testPoolAlloc () =
+  let p: __outptr<int> = Ptr.regionAlloc 2
+  Ptr.write p.[0] 42
+  Ptr.write p.[1] 43
+  // It's now initialized.
+  let p: nativeptr<int> = Ptr.asMutable p
+
+  assert (Ptr.read p = 42)
+  assert (Ptr.read p.[1] = 43)
+
 let main _ =
   testBasic ()
   testVoidPtrAvailable ()
@@ -146,4 +156,5 @@ let main _ =
   testPtrSelect ()
   testPtrRead ()
   testPtrWrite ()
+  testPoolAlloc ()
   0

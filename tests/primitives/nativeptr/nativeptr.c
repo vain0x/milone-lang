@@ -44,6 +44,10 @@ void nativeptr_nativeptr_testPtrRead(void);
 
 void nativeptr_nativeptr_testPtrWrite(void);
 
+int* Std_Ptr_IntIntOutPtrFun1_regionAlloc(int );
+
+void nativeptr_nativeptr_testPoolAlloc(void);
+
 int main(int argc, char** argv);
 
 struct ObjectObjectTuple2_ {
@@ -234,6 +238,20 @@ int data[8] = { 0 };    p_4 = data;
     return;
 }
 
+void nativeptr_nativeptr_testPoolAlloc(void) {
+    int* p_5;
+    int* p_6;
+    int* call_3;
+    call_3 = Std_Ptr_IntIntOutPtrFun1_regionAlloc(2);
+    p_5 = call_3;
+    p_5[0] = 42;
+    p_5[1] = 43;
+    p_6 = ((int*)p_5);
+    milone_assert(((*(p_6)) == 42), (struct String){.str = "nativeptr/nativeptr.milone", .len = 26}, 143, 2);
+    milone_assert((p_6[1] == 43), (struct String){.str = "nativeptr/nativeptr.milone", .len = 26}, 144, 2);
+    return;
+}
+
 int main(int argc, char** argv) {
     milone_start(argc, argv);
     nativeptr_nativeptr_testBasic();
@@ -247,5 +265,6 @@ int main(int argc, char** argv) {
     nativeptr_nativeptr_testPtrSelect();
     nativeptr_nativeptr_testPtrRead();
     nativeptr_nativeptr_testPtrWrite();
+    nativeptr_nativeptr_testPoolAlloc();
     return 0;
 }
