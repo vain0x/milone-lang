@@ -464,7 +464,11 @@ let private traitBoundErrorToString tyDisplay it =
   | ToIntTrait ty -> "Can't convert to integer from: " + tyDisplay ty
   | ToFloatTrait ty -> "Can't convert to float from: " + tyDisplay ty
   | ToStringTrait ty -> "Can't convert to string from: " + tyDisplay ty
-  | PtrSizeTrait ty -> "Expected a pointer type but was: " + tyDisplay ty
+  | PtrTrait ty -> "Expected a pointer type but was: " + tyDisplay ty
+
+  | PtrSizeTrait ty ->
+    "Expected a pointer-size type but was: "
+    + tyDisplay ty
 
 let logToString tyDisplay log =
   match log with

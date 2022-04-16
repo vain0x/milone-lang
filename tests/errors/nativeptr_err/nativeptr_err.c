@@ -1,4 +1,7 @@
 #error nativeptr_err.nativeptr_err:6:17 Expected a pointer type but was: unit
+#error nativeptr_err.nativeptr_err:7:23 Expected a pointer type but was: unativeint
+#error nativeptr_err.nativeptr_err:8:16 Expected a pointer type but was: obj
+#error nativeptr_err.nativeptr_err:9:21 Expected a pointer type but was: int list
 #error nativeptr_err.nativeptr_err:13:15 This function misses some argument.
 #error nativeptr_err.nativeptr_err:14:15 Expected nativeptr, __outptr or voidptr type.
 #error nativeptr_err.nativeptr_err:17:15 Expected nativeptr, __outptr or voidptr type.

@@ -639,6 +639,20 @@ let private resolveTraitBound (ctx: TyCtx) theTrait loc : TyCtx =
 
   | ToStringTrait ty -> expectBasic ctx ty
 
+  | PtrTrait ty ->
+    let isPtrTy (Ty (tk, _)) =
+      match tk with
+      | VoidPtrTk _
+      | NativePtrTk _
+      | NativeFunTk -> true
+      | _ -> false
+
+    match ty with
+    | Ty (ErrorTk _, _) -> ok ctx
+    | _ when isPtrTy ty -> ok ctx
+    | Ty (LinearTk, [ itemTy ]) when isPtrTy itemTy -> ok ctx
+    | _ -> error ctx
+
   | PtrSizeTrait (Ty (tk, _)) ->
     match tk with
     | ErrorTk _
@@ -1206,9 +1220,8 @@ let private primDisposeTy =
   TyScheme([ 1 ], tyFun (tyLinear itemTy) itemTy)
 
 let private primNullPtrScheme =
-  // FIXME: reject ptr-sized non-ptr types
   let ptrTy = tyMeta 1 noLoc
-  BoundedTyScheme([ 1 ], ptrTy, [ PtrSizeTrait ptrTy ])
+  BoundedTyScheme([ 1 ], ptrTy, [ PtrTrait ptrTy ])
 
 let private primNativeCastScheme =
   let meta id = tyMeta id noLoc

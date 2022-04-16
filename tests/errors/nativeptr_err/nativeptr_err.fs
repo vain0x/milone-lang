@@ -4,9 +4,9 @@ module Ptr = Std.Ptr
 
 let private testNullPtrError () =
   let _: unit = __nullptr // type error!
-
-  // FIXME: this should be error
-  // let _: unativeint = __nullptr // type error!
+  let _: unativeint = __nullptr // type error!
+  let _: obj = __nullptr // type error!
+  let _: int list = __nullptr // type error!
   ()
 
 let private testPtrAsInError () =
