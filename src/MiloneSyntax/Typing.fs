@@ -639,7 +639,7 @@ let private resolveTraitBound (ctx: TyCtx) theTrait loc : TyCtx =
 
   | ToStringTrait ty -> expectBasic ctx ty
 
-  | PtrTrait (Ty (tk, _)) ->
+  | PtrSizeTrait (Ty (tk, _)) ->
     match tk with
     | ErrorTk _
     | IntTk IPtr
@@ -1208,13 +1208,19 @@ let private primDisposeTy =
 let private primNullPtrScheme =
   // FIXME: reject ptr-sized non-ptr types
   let ptrTy = tyMeta 1 noLoc
-  BoundedTyScheme([ 1 ], ptrTy, [ PtrTrait ptrTy ])
+  BoundedTyScheme([ 1 ], ptrTy, [ PtrSizeTrait ptrTy ])
 
 let private primNativeCastScheme =
   let meta id = tyMeta id noLoc
   let srcTy = meta 1
   let destTy = meta 2
-  BoundedTyScheme([ 1; 2 ], tyFun srcTy destTy, [ PtrTrait srcTy; PtrTrait destTy ])
+
+  BoundedTyScheme(
+    [ 1; 2 ],
+    tyFun srcTy destTy,
+    [ PtrSizeTrait srcTy
+      PtrSizeTrait destTy ]
+  )
 
 let private inferPrimExpr ctx prim loc =
   let onMono ty = TPrimExpr(prim, ty, loc), ty, ctx

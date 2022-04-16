@@ -125,7 +125,7 @@ type Trait =
   /// Type can be applied to `string` function.
   | ToStringTrait of Ty
 
-  | PtrTrait of Ty
+  | PtrSizeTrait of Ty
 
 /// Type definition.
 [<NoEquality; NoComparison>]

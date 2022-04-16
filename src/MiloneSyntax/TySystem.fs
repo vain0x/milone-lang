@@ -115,7 +115,7 @@ let traitMapTys f it =
   | ToIntTrait ty -> ToIntTrait(f ty)
   | ToFloatTrait ty -> ToFloatTrait(f ty)
   | ToStringTrait ty -> ToStringTrait(f ty)
-  | PtrTrait ty -> PtrTrait(f ty)
+  | PtrSizeTrait ty -> PtrSizeTrait(f ty)
 
 // -----------------------------------------------
 // Types (HIR/MIR)
