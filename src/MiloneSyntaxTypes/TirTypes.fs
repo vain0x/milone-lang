@@ -127,6 +127,8 @@ type Trait =
 
   | PtrTrait of Ty
   | PtrSizeTrait of Ty
+  /// Two types aren't same.
+  | DifferentTypesTrait of Ty * Ty
 
 /// Type definition.
 [<NoEquality; NoComparison>]
@@ -289,6 +291,7 @@ type TPrim =
   | PtrSelect
   | PtrRead
   | PtrWrite
+  | PtrCast
   | PtrAsIn
   | PtrAsNative
 

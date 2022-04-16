@@ -9,6 +9,15 @@ let private testNullPtrError () =
   let _: int list = __nullptr // type error!
   ()
 
+let private testPtrCastError (_t: 'T) =
+  // unativeint isn't a pointer type.
+  let _: voidptr = Ptr.cast 0un // type error!
+  let _: unativeint = Ptr.cast (__nullptr: nativeptr<int>) // type error!
+
+  // Result type must be different than argument type.
+  let _: nativeptr<'T> = Ptr.cast (__nullptr: nativeptr<'T>) // type error!
+  ()
+
 let private testPtrAsInError () =
   let _ = Ptr.asIn // error! missing arg
   let _ = Ptr.asIn () // type error!
@@ -73,6 +82,7 @@ let private testPtrWriteError () =
 
 let main _ =
   testNullPtrError ()
+  testPtrCastError ()
   testPtrAsInError ()
   testPtrAsNativeError ()
   testPtrEqualityError ()

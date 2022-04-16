@@ -44,6 +44,21 @@ let private testNullPtr () =
   let nullOutPtr: __outptr<float> = __nullptr
   assert (__nativeCast nullOutPtr = 0un)
 
+  let nullFunPtr: __nativeFun<unit, unit> = __nullptr
+  assert (__nativeCast nullFunPtr = 0un)
+
+let private testPtrCast () =
+  // Upcast.
+  let voidPtr: voidptr = Ptr.cast (__nullptr: nativeptr<byte>)
+  let voidInPtr: __voidinptr = Ptr.cast (__nullptr: __inptr<int>)
+  let intOutPtr: __outptr<int> = Ptr.cast (__nullptr: nativeptr<int>)
+
+  // Downcast.
+  let intPtr: nativeptr<int> = Ptr.cast (__nullptr: voidptr)
+  let objOutPtr: __outptr<obj> = Ptr.cast (__nullptr: __inptr<string>)
+  let funPtr: __nativeFun<obj * obj, obj> = Ptr.cast (__nullptr: voidptr)
+  ()
+
 let private testAsIn () =
   let mp: nativeptr<int> = __nullptr
   // __inptr<int>
@@ -148,6 +163,7 @@ let main _ =
   testBasic ()
   testVoidPtrAvailable ()
   testNullPtr ()
+  testPtrCast ()
   testAsIn ()
   testAsNative ()
   testEquality ()

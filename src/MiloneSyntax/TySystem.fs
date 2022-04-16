@@ -117,6 +117,7 @@ let traitMapTys f it =
   | ToStringTrait ty -> ToStringTrait(f ty)
   | PtrTrait ty -> PtrTrait(f ty)
   | PtrSizeTrait ty -> PtrSizeTrait(f ty)
+  | DifferentTypesTrait (lTy, rTy) -> DifferentTypesTrait(f lTy, f rTy)
 
 // -----------------------------------------------
 // Types (HIR/MIR)

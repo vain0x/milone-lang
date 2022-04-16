@@ -666,6 +666,14 @@ let private resolveTraitBound (ctx: TyCtx) theTrait loc : TyCtx =
 
     | _ -> error ctx
 
+  | DifferentTypesTrait (lTy, rTy) ->
+    match lTy, rTy with
+    | Ty (ErrorTk _, _), _
+    | _, Ty (ErrorTk _, _) -> ok ctx
+
+    | _ when not (tyEqual lTy rTy) -> ok ctx
+    | _ -> error ctx
+
 let private attemptResolveTraitBounds (ctx: TyCtx) : TyCtx =
   let subst (ctx: TyCtx) ty =
     ty |> substTy ctx |> typingExpandSynonyms ctx.Tys
@@ -1223,6 +1231,18 @@ let private primNullPtrScheme =
   let ptrTy = tyMeta 1 noLoc
   BoundedTyScheme([ 1 ], ptrTy, [ PtrTrait ptrTy ])
 
+let private primPtrCastScheme =
+  let srcTy = tyMeta 1 noLoc
+  let destTy = tyMeta 2 noLoc
+
+  BoundedTyScheme(
+    [ 1; 2 ],
+    tyFun srcTy destTy,
+    [ PtrTrait srcTy
+      PtrTrait destTy
+      DifferentTypesTrait(srcTy, destTy) ]
+  )
+
 let private primNativeCastScheme =
   let meta id = tyMeta id noLoc
   let srcTy = meta 1
@@ -1301,6 +1321,8 @@ let private inferPrimExpr ctx prim loc =
   | TPrim.InRegion -> onMono primInRegionTy
   | TPrim.Acquire -> onUnbounded primAcquireTy
   | TPrim.Dispose -> onUnbounded primDisposeTy
+
+  | TPrim.PtrCast -> onBounded primPtrCastScheme
 
   | TPrim.NativeFun ->
     let ctx =
