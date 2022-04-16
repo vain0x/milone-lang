@@ -20,7 +20,7 @@ let private blackbox (f: unit -> EphSerial) : EphSerial = f ()
 
 let private createNew () =
   let ptr: nativeptr<uint> =
-    memAlloc 1 (unativeint (__sizeOf<unativeint>))
+    memAlloc 1 (unativeint (sizeof<unativeint>))
     |> __nativeCast
 
   Ptr.write ptr (uint 0)

@@ -12,7 +12,7 @@ type private Ref<'T> = Ref of nativeptr<'T>
 
 module Ref =
   let uninit () : Ref<'T> =
-    let p = __alloc (__sizeOf<'T>)
+    let p = __alloc (sizeof<'T>)
     Ref p
 
   let write (value: 'T) (r: Ref<'T>) : unit =

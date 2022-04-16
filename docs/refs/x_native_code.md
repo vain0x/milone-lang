@@ -155,7 +155,7 @@ An extern declaration of the function is also generated.
 
     // void *calloc(size_t, size_t);
     // void *p = calloc(4, sizeof(int));
-    let p: voidptr = __nativeFun ("calloc", 4un, unativeint __sizeOf<int>)
+    let p: voidptr = __nativeFun ("calloc", 4un, unativeint sizeof<int>)
     // ...
 ```
 
@@ -173,7 +173,7 @@ Restriction: Variadic parameter functions (e.g. `printf`) can't be called with t
 
 ## Size of type
 
-`__sizeOf<'T>` is the size of type T in bytes. Type is `int`. Equivalent to `sizeof(T)` in C.
+`sizeof<'T>` is the size of type T in bytes. Type is `int`. Equivalent to `sizeof(T)` in C.
 
 ## Embedded naive expressions
 

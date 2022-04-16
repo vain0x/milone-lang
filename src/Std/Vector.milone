@@ -178,7 +178,7 @@ module Vector =
   /// Allocates an empty vector with the specified capacity.
   let alloc (capacity: int) : Vector<'T> =
     if capacity > 0 then
-      let ptr = rawAllocate (uint capacity) (uint __sizeOf<'T>)
+      let ptr = rawAllocate (uint capacity) (uint sizeof<'T>)
       let ptr: __linear<nativeptr<'T>> = __acquire (__nativeCast (__dispose ptr))
       Vector(ptr, 0u, uint capacity)
     else
@@ -218,7 +218,7 @@ module Vector =
     let ptr, capacity =
       let itemPtr: __voidinptr = __nativeExpr ("&({0})", item)
       let ptr: __linear<voidptr> = __acquire (__nativeCast (__dispose ptr))
-      rawPush itemPtr ptr length capacity (uint __sizeOf<'T>)
+      rawPush itemPtr ptr length capacity (uint sizeof<'T>)
 
     let ptr: __linear<nativeptr<'T>> = __acquire (__nativeCast (__dispose ptr))
     Vector(ptr, length + 1u, capacity)
@@ -251,7 +251,7 @@ module Vector =
       let addition = 1u + uint (List.length xs)
 
       let ptr, capacity =
-        rawReserve addition ptr length capacity (uint __sizeOf<'T>)
+        rawReserve addition ptr length capacity (uint sizeof<'T>)
 
       let ptr: nativeptr<'T> = __nativeCast (__dispose ptr)
 
@@ -325,7 +325,7 @@ module Vector =
     let ptr = __acquire (__nativeCast (__dispose ptr))
 
     let ptr =
-      rawSortUnstable ptrComparer ptr length (uint __sizeOf<'T>)
+      rawSortUnstable ptrComparer ptr length (uint sizeof<'T>)
 
     let ptr = __acquire (__nativeCast (__dispose ptr))
     Vector(ptr, length, capacity)
@@ -373,7 +373,7 @@ module VectorExt =
     let ptr = __acquire (__nativeCast (__dispose ptr))
 
     let ptr, capacity =
-      rawReserve (uint addition) ptr length capacity (uint __sizeOf<'T>)
+      rawReserve (uint addition) ptr length capacity (uint sizeof<'T>)
 
     let ptr = __acquire (__nativeCast (__dispose ptr))
     Vector(ptr, length, capacity)
@@ -391,7 +391,7 @@ module VectorExt =
     let ptr = __acquire (__nativeCast (__dispose ptr))
 
     let ptr, capacity =
-      rawReserveExact (uint addition) ptr length capacity (uint __sizeOf<'T>)
+      rawReserveExact (uint addition) ptr length capacity (uint sizeof<'T>)
 
     let ptr = __acquire (__nativeCast (__dispose ptr))
     Vector(ptr, length, capacity)

@@ -75,9 +75,6 @@ module NativePtr =
 
   // Extension.
 
-  /// Gets size of the underlying type. (`sizeof(*p)`)
-  let __sizeOf (p: nativeptr<'T>) : int = int(uint(npPointeeSize p))
-
   // FIXME: remove this
   /// Deprecated: use __nullptr.
   let __getNullPtr () : nativeptr<_> = __nullptr
@@ -110,9 +107,6 @@ module __InPtr =
   let isNullPtr (p: __inptr<_>) : bool = p = __nullptr
 
   // =============================================
-
-  /// Gets size of the underlying type. (`sizeof(*p)`)
-  let sizeOf (p: __inptr<'T>) : int = int(uint(cpPointeeSize p))
 
   // FIXME: remove this
   /// Deprecated: use __nullptr.

@@ -19,7 +19,7 @@ let private testSort () =
   let len = 5
 
   let array: nativeptr<int> =
-    memAlloc len __sizeOf<int> |> __nativeCast
+    memAlloc len sizeof<int> |> __nativeCast
 
   Ptr.write array.[0] 3
   Ptr.write array.[1] 1

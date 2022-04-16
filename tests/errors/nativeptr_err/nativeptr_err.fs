@@ -45,7 +45,7 @@ let private testPtrEqualityError () =
 
 let private testSizeOfError () =
   // FIXME: name resolution error prevents type check
-  // let _ = __sizeOf // type argument is mandatory
+  // let _ = sizeof // type argument is mandatory
   ()
 
 let private testPtrOfError () =

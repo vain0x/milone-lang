@@ -5,10 +5,10 @@ module rec LibNursery.NativeInterop
 open LibNursery.Runtime
 
 // FIXME: remove this
-let private nativeptrSizeOf (p: nativeptr<'T>) : int = __sizeOf<'T>
+let private nativeptrSizeOf (p: nativeptr<'T>) : int = sizeof<'T>
 
 // FIXME: remove this
-let private inptrSizeOf (p: __inptr<'T>) : int = __sizeOf<'T>
+let private inptrSizeOf (p: __inptr<'T>) : int = sizeof<'T>
 
 // See also:
 //

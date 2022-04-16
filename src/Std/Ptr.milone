@@ -12,4 +12,4 @@ let rawRegionAlloc (count: int) (size: int): voidptr =
 
 /// Allocates a block of memory.
 let regionAlloc (count: int): __outptr<'T> =
-  __nativeCast (rawRegionAlloc count __sizeOf<'T>)
+  __nativeCast (rawRegionAlloc count sizeof<'T>)

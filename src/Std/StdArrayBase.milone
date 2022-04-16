@@ -7,7 +7,7 @@ module Ptr = Std.Ptr
 // -----------------------------------------------
 
 /// Gets the size of pointee type.
-let private __pointeeSize (inPtr: __inptr<'T>) : nativeint = nativeint __sizeOf<'T>
+let private __pointeeSize (inPtr: __inptr<'T>) : nativeint = nativeint sizeof<'T>
 
 let private __ptrAsMut (inPtr: __inptr<'T>) : nativeptr<'T> = __nativeCast inPtr
 
