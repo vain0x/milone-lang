@@ -93,12 +93,12 @@
         {
             "comment": "Built-in types",
             "name": "entity.name.type.milone",
-            "match": "\\b(bool|s?byte|char|float(32)?|int|list|nativeptr|obj|string|u?int(8|16|32|64)|u?nativeint|unit|voidptr|__constptr|__nativeType)\\b"
+            "match": "\\b(bool|s?byte|char|float(32)?|int|list|nativeptr|obj|string|u?int(8|16|32|64)|u?nativeint|unit|voidptr|__inptr|__nativeType|__outptr|__voidinptr)\\b"
         },
         {
             "comment": "Built-in functions",
             "name": "entity.name.function.milone",
-            "match": "\\b(assert|box|char|compare|exit|int|not|printfn|string|unbox|__inRegion|__nativeCast|__nativeDecl|__nativeExpr|__nativeFun|__nativeStmt|__nativeType|__ptrRead|__ptrWrite|__sizeOfVal)\\b"
+            "match": "\\b(assert|box|char|compare|exit|int|not|printfn|sizeof|string|unbox|__inRegion|__nativeCast|__nativeDecl|__nativeExpr|__nativeFun|__nativeStmt|__nativeType|(?<=Ptr\\.)(asIn|asNative|cast|invalid|nullPtr|read|select|write))\\b"
         },
         {
             "comment": "Built-in values",
