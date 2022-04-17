@@ -1,6 +1,6 @@
-# Extension: Pointer
+# Extension: Pointer Types
 
-This page describes non-function pointer feratures.
+This page describes non-function pointer features.
 
 - *NOTICE(lang-ext)*: This feature is "language extension", i.e. not compatible with F#. Identifiers that start with `__` are for extensions.
 
@@ -13,7 +13,7 @@ It's assumed that you know about:
 
 ### Recommended Articles
 
-The "Pointers Are Complicated" article series is good to understand *poitners*.
+The "Pointers Are Complicated" article series is good to understand *pointers*.
 
 - [Pointers Are Complicated, or: What's in a Byte?](https://www.ralfj.de/blog/2018/07/24/pointers-and-bytes.html)
 - [Pointers Are Complicated II, or: We need better language specs](https://www.ralfj.de/blog/2020/12/14/provenance.html)
@@ -115,7 +115,7 @@ There are two kind of potential usage:
 
 ```fsharp
     Ptr.cast : 'P -> 'Q
-    // when both 'P and 'Q are poitner types
+    // when both 'P and 'Q are pointer types
     //      but 'P <> 'Q
 
     Ptr.asIn : (__outptr<'T> -> __inptr<'T>)
@@ -133,8 +133,8 @@ There are two kind of potential usage:
 This function doesn't change pointee type.
 
 `Ptr.asNative` casts a pointer to `nativeptr` or `voidptr` depending on the argument type.
-This function doesn't change poitnee type.
-Be caseful to use this function since it's an unchecked downcast.
+This function doesn't change pointee type.
+Be careful to use this function since it's an unchecked downcast.
 
 ### Selection
 
@@ -194,7 +194,11 @@ Note that reading from an invalid pointer or reading as incorrect type is undefi
 
 The address is considered exposed.
 
-## Recommeded Practice: Abstraction
+----
+
+## Appendix
+
+### Recommended Practice: Abstraction
 
 Pointer types are inherently unsafe and too easy to misuse.
 
@@ -202,3 +206,16 @@ Avoid using pointer types in application.
 Instead, make a module that manipulates pointers that provides only safe API to use.
 (Such module is called safe-wrapper or abstraction.)
 Linear types help such design.
+
+### Legacy Misuse of `obj` Types
+
+The codebase might still contain incorrect use of `obj` due to the change of its semantics.
+
+In previous version of the milone-lang, `obj` was one of pointer types that was equivalent to `void const *` in C.
+`obj` was used instead of current `__voidinptr`.
+
+However, there was a problem that `box` function did't always make a pointer to its argument but just cast it to pointer type when the value type was pointer-sized.
+For example, `Ptr.read (Ptr.cast (box 42un): __inptr<unativeint>)` attempted to read a value from an address `42`, which was definitely error.
+
+That is, existing `box` function made use of `obj` type more unsafe.
+I decided to add a separate type `__voidinptr` for pointer.
