@@ -2000,6 +2000,7 @@ let nameRes (layers: NModuleRoot list list) : TProgram * NameResResult =
       |> add "select" TPrim.PtrSelect
       |> add "read" TPrim.PtrRead
       |> add "write" TPrim.PtrWrite
+      |> add "nullPtr" TPrim.NullPtr
       |> add "cast" TPrim.PtrCast
       |> add "invalid" TPrim.PtrInvalid
       |> add "asIn" TPrim.PtrAsIn

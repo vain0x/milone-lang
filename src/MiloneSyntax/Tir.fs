@@ -153,7 +153,6 @@ let primFromIdent ident =
   | "__nativeExpr" -> TPrim.NativeExpr |> Some
   | "__nativeStmt" -> TPrim.NativeStmt |> Some
   | "__nativeDecl" -> TPrim.NativeDecl |> Some
-  | "__nullptr" -> TPrim.NullPtr |> Some
 
   | _ -> None
 

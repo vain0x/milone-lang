@@ -29,22 +29,22 @@ let private testVoidPtrAvailable () =
   assert (__nativeCast constEnv = 42un)
 
 let private testNullPtr () =
-  let nullVoidPtr: voidptr = __nullptr
+  let nullVoidPtr: voidptr = Ptr.nullPtr
   assert (__nativeCast nullVoidPtr = 0un)
 
-  let nullVoidInPtr: __voidinptr = __nullptr
+  let nullVoidInPtr: __voidinptr = Ptr.nullPtr
   assert (__nativeCast nullVoidInPtr = 0un)
 
-  let nullNativePtr: nativeptr<float> = __nullptr
+  let nullNativePtr: nativeptr<float> = Ptr.nullPtr
   assert (__nativeCast nullNativePtr = 0un)
 
-  let nullInPtr: __inptr<float> = __nullptr
+  let nullInPtr: __inptr<float> = Ptr.nullPtr
   assert (__nativeCast nullInPtr = 0un)
 
-  let nullOutPtr: __outptr<float> = __nullptr
+  let nullOutPtr: __outptr<float> = Ptr.nullPtr
   assert (__nativeCast nullOutPtr = 0un)
 
-  let nullFunPtr: __nativeFun<unit, unit> = __nullptr
+  let nullFunPtr: __nativeFun<unit, unit> = Ptr.nullPtr
   assert (__nativeCast nullFunPtr = 0un)
 
 let private testPtrInvalid () =
@@ -58,44 +58,44 @@ let private testPtrInvalid () =
 
 let private testPtrCast () =
   // Upcast.
-  let voidPtr: voidptr = Ptr.cast (__nullptr: nativeptr<byte>)
-  let voidInPtr: __voidinptr = Ptr.cast (__nullptr: __inptr<int>)
-  let intOutPtr: __outptr<int> = Ptr.cast (__nullptr: nativeptr<int>)
+  let voidPtr: voidptr = Ptr.cast (Ptr.nullPtr: nativeptr<byte>)
+  let voidInPtr: __voidinptr = Ptr.cast (Ptr.nullPtr: __inptr<int>)
+  let intOutPtr: __outptr<int> = Ptr.cast (Ptr.nullPtr: nativeptr<int>)
 
   // Downcast.
-  let intPtr: nativeptr<int> = Ptr.cast (__nullptr: voidptr)
-  let objOutPtr: __outptr<obj> = Ptr.cast (__nullptr: __inptr<string>)
-  let funPtr: __nativeFun<obj * obj, obj> = Ptr.cast (__nullptr: voidptr)
+  let intPtr: nativeptr<int> = Ptr.cast (Ptr.nullPtr: voidptr)
+  let objOutPtr: __outptr<obj> = Ptr.cast (Ptr.nullPtr: __inptr<string>)
+  let funPtr: __nativeFun<obj * obj, obj> = Ptr.cast (Ptr.nullPtr: voidptr)
   ()
 
 let private testAsIn () =
-  let mp: nativeptr<int> = __nullptr
+  let mp: nativeptr<int> = Ptr.nullPtr
   // __inptr<int>
   let kp = Ptr.asIn mp
-  assert (kp = __nullptr)
+  assert (kp = Ptr.nullPtr)
 
-  let mq: voidptr = __nullptr
+  let mq: voidptr = Ptr.nullPtr
   // __inptr<int>
   let kq = Ptr.asIn mq
-  assert (kq = __nullptr)
+  assert (kq = Ptr.nullPtr)
 
 let private testAsNative () =
-  let kp: __inptr<int> = __nullptr
+  let kp: __inptr<int> = Ptr.nullPtr
   // nativeptr<int>
   let mp = Ptr.asNative kp
-  assert (mp = __nullptr)
+  assert (mp = Ptr.nullPtr)
 
-  let kq: __voidinptr = __nullptr
+  let kq: __voidinptr = Ptr.nullPtr
   // voidptr
   let mq = Ptr.asNative kq
-  assert (mq = __nullptr)
+  assert (mq = Ptr.nullPtr)
 
 let private testEquality () =
-  let np: nativeptr<int> = __nullptr
+  let np: nativeptr<int> = Ptr.nullPtr
   let p: nativeptr<int> = __nativeCast 42un
   assert (p <> np)
 
-  let nq: __inptr<int> = __nullptr
+  let nq: __inptr<int> = Ptr.nullPtr
   let q: __inptr<int> = __nativeCast 42un
   assert (q <> nq)
 
@@ -117,7 +117,7 @@ let private testSizeOf () =
   assert (sizeof<int64 * byte * byte> = 16) // 8 + 1 + 1 + padding
 
   // Size of generic type.
-  assert (sizeOfPointee (__nullptr: nativeptr<obj * obj>) = sizeof<obj * obj>)
+  assert (sizeOfPointee (Ptr.nullPtr: nativeptr<obj * obj>) = sizeof<obj * obj>)
 
 let private testPtrOf () =
   let x = 42

@@ -6,6 +6,7 @@ module Buffer = LibSpan.Buffer
 module Path = LibSpan.Path
 module Span = LibSpan.Span
 module SpanMut = LibSpan.SpanMut
+module Ptr = Std.Ptr
 
 type private Path = Path.Path
 
@@ -18,13 +19,13 @@ type File = File of FP
 type Dir = Dir of FP
 
 let private fpAsFileOption (fp: FP) : File option =
-  if fp <> __nullptr then
+  if fp <> Ptr.nullPtr then
     Some(File fp)
   else
     None
 
 let private fpAsDirOption (fp: FP) : Dir option =
-  if fp <> __nullptr then
+  if fp <> Ptr.nullPtr then
     Some(Dir fp)
   else
     None

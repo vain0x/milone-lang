@@ -3,19 +3,19 @@ module rec nativeptr_err.Program
 module Ptr = Std.Ptr
 
 let private testNullPtrError () =
-  let _: unit = __nullptr // type error!
-  let _: unativeint = __nullptr // type error!
-  let _: obj = __nullptr // type error!
-  let _: int list = __nullptr // type error!
+  let _: unit = Ptr.nullPtr // type error!
+  let _: unativeint = Ptr.nullPtr // type error!
+  let _: obj = Ptr.nullPtr // type error!
+  let _: int list = Ptr.nullPtr // type error!
   ()
 
 let private testPtrCastError (_t: 'T) =
   // unativeint isn't a pointer type.
   let _: voidptr = Ptr.cast 0un // type error!
-  let _: unativeint = Ptr.cast (__nullptr: nativeptr<int>) // type error!
+  let _: unativeint = Ptr.cast (Ptr.nullPtr: nativeptr<int>) // type error!
 
   // Result type must be different than argument type.
-  let _: nativeptr<'T> = Ptr.cast (__nullptr: nativeptr<'T>) // type error!
+  let _: nativeptr<'T> = Ptr.cast (Ptr.nullPtr: nativeptr<'T>) // type error!
   ()
 
 let private testPtrAsInError () =
@@ -23,10 +23,10 @@ let private testPtrAsInError () =
   let _ = Ptr.asIn () // type error!
 
   // Argument type must be nativeptr or voidptr.
-  let _ = Ptr.asIn (__nullptr: __inptr<int>) // type error!
+  let _ = Ptr.asIn (Ptr.nullPtr: __inptr<int>) // type error!
 
-  let _: byte = Ptr.asIn (__nullptr: voidptr) // type error!
-  let _: unit = Ptr.asIn (__nullptr: voidptr) // type error!
+  let _: byte = Ptr.asIn (Ptr.nullPtr: voidptr) // type error!
+  let _: unit = Ptr.asIn (Ptr.nullPtr: voidptr) // type error!
   ()
 
 let private testPtrAsNativeError () =
@@ -34,13 +34,15 @@ let private testPtrAsNativeError () =
   let _ = Ptr.asNative "" // type error!
 
   // Argument type must be __inptr or __voidinptr.
-  let _ = Ptr.asNative (__nullptr: nativeptr<int>) // type error!
+  let _ =
+    Ptr.asNative (Ptr.nullPtr: nativeptr<int>) // type error!
+
   ()
 
 let private testPtrEqualityError () =
-  let np: nativeptr<int> = __nullptr
-  let kp: __inptr<int> = __nullptr
-  let vp: voidptr = __nullptr
+  let np: nativeptr<int> = Ptr.nullPtr
+  let kp: __inptr<int> = Ptr.nullPtr
+  let vp: voidptr = Ptr.nullPtr
 
   let _ = np = 0 // type error!
   let _ = np = kp // type error!
@@ -70,14 +72,14 @@ let private testPtrSelectError () =
 let private testPtrReadError () =
   let _ = Ptr.read // error! missing arg
   let _ = Ptr.read 0 // type error!
-  let _ = Ptr.read (__nullptr: __outptr<int>) // type error!
+  let _ = Ptr.read (Ptr.nullPtr: __outptr<int>) // type error!
   ()
 
 let private testPtrWriteError () =
-  let p: nativeptr<int> = __nullptr
+  let p: nativeptr<int> = Ptr.nullPtr
   let _ = Ptr.write // error! missing args
   let _ = Ptr.write p // error! missing arg
-  let _ = Ptr.write (__nullptr: __inptr<int>) 0 // type error!
+  let _ = Ptr.write (Ptr.nullPtr: __inptr<int>) 0 // type error!
   ()
 
 let main _ =

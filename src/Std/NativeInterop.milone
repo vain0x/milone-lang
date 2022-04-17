@@ -1,5 +1,7 @@
 module rec Std.NativeInterop
 
+module Ptr = Std.Ptr
+
 let private memcpy (dest: voidptr) (src: __voidinptr) (size: unativeint) : voidptr = __nativeFun ("memcpy", dest, src, size)
 
 let private npPointeeSize (p: nativeptr<'T> ) : unativeint =
@@ -45,7 +47,7 @@ module NativePtr =
   // NativePtr at F# RFC FS-1109
   // ---------------------------------------------
 
-  let isNullPtr (p: nativeptr<_>) : bool = p = __nullptr
+  let isNullPtr (p: nativeptr<_>) : bool = p = Ptr.nullPtr
 
   /// Copies single value. (`*dest = *src`)
   let copy (dest: nativeptr<'T>) (src: nativeptr<'T>) : unit =
@@ -76,8 +78,8 @@ module NativePtr =
   // Extension.
 
   // FIXME: remove this
-  /// Deprecated: use __nullptr.
-  let __getNullPtr () : nativeptr<_> = __nullptr
+  /// Deprecated: use Ptr.nullPtr.
+  let __getNullPtr () : nativeptr<_> = Ptr.nullPtr
 
 // =============================================================================
 
@@ -98,19 +100,19 @@ module __InPtr =
     __nativeExpr ("(({0})[{1}])", p, unativeint(uint i))
 
   let read (p: __inptr<'T>) : 'T =
-    assert (p <> __nullptr)
+    assert (p <> Ptr.nullPtr)
     __nativeExpr ("(*({0}))", p)
 
   // F# RFC FS-1109
   // not supported: nullPtr (generic constant isn't supported)
 
-  let isNullPtr (p: __inptr<_>) : bool = p = __nullptr
+  let isNullPtr (p: __inptr<_>) : bool = p = Ptr.nullPtr
 
   // =============================================
 
   // FIXME: remove this
-  /// Deprecated: use __nullptr.
-  let getNullPtr () : __inptr<_> = __nullptr
+  /// Deprecated: use Ptr.nullPtr.
+  let getNullPtr () : __inptr<_> = Ptr.nullPtr
 
   /// Adds const qualifier.
   let ofNativePtr (p: nativeptr<'T>) : __inptr<'T> = __nativeCast p

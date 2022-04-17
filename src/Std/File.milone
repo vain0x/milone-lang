@@ -6,6 +6,8 @@ open Std.IO
 open Std.StdError
 open Std.Vector
 
+module Ptr = Std.Ptr
+
 // For strlen.
 __nativeDecl "#include <string.h>"
 
@@ -38,7 +40,7 @@ module File =
     let fp: FilePtr =
       __nativeFun ("fopen", toCStr pathname, toCStr "rb")
 
-    if fp <> __nullptr then
+    if fp <> Ptr.nullPtr then
       Some(File(__acquire fp)), io
     else
       None, io
@@ -48,7 +50,7 @@ module File =
     let fp: FilePtr =
       __nativeFun ("fopen", toCStr pathname, toCStr "wb")
 
-    if fp <> __nullptr then
+    if fp <> Ptr.nullPtr then
       Some(File(__acquire fp)), io
     else
       None, io

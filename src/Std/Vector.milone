@@ -16,7 +16,7 @@ type Vector<'T> = private Vector of ptr: __linear<nativeptr<'T>> * length: uint 
 let private rawAllocate (count: uint) (size: uint) : __linear<voidptr> =
   if (count ||| size) = 0u then
     // __trace "allocate 0"
-    __acquire __nullptr
+    __acquire Ptr.nullPtr
   else
     assert (count < (1u <<< 31) / size)
 
@@ -28,7 +28,7 @@ let private rawAllocate (count: uint) (size: uint) : __linear<voidptr> =
     //   + (" " + string (count * size))
     // )
 
-    assert (ptr <> __nullptr)
+    assert (ptr <> Ptr.nullPtr)
     __acquire ptr
 
 /// Deallocates an untyped dynamic array with `free`.
@@ -60,7 +60,7 @@ let private rawGrowExact
 
   let newPtr = __dispose (rawAllocate newCapacity size)
 
-  if oldPtr <> __nullptr then
+  if oldPtr <> Ptr.nullPtr then
     if length <> 0u then
       __nativeStmt ("memcpy({0}, {1}, {2});", newPtr, oldPtr, unativeint length * unativeint size)
 
@@ -173,7 +173,7 @@ let private rawSortUnstable
 module Vector =
   /// Gets an empty vector.
   let empty () : Vector<'T> =
-    Vector(__acquire __nullptr, 0u, 0u)
+    Vector(__acquire Ptr.nullPtr, 0u, 0u)
 
   /// Allocates an empty vector with the specified capacity.
   let alloc (capacity: int) : Vector<'T> =

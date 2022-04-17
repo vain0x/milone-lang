@@ -15,6 +15,7 @@ open LibSqlite3.Db
 module C = Std.StdChar
 module I = Std.StdInt
 module S = Std.StdString
+module Ptr = Std.Ptr
 
 __nativeDecl
   """
@@ -1069,7 +1070,7 @@ let private readerLoop () : __voidinptr =
 
     trace "reader exited")
 
-  __nullptr
+  Ptr.nullPtr
 
 let private serverLoop () =
   let output = getStdout ()

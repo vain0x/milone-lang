@@ -18,8 +18,7 @@ let private sortIntArray (array: nativeptr<int>) (len: int) : unit =
 let private testSort () =
   let len = 5
 
-  let array: nativeptr<int> =
-    memAlloc len sizeof<int> |> __nativeCast
+  let array: nativeptr<int> = memAlloc len sizeof<int> |> __nativeCast
 
   Ptr.write array.[0] 3
   Ptr.write array.[1] 1
@@ -72,7 +71,7 @@ let private testFunPtrCanBeResult () =
   let plus (x: int) (y: int) = x + y
   let getFunPtr () = __nativeFun plus
   let p = getFunPtr ()
-  assert (p <> __nullptr)
+  assert (p <> Ptr.nullPtr)
 
 let main _ =
   testSort ()
