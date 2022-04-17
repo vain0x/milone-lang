@@ -39,6 +39,7 @@ User-defined types:
 ## Language extensions
 
 - [linear type](x_linear_type.md)
+- [pointer types](x_ptr_types.md)
 - [native code](x_native_code.md)
 
 ## Others
