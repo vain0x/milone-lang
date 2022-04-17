@@ -198,8 +198,9 @@ type HPrim =
   | Assert
   | Printfn
   | InRegion
-  | NativeCast
   | NullPtr
+  | PtrDistance
+  | NativeCast
 
 [<NoEquality; NoComparison>]
 type HExprKind =

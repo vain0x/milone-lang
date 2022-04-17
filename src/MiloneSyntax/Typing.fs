@@ -1248,6 +1248,10 @@ let private primPtrInvalidScheme =
 
   BoundedTyScheme([ 1 ], tyFun tyUNativeInt ptrTy, [ PtrTrait ptrTy ])
 
+let private primPtrDistanceScheme =
+  let ptrTy = tyMeta 1 noLoc
+  BoundedTyScheme([ 1 ], tyFun ptrTy (tyFun ptrTy tyNativeInt), [ PtrTrait ptrTy ])
+
 let private primNativeCastScheme =
   let meta id = tyMeta id noLoc
   let srcTy = meta 1
@@ -1329,6 +1333,7 @@ let private inferPrimExpr ctx prim loc =
 
   | TPrim.PtrCast -> onBounded primPtrCastScheme
   | TPrim.PtrInvalid -> onBounded primPtrInvalidScheme
+  | TPrim.PtrDistance -> onBounded primPtrDistanceScheme
 
   | TPrim.NativeFun ->
     let ctx =

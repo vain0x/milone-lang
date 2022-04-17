@@ -90,6 +90,13 @@ let private testAsNative () =
   let mq = Ptr.asNative kq
   assert (mq = Ptr.nullPtr)
 
+let private testPtrDistance () =
+  let p: nativeptr<int> = Ptr.invalid 0x8000un
+  let q: nativeptr<int> = Ptr.invalid 0x8020un
+  assert (Ptr.distance p p = 0n)
+  assert (Ptr.distance p q = 8n)
+  assert (Ptr.distance q p = -8n)
+
 let private testEquality () =
   let np: nativeptr<int> = Ptr.nullPtr
   let p: nativeptr<int> = __nativeCast 42un
@@ -176,6 +183,7 @@ let main _ =
   testPtrCast ()
   testAsIn ()
   testAsNative ()
+  testPtrDistance ()
   testEquality ()
   testSizeOf ()
   testPtrOf ()

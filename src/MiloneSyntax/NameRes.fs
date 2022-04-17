@@ -2005,6 +2005,7 @@ let nameRes (layers: NModuleRoot list list) : TProgram * NameResResult =
       |> add "invalid" TPrim.PtrInvalid
       |> add "asIn" TPrim.PtrAsIn
       |> add "asNative" TPrim.PtrAsNative
+      |> add "distance" TPrim.PtrDistance
 
     let ctx =
       { ctx with RootModules = ("Std", stdModuleSerial) :: ctx.RootModules }

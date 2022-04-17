@@ -141,6 +141,7 @@ let private lowerPrim (prim: Tir.TPrim) : Hir.HPrim =
   | Tir.TPrim.PtrAsNative
   | Tir.TPrim.NativeCast -> Hir.HPrim.NativeCast
   | Tir.TPrim.NullPtr -> Hir.HPrim.NullPtr
+  | Tir.TPrim.PtrDistance -> Hir.HPrim.PtrDistance
 
   | Tir.TPrim.Discriminant
   | Tir.TPrim.Acquire

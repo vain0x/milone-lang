@@ -295,6 +295,7 @@ type TPrim =
   | PtrInvalid
   | PtrAsIn
   | PtrAsNative
+  | PtrDistance
 
 [<NoEquality; NoComparison>]
 type TExprKind =

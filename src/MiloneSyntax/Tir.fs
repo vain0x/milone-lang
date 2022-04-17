@@ -19,6 +19,7 @@ let tyError loc = Ty(ErrorTk loc, [])
 
 let tyInt = Ty(IntTk I32, [])
 let tyInt64 = Ty(IntTk I64, [])
+let tyNativeInt = Ty(IntTk IPtr, [])
 let tyUint8 = Ty(IntTk U8, [])
 let tyUInt16 = Ty(IntTk U16, [])
 let tyUInt64 = Ty(IntTk U32, [])
