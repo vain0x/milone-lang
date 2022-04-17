@@ -292,6 +292,7 @@ type TPrim =
   | PtrRead
   | PtrWrite
   | PtrCast
+  | PtrInvalid
   | PtrAsIn
   | PtrAsNative
 

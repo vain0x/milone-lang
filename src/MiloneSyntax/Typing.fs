@@ -1243,6 +1243,11 @@ let private primPtrCastScheme =
       DifferentTypesTrait(srcTy, destTy) ]
   )
 
+let private primPtrInvalidScheme =
+  let ptrTy = tyMeta 1 noLoc
+
+  BoundedTyScheme([ 1 ], tyFun tyUNativeInt ptrTy, [ PtrTrait ptrTy ])
+
 let private primNativeCastScheme =
   let meta id = tyMeta id noLoc
   let srcTy = meta 1
@@ -1323,6 +1328,7 @@ let private inferPrimExpr ctx prim loc =
   | TPrim.Dispose -> onUnbounded primDisposeTy
 
   | TPrim.PtrCast -> onBounded primPtrCastScheme
+  | TPrim.PtrInvalid -> onBounded primPtrInvalidScheme
 
   | TPrim.NativeFun ->
     let ctx =

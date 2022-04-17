@@ -2001,6 +2001,7 @@ let nameRes (layers: NModuleRoot list list) : TProgram * NameResResult =
       |> add "read" TPrim.PtrRead
       |> add "write" TPrim.PtrWrite
       |> add "cast" TPrim.PtrCast
+      |> add "invalid" TPrim.PtrInvalid
       |> add "asIn" TPrim.PtrAsIn
       |> add "asNative" TPrim.PtrAsNative
 
