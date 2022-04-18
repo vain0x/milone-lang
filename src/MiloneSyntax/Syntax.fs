@@ -115,22 +115,16 @@ let private keywordMapBuild () : KeywordMap =
       "sig" ]
 
   let reservedWords =
-    [ "atomic"
-      "break"
+    [ "break"
       "checked"
       "component"
       "const"
       "constraint"
-      "constructor"
       "continue"
-      "eager"
       "event"
       "external"
-      "functor"
       "include"
-      "method"
       "mixin"
-      "object"
       "parallel"
       "process"
       "protected"
@@ -138,8 +132,7 @@ let private keywordMapBuild () : KeywordMap =
       "sealed"
       "tailcall"
       "trait"
-      "virtual"
-      "volatile" ]
+      "virtual" ]
 
   let reservedToken = ErrorToken ReservedWordError
 
