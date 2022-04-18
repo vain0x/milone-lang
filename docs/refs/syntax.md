@@ -8,21 +8,21 @@ Category of tokens:
 
 - Number literal tokens
     - Decimal integer tokens (`42`)
-        - with suffix (`65u`)
+        - With suffix (`65u`)
     - Hex integer tokens (`0xca10cafe`)
-        - with suffix (`0x80000000u`)
+        - With suffix (`0x80000000u`)
     - Float tokens (`3.14`)
-        - exponential (`1e-9`)
+        - With exponential (`1e-9`)
 - Character literal tokens (`'a'`)
-    - escaped (`'\x0a'`)
+    - Escaped (`'\x0a'`)
 - String literal tokens
-    - single line (`"hey"`)
-    - raw (`"""..."""`)
+    - Single-line (`"hey"`)
+    - Raw (`"""..."""`)
 - Identifiers (`foo`)
     - Keywords (`let`)
     - Reserved F# keywords (`abstract`)
     - Reserved OCaml keywords (`asr`)
-    - Reserved words (`atomic`)
+    - Reserved words (`break`)
 - Type variables (`'T`)
 - Punctuation
     - Operator (`+`)
@@ -34,7 +34,7 @@ A digit is one of ASCII digit letters.
 
     digit = [0-9]
 
-A hex digit is one of ASCII digits and ASCII alphabets in the A-F range.
+A hex digit is one of ASCII digits and ASCII hex alphabets (A-F and a-f).
 
     hex = [0-9A-Fa-f]
 
@@ -50,11 +50,13 @@ A hexadecimal integer literal consists of `0x`, 1+ hex digits and optional suffi
 
     hex_int_lit = '0x' hex+ suffix?
 
-A floating pointer number (float) literal consists of option minus sign, 1+ digits, optional fraction, optional exponent and optional suffix. Either fraction and exponent must exist (otherwise it's integer.)
+A floating point number (float) literal consists of optional minus sign, 1+ digits, optional fraction, optional exponent and optional suffix. Either fraction or exponent part must exist (otherwise it's an integer literal.)
 
     float_lit = '-'? digit+ ('.' digit+)? ([eE] [+-]? digit+)? suffix?
 
-Let's make a group of these tokens for grammar.
+`int_lit` is a group of these integer tokens.
+`number_lit` is a group of integer and float literal tokens.
+These groups are used in grammar definition later.
 
     int_lit =
         decimal_int_lit
@@ -64,14 +66,15 @@ Let's make a group of these tokens for grammar.
         int_lit
         | float_lit
 
-Remark: Number literals can't interleave `_`s for now. Hex floats are unsupported yet.
-
 ### Character Literal Tokens
 
-Character literal token is basically single unicode character enclosed by ASCII single quotes `'`.
+A character literal token is basically single ASCII character enclosed by ASCII single quotes `'`.
 
-Control character, backslash and single quote can't appear between quotes.
-Escape sequence can be used instead.
+`verbatim_char` is a character that can appear inside quotes, which is any ASCII character except for control characters, backslash and single quote.
+Note control characters include newlines.
+
+`escape` is a so-called escape sequence to represent an non-verbatim character.
+It starts with a backslash and an ASCII alphabet follows.
 
     verbatim_char = [^\x00-\x1f\x7f\\']
 
@@ -81,38 +84,38 @@ Escape sequence can be used instead.
 
     char_lit = "'" (escape | verbatim_char) "'"
 
-Remark: `'\0'` isn't valid. Unicode escape sequence is unsupported yet.
+Remark: `'\0'` isn't valid.
 
 ### String Literal Tokens
 
-Single-line string literal token is basically single line string enclosed by ASCII double quotes `"`.
+A single-line string literal token is basically single-line string enclosed by ASCII double quotes `"`.
 
-Control characters, backslash and double quotes can't appear between quotes.
-Escape sequences can be used.
+`single_verbatim` is a character that can appear inside of quotes, which is any character except for control characters, backslash and double quote.
 
-    string_verbatim = [^\x00-\x1f\0x7f\\"]
-    single_string_lit = '"' (escape | string_verbatim)* '"'
+`escape`, defined above, can also appear inside quotes.
+
+    single_verbatim = [^\x00-\x1f\0x7f\\"]
+    single_string_lit = '"' (escape | single_verbatim)* '"'
 
 Raw string literal token is basically string enclosed by `"""`s.
-CR (0x0d) and LF (0x0a), which are control characters, can also used between these quotes.
-Unescaped double quotes can appear between these quotes, except for start and end of contents.
-Escape sequences can't be used and therefore unescaped backslashes are available.
+CR (U+000D) and LF (U+000A), which are control characters, can also appear inside quotes.
+Unescaped double quotes can appear middle of quotes, except for start and end of contents.
+Escape sequences can't be used. Unescaped backslashes are available.
 
     raw_verbatim = [^\x00-\x09\x0b\x0c\x0e-\x1f\x7f]
-    raw_string_lit = '"""' raw_verbatim+ '"""'
+    raw_string_lit = '"""' raw_verbatim* '"""'
 
     string_lit =
         single_string_lit
         | raw_string_lit
 
-Remark: String interpolation (`$""`) are unsupported yet.
+Remark: String interpolation (`$""`) isn't supported yet.
 
-Identifiers and strings must not appear consecutively without spaces or newlines. (unchecked yet.)
+Identifiers and strings mustn't appear consecutively with no spaces or newlines. (unchecked yet.)
 
 ### Identifiers
 
-Identifiers consist of ASCII digits, ASCII alphabets and ASCII underscore `_`.
-Identifier can't start with a digit.
+An identifier consists of ASCII digits, ASCII alphabets and ASCII underscore `_` except it can't start with a digit.
 
     w0 = [A-Fa-f_]
     w1 = [0-9A-Fa-f_]
@@ -121,7 +124,7 @@ Identifier can't start with a digit.
 
 ### Keywords
 
-Keywords are lexically identifiers but can't be used as symbols.
+Keywords are lexically same as identifiers but can't be used as symbols.
 
 See Syntax.fs for comprehensive list of keywords.
 
@@ -129,22 +132,25 @@ TODO: make an index for keywords and usage like this: [Keyword Reference - F# | 
 
 ### Type variables
 
-Type variable is an identifier that is prefixed by a single quote.
-Currently type variable must be single alphabet.
+A type variable consists of a single quote and single ASCII alphabet.
 
     ty_var = "'" [A-Za-z]
 
 ### Punctuations
 
-Punctuations are operators and others.
+Punctuations are operators, brackets and others.
 
-Non-operator punctuations can appear consecutively. For example, `,,` are two comma tokens. Operators don't. `++` is single operator token event hough such operator doesn't exist. This is for compatibility with F#, where custom operators are supported.
+Non-operator punctuations can appear consecutively.
+For example, `,,` is two comma tokens.
+Operators don't.
+`++` is single operator token even though such operator doesn't exist.
+This is for compatibility with F#, where custom operators are supported.
 
 TODO: make an index for punctuation and usage like this: [Symbol and Operator Reference - F# | Microsoft Docs](https://docs.microsoft.com/en-us/dotnet/fsharp/language-reference/symbol-and-operator-reference/)
 
 ## Grammar
 
-Here is informal grammar of milone-lang source code.
+Here is informal grammar of the milone-lang source code.
 
 ### Categories of Syntax
 
@@ -159,48 +165,51 @@ and others.
 
 ### Types
 
-Type variable token is literally a type.
+A type as an element of syntax is defined recursively as follows.
+
+A type variable token is literally a type.
 
     var_ty = ty_var
 
-Underscore (an identifier token) is a type to be inferred.
+An underscore identifier token is a type.
 
     infer_ty = '_'
 
-Basically, identifier is a type.
+An identifier is a type.
 It's optionally qualified by any number of qualifiers, separated by dot `.`.
 It optionally has type argument list.
 Type argument list is 1+ repetition of types, separated by comma `,` and enclosed by angle brackets `<` `>`.
+Starting bracket `<` must appear consecutively after the previous token.
 
     ty_arg_list = '<' ty (',' ty)* '>'
     app_ty = (ident '.')* ident ty_arg_list?
 
-Parentheses wrap a type.
+A pair of parentheses that wraps a type is also a type.
 
     paren_ty = '(' ty ')'
 
-Those are called atomic types.
+Then, these types are called atomic types.
 
     atom_ty = var_ty | infer_ty | app_ty | paren_ty
 
-Single identifier can be applied to a type in postfix notation, e.g. `_ list`.)
-Note `suffix` in `suffix:ident` is a label of that part.
+A single identifier can be applied to a type in postfix notation, e.g. `_ list`.
+That identifier is called a *suffix*.
 
     suffix_ty =
         suffix_ty suffix:ident
         | atom_ty
 
-Tuple types and function types have operator-like syntax.
-Tuple type constructor `*` is non-associative N-arity operator.
+A tuple type is a list of types separated by 1+ `*` operators.
+It's non-associative, N-ary operator.
 
     tuple_ty =
         suffix_ty ('*' ty)+
         | suffix_ty
 
-Function type constructor `->` is right-associative binary operator.
+A function type consists of source type, an `->` operator and destination type in right-associative infix notation.
 
     fun_ty =
-        tuple_ty '->' fun_ty
+        src:tuple_ty '->' dest:fun_ty
         | tuple_ty
 
 That's type.
@@ -208,6 +217,8 @@ That's type.
     ty = fun_ty
 
 ### Patterns
+
+Next, pattern is defined in the same way as type.
 
 Literals are patterns.
 
@@ -223,36 +234,37 @@ Literals are patterns.
 
     lit_pat = lit
 
-Underscore is a discard pattern. (Also known as wildcard.)
+An underscore token is a discard pattern. (Also known as wildcard.)
 
     discard_pat = '_'
 
-Unqualified identifier is a pattern.
+An unqualified identifier is a pattern.
 It's either a variable pattern or a variant pattern, depending on whether it's defined as a variant or not.
 
-    variant_pat = ident     (when it's defined as variant)
+    variant_pat = ident     (if defined as variant)
     ident_pat = ident       (otherwise)
 
-Identifier that is preceded by an explicit visibility is also a variable pattern.
+An identifier that is preceded by an explicit visibility is also a variable pattern.
+In this case the identifier mustn't be underscore nor defined as a variant.
 
     vis = 'public' | 'private'
     vis_ident_pat = vis ident
 
-Qualified identifier is a pattern.
+A qualified identifier is a pattern.
 
     nav_pat = (ident '.')+ ident
 
-Parentheses wrap a pattern.
+A pair of parentheses that wraps a pattern is also a pattern.
 
     paren_pat = '(' pat ')'
 
-List literal is a pattern.
-It consists of any number of subpatterns, separated by semicolon `;` and enclosed by brackets `[` `].
-Semicolons can be omit by putting subpatterns on the same column.
+A list literal is a pattern.
+It consists of any number of item patterns, separated by semicolon `;` and enclosed by brackets `[` `]`.
+Semicolons can be omit by putting item patterns on the same column.
 
     list_pat = '[' (pat (';' pat)*)? ']'
 
-Those are called atomic pattern.
+These are called atomic pattern.
 
     atom_pat =
         literal
@@ -264,37 +276,38 @@ Those are called atomic pattern.
         | paren_pat
         | list_pat
 
-Variant pattern followed by a payload pattern is a pattern.
+A variant pattern consists of a variant pattern that is followed by a payload pattern.
 
     app_pat =
-        atom_pat atom_pat
+        variant_pat atom_pat
         | atom_pat
 
-Cons (`::`) is a binary operator for patterns.
+A cons pattern consists of head pattern, `::`, and tail pattern in right-associated infix notation.
 
     cons_pat =
-        app_pat '::' app_pat
+        head:app_pat '::' tail:cons_pat
         | app_pat
 
-Type ascription pattern:
+A type ascription pattern consists of a pattern followed by `:` and a type.
 
     ascribe_pat =
         cons_pat ':' ty
         | cons_pat
 
-Tuple pattern is non-associative N-ary operator.
+A tuple pattern consists of 2+ patterns separated by `,` in non-associative N-ary infix operation.
 
     tuple_pat =
         ascribe_pat (',' ascribe_pat)+
         | ascribe_pat
 
-AS pattern (incompatible with F#):
+An `as` pattern consists of a pattern, `as` keyword and an identifier.
+This grammar is less flexible than F#.
 
     as_pat =
-        tuple_pat ('as' tuple_pat)
+        tuple_pat 'as' ident
         | tuple_pat
 
-OR pattern:
+An `or` pattern (also known as disjunction) consists of 2+ patterns separated by '|' in non-associative N-ary infix notation.
 
     or_pat =
         as_pat ('|' as_pat)+
@@ -310,13 +323,12 @@ Literals are expressions like patterns.
 
     lit_expr = lit
 
-Identifier is an expression (except for `_`.)
+An identifier is an expression (except for `_`.)
 It's optionally qualified.
+It optionally has a type argument list, which must appear consecutively without spaces.
 
-    ident_expr = ident
+    ident_expr = ident ty_arg_list?
     nav_expr = (ident '.')+ ident
-
-Remark: Type argument list for expression is unsupported yet.
 
 Parentheses wrap expressions, separated by semicolon `;`.
 Semicolons can be omit by putting subexpressions on the same column.
@@ -324,13 +336,13 @@ Semicolons can be omit by putting subexpressions on the same column.
     block = (expr ';')* expr
     paren_expr = '(' block ')'
 
-List expression is basically same as list pattern but for expression.
+A list expression is basically same as a list pattern but for expression.
 
     list_expr = '[' (expr (';' expr)*)? ']'
 
-Record expression is 1+ list of fields, separated by semicolon `;`.
+A record expression consists of 1+ list of fields, separated by semicolon `;` and enclosed by braces `{` `}`.
 Semicolons can be omit by putting fields on the same column.
-It optionally contains `with` clause.
+It optionally has `with` clause.
 
     record_expr =
         '{' (expr 'with')?
@@ -339,29 +351,29 @@ It optionally contains `with` clause.
 
 There are also expressions that start with keyword.
 
-If expression consists of a condition expression, then clause and optional else clause.
+An `if` expression consists of `if` keyword, a condition expression, then clause and an optional else clause.
 Subexpressions must be inside of the `if` keyword.
-If `else` clause is another if expression, its layout is based on the first `if` keyword.
+If `else` clause is another `if` expression, its layout is based on the first `if` keyword.
 
     if_expr = 'if' cond:expr 'then' body:block ('else' alt:(if_expr | block))?
 
-Match expression consists of a condition expression and *arms*.
-Arm starts with a pipe `|` except for the first one.
+A match expression consists of `match` keyword, a condition expression and 1+ *arms*.
+An arm starts with a pipe `|` except for the first one and contains a pattern, optional guard expression and a body expression.
 Subexpressions must be inside of the `match` keyword.
 
-    arm = pat (when guard:expr)? '->' block
+    arm = pat (when guard:expr)? '->' body:block
 
     match_expr =
         'match' cond:expr 'with'
         '|'? arm
         ('|' arm)*
 
-Function expression (a.k.a. closure, lambda.)
-Parameter patterns and body expression must be inside of the `fun` keyword.
+A function expression (a.k.a. closure or lambda) consists of a `fun` keyword, 1+ list of parameter patterns, `->` and a body expression.
+Parameter patterns and the body must be inside of the `fun` keyword.
 
     fun_expr = 'fun' pat+ -> block
 
-Let expression have two form: let-val and let-fun.
+Let expressions have two categories: let-val and let-fun.
 `in` keyword can be omit by putting `next` on the same column as the `let` keyword.
 
     let_val_expr = 'let' pat '=' init:block 'in' next:block
@@ -377,8 +389,13 @@ Those are called atomic expressions.
         | paren_expr
         | list_expr
         | record_expr
+        | if_expr
+        | match_expr
+        | fun_expr
+        | let_val_expr
+        | let_fun_expr
 
-Suffix expression is either field access, index access or slice.
+A suffix expression is either a field access, an index access or a slice operation.
 
     suffix_expr =
         suffix_expr '.' ident
@@ -386,19 +403,22 @@ Suffix expression is either field access, index access or slice.
         | suffix_expr '.' '[' expr '..' expr ']'
         | atom_expr
 
-Remark: Dot-less index syntax is unsupported yet.
+Remark: Dot-less index syntax isn't supported yet.
 
-Putting two expressions form a function application expression.
+A functional application expression is just two expressions separated by 1+ spaces.
+Argument expression must be inside of the callee expression.
 
     app_expr =
-        app_expr suffix_expr
+        callee:app_expr arg:suffix_expr
         | suffix_expr
 
-Unary operators. It's distinct from infix notation by putting the operator in front of argument with no space between them.
+A prefix expression consists of a operator and an argument expression.
+Operator and expression must appear consecutively without spaces so that the operator is distinct from a binary operator.
 
     prefix_expr = ('-' | '&&') app_expr
 
-Binary operators. Precedence from higher to lower:
+A binary operator consists of two expressions separated by an operator.
+Precedence from higher to lower:
 
 | Name  | Operators                 | Associativity |
 |:------|:--------------------------|:------|
@@ -410,19 +430,21 @@ Binary operators. Precedence from higher to lower:
 | and   | &&                        | Left  |
 | or    | \|\|                      | Left  |
 
+Note the sigil layer also contains `<= >= <> <<< >>>`.
+
     binary_op = '*' | '/' | etc.
 
     binary_expr =
         binary_expr binary_op binary_expr
-        | minus_expr
+        | prefix_expr
 
-Tuple expression.
+A tuple expression consists of 2+ expressions separated by `,`.
 
     tuple_expr =
         binary_expr (',' binary_expr)+
         | binary_expr
 
-Type ascription expression.
+A type ascription expression consists of an expression followed by a type.
 
     ascribe_expr =
         tuple_expr ':' ty
@@ -430,69 +452,66 @@ Type ascription expression.
 
 That's expression.
 
-    expr =
-        atom_expr
-        | suffix_expr
-        | app_expr
-        | minus_expr
-        | binary_expr
-        | tuple_expr
-        | type_ascribe_expr
+    expr = ascribe_expr
 
 ### Declarations
 
-Expression is a declaration.
+An expression is a declaration.
 
     expr_decl = expr
 
 Let declarations are similar to let expressions but don't have `in` clause.
 
-    let_val_decl = 'let' pat '=' init:expr
+    let_val_decl = 'let' pat '=' init:block
 
-    let_fun_decl = 'let' 'rec'? vis? ident pat+ '=' body:expr
+    let_fun_decl = 'let' 'rec'? vis? ident pat+ '=' body:block
 
 Type declarations have various forms.
 Left-hand side is same in all forms.
-Type declaration optionally has a type parameter list.
 
+A type declaration optionally has a type parameter list.
+The angle bracket must appear consecutively after the identifier without spaces.
+
+    xxx_ty_decl = 'type' vis? ident ty_param_list? '=' ...
     ty_param_list = '<' ty_var (',' ty_var)* '>'
 
-Synonym type declaration has a type in right-hand side.
+A type synonym declaration takes a type in right-hand side.
 
-    synonym_ty_decl =
+    ty_synonym_decl =
         'type' vis? ident ty_param_list? '=' ty
 
-Union type declaration has 1+ variants separated by pipe `|`, in right-hand side.
-Initial pipe is optional except when it has single variant and the variant doesn't payload (i.e. `type U = V` is rejected.)
-Each variant optionally has payload type.
-Payload type is basically a tuple type.
-Item types are optionally labelled.
+A discriminated union type declaration takes 1+ variants separated by pipe `|` in right-hand side.
+Initial pipe is optional except it looks like `type U = | V`.
+Each variant optionally has a payload type.
+A payload type is basically a tuple type but each item type can optionally have a label.
 
     payload_ty = (ident ':')? ty ('*' (ident ':')? ty)*
 
     union_ty_decl =
         'type' vis? ident ty_param_list? '='
+        vis?
          '|'? ident ('of' payload_ty)?
         ('|'  ident ('of' payload_ty)?)*
 
-Record type declaration has 1+ fields, separated by semicolon and enclosed by braces, in right-hand side.
+A record type declaration has 1+ fields separated by semicolon and enclosed by braces in right-hand side.
 Semicolons can be omit by putting fields on the same column.
 
     record_ty_decl =
         'type' vis? ident ty_param_list? '='
+        vis?
         '{' (ident ':' ty) (';' ident ':' ty)* '}'
 
-Open declaration:
+An open declaration:
 
     open_decl = 'open' (ident '.')* ident
 
-Module declaration have two forms.
-Module synonyms declaration has module path in right-hand side.
+Module declarations have two forms.
+A module synonym declaration has module path in right-hand side.
 
     module_synonym_decl =
         'module' ident '=' (ident '.')* ident
 
-Module declaration has 1+ declarations separated by semicolon `;` in right-hand side.
+A (non-synonym) module declaration has 1+ declarations separated by semicolon `;` in right-hand side.
 Semicolons can be omit by putting subdeclarations on the same column.
 Subdeclarations must be inside of the `module` keyword.
 
@@ -504,9 +523,9 @@ That's declaration.
 
     decl =
         expr_decl
-        let_val_decl
+        | let_val_decl
         | let_fun_decl
-        | synonym_ty_decl
+        | ty_synonym_decl
         | union_ty_decl
         | record_ty_decl
         | open_decl
@@ -517,13 +536,10 @@ That's declaration.
 
 Root of parse tree optionally has module head and contains 1+ declarations separated by semicolon `;`.
 Semicolons can be omit by putting declarations on the same column.
-These declarations can be on the same column as module head.
 
     head = 'module' 'rec' ident '.' ident
 
-    root =
-        head?
-        (decl (';'+ decl)*)?
+    root = head? (decl (';'+ decl)*)?
 
 ----
 
