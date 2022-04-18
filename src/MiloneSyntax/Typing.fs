@@ -468,6 +468,15 @@ let private tyIsBasic ty =
 
   | _ -> false
 
+let private tyIsPtr ty =
+  let (Ty (tk, _)) = ty
+
+  match tk with
+  | VoidPtrTk _
+  | NativePtrTk _
+  | NativeFunTk -> true
+  | _ -> false
+
 let private addTraitBound theTrait loc (ctx: TyCtx) =
   { ctx with NewTraitBounds = (theTrait, loc) :: ctx.NewTraitBounds }
 
@@ -640,17 +649,9 @@ let private resolveTraitBound (ctx: TyCtx) theTrait loc : TyCtx =
   | ToStringTrait ty -> expectBasic ctx ty
 
   | PtrTrait ty ->
-    let isPtrTy (Ty (tk, _)) =
-      match tk with
-      | VoidPtrTk _
-      | NativePtrTk _
-      | NativeFunTk -> true
-      | _ -> false
-
     match ty with
     | Ty (ErrorTk _, _) -> ok ctx
-    | _ when isPtrTy ty -> ok ctx
-    | Ty (LinearTk, [ itemTy ]) when isPtrTy itemTy -> ok ctx
+    | _ when tyIsPtr ty -> ok ctx
     | _ -> error ctx
 
   | PtrSizeTrait (Ty (tk, _)) ->
@@ -666,12 +667,25 @@ let private resolveTraitBound (ctx: TyCtx) theTrait loc : TyCtx =
 
     | _ -> error ctx
 
-  | DifferentTypesTrait (lTy, rTy) ->
-    match lTy, rTy with
+  | PtrCastTrait (srcTy, destTy) ->
+    match srcTy, destTy with
     | Ty (ErrorTk _, _), _
     | _, Ty (ErrorTk _, _) -> ok ctx
 
-    | _ when not (tyEqual lTy rTy) -> ok ctx
+    | Ty (LinearTk, [ srcTy ]), Ty (LinearTk, [ destTy ]) when
+      tyIsPtr srcTy
+      && tyIsPtr destTy
+      && not (tyEqual srcTy destTy)
+      ->
+      ok ctx
+
+    | _ when
+      tyIsPtr srcTy
+      && tyIsPtr destTy
+      && not (tyEqual srcTy destTy)
+      ->
+      ok ctx
+
     | _ -> error ctx
 
 let private attemptResolveTraitBounds (ctx: TyCtx) : TyCtx =
@@ -1234,14 +1248,7 @@ let private primNullPtrScheme =
 let private primPtrCastScheme =
   let srcTy = tyMeta 1 noLoc
   let destTy = tyMeta 2 noLoc
-
-  BoundedTyScheme(
-    [ 1; 2 ],
-    tyFun srcTy destTy,
-    [ PtrTrait srcTy
-      PtrTrait destTy
-      DifferentTypesTrait(srcTy, destTy) ]
-  )
+  BoundedTyScheme([ 1; 2 ], tyFun srcTy destTy, [ PtrCastTrait(srcTy, destTy) ])
 
 let private primPtrInvalidScheme =
   let ptrTy = tyMeta 1 noLoc

@@ -16,6 +16,10 @@ let private testPtrCastError (_t: 'T) =
 
   // Result type must be different than argument type.
   let _: nativeptr<'T> = Ptr.cast (Ptr.nullPtr: nativeptr<'T>) // type error!
+
+  // Linear type can't be wrapped nor unwrapped.
+  let _: __linear<nativeptr<'T>> = Ptr.cast (Ptr.nullPtr: voidptr) // type error!
+  let _: nativeptr<'T> = Ptr.cast (Ptr.nullPtr: __linear<voidptr>) // type error!
   ()
 
 let private testPtrAsInError () =

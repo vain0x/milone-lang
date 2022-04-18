@@ -161,12 +161,14 @@ void nativeptr_nativeptr_testPtrCast(void) {
     int* intPtr_;
     void const** objOutPtr_;
     VoidConstPtrVoidConstPtrVoidConstPtrFunPtr2 funPtr_;
+    uint32_t* uintPtrLinear_;
     voidPtr_ = ((void*)((uint8_t*)NULL));
     voidInPtr_ = ((void const*)((int const*)NULL));
     intOutPtr_ = ((int*)((int*)NULL));
     intPtr_ = ((int*)NULL);
     objOutPtr_ = ((void const**)((struct String const*)NULL));
     funPtr_ = ((VoidConstPtrVoidConstPtrVoidConstPtrFunPtr2)NULL);
+    uintPtrLinear_ = ((uint32_t*)NULL);
     return;
 }
 
@@ -177,10 +179,10 @@ void nativeptr_nativeptr_testAsIn(void) {
     void const* kq_;
     mp_ = ((int*)NULL);
     kp_ = ((int const*)mp_);
-    milone_assert((kp_ == ((int const*)NULL)), (struct String){.str = "nativeptr/nativeptr.milone", .len = 26}, 74, 2);
+    milone_assert((kp_ == ((int const*)NULL)), (struct String){.str = "nativeptr/nativeptr.milone", .len = 26}, 78, 2);
     mq_ = NULL;
     kq_ = ((void const*)mq_);
-    milone_assert((kq_ == NULL), (struct String){.str = "nativeptr/nativeptr.milone", .len = 26}, 79, 2);
+    milone_assert((kq_ == NULL), (struct String){.str = "nativeptr/nativeptr.milone", .len = 26}, 83, 2);
     return;
 }
 
@@ -191,10 +193,10 @@ void nativeptr_nativeptr_testAsNative(void) {
     void* mq_1;
     kp_1 = ((int const*)NULL);
     mp_1 = ((int*)kp_1);
-    milone_assert((mp_1 == ((int*)NULL)), (struct String){.str = "nativeptr/nativeptr.milone", .len = 26}, 85, 2);
+    milone_assert((mp_1 == ((int*)NULL)), (struct String){.str = "nativeptr/nativeptr.milone", .len = 26}, 89, 2);
     kq_1 = NULL;
     mq_1 = ((void*)kq_1);
-    milone_assert((mq_1 == NULL), (struct String){.str = "nativeptr/nativeptr.milone", .len = 26}, 90, 2);
+    milone_assert((mq_1 == NULL), (struct String){.str = "nativeptr/nativeptr.milone", .len = 26}, 94, 2);
     return;
 }
 
@@ -203,9 +205,9 @@ void nativeptr_nativeptr_testPtrDistance(void) {
     int* q_;
     p_ = ((int*)(size_t)0x8000ULL);
     q_ = ((int*)(size_t)0x8020ULL);
-    milone_assert(((p_ - p_) == 0LL), (struct String){.str = "nativeptr/nativeptr.milone", .len = 26}, 95, 2);
-    milone_assert(((q_ - p_) == 8LL), (struct String){.str = "nativeptr/nativeptr.milone", .len = 26}, 96, 2);
-    milone_assert(((p_ - q_) == -8LL), (struct String){.str = "nativeptr/nativeptr.milone", .len = 26}, 97, 2);
+    milone_assert(((p_ - p_) == 0LL), (struct String){.str = "nativeptr/nativeptr.milone", .len = 26}, 99, 2);
+    milone_assert(((q_ - p_) == 8LL), (struct String){.str = "nativeptr/nativeptr.milone", .len = 26}, 100, 2);
+    milone_assert(((p_ - q_) == -8LL), (struct String){.str = "nativeptr/nativeptr.milone", .len = 26}, 101, 2);
     return;
 }
 
@@ -216,29 +218,29 @@ void nativeptr_nativeptr_testEquality(void) {
     int const* q_1;
     np_ = ((int*)NULL);
     p_1 = ((int*)(size_t)42ULL);
-    milone_assert((p_1 != np_), (struct String){.str = "nativeptr/nativeptr.milone", .len = 26}, 102, 2);
+    milone_assert((p_1 != np_), (struct String){.str = "nativeptr/nativeptr.milone", .len = 26}, 106, 2);
     nq_ = ((int const*)NULL);
     q_1 = ((int const*)(size_t)42ULL);
-    milone_assert((q_1 != nq_), (struct String){.str = "nativeptr/nativeptr.milone", .len = 26}, 106, 2);
+    milone_assert((q_1 != nq_), (struct String){.str = "nativeptr/nativeptr.milone", .len = 26}, 110, 2);
     return;
 }
 
 void nativeptr_nativeptr_testSizeOf(void) {
     int w_;
     int call_1;
-    milone_assert((sizeof(char) == 1), (struct String){.str = "nativeptr/nativeptr.milone", .len = 26}, 111, 2);
-    milone_assert((sizeof(uint8_t) == 1), (struct String){.str = "nativeptr/nativeptr.milone", .len = 26}, 112, 2);
-    milone_assert((sizeof(int16_t) == 2), (struct String){.str = "nativeptr/nativeptr.milone", .len = 26}, 113, 2);
-    milone_assert((sizeof(int) == 4), (struct String){.str = "nativeptr/nativeptr.milone", .len = 26}, 114, 2);
-    milone_assert((sizeof(int64_t) == 8), (struct String){.str = "nativeptr/nativeptr.milone", .len = 26}, 115, 2);
+    milone_assert((sizeof(char) == 1), (struct String){.str = "nativeptr/nativeptr.milone", .len = 26}, 115, 2);
+    milone_assert((sizeof(uint8_t) == 1), (struct String){.str = "nativeptr/nativeptr.milone", .len = 26}, 116, 2);
+    milone_assert((sizeof(int16_t) == 2), (struct String){.str = "nativeptr/nativeptr.milone", .len = 26}, 117, 2);
+    milone_assert((sizeof(int) == 4), (struct String){.str = "nativeptr/nativeptr.milone", .len = 26}, 118, 2);
+    milone_assert((sizeof(int64_t) == 8), (struct String){.str = "nativeptr/nativeptr.milone", .len = 26}, 119, 2);
     w_ = sizeof(uintptr_t);
-    milone_assert((sizeof(void*) == w_), (struct String){.str = "nativeptr/nativeptr.milone", .len = 26}, 118, 2);
-    milone_assert((sizeof(struct ObjectObjectTuple2_*) == w_), (struct String){.str = "nativeptr/nativeptr.milone", .len = 26}, 119, 2);
-    milone_assert((sizeof(struct String) == (w_ * 2)), (struct String){.str = "nativeptr/nativeptr.milone", .len = 26}, 120, 2);
-    milone_assert((sizeof(struct UnitUnitFun1) == (w_ * 2)), (struct String){.str = "nativeptr/nativeptr.milone", .len = 26}, 121, 2);
-    milone_assert((sizeof(struct Int64UInt8UInt8Tuple3_) == 16), (struct String){.str = "nativeptr/nativeptr.milone", .len = 26}, 123, 2);
+    milone_assert((sizeof(void*) == w_), (struct String){.str = "nativeptr/nativeptr.milone", .len = 26}, 122, 2);
+    milone_assert((sizeof(struct ObjectObjectTuple2_*) == w_), (struct String){.str = "nativeptr/nativeptr.milone", .len = 26}, 123, 2);
+    milone_assert((sizeof(struct String) == (w_ * 2)), (struct String){.str = "nativeptr/nativeptr.milone", .len = 26}, 124, 2);
+    milone_assert((sizeof(struct UnitUnitFun1) == (w_ * 2)), (struct String){.str = "nativeptr/nativeptr.milone", .len = 26}, 125, 2);
+    milone_assert((sizeof(struct Int64UInt8UInt8Tuple3_) == 16), (struct String){.str = "nativeptr/nativeptr.milone", .len = 26}, 127, 2);
     call_1 = nativeptr_nativeptr_ObjectObjectTuple2MutPtrIntFun1_sizeOfPointee(((struct ObjectObjectTuple2_*)NULL));
-    milone_assert((call_1 == sizeof(struct ObjectObjectTuple2_)), (struct String){.str = "nativeptr/nativeptr.milone", .len = 26}, 126, 2);
+    milone_assert((call_1 == sizeof(struct ObjectObjectTuple2_)), (struct String){.str = "nativeptr/nativeptr.milone", .len = 26}, 130, 2);
     return;
 }
 
@@ -247,7 +249,7 @@ void nativeptr_nativeptr_testPtrOf(void) {
     int const* p_2;
     x_ = 42;
     p_2 = (&(x_));
-    milone_assert(((*(p_2)) == 42), (struct String){.str = "nativeptr/nativeptr.milone", .len = 26}, 131, 2);
+    milone_assert(((*(p_2)) == 42), (struct String){.str = "nativeptr/nativeptr.milone", .len = 26}, 135, 2);
     return;
 }
 
@@ -256,8 +258,8 @@ void nativeptr_nativeptr_testPtrSelect(void) {
     void* call_2;
     call_2 = nativeptr_nativeptr_memAlloc(4, sizeof(int));
     p_3 = ((int*)call_2);
-    milone_assert(((&(p_3[0])) == p_3), (struct String){.str = "nativeptr/nativeptr.milone", .len = 26}, 136, 2);
-    milone_assert(((((uintptr_t)(&(p_3[1]))) - ((uintptr_t)p_3)) == ((uintptr_t)sizeof(int))), (struct String){.str = "nativeptr/nativeptr.milone", .len = 26}, 137, 2);
+    milone_assert(((&(p_3[0])) == p_3), (struct String){.str = "nativeptr/nativeptr.milone", .len = 26}, 140, 2);
+    milone_assert(((((uintptr_t)(&(p_3[1]))) - ((uintptr_t)p_3)) == ((uintptr_t)sizeof(int))), (struct String){.str = "nativeptr/nativeptr.milone", .len = 26}, 141, 2);
     return;
 }
 
@@ -265,12 +267,12 @@ void nativeptr_nativeptr_testPtrRead(void) {
     int* p_4;
     int const* q_2;
 int array[] = {1, 2, 4, 8, 16};    p_4 = array;
-    milone_assert(((*(p_4)) == 1), (struct String){.str = "nativeptr/nativeptr.milone", .len = 26}, 143, 2);
-    milone_assert((p_4[0] == 1), (struct String){.str = "nativeptr/nativeptr.milone", .len = 26}, 144, 2);
-    milone_assert((p_4[4] == 16), (struct String){.str = "nativeptr/nativeptr.milone", .len = 26}, 145, 2);
+    milone_assert(((*(p_4)) == 1), (struct String){.str = "nativeptr/nativeptr.milone", .len = 26}, 147, 2);
+    milone_assert((p_4[0] == 1), (struct String){.str = "nativeptr/nativeptr.milone", .len = 26}, 148, 2);
+    milone_assert((p_4[4] == 16), (struct String){.str = "nativeptr/nativeptr.milone", .len = 26}, 149, 2);
     q_2 = ((int const*)p_4);
-    milone_assert(((*(q_2)) == 1), (struct String){.str = "nativeptr/nativeptr.milone", .len = 26}, 148, 2);
-    milone_assert((q_2[2] == 4), (struct String){.str = "nativeptr/nativeptr.milone", .len = 26}, 149, 2);
+    milone_assert(((*(q_2)) == 1), (struct String){.str = "nativeptr/nativeptr.milone", .len = 26}, 152, 2);
+    milone_assert((q_2[2] == 4), (struct String){.str = "nativeptr/nativeptr.milone", .len = 26}, 153, 2);
     return;
 }
 
@@ -280,15 +282,15 @@ void nativeptr_nativeptr_testPtrWrite(void) {
     int* q_4;
 int data[8] = { 0 };    p_5 = data;
     (*(p_5)) = 42;
-    milone_assert(((*(p_5)) == 42), (struct String){.str = "nativeptr/nativeptr.milone", .len = 26}, 156, 2);
+    milone_assert(((*(p_5)) == 42), (struct String){.str = "nativeptr/nativeptr.milone", .len = 26}, 160, 2);
     p_5[0] = 43;
-    milone_assert(((*(p_5)) == 43), (struct String){.str = "nativeptr/nativeptr.milone", .len = 26}, 158, 2);
+    milone_assert(((*(p_5)) == 43), (struct String){.str = "nativeptr/nativeptr.milone", .len = 26}, 162, 2);
     p_5[3] = 39;
-    milone_assert((p_5[3] == 39), (struct String){.str = "nativeptr/nativeptr.milone", .len = 26}, 160, 2);
+    milone_assert((p_5[3] == 39), (struct String){.str = "nativeptr/nativeptr.milone", .len = 26}, 164, 2);
     q_3 = &data[7];
     (*(q_3)) = 77;
     q_4 = ((int*)q_3);
-    milone_assert(((*(q_4)) == 77), (struct String){.str = "nativeptr/nativeptr.milone", .len = 26}, 165, 2);
+    milone_assert(((*(q_4)) == 77), (struct String){.str = "nativeptr/nativeptr.milone", .len = 26}, 169, 2);
     return;
 }
 
@@ -301,8 +303,8 @@ void nativeptr_nativeptr_testPoolAlloc(void) {
     p_6[0] = 42;
     p_6[1] = 43;
     p_7 = ((int*)p_6);
-    milone_assert(((*(p_7)) == 42), (struct String){.str = "nativeptr/nativeptr.milone", .len = 26}, 174, 2);
-    milone_assert((p_7[1] == 43), (struct String){.str = "nativeptr/nativeptr.milone", .len = 26}, 175, 2);
+    milone_assert(((*(p_7)) == 42), (struct String){.str = "nativeptr/nativeptr.milone", .len = 26}, 178, 2);
+    milone_assert((p_7[1] == 43), (struct String){.str = "nativeptr/nativeptr.milone", .len = 26}, 179, 2);
     return;
 }
 

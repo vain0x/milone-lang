@@ -470,9 +470,11 @@ let private traitBoundErrorToString tyDisplay it =
     "Expected a pointer-size type but was: "
     + tyDisplay ty
 
-  | DifferentTypesTrait (lTy, rTy) ->
-    "Expected two types are different but both was: "
+  | PtrCastTrait (lTy, rTy) ->
+    "Expected two different pointer types but: one was "
     + tyDisplay lTy
+    + ", the other: "
+    + tyDisplay rTy
 
 let logToString tyDisplay log =
   match log with

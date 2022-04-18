@@ -126,9 +126,9 @@ type Trait =
   | ToStringTrait of Ty
 
   | PtrTrait of Ty
+  /// Types that can be cast from srcTy to destTy.
+  | PtrCastTrait of srcTy: Ty * destTy: Ty
   | PtrSizeTrait of Ty
-  /// Two types aren't same.
-  | DifferentTypesTrait of Ty * Ty
 
 /// Type definition.
 [<NoEquality; NoComparison>]

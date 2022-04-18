@@ -66,6 +66,10 @@ let private testPtrCast () =
   let intPtr: nativeptr<int> = Ptr.cast (Ptr.nullPtr: voidptr)
   let objOutPtr: __outptr<obj> = Ptr.cast (Ptr.nullPtr: __inptr<string>)
   let funPtr: __nativeFun<obj * obj, obj> = Ptr.cast (Ptr.nullPtr: voidptr)
+
+  // Linear type can be cast.
+  let uintPtrLinear: __linear<nativeptr<uint>> = Ptr.cast (__acquire (Ptr.nullPtr: voidptr))
+  let _ = __dispose uintPtrLinear
   ()
 
 let private testAsIn () =
