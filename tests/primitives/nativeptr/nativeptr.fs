@@ -171,7 +171,7 @@ let private testPtrWrite () =
   let q = Ptr.asNative q
   assert (Ptr.read q = 77)
 
-let private testPoolAlloc () =
+let private testPtrRegionAlloc () =
   let p: __outptr<int> = Ptr.regionAlloc 2
   Ptr.write p.[0] 42
   Ptr.write p.[1] 43
@@ -202,6 +202,6 @@ let main _ =
   testPtrSelect ()
   testPtrRead ()
   testPtrWrite ()
-  testPoolAlloc ()
+  testPtrRegionAlloc ()
   testPtrAddress ()
   0
