@@ -190,6 +190,11 @@ Reading from an invalid pointer or reading as incorrect type is undefined behavi
 
 The address is considered exposed. This cast is lossy and impure.
 
+## Others
+
+- Pointer types support equality `(=)`
+- `__linear<P>` (when `P` is a pointer type) can be cast by `Ptr.cast`
+
 ## Recommended Articles
 
 The "Pointers Are Complicated" article series is good to learn about semantics of pointers.
