@@ -155,7 +155,7 @@ let private tyIsLinearWith linearTySet ty : bool =
     | StrTk
     | ObjTk
     | FunTk
-    | VoidPtrTk
+    | VoidPtrTk _
     | NativePtrTk _
     | NativeFunTk
     | NativeTypeTk _

@@ -45,8 +45,8 @@ let private tkEncode tk : int =
   | ListTk -> just 10
 
   | LinearTk -> just 11
-  | VoidPtrTk -> just 12
-  | NativePtrTk isMut -> pair 13 (isMutToInt isMut)
+  | VoidPtrTk isMut -> pair 12 (isMutToInt isMut)
+  | NativePtrTk mode -> pair 13 (RefMode.toInt mode)
   | NativeFunTk -> just 14
 
   | MetaTk (tySerial, _) -> pair 20 tySerial
@@ -85,9 +85,11 @@ let tkDisplay getTyName tk =
   | TupleTk -> "tuple"
   | ListTk -> "list"
   | LinearTk -> "__linear"
-  | VoidPtrTk -> "voidptr"
-  | NativePtrTk IsMut -> "nativeptr"
-  | NativePtrTk IsConst -> "__constptr"
+  | VoidPtrTk IsMut -> "voidptr"
+  | VoidPtrTk IsConst -> "__voidinptr"
+  | NativePtrTk RefMode.ReadWrite -> "nativeptr"
+  | NativePtrTk RefMode.ReadOnly -> "__inptr"
+  | NativePtrTk RefMode.WriteOnly -> "__outptr"
   | NativeFunTk -> "__nativeFun"
   | NativeTypeTk _ -> "__nativeType"
   | MetaTk (tySerial, _) -> getTyName tySerial
@@ -114,6 +116,8 @@ let traitMapTys f it =
   | ToFloatTrait ty -> ToFloatTrait(f ty)
   | ToStringTrait ty -> ToStringTrait(f ty)
   | PtrTrait ty -> PtrTrait(f ty)
+  | PtrSizeTrait ty -> PtrSizeTrait(f ty)
+  | PtrCastTrait (lTy, rTy) -> PtrCastTrait(f lTy, f rTy)
 
 // -----------------------------------------------
 // Types (HIR/MIR)

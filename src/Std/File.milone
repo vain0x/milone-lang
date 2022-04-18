@@ -6,10 +6,12 @@ open Std.IO
 open Std.StdError
 open Std.Vector
 
+module Ptr = Std.Ptr
+
 // For strlen.
 __nativeDecl "#include <string.h>"
 
-let private toCStr (s: string) : __constptr<char> = __nativeFun ("str_to_c_str", s)
+let private toCStr (s: string) : __inptr<char> = __nativeFun ("str_to_c_str", s)
 
 /// `FILE *`
 type private FilePtr = nativeptr<__nativeType<FILE>>
@@ -38,7 +40,7 @@ module File =
     let fp: FilePtr =
       __nativeFun ("fopen", toCStr pathname, toCStr "rb")
 
-    if __nativeExpr ("{0} != NULL", fp) then
+    if fp <> Ptr.nullPtr then
       Some(File(__acquire fp)), io
     else
       None, io
@@ -48,7 +50,7 @@ module File =
     let fp: FilePtr =
       __nativeFun ("fopen", toCStr pathname, toCStr "wb")
 
-    if __nativeExpr ("{0} != NULL", fp) then
+    if fp <> Ptr.nullPtr then
       Some(File(__acquire fp)), io
     else
       None, io
@@ -169,7 +171,7 @@ module File =
   /// Unsafely writes a block of bytes to the file.
   ///
   /// This function blocks to wait until all data are written (unless the underlying file is asynchronous).
-  let unsafeWriteExactFromRawParts (io: IO) (ptr: __constptr<byte>) (len: int) (output: File) : bool * File * IO =
+  let unsafeWriteExactFromRawParts (io: IO) (ptr: __inptr<byte>) (len: int) (output: File) : bool * File * IO =
     let fp, output = unsafeDup output
     assert (len >= 1)
 
@@ -183,7 +185,7 @@ module File =
     let fp, output = unsafeDup output
 
     if s.Length <> 0 then
-      let ptr: __constptr<char> = __nativeExpr ("{0}.str", s)
+      let ptr: __inptr<char> = __nativeExpr ("{0}.str", s)
 
       let ok, output, io =
         unsafeWriteExactFromRawParts io (__nativeCast ptr) s.Length output

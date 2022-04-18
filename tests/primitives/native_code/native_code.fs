@@ -3,6 +3,8 @@ module rec native_code.Program
 // Embedding arbitrary C codes.
 // See also x_native_code.md in docs.
 
+module Ptr = Std.Ptr
+
 let private writeLine (msg: string) : unit =
   __nativeDecl
     """
@@ -36,9 +38,9 @@ let private alignOf (_: nativeptr<'T>) : unativeint =
   __nativeExpr "_Alignof(T)"
 
 let private nativeStmtWithTyPlaceholder () =
-  assert (alignOf (__nativeCast 0n: nativeptr<char>) = 1un)
-  assert (alignOf (__nativeCast 0n: nativeptr<int>) = 4un)
-  assert (alignOf (__nativeCast 0n: nativeptr<int -> unit>) = 8un)
+  assert (alignOf (Ptr.nullPtr: nativeptr<char>) = 1un)
+  assert (alignOf (Ptr.nullPtr: nativeptr<int>) = 4un)
+  assert (alignOf (Ptr.nullPtr: nativeptr<int -> unit>) = 8un)
 
 let main _ =
   writeLine "HEY!"

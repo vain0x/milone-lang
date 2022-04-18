@@ -3,6 +3,8 @@ module rec LibNursery.EphRef
 open LibNursery.EphSerial
 open LibNursery.Runtime
 
+module Ptr = Std.Ptr
+
 /// Ephemeral reference cell.
 ///
 /// This allows a value to be explicitly indirect
@@ -15,12 +17,10 @@ type EphRef<'T> = nativeptr<'T> * EphSerial
 module rec EphRef =
   /// Creates a reference cell, initialized with specified value.
   let create (value: 'T) (serial: EphSerial) : EphRef<'T> * EphSerial =
-    let size =
-      __sizeOfVal (__nativeCast (unativeint 0): __constptr<'T>)
-      |> unativeint
+    let size = unativeint (sizeof<__inptr<'T>>)
 
     let ptr = __nativeCast (memAlloc 1 size)
-    __ptrWrite ptr 0 value
+    Ptr.write (ptr: nativeptr<'T>) value
     let refSerial, serial = EphSerial.create serial // TASK: use single allocation for value and serial
     (ptr, refSerial), serial
 
@@ -44,7 +44,7 @@ module rec EphRef =
     let serial = EphSerial.refresh serial
 
     let current =
-      __ptrRead (__nativeCast ptr: __constptr<'T>) 0
+      Ptr.read (__nativeCast ptr: __inptr<'T>)
 
     current, (ptr, serial)
 
@@ -55,7 +55,7 @@ module rec EphRef =
     // Refresh before access.
     let serial = EphSerial.refresh serial
 
-    __ptrWrite ptr 0 value
+    Ptr.write ptr value
     ptr, serial
 
   /// Gets current value and then writes new value.
@@ -66,7 +66,7 @@ module rec EphRef =
     let serial = EphSerial.refresh serial
 
     let prev =
-      __ptrRead (__nativeCast ptr: __constptr<'T>) 0
+      Ptr.read (__nativeCast ptr: __inptr<'T>)
 
-    __ptrWrite ptr 0 next
+    Ptr.write ptr next
     prev, (ptr, serial)

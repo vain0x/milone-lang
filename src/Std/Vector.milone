@@ -2,6 +2,8 @@ module rec LibLinear.Vector
 
 open Std.StdError
 
+module Ptr = Std.Ptr
+
 // For memcpy
 __nativeDecl "#include <string.h>"
 
@@ -14,7 +16,7 @@ type Vector<'T> = private Vector of ptr: __linear<nativeptr<'T>> * length: uint 
 let private rawAllocate (count: uint) (size: uint) : __linear<voidptr> =
   if (count ||| size) = 0u then
     // __trace "allocate 0"
-    __acquire (__nativeCast 0un)
+    __acquire Ptr.nullPtr
   else
     assert (count < (1u <<< 31) / size)
 
@@ -26,7 +28,7 @@ let private rawAllocate (count: uint) (size: uint) : __linear<voidptr> =
     //   + (" " + string (count * size))
     // )
 
-    assert (__nativeExpr ("{0} != NULL", ptr))
+    assert (ptr <> Ptr.nullPtr)
     __acquire ptr
 
 /// Deallocates an untyped dynamic array with `free`.
@@ -58,7 +60,7 @@ let private rawGrowExact
 
   let newPtr = __dispose (rawAllocate newCapacity size)
 
-  if __nativeExpr ("{0} != NULL", oldPtr) then
+  if oldPtr <> Ptr.nullPtr then
     if length <> 0u then
       __nativeStmt ("memcpy({0}, {1}, {2});", newPtr, oldPtr, unativeint length * unativeint size)
 
@@ -99,7 +101,7 @@ let private rawReserveExact (addition: uint) ptr length capacity size =
 ///
 /// Returns new ptr and capacity since the vector grows if full.
 let private rawPush
-  (item: obj)
+  (item: __voidinptr)
   (ptr: __linear<voidptr>)
   (length: uint)
   (capacity: uint)
@@ -133,7 +135,7 @@ let private rawPush
 /// - Sort algorithm is an unstable sort.
 /// - `ptrComparer` is called with two pointers, each of them points to an item in the vector.
 let private rawSortUnstable
-  (ptrComparer: obj -> obj -> int)
+  (ptrComparer: __voidinptr -> __voidinptr -> int)
   (ptr: __linear<voidptr>)
   (length: uint)
   (size: uint)
@@ -143,11 +145,11 @@ let private rawSortUnstable
   // Define a static function that captures the comparer via thread local.
   __nativeDecl
     """
-      struct ObjCompareFun {
+      struct PtrCompareFun {
         int(*fun)(void const *, void const *, void const *);
         void const *env;
       };
-      _Thread_local struct ObjCompareFun t_compare_fun;
+      _Thread_local struct PtrCompareFun t_compare_fun;
       static int static_compare(void const *l, void const *r) {
         return t_compare_fun.fun(t_compare_fun.env, l, r);
       }
@@ -155,8 +157,8 @@ let private rawSortUnstable
 
   __nativeStmt (
     """
-      struct ObjCompareFun prev = t_compare_fun;
-      t_compare_fun = (struct ObjCompareFun){.fun = {0}.fun, .env = {0}.env};
+      struct PtrCompareFun prev = t_compare_fun;
+      t_compare_fun = (struct PtrCompareFun){.fun = {0}.fun, .env = {0}.env};
       qsort({1}, {2}, {3}, static_compare);
       t_compare_fun = prev;
     """,
@@ -171,13 +173,12 @@ let private rawSortUnstable
 module Vector =
   /// Gets an empty vector.
   let empty () : Vector<'T> =
-    Vector(__acquire (__nativeCast 0un), 0u, 0u)
+    Vector(__acquire Ptr.nullPtr, 0u, 0u)
 
   /// Allocates an empty vector with the specified capacity.
   let alloc (capacity: int) : Vector<'T> =
     if capacity > 0 then
-      let size = __sizeOfVal (unbox (box ()): 'T)
-      let ptr = rawAllocate (uint capacity) (uint size)
+      let ptr = rawAllocate (uint capacity) (uint sizeof<'T>)
       let ptr: __linear<nativeptr<'T>> = __acquire (__nativeCast (__dispose ptr))
       Vector(ptr, 0u, uint capacity)
     else
@@ -199,7 +200,7 @@ module Vector =
     let (Vector (ptr, length, capacity)) = v
     assert (uint i < length)
     let ptr = __dispose ptr
-    let item: 'T = __ptrRead (__nativeCast ptr) i
+    let item = Ptr.read (__nativeCast ptr: __inptr<'T>).[i]
     item, Vector(__acquire ptr, length, capacity)
 
   /// Sets an item at the position. Out of bound causes crash.
@@ -207,7 +208,7 @@ module Vector =
     let (Vector (ptr, length, capacity)) = v
     assert (uint i < length)
     let ptr = __dispose ptr
-    __ptrWrite (__nativeCast ptr) i item
+    Ptr.write ptr.[i] item
     Vector(__acquire ptr, length, capacity)
 
   /// Appends an item to the end of vector.
@@ -215,10 +216,9 @@ module Vector =
     let (Vector (ptr, length, capacity)) = v
 
     let ptr, capacity =
-      let itemPtr: obj = __nativeExpr ("&({0})", item)
+      let itemPtr: __voidinptr = __nativeExpr ("&({0})", item)
       let ptr: __linear<voidptr> = __acquire (__nativeCast (__dispose ptr))
-      let size = uint (__sizeOfVal item)
-      rawPush itemPtr ptr length capacity size
+      rawPush itemPtr ptr length capacity (uint sizeof<'T>)
 
     let ptr: __linear<nativeptr<'T>> = __acquire (__nativeCast (__dispose ptr))
     Vector(ptr, length + 1u, capacity)
@@ -232,8 +232,8 @@ module Vector =
     if length <> 0u then
       let ptr = __dispose ptr
 
-      let item: 'T =
-        __ptrRead (__nativeCast ptr) (int (length - 1u))
+      let item =
+        Ptr.read (__nativeCast ptr: __inptr<'T>).[int (length - 1u)]
 
       Some item, Vector(__acquire ptr, length - 1u, capacity)
     else
@@ -249,15 +249,14 @@ module Vector =
       let ptr: __linear<voidptr> = __acquire (__nativeCast (__dispose ptr))
 
       let addition = 1u + uint (List.length xs)
-      let size = __sizeOfVal (unbox (box ()): 'T)
 
       let ptr, capacity =
-        rawReserve addition ptr length capacity (uint size)
+        rawReserve addition ptr length capacity (uint sizeof<'T>)
 
       let ptr: nativeptr<'T> = __nativeCast (__dispose ptr)
 
       let rec extendFromListLoop i x xs =
-        __ptrWrite ptr i x
+        Ptr.write ptr.[i] x
 
         match xs with
         | [] -> ()
@@ -278,8 +277,10 @@ module Vector =
     assert (uint start <= uint endIndex)
 
     let xs =
+      let ptr: __inptr<'T> = __nativeCast ptr
+
       let rec toListLoop acc i =
-        let acc = __ptrRead (__nativeCast ptr) i :: acc
+        let acc = Ptr.read ptr.[i] :: acc
 
         if i = start then
           acc
@@ -318,14 +319,13 @@ module Vector =
   let sort (itemComparer: 'T -> 'T -> int) (v: Vector<'T>) : Vector<'T> =
     // ptrComparer pl pr = itemComparer (*pl) (*pr)
     let ptrComparer =
-      fun (l: obj) (r: obj) -> itemComparer (__ptrRead (__nativeCast l) 0: 'T) (__ptrRead (__nativeCast r) 0: 'T)
+      fun (l: __voidinptr) (r: __voidinptr) -> itemComparer (Ptr.read (__nativeCast l: __inptr<'T>)) (Ptr.read (__nativeCast r: __inptr<'T>))
 
     let (Vector (ptr, length, capacity)) = v
     let ptr = __acquire (__nativeCast (__dispose ptr))
-    let size = __sizeOfVal (unbox (box ()): 'T)
 
     let ptr =
-      rawSortUnstable ptrComparer ptr length (uint size)
+      rawSortUnstable ptrComparer ptr length (uint sizeof<'T>)
 
     let ptr = __acquire (__nativeCast (__dispose ptr))
     Vector(ptr, length, capacity)
@@ -336,7 +336,7 @@ module VectorExt =
   ///
   /// Prefer to use `alloc` to allocate and `push` contents to it.
   ///
-  /// Item type must be one of: intNN, uintNN, float, unit, bool, char, obj, voidptr, nativeptr, __constptr.
+  /// Item type must be one of: intNN, uintNN, float, unit, bool, char, obj, voidptr, nativeptr, __inptr.
   let unsafeZeroCreate (length: int) : Vector<'T> =
     assert (length >= 0)
     let ptr = rawAllocate (uint length) 1u
@@ -371,10 +371,9 @@ module VectorExt =
 
     let (Vector (ptr, length, capacity)) = v
     let ptr = __acquire (__nativeCast (__dispose ptr))
-    let size = uint (__sizeOfVal (unbox (box ()): 'T))
 
     let ptr, capacity =
-      rawReserve (uint addition) ptr length capacity size
+      rawReserve (uint addition) ptr length capacity (uint sizeof<'T>)
 
     let ptr = __acquire (__nativeCast (__dispose ptr))
     Vector(ptr, length, capacity)
@@ -390,10 +389,9 @@ module VectorExt =
 
     let (Vector (ptr, length, capacity)) = v
     let ptr = __acquire (__nativeCast (__dispose ptr))
-    let size = uint (__sizeOfVal (unbox (box ()): 'T))
 
     let ptr, capacity =
-      rawReserveExact (uint addition) ptr length capacity size
+      rawReserveExact (uint addition) ptr length capacity (uint sizeof<'T>)
 
     let ptr = __acquire (__nativeCast (__dispose ptr))
     Vector(ptr, length, capacity)

@@ -38,6 +38,7 @@ type MatchIR =
 [<NoEquality; NoComparison>]
 type MGenericValue =
   | MNilGv
+  | MNullPtrGv
   | MSizeOfGv
   | MTyPlaceholderGv
 
@@ -46,6 +47,7 @@ type MGenericValue =
 type MUnary =
   | MMinusUnary
   | MNotUnary
+  | MPtrOfUnary
 
   // Converts a scalar to int.
   | MIntOfScalarUnary of intOfScalarFlavor: IntFlavor
@@ -82,6 +84,8 @@ type MUnary =
   /// Gets tail of list, unchecked.
   | MListTailUnary of itemTy: Ty
 
+  /// Dereference a typed pointer.
+  | MDerefUnary of itemTy: Ty
   | MNativeCastUnary of targetTy: Ty
 
 /// Built-in 2-arity operation in middle IR.
@@ -109,6 +113,8 @@ type MBinary =
 
   /// `s.str[i]`
   | MStrIndexBinary
+  /// `&p[i]`
+  | MPtrAddBinary
 
 [<NoEquality; NoComparison>]
 type MAction =
@@ -119,6 +125,7 @@ type MAction =
   | MCallProcAction
   | MCallClosureAction
   | MCallNativeAction of funName: string * argTys: Ty list
+  /// [ ptr; value ]
   | MPtrWriteAction
 
 [<NoEquality; NoComparison>]
@@ -150,7 +157,8 @@ type MPrim =
   | MCallClosurePrim
 
   | MCallNativePrim of funName: string * argTys: Ty list
-  | MPtrReadPrim
+
+  | MPtrInvalidPrim
 
 /// Expression in middle IR.
 [<NoEquality; NoComparison>]

@@ -57,3 +57,34 @@ For quotes:
 - Planned to support:
     - `enum`
     - Index notation without dot
+
+### Lvalue
+
+(This section is a kind of sketch of idea.)
+(See also "pointer types" in the language documentation.)
+
+Occurrence of "lvalue" in the milone-lang is restricted to `&&x`.
+
+Expressions in C are categorized to lvalues and rvalues.
+A variable reference is an lvalue.
+Compound expressions such as `x[i].y` can also be an lvalue.
+
+Lvalue expressions are context-sensitive.
+Assigning a subexpression to a temporary does change its meaning.
+
+For example, the two statements have different semantics:
+
+```c
+    f(&x[i].y);
+// vs.
+    struct S z = x[i];
+    f(&z.y);
+```
+
+Compiler needs to track context of expressions to avoid such invalid conversion.
+
+Compound lvalue expressions don't match the concept of the milone-lang as a language based on values.
+
+Another argument is that dereference operator `*` in C doesn't always dereference.
+For example, the expression `&((*p).x)` contains `*` yet doesn't read anything from memory.
+It's equivalent to `p + offsetof(struct S, x)`, which derives a pointer to field `x` from a pointer to struct `p`.

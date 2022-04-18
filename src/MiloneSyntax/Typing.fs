@@ -463,9 +463,18 @@ let private tyIsBasic ty =
   | BoolTk
   | CharTk
   | StrTk
-  | VoidPtrTk
+  | VoidPtrTk _
   | NativePtrTk _ -> true
 
+  | _ -> false
+
+let private tyIsPtr ty =
+  let (Ty (tk, _)) = ty
+
+  match tk with
+  | VoidPtrTk _
+  | NativePtrTk _
+  | NativeFunTk -> true
   | _ -> false
 
 let private addTraitBound theTrait loc (ctx: TyCtx) =
@@ -535,7 +544,8 @@ let private resolveTraitBound (ctx: TyCtx) theTrait loc : TyCtx =
       match tk, tyArgs with
       | _ when tyIsBasic ty -> true, memo
 
-      | TupleTk, [] -> true, memo
+      | TupleTk, []
+      | NativeFunTk, _ -> true, memo
 
       // Don't memoize structural types
       // because it doesn't cause infinite recursion
@@ -622,7 +632,7 @@ let private resolveTraitBound (ctx: TyCtx) theTrait loc : TyCtx =
     | FloatTk _
     | CharTk
     | StrTk
-    | VoidPtrTk
+    | VoidPtrTk _
     | NativePtrTk _ -> ok ctx
 
     | _ -> error ctx
@@ -638,16 +648,43 @@ let private resolveTraitBound (ctx: TyCtx) theTrait loc : TyCtx =
 
   | ToStringTrait ty -> expectBasic ctx ty
 
-  | PtrTrait (Ty (tk, _)) ->
+  | PtrTrait ty ->
+    match ty with
+    | Ty (ErrorTk _, _) -> ok ctx
+    | _ when tyIsPtr ty -> ok ctx
+    | _ -> error ctx
+
+  | PtrSizeTrait (Ty (tk, _)) ->
     match tk with
     | ErrorTk _
     | IntTk IPtr
     | IntTk UPtr
     | ObjTk
     | ListTk
-    | VoidPtrTk
+    | VoidPtrTk _
     | NativePtrTk _
     | NativeFunTk -> ok ctx
+
+    | _ -> error ctx
+
+  | PtrCastTrait (srcTy, destTy) ->
+    match srcTy, destTy with
+    | Ty (ErrorTk _, _), _
+    | _, Ty (ErrorTk _, _) -> ok ctx
+
+    | Ty (LinearTk, [ srcTy ]), Ty (LinearTk, [ destTy ]) when
+      tyIsPtr srcTy
+      && tyIsPtr destTy
+      && not (tyEqual srcTy destTy)
+      ->
+      ok ctx
+
+    | _ when
+      tyIsPtr srcTy
+      && tyIsPtr destTy
+      && not (tyEqual srcTy destTy)
+      ->
+      ok ctx
 
     | _ -> error ctx
 
@@ -898,6 +935,11 @@ let private txAbort (ctx: TyCtx) loc =
 
   let ty = tyError loc
   TNodeExpr(TAbortEN, [], ty, loc), ty, ctx
+
+/// Reports an error and makes a dummy expression.
+let private errorExpr (ctx: TyCtx) msg loc : TExpr * Ty * TyCtx =
+  let ctx = addError ctx msg loc
+  txAbort ctx loc
 
 // -----------------------------------------------
 // Pattern
@@ -1199,23 +1241,35 @@ let private primDisposeTy =
   let itemTy = tyMeta 1 noLoc
   TyScheme([ 1 ], tyFun (tyLinear itemTy) itemTy)
 
+let private primNullPtrScheme =
+  let ptrTy = tyMeta 1 noLoc
+  BoundedTyScheme([ 1 ], ptrTy, [ PtrTrait ptrTy ])
+
+let private primPtrCastScheme =
+  let srcTy = tyMeta 1 noLoc
+  let destTy = tyMeta 2 noLoc
+  BoundedTyScheme([ 1; 2 ], tyFun srcTy destTy, [ PtrCastTrait(srcTy, destTy) ])
+
+let private primPtrInvalidScheme =
+  let ptrTy = tyMeta 1 noLoc
+
+  BoundedTyScheme([ 1 ], tyFun tyUNativeInt ptrTy, [ PtrTrait ptrTy ])
+
+let private primPtrDistanceScheme =
+  let ptrTy = tyMeta 1 noLoc
+  BoundedTyScheme([ 1 ], tyFun ptrTy (tyFun ptrTy tyNativeInt), [ PtrTrait ptrTy ])
+
 let private primNativeCastScheme =
   let meta id = tyMeta id noLoc
   let srcTy = meta 1
   let destTy = meta 2
-  BoundedTyScheme([ 1; 2 ], tyFun srcTy destTy, [ PtrTrait srcTy; PtrTrait destTy ])
 
-let private primPtrReadScheme =
-  let meta id = tyMeta id noLoc
-  // __constptr<'a> -> int -> 'a
-  let valueTy = meta 1
-  TyScheme([ 1 ], tyFun (tyConstPtr valueTy) (tyFun tyInt valueTy))
-
-let private primPtrWriteScheme =
-  let meta id = tyMeta id noLoc
-  // nativeptr<'a> -> int -> 'a -> unit
-  let valueTy = meta 1
-  TyScheme([ 1 ], tyFun (tyNativePtr valueTy) (tyFun tyInt (tyFun valueTy tyUnit)))
+  BoundedTyScheme(
+    [ 1; 2 ],
+    tyFun srcTy destTy,
+    [ PtrSizeTrait srcTy
+      PtrSizeTrait destTy ]
+  )
 
 let private inferPrimExpr ctx prim loc =
   let onMono ty = TPrimExpr(prim, ty, loc), ty, ctx
@@ -1284,6 +1338,10 @@ let private inferPrimExpr ctx prim loc =
   | TPrim.Acquire -> onUnbounded primAcquireTy
   | TPrim.Dispose -> onUnbounded primDisposeTy
 
+  | TPrim.PtrCast -> onBounded primPtrCastScheme
+  | TPrim.PtrInvalid -> onBounded primPtrInvalidScheme
+  | TPrim.PtrDistance -> onBounded primPtrDistanceScheme
+
   | TPrim.NativeFun ->
     let ctx =
       addError ctx "Illegal use of __nativeFun. Hint: `__nativeFun (\"funName\", arg1, arg2, ...): ResultType`." loc
@@ -1310,14 +1368,13 @@ let private inferPrimExpr ctx prim loc =
 
     txAbort ctx loc
 
-  | TPrim.SizeOfVal ->
-    let ctx =
-      addError ctx "Illegal use of __sizeOfVal. Hint: `__sizeOfVal expr`." loc
+  | TPrim.NullPtr -> onBounded primNullPtrScheme
 
-    txAbort ctx loc
-
-  | TPrim.PtrRead -> onUnbounded primPtrReadScheme
-  | TPrim.PtrWrite -> onUnbounded primPtrWriteScheme
+  | TPrim.PtrSelect
+  | TPrim.PtrRead
+  | TPrim.PtrWrite
+  | TPrim.PtrAsIn
+  | TPrim.PtrAsNative -> errorExpr ctx "This function misses some argument." loc
 
 let private inferRecordExpr ctx expectOpt baseOpt fields loc =
   // First, infer base if exists.
@@ -1520,6 +1577,55 @@ let private inferAppExpr ctx itself =
 
   txApp callee arg targetTy loc, targetTy, ctx
 
+type private PtrProjectionInferError =
+  | PtrProjectionOk of TExpr * Ty * TyCtx
+  | PtrProjectionError of msg: string * Loc * TyCtx
+
+[<RequireQualifiedAccess; NoEquality; NoComparison>]
+type private PtrOperationKind =
+  | Select
+  | Read
+  | Write
+
+/// (For argument of __ptr.)
+let private inferExprAsPtrProjection ctx (kind: PtrOperationKind) expr : TExpr * Ty * TyCtx =
+  let rec go ctx expr =
+    match expr with
+    | TNodeExpr (TIndexEN, [ ptr; index ], _, loc) ->
+      match go ctx ptr with
+      | PtrProjectionOk (ptr, ptrTy, ctx) ->
+        let index, indexTy, ctx = inferExpr ctx (Some tyInt) index
+
+        let ctx =
+          unifyTy ctx (exprToLoc index) indexTy tyInt
+
+        PtrProjectionOk(TNodeExpr(TPtrOffsetEN, [ ptr; index ], ptrTy, loc), ptrTy, ctx)
+
+      | err -> err
+
+    | _ ->
+      let expr, ty, ctx = inferExpr ctx None expr
+      let ty = substTy ctx ty
+
+      match ty with
+      | Ty (NativePtrTk mode, _) ->
+        match mode, kind with
+        | RefMode.ReadOnly, PtrOperationKind.Write ->
+          PtrProjectionError("Expected nativeptr but was __inptr.", exprToLoc expr, ctx)
+        | RefMode.WriteOnly, PtrOperationKind.Read ->
+          PtrProjectionError("Expected nativeptr but was __outptr.", exprToLoc expr, ctx)
+        | _ -> PtrProjectionOk(expr, ty, ctx)
+
+      | _ -> PtrProjectionError("Expected pointer type.", exprToLoc expr, ctx)
+
+  match go ctx expr with
+  | PtrProjectionOk (expr, ty, ctx) -> expr, ty, ctx
+
+  | PtrProjectionError (msg, loc, ctx) ->
+    let ctx = addError ctx msg loc
+
+    txAbort ctx loc
+
 let private inferPrimAppExpr ctx itself =
   let prim, arg, loc =
     match itself with
@@ -1539,6 +1645,49 @@ let private inferPrimAppExpr ctx itself =
       | _ -> unreachable ()
 
     txApp (TPrimExpr(TPrim.Printfn, funTy, loc)) arg targetTy loc, targetTy, ctx
+
+  | TPrim.PtrAsIn, _ ->
+    let arg, argTy, ctx = inferExpr ctx None arg
+    let argTy = substTy ctx argTy
+
+    let ok resultTy =
+      txApp (TPrimExpr(TPrim.NativeCast, tyFun argTy resultTy, loc)) arg resultTy loc, resultTy, ctx
+
+    match argTy with
+    | Ty (VoidPtrTk IsMut, _) -> ok tyVoidInPtr
+    | Ty (NativePtrTk RefMode.ReadWrite, [ itemTy ]) -> ok (tyInPtr itemTy)
+    | Ty (NativePtrTk RefMode.WriteOnly, [ itemTy ]) -> ok (tyInPtr itemTy)
+    | Ty (ErrorTk _, _) -> arg, argTy, ctx
+    | _ -> errorExpr ctx "Expected nativeptr, __outptr or voidptr type." loc
+
+  | TPrim.PtrAsNative, _ ->
+    let arg, argTy, ctx = inferExpr ctx None arg
+    let argTy = substTy ctx argTy
+
+    let ok resultTy =
+      txApp (TPrimExpr(TPrim.NativeCast, tyFun argTy resultTy, loc)) arg resultTy loc, resultTy, ctx
+
+    match argTy with
+    | Ty (VoidPtrTk IsConst, _) -> ok tyVoidPtr
+    | Ty (NativePtrTk RefMode.ReadOnly, [ itemTy ]) -> ok (tyNativePtr itemTy)
+    | Ty (NativePtrTk RefMode.WriteOnly, [ itemTy ]) -> ok (tyNativePtr itemTy)
+    | Ty (ErrorTk _, _) -> arg, argTy, ctx
+    | _ -> errorExpr ctx "Expected __inptr, __voidinptr or __outptr type." loc
+
+  | TPrim.PtrSelect, _ -> inferExprAsPtrProjection ctx PtrOperationKind.Select arg
+
+  | TPrim.PtrRead, _ ->
+    let expr, ty, ctx =
+      inferExprAsPtrProjection ctx PtrOperationKind.Read arg
+
+    let itemTy =
+      // #unwrap_ptr_ty
+      match ty with
+      | Ty (NativePtrTk _, [ item ]) -> item
+      | Ty (ErrorTk _, _) -> ty
+      | _ -> unreachable ()
+
+    TNodeExpr(TPtrReadEN, [ expr ], itemTy, loc), itemTy, ctx
 
   // __nativeFun f
   | TPrim.NativeFun, TFunExpr (funSerial, _, _) ->
@@ -1580,11 +1729,28 @@ let private inferPrimAppExpr ctx itself =
   // __nativeDecl "code"
   | TPrim.NativeDecl, TLitExpr (StrLit code, _) -> TNodeExpr(TNativeDeclEN code, [], tyUnit, loc), tyUnit, ctx
 
-  | TPrim.SizeOfVal, _ ->
-    let arg, argTy, ctx = inferExpr ctx None arg
-    TNodeExpr(TSizeOfValEN, [ TNodeExpr(TTyPlaceholderEN, [], argTy, exprToLoc arg) ], tyInt, loc), tyInt, ctx
-
   | _ -> inferAppExpr ctx itself
+
+let private inferWriteExpr ctx expr : TExpr * Ty * TyCtx =
+  let ptr, item, loc =
+    match expr with
+    | TNodeExpr (TAppEN, [ TNodeExpr (TAppEN, [ TPrimExpr (TPrim.PtrWrite, _, loc); ptr ], _, _); item ], _, _) ->
+      ptr, item, loc
+    | _ -> unreachable ()
+
+  let ptr, ptrTy, ctx =
+    inferExprAsPtrProjection ctx PtrOperationKind.Write ptr
+
+  let itemTy =
+    // #unwrap_ptr_ty
+    match ptrTy with
+    | Ty (NativePtrTk _, [ itemTy ]) -> itemTy
+    | Ty (ErrorTk _, _) -> ptrTy
+    | _ -> unreachable ()
+
+  let item, actualItemTy, ctx = inferExpr ctx (Some itemTy) item
+  let ctx = unifyTy ctx loc actualItemTy itemTy
+  TNodeExpr(TPtrWriteEN, [ ptr; item ], tyUnit, loc), tyUnit, ctx
 
 let private inferMinusExpr ctx arg loc =
   let arg, argTy, ctx = inferExpr ctx None arg
@@ -1593,6 +1759,17 @@ let private inferMinusExpr ctx arg loc =
     ctx |> addTraitBound (IsNumberTrait argTy) loc
 
   TNodeExpr(TMinusEN, [ arg ], argTy, loc), argTy, ctx
+
+let private inferPtrOfExpr ctx arg loc =
+  match arg with
+  | TVarExpr _ ->
+    let arg, argTy, ctx = inferExpr ctx None arg
+    let ty = tyInPtr argTy
+    TNodeExpr(TPtrOfEN, [ arg ], ty, loc), ty, ctx
+
+  | _ ->
+    let ctx = addError ctx "Expected a variable." loc
+    txAbort ctx loc
 
 let private inferIndexExpr ctx l r loc =
   let l, lTy, ctx = inferExpr ctx (Some tyStr) l
@@ -1653,11 +1830,14 @@ let private inferNodeExpr ctx expr : TExpr * Ty * TyCtx =
 
   match kind, args with
   | TAppEN, [ TPrimExpr _; _ ] -> inferPrimAppExpr ctx expr
+  | TAppEN, [ TNodeExpr (TAppEN, [ TPrimExpr (TPrim.PtrWrite, _, _); _ ], _, _); _ ] -> inferWriteExpr ctx expr
   | TAppEN, [ _; _ ] -> inferAppExpr ctx expr
   | TAppEN, _ -> unreachable ()
 
   | TMinusEN, [ arg ] -> inferMinusExpr ctx arg loc
   | TMinusEN, _ -> unreachable ()
+  | TPtrOfEN, [ arg ] -> inferPtrOfExpr ctx arg loc
+  | TPtrOfEN, _ -> unreachable ()
   | TIndexEN, [ l; r ] -> inferIndexExpr ctx l r loc
   | TIndexEN, _ -> unreachable ()
   | TSliceEN, [ l; r; x ] -> inferSliceExpr ctx l r x loc
@@ -1668,6 +1848,13 @@ let private inferNodeExpr ctx expr : TExpr * Ty * TyCtx =
   | TAscribeEN, [ expr ] -> inferAscribeExpr ctx expr (getTy ()) loc
   | TAscribeEN, _ -> unreachable ()
 
+  | TSizeOfEN, [ TNodeExpr (TTyPlaceholderEN, _, ty, _) ] ->
+    assert (isNoTy ty |> not)
+    assert (getTy () |> tyEqual tyInt)
+    expr, tyInt, ctx
+
+  | TSizeOfEN, _ -> unreachable ()
+
   | TTyPlaceholderEN, _ ->
     txUnit loc, tyUnit, addError ctx "Type placeholder can appear in argument of __nativeExpr or __nativeStmt." loc
 
@@ -1675,11 +1862,13 @@ let private inferNodeExpr ctx expr : TExpr * Ty * TyCtx =
 
   | TDiscriminantEN _, _
   | TCallNativeEN _, _
+  | TPtrOffsetEN _, _
+  | TPtrReadEN _, _
+  | TPtrWriteEN _, _
   | TNativeFunEN _, _
   | TNativeExprEN _, _
   | TNativeStmtEN _, _
-  | TNativeDeclEN _, _
-  | TSizeOfValEN, _ -> unreachable ()
+  | TNativeDeclEN _, _ -> unreachable ()
 
 let private inferBlockExpr ctx expectOpt (stmts: TStmt list) last =
   let ctx = collectVarsAndFuns ctx stmts

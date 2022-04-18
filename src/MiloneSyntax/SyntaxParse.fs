@@ -173,6 +173,7 @@ let private inFirstOfPat (token: Token) =
 /// Gets whether a token can be the first of an expression.
 let private inFirstOfExpr (token: Token) =
   match token with
+  | AmpAmpToken _
   | IfToken
   | MatchToken
   | FunToken
@@ -183,7 +184,8 @@ let private inFirstOfExpr (token: Token) =
 /// In the FIRST set of arguments?
 let private inFirstOfArg (token: Token) =
   match token with
-  | MinusToken false -> false
+  | MinusToken false
+  | AmpAmpToken false -> false
 
   | _ -> inFirstOfExpr token
 
@@ -324,7 +326,7 @@ let private eatVis tokens : Vis * Tokens =
 /// `'<' ty '>'`
 let private parseTyArgs basePos (tokens, errors) : PR<ATy list> =
   match tokens with
-  | (LeftAngleToken, ltPos) :: tokens when posInside basePos ltPos ->
+  | (LeftAngleToken true, ltPos) :: tokens when posInside basePos ltPos ->
     let rec go acc (tokens, errors) =
       match tokens with
       | (CommaToken, _) :: tokens ->
@@ -690,7 +692,10 @@ let private parseAtom basePos (tokens, errors) : PR<AExpr> =
   | (FloatToken text, pos) :: tokens -> ALitExpr(FloatLit text, pos), tokens, errors
   | (CharToken value, pos) :: tokens -> ALitExpr(CharLit value, pos), tokens, errors
   | (StrToken value, pos) :: tokens -> ALitExpr(StrLit value, pos), tokens, errors
-  | (IdentToken ident, pos) :: tokens -> AIdentExpr(Name(ident, pos)), tokens, errors
+
+  | (IdentToken ident, pos) :: tokens ->
+    let tyArgs, tokens, errors = parseTyArgs pos (tokens, errors)
+    AIdentExpr(Name(ident, pos), tyArgs), tokens, errors
 
   | (LeftParenToken, pos) :: (RightParenToken, _) :: tokens -> ATupleExpr([], pos), tokens, errors
   | (LeftParenToken, parenPos) :: tokens -> parseParenBody basePos parenPos (tokens, errors)
@@ -752,12 +757,16 @@ let private parseApp basePos (tokens, errors) : PR<AExpr> =
 
   go callee (tokens, errors)
 
-/// `prefix = '-'? app`
+/// `prefix = ('-' | '&&')? app`
 let private parsePrefix basePos (tokens, errors) : PR<AExpr> =
   match tokens with
   | (MinusToken _, pos) :: tokens ->
     let arg, tokens, errors = parseSuffix basePos (tokens, errors)
     AUnaryExpr(MinusUnary, arg, pos), tokens, errors
+
+  | (AmpAmpToken _, pos) :: tokens ->
+    let arg, tokens, errors = parseSuffix basePos (tokens, errors)
+    AUnaryExpr(PtrOfUnary, arg, pos), tokens, errors
 
   | _ -> parseSuffix basePos (tokens, errors)
 
@@ -782,7 +791,7 @@ let private parseOps bp basePos l (tokens, errors) : PR<AExpr> =
   match bp, tokens with
   | OrBp, (PipePipeToken, opPos) :: tokens -> nextL l LogicalOrBinary opPos (tokens, errors)
 
-  | AndBp, (AmpAmpToken, opPos) :: tokens -> nextL l LogicalAndBinary opPos (tokens, errors)
+  | AndBp, (AmpAmpToken false, opPos) :: tokens -> nextL l LogicalAndBinary opPos (tokens, errors)
 
   | SigilBp, (RightAngleToken, opPos) :: (RightAngleToken, pos2) :: (RightAngleToken, pos3) :: tokens when
     canMerge3 opPos pos2 pos3
@@ -791,7 +800,7 @@ let private parseOps bp basePos l (tokens, errors) : PR<AExpr> =
 
   | SigilBp, (EqualToken, opPos) :: tokens -> nextL l EqualBinary opPos (tokens, errors)
   | SigilBp, (LeftRightToken, opPos) :: tokens -> nextL l NotEqualBinary opPos (tokens, errors)
-  | SigilBp, (LeftAngleToken, opPos) :: tokens -> nextL l LessBinary opPos (tokens, errors)
+  | SigilBp, (LeftAngleToken false, opPos) :: tokens -> nextL l LessBinary opPos (tokens, errors)
   | SigilBp, (LeftEqualToken, opPos) :: tokens -> nextL l LessEqualBinary opPos (tokens, errors)
   | SigilBp, (RightAngleToken, opPos) :: tokens -> nextL l GreaterBinary opPos (tokens, errors)
   | SigilBp, (RightEqualToken, opPos) :: tokens -> nextL l GreaterEqualBinary opPos (tokens, errors)
@@ -1244,7 +1253,7 @@ let private parseItems (tokens, errors) : PR<AExpr list> =
 
 let private parseTyParams identPos (tokens, errors) : PR<Name list> =
   match tokens with
-  | (LeftAngleToken, anglePos) :: tokens when posIsSameRow identPos anglePos ->
+  | (LeftAngleToken true, anglePos) :: tokens when posIsSameRow identPos anglePos ->
     let rec go acc tokens =
       match tokens with
       | (TyVarToken ident, identPos) :: tokens ->

@@ -223,8 +223,9 @@ let private mxCompare ctx (op: MBinary) lTy (l: MExpr) r loc =
         | FloatTk _
         | BoolTk
         | CharTk
-        | VoidPtrTk
-        | NativePtrTk _),
+        | VoidPtrTk _
+        | NativePtrTk _
+        | NativeFunTk),
         _) -> mxBinOpScalar ctx op l r loc
 
   | Ty (StrTk, _) -> mxStrCompare ctx op l r loc
@@ -261,7 +262,7 @@ let private toBoxMode (ty: Ty) : BoxMode =
   | Ty (CharTk, _)
   | Ty (ObjTk, _)
   | Ty (ListTk, _)
-  | Ty (VoidPtrTk, _)
+  | Ty (VoidPtrTk _, _)
   | Ty (NativePtrTk _, _)
   | Ty (NativeFunTk, _) -> BoxMode.Cast
 
@@ -492,6 +493,7 @@ let private mirifyExprVariant (ctx: MirCtx) serial loc =
 let private mirifyExprPrim (ctx: MirCtx) prim ty loc =
   match prim with
   | HPrim.Nil -> MGenericValueExpr(MNilGv, ty, loc), ctx
+  | HPrim.NullPtr -> MGenericValueExpr(MNullPtrGv, ty, loc), ctx
   | _ -> unreachable () // Primitives must appear as callee.
 
 let private doEmitIfStmt ctx cond thenHint body altHint alt targetTy loc =
@@ -1147,7 +1149,7 @@ let private mirifyCallCompareExpr ctx itself l r loc =
 
   | Ty ((IntTk I64
         | IntTk IPtr
-        | VoidPtrTk
+        | VoidPtrTk _
         | NativePtrTk _),
         _) -> MBinaryExpr(MInt64CompareBinary, l, r, loc), ctx
 
@@ -1166,9 +1168,7 @@ let private mirifyCallToIntExpr ctx itself flavor arg ty loc =
 
   | Ty ((IntTk _
         | FloatTk _
-        | CharTk
-        | VoidPtrTk
-        | NativePtrTk _),
+        | CharTk),
         _) -> MUnaryExpr(MIntOfScalarUnary flavor, arg, loc), ctx
 
   | Ty (StrTk, _) ->
@@ -1176,6 +1176,14 @@ let private mirifyCallToIntExpr ctx itself flavor arg ty loc =
 
     let ctx =
       addStmt ctx (MPrimStmt(MIntOfStrPrim flavor, [ arg ], tempSerial, ty, loc))
+
+    temp, ctx
+
+  | Ty ((VoidPtrTk _ | NativePtrTk _), _) ->
+    let temp, tempSerial, ctx = freshVar ctx "address" ty loc
+
+    let ctx =
+      addStmt ctx (MPrimStmt(MPtrInvalidPrim, [ arg ], tempSerial, ty, loc))
 
     temp, ctx
 
@@ -1392,12 +1400,13 @@ let private mirifyCallPrimExpr ctx itself prim args ty loc =
   | HPrim.InRegion, [ arg ] -> mirifyCallInRegionExpr ctx arg loc
   | HPrim.InRegion, _ -> fail ()
   | HPrim.Printfn, _ -> mirifyCallPrintfnExpr ctx args loc
+  | HPrim.PtrDistance, [ l; r ] -> regularBinary MSubBinary r l
+  | HPrim.PtrDistance, _ -> fail ()
   | HPrim.NativeCast, [ arg ] -> regularUnary (MNativeCastUnary ty) arg
   | HPrim.NativeCast, _ -> fail ()
-  | HPrim.PtrRead, _ -> regularPrim "read" MPtrReadPrim
-  | HPrim.PtrWrite, _ -> regularAction MPtrWriteAction
 
-  | HPrim.Nil, _ -> fail () // Can't be called.
+  | HPrim.Nil, _
+  | HPrim.NullPtr, _ -> fail () // Can't be called.
 
 let private mirifyExprInfCallClosure ctx callee args resultTy loc =
   let callee, ctx = mirifyExpr ctx callee
@@ -1494,6 +1503,10 @@ let private mirifyExprInf ctx itself kind args ty loc =
     let arg, ctx = mirifyExpr ctx arg
     MUnaryExpr(MMinusUnary, arg, loc), ctx
 
+  | HPtrOfEN, [ arg ], _ ->
+    let arg, ctx = mirifyExpr ctx arg
+    MUnaryExpr(MPtrOfUnary, arg, loc), ctx
+
   | HTupleEN, [], _ -> MUnitExpr loc, ctx
   | HTupleEN, _, _ -> unreachable () // Non-unit HTupleEN is resolved in MonoTy.
   | HRecordEN, _, _ -> mirifyExprRecord ctx args ty loc
@@ -1513,6 +1526,35 @@ let private mirifyExprInf ctx itself kind args ty loc =
   | HCallNativeEN funName, args, _ -> mirifyExprInfCallNative ctx funName args ty loc
   | HClosureEN, [ HFunExpr (funSerial, _, _, _); env ], _ -> mirifyExprInfClosure ctx funSerial env ty loc
 
+  | HPtrOffsetEN, [ ptr; index ], _ ->
+    let ptr, ctx = mirifyExpr ctx ptr
+    let index, ctx = mirifyExpr ctx index
+    mxBinOpScalar ctx MPtrAddBinary ptr index loc
+
+  | HPtrReadEN, [ ptr ], _ ->
+    let itemTy =
+      match exprToTy ptr with
+      | Ty (NativePtrTk RefMode.ReadWrite, [ itemTy ]) -> itemTy
+      | Ty (NativePtrTk RefMode.ReadOnly, [ itemTy ]) -> itemTy
+      | _ -> unreachable ()
+
+    let ptr, ctx = mirifyExpr ctx ptr
+    MUnaryExpr(MDerefUnary itemTy, ptr, loc), ctx
+
+  | HPtrWriteEN, [ ptr; item ], _ ->
+    assert (match exprToTy ptr with
+            | Ty (NativePtrTk RefMode.ReadWrite, _)
+            | Ty (NativePtrTk RefMode.WriteOnly, _) -> true
+            | _ -> false)
+
+    let ptr, ctx = mirifyExpr ctx ptr
+    let item, ctx = mirifyExpr ctx item
+
+    let ctx =
+      addStmt ctx (MActionStmt(MPtrWriteAction, [ ptr; item ], loc))
+
+    MUnitExpr loc, ctx
+
   | HNativeFunEN funSerial, _, _ -> MProcExpr(funSerial, loc), ctx
 
   | HNativeExprEN code, args, _ ->
@@ -1531,7 +1573,7 @@ let private mirifyExprInf ctx itself kind args ty loc =
     let ctx = addDecl ctx (MNativeDecl(code, loc))
     MUnitExpr loc, ctx
 
-  | HSizeOfValEN, [ HNodeExpr (_, _, ty, _) ], _ -> MGenericValueExpr(MSizeOfGv, ty, loc), ctx
+  | HSizeOfEN, [ HNodeExpr (_, _, ty, _) ], _ -> MGenericValueExpr(MSizeOfGv, ty, loc), ctx
   | HTyPlaceholderEN, _, _ -> MGenericValueExpr(MTyPlaceholderGv, ty, loc), ctx
 
   | t -> unreachable t

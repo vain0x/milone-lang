@@ -2,7 +2,7 @@ module rec CmdCat.Ffi
 
 module Env = Std.StdEnv
 
-let strAsPtr (s: string) : __constptr<char> = __nativeFun ("str_as_ptr", s)
+let strAsPtr (s: string) : __inptr<char> = __nativeFun ("str_as_ptr", s)
 
 type Profiler = Profiler of voidptr
 
@@ -13,10 +13,10 @@ let profileInit () : Profiler =
 let profileLog (msg: string) (Profiler state) : unit =
   __nativeFun ("milone_profile_log", msg, state)
 
-type Buffer = { Ptr: obj; Length: int }
+type Buffer = { Ptr: __voidinptr; Length: int }
 
 /// buf: Buffer const *
-let bufferRefNew (buf: obj) : Buffer =
+let bufferRefNew (buf: __voidinptr) : Buffer =
   let len: int = __nativeFun ("buffer_get_length", buf)
 
   { Ptr = buf; Length = len }
@@ -35,10 +35,10 @@ let fileClose (Fd fd) : bool =
   stat = 0
 
 let fileReadBytes (size: int) (Fd fd) : Buffer option =
-  let buf: obj =
+  let buf: __voidinptr =
     __nativeFun ("file_read_bytes", fd, size)
 
-  if __nativeCast buf <> unativeint 0 then
+  if buf <> __nullptr then
     Some(bufferRefNew buf)
   else
     None

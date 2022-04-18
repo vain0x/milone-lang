@@ -2,6 +2,8 @@ module rec LibNursery.EphSerial
 
 open LibNursery.Runtime
 
+module Ptr = Std.Ptr
+
 /// Special object to represent ownership of ephemeral value.
 ///
 /// This object can be used in a module to enforce
@@ -18,10 +20,10 @@ let private blackbox (f: unit -> EphSerial) : EphSerial = f ()
 
 let private createNew () =
   let ptr: nativeptr<uint> =
-    memAlloc 1 (unativeint (__sizeOfVal (unativeint 0)))
+    memAlloc 1 (unativeint (sizeof<unativeint>))
     |> __nativeCast
 
-  __ptrWrite ptr 0 (uint 0)
+  Ptr.write ptr (uint 0)
   EphSerial(uint 0, ptr)
 
 module rec EphSerial =
@@ -46,7 +48,7 @@ module rec EphSerial =
   /// Checks specified serial is alive (not outdated).
   let alive (serial: EphSerial) : bool * EphSerial =
     let (EphSerial (current, ptr)) = serial
-    __ptrRead (__nativeCast ptr) 0 = current, blackbox (fun () -> serial)
+    Ptr.read (__nativeCast ptr) = current, blackbox (fun () -> serial)
 
   /// Creates a fresh serial. After this, specified serial is outdated (no longer alive).
   let refresh (serial: EphSerial) : EphSerial =
@@ -55,5 +57,5 @@ module rec EphSerial =
 
     let (EphSerial (current, ptr)) = serial
     let next = current + uint 1
-    __ptrWrite ptr 0 next // should increment atomically
+    Ptr.write ptr next // should increment atomically
     EphSerial(next, ptr)

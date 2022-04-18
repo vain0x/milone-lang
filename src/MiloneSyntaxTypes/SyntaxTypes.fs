@@ -87,7 +87,7 @@ type Token =
   /// `}`
   | RightBraceToken
   /// `<`
-  | LeftAngleToken
+  | LeftAngleToken of adjacent: bool
   /// `>`
   | RightAngleToken
   /// `[<`
@@ -97,7 +97,7 @@ type Token =
   /// `&`
   | AmpToken
   /// `&&`
-  | AmpAmpToken
+  | AmpAmpToken of prefix: bool
   /// `&&&`
   | AmpAmpAmpToken
   /// `->`
@@ -178,7 +178,10 @@ type TokenizeFullResult = (Token * Pos) list
 
 /// Unary operator.
 [<NoEquality; NoComparison>]
-type Unary = | MinusUnary
+type Unary =
+  | MinusUnary
+  /// `&&`
+  | PtrOfUnary
 
 /// Binary operator.
 [<NoEquality; NoComparison>]
@@ -330,8 +333,8 @@ type AExpr =
 
   | ALitExpr of Lit * Pos
 
-  /// E.g. `x`.
-  | AIdentExpr of Name
+  /// E.g. `x`, `f<'T>`.
+  | AIdentExpr of Name * tyArgs: ATy list
 
   /// List literal, e.g. `[]`, `[2; 3]`.
   | AListExpr of AExpr list * Pos
@@ -355,7 +358,6 @@ type AExpr =
   | AIndexExpr of AExpr * AExpr * Pos
 
   /// Unary operation, e.g. `-x`.
-  /// Currently `-` is the only unary operation.
   | AUnaryExpr of Unary * AExpr * Pos
 
   /// Binary operation, e.g. `x + y`, `f x`.
@@ -461,7 +463,7 @@ type NField = NName * NExpr * NLoc
 type NExpr =
   // Fundamental:
   | Bad of NLoc
-  | Ident of NName
+  | Ident of NName * tyArgs: NTy list
   | Nav of NExpr * NName * NLoc
   | Ascribe of NExpr * NTy * NLoc
   | TyPlaceholder of NTy * NLoc

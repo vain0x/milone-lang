@@ -21,7 +21,7 @@ module ByteVector =
 
   /// Appends UTF-8 bytes of string to the vector.
   let writeString (s: string) (v: Vector<byte>) : Vector<byte> =
-    let stringPtr: __constptr<char> = __nativeExpr ("{0}.str", s)
+    let stringPtr: __inptr<char> = __nativeExpr ("{0}.str", s)
     unsafeWriteRawParts (__nativeCast stringPtr) (uint s.Length) v
 
   /// Creates a vector and copies from a string.

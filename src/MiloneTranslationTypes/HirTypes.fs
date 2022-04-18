@@ -50,8 +50,8 @@ type Tk =
   | ListTk
 
   // FFI types.
-  | VoidPtrTk
-  | NativePtrTk of nativePtrIsMut: IsMut
+  | VoidPtrTk of IsMut
+  | NativePtrTk of mode: RefMode
   | NativeFunTk
   | NativeTypeTk of cCode: string
 
@@ -198,14 +198,17 @@ type HPrim =
   | Assert
   | Printfn
   | InRegion
+  | NullPtr
+  | PtrDistance
   | NativeCast
-  | PtrRead
-  | PtrWrite
 
 [<NoEquality; NoComparison>]
 type HExprKind =
   /// `-x`.
   | HMinusEN
+
+  /// `&&x`.
+  | HPtrOfEN
 
   | HAppEN
 
@@ -244,6 +247,13 @@ type HExprKind =
   /// Gets i'th field of record.
   | HRecordItemEN of index: int
 
+  /// `Ptr.select p.[i]`
+  | HPtrOffsetEN
+  /// Ptr.read accessPath
+  | HPtrReadEN
+  /// Ptr.write accessPath value
+  | HPtrWriteEN
+
   /// Use function as function pointer.
   | HNativeFunEN of FunSerial
 
@@ -256,8 +266,8 @@ type HExprKind =
   /// Embed some C toplevel codes to output.
   | HNativeDeclEN of nativeDeclCode: string
 
-  /// Size of type.
-  | HSizeOfValEN
+  /// Size of type. Argument is a type placeholder. The result type is int.
+  | HSizeOfEN
 
   /// Name of type.
   | HTyPlaceholderEN

@@ -180,7 +180,7 @@ let private readLine (input: Stream) : string option * Stream =
   else
     None, input
 
-let private doWriteExact (ptr: __constptr<byte>) (len: int) (output: Stream) : unit =
+let private doWriteExact (ptr: __inptr<byte>) (len: int) (output: Stream) : unit =
   assert (len >= 1)
 
   __nativeStmt (
@@ -210,8 +210,8 @@ let private writeExact (buf: Buffer) (len: int) (output: Stream) : Buffer * Stre
 let private writeStringExact (s: string) (output: Stream) : Stream =
   if s.Length > 0 then
     __nativeStmt ("char const *ptr = {0}.str;", s)
-    let ptr: __constptr<char> = __nativeExpr "ptr"
-    doWriteExact (__nativeCast ptr: __constptr<byte>) s.Length output
+    let ptr: __inptr<char> = __nativeExpr "ptr"
+    doWriteExact (__nativeCast ptr: __inptr<byte>) s.Length output
 
   output
 

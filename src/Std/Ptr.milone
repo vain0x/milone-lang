@@ -1,0 +1,15 @@
+// Std.Ptr also contains several primitives.
+
+/// Allocates a block of memory in the current region.
+/// (Similar to `calloc`.)
+///
+/// Returned memory is aligned to `size`. Contents are zeroed.
+let rawRegionAlloc (count: int) (size: int): voidptr =
+  if (uint count ||| uint size) <> 0u then
+    __nativeExpr("milone_mem_alloc({0}, (size_t){1})", count, size)
+  else
+    __nativeExpr "NULL" // Can't use Std.Ptr.nullPtr here.
+
+/// Allocates a block of memory.
+let regionAlloc (count: int): __outptr<'T> =
+  __nativeCast (rawRegionAlloc count sizeof<'T>)

@@ -95,9 +95,11 @@ let private tyPrimOfName ident tys =
   | "list", [ itemTy ] -> Some(tyList itemTy)
 
   | "__linear", [ itemTy ] -> Ty(LinearTk, [ itemTy ]) |> Some
-  | "voidptr", [] -> Ty(VoidPtrTk, []) |> Some
-  | "nativeptr", [ itemTy ] -> Ty(NativePtrTk IsMut, [ itemTy ]) |> Some
-  | "__constptr", [ itemTy ] -> Ty(NativePtrTk IsConst, [ itemTy ]) |> Some
+  | "voidptr", [] -> Ty(VoidPtrTk IsMut, []) |> Some
+  | "nativeptr", [ itemTy ] -> tyNativePtr itemTy |> Some
+  | "__voidinptr", [] -> Ty(VoidPtrTk IsConst, []) |> Some
+  | "__inptr", [ itemTy ] -> tyInPtr itemTy |> Some
+  | "__outptr", [ itemTy ] -> tyOutPtr itemTy |> Some
 
   | "__nativeFun", [ Ty (TupleTk, itemTys); resultTy ] ->
     Ty(NativeFunTk, List.append itemTys [ resultTy ])
@@ -142,6 +144,7 @@ type private ValueSymbol =
   | VarSymbol of varSerial: VarSerial
   | FunSymbol of funSerial: FunSerial
   | VariantSymbol of variantSerial: VariantSerial
+  | PrimSymbol of TPrim
 
 [<NoEquality; NoComparison>]
 type private TySymbol =
@@ -1472,6 +1475,7 @@ let private doNameResVarExpr ctx ident loc : TExpr option =
       | VarSymbol serial -> TVarExpr(serial, noTy, loc)
       | FunSymbol serial -> TFunExpr(serial, noTy, loc)
       | VariantSymbol serial -> TVariantExpr(serial, noTy, loc)
+      | PrimSymbol prim -> TPrimExpr(prim, noTy, loc)
 
     Some expr
 
@@ -1480,10 +1484,22 @@ let private doNameResVarExpr ctx ident loc : TExpr option =
     | Some prim -> TPrimExpr(prim, noTy, loc) |> Some
     | None -> None
 
-let private nameResUnqualifiedIdentExpr ctx ident loc : TExpr * ScopeCtx =
-  match doNameResVarExpr ctx ident loc with
-  | Some expr -> expr, ctx
-  | None -> errorExpr ctx (UndefinedValueError ident) loc
+let private nameResUnqualifiedIdentExpr ctx ident loc tyArgs : TExpr * ScopeCtx =
+  if List.isEmpty tyArgs then
+    match doNameResVarExpr ctx ident loc with
+    | Some expr -> expr, ctx
+    | None -> errorExpr ctx (UndefinedValueError ident) loc
+  else
+    let tyArgs, ctx =
+      List.mapFold nameResTyInAscription ctx tyArgs
+
+    match resolveUnqualifiedValue ctx ident with
+    | None when ident = "sizeof" ->
+      match tyArgs with
+      | [ ty ] -> TNodeExpr(TSizeOfEN, [ TNodeExpr(TTyPlaceholderEN, [], ty, loc) ], tyInt, loc), ctx
+      | _ -> errorExpr ctx (TyArityError(ident, List.length tyArgs, 1)) loc
+
+    | _ -> errorExpr ctx UnimplTyArgListError loc
 
 let private nameResNavExpr (ctx: ScopeCtx) (expr: NExpr) : TExpr * ScopeCtx =
   /// Resolves an expressions as scope.
@@ -1493,7 +1509,7 @@ let private nameResNavExpr (ctx: ScopeCtx) (expr: NExpr) : TExpr * ScopeCtx =
   /// exprOpt is also obtained by resolving inner `nav`s as possible.
   let rec resolveExprAsNsOwners ctx expr : ResolvedExpr * ScopeCtx =
     match expr with
-    | NExpr.Ident (ident, loc) ->
+    | NExpr.Ident ((ident, loc), []) ->
       let nsOwners = resolveUnqualifiedNsOwner ctx ident
       let exprOpt = doNameResVarExpr ctx ident loc
 
@@ -1534,6 +1550,7 @@ let private nameResNavExpr (ctx: ScopeCtx) (expr: NExpr) : TExpr * ScopeCtx =
           | Some (VariantSymbol variantSerial) ->
             TVariantExpr(variantSerial, noTy, identLoc)
             |> Some
+          | Some (PrimSymbol prim) -> TPrimExpr(prim, noTy, identLoc) |> Some
           | None -> None
 
         // If not resolved as value, keep try to unresolved.
@@ -1566,7 +1583,7 @@ let private nameResExpr (ctx: ScopeCtx) (expr: NExpr) : TExpr * ScopeCtx =
   | NExpr.Bad loc -> txAbort loc, ctx
   | NExpr.Lit (lit, loc) -> TLitExpr(lit, loc), ctx
 
-  | NExpr.Ident (ident, loc) -> nameResUnqualifiedIdentExpr ctx ident loc
+  | NExpr.Ident ((ident, loc), tyArgs) -> nameResUnqualifiedIdentExpr ctx ident loc tyArgs
   | NExpr.Nav _ -> nameResNavExpr ctx expr
 
   | NExpr.Ascribe (body, ty, loc) ->
@@ -1633,6 +1650,10 @@ let private nameResExpr (ctx: ScopeCtx) (expr: NExpr) : TExpr * ScopeCtx =
   | NExpr.Unary (MinusUnary, arg, loc) ->
     let arg, ctx = arg |> nameResExpr ctx
     TNodeExpr(TMinusEN, [ arg ], noTy, loc), ctx
+
+  | NExpr.Unary (PtrOfUnary, arg, loc) ->
+    let arg, ctx = arg |> nameResExpr ctx
+    TNodeExpr(TPtrOfEN, [ arg ], noTy, loc), ctx
 
   | NExpr.Binary (AppBinary, l, r, loc) ->
     let l, ctx = l |> nameResExpr ctx
@@ -1960,6 +1981,37 @@ let nameRes (layers: NModuleRoot list list) : TProgram * NameResResult =
   // note: NameRes should work per layer in parallel
   //       but it doesn't so due to sequential serial generation for now.
 
+  let state =
+    let stdModuleSerial: ModuleTySerial = 1000000001 // 10^8
+    let stdNs = nsOwnerOfModule stdModuleSerial
+    let ptrModuleSerial: ModuleTySerial = 1000000002
+    let ptrNs = nsOwnerOfModule ptrModuleSerial
+
+    let state = emptyState ()
+    let ctx = state.ScopeCtx
+    let ctx = addNsToNs ctx stdNs "Ptr" ptrNs
+
+    // Std.Ptr.select etc.
+    let ctx =
+      let add alias prim ctx =
+        addValueToNs ctx ptrNs alias (PrimSymbol prim)
+
+      ctx
+      |> add "select" TPrim.PtrSelect
+      |> add "read" TPrim.PtrRead
+      |> add "write" TPrim.PtrWrite
+      |> add "nullPtr" TPrim.NullPtr
+      |> add "cast" TPrim.PtrCast
+      |> add "invalid" TPrim.PtrInvalid
+      |> add "asIn" TPrim.PtrAsIn
+      |> add "asNative" TPrim.PtrAsNative
+      |> add "distance" TPrim.PtrDistance
+
+    let ctx =
+      { ctx with RootModules = ("Std", stdModuleSerial) :: ctx.RootModules }
+
+    { state with ScopeCtx = ctx }
+
   let modules, state =
     layers
     |> listCollectFold
@@ -1973,7 +2025,7 @@ let nameRes (layers: NModuleRoot list list) : TProgram * NameResResult =
                   let state, localVars = sMerge newRootModule state ctx
                   { m with Vars = localVars }, state)
                 state)
-         (emptyState ())
+         state
 
   let mainFunOpt =
     state.Funs

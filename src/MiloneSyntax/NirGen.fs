@@ -124,7 +124,7 @@ let private desugarIf cond body altOpt pos : AExpr =
 /// `fun x y .. -> z` ==> `let f x y .. = z in f`
 let private desugarFun pats body pos : AExpr =
   let name = "fun"
-  let next = AIdentExpr(Name(name, pos))
+  let next = AIdentExpr(Name(name, pos), [])
   ALetExpr(ALetContents.LetFun(NotRec, PrivateVis, Name(name, pos), pats, None, body), next, pos)
 
 /// Desugars `-x`.
@@ -216,7 +216,7 @@ let private ngTy (docId: DocId) (ctx: NirGenCtx) (ty: ATy) : NTy * NirGenCtx =
 
   | AVarTy (Name (ident, pos)) -> NTy.Var("'" + ident, toLoc pos), ctx
 
-  /// `ty suffix` ===> `suffix<ty>`
+  // `ty suffix` ===> `suffix<ty>`
   | ASuffixTy (innerTy, Name (suffix, pos)) ->
     let innerTy, ctx = onTy ctx innerTy
     let loc = toLoc pos
@@ -315,6 +315,7 @@ let private ngLetContents docId ctx (contents: ALetContents) pos : NStmt * NirGe
 
 let private ngExpr (docId: DocId) (ctx: NirGenCtx) (expr: AExpr) : NExpr * NirGenCtx =
   let onTy ctx ty = ngTy docId ctx ty
+  let onTys ctx tys = List.mapFold (ngTy docId) ctx tys
   let onPat ctx pat = ngPat docId ctx pat
   let onExpr ctx expr = ngExpr docId ctx expr
   let onExprs ctx exprs = List.mapFold (ngExpr docId) ctx exprs
@@ -331,7 +332,10 @@ let private ngExpr (docId: DocId) (ctx: NirGenCtx) (expr: AExpr) : NExpr * NirGe
     NExpr.Bad(toLoc pos), ctx
 
   | ALitExpr (lit, pos) -> NExpr.Lit(lit, toLoc pos), ctx
-  | AIdentExpr name -> NExpr.Ident(onName name), ctx
+
+  | AIdentExpr (name, tyArgs) ->
+    let tyArgs, ctx = onTys ctx tyArgs
+    NExpr.Ident(onName name, tyArgs), ctx
 
   | AListExpr ([], pos) -> NExpr.Nil(toLoc pos), ctx
   | AListExpr (items, pos) -> ngExpr docId ctx (desugarListExpr items pos)
@@ -395,6 +399,10 @@ let private ngExpr (docId: DocId) (ctx: NirGenCtx) (expr: AExpr) : NExpr * NirGe
       let arg, ctx = arg |> onExpr ctx
       NExpr.Unary(MinusUnary, arg, toLoc pos), ctx
 
+  | AUnaryExpr (op, arg, pos) ->
+    let arg, ctx = arg |> onExpr ctx
+    NExpr.Unary(op, arg, toLoc pos), ctx
+
   | ABinaryExpr (NotEqualBinary, l, r, pos) -> ngExpr docId ctx (desugarBinNe l r pos)
   | ABinaryExpr (LessEqualBinary, l, r, pos) -> ngExpr docId ctx (desugarBinLe l r pos)
   | ABinaryExpr (GreaterBinary, l, r, pos) -> ngExpr docId ctx (desugarBinGt l r pos)
@@ -413,7 +421,7 @@ let private ngExpr (docId: DocId) (ctx: NirGenCtx) (expr: AExpr) : NExpr * NirGe
     NExpr.Tuple(items, toLoc pos), ctx
 
   // (__type: 'T)
-  | AAscribeExpr (AIdentExpr (Name ("__type", _)), ty, pos) ->
+  | AAscribeExpr (AIdentExpr (Name ("__type", _), []), ty, pos) ->
     let ty, ctx = ty |> onTy ctx
     NExpr.TyPlaceholder(ty, toLoc pos), ctx
 
@@ -491,7 +499,7 @@ let private ngDecl docId attrs ctx decl : NDecl * NirGenCtx =
       attrs
       |> List.exists (fun a ->
         match a with
-        | ABinaryExpr (AppBinary, AIdentExpr (Name ("Repr", _)), ALitExpr (StrLit "C", _), _) -> true
+        | ABinaryExpr (AppBinary, AIdentExpr (Name ("Repr", _), []), ALitExpr (StrLit "C", _), _) -> true
         | _ -> false)
       |> IsCRepr
 

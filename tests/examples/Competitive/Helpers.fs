@@ -1,5 +1,7 @@
 module rec Competitive.Helpers
 
+module Ptr = Std.Ptr
+
 // -----------------------------------------------
 // Native functions
 // -----------------------------------------------
@@ -7,22 +9,23 @@ module rec Competitive.Helpers
 let memAlloc (len: int) (size: int) : voidptr =
   __nativeFun ("milone_mem_alloc", len, unativeint size)
 
-let memCopy (dest: voidptr) (src: obj) (size: int) : voidptr =
+let memCopy (dest: voidptr) (src: __voidinptr) (size: int) : voidptr =
   __nativeFun ("memcpy", dest, src, unativeint size)
 
 let scanInt () : int = __nativeFun "scan_int"
 
 let rawIntArrayNew (len: int) : voidptr =
-  memAlloc len (__sizeOfVal 0) |> __nativeCast
+  memAlloc len sizeof<int> |> __nativeCast
 
-let rawIntArrayGet (array: voidptr) (index: int) : int = __ptrRead (__nativeCast array) index
+let rawIntArrayGet (array: voidptr) (index: int) : int =
+  Ptr.read (__nativeCast array: __inptr<int>).[index]
 
 let rawIntArraySet (array: voidptr) (index: int) (value: int) : unit =
-  __ptrWrite (__nativeCast array) index value
+  Ptr.write (__nativeCast array: nativeptr<int>).[index] value
 
 let rawMemoryCopy (dest: voidptr) (src: voidptr) (size: int) : unit =
   let _ =
-    memCopy dest (__nativeCast src) (size * __sizeOfVal 0)
+    memCopy dest (__nativeCast src) (size * sizeof<int>)
 
   ()
 

@@ -64,9 +64,9 @@ let private monoTyCompare (l: MonoTy) (r: MonoTy) : int =
     | M.FunMt _ -> just 8
     | M.ListMt _ -> just 9
 
-    | M.VoidPtrMt -> just 11
-    | M.NativePtrMt (IsConst, _) -> pair 12 1
-    | M.NativePtrMt (IsMut, _) -> pair 12 2
+    | M.VoidPtrMt IsConst -> pair 11 1
+    | M.VoidPtrMt IsMut -> pair 11 2
+    | M.NativePtrMt (mode, _) -> pair 12 (RefMode.toInt mode)
     | M.NativeFunMt _ -> just 13
     | M.NativeTypeMt _ -> just 14
 
@@ -77,7 +77,7 @@ let private monoTyCompare (l: MonoTy) (r: MonoTy) : int =
   | M.ListMt l, M.ListMt r -> monoTyCompare l r
   | M.FunMt l, M.FunMt r -> listCompare monoTyCompare l r
   | M.NativeFunMt l, M.NativeFunMt r -> listCompare monoTyCompare l r
-  | M.NativePtrMt (lMut, l), M.NativePtrMt (rMut, r) when mutEquals lMut rMut -> monoTyCompare l r
+  | M.NativePtrMt (lMode, l), M.NativePtrMt (rMode, r) when RefMode.equals lMode rMode -> monoTyCompare l r
   | M.NativeTypeMt l, M.NativeTypeMt r -> compare l r
   | _ -> compare (encode l) (encode r)
 
@@ -180,7 +180,7 @@ let private mtTy (ty: Ty, ctx: MtCtx) : M.MonoTy * MtCtx =
   | CharTk, _ -> M.CharMt, ctx
   | StrTk, _ -> M.StrMt, ctx
   | ObjTk, _ -> M.ObjMt, ctx
-  | VoidPtrTk, _ -> M.VoidPtrMt, ctx
+  | VoidPtrTk isMut, _ -> M.VoidPtrMt isMut, ctx
   | NativeTypeTk cCode, _ -> M.NativeTypeMt cCode, ctx
   | RecordTk tySerial, _ -> M.RecordMt tySerial, ctx
 
@@ -201,7 +201,7 @@ let private mtTy (ty: Ty, ctx: MtCtx) : M.MonoTy * MtCtx =
   | ListTk, [ itemTy ] -> M.ListMt itemTy, ctx
   | ListTk, _ -> unreachable ()
 
-  | NativePtrTk isMut, [ itemTy ] -> M.NativePtrMt(isMut, itemTy), ctx
+  | NativePtrTk mode, [ itemTy ] -> M.NativePtrMt(mode, itemTy), ctx
   | NativePtrTk _, _ -> unreachable ()
   | NativeFunTk, _ -> M.NativeFunMt tyArgs, ctx
 
@@ -576,7 +576,7 @@ let private bthTy (ty: MonoTy) : Ty =
   | M.ListMt itemTy -> newTyApp ListTk [ itemTy ]
   | M.FunMt tyArgs -> newTyApp FunTk tyArgs
 
-  | M.VoidPtrMt -> ofTk VoidPtrTk
+  | M.VoidPtrMt isMut -> ofTk (VoidPtrTk isMut)
   | M.NativePtrMt (isMut, itemTy) -> newTyApp (NativePtrTk isMut) [ itemTy ]
   | M.NativeFunMt tyArgs -> newTyApp NativeFunTk tyArgs
   | M.NativeTypeMt cCode -> ofTk (NativeTypeTk cCode)

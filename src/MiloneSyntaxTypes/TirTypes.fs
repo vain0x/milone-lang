@@ -64,8 +64,8 @@ type Tk =
   // Special types.
   /// Ty args must be `[t]`.
   | LinearTk
-  | VoidPtrTk
-  | NativePtrTk of nativePtrIsMut: IsMut
+  | VoidPtrTk of voidPtrIsMut: IsMut
+  | NativePtrTk of mode: RefMode
   | NativeFunTk
   | NativeTypeTk of cCode: string
 
@@ -126,6 +126,9 @@ type Trait =
   | ToStringTrait of Ty
 
   | PtrTrait of Ty
+  /// Types that can be cast from srcTy to destTy.
+  | PtrCastTrait of srcTy: Ty * destTy: Ty
+  | PtrSizeTrait of Ty
 
 /// Type definition.
 [<NoEquality; NoComparison>]
@@ -284,14 +287,23 @@ type TPrim =
   | NativeExpr
   | NativeStmt
   | NativeDecl
-  | SizeOfVal
+  | NullPtr
+  | PtrSelect
   | PtrRead
   | PtrWrite
+  | PtrCast
+  | PtrInvalid
+  | PtrAsIn
+  | PtrAsNative
+  | PtrDistance
 
 [<NoEquality; NoComparison>]
 type TExprKind =
   /// `-x`.
   | TMinusEN
+
+  /// `&&x`.
+  | TPtrOfEN
 
   | TAppEN
 
@@ -312,6 +324,13 @@ type TExprKind =
 
   | TDiscriminantEN of VariantSerial
 
+  /// `Ptr.select p.[i]`
+  | TPtrOffsetEN
+  /// Ptr.read accessPath
+  | TPtrReadEN
+  /// Ptr.write accessPath value
+  | TPtrWriteEN
+
   /// Use function as function pointer.
   | TNativeFunEN of FunSerial
 
@@ -324,8 +343,8 @@ type TExprKind =
   /// Embed some C toplevel codes to output.
   | TNativeDeclEN of nativeDeclCode: string
 
-  /// Size of type.
-  | TSizeOfValEN
+  /// Size of type. Argument is a type placeholder. The result type is int.
+  | TSizeOfEN
 
   /// Name of type.
   | TTyPlaceholderEN
@@ -415,6 +434,7 @@ type NameResLog =
 
   | UnimplGenericTyError
   | UnimplOrPatBindingError
+  | UnimplTyArgListError
 
 [<RequireQualifiedAccess>]
 [<NoEquality; NoComparison>]

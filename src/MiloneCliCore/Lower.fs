@@ -40,8 +40,8 @@ let private lowerTk (tk: Tir.Tk) : Hir.Tk =
   | Tir.TupleTk -> Hir.TupleTk
   | Tir.ListTk -> Hir.ListTk
 
-  | Tir.VoidPtrTk -> Hir.VoidPtrTk
-  | Tir.NativePtrTk isMut -> Hir.NativePtrTk isMut
+  | Tir.VoidPtrTk isMut -> Hir.VoidPtrTk isMut
+  | Tir.NativePtrTk mode -> Hir.NativePtrTk mode
   | Tir.NativeFunTk -> Hir.NativeFunTk
   | Tir.NativeTypeTk code -> Hir.NativeTypeTk code
 
@@ -135,18 +135,24 @@ let private lowerPrim (prim: Tir.TPrim) : Hir.HPrim =
   | Tir.TPrim.Assert -> Hir.HPrim.Assert
   | Tir.TPrim.Printfn -> Hir.HPrim.Printfn
   | Tir.TPrim.InRegion -> Hir.HPrim.InRegion
+  | Tir.TPrim.PtrCast
+  | Tir.TPrim.PtrInvalid
+  | Tir.TPrim.PtrAsIn
+  | Tir.TPrim.PtrAsNative
   | Tir.TPrim.NativeCast -> Hir.HPrim.NativeCast
-  | Tir.TPrim.PtrRead -> Hir.HPrim.PtrRead
-  | Tir.TPrim.PtrWrite -> Hir.HPrim.PtrWrite
+  | Tir.TPrim.NullPtr -> Hir.HPrim.NullPtr
+  | Tir.TPrim.PtrDistance -> Hir.HPrim.PtrDistance
 
   | Tir.TPrim.Discriminant
   | Tir.TPrim.Acquire
   | Tir.TPrim.Dispose
+  | Tir.TPrim.PtrSelect
+  | Tir.TPrim.PtrRead
+  | Tir.TPrim.PtrWrite
   | Tir.TPrim.NativeFun
   | Tir.TPrim.NativeExpr
   | Tir.TPrim.NativeStmt
-  | Tir.TPrim.NativeDecl
-  | Tir.TPrim.SizeOfVal -> unreachable () // Resolved in Typing.
+  | Tir.TPrim.NativeDecl -> unreachable () // Resolved in Typing.
 
 let private lowerPatKind (kind: Tir.TPatKind) : Hir.HPatKind =
   match kind with
@@ -165,17 +171,22 @@ let private lowerPatKind (kind: Tir.TPatKind) : Hir.HPatKind =
 let private lowerExprKind (kind: Tir.TExprKind) : Hir.HExprKind =
   match kind with
   | Tir.TMinusEN -> Hir.HMinusEN
+  | Tir.TPtrOfEN -> Hir.HPtrOfEN
   | Tir.TAppEN -> Hir.HAppEN
   | Tir.TIndexEN -> Hir.HIndexEN
   | Tir.TSliceEN -> Hir.HSliceEN
   | Tir.TDiscriminantEN variantSerial -> Hir.HDiscriminantEN(lowerVariantSerial variantSerial)
   | Tir.TCallNativeEN funName -> Hir.HCallNativeEN funName
   | Tir.TTupleEN -> Hir.HTupleEN
+  | Tir.TPtrOffsetEN -> Hir.HPtrOffsetEN
+  | Tir.TPtrReadEN -> Hir.HPtrReadEN
+  | Tir.TPtrWriteEN -> Hir.HPtrWriteEN
+
   | Tir.TNativeFunEN funSerial -> Hir.HNativeFunEN(lowerFunSerial funSerial)
   | Tir.TNativeExprEN code -> Hir.HNativeExprEN code
   | Tir.TNativeStmtEN code -> Hir.HNativeStmtEN code
   | Tir.TNativeDeclEN code -> Hir.HNativeDeclEN code
-  | Tir.TSizeOfValEN -> Hir.HSizeOfValEN
+  | Tir.TSizeOfEN -> Hir.HSizeOfEN
   | Tir.TTyPlaceholderEN -> Hir.HTyPlaceholderEN
 
   | Tir.TAbortEN -> unreachable () // Compile error occurred.

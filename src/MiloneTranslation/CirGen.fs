@@ -33,6 +33,10 @@ let private tupleField (i: int) = "t" + string i
 /// Calculates discriminant type's name of union type.
 let private toDiscriminantEnumName (name: string) = name + "Discriminant"
 
+let private cVoidPtrTy = CPtrTy CVoidTy
+let private cVoidConstPtrTy = CConstPtrTy CVoidTy
+let private cNullExpr = CVarExpr "NULL"
+
 let private cTyEncode ty =
   match ty with
   | CVoidTy _ -> 1
@@ -543,12 +547,13 @@ let private getUniqueTyName (ctx: CirCtx) ty : _ * CirCtx =
   let name, memo = tyMangle (ty, memo)
   name, { ctx with TyUniqueNames = memo }
 
-let private cgNativePtrTy ctx isMut itemTy =
+let private cgNativePtrTy ctx mode itemTy =
   let itemTy, ctx = cgTyIncomplete ctx itemTy
 
-  match isMut with
-  | IsConst -> CConstPtrTy itemTy, ctx
-  | IsMut -> CPtrTy itemTy, ctx
+  match mode with
+  | RefMode.ReadWrite
+  | RefMode.WriteOnly -> CPtrTy itemTy, ctx
+  | RefMode.ReadOnly -> CConstPtrTy itemTy, ctx
 
 let private cgNativeFunTy ctx tys =
   match splitLast tys with
@@ -580,8 +585,9 @@ let private cgTyIncomplete (ctx: CirCtx) (ty: Ty) : CTy * CirCtx =
   | ListTk, [ itemTy ] -> genIncompleteListTyDecl ctx itemTy
   | ListTk, _ -> unreachable ()
 
-  | VoidPtrTk, _ -> CPtrTy CVoidTy, ctx
-  | NativePtrTk isMut, [ itemTy ] -> cgNativePtrTy ctx isMut itemTy
+  | VoidPtrTk IsMut, _ -> cVoidPtrTy, ctx
+  | VoidPtrTk IsConst, _ -> cVoidConstPtrTy, ctx
+  | NativePtrTk mode, [ itemTy ] -> cgNativePtrTy ctx mode itemTy
   | NativePtrTk _, _ -> unreachable ()
   | NativeFunTk, _ -> cgNativeFunTy ctx tyArgs
   | NativeTypeTk code, _ -> CEmbedTy code, ctx
@@ -617,9 +623,10 @@ let private cgTyComplete (ctx: CirCtx) (ty: Ty) : CTy * CirCtx =
     genIncompleteListTyDecl ctx itemTy
   | ListTk, _ -> unreachable ()
 
-  | VoidPtrTk, _ -> CPtrTy CVoidTy, ctx
+  | VoidPtrTk IsMut, _ -> cVoidPtrTy, ctx
+  | VoidPtrTk IsConst, _ -> cVoidConstPtrTy, ctx
 
-  | NativePtrTk isMut, [ itemTy ] -> cgNativePtrTy ctx isMut itemTy
+  | NativePtrTk mode, [ itemTy ] -> cgNativePtrTy ctx mode itemTy
   | NativePtrTk _, _ -> unreachable ()
 
   | NativeFunTk, _ -> cgNativeFunTy ctx tyArgs
@@ -706,7 +713,8 @@ let private cBinaryOf op =
   | MUInt64CompareBinary
   | MStrAddBinary
   | MStrCompareBinary
-  | MStrIndexBinary -> unreachable ()
+  | MStrIndexBinary
+  | MPtrAddBinary -> unreachable ()
 
 let private genLit lit =
   match lit with
@@ -737,7 +745,15 @@ let private genVariantNameExpr ctx serial =
 
 let private genGenericValue ctx genericValue ty =
   match genericValue with
-  | MNilGv -> CVarExpr "NULL", ctx
+  | MNilGv -> cNullExpr, ctx
+
+  | MNullPtrGv ->
+    match ty with
+    | Ty (VoidPtrTk _, _) -> cNullExpr, ctx
+
+    | _ ->
+      let ty, ctx = cgTyIncomplete ctx ty
+      CCastExpr(cNullExpr, ty), ctx
 
   | MSizeOfGv ->
     let ty, ctx = cgTyComplete ctx ty
@@ -760,6 +776,7 @@ let private genUnaryExpr ctx op arg =
   match op with
   | MMinusUnary -> CUnaryExpr(CMinusUnary, arg), ctx
   | MNotUnary -> CUnaryExpr(CNotUnary, arg), ctx
+  | MPtrOfUnary -> CUnaryExpr(CAddressOfUnary, arg), ctx
   | MIntOfScalarUnary flavor -> CCastExpr(arg, CIntTy flavor), ctx
   | MFloatOfScalarUnary flavor -> CCastExpr(arg, CFloatTy flavor), ctx
   | MCharOfScalarUnary -> CCastExpr(arg, CCharTy), ctx
@@ -803,6 +820,10 @@ let private genUnaryExpr ctx op arg =
     let _, ctx = genListTyDef ctx itemTy
     CArrowExpr(arg, "tail"), ctx
 
+  | MDerefUnary itemTy ->
+    let _, ctx = cgTyComplete ctx itemTy
+    CUnaryExpr(CDerefUnary, arg), ctx
+
   | MNativeCastUnary targetTy ->
     let ty, ctx = cgTyComplete ctx targetTy
     CCastExpr(arg, ty), ctx
@@ -819,6 +840,11 @@ let private genExprBin ctx op l r =
     let l, ctx = cgExpr ctx l
     let r, ctx = cgExpr ctx r
     CIndexExpr(CDotExpr(l, "str"), r), ctx
+
+  | MPtrAddBinary ->
+    let l, ctx = cgExpr ctx l
+    let r, ctx = cgExpr ctx r
+    CUnaryExpr(CAddressOfUnary, CIndexExpr(l, r)), ctx
 
   | _ ->
     let l, ctx = cgExpr ctx l
@@ -919,8 +945,7 @@ let private cgActionStmt ctx itself action args =
 
   | MPtrWriteAction ->
     match cgExprList ctx args with
-    | [ ptr; CIntExpr ("0", _); value ], ctx -> addStmt ctx (CSetStmt(CUnaryExpr(CDerefUnary, ptr), value))
-    | [ ptr; index; value ], ctx -> addStmt ctx (CSetStmt(CIndexExpr(ptr, index), value))
+    | [ ptr; value ], ctx -> addStmt ctx (CSetStmt(CUnaryExpr(CDerefUnary, ptr), value))
     | _ -> unreachable ()
 
 let private cgPrintfnActionStmt ctx itself args argTys =
@@ -1112,11 +1137,10 @@ let private cgPrimStmt (ctx: CirCtx) itself prim args serial resultTy =
 
     regular ctx (fun args -> (CCallExpr(CVarExpr funName, args)))
 
-  | MPtrReadPrim ->
-    regular ctx (fun args ->
+  | MPtrInvalidPrim ->
+    regularWithTy ctx (fun args resultTy ->
       match args with
-      | [ ptr; CIntExpr ("0", _) ] -> CUnaryExpr(CDerefUnary, ptr)
-      | [ ptr; index ] -> CIndexExpr(ptr, index)
+      | [ arg ] -> CCastExpr(arg, resultTy)
       | _ -> unreachable ())
 
 let private cgBoxStmt ctx serial arg argTy =

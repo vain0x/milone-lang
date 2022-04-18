@@ -29,31 +29,53 @@ Such program does anything weird with no error.
 
 | milone-lang       | C                 |
 |:------------------|:------------------|
-| `__constptr<T>`   | `const T *`       |
+| `__inptr<T>`      | `T const *`       |
 | `nativeptr<T>`    | `T *`             |
-| `obj`             | `const void *`    |
+| `__voidinptr`     | `void const *`    |
 | `voidptr`         | `void *`          |
+
+Hint: `T const *` is same as `const T *`.
+
+## NullPtr
+
+`__nullptr` is the null value of any pointer type.
+
+(Currently it's not a pattern.)
 
 ## Get pointer of value
 
-(Not implemented. Use `__nativeExpr("&{0}", v)`.)
+Unary `&&` operator makes a pointer to a variable.
+It's invalidated when the variable goes out of scope.
+
+```fsharp
+    let x = 42
+    let p: __inptr<int> = &&x
+```
+
+- Writing to the content is undefined behavior.
+- Not compatible with F#, where `&&x` is `nativeptr<T>`.
 
 ## Pointer cast
 
 `__nativeCast` function converts pointers and pointer-sized integers (`nativeint` / `unativeint`) each other.
 
 ```fsharp
-    let p: nativeptr<int> = __nativeCast 0un
-    let q: __constptr<int> = __nativeCast p
+    let p: nativeptr<int> = __nativeCast 8un
+    let q: __inptr<int> = __nativeCast p
 ```
+
+- `Std.Ptr.asIn` casts a non-const pointer to const (upcast)
+- `Std.Ptr.asNative` casts a const pointer to non-const (unsafe cast)
 
 ### Read via pointer
 
+*Deprecated*: Use `Std.Ptr.read p.[i]`.
+
 `__ptrRead p i` reads from a pointer `p` by offset `i` (that is, `p[i]`).
-Pointer type must be `__constptr<T>`.
+Pointer type must be `__inptr<T>`.
 
 ```fsharp
-    //    p: __constptr<T>, i: int
+    //    p: __inptr<T>, i: int
     // => (__ptrRead p i): T
 
     __ptrRead p 0  //=> *p in C
@@ -61,6 +83,8 @@ Pointer type must be `__constptr<T>`.
 ```
 
 ### Write via pointer
+
+*Deprecated*: Use `Std.Ptr.write p.[i] value`.
 
 `__ptrWrite p i` writes to a pointer `p` by offset `i` (that is `p[i]`).
 Pointer type must be `nativeptr<T>`.
@@ -131,7 +155,7 @@ An extern declaration of the function is also generated.
 
     // void *calloc(size_t, size_t);
     // void *p = calloc(4, sizeof(int));
-    let p: voidptr = __nativeFun ("calloc", 4un, unativeint (__sizeOfVal 0))
+    let p: voidptr = __nativeFun ("calloc", 4un, unativeint sizeof<int>)
     // ...
 ```
 
@@ -147,21 +171,9 @@ Restriction: Variadic parameter functions (e.g. `printf`) can't be called with t
 
 (Not implemented yet. Use `dlopen` on Unix and link `libdl` (-lm). Use `LoadLibrary` on Windows.)
 
-## Size of values
+## Size of type
 
-`__sizeOfVal (expr: T)` is the size of type T in bytes. Equivalent to `sizeof(expr)` in C.
-
-```fsharp
-    // If the type of `expr` is T, __sizeOfVal(expr) equals to (int)sizeof(T).
-    let _: int = __sizeOfVal expr
-```
-
-It's guaranteed that the argument isn't evaluated.
-
-```fsharp
-    let nullptr: __constptr<int> = __nativeCast 0un
-    assert (__sizeOfVal (__ptrRead nullptr 0) = 4)
-```
+`sizeof<'T>` is the size of type T in bytes. Type is `int`. Equivalent to `sizeof(T)` in C.
 
 ## Embedded naive expressions
 

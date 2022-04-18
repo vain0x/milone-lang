@@ -68,13 +68,6 @@ module private NativePtrTests =
 
     NativePtr.copyBlock p p 0
 
-  let private testSizeOf () =
-    let intPtr: nativeptr<int> = NativePtr.__getNullPtr ()
-    let int64Ptr: nativeptr<int64> = NativePtr.__getNullPtr ()
-
-    assert (NativePtr.__sizeOf intPtr = 4)
-    assert (NativePtr.__sizeOf int64Ptr = 8)
-
   let test () =
     testOfNativeInt ()
     testGet ()
@@ -84,34 +77,25 @@ module private NativePtrTests =
     testCopy ()
     testCopyBlock ()
     testCopyBlockZero ()
-    testSizeOf ()
 
-module private ConstPtrTests =
+module private InPtrTests =
   let private testGet () =
-    let p: __constptr<int> = box (23, 45) |> __nativeCast
-    assert (__ConstPtr.get p 0 = 23)
-    assert (__ConstPtr.get p 1 = 45)
+    let p: __inptr<int> = box (23, 45) |> __nativeCast
+    assert (__InPtr.get p 0 = 23)
+    assert (__InPtr.get p 1 = 45)
 
   let private testRead () =
-    let p: __constptr<int> = box (23, 45) |> __nativeCast
-    assert (__ConstPtr.read p = 23)
+    let p: __inptr<int> = box (23, 45) |> __nativeCast
+    assert (__InPtr.read p = 23)
 
-    let q = __ConstPtr.add p 1
-    assert (__ConstPtr.read q = 45)
-
-  let private testSizeOf () =
-    let intPtr: __constptr<int> = __ConstPtr.getNullPtr ()
-    let int64Ptr: __constptr<int64> = __ConstPtr.getNullPtr ()
-
-    assert (__ConstPtr.sizeOf intPtr = 4)
-    assert (__ConstPtr.sizeOf int64Ptr = 8)
+    let q = __InPtr.add p 1
+    assert (__InPtr.read q = 45)
 
   let test () =
     testGet ()
     testRead ()
-    testSizeOf ()
 
 let main _ =
   NativePtrTests.test ()
-  ConstPtrTests.test ()
+  InPtrTests.test ()
   0

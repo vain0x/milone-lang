@@ -19,6 +19,7 @@ let tyError loc = Ty(ErrorTk loc, [])
 
 let tyInt = Ty(IntTk I32, [])
 let tyInt64 = Ty(IntTk I64, [])
+let tyNativeInt = Ty(IntTk IPtr, [])
 let tyUint8 = Ty(IntTk U8, [])
 let tyUInt16 = Ty(IntTk U16, [])
 let tyUInt64 = Ty(IntTk U32, [])
@@ -36,8 +37,17 @@ let tyTuple itemTys = Ty(TupleTk, itemTys)
 let tyUnit = tyTuple []
 
 let tyLinear itemTy = Ty(LinearTk, [ itemTy ])
-let tyConstPtr itemTy = Ty(NativePtrTk IsConst, [ itemTy ])
-let tyNativePtr itemTy = Ty(NativePtrTk IsMut, [ itemTy ])
+let tyVoidInPtr = Ty(VoidPtrTk IsConst, [])
+let tyVoidPtr = Ty(VoidPtrTk IsMut, [])
+
+let tyNativePtr itemTy =
+  Ty(NativePtrTk RefMode.ReadWrite, [ itemTy ])
+
+let tyInPtr itemTy =
+  Ty(NativePtrTk RefMode.ReadOnly, [ itemTy ])
+
+let tyOutPtr itemTy =
+  Ty(NativePtrTk RefMode.WriteOnly, [ itemTy ])
 
 let tyNativeFun paramTys resultTy =
   Ty(NativeFunTk, List.append paramTys [ resultTy ])
@@ -144,9 +154,6 @@ let primFromIdent ident =
   | "__nativeExpr" -> TPrim.NativeExpr |> Some
   | "__nativeStmt" -> TPrim.NativeStmt |> Some
   | "__nativeDecl" -> TPrim.NativeDecl |> Some
-  | "__sizeOfVal" -> TPrim.SizeOfVal |> Some
-  | "__ptrRead" -> TPrim.PtrRead |> Some
-  | "__ptrWrite" -> TPrim.PtrWrite |> Some
 
   | _ -> None
 
@@ -422,6 +429,7 @@ let nameResLogToString log =
 
   | UnimplGenericTyError -> "Generic record type is unimplemented."
   | UnimplOrPatBindingError -> "OR pattern including some bindings is unimplemented."
+  | UnimplTyArgListError -> "Type argument list is unimplemented."
 
 let private traitBoundErrorToString tyDisplay it =
   match it with
@@ -457,6 +465,16 @@ let private traitBoundErrorToString tyDisplay it =
   | ToFloatTrait ty -> "Can't convert to float from: " + tyDisplay ty
   | ToStringTrait ty -> "Can't convert to string from: " + tyDisplay ty
   | PtrTrait ty -> "Expected a pointer type but was: " + tyDisplay ty
+
+  | PtrSizeTrait ty ->
+    "Expected a pointer-size type but was: "
+    + tyDisplay ty
+
+  | PtrCastTrait (lTy, rTy) ->
+    "Expected two different pointer types but: one was "
+    + tyDisplay lTy
+    + ", the other: "
+    + tyDisplay rTy
 
 let logToString tyDisplay log =
   match log with

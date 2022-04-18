@@ -614,14 +614,14 @@ let private lowerAExpr docId acc expr : DSymbolOccurrence list =
 
   | ANavExpr (l, _, _) ->
     match l with
-    | AIdentExpr (Name (l, pos)) when l.Length = 1 && C.isUpper l.[0] ->
+    | AIdentExpr (Name (l, pos), []) when l.Length = 1 && C.isUpper l.[0] ->
       (DModuleSymbol [ Symbol.toString docId
                        l ],
        Use,
        toLoc pos)
       :: acc
 
-    | ANavExpr (AIdentExpr p, m, _) ->
+    | ANavExpr (AIdentExpr (p, []), m, _) ->
       let path = [ p; m ] |> List.map nameToIdent
 
       if isModulePathLike path then

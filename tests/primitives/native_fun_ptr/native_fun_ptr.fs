@@ -1,43 +1,39 @@
 module rec native_fun_ptr.Program
 
-// __nativeFun<P, T> is a language extension to describe a function pointer type: P -> T.
-// For zero-parameter function, use unit as P.
-// For multi-parameter function, use tuple type as P.
-// For void-returning function, use unit as T.
-// (ABI is same as C.)
 // See also x_native_code.md in docs.
 
-type private CompareFun = __nativeFun<obj * obj, int>
+module Ptr = Std.Ptr
+
+type private CompareFun = __nativeFun<__voidinptr * __voidinptr, int>
 
 let private memAlloc (len: int) (size: int) : voidptr =
   __nativeFun ("milone_mem_alloc", len, unativeint size)
 
 let private sortIntArray (array: nativeptr<int>) (len: int) : unit =
-  let intCompare (l: obj) (r: obj) =
-    compare (__ptrRead (__nativeCast l) 0: int) (__ptrRead (__nativeCast r) 0: int)
+  let intCompare (l: __voidinptr) (r: __voidinptr) =
+    compare (Ptr.read (__nativeCast l: __inptr<int>)) (Ptr.read (__nativeCast r: __inptr<int>))
 
   __nativeFun ("qsort", (__nativeCast array: voidptr), unativeint len, 4un, (__nativeFun intCompare: CompareFun))
 
 let private testSort () =
   let len = 5
 
-  let array: nativeptr<int> =
-    memAlloc len (__sizeOfVal 0) |> __nativeCast
+  let array: nativeptr<int> = memAlloc len sizeof<int> |> __nativeCast
 
-  __ptrWrite array 0 3
-  __ptrWrite array 1 1
-  __ptrWrite array 2 4
-  __ptrWrite array 3 1
-  __ptrWrite array 4 5
+  Ptr.write array.[0] 3
+  Ptr.write array.[1] 1
+  Ptr.write array.[2] 4
+  Ptr.write array.[3] 1
+  Ptr.write array.[4] 5
 
   sortIntArray array len
 
-  let array: __constptr<int> = __nativeCast array
-  assert (__ptrRead array 0 = 1)
-  assert (__ptrRead array 1 = 1)
-  assert (__ptrRead array 2 = 3)
-  assert (__ptrRead array 3 = 4)
-  assert (__ptrRead array 4 = 5)
+  let array: __inptr<int> = __nativeCast array
+  assert (Ptr.read array.[0] = 1)
+  assert (Ptr.read array.[1] = 1)
+  assert (Ptr.read array.[2] = 3)
+  assert (Ptr.read array.[3] = 4)
+  assert (Ptr.read array.[4] = 5)
 
 type private UnitFun = __nativeFun<unit, int>
 
@@ -75,7 +71,7 @@ let private testFunPtrCanBeResult () =
   let plus (x: int) (y: int) = x + y
   let getFunPtr () = __nativeFun plus
   let p = getFunPtr ()
-  assert (__nativeCast p <> 0un)
+  assert (p <> Ptr.nullPtr)
 
 let main _ =
   testSort ()

@@ -51,6 +51,7 @@ let private unaryToString op =
   match op with
   | CMinusUnary -> "-"
   | CNotUnary -> "!"
+  | CAddressOfUnary -> "&"
   | CDerefUnary -> "*"
 
 let private binaryToString op =
@@ -289,6 +290,8 @@ let private cpExpr expr acc : string list =
   | CSizeOfExpr ty -> acc |> cons "sizeof(" |> cpTy ty |> cons ")"
 
   | CTyPlaceholderExpr ty -> acc |> cpTy ty
+
+  | CUnaryExpr (CDerefUnary, CUnaryExpr (CAddressOfUnary, arg)) -> acc |> cpExpr arg
 
   | CUnaryExpr (op, arg) ->
     acc

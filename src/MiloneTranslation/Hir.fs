@@ -39,10 +39,6 @@ let tyList ty = Ty(ListTk, [ ty ])
 
 let tyFun sourceTy targetTy = Ty(FunTk, [ sourceTy; targetTy ])
 
-let tyConstPtr itemTy = Ty(NativePtrTk IsConst, [ itemTy ])
-
-let tyNativePtr itemTy = Ty(NativePtrTk IsMut, [ itemTy ])
-
 let tyNativeFun paramTys resultTy =
   Ty(NativeFunTk, List.append paramTys [ resultTy ])
 
@@ -373,8 +369,8 @@ let private tkEncode tk : int =
   | TupleTk -> just 8
   | ListTk -> just 10
 
-  | VoidPtrTk -> just 11
-  | NativePtrTk isMut -> pair 12 (isMutToInt isMut)
+  | VoidPtrTk isMut -> pair 11 (isMutToInt isMut)
+  | NativePtrTk mode -> pair 12 (RefMode.toInt mode)
   | NativeFunTk -> just 13
 
   | MetaTk (tySerial, _) -> pair 20 tySerial
@@ -405,9 +401,11 @@ let tkDisplay getTyName tk =
   | FunTk -> "fun"
   | TupleTk -> "tuple"
   | ListTk -> "list"
-  | VoidPtrTk -> "voidptr"
-  | NativePtrTk IsMut -> "nativeptr"
-  | NativePtrTk IsConst -> "__constptr"
+  | VoidPtrTk IsMut -> "voidptr"
+  | VoidPtrTk IsConst -> "__voidinptr"
+  | NativePtrTk RefMode.ReadWrite -> "nativeptr"
+  | NativePtrTk RefMode.ReadOnly -> "__inptr"
+  | NativePtrTk RefMode.WriteOnly -> "__outptr"
   | NativeFunTk -> "__nativeFun"
   | NativeTypeTk _ -> "__nativeType"
   | MetaTk (tySerial, _) -> getTyName tySerial
@@ -547,9 +545,11 @@ let tyMangle (ty: Ty, memo: TreeMap<Ty, string>) : string * TreeMap<Ty, string> 
 
       | ListTk -> fixedGeneric "List"
 
-      | VoidPtrTk -> "VoidPtr", ctx
-      | NativePtrTk IsConst -> fixedGeneric "ConstPtr"
-      | NativePtrTk IsMut -> fixedGeneric "MutPtr"
+      | VoidPtrTk IsMut -> "VoidPtr", ctx
+      | VoidPtrTk IsConst -> "VoidInPtr", ctx
+      | NativePtrTk RefMode.ReadWrite -> fixedGeneric "MutPtr"
+      | NativePtrTk RefMode.ReadOnly -> fixedGeneric "InPtr"
+      | NativePtrTk RefMode.WriteOnly -> fixedGeneric "OutPtr"
       | NativeFunTk -> variadicGeneric "NativeFun"
       | NativeTypeTk name -> name, ctx
 
