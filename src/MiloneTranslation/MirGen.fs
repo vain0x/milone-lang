@@ -1168,9 +1168,7 @@ let private mirifyCallToIntExpr ctx itself flavor arg ty loc =
 
   | Ty ((IntTk _
         | FloatTk _
-        | CharTk
-        | VoidPtrTk _
-        | NativePtrTk _),
+        | CharTk),
         _) -> MUnaryExpr(MIntOfScalarUnary flavor, arg, loc), ctx
 
   | Ty (StrTk, _) ->
@@ -1178,6 +1176,14 @@ let private mirifyCallToIntExpr ctx itself flavor arg ty loc =
 
     let ctx =
       addStmt ctx (MPrimStmt(MIntOfStrPrim flavor, [ arg ], tempSerial, ty, loc))
+
+    temp, ctx
+
+  | Ty ((VoidPtrTk _ | NativePtrTk _), _) ->
+    let temp, tempSerial, ctx = freshVar ctx "address" ty loc
+
+    let ctx =
+      addStmt ctx (MPrimStmt(MPtrInvalidPrim, [ arg ], tempSerial, ty, loc))
 
     temp, ctx
 

@@ -1137,6 +1137,12 @@ let private cgPrimStmt (ctx: CirCtx) itself prim args serial resultTy =
 
     regular ctx (fun args -> (CCallExpr(CVarExpr funName, args)))
 
+  | MPtrInvalidPrim ->
+    regularWithTy ctx (fun args resultTy ->
+      match args with
+      | [ arg ] -> CCastExpr(arg, resultTy)
+      | _ -> unreachable ())
+
 let private cgBoxStmt ctx serial arg argTy =
   let argTy, ctx = cgTyComplete ctx argTy
   let arg, ctx = cgExpr ctx arg

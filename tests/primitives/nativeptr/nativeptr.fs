@@ -68,7 +68,9 @@ let private testPtrCast () =
   let funPtr: __nativeFun<obj * obj, obj> = Ptr.cast (Ptr.nullPtr: voidptr)
 
   // Linear type can be cast.
-  let uintPtrLinear: __linear<nativeptr<uint>> = Ptr.cast (__acquire (Ptr.nullPtr: voidptr))
+  let uintPtrLinear: __linear<nativeptr<uint>> =
+    Ptr.cast (__acquire (Ptr.nullPtr: voidptr))
+
   let _ = __dispose uintPtrLinear
   ()
 
@@ -179,6 +181,12 @@ let private testPoolAlloc () =
   assert (Ptr.read p = 42)
   assert (Ptr.read p.[1] = 43)
 
+let private testPtrAddress () =
+  let n = 42
+  // The result isn't used yet cast shouldn't get removed.
+  let _ = unativeint &&n
+  ()
+
 let main _ =
   testBasic ()
   testVoidPtrAvailable ()
@@ -195,4 +203,5 @@ let main _ =
   testPtrRead ()
   testPtrWrite ()
   testPoolAlloc ()
+  testPtrAddress ()
   0

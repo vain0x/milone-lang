@@ -158,6 +158,8 @@ type MPrim =
 
   | MCallNativePrim of funName: string * argTys: Ty list
 
+  | MPtrInvalidPrim
+
 /// Expression in middle IR.
 [<NoEquality; NoComparison>]
 type MExpr =
