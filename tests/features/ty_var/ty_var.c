@@ -8,15 +8,15 @@ struct StringStringListTuple2_;
 
 struct StringStringTuple2_;
 
-struct IntIntTuple2_;
+struct Int32Int32Tuple2_;
 
 struct StringList;
 
 struct StringStringListTuple2_ ty_var_ty_var_StringStringStringListTuple2Fun1_useTyVarInBody(struct String x_1);
 
-int ty_var_ty_var_StringStringTuple2IntFun1_pair(struct StringStringTuple2_ arg_);
+int32_t ty_var_ty_var_StringStringTuple2Int32Fun1_pair(struct StringStringTuple2_ arg_);
 
-int ty_var_ty_var_IntIntTuple2IntFun1_pair(struct IntIntTuple2_ arg_1);
+int32_t ty_var_ty_var_Int32Int32Tuple2Int32Fun1_pair(struct Int32Int32Tuple2_ arg_1);
 
 char ty_var_ty_var_useStringIndexWithoutAscription(struct String x_);
 
@@ -32,9 +32,9 @@ struct StringStringTuple2_ {
     struct String t1;
 };
 
-struct IntIntTuple2_ {
-    int t0;
-    int t1;
+struct Int32Int32Tuple2_ {
+    int32_t t0;
+    int32_t t1;
 };
 
 struct StringList {
@@ -50,37 +50,37 @@ struct StringStringListTuple2_ ty_var_ty_var_StringStringStringListTuple2Fun1_us
     return StringStringListTuple2_;
 }
 
-int ty_var_ty_var_StringStringTuple2IntFun1_pair(struct StringStringTuple2_ arg_) {
+int32_t ty_var_ty_var_StringStringTuple2Int32Fun1_pair(struct StringStringTuple2_ arg_) {
     return 2;
 }
 
-int ty_var_ty_var_IntIntTuple2IntFun1_pair(struct IntIntTuple2_ arg_1) {
+int32_t ty_var_ty_var_Int32Int32Tuple2Int32Fun1_pair(struct Int32Int32Tuple2_ arg_1) {
     return 2;
 }
 
 char ty_var_ty_var_useStringIndexWithoutAscription(struct String x_) {
     struct StringStringTuple2_ StringStringTuple2_;
-    int call_;
+    int32_t call_;
     StringStringTuple2_ = (struct StringStringTuple2_){.t0 = x_, .t1 = (struct String){.ptr = "", .len = 0}};
-    call_ = ty_var_ty_var_StringStringTuple2IntFun1_pair(StringStringTuple2_);
+    call_ = ty_var_ty_var_StringStringTuple2Int32Fun1_pair(StringStringTuple2_);
     return x_.ptr[0];
 }
 
 int main(int argc, char** argv) {
     milone_start(argc, argv);
     struct String s_;
-    struct IntIntTuple2_ IntIntTuple2_;
-    int call_1;
+    struct Int32Int32Tuple2_ Int32Int32Tuple2_;
+    int32_t call_1;
     struct StringStringTuple2_ StringStringTuple2_1;
-    int call_2;
+    int32_t call_2;
     char call_3;
     char match_;
     struct StringStringListTuple2_ call_4;
-    IntIntTuple2_ = (struct IntIntTuple2_){.t0 = 0, .t1 = 0};
-    call_1 = ty_var_ty_var_IntIntTuple2IntFun1_pair(IntIntTuple2_);
+    Int32Int32Tuple2_ = (struct Int32Int32Tuple2_){.t0 = 0, .t1 = 0};
+    call_1 = ty_var_ty_var_Int32Int32Tuple2Int32Fun1_pair(Int32Int32Tuple2_);
     milone_assert((call_1 == 2), (struct String){.ptr = "ty_var/ty_var.milone", .len = 20}, 18, 2);
     StringStringTuple2_1 = (struct StringStringTuple2_){.t0 = (struct String){.ptr = "", .len = 0}, .t1 = (struct String){.ptr = "", .len = 0}};
-    call_2 = ty_var_ty_var_StringStringTuple2IntFun1_pair(StringStringTuple2_1);
+    call_2 = ty_var_ty_var_StringStringTuple2Int32Fun1_pair(StringStringTuple2_1);
     milone_assert((call_2 == 2), (struct String){.ptr = "ty_var/ty_var.milone", .len = 20}, 19, 2);
     call_3 = ty_var_ty_var_useStringIndexWithoutAscription((struct String){.ptr = "a", .len = 1});
     milone_assert((call_3 == 'a'), (struct String){.ptr = "ty_var/ty_var.milone", .len = 20}, 21, 2);

@@ -2,76 +2,76 @@
 #include <stdlib.h>
 #include <milone.h>
 
-typedef int(*VoidConstPtrIntFunPtr1)(void const*);
+typedef int32_t(*VoidConstPtrInt32FunPtr1)(void const*);
 
-struct UnitIntFun1;
+struct UnitInt32Fun1;
 
-typedef int(*VoidConstPtrIntIntFunPtr2)(void const*, int);
+typedef int32_t(*VoidConstPtrInt32Int32FunPtr2)(void const*, int32_t);
 
-struct IntIntFun1;
+struct Int32Int32Fun1;
 
-int fun_arity_never_result_bug_fun_arity_never_result_bug_UnitIntFun1_unreachable(void);
+int32_t fun_arity_never_result_bug_fun_arity_never_result_bug_UnitInt32Fun1_unreachable(void);
 
-struct UnitIntFun1 fun_arity_never_result_bug_fun_arity_never_result_bug_StringUnitIntFun2_failwithf(struct String msg_);
+struct UnitInt32Fun1 fun_arity_never_result_bug_fun_arity_never_result_bug_StringUnitInt32Fun2_failwithf(struct String msg_);
 
-int MiloneCore_Prelude_IntIntFun1_id(int );
+int32_t MiloneCore_Prelude_Int32Int32Fun1_id(int32_t );
 
-int fun_arity_never_result_bug_fun_arity_never_result_bug_eta2_main_id(void const* env_, int arg_);
+int32_t fun_arity_never_result_bug_fun_arity_never_result_bug_eta2_main_id(void const* env_, int32_t arg_);
 
-int fun_arity_never_result_bug_fun_arity_never_result_bug_main_fun(int arg_2);
+int32_t fun_arity_never_result_bug_fun_arity_never_result_bug_main_fun(int32_t arg_2);
 
-int fun_arity_never_result_bug_fun_arity_never_result_bug_eta2_main_fun(void const* env_1, int arg_1);
+int32_t fun_arity_never_result_bug_fun_arity_never_result_bug_eta2_main_fun(void const* env_1, int32_t arg_1);
 
 int main(int argc, char** argv);
 
-struct UnitIntFun1 {
-    VoidConstPtrIntFunPtr1 fun;
+struct UnitInt32Fun1 {
+    VoidConstPtrInt32FunPtr1 fun;
     void const* env;
 };
 
-struct IntIntFun1 {
-    VoidConstPtrIntIntFunPtr2 fun;
+struct Int32Int32Fun1 {
+    VoidConstPtrInt32Int32FunPtr2 fun;
     void const* env;
 };
 
-int fun_arity_never_result_bug_fun_arity_never_result_bug_UnitIntFun1_unreachable(void) {
-    struct UnitIntFun1 call_;
-    int app_;
-    call_ = fun_arity_never_result_bug_fun_arity_never_result_bug_StringUnitIntFun2_failwithf((struct String){.ptr = "NEVER: %A", .len = 9});
+int32_t fun_arity_never_result_bug_fun_arity_never_result_bug_UnitInt32Fun1_unreachable(void) {
+    struct UnitInt32Fun1 call_;
+    int32_t app_;
+    call_ = fun_arity_never_result_bug_fun_arity_never_result_bug_StringUnitInt32Fun2_failwithf((struct String){.ptr = "NEVER: %A", .len = 9});
     app_ = call_.fun(call_.env);
     return app_;
 }
 
-struct UnitIntFun1 fun_arity_never_result_bug_fun_arity_never_result_bug_StringUnitIntFun2_failwithf(struct String msg_) {
+struct UnitInt32Fun1 fun_arity_never_result_bug_fun_arity_never_result_bug_StringUnitInt32Fun2_failwithf(struct String msg_) {
     printf("%s\n", string_to_c_str(msg_));
     exit(1);
 }
 
-int fun_arity_never_result_bug_fun_arity_never_result_bug_eta2_main_id(void const* env_, int arg_) {
-    int call_1;
-    call_1 = MiloneCore_Prelude_IntIntFun1_id(arg_);
+int32_t fun_arity_never_result_bug_fun_arity_never_result_bug_eta2_main_id(void const* env_, int32_t arg_) {
+    int32_t call_1;
+    call_1 = MiloneCore_Prelude_Int32Int32Fun1_id(arg_);
     return call_1;
 }
 
-int fun_arity_never_result_bug_fun_arity_never_result_bug_main_fun(int arg_2) {
-    int call_2;
-    call_2 = fun_arity_never_result_bug_fun_arity_never_result_bug_UnitIntFun1_unreachable();
+int32_t fun_arity_never_result_bug_fun_arity_never_result_bug_main_fun(int32_t arg_2) {
+    int32_t call_2;
+    call_2 = fun_arity_never_result_bug_fun_arity_never_result_bug_UnitInt32Fun1_unreachable();
     return call_2;
 }
 
-int fun_arity_never_result_bug_fun_arity_never_result_bug_eta2_main_fun(void const* env_1, int arg_1) {
-    int call_3;
+int32_t fun_arity_never_result_bug_fun_arity_never_result_bug_eta2_main_fun(void const* env_1, int32_t arg_1) {
+    int32_t call_3;
     call_3 = fun_arity_never_result_bug_fun_arity_never_result_bug_main_fun(arg_1);
     return call_3;
 }
 
 int main(int argc, char** argv) {
     milone_start(argc, argv);
-    struct IntIntFun1 f_;
-    struct IntIntFun1 switch_;
-    struct IntIntFun1 fun_;
-    struct IntIntFun1 fun_1;
-    int app_1;
+    struct Int32Int32Fun1 f_;
+    struct Int32Int32Fun1 switch_;
+    struct Int32Int32Fun1 fun_;
+    struct Int32Int32Fun1 fun_1;
+    int32_t app_1;
     switch (1) {
         case 1:
             goto clause_2;
@@ -80,11 +80,11 @@ int main(int argc, char** argv) {
             goto clause_3;
     }
 clause_2:;
-    fun_ = (struct IntIntFun1){.fun = fun_arity_never_result_bug_fun_arity_never_result_bug_eta2_main_id, .env = NULL};
+    fun_ = (struct Int32Int32Fun1){.fun = fun_arity_never_result_bug_fun_arity_never_result_bug_eta2_main_id, .env = NULL};
     switch_ = fun_;
     goto switch_next_1;
 clause_3:;
-    fun_1 = (struct IntIntFun1){.fun = fun_arity_never_result_bug_fun_arity_never_result_bug_eta2_main_fun, .env = NULL};
+    fun_1 = (struct Int32Int32Fun1){.fun = fun_arity_never_result_bug_fun_arity_never_result_bug_eta2_main_fun, .env = NULL};
     switch_ = fun_1;
     goto switch_next_1;
 switch_next_1:;

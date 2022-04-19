@@ -2,21 +2,21 @@
 #include <stdlib.h>
 #include <milone.h>
 
-int milone_int32_compare(int , int );
+int32_t milone_int32_compare(int32_t , int32_t );
 
-int native_fun_call_native_fun_call_intCompare(int l_, int r_);
+int32_t native_fun_call_native_fun_call_intCompare(int32_t l_, int32_t r_);
 
 int main(int argc, char** argv);
 
-int native_fun_call_native_fun_call_intCompare(int l_, int r_) {
-    int milone_int32_compare_result;
+int32_t native_fun_call_native_fun_call_intCompare(int32_t l_, int32_t r_) {
+    int32_t milone_int32_compare_result;
     milone_int32_compare_result = milone_int32_compare(l_, r_);
     return milone_int32_compare_result;
 }
 
 int main(int argc, char** argv) {
     milone_start(argc, argv);
-    int call_;
+    int32_t call_;
     call_ = native_fun_call_native_fun_call_intCompare(5, 3);
     milone_assert((call_ == 1), (struct String){.ptr = "native_fun_call/native_fun_call.milone", .len = 38}, 9, 2);
     return 0;

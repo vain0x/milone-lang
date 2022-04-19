@@ -11,10 +11,10 @@ int main(int argc, char** argv);
 void records_c_repr_records_c_repr_start(void);
 
 struct Int32X4_ {
-    int t0;
-    int t1;
-    int t2;
-    int t3;
+    int32_t t0;
+    int32_t t1;
+    int32_t t2;
+    int32_t t3;
 };
 
 struct Int32X32_ {

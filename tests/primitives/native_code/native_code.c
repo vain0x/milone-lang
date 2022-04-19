@@ -2,13 +2,13 @@
 #include <stdlib.h>
 #include <milone.h>
 
-typedef void(*VoidConstPtrIntVoidFunPtr2)(void const*, int);
+typedef void(*VoidConstPtrInt32VoidFunPtr2)(void const*, int32_t);
 
-struct IntUnitFun1;
+struct Int32UnitFun1;
 
-uintptr_t native_code_native_code_IntUnitFun1MutPtrUIntPtrFun1_alignOf(struct IntUnitFun1* arg_);
+uintptr_t native_code_native_code_Int32UnitFun1MutPtrUIntPtrFun1_alignOf(struct Int32UnitFun1* arg_);
 
-uintptr_t native_code_native_code_IntMutPtrUIntPtrFun1_alignOf(int* arg_1);
+uintptr_t native_code_native_code_Int32MutPtrUIntPtrFun1_alignOf(int32_t* arg_1);
 
 uintptr_t native_code_native_code_CharMutPtrUIntPtrFun1_alignOf(char* arg_2);
 
@@ -18,7 +18,7 @@ uintptr_t native_code_native_code_CharMutPtrUIntPtrFun1_alignOf(char* arg_2);
   
 void native_code_native_code_writeLine(struct String msg_);
 
-int native_code_native_code_freshId(void);
+int32_t native_code_native_code_freshId(void);
 
 void native_code_native_code_nativeExprWithPlaceholder(void);
 
@@ -26,17 +26,17 @@ void native_code_native_code_nativeStmtWithTyPlaceholder(void);
 
 int main(int argc, char** argv);
 
-struct IntUnitFun1 {
-    VoidConstPtrIntVoidFunPtr2 fun;
+struct Int32UnitFun1 {
+    VoidConstPtrInt32VoidFunPtr2 fun;
     void const* env;
 };
 
-uintptr_t native_code_native_code_IntUnitFun1MutPtrUIntPtrFun1_alignOf(struct IntUnitFun1* arg_) {
-typedef struct IntUnitFun1 T;    return _Alignof(T);
+uintptr_t native_code_native_code_Int32UnitFun1MutPtrUIntPtrFun1_alignOf(struct Int32UnitFun1* arg_) {
+typedef struct Int32UnitFun1 T;    return _Alignof(T);
 }
 
-uintptr_t native_code_native_code_IntMutPtrUIntPtrFun1_alignOf(int* arg_1) {
-typedef int T;    return _Alignof(T);
+uintptr_t native_code_native_code_Int32MutPtrUIntPtrFun1_alignOf(int32_t* arg_1) {
+typedef int32_t T;    return _Alignof(T);
 }
 
 uintptr_t native_code_native_code_CharMutPtrUIntPtrFun1_alignOf(char* arg_2) {
@@ -50,7 +50,7 @@ void native_code_native_code_writeLine(struct String msg_) {
         return;
 }
 
-int native_code_native_code_freshId(void) {
+int32_t native_code_native_code_freshId(void) {
 
     static int s_last;
       return ++s_last;
@@ -58,7 +58,7 @@ int native_code_native_code_freshId(void) {
 
 void native_code_native_code_nativeExprWithPlaceholder(void) {
     struct String s_;
-    int n_;
+    int32_t n_;
     s_ = (struct String){.ptr = "hello", .len = 5};
     n_ = s_.len;
     milone_assert((n_ == 5), (struct String){.ptr = "native_code/native_code.milone", .len = 30}, 32, 2);
@@ -71,18 +71,18 @@ void native_code_native_code_nativeStmtWithTyPlaceholder(void) {
     uintptr_t call_2;
     call_ = native_code_native_code_CharMutPtrUIntPtrFun1_alignOf(((char*)NULL));
     milone_assert((call_ == (size_t)1ULL), (struct String){.ptr = "native_code/native_code.milone", .len = 30}, 40, 2);
-    call_1 = native_code_native_code_IntMutPtrUIntPtrFun1_alignOf(((int*)NULL));
+    call_1 = native_code_native_code_Int32MutPtrUIntPtrFun1_alignOf(((int32_t*)NULL));
     milone_assert((call_1 == (size_t)4ULL), (struct String){.ptr = "native_code/native_code.milone", .len = 30}, 41, 2);
-    call_2 = native_code_native_code_IntUnitFun1MutPtrUIntPtrFun1_alignOf(((struct IntUnitFun1*)NULL));
+    call_2 = native_code_native_code_Int32UnitFun1MutPtrUIntPtrFun1_alignOf(((struct Int32UnitFun1*)NULL));
     milone_assert((call_2 == (size_t)8ULL), (struct String){.ptr = "native_code/native_code.milone", .len = 30}, 42, 2);
     return;
 }
 
 int main(int argc, char** argv) {
     milone_start(argc, argv);
-    int call_3;
+    int32_t call_3;
     struct String call_4;
-    int call_5;
+    int32_t call_5;
     struct String call_6;
     native_code_native_code_writeLine((struct String){.ptr = "HEY!", .len = 4});
     native_code_native_code_writeLine((struct String){.ptr = "YO!", .len = 3});

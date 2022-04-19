@@ -6,7 +6,7 @@ void string_operators_string_operators_addTest(void);
 
 void string_operators_string_operators_compareTest(void);
 
-char string_operators_string_operators_indexOperatorTest_at(int i_, struct String s_);
+char string_operators_string_operators_indexOperatorTest_at(int32_t i_, struct String s_);
 
 void string_operators_string_operators_indexOperatorTest(void);
 
@@ -38,7 +38,7 @@ void string_operators_string_operators_compareTest(void) {
     return;
 }
 
-char string_operators_string_operators_indexOperatorTest_at(int i_, struct String s_) {
+char string_operators_string_operators_indexOperatorTest_at(int32_t i_, struct String s_) {
     return s_.ptr[i_];
 }
 

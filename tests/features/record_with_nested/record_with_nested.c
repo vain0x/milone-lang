@@ -11,14 +11,14 @@ struct Person_ record_with_nested_record_with_nested_newPerson(void);
 int main(int argc, char** argv);
 
 struct Date_ {
-    int t0;
-    int t1;
-    int t2;
+    int32_t t0;
+    int32_t t1;
+    int32_t t2;
 };
 
 struct Person_ {
     struct String t0;
-    int t1;
+    int32_t t1;
     struct Date_ t2;
 };
 

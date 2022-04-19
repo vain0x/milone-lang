@@ -6,8 +6,8 @@ int main(int argc, char** argv);
 
 int main(int argc, char** argv) {
     milone_start(argc, argv);
-    int call_;
-    int call_1;
+    int32_t call_;
+    int32_t call_1;
     struct String call_2;
     struct String call_3;
     struct String call_4;
@@ -15,7 +15,7 @@ int main(int argc, char** argv) {
     milone_assert((((char)97) == 'a'), (struct String){.ptr = "int_to_string/int_to_string.milone", .len = 34}, 1, 2);
     milone_assert((((char)0) == '\0'), (struct String){.ptr = "int_to_string/int_to_string.milone", .len = 34}, 2, 2);
     milone_assert((0 == 0), (struct String){.ptr = "int_to_string/int_to_string.milone", .len = 34}, 4, 2);
-    milone_assert(((((int)'a') - 97) == 0), (struct String){.ptr = "int_to_string/int_to_string.milone", .len = 34}, 5, 2);
+    milone_assert(((((int32_t)'a') - 97) == 0), (struct String){.ptr = "int_to_string/int_to_string.milone", .len = 34}, 5, 2);
     call_ = string_to_int32((struct String){.ptr = "42", .len = 2});
     milone_assert(((call_ - 42) == 0), (struct String){.ptr = "int_to_string/int_to_string.milone", .len = 34}, 6, 2);
     call_1 = string_to_int32((struct String){.ptr = "-1", .len = 2});

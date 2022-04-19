@@ -7,8 +7,8 @@ struct Point_;
 int main(int argc, char** argv);
 
 struct Point_ {
-    int t0;
-    int t1;
+    int32_t t0;
+    int32_t t1;
 };
 
 int main(int argc, char** argv) {

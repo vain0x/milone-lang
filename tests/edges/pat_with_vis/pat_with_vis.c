@@ -2,20 +2,20 @@
 #include <stdlib.h>
 #include <milone.h>
 
-struct IntIntTuple2_;
+struct Int32Int32Tuple2_;
 
 int main(int argc, char** argv);
 
 void pat_with_vis_pat_with_vis_start(void);
 
-struct IntIntTuple2_ {
-    int t0;
-    int t1;
+struct Int32Int32Tuple2_ {
+    int32_t t0;
+    int32_t t1;
 };
 
-int pat_with_vis_pat_with_vis_x;
+int32_t pat_with_vis_pat_with_vis_x;
 
-int y_;
+int32_t y_;
 
 int main(int argc, char** argv) {
     milone_start(argc, argv);
@@ -26,9 +26,9 @@ int main(int argc, char** argv) {
 }
 
 void pat_with_vis_pat_with_vis_start(void) {
-    struct IntIntTuple2_ IntIntTuple2_;
-    IntIntTuple2_ = (struct IntIntTuple2_){.t0 = 2, .t1 = 3};
-    pat_with_vis_pat_with_vis_x = IntIntTuple2_.t0;
-    y_ = IntIntTuple2_.t1;
+    struct Int32Int32Tuple2_ Int32Int32Tuple2_;
+    Int32Int32Tuple2_ = (struct Int32Int32Tuple2_){.t0 = 2, .t1 = 3};
+    pat_with_vis_pat_with_vis_x = Int32Int32Tuple2_.t0;
+    y_ = Int32Int32Tuple2_.t1;
     return;
 }

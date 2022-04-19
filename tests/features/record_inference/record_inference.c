@@ -4,23 +4,23 @@
 
 struct IntWrapper_;
 
-void record_inference_record_inference_letWithTypeAscriptionCase(int n_);
+void record_inference_record_inference_letWithTypeAscriptionCase(int32_t n_);
 
-void record_inference_record_inference_typeAscriptionExprCase(int n_1);
+void record_inference_record_inference_typeAscriptionExprCase(int32_t n_1);
 
-void record_inference_record_inference_matchExprCase(int n_2);
+void record_inference_record_inference_matchExprCase(int32_t n_2);
 
-int record_inference_record_inference_funAppCase_unwrap(struct IntWrapper_ w_1);
+int32_t record_inference_record_inference_funAppCase_unwrap(struct IntWrapper_ w_1);
 
-void record_inference_record_inference_funAppCase(int n_3);
+void record_inference_record_inference_funAppCase(int32_t n_3);
 
 int main(int argc, char** argv);
 
 struct IntWrapper_ {
-    int t0;
+    int32_t t0;
 };
 
-void record_inference_record_inference_letWithTypeAscriptionCase(int n_) {
+void record_inference_record_inference_letWithTypeAscriptionCase(int32_t n_) {
     struct IntWrapper_ w_;
     struct IntWrapper_ IntWrapper_;
     IntWrapper_ = (struct IntWrapper_){.t0 = n_};
@@ -29,14 +29,14 @@ void record_inference_record_inference_letWithTypeAscriptionCase(int n_) {
     return;
 }
 
-void record_inference_record_inference_typeAscriptionExprCase(int n_1) {
+void record_inference_record_inference_typeAscriptionExprCase(int32_t n_1) {
     struct IntWrapper_ IntWrapper_1;
     IntWrapper_1 = (struct IntWrapper_){.t0 = n_1};
     milone_assert((IntWrapper_1.t0 == n_1), (struct String){.ptr = "record_inference/record_inference.milone", .len = 40}, 13, 2);
     return;
 }
 
-void record_inference_record_inference_matchExprCase(int n_2) {
+void record_inference_record_inference_matchExprCase(int32_t n_2) {
     struct IntWrapper_ t_;
     struct IntWrapper_ switch_;
     struct IntWrapper_ IntWrapper_2;
@@ -59,13 +59,13 @@ switch_next_1:;
     return;
 }
 
-int record_inference_record_inference_funAppCase_unwrap(struct IntWrapper_ w_1) {
+int32_t record_inference_record_inference_funAppCase_unwrap(struct IntWrapper_ w_1) {
     return w_1.t0;
 }
 
-void record_inference_record_inference_funAppCase(int n_3) {
+void record_inference_record_inference_funAppCase(int32_t n_3) {
     struct IntWrapper_ IntWrapper_3;
-    int call_;
+    int32_t call_;
     IntWrapper_3 = (struct IntWrapper_){.t0 = n_3};
     call_ = record_inference_record_inference_funAppCase_unwrap(IntWrapper_3);
     milone_assert((call_ == 7), (struct String){.ptr = "record_inference/record_inference.milone", .len = 40}, 26, 2);

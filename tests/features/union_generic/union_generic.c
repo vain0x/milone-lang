@@ -4,7 +4,7 @@
 
 struct StringMyOption1_;
 
-struct IntMyOption1_;
+struct Int32MyOption1_;
 
 struct UnitMyOption1_;
 
@@ -12,9 +12,9 @@ struct String union_generic_union_generic_StringMyOption1StringFun1_unwrap(struc
 
 bool union_generic_union_generic_StringMyOption1BoolFun1_isNone(struct StringMyOption1_ opt_);
 
-int union_generic_union_generic_IntMyOption1IntFun1_unwrap(struct IntMyOption1_ opt_1);
+int32_t union_generic_union_generic_Int32MyOption1Int32Fun1_unwrap(struct Int32MyOption1_ opt_1);
 
-bool union_generic_union_generic_IntMyOption1BoolFun1_isNone(struct IntMyOption1_ opt_);
+bool union_generic_union_generic_Int32MyOption1BoolFun1_isNone(struct Int32MyOption1_ opt_);
 
 bool union_generic_union_generic_UnitMyOption1BoolFun1_isNone(struct UnitMyOption1_ opt_);
 
@@ -36,15 +36,15 @@ struct StringMyOption1_ {
     };
 };
 
-enum IntMyOption1_Discriminant {
+enum Int32MyOption1_Discriminant {
     MyNone_1,
     MySome_1,
 };
 
-struct IntMyOption1_ {
-    enum IntMyOption1_Discriminant discriminant;
+struct Int32MyOption1_ {
+    enum Int32MyOption1_Discriminant discriminant;
     union {
-        int MySome_1;
+        int32_t MySome_1;
     };
 };
 
@@ -99,9 +99,9 @@ switch_next_4:;
     return switch_;
 }
 
-int union_generic_union_generic_IntMyOption1IntFun1_unwrap(struct IntMyOption1_ opt_1) {
-    int it_;
-    int match_1;
+int32_t union_generic_union_generic_Int32MyOption1Int32Fun1_unwrap(struct Int32MyOption1_ opt_1) {
+    int32_t it_;
+    int32_t match_1;
     if ((opt_1.discriminant != MySome_1)) goto next_8;
     it_ = opt_1.MySome_1;
     match_1 = it_;
@@ -116,7 +116,7 @@ end_match_7:;
     return match_1;
 }
 
-bool union_generic_union_generic_IntMyOption1BoolFun1_isNone(struct IntMyOption1_ opt_) {
+bool union_generic_union_generic_Int32MyOption1BoolFun1_isNone(struct Int32MyOption1_ opt_) {
     bool switch_1;
     switch (opt_.discriminant) {
         case MyNone_1:
@@ -162,19 +162,19 @@ switch_next_13:;
 
 void union_generic_union_generic_testBasicUsage(void) {
     struct UnitMyOption1_ none_;
-    struct IntMyOption1_ some_;
+    struct Int32MyOption1_ some_;
     bool call_;
-    struct IntMyOption1_ variant_;
+    struct Int32MyOption1_ variant_;
     bool call_1;
-    int call_2;
+    int32_t call_2;
     none_ = (struct UnitMyOption1_){.discriminant = MyNone_2};
     call_ = union_generic_union_generic_UnitMyOption1BoolFun1_isNone(none_);
     milone_assert(call_, (struct String){.ptr = "union_generic/union_generic.milone", .len = 34}, 23, 2);
-    variant_ = (struct IntMyOption1_){.discriminant = MySome_1, .MySome_1 = 42};
+    variant_ = (struct Int32MyOption1_){.discriminant = MySome_1, .MySome_1 = 42};
     some_ = variant_;
-    call_1 = union_generic_union_generic_IntMyOption1BoolFun1_isNone(some_);
+    call_1 = union_generic_union_generic_Int32MyOption1BoolFun1_isNone(some_);
     milone_assert((!(call_1)), (struct String){.ptr = "union_generic/union_generic.milone", .len = 34}, 28, 2);
-    call_2 = union_generic_union_generic_IntMyOption1IntFun1_unwrap(some_);
+    call_2 = union_generic_union_generic_Int32MyOption1Int32Fun1_unwrap(some_);
     milone_assert((call_2 == 42), (struct String){.ptr = "union_generic/union_generic.milone", .len = 34}, 29, 2);
     return;
 }

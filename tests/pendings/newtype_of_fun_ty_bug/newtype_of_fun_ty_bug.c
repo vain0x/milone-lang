@@ -2,9 +2,9 @@
 #include <stdlib.h>
 #include <milone.h>
 
-typedef int(*VoidConstPtrIntFunPtr1)(void const*);
+typedef int32_t(*VoidConstPtrInt32FunPtr1)(void const*);
 
-struct UnitIntFun1;
+struct UnitInt32Fun1;
 
 struct F_;
 
@@ -12,9 +12,9 @@ typedef struct F_(*VoidConstPtrF_FunPtr1)(void const*);
 
 struct UnitF_Fun1;
 
-int newtype_of_fun_ty_bug_newtype_of_fun_ty_bug_main_fun_fun(void);
+int32_t newtype_of_fun_ty_bug_newtype_of_fun_ty_bug_main_fun_fun(void);
 
-int newtype_of_fun_ty_bug_newtype_of_fun_ty_bug_eta2_main_fun_fun(void const* env_);
+int32_t newtype_of_fun_ty_bug_newtype_of_fun_ty_bug_eta2_main_fun_fun(void const* env_);
 
 struct F_ newtype_of_fun_ty_bug_newtype_of_fun_ty_bug_main_fun(void);
 
@@ -22,8 +22,8 @@ struct F_ newtype_of_fun_ty_bug_newtype_of_fun_ty_bug_eta2_main_fun(void const* 
 
 int main(int argc, char** argv);
 
-struct UnitIntFun1 {
-    VoidConstPtrIntFunPtr1 fun;
+struct UnitInt32Fun1 {
+    VoidConstPtrInt32FunPtr1 fun;
     void const* env;
 };
 
@@ -34,7 +34,7 @@ enum F_Discriminant {
 struct F_ {
     enum F_Discriminant discriminant;
     union {
-        struct UnitIntFun1 F_;
+        struct UnitInt32Fun1 F_;
     };
 };
 
@@ -43,20 +43,20 @@ struct UnitF_Fun1 {
     void const* env;
 };
 
-int newtype_of_fun_ty_bug_newtype_of_fun_ty_bug_main_fun_fun(void) {
+int32_t newtype_of_fun_ty_bug_newtype_of_fun_ty_bug_main_fun_fun(void) {
     return 42;
 }
 
-int newtype_of_fun_ty_bug_newtype_of_fun_ty_bug_eta2_main_fun_fun(void const* env_) {
-    int call_;
+int32_t newtype_of_fun_ty_bug_newtype_of_fun_ty_bug_eta2_main_fun_fun(void const* env_) {
+    int32_t call_;
     call_ = newtype_of_fun_ty_bug_newtype_of_fun_ty_bug_main_fun_fun();
     return call_;
 }
 
 struct F_ newtype_of_fun_ty_bug_newtype_of_fun_ty_bug_main_fun(void) {
-    struct UnitIntFun1 fun_;
+    struct UnitInt32Fun1 fun_;
     struct F_ variant_;
-    fun_ = (struct UnitIntFun1){.fun = newtype_of_fun_ty_bug_newtype_of_fun_ty_bug_eta2_main_fun_fun, .env = NULL};
+    fun_ = (struct UnitInt32Fun1){.fun = newtype_of_fun_ty_bug_newtype_of_fun_ty_bug_eta2_main_fun_fun, .env = NULL};
     variant_ = (struct F_){.discriminant = F_, .F_ = fun_};
     return variant_;
 }
@@ -70,10 +70,10 @@ struct F_ newtype_of_fun_ty_bug_newtype_of_fun_ty_bug_eta2_main_fun(void const* 
 int main(int argc, char** argv) {
     milone_start(argc, argv);
     struct UnitF_Fun1 getF_;
-    struct UnitIntFun1 f_;
+    struct UnitInt32Fun1 f_;
     struct UnitF_Fun1 fun_1;
     struct F_ app_;
-    int app_1;
+    int32_t app_1;
     fun_1 = (struct UnitF_Fun1){.fun = newtype_of_fun_ty_bug_newtype_of_fun_ty_bug_eta2_main_fun, .env = NULL};
     getF_ = fun_1;
     app_ = getF_.fun(getF_.env);

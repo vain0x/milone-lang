@@ -10,7 +10,7 @@ struct StringOddoption1Tuple2_;
 
 struct StringOddoption1Tuple2option1_;
 
-struct IntStringOddoption1Tuple2option1Tuple2_;
+struct Int32StringOddoption1Tuple2option1Tuple2_;
 
 int main(int argc, char** argv);
 
@@ -54,8 +54,8 @@ struct StringOddoption1Tuple2option1_ {
     };
 };
 
-struct IntStringOddoption1Tuple2option1Tuple2_ {
-    int t0;
+struct Int32StringOddoption1Tuple2option1Tuple2_ {
+    int32_t t0;
     struct StringOddoption1Tuple2option1_ t1;
 };
 
@@ -66,33 +66,33 @@ int main(int argc, char** argv) {
     struct Odd_ three_;
     struct StringOddoption1Tuple2_ four_;
     struct String s4_;
-    int n3_;
+    int32_t n3_;
     struct String s2_;
-    int n1_;
-    struct IntStringOddoption1Tuple2option1Tuple2_ IntStringOddoption1Tuple2option1Tuple2_;
+    int32_t n1_;
+    struct Int32StringOddoption1Tuple2option1Tuple2_ Int32StringOddoption1Tuple2option1Tuple2_;
     void const* box_;
     struct Odd_ variant_;
     struct StringOddoption1Tuple2_ StringOddoption1Tuple2_;
     struct Oddoption1_ variant_1;
-    struct IntStringOddoption1Tuple2option1Tuple2_ IntStringOddoption1Tuple2option1Tuple2_1;
+    struct Int32StringOddoption1Tuple2option1Tuple2_ Int32StringOddoption1Tuple2option1Tuple2_1;
     struct StringOddoption1Tuple2option1_ variant_2;
     void const* box_1;
     struct Odd_ variant_3;
     struct StringOddoption1Tuple2_ StringOddoption1Tuple2_1;
     struct Oddoption1_ variant_4;
     char match_;
-    IntStringOddoption1Tuple2option1Tuple2_ = (struct IntStringOddoption1Tuple2option1Tuple2_){.t0 = 1, .t1 = (struct StringOddoption1Tuple2option1_){.discriminant = None_2}};
-    box_ = ((void const*)milone_region_alloc(1, sizeof(struct IntStringOddoption1Tuple2option1Tuple2_)));
-    (*(((struct IntStringOddoption1Tuple2option1Tuple2_*)box_))) = IntStringOddoption1Tuple2option1Tuple2_;
+    Int32StringOddoption1Tuple2option1Tuple2_ = (struct Int32StringOddoption1Tuple2option1Tuple2_){.t0 = 1, .t1 = (struct StringOddoption1Tuple2option1_){.discriminant = None_2}};
+    box_ = ((void const*)milone_region_alloc(1, sizeof(struct Int32StringOddoption1Tuple2option1Tuple2_)));
+    (*(((struct Int32StringOddoption1Tuple2option1Tuple2_*)box_))) = Int32StringOddoption1Tuple2option1Tuple2_;
     variant_ = (struct Odd_){.discriminant = Odd_, .Odd_ = box_};
     one_ = variant_;
     variant_1 = (struct Oddoption1_){.discriminant = Some_1, .Some_1 = one_};
     StringOddoption1Tuple2_ = (struct StringOddoption1Tuple2_){.t0 = (struct String){.ptr = "two", .len = 3}, .t1 = variant_1};
     two_ = StringOddoption1Tuple2_;
     variant_2 = (struct StringOddoption1Tuple2option1_){.discriminant = Some_2, .Some_2 = two_};
-    IntStringOddoption1Tuple2option1Tuple2_1 = (struct IntStringOddoption1Tuple2option1Tuple2_){.t0 = 3, .t1 = variant_2};
-    box_1 = ((void const*)milone_region_alloc(1, sizeof(struct IntStringOddoption1Tuple2option1Tuple2_)));
-    (*(((struct IntStringOddoption1Tuple2option1Tuple2_*)box_1))) = IntStringOddoption1Tuple2option1Tuple2_1;
+    Int32StringOddoption1Tuple2option1Tuple2_1 = (struct Int32StringOddoption1Tuple2option1Tuple2_){.t0 = 3, .t1 = variant_2};
+    box_1 = ((void const*)milone_region_alloc(1, sizeof(struct Int32StringOddoption1Tuple2option1Tuple2_)));
+    (*(((struct Int32StringOddoption1Tuple2option1Tuple2_*)box_1))) = Int32StringOddoption1Tuple2option1Tuple2_1;
     variant_3 = (struct Odd_){.discriminant = Odd_, .Odd_ = box_1};
     three_ = variant_3;
     variant_4 = (struct Oddoption1_){.discriminant = Some_1, .Some_1 = three_};
@@ -100,12 +100,12 @@ int main(int argc, char** argv) {
     four_ = StringOddoption1Tuple2_1;
     s4_ = four_.t0;
     if ((four_.t1.discriminant != Some_1)) goto next_2;
-    n3_ = (*(((struct IntStringOddoption1Tuple2option1Tuple2_ const*)four_.t1.Some_1.Odd_))).t0;
-    if (((*(((struct IntStringOddoption1Tuple2option1Tuple2_ const*)four_.t1.Some_1.Odd_))).t1.discriminant != Some_2)) goto next_2;
-    s2_ = (*(((struct IntStringOddoption1Tuple2option1Tuple2_ const*)four_.t1.Some_1.Odd_))).t1.Some_2.t0;
-    if (((*(((struct IntStringOddoption1Tuple2option1Tuple2_ const*)four_.t1.Some_1.Odd_))).t1.Some_2.t1.discriminant != Some_1)) goto next_2;
-    n1_ = (*(((struct IntStringOddoption1Tuple2option1Tuple2_ const*)(*(((struct IntStringOddoption1Tuple2option1Tuple2_ const*)four_.t1.Some_1.Odd_))).t1.Some_2.t1.Some_1.Odd_))).t0;
-    if (((*(((struct IntStringOddoption1Tuple2option1Tuple2_ const*)(*(((struct IntStringOddoption1Tuple2option1Tuple2_ const*)four_.t1.Some_1.Odd_))).t1.Some_2.t1.Some_1.Odd_))).t1.discriminant != None_2)) goto next_2;
+    n3_ = (*(((struct Int32StringOddoption1Tuple2option1Tuple2_ const*)four_.t1.Some_1.Odd_))).t0;
+    if (((*(((struct Int32StringOddoption1Tuple2option1Tuple2_ const*)four_.t1.Some_1.Odd_))).t1.discriminant != Some_2)) goto next_2;
+    s2_ = (*(((struct Int32StringOddoption1Tuple2option1Tuple2_ const*)four_.t1.Some_1.Odd_))).t1.Some_2.t0;
+    if (((*(((struct Int32StringOddoption1Tuple2option1Tuple2_ const*)four_.t1.Some_1.Odd_))).t1.Some_2.t1.discriminant != Some_1)) goto next_2;
+    n1_ = (*(((struct Int32StringOddoption1Tuple2option1Tuple2_ const*)(*(((struct Int32StringOddoption1Tuple2option1Tuple2_ const*)four_.t1.Some_1.Odd_))).t1.Some_2.t1.Some_1.Odd_))).t0;
+    if (((*(((struct Int32StringOddoption1Tuple2option1Tuple2_ const*)(*(((struct Int32StringOddoption1Tuple2option1Tuple2_ const*)four_.t1.Some_1.Odd_))).t1.Some_2.t1.Some_1.Odd_))).t1.discriminant != None_2)) goto next_2;
     milone_assert((n1_ == 1), (struct String){.ptr = "union_newtype_rec_mutual/union_newtype_rec_mutual.milone", .len = 56}, 15, 4);
     milone_assert((string_compare(s2_, (struct String){.ptr = "two", .len = 3}) == 0), (struct String){.ptr = "union_newtype_rec_mutual/union_newtype_rec_mutual.milone", .len = 56}, 16, 4);
     milone_assert((n3_ == 3), (struct String){.ptr = "union_newtype_rec_mutual/union_newtype_rec_mutual.milone", .len = 56}, 17, 4);

@@ -2,19 +2,19 @@
 #include <stdlib.h>
 #include <milone.h>
 
-int match_exhaustive_match_exhaustive_main_f(int x_);
+int32_t match_exhaustive_match_exhaustive_main_f(int32_t x_);
 
 int main(int argc, char** argv);
 
-int match_exhaustive_match_exhaustive_main_f(int x_) {
+int32_t match_exhaustive_match_exhaustive_main_f(int32_t x_) {
     return (x_ * x_);
 }
 
 int main(int argc, char** argv) {
     milone_start(argc, argv);
-    int y_;
-    int match_;
-    int call_;
+    int32_t y_;
+    int32_t match_;
+    int32_t call_;
     call_ = match_exhaustive_match_exhaustive_main_f(3);
     if ((call_ != 1)) goto next_2;
     milone_assert(false, (struct String){.ptr = "match_exhaustive/match_exhaustive.milone", .len = 40}, 9, 4);

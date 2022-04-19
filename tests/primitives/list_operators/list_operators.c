@@ -2,9 +2,9 @@
 #include <stdlib.h>
 #include <milone.h>
 
-struct IntList;
+struct Int32List;
 
-struct IntList;
+struct Int32List;
 
 void list_operators_list_operators_nilTest(void);
 
@@ -16,13 +16,13 @@ void list_operators_list_operators_literalTest(void);
 
 int main(int argc, char** argv);
 
-struct IntList {
-    int head;
-    struct IntList const* tail;
+struct Int32List {
+    int32_t head;
+    struct Int32List const* tail;
 };
 
 void list_operators_list_operators_nilTest(void) {
-    struct IntList const* nil_;
+    struct Int32List const* nil_;
     char if_;
     nil_ = NULL;
     if ((!(nil_))) {
@@ -42,12 +42,12 @@ if_next_1:;
 }
 
 void list_operators_list_operators_cons1Test(void) {
-    struct IntList const* xs_;
-    int x_;
-    struct IntList const* list_;
+    struct Int32List const* xs_;
+    int32_t x_;
+    struct Int32List const* list_;
     char match_;
-    list_ = ((struct IntList const*)milone_region_alloc(1, sizeof(struct IntList)));
-    (*(((struct IntList*)list_))) = (struct IntList){.head = 1, .tail = NULL};
+    list_ = ((struct Int32List const*)milone_region_alloc(1, sizeof(struct Int32List)));
+    (*(((struct Int32List*)list_))) = (struct Int32List){.head = 1, .tail = NULL};
     xs_ = list_;
     if ((!(xs_))) goto next_5;
     x_ = xs_->head;
@@ -65,17 +65,17 @@ end_match_4:;
 }
 
 void list_operators_list_operators_cons2Test(void) {
-    struct IntList const* ys_;
-    int y2_;
-    int y3_;
-    struct IntList const* list_1;
-    struct IntList const* list_2;
+    struct Int32List const* ys_;
+    int32_t y2_;
+    int32_t y3_;
+    struct Int32List const* list_1;
+    struct Int32List const* list_2;
     char match_1;
     bool if_1;
-    list_2 = ((struct IntList const*)milone_region_alloc(1, sizeof(struct IntList)));
-    (*(((struct IntList*)list_2))) = (struct IntList){.head = 3, .tail = NULL};
-    list_1 = ((struct IntList const*)milone_region_alloc(1, sizeof(struct IntList)));
-    (*(((struct IntList*)list_1))) = (struct IntList){.head = 2, .tail = list_2};
+    list_2 = ((struct Int32List const*)milone_region_alloc(1, sizeof(struct Int32List)));
+    (*(((struct Int32List*)list_2))) = (struct Int32List){.head = 3, .tail = NULL};
+    list_1 = ((struct Int32List const*)milone_region_alloc(1, sizeof(struct Int32List)));
+    (*(((struct Int32List*)list_1))) = (struct Int32List){.head = 2, .tail = list_2};
     ys_ = list_1;
     if ((!(ys_))) goto next_8;
     y2_ = ys_->head;
@@ -107,24 +107,24 @@ end_match_7:;
 }
 
 void list_operators_list_operators_literalTest(void) {
-    struct IntList const* zs_;
-    int z2_;
-    int z3_;
-    int z5_;
-    int z7_;
-    struct IntList const* list_3;
-    struct IntList const* list_4;
-    struct IntList const* list_5;
-    struct IntList const* list_6;
+    struct Int32List const* zs_;
+    int32_t z2_;
+    int32_t z3_;
+    int32_t z5_;
+    int32_t z7_;
+    struct Int32List const* list_3;
+    struct Int32List const* list_4;
+    struct Int32List const* list_5;
+    struct Int32List const* list_6;
     char match_2;
-    list_6 = ((struct IntList const*)milone_region_alloc(1, sizeof(struct IntList)));
-    (*(((struct IntList*)list_6))) = (struct IntList){.head = 7, .tail = NULL};
-    list_5 = ((struct IntList const*)milone_region_alloc(1, sizeof(struct IntList)));
-    (*(((struct IntList*)list_5))) = (struct IntList){.head = 5, .tail = list_6};
-    list_4 = ((struct IntList const*)milone_region_alloc(1, sizeof(struct IntList)));
-    (*(((struct IntList*)list_4))) = (struct IntList){.head = 3, .tail = list_5};
-    list_3 = ((struct IntList const*)milone_region_alloc(1, sizeof(struct IntList)));
-    (*(((struct IntList*)list_3))) = (struct IntList){.head = 2, .tail = list_4};
+    list_6 = ((struct Int32List const*)milone_region_alloc(1, sizeof(struct Int32List)));
+    (*(((struct Int32List*)list_6))) = (struct Int32List){.head = 7, .tail = NULL};
+    list_5 = ((struct Int32List const*)milone_region_alloc(1, sizeof(struct Int32List)));
+    (*(((struct Int32List*)list_5))) = (struct Int32List){.head = 5, .tail = list_6};
+    list_4 = ((struct Int32List const*)milone_region_alloc(1, sizeof(struct Int32List)));
+    (*(((struct Int32List*)list_4))) = (struct Int32List){.head = 3, .tail = list_5};
+    list_3 = ((struct Int32List const*)milone_region_alloc(1, sizeof(struct Int32List)));
+    (*(((struct Int32List*)list_3))) = (struct Int32List){.head = 2, .tail = list_4};
     zs_ = list_3;
     if ((!(zs_))) goto next_14;
     z2_ = zs_->head;

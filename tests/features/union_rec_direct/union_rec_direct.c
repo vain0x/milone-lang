@@ -6,7 +6,7 @@ struct Expr_;
 
 struct ExprExprTuple2_;
 
-int union_rec_direct_union_rec_direct_main_eval(struct Expr_ expr_);
+int32_t union_rec_direct_union_rec_direct_main_eval(struct Expr_ expr_);
 
 int main(int argc, char** argv);
 
@@ -18,7 +18,7 @@ enum Expr_Discriminant {
 struct Expr_ {
     enum Expr_Discriminant discriminant;
     union {
-        int Int_;
+        int32_t Int_;
         void const* Add_;
     };
 };
@@ -28,13 +28,13 @@ struct ExprExprTuple2_ {
     struct Expr_ t1;
 };
 
-int union_rec_direct_union_rec_direct_main_eval(struct Expr_ expr_) {
-    int value_;
+int32_t union_rec_direct_union_rec_direct_main_eval(struct Expr_ expr_) {
+    int32_t value_;
     struct Expr_ l_;
     struct Expr_ r_;
-    int match_;
-    int call_;
-    int call_1;
+    int32_t match_;
+    int32_t call_;
+    int32_t call_1;
     if ((expr_.discriminant != Int_)) goto next_2;
     value_ = expr_.Int_;
     match_ = value_;
@@ -65,7 +65,7 @@ int main(int argc, char** argv) {
     struct Expr_ variant_3;
     void const* box_1;
     struct Expr_ variant_4;
-    int call_2;
+    int32_t call_2;
     variant_ = (struct Expr_){.discriminant = Int_, .Int_ = 11};
     variant_1 = (struct Expr_){.discriminant = Int_, .Int_ = 22};
     variant_2 = (struct Expr_){.discriminant = Int_, .Int_ = 9};

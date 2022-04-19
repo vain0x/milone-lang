@@ -6,7 +6,7 @@ struct String module_open_shadowed_module_open_shadowed_g(void);
 
 struct String module_open_shadowed_module_open_shadowed_main_f(void);
 
-int module_open_shadowed_sub_f(int );
+int32_t module_open_shadowed_sub_f(int32_t );
 
 int main(int argc, char** argv);
 
@@ -20,7 +20,7 @@ struct String module_open_shadowed_module_open_shadowed_main_f(void) {
 
 int main(int argc, char** argv) {
     milone_start(argc, argv);
-    int call_;
+    int32_t call_;
     struct String call_1;
     struct String call_2;
     call_ = module_open_shadowed_sub_f(40);

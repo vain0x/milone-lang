@@ -2,134 +2,134 @@
 #include <stdlib.h>
 #include <milone.h>
 
-struct Intoption1_;
+struct Int32option1_;
 
-struct Intoption1option1_;
+struct Int32option1option1_;
 
-struct Intoption1option1option1_;
+struct Int32option1option1option1_;
 
-typedef struct Intoption1option1option1_(*VoidConstPtrIntIntoption1option1option1_FunPtr2)(void const*, int);
+typedef struct Int32option1option1option1_(*VoidConstPtrInt32Int32option1option1option1_FunPtr2)(void const*, int32_t);
 
-struct IntIntoption1option1option1_Fun1;
+struct Int32Int32option1option1option1_Fun1;
 
-struct IntList;
+struct Int32List;
 
-struct Intoption1option1option1_List;
+struct Int32option1option1option1_List;
 
-struct IntList;
+struct Int32List;
 
-struct Intoption1option1option1_List;
+struct Int32option1option1option1_List;
 
-struct Intoption1option1option1_ list_pat_list_pat_main_fun(int x_);
+struct Int32option1option1option1_ list_pat_list_pat_main_fun(int32_t x_);
 
-struct Intoption1option1option1_ list_pat_list_pat_eta2_main_fun(void const* env_, int arg_);
+struct Int32option1option1option1_ list_pat_list_pat_eta2_main_fun(void const* env_, int32_t arg_);
 
-struct Intoption1option1option1_List const* MiloneCore_List_IntIntoption1option1option1Fun1IntListIntoption1option1option1ListFun2_map(struct IntIntoption1option1option1_Fun1 , struct IntList const* );
+struct Int32option1option1option1_List const* MiloneCore_List_Int32Int32option1option1option1Fun1Int32ListInt32option1option1option1ListFun2_map(struct Int32Int32option1option1option1_Fun1 , struct Int32List const* );
 
 int main(int argc, char** argv);
 
-enum Intoption1_Discriminant {
+enum Int32option1_Discriminant {
     None_,
     Some_,
 };
 
-struct Intoption1_ {
-    enum Intoption1_Discriminant discriminant;
+struct Int32option1_ {
+    enum Int32option1_Discriminant discriminant;
     union {
-        int Some_;
+        int32_t Some_;
     };
 };
 
-enum Intoption1option1_Discriminant {
+enum Int32option1option1_Discriminant {
     None_1,
     Some_1,
 };
 
-struct Intoption1option1_ {
-    enum Intoption1option1_Discriminant discriminant;
+struct Int32option1option1_ {
+    enum Int32option1option1_Discriminant discriminant;
     union {
-        struct Intoption1_ Some_1;
+        struct Int32option1_ Some_1;
     };
 };
 
-enum Intoption1option1option1_Discriminant {
+enum Int32option1option1option1_Discriminant {
     None_2,
     Some_2,
 };
 
-struct Intoption1option1option1_ {
-    enum Intoption1option1option1_Discriminant discriminant;
+struct Int32option1option1option1_ {
+    enum Int32option1option1option1_Discriminant discriminant;
     union {
-        struct Intoption1option1_ Some_2;
+        struct Int32option1option1_ Some_2;
     };
 };
 
-struct IntIntoption1option1option1_Fun1 {
-    VoidConstPtrIntIntoption1option1option1_FunPtr2 fun;
+struct Int32Int32option1option1option1_Fun1 {
+    VoidConstPtrInt32Int32option1option1option1_FunPtr2 fun;
     void const* env;
 };
 
-struct IntList {
-    int head;
-    struct IntList const* tail;
+struct Int32List {
+    int32_t head;
+    struct Int32List const* tail;
 };
 
-struct Intoption1option1option1_List {
-    struct Intoption1option1option1_ head;
-    struct Intoption1option1option1_List const* tail;
+struct Int32option1option1option1_List {
+    struct Int32option1option1option1_ head;
+    struct Int32option1option1option1_List const* tail;
 };
 
-struct Intoption1option1option1_ list_pat_list_pat_main_fun(int x_) {
-    struct Intoption1_ variant_;
-    struct Intoption1option1_ variant_1;
-    struct Intoption1option1option1_ variant_2;
-    variant_ = (struct Intoption1_){.discriminant = Some_, .Some_ = x_};
-    variant_1 = (struct Intoption1option1_){.discriminant = Some_1, .Some_1 = variant_};
-    variant_2 = (struct Intoption1option1option1_){.discriminant = Some_2, .Some_2 = variant_1};
+struct Int32option1option1option1_ list_pat_list_pat_main_fun(int32_t x_) {
+    struct Int32option1_ variant_;
+    struct Int32option1option1_ variant_1;
+    struct Int32option1option1option1_ variant_2;
+    variant_ = (struct Int32option1_){.discriminant = Some_, .Some_ = x_};
+    variant_1 = (struct Int32option1option1_){.discriminant = Some_1, .Some_1 = variant_};
+    variant_2 = (struct Int32option1option1option1_){.discriminant = Some_2, .Some_2 = variant_1};
     return variant_2;
 }
 
-struct Intoption1option1option1_ list_pat_list_pat_eta2_main_fun(void const* env_, int arg_) {
-    struct Intoption1option1option1_ call_;
+struct Int32option1option1option1_ list_pat_list_pat_eta2_main_fun(void const* env_, int32_t arg_) {
+    struct Int32option1option1option1_ call_;
     call_ = list_pat_list_pat_main_fun(arg_);
     return call_;
 }
 
 int main(int argc, char** argv) {
     milone_start(argc, argv);
-    int x1_;
-    int x2_;
-    int x3_;
-    int x4_;
-    int x5_;
-    int x6_;
-    int x7_;
+    int32_t x1_;
+    int32_t x2_;
+    int32_t x3_;
+    int32_t x4_;
+    int32_t x5_;
+    int32_t x6_;
+    int32_t x7_;
     char match_;
-    struct IntIntoption1option1option1_Fun1 fun_;
-    struct IntList const* list_;
-    struct IntList const* list_1;
-    struct IntList const* list_2;
-    struct IntList const* list_3;
-    struct IntList const* list_4;
-    struct IntList const* list_5;
-    struct IntList const* list_6;
-    struct Intoption1option1option1_List const* call_1;
-    fun_ = (struct IntIntoption1option1option1_Fun1){.fun = list_pat_list_pat_eta2_main_fun, .env = NULL};
-    list_6 = ((struct IntList const*)milone_region_alloc(1, sizeof(struct IntList)));
-    (*(((struct IntList*)list_6))) = (struct IntList){.head = 7, .tail = NULL};
-    list_5 = ((struct IntList const*)milone_region_alloc(1, sizeof(struct IntList)));
-    (*(((struct IntList*)list_5))) = (struct IntList){.head = 6, .tail = list_6};
-    list_4 = ((struct IntList const*)milone_region_alloc(1, sizeof(struct IntList)));
-    (*(((struct IntList*)list_4))) = (struct IntList){.head = 5, .tail = list_5};
-    list_3 = ((struct IntList const*)milone_region_alloc(1, sizeof(struct IntList)));
-    (*(((struct IntList*)list_3))) = (struct IntList){.head = 4, .tail = list_4};
-    list_2 = ((struct IntList const*)milone_region_alloc(1, sizeof(struct IntList)));
-    (*(((struct IntList*)list_2))) = (struct IntList){.head = 3, .tail = list_3};
-    list_1 = ((struct IntList const*)milone_region_alloc(1, sizeof(struct IntList)));
-    (*(((struct IntList*)list_1))) = (struct IntList){.head = 2, .tail = list_2};
-    list_ = ((struct IntList const*)milone_region_alloc(1, sizeof(struct IntList)));
-    (*(((struct IntList*)list_))) = (struct IntList){.head = 1, .tail = list_1};
-    call_1 = MiloneCore_List_IntIntoption1option1option1Fun1IntListIntoption1option1option1ListFun2_map(fun_, list_);
+    struct Int32Int32option1option1option1_Fun1 fun_;
+    struct Int32List const* list_;
+    struct Int32List const* list_1;
+    struct Int32List const* list_2;
+    struct Int32List const* list_3;
+    struct Int32List const* list_4;
+    struct Int32List const* list_5;
+    struct Int32List const* list_6;
+    struct Int32option1option1option1_List const* call_1;
+    fun_ = (struct Int32Int32option1option1option1_Fun1){.fun = list_pat_list_pat_eta2_main_fun, .env = NULL};
+    list_6 = ((struct Int32List const*)milone_region_alloc(1, sizeof(struct Int32List)));
+    (*(((struct Int32List*)list_6))) = (struct Int32List){.head = 7, .tail = NULL};
+    list_5 = ((struct Int32List const*)milone_region_alloc(1, sizeof(struct Int32List)));
+    (*(((struct Int32List*)list_5))) = (struct Int32List){.head = 6, .tail = list_6};
+    list_4 = ((struct Int32List const*)milone_region_alloc(1, sizeof(struct Int32List)));
+    (*(((struct Int32List*)list_4))) = (struct Int32List){.head = 5, .tail = list_5};
+    list_3 = ((struct Int32List const*)milone_region_alloc(1, sizeof(struct Int32List)));
+    (*(((struct Int32List*)list_3))) = (struct Int32List){.head = 4, .tail = list_4};
+    list_2 = ((struct Int32List const*)milone_region_alloc(1, sizeof(struct Int32List)));
+    (*(((struct Int32List*)list_2))) = (struct Int32List){.head = 3, .tail = list_3};
+    list_1 = ((struct Int32List const*)milone_region_alloc(1, sizeof(struct Int32List)));
+    (*(((struct Int32List*)list_1))) = (struct Int32List){.head = 2, .tail = list_2};
+    list_ = ((struct Int32List const*)milone_region_alloc(1, sizeof(struct Int32List)));
+    (*(((struct Int32List*)list_))) = (struct Int32List){.head = 1, .tail = list_1};
+    call_1 = MiloneCore_List_Int32Int32option1option1option1Fun1Int32ListInt32option1option1option1ListFun2_map(fun_, list_);
     if ((!(call_1))) goto next_10;
     if ((call_1->head.discriminant != Some_2)) goto next_10;
     if ((call_1->head.Some_2.discriminant != Some_1)) goto next_10;

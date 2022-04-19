@@ -2,17 +2,17 @@
 #include <stdlib.h>
 #include <milone.h>
 
-struct IntList;
+struct Int32List;
 
-struct IntList;
+struct Int32List;
 
 void obj_box_unbox_obj_box_unbox_main_printIntOrStr(bool isInt_, void const* value_);
 
 int main(int argc, char** argv);
 
-struct IntList {
-    int head;
-    struct IntList const* tail;
+struct Int32List {
+    int32_t head;
+    struct Int32List const* tail;
 };
 
 void obj_box_unbox_obj_box_unbox_main_printIntOrStr(bool isInt_, void const* value_) {
@@ -23,7 +23,7 @@ void obj_box_unbox_obj_box_unbox_main_printIntOrStr(bool isInt_, void const* val
         goto else_3;
     }
 then_2:;
-    printf("%d\n", ((int)((intptr_t)value_)));
+    printf("%d\n", ((int32_t)((intptr_t)value_)));
     if_ = 0;
     goto if_next_1;
 else_3:;
@@ -38,28 +38,28 @@ int main(int argc, char** argv) {
     milone_start(argc, argv);
     void const* n_;
     void const* xs_;
-    int a_;
-    int b_;
+    int32_t a_;
+    int32_t b_;
     void const* box_;
-    struct IntList const* list_;
-    struct IntList const* list_1;
+    struct Int32List const* list_;
+    struct Int32List const* list_1;
     char match_;
     obj_box_unbox_obj_box_unbox_main_printIntOrStr(true, ((void const*)((intptr_t)2)));
     box_ = ((void const*)milone_region_alloc(1, sizeof(struct String)));
     (*(((struct String*)box_))) = (struct String){.ptr = "Fizz", .len = 4};
     obj_box_unbox_obj_box_unbox_main_printIntOrStr(false, box_);
     n_ = ((void const*)((intptr_t)42));
-    milone_assert((((int)((intptr_t)n_)) == 42), (struct String){.ptr = "obj_box_unbox/obj_box_unbox.milone", .len = 34}, 19, 2);
-    list_1 = ((struct IntList const*)milone_region_alloc(1, sizeof(struct IntList)));
-    (*(((struct IntList*)list_1))) = (struct IntList){.head = 2, .tail = NULL};
-    list_ = ((struct IntList const*)milone_region_alloc(1, sizeof(struct IntList)));
-    (*(((struct IntList*)list_))) = (struct IntList){.head = 4, .tail = list_1};
+    milone_assert((((int32_t)((intptr_t)n_)) == 42), (struct String){.ptr = "obj_box_unbox/obj_box_unbox.milone", .len = 34}, 19, 2);
+    list_1 = ((struct Int32List const*)milone_region_alloc(1, sizeof(struct Int32List)));
+    (*(((struct Int32List*)list_1))) = (struct Int32List){.head = 2, .tail = NULL};
+    list_ = ((struct Int32List const*)milone_region_alloc(1, sizeof(struct Int32List)));
+    (*(((struct Int32List*)list_))) = (struct Int32List){.head = 4, .tail = list_1};
     xs_ = ((void const*)((intptr_t)list_));
-    if ((!(((struct IntList const*)((intptr_t)xs_))))) goto next_5;
-    a_ = ((struct IntList const*)((intptr_t)xs_))->head;
-    if ((!(((struct IntList const*)((intptr_t)xs_))->tail))) goto next_5;
-    b_ = ((struct IntList const*)((intptr_t)xs_))->tail->head;
-    if ((!((!(((struct IntList const*)((intptr_t)xs_))->tail->tail))))) goto next_5;
+    if ((!(((struct Int32List const*)((intptr_t)xs_))))) goto next_5;
+    a_ = ((struct Int32List const*)((intptr_t)xs_))->head;
+    if ((!(((struct Int32List const*)((intptr_t)xs_))->tail))) goto next_5;
+    b_ = ((struct Int32List const*)((intptr_t)xs_))->tail->head;
+    if ((!((!(((struct Int32List const*)((intptr_t)xs_))->tail->tail))))) goto next_5;
     milone_assert((((a_ * 10) + b_) == 42), (struct String){.ptr = "obj_box_unbox/obj_box_unbox.milone", .len = 34}, 24, 16);
     match_ = 0;
     goto end_match_4;

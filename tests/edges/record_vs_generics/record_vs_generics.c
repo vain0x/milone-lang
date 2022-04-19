@@ -15,7 +15,7 @@ struct IntWrapper_ record_vs_generics_record_vs_generics_eta2_main_constant(void
 int main(int argc, char** argv);
 
 struct IntWrapper_ {
-    int t0;
+    int32_t t0;
 };
 
 struct UnitIntWrapper_Fun1 {

@@ -2,7 +2,7 @@
 #include <stdlib.h>
 #include <milone.h>
 
-struct Intoption1_;
+struct Int32option1_;
 
 struct Stringoption1_;
 
@@ -16,15 +16,15 @@ void option_option_basicMatchCase(void);
 
 int main(int argc, char** argv);
 
-enum Intoption1_Discriminant {
+enum Int32option1_Discriminant {
     None_,
     Some_,
 };
 
-struct Intoption1_ {
-    enum Intoption1_Discriminant discriminant;
+struct Int32option1_ {
+    enum Int32option1_Discriminant discriminant;
     union {
-        int Some_;
+        int32_t Some_;
     };
 };
 
@@ -54,8 +54,8 @@ struct Unitoption1_ {
 
 void option_option_basicSomeCase(void) {
     char match_;
-    struct Intoption1_ variant_;
-    variant_ = (struct Intoption1_){.discriminant = Some_, .Some_ = 1};
+    struct Int32option1_ variant_;
+    variant_ = (struct Int32option1_){.discriminant = Some_, .Some_ = 1};
     if ((variant_.discriminant != None_)) goto next_2;
     milone_assert(false, (struct String){.ptr = "option/option.milone", .len = 20}, 6, 12);
     match_ = 0;

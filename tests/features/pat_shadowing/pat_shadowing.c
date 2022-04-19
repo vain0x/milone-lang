@@ -6,11 +6,11 @@ int main(int argc, char** argv);
 
 int main(int argc, char** argv) {
     milone_start(argc, argv);
-    int x_;
-    int x_1;
+    int32_t x_;
+    int32_t x_1;
     char case1_;
-    int x_2;
-    int x_3;
+    int32_t x_2;
+    int32_t x_3;
     char case2_;
     x_ = 1;
     x_1 = 0;

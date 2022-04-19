@@ -24,15 +24,15 @@ struct Node_;
 
 struct FirstSecondTuple2_;
 
-struct IntThirdTuple2_List;
+struct Int32ThirdTuple2_List;
 
 struct Third_;
 
-struct IntThirdTuple2_;
+struct Int32ThirdTuple2_;
 
 struct Node_List;
 
-struct IntThirdTuple2_List;
+struct Int32ThirdTuple2_List;
 
 struct FirstListSecondListTuple2_ union_complicated_union_complicated_main_f(struct FirstSecondTuple2_List const* arg_2);
 
@@ -82,7 +82,7 @@ enum Node_Discriminant {
 struct Node_ {
     enum Node_Discriminant discriminant;
     union {
-        int Leaf_;
+        int32_t Leaf_;
         struct Node_List const* Node_;
     };
 };
@@ -100,12 +100,12 @@ enum Third_Discriminant {
 struct Third_ {
     enum Third_Discriminant discriminant;
     union {
-        struct IntThirdTuple2_List const* Node3_;
+        struct Int32ThirdTuple2_List const* Node3_;
     };
 };
 
-struct IntThirdTuple2_ {
-    int t0;
+struct Int32ThirdTuple2_ {
+    int32_t t0;
     struct Third_ t1;
 };
 
@@ -114,9 +114,9 @@ struct Node_List {
     struct Node_List const* tail;
 };
 
-struct IntThirdTuple2_List {
-    struct IntThirdTuple2_ head;
-    struct IntThirdTuple2_List const* tail;
+struct Int32ThirdTuple2_List {
+    struct Int32ThirdTuple2_ head;
+    struct Int32ThirdTuple2_List const* tail;
 };
 
 struct FirstListSecondListTuple2_ union_complicated_union_complicated_main_f(struct FirstSecondTuple2_List const* arg_2) {
@@ -139,9 +139,9 @@ struct FirstListSecondListTuple2_ union_complicated_union_complicated_eta2_main_
 
 int main(int argc, char** argv) {
     milone_start(argc, argv);
-    int x_;
-    int y_;
-    int z_;
+    int32_t x_;
+    int32_t y_;
+    int32_t z_;
     struct First_ first_;
     struct Second_ second_;
     char match_;
@@ -166,8 +166,8 @@ int main(int argc, char** argv) {
     struct FirstSecondTuple2_ListFirstListSecondListTuple2_Fun1 fun_1;
     struct Second_ variant_8;
     char match_1;
-    struct IntThirdTuple2_List const* list_6;
-    struct IntThirdTuple2_ IntThirdTuple2_;
+    struct Int32ThirdTuple2_List const* list_6;
+    struct Int32ThirdTuple2_ Int32ThirdTuple2_;
     variant_ = (struct Node_){.discriminant = Leaf_, .Leaf_ = 1};
     variant_1 = (struct Node_){.discriminant = Leaf_, .Leaf_ = 2};
     list_2 = ((struct Node_List const*)milone_region_alloc(1, sizeof(struct Node_List)));
@@ -247,9 +247,9 @@ end_match_1:;
     FirstSecondTuple2_ = (struct FirstSecondTuple2_){.t0 = variant_7, .t1 = variant_8};
     first_ = FirstSecondTuple2_.t0;
     second_ = FirstSecondTuple2_.t1;
-    IntThirdTuple2_ = (struct IntThirdTuple2_){.t0 = 0, .t1 = (struct Third_){.discriminant = Leaf3_}};
-    list_6 = ((struct IntThirdTuple2_List const*)milone_region_alloc(1, sizeof(struct IntThirdTuple2_List)));
-    (*(((struct IntThirdTuple2_List*)list_6))) = (struct IntThirdTuple2_List){.head = IntThirdTuple2_, .tail = NULL};
+    Int32ThirdTuple2_ = (struct Int32ThirdTuple2_){.t0 = 0, .t1 = (struct Third_){.discriminant = Leaf3_}};
+    list_6 = ((struct Int32ThirdTuple2_List const*)milone_region_alloc(1, sizeof(struct Int32ThirdTuple2_List)));
+    (*(((struct Int32ThirdTuple2_List*)list_6))) = (struct Int32ThirdTuple2_List){.head = Int32ThirdTuple2_, .tail = NULL};
     if ((!(list_6))) goto next_11;
     if ((list_6->head.t0 != 0)) goto next_11;
     if ((list_6->head.t1.discriminant != Leaf3_)) goto next_11;

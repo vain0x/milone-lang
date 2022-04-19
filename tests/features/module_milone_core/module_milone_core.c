@@ -2,33 +2,33 @@
 #include <stdlib.h>
 #include <milone.h>
 
-struct IntList;
+struct Int32List;
 
-struct IntList;
+struct Int32List;
 
-bool MiloneCore_List_IntListBoolFun1_isEmpty(struct IntList const* );
+bool MiloneCore_List_Int32ListBoolFun1_isEmpty(struct Int32List const* );
 
-void module_milone_core_module_milone_core_IntListUnitFun1_assertNotEmpty(struct IntList const* xs_);
+void module_milone_core_module_milone_core_Int32ListUnitFun1_assertNotEmpty(struct Int32List const* xs_);
 
 int main(int argc, char** argv);
 
-struct IntList {
-    int head;
-    struct IntList const* tail;
+struct Int32List {
+    int32_t head;
+    struct Int32List const* tail;
 };
 
-void module_milone_core_module_milone_core_IntListUnitFun1_assertNotEmpty(struct IntList const* xs_) {
+void module_milone_core_module_milone_core_Int32ListUnitFun1_assertNotEmpty(struct Int32List const* xs_) {
     bool call_;
-    call_ = MiloneCore_List_IntListBoolFun1_isEmpty(xs_);
+    call_ = MiloneCore_List_Int32ListBoolFun1_isEmpty(xs_);
     milone_assert((!(call_)), (struct String){.ptr = "module_milone_core/module_milone_core.milone", .len = 44}, 5, 34);
     return;
 }
 
 int main(int argc, char** argv) {
     milone_start(argc, argv);
-    struct IntList const* list_;
-    list_ = ((struct IntList const*)milone_region_alloc(1, sizeof(struct IntList)));
-    (*(((struct IntList*)list_))) = (struct IntList){.head = 1, .tail = NULL};
-    module_milone_core_module_milone_core_IntListUnitFun1_assertNotEmpty(list_);
+    struct Int32List const* list_;
+    list_ = ((struct Int32List const*)milone_region_alloc(1, sizeof(struct Int32List)));
+    (*(((struct Int32List*)list_))) = (struct Int32List){.head = 1, .tail = NULL};
+    module_milone_core_module_milone_core_Int32ListUnitFun1_assertNotEmpty(list_);
     return 0;
 }

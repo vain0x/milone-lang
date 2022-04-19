@@ -7,8 +7,8 @@ int main(int argc, char** argv);
 int main(int argc, char** argv) {
     milone_start(argc, argv);
     struct String hello_;
-    int if_;
-    int if_1;
+    int32_t if_;
+    int32_t if_1;
     if (true) {
         goto then_2;
     } else {

@@ -6,7 +6,7 @@ struct Status_;
 
 struct Limit_;
 
-struct IntStringTuple2_;
+struct Int32StringTuple2_;
 
 struct ApiResponse_;
 
@@ -32,12 +32,12 @@ enum Limit_Discriminant {
 struct Limit_ {
     enum Limit_Discriminant discriminant;
     union {
-        int LimitVal_;
+        int32_t LimitVal_;
     };
 };
 
-struct IntStringTuple2_ {
-    int t0;
+struct Int32StringTuple2_ {
+    int32_t t0;
     struct String t1;
 };
 
@@ -51,7 +51,7 @@ struct ApiResponse_ {
     enum ApiResponse_Discriminant discriminant;
     union {
         struct String ARJson_;
-        struct IntStringTuple2_ ARError_;
+        struct Int32StringTuple2_ ARError_;
     };
 };
 
@@ -61,8 +61,8 @@ int main(int argc, char** argv) {
     struct Status_ err1_;
     struct Status_ err2_;
     struct String e_;
-    int x_;
-    int statusCode_;
+    int32_t x_;
+    int32_t statusCode_;
     struct String statusText_;
     struct Status_ ok_1;
     char okOk_;
@@ -75,7 +75,7 @@ int main(int argc, char** argv) {
     struct Limit_ variant_2;
     char switch_;
     char match_2;
-    struct IntStringTuple2_ IntStringTuple2_;
+    struct Int32StringTuple2_ Int32StringTuple2_;
     struct ApiResponse_ variant_3;
     bool if_;
     char switch_1;
@@ -124,8 +124,8 @@ clause_9:;
     switch_ = 0;
     goto switch_next_7;
 switch_next_7:;
-    IntStringTuple2_ = (struct IntStringTuple2_){.t0 = 404, .t1 = (struct String){.ptr = "Not Found", .len = 9}};
-    variant_3 = (struct ApiResponse_){.discriminant = ARError_, .ARError_ = IntStringTuple2_};
+    Int32StringTuple2_ = (struct Int32StringTuple2_){.t0 = 404, .t1 = (struct String){.ptr = "Not Found", .len = 9}};
+    variant_3 = (struct ApiResponse_){.discriminant = ARError_, .ARError_ = Int32StringTuple2_};
     if ((variant_3.discriminant != ARError_)) goto next_11;
     statusCode_ = variant_3.ARError_.t0;
     statusText_ = variant_3.ARError_.t1;

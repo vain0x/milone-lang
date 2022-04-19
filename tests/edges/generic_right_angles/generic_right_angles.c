@@ -2,13 +2,13 @@
 #include <stdlib.h>
 #include <milone.h>
 
-struct IntListListList;
+struct Int32ListListList;
 
 int main(int argc, char** argv);
 
 int main(int argc, char** argv) {
     milone_start(argc, argv);
-    struct IntListListList const* n_;
+    struct Int32ListListList const* n_;
     bool ok_;
     bool if_;
     n_ = NULL;

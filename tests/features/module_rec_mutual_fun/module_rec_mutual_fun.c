@@ -2,13 +2,13 @@
 #include <stdlib.h>
 #include <milone.h>
 
-bool module_rec_mutual_fun_module_rec_mutual_fun_even(int n_);
+bool module_rec_mutual_fun_module_rec_mutual_fun_even(int32_t n_);
 
-bool module_rec_mutual_fun_module_rec_mutual_fun_odd(int n_1);
+bool module_rec_mutual_fun_module_rec_mutual_fun_odd(int32_t n_1);
 
 int main(int argc, char** argv);
 
-bool module_rec_mutual_fun_module_rec_mutual_fun_even(int n_) {
+bool module_rec_mutual_fun_module_rec_mutual_fun_even(int32_t n_) {
     bool if_;
     bool call_;
     if ((n_ == 0)) {
@@ -27,7 +27,7 @@ if_next_1:;
     return if_;
 }
 
-bool module_rec_mutual_fun_module_rec_mutual_fun_odd(int n_1) {
+bool module_rec_mutual_fun_module_rec_mutual_fun_odd(int32_t n_1) {
     bool if_1;
     bool call_1;
     if ((n_1 != 0)) {

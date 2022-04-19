@@ -2,11 +2,11 @@
 #include <stdlib.h>
 #include <milone.h>
 
-bool unary_op_syntax_unary_op_syntax_f(int n_, int m_);
+bool unary_op_syntax_unary_op_syntax_f(int32_t n_, int32_t m_);
 
 int main(int argc, char** argv);
 
-bool unary_op_syntax_unary_op_syntax_f(int n_, int m_) {
+bool unary_op_syntax_unary_op_syntax_f(int32_t n_, int32_t m_) {
     return (n_ == (m_ + 1));
 }
 

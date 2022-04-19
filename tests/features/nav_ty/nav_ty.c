@@ -6,7 +6,7 @@ struct Node_;
 
 struct NodeNodeTuple2_;
 
-struct Node_ nav_ty_nav_ty_main_leaf(int n_);
+struct Node_ nav_ty_nav_ty_main_leaf(int32_t n_);
 
 struct Node_ nav_ty_nav_ty_main_node(struct Node_ l_, struct Node_ r_);
 
@@ -20,7 +20,7 @@ enum Node_Discriminant {
 struct Node_ {
     enum Node_Discriminant discriminant;
     union {
-        int Leaf_;
+        int32_t Leaf_;
         void const* Node_;
     };
 };
@@ -30,7 +30,7 @@ struct NodeNodeTuple2_ {
     struct Node_ t1;
 };
 
-struct Node_ nav_ty_nav_ty_main_leaf(int n_) {
+struct Node_ nav_ty_nav_ty_main_leaf(int32_t n_) {
     struct Node_ variant_;
     variant_ = (struct Node_){.discriminant = Leaf_, .Leaf_ = n_};
     return variant_;
@@ -50,7 +50,7 @@ struct Node_ nav_ty_nav_ty_main_node(struct Node_ l_, struct Node_ r_) {
 int main(int argc, char** argv) {
     milone_start(argc, argv);
     struct Node_ t_;
-    int x_;
+    int32_t x_;
     struct Node_ call_;
     struct Node_ call_1;
     struct Node_ call_2;

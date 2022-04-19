@@ -13,7 +13,7 @@ struct SubRecord_ {
 int main(int argc, char** argv) {
     milone_start(argc, argv);
     struct SubRecord_ text_;
-    int value_;
+    int32_t value_;
     struct SubRecord_ SubRecord_;
     char match_;
     SubRecord_ = (struct SubRecord_){.t0 = (struct String){.ptr = "Hello", .len = 5}};

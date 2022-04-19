@@ -2,11 +2,11 @@
 #include <stdlib.h>
 #include <milone.h>
 
-struct IntList;
+struct Int32List;
 
-struct IntList;
+struct Int32List;
 
-struct IntIntTuple2_;
+struct Int32Int32Tuple2_;
 
 void match_complicated_match_complicated_testTrivialCase(void);
 
@@ -18,14 +18,14 @@ void match_complicated_match_complicated_testNestedMatchesParseCorrectly(void);
 
 int main(int argc, char** argv);
 
-struct IntList {
-    int head;
-    struct IntList const* tail;
+struct Int32List {
+    int32_t head;
+    struct Int32List const* tail;
 };
 
-struct IntIntTuple2_ {
-    int t0;
-    int t1;
+struct Int32Int32Tuple2_ {
+    int32_t t0;
+    int32_t t1;
 };
 
 void match_complicated_match_complicated_testTrivialCase(void) {
@@ -39,9 +39,9 @@ end_match_1:;
 
 void match_complicated_match_complicated_testListMatching(void) {
     char match_1;
-    struct IntList const* list_;
-    list_ = ((struct IntList const*)milone_region_alloc(1, sizeof(struct IntList)));
-    (*(((struct IntList*)list_))) = (struct IntList){.head = 0, .tail = NULL};
+    struct Int32List const* list_;
+    list_ = ((struct Int32List const*)milone_region_alloc(1, sizeof(struct Int32List)));
+    (*(((struct Int32List*)list_))) = (struct Int32List){.head = 0, .tail = NULL};
     if ((!(list_))) goto next_4;
     if ((!(list_->tail))) goto next_4;
     milone_assert(false, (struct String){.ptr = "match_complicated/match_complicated.milone", .len = 42}, 10, 19);
@@ -64,20 +64,20 @@ end_match_3:;
 }
 
 void match_complicated_match_complicated_testMatchArmsMakeScope(void) {
-    int x_;
-    int x_1;
+    int32_t x_;
+    int32_t x_1;
     char match_2;
-    struct IntIntTuple2_ IntIntTuple2_;
+    struct Int32Int32Tuple2_ Int32Int32Tuple2_;
     char if_;
     x_ = 2;
-    IntIntTuple2_ = (struct IntIntTuple2_){.t0 = x_, .t1 = 1};
-    if ((IntIntTuple2_.t0 != 1)) goto next_8;
-    x_1 = IntIntTuple2_.t1;
+    Int32Int32Tuple2_ = (struct Int32Int32Tuple2_){.t0 = x_, .t1 = 1};
+    if ((Int32Int32Tuple2_.t0 != 1)) goto next_8;
+    x_1 = Int32Int32Tuple2_.t1;
     milone_assert(false, (struct String){.ptr = "match_complicated/match_complicated.milone", .len = 42}, 18, 12);
     match_2 = 0;
     goto end_match_7;
 next_8:;
-    if ((IntIntTuple2_.t0 != 2)) goto next_9;
+    if ((Int32Int32Tuple2_.t0 != 2)) goto next_9;
     if ((x_ != 2)) {
         goto then_12;
     } else {

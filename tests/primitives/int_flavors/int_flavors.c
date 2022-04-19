@@ -18,7 +18,7 @@ void int_flavors_int_flavors_signedCases(void) {
     milone_assert((((int8_t)1) == ((int8_t)1)), (struct String){.ptr = "int_flavors/int_flavors.milone", .len = 30}, 12, 2);
     milone_assert((((int8_t)2 + (int8_t)3) == (int8_t)5), (struct String){.ptr = "int_flavors/int_flavors.milone", .len = 30}, 18, 2);
     milone_assert((((int16_t)7 - (int16_t)11) == (int16_t)-4), (struct String){.ptr = "int_flavors/int_flavors.milone", .len = 30}, 19, 2);
-    milone_assert((((int)(int16_t)-4) == -4), (struct String){.ptr = "int_flavors/int_flavors.milone", .len = 30}, 20, 2);
+    milone_assert((((int32_t)(int16_t)-4) == -4), (struct String){.ptr = "int_flavors/int_flavors.milone", .len = 30}, 20, 2);
     milone_assert((((((int8_t)1 + (int8_t)2) + (int8_t)4) & (((int8_t)2 + (int8_t)4) + (int8_t)8)) == ((int8_t)2 + (int8_t)4)), (struct String){.ptr = "int_flavors/int_flavors.milone", .len = 30}, 23, 2);
     milone_assert((((((int16_t)1 + (int16_t)2) + (int16_t)4) | (((int16_t)2 + (int16_t)4) + (int16_t)8)) == ((((int16_t)1 + (int16_t)2) + (int16_t)4) + (int16_t)8)), (struct String){.ptr = "int_flavors/int_flavors.milone", .len = 30}, 25, 2);
     milone_assert(((((1LL + 2LL) + 4LL) ^ ((2LL + 4LL) + 8LL)) == (1LL + 8LL)), (struct String){.ptr = "int_flavors/int_flavors.milone", .len = 30}, 27, 2);
@@ -38,7 +38,7 @@ void int_flavors_int_flavors_signedCases(void) {
     call_1 = string_of_int64((1231231231LL * 3LL));
     milone_assert((string_compare(call_1, (struct String){.ptr = "3693693693", .len = 10}) == 0), (struct String){.ptr = "int_flavors/int_flavors.milone", .len = 30}, 48, 2);
     call_2 = string_to_int64((struct String){.ptr = "-3693693693", .len = 11});
-    milone_assert((((int)(call_2 / 3LL)) == -1231231231), (struct String){.ptr = "int_flavors/int_flavors.milone", .len = 30}, 51, 2);
+    milone_assert((((int32_t)(call_2 / 3LL)) == -1231231231), (struct String){.ptr = "int_flavors/int_flavors.milone", .len = 30}, 51, 2);
     return;
 }
 
@@ -69,7 +69,7 @@ void int_flavors_int_flavors_unsignedCases(void) {
     call_5 = string_to_uint8((struct String){.ptr = "255", .len = 3});
     milone_assert((call_5 == (uint8_t)255U), (struct String){.ptr = "int_flavors/int_flavors.milone", .len = 30}, 88, 2);
     call_6 = string_to_uint64((struct String){.ptr = "3693693693", .len = 10});
-    milone_assert((((int)(call_6 / 3ULL)) == 1231231231), (struct String){.ptr = "int_flavors/int_flavors.milone", .len = 30}, 89, 2);
+    milone_assert((((int32_t)(call_6 / 3ULL)) == 1231231231), (struct String){.ptr = "int_flavors/int_flavors.milone", .len = 30}, 89, 2);
     return;
 }
 

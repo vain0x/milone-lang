@@ -6,11 +6,11 @@ void int_operators_int_operators_literalTest(void);
 
 void int_operators_int_operators_hexLiteralTest(void);
 
-void int_operators_int_operators_arithmeticOperatorsTest(int two_, int three_, int thirtyNine_);
+void int_operators_int_operators_arithmeticOperatorsTest(int32_t two_, int32_t three_, int32_t thirtyNine_);
 
-void int_operators_int_operators_bitOperatorsTest(int n1_);
+void int_operators_int_operators_bitOperatorsTest(int32_t n1_);
 
-void int_operators_int_operators_compareTest(int n2_1, int n3_);
+void int_operators_int_operators_compareTest(int32_t n2_1, int32_t n3_);
 
 void int_operators_int_operators_toIntTest(void);
 
@@ -29,7 +29,7 @@ void int_operators_int_operators_hexLiteralTest(void) {
     return;
 }
 
-void int_operators_int_operators_arithmeticOperatorsTest(int two_, int three_, int thirtyNine_) {
+void int_operators_int_operators_arithmeticOperatorsTest(int32_t two_, int32_t three_, int32_t thirtyNine_) {
     milone_assert(((two_ + three_) == 5), (struct String){.ptr = "int_operators/int_operators.milone", .len = 34}, 13, 2);
     milone_assert(((three_ - two_) == 1), (struct String){.ptr = "int_operators/int_operators.milone", .len = 34}, 14, 2);
     milone_assert(((two_ * three_) == 6), (struct String){.ptr = "int_operators/int_operators.milone", .len = 34}, 15, 2);
@@ -41,11 +41,11 @@ void int_operators_int_operators_arithmeticOperatorsTest(int two_, int three_, i
     return;
 }
 
-void int_operators_int_operators_bitOperatorsTest(int n1_) {
-    int n2_;
-    int n4_;
-    int n8_;
-    int n16_;
+void int_operators_int_operators_bitOperatorsTest(int32_t n1_) {
+    int32_t n2_;
+    int32_t n4_;
+    int32_t n8_;
+    int32_t n16_;
     n2_ = (n1_ * 2);
     n4_ = (n2_ * 2);
     n8_ = (n4_ * 2);
@@ -64,7 +64,7 @@ void int_operators_int_operators_bitOperatorsTest(int n1_) {
     return;
 }
 
-void int_operators_int_operators_compareTest(int n2_1, int n3_) {
+void int_operators_int_operators_compareTest(int32_t n2_1, int32_t n3_) {
     milone_assert((n2_1 == 2), (struct String){.ptr = "int_operators/int_operators.milone", .len = 34}, 44, 2);
     milone_assert((n3_ != 2), (struct String){.ptr = "int_operators/int_operators.milone", .len = 34}, 45, 2);
     milone_assert((2 >= n2_1), (struct String){.ptr = "int_operators/int_operators.milone", .len = 34}, 47, 2);
@@ -78,10 +78,10 @@ void int_operators_int_operators_compareTest(int n2_1, int n3_) {
 }
 
 void int_operators_int_operators_toIntTest(void) {
-    int call_;
-    int call_1;
+    int32_t call_;
+    int32_t call_1;
     milone_assert((0 == 0), (struct String){.ptr = "int_operators/int_operators.milone", .len = 34}, 58, 2);
-    milone_assert((((int)'a') == 97), (struct String){.ptr = "int_operators/int_operators.milone", .len = 34}, 59, 2);
+    milone_assert((((int32_t)'a') == 97), (struct String){.ptr = "int_operators/int_operators.milone", .len = 34}, 59, 2);
     call_ = string_to_int32((struct String){.ptr = "42", .len = 2});
     milone_assert((call_ == 42), (struct String){.ptr = "int_operators/int_operators.milone", .len = 34}, 60, 2);
     call_1 = string_to_int32((struct String){.ptr = "-1", .len = 2});

@@ -2,9 +2,9 @@
 #include <stdlib.h>
 #include <milone.h>
 
-struct IntStringTuple2_;
+struct Int32StringTuple2_;
 
-struct StringIntTuple2_;
+struct StringInt32Tuple2_;
 
 struct StringStringTuple2_;
 
@@ -12,14 +12,14 @@ struct StringStringTuple2StringTuple2_;
 
 int main(int argc, char** argv);
 
-struct IntStringTuple2_ {
-    int t0;
+struct Int32StringTuple2_ {
+    int32_t t0;
     struct String t1;
 };
 
-struct StringIntTuple2_ {
+struct StringInt32Tuple2_ {
     struct String t0;
-    int t1;
+    int32_t t1;
 };
 
 struct StringStringTuple2_ {
@@ -34,29 +34,29 @@ struct StringStringTuple2StringTuple2_ {
 
 int main(int argc, char** argv) {
     milone_start(argc, argv);
-    struct IntStringTuple2_ a_;
-    int x_;
+    struct Int32StringTuple2_ a_;
+    int32_t x_;
     struct String _x;
-    struct StringIntTuple2_ b_;
+    struct StringInt32Tuple2_ b_;
     struct String y_;
-    int _y;
+    int32_t _y;
     struct String z_;
     struct String w_;
     struct String p_;
     struct String q_;
     struct String r_;
-    struct IntStringTuple2_ IntStringTuple2_;
-    struct StringIntTuple2_ StringIntTuple2_;
+    struct Int32StringTuple2_ Int32StringTuple2_;
+    struct StringInt32Tuple2_ StringInt32Tuple2_;
     struct StringStringTuple2_ StringStringTuple2_;
     struct StringStringTuple2StringTuple2_ StringStringTuple2StringTuple2_;
     struct StringStringTuple2_ StringStringTuple2_1;
-    IntStringTuple2_ = (struct IntStringTuple2_){.t0 = 1, .t1 = (struct String){.ptr = "snd", .len = 3}};
-    a_ = IntStringTuple2_;
+    Int32StringTuple2_ = (struct Int32StringTuple2_){.t0 = 1, .t1 = (struct String){.ptr = "snd", .len = 3}};
+    a_ = Int32StringTuple2_;
     x_ = a_.t0;
     _x = a_.t1;
     printf("%d\n", x_);
-    StringIntTuple2_ = (struct StringIntTuple2_){.t0 = (struct String){.ptr = "fst", .len = 3}, .t1 = 2};
-    b_ = StringIntTuple2_;
+    StringInt32Tuple2_ = (struct StringInt32Tuple2_){.t0 = (struct String){.ptr = "fst", .len = 3}, .t1 = 2};
+    b_ = StringInt32Tuple2_;
     y_ = b_.t0;
     _y = b_.t1;
     printf("%s\n", string_to_c_str(y_));
