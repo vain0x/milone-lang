@@ -28,7 +28,7 @@ let tyUNativeInt = Ty(IntTk UPtr, [])
 let tyBool = Ty(BoolTk, [])
 let tyFloat = Ty(FloatTk F64, [])
 let tyChar = Ty(CharTk, [])
-let tyStr = Ty(StrTk, [])
+let tyString = Ty(StringTk, [])
 let tyObj = Ty(ObjTk, [])
 
 let tyFun sourceTy targetTy = Ty(FunTk, [ sourceTy; targetTy ])
@@ -99,7 +99,7 @@ let litToTy (lit: Lit) : Ty =
   | IntLitWithFlavor (_, flavor) -> Ty(IntTk flavor, [])
   | FloatLit _ -> tyFloat
   | CharLit _ -> tyChar
-  | StrLit _ -> tyStr
+  | StringLit _ -> tyString
 
 // -----------------------------------------------
 // TPrim
@@ -371,7 +371,7 @@ let analyzeFormat (format: string) =
       tyUnit
     else if i + 1 < format.Length && format.[i] = '%' then
       match format.[i + 1] with
-      | 's' -> tyFun tyStr (go (i + 2))
+      | 's' -> tyFun tyString (go (i + 2))
       | 'd' -> tyFun tyInt (go (i + 2))
       | 'f' -> tyFun tyFloat (go (i + 2))
       | 'c' -> tyFun tyChar (go (i + 2))
@@ -379,7 +379,7 @@ let analyzeFormat (format: string) =
     else
       go (i + 1)
 
-  tyFun tyStr (go 0)
+  tyFun tyString (go 0)
 
 // -----------------------------------------------
 // Logs

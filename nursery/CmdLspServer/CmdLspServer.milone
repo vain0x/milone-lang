@@ -26,7 +26,7 @@ __nativeDecl
   """
 
 let private writeErrorLine (s: string) : unit =
-  __nativeStmt ("fwrite({0}.str, sizeof(char), (size_t){0}.len, stderr);", s + "\n")
+  __nativeStmt ("fwrite({0}.ptr, sizeof(char), (size_t){0}.len, stderr);", s + "\n")
 
 let private formatN (s: string) (args: string list) : string =
   args
@@ -57,9 +57,9 @@ let private debugN (s: string) (args: string list) : unit = debug (formatN s arg
 let private doInRegion (action: unit -> unit) =
   __nativeStmt (
     """
-      milone_enter_region();
+      milone_region_enter();
       {0}.fun({0}.env);
-      milone_leave_region();
+      milone_region_leave();
     """,
     action
   )
@@ -67,11 +67,11 @@ let private doInRegion (action: unit -> unit) =
 let private whileInRegion (cond: unit -> bool) : unit =
   __nativeStmt (
     """
-      milone_enter_region();
+      milone_region_enter();
       while ({0}.fun({0}.env)) {
         // Pass.
       }
-      milone_leave_region();
+      milone_region_leave();
     """,
     cond
   )
@@ -339,7 +339,7 @@ module private Buffer =
     else
       assert (capacity >= 1)
 
-      __nativeStmt ("unsigned char *buf = milone_mem_alloc({0}, sizeof(unsigned char));", capacity)
+      __nativeStmt ("unsigned char *buf = milone_region_alloc({0}, sizeof(unsigned char));", capacity)
 
       let ptr: nativeptr<byte> = __nativeExpr "buf"
 
@@ -353,7 +353,7 @@ module private Buffer =
     let ptr, capacity = buf
     assert (len >= 0)
     assert (len < capacity)
-    __nativeStmt ("struct String s = str_of_raw_parts({0}, {1});", ptr, len)
+    __nativeStmt ("struct String s = string_of_raw_parts({0}, {1});", ptr, len)
     __nativeExpr "s"
 
 type private Stream = nativeptr<__nativeType<FILE>>
@@ -395,7 +395,7 @@ let private readExact (buf: Buffer) (size: int) (input: Stream) : bool * Buffer 
 
   if not ok then
     // let s: nativeptr<char> = __nativeExpr("strerror(errno)")
-    // let s: string = __nativeExpr ("str_borrow({0})", s)
+    // let s: string = __nativeExpr ("string_borrow({0})", s)
     // printfn "%s" s
     printfn "%d" ((__nativeExpr "result": unativeint) |> int)
 
@@ -411,7 +411,7 @@ let private readLine (input: Stream) : string option * Stream =
   )
 
   if __nativeExpr "ok" then
-    let line: string = __nativeExpr "str_of_c_str(buf)"
+    let line: string = __nativeExpr "string_of_c_str(buf)"
     Some line, input
   else
     None, input
@@ -434,7 +434,7 @@ let private doWriteExact (ptr: __inptr<byte>) (len: int) (output: Stream) : unit
 
 let private writeString (s: string) (output: Stream) : Stream =
   if s.Length <> 0 then
-    let ptr: __inptr<char> = __nativeExpr ("({0}.str)", s)
+    let ptr: __inptr<char> = __nativeExpr ("({0}.ptr)", s)
     let ptr: __inptr<byte> = __nativeCast ptr
     let output = doWriteExact ptr s.Length output
     __nativeStmt ("fflush({0});", output)
@@ -473,7 +473,7 @@ let private miloneDirOpen (dir: string) : nativeptr<DirIter> = __nativeFun ("mil
 let private miloneDirClose (di: nativeptr<DirIter>) : unit = __nativeFun ("milone_dir_close", di)
 
 let private miloneDirNext (di: nativeptr<DirIter>) : string option =
-  __nativeStmt """struct String name = str_borrow("");"""
+  __nativeStmt """struct String name = string_borrow("");"""
   let np: nativeptr<string> = __nativeExpr "&name"
   let ok: bool = __nativeFun ("milone_dir_next", di, np)
   let name: string = __nativeExpr "name"

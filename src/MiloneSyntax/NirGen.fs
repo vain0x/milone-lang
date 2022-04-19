@@ -499,7 +499,7 @@ let private ngDecl docId attrs ctx decl : NDecl * NirGenCtx =
       attrs
       |> List.exists (fun a ->
         match a with
-        | ABinaryExpr (AppBinary, AIdentExpr (Name ("Repr", _), []), ALitExpr (StrLit "C", _), _) -> true
+        | ABinaryExpr (AppBinary, AIdentExpr (Name ("Repr", _), []), ALitExpr (StringLit "C", _), _) -> true
         | _ -> false)
       |> IsCRepr
 

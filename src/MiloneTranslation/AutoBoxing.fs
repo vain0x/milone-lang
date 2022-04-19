@@ -205,7 +205,7 @@ let private trdTy isDirect (ctx: TrdCtx) ty : TrdCtx =
     | FloatTk _
     | BoolTk
     | CharTk
-    | StrTk
+    | StringTk
     | ObjTk
     | VoidPtrTk _
     | MetaTk _ ->
@@ -402,7 +402,7 @@ let private tsmTy (ctx: TsmCtx) ty =
     | NativePtrTk _
     | NativeFunTk -> 8, ctx
 
-    | StrTk
+    | StringTk
     | FunTk -> 16, ctx
 
     | TupleTk ->

@@ -87,7 +87,7 @@ type Lit =
   | IntLitWithFlavor of string * IntFlavor
   | FloatLit of floatText: string
   | CharLit of charValue: char
-  | StrLit of stringValue: string
+  | StringLit of stringValue: string
 
 // -----------------------------------------------
 // Position and location

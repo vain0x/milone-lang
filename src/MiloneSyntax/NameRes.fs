@@ -89,7 +89,7 @@ let private tyPrimOfName ident tys =
 
   | "float", [] -> Some tyFloat
   | "char", [] -> Some tyChar
-  | "string", [] -> Some tyStr
+  | "string", [] -> Some tyString
   | "obj", [] -> Some tyObj
 
   | "list", [ itemTy ] -> Some(tyList itemTy)

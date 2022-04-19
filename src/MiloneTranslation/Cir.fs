@@ -85,7 +85,7 @@ type CExpr =
   /// E.g. `"hi"`
   | CStrRawExpr of string
 
-  /// E.g. `(struct String){.str = "hi", .len = 2}`
+  /// E.g. `(struct String){.ptr = "hi", .len = 2}`
   | CStrObjExpr of string
 
   /// Variable.

@@ -1,7 +1,7 @@
 module rec LibNursery.Runtime
 
 let memAlloc (len: int) (size: unativeint) : voidptr =
-  __nativeFun ("milone_mem_alloc", len, size)
+  __nativeFun ("milone_region_alloc", len, size)
 
 let memcpy (dest: voidptr) (src: obj) (size: unativeint) : voidptr = __nativeFun ("memcpy", dest, src, size)
 
@@ -10,5 +10,5 @@ let memcpy (dest: voidptr) (src: obj) (size: unativeint) : voidptr = __nativeFun
 /// Meant to be used like this:
 ///   `assert (pred || violate "reason")`
 let violate (msg: string) : bool =
-  __nativeStmt ("""fprintf(stderr, "error: %s\n", str_to_c_str({0}));""", msg)
+  __nativeStmt ("""fprintf(stderr, "error: %s\n", string_to_c_str({0}));""", msg)
   false

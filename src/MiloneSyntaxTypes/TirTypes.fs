@@ -50,7 +50,7 @@ type Tk =
   | FloatTk of floatFlavor: FloatFlavor
   | BoolTk
   | CharTk
-  | StrTk
+  | StringTk
   | ObjTk
 
   /// Ty args must be `[s; t]`.
@@ -266,7 +266,7 @@ type TPrim =
   | Unbox
 
   // string:
-  | StrLength
+  | StringLength
 
   // list:
   | Nil
@@ -373,7 +373,7 @@ type TExpr =
   /// arms: (pat, guard, body). Guard is `true` if omit.
   | TMatchExpr of cond: TExpr * arms: (TPat * TExpr * TExpr) list * Ty * Loc
 
-  /// E.g. `List.isEmpty`, `str.Length`
+  /// E.g. `List.isEmpty`, `s.Length`
   | TNavExpr of TExpr * TName * Ty * Loc
 
   /// Some built-in operation.

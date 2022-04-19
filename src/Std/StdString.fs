@@ -17,14 +17,14 @@ let private intClamp (minValue: int) (maxValue: int) (value: int) =
 /// Gets whether a string is empty, i.e. length is zero.
 ///
 /// O(1) time.
-let isEmpty (str: string) : bool = str.Length = 0
+let isEmpty (s: string) : bool = s.Length = 0
 
 /// Gets a byte in string at specified index.
 ///
 /// O(1) time.
-let tryItem (index: int) (str: string) : char option =
-  if 0 <= index && index < str.Length then
-    Some str.[index]
+let tryItem (index: int) (s: string) : char option =
+  if 0 <= index && index < s.Length then
+    Some s.[index]
   else
     None
 

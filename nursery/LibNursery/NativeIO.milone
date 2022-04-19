@@ -3,7 +3,7 @@
 module rec LibNursery.NativeIO
 
 let private allocateBuffer (capacity: unativeint) : nativeptr<byte> =
-  __nativeExpr ("milone_mem_alloc({0}, sizeof(int8_t))", capacity)
+  __nativeExpr ("milone_region_alloc({0}, sizeof(int8_t))", capacity)
 
 // -----------------------------------------------
 // Span
@@ -24,7 +24,7 @@ module Span =
     len
 
   let ofString (s: string) : Span =
-    let ptr: __inptr<byte> = __nativeExpr ("(uint8_t *)({0}.str)", s)
+    let ptr: __inptr<byte> = __nativeExpr ("(uint8_t *)({0}.ptr)", s)
     ptr, unativeint s.Length
 
   // Slice
@@ -111,7 +111,7 @@ module Span =
   /// It should NOT include `\0`.
   let cloneToString (span: Span) : string =
     let ptr, size = span
-    __nativeExpr ("str_of_raw_parts({0}, (int){1});", ptr, size)
+    __nativeExpr ("string_of_raw_parts({0}, (int){1});", ptr, size)
 
 // -----------------------------------------------
 // MutableSpan
@@ -347,7 +347,7 @@ module Stream =
     )
 
     if __nativeExpr "ok" then
-      let line: string = __nativeExpr "str_of_c_str(buf)"
+      let line: string = __nativeExpr "string_of_c_str(buf)"
       Some line
     else
       None
@@ -371,7 +371,7 @@ module Stream =
       )
 
   let writeString (s: string) (output: Stream) : unit =
-    let ptr: __inptr<byte> = __nativeExpr ("(uint8_t *)({0}.str)", s)
+    let ptr: __inptr<byte> = __nativeExpr ("(uint8_t *)({0}.ptr)", s)
 
     let len = unativeint s.Length
     writeExact ptr len output

@@ -60,7 +60,7 @@ let private getDate () : string option =
 
   if ok then
     let date: string =
-      __nativeExpr "str_of_raw_parts(buf, (int)len)"
+      __nativeExpr "string_of_raw_parts(buf, (int)len)"
 
     Some date
   else
@@ -81,7 +81,7 @@ type private Buffer = nativeptr<byte> * int
 let private newBuffer (capacity: int) : Buffer =
   assert (capacity >= 1)
 
-  __nativeStmt ("unsigned char *buf = milone_mem_alloc({0}, sizeof(unsigned char));", capacity)
+  __nativeStmt ("unsigned char *buf = milone_region_alloc({0}, sizeof(unsigned char));", capacity)
 
   let ptr: nativeptr<byte> = __nativeExpr "buf"
 
@@ -92,7 +92,7 @@ let private newBuffer (capacity: int) : Buffer =
 /// Use this only when the contents of buffer are valid as UTF-8 (not checked).
 let private bufToString (len: int) (buf: Buffer) : string =
   let ptr, _ = buf
-  __nativeStmt ("struct String s = str_of_raw_parts({0}, {1});", ptr, len)
+  __nativeStmt ("struct String s = string_of_raw_parts({0}, {1});", ptr, len)
   __nativeExpr "s"
 
 /// File stream. (`FILE *`)
@@ -102,7 +102,7 @@ type private Stream = nativeptr<__nativeType<FILE>>
 let private openFileForRead (filename: string) : Stream option =
   __nativeStmt (
     """
-      FILE *fp = fopen(str_to_c_str({0}), "r");
+      FILE *fp = fopen(string_to_c_str({0}), "r");
       bool ok = fp != NULL;
     """,
     filename
@@ -175,7 +175,7 @@ let private readLine (input: Stream) : string option * Stream =
   )
 
   if __nativeExpr "ok" then
-    let line: string = __nativeExpr "str_of_c_str(buf)"
+    let line: string = __nativeExpr "string_of_c_str(buf)"
     Some line, input
   else
     None, input
@@ -209,7 +209,7 @@ let private writeExact (buf: Buffer) (len: int) (output: Stream) : Buffer * Stre
 /// Writes a string to stream. Blocks to wait for all data to be written.
 let private writeStringExact (s: string) (output: Stream) : Stream =
   if s.Length > 0 then
-    __nativeStmt ("char const *ptr = {0}.str;", s)
+    __nativeStmt ("char const *ptr = {0}.ptr;", s)
     let ptr: __inptr<char> = __nativeExpr "ptr"
     doWriteExact (__nativeCast ptr: __inptr<byte>) s.Length output
 

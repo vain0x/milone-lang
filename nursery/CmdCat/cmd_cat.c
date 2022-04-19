@@ -27,7 +27,7 @@ int buffer_get_length(void const *buf) {
 // file IO
 // -----------------------------------------------
 
-int file_open_read(struct String path) { return open(path.str, O_RDONLY); }
+int file_open_read(struct String path) { return open(path.ptr, O_RDONLY); }
 
 int file_close(int fd) {
     assert(fd >= 0);
@@ -37,8 +37,8 @@ int file_close(int fd) {
 void const *file_read_bytes(int fd, int len) {
     assert(fd >= 0);
 
-    struct Buffer *buf = milone_mem_alloc(1, sizeof(struct Buffer));
-    buf->ptr = milone_mem_alloc(len + 1, sizeof(char));
+    struct Buffer *buf = milone_region_alloc(1, sizeof(struct Buffer));
+    buf->ptr = milone_region_alloc(len + 1, sizeof(char));
     buf->len = len;
 
     // fprintf(stderr, "reading fd=%d buf ptr=%p len=%d\n", fd, buf->ptr,

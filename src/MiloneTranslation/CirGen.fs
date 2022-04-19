@@ -573,7 +573,7 @@ let private cgTyIncomplete (ctx: CirCtx) (ty: Ty) : CTy * CirCtx =
   | FloatTk flavor, _ -> CFloatTy flavor, ctx
   | BoolTk, _ -> CBoolTy, ctx
   | CharTk, _ -> CCharTy, ctx
-  | StrTk, _ -> CStructTy "String", ctx
+  | StringTk, _ -> CStructTy "String", ctx
   | ObjTk, _ -> CConstPtrTy CVoidTy, ctx
 
   | FunTk, [ sTy; tTy ] -> genIncompleteFunTyDecl ctx sTy tTy
@@ -608,7 +608,7 @@ let private cgTyComplete (ctx: CirCtx) (ty: Ty) : CTy * CirCtx =
   | FloatTk flavor, _ -> CFloatTy flavor, ctx
   | BoolTk, _ -> CBoolTy, ctx
   | CharTk, _ -> CCharTy, ctx
-  | StrTk, _ -> CStructTy "String", ctx
+  | StringTk, _ -> CStructTy "String", ctx
   | ObjTk, _ -> CConstPtrTy CVoidTy, ctx
 
   | FunTk, [ sTy; tTy ] -> genFunTyDef ctx sTy tTy
@@ -711,9 +711,9 @@ let private cBinaryOf op =
   | MIntCompareBinary
   | MInt64CompareBinary
   | MUInt64CompareBinary
-  | MStrAddBinary
-  | MStrCompareBinary
-  | MStrIndexBinary
+  | MStringAddBinary
+  | MStringCompareBinary
+  | MStringIndexBinary
   | MPtrAddBinary -> unreachable ()
 
 let private genLit lit =
@@ -724,7 +724,7 @@ let private genLit lit =
   | BoolLit false -> CVarExpr "false"
   | BoolLit true -> CVarExpr "true"
   | CharLit value -> CCharExpr value
-  | StrLit value -> CStrObjExpr value
+  | StringLit value -> CStrObjExpr value
 
 let private genDiscriminant ctx variantSerial =
   CVarExpr(getUniqueVariantName ctx variantSerial)
@@ -780,8 +780,8 @@ let private genUnaryExpr ctx op arg =
   | MIntOfScalarUnary flavor -> CCastExpr(arg, CIntTy flavor), ctx
   | MFloatOfScalarUnary flavor -> CCastExpr(arg, CFloatTy flavor), ctx
   | MCharOfScalarUnary -> CCastExpr(arg, CCharTy), ctx
-  | MStrPtrUnary -> CDotExpr(arg, "str"), ctx
-  | MStrLenUnary -> CDotExpr(arg, "len"), ctx
+  | MStringAsPtrUnary -> CDotExpr(arg, "ptr"), ctx
+  | MStringLengthUnary -> CDotExpr(arg, "len"), ctx
 
   | MUnboxUnary itemTy ->
     let itemTy, ctx = cgTyComplete ctx itemTy
@@ -834,12 +834,12 @@ let private genExprBin ctx op l r =
   | MInt64CompareBinary -> genBinaryExprAsCall ctx "int64_compare" l r
   | MUInt64CompareBinary -> genBinaryExprAsCall ctx "uint64_compare" l r
 
-  | MStrAddBinary -> genBinaryExprAsCall ctx "str_add" l r
-  | MStrCompareBinary -> genBinaryExprAsCall ctx "str_compare" l r
-  | MStrIndexBinary ->
+  | MStringAddBinary -> genBinaryExprAsCall ctx "string_add" l r
+  | MStringCompareBinary -> genBinaryExprAsCall ctx "string_compare" l r
+  | MStringIndexBinary ->
     let l, ctx = cgExpr ctx l
     let r, ctx = cgExpr ctx r
-    CIndexExpr(CDotExpr(l, "str"), r), ctx
+    CIndexExpr(CDotExpr(l, "ptr"), r), ctx
 
   | MPtrAddBinary ->
     let l, ctx = cgExpr ctx l
@@ -904,11 +904,11 @@ let private cgActionStmt ctx itself action args =
 
   | MEnterRegionAction ->
     assert (List.isEmpty args)
-    addStmt ctx (CExprStmt(CCallExpr(CVarExpr "milone_enter_region", [])))
+    addStmt ctx (CExprStmt(CCallExpr(CVarExpr "milone_region_enter", [])))
 
   | MLeaveRegionAction ->
     assert (List.isEmpty args)
-    addStmt ctx (CExprStmt(CCallExpr(CVarExpr "milone_leave_region", [])))
+    addStmt ctx (CExprStmt(CCallExpr(CVarExpr "milone_region_leave", [])))
 
   | MCallProcAction ->
     let args, ctx =
@@ -955,19 +955,19 @@ let private cgPrintfnActionStmt ctx itself args argTys =
     | _ -> unreachable ()
 
   match args with
-  | (MLitExpr (StrLit format, _), _) :: args ->
+  | (MLitExpr (StringLit format, _), _) :: args ->
     let format = CStrRawExpr(format + "\n")
 
     let args, ctx =
       (args, ctx)
       |> stMap (fun ((arg, argTy), ctx) ->
         match arg with
-        | MLitExpr (StrLit value, _) -> CStrRawExpr value, ctx
+        | MLitExpr (StringLit value, _) -> CStrRawExpr value, ctx
 
-        | _ when tyEqual argTy tyStr ->
-          // Insert implicit cast from str to str ptr.
+        | _ when tyEqual argTy tyString ->
+          // Insert implicit cast from string to ptr.
           let arg, ctx = cgExpr ctx arg
-          CCallExpr(CVarExpr "str_to_c_str", [ arg ]), ctx
+          CCallExpr(CVarExpr "string_to_c_str", [ arg ]), ctx
 
         | _ -> cgExpr ctx arg)
 
@@ -989,7 +989,7 @@ let private addLetAllocStmt ctx name valTy varTy =
     let init =
       CCastExpr(
         CCallExpr(
-          CVarExpr "milone_mem_alloc",
+          CVarExpr "milone_region_alloc",
           [ CIntExpr("1", I32)
             CSizeOfExpr valTy ]
         ),
@@ -1030,28 +1030,28 @@ let private cgPrimStmt (ctx: CirCtx) itself prim args serial resultTy =
     addSetStmt ctx name (makeExpr args ty)
 
   match prim with
-  | MIntOfStrPrim flavor ->
+  | MIntOfStringPrim flavor ->
     let name = cStringToIntegerFunName flavor
     conversion ctx (fun arg -> CCallExpr(CVarExpr name, [ arg ]))
 
-  | MFloatOfStrPrim flavor ->
+  | MFloatOfStringPrim flavor ->
     let name = cStringToFloatFunName flavor
     conversion ctx (fun arg -> CCallExpr(CVarExpr name, [ arg ]))
 
-  | MCharOfStrPrim -> conversion ctx (fun arg -> CCallExpr(CVarExpr "str_to_char", [ arg ]))
+  | MCharOfStringPrim -> conversion ctx (fun arg -> CCallExpr(CVarExpr "string_to_char", [ arg ]))
 
-  | MStrOfBoolPrim -> conversion ctx (fun arg -> CCallExpr(CVarExpr "str_of_bool", [ arg ]))
-  | MStrOfCharPrim -> conversion ctx (fun arg -> CCallExpr(CVarExpr "str_of_char", [ arg ]))
+  | MStringOfBoolPrim -> conversion ctx (fun arg -> CCallExpr(CVarExpr "string_of_bool", [ arg ]))
+  | MStringOfCharPrim -> conversion ctx (fun arg -> CCallExpr(CVarExpr "string_of_char", [ arg ]))
 
-  | MStrOfIntPrim flavor ->
+  | MStringOfIntPrim flavor ->
     let name = cStringOfIntegerFunName flavor
     conversion ctx (fun arg -> CCallExpr(CVarExpr name, [ arg ]))
 
-  | MStrOfFloatPrim flavor ->
+  | MStringOfFloatPrim flavor ->
     let name = cStringOfFloatFunName flavor
     conversion ctx (fun arg -> CCallExpr(CVarExpr name, [ arg ]))
 
-  | MStrGetSlicePrim -> regular ctx (fun args -> (CCallExpr(CVarExpr "str_get_slice", args)))
+  | MStringGetSlicePrim -> regular ctx (fun args -> (CCallExpr(CVarExpr "string_get_slice", args)))
 
   | MClosurePrim funSerial ->
     let name = getUniqueVarName ctx serial

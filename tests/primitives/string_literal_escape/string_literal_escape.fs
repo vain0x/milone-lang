@@ -1,4 +1,4 @@
-module rec str_literal_escape.Program
+module rec string_literal_escape.Program
 
 let f (_: char) = ()
 let g (_: string) = ()

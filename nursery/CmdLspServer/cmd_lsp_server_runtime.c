@@ -13,7 +13,7 @@
 
 int milone_lstat(struct String path) {
     struct stat st;
-    bool ok = lstat(str_to_c_str(path), &st) == 0;
+    bool ok = lstat(string_to_c_str(path), &st) == 0;
     if (ok == 0) {
         if (errno == ENOENT)
             return -2; // not found
@@ -31,7 +31,7 @@ int milone_lstat(struct String path) {
 }
 
 struct DirIter *milone_dir_open(struct String dir) {
-    DIR *dp = opendir(str_to_c_str(dir));
+    DIR *dp = opendir(string_to_c_str(dir));
     return (struct DirIter *)dp;
 }
 
@@ -49,7 +49,7 @@ REDO:;
     if (strcmp(entry->d_name, ".") == 0 || strcmp(entry->d_name, "..") == 0)
         goto REDO;
 
-    *name = str_of_c_str(entry->d_name);
+    *name = string_of_c_str(entry->d_name);
     return true;
 }
 
@@ -90,13 +90,13 @@ int milone_subprocess_run2(struct String command, struct StringCons *args,
         dup2(stdout_fd[1], STDOUT_FILENO);
 
         // cmd:
-        char *cmd = (char *)str_to_c_str(command);
+        char *cmd = (char *)string_to_c_str(command);
 
         // args:
         char *arg_array[16] = {cmd};
         int i = 1;
         for (struct StringCons *p = args; p != NULL; p = p->tail) {
-            arg_array[i] = (char *)str_to_c_str(p->head);
+            arg_array[i] = (char *)string_to_c_str(p->head);
             i++;
             assert(i < 15 && "too many args");
         }
@@ -122,7 +122,7 @@ int milone_subprocess_run2(struct String command, struct StringCons *args,
         i += read_size;
     }
 
-    *out_stdout = str_of_raw_parts(buf, i);
+    *out_stdout = string_of_raw_parts(buf, i);
 
     // Join.
     int status;

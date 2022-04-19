@@ -59,7 +59,7 @@ let private monoTyCompare (l: MonoTy) (r: MonoTy) : int =
     | M.UnitMt -> just 3
     | M.BoolMt -> just 4
     | M.CharMt -> just 5
-    | M.StrMt -> just 6
+    | M.StringMt -> just 6
     | M.ObjMt -> just 7
     | M.FunMt _ -> just 8
     | M.ListMt _ -> just 9
@@ -178,7 +178,7 @@ let private mtTy (ty: Ty, ctx: MtCtx) : M.MonoTy * MtCtx =
   | FloatTk flavor, _ -> M.FloatMt flavor, ctx
   | BoolTk, _ -> M.BoolMt, ctx
   | CharTk, _ -> M.CharMt, ctx
-  | StrTk, _ -> M.StrMt, ctx
+  | StringTk, _ -> M.StringMt, ctx
   | ObjTk, _ -> M.ObjMt, ctx
   | VoidPtrTk isMut, _ -> M.VoidPtrMt isMut, ctx
   | NativeTypeTk cCode, _ -> M.NativeTypeMt cCode, ctx
@@ -571,7 +571,7 @@ let private bthTy (ty: MonoTy) : Ty =
   | M.UnitMt -> ofTk TupleTk
   | M.BoolMt -> ofTk BoolTk
   | M.CharMt -> ofTk CharTk
-  | M.StrMt -> ofTk StrTk
+  | M.StringMt -> ofTk StringTk
   | M.ObjMt -> ofTk ObjTk
   | M.ListMt itemTy -> newTyApp ListTk [ itemTy ]
   | M.FunMt tyArgs -> newTyApp FunTk tyArgs

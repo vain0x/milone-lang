@@ -27,7 +27,7 @@ type MonoTy =
   | UnitMt
   | BoolMt
   | CharMt
-  | StrMt
+  | StringMt
   | ObjMt
 
   | FunMt of MonoTy list

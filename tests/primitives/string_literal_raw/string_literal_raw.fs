@@ -1,4 +1,4 @@
-module rec str_literal_raw.Program
+module rec string_literal_raw.Program
 
 let testEol () =
   let eol =

@@ -38,7 +38,7 @@ type Tk =
   | FloatTk of floatFlavor: FloatFlavor
   | BoolTk
   | CharTk
-  | StrTk
+  | StringTk
   | ObjTk
 
   /// Ty args must be `[s; t]`.
@@ -187,7 +187,7 @@ type HPrim =
   | Unbox
 
   // string:
-  | StrLength
+  | StringLength
 
   // list:
   | Nil
@@ -293,7 +293,7 @@ type HExpr =
   /// arms: (pat, guard, body). Guard is `true` if omit.
   | HMatchExpr of cond: HExpr * arms: (HPat * HExpr * HExpr) list * Ty * Loc
 
-  /// E.g. `List.isEmpty`, `str.Length`
+  /// E.g. `List.isEmpty`, `s.Length`
   | HNavExpr of HExpr * Ident * Ty * Loc
 
   /// Some built-in operation.

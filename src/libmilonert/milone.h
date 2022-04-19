@@ -27,78 +27,78 @@ int int64_compare(int64_t l, int64_t r);
 int uint64_compare(uint64_t l, uint64_t r);
 
 // -----------------------------------------------
-// str
+// String
 // -----------------------------------------------
 
 // This assumes some invariants, see documentation about string type.
 struct String {
-    char const *str;
+    char const *ptr;
     int len;
 };
 
 // Convert a null-terminated string to a string object by computing its length.
 //
 // SAFETY: The resulting string is valid until the pointer is valid.
-struct String str_borrow(char const *c_str);
+struct String string_borrow(char const *c_str);
 
 // Compare two strings in lexicographical order.
-int str_compare(struct String l, struct String r);
+int string_compare(struct String l, struct String r);
 
 // Create a copy of native C string.
-struct String str_of_raw_parts(char const *ptr, int len);
+struct String string_of_raw_parts(char const *ptr, int len);
 
 // Create a copy of native null-terminated C string.
-struct String str_of_c_str(char const *s);
+struct String string_of_c_str(char const *s);
 
 // Create a concatenation of two string.
-struct String str_add(struct String l, struct String r);
+struct String string_add(struct String l, struct String r);
 
 // Create a slice of string.
-struct String str_slice(struct String s, int l, int r);
+struct String string_slice(struct String s, int l, int r);
 
 /// Implementation of `s.[l..r]`; `r` is inclusive.
-static struct String str_get_slice(int l, int r, struct String s) {
-    return str_slice(s, l, r + 1);
+static struct String string_get_slice(int l, int r, struct String s) {
+    return string_slice(s, l, r + 1);
 }
 
-struct String str_ensure_null_terminated(struct String s);
+struct String string_ensure_null_terminated(struct String s);
 
 // Ensure null-terminated.
-char const *str_to_c_str(struct String s);
+char const *string_to_c_str(struct String s);
 
 // Conversion:
 
-int8_t str_to_int8(struct String s);
-int16_t str_to_int16(struct String s);
-int str_to_int(struct String s);
-int64_t str_to_int64(struct String s);
-intptr_t str_to_intptr(struct String s);
+int8_t string_to_int8(struct String s);
+int16_t string_to_int16(struct String s);
+int string_to_int(struct String s);
+int64_t string_to_int64(struct String s);
+intptr_t string_to_intptr(struct String s);
 
-uint8_t str_to_uint8(struct String s);
-uint16_t str_to_uint16(struct String s);
-uint32_t str_to_uint32(struct String s);
-uint64_t str_to_uint64(struct String s);
-uintptr_t str_to_uintptr(struct String s);
+uint8_t string_to_uint8(struct String s);
+uint16_t string_to_uint16(struct String s);
+uint32_t string_to_uint32(struct String s);
+uint64_t string_to_uint64(struct String s);
+uintptr_t string_to_uintptr(struct String s);
 
-struct String str_of_int64(int64_t value);
-struct String str_of_uint64(uint64_t value);
+struct String string_of_int64(int64_t value);
+struct String string_of_uint64(uint64_t value);
 
-double str_to_double(struct String s);
-struct String str_of_double(double value);
+double string_to_double(struct String s);
+struct String string_of_double(double value);
 
-struct String str_of_bool(bool value);
+struct String string_of_bool(bool value);
 
-char str_to_char(struct String s);
-struct String str_of_char(char value);
+char string_to_char(struct String s);
+struct String string_of_char(char value);
 
 // Actual name of string list.
 struct StringList;
 
-struct String str_concat(struct String sep, struct StringList const *strings);
+struct String string_concat(struct String sep, struct StringList const *strings);
 
 // Low level operations.
 
-inline char const *str_as_ptr(struct String s) { return s.str; }
+inline char const *string_as_ptr(struct String s) { return s.ptr; }
 
 // -----------------------------------------------
 // assertion

@@ -152,7 +152,7 @@ let private tyIsLinearWith linearTySet ty : bool =
     | FloatTk _
     | BoolTk
     | CharTk
-    | StrTk
+    | StringTk
     | ObjTk
     | FunTk
     | VoidPtrTk _

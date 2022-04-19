@@ -194,8 +194,8 @@ let private opIsComparison op =
 
 let private mxNot expr loc = MUnaryExpr(MNotUnary, expr, loc)
 
-let private mxStrAdd ctx l r loc =
-  MBinaryExpr(MStrAddBinary, l, r, loc), ctx
+let private mxStringAdd ctx l r loc =
+  MBinaryExpr(MStringAddBinary, l, r, loc), ctx
 
 /// x op y ==> `x op y` if `x : {scalar}`
 /// where scalar types are int, char, etc.
@@ -203,14 +203,14 @@ let private mxStrAdd ctx l r loc =
 let private mxBinOpScalar ctx op l r loc = MBinaryExpr(op, l, r, loc), ctx
 
 /// x <=> y ==> `strcmp(x, y) <=> 0` if `x : string`
-let private mxStrCompare ctx op l r loc =
-  let strCompareExpr =
-    MBinaryExpr(MStrCompareBinary, l, r, loc)
+let private mxStringCompare ctx op l r loc =
+  let stringCompareExpr =
+    MBinaryExpr(MStringCompareBinary, l, r, loc)
 
   let zeroExpr = MLitExpr(IntLit "0", loc)
 
   let opExpr =
-    MBinaryExpr(op, strCompareExpr, zeroExpr, loc)
+    MBinaryExpr(op, stringCompareExpr, zeroExpr, loc)
 
   opExpr, ctx
 
@@ -228,7 +228,7 @@ let private mxCompare ctx (op: MBinary) lTy (l: MExpr) r loc =
         | NativeFunTk),
         _) -> mxBinOpScalar ctx op l r loc
 
-  | Ty (StrTk, _) -> mxStrCompare ctx op l r loc
+  | Ty (StringTk, _) -> mxStringCompare ctx op l r loc
 
   | Ty (TupleTk, []) ->
     let value =
@@ -1033,20 +1033,20 @@ let private mirifyCallUnbox ctx arg ty loc =
   let arg, ctx = mirifyExpr ctx arg
   mxUnbox arg ty loc, ctx
 
-let private mirifyCallStrIndexExpr ctx l r loc =
+let private mirifyCallStringIndexExpr ctx l r loc =
   let l, ctx = mirifyExpr ctx l
   let r, ctx = mirifyExpr ctx r
-  MBinaryExpr(MStrIndexBinary, l, r, loc), ctx
+  MBinaryExpr(MStringIndexBinary, l, r, loc), ctx
 
-let private mirifyCallStrGetSliceExpr ctx args loc =
+let private mirifyCallStringGetSliceExpr ctx args loc =
   assert (List.length args = 3)
 
   let args, ctx = mirifyExprs ctx args
 
-  let temp, tempSerial, ctx = freshVar ctx "slice" tyStr loc
+  let temp, tempSerial, ctx = freshVar ctx "slice" tyString loc
 
   let ctx =
-    addStmt ctx (MPrimStmt(MStrGetSlicePrim, args, tempSerial, tyStr, loc))
+    addStmt ctx (MPrimStmt(MStringGetSlicePrim, args, tempSerial, tyString, loc))
 
   temp, ctx
 
@@ -1120,7 +1120,7 @@ let private mirifyExprOpArith ctx itself op l r loc =
         | CharTk),
         _) -> mxBinOpScalar ctx op l r loc
 
-  | Ty (StrTk, _) when op |> mOpIsAdd -> mxStrAdd ctx l r loc
+  | Ty (StringTk, _) when op |> mOpIsAdd -> mxStringAdd ctx l r loc
 
   | _ -> unreachable itself
 
@@ -1155,7 +1155,7 @@ let private mirifyCallCompareExpr ctx itself l r loc =
 
   | Ty (IntTk flavor, _) when intFlavorIsUnsigned flavor -> MBinaryExpr(MUInt64CompareBinary, l, r, loc), ctx
 
-  | Ty (StrTk, _) -> MBinaryExpr(MStrCompareBinary, l, r, loc), ctx
+  | Ty (StringTk, _) -> MBinaryExpr(MStringCompareBinary, l, r, loc), ctx
 
   | _ -> unreachable itself
 
@@ -1171,15 +1171,17 @@ let private mirifyCallToIntExpr ctx itself flavor arg ty loc =
         | CharTk),
         _) -> MUnaryExpr(MIntOfScalarUnary flavor, arg, loc), ctx
 
-  | Ty (StrTk, _) ->
+  | Ty (StringTk, _) ->
     let temp, tempSerial, ctx = freshVar ctx "call" ty loc
 
     let ctx =
-      addStmt ctx (MPrimStmt(MIntOfStrPrim flavor, [ arg ], tempSerial, ty, loc))
+      addStmt ctx (MPrimStmt(MIntOfStringPrim flavor, [ arg ], tempSerial, ty, loc))
 
     temp, ctx
 
-  | Ty ((VoidPtrTk _ | NativePtrTk _), _) ->
+  | Ty ((VoidPtrTk _
+        | NativePtrTk _),
+        _) ->
     let temp, tempSerial, ctx = freshVar ctx "address" ty loc
 
     let ctx =
@@ -1198,11 +1200,11 @@ let private mirifyCallToFloatExpr ctx itself flavor arg ty loc =
 
   | Ty (IntTk _, _) -> MUnaryExpr(MFloatOfScalarUnary flavor, arg, loc), ctx
 
-  | Ty (StrTk, _) ->
+  | Ty (StringTk, _) ->
     let temp, tempSerial, ctx = freshVar ctx "call" ty loc
 
     let ctx =
-      addStmt ctx (MPrimStmt(MFloatOfStrPrim flavor, [ arg ], tempSerial, ty, loc))
+      addStmt ctx (MPrimStmt(MFloatOfStringPrim flavor, [ arg ], tempSerial, ty, loc))
 
     temp, ctx
 
@@ -1219,11 +1221,11 @@ let private mirifyCallCharExpr ctx itself arg ty loc =
         | FloatTk _),
         _) -> MUnaryExpr(MCharOfScalarUnary, arg, loc), ctx
 
-  | Ty (StrTk, _) ->
+  | Ty (StringTk, _) ->
     let temp, tempSerial, ctx = freshVar ctx "char_of_string" ty loc
 
     let ctx =
-      addStmt ctx (MPrimStmt(MCharOfStrPrim, [ arg ], tempSerial, ty, loc))
+      addStmt ctx (MPrimStmt(MCharOfStringPrim, [ arg ], tempSerial, ty, loc))
 
     temp, ctx
 
@@ -1242,12 +1244,12 @@ let private mirifyCallStringExpr ctx itself arg ty loc =
     temp, ctx
 
   match argTy with
-  | Ty (StrTk, _) -> arg, ctx
+  | Ty (StringTk, _) -> arg, ctx
 
-  | Ty (IntTk flavor, _) -> usePrim (MStrOfIntPrim flavor)
-  | Ty (FloatTk flavor, _) -> usePrim (MStrOfFloatPrim flavor)
-  | Ty (BoolTk, _) -> usePrim MStrOfBoolPrim
-  | Ty (CharTk, _) -> usePrim MStrOfCharPrim
+  | Ty (IntTk flavor, _) -> usePrim (MStringOfIntPrim flavor)
+  | Ty (FloatTk flavor, _) -> usePrim (MStringOfFloatPrim flavor)
+  | Ty (BoolTk, _) -> usePrim MStringOfBoolPrim
+  | Ty (CharTk, _) -> usePrim MStringOfCharPrim
 
   | _ -> unreachable itself
 
@@ -1264,7 +1266,7 @@ let private mirifyCallAssertExpr ctx arg loc =
       + ".milone"
 
     [ arg
-      MLitExpr(StrLit name, loc)
+      MLitExpr(StringLit name, loc)
       MLitExpr(IntLit(string y), loc)
       MLitExpr(IntLit(string x), loc) ]
 
@@ -1385,8 +1387,8 @@ let private mirifyCallPrimExpr ctx itself prim args ty loc =
   | HPrim.Box, _ -> fail ()
   | HPrim.Unbox, [ arg ] -> mirifyCallUnbox ctx arg ty loc
   | HPrim.Unbox, _ -> fail ()
-  | HPrim.StrLength, [ arg ] -> regularUnary MStrLenUnary arg
-  | HPrim.StrLength, _ -> fail ()
+  | HPrim.StringLength, [ arg ] -> regularUnary MStringLengthUnary arg
+  | HPrim.StringLength, _ -> fail ()
   | HPrim.ToInt flavor, [ arg ] -> mirifyCallToIntExpr ctx itself flavor arg ty loc
   | HPrim.ToInt _, _ -> fail ()
   | HPrim.ToFloat flavor, [ arg ] -> mirifyCallToFloatExpr ctx itself flavor arg ty loc
@@ -1512,8 +1514,8 @@ let private mirifyExprInf ctx itself kind args ty loc =
   | HRecordEN, _, _ -> mirifyExprRecord ctx args ty loc
   | HRecordItemEN index, [ record ], _ -> mirifyExprRecordItem ctx index record loc
 
-  | HIndexEN, [ l; r ], _ -> mirifyCallStrIndexExpr ctx l r loc
-  | HSliceEN, _, _ -> mirifyCallStrGetSliceExpr ctx args loc
+  | HIndexEN, [ l; r ], _ -> mirifyCallStringIndexExpr ctx l r loc
+  | HSliceEN, _, _ -> mirifyCallStringGetSliceExpr ctx args loc
 
   | HDiscriminantEN variantSerial, _, _ -> mirifyDiscriminantExpr ctx variantSerial loc
 

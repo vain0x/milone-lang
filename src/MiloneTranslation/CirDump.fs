@@ -176,12 +176,12 @@ let private cpCharLit value =
 let private cpStrRawLit (value: string) acc =
   acc
   |> cons "\""
-  |> cons (strEscape value)
+  |> cons (stringEscape value)
   |> cons "\""
 
 let private cpStrObjLit (value: string) acc =
   acc
-  |> cons "(struct String){.str = "
+  |> cons "(struct String){.ptr = "
   |> cpStrRawLit value
   |> cons ", .len = "
   |> cons (string (SB.utf8Length value))

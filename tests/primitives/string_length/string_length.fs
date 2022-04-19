@@ -1,4 +1,4 @@
-module rec str_length.Program
+module rec string_length.Program
 
 // string has `Length` property.
 
