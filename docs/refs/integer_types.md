@@ -114,8 +114,8 @@ Typing rules:
 
 ### Runtime representation
 
-Currently, `int` in milone-lang is same as `int` in C.
-For other types, fixed integer types[^1] in C language are used.
-`nativeint` is `intptr_t`, `unativeint` is `uintptr_t`.
+N-bit integer types in milone-lang map to corresponding fixed integer types[^1] in C; e.g. `int` → `int32_t`.
+
+`nativeint` is `intptr_t` and `unativeint` is `uintptr_t`.
 
 [^1]: [Fixed width integer types](https://en.cppreference.com/w/c/types/integer).

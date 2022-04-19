@@ -22,7 +22,7 @@ void *milone_region_alloc(int count, size_t size);
 // integers
 // -----------------------------------------------
 
-int milone_int32_compare(int l, int r);
+int milone_int32_compare(int32_t l, int32_t r);
 int milone_int64_compare(int64_t l, int64_t r);
 int milone_uint64_compare(uint64_t l, uint64_t r);
 
@@ -57,7 +57,7 @@ struct String string_add(struct String l, struct String r);
 struct String string_slice(struct String s, int l, int r);
 
 /// Implementation of `s.[l..r]`; `r` is inclusive.
-static struct String string_get_slice(int l, int r, struct String s) {
+static struct String string_get_slice(int32_t l, int32_t r, struct String s) {
     return string_slice(s, l, r + 1);
 }
 
@@ -70,7 +70,7 @@ char const *string_to_c_str(struct String s);
 
 int8_t string_to_int8(struct String s);
 int16_t string_to_int16(struct String s);
-int string_to_int32(struct String s);
+int32_t string_to_int32(struct String s);
 int64_t string_to_int64(struct String s);
 intptr_t string_to_nativeint(struct String s);
 
@@ -104,6 +104,6 @@ inline char const *string_as_ptr(struct String s) { return s.ptr; }
 // assertion
 // -----------------------------------------------
 
-void milone_assert(bool cond, struct String name, int row, int column);
+void milone_assert(bool cond, struct String name, int32_t row, int32_t column);
 
 #endif

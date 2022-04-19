@@ -120,7 +120,7 @@ let cIntegerTyName flavor =
   match flavor with
   | I8 -> "int8_t"
   | I16 -> "int16_t"
-  | I32 -> "int"
+  | I32 -> "int32_t"
   | I64 -> "int64_t"
   | IPtr -> "intptr_t"
   | U8 -> "uint8_t"
@@ -133,12 +133,12 @@ let cIntegerTyPascalName flavor =
   match flavor with
   | I8 -> "Int8"
   | I16 -> "Int16"
-  | I32 -> "Int"
+  | I32 -> "Int32"
   | I64 -> "Int64"
   | IPtr -> "ISize"
   | U8 -> "UInt8"
   | U16 -> "UInt16"
-  | U32 -> "UInt"
+  | U32 -> "UInt32"
   | U64 -> "UInt64"
   | UPtr -> "UIntPtr"
 

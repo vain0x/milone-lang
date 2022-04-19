@@ -211,7 +211,7 @@ void *milone_region_alloc(int count, size_t size) {
 // int
 // -----------------------------------------------
 
-int milone_int32_compare(int l, int r) {
+int milone_int32_compare(int32_t l, int32_t r) {
     if (l == r)
         return 0;
     if (l < r)
@@ -235,7 +235,7 @@ int milone_uint64_compare(uint64_t l, uint64_t r) {
     return 1;
 }
 
-static int int32_clamp(int x, int l, int r) {
+static int32_t int32_clamp(int32_t x, int32_t l, int32_t r) {
     if (x < l)
         return l;
     if (x > r)
@@ -432,7 +432,7 @@ double string_to_float64(struct String s) {
     return value;
 }
 
-bool string_to_int_checked(struct String s, int *value_ptr) {
+bool string_to_int_checked(struct String s, int32_t *value_ptr) {
     int64_t value;
     bool ok = string_to_int64_checked(s, &value);
     if (!(ok && INT32_MIN <= value && value <= INT32_MAX)) {
@@ -440,7 +440,7 @@ bool string_to_int_checked(struct String s, int *value_ptr) {
         return false;
     }
 
-    *value_ptr = (int)value;
+    *value_ptr = (int32_t)value;
     return true;
 }
 
@@ -459,8 +459,8 @@ int16_t string_to_int16(struct String s) {
     return (int16_t)value;
 }
 
-int string_to_int32(struct String s) {
-    int value;
+int32_t string_to_int32(struct String s) {
+    int32_t value;
     bool ok = string_to_int_checked(s, &value);
     verify_str_to_number("int", ok);
     return value;
@@ -576,7 +576,7 @@ struct String string_concat(struct String sep, struct StringList const *strings)
 // assertion
 // -----------------------------------------------
 
-void milone_assert(bool cond, struct String name, int y, int x) {
+void milone_assert(bool cond, struct String name, int32_t y, int32_t x) {
     if (!cond) {
         fprintf(stderr, "Assertion failed at %s:%d:%d\n", string_to_c_str(name), y + 1, x + 1);
         exit(1);
@@ -817,8 +817,8 @@ void milone_profile_log(struct String msg, void *profiler) {
 // For competitive programming
 // -----------------------------------------------
 
-int scan_int(void) {
-    int value;
+int32_t scan_int(void) {
+    int32_t value;
     int _n = scanf("%d", &value);
     return value;
 }
@@ -856,12 +856,12 @@ struct String scan_string(int capacity) {
 // Runtime Entrypoint
 // -----------------------------------------------
 
-static int s_argc;
+static int32_t s_argc;
 static char **s_argv;
 
-int milone_get_arg_count(void) { return s_argc; }
+int32_t milone_get_arg_count(void) { return s_argc; }
 
-struct String milone_get_arg(int index) {
+struct String milone_get_arg(int32_t index) {
     if ((uint32_t)index >= (uint32_t)s_argc) {
         return string_borrow("");
     }
