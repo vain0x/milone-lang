@@ -6,9 +6,7 @@
 
 #include <stdbool.h>
 #include <stddef.h>
-#include <stdlib.h>
 #include <stdint.h>
-#include <stdio.h>
 
 void milone_start(int, char **);
 
@@ -21,7 +19,7 @@ void milone_leave_region(void);
 void *milone_mem_alloc(int count, size_t size);
 
 // -----------------------------------------------
-// int
+// integers
 // -----------------------------------------------
 
 int int_compare(int l, int r);
