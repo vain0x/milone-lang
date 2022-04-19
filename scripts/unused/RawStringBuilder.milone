@@ -1,18 +1,20 @@
 // Raw string builder. Causes side effects.
 module rec LibNursery.RawStringBuilder
 
+// WIP
+
 let private stringAsPtr (s: string) : __voidinptr =
   __nativeExpr ("{0}.ptr", s)
 
-let private __alloc (size: unativeint) : voidptr =
-  __nativeFun ("milone_region_alloc", 1, size)
+let private __alloc (size: uint) : voidptr =
+  __nativeFun ("milone_region_alloc", 1u, size)
 
 /// Raw reference cell.
 type private Ref<'T> = Ref of nativeptr<'T>
 
 module Ref =
   let uninit () : Ref<'T> =
-    let p = __alloc (sizeof<'T>)
+    let p = __alloc (uint sizeof<'T>)
     Ref p
 
   let write (value: 'T) (r: Ref<'T>) : unit =
@@ -42,7 +44,7 @@ module RawStringBuilder =
     assert ((capacity >>> 30) = 0)
 
     let repr: SbRepr =
-      { Ptr = if capacity > 0 then __alloc milone_region_alloc (capacity, 1) else stringAsPtr ""
+      { Ptr = if capacity > 0 then __alloc capacity else stringAsPtr ""
         Length = 0
         Capacity = capacity }
 

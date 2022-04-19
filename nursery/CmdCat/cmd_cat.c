@@ -16,10 +16,10 @@
 
 struct Buffer {
     char *ptr;
-    int len;
+    uint32_t len;
 };
 
-int buffer_get_length(void const *buf) {
+uint32_t buffer_get_length(void const *buf) {
     return ((struct Buffer const *)buf)->len;
 }
 
@@ -34,9 +34,7 @@ int file_close(int fd) {
     return close(fd);
 }
 
-void const *file_read_bytes(int fd, int len) {
-    assert(fd >= 0);
-
+void const *file_read_bytes(int fd, uint32_t len) {
     struct Buffer *buf = milone_region_alloc(1, sizeof(struct Buffer));
     buf->ptr = milone_region_alloc(len + 1, sizeof(char));
     buf->len = len;
@@ -44,12 +42,12 @@ void const *file_read_bytes(int fd, int len) {
     // fprintf(stderr, "reading fd=%d buf ptr=%p len=%d\n", fd, buf->ptr,
     //         buf->len);
 
-    int n = read(fd, buf->ptr, buf->len);
-    if (n < 0) {
+    long long n = read(fd, buf->ptr, buf->len);
+    if (n < 0 || n >= (1LL << 31)) {
         return NULL;
     }
 
-    buf->len = n;
+    buf->len = (uint32_t)n;
     return buf;
 }
 

@@ -1,93 +1,59 @@
+// TODO: this should be removed in favor of Vector
+
 module rec Std.StdArrayBase
 
 module Ptr = Std.Ptr
 
 // -----------------------------------------------
-// Pointer util
-// -----------------------------------------------
-
-/// Gets the size of pointee type.
-let private __pointeeSize (inPtr: __inptr<'T>) : nativeint = nativeint sizeof<'T>
-
-let private __ptrAsMut (inPtr: __inptr<'T>) : nativeptr<'T> = __nativeCast inPtr
-
-let private __ptrAsConst (mutPtr: nativeptr<'T>) : __inptr<'T> = __nativeCast mutPtr
-
-let private __ptrAdd (index: int) (ptr: __inptr<'T>) : __inptr<'T> =
-  __nativeCast (
-    nativeint ptr
-    + nativeint index * __pointeeSize ptr
-  )
-
-let private __mutPtrAdd (index: int) (mutPtr: nativeptr<'T>) : nativeptr<'T> =
-  __nativeCast (
-    nativeint mutPtr
-    + nativeint index
-      * __pointeeSize (__ptrAsConst mutPtr)
-  )
-
-// -----------------------------------------------
 // MutArray
 // -----------------------------------------------
 
-let private memAlloc (len: int) (size: unativeint) : voidptr =
-  __nativeFun ("milone_region_alloc", len, size)
-
-// let private memCopy (dest: voidptr) (src: __voidinptr) (size: unativeint): voidptr =
-//   __nativeFun ("memcpy", dest, src, size)
-
 // ptr, len
-type __MutArray<'T> = nativeptr<'T> * int
+type __MutArray<'T> = nativeptr<'T> * uint
 
-let __mutArrayCreate (len: int) : __MutArray<_> =
-  if len = 0 then
-    __nativeCast (unativeint 0), 0
+let __mutArrayCreate (len: uint) : __MutArray<'T> =
+  if len = 0u then
+    Ptr.nullPtr, 0u
   else
-    let nullPtr: __inptr<_> = __nativeCast (unativeint 0)
+    let ptr: __outptr<'T> = Ptr.regionAlloc len
+    Ptr.cast ptr, len
 
-    let ptr =
-      __nativeCast (memAlloc len (unativeint (__pointeeSize nullPtr)))
-
-    let _typeUnifier () = [ ptr; __ptrAsMut nullPtr ]
-
-    ptr, len
-
-let __mutArraySet (index: int) value (array: __MutArray<_>) =
+let __mutArraySet (index: int) (value: 'T) (array: __MutArray<'T>) =
   let mutPtr, len = array
 
-  assert (uint index < uint len)
+  assert (uint index < len)
 
   Ptr.write mutPtr.[index] value
 
-let __mutArraySlice (start: int) (endIndex: int) (array: __MutArray<_>) : __MutArray<_> =
+let __mutArraySlice (start: int) (endIndex: int) (array: __MutArray<'T>) : __MutArray<'T> =
   let mutPtr, len = array
 
-  assert (0 <= start && start <= endIndex && endIndex <= len)
+  assert (0 <= start && uint start <= uint endIndex && uint endIndex <= len)
 
-  __mutPtrAdd start mutPtr, endIndex - start
+  Ptr.select mutPtr.[start], uint endIndex - uint start
 
 // -----------------------------------------------
 // ConstArray
 // -----------------------------------------------
 
-type __ConstArray<'T> = __inptr<'T> * int
+type __ConstArray<'T> = __inptr<'T> * uint
 
-let __constArrayOfMut (mutArray: __MutArray<_>) : __ConstArray<_> =
+let __constArrayOfMut (mutArray: __MutArray<'T>) : __ConstArray<'T> =
   let mutPtr, len = mutArray
-  __ptrAsConst mutPtr, len
+  Ptr.asIn mutPtr, len
 
-let __constArrayLength (array: __ConstArray<_>) =
+let __constArrayLength (array: __ConstArray<'T>) : int =
   let _, len = array
-  len
+  int len
 
-let __constArrayGet (index: int) (array: __ConstArray<_>) =
+let __constArrayGet (index: int) (array: __ConstArray<'T>) : 'T =
   let ptr, len = array
-  assert (uint index < uint len)
-  Ptr.read ptr.[index]
+  assert (uint index < len)
+  Ptr.read ptr.[int index]
 
-let __constArraySlice (start: int) (endIndex: int) (array: __ConstArray<_>) : __ConstArray<_> =
+let __constArraySlice (start: int) (endIndex: int) (array: __ConstArray<'T>) : __ConstArray<'T> =
   let ptr, len = array
 
-  assert (0 <= start && start <= endIndex && endIndex <= len)
+  assert (0 <= start && uint start <= uint endIndex && uint endIndex <= len)
 
-  __ptrAdd start ptr, endIndex - start
+  Ptr.select ptr.[start], uint endIndex - uint start

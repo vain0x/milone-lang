@@ -16,13 +16,13 @@ struct Int64UInt8UInt8Tuple3_;
 
 int32_t nativeptr_nativeptr_ObjectObjectTuple2MutPtrInt32Fun1_sizeOfPointee(struct ObjectObjectTuple2_* ptr_);
 
-void* milone_region_alloc(int32_t , uintptr_t );
+void* milone_region_alloc(uint32_t , uint32_t );
 
-void* nativeptr_nativeptr_memAlloc(int32_t count_, int32_t size_);
+void* nativeptr_nativeptr_memAlloc(uint32_t count_, uint32_t size_);
 
 void* memset(void* , int32_t , uintptr_t );
 
-void nativeptr_nativeptr_memSet(void* dest_, uint8_t value_, int32_t count_1);
+void nativeptr_nativeptr_memSet(void* dest_, uint8_t value_, uint32_t count_1);
 
 char* strcpy(char* , char const* );
 
@@ -56,7 +56,7 @@ void nativeptr_nativeptr_testPtrRead(void);
 
 void nativeptr_nativeptr_testPtrWrite(void);
 
-int32_t* Std_Ptr_Int32Int32OutPtrFun1_regionAlloc(int32_t );
+int32_t* Std_Ptr_UInt32Int32OutPtrFun1_regionAlloc(uint32_t );
 
 void nativeptr_nativeptr_testPtrRegionAlloc(void);
 
@@ -84,13 +84,13 @@ int32_t nativeptr_nativeptr_ObjectObjectTuple2MutPtrInt32Fun1_sizeOfPointee(stru
     return sizeof(struct ObjectObjectTuple2_);
 }
 
-void* nativeptr_nativeptr_memAlloc(int32_t count_, int32_t size_) {
+void* nativeptr_nativeptr_memAlloc(uint32_t count_, uint32_t size_) {
     void* milone_region_alloc_result;
-    milone_region_alloc_result = milone_region_alloc(count_, ((uintptr_t)size_));
+    milone_region_alloc_result = milone_region_alloc(count_, size_);
     return milone_region_alloc_result;
 }
 
-void nativeptr_nativeptr_memSet(void* dest_, uint8_t value_, int32_t count_1) {
+void nativeptr_nativeptr_memSet(void* dest_, uint8_t value_, uint32_t count_1) {
     void* memset_result;
     memset_result = memset(dest_, ((int32_t)value_), ((uintptr_t)count_1));
     return;
@@ -106,9 +106,9 @@ void nativeptr_nativeptr_testBasic(void) {
     void* buf_;
     void* call_;
     uintptr_t address_1;
-    call_ = nativeptr_nativeptr_memAlloc(1, 8);
+    call_ = nativeptr_nativeptr_memAlloc((uint32_t)1U, (uint32_t)8U);
     buf_ = call_;
-    nativeptr_nativeptr_memSet(buf_, (uint8_t)255U, 8);
+    nativeptr_nativeptr_memSet(buf_, (uint8_t)255U, (uint32_t)8U);
     milone_assert(((*(((int32_t const*)buf_))) == -1), (struct String){.ptr = "nativeptr/nativeptr.milone", .len = 26}, 20, 2);
     address_1 = ((uintptr_t)buf_);
     milone_assert((address_1 != (size_t)0ULL), (struct String){.ptr = "nativeptr/nativeptr.milone", .len = 26}, 23, 2);
@@ -268,7 +268,7 @@ void nativeptr_nativeptr_testPtrSelect(void) {
     void* call_2;
     uintptr_t address_4;
     uintptr_t address_5;
-    call_2 = nativeptr_nativeptr_memAlloc(4, sizeof(int32_t));
+    call_2 = nativeptr_nativeptr_memAlloc((uint32_t)4U, ((uint32_t)sizeof(int32_t)));
     p_3 = ((int32_t*)call_2);
     milone_assert(((&(p_3[0])) == p_3), (struct String){.ptr = "nativeptr/nativeptr.milone", .len = 26}, 142, 2);
     address_4 = ((uintptr_t)(&(p_3[1])));
@@ -312,7 +312,7 @@ void nativeptr_nativeptr_testPtrRegionAlloc(void) {
     int32_t* p_6;
     int32_t* p_7;
     int32_t* call_3;
-    call_3 = Std_Ptr_Int32Int32OutPtrFun1_regionAlloc(2);
+    call_3 = Std_Ptr_UInt32Int32OutPtrFun1_regionAlloc((uint32_t)2U);
     p_6 = call_3;
     p_6[0] = 42;
     p_6[1] = 43;

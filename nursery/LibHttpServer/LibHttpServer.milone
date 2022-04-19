@@ -75,11 +75,11 @@ let private getCwd () : string = __nativeFun "get_cwd"
 // -----------------------------------------------
 
 // ptr, capacity
-type private Buffer = nativeptr<byte> * int
+type private Buffer = nativeptr<byte> * uint
 
 /// Allocates new buffer with specified size of capacity.
-let private newBuffer (capacity: int) : Buffer =
-  assert (capacity >= 1)
+let private newBuffer (capacity: uint) : Buffer =
+  assert (capacity >= 1u)
 
   __nativeStmt ("unsigned char *buf = milone_region_alloc({0}, sizeof(unsigned char));", capacity)
 
@@ -90,7 +90,7 @@ let private newBuffer (capacity: int) : Buffer =
 /// Converts a buffer to string.
 ///
 /// Use this only when the contents of buffer are valid as UTF-8 (not checked).
-let private bufToString (len: int) (buf: Buffer) : string =
+let private bufToString (len: uint) (buf: Buffer) : string =
   let ptr, _ = buf
   __nativeStmt ("struct String s = string_of_raw_parts({0}, {1});", ptr, len)
   __nativeExpr "s"
@@ -132,26 +132,25 @@ let private closeFd (fd: int) : unit = __nativeStmt ("close({0});", fd)
 /// Reads from stream to fill the buffer.
 ///
 /// Returns size of read data. (Maybe less than capacity.)
-let private readBlock (buf: Buffer) (input: Stream) : int * Buffer * Stream =
+let private readBlock (buf: Buffer) (input: Stream) : uint * Buffer * Stream =
   let bufPtr, bufSize = buf
 
-  __nativeStmt ("int len = (int)fread({1}, 1, (size_t){2}, {0});", input, bufPtr, bufSize)
+  __nativeStmt ("uint32_t len = (uint32_t)fread({1}, 1, {2}, {0});", input, bufPtr, bufSize)
 
-  let len: int = __nativeExpr "len"
+  let len: uint = __nativeExpr "len"
   len, buf, input
 
 /// Reads a block of bytes equal to specified size.
 ///
 /// Blocks to wait for the buffer to fill.
 /// Returns whether read data is of specified size.
-let private readExact (buf: Buffer) (size: int) (input: Stream) : bool * Buffer * Stream =
+let private readExact (buf: Buffer) (size: uint) (input: Stream) : bool * Buffer * Stream =
   let bufPtr, bufSize = buf
-  assert (size >= 0)
   assert (size <= bufSize)
 
   __nativeStmt (
     """
-      size_t result = fread({1}, (size_t){2}, 1, {0});
+      size_t result = fread({1}, {2}, 1, {0});
       bool ok = result == 1;
     """,
     input,
@@ -180,8 +179,8 @@ let private readLine (input: Stream) : string option * Stream =
   else
     None, input
 
-let private doWriteExact (ptr: __inptr<byte>) (len: int) (output: Stream) : unit =
-  assert (len >= 1)
+let private doWriteExact (ptr: __inptr<byte>) (len: uint) (output: Stream) : unit =
+  assert (len >= 1u)
 
   __nativeStmt (
     """
@@ -197,9 +196,7 @@ let private doWriteExact (ptr: __inptr<byte>) (len: int) (output: Stream) : unit
   if not ok then failwith "writeExact"
 
 /// Writes data to stream. Blocks to wait for all data to be written.
-let private writeExact (buf: Buffer) (len: int) (output: Stream) : Buffer * Stream =
-  assert (len >= 0)
-
+let private writeExact (buf: Buffer) (len: uint) (output: Stream) : Buffer * Stream =
   let bufPtr, bufSize = buf
   assert (len <= bufSize)
 
@@ -211,7 +208,7 @@ let private writeStringExact (s: string) (output: Stream) : Stream =
   if s.Length > 0 then
     __nativeStmt ("char const *ptr = {0}.ptr;", s)
     let ptr: __inptr<char> = __nativeExpr "ptr"
-    doWriteExact (__nativeCast ptr: __inptr<byte>) s.Length output
+    doWriteExact (__nativeCast ptr: __inptr<byte>) (uint s.Length) output
 
   output
 
@@ -228,18 +225,18 @@ let private readAllText (filePath: string) : string option =
           struct stat st;
           int result = fstat(fileno({0}), &st);
           bool ok = result == 0 && S_ISREG(st.st_mode) && st.st_size < (1L << 30);
-          int len = ok ? (int)st.st_size : 0;
+          uint32_t len = ok ? (uint32_t)st.st_size : 0;
         """,
       fp
     )
 
-    let size: int = __nativeExpr "len"
+    let size: uint = __nativeExpr "len"
     let ok: bool = __nativeExpr "ok"
 
     if not ok then
       closeFile fp
       None
-    else if size = 0 then
+    else if size = 0u then
       closeFile fp
       Some ""
     else
@@ -396,15 +393,15 @@ let private readHeaderField (input: Stream) : Map<string, string> option * Strea
 
 /// Reads HTTP request body of specified size.
 // data is discarded
-let private readReqBody (input: Stream) (size: int) : Stream =
-  if size > 1100100100 then
+let private readReqBody (input: Stream) (size: uint) : Stream =
+  if size > 1100100100u then
     failwith "body too long"
 
-  let bufSize = 8000
+  let bufSize = 8000u
   let buf = newBuffer bufSize
 
   let rec go input buf size =
-    if size = 0 then
+    if size = 0u then
       input
     else
       let blockSize = I.min bufSize size
@@ -516,6 +513,7 @@ let private readReq (handler: HttpActionContext -> unit) (input: Stream) (output
           |> TMap.tryFind "content-length"
           |> Option.bind I.tryParse
           |> Option.defaultValue 0
+          |> uint
 
         let _input = readReqBody input contentLength
 

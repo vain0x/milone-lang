@@ -42,6 +42,6 @@ int main(int argc, char** argv) {
     Person_1 = (struct Person_){.t0 = (struct String){.ptr = "John Doe", .len = 8}, .t1 = base_.t1, .t2 = base_.t2};
     john_ = Person_1;
     name_ = john_.t0;
-    milone_assert((name_.len == 8), (struct String){.ptr = "record_with_nested/record_with_nested.milone", .len = 44}, 20, 2);
+    milone_assert((((int32_t)name_.len) == 8), (struct String){.ptr = "record_with_nested/record_with_nested.milone", .len = 44}, 20, 2);
     return 0;
 }

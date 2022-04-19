@@ -14,7 +14,7 @@ type __MutArray<'T> = System.ArraySegment<'T>
 /// UNSAFE: Note calling this function is NOT pure, causing side-effects
 /// since returned array is distinct value for each calling.
 /// (Only one exception is len = 0.)
-let internal __mutArrayCreate (len: int) : __MutArray<_> = __MutArray (Array.zeroCreate len)
+let internal __mutArrayCreate (len: uint) : __MutArray<_> = __MutArray (Array.zeroCreate (int len))
 
 let internal __mutArraySet (index: int) value (array: __MutArray<_>) =
   let mutable array = array

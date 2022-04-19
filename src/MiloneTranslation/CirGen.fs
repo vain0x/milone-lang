@@ -33,6 +33,7 @@ let private tupleField (i: int) = "t" + string i
 /// Calculates discriminant type's name of union type.
 let private toDiscriminantEnumName (name: string) = name + "Discriminant"
 
+let private cInt32Ty = CIntTy I32
 let private cVoidPtrTy = CPtrTy CVoidTy
 let private cVoidConstPtrTy = CConstPtrTy CVoidTy
 let private cNullExpr = CVarExpr "NULL"
@@ -781,7 +782,7 @@ let private genUnaryExpr ctx op arg =
   | MFloatOfScalarUnary flavor -> CCastExpr(arg, CFloatTy flavor), ctx
   | MCharOfScalarUnary -> CCastExpr(arg, CCharTy), ctx
   | MStringAsPtrUnary -> CDotExpr(arg, "ptr"), ctx
-  | MStringLengthUnary -> CDotExpr(arg, "len"), ctx
+  | MStringLengthUnary -> CCastExpr(CDotExpr(arg, "len"), cInt32Ty), ctx
 
   | MUnboxUnary itemTy ->
     let itemTy, ctx = cgTyComplete ctx itemTy

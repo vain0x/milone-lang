@@ -17,7 +17,7 @@ type Array<'T> = __ConstArray<'T>
 /// Gets an empty array.
 ///
 /// PERF: O(1) time, no allocation.
-let empty () : Array<_> = __constArrayOfMut (__mutArrayCreate 0)
+let empty () : Array<_> = __constArrayOfMut (__mutArrayCreate 0u)
 
 /// Creates an array with specified length. i'th item is `f i`.
 ///
@@ -27,7 +27,7 @@ let init (len: int) (f: int -> _) : Array<_> =
     assert (len = 0)
     empty ()
   else
-    let array = __mutArrayCreate len
+    let array = __mutArrayCreate (uint len)
 
     let rec arrayInitLoop i =
       if i < len then
@@ -133,7 +133,7 @@ let map (f: _ -> _) (array: Array<_>) : Array<_> =
 
 let choose (f: _ -> _ option) (src: Array<_>) : Array<_> =
   let len = length src
-  let dest = __mutArrayCreate len
+  let dest = __mutArrayCreate (uint len)
 
   // si: number of items read from src.
   // di: number of items written to dest.
@@ -182,7 +182,7 @@ let ofList (xs: _ list) : Array<_> =
 
     listLengthLoop 0 xs
 
-  let dest = __mutArrayCreate len
+  let dest = __mutArrayCreate (uint len)
 
   let rec ofListLoop i xs =
     match xs with

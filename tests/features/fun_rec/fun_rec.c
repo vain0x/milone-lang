@@ -51,7 +51,7 @@ int main(int argc, char** argv) {
     struct String source_;
     int32_t len_;
     source_ = (struct String){.ptr = "hello world", .len = 11};
-    len_ = source_.len;
+    len_ = ((int32_t)source_.len);
     fun_rec_fun_rec_main_go(len_, source_, 0);
     return 0;
 }

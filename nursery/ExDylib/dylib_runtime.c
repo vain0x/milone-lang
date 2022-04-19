@@ -29,15 +29,15 @@ struct OsString {
     LPCTSTR ptr;
 
     // Length. Count of UTF-16 code units. Half of bytes.
-    size_t len;
+    uint32_t len;
 };
 
 // Convert an null-terminated OS-native string to OsString.
 //
-// The result is NOT allocated and is valid only when the parmeter is valid.
+// The result is NOT allocated and is valid only when the parameter is valid.
 static struct OsString os_string_borrow(LPCTSTR s) {
     assert(s != NULL);
-    return (struct OsString){.ptr = s, .len = _tcslen(s)};
+    return (struct OsString){.ptr = s, .len = (uint32_t)_tcslen(s)};
 }
 
 // Convert a UTF-8 string to OS-native encoding. (UTF-16 on Windows)
@@ -54,7 +54,7 @@ static struct OsString os_string_of(struct String s) {
     }
     assert(len >= 0);
 
-    LPTSTR buf = milone_region_alloc(len + 1, sizeof(TCHAR));
+    LPTSTR buf = milone_region_alloc((uint32_t)len + 1, sizeof(TCHAR));
 
     int n = MultiByteToWideChar(CP_UTF8, 0, s.ptr, s.len, buf, len);
     if (n == 0) {
@@ -62,8 +62,8 @@ static struct OsString os_string_of(struct String s) {
     }
     assert(n >= 0);
     assert(n <= len);
-    assert(buf[(size_t)n] == L'\0');
-    return (struct OsString){.ptr = buf, .len = (size_t)n};
+    assert(buf[(uint32_t)n] == L'\0');
+    return (struct OsString){.ptr = buf, .len = (uint32_t)n};
 }
 
 struct Dylib *milone_dylib_open(struct String path) {

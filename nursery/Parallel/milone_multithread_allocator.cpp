@@ -151,7 +151,7 @@ class MemoryPool {
         return ptr;
     }
 
-    void *alloc(int count, size_t size) {
+    void *alloc(uint32_t count, uint32_t size) {
         assert(count > 0 && size > 0);
 
         size_t total = (size_t)count * size;
@@ -200,7 +200,7 @@ extern "C" void milone_region_enter(void) { s_heap.local().enter_region(); }
 
 extern "C" void milone_region_leave(void) { s_heap.local().leave_region(); }
 
-extern "C" void *milone_region_alloc(int count, size_t size) {
+extern "C" void *milone_region_alloc(uint32_t count, uint32_t size) {
     void *p = s_heap.local().alloc(count, size);
     // fprintf(stderr, "alloc %d x %d -> %p\n", count, (int)size, p);
     return p;

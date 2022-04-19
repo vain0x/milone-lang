@@ -7,7 +7,7 @@ module Ptr = Std.Ptr
 // -----------------------------------------------
 
 let memAlloc (len: int) (size: int) : voidptr =
-  __nativeFun ("milone_region_alloc", len, unativeint size)
+  __nativeFun ("milone_region_alloc", uint len, uint size)
 
 let memCopy (dest: voidptr) (src: __voidinptr) (size: int) : voidptr =
   __nativeFun ("memcpy", dest, src, unativeint size)

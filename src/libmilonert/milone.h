@@ -16,7 +16,7 @@ void milone_start(int argc, char **argv);
 
 void milone_region_enter(void);
 void milone_region_leave(void);
-void *milone_region_alloc(int count, size_t size);
+void *milone_region_alloc(uint32_t count, uint32_t size);
 
 // -----------------------------------------------
 // integers
@@ -33,7 +33,7 @@ int milone_uint64_compare(uint64_t l, uint64_t r);
 // This assumes some invariants, see documentation about string type.
 struct String {
     char const *ptr;
-    int len;
+    uint32_t len;
 };
 
 // Convert a null-terminated string to a string object by computing its length.
@@ -45,7 +45,7 @@ struct String string_borrow(char const *c_str);
 int string_compare(struct String l, struct String r);
 
 // Create a copy of native C string.
-struct String string_of_raw_parts(char const *ptr, int len);
+struct String string_of_raw_parts(char const *ptr, uint32_t len);
 
 // Create a copy of native null-terminated C string.
 struct String string_of_c_str(char const *s);
@@ -54,7 +54,7 @@ struct String string_of_c_str(char const *s);
 struct String string_add(struct String l, struct String r);
 
 // Create a slice of string.
-struct String string_slice(struct String s, int l, int r);
+struct String string_slice(struct String s, int32_t l, int32_t r);
 
 /// Implementation of `s.[l..r]`; `r` is inclusive.
 static struct String string_get_slice(int32_t l, int32_t r, struct String s) {

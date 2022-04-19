@@ -80,15 +80,15 @@ struct OsString {
     LPCTSTR ptr;
 
     // Length. Count of UTF-16 code units. Half of bytes.
-    size_t len;
+    uint32_t len;
 };
 
 // Convert an null-terminated OS-native string to OsString.
 //
-// The result is NOT allocated and is valid only when the parmeter is valid.
+// The result is NOT allocated and is valid only when the parameter is valid.
 static struct OsString os_string_borrow(LPCTSTR s) {
     assert(s != NULL);
-    return (struct OsString){.ptr = s, .len = _tcslen(s)};
+    return (struct OsString){.ptr = s, .len = (uint32_t)_tcslen(s)};
 }
 
 // Convert a UTF-8 string to OS-native encoding. (UTF-16 on Windows)
@@ -105,7 +105,7 @@ static struct OsString os_string_of(struct String s) {
     }
     assert(len >= 0);
 
-    LPTSTR buf = milone_region_alloc(len + 1, sizeof(TCHAR));
+    LPTSTR buf = milone_region_alloc((uint32_t)len + 1, sizeof(TCHAR));
 
     int n = MultiByteToWideChar(CP_UTF8, 0, s.ptr, s.len, buf, len);
     if (n == 0) {
@@ -113,8 +113,8 @@ static struct OsString os_string_of(struct String s) {
     }
     assert(n >= 0);
     assert(n <= len);
-    assert(buf[(size_t)n] == L'\0');
-    return (struct OsString){.ptr = buf, .len = (size_t)n};
+    assert(buf[(uint32_t)n] == L'\0');
+    return (struct OsString){.ptr = buf, .len = (uint32_t)n};
 }
 
 // Convert an OS-string to a UTF-8. Allocate to copy.
@@ -133,7 +133,7 @@ static struct String os_string_to(struct OsString s) {
     }
     assert(len >= 0);
 
-    char *buf = milone_region_alloc(len + 1, sizeof(char));
+    char *buf = milone_region_alloc((uint32_t)len + 1, sizeof(char));
 
     int n = WideCharToMultiByte(CP_UTF8, 0, s.ptr, (int)s.len, buf, len, NULL,
                                 NULL);
@@ -142,8 +142,8 @@ static struct String os_string_to(struct OsString s) {
     }
     assert(n >= 0);
     assert(n <= len);
-    assert(buf[(size_t)n] == '\0');
-    return (struct String){.ptr = buf, .len = (size_t)n};
+    assert(buf[(uint32_t)n] == '\0');
+    return (struct String){.ptr = buf, .len = (uint32_t)n};
 }
 
 #endif // windows
@@ -201,7 +201,7 @@ static struct String milone_platform_normalize_path_sep(struct String path) {
 #elif defined(MILONE_PLATFORM_WINDOWS)
     char *buf = milone_region_alloc(path.len + 1, sizeof(char));
     strncpy(buf, path.ptr, path.len);
-    for (size_t i = 0; i < path.len; i++) {
+    for (uint32_t i = 0; i < path.len; i++) {
         if (buf[i] == '\\') {
             buf[i] = '/';
         }
@@ -236,7 +236,7 @@ bool dir_create(struct String dir, struct String base_dir) {
 
     // Span of absolute path.
     char const *const al = dir.ptr;
-    char const *const ar = dir.ptr + (size_t)dir.len;
+    char const *const ar = dir.ptr + dir.len;
 
     // Start of basename.
     char const *bl = al;
@@ -292,8 +292,8 @@ struct StringCons {
 // Combine command and args into single command line string.
 // Write to buf.
 static void build_cmdline(struct String command, struct StringCons const *args,
-                          char *buf, size_t buf_size) {
-    size_t total_len = command.len + 2;
+                          char *buf, uint32_t buf_size) {
+    uint32_t total_len = command.len + 2;
     {
         struct StringCons const *a = args;
         while (a != NULL) {
@@ -306,11 +306,11 @@ static void build_cmdline(struct String command, struct StringCons const *args,
         exit(1);
     }
 
-    size_t i = 0;
+    uint32_t i = 0;
     buf[i] = '"';
     i++;
 
-    strncpy(&buf[i], command.ptr, (size_t)command.len);
+    memcpy(&buf[i], command.ptr, (uint32_t)command.len);
     i += command.len;
 
     buf[i] = '"';
@@ -325,7 +325,7 @@ static void build_cmdline(struct String command, struct StringCons const *args,
             buf[i] = '"';
             i++;
 
-            strncpy(&buf[i], a->head.ptr, a->head.len);
+            memcpy(&buf[i], a->head.ptr, a->head.len);
             i += a->head.len;
 
             buf[i] = '"';
@@ -441,11 +441,8 @@ static void rng_destroy(BCRYPT_ALG_HANDLE h_alg) {
     BCryptCloseAlgorithmProvider(h_alg, 0);
 }
 
-static void rng_random_bytes(BCRYPT_ALG_HANDLE h_alg, uint8_t *buf, int len) {
-    assert(len >= 0);
-    if (len == 0) return;
-
-    assert(buf != NULL);
+static void rng_random_bytes(BCRYPT_ALG_HANDLE h_alg, uint8_t *buf, uint32_t len) {
+    assert(buf != NULL && len != 0);
 
     if (BCryptGenRandom(h_alg, (PUCHAR)buf, (ULONG)len, 0) != 0) {
         failwith("BCryptGenRandom");

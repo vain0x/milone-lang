@@ -29,6 +29,9 @@
 #define THREAD_LOCAL _Thread_local
 #endif
 
+// Max size of allocation.
+static uint32_t const LIMIT = 1U << 31;
+
 // -----------------------------------------------
 // memory management (memory pool)
 // -----------------------------------------------
@@ -130,7 +133,7 @@ static void do_region_leave(void) {
 }
 
 // allocate new chunk
-static void *milone_region_alloc_slow(size_t total) {
+static void *do_region_alloc_slow(size_t total) {
     size_t cap = s_heap.cap;
 
     // move current chunk to used list
@@ -169,8 +172,13 @@ static void *milone_region_alloc_slow(size_t total) {
     return ptr;
 }
 
-static void *do_region_alloc(int count, size_t size) {
-    assert(count > 0 && size > 0);
+static void *do_region_alloc(uint32_t count, uint32_t size) {
+    assert(count != 0 && size != 0);
+
+    // Allocation size limit: count * size < LIMIT
+    if (count >= LIMIT / size) {
+        oom();
+    }
 
     size_t total = (size_t)count * size;
 
@@ -178,8 +186,8 @@ static void *do_region_alloc(int count, size_t size) {
     total = (total + 0xf) & ~0xf;
     assert(total % 16 == 0 && total >= (size_t)count * size);
 
-    if (s_heap.len + total > s_heap.cap) {
-        return milone_region_alloc_slow(total);
+    if (total > s_heap.cap - s_heap.len) {
+        return do_region_alloc_slow(total);
     }
 
     // use current chunk
@@ -201,7 +209,7 @@ size_t milone_alloc_cost(void) { return s_alloc_cost; }
 void milone_region_enter(void) { do_region_enter(); }
 void milone_region_leave(void) { do_region_leave(); }
 
-void *milone_region_alloc(int count, size_t size) {
+void *milone_region_alloc(uint32_t count, uint32_t size) {
     return do_region_alloc(count, size);
 }
 
@@ -235,12 +243,14 @@ int milone_uint64_compare(uint64_t l, uint64_t r) {
     return 1;
 }
 
-static int32_t int32_clamp(int32_t x, int32_t l, int32_t r) {
-    if (x < l)
-        return l;
-    if (x > r)
-        return r;
-    return x;
+static uint32_t uint32_min(uint32_t l, uint32_t r) {
+    return r < l ? r : l;
+}
+
+static int uint32_compare(uint32_t l, uint32_t r) {
+    if (l == r) return 0;
+    if (l < r) return -1;
+    return 1;
 }
 
 // -----------------------------------------------
@@ -249,13 +259,11 @@ static int32_t int32_clamp(int32_t x, int32_t l, int32_t r) {
 
 struct StringBuilder {
     char *buf;
-    int len;
-    int cap;
+    uint32_t len;
+    uint32_t cap;
 };
 
-static struct StringBuilder *string_builder_new_with_capacity(int cap) {
-    assert(cap >= 0);
-
+static struct StringBuilder *string_builder_new_with_capacity(uint32_t cap) {
     struct StringBuilder *sb =
         milone_region_alloc(1, sizeof(struct StringBuilder));
     *sb = (struct StringBuilder){
@@ -266,15 +274,16 @@ static struct StringBuilder *string_builder_new_with_capacity(int cap) {
     return sb;
 }
 
-static void string_builder_grow(struct StringBuilder *sb, int addition) {
-    assert(addition >= 0);
-    assert(sb->len + addition >= sb->cap);
+static void string_builder_grow(struct StringBuilder *sb, uint32_t addition) {
+    // Addition must be larger than unused space.
+    assert(addition >= sb->cap - sb->len);
+    if (addition >= LIMIT - sb->cap) oom();
 
     // grow exponentially
     sb->cap *= 2;
 
     // +1 for final null byte.
-    int min_len = sb->len + addition + 1;
+    uint32_t min_len = sb->len + addition + 1;
     if (sb->cap < min_len) {
         sb->cap = min_len;
     }
@@ -289,7 +298,7 @@ static void string_builder_grow(struct StringBuilder *sb, int addition) {
 
 static void string_builder_append_string(struct StringBuilder *sb,
                                          struct String value) {
-    if (sb->len + value.len >= sb->cap) {
+    if (value.len >= sb->cap - sb->len) {
         string_builder_grow(sb, value.len);
     }
 
@@ -302,36 +311,31 @@ static void string_builder_append_string(struct StringBuilder *sb,
 
 struct String string_borrow(char const *c_str) {
     assert(c_str != NULL);
-    return (struct String){.ptr = c_str, .len = (int)strlen(c_str)};
+    return (struct String){.ptr = c_str, .len = (uint32_t)strlen(c_str)};
 }
 
 int string_compare(struct String left, struct String right) {
     // Compare prefix part of two strings.
-    int min_len = int32_clamp(left.len, 0, right.len);
+    uint32_t min_len = uint32_min(left.len, right.len);
     int c = memcmp(left.ptr, right.ptr, min_len);
     if (c != 0) {
         return c;
     }
 
     // One is prefix of the other here, and therefore, longer is greater.
-    return milone_int32_compare(left.len, right.len);
+    return uint32_compare(left.len, right.len);
 }
 
-_Noreturn static void error_str_of_raw_parts(int len) {
+_Noreturn static void error_str_of_raw_parts(uint32_t len) {
     fprintf(stderr, "FATAL: Negative string length (%d).\n", len);
     exit(1);
 }
 
-struct String string_of_raw_parts(char const *p, int len) {
+struct String string_of_raw_parts(char const *p, uint32_t len) {
     assert(p != NULL);
 
-    if (len <= 0) {
-        if (len < 0) {
-            error_str_of_raw_parts(len);
-        }
-
-        return string_borrow("");
-    }
+    if (len == 0) return string_borrow("");
+    if (len >= LIMIT - 1) oom();
 
     // +1 for the invariant of existence of null byte.
     char *buf = milone_region_alloc(len + 1, sizeof(char));
@@ -342,7 +346,7 @@ struct String string_of_raw_parts(char const *p, int len) {
 
 struct String string_of_c_str(char const *s) {
     assert(s != NULL);
-    return string_of_raw_parts(s, (int)strlen(s));
+    return string_of_raw_parts(s, (uint32_t)strlen(s));
 }
 
 _Noreturn static void error_str_add_overflow() {
@@ -355,11 +359,12 @@ struct String string_add(struct String left, struct String right) {
         return right.len == 0 ? left : right;
     }
 
-    if ((uint32_t)left.len + (uint32_t)right.len >= (uint32_t)INT32_MAX) {
+    // Length limit: |l| + |r| < LIMIT
+    if (right.len >= LIMIT - left.len) {
         error_str_add_overflow();
     }
 
-    int len = left.len + right.len;
+    uint32_t len = left.len + right.len;
     char *buf = milone_region_alloc(len + 1, sizeof(char));
     memcpy(buf, left.ptr, left.len);
     memcpy(buf + left.len, right.ptr, right.len);
@@ -367,11 +372,13 @@ struct String string_add(struct String left, struct String right) {
     return (struct String){.ptr = buf, .len = len};
 }
 
-struct String string_slice(struct String s, int l, int r) {
-    l = int32_clamp(l, 0, s.len);
-    r = int32_clamp(r, l, s.len);
-    assert(0 <= l && l <= r && r <= s.len);
-    return (struct String){.ptr = s.ptr + l, .len = r - l};
+struct String string_slice(struct String s, int32_t l, int32_t r) {
+    if (l < 0) l = 0;
+    if (r < 0) r = 0;
+    uint32_t ur = uint32_min((uint32_t)r, s.len);
+    uint32_t ul = uint32_min((uint32_t)l, (uint32_t)r);
+    assert(ul <= ur && ur <= s.len);
+    return (struct String){.ptr = s.ptr + ul, .len = ur - ul};
 }
 
 struct String string_ensure_null_terminated(struct String s) {
@@ -556,7 +563,7 @@ struct String string_concat(struct String sep, struct StringList const *strings)
         struct String head = ss->head;
         ss = ss->tail;
 
-        if (!first && sep.len > 0) {
+        if (!first && sep.len >= 1) {
             string_builder_append_string(sb, sep);
         }
         first = false;
@@ -614,12 +621,17 @@ struct String file_read_all_text(struct String file_name) {
     long size = ftell(fp);
     if (size < 0) {
         fclose(fp);
-        fprintf(stderr, "%s", "Couldn't retrieve the file size.");
+        fprintf(stderr, "%s", "Couldn't retrieve the file size.\n");
+        exit(1);
+    }
+    if ((size_t)size >= LIMIT) {
+        fclose(fp);
+        fprintf(stderr, "%s", "File size is too large.\n");
         exit(1);
     }
     fseek(fp, 0, SEEK_SET);
 
-    char *content = milone_region_alloc((size_t)size + 1, sizeof(char));
+    char *content = milone_region_alloc((uint32_t)size + 1, sizeof(char));
     size_t read_size = fread(content, 1, (size_t)size, fp);
     if (read_size != (size_t)size) {
         fclose(fp);
@@ -628,7 +640,7 @@ struct String file_read_all_text(struct String file_name) {
     }
 
     fclose(fp);
-    return (struct String){.ptr = content, .len = size};
+    return (struct String){.ptr = content, .len = (uint32_t)size};
 }
 
 void file_write_all_text(struct String file_name, struct String content) {
@@ -645,7 +657,7 @@ void file_write_all_text(struct String file_name, struct String content) {
             fseek(fp, 0, SEEK_SET);
 
             if (size >= 0 && (size_t)size == (size_t)content.len) {
-                char *old_content = calloc((size_t)size + 1, sizeof(char));
+                char *old_content = calloc((uint32_t)size + 1, sizeof(char));
                 size_t read_len =
                     fread(old_content, sizeof(char), (size_t)size, fp);
                 bool same = read_len == (size_t)size &&
@@ -694,7 +706,7 @@ struct String milone_read_stdin_all(void) {
             break;
 
         string_builder_append_string(
-            sb, (struct String){.ptr = buf, .len = (int)read_len});
+            sb, (struct String){.ptr = buf, .len = (uint32_t)read_len});
     }
 
     // #sb_finish
@@ -849,7 +861,7 @@ struct String scan_string(int capacity) {
 
     size_t len = strlen(buf);
     assert((long long)len < (long long)capacity);
-    return (struct String){.ptr = buf, .len = (int)len};
+    return (struct String){.ptr = buf, .len = (uint32_t)len};
 }
 
 // -----------------------------------------------

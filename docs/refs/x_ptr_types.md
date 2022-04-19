@@ -70,7 +70,7 @@ It's invalidated when the variable goes out of scope.
 ### Allocated Pointer
 
 ```fsharp
-    Ptr.regionAlloc : int -> __outptr<'T>
+    Ptr.regionAlloc : uint -> __outptr<'T>
 ```
 
 `Ptr.regionAlloc` function allocates a number of items of a type on the current region and returns a pointer to the start of memory block.
