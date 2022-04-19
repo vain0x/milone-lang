@@ -3,10 +3,10 @@ module rec Std.StdIntBase
 let tryParseInt32 (s: string) : int option =
   __nativeStmt (
     """
-      bool string_to_int_checked(struct String, int32_t *);
+      bool string_to_int32_checked(struct String, int32_t *);
 
       int32_t value;
-      bool ok = string_to_int_checked({0}, &value);
+      bool ok = string_to_int32_checked({0}, &value);
     """,
     s
   )

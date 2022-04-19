@@ -432,7 +432,7 @@ double string_to_float64(struct String s) {
     return value;
 }
 
-bool string_to_int_checked(struct String s, int32_t *value_ptr) {
+bool string_to_int32_checked(struct String s, int32_t *value_ptr) {
     int64_t value;
     bool ok = string_to_int64_checked(s, &value);
     if (!(ok && INT32_MIN <= value && value <= INT32_MAX)) {
@@ -461,7 +461,7 @@ int16_t string_to_int16(struct String s) {
 
 int32_t string_to_int32(struct String s) {
     int32_t value;
-    bool ok = string_to_int_checked(s, &value);
+    bool ok = string_to_int32_checked(s, &value);
     verify_str_to_number("int", ok);
     return value;
 }
