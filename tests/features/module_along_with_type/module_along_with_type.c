@@ -1,3 +1,5 @@
+#include <stdio.h>
+#include <stdlib.h>
 #include <milone.h>
 
 struct IntIntTuple2_;
@@ -51,11 +53,11 @@ struct String module_along_with_type_module_along_with_type_Range_toString(struc
     sx_ = s_1.t1;
     ty_ = t_1.t0;
     tx_ = t_1.t1;
-    call_ = str_of_int64((sy_ + 1));
-    call_1 = str_of_int64((sx_ + 1));
-    call_2 = str_of_int64((ty_ + 1));
-    call_3 = str_of_int64((tx_ + 1));
-    return str_add(str_add(str_add(str_add(str_add(str_add(call_, (struct String){.str = ".", .len = 1}), call_1), (struct String){.str = "-", .len = 1}), call_2), (struct String){.str = ".", .len = 1}), call_3);
+    call_ = string_of_int64((sy_ + 1));
+    call_1 = string_of_int64((sx_ + 1));
+    call_2 = string_of_int64((ty_ + 1));
+    call_3 = string_of_int64((tx_ + 1));
+    return string_add(string_add(string_add(string_add(string_add(string_add(call_, (struct String){.ptr = ".", .len = 1}), call_1), (struct String){.ptr = "-", .len = 1}), call_2), (struct String){.ptr = ".", .len = 1}), call_3);
 }
 
 int main(int argc, char** argv) {
@@ -74,11 +76,11 @@ int main(int argc, char** argv) {
     IntIntTuple2IntIntTuple2Tuple2_1 = (struct IntIntTuple2IntIntTuple2Tuple2_){.t0 = p_, .t1 = call_4};
     r_ = IntIntTuple2IntIntTuple2Tuple2_1;
     call_5 = module_along_with_type_sub_Pos_toString(p_);
-    milone_assert((str_compare(call_5, (struct String){.str = "2:1", .len = 3}) == 0), (struct String){.str = "module_along_with_type/module_along_with_type.milone", .len = 52}, 29, 2);
+    milone_assert((string_compare(call_5, (struct String){.ptr = "2:1", .len = 3}) == 0), (struct String){.ptr = "module_along_with_type/module_along_with_type.milone", .len = 52}, 29, 2);
     call_6 = module_along_with_type_sub_Pos_add(p_, p_);
     call_7 = module_along_with_type_sub_Pos_toString(call_6);
-    milone_assert((str_compare(call_7, (struct String){.str = "3:1", .len = 3}) == 0), (struct String){.str = "module_along_with_type/module_along_with_type.milone", .len = 52}, 30, 2);
+    milone_assert((string_compare(call_7, (struct String){.ptr = "3:1", .len = 3}) == 0), (struct String){.ptr = "module_along_with_type/module_along_with_type.milone", .len = 52}, 30, 2);
     call_8 = module_along_with_type_module_along_with_type_Range_toString(r_);
-    milone_assert((str_compare(call_8, (struct String){.str = "2.1-3.1", .len = 7}) == 0), (struct String){.str = "module_along_with_type/module_along_with_type.milone", .len = 52}, 32, 2);
+    milone_assert((string_compare(call_8, (struct String){.ptr = "2.1-3.1", .len = 7}) == 0), (struct String){.ptr = "module_along_with_type/module_along_with_type.milone", .len = 52}, 32, 2);
     return 0;
 }

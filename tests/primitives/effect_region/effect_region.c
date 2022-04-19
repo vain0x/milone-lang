@@ -1,3 +1,5 @@
+#include <stdio.h>
+#include <stdlib.h>
 #include <milone.h>
 
 struct IntList;
@@ -43,7 +45,7 @@ then_3:;
     if_ = acc_;
     goto if_next_2;
 else_4:;
-    list_ = ((struct IntList const*)milone_mem_alloc(1, sizeof(struct IntList)));
+    list_ = ((struct IntList const*)milone_region_alloc(1, sizeof(struct IntList)));
     (*(((struct IntList*)list_))) = (struct IntList){.head = i_, .tail = acc_};
     arg_1 = list_;
     arg_2 = (i_ + 1);
@@ -72,9 +74,9 @@ int effect_region_effect_region_doAction(void) {
     struct UnitIntFun1 fun_;
     int region_result;
     fun_ = (struct UnitIntFun1){.fun = effect_region_effect_region_eta2_doAction_fun, .env = NULL};
-    milone_enter_region();
+    milone_region_enter();
     region_result = fun_.fun(fun_.env);
-    milone_leave_region();
+    milone_region_leave();
     return region_result;
 }
 

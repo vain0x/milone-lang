@@ -48,24 +48,24 @@ let dumpTreeToString (node: DumpTree) =
       | _ -> unreachable () // DumpTree.next never empty.
 
     match node with
-    | DumpTree (text, [], []) -> acc |> cons (strEscape text)
+    | DumpTree (text, [], []) -> acc |> cons (stringEscape text)
 
     | DumpTree (text, [ DumpTree (childText, [], []) ], next) ->
       acc
-      |> cons (strEscape text)
+      |> cons (stringEscape text)
       |> cons ": "
-      |> cons (strEscape childText)
+      |> cons (stringEscape childText)
       |> goNext eol next
 
     | DumpTree (text, children, next) ->
       acc
-      |> cons (strEscape text)
+      |> cons (stringEscape text)
       |> cons ":"
       |> goChildren eol children
       |> goNext eol next
 
   let eol = "\n"
-  [] |> go eol node |> List.rev |> strConcat
+  [] |> go eol node |> List.rev |> stringConcat
 
 [<Fact>]
 let dumpTreeTestEscape () =

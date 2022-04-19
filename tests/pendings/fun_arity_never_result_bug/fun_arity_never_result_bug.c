@@ -1,3 +1,5 @@
+#include <stdio.h>
+#include <stdlib.h>
 #include <milone.h>
 
 typedef int(*VoidConstPtrIntFunPtr1)(void const*);
@@ -35,13 +37,13 @@ struct IntIntFun1 {
 int fun_arity_never_result_bug_fun_arity_never_result_bug_UnitIntFun1_unreachable(void) {
     struct UnitIntFun1 call_;
     int app_;
-    call_ = fun_arity_never_result_bug_fun_arity_never_result_bug_StringUnitIntFun2_failwithf((struct String){.str = "NEVER: %A", .len = 9});
+    call_ = fun_arity_never_result_bug_fun_arity_never_result_bug_StringUnitIntFun2_failwithf((struct String){.ptr = "NEVER: %A", .len = 9});
     app_ = call_.fun(call_.env);
     return app_;
 }
 
 struct UnitIntFun1 fun_arity_never_result_bug_fun_arity_never_result_bug_StringUnitIntFun2_failwithf(struct String msg_) {
-    printf("%s\n", str_to_c_str(msg_));
+    printf("%s\n", string_to_c_str(msg_));
     exit(1);
 }
 
@@ -88,6 +90,6 @@ clause_3:;
 switch_next_1:;
     f_ = switch_;
     app_1 = f_.fun(f_.env, 2);
-    milone_assert((app_1 == 2), (struct String){.str = "fun_arity_never_result_bug/fun_arity_never_result_bug.milone", .len = 60}, 38, 2);
+    milone_assert((app_1 == 2), (struct String){.ptr = "fun_arity_never_result_bug/fun_arity_never_result_bug.milone", .len = 60}, 38, 2);
     return 0;
 }

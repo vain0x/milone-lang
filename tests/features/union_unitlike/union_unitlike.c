@@ -1,3 +1,5 @@
+#include <stdio.h>
+#include <stdlib.h>
 #include <milone.h>
 
 struct MyBool_;
@@ -74,7 +76,7 @@ void union_unitlike_union_unitlike_usedInOtherSumTypeCase(void) {
     variant_ = (struct MyBool_){.discriminant = MyTrue_, .MyTrue_ = 0};
     myBool_ = variant_;
     call_ = union_unitlike_union_unitlike_usedInOtherSumTypeCase_toBool(myBool_);
-    milone_assert(call_, (struct String){.str = "union_unitlike/union_unitlike.milone", .len = 36}, 27, 2);
+    milone_assert(call_, (struct String){.ptr = "union_unitlike/union_unitlike.milone", .len = 36}, 27, 2);
     return;
 }
 
@@ -83,7 +85,7 @@ void union_unitlike_union_unitlike_usedInRecordTypeCase(void) {
     struct RecordUsingMyUnit_ RecordUsingMyUnit_;
     struct UnitList const* list_;
     char match_2;
-    list_ = ((struct UnitList const*)milone_mem_alloc(1, sizeof(struct UnitList)));
+    list_ = ((struct UnitList const*)milone_region_alloc(1, sizeof(struct UnitList)));
     (*(((struct UnitList*)list_))) = (struct UnitList){.head = 0, .tail = NULL};
     RecordUsingMyUnit_ = (struct RecordUsingMyUnit_){.t0 = 0, .t1 = list_};
     record_ = RecordUsingMyUnit_;
@@ -92,7 +94,7 @@ void union_unitlike_union_unitlike_usedInRecordTypeCase(void) {
     match_2 = 0;
     goto end_match_6;
 next_7:;
-    milone_assert(false, (struct String){.str = "union_unitlike/union_unitlike.milone", .len = 36}, 37, 9);
+    milone_assert(false, (struct String){.ptr = "union_unitlike/union_unitlike.milone", .len = 36}, 37, 9);
     match_2 = 0;
     goto end_match_6;
 next_8:;

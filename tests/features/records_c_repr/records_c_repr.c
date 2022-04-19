@@ -1,3 +1,5 @@
+#include <stdio.h>
+#include <stdlib.h>
 #include <milone.h>
 
 struct Int32X4_;
@@ -29,7 +31,7 @@ struct Int32X32_ records_c_repr_records_c_repr_int32X32Zero;
 int main(int argc, char** argv) {
     milone_start(argc, argv);
     records_c_repr_records_c_repr_start();
-    milone_assert((records_c_repr_records_c_repr_int32X32Zero.t0.t0 == 0), (struct String){.str = "records_c_repr/records_c_repr.milone", .len = 36}, 24, 2);
+    milone_assert((records_c_repr_records_c_repr_int32X32Zero.t0.t0 == 0), (struct String){.ptr = "records_c_repr/records_c_repr.milone", .len = 36}, 24, 2);
     return 0;
 }
 

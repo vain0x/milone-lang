@@ -1,3 +1,5 @@
+#include <stdio.h>
+#include <stdlib.h>
 #include <milone.h>
 
 typedef int(*VoidConstPtrIntIntFunPtr2)(void const*, int);
@@ -61,7 +63,7 @@ void fun_lambda_fun_lambda_layoutTest(void) {
     fun_ = (struct IntIntFun1){.fun = fun_lambda_fun_lambda_eta2_layoutTest_fun, .env = NULL};
     call_1 = fun_lambda_fun_lambda_layoutTest_apply(fun_, 2);
     a_ = call_1;
-    milone_assert((a_ == 5), (struct String){.str = "fun_lambda/fun_lambda.milone", .len = 28}, 13, 2);
+    milone_assert((a_ == 5), (struct String){.ptr = "fun_lambda/fun_lambda.milone", .len = 28}, 13, 2);
     return;
 }
 
@@ -105,10 +107,10 @@ int main(int argc, char** argv) {
     fun_1 = (struct IntIntFun1){.fun = fun_lambda_fun_lambda_eta2_main_fun, .env = NULL};
     call_4 = fun_lambda_fun_lambda_main_twice(fun_1, 40);
     x_4 = call_4;
-    milone_assert((x_4 == 42), (struct String){.str = "fun_lambda/fun_lambda.milone", .len = 28}, 24, 2);
+    milone_assert((x_4 == 42), (struct String){.ptr = "fun_lambda/fun_lambda.milone", .len = 28}, 24, 2);
     fun_2 = (struct IntIntIntFun2){.fun = fun_lambda_fun_lambda_eta3_main_fun, .env = NULL};
     app_3 = fun_2.fun(fun_2.env, 84, 2);
-    milone_assert((app_3 == 42), (struct String){.str = "fun_lambda/fun_lambda.milone", .len = 28}, 26, 2);
+    milone_assert((app_3 == 42), (struct String){.ptr = "fun_lambda/fun_lambda.milone", .len = 28}, 26, 2);
     fun_lambda_fun_lambda_layoutTest();
     return 0;
 }

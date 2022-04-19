@@ -1,3 +1,5 @@
+#include <stdio.h>
+#include <stdlib.h>
 #include <milone.h>
 
 struct Stringoption1_;
@@ -34,7 +36,7 @@ void const* record_large_record_large_defaultOptions(void) {
     struct GitCommitOptions_ GitCommitOptions_;
     void const* box_;
     GitCommitOptions_ = (struct GitCommitOptions_){.t0 = false, .t1 = false, .t2 = (struct Stringoption1_){.discriminant = None_}, .t3 = (struct Stringoption1_){.discriminant = None_}, .t4 = (struct Stringoption1_){.discriminant = None_}, .t5 = (struct Stringoption1_){.discriminant = None_}, .t6 = false};
-    box_ = ((void const*)milone_mem_alloc(1, sizeof(struct GitCommitOptions_)));
+    box_ = ((void const*)milone_region_alloc(1, sizeof(struct GitCommitOptions_)));
     (*(((struct GitCommitOptions_*)box_))) = GitCommitOptions_;
     return box_;
 }

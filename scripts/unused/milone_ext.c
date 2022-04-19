@@ -24,7 +24,7 @@ struct Span span_slice(struct Span span, size_t start, size_t end,
 
 struct Buffer buffer_new(size_t cap, size_t item_size) {
     uint8_t *ptr =
-        cap == 0 || item_size == 0 ? NULL : milone_mem_alloc(cap, item_size);
+        cap == 0 || item_size == 0 ? NULL : milone_region_alloc(cap, item_size);
     return (struct Buffer){.ptr = ptr, .len = 0, .cap = cap};
 }
 
@@ -46,7 +46,7 @@ void buffer_grow(struct Buffer *buffer, size_t required_len, size_t item_size) {
         new_cap = required_len;
     }
 
-    void *new_ptr = milone_mem_alloc((int)new_cap, item_size);
+    void *new_ptr = milone_region_alloc((int)new_cap, item_size);
     memcpy(new_ptr, buffer->ptr, item_size * buffer->len);
 
     buffer->ptr = new_ptr;
@@ -85,7 +85,7 @@ struct SpanMut buffer_slice_mut(struct Buffer buffer, size_t start, size_t end,
 // -----------------------------------------------
 
 struct File milone_file_open(struct String path, struct String mode) {
-    FILE *fp = fopen(str_to_c_str(path), str_to_c_str(mode));
+    FILE *fp = fopen(string_to_c_str(path), string_to_c_str(mode));
     // fp maybe null.
     return (struct File){.fp = fp};
 }
@@ -94,8 +94,8 @@ void milone_file_close(struct File file) { fclose(file.fp); }
 
 bool milone_file_exists(struct String file_path, bool follow_link) {
     struct stat st;
-    bool ok = follow_link ? stat(str_to_c_str(file_path), &st) == 0
-                          : lstat(str_to_c_str(file_path), &st) == 0;
+    bool ok = follow_link ? stat(string_to_c_str(file_path), &st) == 0
+                          : lstat(string_to_c_str(file_path), &st) == 0;
     if (!ok) {
         return false;
     }
@@ -115,8 +115,8 @@ size_t milone_file_write(struct File file, struct SpanMut src) {
 
 bool milone_dir_exists(struct String file_path, bool follow_link) {
     struct stat st;
-    bool ok = follow_link ? stat(str_to_c_str(file_path), &st) == 0
-                          : lstat(str_to_c_str(file_path), &st) == 0;
+    bool ok = follow_link ? stat(string_to_c_str(file_path), &st) == 0
+                          : lstat(string_to_c_str(file_path), &st) == 0;
     if (!ok) {
         return false;
     }

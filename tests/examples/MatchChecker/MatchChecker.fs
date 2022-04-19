@@ -84,7 +84,7 @@ let listZip xs ys =
 
   go [] xs ys
 
-let strConcat xs =
+let stringConcat xs =
   let rec go (xs: string list) =
     match xs with
     | [] -> ""
@@ -330,7 +330,7 @@ let spaceToString space =
 
     | _ -> failwith "NEVER: suppress warning"
 
-  [] |> go space |> listRev |> strConcat
+  [] |> go space |> listRev |> stringConcat
 
 // -----------------------------------------------
 // Space generation

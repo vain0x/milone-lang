@@ -214,25 +214,25 @@ let private kmPrimNot itself args results conts loc ctx =
   | [ arg ], [ result ], [ cont ] -> ctx |> setUnaryK MNotUnary arg result cont loc
   | _ -> unreachable itself
 
-let private kmPrimStrIndex itself args results conts loc ctx =
+let private kmPrimStringIndex itself args results conts loc ctx =
   match args, results, conts with
   | [ l; r ], [ result ], [ cont ] ->
     // TODO: support l: nativeptr or __constptr
 
     ctx
-    |> setBinaryK MStrIndexBinary l r result cont loc
+    |> setBinaryK MStringIndexBinary l r result cont loc
 
   | _ -> unreachable itself
 
-let private kmPrimStrAdd itself args results conts loc ctx =
+let private kmPrimStringAdd itself args results conts loc ctx =
   match args, results, conts with
   | [ l; r ], [ result ], [ cont ] ->
     ctx
-    |> setBinaryK MStrAddBinary l r result cont loc
+    |> setBinaryK MStringAddBinary l r result cont loc
 
   | _ -> unreachable itself
 
-let private kmPrimStrCompare itself args results conts loc ctx =
+let private kmPrimStringCompare itself args results conts loc ctx =
   match args, results, conts with
   | [ l; r ], [ result ], [ cont ] ->
     ctx
@@ -240,9 +240,11 @@ let private kmPrimStrCompare itself args results conts loc ctx =
 
   | _ -> unreachable itself
 
-let private kmPrimStrLength itself args results conts loc ctx =
+let private kmPrimStringLength itself args results conts loc ctx =
   match args, results, conts with
-  | [ arg ], [ result ], [ cont ] -> ctx |> setUnaryK MStrLenUnary arg result cont loc
+  | [ arg ], [ result ], [ cont ] ->
+    ctx
+    |> setUnaryK MStringLengthUnary arg result cont loc
   | _ -> unreachable itself
 
 let private kmPrimCons itself args results conts loc ctx =
@@ -388,10 +390,10 @@ let private kmPrimNode itself prim args results conts loc ctx : KirToMirCtx =
   | KEqualPrim -> kmPrimEqual itself args results conts loc ctx
   | KLessPrim -> kmPrimLess itself args results conts loc ctx
   | KNotPrim -> kmPrimNot itself args results conts loc ctx
-  | KStrAddPrim -> kmPrimStrAdd itself args results conts loc ctx
-  | KStrComparePrim -> kmPrimStrCompare itself args results conts loc ctx
-  | KStrIndexPrim -> kmPrimStrIndex itself args results conts loc ctx
-  | KStrLengthPrim -> kmPrimStrLength itself args results conts loc ctx
+  | KStringAddPrim -> kmPrimStringAdd itself args results conts loc ctx
+  | KStringComparePrim -> kmPrimStringCompare itself args results conts loc ctx
+  | KStringIndexPrim -> kmPrimStringIndex itself args results conts loc ctx
+  | KStringLengthPrim -> kmPrimStringLength itself args results conts loc ctx
   | KConsPrim -> kmPrimCons itself args results conts loc ctx
   | KSomePrim -> kmPrimSome itself args results conts loc ctx
   | KTuplePrim -> kmPrimTuple itself args results conts loc ctx

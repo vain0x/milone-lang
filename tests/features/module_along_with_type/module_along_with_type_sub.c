@@ -1,3 +1,5 @@
+#include <stdio.h>
+#include <stdlib.h>
 #include <milone.h>
 
 struct IntIntTuple2_;
@@ -36,9 +38,9 @@ struct String module_along_with_type_sub_Pos_toString(struct IntIntTuple2_ arg_)
     struct String call_1;
     row_ = arg_.t0;
     column_ = arg_.t1;
-    call_ = str_of_int64((row_ + 1));
-    call_1 = str_of_int64((column_ + 1));
-    return str_add(str_add(call_, (struct String){.str = ":", .len = 1}), call_1);
+    call_ = string_of_int64((row_ + 1));
+    call_1 = string_of_int64((column_ + 1));
+    return string_add(string_add(call_, (struct String){.ptr = ":", .len = 1}), call_1);
 }
 
 void module_along_with_type_sub_start(void) {

@@ -1,3 +1,5 @@
+#include <stdio.h>
+#include <stdlib.h>
 #include <milone.h>
 
 struct StringList;
@@ -59,9 +61,9 @@ int ty_var_ty_var_IntIntTuple2IntFun1_pair(struct IntIntTuple2_ arg_1) {
 char ty_var_ty_var_useStringIndexWithoutAscription(struct String x_) {
     struct StringStringTuple2_ StringStringTuple2_;
     int call_;
-    StringStringTuple2_ = (struct StringStringTuple2_){.t0 = x_, .t1 = (struct String){.str = "", .len = 0}};
+    StringStringTuple2_ = (struct StringStringTuple2_){.t0 = x_, .t1 = (struct String){.ptr = "", .len = 0}};
     call_ = ty_var_ty_var_StringStringTuple2IntFun1_pair(StringStringTuple2_);
-    return x_.str[0];
+    return x_.ptr[0];
 }
 
 int main(int argc, char** argv) {
@@ -76,16 +78,16 @@ int main(int argc, char** argv) {
     struct StringStringListTuple2_ call_4;
     IntIntTuple2_ = (struct IntIntTuple2_){.t0 = 0, .t1 = 0};
     call_1 = ty_var_ty_var_IntIntTuple2IntFun1_pair(IntIntTuple2_);
-    milone_assert((call_1 == 2), (struct String){.str = "ty_var/ty_var.milone", .len = 20}, 18, 2);
-    StringStringTuple2_1 = (struct StringStringTuple2_){.t0 = (struct String){.str = "", .len = 0}, .t1 = (struct String){.str = "", .len = 0}};
+    milone_assert((call_1 == 2), (struct String){.ptr = "ty_var/ty_var.milone", .len = 20}, 18, 2);
+    StringStringTuple2_1 = (struct StringStringTuple2_){.t0 = (struct String){.ptr = "", .len = 0}, .t1 = (struct String){.ptr = "", .len = 0}};
     call_2 = ty_var_ty_var_StringStringTuple2IntFun1_pair(StringStringTuple2_1);
-    milone_assert((call_2 == 2), (struct String){.str = "ty_var/ty_var.milone", .len = 20}, 19, 2);
-    call_3 = ty_var_ty_var_useStringIndexWithoutAscription((struct String){.str = "a", .len = 1});
-    milone_assert((call_3 == 'a'), (struct String){.str = "ty_var/ty_var.milone", .len = 20}, 21, 2);
-    call_4 = ty_var_ty_var_StringStringStringListTuple2Fun1_useTyVarInBody((struct String){.str = "b", .len = 1});
+    milone_assert((call_2 == 2), (struct String){.ptr = "ty_var/ty_var.milone", .len = 20}, 19, 2);
+    call_3 = ty_var_ty_var_useStringIndexWithoutAscription((struct String){.ptr = "a", .len = 1});
+    milone_assert((call_3 == 'a'), (struct String){.ptr = "ty_var/ty_var.milone", .len = 20}, 21, 2);
+    call_4 = ty_var_ty_var_StringStringStringListTuple2Fun1_useTyVarInBody((struct String){.ptr = "b", .len = 1});
     if ((!(call_4.t1))) goto next_2;
     s_ = call_4.t1->head;
-    milone_assert((s_.str[0] == 'b'), (struct String){.str = "ty_var/ty_var.milone", .len = 20}, 24, 17);
+    milone_assert((s_.ptr[0] == 'b'), (struct String){.ptr = "ty_var/ty_var.milone", .len = 20}, 24, 17);
     match_ = 0;
     goto end_match_1;
 next_2:;

@@ -8,20 +8,20 @@ type Token =
 
 let charEqual (l: char) (r: char) = l = r
 
-let strContains (c: char) (s: string) =
+let stringContains (c: char) (s: string) =
   let rec go i =
     i < s.Length && (s.[i] = c || go (i + 1))
 
   go 0
 
-let strStartsWith (prefix: string) (s: string) =
+let stringStartsWith (prefix: string) (s: string) =
   let rec go i =
     i >= prefix.Length
     || (s.[i] = prefix.[i] && go (i + 1))
 
   s.Length >= prefix.Length && go 0
 
-let strConcat (xs: string list) =
+let stringConcat (xs: string list) =
   let rec go (xs: string list) =
     match xs with
     | [] -> ""
@@ -29,7 +29,7 @@ let strConcat (xs: string list) =
 
   go xs
 
-let strListRev (xs: string list) =
+let stringListRev (xs: string list) =
   let rec go acc (xs: string list) =
     match xs with
     | [] -> acc
@@ -157,8 +157,8 @@ let rec evalExpr tokens =
 
   evalAdd tokens
 
-let eval str =
-  match str |> tokenize |> evalExpr with
+let eval source =
+  match source |> tokenize |> evalExpr with
   | value, [] -> value
   | _, tokens ->
     printfn "ERROR: couldn't parse tokens:"
@@ -166,11 +166,11 @@ let eval str =
     exit 1
 
 let main _ =
-  assert (strContains '+' "+-*/")
-  assert (strStartsWith "hell" "hello")
-  assert (strStartsWith "heaven" "hello" |> not)
-  assert (strConcat [ "a"; ","; "b" ] = "a,b")
-  assert ([ "a"; ","; "b" ] |> strListRev |> strConcat = "b,a")
+  assert (stringContains '+' "+-*/")
+  assert (stringStartsWith "hell" "hello")
+  assert (stringStartsWith "heaven" "hello" |> not)
+  assert (stringConcat [ "a"; ","; "b" ] = "a,b")
+  assert ([ "a"; ","; "b" ] |> stringListRev |> stringConcat = "b,a")
 
   let source = "2 + 3\r\n    - 4"
   source |> tokenize |> tokenListPrint

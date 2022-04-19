@@ -1,3 +1,5 @@
+#include <stdio.h>
+#include <stdlib.h>
 #include <milone.h>
 
 struct LazyList_;
@@ -54,7 +56,7 @@ struct LazyList_ union_rec_union_rec_main_cons(struct UnitLazyList_Fun1 tail_, i
     void const* box_;
     struct LazyList_ variant_;
     IntUnitLazyListFun1Tuple2_ = (struct IntUnitLazyListFun1Tuple2_){.t0 = head_, .t1 = tail_};
-    box_ = ((void const*)milone_mem_alloc(1, sizeof(struct IntUnitLazyListFun1Tuple2_)));
+    box_ = ((void const*)milone_region_alloc(1, sizeof(struct IntUnitLazyListFun1Tuple2_)));
     (*(((struct IntUnitLazyListFun1Tuple2_*)box_))) = IntUnitLazyListFun1Tuple2_;
     variant_ = (struct LazyList_){.discriminant = Cons_, .Cons_ = box_};
     return variant_;
@@ -124,7 +126,7 @@ struct LazyList_ union_rec_union_rec_main_makeTail(int n_2, int prev_) {
     struct LazyList_ call_1;
     head_2 = (n_2 * prev_);
     IntIntTuple2_ = (struct IntIntTuple2_){.t0 = (n_2 + 1), .t1 = head_2};
-    box_1 = ((void const*)milone_mem_alloc(1, sizeof(struct IntIntTuple2_)));
+    box_1 = ((void const*)milone_region_alloc(1, sizeof(struct IntIntTuple2_)));
     (*(((struct IntIntTuple2_*)box_1))) = IntIntTuple2_;
     fun_ = (struct UnitLazyList_Fun1){.fun = union_rec_union_rec_eta2_main_makeTail_makeTail, .env = box_1};
     call_1 = union_rec_union_rec_main_cons(fun_, head_2);

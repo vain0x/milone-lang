@@ -1,3 +1,5 @@
+#include <stdio.h>
+#include <stdlib.h>
 #include <milone.h>
 
 struct IntIntTuple2_;
@@ -36,9 +38,9 @@ int main(int argc, char** argv) {
     bool call_1;
     IntIntTuple2_ = (struct IntIntTuple2_){.t0 = 1, .t1 = 1};
     call_ = pat_when_pat_when_equal(IntIntTuple2_);
-    milone_assert(call_, (struct String){.str = "pat_when/pat_when.milone", .len = 24}, 10, 2);
+    milone_assert(call_, (struct String){.ptr = "pat_when/pat_when.milone", .len = 24}, 10, 2);
     IntIntTuple2_1 = (struct IntIntTuple2_){.t0 = 1, .t1 = 2};
     call_1 = pat_when_pat_when_equal(IntIntTuple2_1);
-    milone_assert((!(call_1)), (struct String){.str = "pat_when/pat_when.milone", .len = 24}, 11, 2);
+    milone_assert((!(call_1)), (struct String){.ptr = "pat_when/pat_when.milone", .len = 24}, 11, 2);
     return 0;
 }

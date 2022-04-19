@@ -314,7 +314,7 @@ module private SyntaxTree =
       | IntToken text -> sprintf "Int %s" text
       | FloatToken text -> sprintf "Float %s" text
       | CharToken c -> sprintf "Char %A" c
-      | StrToken text -> sprintf "String %A" text
+      | StringToken text -> sprintf "String %A" text
       | IdentToken text -> sprintf "Ident %A" text
       | _ -> sprintf "%A" token
 

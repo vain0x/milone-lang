@@ -7,7 +7,7 @@ module Ptr = Std.Ptr
 type private CompareFun = __nativeFun<__voidinptr * __voidinptr, int>
 
 let private memAlloc (len: int) (size: int) : voidptr =
-  __nativeFun ("milone_mem_alloc", len, unativeint size)
+  __nativeFun ("milone_region_alloc", len, unativeint size)
 
 let private sortIntArray (array: nativeptr<int>) (len: int) : unit =
   let intCompare (l: __voidinptr) (r: __voidinptr) =

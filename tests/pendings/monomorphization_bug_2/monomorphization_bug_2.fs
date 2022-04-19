@@ -60,7 +60,7 @@ module rec monomorphization_bug_2.Program
 // }
 
 // int milone_main(void) {
-//     struct UnitUnitTuple2_ call_1 = tag1_((struct String){.str = "anything", .len = 8});
+//     struct UnitUnitTuple2_ call_1 = tag1_((struct String){.ptr = "anything", .len = 8});
 //     untag_(call_1);
 //     return 0;
 // }

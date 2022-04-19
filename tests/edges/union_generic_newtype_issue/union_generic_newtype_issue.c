@@ -1,3 +1,5 @@
+#include <stdio.h>
+#include <stdlib.h>
 #include <milone.h>
 
 struct IntIntTuple2_;
@@ -52,7 +54,7 @@ clause_2:;
     switch_ = 0;
     goto switch_next_1;
 clause_3:;
-    milone_assert(false, (struct String){.str = "union_generic_newtype_issue/union_generic_newtype_issue.milone", .len = 62}, 16, 16);
+    milone_assert(false, (struct String){.ptr = "union_generic_newtype_issue/union_generic_newtype_issue.milone", .len = 62}, 16, 16);
     switch_ = 0;
     goto switch_next_1;
 switch_next_1:;

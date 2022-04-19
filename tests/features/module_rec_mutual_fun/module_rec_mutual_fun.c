@@ -1,3 +1,5 @@
+#include <stdio.h>
+#include <stdlib.h>
 #include <milone.h>
 
 bool module_rec_mutual_fun_module_rec_mutual_fun_even(int n_);
@@ -50,10 +52,10 @@ int main(int argc, char** argv) {
     bool call_3;
     bool call_4;
     call_2 = module_rec_mutual_fun_module_rec_mutual_fun_odd(1);
-    milone_assert(call_2, (struct String){.str = "module_rec_mutual_fun/module_rec_mutual_fun.milone", .len = 50}, 9, 2);
+    milone_assert(call_2, (struct String){.ptr = "module_rec_mutual_fun/module_rec_mutual_fun.milone", .len = 50}, 9, 2);
     call_3 = module_rec_mutual_fun_module_rec_mutual_fun_even(2);
-    milone_assert(call_3, (struct String){.str = "module_rec_mutual_fun/module_rec_mutual_fun.milone", .len = 50}, 10, 2);
+    milone_assert(call_3, (struct String){.ptr = "module_rec_mutual_fun/module_rec_mutual_fun.milone", .len = 50}, 10, 2);
     call_4 = module_rec_mutual_fun_module_rec_mutual_fun_even(3);
-    milone_assert((!(call_4)), (struct String){.str = "module_rec_mutual_fun/module_rec_mutual_fun.milone", .len = 50}, 11, 2);
+    milone_assert((!(call_4)), (struct String){.ptr = "module_rec_mutual_fun/module_rec_mutual_fun.milone", .len = 50}, 11, 2);
     return 0;
 }

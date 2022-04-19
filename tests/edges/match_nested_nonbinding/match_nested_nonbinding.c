@@ -1,3 +1,5 @@
+#include <stdio.h>
+#include <stdlib.h>
 #include <milone.h>
 
 struct MyBool_;
@@ -38,12 +40,12 @@ int main(int argc, char** argv) {
     goto end_match_1;
 next_2:;
     if ((variant_.discriminant != MySome_)) goto next_3;
-    milone_assert(false, (struct String){.str = "match_nested_nonbinding/match_nested_nonbinding.milone", .len = 54}, 16, 16);
+    milone_assert(false, (struct String){.ptr = "match_nested_nonbinding/match_nested_nonbinding.milone", .len = 54}, 16, 16);
     match_ = 0;
     goto end_match_1;
 next_3:;
     if ((variant_.discriminant != MyNone_)) goto next_4;
-    milone_assert(false, (struct String){.str = "match_nested_nonbinding/match_nested_nonbinding.milone", .len = 54}, 17, 14);
+    milone_assert(false, (struct String){.ptr = "match_nested_nonbinding/match_nested_nonbinding.milone", .len = 54}, 17, 14);
     match_ = 0;
     goto end_match_1;
 next_4:;

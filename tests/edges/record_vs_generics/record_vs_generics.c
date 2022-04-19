@@ -1,3 +1,5 @@
+#include <stdio.h>
+#include <stdlib.h>
 #include <milone.h>
 
 struct IntWrapper_;
@@ -42,12 +44,12 @@ int main(int argc, char** argv) {
     struct UnitIntWrapper_Fun1 fun_;
     struct IntWrapper_ app_;
     IntWrapper_ = (struct IntWrapper_){.t0 = 42};
-    box_ = ((void const*)milone_mem_alloc(1, sizeof(struct IntWrapper_)));
+    box_ = ((void const*)milone_region_alloc(1, sizeof(struct IntWrapper_)));
     (*(((struct IntWrapper_*)box_))) = IntWrapper_;
     fun_ = (struct UnitIntWrapper_Fun1){.fun = record_vs_generics_record_vs_generics_eta2_main_constant, .env = box_};
     f_ = fun_;
     app_ = f_.fun(f_.env);
     wrapper_ = app_;
-    milone_assert((wrapper_.t0 == 42), (struct String){.str = "record_vs_generics/record_vs_generics.milone", .len = 44}, 12, 2);
+    milone_assert((wrapper_.t0 == 42), (struct String){.ptr = "record_vs_generics/record_vs_generics.milone", .len = 44}, 12, 2);
     return 0;
 }

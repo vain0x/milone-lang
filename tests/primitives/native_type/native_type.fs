@@ -7,7 +7,7 @@ module Ptr = Std.Ptr
 
 type FILE = __nativeType<FILE>
 
-let strAsPtr (s: string) : __inptr<char> = __nativeFun ("str_as_ptr", s)
+let strAsPtr (s: string) : __inptr<char> = __nativeFun ("string_as_ptr", s)
 
 let fopen (filename: string) (mode: string) : nativeptr<FILE> =
   __nativeFun ("fopen", strAsPtr filename, strAsPtr mode)

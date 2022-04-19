@@ -400,7 +400,7 @@ let private kgCallAddExpr itself _primTy args ty loc hole ctx =
              | CharTyCtor),
              _) -> basicPrimNode2 "add" KAddPrim l r ty loc hole ctx
 
-    | AppTy (StrTyCtor, _) -> basicPrimNode2 "add" KStrAddPrim l r ty loc hole ctx
+    | AppTy (StringTyCtor, _) -> basicPrimNode2 "add" KStringAddPrim l r ty loc hole ctx
 
     | _ -> failwithf "NEVER: bad type %A" itself
 
@@ -778,7 +778,7 @@ let private kgInfExpr itself kind args ty loc hole ctx : KNode * KirGenCtx =
       | HPrim.Box -> regular "box" KBoxPrim
       | HPrim.Unbox -> regular "unbox" KUnboxPrim
       | HPrim.Printfn -> regular "printfn" KPrintfnPrim
-      | HPrim.StrLength -> regular "str_length" KStrLengthPrim
+      | HPrim.StringLength -> regular "string_length" KStringLengthPrim
       | HPrim.Char -> regular "char" KCharPrim
       | HPrim.ToInt _ -> regular "int" KIntPrim
       | HPrim.ToFloat _ -> failwith "unimplemented"

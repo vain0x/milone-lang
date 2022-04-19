@@ -1,3 +1,5 @@
+#include <stdio.h>
+#include <stdlib.h>
 #include <milone.h>
 
 typedef int(*VoidConstPtrIntIntFunPtr2)(void const*, int);
@@ -104,17 +106,17 @@ int main(int argc, char** argv) {
     fun_ = (struct IntIntFun1){.fun = fun_partial_app_fun_partial_app_eta2_main_dec, .env = ((void const*)((intptr_t)3))};
     dec3_ = fun_;
     call_3 = fun_partial_app_fun_partial_app_twice(dec3_, 8);
-    milone_assert((call_3 == 2), (struct String){.str = "fun_partial_app/fun_partial_app.milone", .len = 38}, 12, 2);
+    milone_assert((call_3 == 2), (struct String){.ptr = "fun_partial_app/fun_partial_app.milone", .len = 38}, 12, 2);
     IntIntTuple2_ = (struct IntIntTuple2_){.t0 = 2, .t1 = 3};
-    box_ = ((void const*)milone_mem_alloc(1, sizeof(struct IntIntTuple2_)));
+    box_ = ((void const*)milone_region_alloc(1, sizeof(struct IntIntTuple2_)));
     (*(((struct IntIntTuple2_*)box_))) = IntIntTuple2_;
     fun_1 = (struct IntIntIntFun2){.fun = fun_partial_app_fun_partial_app_eta3_main_add4, .env = box_};
     add2_ = fun_1;
     app_2 = add2_.fun(add2_.env, 5, 7);
-    milone_assert((app_2 == (((2 + 3) + 5) + 7)), (struct String){.str = "fun_partial_app/fun_partial_app.milone", .len = 38}, 15, 2);
+    milone_assert((app_2 == (((2 + 3) + 5) + 7)), (struct String){.ptr = "fun_partial_app/fun_partial_app.milone", .len = 38}, 15, 2);
     fun_2 = (struct IntIntIntIntIntFun4){.fun = fun_partial_app_fun_partial_app_eta5_main_add4, .env = NULL};
     f_1 = fun_2;
     app_3 = f_1.fun(f_1.env, 1, 2, 3, 4);
-    milone_assert((app_3 == (((1 + 2) + 3) + 4)), (struct String){.str = "fun_partial_app/fun_partial_app.milone", .len = 38}, 18, 2);
+    milone_assert((app_3 == (((1 + 2) + 3) + 4)), (struct String){.ptr = "fun_partial_app/fun_partial_app.milone", .len = 38}, 18, 2);
     return 0;
 }

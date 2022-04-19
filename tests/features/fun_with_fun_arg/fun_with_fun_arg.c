@@ -1,3 +1,5 @@
+#include <stdio.h>
+#include <stdlib.h>
 #include <milone.h>
 
 typedef void(*VoidConstPtrIntStringVoidFunPtr3)(void const*, int, struct String);
@@ -55,14 +57,14 @@ struct StringUnitFun1 fun_with_fun_arg_fun_with_fun_arg_bindInt(struct IntString
     struct StringUnitFun1 fun_;
     callee_ = f_;
     IntStringUnitFun2IntTuple2_ = (struct IntStringUnitFun2IntTuple2_){.t0 = callee_, .t1 = x_};
-    box_ = ((void const*)milone_mem_alloc(1, sizeof(struct IntStringUnitFun2IntTuple2_)));
+    box_ = ((void const*)milone_region_alloc(1, sizeof(struct IntStringUnitFun2IntTuple2_)));
     (*(((struct IntStringUnitFun2IntTuple2_*)box_))) = IntStringUnitFun2IntTuple2_;
     fun_ = (struct StringUnitFun1){.fun = fun_with_fun_arg_fun_with_fun_arg_eta2_obj, .env = box_};
     return fun_;
 }
 
 void fun_with_fun_arg_fun_with_fun_arg_printInt(int value_, struct String label_) {
-    printf("%d: %s\n", value_, str_to_c_str(label_));
+    printf("%d: %s\n", value_, string_to_c_str(label_));
     return;
 }
 
@@ -83,13 +85,13 @@ tailrec_1:;
         goto else_4;
     }
 then_3:;
-    printf("%s\n", str_to_c_str(f_1));
+    printf("%s\n", string_to_c_str(f_1));
     if_ = 0;
     goto if_next_2;
 else_4:;
     arg_8 = d_;
     arg_9 = (n_ - 1);
-    arg_10 = str_add(f_1, d_);
+    arg_10 = string_add(f_1, d_);
     d_ = arg_8;
     n_ = arg_9;
     f_1 = arg_10;
@@ -118,13 +120,13 @@ int main(int argc, char** argv) {
     fun_1 = (struct IntStringUnitFun2){.fun = fun_with_fun_arg_fun_with_fun_arg_eta3_main_printInt, .env = NULL};
     call_ = fun_with_fun_arg_fun_with_fun_arg_bindInt(fun_1, 42);
     print42_ = call_;
-    print42_.fun(print42_.env, (struct String){.str = "The answer", .len = 10});
-    d_ = (struct String){.str = "\'", .len = 1};
-    box_1 = ((void const*)milone_mem_alloc(1, sizeof(struct String)));
+    print42_.fun(print42_.env, (struct String){.ptr = "The answer", .len = 10});
+    d_ = (struct String){.ptr = "\'", .len = 1};
+    box_1 = ((void const*)milone_region_alloc(1, sizeof(struct String)));
     (*(((struct String*)box_1))) = d_;
     fun_2 = (struct IntStringUnitFun2){.fun = fun_with_fun_arg_fun_with_fun_arg_eta3_main_der, .env = box_1};
     call_1 = fun_with_fun_arg_fun_with_fun_arg_bindInt(fun_2, 2);
     der2_ = call_1;
-    der2_.fun(der2_.env, (struct String){.str = "f", .len = 1});
+    der2_.fun(der2_.env, (struct String){.ptr = "f", .len = 1});
     return 0;
 }

@@ -1,3 +1,5 @@
+#include <stdio.h>
+#include <stdlib.h>
 #include <milone.h>
 
 struct MyList_;
@@ -45,7 +47,7 @@ struct MyList_ union_newtype_rec_union_newtype_rec_main_myCons(int head_, struct
     struct MyList_ variant_1;
     variant_ = (struct MyListoption1_){.discriminant = Some_, .Some_ = tail_};
     IntMyListoption1Tuple2_ = (struct IntMyListoption1Tuple2_){.t0 = head_, .t1 = variant_};
-    box_ = ((void const*)milone_mem_alloc(1, sizeof(struct IntMyListoption1Tuple2_)));
+    box_ = ((void const*)milone_region_alloc(1, sizeof(struct IntMyListoption1Tuple2_)));
     (*(((struct IntMyListoption1Tuple2_*)box_))) = IntMyListoption1Tuple2_;
     variant_1 = (struct MyList_){.discriminant = MyList_, .MyList_ = box_};
     return variant_1;
@@ -63,7 +65,7 @@ int main(int argc, char** argv) {
     char match_;
     char match_1;
     IntMyListoption1Tuple2_1 = (struct IntMyListoption1Tuple2_){.t0 = 0, .t1 = (struct MyListoption1_){.discriminant = None_}};
-    box_1 = ((void const*)milone_mem_alloc(1, sizeof(struct IntMyListoption1Tuple2_)));
+    box_1 = ((void const*)milone_region_alloc(1, sizeof(struct IntMyListoption1Tuple2_)));
     (*(((struct IntMyListoption1Tuple2_*)box_1))) = IntMyListoption1Tuple2_1;
     variant_2 = (struct MyList_){.discriminant = MyList_, .MyList_ = box_1};
     first_ = variant_2;
@@ -74,18 +76,18 @@ int main(int argc, char** argv) {
     match_ = 0;
     goto end_match_1;
 next_2:;
-    milone_assert(false, (struct String){.str = "union_newtype_rec/union_newtype_rec.milone", .len = 42}, 14, 9);
+    milone_assert(false, (struct String){.ptr = "union_newtype_rec/union_newtype_rec.milone", .len = 42}, 14, 9);
     match_ = 0;
     goto end_match_1;
 next_3:;
 end_match_1:;
     if (((*(((struct IntMyListoption1Tuple2_ const*)second_.MyList_))).t1.discriminant != Some_)) goto next_5;
     value_ = (*(((struct IntMyListoption1Tuple2_ const*)(*(((struct IntMyListoption1Tuple2_ const*)second_.MyList_))).t1.Some_.MyList_))).t0;
-    milone_assert((value_ == 0), (struct String){.str = "union_newtype_rec/union_newtype_rec.milone", .len = 42}, 17, 44);
+    milone_assert((value_ == 0), (struct String){.ptr = "union_newtype_rec/union_newtype_rec.milone", .len = 42}, 17, 44);
     match_1 = 0;
     goto end_match_4;
 next_5:;
-    milone_assert(false, (struct String){.str = "union_newtype_rec/union_newtype_rec.milone", .len = 42}, 18, 9);
+    milone_assert(false, (struct String){.ptr = "union_newtype_rec/union_newtype_rec.milone", .len = 42}, 18, 9);
     match_1 = 0;
     goto end_match_4;
 next_6:;

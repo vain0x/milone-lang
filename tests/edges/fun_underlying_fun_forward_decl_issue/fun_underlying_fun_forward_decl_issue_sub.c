@@ -1,3 +1,5 @@
+#include <stdio.h>
+#include <stdlib.h>
 #include <milone.h>
 
 typedef struct String(*VoidConstPtrStringStringFunPtr2)(void const*, struct String);
@@ -19,8 +21,8 @@ struct StringStringFun1 fun_underlying_fun_forward_decl_issue_sub_f2;
 
 struct String fun_underlying_fun_forward_decl_issue_sub_f(int x_, struct String y_) {
     struct String call_;
-    call_ = str_of_int64(x_);
-    return str_add(str_add(str_add((struct String){.str = "x = ", .len = 4}, call_), (struct String){.str = ", y = ", .len = 6}), y_);
+    call_ = string_of_int64(x_);
+    return string_add(string_add(string_add((struct String){.ptr = "x = ", .len = 4}, call_), (struct String){.ptr = ", y = ", .len = 6}), y_);
 }
 
 struct String fun_underlying_fun_forward_decl_issue_sub_eta2__f(void const* env_, struct String arg_) {

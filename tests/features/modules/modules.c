@@ -1,3 +1,5 @@
+#include <stdio.h>
+#include <stdlib.h>
 #include <milone.h>
 
 struct Val_;
@@ -8,14 +10,14 @@ int main(int argc, char** argv);
 
 enum Val_Discriminant {
     Int_,
-    Str_,
+    String_,
 };
 
 struct Val_ {
     enum Val_Discriminant discriminant;
     union {
         int Int_;
-        struct String Str_;
+        struct String String_;
     };
 };
 
@@ -33,7 +35,7 @@ int main(int argc, char** argv) {
     match_ = x_;
     goto end_match_1;
 next_2:;
-    if ((variant_.discriminant != Str_)) goto next_3;
+    if ((variant_.discriminant != String_)) goto next_3;
     match_ = 0;
     goto end_match_1;
 next_3:;

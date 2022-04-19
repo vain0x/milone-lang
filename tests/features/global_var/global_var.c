@@ -1,3 +1,5 @@
+#include <stdio.h>
+#include <stdlib.h>
 #include <milone.h>
 
 int global_var_global_var_f(void);
@@ -27,8 +29,8 @@ int main(int argc, char** argv) {
     int call_1;
     global_var_global_var_start();
     call_1 = global_var_global_var_g();
-    milone_assert((call_1 == 0), (struct String){.str = "global_var/global_var.milone", .len = 28}, 13, 2);
-    milone_assert((failure_ == 1), (struct String){.str = "global_var/global_var.milone", .len = 28}, 14, 2);
+    milone_assert((call_1 == 0), (struct String){.ptr = "global_var/global_var.milone", .len = 28}, 13, 2);
+    milone_assert((failure_ == 1), (struct String){.ptr = "global_var/global_var.milone", .len = 28}, 14, 2);
     return 0;
 }
 

@@ -7,7 +7,7 @@ module Ptr = Std.Ptr
 // -----------------------------------------------
 
 let memAlloc (len: int) (size: int) : voidptr =
-  __nativeFun ("milone_mem_alloc", len, unativeint size)
+  __nativeFun ("milone_region_alloc", len, unativeint size)
 
 let memCopy (dest: voidptr) (src: __voidinptr) (size: int) : voidptr =
   __nativeFun ("memcpy", dest, src, unativeint size)
@@ -88,7 +88,7 @@ let listInit len gen =
 
   go [] 0
 
-let strConcat (xs: string list) =
+let stringConcat (xs: string list) =
   /// Get (str, ys) where
   /// `str` is the concatenation of first `xn` items in `xs`
   /// `ys` is a list of the other items
@@ -121,7 +121,7 @@ let intMin (first: int) (second: int) =
 let intMax (first: int) (second: int) =
   if first < second then second else first
 
-let strEqual (first: string) (second: string) = first = second
+let stringEqual (first: string) (second: string) = first = second
 
 let failwith msg =
   printfn "ERROR %s" msg

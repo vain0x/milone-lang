@@ -1,3 +1,5 @@
+#include <stdio.h>
+#include <stdlib.h>
 #include <milone.h>
 
 struct IntIntTuple2_;
@@ -18,8 +20,8 @@ int y_;
 int main(int argc, char** argv) {
     milone_start(argc, argv);
     pat_with_vis_pat_with_vis_start();
-    milone_assert((pat_with_vis_pat_with_vis_x == 2), (struct String){.str = "pat_with_vis/pat_with_vis.milone", .len = 32}, 7, 2);
-    milone_assert((y_ == 3), (struct String){.str = "pat_with_vis/pat_with_vis.milone", .len = 32}, 8, 2);
+    milone_assert((pat_with_vis_pat_with_vis_x == 2), (struct String){.ptr = "pat_with_vis/pat_with_vis.milone", .len = 32}, 7, 2);
+    milone_assert((y_ == 3), (struct String){.ptr = "pat_with_vis/pat_with_vis.milone", .len = 32}, 8, 2);
     return 0;
 }
 

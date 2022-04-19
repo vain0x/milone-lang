@@ -1,3 +1,5 @@
+#include <stdio.h>
+#include <stdlib.h>
 #include <milone.h>
 
 struct IntList;
@@ -23,7 +25,7 @@ int main(int argc, char** argv) {
     struct IntList const* list_;
     struct IntList const* call_;
     call_ = ty_synonym_generic_ty_synonym_generic_UnitIntListFun1_newStack();
-    list_ = ((struct IntList const*)milone_mem_alloc(1, sizeof(struct IntList)));
+    list_ = ((struct IntList const*)milone_region_alloc(1, sizeof(struct IntList)));
     (*(((struct IntList*)list_))) = (struct IntList){.head = 1, .tail = call_};
     _stack = list_;
     return 0;

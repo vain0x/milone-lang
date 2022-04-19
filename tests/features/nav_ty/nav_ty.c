@@ -1,3 +1,5 @@
+#include <stdio.h>
+#include <stdlib.h>
 #include <milone.h>
 
 struct Node_;
@@ -39,7 +41,7 @@ struct Node_ nav_ty_nav_ty_main_node(struct Node_ l_, struct Node_ r_) {
     void const* box_;
     struct Node_ variant_1;
     NodeNodeTuple2_ = (struct NodeNodeTuple2_){.t0 = l_, .t1 = r_};
-    box_ = ((void const*)milone_mem_alloc(1, sizeof(struct NodeNodeTuple2_)));
+    box_ = ((void const*)milone_region_alloc(1, sizeof(struct NodeNodeTuple2_)));
     (*(((struct NodeNodeTuple2_*)box_))) = NodeNodeTuple2_;
     variant_1 = (struct Node_){.discriminant = Node_, .Node_ = box_};
     return variant_1;
@@ -64,11 +66,11 @@ int main(int argc, char** argv) {
     if ((t_.discriminant != Node_)) goto next_2;
     if (((*(((struct NodeNodeTuple2_ const*)t_.Node_))).t0.discriminant != Leaf_)) goto next_2;
     x_ = (*(((struct NodeNodeTuple2_ const*)t_.Node_))).t0.Leaf_;
-    milone_assert((x_ == 2), (struct String){.str = "nav_ty/nav_ty.milone", .len = 20}, 22, 24);
+    milone_assert((x_ == 2), (struct String){.ptr = "nav_ty/nav_ty.milone", .len = 20}, 22, 24);
     match_ = 0;
     goto end_match_1;
 next_2:;
-    milone_assert(false, (struct String){.str = "nav_ty/nav_ty.milone", .len = 20}, 23, 9);
+    milone_assert(false, (struct String){.ptr = "nav_ty/nav_ty.milone", .len = 20}, 23, 9);
     match_ = 0;
     goto end_match_1;
 next_3:;

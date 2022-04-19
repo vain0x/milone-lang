@@ -1,3 +1,5 @@
+#include <stdio.h>
+#include <stdlib.h>
 #include <milone.h>
 
 struct IntList;
@@ -38,11 +40,11 @@ end_match_1:;
 void match_complicated_match_complicated_testListMatching(void) {
     char match_1;
     struct IntList const* list_;
-    list_ = ((struct IntList const*)milone_mem_alloc(1, sizeof(struct IntList)));
+    list_ = ((struct IntList const*)milone_region_alloc(1, sizeof(struct IntList)));
     (*(((struct IntList*)list_))) = (struct IntList){.head = 0, .tail = NULL};
     if ((!(list_))) goto next_4;
     if ((!(list_->tail))) goto next_4;
-    milone_assert(false, (struct String){.str = "match_complicated/match_complicated.milone", .len = 42}, 10, 19);
+    milone_assert(false, (struct String){.ptr = "match_complicated/match_complicated.milone", .len = 42}, 10, 19);
     match_1 = 0;
     goto end_match_3;
 next_4:;
@@ -52,7 +54,7 @@ next_4:;
     goto end_match_3;
 next_5:;
     if ((!((!(list_))))) goto next_6;
-    milone_assert(false, (struct String){.str = "match_complicated/match_complicated.milone", .len = 42}, 12, 10);
+    milone_assert(false, (struct String){.ptr = "match_complicated/match_complicated.milone", .len = 42}, 12, 10);
     match_1 = 0;
     goto end_match_3;
 next_6:;
@@ -71,7 +73,7 @@ void match_complicated_match_complicated_testMatchArmsMakeScope(void) {
     IntIntTuple2_ = (struct IntIntTuple2_){.t0 = x_, .t1 = 1};
     if ((IntIntTuple2_.t0 != 1)) goto next_8;
     x_1 = IntIntTuple2_.t1;
-    milone_assert(false, (struct String){.str = "match_complicated/match_complicated.milone", .len = 42}, 18, 12);
+    milone_assert(false, (struct String){.ptr = "match_complicated/match_complicated.milone", .len = 42}, 18, 12);
     match_2 = 0;
     goto end_match_7;
 next_8:;
@@ -82,7 +84,7 @@ next_8:;
         goto else_13;
     }
 then_12:;
-    milone_assert(false, (struct String){.str = "match_complicated/match_complicated.milone", .len = 42}, 19, 27);
+    milone_assert(false, (struct String){.ptr = "match_complicated/match_complicated.milone", .len = 42}, 19, 27);
     if_ = 0;
     goto if_next_11;
 else_13:;
@@ -92,7 +94,7 @@ if_next_11:;
     match_2 = 0;
     goto end_match_7;
 next_9:;
-    milone_assert(false, (struct String){.str = "match_complicated/match_complicated.milone", .len = 42}, 20, 9);
+    milone_assert(false, (struct String){.ptr = "match_complicated/match_complicated.milone", .len = 42}, 20, 9);
     match_2 = 0;
     goto end_match_7;
 next_10:;
@@ -109,7 +111,7 @@ void match_complicated_match_complicated_testNestedMatchesParseCorrectly(void) {
             goto clause_18;
     }
 clause_18:;
-    milone_assert(false, (struct String){.str = "match_complicated/match_complicated.milone", .len = 42}, 26, 11);
+    milone_assert(false, (struct String){.ptr = "match_complicated/match_complicated.milone", .len = 42}, 26, 11);
     switch_ = 0;
     goto switch_next_17;
 switch_next_17:;

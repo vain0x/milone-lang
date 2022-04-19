@@ -1,3 +1,5 @@
+#include <stdio.h>
+#include <stdlib.h>
 #include <milone.h>
 
 struct Expr_;
@@ -68,15 +70,15 @@ int main(int argc, char** argv) {
     variant_1 = (struct Expr_){.discriminant = Int_, .Int_ = 22};
     variant_2 = (struct Expr_){.discriminant = Int_, .Int_ = 9};
     ExprExprTuple2_1 = (struct ExprExprTuple2_){.t0 = variant_1, .t1 = variant_2};
-    box_ = ((void const*)milone_mem_alloc(1, sizeof(struct ExprExprTuple2_)));
+    box_ = ((void const*)milone_region_alloc(1, sizeof(struct ExprExprTuple2_)));
     (*(((struct ExprExprTuple2_*)box_))) = ExprExprTuple2_1;
     variant_3 = (struct Expr_){.discriminant = Add_, .Add_ = box_};
     ExprExprTuple2_ = (struct ExprExprTuple2_){.t0 = variant_, .t1 = variant_3};
-    box_1 = ((void const*)milone_mem_alloc(1, sizeof(struct ExprExprTuple2_)));
+    box_1 = ((void const*)milone_region_alloc(1, sizeof(struct ExprExprTuple2_)));
     (*(((struct ExprExprTuple2_*)box_1))) = ExprExprTuple2_;
     variant_4 = (struct Expr_){.discriminant = Add_, .Add_ = box_1};
     expr_1 = variant_4;
     call_2 = union_rec_direct_union_rec_direct_main_eval(expr_1);
-    milone_assert((call_2 == 42), (struct String){.str = "union_rec_direct/union_rec_direct.milone", .len = 40}, 17, 2);
+    milone_assert((call_2 == 42), (struct String){.ptr = "union_rec_direct/union_rec_direct.milone", .len = 40}, 17, 2);
     return 0;
 }

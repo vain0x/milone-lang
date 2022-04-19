@@ -21,7 +21,7 @@ let private unreachable context = failwithf "NEVER: %A" context
 // Generated code:
 
 // struct IntIntFun1 fun_arity_never_result_bug_fun_arity_never_result_bug_UnitIntIntFun2_unreachable(void) {
-//     struct UnitIntIntFun2 call_ = fun_arity_never_result_bug_fun_arity_never_result_bug_StringUnitIntIntFun3_failwithf((struct String){.str = "NEVER: %A", .len = 9});
+//     struct UnitIntIntFun2 call_ = fun_arity_never_result_bug_fun_arity_never_result_bug_StringUnitIntIntFun3_failwithf((struct String){.ptr = "NEVER: %A", .len = 9});
 //     struct IntIntFun1 app_ = call_.fun(call_.env);
 //     return app_;
 // }

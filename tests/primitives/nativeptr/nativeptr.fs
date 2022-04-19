@@ -5,7 +5,7 @@ module rec nativeptr.Program
 module Ptr = Std.Ptr
 
 let private memAlloc (count: int) (size: int) : voidptr =
-  __nativeFun ("milone_mem_alloc", count, unativeint size)
+  __nativeFun ("milone_region_alloc", count, unativeint size)
 
 let private memSet (dest: voidptr) (value: uint8) (count: int) =
   let _ =

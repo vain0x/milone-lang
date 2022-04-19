@@ -1,3 +1,5 @@
+#include <stdio.h>
+#include <stdlib.h>
 #include <milone.h>
 
 typedef int(*VoidConstPtrIntFunPtr1)(void const*);
@@ -77,6 +79,6 @@ int main(int argc, char** argv) {
     app_ = getF_.fun(getF_.env);
     f_ = app_.F_;
     app_1 = f_.fun(f_.env);
-    milone_assert((app_1 == 42), (struct String){.str = "newtype_of_fun_ty_bug/newtype_of_fun_ty_bug.milone", .len = 50}, 10, 2);
+    milone_assert((app_1 == 42), (struct String){.ptr = "newtype_of_fun_ty_bug/newtype_of_fun_ty_bug.milone", .len = 50}, 10, 2);
     return 0;
 }

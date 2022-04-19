@@ -1,3 +1,5 @@
+#include <stdio.h>
+#include <stdlib.h>
 #include <milone.h>
 
 struct IntStringTuple2_;
@@ -76,7 +78,7 @@ bool MiloneDerive_TupleEqual_tuple2Equal(struct IntStringTuple2_ l_4, struct Int
     l_6 = l_4.t1;
     r_5 = r_4.t0;
     r_6 = r_4.t1;
-    return ((l_5 == r_5) & (str_compare(l_6, r_6) == 0));
+    return ((l_5 == r_5) & (string_compare(l_6, r_6) == 0));
 }
 
 bool MiloneCore_Option_optionEqual(struct Intoption1_ l_, struct Intoption1_ r_) {
@@ -146,17 +148,17 @@ void option_equal_option_equal_testIntOption(void) {
     some_ = variant_;
     variant_1 = (struct Intoption1_){.discriminant = Some_, .Some_ = 2};
     call_1 = MiloneCore_Option_optionEqual(some_, variant_1);
-    milone_assert(call_1, (struct String){.str = "option_equal/option_equal.milone", .len = 32}, 6, 2);
+    milone_assert(call_1, (struct String){.ptr = "option_equal/option_equal.milone", .len = 32}, 6, 2);
     variant_2 = (struct Intoption1_){.discriminant = Some_, .Some_ = 3};
     call_2 = MiloneCore_Option_optionEqual(some_, variant_2);
-    milone_assert((!(call_2)), (struct String){.str = "option_equal/option_equal.milone", .len = 32}, 7, 2);
+    milone_assert((!(call_2)), (struct String){.ptr = "option_equal/option_equal.milone", .len = 32}, 7, 2);
     call_3 = MiloneCore_Option_optionEqual(some_, (struct Intoption1_){.discriminant = None_});
-    milone_assert((!(call_3)), (struct String){.str = "option_equal/option_equal.milone", .len = 32}, 8, 2);
+    milone_assert((!(call_3)), (struct String){.ptr = "option_equal/option_equal.milone", .len = 32}, 8, 2);
     none_ = (struct Intoption1_){.discriminant = None_};
     call_4 = MiloneCore_Option_optionEqual(none_, (struct Intoption1_){.discriminant = None_});
-    milone_assert(call_4, (struct String){.str = "option_equal/option_equal.milone", .len = 32}, 11, 2);
+    milone_assert(call_4, (struct String){.ptr = "option_equal/option_equal.milone", .len = 32}, 11, 2);
     call_5 = MiloneCore_Option_optionEqual(none_, some_);
-    milone_assert((!(call_5)), (struct String){.str = "option_equal/option_equal.milone", .len = 32}, 12, 2);
+    milone_assert((!(call_5)), (struct String){.ptr = "option_equal/option_equal.milone", .len = 32}, 12, 2);
     return;
 }
 
@@ -171,18 +173,18 @@ void option_equal_option_equal_testPair(void) {
     struct IntStringTuple2_ IntStringTuple2_3;
     struct IntStringTuple2option1_ variant_6;
     bool call_7;
-    IntStringTuple2_ = (struct IntStringTuple2_){.t0 = 2, .t1 = (struct String){.str = "a", .len = 1}};
+    IntStringTuple2_ = (struct IntStringTuple2_){.t0 = 2, .t1 = (struct String){.ptr = "a", .len = 1}};
     variant_3 = (struct IntStringTuple2option1_){.discriminant = Some_1, .Some_1 = IntStringTuple2_};
-    IntStringTuple2_1 = (struct IntStringTuple2_){.t0 = 2, .t1 = (struct String){.str = "a", .len = 1}};
+    IntStringTuple2_1 = (struct IntStringTuple2_){.t0 = 2, .t1 = (struct String){.ptr = "a", .len = 1}};
     variant_4 = (struct IntStringTuple2option1_){.discriminant = Some_1, .Some_1 = IntStringTuple2_1};
     call_6 = MiloneCore_Option_optionEqual_1(variant_3, variant_4);
-    milone_assert(call_6, (struct String){.str = "option_equal/option_equal.milone", .len = 32}, 15, 2);
-    IntStringTuple2_2 = (struct IntStringTuple2_){.t0 = 2, .t1 = (struct String){.str = "a", .len = 1}};
+    milone_assert(call_6, (struct String){.ptr = "option_equal/option_equal.milone", .len = 32}, 15, 2);
+    IntStringTuple2_2 = (struct IntStringTuple2_){.t0 = 2, .t1 = (struct String){.ptr = "a", .len = 1}};
     variant_5 = (struct IntStringTuple2option1_){.discriminant = Some_1, .Some_1 = IntStringTuple2_2};
-    IntStringTuple2_3 = (struct IntStringTuple2_){.t0 = 2, .t1 = (struct String){.str = "A", .len = 1}};
+    IntStringTuple2_3 = (struct IntStringTuple2_){.t0 = 2, .t1 = (struct String){.ptr = "A", .len = 1}};
     variant_6 = (struct IntStringTuple2option1_){.discriminant = Some_1, .Some_1 = IntStringTuple2_3};
     call_7 = MiloneCore_Option_optionEqual_1(variant_5, variant_6);
-    milone_assert((!(call_7)), (struct String){.str = "option_equal/option_equal.milone", .len = 32}, 16, 2);
+    milone_assert((!(call_7)), (struct String){.ptr = "option_equal/option_equal.milone", .len = 32}, 16, 2);
     return;
 }
 

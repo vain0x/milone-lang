@@ -1,3 +1,5 @@
+#include <stdio.h>
+#include <stdlib.h>
 #include <milone.h>
 
 struct IntIntTuple2_;
@@ -22,7 +24,7 @@ int main(int argc, char** argv) {
 next_2:;
     if ((IntIntTuple2_.t0 != 999)) goto next_3;
     y_ = IntIntTuple2_.t1;
-    milone_assert((y_ != 9), (struct String){.str = "match_nonexhaustive/match_nonexhaustive.milone", .len = 46}, 9, 4);
+    milone_assert((y_ != 9), (struct String){.ptr = "match_nonexhaustive/match_nonexhaustive.milone", .len = 46}, 9, 4);
     match_ = 1;
     goto end_match_1;
 next_3:;

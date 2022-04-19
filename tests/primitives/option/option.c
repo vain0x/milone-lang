@@ -1,3 +1,5 @@
+#include <stdio.h>
+#include <stdlib.h>
 #include <milone.h>
 
 struct Intoption1_;
@@ -55,7 +57,7 @@ void option_option_basicSomeCase(void) {
     struct Intoption1_ variant_;
     variant_ = (struct Intoption1_){.discriminant = Some_, .Some_ = 1};
     if ((variant_.discriminant != None_)) goto next_2;
-    milone_assert(false, (struct String){.str = "option/option.milone", .len = 20}, 6, 12);
+    milone_assert(false, (struct String){.ptr = "option/option.milone", .len = 20}, 6, 12);
     match_ = 0;
     goto end_match_1;
 next_2:;
@@ -64,7 +66,7 @@ next_2:;
     match_ = 0;
     goto end_match_1;
 next_3:;
-    milone_assert(false, (struct String){.str = "option/option.milone", .len = 20}, 10, 9);
+    milone_assert(false, (struct String){.ptr = "option/option.milone", .len = 20}, 10, 9);
     match_ = 0;
     goto end_match_1;
 next_4:;
@@ -75,8 +77,8 @@ end_match_1:;
 void option_option_basicNoneCase(void) {
     char match_1;
     if (((struct Stringoption1_){.discriminant = None_1}.discriminant != Some_1)) goto next_6;
-    if ((str_compare((struct Stringoption1_){.discriminant = None_1}.Some_1, (struct String){.str = "a", .len = 1}) != 0)) goto next_6;
-    milone_assert(false, (struct String){.str = "option/option.milone", .len = 20}, 14, 16);
+    if ((string_compare((struct Stringoption1_){.discriminant = None_1}.Some_1, (struct String){.ptr = "a", .len = 1}) != 0)) goto next_6;
+    milone_assert(false, (struct String){.ptr = "option/option.milone", .len = 20}, 14, 16);
     match_1 = 0;
     goto end_match_5;
 next_6:;
@@ -84,7 +86,7 @@ next_6:;
     match_1 = 0;
     goto end_match_5;
 next_7:;
-    milone_assert(false, (struct String){.str = "option/option.milone", .len = 20}, 18, 9);
+    milone_assert(false, (struct String){.ptr = "option/option.milone", .len = 20}, 18, 9);
     match_1 = 0;
     goto end_match_5;
 next_8:;
@@ -104,7 +106,7 @@ void option_option_basicMatchCase(void) {
             goto clause_11;
     }
 clause_10:;
-    milone_assert(false, (struct String){.str = "option/option.milone", .len = 20}, 24, 12);
+    milone_assert(false, (struct String){.ptr = "option/option.milone", .len = 20}, 24, 12);
     switch_ = 0;
     goto switch_next_9;
 clause_11:;

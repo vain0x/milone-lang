@@ -1,3 +1,5 @@
+#include <stdio.h>
+#include <stdlib.h>
 #include <milone.h>
 
 struct FirstSecondTuple2_List;
@@ -168,21 +170,21 @@ int main(int argc, char** argv) {
     struct IntThirdTuple2_ IntThirdTuple2_;
     variant_ = (struct Node_){.discriminant = Leaf_, .Leaf_ = 1};
     variant_1 = (struct Node_){.discriminant = Leaf_, .Leaf_ = 2};
-    list_2 = ((struct Node_List const*)milone_mem_alloc(1, sizeof(struct Node_List)));
+    list_2 = ((struct Node_List const*)milone_region_alloc(1, sizeof(struct Node_List)));
     (*(((struct Node_List*)list_2))) = (struct Node_List){.head = variant_1, .tail = NULL};
-    list_1 = ((struct Node_List const*)milone_mem_alloc(1, sizeof(struct Node_List)));
+    list_1 = ((struct Node_List const*)milone_region_alloc(1, sizeof(struct Node_List)));
     (*(((struct Node_List*)list_1))) = (struct Node_List){.head = variant_, .tail = list_2};
     variant_2 = (struct Node_){.discriminant = Node_, .Node_ = list_1};
     variant_3 = (struct Node_){.discriminant = Node_, .Node_ = NULL};
     variant_4 = (struct Node_){.discriminant = Leaf_, .Leaf_ = 3};
-    list_5 = ((struct Node_List const*)milone_mem_alloc(1, sizeof(struct Node_List)));
+    list_5 = ((struct Node_List const*)milone_region_alloc(1, sizeof(struct Node_List)));
     (*(((struct Node_List*)list_5))) = (struct Node_List){.head = variant_4, .tail = NULL};
     variant_5 = (struct Node_){.discriminant = Node_, .Node_ = list_5};
-    list_4 = ((struct Node_List const*)milone_mem_alloc(1, sizeof(struct Node_List)));
+    list_4 = ((struct Node_List const*)milone_region_alloc(1, sizeof(struct Node_List)));
     (*(((struct Node_List*)list_4))) = (struct Node_List){.head = variant_5, .tail = NULL};
-    list_3 = ((struct Node_List const*)milone_mem_alloc(1, sizeof(struct Node_List)));
+    list_3 = ((struct Node_List const*)milone_region_alloc(1, sizeof(struct Node_List)));
     (*(((struct Node_List*)list_3))) = (struct Node_List){.head = variant_3, .tail = list_4};
-    list_ = ((struct Node_List const*)milone_mem_alloc(1, sizeof(struct Node_List)));
+    list_ = ((struct Node_List const*)milone_region_alloc(1, sizeof(struct Node_List)));
     (*(((struct Node_List*)list_))) = (struct Node_List){.head = variant_2, .tail = list_3};
     variant_6 = (struct Node_){.discriminant = Node_, .Node_ = list_};
     if ((variant_6.discriminant != Node_)) goto next_2;
@@ -229,11 +231,11 @@ else_9:;
     if_1 = false;
     goto if_next_7;
 if_next_7:;
-    milone_assert(if_1, (struct String){.str = "union_complicated/union_complicated.milone", .len = 42}, 23, 84);
+    milone_assert(if_1, (struct String){.ptr = "union_complicated/union_complicated.milone", .len = 42}, 23, 84);
     match_ = 0;
     goto end_match_1;
 next_2:;
-    milone_assert(false, (struct String){.str = "union_complicated/union_complicated.milone", .len = 42}, 24, 9);
+    milone_assert(false, (struct String){.ptr = "union_complicated/union_complicated.milone", .len = 42}, 24, 9);
     match_ = 0;
     goto end_match_1;
 next_3:;
@@ -246,7 +248,7 @@ end_match_1:;
     first_ = FirstSecondTuple2_.t0;
     second_ = FirstSecondTuple2_.t1;
     IntThirdTuple2_ = (struct IntThirdTuple2_){.t0 = 0, .t1 = (struct Third_){.discriminant = Leaf3_}};
-    list_6 = ((struct IntThirdTuple2_List const*)milone_mem_alloc(1, sizeof(struct IntThirdTuple2_List)));
+    list_6 = ((struct IntThirdTuple2_List const*)milone_region_alloc(1, sizeof(struct IntThirdTuple2_List)));
     (*(((struct IntThirdTuple2_List*)list_6))) = (struct IntThirdTuple2_List){.head = IntThirdTuple2_, .tail = NULL};
     if ((!(list_6))) goto next_11;
     if ((list_6->head.t0 != 0)) goto next_11;
@@ -255,7 +257,7 @@ end_match_1:;
     match_1 = 0;
     goto end_match_10;
 next_11:;
-    milone_assert(false, (struct String){.str = "union_complicated/union_complicated.milone", .len = 42}, 32, 9);
+    milone_assert(false, (struct String){.ptr = "union_complicated/union_complicated.milone", .len = 42}, 32, 9);
     match_1 = 0;
     goto end_match_10;
 next_12:;

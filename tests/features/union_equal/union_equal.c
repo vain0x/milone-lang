@@ -1,3 +1,5 @@
+#include <stdio.h>
+#include <stdlib.h>
 #include <milone.h>
 
 struct IntMyNode1_List;
@@ -259,7 +261,7 @@ next_16:;
     l_13 = MyValueMyValueTuple2_.t0.MyString_;
     if ((MyValueMyValueTuple2_.t1.discriminant != MyString_)) goto next_17;
     r_13 = MyValueMyValueTuple2_.t1.MyString_;
-    match_2 = (str_compare(l_13, r_13) == 0);
+    match_2 = (string_compare(l_13, r_13) == 0);
     goto end_match_14;
 next_17:;
     match_2 = false;
@@ -290,7 +292,7 @@ next_20:;
     l_5 = MyResultMyResultTuple2_.t0.MyErr_;
     if ((MyResultMyResultTuple2_.t1.discriminant != MyErr_)) goto next_21;
     r_5 = MyResultMyResultTuple2_.t1.MyErr_;
-    match_3 = (str_compare(l_5, r_5) == 0);
+    match_3 = (string_compare(l_5, r_5) == 0);
     goto end_match_19;
 next_21:;
     match_3 = false;
@@ -329,14 +331,14 @@ void union_equal_union_equal_testMyBool(void) {
     bool call_8;
     t_ = (struct MyBool_){.discriminant = MyTrue_};
     call_5 = union_equal_union_equal_MyBoolEqual(t_, (struct MyBool_){.discriminant = MyTrue_});
-    milone_assert(call_5, (struct String){.str = "union_equal/union_equal.milone", .len = 30}, 11, 2);
+    milone_assert(call_5, (struct String){.ptr = "union_equal/union_equal.milone", .len = 30}, 11, 2);
     call_6 = union_equal_union_equal_MyBoolEqual(t_, (struct MyBool_){.discriminant = MyFalse_});
-    milone_assert((!(call_6)), (struct String){.str = "union_equal/union_equal.milone", .len = 30}, 12, 2);
+    milone_assert((!(call_6)), (struct String){.ptr = "union_equal/union_equal.milone", .len = 30}, 12, 2);
     f_ = (struct MyBool_){.discriminant = MyFalse_};
     call_7 = union_equal_union_equal_MyBoolEqual(t_, f_);
-    milone_assert((!(call_7)), (struct String){.str = "union_equal/union_equal.milone", .len = 30}, 15, 2);
+    milone_assert((!(call_7)), (struct String){.ptr = "union_equal/union_equal.milone", .len = 30}, 15, 2);
     call_8 = union_equal_union_equal_MyBoolEqual(f_, (struct MyBool_){.discriminant = MyFalse_});
-    milone_assert(call_8, (struct String){.str = "union_equal/union_equal.milone", .len = 30}, 16, 2);
+    milone_assert(call_8, (struct String){.ptr = "union_equal/union_equal.milone", .len = 30}, 16, 2);
     return;
 }
 
@@ -355,17 +357,17 @@ void union_equal_union_equal_testMyInt(void) {
     s_ = variant_;
     variant_1 = (struct MyIntOption_){.discriminant = MySome_, .MySome_ = 2};
     call_9 = union_equal_union_equal_MyIntOptionEqual(s_, variant_1);
-    milone_assert(call_9, (struct String){.str = "union_equal/union_equal.milone", .len = 30}, 25, 2);
+    milone_assert(call_9, (struct String){.ptr = "union_equal/union_equal.milone", .len = 30}, 25, 2);
     variant_2 = (struct MyIntOption_){.discriminant = MySome_, .MySome_ = 3};
     call_10 = union_equal_union_equal_MyIntOptionEqual(s_, variant_2);
-    milone_assert((!(call_10)), (struct String){.str = "union_equal/union_equal.milone", .len = 30}, 26, 2);
+    milone_assert((!(call_10)), (struct String){.ptr = "union_equal/union_equal.milone", .len = 30}, 26, 2);
     call_11 = union_equal_union_equal_MyIntOptionEqual(s_, (struct MyIntOption_){.discriminant = MyNone_});
-    milone_assert((!(call_11)), (struct String){.str = "union_equal/union_equal.milone", .len = 30}, 27, 2);
+    milone_assert((!(call_11)), (struct String){.ptr = "union_equal/union_equal.milone", .len = 30}, 27, 2);
     n_ = (struct MyIntOption_){.discriminant = MyNone_};
     call_12 = union_equal_union_equal_MyIntOptionEqual(s_, n_);
-    milone_assert((!(call_12)), (struct String){.str = "union_equal/union_equal.milone", .len = 30}, 30, 2);
+    milone_assert((!(call_12)), (struct String){.ptr = "union_equal/union_equal.milone", .len = 30}, 30, 2);
     call_13 = union_equal_union_equal_MyIntOptionEqual(n_, (struct MyIntOption_){.discriminant = MyNone_});
-    milone_assert(call_13, (struct String){.str = "union_equal/union_equal.milone", .len = 30}, 31, 2);
+    milone_assert(call_13, (struct String){.ptr = "union_equal/union_equal.milone", .len = 30}, 31, 2);
     return;
 }
 
@@ -398,29 +400,29 @@ void union_equal_union_equal_testMyResult(void) {
     variant_5 = (struct MyValue_){.discriminant = MyInt_, .MyInt_ = 2};
     variant_6 = (struct MyResult_){.discriminant = MyOk_, .MyOk_ = variant_5};
     call_14 = union_equal_union_equal_MyResultEqual(ok2_, variant_6);
-    milone_assert(call_14, (struct String){.str = "union_equal/union_equal.milone", .len = 30}, 45, 2);
+    milone_assert(call_14, (struct String){.ptr = "union_equal/union_equal.milone", .len = 30}, 45, 2);
     variant_7 = (struct MyValue_){.discriminant = MyInt_, .MyInt_ = 3};
     variant_8 = (struct MyResult_){.discriminant = MyOk_, .MyOk_ = variant_7};
     call_15 = union_equal_union_equal_MyResultEqual(ok2_, variant_8);
-    milone_assert((!(call_15)), (struct String){.str = "union_equal/union_equal.milone", .len = 30}, 46, 2);
+    milone_assert((!(call_15)), (struct String){.ptr = "union_equal/union_equal.milone", .len = 30}, 46, 2);
     variant_9 = (struct MyResult_){.discriminant = MyOk_, .MyOk_ = (struct MyValue_){.discriminant = MyUnit_}};
     call_16 = union_equal_union_equal_MyResultEqual(ok2_, variant_9);
-    milone_assert((!(call_16)), (struct String){.str = "union_equal/union_equal.milone", .len = 30}, 47, 2);
-    variant_10 = (struct MyResult_){.discriminant = MyErr_, .MyErr_ = (struct String){.str = "", .len = 0}};
+    milone_assert((!(call_16)), (struct String){.ptr = "union_equal/union_equal.milone", .len = 30}, 47, 2);
+    variant_10 = (struct MyResult_){.discriminant = MyErr_, .MyErr_ = (struct String){.ptr = "", .len = 0}};
     call_17 = union_equal_union_equal_MyResultEqual(ok2_, variant_10);
-    milone_assert((!(call_17)), (struct String){.str = "union_equal/union_equal.milone", .len = 30}, 48, 2);
-    variant_11 = (struct MyValue_){.discriminant = MyString_, .MyString_ = (struct String){.str = "hello", .len = 5}};
+    milone_assert((!(call_17)), (struct String){.ptr = "union_equal/union_equal.milone", .len = 30}, 48, 2);
+    variant_11 = (struct MyValue_){.discriminant = MyString_, .MyString_ = (struct String){.ptr = "hello", .len = 5}};
     variant_12 = (struct MyResult_){.discriminant = MyOk_, .MyOk_ = variant_11};
     hello_ = variant_12;
-    variant_13 = (struct MyValue_){.discriminant = MyString_, .MyString_ = (struct String){.str = "hello", .len = 5}};
+    variant_13 = (struct MyValue_){.discriminant = MyString_, .MyString_ = (struct String){.ptr = "hello", .len = 5}};
     variant_14 = (struct MyResult_){.discriminant = MyOk_, .MyOk_ = variant_13};
     call_18 = union_equal_union_equal_MyResultEqual(hello_, variant_14);
-    milone_assert(call_18, (struct String){.str = "union_equal/union_equal.milone", .len = 30}, 51, 2);
+    milone_assert(call_18, (struct String){.ptr = "union_equal/union_equal.milone", .len = 30}, 51, 2);
     call_19 = union_equal_union_equal_MyResultEqual(hello_, ok2_);
-    milone_assert((!(call_19)), (struct String){.str = "union_equal/union_equal.milone", .len = 30}, 52, 2);
-    variant_15 = (struct MyResult_){.discriminant = MyErr_, .MyErr_ = (struct String){.str = "hello", .len = 5}};
+    milone_assert((!(call_19)), (struct String){.ptr = "union_equal/union_equal.milone", .len = 30}, 52, 2);
+    variant_15 = (struct MyResult_){.discriminant = MyErr_, .MyErr_ = (struct String){.ptr = "hello", .len = 5}};
     call_20 = union_equal_union_equal_MyResultEqual(hello_, variant_15);
-    milone_assert((!(call_20)), (struct String){.str = "union_equal/union_equal.milone", .len = 30}, 53, 2);
+    milone_assert((!(call_20)), (struct String){.ptr = "union_equal/union_equal.milone", .len = 30}, 53, 2);
     return;
 }
 
@@ -442,19 +444,19 @@ void union_equal_union_equal_testMyNode(void) {
     variant_16 = (struct IntMyNode1_){.discriminant = MyNode_, .MyNode_ = IntIntMyNode1ListTuple2_1};
     IntIntMyNode1ListTuple2_2 = (struct IntIntMyNode1ListTuple2_){.t0 = 3, .t1 = NULL};
     variant_17 = (struct IntMyNode1_){.discriminant = MyNode_, .MyNode_ = IntIntMyNode1ListTuple2_2};
-    list_1 = ((struct IntMyNode1_List const*)milone_mem_alloc(1, sizeof(struct IntMyNode1_List)));
+    list_1 = ((struct IntMyNode1_List const*)milone_region_alloc(1, sizeof(struct IntMyNode1_List)));
     (*(((struct IntMyNode1_List*)list_1))) = (struct IntMyNode1_List){.head = variant_17, .tail = NULL};
-    list_ = ((struct IntMyNode1_List const*)milone_mem_alloc(1, sizeof(struct IntMyNode1_List)));
+    list_ = ((struct IntMyNode1_List const*)milone_region_alloc(1, sizeof(struct IntMyNode1_List)));
     (*(((struct IntMyNode1_List*)list_))) = (struct IntMyNode1_List){.head = variant_16, .tail = list_1};
     IntIntMyNode1ListTuple2_ = (struct IntIntMyNode1ListTuple2_){.t0 = 5, .t1 = list_};
     variant_18 = (struct IntMyNode1_){.discriminant = MyNode_, .MyNode_ = IntIntMyNode1ListTuple2_};
     v_ = variant_18;
     call_21 = union_equal_union_equal_MyNodeEqual(v_, v_);
-    milone_assert(call_21, (struct String){.str = "union_equal/union_equal.milone", .len = 30}, 62, 2);
+    milone_assert(call_21, (struct String){.ptr = "union_equal/union_equal.milone", .len = 30}, 62, 2);
     IntIntMyNode1ListTuple2_3 = (struct IntIntMyNode1ListTuple2_){.t0 = 5, .t1 = NULL};
     variant_19 = (struct IntMyNode1_){.discriminant = MyNode_, .MyNode_ = IntIntMyNode1ListTuple2_3};
     call_22 = union_equal_union_equal_MyNodeEqual(v_, variant_19);
-    milone_assert((!(call_22)), (struct String){.str = "union_equal/union_equal.milone", .len = 30}, 63, 2);
+    milone_assert((!(call_22)), (struct String){.ptr = "union_equal/union_equal.milone", .len = 30}, 63, 2);
     return;
 }
 

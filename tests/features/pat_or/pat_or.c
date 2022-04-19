@@ -1,3 +1,5 @@
+#include <stdio.h>
+#include <stdlib.h>
 #include <milone.h>
 
 struct IntList;
@@ -69,9 +71,9 @@ else_6:;
     if_ = false;
     goto if_next_4;
 if_next_4:;
-    milone_assert(if_, (struct String){.str = "pat_or/pat_or.milone", .len = 20}, 12, 2);
+    milone_assert(if_, (struct String){.ptr = "pat_or/pat_or.milone", .len = 20}, 12, 2);
     call_2 = pat_or_pat_or_isZeroOrOne(2);
-    milone_assert((!(call_2)), (struct String){.str = "pat_or/pat_or.milone", .len = 20}, 13, 2);
+    milone_assert((!(call_2)), (struct String){.ptr = "pat_or/pat_or.milone", .len = 20}, 13, 2);
     return;
 }
 
@@ -119,20 +121,20 @@ void pat_or_pat_or_nestedCase(void) {
     struct IntList const* list_3;
     struct IntList const* list_4;
     bool call_4;
-    list_2 = ((struct IntList const*)milone_mem_alloc(1, sizeof(struct IntList)));
+    list_2 = ((struct IntList const*)milone_region_alloc(1, sizeof(struct IntList)));
     (*(((struct IntList*)list_2))) = (struct IntList){.head = 2, .tail = NULL};
-    list_1 = ((struct IntList const*)milone_mem_alloc(1, sizeof(struct IntList)));
+    list_1 = ((struct IntList const*)milone_region_alloc(1, sizeof(struct IntList)));
     (*(((struct IntList*)list_1))) = (struct IntList){.head = 1, .tail = list_2};
-    list_ = ((struct IntList const*)milone_mem_alloc(1, sizeof(struct IntList)));
+    list_ = ((struct IntList const*)milone_region_alloc(1, sizeof(struct IntList)));
     (*(((struct IntList*)list_))) = (struct IntList){.head = 0, .tail = list_1};
     call_3 = pat_or_pat_or_startsWithDoubleBits(list_);
-    milone_assert(call_3, (struct String){.str = "pat_or/pat_or.milone", .len = 20}, 24, 2);
-    list_4 = ((struct IntList const*)milone_mem_alloc(1, sizeof(struct IntList)));
+    milone_assert(call_3, (struct String){.ptr = "pat_or/pat_or.milone", .len = 20}, 24, 2);
+    list_4 = ((struct IntList const*)milone_region_alloc(1, sizeof(struct IntList)));
     (*(((struct IntList*)list_4))) = (struct IntList){.head = 2, .tail = NULL};
-    list_3 = ((struct IntList const*)milone_mem_alloc(1, sizeof(struct IntList)));
+    list_3 = ((struct IntList const*)milone_region_alloc(1, sizeof(struct IntList)));
     (*(((struct IntList*)list_3))) = (struct IntList){.head = 1, .tail = list_4};
     call_4 = pat_or_pat_or_startsWithDoubleBits(list_3);
-    milone_assert((!(call_4)), (struct String){.str = "pat_or/pat_or.milone", .len = 20}, 25, 2);
+    milone_assert((!(call_4)), (struct String){.ptr = "pat_or/pat_or.milone", .len = 20}, 25, 2);
     return;
 }
 
@@ -163,10 +165,10 @@ void pat_or_pat_or_complexCase(void) {
     bool call_6;
     IntIntTuple2_ = (struct IntIntTuple2_){.t0 = 0, .t1 = 1};
     call_5 = pat_or_pat_or_performComplexMatching(IntIntTuple2_);
-    milone_assert(call_5, (struct String){.str = "pat_or/pat_or.milone", .len = 20}, 38, 2);
+    milone_assert(call_5, (struct String){.ptr = "pat_or/pat_or.milone", .len = 20}, 38, 2);
     IntIntTuple2_1 = (struct IntIntTuple2_){.t0 = 1, .t1 = 2};
     call_6 = pat_or_pat_or_performComplexMatching(IntIntTuple2_1);
-    milone_assert((!(call_6)), (struct String){.str = "pat_or/pat_or.milone", .len = 20}, 39, 2);
+    milone_assert((!(call_6)), (struct String){.ptr = "pat_or/pat_or.milone", .len = 20}, 39, 2);
     return;
 }
 

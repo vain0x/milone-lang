@@ -1,3 +1,5 @@
+#include <stdio.h>
+#include <stdlib.h>
 #include <milone.h>
 
 struct StringStringTuple2_;
@@ -30,10 +32,10 @@ int main(int argc, char** argv) {
     struct String x1_;
     struct String x2_;
     struct StringStringTuple2_ call_1;
-    call_1 = monomorphization_bug_1_monomorphization_bug_1_bug((struct String){.str = "a", .len = 1});
+    call_1 = monomorphization_bug_1_monomorphization_bug_1_bug((struct String){.ptr = "a", .len = 1});
     x1_ = call_1.t0;
     x2_ = call_1.t1;
-    printf("x1 = \'%s\'\n", str_to_c_str(x1_));
-    printf("x2 = \'%s\'\n", str_to_c_str(x2_));
+    printf("x1 = \'%s\'\n", string_to_c_str(x1_));
+    printf("x2 = \'%s\'\n", string_to_c_str(x2_));
     return 0;
 }

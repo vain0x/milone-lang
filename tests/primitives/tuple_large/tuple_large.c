@@ -1,3 +1,5 @@
+#include <stdio.h>
+#include <stdlib.h>
 #include <milone.h>
 
 struct IntIntIntIntIntIntIntIntIntIntIntTuple11_;
@@ -88,7 +90,7 @@ else_9:;
     if_2 = false;
     goto if_next_7;
 if_next_7:;
-    milone_assert(if_2, (struct String){.str = "tuple_large/tuple_large.milone", .len = 30}, 6, 2);
+    milone_assert(if_2, (struct String){.ptr = "tuple_large/tuple_large.milone", .len = 30}, 6, 2);
     IntIntIntIntIntIntIntIntIntIntIntTuple11_ = (struct IntIntIntIntIntIntIntIntIntIntIntTuple11_){.t0 = 1, .t1 = 2, .t2 = 3, .t3 = 4, .t4 = 5, .t5 = 6, .t6 = 7, .t7 = 8, .t8 = 9, .t9 = 10, .t10 = 11};
     _t11 = IntIntIntIntIntIntIntIntIntIntIntTuple11_;
     return 0;

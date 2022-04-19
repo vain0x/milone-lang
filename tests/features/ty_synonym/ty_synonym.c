@@ -1,3 +1,5 @@
+#include <stdio.h>
+#include <stdlib.h>
 #include <milone.h>
 
 struct IntList;
@@ -63,17 +65,17 @@ void ty_synonym_ty_synonym_baseCase(void) {
     struct IntList const* list_1;
     success_ = 0;
     failure_ = 1;
-    list_1 = ((struct IntList const*)milone_mem_alloc(1, sizeof(struct IntList)));
+    list_1 = ((struct IntList const*)milone_region_alloc(1, sizeof(struct IntList)));
     (*(((struct IntList*)list_1))) = (struct IntList){.head = failure_, .tail = NULL};
-    list_ = ((struct IntList const*)milone_mem_alloc(1, sizeof(struct IntList)));
+    list_ = ((struct IntList const*)milone_region_alloc(1, sizeof(struct IntList)));
     (*(((struct IntList*)list_))) = (struct IntList){.head = success_, .tail = list_1};
     codes_ = list_;
-    milone_assert((success_ == 0), (struct String){.str = "ty_synonym/ty_synonym.milone", .len = 28}, 13, 2);
+    milone_assert((success_ == 0), (struct String){.ptr = "ty_synonym/ty_synonym.milone", .len = 28}, 13, 2);
     return;
 }
 
 void ty_synonym_ty_synonym_yodaCase(int exitCode_) {
-    milone_assert((0 == exitCode_), (struct String){.str = "ty_synonym/ty_synonym.milone", .len = 28}, 16, 36);
+    milone_assert((0 == exitCode_), (struct String){.ptr = "ty_synonym/ty_synonym.milone", .len = 28}, 16, 36);
     return;
 }
 
@@ -81,9 +83,9 @@ void ty_synonym_ty_synonym_polymorphicFunCase(void) {
     int call_;
     struct String call_1;
     call_ = ty_synonym_ty_synonym_BoolIntIntIntFun3_proj(true, 1, 0);
-    milone_assert((call_ == 1), (struct String){.str = "ty_synonym/ty_synonym.milone", .len = 28}, 21, 2);
-    call_1 = ty_synonym_ty_synonym_BoolStringStringStringFun3_proj(false, (struct String){.str = "T", .len = 1}, (struct String){.str = "F", .len = 1});
-    milone_assert((str_compare(call_1, (struct String){.str = "F", .len = 1}) == 0), (struct String){.str = "ty_synonym/ty_synonym.milone", .len = 28}, 22, 2);
+    milone_assert((call_ == 1), (struct String){.ptr = "ty_synonym/ty_synonym.milone", .len = 28}, 21, 2);
+    call_1 = ty_synonym_ty_synonym_BoolStringStringStringFun3_proj(false, (struct String){.ptr = "T", .len = 1}, (struct String){.ptr = "F", .len = 1});
+    milone_assert((string_compare(call_1, (struct String){.ptr = "F", .len = 1}) == 0), (struct String){.ptr = "ty_synonym/ty_synonym.milone", .len = 28}, 22, 2);
     return;
 }
 

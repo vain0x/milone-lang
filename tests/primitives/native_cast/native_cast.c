@@ -1,3 +1,5 @@
+#include <stdio.h>
+#include <stdlib.h>
 #include <milone.h>
 
 int main(int argc, char** argv);
@@ -14,6 +16,6 @@ int main(int argc, char** argv) {
     constIntPtr_ = ((int const*)constNull_);
     intPtr_ = ((int*)constIntPtr_);
     address_ = ((intptr_t)intPtr_);
-    milone_assert((address_ == 0LL), (struct String){.str = "native_cast/native_cast.milone", .len = 30}, 14, 2);
+    milone_assert((address_ == 0LL), (struct String){.ptr = "native_cast/native_cast.milone", .len = 30}, 14, 2);
     return 0;
 }

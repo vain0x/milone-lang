@@ -1,3 +1,5 @@
+#include <stdio.h>
+#include <stdlib.h>
 #include <milone.h>
 
 struct Intoption1_;
@@ -113,19 +115,19 @@ int main(int argc, char** argv) {
     struct IntList const* list_6;
     struct Intoption1option1option1_List const* call_1;
     fun_ = (struct IntIntoption1option1option1_Fun1){.fun = list_pat_list_pat_eta2_main_fun, .env = NULL};
-    list_6 = ((struct IntList const*)milone_mem_alloc(1, sizeof(struct IntList)));
+    list_6 = ((struct IntList const*)milone_region_alloc(1, sizeof(struct IntList)));
     (*(((struct IntList*)list_6))) = (struct IntList){.head = 7, .tail = NULL};
-    list_5 = ((struct IntList const*)milone_mem_alloc(1, sizeof(struct IntList)));
+    list_5 = ((struct IntList const*)milone_region_alloc(1, sizeof(struct IntList)));
     (*(((struct IntList*)list_5))) = (struct IntList){.head = 6, .tail = list_6};
-    list_4 = ((struct IntList const*)milone_mem_alloc(1, sizeof(struct IntList)));
+    list_4 = ((struct IntList const*)milone_region_alloc(1, sizeof(struct IntList)));
     (*(((struct IntList*)list_4))) = (struct IntList){.head = 5, .tail = list_5};
-    list_3 = ((struct IntList const*)milone_mem_alloc(1, sizeof(struct IntList)));
+    list_3 = ((struct IntList const*)milone_region_alloc(1, sizeof(struct IntList)));
     (*(((struct IntList*)list_3))) = (struct IntList){.head = 4, .tail = list_4};
-    list_2 = ((struct IntList const*)milone_mem_alloc(1, sizeof(struct IntList)));
+    list_2 = ((struct IntList const*)milone_region_alloc(1, sizeof(struct IntList)));
     (*(((struct IntList*)list_2))) = (struct IntList){.head = 3, .tail = list_3};
-    list_1 = ((struct IntList const*)milone_mem_alloc(1, sizeof(struct IntList)));
+    list_1 = ((struct IntList const*)milone_region_alloc(1, sizeof(struct IntList)));
     (*(((struct IntList*)list_1))) = (struct IntList){.head = 2, .tail = list_2};
-    list_ = ((struct IntList const*)milone_mem_alloc(1, sizeof(struct IntList)));
+    list_ = ((struct IntList const*)milone_region_alloc(1, sizeof(struct IntList)));
     (*(((struct IntList*)list_))) = (struct IntList){.head = 1, .tail = list_1};
     call_1 = MiloneCore_List_IntIntoption1option1option1Fun1IntListIntoption1option1option1ListFun2_map(fun_, list_);
     if ((!(call_1))) goto next_10;
@@ -164,17 +166,17 @@ int main(int argc, char** argv) {
     if ((call_1->tail->tail->tail->tail->tail->tail->head.Some_2.Some_1.discriminant != Some_)) goto next_10;
     x7_ = call_1->tail->tail->tail->tail->tail->tail->head.Some_2.Some_1.Some_;
     if ((!((!(call_1->tail->tail->tail->tail->tail->tail->tail))))) goto next_10;
-    milone_assert((x1_ == 1), (struct String){.str = "list_pat/list_pat.milone", .len = 24}, 15, 4);
-    milone_assert((x2_ == 2), (struct String){.str = "list_pat/list_pat.milone", .len = 24}, 16, 4);
-    milone_assert((x3_ == 3), (struct String){.str = "list_pat/list_pat.milone", .len = 24}, 17, 4);
-    milone_assert((x4_ == 4), (struct String){.str = "list_pat/list_pat.milone", .len = 24}, 18, 4);
-    milone_assert((x5_ == 5), (struct String){.str = "list_pat/list_pat.milone", .len = 24}, 19, 4);
-    milone_assert((x6_ == 6), (struct String){.str = "list_pat/list_pat.milone", .len = 24}, 20, 4);
-    milone_assert((x7_ == 7), (struct String){.str = "list_pat/list_pat.milone", .len = 24}, 21, 4);
+    milone_assert((x1_ == 1), (struct String){.ptr = "list_pat/list_pat.milone", .len = 24}, 15, 4);
+    milone_assert((x2_ == 2), (struct String){.ptr = "list_pat/list_pat.milone", .len = 24}, 16, 4);
+    milone_assert((x3_ == 3), (struct String){.ptr = "list_pat/list_pat.milone", .len = 24}, 17, 4);
+    milone_assert((x4_ == 4), (struct String){.ptr = "list_pat/list_pat.milone", .len = 24}, 18, 4);
+    milone_assert((x5_ == 5), (struct String){.ptr = "list_pat/list_pat.milone", .len = 24}, 19, 4);
+    milone_assert((x6_ == 6), (struct String){.ptr = "list_pat/list_pat.milone", .len = 24}, 20, 4);
+    milone_assert((x7_ == 7), (struct String){.ptr = "list_pat/list_pat.milone", .len = 24}, 21, 4);
     match_ = 0;
     goto end_match_9;
 next_10:;
-    milone_assert(false, (struct String){.str = "list_pat/list_pat.milone", .len = 24}, 23, 9);
+    milone_assert(false, (struct String){.ptr = "list_pat/list_pat.milone", .len = 24}, 23, 9);
     match_ = 0;
     goto end_match_9;
 next_11:;

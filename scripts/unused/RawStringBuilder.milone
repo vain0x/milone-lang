@@ -2,10 +2,10 @@
 module rec LibNursery.RawStringBuilder
 
 let private stringAsPtr (s: string) : __voidinptr =
-  __nativeExpr ("{0}.str", s)
+  __nativeExpr ("{0}.ptr", s)
 
 let private __alloc (size: unativeint) : voidptr =
-  __nativeFun ("milone_mem_alloc", 1, size)
+  __nativeFun ("milone_region_alloc", 1, size)
 
 /// Raw reference cell.
 type private Ref<'T> = Ref of nativeptr<'T>
@@ -42,7 +42,7 @@ module RawStringBuilder =
     assert ((capacity >>> 30) = 0)
 
     let repr: SbRepr =
-      { Ptr = if capacity > 0 then __alloc milone_mem_alloc (capacity, 1) else stringAsPtr ""
+      { Ptr = if capacity > 0 then __alloc milone_region_alloc (capacity, 1) else stringAsPtr ""
         Length = 0
         Capacity = capacity }
 

@@ -1,3 +1,5 @@
+#include <stdio.h>
+#include <stdlib.h>
 #include <milone.h>
 
 typedef int(*VoidConstPtrIntFunPtr1)(void const*);
@@ -86,7 +88,7 @@ void fun_closure_fun_closure_basicCase(void) {
     int call_;
     step_ = 3;
     call_ = fun_closure_fun_closure_basicCase_sub(step_, 8);
-    milone_assert((call_ == 5), (struct String){.str = "fun_closure/fun_closure.milone", .len = 30}, 7, 2);
+    milone_assert((call_ == 5), (struct String){.ptr = "fun_closure/fun_closure.milone", .len = 30}, 7, 2);
     return;
 }
 
@@ -107,7 +109,7 @@ void fun_closure_fun_closure_transitiveCase(void) {
     int call_3;
     step_1 = 1;
     call_3 = fun_closure_fun_closure_transitiveCase_incTwice(step_1, 0);
-    milone_assert((call_3 == 2), (struct String){.str = "fun_closure/fun_closure.milone", .len = 30}, 13, 2);
+    milone_assert((call_3 == 2), (struct String){.ptr = "fun_closure/fun_closure.milone", .len = 30}, 13, 2);
     return;
 }
 
@@ -145,7 +147,7 @@ void fun_closure_fun_closure_recursiveCase(void) {
     bool call_5;
     step_2 = 1;
     call_5 = fun_closure_fun_closure_recursiveCase_go(step_2, 0);
-    milone_assert(call_5, (struct String){.str = "fun_closure/fun_closure.milone", .len = 30}, 21, 2);
+    milone_assert(call_5, (struct String){.ptr = "fun_closure/fun_closure.milone", .len = 30}, 21, 2);
     return;
 }
 
@@ -180,7 +182,7 @@ void fun_closure_fun_closure_lambdaCase(void) {
     int call_8;
     lx_ = 7;
     call_8 = fun_closure_fun_closure_lambdaCase_lf(lx_);
-    milone_assert((call_8 == lx_), (struct String){.str = "fun_closure/fun_closure.milone", .len = 30}, 30, 2);
+    milone_assert((call_8 == lx_), (struct String){.ptr = "fun_closure/fun_closure.milone", .len = 30}, 30, 2);
     return;
 }
 
@@ -250,7 +252,7 @@ if_next_11:;
 void fun_closure_fun_closure_escapeCase(void) {
     int call_13;
     call_13 = fun_closure_fun_closure_escapeCase_xf1(1);
-    milone_assert((call_13 == ((1 + 2) + 3)), (struct String){.str = "fun_closure/fun_closure.milone", .len = 30}, 50, 2);
+    milone_assert((call_13 == ((1 + 2) + 3)), (struct String){.ptr = "fun_closure/fun_closure.milone", .len = 30}, 50, 2);
     return;
 }
 
@@ -279,14 +281,14 @@ int fun_closure_fun_closure_innerFunCase_zf2(int x_5) {
 void fun_closure_fun_closure_innerFunCase(void) {
     int call_17;
     call_17 = fun_closure_fun_closure_innerFunCase_zf2(1);
-    milone_assert((call_17 == 1), (struct String){.str = "fun_closure/fun_closure.milone", .len = 30}, 61, 2);
+    milone_assert((call_17 == 1), (struct String){.ptr = "fun_closure/fun_closure.milone", .len = 30}, 61, 2);
     return;
 }
 
 void fun_closure_fun_closure_mutuallyRecursiveCase(void) {
     int call_18;
     call_18 = fun_closure_fun_closure_f1();
-    milone_assert((call_18 == 1), (struct String){.str = "fun_closure/fun_closure.milone", .len = 30}, 64, 31);
+    milone_assert((call_18 == 1), (struct String){.ptr = "fun_closure/fun_closure.milone", .len = 30}, 64, 31);
     return;
 }
 

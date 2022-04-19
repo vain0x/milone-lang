@@ -576,6 +576,6 @@ let segTreeTest () =
 
     assert (v
             |> segTreeToList
-            |> listEqual strEqual [ "a"; "b" ])
+            |> listEqual stringEqual [ "a"; "b" ])
 
   testPolymorphic ()

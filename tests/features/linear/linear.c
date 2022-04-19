@@ -1,3 +1,5 @@
+#include <stdio.h>
+#include <stdlib.h>
 #include <milone.h>
 
 typedef int(*VoidConstPtrIntIntFunPtr2)(void const*, int);
@@ -132,7 +134,7 @@ void linear_linear_acquireAndUse(void) {
     call_2 = linear_linear_increment(counter_3);
     n_3 = call_2.t0;
     counter_4 = call_2.t1;
-    milone_assert((n_3 == 1), (struct String){.str = "linear/linear.milone", .len = 20}, 24, 2);
+    milone_assert((n_3 == 1), (struct String){.ptr = "linear/linear.milone", .len = 20}, 24, 2);
     call_3 = linear_linear_increment(counter_4);
     n_4 = call_3.t0;
     counter_5 = call_3.t1;
@@ -262,7 +264,7 @@ struct IntList const* linear_linear_loopCase_acquireMany_go(int n_6, struct IntL
     }
 then_13:;
     call_12 = linear_linear_create(i_);
-    list_ = ((struct IntList const*)milone_mem_alloc(1, sizeof(struct IntList)));
+    list_ = ((struct IntList const*)milone_region_alloc(1, sizeof(struct IntList)));
     (*(((struct IntList*)list_))) = (struct IntList){.head = call_12, .tail = acc_};
     if_ = list_;
     goto if_next_12;
@@ -282,9 +284,9 @@ struct IntList const* linear_linear_loopCase_acquireMany(int n_6) {
 void linear_linear_genericWrapperCase(void) {
     struct String w_;
     struct String value_;
-    w_ = (struct String){.str = "contents", .len = 8};
+    w_ = (struct String){.ptr = "contents", .len = 8};
     value_ = w_;
-    milone_assert((str_compare(value_, (struct String){.str = "contents", .len = 8}) == 0), (struct String){.str = "linear/linear.milone", .len = 20}, 91, 2);
+    milone_assert((string_compare(value_, (struct String){.ptr = "contents", .len = 8}) == 0), (struct String){.ptr = "linear/linear.milone", .len = 20}, 91, 2);
     return;
 }
 
@@ -312,7 +314,7 @@ else_17:;
     if_1 = false;
     goto if_next_15;
 if_next_15:;
-    milone_assert(if_1, (struct String){.str = "linear/linear.milone", .len = 20}, 100, 2);
+    milone_assert(if_1, (struct String){.ptr = "linear/linear.milone", .len = 20}, 100, 2);
     return;
 }
 
@@ -337,7 +339,7 @@ void linear_linear_genericLinearFunCase(void) {
     l_3 = call_15;
     l_4 = l_3;
     n_7 = l_4;
-    milone_assert((n_7 == 3), (struct String){.str = "linear/linear.milone", .len = 20}, 113, 2);
+    milone_assert((n_7 == 3), (struct String){.ptr = "linear/linear.milone", .len = 20}, 113, 2);
     return;
 }
 
@@ -369,7 +371,7 @@ else_23:;
     if_2 = false;
     goto if_next_21;
 if_next_21:;
-    milone_assert(if_2, (struct String){.str = "linear/linear.milone", .len = 20}, 121, 4);
+    milone_assert(if_2, (struct String){.ptr = "linear/linear.milone", .len = 20}, 121, 4);
     match_ = 0;
     goto end_match_18;
 next_19:;

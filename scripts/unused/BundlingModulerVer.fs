@@ -149,12 +149,12 @@ let bundleErrorToString error =
 let evalProjectSchema projectName ast : ProjectSchemaResult option =
   let asProjectRef expr : (ProjectOption * Pos) option =
     match expr with
-    | ABinaryExpr (AppBinary, AIdentExpr ("Ref", pos), ALitExpr (StrLit projectDir, _), _) ->
+    | ABinaryExpr (AppBinary, AIdentExpr ("Ref", pos), ALitExpr (StringLit projectDir, _), _) ->
       Some(ProjectOption.Ref projectDir, pos)
 
     | ABinaryExpr (AppBinary,
                    AIdentExpr ("AliasedRef", pos),
-                   ATupleExpr ([ ALitExpr (StrLit projectName, _); ALitExpr (StrLit projectDir, _) ], _),
+                   ATupleExpr ([ ALitExpr (StringLit projectName, _); ALitExpr (StringLit projectDir, _) ], _),
                    _) -> Some(ProjectOption.AliasedRef(projectName, projectDir), pos)
 
     | _ -> None

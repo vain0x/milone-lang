@@ -1,3 +1,5 @@
+#include <stdio.h>
+#include <stdlib.h>
 #include <milone.h>
 
 struct IntGU1_;
@@ -33,7 +35,7 @@ int main(int argc, char** argv) {
     milone_start(argc, argv);
     void const* box_;
     struct IntGU1_ variant_;
-    box_ = ((void const*)milone_mem_alloc(1, sizeof(struct IntGU1option1_)));
+    box_ = ((void const*)milone_region_alloc(1, sizeof(struct IntGU1option1_)));
     (*(((struct IntGU1option1_*)box_))) = (struct IntGU1option1_){.discriminant = None_};
     variant_ = (struct IntGU1_){.discriminant = GU_, .GU_ = box_};
     return 0;
