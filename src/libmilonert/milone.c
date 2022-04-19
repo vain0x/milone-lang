@@ -235,7 +235,7 @@ int milone_uint64_compare(uint64_t l, uint64_t r) {
     return 1;
 }
 
-int int_clamp(int x, int l, int r) {
+static int int32_clamp(int x, int l, int r) {
     if (x < l)
         return l;
     if (x > r)
@@ -307,7 +307,7 @@ struct String string_borrow(char const *c_str) {
 
 int string_compare(struct String left, struct String right) {
     // Compare prefix part of two strings.
-    int min_len = int_clamp(left.len, 0, right.len);
+    int min_len = int32_clamp(left.len, 0, right.len);
     int c = memcmp(left.ptr, right.ptr, min_len);
     if (c != 0) {
         return c;
@@ -368,8 +368,8 @@ struct String string_add(struct String left, struct String right) {
 }
 
 struct String string_slice(struct String s, int l, int r) {
-    l = int_clamp(l, 0, s.len);
-    r = int_clamp(r, l, s.len);
+    l = int32_clamp(l, 0, s.len);
+    r = int32_clamp(r, l, s.len);
     assert(0 <= l && l <= r && r <= s.len);
     return (struct String){.ptr = s.ptr + l, .len = r - l};
 }
