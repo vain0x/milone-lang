@@ -105,7 +105,7 @@ static struct OsString os_string_of(struct String s) {
     }
     assert(len >= 0);
 
-    LPTSTR buf = milone_mem_alloc(len + 1, sizeof(TCHAR));
+    LPTSTR buf = milone_region_alloc(len + 1, sizeof(TCHAR));
 
     int n = MultiByteToWideChar(CP_UTF8, 0, s.str, s.len, buf, len);
     if (n == 0) {
@@ -133,7 +133,7 @@ static struct String os_string_to(struct OsString s) {
     }
     assert(len >= 0);
 
-    char *buf = milone_mem_alloc(len + 1, sizeof(char));
+    char *buf = milone_region_alloc(len + 1, sizeof(char));
 
     int n = WideCharToMultiByte(CP_UTF8, 0, s.str, (int)s.len, buf, len, NULL,
                                 NULL);
@@ -199,7 +199,7 @@ static struct String milone_platform_normalize_path_sep(struct String path) {
 #if defined(MILONE_PLATFORM_UNIX)
     return path;
 #elif defined(MILONE_PLATFORM_WINDOWS)
-    char *buf = milone_mem_alloc(path.len + 1, sizeof(char));
+    char *buf = milone_region_alloc(path.len + 1, sizeof(char));
     strncpy(buf, path.str, path.len);
     for (size_t i = 0; i < path.len; i++) {
         if (buf[i] == '\\') {

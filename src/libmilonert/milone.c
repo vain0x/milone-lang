@@ -33,8 +33,8 @@
 // memory management (memory pool)
 // -----------------------------------------------
 
-size_t milone_mem_heap_size(void);
-size_t milone_mem_alloc_cost(void);
+size_t milone_heap_size(void);
+size_t milone_alloc_cost(void);
 
 // structure for memory management. poor implementation. thread unsafe.
 struct MemoryChunk {
@@ -79,7 +79,7 @@ static void free_chunk(struct MemoryChunk *chunk) {
     s_heap_alloc -= chunk->cap;
 }
 
-static void do_enter_region(void) {
+static void do_region_enter(void) {
     // fprintf(stderr, "debug: enter_region level=%d size=%d\n", s_heap_level +
     // 1, s_heap_size);
 
@@ -95,7 +95,7 @@ static void do_enter_region(void) {
     s_heap_level++;
 }
 
-static void do_leave_region(void) {
+static void do_region_leave(void) {
     // fprintf(stderr, "debug: leave_region level=%d size=%d\n", s_heap_level,
     // s_heap_size);
 
@@ -130,7 +130,7 @@ static void do_leave_region(void) {
 }
 
 // allocate new chunk
-static void *milone_mem_alloc_slow(size_t total) {
+static void *milone_region_alloc_slow(size_t total) {
     size_t cap = s_heap.cap;
 
     // move current chunk to used list
@@ -169,7 +169,7 @@ static void *milone_mem_alloc_slow(size_t total) {
     return ptr;
 }
 
-static void *do_mem_alloc(int count, size_t size) {
+static void *do_region_alloc(int count, size_t size) {
     assert(count > 0 && size > 0);
 
     size_t total = (size_t)count * size;
@@ -179,7 +179,7 @@ static void *do_mem_alloc(int count, size_t size) {
     assert(total % 16 == 0 && total >= (size_t)count * size);
 
     if (s_heap.len + total > s_heap.cap) {
-        return milone_mem_alloc_slow(total);
+        return milone_region_alloc_slow(total);
     }
 
     // use current chunk
@@ -195,14 +195,14 @@ static void *do_mem_alloc(int count, size_t size) {
 
 #ifndef MILONE_NO_DEFAULT_ALLOCATOR
 
-size_t milone_mem_heap_size(void) { return s_heap_size; }
-size_t milone_mem_alloc_cost(void) { return s_alloc_cost; }
+size_t milone_heap_size(void) { return s_heap_size; }
+size_t milone_alloc_cost(void) { return s_alloc_cost; }
 
-void milone_enter_region(void) { do_enter_region(); }
-void milone_leave_region(void) { do_leave_region(); }
+void milone_region_enter(void) { do_region_enter(); }
+void milone_region_leave(void) { do_region_leave(); }
 
-void *milone_mem_alloc(int count, size_t size) {
-    return do_mem_alloc(count, size);
+void *milone_region_alloc(int count, size_t size) {
+    return do_region_alloc(count, size);
 }
 
 #endif // MILONE_NO_DEFAULT_ALLOCATOR
@@ -257,9 +257,9 @@ static struct StringBuilder *string_builder_new_with_capacity(int cap) {
     assert(cap >= 0);
 
     struct StringBuilder *sb =
-        milone_mem_alloc(1, sizeof(struct StringBuilder));
+        milone_region_alloc(1, sizeof(struct StringBuilder));
     *sb = (struct StringBuilder){
-        .buf = cap > 0 ? milone_mem_alloc(cap, sizeof(char)) : "",
+        .buf = cap > 0 ? milone_region_alloc(cap, sizeof(char)) : "",
         .len = 0,
         .cap = cap,
     };
@@ -279,7 +279,7 @@ static void string_builder_grow(struct StringBuilder *sb, int addition) {
         sb->cap = min_len;
     }
 
-    char *buf = milone_mem_alloc(sb->cap, sizeof(char));
+    char *buf = milone_region_alloc(sb->cap, sizeof(char));
     memcpy(buf, sb->buf, sb->len);
     sb->buf = buf;
 
@@ -334,7 +334,7 @@ struct String str_of_raw_parts(char const *p, int len) {
     }
 
     // +1 for the invariant of existence of null byte.
-    char *str = milone_mem_alloc(len + 1, sizeof(char));
+    char *str = milone_region_alloc(len + 1, sizeof(char));
     memcpy(str, p, len * sizeof(char));
     assert(str[len] == '\0');
     return (struct String){.str = str, .len = len};
@@ -360,7 +360,7 @@ struct String str_add(struct String left, struct String right) {
     }
 
     int len = left.len + right.len;
-    char *str = milone_mem_alloc(len + 1, sizeof(char));
+    char *str = milone_region_alloc(len + 1, sizeof(char));
     memcpy(str, left.str, left.len);
     memcpy(str + left.len, right.str, right.len);
     assert(str[len] == '\0');
@@ -536,7 +536,7 @@ struct String str_of_char(char value) {
         return str_borrow("");
     }
 
-    char *str = milone_mem_alloc(2, sizeof(char));
+    char *str = milone_region_alloc(2, sizeof(char));
     str[0] = value;
     return (struct String){.str = str, .len = 1};
 }
@@ -619,7 +619,7 @@ struct String file_read_all_text(struct String file_name) {
     }
     fseek(fp, 0, SEEK_SET);
 
-    char *content = milone_mem_alloc((size_t)size + 1, sizeof(char));
+    char *content = milone_region_alloc((size_t)size + 1, sizeof(char));
     size_t read_size = fread(content, 1, (size_t)size, fp);
     if (read_size != (size_t)size) {
         fclose(fp);
@@ -757,12 +757,12 @@ struct Profiler {
 };
 
 void *milone_profile_init(void) {
-    struct Profiler *p = milone_mem_alloc(1, sizeof(struct Profiler));
+    struct Profiler *p = milone_region_alloc(1, sizeof(struct Profiler));
     p->msg = str_borrow("start");
     p->epoch = milone_get_time_millis();
     p->start_epoch = p->epoch;
-    p->heap_size = milone_mem_heap_size();
-    p->alloc_cost = milone_mem_alloc_cost();
+    p->heap_size = milone_heap_size();
+    p->alloc_cost = milone_alloc_cost();
     return p;
 }
 
@@ -791,8 +791,8 @@ void milone_profile_log(struct String msg, void *profiler) {
     struct Profiler *p = (struct Profiler *)profiler;
 
     long t = milone_get_time_millis();
-    long heap_size = (long)milone_mem_heap_size();
-    long alloc_cost = (long)milone_mem_alloc_cost();
+    long heap_size = (long)milone_heap_size();
+    long alloc_cost = (long)milone_alloc_cost();
 
     long time_delta = t - p->epoch;
     long mem_delta = heap_size - (long)p->heap_size;
@@ -835,7 +835,7 @@ struct String scan_str(int capacity) {
         exit(1);
     }
 
-    char *str = milone_mem_alloc(capacity, sizeof(char));
+    char *str = milone_region_alloc(capacity, sizeof(char));
     if (str == NULL) {
         fprintf(stderr, "scan_str(%d) out of memory", capacity);
         exit(1);

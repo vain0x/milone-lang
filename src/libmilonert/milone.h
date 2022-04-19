@@ -8,15 +8,15 @@
 #include <stddef.h>
 #include <stdint.h>
 
-void milone_start(int, char **);
+void milone_start(int argc, char **argv);
 
 // -----------------------------------------------
 // memory management
 // -----------------------------------------------
 
-void milone_enter_region(void);
-void milone_leave_region(void);
-void *milone_mem_alloc(int count, size_t size);
+void milone_region_enter(void);
+void milone_region_leave(void);
+void *milone_region_alloc(int count, size_t size);
 
 // -----------------------------------------------
 // integers
