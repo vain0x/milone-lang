@@ -82,9 +82,9 @@ void int_operators_int_operators_toIntTest(void) {
     int call_1;
     milone_assert((0 == 0), (struct String){.ptr = "int_operators/int_operators.milone", .len = 34}, 58, 2);
     milone_assert((((int)'a') == 97), (struct String){.ptr = "int_operators/int_operators.milone", .len = 34}, 59, 2);
-    call_ = string_to_int((struct String){.ptr = "42", .len = 2});
+    call_ = string_to_int32((struct String){.ptr = "42", .len = 2});
     milone_assert((call_ == 42), (struct String){.ptr = "int_operators/int_operators.milone", .len = 34}, 60, 2);
-    call_1 = string_to_int((struct String){.ptr = "-1", .len = 2});
+    call_1 = string_to_int32((struct String){.ptr = "-1", .len = 2});
     milone_assert(((call_1 + 1) == 0), (struct String){.ptr = "int_operators/int_operators.milone", .len = 34}, 61, 2);
     return;
 }

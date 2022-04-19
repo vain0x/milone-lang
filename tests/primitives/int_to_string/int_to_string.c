@@ -16,9 +16,9 @@ int main(int argc, char** argv) {
     milone_assert((((char)0) == '\0'), (struct String){.ptr = "int_to_string/int_to_string.milone", .len = 34}, 2, 2);
     milone_assert((0 == 0), (struct String){.ptr = "int_to_string/int_to_string.milone", .len = 34}, 4, 2);
     milone_assert(((((int)'a') - 97) == 0), (struct String){.ptr = "int_to_string/int_to_string.milone", .len = 34}, 5, 2);
-    call_ = string_to_int((struct String){.ptr = "42", .len = 2});
+    call_ = string_to_int32((struct String){.ptr = "42", .len = 2});
     milone_assert(((call_ - 42) == 0), (struct String){.ptr = "int_to_string/int_to_string.milone", .len = 34}, 6, 2);
-    call_1 = string_to_int((struct String){.ptr = "-1", .len = 2});
+    call_1 = string_to_int32((struct String){.ptr = "-1", .len = 2});
     milone_assert(((call_1 + 1) == 0), (struct String){.ptr = "int_to_string/int_to_string.milone", .len = 34}, 7, 2);
     call_2 = string_of_int64(0);
     milone_assert((string_compare(call_2, (struct String){.ptr = "0", .len = 1}) == 0), (struct String){.ptr = "int_to_string/int_to_string.milone", .len = 34}, 9, 2);

@@ -70,21 +70,21 @@ char const *string_to_c_str(struct String s);
 
 int8_t string_to_int8(struct String s);
 int16_t string_to_int16(struct String s);
-int string_to_int(struct String s);
+int string_to_int32(struct String s);
 int64_t string_to_int64(struct String s);
-intptr_t string_to_intptr(struct String s);
+intptr_t string_to_nativeint(struct String s);
 
 uint8_t string_to_uint8(struct String s);
 uint16_t string_to_uint16(struct String s);
 uint32_t string_to_uint32(struct String s);
 uint64_t string_to_uint64(struct String s);
-uintptr_t string_to_uintptr(struct String s);
+uintptr_t string_to_unativeint(struct String s);
 
 struct String string_of_int64(int64_t value);
 struct String string_of_uint64(uint64_t value);
 
-double string_to_double(struct String s);
-struct String string_of_double(double value);
+double string_to_float64(struct String s);
+struct String string_of_float64(double value);
 
 struct String string_of_bool(bool value);
 

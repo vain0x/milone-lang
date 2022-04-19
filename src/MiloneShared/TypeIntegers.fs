@@ -146,14 +146,14 @@ let cStringToIntegerFunName flavor =
   match flavor with
   | I8 -> "string_to_int8"
   | I16 -> "string_to_int16"
-  | I32 -> "string_to_int"
+  | I32 -> "string_to_int32"
   | I64 -> "string_to_int64"
-  | IPtr -> "string_to_intptr"
+  | IPtr -> "string_to_nativeint"
   | U8 -> "string_to_uint8"
   | U16 -> "string_to_uint16"
   | U32 -> "string_to_uint32"
   | U64 -> "string_to_uint64"
-  | UPtr -> "string_to_uintptr"
+  | UPtr -> "string_to_unativeint"
 
 let cStringOfIntegerFunName flavor =
   match intFlavorToSignedness flavor with

@@ -422,7 +422,7 @@ bool string_to_uint64_checked(struct String s, uint64_t *value_ptr) {
            errno != ERANGE;
 }
 
-double string_to_double(struct String s) {
+double string_to_float64(struct String s) {
     s = string_ensure_null_terminated(s);
     char *endptr = (char *)(s.ptr + s.len);
     double value = strtod(s.ptr, &endptr);
@@ -459,7 +459,7 @@ int16_t string_to_int16(struct String s) {
     return (int16_t)value;
 }
 
-int string_to_int(struct String s) {
+int string_to_int32(struct String s) {
     int value;
     bool ok = string_to_int_checked(s, &value);
     verify_str_to_number("int", ok);
@@ -473,7 +473,7 @@ int64_t string_to_int64(struct String s) {
     return value;
 }
 
-intptr_t string_to_intptr(struct String s) { return (intptr_t)string_to_int64(s); }
+intptr_t string_to_nativeint(struct String s) { return (intptr_t)string_to_int64(s); }
 
 uint8_t string_to_uint8(struct String s) {
     uint64_t value;
@@ -503,7 +503,7 @@ uint64_t string_to_uint64(struct String s) {
     return value;
 }
 
-uintptr_t string_to_uintptr(struct String s) {
+uintptr_t string_to_unativeint(struct String s) {
     return (uintptr_t)string_to_uint64(s);
 }
 
@@ -519,7 +519,7 @@ struct String string_of_uint64(uint64_t value) {
     return string_of_raw_parts(buf, n);
 }
 
-struct String string_of_double(double value) {
+struct String string_of_float64(double value) {
     char buf[64] = {0};
     int n = sprintf(buf, "%f", value);
     return string_of_raw_parts(buf, n);

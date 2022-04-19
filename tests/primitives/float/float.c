@@ -189,9 +189,9 @@ int main(int argc, char** argv) {
     milone_assert((3.0 >= 2.0), (struct String){.ptr = "float/float.milone", .len = 18}, 57, 2);
     milone_assert((((int)3.14) == 3), (struct String){.ptr = "float/float.milone", .len = 18}, 60, 2);
     milone_assert((((double)3) == 3.0), (struct String){.ptr = "float/float.milone", .len = 18}, 61, 2);
-    call_5 = string_of_double(3.14);
+    call_5 = string_of_float64(3.14);
     milone_assert((string_compare(call_5, (struct String){.ptr = "3.140000", .len = 8}) == 0), (struct String){.ptr = "float/float.milone", .len = 18}, 65, 2);
-    call_6 = string_to_double((struct String){.ptr = "3.14", .len = 4});
+    call_6 = string_to_float64((struct String){.ptr = "3.14", .len = 4});
     milone_assert((call_6 == 3.14), (struct String){.ptr = "float/float.milone", .len = 18}, 68, 2);
     printf("Assume PI is %f.\n", 3.14);
     return 0;
