@@ -22,9 +22,9 @@ void *milone_region_alloc(int count, size_t size);
 // integers
 // -----------------------------------------------
 
-int int_compare(int l, int r);
-int int64_compare(int64_t l, int64_t r);
-int uint64_compare(uint64_t l, uint64_t r);
+int milone_int32_compare(int l, int r);
+int milone_int64_compare(int64_t l, int64_t r);
+int milone_uint64_compare(uint64_t l, uint64_t r);
 
 // -----------------------------------------------
 // String

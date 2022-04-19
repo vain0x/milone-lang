@@ -51,7 +51,7 @@ void* native_fun_ptr_native_fun_ptr_memAlloc(int len_, int size_) {
 }
 
 int native_fun_ptr_native_fun_ptr_sortIntArray_intCompare(void const* l_, void const* r_) {
-    return int_compare((*(((int const*)l_))), (*(((int const*)r_))));
+    return milone_int32_compare((*(((int const*)l_))), (*(((int const*)r_))));
 }
 
 void native_fun_ptr_native_fun_ptr_sortIntArray(int* array_, int len_1) {

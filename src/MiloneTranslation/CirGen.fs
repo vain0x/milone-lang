@@ -708,7 +708,7 @@ let private cBinaryOf op =
   | MLessBinary -> CLessBinary
   | MGreaterEqualBinary -> CGreaterEqualBinary
 
-  | MIntCompareBinary
+  | MInt32CompareBinary
   | MInt64CompareBinary
   | MUInt64CompareBinary
   | MStringAddBinary
@@ -830,9 +830,9 @@ let private genUnaryExpr ctx op arg =
 
 let private genExprBin ctx op l r =
   match op with
-  | MIntCompareBinary -> genBinaryExprAsCall ctx "int_compare" l r
-  | MInt64CompareBinary -> genBinaryExprAsCall ctx "int64_compare" l r
-  | MUInt64CompareBinary -> genBinaryExprAsCall ctx "uint64_compare" l r
+  | MInt32CompareBinary -> genBinaryExprAsCall ctx "milone_int32_compare" l r
+  | MInt64CompareBinary -> genBinaryExprAsCall ctx "milone_int64_compare" l r
+  | MUInt64CompareBinary -> genBinaryExprAsCall ctx "milone_uint64_compare" l r
 
   | MStringAddBinary -> genBinaryExprAsCall ctx "string_add" l r
   | MStringCompareBinary -> genBinaryExprAsCall ctx "string_compare" l r

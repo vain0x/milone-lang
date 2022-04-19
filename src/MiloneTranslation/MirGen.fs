@@ -1145,7 +1145,7 @@ let private mirifyCallCompareExpr ctx itself l r loc =
         | CharTk),
         _) -> MBinaryExpr(MSubBinary, l, r, loc), ctx
 
-  | Ty (IntTk I32, _) -> MBinaryExpr(MIntCompareBinary, l, r, loc), ctx
+  | Ty (IntTk I32, _) -> MBinaryExpr(MInt32CompareBinary, l, r, loc), ctx
 
   | Ty ((IntTk I64
         | IntTk IPtr

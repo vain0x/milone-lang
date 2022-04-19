@@ -211,7 +211,7 @@ void *milone_region_alloc(int count, size_t size) {
 // int
 // -----------------------------------------------
 
-int int_compare(int l, int r) {
+int milone_int32_compare(int l, int r) {
     if (l == r)
         return 0;
     if (l < r)
@@ -219,7 +219,7 @@ int int_compare(int l, int r) {
     return 1;
 }
 
-int int64_compare(int64_t l, int64_t r) {
+int milone_int64_compare(int64_t l, int64_t r) {
     if (l == r)
         return 0;
     if (l < r)
@@ -227,7 +227,7 @@ int int64_compare(int64_t l, int64_t r) {
     return 1;
 }
 
-int uint64_compare(uint64_t l, uint64_t r) {
+int milone_uint64_compare(uint64_t l, uint64_t r) {
     if (l == r)
         return 0;
     if (l < r)
@@ -314,7 +314,7 @@ int string_compare(struct String left, struct String right) {
     }
 
     // One is prefix of the other here, and therefore, longer is greater.
-    return int_compare(left.len, right.len);
+    return milone_int32_compare(left.len, right.len);
 }
 
 _Noreturn static void error_str_of_raw_parts(int len) {

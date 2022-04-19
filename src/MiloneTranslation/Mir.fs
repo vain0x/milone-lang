@@ -105,7 +105,7 @@ type MBinary =
   | MNotEqualBinary
   | MLessBinary
   | MGreaterEqualBinary
-  | MIntCompareBinary
+  | MInt32CompareBinary
   | MInt64CompareBinary
   | MUInt64CompareBinary
   | MStringAddBinary

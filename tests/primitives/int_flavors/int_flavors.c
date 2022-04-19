@@ -31,8 +31,8 @@ void int_flavors_int_flavors_signedCases(void) {
     milone_assert((((int8_t)2 - (int8_t)2) == 0), (struct String){.ptr = "int_flavors/int_flavors.milone", .len = 30}, 39, 2);
     milone_assert((((int8_t)2 - (int8_t)3) < 0), (struct String){.ptr = "int_flavors/int_flavors.milone", .len = 30}, 40, 2);
     milone_assert((0 < ((int8_t)2 - (int8_t)-1)), (struct String){.ptr = "int_flavors/int_flavors.milone", .len = 30}, 41, 2);
-    milone_assert((int64_compare((1231231231LL * 2LL), (1231231231LL * 3LL)) < 0), (struct String){.ptr = "int_flavors/int_flavors.milone", .len = 30}, 43, 2);
-    milone_assert((0 < int64_compare((1231231231LL * 3LL), (1231231231LL * 2LL))), (struct String){.ptr = "int_flavors/int_flavors.milone", .len = 30}, 44, 2);
+    milone_assert((milone_int64_compare((1231231231LL * 2LL), (1231231231LL * 3LL)) < 0), (struct String){.ptr = "int_flavors/int_flavors.milone", .len = 30}, 43, 2);
+    milone_assert((0 < milone_int64_compare((1231231231LL * 3LL), (1231231231LL * 2LL))), (struct String){.ptr = "int_flavors/int_flavors.milone", .len = 30}, 44, 2);
     call_ = string_of_int64((int8_t)-1);
     milone_assert((string_compare(call_, (struct String){.ptr = "-1", .len = 2}) == 0), (struct String){.ptr = "int_flavors/int_flavors.milone", .len = 30}, 47, 2);
     call_1 = string_of_int64((1231231231LL * 3LL));
@@ -59,9 +59,9 @@ void int_flavors_int_flavors_unsignedCases(void) {
     milone_assert((((uint32_t)13) == (uint32_t)13U), (struct String){.ptr = "int_flavors/int_flavors.milone", .len = 30}, 75, 2);
     milone_assert((17ULL == 17ULL), (struct String){.ptr = "int_flavors/int_flavors.milone", .len = 30}, 76, 2);
     milone_assert(((size_t)19ULL < (size_t)23ULL), (struct String){.ptr = "int_flavors/int_flavors.milone", .len = 30}, 77, 2);
-    milone_assert((uint64_compare(2ULL, 2ULL) == 0), (struct String){.ptr = "int_flavors/int_flavors.milone", .len = 30}, 79, 2);
-    milone_assert((uint64_compare((1231231231ULL * 2ULL), (1231231231ULL * 3ULL)) < 0), (struct String){.ptr = "int_flavors/int_flavors.milone", .len = 30}, 80, 2);
-    milone_assert((0 < uint64_compare((1231231231ULL * 3ULL), (1231231231ULL * 2ULL))), (struct String){.ptr = "int_flavors/int_flavors.milone", .len = 30}, 81, 2);
+    milone_assert((milone_uint64_compare(2ULL, 2ULL) == 0), (struct String){.ptr = "int_flavors/int_flavors.milone", .len = 30}, 79, 2);
+    milone_assert((milone_uint64_compare((1231231231ULL * 2ULL), (1231231231ULL * 3ULL)) < 0), (struct String){.ptr = "int_flavors/int_flavors.milone", .len = 30}, 80, 2);
+    milone_assert((0 < milone_uint64_compare((1231231231ULL * 3ULL), (1231231231ULL * 2ULL))), (struct String){.ptr = "int_flavors/int_flavors.milone", .len = 30}, 81, 2);
     call_3 = string_of_uint64((uint8_t)0U);
     milone_assert((string_compare(call_3, (struct String){.ptr = "0", .len = 1}) == 0), (struct String){.ptr = "int_flavors/int_flavors.milone", .len = 30}, 84, 2);
     call_4 = string_of_uint64((1231231231ULL * 3ULL));

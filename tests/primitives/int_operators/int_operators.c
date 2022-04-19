@@ -71,9 +71,9 @@ void int_operators_int_operators_compareTest(int n2_1, int n3_) {
     milone_assert((n3_ >= n2_1), (struct String){.ptr = "int_operators/int_operators.milone", .len = 34}, 48, 2);
     milone_assert((n2_1 < n3_), (struct String){.ptr = "int_operators/int_operators.milone", .len = 34}, 49, 2);
     milone_assert((n2_1 < n3_), (struct String){.ptr = "int_operators/int_operators.milone", .len = 34}, 51, 2);
-    milone_assert((int_compare(n2_1, 3) < 0), (struct String){.ptr = "int_operators/int_operators.milone", .len = 34}, 53, 2);
-    milone_assert((int_compare(n2_1, 2) == 0), (struct String){.ptr = "int_operators/int_operators.milone", .len = 34}, 54, 2);
-    milone_assert((0 < int_compare(n3_, 2)), (struct String){.ptr = "int_operators/int_operators.milone", .len = 34}, 55, 2);
+    milone_assert((milone_int32_compare(n2_1, 3) < 0), (struct String){.ptr = "int_operators/int_operators.milone", .len = 34}, 53, 2);
+    milone_assert((milone_int32_compare(n2_1, 2) == 0), (struct String){.ptr = "int_operators/int_operators.milone", .len = 34}, 54, 2);
+    milone_assert((0 < milone_int32_compare(n3_, 2)), (struct String){.ptr = "int_operators/int_operators.milone", .len = 34}, 55, 2);
     return;
 }
 
