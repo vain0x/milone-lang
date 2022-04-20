@@ -583,11 +583,9 @@ struct String string_concat(struct String sep, struct StringCons const *strings)
 // assertion
 // -----------------------------------------------
 
-void milone_assert(bool cond, struct String name, int32_t y, int32_t x) {
-    if (!cond) {
-        fprintf(stderr, "Assertion failed at %s:%d:%d\n", string_to_c_str(name), y + 1, x + 1);
-        exit(1);
-    }
+_Noreturn void milone_assert_error(char const *filename, int32_t row, int32_t column) {
+    fprintf(stderr, "Assertion failed at %s:%d:%d\n", filename, row + 1, column + 1);
+    exit(1);
 }
 
 // -----------------------------------------------

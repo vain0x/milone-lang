@@ -104,6 +104,8 @@ inline char const *string_as_ptr(struct String s) { return s.ptr; }
 // assertion
 // -----------------------------------------------
 
-void milone_assert(bool cond, struct String name, int32_t row, int32_t column);
+// Invoke an assertion violation error.
+// Print location and abort the execution.
+_Noreturn void milone_assert_error(char const *filename, int32_t row, int32_t column);
 
 #endif

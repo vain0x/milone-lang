@@ -1256,22 +1256,8 @@ let private mirifyCallStringExpr ctx itself arg ty loc =
 let private mirifyCallAssertExpr ctx arg loc =
   let arg, ctx = mirifyExpr ctx arg
 
-  // Embed the source location information.
-  let args =
-    let (Loc (docId, y, x)) = loc
-
-    // #abusingDocId
-    let name =
-      (Symbol.toString docId |> S.replace "." "/")
-      + ".milone"
-
-    [ arg
-      MLitExpr(StringLit name, loc)
-      MLitExpr(IntLit(string y), loc)
-      MLitExpr(IntLit(string x), loc) ]
-
   let ctx =
-    addStmt ctx (MActionStmt(MAssertAction, args, loc))
+    addStmt ctx (MActionStmt(MAssertNotAction, [ mxNot arg loc ], loc))
 
   MUnitExpr loc, ctx
 

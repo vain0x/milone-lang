@@ -129,6 +129,8 @@ type CStmt =
   | CGotoStmt of CLabel
   | CGotoIfStmt of CExpr * CLabel
   | CIfStmt of CExpr * CStmt * CStmt
+  /// `if (cond) stmt;`
+  | CIfStmt1 of CExpr * CStmt
 
   /// clause: (caseLiterals, isDefault, body).
   | CSwitchStmt of cond: CExpr * clauses: (CExpr list * bool * CStmt) list

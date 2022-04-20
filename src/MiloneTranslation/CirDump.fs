@@ -424,6 +424,14 @@ let private cpStmt indent stmt acc : string list =
     |> cons "}"
     |> cons eol
 
+  | CIfStmt1 (cond, thenCl) ->
+    acc
+    |> cons indent
+    |> cons "if ("
+    |> cpExpr cond
+    |> cons ") "
+    |> cpStmt "" thenCl // indent isn't used.
+
   | CSwitchStmt (cond, clauses) ->
     let cpCaseLabels cases acc =
       cases

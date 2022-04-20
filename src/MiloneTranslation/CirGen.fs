@@ -897,11 +897,28 @@ let private addNativeFunDecl ctx funName argTys resultTy =
 
   addDecl ctx (CFunForwardDecl(funName, argTys, resultTy))
 
-let private cgActionStmt ctx itself action args =
+let private cgActionStmt ctx itself action args loc =
   match action with
-  | MAssertAction ->
-    let args, ctx = cgExprList ctx args
-    addStmt ctx (CExprStmt(CCallExpr(CVarExpr "milone_assert", args)))
+  | MAssertNotAction ->
+    let cond, ctx =
+      match args with
+      | [ arg ] -> cgExpr ctx arg
+      | _ -> unreachable ()
+
+    // Embed the source location information.
+    let args =
+      let (Loc (docId, y, x)) = loc
+
+      // #abusingDocId
+      let name =
+        (Symbol.toString docId |> S.replace "." "/")
+        + ".milone"
+
+      [ CStrRawExpr name
+        CIntExpr(string y, I32)
+        CIntExpr(string x, I32) ]
+
+    addStmt ctx (CIfStmt1(cond, CExprStmt(CCallExpr(CVarExpr "milone_assert_error", args))))
 
   | MPrintfnAction argTys -> cgPrintfnActionStmt ctx itself args argTys
 
@@ -1242,7 +1259,7 @@ let private cgTerminatorStmt ctx stmt : CStmt * CirCtx =
 
 let private cgStmt ctx stmt =
   match stmt with
-  | MActionStmt (action, args, _) -> cgActionStmt ctx stmt action args
+  | MActionStmt (action, args, loc) -> cgActionStmt ctx stmt action args loc
   | MPrimStmt (prim, args, temp, resultTy, _) -> cgPrimStmt ctx stmt prim args temp resultTy
   | MLetValStmt (serial, init, _, _) -> cgLetValStmt ctx serial init
   | MSetStmt (serial, right, _) -> cgSetStmt ctx serial right

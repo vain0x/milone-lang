@@ -118,7 +118,7 @@ type MBinary =
 
 [<NoEquality; NoComparison>]
 type MAction =
-  | MAssertAction
+  | MAssertNotAction
   | MPrintfnAction of argTys: Ty list
   | MEnterRegionAction
   | MLeaveRegionAction
