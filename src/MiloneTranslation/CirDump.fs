@@ -280,12 +280,12 @@ let private cpExpr expr acc : string list =
     |> cons (cpCharLit value)
     |> cons "'"
 
-  | CStrObjExpr value -> acc |> cpStrObjLit value
-  | CStrRawExpr value -> acc |> cpStrRawLit value
+  | CStringInitExpr value -> acc |> cpStrObjLit value
+  | CStringLitExpr value -> acc |> cpStrRawLit value
 
   | CInitExpr (fields, ty) -> acc |> cpStructLit fields ty
 
-  | CDotExpr (CStrObjExpr value, "len") -> acc |> cons (string (SB.utf8Length value))
+  | CDotExpr (CStringInitExpr value, "len") -> acc |> cons (string (SB.utf8Length value))
 
   | CVarExpr name -> acc |> cons name
 

@@ -83,10 +83,10 @@ type CExpr =
   | CCharExpr of char
 
   /// E.g. `"hi"`
-  | CStrRawExpr of string
+  | CStringLitExpr of string
 
   /// E.g. `(struct String){.ptr = "hi", .len = 2}`
-  | CStrObjExpr of string
+  | CStringInitExpr of string
 
   /// Variable.
   | CVarExpr of Ident

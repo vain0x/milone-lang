@@ -727,7 +727,7 @@ let private genLit lit =
   | BoolLit false -> CVarExpr "false"
   | BoolLit true -> CVarExpr "true"
   | CharLit value -> CCharExpr value
-  | StringLit value -> CStrObjExpr value
+  | StringLit value -> CStringInitExpr value
 
 let private genDiscriminant ctx variantSerial =
   CVarExpr(getUniqueVariantName ctx variantSerial)
@@ -914,7 +914,7 @@ let private cgActionStmt ctx itself action args loc =
         (Symbol.toString docId |> S.replace "." "/")
         + ".milone"
 
-      [ CStrRawExpr name
+      [ CStringLitExpr name
         CIntExpr(string y, I32)
         CIntExpr(string x, I32) ]
 
@@ -976,13 +976,13 @@ let private cgPrintfnActionStmt ctx itself args argTys =
 
   match args with
   | (MLitExpr (StringLit format, _), _) :: args ->
-    let format = CStrRawExpr(format + "\n")
+    let format = CStringLitExpr(format + "\n")
 
     let args, ctx =
       (args, ctx)
       |> stMap (fun ((arg, argTy), ctx) ->
         match arg with
-        | MLitExpr (StringLit value, _) -> CStrRawExpr value, ctx
+        | MLitExpr (StringLit value, _) -> CStringLitExpr value, ctx
 
         | _ when tyEqual argTy tyString ->
           // Insert implicit cast from string to ptr.
