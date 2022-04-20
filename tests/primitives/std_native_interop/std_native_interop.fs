@@ -2,6 +2,8 @@ module rec std_native_interop.Program
 
 open Std.NativeInterop
 
+module Ptr = Std.Ptr
+
 module private NativePtrTests =
   let private testOfNativeInt () =
     let addr: nativeint = __nativeCast (box "hello")
@@ -63,9 +65,7 @@ module private NativePtrTests =
 
   let private testCopyBlockZero () =
     // Copying from/to null is okay when length is 0.
-    let p: nativeptr<int> = NativePtr.__getNullPtr ()
-    assert (__nativeCast p = 0n)
-
+    let p: nativeptr<int> = Ptr.nullPtr
     NativePtr.copyBlock p p 0
 
   let test () =
