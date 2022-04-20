@@ -4,14 +4,14 @@
 
 struct Int32Int32Tuple2_;
 
-int main(int argc, char** argv);
+int main(int argc, char **argv);
 
 struct Int32Int32Tuple2_ {
     int32_t t0;
     int32_t t1;
 };
 
-int main(int argc, char** argv) {
+int main(int argc, char **argv) {
     milone_start(argc, argv);
     int32_t y_;
     int32_t match_;
@@ -24,7 +24,7 @@ int main(int argc, char** argv) {
 next_2:;
     if ((Int32Int32Tuple2_.t0 != 999)) goto next_3;
     y_ = Int32Int32Tuple2_.t1;
-    milone_assert((y_ != 9), (struct String){.ptr = "match_nonexhaustive/match_nonexhaustive.milone", .len = 46}, 9, 4);
+    if ((y_ == 9)) milone_assert_error("match_nonexhaustive/match_nonexhaustive.milone", 9, 4);
     match_ = 1;
     goto end_match_1;
 next_3:;

@@ -8,7 +8,7 @@ struct Person_;
 
 struct Person_ record_with_nested_record_with_nested_newPerson(void);
 
-int main(int argc, char** argv);
+int main(int argc, char **argv);
 
 struct Date_ {
     int32_t t0;
@@ -30,7 +30,7 @@ struct Person_ record_with_nested_record_with_nested_newPerson(void) {
     return Person_;
 }
 
-int main(int argc, char** argv) {
+int main(int argc, char **argv) {
     milone_start(argc, argv);
     struct Person_ john_;
     struct String name_;
@@ -42,6 +42,6 @@ int main(int argc, char** argv) {
     Person_1 = (struct Person_){.t0 = (struct String){.ptr = "John Doe", .len = 8}, .t1 = base_.t1, .t2 = base_.t2};
     john_ = Person_1;
     name_ = john_.t0;
-    milone_assert((((int32_t)name_.len) == 8), (struct String){.ptr = "record_with_nested/record_with_nested.milone", .len = 44}, 20, 2);
+    if ((((int32_t)name_.len) != 8)) milone_assert_error("record_with_nested/record_with_nested.milone", 20, 2);
     return 0;
 }

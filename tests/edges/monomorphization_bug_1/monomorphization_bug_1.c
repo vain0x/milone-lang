@@ -8,7 +8,7 @@ struct StringStringTuple2_ monomorphization_bug_1_monomorphization_bug_1_StringS
 
 struct StringStringTuple2_ monomorphization_bug_1_monomorphization_bug_1_bug(struct String b_);
 
-int main(int argc, char** argv);
+int main(int argc, char **argv);
 
 struct StringStringTuple2_ {
     struct String t0;
@@ -27,7 +27,7 @@ struct StringStringTuple2_ monomorphization_bug_1_monomorphization_bug_1_bug(str
     return call_;
 }
 
-int main(int argc, char** argv) {
+int main(int argc, char **argv) {
     milone_start(argc, argv);
     struct String x1_;
     struct String x2_;

@@ -4,9 +4,9 @@
 
 struct Val_;
 
-int32_t modules_sub_Int32Int32Fun1_f(int32_t );
+int32_t modules_sub_Int32Int32Fun1_f(int32_t);
 
-int main(int argc, char** argv);
+int main(int argc, char **argv);
 
 enum Val_Discriminant {
     Int_,
@@ -21,7 +21,7 @@ struct Val_ {
     };
 };
 
-int main(int argc, char** argv) {
+int main(int argc, char **argv) {
     milone_start(argc, argv);
     int32_t x_;
     int32_t n_;

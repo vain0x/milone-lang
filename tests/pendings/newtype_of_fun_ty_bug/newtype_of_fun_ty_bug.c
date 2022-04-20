@@ -2,29 +2,29 @@
 #include <stdlib.h>
 #include <milone.h>
 
-typedef int32_t(*VoidConstPtrInt32FunPtr1)(void const*);
+typedef int32_t(*VoidConstPtrInt32FunPtr1)(void const *);
 
 struct UnitInt32Fun1;
 
 struct F_;
 
-typedef struct F_(*VoidConstPtrF_FunPtr1)(void const*);
+typedef struct F_(*VoidConstPtrF_FunPtr1)(void const *);
 
 struct UnitF_Fun1;
 
 int32_t newtype_of_fun_ty_bug_newtype_of_fun_ty_bug_main_fun_fun(void);
 
-int32_t newtype_of_fun_ty_bug_newtype_of_fun_ty_bug_eta2_main_fun_fun(void const* env_);
+int32_t newtype_of_fun_ty_bug_newtype_of_fun_ty_bug_eta2_main_fun_fun(void const *env_);
 
 struct F_ newtype_of_fun_ty_bug_newtype_of_fun_ty_bug_main_fun(void);
 
-struct F_ newtype_of_fun_ty_bug_newtype_of_fun_ty_bug_eta2_main_fun(void const* env_1);
+struct F_ newtype_of_fun_ty_bug_newtype_of_fun_ty_bug_eta2_main_fun(void const *env_1);
 
-int main(int argc, char** argv);
+int main(int argc, char **argv);
 
 struct UnitInt32Fun1 {
     VoidConstPtrInt32FunPtr1 fun;
-    void const* env;
+    void const *env;
 };
 
 enum F_Discriminant {
@@ -40,14 +40,14 @@ struct F_ {
 
 struct UnitF_Fun1 {
     VoidConstPtrF_FunPtr1 fun;
-    void const* env;
+    void const *env;
 };
 
 int32_t newtype_of_fun_ty_bug_newtype_of_fun_ty_bug_main_fun_fun(void) {
     return 42;
 }
 
-int32_t newtype_of_fun_ty_bug_newtype_of_fun_ty_bug_eta2_main_fun_fun(void const* env_) {
+int32_t newtype_of_fun_ty_bug_newtype_of_fun_ty_bug_eta2_main_fun_fun(void const *env_) {
     int32_t call_;
     call_ = newtype_of_fun_ty_bug_newtype_of_fun_ty_bug_main_fun_fun();
     return call_;
@@ -61,13 +61,13 @@ struct F_ newtype_of_fun_ty_bug_newtype_of_fun_ty_bug_main_fun(void) {
     return variant_;
 }
 
-struct F_ newtype_of_fun_ty_bug_newtype_of_fun_ty_bug_eta2_main_fun(void const* env_1) {
+struct F_ newtype_of_fun_ty_bug_newtype_of_fun_ty_bug_eta2_main_fun(void const *env_1) {
     struct F_ call_1;
     call_1 = newtype_of_fun_ty_bug_newtype_of_fun_ty_bug_main_fun();
     return call_1;
 }
 
-int main(int argc, char** argv) {
+int main(int argc, char **argv) {
     milone_start(argc, argv);
     struct UnitF_Fun1 getF_;
     struct UnitInt32Fun1 f_;
@@ -79,6 +79,6 @@ int main(int argc, char** argv) {
     app_ = getF_.fun(getF_.env);
     f_ = app_.F_;
     app_1 = f_.fun(f_.env);
-    milone_assert((app_1 == 42), (struct String){.ptr = "newtype_of_fun_ty_bug/newtype_of_fun_ty_bug.milone", .len = 50}, 10, 2);
+    if ((app_1 != 42)) milone_assert_error("newtype_of_fun_ty_bug/newtype_of_fun_ty_bug.milone", 10, 2);
     return 0;
 }

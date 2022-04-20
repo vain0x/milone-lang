@@ -8,7 +8,7 @@ struct Int32Int32Tuple2MyOption1_;
 
 struct Int32Int32Tuple2MyOption1_ union_generic_newtype_issue_union_generic_newtype_issue_f(void);
 
-int main(int argc, char** argv);
+int main(int argc, char **argv);
 
 struct Int32Int32Tuple2_ {
     int32_t t0;
@@ -35,7 +35,7 @@ struct Int32Int32Tuple2MyOption1_ union_generic_newtype_issue_union_generic_newt
     return variant_;
 }
 
-int main(int argc, char** argv) {
+int main(int argc, char **argv) {
     milone_start(argc, argv);
     char switch_;
     struct Int32Int32Tuple2MyOption1_ call_;
@@ -54,7 +54,7 @@ clause_2:;
     switch_ = 0;
     goto switch_next_1;
 clause_3:;
-    milone_assert(false, (struct String){.ptr = "union_generic_newtype_issue/union_generic_newtype_issue.milone", .len = 62}, 16, 16);
+    if (true) milone_assert_error("union_generic_newtype_issue/union_generic_newtype_issue.milone", 16, 16);
     switch_ = 0;
     goto switch_next_1;
 switch_next_1:;

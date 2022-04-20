@@ -6,7 +6,7 @@ struct Int32Int32Tuple2_;
 
 int32_t tuple_arg_tuple_arg_main_sub(struct Int32Int32Tuple2_ arg_);
 
-int main(int argc, char** argv);
+int main(int argc, char **argv);
 
 struct Int32Int32Tuple2_ {
     int32_t t0;
@@ -21,7 +21,7 @@ int32_t tuple_arg_tuple_arg_main_sub(struct Int32Int32Tuple2_ arg_) {
     return (x_ - y_);
 }
 
-int main(int argc, char** argv) {
+int main(int argc, char **argv) {
     milone_start(argc, argv);
     struct Int32Int32Tuple2_ Int32Int32Tuple2_;
     int32_t call_;

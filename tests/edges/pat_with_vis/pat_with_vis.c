@@ -4,7 +4,7 @@
 
 struct Int32Int32Tuple2_;
 
-int main(int argc, char** argv);
+int main(int argc, char **argv);
 
 void pat_with_vis_pat_with_vis_start(void);
 
@@ -17,11 +17,11 @@ int32_t pat_with_vis_pat_with_vis_x;
 
 int32_t y_;
 
-int main(int argc, char** argv) {
+int main(int argc, char **argv) {
     milone_start(argc, argv);
     pat_with_vis_pat_with_vis_start();
-    milone_assert((pat_with_vis_pat_with_vis_x == 2), (struct String){.ptr = "pat_with_vis/pat_with_vis.milone", .len = 32}, 7, 2);
-    milone_assert((y_ == 3), (struct String){.ptr = "pat_with_vis/pat_with_vis.milone", .len = 32}, 8, 2);
+    if ((pat_with_vis_pat_with_vis_x != 2)) milone_assert_error("pat_with_vis/pat_with_vis.milone", 7, 2);
+    if ((y_ != 3)) milone_assert_error("pat_with_vis/pat_with_vis.milone", 8, 2);
     return 0;
 }
 

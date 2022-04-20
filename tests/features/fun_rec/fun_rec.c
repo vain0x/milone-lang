@@ -4,7 +4,7 @@
 
 void fun_rec_fun_rec_main_go(int32_t len_, struct String source_, int32_t i_);
 
-int main(int argc, char** argv);
+int main(int argc, char **argv);
 
 void fun_rec_fun_rec_main_go(int32_t len_, struct String source_, int32_t i_) {
     char if_;
@@ -46,7 +46,7 @@ if_next_2:;
     return;
 }
 
-int main(int argc, char** argv) {
+int main(int argc, char **argv) {
     milone_start(argc, argv);
     struct String source_;
     int32_t len_;

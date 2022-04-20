@@ -2,15 +2,15 @@
 #include <stdlib.h>
 #include <milone.h>
 
-typedef int32_t(*VoidConstPtrInt32Int32FunPtr2)(void const*, int32_t);
+typedef int32_t(*VoidConstPtrInt32Int32FunPtr2)(void const *, int32_t);
 
 struct Int32Int32Fun1;
 
 struct Int32Int32Tuple2_;
 
-struct Int32List;
+struct Int32Cons;
 
-struct Int32List;
+struct Int32Cons;
 
 struct Int32Int32Tuple2option1_;
 
@@ -34,9 +34,9 @@ void linear_linear_multipleMatches(void);
 
 void linear_linear_nestedMatches(void);
 
-struct Int32List const* linear_linear_loopCase_acquireMany_go(int32_t n_6, struct Int32List const* acc_, int32_t i_);
+struct Int32Cons const *linear_linear_loopCase_acquireMany_go(int32_t n_6, struct Int32Cons const *acc_, int32_t i_);
 
-struct Int32List const* linear_linear_loopCase_acquireMany(int32_t n_6);
+struct Int32Cons const *linear_linear_loopCase_acquireMany(int32_t n_6);
 
 void linear_linear_genericWrapperCase(void);
 
@@ -44,7 +44,7 @@ void linear_linear_genericLinearCase(void);
 
 int32_t linear_linear_genericLinearFunCase_fun(int32_t x_1);
 
-int32_t linear_linear_eta2_genericLinearFunCase_fun(void const* env_, int32_t arg_);
+int32_t linear_linear_eta2_genericLinearFunCase_fun(void const *env_, int32_t arg_);
 
 void linear_linear_genericLinearFunCase(void);
 
@@ -54,11 +54,11 @@ void linear_linear_nestedLinearCase(void);
 
 void linear_linear_linearWrapperCase(void);
 
-int main(int argc, char** argv);
+int main(int argc, char **argv);
 
 struct Int32Int32Fun1 {
     VoidConstPtrInt32Int32FunPtr2 fun;
-    void const* env;
+    void const *env;
 };
 
 struct Int32Int32Tuple2_ {
@@ -66,9 +66,9 @@ struct Int32Int32Tuple2_ {
     int32_t t1;
 };
 
-struct Int32List {
+struct Int32Cons {
     int32_t head;
-    struct Int32List const* tail;
+    struct Int32Cons const *tail;
 };
 
 enum Int32Int32Tuple2option1_Discriminant {
@@ -134,7 +134,7 @@ void linear_linear_acquireAndUse(void) {
     call_2 = linear_linear_increment(counter_3);
     n_3 = call_2.t0;
     counter_4 = call_2.t1;
-    milone_assert((n_3 == 1), (struct String){.ptr = "linear/linear.milone", .len = 20}, 24, 2);
+    if ((n_3 != 1)) milone_assert_error("linear/linear.milone", 24, 2);
     call_3 = linear_linear_increment(counter_4);
     n_4 = call_3.t0;
     counter_5 = call_3.t1;
@@ -253,9 +253,9 @@ switch_next_8:;
     return;
 }
 
-struct Int32List const* linear_linear_loopCase_acquireMany_go(int32_t n_6, struct Int32List const* acc_, int32_t i_) {
-    struct Int32List const* if_;
-    struct Int32List const* list_;
+struct Int32Cons const *linear_linear_loopCase_acquireMany_go(int32_t n_6, struct Int32Cons const *acc_, int32_t i_) {
+    struct Int32Cons const *if_;
+    struct Int32Cons const *list_;
     int32_t call_12;
     if ((i_ < n_6)) {
         goto then_13;
@@ -264,8 +264,8 @@ struct Int32List const* linear_linear_loopCase_acquireMany_go(int32_t n_6, struc
     }
 then_13:;
     call_12 = linear_linear_create(i_);
-    list_ = ((struct Int32List const*)milone_region_alloc(1, sizeof(struct Int32List)));
-    (*(((struct Int32List*)list_))) = (struct Int32List){.head = call_12, .tail = acc_};
+    list_ = ((struct Int32Cons const *)milone_region_alloc(1, sizeof(struct Int32Cons)));
+    (*(((struct Int32Cons *)list_))) = (struct Int32Cons){.head = call_12, .tail = acc_};
     if_ = list_;
     goto if_next_12;
 else_14:;
@@ -275,8 +275,8 @@ if_next_12:;
     return if_;
 }
 
-struct Int32List const* linear_linear_loopCase_acquireMany(int32_t n_6) {
-    struct Int32List const* call_13;
+struct Int32Cons const *linear_linear_loopCase_acquireMany(int32_t n_6) {
+    struct Int32Cons const *call_13;
     call_13 = linear_linear_loopCase_acquireMany_go(n_6, NULL, 0);
     return call_13;
 }
@@ -286,7 +286,7 @@ void linear_linear_genericWrapperCase(void) {
     struct String value_;
     w_ = (struct String){.ptr = "contents", .len = 8};
     value_ = w_;
-    milone_assert((string_compare(value_, (struct String){.ptr = "contents", .len = 8}) == 0), (struct String){.ptr = "linear/linear.milone", .len = 20}, 91, 2);
+    if ((string_compare(value_, (struct String){.ptr = "contents", .len = 8}) != 0)) milone_assert_error("linear/linear.milone", 91, 2);
     return;
 }
 
@@ -314,7 +314,7 @@ else_17:;
     if_1 = false;
     goto if_next_15;
 if_next_15:;
-    milone_assert(if_1, (struct String){.ptr = "linear/linear.milone", .len = 20}, 100, 2);
+    if ((!(if_1))) milone_assert_error("linear/linear.milone", 100, 2);
     return;
 }
 
@@ -322,7 +322,7 @@ int32_t linear_linear_genericLinearFunCase_fun(int32_t x_1) {
     return (x_1 + 1);
 }
 
-int32_t linear_linear_eta2_genericLinearFunCase_fun(void const* env_, int32_t arg_) {
+int32_t linear_linear_eta2_genericLinearFunCase_fun(void const *env_, int32_t arg_) {
     int32_t call_14;
     call_14 = linear_linear_genericLinearFunCase_fun(arg_);
     return call_14;
@@ -339,7 +339,7 @@ void linear_linear_genericLinearFunCase(void) {
     l_3 = call_15;
     l_4 = l_3;
     n_7 = l_4;
-    milone_assert((n_7 == 3), (struct String){.ptr = "linear/linear.milone", .len = 20}, 113, 2);
+    if ((n_7 != 3)) milone_assert_error("linear/linear.milone", 113, 2);
     return;
 }
 
@@ -371,7 +371,7 @@ else_23:;
     if_2 = false;
     goto if_next_21;
 if_next_21:;
-    milone_assert(if_2, (struct String){.ptr = "linear/linear.milone", .len = 20}, 121, 4);
+    if ((!(if_2))) milone_assert_error("linear/linear.milone", 121, 4);
     match_ = 0;
     goto end_match_18;
 next_19:;
@@ -403,7 +403,7 @@ void linear_linear_linearWrapperCase(void) {
     return;
 }
 
-int main(int argc, char** argv) {
+int main(int argc, char **argv) {
     milone_start(argc, argv);
     linear_linear_acquireAndThenDispose();
     linear_linear_acquireAndUse();

@@ -10,7 +10,7 @@ struct StringStringTuple2_;
 
 struct StringStringTuple2StringTuple2_;
 
-int main(int argc, char** argv);
+int main(int argc, char **argv);
 
 struct Int32StringTuple2_ {
     int32_t t0;
@@ -32,7 +32,7 @@ struct StringStringTuple2StringTuple2_ {
     struct String t1;
 };
 
-int main(int argc, char** argv) {
+int main(int argc, char **argv) {
     milone_start(argc, argv);
     struct Int32StringTuple2_ a_;
     int32_t x_;

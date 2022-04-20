@@ -8,7 +8,7 @@ struct Int32Int32Tuple2_;
 
 struct Int32Int32Int32Int32Tuple2Tuple3_;
 
-int main(int argc, char** argv);
+int main(int argc, char **argv);
 
 struct Int32Int32Int32Int32Int32Int32Int32Int32Int32Int32Int32Tuple11_ {
     int32_t t0;
@@ -35,7 +35,7 @@ struct Int32Int32Int32Int32Tuple2Tuple3_ {
     struct Int32Int32Tuple2_ t2;
 };
 
-int main(int argc, char** argv) {
+int main(int argc, char **argv) {
     milone_start(argc, argv);
     int32_t x_;
     int32_t y_;
@@ -90,7 +90,7 @@ else_9:;
     if_2 = false;
     goto if_next_7;
 if_next_7:;
-    milone_assert(if_2, (struct String){.ptr = "tuple_large/tuple_large.milone", .len = 30}, 6, 2);
+    if ((!(if_2))) milone_assert_error("tuple_large/tuple_large.milone", 6, 2);
     Int32Int32Int32Int32Int32Int32Int32Int32Int32Int32Int32Tuple11_ = (struct Int32Int32Int32Int32Int32Int32Int32Int32Int32Int32Int32Tuple11_){.t0 = 1, .t1 = 2, .t2 = 3, .t3 = 4, .t4 = 5, .t5 = 6, .t6 = 7, .t7 = 8, .t8 = 9, .t9 = 10, .t10 = 11};
     _t11 = Int32Int32Int32Int32Int32Int32Int32Int32Int32Int32Int32Tuple11_;
     return 0;

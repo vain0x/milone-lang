@@ -2,13 +2,13 @@
 #include <stdlib.h>
 #include <milone.h>
 
-struct Int32ListListList;
+struct Int32ListListCons;
 
-int main(int argc, char** argv);
+int main(int argc, char **argv);
 
-int main(int argc, char** argv) {
+int main(int argc, char **argv) {
     milone_start(argc, argv);
-    struct Int32ListListList const* n_;
+    struct Int32ListListCons const *n_;
     bool ok_;
     bool if_;
     n_ = NULL;
@@ -25,8 +25,8 @@ cons_cl_3:;
     goto if_next_1;
 if_next_1:;
     ok_ = if_;
-    milone_assert(ok_, (struct String){.ptr = "generic_right_angles/generic_right_angles.milone", .len = 48}, 16, 2);
-    milone_assert((3 >= 2), (struct String){.ptr = "generic_right_angles/generic_right_angles.milone", .len = 48}, 19, 2);
-    milone_assert(((2 << 3) == 16), (struct String){.ptr = "generic_right_angles/generic_right_angles.milone", .len = 48}, 22, 2);
+    if ((!(ok_))) milone_assert_error("generic_right_angles/generic_right_angles.milone", 16, 2);
+    if ((3 < 2)) milone_assert_error("generic_right_angles/generic_right_angles.milone", 19, 2);
+    if (((2 << 3) != 16)) milone_assert_error("generic_right_angles/generic_right_angles.milone", 22, 2);
     return 0;
 }

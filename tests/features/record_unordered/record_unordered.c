@@ -4,14 +4,14 @@
 
 struct Person_;
 
-int main(int argc, char** argv);
+int main(int argc, char **argv);
 
 struct Person_ {
     struct String t0;
     int32_t t1;
 };
 
-int main(int argc, char** argv) {
+int main(int argc, char **argv) {
     milone_start(argc, argv);
     struct Person_ _john;
     struct Person_ _jane;

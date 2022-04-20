@@ -12,29 +12,29 @@ void string_operators_string_operators_indexOperatorTest(void);
 
 void string_operators_string_operators_subscriptOperatorTest(void);
 
-int main(int argc, char** argv);
+int main(int argc, char **argv);
 
 void string_operators_string_operators_addTest(void) {
     struct String hello_;
     struct String world_;
     hello_ = (struct String){.ptr = "Hello", .len = 5};
     world_ = (struct String){.ptr = ", world!", .len = 8};
-    milone_assert((string_compare(string_add(hello_, world_), (struct String){.ptr = "Hello, world!", .len = 13}) == 0), (struct String){.ptr = "string_operators/string_operators.milone", .len = 40}, 5, 2);
-    milone_assert((string_add((struct String){.ptr = "a", .len = 1}, (struct String){.ptr = "\0b", .len = 2}).ptr[2] == 'b'), (struct String){.ptr = "string_operators/string_operators.milone", .len = 40}, 8, 2);
+    if ((string_compare(string_add(hello_, world_), (struct String){.ptr = "Hello, world!", .len = 13}) != 0)) milone_assert_error("string_operators/string_operators.milone", 5, 2);
+    if ((string_add((struct String){.ptr = "a", .len = 1}, (struct String){.ptr = "\0b", .len = 2}).ptr[2] != 'b')) milone_assert_error("string_operators/string_operators.milone", 8, 2);
     return;
 }
 
 void string_operators_string_operators_compareTest(void) {
-    milone_assert((string_compare((struct String){.ptr = "", .len = 0}, (struct String){.ptr = "", .len = 0}) == 0), (struct String){.ptr = "string_operators/string_operators.milone", .len = 40}, 11, 2);
-    milone_assert((string_compare((struct String){.ptr = "o", .len = 1}, (struct String){.ptr = "o", .len = 1}) == 0), (struct String){.ptr = "string_operators/string_operators.milone", .len = 40}, 12, 2);
-    milone_assert((string_compare((struct String){.ptr = "alpha", .len = 5}, (struct String){.ptr = "alpha", .len = 5}) == 0), (struct String){.ptr = "string_operators/string_operators.milone", .len = 40}, 13, 2);
-    milone_assert((string_compare((struct String){.ptr = "a", .len = 1}, (struct String){.ptr = "b", .len = 1}) < 0), (struct String){.ptr = "string_operators/string_operators.milone", .len = 40}, 15, 2);
-    milone_assert((string_compare((struct String){.ptr = "alpha", .len = 5}, (struct String){.ptr = "beta", .len = 4}) < 0), (struct String){.ptr = "string_operators/string_operators.milone", .len = 40}, 16, 2);
-    milone_assert((string_compare((struct String){.ptr = "a", .len = 1}, (struct String){.ptr = "z", .len = 1}) < 0), (struct String){.ptr = "string_operators/string_operators.milone", .len = 40}, 18, 2);
-    milone_assert((string_compare((struct String){.ptr = "alpha", .len = 5}, (struct String){.ptr = "beta", .len = 4}) < 0), (struct String){.ptr = "string_operators/string_operators.milone", .len = 40}, 20, 2);
-    milone_assert((string_compare((struct String){.ptr = "alpha", .len = 5}, (struct String){.ptr = "alpha", .len = 5}) == 0), (struct String){.ptr = "string_operators/string_operators.milone", .len = 40}, 21, 2);
-    milone_assert((0 < string_compare((struct String){.ptr = "beta", .len = 4}, (struct String){.ptr = "alpha", .len = 5})), (struct String){.ptr = "string_operators/string_operators.milone", .len = 40}, 22, 2);
-    milone_assert((string_compare((struct String){.ptr = "\0x", .len = 2}, (struct String){.ptr = "\0y", .len = 2}) < 0), (struct String){.ptr = "string_operators/string_operators.milone", .len = 40}, 25, 2);
+    if ((string_compare((struct String){.ptr = "", .len = 0}, (struct String){.ptr = "", .len = 0}) != 0)) milone_assert_error("string_operators/string_operators.milone", 11, 2);
+    if ((string_compare((struct String){.ptr = "o", .len = 1}, (struct String){.ptr = "o", .len = 1}) != 0)) milone_assert_error("string_operators/string_operators.milone", 12, 2);
+    if ((string_compare((struct String){.ptr = "alpha", .len = 5}, (struct String){.ptr = "alpha", .len = 5}) != 0)) milone_assert_error("string_operators/string_operators.milone", 13, 2);
+    if ((string_compare((struct String){.ptr = "a", .len = 1}, (struct String){.ptr = "b", .len = 1}) >= 0)) milone_assert_error("string_operators/string_operators.milone", 15, 2);
+    if ((string_compare((struct String){.ptr = "alpha", .len = 5}, (struct String){.ptr = "beta", .len = 4}) >= 0)) milone_assert_error("string_operators/string_operators.milone", 16, 2);
+    if ((string_compare((struct String){.ptr = "a", .len = 1}, (struct String){.ptr = "z", .len = 1}) >= 0)) milone_assert_error("string_operators/string_operators.milone", 18, 2);
+    if ((string_compare((struct String){.ptr = "alpha", .len = 5}, (struct String){.ptr = "beta", .len = 4}) >= 0)) milone_assert_error("string_operators/string_operators.milone", 20, 2);
+    if ((string_compare((struct String){.ptr = "alpha", .len = 5}, (struct String){.ptr = "alpha", .len = 5}) != 0)) milone_assert_error("string_operators/string_operators.milone", 21, 2);
+    if ((0 >= string_compare((struct String){.ptr = "beta", .len = 4}, (struct String){.ptr = "alpha", .len = 5}))) milone_assert_error("string_operators/string_operators.milone", 22, 2);
+    if ((string_compare((struct String){.ptr = "\0x", .len = 2}, (struct String){.ptr = "\0y", .len = 2}) >= 0)) milone_assert_error("string_operators/string_operators.milone", 25, 2);
     return;
 }
 
@@ -59,9 +59,9 @@ else_3:;
     if_ = false;
     goto if_next_1;
 if_next_1:;
-    milone_assert(if_, (struct String){.ptr = "string_operators/string_operators.milone", .len = 40}, 33, 2);
+    if ((!(if_))) milone_assert_error("string_operators/string_operators.milone", 33, 2);
     call_ = string_operators_string_operators_indexOperatorTest_at(0, hello_1);
-    milone_assert((call_ == 'h'), (struct String){.ptr = "string_operators/string_operators.milone", .len = 40}, 38, 2);
+    if ((call_ != 'h')) milone_assert_error("string_operators/string_operators.milone", 38, 2);
     return;
 }
 
@@ -72,15 +72,15 @@ void string_operators_string_operators_subscriptOperatorTest(void) {
     struct String slice_2;
     text_ = (struct String){.ptr = "Hello, John!", .len = 12};
     slice_ = string_get_slice(0, 4, text_);
-    milone_assert((string_compare(slice_, (struct String){.ptr = "Hello", .len = 5}) == 0), (struct String){.ptr = "string_operators/string_operators.milone", .len = 40}, 42, 2);
+    if ((string_compare(slice_, (struct String){.ptr = "Hello", .len = 5}) != 0)) milone_assert_error("string_operators/string_operators.milone", 42, 2);
     slice_1 = string_get_slice(7, 10, text_);
-    milone_assert((string_compare(slice_1, (struct String){.ptr = "John", .len = 4}) == 0), (struct String){.ptr = "string_operators/string_operators.milone", .len = 40}, 43, 2);
+    if ((string_compare(slice_1, (struct String){.ptr = "John", .len = 4}) != 0)) milone_assert_error("string_operators/string_operators.milone", 43, 2);
     slice_2 = string_get_slice(11, 11, text_);
-    milone_assert((string_compare(slice_2, (struct String){.ptr = "!", .len = 1}) == 0), (struct String){.ptr = "string_operators/string_operators.milone", .len = 40}, 44, 2);
+    if ((string_compare(slice_2, (struct String){.ptr = "!", .len = 1}) != 0)) milone_assert_error("string_operators/string_operators.milone", 44, 2);
     return;
 }
 
-int main(int argc, char** argv) {
+int main(int argc, char **argv) {
     milone_start(argc, argv);
     string_operators_string_operators_addTest();
     string_operators_string_operators_compareTest();

@@ -22,7 +22,7 @@ void union_generic_union_generic_testBasicUsage(void);
 
 void union_generic_union_generic_testAnotherInstance(void);
 
-int main(int argc, char** argv);
+int main(int argc, char **argv);
 
 enum StringMyOption1_Discriminant {
     MyNone_,
@@ -69,7 +69,7 @@ struct String union_generic_union_generic_StringMyOption1StringFun1_unwrap(struc
     goto end_match_1;
 next_2:;
     if ((opt_1.discriminant != MyNone_)) goto next_3;
-    milone_assert(false, (struct String){.ptr = "union_generic/union_generic.milone", .len = 34}, 16, 4);
+    if (true) milone_assert_error("union_generic/union_generic.milone", 16, 4);
     exit(1);
 next_3:;
     exit(1);
@@ -108,7 +108,7 @@ int32_t union_generic_union_generic_Int32MyOption1Int32Fun1_unwrap(struct Int32M
     goto end_match_7;
 next_8:;
     if ((opt_1.discriminant != MyNone_1)) goto next_9;
-    milone_assert(false, (struct String){.ptr = "union_generic/union_generic.milone", .len = 34}, 16, 4);
+    if (true) milone_assert_error("union_generic/union_generic.milone", 16, 4);
     exit(1);
 next_9:;
     exit(1);
@@ -169,13 +169,13 @@ void union_generic_union_generic_testBasicUsage(void) {
     int32_t call_2;
     none_ = (struct UnitMyOption1_){.discriminant = MyNone_2};
     call_ = union_generic_union_generic_UnitMyOption1BoolFun1_isNone(none_);
-    milone_assert(call_, (struct String){.ptr = "union_generic/union_generic.milone", .len = 34}, 23, 2);
+    if ((!(call_))) milone_assert_error("union_generic/union_generic.milone", 23, 2);
     variant_ = (struct Int32MyOption1_){.discriminant = MySome_1, .MySome_1 = 42};
     some_ = variant_;
     call_1 = union_generic_union_generic_Int32MyOption1BoolFun1_isNone(some_);
-    milone_assert((!(call_1)), (struct String){.ptr = "union_generic/union_generic.milone", .len = 34}, 28, 2);
+    if (call_1) milone_assert_error("union_generic/union_generic.milone", 28, 2);
     call_2 = union_generic_union_generic_Int32MyOption1Int32Fun1_unwrap(some_);
-    milone_assert((call_2 == 42), (struct String){.ptr = "union_generic/union_generic.milone", .len = 34}, 29, 2);
+    if ((call_2 != 42)) milone_assert_error("union_generic/union_generic.milone", 29, 2);
     return;
 }
 
@@ -188,17 +188,17 @@ void union_generic_union_generic_testAnotherInstance(void) {
     struct String call_5;
     stringNone_ = (struct StringMyOption1_){.discriminant = MyNone_};
     call_3 = union_generic_union_generic_StringMyOption1BoolFun1_isNone(stringNone_);
-    milone_assert(call_3, (struct String){.ptr = "union_generic/union_generic.milone", .len = 34}, 34, 2);
+    if ((!(call_3))) milone_assert_error("union_generic/union_generic.milone", 34, 2);
     variant_1 = (struct StringMyOption1_){.discriminant = MySome_, .MySome_ = (struct String){.ptr = "hey", .len = 3}};
     stringSome_ = variant_1;
     call_4 = union_generic_union_generic_StringMyOption1BoolFun1_isNone(stringSome_);
-    milone_assert((!(call_4)), (struct String){.ptr = "union_generic/union_generic.milone", .len = 34}, 38, 2);
+    if (call_4) milone_assert_error("union_generic/union_generic.milone", 38, 2);
     call_5 = union_generic_union_generic_StringMyOption1StringFun1_unwrap(stringSome_);
-    milone_assert((string_compare(call_5, (struct String){.ptr = "hey", .len = 3}) == 0), (struct String){.ptr = "union_generic/union_generic.milone", .len = 34}, 39, 2);
+    if ((string_compare(call_5, (struct String){.ptr = "hey", .len = 3}) != 0)) milone_assert_error("union_generic/union_generic.milone", 39, 2);
     return;
 }
 
-int main(int argc, char** argv) {
+int main(int argc, char **argv) {
     milone_start(argc, argv);
     union_generic_union_generic_testBasicUsage();
     union_generic_union_generic_testAnotherInstance();

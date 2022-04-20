@@ -2,9 +2,9 @@
 #include <stdlib.h>
 #include <milone.h>
 
-struct Int32List;
+struct Int32Cons;
 
-struct Int32List;
+struct Int32Cons;
 
 struct Int32Int32Tuple2_;
 
@@ -12,7 +12,7 @@ bool pat_or_pat_or_isZeroOrOne(int32_t x_);
 
 void pat_or_pat_or_simpleCase(void);
 
-bool pat_or_pat_or_startsWithDoubleBits(struct Int32List const* xs_);
+bool pat_or_pat_or_startsWithDoubleBits(struct Int32Cons const *xs_);
 
 void pat_or_pat_or_nestedCase(void);
 
@@ -20,11 +20,11 @@ bool pat_or_pat_or_performComplexMatching(struct Int32Int32Tuple2_ expr_);
 
 void pat_or_pat_or_complexCase(void);
 
-int main(int argc, char** argv);
+int main(int argc, char **argv);
 
-struct Int32List {
+struct Int32Cons {
     int32_t head;
-    struct Int32List const* tail;
+    struct Int32Cons const *tail;
 };
 
 struct Int32Int32Tuple2_ {
@@ -71,13 +71,13 @@ else_6:;
     if_ = false;
     goto if_next_4;
 if_next_4:;
-    milone_assert(if_, (struct String){.ptr = "pat_or/pat_or.milone", .len = 20}, 12, 2);
+    if ((!(if_))) milone_assert_error("pat_or/pat_or.milone", 12, 2);
     call_2 = pat_or_pat_or_isZeroOrOne(2);
-    milone_assert((!(call_2)), (struct String){.ptr = "pat_or/pat_or.milone", .len = 20}, 13, 2);
+    if (call_2) milone_assert_error("pat_or/pat_or.milone", 13, 2);
     return;
 }
 
-bool pat_or_pat_or_startsWithDoubleBits(struct Int32List const* xs_) {
+bool pat_or_pat_or_startsWithDoubleBits(struct Int32Cons const *xs_) {
     bool match_;
     if ((!(xs_))) goto next_9;
     if ((xs_->head != 0)) goto next_9;
@@ -114,27 +114,27 @@ end_match_7:;
 }
 
 void pat_or_pat_or_nestedCase(void) {
-    struct Int32List const* list_;
-    struct Int32List const* list_1;
-    struct Int32List const* list_2;
+    struct Int32Cons const *list_;
+    struct Int32Cons const *list_1;
+    struct Int32Cons const *list_2;
     bool call_3;
-    struct Int32List const* list_3;
-    struct Int32List const* list_4;
+    struct Int32Cons const *list_3;
+    struct Int32Cons const *list_4;
     bool call_4;
-    list_2 = ((struct Int32List const*)milone_region_alloc(1, sizeof(struct Int32List)));
-    (*(((struct Int32List*)list_2))) = (struct Int32List){.head = 2, .tail = NULL};
-    list_1 = ((struct Int32List const*)milone_region_alloc(1, sizeof(struct Int32List)));
-    (*(((struct Int32List*)list_1))) = (struct Int32List){.head = 1, .tail = list_2};
-    list_ = ((struct Int32List const*)milone_region_alloc(1, sizeof(struct Int32List)));
-    (*(((struct Int32List*)list_))) = (struct Int32List){.head = 0, .tail = list_1};
+    list_2 = ((struct Int32Cons const *)milone_region_alloc(1, sizeof(struct Int32Cons)));
+    (*(((struct Int32Cons *)list_2))) = (struct Int32Cons){.head = 2, .tail = NULL};
+    list_1 = ((struct Int32Cons const *)milone_region_alloc(1, sizeof(struct Int32Cons)));
+    (*(((struct Int32Cons *)list_1))) = (struct Int32Cons){.head = 1, .tail = list_2};
+    list_ = ((struct Int32Cons const *)milone_region_alloc(1, sizeof(struct Int32Cons)));
+    (*(((struct Int32Cons *)list_))) = (struct Int32Cons){.head = 0, .tail = list_1};
     call_3 = pat_or_pat_or_startsWithDoubleBits(list_);
-    milone_assert(call_3, (struct String){.ptr = "pat_or/pat_or.milone", .len = 20}, 24, 2);
-    list_4 = ((struct Int32List const*)milone_region_alloc(1, sizeof(struct Int32List)));
-    (*(((struct Int32List*)list_4))) = (struct Int32List){.head = 2, .tail = NULL};
-    list_3 = ((struct Int32List const*)milone_region_alloc(1, sizeof(struct Int32List)));
-    (*(((struct Int32List*)list_3))) = (struct Int32List){.head = 1, .tail = list_4};
+    if ((!(call_3))) milone_assert_error("pat_or/pat_or.milone", 24, 2);
+    list_4 = ((struct Int32Cons const *)milone_region_alloc(1, sizeof(struct Int32Cons)));
+    (*(((struct Int32Cons *)list_4))) = (struct Int32Cons){.head = 2, .tail = NULL};
+    list_3 = ((struct Int32Cons const *)milone_region_alloc(1, sizeof(struct Int32Cons)));
+    (*(((struct Int32Cons *)list_3))) = (struct Int32Cons){.head = 1, .tail = list_4};
     call_4 = pat_or_pat_or_startsWithDoubleBits(list_3);
-    milone_assert((!(call_4)), (struct String){.ptr = "pat_or/pat_or.milone", .len = 20}, 25, 2);
+    if (call_4) milone_assert_error("pat_or/pat_or.milone", 25, 2);
     return;
 }
 
@@ -165,14 +165,14 @@ void pat_or_pat_or_complexCase(void) {
     bool call_6;
     Int32Int32Tuple2_ = (struct Int32Int32Tuple2_){.t0 = 0, .t1 = 1};
     call_5 = pat_or_pat_or_performComplexMatching(Int32Int32Tuple2_);
-    milone_assert(call_5, (struct String){.ptr = "pat_or/pat_or.milone", .len = 20}, 38, 2);
+    if ((!(call_5))) milone_assert_error("pat_or/pat_or.milone", 38, 2);
     Int32Int32Tuple2_1 = (struct Int32Int32Tuple2_){.t0 = 1, .t1 = 2};
     call_6 = pat_or_pat_or_performComplexMatching(Int32Int32Tuple2_1);
-    milone_assert((!(call_6)), (struct String){.ptr = "pat_or/pat_or.milone", .len = 20}, 39, 2);
+    if (call_6) milone_assert_error("pat_or/pat_or.milone", 39, 2);
     return;
 }
 
-int main(int argc, char** argv) {
+int main(int argc, char **argv) {
     milone_start(argc, argv);
     pat_or_pat_or_simpleCase();
     pat_or_pat_or_nestedCase();

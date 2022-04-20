@@ -16,19 +16,19 @@ bool MiloneDerive_TupleEqual_tuple2Equal(struct Int32StringTuple2_ l_4, struct I
 
 bool MiloneCore_Option_optionEqual(struct Int32option1_ l_, struct Int32option1_ r_);
 
-bool MiloneDerive_TupleEqual_tuple2Equal(struct Int32StringTuple2_ , struct Int32StringTuple2_ );
+bool MiloneDerive_TupleEqual_tuple2Equal(struct Int32StringTuple2_, struct Int32StringTuple2_);
 
 bool MiloneCore_Option_optionEqual_1(struct Int32StringTuple2option1_ l_2, struct Int32StringTuple2option1_ r_2);
 
-bool MiloneCore_Option_optionEqual(struct Int32option1_ , struct Int32option1_ );
+bool MiloneCore_Option_optionEqual(struct Int32option1_, struct Int32option1_);
 
 void option_equal_option_equal_testIntOption(void);
 
-bool MiloneCore_Option_optionEqual_1(struct Int32StringTuple2option1_ , struct Int32StringTuple2option1_ );
+bool MiloneCore_Option_optionEqual_1(struct Int32StringTuple2option1_, struct Int32StringTuple2option1_);
 
 void option_equal_option_equal_testPair(void);
 
-int main(int argc, char** argv);
+int main(int argc, char **argv);
 
 struct Int32StringTuple2_ {
     int32_t t0;
@@ -148,17 +148,17 @@ void option_equal_option_equal_testIntOption(void) {
     some_ = variant_;
     variant_1 = (struct Int32option1_){.discriminant = Some_, .Some_ = 2};
     call_1 = MiloneCore_Option_optionEqual(some_, variant_1);
-    milone_assert(call_1, (struct String){.ptr = "option_equal/option_equal.milone", .len = 32}, 6, 2);
+    if ((!(call_1))) milone_assert_error("option_equal/option_equal.milone", 6, 2);
     variant_2 = (struct Int32option1_){.discriminant = Some_, .Some_ = 3};
     call_2 = MiloneCore_Option_optionEqual(some_, variant_2);
-    milone_assert((!(call_2)), (struct String){.ptr = "option_equal/option_equal.milone", .len = 32}, 7, 2);
+    if (call_2) milone_assert_error("option_equal/option_equal.milone", 7, 2);
     call_3 = MiloneCore_Option_optionEqual(some_, (struct Int32option1_){.discriminant = None_});
-    milone_assert((!(call_3)), (struct String){.ptr = "option_equal/option_equal.milone", .len = 32}, 8, 2);
+    if (call_3) milone_assert_error("option_equal/option_equal.milone", 8, 2);
     none_ = (struct Int32option1_){.discriminant = None_};
     call_4 = MiloneCore_Option_optionEqual(none_, (struct Int32option1_){.discriminant = None_});
-    milone_assert(call_4, (struct String){.ptr = "option_equal/option_equal.milone", .len = 32}, 11, 2);
+    if ((!(call_4))) milone_assert_error("option_equal/option_equal.milone", 11, 2);
     call_5 = MiloneCore_Option_optionEqual(none_, some_);
-    milone_assert((!(call_5)), (struct String){.ptr = "option_equal/option_equal.milone", .len = 32}, 12, 2);
+    if (call_5) milone_assert_error("option_equal/option_equal.milone", 12, 2);
     return;
 }
 
@@ -178,17 +178,17 @@ void option_equal_option_equal_testPair(void) {
     Int32StringTuple2_1 = (struct Int32StringTuple2_){.t0 = 2, .t1 = (struct String){.ptr = "a", .len = 1}};
     variant_4 = (struct Int32StringTuple2option1_){.discriminant = Some_1, .Some_1 = Int32StringTuple2_1};
     call_6 = MiloneCore_Option_optionEqual_1(variant_3, variant_4);
-    milone_assert(call_6, (struct String){.ptr = "option_equal/option_equal.milone", .len = 32}, 15, 2);
+    if ((!(call_6))) milone_assert_error("option_equal/option_equal.milone", 15, 2);
     Int32StringTuple2_2 = (struct Int32StringTuple2_){.t0 = 2, .t1 = (struct String){.ptr = "a", .len = 1}};
     variant_5 = (struct Int32StringTuple2option1_){.discriminant = Some_1, .Some_1 = Int32StringTuple2_2};
     Int32StringTuple2_3 = (struct Int32StringTuple2_){.t0 = 2, .t1 = (struct String){.ptr = "A", .len = 1}};
     variant_6 = (struct Int32StringTuple2option1_){.discriminant = Some_1, .Some_1 = Int32StringTuple2_3};
     call_7 = MiloneCore_Option_optionEqual_1(variant_5, variant_6);
-    milone_assert((!(call_7)), (struct String){.ptr = "option_equal/option_equal.milone", .len = 32}, 16, 2);
+    if (call_7) milone_assert_error("option_equal/option_equal.milone", 16, 2);
     return;
 }
 
-int main(int argc, char** argv) {
+int main(int argc, char **argv) {
     milone_start(argc, argv);
     option_equal_option_equal_testIntOption();
     option_equal_option_equal_testPair();

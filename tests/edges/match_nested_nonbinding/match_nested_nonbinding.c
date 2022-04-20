@@ -6,7 +6,7 @@ struct MyBool_;
 
 struct MyOption_;
 
-int main(int argc, char** argv);
+int main(int argc, char **argv);
 
 enum MyBool_Discriminant {
     MyFalse_,
@@ -29,7 +29,7 @@ struct MyOption_ {
     };
 };
 
-int main(int argc, char** argv) {
+int main(int argc, char **argv) {
     milone_start(argc, argv);
     char match_;
     struct MyOption_ variant_;
@@ -40,12 +40,12 @@ int main(int argc, char** argv) {
     goto end_match_1;
 next_2:;
     if ((variant_.discriminant != MySome_)) goto next_3;
-    milone_assert(false, (struct String){.ptr = "match_nested_nonbinding/match_nested_nonbinding.milone", .len = 54}, 16, 16);
+    if (true) milone_assert_error("match_nested_nonbinding/match_nested_nonbinding.milone", 16, 16);
     match_ = 0;
     goto end_match_1;
 next_3:;
     if ((variant_.discriminant != MyNone_)) goto next_4;
-    milone_assert(false, (struct String){.ptr = "match_nested_nonbinding/match_nested_nonbinding.milone", .len = 54}, 17, 14);
+    if (true) milone_assert_error("match_nested_nonbinding/match_nested_nonbinding.milone", 17, 14);
     match_ = 0;
     goto end_match_1;
 next_4:;

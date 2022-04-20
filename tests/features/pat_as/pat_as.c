@@ -8,7 +8,7 @@ void pat_as_pat_as_simpleCase(void);
 
 void pat_as_pat_as_shadowingCase(void);
 
-int main(int argc, char** argv);
+int main(int argc, char **argv);
 
 struct Int32Int32Tuple2_ {
     int32_t t0;
@@ -20,11 +20,11 @@ void pat_as_pat_as_simpleCase(void) {
     char match_;
     x_ = 1;
     if ((x_ != 1)) goto next_2;
-    milone_assert((x_ == 1), (struct String){.ptr = "pat_as/pat_as.milone", .len = 20}, 6, 14);
+    if ((x_ != 1)) milone_assert_error("pat_as/pat_as.milone", 6, 14);
     match_ = 0;
     goto end_match_1;
 next_2:;
-    milone_assert(false, (struct String){.ptr = "pat_as/pat_as.milone", .len = 20}, 7, 9);
+    if (true) milone_assert_error("pat_as/pat_as.milone", 7, 9);
     match_ = 0;
     goto end_match_1;
 next_3:;
@@ -72,7 +72,7 @@ else_11:;
     if_1 = false;
     goto if_next_9;
 if_next_9:;
-    milone_assert(if_1, (struct String){.ptr = "pat_as/pat_as.milone", .len = 20}, 15, 4);
+    if ((!(if_1))) milone_assert_error("pat_as/pat_as.milone", 15, 4);
     match_1 = 0;
     goto end_match_4;
 next_5:;
@@ -80,7 +80,7 @@ end_match_4:;
     return;
 }
 
-int main(int argc, char** argv) {
+int main(int argc, char **argv) {
     milone_start(argc, argv);
     pat_as_pat_as_simpleCase();
     pat_as_pat_as_shadowingCase();

@@ -2,9 +2,9 @@
 #include <stdlib.h>
 #include <milone.h>
 
-struct Int32List;
+struct Int32Cons;
 
-struct Int32List;
+struct Int32Cons;
 
 struct String ty_synonym_ty_synonym_BoolStringStringStringFun3_proj(bool cond_, struct String body_, struct String alt_);
 
@@ -16,11 +16,11 @@ void ty_synonym_ty_synonym_yodaCase(int32_t exitCode_);
 
 void ty_synonym_ty_synonym_polymorphicFunCase(void);
 
-int main(int argc, char** argv);
+int main(int argc, char **argv);
 
-struct Int32List {
+struct Int32Cons {
     int32_t head;
-    struct Int32List const* tail;
+    struct Int32Cons const *tail;
 };
 
 struct String ty_synonym_ty_synonym_BoolStringStringStringFun3_proj(bool cond_, struct String body_, struct String alt_) {
@@ -60,22 +60,22 @@ if_next_4:;
 void ty_synonym_ty_synonym_baseCase(void) {
     int32_t success_;
     int32_t failure_;
-    struct Int32List const* codes_;
-    struct Int32List const* list_;
-    struct Int32List const* list_1;
+    struct Int32Cons const *codes_;
+    struct Int32Cons const *list_;
+    struct Int32Cons const *list_1;
     success_ = 0;
     failure_ = 1;
-    list_1 = ((struct Int32List const*)milone_region_alloc(1, sizeof(struct Int32List)));
-    (*(((struct Int32List*)list_1))) = (struct Int32List){.head = failure_, .tail = NULL};
-    list_ = ((struct Int32List const*)milone_region_alloc(1, sizeof(struct Int32List)));
-    (*(((struct Int32List*)list_))) = (struct Int32List){.head = success_, .tail = list_1};
+    list_1 = ((struct Int32Cons const *)milone_region_alloc(1, sizeof(struct Int32Cons)));
+    (*(((struct Int32Cons *)list_1))) = (struct Int32Cons){.head = failure_, .tail = NULL};
+    list_ = ((struct Int32Cons const *)milone_region_alloc(1, sizeof(struct Int32Cons)));
+    (*(((struct Int32Cons *)list_))) = (struct Int32Cons){.head = success_, .tail = list_1};
     codes_ = list_;
-    milone_assert((success_ == 0), (struct String){.ptr = "ty_synonym/ty_synonym.milone", .len = 28}, 13, 2);
+    if ((success_ != 0)) milone_assert_error("ty_synonym/ty_synonym.milone", 13, 2);
     return;
 }
 
 void ty_synonym_ty_synonym_yodaCase(int32_t exitCode_) {
-    milone_assert((0 == exitCode_), (struct String){.ptr = "ty_synonym/ty_synonym.milone", .len = 28}, 16, 36);
+    if ((0 != exitCode_)) milone_assert_error("ty_synonym/ty_synonym.milone", 16, 36);
     return;
 }
 
@@ -83,13 +83,13 @@ void ty_synonym_ty_synonym_polymorphicFunCase(void) {
     int32_t call_;
     struct String call_1;
     call_ = ty_synonym_ty_synonym_BoolInt32Int32Int32Fun3_proj(true, 1, 0);
-    milone_assert((call_ == 1), (struct String){.ptr = "ty_synonym/ty_synonym.milone", .len = 28}, 21, 2);
+    if ((call_ != 1)) milone_assert_error("ty_synonym/ty_synonym.milone", 21, 2);
     call_1 = ty_synonym_ty_synonym_BoolStringStringStringFun3_proj(false, (struct String){.ptr = "T", .len = 1}, (struct String){.ptr = "F", .len = 1});
-    milone_assert((string_compare(call_1, (struct String){.ptr = "F", .len = 1}) == 0), (struct String){.ptr = "ty_synonym/ty_synonym.milone", .len = 28}, 22, 2);
+    if ((string_compare(call_1, (struct String){.ptr = "F", .len = 1}) != 0)) milone_assert_error("ty_synonym/ty_synonym.milone", 22, 2);
     return;
 }
 
-int main(int argc, char** argv) {
+int main(int argc, char **argv) {
     milone_start(argc, argv);
     ty_synonym_ty_synonym_baseCase();
     ty_synonym_ty_synonym_yodaCase(0);

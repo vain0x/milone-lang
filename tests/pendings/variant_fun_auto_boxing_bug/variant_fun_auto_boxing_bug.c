@@ -6,13 +6,13 @@ struct BoxedVariant_;
 
 struct BoxedVariantoption1_;
 
-typedef struct BoxedVariant_(*VoidConstPtrBoxedVariantoption1_BoxedVariant_FunPtr2)(void const*, struct BoxedVariantoption1_);
+typedef struct BoxedVariant_(*VoidConstPtrBoxedVariantoption1_BoxedVariant_FunPtr2)(void const *, struct BoxedVariantoption1_);
 
 struct BoxedVariantoption1_BoxedVariant_Fun1;
 
 struct BoxedVariant_ variant_fun_auto_boxing_bug_variant_fun_auto_boxing_bug_feedNil(struct BoxedVariantoption1_BoxedVariant_Fun1 f_);
 
-int main(int argc, char** argv);
+int main(int argc, char **argv);
 
 enum BoxedVariant_Discriminant {
     A_,
@@ -21,7 +21,7 @@ enum BoxedVariant_Discriminant {
 struct BoxedVariant_ {
     enum BoxedVariant_Discriminant discriminant;
     union {
-        void const* A_;
+        void const *A_;
     };
 };
 
@@ -39,7 +39,7 @@ struct BoxedVariantoption1_ {
 
 struct BoxedVariantoption1_BoxedVariant_Fun1 {
     VoidConstPtrBoxedVariantoption1_BoxedVariant_FunPtr2 fun;
-    void const* env;
+    void const *env;
 };
 
 struct BoxedVariant_ variant_fun_auto_boxing_bug_variant_fun_auto_boxing_bug_feedNil(struct BoxedVariantoption1_BoxedVariant_Fun1 f_) {
@@ -48,7 +48,7 @@ struct BoxedVariant_ variant_fun_auto_boxing_bug_variant_fun_auto_boxing_bug_fee
     return app_;
 }
 
-int main(int argc, char** argv) {
+int main(int argc, char **argv) {
     milone_start(argc, argv);
     return 0;
 }

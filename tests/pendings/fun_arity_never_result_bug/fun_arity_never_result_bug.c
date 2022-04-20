@@ -2,11 +2,11 @@
 #include <stdlib.h>
 #include <milone.h>
 
-typedef int32_t(*VoidConstPtrInt32FunPtr1)(void const*);
+typedef int32_t(*VoidConstPtrInt32FunPtr1)(void const *);
 
 struct UnitInt32Fun1;
 
-typedef int32_t(*VoidConstPtrInt32Int32FunPtr2)(void const*, int32_t);
+typedef int32_t(*VoidConstPtrInt32Int32FunPtr2)(void const *, int32_t);
 
 struct Int32Int32Fun1;
 
@@ -14,24 +14,24 @@ int32_t fun_arity_never_result_bug_fun_arity_never_result_bug_UnitInt32Fun1_unre
 
 struct UnitInt32Fun1 fun_arity_never_result_bug_fun_arity_never_result_bug_StringUnitInt32Fun2_failwithf(struct String msg_);
 
-int32_t MiloneCore_Prelude_Int32Int32Fun1_id(int32_t );
+int32_t MiloneCore_Prelude_Int32Int32Fun1_id(int32_t);
 
-int32_t fun_arity_never_result_bug_fun_arity_never_result_bug_eta2_main_id(void const* env_, int32_t arg_);
+int32_t fun_arity_never_result_bug_fun_arity_never_result_bug_eta2_main_id(void const *env_, int32_t arg_);
 
 int32_t fun_arity_never_result_bug_fun_arity_never_result_bug_main_fun(int32_t arg_2);
 
-int32_t fun_arity_never_result_bug_fun_arity_never_result_bug_eta2_main_fun(void const* env_1, int32_t arg_1);
+int32_t fun_arity_never_result_bug_fun_arity_never_result_bug_eta2_main_fun(void const *env_1, int32_t arg_1);
 
-int main(int argc, char** argv);
+int main(int argc, char **argv);
 
 struct UnitInt32Fun1 {
     VoidConstPtrInt32FunPtr1 fun;
-    void const* env;
+    void const *env;
 };
 
 struct Int32Int32Fun1 {
     VoidConstPtrInt32Int32FunPtr2 fun;
-    void const* env;
+    void const *env;
 };
 
 int32_t fun_arity_never_result_bug_fun_arity_never_result_bug_UnitInt32Fun1_unreachable(void) {
@@ -47,7 +47,7 @@ struct UnitInt32Fun1 fun_arity_never_result_bug_fun_arity_never_result_bug_Strin
     exit(1);
 }
 
-int32_t fun_arity_never_result_bug_fun_arity_never_result_bug_eta2_main_id(void const* env_, int32_t arg_) {
+int32_t fun_arity_never_result_bug_fun_arity_never_result_bug_eta2_main_id(void const *env_, int32_t arg_) {
     int32_t call_1;
     call_1 = MiloneCore_Prelude_Int32Int32Fun1_id(arg_);
     return call_1;
@@ -59,13 +59,13 @@ int32_t fun_arity_never_result_bug_fun_arity_never_result_bug_main_fun(int32_t a
     return call_2;
 }
 
-int32_t fun_arity_never_result_bug_fun_arity_never_result_bug_eta2_main_fun(void const* env_1, int32_t arg_1) {
+int32_t fun_arity_never_result_bug_fun_arity_never_result_bug_eta2_main_fun(void const *env_1, int32_t arg_1) {
     int32_t call_3;
     call_3 = fun_arity_never_result_bug_fun_arity_never_result_bug_main_fun(arg_1);
     return call_3;
 }
 
-int main(int argc, char** argv) {
+int main(int argc, char **argv) {
     milone_start(argc, argv);
     struct Int32Int32Fun1 f_;
     struct Int32Int32Fun1 switch_;
@@ -90,6 +90,6 @@ clause_3:;
 switch_next_1:;
     f_ = switch_;
     app_1 = f_.fun(f_.env, 2);
-    milone_assert((app_1 == 2), (struct String){.ptr = "fun_arity_never_result_bug/fun_arity_never_result_bug.milone", .len = 60}, 38, 2);
+    if ((app_1 != 2)) milone_assert_error("fun_arity_never_result_bug/fun_arity_never_result_bug.milone", 38, 2);
     return 0;
 }

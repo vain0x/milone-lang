@@ -12,11 +12,11 @@ struct String module_along_with_type_module_along_with_type_Range_toString(struc
 
 void module_along_with_type_sub_start(void);
 
-struct Int32Int32Tuple2_ module_along_with_type_sub_Pos_add(struct Int32Int32Tuple2_ , struct Int32Int32Tuple2_ );
+struct Int32Int32Tuple2_ module_along_with_type_sub_Pos_add(struct Int32Int32Tuple2_, struct Int32Int32Tuple2_);
 
-struct String module_along_with_type_sub_Pos_toString(struct Int32Int32Tuple2_ );
+struct String module_along_with_type_sub_Pos_toString(struct Int32Int32Tuple2_);
 
-int main(int argc, char** argv);
+int main(int argc, char **argv);
 
 struct Int32Int32Tuple2_ {
     int32_t t0;
@@ -60,7 +60,7 @@ struct String module_along_with_type_module_along_with_type_Range_toString(struc
     return string_add(string_add(string_add(string_add(string_add(string_add(call_, (struct String){.ptr = ".", .len = 1}), call_1), (struct String){.ptr = "-", .len = 1}), call_2), (struct String){.ptr = ".", .len = 1}), call_3);
 }
 
-int main(int argc, char** argv) {
+int main(int argc, char **argv) {
     milone_start(argc, argv);
     struct Int32Int32Tuple2_ p_;
     struct Int32Int32Tuple2Int32Int32Tuple2Tuple2_ r_;
@@ -76,11 +76,11 @@ int main(int argc, char** argv) {
     Int32Int32Tuple2Int32Int32Tuple2Tuple2_1 = (struct Int32Int32Tuple2Int32Int32Tuple2Tuple2_){.t0 = p_, .t1 = call_4};
     r_ = Int32Int32Tuple2Int32Int32Tuple2Tuple2_1;
     call_5 = module_along_with_type_sub_Pos_toString(p_);
-    milone_assert((string_compare(call_5, (struct String){.ptr = "2:1", .len = 3}) == 0), (struct String){.ptr = "module_along_with_type/module_along_with_type.milone", .len = 52}, 29, 2);
+    if ((string_compare(call_5, (struct String){.ptr = "2:1", .len = 3}) != 0)) milone_assert_error("module_along_with_type/module_along_with_type.milone", 29, 2);
     call_6 = module_along_with_type_sub_Pos_add(p_, p_);
     call_7 = module_along_with_type_sub_Pos_toString(call_6);
-    milone_assert((string_compare(call_7, (struct String){.ptr = "3:1", .len = 3}) == 0), (struct String){.ptr = "module_along_with_type/module_along_with_type.milone", .len = 52}, 30, 2);
+    if ((string_compare(call_7, (struct String){.ptr = "3:1", .len = 3}) != 0)) milone_assert_error("module_along_with_type/module_along_with_type.milone", 30, 2);
     call_8 = module_along_with_type_module_along_with_type_Range_toString(r_);
-    milone_assert((string_compare(call_8, (struct String){.ptr = "2.1-3.1", .len = 7}) == 0), (struct String){.ptr = "module_along_with_type/module_along_with_type.milone", .len = 52}, 32, 2);
+    if ((string_compare(call_8, (struct String){.ptr = "2.1-3.1", .len = 7}) != 0)) milone_assert_error("module_along_with_type/module_along_with_type.milone", 32, 2);
     return 0;
 }

@@ -10,7 +10,7 @@ struct Int32StringTuple2_;
 
 struct ApiResponse_;
 
-int main(int argc, char** argv);
+int main(int argc, char **argv);
 
 enum Status_Discriminant {
     Ok_1,
@@ -55,7 +55,7 @@ struct ApiResponse_ {
     };
 };
 
-int main(int argc, char** argv) {
+int main(int argc, char **argv) {
     milone_start(argc, argv);
     struct Status_ ok_;
     struct Status_ err1_;
@@ -85,13 +85,13 @@ int main(int argc, char** argv) {
     variant_1 = (struct Status_){.discriminant = Err_, .Err_ = (struct String){.ptr = "Access denied.", .len = 14}};
     err2_ = variant_1;
     if ((err1_.discriminant != Ok_1)) goto next_2;
-    milone_assert(false, (struct String){.ptr = "union/union.milone", .len = 18}, 28, 12);
+    if (true) milone_assert_error("union/union.milone", 28, 12);
     match_ = 0;
     goto end_match_1;
 next_2:;
     if ((err1_.discriminant != Err_)) goto next_3;
     e_ = err1_.Err_;
-    milone_assert((string_compare(e_, (struct String){.ptr = "No such file or directory.", .len = 26}) == 0), (struct String){.ptr = "union/union.milone", .len = 18}, 29, 15);
+    if ((string_compare(e_, (struct String){.ptr = "No such file or directory.", .len = 26}) != 0)) milone_assert_error("union/union.milone", 29, 15);
     match_ = 0;
     goto end_match_1;
 next_3:;
@@ -100,7 +100,7 @@ end_match_1:;
     variant_2 = (struct Limit_){.discriminant = LimitVal_, .LimitVal_ = 1};
     if ((variant_2.discriminant != LimitVal_)) goto next_5;
     x_ = variant_2.LimitVal_;
-    milone_assert((x_ == 1), (struct String){.ptr = "union/union.milone", .len = 18}, 33, 20);
+    if ((x_ != 1)) milone_assert_error("union/union.milone", 33, 20);
     match_1 = 0;
     goto end_match_4;
 next_5:;
@@ -120,7 +120,7 @@ clause_8:;
     switch_ = 0;
     goto switch_next_7;
 clause_9:;
-    milone_assert(false, (struct String){.ptr = "union/union.milone", .len = 18}, 39, 11);
+    if (true) milone_assert_error("union/union.milone", 39, 11);
     switch_ = 0;
     goto switch_next_7;
 switch_next_7:;
@@ -141,11 +141,11 @@ else_15:;
     if_ = false;
     goto if_next_13;
 if_next_13:;
-    milone_assert(if_, (struct String){.ptr = "union/union.milone", .len = 18}, 43, 42);
+    if ((!(if_))) milone_assert_error("union/union.milone", 43, 42);
     match_2 = 0;
     goto end_match_10;
 next_11:;
-    milone_assert(false, (struct String){.ptr = "union/union.milone", .len = 18}, 44, 11);
+    if (true) milone_assert_error("union/union.milone", 44, 11);
     match_2 = 0;
     goto end_match_10;
 next_12:;
@@ -167,7 +167,7 @@ clause_17:;
     switch_1 = 0;
     goto switch_next_16;
 clause_18:;
-    milone_assert(false, (struct String){.ptr = "union/union.milone", .len = 18}, 55, 20);
+    if (true) milone_assert_error("union/union.milone", 55, 20);
     switch_1 = 0;
     goto switch_next_16;
 switch_next_16:;
