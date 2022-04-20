@@ -388,7 +388,8 @@ let private genIncompleteListTyDecl (ctx: CirCtx) itemTy =
   | Some (_, ty) -> ty, ctx
 
   | None ->
-    let structName, ctx = getUniqueTyName ctx listTy
+    let itemTyName, ctx = getUniqueTyName ctx itemTy
+    let structName = itemTyName + "Cons"
     let selfTy = CConstPtrTy(CStructTy structName)
 
     let ctx =
@@ -405,7 +406,8 @@ let private genListTyDef (ctx: CirCtx) itemTy =
   | Some (CTyDefined, ty) -> ty, ctx
 
   | _ ->
-    let structName, ctx = getUniqueTyName ctx listTy
+    let itemTyName, ctx = getUniqueTyName ctx itemTy
+    let structName = itemTyName + "Cons"
     let selfTy, ctx = genIncompleteListTyDecl ctx itemTy
 
     let itemTy, (ctx: CirCtx) = cgTyComplete ctx itemTy
@@ -1285,7 +1287,7 @@ let private genMainFun stmts : CDecl =
 
   let args =
     [ "argc", intTy
-      "argv", CPtrTy (CPtrTy (CEmbedTy "char")) ]
+      "argv", CPtrTy(CPtrTy(CEmbedTy "char")) ]
 
   let stmts =
     CExprStmt(CCallExpr(CVarExpr "milone_start", [ CVarExpr "argc"; CVarExpr "argv" ]))

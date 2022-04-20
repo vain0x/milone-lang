@@ -91,10 +91,10 @@ struct String string_of_bool(bool value);
 char string_to_char(struct String s);
 struct String string_of_char(char value);
 
-// Actual name of string list.
-struct StringList;
+// Actual name of string cons-cell.
+struct StringCons;
 
-struct String string_concat(struct String sep, struct StringList const *strings);
+struct String string_concat(struct String sep, struct StringCons const *strings);
 
 // Low level operations.
 

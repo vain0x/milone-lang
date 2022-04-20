@@ -548,13 +548,13 @@ struct String string_of_char(char value) {
     return (struct String){.ptr = buf, .len = 1};
 }
 
-struct MyStringList {
+struct MyStringCons {
     struct String head;
-    struct MyStringList const *tail;
+    struct MyStringCons const *tail;
 };
 
-struct String string_concat(struct String sep, struct StringList const *strings) {
-    struct MyStringList const *ss = (struct MyStringList const *)strings;
+struct String string_concat(struct String sep, struct StringCons const *strings) {
+    struct MyStringCons const *ss = (struct MyStringCons const *)strings;
 
     struct StringBuilder *sb = string_builder_new_with_capacity(0x1000);
     bool first = true;
