@@ -220,27 +220,18 @@ void *milone_region_alloc(uint32_t count, uint32_t size) {
 // -----------------------------------------------
 
 int milone_int32_compare(int32_t l, int32_t r) {
-    if (l == r)
-        return 0;
-    if (l < r)
-        return -1;
-    return 1;
+    // if l < r: 0 - 1
+    // if l == r: 0 - 0
+    // if l > r: 1 - 0
+    return (r < l) - (l < r);
 }
 
 int milone_int64_compare(int64_t l, int64_t r) {
-    if (l == r)
-        return 0;
-    if (l < r)
-        return -1;
-    return 1;
+    return (r < l) - (l < r);
 }
 
 int milone_uint64_compare(uint64_t l, uint64_t r) {
-    if (l == r)
-        return 0;
-    if (l < r)
-        return -1;
-    return 1;
+    return (r < l) - (l < r);
 }
 
 static uint32_t uint32_min(uint32_t l, uint32_t r) {
@@ -248,9 +239,7 @@ static uint32_t uint32_min(uint32_t l, uint32_t r) {
 }
 
 static int uint32_compare(uint32_t l, uint32_t r) {
-    if (l == r) return 0;
-    if (l < r) return -1;
-    return 1;
+    return (r < l) - (l < r);
 }
 
 // -----------------------------------------------
