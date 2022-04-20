@@ -1376,13 +1376,13 @@ let private sortDecls (decls: CDecl list) : CDecl list =
            | CFunPtrTyDef _
            | CStructForwardDecl _
            | CStructDecl _
-           | CEnumDecl _ -> decl :: types, vars, bodies
+           | CEnumDecl _
+           | CNativeDecl _ -> decl :: types, vars, bodies
 
            | CStaticVarDecl _
            | CInternalStaticVarDecl _
            | CExternVarDecl _ -> types, decl :: vars, bodies
 
-           | CNativeDecl _
            | CFunForwardDecl _
            | CFunDecl _
            | CStaticFunDecl _ -> types, vars, decl :: bodies)
