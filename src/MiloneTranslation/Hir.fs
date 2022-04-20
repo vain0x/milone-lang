@@ -551,7 +551,7 @@ let tyMangle (ty: Ty, memo: TreeMap<Ty, string>) : string * TreeMap<Ty, string> 
       | NativePtrTk RefMode.ReadOnly -> fixedGeneric "InPtr"
       | NativePtrTk RefMode.WriteOnly -> fixedGeneric "OutPtr"
       | NativeFunTk -> variadicGeneric "NativeFun"
-      | NativeTypeTk name -> name, ctx
+      | NativeTypeTk name -> S.replace " " "_" name, ctx
 
       | FunTk ->
         let arity, argTys, resultTy = tyToArgList ty

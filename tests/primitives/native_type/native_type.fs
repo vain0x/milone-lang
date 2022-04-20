@@ -7,12 +7,19 @@ module Ptr = Std.Ptr
 
 type FILE = __nativeType<FILE>
 
+// It can include spaces.
+type OpaqueStruct = __nativeType<``struct Opaque``>
+
 let strAsPtr (s: string) : __inptr<char> = __nativeFun ("string_as_ptr", s)
 
 let fopen (filename: string) (mode: string) : nativeptr<FILE> =
   __nativeFun ("fopen", strAsPtr filename, strAsPtr mode)
 
 let fclose (fp: nativeptr<FILE>) : int = __nativeFun ("fclose", fp)
+
+let private testOpaqueStruct () =
+  let opt: option<nativeptr<OpaqueStruct>> = Some Ptr.nullPtr
+  ()
 
 let main _ =
   let fp = fopen "LICENSE" "r"
