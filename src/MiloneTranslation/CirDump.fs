@@ -77,6 +77,12 @@ let private binaryToString op =
 // Types
 // -----------------------------------------------
 
+let private cTyIsPtrOrConstPtr ty =
+  match ty with
+  | CPtrTy _
+  | CConstPtrTy _ -> true
+  | _ -> false
+
 let private cpTy ty acc : string list =
   match ty with
   | CVoidTy -> acc |> cons "void"
@@ -84,29 +90,51 @@ let private cpTy ty acc : string list =
   | CFloatTy flavor -> acc |> cons (cFloatTyName flavor)
   | CBoolTy -> acc |> cons "bool"
   | CCharTy -> acc |> cons "char"
-  | CPtrTy ty -> acc |> cpTy ty |> cons "*"
-  | CConstPtrTy ty -> acc |> cpTy ty |> cons " const*"
+
+  | CPtrTy ty ->
+    acc
+    |> cpTy ty
+    |> cons (
+      if cTyIsPtrOrConstPtr ty then
+        "*"
+      else
+        " *"
+    )
+
+  | CConstPtrTy ty ->
+    acc
+    |> cpTy ty
+    |> cons (
+      if cTyIsPtrOrConstPtr ty then
+        "const *"
+      else
+        " const *"
+    )
+
   | CStructTy name -> acc |> cons "struct " |> cons name
   | CEnumTy name -> acc |> cons "enum " |> cons name
   | CEmbedTy code -> acc |> cons code
 
-/// `T x` or `T (*x)(..)`. FIXME: remove this
-let private cpTyWithName name ty acc = acc |> cpTy ty |> cons " " |> cons name
+/// `T x`. (CTy isn't a function pointer.)
+let private cpTyWithName (name: string) ty acc =
+  let acc = acc |> cpTy ty
+
+  let acc =
+    if not (cTyIsPtrOrConstPtr ty) && name.Length <> 0 then
+      acc |> cons " "
+    else
+      acc
+
+  acc |> cons name
 
 let private cpParams ps acc : string list =
   let rec go ps acc =
     match ps with
     | [] -> acc
 
-    | [ name, ty ] -> acc |> cpTy ty |> cons " " |> cons name
+    | [ name, ty ] -> acc |> cpTyWithName name ty
 
-    | (name, ty) :: ps ->
-      acc
-      |> cpTy ty
-      |> cons " "
-      |> cons name
-      |> cons ", "
-      |> go ps
+    | (name, ty) :: ps -> acc |> cpTyWithName name ty |> cons ", " |> go ps
 
   match ps with
   | [] -> acc |> cons "void"

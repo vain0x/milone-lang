@@ -1148,13 +1148,13 @@ let private cgBoxStmt ctx serial arg argTy =
   let argTy, ctx = cgTyComplete ctx argTy
   let arg, ctx = cgExpr ctx arg
 
-  // void const* p = malloc(sizeof T);
+  // void const *p = malloc(sizeof T);
   let temp = getUniqueVarName ctx serial
 
   let ctx =
     addLetAllocStmt ctx temp argTy (CConstPtrTy CVoidTy)
 
-  // *(T*)p = t;
+  // *(T *)p = t;
   let left =
     CUnaryExpr(CDerefUnary, CCastExpr(CVarExpr temp, CPtrTy argTy))
 
@@ -1285,7 +1285,7 @@ let private genMainFun stmts : CDecl =
 
   let args =
     [ "argc", intTy
-      "argv", CEmbedTy "char**" ]
+      "argv", CPtrTy (CPtrTy (CEmbedTy "char")) ]
 
   let stmts =
     CExprStmt(CCallExpr(CVarExpr "milone_start", [ CVarExpr "argc"; CVarExpr "argv" ]))
