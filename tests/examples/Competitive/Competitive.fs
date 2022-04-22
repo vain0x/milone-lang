@@ -1,6 +1,8 @@
 module rec Competitive.Program
 
-open Competitive.Helpers
+open Std.IO
+open Std.StdError
+open Competitive.Scan
 open Competitive.SegTree
 open Competitive.ABC140A
 open Competitive.ABC140B
@@ -8,11 +10,11 @@ open Competitive.ABC140E
 
 [<EntryPoint>]
 let main _ =
-  vectorTest ()
   segTreeTest ()
   abc140aTest ()
   abc140bTest ()
   abc140eTest ()
 
-  // abc140eMain ()
+  // Comment in the next line to try with stdio.
+  // IO.exec abc140eMain |> never
   0

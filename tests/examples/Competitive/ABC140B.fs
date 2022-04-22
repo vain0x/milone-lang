@@ -1,38 +1,49 @@
 // https://atcoder.jp/contests/abc140/tasks/abc140_b
 module rec Competitive.ABC140B
 
-open Competitive.Helpers
-open Competitive.SegTree
+open Competitive.Scan
+open Std.IO
+open Std.Vector
 
-let abc140bSolve n a b c =
-  let segItemTypeInt = segItemTypeNew 0 (fun _ _ -> 0)
-  let a = a |> segTreeOfList segItemTypeInt
-  let b = b |> segTreeOfList segItemTypeInt
-  let c = c |> segTreeOfList segItemTypeInt
+let private solve n a b c =
+  let a = Vector.ofList a
+  let b = Vector.ofList b
+  let c = Vector.ofList c
 
-  let rec go (sum: int) i =
-    if i = n then
-      sum
-    else
-      let ai = a |> segTreeGet i
-      let eat = b |> segTreeGet (ai - 1) // 0-indexed
+  let rec go (sum: int) a b c i =
+    if i < n then
+      let ai, a = Vector.forceGet i a
 
-      let bonus =
-        if i + 1 < n && a |> segTreeGet (i + 1) = ai + 1 then
-          c |> segTreeGet (ai - 1)
+      let add, b = Vector.forceGet (ai - 1) b
+      let sum = sum + add
+
+      let bonus, a, c =
+        if i >= 1 then
+          let prev, a = Vector.forceGet (i - 1) a
+          if prev = ai - 1 then
+            let x, c = Vector.forceGet (ai - 2) c
+            x, a, c
+          else
+            0, a, c
         else
-          0
+          0, a, c
 
-      go (sum + eat + bonus) (i + 1)
+      go (sum + bonus) a b c (i + 1)
+    else
+      sum, a, b, c
 
-  go 0 0
+  let total, a, b, c = go 0 a b c 0
+  Vector.dispose a
+  Vector.dispose b
+  Vector.dispose c
+  total
 
 let abc140bTest () =
   let f a b c =
-    let n = a |> listLength
-    assert (b |> listLength = n)
-    assert (c |> listLength = n - 1)
-    abc140bSolve n a b c
+    let n = List.length a
+    assert (List.length b = n)
+    assert (List.length c = n - 1)
+    solve n a b c
 
   let case1 () =
     let a = [ 3; 1; 2 ]
@@ -58,10 +69,11 @@ let abc140bTest () =
 
   assert (case3 ())
 
-let abc140bMain () =
-  let n = scanInt ()
-  let a = scanIntList n
-  let b = scanIntList n
-  let c = scanIntList (n - 1)
-  let m = abc140bSolve n a b c
+let abc140bMain (io: IO) =
+  let n, io = scanInt io
+  let a, io = scanList scanInt n io
+  let b, io = scanList scanInt n io
+  let c, io = scanList scanInt (n - 1) io
+  let m = solve n a b c
   printfn "%d" m
+  io
