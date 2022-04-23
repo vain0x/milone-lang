@@ -66,6 +66,9 @@ const newLanguageClient = (lspCommand: string, miloneHome: string, dotnetCommand
         MILONE_HOME: miloneHome,
         MILONE_LSP_SERVER_LOG_LEVEL,
         MILONE_LSP_SERVER_DOTNET_COMMAND: dotnetCommand,
+
+        // Heap limit ~2GB. https://docs.microsoft.com/en-us/dotnet/core/runtime-config/garbage-collector#heap-limit
+        DOTNET_GCHeapHardLimit: "0x70001000",
       },
     })
     server = p
