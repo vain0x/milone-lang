@@ -1,3 +1,4 @@
+open Std.Block
 open Std.StdList
 open Std.StdTesting
 open Std.Vector
@@ -171,6 +172,21 @@ let private sortCase () =
   assert (shouldEqual (List.debug string) xs [ 1; 1; 3; 4; 5; 9 ])
   Vector.dispose v
 
+let private ofBlockCase () =
+  let v = Vector.ofBlock (Block.ofList [ 3; 1; 4; 1; 5; 9 ])
+  let xs, v = Vector.toList v
+  Vector.dispose v
+
+  assert (shouldEqual (List.debug string) xs [ 3; 1; 4; 1; 5; 9 ])
+
+let private toBlockCase () =
+  let v = Vector.ofList [ 3; 1; 4; 1; 5; 9 ]
+  let block, v = Vector.toBlock v
+  Vector.dispose v
+
+  let xs = Block.toList block
+  assert (shouldEqual (List.debug string) xs [ 3; 1; 4; 1; 5; 9 ])
+
 // -----------------------------------------------
 // VectorExt
 // -----------------------------------------------
@@ -240,6 +256,8 @@ let testVector () =
   replicateCase ()
   foldCase ()
   sortCase ()
+  ofBlockCase ()
+  toBlockCase ()
 
   // VectorExt
   reserveCase ()

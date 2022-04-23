@@ -1,5 +1,8 @@
 module Ptr = Std.Ptr
 
+// For memcpy
+__nativeDecl "#include <string.h>"
+
 /// Immutable array.
 type Block<'T> = private Block of ptr: __inptr<'T> * len: uint
 
@@ -248,3 +251,22 @@ module Block =
         acc
 
     toListLoop [] (length block)
+
+module BlockExt =
+  /// Unsafely exposes pointer and length.
+  ///
+  /// - Pointer can be null when length is zero.
+  /// - Pointer is invalidated when to leave the current region.
+  let unsafeToRawParts (block: Block<'T>) : __inptr<'T> * uint =
+    let (Block(ptr, len)) = block
+    ptr, len
+
+  /// Creates a block by copying from a pointer.
+  let unsafeOfRawParts (ptr: __inptr<'T>) (len: uint) : Block<'T> =
+    if len <> 0u then
+      assert (ptr <> Ptr.nullPtr)
+      let destPtr: __outptr<'T> = Ptr.regionAlloc len
+      __nativeStmt ("memcpy({0}, {1}, {2});", destPtr, ptr, unativeint len * unativeint sizeof<'T>)
+      Block(Ptr.cast destPtr, len)
+    else
+      Block.empty ()

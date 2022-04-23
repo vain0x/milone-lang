@@ -1,5 +1,6 @@
 module rec LibLinear.Vector
 
+open Std.Block
 open Std.StdError
 
 module Ptr = Std.Ptr
@@ -346,6 +347,29 @@ module Vector =
 
     let ptr = __acquire (__nativeCast (__dispose ptr))
     Vector(ptr, length, capacity)
+
+  /// Creates a vector by copying from a block.
+  let ofBlock (block: Block<'T>) : Vector<'T> =
+    let srcPtr, len = BlockExt.unsafeToRawParts block
+
+    if len <> 0u then
+      let destPtr =
+        __dispose (rawAllocate len (uint sizeof<'T>))
+
+      __nativeStmt ("memcpy({0}, {1}, {2});", destPtr, srcPtr, unativeint len * unativeint sizeof<'T>)
+      Vector(__acquire (Ptr.cast destPtr), len, len)
+    else
+      empty ()
+
+  /// Creates a block by copying from a vector.
+  let toBlock (v: Vector<'T>) : Block<'T> * Vector<'T> =
+    let (Vector (ptr, len, cap)) = v
+    let ptr = __dispose ptr
+
+    let block =
+      BlockExt.unsafeOfRawParts (Ptr.asIn ptr) len
+
+    block, Vector(__acquire ptr, len, cap)
 
 /// Vector methods that are less frequently used.
 module VectorExt =
