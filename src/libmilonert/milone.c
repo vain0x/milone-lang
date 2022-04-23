@@ -813,45 +813,6 @@ void milone_profile_log(struct String msg, void *profiler) {
 }
 
 // -----------------------------------------------
-// For competitive programming
-// -----------------------------------------------
-
-int32_t scan_int(void) {
-    int32_t value;
-    int _n = scanf("%d", &value);
-    return value;
-}
-
-char scan_char(void) {
-    char value;
-    int _n = scanf("%c", &value);
-    return value;
-}
-
-struct String scan_string(int capacity) {
-    if (capacity <= 0) {
-        fprintf(stderr, "scan_string(%d)", capacity);
-        exit(1);
-    }
-
-    char *buf = milone_region_alloc(capacity, sizeof(char));
-    if (buf == NULL) {
-        fprintf(stderr, "scan_string(%d) out of memory", capacity);
-        exit(1);
-    }
-
-    char fmt[16] = {0};
-    sprintf(fmt, "%%%ds", capacity);
-    assert(fmt[15] == 0);
-
-    int _n = scanf(fmt, buf);
-
-    size_t len = strlen(buf);
-    assert((long long)len < (long long)capacity);
-    return (struct String){.ptr = buf, .len = (uint32_t)len};
-}
-
-// -----------------------------------------------
 // Runtime Entrypoint
 // -----------------------------------------------
 
