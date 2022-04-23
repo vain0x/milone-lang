@@ -8,7 +8,7 @@
 
 #include <milone.h>
 
-#if defined(_MSC_VER)
+#if defined(_MSC_VER) // On Windows
 
 #define MILONE_PLATFORM_WINDOWS 1
 #define WIN32_LEAN_AND_MEAN 1
@@ -72,7 +72,7 @@ static struct String path_join(struct String base_path, struct String path) {
 // String of OS-native encoding.
 //
 // This holds the same invariant as `String`.
-struct OsString {
+struct MiloneOsString {
     // Pointer to string.
     //
     // Allocation block that is pointed to must include at least one "\x00\x00"
@@ -86,17 +86,17 @@ struct OsString {
 // Convert an null-terminated OS-native string to OsString.
 //
 // The result is NOT allocated and is valid only when the parameter is valid.
-static struct OsString os_string_borrow(LPCTSTR s) {
+static struct MiloneOsString milone_os_string_borrow(LPCTSTR s) {
     assert(s != NULL);
-    return (struct OsString){.ptr = s, .len = (uint32_t)_tcslen(s)};
+    return (struct MiloneOsString){.ptr = s, .len = (uint32_t)_tcslen(s)};
 }
 
 // Convert a UTF-8 string to OS-native encoding. (UTF-16 on Windows)
 //
 // The result is null-terminated.
-static struct OsString os_string_of(struct String s) {
+static struct MiloneOsString milone_os_string_of(struct String s) {
     if (s.len == 0) {
-        return os_string_borrow(L"");
+        return milone_os_string_borrow(L"");
     }
 
     int len = MultiByteToWideChar(CP_UTF8, 0, s.ptr, s.len, NULL, 0);
@@ -114,13 +114,13 @@ static struct OsString os_string_of(struct String s) {
     assert(n >= 0);
     assert(n <= len);
     assert(buf[(uint32_t)n] == L'\0');
-    return (struct OsString){.ptr = buf, .len = (uint32_t)n};
+    return (struct MiloneOsString){.ptr = buf, .len = (uint32_t)n};
 }
 
 // Convert an OS-string to a UTF-8. Allocate to copy.
 //
 // The result is null-terminated.
-static struct String os_string_to(struct OsString s) {
+static struct String milone_os_string_to(struct MiloneOsString s) {
     if (s.len == 0) {
         return string_borrow("");
     }
@@ -184,7 +184,7 @@ struct String milone_get_cwd(void) {
         exit(1);
     }
 
-    return os_string_to((struct OsString){.ptr = buf, .len = len});
+    return milone_os_string_to((struct MiloneOsString){.ptr = buf, .len = len});
 #else
 #error no platform
 #endif
@@ -217,7 +217,7 @@ static bool milone_platform_create_single_directory(struct String dir) {
 #if defined(MILONE_PLATFORM_UNIX)
     return mkdir(string_to_c_str(dir), 0774) == 0 || errno == EEXIST;
 #elif defined(MILONE_PLATFORM_WINDOWS)
-    struct OsString d = os_string_of(dir);
+    struct MiloneOsString d = milone_os_string_of(dir);
     return CreateDirectoryW(d.ptr, NULL) != 0 ||
            GetLastError() == ERROR_ALREADY_EXISTS;
 #else
@@ -347,7 +347,7 @@ static void milone_subprocess_run_windows(struct String cmdline, int *code) {
         // application name: null to use command line
         NULL,
         // command line
-        (LPWSTR)os_string_of(cmdline).ptr,
+        (LPWSTR)milone_os_string_of(cmdline).ptr,
         // process security attributes
         NULL,
         // primary thread security attributes
