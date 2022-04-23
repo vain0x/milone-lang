@@ -6,6 +6,8 @@ open Std.FileTests
 open Std.StdError
 open Std.VectorTests
 
+open Std.Block
+
 let main _ =
   IO.exec (fun (io: IO) ->
     testByteVector ()
