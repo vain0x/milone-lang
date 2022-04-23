@@ -6,13 +6,20 @@ module rec Competitive.ABC140E
 
 // not verified to get AC
 
+open Std.Block
 open Std.IO
+open Std.StdError
 open Std.Vector
 open Competitive.Scan
 open Competitive.SegTree
 
 let private intMin (l: int) r = if r < l then r else l
 let private intMax (l: int) r = if l < r then r else l
+
+module private Block =
+  let get index block =
+    Block.tryItem index block
+    |> Option.defaultWith unreachable
 
 let private solve n perm =
   // Add sentinels.
@@ -28,26 +35,30 @@ let private solve n perm =
 
   // Inverse of perm.
   let pos =
-    let rec go pos perm i =
-      if i = n + 2 then
-        pos, perm
-      else
-        let p, perm = Vector.forceGet i perm
-        let pos = Vector.forceSet p i pos
-        go pos perm (i + 1)
+    let perm = Block.ofList perm
 
-    let pos = Vector.ofList (List.replicate (n + 3) 0)
-    let perm = Vector.ofList perm
-    let pos, perm = go pos perm 0
-    Vector.dispose perm
+    let rec go pos i =
+      if i = n + 2 then
+        pos
+      else
+        let p = Block.get i perm
+        let pos = Vector.forceSet p i pos
+        go pos (i + 1)
+
+    let pos = Vector.replicate (n + 3) 0
+    let pos = go pos 0
+
+    let pos, v = Vector.toBlock pos
+    Vector.dispose v
     pos
 
-
-  let rec go pos sum prev next p =
+  let rec go sum prev next p =
     if p < 1 then
-      sum, pos, prev, next
+      SegTree.dispose prev
+      SegTree.dispose next
+      sum
     else
-      let i, pos = Vector.forceGet p pos
+      let i = Block.get p pos
 
       let x, prev = SegTree.sum 0 i prev
       let w, prev = SegTree.sum 0 x prev
@@ -66,13 +77,9 @@ let private solve n perm =
       let prev = SegTree.set i i prev
       let next = SegTree.set i i next
 
-      go pos sum prev next (p - 1)
+      go sum prev next (p - 1)
 
-  let sum, pos, prev, next = go pos 0 prev next n
-  Vector.dispose pos
-  SegTree.dispose prev
-  SegTree.dispose next
-  sum
+  go 0 prev next n
 
 let abc140eTest () =
   let solve p expected =

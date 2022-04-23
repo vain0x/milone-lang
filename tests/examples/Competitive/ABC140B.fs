@@ -2,41 +2,39 @@
 module rec Competitive.ABC140B
 
 open Competitive.Scan
+open Std.Block
 open Std.IO
+open Std.StdError
 open Std.Vector
 
+module private Block =
+  let get index block =
+    Block.tryItem index block
+    |> Option.defaultWith unreachable
+
 let private solve n a b c =
-  let a = Vector.ofList a
-  let b = Vector.ofList b
-  let c = Vector.ofList c
+  let a = Block.ofList a
+  let b = Block.ofList b
+  let c = Block.ofList c
 
-  let rec go (sum: int) a b c i =
+  let rec go (sum: int) i =
     if i < n then
-      let ai, a = Vector.forceGet i a
+      let ai = Block.get i a
 
-      let add, b = Vector.forceGet (ai - 1) b
+      let add = Block.get (ai - 1) b
       let sum = sum + add
 
-      let bonus, a, c =
-        if i >= 1 then
-          let prev, a = Vector.forceGet (i - 1) a
-          if prev = ai - 1 then
-            let x, c = Vector.forceGet (ai - 2) c
-            x, a, c
-          else
-            0, a, c
+      let bonus =
+        if i >= 1 && Block.get (i - 1) a = ai - 1 then
+          Block.get (ai - 2) c
         else
-          0, a, c
+          0
 
-      go (sum + bonus) a b c (i + 1)
+      go (sum + bonus) (i + 1)
     else
-      sum, a, b, c
+      sum
 
-  let total, a, b, c = go 0 a b c 0
-  Vector.dispose a
-  Vector.dispose b
-  Vector.dispose c
-  total
+  go 0 0
 
 let abc140bTest () =
   let f a b c =

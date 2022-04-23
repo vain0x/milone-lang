@@ -60,11 +60,7 @@ module SegTree =
 
     assert (w >= len)
 
-    // use Vector.replicate
-    let nodes =
-      // Node count.
-      let nk = 2 * w - 1
-      Vector.ofList (List.replicate nk empty)
+    let nodes = Vector.replicate (2 * w - 1) empty
 
     // Set leaves.
     let nodes =
