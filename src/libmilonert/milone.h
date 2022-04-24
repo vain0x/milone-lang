@@ -101,6 +101,56 @@ struct String string_concat(struct String sep, struct StringCons const *strings)
 inline char const *string_as_ptr(struct String s) { return s.ptr; }
 
 // -----------------------------------------------
+// OsString
+// -----------------------------------------------
+// #milone_os_string
+
+// HACK: This section should be written in an appropriate module
+//       but there's no good way.
+//       On Windows, this should include Windows.h and tchar.h if necessary.
+
+#if defined(_MSC_VER) // On Windows MSVC
+
+// UTF-16 code unit
+typedef uint16_t OsChar;
+
+#else
+
+// UTF-8 code unit
+typedef char OsChar;
+
+#endif
+
+// Pointer to a NUL-terminated string of OS-dependent encoding.
+// LPCTSTR on Windows, char const * on Linux.
+typedef OsChar const *OsStringPtr;
+
+// String of OS-dependent encoding.
+//
+// This holds the same invariants as String.
+struct MiloneOsString {
+    OsStringPtr ptr;
+    uint32_t len;
+};
+
+// Wraps a pointer with a string object.
+//
+// SAFETY: Tha result is valid as long as the given pointer is valid.
+struct MiloneOsString milone_os_string_borrow(OsStringPtr ptr);
+
+// Creates an OS-encode string by copying from a NUL-terminated string.
+// The result is guaranteed to be NUL-terminated.
+struct MiloneOsString milone_os_string_of_native(OsStringPtr ptr);
+
+// Creates an OS-encode string by converting from a UTF-8 string.
+// The result is guaranteed to be NUL-terminated.
+struct MiloneOsString milone_os_string_of(struct String s);
+
+// Creates a UTF-8 string by converting from an OS-encode string.
+// The result is guaranteed to be NUL-terminated.
+struct String milone_os_string_to(struct MiloneOsString s);
+
+// -----------------------------------------------
 // assertion
 // -----------------------------------------------
 

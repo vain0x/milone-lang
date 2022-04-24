@@ -64,37 +64,18 @@ static struct String path_join(struct String base_path, struct String path) {
 }
 
 // -----------------------------------------------
-// OSString
+// OsString
 // -----------------------------------------------
+// #milone_os_string
 
-#ifdef MILONE_PLATFORM_WINDOWS
+#if defined(_MSC_VER) // On Windows MSVC
 
-// String of OS-native encoding.
-//
-// This holds the same invariant as `String`.
-struct MiloneOsString {
-    // Pointer to string.
-    //
-    // Allocation block that is pointed to must include at least one "\x00\x00"
-    // sequence in distance of 2N bytes from the end of the span.
-    LPCTSTR ptr;
-
-    // Length. Count of UTF-16 code units. Half of bytes.
-    uint32_t len;
-};
-
-// Convert an null-terminated OS-native string to OsString.
-//
-// The result is NOT allocated and is valid only when the parameter is valid.
-static struct MiloneOsString milone_os_string_borrow(LPCTSTR s) {
+struct MiloneOsString milone_os_string_borrow(LPCTSTR s) {
     assert(s != NULL);
     return (struct MiloneOsString){.ptr = s, .len = (uint32_t)_tcslen(s)};
 }
 
-// Convert a UTF-8 string to OS-native encoding. (UTF-16 on Windows)
-//
-// The result is null-terminated.
-static struct MiloneOsString milone_os_string_of(struct String s) {
+struct MiloneOsString milone_os_string_of(struct String s) {
     if (s.len == 0) {
         return milone_os_string_borrow(L"");
     }
@@ -113,14 +94,11 @@ static struct MiloneOsString milone_os_string_of(struct String s) {
     }
     assert(n >= 0);
     assert(n <= len);
-    assert(buf[(uint32_t)n] == L'\0');
+    assert(buf[(uint32_t)n] == (TCHAR)'\0');
     return (struct MiloneOsString){.ptr = buf, .len = (uint32_t)n};
 }
 
-// Convert an OS-string to a UTF-8. Allocate to copy.
-//
-// The result is null-terminated.
-static struct String milone_os_string_to(struct MiloneOsString s) {
+struct String milone_os_string_to(struct MiloneOsString s) {
     if (s.len == 0) {
         return string_borrow("");
     }
@@ -146,7 +124,36 @@ static struct String milone_os_string_to(struct MiloneOsString s) {
     return (struct String){.ptr = buf, .len = (uint32_t)n};
 }
 
-#endif // windows
+struct MiloneOsString milone_os_string_of_native(LPCTSTR ptr) {
+    assert(ptr != NULL);
+    uint32_t len = (uint32_t)_tcslen(ptr);
+    TCHAR *buf = milone_region_alloc(len + 1, sizeof(TCHAR));
+    memcpy(buf, ptr, len * sizeof(TCHAR));
+    assert(buf[len] == (TCHAR)'\0');
+    return (struct MiloneOsString){.ptr = buf, .len = len};
+}
+
+#else
+
+struct MiloneOsString milone_os_string_borrow(OsStringPtr ptr) {
+    return (struct MiloneOsString){.ptr = ptr, .len = (uint32_t)strlen(ptr)};
+}
+
+struct MiloneOsString milone_os_string_of_native(OsStringPtr ptr) {
+    struct String s = string_of_c_str(ptr);
+    return (struct MiloneOsString){.ptr = ptr, .len = s.len};
+}
+
+struct MiloneOsString milone_os_string_of(struct String s) {
+    s = string_ensure_null_terminated(s);
+    return (struct MiloneOsString){.ptr = s.ptr, .len = s.len};
+}
+
+struct String milone_os_string_to(struct MiloneOsString s) {
+    return string_ensure_null_terminated((struct String){.ptr = s.ptr, .len = s.len});
+}
+
+#endif
 
 // -----------------------------------------------
 // misc

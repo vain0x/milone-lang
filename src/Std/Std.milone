@@ -5,12 +5,15 @@ open Std.IO
 open Std.FileTests
 open Std.StdError
 open Std.VectorTests
+open Std.OsStringTests
 
+// Test is written in tests/primitives/std_block
 open Std.Block
 
 let main _ =
   IO.exec (fun (io: IO) ->
     testByteVector ()
     testVector ()
+    testOsString ()
     testFile io)
   |> never

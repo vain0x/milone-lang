@@ -1,0 +1,35 @@
+open Std.OsString
+open Std.StdError
+open Std.Vector
+
+let private basicTest () =
+  // Creation.
+  let s = OsString.ofString "你好, 🐧！" // (Hello, penguin!)
+
+  let n = OsString.length s
+  assert (n = 7 || n = 15) // 7 in UTF-16, 15 in UTF-8
+
+  // of/to roundtrip
+  let t = OsString.toString s
+  assert (t = "你好, 🐧！")
+
+  // Empty string.
+  let empty = OsString.ofString ""
+  assert (OsString.length empty = 0)
+
+let private osCharTest () =
+  // NUL
+  assert (OsChar.toUInt OsChar.nul = 0u)
+
+  // conversion between uint
+  assert (OsChar.toUInt (OsChar.ofUInt 65u) = 65u)
+
+  // conversion between char
+  let c = OsChar.asChar (OsChar.ofChar 'A')
+  assert (byte c = 65uy)
+  let c = OsChar.ofChar (char 0xFFuy)
+  assert (byte (OsChar.asChar c) = 0uy)
+
+let testOsString () =
+  basicTest ()
+  osCharTest ()
