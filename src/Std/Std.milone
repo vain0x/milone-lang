@@ -3,6 +3,7 @@
 open Std.ByteVectorTests
 open Std.IO
 open Std.FileTests
+open Std.PathTests
 open Std.StdError
 open Std.VectorTests
 open Std.OsStringTests
@@ -15,5 +16,6 @@ let main _ =
     testByteVector ()
     testVector ()
     testOsString ()
+    testPath ()
     testFile io)
   |> never
