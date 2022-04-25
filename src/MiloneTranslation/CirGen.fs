@@ -239,7 +239,13 @@ let private ofMirResult (mirCtx: MirResult) : CirCtx =
   let variantUniqueNames, freq =
     renameIdents2
       mirCtx.Variants
-      (fun (variantDef: VariantDef) -> true, variantDef.Name)
+      (fun (variantDef: VariantDef) ->
+        let unionIdent =
+          match mirCtx.Tys |> mapFind variantDef.UnionTySerial with
+          | UnionTyDef (ident, _, _, _) -> ident
+          | _ -> unreachable ()
+
+        true, unionIdent + "_" + variantDef.Name)
       (TMap.empty variantSerialCompare)
       freq
 
