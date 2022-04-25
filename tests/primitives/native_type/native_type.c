@@ -21,14 +21,14 @@ void native_type_native_type_testOpaqueStruct(void);
 int main(int argc, char **argv);
 
 enum struct_OpaqueMutPtroption1Discriminant {
-    None_,
-    Some_,
+    struct_OpaqueMutPtroption1_None,
+    struct_OpaqueMutPtroption1_Some,
 };
 
 struct struct_OpaqueMutPtroption1 {
     enum struct_OpaqueMutPtroption1Discriminant discriminant;
     union {
-        struct Opaque *Some_;
+        struct Opaque *struct_OpaqueMutPtroption1_Some;
     };
 };
 
@@ -57,7 +57,7 @@ int32_t native_type_native_type_fclose(FILE *fp_) {
 void native_type_native_type_testOpaqueStruct(void) {
     struct struct_OpaqueMutPtroption1 opt_;
     struct struct_OpaqueMutPtroption1 variant_;
-    variant_ = (struct struct_OpaqueMutPtroption1){.discriminant = Some_, .Some_ = ((struct Opaque *)NULL)};
+    variant_ = (struct struct_OpaqueMutPtroption1){.discriminant = struct_OpaqueMutPtroption1_Some, .struct_OpaqueMutPtroption1_Some = ((struct Opaque *)NULL)};
     opt_ = variant_;
     return;
 }

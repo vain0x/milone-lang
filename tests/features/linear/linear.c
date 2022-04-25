@@ -72,14 +72,14 @@ struct Int32Cons {
 };
 
 enum Int32Int32Tuple2option1_Discriminant {
-    None_,
-    Some_,
+    Int32Int32Tuple2option1_None,
+    Int32Int32Tuple2option1_Some,
 };
 
 struct Int32Int32Tuple2option1_ {
     enum Int32Int32Tuple2option1_Discriminant discriminant;
     union {
-        struct Int32Int32Tuple2_ Some_;
+        struct Int32Int32Tuple2_ Int32Int32Tuple2option1_Some;
     };
 };
 
@@ -353,10 +353,10 @@ void linear_linear_optionOfLinearCase(void) {
     char match_;
     bool if_2;
     Int32Int32Tuple2_2 = (struct Int32Int32Tuple2_){.t0 = 5, .t1 = 7};
-    variant_ = (struct Int32Int32Tuple2option1_){.discriminant = Some_, .Some_ = Int32Int32Tuple2_2};
+    variant_ = (struct Int32Int32Tuple2option1_){.discriminant = Int32Int32Tuple2option1_Some, .Int32Int32Tuple2option1_Some = Int32Int32Tuple2_2};
     linearOpt_ = variant_;
-    if ((linearOpt_.discriminant != Some_)) goto next_19;
-    l_5 = linearOpt_.Some_;
+    if ((linearOpt_.discriminant != Int32Int32Tuple2option1_Some)) goto next_19;
+    l_5 = linearOpt_.Int32Int32Tuple2option1_Some;
     x_2 = l_5.t0;
     y_1 = l_5.t1;
     if ((x_2 == 5)) {
@@ -375,7 +375,7 @@ if_next_21:;
     match_ = 0;
     goto end_match_18;
 next_19:;
-    if ((linearOpt_.discriminant != None_)) goto next_20;
+    if ((linearOpt_.discriminant != Int32Int32Tuple2option1_None)) goto next_20;
     match_ = 0;
     goto end_match_18;
 next_20:;

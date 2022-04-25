@@ -15,13 +15,13 @@ struct UnionX_;
 int main(int argc, char **argv);
 
 enum RecA_Discriminant {
-    T_2,
+    RecA_T,
 };
 
 struct RecA_ {
     enum RecA_Discriminant discriminant;
     union {
-        struct RecA_ListCons const *T_2;
+        struct RecA_ListCons const *RecA_T;
     };
 };
 
@@ -31,8 +31,8 @@ struct UnitCons {
 };
 
 enum UnionX_Discriminant {
-    VariantX_,
-    VariantY_,
+    UnionX_VariantX,
+    UnionX_VariantY,
 };
 
 struct UnionX_ {
@@ -48,8 +48,8 @@ int main(int argc, char **argv) {
     char match_;
     list_ = ((struct UnitCons const *)milone_region_alloc(1, sizeof(struct UnitCons)));
     (*(((struct UnitCons *)list_))) = (struct UnitCons){.head = 0, .tail = NULL};
-    switch ((struct UnionX_){.discriminant = VariantY_}.discriminant) {
-        case VariantX_:
+    switch ((struct UnionX_){.discriminant = UnionX_VariantY}.discriminant) {
+        case UnionX_VariantX:
             goto clause_2;
 
         default:
@@ -63,9 +63,9 @@ clause_3:;
     switch_ = 0;
     goto switch_next_1;
 switch_next_1:;
-    variant_ = (struct RecA_){.discriminant = T_2, .T_2 = NULL};
+    variant_ = (struct RecA_){.discriminant = RecA_T, .RecA_T = NULL};
     useRecA_ = variant_;
-    if ((!((!(useRecA_.T_2))))) goto next_5;
+    if ((!((!(useRecA_.RecA_T))))) goto next_5;
     match_ = 0;
     goto end_match_4;
 next_5:;

@@ -21,15 +21,15 @@ void union_unitlike_union_unitlike_usedInRecordTypeCase(void);
 int main(int argc, char **argv);
 
 enum MyBool_Discriminant {
-    MyFalse_,
-    MyTrue_,
+    MyBool_MyFalse,
+    MyBool_MyTrue,
 };
 
 struct MyBool_ {
     enum MyBool_Discriminant discriminant;
     union {
-        char MyFalse_;
-        char MyTrue_;
+        char MyBool_MyFalse;
+        char MyBool_MyTrue;
     };
 };
 
@@ -56,11 +56,11 @@ end_match_1:;
 
 bool union_unitlike_union_unitlike_usedInOtherSumTypeCase_toBool(struct MyBool_ myBool_1) {
     bool match_1;
-    if ((myBool_1.discriminant != MyFalse_)) goto next_4;
+    if ((myBool_1.discriminant != MyBool_MyFalse)) goto next_4;
     match_1 = false;
     goto end_match_3;
 next_4:;
-    if ((myBool_1.discriminant != MyTrue_)) goto next_5;
+    if ((myBool_1.discriminant != MyBool_MyTrue)) goto next_5;
     match_1 = true;
     goto end_match_3;
 next_5:;
@@ -73,7 +73,7 @@ void union_unitlike_union_unitlike_usedInOtherSumTypeCase(void) {
     struct MyBool_ myBool_;
     struct MyBool_ variant_;
     bool call_;
-    variant_ = (struct MyBool_){.discriminant = MyTrue_, .MyTrue_ = 0};
+    variant_ = (struct MyBool_){.discriminant = MyBool_MyTrue, .MyBool_MyTrue = 0};
     myBool_ = variant_;
     call_ = union_unitlike_union_unitlike_usedInOtherSumTypeCase_toBool(myBool_);
     if ((!(call_))) milone_assert_error("union_unitlike/union_unitlike.milone", 27, 2);

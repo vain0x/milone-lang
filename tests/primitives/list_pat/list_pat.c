@@ -29,38 +29,38 @@ struct Int32option1option1option1_Cons const *MiloneCore_List_Int32Int32option1o
 int main(int argc, char **argv);
 
 enum Int32option1_Discriminant {
-    None_,
-    Some_,
+    Int32option1_None,
+    Int32option1_Some,
 };
 
 struct Int32option1_ {
     enum Int32option1_Discriminant discriminant;
     union {
-        int32_t Some_;
+        int32_t Int32option1_Some;
     };
 };
 
 enum Int32option1option1_Discriminant {
-    None_1,
-    Some_1,
+    Int32option1option1_None,
+    Int32option1option1_Some,
 };
 
 struct Int32option1option1_ {
     enum Int32option1option1_Discriminant discriminant;
     union {
-        struct Int32option1_ Some_1;
+        struct Int32option1_ Int32option1option1_Some;
     };
 };
 
 enum Int32option1option1option1_Discriminant {
-    None_2,
-    Some_2,
+    Int32option1option1option1_None,
+    Int32option1option1option1_Some,
 };
 
 struct Int32option1option1option1_ {
     enum Int32option1option1option1_Discriminant discriminant;
     union {
-        struct Int32option1option1_ Some_2;
+        struct Int32option1option1_ Int32option1option1option1_Some;
     };
 };
 
@@ -83,9 +83,9 @@ struct Int32option1option1option1_ list_pat_list_pat_main_fun(int32_t x_) {
     struct Int32option1_ variant_;
     struct Int32option1option1_ variant_1;
     struct Int32option1option1option1_ variant_2;
-    variant_ = (struct Int32option1_){.discriminant = Some_, .Some_ = x_};
-    variant_1 = (struct Int32option1option1_){.discriminant = Some_1, .Some_1 = variant_};
-    variant_2 = (struct Int32option1option1option1_){.discriminant = Some_2, .Some_2 = variant_1};
+    variant_ = (struct Int32option1_){.discriminant = Int32option1_Some, .Int32option1_Some = x_};
+    variant_1 = (struct Int32option1option1_){.discriminant = Int32option1option1_Some, .Int32option1option1_Some = variant_};
+    variant_2 = (struct Int32option1option1option1_){.discriminant = Int32option1option1option1_Some, .Int32option1option1option1_Some = variant_1};
     return variant_2;
 }
 
@@ -131,40 +131,40 @@ int main(int argc, char **argv) {
     (*(((struct Int32Cons *)list_))) = (struct Int32Cons){.head = 1, .tail = list_1};
     call_1 = MiloneCore_List_Int32Int32option1option1option1Fun1Int32ListInt32option1option1option1ListFun2_map(fun_, list_);
     if ((!(call_1))) goto next_10;
-    if ((call_1->head.discriminant != Some_2)) goto next_10;
-    if ((call_1->head.Some_2.discriminant != Some_1)) goto next_10;
-    if ((call_1->head.Some_2.Some_1.discriminant != Some_)) goto next_10;
-    x1_ = call_1->head.Some_2.Some_1.Some_;
+    if ((call_1->head.discriminant != Int32option1option1option1_Some)) goto next_10;
+    if ((call_1->head.Int32option1option1option1_Some.discriminant != Int32option1option1_Some)) goto next_10;
+    if ((call_1->head.Int32option1option1option1_Some.Int32option1option1_Some.discriminant != Int32option1_Some)) goto next_10;
+    x1_ = call_1->head.Int32option1option1option1_Some.Int32option1option1_Some.Int32option1_Some;
     if ((!(call_1->tail))) goto next_10;
-    if ((call_1->tail->head.discriminant != Some_2)) goto next_10;
-    if ((call_1->tail->head.Some_2.discriminant != Some_1)) goto next_10;
-    if ((call_1->tail->head.Some_2.Some_1.discriminant != Some_)) goto next_10;
-    x2_ = call_1->tail->head.Some_2.Some_1.Some_;
+    if ((call_1->tail->head.discriminant != Int32option1option1option1_Some)) goto next_10;
+    if ((call_1->tail->head.Int32option1option1option1_Some.discriminant != Int32option1option1_Some)) goto next_10;
+    if ((call_1->tail->head.Int32option1option1option1_Some.Int32option1option1_Some.discriminant != Int32option1_Some)) goto next_10;
+    x2_ = call_1->tail->head.Int32option1option1option1_Some.Int32option1option1_Some.Int32option1_Some;
     if ((!(call_1->tail->tail))) goto next_10;
-    if ((call_1->tail->tail->head.discriminant != Some_2)) goto next_10;
-    if ((call_1->tail->tail->head.Some_2.discriminant != Some_1)) goto next_10;
-    if ((call_1->tail->tail->head.Some_2.Some_1.discriminant != Some_)) goto next_10;
-    x3_ = call_1->tail->tail->head.Some_2.Some_1.Some_;
+    if ((call_1->tail->tail->head.discriminant != Int32option1option1option1_Some)) goto next_10;
+    if ((call_1->tail->tail->head.Int32option1option1option1_Some.discriminant != Int32option1option1_Some)) goto next_10;
+    if ((call_1->tail->tail->head.Int32option1option1option1_Some.Int32option1option1_Some.discriminant != Int32option1_Some)) goto next_10;
+    x3_ = call_1->tail->tail->head.Int32option1option1option1_Some.Int32option1option1_Some.Int32option1_Some;
     if ((!(call_1->tail->tail->tail))) goto next_10;
-    if ((call_1->tail->tail->tail->head.discriminant != Some_2)) goto next_10;
-    if ((call_1->tail->tail->tail->head.Some_2.discriminant != Some_1)) goto next_10;
-    if ((call_1->tail->tail->tail->head.Some_2.Some_1.discriminant != Some_)) goto next_10;
-    x4_ = call_1->tail->tail->tail->head.Some_2.Some_1.Some_;
+    if ((call_1->tail->tail->tail->head.discriminant != Int32option1option1option1_Some)) goto next_10;
+    if ((call_1->tail->tail->tail->head.Int32option1option1option1_Some.discriminant != Int32option1option1_Some)) goto next_10;
+    if ((call_1->tail->tail->tail->head.Int32option1option1option1_Some.Int32option1option1_Some.discriminant != Int32option1_Some)) goto next_10;
+    x4_ = call_1->tail->tail->tail->head.Int32option1option1option1_Some.Int32option1option1_Some.Int32option1_Some;
     if ((!(call_1->tail->tail->tail->tail))) goto next_10;
-    if ((call_1->tail->tail->tail->tail->head.discriminant != Some_2)) goto next_10;
-    if ((call_1->tail->tail->tail->tail->head.Some_2.discriminant != Some_1)) goto next_10;
-    if ((call_1->tail->tail->tail->tail->head.Some_2.Some_1.discriminant != Some_)) goto next_10;
-    x5_ = call_1->tail->tail->tail->tail->head.Some_2.Some_1.Some_;
+    if ((call_1->tail->tail->tail->tail->head.discriminant != Int32option1option1option1_Some)) goto next_10;
+    if ((call_1->tail->tail->tail->tail->head.Int32option1option1option1_Some.discriminant != Int32option1option1_Some)) goto next_10;
+    if ((call_1->tail->tail->tail->tail->head.Int32option1option1option1_Some.Int32option1option1_Some.discriminant != Int32option1_Some)) goto next_10;
+    x5_ = call_1->tail->tail->tail->tail->head.Int32option1option1option1_Some.Int32option1option1_Some.Int32option1_Some;
     if ((!(call_1->tail->tail->tail->tail->tail))) goto next_10;
-    if ((call_1->tail->tail->tail->tail->tail->head.discriminant != Some_2)) goto next_10;
-    if ((call_1->tail->tail->tail->tail->tail->head.Some_2.discriminant != Some_1)) goto next_10;
-    if ((call_1->tail->tail->tail->tail->tail->head.Some_2.Some_1.discriminant != Some_)) goto next_10;
-    x6_ = call_1->tail->tail->tail->tail->tail->head.Some_2.Some_1.Some_;
+    if ((call_1->tail->tail->tail->tail->tail->head.discriminant != Int32option1option1option1_Some)) goto next_10;
+    if ((call_1->tail->tail->tail->tail->tail->head.Int32option1option1option1_Some.discriminant != Int32option1option1_Some)) goto next_10;
+    if ((call_1->tail->tail->tail->tail->tail->head.Int32option1option1option1_Some.Int32option1option1_Some.discriminant != Int32option1_Some)) goto next_10;
+    x6_ = call_1->tail->tail->tail->tail->tail->head.Int32option1option1option1_Some.Int32option1option1_Some.Int32option1_Some;
     if ((!(call_1->tail->tail->tail->tail->tail->tail))) goto next_10;
-    if ((call_1->tail->tail->tail->tail->tail->tail->head.discriminant != Some_2)) goto next_10;
-    if ((call_1->tail->tail->tail->tail->tail->tail->head.Some_2.discriminant != Some_1)) goto next_10;
-    if ((call_1->tail->tail->tail->tail->tail->tail->head.Some_2.Some_1.discriminant != Some_)) goto next_10;
-    x7_ = call_1->tail->tail->tail->tail->tail->tail->head.Some_2.Some_1.Some_;
+    if ((call_1->tail->tail->tail->tail->tail->tail->head.discriminant != Int32option1option1option1_Some)) goto next_10;
+    if ((call_1->tail->tail->tail->tail->tail->tail->head.Int32option1option1option1_Some.discriminant != Int32option1option1_Some)) goto next_10;
+    if ((call_1->tail->tail->tail->tail->tail->tail->head.Int32option1option1option1_Some.Int32option1option1_Some.discriminant != Int32option1_Some)) goto next_10;
+    x7_ = call_1->tail->tail->tail->tail->tail->tail->head.Int32option1option1option1_Some.Int32option1option1_Some.Int32option1_Some;
     if ((!((!(call_1->tail->tail->tail->tail->tail->tail->tail))))) goto next_10;
     if ((x1_ != 1)) milone_assert_error("list_pat/list_pat.milone", 15, 4);
     if ((x2_ != 2)) milone_assert_error("list_pat/list_pat.milone", 16, 4);

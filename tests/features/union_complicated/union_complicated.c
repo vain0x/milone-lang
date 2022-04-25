@@ -53,37 +53,37 @@ struct FirstSecondTuple2_ListFirstListSecondListTuple2_Fun1 {
 };
 
 enum First_Discriminant {
-    First_,
+    First_First,
 };
 
 struct First_ {
     enum First_Discriminant discriminant;
     union {
-        struct FirstSecondTuple2_ListFirstListSecondListTuple2_Fun1 First_;
+        struct FirstSecondTuple2_ListFirstListSecondListTuple2_Fun1 First_First;
     };
 };
 
 enum Second_Discriminant {
-    Second_,
+    Second_Second,
 };
 
 struct Second_ {
     enum Second_Discriminant discriminant;
     union {
-        struct FirstSecondTuple2_ListFirstListSecondListTuple2_Fun1 Second_;
+        struct FirstSecondTuple2_ListFirstListSecondListTuple2_Fun1 Second_Second;
     };
 };
 
 enum Node_Discriminant {
-    Leaf_,
-    Node_,
+    Node_Leaf,
+    Node_Node,
 };
 
 struct Node_ {
     enum Node_Discriminant discriminant;
     union {
-        int32_t Leaf_;
-        struct Node_Cons const *Node_;
+        int32_t Node_Leaf;
+        struct Node_Cons const *Node_Node;
     };
 };
 
@@ -93,14 +93,14 @@ struct FirstSecondTuple2_ {
 };
 
 enum Third_Discriminant {
-    Leaf3_,
-    Node3_,
+    Third_Leaf3,
+    Third_Node3,
 };
 
 struct Third_ {
     enum Third_Discriminant discriminant;
     union {
-        struct Int32ThirdTuple2_Cons const *Node3_;
+        struct Int32ThirdTuple2_Cons const *Third_Node3;
     };
 };
 
@@ -168,45 +168,45 @@ int main(int argc, char **argv) {
     char match_1;
     struct Int32ThirdTuple2_Cons const *list_6;
     struct Int32ThirdTuple2_ Int32ThirdTuple2_;
-    variant_ = (struct Node_){.discriminant = Leaf_, .Leaf_ = 1};
-    variant_1 = (struct Node_){.discriminant = Leaf_, .Leaf_ = 2};
+    variant_ = (struct Node_){.discriminant = Node_Leaf, .Node_Leaf = 1};
+    variant_1 = (struct Node_){.discriminant = Node_Leaf, .Node_Leaf = 2};
     list_2 = ((struct Node_Cons const *)milone_region_alloc(1, sizeof(struct Node_Cons)));
     (*(((struct Node_Cons *)list_2))) = (struct Node_Cons){.head = variant_1, .tail = NULL};
     list_1 = ((struct Node_Cons const *)milone_region_alloc(1, sizeof(struct Node_Cons)));
     (*(((struct Node_Cons *)list_1))) = (struct Node_Cons){.head = variant_, .tail = list_2};
-    variant_2 = (struct Node_){.discriminant = Node_, .Node_ = list_1};
-    variant_3 = (struct Node_){.discriminant = Node_, .Node_ = NULL};
-    variant_4 = (struct Node_){.discriminant = Leaf_, .Leaf_ = 3};
+    variant_2 = (struct Node_){.discriminant = Node_Node, .Node_Node = list_1};
+    variant_3 = (struct Node_){.discriminant = Node_Node, .Node_Node = NULL};
+    variant_4 = (struct Node_){.discriminant = Node_Leaf, .Node_Leaf = 3};
     list_5 = ((struct Node_Cons const *)milone_region_alloc(1, sizeof(struct Node_Cons)));
     (*(((struct Node_Cons *)list_5))) = (struct Node_Cons){.head = variant_4, .tail = NULL};
-    variant_5 = (struct Node_){.discriminant = Node_, .Node_ = list_5};
+    variant_5 = (struct Node_){.discriminant = Node_Node, .Node_Node = list_5};
     list_4 = ((struct Node_Cons const *)milone_region_alloc(1, sizeof(struct Node_Cons)));
     (*(((struct Node_Cons *)list_4))) = (struct Node_Cons){.head = variant_5, .tail = NULL};
     list_3 = ((struct Node_Cons const *)milone_region_alloc(1, sizeof(struct Node_Cons)));
     (*(((struct Node_Cons *)list_3))) = (struct Node_Cons){.head = variant_3, .tail = list_4};
     list_ = ((struct Node_Cons const *)milone_region_alloc(1, sizeof(struct Node_Cons)));
     (*(((struct Node_Cons *)list_))) = (struct Node_Cons){.head = variant_2, .tail = list_3};
-    variant_6 = (struct Node_){.discriminant = Node_, .Node_ = list_};
-    if ((variant_6.discriminant != Node_)) goto next_2;
-    if ((!(variant_6.Node_))) goto next_2;
-    if ((variant_6.Node_->head.discriminant != Node_)) goto next_2;
-    if ((!(variant_6.Node_->head.Node_))) goto next_2;
-    if ((variant_6.Node_->head.Node_->head.discriminant != Leaf_)) goto next_2;
-    x_ = variant_6.Node_->head.Node_->head.Leaf_;
-    if ((!(variant_6.Node_->head.Node_->tail))) goto next_2;
-    if ((variant_6.Node_->head.Node_->tail->head.discriminant != Leaf_)) goto next_2;
-    y_ = variant_6.Node_->head.Node_->tail->head.Leaf_;
-    if ((!((!(variant_6.Node_->head.Node_->tail->tail))))) goto next_2;
-    if ((!(variant_6.Node_->tail))) goto next_2;
-    if ((variant_6.Node_->tail->head.discriminant != Node_)) goto next_2;
-    if ((!((!(variant_6.Node_->tail->head.Node_))))) goto next_2;
-    if ((!(variant_6.Node_->tail->tail))) goto next_2;
-    if ((variant_6.Node_->tail->tail->head.discriminant != Node_)) goto next_2;
-    if ((!(variant_6.Node_->tail->tail->head.Node_))) goto next_2;
-    if ((variant_6.Node_->tail->tail->head.Node_->head.discriminant != Leaf_)) goto next_2;
-    z_ = variant_6.Node_->tail->tail->head.Node_->head.Leaf_;
-    if ((!((!(variant_6.Node_->tail->tail->head.Node_->tail))))) goto next_2;
-    if ((!((!(variant_6.Node_->tail->tail->tail))))) goto next_2;
+    variant_6 = (struct Node_){.discriminant = Node_Node, .Node_Node = list_};
+    if ((variant_6.discriminant != Node_Node)) goto next_2;
+    if ((!(variant_6.Node_Node))) goto next_2;
+    if ((variant_6.Node_Node->head.discriminant != Node_Node)) goto next_2;
+    if ((!(variant_6.Node_Node->head.Node_Node))) goto next_2;
+    if ((variant_6.Node_Node->head.Node_Node->head.discriminant != Node_Leaf)) goto next_2;
+    x_ = variant_6.Node_Node->head.Node_Node->head.Node_Leaf;
+    if ((!(variant_6.Node_Node->head.Node_Node->tail))) goto next_2;
+    if ((variant_6.Node_Node->head.Node_Node->tail->head.discriminant != Node_Leaf)) goto next_2;
+    y_ = variant_6.Node_Node->head.Node_Node->tail->head.Node_Leaf;
+    if ((!((!(variant_6.Node_Node->head.Node_Node->tail->tail))))) goto next_2;
+    if ((!(variant_6.Node_Node->tail))) goto next_2;
+    if ((variant_6.Node_Node->tail->head.discriminant != Node_Node)) goto next_2;
+    if ((!((!(variant_6.Node_Node->tail->head.Node_Node))))) goto next_2;
+    if ((!(variant_6.Node_Node->tail->tail))) goto next_2;
+    if ((variant_6.Node_Node->tail->tail->head.discriminant != Node_Node)) goto next_2;
+    if ((!(variant_6.Node_Node->tail->tail->head.Node_Node))) goto next_2;
+    if ((variant_6.Node_Node->tail->tail->head.Node_Node->head.discriminant != Node_Leaf)) goto next_2;
+    z_ = variant_6.Node_Node->tail->tail->head.Node_Node->head.Node_Leaf;
+    if ((!((!(variant_6.Node_Node->tail->tail->head.Node_Node->tail))))) goto next_2;
+    if ((!((!(variant_6.Node_Node->tail->tail->tail))))) goto next_2;
     if ((x_ == 1)) {
         goto then_5;
     } else {
@@ -241,18 +241,18 @@ next_2:;
 next_3:;
 end_match_1:;
     fun_ = (struct FirstSecondTuple2_ListFirstListSecondListTuple2_Fun1){.fun = union_complicated_union_complicated_eta2_main_f, .env = NULL};
-    variant_7 = (struct First_){.discriminant = First_, .First_ = fun_};
+    variant_7 = (struct First_){.discriminant = First_First, .First_First = fun_};
     fun_1 = (struct FirstSecondTuple2_ListFirstListSecondListTuple2_Fun1){.fun = union_complicated_union_complicated_eta2_main_f_1, .env = NULL};
-    variant_8 = (struct Second_){.discriminant = Second_, .Second_ = fun_1};
+    variant_8 = (struct Second_){.discriminant = Second_Second, .Second_Second = fun_1};
     FirstSecondTuple2_ = (struct FirstSecondTuple2_){.t0 = variant_7, .t1 = variant_8};
     first_ = FirstSecondTuple2_.t0;
     second_ = FirstSecondTuple2_.t1;
-    Int32ThirdTuple2_ = (struct Int32ThirdTuple2_){.t0 = 0, .t1 = (struct Third_){.discriminant = Leaf3_}};
+    Int32ThirdTuple2_ = (struct Int32ThirdTuple2_){.t0 = 0, .t1 = (struct Third_){.discriminant = Third_Leaf3}};
     list_6 = ((struct Int32ThirdTuple2_Cons const *)milone_region_alloc(1, sizeof(struct Int32ThirdTuple2_Cons)));
     (*(((struct Int32ThirdTuple2_Cons *)list_6))) = (struct Int32ThirdTuple2_Cons){.head = Int32ThirdTuple2_, .tail = NULL};
     if ((!(list_6))) goto next_11;
     if ((list_6->head.t0 != 0)) goto next_11;
-    if ((list_6->head.t1.discriminant != Leaf3_)) goto next_11;
+    if ((list_6->head.t1.discriminant != Third_Leaf3)) goto next_11;
     if ((!((!(list_6->tail))))) goto next_11;
     match_1 = 0;
     goto end_match_10;

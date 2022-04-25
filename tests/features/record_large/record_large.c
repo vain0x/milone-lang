@@ -11,14 +11,14 @@ void const *record_large_record_large_defaultOptions(void);
 int main(int argc, char **argv);
 
 enum Stringoption1_Discriminant {
-    None_,
-    Some_,
+    Stringoption1_None,
+    Stringoption1_Some,
 };
 
 struct Stringoption1_ {
     enum Stringoption1_Discriminant discriminant;
     union {
-        struct String Some_;
+        struct String Stringoption1_Some;
     };
 };
 
@@ -35,7 +35,7 @@ struct GitCommitOptions_ {
 void const *record_large_record_large_defaultOptions(void) {
     struct GitCommitOptions_ GitCommitOptions_;
     void const *box_;
-    GitCommitOptions_ = (struct GitCommitOptions_){.t0 = false, .t1 = false, .t2 = (struct Stringoption1_){.discriminant = None_}, .t3 = (struct Stringoption1_){.discriminant = None_}, .t4 = (struct Stringoption1_){.discriminant = None_}, .t5 = (struct Stringoption1_){.discriminant = None_}, .t6 = false};
+    GitCommitOptions_ = (struct GitCommitOptions_){.t0 = false, .t1 = false, .t2 = (struct Stringoption1_){.discriminant = Stringoption1_None}, .t3 = (struct Stringoption1_){.discriminant = Stringoption1_None}, .t4 = (struct Stringoption1_){.discriminant = Stringoption1_None}, .t5 = (struct Stringoption1_){.discriminant = Stringoption1_None}, .t6 = false};
     box_ = ((void const *)milone_region_alloc(1, sizeof(struct GitCommitOptions_)));
     (*(((struct GitCommitOptions_ *)box_))) = GitCommitOptions_;
     return box_;

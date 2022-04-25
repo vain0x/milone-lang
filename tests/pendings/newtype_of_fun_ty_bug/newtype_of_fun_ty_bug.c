@@ -28,13 +28,13 @@ struct UnitInt32Fun1 {
 };
 
 enum F_Discriminant {
-    F_,
+    F_F,
 };
 
 struct F_ {
     enum F_Discriminant discriminant;
     union {
-        struct UnitInt32Fun1 F_;
+        struct UnitInt32Fun1 F_F;
     };
 };
 
@@ -57,7 +57,7 @@ struct F_ newtype_of_fun_ty_bug_newtype_of_fun_ty_bug_main_fun(void) {
     struct UnitInt32Fun1 fun_;
     struct F_ variant_;
     fun_ = (struct UnitInt32Fun1){.fun = newtype_of_fun_ty_bug_newtype_of_fun_ty_bug_eta2_main_fun_fun, .env = NULL};
-    variant_ = (struct F_){.discriminant = F_, .F_ = fun_};
+    variant_ = (struct F_){.discriminant = F_F, .F_F = fun_};
     return variant_;
 }
 
@@ -77,7 +77,7 @@ int main(int argc, char **argv) {
     fun_1 = (struct UnitF_Fun1){.fun = newtype_of_fun_ty_bug_newtype_of_fun_ty_bug_eta2_main_fun, .env = NULL};
     getF_ = fun_1;
     app_ = getF_.fun(getF_.env);
-    f_ = app_.F_;
+    f_ = app_.F_F;
     app_1 = f_.fun(f_.env);
     if ((app_1 != 42)) milone_assert_error("newtype_of_fun_ty_bug/newtype_of_fun_ty_bug.milone", 10, 2);
     return 0;

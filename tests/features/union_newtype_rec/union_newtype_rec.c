@@ -13,25 +13,25 @@ struct MyList_ union_newtype_rec_union_newtype_rec_main_myCons(int32_t head_, st
 int main(int argc, char **argv);
 
 enum MyList_Discriminant {
-    MyList_,
+    MyList_MyList,
 };
 
 struct MyList_ {
     enum MyList_Discriminant discriminant;
     union {
-        void const *MyList_;
+        void const *MyList_MyList;
     };
 };
 
 enum MyListoption1_Discriminant {
-    None_,
-    Some_,
+    MyListoption1_None,
+    MyListoption1_Some,
 };
 
 struct MyListoption1_ {
     enum MyListoption1_Discriminant discriminant;
     union {
-        struct MyList_ Some_;
+        struct MyList_ MyListoption1_Some;
     };
 };
 
@@ -45,11 +45,11 @@ struct MyList_ union_newtype_rec_union_newtype_rec_main_myCons(int32_t head_, st
     struct MyListoption1_ variant_;
     void const *box_;
     struct MyList_ variant_1;
-    variant_ = (struct MyListoption1_){.discriminant = Some_, .Some_ = tail_};
+    variant_ = (struct MyListoption1_){.discriminant = MyListoption1_Some, .MyListoption1_Some = tail_};
     Int32MyListoption1Tuple2_ = (struct Int32MyListoption1Tuple2_){.t0 = head_, .t1 = variant_};
     box_ = ((void const *)milone_region_alloc(1, sizeof(struct Int32MyListoption1Tuple2_)));
     (*(((struct Int32MyListoption1Tuple2_ *)box_))) = Int32MyListoption1Tuple2_;
-    variant_1 = (struct MyList_){.discriminant = MyList_, .MyList_ = box_};
+    variant_1 = (struct MyList_){.discriminant = MyList_MyList, .MyList_MyList = box_};
     return variant_1;
 }
 
@@ -64,15 +64,15 @@ int main(int argc, char **argv) {
     struct MyList_ call_;
     char match_;
     char match_1;
-    Int32MyListoption1Tuple2_1 = (struct Int32MyListoption1Tuple2_){.t0 = 0, .t1 = (struct MyListoption1_){.discriminant = None_}};
+    Int32MyListoption1Tuple2_1 = (struct Int32MyListoption1Tuple2_){.t0 = 0, .t1 = (struct MyListoption1_){.discriminant = MyListoption1_None}};
     box_1 = ((void const *)milone_region_alloc(1, sizeof(struct Int32MyListoption1Tuple2_)));
     (*(((struct Int32MyListoption1Tuple2_ *)box_1))) = Int32MyListoption1Tuple2_1;
-    variant_2 = (struct MyList_){.discriminant = MyList_, .MyList_ = box_1};
+    variant_2 = (struct MyList_){.discriminant = MyList_MyList, .MyList_MyList = box_1};
     first_ = variant_2;
     call_ = union_newtype_rec_union_newtype_rec_main_myCons(1, first_);
     second_ = call_;
-    if (((*(((struct Int32MyListoption1Tuple2_ const *)first_.MyList_))).t0 != 0)) goto next_2;
-    if (((*(((struct Int32MyListoption1Tuple2_ const *)first_.MyList_))).t1.discriminant != None_)) goto next_2;
+    if (((*(((struct Int32MyListoption1Tuple2_ const *)first_.MyList_MyList))).t0 != 0)) goto next_2;
+    if (((*(((struct Int32MyListoption1Tuple2_ const *)first_.MyList_MyList))).t1.discriminant != MyListoption1_None)) goto next_2;
     match_ = 0;
     goto end_match_1;
 next_2:;
@@ -81,8 +81,8 @@ next_2:;
     goto end_match_1;
 next_3:;
 end_match_1:;
-    if (((*(((struct Int32MyListoption1Tuple2_ const *)second_.MyList_))).t1.discriminant != Some_)) goto next_5;
-    value_ = (*(((struct Int32MyListoption1Tuple2_ const *)(*(((struct Int32MyListoption1Tuple2_ const *)second_.MyList_))).t1.Some_.MyList_))).t0;
+    if (((*(((struct Int32MyListoption1Tuple2_ const *)second_.MyList_MyList))).t1.discriminant != MyListoption1_Some)) goto next_5;
+    value_ = (*(((struct Int32MyListoption1Tuple2_ const *)(*(((struct Int32MyListoption1Tuple2_ const *)second_.MyList_MyList))).t1.MyListoption1_Some.MyList_MyList))).t0;
     if ((value_ != 0)) milone_assert_error("union_newtype_rec/union_newtype_rec.milone", 17, 44);
     match_1 = 0;
     goto end_match_4;

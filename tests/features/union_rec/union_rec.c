@@ -25,14 +25,14 @@ struct LazyList_ union_rec_union_rec_main_makeTail(int32_t n_2, int32_t prev_);
 int main(int argc, char **argv);
 
 enum LazyList_Discriminant {
-    Nil_,
-    Cons_,
+    LazyList_Nil,
+    LazyList_Cons,
 };
 
 struct LazyList_ {
     enum LazyList_Discriminant discriminant;
     union {
-        void const *Cons_;
+        void const *LazyList_Cons;
     };
 };
 
@@ -58,7 +58,7 @@ struct LazyList_ union_rec_union_rec_main_cons(struct UnitLazyList_Fun1 tail_, i
     Int32UnitLazyListFun1Tuple2_ = (struct Int32UnitLazyListFun1Tuple2_){.t0 = head_, .t1 = tail_};
     box_ = ((void const *)milone_region_alloc(1, sizeof(struct Int32UnitLazyListFun1Tuple2_)));
     (*(((struct Int32UnitLazyListFun1Tuple2_ *)box_))) = Int32UnitLazyListFun1Tuple2_;
-    variant_ = (struct LazyList_){.discriminant = Cons_, .Cons_ = box_};
+    variant_ = (struct LazyList_){.discriminant = LazyList_Cons, .LazyList_Cons = box_};
     return variant_;
 }
 
@@ -77,13 +77,13 @@ tailrec_1:;
         goto else_7;
     }
 then_3:;
-    if ((xs_1.discriminant != Nil_)) goto next_5;
+    if ((xs_1.discriminant != LazyList_Nil)) goto next_5;
     match_ = 0;
     goto end_match_4;
 next_5:;
-    if ((xs_1.discriminant != Cons_)) goto next_6;
-    head_1 = (*(((struct Int32UnitLazyListFun1Tuple2_ const *)xs_1.Cons_))).t0;
-    tail_1 = (*(((struct Int32UnitLazyListFun1Tuple2_ const *)xs_1.Cons_))).t1;
+    if ((xs_1.discriminant != LazyList_Cons)) goto next_6;
+    head_1 = (*(((struct Int32UnitLazyListFun1Tuple2_ const *)xs_1.LazyList_Cons))).t0;
+    tail_1 = (*(((struct Int32UnitLazyListFun1Tuple2_ const *)xs_1.LazyList_Cons))).t1;
     printf("%d\n", head_1);
     app_ = tail_1.fun(tail_1.env);
     arg_3 = (n_1 - 1);

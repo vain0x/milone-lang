@@ -22,14 +22,14 @@ struct Int32StringTuple2_ {
 };
 
 enum Int32StringTuple2option1_Discriminant {
-    None_,
-    Some_,
+    Int32StringTuple2option1_None,
+    Int32StringTuple2option1_Some,
 };
 
 struct Int32StringTuple2option1_ {
     enum Int32StringTuple2option1_Discriminant discriminant;
     union {
-        struct Int32StringTuple2_ Some_;
+        struct Int32StringTuple2_ Int32StringTuple2option1_Some;
     };
 };
 
@@ -56,7 +56,7 @@ void fun_generic_ty_degeneration_fun_generic_ty_degeneration_testCase(struct Int
     int32_t call_2;
     box_ = ((void const *)milone_region_alloc(1, sizeof(struct Int32StringTuple2_)));
     (*(((struct Int32StringTuple2_ *)box_))) = kv_;
-    call_2 = fun_generic_ty_degeneration_fun_generic_ty_degeneration_ObjectInt32StringTuple2option1Int32Fun2_fstUnbox(box_, (struct Int32StringTuple2option1_){.discriminant = None_});
+    call_2 = fun_generic_ty_degeneration_fun_generic_ty_degeneration_ObjectInt32StringTuple2option1Int32Fun2_fstUnbox(box_, (struct Int32StringTuple2option1_){.discriminant = Int32StringTuple2option1_None});
     if ((call_2 != 0)) milone_assert_error("fun_generic_ty_degeneration/fun_generic_ty_degeneration.milone", 20, 2);
     return;
 }
