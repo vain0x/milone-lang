@@ -151,7 +151,7 @@ let private inFirstOfPatAndExpr (token: Token) =
   | IntToken _
   | FloatToken _
   | CharToken _
-  | StrToken _
+  | StringToken _
   | IdentToken _
   | LeftParenToken
   | LeftBracketToken
@@ -486,7 +486,7 @@ let private parsePatAtom basePos (tokens, errors) : PR<APat> =
   | (IntToken (text, flavorOpt), pos) :: tokens -> ALitPat(newIntLit text flavorOpt, pos), tokens, errors
   | (FloatToken text, pos) :: tokens -> ALitPat(FloatLit text, pos), tokens, errors
   | (CharToken value, pos) :: tokens -> ALitPat(CharLit value, pos), tokens, errors
-  | (StrToken value, pos) :: tokens -> ALitPat(StrLit value, pos), tokens, errors
+  | (StringToken value, pos) :: tokens -> ALitPat(StringLit value, pos), tokens, errors
 
   | (IdentToken ident, pos) :: tokens -> parseNavPatBody ident pos (tokens, errors)
 
@@ -691,7 +691,7 @@ let private parseAtom basePos (tokens, errors) : PR<AExpr> =
   | (IntToken (text, flavorOpt), pos) :: tokens -> ALitExpr(newIntLit text flavorOpt, pos), tokens, errors
   | (FloatToken text, pos) :: tokens -> ALitExpr(FloatLit text, pos), tokens, errors
   | (CharToken value, pos) :: tokens -> ALitExpr(CharLit value, pos), tokens, errors
-  | (StrToken value, pos) :: tokens -> ALitExpr(StrLit value, pos), tokens, errors
+  | (StringToken value, pos) :: tokens -> ALitExpr(StringLit value, pos), tokens, errors
 
   | (IdentToken ident, pos) :: tokens ->
     let tyArgs, tokens, errors = parseTyArgs pos (tokens, errors)

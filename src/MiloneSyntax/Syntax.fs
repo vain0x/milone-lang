@@ -14,7 +14,7 @@ open MiloneSyntaxTypes.SyntaxTypes
 let tokenizeErrorToString error =
   match error with
   | InvalidCharLitError -> "Invalid char literal."
-  | InvalidStrLitError -> "Invalid string literal."
+  | InvalidStringLitError -> "Invalid string literal."
   | InvalidRawIdentError -> "Invalid raw identifier. Hint: ``write like this``."
   | BadTokenError -> "Invalid characters."
 

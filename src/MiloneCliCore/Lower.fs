@@ -33,7 +33,7 @@ let private lowerTk (tk: Tir.Tk) : Hir.Tk =
   | Tir.FloatTk floatFlavor -> Hir.FloatTk floatFlavor
   | Tir.BoolTk -> Hir.BoolTk
   | Tir.CharTk -> Hir.CharTk
-  | Tir.StrTk -> Hir.StrTk
+  | Tir.StringTk -> Hir.StringTk
   | Tir.ObjTk -> Hir.ObjTk
 
   | Tir.FunTk -> Hir.FunTk
@@ -128,7 +128,7 @@ let private lowerPrim (prim: Tir.TPrim) : Hir.HPrim =
   | Tir.TPrim.String -> Hir.HPrim.String
   | Tir.TPrim.Box -> Hir.HPrim.Box
   | Tir.TPrim.Unbox -> Hir.HPrim.Unbox
-  | Tir.TPrim.StrLength -> Hir.HPrim.StrLength
+  | Tir.TPrim.StringLength -> Hir.HPrim.StringLength
   | Tir.TPrim.Nil -> Hir.HPrim.Nil
   | Tir.TPrim.Cons -> Hir.HPrim.Cons
   | Tir.TPrim.Exit -> Hir.HPrim.Exit

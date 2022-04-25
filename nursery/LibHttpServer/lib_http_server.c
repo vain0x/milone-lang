@@ -96,7 +96,7 @@ int listen_socket(struct String port) {
         .ai_socktype = SOCK_STREAM,
     };
     struct addrinfo *res;
-    int err = getaddrinfo(NULL, str_to_c_str(port), &hints, &res);
+    int err = getaddrinfo(NULL, string_to_c_str(port), &hints, &res);
     if (err != 0) {
         fprintf(stderr, "error: %s\n", gai_strerror(err));
         exit(1);
@@ -167,12 +167,12 @@ bool get_date(char *buf, int buf_size, int *len) {
 }
 
 struct String get_env(struct String name) {
-    char const *value = getenv(str_to_c_str(name));
+    char const *value = getenv(string_to_c_str(name));
     if (value == NULL) {
-        return str_borrow("");
+        return string_borrow("");
     }
 
-    return str_of_c_str(value);
+    return string_of_c_str(value);
 }
 
 struct String get_cwd(void) {
@@ -183,5 +183,5 @@ struct String get_cwd(void) {
         exit(1);
     }
 
-    return str_of_c_str(buf);
+    return string_of_c_str(buf);
 }

@@ -2,7 +2,7 @@ module rec CmdCat.Ffi
 
 module Env = Std.StdEnv
 
-let strAsPtr (s: string) : __inptr<char> = __nativeFun ("str_as_ptr", s)
+let stringAsPtr (s: string) : __inptr<char> = __nativeFun ("string_as_ptr", s)
 
 type Profiler = Profiler of voidptr
 

@@ -1,120 +1,122 @@
+#include <stdio.h>
+#include <stdlib.h>
 #include <milone.h>
 
-typedef int(*VoidConstPtrIntIntFunPtr2)(void const*, int);
+typedef int32_t(*VoidConstPtrInt32Int32FunPtr2)(void const *, int32_t);
 
-struct IntIntFun1;
+struct Int32Int32Fun1;
 
-struct IntIntTuple2_;
+struct Int32Int32Tuple2_;
 
-typedef int(*VoidConstPtrIntIntIntFunPtr3)(void const*, int, int);
+typedef int32_t(*VoidConstPtrInt32Int32Int32FunPtr3)(void const *, int32_t, int32_t);
 
-struct IntIntIntFun2;
+struct Int32Int32Int32Fun2;
 
-typedef int(*VoidConstPtrIntIntIntIntIntFunPtr5)(void const*, int, int, int, int);
+typedef int32_t(*VoidConstPtrInt32Int32Int32Int32Int32FunPtr5)(void const *, int32_t, int32_t, int32_t, int32_t);
 
-struct IntIntIntIntIntFun4;
+struct Int32Int32Int32Int32Int32Fun4;
 
-int fun_partial_app_fun_partial_app_twice(struct IntIntFun1 f_, int x_);
+int32_t fun_partial_app_fun_partial_app_twice(struct Int32Int32Fun1 f_, int32_t x_);
 
-int fun_partial_app_fun_partial_app_dec(int y_, int x_1);
+int32_t fun_partial_app_fun_partial_app_dec(int32_t y_, int32_t x_1);
 
-int fun_partial_app_fun_partial_app_add4(int x1_, int x2_, int x3_, int x4_);
+int32_t fun_partial_app_fun_partial_app_add4(int32_t x1_, int32_t x2_, int32_t x3_, int32_t x4_);
 
-int fun_partial_app_fun_partial_app_eta2_main_dec(void const* env_, int arg_);
+int32_t fun_partial_app_fun_partial_app_eta2_main_dec(void const *env_, int32_t arg_);
 
-int fun_partial_app_fun_partial_app_eta3_main_add4(void const* env_1, int arg_2, int arg_3);
+int32_t fun_partial_app_fun_partial_app_eta3_main_add4(void const *env_1, int32_t arg_2, int32_t arg_3);
 
-int fun_partial_app_fun_partial_app_eta5_main_add4(void const* env_2, int arg_6, int arg_7, int arg_8, int arg_9);
+int32_t fun_partial_app_fun_partial_app_eta5_main_add4(void const *env_2, int32_t arg_6, int32_t arg_7, int32_t arg_8, int32_t arg_9);
 
-int main(int argc, char** argv);
+int main(int argc, char **argv);
 
-struct IntIntFun1 {
-    VoidConstPtrIntIntFunPtr2 fun;
-    void const* env;
+struct Int32Int32Fun1 {
+    VoidConstPtrInt32Int32FunPtr2 fun;
+    void const *env;
 };
 
-struct IntIntTuple2_ {
-    int t0;
-    int t1;
+struct Int32Int32Tuple2_ {
+    int32_t t0;
+    int32_t t1;
 };
 
-struct IntIntIntFun2 {
-    VoidConstPtrIntIntIntFunPtr3 fun;
-    void const* env;
+struct Int32Int32Int32Fun2 {
+    VoidConstPtrInt32Int32Int32FunPtr3 fun;
+    void const *env;
 };
 
-struct IntIntIntIntIntFun4 {
-    VoidConstPtrIntIntIntIntIntFunPtr5 fun;
-    void const* env;
+struct Int32Int32Int32Int32Int32Fun4 {
+    VoidConstPtrInt32Int32Int32Int32Int32FunPtr5 fun;
+    void const *env;
 };
 
-int fun_partial_app_fun_partial_app_twice(struct IntIntFun1 f_, int x_) {
-    int app_;
-    int app_1;
+int32_t fun_partial_app_fun_partial_app_twice(struct Int32Int32Fun1 f_, int32_t x_) {
+    int32_t app_;
+    int32_t app_1;
     app_ = f_.fun(f_.env, x_);
     app_1 = f_.fun(f_.env, app_);
     return app_1;
 }
 
-int fun_partial_app_fun_partial_app_dec(int y_, int x_1) {
+int32_t fun_partial_app_fun_partial_app_dec(int32_t y_, int32_t x_1) {
     return (x_1 - y_);
 }
 
-int fun_partial_app_fun_partial_app_add4(int x1_, int x2_, int x3_, int x4_) {
+int32_t fun_partial_app_fun_partial_app_add4(int32_t x1_, int32_t x2_, int32_t x3_, int32_t x4_) {
     return (((x1_ + x2_) + x3_) + x4_);
 }
 
-int fun_partial_app_fun_partial_app_eta2_main_dec(void const* env_, int arg_) {
-    int arg_1;
-    int call_;
-    arg_1 = ((int)((intptr_t)env_));
+int32_t fun_partial_app_fun_partial_app_eta2_main_dec(void const *env_, int32_t arg_) {
+    int32_t arg_1;
+    int32_t call_;
+    arg_1 = ((int32_t)((intptr_t)env_));
     call_ = fun_partial_app_fun_partial_app_dec(arg_1, arg_);
     return call_;
 }
 
-int fun_partial_app_fun_partial_app_eta3_main_add4(void const* env_1, int arg_2, int arg_3) {
-    int arg_4;
-    int arg_5;
-    int call_1;
-    arg_4 = (*(((struct IntIntTuple2_ const*)env_1))).t0;
-    arg_5 = (*(((struct IntIntTuple2_ const*)env_1))).t1;
+int32_t fun_partial_app_fun_partial_app_eta3_main_add4(void const *env_1, int32_t arg_2, int32_t arg_3) {
+    int32_t arg_4;
+    int32_t arg_5;
+    int32_t call_1;
+    arg_4 = (*(((struct Int32Int32Tuple2_ const *)env_1))).t0;
+    arg_5 = (*(((struct Int32Int32Tuple2_ const *)env_1))).t1;
     call_1 = fun_partial_app_fun_partial_app_add4(arg_4, arg_5, arg_2, arg_3);
     return call_1;
 }
 
-int fun_partial_app_fun_partial_app_eta5_main_add4(void const* env_2, int arg_6, int arg_7, int arg_8, int arg_9) {
-    int call_2;
+int32_t fun_partial_app_fun_partial_app_eta5_main_add4(void const *env_2, int32_t arg_6, int32_t arg_7, int32_t arg_8, int32_t arg_9) {
+    int32_t call_2;
     call_2 = fun_partial_app_fun_partial_app_add4(arg_6, arg_7, arg_8, arg_9);
     return call_2;
 }
 
-int main(int argc, char** argv) {
+int main(int argc, char **argv) {
     milone_start(argc, argv);
-    struct IntIntFun1 dec3_;
-    struct IntIntIntFun2 add2_;
-    struct IntIntIntIntIntFun4 f_1;
-    struct IntIntFun1 fun_;
-    int call_3;
-    struct IntIntTuple2_ IntIntTuple2_;
-    void const* box_;
-    struct IntIntIntFun2 fun_1;
-    int app_2;
-    struct IntIntIntIntIntFun4 fun_2;
-    int app_3;
-    fun_ = (struct IntIntFun1){.fun = fun_partial_app_fun_partial_app_eta2_main_dec, .env = ((void const*)((intptr_t)3))};
+    struct Int32Int32Fun1 dec3_;
+    struct Int32Int32Int32Fun2 add2_;
+    struct Int32Int32Int32Int32Int32Fun4 f_1;
+    struct Int32Int32Fun1 fun_;
+    int32_t call_3;
+    struct Int32Int32Tuple2_ Int32Int32Tuple2_;
+    void const *box_;
+    struct Int32Int32Int32Fun2 fun_1;
+    int32_t app_2;
+    struct Int32Int32Int32Int32Int32Fun4 fun_2;
+    int32_t app_3;
+    fun_ = (struct Int32Int32Fun1){.fun = fun_partial_app_fun_partial_app_eta2_main_dec, .env = ((void const *)((intptr_t)3))};
     dec3_ = fun_;
     call_3 = fun_partial_app_fun_partial_app_twice(dec3_, 8);
-    milone_assert((call_3 == 2), (struct String){.str = "fun_partial_app/fun_partial_app.milone", .len = 38}, 12, 2);
-    IntIntTuple2_ = (struct IntIntTuple2_){.t0 = 2, .t1 = 3};
-    box_ = ((void const*)milone_mem_alloc(1, sizeof(struct IntIntTuple2_)));
-    (*(((struct IntIntTuple2_*)box_))) = IntIntTuple2_;
-    fun_1 = (struct IntIntIntFun2){.fun = fun_partial_app_fun_partial_app_eta3_main_add4, .env = box_};
+    if ((call_3 != 2)) milone_assert_error("fun_partial_app/fun_partial_app.milone", 12, 2);
+    Int32Int32Tuple2_ = (struct Int32Int32Tuple2_){.t0 = 2, .t1 = 3};
+    box_ = ((void const *)milone_region_alloc(1, sizeof(struct Int32Int32Tuple2_)));
+    (*(((struct Int32Int32Tuple2_ *)box_))) = Int32Int32Tuple2_;
+    fun_1 = (struct Int32Int32Int32Fun2){.fun = fun_partial_app_fun_partial_app_eta3_main_add4, .env = box_};
     add2_ = fun_1;
     app_2 = add2_.fun(add2_.env, 5, 7);
-    milone_assert((app_2 == (((2 + 3) + 5) + 7)), (struct String){.str = "fun_partial_app/fun_partial_app.milone", .len = 38}, 15, 2);
-    fun_2 = (struct IntIntIntIntIntFun4){.fun = fun_partial_app_fun_partial_app_eta5_main_add4, .env = NULL};
+    if ((app_2 != (((2 + 3) + 5) + 7))) milone_assert_error("fun_partial_app/fun_partial_app.milone", 15, 2);
+    fun_2 = (struct Int32Int32Int32Int32Int32Fun4){.fun = fun_partial_app_fun_partial_app_eta5_main_add4, .env = NULL};
     f_1 = fun_2;
     app_3 = f_1.fun(f_1.env, 1, 2, 3, 4);
-    milone_assert((app_3 == (((1 + 2) + 3) + 4)), (struct String){.str = "fun_partial_app/fun_partial_app.milone", .len = 38}, 18, 2);
+    if ((app_3 != (((1 + 2) + 3) + 4))) milone_assert_error("fun_partial_app/fun_partial_app.milone", 18, 2);
     return 0;
 }

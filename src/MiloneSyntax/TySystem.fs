@@ -38,7 +38,7 @@ let private tkEncode tk : int =
   | FloatTk flavor -> pair 2 (floatFlavorToOrdinary flavor)
   | BoolTk -> just 3
   | CharTk -> just 4
-  | StrTk -> just 5
+  | StringTk -> just 5
   | ObjTk -> just 6
   | FunTk -> just 7
   | TupleTk -> just 8
@@ -79,7 +79,7 @@ let tkDisplay getTyName tk =
   | FloatTk flavor -> fsharpFloatTyName flavor
   | BoolTk -> "bool"
   | CharTk -> "char"
-  | StrTk -> "string"
+  | StringTk -> "string"
   | ObjTk -> "obj"
   | FunTk -> "fun"
   | TupleTk -> "tuple"

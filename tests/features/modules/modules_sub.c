@@ -1,7 +1,9 @@
+#include <stdio.h>
+#include <stdlib.h>
 #include <milone.h>
 
-int modules_sub_IntIntFun1_f(int x_);
+int32_t modules_sub_Int32Int32Fun1_f(int32_t x_);
 
-int modules_sub_IntIntFun1_f(int x_) {
+int32_t modules_sub_Int32Int32Fun1_f(int32_t x_) {
     return x_;
 }

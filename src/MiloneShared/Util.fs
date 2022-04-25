@@ -120,19 +120,19 @@ let charEscape (c: char) =
 // String
 // -----------------------------------------------
 
-let strNeedsEscaping (str: string) =
+let stringNeedsEscaping (s: string) =
   let rec go i =
-    i < str.Length
-    && (charNeedsEscaping str.[i] || go (i + 1))
+    i < s.Length
+    && (charNeedsEscaping s.[i] || go (i + 1))
 
   go 0
 
-let strEscape (str: string) =
+let stringEscape (s: string) =
   let rec go acc i =
     /// Finds the end index of the maximum non-escaping segment
     /// that starts at `l`.
     let rec raw i =
-      if i = str.Length || charNeedsEscaping str.[i] then
+      if i = s.Length || charNeedsEscaping s.[i] then
         i
       else
         raw (i + 1)
@@ -140,15 +140,15 @@ let strEscape (str: string) =
     // Skip the non-escape segment that starts at `i`.
     let i, acc =
       let r = raw i
-      r, (str |> S.slice i r) :: acc
+      r, (s |> S.slice i r) :: acc
 
-    if i = str.Length then
+    if i = s.Length then
       acc
     else
-      let t = str.[i] |> charEscape
+      let t = s.[i] |> charEscape
       go (t :: acc) (i + 1)
 
-  if str |> strNeedsEscaping |> not then
-    str
+  if s |> stringNeedsEscaping |> not then
+    s
   else
     go [] 0 |> List.rev |> S.concat ""

@@ -1,38 +1,47 @@
 // https://atcoder.jp/contests/abc140/tasks/abc140_b
 module rec Competitive.ABC140B
 
-open Competitive.Helpers
-open Competitive.SegTree
+open Competitive.Scan
+open Std.Block
+open Std.IO
+open Std.StdError
+open Std.Vector
 
-let abc140bSolve n a b c =
-  let segItemTypeInt = segItemTypeNew 0 (fun _ _ -> 0)
-  let a = a |> segTreeOfList segItemTypeInt
-  let b = b |> segTreeOfList segItemTypeInt
-  let c = c |> segTreeOfList segItemTypeInt
+module private Block =
+  let get index block =
+    Block.tryItem index block
+    |> Option.defaultWith unreachable
+
+let private solve n a b c =
+  let a = Block.ofList a
+  let b = Block.ofList b
+  let c = Block.ofList c
 
   let rec go (sum: int) i =
-    if i = n then
-      sum
-    else
-      let ai = a |> segTreeGet i
-      let eat = b |> segTreeGet (ai - 1) // 0-indexed
+    if i < n then
+      let ai = Block.get i a
+
+      let add = Block.get (ai - 1) b
+      let sum = sum + add
 
       let bonus =
-        if i + 1 < n && a |> segTreeGet (i + 1) = ai + 1 then
-          c |> segTreeGet (ai - 1)
+        if i >= 1 && Block.get (i - 1) a = ai - 1 then
+          Block.get (ai - 2) c
         else
           0
 
-      go (sum + eat + bonus) (i + 1)
+      go (sum + bonus) (i + 1)
+    else
+      sum
 
   go 0 0
 
 let abc140bTest () =
   let f a b c =
-    let n = a |> listLength
-    assert (b |> listLength = n)
-    assert (c |> listLength = n - 1)
-    abc140bSolve n a b c
+    let n = List.length a
+    assert (List.length b = n)
+    assert (List.length c = n - 1)
+    solve n a b c
 
   let case1 () =
     let a = [ 3; 1; 2 ]
@@ -58,10 +67,11 @@ let abc140bTest () =
 
   assert (case3 ())
 
-let abc140bMain () =
-  let n = scanInt ()
-  let a = scanIntList n
-  let b = scanIntList n
-  let c = scanIntList (n - 1)
-  let m = abc140bSolve n a b c
+let abc140bMain (io: IO) =
+  let n, io = scanInt io
+  let a, io = scanList scanInt n io
+  let b, io = scanList scanInt n io
+  let c, io = scanList scanInt (n - 1) io
+  let m = solve n a b c
   printfn "%d" m
+  io

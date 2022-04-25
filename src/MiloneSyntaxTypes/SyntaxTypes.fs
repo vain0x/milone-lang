@@ -43,7 +43,7 @@ type FetchModuleFun = ProjectName -> ModuleName -> Future<ModuleSyntaxData optio
 
 type TokenizeError =
   | InvalidCharLitError
-  | InvalidStrLitError
+  | InvalidStringLitError
   | InvalidRawIdentError
   | BadTokenError
   | UnknownEscapeSequenceError
@@ -67,7 +67,7 @@ type Token =
   | IntToken of intText: string * IntFlavor option
   | FloatToken of floatText: string
   | CharToken of char
-  | StrToken of string
+  | StringToken of string
   | IdentToken of Ident
 
   /// `'T` etc.
@@ -351,10 +351,10 @@ type AExpr =
   /// `fun pat1 pat2 ... -> body`
   | AFunExpr of APat list * AExpr * Pos
 
-  /// Navigation, e.g. `str.Length`.
+  /// Navigation, e.g. `s.Length`.
   | ANavExpr of AExpr * Name * Pos
 
-  /// E.g. `str.[i]`.
+  /// E.g. `s.[i]`.
   | AIndexExpr of AExpr * AExpr * Pos
 
   /// Unary operation, e.g. `-x`.

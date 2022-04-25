@@ -3,7 +3,7 @@ module rec Std.StdError
 let __dump (_: 'T) : string = "<dump>"
 
 let __writeError (s: string) : unit =
-  __nativeStmt ("fwrite({0}.str, sizeof(char), (size_t){0}.len, stderr);", s)
+  __nativeStmt ("fwrite({0}.ptr, sizeof(char), (size_t){0}.len, stderr);", s)
 
 let __writeErrorLine (s: string) : unit =
   __writeError (s + "\n")

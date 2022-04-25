@@ -3,12 +3,19 @@
 open Std.ByteVectorTests
 open Std.IO
 open Std.FileTests
+open Std.PathTests
 open Std.StdError
 open Std.VectorTests
+open Std.OsStringTests
+
+// Test is written in tests/primitives/std_block
+open Std.Block
 
 let main _ =
   IO.exec (fun (io: IO) ->
     testByteVector ()
     testVector ()
+    testOsString ()
+    testPath ()
     testFile io)
   |> never

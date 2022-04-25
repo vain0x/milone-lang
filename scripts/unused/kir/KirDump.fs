@@ -62,7 +62,7 @@ let private litToDebugString lit =
   | FloatLit text -> text
   | IntLit text -> text
   | CharLit value -> "'" + charEscape value + "'"
-  | StrLit value -> "\"" + strEscape value + "\""
+  | StringLit value -> "\"" + stringEscape value + "\""
 
 let private tsConstStmt indent pat init =
   indent + "const " + pat + " = " + init + "\n"
@@ -98,7 +98,7 @@ let private tyToDebugString ty ctx =
 
     | TupleTyCtor, _ ->
       "["
-      + strConcat (
+      + stringConcat (
         args
         |> List.mapi (fun i ty ->
           (if i = 0 then "" else ", ")
@@ -120,7 +120,7 @@ let private tyToDebugString ty ctx =
     | _ ->
       tyCtorToDebugString tyCtor ctx
       + "<"
-      + strConcat (
+      + stringConcat (
         args
         |> List.mapi (fun i ty ->
           (if i = 0 then "" else ", ")
@@ -164,14 +164,14 @@ let private kdArgsAsParamList args ctx =
        + getVarName arg ctx
        + ": "
        + kdVarAsTy arg ctx)
-     |> strConcat)
+     |> stringConcat)
   + ")"
 
 let private kdTermsAsArgList args ctx =
   "("
   + (args
      |> List.mapi (fun i arg -> (if i = 0 then "" else ", ") + kdTerm arg ctx)
-     |> strConcat)
+     |> stringConcat)
   + ")"
 
 // -----------------------------------------------
@@ -194,11 +194,11 @@ let private kdPrim prim =
   | KLessPrim -> "Less"
   | KNotPrim -> "Not"
   | KIntComparePrim -> "IntCompare"
-  | KStrAddPrim -> "StrAdd"
-  | KStrComparePrim -> "StrCompare"
-  | KStrIndexPrim -> "StrIndex"
-  | KStrLengthPrim -> "StrLength"
-  | KStrGetSlicePrim -> "StrGetSlice"
+  | KStringAddPrim -> "StringAdd"
+  | KStringComparePrim -> "StringCompare"
+  | KStringIndexPrim -> "StringIndex"
+  | KStringLengthPrim -> "StringLength"
+  | KStringGetSlicePrim -> "StringGetSlice"
   | KConsPrim -> "Cons"
   | KSomePrim -> "Some"
   | KTuplePrim -> "Tuple"
@@ -259,7 +259,7 @@ let private kdPrimNode indent prim args results conts ctx =
       |> List.mapi (fun i result ->
         (if i = 0 then "" else ", ")
         + getVarName result ctx)
-      |> strConcat
+      |> stringConcat
 
     match conts with
     | [] -> indent + "throw " + kdPrim prim + argList + "\n"
@@ -279,7 +279,7 @@ let private kdPrimNode indent prim args results conts ctx =
            + (indent + "{\n")
            + kdNode (deeper indent) cont ctx
            + (indent + "}\n"))
-         |> strConcat)
+         |> stringConcat)
 
   match prim, args, results, conts with
   | KAddPrim, [ l; r ], [ result ], [ cont ] -> binary "+" l r result cont
@@ -293,11 +293,11 @@ let private kdPrimNode indent prim args results conts ctx =
 
   | KNotPrim, [ arg ], [ result ], [ cont ] -> prefix "!" arg result cont
 
-  | KStrAddPrim, [ l; r ], [ result ], [ cont ] -> methodCall ".concat" l [ r ] result cont
-  | KStrComparePrim, [ l; r ], [ result ], [ cont ] -> methodCall ".compare" l [ r ] result cont
-  | KStrIndexPrim, [ l; r ], [ result ], [ cont ] -> index l r result cont
-  | KStrLengthPrim, [ arg ], [ result ], [ cont ] -> prop ".length" arg result cont
-  | KStrGetSlicePrim, [ l; r; s ], [ result ], [ cont ] -> methodCall ".slice" s [ l; r ] result cont
+  | KStringAddPrim, [ l; r ], [ result ], [ cont ] -> methodCall ".concat" l [ r ] result cont
+  | KStringComparePrim, [ l; r ], [ result ], [ cont ] -> methodCall ".compare" l [ r ] result cont
+  | KStringIndexPrim, [ l; r ], [ result ], [ cont ] -> index l r result cont
+  | KStringLengthPrim, [ arg ], [ result ], [ cont ] -> prop ".length" arg result cont
+  | KStringGetSlicePrim, [ l; r; s ], [ result ], [ cont ] -> methodCall ".slice" s [ l; r ] result cont
 
   | KConsPrim, [ l; r ], [ result ], [ cont ] -> basic ("[" + kdTerm l ctx + ", ..." + kdTerm r ctx + "]") result cont
 
@@ -309,7 +309,7 @@ let private kdPrimNode indent prim args results conts ctx =
       ("["
        + (args
           |> List.mapi (fun i arg -> (if i = 0 then "" else ", ") + kdTerm arg ctx)
-          |> strConcat)
+          |> stringConcat)
        + "]")
       result
       cont
@@ -364,7 +364,7 @@ let private kdNode indent node ctx =
     kdNode indent cont ctx
     + (joints
        |> List.map (fun joint -> kdJointBinding indent false joint ctx)
-       |> strConcat)
+       |> stringConcat)
 
 let private kdJointBinding indent isEntryPoint jointBinding ctx =
   let (KJointBinding (jointSerial, args, body, loc)) = jointBinding
@@ -427,4 +427,4 @@ let kirDump hint indent (kRoot: KRoot, ctx: KirGenCtx) : string =
   + "\n"
   + (funBindings
      |> List.map (fun funBinding -> kdFunBinding indent funBinding ctx)
-     |> strConcat)
+     |> stringConcat)

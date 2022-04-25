@@ -35,8 +35,8 @@ let private findFunDef _ = failwith ""
 
 //   // String:
 //   | KIndexPrim
-//   | KStrLengthPrim
-//   | KStrGetSlicePrim
+//   | KStringLengthPrim
+//   | KStringGetSlicePrim
 
 //   // List, option:
 //   | KConsPrim

@@ -4,7 +4,7 @@ Not all of F# features are supported. Features for functional-style programming 
 
 - Compile a CLI application (no libraries)
 - Expressions
-    - Literals: `42`, `3.14`, `"str"`, `"""raw str"""`
+    - Literals: `42`, `3.14`, `"string"`, `"""raw string"""`
     - Operations: `a + b`, `s.[i]`, `h :: t`, `(x, y)`, etc.
     - Function calls: `f x y` and `y |> f x`
     - Function definitions: `let f x y = ..` and `fun x y -> ..`

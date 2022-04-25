@@ -69,14 +69,14 @@ static void db_close(void) {
 }
 
 void db_open(struct String filename) {
-    filename = str_ensure_null_terminated(filename);
+    filename = string_ensure_null_terminated(filename);
 
     assert(s_db == NULL && "can't db_open twice");
 
     sqlite3 *db;
-    bool ok = sqlite3_open(filename.str, &db) == 0;
+    bool ok = sqlite3_open(filename.ptr, &db) == 0;
     if (!ok) {
-        fprintf(stderr, "error: Can't open database: '%s'.\n", filename.str);
+        fprintf(stderr, "error: Can't open database: '%s'.\n", filename.ptr);
         exit(1);
     }
 
@@ -91,10 +91,10 @@ static void db_bind_params(sqlite3_stmt *stmt,
         struct String key = p->head.t0;
         struct DbValue value = p->head.t1;
 
-        int i = sqlite3_bind_parameter_index(stmt, str_to_c_str(key));
+        int i = sqlite3_bind_parameter_index(stmt, string_to_c_str(key));
         if (i == 0) {
             db_fail(
-                str_to_c_str(str_add(str_borrow("Unknown variable: "), key)));
+                string_to_c_str(string_add(string_borrow("Unknown variable: "), key)));
         }
 
         switch (value.discriminant) {
@@ -105,7 +105,7 @@ static void db_bind_params(sqlite3_stmt *stmt,
         }
         case DString: {
             bool ok =
-                sqlite3_bind_text(stmt, i, value.DString.str, value.DString.len,
+                sqlite3_bind_text(stmt, i, value.DString.ptr, value.DString.len,
                                   SQLITE_STATIC) == SQLITE_OK;
             assert(ok && "bind_text");
             break;
@@ -127,7 +127,7 @@ static struct DbValueCons const *db_read_row(sqlite3_stmt *stmt) {
         return NULL;
     }
 
-    struct DbValueCons *cons = milone_mem_alloc(n, sizeof(struct DbValueCons));
+    struct DbValueCons *cons = milone_region_alloc(n, sizeof(struct DbValueCons));
 
     for (int i = 0; i < n; i++) {
         int ty = sqlite3_column_type(stmt, i);
@@ -137,7 +137,7 @@ static struct DbValueCons const *db_read_row(sqlite3_stmt *stmt) {
             unsigned char const *s = sqlite3_column_text(stmt, i);
             assert(s != NULL);
             d = (struct DbValue){.discriminant = DString,
-                                 .DString = str_of_c_str((char const *)s)};
+                                 .DString = string_of_c_str((char const *)s)};
             break;
         }
         case SQLITE_INTEGER: {
@@ -166,7 +166,7 @@ db_select(struct String sql, struct StringDbValuePairCons const *params) {
     assert(db != NULL && "db not open");
 
     sqlite3_stmt *stmt = NULL;
-    bool ok = sqlite3_prepare(db, str_to_c_str(sql), sql.len, &stmt, NULL) ==
+    bool ok = sqlite3_prepare(db, string_to_c_str(sql), sql.len, &stmt, NULL) ==
               SQLITE_OK;
     if (!ok) {
         db_fail("prepare");
@@ -216,7 +216,7 @@ db_select(struct String sql, struct StringDbValuePairCons const *params) {
     // Array to list.
     struct DbValueListCons *result = NULL;
     if (len != 0) {
-        result = milone_mem_alloc((int)len, sizeof(struct DbValueListCons));
+        result = milone_region_alloc((int)len, sizeof(struct DbValueListCons));
         for (size_t i = 0; i < len; i++) {
             result[i].head = table[i];
             result[i].tail = i + 1 < len ? &result[i + 1] : NULL;
@@ -232,7 +232,7 @@ void db_mutate(struct String sql, struct StringDbValuePairCons const *params) {
     assert(db != NULL && "db not open");
 
     sqlite3_stmt *stmt = NULL;
-    bool ok = sqlite3_prepare(db, str_to_c_str(sql), sql.len, &stmt, NULL) ==
+    bool ok = sqlite3_prepare(db, string_to_c_str(sql), sql.len, &stmt, NULL) ==
               SQLITE_OK;
     if (!ok) {
         db_fail("prepare");
@@ -276,7 +276,7 @@ void db_exec(struct String sql) {
     assert(db != NULL && "db not open");
 
     bool ok =
-        sqlite3_exec(db, str_to_c_str(sql), NULL, NULL, NULL) == SQLITE_OK;
+        sqlite3_exec(db, string_to_c_str(sql), NULL, NULL, NULL) == SQLITE_OK;
     if (!ok) {
         db_fail("exec");
     }

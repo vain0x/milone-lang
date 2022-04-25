@@ -262,7 +262,7 @@ let private scanCharLit (text: string) (i: int) =
   assert (i >= 1 && at (i - 1) = '\'')
   go i
 
-let private scanStrLit (text: string) (i: int) =
+let private scanStringLit (text: string) (i: int) =
   let at (i: int) =
     if i < text.Length then
       text.[i]
@@ -288,7 +288,7 @@ let private scanStrLit (text: string) (i: int) =
   assert (i >= 1 && text.[i - 1] = '"')
   go i
 
-let private scanStrLitRaw (text: string) (i: int) =
+let private scanStringLitRaw (text: string) (i: int) =
   let rec go i =
     if i + 3 <= text.Length then
       if text |> isFollowedByRawQuotes i then
@@ -317,7 +317,7 @@ let private tokenOfOp allowPrefix (text: string) l r : Token =
   | '&' ->
     match s with
     | "&" -> AmpToken
-    | "&&" -> AmpAmpToken (allowPrefix && not (atSpace text r))
+    | "&&" -> AmpAmpToken(allowPrefix && not (atSpace text r))
     | "&&&" -> AmpAmpAmpToken
     | _ -> error ()
 
@@ -420,7 +420,7 @@ let private evalCharLit (text: string) (l: int) (r: int) : Token =
 
   | _ -> ErrorToken InvalidCharLitError
 
-let private evalStrLit (text: string) (l: int) (r: int) : Token =
+let private evalStringLit (text: string) (l: int) (r: int) : Token =
   let rec skipVerbatim i =
     if i + 1 < r && text.[i] <> '\\' then
       skipVerbatim (i + 1)
@@ -445,7 +445,7 @@ let private evalStrLit (text: string) (l: int) (r: int) : Token =
 
     // Take an escape sequence or halt.
     if i = r - 1 then
-      StrToken(acc |> List.rev |> S.concat "")
+      StringToken(acc |> List.rev |> S.concat "")
     else
       assert (i < r - 1 && text.[i] = '\\')
 
@@ -485,15 +485,15 @@ let private evalStrLit (text: string) (l: int) (r: int) : Token =
   if l + 2 <= r && text.[l] = '"' && text.[r - 1] = '"' then
     go [] (l + 1)
   else
-    ErrorToken InvalidStrLitError
+    ErrorToken InvalidStringLitError
 
-let private evalStrLitRaw (text: string) l r =
+let private evalStringLitRaw (text: string) l r =
   if (l + 6 <= r)
      && text |> isFollowedByRawQuotes l
      && text |> isFollowedByRawQuotes (r - 3) then
-    StrToken(text |> S.slice (l + 3) (r - 3))
+    StringToken(text |> S.slice (l + 3) (r - 3))
   else
-    ErrorToken InvalidStrLitError
+    ErrorToken InvalidStringLitError
 
 // -----------------------------------------------
 // Tokenize routines
@@ -749,12 +749,12 @@ let private doNext (host: TokenizeHost) allowPrefix (text: string) (index: int) 
     evalCharLit text index r, r
 
   | LStr ->
-    let r = scanStrLit text (index + len)
-    evalStrLit text index r, r
+    let r = scanStringLit text (index + len)
+    evalStringLit text index r, r
 
   | LRawStr ->
-    let r = scanStrLitRaw text (index + len)
-    evalStrLitRaw text index r, r
+    let r = scanStringLitRaw text (index + len)
+    evalStringLitRaw text index r, r
 
   | LOp ->
     let r = scanOp text (index + len)

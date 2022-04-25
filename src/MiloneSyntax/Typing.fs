@@ -462,7 +462,7 @@ let private tyIsBasic ty =
   | FloatTk _
   | BoolTk
   | CharTk
-  | StrTk
+  | StringTk
   | VoidPtrTk _
   | NativePtrTk _ -> true
 
@@ -510,7 +510,7 @@ let private resolveTraitBound (ctx: TyCtx) theTrait loc : TyCtx =
     | IntTk _
     | FloatTk _
     | CharTk
-    | StrTk -> ok ctx
+    | StringTk -> ok ctx
 
     | _ -> defaultToInt ctx ty
 
@@ -597,7 +597,7 @@ let private resolveTraitBound (ctx: TyCtx) theTrait loc : TyCtx =
   | IndexTrait (lTy, rTy, resultTy) ->
     match lTy with
     | Ty (ErrorTk _, _) -> ok ctx
-    | Ty (StrTk, _) -> unify2 (rTy, tyInt) (resultTy, tyChar)
+    | Ty (StringTk, _) -> unify2 (rTy, tyInt) (resultTy, tyChar)
     | _ -> error ctx
 
   | IsIntTrait ty ->
@@ -621,7 +621,7 @@ let private resolveTraitBound (ctx: TyCtx) theTrait loc : TyCtx =
     | IntTk _
     | FloatTk _
     | CharTk
-    | StrTk -> ok ctx
+    | StringTk -> ok ctx
 
     | _ -> error ctx
 
@@ -631,7 +631,7 @@ let private resolveTraitBound (ctx: TyCtx) theTrait loc : TyCtx =
     | IntTk _
     | FloatTk _
     | CharTk
-    | StrTk
+    | StringTk
     | VoidPtrTk _
     | NativePtrTk _ -> ok ctx
 
@@ -642,7 +642,7 @@ let private resolveTraitBound (ctx: TyCtx) theTrait loc : TyCtx =
     | ErrorTk _
     | IntTk _
     | FloatTk _
-    | StrTk -> ok ctx
+    | StringTk -> ok ctx
 
     | _ -> error ctx
 
@@ -1199,7 +1199,7 @@ let private primCharScheme =
 let private primStringScheme =
   let meta id = tyMeta id noLoc
   let srcTy = meta 1
-  BoundedTyScheme([ 1 ], tyFun srcTy tyStr, [ ToStringTrait srcTy ])
+  BoundedTyScheme([ 1 ], tyFun srcTy tyString, [ ToStringTrait srcTy ])
 
 let private primBoxScheme =
   let meta id = tyMeta id noLoc
@@ -1211,7 +1211,7 @@ let private primUnboxScheme =
   let resultTy = meta 1
   TyScheme([ 1 ], tyFun tyObj resultTy)
 
-let private primStrLengthTy = tyFun tyStr tyInt
+let private primStringLengthTy = tyFun tyString tyInt
 
 let private primNilScheme =
   let meta id = tyMeta id noLoc
@@ -1311,7 +1311,7 @@ let private inferPrimExpr ctx prim loc =
   | TPrim.Box -> onUnbounded primBoxScheme
   | TPrim.Unbox -> onUnbounded primUnboxScheme
 
-  | TPrim.StrLength -> onMono primStrLengthTy
+  | TPrim.StringLength -> onMono primStringLengthTy
 
   | TPrim.Nil -> onUnbounded primNilScheme
   | TPrim.Cons -> onUnbounded primConsScheme
@@ -1516,9 +1516,9 @@ let private inferNavExpr ctx l (r: Ident, rLoc) loc =
   let lTy = substTy ctx lTy
 
   match lTy, r with
-  | Ty (StrTk, []), "Length" ->
+  | Ty (StringTk, []), "Length" ->
     let funExpr =
-      TPrimExpr(TPrim.StrLength, tyFun tyStr tyInt, loc)
+      TPrimExpr(TPrim.StringLength, tyFun tyString tyInt, loc)
 
     txApp funExpr l tyInt loc, tyInt, ctx
 
@@ -1638,7 +1638,7 @@ let private inferPrimAppExpr ctx itself =
     TNodeExpr(TDiscriminantEN variantSerial, [], tyInt, loc), tyInt, ctx
 
   // printfn "..."
-  | TPrim.Printfn, TLitExpr (StrLit format, _) ->
+  | TPrim.Printfn, TLitExpr (StringLit format, _) ->
     let funTy, targetTy =
       match analyzeFormat format with
       | (Ty (FunTk, [ _; targetTy ])) as funTy -> funTy, targetTy
@@ -1695,12 +1695,12 @@ let private inferPrimAppExpr ctx itself =
     TNodeExpr(TNativeFunEN funSerial, [], targetTy, loc), targetTy, ctx
 
   // __nativeFun "funName"
-  | TPrim.NativeFun, TLitExpr (StrLit funName, _) ->
+  | TPrim.NativeFun, TLitExpr (StringLit funName, _) ->
     let targetTy, ctx = ctx |> freshMetaTyForExpr itself
     TNodeExpr(TCallNativeEN funName, [], targetTy, loc), targetTy, ctx
 
   // __nativeFun ("funName", arg1, arg2, ...)
-  | TPrim.NativeFun, TNodeExpr (TTupleEN, TLitExpr (StrLit funName, _) :: args, _, _) ->
+  | TPrim.NativeFun, TNodeExpr (TTupleEN, TLitExpr (StringLit funName, _) :: args, _, _) ->
     // Type of native function is unchecked. Type ascriptions must be written correctly.
     let targetTy, ctx = ctx |> freshMetaTyForExpr itself
     let args, ctx = inferUntypedExprs ctx args
@@ -1708,26 +1708,26 @@ let private inferPrimAppExpr ctx itself =
     TNodeExpr(TCallNativeEN funName, args, targetTy, loc), targetTy, ctx
 
   // __nativeExpr "code"
-  | TPrim.NativeExpr, TLitExpr (StrLit code, _) ->
+  | TPrim.NativeExpr, TLitExpr (StringLit code, _) ->
     let targetTy, ctx = ctx |> freshMetaTyForExpr itself
     TNodeExpr(TNativeExprEN code, [], targetTy, loc), targetTy, ctx
 
   // __nativeExpr ("code", args...)
-  | TPrim.NativeExpr, TNodeExpr (TTupleEN, TLitExpr (StrLit code, _) :: args, _, _) ->
+  | TPrim.NativeExpr, TNodeExpr (TTupleEN, TLitExpr (StringLit code, _) :: args, _, _) ->
     let args, ctx = inferUntypedExprs ctx args
     let targetTy, ctx = ctx |> freshMetaTyForExpr itself
     TNodeExpr(TNativeExprEN code, args, targetTy, loc), targetTy, ctx
 
   // __nativeStmt "code"
-  | TPrim.NativeStmt, TLitExpr (StrLit code, _) -> TNodeExpr(TNativeStmtEN code, [], tyUnit, loc), tyUnit, ctx
+  | TPrim.NativeStmt, TLitExpr (StringLit code, _) -> TNodeExpr(TNativeStmtEN code, [], tyUnit, loc), tyUnit, ctx
 
   // __nativeStmt ("code", args...)
-  | TPrim.NativeStmt, TNodeExpr (TTupleEN, TLitExpr (StrLit code, _) :: args, _, _) ->
+  | TPrim.NativeStmt, TNodeExpr (TTupleEN, TLitExpr (StringLit code, _) :: args, _, _) ->
     let args, ctx = inferUntypedExprs ctx args
     TNodeExpr(TNativeStmtEN code, args, tyUnit, loc), tyUnit, ctx
 
   // __nativeDecl "code"
-  | TPrim.NativeDecl, TLitExpr (StrLit code, _) -> TNodeExpr(TNativeDeclEN code, [], tyUnit, loc), tyUnit, ctx
+  | TPrim.NativeDecl, TLitExpr (StringLit code, _) -> TNodeExpr(TNativeDeclEN code, [], tyUnit, loc), tyUnit, ctx
 
   | _ -> inferAppExpr ctx itself
 
@@ -1772,7 +1772,7 @@ let private inferPtrOfExpr ctx arg loc =
     txAbort ctx loc
 
 let private inferIndexExpr ctx l r loc =
-  let l, lTy, ctx = inferExpr ctx (Some tyStr) l
+  let l, lTy, ctx = inferExpr ctx (Some tyString) l
   let r, rTy, ctx = inferExpr ctx (Some tyInt) r
   let tTy, ctx = freshMetaTy loc ctx
 
@@ -1791,7 +1791,7 @@ let private inferSliceExpr ctx l r x loc =
     let actualTy = tyFun lTy (tyFun rTy (tyFun xTy xTy))
 
     let expectedTy =
-      tyFun tyInt (tyFun tyInt (tyFun tyStr tyStr))
+      tyFun tyInt (tyFun tyInt (tyFun tyString tyString))
 
     unifyTy ctx loc actualTy expectedTy
 

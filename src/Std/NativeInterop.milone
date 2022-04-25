@@ -73,14 +73,6 @@ module NativePtr =
   // not supported: nullPtr (generic constant isn't supported)
   // unimplemented: initBlock, clear
 
-  // =============================================
-
-  // Extension.
-
-  // FIXME: remove this
-  /// Deprecated: use Ptr.nullPtr.
-  let __getNullPtr () : nativeptr<_> = Ptr.nullPtr
-
 // =============================================================================
 
 module __InPtr =
@@ -109,10 +101,6 @@ module __InPtr =
   let isNullPtr (p: __inptr<_>) : bool = p = Ptr.nullPtr
 
   // =============================================
-
-  // FIXME: remove this
-  /// Deprecated: use Ptr.nullPtr.
-  let getNullPtr () : __inptr<_> = Ptr.nullPtr
 
   /// Adds const qualifier.
   let ofNativePtr (p: nativeptr<'T>) : __inptr<'T> = __nativeCast p

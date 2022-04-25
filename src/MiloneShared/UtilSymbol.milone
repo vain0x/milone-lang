@@ -30,20 +30,20 @@ static void _initialize(void) {
 static uint32_t symbol_intern(struct String s) {
   _initialize();
 
-  void *p = hashmap_get(&t_hashmap, (char const *)s.str, (unsigned)s.len);
+  void *p = hashmap_get(&t_hashmap, (char const *)s.ptr, (unsigned)s.len);
   if (p == NULL) {
     uint32_t id = t_entries_len;
     assert(t_entries_len < 4000);
     t_entries_len++;
     t_entries[id] = s;
-    hashmap_put(&t_hashmap, (char const *)s.str, (unsigned)s.len, (void *)(uintptr_t)id);
+    hashmap_put(&t_hashmap, (char const *)s.ptr, (unsigned)s.len, (void *)(uintptr_t)id);
     return id;
   }
   return (uint32_t)(uintptr_t)p;
 }
 
 static struct String symbol_to_string(uint32_t id) {
-  // assert(id < t_entries_len && t_entries[id].str != NULL);
+  // assert(id < t_entries_len && t_entries[id].ptr != NULL);
   return t_entries[id];
 }
 """

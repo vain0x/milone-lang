@@ -2,11 +2,13 @@
 
 #include <assert.h>
 #include <errno.h>
+#include <stdio.h>
+#include <stdlib.h>
 #include <string.h>
 
 #include <milone.h>
 
-#if defined(_MSC_VER)
+#if defined(_MSC_VER) // On Windows
 
 #define MILONE_PLATFORM_WINDOWS 1
 #define WIN32_LEAN_AND_MEAN 1
@@ -35,11 +37,11 @@ _Noreturn static void failwith(char const *msg) {
 
 static bool path_is_absolute(struct String path) {
 #if defined(MILONE_PLATFORM_UNIX)
-    return path.len >= 1 && *path.str == '/';
+    return path.len >= 1 && *path.ptr == '/';
 #elif defined(MILONE_PLATFORM_WINDOWS)
     // UNC style path isn't supported
-    return (path.len >= 1 && *path.str == '/') ||
-           (path.len >= 2 && path.str[1] == ':');
+    return (path.len >= 1 && *path.ptr == '/') ||
+           (path.len >= 2 && path.ptr[1] == ':');
 #else
 #error no platform
 #endif
@@ -55,96 +57,103 @@ static struct String path_join(struct String base_path, struct String path) {
         return path;
     }
 
-    if (base_path.len >= 1 && base_path.str[base_path.len - 1] != '/') {
-        base_path = str_add(base_path, str_borrow("/"));
+    if (base_path.len >= 1 && base_path.ptr[base_path.len - 1] != '/') {
+        base_path = string_add(base_path, string_borrow("/"));
     }
-    return str_add(base_path, path);
+    return string_add(base_path, path);
 }
 
 // -----------------------------------------------
-// OSString
+// OsString
 // -----------------------------------------------
+// #milone_os_string
 
-#ifdef MILONE_PLATFORM_WINDOWS
+#if defined(_MSC_VER) // On Windows MSVC
 
-// String of OS-native encoding.
-//
-// This holds the same invariant as `String`.
-struct OsString {
-    // Pointer to string.
-    //
-    // Allocation block that is pointed to must include at least one "\x00\x00"
-    // sequence in distance of 2N bytes from the end of the span.
-    LPCTSTR str;
-
-    // Length. Count of UTF-16 code units. Half of bytes.
-    size_t len;
-};
-
-// Convert an null-terminated OS-native string to OsString.
-//
-// The result is NOT allocated and is valid only when the parmeter is valid.
-static struct OsString os_string_borrow(LPCTSTR s) {
+struct MiloneOsString milone_os_string_borrow(LPCTSTR s) {
     assert(s != NULL);
-    return (struct OsString){.str = s, .len = _tcslen(s)};
+    return (struct MiloneOsString){.ptr = s, .len = (uint32_t)_tcslen(s)};
 }
 
-// Convert a UTF-8 string to OS-native encoding. (UTF-16 on Windows)
-//
-// The result is null-terminated.
-static struct OsString os_string_of(struct String s) {
+struct MiloneOsString milone_os_string_of(struct String s) {
     if (s.len == 0) {
-        return os_string_borrow(L"");
+        return milone_os_string_borrow(L"");
     }
 
-    int len = MultiByteToWideChar(CP_UTF8, 0, s.str, s.len, NULL, 0);
+    int len = MultiByteToWideChar(CP_UTF8, 0, s.ptr, s.len, NULL, 0);
     if (len == 0) {
         failwith("MultiByteToWideChar");
     }
     assert(len >= 0);
 
-    LPTSTR buf = milone_mem_alloc(len + 1, sizeof(TCHAR));
+    LPTSTR buf = milone_region_alloc((uint32_t)len + 1, sizeof(TCHAR));
 
-    int n = MultiByteToWideChar(CP_UTF8, 0, s.str, s.len, buf, len);
+    int n = MultiByteToWideChar(CP_UTF8, 0, s.ptr, s.len, buf, len);
     if (n == 0) {
         failwith("MultiByteToWideChar");
     }
     assert(n >= 0);
     assert(n <= len);
-    assert(buf[(size_t)n] == L'\0');
-    return (struct OsString){.str = buf, .len = (size_t)n};
+    assert(buf[(uint32_t)n] == (TCHAR)'\0');
+    return (struct MiloneOsString){.ptr = buf, .len = (uint32_t)n};
 }
 
-// Convert an OS-string to a UTF-8. Allocate to copy.
-//
-// The result is null-terminated.
-static struct String os_string_to(struct OsString s) {
+struct String milone_os_string_to(struct MiloneOsString s) {
     if (s.len == 0) {
-        return str_borrow("");
+        return string_borrow("");
     }
 
     static_assert(sizeof(wchar_t) == 2, "this function is windows only");
     int len =
-        WideCharToMultiByte(CP_UTF8, 0, s.str, (int)s.len, NULL, 0, NULL, NULL);
+        WideCharToMultiByte(CP_UTF8, 0, s.ptr, (int)s.len, NULL, 0, NULL, NULL);
     if (len == 0) {
         failwith("WideCharToMultiByte");
     }
     assert(len >= 0);
 
-    char *buf = milone_mem_alloc(len + 1, sizeof(char));
+    char *buf = milone_region_alloc((uint32_t)len + 1, sizeof(char));
 
-    int n = WideCharToMultiByte(CP_UTF8, 0, s.str, (int)s.len, buf, len, NULL,
+    int n = WideCharToMultiByte(CP_UTF8, 0, s.ptr, (int)s.len, buf, len, NULL,
                                 NULL);
     if (n == 0) {
         failwith("WideCharToMultiByte");
     }
     assert(n >= 0);
     assert(n <= len);
-    assert(buf[(size_t)n] == '\0');
-    return (struct String){.str = buf, .len = (size_t)n};
+    assert(buf[(uint32_t)n] == '\0');
+    return (struct String){.ptr = buf, .len = (uint32_t)n};
 }
 
-#endif // windows
+struct MiloneOsString milone_os_string_of_native(LPCTSTR ptr) {
+    assert(ptr != NULL);
+    uint32_t len = (uint32_t)_tcslen(ptr);
+    TCHAR *buf = milone_region_alloc(len + 1, sizeof(TCHAR));
+    memcpy(buf, ptr, len * sizeof(TCHAR));
+    assert(buf[len] == (TCHAR)'\0');
+    return (struct MiloneOsString){.ptr = buf, .len = len};
+}
+
+#else
+
+struct MiloneOsString milone_os_string_borrow(OsStringPtr ptr) {
+    return (struct MiloneOsString){.ptr = ptr, .len = (uint32_t)strlen(ptr)};
+}
+
+struct MiloneOsString milone_os_string_of_native(OsStringPtr ptr) {
+    struct String s = string_of_c_str(ptr);
+    return (struct MiloneOsString){.ptr = ptr, .len = s.len};
+}
+
+struct MiloneOsString milone_os_string_of(struct String s) {
+    s = string_ensure_null_terminated(s);
+    return (struct MiloneOsString){.ptr = s.ptr, .len = s.len};
+}
+
+struct String milone_os_string_to(struct MiloneOsString s) {
+    return string_ensure_null_terminated((struct String){.ptr = s.ptr, .len = s.len});
+}
+
+#endif
 
 // -----------------------------------------------
 // misc
@@ -152,9 +161,9 @@ static struct String os_string_to(struct OsString s) {
 
 struct String milone_get_platform(void) {
 #if defined(MILONE_PLATFORM_UNIX)
-    return str_borrow("unix");
+    return string_borrow("unix");
 #elif defined(MILONE_PLATFORM_WINDOWS)
-    return str_borrow("windows");
+    return string_borrow("windows");
 #else
 #error no platform
 #endif
@@ -173,7 +182,7 @@ struct String milone_get_cwd(void) {
         exit(1);
     }
 
-    return str_of_c_str(buf);
+    return string_of_c_str(buf);
 #elif defined(MILONE_PLATFORM_WINDOWS)
     TCHAR buf[MAX_PATH + 1] = {0};
     DWORD len = GetCurrentDirectory(sizeof(buf), buf);
@@ -182,7 +191,7 @@ struct String milone_get_cwd(void) {
         exit(1);
     }
 
-    return os_string_to((struct OsString){.str = buf, .len = len});
+    return milone_os_string_to((struct MiloneOsString){.ptr = buf, .len = len});
 #else
 #error no platform
 #endif
@@ -197,14 +206,14 @@ static struct String milone_platform_normalize_path_sep(struct String path) {
 #if defined(MILONE_PLATFORM_UNIX)
     return path;
 #elif defined(MILONE_PLATFORM_WINDOWS)
-    char *buf = milone_mem_alloc(path.len + 1, sizeof(char));
-    strncpy(buf, path.str, path.len);
-    for (size_t i = 0; i < path.len; i++) {
+    char *buf = milone_region_alloc(path.len + 1, sizeof(char));
+    strncpy(buf, path.ptr, path.len);
+    for (uint32_t i = 0; i < path.len; i++) {
         if (buf[i] == '\\') {
             buf[i] = '/';
         }
     }
-    return (struct String){.str = buf, .len = path.len};
+    return (struct String){.ptr = buf, .len = path.len};
 #else
 #error no platform
 #endif
@@ -213,10 +222,10 @@ static struct String milone_platform_normalize_path_sep(struct String path) {
 // Create a single directory (not recursive).
 static bool milone_platform_create_single_directory(struct String dir) {
 #if defined(MILONE_PLATFORM_UNIX)
-    return mkdir(str_to_c_str(dir), 0774) == 0 || errno == EEXIST;
+    return mkdir(string_to_c_str(dir), 0774) == 0 || errno == EEXIST;
 #elif defined(MILONE_PLATFORM_WINDOWS)
-    struct OsString d = os_string_of(dir);
-    return CreateDirectoryW(d.str, NULL) != 0 ||
+    struct MiloneOsString d = milone_os_string_of(dir);
+    return CreateDirectoryW(d.ptr, NULL) != 0 ||
            GetLastError() == ERROR_ALREADY_EXISTS;
 #else
 #error no platform
@@ -233,8 +242,8 @@ bool dir_create(struct String dir, struct String base_dir) {
     dir = path_join(base_dir, dir);
 
     // Span of absolute path.
-    char const *const al = dir.str;
-    char const *const ar = dir.str + (size_t)dir.len;
+    char const *const al = dir.ptr;
+    char const *const ar = dir.ptr + dir.len;
 
     // Start of basename.
     char const *bl = al;
@@ -261,7 +270,7 @@ bool dir_create(struct String dir, struct String base_dir) {
         // Create the directory at `al..br`.
         {
             // FIXME: Unnecessary copying
-            struct String d = str_slice(dir, 0, (int)(br - al));
+            struct String d = string_slice(dir, 0, (int)(br - al));
 
             if (!milone_platform_create_single_directory(d)) {
                 return false;
@@ -290,8 +299,8 @@ struct StringCons {
 // Combine command and args into single command line string.
 // Write to buf.
 static void build_cmdline(struct String command, struct StringCons const *args,
-                          char *buf, size_t buf_size) {
-    size_t total_len = command.len + 2;
+                          char *buf, uint32_t buf_size) {
+    uint32_t total_len = command.len + 2;
     {
         struct StringCons const *a = args;
         while (a != NULL) {
@@ -304,11 +313,11 @@ static void build_cmdline(struct String command, struct StringCons const *args,
         exit(1);
     }
 
-    size_t i = 0;
+    uint32_t i = 0;
     buf[i] = '"';
     i++;
 
-    strncpy(&buf[i], command.str, (size_t)command.len);
+    memcpy(&buf[i], command.ptr, (uint32_t)command.len);
     i += command.len;
 
     buf[i] = '"';
@@ -323,7 +332,7 @@ static void build_cmdline(struct String command, struct StringCons const *args,
             buf[i] = '"';
             i++;
 
-            strncpy(&buf[i], a->head.str, a->head.len);
+            memcpy(&buf[i], a->head.ptr, a->head.len);
             i += a->head.len;
 
             buf[i] = '"';
@@ -345,7 +354,7 @@ static void milone_subprocess_run_windows(struct String cmdline, int *code) {
         // application name: null to use command line
         NULL,
         // command line
-        (LPWSTR)os_string_of(cmdline).str,
+        (LPWSTR)milone_os_string_of(cmdline).ptr,
         // process security attributes
         NULL,
         // primary thread security attributes
@@ -387,7 +396,7 @@ int milone_subprocess_run(struct String command,
 #elif defined(MILONE_PLATFORM_WINDOWS)
     char buf[8000] = "";
     build_cmdline(command, args, buf, sizeof(buf));
-    struct String cmdline = str_borrow(buf);
+    struct String cmdline = string_borrow(buf);
 
     int code;
     milone_subprocess_run_windows(cmdline, &code);
@@ -403,13 +412,13 @@ void execute_into(struct String cmd) {
     char *argv[] = {
         "/bin/sh",
         "-c",
-        (char *)str_to_c_str(cmd),
+        (char *)string_to_c_str(cmd),
         0,
     };
 
     int code = execv("/bin/sh", argv);
     assert(code != 0);
-    fprintf(stderr, "ERROR: Failed to execute '%s'.\n", str_to_c_str(cmd));
+    fprintf(stderr, "ERROR: Failed to execute '%s'.\n", string_to_c_str(cmd));
     exit(code);
 #elif defined(MILONE_PLATFORM_WINDOWS)
     assert(false && "execute_into isn't supported on Windows\n");
@@ -439,11 +448,8 @@ static void rng_destroy(BCRYPT_ALG_HANDLE h_alg) {
     BCryptCloseAlgorithmProvider(h_alg, 0);
 }
 
-static void rng_random_bytes(BCRYPT_ALG_HANDLE h_alg, uint8_t *buf, int len) {
-    assert(len >= 0);
-    if (len == 0) return;
-
-    assert(buf != NULL);
+static void rng_random_bytes(BCRYPT_ALG_HANDLE h_alg, uint8_t *buf, uint32_t len) {
+    assert(buf != NULL && len != 0);
 
     if (BCryptGenRandom(h_alg, (PUCHAR)buf, (ULONG)len, 0) != 0) {
         failwith("BCryptGenRandom");
@@ -468,7 +474,7 @@ struct String milone_uuid(void) {
         buf[0x8], buf[0x9], buf[0xa], buf[0xb],
         buf[0xc], buf[0xd], buf[0xe], buf[0xf]
     );
-    return str_of_c_str(s);
+    return string_of_c_str(s);
 }
 
 #else

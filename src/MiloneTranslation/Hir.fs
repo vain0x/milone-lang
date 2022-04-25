@@ -29,7 +29,7 @@ let tyFloat = Ty(FloatTk F64, [])
 
 let tyChar = Ty(CharTk, [])
 
-let tyStr = Ty(StrTk, [])
+let tyString = Ty(StringTk, [])
 
 let tyObj = Ty(ObjTk, [])
 
@@ -89,7 +89,7 @@ let litToTy (lit: Lit) : Ty =
   | IntLitWithFlavor (_, flavor) -> Ty(IntTk flavor, [])
   | FloatLit _ -> tyFloat
   | CharLit _ -> tyChar
-  | StrLit _ -> tyStr
+  | StringLit _ -> tyString
 
 // -----------------------------------------------
 // Patterns (HIR)
@@ -363,7 +363,7 @@ let private tkEncode tk : int =
   | FloatTk flavor -> pair 2 (floatFlavorToOrdinary flavor)
   | BoolTk -> just 3
   | CharTk -> just 4
-  | StrTk -> just 5
+  | StringTk -> just 5
   | ObjTk -> just 6
   | FunTk -> just 7
   | TupleTk -> just 8
@@ -396,7 +396,7 @@ let tkDisplay getTyName tk =
   | FloatTk flavor -> fsharpFloatTyName flavor
   | BoolTk -> "bool"
   | CharTk -> "char"
-  | StrTk -> "string"
+  | StringTk -> "string"
   | ObjTk -> "obj"
   | FunTk -> "fun"
   | TupleTk -> "tuple"
@@ -535,7 +535,7 @@ let tyMangle (ty: Ty, memo: TreeMap<Ty, string>) : string * TreeMap<Ty, string> 
       | FloatTk flavor -> cFloatTyPascalName flavor, ctx
       | BoolTk -> "Bool", ctx
       | CharTk -> "Char", ctx
-      | StrTk -> "String", ctx
+      | StringTk -> "String", ctx
 
       | MetaTk _
       | ObjTk -> "Object", ctx
@@ -551,7 +551,7 @@ let tyMangle (ty: Ty, memo: TreeMap<Ty, string>) : string * TreeMap<Ty, string> 
       | NativePtrTk RefMode.ReadOnly -> fixedGeneric "InPtr"
       | NativePtrTk RefMode.WriteOnly -> fixedGeneric "OutPtr"
       | NativeFunTk -> variadicGeneric "NativeFun"
-      | NativeTypeTk name -> name, ctx
+      | NativeTypeTk name -> S.replace " " "_" name, ctx
 
       | FunTk ->
         let arity, argTys, resultTy = tyToArgList ty

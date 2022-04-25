@@ -65,7 +65,7 @@ static inline struct String buffer_as_string(struct Buffer buffer) {
     if (buffer.len == buffer.cap) {
         buffer_grow(&buffer, buffer.len + 1, 1);
     }
-    return (struct String){.str = (char const *)buffer.ptr, .len = buffer.len};
+    return (struct String){.ptr = (char const *)buffer.ptr, .len = buffer.len};
 }
 
 #endif

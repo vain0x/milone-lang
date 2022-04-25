@@ -19,14 +19,14 @@ let private forList folder xs state =
 
 let private mPrimIsPure prim =
   match prim with
-  | MIntOfStrPrim _
-  | MFloatOfStrPrim _
-  | MCharOfStrPrim
-  | MStrOfBoolPrim
-  | MStrOfCharPrim
-  | MStrOfIntPrim _
-  | MStrOfFloatPrim _
-  | MStrGetSlicePrim
+  | MIntOfStringPrim _
+  | MFloatOfStringPrim _
+  | MCharOfStringPrim
+  | MStringOfBoolPrim
+  | MStringOfCharPrim
+  | MStringOfIntPrim _
+  | MStringOfFloatPrim _
+  | MStringGetSlicePrim
   | MPtrReadPrim -> true
 
   | MCallNativePrim _ -> false

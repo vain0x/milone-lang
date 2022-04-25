@@ -1,31 +1,33 @@
+#include <stdio.h>
+#include <stdlib.h>
 #include <milone.h>
 
-int main(int argc, char** argv);
+int main(int argc, char **argv);
 
-int main(int argc, char** argv) {
+int main(int argc, char **argv) {
     milone_start(argc, argv);
-    int call_;
-    int call_1;
+    int32_t call_;
+    int32_t call_1;
     struct String call_2;
     struct String call_3;
     struct String call_4;
     struct String call_5;
-    milone_assert((((char)97) == 'a'), (struct String){.str = "int_to_string/int_to_string.milone", .len = 34}, 1, 2);
-    milone_assert((((char)0) == '\0'), (struct String){.str = "int_to_string/int_to_string.milone", .len = 34}, 2, 2);
-    milone_assert((0 == 0), (struct String){.str = "int_to_string/int_to_string.milone", .len = 34}, 4, 2);
-    milone_assert(((((int)'a') - 97) == 0), (struct String){.str = "int_to_string/int_to_string.milone", .len = 34}, 5, 2);
-    call_ = str_to_int((struct String){.str = "42", .len = 2});
-    milone_assert(((call_ - 42) == 0), (struct String){.str = "int_to_string/int_to_string.milone", .len = 34}, 6, 2);
-    call_1 = str_to_int((struct String){.str = "-1", .len = 2});
-    milone_assert(((call_1 + 1) == 0), (struct String){.str = "int_to_string/int_to_string.milone", .len = 34}, 7, 2);
-    call_2 = str_of_int64(0);
-    milone_assert((str_compare(call_2, (struct String){.str = "0", .len = 1}) == 0), (struct String){.str = "int_to_string/int_to_string.milone", .len = 34}, 9, 2);
-    call_3 = str_of_int64((0 - 97));
-    milone_assert((str_compare(call_3, (struct String){.str = "-97", .len = 3}) == 0), (struct String){.str = "int_to_string/int_to_string.milone", .len = 34}, 10, 2);
-    call_4 = str_of_char('a');
-    milone_assert((str_compare(call_4, (struct String){.str = "a", .len = 1}) == 0), (struct String){.str = "int_to_string/int_to_string.milone", .len = 34}, 11, 2);
-    call_5 = str_of_char('\0');
-    milone_assert((str_compare(call_5, (struct String){.str = "", .len = 0}) == 0), (struct String){.str = "int_to_string/int_to_string.milone", .len = 34}, 12, 2);
-    milone_assert((str_compare((struct String){.str = "fix", .len = 3}, (struct String){.str = "fix", .len = 3}) == 0), (struct String){.str = "int_to_string/int_to_string.milone", .len = 34}, 13, 2);
+    if ((((char)97) != 'a')) milone_assert_error("int_to_string/int_to_string.milone", 1, 2);
+    if ((((char)0) != '\0')) milone_assert_error("int_to_string/int_to_string.milone", 2, 2);
+    if ((0 != 0)) milone_assert_error("int_to_string/int_to_string.milone", 4, 2);
+    if (((((int32_t)'a') - 97) != 0)) milone_assert_error("int_to_string/int_to_string.milone", 5, 2);
+    call_ = string_to_int32((struct String){.ptr = "42", .len = 2});
+    if (((call_ - 42) != 0)) milone_assert_error("int_to_string/int_to_string.milone", 6, 2);
+    call_1 = string_to_int32((struct String){.ptr = "-1", .len = 2});
+    if (((call_1 + 1) != 0)) milone_assert_error("int_to_string/int_to_string.milone", 7, 2);
+    call_2 = string_of_int64(0);
+    if ((string_compare(call_2, (struct String){.ptr = "0", .len = 1}) != 0)) milone_assert_error("int_to_string/int_to_string.milone", 9, 2);
+    call_3 = string_of_int64((0 - 97));
+    if ((string_compare(call_3, (struct String){.ptr = "-97", .len = 3}) != 0)) milone_assert_error("int_to_string/int_to_string.milone", 10, 2);
+    call_4 = string_of_char('a');
+    if ((string_compare(call_4, (struct String){.ptr = "a", .len = 1}) != 0)) milone_assert_error("int_to_string/int_to_string.milone", 11, 2);
+    call_5 = string_of_char('\0');
+    if ((string_compare(call_5, (struct String){.ptr = "", .len = 0}) != 0)) milone_assert_error("int_to_string/int_to_string.milone", 12, 2);
+    if ((string_compare((struct String){.ptr = "fix", .len = 3}, (struct String){.ptr = "fix", .len = 3}) != 0)) milone_assert_error("int_to_string/int_to_string.milone", 13, 2);
     return 0;
 }

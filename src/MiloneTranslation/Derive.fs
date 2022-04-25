@@ -446,7 +446,7 @@ let private deriveOnStmt (hirCtx: HirCtx) (ctx: DCtx) stmt : DCtx =
     | FloatTk _, _
     | BoolTk, _
     | CharTk, _
-    | StrTk _, _
+    | StringTk _, _
     | VoidPtrTk _, _
     | NativePtrTk _, _
     | NativeFunTk _, _ -> ctx

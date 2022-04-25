@@ -29,12 +29,15 @@
 #define THREAD_LOCAL _Thread_local
 #endif
 
+// Max size of allocation.
+static uint32_t const LIMIT = 1U << 31;
+
 // -----------------------------------------------
 // memory management (memory pool)
 // -----------------------------------------------
 
-size_t milone_mem_heap_size(void);
-size_t milone_mem_alloc_cost(void);
+size_t milone_heap_size(void);
+size_t milone_alloc_cost(void);
 
 // structure for memory management. poor implementation. thread unsafe.
 struct MemoryChunk {
@@ -79,7 +82,7 @@ static void free_chunk(struct MemoryChunk *chunk) {
     s_heap_alloc -= chunk->cap;
 }
 
-static void do_enter_region(void) {
+static void do_region_enter(void) {
     // fprintf(stderr, "debug: enter_region level=%d size=%d\n", s_heap_level +
     // 1, s_heap_size);
 
@@ -95,7 +98,7 @@ static void do_enter_region(void) {
     s_heap_level++;
 }
 
-static void do_leave_region(void) {
+static void do_region_leave(void) {
     // fprintf(stderr, "debug: leave_region level=%d size=%d\n", s_heap_level,
     // s_heap_size);
 
@@ -130,7 +133,7 @@ static void do_leave_region(void) {
 }
 
 // allocate new chunk
-static void *milone_mem_alloc_slow(size_t total) {
+static void *do_region_alloc_slow(size_t total) {
     size_t cap = s_heap.cap;
 
     // move current chunk to used list
@@ -169,8 +172,13 @@ static void *milone_mem_alloc_slow(size_t total) {
     return ptr;
 }
 
-static void *do_mem_alloc(int count, size_t size) {
-    assert(count > 0 && size > 0);
+static void *do_region_alloc(uint32_t count, uint32_t size) {
+    assert(count != 0 && size != 0);
+
+    // Allocation size limit: count * size < LIMIT
+    if (count >= LIMIT / size) {
+        oom();
+    }
 
     size_t total = (size_t)count * size;
 
@@ -178,8 +186,8 @@ static void *do_mem_alloc(int count, size_t size) {
     total = (total + 0xf) & ~0xf;
     assert(total % 16 == 0 && total >= (size_t)count * size);
 
-    if (s_heap.len + total > s_heap.cap) {
-        return milone_mem_alloc_slow(total);
+    if (total > s_heap.cap - s_heap.len) {
+        return do_region_alloc_slow(total);
     }
 
     // use current chunk
@@ -195,14 +203,14 @@ static void *do_mem_alloc(int count, size_t size) {
 
 #ifndef MILONE_NO_DEFAULT_ALLOCATOR
 
-size_t milone_mem_heap_size(void) { return s_heap_size; }
-size_t milone_mem_alloc_cost(void) { return s_alloc_cost; }
+size_t milone_heap_size(void) { return s_heap_size; }
+size_t milone_alloc_cost(void) { return s_alloc_cost; }
 
-void milone_enter_region(void) { do_enter_region(); }
-void milone_leave_region(void) { do_leave_region(); }
+void milone_region_enter(void) { do_region_enter(); }
+void milone_region_leave(void) { do_region_leave(); }
 
-void *milone_mem_alloc(int count, size_t size) {
-    return do_mem_alloc(count, size);
+void *milone_region_alloc(uint32_t count, uint32_t size) {
+    return do_region_alloc(count, size);
 }
 
 #endif // MILONE_NO_DEFAULT_ALLOCATOR
@@ -211,75 +219,65 @@ void *milone_mem_alloc(int count, size_t size) {
 // int
 // -----------------------------------------------
 
-int int_compare(int l, int r) {
-    if (l == r)
-        return 0;
-    if (l < r)
-        return -1;
-    return 1;
+int milone_int32_compare(int32_t l, int32_t r) {
+    // if l < r: 0 - 1
+    // if l == r: 0 - 0
+    // if l > r: 1 - 0
+    return (r < l) - (l < r);
 }
 
-int int64_compare(int64_t l, int64_t r) {
-    if (l == r)
-        return 0;
-    if (l < r)
-        return -1;
-    return 1;
+int milone_int64_compare(int64_t l, int64_t r) {
+    return (r < l) - (l < r);
 }
 
-int uint64_compare(uint64_t l, uint64_t r) {
-    if (l == r)
-        return 0;
-    if (l < r)
-        return -1;
-    return 1;
+int milone_uint64_compare(uint64_t l, uint64_t r) {
+    return (r < l) - (l < r);
 }
 
-int int_clamp(int x, int l, int r) {
-    if (x < l)
-        return l;
-    if (x > r)
-        return r;
-    return x;
+static uint32_t uint32_min(uint32_t l, uint32_t r) {
+    return r < l ? r : l;
+}
+
+static int uint32_compare(uint32_t l, uint32_t r) {
+    return (r < l) - (l < r);
 }
 
 // -----------------------------------------------
-// str
+// string
 // -----------------------------------------------
 
 struct StringBuilder {
     char *buf;
-    int len;
-    int cap;
+    uint32_t len;
+    uint32_t cap;
 };
 
-static struct StringBuilder *string_builder_new_with_capacity(int cap) {
-    assert(cap >= 0);
-
+static struct StringBuilder *string_builder_new_with_capacity(uint32_t cap) {
     struct StringBuilder *sb =
-        milone_mem_alloc(1, sizeof(struct StringBuilder));
+        milone_region_alloc(1, sizeof(struct StringBuilder));
     *sb = (struct StringBuilder){
-        .buf = cap > 0 ? milone_mem_alloc(cap, sizeof(char)) : "",
+        .buf = cap > 0 ? milone_region_alloc(cap, sizeof(char)) : "",
         .len = 0,
         .cap = cap,
     };
     return sb;
 }
 
-static void string_builder_grow(struct StringBuilder *sb, int addition) {
-    assert(addition >= 0);
-    assert(sb->len + addition >= sb->cap);
+static void string_builder_grow(struct StringBuilder *sb, uint32_t addition) {
+    // Addition must be larger than unused space.
+    assert(addition >= sb->cap - sb->len);
+    if (addition >= LIMIT - sb->cap) oom();
 
     // grow exponentially
     sb->cap *= 2;
 
     // +1 for final null byte.
-    int min_len = sb->len + addition + 1;
+    uint32_t min_len = sb->len + addition + 1;
     if (sb->cap < min_len) {
         sb->cap = min_len;
     }
 
-    char *buf = milone_mem_alloc(sb->cap, sizeof(char));
+    char *buf = milone_region_alloc(sb->cap, sizeof(char));
     memcpy(buf, sb->buf, sb->len);
     sb->buf = buf;
 
@@ -289,106 +287,104 @@ static void string_builder_grow(struct StringBuilder *sb, int addition) {
 
 static void string_builder_append_string(struct StringBuilder *sb,
                                          struct String value) {
-    if (sb->len + value.len >= sb->cap) {
+    if (value.len >= sb->cap - sb->len) {
         string_builder_grow(sb, value.len);
     }
 
-    memcpy(&sb->buf[sb->len], value.str, value.len);
+    memcpy(&sb->buf[sb->len], value.ptr, value.len);
     sb->len += value.len;
 
     assert(sb->len < sb->cap);
     assert(sb->buf[sb->cap - 1] == '\0');
 }
 
-struct String str_borrow(char const *c_str) {
+struct String string_borrow(char const *c_str) {
     assert(c_str != NULL);
-    return (struct String){.str = c_str, .len = (int)strlen(c_str)};
+    return (struct String){.ptr = c_str, .len = (uint32_t)strlen(c_str)};
 }
 
-int str_compare(struct String left, struct String right) {
+int string_compare(struct String left, struct String right) {
     // Compare prefix part of two strings.
-    int min_len = int_clamp(left.len, 0, right.len);
-    int c = memcmp(left.str, right.str, min_len);
+    uint32_t min_len = uint32_min(left.len, right.len);
+    int c = memcmp(left.ptr, right.ptr, min_len);
     if (c != 0) {
         return c;
     }
 
     // One is prefix of the other here, and therefore, longer is greater.
-    return int_compare(left.len, right.len);
+    return uint32_compare(left.len, right.len);
 }
 
-_Noreturn static void error_str_of_raw_parts(int len) {
+_Noreturn static void error_str_of_raw_parts(uint32_t len) {
     fprintf(stderr, "FATAL: Negative string length (%d).\n", len);
     exit(1);
 }
 
-struct String str_of_raw_parts(char const *p, int len) {
+struct String string_of_raw_parts(char const *p, uint32_t len) {
     assert(p != NULL);
 
-    if (len <= 0) {
-        if (len < 0) {
-            error_str_of_raw_parts(len);
-        }
-
-        return str_borrow("");
-    }
+    if (len == 0) return string_borrow("");
+    if (len >= LIMIT - 1) oom();
 
     // +1 for the invariant of existence of null byte.
-    char *str = milone_mem_alloc(len + 1, sizeof(char));
-    memcpy(str, p, len * sizeof(char));
-    assert(str[len] == '\0');
-    return (struct String){.str = str, .len = len};
+    char *buf = milone_region_alloc(len + 1, sizeof(char));
+    memcpy(buf, p, len * sizeof(char));
+    assert(buf[len] == '\0');
+    return (struct String){.ptr = buf, .len = len};
 }
 
-struct String str_of_c_str(char const *s) {
+struct String string_of_c_str(char const *s) {
     assert(s != NULL);
-    return str_of_raw_parts(s, (int)strlen(s));
+    return string_of_raw_parts(s, (uint32_t)strlen(s));
 }
 
 _Noreturn static void error_str_add_overflow() {
-    fprintf(stderr, "str_add: length overflow.\n");
+    fprintf(stderr, "string_add: length overflow.\n");
     exit(1);
 }
 
-struct String str_add(struct String left, struct String right) {
+struct String string_add(struct String left, struct String right) {
     if (left.len == 0 || right.len == 0) {
         return right.len == 0 ? left : right;
     }
 
-    if ((uint32_t)left.len + (uint32_t)right.len >= (uint32_t)INT32_MAX) {
+    // Length limit: |l| + |r| < LIMIT
+    if (right.len >= LIMIT - left.len) {
         error_str_add_overflow();
     }
 
-    int len = left.len + right.len;
-    char *str = milone_mem_alloc(len + 1, sizeof(char));
-    memcpy(str, left.str, left.len);
-    memcpy(str + left.len, right.str, right.len);
-    assert(str[len] == '\0');
-    return (struct String){.str = str, .len = len};
+    uint32_t len = left.len + right.len;
+    char *buf = milone_region_alloc(len + 1, sizeof(char));
+    memcpy(buf, left.ptr, left.len);
+    memcpy(buf + left.len, right.ptr, right.len);
+    assert(buf[len] == '\0');
+    return (struct String){.ptr = buf, .len = len};
 }
 
-struct String str_slice(struct String s, int l, int r) {
-    l = int_clamp(l, 0, s.len);
-    r = int_clamp(r, l, s.len);
-    assert(0 <= l && l <= r && r <= s.len);
-    return (struct String){.str = s.str + l, .len = r - l};
+struct String string_slice(struct String s, int32_t l, int32_t r) {
+    if (l < 0) l = 0;
+    if (r < 0) r = 0;
+    uint32_t ur = uint32_min((uint32_t)r, s.len);
+    uint32_t ul = uint32_min((uint32_t)l, (uint32_t)r);
+    assert(ul <= ur && ur <= s.len);
+    return (struct String){.ptr = s.ptr + ul, .len = ur - ul};
 }
 
-struct String str_ensure_null_terminated(struct String s) {
+struct String string_ensure_null_terminated(struct String s) {
     // The dereference is safe due to the invariant of existence of null byte.
-    if (s.str[s.len] != '\0') {
-        s = str_of_raw_parts(s.str, s.len);
+    if (s.ptr[s.len] != '\0') {
+        s = string_of_raw_parts(s.ptr, s.len);
     }
 
-    assert(s.str[s.len] == '\0');
+    assert(s.ptr[s.len] == '\0');
     return s;
 }
 
-char const *str_to_c_str(struct String s) {
-    return str_ensure_null_terminated(s).str;
+char const *string_to_c_str(struct String s) {
+    return string_ensure_null_terminated(s).ptr;
 }
 
-static bool str_is_all_spaces(char const *begin, char const *end) {
+static bool string_is_all_spaces(char const *begin, char const *end) {
     char const *p = begin;
     while (p != end && *p != 0 && isspace(*p)) {
         p++;
@@ -404,150 +400,150 @@ static void verify_str_to_number(const char *type_name, bool ok) {
     }
 }
 
-bool str_to_int64_checked(struct String s, int64_t *value_ptr) {
-    s = str_ensure_null_terminated(s);
-    char *endptr = (char *)(s.str + s.len);
-    long long value = strtoll(s.str, &endptr, 10);
+bool string_to_int64_checked(struct String s, int64_t *value_ptr) {
+    s = string_ensure_null_terminated(s);
+    char *endptr = (char *)(s.ptr + s.len);
+    long long value = strtoll(s.ptr, &endptr, 10);
     *value_ptr = (int64_t)value;
-    return endptr != s.str && str_is_all_spaces(endptr, s.str + s.len) &&
+    return endptr != s.ptr && string_is_all_spaces(endptr, s.ptr + s.len) &&
            errno != ERANGE;
 }
 
-bool str_to_uint64_checked(struct String s, uint64_t *value_ptr) {
-    s = str_ensure_null_terminated(s);
-    char *endptr = (char *)(s.str + s.len);
-    unsigned long long value = strtoull(s.str, &endptr, 10);
+bool string_to_uint64_checked(struct String s, uint64_t *value_ptr) {
+    s = string_ensure_null_terminated(s);
+    char *endptr = (char *)(s.ptr + s.len);
+    unsigned long long value = strtoull(s.ptr, &endptr, 10);
     *value_ptr = (uint64_t)value;
-    return endptr != s.str && str_is_all_spaces(endptr, s.str + s.len) &&
+    return endptr != s.ptr && string_is_all_spaces(endptr, s.ptr + s.len) &&
            errno != ERANGE;
 }
 
-double str_to_double(struct String s) {
-    s = str_ensure_null_terminated(s);
-    char *endptr = (char *)(s.str + s.len);
-    double value = strtod(s.str, &endptr);
-    bool ok = endptr != s.str && str_is_all_spaces(endptr, s.str + s.len) &&
+double string_to_float64(struct String s) {
+    s = string_ensure_null_terminated(s);
+    char *endptr = (char *)(s.ptr + s.len);
+    double value = strtod(s.ptr, &endptr);
+    bool ok = endptr != s.ptr && string_is_all_spaces(endptr, s.ptr + s.len) &&
               errno != ERANGE;
     verify_str_to_number("float", ok);
     return value;
 }
 
-bool str_to_int_checked(struct String s, int *value_ptr) {
+bool string_to_int32_checked(struct String s, int32_t *value_ptr) {
     int64_t value;
-    bool ok = str_to_int64_checked(s, &value);
+    bool ok = string_to_int64_checked(s, &value);
     if (!(ok && INT32_MIN <= value && value <= INT32_MAX)) {
         *value_ptr = 0;
         return false;
     }
 
-    *value_ptr = (int)value;
+    *value_ptr = (int32_t)value;
     return true;
 }
 
-int8_t str_to_int8(struct String s) {
+int8_t string_to_int8(struct String s) {
     int64_t value;
-    bool ok = str_to_int64_checked(s, &value);
+    bool ok = string_to_int64_checked(s, &value);
     verify_str_to_number("int8", ok && INT8_MIN <= value && value <= INT8_MAX);
     return (int8_t)value;
 }
 
-int16_t str_to_int16(struct String s) {
+int16_t string_to_int16(struct String s) {
     int64_t value;
-    bool ok = str_to_int64_checked(s, &value);
+    bool ok = string_to_int64_checked(s, &value);
     verify_str_to_number("int16",
                          ok && INT16_MIN <= value && value <= INT16_MAX);
     return (int16_t)value;
 }
 
-int str_to_int(struct String s) {
-    int value;
-    bool ok = str_to_int_checked(s, &value);
+int32_t string_to_int32(struct String s) {
+    int32_t value;
+    bool ok = string_to_int32_checked(s, &value);
     verify_str_to_number("int", ok);
     return value;
 }
 
-int64_t str_to_int64(struct String s) {
+int64_t string_to_int64(struct String s) {
     int64_t value;
-    bool ok = str_to_int64_checked(s, &value);
+    bool ok = string_to_int64_checked(s, &value);
     verify_str_to_number("int64", ok);
     return value;
 }
 
-intptr_t str_to_intptr(struct String s) { return (intptr_t)str_to_int64(s); }
+intptr_t string_to_nativeint(struct String s) { return (intptr_t)string_to_int64(s); }
 
-uint8_t str_to_uint8(struct String s) {
+uint8_t string_to_uint8(struct String s) {
     uint64_t value;
-    bool ok = str_to_uint64_checked(s, &value);
+    bool ok = string_to_uint64_checked(s, &value);
     verify_str_to_number("uint8", ok && value <= UINT8_MAX);
     return (uint8_t)value;
 }
 
-uint16_t str_to_uint16(struct String s) {
+uint16_t string_to_uint16(struct String s) {
     uint64_t value;
-    bool ok = str_to_uint64_checked(s, &value);
+    bool ok = string_to_uint64_checked(s, &value);
     verify_str_to_number("uint16", ok && value <= UINT16_MAX);
     return (uint16_t)value;
 }
 
-uint32_t str_to_uint32(struct String s) {
+uint32_t string_to_uint32(struct String s) {
     uint64_t value;
-    bool ok = str_to_uint64_checked(s, &value);
+    bool ok = string_to_uint64_checked(s, &value);
     verify_str_to_number("uint", ok && value <= UINT32_MAX);
     return (uint32_t)value;
 }
 
-uint64_t str_to_uint64(struct String s) {
+uint64_t string_to_uint64(struct String s) {
     uint64_t value;
-    bool ok = str_to_uint64_checked(s, &value);
+    bool ok = string_to_uint64_checked(s, &value);
     verify_str_to_number("uint64", ok);
     return value;
 }
 
-uintptr_t str_to_uintptr(struct String s) {
-    return (uintptr_t)str_to_uint64(s);
+uintptr_t string_to_unativeint(struct String s) {
+    return (uintptr_t)string_to_uint64(s);
 }
 
-struct String str_of_int64(int64_t value) {
+struct String string_of_int64(int64_t value) {
     char buf[21] = {0};
     int n = sprintf(buf, "%lld", (long long)value);
-    return str_of_raw_parts(buf, n);
+    return string_of_raw_parts(buf, n);
 }
 
-struct String str_of_uint64(uint64_t value) {
+struct String string_of_uint64(uint64_t value) {
     char buf[21] = {0};
     int n = sprintf(buf, "%llu", (unsigned long long)value);
-    return str_of_raw_parts(buf, n);
+    return string_of_raw_parts(buf, n);
 }
 
-struct String str_of_double(double value) {
+struct String string_of_float64(double value) {
     char buf[64] = {0};
     int n = sprintf(buf, "%f", value);
-    return str_of_raw_parts(buf, n);
+    return string_of_raw_parts(buf, n);
 }
 
-struct String str_of_bool(bool value) {
-    return value ? str_borrow("True") : str_borrow("False");
+struct String string_of_bool(bool value) {
+    return value ? string_borrow("True") : string_borrow("False");
 }
 
-char str_to_char(struct String s) { return s.len >= 1 ? *s.str : '\0'; }
+char string_to_char(struct String s) { return s.len >= 1 ? *s.ptr : '\0'; }
 
-struct String str_of_char(char value) {
+struct String string_of_char(char value) {
     if (value == '\0') {
-        return str_borrow("");
+        return string_borrow("");
     }
 
-    char *str = milone_mem_alloc(2, sizeof(char));
-    str[0] = value;
-    return (struct String){.str = str, .len = 1};
+    char *buf = milone_region_alloc(2, sizeof(char));
+    buf[0] = value;
+    return (struct String){.ptr = buf, .len = 1};
 }
 
-struct MyStringList {
+struct MyStringCons {
     struct String head;
-    struct MyStringList const *tail;
+    struct MyStringCons const *tail;
 };
 
-struct String str_concat(struct String sep, struct StringList const *strings) {
-    struct MyStringList const *ss = (struct MyStringList const *)strings;
+struct String string_concat(struct String sep, struct StringCons const *strings) {
+    struct MyStringCons const *ss = (struct MyStringCons const *)strings;
 
     struct StringBuilder *sb = string_builder_new_with_capacity(0x1000);
     bool first = true;
@@ -556,7 +552,7 @@ struct String str_concat(struct String sep, struct StringList const *strings) {
         struct String head = ss->head;
         ss = ss->tail;
 
-        if (!first && sep.len > 0) {
+        if (!first && sep.len >= 1) {
             string_builder_append_string(sb, sep);
         }
         first = false;
@@ -569,18 +565,16 @@ struct String str_concat(struct String sep, struct StringList const *strings) {
     assert(sb->len < sb->cap);
     sb->buf[sb->len] = '\0';
 
-    return (struct String){.str = sb->buf, .len = sb->len};
+    return (struct String){.ptr = sb->buf, .len = sb->len};
 }
 
 // -----------------------------------------------
 // assertion
 // -----------------------------------------------
 
-void milone_assert(bool cond, struct String name, int y, int x) {
-    if (!cond) {
-        fprintf(stderr, "Assertion failed at %s:%d:%d\n", str_to_c_str(name), y + 1, x + 1);
-        exit(1);
-    }
+_Noreturn void milone_assert_error(char const *filename, int32_t row, int32_t column) {
+    fprintf(stderr, "Assertion failed at %s:%d:%d\n", filename, row + 1, column + 1);
+    exit(1);
 }
 
 // -----------------------------------------------
@@ -588,11 +582,11 @@ void milone_assert(bool cond, struct String name, int y, int x) {
 // -----------------------------------------------
 
 int file_exists(struct String file_name) {
-    file_name = str_ensure_null_terminated(file_name);
+    file_name = string_ensure_null_terminated(file_name);
 
     bool ok = false;
 
-    FILE *fp = fopen(file_name.str, "r");
+    FILE *fp = fopen(file_name.ptr, "r");
     if (fp) {
         ok = true;
         fclose(fp);
@@ -602,11 +596,11 @@ int file_exists(struct String file_name) {
 }
 
 struct String file_read_all_text(struct String file_name) {
-    file_name = str_ensure_null_terminated(file_name);
+    file_name = string_ensure_null_terminated(file_name);
 
-    FILE *fp = fopen(file_name.str, "rb");
+    FILE *fp = fopen(file_name.ptr, "rb");
     if (!fp) {
-        fprintf(stderr, "File '%s' not found.", file_name.str);
+        fprintf(stderr, "File '%s' not found.", file_name.ptr);
         exit(1);
     }
 
@@ -614,12 +608,17 @@ struct String file_read_all_text(struct String file_name) {
     long size = ftell(fp);
     if (size < 0) {
         fclose(fp);
-        fprintf(stderr, "%s", "Couldn't retrieve the file size.");
+        fprintf(stderr, "%s", "Couldn't retrieve the file size.\n");
+        exit(1);
+    }
+    if ((size_t)size >= LIMIT) {
+        fclose(fp);
+        fprintf(stderr, "%s", "File size is too large.\n");
         exit(1);
     }
     fseek(fp, 0, SEEK_SET);
 
-    char *content = milone_mem_alloc((size_t)size + 1, sizeof(char));
+    char *content = milone_region_alloc((uint32_t)size + 1, sizeof(char));
     size_t read_size = fread(content, 1, (size_t)size, fp);
     if (read_size != (size_t)size) {
         fclose(fp);
@@ -628,28 +627,28 @@ struct String file_read_all_text(struct String file_name) {
     }
 
     fclose(fp);
-    return (struct String){.str = content, .len = size};
+    return (struct String){.ptr = content, .len = (uint32_t)size};
 }
 
 void file_write_all_text(struct String file_name, struct String content) {
-    file_name = str_ensure_null_terminated(file_name);
+    file_name = string_ensure_null_terminated(file_name);
 
     FILE *fp = NULL;
 
     // Skip writing if unchanged.
     {
-        fp = fopen(file_name.str, "rb");
+        fp = fopen(file_name.ptr, "rb");
         if (fp) {
             fseek(fp, 0, SEEK_END);
             long size = ftell(fp);
             fseek(fp, 0, SEEK_SET);
 
             if (size >= 0 && (size_t)size == (size_t)content.len) {
-                char *old_content = calloc((size_t)size + 1, sizeof(char));
+                char *old_content = calloc((uint32_t)size + 1, sizeof(char));
                 size_t read_len =
                     fread(old_content, sizeof(char), (size_t)size, fp);
                 bool same = read_len == (size_t)size &&
-                            memcmp(old_content, content.str, read_len) == 0;
+                            memcmp(old_content, content.ptr, read_len) == 0;
                 free(old_content);
 
                 if (same) {
@@ -661,13 +660,13 @@ void file_write_all_text(struct String file_name, struct String content) {
         }
     }
 
-    fp = fopen(file_name.str, "w+");
+    fp = fopen(file_name.ptr, "w+");
     if (!fp) {
         perror("fopen(w+)");
         exit(1);
     }
 
-    bool ok = fwrite(content.str, sizeof(char), (size_t)content.len, fp) ==
+    bool ok = fwrite(content.ptr, sizeof(char), (size_t)content.len, fp) ==
               (size_t)content.len;
     if (!ok) {
         perror("fwrite");
@@ -694,7 +693,7 @@ struct String milone_read_stdin_all(void) {
             break;
 
         string_builder_append_string(
-            sb, (struct String){.str = buf, .len = (int)read_len});
+            sb, (struct String){.ptr = buf, .len = (uint32_t)read_len});
     }
 
     // #sb_finish
@@ -702,7 +701,7 @@ struct String milone_read_stdin_all(void) {
     assert(sb->len < sb->cap);
     sb->buf[sb->len] = '\0';
 
-    return (struct String){.str = sb->buf, .len = sb->len};
+    return (struct String){.ptr = sb->buf, .len = sb->len};
 }
 
 // -----------------------------------------------
@@ -710,14 +709,14 @@ struct String milone_read_stdin_all(void) {
 // -----------------------------------------------
 
 struct String milone_get_env(struct String name) {
-    name = str_ensure_null_terminated(name);
+    name = string_ensure_null_terminated(name);
 
-    char const *value = getenv(name.str);
+    char const *value = getenv(name.ptr);
     if (value == NULL) {
-        return str_borrow("");
+        return string_borrow("");
     }
 
-    return str_of_c_str(value);
+    return string_of_c_str(value);
 }
 
 // -----------------------------------------------
@@ -757,18 +756,18 @@ struct Profiler {
 };
 
 void *milone_profile_init(void) {
-    struct Profiler *p = milone_mem_alloc(1, sizeof(struct Profiler));
-    p->msg = str_borrow("start");
+    struct Profiler *p = milone_region_alloc(1, sizeof(struct Profiler));
+    p->msg = string_borrow("start");
     p->epoch = milone_get_time_millis();
     p->start_epoch = p->epoch;
-    p->heap_size = milone_mem_heap_size();
-    p->alloc_cost = milone_mem_alloc_cost();
+    p->heap_size = milone_heap_size();
+    p->alloc_cost = milone_alloc_cost();
     return p;
 }
 
 static void milone_profile_print_log(struct String msg, long millis,
                                      long mem_bytes, long alloc_cost) {
-    msg = str_ensure_null_terminated(msg);
+    msg = string_ensure_null_terminated(msg);
 
     if (millis < 0) {
         millis = 0;
@@ -783,7 +782,7 @@ static void milone_profile_print_log(struct String msg, long millis,
     char cost[16];
     thousand_sep(alloc_cost, cost, sizeof(cost));
 
-    fprintf(stderr, "profile: %-17s time=%4d.%02d mem=%s cost=%s\n", msg.str,
+    fprintf(stderr, "profile: %-17s time=%4d.%02d mem=%s cost=%s\n", msg.ptr,
             (int)sec, (int)millis, mem, cost);
 }
 
@@ -791,8 +790,8 @@ void milone_profile_log(struct String msg, void *profiler) {
     struct Profiler *p = (struct Profiler *)profiler;
 
     long t = milone_get_time_millis();
-    long heap_size = (long)milone_mem_heap_size();
-    long alloc_cost = (long)milone_mem_alloc_cost();
+    long heap_size = (long)milone_heap_size();
+    long alloc_cost = (long)milone_alloc_cost();
 
     long time_delta = t - p->epoch;
     long mem_delta = heap_size - (long)p->heap_size;
@@ -805,68 +804,29 @@ void milone_profile_log(struct String msg, void *profiler) {
     p->heap_size = heap_size;
     p->alloc_cost = alloc_cost;
 
-    if (str_compare(msg, str_borrow("Finish")) == 0) {
+    if (string_compare(msg, string_borrow("Finish")) == 0) {
         fprintf(stderr, "profile: Finish\n");
         long millis = t - p->start_epoch;
-        milone_profile_print_log(str_borrow("total"), millis, heap_size,
+        milone_profile_print_log(string_borrow("total"), millis, heap_size,
                                  alloc_cost);
     }
-}
-
-// -----------------------------------------------
-// For competitive programming
-// -----------------------------------------------
-
-int scan_int(void) {
-    int value;
-    int _n = scanf("%d", &value);
-    return value;
-}
-
-char scan_char(void) {
-    char value;
-    int _n = scanf("%c", &value);
-    return value;
-}
-
-struct String scan_str(int capacity) {
-    if (capacity <= 0) {
-        fprintf(stderr, "scan_str(%d)", capacity);
-        exit(1);
-    }
-
-    char *str = milone_mem_alloc(capacity, sizeof(char));
-    if (str == NULL) {
-        fprintf(stderr, "scan_str(%d) out of memory", capacity);
-        exit(1);
-    }
-
-    char fmt[16] = {0};
-    sprintf(fmt, "%%%ds", capacity);
-    assert(fmt[15] == 0);
-
-    int _n = scanf(fmt, str);
-
-    size_t len = strlen(str);
-    assert((long long)len < (long long)capacity);
-    return (struct String){.str = str, .len = (int)len};
 }
 
 // -----------------------------------------------
 // Runtime Entrypoint
 // -----------------------------------------------
 
-static int s_argc;
+static int32_t s_argc;
 static char **s_argv;
 
-int milone_get_arg_count(void) { return s_argc; }
+int32_t milone_get_arg_count(void) { return s_argc; }
 
-struct String milone_get_arg(int index) {
+struct String milone_get_arg(int32_t index) {
     if ((uint32_t)index >= (uint32_t)s_argc) {
-        return str_borrow("");
+        return string_borrow("");
     }
 
-    return str_borrow(s_argv[index]);
+    return string_borrow(s_argv[index]);
 }
 
 void milone_start(int argc, char **argv) {

@@ -39,7 +39,7 @@ let jsonNumberToString (n: float) : string =
       double n = {0};
       char buf[32] = "";
       size_t len = sprintf(buf, "%.15g", n);
-      struct String s = str_of_raw_parts(buf, len);
+      struct String s = string_of_raw_parts(buf, len);
     """,
     n
   )

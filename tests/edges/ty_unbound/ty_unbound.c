@@ -1,21 +1,23 @@
+#include <stdio.h>
+#include <stdlib.h>
 #include <milone.h>
 
-struct UnitList;
+struct UnitCons;
 
-bool MiloneCore_List_UnitListBoolFun1_isEmpty(struct UnitList const* );
+bool MiloneCore_List_UnitListBoolFun1_isEmpty(struct UnitCons const *);
 
-void ty_unbound_ty_unbound_UnitListUnitFun1_assertIsEmpty(struct UnitList const* xs_);
+void ty_unbound_ty_unbound_UnitListUnitFun1_assertIsEmpty(struct UnitCons const *xs_);
 
-int main(int argc, char** argv);
+int main(int argc, char **argv);
 
-void ty_unbound_ty_unbound_UnitListUnitFun1_assertIsEmpty(struct UnitList const* xs_) {
+void ty_unbound_ty_unbound_UnitListUnitFun1_assertIsEmpty(struct UnitCons const *xs_) {
     bool call_;
     call_ = MiloneCore_List_UnitListBoolFun1_isEmpty(xs_);
-    milone_assert(call_, (struct String){.str = "ty_unbound/ty_unbound.milone", .len = 28}, 4, 23);
+    if ((!(call_))) milone_assert_error("ty_unbound/ty_unbound.milone", 4, 23);
     return;
 }
 
-int main(int argc, char** argv) {
+int main(int argc, char **argv) {
     milone_start(argc, argv);
     ty_unbound_ty_unbound_UnitListUnitFun1_assertIsEmpty(NULL);
     return 0;

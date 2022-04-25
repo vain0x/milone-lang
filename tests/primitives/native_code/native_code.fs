@@ -14,7 +14,7 @@ let private writeLine (msg: string) : unit =
 
   __nativeStmt (
     """
-      fprintf(stdout, "%s\n", str_to_c_str({0}));
+      fprintf(stdout, "%s\n", string_to_c_str({0}));
     """,
     msg
   )

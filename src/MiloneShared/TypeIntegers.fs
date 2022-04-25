@@ -120,7 +120,7 @@ let cIntegerTyName flavor =
   match flavor with
   | I8 -> "int8_t"
   | I16 -> "int16_t"
-  | I32 -> "int"
+  | I32 -> "int32_t"
   | I64 -> "int64_t"
   | IPtr -> "intptr_t"
   | U8 -> "uint8_t"
@@ -133,29 +133,29 @@ let cIntegerTyPascalName flavor =
   match flavor with
   | I8 -> "Int8"
   | I16 -> "Int16"
-  | I32 -> "Int"
+  | I32 -> "Int32"
   | I64 -> "Int64"
   | IPtr -> "ISize"
   | U8 -> "UInt8"
   | U16 -> "UInt16"
-  | U32 -> "UInt"
+  | U32 -> "UInt32"
   | U64 -> "UInt64"
   | UPtr -> "UIntPtr"
 
 let cStringToIntegerFunName flavor =
   match flavor with
-  | I8 -> "str_to_int8"
-  | I16 -> "str_to_int16"
-  | I32 -> "str_to_int"
-  | I64 -> "str_to_int64"
-  | IPtr -> "str_to_intptr"
-  | U8 -> "str_to_uint8"
-  | U16 -> "str_to_uint16"
-  | U32 -> "str_to_uint32"
-  | U64 -> "str_to_uint64"
-  | UPtr -> "str_to_uintptr"
+  | I8 -> "string_to_int8"
+  | I16 -> "string_to_int16"
+  | I32 -> "string_to_int32"
+  | I64 -> "string_to_int64"
+  | IPtr -> "string_to_nativeint"
+  | U8 -> "string_to_uint8"
+  | U16 -> "string_to_uint16"
+  | U32 -> "string_to_uint32"
+  | U64 -> "string_to_uint64"
+  | UPtr -> "string_to_unativeint"
 
 let cStringOfIntegerFunName flavor =
   match intFlavorToSignedness flavor with
-  | Signed -> "str_of_int64"
-  | Unsigned -> "str_of_uint64"
+  | Signed -> "string_of_int64"
+  | Unsigned -> "string_of_uint64"

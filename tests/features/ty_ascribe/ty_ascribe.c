@@ -1,54 +1,56 @@
+#include <stdio.h>
+#include <stdlib.h>
 #include <milone.h>
 
-struct IntList;
+struct Int32Cons;
 
-struct StringList;
+struct StringCons;
 
-struct IntList;
+struct Int32Cons;
 
-struct StringList;
+struct StringCons;
 
-int ty_ascribe_ty_ascribe_main_f(int x_);
+int32_t ty_ascribe_ty_ascribe_main_f(int32_t x_);
 
-int ty_ascribe_ty_ascribe_main_g(int x_1);
+int32_t ty_ascribe_ty_ascribe_main_g(int32_t x_1);
 
-int main(int argc, char** argv);
+int main(int argc, char **argv);
 
-struct IntList {
-    int head;
-    struct IntList const* tail;
+struct Int32Cons {
+    int32_t head;
+    struct Int32Cons const *tail;
 };
 
-struct StringList {
+struct StringCons {
     struct String head;
-    struct StringList const* tail;
+    struct StringCons const *tail;
 };
 
-int ty_ascribe_ty_ascribe_main_f(int x_) {
+int32_t ty_ascribe_ty_ascribe_main_f(int32_t x_) {
     return x_;
 }
 
-int ty_ascribe_ty_ascribe_main_g(int x_1) {
+int32_t ty_ascribe_ty_ascribe_main_g(int32_t x_1) {
     return x_1;
 }
 
-int main(int argc, char** argv) {
+int main(int argc, char **argv) {
     milone_start(argc, argv);
-    int zero_;
-    struct IntList const* xs_;
-    struct StringList const* ys_;
-    int call_;
-    int call_1;
-    struct IntList const* list_;
-    struct StringList const* list_1;
+    int32_t zero_;
+    struct Int32Cons const *xs_;
+    struct StringCons const *ys_;
+    int32_t call_;
+    int32_t call_1;
+    struct Int32Cons const *list_;
+    struct StringCons const *list_1;
     call_ = ty_ascribe_ty_ascribe_main_f(1);
     call_1 = ty_ascribe_ty_ascribe_main_g(1);
     zero_ = (call_ - call_1);
-    list_ = ((struct IntList const*)milone_mem_alloc(1, sizeof(struct IntList)));
-    (*(((struct IntList*)list_))) = (struct IntList){.head = 1, .tail = NULL};
+    list_ = ((struct Int32Cons const *)milone_region_alloc(1, sizeof(struct Int32Cons)));
+    (*(((struct Int32Cons *)list_))) = (struct Int32Cons){.head = 1, .tail = NULL};
     xs_ = list_;
-    list_1 = ((struct StringList const*)milone_mem_alloc(1, sizeof(struct StringList)));
-    (*(((struct StringList*)list_1))) = (struct StringList){.head = (struct String){.str = "a", .len = 1}, .tail = NULL};
+    list_1 = ((struct StringCons const *)milone_region_alloc(1, sizeof(struct StringCons)));
+    (*(((struct StringCons *)list_1))) = (struct StringCons){.head = (struct String){.ptr = "a", .len = 1}, .tail = NULL};
     ys_ = list_1;
     return zero_;
 }

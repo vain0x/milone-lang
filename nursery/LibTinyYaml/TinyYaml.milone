@@ -70,17 +70,17 @@ let private pIsAligned (_, posX: int) (_, _, _, x: int) = x = posX
 
 let private pIsDeeper (_, posX: int) (_, _, _, x: int) = x > posX
 
-let private pExpect (str: string) p =
+let private pExpect (text: string) p =
   let rec go count p =
     if count = 0 || pLook p = '\x00' then
       p
     else
       go (count - 1) (p |> pBump)
 
-  let q = go str.Length p
+  let q = go text.Length p
 
-  if pSlice p q <> str then
-    pError ("Expected `" + str + "`") p
+  if pSlice p q <> text then
+    pError ("Expected `" + text + "`") p
 
   q
 

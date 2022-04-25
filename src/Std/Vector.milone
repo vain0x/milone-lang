@@ -1,5 +1,6 @@
 module rec LibLinear.Vector
 
+open Std.Block
 open Std.StdError
 
 module Ptr = Std.Ptr
@@ -172,13 +173,14 @@ let private rawSortUnstable
 
 module Vector =
   /// Gets an empty vector.
-  let empty () : Vector<'T> =
-    Vector(__acquire Ptr.nullPtr, 0u, 0u)
+  let empty () : Vector<'T> = Vector(__acquire Ptr.nullPtr, 0u, 0u)
 
   /// Allocates an empty vector with the specified capacity.
   let alloc (capacity: int) : Vector<'T> =
     if capacity > 0 then
-      let ptr = rawAllocate (uint capacity) (uint sizeof<'T>)
+      let ptr =
+        rawAllocate (uint capacity) (uint sizeof<'T>)
+
       let ptr: __linear<nativeptr<'T>> = __acquire (__nativeCast (__dispose ptr))
       Vector(ptr, 0u, uint capacity)
     else
@@ -200,7 +202,10 @@ module Vector =
     let (Vector (ptr, length, capacity)) = v
     assert (uint i < length)
     let ptr = __dispose ptr
-    let item = Ptr.read (__nativeCast ptr: __inptr<'T>).[i]
+
+    let item =
+      Ptr.read (__nativeCast ptr: __inptr<'T>).[i]
+
     item, Vector(__acquire ptr, length, capacity)
 
   /// Sets an item at the position. Out of bound causes crash.
@@ -299,6 +304,18 @@ module Vector =
     let length, v = length v
     sliceToList 0 length v
 
+  /// Creates a vector with the specified length.
+  let replicate (len: int) (item: 'T) : Vector<'T> =
+    let v = alloc len
+
+    let rec go i v =
+      if i < len then
+        go (i + 1) (push item v)
+      else
+        v
+
+    go 0 v
+
   /// Folds a vector.
   let fold (folder: 'S -> 'T -> 'S) (init: 'S) (v: Vector<'T>) : 'S * Vector<'T> =
     let n, v = length v
@@ -319,7 +336,8 @@ module Vector =
   let sort (itemComparer: 'T -> 'T -> int) (v: Vector<'T>) : Vector<'T> =
     // ptrComparer pl pr = itemComparer (*pl) (*pr)
     let ptrComparer =
-      fun (l: __voidinptr) (r: __voidinptr) -> itemComparer (Ptr.read (__nativeCast l: __inptr<'T>)) (Ptr.read (__nativeCast r: __inptr<'T>))
+      fun (l: __voidinptr) (r: __voidinptr) ->
+        itemComparer (Ptr.read (__nativeCast l: __inptr<'T>)) (Ptr.read (__nativeCast r: __inptr<'T>))
 
     let (Vector (ptr, length, capacity)) = v
     let ptr = __acquire (__nativeCast (__dispose ptr))
@@ -329,6 +347,29 @@ module Vector =
 
     let ptr = __acquire (__nativeCast (__dispose ptr))
     Vector(ptr, length, capacity)
+
+  /// Creates a vector by copying from a block.
+  let ofBlock (block: Block<'T>) : Vector<'T> =
+    let srcPtr, len = BlockExt.unsafeToRawParts block
+
+    if len <> 0u then
+      let destPtr =
+        __dispose (rawAllocate len (uint sizeof<'T>))
+
+      __nativeStmt ("memcpy({0}, {1}, {2});", destPtr, srcPtr, unativeint len * unativeint sizeof<'T>)
+      Vector(__acquire (Ptr.cast destPtr), len, len)
+    else
+      empty ()
+
+  /// Creates a block by copying from a vector.
+  let toBlock (v: Vector<'T>) : Block<'T> * Vector<'T> =
+    let (Vector (ptr, len, cap)) = v
+    let ptr = __dispose ptr
+
+    let block =
+      BlockExt.unsafeOfRawParts (Ptr.asIn ptr) len
+
+    block, Vector(__acquire ptr, len, cap)
 
 /// Vector methods that are less frequently used.
 module VectorExt =

@@ -77,6 +77,12 @@ let private binaryToString op =
 // Types
 // -----------------------------------------------
 
+let private cTyIsPtrOrConstPtr ty =
+  match ty with
+  | CPtrTy _
+  | CConstPtrTy _ -> true
+  | _ -> false
+
 let private cpTy ty acc : string list =
   match ty with
   | CVoidTy -> acc |> cons "void"
@@ -84,29 +90,51 @@ let private cpTy ty acc : string list =
   | CFloatTy flavor -> acc |> cons (cFloatTyName flavor)
   | CBoolTy -> acc |> cons "bool"
   | CCharTy -> acc |> cons "char"
-  | CPtrTy ty -> acc |> cpTy ty |> cons "*"
-  | CConstPtrTy ty -> acc |> cpTy ty |> cons " const*"
+
+  | CPtrTy ty ->
+    acc
+    |> cpTy ty
+    |> cons (
+      if cTyIsPtrOrConstPtr ty then
+        "*"
+      else
+        " *"
+    )
+
+  | CConstPtrTy ty ->
+    acc
+    |> cpTy ty
+    |> cons (
+      if cTyIsPtrOrConstPtr ty then
+        "const *"
+      else
+        " const *"
+    )
+
   | CStructTy name -> acc |> cons "struct " |> cons name
   | CEnumTy name -> acc |> cons "enum " |> cons name
   | CEmbedTy code -> acc |> cons code
 
-/// `T x` or `T (*x)(..)`. FIXME: remove this
-let private cpTyWithName name ty acc = acc |> cpTy ty |> cons " " |> cons name
+/// `T x`. (CTy isn't a function pointer.)
+let private cpTyWithName (name: string) ty acc =
+  let acc = acc |> cpTy ty
+
+  let acc =
+    if not (cTyIsPtrOrConstPtr ty) && name.Length <> 0 then
+      acc |> cons " "
+    else
+      acc
+
+  acc |> cons name
 
 let private cpParams ps acc : string list =
   let rec go ps acc =
     match ps with
     | [] -> acc
 
-    | [ name, ty ] -> acc |> cpTy ty |> cons " " |> cons name
+    | [ name, ty ] -> acc |> cpTyWithName name ty
 
-    | (name, ty) :: ps ->
-      acc
-      |> cpTy ty
-      |> cons " "
-      |> cons name
-      |> cons ", "
-      |> go ps
+    | (name, ty) :: ps -> acc |> cpTyWithName name ty |> cons ", " |> go ps
 
   match ps with
   | [] -> acc |> cons "void"
@@ -176,12 +204,12 @@ let private cpCharLit value =
 let private cpStrRawLit (value: string) acc =
   acc
   |> cons "\""
-  |> cons (strEscape value)
+  |> cons (stringEscape value)
   |> cons "\""
 
 let private cpStrObjLit (value: string) acc =
   acc
-  |> cons "(struct String){.str = "
+  |> cons "(struct String){.ptr = "
   |> cpStrRawLit value
   |> cons ", .len = "
   |> cons (string (SB.utf8Length value))
@@ -252,12 +280,12 @@ let private cpExpr expr acc : string list =
     |> cons (cpCharLit value)
     |> cons "'"
 
-  | CStrObjExpr value -> acc |> cpStrObjLit value
-  | CStrRawExpr value -> acc |> cpStrRawLit value
+  | CStringInitExpr value -> acc |> cpStrObjLit value
+  | CStringLitExpr value -> acc |> cpStrRawLit value
 
   | CInitExpr (fields, ty) -> acc |> cpStructLit fields ty
 
-  | CDotExpr (CStrObjExpr value, "len") -> acc |> cons (string (SB.utf8Length value))
+  | CDotExpr (CStringInitExpr value, "len") -> acc |> cons (string (SB.utf8Length value))
 
   | CVarExpr name -> acc |> cons name
 
@@ -395,6 +423,14 @@ let private cpStmt indent stmt acc : string list =
     |> cons indent
     |> cons "}"
     |> cons eol
+
+  | CIfStmt1 (cond, thenCl) ->
+    acc
+    |> cons indent
+    |> cons "if ("
+    |> cpExpr cond
+    |> cons ") "
+    |> cpStmt "" thenCl // indent isn't used.
 
   | CSwitchStmt (cond, clauses) ->
     let cpCaseLabels cases acc =
@@ -679,7 +715,11 @@ let private cpDecls decls acc =
 // -----------------------------------------------
 
 let private cpHeader acc =
-  let header = "#include <milone.h>"
+  // stdio for printf
+  // stdlib for exit
+  let header =
+    "#include <stdio.h>\n#include <stdlib.h>\n#include <milone.h>"
+
   acc |> cons header |> cons eol |> cons eol
 
 let cirDump (decls: CDecl list) : string =

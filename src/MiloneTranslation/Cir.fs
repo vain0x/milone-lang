@@ -83,10 +83,10 @@ type CExpr =
   | CCharExpr of char
 
   /// E.g. `"hi"`
-  | CStrRawExpr of string
+  | CStringLitExpr of string
 
-  /// E.g. `(struct String){.str = "hi", .len = 2}`
-  | CStrObjExpr of string
+  /// E.g. `(struct String){.ptr = "hi", .len = 2}`
+  | CStringInitExpr of string
 
   /// Variable.
   | CVarExpr of Ident
@@ -129,6 +129,8 @@ type CStmt =
   | CGotoStmt of CLabel
   | CGotoIfStmt of CExpr * CLabel
   | CIfStmt of CExpr * CStmt * CStmt
+  /// `if (cond) stmt;`
+  | CIfStmt1 of CExpr * CStmt
 
   /// clause: (caseLiterals, isDefault, body).
   | CSwitchStmt of cond: CExpr * clauses: (CExpr list * bool * CStmt) list

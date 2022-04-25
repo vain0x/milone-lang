@@ -27,7 +27,7 @@ struct String stdin_read_all(void) {
         len += n;
     }
 
-    struct String result = str_of_raw_parts(s, len);
+    struct String result = string_of_raw_parts(s, len);
     free(s);
     return result;
 }

@@ -129,7 +129,7 @@ let private primToArity ty prim =
   | HPrim.Assert
   | HPrim.Box
   | HPrim.Unbox
-  | HPrim.StrLength
+  | HPrim.StringLength
   | HPrim.Char
   | HPrim.ToInt _
   | HPrim.ToFloat _

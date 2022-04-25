@@ -55,10 +55,10 @@ type MUnary =
   | MCharOfScalarUnary
 
   /// Gets raw ptr of string.
-  | MStrPtrUnary
+  | MStringAsPtrUnary
 
   /// Gets length of string.
-  | MStrLenUnary
+  | MStringLengthUnary
 
   /// Downcast.
   | MUnboxUnary of itemTy: Ty
@@ -105,20 +105,20 @@ type MBinary =
   | MNotEqualBinary
   | MLessBinary
   | MGreaterEqualBinary
-  | MIntCompareBinary
+  | MInt32CompareBinary
   | MInt64CompareBinary
   | MUInt64CompareBinary
-  | MStrAddBinary
-  | MStrCompareBinary
+  | MStringAddBinary
+  | MStringCompareBinary
 
-  /// `s.str[i]`
-  | MStrIndexBinary
+  /// `s.ptr[i]`
+  | MStringIndexBinary
   /// `&p[i]`
   | MPtrAddBinary
 
 [<NoEquality; NoComparison>]
 type MAction =
-  | MAssertAction
+  | MAssertNotAction
   | MPrintfnAction of argTys: Ty list
   | MEnterRegionAction
   | MLeaveRegionAction
@@ -131,16 +131,16 @@ type MAction =
 [<NoEquality; NoComparison>]
 type MPrim =
   /// string -> int
-  | MIntOfStrPrim of intOfStrFlavor: IntFlavor
-  | MFloatOfStrPrim of floatOfStrFlavor: FloatFlavor
-  | MCharOfStrPrim
+  | MIntOfStringPrim of intOfStringFlavor: IntFlavor
+  | MFloatOfStringPrim of floatOfStringFlavor: FloatFlavor
+  | MCharOfStringPrim
 
-  | MStrOfBoolPrim
-  | MStrOfCharPrim
-  | MStrOfIntPrim of strOfIntFlavor: IntFlavor
-  | MStrOfFloatPrim of strOfFloatFlavor: FloatFlavor
+  | MStringOfBoolPrim
+  | MStringOfCharPrim
+  | MStringOfIntPrim of stringOfIntFlavor: IntFlavor
+  | MStringOfFloatPrim of stringOfFloatFlavor: FloatFlavor
 
-  | MStrGetSlicePrim
+  | MStringGetSlicePrim
 
   /// Construct a closure, packing environment.
   | MClosurePrim of closureFunSerial: FunSerial

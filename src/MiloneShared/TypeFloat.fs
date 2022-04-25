@@ -35,10 +35,10 @@ let cFloatTyName flavor =
 
 let cStringOfFloatFunName flavor =
   match flavor with
-  | F32 -> "str_of_float"
-  | F64 -> "str_of_double"
+  | F32 -> "string_of_float32"
+  | F64 -> "string_of_float64"
 
 let cStringToFloatFunName flavor =
   match flavor with
-  | F32 -> "str_to_float"
-  | F64 -> "str_to_double"
+  | F32 -> "string_to_float32"
+  | F64 -> "string_to_float64"

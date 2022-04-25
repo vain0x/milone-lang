@@ -29,7 +29,7 @@ struct Span span_slice(struct Span span, size_t start, size_t end,
 
 struct Buffer buffer_new(size_t cap, size_t item_size) {
     uint8_t *ptr =
-        cap == 0 || item_size == 0 ? NULL : milone_mem_alloc(cap, item_size);
+        cap == 0 || item_size == 0 ? NULL : milone_region_alloc(cap, item_size);
     return (struct Buffer){.ptr = ptr, .len = 0, .cap = cap};
 }
 
@@ -51,7 +51,7 @@ void buffer_grow(struct Buffer *buffer, size_t required_len, size_t item_size) {
         new_cap = required_len;
     }
 
-    void *new_ptr = milone_mem_alloc((int)new_cap, item_size);
+    void *new_ptr = milone_region_alloc((int)new_cap, item_size);
     if (buffer->len != 0) {
         memcpy(new_ptr, buffer->ptr, item_size * buffer->len);
     }

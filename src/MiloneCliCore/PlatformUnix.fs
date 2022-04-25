@@ -184,7 +184,12 @@ build $milone_platform_o: cc $milone_platform_c | $milone_h
     | None -> []
 
   let cFlags =
-    let debug = if p.CDebug then [ "-g" ] else []
+    let debug =
+      if p.CDebug then
+        [ "-g" ]
+      else
+        [ "-DNDEBUG" ]
+
     let optimize = if p.COptimize then "-O2" else "-O1"
     let std = "-std=" + p.CStd
 

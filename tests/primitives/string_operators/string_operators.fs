@@ -1,4 +1,4 @@
-module rec str_operators.Program
+module rec string_operators.Program
 
 let addTest () =
   let hello = "Hello"
@@ -39,10 +39,10 @@ let indexOperatorTest () =
   assert (at 0 hello = 'h')
 
 let subscriptOperatorTest () =
-  let str = "Hello, John!"
-  assert (str.[0..4] = "Hello")
-  assert (str.[7..10] = "John")
-  assert (str.[11..11] = "!")
+  let text = "Hello, John!"
+  assert (text.[0..4] = "Hello")
+  assert (text.[7..10] = "John")
+  assert (text.[11..11] = "!")
 
 let main _ =
   addTest ()
