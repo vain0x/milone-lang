@@ -93,13 +93,7 @@
                     "include": "#sigil_rule"
                 },
                 {
-                    "comment": "Potential namespaces guess (front of dot)",
-                    "match": "\\b([A-Z]\\w*)(?=\\.(?!\\.|\\[))",
-                    "captures": {
-                        "1": {
-                            "name": "entity.name.class.milone"
-                        }
-                    }
+                    "include": "#namespace_guess_rule"
                 },
                 {
                     "comment": "Wildcard or discard",
@@ -332,7 +326,7 @@
                                     "include": "#built_in_value_rule"
                                 },
                                 {
-                                    "include": "#nav_type_rule"
+                                    "include": "#namespace_guess_rule"
                                 }
                             ]
                         },
@@ -508,6 +502,15 @@
                     }
                 }
             ]
+        },
+        "namespace_guess_rule": {
+            "comment": "Namespace-ish symbols guess (uppercase, front of dot)",
+            "match": "\\b([A-Z]\\w*)(?=\\.(?!\\.|\\[))",
+            "captures": {
+                "1": {
+                    "name": "entity.name.class.milone"
+                }
+            }
         }
     }
 }
