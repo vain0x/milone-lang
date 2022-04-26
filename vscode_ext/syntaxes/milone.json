@@ -76,6 +76,59 @@
                     ]
                 },
                 {
+                    "comment": "Type parameter list",
+                    "begin": "\\b(type)\\b\\s*([A-Za-z][_0-9A-Za-z]*)(<)",
+                    "end": ">",
+                    "beginCaptures": {
+                        "1": {
+                            "name": "keyword.other.milone"
+                        },
+                        "2": {
+                            "name": "entity.name.type.milone"
+                        },
+                        "3": {
+                            "name": "keyword.operator.bracket.milone"
+                        }
+                    },
+                    "endCaptures": {
+                        "0": {
+                            "name": "keyword.operator.bracket.milone"
+                        }
+                    },
+                    "patterns": [
+                        {
+                            "include": "#milone_syntax"
+                        }
+                    ]
+                },
+                {
+                    "comment": "Type argument list",
+                    "begin": "\\b([A-Za-z][_0-9A-Za-z]*)(<)",
+                    "end": ">",
+                    "beginCaptures": {
+                        "1": {
+                            "patterns": [
+                                {
+                                    "include": "#milone_syntax"
+                                }
+                            ]
+                        },
+                        "2": {
+                            "name": "keyword.operator.entity.milone"
+                        }
+                    },
+                    "endCaptures": {
+                        "0": {
+                            "name": "keyword.operator.entity.milone"
+                        }
+                    },
+                    "patterns": [
+                        {
+                            "include": "#milone_syntax"
+                        }
+                    ]
+                },
+                {
                     "comment": "Attributes",
                     "name": "meta.embedded.milone",
                     "begin": "^\\[<",
@@ -106,6 +159,7 @@
                     "match": "\\b(false|true)\\b"
                 },
                 {
+                    "comment": "Unsupported computation expression binders",
                     "name": "invalid.illegal.milone",
                     "match": "\\b(do|let|match|return|yield)!"
                 },
