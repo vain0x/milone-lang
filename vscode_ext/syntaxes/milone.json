@@ -47,6 +47,9 @@
                     "include": "#type_argument_list_rule"
                 },
                 {
+                    "include": "#type_ascription_rule"
+                },
+                {
                     "include": "#keyword_rule"
                 },
                 {
@@ -320,6 +323,25 @@
                     "endCaptures": {
                         "0": {
                             "name": "keyword.operator.bracket.milone"
+                        }
+                    },
+                    "patterns": [
+                        {
+                            "include": "#type_rule"
+                        }
+                    ]
+                }
+            ]
+        },
+        "type_ascription_rule": {
+            "comment": "Grammar of type ascription (':' type)",
+            "patterns": [
+                {
+                    "begin": "(:)(?![-;:!?\\.@*\\/&%^+<=>|~])",
+                    "end": "(?=\\)|\\]|\\}|,|;|=|\\n)|$",
+                    "beginCaptures": {
+                        "1": {
+                            "name": "keyword.operator.milone"
                         }
                     },
                     "patterns": [
