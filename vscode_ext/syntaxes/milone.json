@@ -176,7 +176,7 @@
                 },
                 {
                     "comment": "Brackets",
-                    "name": "keyword.other.brackets.milone",
+                    "name": "keyword.operator.bracket.milone",
                     "match": "\\(|\\)|\\[|\\]|\\{|\\}"
                 },
                 {
