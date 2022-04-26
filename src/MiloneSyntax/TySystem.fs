@@ -44,7 +44,7 @@ let private tkEncode tk : int =
   | TupleTk -> just 8
   | ListTk -> just 10
 
-  | LinearTk -> just 11
+  | OwnTk -> just 11
   | VoidPtrTk isMut -> pair 12 (isMutToInt isMut)
   | NativePtrTk mode -> pair 13 (RefMode.toInt mode)
   | NativeFunTk -> just 14
@@ -84,7 +84,7 @@ let tkDisplay getTyName tk =
   | FunTk -> "fun"
   | TupleTk -> "tuple"
   | ListTk -> "list"
-  | LinearTk -> "__linear"
+  | OwnTk -> "Own"
   | VoidPtrTk IsMut -> "voidptr"
   | VoidPtrTk IsConst -> "__voidinptr"
   | NativePtrTk RefMode.ReadWrite -> "nativeptr"

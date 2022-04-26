@@ -1,17 +1,19 @@
-module rec linear.Program
+module rec own.Program
 
-type private Counter = Counter of __linear<int>
+open Std.Own
 
-let private create (init: int) : Counter = Counter(__acquire init)
+type private Counter = Counter of Own<int>
+
+let private create (init: int) : Counter = Counter(Own.acquire init)
 
 let private increment (counter: Counter) : int * Counter =
   let (Counter n) = counter
-  let n = __dispose n + 1
-  n, Counter(__acquire n)
+  let n = Own.release n + 1
+  n, Counter(Own.acquire n)
 
 let private drop (counter: Counter) : unit =
   let (Counter n) = counter
-  let _ = __dispose n
+  let _ = Own.release n
   ()
 
 let private acquireAndThenDispose () =
@@ -83,59 +85,59 @@ let private loopCase () =
   let counters: Counter list = acquireMany 0
   disposeMany counters
 
-/// Generic union with type variable bound to linear type.
+/// Generic union with type variable bound to an owned type.
 type private Wrapper<'T> = Wrapper of 'T
 
 let private genericWrapperCase () =
-  let w = Wrapper(__acquire "contents")
+  let w = Wrapper(Own.acquire "contents")
   let (Wrapper value) = w
-  assert (__dispose value = "contents")
+  assert (Own.release value = "contents")
 
-/// Generic union that is always linear.
-type private Linear<'T> = Linear of __linear<'T>
+/// Generic union that is always owned.
+type private OwnWrapper<'T> = OwnWrapper of Own<'T>
 
-let private genericLinearCase () =
-  let linear = Linear(__acquire (2, 3))
-  let (Linear l) = linear
-  let x, y = __dispose l
+let private genericOwnCase () =
+  let Own = OwnWrapper(Own.acquire (2, 3))
+  let (OwnWrapper l) = Own
+  let x, y = Own.release l
   assert (x = 2 && y = 3)
 
-let private linearMap (mapping: 'T -> 'U) (l: Linear<'T>) : Linear<'U> =
-  let (Linear l) = l
-  Linear(__acquire (mapping (__dispose l)))
+let private ownMap (mapping: 'T -> 'U) (l: OwnWrapper<'T>) : OwnWrapper<'U> =
+  let (OwnWrapper l) = l
+  OwnWrapper(Own.acquire (mapping (Own.release l)))
 
-let private genericLinearFunCase () =
+let private genericOwnFunCase () =
   let l =
-    Linear(__acquire 2)
-    |> linearMap (fun (x: int) -> x + 1)
+    OwnWrapper(Own.acquire 2)
+    |> ownMap (fun (x: int) -> x + 1)
 
-  let (Linear l) = l
-  let n = __dispose l
+  let (OwnWrapper l) = l
+  let n = Own.release l
   assert (n = 3)
 
-let private optionOfLinearCase () =
-  let linearOpt = Linear(__acquire (5, 7)) |> Some
+let private optionOfOwnCase () =
+  let ownOpt = OwnWrapper(Own.acquire (5, 7)) |> Some
 
-  match linearOpt with
-  | Some (Linear l) ->
-    let x, y = __dispose l
+  match ownOpt with
+  | Some (OwnWrapper l) ->
+    let x, y = Own.release l
     assert (x = 5 && y = 3)
 
   | None -> ()
 
-let private nestedLinearCase () =
-  let nested = __acquire (__acquire 2)
-  let unwrapped = __dispose nested
-  let _ = __dispose unwrapped
+let private nestedOwnCase () =
+  let nested = Own.acquire (Own.acquire 2)
+  let unwrapped = Own.release nested
+  let _ = Own.release unwrapped
   ()
 
-/// Union can be linear with subtle restriction.
+/// Union can be an owned type with subtle restriction.
 /// (Basically a union cannot forwardly reference to own another unions.)
-type private LinearWrapper = LinearWrapper of Counter
+type private CounterWrapper = CounterWrapper of Counter
 
-let private linearWrapperCase () =
-  let w = LinearWrapper(create 0)
-  let (LinearWrapper c) = w
+let private counterWrapperCase () =
+  let w = CounterWrapper(create 0)
+  let (CounterWrapper c) = w
   drop c
 
 let main _ =
@@ -146,8 +148,8 @@ let main _ =
   multipleMatches ()
   nestedMatches ()
   genericWrapperCase ()
-  genericLinearCase ()
-  genericLinearFunCase ()
-  nestedLinearCase ()
-  linearWrapperCase ()
+  genericOwnCase ()
+  genericOwnFunCase ()
+  nestedOwnCase ()
+  counterWrapperCase ()
   0

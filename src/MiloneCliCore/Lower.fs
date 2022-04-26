@@ -54,7 +54,7 @@ let private lowerTk (tk: Tir.Tk) : Hir.Tk =
   | Tir.SynonymTk _
   | Tir.InferTk _ // Resolved in Typing.
 
-  | Tir.LinearTk -> unreachable () // Resolved in LinearCheck.
+  | Tir.OwnTk -> unreachable () // Resolved in OwnershipCheck.
 
 let private lowerTy (ty: Tir.Ty) : Hir.Ty =
   let (Tir.Ty (tk, tyArgs)) = ty
@@ -144,8 +144,8 @@ let private lowerPrim (prim: Tir.TPrim) : Hir.HPrim =
   | Tir.TPrim.PtrDistance -> Hir.HPrim.PtrDistance
 
   | Tir.TPrim.Discriminant
-  | Tir.TPrim.Acquire
-  | Tir.TPrim.Dispose
+  | Tir.TPrim.OwnAcquire
+  | Tir.TPrim.OwnRelease
   | Tir.TPrim.PtrSelect
   | Tir.TPrim.PtrRead
   | Tir.TPrim.PtrWrite

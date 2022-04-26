@@ -63,7 +63,7 @@ type Tk =
 
   // Special types.
   /// Ty args must be `[t]`.
-  | LinearTk
+  | OwnTk
   | VoidPtrTk of voidPtrIsMut: IsMut
   | NativePtrTk of mode: RefMode
   | NativeFunTk
@@ -280,8 +280,8 @@ type TPrim =
   | Assert
   | Printfn
   | InRegion
-  | Acquire
-  | Dispose
+  | OwnAcquire
+  | OwnRelease
   | NativeFun
   | NativeCast
   | NativeExpr

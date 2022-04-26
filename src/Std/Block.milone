@@ -1,3 +1,5 @@
+open Std.Own
+
 module Ptr = Std.Ptr
 
 // For memcpy
@@ -6,37 +8,37 @@ __nativeDecl "#include <string.h>"
 /// Immutable array.
 type Block<'T> = private Block of ptr: __inptr<'T> * len: uint
 
-/// Linear growable array to build a block object. (Allocated on a region.)
-type BlockBuilder<'T> = private BlockBuilder of ptr: __linear<__outptr<'T>> * cap: uint
+/// Owned growable array to build a block object. (Allocated on a region.)
+type BlockBuilder<'T> = private BlockBuilder of ptr: Own<__outptr<'T>> * cap: uint
 
 // -----------------------------------------------
 // BlockBuilder helpers
 // -----------------------------------------------
 
-let private bbEmpty () : BlockBuilder<'T> = BlockBuilder(__acquire Ptr.nullPtr, 0u)
+let private bbEmpty () : BlockBuilder<'T> = BlockBuilder(Own.acquire Ptr.nullPtr, 0u)
 
 let private bbAlloc (count: uint) : BlockBuilder<'T> =
   if count <> 0u then
     let ptr: __outptr<'T> = Ptr.regionAlloc count
-    BlockBuilder(__acquire ptr, count)
+    BlockBuilder(Own.acquire ptr, count)
   else
     bbEmpty ()
 
 let private bbDispose (bb: BlockBuilder<'T>) : unit =
   let (BlockBuilder (ptr, _)) = bb
-  let _ = __dispose ptr
+  let _ = Own.release ptr
   ()
 
 let private bbSet (index: uint) (item: 'T) (bb: BlockBuilder<'T>) : BlockBuilder<'T> =
   let (BlockBuilder (ptr, cap)) = bb
   assert (index < cap)
-  let ptr = __dispose ptr
+  let ptr = Own.release ptr
   Ptr.write ptr.[int index] item
-  BlockBuilder(__acquire ptr, cap)
+  BlockBuilder(Own.acquire ptr, cap)
 
 let private bbFinish (bb: BlockBuilder<'T>) : Block<'T> =
   let (BlockBuilder (ptr, cap)) = bb
-  Block(Ptr.cast (__dispose ptr), cap)
+  Block(Ptr.cast (Own.release ptr), cap)
 
 // -----------------------------------------------
 // Block

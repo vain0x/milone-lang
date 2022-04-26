@@ -94,7 +94,6 @@ let private tyPrimOfName ident tys =
 
   | "list", [ itemTy ] -> Some(tyList itemTy)
 
-  | "__linear", [ itemTy ] -> Ty(LinearTk, [ itemTy ]) |> Some
   | "voidptr", [] -> Ty(VoidPtrTk IsMut, []) |> Some
   | "nativeptr", [ itemTy ] -> tyNativePtr itemTy |> Some
   | "__voidinptr", [] -> Ty(VoidPtrTk IsConst, []) |> Some
@@ -152,13 +151,7 @@ type private TySymbol =
   | SynonymTySymbol of synonymTySerial: TySerial
   | UnionTySymbol of unionTySerial: TySerial
   | RecordTySymbol of recordTySerial: TySerial
-
-let private tySymbolToSerial symbol =
-  match symbol with
-  | UnivTySymbol s -> s
-  | SynonymTySymbol s -> s
-  | UnionTySymbol s -> s
-  | RecordTySymbol s -> s
+  | PrimTySymbol of Tk
 
 // -----------------------------------------------
 // NsOwner
@@ -178,7 +171,14 @@ let private nsOwnerAsModule (nsOwner: NsOwner) : ModuleTySerial option =
 
 let private nsOwnerCompare (l: NsOwner) r : int = compare l r
 
-let private nsOwnerOfTySymbol (tySymbol: TySymbol) : NsOwner = nsOwnerOfTy (tySymbolToSerial tySymbol)
+let private nsOwnerOfTySymbol (tySymbol: TySymbol) : NsOwner option =
+  match tySymbol with
+  | UnionTySymbol s -> Some(nsOwnerOfTy s)
+
+  | UnivTySymbol _
+  | SynonymTySymbol _
+  | RecordTySymbol _
+  | PrimTySymbol _ -> None
 
 let private nsOwnerDump (nsOwner: NsOwner) = nsOwner |> string
 
@@ -487,8 +487,9 @@ let private addTyToNs (ctx: ScopeCtx) (nsOwner: NsOwner) alias tySymbol : ScopeC
       TyNs = ctx.TyNs |> nsAdd nsOwner alias tySymbol
 
       NsNs =
-        ctx.NsNs
-        |> nsMerge nsOwner alias (nsOwnerOfTySymbol tySymbol) }
+        match nsOwnerOfTySymbol tySymbol with
+        | Some ns -> ctx.NsNs |> nsMerge nsOwner alias ns
+        | None -> ctx.NsNs }
 
 /// Makes a child namespace accessible from a namespace.
 ///
@@ -532,8 +533,9 @@ let private importTy (ctx: ScopeCtx) alias (symbol: TySymbol) : ScopeCtx =
       let tyMap = tyMap |> TMap.add alias symbol
 
       let nsMap =
-        nsMap
-        |> Multimap.add alias (nsOwnerOfTySymbol symbol)
+        match nsOwnerOfTySymbol symbol with
+        | Some ns -> nsMap |> Multimap.add alias ns
+        | None -> nsMap
 
       kinds, valueScopes, tyMap :: tyScopes, nsMap :: nsScopes
 
@@ -807,6 +809,19 @@ let private resolveTy ctx ty selfTyArgs : Ty * ScopeCtx =
           errorTy ctx (TyArityError(ident, arity, defArity)) loc
         else
           tyRecord tySerial loc, ctx
+
+      | Some (PrimTySymbol tk) ->
+        match tk with
+        | OwnTk ->
+          // #ty_arity_check
+          let defArity = 1
+
+          if arity <> defArity then
+            errorTy ctx (TyArityError(ident, arity, defArity)) loc
+          else
+            Ty(tk, tyArgs), ctx
+
+        | _ -> unreachable ()
 
       | Some (UnivTySymbol _) -> unreachable () // UnivTySymbol is only resolved from type variable.
 
@@ -1982,14 +1997,31 @@ let nameRes (layers: NModuleRoot list list) : TProgram * NameResResult =
   //       but it doesn't so due to sequential serial generation for now.
 
   let state =
-    let stdModuleSerial: ModuleTySerial = 1000000001 // 10^8
+    let s: ModuleTySerial = 1000000001 // 10^8
+    let stdModuleSerial, s = s, s + 1
     let stdNs = nsOwnerOfModule stdModuleSerial
-    let ptrModuleSerial: ModuleTySerial = 1000000002
-    let ptrNs = nsOwnerOfModule ptrModuleSerial
+    let stdOwnNs, s = nsOwnerOfModule s, s + 1
+    let ownModuleNs, s = nsOwnerOfModule s, s + 1
+    let ptrNs = nsOwnerOfModule s
 
     let state = emptyState ()
     let ctx = state.ScopeCtx
+    let ctx = addNsToNs ctx stdNs "Own" stdOwnNs
     let ctx = addNsToNs ctx stdNs "Ptr" ptrNs
+
+    // Std.Own
+    let ctx =
+      let ctx =
+        addTyToNs ctx stdOwnNs "Own" (PrimTySymbol OwnTk)
+
+      let ctx = addNsToNs ctx stdOwnNs "Own" ownModuleNs
+
+      let addValue alias prim ctx =
+        addValueToNs ctx ownModuleNs alias (PrimSymbol prim)
+
+      ctx
+      |> addValue "acquire" TPrim.OwnAcquire
+      |> addValue "release" TPrim.OwnRelease
 
     // Std.Ptr.select etc.
     let ctx =

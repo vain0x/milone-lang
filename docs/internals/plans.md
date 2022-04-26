@@ -13,7 +13,7 @@ To determine:
 
 ## Memory Management
 
-*In short: No GC. use dynamic region-based memory management and linear type.*
+*In short: No GC. use dynamic region-based memory management and ownership.*
 
 Unlike F#, milone-lang doesn't support GC.
 Compiler is short-running application, so it doesn't need to free anything.
@@ -55,10 +55,10 @@ This should be done by deeply cloning the result value of the region: the copy i
     - free copies manually? (`let x = __inRegion f in doSomething x; free x`)
     - prevent copies from escaping and free them at the end of scope? (`let x: inref<T> = __inRegion f in doSomething x`)
 
-### Linear Types
+### Ownership
 
-Memory that can't be put on a region are considered general resource.
+Memory that can't be put on a region are considered general resource and are manged using ownership.
 
 ## Resource Management
 
-General resource is manged using linear types.
+General resource is manged using ownership.

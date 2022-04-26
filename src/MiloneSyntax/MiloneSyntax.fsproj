@@ -16,7 +16,7 @@
     <Compile Include="NameRes.fs" />
     <Compile Include="Typing.fs" />
     <Compile Include="ArityCheck.fs" />
-    <Compile Include="LinearCheck.fs" />
+    <Compile Include="OwnershipCheck.fs" />
     <Compile Include="SyntaxApi.fs" />
   </ItemGroup>
 

@@ -1,6 +1,7 @@
-module rec LibLinear.Vector
+module rec Std.Vector
 
 open Std.Block
+open Std.Own
 open Std.StdError
 
 module Ptr = Std.Ptr
@@ -8,16 +9,16 @@ module Ptr = Std.Ptr
 // For memcpy
 __nativeDecl "#include <string.h>"
 
-/// Linear dynamic array.
-type Vector<'T> = private Vector of ptr: __linear<nativeptr<'T>> * length: uint * capacity: uint
+/// Owned dynamic array.
+type Vector<'T> = private Vector of ptr: Own<nativeptr<'T>> * length: uint * capacity: uint
 
 /// Allocates an untyped dynamic array with `calloc`.
 ///
 /// Returns NULL if count or size is zero.
-let private rawAllocate (count: uint) (size: uint) : __linear<voidptr> =
+let private rawAllocate (count: uint) (size: uint) : Own<voidptr> =
   if (count ||| size) = 0u then
     // __trace "allocate 0"
-    __acquire Ptr.nullPtr
+    Own.acquire Ptr.nullPtr
   else
     assert (count < (1u <<< 31) / size)
 
@@ -30,13 +31,13 @@ let private rawAllocate (count: uint) (size: uint) : __linear<voidptr> =
     // )
 
     assert (ptr <> Ptr.nullPtr)
-    __acquire ptr
+    Own.acquire ptr
 
 /// Deallocates an untyped dynamic array with `free`.
 ///
 /// If ptr is null, it's noop.
-let private rawDeallocate (ptr: __linear<voidptr>) : unit =
-  let ptr = __dispose ptr
+let private rawDeallocate (ptr: Own<voidptr>) : unit =
+  let ptr = Own.release ptr
   // __trace ("free " + string (unativeint ptr))
   __nativeStmt ("free({0});", ptr)
 
@@ -46,12 +47,12 @@ let private rawDeallocate (ptr: __linear<voidptr>) : unit =
 /// New memory must have a capacity `minLength` at least.
 let private rawGrowExact
   (newCapacity: uint)
-  (ptr: __linear<voidptr>)
+  (ptr: Own<voidptr>)
   (length: uint)
   (capacity: uint)
   (size: uint)
-  : __linear<voidptr> * uint =
-  let oldPtr = __dispose ptr
+  : Own<voidptr> * uint =
+  let oldPtr = Own.release ptr
 
   // __trace (
   //   ("grow len:" + string length)
@@ -59,15 +60,15 @@ let private rawGrowExact
   //   + (" -> " + string newCapacity)
   // )
 
-  let newPtr = __dispose (rawAllocate newCapacity size)
+  let newPtr = Own.release (rawAllocate newCapacity size)
 
   if oldPtr <> Ptr.nullPtr then
     if length <> 0u then
       __nativeStmt ("memcpy({0}, {1}, {2});", newPtr, oldPtr, unativeint length * unativeint size)
 
-    rawDeallocate (__acquire oldPtr)
+    rawDeallocate (Own.acquire oldPtr)
 
-  __acquire newPtr, newCapacity
+  Own.acquire newPtr, newCapacity
 
 /// Reserves more capacity for an untyped vector.
 ///
@@ -103,11 +104,11 @@ let private rawReserveExact (addition: uint) ptr length capacity size =
 /// Returns new ptr and capacity since the vector grows if full.
 let private rawPush
   (item: __voidinptr)
-  (ptr: __linear<voidptr>)
+  (ptr: Own<voidptr>)
   (length: uint)
   (capacity: uint)
   (size: uint)
-  : __linear<voidptr> * uint =
+  : Own<voidptr> * uint =
   let ptr, capacity =
     if length = capacity then
       // #exponentially_grow
@@ -119,7 +120,7 @@ let private rawPush
     else
       ptr, capacity
 
-  let ptr = __dispose ptr
+  let ptr = Own.release ptr
 
   __nativeStmt (
     "memcpy(&({0})[{1}], {2}, {3});",
@@ -129,7 +130,7 @@ let private rawPush
     unativeint size
   )
 
-  __acquire ptr, capacity
+  Own.acquire ptr, capacity
 
 /// Sorts an untyped vector in-place.
 ///
@@ -137,11 +138,11 @@ let private rawPush
 /// - `ptrComparer` is called with two pointers, each of them points to an item in the vector.
 let private rawSortUnstable
   (ptrComparer: __voidinptr -> __voidinptr -> int)
-  (ptr: __linear<voidptr>)
+  (ptr: Own<voidptr>)
   (length: uint)
   (size: uint)
-  : __linear<voidptr> =
-  let ptr = __dispose ptr
+  : Own<voidptr> =
+  let ptr = Own.release ptr
 
   // Define a static function that captures the comparer via thread local.
   __nativeDecl
@@ -169,11 +170,11 @@ let private rawSortUnstable
     size
   )
 
-  __acquire ptr
+  Own.acquire ptr
 
 module Vector =
   /// Gets an empty vector.
-  let empty () : Vector<'T> = Vector(__acquire Ptr.nullPtr, 0u, 0u)
+  let empty () : Vector<'T> = Vector(Own.acquire Ptr.nullPtr, 0u, 0u)
 
   /// Allocates an empty vector with the specified capacity.
   let alloc (capacity: int) : Vector<'T> =
@@ -181,7 +182,7 @@ module Vector =
       let ptr =
         rawAllocate (uint capacity) (uint sizeof<'T>)
 
-      let ptr: __linear<nativeptr<'T>> = __acquire (__nativeCast (__dispose ptr))
+      let ptr: Own<nativeptr<'T>> = Own.acquire (__nativeCast (Own.release ptr))
       Vector(ptr, 0u, uint capacity)
     else
       empty ()
@@ -189,7 +190,7 @@ module Vector =
   /// Disposes a vector.
   let dispose (v: Vector<'T>) : unit =
     let (Vector (ptr, _, _)) = v
-    let ptr: __linear<voidptr> = __acquire (__nativeCast (__dispose ptr))
+    let ptr: Own<voidptr> = Own.acquire (__nativeCast (Own.release ptr))
     rawDeallocate ptr
 
   /// Gets the length.
@@ -201,20 +202,20 @@ module Vector =
   let forceGet (i: int) (v: Vector<'T>) : 'T * Vector<'T> =
     let (Vector (ptr, length, capacity)) = v
     assert (uint i < length)
-    let ptr = __dispose ptr
+    let ptr = Own.release ptr
 
     let item =
       Ptr.read (__nativeCast ptr: __inptr<'T>).[i]
 
-    item, Vector(__acquire ptr, length, capacity)
+    item, Vector(Own.acquire ptr, length, capacity)
 
   /// Sets an item at the position. Out of bound causes crash.
   let forceSet (i: int) (item: 'T) (v: Vector<'T>) : Vector<'T> =
     let (Vector (ptr, length, capacity)) = v
     assert (uint i < length)
-    let ptr = __dispose ptr
+    let ptr = Own.release ptr
     Ptr.write ptr.[i] item
-    Vector(__acquire ptr, length, capacity)
+    Vector(Own.acquire ptr, length, capacity)
 
   /// Appends an item to the end of vector.
   let push (item: 'T) (v: Vector<'T>) : Vector<'T> =
@@ -222,10 +223,10 @@ module Vector =
 
     let ptr, capacity =
       let itemPtr: __voidinptr = __nativeExpr ("&({0})", item)
-      let ptr: __linear<voidptr> = __acquire (__nativeCast (__dispose ptr))
+      let ptr: Own<voidptr> = Own.acquire (__nativeCast (Own.release ptr))
       rawPush itemPtr ptr length capacity (uint sizeof<'T>)
 
-    let ptr: __linear<nativeptr<'T>> = __acquire (__nativeCast (__dispose ptr))
+    let ptr: Own<nativeptr<'T>> = Own.acquire (__nativeCast (Own.release ptr))
     Vector(ptr, length + 1u, capacity)
 
   /// Removes the last item from the vector unless empty.
@@ -235,12 +236,12 @@ module Vector =
     let (Vector (ptr, length, capacity)) = v
 
     if length <> 0u then
-      let ptr = __dispose ptr
+      let ptr = Own.release ptr
 
       let item =
         Ptr.read (__nativeCast ptr: __inptr<'T>).[int (length - 1u)]
 
-      Some item, Vector(__acquire ptr, length - 1u, capacity)
+      Some item, Vector(Own.acquire ptr, length - 1u, capacity)
     else
       None, Vector(ptr, length, capacity)
 
@@ -251,14 +252,14 @@ module Vector =
 
     | x :: xs ->
       let (Vector (ptr, length, capacity)) = v
-      let ptr: __linear<voidptr> = __acquire (__nativeCast (__dispose ptr))
+      let ptr: Own<voidptr> = Own.acquire (__nativeCast (Own.release ptr))
 
       let addition = 1u + uint (List.length xs)
 
       let ptr, capacity =
         rawReserve addition ptr length capacity (uint sizeof<'T>)
 
-      let ptr: nativeptr<'T> = __nativeCast (__dispose ptr)
+      let ptr: nativeptr<'T> = __nativeCast (Own.release ptr)
 
       let rec extendFromListLoop i x xs =
         Ptr.write ptr.[i] x
@@ -268,7 +269,7 @@ module Vector =
         | x :: xs -> extendFromListLoop (i + 1) x xs
 
       extendFromListLoop (int length) x xs
-      Vector(__acquire ptr, length + addition, capacity)
+      Vector(Own.acquire ptr, length + addition, capacity)
 
   /// Creates a vector from a list.
   let ofList (xs: 'T list) : Vector<'T> = extendFromList xs (empty ())
@@ -276,7 +277,7 @@ module Vector =
   /// Creates a list from a range of the vector.
   let sliceToList (start: int) (endIndex: int) (v: Vector<'T>) : 'T list * Vector<'T> =
     let (Vector (ptr, length, capacity)) = v
-    let ptr = __dispose ptr
+    let ptr = Own.release ptr
 
     assert (uint endIndex <= length)
     assert (uint start <= uint endIndex)
@@ -297,7 +298,7 @@ module Vector =
       else
         []
 
-    xs, Vector(__acquire ptr, length, capacity)
+    xs, Vector(Own.acquire ptr, length, capacity)
 
   /// Creates a list from a vector.
   let toList (v: Vector<'T>) : 'T list * Vector<'T> =
@@ -340,12 +341,12 @@ module Vector =
         itemComparer (Ptr.read (__nativeCast l: __inptr<'T>)) (Ptr.read (__nativeCast r: __inptr<'T>))
 
     let (Vector (ptr, length, capacity)) = v
-    let ptr = __acquire (__nativeCast (__dispose ptr))
+    let ptr = Own.acquire (__nativeCast (Own.release ptr))
 
     let ptr =
       rawSortUnstable ptrComparer ptr length (uint sizeof<'T>)
 
-    let ptr = __acquire (__nativeCast (__dispose ptr))
+    let ptr = Own.acquire (__nativeCast (Own.release ptr))
     Vector(ptr, length, capacity)
 
   /// Creates a vector by copying from a block.
@@ -354,22 +355,22 @@ module Vector =
 
     if len <> 0u then
       let destPtr =
-        __dispose (rawAllocate len (uint sizeof<'T>))
+        Own.release (rawAllocate len (uint sizeof<'T>))
 
       __nativeStmt ("memcpy({0}, {1}, {2});", destPtr, srcPtr, unativeint len * unativeint sizeof<'T>)
-      Vector(__acquire (Ptr.cast destPtr), len, len)
+      Vector(Own.acquire (Ptr.cast destPtr), len, len)
     else
       empty ()
 
   /// Creates a block by copying from a vector.
   let toBlock (v: Vector<'T>) : Block<'T> * Vector<'T> =
     let (Vector (ptr, len, cap)) = v
-    let ptr = __dispose ptr
+    let ptr = Own.release ptr
 
     let block =
       BlockExt.unsafeOfRawParts (Ptr.asIn ptr) len
 
-    block, Vector(__acquire ptr, len, cap)
+    block, Vector(Own.acquire ptr, len, cap)
 
 /// Vector methods that are less frequently used.
 module VectorExt =
@@ -381,15 +382,15 @@ module VectorExt =
   let unsafeZeroCreate (length: int) : Vector<'T> =
     assert (length >= 0)
     let ptr = rawAllocate (uint length) 1u
-    Vector(__acquire (__nativeCast (__dispose ptr)), uint length, uint length)
+    Vector(Own.acquire (__nativeCast (Own.release ptr)), uint length, uint length)
 
   /// Unsafely exposes the internal buffer of the vector.
   ///
   /// This function exists to build another type on the top of Vector efficiently.
   let unsafeDup (v: Vector<'T>) : nativeptr<'T> * uint * uint * Vector<'T> =
     let (Vector (ptr, length, capacity)) = v
-    let ptr = __dispose ptr
-    ptr, length, capacity, Vector(__acquire ptr, length, capacity)
+    let ptr = Own.release ptr
+    ptr, length, capacity, Vector(Own.acquire ptr, length, capacity)
 
   let unsafeSetLength (length: int) (v: Vector<'T>) : Vector<'T> =
     let (Vector (ptr, _, capacity)) = v
@@ -411,12 +412,12 @@ module VectorExt =
     assert (addition >= 0)
 
     let (Vector (ptr, length, capacity)) = v
-    let ptr = __acquire (__nativeCast (__dispose ptr))
+    let ptr = Own.acquire (__nativeCast (Own.release ptr))
 
     let ptr, capacity =
       rawReserve (uint addition) ptr length capacity (uint sizeof<'T>)
 
-    let ptr = __acquire (__nativeCast (__dispose ptr))
+    let ptr = Own.acquire (__nativeCast (Own.release ptr))
     Vector(ptr, length, capacity)
 
   /// Reserves more memory for a vector.
@@ -429,10 +430,10 @@ module VectorExt =
     assert (addition >= 0)
 
     let (Vector (ptr, length, capacity)) = v
-    let ptr = __acquire (__nativeCast (__dispose ptr))
+    let ptr = Own.acquire (__nativeCast (Own.release ptr))
 
     let ptr, capacity =
       rawReserveExact (uint addition) ptr length capacity (uint sizeof<'T>)
 
-    let ptr = __acquire (__nativeCast (__dispose ptr))
+    let ptr = Own.acquire (__nativeCast (Own.release ptr))
     Vector(ptr, length, capacity)

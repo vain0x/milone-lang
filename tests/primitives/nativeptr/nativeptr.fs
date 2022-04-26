@@ -2,6 +2,8 @@ module rec nativeptr.Program
 
 // See x_native_code.md in docs.
 
+open Std.Own
+
 module Ptr = Std.Ptr
 
 let private memAlloc (count: uint) (size: uint) : voidptr =
@@ -67,11 +69,11 @@ let private testPtrCast () =
   let objOutPtr: __outptr<obj> = Ptr.cast (Ptr.nullPtr: __inptr<string>)
   let funPtr: __nativeFun<obj * obj, obj> = Ptr.cast (Ptr.nullPtr: voidptr)
 
-  // Linear type can be cast.
-  let uintPtrLinear: __linear<nativeptr<uint>> =
-    Ptr.cast (__acquire (Ptr.nullPtr: voidptr))
+  // Own type can be cast.
+  let uintPtrOwn: Own<nativeptr<uint>> =
+    Ptr.cast (Own.acquire (Ptr.nullPtr: voidptr))
 
-  let _ = __dispose uintPtrLinear
+  let _ = Own.release uintPtrOwn
   ()
 
 let private testAsIn () =
@@ -138,7 +140,8 @@ let private testPtrOf () =
   assert (Ptr.read p = 42)
 
 let private testPtrSelect () =
-  let p: nativeptr<int> = __nativeCast (memAlloc 4u (uint sizeof<int>))
+  let p: nativeptr<int> =
+    __nativeCast (memAlloc 4u (uint sizeof<int>))
 
   assert (Ptr.select p.[0] = p)
   assert (unativeint (Ptr.select p.[1]) - unativeint p = unativeint sizeof<int>)
