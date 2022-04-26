@@ -1,4 +1,4 @@
-module rec MiloneSyntax.LinearCheck
+module rec MiloneSyntax.OwnershipCheck
 
 open MiloneShared.SharedTypes
 open MiloneShared.Util
@@ -12,7 +12,7 @@ open Std.StdSet
 module StdInt = Std.StdInt
 module S = Std.StdString
 
-let private emptyLinearTySet: TreeSet<TySerial> = TSet.empty compare
+let private emptyOwnedTySet: TreeSet<TySerial> = TSet.empty compare
 
 /// varSerial -> (true = owned | false = disposed)
 type private OwnershipMap = TreeMap<VarSerial, bool>
@@ -30,26 +30,26 @@ let private emptyUsedMap: TreeMap<VarSerial, Loc> = TMap.empty varSerialCompare
 // Rx
 // -----------------------------------------------
 
-/// Read-only context for linear check.
+/// Read-only context for ownership check.
 [<RequireQualifiedAccess; NoEquality; NoComparison>]
 type private Rx =
   { GetVarName: VarSerial -> string
     GetVarLoc: VarSerial -> Loc
     Funs: TreeMap<FunSerial, FunDef>
-    LinearTySet: TreeSet<TySerial> }
+    OwnedTySet: TreeSet<TySerial> }
 
-let private newRxForToplevel linearTys (tirCtx: TirCtx) : Rx =
+let private newRxForToplevel ownedTySet (tirCtx: TirCtx) : Rx =
   let findVar varSerial = tirCtx.StaticVars |> mapFind varSerial
 
   let rx: Rx =
     { GetVarName = fun varSerial -> (findVar varSerial).Name
       GetVarLoc = fun varSerial -> (findVar varSerial).Loc
       Funs = tirCtx.Funs
-      LinearTySet = linearTys }
+      OwnedTySet = ownedTySet }
 
   rx
 
-let private newRxForModule linearTys (m: TModule) (tirCtx: TirCtx) : Rx =
+let private newRxForModule ownedTySet (m: TModule) (tirCtx: TirCtx) : Rx =
   let findVar varSerial =
     match m.Vars |> TMap.tryFind varSerial with
     | Some varDef -> varDef
@@ -59,7 +59,7 @@ let private newRxForModule linearTys (m: TModule) (tirCtx: TirCtx) : Rx =
     { GetVarName = fun varSerial -> (findVar varSerial).Name
       GetVarLoc = fun varSerial -> (findVar varSerial).Loc
       Funs = tirCtx.Funs
-      LinearTySet = linearTys }
+      OwnedTySet = ownedTySet }
 
   rx
 
@@ -73,13 +73,13 @@ let private funIsGeneric (rx: Rx) funSerial =
 // -----------------------------------------------
 
 [<RequireQualifiedAccess; NoEquality; NoComparison>]
-type private LinearCheckCtx =
+type private OwnershipCheckCtx =
   { Parent: OwnershipMap
     Current: OwnershipMap
     Used: TreeMap<VarSerial, Loc>
     Logs: (Log * Loc) list }
 
-let private emptyCtx () : LinearCheckCtx =
+let private emptyCtx () : OwnershipCheckCtx =
   { Parent = emptyMap
     Current = emptyMap
     Used = emptyUsedMap
@@ -90,59 +90,59 @@ let private emptyCtx () : LinearCheckCtx =
 // -----------------------------------------------
 
 [<RequireQualifiedAccess; NoEquality; NoComparison>]
-type private LinearError =
+type private OwnershipError =
   | VariableNotUsed
   | VariableAlreadyUsed
   | VariableCannotBeUsed
   | VariableCannotBeCaptured
   | VariantInvalid
   | CannotUseAsPat
-  | StaticVarCannotBeLinear
-  | GenericFunCannotUseLinear
+  | StaticVarCannotBeOwned
+  | GenericFunCannotUseOwned
   | BranchMustUse of varNames: string list
-  | FieldCannotBeLinear
+  | FieldCannotBeOwned
   | PartialApp
 
 let private errorToString err =
   match err with
-  | LinearError.VariableNotUsed -> "This linear variable is not used."
+  | OwnershipError.VariableNotUsed -> "This variable of owned type is not used."
 
-  | LinearError.VariableAlreadyUsed -> "This linear variable is already used and cannot be used here."
+  | OwnershipError.VariableAlreadyUsed -> "This variable of owned type is already used and cannot be used here."
 
-  | LinearError.VariableCannotBeUsed ->
-    "This linear variable must not be used in this branch because the previous branch does not use it."
+  | OwnershipError.VariableCannotBeUsed ->
+    "This variable of owned type must not be used in this branch because the previous branch does not use it."
 
-  | LinearError.VariableCannotBeCaptured ->
-    "This linear variable must not be used in local functions and function expressions."
+  | OwnershipError.VariableCannotBeCaptured ->
+    "This variable of owned type must not be used in local functions and function expressions."
 
-  | LinearError.VariantInvalid ->
-    "This linear variant is invalid for now. This error happens when a union contains another linear union types. Consider to use the Linear type directly."
+  | OwnershipError.VariantInvalid ->
+    "This variant of owned type is invalid for now. This error happens when a union contains another owned union type. Consider to use the Own type directly."
 
-  | LinearError.CannotUseAsPat -> "This linear variable cannot be defined by AS pattern."
+  | OwnershipError.CannotUseAsPat -> "This variable of owned type cannot be defined by AS pattern."
 
-  | LinearError.StaticVarCannotBeLinear -> "This static variable cannot be linear type."
+  | OwnershipError.StaticVarCannotBeOwned -> "This static variable cannot be an owned type."
 
-  | LinearError.GenericFunCannotUseLinear -> "This generic function cannot bind type variables to linear types."
+  | OwnershipError.GenericFunCannotUseOwned -> "This generic function cannot bind type variables to owned types."
 
-  | LinearError.BranchMustUse varNames ->
+  | OwnershipError.BranchMustUse varNames ->
     assert (varNames |> List.isEmpty |> not)
 
     "This branch must use a particular set of variables that are used in the previous branch. Variables: ["
     + S.concat "; " varNames
     + "]"
 
-  | LinearError.FieldCannotBeLinear -> "Fields cannot be linear for now."
+  | OwnershipError.FieldCannotBeOwned -> "Fields cannot be owned types for now."
 
-  | LinearError.PartialApp -> "Functions that take a linear value can't be partially applied."
+  | OwnershipError.PartialApp -> "Functions that take a value of owned type can't be partially applied."
 
-let private addError err (loc: Loc) (ctx: LinearCheckCtx) =
+let private addError err (loc: Loc) (ctx: OwnershipCheckCtx) =
   { ctx with Logs = (Log.Error(errorToString err), loc) :: ctx.Logs }
 
 // -----------------------------------------------
 // Types
 // -----------------------------------------------
 
-let private tyIsLinearWith linearTySet ty : bool =
+let private tyIsOwnedWith ownedTySet ty : bool =
   let rec go ty =
     let (Ty (tk, tyArgs)) = ty
 
@@ -162,71 +162,71 @@ let private tyIsLinearWith linearTySet ty : bool =
     | MetaTk _
     | UnivTk _ -> false
 
-    | LinearTk -> true
+    | OwnTk -> true
 
     | TupleTk
     | ListTk -> tyArgs |> List.exists go
 
     | UnionTk (tySerial, _) ->
-      // Note that it's unclear whether union is a linear when it has a linear type as argument
+      // Note that it's unclear whether union is an owned when it has an owned type as argument
       // since that type variable might not appear or not *owned*.
       // (E.g. 'T in type U<'T> = V of ('T -> 'T) isn't owned.)
-      TSet.contains tySerial linearTySet
+      TSet.contains tySerial ownedTySet
       || tyArgs |> List.exists go
 
     | RecordTk _ ->
       assert (List.isEmpty tyArgs)
-      false // Record can't be linear nor generic for now.
+      false // Record types can't be owned types nor generic for now.
 
     | SynonymTk _
     | InferTk _ -> unreachable () // SynonymTk, InferTk are resolved in Typing.
 
   go ty
 
-let private tyIsLinear (rx: Rx) ty = tyIsLinearWith rx.LinearTySet ty
+let private tyIsOwned (rx: Rx) ty = tyIsOwnedWith rx.OwnedTySet ty
 
-// FIXME: Union types that own Linear directly are linear for now.
+// FIXME: Union types that own the Own type directly are owned for now.
 //        This should be transitive.
-let private computeLinearTys (tirCtx: TirCtx) =
+let private computeOwnedTySet (tirCtx: TirCtx) =
   tirCtx.Tys
   |> TMap.fold
-       (fun linearTySet tySerial (tyDef: TyDef) ->
+       (fun ownedTySet tySerial (tyDef: TyDef) ->
          match tyDef with
          | UnionTyDef (_, _, variants, _) ->
-           let linear =
+           let owned =
              variants
              |> List.exists (fun variantSerial ->
                let variantDef = tirCtx.Variants |> mapFind variantSerial
 
                variantDef.HasPayload
-               && tyIsLinearWith linearTySet variantDef.PayloadTy)
+               && tyIsOwnedWith ownedTySet variantDef.PayloadTy)
 
-           if linear then
-             linearTySet |> TSet.add tySerial
+           if owned then
+             ownedTySet |> TSet.add tySerial
            else
-             linearTySet
+             ownedTySet
 
-         | _ -> linearTySet)
-       emptyLinearTySet
+         | _ -> ownedTySet)
+       emptyOwnedTySet
 
 // -----------------------------------------------
 // Check definitions
 // -----------------------------------------------
 
-/// Performs linear check for definitions.
-let private lcDefs linearTys (tirCtx: TirCtx) =
+/// Performs ownership check for definitions.
+let private ocDefs ownedTySet (tirCtx: TirCtx) =
   let logs, tirCtx = tirCtx.Logs, { tirCtx with Logs = [] }
 
-  let rx = newRxForToplevel linearTys tirCtx
-  let isLinear ty = tyIsLinear rx ty
+  let rx = newRxForToplevel ownedTySet tirCtx
+  let isOwned ty = tyIsOwned rx ty
 
   let logs =
     tirCtx.StaticVars
     |> TMap.fold
          (fun logs _ (varDef: VarDef) ->
-           if isLinear varDef.Ty then
+           if isOwned varDef.Ty then
              let log =
-               Log.Error(errorToString LinearError.StaticVarCannotBeLinear)
+               Log.Error(errorToString OwnershipError.StaticVarCannotBeOwned)
 
              (log, varDef.Loc) :: logs
            else
@@ -237,12 +237,12 @@ let private lcDefs linearTys (tirCtx: TirCtx) =
     tirCtx.Variants
     |> TMap.fold
          (fun logs _ (variantDef: VariantDef) ->
-           if tyIsLinear rx variantDef.PayloadTy then
-             if rx.LinearTySet
+           if tyIsOwned rx variantDef.PayloadTy then
+             if rx.OwnedTySet
                 |> TSet.contains variantDef.UnionTySerial
                 |> not then
                let log =
-                 Log.Error(errorToString LinearError.VariantInvalid)
+                 Log.Error(errorToString OwnershipError.VariantInvalid)
 
                (log, variantDef.Loc) :: logs
              else
@@ -260,9 +260,9 @@ let private lcDefs linearTys (tirCtx: TirCtx) =
              fields
              |> List.fold
                   (fun logs (_, ty, loc) ->
-                    if isLinear ty then
+                    if isOwned ty then
                       let log =
-                        Log.Error(errorToString LinearError.FieldCannotBeLinear)
+                        Log.Error(errorToString OwnershipError.FieldCannotBeOwned)
 
                       (log, loc) :: logs
                     else
@@ -280,18 +280,18 @@ let private lcDefs linearTys (tirCtx: TirCtx) =
 // Control
 // -----------------------------------------------
 
-let private markAsDefined (ctx: LinearCheckCtx) varSerial : LinearCheckCtx =
+let private markAsDefined (ctx: OwnershipCheckCtx) varSerial : OwnershipCheckCtx =
   { ctx with Current = ctx.Current |> TMap.add varSerial true }
 
-let private markAsUsed (ctx: LinearCheckCtx) varSerial loc : LinearCheckCtx =
+let private markAsUsed (ctx: OwnershipCheckCtx) varSerial loc : OwnershipCheckCtx =
   match ctx.Parent |> TMap.tryFind varSerial with
   | Some true -> { ctx with Used = ctx.Used |> TMap.add varSerial loc }
-  | Some false -> addError LinearError.VariableAlreadyUsed loc ctx
+  | Some false -> addError OwnershipError.VariableAlreadyUsed loc ctx
   | None ->
     match ctx.Current |> TMap.tryFind varSerial with
     | Some true -> { ctx with Current = ctx.Current |> TMap.add varSerial false }
-    | Some false -> addError LinearError.VariableAlreadyUsed loc ctx
-    | None -> addError LinearError.VariableCannotBeCaptured loc ctx
+    | Some false -> addError OwnershipError.VariableAlreadyUsed loc ctx
+    | None -> addError OwnershipError.VariableCannotBeCaptured loc ctx
 
 [<RequireQualifiedAccess; NoEquality; NoComparison>]
 type private Branch =
@@ -305,7 +305,7 @@ type private Branch =
     //    and used in the first branch.
     PrevOpt: UsedMap option }
 
-let private enterBranches (ctx: LinearCheckCtx) =
+let private enterBranches (ctx: OwnershipCheckCtx) =
   let branch: Branch =
     { Parent = ctx.Parent
       Current = ctx.Current
@@ -329,7 +329,7 @@ let private enterBranches (ctx: LinearCheckCtx) =
 
   branch, ctx
 
-let private nextBranch (rx: Rx) (branch: Branch) (branchLoc: Loc) (ctx: LinearCheckCtx) =
+let private nextBranch (rx: Rx) (branch: Branch) (branchLoc: Loc) (ctx: OwnershipCheckCtx) =
   let current, used, logs, ctx =
     ctx.Current,
     ctx.Used,
@@ -346,7 +346,7 @@ let private nextBranch (rx: Rx) (branch: Branch) (branchLoc: Loc) (ctx: LinearCh
          (fun logs varSerial owned ->
            if owned then
              let log =
-               Log.Error(errorToString LinearError.VariableNotUsed)
+               Log.Error(errorToString OwnershipError.VariableNotUsed)
 
              let loc = rx.GetVarLoc varSerial
              (log, loc) :: logs
@@ -365,7 +365,7 @@ let private nextBranch (rx: Rx) (branch: Branch) (branchLoc: Loc) (ctx: LinearCh
              (fun logs varSerial loc ->
                if prev |> TMap.containsKey varSerial |> not then
                  let log =
-                   Log.Error(errorToString LinearError.VariableCannotBeUsed)
+                   Log.Error(errorToString OwnershipError.VariableCannotBeUsed)
 
                  (log, loc) :: logs
                else
@@ -387,7 +387,7 @@ let private nextBranch (rx: Rx) (branch: Branch) (branchLoc: Loc) (ctx: LinearCh
           let names = unused |> List.map rx.GetVarName
 
           let log =
-            Log.Error(errorToString (LinearError.BranchMustUse names))
+            Log.Error(errorToString (OwnershipError.BranchMustUse names))
 
           (log, branchLoc) :: logs
         else
@@ -407,7 +407,7 @@ let private nextBranch (rx: Rx) (branch: Branch) (branchLoc: Loc) (ctx: LinearCh
 
   branch, ctx
 
-let private leaveBranches (branch: Branch) (ctx: LinearCheckCtx) : LinearCheckCtx =
+let private leaveBranches (branch: Branch) (ctx: OwnershipCheckCtx) : OwnershipCheckCtx =
   // Propagate "used" marks to the parent branch.
   let current, used =
     let branchUsed =
@@ -430,31 +430,31 @@ let private leaveBranches (branch: Branch) (ctx: LinearCheckCtx) : LinearCheckCt
       Current = current
       Used = used }
 
-let private enterBody (ctx: LinearCheckCtx) : _ * LinearCheckCtx =
+let private enterBody (ctx: OwnershipCheckCtx) : _ * OwnershipCheckCtx =
   let branch, ctx = enterBranches ctx
 
-  // Prevent body from using parent linear variables (no escape).
+  // Prevent body from using parent owned variables (no escape).
   let ctx = { ctx with Parent = emptyMap }
 
   branch, ctx
 
-let private leaveBody rx (branch: Branch) bodyLoc (ctx: LinearCheckCtx) : LinearCheckCtx =
+let private leaveBody rx (branch: Branch) bodyLoc (ctx: OwnershipCheckCtx) : OwnershipCheckCtx =
   // reuse error checking mechanism. this is not ideal because error message talks about branching
   let branch, ctx = nextBranch rx branch bodyLoc ctx
   leaveBranches branch ctx
 
-let private lcPat (rx: Rx) (ctx: LinearCheckCtx) pat : LinearCheckCtx =
+let private ocPat (rx: Rx) (ctx: OwnershipCheckCtx) pat : OwnershipCheckCtx =
   match pat with
   | TLitPat _ -> ctx
 
   | TDiscardPat (ty, loc) ->
-    if tyIsLinear rx ty then
-      addError LinearError.VariableNotUsed loc ctx
+    if tyIsOwned rx ty then
+      addError OwnershipError.VariableNotUsed loc ctx
     else
       ctx
 
   | TVarPat (_, varSerial, ty, _) ->
-    if tyIsLinear rx ty then
+    if tyIsOwned rx ty then
       markAsDefined ctx varSerial
     else
       ctx
@@ -463,43 +463,43 @@ let private lcPat (rx: Rx) (ctx: LinearCheckCtx) pat : LinearCheckCtx =
     // Matching to variant is considered a use, okay?
     ctx
 
-  | TNodePat (_, argPats, _, _) -> argPats |> List.fold (lcPat rx) ctx
+  | TNodePat (_, argPats, _, _) -> argPats |> List.fold (ocPat rx) ctx
 
   | TAsPat (bodyPat, varSerial, loc) ->
     let ctx =
       let ty = patToTy bodyPat
 
-      if tyIsLinear rx ty then
+      if tyIsOwned rx ty then
         let ctx = markAsDefined ctx varSerial
-        addError LinearError.CannotUseAsPat loc ctx
+        addError OwnershipError.CannotUseAsPat loc ctx
       else
         ctx
 
-    lcPat rx ctx bodyPat
+    ocPat rx ctx bodyPat
 
-  | TOrPat (lPat, _, _) -> lcPat rx ctx lPat
+  | TOrPat (lPat, _, _) -> ocPat rx ctx lPat
 
 // applied: true if target of the expression is caller of function application. (It appears as `e` in `e x`.)
-let private lcExpr (rx: Rx) (applied: bool) (ctx: LinearCheckCtx) expr : LinearCheckCtx =
+let private ocExpr (rx: Rx) (applied: bool) (ctx: OwnershipCheckCtx) expr : OwnershipCheckCtx =
   match expr with
   | TLitExpr _
   | TVariantExpr _
   | TPrimExpr _ -> ctx
 
   | TVarExpr (varSerial, ty, loc) ->
-    if tyIsLinear rx ty then
+    if tyIsOwned rx ty then
       markAsUsed ctx varSerial loc
     else
       ctx
 
   | TFunExpr (funSerial, ty, loc) ->
-    let rec funTyContainsLinear ty =
+    let rec funTyContainsOwnedTy ty =
       match ty with
-      | Ty (FunTk, [ sTy; tTy ]) -> tyIsLinear rx sTy || funTyContainsLinear tTy
-      | _ -> tyIsLinear rx ty
+      | Ty (FunTk, [ sTy; tTy ]) -> tyIsOwned rx sTy || funTyContainsOwnedTy tTy
+      | _ -> tyIsOwned rx ty
 
     if funIsGeneric rx funSerial
-       && funTyContainsLinear ty then
+       && funTyContainsOwnedTy ty then
       let funDef = rx.Funs |> mapFind funSerial
       let (TyScheme (_, defTy)) = funDef.Ty
 
@@ -554,8 +554,8 @@ let private lcExpr (rx: Rx) (applied: bool) (ctx: LinearCheckCtx) expr : LinearC
 
       match tyArgsOpt with
       | Some tyArgs ->
-        if tyArgs |> List.exists (tyIsLinear rx) then
-          addError LinearError.GenericFunCannotUseLinear loc ctx
+        if tyArgs |> List.exists (tyIsOwned rx) then
+          addError OwnershipError.GenericFunCannotUseOwned loc ctx
         else
           ctx
 
@@ -571,13 +571,13 @@ let private lcExpr (rx: Rx) (applied: bool) (ctx: LinearCheckCtx) expr : LinearC
 
   | TRecordExpr (baseOpt, fields, _, _) ->
     let ctx =
-      Option.fold (lcExpr rx false) ctx baseOpt
+      Option.fold (ocExpr rx false) ctx baseOpt
 
     fields
-    |> List.fold (fun ctx (_, init, _) -> lcExpr rx false ctx init) ctx
+    |> List.fold (fun ctx (_, init, _) -> ocExpr rx false ctx init) ctx
 
   | TMatchExpr (cond, arms, _, _) ->
-    let ctx = lcExpr rx false ctx cond
+    let ctx = ocExpr rx false ctx cond
 
     let branch, ctx = enterBranches ctx
 
@@ -585,15 +585,15 @@ let private lcExpr (rx: Rx) (applied: bool) (ctx: LinearCheckCtx) expr : LinearC
       arms
       |> List.fold
            (fun (branch, ctx) (pat, guard, body) ->
-             let ctx = lcPat rx ctx pat
-             let ctx = lcExpr rx false ctx guard
-             let ctx = lcExpr rx false ctx body
+             let ctx = ocPat rx ctx pat
+             let ctx = ocExpr rx false ctx guard
+             let ctx = ocExpr rx false ctx body
              nextBranch rx branch (exprToLoc body) ctx)
            (branch, ctx)
 
     leaveBranches branch ctx
 
-  | TNavExpr (l, _, _, _) -> lcExpr rx false ctx l
+  | TNavExpr (l, _, _, _) -> ocExpr rx false ctx l
 
   | TNodeExpr (kind, args, ty, loc) ->
     match kind with
@@ -603,10 +603,10 @@ let private lcExpr (rx: Rx) (applied: bool) (ctx: LinearCheckCtx) expr : LinearC
         | [ l; r ] -> l, r
         | _ -> unreachable ()
 
-      let rec takesLinear ty =
+      let rec takesOwnedArg ty =
         match ty with
-        | Ty (FunTk, sTy :: _) when tyIsLinear rx sTy -> true
-        | Ty (FunTk, [ _; tTy ]) -> takesLinear tTy
+        | Ty (FunTk, sTy :: _) when tyIsOwned rx sTy -> true
+        | Ty (FunTk, [ _; tTy ]) -> takesOwnedArg tTy
         | _ -> false
 
       let tyIsFun ty =
@@ -617,52 +617,52 @@ let private lcExpr (rx: Rx) (applied: bool) (ctx: LinearCheckCtx) expr : LinearC
       let ctx =
         if
           not applied && tyIsFun ty
-          && takesLinear (exprToTy l)
+          && takesOwnedArg (exprToTy l)
         then
-          addError LinearError.PartialApp loc ctx
+          addError OwnershipError.PartialApp loc ctx
         else
           ctx
 
-      let ctx = lcExpr rx true ctx l
-      lcExpr rx false ctx r
+      let ctx = ocExpr rx true ctx l
+      ocExpr rx false ctx r
 
-    | _ -> lcExprs rx ctx args
+    | _ -> ocExprs rx ctx args
 
   | TBlockExpr (stmts, last) ->
-    let ctx = lcStmts rx ctx stmts
-    lcExpr rx applied ctx last
+    let ctx = ocStmts rx ctx stmts
+    ocExpr rx applied ctx last
 
-let private lcExprs rx ctx exprs : LinearCheckCtx =
-  exprs |> List.fold (lcExpr rx false) ctx
+let private ocExprs rx ctx exprs : OwnershipCheckCtx =
+  exprs |> List.fold (ocExpr rx false) ctx
 
-let private lcStmt rx (ctx: LinearCheckCtx) stmt : LinearCheckCtx =
+let private ocStmt rx (ctx: OwnershipCheckCtx) stmt : OwnershipCheckCtx =
   match stmt with
-  | TExprStmt expr -> lcExpr rx false ctx expr
+  | TExprStmt expr -> ocExpr rx false ctx expr
 
   | TLetValStmt (pat, init, _) ->
-    let ctx = lcPat rx ctx pat
-    lcExpr rx false ctx init
+    let ctx = ocPat rx ctx pat
+    ocExpr rx false ctx init
 
   | TLetFunStmt (_, _, _, argPats, body, loc) ->
     let parent, ctx = enterBody ctx
-    let ctx = argPats |> List.fold (lcPat rx) ctx
-    let ctx = lcExpr rx false ctx body
+    let ctx = argPats |> List.fold (ocPat rx) ctx
+    let ctx = ocExpr rx false ctx body
     leaveBody rx parent loc ctx
 
-  | TBlockStmt (_, stmts) -> lcStmts rx ctx stmts
+  | TBlockStmt (_, stmts) -> ocStmts rx ctx stmts
 
-let private lcStmts rx ctx stmts : LinearCheckCtx = stmts |> List.fold (lcStmt rx) ctx
+let private ocStmts rx ctx stmts : OwnershipCheckCtx = stmts |> List.fold (ocStmt rx) ctx
 
-let private lcProgram linearTys (modules: TProgram) (tirCtx: TirCtx) : TirCtx =
+let private ocProgram ownedTySet (modules: TProgram) (tirCtx: TirCtx) : TirCtx =
   let ctx = { emptyCtx () with Logs = tirCtx.Logs }
 
   let ctx =
     modules
     |> List.fold
          (fun ctx (m: TModule) ->
-           let rx = newRxForModule linearTys m tirCtx
+           let rx = newRxForModule ownedTySet m tirCtx
 
-           m.Stmts |> List.fold (lcStmt rx) ctx)
+           m.Stmts |> List.fold (ocStmt rx) ctx)
          ctx
 
   { tirCtx with Logs = ctx.Logs }
@@ -671,12 +671,14 @@ let private lcProgram linearTys (modules: TProgram) (tirCtx: TirCtx) : TirCtx =
 // Rewrite
 // -----------------------------------------------
 
-// Remove linear primitives.
+// Remove Std.Own primitives.
 
-let private tyContainsLinear ty =
+/// Gets whether a type syntactically contains the Own type (not owned types).
+/// (It doesn't consider type variables are owned or not.)
+let private tyContainsOwn ty =
   let rec go ty =
     match ty with
-    | Ty (LinearTk, _) -> true
+    | Ty (OwnTk, _) -> true
     | Ty (_, []) -> false
     | Ty (_, tyArgs) -> tyArgs |> List.exists go
 
@@ -686,7 +688,7 @@ let private lwTy ty : Ty =
   let (Ty (tk, tyArgs)) = ty
 
   match tk, tyArgs with
-  | LinearTk, [ itemTy ] -> lwTy itemTy
+  | OwnTk, [ itemTy ] -> lwTy itemTy
   | _, [] -> ty
   | _ -> Ty(tk, List.map lwTy tyArgs)
 
@@ -718,8 +720,8 @@ let private lwExpr expr : TExpr =
 
   | TNavExpr (l, r, ty, loc) -> TNavExpr(lwExpr l, r, lwTy ty, loc)
 
-  | TNodeExpr (TAppEN, [ TPrimExpr (TPrim.Acquire, _, _); arg ], _, _) -> lwExpr arg
-  | TNodeExpr (TAppEN, [ TPrimExpr (TPrim.Dispose, _, _); arg ], _, _) -> lwExpr arg
+  | TNodeExpr (TAppEN, [ TPrimExpr (TPrim.OwnAcquire, _, _); arg ], _, _) -> lwExpr arg
+  | TNodeExpr (TAppEN, [ TPrimExpr (TPrim.OwnRelease, _, _); arg ], _, _) -> lwExpr arg
 
   | TNodeExpr (kind, args, ty, loc) -> TNodeExpr(kind, List.map lwExpr args, lwTy ty, loc)
   | TBlockExpr (stmts, last) -> TBlockExpr(List.map lwStmt stmts, lwExpr last)
@@ -742,7 +744,7 @@ let private lwProgram modules (tirCtx: TirCtx) : TProgram * TirCtx =
           Vars =
             m.Vars
             |> TMap.map (fun _ (varDef: VarDef) ->
-              if tyContainsLinear varDef.Ty then
+              if tyContainsOwn varDef.Ty then
                 { varDef with Ty = lwTy varDef.Ty }
               else
                 varDef)
@@ -753,14 +755,14 @@ let private lwProgram modules (tirCtx: TirCtx) : TProgram * TirCtx =
         StaticVars =
           tirCtx.StaticVars
           |> TMap.map (fun _ (varDef: VarDef) ->
-            if tyContainsLinear varDef.Ty then
+            if tyContainsOwn varDef.Ty then
               { varDef with Ty = lwTy varDef.Ty }
             else
               varDef)
         Variants =
           tirCtx.Variants
           |> TMap.map (fun _ (variantDef: VariantDef) ->
-            if tyContainsLinear variantDef.PayloadTy then
+            if tyContainsOwn variantDef.PayloadTy then
               { variantDef with PayloadTy = lwTy variantDef.PayloadTy }
             else
               variantDef)
@@ -769,7 +771,7 @@ let private lwProgram modules (tirCtx: TirCtx) : TProgram * TirCtx =
           |> TMap.map (fun _ (funDef: FunDef) ->
             let (TyScheme (tyVars, ty)) = funDef.Ty
 
-            if tyContainsLinear ty then
+            if tyContainsOwn ty then
               { funDef with Ty = TyScheme(tyVars, lwTy ty) }
             else
               funDef)
@@ -779,7 +781,7 @@ let private lwProgram modules (tirCtx: TirCtx) : TProgram * TirCtx =
             match tyDef with
             | RecordTyDef (ident, tyArgs, fields, repr, loc) ->
               if fields
-                 |> List.exists (fun (_, ty, _) -> tyContainsLinear ty) then
+                 |> List.exists (fun (_, ty, _) -> tyContainsOwn ty) then
                 let fields =
                   fields
                   |> List.map (fun (ident, ty, loc) -> ident, lwTy ty, loc)
@@ -798,11 +800,11 @@ let private lwProgram modules (tirCtx: TirCtx) : TProgram * TirCtx =
 // Interface
 // -----------------------------------------------
 
-let linearCheck (modules: TProgram, tirCtx: TirCtx) : TProgram * TirCtx =
-  let linearTys = computeLinearTys tirCtx
+let ownershipCheck (modules: TProgram, tirCtx: TirCtx) : TProgram * TirCtx =
+  let ownedTySet = computeOwnedTySet tirCtx
 
-  let tirCtx = lcDefs linearTys tirCtx
-  let tirCtx = lcProgram linearTys modules tirCtx
+  let tirCtx = ocDefs ownedTySet tirCtx
+  let tirCtx = ocProgram ownedTySet modules tirCtx
 
   if tirCtx.Logs |> List.isEmpty then
     lwProgram modules tirCtx

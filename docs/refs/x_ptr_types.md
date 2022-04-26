@@ -193,7 +193,7 @@ The address is considered exposed. This cast is lossy and impure.
 ## Others
 
 - Pointer types support equality `(=)`
-- `Linear<P>` (when `P` is a pointer type) can be cast by `Ptr.cast`
+- `Own<P>` (when `P` is a pointer type) can be cast by `Ptr.cast`
 
 ## Recommended Articles
 
@@ -211,7 +211,7 @@ Avoid using pointer types in application-wide source files.
 Instead, make a module that manipulates pointers that provides only safe API to use.
 Such module is called safe-wrapper or abstraction.
 
-Also, linear types help such design.
+Also, [owned types](x_own_type.md) help such design.
 
 ----
 

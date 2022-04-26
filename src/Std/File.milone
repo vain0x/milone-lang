@@ -3,7 +3,7 @@
 // Currently functionality is designed similar to C standard library.
 open Std.ByteVector
 open Std.IO
-open Std.Linear
+open Std.Own
 open Std.StdError
 open Std.Vector
 
@@ -18,23 +18,23 @@ let private toCStr (s: string) : __inptr<char> = __nativeFun ("string_to_c_str",
 type private FilePtr = nativeptr<__nativeType<FILE>>
 
 /// Represents a connection to an opened file.
-type File = private File of Linear<FilePtr>
+type File = private File of Own<FilePtr>
 
 /// Unsafely retrieves a `FILE *` ptr, which must not outlive `File` value.
 let private unsafeDup (file: File) : FilePtr * File =
   let (File fp) = file
-  let fp = Linear.dispose fp
-  fp, File(Linear.acquire fp)
+  let fp = Own.release fp
+  fp, File(Own.acquire fp)
 
 module File =
   /// Gets the file abstraction of standard input.
-  let stdin () : File = File(Linear.acquire (__nativeExpr "stdin"))
+  let stdin () : File = File(Own.acquire (__nativeExpr "stdin"))
 
   /// Gets the file abstraction of standard output.
-  let stdout () : File = File(Linear.acquire (__nativeExpr "stdout"))
+  let stdout () : File = File(Own.acquire (__nativeExpr "stdout"))
 
   /// Gets the file abstraction of standard error.
-  let stderr () : File = File(Linear.acquire (__nativeExpr "stderr"))
+  let stderr () : File = File(Own.acquire (__nativeExpr "stderr"))
 
   /// Opens a regular file for reading.
   let openRead (io: IO) (pathname: string) : File option * IO =
@@ -42,7 +42,7 @@ module File =
       __nativeFun ("fopen", toCStr pathname, toCStr "rb")
 
     if fp <> Ptr.nullPtr then
-      Some(File(Linear.acquire fp)), io
+      Some(File(Own.acquire fp)), io
     else
       None, io
 
@@ -52,17 +52,17 @@ module File =
       __nativeFun ("fopen", toCStr pathname, toCStr "wb")
 
     if fp <> Ptr.nullPtr then
-      Some(File(Linear.acquire fp)), io
+      Some(File(Own.acquire fp)), io
     else
       None, io
 
   /// Closes the file.
   ///
   /// The underlying file descriptor is closed.
-  /// Remark: Closing stdin/stdout/stderr is noop. It's required to close such file due to the linearity check.
+  /// Remark: Closing stdin/stdout/stderr is noop. It's required to close such file due to the ownership check.
   let close (io: IO) (file: File) : IO =
     let (File fp) = file
-    let fp = Linear.dispose fp
+    let fp = Own.release fp
 
     __nativeStmt (
       """
@@ -209,10 +209,10 @@ module FileExt =
   type FilePtr = nativeptr<__nativeType<FILE>>
 
   /// Unsafely wraps a `FILE *` ptr in an abstraction.
-  let unsafeWrap (fp: Linear<FilePtr>) : File =
-    File(Linear.acquire (__nativeCast (Linear.dispose fp)))
+  let unsafeWrap (fp: Own<FilePtr>) : File =
+    File(Own.acquire (__nativeCast (Own.release fp)))
 
   /// Unsafely unwraps an abstraction and returns a `File *` ptr.
-  let unsafeUnwrap (file: File) : Linear<FilePtr> =
+  let unsafeUnwrap (file: File) : Own<FilePtr> =
     let (File fp) = file
-    Linear.acquire (__nativeCast (Linear.dispose fp))
+    Own.acquire (__nativeCast (Own.release fp))

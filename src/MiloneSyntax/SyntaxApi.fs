@@ -15,7 +15,7 @@ open MiloneSyntaxTypes.SyntaxApiTypes
 
 module ArityCheck = MiloneSyntax.ArityCheck
 module AstBundle = MiloneSyntax.AstBundle
-module LinearCheck = MiloneSyntax.LinearCheck
+module OwnershipCheck = MiloneSyntax.OwnershipCheck
 module NameRes = MiloneSyntax.NameRes
 module Manifest = MiloneSyntax.Manifest
 module S = Std.StdString
@@ -433,10 +433,10 @@ let performSyntaxAnalysis (ctx: SyntaxCtx) : SyntaxLayers * SyntaxAnalysisResult
       writeLog "ArityCheck"
       let tirCtx = ArityCheck.arityCheck (modules, tirCtx)
 
-      writeLog "LinearCheck"
+      writeLog "OwnershipCheck"
 
       let modules, tirCtx =
-        LinearCheck.linearCheck (modules, tirCtx)
+        OwnershipCheck.ownershipCheck (modules, tirCtx)
 
       match collectTypingErrors tirCtx with
       | Some errors -> syntaxLayers, SyntaxAnalysisError(errors, Some tirCtx)

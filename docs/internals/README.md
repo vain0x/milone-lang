@@ -25,7 +25,7 @@ Validation:
 - [name_resolution](name_resolution.md)
 - ~~type_check~~
 - [arity_check](arity_check.md)
-- ~~linear_check~~
+- ~~ownership_check~~
 
 Transformation:
 

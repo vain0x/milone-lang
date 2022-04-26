@@ -1,4 +1,4 @@
-// Provides linear segment tree.
+// Provides owned segment tree.
 module rec Competitive.SegTree
 
 open Std.Vector
@@ -28,7 +28,7 @@ module private Interval =
 // SegTree
 // -----------------------------------------------
 
-/// Linear segment tree.
+/// Owned segment tree.
 type SegTree<'T> =
   private | SegTree of
     // Count of items.

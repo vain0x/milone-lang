@@ -36,7 +36,7 @@ let tyList itemTy = Ty(ListTk, [ itemTy ])
 let tyTuple itemTys = Ty(TupleTk, itemTys)
 let tyUnit = tyTuple []
 
-let tyLinear itemTy = Ty(LinearTk, [ itemTy ])
+let tyOwn itemTy = Ty(OwnTk, [ itemTy ])
 let tyVoidInPtr = Ty(VoidPtrTk IsConst, [])
 let tyVoidPtr = Ty(VoidPtrTk IsMut, [])
 

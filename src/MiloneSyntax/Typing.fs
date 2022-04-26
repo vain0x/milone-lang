@@ -672,7 +672,7 @@ let private resolveTraitBound (ctx: TyCtx) theTrait loc : TyCtx =
     | Ty (ErrorTk _, _), _
     | _, Ty (ErrorTk _, _) -> ok ctx
 
-    | Ty (LinearTk, [ srcTy ]), Ty (LinearTk, [ destTy ]) when
+    | Ty (OwnTk, [ srcTy ]), Ty (OwnTk, [ destTy ]) when
       tyIsPtr srcTy
       && tyIsPtr destTy
       && not (tyEqual srcTy destTy)
@@ -1233,13 +1233,13 @@ let private primAssertTy = tyFun tyBool tyUnit
 
 let private primInRegionTy = tyFun (tyFun tyUnit tyInt) tyInt
 
-let private primAcquireTy =
+let private primOwnAcquireTy =
   let itemTy = tyMeta 1 noLoc
-  TyScheme([ 1 ], tyFun itemTy (tyLinear itemTy))
+  TyScheme([ 1 ], tyFun itemTy (tyOwn itemTy))
 
-let private primDisposeTy =
+let private primOwnReleaseTy =
   let itemTy = tyMeta 1 noLoc
-  TyScheme([ 1 ], tyFun (tyLinear itemTy) itemTy)
+  TyScheme([ 1 ], tyFun (tyOwn itemTy) itemTy)
 
 let private primNullPtrScheme =
   let ptrTy = tyMeta 1 noLoc
@@ -1335,8 +1335,8 @@ let private inferPrimExpr ctx prim loc =
     txAbort ctx loc
 
   | TPrim.InRegion -> onMono primInRegionTy
-  | TPrim.Acquire -> onUnbounded primAcquireTy
-  | TPrim.Dispose -> onUnbounded primDisposeTy
+  | TPrim.OwnAcquire -> onUnbounded primOwnAcquireTy
+  | TPrim.OwnRelease -> onUnbounded primOwnReleaseTy
 
   | TPrim.PtrCast -> onBounded primPtrCastScheme
   | TPrim.PtrInvalid -> onBounded primPtrInvalidScheme

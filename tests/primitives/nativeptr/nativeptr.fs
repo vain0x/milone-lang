@@ -1,7 +1,8 @@
 module rec nativeptr.Program
 
 // See x_native_code.md in docs.
-open Std.Linear
+
+open Std.Own
 
 module Ptr = Std.Ptr
 
@@ -68,11 +69,11 @@ let private testPtrCast () =
   let objOutPtr: __outptr<obj> = Ptr.cast (Ptr.nullPtr: __inptr<string>)
   let funPtr: __nativeFun<obj * obj, obj> = Ptr.cast (Ptr.nullPtr: voidptr)
 
-  // Linear type can be cast.
-  let uintPtrLinear: Linear<nativeptr<uint>> =
-    Ptr.cast (Linear.acquire (Ptr.nullPtr: voidptr))
+  // Own type can be cast.
+  let uintPtrOwn: Own<nativeptr<uint>> =
+    Ptr.cast (Own.acquire (Ptr.nullPtr: voidptr))
 
-  let _ = Linear.dispose uintPtrLinear
+  let _ = Own.release uintPtrOwn
   ()
 
 let private testAsIn () =

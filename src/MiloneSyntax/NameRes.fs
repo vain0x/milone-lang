@@ -812,7 +812,7 @@ let private resolveTy ctx ty selfTyArgs : Ty * ScopeCtx =
 
       | Some (PrimTySymbol tk) ->
         match tk with
-        | LinearTk ->
+        | OwnTk ->
           // #ty_arity_check
           let defArity = 1
 
@@ -2000,29 +2000,28 @@ let nameRes (layers: NModuleRoot list list) : TProgram * NameResResult =
     let s: ModuleTySerial = 1000000001 // 10^8
     let stdModuleSerial, s = s, s + 1
     let stdNs = nsOwnerOfModule stdModuleSerial
-    let linearNs, s = nsOwnerOfModule s, s + 1
-    let linearLinearNs, s = nsOwnerOfModule s, s + 1
+    let stdOwnNs, s = nsOwnerOfModule s, s + 1
+    let ownModuleNs, s = nsOwnerOfModule s, s + 1
     let ptrNs = nsOwnerOfModule s
 
     let state = emptyState ()
     let ctx = state.ScopeCtx
-    let ctx = addNsToNs ctx stdNs "Linear" linearNs
+    let ctx = addNsToNs ctx stdNs "Own" stdOwnNs
     let ctx = addNsToNs ctx stdNs "Ptr" ptrNs
 
-    // Std.Linear
+    // Std.Own
     let ctx =
       let ctx =
-        addTyToNs ctx linearNs "Linear" (PrimTySymbol LinearTk)
+        addTyToNs ctx stdOwnNs "Own" (PrimTySymbol OwnTk)
 
-      let ctx =
-        addNsToNs ctx linearNs "Linear" linearLinearNs
+      let ctx = addNsToNs ctx stdOwnNs "Own" ownModuleNs
 
       let addValue alias prim ctx =
-        addValueToNs ctx linearLinearNs alias (PrimSymbol prim)
+        addValueToNs ctx ownModuleNs alias (PrimSymbol prim)
 
       ctx
-      |> addValue "acquire" TPrim.Acquire
-      |> addValue "dispose" TPrim.Dispose
+      |> addValue "acquire" TPrim.OwnAcquire
+      |> addValue "release" TPrim.OwnRelease
 
     // Std.Ptr.select etc.
     let ctx =

@@ -1,4 +1,4 @@
-open Std.Linear
+open Std.Own
 
 module Ptr = Std.Ptr
 
@@ -8,37 +8,37 @@ __nativeDecl "#include <string.h>"
 /// Immutable array.
 type Block<'T> = private Block of ptr: __inptr<'T> * len: uint
 
-/// Linear growable array to build a block object. (Allocated on a region.)
-type BlockBuilder<'T> = private BlockBuilder of ptr: Linear<__outptr<'T>> * cap: uint
+/// Owned growable array to build a block object. (Allocated on a region.)
+type BlockBuilder<'T> = private BlockBuilder of ptr: Own<__outptr<'T>> * cap: uint
 
 // -----------------------------------------------
 // BlockBuilder helpers
 // -----------------------------------------------
 
-let private bbEmpty () : BlockBuilder<'T> = BlockBuilder(Linear.acquire Ptr.nullPtr, 0u)
+let private bbEmpty () : BlockBuilder<'T> = BlockBuilder(Own.acquire Ptr.nullPtr, 0u)
 
 let private bbAlloc (count: uint) : BlockBuilder<'T> =
   if count <> 0u then
     let ptr: __outptr<'T> = Ptr.regionAlloc count
-    BlockBuilder(Linear.acquire ptr, count)
+    BlockBuilder(Own.acquire ptr, count)
   else
     bbEmpty ()
 
 let private bbDispose (bb: BlockBuilder<'T>) : unit =
   let (BlockBuilder (ptr, _)) = bb
-  let _ = Linear.dispose ptr
+  let _ = Own.release ptr
   ()
 
 let private bbSet (index: uint) (item: 'T) (bb: BlockBuilder<'T>) : BlockBuilder<'T> =
   let (BlockBuilder (ptr, cap)) = bb
   assert (index < cap)
-  let ptr = Linear.dispose ptr
+  let ptr = Own.release ptr
   Ptr.write ptr.[int index] item
-  BlockBuilder(Linear.acquire ptr, cap)
+  BlockBuilder(Own.acquire ptr, cap)
 
 let private bbFinish (bb: BlockBuilder<'T>) : Block<'T> =
   let (BlockBuilder (ptr, cap)) = bb
-  Block(Ptr.cast (Linear.dispose ptr), cap)
+  Block(Ptr.cast (Own.release ptr), cap)
 
 // -----------------------------------------------
 // Block

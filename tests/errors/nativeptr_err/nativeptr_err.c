@@ -5,10 +5,10 @@
 #error nativeptr_err.nativeptr_err:16:24 Expected two different pointer types but: one was unativeint, the other: voidptr
 #error nativeptr_err.nativeptr_err:17:27 Expected two different pointer types but: one was nativeptr<int>, the other: unativeint
 #error nativeptr_err.nativeptr_err:20:30 Expected two different pointer types but: one was nativeptr<'T>, the other: nativeptr<'T>
-#error nativeptr_err.nativeptr_err:23:7 This linear variable is not used.
-#error nativeptr_err.nativeptr_err:23:38 Expected two different pointer types but: one was voidptr, the other: Linear<nativeptr<'T>>
-#error nativeptr_err.nativeptr_err:24:30 Expected two different pointer types but: one was Linear<voidptr>, the other: nativeptr<'T>
-#error nativeptr_err.nativeptr_err:24:40 Expected a pointer type but was: Linear<voidptr>
+#error nativeptr_err.nativeptr_err:23:7 This variable of owned type is not used.
+#error nativeptr_err.nativeptr_err:23:35 Expected two different pointer types but: one was voidptr, the other: Own<nativeptr<'T>>
+#error nativeptr_err.nativeptr_err:24:30 Expected two different pointer types but: one was Own<voidptr>, the other: nativeptr<'T>
+#error nativeptr_err.nativeptr_err:24:40 Expected a pointer type but was: Own<voidptr>
 #error nativeptr_err.nativeptr_err:28:15 This function misses some argument.
 #error nativeptr_err.nativeptr_err:29:15 Expected nativeptr, __outptr or voidptr type.
 #error nativeptr_err.nativeptr_err:32:15 Expected nativeptr, __outptr or voidptr type.
