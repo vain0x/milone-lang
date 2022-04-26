@@ -344,6 +344,37 @@
                 }
             ]
         },
+        "type_argument_list_in_type_rule": {
+            "comment": "Grammar of identifier with type argument list, which appear in type context",
+            "patterns": [
+                {
+                    "begin": "\\b([A-Za-z]\\w*(?:\\.[A-Za-z]\\w*)*)(<)",
+                    "end": ">",
+                    "beginCaptures": {
+                        "1": {
+                            "patterns": [
+                                {
+                                    "include": "#type_rule"
+                                }
+                            ]
+                        },
+                        "2": {
+                            "name": "keyword.operator.bracket.milone"
+                        }
+                    },
+                    "endCaptures": {
+                        "0": {
+                            "name": "keyword.operator.bracket.milone"
+                        }
+                    },
+                    "patterns": [
+                        {
+                            "include": "#type_rule"
+                        }
+                    ]
+                }
+            ]
+        },
         "type_ascription_rule": {
             "comment": "Grammar of type ascription (':' type, 'of' type)",
             "patterns": [
@@ -398,7 +429,7 @@
                     "include": "#keyword_rule"
                 },
                 {
-                    "include": "#type_argument_list_rule"
+                    "include": "#type_argument_list_in_type_rule"
                 },
                 {
                     "include": "#built_in_type_rule"
