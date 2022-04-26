@@ -18,6 +18,9 @@
                     "include": "#literal_rule"
                 },
                 {
+                    "include": "#type_declaration_rule"
+                },
+                {
                     "comment": "Type parameter list",
                     "begin": "\\b(type)\\b\\s*([A-Za-z]\\w*)(<)",
                     "end": ">",
@@ -500,6 +503,82 @@
                             "name": "entity.name.function.milone"
                         }
                     }
+                }
+            ]
+        },
+        "type_declaration_rule": {
+            "comment": "Grammar of type declaration.",
+            "begin": "\\b(type)\\b\\s*(\\w+(?:<.*>)?)\\b\\s*(=)",
+            "end": "$",
+            "beginCaptures": {
+                "1": {
+                    "name": "keyword.other.milone"
+                },
+                "2": {
+                    "patterns": [
+                        {
+                            "include": "#type_rule"
+                        }
+                    ]
+                },
+                "3": {
+                    "name": "keyword.other.milone"
+                }
+            },
+            "patterns": [
+                {
+                    "begin": "(\\|)",
+                    "end": "$",
+                    "beginCaptures": {
+                        "1": {
+                            "name": "keyword.operator.milone"
+                        }
+                    },
+                    "patterns": [
+                        {
+                            "include": "#comment_rule"
+                        },
+                        {
+                            "include": "#literal_rule"
+                        },
+                        {
+                            "include": "#type_ascription_rule"
+                        },
+                        {
+                            "include": "#keyword_rule"
+                        }
+                    ]
+                },
+                {
+                    "begin": "(\\{)",
+                    "end": "(\\})",
+                    "beginCaptures": {
+                        "1": {
+                            "name": "keyword.operator.bracket.milone"
+                        }
+                    },
+                    "endCaptures": {
+                        "1": {
+                            "name": "keyword.operator.bracket.milone"
+                        }
+                    },
+                    "patterns": [
+                        {
+                            "include": "#comment_rule"
+                        },
+                        {
+                            "include": "#literal_rule"
+                        },
+                        {
+                            "include": "#type_ascription_rule"
+                        },
+                        {
+                            "include": "#keyword_rule"
+                        }
+                    ]
+                },
+                {
+                    "include": "#type_rule"
                 }
             ]
         },
