@@ -389,6 +389,16 @@
                     "match": "\\*|->"
                 },
                 {
+                    "comment": "Parentheses of type",
+                    "begin": "\\(",
+                    "end": "\\)",
+                    "patterns": [
+                        {
+                            "include": "#type_rule"
+                        }
+                    ]
+                },
+                {
                     "name": "entity.name.type",
                     "match": "\\b([A-Za-z]\\w*)\\b"
                 }
