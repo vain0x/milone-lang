@@ -1677,14 +1677,16 @@ let private inferPrimAppExpr ctx itself =
   | TPrim.PtrSelect, _ -> inferExprAsPtrProjection ctx PtrOperationKind.Select arg
 
   | TPrim.PtrRead, _ ->
-    let expr, ty, ctx =
+    let expr, ptrTy, ctx =
       inferExprAsPtrProjection ctx PtrOperationKind.Read arg
+
+    let ptrTy = substTy ctx ptrTy
 
     let itemTy =
       // #unwrap_ptr_ty
-      match ty with
+      match ptrTy with
       | Ty (NativePtrTk _, [ item ]) -> item
-      | Ty (ErrorTk _, _) -> ty
+      | Ty (ErrorTk _, _) -> ptrTy
       | _ -> unreachable ()
 
     TNodeExpr(TPtrReadEN, [ expr ], itemTy, loc), itemTy, ctx
@@ -1740,6 +1742,8 @@ let private inferWriteExpr ctx expr : TExpr * Ty * TyCtx =
 
   let ptr, ptrTy, ctx =
     inferExprAsPtrProjection ctx PtrOperationKind.Write ptr
+
+  let ptrTy = substTy ctx ptrTy
 
   let itemTy =
     // #unwrap_ptr_ty
