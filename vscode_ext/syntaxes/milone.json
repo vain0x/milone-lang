@@ -345,7 +345,7 @@
             ]
         },
         "type_ascription_rule": {
-            "comment": "Grammar of type ascription (':' type)",
+            "comment": "Grammar of type ascription (':' type, 'of' type)",
             "patterns": [
                 {
                     "begin": "(:)(?![-;:!?\\.@*\\/&%^+<=>|~])",
@@ -356,6 +356,28 @@
                         }
                     },
                     "patterns": [
+                        {
+                            "include": "#type_rule"
+                        }
+                    ]
+                },
+                {
+                    "begin": "\\b(of)\\b",
+                    "end": "(?=\\||(\\r?\\n\\r?\\n))|$",
+                    "beginCaptures": {
+                        "1": {
+                            "name": "keyword.other.milone"
+                        }
+                    },
+                    "patterns": [
+                        {
+                            "match": "\\b([_A-Za-z]\\w*)\\b\\s*(?=:)",
+                            "captures": {
+                                "1": {
+                                    "name": "variable.name.label.milone"
+                                }
+                            }
+                        },
                         {
                             "include": "#type_rule"
                         }
