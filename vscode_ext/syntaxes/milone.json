@@ -280,7 +280,7 @@
             ]
         },
         "nav_type_rule": {
-            "comment": "Grammar of type with dots.",
+            "comment": "Grammar of nav type including 1+ dots.",
             "patterns": [
                 {
                     "match": "\\b([A-Za-z]\\w*)(\\.[A-Za-z]\\w*)+\\b",
@@ -313,6 +313,9 @@
                                 },
                                 {
                                     "include": "#built_in_value_rule"
+                                },
+                                {
+                                    "include": "#nav_type_rule"
                                 }
                             ]
                         },
@@ -376,6 +379,10 @@
                 {
                     "name": "keyword.operator.milone",
                     "match": "\\*|->"
+                },
+                {
+                    "name": "entity.name.type",
+                    "match": "\\b([A-Za-z]\\w*)\\b"
                 }
             ]
         }
