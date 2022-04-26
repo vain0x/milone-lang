@@ -181,6 +181,12 @@
                     "comment": "Unit and bool literals",
                     "name": "constant.language.literal.milone",
                     "match": "\\(\\)|\\b(false|true)\\b"
+                },
+                {
+                    "comment": "Quoted identifiers",
+                    "name": "entity.name.milone",
+                    "begin": "``",
+                    "end": "``"
                 }
             ]
         },
