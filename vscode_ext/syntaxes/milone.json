@@ -29,7 +29,21 @@
         {
             "comment": "Char literal",
             "name": "string.quoted.single.milone",
-            "match": "'([^'\\\\]|\\\\(x[0-9A-Fa-f]{2}|.))'"
+            "match": "'([^'\\\\]|\\\\(?:x[0-9A-Fa-f]{2}|.))'",
+            "captures": {
+                "1": {
+                    "patterns": [
+                        {
+                            "include": "#escape_sequence"
+                        }
+                    ]
+                }
+            }
+        },
+        {
+            "comment": "Type variable",
+            "name": "entity.name.type.variable.milone",
+            "match": "'[A-Za-z]\\b"
         },
         {
             "comment": "Multi-line string literal",
@@ -37,6 +51,11 @@
             "begin": "\"\"\"",
             "end": "\"\"\"",
             "patterns": []
+        },
+        {
+            "comment": "Illegal prefix of char/string literal",
+            "name": "invalid.illegal.milone",
+            "match": "\\b[A-Za-z_][0-9A-Za-z_]*(?=['\"])"
         },
         {
             "comment": "Single-line string literal",
@@ -53,8 +72,7 @@
             "comment": "Attributes",
             "name": "meta.embedded.milone",
             "begin": "^\\[<",
-            "end": ">\\]",
-            "patterns": []
+            "end": ">\\]"
         },
         {
             "comment": "Boolean literals",
@@ -62,14 +80,13 @@
             "match": "\\b(false|true)\\b"
         },
         {
-            "comment": "Wildcard or discard",
-            "name": "variable.language.wildcard.milone",
-            "match": "\\b_[0-9A-Za-z_]*\\b"
+            "name": "invalid.illegal.milone",
+            "match": "\\b(do|let|match|return|yield)!"
         },
         {
             "comment": "Unsupported keywords",
             "name": "invalid.illegal.milone",
-            "match": "\\b(abstract|and|async|base|become|begin|break|checked|class|component|const|constraint|continue|default|delegate|done|downcast|downto|elif|end|event|exception|extern|external|finally|fixed|for|function|global|include|inherit|inline|interface|internal|lazy|member|mixin|mutable|mut|namespace|new|null|or|override|parallel|process|protected|pure|ref|return|sealed|select|seq|signature|sig|static|struct|tailcall|to|trait|try|upcast|use|val|virtual|void|while|yield)\\b"
+            "match": "\\b(abstract|and|async|base|become|begin|break|checked|class|component|const|constraint|continue|default|delegate|done|downcast|downto|do|elif|end|event|exception|extern|external|finally|fixed|for|function|global|include|inherit|inline|interface|internal|lazy|member|mixin|mutable|mut|namespace|new|null|or|override|parallel|process|protected|pure|ref|return|sealed|select|seq|signature|sig|static|struct|tailcall|to|trait|try|upcast|use|val|virtual|void|while|yield)\\b"
         },
         {
             "comment": "Control keywords",
@@ -84,7 +101,7 @@
         {
             "comment": "Other keywords",
             "name": "keyword.milone",
-            "match": "\\b(as|do|fun|in|let|module|of|open|rec|type)\\b"
+            "match": "\\b(as|fun|in|let|module|of|open|rec|type)\\b"
         },
         {
             "comment": "Built-in types",
@@ -102,34 +119,39 @@
             "match": "\\b(Error|None|Ok|Some)\\b"
         },
         {
-            "comment": "Equality operators",
-            "name": "keyword.operator.equality.milone",
-            "match": "=|<>"
+            "comment": "Unsupported brackets and sigils",
+            "name": "invalid.illegal.milone",
+            "match": "\\(\\||\\|\\)|\\[\\||\\|\\]|\\[:|:\\]|\\{\\||\\|\\}|\\(\\*|\\*\\)|\\\\|#|`|\\$"
         },
         {
             "comment": "Arithmetic operators",
             "name": "keyword.operator.arithmetic.milone",
-            "match": "\\+|-|\\*|/|%|&&&|\\|\\|\\||\\^\\^\\^|<<<|>>>"
+            "match": "(\\+|-|\\*|/|%|&&&|\\|\\|\\||\\^\\^\\^|<<<|>>>)(?![-;:!?\\.@*\\/&%^+<=>|~])"
         },
         {
             "comment": "Logical operators (this rule must be after arithmetic operators to avoid conflict)",
             "name": "keyword.operator.logical.milone",
-            "match": "&&|\\|\\|"
+            "match": "(&&|\\|\\|)(?![-;:!?\\.@*\\/&%^+<=>|~])"
         },
         {
-            "comment": "Comparison operators (this rule must be after arithmetic operators to avoid conflict)",
-            "name": "keyword.operator.comparison.milone",
-            "match": "<=|>=|<|>"
-        },
-        {
-            "comment": "Other sigils",
+            "comment": "Other oerators",
             "name": "keyword.operator.other.milone",
-            "match": "\\{|\\}|\\.\\.|\\.|,|::|:|;|->|\\|>|&|\\|"
+            "match": "(\\|>|\\.\\.?|::?|->|&|\\||,|;)(?![-;:!?\\.@*\\/&%^+<=>|~])"
+        },
+        {
+            "comment": "Comparison operators (this rule must be after arithmetic operators and pipeline operator to avoid conflict)",
+            "name": "keyword.operator.comparison.milone",
+            "match": "(=|<>|<|<=|>|>=)(?![-;:!?\\.@*\\/&%^+<=>|~])"
         },
         {
             "comment": "Unsupported sigils",
             "name": "invalid.illegal.milone",
-            "match": "<<|>>|==|!=|=>|!|#|$|%%|`|\\(\\*|\\(\\|\\*\\*|\\[\\||\\[:|\\{\\||:=|:>|:\\?|:\\?>|<-|\\|\\|+>|<\\|+|\\?|@|~"
+            "match": "[-;:!?\\.@*\\/&%^+<=>|~]+"
+        },
+        {
+            "comment": "Brackets",
+            "name": "keyword.other.brackets.milone",
+            "match": "\\(|\\)|\\[|\\]|\\{|\\}"
         },
         {
             "comment": "Potential namespaces guess (front of dot)",
@@ -139,6 +161,11 @@
                     "name": "entity.name.class.milone"
                 }
             }
+        },
+        {
+            "comment": "Wildcard or discard",
+            "name": "variable.other.wildcard.milone",
+            "match": "\\b_[0-9A-Za-z_]*\\b"
         }
     ],
     "repository": {
