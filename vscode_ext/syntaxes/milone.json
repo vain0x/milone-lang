@@ -175,9 +175,9 @@
                     ]
                 },
                 {
-                    "comment": "Boolean literals",
-                    "name": "constant.language.boolean.milone",
-                    "match": "\\b(false|true)\\b"
+                    "comment": "Unit and bool literals",
+                    "name": "constant.language.literal.milone",
+                    "match": "\\(\\)|\\b(false|true)\\b"
                 }
             ]
         },
