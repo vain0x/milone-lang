@@ -53,6 +53,9 @@
                     "include": "#closure_rule"
                 },
                 {
+                    "include": "#let_fun_rule"
+                },
+                {
                     "include": "#keyword_rule"
                 },
                 {
@@ -480,6 +483,29 @@
             "patterns": [
                 {
                     "include": "#milone_syntax"
+                }
+            ]
+        },
+        "let_fun_rule": {
+            "comment": "Grammar of let-fun definitions.",
+            "patterns": [
+                {
+                    "comment": "Rule of let definitions.",
+                    "match": "\\b(let)\\b\\s*(?:(rec)\\b\\s*)?(?:(private|public)\\b\\s*)?(?!rec|private|public)([A-Za-z]\\w*)\\b\\s*(?=\\w|\\()",
+                    "captures": {
+                        "1": {
+                            "name": "keyword.other.milone"
+                        },
+                        "2": {
+                            "name": "keyword.other.milone"
+                        },
+                        "3": {
+                            "name": "keyword.other.milone"
+                        },
+                        "4": {
+                            "name": "entity.name.function.milone"
+                        }
+                    }
                 }
             ]
         }
