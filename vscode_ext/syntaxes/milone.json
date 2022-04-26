@@ -212,7 +212,7 @@
                 {
                     "comment": "Other keywords",
                     "name": "keyword.milone",
-                    "match": "\\b(as|fun|in|let|module|of|open|rec|type)\\b"
+                    "match": "\\b(_|as|fun|in|let|module|of|open|rec|type)\\b"
                 }
             ]
         },
