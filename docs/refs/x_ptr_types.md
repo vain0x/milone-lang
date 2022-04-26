@@ -193,7 +193,7 @@ The address is considered exposed. This cast is lossy and impure.
 ## Others
 
 - Pointer types support equality `(=)`
-- `__linear<P>` (when `P` is a pointer type) can be cast by `Ptr.cast`
+- `Linear<P>` (when `P` is a pointer type) can be cast by `Ptr.cast`
 
 ## Recommended Articles
 

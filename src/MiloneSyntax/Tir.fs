@@ -147,8 +147,6 @@ let primFromIdent ident =
   | "__inRegion" -> TPrim.InRegion |> Some
   | "__discriminant" -> TPrim.Discriminant |> Some
 
-  | "__acquire" -> TPrim.Acquire |> Some
-  | "__dispose" -> TPrim.Dispose |> Some
   | "__nativeFun" -> TPrim.NativeFun |> Some
   | "__nativeCast" -> TPrim.NativeCast |> Some
   | "__nativeExpr" -> TPrim.NativeExpr |> Some

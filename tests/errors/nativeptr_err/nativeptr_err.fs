@@ -1,5 +1,7 @@
 module rec nativeptr_err.Program
 
+open Std.Linear
+
 module Ptr = Std.Ptr
 
 let private testNullPtrError () =
@@ -18,8 +20,8 @@ let private testPtrCastError (_t: 'T) =
   let _: nativeptr<'T> = Ptr.cast (Ptr.nullPtr: nativeptr<'T>) // type error!
 
   // Linear type can't be wrapped nor unwrapped.
-  let _: __linear<nativeptr<'T>> = Ptr.cast (Ptr.nullPtr: voidptr) // type error!
-  let _: nativeptr<'T> = Ptr.cast (Ptr.nullPtr: __linear<voidptr>) // type error!
+  let _: Linear<nativeptr<'T>> = Ptr.cast (Ptr.nullPtr: voidptr) // type error!
+  let _: nativeptr<'T> = Ptr.cast (Ptr.nullPtr: Linear<voidptr>) // type error!
   ()
 
 let private testPtrAsInError () =

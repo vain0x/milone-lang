@@ -84,7 +84,7 @@ let tkDisplay getTyName tk =
   | FunTk -> "fun"
   | TupleTk -> "tuple"
   | ListTk -> "list"
-  | LinearTk -> "__linear"
+  | LinearTk -> "Linear"
   | VoidPtrTk IsMut -> "voidptr"
   | VoidPtrTk IsConst -> "__voidinptr"
   | NativePtrTk RefMode.ReadWrite -> "nativeptr"

@@ -1,17 +1,19 @@
 module rec linear.Program
 
-type private Counter = Counter of __linear<int>
+open Std.Linear
 
-let private create (init: int) : Counter = Counter(__acquire init)
+type private Counter = Counter of Linear<int>
+
+let private create (init: int) : Counter = Counter(Linear.acquire init)
 
 let private increment (counter: Counter) : int * Counter =
   let (Counter n) = counter
-  let n = __dispose n + 1
-  n, Counter(__acquire n)
+  let n = Linear.dispose n + 1
+  n, Counter(Linear.acquire n)
 
 let private drop (counter: Counter) : unit =
   let (Counter n) = counter
-  let _ = __dispose n
+  let _ = Linear.dispose n
   ()
 
 let private acquireAndThenDispose () =
@@ -87,55 +89,56 @@ let private loopCase () =
 type private Wrapper<'T> = Wrapper of 'T
 
 let private genericWrapperCase () =
-  let w = Wrapper(__acquire "contents")
+  let w = Wrapper(Linear.acquire "contents")
   let (Wrapper value) = w
-  assert (__dispose value = "contents")
+  assert (Linear.dispose value = "contents")
 
 /// Generic union that is always linear.
-type private Linear<'T> = Linear of __linear<'T>
+type private LinearWrapper<'T> = LinearWrapper of Linear<'T>
 
 let private genericLinearCase () =
-  let linear = Linear(__acquire (2, 3))
-  let (Linear l) = linear
-  let x, y = __dispose l
+  let linear = LinearWrapper(Linear.acquire (2, 3))
+  let (LinearWrapper l) = linear
+  let x, y = Linear.dispose l
   assert (x = 2 && y = 3)
 
-let private linearMap (mapping: 'T -> 'U) (l: Linear<'T>) : Linear<'U> =
-  let (Linear l) = l
-  Linear(__acquire (mapping (__dispose l)))
+let private linearMap (mapping: 'T -> 'U) (l: LinearWrapper<'T>) : LinearWrapper<'U> =
+  let (LinearWrapper l) = l
+  LinearWrapper(Linear.acquire (mapping (Linear.dispose l)))
 
 let private genericLinearFunCase () =
   let l =
-    Linear(__acquire 2)
+    LinearWrapper(Linear.acquire 2)
     |> linearMap (fun (x: int) -> x + 1)
 
-  let (Linear l) = l
-  let n = __dispose l
+  let (LinearWrapper l) = l
+  let n = Linear.dispose l
   assert (n = 3)
 
 let private optionOfLinearCase () =
-  let linearOpt = Linear(__acquire (5, 7)) |> Some
+  let linearOpt =
+    LinearWrapper(Linear.acquire (5, 7)) |> Some
 
   match linearOpt with
-  | Some (Linear l) ->
-    let x, y = __dispose l
+  | Some (LinearWrapper l) ->
+    let x, y = Linear.dispose l
     assert (x = 5 && y = 3)
 
   | None -> ()
 
 let private nestedLinearCase () =
-  let nested = __acquire (__acquire 2)
-  let unwrapped = __dispose nested
-  let _ = __dispose unwrapped
+  let nested = Linear.acquire (Linear.acquire 2)
+  let unwrapped = Linear.dispose nested
+  let _ = Linear.dispose unwrapped
   ()
 
 /// Union can be linear with subtle restriction.
 /// (Basically a union cannot forwardly reference to own another unions.)
-type private LinearWrapper = LinearWrapper of Counter
+type private CounterWrapper = CounterWrapper of Counter
 
-let private linearWrapperCase () =
-  let w = LinearWrapper(create 0)
-  let (LinearWrapper c) = w
+let private counterWrapperCase () =
+  let w = CounterWrapper(create 0)
+  let (CounterWrapper c) = w
   drop c
 
 let main _ =
@@ -149,5 +152,5 @@ let main _ =
   genericLinearCase ()
   genericLinearFunCase ()
   nestedLinearCase ()
-  linearWrapperCase ()
+  counterWrapperCase ()
   0

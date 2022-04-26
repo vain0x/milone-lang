@@ -8,23 +8,35 @@ Linear type is a container of single value that must be used linearly.
 ## Instant usage
 
 ```fsharp
+    open Std.Linear
+
     // Acquires a resource (allocate/connect/etc.)
-    let acquireThing () : __linear<A> =
-        __acquire (malloc ())
+    let acquireThing () : Linear<A> =
+        Linear.acquire (malloc ())
 
     // Disposes a resource. (free/disconnect/etc.)
-    let disposeThing (resource: __linear<A>) : unit =
-        let handle = __dispose resource
+    let disposeThing (resource: Linear<A>) : unit =
+        let handle = Linear.dispose resource
         free handle
 ```
 
 ## Guide-level explanation
 
-`__linear<T>` is a linear type.
+The `Std.Linear` module provides several primitives for this feature.
+
+```fsharp
+    module Std.Linear =
+        type Linear<'T>
+        fun acquire<'T> : 'T -> Linear<'T>
+        fun dispose<'T> : Linear<'T> -> 'T
+        // etc.
+```
+
+`Linear<T>` is a linear type.
 
 The type itself is really simple.
-Primitive `__acquire` function wraps a value in a linear.
-Primitive `__dispose` function unwraps a linear value.
+Primitive `Linear.acquire` function wraps a value in a linear.
+Primitive `Linear.dispose` function unwraps a linear value.
 
 The key point is a feature called *linearity check*. Compiler ensures that values of linear type are used *linearly*, i.e. exactly once.
 Linearity check reports a compile error when it detects the violation of linearly, that is, a value of linear type is unused or used more than once.
@@ -45,7 +57,7 @@ Let a module provide an API for file system manipulation, which consists of a Fi
 // Sketch of File module:
 
 /// Linear file handle.
-type FileHandle = __linear<...>
+type FileHandle = FileHandle of Linear<...>
 
 /// Opens a file.
 let openFile (filename: string) : FileHandle = ...
@@ -107,19 +119,19 @@ Linearity check protects the file handle from abusing.
 
 Types are classified to linear types and others (non-linear types) automatically.
 
-`__linear<T>` is literally linear type.
+`Linear<T>` is literally linear type.
 
 *Non-linear types*: Basic types (such as `int` and `string`) are non-linear.
-Function types are non-linear no matter whether linear types appear in its signature. For example, `__linear<int> -> unit` is non-linear.
+Function types are non-linear no matter whether linear types appear in its signature. For example, `Linear<int> -> unit` is non-linear.
 
 Compound types (lists, tuples, unions and records) are linear when it contains other linear types in it.
 For example:
 
-- *list*: `__linear<int> list` is linear
-- *tuple*: `__linear<int> * int` is linear
+- *list*: `Linear<int> list` is linear
+- *tuple*: `Linear<int> * int` is linear
 - *union*:
-    - `type U = | V of __linear<int> ` is linear
-    - `type U = | V of __linear<int> | W` is also linear. Note that `W` is linear value despite it contains no linear values in it.
+    - `type U = | V of Linear<int> ` is linear
+    - `type U = | V of Linear<int> | W` is also linear. Note that `W` is linear value despite it contains no linear values in it.
 - *record*: (never linear for now)
 
 ## Linear types and branching
@@ -133,11 +145,11 @@ Otherwise, it becomes unclear that a linear variable is disposed or not, dependi
 ```fsharp
     // The program is incorrect:
 
-    let r: LinearType = acquire ()
+    let r: LinearType = Linear.acquire ()
 
     match flip () with
     | A ->
-        dispose r
+        Linear.dispose r
 
     | B ->
         ()
@@ -153,15 +165,15 @@ There are some restrictions due to maturity of language and implementation.
 - Union types can't be linear in some situation.
 - Record types can't be linear. In other words, field types can't be linear.
 - Generic function can't bind type variables to linear types.
-    - Note that type variables of generic types can be linear; e.g. `option<__linear<int>>`.
+    - Note that type variables of generic types can be linear; e.g. `option<Linear<int>>`.
 - Linear variables can't be used in local functions.
 
 ## Advanced topics
 
 ### Runtime representation
 
-Runtime representation of `__linear<T>` is same as `T`.
-`__acquire` and `__dispose` are noop at runtime.
+Runtime representation of `Linear<T>` is same as `T`.
+`acquire` and `dispose` are noop at runtime.
 
 ### Prior art
 

@@ -52,7 +52,7 @@ void linear_linear_optionOfLinearCase(void);
 
 void linear_linear_nestedLinearCase(void);
 
-void linear_linear_linearWrapperCase(void);
+void linear_linear_counterWrapperCase(void);
 
 int main(int argc, char **argv);
 
@@ -134,7 +134,7 @@ void linear_linear_acquireAndUse(void) {
     call_2 = linear_linear_increment(counter_3);
     n_3 = call_2.t0;
     counter_4 = call_2.t1;
-    if ((n_3 != 1)) milone_assert_error("linear/linear.milone", 24, 2);
+    if ((n_3 != 1)) milone_assert_error("linear/linear.milone", 26, 2);
     call_3 = linear_linear_increment(counter_4);
     n_4 = call_3.t0;
     counter_5 = call_3.t1;
@@ -286,7 +286,7 @@ void linear_linear_genericWrapperCase(void) {
     struct String value_;
     w_ = (struct String){.ptr = "contents", .len = 8};
     value_ = w_;
-    if ((string_compare(value_, (struct String){.ptr = "contents", .len = 8}) != 0)) milone_assert_error("linear/linear.milone", 91, 2);
+    if ((string_compare(value_, (struct String){.ptr = "contents", .len = 8}) != 0)) milone_assert_error("linear/linear.milone", 93, 2);
     return;
 }
 
@@ -314,7 +314,7 @@ else_17:;
     if_1 = false;
     goto if_next_15;
 if_next_15:;
-    if ((!(if_1))) milone_assert_error("linear/linear.milone", 100, 2);
+    if ((!(if_1))) milone_assert_error("linear/linear.milone", 102, 2);
     return;
 }
 
@@ -339,7 +339,7 @@ void linear_linear_genericLinearFunCase(void) {
     l_3 = call_15;
     l_4 = l_3;
     n_7 = l_4;
-    if ((n_7 != 3)) milone_assert_error("linear/linear.milone", 113, 2);
+    if ((n_7 != 3)) milone_assert_error("linear/linear.milone", 115, 2);
     return;
 }
 
@@ -371,7 +371,7 @@ else_23:;
     if_2 = false;
     goto if_next_21;
 if_next_21:;
-    if ((!(if_2))) milone_assert_error("linear/linear.milone", 121, 4);
+    if ((!(if_2))) milone_assert_error("linear/linear.milone", 124, 4);
     match_ = 0;
     goto end_match_18;
 next_19:;
@@ -392,7 +392,7 @@ void linear_linear_nestedLinearCase(void) {
     return;
 }
 
-void linear_linear_linearWrapperCase(void) {
+void linear_linear_counterWrapperCase(void) {
     int32_t w_1;
     int32_t c_1;
     int32_t call_16;
@@ -415,6 +415,6 @@ int main(int argc, char **argv) {
     linear_linear_genericLinearCase();
     linear_linear_genericLinearFunCase();
     linear_linear_nestedLinearCase();
-    linear_linear_linearWrapperCase();
+    linear_linear_counterWrapperCase();
     return 0;
 }

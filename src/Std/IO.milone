@@ -4,6 +4,7 @@
 // Here IO indicates a kind of operations that affect the host environment (OS)
 // such as file system, network, processes etc.
 
+open Std.Linear
 open Std.StdError
 
 /// Linear marker to make it explicit for a function to use IO operations.
@@ -11,7 +12,7 @@ open Std.StdError
 /// As a convention, functions that use IO should take an IO value and return it.
 /// By passing an IO value around, dependencies are explicitly expressed
 /// between use of IO-dependent functions.
-type IO = private IO of __linear<unit>
+type IO = private IO of Linear<unit>
 
 module IO =
   /// Executes a program that uses IO operations inside of it.
@@ -24,7 +25,7 @@ module IO =
   ///   let main _ = never (IO.exec (fun io -> action io))
   /// ```
   let exec (action: IO -> IO) : Never =
-    let (IO io) = action (IO(__acquire ()))
-    __dispose io
+    let (IO io) = action (IO(Linear.acquire ()))
+    Linear.dispose io
     __nativeStmt ("exit(0);")
     unreachable ()

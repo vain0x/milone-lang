@@ -116,7 +116,7 @@ let private errorToString err =
     "This linear variable must not be used in local functions and function expressions."
 
   | LinearError.VariantInvalid ->
-    "This linear variant is invalid for now. This error happens when a union contains another linear union types. Consider to use __linear directly."
+    "This linear variant is invalid for now. This error happens when a union contains another linear union types. Consider to use the Linear type directly."
 
   | LinearError.CannotUseAsPat -> "This linear variable cannot be defined by AS pattern."
 
@@ -185,7 +185,7 @@ let private tyIsLinearWith linearTySet ty : bool =
 
 let private tyIsLinear (rx: Rx) ty = tyIsLinearWith rx.LinearTySet ty
 
-// FIXME: Union types that own __linear directly are linear for now.
+// FIXME: Union types that own Linear directly are linear for now.
 //        This should be transitive.
 let private computeLinearTys (tirCtx: TirCtx) =
   tirCtx.Tys
