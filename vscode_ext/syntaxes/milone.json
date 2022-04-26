@@ -68,8 +68,8 @@
         },
         {
             "comment": "Unsupported keywords",
-            "name": "invalid.deprecated.milone",
-            "match": "\\b(abstract|and|async|atomic|base|become|begin|break|checked|class|component|const|constraint|constructor|continue|default|delegate|done|downcast|downto|eager|elif|end|event|exception|extern|external|finally|fixed|for|function|functor|global|include|inherit|inline|interface|internal|lazy|member|method|mixin|mutable|mut|namespace|new|null|object|or|override|parallel|process|protected|pure|ref|return|sealed|select|seq|signature|sig|static|struct|tailcall|to|trait|try|upcast|use|using|val|virtual|void|volatile|while|yield)\\b|!=|!|#|$|%%|`|\\(\\*|\\(\\|\\*\\*|:=|:>|:\\?|:\\?>|<-|\\|\\|+>|<\\|+|<@|==|\\?|@|\\[\\||~"
+            "name": "invalid.illegal.milone",
+            "match": "\\b(abstract|and|async|base|become|begin|break|checked|class|component|const|constraint|continue|default|delegate|done|downcast|downto|elif|end|event|exception|extern|external|finally|fixed|for|function|global|include|inherit|inline|interface|internal|lazy|member|mixin|mutable|mut|namespace|new|null|or|override|parallel|process|protected|pure|ref|return|sealed|select|seq|signature|sig|static|struct|tailcall|to|trait|try|upcast|use|val|virtual|void|while|yield)\\b"
         },
         {
             "comment": "Control keywords",
@@ -89,21 +89,21 @@
         {
             "comment": "Built-in types",
             "name": "entity.name.type.milone",
-            "match": "\\b(bool|s?byte|char|float(32)?|int|list|nativeptr|obj|string|u?int(8|16|32|64)|u?nativeint|unit|voidptr|__inptr|__nativeType|__outptr|__voidinptr)\\b"
+            "match": "\\b(bool|s?byte|char|float(32)?|list|nativeptr|obj|string|u?int(8|16|32|64)?|u?nativeint|unit|voidptr|__inptr|__nativeType|__outptr|__voidinptr)\\b"
         },
         {
             "comment": "Built-in functions",
             "name": "entity.name.function.milone",
-            "match": "\\b(assert|box|char|compare|exit|int|not|printfn|sizeof|string|unbox|__inRegion|__nativeCast|__nativeDecl|__nativeExpr|__nativeFun|__nativeStmt|__nativeType|(?<=Ptr\\.)(asIn|asNative|cast|invalid|nullPtr|read|select|write))\\b"
+            "match": "\\b(assert|box|compare|exit|not|printfn|sizeof|unbox|__[0-9A-Za-z]*)\\b"
         },
         {
             "comment": "Built-in values",
             "name": "constant.language.milone",
-            "match": "\\b(None|Some)\\b"
+            "match": "\\b(Error|None|Ok|Some)\\b"
         },
         {
             "comment": "Equality operators",
-            "name": "keyword.operator.comparison.milone",
+            "name": "keyword.operator.equality.milone",
             "match": "=|<>"
         },
         {
@@ -112,17 +112,12 @@
             "match": "\\+|-|\\*|/|%|&&&|\\|\\|\\||\\^\\^\\^|<<<|>>>"
         },
         {
-            "comment": "Unsupported functional composition operators",
-            "name": "invalid.deprecated.milone",
-            "match": "<<|>>"
-        },
-        {
-            "comment": "Logical operators (this rule should be after arithmetic operators to avoid conflict)",
+            "comment": "Logical operators (this rule must be after arithmetic operators to avoid conflict)",
             "name": "keyword.operator.logical.milone",
             "match": "&&|\\|\\|"
         },
         {
-            "comment": "Comparison operators (this rule should be after arithmetic operators to avoid conflict)",
+            "comment": "Comparison operators (this rule must be after arithmetic operators to avoid conflict)",
             "name": "keyword.operator.comparison.milone",
             "match": "<=|>=|<|>"
         },
@@ -130,6 +125,11 @@
             "comment": "Other sigils",
             "name": "keyword.operator.other.milone",
             "match": "\\{|\\}|\\.\\.|\\.|,|::|:|;|->|\\|>|&|\\|"
+        },
+        {
+            "comment": "Unsupported sigils",
+            "name": "invalid.illegal.milone",
+            "match": "<<|>>|==|!=|=>|!|#|$|%%|`|\\(\\*|\\(\\|\\*\\*|\\[\\||\\[:|\\{\\||:=|:>|:\\?|:\\?>|<-|\\|\\|+>|<\\|+|\\?|@|~"
         },
         {
             "comment": "Potential namespaces guess (front of dot)",
