@@ -5,151 +5,591 @@
     "scopeName": "source.milone",
     "patterns": [
         {
-            "comment": "Single-line documentation comment",
-            "name": "comment.line.documentation.milone",
-            "begin": "///",
-            "end": "$"
-        },
-        {
-            "comment": "Single-line non-documentation comment",
-            "name": "comment.line.double-slash.milone",
-            "begin": "//",
-            "end": "$"
-        },
-        {
-            "comment": "Hexadecimal literal",
-            "name": "constant.numeric.hexadecimal.milone",
-            "match": "\\b0x[_0-9A-Fa-f]*\\b"
-        },
-        {
-            "comment": "Decimal literal",
-            "name": "constant.numeric.float.milone",
-            "match": "\\b-?[0-9][_0-9]*(\\.[_0-9]*)?([eE][-+]?[_0-9]*)?\\b"
-        },
-        {
-            "comment": "Char literal",
-            "name": "string.quoted.single.milone",
-            "match": "'([^'\\\\]|\\\\(x[0-9A-Fa-f]{2}|.))'"
-        },
-        {
-            "comment": "Single-line string literal",
-            "name": "string.quoted.double.milone",
-            "begin": "\"",
-            "end": "\"",
+            "include": "#milone_syntax"
+        }
+    ],
+    "repository": {
+        "milone_syntax": {
             "patterns": [
                 {
-                    "include": "#escape_sequence"
+                    "include": "#comment_rule"
+                },
+                {
+                    "include": "#literal_rule"
+                },
+                {
+                    "include": "#type_declaration_rule"
+                },
+                {
+                    "comment": "Type parameter list",
+                    "begin": "\\b(type)\\b\\s*([A-Za-z]\\w*)(<)",
+                    "end": ">",
+                    "beginCaptures": {
+                        "1": {
+                            "name": "keyword.other.milone"
+                        },
+                        "2": {
+                            "name": "entity.name.type.milone"
+                        },
+                        "3": {
+                            "name": "keyword.operator.bracket.milone"
+                        }
+                    },
+                    "endCaptures": {
+                        "0": {
+                            "name": "keyword.operator.bracket.milone"
+                        }
+                    },
+                    "patterns": [
+                        {
+                            "include": "#type_rule"
+                        }
+                    ]
+                },
+                {
+                    "include": "#type_argument_list_rule"
+                },
+                {
+                    "include": "#type_ascription_rule"
+                },
+                {
+                    "include": "#closure_rule"
+                },
+                {
+                    "include": "#let_fun_rule"
+                },
+                {
+                    "include": "#keyword_rule"
+                },
+                {
+                    "include": "#built_in_type_rule"
+                },
+                {
+                    "include": "#built_in_value_rule"
+                },
+                {
+                    "comment": "Attributes",
+                    "name": "meta.embedded.milone",
+                    "begin": "^\\[<",
+                    "end": ">\\]",
+                    "beginCaptures": {
+                        "0": {
+                            "name": "keyword.operator.bracket.milone"
+                        }
+                    },
+                    "endCaptures": {
+                        "0": {
+                            "name": "keyword.operator.bracket.milone"
+                        }
+                    },
+                    "patterns": [
+                        {
+                            "name": "entity.other.attribute-name",
+                            "match": "\\bRepr\\b"
+                        },
+                        {
+                            "include": "#milone_syntax"
+                        }
+                    ]
+                },
+                {
+                    "include": "#sigil_rule"
+                },
+                {
+                    "include": "#namespace_guess_rule"
+                },
+                {
+                    "comment": "Wildcard or discard",
+                    "name": "variable.other.wildcard.milone",
+                    "match": "\\b_\\w*\\b"
                 }
             ]
         },
-        {
-            "comment": "Multi-line string literal",
-            "name": "string.quoted.triple.milone",
-            "begin": "\"\"\"",
-            "end": "\"\"\"",
+        "comment_rule": {
+            "comment": "Grammar of comments.",
             "patterns": [
                 {
-                    "include": "#escape_sequence"
+                    "comment": "Single-line documentation comment",
+                    "name": "comment.line.documentation.milone",
+                    "begin": "///",
+                    "end": "$"
+                },
+                {
+                    "comment": "Single-line non-documentation comment",
+                    "name": "comment.line.double-slash.milone",
+                    "begin": "//",
+                    "end": "$"
                 }
             ]
         },
-        {
-            "comment": "Attributes",
-            "name": "meta.embedded.milone",
-            "begin": "^\\[<",
-            "end": ">\\]",
-            "patterns": []
+        "literal_rule": {
+            "comment": "Grammar of number literals, char literals, type variables, string literals, and bool keywords.",
+            "patterns": [
+                {
+                    "comment": "Hex literal",
+                    "name": "constant.numeric.hexadecimal.milone",
+                    "match": "\\b0x\\w*\\b"
+                },
+                {
+                    "comment": "Decimal literal",
+                    "name": "constant.numeric.float.milone",
+                    "match": "\\b-?[0-9][_0-9]*(\\.[_0-9]*)?([eE][-+]?[_0-9]*)?\\w*\\b"
+                },
+                {
+                    "comment": "Char literal",
+                    "name": "string.quoted.single.milone",
+                    "match": "'([^'\\\\]|\\\\(?:x[0-9A-Fa-f]{2}|.))'",
+                    "captures": {
+                        "1": {
+                            "patterns": [
+                                {
+                                    "include": "#escape_sequence_rule"
+                                }
+                            ]
+                        }
+                    }
+                },
+                {
+                    "comment": "Type variable",
+                    "name": "entity.name.type.variable.milone",
+                    "match": "'[A-Za-z]\\b"
+                },
+                {
+                    "comment": "Multiline string literal",
+                    "name": "string.quoted.triple.milone",
+                    "begin": "\"\"\"",
+                    "end": "\"\"\"",
+                    "patterns": []
+                },
+                {
+                    "comment": "Illegal prefix of char/string literal",
+                    "name": "invalid.illegal.milone",
+                    "match": "\\b[_A-Za-z]\\w*(?=['\"])"
+                },
+                {
+                    "comment": "Single-line string literal",
+                    "name": "string.quoted.double.milone",
+                    "begin": "\"",
+                    "end": "\"",
+                    "patterns": [
+                        {
+                            "include": "#escape_sequence_rule"
+                        }
+                    ]
+                },
+                {
+                    "comment": "Unit and bool literals",
+                    "name": "constant.language.literal.milone",
+                    "match": "\\(\\)|\\b(false|true)\\b"
+                },
+                {
+                    "comment": "Quoted identifiers",
+                    "name": "entity.name.milone",
+                    "begin": "``",
+                    "end": "``"
+                }
+            ]
         },
-        {
-            "comment": "Boolean literals",
-            "name": "constant.language.boolean.milone",
-            "match": "\\b(false|true)\\b"
+        "escape_sequence_rule": {
+            "comment": "Escape sequences in quotes",
+            "name": "constant.character.escape.milone",
+            "match": "\\\\(x[0-9A-Fa-f]{2}|.)"
         },
-        {
-            "comment": "Wildcard or discard",
-            "name": "variable.language.wildcard.milone",
-            "match": "\\b_[0-9A-Za-z_]*\\b"
+        "keyword_rule": {
+            "comment": "Grammar of non-contextual keywords.",
+            "patterns": [
+                {
+                    "comment": "Unsupported computation expression binders",
+                    "name": "invalid.illegal.milone",
+                    "match": "\\b(do|let|match|return|yield)!"
+                },
+                {
+                    "comment": "Unsupported keywords",
+                    "name": "invalid.illegal.milone",
+                    "match": "\\b(abstract|and|async|base|become|begin|break|checked|class|component|const|constraint|continue|default|delegate|done|downcast|downto|do|elif|end|event|exception|extern|external|finally|fixed|for|function|global|include|inherit|inline|interface|internal|lazy|member|mixin|mutable|mut|namespace|new|null|or|override|parallel|process|protected|pure|ref|return|sealed|select|seq|signature|sig|static|struct|tailcall|to|trait|try|upcast|use|val|virtual|void|while|yield)\\b"
+                },
+                {
+                    "comment": "Control keywords",
+                    "name": "keyword.control.milone",
+                    "match": "\\b(else|if|match|then|when|with)\\b"
+                },
+                {
+                    "comment": "Visibility keywords",
+                    "name": "storage.modifier.visibility.milone",
+                    "match": "\\b(private|public)\\b"
+                },
+                {
+                    "comment": "Other keywords",
+                    "name": "keyword.milone",
+                    "match": "\\b(_|as|fun|in|let|module|of|open|rec|type)\\b"
+                }
+            ]
         },
-        {
-            "comment": "Unsupported keywords",
-            "name": "invalid.deprecated.milone",
-            "match": "\\b(abstract|and|async|atomic|base|become|begin|break|checked|class|component|const|constraint|constructor|continue|default|delegate|done|downcast|downto|eager|elif|end|event|exception|extern|external|finally|fixed|for|function|functor|global|include|inherit|inline|interface|internal|lazy|member|method|mixin|mutable|mut|namespace|new|null|object|or|override|parallel|process|protected|pure|ref|return|sealed|select|seq|signature|sig|static|struct|tailcall|to|trait|try|upcast|use|using|val|virtual|void|volatile|while|yield)\\b|!=|!|#|$|%%|`|\\(\\*|\\(\\|\\*\\*|:=|:>|:\\?|:\\?>|<-|\\|\\|+>|<\\|+|<@|==|\\?|@|\\[\\||~"
+        "built_in_type_rule": {
+            "patterns": [
+                {
+                    "comment": "Built-in types",
+                    "name": "entity.name.type.milone",
+                    "match": "\\b(bool|s?byte|char|float(32)?|list|nativeptr|obj|option|Result|string|u?int(8|16|32|64)?|u?nativeint|unit|voidptr|__inptr|__nativeType|__outptr|__voidinptr)\\b"
+                }
+            ]
         },
-        {
-            "comment": "Control keywords",
-            "name": "keyword.control.milone",
-            "match": "\\b(else|if|match|then|when|with)\\b"
+        "built_in_value_rule": {
+            "patterns": [
+                {
+                    "comment": "Built-in functions",
+                    "name": "entity.name.function.milone",
+                    "match": "\\b(assert|box|compare|exit|not|printfn|sizeof|unbox|__\\w*)\\b"
+                },
+                {
+                    "comment": "Built-in variants",
+                    "name": "constant.language.milone",
+                    "match": "\\b(Error|None|Ok|Some)\\b"
+                }
+            ]
         },
-        {
-            "comment": "Visibility keywords",
-            "name": "storage.modifier.visibility.milone",
-            "match": "\\b(private|public)\\b"
+        "sigil_rule": {
+            "comment": "Grammar of brackets, operators, punctuations and other sigils.",
+            "patterns": [
+                {
+                    "comment": "Unsupported brackets and sigils",
+                    "name": "invalid.illegal.milone",
+                    "match": "\\(\\||\\|\\)|\\[\\||\\|\\]|\\[:|:\\]|\\{\\||\\|\\}|\\(\\*|\\*\\)|\\\\|#|`|\\$"
+                },
+                {
+                    "comment": "Arrow of arms",
+                    "name": "keyword.control.milone",
+                    "match": "(->)(?![-;:!?\\.@*\\/&%^+<=>|~])"
+                },
+                {
+                    "comment": "Arithmetic operators",
+                    "name": "keyword.operator.arithmetic.milone",
+                    "match": "(\\+|-|\\*|/|%|&&&|\\|\\|\\||\\^\\^\\^|<<<|>>>)(?![-;:!?\\.@*\\/&%^+<=>|~])"
+                },
+                {
+                    "comment": "Logical operators (this rule must be after arithmetic operators to avoid conflict)",
+                    "name": "keyword.operator.logical.milone",
+                    "match": "(&&|\\|\\|)(?![-;:!?\\.@*\\/&%^+<=>|~])"
+                },
+                {
+                    "comment": "Other operators",
+                    "name": "keyword.operator.other.milone",
+                    "match": "(\\|>|\\.\\.?|::?|->|&|\\||,|;)(?![-;:!?\\.@*\\/&%^+<=>|~])"
+                },
+                {
+                    "comment": "Comparison operators (this rule must be after arithmetic operators and pipeline operator to avoid conflict)",
+                    "name": "keyword.operator.comparison.milone",
+                    "match": "(=|<>|<|<=|>|>=)(?![-;:!?\\.@*\\/&%^+<=>|~])"
+                },
+                {
+                    "comment": "Unsupported operators",
+                    "name": "invalid.illegal.milone",
+                    "match": "[-;:!?\\.@*\\/&%^+<=>|~]+"
+                },
+                {
+                    "comment": "Brackets",
+                    "name": "keyword.operator.bracket.milone",
+                    "match": "\\(|\\)|\\[|\\]|\\{|\\}"
+                }
+            ]
         },
-        {
-            "comment": "Other keywords",
-            "name": "keyword.milone",
-            "match": "\\b(as|do|fun|in|let|module|of|open|rec|type)\\b"
+        "nav_type_rule": {
+            "comment": "Grammar of nav type including 1+ dots.",
+            "patterns": [
+                {
+                    "match": "\\b([A-Za-z]\\w*)(\\.[A-Za-z]\\w*)+\\b",
+                    "captures": {
+                        "1": {
+                            "name": "entity.name.type.milone"
+                        },
+                        "2": {
+                            "name": "entity.name.type.milone"
+                        }
+                    }
+                }
+            ]
         },
-        {
-            "comment": "Built-in types",
-            "name": "entity.name.type.milone",
-            "match": "\\b(bool|s?byte|char|float(32)?|int|list|nativeptr|obj|string|u?int(8|16|32|64)|u?nativeint|unit|voidptr|__inptr|__nativeType|__outptr|__voidinptr)\\b"
+        "type_argument_list_rule": {
+            "comment": "Grammar of identifier with type argument list",
+            "patterns": [
+                {
+                    "comment": "Type argument list",
+                    "begin": "\\b([A-Za-z]\\w*(?:\\.[A-Za-z]\\w*)*)(<)",
+                    "end": ">",
+                    "beginCaptures": {
+                        "1": {
+                            "patterns": [
+                                {
+                                    "include": "#keyword_rule"
+                                },
+                                {
+                                    "include": "#built_in_type_rule"
+                                },
+                                {
+                                    "include": "#built_in_value_rule"
+                                },
+                                {
+                                    "include": "#namespace_guess_rule"
+                                }
+                            ]
+                        },
+                        "2": {
+                            "name": "keyword.operator.bracket.milone"
+                        }
+                    },
+                    "endCaptures": {
+                        "0": {
+                            "name": "keyword.operator.bracket.milone"
+                        }
+                    },
+                    "patterns": [
+                        {
+                            "include": "#type_rule"
+                        }
+                    ]
+                }
+            ]
         },
-        {
-            "comment": "Built-in functions",
-            "name": "entity.name.function.milone",
-            "match": "\\b(assert|box|char|compare|exit|int|not|printfn|sizeof|string|unbox|__inRegion|__nativeCast|__nativeDecl|__nativeExpr|__nativeFun|__nativeStmt|__nativeType|(?<=Ptr\\.)(asIn|asNative|cast|invalid|nullPtr|read|select|write))\\b"
+        "type_argument_list_in_type_rule": {
+            "comment": "Grammar of identifier with type argument list, which appear in type context",
+            "patterns": [
+                {
+                    "begin": "\\b([A-Za-z]\\w*(?:\\.[A-Za-z]\\w*)*)(<)",
+                    "end": ">",
+                    "beginCaptures": {
+                        "1": {
+                            "patterns": [
+                                {
+                                    "include": "#type_rule"
+                                }
+                            ]
+                        },
+                        "2": {
+                            "name": "keyword.operator.bracket.milone"
+                        }
+                    },
+                    "endCaptures": {
+                        "0": {
+                            "name": "keyword.operator.bracket.milone"
+                        }
+                    },
+                    "patterns": [
+                        {
+                            "include": "#type_rule"
+                        }
+                    ]
+                }
+            ]
         },
-        {
-            "comment": "Built-in values",
-            "name": "constant.language.milone",
-            "match": "\\b(None|Some)\\b"
+        "type_ascription_rule": {
+            "comment": "Grammar of type ascription (':' type, 'of' type)",
+            "patterns": [
+                {
+                    "begin": "(:)(?![-;:!?\\.@*\\/&%^+<=>|~])",
+                    "end": "(?=\\)|\\]|\\}|,|;|=|\\n)|$",
+                    "beginCaptures": {
+                        "1": {
+                            "name": "keyword.operator.milone"
+                        }
+                    },
+                    "patterns": [
+                        {
+                            "include": "#type_rule"
+                        }
+                    ]
+                },
+                {
+                    "begin": "\\b(of)\\b",
+                    "end": "(?=\\||(\\r?\\n\\r?\\n))|$",
+                    "beginCaptures": {
+                        "1": {
+                            "name": "keyword.other.milone"
+                        }
+                    },
+                    "patterns": [
+                        {
+                            "match": "\\b([_A-Za-z]\\w*)\\b\\s*(?=:)",
+                            "captures": {
+                                "1": {
+                                    "name": "variable.name.label.milone"
+                                }
+                            }
+                        },
+                        {
+                            "include": "#type_rule"
+                        }
+                    ]
+                }
+            ]
         },
-        {
-            "comment": "Equality operators",
-            "name": "keyword.operator.comparison.milone",
-            "match": "=|<>"
+        "type_rule": {
+            "comment": "Grammar for type ascription. This excludes grammar of values and statements.",
+            "patterns": [
+                {
+                    "include": "#comment_rule"
+                },
+                {
+                    "include": "#literal_rule"
+                },
+                {
+                    "include": "#keyword_rule"
+                },
+                {
+                    "include": "#type_argument_list_in_type_rule"
+                },
+                {
+                    "include": "#built_in_type_rule"
+                },
+                {
+                    "include": "#nav_type_rule"
+                },
+                {
+                    "name": "keyword.operator.milone",
+                    "match": "\\*|->"
+                },
+                {
+                    "comment": "Parentheses of type",
+                    "begin": "\\(",
+                    "end": "\\)",
+                    "patterns": [
+                        {
+                            "include": "#type_rule"
+                        }
+                    ]
+                },
+                {
+                    "name": "entity.name.type",
+                    "match": "\\b([A-Za-z]\\w*)\\b"
+                }
+            ]
         },
-        {
-            "comment": "Arithmetic operators",
-            "name": "keyword.operator.arithmetic.milone",
-            "match": "\\+|-|\\*|/|%|&&&|\\|\\|\\||\\^\\^\\^|<<<|>>>"
+        "closure_rule": {
+            "comment": "Grammar of closure expression",
+            "begin": "\\b(fun)\\b",
+            "end": "(->)(?![-;:!?\\.@*\\/&%^+<=>|~])|(?=\\n)|$",
+            "beginCaptures": {
+                "1": {
+                    "name": "keyword.other.milone"
+                }
+            },
+            "endCaptures": {
+                "1": {
+                    "name": "keyword.other.milone"
+                }
+            },
+            "patterns": [
+                {
+                    "include": "#milone_syntax"
+                }
+            ]
         },
-        {
-            "comment": "Unsupported functional composition operators",
-            "name": "invalid.deprecated.milone",
-            "match": "<<|>>"
+        "let_fun_rule": {
+            "comment": "Grammar of let-fun definitions.",
+            "patterns": [
+                {
+                    "comment": "Rule of let definitions.",
+                    "match": "\\b(let)\\b\\s*(?:(rec)\\b\\s*)?(?:(private|public)\\b\\s*)?(?!rec|private|public)([A-Za-z]\\w*)\\b\\s*(?=\\w|\\()",
+                    "captures": {
+                        "1": {
+                            "name": "keyword.other.milone"
+                        },
+                        "2": {
+                            "name": "keyword.other.milone"
+                        },
+                        "3": {
+                            "name": "keyword.other.milone"
+                        },
+                        "4": {
+                            "name": "entity.name.function.milone"
+                        }
+                    }
+                }
+            ]
         },
-        {
-            "comment": "Logical operators (this rule should be after arithmetic operators to avoid conflict)",
-            "name": "keyword.operator.logical.milone",
-            "match": "&&|\\|\\|"
+        "type_declaration_rule": {
+            "comment": "Grammar of type declaration.",
+            "begin": "\\b(type)\\b\\s*(\\w+(?:<.*>)?)\\b\\s*(=)",
+            "end": "$",
+            "beginCaptures": {
+                "1": {
+                    "name": "keyword.other.milone"
+                },
+                "2": {
+                    "patterns": [
+                        {
+                            "include": "#type_rule"
+                        }
+                    ]
+                },
+                "3": {
+                    "name": "keyword.other.milone"
+                }
+            },
+            "patterns": [
+                {
+                    "begin": "(\\|)",
+                    "end": "$",
+                    "beginCaptures": {
+                        "1": {
+                            "name": "keyword.operator.milone"
+                        }
+                    },
+                    "patterns": [
+                        {
+                            "include": "#comment_rule"
+                        },
+                        {
+                            "include": "#literal_rule"
+                        },
+                        {
+                            "include": "#type_ascription_rule"
+                        },
+                        {
+                            "include": "#keyword_rule"
+                        }
+                    ]
+                },
+                {
+                    "begin": "(\\{)",
+                    "end": "(\\})",
+                    "beginCaptures": {
+                        "1": {
+                            "name": "keyword.operator.bracket.milone"
+                        }
+                    },
+                    "endCaptures": {
+                        "1": {
+                            "name": "keyword.operator.bracket.milone"
+                        }
+                    },
+                    "patterns": [
+                        {
+                            "include": "#comment_rule"
+                        },
+                        {
+                            "include": "#literal_rule"
+                        },
+                        {
+                            "include": "#type_ascription_rule"
+                        },
+                        {
+                            "include": "#keyword_rule"
+                        }
+                    ]
+                },
+                {
+                    "include": "#type_rule"
+                }
+            ]
         },
-        {
-            "comment": "Comparison operators (this rule should be after arithmetic operators to avoid conflict)",
-            "name": "keyword.operator.comparison.milone",
-            "match": "<=|>=|<|>"
-        },
-        {
-            "comment": "Other sigils",
-            "name": "keyword.operator.other.milone",
-            "match": "\\{|\\}|\\.\\.|\\.|,|::|:|;|->|\\|>|&|\\|"
-        },
-        {
-            "comment": "Potential namespaces guess (front of dot)",
-            "match": "\\b([A-Z]\\w+)(?=\\.(?!\\.|\\[))",
+        "namespace_guess_rule": {
+            "comment": "Namespace-ish symbols guess (uppercase, front of dot)",
+            "match": "\\b([A-Z]\\w*)(?=\\.(?!\\.|\\[))",
             "captures": {
                 "1": {
                     "name": "entity.name.class.milone"
                 }
             }
-        }
-    ],
-    "repository": {
-        "escape_sequence": {
-            "comment": "Escape sequences",
-            "name": "constant.character.escape.milone",
-            "match": "\\\\(x[0-9A-Fa-f]{2}|.)"
         }
     }
 }
