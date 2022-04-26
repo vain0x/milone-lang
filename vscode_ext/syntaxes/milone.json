@@ -32,21 +32,17 @@
             "match": "'([^'\\\\]|\\\\(x[0-9A-Fa-f]{2}|.))'"
         },
         {
-            "comment": "Single-line string literal",
-            "name": "string.quoted.double.milone",
-            "begin": "\"",
-            "end": "\"",
-            "patterns": [
-                {
-                    "include": "#escape_sequence"
-                }
-            ]
-        },
-        {
             "comment": "Multi-line string literal",
             "name": "string.quoted.triple.milone",
             "begin": "\"\"\"",
             "end": "\"\"\"",
+            "patterns": []
+        },
+        {
+            "comment": "Single-line string literal",
+            "name": "string.quoted.double.milone",
+            "begin": "\"",
+            "end": "\"",
             "patterns": [
                 {
                     "include": "#escape_sequence"
