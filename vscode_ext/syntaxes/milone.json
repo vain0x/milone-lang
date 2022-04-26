@@ -50,6 +50,9 @@
                     "include": "#type_ascription_rule"
                 },
                 {
+                    "include": "#closure_rule"
+                },
+                {
                     "include": "#keyword_rule"
                 },
                 {
@@ -248,6 +251,11 @@
                     "match": "\\(\\||\\|\\)|\\[\\||\\|\\]|\\[:|:\\]|\\{\\||\\|\\}|\\(\\*|\\*\\)|\\\\|#|`|\\$"
                 },
                 {
+                    "comment": "Arrow of arms",
+                    "name": "keyword.control.milone",
+                    "match": "(->)(?![-;:!?\\.@*\\/&%^+<=>|~])"
+                },
+                {
                     "comment": "Arithmetic operators",
                     "name": "keyword.operator.arithmetic.milone",
                     "match": "(\\+|-|\\*|/|%|&&&|\\|\\|\\||\\^\\^\\^|<<<|>>>)(?![-;:!?\\.@*\\/&%^+<=>|~])"
@@ -383,6 +391,26 @@
                 {
                     "name": "entity.name.type",
                     "match": "\\b([A-Za-z]\\w*)\\b"
+                }
+            ]
+        },
+        "closure_rule": {
+            "comment": "Grammar of closure expression",
+            "begin": "\\b(fun)\\b",
+            "end": "(->)(?![-;:!?\\.@*\\/&%^+<=>|~])|(?=\\n)|$",
+            "beginCaptures": {
+                "1": {
+                    "name": "keyword.other.milone"
+                }
+            },
+            "endCaptures": {
+                "1": {
+                    "name": "keyword.other.milone"
+                }
+            },
+            "patterns": [
+                {
+                    "include": "#milone_syntax"
                 }
             ]
         }
