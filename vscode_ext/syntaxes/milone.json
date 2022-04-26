@@ -91,7 +91,7 @@
                 },
                 {
                     "comment": "Potential namespaces guess (front of dot)",
-                    "match": "\\b([A-Z]\\w+)(?=\\.(?!\\.|\\[))",
+                    "match": "\\b([A-Z]\\w*)(?=\\.(?!\\.|\\[))",
                     "captures": {
                         "1": {
                             "name": "entity.name.class.milone"
