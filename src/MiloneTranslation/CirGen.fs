@@ -306,12 +306,9 @@ let private addDecl (ctx: CirCtx) decl = { ctx with Decls = decl :: ctx.Decls }
 // -----------------------------------------------
 
 let private cgArgTys ctx argTys : CTy list * CirCtx =
-  let argTys =
-    argTys
-    |> List.filter (fun ty -> tyIsUnit ty |> not)
-
-  (argTys, ctx)
-  |> stMap (fun (ty, ctx) -> cgTyComplete ctx ty)
+  argTys
+  |> List.filter (fun ty -> tyIsUnit ty |> not)
+  |> List.mapFold cgTyComplete ctx
 
 let private cgResultTy ctx resultTy : CTy * CirCtx =
   if tyIsUnit resultTy then
@@ -520,10 +517,9 @@ let private genRecordTyDef ctx tySerial fields =
 
   | _ ->
     let fieldTys, (ctx: CirCtx) =
-      (fields, ctx)
-      |> stMap (fun ((_, ty, _), ctx) ->
-        let ty, ctx = cgTyComplete ctx ty
-        ty, ctx)
+      fields
+      |> List.map (fun (_, ty, _) -> ty)
+      |> List.mapFold cgTyComplete ctx
 
     let fields =
       fieldTys
@@ -861,16 +857,6 @@ let private genExprBin ctx op l r =
     let opExpr = CBinaryExpr(cBinaryOf op, l, r)
     opExpr, ctx
 
-let private cgExprList ctx exprs =
-  let rec go results ctx exprs =
-    match exprs with
-    | [] -> List.rev results, ctx
-    | expr :: exprs ->
-      let result, ctx = cgExpr ctx expr
-      go (result :: results) ctx exprs
-
-  go [] ctx exprs
-
 let private cgExpr (ctx: CirCtx) (arg: MExpr) : CExpr * CirCtx =
   match arg |> mxSugar with
   | MLitExpr (lit, _) -> genLit lit, ctx
@@ -892,6 +878,8 @@ let private cgExpr (ctx: CirCtx) (arg: MExpr) : CExpr * CirCtx =
   | MNativeExpr (code, args, _, _) ->
     let args, ctx = cgExprList ctx args
     CNativeExpr(code, args), ctx
+
+let private cgExprList ctx exprs : CExpr list * CirCtx = exprs |> List.mapFold cgExpr ctx
 
 // -----------------------------------------------
 // Statements
@@ -937,18 +925,14 @@ let private cgActionStmt ctx itself action args loc =
     addStmt ctx (CExprStmt(CCallExpr(CVarExpr "milone_region_leave", [])))
 
   | MCallProcAction ->
-    let args, ctx =
-      (args, ctx)
-      |> stMap (fun (arg, ctx) -> cgExpr ctx arg)
+    let args, ctx = cgExprList ctx args
 
     match args with
     | callee :: args -> addStmt ctx (CExprStmt(CCallExpr(callee, args)))
     | _ -> unreachable itself
 
   | MCallClosureAction ->
-    let args, ctx =
-      (args, ctx)
-      |> stMap (fun (arg, ctx) -> cgExpr ctx arg)
+    let args, ctx = cgExprList ctx args
 
     match args with
     | callee :: args ->
@@ -985,17 +969,19 @@ let private cgPrintfnActionStmt ctx itself args argTys =
     let format = CStringLitExpr(format + "\n")
 
     let args, ctx =
-      (args, ctx)
-      |> stMap (fun ((arg, argTy), ctx) ->
-        match arg with
-        | MLitExpr (StringLit value, _) -> CStringLitExpr value, ctx
+      args
+      |> List.mapFold
+           (fun ctx (arg, argTy) ->
+             match arg with
+             | MLitExpr (StringLit value, _) -> CStringLitExpr value, ctx
 
-        | _ when tyEqual argTy tyString ->
-          // Insert implicit cast from string to ptr.
-          let arg, ctx = cgExpr ctx arg
-          CCallExpr(CVarExpr "string_to_c_str", [ arg ]), ctx
+             | _ when tyEqual argTy tyString ->
+               // Insert implicit cast from string to ptr.
+               let arg, ctx = cgExpr ctx arg
+               CCallExpr(CVarExpr "string_to_c_str", [ arg ]), ctx
 
-        | _ -> cgExpr ctx arg)
+             | _ -> cgExpr ctx arg)
+           ctx
 
     addStmt ctx (CExprStmt(CCallExpr(CVarExpr "printf", format :: args)))
 
@@ -1038,21 +1024,13 @@ let private cgPrimStmt (ctx: CirCtx) itself prim args serial resultTy =
 
   let regular ctx makeExpr =
     let name = getUniqueVarName ctx serial
-
-    let args, ctx =
-      (args, ctx)
-      |> stMap (fun (arg, ctx) -> cgExpr ctx arg)
-
+    let args, ctx = cgExprList ctx args
     addSetStmt ctx name (makeExpr args)
 
   let regularWithTy ctx makeExpr =
     let name = getUniqueVarName ctx serial
     let ty, ctx = cgTyComplete ctx resultTy
-
-    let args, ctx =
-      (args, ctx)
-      |> stMap (fun (arg, ctx) -> cgExpr ctx arg)
-
+    let args, ctx = cgExprList ctx args
     addSetStmt ctx name (makeExpr args ty)
 
   match prim with
@@ -1082,10 +1060,7 @@ let private cgPrimStmt (ctx: CirCtx) itself prim args serial resultTy =
   | MClosurePrim funSerial ->
     let name = getUniqueVarName ctx serial
     let ty, ctx = cgTyComplete ctx resultTy
-
-    let args, ctx =
-      (args, ctx)
-      |> stMap (fun (arg, ctx) -> cgExpr ctx arg)
+    let args, ctx = cgExprList ctx args
 
     let expr, ctx =
       let funExpr = CVarExpr(getUniqueFunName ctx funSerial)
@@ -1129,10 +1104,7 @@ let private cgPrimStmt (ctx: CirCtx) itself prim args serial resultTy =
 
   | MCallProcPrim ->
     let name = getUniqueVarName ctx serial
-
-    let args, ctx =
-      (args, ctx)
-      |> stMap (fun (arg, ctx) -> cgExpr ctx arg)
+    let args, ctx = cgExprList ctx args
 
     match args with
     | callee :: args -> addSetStmt ctx name (CCallExpr(callee, args))
@@ -1141,10 +1113,7 @@ let private cgPrimStmt (ctx: CirCtx) itself prim args serial resultTy =
 
   | MCallClosurePrim ->
     let name = getUniqueVarName ctx serial
-
-    let args, ctx =
-      (args, ctx)
-      |> stMap (fun (arg, ctx) -> cgExpr ctx arg)
+    let args, ctx = cgExprList ctx args
 
     match args with
     | callee :: args ->
@@ -1247,15 +1216,17 @@ let private cgTerminatorStmt ctx stmt : CStmt * CirCtx =
     let cond, ctx = cgExpr ctx cond
 
     let clauses, ctx =
-      (clauses, ctx)
-      |> stMap (fun (clause: MSwitchClause, ctx) ->
-        let cases =
-          clause.Cases
-          |> List.map (fun cond -> cgConst ctx cond)
+      clauses
+      |> List.mapFold
+           (fun ctx (clause: MSwitchClause) ->
+             let cases =
+               clause.Cases
+               |> List.map (fun cond -> cgConst ctx cond)
 
-        let stmt, ctx = cgTerminatorStmt ctx clause.Terminator
+             let stmt, ctx = cgTerminatorStmt ctx clause.Terminator
 
-        (cases, clause.IsDefault, stmt), ctx)
+             (cases, clause.IsDefault, stmt), ctx)
+           ctx
 
     CSwitchStmt(cond, clauses), ctx
 

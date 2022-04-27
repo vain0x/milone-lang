@@ -99,13 +99,17 @@ let private hoistExpr (expr, ctx) : HExpr * HoistCtx =
   | HPrimExpr _ -> expr, ctx
 
   | HMatchExpr (cond, arms, ty, loc) ->
-    let onArm ((pat, guard, body), ctx) =
-      let guard, ctx = hoistExprAsBlock (guard, ctx)
-      let body, ctx = hoistExprAsBlock (body, ctx)
-      (pat, guard, body), ctx
-
     let cond, ctx = hoistExpr (cond, ctx)
-    let arms, ctx = (arms, ctx) |> stMap onArm
+
+    let arms, ctx =
+      arms
+      |> List.mapFold
+           (fun ctx (pat, guard, body) ->
+             let guard, ctx = hoistExprAsBlock (guard, ctx)
+             let body, ctx = hoistExprAsBlock (body, ctx)
+             (pat, guard, body), ctx)
+           ctx
+
     HMatchExpr(cond, arms, ty, loc), ctx
 
   | HNodeExpr (kind, items, ty, loc) ->

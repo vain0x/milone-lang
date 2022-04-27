@@ -547,11 +547,13 @@ let private exExpr (expr, ctx) =
     let cond, ctx = (cond, ctx) |> exExpr
 
     let arms, ctx =
-      (arms, ctx)
-      |> stMap (fun ((pat, guard, body), ctx) ->
-        let guard, ctx = (guard, ctx) |> exExpr
-        let body, ctx = (body, ctx) |> exExpr
-        (pat, guard, body), ctx)
+      arms
+      |> List.mapFold
+           (fun ctx (pat, guard, body) ->
+             let guard, ctx = (guard, ctx) |> exExpr
+             let body, ctx = (body, ctx) |> exExpr
+             (pat, guard, body), ctx)
+           ctx
 
     HMatchExpr(cond, arms, ty, loc), ctx
 

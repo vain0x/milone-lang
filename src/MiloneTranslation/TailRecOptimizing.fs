@@ -72,12 +72,15 @@ let private troExpr isTail (expr, ctx) =
   | HMatchExpr (cond, arms, ty, loc) ->
     let cond, ctx = troExpr NotTail (cond, ctx)
 
-    let go ((pat, guard, body), ctx) =
-      let guard, ctx = troExpr NotTail (guard, ctx)
-      let body, ctx = troExpr isTail (body, ctx)
-      (pat, guard, body), ctx
+    let arms, ctx =
+      arms
+      |> List.mapFold
+           (fun ctx (pat, guard, body) ->
+             let guard, ctx = troExpr NotTail (guard, ctx)
+             let body, ctx = troExpr isTail (body, ctx)
+             (pat, guard, body), ctx)
+           ctx
 
-    let arms, ctx = (arms, ctx) |> stMap go
     HMatchExpr(cond, arms, ty, loc), ctx
 
   | HNodeExpr (kind, items, ty, loc) -> ctx |> troInfExpr isTail kind items ty loc

@@ -380,12 +380,14 @@ let private mtExpr (expr, ctx) : M.HExpr * MtCtx =
     let cond, ctx = (cond, ctx) |> mtExpr
 
     let arms, ctx =
-      (arms, ctx)
-      |> stMap (fun ((pat, guard, body), ctx) ->
-        let pat, ctx = (pat, ctx) |> mtPat
-        let guard, ctx = (guard, ctx) |> mtExpr
-        let body, ctx = (body, ctx) |> mtExpr
-        (pat, guard, body), ctx)
+      arms
+      |> List.mapFold
+           (fun ctx (pat, guard, body) ->
+             let pat, ctx = (pat, ctx) |> mtPat
+             let guard, ctx = (guard, ctx) |> mtExpr
+             let body, ctx = (body, ctx) |> mtExpr
+             (pat, guard, body), ctx)
+           ctx
 
     let ty, ctx = (ty, ctx) |> mtTy
     M.HMatchExpr(cond, arms, ty, loc), ctx
@@ -538,10 +540,12 @@ let private mtDefs (hirCtx: HirCtx) (mtCtx: MtCtx) =
 
            | RecordTyDef (ident, fields, repr, loc) ->
              let fields, ctx =
-               (fields, ctx)
-               |> stMap (fun ((ident, ty, loc), ctx) ->
-                 let ty, ctx = (ty, ctx) |> mtTy
-                 (ident, ty, loc), ctx)
+               fields
+               |> List.mapFold
+                    (fun ctx (ident, ty, loc) ->
+                      let ty, ctx = (ty, ctx) |> mtTy
+                      (ident, ty, loc), ctx)
+                    ctx
 
              let tyDef = M.RecordTyDef(ident, fields, repr, loc)
              tys |> TMap.add tySerial tyDef, ctx)

@@ -898,7 +898,7 @@ let private castFunAsNativeFun funSerial (ctx: TyCtx) : Ty * TyCtx =
 ///
 /// Current level is assigned to `'T`s and `_`s.
 let private resolveAscriptionTy ctx ascriptionTy =
-  let rec go (ty, ctx: TyCtx) =
+  let rec go (ctx: TyCtx) ty =
     match ty with
     | Ty (ErrorTk _, _) -> ty, ctx
 
@@ -917,10 +917,10 @@ let private resolveAscriptionTy ctx ascriptionTy =
     | Ty (_, []) -> ty, ctx
 
     | Ty (tk, tys) ->
-      let tys, ctx = (tys, ctx) |> stMap go
+      let tys, ctx = tys |> List.mapFold go ctx
       Ty(tk, tys), ctx
 
-  go (ascriptionTy, ctx)
+  go ctx ascriptionTy
 
 // -----------------------------------------------
 // Emission helpers
@@ -1426,20 +1426,22 @@ let private inferRecordExpr ctx expectOpt baseOpt fields loc =
         |> List.map (fun (name, ty, _) -> name, ty)
         |> TMap.ofList compare
 
-      (fields, (fieldDefs, ctx))
-      |> stMap (fun (field, (fieldDefs, ctx)) ->
-        let name, init, loc = field
+      fields
+      |> List.mapFold
+           (fun (fieldDefs, ctx) field ->
+             let name, init, loc = field
 
-        match fieldDefs |> TMap.remove name with
-        | None, _ ->
-          let ctx = ctx |> addRedundantErr name loc
-          let init, _, ctx = inferExpr ctx None init
-          (name, init, loc), (fieldDefs, ctx)
+             match fieldDefs |> TMap.remove name with
+             | None, _ ->
+               let ctx = ctx |> addRedundantErr name loc
+               let init, _, ctx = inferExpr ctx None init
+               (name, init, loc), (fieldDefs, ctx)
 
-        | Some defTy, fieldDefs ->
-          let init, initTy, ctx = inferExpr ctx (Some defTy) init
-          let ctx = unifyTy ctx loc initTy defTy
-          (name, init, loc), (fieldDefs, ctx))
+             | Some defTy, fieldDefs ->
+               let init, initTy, ctx = inferExpr ctx (Some defTy) init
+               let ctx = unifyTy ctx loc initTy defTy
+               (name, init, loc), (fieldDefs, ctx))
+           (fieldDefs, ctx)
 
     // Unless base expr is specified, set of field initializers must be complete.
     let ctx =
@@ -1484,23 +1486,25 @@ let private inferMatchExpr ctx expectOpt itself cond arms loc =
     |> List.fold (fun ctx (pat, _, _) -> addVarLevels ctx pat) ctx
 
   let arms, ctx =
-    (arms, ctx)
-    |> stMap (fun ((pat, guard, body), ctx) ->
-      let pat, patTy, ctx = inferRefutablePat ctx pat
+    arms
+    |> List.mapFold
+         (fun ctx (pat, guard, body) ->
+           let pat, patTy, ctx = inferRefutablePat ctx pat
 
-      let ctx = unifyTy ctx (patToLoc pat) patTy condTy
+           let ctx = unifyTy ctx (patToLoc pat) patTy condTy
 
-      let guard, guardTy, ctx = inferExpr ctx None guard
+           let guard, guardTy, ctx = inferExpr ctx None guard
 
-      let ctx =
-        unifyTy ctx (exprToLoc guard) guardTy tyBool
+           let ctx =
+             unifyTy ctx (exprToLoc guard) guardTy tyBool
 
-      let body, bodyTy, ctx = inferExpr ctx expectOpt body
+           let body, bodyTy, ctx = inferExpr ctx expectOpt body
 
-      let ctx =
-        unifyTy ctx (exprToLoc body) targetTy bodyTy
+           let ctx =
+             unifyTy ctx (exprToLoc body) targetTy bodyTy
 
-      (pat, guard, body), ctx)
+           (pat, guard, body), ctx)
+         ctx
 
   TMatchExpr(cond, arms, targetTy, loc), targetTy, ctx
 
@@ -1542,17 +1546,19 @@ let private inferNavExpr ctx l (r: Ident, rLoc) loc =
   | _ -> fail ctx
 
 let private inferUntypedExprs ctx exprs =
-  (exprs, ctx)
-  |> stMap (fun (expr, ctx) ->
-    let expr, _, ctx =
-      match expr with
-      | TNodeExpr (TTyPlaceholderEN, [], ty, loc) ->
-        let ty, ctx = resolveAscriptionTy ctx ty
-        TNodeExpr(TTyPlaceholderEN, [], ty, loc), ty, ctx
+  exprs
+  |> List.mapFold
+       (fun ctx expr ->
+         let expr, _, ctx =
+           match expr with
+           | TNodeExpr (TTyPlaceholderEN, [], ty, loc) ->
+             let ty, ctx = resolveAscriptionTy ctx ty
+             TNodeExpr(TTyPlaceholderEN, [], ty, loc), ty, ctx
 
-      | _ -> inferExpr ctx None expr
+           | _ -> inferExpr ctx None expr
 
-    expr, ctx)
+         expr, ctx)
+       ctx
 
 let private inferAppExpr ctx itself =
   let callee, arg, loc =
@@ -1878,8 +1884,8 @@ let private inferBlockExpr ctx expectOpt (stmts: TStmt list) last =
   let ctx = collectVarsAndFuns ctx stmts
 
   let stmts, ctx =
-    (stmts, ctx)
-    |> stMap (fun (stmt, ctx) -> inferStmt ctx NotRec stmt)
+    stmts
+    |> List.mapFold (fun ctx stmt -> inferStmt ctx NotRec stmt) ctx
 
   let last, lastTy, ctx = inferExpr ctx expectOpt last
 
@@ -2001,8 +2007,8 @@ let private inferBlockStmt (ctx: TyCtx) mutuallyRec stmts : TStmt * TyCtx =
   let ctx = collectVarsAndFuns ctx stmts
 
   let stmts, ctx =
-    (stmts, ctx)
-    |> stMap (fun (stmt, ctx) -> inferStmt ctx mutuallyRec stmt)
+    stmts
+    |> List.mapFold (fun ctx stmt -> inferStmt ctx mutuallyRec stmt) ctx
 
   // Generalize these funs again.
   // Ty scheme of these funs might try to quantify meta tys that are bound later.

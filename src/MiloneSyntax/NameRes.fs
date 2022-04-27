@@ -1411,35 +1411,37 @@ let private nameResRefutablePat (ctx: ScopeCtx) (pat: NPat) : TPat * ScopeCtx =
     |> TSet.ofList varSerialCompare
 
   let pats, ctx =
-    (pats, ctx)
-    |> stMap (fun (pat, ctx) ->
-      let (rScope, pat), ctx =
-        doWithPatScope ctx (Some lScope) (fun ctx -> nameResPat ctx pat)
+    pats
+    |> List.mapFold
+         (fun ctx pat ->
+           let (rScope, pat), ctx =
+             doWithPatScope ctx (Some lScope) (fun ctx -> nameResPat ctx pat)
 
-      // Validate that each variable defined in the left-hand side
-      // appears also right-hand side exactly once.
-      let ok =
-        let ok, set =
-          rScope
-          |> TMap.fold
-               (fun (ok, set) (_: string) (varSerial: VarSerial, _, usedLocs) ->
-                 match usedLocs with
-                 | [ _ ] when ok ->
-                   let removed, set = set |> TSet.remove varSerial
-                   ok && removed, set
+           // Validate that each variable defined in the left-hand side
+           // appears also right-hand side exactly once.
+           let ok =
+             let ok, set =
+               rScope
+               |> TMap.fold
+                    (fun (ok, set) (_: string) (varSerial: VarSerial, _, usedLocs) ->
+                      match usedLocs with
+                      | [ _ ] when ok ->
+                        let removed, set = set |> TSet.remove varSerial
+                        ok && removed, set
 
-                 | _ -> false, set)
-               (true, varSerialSet)
+                      | _ -> false, set)
+                    (true, varSerialSet)
 
-        ok && TSet.isEmpty set
+             ok && TSet.isEmpty set
 
-      let ctx =
-        if ok then
-          ctx
-        else
-          addLog ctx OrPatInconsistentBindingError loc
+           let ctx =
+             if ok then
+               ctx
+             else
+               addLog ctx OrPatInconsistentBindingError loc
 
-      pat, ctx)
+           pat, ctx)
+         ctx
 
   // PENDING: MirGen generates illegal code for binding OR patterns, so reject here.
   let ctx =

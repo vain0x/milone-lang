@@ -394,13 +394,16 @@ let private ccExpr (expr, ctx) : HExpr * CcCtx =
   | HMatchExpr (cond, arms, ty, loc) ->
     let cond, ctx = ccExpr (cond, ctx)
 
-    let go ((pat, guard, body), ctx) =
-      let ctx = ccPat ctx pat
-      let guard, ctx = ccExpr (guard, ctx)
-      let body, ctx = ccExpr (body, ctx)
-      (pat, guard, body), ctx
+    let arms, ctx =
+      arms
+      |> List.mapFold
+           (fun ctx (pat, guard, body) ->
+             let ctx = ccPat ctx pat
+             let guard, ctx = ccExpr (guard, ctx)
+             let body, ctx = ccExpr (body, ctx)
+             (pat, guard, body), ctx)
+           ctx
 
-    let arms, ctx = (arms, ctx) |> stMap go
     HMatchExpr(cond, arms, ty, loc), ctx
 
   | HNodeExpr (kind, items, ty, loc) ->
