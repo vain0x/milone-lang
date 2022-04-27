@@ -129,7 +129,7 @@ let private ofHirCtx (hirCtx: HirCtx) : MtCtx =
     NewTys = []
     NewVariants = [] }
 
-let private mangle (tk: Tk, tyArgs: Ty list, ctx: MtCtx) : string * MtCtx =
+let private mangle (ctx: MtCtx) (tk: Tk, tyArgs: Ty list) : string * MtCtx =
   let name, memo = tyMangle (Ty(tk, tyArgs), ctx.TyNames)
   name, { ctx with TyNames = memo }
 
@@ -137,7 +137,7 @@ let private mangle (tk: Tk, tyArgs: Ty list, ctx: MtCtx) : string * MtCtx =
 // Control
 // -----------------------------------------------
 
-let private addTupleDef (name: string) (itemTys: MonoTy list) (ctx: MtCtx) =
+let private addTupleDef (ctx: MtCtx) (name: string) (itemTys: MonoTy list) =
   match ctx.Map |> TMap.tryFind (TupleTk, itemTys) with
   | _ when List.isEmpty itemTys -> M.UnitMt, ctx
 
@@ -167,11 +167,11 @@ let private addTupleDef (name: string) (itemTys: MonoTy list) (ctx: MtCtx) =
 
     recordMt, ctx
 
-let private mtTy (ty: Ty, ctx: MtCtx) : M.MonoTy * MtCtx =
+let private mtTy (ctx: MtCtx) (ty: Ty) : M.MonoTy * MtCtx =
   let (Ty (tk, tyArgs)) = ty
 
   let polyTyArgs = tyArgs
-  let tyArgs, ctx = (tyArgs, ctx) |> stMap mtTy
+  let tyArgs, ctx = tyArgs |> List.mapFold mtTy ctx
 
   match tk, tyArgs with
   | IntTk flavor, _ -> M.IntMt flavor, ctx
@@ -193,10 +193,10 @@ let private mtTy (ty: Ty, ctx: MtCtx) : M.MonoTy * MtCtx =
     | Some (ty, _) -> ty, ctx
 
     | None ->
-      let name, ctx = mangle (tk, polyTyArgs, ctx)
-      addTupleDef name tyArgs ctx
+      let name, ctx = mangle ctx (tk, polyTyArgs)
+      addTupleDef ctx name tyArgs
 
-  | FunTk, _ -> M.FunMt(tyArgs), ctx
+  | FunTk, _ -> M.FunMt tyArgs, ctx
 
   | ListTk, [ itemTy ] -> M.ListMt itemTy, ctx
   | ListTk, _ -> unreachable ()
@@ -212,7 +212,7 @@ let private mtTy (ty: Ty, ctx: MtCtx) : M.MonoTy * MtCtx =
     | Some (ty, _) -> ty, ctx
 
     | None ->
-      let name, ctx = mangle (tk, polyTyArgs, ctx)
+      let name, ctx = mangle ctx (tk, polyTyArgs)
       let tyVars, variants, loc = ctx.GetUnionDef polyTySerial
       let assignment = getTyAssignment tyVars polyTyArgs
       let variantCount = List.length variants
@@ -255,7 +255,7 @@ let private mtTy (ty: Ty, ctx: MtCtx) : M.MonoTy * MtCtx =
                let v = getMonoVariantSerial i
 
                let payloadTy, ctx =
-                 (payloadTy |> tyAssign assignment, ctx) |> mtTy
+                 payloadTy |> tyAssign assignment |> mtTy ctx
 
                let def: M.VariantDef =
                  { Name = name
@@ -280,8 +280,8 @@ let private mtTy (ty: Ty, ctx: MtCtx) : M.MonoTy * MtCtx =
 let private tyToUnionDef (ty: Ty, ctx: MtCtx) : (UnionDef * MtCtx) option =
   match ty with
   | Ty (UnionTk polyTySerial, ((_ :: _) as tyArgs)) ->
-    let tyArgs, ctx = (tyArgs, ctx) |> stMap mtTy
-    let _, ctx = (ty, ctx) |> mtTy
+    let tyArgs, ctx = tyArgs |> List.mapFold mtTy ctx
+    let _, ctx = ty |> mtTy ctx
 
     match
       ctx.Map
@@ -292,7 +292,7 @@ let private tyToUnionDef (ty: Ty, ctx: MtCtx) : (UnionDef * MtCtx) option =
 
   | _ -> None
 
-let private asMonoVariant variantSerial ty (ctx: MtCtx) : (VariantSerial * MtCtx) option =
+let private asMonoVariant (ctx: MtCtx) variantSerial ty : (VariantSerial * MtCtx) option =
   match tyToUnionDef (ty, ctx) with
   | Some (unionDef, ctx) ->
     let monoVariantSerial =
@@ -302,111 +302,111 @@ let private asMonoVariant variantSerial ty (ctx: MtCtx) : (VariantSerial * MtCtx
 
   | _ -> None
 
-let private mtPat (pat, ctx) : M.HPat * MtCtx =
+let private mtPat ctx pat : M.HPat * MtCtx =
   match pat with
   | HLitPat (lit, loc) -> M.HLitPat(lit, loc), ctx
 
   | HDiscardPat (ty, loc) ->
-    let ty, ctx = (ty, ctx) |> mtTy
+    let ty, ctx = ty |> mtTy ctx
     M.HDiscardPat(ty, loc), ctx
 
   | HVarPat (varSerial, ty, loc) ->
-    let ty, ctx = (ty, ctx) |> mtTy
+    let ty, ctx = ty |> mtTy ctx
     M.HVarPat(varSerial, ty, loc), ctx
 
   | HVariantPat (variantSerial, ty, loc) ->
-    match asMonoVariant variantSerial ty ctx with
+    match asMonoVariant ctx variantSerial ty with
     | Some (monoVariantSerial, ctx) ->
-      let ty, ctx = (ty, ctx) |> mtTy
+      let ty, ctx = ty |> mtTy ctx
       M.HVariantPat(monoVariantSerial, ty, loc), ctx
 
     | _ ->
-      let ty, ctx = (ty, ctx) |> mtTy
+      let ty, ctx = ty |> mtTy ctx
       M.HVariantPat(variantSerial, ty, loc), ctx
 
   | HNodePat (((HVariantAppPN variantSerial) as kind), ([ payloadPat ] as argPats), ty, loc) ->
-    match asMonoVariant variantSerial ty ctx with
+    match asMonoVariant ctx variantSerial ty with
     | Some (monoVariantSerial, ctx) ->
-      let payloadPat, ctx = (payloadPat, ctx) |> mtPat
-      let ty, ctx = (ty, ctx) |> mtTy
+      let payloadPat, ctx = payloadPat |> mtPat ctx
+      let ty, ctx = ty |> mtTy ctx
       M.HNodePat(HVariantAppPN monoVariantSerial, [ payloadPat ], ty, loc), ctx
 
     | None ->
-      let argPats, ctx = (argPats, ctx) |> stMap mtPat
-      let ty, ctx = (ty, ctx) |> mtTy
+      let argPats, ctx = argPats |> List.mapFold mtPat ctx
+      let ty, ctx = ty |> mtTy ctx
       M.HNodePat(kind, argPats, ty, loc), ctx
 
   | HNodePat (kind, argPats, ty, loc) ->
-    let argPats, ctx = (argPats, ctx) |> stMap mtPat
-    let ty, ctx = (ty, ctx) |> mtTy
+    let argPats, ctx = argPats |> List.mapFold mtPat ctx
+    let ty, ctx = ty |> mtTy ctx
     M.HNodePat(kind, argPats, ty, loc), ctx
 
   | HAsPat (bodyPat, varSerial, loc) ->
-    let bodyPat, ctx = (bodyPat, ctx) |> mtPat
+    let bodyPat, ctx = bodyPat |> mtPat ctx
     M.HAsPat(bodyPat, varSerial, loc), ctx
 
   | HOrPat (l, r, loc) ->
-    let l, ctx = (l, ctx) |> mtPat
-    let r, ctx = (r, ctx) |> mtPat
+    let l, ctx = l |> mtPat ctx
+    let r, ctx = r |> mtPat ctx
     M.HOrPat(l, r, loc), ctx
 
-let private mtExpr (expr, ctx) : M.HExpr * MtCtx =
+let private mtExpr ctx expr : M.HExpr * MtCtx =
   match expr with
   | HLitExpr (lit, loc) -> M.HLitExpr(lit, loc), ctx
 
   | HVarExpr (varSerial, ty, loc) ->
-    let ty, ctx = (ty, ctx) |> mtTy
+    let ty, ctx = ty |> mtTy ctx
     M.HVarExpr(varSerial, ty, loc), ctx
 
   | HFunExpr (funSerial, ty, _, loc) ->
-    let ty, ctx = (ty, ctx) |> mtTy
+    let ty, ctx = ty |> mtTy ctx
     M.HFunExpr(funSerial, ty, loc), ctx
 
   | HVariantExpr (variantSerial, ty, loc) ->
-    match asMonoVariant variantSerial ty ctx with
+    match asMonoVariant ctx variantSerial ty with
     | Some (monoVariantSerial, ctx) ->
-      let ty, ctx = (ty, ctx) |> mtTy
+      let ty, ctx = ty |> mtTy ctx
       M.HVariantExpr(monoVariantSerial, ty, loc), ctx
 
     | _ ->
-      let ty, ctx = (ty, ctx) |> mtTy
+      let ty, ctx = ty |> mtTy ctx
       M.HVariantExpr(variantSerial, ty, loc), ctx
 
   | HPrimExpr (prim, ty, loc) ->
-    let ty, ctx = (ty, ctx) |> mtTy
+    let ty, ctx = ty |> mtTy ctx
     M.HPrimExpr(prim, ty, loc), ctx
 
   | HMatchExpr (cond, arms, ty, loc) ->
-    let cond, ctx = (cond, ctx) |> mtExpr
+    let cond, ctx = cond |> mtExpr ctx
 
     let arms, ctx =
       arms
       |> List.mapFold
            (fun ctx (pat, guard, body) ->
-             let pat, ctx = (pat, ctx) |> mtPat
-             let guard, ctx = (guard, ctx) |> mtExpr
-             let body, ctx = (body, ctx) |> mtExpr
+             let pat, ctx = pat |> mtPat ctx
+             let guard, ctx = guard |> mtExpr ctx
+             let body, ctx = body |> mtExpr ctx
              (pat, guard, body), ctx)
            ctx
 
-    let ty, ctx = (ty, ctx) |> mtTy
+    let ty, ctx = ty |> mtTy ctx
     M.HMatchExpr(cond, arms, ty, loc), ctx
 
   | HNodeExpr (kind, args, ty, loc) ->
     let onDefault kind =
-      let args, ctx = (args, ctx) |> stMap mtExpr
-      let ty, ctx = (ty, ctx) |> mtTy
+      let args, ctx = args |> List.mapFold mtExpr ctx
+      let ty, ctx = ty |> mtTy ctx
       M.HNodeExpr(kind, args, ty, loc), ctx
 
     match kind, args with
     | HTupleEN, _ :: _ -> onDefault HRecordEN
 
     | HCallProcEN, HVariantExpr (variantSerial, variantTy, variantLoc) :: args ->
-      match asMonoVariant variantSerial ty ctx with
+      match asMonoVariant ctx variantSerial ty with
       | Some (monoVariantSerial, ctx) ->
-        let args, ctx = (args, ctx) |> stMap mtExpr
-        let variantTy, ctx = (variantTy, ctx) |> mtTy
-        let ty, ctx = (ty, ctx) |> mtTy
+        let args, ctx = args |> List.mapFold mtExpr ctx
+        let variantTy, ctx = variantTy |> mtTy ctx
+        let ty, ctx = ty |> mtTy ctx
 
         let callee =
           M.HVariantExpr(monoVariantSerial, variantTy, variantLoc)
@@ -418,31 +418,31 @@ let private mtExpr (expr, ctx) : M.HExpr * MtCtx =
     | _ -> onDefault kind
 
   | HBlockExpr (stmts, last) ->
-    let stmts, ctx = (stmts, ctx) |> stMap mtStmt
-    let last, ctx = (last, ctx) |> mtExpr
+    let stmts, ctx = stmts |> List.mapFold mtStmt ctx
+    let last, ctx = last |> mtExpr ctx
     M.HBlockExpr(stmts, last), ctx
 
   | HNavExpr _ -> unreachable () // HNavExpr is resolved in NameRes, Typing, or RecordRes.
   | HRecordExpr _ -> unreachable () // HRecordExpr is resolved in RecordRes.
 
-let private mtStmt (stmt, ctx) : M.HStmt * MtCtx =
+let private mtStmt ctx stmt : M.HStmt * MtCtx =
   match stmt with
   | HExprStmt expr ->
-    let expr, ctx = mtExpr (expr, ctx)
+    let expr, ctx = expr |> mtExpr ctx
     M.HExprStmt expr, ctx
 
   | HLetValStmt (pat, init, loc) ->
-    let pat, ctx = (pat, ctx) |> mtPat
-    let init, ctx = (init, ctx) |> mtExpr
+    let pat, ctx = pat |> mtPat ctx
+    let init, ctx = init |> mtExpr ctx
     M.HLetValStmt(pat, init, loc), ctx
 
   | HLetFunStmt (callee, args, body, loc) ->
-    let args, ctx = (args, ctx) |> stMap mtPat
-    let body, ctx = (body, ctx) |> mtExpr
+    let args, ctx = args |> List.mapFold mtPat ctx
+    let body, ctx = body |> mtExpr ctx
     M.HLetFunStmt(callee, args, body, loc), ctx
 
-let private mtModule (m: HModule2, ctx) =
-  let stmts, ctx = (m.Stmts, ctx) |> stMap mtStmt
+let private mtModule ctx (m: HModule2) =
+  let stmts, ctx = m.Stmts |> List.mapFold mtStmt ctx
 
   let m: M.HModule2 =
     { DocId = m.DocId
@@ -463,7 +463,7 @@ let private mtDefs (hirCtx: HirCtx) (mtCtx: MtCtx) =
     hirCtx.StaticVars
     |> TMap.fold
          (fun (staticVars, ctx) varSerial (varDef: VarDef) ->
-           let ty, ctx = (varDef.Ty, ctx) |> mtTy
+           let ty, ctx = varDef.Ty |> mtTy ctx
 
            let varDef: M.VarDef =
              { Name = varDef.Name
@@ -483,7 +483,7 @@ let private mtDefs (hirCtx: HirCtx) (mtCtx: MtCtx) =
            if tyVars |> List.isEmpty |> not then
              funs, ctx
            else
-             let ty, ctx = (ty, ctx) |> mtTy
+             let ty, ctx = ty |> mtTy ctx
 
              let funDef: M.FunDef =
                { Name = funDef.Name
@@ -511,7 +511,7 @@ let private mtDefs (hirCtx: HirCtx) (mtCtx: MtCtx) =
            if monomorphic then
              let payloadTy, ctx =
                let ty = variantDef.PayloadTy
-               (ty, ctx) |> mtTy
+               ty |> mtTy ctx
 
              let variantDef: M.VariantDef =
                { Name = variantDef.Name
@@ -543,7 +543,7 @@ let private mtDefs (hirCtx: HirCtx) (mtCtx: MtCtx) =
                fields
                |> List.mapFold
                     (fun ctx (ident, ty, loc) ->
-                      let ty, ctx = (ty, ctx) |> mtTy
+                      let ty, ctx = ty |> mtTy ctx
                       (ident, ty, loc), ctx)
                     ctx
 
@@ -687,7 +687,7 @@ let monoTy (modules: HModule2 list, hirCtx: HirCtx) : HModule2 list * HirCtx =
   let mtCtx = ofHirCtx hirCtx
 
   // Convert to IR.
-  let modules, mtCtx = (modules, mtCtx) |> stMap mtModule
+  let modules, mtCtx = modules |> List.mapFold mtModule mtCtx
   let staticVars, funs, variants, tys, mtCtx = mtDefs hirCtx mtCtx
 
   // Back to HIR.
