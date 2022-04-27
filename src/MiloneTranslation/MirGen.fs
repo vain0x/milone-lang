@@ -856,7 +856,7 @@ let private mirifyExprMatchFull ctx cond arms ty loc =
   temp, ctx
 
 let private mirifyExprMatch ctx cond arms ty loc =
-  let arms, ctx = reuseArmLocals arms ctx
+  let arms, ctx = reuseArmLocals ctx arms
 
   match mirifyExprMatchAsIfStmt ctx cond arms ty loc with
   | Some (result, ctx) -> result, ctx
@@ -989,7 +989,7 @@ let private doReuseArmLocals funSerial arms (ctx: MirCtx) : _ * MirCtx =
 
   arms, ctx
 
-let private reuseArmLocals arms (ctx: MirCtx) : _ * MirCtx =
+let private reuseArmLocals (ctx: MirCtx) arms : _ * MirCtx =
   match ctx.CurrentFunSerial with
   | Some funSerial -> doReuseArmLocals funSerial arms ctx
   | _ -> arms, ctx // toplevel match? unreachable?
@@ -1736,7 +1736,7 @@ let private mirifyStmt (ctx: MirCtx) (stmt: HStmt) : MirCtx =
 
   | HLetFunStmt (funSerial, argPats, body, loc) -> mirifyExprLetFunContents ctx funSerial argPats body loc
 
-let private mirifyModule (m: HModule2, ctx: MirCtx) =
+let private mirifyModule (ctx: MirCtx) (m: HModule2) =
   let ctx =
     let ctx =
       { ctx with
@@ -1772,7 +1772,7 @@ let private mirifyModule (m: HModule2, ctx: MirCtx) =
 let mirify (modules: HModule2 list, hirCtx: HirCtx) : MModule list * MirResult =
   let ctx = ofHirCtx hirCtx
 
-  let modules, _ = (modules, ctx) |> stMap mirifyModule
+  let modules, _ = modules |> List.mapFold mirifyModule ctx
 
   let result: MirResult =
     { StaticVars = hirCtx.StaticVars
