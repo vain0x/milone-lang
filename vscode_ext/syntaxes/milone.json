@@ -1,6 +1,6 @@
 {
     "$schema": "https://raw.githubusercontent.com/martinring/tmlanguage/master/tmlanguage.json",
-    "version": "0.1.0",
+    "version": "0.4.0",
     "name": "milone",
     "scopeName": "source.milone",
     "patterns": [
@@ -10,6 +10,7 @@
     ],
     "repository": {
         "milone_syntax": {
+            "comment": "The root rule of the milone-lang syntax. Note that this rule assumes value context where identifiers can be either values and types unlike 'type_rule' and 'pattern_rule'.",
             "patterns": [
                 {
                     "include": "#comment_rule"
@@ -18,39 +19,19 @@
                     "include": "#literal_rule"
                 },
                 {
+                    "include": "#unsupported_token_rule"
+                },
+                {
                     "include": "#type_declaration_rule"
                 },
                 {
-                    "comment": "Type parameter list",
-                    "begin": "\\b(type)\\b\\s*([A-Za-z]\\w*)(<)",
-                    "end": ">",
-                    "beginCaptures": {
-                        "1": {
-                            "name": "keyword.other.milone"
-                        },
-                        "2": {
-                            "name": "entity.name.type.milone"
-                        },
-                        "3": {
-                            "name": "keyword.operator.bracket.milone"
-                        }
-                    },
-                    "endCaptures": {
-                        "0": {
-                            "name": "keyword.operator.bracket.milone"
-                        }
-                    },
-                    "patterns": [
-                        {
-                            "include": "#type_rule"
-                        }
-                    ]
-                },
-                {
-                    "include": "#type_argument_list_rule"
+                    "include": "#type_argument_list_in_value_rule"
                 },
                 {
                     "include": "#type_ascription_rule"
+                },
+                {
+                    "include": "#match_arm_rule"
                 },
                 {
                     "include": "#closure_rule"
@@ -59,33 +40,32 @@
                     "include": "#let_fun_rule"
                 },
                 {
-                    "include": "#keyword_rule"
+                    "include": "#let_val_rule"
                 },
                 {
-                    "include": "#built_in_type_rule"
+                    "include": "#keyword_rule"
                 },
                 {
                     "include": "#built_in_value_rule"
                 },
                 {
-                    "comment": "Attributes",
-                    "name": "meta.embedded.milone",
-                    "begin": "^\\[<",
-                    "end": ">\\]",
+                    "comment": "Rule of attributes (`[< ... >]`). Well-known attribute names are recognized inside of attributes. This rule doesn't check if it's a valid place for the attribute to occur nor an appreciate syntax element follows it.",
+                    "begin": "(\\[<)",
+                    "end": "(>\\])",
                     "beginCaptures": {
-                        "0": {
+                        "1": {
                             "name": "keyword.operator.bracket.milone"
                         }
                     },
                     "endCaptures": {
-                        "0": {
+                        "1": {
                             "name": "keyword.operator.bracket.milone"
                         }
                     },
                     "patterns": [
                         {
-                            "name": "entity.other.attribute-name",
-                            "match": "\\bRepr\\b"
+                            "name": "entity.other.attribute-name.milone",
+                            "match": "\\b(Repr)\\b"
                         },
                         {
                             "include": "#milone_syntax"
@@ -93,20 +73,50 @@
                     ]
                 },
                 {
-                    "include": "#sigil_rule"
+                    "comment": "Rule of sigils in value context. Sigils include brackets, operators and punctuations. This rule must be after the 'unsupported_token_rule' for precedence.",
+                    "patterns": [
+                        {
+                            "comment": "Rule of arrows in match arms. Trailing negative lookahead (?!) ensures no other operator-sigils follow it. Other rules such as closure_rule override this rule for `->` of the different meaning.",
+                            "name": "keyword.control.milone",
+                            "match": "(->)(?![-;:!?\\.@*\\/&%^+<=>|~])"
+                        },
+                        {
+                            "comment": "Rule of arithmetic operators. (+ - * / % &&& ||| ^^^ <<< >>>) Trailing negative lookahead (?!) ensures no other operator-sigils follow it. This rule must be after the arrow rule for precedence.",
+                            "name": "keyword.operator.arithmetic.milone",
+                            "match": "(\\+|-|\\*|/|%|&&&|\\|\\|\\||\\^\\^\\^|<<<|>>>)(?![-;:!?\\.@*\\/&%^+<=>|~])"
+                        },
+                        {
+                            "comment": "Rule of logical operators (&& ||). Trailing negative lookahead (?!) ensures no other operator-sigils follow it.",
+                            "name": "keyword.operator.logical.milone",
+                            "match": "(&&|\\|\\|)(?![-;:!?\\.@*\\/&%^+<=>|~])"
+                        },
+                        {
+                            "comment": "Rule of other operators and punctuations: (|> .. . :: & | , ;). Trailing negative lookahead (?!) ensures no other operator-sigils follow it. ':' is recognized in the type ascription rule.",
+                            "name": "keyword.operator.other.milone",
+                            "match": "(\\|>|\\.\\.?|::|&|\\||,|;)(?![-;:!?\\.@*\\/&%^+<=>|~])"
+                        },
+                        {
+                            "comment": "Rule of comparison operators. Trailing negative lookahead (?!) ensures no other operator-sigils follow it.",
+                            "name": "keyword.operator.comparison.milone",
+                            "match": "(=|<>|<|<=|>|>=)(?![-;:!?\\.@*\\/&%^+<=>|~])"
+                        },
+                        {
+                            "include": "#unknown_sigil_rule"
+                        },
+                        {
+                            "comment": "Rule of brackets: () [] {}. This rule must be after the 'unsupported_token_rule' for precedence.",
+                            "name": "keyword.operator.bracket.milone",
+                            "match": "\\(|\\)|\\[|\\]|\\{|\\}"
+                        }
+                    ]
                 },
                 {
                     "include": "#namespace_guess_rule"
-                },
-                {
-                    "comment": "Wildcard or discard",
-                    "name": "variable.other.wildcard.milone",
-                    "match": "\\b_\\w*\\b"
                 }
             ]
         },
         "comment_rule": {
-            "comment": "Grammar of comments.",
+            "comment": "Rule of comments. Almost all of rules should include this rule.",
             "patterns": [
                 {
                     "comment": "Single-line documentation comment",
@@ -123,22 +133,22 @@
             ]
         },
         "literal_rule": {
-            "comment": "Grammar of number literals, char literals, type variables, string literals, and bool keywords.",
+            "comment": "Rule of literals: numbers, chars, type variables, strings, unit and booleans. Almost all of rules should include this rule because interpretation of these tokens is independent of context.",
             "patterns": [
                 {
-                    "comment": "Hex literal",
+                    "comment": "Rule of hex literals. Structure is: `'0x' <ident>`. This rule allows non-hex letters because of suffix and interleaving `_`s.",
                     "name": "constant.numeric.hexadecimal.milone",
-                    "match": "\\b0x\\w*\\b"
+                    "match": "\\b(0x[_\\w]*)\\b"
                 },
                 {
-                    "comment": "Decimal literal",
+                    "comment": "Rule of decimal literals: both integers and floats. Structure is: `-?<int>(<fraction>?)(<exp>?)(<suffix>?)`, allowing interleaving `_`s.",
                     "name": "constant.numeric.float.milone",
-                    "match": "\\b-?[0-9][_0-9]*(\\.[_0-9]*)?([eE][-+]?[_0-9]*)?\\w*\\b"
+                    "match": "(-|\\b)[0-9][_0-9]*(\\.[_0-9]*)?([eE][-+]?[_0-9]*)?\\w*\\b"
                 },
                 {
-                    "comment": "Char literal",
+                    "comment": "Rule of char literals. Structure is basically: `'(<char>|<escape>)' <suffix>`. Suffix is marked as illegal.",
                     "name": "string.quoted.single.milone",
-                    "match": "'([^'\\\\]|\\\\(?:x[0-9A-Fa-f]{2}|.))'",
+                    "match": "'([^'\\\\]|\\\\(?:x[0-9A-Fa-f]{2}|.))'(\\w*)",
                     "captures": {
                         "1": {
                             "patterns": [
@@ -146,31 +156,48 @@
                                     "include": "#escape_sequence_rule"
                                 }
                             ]
+                        },
+                        "2": {
+                            "name": "invalid.illegal.milone"
                         }
                     }
                 },
                 {
-                    "comment": "Type variable",
+                    "comment": "Rule of type variables. This rule must be after the char literal rule for precedence.",
                     "name": "entity.name.type.variable.milone",
                     "match": "'[A-Za-z]\\b"
                 },
                 {
-                    "comment": "Multiline string literal",
+                    "comment": "Rule of invalid type variables; e.g. '_, 'xx, ^static. This rule must be after the char literal rule and the valid type variable rule for precedence.",
+                    "name": "invalid.illegal.milone",
+                    "match": "('_|'[_A-Za-z]\\w+|\\^[_A-Za-z]\\w*)\\b"
+                },
+                {
+                    "comment": "Rule of multiline string literals. This also marks suffix as illegal.",
                     "name": "string.quoted.triple.milone",
                     "begin": "\"\"\"",
-                    "end": "\"\"\"",
-                    "patterns": []
+                    "end": "\"\"\"(\\w*)",
+                    "endCaptures": {
+                        "1": {
+                            "name": "invalid.illegal.milone"
+                        }
+                    }
                 },
                 {
-                    "comment": "Illegal prefix of char/string literal",
+                    "comment": "Rule of illegal prefix of char/string literals. This rule visualizes that identifiers and quotes shouldn't appear consecutively with no spaces for forward compatibility.",
                     "name": "invalid.illegal.milone",
-                    "match": "\\b[_A-Za-z]\\w*(?=['\"])"
+                    "match": "\\b([_A-Za-z]\\w*)(?=['\"])"
                 },
                 {
-                    "comment": "Single-line string literal",
+                    "comment": "Rule of single-line string literals. This also marks suffix as illegal.",
                     "name": "string.quoted.double.milone",
                     "begin": "\"",
-                    "end": "\"",
+                    "end": "\"(\\w*)",
+                    "endCaptures": {
+                        "1": {
+                            "name": "invalid.illegal.milone"
+                        }
+                    },
                     "patterns": [
                         {
                             "include": "#escape_sequence_rule"
@@ -178,215 +205,144 @@
                     ]
                 },
                 {
-                    "comment": "Unit and bool literals",
+                    "comment": "Rule of the unit literal and bool literals",
                     "name": "constant.language.literal.milone",
                     "match": "\\(\\)|\\b(false|true)\\b"
                 },
                 {
-                    "comment": "Quoted identifiers",
-                    "name": "entity.name.milone",
+                    "comment": "Rule of quoted identifiers.",
+                    "name": "entity.name.quoted.double-backtick.milone",
                     "begin": "``",
                     "end": "``"
                 }
             ]
         },
         "escape_sequence_rule": {
-            "comment": "Escape sequences in quotes",
+            "comment": "Rule of escape sequences in quotes.",
             "name": "constant.character.escape.milone",
             "match": "\\\\(x[0-9A-Fa-f]{2}|.)"
         },
         "keyword_rule": {
-            "comment": "Grammar of non-contextual keywords.",
+            "comment": "Rule of non-contextual keywords. Almost all of rules should include this rule because these keywords work anywhere. Be careful of the include order for precedence.",
             "patterns": [
                 {
-                    "comment": "Unsupported computation expression binders",
-                    "name": "invalid.illegal.milone",
-                    "match": "\\b(do|let|match|return|yield)!"
-                },
-                {
-                    "comment": "Unsupported keywords",
-                    "name": "invalid.illegal.milone",
-                    "match": "\\b(abstract|and|async|base|become|begin|break|checked|class|component|const|constraint|continue|default|delegate|done|downcast|downto|do|elif|end|event|exception|extern|external|finally|fixed|for|function|global|include|inherit|inline|interface|internal|lazy|member|mixin|mutable|mut|namespace|new|null|or|override|parallel|process|protected|pure|ref|return|sealed|select|seq|signature|sig|static|struct|tailcall|to|trait|try|upcast|use|val|virtual|void|while|yield)\\b"
-                },
-                {
-                    "comment": "Control keywords",
                     "name": "keyword.control.milone",
                     "match": "\\b(else|if|match|then|when|with)\\b"
                 },
                 {
-                    "comment": "Visibility keywords",
                     "name": "storage.modifier.visibility.milone",
                     "match": "\\b(private|public)\\b"
                 },
                 {
-                    "comment": "Other keywords",
-                    "name": "keyword.milone",
+                    "name": "keyword.other.milone",
                     "match": "\\b(_|as|fun|in|let|module|of|open|rec|type)\\b"
                 }
             ]
         },
-        "built_in_type_rule": {
-            "patterns": [
-                {
-                    "comment": "Built-in types",
-                    "name": "entity.name.type.milone",
-                    "match": "\\b(bool|s?byte|char|float(32)?|list|nativeptr|obj|option|Result|string|u?int(8|16|32|64)?|u?nativeint|unit|voidptr|__inptr|__nativeType|__outptr|__voidinptr)\\b"
-                }
-            ]
-        },
         "built_in_value_rule": {
+            "comment": "Rule of built-in value names: functions and variants. These are non-keywords.",
             "patterns": [
                 {
-                    "comment": "Built-in functions",
                     "name": "entity.name.function.milone",
-                    "match": "\\b(assert|box|compare|exit|not|printfn|sizeof|unbox|__\\w*)\\b"
+                    "match": "\\b(assert|box|char|compare|exit|float(32)?|fst|id|not|printfn|s?byte|sizeof|snd|string|u?int(8|16|32|64)?|u?nativeint|unbox|__\\w*)\\b"
                 },
                 {
-                    "comment": "Built-in variants",
-                    "name": "constant.language.milone",
+                    "name": "entity.name.variant.milone",
                     "match": "\\b(Error|None|Ok|Some)\\b"
                 }
             ]
         },
-        "sigil_rule": {
-            "comment": "Grammar of brackets, operators, punctuations and other sigils.",
+        "unsupported_token_rule": {
+            "comment": "Rule of unsupported brackets, operators, punctuations and non-contextual keywords. This includes: Banana brackets (||), arrays [||], blocks [::], anonymous records {||}, OCaml-style comments (**) and unusable sigils (\\ # ` $). Almost all of rules should include this rule because these tokens are rejected anywhere. Include this rule earlier order for precedence. Define supported sigils and keywords after this rule. Include also 'keyword_rule' for supported keywords.",
             "patterns": [
                 {
-                    "comment": "Unsupported brackets and sigils",
                     "name": "invalid.illegal.milone",
                     "match": "\\(\\||\\|\\)|\\[\\||\\|\\]|\\[:|:\\]|\\{\\||\\|\\}|\\(\\*|\\*\\)|\\\\|#|`|\\$"
                 },
                 {
-                    "comment": "Arrow of arms",
-                    "name": "keyword.control.milone",
-                    "match": "(->)(?![-;:!?\\.@*\\/&%^+<=>|~])"
-                },
-                {
-                    "comment": "Arithmetic operators",
-                    "name": "keyword.operator.arithmetic.milone",
-                    "match": "(\\+|-|\\*|/|%|&&&|\\|\\|\\||\\^\\^\\^|<<<|>>>)(?![-;:!?\\.@*\\/&%^+<=>|~])"
-                },
-                {
-                    "comment": "Logical operators (this rule must be after arithmetic operators to avoid conflict)",
-                    "name": "keyword.operator.logical.milone",
-                    "match": "(&&|\\|\\|)(?![-;:!?\\.@*\\/&%^+<=>|~])"
-                },
-                {
-                    "comment": "Other operators",
-                    "name": "keyword.operator.other.milone",
-                    "match": "(\\|>|\\.\\.?|::?|->|&|\\||,|;)(?![-;:!?\\.@*\\/&%^+<=>|~])"
-                },
-                {
-                    "comment": "Comparison operators (this rule must be after arithmetic operators and pipeline operator to avoid conflict)",
-                    "name": "keyword.operator.comparison.milone",
-                    "match": "(=|<>|<|<=|>|>=)(?![-;:!?\\.@*\\/&%^+<=>|~])"
-                },
-                {
-                    "comment": "Unsupported operators",
+                    "comment": "Rule of unsupported computation expression binders.",
                     "name": "invalid.illegal.milone",
-                    "match": "[-;:!?\\.@*\\/&%^+<=>|~]+"
+                    "match": "\\b(do|let|match|return|yield)!"
                 },
                 {
-                    "comment": "Brackets",
-                    "name": "keyword.operator.bracket.milone",
-                    "match": "\\(|\\)|\\[|\\]|\\{|\\}"
+                    "comment": "Rule of unsupported keywords.",
+                    "name": "invalid.illegal.milone",
+                    "match": "\\b(abstract|and|async|base|become|begin|break|checked|class|component|const|constraint|continue|default|delegate|done|downcast|downto|do|elif|end|event|exception|extern|external|finally|fixed|for|function|global|include|inherit|inline|interface|internal|lazy|member|mixin|mutable|mut|namespace|new|null|or|override|parallel|process|protected|pure|ref|return|sealed|select|seq|signature|sig|static|struct|tailcall|to|trait|try|upcast|use|val|virtual|void|while|yield)\\b"
                 }
             ]
         },
-        "nav_type_rule": {
-            "comment": "Grammar of nav type including 1+ dots.",
-            "patterns": [
-                {
-                    "match": "\\b([A-Za-z]\\w*)(\\.[A-Za-z]\\w*)+\\b",
-                    "captures": {
-                        "1": {
-                            "name": "entity.name.type.milone"
-                        },
-                        "2": {
-                            "name": "entity.name.type.milone"
-                        }
-                    }
-                }
-            ]
+        "unknown_sigil_rule": {
+            "comment": "Rule of unknown sigils. Except for defined sigils in other rules, all combination of operator-sigils are invalid for backward compatibility with F# custom operators.",
+            "name": "invalid.illegal.operator.milone",
+            "match": "[-;:!?\\.@*\\/&%^+<=>|~]+"
         },
-        "type_argument_list_rule": {
-            "comment": "Grammar of identifier with type argument list",
-            "patterns": [
-                {
-                    "comment": "Type argument list",
-                    "begin": "\\b([A-Za-z]\\w*(?:\\.[A-Za-z]\\w*)*)(<)",
-                    "end": ">",
-                    "beginCaptures": {
-                        "1": {
-                            "patterns": [
-                                {
-                                    "include": "#keyword_rule"
-                                },
-                                {
-                                    "include": "#built_in_type_rule"
-                                },
-                                {
-                                    "include": "#built_in_value_rule"
-                                },
-                                {
-                                    "include": "#namespace_guess_rule"
-                                }
-                            ]
-                        },
-                        "2": {
-                            "name": "keyword.operator.bracket.milone"
-                        }
-                    },
-                    "endCaptures": {
-                        "0": {
-                            "name": "keyword.operator.bracket.milone"
-                        }
-                    },
+        "type_argument_list_in_value_rule": {
+            "comment": "Rule of identifiers followed by a type argument list. Structure is: `<ident> ('.' <id>)* '<' ... '>'`. The left angle bracket may not be lead by spaces. Only value-context rules should include this rule. Type-context rules should use 'type_argument_list_in_type_rule' instead.",
+            "begin": "\\b([_A-Za-z]\\w*(?:\\.[_A-Za-z]\\w*)*)(<)",
+            "end": ">",
+            "beginCaptures": {
+                "1": {
                     "patterns": [
                         {
-                            "include": "#type_rule"
+                            "include": "#keyword_rule"
+                        },
+                        {
+                            "include": "#built_in_value_rule"
+                        },
+                        {
+                            "include": "#namespace_guess_rule"
                         }
                     ]
+                },
+                "2": {
+                    "name": "keyword.operator.bracket.milone"
+                }
+            },
+            "endCaptures": {
+                "0": {
+                    "name": "keyword.operator.bracket.milone"
+                }
+            },
+            "patterns": [
+                {
+                    "include": "#type_rule"
                 }
             ]
         },
         "type_argument_list_in_type_rule": {
-            "comment": "Grammar of identifier with type argument list, which appear in type context",
-            "patterns": [
-                {
-                    "begin": "\\b([A-Za-z]\\w*(?:\\.[A-Za-z]\\w*)*)(<)",
-                    "end": ">",
-                    "beginCaptures": {
-                        "1": {
-                            "patterns": [
-                                {
-                                    "include": "#type_rule"
-                                }
-                            ]
-                        },
-                        "2": {
-                            "name": "keyword.operator.bracket.milone"
-                        }
-                    },
-                    "endCaptures": {
-                        "0": {
-                            "name": "keyword.operator.bracket.milone"
-                        }
-                    },
+            "comment": "Rules of identifiers followed by a type argument list in type context. Structure is: `<ident> ('.' <id>)* '<' ... '>'`. The left angle bracket may not be lead by spaces. Only type-context rules should include this rule. Value-context rules should use 'type_argument_list_in_value_rule' instead.",
+            "begin": "\\b([_A-Za-z]\\w*(?:\\.[_A-Za-z]\\w*)*)(<)",
+            "end": ">",
+            "beginCaptures": {
+                "1": {
                     "patterns": [
                         {
                             "include": "#type_rule"
                         }
                     ]
+                },
+                "2": {
+                    "name": "keyword.operator.bracket.milone"
+                }
+            },
+            "endCaptures": {
+                "0": {
+                    "name": "keyword.operator.bracket.milone"
+                }
+            },
+            "patterns": [
+                {
+                    "include": "#type_rule"
                 }
             ]
         },
         "type_ascription_rule": {
-            "comment": "Grammar of type ascription (':' type, 'of' type)",
+            "comment": "Rule of type ascriptions and payload type declarations. Structure is: `(':' | 'of') <type>`.",
             "patterns": [
                 {
+                    "comment": "Rule of normal type ascriptions. Trailing negative lookahead (?!) ensures no other operator-sigils follow it. Ending anchor looks ahead for any right bracket or one of `= | , ;`.",
                     "begin": "(:)(?![-;:!?\\.@*\\/&%^+<=>|~])",
-                    "end": "(?=\\)|\\]|\\}|,|;|=|\\n)|$",
+                    "end": "(?=\\)|\\]|\\}|=|\\||,|;)|$",
                     "beginCaptures": {
                         "1": {
                             "name": "keyword.operator.milone"
@@ -399,8 +355,9 @@
                     ]
                 },
                 {
+                    "comment": "Rule of payload type declarations. Label specifiers are recognized inside of this rule (`<ident> ':'`).",
                     "begin": "\\b(of)\\b",
-                    "end": "(?=\\||(\\r?\\n\\r?\\n))|$",
+                    "end": "(?=\\|)|$",
                     "beginCaptures": {
                         "1": {
                             "name": "keyword.other.milone"
@@ -408,10 +365,13 @@
                     },
                     "patterns": [
                         {
-                            "match": "\\b([_A-Za-z]\\w*)\\b\\s*(?=:)",
+                            "match": "\\b([_A-Za-z]\\w*)\\b\\s*(:)(?![-;:!?\\.@*\\/&%^+<=>|~])",
                             "captures": {
                                 "1": {
-                                    "name": "variable.name.label.milone"
+                                    "name": "entity.name.label.milone"
+                                },
+                                "2": {
+                                    "name": "keyword.operator.milone"
                                 }
                             }
                         },
@@ -423,7 +383,7 @@
             ]
         },
         "type_rule": {
-            "comment": "Grammar for type ascription. This excludes grammar of values and statements.",
+            "comment": "Rule of the type context in the milone-lang syntax. This excludes rules of values and declarations. Uppercase identifiers are type names by default.",
             "patterns": [
                 {
                     "include": "#comment_rule"
@@ -432,25 +392,37 @@
                     "include": "#literal_rule"
                 },
                 {
-                    "include": "#keyword_rule"
+                    "include": "#unsupported_token_rule"
                 },
                 {
                     "include": "#type_argument_list_in_type_rule"
                 },
                 {
-                    "include": "#built_in_type_rule"
+                    "include": "#keyword_rule"
                 },
                 {
-                    "include": "#nav_type_rule"
+                    "comment": "This rule is included for variant declarations.",
+                    "include": "#match_arm_rule"
                 },
                 {
-                    "name": "keyword.operator.milone",
-                    "match": "\\*|->"
+                    "comment": "Rule of sigils in types: `* -> . , ;`. Trailing negative lookahead (?!) ensures no other operator-sigils follow it.",
+                    "name": "keyword.operator.type.milone",
+                    "match": ",|(\\*|->|\\.|;)(?![-;:!?\\.@*\\/&%^+<=>|~])"
                 },
                 {
-                    "comment": "Parentheses of type",
+                    "comment": "Rule of paren types. This rule allows type context spans over multiline.",
                     "begin": "\\(",
                     "end": "\\)",
+                    "beginCaptures": {
+                        "0": {
+                            "name": "keyword.operator.bracket.milone"
+                        }
+                    },
+                    "endCaptures": {
+                        "0": {
+                            "name": "keyword.operator.bracket.milone"
+                        }
+                    },
                     "patterns": [
                         {
                             "include": "#type_rule"
@@ -458,15 +430,182 @@
                     ]
                 },
                 {
-                    "name": "entity.name.type",
-                    "match": "\\b([A-Za-z]\\w*)\\b"
+                    "comment": "Rule of record types. This rule is defined for the case where a record type declaration occur in the right-hand side of a type declaration. The 'type_ascription_rule' can handle field declarations.",
+                    "begin": "\\{",
+                    "end": "\\}",
+                    "beginCaptures": {
+                        "0": {
+                            "name": "keyword.operator.bracket.milone"
+                        }
+                    },
+                    "endCaptures": {
+                        "0": {
+                            "name": "keyword.operator.bracket.milone"
+                        }
+                    },
+                    "patterns": [
+                        {
+                            "include": "#type_ascription_rule"
+                        },
+                        {
+                            "include": "#type_rule"
+                        }
+                    ]
+                },
+                {
+                    "comment": "Rule of nav types. Structure is: `<ident> ('.' <ident>)+`. Only type-context rules should include this rule.",
+                    "patterns": [
+                        {
+                            "match": "\\b([A-Za-z]\\w*)(?:(\\.)([A-Za-z]\\w*))+\\b",
+                            "captures": {
+                                "1": {
+                                    "name": "entity.name.namespace.milone"
+                                },
+                                "2": {
+                                    "name": "keyword.operator.milone"
+                                },
+                                "3": {
+                                    "name": "entity.name.type.milone"
+                                }
+                            }
+                        }
+                    ]
+                },
+                {
+                    "comment": "Rule of identifiers in type context. Type name starts with an upper alphabet or one of built-in type names.",
+                    "name": "entity.name.type.milone",
+                    "match": "\\b([A-Z]\\w*|bool|char|float(32)?|list|nativeptr|obj|option|s?byte|sizeof|string|u?int(8|16|32|64)?|u?nativeint|unit|voidptr|__nativeType|__inptr|__outptr|__voidinptr)\\b"
+                },
+                {
+                    "include": "#unknown_sigil_rule"
+                }
+            ]
+        },
+        "pattern_rule": {
+            "comment": "Rule of the pattern context in the milone-lang syntax. This excludes rules of declarations. Uppercase identifiers are assumed to be variants.",
+            "patterns": [
+                {
+                    "include": "#comment_rule"
+                },
+                {
+                    "include": "#literal_rule"
+                },
+                {
+                    "include": "#unsupported_token_rule"
+                },
+                {
+                    "include": "#type_ascription_rule"
+                },
+                {
+                    "include": "#keyword_rule"
+                },
+                {
+                    "comment": "Rule of paren patterns. This rule allows pattern context spans over multiline.",
+                    "begin": "\\(",
+                    "end": "\\)",
+                    "beginCaptures": {
+                        "0": {
+                            "name": "keyword.operator.bracket.milone"
+                        }
+                    },
+                    "endCaptures": {
+                        "0": {
+                            "name": "keyword.operator.bracket.milone"
+                        }
+                    },
+                    "patterns": [
+                        {
+                            "include": "#pattern_rule"
+                        }
+                    ]
+                },
+                {
+                    "comment": "Rule of list patterns. This rule allows pattern context spans over multiline.",
+                    "begin": "\\[",
+                    "end": "\\]",
+                    "beginCaptures": {
+                        "0": {
+                            "name": "keyword.operator.bracket.milone"
+                        }
+                    },
+                    "endCaptures": {
+                        "0": {
+                            "name": "keyword.operator.bracket.milone"
+                        }
+                    },
+                    "patterns": [
+                        {
+                            "include": "#pattern_rule"
+                        }
+                    ]
+                },
+                {
+                    "comment": "Rule of operators and sigils in patterns. Trailing negative lookahead (?!) ensures no other operator-sigils follow it.",
+                    "name": "keyword.operator.pattern.milone",
+                    "match": ",|(-|::|\\||\\.|;)(?![-;:!?\\.@*\\/&%^+<=>|~])"
+                },
+                {
+                    "include": "#namespace_guess_rule"
+                },
+                {
+                    "comment": "Rule of lowercase identifiers.",
+                    "name": "variable.name.pattern.milone",
+                    "match": "\\b([a-z]\\w*)\\b"
+                },
+                {
+                    "comment": "Rule of uppercase identifiers that are assumed to be variants.",
+                    "name": "entity.name.variant.milone",
+                    "match": "\\b([A-Z]\\w*)\\b"
+                },
+                {
+                    "comment": "Rule of conventional wildcard identifiers.",
+                    "name": "variable.name.wildcard.milone",
+                    "match": "\\b(_\\w*)\\b"
+                },
+                {
+                    "include": "#unknown_sigil_rule"
+                }
+            ]
+        },
+        "match_arm_rule": {
+            "comment": "Rule of match arms and variant declarations. These syntaxes can't be distinct in the textmate syntax definition (if I understand correctly). Structure is: `'|' <pattern> ('->' | '|' | $)`.",
+            "begin": "(\\|)(?![-;:!?\\.@*\\/&%^+<=>|~])",
+            "end": "(?:(->)|(?=\\|))(?![-;:!?\\.@*\\/&%^+<=>|~])|$",
+            "beginCaptures": {
+                "1": {
+                    "name": "keyword.operator.milone"
+                }
+            },
+            "endCaptures": {
+                "1": {
+                    "name": "keyword.control.operator.milone"
+                },
+                "2": {
+                    "name": "keyword.operator.milone"
+                }
+            },
+            "patterns": [
+                {
+                    "begin": "\\b(?=when)\\b",
+                    "end": "(?=(->|\\|)(?![-;:!?\\.@*\\/&%^+<=>|~]))|$",
+                    "patterns": [
+                        {
+                            "include": "#milone_syntax"
+                        }
+                    ]
+                },
+                {
+                    "include": "#type_ascription_rule"
+                },
+                {
+                    "include": "#pattern_rule"
                 }
             ]
         },
         "closure_rule": {
-            "comment": "Grammar of closure expression",
+            "comment": "Rule of closure expressions. This rule overrides the rule of `->` that is for match arms by default. Structure is: `'fun' <pattern>+ '->'`.",
             "begin": "\\b(fun)\\b",
-            "end": "(->)(?![-;:!?\\.@*\\/&%^+<=>|~])|(?=\\n)|$",
+            "end": "(->)(?![-;:!?\\.@*\\/&%^+<=>|~])|$",
             "beginCaptures": {
                 "1": {
                     "name": "keyword.other.milone"
@@ -479,115 +618,106 @@
             },
             "patterns": [
                 {
-                    "include": "#milone_syntax"
+                    "include": "#pattern_rule"
                 }
             ]
         },
         "let_fun_rule": {
-            "comment": "Grammar of let-fun definitions.",
-            "patterns": [
-                {
-                    "comment": "Rule of let definitions.",
-                    "match": "\\b(let)\\b\\s*(?:(rec)\\b\\s*)?(?:(private|public)\\b\\s*)?(?!rec|private|public)([A-Za-z]\\w*)\\b\\s*(?=\\w|\\()",
-                    "captures": {
-                        "1": {
-                            "name": "keyword.other.milone"
-                        },
-                        "2": {
-                            "name": "keyword.other.milone"
-                        },
-                        "3": {
-                            "name": "keyword.other.milone"
-                        },
-                        "4": {
-                            "name": "entity.name.function.milone"
-                        }
-                    }
-                }
-            ]
-        },
-        "type_declaration_rule": {
-            "comment": "Grammar of type declaration.",
-            "begin": "\\b(type)\\b\\s*(\\w+(?:<.*>)?)\\b\\s*(=)",
-            "end": "$",
+            "comment": "Rule of let-fun expressions and declarations. Structure is: `'let' 'rec'? vis? ident ('<' ... '>')?`, followed by a parameter pattern. Negative lookahead (?!) ensures the identifier can't be a keyword. This rule is defined to recognize function names for better readability and visual distinction to the let-val syntax.",
+            "begin": "\\b(let)\\b\\s*(?:(rec)\\b\\s*)?(?:(private|public)\\b\\s*)?(?!rec|private|public)([A-Za-z]\\w*)\\b(?:(<)([^=\\r\\n]*)(>))?\\s*(?=\\w|\\()",
+            "end": "(=)|$",
             "beginCaptures": {
                 "1": {
                     "name": "keyword.other.milone"
                 },
                 "2": {
+                    "name": "keyword.other.milone"
+                },
+                "3": {
+                    "name": "storage.modifier.visibility.milone"
+                },
+                "4": {
+                    "name": "entity.name.function.milone"
+                },
+                "5": {
+                    "name": "keyword.operator.bracket.milone"
+                },
+                "6": {
                     "patterns": [
                         {
                             "include": "#type_rule"
                         }
                     ]
                 },
-                "3": {
+                "7": {
+                    "name": "keyword.operator.bracket.milone"
+                }
+            },
+            "endCaptures": {
+                "1": {
                     "name": "keyword.other.milone"
                 }
             },
             "patterns": [
                 {
-                    "begin": "(\\|)",
-                    "end": "$",
-                    "beginCaptures": {
-                        "1": {
-                            "name": "keyword.operator.milone"
-                        }
-                    },
-                    "patterns": [
-                        {
-                            "include": "#comment_rule"
-                        },
-                        {
-                            "include": "#literal_rule"
-                        },
-                        {
-                            "include": "#type_ascription_rule"
-                        },
-                        {
-                            "include": "#keyword_rule"
-                        }
-                    ]
-                },
+                    "include": "#pattern_rule"
+                }
+            ]
+        },
+        "let_val_rule": {
+            "comment": "Rule of let-val expressions and declarations. Structure is: `'let' <pattern> '='`.",
+            "begin": "\\b(let)\\b",
+            "end": "(=)",
+            "beginCaptures": {
+                "1": {
+                    "name": "keyword.other.milone"
+                }
+            },
+            "endCaptures": {
+                "1": {
+                    "name": "keyword.other.milone"
+                }
+            },
+            "patterns": [
                 {
-                    "begin": "(\\{)",
-                    "end": "(\\})",
-                    "beginCaptures": {
-                        "1": {
-                            "name": "keyword.operator.bracket.milone"
-                        }
-                    },
-                    "endCaptures": {
-                        "1": {
-                            "name": "keyword.operator.bracket.milone"
-                        }
-                    },
+                    "include": "#pattern_rule"
+                }
+            ]
+        },
+        "type_declaration_rule": {
+            "comment": "Rule of type declarations. Structure is: `'type' vis? 'ident' '<' ... '>' '=' ...`. This rule is defined to make the right-hand side be in type context. This rule spans only single line and doesn't handle multiline type declarations (typically for union and records) correctly; although it looks good enough thanks to the type ascription rule handles variant declarations and field declarations.",
+            "begin": "\\b(type)\\b\\s*((?:private|public)\\b\\s*)?([A-Za-z]\\w*\\b(?:<[^=\\r\\n]*>)?)\\s*(=)",
+            "end": "$",
+            "beginCaptures": {
+                "1": {
+                    "name": "keyword.other.milone"
+                },
+                "2": {
+                    "name": "storage.modifier.visibility.milone"
+                },
+                "3": {
                     "patterns": [
                         {
-                            "include": "#comment_rule"
-                        },
-                        {
-                            "include": "#literal_rule"
-                        },
-                        {
-                            "include": "#type_ascription_rule"
-                        },
-                        {
-                            "include": "#keyword_rule"
+                            "include": "#type_rule"
                         }
                     ]
                 },
+                "4": {
+                    "name": "keyword.other.milone"
+                }
+            },
+            "patterns": [
                 {
                     "include": "#type_rule"
                 }
             ]
         },
         "namespace_guess_rule": {
-            "comment": "Namespace-ish symbols guess (uppercase, front of dot)",
+            "comment": "Rule of namespace-ish symbols guess (uppercase, front of dot.)",
             "match": "\\b([A-Z]\\w*)(?=\\.(?!\\.|\\[))",
             "captures": {
                 "1": {
-                    "name": "entity.name.class.milone"
+                    "name": "entity.name.namespace.milone"
                 }
             }
         }
