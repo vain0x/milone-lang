@@ -483,7 +483,7 @@ let private deriveOnStmt (hirCtx: HirCtx) (ctx: DCtx) stmt : DCtx =
   assert (List.isEmpty ctx.WorkList)
   ctx
 
-let private deriveOnModule (m: HModule, hirCtx: HirCtx) : HModule * HirCtx =
+let private deriveOnModule (hirCtx: HirCtx) (m: HModule) : HModule * HirCtx =
   let ctx =
     m.Stmts
     |> List.fold (deriveOnStmt hirCtx) (ofHirCtx hirCtx)
@@ -528,4 +528,4 @@ let private deriveOnModule (m: HModule, hirCtx: HirCtx) : HModule * HirCtx =
 // -----------------------------------------------
 
 let deriveOps (modules: HProgram, hirCtx: HirCtx) : HProgram * HirCtx =
-  (modules, hirCtx) |> stMap deriveOnModule
+  modules |> List.mapFold deriveOnModule hirCtx

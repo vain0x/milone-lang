@@ -856,7 +856,7 @@ let private mirifyExprMatchFull ctx cond arms ty loc =
   temp, ctx
 
 let private mirifyExprMatch ctx cond arms ty loc =
-  let arms, ctx = reuseArmLocals arms ctx
+  let arms, ctx = reuseArmLocals ctx arms
 
   match mirifyExprMatchAsIfStmt ctx cond arms ty loc with
   | Some (result, ctx) -> result, ctx
@@ -989,7 +989,7 @@ let private doReuseArmLocals funSerial arms (ctx: MirCtx) : _ * MirCtx =
 
   arms, ctx
 
-let private reuseArmLocals arms (ctx: MirCtx) : _ * MirCtx =
+let private reuseArmLocals (ctx: MirCtx) arms : _ * MirCtx =
   match ctx.CurrentFunSerial with
   | Some funSerial -> doReuseArmLocals funSerial arms ctx
   | _ -> arms, ctx // toplevel match? unreachable?
@@ -1426,14 +1426,16 @@ let private mirifyExprInfCallTailRec (ctx: MirCtx) args loc =
   let tempExprs, ctx =
     let args, ctx = mirifyArgsWithTys ctx args
 
-    (args, ctx)
-    |> stMap (fun ((arg, ty, loc), ctx) ->
-      let tempVarExpr, tempVarSerial, ctx = freshVar ctx "arg" ty loc
+    args
+    |> List.mapFold
+         (fun ctx (arg, ty, loc) ->
+           let tempVarExpr, tempVarSerial, ctx = freshVar ctx "arg" ty loc
 
-      let ctx =
-        addStmt ctx (MLetValStmt(tempVarSerial, Some arg, ty, loc))
+           let ctx =
+             addStmt ctx (MLetValStmt(tempVarSerial, Some arg, ty, loc))
 
-      tempVarExpr, ctx)
+           tempVarExpr, ctx)
+         ctx
 
   // Update args.
   let ctx =
@@ -1688,17 +1690,17 @@ let private mirifyExpr (ctx: MirCtx) (expr: HExpr) : MExpr * MirCtx =
   | HNavExpr _ -> unreachable () // HNavExpr is resolved in NameRes, Typing, or RecordRes.
   | HRecordExpr _ -> unreachable () // HRecordExpr is resolved in RecordRes.
 
-let private mirifyExprs ctx exprs =
-  (exprs, ctx)
-  |> stMap (fun (expr, ctx) -> mirifyExpr ctx expr)
+let private mirifyExprs ctx exprs = exprs |> List.mapFold mirifyExpr ctx
 
 let private mirifyArgs ctx args =
   let args, ctx =
-    (args, ctx)
-    |> stMap (fun (arg, ctx) ->
-      let ty = exprToTy arg
-      let arg, ctx = mirifyExpr ctx arg
-      (arg, ty), ctx)
+    args
+    |> List.mapFold
+         (fun ctx arg ->
+           let ty = exprToTy arg
+           let arg, ctx = mirifyExpr ctx arg
+           (arg, ty), ctx)
+         ctx
 
   let args =
     args
@@ -1709,11 +1711,13 @@ let private mirifyArgs ctx args =
 
 let private mirifyArgsWithTys ctx args =
   let args, ctx =
-    (args, ctx)
-    |> stMap (fun (arg, ctx) ->
-      let ty, loc = exprExtract arg
-      let arg, ctx = mirifyExpr ctx arg
-      (arg, ty, loc), ctx)
+    args
+    |> List.mapFold
+         (fun ctx arg ->
+           let ty, loc = exprExtract arg
+           let arg, ctx = mirifyExpr ctx arg
+           (arg, ty, loc), ctx)
+         ctx
 
   let args =
     args
@@ -1732,7 +1736,7 @@ let private mirifyStmt (ctx: MirCtx) (stmt: HStmt) : MirCtx =
 
   | HLetFunStmt (funSerial, argPats, body, loc) -> mirifyExprLetFunContents ctx funSerial argPats body loc
 
-let private mirifyModule (m: HModule2, ctx: MirCtx) =
+let private mirifyModule (ctx: MirCtx) (m: HModule2) =
   let ctx =
     let ctx =
       { ctx with
@@ -1768,7 +1772,7 @@ let private mirifyModule (m: HModule2, ctx: MirCtx) =
 let mirify (modules: HModule2 list, hirCtx: HirCtx) : MModule list * MirResult =
   let ctx = ofHirCtx hirCtx
 
-  let modules, _ = (modules, ctx) |> stMap mirifyModule
+  let modules, _ = modules |> List.mapFold mirifyModule ctx
 
   let result: MirResult =
     { StaticVars = hirCtx.StaticVars

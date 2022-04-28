@@ -21,14 +21,6 @@ let pairCompare compare1 compare2 l r = Pair.compare compare1 compare2 l r
 // Option
 // -----------------------------------------------
 
-/// `Option.map`, modifying context.
-let stOptionMap f (x, ctx) =
-  match x with
-  | Some x ->
-    let x, ctx = f (x, ctx)
-    Some x, ctx
-  | None -> None, ctx
-
 let optionMapFold (mapFolder: 'S -> 'T -> 'U * 'S) (state: 'S) (opt: 'T option) : 'U option * 'S =
   match opt with
   | Some item ->
@@ -59,15 +51,6 @@ let listChooseFold (mapFolder: 'S -> 'T -> 'U option * 'S) (state: 'S) (xs: 'T l
 let listCollectFold (mapFolder: 'S -> 'T -> 'U list * 'S) (state: 'S) (xs: 'T list) : 'U list * 'S =
   let yss, state = List.mapFold mapFolder state xs
   yss |> List.collect id, state
-
-/// `List.map`, modifying context.
-///
-/// USAGE:
-/// ```fs
-/// let ys, ctx = (xs, ctx) |> stMap (fun (x, ctx) -> y, ctx)
-/// ```
-let stMap f (xs, ctx) =
-  xs |> List.mapFold (fun ctx x -> f (x, ctx)) ctx
 
 /// Tries to split a list to pair of non-last items and the last item.
 let splitLast xs =

@@ -517,8 +517,7 @@ let tyMangle (ty: Ty, memo: TreeMap<Ty, string>) : string * TreeMap<Ty, string> 
     let (Ty (tk, tyArgs)) = ty
 
     let mangleList tys ctx =
-      (tys, ctx)
-      |> stMap (fun (ty, ctx) -> ctx |> go ty)
+      tys |> List.mapFold (fun ctx ty -> go ty ctx) ctx
 
     let fixedGeneric (name: string) =
       let tyArgs, ctx = mangleList tyArgs ctx
