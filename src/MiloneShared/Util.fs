@@ -21,14 +21,6 @@ let pairCompare compare1 compare2 l r = Pair.compare compare1 compare2 l r
 // Option
 // -----------------------------------------------
 
-/// `Option.map`, modifying context.
-let stOptionMap f (x, ctx) =
-  match x with
-  | Some x ->
-    let x, ctx = f (x, ctx)
-    Some x, ctx
-  | None -> None, ctx
-
 let optionMapFold (mapFolder: 'S -> 'T -> 'U * 'S) (state: 'S) (opt: 'T option) : 'U option * 'S =
   match opt with
   | Some item ->
