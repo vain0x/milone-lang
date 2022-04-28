@@ -49,7 +49,8 @@ let private withCurrentFun funSerial (f: TailRecCtx -> HExpr * TailRecCtx) (ctx:
   result, parentCtx
 
 let private troInfExpr isTail kind items ty loc ctx =
-  let items, ctx = (items, ctx) |> stMap (troExpr NotTail)
+  let items, ctx =
+    items |> List.mapFold (troExpr NotTail) ctx
 
   match kind, items, isTail with
   | HCallProcEN, HFunExpr (funSerial, _, _, _) :: _, IsTail when ctx |> isCurrentFun funSerial ->
@@ -61,7 +62,7 @@ let private troInfExpr isTail kind items ty loc ctx =
 // Control
 // -----------------------------------------------
 
-let private troExpr isTail (expr, ctx) =
+let private troExpr isTail (ctx: TailRecCtx) expr : HExpr * TailRecCtx =
   match expr with
   | HLitExpr _
   | HVarExpr _
@@ -70,14 +71,14 @@ let private troExpr isTail (expr, ctx) =
   | HPrimExpr _ -> expr, ctx
 
   | HMatchExpr (cond, arms, ty, loc) ->
-    let cond, ctx = troExpr NotTail (cond, ctx)
+    let cond, ctx = cond |> troExpr NotTail ctx
 
     let arms, ctx =
       arms
       |> List.mapFold
            (fun ctx (pat, guard, body) ->
-             let guard, ctx = troExpr NotTail (guard, ctx)
-             let body, ctx = troExpr isTail (body, ctx)
+             let guard, ctx = guard |> troExpr NotTail ctx
+             let body, ctx = body |> troExpr isTail ctx
              (pat, guard, body), ctx)
            ctx
 
@@ -87,7 +88,7 @@ let private troExpr isTail (expr, ctx) =
 
   | HBlockExpr (stmts, last) ->
     let stmts, ctx = stmts |> List.mapFold troStmt ctx
-    let last, ctx = (last, ctx) |> troExpr isTail
+    let last, ctx = last |> troExpr isTail ctx
     HBlockExpr(stmts, last), ctx
 
   | HNavExpr _ -> unreachable () // HNavExpr is resolved in NameRes, Typing, or RecordRes.
@@ -96,29 +97,28 @@ let private troExpr isTail (expr, ctx) =
 let private troStmt ctx stmt =
   match stmt with
   | HExprStmt expr ->
-    let expr, ctx = troExpr NotTail (expr, ctx)
+    let expr, ctx = expr |> troExpr NotTail ctx
     HExprStmt expr, ctx
 
   | HLetValStmt (pat, init, loc) ->
-    let init, ctx = troExpr NotTail (init, ctx)
+    let init, ctx = init |> troExpr NotTail ctx
     HLetValStmt(pat, init, loc), ctx
 
   | HLetFunStmt (callee, args, body, loc) ->
     let body, ctx =
       ctx
-      |> withCurrentFun callee (fun ctx -> troExpr IsTail (body, ctx))
+      |> withCurrentFun callee (fun ctx -> troExpr IsTail ctx body)
 
     HLetFunStmt(callee, args, body, loc), ctx
 
-let private troModule (m: HModule, ctx: TailRecCtx) : HModule * TailRecCtx =
+let private troModule (ctx: TailRecCtx) (m: HModule) : HModule * TailRecCtx =
   let stmts, ctx = m.Stmts |> List.mapFold troStmt ctx
-
   let m = { m with Stmts = stmts }
   m, ctx
 
 let tailRecOptimize (modules: HProgram, hirCtx: HirCtx) : HProgram * HirCtx =
   let decls, _ =
     let ctx: TailRecCtx = None
-    (modules, ctx) |> stMap troModule
+    modules |> List.mapFold troModule ctx
 
   decls, hirCtx

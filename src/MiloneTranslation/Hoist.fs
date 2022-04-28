@@ -90,7 +90,7 @@ let private takeDecls (ctx: HoistCtx) : HStmt list * HoistCtx =
 // Control
 // -----------------------------------------------
 
-let private hoistExpr (expr, ctx) : HExpr * HoistCtx =
+let private hoistExpr ctx expr : HExpr * HoistCtx =
   match expr with
   | HLitExpr _
   | HVarExpr _
@@ -99,40 +99,40 @@ let private hoistExpr (expr, ctx) : HExpr * HoistCtx =
   | HPrimExpr _ -> expr, ctx
 
   | HMatchExpr (cond, arms, ty, loc) ->
-    let cond, ctx = hoistExpr (cond, ctx)
+    let cond, ctx = cond |> hoistExpr ctx
 
     let arms, ctx =
       arms
       |> List.mapFold
            (fun ctx (pat, guard, body) ->
-             let guard, ctx = hoistExprAsBlock (guard, ctx)
-             let body, ctx = hoistExprAsBlock (body, ctx)
+             let guard, ctx = guard |> hoistExprAsBlock ctx
+             let body, ctx = body |> hoistExprAsBlock ctx
              (pat, guard, body), ctx)
            ctx
 
     HMatchExpr(cond, arms, ty, loc), ctx
 
   | HNodeExpr (kind, items, ty, loc) ->
-    let items, ctx = (items, ctx) |> stMap hoistExpr
+    let items, ctx = items |> List.mapFold hoistExpr ctx
     HNodeExpr(kind, items, ty, loc), ctx
 
   | HBlockExpr (stmts, last) ->
     let ctx = stmts |> List.fold hoistStmt ctx
-    (last, ctx) |> hoistExpr
+    last |> hoistExpr ctx
 
   | HNavExpr _ -> unreachable () // HNavExpr is resolved in NameRes, Typing, or RecordRes.
   | HRecordExpr _ -> unreachable () // HRecordExpr is resolved in RecordRes.
 
-let private hoistExprAsStmt (expr, ctx) : HoistCtx =
-  let expr, ctx = (expr, ctx) |> hoistExpr
+let private hoistExprAsStmt (ctx: HoistCtx) expr : HoistCtx =
+  let expr, ctx = expr |> hoistExpr ctx
   ctx |> addStmt (HExprStmt expr)
 
 /// Processes an expression into single block.
 ///
 /// Stmts are unchanged.
-let private hoistExprAsBlock (expr, ctx: HoistCtx) : HExpr * HoistCtx =
+let private hoistExprAsBlock (ctx: HoistCtx) expr : HExpr * HoistCtx =
   let parent, ctx = ctx.Stmts, { ctx with Stmts = [] }
-  let expr, ctx = (expr, ctx) |> hoistExpr
+  let expr, ctx = expr |> hoistExpr ctx
 
   let stmts, ctx =
     List.rev ctx.Stmts, { ctx with Stmts = parent }
@@ -141,14 +141,14 @@ let private hoistExprAsBlock (expr, ctx: HoistCtx) : HExpr * HoistCtx =
 
 let private hoistStmt ctx stmt : HoistCtx =
   match stmt with
-  | HExprStmt expr -> hoistExprAsStmt (expr, ctx)
+  | HExprStmt expr -> expr |> hoistExprAsStmt ctx
 
   | HLetValStmt (pat, init, loc) ->
-    let init, ctx = (init, ctx) |> hoistExprAsBlock
+    let init, ctx = init |> hoistExprAsBlock ctx
     ctx |> addStmt (HLetValStmt(pat, init, loc))
 
   | HLetFunStmt (callee, args, body, loc) ->
-    let body, ctx = (body, ctx) |> hoistExprAsBlock
+    let body, ctx = body |> hoistExprAsBlock ctx
 
     ctx
     |> addDecl (HLetFunStmt(callee, args, body, loc))
