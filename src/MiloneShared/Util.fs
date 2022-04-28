@@ -60,15 +60,6 @@ let listCollectFold (mapFolder: 'S -> 'T -> 'U list * 'S) (state: 'S) (xs: 'T li
   let yss, state = List.mapFold mapFolder state xs
   yss |> List.collect id, state
 
-/// `List.map`, modifying context.
-///
-/// USAGE:
-/// ```fs
-/// let ys, ctx = (xs, ctx) |> stMap (fun (x, ctx) -> y, ctx)
-/// ```
-let stMap f (xs, ctx) =
-  xs |> List.mapFold (fun ctx x -> f (x, ctx)) ctx
-
 /// Tries to split a list to pair of non-last items and the last item.
 let splitLast xs =
   let rec go acc last xs =
