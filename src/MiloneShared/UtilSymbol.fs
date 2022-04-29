@@ -2,28 +2,32 @@ module MiloneShared.UtilSymbol
 
 open System
 open System.Collections.Generic
-open System.Threading
 
-let private tMap =
-  let capacity = 4000
-  new ThreadLocal<_>(fun () -> Dictionary<string, int>(capacity), ResizeArray<string>(capacity))
+// Locks following fields.
+let private sLocker = obj ()
+
+let mutable private sLastId = 0
+let private sMap = Dictionary<string, int>()
+let private sData = Array.zeroCreate 4000
 
 let private symbolIntern (name: string) =
-  let map, entries = tMap.Value
   let name = String.Intern(name)
 
-  match map.TryGetValue(name) with
-  | true, id -> id
+  lock sLocker (fun () ->
+    match sMap.TryGetValue(name) with
+    | true, id -> id
 
-  | false, _ ->
-    let id = entries.Count
-    entries.Add(name)
-    map.Add(name, id)
-    id
+    | false, _ ->
+      sLastId <- sLastId + 1
+      let id = sLastId
+      sData.[id] <- name
+      sMap.Add(name, id)
+      id)
 
 let private symbolToString (id: int) =
-  let _, entries = tMap.Value
-  entries.[id]
+  lock sLocker (fun () ->
+    assert (uint id <= uint sLastId)
+    sData.[id])
 
 [<Struct; NoEquality; NoComparison>]
 type Symbol =
