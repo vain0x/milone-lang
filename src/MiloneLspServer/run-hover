@@ -14,6 +14,8 @@ LINE=$(( $LINE - 1 ))
 tail -f err.generated.txt &
 TAIL=$!
 
+dotnet build
+
 {
 ./req <<END
 {"method": "initialize", "id": 1, "params": {
@@ -75,6 +77,6 @@ END
 ./req <<END
 {"method": "exit"}
 END
-} | MILONE_HOME="$MILONE_HOME" dotnet run 2>err.generated.txt
+} | MILONE_LSP_SERVER_LOG_LEVEL=trace MILONE_HOME="$MILONE_HOME" dotnet run --no-build 2>err.generated.txt
 
 kill $!

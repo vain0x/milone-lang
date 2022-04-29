@@ -418,7 +418,8 @@ let private handleNotificationWith hint action cont : unit =
 
 /// Incoming message.
 [<NoEquality; NoComparison>]
-type private LspIncome =
+type LspIncome =
+  private
   // Initialize/shutdown messages.
   | InitializeRequest of MsgId * InitializeParam
   | InitializedNotification
@@ -457,11 +458,11 @@ type private LspIncome =
   | ErrorIncome of LspError
 
 [<NoEquality; NoComparison>]
-type private ProcessResult =
+type ProcessResult =
   | Continue
   | Exit of exitCode: int
 
-let private parseIncome (jsonValue: JsonValue) : LspIncome =
+let parseIncome (jsonValue: JsonValue) : LspIncome =
   let getMsgId () = jsonValue |> jFind "id"
 
   let methodName =
@@ -791,156 +792,61 @@ let private processNext host : LspIncome -> ProcessResult =
         Continue
 
 // -----------------------------------------------
-// Request preprocess
+// LspIncome
 // -----------------------------------------------
 
-/// Removes didChange notifications in a line
-/// except for the last one.
-let private dedupChanges (incomes: LspIncome list) : LspIncome list =
-  match List.rev incomes with
-  | [] -> []
-
-  | last :: incomes ->
-    incomes
-    |> List.fold
-         (fun (next, acc) income ->
-           match income, next with
-           | DidChangeNotification p, DidChangeNotification q when p.Uri = q.Uri -> next, acc
-           | _ -> income, income :: acc)
-         (last, [ last ])
-    |> snd
-
-/// Automatically update diagnostics by appending diagnostics notification
-/// if some document changed.
-let private autoUpdateDiagnostics (incomes: LspIncome list) : LspIncome list =
-  let doesUpdateDiagnostics income =
-    match income with
-    | InitializedNotification _
-    | DidOpenNotification _
-    | DidChangeNotification _
-    | DidCloseNotification _
-    | DidChangeWatchedFiles _ -> true
-
-    | _ -> false
-
-  let isDiagnosticsNotification income =
-    match income with
-    | DiagnosticsNotification -> true
-    | _ -> false
-
-  if incomes |> List.exists doesUpdateDiagnostics then
-    let incomes =
-      incomes
-      |> List.filter (isDiagnosticsNotification >> not)
-
-    List.append incomes [ DiagnosticsNotification ]
-  else
-    incomes
-
-/// Replaces each pair of request and cancellation with an error.
-let private preprocessCancelRequests (incomes: LspIncome list) : LspIncome list =
+module LspIncome =
   let asCancelRequest income =
     match income with
     | CancelRequestNotification msgId -> Some msgId
     | _ -> None
 
-  let isCancelRequest income =
-    income |> asCancelRequest |> Option.isSome
-
   let asMsgId income =
     match income with
+    | CodeActionRequest (msgId, _)
+    | CompletionRequest (msgId, _)
     | DefinitionRequest (msgId, _)
     | ReferencesRequest (msgId, _)
     | DocumentHighlightRequest (msgId, _)
-    | HoverRequest (msgId, _) -> Some msgId
-
+    | DocumentSymbolRequest (msgId, _)
+    | FormattingRequest (msgId, _)
+    | HoverRequest (msgId, _)
+    | RenameRequest (msgId, _)
+    | RegisterCapabilityResponse msgId -> Some msgId
     | _ -> None
 
-  let cancelledIds =
-    incomes
-    |> List.choose asCancelRequest
-    |> Set.ofList
+  let affectsDiagnostics income =
+    match income with
+    | InitializeRequest _
+    | DidOpenNotification _
+    | DidChangeNotification _
+    | DidCloseNotification _
+    | DidChangeWatchedFiles _ -> true
+    | _ -> false
 
-  let isCanceled msgId = Set.contains msgId cancelledIds
+  let isQuery income =
+    match income with
+    | CodeActionRequest _
+    | CompletionRequest _
+    | DefinitionRequest _
+    | ReferencesRequest _
+    | DocumentHighlightRequest _
+    | DocumentSymbolRequest _
+    | HoverRequest _ -> true
+    | _ -> false
 
-  incomes
-  |> List.filter (isCancelRequest >> not)
-  |> List.map (fun income ->
-    match asMsgId income with
-    | Some msgId when isCanceled msgId -> ErrorIncome(CancelledRequestError msgId)
-    | _ -> income)
-
-/// Optimizes a bunch of messages.
-let private preprocess (incomes: LspIncome list) : LspIncome list =
-  incomes
-  |> dedupChanges
-  |> autoUpdateDiagnostics
-  |> preprocessCancelRequests
+  let diagnostics = DiagnosticsNotification
 
 // -----------------------------------------------
 // Server
 // -----------------------------------------------
 
 [<RequireQualifiedAccess; NoEquality; NoComparison>]
-type LspServerHost =
-  { RequestReceived: IEvent<JsonValue>
-    OnQueueLengthChanged: int -> unit
-    Host: LspLangService.WorkspaceAnalysisHost }
+type LspServer =
+  private
+    { ProcessNext: LspIncome -> ProcessResult }
 
-let lspServer (host: LspServerHost) : Async<int> =
-  let onRequest = processNext host.Host
+module LspServer =
+  let create (host: LspLangService.WorkspaceAnalysisHost) : LspServer = { ProcessNext = processNext host }
 
-  let queue = ConcurrentQueue<LspIncome>()
-  let queueChangedEvent = Event<unit>()
-  let queueChanged = queueChangedEvent.Publish
-
-  let dequeueMany (limit: int) =
-    assert (limit >= 0)
-
-    let rec go (limit: int) acc =
-      if limit = 0 then
-        acc
-      else
-        match queue.TryDequeue() with
-        | true, income -> go (limit - 1) (income :: acc)
-        | false, _ -> acc
-
-    go limit [] |> List.rev
-
-  let mutable incomeCount = 0
-
-  let setIncomeCount n =
-    Interlocked.Exchange(&incomeCount, n) |> ignore
-    host.OnQueueLengthChanged(n + queue.Count)
-
-  host.RequestReceived.Subscribe (fun msg ->
-    queue.Enqueue(parseIncome msg)
-    queueChangedEvent.Trigger()
-    host.OnQueueLengthChanged(incomeCount + queue.Count))
-  |> ignore
-
-  let rec go incomes =
-    async {
-      let incomes =
-        let len = List.length incomes
-
-        if len < 50 then
-          List.append incomes (dequeueMany (100 - len))
-          |> preprocess
-        else
-          incomes
-
-      setIncomeCount (List.length incomes)
-
-      match incomes with
-      | [] ->
-        do! Async.AwaitEvent(queueChanged)
-        return! go incomes
-
-      | income :: incomes ->
-        match onRequest income with
-        | Exit code -> return code
-        | Continue -> return! go incomes
-    }
-
-  go []
+  let processNext income (server: LspServer) = server.ProcessNext income

@@ -2,25 +2,48 @@
 
 set -eu
 
-MILONE_LANG_DIR="$(dirname $PWD)/MiloneLang"
+MILONE_CLI_DIR="$(dirname $PWD)/MiloneCli"
+MILONE_CLI_PATH="$MILONE_CLI_DIR/MiloneCli.milone"
+MILONE_HOME=$(dirname $(dirname $PWD))
 
-dotnet build
+# Find the line number.
+LINE=$(cat $MILONE_CLI_PATH | grep -n 'cli host' | cut -d ':' -f 1)
+LINE=$(( $LINE - 1 ))
+
+: >err.generated.txt
+tail -f err.generated.txt &
+TAIL=$!
+
+dotnet build -nologo --no-restore
 
 {
 ./req <<END
 {"method": "initialize", "id": 1, "params": {
-    "rootUri": "file://${MILONE_LANG_DIR}"
+    "rootUri": "file://${MILONE_CLI_DIR}"
 }}
 END
 
 ./req <<END
+{"method": "textDocument/didOpen", "params": {
+    "textDocument": {
+        "uri": "file://$MILONE_CLI_PATH",
+        "languageId": "milone",
+        "version": 1,
+        "text": $(cat $MILONE_CLI_PATH | ./json-encode)
+    }
+}}
+END
+
+sleep 3s
+
+./req <<END
 {"method": "textDocument/definition", "id": 2, "params": {
     "textDocument": {
-        "uri": "file://${MILONE_LANG_DIR}/MiloneLang.milone"
+        "uri": "file://$MILONE_CLI_PATH"
     },
     "position": {
-        "line": 48,
-        "character": 13
+        "line": $LINE,
+        "character": 3
     }
 }}
 END
@@ -38,4 +61,6 @@ END
 ./req <<END
 {"method": "exit"}
 END
-} | MILONE_HOME="$(dirname $PWD)" dotnet run 2>err.generated.txt
+} | MILONE_LSP_SERVER_LOG_LEVEL=trace MILONE_HOME="$MILONE_HOME" dotnet run --no-build 2>err.generated.txt
+
+kill $!
