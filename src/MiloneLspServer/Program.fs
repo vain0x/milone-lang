@@ -235,7 +235,11 @@ let main (args: string array) =
             | None -> ()
 
             if not cancelled then
-              let result = LspServer.processNext income server
+              let ct =
+                ctOpt
+                |> Option.defaultValue CancellationToken.None
+
+              let result = LspServer.processNext income ct server
 
               match LspIncome.asMsgId income with
               | Some msgId ->
@@ -254,7 +258,9 @@ let main (args: string array) =
                 // if the last result isn't fresh (or not published yet)
                 // after some query request.
                 if not diagnosticsFresh && LspIncome.isQuery income then
-                  match LspServer.processNext LspIncome.diagnostics server with
+                  let ct = CancellationToken.None
+
+                  match LspServer.processNext LspIncome.diagnostics ct server with
                   | Continue ->
                     diagnosticsFresh <- false
                     return! loop ()

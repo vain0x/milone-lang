@@ -526,12 +526,12 @@ let private enableDidChangedWatchedFiles () =
 
   jsonRpcWriteWithIdParams "client/registerCapability" msgId param
 
-let private processNext host : LspIncome -> ProcessResult =
+let private processNext host : LspIncome -> CancellationToken -> ProcessResult =
   let mutable current = WorkspaceAnalysis.create host
   let mutable exitCode: int = 1
   let mutable rootUriOpt: Uri option = None
 
-  fun (income: LspIncome) ->
+  fun (income: LspIncome) ct ->
     match income with
     | InitializeRequest (msgId, param) ->
       handleRequestWith "initialize" msgId (fun () ->
@@ -844,9 +844,9 @@ module LspIncome =
 [<RequireQualifiedAccess; NoEquality; NoComparison>]
 type LspServer =
   private
-    { ProcessNext: LspIncome -> ProcessResult }
+    { ProcessNext: LspIncome -> CancellationToken -> ProcessResult }
 
 module LspServer =
   let create (host: LspLangService.WorkspaceAnalysisHost) : LspServer = { ProcessNext = processNext host }
 
-  let processNext income (server: LspServer) = server.ProcessNext income
+  let processNext income ct (server: LspServer) = server.ProcessNext income ct
