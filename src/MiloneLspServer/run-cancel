@@ -13,6 +13,7 @@ LINE=$(( $LINE - 1 ))
 : >err.generated.txt
 tail -f err.generated.txt &
 TAIL=$!
+trap "kill $TAIL" EXIT
 
 dotnet build -nologo --no-restore
 
@@ -21,6 +22,10 @@ dotnet build -nologo --no-restore
 {"method": "initialize", "id": 1, "params": {
     "rootUri": "file://${MILONE_CLI_DIR}"
 }}
+END
+
+./req <<END
+{"method": "initialized", "params": {}}
 END
 
 ./req <<END
@@ -62,5 +67,3 @@ END
 {"method": "exit"}
 END
 } | MILONE_LSP_SERVER_LOG_LEVEL=trace MILONE_HOME="$MILONE_HOME" dotnet run --no-build 2>err.generated.txt
-
-kill $!

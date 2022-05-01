@@ -18,4 +18,4 @@ END
 ./req <<END
 {"method": "exit"}
 END
-} | dotnet run
+} | dotnet run -nologo --no-restore

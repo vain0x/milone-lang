@@ -10,6 +10,7 @@ CONTENTS=$(cat $MILONE_CLI_PATH | ./json-encode)
 : >err.generated.txt
 tail -f err.generated.txt &
 TAIL=$!
+trap "kill $TAIL" EXIT
 
 dotnet build
 
@@ -18,6 +19,10 @@ dotnet build
 {"method": "initialize", "id": 1, "params": {
     "rootUri": "file://$MILONE_CLI_DIR"
 }}
+END
+
+./req <<END
+{"method": "initialized"}
 END
 
 ./req <<END
@@ -68,6 +73,4 @@ END
 ./req <<END
 {"method": "exit"}
 END
-} | MILONE_HOME="$MILONE_HOME" dotnet run
-
-kill $!
+} | MILONE_HOME="$MILONE_HOME" dotnet run -nologo --no-restore2 2>err.generated.txt
