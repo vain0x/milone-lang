@@ -293,19 +293,22 @@ let private doFindProjects fileExists getDirEntries (rootUri: Uri) : ProjectInfo
       let acc =
         let projectName = stem dir
 
-        let tryAddProject ext acc =
+        let tryToProjectInfo ext =
           if fileExists (dir + "/" + projectName + ext) then
             let project: ProjectInfo =
               { ProjectDir = dir
                 ProjectName = projectName }
 
-            project :: acc
+            Some project
           else
-            acc
+            None
 
-        acc
-        |> tryAddProject ".milone"
-        |> tryAddProject ".fs"
+        match tryToProjectInfo ".milone" with
+        | Some it -> it :: acc
+        | None ->
+          match tryToProjectInfo ".fs" with
+          | Some it -> it :: acc
+          | None -> acc
 
       let stack =
         if depth < 3 then
