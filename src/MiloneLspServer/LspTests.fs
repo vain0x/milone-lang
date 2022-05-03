@@ -813,7 +813,7 @@ let private testCodeActionGenerateModuleHead () =
   let wa =
     createWorkspaceAnalysisWithFiles [ path, "" ]
 
-  let range: Range = (0, 0), (0, 0)
+  let range: Range = Range.zero
 
   let result, _ =
     wa

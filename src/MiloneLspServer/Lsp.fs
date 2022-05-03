@@ -1,18 +1,17 @@
 /// Module for LSP to talk directly to MiloneLang compiler.
 module rec MiloneLspServer.Lsp
 
+open MiloneLspServer.LspUtil
 open MiloneShared.SharedTypes
 open MiloneShared.UtilParallel
 open MiloneShared.UtilSymbol
-open Std.StdMap
-open Std.StdSet
 open MiloneSyntax.Syntax
 open MiloneSyntax.Tir
+open MiloneSyntaxTypes.SyntaxApiTypes
 open MiloneSyntaxTypes.SyntaxTypes
 open MiloneSyntaxTypes.TirTypes
-open MiloneSyntaxTypes.SyntaxApiTypes
-
-module U = MiloneLspServer.Util // FIXME: don't depend
+open Std.StdMap
+open Std.StdSet
 
 module C = Std.StdChar
 module S = Std.StdString
@@ -20,14 +19,6 @@ module AstBundle = MiloneSyntax.AstBundle
 module SyntaxApi = MiloneSyntax.SyntaxApi
 module SyntaxTokenize = MiloneSyntax.SyntaxTokenize
 module TySystem = MiloneSyntax.TySystem
-
-type Range = Pos * Pos
-type Location = DocId * Pos * Pos
-type LError = string * Location
-
-type private FilePath = string
-type private DocVersion = int
-type private Error = string * Loc
 
 // Hide compiler-specific types from other modules.
 
@@ -356,7 +347,7 @@ let private parseWithCache docId (pa: ProjectAnalysis) = pa.Host.Parse docId |> 
 type BundleResult =
   private
     { ProgramOpt: (TProgram * TirCtx) option
-      Errors: Error list
+      Errors: (string * Loc) list
       DocVersions: (DocId * DocVersion) list
       ParseResults: (DocVersion * LSyntaxData) list }
 

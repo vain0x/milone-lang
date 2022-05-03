@@ -10,9 +10,17 @@ open MiloneLspServer.Util
 
 module WorkspaceAnalysis = LspLangService.WorkspaceAnalysis
 
-type private Pos = int * int
-type private Position = int * int
-type private Range = Position * Position
+/// Column index of text. (0-origin. This needs to be computed in UTF-16.)
+type private LColumnIndex = int
+
+/// Position of text. (This type is defined in LSP specification.)
+type private LPosition = RowIndex * LColumnIndex
+
+/// Range of text. (This type is defined in LSP specification.)
+type private LRange = LPosition * LPosition
+
+/// Edit to delete a range and replace it with a text.
+type private LTextEdit = LRange * string
 
 // -----------------------------------------------
 // JSON helper
@@ -22,11 +30,15 @@ let private jOfInt (value: int) : JsonValue = JNumber(float value)
 
 let private jOfObj (assoc: (string * JsonValue) list) = JObject(Map.ofList assoc)
 
-let private jOfPos (row: int, column: int) : JsonValue =
+let private jOfPos (pos: LPosition) : JsonValue =
+  let row, column = pos
+
   jOfObj [ "line", jOfInt row
            "character", jOfInt column ]
 
-let private jOfRange (start: Position, endValue: Position) : JsonValue =
+let private jOfRange (range: LRange) : JsonValue =
+  let start, endValue = range
+
   jOfObj [ "start", jOfPos start
            "end", jOfPos endValue ]
 
@@ -96,13 +108,13 @@ let private jArrayOrNull items =
   else
     JNull
 
-let private jToPos jsonValue : Position =
+let private jToPos jsonValue : LPosition =
   let row, column =
     jsonValue |> jFields2 "line" "character"
 
   jToInt row, jToInt column
 
-let private jToRange jsonValue : Range =
+let private jToRange jsonValue : LRange =
   let start, endPos = jsonValue |> jFields2 "start" "end"
   jToPos start, jToPos endPos
 
@@ -115,7 +127,9 @@ let private jOfMarkdownString (text: string) =
   jOfObj [ "language", JString "markdown"
            "value", JString text ]
 
-let private jTextEdit (range, newText) =
+let private jTextEdit (edit: LTextEdit) =
+  let range, newText = edit
+
   jOfObj [ "range", jOfRange range
            "newText", JString newText ]
 
@@ -272,7 +286,7 @@ let private parseDidChangeWatchedFilesParam jsonValue : DidChangeWatchedFilesPar
   { Changes = changes }
 
 [<RequireQualifiedAccess; NoEquality; NoComparison>]
-type private DocumentPositionParam = { Uri: Uri; Pos: Pos }
+type private DocumentPositionParam = { Uri: Uri; Pos: LPosition }
 
 let private parseDocumentPositionParam jsonValue : DocumentPositionParam =
   let uri =
@@ -287,7 +301,7 @@ let private parseDocumentPositionParam jsonValue : DocumentPositionParam =
   { Uri = uri; Pos = pos }
 
 [<RequireQualifiedAccess; NoEquality; NoComparison>]
-type private DocumentRangeParam = { Uri: Uri; Range: Range }
+type private DocumentRangeParam = { Uri: Uri; Range: LRange }
 
 let private parseDocumentRangeParam jsonValue : DocumentRangeParam =
   let uri =
@@ -304,7 +318,7 @@ let private parseDocumentRangeParam jsonValue : DocumentRangeParam =
 [<RequireQualifiedAccess; NoEquality; NoComparison>]
 type private ReferencesParam =
   { Uri: Uri
-    Pos: Pos
+    Pos: LPosition
     IncludeDecl: bool }
 
 let private parseReferencesParam jsonValue : ReferencesParam =
@@ -328,7 +342,10 @@ let private parseDocumentSymbolParam jsonValue =
   |> Uri
 
 [<RequireQualifiedAccess; NoEquality; NoComparison>]
-type private RenameParam = { Uri: Uri; Pos: Pos; NewName: string }
+type private RenameParam =
+  { Uri: Uri
+    Pos: LPosition
+    NewName: string }
 
 let private parseRenameParam jsonValue : RenameParam =
   let p = parseDocumentPositionParam jsonValue
@@ -531,7 +548,7 @@ let private processNext host : LspIncome -> CancellationToken -> ProcessResult =
   let mutable exitCode: int = 1
   let mutable rootUriOpt: Uri option = None
 
-  fun (income: LspIncome) ct ->
+  fun (income: LspIncome) _ct ->
     match income with
     | InitializeRequest (msgId, param) ->
       handleRequestWith "initialize" msgId (fun () ->

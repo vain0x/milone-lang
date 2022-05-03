@@ -16,19 +16,16 @@ module SyntaxApi = MiloneSyntax.SyntaxApi
 module C = Std.StdChar
 module S = Std.StdString
 
-type private DocVersion = int
-type private FilePath = string
-type private ProjectDir = string
-type private MiloneHome = string
+type private LError = string * Location
 type private FileExistsFun = FilePath -> bool
 type private ReadTextFileFun = FilePath -> Future<string option>
 type private DocIdToFilePathFun = ProjectDir -> DocId -> string
 type private DirEntriesFun = string -> string list * string list
 type private ReadSourceFileFun = FilePath -> Future<string option>
 
-let MinVersion: DocVersion = 0
-let InitialVersion: DocVersion = 1
-let DocBaseVersion: DocVersion = 0x8000
+let private MinVersion: DocVersion = 0
+let private InitialVersion: DocVersion = 1
+let private DocBaseVersion: DocVersion = 0x8000
 
 // -----------------------------------------------
 // Util
@@ -1160,7 +1157,7 @@ module WorkspaceAnalysis =
   let codeAction (uri: Uri) (range: Range) (wa: WorkspaceAnalysis) =
     let generateModuleHeadAction () =
       let title = "Generate module head"
-      let front: Range = (0, 0), (0, 0)
+      let front: Range = Range.zero
 
       let isEmpty =
         match wa.Docs |> TMap.tryFind uri with
