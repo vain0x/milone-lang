@@ -731,19 +731,15 @@ let private lowerARoot (docId: DocId) acc root : DSymbolOccurrence list =
   let toLoc (y, x) = At(Loc(docId, y, x))
   let (ARoot (headOpt, decls)) = root
 
-  let acc =
+  let pos: Pos =
     match headOpt with
-    | Some (path, pos) ->
-      let pos = path |> pathToPos pos
+    | Some (_, pos) -> pos
+    | _ -> 0, 0
 
-      (DModuleSymbol(path |> List.map nameToIdent), Def, toLoc pos)
-      :: acc
-
-    | _ ->
-      // #abusingDocId
-      let path = Symbol.toString docId |> S.split "."
-
-      (DModuleSymbol path, Def, toLoc (0, 0)) :: acc
+  let acc =
+    // #abusingDocId
+    let path = Symbol.toString docId |> S.split "."
+    (DModuleSymbol path, Def, toLoc pos) :: acc
 
   acc |> up (List.fold (lowerADecl docId)) decls
 
