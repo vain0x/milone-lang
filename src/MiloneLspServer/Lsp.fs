@@ -613,8 +613,9 @@ let private lowerAExpr docId acc expr : DSymbolOccurrence list =
            acc |> up onExprOpt guard |> up onExpr body))
          arms
 
-  | AFunExpr (_, body, pos) ->
+  | AFunExpr (argPats, body, pos) ->
     ((DFunSymbol "<fun>", Def, toLoc pos) :: acc)
+    |> upList onPat argPats
     |> up onExpr body
 
   | ANavExpr (l, _, _) ->
