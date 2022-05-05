@@ -321,6 +321,12 @@ let private doFindProjects fileExists getDirEntries (rootUri: Uri) : ProjectInfo
 
   bfs [] [ 0, rootDir ]
 
+let private isSourceFile (path: string) =
+  match getExt path with
+  | Some ".milone"
+  | Some ".fs" -> true
+  | _ -> false
+
 let private isManifest (path: string) = basename path = "milone_manifest"
 
 let private isEntrypoint (path: string) =
@@ -1081,7 +1087,7 @@ module WorkspaceAnalysis =
         wa
 
     // delay reading file
-    if isManifest path |> not then
+    if isSourceFile path && not (isManifest path) then
       match readTextFile (uriToFilePath uri) wa with
       | Some text ->
         let version, wa = freshId wa
