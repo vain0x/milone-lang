@@ -793,7 +793,7 @@ let private testDocumentSymbol () =
 
           0
       """
-      """1:31 Program (2)
+      """1:8 TestProject (2)
 5:15 S (2)
 7:13 Int (5)
 9:13 Record (5)
@@ -813,7 +813,7 @@ let private testCodeActionGenerateModuleHead () =
   let wa =
     createWorkspaceAnalysisWithFiles [ path, "" ]
 
-  let range: Range = (0, 0), (0, 0)
+  let range: Range = Range.zero
 
   let result, _ =
     wa

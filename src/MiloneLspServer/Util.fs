@@ -24,27 +24,34 @@ module Md5Helper =
 type private LogLevel =
   | Error = 3
   | Warn = 4
+  | Info = 5
   | Debug = 7 // LOG_DEBUG
   | Trace = 8
 
-let private currentLogLevel: LogLevel =
-  match System.Environment.GetEnvironmentVariable("MILONE_LSP_SERVER_LOG_LEVEL") with
+let private logLevelEnv: string =
+  let env =
+    System.Environment.GetEnvironmentVariable("MILONE_LSP_SERVER_LOG_LEVEL")
+
+  if not (isNull env) then
+    eprintf "%s" $"debug: $MILONE_LSP_SERVER_LOG_LEVEL='{env}'\n"
+
+  env
+
+let private maxLevel: LogLevel =
+  match logLevelEnv with
   | "debug" -> LogLevel.Debug
   | "trace" -> LogLevel.Trace
   | _ -> LogLevel.Warn
 
-let private printLog name (level: LogLevel) =
-  fun fmt ->
-    Printf.kprintf
-      (fun msg ->
-        if level <= currentLogLevel then
-          eprintf "%s: %s" name (msg + "\n")
-        else
-          ())
-      fmt
+let private printLog (label: string) (level: LogLevel) fmt =
+  Printf.kprintf
+    (fun msg ->
+      if level <= maxLevel then
+        eprintf "%s" $"{label}: {msg}\n")
+    fmt
 
 let errorFn fmt = printLog "error" LogLevel.Error fmt
 let warnFn fmt = printLog "warn" LogLevel.Warn fmt
-let infoFn fmt = printLog "info" LogLevel.Debug fmt // no such level
+let infoFn fmt = printLog "info" LogLevel.Info fmt
 let debugFn fmt = printLog "debug" LogLevel.Debug fmt
 let traceFn fmt = printLog "trace" LogLevel.Trace fmt

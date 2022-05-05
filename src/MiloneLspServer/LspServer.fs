@@ -10,9 +10,17 @@ open MiloneLspServer.Util
 
 module WorkspaceAnalysis = LspLangService.WorkspaceAnalysis
 
-type private Pos = int * int
-type private Position = int * int
-type private Range = Position * Position
+/// Column index of text. (0-origin. This needs to be computed in UTF-16.)
+type private LColumnIndex = int
+
+/// Position of text. (This type is defined in LSP specification.)
+type private LPosition = RowIndex * LColumnIndex
+
+/// Range of text. (This type is defined in LSP specification.)
+type private LRange = LPosition * LPosition
+
+/// Edit to delete a range and replace it with a text.
+type private LTextEdit = LRange * string
 
 // -----------------------------------------------
 // JSON helper
@@ -22,11 +30,15 @@ let private jOfInt (value: int) : JsonValue = JNumber(float value)
 
 let private jOfObj (assoc: (string * JsonValue) list) = JObject(Map.ofList assoc)
 
-let private jOfPos (row: int, column: int) : JsonValue =
+let private jOfPos (pos: LPosition) : JsonValue =
+  let row, column = pos
+
   jOfObj [ "line", jOfInt row
            "character", jOfInt column ]
 
-let private jOfRange (start: Position, endValue: Position) : JsonValue =
+let private jOfRange (range: LRange) : JsonValue =
+  let start, endValue = range
+
   jOfObj [ "start", jOfPos start
            "end", jOfPos endValue ]
 
@@ -96,13 +108,13 @@ let private jArrayOrNull items =
   else
     JNull
 
-let private jToPos jsonValue : Position =
+let private jToPos jsonValue : LPosition =
   let row, column =
     jsonValue |> jFields2 "line" "character"
 
   jToInt row, jToInt column
 
-let private jToRange jsonValue : Range =
+let private jToRange jsonValue : LRange =
   let start, endPos = jsonValue |> jFields2 "start" "end"
   jToPos start, jToPos endPos
 
@@ -115,7 +127,9 @@ let private jOfMarkdownString (text: string) =
   jOfObj [ "language", JString "markdown"
            "value", JString text ]
 
-let private jTextEdit (range, newText) =
+let private jTextEdit (edit: LTextEdit) =
+  let range, newText = edit
+
   jOfObj [ "range", jOfRange range
            "newText", JString newText ]
 
@@ -272,7 +286,7 @@ let private parseDidChangeWatchedFilesParam jsonValue : DidChangeWatchedFilesPar
   { Changes = changes }
 
 [<RequireQualifiedAccess; NoEquality; NoComparison>]
-type private DocumentPositionParam = { Uri: Uri; Pos: Pos }
+type private DocumentPositionParam = { Uri: Uri; Pos: LPosition }
 
 let private parseDocumentPositionParam jsonValue : DocumentPositionParam =
   let uri =
@@ -287,7 +301,7 @@ let private parseDocumentPositionParam jsonValue : DocumentPositionParam =
   { Uri = uri; Pos = pos }
 
 [<RequireQualifiedAccess; NoEquality; NoComparison>]
-type private DocumentRangeParam = { Uri: Uri; Range: Range }
+type private DocumentRangeParam = { Uri: Uri; Range: LRange }
 
 let private parseDocumentRangeParam jsonValue : DocumentRangeParam =
   let uri =
@@ -304,7 +318,7 @@ let private parseDocumentRangeParam jsonValue : DocumentRangeParam =
 [<RequireQualifiedAccess; NoEquality; NoComparison>]
 type private ReferencesParam =
   { Uri: Uri
-    Pos: Pos
+    Pos: LPosition
     IncludeDecl: bool }
 
 let private parseReferencesParam jsonValue : ReferencesParam =
@@ -328,7 +342,10 @@ let private parseDocumentSymbolParam jsonValue =
   |> Uri
 
 [<RequireQualifiedAccess; NoEquality; NoComparison>]
-type private RenameParam = { Uri: Uri; Pos: Pos; NewName: string }
+type private RenameParam =
+  { Uri: Uri
+    Pos: LPosition
+    NewName: string }
 
 let private parseRenameParam jsonValue : RenameParam =
   let p = parseDocumentPositionParam jsonValue
@@ -418,7 +435,8 @@ let private handleNotificationWith hint action cont : unit =
 
 /// Incoming message.
 [<NoEquality; NoComparison>]
-type private LspIncome =
+type LspIncome =
+  private
   // Initialize/shutdown messages.
   | InitializeRequest of MsgId * InitializeParam
   | InitializedNotification
@@ -457,11 +475,11 @@ type private LspIncome =
   | ErrorIncome of LspError
 
 [<NoEquality; NoComparison>]
-type private ProcessResult =
+type ProcessResult =
   | Continue
   | Exit of exitCode: int
 
-let private parseIncome (jsonValue: JsonValue) : LspIncome =
+let parseIncome (jsonValue: JsonValue) : LspIncome =
   let getMsgId () = jsonValue |> jFind "id"
 
   let methodName =
@@ -525,12 +543,12 @@ let private enableDidChangedWatchedFiles () =
 
   jsonRpcWriteWithIdParams "client/registerCapability" msgId param
 
-let private processNext host : LspIncome -> ProcessResult =
+let private processNext host : LspIncome -> CancellationToken -> ProcessResult =
   let mutable current = WorkspaceAnalysis.create host
   let mutable exitCode: int = 1
   let mutable rootUriOpt: Uri option = None
 
-  fun (income: LspIncome) ->
+  fun (income: LspIncome) _ct ->
     match income with
     | InitializeRequest (msgId, param) ->
       handleRequestWith "initialize" msgId (fun () ->
@@ -791,156 +809,61 @@ let private processNext host : LspIncome -> ProcessResult =
         Continue
 
 // -----------------------------------------------
-// Request preprocess
+// LspIncome
 // -----------------------------------------------
 
-/// Removes didChange notifications in a line
-/// except for the last one.
-let private dedupChanges (incomes: LspIncome list) : LspIncome list =
-  match List.rev incomes with
-  | [] -> []
-
-  | last :: incomes ->
-    incomes
-    |> List.fold
-         (fun (next, acc) income ->
-           match income, next with
-           | DidChangeNotification p, DidChangeNotification q when p.Uri = q.Uri -> next, acc
-           | _ -> income, income :: acc)
-         (last, [ last ])
-    |> snd
-
-/// Automatically update diagnostics by appending diagnostics notification
-/// if some document changed.
-let private autoUpdateDiagnostics (incomes: LspIncome list) : LspIncome list =
-  let doesUpdateDiagnostics income =
-    match income with
-    | InitializedNotification _
-    | DidOpenNotification _
-    | DidChangeNotification _
-    | DidCloseNotification _
-    | DidChangeWatchedFiles _ -> true
-
-    | _ -> false
-
-  let isDiagnosticsNotification income =
-    match income with
-    | DiagnosticsNotification -> true
-    | _ -> false
-
-  if incomes |> List.exists doesUpdateDiagnostics then
-    let incomes =
-      incomes
-      |> List.filter (isDiagnosticsNotification >> not)
-
-    List.append incomes [ DiagnosticsNotification ]
-  else
-    incomes
-
-/// Replaces each pair of request and cancellation with an error.
-let private preprocessCancelRequests (incomes: LspIncome list) : LspIncome list =
+module LspIncome =
   let asCancelRequest income =
     match income with
     | CancelRequestNotification msgId -> Some msgId
     | _ -> None
 
-  let isCancelRequest income =
-    income |> asCancelRequest |> Option.isSome
-
   let asMsgId income =
     match income with
+    | CodeActionRequest (msgId, _)
+    | CompletionRequest (msgId, _)
     | DefinitionRequest (msgId, _)
     | ReferencesRequest (msgId, _)
     | DocumentHighlightRequest (msgId, _)
-    | HoverRequest (msgId, _) -> Some msgId
-
+    | DocumentSymbolRequest (msgId, _)
+    | FormattingRequest (msgId, _)
+    | HoverRequest (msgId, _)
+    | RenameRequest (msgId, _)
+    | RegisterCapabilityResponse msgId -> Some msgId
     | _ -> None
 
-  let cancelledIds =
-    incomes
-    |> List.choose asCancelRequest
-    |> Set.ofList
+  let affectsDiagnostics income =
+    match income with
+    | InitializeRequest _
+    | DidOpenNotification _
+    | DidChangeNotification _
+    | DidCloseNotification _
+    | DidChangeWatchedFiles _ -> true
+    | _ -> false
 
-  let isCanceled msgId = Set.contains msgId cancelledIds
+  let isQuery income =
+    match income with
+    | CodeActionRequest _
+    | CompletionRequest _
+    | DefinitionRequest _
+    | ReferencesRequest _
+    | DocumentHighlightRequest _
+    | DocumentSymbolRequest _
+    | HoverRequest _ -> true
+    | _ -> false
 
-  incomes
-  |> List.filter (isCancelRequest >> not)
-  |> List.map (fun income ->
-    match asMsgId income with
-    | Some msgId when isCanceled msgId -> ErrorIncome(CancelledRequestError msgId)
-    | _ -> income)
-
-/// Optimizes a bunch of messages.
-let private preprocess (incomes: LspIncome list) : LspIncome list =
-  incomes
-  |> dedupChanges
-  |> autoUpdateDiagnostics
-  |> preprocessCancelRequests
+  let diagnostics = DiagnosticsNotification
 
 // -----------------------------------------------
 // Server
 // -----------------------------------------------
 
 [<RequireQualifiedAccess; NoEquality; NoComparison>]
-type LspServerHost =
-  { RequestReceived: IEvent<JsonValue>
-    OnQueueLengthChanged: int -> unit
-    Host: LspLangService.WorkspaceAnalysisHost }
+type LspServer =
+  private
+    { ProcessNext: LspIncome -> CancellationToken -> ProcessResult }
 
-let lspServer (host: LspServerHost) : Async<int> =
-  let onRequest = processNext host.Host
+module LspServer =
+  let create (host: LspLangService.WorkspaceAnalysisHost) : LspServer = { ProcessNext = processNext host }
 
-  let queue = ConcurrentQueue<LspIncome>()
-  let queueChangedEvent = Event<unit>()
-  let queueChanged = queueChangedEvent.Publish
-
-  let dequeueMany (limit: int) =
-    assert (limit >= 0)
-
-    let rec go (limit: int) acc =
-      if limit = 0 then
-        acc
-      else
-        match queue.TryDequeue() with
-        | true, income -> go (limit - 1) (income :: acc)
-        | false, _ -> acc
-
-    go limit [] |> List.rev
-
-  let mutable incomeCount = 0
-
-  let setIncomeCount n =
-    Interlocked.Exchange(&incomeCount, n) |> ignore
-    host.OnQueueLengthChanged(n + queue.Count)
-
-  host.RequestReceived.Subscribe (fun msg ->
-    queue.Enqueue(parseIncome msg)
-    queueChangedEvent.Trigger()
-    host.OnQueueLengthChanged(incomeCount + queue.Count))
-  |> ignore
-
-  let rec go incomes =
-    async {
-      let incomes =
-        let len = List.length incomes
-
-        if len < 50 then
-          List.append incomes (dequeueMany (100 - len))
-          |> preprocess
-        else
-          incomes
-
-      setIncomeCount (List.length incomes)
-
-      match incomes with
-      | [] ->
-        do! Async.AwaitEvent(queueChanged)
-        return! go incomes
-
-      | income :: incomes ->
-        match onRequest income with
-        | Exit code -> return code
-        | Continue -> return! go incomes
-    }
-
-  go []
+  let processNext income ct (server: LspServer) = server.ProcessNext income ct

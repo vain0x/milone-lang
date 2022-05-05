@@ -1,18 +1,17 @@
 /// Module for LSP to talk directly to MiloneLang compiler.
 module rec MiloneLspServer.Lsp
 
+open MiloneLspServer.LspUtil
 open MiloneShared.SharedTypes
 open MiloneShared.UtilParallel
 open MiloneShared.UtilSymbol
-open Std.StdMap
-open Std.StdSet
 open MiloneSyntax.Syntax
 open MiloneSyntax.Tir
+open MiloneSyntaxTypes.SyntaxApiTypes
 open MiloneSyntaxTypes.SyntaxTypes
 open MiloneSyntaxTypes.TirTypes
-open MiloneSyntaxTypes.SyntaxApiTypes
-
-module U = MiloneLspServer.Util // FIXME: don't depend
+open Std.StdMap
+open Std.StdSet
 
 module C = Std.StdChar
 module S = Std.StdString
@@ -20,14 +19,6 @@ module AstBundle = MiloneSyntax.AstBundle
 module SyntaxApi = MiloneSyntax.SyntaxApi
 module SyntaxTokenize = MiloneSyntax.SyntaxTokenize
 module TySystem = MiloneSyntax.TySystem
-
-type Range = Pos * Pos
-type Location = DocId * Pos * Pos
-type LError = string * Location
-
-type private FilePath = string
-type private DocVersion = int
-type private Error = string * Loc
 
 // Hide compiler-specific types from other modules.
 
@@ -66,6 +57,18 @@ module Multimap =
          key
          (value
           :: (map |> TMap.tryFind key |> Option.defaultValue []))
+
+module T3 =
+  let compare c0 c1 c2 l r =
+    let l0, l1, l2 = l
+    let r0, r1, r2 = r
+
+    match c0 l0 r0 with
+    | 0 ->
+      match c1 l1 r1 with
+      | 0 -> c2 l2 r2
+      | c -> c
+    | c -> c
 
 // -----------------------------------------------
 // Syntax
@@ -356,7 +359,7 @@ let private parseWithCache docId (pa: ProjectAnalysis) = pa.Host.Parse docId |> 
 type BundleResult =
   private
     { ProgramOpt: (TProgram * TirCtx) option
-      Errors: Error list
+      Errors: (string * Loc) list
       DocVersions: (DocId * DocVersion) list
       ParseResults: (DocVersion * LSyntaxData) list }
 
@@ -477,6 +480,8 @@ type private ModulePath = string list
 [<NoComparison>]
 type DSymbol =
   | DFunSymbol of string
+  | DVariantSymbol of Ident * unionIdent: Ident * defDoc: DocId
+  | DFieldSymbol of Ident * recordIdent: Ident * defDoc: DocId
   | DTySymbol of string
   | DModuleSymbol of ModulePath
   | DOpenUse of ModulePath
@@ -608,8 +613,9 @@ let private lowerAExpr docId acc expr : DSymbolOccurrence list =
            acc |> up onExprOpt guard |> up onExpr body))
          arms
 
-  | AFunExpr (_, body, pos) ->
+  | AFunExpr (argPats, body, pos) ->
     ((DFunSymbol "<fun>", Def, toLoc pos) :: acc)
+    |> upList onPat argPats
     |> up onExpr body
 
   | ANavExpr (l, _, _) ->
@@ -659,11 +665,39 @@ let private lowerADecl docId acc decl : DSymbolOccurrence list =
 
   | ALetDecl (contents, _) -> lowerALetContents docId acc contents
 
-  | ATySynonymDecl (_, name, _, _, _)
-  | AUnionTyDecl (_, name, _, _, _)
-  | ARecordTyDecl (_, name, _, _, _) ->
+  | ATySynonymDecl (_, name, _, _, _) ->
     let (Name (name, pos)) = name
     (DTySymbol name, Def, toLoc pos) :: acc
+
+  | AUnionTyDecl (_, name, _, variants, _) ->
+    let (Name (unionIdent, pos)) = name
+
+    let acc =
+      variants
+      |> List.fold
+           (fun acc (AVariant (name, _, _)) ->
+             let (Name (ident, pos)) = name
+
+             (DVariantSymbol(ident, unionIdent, docId), Def, toLoc pos)
+             :: acc)
+           acc
+
+    (DTySymbol unionIdent, Def, toLoc pos) :: acc
+
+  | ARecordTyDecl (_, name, _, fields, _) ->
+    let (Name (recordIdent, pos)) = name
+
+    let acc =
+      fields
+      |> List.fold
+           (fun acc (name, _, _) ->
+             let (Name (ident, pos)) = name
+
+             (DFieldSymbol(ident, recordIdent, docId), Def, toLoc pos)
+             :: acc)
+           acc
+
+    (DTySymbol recordIdent, Def, toLoc pos) :: acc
 
   | AOpenDecl (path, pos) ->
     let pos = path |> pathToPos pos
@@ -698,19 +732,15 @@ let private lowerARoot (docId: DocId) acc root : DSymbolOccurrence list =
   let toLoc (y, x) = At(Loc(docId, y, x))
   let (ARoot (headOpt, decls)) = root
 
-  let acc =
+  let pos: Pos =
     match headOpt with
-    | Some (path, pos) ->
-      let pos = path |> pathToPos pos
+    | Some (_, pos) -> pos
+    | _ -> 0, 0
 
-      (DModuleSymbol(path |> List.map nameToIdent), Def, toLoc pos)
-      :: acc
-
-    | _ ->
-      // #abusingDocId
-      let path = Symbol.toString docId |> S.split "."
-
-      (DModuleSymbol path, Def, toLoc (0, 0)) :: acc
+  let acc =
+    // #abusingDocId
+    let path = Symbol.toString docId |> S.split "."
+    (DModuleSymbol path, Def, toLoc pos) :: acc
 
   acc |> up (List.fold (lowerADecl docId)) decls
 
@@ -835,56 +865,6 @@ let private lowerTStmt acc stmt =
     |> up (List.fold lowerTPat) argPats
     |> up lowerTExpr body
 
-  // FIXME: TTyDeclStmt is removed. Use AST instead.
-  // | TTyDeclStmt (tySerial, _, tyArgs, tyDecl, tyDeclLoc) ->
-  //   match tyDecl with
-  //   | TySynonymDecl _ -> acc
-
-  //   | UnionTyDecl (_, variants, _) ->
-  //     let acc =
-  //       // after 'type'
-  //       let loc = NextIdent tyDeclLoc
-
-  //       (TySymbol(UnionTySymbol tySerial), Def, None, loc)
-  //       :: acc
-
-  //     acc
-  //     |> up
-  //          (List.fold (fun acc v ->
-  //            let _, variantSerial, hasPayload, payloadTy, identLoc = v
-
-  //            let ty =
-  //              let tyArgs =
-  //                tyArgs
-  //                |> List.map (fun tySerial -> tyMeta tySerial tyDeclLoc)
-
-  //              if hasPayload then
-  //                tyFun payloadTy (tyUnion tySerial tyArgs identLoc)
-  //              else
-  //                tyUnit
-
-  //            (ValueSymbol(VariantSymbol variantSerial), Def, Some ty, At identLoc)
-  //            :: acc))
-  //          variants
-
-  //   | RecordTyDecl (_, fields, _, _) ->
-  //     let acc =
-  //       // after 'type'
-  //       let loc = NextIdent tyDeclLoc
-
-  //       (TySymbol(RecordTySymbol tySerial), Def, None, loc)
-  //       :: acc
-
-  //     acc
-  //     |> up
-  //          (List.fold (fun acc (ident, ty, loc) ->
-  //            // before ':'
-  //            let loc = PreviousIdent loc
-
-  //            (FieldSymbol(tySerial, ident), Def, Some ty, loc)
-  //            :: acc))
-  //          fields
-
   | TBlockStmt (_, stmts) -> acc |> up (List.fold lowerTStmt) stmts
 
 let private lowerTModules acc modules =
@@ -942,6 +922,37 @@ let private collectSymbolsInExpr (pa: ProjectAnalysis) (modules: TProgram) (tirC
     | Some (LSyntaxData (_, _, ast, _)) -> docId, ast
     | None -> failwith "must be parsed"
 
+  let variantNameMap =
+    tirCtx.Variants
+    |> TMap.fold
+         (fun acc variantSerial (variantDef: VariantDef) ->
+           let tySerial = variantDef.UnionTySerial
+           let name = variantDef.Name
+           let loc = variantDef.Loc
+           let docId, _ = Loc.toDocPos loc
+
+           acc
+           |> TMap.add (name, tySerial, docId) (VariantSymbol variantSerial))
+         (TMap.empty (T3.compare compare compare Symbol.compare))
+
+  let fieldNameMap =
+    tirCtx.Tys
+    |> TMap.fold
+         (fun acc tySerial tyDef ->
+           match tyDef with
+           | RecordTyDef (_, _, fields, _, loc) ->
+             let docId, _ = Loc.toDocPos loc
+
+             fields
+             |> List.fold
+                  (fun acc (ident, _, _) ->
+                    acc
+                    |> TMap.add (ident, tySerial, docId) (FieldSymbol(tySerial, ident)))
+                  acc
+
+           | _ -> acc)
+         (TMap.empty (T3.compare compare compare Symbol.compare))
+
   let tyNameToDefs =
     tirCtx.Tys
     |> TMap.toList
@@ -977,9 +988,37 @@ let private collectSymbolsInExpr (pa: ProjectAnalysis) (modules: TProgram) (tirC
     docSymbols
     |> List.choose (fun (symbol, defOrUse, loc) ->
       match symbol, defOrUse with
-      | DTySymbol name, Use ->
+      | DVariantSymbol (ident, unionIdent, defDoc), Def ->
+        match findTyByName unionIdent with
+        | Some (UnionTySymbol tySerial) ->
+          match
+            variantNameMap
+            |> TMap.tryFind (ident, tySerial, defDoc)
+            with
+          | Some variantSymbol ->
+            let tyOpt = None // FIXME: Compute type
+            Some(ValueSymbol variantSymbol, Def, tyOpt, loc)
+
+          | None -> None
+        | _ -> None
+
+      | DFieldSymbol (ident, recordIdent, defDoc), Def ->
+        match findTyByName recordIdent with
+        | Some (RecordTySymbol tySerial) ->
+          match
+            fieldNameMap
+            |> TMap.tryFind (ident, tySerial, defDoc)
+            with
+          | Some fieldSymbol ->
+            let tyOpt = None // FIXME: Compute type
+            Some(fieldSymbol, Def, tyOpt, loc)
+
+          | None -> None
+        | _ -> None
+
+      | DTySymbol name, _ ->
         match findTyByName name with
-        | Some tySerial -> Some(TySymbol tySerial, Use, None, loc)
+        | Some tySymbol -> Some(TySymbol tySymbol, defOrUse, None, loc)
         | _ -> None
       | _ -> None)
 

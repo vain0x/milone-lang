@@ -1,12 +1,43 @@
 module rec MiloneLspServer.LspUtil
 
+open MiloneShared.SharedTypes
 open MiloneShared.Util
 open Std.StdMap
 open Std.StdMultimap
 
 module S = Std.StdString
+module SharedTypes = MiloneShared.SharedTypes
 
 let private cons x y = x :: y
+
+// Re-exports.
+type RowIndex = SharedTypes.RowIndex
+type Pos = SharedTypes.Pos
+
+// -----------------------------------------------
+// Location
+// -----------------------------------------------
+
+/// Increasing version ID of text document.
+type DocVersion = int
+
+/// Range of text. (Pair of begin-position and end-position. End is exclusive.)
+type Range = Pos * Pos
+
+/// Location of text document.
+type Location = DocId * Pos * Pos
+
+/// Pathname of file or directory.
+type FilePath = string
+
+/// Pathname of project directory.
+type ProjectDir = string
+
+/// Pathname of the milone system directory. ($MILONE_HOME)
+type MiloneHome = string
+
+module Range =
+  let zero: Range = (0, 0), (0, 0)
 
 // -----------------------------------------------
 // URI
@@ -26,16 +57,14 @@ module Uri =
 // DiagnosticsCache
 // -----------------------------------------------
 
-type private Pos = int * int
-type private Error = string * Pos * Pos
+type private AError = string * Pos * Pos
+type private Diagnostics = (Uri * AError list) list
 
 [<NoEquality; NoComparison>]
 type DiagnosticsCache<'H> =
   | DiagnosticsCache of files: TreeMap<Uri, 'H> * hasher: (string -> 'H) * hashEquals: ('H -> 'H -> bool)
 
 module DiagnosticsCache =
-  type private Diagnostics = (Uri * Error list) list
-
   let empty (hasher: string -> 'H) (hashEquals: 'H -> 'H -> bool) : DiagnosticsCache<'H> =
     DiagnosticsCache(TMap.empty Uri.compare, hasher, hashEquals)
 
@@ -98,7 +127,10 @@ module DiagnosticsCache =
 
     publishList, cache
 
-let private compareError (_: string, l1, r1) (_: string, l2, r2) : int =
+let private compareError (l: AError) (r: AError) : int =
+  let _, l1, r1 = l
+  let _, l2, r2 = r
+
   let ly1, lx1 = l1
   let ly2, lx2 = l2
 

@@ -13,12 +13,17 @@ LINE=$(( $LINE - 1 ))
 : >err.generated.txt
 tail -f err.generated.txt &
 TAIL=$!
+kill $!
 
 {
 ./req <<END
 {"method": "initialize", "id": 1, "params": {
     "rootUri": "file://${MILONE_CLI_DIR}"
 }}
+END
+
+./req <<END
+{"method": "initialized"}
 END
 
 ./req <<END
@@ -55,6 +60,4 @@ END
 ./req <<END
 {"method": "exit"}
 END
-} | MILONE_HOME="$MILONE_HOME" dotnet run 2>err.generated.txt
-
-kill $!
+} | MILONE_HOME="$MILONE_HOME" dotnet run -nologo --no-restore 2>err.generated.txt

@@ -16,19 +16,16 @@ module SyntaxApi = MiloneSyntax.SyntaxApi
 module C = Std.StdChar
 module S = Std.StdString
 
-type private DocVersion = int
-type private FilePath = string
-type private ProjectDir = string
-type private MiloneHome = string
+type private LError = string * Location
 type private FileExistsFun = FilePath -> bool
 type private ReadTextFileFun = FilePath -> Future<string option>
 type private DocIdToFilePathFun = ProjectDir -> DocId -> string
 type private DirEntriesFun = string -> string list * string list
 type private ReadSourceFileFun = FilePath -> Future<string option>
 
-let MinVersion: DocVersion = 0
-let InitialVersion: DocVersion = 1
-let DocBaseVersion: DocVersion = 0x8000
+let private MinVersion: DocVersion = 0
+let private InitialVersion: DocVersion = 1
+let private DocBaseVersion: DocVersion = 0x8000
 
 // -----------------------------------------------
 // Util
@@ -293,19 +290,22 @@ let private doFindProjects fileExists getDirEntries (rootUri: Uri) : ProjectInfo
       let acc =
         let projectName = stem dir
 
-        let tryAddProject ext acc =
+        let tryToProjectInfo ext =
           if fileExists (dir + "/" + projectName + ext) then
             let project: ProjectInfo =
               { ProjectDir = dir
                 ProjectName = projectName }
 
-            project :: acc
+            Some project
           else
-            acc
+            None
 
-        acc
-        |> tryAddProject ".milone"
-        |> tryAddProject ".fs"
+        match tryToProjectInfo ".milone" with
+        | Some it -> it :: acc
+        | None ->
+          match tryToProjectInfo ".fs" with
+          | Some it -> it :: acc
+          | None -> acc
 
       let stack =
         if depth < 3 then
@@ -320,6 +320,12 @@ let private doFindProjects fileExists getDirEntries (rootUri: Uri) : ProjectInfo
       bfs acc stack
 
   bfs [] [ 0, rootDir ]
+
+let private isSourceFile (path: string) =
+  match getExt path with
+  | Some ".milone"
+  | Some ".fs" -> true
+  | _ -> false
 
 let private isManifest (path: string) = basename path = "milone_manifest"
 
@@ -1081,7 +1087,7 @@ module WorkspaceAnalysis =
         wa
 
     // delay reading file
-    if isManifest path |> not then
+    if isSourceFile path && not (isManifest path) then
       match readTextFile (uriToFilePath uri) wa with
       | Some text ->
         let version, wa = freshId wa
@@ -1157,7 +1163,7 @@ module WorkspaceAnalysis =
   let codeAction (uri: Uri) (range: Range) (wa: WorkspaceAnalysis) =
     let generateModuleHeadAction () =
       let title = "Generate module head"
-      let front: Range = (0, 0), (0, 0)
+      let front: Range = Range.zero
 
       let isEmpty =
         match wa.Docs |> TMap.tryFind uri with
