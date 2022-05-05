@@ -147,10 +147,11 @@ let private resolveMiloneCoreDeps kind tokens ast =
       |> TMap.fold
            (fun decls moduleName pos ->
              AModuleSynonymDecl(
+               pos,
                Name(moduleName, pos),
+               pos,
                [ Name("MiloneCore", pos)
-                 Name(moduleName, pos) ],
-               pos
+                 Name(moduleName, pos) ]
              )
              :: decls)
            decls
@@ -159,9 +160,9 @@ let private resolveMiloneCoreDeps kind tokens ast =
       match preludeOpt with
       | Some pos ->
         AOpenDecl(
+          pos,
           [ Name("MiloneCore", pos)
-            Name("Prelude", pos) ],
-          pos
+            Name("Prelude", pos) ]
         )
         :: decls
       | None -> decls
@@ -170,9 +171,9 @@ let private resolveMiloneCoreDeps kind tokens ast =
       match optionOpt with
       | Some pos ->
         AOpenDecl(
+          pos,
           [ Name("MiloneCore", pos)
-            Name("Option", pos) ],
-          pos
+            Name("Option", pos) ]
         )
         :: decls
       | None -> decls
@@ -180,9 +181,9 @@ let private resolveMiloneCoreDeps kind tokens ast =
     match resultOpt with
     | Some pos ->
       AOpenDecl(
+        pos,
         [ Name("MiloneCore", pos)
-          Name("Result", pos) ],
-        pos
+          Name("Result", pos) ]
       )
       :: decls
     | None -> decls

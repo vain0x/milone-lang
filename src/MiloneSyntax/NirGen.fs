@@ -64,14 +64,14 @@ let private apTrue pos = ALitPat(BoolLit true, pos)
 // AExpr
 // -----------------------------------------------
 
-let private axUnit loc = ATupleExpr([], loc)
-let private axFalse loc = ALitExpr(BoolLit false, loc)
-let private axTrue loc = ALitExpr(BoolLit true, loc)
+let private axUnit pos = ATupleExpr([], pos)
+let private axFalse pos = ALitExpr(BoolLit false, pos)
+let private axTrue pos = ALitExpr(BoolLit true, pos)
 
 /// `not x` ==> `x = false`
-let private axNot arg loc =
-  let falseExpr = axFalse loc
-  ABinaryExpr(EqualBinary, arg, falseExpr, loc)
+let private axNot arg pos =
+  let falseExpr = axFalse pos
+  ABinaryExpr(EqualBinary, arg, pos, falseExpr)
 
 // -----------------------------------------------
 // Desugar
@@ -83,11 +83,11 @@ let private desugarListPat pats pos : APat =
 
   let rec go pats =
     match pats with
-    | [] -> AListPat([], pos)
+    | [] -> AListPat(pos, [], None)
 
     | head :: tail ->
       let tail = go tail
-      AConsPat(head, tail, pos)
+      AConsPat(head, pos, tail)
 
   go pats
 
@@ -96,11 +96,11 @@ let private desugarListExpr items pos : AExpr =
 
   let rec go items =
     match items with
-    | [] -> AListExpr([], pos)
+    | [] -> AListExpr(pos, [], None)
 
     | head :: tail ->
       let tail = go tail
-      ABinaryExpr(ConsBinary, head, tail, pos)
+      ABinaryExpr(ConsBinary, head, pos, tail)
 
   go items
 
@@ -108,24 +108,26 @@ let private desugarListExpr items pos : AExpr =
 ///
 /// `if cond then body else alt` ==>
 /// `match cond with | true -> body | false -> alt`.
-let private desugarIf cond body altOpt pos : AExpr =
+let private desugarIf ifPos cond body altOpt : AExpr =
+  let pos = ifPos
+
   let alt =
     match altOpt with
-    | None -> axUnit pos
     | Some alt -> alt
+    | None -> axUnit pos
 
   let arms =
-    [ AArm(apTrue pos, None, body, pos)
-      AArm(apFalse pos, None, alt, pos) ]
+    [ None, apTrue pos, None, pos, body
+      None, apFalse pos, None, pos, alt ]
 
-  AMatchExpr(cond, arms, pos)
+  AMatchExpr(ifPos, cond, None, arms)
 
 /// Desugars to let expression.
 /// `fun x y .. -> z` ==> `let f x y .. = z in f`
-let private desugarFun pats body pos : AExpr =
+let private desugarFun funPos argPats equalPos body : AExpr =
   let name = "fun"
-  let next = AIdentExpr(Name(name, pos), [])
-  ALetExpr(ALetContents.LetFun(NotRec, PrivateVis, Name(name, pos), pats, None, body), next, pos)
+  let next = AIdentExpr(Name(name, funPos), None)
+  ALetExpr(funPos, ALetContents.LetFun(NotRec, PrivateVis, Name(name, funPos), argPats, None, equalPos, body), next)
 
 /// Desugars `-x`.
 ///
@@ -133,7 +135,7 @@ let private desugarFun pats body pos : AExpr =
 /// `-n` (n: literal).
 let private desugarMinusUnary arg : AExpr option =
   match arg with
-  | AUnaryExpr (MinusUnary, arg, _) -> Some arg
+  | AUnaryExpr (MinusUnary, _, arg) -> Some arg
 
   | ALitExpr (IntLit text, pos) -> ALitExpr(IntLit("-" + text), pos) |> Some
 
@@ -147,38 +149,38 @@ let private desugarMinusUnary arg : AExpr option =
 
 /// `l <> r` ==> `not (l = r)`
 let private desugarBinNe l r pos : AExpr =
-  let equalExpr = ABinaryExpr(EqualBinary, l, r, pos)
+  let equalExpr = ABinaryExpr(EqualBinary, l, pos, r)
   axNot equalExpr pos
 
 /// `l <= r` ==> `not (r < l)`
 /// NOTE: Evaluation order does change.
 let private desugarBinLe l r pos : AExpr =
-  let ltExpr = ABinaryExpr(LessBinary, r, l, pos)
+  let ltExpr = ABinaryExpr(LessBinary, r, pos, l)
   axNot ltExpr pos
 
 /// `l > r` ==> `r < l`
 /// NOTE: Evaluation order does change.
-let private desugarBinGt l r pos : AExpr = ABinaryExpr(LessBinary, r, l, pos)
+let private desugarBinGt l r pos : AExpr = ABinaryExpr(LessBinary, r, pos, l)
 
 /// `l >= r` ==> `not (l < r)`
 let private desugarBinGe l r pos : AExpr =
-  let ltExpr = ABinaryExpr(LessBinary, l, r, pos)
+  let ltExpr = ABinaryExpr(LessBinary, l, pos, r)
   axNot ltExpr pos
 
 /// `l && r` ==> `if l then r else false`
-let private desugarBinAnd l r pos : AExpr = desugarIf l r (Some(axFalse pos)) pos
+let private desugarBinAnd l r pos : AExpr = desugarIf pos l r (Some(axFalse pos))
 
 /// `l || r` ==> `if l then true else r`
-let private desugarBinOr l r pos : AExpr = desugarIf l (axTrue pos) (Some r) pos
+let private desugarBinOr l r pos : AExpr = desugarIf pos l (axTrue pos) (Some r)
 
 /// `x |> f` ==> `f x`
 /// NOTE: Evaluation order does change.
-let private desugarBinPipe l r pos : AExpr = ABinaryExpr(AppBinary, r, l, pos)
+let private desugarBinPipe l r pos : AExpr = ABinaryExpr(AppBinary, r, pos, l)
 
 /// `let f ... : ty = body` ==> `let f ... = body : ty`
 let private desugarResultTy expr resultTyOpt : AExpr =
   match resultTyOpt with
-  | Some (ascriptionTy, ascriptionPos) -> AAscribeExpr(expr, ascriptionTy, ascriptionPos)
+  | Some (colonPos, ascriptionTy) -> AAscribeExpr(expr, colonPos, ascriptionTy)
   | None -> expr
 
 // -----------------------------------------------
@@ -206,15 +208,25 @@ let private ngTy (docId: DocId) (ctx: NirGenCtx) (ty: ATy) : NTy * NirGenCtx =
   match ty with
   | AMissingTy pos -> NTy.Bad(toLoc pos), ctx
 
-  | AAppTy ([], Name ("_", pos), [], _) -> NTy.Infer(toLoc pos), ctx
+  | AAppTy ([], Name ("_", pos), None) -> NTy.Infer(toLoc pos), ctx
 
-  | AAppTy (quals, name, argTys, pos) ->
-    let quals = quals |> List.map onName
-    let name = name |> onName
-    let argTys, ctx = onTys ctx argTys
-    NTy.App(quals, name, argTys, toLoc pos), ctx
+  | AAppTy (quals, name, tyArgs) ->
+    let quals =
+      quals |> List.map (fun (name, _) -> onName name)
+
+    let name = onName name
+    let _, loc = name
+
+    let tyArgs, ctx =
+      match tyArgs with
+      | Some (_, tyArgs, _) -> onTys ctx tyArgs
+      | None -> [], ctx
+
+    NTy.App(quals, name, tyArgs, loc), ctx
 
   | AVarTy (Name (ident, pos)) -> NTy.Var("'" + ident, toLoc pos), ctx
+
+  | AParenTy (_, ty, _) -> ngTy docId ctx ty
 
   // `ty suffix` ===> `suffix<ty>`
   | ASuffixTy (innerTy, Name (suffix, pos)) ->
@@ -226,7 +238,7 @@ let private ngTy (docId: DocId) (ctx: NirGenCtx) (ty: ATy) : NTy * NirGenCtx =
     let itemTys, ctx = onTys ctx itemTys
     NTy.Tuple(itemTys, toLoc pos), ctx
 
-  | AFunTy (sTy, tTy, pos) ->
+  | AFunTy (sTy, pos, tTy) ->
     let sTy, ctx = onTy ctx sTy
     let tTy, ctx = onTy ctx tTy
     NTy.Fun(sTy, tTy, toLoc pos), ctx
@@ -245,52 +257,45 @@ let private ngPat (docId: DocId) (ctx: NirGenCtx) (pat: APat) : NPat * NirGenCtx
   | AIdentPat (_, Name ("_", pos)) -> NPat.Discard(toLoc pos), ctx
   | AIdentPat (vis, Name (ident, pos)) -> NPat.Ident(vis, (ident, toLoc pos)), ctx
 
-  | AListPat ([], pos) -> NPat.Nil(toLoc pos), ctx
+  | AParenPat (_, pat, _) -> ngPat docId ctx pat
 
-  | AListPat (pats, pos) ->
-    let pat = desugarListPat pats pos
-    ngPat docId ctx pat
+  | AListPat (pos, [], _) -> NPat.Nil(toLoc pos), ctx
+  | AListPat (pos, pats, _) -> ngPat docId ctx (desugarListPat pats pos)
 
-  | ANavPat (l, r, pos) ->
+  | ANavPat (l, pos, r) ->
     let l, ctx = l |> onPat ctx
     let loc = toLoc pos
     NPat.Nav(l, onName r, loc), ctx
 
-  | AAppPat (calleePat, argPat, pos) ->
+  | AAppPat (calleePat, pos, argPat) ->
     let calleePat, ctx = calleePat |> onPat ctx
     let argPat, ctx = argPat |> onPat ctx
-    let loc = toLoc pos
-    NPat.VariantApp(calleePat, argPat, loc), ctx
+    NPat.VariantApp(calleePat, argPat, toLoc pos), ctx
 
-  | AConsPat (l, r, pos) ->
+  | AConsPat (l, pos, r) ->
     let l, ctx = l |> onPat ctx
     let r, ctx = r |> onPat ctx
-    let loc = toLoc pos
-    NPat.Cons(l, r, loc), ctx
+    NPat.Cons(l, r, toLoc pos), ctx
 
   | ATuplePat (pats, pos) ->
     let pats, ctx = pats |> onPats ctx
-    let loc = toLoc pos
-    NPat.Tuple(pats, loc), ctx
+    NPat.Tuple(pats, toLoc pos), ctx
 
-  | AAsPat (bodyPat, name, pos) ->
+  | AAsPat (bodyPat, pos, name) ->
     let bodyPat, ctx = bodyPat |> onPat ctx
-    let loc = toLoc pos
-    NPat.As(bodyPat, onName name, loc), ctx
+    NPat.As(bodyPat, onName name, toLoc pos), ctx
 
-  | AAscribePat (bodyPat, ty, pos) ->
+  | AAscribePat (bodyPat, pos, ty) ->
     let bodyPat, ctx = bodyPat |> onPat ctx
     let ty, ctx = ty |> onTy ctx
-    let loc = toLoc pos
-    NPat.Ascribe(bodyPat, ty, loc), ctx
+    NPat.Ascribe(bodyPat, ty, toLoc pos), ctx
 
-  | AOrPat (l, r, pos) ->
+  | AOrPat (l, pos, r) ->
     let l, ctx = l |> onPat ctx
     let r, ctx = r |> onPat ctx
-    let loc = toLoc pos
-    NPat.Or(l, r, loc), ctx
+    NPat.Or(l, r, toLoc pos), ctx
 
-let private ngLetContents docId ctx (contents: ALetContents) pos : NStmt * NirGenCtx =
+let private ngLetContents docId ctx pos (contents: ALetContents) : NStmt * NirGenCtx =
   let onPat ctx pat = ngPat docId ctx pat
   let onPats ctx pats = List.mapFold (ngPat docId) ctx pats
   let onExpr ctx expr = ngExpr docId ctx expr
@@ -298,7 +303,7 @@ let private ngLetContents docId ctx (contents: ALetContents) pos : NStmt * NirGe
   let onName (Name (ident, pos)) = ident, toLoc pos
 
   match contents with
-  | ALetContents.LetFun (isRec, vis, name, argPats, resultTyOpt, body) ->
+  | ALetContents.LetFun (isRec, vis, name, argPats, resultTyOpt, _, body) ->
     let argPats, ctx = argPats |> onPats ctx
 
     let body, ctx =
@@ -307,7 +312,7 @@ let private ngLetContents docId ctx (contents: ALetContents) pos : NStmt * NirGe
 
     NStmt.LetFun(isRec, vis, onName name, argPats, body, toLoc pos), ctx
 
-  | ALetContents.LetVal (_, pat, body) ->
+  | ALetContents.LetVal (_, pat, _, body) ->
     // let rec for let-val should be error.
     let pat, ctx = pat |> onPat ctx
     let body, ctx = body |> onExpr ctx
@@ -333,52 +338,72 @@ let private ngExpr (docId: DocId) (ctx: NirGenCtx) (expr: AExpr) : NExpr * NirGe
 
   | ALitExpr (lit, pos) -> NExpr.Lit(lit, toLoc pos), ctx
 
-  | AIdentExpr (name, tyArgs) ->
-    let tyArgs, ctx = onTys ctx tyArgs
+  | AIdentExpr (name, tyArgList) ->
+    let tyArgs, ctx =
+      match tyArgList with
+      | Some (_, tyArgs, _) -> tyArgs |> onTys ctx
+      | None -> [], ctx
+
     NExpr.Ident(onName name, tyArgs), ctx
 
-  | AListExpr ([], pos) -> NExpr.Nil(toLoc pos), ctx
-  | AListExpr (items, pos) -> ngExpr docId ctx (desugarListExpr items pos)
+  | AParenExpr (_, expr, _) -> ngExpr docId ctx expr
 
-  | ARecordExpr (baseOpt, fields, pos) ->
-    let baseOpt, ctx = baseOpt |> onExprOpt ctx
+  | AListExpr (pos, [], _) -> NExpr.Nil(toLoc pos), ctx
+  | AListExpr (pos, items, _) -> ngExpr docId ctx (desugarListExpr items pos)
+
+  | ARecordExpr (pos, baseOpt, fields, _) ->
+    let baseOpt, ctx =
+      match baseOpt with
+      | Some (baseExpr, _) ->
+        let expr, ctx = onExpr ctx baseExpr
+        Some expr, ctx
+
+      | None -> None, ctx
 
     let fields, ctx =
       fields
       |> List.mapFold
-           (fun ctx (name, init, pos) ->
+           (fun ctx (name, pos, init) ->
              let init, ctx = init |> onExpr ctx
              (onName name, init, toLoc pos), ctx)
            ctx
 
     NExpr.Record(baseOpt, fields, toLoc pos), ctx
 
-  | AIfExpr (cond, body, altOpt, pos) -> ngExpr docId ctx (desugarIf cond body altOpt pos)
+  | AIfExpr (ifPos, cond, _, body, altOpt) ->
+    let altOpt = altOpt |> Option.map snd
+    ngExpr docId ctx (desugarIf ifPos cond body altOpt)
 
-  | AMatchExpr (cond, arms, pos) ->
+  | AMatchExpr (matchPos, cond, _, arms) ->
     let cond, ctx = cond |> onExpr ctx
 
     let arms, ctx =
       arms
       |> List.mapFold
-           (fun ctx (AArm (pat, guardOpt, body, pos)) ->
+           (fun ctx (pos, pat, guardOpt, _, body) ->
+             let pos = pos |> Option.defaultValue matchPos
              let pat, ctx = pat |> onPat ctx
-             let guardOpt, ctx = guardOpt |> onExprOpt ctx
+
+             let guardOpt, ctx =
+               match guardOpt with
+               | Some (_, guard) -> onExprOpt ctx (Some guard)
+               | None -> None, ctx
+
              let body, ctx = body |> onExpr ctx
              (pat, guardOpt, body, toLoc pos), ctx)
            ctx
 
-    NExpr.Match(cond, arms, toLoc pos), ctx
+    NExpr.Match(cond, arms, toLoc matchPos), ctx
 
-  | AFunExpr (pats, body, pos) -> ngExpr docId ctx (desugarFun pats body pos)
+  | AFunExpr (funPos, argPats, arrowPos, body) -> ngExpr docId ctx (desugarFun funPos argPats arrowPos body)
 
-  | ANavExpr (l, r, pos) ->
+  | ANavExpr (l, pos, r) ->
     let l, ctx = l |> onExpr ctx
     NExpr.Nav(l, onName r, toLoc pos), ctx
 
-  | AIndexExpr (l, r, pos) ->
+  | AIndexExpr (l, pos, _, r, _) ->
     match expr with
-    | AIndexExpr (x, ARangeExpr (l, r, _), _) ->
+    | AIndexExpr (x, _, _, ARangeExpr (l, _, r), _) ->
       let x, ctx = x |> onExpr ctx
       let l, ctx = l |> onExpr ctx
       let r, ctx = r |> onExpr ctx
@@ -391,7 +416,7 @@ let private ngExpr (docId: DocId) (ctx: NirGenCtx) (expr: AExpr) : NExpr * NirGe
       let loc = toLoc pos
       NExpr.Index(l, r, loc), ctx
 
-  | AUnaryExpr (MinusUnary, arg, pos) ->
+  | AUnaryExpr (MinusUnary, pos, arg) ->
     match desugarMinusUnary arg with
     | Some arg -> ngExpr docId ctx arg
 
@@ -399,19 +424,19 @@ let private ngExpr (docId: DocId) (ctx: NirGenCtx) (expr: AExpr) : NExpr * NirGe
       let arg, ctx = arg |> onExpr ctx
       NExpr.Unary(MinusUnary, arg, toLoc pos), ctx
 
-  | AUnaryExpr (op, arg, pos) ->
+  | AUnaryExpr (op, pos, arg) ->
     let arg, ctx = arg |> onExpr ctx
     NExpr.Unary(op, arg, toLoc pos), ctx
 
-  | ABinaryExpr (NotEqualBinary, l, r, pos) -> ngExpr docId ctx (desugarBinNe l r pos)
-  | ABinaryExpr (LessEqualBinary, l, r, pos) -> ngExpr docId ctx (desugarBinLe l r pos)
-  | ABinaryExpr (GreaterBinary, l, r, pos) -> ngExpr docId ctx (desugarBinGt l r pos)
-  | ABinaryExpr (GreaterEqualBinary, l, r, pos) -> ngExpr docId ctx (desugarBinGe l r pos)
-  | ABinaryExpr (LogicalAndBinary, l, r, pos) -> ngExpr docId ctx (desugarBinAnd l r pos)
-  | ABinaryExpr (LogicalOrBinary, l, r, pos) -> ngExpr docId ctx (desugarBinOr l r pos)
-  | ABinaryExpr (PipeBinary, l, r, pos) -> ngExpr docId ctx (desugarBinPipe l r pos)
+  | ABinaryExpr (NotEqualBinary, l, pos, r) -> ngExpr docId ctx (desugarBinNe l r pos)
+  | ABinaryExpr (LessEqualBinary, l, pos, r) -> ngExpr docId ctx (desugarBinLe l r pos)
+  | ABinaryExpr (GreaterBinary, l, pos, r) -> ngExpr docId ctx (desugarBinGt l r pos)
+  | ABinaryExpr (GreaterEqualBinary, l, pos, r) -> ngExpr docId ctx (desugarBinGe l r pos)
+  | ABinaryExpr (LogicalAndBinary, l, pos, r) -> ngExpr docId ctx (desugarBinAnd l r pos)
+  | ABinaryExpr (LogicalOrBinary, l, pos, r) -> ngExpr docId ctx (desugarBinOr l r pos)
+  | ABinaryExpr (PipeBinary, l, pos, r) -> ngExpr docId ctx (desugarBinPipe l r pos)
 
-  | ABinaryExpr (op, l, r, pos) ->
+  | ABinaryExpr (op, l, pos, r) ->
     let l, ctx = l |> onExpr ctx
     let r, ctx = r |> onExpr ctx
     NExpr.Binary(op, l, r, toLoc pos), ctx
@@ -421,11 +446,11 @@ let private ngExpr (docId: DocId) (ctx: NirGenCtx) (expr: AExpr) : NExpr * NirGe
     NExpr.Tuple(items, toLoc pos), ctx
 
   // (__type: 'T)
-  | AAscribeExpr (AIdentExpr (Name ("__type", _), []), ty, pos) ->
+  | AAscribeExpr (AIdentExpr (Name ("__type", _), None), pos, ty) ->
     let ty, ctx = ty |> onTy ctx
     NExpr.TyPlaceholder(ty, toLoc pos), ctx
 
-  | AAscribeExpr (body, ty, pos) ->
+  | AAscribeExpr (body, pos, ty) ->
     let body, ctx = body |> onExpr ctx
     let ty, ctx = ty |> onTy ctx
     NExpr.Ascribe(body, ty, toLoc pos), ctx
@@ -442,14 +467,19 @@ let private ngExpr (docId: DocId) (ctx: NirGenCtx) (expr: AExpr) : NExpr * NirGe
     let last, ctx = last |> onExpr ctx
     NExpr.Block(stmts, last), ctx
 
-  | ALetExpr (contents, next, pos) ->
-    let stmt, ctx = ngLetContents docId ctx contents pos
+  | ALetExpr (letPos, contents, next) ->
+    let stmt, ctx = ngLetContents docId ctx letPos contents
     let next, ctx = next |> onExpr ctx
     NExpr.Block([ stmt ], next), ctx
 
   | ARangeExpr _ -> unreachable () // Generated only inside of AIndexExpr.
 
-let private ngTyArgs docId tyArgs =
+let private ngTyParamList docId tyParamList =
+  let tyArgs =
+    match tyParamList with
+    | Some (_, tyArgs, _) -> tyArgs
+    | None -> []
+
   tyArgs
   |> List.map (fun (Name (ident, pos)) -> "'" + ident, toLoc docId pos)
 
@@ -476,34 +506,42 @@ let private ngDecl docId attrs ctx decl : NDecl * NirGenCtx =
     let stmt, ctx = ngLetContents docId ctx contents pos
     NDecl.Stmt stmt, ctx
 
-  | ATySynonymDecl (vis, name, tyArgs, bodyTy, pos) ->
+  | ATySynonymDecl (pos, vis, name, tyParamList, _, bodyTy) ->
     let bodyTy, ctx = bodyTy |> onTy ctx
-    let tyArgs = tyArgs |> ngTyArgs docId
-    NDecl.TySynonym(vis, onName name, tyArgs, bodyTy, toLoc pos), ctx
+    let tyParamList = tyParamList |> ngTyParamList docId
+    NDecl.TySynonym(vis, onName name, tyParamList, bodyTy, toLoc pos), ctx
 
-  | AUnionTyDecl (vis, name, tyArgs, variants, pos) ->
-    let tyArgs = tyArgs |> ngTyArgs docId
+  | AUnionTyDecl (pos, vis, name, tyParamList, _, variants) ->
+    let tyParamList = tyParamList |> ngTyParamList docId
 
     let variants, ctx =
       variants
       |> List.mapFold
-           (fun ctx (AVariant (name, payloadTyOpt, pos)) ->
-             let payloadTyOpt, ctx = payloadTyOpt |> onTyOpt ctx
+           (fun ctx (pos, name, payloadTyOpt) ->
+             let payloadTyOpt, ctx =
+               payloadTyOpt |> Option.map snd |> onTyOpt ctx
+
              (onName name, payloadTyOpt, toLoc pos), ctx)
            ctx
 
-    NDecl.Union(vis, onName name, tyArgs, variants, toLoc pos), ctx
+    NDecl.Union(vis, onName name, tyParamList, variants, toLoc pos), ctx
 
-  | ARecordTyDecl (vis, name, tyArgs, fields, pos) ->
+  | ARecordTyDecl (pos, vis, name, tyParamList, _, _, fields, _) ->
     let repr =
       attrs
       |> List.exists (fun a ->
+        // Unwrap paren of arg.
+        let a =
+          match a with
+          | ABinaryExpr (binary, l, pos, AParenExpr (_, r, _)) -> ABinaryExpr(binary, l, pos, r)
+          | _ -> a
+
         match a with
-        | ABinaryExpr (AppBinary, AIdentExpr (Name ("Repr", _), []), ALitExpr (StringLit "C", _), _) -> true
+        | ABinaryExpr (AppBinary, AIdentExpr (Name ("Repr", _), None), _, ALitExpr (StringLit "C", _)) -> true
         | _ -> false)
       |> IsCRepr
 
-    let tyArgs = tyArgs |> ngTyArgs docId
+    let tyParamList = tyParamList |> ngTyParamList docId
 
     let fields, ctx =
       fields
@@ -513,21 +551,21 @@ let private ngDecl docId attrs ctx decl : NDecl * NirGenCtx =
              (onName name, ty, toLoc pos), ctx)
            ctx
 
-    NDecl.Record(vis, onName name, tyArgs, fields, repr, toLoc pos), ctx
+    NDecl.Record(vis, onName name, tyParamList, fields, repr, toLoc pos), ctx
 
-  | AOpenDecl (path, pos) ->
+  | AOpenDecl (pos, path) ->
     let path = path |> List.map onName
     NDecl.Open(path, toLoc pos), ctx
 
-  | AModuleSynonymDecl (name, path, pos) ->
+  | AModuleSynonymDecl (pos, name, _, path) ->
     let path = path |> List.map onName
     NDecl.ModuleSynonym(onName name, path, toLoc pos), ctx
 
-  | AModuleDecl (isRec, vis, name, decls, pos) ->
+  | AModuleDecl (pos, isRec, vis, name, _, decls) ->
     let decls, ctx = decls |> ngDecls docId attrs ctx
     NDecl.Module(NModuleDecl(isRec, vis, onName name, decls, toLoc pos)), ctx
 
-  | AAttrDecl (attr, next, _) ->
+  | AAttrDecl (_, attr, _, next) ->
     let rec prepend attr acc =
       match attr with
       | ASemiExpr (stmts, last, _) -> List.append stmts (last :: acc)
@@ -558,7 +596,7 @@ let genNir
   let fileModuleDecl, ctx =
     let namePos, headPos =
       match headOpt with
-      | Some ([ _; Name (_, namePos) ], headPos) -> namePos, headPos
+      | Some (headPos, [ _; Name (_, namePos) ]) -> namePos, headPos
       | _ -> zeroPos, zeroPos
 
     let decls, ctx = decls |> ngDecls docId [] ctx

@@ -233,6 +233,16 @@ type Binary =
 // AST
 // -----------------------------------------------
 
+/// Type parameter list.
+///
+/// `'<', 'T list, ('>' option)`
+type ATyParamList = Pos * Name list * Pos option
+
+/// Type argument list.
+///
+/// `'<', Type list, ('>' option)`
+type ATyArgList = Pos * ATy list * Pos option
+
 /// Type expression in AST.
 [<NoEquality; NoComparison>]
 type ATy =
@@ -240,19 +250,26 @@ type ATy =
 
   /// Named type with potential qualifiers and type arguments,
   /// e.g. `int`, `TMap.AssocMap<K, V>`.
-  | AAppTy of quals: Name list * Name * ATy list * Pos
+  ///
+  /// quals: `(name, '.' option) list`
+  | AAppTy of quals: (Name * Pos) list * Name * ATyArgList option
 
   /// Type variable, e.g. `'T`.
   | AVarTy of Name
 
+  /// `'(' Ty ')'`.
+  | AParenTy of lPos: Pos * ATy * rPos: Pos option
+
   /// Type suffix, e.g. `T list`.
   | ASuffixTy of ATy * Name
 
-  /// Tuple type, e.g. `int * string`.
-  | ATupleTy of ATy list * Pos
+  /// Tuple type, e.g. `int * string`, `T * T * T`.
+  ///
+  /// `starPos` is position of the first star.
+  | ATupleTy of ATy list * starPos: Pos
 
   /// Function type, e.g. `int -> string`.
-  | AFunTy of ATy * ATy * Pos
+  | AFunTy of ATy * arrowPos: Pos * ATy
 
 /// Pattern in AST.
 [<NoEquality; NoComparison>]
@@ -265,45 +282,45 @@ type APat =
   /// Variable (`x`), wildcard (`_`) or variant (`None`).
   | AIdentPat of Vis * Name
 
-  /// E.g. `[x; y; z]`.
-  | AListPat of APat list * Pos
+  /// E.g. `(_)`.
+  | AParenPat of lPos: Pos * APat * rPos: Pos option
+
+  /// E.g. `[ x; y; z ]`.
+  | AListPat of lPos: Pos * itemPats: APat list * rPos: Pos option
 
   /// Navigation, e.g. `Foo.Bar`.
-  | ANavPat of APat * Name * Pos
+  | ANavPat of APat * dotPos: Pos * Name
 
   /// Application. e.g. `Some x`.
   ///
   /// Used only for variant destruction.
   /// AFunDeclPat is used for `let`.
-  | AAppPat of APat * APat * Pos
+  | AAppPat of APat * middlePos: Pos * APat
 
   /// `::`
-  | AConsPat of APat * APat * Pos
+  | AConsPat of APat * opPos: Pos * APat
 
   /// E.g. `x, y, z`.
-  | ATuplePat of APat list * Pos
+  | ATuplePat of APat list * commaPos: Pos
 
   /// E.g. `(Some x) as opt`.
-  | AAsPat of APat * Name * Pos
+  | AAsPat of APat * asPos: Pos * Name
 
   /// Type ascription, e.g. `x: int`.
-  | AAscribePat of APat * ATy * Pos
+  | AAscribePat of APat * colonPos: Pos * ATy
 
   /// E.g. `l | r`
-  | AOrPat of APat * APat * Pos
-
-/// Arm of match expression in AST.
-///
-/// `| pat when guard -> body`
-[<Struct; NoEquality; NoComparison>]
-type AArm = AArm of pat: APat * guard: AExpr option * body: AExpr * Pos
+  | AOrPat of APat * pipePos: Pos * APat
 
 /// Declaration of variant in AST.
 ///
+/// `('|', Name, ('of' Ty)?)`
+///
+/// Pipe position can be previous position of name.
+///
 /// E.g. `| Card of Suit * Rank` (with `of`)
 /// or `| Joker` (without `of`).
-[<Struct; NoEquality; NoComparison>]
-type AVariant = AVariant of Name * payloadTyOpt: ATy option * Pos
+type AVariantDecl = Pos * Name * (Pos * ATy) option
 
 /// Field declaration in AST.
 ///
@@ -313,8 +330,8 @@ type AFieldDecl = Name * ATy * Pos
 /// Let expression in AST.
 [<RequireQualifiedAccess; NoEquality; NoComparison>]
 type ALetContents =
-  | LetVal of IsRec * pat: APat * init: AExpr
-  | LetFun of IsRec * Vis * Name * argPats: APat list * resultTyOpt: (ATy * Pos) option * body: AExpr
+  | LetVal of IsRec * APat * equalPos: Pos * init: AExpr
+  | LetFun of IsRec * Vis * Name * argPats: APat list * resultTyOpt: (Pos * ATy) option * equalPos: Pos * body: AExpr
 
 /// Body of type declaration in AST.
 [<NoEquality; NoComparison>]
@@ -322,8 +339,8 @@ type ATyDeclBody =
   /// E.g. `type Serial = int`.
   | ATySynonymDeclBody of ATy
 
-  | AUnionTyDeclBody of AVariant list
-  | ARecordTyDeclBody of AFieldDecl list
+  | AUnionTyDeclBody of AVariantDecl list
+  | ARecordTyDeclBody of lPos: Pos * AFieldDecl list * rPos: Pos option
 
 /// Expression in AST.
 [<NoEquality; NoComparison>]
@@ -334,80 +351,116 @@ type AExpr =
   | ALitExpr of Lit * Pos
 
   /// E.g. `x`, `f<'T>`.
-  | AIdentExpr of Name * tyArgs: ATy list
+  | AIdentExpr of Name * ATyArgList option
 
-  /// List literal, e.g. `[]`, `[2; 3]`.
-  | AListExpr of AExpr list * Pos
+  /// `'(' Expr ')'`.
+  | AParenExpr of lPos: Pos * AExpr * rPos: Pos option
 
-  /// Record literal, e.g. `{}`, `{ X = 1; Y = 2 }`.
-  | ARecordExpr of AExpr option * (Name * AExpr * Pos) list * Pos
+  /// List literal, e.g. `[]`, `[ 2; 3 ]`.
+  | AListExpr of lPos: Pos * AExpr list * rPos: Pos option
+
+  /// Record literal, e.g. `{}`, `{ X = 1; Y = 2 }`, `{ r with X = n }`.
+  ///
+  /// - `withClause`: `Expr 'with'`
+  /// - `fields`: `Name '=' Expr`
+  | ARecordExpr of
+    lPos: Pos *
+    withClause: (AExpr * Pos option) option *
+    fields: (Name * Pos * AExpr) list *
+    rPos: Pos option
 
   /// `if cond then body else alt`.
-  | AIfExpr of cond: AExpr * body: AExpr * alt: AExpr option * Pos
+  | AIfExpr of ifPos: Pos * cond: AExpr * thenPos: Pos * body: AExpr * alt: (Pos * AExpr) option
 
   /// `match cond with (| pat when guard -> body)*`
-  | AMatchExpr of cond: AExpr * arms: AArm list * Pos
+  ///
+  /// arm: `'|', Pat, ('when' Expr), '->', Expr
+  | AMatchExpr of
+    matchPos: Pos *
+    cond: AExpr *
+    withPos: Pos option *
+    arms: (Pos option * APat * (Pos * AExpr) option * Pos * AExpr) list
 
   /// `fun pat1 pat2 ... -> body`
-  | AFunExpr of APat list * AExpr * Pos
+  | AFunExpr of funPos: Pos * argPats: APat list * arrowPos: Pos * AExpr
 
   /// Navigation, e.g. `s.Length`.
-  | ANavExpr of AExpr * Name * Pos
+  | ANavExpr of AExpr * dotPos: Pos * Name
 
   /// E.g. `s.[i]`.
-  | AIndexExpr of AExpr * AExpr * Pos
+  | AIndexExpr of AExpr * dotPos: Pos * lPos: Pos * AExpr * rPos: Pos option
 
   /// Unary operation, e.g. `-x`.
-  | AUnaryExpr of Unary * AExpr * Pos
+  | AUnaryExpr of Unary * opPos: Pos * AExpr
 
   /// Binary operation, e.g. `x + y`, `f x`.
-  | ABinaryExpr of Binary * AExpr * AExpr * Pos
+  ///
+  /// Position is either that of operator (when binary isn't app) or position of LHS (when binary is app).
+  | ABinaryExpr of Binary * AExpr * opPos: Pos * AExpr
 
   /// Range syntax, e.g. `first..last`.
   ///
-  /// (`first .. step .. last` is unimplemented yet.)
-  | ARangeExpr of AExpr * AExpr * Pos
+  /// (`first .. step .. last` is unimplemented.)
+  | ARangeExpr of AExpr * dotDot: Pos * AExpr
 
   /// Tuple construction or unit literal, e.g. `()`, `2, "two"`.
-  | ATupleExpr of AExpr list * Pos
+  ///
+  /// `commaPos` is position of first ',' if `items` isn't empty; or '('.
+  | ATupleExpr of items: AExpr list * commaPos: Pos
 
   /// Type ascription, e.g. `None: int option`.
-  | AAscribeExpr of AExpr * ATy * Pos
+  | AAscribeExpr of AExpr * colonPos: Pos * ATy
 
   /// Semicolon-separated expressions.
-  | ASemiExpr of AExpr list * AExpr * Pos
+  | ASemiExpr of AExpr list * AExpr * leadingPos: Pos
 
-  | ALetExpr of ALetContents * next: AExpr * Pos
+  /// `let ... in next`
+  | ALetExpr of letPos: Pos * ALetContents * next: AExpr
 
 [<NoEquality; NoComparison>]
 type ADecl =
   | AExprDecl of AExpr
 
-  | ALetDecl of ALetContents * Pos
+  /// `let pat = init` or `let f pats... = body`
+  | ALetDecl of letPos: Pos * ALetContents
 
   /// Type synonym declaration, e.g. `type UserId = int`.
-  | ATySynonymDecl of Vis * Name * tyArgs: Name list * ATy * Pos
+  | ATySynonymDecl of typePos: Pos * Vis * Name * tyParamList: ATyParamList option * equalPos: Pos * ATy
 
   /// Discriminated union type declaration, e.g. `type Result = | Ok | Err of int`.
-  | AUnionTyDecl of Vis * Name * tyArgs: Name list * AVariant list * Pos
+  | AUnionTyDecl of typePos: Pos * Vis * Name * tyParamList: ATyParamList option * equalPos: Pos * AVariantDecl list
 
   /// Record type declaration, e.g. `type Pos = { X: int; Y: int }`.
-  | ARecordTyDecl of Vis * Name * tyArgs: Name list * AFieldDecl list * Pos
+  | ARecordTyDecl of
+    typePos: Pos *
+    Vis *
+    Name *
+    tyParamList: ATyParamList option *
+    equalPos: Pos *
+    lPos: Pos *
+    fields: AFieldDecl list *
+    rPos: Pos option
 
   /// Open statement, e.g. `open System.IO`.
-  | AOpenDecl of Name list * Pos
+  | AOpenDecl of openPos: Pos * Name list
 
   /// Module synonym statement, e.g. `module T = System.Text`.
-  | AModuleSynonymDecl of Name * Name list * Pos
+  | AModuleSynonymDecl of modulePos: Pos * Name * equalPos: Pos * path: Name list
 
-  /// Module statement, e.g. `module Pos = let zero () = ...`.
-  | AModuleDecl of IsRec * Vis * Name * ADecl list * Pos
+  /// Module statement, e.g.
+  ///
+  /// ```fsharp
+  /// module Pos =
+  ///   let zero = 0, 0
+  /// ```
+  | AModuleDecl of modulePos: Pos * IsRec * Vis * Name * equalPos: Pos * body: ADecl list
 
-  /// Expression with some attribute.
-  | AAttrDecl of contents: AExpr * next: ADecl * Pos
+  /// Declaration attached with an attribute.
+  /// `[< attributes >] next`
+  | AAttrDecl of l: Pos * contents: AExpr * r: Pos option * next: ADecl
 
 /// Root of AST, a result of parsing single source file.
-type AModuleHead = Name list * Pos
+type AModuleHead = Pos * Name list
 
 /// Root of AST, a result of parsing single source file.
 [<NoEquality; NoComparison>]
