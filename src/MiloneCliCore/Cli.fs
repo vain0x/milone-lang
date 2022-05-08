@@ -540,6 +540,34 @@ let main _ =
       PW.runOnWindows p []
       0
 
+let private cliParse (sApi: SyntaxApi) (host: CliHost) docId (text: Future<string>) : int =
+  text
+  |> Future.map (fun text ->
+    let output, errors = sApi.DumpSyntax text
+
+    let errors =
+      errors
+      |> List.map (fun (msg, pos) -> msg, Loc.ofDocPos docId pos)
+
+    let good = List.isEmpty errors
+    let exitCode = if good then 0 else 1
+
+    let output =
+      (if good then
+         ""
+       else
+         "Errors: " + string (List.length errors) + "\n\n")
+      + output
+      + (if good then
+           ""
+         else
+           "\n\n" + sApi.SyntaxErrorsToString errors)
+      + "\n"
+
+    host.WriteStdout output
+    exitCode)
+  |> Future.wait
+
 // -----------------------------------------------
 // Arg parsing
 // -----------------------------------------------
@@ -718,6 +746,7 @@ type private CliCmd =
   | BuildCmd
   | RunCmd
   | EvalCmd
+  | ParseCmd
   | BadCmd of string
 
 let private parseArgs args =
@@ -739,6 +768,7 @@ let private parseArgs args =
     | "compile" -> CompileCmd, args
     | "run" -> RunCmd, args
     | "eval" -> EvalCmd, args
+    | "parse" -> ParseCmd, args
     | _ -> BadCmd arg, []
 
 // -----------------------------------------------
@@ -802,6 +832,34 @@ let cli (sApi: SyntaxApi) (tApi: TranslationApi) (host: CliHost) =
         exit 1
 
     cliEval sApi tApi host sourceCode
+
+  | ParseCmd, args ->
+    let docId, text =
+      match args with
+      | [ "-" ] ->
+        let docId: DocId = Symbol.intern "/dev/stdin"
+        docId, host.ReadStdinAll() |> Future.just
+
+      | [ pathname ] ->
+        let pathname = pathJoin host.WorkDir pathname
+        let docId: DocId = Symbol.intern pathname
+
+        let contentsFuture =
+          host.FileReadAllText pathname
+          |> Future.map (fun textOpt ->
+            match textOpt with
+            | Some it -> it
+            | None ->
+              printfn "ERROR: Can't read from '%s'" pathname
+              exit 1)
+
+        docId, contentsFuture
+
+      | _ ->
+        printfn "ERROR: Invalid args: `milone parse <pathname>`"
+        exit 1
+
+    cliParse sApi host docId text
 
   | BadCmd subcommand, _ ->
     printfn "ERROR: Unknown subcommand '%s'." subcommand

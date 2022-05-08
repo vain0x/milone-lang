@@ -21,6 +21,7 @@ module Manifest = MiloneSyntax.Manifest
 module S = Std.StdString
 module SyntaxParse = MiloneSyntax.SyntaxParse
 module SyntaxTokenize = MiloneSyntax.SyntaxTokenize
+module SyntaxTree = MiloneSyntax.SyntaxTree
 module Tir = MiloneSyntax.Tir
 module Typing = MiloneSyntax.Typing
 module TySystem = MiloneSyntax.TySystem
@@ -444,6 +445,21 @@ let performSyntaxAnalysis (ctx: SyntaxCtx) : SyntaxLayers * SyntaxAnalysisResult
       | None -> syntaxLayers, SyntaxAnalysisOk(modules, tirCtx)
 
 // -----------------------------------------------
+// Dump
+// -----------------------------------------------
+
+let dumpSyntax (text: string) : string * ModuleSyntaxError list =
+  let host = tokenizeHostNew ()
+  let tokens = SyntaxTokenize.tokenizeAll host text
+
+  let ast, errors =
+    SyntaxTokenize.tokenize host text
+    |> SyntaxParse.parse
+
+  let tree = SyntaxTree.dumpTree tokens ast
+  tree, errors
+
+// -----------------------------------------------
 // Interface
 // -----------------------------------------------
 
@@ -455,4 +471,5 @@ let newSyntaxApi () : SyntaxApi =
     SyntaxErrorsToString = syntaxErrorsToString
     NewSyntaxCtx = fun host -> newSyntaxCtx host |> wrap
     GetManifest = fun ctx -> ctx |> unwrap |> SyntaxCtx.getManifest
-    PerformSyntaxAnalysis = fun ctx -> ctx |> unwrap |> performSyntaxAnalysis }
+    PerformSyntaxAnalysis = fun ctx -> ctx |> unwrap |> performSyntaxAnalysis
+    DumpSyntax = dumpSyntax }

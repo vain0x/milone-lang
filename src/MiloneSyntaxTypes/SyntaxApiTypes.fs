@@ -50,7 +50,7 @@ type SyntaxApi =
   { /// getMiloneHomeEnv -> getHomeEnv -> MiloneHome
     GetMiloneHomeFromEnv: (unit -> string option) -> (unit -> string option) -> string
     SyntaxErrorsToString: SyntaxError list -> string
-
     NewSyntaxCtx: FetchModuleHost -> SyntaxCtx
     GetManifest: SyntaxCtx -> ManifestData
-    PerformSyntaxAnalysis: SyntaxCtx -> SyntaxLayers * SyntaxAnalysisResult }
+    PerformSyntaxAnalysis: SyntaxCtx -> SyntaxLayers * SyntaxAnalysisResult
+    DumpSyntax: string -> string * ModuleSyntaxError list }
