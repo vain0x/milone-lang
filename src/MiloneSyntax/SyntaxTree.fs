@@ -16,6 +16,24 @@ module S = Std.StdString
 // Util
 // -----------------------------------------------
 
+let private noRange: Range = (0, 0), (0, 0)
+
+module Pos =
+  let zero: Pos = 0, 0
+  let min l r = if Pos.compare r l < 0 then r else l
+  let max l r = if Pos.compare l r < 0 then r else l
+
+module Range =
+  let join l r : Range =
+    let lp, lq = l
+    let rp, rq = r
+    Pos.min lp rp, Pos.max lq rq
+
+  let meet l r : Range =
+    let lp, lq = l
+    let rp, rq = r
+    Pos.max lp rp, Pos.min lq rq
+
 let private cons x xs = [ x ] :: xs
 
 let private consOpt xOpt xs =
@@ -147,7 +165,17 @@ type private Sk = SyntaxKind
 [<NoEquality; NoComparison>]
 type SyntaxElement =
   | SyntaxToken of SyntaxKind * Range
-  | SyntaxNode of SyntaxKind * SyntaxElement list
+  | SyntaxNode of SyntaxKind * Range * SyntaxElement list
+
+let private getKind element =
+  match element with
+  | SyntaxToken (kind, _) -> kind
+  | SyntaxNode (kind, _, _) -> kind
+
+let private getRange element =
+  match element with
+  | SyntaxToken (_, range) -> range
+  | SyntaxNode (_, range, _) -> range
 
 [<NoEquality; NoComparison>]
 type SyntaxTree = SyntaxTree of root: SyntaxElement
@@ -173,10 +201,10 @@ let private sgToken (ctx: SgCtx) kind pos =
 
 let private newAnchor pos = SyntaxToken(Sk.Anchor, (pos, pos))
 
-let private newNode kind children : SyntaxElement = SyntaxNode(kind, children)
+let private newNode kind children : SyntaxElement = SyntaxNode(kind, noRange, children)
 
 let private buildNode kind childrenRev : SyntaxElement =
-  SyntaxNode(kind, childrenRev |> List.rev |> List.collect id)
+  SyntaxNode(kind, noRange, childrenRev |> List.rev |> List.collect id)
 
 let private sgName (ctx: SgCtx) name : SyntaxElement =
   let (Name (_, pos)) = name
@@ -482,19 +510,68 @@ let private sgRoot (ctx: SgCtx) root : SyntaxElement =
      )
      |> consListMap onDecl decls)
 
+let private postprocess (_tokens: TokenizeFullResult) (eofPos: Pos) (root: SyntaxElement) : SyntaxElement =
+  let rec go availableRange element =
+    match element with
+    | SyntaxToken _ -> element
+
+    | SyntaxNode (kind, _, children) ->
+      let children, availableRange =
+        children
+        |> List.mapFold
+             (fun availableRange child ->
+               let child = go availableRange child
+
+               let p, q = availableRange
+               let _, m = getRange child
+               let restRange = Pos.max p m, Pos.min q m
+
+               child, restRange)
+             availableRange
+
+      let range =
+        match children with
+        | [] ->
+          let pos, _ = availableRange
+          pos, pos
+
+        | [ child ] -> getRange child
+
+        | first :: nonFirst ->
+          let last =
+            match List.tryLast nonFirst with
+            | Some last -> last
+            | None -> unreachable ()
+
+          Range.join (getRange first) (getRange last)
+
+      // FIXME: collect tokens
+      SyntaxNode(kind, range, children)
+
+  let wholeRange: Range = Pos.zero, eofPos
+
+  match go wholeRange root with
+  | SyntaxToken _ -> unreachable ()
+  | SyntaxNode (kind, _, children) -> SyntaxNode (kind, wholeRange, children)
+
 // -----------------------------------------------
 // Dump
 // -----------------------------------------------
 
+let private sdRange range =
+  let pos, endPos = range
+
+  "\""
+  + Pos.toString pos
+  + ".."
+  + Pos.toString endPos
+  + "\""
+
 let private sdElement rx indent (element: SyntaxElement) =
   match element with
-  | SyntaxToken (kind, (pos, endPos)) ->
-    let range =
-      "\""
-      + Pos.toString pos
-      + ".."
-      + Pos.toString endPos
-      + "\""
+  | SyntaxToken (kind, tokenRange) ->
+    let pos, _ = tokenRange
+    let range = sdRange tokenRange
 
     let map: TokenRangeMap = rx
 
@@ -552,8 +629,7 @@ let private sdElement rx indent (element: SyntaxElement) =
       | TyVarToken text -> "[\"TyVar\", " + range + "\"'" + text + "\"]"
 
       | NewlinesToken ->
-        let y1, x1 = pos
-        let y2, x2 = endPos
+        let (y1, x1), (y2, x2) = tokenRange
         let blank = if y1 < y2 then x2 else x1 + x2
 
         "[\"Newlines\", "
@@ -569,10 +645,18 @@ let private sdElement rx indent (element: SyntaxElement) =
 
     | None -> "[\"" + __dump kind + "\", " + range + "]"
 
-  | SyntaxNode (kind, []) -> "[\"" + __dump kind + "\", []]"
+  | SyntaxNode (kind, range, []) ->
+    "[\""
+    + __dump kind
+    + "\", "
+    + sdRange range
+    + ", []]"
 
-  | SyntaxNode (kind, children) ->
-    let s = "[\"" + __dump kind + "\", ["
+  | SyntaxNode (kind, range, children) ->
+    let range = sdRange range
+
+    let s =
+      "[\"" + __dump kind + "\", " + range + ", ["
 
     let t =
       let deepIndent = indent + "  "
@@ -583,16 +667,13 @@ let private sdElement rx indent (element: SyntaxElement) =
 
     s + t + "\n" + indent + "]]"
 
-let private stDump (tokens: TokenizeFullResult) (tree: SyntaxTree) : string =
-  let (SyntaxTree root) = tree
-  let map = toTokenRangeMap tokens
-  sdElement map "" root
+let private sdRoot (rangeMap: TokenRangeMap) (root: SyntaxElement) : string = sdElement rangeMap "" root
 
 // -----------------------------------------------
 // Tokens
 // -----------------------------------------------
 
-let private toTokenRangeMap (tokens: TokenizeFullResult) : TokenRangeMap =
+let private toTokenRangeMap (tokens: TokenizeFullResult) (eofPos: Pos) : TokenRangeMap =
   let lastOpt, map =
     tokens
     |> List.fold
@@ -606,11 +687,7 @@ let private toTokenRangeMap (tokens: TokenizeFullResult) : TokenRangeMap =
          (None, TMap.empty (Pair.compare compare compare))
 
   match lastOpt with
-  | Some (token, pos) ->
-    let y, _ = pos
-    let endPos: Pos = y + 1, 0
-    map |> TMap.add pos (token, endPos)
-
+  | Some (token, pos) -> map |> TMap.add pos (token, eofPos)
   | None -> map
 
 let private resolveTokenRange (map: TokenRangeMap) (pos: Pos) : (Token * Range) option =
@@ -623,8 +700,27 @@ let private resolveTokenRange (map: TokenRangeMap) (pos: Pos) : (Token * Range) 
 // -----------------------------------------------
 
 let genSyntaxTree (tokens: TokenizeFullResult) (ast: ARoot) : SyntaxTree =
-  let ctx: SgCtx = SgCtx(toTokenRangeMap tokens)
-  SyntaxTree(sgRoot ctx ast)
+  let eofPos: Pos =
+    match List.tryLast tokens with
+    | Some (_, (y, _)) -> y + 1, 0
+    | None -> 0, 0
+
+  let rangeMap = toTokenRangeMap tokens eofPos
+  let ctx: SgCtx = SgCtx rangeMap
+
+  sgRoot ctx ast
+  |> postprocess tokens eofPos
+  |> SyntaxTree
 
 let dumpTree (tokens: TokenizeFullResult) (ast: ARoot) : string =
-  genSyntaxTree tokens ast |> stDump tokens
+  let eofPos: Pos =
+    match List.tryLast tokens with
+    | Some (_, (y, _)) -> y + 1, 0
+    | None -> 0, 0
+
+  let rangeMap = toTokenRangeMap tokens eofPos
+  let ctx: SgCtx = SgCtx rangeMap
+
+  sgRoot ctx ast
+  |> postprocess tokens eofPos
+  |> sdRoot rangeMap
