@@ -553,16 +553,22 @@ let private cliParse (sApi: SyntaxApi) (host: CliHost) docId (text: Future<strin
     let exitCode = if good then 0 else 1
 
     let output =
-      (if good then
-         ""
-       else
-         "Errors: " + string (List.length errors) + "\n\n")
+      "{\"root\":\n\n"
       + output
       + (if good then
            ""
          else
-           "\n\n" + sApi.SyntaxErrorsToString errors)
-      + "\n"
+           ",\n\n  \"errors\": ["
+           + (errors
+              |> List.map (fun (msg, pos) ->
+                "\n    [\""
+                + Loc.toString pos
+                + "\""
+                + msg
+                + "\"]")
+              |> S.concat ",")
+           + "\n]")
+      + "}\n"
 
     host.WriteStdout output
     exitCode)

@@ -1,8 +1,10 @@
 module rec MiloneSyntax.SyntaxTree
 
 open MiloneShared.SharedTypes
+open MiloneShared.TypeIntegers
 open MiloneSyntaxTypes.SyntaxTypes
 open Std.StdError
+open Std.StdJson
 open Std.StdPair
 open Std.StdMap
 open Std.StdSet
@@ -174,7 +176,7 @@ let private newAnchor pos = SyntaxToken(Sk.Anchor, (pos, pos))
 let private newNode kind children : SyntaxElement = SyntaxNode(kind, children)
 
 let private buildNode kind childrenRev : SyntaxElement =
-  SyntaxNode(kind, List.rev (List.collect id childrenRev))
+  SyntaxNode(kind, childrenRev |> List.rev |> List.collect id)
 
 let private sgName (ctx: SgCtx) name : SyntaxElement =
   let (Name (_, pos)) = name
@@ -488,70 +490,98 @@ let private sdElement rx indent (element: SyntaxElement) =
   match element with
   | SyntaxToken (kind, (pos, endPos)) ->
     let range =
-      Pos.toString pos + ".." + Pos.toString endPos
+      "\""
+      + Pos.toString pos
+      + ".."
+      + Pos.toString endPos
+      + "\""
 
-    let value =
-      let map: TokenRangeMap = rx
+    let map: TokenRangeMap = rx
 
-      match resolveTokenRange map pos with
-      | Some (token, _) ->
-        match token with
-        | IntToken (text, _) -> text // TODO: flavor
-        | FloatToken text -> text
+    match resolveTokenRange map pos with
+    | Some (token, _) ->
+      match token with
+      | IntToken (text, flavorOpt) ->
+        let flavor =
+          match flavorOpt with
+          | Some flavor ->
+            let item =
+              match flavor with
+              | I8 -> "int8"
+              | I16 -> "int16"
+              | I32 -> "int"
+              | I64 -> "int64"
+              | IPtr -> "nativeint"
+              | U8 -> "byte"
+              | U16 -> "uint16"
+              | U32 -> "uint"
+              | U64 -> "uint64"
+              | UPtr -> "unativeint"
 
-        | CharToken c ->
-          match c with
-          | '\n' -> "'\\n'"
-          | '\\' -> "'\\\\'"
-          | '\'' -> "'\\''"
-          | _ when C.isAscii c && not (C.isControl c) -> "'" + string c + "'"
-          | _ -> "'\\x" + S.uint64ToHex 2 (uint64 (byte c)) + "'"
+            ", \"" + item + "\""
 
-        | StringToken s -> __dump s // TODO: escape
-        | IdentToken text -> text // TODO: quote
-        | TyVarToken text -> "'" + text
+          | None -> ""
 
-        | NewlinesToken ->
-          let y1, x1 = pos
-          let y2, x2 = endPos
-          let blank = if y1 < y2 then x2 else x1 + x2
+        "[\"Int\", " + range + ", " + text + flavor + "]"
 
-          "`"
-          + String.replicate (y2 - y1) "\\n"
-          + String.replicate blank " "
-          + "`"
+      | FloatToken text -> "[\"Float\", " + range + ", " + text + "]"
 
-        | CommentToken ->
-          // TODO: extract comment from text
-          "Comment"
+      | CharToken c ->
+        let value =
+          if c <> '\x00' then
+            Json.dump (JString(string c))
+          else
+            "\"\\u0000\""
 
-        | _ -> __dump kind
+        "[\"Char\", " + range + ", " + value + "]"
 
-      | None -> __dump kind
+      | StringToken s ->
+        "[\"String\", "
+        + range
+        + ", "
+        + Json.dump (JString s)
+        + "]"
 
-    "token " + range + " " + value
+      | IdentToken text ->
+        "[\"Ident\", "
+        + range
+        + ", "
+        + Json.dump (JString text)
+        + "]"
 
-  | SyntaxNode (kind, []) -> __dump kind + " {}"
+      | TyVarToken text -> "[\"TyVar\", " + range + "\"'" + text + "\"]"
 
-  | SyntaxNode (kind, [ (SyntaxToken _) as child ]) ->
-    let deepIndent = indent + "  "
+      | NewlinesToken ->
+        let y1, x1 = pos
+        let y2, x2 = endPos
+        let blank = if y1 < y2 then x2 else x1 + x2
 
-    __dump kind
-    + " {"
-    + sdElement rx deepIndent child
-    + "}"
+        "[\"Newlines\", "
+        + range
+        + ", \""
+        + String.replicate (y2 - y1) "\\n"
+        + String.replicate blank " "
+        + "\"]"
+
+      | CommentToken -> "[\"Comment\", " + range + "]"
+
+      | _ -> "[\"" + __dump kind + "\", " + range + "]"
+
+    | None -> "[\"" + __dump kind + "\", " + range + "]"
+
+  | SyntaxNode (kind, []) -> "[\"" + __dump kind + "\", []]"
 
   | SyntaxNode (kind, children) ->
-    let s = __dump kind + " {"
+    let s = "[\"" + __dump kind + "\", ["
 
     let t =
       let deepIndent = indent + "  "
 
       children
       |> List.map (fun child -> "\n" + deepIndent + sdElement rx deepIndent child)
-      |> S.concat ""
+      |> S.concat ","
 
-    s + t + "\n" + indent + "}"
+    s + t + "\n" + indent + "]]"
 
 let private stDump (tokens: TokenizeFullResult) (tree: SyntaxTree) : string =
   let (SyntaxTree root) = tree
