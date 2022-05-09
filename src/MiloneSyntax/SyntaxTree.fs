@@ -2,6 +2,7 @@ module rec MiloneSyntax.SyntaxTree
 
 open MiloneShared.SharedTypes
 open MiloneShared.TypeIntegers
+open MiloneShared.Util
 open MiloneSyntaxTypes.SyntaxTypes
 open Std.StdError
 open Std.StdJson
@@ -59,6 +60,10 @@ type SyntaxKind =
   | Anchor
 
   // Token:
+  | Bad
+  | Newlines
+  | Blank
+  | Comment
   | Literal
   | Ident
   | LeftParen
@@ -418,19 +423,21 @@ let private sgExpr (ctx: SgCtx) (expr: AExpr) : SyntaxElement =
 
   | ALetExpr (letPos, contents, next) ->
     match contents with
-    | ALetContents.LetVal (_, pat, _equalPos, init) ->
+    | ALetContents.LetVal (_, pat, equalPos, init) ->
       newNode
         SyntaxKind.LetValExpr
         [ onToken Sk.LetVal letPos
           onPat pat
+          onToken Sk.Equal equalPos
           onExpr init
           onExpr next ]
 
-    | ALetContents.LetFun (_, _, name, argPats, resultTyOpt, _equalPos, body) ->
+    | ALetContents.LetFun (_, _, name, argPats, resultTyOpt, equalPos, body) ->
       buildNode
         SyntaxKind.LetFunExpr
         ([ [ onName name ] ]
          |> cons (newNode Sk.ParamList (onPats argPats))
+         |> cons (onToken Sk.Equal equalPos)
          |> consList (
            match resultTyOpt with
            | Some (colonPos, ty) -> [ onToken Sk.Colon colonPos; onTy ty ]
@@ -451,19 +458,21 @@ let private sgDecl (ctx: SgCtx) decl : SyntaxElement =
 
   | ALetDecl (letPos, contents) ->
     match contents with
-    | ALetContents.LetVal (_, pat, _equalPos, init) ->
+    | ALetContents.LetVal (_, pat, equalPos, init) ->
       newNode
         SyntaxKind.LetValDecl
         [ onToken Sk.LetVal letPos
           onPat pat
+          onToken Sk.Equal equalPos
           onExpr init ]
 
-    | ALetContents.LetFun (_, _, name, argPats, resultTyOpt, _equalPos, body) ->
+    | ALetContents.LetFun (_, _, name, argPats, resultTyOpt, equalPos, body) ->
       buildNode
         SyntaxKind.LetFunDecl
         ([ [ onToken Sk.LetFun letPos
              onName name ] ]
          |> cons (newNode Sk.ParamList (argPats |> List.map onPat))
+         |> cons (onToken Sk.Equal equalPos)
          |> consList (
            match resultTyOpt with
            | Some (colonPos, ty) -> [ onToken Sk.Colon colonPos; onTy ty ]
@@ -510,49 +519,225 @@ let private sgRoot (ctx: SgCtx) root : SyntaxElement =
      )
      |> consListMap onDecl decls)
 
-let private postprocess (_tokens: TokenizeFullResult) (eofPos: Pos) (root: SyntaxElement) : SyntaxElement =
-  let rec go availableRange element =
+// -----------------------------------------------
+// Postprocess
+// -----------------------------------------------
+
+/// Converts a token with range to syntax element.
+let private wrapToken (token, range) : SyntaxElement =
+  let kind =
+    match token with
+    | ErrorToken _ -> Sk.Bad
+    | BlankToken -> Sk.Blank
+    | NewlinesToken -> Sk.Newlines
+    | CommentToken -> Sk.Comment
+
+    | _ -> Sk.Todo
+
+  SyntaxToken(kind, range)
+
+/// Takes (leading) trivias.
+let private takeLeadingTrivias (rangeMap: TokenRangeMap) tokens =
+  let isLeading token =
+    match token with
+    | ErrorToken _
+    | NewlinesToken _
+    | BlankToken _
+    | CommentToken _ -> true
+    | _ -> false
+
+  let rec go acc tokens =
+    match tokens with
+    | (token, pos) :: tokens when isLeading token ->
+      let _, endPos = rangeMap |> mapFind pos
+      go (wrapToken (token, (pos, endPos)) :: acc) tokens
+
+    | _ -> List.rev acc, tokens
+
+  go [] tokens
+
+/// Takes trailing (non-newline) trivias.
+let private takeTrailingTrivias (rangeMap: TokenRangeMap) tokens =
+  let isTrailing token =
+    match token with
+    | ErrorToken _
+    | BlankToken _
+    | CommentToken _ -> true
+    | _ -> false
+
+  let rec go acc tokens =
+    match tokens with
+    | (token, pos) :: tokens when isTrailing token ->
+      let _, endPos = rangeMap |> mapFind pos
+      go (wrapToken (token, (pos, endPos)) :: acc) tokens
+
+    | _ -> List.rev acc, tokens
+
+  go [] tokens
+
+/// Takes tokens until a position.
+let private takeTokensUntil (rangeMap: TokenRangeMap) tokens untilPos =
+  let rec go acc tokens =
+    match tokens with
+    | (token, pos) :: tokens ->
+      let _, endPos = rangeMap |> mapFind pos
+
+      if Pos.compare endPos untilPos <= 0 then
+        go (wrapToken (token, (pos, endPos)) :: acc) tokens
+      else
+        List.rev acc, tokens
+
+    | _ -> List.rev acc, tokens
+
+  go [] tokens
+
+let private postprocess
+  (tokens: TokenizeFullResult)
+  (rangeMap: TokenRangeMap)
+  (eofPos: Pos)
+  (root: SyntaxElement)
+  : SyntaxElement =
+  let shrinkRange elements range =
+    match List.tryLast elements with
+    | Some t ->
+      let _, m = getRange t
+      let p, q = range
+      Pos.max p m, q
+
+    | None -> range
+
+  let rec go (availableRange: Range) tokens element =
     match element with
-    | SyntaxToken _ -> element
+    | SyntaxToken (_, (pos, _)) ->
+      // Take all tokens before this token.
+      let middle, tokens = takeTokensUntil rangeMap tokens pos
+
+      // Skip this token.
+      let tokens =
+        tokens
+        |> List.skipWhile (fun (_, p) -> Pos.compare p pos = 0)
+
+      let trailing, tokens = takeTrailingTrivias rangeMap tokens
+      List.collect id [ middle; [ element ]; trailing ], tokens
 
     | SyntaxNode (kind, _, children) ->
-      let children, availableRange =
+      let leading, tokens = takeLeadingTrivias rangeMap tokens
+      let availableRange = shrinkRange leading availableRange
+
+      let children, (availableRange, tokens) =
         children
-        |> List.mapFold
-             (fun availableRange child ->
-               let child = go availableRange child
+        |> listCollectFold
+             (fun (availableRange, tokens) child ->
+               let leading, tokens = takeLeadingTrivias rangeMap tokens
+               let availableRange = shrinkRange leading availableRange
 
-               let p, q = availableRange
-               let _, m = getRange child
-               let restRange = Pos.max p m, Pos.min q m
+               let child, tokens = go availableRange tokens child
+               let availableRange = shrinkRange child availableRange
 
-               child, restRange)
-             availableRange
+               let trailing, tokens = takeTrailingTrivias rangeMap tokens
+               let availableRange = shrinkRange trailing availableRange
+
+               let elements =
+                 List.collect id [ leading; child; trailing ]
+
+               elements, (availableRange, tokens))
+             (availableRange, tokens)
+
+      let trailing, tokens = takeTrailingTrivias rangeMap tokens
+
+      let elements =
+        List.collect id [ leading; children; trailing ]
 
       let range =
-        match children with
+        match elements with
         | [] ->
-          let pos, _ = availableRange
+          let pos, _ = shrinkRange elements availableRange
           pos, pos
 
-        | [ child ] -> getRange child
-
         | first :: nonFirst ->
-          let last =
-            match List.tryLast nonFirst with
-            | Some last -> last
-            | None -> unreachable ()
+          match List.tryLast nonFirst with
+          | Some last -> Range.join (getRange first) (getRange last)
+          | None -> getRange first
 
-          Range.join (getRange first) (getRange last)
-
-      // FIXME: collect tokens
-      SyntaxNode(kind, range, children)
+      [ SyntaxNode(kind, range, children) ], tokens
 
   let wholeRange: Range = Pos.zero, eofPos
 
-  match go wholeRange root with
-  | SyntaxToken _ -> unreachable ()
-  | SyntaxNode (kind, _, children) -> SyntaxNode (kind, wholeRange, children)
+  let rootLeadingTokens, tokens = takeLeadingTrivias rangeMap tokens
+
+  match go wholeRange tokens root with
+  | [ SyntaxNode (kind, _, children) ], tokens ->
+    let trailing =
+      tokens
+      |> List.map (fun (token, pos) ->
+        let _, endPos = rangeMap |> mapFind pos
+        wrapToken (token, (pos, endPos)))
+
+    let children =
+      List.collect
+        id
+        [ rootLeadingTokens
+          children
+          trailing ]
+
+    SyntaxNode(kind, wholeRange, children)
+
+  | _ -> unreachable ()
+
+// -----------------------------------------------
+// Validate
+// -----------------------------------------------
+
+let private stValidate rangeMap (tokens: TokenizeFullResult) (root: SyntaxElement) =
+  let rec go tokens element =
+    match element, tokens with
+    | SyntaxToken (kind, range), (k, pos) :: tokens ->
+      let _, endPos = rangeMap |> mapFind pos
+
+      let p1, q1 = range
+
+      if Pos.compare p1 pos = 0
+         && Pos.compare q1 endPos = 0 then
+        // check kind
+        true, tokens
+      else
+        __trace (
+          "token/tree mismatch. Next token: "
+          + __dump (k, pos)
+          + " but was SyntaxToken: "
+          + __dump (kind, range)
+        )
+
+        false, tokens
+
+    | SyntaxToken _, _ ->
+      __trace (
+        "token/tree mismatch. Expected no token but was: "
+        + __dump element
+      )
+
+      false, tokens
+
+    | SyntaxNode (_, _, children), _ ->
+      children
+      |> List.fold
+           (fun (ok, tokens) child ->
+             if ok then
+               go tokens child
+             else
+               false, tokens)
+           (true, tokens)
+
+  match go tokens root with
+  | true, (token :: _) ->
+    __trace (
+      "token/tree mismatch. Syntax tree didn't contain: "
+      + __dump token
+    )
+
+    false
+
+  | ok, _ -> ok
 
 // -----------------------------------------------
 // Dump
@@ -709,7 +894,7 @@ let genSyntaxTree (tokens: TokenizeFullResult) (ast: ARoot) : SyntaxTree =
   let ctx: SgCtx = SgCtx rangeMap
 
   sgRoot ctx ast
-  |> postprocess tokens eofPos
+  |> postprocess tokens rangeMap eofPos
   |> SyntaxTree
 
 let dumpTree (tokens: TokenizeFullResult) (ast: ARoot) : string =
@@ -721,6 +906,9 @@ let dumpTree (tokens: TokenizeFullResult) (ast: ARoot) : string =
   let rangeMap = toTokenRangeMap tokens eofPos
   let ctx: SgCtx = SgCtx rangeMap
 
-  sgRoot ctx ast
-  |> postprocess tokens eofPos
-  |> sdRoot rangeMap
+  let root =
+    sgRoot ctx ast
+    |> postprocess tokens rangeMap eofPos
+
+  assert (stValidate rangeMap tokens root)
+  sdRoot rangeMap root
