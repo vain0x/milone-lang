@@ -802,8 +802,25 @@ let private takeTrailingTrivias (rangeMap: TokenRangeMap) tokens =
 
   go [] tokens
 
+let private takeTokensBefore (rangeMap: TokenRangeMap) untilPos tokens =
+  let rec go acc tokens =
+    let tokensOrig = tokens
+
+    match tokens with
+    | (token, pos) :: tokens ->
+      let _, endPos = rangeMap |> mapFind pos
+
+      if Pos.compare pos untilPos < 0 then
+        go (wrapToken (token, (pos, endPos)) :: acc) tokens
+      else
+        List.rev acc, tokensOrig
+
+    | _ -> List.rev acc, tokens
+
+  go [] tokens
+
 /// Takes tokens until a position (inclusive).
-let private takeTokensUntil (rangeMap: TokenRangeMap) tokens untilPos =
+let private takeTokensUntil (rangeMap: TokenRangeMap) untilPos tokens =
   let rec go acc tokens =
     let tokensOrig = tokens
 
@@ -841,21 +858,9 @@ let private postprocess
       // Don't relay on the kind and trust token stream.
 
       // Take all tokens before and at the position.
-      let middle, tokens = takeTokensUntil rangeMap tokens pos
-
-      __trace (
-        "middle pos="
-        + Pos.toString pos
-        + ": "
-        + __dump middle
-        + "; (next = "
-        + __dump (List.tryHead tokens)
-        + ")"
-      )
+      let middle, tokens = takeTokensUntil rangeMap pos tokens
 
       let trailing, tokens = takeTrailingTrivias rangeMap tokens
-      __trace ("    trailing: " + __dump trailing)
-
       List.collect id [ middle; trailing ], tokens
 
     | SyntaxNode (kind, _, children) ->
@@ -866,6 +871,19 @@ let private postprocess
         children
         |> listCollectFold
              (fun (availableRange, tokens) child ->
+               // Take tokens not covered by this child.
+               let rec leftmost element =
+                 match element with
+                 | SyntaxToken (_, pos) -> Some pos
+                 | SyntaxNode (_, _, children) -> List.tryPick leftmost children
+
+               let middle, tokens =
+                 match leftmost child with
+                 | Some (pos, _) -> takeTokensBefore rangeMap pos tokens
+                 | None -> [], tokens
+
+               let availableRange = shrinkRange middle availableRange
+
                let leading, tokens = takeLeadingTrivias rangeMap tokens
                let availableRange = shrinkRange leading availableRange
 
@@ -876,7 +894,7 @@ let private postprocess
                let availableRange = shrinkRange trailing availableRange
 
                let elements =
-                 List.collect id [ leading; child; trailing ]
+                 List.collect id [ middle; leading; child; trailing ]
 
                elements, (availableRange, tokens))
              (availableRange, tokens)
