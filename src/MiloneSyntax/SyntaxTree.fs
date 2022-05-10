@@ -8,7 +8,6 @@ open Std.StdError
 open Std.StdJson
 open Std.StdPair
 open Std.StdMap
-open Std.StdSet
 
 module C = Std.StdChar
 module S = Std.StdString
@@ -61,11 +60,15 @@ type SyntaxKind =
 
   // Token:
   | Bad
-  | Newlines
   | Blank
+  | Newlines
   | Comment
-  | Literal
+  | Int
+  | Float
+  | Char
+  | String
   | Ident
+  | TyVar
   | LeftParen
   | RightParen
   | LeftBracket
@@ -74,21 +77,52 @@ type SyntaxKind =
   | RightBrace
   | LeftAngle
   | RightAngle
+  | LeftAttr
+  | RightAttr
+  | Amp
+  | AmpAmp
+  | AmpAmpAmp
   | Arrow
   | Colon
+  | ColonColon
+  | Comma
   | Dot
+  | DotDot
+  | Hat
+  | HatHatHat
+  | LeftEqual
+  | LeftLeft
+  | LeftLeftLeft
+  | LeftRight
+  | RightEqual
   | Equal
   | Pipe
+  | As
   | Else
+  | False
   | Fun
   | If
-  | LetFun
-  | LetVal
+  | In
+  | Let
   | Match
   | Minus
   | Module
-  | PtrOf
+  | Of
+  | Open
+  | Percent
+  | PipePipe
+  | PipePipePipe
+  | PipeRight
+  | Plus
+  | Private
+  | Public
+  | Rec
+  | Semi
+  | Slash
+  | Star
   | Then
+  | True
+  | Type
   | When
   | With
 
@@ -104,6 +138,8 @@ type SyntaxKind =
   | Arm
   | GuardClause
   | ModuleHead
+  | VariantDecl
+  | FieldDecl
 
   // Ty:
   | MissingTy
@@ -163,7 +199,6 @@ type SyntaxKind =
   | AttrDecl
 
   | Root
-  | Todo
 
 type private Sk = SyntaxKind
 
@@ -210,6 +245,19 @@ let private newNode kind children : SyntaxElement = SyntaxNode(kind, noRange, ch
 
 let private buildNode kind childrenRev : SyntaxElement =
   SyntaxNode(kind, noRange, childrenRev |> List.rev |> List.collect id)
+
+let private sgLit ctx lit pos =
+  let kind =
+    match lit with
+    | BoolLit false -> Sk.False
+    | BoolLit true -> Sk.True
+    | IntLit _
+    | IntLitWithFlavor _ -> Sk.Int
+    | FloatLit _ -> Sk.Float
+    | CharLit _ -> Sk.Char
+    | StringLit _ -> Sk.String
+
+  sgToken ctx kind pos
 
 let private sgName (ctx: SgCtx) name : SyntaxElement =
   let (Name (_, pos)) = name
@@ -274,8 +322,68 @@ let private sgTy (ctx: SgCtx) (ty: ATy) : SyntaxElement =
   | AFunTy (lTy, _, rTy) -> newNode Sk.FunTy [ onTy lTy; onTy rTy ]
 
 let private sgPat (ctx: SgCtx) (pat: APat) : SyntaxElement =
-  // FIXME: implement
-  newNode SyntaxKind.Todo []
+  let onToken kind pos = sgToken ctx kind pos
+  let onName name = sgName ctx name
+  let onTy ty = sgTy ctx ty
+  let onPat pat = sgPat ctx pat
+
+  match pat with
+  | AMissingPat pos -> newAnchor pos
+  | ALitPat (lit, pos) -> newNode Sk.LitPat [ sgLit ctx lit pos ]
+  | AIdentPat (_, name) -> newNode Sk.IdentPat [ onName name ]
+
+  | AParenPat (lPos, bodyPat, rPos) ->
+    buildNode
+      Sk.ParenPat
+      ([ [ onToken Sk.LeftParen lPos ] ]
+       |> cons (onPat bodyPat)
+       |> consOptionMap (onToken Sk.RightParen) rPos)
+
+  | AListPat (lPos, itemPats, rPos) ->
+    buildNode
+      Sk.ListPat
+      ([ [ onToken Sk.LeftBracket lPos ] ]
+       |> consListMap onPat itemPats
+       |> consOptionMap (onToken Sk.RightBracket) rPos)
+
+  | ANavPat (lPat, dotPos, r) ->
+    newNode
+      Sk.NavPat
+      [ onPat lPat
+        onToken Sk.Dot dotPos
+        onName r ]
+
+  | AAppPat (lPat, _, rPat) -> newNode Sk.AppPat [ onPat lPat; onPat rPat ]
+
+  | AConsPat (lPat, opPos, rPat) ->
+    newNode
+      Sk.ConsPat
+      [ onPat lPat
+        onToken Sk.ColonColon opPos
+        onPat rPat ]
+
+  | ATuplePat (itemPats, _) -> newNode Sk.TuplePat (itemPats |> List.map onPat)
+
+  | AAsPat (bodyPat, asPos, name) ->
+    newNode
+      Sk.AsPat
+      [ onPat bodyPat
+        onToken Sk.As asPos
+        onName name ]
+
+  | AAscribePat (bodyPat, colonPos, ty) ->
+    newNode
+      Sk.AscribePat
+      [ onPat bodyPat
+        onToken Sk.Colon colonPos
+        onTy ty ]
+
+  | AOrPat (lPat, pipePos, rPat) ->
+    newNode
+      Sk.OrPat
+      [ onPat lPat
+        onToken Sk.Pipe pipePos
+        onPat rPat ]
 
 let private sgExpr (ctx: SgCtx) (expr: AExpr) : SyntaxElement =
   let onToken kind pos = sgToken ctx kind pos
@@ -289,7 +397,7 @@ let private sgExpr (ctx: SgCtx) (expr: AExpr) : SyntaxElement =
 
   match expr with
   | AMissingExpr pos -> newNode SyntaxKind.MissingExpr [ newAnchor pos ]
-  | ALitExpr (_, pos) -> newNode SyntaxKind.LiteralExpr [ onToken Sk.Literal pos ]
+  | ALitExpr (lit, pos) -> newNode SyntaxKind.LiteralExpr [ sgLit ctx lit pos ]
 
   | AIdentExpr (name, tyArgList) ->
     buildNode
@@ -408,7 +516,7 @@ let private sgExpr (ctx: SgCtx) (expr: AExpr) : SyntaxElement =
     let opKind =
       match unary with
       | MinusUnary -> Sk.Minus
-      | PtrOfUnary -> Sk.PtrOf
+      | PtrOfUnary -> Sk.AmpAmp
 
     newNode SyntaxKind.UnaryExpr [ onToken opKind opPos; onExpr arg ]
 
@@ -426,7 +534,7 @@ let private sgExpr (ctx: SgCtx) (expr: AExpr) : SyntaxElement =
     | ALetContents.LetVal (_, pat, equalPos, init) ->
       newNode
         SyntaxKind.LetValExpr
-        [ onToken Sk.LetVal letPos
+        [ onToken Sk.Let letPos
           onPat pat
           onToken Sk.Equal equalPos
           onExpr init
@@ -437,12 +545,12 @@ let private sgExpr (ctx: SgCtx) (expr: AExpr) : SyntaxElement =
         SyntaxKind.LetFunExpr
         ([ [ onName name ] ]
          |> cons (newNode Sk.ParamList (onPats argPats))
-         |> cons (onToken Sk.Equal equalPos)
          |> consList (
            match resultTyOpt with
            | Some (colonPos, ty) -> [ onToken Sk.Colon colonPos; onTy ty ]
            | None -> []
          )
+         |> cons (onToken Sk.Equal equalPos)
          |> consList (onExprs [ body; next ]))
 
 let private sgDecl (ctx: SgCtx) decl : SyntaxElement =
@@ -453,6 +561,11 @@ let private sgDecl (ctx: SgCtx) decl : SyntaxElement =
   let onExpr expr = sgExpr ctx expr
   let onDecls decls = decls |> List.map (sgDecl ctx)
 
+  let onTyHead typePos name tyParamList equalPos =
+    [ [ onToken Sk.Type typePos; onName name ] ]
+    |> consOpt (sgTyParamList ctx tyParamList)
+    |> cons (onToken Sk.Equal equalPos)
+
   match decl with
   | AExprDecl expr -> newNode SyntaxKind.ExprDecl [ onExpr expr ]
 
@@ -461,7 +574,7 @@ let private sgDecl (ctx: SgCtx) decl : SyntaxElement =
     | ALetContents.LetVal (_, pat, equalPos, init) ->
       newNode
         SyntaxKind.LetValDecl
-        [ onToken Sk.LetVal letPos
+        [ onToken Sk.Let letPos
           onPat pat
           onToken Sk.Equal equalPos
           onExpr init ]
@@ -469,22 +582,63 @@ let private sgDecl (ctx: SgCtx) decl : SyntaxElement =
     | ALetContents.LetFun (_, _, name, argPats, resultTyOpt, equalPos, body) ->
       buildNode
         SyntaxKind.LetFunDecl
-        ([ [ onToken Sk.LetFun letPos
-             onName name ] ]
+        ([ [ onToken Sk.Let letPos; onName name ] ]
          |> cons (newNode Sk.ParamList (argPats |> List.map onPat))
-         |> cons (onToken Sk.Equal equalPos)
          |> consList (
            match resultTyOpt with
            | Some (colonPos, ty) -> [ onToken Sk.Colon colonPos; onTy ty ]
            | None -> []
          )
+         |> cons (onToken Sk.Equal equalPos)
          |> cons (onExpr body))
 
-  | ATySynonymDecl _
-  | AUnionTyDecl _
-  | ARecordTyDecl _
-  | AOpenDecl _
-  | AModuleSynonymDecl _ -> newNode Sk.Todo []
+  | ATySynonymDecl (typePos, _, name, tyParamList, equalPos, ty) ->
+    buildNode
+      Sk.TySynonymDecl
+      (onTyHead typePos name tyParamList equalPos
+       |> cons (onTy ty))
+
+  | AUnionTyDecl (typePos, _, name, tyParamList, equalPos, variants) ->
+    buildNode
+      Sk.UnionTyDecl
+      (onTyHead typePos name tyParamList equalPos
+       |> consList (
+         variants
+         |> List.map (fun (pipe, name, payloadOpt) ->
+           buildNode
+             Sk.VariantDecl
+             ([ [ onToken Sk.Pipe pipe; onName name ] ]
+              |> consList (
+                match payloadOpt with
+                | Some (ofPos, ty) -> [ onToken Sk.Of ofPos; onTy ty ]
+                | None -> []
+              )))
+       ))
+
+  | ARecordTyDecl (typePos, _, name, tyParamList, equalPos, lPos, fields, rPos) ->
+    buildNode
+      Sk.RecordTyDecl
+      (onTyHead typePos name tyParamList equalPos
+       |> cons (onToken Sk.LeftBrace lPos)
+       |> consList (
+         fields
+         |> List.map (fun (name, ty, _) -> newNode Sk.FieldDecl [ onName name; onTy ty ])
+       )
+       |> consOptionMap (onToken Sk.RightBrace) rPos)
+
+  | AOpenDecl (openPos, path) ->
+    newNode
+      Sk.OpenDecl
+      [ onToken Sk.Open openPos
+        newNode Sk.Path (path |> List.map onName) ]
+
+  | AModuleSynonymDecl (modulePos, name, equalPos, path) ->
+    newNode
+      Sk.ModuleSynonymDecl
+      [ onToken Sk.Module modulePos
+        onName name
+        onToken Sk.Equal equalPos
+        newNode Sk.Path (path |> List.map onName) ]
 
   | AModuleDecl (modulePos, _, _, name, _, decls) ->
     newNode
@@ -492,9 +646,13 @@ let private sgDecl (ctx: SgCtx) decl : SyntaxElement =
       (onToken Sk.Module modulePos
        :: onName name :: onDecls decls)
 
-  | AAttrDecl (l, attr, rOpt, next) ->
-    // FIXME: add attribute node
-    sgDecl ctx next
+  | AAttrDecl (lPos, attr, rOpt, next) ->
+    buildNode
+      SyntaxKind.AttrDecl
+      ([ [ onToken Sk.LeftAttr lPos
+           onExpr attr ] ]
+       |> consOptionMap (onToken Sk.RightAttr) rOpt
+       |> cons (sgDecl ctx next))
 
 let private sgRoot (ctx: SgCtx) root : SyntaxElement =
   let onToken kind pos = sgToken ctx kind pos
@@ -531,8 +689,68 @@ let private wrapToken (token, range) : SyntaxElement =
     | BlankToken -> Sk.Blank
     | NewlinesToken -> Sk.Newlines
     | CommentToken -> Sk.Comment
-
-    | _ -> Sk.Todo
+    | IntToken _ -> Sk.Int
+    | FloatToken _ -> Sk.Float
+    | CharToken _ -> Sk.Char
+    | StringToken _ -> Sk.String
+    | IdentToken _ -> Sk.Ident
+    | TyVarToken _ -> Sk.TyVar
+    | LeftParenToken -> Sk.LeftParen
+    | RightParenToken -> Sk.RightParen
+    | LeftBracketToken -> Sk.LeftBracket
+    | RightBracketToken -> Sk.RightBracket
+    | LeftBraceToken -> Sk.LeftBrace
+    | RightBraceToken -> Sk.RightBrace
+    | LeftAngleToken _ -> Sk.LeftAngle
+    | RightAngleToken -> Sk.RightAngle
+    | LeftAttrToken -> Sk.LeftAttr
+    | RightAttrToken -> Sk.RightAttr
+    | AmpToken -> Sk.Amp
+    | AmpAmpToken _ -> Sk.AmpAmp
+    | AmpAmpAmpToken -> Sk.AmpAmpAmp
+    | ArrowToken -> Sk.Arrow
+    | ColonToken -> Sk.Colon
+    | ColonColonToken -> Sk.ColonColon
+    | CommaToken -> Sk.Comma
+    | DotToken -> Sk.Dot
+    | DotDotToken -> Sk.DotDot
+    | EqualToken -> Sk.Equal
+    | HatToken -> Sk.Hat
+    | HatHatHatToken -> Sk.HatHatHat
+    | LeftEqualToken -> Sk.LeftEqual
+    | LeftLeftToken -> Sk.LeftLeft
+    | LeftLeftLeftToken -> Sk.LeftLeftLeft
+    | LeftRightToken -> Sk.LeftRight
+    | RightEqualToken -> Sk.RightEqual
+    | MinusToken _ -> Sk.Minus
+    | PercentToken -> Sk.Percent
+    | PipeToken -> Sk.Pipe
+    | PipeRightToken -> Sk.PipeRight
+    | PipePipeToken -> Sk.PipePipe
+    | PipePipePipeToken -> Sk.PipePipePipe
+    | PlusToken -> Sk.Plus
+    | SemiToken -> Sk.Semi
+    | SlashToken -> Sk.Slash
+    | StarToken -> Sk.Star
+    | AsToken -> Sk.As
+    | ElseToken -> Sk.Else
+    | FalseToken -> Sk.False
+    | FunToken -> Sk.Fun
+    | IfToken -> Sk.If
+    | InToken -> Sk.In
+    | LetToken -> Sk.Let
+    | MatchToken -> Sk.Match
+    | ModuleToken -> Sk.Module
+    | OfToken -> Sk.Of
+    | OpenToken -> Sk.Open
+    | PrivateToken -> Sk.Private
+    | PublicToken -> Sk.Public
+    | RecToken -> Sk.Rec
+    | ThenToken -> Sk.Then
+    | TrueToken -> Sk.True
+    | TypeToken -> Sk.Type
+    | WhenToken -> Sk.When
+    | WithToken -> Sk.With
 
   SyntaxToken(kind, range)
 
@@ -910,5 +1128,5 @@ let dumpTree (tokens: TokenizeFullResult) (ast: ARoot) : string =
     sgRoot ctx ast
     |> postprocess tokens rangeMap eofPos
 
-  assert (stValidate rangeMap tokens root)
+  // assert (stValidate rangeMap tokens root)
   sdRoot rangeMap root
