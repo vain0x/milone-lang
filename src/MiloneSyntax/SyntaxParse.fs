@@ -971,6 +971,7 @@ let private parseRecordExpr lPos (tokens, errors) : PR<AExpr> =
 let private parseThenClause basePos (tokens, errors) : PR<Pos * AExpr> =
   let innerBasePos = basePos |> posAddX 1
 
+  // #incorrectPos
   let thenPos, (body, tokens, errors) =
     match tokens with
     | (ThenToken, thenPos) :: tokens when posInside basePos thenPos ->
@@ -1027,6 +1028,7 @@ let private parseMatchArm matchPos (pipePos: Pos option) (tokens, errors) =
 
     | _ -> None, tokens, errors
 
+  // #incorrectPos
   let arrowPos, (body, tokens, errors) =
     match tokens with
     | (ArrowToken, arrowPos) :: tokens -> arrowPos, parseSemi matchPos arrowPos (tokens, errors)
@@ -1078,6 +1080,7 @@ let private parseFun basePos funPos (tokens, errors) : PR<AExpr> =
   let argPats, tokens, errors =
     parsePatCallArgs basePos (tokens, errors)
 
+  // #incorrectPos
   let arrowPos, (body, tokens, errors) =
     match tokens with
     | (ArrowToken, arrowPos) :: tokens -> arrowPos, parseSemi basePos arrowPos (tokens, errors)
@@ -1096,6 +1099,7 @@ let private parseLet letPos (tokens, errors) : PR<AExpr> =
   let head, tokens, errors =
     parseLetHead innerBasePos (tokens, errors)
 
+  // #incorrectPos
   let equalPos, (body, tokens, errors) =
     match tokens with
     | (EqualToken, equalPos) :: tokens -> equalPos, parseSemi innerBasePos equalPos (tokens, errors)
@@ -1210,6 +1214,7 @@ let private parseTyDeclBody basePos (tokens, errors) : PR<ATyDeclBody> =
   | (PipeToken, _) :: _ -> parseTyDeclUnion basePos (tokens, errors)
 
   | (IdentToken _, pos) :: (OfToken, _) :: _ ->
+    // #incorrectPos
     let tokens = (PipeToken, posPrev pos) :: tokens
     parseTyDeclUnion basePos (tokens, errors)
 
@@ -1320,6 +1325,7 @@ let private parseLetDecl letPos (tokens, errors) : PR<ADecl option> =
   let head, tokens, errors =
     parseLetHead innerBasePos (tokens, errors)
 
+  // #incorrectPos
   let equalPos, (init, tokens, errors) =
     match tokens with
     | (EqualToken, equalPos) :: tokens -> equalPos, parseSemi innerBasePos equalPos (tokens, errors)
@@ -1375,6 +1381,7 @@ let private parseTyDecl typePos (tokens, errors) : PR<ADecl option> =
     Some decl, tokens, errors
 
   | Some (tyName, tyParamList), tokens ->
+    // #incorrectPos
     let equalPos = posPrev (nextPos tokens)
 
     let ty, tokens, errors =
@@ -1437,6 +1444,7 @@ let private parseModuleDecl modulePos (tokens, errors) : PR<ADecl option> =
     Some(AModuleDecl(modulePos, isRec, vis, name, equalPos, decls)), tokens, errors
 
   | _ ->
+    // #incorrectPos
     let equalPos = behindName name
 
     let errors =
