@@ -69,6 +69,7 @@ type SyntaxKind =
   | String
   | Ident
   | TyVar
+  // Parentheses:
   | LeftParen
   | RightParen
   | LeftBracket
@@ -79,6 +80,7 @@ type SyntaxKind =
   | RightAngle
   | LeftAttr
   | RightAttr
+  // Punctuations:
   | Amp
   | AmpAmp
   | AmpAmpAmp
@@ -88,38 +90,39 @@ type SyntaxKind =
   | Comma
   | Dot
   | DotDot
+  | Equal
   | Hat
   | HatHatHat
   | LeftEqual
   | LeftLeft
   | LeftLeftLeft
   | LeftRight
-  | RightEqual
-  | Equal
+  | Let
+  | Minus
+  | Percent
   | Pipe
+  | PipePipe
+  | PipePipePipe
+  | PipeRight
+  | Plus
+  | RightEqual
+  | Semi
+  | Slash
+  | Star
+  // Keywords:
   | As
   | Else
   | False
   | Fun
   | If
   | In
-  | Let
   | Match
-  | Minus
   | Module
   | Of
   | Open
-  | Percent
-  | PipePipe
-  | PipePipePipe
-  | PipeRight
-  | Plus
   | Private
   | Public
   | Rec
-  | Semi
-  | Slash
-  | Star
   | Then
   | True
   | Type
@@ -137,9 +140,9 @@ type SyntaxKind =
   | ElseClause
   | Arm
   | GuardClause
-  | ModuleHead
   | VariantDecl
   | FieldDecl
+  | ModuleHead
 
   // Ty:
   | MissingTy
@@ -176,9 +179,9 @@ type SyntaxKind =
   | FunExpr
   | NavExpr
   | IndexExpr
+  | AppExpr
   | UnaryExpr
   | BinaryExpr
-  | AppExpr
   | RangeExpr
   | TupleExpr
   | AscribeExpr
