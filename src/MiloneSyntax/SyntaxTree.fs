@@ -16,8 +16,6 @@ module S = Std.StdString
 // Util
 // -----------------------------------------------
 
-let private noRange: Range = (0, 0), (0, 0)
-
 module Pos =
   let zero: Pos = 0, 0
   let min l r = if Pos.compare r l < 0 then r else l
@@ -84,9 +82,6 @@ let private resolveTokenRange (map: TokenRangeMap) (pos: Pos) : (Token * Range) 
 
 [<RequireQualifiedAccess; NoEquality; NoComparison>]
 type SyntaxKind =
-  // Non-token anchor to occupy a position.
-  | Anchor
-
   // Token:
   | Bad
   | Blank
@@ -322,12 +317,8 @@ let private kindOfToken token =
 // SyntaxElement
 // -----------------------------------------------
 
-let private newAnchor pos = SyntaxToken(Sk.Anchor, (pos, pos))
-
 /// Converts a token with range to syntax element.
 let private wrapToken (token, range) = SyntaxToken(kindOfToken token, range)
-
-let private newNode kind children = SyntaxNode(kind, noRange, children)
 
 let private getRange element =
   match element with
@@ -335,59 +326,54 @@ let private getRange element =
   | SyntaxNode (_, range, _) -> range
 
 // -----------------------------------------------
+// Builder
+// -----------------------------------------------
+
+[<RequireQualifiedAccess; NoEquality; NoComparison>]
+type private BuilderElement =
+  | Anchor of Pos
+  | Node of SyntaxKind * children: BuilderElement list
+
+let private newAnchor pos = BuilderElement.Anchor pos
+
+let private newNode kind children = BuilderElement.Node(kind, children)
+
+let private buildNode kind childrenRev =
+  BuilderElement.Node(kind, childrenRev |> List.rev |> List.collect id)
+
+// -----------------------------------------------
 // Syntax Tree Generation
 // -----------------------------------------------
 
 // sg: syntax tree generation
 
-let private sgToken (ctx: SgCtx) kind pos =
-  let (SgCtx map) = ctx
-
-  match resolveTokenRange map pos with
-  | Some (_, range) -> SyntaxToken(kind, range)
-  | None -> SyntaxToken(kind, (pos, pos))
-
-let private buildNode kind childrenRev : SyntaxElement =
-  SyntaxNode(kind, noRange, childrenRev |> List.rev |> List.collect id)
-
 // Parser might produce incorrect position.
-/// Anchor of `then` keyword. #incorrectPos
-let private sgThen ctx pos =
-  let (SgCtx rangeMap) = ctx
+/// Anchor of a token of the specified kind. #incorrectPos
+let private sgTokenChecked (rx: SgCtx) token pos =
+  let (SgCtx rangeMap) = rx
 
-  match rangeMap |> TMap.tryFind pos with
-  | Some (ThenToken, _) -> Some(newAnchor pos)
-  | _ -> None
+  match token, rangeMap |> TMap.tryFind pos with
+  | ThenToken, Some (ThenToken, _) -> Some(newAnchor pos)
+  | ArrowToken, Some (ArrowToken, _) -> Some(newAnchor pos)
+  | EqualToken, Some (EqualToken, _) -> Some(newAnchor pos)
+  | PipeToken, Some (PipeToken, _) -> Some(newAnchor pos)
 
-/// Anchor of `->`. #incorrectPos
-let private sgArrow ctx pos =
-  let (SgCtx rangeMap) = ctx
+  | ThenToken, _
+  | ArrowToken, _
+  | EqualToken, _
+  | PipeToken, _ -> None
+  | _ -> unreachable ()
 
-  match rangeMap |> TMap.tryFind pos with
-  | Some (ArrowToken, _) -> Some(newAnchor pos)
-  | _ -> None
+let private sgThen ctx pos = sgTokenChecked ctx ThenToken pos
+let private sgArrow ctx pos = sgTokenChecked ctx ArrowToken pos
+let private sgEqual ctx pos = sgTokenChecked ctx EqualToken pos
+let private sgPipe ctx pos = sgTokenChecked ctx PipeToken pos
 
-/// Anchor of `=`. #incorrectPos
-let private sgEqual ctx pos =
-  let (SgCtx rangeMap) = ctx
-
-  match rangeMap |> TMap.tryFind pos with
-  | Some (EqualToken, _) -> Some(newAnchor pos)
-  | _ -> None
-
-/// Anchor of `|`. #incorrectPos
-let private sgPipe ctx pos =
-  let (SgCtx rangeMap) = ctx
-
-  match rangeMap |> TMap.tryFind pos with
-  | Some (PipeToken, _) -> Some(newAnchor pos)
-  | _ -> None
-
-let private sgName name : SyntaxElement =
+let private sgName name =
   let (Name (_, pos)) = name
   newAnchor pos
 
-let private sgPath quals name : SyntaxElement =
+let private sgPath quals name =
   buildNode
     Sk.Path
     ([ quals
@@ -418,7 +404,7 @@ let private sgTyArgList (ctx: SgCtx) (tyArgListOpt: ATyArgList option) =
 
   | None -> None
 
-let private sgTy (ctx: SgCtx) (ty: ATy) : SyntaxElement =
+let private sgTy (ctx: SgCtx) (ty: ATy) : BuilderElement =
   let onTy ty = sgTy ctx ty
 
   match ty with
@@ -443,7 +429,7 @@ let private sgTy (ctx: SgCtx) (ty: ATy) : SyntaxElement =
   | ATupleTy (itemTys, _) -> newNode SyntaxKind.TupleTy (itemTys |> List.map onTy)
   | AFunTy (lTy, _, rTy) -> newNode Sk.FunTy [ onTy lTy; onTy rTy ]
 
-let private sgPat (ctx: SgCtx) (pat: APat) : SyntaxElement =
+let private sgPat (ctx: SgCtx) (pat: APat) : BuilderElement =
   let onTy ty = sgTy ctx ty
   let onPat pat = sgPat ctx pat
 
@@ -505,7 +491,7 @@ let private sgPat (ctx: SgCtx) (pat: APat) : SyntaxElement =
         newAnchor pipePos
         onPat rPat ]
 
-let private sgExpr (ctx: SgCtx) (expr: AExpr) : SyntaxElement =
+let private sgExpr (ctx: SgCtx) (expr: AExpr) : BuilderElement =
   let onTy ty = sgTy ctx ty
   let onPat pat = sgPat ctx pat
   let onPats pats = pats |> List.map (sgPat ctx)
@@ -665,7 +651,7 @@ let private sgExpr (ctx: SgCtx) (expr: AExpr) : SyntaxElement =
          |> consOpt (sgEqual ctx equalPos)
          |> consList (onExprs [ body; next ]))
 
-let private sgDecl (ctx: SgCtx) decl : SyntaxElement =
+let private sgDecl (ctx: SgCtx) decl : BuilderElement =
   let onTy ty = sgTy ctx ty
   let onPat pat = sgPat ctx pat
   let onExpr expr = sgExpr ctx expr
@@ -764,7 +750,7 @@ let private sgDecl (ctx: SgCtx) decl : SyntaxElement =
        |> consOptionMap (newAnchor) rOpt
        |> cons (sgDecl ctx next))
 
-let private sgRoot (ctx: SgCtx) root : SyntaxElement =
+let private sgRoot (ctx: SgCtx) root : BuilderElement =
   let (ARoot (headOpt, decls)) = root
 
   buildNode
@@ -861,11 +847,12 @@ let private takeTokensUntil (rangeMap: TokenRangeMap) untilPos tokens =
 
   go [] tokens
 
+/// Merges tokens into tree to create a full-fidelity syntax tree.
 let private postprocess
   (tokens: TokenizeFullResult)
   (rangeMap: TokenRangeMap)
   (eofPos: Pos)
-  (root: SyntaxElement)
+  (root: BuilderElement)
   : SyntaxElement =
   let shrinkRange elements range =
     match List.tryLast elements with
@@ -878,16 +865,14 @@ let private postprocess
 
   let rec go (availableRange: Range) tokens element =
     match element with
-    | SyntaxToken (_, (pos, _)) ->
-      // Don't relay on the kind and trust token stream.
-
+    | BuilderElement.Anchor pos ->
       // Take all tokens before and at the position.
       let middle, tokens = takeTokensUntil rangeMap pos tokens
 
       let trailing, tokens = takeTrailingTrivias rangeMap tokens
       List.collect id [ middle; trailing ], tokens
 
-    | SyntaxNode (kind, _, children) ->
+    | BuilderElement.Node (kind, children) ->
       let leading, tokens = takeLeadingTrivias rangeMap tokens
       let availableRange = shrinkRange leading availableRange
 
@@ -898,12 +883,12 @@ let private postprocess
                // Take tokens not covered by this child.
                let rec leftmost element =
                  match element with
-                 | SyntaxToken (_, pos) -> Some pos
-                 | SyntaxNode (_, _, children) -> List.tryPick leftmost children
+                 | BuilderElement.Anchor pos -> Some pos
+                 | BuilderElement.Node (_, children) -> List.tryPick leftmost children
 
                let middle, tokens =
                  match leftmost child with
-                 | Some (pos, _) -> takeTokensBefore rangeMap pos tokens
+                 | Some pos -> takeTokensBefore rangeMap pos tokens
                  | None -> [], tokens
 
                let availableRange = shrinkRange middle availableRange
