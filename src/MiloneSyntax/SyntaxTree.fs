@@ -154,7 +154,6 @@ type SyntaxKind =
   | With
 
   // Fragment:
-  | Path
   | GenericParamList
   | GenericArgList
   | WithClause
@@ -165,11 +164,12 @@ type SyntaxKind =
   | GuardClause
   | VariantDecl
   | FieldDecl
+  | ModulePath
   | ModuleHead
 
   // Ty:
   | MissingTy
-  | PathTy
+  | NameTy
   | VarTy
   | ParenTy
   | SuffixTy
@@ -372,13 +372,6 @@ let private sgName name =
   let (Name (_, pos)) = name
   newAnchor pos
 
-let private sgPath quals name =
-  buildNode
-    Sk.Path
-    ([ quals
-       |> List.collect (fun (name, pos) -> [ sgName name; newAnchor pos ]) ]
-     |> cons (sgName name))
-
 let private sgTyParamList (tyParamListOpt: ATyParamList option) =
   match tyParamListOpt with
   | Some (lPos, tyParams, rOpt) ->
@@ -411,8 +404,10 @@ let private sgTy (ctx: SgCtx) (ty: ATy) : BuilderElement =
 
   | AAppTy (quals, name, tyArgList) ->
     buildNode
-      SyntaxKind.PathTy
-      ([ [ sgPath quals name ] ]
+      SyntaxKind.NameTy
+      (quals
+       |> List.map (fun (name, pos) -> [ sgName name; newAnchor pos ])
+       |> cons (sgName name)
        |> consOpt (sgTyArgList ctx tyArgList))
 
   | AVarTy name -> newNode SyntaxKind.VarTy [ sgName name ]
@@ -726,14 +721,14 @@ let private sgDecl (ctx: SgCtx) decl : BuilderElement =
     newNode
       Sk.OpenDecl
       [ newAnchor openPos
-        newNode Sk.Path (path |> List.map sgName) ]
+        newNode Sk.ModulePath (path |> List.map sgName) ]
 
   | AModuleSynonymDecl (modulePos, name, equalPos, path) ->
     buildNode
       Sk.ModuleSynonymDecl
       ([ [ newAnchor modulePos; sgName name ] ]
        |> consOpt (sgEqual ctx equalPos)
-       |> cons (newNode Sk.Path (path |> List.map sgName)))
+       |> cons (newNode Sk.ModulePath (path |> List.map sgName)))
 
   | AModuleDecl (modulePos, _, _, name, equalPos, decls) ->
     buildNode
@@ -761,7 +756,7 @@ let private sgRoot (ctx: SgCtx) root : BuilderElement =
          newNode
            SyntaxKind.ModuleHead
            [ newAnchor modulePos
-             newNode Sk.Path (path |> List.map sgName) ]
+             newNode Sk.ModulePath (path |> List.map sgName) ]
          |> Some
 
        | _ -> None
