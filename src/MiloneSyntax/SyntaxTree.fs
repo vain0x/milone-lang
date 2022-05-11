@@ -121,7 +121,6 @@ type SyntaxKind =
   | LeftLeft
   | LeftLeftLeft
   | LeftRight
-  | Let
   | Minus
   | Percent
   | Pipe
@@ -140,6 +139,7 @@ type SyntaxKind =
   | Fun
   | If
   | In
+  | Let
   | Match
   | Module
   | Of
@@ -380,7 +380,7 @@ let private sgPath quals name =
        |> List.collect (fun (name, pos) -> [ sgName name; newAnchor pos ]) ]
      |> cons (sgName name))
 
-let private sgTyParamList ctx (tyParamListOpt: ATyParamList option) =
+let private sgTyParamList (tyParamListOpt: ATyParamList option) =
   match tyParamListOpt with
   | Some (lPos, tyParams, rOpt) ->
     buildNode
@@ -659,7 +659,7 @@ let private sgDecl (ctx: SgCtx) decl : BuilderElement =
 
   let onTyHead typePos name tyParamList equalPos =
     [ [ newAnchor typePos; sgName name ] ]
-    |> consOpt (sgTyParamList ctx tyParamList)
+    |> consOpt (sgTyParamList tyParamList)
     |> consOpt (sgEqual ctx equalPos)
 
   match decl with
@@ -721,7 +721,7 @@ let private sgDecl (ctx: SgCtx) decl : BuilderElement =
          fields
          |> List.map (fun (name, ty, _) -> newNode Sk.FieldDecl [ sgName name; onTy ty ])
        )
-       |> consOptionMap (newAnchor) rPos)
+       |> consOptionMap newAnchor rPos)
 
   | AOpenDecl (openPos, path) ->
     newNode
@@ -747,7 +747,7 @@ let private sgDecl (ctx: SgCtx) decl : BuilderElement =
     buildNode
       SyntaxKind.AttrDecl
       ([ [ newAnchor lPos; onExpr attr ] ]
-       |> consOptionMap (newAnchor) rOpt
+       |> consOptionMap newAnchor rOpt
        |> cons (sgDecl ctx next))
 
 let private sgRoot (ctx: SgCtx) root : BuilderElement =
@@ -1151,9 +1151,6 @@ let dumpTree (tokens: TokenizeFullResult) (ast: ARoot) : string =
   let root =
     sgRoot ctx ast
     |> postprocess tokens rangeMap eofPos
-
-  if not (stValidate rangeMap tokens root) then
-    __trace "violated!"
 
   // assert (stValidate rangeMap tokens root)
   sdRoot rangeMap root
