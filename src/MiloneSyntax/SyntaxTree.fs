@@ -773,16 +773,16 @@ let private sgRoot (ctx: SgCtx) root : BuilderElement =
 // Postprocess
 // -----------------------------------------------
 
+let private isLeading token =
+  match token with
+  | ErrorToken _
+  | NewlinesToken _
+  | BlankToken _
+  | CommentToken _ -> true
+  | _ -> false
+
 /// Takes (leading) trivias.
 let private takeLeadingTrivias (rangeMap: TokenRangeMap) tokens =
-  let isLeading token =
-    match token with
-    | ErrorToken _
-    | NewlinesToken _
-    | BlankToken _
-    | CommentToken _ -> true
-    | _ -> false
-
   let rec go acc tokens =
     match tokens with
     | (token, pos) :: tokens when isLeading token ->
@@ -812,36 +812,44 @@ let private takeTrailingTrivias (rangeMap: TokenRangeMap) tokens =
 
   go [] tokens
 
+/// Takes tokens before `untilPos` excluding leading trivias of the next token.
 let private takeTokensBefore (rangeMap: TokenRangeMap) untilPos tokens =
-  let rec go acc tokens =
-    let tokensOrig = tokens
+  // Position of the last non-trivia token before `untilPos`.
+  let lastOpt =
+    let rec measure lastOpt tokens =
+      match tokens with
+      | (token, pos) :: tokens when Pos.compare pos untilPos < 0 ->
+        if not (isLeading token) then
+          measure (Some pos) tokens
+        else
+          measure lastOpt tokens
 
-    match tokens with
-    | (token, pos) :: tokens ->
-      let _, endPos = rangeMap |> mapFind pos
+      | [] -> Some untilPos
+      | _ -> lastOpt
 
-      if Pos.compare pos untilPos < 0 then
+    measure None tokens
+
+  match lastOpt with
+  | Some lastPos ->
+    let rec go acc tokens =
+      match tokens with
+      | (token, pos) :: tokens when Pos.compare pos lastPos <= 0 ->
+        let _, endPos = rangeMap |> mapFind pos
         go (wrapToken (token, (pos, endPos)) :: acc) tokens
-      else
-        List.rev acc, tokensOrig
 
-    | _ -> List.rev acc, tokens
+      | _ -> List.rev acc, tokens
 
-  go [] tokens
+    go [] tokens
+
+  | None -> [], tokens
 
 /// Takes tokens until a position (inclusive).
 let private takeTokensUntil (rangeMap: TokenRangeMap) untilPos tokens =
   let rec go acc tokens =
-    let tokensOrig = tokens
-
     match tokens with
-    | (token, pos) :: tokens ->
+    | (token, pos) :: tokens when Pos.compare pos untilPos <= 0 ->
       let _, endPos = rangeMap |> mapFind pos
-
-      if Pos.compare pos untilPos <= 0 then
-        go (wrapToken (token, (pos, endPos)) :: acc) tokens
-      else
-        List.rev acc, tokensOrig
+      go (wrapToken (token, (pos, endPos)) :: acc) tokens
 
     | _ -> List.rev acc, tokens
 
@@ -870,12 +878,9 @@ let private postprocess
       let middle, tokens = takeTokensUntil rangeMap pos tokens
 
       let trailing, tokens = takeTrailingTrivias rangeMap tokens
-      List.collect id [ middle; trailing ], tokens
+      List.append middle trailing, tokens
 
     | BuilderElement.Node (kind, children) ->
-      let leading, tokens = takeLeadingTrivias rangeMap tokens
-      let availableRange = shrinkRange leading availableRange
-
       let children, (availableRange, tokens) =
         children
         |> listCollectFold
@@ -893,30 +898,28 @@ let private postprocess
 
                let availableRange = shrinkRange middle availableRange
 
-               let leading, tokens = takeLeadingTrivias rangeMap tokens
-               let availableRange = shrinkRange leading availableRange
+               let trailingOfMiddle, tokens =
+                 if not (List.isEmpty middle) then
+                   takeTrailingTrivias rangeMap tokens
+                 else
+                   [], tokens
+
+               let availableRange =
+                 shrinkRange trailingOfMiddle availableRange
 
                let child, tokens = go availableRange tokens child
                let availableRange = shrinkRange child availableRange
 
-               let trailing, tokens = takeTrailingTrivias rangeMap tokens
-               let availableRange = shrinkRange trailing availableRange
-
                let elements =
-                 List.collect id [ middle; leading; child; trailing ]
+                 List.collect id [ middle; trailingOfMiddle; child ]
 
                elements, (availableRange, tokens))
              (availableRange, tokens)
 
-      let trailing, tokens = takeTrailingTrivias rangeMap tokens
-
-      let elements =
-        List.collect id [ leading; children; trailing ]
-
       let range =
-        match elements with
+        match children with
         | [] ->
-          let pos, _ = shrinkRange elements availableRange
+          let pos, _ = shrinkRange children availableRange
           pos, pos
 
         | first :: nonFirst ->
