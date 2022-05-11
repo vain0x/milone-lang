@@ -80,6 +80,8 @@ let private resolveTokenRange (map: TokenRangeMap) (pos: Pos) : (Token * Range) 
 // Syntax Types
 // -----------------------------------------------
 
+// See also milone_syntax_tree.ungram
+
 [<RequireQualifiedAccess; NoEquality; NoComparison>]
 type SyntaxKind =
   // Token:
@@ -154,14 +156,14 @@ type SyntaxKind =
   | With
 
   // Fragment:
-  | GenericParamList
-  | GenericArgList
+  | TyParamList
+  | TyArgList
   | WithClause
   | FieldInit
   | ThenClause
   | ElseClause
-  | Arm
   | GuardClause
+  | Arm
   | VariantDecl
   | FieldDecl
   | ModulePath
@@ -178,32 +180,33 @@ type SyntaxKind =
 
   // Pat:
   | MissingPat
-  | LitPat
-  | IdentPat
+  | LiteralPat
+  | WildcardPat
+  | VarPat
   | ParenPat
   | ListPat
   | NavPat
-  | AppPat
+  | WrapPat
   | ConsPat
+  | AscribePat
   | TuplePat
   | AsPat
-  | AscribePat
   | OrPat
 
   // Expr:
   | MissingExpr
   | LiteralExpr
   | NameExpr
+  | PathExpr
   | ParenExpr
   | ListExpr
   | RecordExpr
   | IfExpr
   | MatchExpr
   | FunExpr
-  | NavExpr
   | IndexExpr
-  | AppExpr
   | UnaryExpr
+  | AppExpr
   | BinaryExpr
   | RangeExpr
   | TupleExpr
@@ -376,7 +379,7 @@ let private sgTyParamList (tyParamListOpt: ATyParamList option) =
   match tyParamListOpt with
   | Some (lPos, tyParams, rOpt) ->
     buildNode
-      Sk.GenericParamList
+      Sk.TyParamList
       ([ [ newAnchor lPos ] ]
        |> consListMap sgName tyParams
        |> consOptionMap newAnchor rOpt)
@@ -388,7 +391,7 @@ let private sgTyArgList (ctx: SgCtx) (tyArgListOpt: ATyArgList option) =
   match tyArgListOpt with
   | Some (lPos, tyArgs, rOpt) ->
     buildNode
-      Sk.GenericArgList
+      Sk.TyArgList
       ([ [ newAnchor lPos ] ]
        |> consListMap (sgTy ctx) tyArgs
        |> consOptionMap newAnchor rOpt)
@@ -429,8 +432,9 @@ let private sgPat (ctx: SgCtx) (pat: APat) : BuilderElement =
 
   match pat with
   | AMissingPat pos -> newNode Sk.MissingPat [ newAnchor pos ]
-  | ALitPat (_, pos) -> newNode Sk.LitPat [ newAnchor pos ]
-  | AIdentPat (_, name) -> newNode Sk.IdentPat [ sgName name ]
+  | ALitPat (_, pos) -> newNode Sk.LiteralPat [ newAnchor pos ]
+  | AIdentPat (_, Name ("_", pos)) -> newNode Sk.WildcardPat [ newAnchor pos ]
+  | AIdentPat (_, name) -> newNode Sk.VarPat [ sgName name ]
 
   | AParenPat (lPos, bodyPat, rPos) ->
     buildNode
@@ -453,7 +457,7 @@ let private sgPat (ctx: SgCtx) (pat: APat) : BuilderElement =
         newAnchor dotPos
         sgName r ]
 
-  | AAppPat (lPat, _, rPat) -> newNode Sk.AppPat [ onPat lPat; onPat rPat ]
+  | AAppPat (lPat, _, rPat) -> newNode Sk.WrapPat [ onPat lPat; onPat rPat ]
 
   | AConsPat (lPat, opPos, rPat) ->
     newNode
@@ -469,7 +473,7 @@ let private sgPat (ctx: SgCtx) (pat: APat) : BuilderElement =
       Sk.AsPat
       [ onPat bodyPat
         newAnchor asPos
-        sgName name ]
+        newNode Sk.VarPat [ sgName name ] ]
 
   | AAscribePat (bodyPat, colonPos, ty) ->
     newNode
@@ -596,7 +600,7 @@ let private sgExpr (ctx: SgCtx) (expr: AExpr) : BuilderElement =
        |> consOpt (sgArrow ctx arrowPos)
        |> cons (onExpr body))
 
-  | ANavExpr (l, dotPos, r) -> newNode SyntaxKind.NavExpr [ onExpr l; newAnchor dotPos; sgName r ]
+  | ANavExpr (l, dotPos, r) -> newNode SyntaxKind.PathExpr [ onExpr l; newAnchor dotPos; sgName r ]
 
   | AIndexExpr (l, dotPos, lPos, r, rOpt) ->
     buildNode
