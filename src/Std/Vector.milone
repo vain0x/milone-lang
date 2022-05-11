@@ -6,8 +6,17 @@ open Std.StdError
 
 module Ptr = Std.Ptr
 
-// For memcpy
-__nativeDecl "#include <string.h>"
+// For memcpy.
+__nativeDecl
+  """
+  #include <string.h>
+
+#if defined(_MSC_VER) // On Windows MSVC
+#define THREAD_LOCAL __declspec(thread)
+#else
+#define THREAD_LOCAL _Thread_local
+#endif
+"""
 
 /// Owned dynamic array.
 type Vector<'T> = private Vector of ptr: Own<nativeptr<'T>> * length: uint * capacity: uint
