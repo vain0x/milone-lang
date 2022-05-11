@@ -155,7 +155,6 @@ type SyntaxKind =
 
   // Fragment:
   | Path
-  | ParamList
   | GenericParamList
   | GenericArgList
   | WithClause
@@ -598,7 +597,7 @@ let private sgExpr (ctx: SgCtx) (expr: AExpr) : BuilderElement =
     buildNode
       SyntaxKind.FunExpr
       ([ [ newAnchor funPos ] ]
-       |> cons (newNode Sk.ParamList (onPats argPats))
+       |> consListMap onPat argPats
        |> consOpt (sgArrow ctx arrowPos)
        |> cons (onExpr body))
 
@@ -642,7 +641,7 @@ let private sgExpr (ctx: SgCtx) (expr: AExpr) : BuilderElement =
       buildNode
         SyntaxKind.LetFunExpr
         ([ [ sgName name ] ]
-         |> cons (newNode Sk.ParamList (onPats argPats))
+         |> consListMap onPat argPats
          |> consList (
            match resultTyOpt with
            | Some (colonPos, ty) -> [ newAnchor colonPos; onTy ty ]
@@ -678,7 +677,7 @@ let private sgDecl (ctx: SgCtx) decl : BuilderElement =
       buildNode
         SyntaxKind.LetFunDecl
         ([ [ newAnchor letPos; sgName name ] ]
-         |> cons (newNode Sk.ParamList (argPats |> List.map onPat))
+         |> consListMap onPat argPats
          |> consList (
            match resultTyOpt with
            | Some (colonPos, ty) -> [ newAnchor colonPos; onTy ty ]
