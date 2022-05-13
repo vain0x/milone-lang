@@ -301,7 +301,9 @@ type APat =
   | AConsPat of APat * opPos: Pos * APat
 
   /// E.g. `x, y, z`.
-  | ATuplePat of APat list * commaPos: Pos
+  ///
+  /// `lPos` is at first `,` if non-unit, otherwise `(` if unit.
+  | ATuplePat of lPos: Pos * APat list * rOpt: Pos option
 
   /// E.g. `(Some x) as opt`.
   | AAsPat of APat * asPos: Pos * Name
@@ -405,8 +407,8 @@ type AExpr =
 
   /// Tuple construction or unit literal, e.g. `()`, `2, "two"`.
   ///
-  /// `commaPos` is position of first ',' if `items` isn't empty; or '('.
-  | ATupleExpr of items: AExpr list * commaPos: Pos
+  /// `lPos` is at first ',' if non-unit or `(` if unit. It also can be some position.
+  | ATupleExpr of lPos: Pos * items: AExpr list * rOpt: Pos option
 
   /// Type ascription, e.g. `None: int option`.
   | AAscribeExpr of AExpr * colonPos: Pos * ATy
@@ -415,7 +417,7 @@ type AExpr =
   | ASemiExpr of AExpr list * AExpr * leadingPos: Pos
 
   /// `let ... in next`
-  | ALetExpr of letPos: Pos * ALetContents * next: AExpr
+  | ALetExpr of letPos: Pos * ALetContents * next: AExpr option
 
 [<NoEquality; NoComparison>]
 type ADecl =

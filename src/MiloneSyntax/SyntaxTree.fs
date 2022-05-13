@@ -466,7 +466,13 @@ let private sgPat (ctx: SgCtx) (pat: APat) : BuilderElement =
         newAnchor opPos
         onPat rPat ]
 
-  | ATuplePat (itemPats, _) -> newNode Sk.TuplePat (itemPats |> List.map onPat)
+  | ATuplePat (lPos, [], rOpt) ->
+    buildNode
+      Sk.TuplePat
+      ([ [ newAnchor lPos ] ]
+       |> consOptionMap newAnchor rOpt)
+
+  | ATuplePat (_, itemPats, _) -> newNode Sk.TuplePat (itemPats |> List.map onPat)
 
   | AAsPat (bodyPat, asPos, name) ->
     newNode
@@ -616,7 +622,12 @@ let private sgExpr (ctx: SgCtx) (expr: AExpr) : BuilderElement =
   | ABinaryExpr (AppBinary, l, _, r) -> newNode Sk.AppExpr (onExprs [ l; r ])
   | ABinaryExpr (_, l, opPos, r) -> newNode SyntaxKind.BinaryExpr ([ onExpr l; newAnchor opPos; onExpr r ])
   | ARangeExpr (l, opPos, r) -> newNode SyntaxKind.RangeExpr ([ onExpr l; newAnchor opPos; onExpr r ])
-  | ATupleExpr (items, _) -> newNode SyntaxKind.TupleExpr (onExprs items)
+  | ATupleExpr (lPos, [], rOpt) ->
+    buildNode
+      SyntaxKind.TupleExpr
+      ([ [ newAnchor lPos ] ]
+       |> consOptionMap newAnchor rOpt)
+  | ATupleExpr (_, items, _) -> newNode SyntaxKind.TupleExpr (onExprs items)
   | AAscribeExpr (l, colonPos, rTy) ->
     newNode
       SyntaxKind.AscribeExpr
@@ -627,14 +638,15 @@ let private sgExpr (ctx: SgCtx) (expr: AExpr) : BuilderElement =
   | ASemiExpr ([], last, _) -> onExpr last
   | ASemiExpr (stmts, last, _) -> buildNode SyntaxKind.BlockExpr ([ onExprs stmts ] |> cons (onExpr last))
 
-  | ALetExpr (letPos, contents, next) ->
+  | ALetExpr (letPos, contents, nextOpt) ->
     match contents with
     | ALetContents.LetVal (_, pat, equalPos, init) ->
       buildNode
         SyntaxKind.LetValExpr
         ([ [ newAnchor letPos; onPat pat ] ]
          |> consOpt (sgEqual ctx equalPos)
-         |> consList (onExprs [ init; next ]))
+         |> cons (onExpr init)
+         |> consOptionMap onExpr nextOpt)
 
     | ALetContents.LetFun (_, _, name, argPats, resultTyOpt, equalPos, body) ->
       buildNode
@@ -647,7 +659,8 @@ let private sgExpr (ctx: SgCtx) (expr: AExpr) : BuilderElement =
            | None -> []
          )
          |> consOpt (sgEqual ctx equalPos)
-         |> consList (onExprs [ body; next ]))
+         |> cons (onExpr body)
+         |> consOptionMap onExpr nextOpt)
 
 let private sgDecl (ctx: SgCtx) decl : BuilderElement =
   let onTy ty = sgTy ctx ty

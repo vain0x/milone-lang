@@ -557,7 +557,7 @@ let private lowerAPat docId acc pat : DSymbolOccurrence list =
   | AAppPat (l, _, r)
   | AConsPat (l, _, r) -> acc |> up onPat l |> up onPat r
 
-  | ATuplePat (itemPats, _) -> acc |> up onPats itemPats
+  | ATuplePat (_, itemPats, _) -> acc |> up onPats itemPats
   | AAsPat (bodyPat, _, _) -> acc |> up onPat bodyPat
   | AAscribePat (l, _, r) -> acc |> up onPat l |> up onTy r
   | AOrPat (l, _, r) -> acc |> up onPat l |> up onPat r
@@ -656,7 +656,7 @@ let private lowerAExpr docId acc expr : DSymbolOccurrence list =
   | AUnaryExpr (_, _, arg) -> onExpr acc arg
   | ABinaryExpr (_, l, _, r) -> onExprs acc [ l; r ]
   | ARangeExpr (l, _, r) -> onExprs acc [ l; r ]
-  | ATupleExpr (items, _) -> onExprs acc items
+  | ATupleExpr (_, items, _) -> onExprs acc items
 
   | AAscribeExpr (l, _, r) -> acc |> up onExpr l |> up onTy r
   | ASemiExpr (stmts, last, _) -> acc |> up onExprs stmts |> up onExpr last

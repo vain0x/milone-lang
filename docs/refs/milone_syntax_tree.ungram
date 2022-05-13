@@ -53,13 +53,12 @@ WildcardPat = '_'
 VarPat = Vis? 'ident'
 PathPat = Pat '.' 'ident' TyArgList?
 
-UnitPat = '(' ')'
 ParenPat = '(' Pat ')'
 ListPat = '[' ((Pat ';'?)* Pat)? ']'
 WrapPat = Pat Pat
 ConsPat = Pat '::' Pat
 AscribePat = Pat ':' Ty
-TuplePat = (Pat ',')+ Pat
+TuplePat = (Pat ',')+ Pat | '(' ')'
 AsPat = Pat 'as' Pat
 OrPat = Pat '|' Pat
 
@@ -69,7 +68,6 @@ Pat =
 | WildcardPat
 | VarPat
 | PathPat
-| UnitPat
 | ParenPat
 | ListPat
 | WrapPat
@@ -111,7 +109,6 @@ LiteralExpr = Literal
 NameExpr = 'ident' TyArgList?
 PathExpr = Expr '.' 'ident' TyArgList?
 
-UnitExpr = '(' ')'
 ParenExpr = '(' Expr ')'
 ListExpr = '[' ((Expr ';'?)* Expr)? ']'
 
@@ -137,17 +134,17 @@ UnaryExpr = Unary Expr
 AppExpr = Expr Expr
 BinaryExpr = Expr Binary Expr
 RangeExpr = Expr '..' Expr
-TupleExpr = (Expr ',')+ Expr
+TupleExpr = (Expr ',')+ Expr | '(' ')'
 AscribeExpr = Expr ':' Ty
 BlockExpr = (Expr ';'?)+ Expr
 
-LetValExpr = 'let' Pat '=' Expr 'in'? Expr
+LetValExpr = 'let' Pat '=' Expr 'in'? Expr?
 
 LetFunExpr =
     'let' 'rec'?
     Vis? 'ident' TyParamList? Pat+
     '=' Expr
-    'in'? Expr
+    'in'? Expr?
 
 
 
@@ -155,7 +152,6 @@ Expr =
   LiteralExpr
 | NameExpr
 | PathExpr
-| UnitExpr
 | ParenExpr
 | ListExpr
 | RecordExpr

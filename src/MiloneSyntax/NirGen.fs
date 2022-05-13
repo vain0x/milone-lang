@@ -64,7 +64,7 @@ let private apTrue pos = ALitPat(BoolLit true, pos)
 // AExpr
 // -----------------------------------------------
 
-let private axUnit pos = ATupleExpr([], pos)
+let private axUnit pos = ATupleExpr(pos, [], None)
 let private axFalse pos = ALitExpr(BoolLit false, pos)
 let private axTrue pos = ALitExpr(BoolLit true, pos)
 
@@ -126,8 +126,12 @@ let private desugarIf ifPos cond body altOpt : AExpr =
 /// `fun x y .. -> z` ==> `let f x y .. = z in f`
 let private desugarFun funPos argPats equalPos body : AExpr =
   let name = "fun"
-  let next = AIdentExpr(Name(name, funPos), None)
-  ALetExpr(funPos, ALetContents.LetFun(NotRec, PrivateVis, Name(name, funPos), argPats, None, equalPos, body), next)
+
+  ALetExpr(
+    funPos,
+    ALetContents.LetFun(NotRec, PrivateVis, Name(name, funPos), argPats, None, equalPos, body),
+    Some(AIdentExpr(Name(name, funPos), None))
+  )
 
 /// Desugars `-x`.
 ///
@@ -277,9 +281,9 @@ let private ngPat (docId: DocId) (ctx: NirGenCtx) (pat: APat) : NPat * NirGenCtx
     let r, ctx = r |> onPat ctx
     NPat.Cons(l, r, toLoc pos), ctx
 
-  | ATuplePat (pats, pos) ->
+  | ATuplePat (lPos, pats, _) ->
     let pats, ctx = pats |> onPats ctx
-    NPat.Tuple(pats, toLoc pos), ctx
+    NPat.Tuple(pats, toLoc lPos), ctx
 
   | AAsPat (bodyPat, pos, name) ->
     let bodyPat, ctx = bodyPat |> onPat ctx
@@ -441,9 +445,9 @@ let private ngExpr (docId: DocId) (ctx: NirGenCtx) (expr: AExpr) : NExpr * NirGe
     let r, ctx = r |> onExpr ctx
     NExpr.Binary(op, l, r, toLoc pos), ctx
 
-  | ATupleExpr (items, pos) ->
+  | ATupleExpr (lPos, items, _) ->
     let items, ctx = items |> onExprs ctx
-    NExpr.Tuple(items, toLoc pos), ctx
+    NExpr.Tuple(items, toLoc lPos), ctx
 
   // (__type: 'T)
   | AAscribeExpr (AIdentExpr (Name ("__type", _), None), pos, ty) ->
@@ -467,9 +471,15 @@ let private ngExpr (docId: DocId) (ctx: NirGenCtx) (expr: AExpr) : NExpr * NirGe
     let last, ctx = last |> onExpr ctx
     NExpr.Block(stmts, last), ctx
 
-  | ALetExpr (letPos, contents, next) ->
+  | ALetExpr (letPos, contents, nextOpt) ->
     let stmt, ctx = ngLetContents docId ctx letPos contents
-    let next, ctx = next |> onExpr ctx
+    let nextOpt, ctx = nextOpt |> onExprOpt ctx
+
+    let next =
+      match nextOpt with
+      | Some it -> it
+      | None -> NExpr.Tuple([], toLoc letPos)
+
     NExpr.Block([ stmt ], next), ctx
 
   | ARangeExpr _ -> unreachable () // Generated only inside of AIndexExpr.

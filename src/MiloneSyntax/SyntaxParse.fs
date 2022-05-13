@@ -512,8 +512,7 @@ let private parsePatAtom basePos (tokens, errors) : PR<APat> =
 
   | (IdentToken ident, pos) :: tokens -> parseNavPatBody ident pos (tokens, errors)
 
-  | (LeftParenToken, lPos) :: (RightParenToken, rPos) :: tokens ->
-    AParenPat(lPos, ATuplePat([], lPos), Some rPos), tokens, errors
+  | (LeftParenToken, lPos) :: (RightParenToken, rPos) :: tokens -> ATuplePat(lPos, [], Some rPos), tokens, errors
   | (LeftParenToken, lPos) :: tokens -> parsePatParenBody basePos lPos (tokens, errors)
   | (LeftBracketToken, lPos) :: (RightBracketToken, rPos) :: tokens -> AListPat(lPos, [], Some rPos), tokens, errors
   | (LeftBracketToken, lPos) :: tokens -> parsePatListBody basePos lPos (tokens, errors)
@@ -616,7 +615,7 @@ let private parsePatTuple basePos (tokens, errors) : PR<APat> =
   match tokens with
   | (CommaToken, pos) :: _ ->
     let itemPats, tokens, errors = go [] (tokens, errors)
-    ATuplePat(itemPat :: itemPats, pos), tokens, errors
+    ATuplePat(pos, itemPat :: itemPats, None), tokens, errors
 
   | _ -> itemPat, tokens, errors
 
@@ -722,7 +721,7 @@ let private parseAtom basePos (tokens, errors) : PR<AExpr> =
     AIdentExpr(Name(ident, pos), tyArgs), tokens, errors
 
   | (LeftParenToken, lPos) :: (RightParenToken, rPos) :: tokens ->
-    AParenExpr(lPos, ATupleExpr([], lPos), Some rPos), tokens, errors
+    AParenExpr(lPos, ATupleExpr(lPos, [], Some lPos), Some rPos), tokens, errors
   | (LeftParenToken, lPos) :: tokens -> parseParenBody basePos lPos (tokens, errors)
   | (LeftBracketToken, bracketPos) :: tokens -> parseList basePos bracketPos (tokens, errors)
   | (LeftBraceToken, bracePos) :: tokens -> parseRecordExpr bracePos (tokens, errors)
@@ -871,7 +870,7 @@ let private parseTuple basePos (tokens, errors) : PR<AExpr> =
   match tokens with
   | (CommaToken, pos) :: _ ->
     let items, tokens, errors = go [] (tokens, errors)
-    ATupleExpr(item :: items, pos), tokens, errors
+    ATupleExpr(pos, item :: items, None), tokens, errors
 
   | _ -> item, tokens, errors
 
@@ -1106,22 +1105,27 @@ let private parseLet letPos (tokens, errors) : PR<AExpr> =
 
     | _ -> posPrev (nextPos tokens), parseExprError "Missing '='" (tokens, errors)
 
-  let next, tokens, errors =
+  let nextOpt, tokens, errors =
     match tokens with
-    | (InToken, inPos) :: tokens when posInside letPos inPos -> parseSemi letPos inPos (tokens, errors)
+    | (InToken, inPos) :: tokens when posInside letPos inPos ->
+      let next, tokens, errors = parseSemi letPos inPos (tokens, errors)
+      Some next, tokens, errors
 
     | _ :: _ when posIsSameColumn (nextPos tokens) letPos ->
       // Implicit `in` clause must be on the same column as `let`.
-      parseSemi letPos (nextPos tokens) (tokens, errors)
+      let next, tokens, errors =
+        parseSemi letPos (nextPos tokens) (tokens, errors)
 
-    | tokens -> ATupleExpr([], letPos), tokens, errors
+      Some next, tokens, errors
+
+    | _ -> None, tokens, errors
 
   match head with
   | ALetHead.LetVal (isRec, pat) ->
-    ALetExpr(letPos, ALetContents.LetVal(isRec, pat, equalPos, body), next), tokens, errors
+    ALetExpr(letPos, ALetContents.LetVal(isRec, pat, equalPos, body), nextOpt), tokens, errors
 
   | ALetHead.LetFun (isRec, vis, callee, argPats, resultTyOpt) ->
-    ALetExpr(letPos, ALetContents.LetFun(isRec, vis, callee, argPats, resultTyOpt, equalPos, body), next),
+    ALetExpr(letPos, ALetContents.LetFun(isRec, vis, callee, argPats, resultTyOpt, equalPos, body), nextOpt),
     tokens,
     errors
 
