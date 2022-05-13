@@ -434,7 +434,10 @@ let private sgPat (ctx: SgCtx) (pat: APat) : BuilderElement =
   | AMissingPat pos -> newNode Sk.MissingPat [ newAnchor pos ]
   | ALitPat (_, pos) -> newNode Sk.LiteralPat [ newAnchor pos ]
   | AIdentPat (_, Name ("_", pos)) -> newNode Sk.WildcardPat [ newAnchor pos ]
-  | AIdentPat (_, name) -> newNode Sk.VarPat [ sgName name ]
+  | AIdentPat (visOpt, name) ->
+    match visOpt with
+    | Some (_, pos) -> newNode Sk.VarPat [ newAnchor pos; sgName name ]
+    | None -> newNode Sk.VarPat [ sgName name ]
 
   | AParenPat (lPos, bodyPat, rPos) ->
     buildNode

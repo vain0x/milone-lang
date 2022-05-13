@@ -280,7 +280,7 @@ type APat =
 
   /// Pattern that is non-keyword identifier.
   /// Variable (`x`), wildcard (`_`) or variant (`None`).
-  | AIdentPat of Vis * Name
+  | AIdentPat of (Vis * Pos) option * Name
 
   /// E.g. `(_)`.
   | AParenPat of lPos: Pos * APat * rPos: Pos option

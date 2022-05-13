@@ -452,7 +452,7 @@ let private parseNavPatBody head headPos (tokens, errors) : PR<APat> =
       go (ANavPat(acc, dotPos, Name(ident, identPos))) tokens
     | _ -> acc, tokens, errors
 
-  go (AIdentPat(PublicVis, Name(head, headPos))) tokens
+  go (AIdentPat(None, Name(head, headPos))) tokens
 
 /// `pat ')'`
 let private parsePatParenBody basePos lPos (tokens, errors) : PR<APat> =
@@ -496,9 +496,9 @@ let private parsePatListBody basePos bracketPos (tokens, errors) : PR<APat> =
   AListPat(bracketPos, itemPats, rOpt), tokens, errors
 
 let private parsePatAtom basePos (tokens, errors) : PR<APat> =
-  let onVis vis tokens =
+  let onVis vis visPos tokens =
     match tokens with
-    | (IdentToken ident, pos) :: tokens -> AIdentPat(vis, Name(ident, pos)), tokens, errors
+    | (IdentToken ident, pos) :: tokens -> AIdentPat(Some(vis, visPos), Name(ident, pos)), tokens, errors
     | _ -> parsePatError "Expected identifier" (tokens, errors)
 
   match tokens with
@@ -520,8 +520,8 @@ let private parsePatAtom basePos (tokens, errors) : PR<APat> =
   | (FalseToken, pos) :: tokens -> ALitPat(BoolLit false, pos), tokens, errors
   | (TrueToken, pos) :: tokens -> ALitPat(BoolLit true, pos), tokens, errors
 
-  | (PublicToken, _) :: tokens -> onVis PublicVis tokens
-  | (PrivateToken, _) :: tokens -> onVis PrivateVis tokens
+  | (PublicToken, visPos) :: tokens -> onVis PublicVis visPos tokens
+  | (PrivateToken, visPos) :: tokens -> onVis PrivateVis visPos tokens
 
   | (MinusToken _, pos) :: (IntToken (text, flavorOpt), _) :: tokens ->
     ALitPat(newIntLit ("-" + text) flavorOpt, pos), tokens, errors

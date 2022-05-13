@@ -259,7 +259,13 @@ let private ngPat (docId: DocId) (ctx: NirGenCtx) (pat: APat) : NPat * NirGenCtx
 
   | ALitPat (lit, pos) -> NPat.Lit(lit, toLoc pos), ctx
   | AIdentPat (_, Name ("_", pos)) -> NPat.Discard(toLoc pos), ctx
-  | AIdentPat (vis, Name (ident, pos)) -> NPat.Ident(vis, (ident, toLoc pos)), ctx
+  | AIdentPat (visOpt, Name (ident, pos)) ->
+    let vis =
+      match visOpt with
+      | Some (vis, _) -> vis
+      | None -> PublicVis
+
+    NPat.Ident(vis, (ident, toLoc pos)), ctx
 
   | AParenPat (_, pat, _) -> ngPat docId ctx pat
 
