@@ -1131,33 +1131,27 @@ let private parseLet letPos (tokens, errors) : PR<AExpr> =
 
 /// `payload-ty = labeled-ty ( '*' labeled-ty )*`
 /// `labeled-ty = ( ident ':' )? ty-suffix`
-let private parsePayloadTy basePos (tokens, errors) : PR<ATy> =
+let private parsePayloadTy basePos (tokens, errors) : PR<(Pos option * ATy) list> =
   let eatLabel tokens =
     match tokens with
-    | (IdentToken _, _) :: (ColonToken, _) :: tokens -> tokens
-    | _ -> tokens
-
-  let pos = nextPos tokens
+    | (IdentToken _, pos) :: (ColonToken, _) :: tokens -> Some pos, tokens
+    | _ -> None, tokens
 
   // parse first
-  let tokens = eatLabel tokens
+  let labelOpt, tokens = eatLabel tokens
   let firstTy, tokens, errors = parseTySuffix basePos (tokens, errors)
 
   // parse second or more
   let rec go acc (tokens, errors) =
     match tokens with
     | (StarToken, _) :: tokens ->
-      let tokens = eatLabel tokens
+      let labelOpt, tokens = eatLabel tokens
       let itemTy, tokens, errors = parseTySuffix basePos (tokens, errors)
-      go (itemTy :: acc) (tokens, errors)
+      go ((labelOpt, itemTy) :: acc) (tokens, errors)
 
     | _ -> List.rev acc, tokens, errors
 
-  let itemTys, tokens, errors = go [ firstTy ] (tokens, errors)
-
-  match itemTys with
-  | [ itemTy ] -> itemTy, tokens, errors
-  | _ -> ATupleTy(itemTys, pos), tokens, errors
+  go [ labelOpt, firstTy ] (tokens, errors)
 
 /// Parses the body of union `type` declaration.
 let private parseTyDeclUnion basePos (tokens, errors) : PR<ATyDeclBody> =

@@ -316,13 +316,13 @@ type APat =
 
 /// Declaration of variant in AST.
 ///
-/// `('|', Name, ('of' Ty)?)`
+/// `('|', Name, ('of' (label? Ty))?)`
 ///
 /// Pipe position can be previous position of name.
 ///
 /// E.g. `| Card of Suit * Rank` (with `of`)
 /// or `| Joker` (without `of`).
-type AVariantDecl = Pos * Name * (Pos * ATy) option
+type AVariantDecl = Pos * Name * (Pos * (Pos option * ATy) list) option
 
 /// Field declaration in AST.
 ///

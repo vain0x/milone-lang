@@ -535,7 +535,14 @@ let private ngDecl docId attrs ctx decl : NDecl * NirGenCtx =
       |> List.mapFold
            (fun ctx (pos, name, payloadTyOpt) ->
              let payloadTyOpt, ctx =
-               payloadTyOpt |> Option.map snd |> onTyOpt ctx
+               match payloadTyOpt with
+               | Some (_, itemTys) ->
+                 let itemTys, ctx =
+                   itemTys |> List.map snd |> List.mapFold onTy ctx
+
+                 Some(NTy.Tuple(itemTys, toLoc pos)), ctx
+
+               | None -> None, ctx
 
              (onName name, payloadTyOpt, toLoc pos), ctx)
            ctx

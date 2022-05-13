@@ -164,6 +164,7 @@ type SyntaxKind =
   | ElseClause
   | GuardClause
   | Arm
+  | LabeledTy
   | VariantDecl
   | FieldDecl
   | ModulePath
@@ -721,7 +722,13 @@ let private sgDecl (ctx: SgCtx) decl : BuilderElement =
               |> cons (sgName name)
               |> consList (
                 match payloadOpt with
-                | Some (ofPos, ty) -> [ newAnchor ofPos; onTy ty ]
+                | Some (ofPos, labeledTys) ->
+                  newAnchor ofPos
+                  :: (labeledTys
+                      |> List.map (fun (labelOpt, itemTy) ->
+                        match labelOpt with
+                        | Some label -> newNode Sk.LabeledTy [ newAnchor label; onTy itemTy ]
+                        | None -> onTy itemTy))
                 | None -> []
               )))
        ))
