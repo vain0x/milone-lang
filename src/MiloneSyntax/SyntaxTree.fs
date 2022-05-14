@@ -31,21 +31,6 @@ module Range =
     let rp, rq = r
     Pos.max lp rp, Pos.min lq rq
 
-let private cons x xs = [ x ] :: xs
-
-let private consOpt xOpt xs =
-  match xOpt with
-  | Some x -> [ x ] :: xs
-  | None -> xs
-
-let private consOptionMap f xOpt xs =
-  match xOpt with
-  | Some x -> [ f x ] :: xs
-  | None -> xs
-
-let private consList x xs = x :: xs
-let private consListMap f x xs = List.map f x :: xs
-
 // -----------------------------------------------
 // Tokens
 // -----------------------------------------------
@@ -318,6 +303,27 @@ let private newNode kind children = BuilderElement.Node(kind, children)
 let private buildNode kind childrenRev =
   BuilderElement.Node(kind, childrenRev |> List.rev |> List.collect id)
 
+/// Pushes an element to builder.
+let private push x xs : BuilderElement list list = [ x ] :: xs
+
+/// Pushes an element to builder if some.
+let private pushOption xOpt xs : BuilderElement list list =
+  match xOpt with
+  | Some x -> [ x ] :: xs
+  | None -> xs
+
+/// Pushes an element to builder if some, mapping its content.
+let private pushOptionMap f xOpt xs : BuilderElement list list =
+  match xOpt with
+  | Some x -> [ f x ] :: xs
+  | None -> xs
+
+/// Pushes multiple elements to builder.
+let private pushList x xs : BuilderElement list list = x :: xs
+
+/// Pushes multiple elements to builder and apply mapping.
+let private pushListMap f x xs : BuilderElement list list = List.map f x :: xs
+
 // -----------------------------------------------
 // Syntax Tree Generation
 // -----------------------------------------------
@@ -359,8 +365,8 @@ let private sgTyParamList (tyParamListOpt: ATyParamList option) =
     buildNode
       SyntaxKind.TyParamList
       ([ [ newAnchor lPos ] ]
-       |> consListMap sgName tyParams
-       |> consOptionMap newAnchor rOpt)
+       |> pushListMap sgName tyParams
+       |> pushOptionMap newAnchor rOpt)
     |> Some
 
   | None -> None
@@ -371,8 +377,8 @@ let private sgTyArgList (ctx: SgCtx) (tyArgListOpt: ATyArgList option) =
     buildNode
       SyntaxKind.TyArgList
       ([ [ newAnchor lPos ] ]
-       |> consListMap (sgTy ctx) tyArgs
-       |> consOptionMap newAnchor rOpt)
+       |> pushListMap (sgTy ctx) tyArgs
+       |> pushOptionMap newAnchor rOpt)
     |> Some
 
   | None -> None
@@ -388,8 +394,8 @@ let private sgTy (ctx: SgCtx) (ty: ATy) : BuilderElement =
       SyntaxKind.NameTy
       (quals
        |> List.map (fun (name, pos) -> [ sgName name; newAnchor pos ])
-       |> cons (sgName name)
-       |> consOpt (sgTyArgList ctx tyArgList))
+       |> push (sgName name)
+       |> pushOption (sgTyArgList ctx tyArgList))
 
   | AVarTy name -> newNode SyntaxKind.VarTy [ sgName name ]
 
@@ -397,8 +403,8 @@ let private sgTy (ctx: SgCtx) (ty: ATy) : BuilderElement =
     buildNode
       SyntaxKind.ParenTy
       ([ [ newAnchor lPos ] ]
-       |> cons (onTy bodyTy)
-       |> consOptionMap newAnchor rOpt)
+       |> push (onTy bodyTy)
+       |> pushOptionMap newAnchor rOpt)
 
   | ASuffixTy (bodyTy, suffix) -> newNode SyntaxKind.SuffixTy [ onTy bodyTy; sgName suffix ]
   | ATupleTy (itemTys, _) -> newNode SyntaxKind.TupleTy (itemTys |> List.map onTy)
@@ -421,15 +427,15 @@ let private sgPat (ctx: SgCtx) (pat: APat) : BuilderElement =
     buildNode
       SyntaxKind.ParenPat
       ([ [ newAnchor lPos ] ]
-       |> cons (onPat bodyPat)
-       |> consOptionMap newAnchor rPos)
+       |> push (onPat bodyPat)
+       |> pushOptionMap newAnchor rPos)
 
   | AListPat (lPos, itemPats, rPos) ->
     buildNode
       SyntaxKind.ListPat
       ([ [ newAnchor lPos ] ]
-       |> consListMap onPat itemPats
-       |> consOptionMap newAnchor rPos)
+       |> pushListMap onPat itemPats
+       |> pushOptionMap newAnchor rPos)
 
   | ANavPat (lPat, dotPos, r) ->
     newNode
@@ -451,7 +457,7 @@ let private sgPat (ctx: SgCtx) (pat: APat) : BuilderElement =
     buildNode
       SyntaxKind.TuplePat
       ([ [ newAnchor lPos ] ]
-       |> consOptionMap newAnchor rOpt)
+       |> pushOptionMap newAnchor rOpt)
 
   | ATuplePat (_, itemPats, _) -> newNode SyntaxKind.TuplePat (itemPats |> List.map onPat)
 
@@ -479,7 +485,6 @@ let private sgPat (ctx: SgCtx) (pat: APat) : BuilderElement =
 let private sgExpr (ctx: SgCtx) (expr: AExpr) : BuilderElement =
   let onTy ty = sgTy ctx ty
   let onPat pat = sgPat ctx pat
-  let onPats pats = pats |> List.map (sgPat ctx)
   let onExpr expr = sgExpr ctx expr
   let onExprs exprs = exprs |> List.map onExpr
 
@@ -491,38 +496,38 @@ let private sgExpr (ctx: SgCtx) (expr: AExpr) : BuilderElement =
     buildNode
       SyntaxKind.NameExpr
       ([ [ sgName name ] ]
-       |> consOpt (sgTyArgList ctx tyArgList))
+       |> pushOption (sgTyArgList ctx tyArgList))
 
   | AParenExpr (lPos, body, rOpt) ->
     buildNode
       SyntaxKind.ParenExpr
       ([ [ newAnchor lPos ] ]
-       |> cons (onExpr body)
-       |> consOptionMap newAnchor rOpt)
+       |> push (onExpr body)
+       |> pushOptionMap newAnchor rOpt)
 
   | AListExpr (lPos, items, rOpt) ->
     buildNode
       SyntaxKind.ListExpr
       ([ [ newAnchor lPos ] ]
-       |> consListMap onExpr items
-       |> consOptionMap newAnchor rOpt)
+       |> pushListMap onExpr items
+       |> pushOptionMap newAnchor rOpt)
 
   | ARecordExpr (lPos, withClauseOpt, fields, rOpt) ->
     buildNode
       SyntaxKind.RecordExpr
       ([ [ newAnchor lPos ] ]
-       |> consOpt (
+       |> pushOption (
          match withClauseOpt with
          | Some (baseExpr, withOpt) ->
            buildNode
              SyntaxKind.WithClause
              ([ [ onExpr baseExpr ] ]
-              |> consOptionMap newAnchor withOpt)
+              |> pushOptionMap newAnchor withOpt)
            |> Some
 
          | None -> None
        )
-       |> consList (
+       |> pushList (
          fields
          |> List.map (fun (ident, equalPos, init) ->
            newNode
@@ -531,16 +536,16 @@ let private sgExpr (ctx: SgCtx) (expr: AExpr) : BuilderElement =
                newAnchor equalPos
                onExpr init ])
        )
-       |> consOptionMap newAnchor rOpt)
+       |> pushOptionMap newAnchor rOpt)
 
   | AIfExpr (ifPos, cond, thenPos, body, altOpt) ->
     buildNode
       SyntaxKind.IfExpr
       ([ [ newAnchor ifPos ] ]
-       |> cons (onExpr cond)
-       |> consOpt (sgThen ctx thenPos)
-       |> cons (onExpr body)
-       |> consOpt (
+       |> push (onExpr cond)
+       |> pushOption (sgThen ctx thenPos)
+       |> push (onExpr body)
+       |> pushOption (
          match altOpt with
          | Some (elsePos, alt) ->
            newNode SyntaxKind.ElseClause [ newAnchor elsePos; onExpr alt ]
@@ -552,17 +557,17 @@ let private sgExpr (ctx: SgCtx) (expr: AExpr) : BuilderElement =
     buildNode
       SyntaxKind.MatchExpr
       ([ [ newAnchor matchPos ] ]
-       |> cons (onExpr cond)
-       |> consOptionMap newAnchor withOpt
-       |> consList (
+       |> push (onExpr cond)
+       |> pushOptionMap newAnchor withOpt
+       |> pushList (
          arms
          |> List.map (fun (pipeOpt, pat, guardOpt, arrowPos, body) ->
            buildNode
              SyntaxKind.Arm
              ([]
-              |> consOptionMap newAnchor pipeOpt
-              |> cons (onPat pat)
-              |> consOpt (
+              |> pushOptionMap newAnchor pipeOpt
+              |> push (onPat pat)
+              |> pushOption (
                 match guardOpt with
                 | Some (whenPos, guard) ->
                   newNode SyntaxKind.GuardClause [ newAnchor whenPos; onExpr guard ]
@@ -570,17 +575,17 @@ let private sgExpr (ctx: SgCtx) (expr: AExpr) : BuilderElement =
 
                 | None -> None
               )
-              |> consOpt (sgArrow ctx arrowPos)
-              |> cons (onExpr body)))
+              |> pushOption (sgArrow ctx arrowPos)
+              |> push (onExpr body)))
        ))
 
   | AFunExpr (funPos, argPats, arrowPos, body) ->
     buildNode
       SyntaxKind.FunExpr
       ([ [ newAnchor funPos ] ]
-       |> consListMap onPat argPats
-       |> consOpt (sgArrow ctx arrowPos)
-       |> cons (onExpr body))
+       |> pushListMap onPat argPats
+       |> pushOption (sgArrow ctx arrowPos)
+       |> push (onExpr body))
 
   | ANavExpr (l, dotPos, r) -> newNode SyntaxKind.PathExpr [ onExpr l; newAnchor dotPos; sgName r ]
 
@@ -591,7 +596,7 @@ let private sgExpr (ctx: SgCtx) (expr: AExpr) : BuilderElement =
            newAnchor dotPos
            newAnchor lPos
            onExpr r ] ]
-       |> consOptionMap newAnchor rOpt)
+       |> pushOptionMap newAnchor rOpt)
 
   | AUnaryExpr (_, opPos, arg) -> newNode SyntaxKind.UnaryExpr [ newAnchor opPos; onExpr arg ]
 
@@ -602,7 +607,7 @@ let private sgExpr (ctx: SgCtx) (expr: AExpr) : BuilderElement =
     buildNode
       SyntaxKind.TupleExpr
       ([ [ newAnchor lPos ] ]
-       |> consOptionMap newAnchor rOpt)
+       |> pushOptionMap newAnchor rOpt)
   | ATupleExpr (_, items, _) -> newNode SyntaxKind.TupleExpr (onExprs items)
   | AAscribeExpr (l, colonPos, rTy) ->
     newNode
@@ -612,7 +617,7 @@ let private sgExpr (ctx: SgCtx) (expr: AExpr) : BuilderElement =
         onTy rTy ]
 
   | ASemiExpr ([], last, _) -> onExpr last
-  | ASemiExpr (stmts, last, _) -> buildNode SyntaxKind.BlockExpr ([ onExprs stmts ] |> cons (onExpr last))
+  | ASemiExpr (stmts, last, _) -> buildNode SyntaxKind.BlockExpr ([ onExprs stmts ] |> push (onExpr last))
 
   | ALetExpr (letPos, contents, nextOpt) ->
     match contents with
@@ -620,23 +625,23 @@ let private sgExpr (ctx: SgCtx) (expr: AExpr) : BuilderElement =
       buildNode
         SyntaxKind.LetValExpr
         ([ [ newAnchor letPos; onPat pat ] ]
-         |> consOpt (sgEqual ctx equalPos)
-         |> cons (onExpr init)
-         |> consOptionMap onExpr nextOpt)
+         |> pushOption (sgEqual ctx equalPos)
+         |> push (onExpr init)
+         |> pushOptionMap onExpr nextOpt)
 
     | ALetContents.LetFun (_, _, name, argPats, resultTyOpt, equalPos, body) ->
       buildNode
         SyntaxKind.LetFunExpr
         ([ [ sgName name ] ]
-         |> consListMap onPat argPats
-         |> consList (
+         |> pushListMap onPat argPats
+         |> pushList (
            match resultTyOpt with
            | Some (colonPos, ty) -> [ newAnchor colonPos; onTy ty ]
            | None -> []
          )
-         |> consOpt (sgEqual ctx equalPos)
-         |> cons (onExpr body)
-         |> consOptionMap onExpr nextOpt)
+         |> pushOption (sgEqual ctx equalPos)
+         |> push (onExpr body)
+         |> pushOptionMap onExpr nextOpt)
 
 let private sgDecl (ctx: SgCtx) attrAcc decl : BuilderElement =
   let onTy ty = sgTy ctx ty
@@ -651,17 +656,17 @@ let private sgDecl (ctx: SgCtx) attrAcc decl : BuilderElement =
       buildNode
         SyntaxKind.AttrDecl
         ([ [ newAnchor lPos; onExpr attr ] ]
-         |> consOptionMap newAnchor rOpt))
+         |> pushOptionMap newAnchor rOpt))
 
   let onTyHead typePos name tyParamList equalPos =
     [ genAttrList () ]
-    |> cons (newAnchor typePos)
-    |> cons (sgName name)
-    |> consOpt (sgTyParamList tyParamList)
-    |> consOpt (sgEqual ctx equalPos)
+    |> push (newAnchor typePos)
+    |> push (sgName name)
+    |> pushOption (sgTyParamList tyParamList)
+    |> pushOption (sgEqual ctx equalPos)
 
   match decl with
-  | AExprDecl expr -> buildNode SyntaxKind.ExprDecl ([ genAttrList () ] |> cons (onExpr expr))
+  | AExprDecl expr -> buildNode SyntaxKind.ExprDecl ([ genAttrList () ] |> push (onExpr expr))
 
   | ALetDecl (letPos, contents) ->
     match contents with
@@ -669,44 +674,44 @@ let private sgDecl (ctx: SgCtx) attrAcc decl : BuilderElement =
       buildNode
         SyntaxKind.LetValDecl
         ([ genAttrList () ]
-         |> consList [ newAnchor letPos; onPat pat ]
-         |> consOpt (sgEqual ctx equalPos)
-         |> cons (onExpr init))
+         |> pushList [ newAnchor letPos; onPat pat ]
+         |> pushOption (sgEqual ctx equalPos)
+         |> push (onExpr init))
 
     | ALetContents.LetFun (_, _, name, argPats, resultTyOpt, equalPos, body) ->
       buildNode
         SyntaxKind.LetFunDecl
         ([ genAttrList () ]
-         |> consList [ newAnchor letPos
+         |> pushList [ newAnchor letPos
                        sgName name ]
-         |> consListMap onPat argPats
-         |> consList (
+         |> pushListMap onPat argPats
+         |> pushList (
            match resultTyOpt with
            | Some (colonPos, ty) -> [ newAnchor colonPos; onTy ty ]
            | None -> []
          )
-         |> consOpt (sgEqual ctx equalPos)
-         |> cons (onExpr body))
+         |> pushOption (sgEqual ctx equalPos)
+         |> push (onExpr body))
 
   | ATySynonymDecl (typePos, _, name, tyParamList, equalPos, ty) ->
     buildNode
       SyntaxKind.TySynonymDecl
       (onTyHead typePos name tyParamList equalPos
-       |> cons (onTy ty))
+       |> push (onTy ty))
 
   | AUnionTyDecl (typePos, _, name, tyParamList, equalPos, variants) ->
     buildNode
       SyntaxKind.UnionTyDecl
       (onTyHead typePos name tyParamList equalPos
-       |> consList (
+       |> pushList (
          variants
          |> List.map (fun (pipePos, name, payloadOpt) ->
            buildNode
              SyntaxKind.VariantDecl
              ([]
-              |> consOpt (sgPipe ctx pipePos)
-              |> cons (sgName name)
-              |> consList (
+              |> pushOption (sgPipe ctx pipePos)
+              |> push (sgName name)
+              |> pushList (
                 match payloadOpt with
                 | Some (ofPos, labeledTys) ->
                   newAnchor ofPos
@@ -723,37 +728,37 @@ let private sgDecl (ctx: SgCtx) attrAcc decl : BuilderElement =
     buildNode
       SyntaxKind.RecordTyDecl
       (onTyHead typePos name tyParamList equalPos
-       |> cons (newAnchor lPos)
-       |> consList (
+       |> push (newAnchor lPos)
+       |> pushList (
          fields
          |> List.map (fun (name, ty, _) -> newNode SyntaxKind.FieldDecl [ sgName name; onTy ty ])
        )
-       |> consOptionMap newAnchor rPos)
+       |> pushOptionMap newAnchor rPos)
 
   | AOpenDecl (openPos, path) ->
     buildNode
       SyntaxKind.OpenDecl
       ([ genAttrList () ]
-       |> cons (newAnchor openPos)
-       |> cons (newNode SyntaxKind.ModulePath (path |> List.map sgName)))
+       |> push (newAnchor openPos)
+       |> push (newNode SyntaxKind.ModulePath (path |> List.map sgName)))
 
   | AModuleSynonymDecl (modulePos, name, equalPos, path) ->
     buildNode
       SyntaxKind.ModuleSynonymDecl
       ([ genAttrList () ]
-       |> consList [ newAnchor modulePos
+       |> pushList [ newAnchor modulePos
                      sgName name ]
-       |> consOpt (sgEqual ctx equalPos)
-       |> cons (newNode SyntaxKind.ModulePath (path |> List.map sgName)))
+       |> pushOption (sgEqual ctx equalPos)
+       |> push (newNode SyntaxKind.ModulePath (path |> List.map sgName)))
 
   | AModuleDecl (modulePos, _, _, name, equalPos, decls) ->
     buildNode
       SyntaxKind.ModuleDecl
       ([ genAttrList () ]
-       |> consList [ newAnchor modulePos
+       |> pushList [ newAnchor modulePos
                      sgName name ]
-       |> consOpt (sgEqual ctx equalPos)
-       |> consList (onDecls decls))
+       |> pushOption (sgEqual ctx equalPos)
+       |> pushList (onDecls decls))
 
   | AAttrDecl (lPos, attr, rOpt, next) -> sgDecl ctx ((lPos, attr, rOpt) :: attrAcc) next
 
@@ -763,7 +768,7 @@ let private sgRoot (ctx: SgCtx) root : BuilderElement =
   buildNode
     SyntaxKind.Root
     ([]
-     |> consOpt (
+     |> pushOption (
        match headOpt with
        | Some (modulePos, path) ->
          newNode
@@ -774,7 +779,7 @@ let private sgRoot (ctx: SgCtx) root : BuilderElement =
 
        | _ -> None
      )
-     |> consListMap (sgDecl ctx []) decls)
+     |> pushListMap (sgDecl ctx []) decls)
 
 // -----------------------------------------------
 // Postprocess
