@@ -5,7 +5,6 @@ open MiloneShared.TypeIntegers
 open MiloneShared.Util
 open MiloneSyntaxTypes.SyntaxTypes
 open Std.StdError
-open Std.StdJson
 open Std.StdPair
 open Std.StdMap
 
@@ -312,6 +311,148 @@ let private kindOfToken token =
   | TypeToken -> SyntaxKind.Type
   | WhenToken -> SyntaxKind.When
   | WithToken -> SyntaxKind.With
+
+let private kindToString kind =
+  match kind with
+  | SyntaxKind.Bad -> "Bad"
+  | SyntaxKind.Blank -> "Blank"
+  | SyntaxKind.Newlines -> "Newlines"
+  | SyntaxKind.Comment -> "Comment"
+  | SyntaxKind.Int -> "Int"
+  | SyntaxKind.Float -> "Float"
+  | SyntaxKind.Char -> "Char"
+  | SyntaxKind.String -> "String"
+  | SyntaxKind.Ident -> "Ident"
+  | SyntaxKind.TyVar -> "TyVar"
+  | SyntaxKind.LeftParen -> "LeftParen"
+  | SyntaxKind.RightParen -> "RightParen"
+  | SyntaxKind.LeftBracket -> "LeftBracket"
+  | SyntaxKind.RightBracket -> "RightBracket"
+  | SyntaxKind.LeftBrace -> "LeftBrace"
+  | SyntaxKind.RightBrace -> "RightBrace"
+  | SyntaxKind.LeftAngle -> "LeftAngle"
+  | SyntaxKind.RightAngle -> "RightAngle"
+  | SyntaxKind.LeftAttr -> "LeftAttr"
+  | SyntaxKind.RightAttr -> "RightAttr"
+  | SyntaxKind.Amp -> "Amp"
+  | SyntaxKind.AmpAmp -> "AmpAmp"
+  | SyntaxKind.AmpAmpAmp -> "AmpAmpAmp"
+  | SyntaxKind.Arrow -> "Arrow"
+  | SyntaxKind.Colon -> "Colon"
+  | SyntaxKind.ColonColon -> "ColonColon"
+  | SyntaxKind.Comma -> "Comma"
+  | SyntaxKind.Dot -> "Dot"
+  | SyntaxKind.DotDot -> "DotDot"
+  | SyntaxKind.Equal -> "Equal"
+  | SyntaxKind.Hat -> "Hat"
+  | SyntaxKind.HatHatHat -> "HatHatHat"
+  | SyntaxKind.LeftEqual -> "LeftEqual"
+  | SyntaxKind.LeftLeft -> "LeftLeft"
+  | SyntaxKind.LeftLeftLeft -> "LeftLeftLeft"
+  | SyntaxKind.LeftRight -> "LeftRight"
+  | SyntaxKind.RightEqual -> "RightEqual"
+  | SyntaxKind.Minus -> "Minus"
+  | SyntaxKind.Percent -> "Percent"
+  | SyntaxKind.Pipe -> "Pipe"
+  | SyntaxKind.PipeRight -> "PipeRight"
+  | SyntaxKind.PipePipe -> "PipePipe"
+  | SyntaxKind.PipePipePipe -> "PipePipePipe"
+  | SyntaxKind.Plus -> "Plus"
+  | SyntaxKind.Semi -> "Semi"
+  | SyntaxKind.Slash -> "Slash"
+  | SyntaxKind.Star -> "Star"
+  | SyntaxKind.As -> "As"
+  | SyntaxKind.Else -> "Else"
+  | SyntaxKind.False -> "False"
+  | SyntaxKind.Fun -> "Fun"
+  | SyntaxKind.If -> "If"
+  | SyntaxKind.In -> "In"
+  | SyntaxKind.Let -> "Let"
+  | SyntaxKind.Match -> "Match"
+  | SyntaxKind.Module -> "Module"
+  | SyntaxKind.Of -> "Of"
+  | SyntaxKind.Open -> "Open"
+  | SyntaxKind.Private -> "Private"
+  | SyntaxKind.Public -> "Public"
+  | SyntaxKind.Rec -> "Rec"
+  | SyntaxKind.Then -> "Then"
+  | SyntaxKind.True -> "True"
+  | SyntaxKind.Type -> "Type"
+  | SyntaxKind.When -> "When"
+  | SyntaxKind.With -> "With"
+
+  | SyntaxKind.TyParamList -> "TyParamList"
+  | SyntaxKind.TyArgList -> "TyArgList"
+  | SyntaxKind.WithClause -> "WithClause"
+  | SyntaxKind.FieldInit -> "FieldInit"
+  | SyntaxKind.ElseClause -> "ElseClause"
+  | SyntaxKind.GuardClause -> "GuardClause"
+  | SyntaxKind.Arm -> "Arm"
+  | SyntaxKind.LabeledTy -> "LabeledTy"
+  | SyntaxKind.VariantDecl -> "VariantDecl"
+  | SyntaxKind.FieldDecl -> "FieldDecl"
+  | SyntaxKind.ModulePath -> "ModulePath"
+  | SyntaxKind.ModuleHead -> "ModuleHead"
+
+  // Ty:
+  | SyntaxKind.MissingTy -> "MissingTy"
+  | SyntaxKind.NameTy -> "NameTy"
+  | SyntaxKind.VarTy -> "VarTy"
+  | SyntaxKind.ParenTy -> "ParenTy"
+  | SyntaxKind.SuffixTy -> "SuffixTy"
+  | SyntaxKind.TupleTy -> "TupleTy"
+  | SyntaxKind.FunTy -> "FunTy"
+
+  // Pat:
+  | SyntaxKind.MissingPat -> "MissingPat"
+  | SyntaxKind.LiteralPat -> "LiteralPat"
+  | SyntaxKind.WildcardPat -> "WildcardPat"
+  | SyntaxKind.VarPat -> "VarPat"
+  | SyntaxKind.PathPat -> "PathPat"
+  | SyntaxKind.ParenPat -> "ParenPat"
+  | SyntaxKind.ListPat -> "ListPat"
+  | SyntaxKind.WrapPat -> "WrapPat"
+  | SyntaxKind.ConsPat -> "ConsPat"
+  | SyntaxKind.AscribePat -> "AscribePat"
+  | SyntaxKind.TuplePat -> "TuplePat"
+  | SyntaxKind.AsPat -> "AsPat"
+  | SyntaxKind.OrPat -> "OrPat"
+
+  // Expr:
+  | SyntaxKind.MissingExpr -> "MissingExpr"
+  | SyntaxKind.LiteralExpr -> "LiteralExpr"
+  | SyntaxKind.NameExpr -> "NameExpr"
+  | SyntaxKind.PathExpr -> "PathExpr"
+  | SyntaxKind.ParenExpr -> "ParenExpr"
+  | SyntaxKind.ListExpr -> "ListExpr"
+  | SyntaxKind.RecordExpr -> "RecordExpr"
+  | SyntaxKind.IfExpr -> "IfExpr"
+  | SyntaxKind.MatchExpr -> "MatchExpr"
+  | SyntaxKind.FunExpr -> "FunExpr"
+  | SyntaxKind.IndexExpr -> "IndexExpr"
+  | SyntaxKind.UnaryExpr -> "UnaryExpr"
+  | SyntaxKind.AppExpr -> "AppExpr"
+  | SyntaxKind.BinaryExpr -> "BinaryExpr"
+  | SyntaxKind.RangeExpr -> "RangeExpr"
+  | SyntaxKind.TupleExpr -> "TupleExpr"
+  | SyntaxKind.AscribeExpr -> "AscribeExpr"
+  | SyntaxKind.BlockExpr -> "BlockExpr"
+  | SyntaxKind.LetValExpr -> "LetValExpr"
+  | SyntaxKind.LetFunExpr -> "LetFunExpr"
+
+  // Decl:
+  | SyntaxKind.ExprDecl -> "ExprDecl"
+  | SyntaxKind.LetValDecl -> "LetValDecl"
+  | SyntaxKind.LetFunDecl -> "LetFunDecl"
+  | SyntaxKind.TySynonymDecl -> "TySynonymDecl"
+  | SyntaxKind.UnionTyDecl -> "UnionTyDecl"
+  | SyntaxKind.RecordTyDecl -> "RecordTyDecl"
+  | SyntaxKind.OpenDecl -> "OpenDecl"
+  | SyntaxKind.ModuleDecl -> "ModuleDecl"
+  | SyntaxKind.ModuleSynonymDecl -> "ModuleSynonymDecl"
+  | SyntaxKind.AttrDecl -> "AttrDecl"
+
+  | SyntaxKind.Root -> "Root"
 
 // -----------------------------------------------
 // SyntaxElement
@@ -761,7 +902,8 @@ let private sgDecl (ctx: SgCtx) attrAcc decl : BuilderElement =
     buildNode
       SyntaxKind.ModuleSynonymDecl
       ([ genAttrList () ]
-       |> consList [ newAnchor modulePos; sgName name ]
+       |> consList [ newAnchor modulePos
+                     sgName name ]
        |> consOpt (sgEqual ctx equalPos)
        |> cons (newNode SyntaxKind.ModulePath (path |> List.map sgName)))
 
@@ -769,7 +911,8 @@ let private sgDecl (ctx: SgCtx) attrAcc decl : BuilderElement =
     buildNode
       SyntaxKind.ModuleDecl
       ([ genAttrList () ]
-       |> consList [ newAnchor modulePos; sgName name ]
+       |> consList [ newAnchor modulePos
+                     sgName name ]
        |> consOpt (sgEqual ctx equalPos)
        |> consList (onDecls decls))
 
@@ -1036,116 +1179,217 @@ let private stValidate rangeMap (tokens: TokenizeFullResult) (root: SyntaxElemen
 // Dump
 // -----------------------------------------------
 
-let private sdRange range =
-  let pos, endPos = range
+module private SyntaxTreeDump =
+  // #json_escape
+  let private needsEscape c = c = '"' || c = '\\' || C.isControl c
 
-  "\""
-  + Pos.toString pos
-  + ".."
-  + Pos.toString endPos
-  + "\""
+  let private escapeChar c =
+    match c with
+    | '"' -> "\\\""
+    | '\\' -> "\\\\"
+    | '\r' -> "\\r"
+    | '\n' -> "\\n"
+    | '\t' -> "\\t"
+    | '\x08' -> "\\b" // backspace
+    | '\x0c' -> "\\f" // formfeed
 
-let private sdElement rx indent (element: SyntaxElement) =
-  match element with
-  | SyntaxToken (kind, tokenRange) ->
-    let pos, _ = tokenRange
-    let range = sdRange tokenRange
+    | _ ->
+      assert (needsEscape c)
+      "\\u" + S.uint64ToHex 4 (uint64 (byte c))
 
-    let map: TokenRangeMap = rx
+  let private writeString (text: string) acc =
+    let rec scanVerbatim i =
+      if i < text.Length && not (needsEscape text.[i]) then
+        scanVerbatim (i + 1)
+      else
+        i
 
-    match resolveTokenRange map pos with
-    | Some (token, _) ->
-      match token with
-      | IntToken (text, flavorOpt) ->
-        let flavor =
-          match flavorOpt with
-          | Some flavor ->
-            let item =
-              match flavor with
-              | I8 -> "int8"
-              | I16 -> "int16"
-              | I32 -> "int"
-              | I64 -> "int64"
-              | IPtr -> "nativeint"
-              | U8 -> "byte"
-              | U16 -> "uint16"
-              | U32 -> "uint"
-              | U64 -> "uint64"
-              | UPtr -> "unativeint"
+    let rec go acc i =
+      if i < text.Length then
+        if needsEscape text.[i] then
+          go (escapeChar text.[i] :: acc) (i + 1)
+        else
+          let r = scanVerbatim i
+          assert (i < r)
+          go (text.[i..r - 1] :: acc) r
+      else
+        acc
 
-            ", \"" + item + "\""
+    "\"" :: go ("\"" :: acc) 0
 
-          | None -> ""
+  let private cons h t : string list = h :: t
 
-        "[\"Int\", " + range + ", " + text + flavor + "]"
+  let private writeReplicate count s acc =
+    if count >= 1 then
+      writeReplicate (count - 1) s (s :: acc)
+    else
+      acc
 
-      | FloatToken text -> "[\"Float\", " + range + ", " + text + "]"
+  let private flavorToString flavor =
+    match flavor with
+    | I8 -> "int8"
+    | I16 -> "int16"
+    | I32 -> "int"
+    | I64 -> "int64"
+    | IPtr -> "nativeint"
+    | U8 -> "byte"
+    | U16 -> "uint16"
+    | U32 -> "uint"
+    | U64 -> "uint64"
+    | UPtr -> "unativeint"
 
-      | CharToken c ->
-        let value =
-          if c <> '\x00' then
-            Json.dump (JString(string c))
-          else
-            "\"\\u0000\""
+  let private sdRange range acc =
+    let pos, endPos = range
 
-        "[\"Char\", " + range + ", " + value + "]"
+    acc
+    |> cons "\""
+    |> cons (Pos.toString pos)
+    |> cons ".."
+    |> cons (Pos.toString endPos)
+    |> cons "\""
 
-      | StringToken s ->
-        "[\"String\", "
-        + range
-        + ", "
-        + Json.dump (JString s)
-        + "]"
+  let private sdElement rx newline acc (element: SyntaxElement) =
+    match element with
+    | SyntaxToken (kind, tokenRange) ->
+      let pos, _ = tokenRange
+      let range acc = sdRange tokenRange acc
 
-      | IdentToken text ->
-        "[\"Ident\", "
-        + range
-        + ", "
-        + Json.dump (JString text)
-        + "]"
+      let map: TokenRangeMap = rx
 
-      | TyVarToken text -> "[\"TyVar\", " + range + "\"'" + text + "\"]"
+      match resolveTokenRange map pos with
+      | Some (token, _) ->
+        match token with
+        | IntToken (text, flavorOpt) ->
+          acc
+          |> cons "[\"Int\", "
+          |> range
+          |> cons ", "
+          |> cons text
+          |> (fun acc ->
+            match flavorOpt with
+            | Some flavor ->
+              acc
+              |> cons ", \""
+              |> cons (flavorToString flavor)
+              |> cons "\""
 
-      | NewlinesToken ->
-        let (y1, x1), (y2, x2) = tokenRange
-        let blank = if y1 < y2 then x2 else x1 + x2
+            | None -> acc)
+          |> cons "]"
 
-        "[\"Newlines\", "
-        + range
-        + ", \""
-        + String.replicate (y2 - y1) "\\n"
-        + String.replicate blank " "
-        + "\"]"
+        | FloatToken text ->
+          acc
+          |> cons "[\"Float\", "
+          |> range
+          |> cons ", "
+          |> cons text
+          |> cons "]"
 
-      | CommentToken -> "[\"Comment\", " + range + "]"
+        | CharToken c ->
+          acc
+          |> cons "[\"Char\", "
+          |> range
+          |> cons ", \""
+          |> cons (
+            if needsEscape c then
+              escapeChar c
+            else
+              string c
+          )
+          |> cons "\"]"
 
-      | _ -> "[\"" + __dump kind + "\", " + range + "]"
+        | StringToken s ->
+          acc
+          |> cons "[\"String\", "
+          |> range
+          |> cons ", "
+          |> writeString s
+          |> cons "]"
 
-    | None -> "[\"" + __dump kind + "\", " + range + "]"
+        | IdentToken text ->
+          acc
+          |> cons "[\"Ident\", "
+          |> range
+          |> cons ", "
+          |> writeString text
+          |> cons "]"
 
-  | SyntaxNode (kind, range, []) ->
-    "[\""
-    + __dump kind
-    + "\", "
-    + sdRange range
-    + ", []]"
+        | TyVarToken text ->
+          acc
+          |> cons "[\"TyVar\", "
+          |> range
+          |> cons "\"'"
+          |> cons text
+          |> cons "\"]"
 
-  | SyntaxNode (kind, range, children) ->
-    let range = sdRange range
+        | NewlinesToken ->
+          let (y1, x1), (y2, x2) = tokenRange
+          let blank = if y1 < y2 then x2 else x1 + x2
 
-    let s =
-      "[\"" + __dump kind + "\", " + range + ", ["
+          acc
+          |> cons "[\"Newlines\", "
+          |> range
+          |> cons ", \""
+          |> writeReplicate (y2 - y1) "\\n"
+          |> writeReplicate blank " "
+          |> cons "\"]"
 
-    let t =
-      let deepIndent = indent + "  "
+        | CommentToken -> acc |> cons "[\"Comment\", " |> range |> cons "]"
 
-      children
-      |> List.map (fun child -> "\n" + deepIndent + sdElement rx deepIndent child)
-      |> S.concat ","
+        | _ ->
+          acc
+          |> cons "[\""
+          |> cons (kindToString kind)
+          |> cons "\", "
+          |> range
+          |> cons "]"
 
-    s + t + "\n" + indent + "]]"
+      | None ->
+        acc
+        |> cons "[\""
+        |> cons (kindToString kind)
+        |> cons "\", "
+        |> range
+        |> cons "]"
 
-let private sdRoot (rangeMap: TokenRangeMap) (root: SyntaxElement) : string = sdElement rangeMap "" root
+    | SyntaxNode (kind, range, []) ->
+      acc
+      |> cons "[\""
+      |> cons (kindToString kind)
+      |> cons "\", "
+      |> sdRange range
+      |> cons ", []]"
+
+    | SyntaxNode (kind, range, children) ->
+      let acc =
+        acc
+        |> cons "[\""
+        |> cons (kindToString kind)
+        |> cons "\", "
+        |> sdRange range
+        |> cons ", ["
+
+      let acc =
+        let deep = newline + "  "
+
+        let onChild child acc =
+          let acc = acc |> cons deep
+          sdElement rx deep acc child
+
+        match children with
+        | [] -> acc
+
+        | child :: children ->
+          let acc = onChild child acc
+
+          children
+          |> List.fold (fun acc child -> acc |> cons "," |> onChild child) acc
+
+      acc |> cons newline |> cons "]]"
+
+  let sdRoot (rangeMap: TokenRangeMap) (root: SyntaxElement) : string =
+    sdElement rangeMap "\n" [] root
+    |> List.rev
+    |> S.concat ""
 
 // -----------------------------------------------
 // Interface
@@ -1178,4 +1422,4 @@ let dumpTree (tokens: TokenizeFullResult) (ast: ARoot) : string =
     |> postprocess tokens rangeMap eofPos
 
   // assert (stValidate rangeMap tokens root)
-  sdRoot rangeMap root
+  SyntaxTreeDump.sdRoot rangeMap root
