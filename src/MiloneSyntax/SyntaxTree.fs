@@ -658,33 +658,47 @@ let private sgExpr (ctx: SgCtx) (expr: AExpr) : BuilderElement =
          |> cons (onExpr body)
          |> consOptionMap onExpr nextOpt)
 
-let private sgDecl (ctx: SgCtx) decl : BuilderElement =
+let private sgDecl (ctx: SgCtx) attrAcc decl : BuilderElement =
   let onTy ty = sgTy ctx ty
   let onPat pat = sgPat ctx pat
   let onExpr expr = sgExpr ctx expr
-  let onDecls decls = decls |> List.map (sgDecl ctx)
+  let onDecls decls = decls |> List.map (sgDecl ctx [])
+
+  let genAttrList () =
+    attrAcc
+    |> List.rev
+    |> List.map (fun (lPos, attr, rOpt) ->
+      buildNode
+        SyntaxKind.AttrDecl
+        ([ [ newAnchor lPos; onExpr attr ] ]
+         |> consOptionMap newAnchor rOpt))
 
   let onTyHead typePos name tyParamList equalPos =
-    [ [ newAnchor typePos; sgName name ] ]
+    [ genAttrList () ]
+    |> cons (newAnchor typePos)
+    |> cons (sgName name)
     |> consOpt (sgTyParamList tyParamList)
     |> consOpt (sgEqual ctx equalPos)
 
   match decl with
-  | AExprDecl expr -> newNode SyntaxKind.ExprDecl [ onExpr expr ]
+  | AExprDecl expr -> buildNode SyntaxKind.ExprDecl ([ genAttrList () ] |> cons (onExpr expr))
 
   | ALetDecl (letPos, contents) ->
     match contents with
     | ALetContents.LetVal (_, pat, equalPos, init) ->
       buildNode
         SyntaxKind.LetValDecl
-        ([ [ newAnchor letPos; onPat pat ] ]
+        ([ genAttrList () ]
+         |> consList [ newAnchor letPos; onPat pat ]
          |> consOpt (sgEqual ctx equalPos)
          |> cons (onExpr init))
 
     | ALetContents.LetFun (_, _, name, argPats, resultTyOpt, equalPos, body) ->
       buildNode
         SyntaxKind.LetFunDecl
-        ([ [ newAnchor letPos; sgName name ] ]
+        ([ genAttrList () ]
+         |> consList [ newAnchor letPos
+                       sgName name ]
          |> consListMap onPat argPats
          |> consList (
            match resultTyOpt with
@@ -737,31 +751,29 @@ let private sgDecl (ctx: SgCtx) decl : BuilderElement =
        |> consOptionMap newAnchor rPos)
 
   | AOpenDecl (openPos, path) ->
-    newNode
+    buildNode
       SyntaxKind.OpenDecl
-      [ newAnchor openPos
-        newNode SyntaxKind.ModulePath (path |> List.map sgName) ]
+      ([ genAttrList () ]
+       |> cons (newAnchor openPos)
+       |> cons (newNode SyntaxKind.ModulePath (path |> List.map sgName)))
 
   | AModuleSynonymDecl (modulePos, name, equalPos, path) ->
     buildNode
       SyntaxKind.ModuleSynonymDecl
-      ([ [ newAnchor modulePos; sgName name ] ]
+      ([ genAttrList () ]
+       |> consList [ newAnchor modulePos; sgName name ]
        |> consOpt (sgEqual ctx equalPos)
        |> cons (newNode SyntaxKind.ModulePath (path |> List.map sgName)))
 
   | AModuleDecl (modulePos, _, _, name, equalPos, decls) ->
     buildNode
       SyntaxKind.ModuleDecl
-      ([ [ newAnchor modulePos; sgName name ] ]
+      ([ genAttrList () ]
+       |> consList [ newAnchor modulePos; sgName name ]
        |> consOpt (sgEqual ctx equalPos)
        |> consList (onDecls decls))
 
-  | AAttrDecl (lPos, attr, rOpt, next) ->
-    buildNode
-      SyntaxKind.AttrDecl
-      ([ [ newAnchor lPos; onExpr attr ] ]
-       |> consOptionMap newAnchor rOpt
-       |> cons (sgDecl ctx next))
+  | AAttrDecl (lPos, attr, rOpt, next) -> sgDecl ctx ((lPos, attr, rOpt) :: attrAcc) next
 
 let private sgRoot (ctx: SgCtx) root : BuilderElement =
   let (ARoot (headOpt, decls)) = root
@@ -780,7 +792,7 @@ let private sgRoot (ctx: SgCtx) root : BuilderElement =
 
        | _ -> None
      )
-     |> consListMap (sgDecl ctx) decls)
+     |> consListMap (sgDecl ctx []) decls)
 
 // -----------------------------------------------
 // Postprocess
