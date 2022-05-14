@@ -661,9 +661,12 @@ let private lowerAExpr docId acc expr : DSymbolOccurrence list =
   | AAscribeExpr (l, _, r) -> acc |> up onExpr l |> up onTy r
   | ASemiExpr (stmts, last, _) -> acc |> up onExprs stmts |> up onExpr last
 
-  | ALetExpr (_, contents, next) ->
+  | ALetExpr (_, contents, nextOpt) ->
     let acc = lowerALetContents docId acc contents
-    lowerAExpr docId acc next
+
+    match nextOpt with
+    | Some next -> lowerAExpr docId acc next
+    | None -> acc
 
 let private lowerADecl docId acc decl : DSymbolOccurrence list =
   let onTy acc ty = lowerATy docId acc ty
