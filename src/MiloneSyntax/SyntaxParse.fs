@@ -720,8 +720,7 @@ let private parseAtom basePos (tokens, errors) : PR<AExpr> =
     let tyArgs, tokens, errors = parseTyArgs pos (tokens, errors)
     AIdentExpr(Name(ident, pos), tyArgs), tokens, errors
 
-  | (LeftParenToken, lPos) :: (RightParenToken, rPos) :: tokens ->
-    AParenExpr(lPos, ATupleExpr(lPos, [], Some lPos), Some rPos), tokens, errors
+  | (LeftParenToken, lPos) :: (RightParenToken, rPos) :: tokens -> ATupleExpr(lPos, [], Some rPos), tokens, errors
   | (LeftParenToken, lPos) :: tokens -> parseParenBody basePos lPos (tokens, errors)
   | (LeftBracketToken, bracketPos) :: tokens -> parseList basePos bracketPos (tokens, errors)
   | (LeftBraceToken, bracePos) :: tokens -> parseRecordExpr bracePos (tokens, errors)
