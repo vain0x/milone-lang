@@ -21,7 +21,7 @@ module Manifest = MiloneSyntax.Manifest
 module S = Std.StdString
 module SyntaxParse = MiloneSyntax.SyntaxParse
 module SyntaxTokenize = MiloneSyntax.SyntaxTokenize
-module SyntaxTree = MiloneSyntax.SyntaxTree
+module SyntaxTreeGen = MiloneSyntax.SyntaxTreeGen
 module Tir = MiloneSyntax.Tir
 module Typing = MiloneSyntax.Typing
 module TySystem = MiloneSyntax.TySystem
@@ -456,7 +456,7 @@ let dumpSyntax (text: string) : string * ModuleSyntaxError list =
     SyntaxTokenize.tokenize host text
     |> SyntaxParse.parse
 
-  let tree = SyntaxTree.dumpTree tokens ast
+  let tree = SyntaxTreeGen.dumpTree tokens ast
   tree, errors
 
 // -----------------------------------------------
@@ -472,5 +472,5 @@ let newSyntaxApi () : SyntaxApi =
     NewSyntaxCtx = fun host -> newSyntaxCtx host |> wrap
     GetManifest = fun ctx -> ctx |> unwrap |> SyntaxCtx.getManifest
     PerformSyntaxAnalysis = fun ctx -> ctx |> unwrap |> performSyntaxAnalysis
-    GenSyntaxTree = SyntaxTree.genSyntaxTree
+    GenSyntaxTree = SyntaxTreeGen.genSyntaxTree
     DumpSyntax = dumpSyntax }

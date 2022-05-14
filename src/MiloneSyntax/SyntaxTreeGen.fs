@@ -1,4 +1,4 @@
-module rec MiloneSyntax.SyntaxTree
+module rec MiloneSyntax.SyntaxTreeGen
 
 open MiloneShared.SharedTypes
 open MiloneShared.TypeIntegers
