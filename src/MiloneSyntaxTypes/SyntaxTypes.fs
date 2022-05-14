@@ -562,3 +562,164 @@ type NDecl =
 type NRoot = NModuleDecl
 
 type NModuleRoot = DocId * NRoot
+
+// -----------------------------------------------
+// SyntaxTree
+// -----------------------------------------------
+
+// See also milone_syntax_tree.ungram
+/// Kind of token or node.
+[<RequireQualifiedAccess; NoEquality; NoComparison>]
+type SyntaxKind =
+  // Token:
+  | Bad
+  | Blank
+  | Newlines
+  | Comment
+  | Int
+  | Float
+  | Char
+  | String
+  | Ident
+  | TyVar
+  // Parentheses:
+  | LeftParen
+  | RightParen
+  | LeftBracket
+  | RightBracket
+  | LeftBrace
+  | RightBrace
+  | LeftAngle
+  | RightAngle
+  | LeftAttr
+  | RightAttr
+  // Punctuations:
+  | Amp
+  | AmpAmp
+  | AmpAmpAmp
+  | Arrow
+  | Colon
+  | ColonColon
+  | Comma
+  | Dot
+  | DotDot
+  | Equal
+  | Hat
+  | HatHatHat
+  | LeftEqual
+  | LeftLeft
+  | LeftLeftLeft
+  | LeftRight
+  | Minus
+  | Percent
+  | Pipe
+  | PipePipe
+  | PipePipePipe
+  | PipeRight
+  | Plus
+  | RightEqual
+  | Semi
+  | Slash
+  | Star
+  // Keywords:
+  | As
+  | Else
+  | False
+  | Fun
+  | If
+  | In
+  | Let
+  | Match
+  | Module
+  | Of
+  | Open
+  | Private
+  | Public
+  | Rec
+  | Then
+  | True
+  | Type
+  | When
+  | With
+
+  // Fragment:
+  | TyParamList
+  | TyArgList
+  | WithClause
+  | FieldInit
+  | ElseClause
+  | GuardClause
+  | Arm
+  | LabeledTy
+  | VariantDecl
+  | FieldDecl
+  | ModulePath
+  | ModuleHead
+
+  // Ty:
+  | MissingTy
+  | NameTy
+  | VarTy
+  | ParenTy
+  | SuffixTy
+  | TupleTy
+  | FunTy
+
+  // Pat:
+  | MissingPat
+  | LiteralPat
+  | WildcardPat
+  | VarPat
+  | PathPat
+  | ParenPat
+  | ListPat
+  | WrapPat
+  | ConsPat
+  | AscribePat
+  | TuplePat
+  | AsPat
+  | OrPat
+
+  // Expr:
+  | MissingExpr
+  | LiteralExpr
+  | NameExpr
+  | PathExpr
+  | ParenExpr
+  | ListExpr
+  | RecordExpr
+  | IfExpr
+  | MatchExpr
+  | FunExpr
+  | IndexExpr
+  | UnaryExpr
+  | AppExpr
+  | BinaryExpr
+  | RangeExpr
+  | TupleExpr
+  | AscribeExpr
+  | BlockExpr
+  | LetValExpr
+  | LetFunExpr
+
+  // Decl:
+  | ExprDecl
+  | LetValDecl
+  | LetFunDecl
+  | TySynonymDecl
+  | UnionTyDecl
+  | RecordTyDecl
+  | OpenDecl
+  | ModuleDecl
+  | ModuleSynonymDecl
+  | AttrDecl
+
+  | Root
+
+[<NoEquality; NoComparison>]
+type SyntaxElement =
+  | SyntaxToken of SyntaxKind * Range
+  | SyntaxNode of SyntaxKind * Range * children: SyntaxElement list
+
+[<NoEquality; NoComparison>]
+type SyntaxTree = SyntaxTree of root: SyntaxElement
