@@ -540,7 +540,12 @@ let private ngDecl docId attrs ctx decl : NDecl * NirGenCtx =
                  let itemTys, ctx =
                    itemTys |> List.map snd |> List.mapFold onTy ctx
 
-                 Some(NTy.Tuple(itemTys, toLoc pos)), ctx
+                 let payloadTy =
+                   match itemTys with
+                   | [ ty ] -> ty
+                   | _ -> NTy.Tuple(itemTys, toLoc pos)
+
+                 Some payloadTy, ctx
 
                | None -> None, ctx
 
