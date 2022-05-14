@@ -183,9 +183,9 @@ type SyntaxKind =
   | LiteralPat
   | WildcardPat
   | VarPat
+  | PathPat
   | ParenPat
   | ListPat
-  | NavPat
   | WrapPat
   | ConsPat
   | AscribePat
@@ -453,7 +453,7 @@ let private sgPat (ctx: SgCtx) (pat: APat) : BuilderElement =
 
   | ANavPat (lPat, dotPos, r) ->
     newNode
-      SyntaxKind.NavPat
+      SyntaxKind.PathPat
       [ onPat lPat
         newAnchor dotPos
         sgName r ]
