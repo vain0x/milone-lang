@@ -160,7 +160,6 @@ type SyntaxKind =
   | TyArgList
   | WithClause
   | FieldInit
-  | ThenClause
   | ElseClause
   | GuardClause
   | Arm
@@ -559,13 +558,8 @@ let private sgExpr (ctx: SgCtx) (expr: AExpr) : BuilderElement =
       SyntaxKind.IfExpr
       ([ [ newAnchor ifPos ] ]
        |> cons (onExpr cond)
-       |> cons (
-         buildNode
-           SyntaxKind.ThenClause
-           ([]
-            |> consOpt (sgThen ctx thenPos)
-            |> cons (onExpr body))
-       )
+       |> consOpt (sgThen ctx thenPos)
+       |> cons (onExpr body)
        |> consOpt (
          match altOpt with
          | Some (elsePos, alt) ->
