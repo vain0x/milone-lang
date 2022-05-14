@@ -53,4 +53,5 @@ type SyntaxApi =
     NewSyntaxCtx: FetchModuleHost -> SyntaxCtx
     GetManifest: SyntaxCtx -> ManifestData
     PerformSyntaxAnalysis: SyntaxCtx -> SyntaxLayers * SyntaxAnalysisResult
+    GenSyntaxTree: TokenizeFullResult -> ARoot -> SyntaxTree
     DumpSyntax: string -> string * ModuleSyntaxError list }

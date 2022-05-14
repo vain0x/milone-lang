@@ -472,4 +472,5 @@ let newSyntaxApi () : SyntaxApi =
     NewSyntaxCtx = fun host -> newSyntaxCtx host |> wrap
     GetManifest = fun ctx -> ctx |> unwrap |> SyntaxCtx.getManifest
     PerformSyntaxAnalysis = fun ctx -> ctx |> unwrap |> performSyntaxAnalysis
+    GenSyntaxTree = SyntaxTree.genSyntaxTree
     DumpSyntax = dumpSyntax }
