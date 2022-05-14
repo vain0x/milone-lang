@@ -18,6 +18,7 @@ module S = Std.StdString
 module AstBundle = MiloneSyntax.AstBundle
 module SyntaxApi = MiloneSyntax.SyntaxApi
 module SyntaxTokenize = MiloneSyntax.SyntaxTokenize
+module SyntaxTreeGen = MiloneSyntax.SyntaxTreeGen
 module TySystem = MiloneSyntax.TySystem
 
 // Hide compiler-specific types from other modules.
@@ -30,6 +31,15 @@ type LTokenList = private LTokenList of TokenizeFullResult
 
 [<NoEquality; NoComparison>]
 type LSyntaxData = private LSyntaxData of ModuleSyntaxData
+
+[<RequireQualifiedAccess; NoEquality; NoComparison>]
+type LSyntax2 =
+  { DocId: DocId
+    Text: SourceCode
+    FullTokens: TokenizeFullResult
+    Ast: ARoot
+    SyntaxTree: SyntaxTree
+    Errors: ModuleSyntaxError list }
 
 // -----------------------------------------------
 // Utils
@@ -308,6 +318,25 @@ module LSyntaxData =
       | DModuleSynonymDef (synonym, modulePath), Some loc -> Some(synonym, modulePath, loc)
       | _ -> None)
 
+module LSyntax2 =
+  let private host = tokenizeHostNew ()
+
+  let parse projectName moduleName docId (text: SourceCode) : LSyntax2 =
+    let fullTokens = SyntaxTokenize.tokenizeAll host text
+
+    let _, _, ast, errors =
+      parseAllTokens projectName moduleName docId fullTokens
+
+    let syntax: LSyntax2 =
+      { DocId = docId
+        Text = text
+        FullTokens = fullTokens
+        Ast = ast
+        SyntaxTree = SyntaxTreeGen.genSyntaxTree fullTokens ast
+        Errors = errors }
+
+    syntax
+
 module BundleResult =
   let getErrors (b: BundleResult) = b.Errors
 
@@ -321,6 +350,7 @@ type ProjectAnalysisHost =
   { GetDocVersion: DocId -> DocVersion
     Tokenize: DocId -> DocVersion * LTokenList
     Parse: DocId -> (DocVersion * LSyntaxData) option
+    Parse2: DocId -> LSyntax2 option
 
     MiloneHome: FilePath
     ReadTextFile: string -> Future<string option> }
@@ -1117,6 +1147,8 @@ module ProjectAnalysis1 =
     LTokenList tokens, pa
 
   let parse (docId: DocId) (pa: ProjectAnalysis) : LSyntaxData option * ProjectAnalysis = parseWithCache docId pa, pa
+
+  let parse2 (docId: DocId) (pa: ProjectAnalysis) : LSyntax2 option * ProjectAnalysis = pa.Host.Parse2 docId, pa
 
   let bundle (pa: ProjectAnalysis) : BundleResult * ProjectAnalysis = bundleWithCache pa
 

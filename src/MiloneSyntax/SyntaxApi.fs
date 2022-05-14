@@ -74,7 +74,7 @@ type ModuleKind =
   | MiloneCore
   | Regular
 
-let getModuleKind projectName _moduleName =
+let getModuleKind projectName (_: ModuleName) =
   match projectName with
   | "MiloneCore" -> ModuleKind.MiloneCore
   | _ -> ModuleKind.Regular
