@@ -357,30 +357,32 @@ let private parseTyArgs basePos (tokens, errors) : PR<ATyArgList option> =
   | _ -> None, tokens, errors
 
 /// `qual.ident <...>`
+// pos: position behind name
 let private parseNavTy basePos (tokens, errors) : PR<ATy> =
-  let rec go acc (tokens, errors) =
+  let rec go acc pos (tokens, errors) =
     match tokens with
-    | (IdentToken qual, qualPos) :: (DotToken, dot) :: tokens -> go ((Name(qual, qualPos), dot) :: acc) (tokens, errors)
+    | (IdentToken qual, qualPos) :: (DotToken, dotPos) :: tokens ->
+      go ((Name(qual, qualPos), dotPos) :: acc) (posAddX 1 dotPos) (tokens, errors)
 
-    | (IdentToken ident, pos) :: tokens ->
+    | (IdentToken ident, identPos) :: tokens ->
       let tyArgListOpt, tokens, errors = parseTyArgs basePos (tokens, errors)
-      AAppTy(List.rev acc, Name(ident, pos), tyArgListOpt), tokens, errors
+      AAppTy(List.rev acc, Some(Name(ident, identPos)), tyArgListOpt), tokens, errors
 
-    | _ when not (List.isEmpty acc) ->
-      // Include qualifiers for completion.
-      let pos =
-        match List.tryLast acc with
-        | Some (_, pos) -> posAddX 1 pos
-        | None -> unreachable ()
-
+    | _ ->
       let errors =
         parseErrorCore "Expected identifier" pos errors
 
-      AAppTy(List.rev acc, Name("", pos), None), tokens, errors
+      AAppTy(List.rev acc, None, None), tokens, errors
 
-    | _ -> parseTyError "Expected identifier" (tokens, errors)
+  match tokens with
+  | (IdentToken qual, qualPos) :: (DotToken, dotPos) :: tokens ->
+    go [ Name(qual, qualPos), dotPos ] (posAddX 1 dotPos) (tokens, errors)
 
-  go [] (tokens, errors)
+  | (IdentToken ident, identPos) :: tokens ->
+    let tyArgListOpt, tokens, errors = parseTyArgs basePos (tokens, errors)
+    AAppTy([], Some(Name(ident, identPos)), tyArgListOpt), tokens, errors
+
+  | _ -> unreachable ()
 
 let private parseTyAtom basePos (tokens, errors) : PR<ATy> =
   match tokens with
@@ -445,14 +447,24 @@ let private parseTy basePos (tokens, errors) = parseTyFun basePos (tokens, error
 // Parse patterns
 // -----------------------------------------------
 
-let private parseNavPatBody head headPos (tokens, errors) : PR<APat> =
+let private parseNavPat (tokens, errors) : PR<APat> =
   let rec go acc tokens =
     match tokens with
     | (DotToken, dotPos) :: (IdentToken ident, identPos) :: tokens ->
-      go (ANavPat(acc, dotPos, Name(ident, identPos))) tokens
-    | _ -> acc, tokens, errors
+      go (ANavPat(acc, dotPos, Some(Name(ident, identPos)))) tokens
 
-  go (AIdentPat(None, Name(head, headPos))) tokens
+    | (DotToken, dotPos) :: tokens -> ANavPat(acc, dotPos, None), tokens
+
+    | _ -> acc, tokens
+
+  match tokens with
+  | (IdentToken ident, identPos) :: tokens ->
+    let pat, tokens =
+      go (AIdentPat(None, Name(ident, identPos))) tokens
+
+    pat, tokens, errors
+
+  | _ -> unreachable ()
 
 /// `pat ')'`
 let private parsePatParenBody basePos lPos (tokens, errors) : PR<APat> =
@@ -510,7 +522,7 @@ let private parsePatAtom basePos (tokens, errors) : PR<APat> =
   | (CharToken value, pos) :: tokens -> ALitPat(CharLit value, pos), tokens, errors
   | (StringToken value, pos) :: tokens -> ALitPat(StringLit value, pos), tokens, errors
 
-  | (IdentToken ident, pos) :: tokens -> parseNavPatBody ident pos (tokens, errors)
+  | (IdentToken _, _) :: _ -> parseNavPat (tokens, errors)
 
   | (LeftParenToken, lPos) :: (RightParenToken, rPos) :: tokens -> ATuplePat(lPos, [], Some rPos), tokens, errors
   | (LeftParenToken, lPos) :: tokens -> parsePatParenBody basePos lPos (tokens, errors)
@@ -531,25 +543,13 @@ let private parsePatAtom basePos (tokens, errors) : PR<APat> =
     // Drop the next token to prevent infinite loop.
     parsePatError "Expected a pattern atom" (listSkip 1 tokens, errors)
 
-/// `pat-nav = pat-atom ( '.' ident )?`
-let private parsePatNav basePos (tokens, errors) : PR<APat> =
-  let pat, tokens, errors = parsePatAtom basePos (tokens, errors)
-
-  match tokens with
-  | (DotToken, pos) :: (IdentToken ident, identPos) :: tokens ->
-    ANavPat(pat, pos, Name(ident, identPos)), tokens, errors
-
-  | (DotToken, _) :: tokens -> parsePatError "Expected identifier" (tokens, errors)
-
-  | _ -> pat, tokens, errors
-
 let private parsePatCallArgs basePos (tokens, errors) : PR<APat list> =
   let innerBasePos = basePos |> posAddX 1
 
   let rec go acc (tokens, errors) =
     if nextInside innerBasePos tokens && leadsPat tokens then
       let pat, tokens, errors =
-        parsePatNav innerBasePos (tokens, errors)
+        parsePatAtom innerBasePos (tokens, errors)
 
       go (pat :: acc) (tokens, errors)
     else
@@ -557,9 +557,8 @@ let private parsePatCallArgs basePos (tokens, errors) : PR<APat list> =
 
   go [] (tokens, errors)
 
-/// `pat-app = pat-nav ( pat-nav )?`
 let private parsePatApp basePos (tokens, errors) : PR<APat> =
-  let callee, tokens, errors = parsePatNav basePos (tokens, errors)
+  let callee, tokens, errors = parsePatAtom basePos (tokens, errors)
 
   // Parse argument if exists.
   if nextInside (basePos |> posAddX 1) tokens
@@ -567,7 +566,7 @@ let private parsePatApp basePos (tokens, errors) : PR<APat> =
     let argPos = posPrev (nextPos tokens)
 
     let arg, tokens, errors =
-      parsePatNav (basePos |> posAddX 1) (tokens, errors)
+      parsePatAtom (basePos |> posAddX 1) (tokens, errors)
 
     AAppPat(callee, argPos, arg), tokens, errors
   else
@@ -750,13 +749,13 @@ let private parseSuffix basePos (tokens, errors) : PR<AExpr> =
       go (AIndexExpr(acc, dotPos, lPos, r, rPos)) (tokens, errors)
 
     | (DotToken, dotPos) :: (IdentToken ident, identPos) :: tokens ->
-      go (ANavExpr(acc, dotPos, Name(ident, identPos))) (tokens, errors)
+      go (ANavExpr(acc, dotPos, Some(Name(ident, identPos)))) (tokens, errors)
 
-    | (DotToken, _) :: tokens ->
+    | (DotToken, dotPos) :: tokens ->
       let errors =
         parseNewError "Expected .[] or .field" (tokens, errors)
 
-      acc, tokens, errors
+      ANavExpr(acc, dotPos, None), tokens, errors
 
     | _ -> acc, tokens, errors
 

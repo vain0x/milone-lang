@@ -212,9 +212,14 @@ let private ngTy (docId: DocId) (ctx: NirGenCtx) (ty: ATy) : NTy * NirGenCtx =
   match ty with
   | AMissingTy pos -> NTy.Bad(toLoc pos), ctx
 
-  | AAppTy ([], Name ("_", pos), None) -> NTy.Infer(toLoc pos), ctx
+  | AAppTy ([], Some (Name ("_", pos)), None) -> NTy.Infer(toLoc pos), ctx
 
-  | AAppTy (quals, name, tyArgs) ->
+  | AAppTy (quals, None, _) ->
+    match List.tryLast quals with
+    | Some (_, (y, x)) -> NTy.Bad(toLoc (y, x + 1)), ctx
+    | None -> unreachable ()
+
+  | AAppTy (quals, Some name, tyArgs) ->
     let quals =
       quals |> List.map (fun (name, _) -> onName name)
 
@@ -272,7 +277,9 @@ let private ngPat (docId: DocId) (ctx: NirGenCtx) (pat: APat) : NPat * NirGenCtx
   | AListPat (pos, [], _) -> NPat.Nil(toLoc pos), ctx
   | AListPat (pos, pats, _) -> ngPat docId ctx (desugarListPat pats pos)
 
-  | ANavPat (l, pos, r) ->
+  | ANavPat (_, pos, None) -> NPat.Bad(toLoc pos), ctx
+
+  | ANavPat (l, pos, Some r) ->
     let l, ctx = l |> onPat ctx
     let loc = toLoc pos
     NPat.Nav(l, onName r, loc), ctx
@@ -407,7 +414,9 @@ let private ngExpr (docId: DocId) (ctx: NirGenCtx) (expr: AExpr) : NExpr * NirGe
 
   | AFunExpr (funPos, argPats, arrowPos, body) -> ngExpr docId ctx (desugarFun funPos argPats arrowPos body)
 
-  | ANavExpr (l, pos, r) ->
+  | ANavExpr (_, pos, None) -> NExpr.Bad(toLoc pos), ctx
+
+  | ANavExpr (l, pos, Some r) ->
     let l, ctx = l |> onExpr ctx
     NExpr.Nav(l, onName r, toLoc pos), ctx
 

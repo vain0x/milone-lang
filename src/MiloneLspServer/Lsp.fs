@@ -552,7 +552,9 @@ let private lowerATy docId acc ty : DSymbolOccurrence list =
   | AMissingTy _
   | AVarTy _ -> acc
 
-  | AAppTy (_, Name (name, pos), tyArgList) ->
+  | AAppTy (_, None, _) -> acc
+
+  | AAppTy (_, Some(Name (name, pos)), tyArgList) ->
     let acc =
       (DTySymbol name, Use, At(Loc.ofDocPos docId pos))
       :: acc
@@ -669,7 +671,7 @@ let private lowerAExpr docId acc expr : DSymbolOccurrence list =
        toLoc pos)
       :: acc
 
-    | ANavExpr (AIdentExpr (p, None), _, m) ->
+    | ANavExpr (AIdentExpr (p, None), _, Some m) ->
       let path = [ p; m ] |> List.map nameToIdent
 
       if isModulePathLike path then

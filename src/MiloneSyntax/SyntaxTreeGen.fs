@@ -389,12 +389,12 @@ let private sgTy (ctx: SgCtx) (ty: ATy) : BuilderElement =
   match ty with
   | AMissingTy pos -> newNode SyntaxKind.MissingTy [ newAnchor pos ]
 
-  | AAppTy (quals, name, tyArgList) ->
+  | AAppTy (quals, nameOpt, tyArgList) ->
     buildNode
       SyntaxKind.NameTy
       (quals
        |> List.map (fun (name, pos) -> [ sgName name; newAnchor pos ])
-       |> push (sgName name)
+       |> pushOptionMap sgName nameOpt
        |> pushOption (sgTyArgList ctx tyArgList))
 
   | AVarTy name -> newNode SyntaxKind.VarTy [ sgName name ]
@@ -437,12 +437,11 @@ let private sgPat (ctx: SgCtx) (pat: APat) : BuilderElement =
        |> pushListMap onPat itemPats
        |> pushOptionMap newAnchor rPos)
 
-  | ANavPat (lPat, dotPos, r) ->
-    newNode
+  | ANavPat (lPat, dotPos, rOpt) ->
+    buildNode
       SyntaxKind.PathPat
-      [ onPat lPat
-        newAnchor dotPos
-        sgName r ]
+      ([ [ onPat lPat; newAnchor dotPos ] ]
+       |> pushOptionMap sgName rOpt)
 
   | AAppPat (lPat, _, rPat) -> newNode SyntaxKind.WrapPat [ onPat lPat; onPat rPat ]
 
@@ -587,7 +586,11 @@ let private sgExpr (ctx: SgCtx) (expr: AExpr) : BuilderElement =
        |> pushOption (sgArrow ctx arrowPos)
        |> push (onExpr body))
 
-  | ANavExpr (l, dotPos, r) -> newNode SyntaxKind.PathExpr [ onExpr l; newAnchor dotPos; sgName r ]
+  | ANavExpr (l, dotPos, rOpt) ->
+    buildNode
+      SyntaxKind.PathExpr
+      ([ [ onExpr l; newAnchor dotPos ] ]
+       |> pushOptionMap sgName rOpt)
 
   | AIndexExpr (l, dotPos, lPos, r, rOpt) ->
     buildNode

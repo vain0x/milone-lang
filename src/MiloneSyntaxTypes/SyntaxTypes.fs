@@ -252,7 +252,7 @@ type ATy =
   /// e.g. `int`, `TMap.AssocMap<K, V>`.
   ///
   /// quals: `(name, '.' option) list`
-  | AAppTy of quals: (Name * Pos) list * Name * ATyArgList option
+  | AAppTy of quals: (Name * Pos) list * Name option * ATyArgList option
 
   /// Type variable, e.g. `'T`.
   | AVarTy of Name
@@ -289,7 +289,7 @@ type APat =
   | AListPat of lPos: Pos * itemPats: APat list * rPos: Pos option
 
   /// Navigation, e.g. `Foo.Bar`.
-  | ANavPat of APat * dotPos: Pos * Name
+  | ANavPat of APat * dotPos: Pos * Name option
 
   /// Application. e.g. `Some x`.
   ///
@@ -387,7 +387,7 @@ type AExpr =
   | AFunExpr of funPos: Pos * argPats: APat list * arrowPos: Pos * AExpr
 
   /// Navigation, e.g. `s.Length`.
-  | ANavExpr of AExpr * dotPos: Pos * Name
+  | ANavExpr of AExpr * dotPos: Pos * Name option
 
   /// E.g. `s.[i]`.
   | AIndexExpr of AExpr * dotPos: Pos * lPos: Pos * AExpr * rPos: Pos option
