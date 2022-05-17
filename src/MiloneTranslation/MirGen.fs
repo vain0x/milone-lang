@@ -1271,7 +1271,11 @@ let private mirifyCallToStringExpr ctx itself arg ty loc =
   | Ty (BoolTk, _) -> usePrim MStringOfBoolPrim
   | Ty (CharTk, _) -> usePrim MStringOfCharPrim
 
-  | _ -> unreachable itself
+  | Ty (TupleTk, []) -> MLitExpr(StringLit "()", loc), ctx
+
+  | _ ->
+    // It might be the type isn't handled in derive.
+    unreachable itself
 
 let private mirifyCallAssertExpr ctx arg loc =
   let arg, ctx = mirifyExpr ctx arg

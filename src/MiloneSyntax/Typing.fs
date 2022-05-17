@@ -515,6 +515,7 @@ let private resolveTraitBound (ctx: TyCtx) theTrait loc : TyCtx =
     | _ -> defaultToInt ctx ty
 
   | EqualTrait ty ->
+    // #trait_resolve
     let rec go memo ty =
       let (Ty (tk, tyArgs)) = ty
 
@@ -649,7 +650,38 @@ let private resolveTraitBound (ctx: TyCtx) theTrait loc : TyCtx =
 
     | _ -> error ctx
 
-  | ToStringTrait ty -> expectBasic ctx ty
+  | ToStringTrait ty ->
+    // #trait_resolve
+    let rec go memo ty =
+      let (Ty (tk, tyArgs)) = ty
+
+      let onTys memo tys =
+        tys
+        |> List.fold
+             (fun (ok, memo) tyArg ->
+               if not ok then
+                 ok, memo
+               else
+                 let ok1, memo = go memo tyArg
+                 ok && ok1, memo)
+             (true, memo)
+
+      let allowRec memo action =
+        if memo |> TSet.contains ty then
+          true, memo
+        else
+          memo |> TSet.add ty |> action
+
+      match tk, tyArgs with
+      | _ when tyIsBasic ty -> true, memo
+
+      | TupleTk, [] -> true, memo
+      | TupleTk, _ -> onTys memo tyArgs
+      | _ -> false, memo
+
+    let resolved, _ = go (TSet.empty tyCompare) ty
+
+    if resolved then ok ctx else error ctx
 
   | PtrTrait ty ->
     match ty with
