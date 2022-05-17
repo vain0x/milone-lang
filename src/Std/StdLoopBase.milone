@@ -1,0 +1,39 @@
+module rec Std.StdLoopBase
+
+module Ptr = Std.Ptr
+
+type private Folder<'S, 'T> = 'S -> 'T -> bool * 'S
+type private Loop<'S, 'T> = Folder<'S, Folder<'S, 'T>>
+
+// let shareLoop (xs: Loop<obj, 'T>) : Loop<'S, 'T> =
+//   fun (state: 'S) folder ->
+//     let ok, state =
+//       xs (box (state: 'S)) (fun state (item: 'T) ->
+//         let ok, state = folder (unbox state: 'S) item
+//         ok, box (state: 'S))
+//
+//     ok, (unbox state: 'S)
+
+let shareLoop (xs: Loop<obj, 'T>) : Loop<'S, 'T> =
+  fun (state: 'S) folder ->
+    __nativeStmt
+      ("""
+        _Alignas({0}) uint8_t stack_place[256];
+        void *place =
+          sizeof({0}) <= sizeof(stack_place)
+            ? stack_place
+            : milone_region_alloc(1, sizeof({0}));
+      """, (__type: 'S))
+
+    let place: nativeptr<'S> = __nativeExpr "place"
+
+    let ok, _ =
+      Ptr.write place state
+
+      xs (__nativeCast place: obj) (fun (place: obj) (item: 'T) ->
+        let place: nativeptr<'S> = __nativeCast place
+        let ok, state = folder (Ptr.read place) item
+        Ptr.write place state
+        ok, (__nativeCast place: obj))
+
+    ok, Ptr.read place

@@ -16,6 +16,7 @@
 module rec Std.StdLoop
 
 module S = Std.StdString
+module StdLoopBase = Std.StdLoopBase
 
 /// Function type to compute a step of iteration.
 ///
@@ -121,6 +122,8 @@ module Loop =
   // -----------------------------------------------
   // Transformation
   // -----------------------------------------------
+
+  let share (xs: Loop<obj, 'T>) : Loop<_, 'T> = StdLoopBase.shareLoop xs
 
   let map (f: 'T -> 'U) (xs: Loop<'S, 'T>) : Loop<'S, 'U> =
     fun state folder -> xs state (fun state item -> folder state (f item))
