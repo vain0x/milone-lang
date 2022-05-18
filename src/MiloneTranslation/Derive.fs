@@ -12,6 +12,13 @@ open Std.StdSet
 open MiloneTranslation.Hir
 open MiloneTranslation.HirTypes
 
+// #tyAssign
+let tyAssign tyVars tyArgs =
+  match listTryZip tyVars tyArgs with
+  | [], [], [] -> id
+  | assignment, [], [] -> tySubst (fun tySerial -> assocTryFind compare tySerial assignment)
+  | _ -> fun (_: Ty) -> unreachable ()
+
 // #tyAppliedBy
 let private tyAppliedBy n ty =
   match ty with
@@ -149,6 +156,12 @@ let private rewriteStmt ctx stmt : HStmt =
 // Generation
 // -----------------------------------------------
 
+[<RequireQualifiedAccess; NoEquality; NoComparison>]
+type private DRx =
+  { Variants: TreeMap<VariantSerial, VariantDef>
+    Tys: TreeMap<TySerial, TyDef> }
+
+[<RequireQualifiedAccess; NoEquality; NoComparison>]
 type private DCtx =
   { Serial: Serial
     NewVars: (VarSerial * VarDef) list
@@ -267,7 +280,102 @@ let private deriveStringForTuple (tupleTy: Ty) (ctx: DCtx) : DCtx =
         ctx.StringFunInstances
         |> TMap.add tupleTy funSerial }
 
+// string union :=
+//    match union with
+//    | U.UnitLike -> "U.UnitLike"
+//    | U.Carrying payload -> "U.Carrying(" + string payload + ")"
+let private deriveStringForUnion (rx: DRx) (unionTy: Ty) (ctx: DCtx) : DCtx =
+  let loc =
+    Loc(Symbol.intern "MiloneDerive.UnionString", 0, 0)
+
+  let tySerial, tyArgs =
+    match unionTy with
+    | Ty (UnionTk tySerial, tyArgs) -> tySerial, tyArgs
+    | _ -> unreachable ()
+
+  let unionIdent, tyVars, variants =
+    match rx.Tys |> mapFind tySerial with
+    | UnionTyDef (unionIdent, tyVars, variants, _) -> unionIdent, tyVars, variants
+    | _ -> unreachable ()
+
+  let funSerial, ctx =
+    FunSerial(ctx.Serial + 1), { ctx with Serial = ctx.Serial + 1 }
+
+  let funDef: FunDef =
+    { Name = "union" + string (List.length tyArgs) + "String"
+      Arity = 1
+      Ty = TyScheme([], tyFun unionTy tyString)
+      Abi = MiloneAbi
+      Linkage = InternalLinkage
+      Prefix = []
+      Loc = loc }
+
+  let tyAssign = tyAssign tyVars tyArgs
+
+  let addPrim =
+    let fun1Ty = tyFun tyString tyString
+    HPrimExpr(HPrim.Add, tyFun tyString fun1Ty, loc)
+
+  let trueExpr = hxTrue loc
+
+  let unionArg, ctx = addVar "union" unionTy loc ctx
+
+  let armAcc, ctx =
+    variants
+    |> List.map (fun variantSerial -> variantSerial, rx.Variants |> mapFind variantSerial)
+    |> List.fold
+         (fun (armAcc, ctx) (variantSerial, variantDef: VariantDef) ->
+           let name =
+             if variantDef.Name <> unionIdent then
+               unionIdent + "." + variantDef.Name
+             else
+               variantDef.Name
+
+           if not variantDef.HasPayload then
+             let armPat = HVariantPat(variantSerial, unionTy, loc)
+             let body = HLitExpr(StringLit name, loc)
+             (armPat, trueExpr, body) :: armAcc, ctx
+           else
+             let payloadTy = tyAssign variantDef.PayloadTy
+             let payloadArg, ctx = addVar "payload" payloadTy loc ctx
+
+             let armPat =
+               HNodePat(HVariantAppPN variantSerial, [ hpVar payloadArg payloadTy loc ], unionTy, loc)
+
+             let payload =
+               let stringFun =
+                 HPrimExpr(HPrim.ToString, tyFun payloadTy tyString, loc)
+
+               let item = HVarExpr(payloadArg, payloadTy, loc)
+               hxApp stringFun item tyString loc
+
+             let concat =
+               let s1 = HLitExpr(StringLit(name + "("), loc)
+               let s2 = HLitExpr(StringLit ")", loc)
+               hxApp2 addPrim (hxApp2 addPrim s1 payload) s2
+
+             (armPat, trueExpr, concat) :: armAcc, ctx)
+         ([], ctx)
+
+  let body =
+    HMatchExpr(HVarExpr(unionArg, unionTy, loc), List.rev armAcc, tyString, loc)
+
+  let letFunStmt =
+    HLetFunStmt(funSerial, [ hpVar unionArg unionTy loc ], body, loc)
+
+  { ctx with
+      NewFuns = (funSerial, funDef) :: ctx.NewFuns
+      NewLetFuns = (unionTy, letFunStmt) :: ctx.NewLetFuns
+      StringWorkList = List.append tyArgs ctx.StringWorkList
+      StringFunInstances =
+        ctx.StringFunInstances
+        |> TMap.add unionTy funSerial }
+
 let private deriveOnStmt (hirCtx: HirCtx) (ctx: DCtx) stmt : DCtx =
+  let rx: DRx =
+    { Variants = hirCtx.Variants
+      Tys = hirCtx.Tys }
+
   let findTy tySerial = hirCtx.Tys |> mapFind tySerial
 
   let findVariant variantSerial =
@@ -461,12 +569,7 @@ let private deriveOnStmt (hirCtx: HirCtx) (ctx: DCtx) stmt : DCtx =
       | UnionTyDef (ident, tyVars, variantSerials, loc) -> ident, tyVars, variantSerials, loc
       | _ -> unreachable ()
 
-    // #tyAssign
-    let tyAssign =
-      match listTryZip tyVars tyArgs with
-      | [], [], [] -> id
-      | assignment, [], [] -> tySubst (fun tySerial -> assocTryFind compare tySerial assignment)
-      | _ -> fun (_: Ty) -> unreachable ()
+    let tyAssign = tyAssign tyVars tyArgs
 
     let trueExpr = hxTrue loc
     let falseExpr = HLitExpr(BoolLit false, loc)
@@ -587,7 +690,7 @@ let private deriveOnStmt (hirCtx: HirCtx) (ctx: DCtx) stmt : DCtx =
 
     | TupleTk, _ -> deriveStringForTuple ty ctx
     // | ListTk _, _ -> deriveStringForList ty ctx
-    // | UnionTk _, _ -> deriveStringForUnion ty ctx
+    | UnionTk _, _ -> deriveStringForUnion rx ty ctx
     | _ -> ctx
 
   let ctx =
