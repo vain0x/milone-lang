@@ -39,6 +39,14 @@ static uint32_t const LIMIT = 1U << 31;
 size_t milone_heap_size(void);
 size_t milone_alloc_cost(void);
 
+typedef void (*DeferFunPtr)(void const *env);
+
+struct DeferChain {
+  DeferFunPtr fun;
+  void const *env;
+  struct DeferChain *parent;
+};
+
 // structure for memory management. poor implementation. thread unsafe.
 struct MemoryChunk {
     // start of allocated memory or null
@@ -59,6 +67,8 @@ struct MemoryChunk {
     // each region is allocated by calloc and should be freed after leaving
     // region
     struct MemoryChunk *parent;
+
+    struct DeferChain *defer_chain;
 };
 
 THREAD_LOCAL struct MemoryChunk s_heap;
@@ -104,6 +114,20 @@ static void do_region_leave(void) {
 
     assert(s_heap.parent != NULL);
     struct MemoryChunk *parent = s_heap.parent;
+
+    // free resources
+    {
+        struct DeferChain *chain = s_heap.defer_chain;
+        s_heap.defer_chain = NULL;
+
+        while (chain != NULL) {
+            struct DeferChain *parent = chain->parent;
+            chain->fun(chain->env);
+            free(chain);
+            s_heap_size -= sizeof(struct DeferChain);
+            chain = parent;
+        }
+    }
 
     // free current region
     {
@@ -201,6 +225,16 @@ static void *do_region_alloc(uint32_t count, uint32_t size) {
     return ptr;
 }
 
+static void do_region_defer(DeferFunPtr fun, void const *env) {
+    s_heap_alloc++;
+    s_heap_size += sizeof(struct DeferChain);
+    struct DeferChain *chain = calloc(1, sizeof(struct DeferChain));
+    chain->fun = fun;
+    chain->env = env;
+    chain->parent = s_heap.defer_chain;
+    s_heap.defer_chain = chain;
+}
+
 #ifndef MILONE_NO_DEFAULT_ALLOCATOR
 
 size_t milone_heap_size(void) { return s_heap_size; }
@@ -212,6 +246,8 @@ void milone_region_leave(void) { do_region_leave(); }
 void *milone_region_alloc(uint32_t count, uint32_t size) {
     return do_region_alloc(count, size);
 }
+
+void milone_region_defer(DeferFunPtr fun, void const *env) { do_region_defer(fun, env); }
 
 #endif // MILONE_NO_DEFAULT_ALLOCATOR
 

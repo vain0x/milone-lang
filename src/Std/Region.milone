@@ -22,3 +22,7 @@ module Region =
   /// Allocates a block of memory in current region.
   let alloc (count: uint) : __outptr<'T> =
     __nativeCast (rawRegionAlloc count (uint sizeof<'T>))
+
+  /// Registers a function to be executed when to leave of current region.
+  let defer (action: unit -> unit) : unit =
+    __nativeStmt ("milone_region_defer({0}.fun, {0}.env);", action)

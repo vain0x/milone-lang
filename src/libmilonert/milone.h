@@ -17,6 +17,7 @@ void milone_start(int argc, char **argv);
 void milone_region_enter(void);
 void milone_region_leave(void);
 void *milone_region_alloc(uint32_t count, uint32_t size);
+void milone_region_defer(void (*fun)(void const *env), void const *env);
 
 // -----------------------------------------------
 // integers
