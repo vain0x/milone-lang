@@ -5,6 +5,7 @@
 // Impure things need replacing by ephemeral objects.
 module rec LibHttpServer.Program
 
+open Std.Region
 open Std.StdError
 open Std.StdMap
 
@@ -272,7 +273,7 @@ module Option =
 /// (Therefore, this function never returns 0.)
 let private loopInRegion (f: unit -> int) : int =
   let rec go () =
-    let code = __inRegion f
+    let code = Region.run f
     if code = 0 then go () else code
 
   go ()

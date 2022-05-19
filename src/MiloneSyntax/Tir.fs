@@ -108,20 +108,12 @@ let litToTy (lit: Lit) : Ty =
 let primFromIdent ident =
   match ident with
   | "not" -> TPrim.Not |> Some
-
   | "exit" -> TPrim.Exit |> Some
-
   | "assert" -> TPrim.Assert |> Some
-
   | "box" -> TPrim.Box |> Some
-
   | "unbox" -> TPrim.Unbox |> Some
-
   | "printfn" -> TPrim.Printfn |> Some
-
   | "compare" -> TPrim.Compare |> Some
-
-  | "char" -> TPrim.Char |> Some
 
   | "int"
   | "int32" -> TPrim.ToInt I32 |> Some
@@ -138,13 +130,11 @@ let primFromIdent ident =
   | "uint16" -> TPrim.ToInt U16 |> Some
   | "uint64" -> TPrim.ToInt U64 |> Some
   | "unativeint" -> TPrim.ToInt UPtr |> Some
-
   | "float" -> TPrim.ToFloat F64 |> Some
   | "float32" -> TPrim.ToFloat F32 |> Some
-
+  | "char" -> TPrim.Char |> Some
   | "string" -> TPrim.String |> Some
 
-  | "__inRegion" -> TPrim.InRegion |> Some
   | "__discriminant" -> TPrim.Discriminant |> Some
 
   | "__nativeFun" -> TPrim.NativeFun |> Some

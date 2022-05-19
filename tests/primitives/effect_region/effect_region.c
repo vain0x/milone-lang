@@ -16,6 +16,8 @@ int32_t effect_region_effect_region_doAction_fun(void);
 
 int32_t effect_region_effect_region_eta2_doAction_fun(void const *env_);
 
+int32_t Std_Region_Region_run(struct UnitInt32Fun1);
+
 int32_t effect_region_effect_region_doAction(void);
 
 int main(int argc, char **argv);
@@ -72,17 +74,15 @@ int32_t effect_region_effect_region_eta2_doAction_fun(void const *env_) {
 
 int32_t effect_region_effect_region_doAction(void) {
     struct UnitInt32Fun1 fun_;
-    int32_t region_result;
+    int32_t call_2;
     fun_ = (struct UnitInt32Fun1){.fun = effect_region_effect_region_eta2_doAction_fun, .env = NULL};
-    milone_region_enter();
-    region_result = fun_.fun(fun_.env);
-    milone_region_leave();
-    return region_result;
+    call_2 = Std_Region_Region_run(fun_);
+    return call_2;
 }
 
 int main(int argc, char **argv) {
     milone_start(argc, argv);
-    int32_t call_2;
-    call_2 = effect_region_effect_region_doAction();
+    int32_t call_3;
+    call_3 = effect_region_effect_region_doAction();
     return 0;
 }

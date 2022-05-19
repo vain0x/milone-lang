@@ -1,7 +1,9 @@
 module rec effect_region.Program
 
+open Std.Region
+
 let doAction () =
-  __inRegion (fun () ->
+  Region.run (fun () ->
     let rec go acc i =
       if i >= 0 then
         acc

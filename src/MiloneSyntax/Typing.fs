@@ -1231,8 +1231,6 @@ let private primExitScheme =
 
 let private primAssertTy = tyFun tyBool tyUnit
 
-let private primInRegionTy = tyFun (tyFun tyUnit tyInt) tyInt
-
 let private primOwnAcquireTy =
   let itemTy = tyMeta 1 noLoc
   TyScheme([ 1 ], tyFun itemTy (tyOwn itemTy))
@@ -1334,7 +1332,6 @@ let private inferPrimExpr ctx prim loc =
 
     txAbort ctx loc
 
-  | TPrim.InRegion -> onMono primInRegionTy
   | TPrim.OwnAcquire -> onUnbounded primOwnAcquireTy
   | TPrim.OwnRelease -> onUnbounded primOwnReleaseTy
 

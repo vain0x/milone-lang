@@ -1,0 +1,9 @@
+module rec Std.Region
+
+module Region =
+  /// Runs a function in new region.
+  let run (action: unit -> int) : int =
+    __nativeStmt "milone_region_enter();"
+    let code = action ()
+    __nativeStmt "milone_region_leave();"
+    code

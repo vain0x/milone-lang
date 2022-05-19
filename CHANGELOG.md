@@ -73,7 +73,7 @@ https://github.com/vain0x/milone-lang/commits/develop?after=689350a9d82133b68350
     - Fix an issue that `string : bool -> string` didn't work at all
     - Add `__discriminant`
     - Add `sizeof<'T>`, remove `__sizeOfVal` primitive in favor of this
-    - Rename `inRegion` to `__inRegion`
+    - Rename `inRegion` to `Region.run`
     - `__nativeExpr` etc. can now embed some expressions and types
 - Support provisional manifest files (`milone_manifest`)
 
@@ -102,6 +102,7 @@ https://github.com/vain0x/milone-lang/commits/develop?after=689350a9d82133b68350
     - `StdTesting`
     - `Own`
     - `Ptr`
+    - `Region`
     - `IO`, `File`, `Path`, `OsString`
     - `Vector`, `ByteVector`, `Block`
 - Add functions:

@@ -197,7 +197,6 @@ type HPrim =
   | Exit
   | Assert
   | Printfn
-  | InRegion
   | NullPtr
   | PtrDistance
   | NativeCast

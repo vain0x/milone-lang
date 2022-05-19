@@ -2,7 +2,6 @@
 [<AutoOpen>]
 module FSharpOnly
 
-let __inRegion (f: unit -> int) : int = f ()
 
 // -----------------------------------------------
 // C FFI
@@ -42,3 +41,7 @@ module Std =
 
     /// Writes a value into a pointer.
     let write (_ptr: nativeptr<'T>) (_: 'T) : unit = failwith "Ptr.write not available"
+
+  module Region =
+    module Region =
+      let run (f: unit -> int) : int = f ()

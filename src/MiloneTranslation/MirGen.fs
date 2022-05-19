@@ -1261,23 +1261,6 @@ let private mirifyCallAssertExpr ctx arg loc =
 
   MUnitExpr loc, ctx
 
-let private mirifyCallInRegionExpr ctx arg loc =
-  // arg: closure
-  let arg, ctx = mirifyExpr ctx arg
-
-  let temp, tempSerial, ctx = freshVar ctx "region_result" tyInt loc
-
-  let ctx =
-    addStmt ctx (MActionStmt(MEnterRegionAction, [], loc))
-
-  let ctx =
-    addStmt ctx (MPrimStmt(MCallClosurePrim, [ arg ], tempSerial, tyInt, loc))
-
-  let ctx =
-    addStmt ctx (MActionStmt(MLeaveRegionAction, [], loc))
-
-  temp, ctx
-
 let private mirifyCallPrintfnExpr ctx args loc =
   let argTys = args |> List.map exprToTy
   let args, ctx = mirifyExprs ctx args
@@ -1385,8 +1368,6 @@ let private mirifyCallPrimExpr ctx itself prim args ty loc =
   | HPrim.String, _ -> fail ()
   | HPrim.Assert, [ arg ] -> mirifyCallAssertExpr ctx arg loc
   | HPrim.Assert, _ -> fail ()
-  | HPrim.InRegion, [ arg ] -> mirifyCallInRegionExpr ctx arg loc
-  | HPrim.InRegion, _ -> fail ()
   | HPrim.Printfn, _ -> mirifyCallPrintfnExpr ctx args loc
   | HPrim.PtrDistance, [ l; r ] -> regularBinary MSubBinary r l
   | HPrim.PtrDistance, _ -> fail ()

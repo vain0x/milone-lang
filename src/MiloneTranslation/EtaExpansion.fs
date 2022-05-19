@@ -134,7 +134,6 @@ let private primToArity ty prim =
   | HPrim.ToInt _
   | HPrim.ToFloat _
   | HPrim.String
-  | HPrim.InRegion
   | HPrim.NativeCast -> 1
 
   | HPrim.Add
