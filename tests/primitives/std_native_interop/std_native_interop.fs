@@ -1,8 +1,7 @@
 module rec std_native_interop.Program
 
 open Std.NativeInterop
-
-module Ptr = Std.Ptr
+open Std.Ptr
 
 module private NativePtrTests =
   let private testOfNativeInt () =

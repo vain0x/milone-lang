@@ -2004,12 +2004,13 @@ let nameRes (layers: NModuleRoot list list) : TProgram * NameResResult =
     let stdNs = nsOwnerOfModule stdModuleSerial
     let stdOwnNs, s = nsOwnerOfModule s, s + 1
     let ownModuleNs, s = nsOwnerOfModule s, s + 1
-    let ptrNs = nsOwnerOfModule s
+    let stdPtrNs, s = nsOwnerOfModule s, s + 1
+    let ptrModuleNs = nsOwnerOfModule s
 
     let state = emptyState ()
     let ctx = state.ScopeCtx
     let ctx = addNsToNs ctx stdNs "Own" stdOwnNs
-    let ctx = addNsToNs ctx stdNs "Ptr" ptrNs
+    let ctx = addNsToNs ctx stdNs "Ptr" stdPtrNs
 
     // Std.Own
     let ctx =
@@ -2025,10 +2026,12 @@ let nameRes (layers: NModuleRoot list list) : TProgram * NameResResult =
       |> addValue "acquire" TPrim.OwnAcquire
       |> addValue "release" TPrim.OwnRelease
 
-    // Std.Ptr.select etc.
+    // Std.Ptr
     let ctx =
+      let ctx = addNsToNs ctx stdPtrNs "Ptr" ptrModuleNs
+
       let add alias prim ctx =
-        addValueToNs ctx ptrNs alias (PrimSymbol prim)
+        addValueToNs ctx ptrModuleNs alias (PrimSymbol prim)
 
       ctx
       |> add "select" TPrim.PtrSelect

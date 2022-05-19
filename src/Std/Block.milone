@@ -1,7 +1,6 @@
 open Std.Own
+open Std.Ptr
 open Std.Region
-
-module Ptr = Std.Ptr
 
 // For memcpy
 __nativeDecl "#include <string.h>"

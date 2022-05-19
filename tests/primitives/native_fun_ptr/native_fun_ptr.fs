@@ -2,7 +2,7 @@ module rec native_fun_ptr.Program
 
 // See also x_native_code.md in docs.
 
-module Ptr = Std.Ptr
+open Std.Ptr
 
 type private CompareFun = __nativeFun<__voidinptr * __voidinptr, int>
 

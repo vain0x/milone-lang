@@ -4,10 +4,9 @@
 open Std.ByteVector
 open Std.IO
 open Std.Own
+open Std.Ptr
 open Std.StdError
 open Std.Vector
-
-module Ptr = Std.Ptr
 
 // For strlen.
 __nativeDecl "#include <string.h>"

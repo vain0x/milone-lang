@@ -3,7 +3,7 @@ module rec native_cast.Program
 // Unsafe pointer casting.
 // See also x_native_code.md in docs.
 
-module Ptr = Std.Ptr
+open Std.Ptr
 
 let main _ =
   let mutNull: voidptr = Ptr.nullPtr

@@ -1,6 +1,6 @@
 module rec Std.NativeInterop
 
-module Ptr = Std.Ptr
+open Std.Ptr
 
 let private memcpy (dest: voidptr) (src: __voidinptr) (size: unativeint) : voidptr = __nativeFun ("memcpy", dest, src, size)
 

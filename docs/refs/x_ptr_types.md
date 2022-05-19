@@ -17,7 +17,7 @@ It's assumed that the reader know about:
 
 `Std.Ptr` is a special module that provides several primitives for pointers.
 
-This page omits `Std.` prefix, assuming it's declared with `module Ptr = Std.Ptr`.
+This page assumes `open Std.Ptr` is declared.
 
 ## Pointer Types
 

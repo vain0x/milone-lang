@@ -2,9 +2,8 @@ module rec Std.Vector
 
 open Std.Block
 open Std.Own
+open Std.Ptr
 open Std.StdError
-
-module Ptr = Std.Ptr
 
 // For memcpy.
 __nativeDecl

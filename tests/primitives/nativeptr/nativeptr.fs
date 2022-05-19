@@ -3,9 +3,8 @@ module rec nativeptr.Program
 // See x_native_code.md in docs.
 
 open Std.Own
+open Std.Ptr
 open Std.Region
-
-module Ptr = Std.Ptr
 
 let private memAlloc (count: uint) (size: uint) : voidptr =
   __nativeFun ("milone_region_alloc", count, size)

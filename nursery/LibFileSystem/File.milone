@@ -1,12 +1,12 @@
 module rec LibFileSystem.File
 
 open LibSpan.Buffer
+open Std.Ptr
 
 module Buffer = LibSpan.Buffer
 module Path = LibSpan.Path
 module Span = LibSpan.Span
 module SpanMut = LibSpan.SpanMut
-module Ptr = Std.Ptr
 
 type private Path = Path.Path
 

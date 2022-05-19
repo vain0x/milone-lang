@@ -1,8 +1,7 @@
 module rec nativeptr_err.Program
 
 open Std.Own
-
-module Ptr = Std.Ptr
+open Std.Ptr
 
 let private testNullPtrError () =
   let _: unit = Ptr.nullPtr // type error!

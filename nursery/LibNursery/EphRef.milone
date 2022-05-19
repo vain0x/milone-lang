@@ -2,8 +2,7 @@ module rec LibNursery.EphRef
 
 open LibNursery.EphSerial
 open LibNursery.Runtime
-
-module Ptr = Std.Ptr
+open Std.Ptr
 
 /// Ephemeral reference cell.
 ///

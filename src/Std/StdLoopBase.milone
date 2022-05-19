@@ -1,6 +1,6 @@
 module rec Std.StdLoopBase
 
-module Ptr = Std.Ptr
+open Std.Ptr
 
 type private Folder<'S, 'T> = 'S -> 'T -> bool * 'S
 type private Loop<'S, 'T> = Folder<'S, Folder<'S, 'T>>
