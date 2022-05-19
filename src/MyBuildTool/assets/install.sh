@@ -5,7 +5,13 @@
 
 set -eu
 
+NINJA_URL='https://github.com/ninja-build/ninja/releases/download/v1.11.0/ninja-linux.zip'
 VERSION=$(cat .milone/version)
+
+# Download ninja.
+curl -sL "$NINJA_URL" -o 'ninja.zip'
+unzip 'ninja.zip'
+rm 'ninja.zip'
 
 # Ensure directories exist and non-directory doesn't resident.
 mkdir -p "$HOME/bin"
@@ -18,6 +24,7 @@ rm -rf "$HOME/.milone"
 # Install.
 cp 'bin/milone' "$HOME/bin/milone"
 cp -R '.milone' "$HOME/.milone"
+mv 'ninja' "$HOME/.milone/bin/ninja"
 
 # Information about PATH.
 if ! milone --version >/dev/null

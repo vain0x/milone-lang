@@ -33,8 +33,10 @@ Installation script should place these files (and these files only):
     - `bin/`
         - `milone_dotnet/`
         - `milone_lsp/`
+        - `ninja` (Linux only)
     - `src/`
-        - `MiloneCore`
+        - `libmilonert/`
+        - `MiloneCore/`
         - `Std/`
     - `version`
 
