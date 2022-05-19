@@ -1,4 +1,5 @@
 open Std.Own
+open Std.Region
 
 module Ptr = Std.Ptr
 
@@ -19,7 +20,7 @@ let private bbEmpty () : BlockBuilder<'T> = BlockBuilder(Own.acquire Ptr.nullPtr
 
 let private bbAlloc (count: uint) : BlockBuilder<'T> =
   if count <> 0u then
-    let ptr: __outptr<'T> = Ptr.regionAlloc count
+    let ptr: __outptr<'T> = Region.alloc count
     BlockBuilder(Own.acquire ptr, count)
   else
     bbEmpty ()
@@ -267,7 +268,7 @@ module BlockExt =
   let unsafeOfRawParts (ptr: __inptr<'T>) (len: uint) : Block<'T> =
     if len <> 0u then
       assert (ptr <> Ptr.nullPtr)
-      let destPtr: __outptr<'T> = Ptr.regionAlloc len
+      let destPtr: __outptr<'T> = Region.alloc len
       __nativeStmt ("memcpy({0}, {1}, {2});", destPtr, ptr, unativeint len * unativeint sizeof<'T>)
       Block(Ptr.cast destPtr, len)
     else

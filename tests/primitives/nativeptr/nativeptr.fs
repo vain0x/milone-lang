@@ -3,6 +3,7 @@ module rec nativeptr.Program
 // See x_native_code.md in docs.
 
 open Std.Own
+open Std.Region
 
 module Ptr = Std.Ptr
 
@@ -174,8 +175,8 @@ let private testPtrWrite () =
   let q = Ptr.asNative q
   assert (Ptr.read q = 77)
 
-let private testPtrRegionAlloc () =
-  let p: __outptr<int> = Ptr.regionAlloc 2u
+let private testRegionAlloc () =
+  let p: __outptr<int> = Region.alloc 2u
   Ptr.write p.[0] 42
   Ptr.write p.[1] 43
   // It's now initialized.
@@ -205,6 +206,6 @@ let main _ =
   testPtrSelect ()
   testPtrRead ()
   testPtrWrite ()
-  testPtrRegionAlloc ()
+  testRegionAlloc ()
   testPtrAddress ()
   0
