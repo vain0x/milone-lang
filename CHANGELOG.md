@@ -122,6 +122,7 @@
         - `distance`
 - Improve primitives:
     - Fix an issue that `string : bool -> string` didn't work at all
+    - `string` now works for tuples and unions (result is unstable)
     - Add `__discriminant`
     - Add `sizeof<'T>`, remove `__sizeOfVal` primitive in favor of this
     - Rename `inRegion` to `Region.run`
