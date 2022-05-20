@@ -2034,6 +2034,62 @@ let private nameResModuleRoot ctx (root: NModuleRoot) : _ * TModule * ScopeCtx =
   newRootModule, m, ctx
 
 // -----------------------------------------------
+// Primitives
+// -----------------------------------------------
+
+let private addPrims (ctx: ScopeCtx) =
+  let s: ModuleTySerial = 1000000001 // 10^8
+  let stdModuleSerial, s = s, s + 1
+  let stdNs = nsOwnerOfModule stdModuleSerial
+  let stdOwnNs, s = nsOwnerOfModule s, s + 1
+  let ownModuleNs, s = nsOwnerOfModule s, s + 1
+  let stdPtrNs, s = nsOwnerOfModule s, s + 1
+  let ptrModuleNs = nsOwnerOfModule s
+
+  let ctx = addNsToNs ctx stdNs "Own" stdOwnNs
+  let ctx = addNsToNs ctx stdNs "Ptr" stdPtrNs
+
+  // Std.Own
+  let ctx =
+    let ctx =
+      addTyToNs ctx stdOwnNs "Own" (PrimTySymbol OwnTk)
+
+    let ctx = addNsToNs ctx stdOwnNs "Own" ownModuleNs
+
+    let addValue alias prim ctx =
+      addValueToNs ctx ownModuleNs alias (PrimSymbol prim)
+
+    ctx
+    |> addValue "acquire" TPrim.OwnAcquire
+    |> addValue "release" TPrim.OwnRelease
+
+  // Std.Ptr
+  let ctx =
+    let addTy alias prim ctx =
+      addTyToNs ctx stdPtrNs alias (PrimTySymbol prim)
+
+    let add alias prim ctx =
+      addValueToNs ctx ptrModuleNs alias (PrimSymbol prim)
+
+    let ctx = addNsToNs ctx stdPtrNs "Ptr" ptrModuleNs
+
+    ctx
+    |> addTy "InPtr" (NativePtrTk RefMode.ReadOnly)
+    |> addTy "OutPtr" (NativePtrTk RefMode.WriteOnly)
+    |> addTy "VoidInPtr" (VoidPtrTk IsConst)
+    |> add "select" TPrim.PtrSelect
+    |> add "read" TPrim.PtrRead
+    |> add "write" TPrim.PtrWrite
+    |> add "nullPtr" TPrim.NullPtr
+    |> add "cast" TPrim.PtrCast
+    |> add "invalid" TPrim.PtrInvalid
+    |> add "asIn" TPrim.PtrAsIn
+    |> add "asNative" TPrim.PtrAsNative
+    |> add "distance" TPrim.PtrDistance
+
+  { ctx with RootModules = ("Std", stdModuleSerial) :: ctx.RootModules }
+
+// -----------------------------------------------
 // Interface
 // -----------------------------------------------
 
@@ -2042,61 +2098,8 @@ let nameRes (layers: NModuleRoot list list) : TProgram * NameResResult =
   //       but it doesn't so due to sequential serial generation for now.
 
   let state =
-    let s: ModuleTySerial = 1000000001 // 10^8
-    let stdModuleSerial, s = s, s + 1
-    let stdNs = nsOwnerOfModule stdModuleSerial
-    let stdOwnNs, s = nsOwnerOfModule s, s + 1
-    let ownModuleNs, s = nsOwnerOfModule s, s + 1
-    let stdPtrNs, s = nsOwnerOfModule s, s + 1
-    let ptrModuleNs = nsOwnerOfModule s
-
     let state = emptyState ()
-    let ctx = state.ScopeCtx
-    let ctx = addNsToNs ctx stdNs "Own" stdOwnNs
-    let ctx = addNsToNs ctx stdNs "Ptr" stdPtrNs
-
-    // Std.Own
-    let ctx =
-      let ctx =
-        addTyToNs ctx stdOwnNs "Own" (PrimTySymbol OwnTk)
-
-      let ctx = addNsToNs ctx stdOwnNs "Own" ownModuleNs
-
-      let addValue alias prim ctx =
-        addValueToNs ctx ownModuleNs alias (PrimSymbol prim)
-
-      ctx
-      |> addValue "acquire" TPrim.OwnAcquire
-      |> addValue "release" TPrim.OwnRelease
-
-    // Std.Ptr
-    let ctx =
-      let addTy alias prim ctx =
-        addTyToNs ctx stdPtrNs alias (PrimTySymbol prim)
-
-      let add alias prim ctx =
-        addValueToNs ctx ptrModuleNs alias (PrimSymbol prim)
-
-      let ctx = addNsToNs ctx stdPtrNs "Ptr" ptrModuleNs
-
-      ctx
-      |> addTy "InPtr" (NativePtrTk RefMode.ReadOnly)
-      |> addTy "OutPtr" (NativePtrTk RefMode.WriteOnly)
-      |> addTy "VoidInPtr" (VoidPtrTk IsConst)
-      |> add "select" TPrim.PtrSelect
-      |> add "read" TPrim.PtrRead
-      |> add "write" TPrim.PtrWrite
-      |> add "nullPtr" TPrim.NullPtr
-      |> add "cast" TPrim.PtrCast
-      |> add "invalid" TPrim.PtrInvalid
-      |> add "asIn" TPrim.PtrAsIn
-      |> add "asNative" TPrim.PtrAsNative
-      |> add "distance" TPrim.PtrDistance
-
-    let ctx =
-      { ctx with RootModules = ("Std", stdModuleSerial) :: ctx.RootModules }
-
-    { state with ScopeCtx = ctx }
+    { state with ScopeCtx = addPrims state.ScopeCtx }
 
   let modules, state =
     layers
