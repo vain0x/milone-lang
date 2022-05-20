@@ -18,15 +18,10 @@ module S = Std.StdString
 let tyError loc = Ty(ErrorTk loc, [])
 
 let tyInt = Ty(IntTk I32, [])
-let tyInt64 = Ty(IntTk I64, [])
 let tyNativeInt = Ty(IntTk IPtr, [])
-let tyUint8 = Ty(IntTk U8, [])
-let tyUInt16 = Ty(IntTk U16, [])
-let tyUInt64 = Ty(IntTk U32, [])
 let tyUNativeInt = Ty(IntTk UPtr, [])
-
-let tyBool = Ty(BoolTk, [])
 let tyFloat = Ty(FloatTk F64, [])
+let tyBool = Ty(BoolTk, [])
 let tyChar = Ty(CharTk, [])
 let tyString = Ty(StringTk, [])
 let tyObj = Ty(ObjTk, [])
