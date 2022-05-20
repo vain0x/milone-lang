@@ -10,12 +10,12 @@ let private allocateBuffer (capacity: unativeint) : nativeptr<byte> =
 // -----------------------------------------------
 
 /// (ptr, size). Read-only.
-type Span = __inptr<byte> * unativeint
+type Span = InPtr<byte> * unativeint
 
 module Span =
   let empty: Span = __nativeCast 1un, 0un
 
-  let asPtr (span: Span) : __inptr<byte> =
+  let asPtr (span: Span) : InPtr<byte> =
     let ptr, _ = span
     ptr
 
@@ -24,7 +24,7 @@ module Span =
     len
 
   let ofString (s: string) : Span =
-    let ptr: __inptr<byte> = __nativeExpr ("(uint8_t *)({0}.ptr)", s)
+    let ptr: InPtr<byte> = __nativeExpr ("(uint8_t *)({0}.ptr)", s)
     ptr, unativeint s.Length
 
   // Slice
@@ -34,7 +34,7 @@ module Span =
     let spanPtr, spanSize = span
 
     if start < spanSize then
-      let spanPtr: __inptr<byte> =
+      let spanPtr: InPtr<byte> =
         __nativeExpr ("""(uint8_t *){0} + {1}""", spanPtr, start)
 
       spanPtr, spanSize - start
@@ -355,7 +355,7 @@ module Stream =
   // Write
   // ================
 
-  let writeExact (ptr: __inptr<byte>) (len: unativeint) (output: Stream) : unit =
+  let writeExact (ptr: InPtr<byte>) (len: unativeint) (output: Stream) : unit =
     if len >= 1un then
       __nativeStmt (
         """
@@ -371,7 +371,7 @@ module Stream =
       )
 
   let writeString (s: string) (output: Stream) : unit =
-    let ptr: __inptr<byte> = __nativeExpr ("(uint8_t *)({0}.ptr)", s)
+    let ptr: InPtr<byte> = __nativeExpr ("(uint8_t *)({0}.ptr)", s)
 
     let len = unativeint s.Length
     writeExact ptr len output

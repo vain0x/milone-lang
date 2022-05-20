@@ -2,18 +2,9 @@
 [<AutoOpen>]
 module FSharpOnly
 
-
 // -----------------------------------------------
 // C FFI
 // -----------------------------------------------
-
-/// `T const *` in C.
-[<AbstractClass; Sealed>]
-type __inptr<'T> =
-  override _.ToString() = "__inptr is not available in F#"
-
-  static member op_Implicit(_: __inptr<'T>) : int = 0
-  static member op_Implicit(_: __inptr<'T>) : unativeint = unativeint 0
 
 /// C-ABI function pointer type: `T (*)(params...)` in C.
 ///
@@ -41,6 +32,26 @@ module Std =
 
     /// Writes a value into a pointer.
     let write (_ptr: nativeptr<'T>) (_: 'T) : unit = failwith "Ptr.write not available"
+
+    module Ptr =
+      /// `T const *` in C.
+      [<AbstractClass; Sealed>]
+      type InPtr<'T> =
+        override _.ToString() = "InPtr is not available in F#"
+
+        static member op_Implicit(_: InPtr<'T>) : int = 0
+        static member op_Implicit(_: InPtr<'T>) : unativeint = unativeint 0
+
+      /// `void const *` in C.
+      type VoidInPtr = voidptr
+
+      /// Non-readable `T *` in C.
+      [<AbstractClass; Sealed>]
+      type OutPtr<'T> =
+        override _.ToString() = "OutPtr is not available in F#"
+
+        static member op_Implicit(_: InPtr<'T>) : int = 0
+        static member op_Implicit(_: InPtr<'T>) : unativeint = unativeint 0
 
   module Region =
     module Region =

@@ -4,14 +4,14 @@ module rec native_fun_ptr.Program
 
 open Std.Ptr
 
-type private CompareFun = __nativeFun<__voidinptr * __voidinptr, int>
+type private CompareFun = __nativeFun<VoidInPtr * VoidInPtr, int>
 
 let private memAlloc (len: uint) (size: uint) : voidptr =
   __nativeFun ("milone_region_alloc", len, size)
 
 let private sortIntArray (array: nativeptr<int>) (len: uint) : unit =
-  let intCompare (l: __voidinptr) (r: __voidinptr) =
-    compare (Ptr.read (__nativeCast l: __inptr<int>)) (Ptr.read (__nativeCast r: __inptr<int>))
+  let intCompare (l: VoidInPtr) (r: VoidInPtr) =
+    compare (Ptr.read (__nativeCast l: InPtr<int>)) (Ptr.read (__nativeCast r: InPtr<int>))
 
   __nativeFun ("qsort", (__nativeCast array: voidptr), unativeint len, 4un, (__nativeFun intCompare: CompareFun))
 
@@ -28,7 +28,7 @@ let private testSort () =
 
   sortIntArray array len
 
-  let array: __inptr<int> = __nativeCast array
+  let array: InPtr<int> = __nativeCast array
   assert (Ptr.read array.[0] = 1)
   assert (Ptr.read array.[1] = 1)
   assert (Ptr.read array.[2] = 3)

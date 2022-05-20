@@ -10,7 +10,7 @@ type FILE = __nativeType<FILE>
 // It can include spaces.
 type OpaqueStruct = __nativeType<``struct Opaque``>
 
-let strAsPtr (s: string) : __inptr<char> = __nativeFun ("string_as_ptr", s)
+let strAsPtr (s: string) : InPtr<char> = __nativeFun ("string_as_ptr", s)
 
 let fopen (filename: string) (mode: string) : nativeptr<FILE> =
   __nativeFun ("fopen", strAsPtr filename, strAsPtr mode)

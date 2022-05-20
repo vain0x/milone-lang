@@ -3,7 +3,7 @@ module rec LibNursery.Runtime
 let memAlloc (len: uint) (size: uint) : voidptr =
   __nativeFun ("milone_region_alloc", len, size)
 
-let memcpy (dest: voidptr) (src: __voidinptr) (size: uint) : voidptr = __nativeFun ("memcpy", dest, src, size)
+let memcpy (dest: voidptr) (src: VoidInPtr) (size: uint) : voidptr = __nativeFun ("memcpy", dest, src, size)
 
 /// Prints a message to stderr and returns false.
 ///

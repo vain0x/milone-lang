@@ -1614,9 +1614,9 @@ let private inferExprAsPtrProjection ctx (kind: PtrOperationKind) expr : TExpr *
       | Ty (NativePtrTk mode, _) ->
         match mode, kind with
         | RefMode.ReadOnly, PtrOperationKind.Write ->
-          PtrProjectionError("Expected nativeptr but was __inptr.", exprToLoc expr, ctx)
+          PtrProjectionError("Expected nativeptr but was InPtr.", exprToLoc expr, ctx)
         | RefMode.WriteOnly, PtrOperationKind.Read ->
-          PtrProjectionError("Expected nativeptr but was __outptr.", exprToLoc expr, ctx)
+          PtrProjectionError("Expected nativeptr but was OutPtr.", exprToLoc expr, ctx)
         | _ -> PtrProjectionOk(expr, ty, ctx)
 
       | _ -> PtrProjectionError("Expected pointer type.", exprToLoc expr, ctx)
@@ -1661,7 +1661,7 @@ let private inferPrimAppExpr ctx itself =
     | Ty (NativePtrTk RefMode.ReadWrite, [ itemTy ]) -> ok (tyInPtr itemTy)
     | Ty (NativePtrTk RefMode.WriteOnly, [ itemTy ]) -> ok (tyInPtr itemTy)
     | Ty (ErrorTk _, _) -> arg, argTy, ctx
-    | _ -> errorExpr ctx "Expected nativeptr, __outptr or voidptr type." loc
+    | _ -> errorExpr ctx "Expected nativeptr, OutPtr or voidptr type." loc
 
   | TPrim.PtrAsNative, _ ->
     let arg, argTy, ctx = inferExpr ctx None arg
@@ -1675,7 +1675,7 @@ let private inferPrimAppExpr ctx itself =
     | Ty (NativePtrTk RefMode.ReadOnly, [ itemTy ]) -> ok (tyNativePtr itemTy)
     | Ty (NativePtrTk RefMode.WriteOnly, [ itemTy ]) -> ok (tyNativePtr itemTy)
     | Ty (ErrorTk _, _) -> arg, argTy, ctx
-    | _ -> errorExpr ctx "Expected __inptr, __voidinptr or __outptr type." loc
+    | _ -> errorExpr ctx "Expected InPtr, VoidInPtr or OutPtr type." loc
 
   | TPrim.PtrSelect, _ -> inferExprAsPtrProjection ctx PtrOperationKind.Select arg
 

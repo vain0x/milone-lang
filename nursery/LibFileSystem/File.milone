@@ -34,7 +34,7 @@ let private fileAsFp (File fp) : FP = fp
 
 let private dirAsFp (Dir fp) : FP = fp
 
-let private toCStr (s: string) : __inptr<char> = __nativeFun ("string_to_c_str", s)
+let private toCStr (s: string) : InPtr<char> = __nativeFun ("string_to_c_str", s)
 
 let openRead (path: Path) : File option =
   let filename = toCStr (Path.asString path)

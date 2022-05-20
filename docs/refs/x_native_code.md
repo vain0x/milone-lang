@@ -27,75 +27,7 @@ Such program does anything weird with no error.
 
 ## Native pointer types
 
-| milone-lang       | C                 |
-|:------------------|:------------------|
-| `__inptr<T>`      | `T const *`       |
-| `nativeptr<T>`    | `T *`             |
-| `__voidinptr`     | `void const *`    |
-| `voidptr`         | `void *`          |
-
-Hint: `T const *` is same as `const T *`.
-
-## NullPtr
-
-`__nullptr` is the null value of any pointer type.
-
-(Currently it's not a pattern.)
-
-## Get pointer of value
-
-Unary `&&` operator makes a pointer to a variable.
-It's invalidated when the variable goes out of scope.
-
-```fsharp
-    let x = 42
-    let p: __inptr<int> = &&x
-```
-
-- Writing to the content is undefined behavior.
-- Not compatible with F#, where `&&x` is `nativeptr<T>`.
-
-## Pointer cast
-
-`__nativeCast` function converts pointers and pointer-sized integers (`nativeint` / `unativeint`) each other.
-
-```fsharp
-    let p: nativeptr<int> = __nativeCast 8un
-    let q: __inptr<int> = __nativeCast p
-```
-
-- `Std.Ptr.asIn` casts a non-const pointer to const (upcast)
-- `Std.Ptr.asNative` casts a const pointer to non-const (unsafe cast)
-
-### Read via pointer
-
-*Deprecated*: Use `Std.Ptr.read p.[i]`.
-
-`__ptrRead p i` reads from a pointer `p` by offset `i` (that is, `p[i]`).
-Pointer type must be `__inptr<T>`.
-
-```fsharp
-    //    p: __inptr<T>, i: int
-    // => (__ptrRead p i): T
-
-    __ptrRead p 0  //=> *p in C
-    __ptrRead p i  //=> p[i] in C
-```
-
-### Write via pointer
-
-*Deprecated*: Use `Std.Ptr.write p.[i] value`.
-
-`__ptrWrite p i` writes to a pointer `p` by offset `i` (that is `p[i]`).
-Pointer type must be `nativeptr<T>`.
-
-```fsharp
-    //    p: nativeptr<T>, index: int, value: T
-    // => (__ptrWrite p index value): unit
-
-    __ptrWrite p 0 x  //=> *p = x; in C
-    __ptrWrite p i x  //=> p[i] = x; in C
-```
+See [x_ptr_types](x_ptr_types.md).
 
 ## Function pointer types
 

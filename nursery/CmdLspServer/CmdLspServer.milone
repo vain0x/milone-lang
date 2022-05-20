@@ -298,7 +298,7 @@ let private amortizedSleep (millis: int) : unit =
     millis
   )
 
-let private concurrent (p1: unit -> __voidinptr) (p2: unit -> unit) : unit =
+let private concurrent (p1: unit -> VoidInPtr) (p2: unit -> unit) : unit =
   __nativeDecl
     """
       #include <pthread.h>
@@ -411,7 +411,7 @@ let private readLine (input: Stream) : string option * Stream =
   else
     None, input
 
-let private doWriteExact (ptr: __inptr<byte>) (len: uint) (output: Stream) : unit =
+let private doWriteExact (ptr: InPtr<byte>) (len: uint) (output: Stream) : unit =
   assert (len >= 1u)
 
   __nativeStmt (
@@ -429,8 +429,8 @@ let private doWriteExact (ptr: __inptr<byte>) (len: uint) (output: Stream) : uni
 
 let private writeString (s: string) (output: Stream) : Stream =
   if s.Length <> 0 then
-    let ptr: __inptr<char> = __nativeExpr ("({0}.ptr)", s)
-    let ptr: __inptr<byte> = __nativeCast ptr
+    let ptr: InPtr<char> = __nativeExpr ("({0}.ptr)", s)
+    let ptr: InPtr<byte> = __nativeCast ptr
     let output = doWriteExact ptr s.Length output
     __nativeStmt ("fflush({0});", output)
     output
@@ -1053,7 +1053,7 @@ let private initializeResponse () =
     }
   }"""
 
-let private readerLoop () : __voidinptr =
+let private readerLoop () : VoidInPtr =
   doInRegion (fun () ->
     whileInRegion (fun () ->
       let request = readRawRequest ()

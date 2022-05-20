@@ -10,7 +10,7 @@ open Std.Vector
 type OsChar = __nativeType<OsChar>
 
 /// `LPCTSTR` on Windows. `char const *` on Linux.
-type OsStringPtr = __inptr<OsChar>
+type OsStringPtr = InPtr<OsChar>
 
 /// String of OS-dependent encoding.
 ///
@@ -69,7 +69,7 @@ module OsString =
   let item (index: int) (s: OsString) : OsChar =
     let ptr, len = toPtrLenPair s
     assert (uint index < len)
-    Ptr.read (ptr: __inptr<OsChar>).[index]
+    Ptr.read (ptr: InPtr<OsChar>).[index]
 
 module OsStringExt =
   /// Unsafely creates an OsString

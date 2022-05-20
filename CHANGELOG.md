@@ -61,8 +61,8 @@ https://github.com/vain0x/milone-lang/commits/develop?after=689350a9d82133b68350
     - Support ownership check
     - Add several standard libraries built on top of it
 - Support more **pointer** types and primitives
-    - Add  `__outptr<'T>` and `__voidinptr<'T>` types
-    - Change `__constptr` to `__inptr`
+    - Add  `OutPtr<'T>` and `VoidInPtr<'T>` types
+    - Change `__constptr<'T>` to `InPtr<'T>`
     - Add ptr-of (`&&`) operator
     - Add `Ptr` module
         - `select`, `read`, `write`

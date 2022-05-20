@@ -79,16 +79,16 @@ module private NativePtrTests =
 
 module private InPtrTests =
   let private testGet () =
-    let p: __inptr<int> = box (23, 45) |> __nativeCast
-    assert (__InPtr.get p 0 = 23)
-    assert (__InPtr.get p 1 = 45)
+    let p: InPtr<int> = box (23, 45) |> __nativeCast
+    assert (InPtr.get p 0 = 23)
+    assert (InPtr.get p 1 = 45)
 
   let private testRead () =
-    let p: __inptr<int> = box (23, 45) |> __nativeCast
-    assert (__InPtr.read p = 23)
+    let p: InPtr<int> = box (23, 45) |> __nativeCast
+    assert (InPtr.read p = 23)
 
-    let q = __InPtr.add p 1
-    assert (__InPtr.read q = 45)
+    let q = InPtr.add p 1
+    assert (InPtr.read q = 45)
 
   let test () =
     testGet ()

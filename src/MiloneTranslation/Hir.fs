@@ -402,10 +402,10 @@ let tkDisplay getTyName tk =
   | TupleTk -> "tuple"
   | ListTk -> "list"
   | VoidPtrTk IsMut -> "voidptr"
-  | VoidPtrTk IsConst -> "__voidinptr"
+  | VoidPtrTk IsConst -> "VoidInPtr"
   | NativePtrTk RefMode.ReadWrite -> "nativeptr"
-  | NativePtrTk RefMode.ReadOnly -> "__inptr"
-  | NativePtrTk RefMode.WriteOnly -> "__outptr"
+  | NativePtrTk RefMode.ReadOnly -> "InPtr"
+  | NativePtrTk RefMode.WriteOnly -> "OutPtr"
   | NativeFunTk -> "__nativeFun"
   | NativeTypeTk _ -> "__nativeType"
   | MetaTk (tySerial, _) -> getTyName tySerial

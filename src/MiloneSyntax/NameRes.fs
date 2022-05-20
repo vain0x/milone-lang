@@ -96,9 +96,6 @@ let private tyPrimOfName ident tys =
 
   | "voidptr", [] -> Ty(VoidPtrTk IsMut, []) |> Some
   | "nativeptr", [ itemTy ] -> tyNativePtr itemTy |> Some
-  | "__voidinptr", [] -> Ty(VoidPtrTk IsConst, []) |> Some
-  | "__inptr", [ itemTy ] -> tyInPtr itemTy |> Some
-  | "__outptr", [ itemTy ] -> tyOutPtr itemTy |> Some
 
   | "__nativeFun", [ Ty (TupleTk, itemTys); resultTy ] ->
     Ty(NativeFunTk, List.append itemTys [ resultTy ])
@@ -812,9 +809,14 @@ let private resolveTy ctx ty selfTyArgs : Ty * ScopeCtx =
 
       | Some (PrimTySymbol tk) ->
         match tk with
-        | OwnTk ->
+        | OwnTk
+        | VoidPtrTk _
+        | NativePtrTk _ ->
           // #ty_arity_check
-          let defArity = 1
+          let defArity =
+            match tk with
+            | VoidPtrTk _ -> 0
+            | _ -> 1
 
           if arity <> defArity then
             errorTy ctx (TyArityError(ident, arity, defArity)) loc
@@ -2028,12 +2030,18 @@ let nameRes (layers: NModuleRoot list list) : TProgram * NameResResult =
 
     // Std.Ptr
     let ctx =
-      let ctx = addNsToNs ctx stdPtrNs "Ptr" ptrModuleNs
+      let addTy alias prim ctx =
+        addTyToNs ctx stdPtrNs alias (PrimTySymbol prim)
 
       let add alias prim ctx =
         addValueToNs ctx ptrModuleNs alias (PrimSymbol prim)
 
+      let ctx = addNsToNs ctx stdPtrNs "Ptr" ptrModuleNs
+
       ctx
+      |> addTy "InPtr" (NativePtrTk RefMode.ReadOnly)
+      |> addTy "OutPtr" (NativePtrTk RefMode.WriteOnly)
+      |> addTy "VoidInPtr" (VoidPtrTk IsConst)
       |> add "select" TPrim.PtrSelect
       |> add "read" TPrim.PtrRead
       |> add "write" TPrim.PtrWrite
