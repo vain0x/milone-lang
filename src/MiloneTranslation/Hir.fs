@@ -300,11 +300,11 @@ let exprToLoc expr =
 // HStmt
 // -----------------------------------------------
 
-// let stmtToLoc stmt : Loc =
-//   match stmt with
-//   | HExprStmt expr -> exprToLoc expr
-//   | HLetValStmt (_, _, a) -> a
-//   | HLetFunStmt (_, _, _, a) -> a
+let stmtToLoc stmt : Loc =
+  match stmt with
+  | HExprStmt expr -> exprToLoc expr
+  | HLetValStmt (_, _, a) -> a
+  | HLetFunStmt (_, _, _, a) -> a
 
 let stmtMap (f: Ty -> Ty) stmt =
   let onPat pat = patMap f pat

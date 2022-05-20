@@ -456,7 +456,20 @@ let monify (modules: HProgram, hirCtx: HirCtx) : HProgram * HirCtx =
           let (FunBody (args, body)) = body
           HLetFunStmt(funSerial, args, body, loc))
 
-      let stmts = List.append funBodies m.Stmts
+      let stmts =
+        let locToPos (Loc (_, y, x)) = ((uint64 y) <<< 32) ||| (uint64 x)
+
+        let precedes l r =
+          locToPos (stmtToLoc l) < locToPos (stmtToLoc r)
+
+        let rec merge acc stmts funBodies =
+          match stmts, funBodies with
+          | [], _ -> List.append (List.rev acc) funBodies
+          | _, [] -> List.append (List.rev acc) stmts
+          | (stmt :: stmts), (funBody :: _) when precedes stmt funBody -> merge (stmt :: acc) stmts funBodies
+          | _, funBody :: funBodies -> merge (funBody :: acc) stmts funBodies
+
+        merge [] m.Stmts funBodies
 
       let stmts =
         let rx: RewriteRx =
