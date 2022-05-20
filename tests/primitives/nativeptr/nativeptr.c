@@ -2,19 +2,17 @@
 #include <stdlib.h>
 #include <milone.h>
 
-struct ObjectObjectTuple2_;
-
 typedef void(*VoidFunPtr0)(void);
 
 typedef void const *(*VoidConstPtrVoidConstPtrVoidConstPtrFunPtr2)(void const *, void const *);
+
+struct ObjectObjectTuple2_;
 
 typedef void(*VoidConstPtrVoidFunPtr1)(void const *);
 
 struct UnitUnitFun1;
 
 struct Int64UInt8UInt8Tuple3_;
-
-int32_t nativeptr_nativeptr_ObjectObjectTuple2MutPtrInt32Fun1_sizeOfPointee(struct ObjectObjectTuple2_ *ptr_);
 
 void *milone_region_alloc(uint32_t, uint32_t);
 
@@ -45,6 +43,8 @@ void nativeptr_nativeptr_testAsNative(void);
 void nativeptr_nativeptr_testPtrDistance(void);
 
 void nativeptr_nativeptr_testEquality(void);
+
+int32_t nativeptr_nativeptr_ObjectObjectTuple2MutPtrInt32Fun1_sizeOfPointee(struct ObjectObjectTuple2_ *ptr_);
 
 void nativeptr_nativeptr_testSizeOf(void);
 
@@ -79,10 +79,6 @@ struct Int64UInt8UInt8Tuple3_ {
     uint8_t t1;
     uint8_t t2;
 };
-
-int32_t nativeptr_nativeptr_ObjectObjectTuple2MutPtrInt32Fun1_sizeOfPointee(struct ObjectObjectTuple2_ *ptr_) {
-    return sizeof(struct ObjectObjectTuple2_);
-}
 
 void *nativeptr_nativeptr_memAlloc(uint32_t count_, uint32_t size_) {
     void *milone_region_alloc_result;
@@ -233,6 +229,10 @@ void nativeptr_nativeptr_testEquality(void) {
     q_1 = ((int32_t const *)(size_t)42ULL);
     if ((q_1 == nq_)) milone_assert_error("nativeptr/nativeptr.milone", 114, 2);
     return;
+}
+
+int32_t nativeptr_nativeptr_ObjectObjectTuple2MutPtrInt32Fun1_sizeOfPointee(struct ObjectObjectTuple2_ *ptr_) {
+    return sizeof(struct ObjectObjectTuple2_);
 }
 
 void nativeptr_nativeptr_testSizeOf(void) {

@@ -2,15 +2,17 @@
 #include <stdlib.h>
 #include <milone.h>
 
+struct StringStringTuple2_;
+
 struct StringCons;
 
 struct StringStringListTuple2_;
 
-struct StringStringTuple2_;
-
 struct Int32Int32Tuple2_;
 
 struct StringCons;
+
+char ty_var_ty_var_useStringIndexWithoutAscription(struct String x_);
 
 struct StringStringListTuple2_ ty_var_ty_var_StringStringStringListTuple2Fun1_useTyVarInBody(struct String x_1);
 
@@ -18,18 +20,16 @@ int32_t ty_var_ty_var_StringStringTuple2Int32Fun1_pair(struct StringStringTuple2
 
 int32_t ty_var_ty_var_Int32Int32Tuple2Int32Fun1_pair(struct Int32Int32Tuple2_ arg_1);
 
-char ty_var_ty_var_useStringIndexWithoutAscription(struct String x_);
-
 int main(int argc, char **argv);
-
-struct StringStringListTuple2_ {
-    struct String t0;
-    struct StringCons const *t1;
-};
 
 struct StringStringTuple2_ {
     struct String t0;
     struct String t1;
+};
+
+struct StringStringListTuple2_ {
+    struct String t0;
+    struct StringCons const *t1;
 };
 
 struct Int32Int32Tuple2_ {
@@ -41,6 +41,14 @@ struct StringCons {
     struct String head;
     struct StringCons const *tail;
 };
+
+char ty_var_ty_var_useStringIndexWithoutAscription(struct String x_) {
+    struct StringStringTuple2_ StringStringTuple2_;
+    int32_t call_;
+    StringStringTuple2_ = (struct StringStringTuple2_){.t0 = x_, .t1 = (struct String){.ptr = "", .len = 0}};
+    call_ = ty_var_ty_var_StringStringTuple2Int32Fun1_pair(StringStringTuple2_);
+    return x_.ptr[0];
+}
 
 struct StringStringListTuple2_ ty_var_ty_var_StringStringStringListTuple2Fun1_useTyVarInBody(struct String x_1) {
     struct StringCons const *xs_;
@@ -56,14 +64,6 @@ int32_t ty_var_ty_var_StringStringTuple2Int32Fun1_pair(struct StringStringTuple2
 
 int32_t ty_var_ty_var_Int32Int32Tuple2Int32Fun1_pair(struct Int32Int32Tuple2_ arg_1) {
     return 2;
-}
-
-char ty_var_ty_var_useStringIndexWithoutAscription(struct String x_) {
-    struct StringStringTuple2_ StringStringTuple2_;
-    int32_t call_;
-    StringStringTuple2_ = (struct StringStringTuple2_){.t0 = x_, .t1 = (struct String){.ptr = "", .len = 0}};
-    call_ = ty_var_ty_var_StringStringTuple2Int32Fun1_pair(StringStringTuple2_);
-    return x_.ptr[0];
 }
 
 int main(int argc, char **argv) {
