@@ -102,50 +102,6 @@ let litToTy (lit: Lit) : Ty =
   | StringLit _ -> tyString
 
 // -----------------------------------------------
-// TPrim
-// -----------------------------------------------
-
-let primFromIdent ident =
-  match ident with
-  | "not" -> TPrim.Not |> Some
-  | "exit" -> TPrim.Exit |> Some
-  | "assert" -> TPrim.Assert |> Some
-  | "box" -> TPrim.Box |> Some
-  | "unbox" -> TPrim.Unbox |> Some
-  | "printfn" -> TPrim.Printfn |> Some
-  | "compare" -> TPrim.Compare |> Some
-
-  | "int"
-  | "int32" -> TPrim.ToInt I32 |> Some
-  | "uint"
-  | "uint32" -> TPrim.ToInt U32 |> Some
-  | "sbyte"
-  | "int8" -> TPrim.ToInt I8 |> Some
-  | "byte"
-  | "uint8" -> TPrim.ToInt U8 |> Some
-
-  | "int16" -> TPrim.ToInt I16 |> Some
-  | "int64" -> TPrim.ToInt I64 |> Some
-  | "nativeint" -> TPrim.ToInt IPtr |> Some
-  | "uint16" -> TPrim.ToInt U16 |> Some
-  | "uint64" -> TPrim.ToInt U64 |> Some
-  | "unativeint" -> TPrim.ToInt UPtr |> Some
-  | "float" -> TPrim.ToFloat F64 |> Some
-  | "float32" -> TPrim.ToFloat F32 |> Some
-  | "char" -> TPrim.Char |> Some
-  | "string" -> TPrim.String |> Some
-
-  | "__discriminant" -> TPrim.Discriminant |> Some
-
-  | "__nativeFun" -> TPrim.NativeFun |> Some
-  | "__nativeCast" -> TPrim.NativeCast |> Some
-  | "__nativeExpr" -> TPrim.NativeExpr |> Some
-  | "__nativeStmt" -> TPrim.NativeStmt |> Some
-  | "__nativeDecl" -> TPrim.NativeDecl |> Some
-
-  | _ -> None
-
-// -----------------------------------------------
 // TPat
 // -----------------------------------------------
 

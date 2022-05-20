@@ -5,6 +5,7 @@
 module rec MiloneSyntax.NameRes
 
 open MiloneShared.SharedTypes
+open MiloneShared.TypeFloat
 open MiloneShared.TypeIntegers
 open MiloneShared.Util
 open Std.StdError
@@ -63,10 +64,50 @@ let private txApp f x loc = TNodeExpr(TAppEN, [ f; x ], noTy, loc)
 let private txApp2 f x1 x2 loc = txApp (txApp f x1 loc) x2 loc
 
 // -----------------------------------------------
-// Type primitives
+// Primitives
 // -----------------------------------------------
 
-let private tyPrimOfName ident tys =
+let private valuePrimOfIdent ident =
+  match ident with
+  | "not" -> TPrim.Not |> Some
+  | "exit" -> TPrim.Exit |> Some
+  | "assert" -> TPrim.Assert |> Some
+  | "box" -> TPrim.Box |> Some
+  | "unbox" -> TPrim.Unbox |> Some
+  | "printfn" -> TPrim.Printfn |> Some
+  | "compare" -> TPrim.Compare |> Some
+
+  | "int"
+  | "int32" -> TPrim.ToInt I32 |> Some
+  | "uint"
+  | "uint32" -> TPrim.ToInt U32 |> Some
+  | "sbyte"
+  | "int8" -> TPrim.ToInt I8 |> Some
+  | "byte"
+  | "uint8" -> TPrim.ToInt U8 |> Some
+
+  | "int16" -> TPrim.ToInt I16 |> Some
+  | "int64" -> TPrim.ToInt I64 |> Some
+  | "nativeint" -> TPrim.ToInt IPtr |> Some
+  | "uint16" -> TPrim.ToInt U16 |> Some
+  | "uint64" -> TPrim.ToInt U64 |> Some
+  | "unativeint" -> TPrim.ToInt UPtr |> Some
+  | "float" -> TPrim.ToFloat F64 |> Some
+  | "float32" -> TPrim.ToFloat F32 |> Some
+  | "char" -> TPrim.Char |> Some
+  | "string" -> TPrim.String |> Some
+
+  | "__discriminant" -> TPrim.Discriminant |> Some
+
+  | "__nativeFun" -> TPrim.NativeFun |> Some
+  | "__nativeCast" -> TPrim.NativeCast |> Some
+  | "__nativeExpr" -> TPrim.NativeExpr |> Some
+  | "__nativeStmt" -> TPrim.NativeStmt |> Some
+  | "__nativeDecl" -> TPrim.NativeDecl |> Some
+
+  | _ -> None
+
+let private tyPrimOfIdent ident tys =
   match ident, tys with
   | "unit", [] -> Some tyUnit
   | "bool", [] -> Some tyBool
@@ -828,7 +869,7 @@ let private resolveTy ctx ty selfTyArgs : Ty * ScopeCtx =
       | Some (UnivTySymbol _) -> unreachable () // UnivTySymbol is only resolved from type variable.
 
       | None ->
-        match tyPrimOfName ident tyArgs with
+        match tyPrimOfIdent ident tyArgs with
         | Some ty -> ty, ctx
         | None -> errorTy ctx (UndefinedTyError ident) loc
 
@@ -1499,7 +1540,7 @@ let private doNameResVarExpr ctx ident loc : TExpr option =
     Some expr
 
   | None ->
-    match primFromIdent ident with
+    match valuePrimOfIdent ident with
     | Some prim -> TPrimExpr(prim, noTy, loc) |> Some
     | None -> None
 
