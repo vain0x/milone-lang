@@ -314,18 +314,21 @@ let stmtMap (f: Ty -> Ty) stmt =
   | HExprStmt expr -> HExprStmt(onExpr expr)
   | HLetValStmt (pat, init, loc) -> HLetValStmt(onPat pat, onExpr init, loc)
   | HLetFunStmt (funSerial, argPats, body, loc) -> HLetFunStmt(funSerial, List.map onPat argPats, onExpr body, loc)
+  | HNativeDeclStmt _ -> stmt
 
 let private stmtMapExpr (f: HExpr -> HExpr) stmt =
   match stmt with
   | HExprStmt expr -> HExprStmt(f expr)
   | HLetValStmt (pat, init, loc) -> HLetValStmt(pat, f init, loc)
   | HLetFunStmt (funSerial, argPats, body, loc) -> HLetFunStmt(funSerial, argPats, f body, loc)
+  | HNativeDeclStmt _ -> stmt
 
 let private stmtFoldExpr (folder: 'S -> HExpr -> 'S) (state: 'S) stmt =
   match stmt with
   | HExprStmt expr -> folder state expr
   | HLetValStmt (_, init, _) -> folder state init
   | HLetFunStmt (_, _, body, _) -> folder state body
+  | HNativeDeclStmt _ -> state
 
 // -----------------------------------------------
 // HProgram

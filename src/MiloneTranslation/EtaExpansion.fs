@@ -558,6 +558,8 @@ let private exStmt ctx stmt : HStmt * EtaCtx =
 
   | HLetFunStmt _ -> exLetFunStmt ctx stmt
 
+  | HNativeDeclStmt _ -> unreachable () // Generated in Hoist.
+
 let private exModule (ctx: EtaCtx) (m: HModule) =
   let ctx = { ctx with Vars = m.Vars }
   let stmts, ctx = m.Stmts |> List.mapFold exStmt ctx

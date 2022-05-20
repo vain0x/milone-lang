@@ -830,6 +830,8 @@ let private abStmt ctx stmt =
     let body = body |> abExpr ctx
     HLetFunStmt(callee, args, body, loc)
 
+  | HNativeDeclStmt _ -> unreachable () // Generated in Hoist.
+
 let autoBox (modules: HProgram, hirCtx: HirCtx) : HProgram * HirCtx =
   // Detect recursion.
   let trdCtx = detectTypeRecursion hirCtx
@@ -1033,6 +1035,8 @@ let private tvStmt stmt ctx =
 
     ctx
 
+  | HNativeDeclStmt _ -> unreachable () // Generated in Hoist.
+
 // -----------------------------------------------
 // Compute ty args
 // -----------------------------------------------
@@ -1099,6 +1103,7 @@ let private taStmt ctx stmt =
   | HExprStmt expr -> HExprStmt(onExpr expr)
   | HLetValStmt (pat, init, loc) -> HLetValStmt(pat, onExpr init, loc)
   | HLetFunStmt (callee, args, body, loc) -> HLetFunStmt(callee, args, taExpr ctx body, loc)
+  | HNativeDeclStmt _ -> unreachable () // Generated in Hoist.
 
 let computeFunTyArgs (modules: HProgram, hirCtx: HirCtx) : HProgram * HirCtx =
   let hirCtx =

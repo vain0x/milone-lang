@@ -929,6 +929,7 @@ let private reuseVarOnStmt (reuseMap: VarReuseMap) stmt =
   | HExprStmt expr -> HExprStmt(onExpr expr)
   | HLetValStmt (pat, init, loc) -> HLetValStmt(onPat pat, onExpr init, loc)
   | HLetFunStmt (serial, args, body, loc) -> HLetFunStmt(serial, List.map onPat args, onExpr body, loc)
+  | HNativeDeclStmt _ -> stmt
 
 let private doReuseArmLocals funSerial arms (ctx: MirCtx) : _ * MirCtx =
   let emptyReuseMap: VarReuseMap = TMap.empty varSerialCompare
@@ -1717,6 +1718,8 @@ let private mirifyStmt (ctx: MirCtx) (stmt: HStmt) : MirCtx =
 
   | HLetFunStmt (funSerial, argPats, body, loc) -> mirifyExprLetFunContents ctx funSerial argPats body loc
 
+  | HNativeDeclStmt (cCode, loc) -> addDecl ctx (MNativeDecl(cCode, loc))
+
 let private mirifyModule (ctx: MirCtx) (m: HModule2) =
   let ctx =
     let ctx =
@@ -1753,7 +1756,8 @@ let private mirifyModule (ctx: MirCtx) (m: HModule2) =
 let mirify (modules: HModule2 list, hirCtx: HirCtx) : MModule list * MirResult =
   let ctx = ofHirCtx hirCtx
 
-  let modules, _ = modules |> List.mapFold mirifyModule ctx
+  let modules, _ =
+    modules |> List.mapFold mirifyModule ctx
 
   let result: MirResult =
     { StaticVars = hirCtx.StaticVars

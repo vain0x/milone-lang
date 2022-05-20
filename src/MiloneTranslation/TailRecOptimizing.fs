@@ -111,6 +111,8 @@ let private troStmt ctx stmt =
 
     HLetFunStmt(callee, args, body, loc), ctx
 
+  | HNativeDeclStmt _ -> stmt, ctx
+
 let private troModule (ctx: TailRecCtx) (m: HModule) : HModule * TailRecCtx =
   let stmts, ctx = m.Stmts |> List.mapFold troStmt ctx
   let m = { m with Stmts = stmts }

@@ -441,6 +441,8 @@ let private mtStmt ctx stmt : M.HStmt * MtCtx =
     let body, ctx = body |> mtExpr ctx
     M.HLetFunStmt(callee, args, body, loc), ctx
 
+  | HNativeDeclStmt (cCode, loc) -> M.HNativeDeclStmt(cCode, loc), ctx
+
 let private mtModule ctx (m: HModule2) =
   let stmts, ctx = m.Stmts |> List.mapFold mtStmt ctx
 
@@ -638,6 +640,7 @@ let private bthStmt stmt =
   | M.HExprStmt expr -> HExprStmt(bthExpr expr)
   | M.HLetValStmt (pat, init, loc) -> HLetValStmt(ofPat pat, ofExpr init, loc)
   | M.HLetFunStmt (funSerial, args, body, loc) -> HLetFunStmt(funSerial, ofPats args, ofExpr body, loc)
+  | M.HNativeDeclStmt (cCode, loc) -> HNativeDeclStmt(cCode, loc)
 
 let private bthModule (m: M.HModule2) : HModule2 =
   { DocId = m.DocId

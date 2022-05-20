@@ -5,12 +5,17 @@ module rec native_code.Program
 
 open Std.Ptr
 
+__nativeDecl
+  """
+    // Embedded by __nativeDecl on toplevel.
+  """
+
 let private writeLine (msg: string) : unit =
   __nativeDecl
     """
-      // Embedded by __nativeDecl.
+      // Embedded by __nativeDecl in function.
       #include <stdio.h>
-  """
+    """
 
   __nativeStmt (
     """

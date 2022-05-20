@@ -172,6 +172,8 @@ let private collectOnStmt (rx: CollectRx) (wx: CollectWx) stmt : CollectWx =
 
     wx |> onExpr body
 
+  | HNativeDeclStmt _ -> wx
+
 // -----------------------------------------------
 // Rewrite
 // -----------------------------------------------
@@ -250,6 +252,8 @@ let private rewriteStmt (rx: RewriteRx) stmt : HStmt option =
     else
       HLetFunStmt(callee, args, onExpr body, loc)
       |> Some
+
+  | HNativeDeclStmt _ -> Some stmt
 
 // -----------------------------------------------
 // Generation
