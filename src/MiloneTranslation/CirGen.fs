@@ -1344,28 +1344,28 @@ let private cgDecls (ctx: CirCtx) decls =
 // Sort declarations by kind.
 // Without this, static variable definition can appear before its type definition.
 let private sortDecls (decls: CDecl list) : CDecl list =
-  let types, vars, bodies =
+  let tys, vars, funs =
     decls
     |> List.fold
-         (fun (types, vars, bodies) decl ->
+         (fun (tys, vars, funs) decl ->
            match decl with
            | CErrorDecl _
            | CFunPtrTyDef _
            | CStructForwardDecl _
            | CStructDecl _
            | CEnumDecl _
-           | CNativeDecl _ -> decl :: types, vars, bodies
+           | CNativeDecl _ -> decl :: tys, vars, funs
 
            | CStaticVarDecl _
            | CInternalStaticVarDecl _
-           | CExternVarDecl _ -> types, decl :: vars, bodies
+           | CExternVarDecl _ -> tys, decl :: vars, funs
 
            | CFunForwardDecl _
            | CFunDecl _
-           | CStaticFunDecl _ -> types, vars, decl :: bodies)
+           | CStaticFunDecl _ -> tys, vars, decl :: funs)
          ([], [], [])
 
-  List.collect List.rev [ types; vars; bodies ]
+  List.collect List.rev [ tys; vars; funs ]
 
 let private cgModule (ctx: CirCtx) (m: MModule) : DocId * CDecl list =
   let varUniqueNames, _ =
@@ -1382,6 +1382,18 @@ let private cgModule (ctx: CirCtx) (m: MModule) : DocId * CDecl list =
       Decls = []
       FunDecls = TSet.empty funSerialCompare
       FunPtrTys = TMap.empty (pairCompare (listCompare cTyCompare) cTyCompare) }
+
+  // Generate leading native decls to not be preceded by generated decls.
+  let moduleDecls, ctx =
+    let leadingNativeDeclAcc, decls =
+      let rec go acc decls =
+        match decls with
+        | (MNativeDecl (cCode, _)) :: decls -> go (CNativeDecl cCode :: acc) decls
+        | _ -> acc, decls
+
+      go [] m.Decls
+
+    decls, { ctx with Decls = leadingNativeDeclAcc }
 
   // Generate extern var decls.
   let ctx =
@@ -1404,7 +1416,7 @@ let private cgModule (ctx: CirCtx) (m: MModule) : DocId * CDecl list =
          ctx
 
   // Generate decls.
-  let ctx = cgDecls ctx m.Decls
+  let ctx = cgDecls ctx moduleDecls
   let decls = List.rev ctx.Decls |> sortDecls
 
   m.DocId, decls
