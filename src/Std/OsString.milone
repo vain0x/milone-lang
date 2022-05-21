@@ -1,6 +1,7 @@
 // Provides OsString for interop with OS API.
 
 open Std.Block
+open Std.Ptr
 open Std.Vector
 
 // See also milone.h and milone_platform.c
