@@ -106,6 +106,7 @@ https://github.com/vain0x/milone-lang/commits/develop?after=689350a9d82133b68350
     - `Region`
     - `IO`, `File`, `Path`, `OsString`
     - `Vector`, `ByteVector`, `Block`
+    - `StringBuffer`
 - Add functions:
     - `Option.fold`
     - `List.takeWhile`
