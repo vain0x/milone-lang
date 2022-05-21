@@ -1,15 +1,15 @@
 open Std.Own
-
-module Ptr = Std.Ptr
+open Std.Ptr
+open Std.Region
 
 // For memcpy
 __nativeDecl "#include <string.h>"
 
 /// Immutable array.
-type Block<'T> = private Block of ptr: __inptr<'T> * len: uint
+type Block<'T> = private Block of ptr: InPtr<'T> * len: uint
 
 /// Owned growable array to build a block object. (Allocated on a region.)
-type BlockBuilder<'T> = private BlockBuilder of ptr: Own<__outptr<'T>> * cap: uint
+type BlockBuilder<'T> = private BlockBuilder of ptr: Own<OutPtr<'T>> * cap: uint
 
 // -----------------------------------------------
 // BlockBuilder helpers
@@ -19,7 +19,7 @@ let private bbEmpty () : BlockBuilder<'T> = BlockBuilder(Own.acquire Ptr.nullPtr
 
 let private bbAlloc (count: uint) : BlockBuilder<'T> =
   if count <> 0u then
-    let ptr: __outptr<'T> = Ptr.regionAlloc count
+    let ptr: OutPtr<'T> = Region.alloc count
     BlockBuilder(Own.acquire ptr, count)
   else
     bbEmpty ()
@@ -259,15 +259,15 @@ module BlockExt =
   ///
   /// - Pointer can be null when length is zero.
   /// - Pointer is invalidated when to leave the current region.
-  let unsafeToRawParts (block: Block<'T>) : __inptr<'T> * uint =
+  let unsafeToRawParts (block: Block<'T>) : InPtr<'T> * uint =
     let (Block(ptr, len)) = block
     ptr, len
 
   /// Creates a block by copying from a pointer.
-  let unsafeOfRawParts (ptr: __inptr<'T>) (len: uint) : Block<'T> =
+  let unsafeOfRawParts (ptr: InPtr<'T>) (len: uint) : Block<'T> =
     if len <> 0u then
       assert (ptr <> Ptr.nullPtr)
-      let destPtr: __outptr<'T> = Ptr.regionAlloc len
+      let destPtr: OutPtr<'T> = Region.alloc len
       __nativeStmt ("memcpy({0}, {1}, {2});", destPtr, ptr, unativeint len * unativeint sizeof<'T>)
       Block(Ptr.cast destPtr, len)
     else

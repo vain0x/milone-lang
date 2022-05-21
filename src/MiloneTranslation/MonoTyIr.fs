@@ -129,6 +129,7 @@ type HStmt =
   | HExprStmt of HExpr
   | HLetValStmt of HPat * init: HExpr * Loc
   | HLetFunStmt of FunSerial * argPats: HPat list * body: HExpr * Loc
+  | HNativeDeclStmt of cCode: string * args: HExpr list * Loc
 
 /// Module. Variable info is reduced.
 [<RequireQualifiedAccess; NoEquality; NoComparison>]

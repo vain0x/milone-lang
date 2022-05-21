@@ -99,7 +99,7 @@ module EphArray =
       let ptr, _, _ = array
       ptr, array
 
-    let asPtr (array: EphArray<'T>) : __inptr<'T> * EphArray<'T> =
+    let asPtr (array: EphArray<'T>) : InPtr<'T> * EphArray<'T> =
       let array = assertAlive array
       let ptr, _, _ = array
       InPtr.ofNativePtr ptr, array

@@ -197,7 +197,6 @@ type HPrim =
   | Exit
   | Assert
   | Printfn
-  | InRegion
   | NullPtr
   | PtrDistance
   | NativeCast
@@ -263,7 +262,7 @@ type HExprKind =
   /// Embed some C statement to output.
   | HNativeStmtEN of nativeStmtCode: string
 
-  /// Embed some C toplevel codes to output.
+  /// Embed some C toplevel codes to output. This is converted to HNativeDeclStmt in Hoist.
   | HNativeDeclEN of nativeDeclCode: string
 
   /// Size of type. Argument is a type placeholder. The result type is int.
@@ -308,6 +307,9 @@ type HStmt =
   | HExprStmt of HExpr
   | HLetValStmt of HPat * init: HExpr * Loc
   | HLetFunStmt of FunSerial * argPats: HPat list * body: HExpr * Loc
+
+  /// Generated after Hoist.
+  | HNativeDeclStmt of cCode: string * args: HExpr list * Loc
 
 type VarMap = TreeMap<VarSerial, VarDef>
 type VarNameMap = TreeMap<VarSerial, Ident>

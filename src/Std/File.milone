@@ -4,15 +4,14 @@
 open Std.ByteVector
 open Std.IO
 open Std.Own
+open Std.Ptr
 open Std.StdError
 open Std.Vector
-
-module Ptr = Std.Ptr
 
 // For strlen.
 __nativeDecl "#include <string.h>"
 
-let private toCStr (s: string) : __inptr<char> = __nativeFun ("string_to_c_str", s)
+let private toCStr (s: string) : InPtr<char> = __nativeFun ("string_to_c_str", s)
 
 /// `FILE *`
 type private FilePtr = nativeptr<__nativeType<FILE>>
@@ -172,7 +171,7 @@ module File =
   /// Unsafely writes a block of bytes to the file.
   ///
   /// This function blocks to wait until all data are written (unless the underlying file is asynchronous).
-  let unsafeWriteExactFromRawParts (io: IO) (ptr: __inptr<byte>) (len: int) (output: File) : bool * File * IO =
+  let unsafeWriteExactFromRawParts (io: IO) (ptr: InPtr<byte>) (len: int) (output: File) : bool * File * IO =
     let fp, output = unsafeDup output
     assert (len >= 1)
 
@@ -186,7 +185,7 @@ module File =
     let fp, output = unsafeDup output
 
     if s.Length <> 0 then
-      let ptr: __inptr<char> = __nativeExpr ("{0}.ptr", s)
+      let ptr: InPtr<char> = __nativeExpr ("{0}.ptr", s)
 
       let ok, output, io =
         unsafeWriteExactFromRawParts io (__nativeCast ptr) s.Length output

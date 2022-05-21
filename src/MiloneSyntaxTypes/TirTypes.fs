@@ -279,7 +279,6 @@ type TPrim =
   | Exit
   | Assert
   | Printfn
-  | InRegion
   | OwnAcquire
   | OwnRelease
   | NativeFun

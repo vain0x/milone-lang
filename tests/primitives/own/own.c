@@ -2,19 +2,17 @@
 #include <stdlib.h>
 #include <milone.h>
 
-typedef int32_t(*VoidConstPtrInt32Int32FunPtr2)(void const *, int32_t);
-
-struct Int32Int32Fun1;
-
 struct Int32Int32Tuple2_;
 
 struct Int32Cons;
 
 struct Int32Cons;
 
-struct Int32Int32Tuple2option1_;
+typedef int32_t(*VoidConstPtrInt32Int32FunPtr2)(void const *, int32_t);
 
-int32_t own_own_Int32Int32Fun1Int32Int32Fun2_ownMap(struct Int32Int32Fun1 mapping_, int32_t l_1);
+struct Int32Int32Fun1;
+
+struct Int32Int32Tuple2option1_;
 
 int32_t own_own_create(int32_t init_);
 
@@ -42,6 +40,8 @@ void own_own_genericWrapperCase(void);
 
 void own_own_genericOwnCase(void);
 
+int32_t own_own_Int32Int32Fun1Int32Int32Fun2_ownMap(struct Int32Int32Fun1 mapping_, int32_t l_1);
+
 int32_t own_own_genericOwnFunCase_fun(int32_t x_1);
 
 int32_t own_own_eta2_genericOwnFunCase_fun(void const *env_, int32_t arg_);
@@ -56,11 +56,6 @@ void own_own_counterWrapperCase(void);
 
 int main(int argc, char **argv);
 
-struct Int32Int32Fun1 {
-    VoidConstPtrInt32Int32FunPtr2 fun;
-    void const *env;
-};
-
 struct Int32Int32Tuple2_ {
     int32_t t0;
     int32_t t1;
@@ -69,6 +64,11 @@ struct Int32Int32Tuple2_ {
 struct Int32Cons {
     int32_t head;
     struct Int32Cons const *tail;
+};
+
+struct Int32Int32Fun1 {
+    VoidConstPtrInt32Int32FunPtr2 fun;
+    void const *env;
 };
 
 enum Int32Int32Tuple2option1_Discriminant {
@@ -82,14 +82,6 @@ struct Int32Int32Tuple2option1_ {
         struct Int32Int32Tuple2_ Int32Int32Tuple2option1_Some;
     };
 };
-
-int32_t own_own_Int32Int32Fun1Int32Int32Fun2_ownMap(struct Int32Int32Fun1 mapping_, int32_t l_1) {
-    int32_t l_2;
-    int32_t app_;
-    l_2 = l_1;
-    app_ = mapping_.fun(mapping_.env, l_2);
-    return app_;
-}
 
 int32_t own_own_create(int32_t init_) {
     return init_;
@@ -316,6 +308,14 @@ else_17:;
 if_next_15:;
     if ((!(if_1))) milone_assert_error("own/own.milone", 102, 2);
     return;
+}
+
+int32_t own_own_Int32Int32Fun1Int32Int32Fun2_ownMap(struct Int32Int32Fun1 mapping_, int32_t l_1) {
+    int32_t l_2;
+    int32_t app_;
+    l_2 = l_1;
+    app_ = mapping_.fun(mapping_.env, l_2);
+    return app_;
 }
 
 int32_t own_own_genericOwnFunCase_fun(int32_t x_1) {

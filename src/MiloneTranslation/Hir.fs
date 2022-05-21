@@ -300,11 +300,12 @@ let exprToLoc expr =
 // HStmt
 // -----------------------------------------------
 
-// let stmtToLoc stmt : Loc =
-//   match stmt with
-//   | HExprStmt expr -> exprToLoc expr
-//   | HLetValStmt (_, _, a) -> a
-//   | HLetFunStmt (_, _, _, a) -> a
+let stmtToLoc stmt : Loc =
+  match stmt with
+  | HExprStmt expr -> exprToLoc expr
+  | HLetValStmt (_, _, a) -> a
+  | HLetFunStmt (_, _, _, a) -> a
+  | HNativeDeclStmt (_, _, a) -> a
 
 let stmtMap (f: Ty -> Ty) stmt =
   let onPat pat = patMap f pat
@@ -314,18 +315,21 @@ let stmtMap (f: Ty -> Ty) stmt =
   | HExprStmt expr -> HExprStmt(onExpr expr)
   | HLetValStmt (pat, init, loc) -> HLetValStmt(onPat pat, onExpr init, loc)
   | HLetFunStmt (funSerial, argPats, body, loc) -> HLetFunStmt(funSerial, List.map onPat argPats, onExpr body, loc)
+  | HNativeDeclStmt (code, args, loc) -> HNativeDeclStmt(code, List.map onExpr args, loc)
 
 let private stmtMapExpr (f: HExpr -> HExpr) stmt =
   match stmt with
   | HExprStmt expr -> HExprStmt(f expr)
   | HLetValStmt (pat, init, loc) -> HLetValStmt(pat, f init, loc)
   | HLetFunStmt (funSerial, argPats, body, loc) -> HLetFunStmt(funSerial, argPats, f body, loc)
+  | HNativeDeclStmt (code, args, loc) -> HNativeDeclStmt(code, List.map f args, loc)
 
 let private stmtFoldExpr (folder: 'S -> HExpr -> 'S) (state: 'S) stmt =
   match stmt with
   | HExprStmt expr -> folder state expr
   | HLetValStmt (_, init, _) -> folder state init
   | HLetFunStmt (_, _, body, _) -> folder state body
+  | HNativeDeclStmt (code, args, loc) -> List.fold folder state args
 
 // -----------------------------------------------
 // HProgram
@@ -402,10 +406,10 @@ let tkDisplay getTyName tk =
   | TupleTk -> "tuple"
   | ListTk -> "list"
   | VoidPtrTk IsMut -> "voidptr"
-  | VoidPtrTk IsConst -> "__voidinptr"
+  | VoidPtrTk IsConst -> "VoidInPtr"
   | NativePtrTk RefMode.ReadWrite -> "nativeptr"
-  | NativePtrTk RefMode.ReadOnly -> "__inptr"
-  | NativePtrTk RefMode.WriteOnly -> "__outptr"
+  | NativePtrTk RefMode.ReadOnly -> "InPtr"
+  | NativePtrTk RefMode.WriteOnly -> "OutPtr"
   | NativeFunTk -> "__nativeFun"
   | NativeTypeTk _ -> "__nativeType"
   | MetaTk (tySerial, _) -> getTyName tySerial

@@ -2,19 +2,17 @@
 #include <stdlib.h>
 #include <milone.h>
 
-struct ObjectObjectTuple2_;
-
 typedef void(*VoidFunPtr0)(void);
 
 typedef void const *(*VoidConstPtrVoidConstPtrVoidConstPtrFunPtr2)(void const *, void const *);
+
+struct ObjectObjectTuple2_;
 
 typedef void(*VoidConstPtrVoidFunPtr1)(void const *);
 
 struct UnitUnitFun1;
 
 struct Int64UInt8UInt8Tuple3_;
-
-int32_t nativeptr_nativeptr_ObjectObjectTuple2MutPtrInt32Fun1_sizeOfPointee(struct ObjectObjectTuple2_ *ptr_);
 
 void *milone_region_alloc(uint32_t, uint32_t);
 
@@ -46,6 +44,8 @@ void nativeptr_nativeptr_testPtrDistance(void);
 
 void nativeptr_nativeptr_testEquality(void);
 
+int32_t nativeptr_nativeptr_ObjectObjectTuple2MutPtrInt32Fun1_sizeOfPointee(struct ObjectObjectTuple2_ *ptr_);
+
 void nativeptr_nativeptr_testSizeOf(void);
 
 void nativeptr_nativeptr_testPtrOf(void);
@@ -56,9 +56,9 @@ void nativeptr_nativeptr_testPtrRead(void);
 
 void nativeptr_nativeptr_testPtrWrite(void);
 
-int32_t *Std_Ptr_UInt32Int32OutPtrFun1_regionAlloc(uint32_t);
+int32_t *Std_Region_UInt32Int32OutPtrFun1_alloc(uint32_t);
 
-void nativeptr_nativeptr_testPtrRegionAlloc(void);
+void nativeptr_nativeptr_testRegionAlloc(void);
 
 void nativeptr_nativeptr_testPtrAddress(void);
 
@@ -79,10 +79,6 @@ struct Int64UInt8UInt8Tuple3_ {
     uint8_t t1;
     uint8_t t2;
 };
-
-int32_t nativeptr_nativeptr_ObjectObjectTuple2MutPtrInt32Fun1_sizeOfPointee(struct ObjectObjectTuple2_ *ptr_) {
-    return sizeof(struct ObjectObjectTuple2_);
-}
 
 void *nativeptr_nativeptr_memAlloc(uint32_t count_, uint32_t size_) {
     void *milone_region_alloc_result;
@@ -235,6 +231,10 @@ void nativeptr_nativeptr_testEquality(void) {
     return;
 }
 
+int32_t nativeptr_nativeptr_ObjectObjectTuple2MutPtrInt32Fun1_sizeOfPointee(struct ObjectObjectTuple2_ *ptr_) {
+    return sizeof(struct ObjectObjectTuple2_);
+}
+
 void nativeptr_nativeptr_testSizeOf(void) {
     int32_t w_;
     int32_t call_1;
@@ -308,11 +308,11 @@ int data[8] = { 0 };    p_5 = data;
     return;
 }
 
-void nativeptr_nativeptr_testPtrRegionAlloc(void) {
+void nativeptr_nativeptr_testRegionAlloc(void) {
     int32_t *p_6;
     int32_t *p_7;
     int32_t *call_3;
-    call_3 = Std_Ptr_UInt32Int32OutPtrFun1_regionAlloc((uint32_t)2U);
+    call_3 = Std_Region_UInt32Int32OutPtrFun1_alloc((uint32_t)2U);
     p_6 = call_3;
     p_6[0] = 42;
     p_6[1] = 43;
@@ -346,7 +346,7 @@ int main(int argc, char **argv) {
     nativeptr_nativeptr_testPtrSelect();
     nativeptr_nativeptr_testPtrRead();
     nativeptr_nativeptr_testPtrWrite();
-    nativeptr_nativeptr_testPtrRegionAlloc();
+    nativeptr_nativeptr_testRegionAlloc();
     nativeptr_nativeptr_testPtrAddress();
     return 0;
 }

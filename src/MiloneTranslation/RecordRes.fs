@@ -220,6 +220,8 @@ let private teStmt ctx stmt =
     let body = body |> teExpr ctx
     HLetFunStmt(callee, args, body, loc)
 
+  | HNativeDeclStmt _ -> unreachable () // Generated in Hoist.
+
 let recordRes (modules: HProgram, hirCtx: HirCtx) : HProgram * HirCtx =
   let ctx = ofHirCtx hirCtx
 

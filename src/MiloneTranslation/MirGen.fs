@@ -929,6 +929,7 @@ let private reuseVarOnStmt (reuseMap: VarReuseMap) stmt =
   | HExprStmt expr -> HExprStmt(onExpr expr)
   | HLetValStmt (pat, init, loc) -> HLetValStmt(onPat pat, onExpr init, loc)
   | HLetFunStmt (serial, args, body, loc) -> HLetFunStmt(serial, List.map onPat args, onExpr body, loc)
+  | HNativeDeclStmt (code, args, loc) -> HNativeDeclStmt (code, List.map onExpr args, loc)
 
 let private doReuseArmLocals funSerial arms (ctx: MirCtx) : _ * MirCtx =
   let emptyReuseMap: VarReuseMap = TMap.empty varSerialCompare
@@ -1261,23 +1262,6 @@ let private mirifyCallAssertExpr ctx arg loc =
 
   MUnitExpr loc, ctx
 
-let private mirifyCallInRegionExpr ctx arg loc =
-  // arg: closure
-  let arg, ctx = mirifyExpr ctx arg
-
-  let temp, tempSerial, ctx = freshVar ctx "region_result" tyInt loc
-
-  let ctx =
-    addStmt ctx (MActionStmt(MEnterRegionAction, [], loc))
-
-  let ctx =
-    addStmt ctx (MPrimStmt(MCallClosurePrim, [ arg ], tempSerial, tyInt, loc))
-
-  let ctx =
-    addStmt ctx (MActionStmt(MLeaveRegionAction, [], loc))
-
-  temp, ctx
-
 let private mirifyCallPrintfnExpr ctx args loc =
   let argTys = args |> List.map exprToTy
   let args, ctx = mirifyExprs ctx args
@@ -1385,8 +1369,6 @@ let private mirifyCallPrimExpr ctx itself prim args ty loc =
   | HPrim.String, _ -> fail ()
   | HPrim.Assert, [ arg ] -> mirifyCallAssertExpr ctx arg loc
   | HPrim.Assert, _ -> fail ()
-  | HPrim.InRegion, [ arg ] -> mirifyCallInRegionExpr ctx arg loc
-  | HPrim.InRegion, _ -> fail ()
   | HPrim.Printfn, _ -> mirifyCallPrintfnExpr ctx args loc
   | HPrim.PtrDistance, [ l; r ] -> regularBinary MSubBinary r l
   | HPrim.PtrDistance, _ -> fail ()
@@ -1560,7 +1542,11 @@ let private mirifyExprInf ctx itself kind args ty loc =
     MUnitExpr loc, ctx
 
   | HNativeDeclEN code, _, _ ->
-    let ctx = addDecl ctx (MNativeDecl(code, loc))
+    let args, ctx = mirifyExprs ctx args
+
+    let ctx =
+      addDecl ctx (MNativeDecl(code, args, loc))
+
     MUnitExpr loc, ctx
 
   | HSizeOfEN, [ HNodeExpr (_, _, ty, _) ], _ -> MGenericValueExpr(MSizeOfGv, ty, loc), ctx
@@ -1736,6 +1722,10 @@ let private mirifyStmt (ctx: MirCtx) (stmt: HStmt) : MirCtx =
 
   | HLetFunStmt (funSerial, argPats, body, loc) -> mirifyExprLetFunContents ctx funSerial argPats body loc
 
+  | HNativeDeclStmt (cCode, args, loc) ->
+    let args, ctx = mirifyExprs ctx args
+    addDecl ctx (MNativeDecl(cCode, args, loc))
+
 let private mirifyModule (ctx: MirCtx) (m: HModule2) =
   let ctx =
     let ctx =
@@ -1772,7 +1762,8 @@ let private mirifyModule (ctx: MirCtx) (m: HModule2) =
 let mirify (modules: HModule2 list, hirCtx: HirCtx) : MModule list * MirResult =
   let ctx = ofHirCtx hirCtx
 
-  let modules, _ = modules |> List.mapFold mirifyModule ctx
+  let modules, _ =
+    modules |> List.mapFold mirifyModule ctx
 
   let result: MirResult =
     { StaticVars = hirCtx.StaticVars

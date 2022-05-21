@@ -5,6 +5,7 @@
 module rec MiloneSyntax.NameRes
 
 open MiloneShared.SharedTypes
+open MiloneShared.TypeFloat
 open MiloneShared.TypeIntegers
 open MiloneShared.Util
 open Std.StdError
@@ -63,50 +64,8 @@ let private txApp f x loc = TNodeExpr(TAppEN, [ f; x ], noTy, loc)
 let private txApp2 f x1 x2 loc = txApp (txApp f x1 loc) x2 loc
 
 // -----------------------------------------------
-// Type primitives
+// Binary
 // -----------------------------------------------
-
-let private tyPrimOfName ident tys =
-  match ident, tys with
-  | "unit", [] -> Some tyUnit
-  | "bool", [] -> Some tyBool
-
-  | "int", []
-  | "int32", [] -> Some tyInt
-  | "uint", []
-  | "uint32", [] -> Ty(IntTk U32, []) |> Some
-  | "sbyte", []
-  | "int8", [] -> Ty(IntTk I8, []) |> Some
-  | "byte", []
-  | "uint8", [] -> Ty(IntTk U8, []) |> Some
-
-  | "int16", [] -> Ty(IntTk I16, []) |> Some
-  | "int64", [] -> Ty(IntTk I64, []) |> Some
-  | "nativeint", [] -> Ty(IntTk IPtr, []) |> Some
-  | "uint16", [] -> Ty(IntTk U16, []) |> Some
-  | "uint64", [] -> Ty(IntTk U64, []) |> Some
-  | "unativeint", [] -> Ty(IntTk UPtr, []) |> Some
-
-  | "float", [] -> Some tyFloat
-  | "char", [] -> Some tyChar
-  | "string", [] -> Some tyString
-  | "obj", [] -> Some tyObj
-
-  | "list", [ itemTy ] -> Some(tyList itemTy)
-
-  | "voidptr", [] -> Ty(VoidPtrTk IsMut, []) |> Some
-  | "nativeptr", [ itemTy ] -> tyNativePtr itemTy |> Some
-  | "__voidinptr", [] -> Ty(VoidPtrTk IsConst, []) |> Some
-  | "__inptr", [ itemTy ] -> tyInPtr itemTy |> Some
-  | "__outptr", [ itemTy ] -> tyOutPtr itemTy |> Some
-
-  | "__nativeFun", [ Ty (TupleTk, itemTys); resultTy ] ->
-    Ty(NativeFunTk, List.append itemTys [ resultTy ])
-    |> Some
-
-  | "__nativeFun", [ itemTy; resultTy ] -> Ty(NativeFunTk, [ itemTy; resultTy ]) |> Some
-
-  | _ -> None
 
 let private binaryToPrim op : TPrim =
   match op with
@@ -151,7 +110,8 @@ type private TySymbol =
   | SynonymTySymbol of synonymTySerial: TySerial
   | UnionTySymbol of unionTySerial: TySerial
   | RecordTySymbol of recordTySerial: TySerial
-  | PrimTySymbol of Tk
+  | PrimTkSymbol of Tk
+  | PrimTySymbol of Ty
 
 // -----------------------------------------------
 // NsOwner
@@ -178,6 +138,7 @@ let private nsOwnerOfTySymbol (tySymbol: TySymbol) : NsOwner option =
   | UnivTySymbol _
   | SynonymTySymbol _
   | RecordTySymbol _
+  | PrimTkSymbol _
   | PrimTySymbol _ -> None
 
 let private nsOwnerDump (nsOwner: NsOwner) = nsOwner |> string
@@ -810,25 +771,54 @@ let private resolveTy ctx ty selfTyArgs : Ty * ScopeCtx =
         else
           tyRecord tySerial loc, ctx
 
-      | Some (PrimTySymbol tk) ->
-        match tk with
-        | OwnTk ->
-          // #ty_arity_check
-          let defArity = 1
-
+      | Some (PrimTkSymbol tk) ->
+        let onRegular defArity =
           if arity <> defArity then
             errorTy ctx (TyArityError(ident, arity, defArity)) loc
           else
             Ty(tk, tyArgs), ctx
 
-        | _ -> unreachable ()
+        match tk with
+        | NativeFunTk ->
+          match tyArgs with
+          | [ Ty (TupleTk, itemTys); resultTy ] -> Ty(NativeFunTk, List.append itemTys [ resultTy ]), ctx
+          | [ itemTy; resultTy ] -> Ty(NativeFunTk, [ itemTy; resultTy ]), ctx
+          | _ -> onRegular 2
+
+        | ListTk
+        | OwnTk
+        | NativePtrTk _
+        | NativeTypeTk _ -> onRegular 1
+
+        | ErrorTk _
+        | IntTk _
+        | FloatTk _
+        | BoolTk
+        | CharTk
+        | StringTk
+        | ObjTk
+        | FunTk
+        | TupleTk
+        | VoidPtrTk _
+        | MetaTk _
+        | UnivTk _
+        | SynonymTk _
+        | UnionTk _
+        | RecordTk _
+        | InferTk _ -> unreachable ()
+
+      | Some (PrimTySymbol ty) ->
+        // #ty_arity_check
+        let defArity = 0
+
+        if arity <> defArity then
+          errorTy ctx (TyArityError(ident, arity, defArity)) loc
+        else
+          ty, ctx
 
       | Some (UnivTySymbol _) -> unreachable () // UnivTySymbol is only resolved from type variable.
 
-      | None ->
-        match tyPrimOfName ident tyArgs with
-        | Some ty -> ty, ctx
-        | None -> errorTy ctx (UndefinedTyError ident) loc
+      | None -> errorTy ctx (UndefinedTyError ident) loc
 
     | NTy.Infer loc -> Ty(InferTk loc, []), ctx
 
@@ -1496,10 +1486,7 @@ let private doNameResVarExpr ctx ident loc : TExpr option =
 
     Some expr
 
-  | None ->
-    match primFromIdent ident with
-    | Some prim -> TPrimExpr(prim, noTy, loc) |> Some
-    | None -> None
+  | None -> None
 
 let private nameResUnqualifiedIdentExpr ctx ident loc tyArgs : TExpr * ScopeCtx =
   if List.isEmpty tyArgs then
@@ -1991,6 +1978,132 @@ let private nameResModuleRoot ctx (root: NModuleRoot) : _ * TModule * ScopeCtx =
   newRootModule, m, ctx
 
 // -----------------------------------------------
+// Primitives
+// -----------------------------------------------
+
+let private addPrims (ctx: ScopeCtx) =
+  let s: ModuleTySerial = 1000000001 // 10^8
+  let stdModuleSerial, s = s, s + 1
+  let stdNs = nsOwnerOfModule stdModuleSerial
+  let stdOwnNs, s = nsOwnerOfModule s, s + 1
+  let ownModuleNs, s = nsOwnerOfModule s, s + 1
+  let stdPtrNs, s = nsOwnerOfModule s, s + 1
+  let ptrModuleNs = nsOwnerOfModule s
+
+  let ctx = addNsToNs ctx stdNs "Own" stdOwnNs
+  let ctx = addNsToNs ctx stdNs "Ptr" stdPtrNs
+
+  // Top-level value primitives.
+  let topLevelValueScope =
+    [ "not", TPrim.Not
+      "exit", TPrim.Exit
+      "assert", TPrim.Assert
+      "box", TPrim.Box
+      "unbox", TPrim.Unbox
+      "printfn", TPrim.Printfn
+      "compare", TPrim.Compare
+
+      "int", TPrim.ToInt I32
+      "int32", TPrim.ToInt I32
+      "uint", TPrim.ToInt U32
+      "uint32", TPrim.ToInt U32
+      "sbyte", TPrim.ToInt I8
+      "int8", TPrim.ToInt I8
+      "byte", TPrim.ToInt U8
+      "uint8", TPrim.ToInt U8
+      "int16", TPrim.ToInt I16
+      "int64", TPrim.ToInt I64
+      "nativeint", TPrim.ToInt IPtr
+      "uint16", TPrim.ToInt U16
+      "uint64", TPrim.ToInt U64
+      "unativeint", TPrim.ToInt UPtr
+      "float", TPrim.ToFloat F64
+      "float32", TPrim.ToFloat F32
+      "char", TPrim.Char
+      "string", TPrim.String
+
+      "__discriminant", TPrim.Discriminant
+      "__nativeFun", TPrim.NativeFun
+      "__nativeCast", TPrim.NativeCast
+      "__nativeExpr", TPrim.NativeExpr
+      "__nativeStmt", TPrim.NativeStmt
+      "__nativeDecl", TPrim.NativeDecl ]
+    |> List.map (fun (ident, prim) -> ident, PrimSymbol prim)
+    |> TMap.ofList compare
+
+  let topLevelTyScope =
+    let ofTk tk = PrimTkSymbol tk
+    let ofTy ty = PrimTySymbol ty
+
+    [ "int", ofTy tyInt
+      "int32", ofTy tyInt
+      "uint", ofTy (Ty(IntTk U32, []))
+      "uint32", ofTy (Ty(IntTk U32, []))
+      "sbyte", ofTy (Ty(IntTk I8, []))
+      "int8", ofTy (Ty(IntTk I8, []))
+      "byte", ofTy (Ty(IntTk U8, []))
+      "uint8", ofTy (Ty(IntTk U8, []))
+      "int16", ofTy (Ty(IntTk I16, []))
+      "int64", ofTy (Ty(IntTk I64, []))
+      "nativeint", ofTy (Ty(IntTk IPtr, []))
+      "uint16", ofTy (Ty(IntTk U16, []))
+      "uint64", ofTy (Ty(IntTk U64, []))
+      "unativeint", ofTy tyUNativeInt
+      "float", ofTy tyFloat
+      "float32", ofTy (Ty(FloatTk F32, []))
+      "unit", ofTy tyUnit
+      "bool", ofTy tyBool
+      "char", ofTy tyChar
+      "string", ofTy tyString
+      "obj", ofTy tyObj
+      "voidptr", ofTy tyVoidPtr
+      "list", ofTk ListTk
+      "nativeptr", ofTk (NativePtrTk RefMode.ReadWrite)
+      "__nativeFun", ofTk NativeFunTk ]
+    |> TMap.ofList compare
+
+  // Std.Own
+  let ctx =
+    let addTy alias tySymbol ctx = addTyToNs ctx stdOwnNs alias tySymbol
+
+    let addValue alias prim ctx =
+      addValueToNs ctx ownModuleNs alias (PrimSymbol prim)
+
+    let ctx = addNsToNs ctx stdOwnNs "Own" ownModuleNs
+
+    ctx
+    |> addTy "Own" (PrimTkSymbol OwnTk)
+    |> addValue "acquire" TPrim.OwnAcquire
+    |> addValue "release" TPrim.OwnRelease
+
+  // Std.Ptr
+  let ctx =
+    let addTy alias tySymbol ctx = addTyToNs ctx stdPtrNs alias tySymbol
+
+    let addValue alias prim ctx =
+      addValueToNs ctx ptrModuleNs alias (PrimSymbol prim)
+
+    let ctx = addNsToNs ctx stdPtrNs "Ptr" ptrModuleNs
+
+    ctx
+    |> addTy "InPtr" (PrimTkSymbol(NativePtrTk RefMode.ReadOnly))
+    |> addTy "OutPtr" (PrimTkSymbol(NativePtrTk RefMode.WriteOnly))
+    |> addTy "VoidInPtr" (PrimTySymbol tyVoidInPtr)
+    |> addValue "select" TPrim.PtrSelect
+    |> addValue "read" TPrim.PtrRead
+    |> addValue "write" TPrim.PtrWrite
+    |> addValue "nullPtr" TPrim.NullPtr
+    |> addValue "cast" TPrim.PtrCast
+    |> addValue "invalid" TPrim.PtrInvalid
+    |> addValue "asIn" TPrim.PtrAsIn
+    |> addValue "asNative" TPrim.PtrAsNative
+    |> addValue "distance" TPrim.PtrDistance
+
+  { ctx with
+      RootModules = ("Std", stdModuleSerial) :: ctx.RootModules
+      Local = [], [ topLevelValueScope ], [ topLevelTyScope ], scopeChainEmpty () }
+
+// -----------------------------------------------
 // Interface
 // -----------------------------------------------
 
@@ -1999,52 +2112,8 @@ let nameRes (layers: NModuleRoot list list) : TProgram * NameResResult =
   //       but it doesn't so due to sequential serial generation for now.
 
   let state =
-    let s: ModuleTySerial = 1000000001 // 10^8
-    let stdModuleSerial, s = s, s + 1
-    let stdNs = nsOwnerOfModule stdModuleSerial
-    let stdOwnNs, s = nsOwnerOfModule s, s + 1
-    let ownModuleNs, s = nsOwnerOfModule s, s + 1
-    let ptrNs = nsOwnerOfModule s
-
     let state = emptyState ()
-    let ctx = state.ScopeCtx
-    let ctx = addNsToNs ctx stdNs "Own" stdOwnNs
-    let ctx = addNsToNs ctx stdNs "Ptr" ptrNs
-
-    // Std.Own
-    let ctx =
-      let ctx =
-        addTyToNs ctx stdOwnNs "Own" (PrimTySymbol OwnTk)
-
-      let ctx = addNsToNs ctx stdOwnNs "Own" ownModuleNs
-
-      let addValue alias prim ctx =
-        addValueToNs ctx ownModuleNs alias (PrimSymbol prim)
-
-      ctx
-      |> addValue "acquire" TPrim.OwnAcquire
-      |> addValue "release" TPrim.OwnRelease
-
-    // Std.Ptr.select etc.
-    let ctx =
-      let add alias prim ctx =
-        addValueToNs ctx ptrNs alias (PrimSymbol prim)
-
-      ctx
-      |> add "select" TPrim.PtrSelect
-      |> add "read" TPrim.PtrRead
-      |> add "write" TPrim.PtrWrite
-      |> add "nullPtr" TPrim.NullPtr
-      |> add "cast" TPrim.PtrCast
-      |> add "invalid" TPrim.PtrInvalid
-      |> add "asIn" TPrim.PtrAsIn
-      |> add "asNative" TPrim.PtrAsNative
-      |> add "distance" TPrim.PtrDistance
-
-    let ctx =
-      { ctx with RootModules = ("Std", stdModuleSerial) :: ctx.RootModules }
-
-    { state with ScopeCtx = ctx }
+    { state with ScopeCtx = addPrims state.ScopeCtx }
 
   let modules, state =
     layers

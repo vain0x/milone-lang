@@ -1231,8 +1231,6 @@ let private primExitScheme =
 
 let private primAssertTy = tyFun tyBool tyUnit
 
-let private primInRegionTy = tyFun (tyFun tyUnit tyInt) tyInt
-
 let private primOwnAcquireTy =
   let itemTy = tyMeta 1 noLoc
   TyScheme([ 1 ], tyFun itemTy (tyOwn itemTy))
@@ -1334,7 +1332,6 @@ let private inferPrimExpr ctx prim loc =
 
     txAbort ctx loc
 
-  | TPrim.InRegion -> onMono primInRegionTy
   | TPrim.OwnAcquire -> onUnbounded primOwnAcquireTy
   | TPrim.OwnRelease -> onUnbounded primOwnReleaseTy
 
@@ -1617,9 +1614,9 @@ let private inferExprAsPtrProjection ctx (kind: PtrOperationKind) expr : TExpr *
       | Ty (NativePtrTk mode, _) ->
         match mode, kind with
         | RefMode.ReadOnly, PtrOperationKind.Write ->
-          PtrProjectionError("Expected nativeptr but was __inptr.", exprToLoc expr, ctx)
+          PtrProjectionError("Expected nativeptr but was InPtr.", exprToLoc expr, ctx)
         | RefMode.WriteOnly, PtrOperationKind.Read ->
-          PtrProjectionError("Expected nativeptr but was __outptr.", exprToLoc expr, ctx)
+          PtrProjectionError("Expected nativeptr but was OutPtr.", exprToLoc expr, ctx)
         | _ -> PtrProjectionOk(expr, ty, ctx)
 
       | _ -> PtrProjectionError("Expected pointer type.", exprToLoc expr, ctx)
@@ -1664,7 +1661,7 @@ let private inferPrimAppExpr ctx itself =
     | Ty (NativePtrTk RefMode.ReadWrite, [ itemTy ]) -> ok (tyInPtr itemTy)
     | Ty (NativePtrTk RefMode.WriteOnly, [ itemTy ]) -> ok (tyInPtr itemTy)
     | Ty (ErrorTk _, _) -> arg, argTy, ctx
-    | _ -> errorExpr ctx "Expected nativeptr, __outptr or voidptr type." loc
+    | _ -> errorExpr ctx "Expected nativeptr, OutPtr or voidptr type." loc
 
   | TPrim.PtrAsNative, _ ->
     let arg, argTy, ctx = inferExpr ctx None arg
@@ -1678,7 +1675,7 @@ let private inferPrimAppExpr ctx itself =
     | Ty (NativePtrTk RefMode.ReadOnly, [ itemTy ]) -> ok (tyNativePtr itemTy)
     | Ty (NativePtrTk RefMode.WriteOnly, [ itemTy ]) -> ok (tyNativePtr itemTy)
     | Ty (ErrorTk _, _) -> arg, argTy, ctx
-    | _ -> errorExpr ctx "Expected __inptr, __voidinptr or __outptr type." loc
+    | _ -> errorExpr ctx "Expected InPtr, VoidInPtr or OutPtr type." loc
 
   | TPrim.PtrSelect, _ -> inferExprAsPtrProjection ctx PtrOperationKind.Select arg
 
@@ -1736,6 +1733,31 @@ let private inferPrimAppExpr ctx itself =
 
   // __nativeDecl "code"
   | TPrim.NativeDecl, TLitExpr (StringLit code, _) -> TNodeExpr(TNativeDeclEN code, [], tyUnit, loc), tyUnit, ctx
+
+  // __nativeDecl ("code", args...)
+  | TPrim.NativeDecl, TNodeExpr (TTupleEN, TLitExpr (StringLit code, _) :: args, _, _) ->
+    // Infer arguments. Arguments are restricted so that statements don't emit on top-level.
+    let args, ctx =
+      args
+      |> List.mapFold
+           (fun ctx arg ->
+             let arg, _, ctx =
+               match arg with
+               | TLitExpr _
+               | TVarExpr _ -> inferExpr ctx None arg
+
+               | TNodeExpr (TAppEN, [ TPrimExpr (TPrim.NativeFun, _, _); TFunExpr _ ], _, _) -> inferExpr ctx None arg
+
+               | TNodeExpr (TTyPlaceholderEN, [], ty, loc) ->
+                 let ty, ctx = resolveAscriptionTy ctx ty
+                 TNodeExpr(TTyPlaceholderEN, [], ty, loc), ty, ctx
+
+               | _ -> errorExpr ctx "Expected a literal, a name or (__type: T)." (exprToLoc arg)
+
+             arg, ctx)
+           ctx
+
+    TNodeExpr(TNativeDeclEN code, args, tyUnit, loc), tyUnit, ctx
 
   | _ -> inferAppExpr ctx itself
 

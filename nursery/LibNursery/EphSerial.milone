@@ -1,8 +1,7 @@
 module rec LibNursery.EphSerial
 
 open LibNursery.Runtime
-
-module Ptr = Std.Ptr
+open Std.Ptr
 
 /// Special object to represent ownership of ephemeral value.
 ///

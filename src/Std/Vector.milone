@@ -2,9 +2,8 @@ module rec Std.Vector
 
 open Std.Block
 open Std.Own
+open Std.Ptr
 open Std.StdError
-
-module Ptr = Std.Ptr
 
 // For memcpy.
 __nativeDecl
@@ -112,7 +111,7 @@ let private rawReserveExact (addition: uint) ptr length capacity size =
 ///
 /// Returns new ptr and capacity since the vector grows if full.
 let private rawPush
-  (item: __voidinptr)
+  (item: VoidInPtr)
   (ptr: Own<voidptr>)
   (length: uint)
   (capacity: uint)
@@ -146,7 +145,7 @@ let private rawPush
 /// - Sort algorithm is an unstable sort.
 /// - `ptrComparer` is called with two pointers, each of them points to an item in the vector.
 let private rawSortUnstable
-  (ptrComparer: __voidinptr -> __voidinptr -> int)
+  (ptrComparer: VoidInPtr -> VoidInPtr -> int)
   (ptr: Own<voidptr>)
   (length: uint)
   (size: uint)
@@ -214,7 +213,7 @@ module Vector =
     let ptr = Own.release ptr
 
     let item =
-      Ptr.read (__nativeCast ptr: __inptr<'T>).[i]
+      Ptr.read (__nativeCast ptr: InPtr<'T>).[i]
 
     item, Vector(Own.acquire ptr, length, capacity)
 
@@ -231,7 +230,7 @@ module Vector =
     let (Vector (ptr, length, capacity)) = v
 
     let ptr, capacity =
-      let itemPtr: __voidinptr = __nativeExpr ("&({0})", item)
+      let itemPtr: VoidInPtr = __nativeExpr ("&({0})", item)
       let ptr: Own<voidptr> = Own.acquire (__nativeCast (Own.release ptr))
       rawPush itemPtr ptr length capacity (uint sizeof<'T>)
 
@@ -248,7 +247,7 @@ module Vector =
       let ptr = Own.release ptr
 
       let item =
-        Ptr.read (__nativeCast ptr: __inptr<'T>).[int (length - 1u)]
+        Ptr.read (__nativeCast ptr: InPtr<'T>).[int (length - 1u)]
 
       Some item, Vector(Own.acquire ptr, length - 1u, capacity)
     else
@@ -292,7 +291,7 @@ module Vector =
     assert (uint start <= uint endIndex)
 
     let xs =
-      let ptr: __inptr<'T> = __nativeCast ptr
+      let ptr: InPtr<'T> = __nativeCast ptr
 
       let rec toListLoop acc i =
         let acc = Ptr.read ptr.[i] :: acc
@@ -346,8 +345,8 @@ module Vector =
   let sort (itemComparer: 'T -> 'T -> int) (v: Vector<'T>) : Vector<'T> =
     // ptrComparer pl pr = itemComparer (*pl) (*pr)
     let ptrComparer =
-      fun (l: __voidinptr) (r: __voidinptr) ->
-        itemComparer (Ptr.read (__nativeCast l: __inptr<'T>)) (Ptr.read (__nativeCast r: __inptr<'T>))
+      fun (l: VoidInPtr) (r: VoidInPtr) ->
+        itemComparer (Ptr.read (__nativeCast l: InPtr<'T>)) (Ptr.read (__nativeCast r: InPtr<'T>))
 
     let (Vector (ptr, length, capacity)) = v
     let ptr = Own.acquire (__nativeCast (Own.release ptr))
@@ -387,7 +386,7 @@ module VectorExt =
   ///
   /// Prefer to use `alloc` to allocate and `push` contents to it.
   ///
-  /// Item type must be one of: intNN, uintNN, float, unit, bool, char, obj, voidptr, nativeptr, __inptr.
+  /// Item type must be one of: intNN, uintNN, float, unit, bool, char, obj, voidptr, nativeptr, InPtr.
   let unsafeZeroCreate (length: int) : Vector<'T> =
     assert (length >= 0)
     let ptr = rawAllocate (uint length) 1u

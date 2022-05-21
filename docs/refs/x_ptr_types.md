@@ -17,7 +17,7 @@ It's assumed that the reader know about:
 
 `Std.Ptr` is a special module that provides several primitives for pointers.
 
-This page omits `Std.` prefix, assuming it's declared with `module Ptr = Std.Ptr`.
+This page assumes `open Std.Ptr` is declared.
 
 ## Pointer Types
 
@@ -25,24 +25,24 @@ There are several types for pointers.
 
 | milone-lang       | C                 | Permission    |
 |:------------------|:------------------|:--------------|
-| `__inptr<T>`      | `T const *`       | Read-only     |
-| `__outptr<T>`     | `T *`             | Write-only    |
+| `InPtr<T>`      | `T const *`       | Read-only     |
+| `OutPtr<T>`     | `T *`             | Write-only    |
 | `nativeptr<T>`    | `T *`             | Read-write    |
-| `__voidinptr`     | `void const *`    | -             |
+| `VoidInPtr`     | `void const *`    | -             |
 | `voidptr`         | `void *`          | -             |
 
 *Note*: `nativeptr` and `voidptr` exist in F# but others don't.
 
-First three types (`__inptr`, `__outptr`, `nativeptr`) are generic. They carry type of pointee.
+First three types (`InPtr`, `OutPtr`, `nativeptr`) are generic. They carry type of pointee.
 The difference is permission of read/write operations.
 
-The other two types (`__voidinptr`, `voidptr`) are *opaque* pointers.
+The other two types (`VoidInPtr`, `voidptr`) are *opaque* pointers.
 Type of pointee isn't statically known.
 Read/write operations don't directly work on them.
 Cast to a generic pointer type to use.
 
-`__outptr` is same as `nativeptr` in the view of C language.
-The difference is that `__outptr` isn't readable.
+`OutPtr` is same as `nativeptr` in the view of C language.
+The difference is that `OutPtr` isn't readable.
 Intentional usage is an uninitialized buffer (result of allocation function) and an output parameter.
 
 ### Notation of Types
@@ -61,7 +61,7 @@ It's invalidated when the variable goes out of scope.
 
 ```fsharp
     let x = 42
-    let p: __inptr<int> = &&x
+    let p: InPtr<int> = &&x
 ```
 
 - Writing to the content is undefined behavior.
@@ -70,7 +70,7 @@ It's invalidated when the variable goes out of scope.
 ### Allocated Pointer
 
 ```fsharp
-    Ptr.regionAlloc : uint -> __outptr<'T>
+    Ptr.regionAlloc : uint -> OutPtr<'T>
 ```
 
 `Ptr.regionAlloc` function allocates a number of items of a type on the current region and returns a pointer to the start of memory block.
@@ -111,20 +111,20 @@ There are two kind of potential usage:
     // when both 'P and 'Q are pointer types
     //      but 'P <> 'Q
 
-    Ptr.asIn : (__outptr<'T> -> __inptr<'T>)
-             & (nativeptr<'T> -> __inptr<'T>)
-             & (voidptr -> __voidinptr)
+    Ptr.asIn : (OutPtr<'T> -> InPtr<'T>)
+             & (nativeptr<'T> -> InPtr<'T>)
+             & (voidptr -> VoidInPtr)
 
-    Ptr.asNative : (__inptr<'T> -> nativeptr<'T>)
-                 & (__outptr<'T> -> nativeptr<'T>)
-                 & (__voidinptr -> voidptr)
+    Ptr.asNative : (InPtr<'T> -> nativeptr<'T>)
+                 & (OutPtr<'T> -> nativeptr<'T>)
+                 & (VoidInPtr -> voidptr)
 ```
 
 *Note*: `f : F & G` means the function type is overloaded to F and G.
 
 `Ptr.cast` casts a pointer to another pointer type.
 
-`Ptr.asIn` casts a pointer to `__inptr` or `__voidinptr` depending on the argument type.
+`Ptr.asIn` casts a pointer to `InPtr` or `VoidInPtr` depending on the argument type.
 This function doesn't change pointee type.
 
 `Ptr.asNative` casts a pointer to `nativeptr` or `voidptr` depending on the argument type.
@@ -154,7 +154,7 @@ For example, `Ptr.select p.Field` will derive a pointer to field from a pointer 
 
 ```fsharp
     Ptr.read : accessPath:'P -> 'T
-    // when 'P is either __inptr<'T> or nativeptr<'T>
+    // when 'P is either InPtr<'T> or nativeptr<'T>
 
     Ptr.read p      // *p in C
     Ptr.read p.[i]  // p[i] in C
@@ -168,7 +168,7 @@ Reading from an invalid pointer or reading as incorrect type is undefined behavi
 
 ```fsharp
     Ptr.write : accessPath:'P -> value:'T -> unit
-    // when 'P is either __outptr<'T> or nativeptr<'T>
+    // when 'P is either OutPtr<'T> or nativeptr<'T>
 
     // *p = value; in C
     Ptr.write p value
@@ -222,10 +222,10 @@ Also, [owned types](x_own_type.md) help such design.
 The codebase might still contain incorrect use of `obj` due to the change of its semantics.
 
 In previous version of the milone-lang, `obj` was one of pointer types that was equivalent to `void const *` in C.
-`obj` was used instead of current `__voidinptr`.
+`obj` was used instead of current `VoidInPtr`.
 
 However, there was a problem that `box` function did't always make a pointer to its argument but just cast it to pointer type when the value type was pointer-sized.
-For example, `Ptr.read (Ptr.cast (box 42un): __inptr<unativeint>)` attempted to read a value from an address `42`, which was definitely error.
+For example, `Ptr.read (Ptr.cast (box 42un): InPtr<unativeint>)` attempted to read a value from an address `42`, which was definitely error.
 
 That is, existing `box` function made use of `obj` type more unsafe.
-I decided to add a separate type `__voidinptr` for pointer.
+I decided to add a separate type `VoidInPtr` for pointer.

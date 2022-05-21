@@ -5,6 +5,7 @@
 // Impure things need replacing by ephemeral objects.
 module rec LibHttpServer.Program
 
+open Std.Region
 open Std.StdError
 open Std.StdMap
 
@@ -179,7 +180,7 @@ let private readLine (input: Stream) : string option * Stream =
   else
     None, input
 
-let private doWriteExact (ptr: __inptr<byte>) (len: uint) (output: Stream) : unit =
+let private doWriteExact (ptr: InPtr<byte>) (len: uint) (output: Stream) : unit =
   assert (len >= 1u)
 
   __nativeStmt (
@@ -207,8 +208,8 @@ let private writeExact (buf: Buffer) (len: uint) (output: Stream) : Buffer * Str
 let private writeStringExact (s: string) (output: Stream) : Stream =
   if s.Length > 0 then
     __nativeStmt ("char const *ptr = {0}.ptr;", s)
-    let ptr: __inptr<char> = __nativeExpr "ptr"
-    doWriteExact (__nativeCast ptr: __inptr<byte>) (uint s.Length) output
+    let ptr: InPtr<char> = __nativeExpr "ptr"
+    doWriteExact (__nativeCast ptr: InPtr<byte>) (uint s.Length) output
 
   output
 
@@ -272,7 +273,7 @@ module Option =
 /// (Therefore, this function never returns 0.)
 let private loopInRegion (f: unit -> int) : int =
   let rec go () =
-    let code = __inRegion f
+    let code = Region.run f
     if code = 0 then go () else code
 
   go ()

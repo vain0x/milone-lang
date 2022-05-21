@@ -134,7 +134,6 @@ let private primToArity ty prim =
   | HPrim.ToInt _
   | HPrim.ToFloat _
   | HPrim.String
-  | HPrim.InRegion
   | HPrim.NativeCast -> 1
 
   | HPrim.Add
@@ -558,6 +557,8 @@ let private exStmt ctx stmt : HStmt * EtaCtx =
     HLetValStmt(pat, init, loc), ctx
 
   | HLetFunStmt _ -> exLetFunStmt ctx stmt
+
+  | HNativeDeclStmt _ -> unreachable () // Generated in Hoist.
 
 let private exModule (ctx: EtaCtx) (m: HModule) =
   let ctx = { ctx with Vars = m.Vars }

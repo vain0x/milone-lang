@@ -484,7 +484,6 @@ let private cpStmt indent stmt acc : string list =
 
   | CNativeStmt (code, args) ->
     let code = expandPlaceholders args code
-
     acc |> cons code
 
 let private cpStmtList indent stmts acc : string list =
@@ -686,7 +685,9 @@ let private cpForwardDecl decl acc =
     // |> cons "static "
     |> cpFunForwardDecl name (cpParams args) resultTy
 
-  | CNativeDecl code -> acc |> cons code |> cons eol
+  | CNativeDecl (code, args) ->
+    let code = expandPlaceholders args code
+    acc |> cons code |> cons eol
 
 let private cpForwardDecls decls acc =
   decls
