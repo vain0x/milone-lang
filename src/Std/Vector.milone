@@ -68,7 +68,8 @@ let private rawGrowExact
   //   + (" -> " + string newCapacity)
   // )
 
-  let newPtr = Own.release (rawAllocate newCapacity size)
+  let newPtr =
+    Own.release (rawAllocate newCapacity size)
 
   if oldPtr <> Ptr.nullPtr then
     if length <> 0u then
@@ -190,7 +191,9 @@ module Vector =
       let ptr =
         rawAllocate (uint capacity) (uint sizeof<'T>)
 
-      let ptr: Own<nativeptr<'T>> = Own.acquire (__nativeCast (Own.release ptr))
+      let ptr: Own<nativeptr<'T>> =
+        Own.acquire (__nativeCast (Own.release ptr))
+
       Vector(ptr, 0u, uint capacity)
     else
       empty ()
@@ -198,7 +201,10 @@ module Vector =
   /// Disposes a vector.
   let dispose (v: Vector<'T>) : unit =
     let (Vector (ptr, _, _)) = v
-    let ptr: Own<voidptr> = Own.acquire (__nativeCast (Own.release ptr))
+
+    let ptr: Own<voidptr> =
+      Own.acquire (__nativeCast (Own.release ptr))
+
     rawDeallocate ptr
 
   /// Gets the length.
@@ -231,10 +237,15 @@ module Vector =
 
     let ptr, capacity =
       let itemPtr: VoidInPtr = __nativeExpr ("&({0})", item)
-      let ptr: Own<voidptr> = Own.acquire (__nativeCast (Own.release ptr))
+
+      let ptr: Own<voidptr> =
+        Own.acquire (__nativeCast (Own.release ptr))
+
       rawPush itemPtr ptr length capacity (uint sizeof<'T>)
 
-    let ptr: Own<nativeptr<'T>> = Own.acquire (__nativeCast (Own.release ptr))
+    let ptr: Own<nativeptr<'T>> =
+      Own.acquire (__nativeCast (Own.release ptr))
+
     Vector(ptr, length + 1u, capacity)
 
   /// Removes the last item from the vector unless empty.
@@ -260,7 +271,9 @@ module Vector =
 
     | x :: xs ->
       let (Vector (ptr, length, capacity)) = v
-      let ptr: Own<voidptr> = Own.acquire (__nativeCast (Own.release ptr))
+
+      let ptr: Own<voidptr> =
+        Own.acquire (__nativeCast (Own.release ptr))
 
       let addition = 1u + uint (List.length xs)
 
@@ -349,12 +362,16 @@ module Vector =
         itemComparer (Ptr.read (__nativeCast l: InPtr<'T>)) (Ptr.read (__nativeCast r: InPtr<'T>))
 
     let (Vector (ptr, length, capacity)) = v
-    let ptr = Own.acquire (__nativeCast (Own.release ptr))
+
+    let ptr =
+      Own.acquire (__nativeCast (Own.release ptr))
 
     let ptr =
       rawSortUnstable ptrComparer ptr length (uint sizeof<'T>)
 
-    let ptr = Own.acquire (__nativeCast (Own.release ptr))
+    let ptr =
+      Own.acquire (__nativeCast (Own.release ptr))
+
     Vector(ptr, length, capacity)
 
   /// Creates a vector by copying from a block.
@@ -420,12 +437,16 @@ module VectorExt =
     assert (addition >= 0)
 
     let (Vector (ptr, length, capacity)) = v
-    let ptr = Own.acquire (__nativeCast (Own.release ptr))
+
+    let ptr =
+      Own.acquire (__nativeCast (Own.release ptr))
 
     let ptr, capacity =
       rawReserve (uint addition) ptr length capacity (uint sizeof<'T>)
 
-    let ptr = Own.acquire (__nativeCast (Own.release ptr))
+    let ptr =
+      Own.acquire (__nativeCast (Own.release ptr))
+
     Vector(ptr, length, capacity)
 
   /// Reserves more memory for a vector.
@@ -438,10 +459,14 @@ module VectorExt =
     assert (addition >= 0)
 
     let (Vector (ptr, length, capacity)) = v
-    let ptr = Own.acquire (__nativeCast (Own.release ptr))
+
+    let ptr =
+      Own.acquire (__nativeCast (Own.release ptr))
 
     let ptr, capacity =
       rawReserveExact (uint addition) ptr length capacity (uint sizeof<'T>)
 
-    let ptr = Own.acquire (__nativeCast (Own.release ptr))
+    let ptr =
+      Own.acquire (__nativeCast (Own.release ptr))
+
     Vector(ptr, length, capacity)

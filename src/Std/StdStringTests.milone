@@ -14,7 +14,9 @@ let private testEnsureNullTerminated () =
   let t = S.StringExt.ensureNullTerminated s
   assert (shouldEqual id s t)
 
-  let b = byte (Ptr.read (S.StringExt.asPtr t).[5])
+  let b =
+    byte (Ptr.read (S.StringExt.asPtr t).[5])
+
   assert (shouldEqual string 0uy b)
 
 let private testToNative () =

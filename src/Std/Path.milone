@@ -172,7 +172,10 @@ module Pathname =
         |> List.rev
         |> S.concat "/"
 
-      if root <> "." then root + pathname else pathname
+      if root <> "." then
+        root + pathname
+      else
+        pathname
 
   /// Concatenates two pathnames in the order.
   ///

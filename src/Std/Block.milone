@@ -15,7 +15,8 @@ type BlockBuilder<'T> = private BlockBuilder of ptr: Own<OutPtr<'T>> * cap: uint
 // BlockBuilder helpers
 // -----------------------------------------------
 
-let private bbEmpty () : BlockBuilder<'T> = BlockBuilder(Own.acquire Ptr.nullPtr, 0u)
+let private bbEmpty () : BlockBuilder<'T> =
+  BlockBuilder(Own.acquire Ptr.nullPtr, 0u)
 
 let private bbAlloc (count: uint) : BlockBuilder<'T> =
   if count <> 0u then
@@ -260,7 +261,7 @@ module BlockExt =
   /// - Pointer can be null when length is zero.
   /// - Pointer is invalidated when to leave the current region.
   let unsafeToRawParts (block: Block<'T>) : InPtr<'T> * uint =
-    let (Block(ptr, len)) = block
+    let (Block (ptr, len)) = block
     ptr, len
 
   /// Creates a block by copying from a pointer.

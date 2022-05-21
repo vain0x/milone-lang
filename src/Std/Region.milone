@@ -6,9 +6,9 @@ open Std.Ptr
 /// (Similar to `calloc`.)
 ///
 /// Contents are zeroed.
-let rawRegionAlloc (count: uint) (size: uint): voidptr =
+let rawRegionAlloc (count: uint) (size: uint) : voidptr =
   if (count ||| size) <> 0u then
-    __nativeExpr("milone_region_alloc({0}, {1})", count, size)
+    __nativeExpr ("milone_region_alloc({0}, {1})", count, size)
   else
     Ptr.nullPtr
 

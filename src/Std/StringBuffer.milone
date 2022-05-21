@@ -13,8 +13,11 @@ let private uintMax (l: uint) r = if l < r then r else l
 
 let private vectorContainsByte (b: byte) (v: Vector<byte>) : bool * Vector<byte> =
   let ptr, len, _, v = VectorExt.unsafeDup v
+
   if len <> 0u then
-    let found: bool = __nativeExpr ("memchr({0}, {1}, {2}) != NULL", ptr, b, len)
+    let found: bool =
+      __nativeExpr ("memchr({0}, {1}, {2}) != NULL", ptr, b, len)
+
     found, v
   else
     false, v
@@ -149,10 +152,14 @@ module StringBuffer =
 
   /// Appends a string.
   let writeString (s: string) (sb: StringBuffer) : StringBuffer =
-    let charPtr: VoidInPtr = __nativeExpr ("(void const *){0}.ptr", s)
+    let charPtr: VoidInPtr =
+      __nativeExpr ("(void const *){0}.ptr", s)
 
     let (StringBuffer v) = sb
-    let v = unsafeWriteRawParts charPtr (uint s.Length) v
+
+    let v =
+      unsafeWriteRawParts charPtr (uint s.Length) v
+
     StringBuffer v
 
   /// Appends a non-NUL ASCII character.
@@ -183,11 +190,12 @@ module StringBuffer =
       width,
       value
     )
+
     let buf: VoidInPtr = __nativeExpr "(void const *)buf"
     let len: uint = __nativeExpr "len"
 
     let (StringBuffer v) = sb
-    StringBuffer (unsafeWriteRawParts buf len v)
+    StringBuffer(unsafeWriteRawParts buf len v)
 
   /// Appends a 64-bit integer in hexadecimal representation. (Zero-padded, lowercase, unsigned.)
   ///
@@ -205,11 +213,12 @@ module StringBuffer =
       width,
       value
     )
+
     let buf: VoidInPtr = __nativeExpr "(void const *)buf"
     let len: uint = __nativeExpr "len"
 
     let (StringBuffer v) = sb
-    StringBuffer (unsafeWriteRawParts buf len v)
+    StringBuffer(unsafeWriteRawParts buf len v)
 
   /// Appends a string representation of float. (Format isn't determined yet.)
   let writeFloat (value: float) (sb: StringBuffer) : StringBuffer =

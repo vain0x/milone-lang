@@ -27,13 +27,16 @@ let private unsafeDup (file: File) : FilePtr * File =
 
 module File =
   /// Gets the file abstraction of standard input.
-  let stdin () : File = File(Own.acquire (__nativeExpr "stdin"))
+  let stdin () : File =
+    File(Own.acquire (__nativeExpr "stdin"))
 
   /// Gets the file abstraction of standard output.
-  let stdout () : File = File(Own.acquire (__nativeExpr "stdout"))
+  let stdout () : File =
+    File(Own.acquire (__nativeExpr "stdout"))
 
   /// Gets the file abstraction of standard error.
-  let stderr () : File = File(Own.acquire (__nativeExpr "stderr"))
+  let stderr () : File =
+    File(Own.acquire (__nativeExpr "stderr"))
 
   /// Opens a regular file for reading.
   let openRead (io: IO) (pathname: string) : File option * IO =
