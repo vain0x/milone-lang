@@ -119,6 +119,8 @@ https://github.com/vain0x/milone-lang/commits/develop?after=689350a9d82133b68350
         - `split`, `splitAt`
         - `stripStart`, `stripEnd`
         - `parseHexAsUInt64`, `uint64ToHex`
+        - `StringExt`
+            - `asPtr`, etc.
 - Change `StdMap.TreeMap` to a generic union (from a synonym)
 - Fix an issue that `StdString.cutLine` and `toLines` aren't binary-safe
 

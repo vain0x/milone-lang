@@ -450,3 +450,21 @@ let format (s: string) (args: string list) =
          i + 1, s)
        (0, s)
   |> snd
+
+// -----------------------------------------------
+// StringExt
+// -----------------------------------------------
+
+/// Rarely-used or unsafe features.
+module StringExt =
+  let asPtr (s: string) = B.stringAsPtr s
+
+  let ensureNullTerminated (s: string) : string = B.ensureNullTerminatedString s
+
+  let toNative (s: string) = B.stringToNative s
+
+  let unsafeWrap ptr (length: int) : string = B.unsafeWrapString ptr length
+
+  let unsafeOfNative ptr : string = B.unsafeStringOfNative ptr
+
+  let unsafeOfRawParts ptr (length: int) : string = B.unsafeStringOfRawParts ptr length

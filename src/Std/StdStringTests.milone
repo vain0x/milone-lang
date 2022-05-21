@@ -1,0 +1,81 @@
+open Std.Ptr
+open Std.StdTesting
+
+module S = Std.StdString
+
+let private testAsPtr () =
+  let s = "Hello, world!"
+  let p = S.StringExt.asPtr s
+  assert (shouldEqual string 'H' (Ptr.read p))
+  assert (shouldEqual string '!' (Ptr.read p.[12]))
+
+let private testEnsureNullTerminated () =
+  let s = "Hello, world!".[0..4]
+  let t = S.StringExt.ensureNullTerminated s
+  assert (shouldEqual id s t)
+
+  let b = byte (Ptr.read (S.StringExt.asPtr t).[5])
+  assert (shouldEqual string 0uy b)
+
+let private testToNative () =
+  let s = "Hello, world!".[0..4]
+  let ptr = S.StringExt.toNative s
+
+  let b = byte (Ptr.read ptr.[5])
+  assert (shouldEqual string 0uy b)
+
+let private testUnsafeWrap () =
+  __nativeStmt
+    """
+      char buf[] = "Hello, world!";
+    """
+
+  let buf = __nativeExpr "buf"
+  let s = S.StringExt.unsafeWrap buf 5
+  assert (shouldEqual id "Hello" s)
+  assert (S.StringExt.asPtr s = buf)
+
+let private testUnsafeOfNative () =
+  __nativeStmt
+    """
+      char buf[] = "Hello, world!";
+    """
+
+  let buf = __nativeExpr "buf"
+  let s = S.StringExt.unsafeOfNative buf
+  assert (shouldEqual id "Hello, world!" s)
+
+  // Mutation doesn't affect the copy.
+  __nativeStmt
+    """
+      buf[12] = '?';
+    """
+
+  assert (shouldEqual id "Hello, world!" s)
+
+let private testUnsafeOfRawParts () =
+  __nativeStmt
+    """
+      char buf[] = "Hello, world!";
+    """
+
+  let buf = __nativeExpr "buf"
+  let s = S.StringExt.unsafeOfRawParts buf 5
+  assert (shouldEqual id "Hello" s)
+
+  // Mutation doesn't affect the copy.
+  __nativeStmt
+    """
+      buf[4] = '?';
+    """
+
+  assert (shouldEqual id "Hello" s)
+
+let testString () =
+  // StringExt:
+  testAsPtr ()
+  testEnsureNullTerminated ()
+  testToNative ()
+  testUnsafeWrap ()
+  testUnsafeOfNative ()
+  testUnsafeOfRawParts ()
