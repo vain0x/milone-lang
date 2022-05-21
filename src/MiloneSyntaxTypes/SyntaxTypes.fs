@@ -32,7 +32,7 @@ type ModuleSyntaxError = string * Pos
 
 type ModuleSyntaxData = DocId * TokenizeResult * ARoot * ModuleSyntaxError list
 
-/// filename -> (contents option)
+// filename -> (contents option)
 type ReadTextFileFun = string -> Future<string option>
 
 type FetchModuleFun = ProjectName -> ModuleName -> Future<ModuleSyntaxData option>
@@ -86,21 +86,21 @@ type Token =
   | LeftBraceToken
   /// `}`
   | RightBraceToken
-  /// `<`
+  // `<`
   | LeftAngleToken of adjacent: bool
-  /// `>`
+  // `>`
   | RightAngleToken
-  /// `[<`
+  // `[<`
   | LeftAttrToken
-  /// `>]`
+  // `>]`
   | RightAttrToken
-  /// `&`
+  // `&`
   | AmpToken
-  /// `&&`
+  // `&&`
   | AmpAmpToken of prefix: bool
-  /// `&&&`
+  // `&&&`
   | AmpAmpAmpToken
-  /// `->`
+  // `->`
   | ArrowToken
   /// `:`
   | ColonToken
@@ -118,15 +118,15 @@ type Token =
   | HatToken
   /// `^^^`
   | HatHatHatToken
-  /// `<=`
+  // `<=`
   | LeftEqualToken
-  /// `<<`
+  // `<<`
   | LeftLeftToken
-  /// `<<<`
+  // `<<<`
   | LeftLeftLeftToken
-  /// `<>`
+  // `<>`
   | LeftRightToken
-  /// `>=`
+  // `>=`
   | RightEqualToken
   /// `-`
   | MinusToken of minusPrefix: bool
@@ -134,7 +134,7 @@ type Token =
   | PercentToken
   /// `|`
   | PipeToken
-  /// `|>`
+  // `|>`
   | PipeRightToken
   /// `||`
   | PipePipeToken
@@ -180,7 +180,7 @@ type TokenizeFullResult = (Token * Pos) list
 [<NoEquality; NoComparison>]
 type Unary =
   | MinusUnary
-  /// `&&`
+  // `&&`
   | PtrOfUnary
 
 /// Binary operator.
@@ -198,29 +198,29 @@ type Binary =
   | SubBinary
   /// `=`
   | EqualBinary
-  /// `<>`
+  // `<>`
   | NotEqualBinary
-  /// `<`
+  // `<`
   | LessBinary
-  /// `<=`
+  // `<=`
   | LessEqualBinary
-  /// `>`
+  // `>`
   | GreaterBinary
-  /// `>=`
+  // `>=`
   | GreaterEqualBinary
-  /// `&&&`
+  // `&&&`
   | BitAndBinary
   /// `|||`
   | BitOrBinary
   /// `^^^`
   | BitXorBinary
-  /// `<<<`
+  // `<<<`
   | LeftShiftBinary
-  /// `>>>`
+  // `>>>`
   | RightShiftBinary
-  /// `|>`
+  // `|>`
   | PipeBinary
-  /// `&&`
+  // `&&`
   | LogicalAndBinary
   /// `||`
   | LogicalOrBinary
@@ -238,8 +238,8 @@ type Binary =
 type ATy =
   | AMissingTy of Pos
 
-  /// Named type with potential qualifiers and type arguments,
-  /// e.g. `int`, `TMap.AssocMap<K, V>`.
+  /// Named type with potential qualifiers and type arguments.
+  // E.g. `int`, `TMap.AssocMap<K, V>`.
   | AAppTy of quals: Name list * Name * ATy list * Pos
 
   /// Type variable, e.g. `'T`.
@@ -251,7 +251,8 @@ type ATy =
   /// Tuple type, e.g. `int * string`.
   | ATupleTy of ATy list * Pos
 
-  /// Function type, e.g. `int -> string`.
+  /// Function type.
+  // E.g. `int -> string`
   | AFunTy of ATy * ATy * Pos
 
 /// Pattern in AST.
@@ -293,8 +294,7 @@ type APat =
   | AOrPat of APat * APat * Pos
 
 /// Arm of match expression in AST.
-///
-/// `| pat when guard -> body`
+// `| pat when guard -> body`
 [<Struct; NoEquality; NoComparison>]
 type AArm = AArm of pat: APat * guard: AExpr option * body: AExpr * Pos
 
@@ -333,7 +333,7 @@ type AExpr =
 
   | ALitExpr of Lit * Pos
 
-  /// E.g. `x`, `f<'T>`.
+  // E.g. `x`, `f<'T>`.
   | AIdentExpr of Name * tyArgs: ATy list
 
   /// List literal, e.g. `[]`, `[2; 3]`.
@@ -345,10 +345,10 @@ type AExpr =
   /// `if cond then body else alt`.
   | AIfExpr of cond: AExpr * body: AExpr * alt: AExpr option * Pos
 
-  /// `match cond with (| pat when guard -> body)*`
+  // `match cond with (| pat when guard -> body)*`
   | AMatchExpr of cond: AExpr * arms: AArm list * Pos
 
-  /// `fun pat1 pat2 ... -> body`
+  // `fun pat1 pat2 ... -> body`
   | AFunExpr of APat list * AExpr * Pos
 
   /// Navigation, e.g. `s.Length`.
@@ -368,7 +368,8 @@ type AExpr =
   /// (`first .. step .. last` is unimplemented yet.)
   | ARangeExpr of AExpr * AExpr * Pos
 
-  /// Tuple construction or unit literal, e.g. `()`, `2, "two"`.
+  /// Tuple construction or unit literal.
+  // E.g. `()`, `2, "two"`.
   | ATupleExpr of AExpr list * Pos
 
   /// Type ascription, e.g. `None: int option`.

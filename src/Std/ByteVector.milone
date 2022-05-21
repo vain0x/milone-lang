@@ -4,7 +4,7 @@ open Std.Vector
 
 __nativeDecl "#include <string.h>" // for memcpy
 
-/// Functions for `Vector<byte>`.
+// Functions for `Vector<byte>`.
 module ByteVector =
   /// Creates a vector with the specified length and all elements are zero.
   let zeroCreate (length: int) : Vector<byte> = VectorExt.unsafeZeroCreate length

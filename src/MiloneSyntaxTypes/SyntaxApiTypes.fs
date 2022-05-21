@@ -47,7 +47,7 @@ type SyntaxAnalysisResult =
 
 [<RequireQualifiedAccess; NoEquality; NoComparison>]
 type SyntaxApi =
-  { /// getMiloneHomeEnv -> getHomeEnv -> MiloneHome
+  { // getMiloneHomeEnv -> getHomeEnv -> MiloneHome
     GetMiloneHomeFromEnv: (unit -> string option) -> (unit -> string option) -> string
     SyntaxErrorsToString: SyntaxError list -> string
 

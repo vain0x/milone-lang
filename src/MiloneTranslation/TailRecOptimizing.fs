@@ -5,19 +5,18 @@
 ///
 /// A function call to the function itself at the end of it
 /// is a *tail recursive* call.
-///
-/// ## Example
-///
-/// ```fsharp
-///   let rec length xs =
-///     match xs with
-///     | [] -> 0
-///     | _ :: xs -> length xs
-///   //             ^^^^^^ tail recursive call
-/// ```
+//
+// ## Example
+//
+// ```fsharp
+//   let rec length xs =
+//     match xs with
+//     | [] -> 0
+//     | _ :: xs -> length xs
+//   //             ^^^^^^ tail recursive call
+// ```
 module rec MiloneTranslation.TailRecOptimizing
 
-open MiloneShared.Util
 open Std.StdError
 open MiloneTranslation.Hir
 open MiloneTranslationTypes.HirTypes

@@ -1475,7 +1475,7 @@ let private inferRecordExpr ctx expectOpt baseOpt fields loc =
 
       txLetIn (TLetValStmt(varPat, baseExpr, loc)) recordExpr, recordTy, ctx
 
-/// match 'a with ( | 'a -> 'b )*
+// match 'a with ( | 'a -> 'b )*
 let private inferMatchExpr ctx expectOpt itself cond arms loc =
   let targetTy, ctx = freshMetaTyForExpr itself ctx
 

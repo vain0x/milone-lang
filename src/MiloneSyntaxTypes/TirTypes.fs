@@ -102,7 +102,7 @@ type Trait =
   /// The type supports `=`.
   | EqualTrait of Ty
 
-  /// The type supports `<`.
+  /// The type supports comparison operators.
   | CompareTrait of Ty
 
   /// For `l: lTy, r: rTy`, `l.[r]` is allowed.
@@ -301,7 +301,7 @@ type TExprKind =
   /// `-x`.
   | TMinusEN
 
-  /// `&&x`.
+  // `&&x`.
   | TPtrOfEN
 
   | TAppEN

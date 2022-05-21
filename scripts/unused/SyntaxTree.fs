@@ -6,11 +6,11 @@
 type private SyntaxKind =
   // Fragment
   | Path
-  /// `<_, _>`
+  // `<_, _>`
   | GenericArgList
   /// `ident = expr`
   | FieldInit
-  /// `| pat when guard -> body`
+  // `| pat when guard -> body`
   | Arm
   | ModuleHead
 

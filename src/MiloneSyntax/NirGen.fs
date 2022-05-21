@@ -24,15 +24,15 @@
 /// ```fsharp
 ///   // file: P/M.milone
 ///   module rec P.M
-///   <contents>
+///   contents...
 /// ```
 ///
-/// ==>
+/// ⇒
 ///
 /// ```fsharp
 ///   module rec P =
 ///     module rec M =
-///       <contents>
+///       contents...
 /// ```
 module rec MiloneSyntax.NirGen
 
@@ -68,7 +68,7 @@ let private axUnit loc = ATupleExpr([], loc)
 let private axFalse loc = ALitExpr(BoolLit false, loc)
 let private axTrue loc = ALitExpr(BoolLit true, loc)
 
-/// `not x` ==> `x = false`
+// Desugar: `not x` ==> `x = false`
 let private axNot arg loc =
   let falseExpr = axFalse loc
   ABinaryExpr(EqualBinary, arg, falseExpr, loc)
@@ -105,9 +105,8 @@ let private desugarListExpr items pos : AExpr =
   go items
 
 /// Desugars `if` to `match`.
-///
-/// `if cond then body else alt` ==>
-/// `match cond with | true -> body | false -> alt`.
+// `if cond then body else alt` ==>
+// `match cond with | true -> body | false -> alt`.
 let private desugarIf cond body altOpt pos : AExpr =
   let alt =
     match altOpt with
@@ -121,16 +120,15 @@ let private desugarIf cond body altOpt pos : AExpr =
   AMatchExpr(cond, arms, pos)
 
 /// Desugars to let expression.
-/// `fun x y .. -> z` ==> `let f x y .. = z in f`
+// `fun x y .. -> z` ==> `let f x y .. = z in f`
 let private desugarFun pats body pos : AExpr =
   let name = "fun"
   let next = AIdentExpr(Name(name, pos), [])
   ALetExpr(ALetContents.LetFun(NotRec, PrivateVis, Name(name, pos), pats, None, body), next, pos)
 
 /// Desugars `-x`.
-///
-/// `-(-x)` ==> x.
-/// `-n` (n: literal).
+// `-(-x)` ==> x.
+// `-n` (n: literal).
 let private desugarMinusUnary arg : AExpr option =
   match arg with
   | AUnaryExpr (MinusUnary, arg, _) -> Some arg
@@ -145,37 +143,37 @@ let private desugarMinusUnary arg : AExpr option =
 
   | _ -> None
 
-/// `l <> r` ==> `not (l = r)`
+// Desugar: `l <> r` ==> `not (l = r)`
 let private desugarBinNe l r pos : AExpr =
   let equalExpr = ABinaryExpr(EqualBinary, l, r, pos)
   axNot equalExpr pos
 
-/// `l <= r` ==> `not (r < l)`
+// Desugar: `l <= r` ==> `not (r < l)`
 /// NOTE: Evaluation order does change.
 let private desugarBinLe l r pos : AExpr =
   let ltExpr = ABinaryExpr(LessBinary, r, l, pos)
   axNot ltExpr pos
 
-/// `l > r` ==> `r < l`
-/// NOTE: Evaluation order does change.
+// Desugar: `l > r` ==> `r < l`
+// NOTE: Evaluation order does change.
 let private desugarBinGt l r pos : AExpr = ABinaryExpr(LessBinary, r, l, pos)
 
-/// `l >= r` ==> `not (l < r)`
+// Desugar: `l >= r` ==> `not (l < r)`
 let private desugarBinGe l r pos : AExpr =
   let ltExpr = ABinaryExpr(LessBinary, l, r, pos)
   axNot ltExpr pos
 
-/// `l && r` ==> `if l then r else false`
+// Desugar: `l && r` ==> `if l then r else false`
 let private desugarBinAnd l r pos : AExpr = desugarIf l r (Some(axFalse pos)) pos
 
-/// `l || r` ==> `if l then true else r`
+// Desugar: `l || r` ==> `if l then true else r`
 let private desugarBinOr l r pos : AExpr = desugarIf l (axTrue pos) (Some r) pos
 
-/// `x |> f` ==> `f x`
+// Desugar: `x |> f` ==> `f x`
 /// NOTE: Evaluation order does change.
 let private desugarBinPipe l r pos : AExpr = ABinaryExpr(AppBinary, r, l, pos)
 
-/// `let f ... : ty = body` ==> `let f ... = body : ty`
+// Desugar: `let f ... : ty = body` ==> `let f ... = body : ty`
 let private desugarResultTy expr resultTyOpt : AExpr =
   match resultTyOpt with
   | Some (ascriptionTy, ascriptionPos) -> AAscribeExpr(expr, ascriptionTy, ascriptionPos)

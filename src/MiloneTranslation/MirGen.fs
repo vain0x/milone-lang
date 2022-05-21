@@ -197,12 +197,12 @@ let private mxNot expr loc = MUnaryExpr(MNotUnary, expr, loc)
 let private mxStringAdd ctx l r loc =
   MBinaryExpr(MStringAddBinary, l, r, loc), ctx
 
-/// x op y ==> `x op y` if `x : {scalar}`
+// x op y ==> `x op y` if `x : {scalar}`
 /// where scalar types are int, char, etc.
 /// C language supports all operators.
 let private mxBinOpScalar ctx op l r loc = MBinaryExpr(op, l, r, loc), ctx
 
-/// x <=> y ==> `strcmp(x, y) <=> 0` if `x : string`
+// x <=> y ==> `strcmp(x, y) <=> 0` if `x : string`
 let private mxStringCompare ctx op l r loc =
   let stringCompareExpr =
     MBinaryExpr(MStringCompareBinary, l, r, loc)
@@ -540,8 +540,8 @@ let private doEmitIfStmt ctx cond thenHint body altHint alt targetTy loc =
   let ctx = addStmt ctx nextLabelStmt
   temp, ctx
 
-/// Tries to *sugar* a match expression to if expression
-/// when `match p with true -> body | false -> alt`.
+/// Tries to *sugar* a match expression to if expression.
+// `match p with true -> body | false -> alt`.
 let private mirifyExprMatchAsIfStmt ctx cond arms ty loc =
   let condTy, condLoc = exprExtract cond
 

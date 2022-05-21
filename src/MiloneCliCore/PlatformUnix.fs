@@ -20,8 +20,8 @@ let private escapeShellWord (s: string) : string =
 
 let private quoteShellWord (s: string) : string = "\"" + escapeShellWord s + "\""
 
-/// Formats a string of shell command fragment:
-///   `&& mkdir -p <OUTPUT-DIR> && cp <EXE> <OUTPUT>`
+/// Formats a string of shell command fragment.
+// `&& mkdir -p <OUTPUT-DIR> && cp <EXE> <OUTPUT>`
 let private andCopyCommand exeFile outputOpt =
   match outputOpt with
   | None -> ""

@@ -49,7 +49,7 @@ type CUnary =
   /// `!p`
   | CNotUnary
 
-  /// `&x`
+  // `&x`
   | CAddressOfUnary
 
   /// `*p`
@@ -100,7 +100,7 @@ type CExpr =
   /// `a.x`
   | CDotExpr of CExpr * Ident
 
-  /// `p->x`
+  // `p->x`
   | CArrowExpr of CExpr * Ident
 
   /// `a[i]`

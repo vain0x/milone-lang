@@ -113,7 +113,7 @@ type MBinary =
 
   /// `s.ptr[i]`
   | MStringIndexBinary
-  /// `&p[i]`
+  // `&p[i]`
   | MPtrAddBinary
 
 [<NoEquality; NoComparison>]
@@ -130,7 +130,6 @@ type MAction =
 
 [<NoEquality; NoComparison>]
 type MPrim =
-  /// string -> int
   | MIntOfStringPrim of intOfStringFlavor: IntFlavor
   | MFloatOfStringPrim of floatOfStringFlavor: FloatFlavor
   | MCharOfStringPrim

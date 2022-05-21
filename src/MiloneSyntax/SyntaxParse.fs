@@ -21,7 +21,7 @@
 ///   - `if cond then body else alt`
 ///     - `cond` and `body` are inner subterms
 ///     - `alt` is a dangling subterm
-///   - `match cond with | pat when guard -> body`
+///   - `match cond with | pat when guard → body`
 ///     - `cond`, `pat` and `guard` are inner subterms
 ///     - `body` is a dangling subterm if it's in the last arm;
 ///         or an inner subterm otherwise
@@ -113,7 +113,7 @@ let private canMerge3 (pos1: Pos) pos2 pos3 =
 
 /// Binding power.
 ///
-/// See: <https://docs.microsoft.com/en-us/dotnet/fsharp/language-reference/symbol-and-operator-reference/#operator-precedence>
+/// See: https://docs.microsoft.com/en-us/dotnet/fsharp/language-reference/symbol-and-operator-reference/#operator-precedence
 [<NoEquality; NoComparison>]
 type private Bp =
   | PrefixBp
@@ -122,7 +122,7 @@ type private Bp =
   | ConsBp
   | XorBp
 
-  /// `<`, `>`, `=`, `|>`, `|||`, `&&&`
+  // `<`, `>`, `=`, `|>`, `|||`, `&&&`
   | SigilBp
 
   | AndBp
@@ -323,7 +323,7 @@ let private eatVis tokens : Vis * Tokens =
 // Parse types
 // -----------------------------------------------
 
-/// `'<' ty '>'`
+// `'<' ty '>'`
 let private parseTyArgs basePos (tokens, errors) : PR<ATy list> =
   match tokens with
   | (LeftAngleToken true, ltPos) :: tokens when posInside basePos ltPos ->
@@ -344,7 +344,7 @@ let private parseTyArgs basePos (tokens, errors) : PR<ATy list> =
 
   | _ -> [], tokens, errors
 
-/// `qual.ident <...>`
+// `qual.ident <...>`
 let private parseNavTy basePos (tokens, errors) : PR<ATy> =
   let rec go acc (tokens, errors) =
     match tokens with
@@ -406,7 +406,7 @@ let private parseTyTuple basePos (tokens, errors) : PR<ATy> =
 
   | _ -> itemTy, tokens, errors
 
-/// `ty-fun = ty-tuple ( '->' ty-fun )?`
+// `ty-fun = ty-tuple ( '->' ty-fun )?`
 let private parseTyFun basePos (tokens, errors) : PR<ATy> =
   let sTy, tokens, errors = parseTyTuple basePos (tokens, errors)
 
@@ -757,7 +757,7 @@ let private parseApp basePos (tokens, errors) : PR<AExpr> =
 
   go callee (tokens, errors)
 
-/// `prefix = ('-' | '&&')? app`
+// `prefix = ('-' | '&&')? app`
 let private parsePrefix basePos (tokens, errors) : PR<AExpr> =
   match tokens with
   | (MinusToken _, pos) :: tokens ->
@@ -978,7 +978,7 @@ let private parseIf ifPos (tokens, errors) : PR<AExpr> =
   let altOpt, tokens, errors = parseElseClause ifPos (tokens, errors)
   AIfExpr(cond, body, altOpt, ifPos), tokens, errors
 
-/// `pat ( 'when' expr )? -> expr`
+// `pat ( 'when' expr )? -> expr`
 let private parseMatchArm matchPos armPos (tokens, errors) =
   let innerBasePos = matchPos |> posAddX 1
 
@@ -1038,7 +1038,7 @@ let private parseMatch matchPos (tokens, errors) : PR<AExpr> =
 
   AMatchExpr(cond, arms, matchPos), tokens, errors
 
-/// `fun-expr = 'fun' pat* '->' expr`
+// `fun-expr = 'fun' pat* '->' expr`
 let private parseFun basePos funPos (tokens, errors) : PR<AExpr> =
   let pats, tokens, errors =
     parsePatCallArgs basePos (tokens, errors)

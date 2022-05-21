@@ -8,7 +8,7 @@
 ///
 /// `Loop` is similar to `seq` in F# but not the same.
 ///
-/// `Loop<'S, 'T>` carries the type of internal state `'S` in its type.
+/// `Loop{'S, 'T}` carries the type of internal state `'S` in its type.
 ///
 /// - Pros: `Loop` runs fast enough but `seq` doesn't in current milone-lang
 /// - Cons: Less flexible than `seq`.
@@ -48,7 +48,7 @@ module Loop =
 
   let singleton (x: 'T) : Loop<_, 'T> = fun state folder -> folder state x
 
-  /// Generates integers such that `start <= i && i < endIndex`.
+  /// Generates integers from start to endIndex (exclusive).
   let range (start: int) (endIndex: int) : Loop<_, int> =
     fun state folder ->
       let rec loopRangeLoop (i: int) state =

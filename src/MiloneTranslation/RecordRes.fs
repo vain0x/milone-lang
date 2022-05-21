@@ -24,7 +24,7 @@ let private hxIsVarOrUnboxingVar expr =
 type private RrCtx =
   { Tys: TreeMap<TySerial, TyDef>
 
-    /// recordTySerial -> (fieldTys, (field -> (fieldIndex, fieldTy)))
+    // recordTySerial -> (fieldTys, (field -> (fieldIndex, fieldTy)))
     RecordMap: TreeMap<TySerial, (Ty list * TreeMap<Ident, int * Ty>)> }
 
 let private ofHirCtx (hirCtx: HirCtx) : RrCtx =
@@ -52,7 +52,7 @@ let private ofHirCtx (hirCtx: HirCtx) : RrCtx =
 ///     F2 = t2
 ///     F1 = t1
 ///   }
-/// //=>
+/// // ⇒
 ///   {
 ///     F1 = t1
 ///     F2 = t2
@@ -70,7 +70,7 @@ let private ofHirCtx (hirCtx: HirCtx) : RrCtx =
 ///       Fi = ti
 ///       ...
 ///   }
-/// //=>
+/// // ⇒
 ///   {
 ///       Fi = Ti  // specified fields
 ///       ...

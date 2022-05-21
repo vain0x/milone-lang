@@ -20,14 +20,14 @@ module List =
   ///
   /// If two lists have different length, some elements have no pair.
   /// These items are returns as second and third result.
-  ///
-  /// To check two list has same length, do:
-  ///
-  /// ```fsharp
-  ///   match List.zipEx xs ys with
-  ///   | it, [], [] -> Some it
-  ///   | _ -> None
-  /// ```
+  //
+  // To check two list has same length, do:
+  //
+  // ```fsharp
+  //   match List.zipEx xs ys with
+  //   | it, [], [] -> Some it
+  //   | _ -> None
+  // ```
   let zipEx (xs: 'T list) (ys: 'U list) : ('T * 'U) list * 'T list * 'U list =
     let rec listZipLoop acc xs ys =
       match xs, ys with

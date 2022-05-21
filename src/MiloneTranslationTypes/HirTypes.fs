@@ -206,7 +206,7 @@ type HExprKind =
   /// `-x`.
   | HMinusEN
 
-  /// `&&x`.
+  // `&&x`.
   | HPtrOfEN
 
   | HAppEN

@@ -95,8 +95,7 @@ type CliHost =
     ProfileLog: string -> Profiler -> unit
 
     /// Ensures directory exist.
-    ///
-    /// baseDir -> dir -> exist
+    // baseDir -> dir -> exist
     DirCreate: string -> string -> bool
 
     FileExists: string -> bool

@@ -22,12 +22,12 @@ let private identOf (name: NName) = fst name
 
 /// Identity of token based on its text position. (Byte index is better though.)
 ///
-/// While both row number  and column number are 32-bit,
+/// While both row number and column number are 32-bit,
 /// PosId is compressed to 32-bit.
 ///
 /// Heuristically most of source files follow either:
-///    1. y <= 2^23 and x <= 2^9 (manually written)
-///    2. x <= 2^23 and y <= 2^9 (machinery generated)
+///    1. y ≤ 2^23 and x ≤ 2^9 (manually written)
+///    2. x ≤ 2^23 and y ≤ 2^9 (machinery generated)
 /// (noting that 2^9 ~ 500, 2^23 ~ 8M.)
 ///
 /// By rotating x by 23 bits up, y and x likely become orthogonal.
@@ -336,8 +336,8 @@ type private ScopeCtx =
     Local: Scope
 
     /// Variables defined in current pattern.
-    ///
-    /// ident -> (varSerial, definedLoc, usedLoc list)
+    //
+    // ident -> (varSerial, definedLoc, usedLoc list)
     PatScope: TreeMap<Ident, VarSerial * Loc * Loc list>
 
     NewLogs: (NameResLog * Loc) list }
@@ -454,7 +454,7 @@ let private addTyToNs (ctx: ScopeCtx) (nsOwner: NsOwner) alias tySymbol : ScopeC
 
 /// Makes a child namespace accessible from a namespace.
 ///
-/// `<parent>.<alias>` can be resolved to `<child>`.
+/// `parent.alias` can be resolved to `child`.
 let private addNsToNs (ctx: ScopeCtx) (parentNsOwner: NsOwner) alias (childNsOwner: NsOwner) : ScopeCtx =
   // __trace (
   //   "addNsToNs "
@@ -1280,7 +1280,7 @@ let private npNormalize (pat: NPat) : NPat list =
   /// - sub-patterns
   /// - a function to update sub-patterns
   ///
-  /// That is, `decompose Pat(P) = (P, fun P' -> Pat(P'))`
+  /// That is, `decompose Pat(P) = (P, fun P' → Pat(P'))`
   /// where P, P' are arguments of a particular pattern.
   let decompose pat =
     match pat with

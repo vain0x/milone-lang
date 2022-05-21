@@ -178,7 +178,7 @@ module StringBuffer =
   ///
   /// If decimal representation of `value` is shorter than `width`,
   /// leading 0's are filled to write at least `width` bytes.
-  /// `width` must be `<= 300`.
+  /// `width` must be less than 300.
   let writeUInt64 (width: int) (value: uint64) (sb: StringBuffer) : StringBuffer =
     assert (width >= 0 && width <= 300)
 
@@ -201,7 +201,7 @@ module StringBuffer =
   ///
   /// If `value` can be written in hex digits shorter than `width`,
   /// leading 0's are filled to write at least `width` bytes.
-  /// `width` must be `<= 300`.
+  /// `width` must be less than 300.
   let writeHex (width: int) (value: uint64) (sb: StringBuffer) : StringBuffer =
     assert (width >= 0 && width <= 300)
 
@@ -232,7 +232,7 @@ module StringBuffer =
   ///
   /// - `writeSep` is called after non-first item to write a separator.
   ///
-  /// E.g. `sb |> StringBuffer.writeList StringBuffer.writeInt ", " [1; 2; 3]` → `1, 2, 3`
+  /// E.g. `StringBuffer.writeList StringBuffer.writeInt ", " [1; 2; 3] sb` → `1, 2, 3`
   let writeList
     (writeItem: 'T -> StringBuffer -> StringBuffer)
     (sep: string)
@@ -252,7 +252,7 @@ module StringBuffer =
   ///
   /// - `writeSep` is called after non-first item to write a separator.
   ///
-  /// E.g. `sb |> StringBuffer.writeBlock StringBuffer.writeInt ", " (Block.ofList [ 1; 2; 3 ])` → `1, 2, 3`
+  /// E.g. `StringBuffer.writeBlock StringBuffer.writeInt ", " (Block.ofList [ 1; 2; 3 ]) sb` → `1, 2, 3`
   let writeBlock
     (writeItem: 'T -> StringBuffer -> StringBuffer)
     (sep: string)

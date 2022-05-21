@@ -35,9 +35,9 @@ type LSyntaxData = private LSyntaxData of ModuleSyntaxData
 // Utils
 // -----------------------------------------------
 
+// Usage:
+//  state |> up folder item1 |> up folder tem2 |> ...
 /// Folds single value to update a state.
-///
-/// Usage: `state |> up folder item1 |> up folder item2 |> ...`
 let private up (folder: 'S -> 'T -> 'S) (item: 'T) (state: 'S) : 'S = folder state item
 
 let private upOpt (folder: 'S -> 'T -> 'S) (itemOpt: 'T option) (state: 'S) : 'S = Option.fold folder state itemOpt

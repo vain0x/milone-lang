@@ -14,7 +14,7 @@ module S = Std.StdString
 
 let private emptyOwnedTySet: TreeSet<TySerial> = TSet.empty compare
 
-/// varSerial -> (true = owned | false = disposed)
+/// Mapping from varSerial to (true = owned | false = disposed)
 type private OwnershipMap = TreeMap<VarSerial, bool>
 
 /// Empty ownership map.
