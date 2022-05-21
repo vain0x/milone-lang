@@ -309,7 +309,7 @@ type HStmt =
   | HLetFunStmt of FunSerial * argPats: HPat list * body: HExpr * Loc
 
   /// Generated after Hoist.
-  | HNativeDeclStmt of cCode: string * Loc
+  | HNativeDeclStmt of cCode: string * args: HExpr list * Loc
 
 type VarMap = TreeMap<VarSerial, VarDef>
 type VarNameMap = TreeMap<VarSerial, Ident>

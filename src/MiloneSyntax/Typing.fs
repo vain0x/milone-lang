@@ -1734,6 +1734,31 @@ let private inferPrimAppExpr ctx itself =
   // __nativeDecl "code"
   | TPrim.NativeDecl, TLitExpr (StringLit code, _) -> TNodeExpr(TNativeDeclEN code, [], tyUnit, loc), tyUnit, ctx
 
+  // __nativeDecl ("code", args...)
+  | TPrim.NativeDecl, TNodeExpr (TTupleEN, TLitExpr (StringLit code, _) :: args, _, _) ->
+    // Infer arguments. Arguments are restricted so that statements don't emit on top-level.
+    let args, ctx =
+      args
+      |> List.mapFold
+           (fun ctx arg ->
+             let arg, _, ctx =
+               match arg with
+               | TLitExpr _
+               | TVarExpr _ -> inferExpr ctx None arg
+
+               | TNodeExpr (TAppEN, [ TPrimExpr (TPrim.NativeFun, _, _); TFunExpr _ ], _, _) -> inferExpr ctx None arg
+
+               | TNodeExpr (TTyPlaceholderEN, [], ty, loc) ->
+                 let ty, ctx = resolveAscriptionTy ctx ty
+                 TNodeExpr(TTyPlaceholderEN, [], ty, loc), ty, ctx
+
+               | _ -> errorExpr ctx "Expected a literal, a name or (__type: T)." (exprToLoc arg)
+
+             arg, ctx)
+           ctx
+
+    TNodeExpr(TNativeDeclEN code, args, tyUnit, loc), tyUnit, ctx
+
   | _ -> inferAppExpr ctx itself
 
 let private inferWriteExpr ctx expr : TExpr * Ty * TyCtx =

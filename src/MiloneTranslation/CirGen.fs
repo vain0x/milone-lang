@@ -1337,8 +1337,9 @@ let private cgDecls (ctx: CirCtx) decls =
     let ctx = addDecl ctx funDecl
     cgDecls ctx decls
 
-  | MNativeDecl (code, _) :: decls ->
-    let ctx = addDecl ctx (CNativeDecl code)
+  | MNativeDecl (code, args, _) :: decls ->
+    let args, ctx = cgExprList ctx args
+    let ctx = addDecl ctx (CNativeDecl(code, args))
     cgDecls ctx decls
 
 // Sort declarations by kind.
@@ -1388,7 +1389,7 @@ let private cgModule (ctx: CirCtx) (m: MModule) : DocId * CDecl list =
     let leadingNativeDeclAcc, decls =
       let rec go acc decls =
         match decls with
-        | (MNativeDecl (cCode, _)) :: decls -> go (CNativeDecl cCode :: acc) decls
+        | (MNativeDecl (cCode, [], _)) :: decls -> go (CNativeDecl(cCode, []) :: acc) decls
         | _ -> acc, decls
 
       go [] m.Decls

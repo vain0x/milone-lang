@@ -239,7 +239,7 @@ type MDecl =
     resultTy: Ty *
     localVars: (VarSerial * Ty * Loc) list *
     Loc
-  | MNativeDecl of code: string * Loc
+  | MNativeDecl of code: string * args: MExpr list * Loc
 
 [<RequireQualifiedAccess; NoEquality; NoComparison>]
 type MModule =
@@ -259,7 +259,7 @@ type MModule =
 let mDeclToLoc (decl: MDecl) : Loc =
   match decl with
   | MProcDecl (_, _, _, _, _, loc) -> loc
-  | MNativeDecl (_, loc) -> loc
+  | MNativeDecl (_, _, loc) -> loc
 
 // -----------------------------------------------
 // Expression sugaring (MIR)

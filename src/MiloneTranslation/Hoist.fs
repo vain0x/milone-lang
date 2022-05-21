@@ -110,7 +110,9 @@ let private hoistExpr ctx expr : HExpr * HoistCtx =
 
     HMatchExpr(cond, arms, ty, loc), ctx
 
-  | HNodeExpr (HNativeDeclEN cCode, _, _, loc) -> hxUnit loc, addDecl (HNativeDeclStmt(cCode, loc)) ctx
+  | HNodeExpr (HNativeDeclEN cCode, args, _, loc) ->
+    let args, ctx = args |> List.mapFold hoistExpr ctx
+    hxUnit loc, addDecl (HNativeDeclStmt(cCode, args, loc)) ctx
 
   | HNodeExpr (kind, items, ty, loc) ->
     let items, ctx = items |> List.mapFold hoistExpr ctx

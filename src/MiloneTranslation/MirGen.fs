@@ -929,7 +929,7 @@ let private reuseVarOnStmt (reuseMap: VarReuseMap) stmt =
   | HExprStmt expr -> HExprStmt(onExpr expr)
   | HLetValStmt (pat, init, loc) -> HLetValStmt(onPat pat, onExpr init, loc)
   | HLetFunStmt (serial, args, body, loc) -> HLetFunStmt(serial, List.map onPat args, onExpr body, loc)
-  | HNativeDeclStmt _ -> stmt
+  | HNativeDeclStmt (code, args, loc) -> HNativeDeclStmt (code, List.map onExpr args, loc)
 
 let private doReuseArmLocals funSerial arms (ctx: MirCtx) : _ * MirCtx =
   let emptyReuseMap: VarReuseMap = TMap.empty varSerialCompare
@@ -1542,7 +1542,11 @@ let private mirifyExprInf ctx itself kind args ty loc =
     MUnitExpr loc, ctx
 
   | HNativeDeclEN code, _, _ ->
-    let ctx = addDecl ctx (MNativeDecl(code, loc))
+    let args, ctx = mirifyExprs ctx args
+
+    let ctx =
+      addDecl ctx (MNativeDecl(code, args, loc))
+
     MUnitExpr loc, ctx
 
   | HSizeOfEN, [ HNodeExpr (_, _, ty, _) ], _ -> MGenericValueExpr(MSizeOfGv, ty, loc), ctx
@@ -1718,7 +1722,9 @@ let private mirifyStmt (ctx: MirCtx) (stmt: HStmt) : MirCtx =
 
   | HLetFunStmt (funSerial, argPats, body, loc) -> mirifyExprLetFunContents ctx funSerial argPats body loc
 
-  | HNativeDeclStmt (cCode, loc) -> addDecl ctx (MNativeDecl(cCode, loc))
+  | HNativeDeclStmt (cCode, args, loc) ->
+    let args, ctx = mirifyExprs ctx args
+    addDecl ctx (MNativeDecl(cCode, args, loc))
 
 let private mirifyModule (ctx: MirCtx) (m: HModule2) =
   let ctx =

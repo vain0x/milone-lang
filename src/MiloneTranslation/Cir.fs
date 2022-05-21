@@ -175,4 +175,4 @@ type CDecl =
 
   | CStaticFunDecl of Ident * args: (Ident * CTy) list * resultTy: CTy * body: CStmt list
 
-  | CNativeDecl of string
+  | CNativeDecl of string * args: CExpr list

@@ -13,6 +13,15 @@ typedef void(*VoidConstPtrInt32VoidFunPtr2)(void const *, int32_t);
 
 struct Int32UnitFun1;
 
+struct R_;
+
+
+    int32_t native_code_native_code_getX(struct R_ *r);
+
+    int32_t getX(struct R_ *r) {
+      return native_code_native_code_getX(r);
+    }
+  
 void native_code_native_code_writeLine(struct String msg_);
 
 int32_t native_code_native_code_freshId(void);
@@ -27,6 +36,8 @@ uintptr_t native_code_native_code_CharMutPtrUIntPtrFun1_alignOf(char *arg_2);
 
 void native_code_native_code_nativeStmtWithTyPlaceholder(void);
 
+int32_t native_code_native_code_getX(struct R_ *r_);
+
 int main(int argc, char **argv);
 
 
@@ -35,6 +46,11 @@ struct Int32UnitFun1 {
     VoidConstPtrInt32VoidFunPtr2 fun;
     void const *env;
 };
+
+struct R_ {
+    int32_t t0;
+};
+
 
 void native_code_native_code_writeLine(struct String msg_) {
 
@@ -80,6 +96,10 @@ void native_code_native_code_nativeStmtWithTyPlaceholder(void) {
     call_2 = native_code_native_code_Int32UnitFun1MutPtrUIntPtrFun1_alignOf(((struct Int32UnitFun1 *)NULL));
     if ((call_2 != (size_t)8ULL)) milone_assert_error("native_code/native_code.milone", 47, 2);
     return;
+}
+
+int32_t native_code_native_code_getX(struct R_ *r_) {
+    return (*(r_)).t0;
 }
 
 int main(int argc, char **argv) {

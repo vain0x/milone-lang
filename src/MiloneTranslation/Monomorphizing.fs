@@ -253,7 +253,7 @@ let private rewriteStmt (rx: RewriteRx) stmt : HStmt option =
       HLetFunStmt(callee, args, onExpr body, loc)
       |> Some
 
-  | HNativeDeclStmt _ -> Some stmt
+  | HNativeDeclStmt (code, args, loc) -> HNativeDeclStmt(code, onExprs args, loc) |> Some
 
 // -----------------------------------------------
 // Generation
