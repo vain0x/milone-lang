@@ -12,22 +12,23 @@ Escape sequences work same as string literals. See also [String type](string_typ
 
 ### Conversion
 
-`char` function converts an integer to `char` type. (Signedness and precision are unspecified.)
+`char` function converts an 8-bit integer to `char` type.
 
 ```fsharp
-    assert (char 65 = 'A')
+    assert (char 65uy = 'A')
 ```
 
-Char value can be converted to integer types. See [Int types#Conversion](integer_types.md#Conversion) for details.
+Char value can be converted to 8-bit integer types. See [Int types#Conversion](integer_types.md#Conversion) for details.
 
 ```fsharp
-    assert (int 'A' = 65)
+    assert (byte 'A' = 65uy)
 ```
 
 ### Remarks
 
 - Single `char` value can't represent all "character" in the world. Learn about Unicode for details.
 - `char` value is typically used to represent a UTF-8 code unit in milone-lang, but it's not guaranteed.
+- `char` doesn't support comparison operators (`<` etc.) to avoid incompatibility with F#.
 
 ## Advanced topics
 
@@ -40,3 +41,17 @@ Currently, `char` in milone-lang is same as `char` in C language.
 Notice `char` can signed *or* unsigned, depending on implementation.
 Even when `char` is signed, it's different type from `signed char`.
 See [Types](https://en.cppreference.com/w/c/language/type).
+
+The difference makes some of operations work incompatibly.
+
+```fsharp
+    assert (char (-1) = char 0xffff) // F#
+
+    // If char->uint conversion were allowed:
+    assert (uint (char (-1)) <> 0xff) // F#
+    assert (uint (char (-1)) = 0xff) // milone-lang
+
+    // If char comparison is allowed:
+    assert (char (-1) >= char 0) // F#
+    assert (char (-1) < char 0) // milone-lang
+```

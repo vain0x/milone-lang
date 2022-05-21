@@ -400,7 +400,7 @@ let private traitBoundErrorToString tyDisplay it =
     + tyDisplay ty
 
   | ToCharTrait ty -> "Can't convert to char from: " + tyDisplay ty
-  | ToIntTrait ty -> "Can't convert to integer from: " + tyDisplay ty
+  | ToIntTrait (_, ty) -> "Can't convert to integer from: " + tyDisplay ty
   | ToFloatTrait ty -> "Can't convert to float from: " + tyDisplay ty
   | ToStringTrait ty -> "Can't convert to string from: " + tyDisplay ty
   | PtrTrait ty -> "Expected a pointer type but was: " + tyDisplay ty

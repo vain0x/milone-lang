@@ -7,10 +7,6 @@ let main _ =
   assert (int 42u = 42)
   assert (uint 42 = 42u)
 
-  // Conversion from/to char.
-  assert (uint 'A' = 65u)
-  assert (char 65u = 'A')
-
   // Conversion from/to string.
   assert (int (uint "42") = 42)
   assert (string 42u = "42")

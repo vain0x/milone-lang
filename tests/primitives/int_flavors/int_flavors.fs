@@ -5,7 +5,7 @@ module rec int_types.Program
 
 // Integer literal without suffix is of int.
 
-let signedCases () =
+let private signedCases () =
   // int32 is same as int.
   assert (int32 1 = 1)
 
@@ -51,7 +51,7 @@ let signedCases () =
   // Conversion from string.
   assert (int (int64 "-3693693693" / 3L) = -1231231231)
 
-let unsignedCases () =
+let private unsignedCases () =
   // byte is same as uint8.
   assert (byte 1 = uint8 1)
 
@@ -102,8 +102,16 @@ let private suffix () =
 
   assert (string 180150120900600300L = "180150120900600300")
 
+let private charConversion () =
+  // Byte-sized integers can convert from/to char.
+  assert (char 65y = 'A')
+  assert (int8 'A' = 65y)
+  assert (char 65uy = 'A')
+  assert (byte 'A' = 65uy)
+
 let main _ =
   signedCases ()
   unsignedCases ()
   suffix ()
+  charConversion ()
   0

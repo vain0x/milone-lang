@@ -8,6 +8,8 @@ void int_flavors_int_flavors_unsignedCases(void);
 
 void int_flavors_int_flavors_suffix(void);
 
+void int_flavors_int_flavors_charConversion(void);
+
 int main(int argc, char **argv);
 
 void int_flavors_int_flavors_signedCases(void) {
@@ -88,10 +90,19 @@ void int_flavors_int_flavors_suffix(void) {
     return;
 }
 
+void int_flavors_int_flavors_charConversion(void) {
+    if ((((char)(int8_t)65) != 'A')) milone_assert_error("int_flavors/int_flavors.milone", 106, 2);
+    if ((((int8_t)'A') != (int8_t)65)) milone_assert_error("int_flavors/int_flavors.milone", 107, 2);
+    if ((((char)(uint8_t)65U) != 'A')) milone_assert_error("int_flavors/int_flavors.milone", 108, 2);
+    if ((((uint8_t)'A') != (uint8_t)65U)) milone_assert_error("int_flavors/int_flavors.milone", 109, 2);
+    return;
+}
+
 int main(int argc, char **argv) {
     milone_start(argc, argv);
     int_flavors_int_flavors_signedCases();
     int_flavors_int_flavors_unsignedCases();
     int_flavors_int_flavors_suffix();
+    int_flavors_int_flavors_charConversion();
     return 0;
 }

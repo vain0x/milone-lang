@@ -118,7 +118,7 @@ type Trait =
   | ToCharTrait of Ty
 
   /// Type supports conversion to integer.
-  | ToIntTrait of Ty
+  | ToIntTrait of flavor: IntFlavor * Ty
 
   | ToFloatTrait of Ty
 

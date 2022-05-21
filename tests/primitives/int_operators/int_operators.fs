@@ -57,7 +57,6 @@ let compareTest (n2: int) (n3: int) =
 
 let toIntTest () =
   assert (int 0 = 0)
-  assert (int 'a' = 97)
   assert (int "42" = 42)
   assert (int "-1" + 1 = 0)
 

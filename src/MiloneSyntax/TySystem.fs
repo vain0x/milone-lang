@@ -112,7 +112,7 @@ let traitMapTys f it =
   | IsIntTrait ty -> IsIntTrait(f ty)
   | IsNumberTrait ty -> IsNumberTrait(f ty)
   | ToCharTrait ty -> ToCharTrait(f ty)
-  | ToIntTrait ty -> ToIntTrait(f ty)
+  | ToIntTrait (flavor, ty) -> ToIntTrait(flavor, f ty)
   | ToFloatTrait ty -> ToFloatTrait(f ty)
   | ToStringTrait ty -> ToStringTrait(f ty)
   | PtrTrait ty -> PtrTrait(f ty)

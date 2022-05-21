@@ -81,11 +81,10 @@ void int_operators_int_operators_toIntTest(void) {
     int32_t call_;
     int32_t call_1;
     if ((0 != 0)) milone_assert_error("int_operators/int_operators.milone", 58, 2);
-    if ((((int32_t)'a') != 97)) milone_assert_error("int_operators/int_operators.milone", 59, 2);
     call_ = string_to_int32((struct String){.ptr = "42", .len = 2});
-    if ((call_ != 42)) milone_assert_error("int_operators/int_operators.milone", 60, 2);
+    if ((call_ != 42)) milone_assert_error("int_operators/int_operators.milone", 59, 2);
     call_1 = string_to_int32((struct String){.ptr = "-1", .len = 2});
-    if (((call_1 + 1) != 0)) milone_assert_error("int_operators/int_operators.milone", 61, 2);
+    if (((call_1 + 1) != 0)) milone_assert_error("int_operators/int_operators.milone", 60, 2);
     return;
 }
 

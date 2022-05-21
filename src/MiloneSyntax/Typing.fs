@@ -381,7 +381,7 @@ let private instantiateBoundedTyScheme (ctx: TyCtx) (tyScheme: BoundedTyScheme) 
              | IsIntTrait ty -> Some ty
              | IsNumberTrait ty -> Some ty
              | ToCharTrait ty -> Some ty
-             | ToIntTrait ty -> Some ty
+             | ToIntTrait (_, ty) -> Some ty
              | ToFloatTrait ty -> Some ty
              | ToStringTrait ty -> Some ty
              | _ -> None
@@ -592,6 +592,7 @@ let private resolveTraitBound (ctx: TyCtx) theTrait loc : TyCtx =
   | CompareTrait ty ->
     match ty with
     | Ty (TupleTk, []) -> ok ctx
+    | Ty (CharTk, _) -> error ctx
     | _ -> expectBasic ctx ty
 
   | IndexTrait (lTy, rTy, resultTy) ->
@@ -618,22 +619,24 @@ let private resolveTraitBound (ctx: TyCtx) theTrait loc : TyCtx =
   | ToCharTrait (Ty (tk, _)) ->
     match tk with
     | ErrorTk _
-    | IntTk _
-    | FloatTk _
+    | IntTk I8
+    | IntTk U8
     | CharTk
     | StringTk -> ok ctx
 
     | _ -> error ctx
 
-  | ToIntTrait (Ty (tk, _)) ->
-    match tk with
-    | ErrorTk _
-    | IntTk _
-    | FloatTk _
-    | CharTk
-    | StringTk
-    | VoidPtrTk _
-    | NativePtrTk _ -> ok ctx
+  | ToIntTrait (flavor, Ty (tk, _)) ->
+    match tk, flavor with
+    | ErrorTk _, _
+    | IntTk _, _
+    | FloatTk _, _
+    | StringTk, _
+    | VoidPtrTk _, _
+    | NativePtrTk _, _ -> ok ctx
+
+    | CharTk, I8
+    | CharTk, U8 -> ok ctx
 
     | _ -> error ctx
 
@@ -1183,7 +1186,7 @@ let private primIntScheme flavor =
   let meta id = tyMeta id noLoc
   let srcTy = meta 1
   let resultTy = Ty(IntTk flavor, [])
-  BoundedTyScheme([ 1 ], tyFun srcTy resultTy, [ ToIntTrait srcTy ])
+  BoundedTyScheme([ 1 ], tyFun srcTy resultTy, [ ToIntTrait(flavor, srcTy) ])
 
 let private primFloatScheme flavor =
   let meta id = tyMeta id noLoc

@@ -38,6 +38,7 @@ https://github.com/vain0x/milone-lang/commits/develop?after=689350a9d82133b68350
     - Support equality for built-in types: list, option, tuple and discriminated union
         - (Note `open Std.Equal` is required to enable this feature.)
     - `unit` is comparable now
+    - `char` is now convertible from/to 8-bit integers to avoid incompatibility with F#
     - `option` is defined as a discriminated union now (which is still built-in type, almost non-functional change)
     - `Result` is a new built-in type (which is also defined as a discriminated union)
 - Improve transformation:
