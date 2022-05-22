@@ -478,7 +478,7 @@ let private writeResponse (res: HttpResponseContext) : unit =
 ///
 /// - None: stream ends
 /// - Some 0: a request is gracefully processed
-/// - Some code when `code <> 0`: error
+/// - Some code when code is non-zero: error
 let private readReq (handler: HttpActionContext -> unit) (input: Stream) (output: Stream) : int option =
   __trace "reading request line"
   let reqLineOpt, input = readRequestLine input

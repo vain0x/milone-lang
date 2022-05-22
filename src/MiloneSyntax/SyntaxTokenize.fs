@@ -428,7 +428,7 @@ let private evalStringLit (text: string) (l: int) (r: int) : Token =
       i
 
   /// Splits a string to alternating list of unescaped "verbatim" parts
-  /// and escape sequences. E.g. "hello\nworld" -> "hello", "\n", "world".
+  /// and escape sequences. E.g. "hello\nworld" ⇒ "hello", "\n", "world".
   let rec go acc i =
     assert (i < r)
 

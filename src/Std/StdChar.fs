@@ -3,7 +3,7 @@ module rec Std.StdChar
 /// Subtracts char codes.
 let subtract (l: char) (r: char) : char = char (byte l - byte r)
 
-/// Gets whether a char is in ASCII range, i.e. `0x00 <= c <= 0x7f`.
+/// Gets whether a char is in ASCII range.
 let isAscii (c: char) : bool = byte c <= 0x7fuy
 
 // -----------------------------------------------

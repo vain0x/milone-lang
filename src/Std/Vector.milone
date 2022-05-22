@@ -81,7 +81,7 @@ let private rawGrowExact
 
 /// Reserves more capacity for an untyped vector.
 ///
-/// In result, `length + addition <= capacity`.
+/// In result, `length + addition` doesn't exceed capacity`.
 let private rawReserve (addition: uint) ptr length capacity size =
   assert (addition < (1u <<< 31) - length)
 
@@ -430,7 +430,7 @@ module VectorExt =
   /// Reserves more memory for a vector.
   ///
   /// - If the vector already have plenty memory, it's noop.
-  /// - Result vector should satisfy `length + addition <= capacity`.
+  /// - Result vector should satisfy `length + addition` is less than or equal to `capacity`.
   ///   Note that new capacity may be greater than required size
   ///   to ensure the number of reallocation is small (O(log N)).
   let reserve (addition: int) (v: Vector<'T>) : Vector<'T> =

@@ -166,8 +166,8 @@ module Block =
     slice 0 index block, slice index (length block) block
 
   /// Tries to split a block into a pair of the first item and the other part.
-  ///
-  /// E.g. `[: x1; x2; ... :]` => `Some (x1, [: x2; ... :])`
+  //
+  // E.g. `[: x1; x2; ... :]` => `Some (x1, [: x2; ... :])`
   let uncons (block: Block<'T>) : ('T * Block<'T>) option =
     let (Block (ptr, len)) = block
 

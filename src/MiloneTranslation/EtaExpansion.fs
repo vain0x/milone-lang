@@ -41,7 +41,7 @@
 ///
 /// ```fsharp
 ///    let env = box (x, y)
-///    (sumObj2, env) :> (int -> int)  // closure object creation
+///    (sumObj2, env) as (int → int)  // closure object creation
 /// ```
 ///
 /// Given arguments are packed into an object `env` so that `sumObj2` can use them
@@ -73,7 +73,7 @@
 ///
 /// ```fsharp
 ///    let env = box ()
-///    (sumObj0, ()) :> (int -> int -> int -> int)
+///    (sumObj0, ()) as (int → int → int → int)
 /// ```
 module rec MiloneTranslation.EtaExpansion
 
@@ -130,16 +130,16 @@ let private primToArity ty prim =
   | HPrim.Box
   | HPrim.Unbox
   | HPrim.StringLength
-  | HPrim.Char
   | HPrim.ToInt _
   | HPrim.ToFloat _
-  | HPrim.String
+  | HPrim.ToChar
+  | HPrim.ToString
   | HPrim.NativeCast -> 1
 
   | HPrim.Add
-  | HPrim.Sub
-  | HPrim.Mul
-  | HPrim.Div
+  | HPrim.Subtract
+  | HPrim.Multiply
+  | HPrim.Divide
   | HPrim.Modulo
   | HPrim.BitAnd
   | HPrim.BitOr

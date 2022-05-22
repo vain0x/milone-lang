@@ -3,9 +3,9 @@
 /// ## References
 ///
 /// - "Pattern matching covering check used in the Swift compiler"
-///   <https://qiita.com/ukitaka/items/7345e74116e11eb10f33> (written in Japanese)
+///   https://qiita.com/ukitaka/items/7345e74116e11eb10f33 (written in Japanese)
 /// - "A generic algorithm for checking exhaustivity of pattern matching"
-///   <https://infoscience.epfl.ch/record/225497> (written in English)
+///   https://infoscience.epfl.ch/record/225497 (written in English)
 module rec MatchChecker.Program
 
 // -----------------------------------------------

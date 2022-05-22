@@ -49,7 +49,7 @@ type CUnary =
   /// `!p`
   | CNotUnary
 
-  /// `&x`
+  // `&x`
   | CAddressOfUnary
 
   /// `*p`
@@ -58,11 +58,11 @@ type CUnary =
 /// Binary operators in CIR.
 [<NoEquality; NoComparison>]
 type CBinary =
-  | CMulBinary
-  | CDivBinary
+  | CMultiplyBinary
+  | CDivideBinary
   | CModuloBinary
   | CAddBinary
-  | CSubBinary
+  | CSubtractBinary
   | CBitAndBinary
   | CBitOrBinary
   | CBitXorBinary
@@ -100,7 +100,7 @@ type CExpr =
   /// `a.x`
   | CDotExpr of CExpr * Ident
 
-  /// `p->x`
+  // `p->x`
   | CArrowExpr of CExpr * Ident
 
   /// `a[i]`

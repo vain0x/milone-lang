@@ -135,7 +135,8 @@ let append (xs: _ list) (ys: _ list) : _ list =
 
   listAppendLoop ys (rev xs)
 
-/// USAGE: `items |> List.fold (fun state item -> nextState) initialState`
+// Usage:
+//  items |> List.fold (fun state item -> nextState) initialState
 let fold (folder: _ -> _ -> _) state (xs: _ list) =
   let rec listFoldLoop state xs =
     match xs with
@@ -145,12 +146,10 @@ let fold (folder: _ -> _ -> _) state (xs: _ list) =
 
   listFoldLoop state xs
 
+// Usage:
+//  let mappedList, finalState =
+//    items |> List.mapFold (fun state item -> mappedItem, nextState) initialState
 /// Does `map` and `fold` on a list at the same time.
-///
-/// ```fs
-/// let mappedList, finalState =
-///   items |> List.mapFold (fun state item -> mappedItem, nextState) initialState
-/// ```
 let mapFold (folder: 'S -> 'T -> 'U * 'S) (state: 'S) (xs: 'T list) : 'U list * 'S =
   let rec listMapFoldLoop state acc xs =
     match xs with

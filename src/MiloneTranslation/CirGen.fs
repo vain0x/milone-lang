@@ -696,11 +696,11 @@ let private cgExternFunDecl (ctx: CirCtx) funSerial =
 
 let private cBinaryOf op =
   match op with
-  | MMulBinary -> CMulBinary
-  | MDivBinary -> CDivBinary
+  | MMultiplyBinary -> CMultiplyBinary
+  | MDivideBinary -> CDivideBinary
   | MModuloBinary -> CModuloBinary
   | MAddBinary -> CAddBinary
-  | MSubBinary -> CSubBinary
+  | MSubtractBinary -> CSubtractBinary
 
   | MBitAndBinary -> CBitAndBinary
   | MBitOrBinary -> CBitOrBinary

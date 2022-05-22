@@ -102,7 +102,7 @@ type Trait =
   /// The type supports `=`.
   | EqualTrait of Ty
 
-  /// The type supports `<`.
+  /// The type supports comparison operators.
   | CompareTrait of Ty
 
   /// For `l: lTy, r: rTy`, `l.[r]` is allowed.
@@ -114,13 +114,13 @@ type Trait =
   /// Integer or float type. Defaults to int.
   | IsNumberTrait of Ty
 
-  /// Type supports conversion to char.
-  | ToCharTrait of Ty
-
   /// Type supports conversion to integer.
   | ToIntTrait of flavor: IntFlavor * Ty
 
   | ToFloatTrait of Ty
+
+  /// Type supports conversion to char.
+  | ToCharTrait of Ty
 
   /// Type can be applied to `string` function.
   | ToStringTrait of Ty
@@ -199,9 +199,6 @@ type TPatKind =
   /// `p1 :: p2`.
   | TConsPN
 
-  /// `p1 p2`.
-  | TAppPN
-
   /// `Variant p1`.
   | TVariantAppPN of variantApp: VariantSerial
 
@@ -244,9 +241,9 @@ type TPrim =
   // operator:
   | Not
   | Add
-  | Sub
-  | Mul
-  | Div
+  | Subtract
+  | Multiply
+  | Divide
   | Modulo
   | BitAnd
   | BitOr
@@ -260,8 +257,8 @@ type TPrim =
   // conversion:
   | ToInt of toIntFlavor: IntFlavor
   | ToFloat of toFloatFlavor: FloatFlavor
-  | Char
-  | String
+  | ToChar
+  | ToString
   | Box
   | Unbox
 
@@ -301,7 +298,7 @@ type TExprKind =
   /// `-x`.
   | TMinusEN
 
-  /// `&&x`.
+  // `&&x`.
   | TPtrOfEN
 
   | TAppEN

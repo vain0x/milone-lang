@@ -17,7 +17,7 @@
 ///
 /// ```fsharp
 ///   let flip (x, y) = (y, x)
-///   (1, "one") |> flip |> flip
+///   flip (flip (1, "one"))
 /// ```
 ///
 /// The monomorphization converts it to the code below:
@@ -25,7 +25,7 @@
 /// ```fsharp
 ///   let flipIntStringPair ((x, y): int * string): string * int = (y, x)
 ///   let flipStringIntPair ((x, y): string * int): int * string = (y, x)
-///   (1, "one") |> flipIntStringPair |> flipStringIntPair
+///   flipStringIntPair (flipIntStringPair (1, "one"))
 /// ```
 ///
 /// In short, this conversion *clones* generic definitions

@@ -186,7 +186,6 @@ let patIsClearlyExhaustive isNewtypeVariant pat =
 
       | TNilPN, _
       | TConsPN, _
-      | TAppPN, _
       | TVariantAppPN _, _
       | TNavPN _, _ -> false
 
@@ -399,9 +398,9 @@ let private traitBoundErrorToString tyDisplay it =
     "Expected int or float type but was: "
     + tyDisplay ty
 
-  | ToCharTrait ty -> "Can't convert to char from: " + tyDisplay ty
   | ToIntTrait (_, ty) -> "Can't convert to integer from: " + tyDisplay ty
   | ToFloatTrait ty -> "Can't convert to float from: " + tyDisplay ty
+  | ToCharTrait ty -> "Can't convert to char from: " + tyDisplay ty
   | ToStringTrait ty -> "Can't convert to string from: " + tyDisplay ty
   | PtrTrait ty -> "Expected a pointer type but was: " + tyDisplay ty
 

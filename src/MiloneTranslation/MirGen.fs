@@ -197,12 +197,12 @@ let private mxNot expr loc = MUnaryExpr(MNotUnary, expr, loc)
 let private mxStringAdd ctx l r loc =
   MBinaryExpr(MStringAddBinary, l, r, loc), ctx
 
-/// x op y ==> `x op y` if `x : {scalar}`
+// x op y ==> `x op y` if `x : {scalar}`
 /// where scalar types are int, char, etc.
 /// C language supports all operators.
 let private mxBinOpScalar ctx op l r loc = MBinaryExpr(op, l, r, loc), ctx
 
-/// x <=> y ==> `strcmp(x, y) <=> 0` if `x : string`
+// x <=> y ==> `strcmp(x, y) <=> 0` if `x : string`
 let private mxStringCompare ctx op l r loc =
   let stringCompareExpr =
     MBinaryExpr(MStringCompareBinary, l, r, loc)
@@ -540,8 +540,8 @@ let private doEmitIfStmt ctx cond thenHint body altHint alt targetTy loc =
   let ctx = addStmt ctx nextLabelStmt
   temp, ctx
 
-/// Tries to *sugar* a match expression to if expression
-/// when `match p with true -> body | false -> alt`.
+/// Tries to *sugar* a match expression to if expression.
+// `match p with true -> body | false -> alt`.
 let private mirifyExprMatchAsIfStmt ctx cond arms ty loc =
   let condTy, condLoc = exprExtract cond
 
@@ -929,7 +929,7 @@ let private reuseVarOnStmt (reuseMap: VarReuseMap) stmt =
   | HExprStmt expr -> HExprStmt(onExpr expr)
   | HLetValStmt (pat, init, loc) -> HLetValStmt(onPat pat, onExpr init, loc)
   | HLetFunStmt (serial, args, body, loc) -> HLetFunStmt(serial, List.map onPat args, onExpr body, loc)
-  | HNativeDeclStmt (code, args, loc) -> HNativeDeclStmt (code, List.map onExpr args, loc)
+  | HNativeDeclStmt (code, args, loc) -> HNativeDeclStmt(code, List.map onExpr args, loc)
 
 let private doReuseArmLocals funSerial arms (ctx: MirCtx) : _ * MirCtx =
   let emptyReuseMap: VarReuseMap = TMap.empty varSerialCompare
@@ -1144,7 +1144,7 @@ let private mirifyCallCompareExpr ctx itself l r loc =
         | IntTk U16
         | BoolTk
         | CharTk),
-        _) -> MBinaryExpr(MSubBinary, l, r, loc), ctx
+        _) -> MBinaryExpr(MSubtractBinary, l, r, loc), ctx
 
   | Ty (IntTk I32, _) -> MBinaryExpr(MInt32CompareBinary, l, r, loc), ctx
 
@@ -1211,7 +1211,7 @@ let private mirifyCallToFloatExpr ctx itself flavor arg ty loc =
 
   | _ -> unreachable itself
 
-let private mirifyCallCharExpr ctx itself arg ty loc =
+let private mirifyCallToCharExpr ctx itself arg ty loc =
   let argTy = arg |> exprToTy
   let arg, ctx = mirifyExpr ctx arg
 
@@ -1232,7 +1232,7 @@ let private mirifyCallCharExpr ctx itself arg ty loc =
 
   | _ -> unreachable itself
 
-let private mirifyCallStringExpr ctx itself arg ty loc =
+let private mirifyCallToStringExpr ctx itself arg ty loc =
   let argTy = arg |> exprToTy
   let arg, ctx = mirifyExpr ctx arg
 
@@ -1321,12 +1321,12 @@ let private mirifyCallPrimExpr ctx itself prim args ty loc =
   match prim, args with
   | HPrim.Add, [ l; r ] -> mirifyExprOpArith ctx itself MAddBinary l r loc
   | HPrim.Add, _ -> fail ()
-  | HPrim.Sub, [ l; r ] -> mirifyExprOpArith ctx itself MSubBinary l r loc
-  | HPrim.Sub, _ -> fail ()
-  | HPrim.Mul, [ l; r ] -> mirifyExprOpArith ctx itself MMulBinary l r loc
-  | HPrim.Mul, _ -> fail ()
-  | HPrim.Div, [ l; r ] -> mirifyExprOpArith ctx itself MDivBinary l r loc
-  | HPrim.Div, _ -> fail ()
+  | HPrim.Subtract, [ l; r ] -> mirifyExprOpArith ctx itself MSubtractBinary l r loc
+  | HPrim.Subtract, _ -> fail ()
+  | HPrim.Multiply, [ l; r ] -> mirifyExprOpArith ctx itself MMultiplyBinary l r loc
+  | HPrim.Multiply, _ -> fail ()
+  | HPrim.Divide, [ l; r ] -> mirifyExprOpArith ctx itself MDivideBinary l r loc
+  | HPrim.Divide, _ -> fail ()
   | HPrim.Modulo, [ l; r ] -> mirifyExprOpArith ctx itself MModuloBinary l r loc
   | HPrim.Modulo, _ -> fail ()
 
@@ -1363,14 +1363,14 @@ let private mirifyCallPrimExpr ctx itself prim args ty loc =
   | HPrim.ToInt _, _ -> fail ()
   | HPrim.ToFloat flavor, [ arg ] -> mirifyCallToFloatExpr ctx itself flavor arg ty loc
   | HPrim.ToFloat _, _ -> fail ()
-  | HPrim.Char, [ arg ] -> mirifyCallCharExpr ctx itself arg ty loc
-  | HPrim.Char, _ -> fail ()
-  | HPrim.String, [ arg ] -> mirifyCallStringExpr ctx itself arg ty loc
-  | HPrim.String, _ -> fail ()
+  | HPrim.ToChar, [ arg ] -> mirifyCallToCharExpr ctx itself arg ty loc
+  | HPrim.ToChar, _ -> fail ()
+  | HPrim.ToString, [ arg ] -> mirifyCallToStringExpr ctx itself arg ty loc
+  | HPrim.ToString, _ -> fail ()
   | HPrim.Assert, [ arg ] -> mirifyCallAssertExpr ctx arg loc
   | HPrim.Assert, _ -> fail ()
   | HPrim.Printfn, _ -> mirifyCallPrintfnExpr ctx args loc
-  | HPrim.PtrDistance, [ l; r ] -> regularBinary MSubBinary r l
+  | HPrim.PtrDistance, [ l; r ] -> regularBinary MSubtractBinary r l
   | HPrim.PtrDistance, _ -> fail ()
   | HPrim.NativeCast, [ arg ] -> regularUnary (MNativeCastUnary ty) arg
   | HPrim.NativeCast, _ -> fail ()

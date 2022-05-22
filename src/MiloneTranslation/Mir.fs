@@ -91,11 +91,11 @@ type MUnary =
 /// Built-in 2-arity operation in middle IR.
 [<NoEquality; NoComparison>]
 type MBinary =
-  | MMulBinary
-  | MDivBinary
+  | MMultiplyBinary
+  | MDivideBinary
   | MModuloBinary
   | MAddBinary
-  | MSubBinary
+  | MSubtractBinary
   | MBitAndBinary
   | MBitOrBinary
   | MBitXorBinary
@@ -113,7 +113,7 @@ type MBinary =
 
   /// `s.ptr[i]`
   | MStringIndexBinary
-  /// `&p[i]`
+  // `&p[i]`
   | MPtrAddBinary
 
 [<NoEquality; NoComparison>]
@@ -130,7 +130,6 @@ type MAction =
 
 [<NoEquality; NoComparison>]
 type MPrim =
-  /// string -> int
   | MIntOfStringPrim of intOfStringFlavor: IntFlavor
   | MFloatOfStringPrim of floatOfStringFlavor: FloatFlavor
   | MCharOfStringPrim

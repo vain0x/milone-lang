@@ -33,7 +33,7 @@ let private isValueArg (arg: string) =
 /// This function reads an argument list
 /// and emits an event to state machine for each occurrence of:
 ///   - flag (`-f`),
-///   - binding (``--p=a``), or
+///   - binding (`--p=a`), or
 ///   - positional arg (`foo`).
 ///
 /// @param init initial state

@@ -165,9 +165,9 @@ type HPrim =
   // operator:
   | Not
   | Add
-  | Sub
-  | Mul
-  | Div
+  | Subtract
+  | Multiply
+  | Divide
   | Modulo
   | BitAnd
   | BitOr
@@ -181,8 +181,8 @@ type HPrim =
   // conversion:
   | ToInt of toIntFlavor: IntFlavor
   | ToFloat of toFloatFlavor: FloatFlavor
-  | Char
-  | String
+  | ToChar
+  | ToString
   | Box
   | Unbox
 
@@ -206,7 +206,7 @@ type HExprKind =
   /// `-x`.
   | HMinusEN
 
-  /// `&&x`.
+  // `&&x`.
   | HPtrOfEN
 
   | HAppEN

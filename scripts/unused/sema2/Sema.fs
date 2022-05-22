@@ -1,7 +1,7 @@
 /// Semantic analysis.
 ///
 /// - name resolution
-/// - type inference & checking
+/// - type inference and checking
 /// - pattern matching exhaustivity
 /// - validation:
 ///     - OR pattern bindings

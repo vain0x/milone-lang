@@ -71,9 +71,9 @@ type private TrdCtx =
   { Variants: TreeMap<VariantSerial, VariantDef>
     Tys: TreeMap<TySerial, TyDef>
 
-    /// ((variantSerial, IsDirect) -> Boxed) means:
+    // ((variantSerial, IsDirect), Boxed) means:
     ///     The variant should be boxed because it is recursive without indirection.
-    /// ((variantSerial, IsIndirect) -> Boxed) means:
+    /// ((variantSerial, IsIndirect), Boxed) means:
     ///     The variant is indirectly recursive (i.e. by following pointers).
     VariantMemo: TreeMap<VariantSerial * IsDirect, Status>
 
@@ -515,12 +515,12 @@ let private needsBoxedRecordTy ctx ty =
 /// ```fsharp
 ///   // Variant creation. K is a variant that has payload.
 ///   K payload
-///   // =>
+///   // ⇒
 ///   K (box payload)
 ///
 ///   // Variant decomposition. x is a variable defined in the pattern.
 ///   K payloadPat
-///   // =>
+///   // ⇒
 ///   K (box payloadPat)  // using box pattern to unbox the payload
 /// ```
 
@@ -635,22 +635,22 @@ let private unwrapNewtypeVariantCallExpr (ctx: AbCtx) variantSerial payload : HE
 /// ```fsharp
 ///   // Record creation.
 ///   { fields... }: R
-///   // =>
+///   // ⇒
 ///   box { fields... }: obj
 ///
 ///   // Record mutation.
 ///   { record with fields... }: R
-///   // =>
+///   // ⇒
 ///   box { unbox record with fields... }: obj
 ///
 ///   // Field projection.
 ///   (record: R).field
-///   // =>
+///   // ⇒
 ///   (unbox record).field
 ///
 ///   // Def/use of record-type pat/expr.
 ///   record: R
-///   // =>
+///   // ⇒
 ///   record: obj
 /// ```
 

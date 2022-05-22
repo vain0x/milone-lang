@@ -380,9 +380,9 @@ let private instantiateBoundedTyScheme (ctx: TyCtx) (tyScheme: BoundedTyScheme) 
              | AddTrait ty -> Some ty
              | IsIntTrait ty -> Some ty
              | IsNumberTrait ty -> Some ty
-             | ToCharTrait ty -> Some ty
              | ToIntTrait (_, ty) -> Some ty
              | ToFloatTrait ty -> Some ty
+             | ToCharTrait ty -> Some ty
              | ToStringTrait ty -> Some ty
              | _ -> None
 
@@ -616,16 +616,6 @@ let private resolveTraitBound (ctx: TyCtx) theTrait loc : TyCtx =
 
     | _ -> defaultToInt ctx ty
 
-  | ToCharTrait (Ty (tk, _)) ->
-    match tk with
-    | ErrorTk _
-    | IntTk I8
-    | IntTk U8
-    | CharTk
-    | StringTk -> ok ctx
-
-    | _ -> error ctx
-
   | ToIntTrait (flavor, Ty (tk, _)) ->
     match tk, flavor with
     | ErrorTk _, _
@@ -645,6 +635,16 @@ let private resolveTraitBound (ctx: TyCtx) theTrait loc : TyCtx =
     | ErrorTk _
     | IntTk _
     | FloatTk _
+    | StringTk -> ok ctx
+
+    | _ -> error ctx
+
+  | ToCharTrait (Ty (tk, _)) ->
+    match tk with
+    | ErrorTk _
+    | IntTk I8
+    | IntTk U8
+    | CharTk
     | StringTk -> ok ctx
 
     | _ -> error ctx
@@ -1082,7 +1082,6 @@ let private inferNodePat ctx pat =
   | TAscribePN, [ bodyPat ] -> inferAscribePat ctx bodyPat (getTy ()) loc
   | TAscribePN, _ -> unreachable ()
 
-  | TAppPN, _ // Error in NameRes.
   | TNavPN _, _ -> unreachable () // Resolved in NameRes.
 
 let private inferPat ctx pat : TPat * Ty * TyCtx =
@@ -1152,7 +1151,7 @@ let private primAddScheme =
   let addTy = meta 1
   BoundedTyScheme([ 1 ], tyFun addTy (tyFun addTy addTy), [ AddTrait addTy ])
 
-let private primSubEtcScheme =
+let private primSubtractEtcScheme =
   let meta id = tyMeta id noLoc
   let ty = meta 1
   BoundedTyScheme([ 1 ], tyFun ty (tyFun ty ty), [ IsNumberTrait ty ])
@@ -1194,12 +1193,12 @@ let private primFloatScheme flavor =
   let resultTy = Ty(FloatTk flavor, [])
   BoundedTyScheme([ 1 ], tyFun srcTy resultTy, [ ToFloatTrait srcTy ])
 
-let private primCharScheme =
+let private primToCharScheme =
   let meta id = tyMeta id noLoc
   let srcTy = meta 1
   BoundedTyScheme([ 1 ], tyFun srcTy tyChar, [ ToCharTrait srcTy ])
 
-let private primStringScheme =
+let private primToStringScheme =
   let meta id = tyMeta id noLoc
   let srcTy = meta 1
   BoundedTyScheme([ 1 ], tyFun srcTy tyString, [ ToStringTrait srcTy ])
@@ -1289,10 +1288,10 @@ let private inferPrimExpr ctx prim loc =
   | TPrim.Not -> onMono primNotTy
   | TPrim.Add -> onBounded primAddScheme
 
-  | TPrim.Sub
-  | TPrim.Mul
-  | TPrim.Div
-  | TPrim.Modulo -> onBounded primSubEtcScheme
+  | TPrim.Subtract
+  | TPrim.Multiply
+  | TPrim.Divide
+  | TPrim.Modulo -> onBounded primSubtractEtcScheme
 
   | TPrim.BitAnd
   | TPrim.BitOr
@@ -1307,8 +1306,8 @@ let private inferPrimExpr ctx prim loc =
 
   | TPrim.ToInt flavor -> onBounded (primIntScheme flavor)
   | TPrim.ToFloat flavor -> onBounded (primFloatScheme flavor)
-  | TPrim.Char -> onBounded primCharScheme
-  | TPrim.String -> onBounded primStringScheme
+  | TPrim.ToChar -> onBounded primToCharScheme
+  | TPrim.ToString -> onBounded primToStringScheme
   | TPrim.Box -> onUnbounded primBoxScheme
   | TPrim.Unbox -> onUnbounded primUnboxScheme
 
@@ -1475,7 +1474,7 @@ let private inferRecordExpr ctx expectOpt baseOpt fields loc =
 
       txLetIn (TLetValStmt(varPat, baseExpr, loc)) recordExpr, recordTy, ctx
 
-/// match 'a with ( | 'a -> 'b )*
+// match 'a with ( | 'a -> 'b )*
 let private inferMatchExpr ctx expectOpt itself cond arms loc =
   let targetTy, ctx = freshMetaTyForExpr itself ctx
 

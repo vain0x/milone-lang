@@ -110,9 +110,9 @@ let private lowerPrim (prim: Tir.TPrim) : Hir.HPrim =
   match prim with
   | Tir.TPrim.Not -> Hir.HPrim.Not
   | Tir.TPrim.Add -> Hir.HPrim.Add
-  | Tir.TPrim.Sub -> Hir.HPrim.Sub
-  | Tir.TPrim.Mul -> Hir.HPrim.Mul
-  | Tir.TPrim.Div -> Hir.HPrim.Div
+  | Tir.TPrim.Subtract -> Hir.HPrim.Subtract
+  | Tir.TPrim.Multiply -> Hir.HPrim.Multiply
+  | Tir.TPrim.Divide -> Hir.HPrim.Divide
   | Tir.TPrim.Modulo -> Hir.HPrim.Modulo
   | Tir.TPrim.BitAnd -> Hir.HPrim.BitAnd
   | Tir.TPrim.BitOr -> Hir.HPrim.BitOr
@@ -124,8 +124,8 @@ let private lowerPrim (prim: Tir.TPrim) : Hir.HPrim =
   | Tir.TPrim.Compare -> Hir.HPrim.Compare
   | Tir.TPrim.ToInt flavor -> Hir.HPrim.ToInt flavor
   | Tir.TPrim.ToFloat flavor -> Hir.HPrim.ToFloat flavor
-  | Tir.TPrim.Char -> Hir.HPrim.Char
-  | Tir.TPrim.String -> Hir.HPrim.String
+  | Tir.TPrim.ToChar -> Hir.HPrim.ToChar
+  | Tir.TPrim.ToString -> Hir.HPrim.ToString
   | Tir.TPrim.Box -> Hir.HPrim.Box
   | Tir.TPrim.Unbox -> Hir.HPrim.Unbox
   | Tir.TPrim.StringLength -> Hir.HPrim.StringLength
@@ -160,11 +160,8 @@ let private lowerPatKind (kind: Tir.TPatKind) : Hir.HPatKind =
   | Tir.TVariantAppPN serial -> Hir.HVariantAppPN(lowerVariantSerial serial)
   | Tir.TTuplePN -> Hir.HTuplePN
 
-  | Tir.TAppPN
   | Tir.TNavPN _ -> unreachable () // Resolved in NameRes.
-
   | Tir.TAscribePN -> unreachable () // Resolved in Typing.
-
   | Tir.TAbortPN -> unreachable () // Compile error occurred.
 
 let private lowerExprKind (kind: Tir.TExprKind) : Hir.HExprKind =
