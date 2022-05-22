@@ -1211,7 +1211,7 @@ let private mirifyCallToFloatExpr ctx itself flavor arg ty loc =
 
   | _ -> unreachable itself
 
-let private mirifyCallCharExpr ctx itself arg ty loc =
+let private mirifyCallToCharExpr ctx itself arg ty loc =
   let argTy = arg |> exprToTy
   let arg, ctx = mirifyExpr ctx arg
 
@@ -1232,7 +1232,7 @@ let private mirifyCallCharExpr ctx itself arg ty loc =
 
   | _ -> unreachable itself
 
-let private mirifyCallStringExpr ctx itself arg ty loc =
+let private mirifyCallToStringExpr ctx itself arg ty loc =
   let argTy = arg |> exprToTy
   let arg, ctx = mirifyExpr ctx arg
 
@@ -1363,10 +1363,10 @@ let private mirifyCallPrimExpr ctx itself prim args ty loc =
   | HPrim.ToInt _, _ -> fail ()
   | HPrim.ToFloat flavor, [ arg ] -> mirifyCallToFloatExpr ctx itself flavor arg ty loc
   | HPrim.ToFloat _, _ -> fail ()
-  | HPrim.Char, [ arg ] -> mirifyCallCharExpr ctx itself arg ty loc
-  | HPrim.Char, _ -> fail ()
-  | HPrim.String, [ arg ] -> mirifyCallStringExpr ctx itself arg ty loc
-  | HPrim.String, _ -> fail ()
+  | HPrim.ToChar, [ arg ] -> mirifyCallToCharExpr ctx itself arg ty loc
+  | HPrim.ToChar, _ -> fail ()
+  | HPrim.ToString, [ arg ] -> mirifyCallToStringExpr ctx itself arg ty loc
+  | HPrim.ToString, _ -> fail ()
   | HPrim.Assert, [ arg ] -> mirifyCallAssertExpr ctx arg loc
   | HPrim.Assert, _ -> fail ()
   | HPrim.Printfn, _ -> mirifyCallPrintfnExpr ctx args loc

@@ -130,10 +130,10 @@ let private primToArity ty prim =
   | HPrim.Box
   | HPrim.Unbox
   | HPrim.StringLength
-  | HPrim.Char
   | HPrim.ToInt _
   | HPrim.ToFloat _
-  | HPrim.String
+  | HPrim.ToChar
+  | HPrim.ToString
   | HPrim.NativeCast -> 1
 
   | HPrim.Add

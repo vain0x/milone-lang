@@ -124,8 +124,8 @@ let private lowerPrim (prim: Tir.TPrim) : Hir.HPrim =
   | Tir.TPrim.Compare -> Hir.HPrim.Compare
   | Tir.TPrim.ToInt flavor -> Hir.HPrim.ToInt flavor
   | Tir.TPrim.ToFloat flavor -> Hir.HPrim.ToFloat flavor
-  | Tir.TPrim.Char -> Hir.HPrim.Char
-  | Tir.TPrim.String -> Hir.HPrim.String
+  | Tir.TPrim.ToChar -> Hir.HPrim.ToChar
+  | Tir.TPrim.ToString -> Hir.HPrim.ToString
   | Tir.TPrim.Box -> Hir.HPrim.Box
   | Tir.TPrim.Unbox -> Hir.HPrim.Unbox
   | Tir.TPrim.StringLength -> Hir.HPrim.StringLength

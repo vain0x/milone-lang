@@ -2019,8 +2019,8 @@ let private addPrims (ctx: ScopeCtx) =
       "unativeint", TPrim.ToInt UPtr
       "float", TPrim.ToFloat F64
       "float32", TPrim.ToFloat F32
-      "char", TPrim.Char
-      "string", TPrim.String
+      "char", TPrim.ToChar
+      "string", TPrim.ToString
 
       "__discriminant", TPrim.Discriminant
       "__nativeFun", TPrim.NativeFun

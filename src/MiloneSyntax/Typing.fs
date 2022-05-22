@@ -1194,12 +1194,12 @@ let private primFloatScheme flavor =
   let resultTy = Ty(FloatTk flavor, [])
   BoundedTyScheme([ 1 ], tyFun srcTy resultTy, [ ToFloatTrait srcTy ])
 
-let private primCharScheme =
+let private primToCharScheme =
   let meta id = tyMeta id noLoc
   let srcTy = meta 1
   BoundedTyScheme([ 1 ], tyFun srcTy tyChar, [ ToCharTrait srcTy ])
 
-let private primStringScheme =
+let private primToStringScheme =
   let meta id = tyMeta id noLoc
   let srcTy = meta 1
   BoundedTyScheme([ 1 ], tyFun srcTy tyString, [ ToStringTrait srcTy ])
@@ -1307,8 +1307,8 @@ let private inferPrimExpr ctx prim loc =
 
   | TPrim.ToInt flavor -> onBounded (primIntScheme flavor)
   | TPrim.ToFloat flavor -> onBounded (primFloatScheme flavor)
-  | TPrim.Char -> onBounded primCharScheme
-  | TPrim.String -> onBounded primStringScheme
+  | TPrim.ToChar -> onBounded primToCharScheme
+  | TPrim.ToString -> onBounded primToStringScheme
   | TPrim.Box -> onUnbounded primBoxScheme
   | TPrim.Unbox -> onUnbounded primUnboxScheme
 

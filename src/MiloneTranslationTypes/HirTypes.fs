@@ -181,8 +181,8 @@ type HPrim =
   // conversion:
   | ToInt of toIntFlavor: IntFlavor
   | ToFloat of toFloatFlavor: FloatFlavor
-  | Char
-  | String
+  | ToChar
+  | ToString
   | Box
   | Unbox
 
