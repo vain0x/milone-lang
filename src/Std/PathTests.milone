@@ -62,8 +62,8 @@ let private cutRootTest () =
   // empty
   assert (t "" (".", ""))
 
-  // not yet
-  // assert (t "C:" ("C:.", "."))
+// not yet
+// assert (t "C:" ("C:.", "."))
 
 let private cutTest () =
   let t pathname expected =
@@ -86,13 +86,13 @@ let private cutTest () =
   assert (t "C:/path/to" ("C:/", "path/to"))
   assert (t "" (".", ""))
 
-  // not yet
-  // assert (t "C:my/relative/to" ("C:.", "my/relative/to"))
-  // assert (t "C:" ("C:.", "."))
+// not yet
+// assert (t "C:my/relative/to" ("C:.", "my/relative/to"))
+// assert (t "C:" ("C:.", "."))
 
 let private cutLastTest () =
   let t pathname expected =
-    shouldEqual (fun (l, r) -> l + ";" + r)  expected (Pathname.cutLast pathname)
+    shouldEqual (fun (l, r) -> l + ";" + r) expected (Pathname.cutLast pathname)
 
   assert (t "/" ("/", "."))
   assert (t "." (".", "."))
@@ -145,7 +145,8 @@ let private normalizeTest () =
   assert (t "c:\\Program Files\\Git" "C:/Program Files/Git")
 
 let private basenameTest () =
-  let t pathname expected = shouldEqual id expected (Pathname.basename pathname)
+  let t pathname expected =
+    shouldEqual id expected (Pathname.basename pathname)
 
   assert (t "path/to/foo.txt" "foo.txt")
   assert (t ".." "..")
@@ -157,13 +158,15 @@ let private basenameTest () =
   assert (t "/" ".")
 
 let private dirnameTest () =
-  let t pathname expected = shouldEqual id expected (Pathname.dirname pathname)
+  let t pathname expected =
+    shouldEqual id expected (Pathname.dirname pathname)
 
   assert (t "path/to/foo.txt" "path/to")
   assert (t "/" "/")
 
 let private stemTest () =
-  let t pathname expected = shouldEqual id expected (Pathname.stem pathname)
+  let t pathname expected =
+    shouldEqual id expected (Pathname.stem pathname)
 
   assert (t "path/to/foo.txt" "foo")
   assert (t "path/to/bar.tar.gz" "bar.tar")

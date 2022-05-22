@@ -16,14 +16,16 @@ type private Loop<'S, 'T> = Folder<'S, Folder<'S, 'T>>
 
 let shareLoop (xs: Loop<obj, 'T>) : Loop<'S, 'T> =
   fun (state: 'S) folder ->
-    __nativeStmt
-      ("""
+    __nativeStmt (
+      """
         _Alignas({0}) uint8_t stack_place[256];
         void *place =
           sizeof({0}) <= sizeof(stack_place)
             ? stack_place
             : milone_region_alloc(1, sizeof({0}));
-      """, (__type: 'S))
+      """,
+      (__type: 'S)
+    )
 
     let place: nativeptr<'S> = __nativeExpr "place"
 

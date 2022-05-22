@@ -1,6 +1,7 @@
 // Provides OsString for interop with OS API.
 
 open Std.Block
+open Std.Ptr
 open Std.Vector
 
 // See also milone.h and milone_platform.c
@@ -28,7 +29,7 @@ let private toPtrLenPair (s: OsString) : OsStringPtr * uint =
   __nativeExpr ("{0}.ptr", s), __nativeExpr ("{0}.len", s)
 
 module OsChar =
-  let nul : OsChar = __nativeExpr "(OsChar)0"
+  let nul: OsChar = __nativeExpr "(OsChar)0"
 
   let ofUInt (n: uint) : OsChar = __nativeExpr ("(OsChar){0}", n)
   let toUInt (n: OsChar) : uint = __nativeExpr ("(uint32_t){0}", n)
@@ -39,7 +40,11 @@ module OsChar =
   /// Returns NUL ('\x00') if not.
   let asChar (c: OsChar) : char =
     let n = toUInt c
-    if n <= 255u then char (byte n) else '\x00'
+
+    if n <= 255u then
+      char (byte n)
+    else
+      '\x00'
 
   let isAscii (c: OsChar) = toUInt c <= 255u
 
@@ -102,6 +107,6 @@ module OsStringExt =
   ///
   /// SAFETY: Contents of block must be valid in the encoding
   ///         but that's unchecked.
-  let unsafeOfBlockUnchecked (block : Block<OsChar>) : OsString =
+  let unsafeOfBlockUnchecked (block: Block<OsChar>) : OsString =
     let ptr, len = BlockExt.unsafeToRawParts block
     unsafeBorrow ptr

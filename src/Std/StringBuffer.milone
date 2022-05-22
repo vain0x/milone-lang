@@ -1,0 +1,315 @@
+open Std.Block
+open Std.Ptr
+open Std.Vector
+
+// for memchr, memcpy
+__nativeDecl
+  """
+    #include <string.h>
+  """
+
+let private uintMin (l: uint) r = if r < l then r else l
+let private uintMax (l: uint) r = if l < r then r else l
+
+let private vectorContainsByte (b: byte) (v: Vector<byte>) : bool * Vector<byte> =
+  let ptr, len, _, v = VectorExt.unsafeDup v
+
+  if len <> 0u then
+    let found: bool =
+      __nativeExpr ("memchr({0}, {1}, {2}) != NULL", ptr, b, len)
+
+    found, v
+  else
+    false, v
+
+// -----------------------------------------------
+// Vector Utilities
+// -----------------------------------------------
+
+/// Appends contiguous part of memory to the vector.
+let private unsafeWriteRawParts (p: VoidInPtr) (len: uint) (v: Vector<byte>) : Vector<byte> =
+  if len <> 0u then
+    let v = VectorExt.reserve (int len) v
+    let ptr, bufLen, capacity, v = VectorExt.unsafeDup v
+    assert (ptr <> Ptr.nullPtr)
+    assert (bufLen + len <= capacity)
+    __nativeStmt ("memcpy(&{0}[{1}], {2}, {3});", ptr, bufLen, p, len)
+    VectorExt.unsafeSetLength (int (bufLen + len)) v
+  else
+    v
+
+let private doWriteInt (value: int) (v: Vector<byte>) =
+  __nativeStmt (
+    """
+      char buf[16] = "";
+      uint32_t len = (uint32_t)sprintf(buf, "%d", {0});
+    """,
+    value
+  )
+
+  let buf: nativeptr<char> = __nativeExpr "buf"
+  unsafeWriteRawParts (__nativeCast buf) (__nativeExpr "len") v
+
+let private doWriteFloat (value: float) (v: Vector<byte>) =
+  __nativeStmt (
+    """
+      char buf[64] = "";
+      uint32_t len = (uint32_t)sprintf(buf, "%f", {0});
+    """,
+    value
+  )
+
+  let buf: nativeptr<char> = __nativeExpr "buf"
+  unsafeWriteRawParts (__nativeCast buf) (__nativeExpr "len") v
+
+// ===============================================
+
+/// Owned, growable string object.
+type StringBuffer = private StringBuffer of Vector<byte>
+
+/// (ptr, len, capacity, self)
+let private unsafeDoDup (StringBuffer v) : nativeptr<byte> * uint * uint * StringBuffer =
+  let ptr, len, capacity, v = VectorExt.unsafeDup v
+  ptr, len, capacity, StringBuffer v
+
+let private doReserve addition (StringBuffer v) =
+  StringBuffer(VectorExt.reserve addition v)
+
+let private unsafeDoSetLength len (StringBuffer v) =
+  StringBuffer(VectorExt.unsafeSetLength len v)
+
+module StringBuffer =
+  /// Gets an empty StringBuffer. Capacity is zero.
+  let empty () : StringBuffer = StringBuffer(Vector.empty ())
+
+  /// Allocates an empty StringBuffer of the specified capacity.
+  let alloc (capacity: int) : StringBuffer =
+    assert (capacity >= 0)
+    StringBuffer(Vector.alloc capacity)
+
+  /// Deallocates a StringBuffer.
+  let dispose (sb: StringBuffer) : unit =
+    let (StringBuffer v) = sb
+    Vector.dispose v
+
+  let length (sb: StringBuffer) : int * StringBuffer =
+    let (StringBuffer v) = sb
+    let len, v = Vector.length v
+    len, StringBuffer v
+
+  let forceGetByte (index: int) (sb: StringBuffer) : byte * StringBuffer =
+    let (StringBuffer v) = sb
+    let value, v = Vector.forceGet index v
+    value, StringBuffer v
+
+  let ofVector (v: Vector<byte>) : Result<StringBuffer, Vector<byte>> =
+    let len, v = Vector.length v
+
+    // roughly validate
+    let hasZero, v = vectorContainsByte 0uy v
+
+    if not hasZero then
+      Ok(StringBuffer v)
+    else
+      Error v
+
+  let intoVector (sb: StringBuffer) : Vector<byte> =
+    let (StringBuffer v) = sb
+    v
+
+  /// Creates a string from the contents in the specified range.
+  let sliceToString (start: int) (endIndex: int) (sb: StringBuffer) : string * StringBuffer =
+    let ptr, len, _, sb = unsafeDoDup sb
+
+    let start = if start >= 0 then uint start else 0u
+
+    let endIndex =
+      if endIndex >= 0 then
+        uint endIndex
+      else
+        0u
+
+    let endIndex = uintMin len endIndex
+    let start = uintMin endIndex start
+
+    assert (start <= endIndex && endIndex <= len)
+
+    let s: string =
+      if start < endIndex then
+        __nativeExpr ("string_of_raw_parts(&({0})[{1}], {2})", ptr, start, endIndex - start)
+      else
+        ""
+
+    s, sb
+
+  let toString (sb: StringBuffer) : string * StringBuffer =
+    let len, sb = length sb
+    sliceToString 0 len sb
+
+  let clear (sb: StringBuffer) : StringBuffer = unsafeDoSetLength 0 sb
+
+  // =============================================
+
+  /// Appends a string.
+  let writeString (s: string) (sb: StringBuffer) : StringBuffer =
+    let charPtr: VoidInPtr =
+      __nativeExpr ("(void const *){0}.ptr", s)
+
+    let (StringBuffer v) = sb
+
+    let v =
+      unsafeWriteRawParts charPtr (uint s.Length) v
+
+    StringBuffer v
+
+  /// Appends a non-NUL ASCII character.
+  let writeAscii (c: char) (sb: StringBuffer) : StringBuffer =
+    assert (c <> '\x00' && byte c <= 0x7fuy)
+
+    let (StringBuffer v) = sb
+    StringBuffer(unsafeWriteRawParts (Ptr.cast &&c) 1u v)
+
+  /// Appends a decimal representation of an integer.
+  let writeInt (value: int) (sb: StringBuffer) : StringBuffer =
+    let (StringBuffer v) = sb
+    StringBuffer(doWriteInt value v)
+
+  /// Appends a 64-bit integer in decimal representation. (Zero-padded, unsigned.)
+  ///
+  /// If decimal representation of `value` is shorter than `width`,
+  /// leading 0's are filled to write at least `width` bytes.
+  /// `width` must be `<= 300`.
+  let writeUInt64 (width: int) (value: uint64) (sb: StringBuffer) : StringBuffer =
+    assert (width >= 0 && width <= 300)
+
+    __nativeStmt (
+      """
+        char buf[350];
+        uint32_t len = sprintf(buf, "%0*lld", (int){0}, (unsigned long long){1});
+      """,
+      width,
+      value
+    )
+
+    let buf: VoidInPtr = __nativeExpr "(void const *)buf"
+    let len: uint = __nativeExpr "len"
+
+    let (StringBuffer v) = sb
+    StringBuffer(unsafeWriteRawParts buf len v)
+
+  /// Appends a 64-bit integer in hexadecimal representation. (Zero-padded, lowercase, unsigned.)
+  ///
+  /// If `value` can be written in hex digits shorter than `width`,
+  /// leading 0's are filled to write at least `width` bytes.
+  /// `width` must be `<= 300`.
+  let writeHex (width: int) (value: uint64) (sb: StringBuffer) : StringBuffer =
+    assert (width >= 0 && width <= 300)
+
+    __nativeStmt (
+      """
+        char buf[350];
+        uint32_t len = sprintf(buf, "%0*llx", (int){0}, (unsigned long long){1});
+      """,
+      width,
+      value
+    )
+
+    let buf: VoidInPtr = __nativeExpr "(void const *)buf"
+    let len: uint = __nativeExpr "len"
+
+    let (StringBuffer v) = sb
+    StringBuffer(unsafeWriteRawParts buf len v)
+
+  /// Appends a string representation of float. (Format isn't determined yet.)
+  let writeFloat (value: float) (sb: StringBuffer) : StringBuffer =
+    let (StringBuffer v) = sb
+    StringBuffer(doWriteFloat value v)
+
+  /// Appends a string representation of boolean: "True" or "False".
+  let writeBool (value: bool) (sb: StringBuffer) : StringBuffer = writeString (string value) sb
+
+  /// Appends a list.
+  ///
+  /// - `writeSep` is called after non-first item to write a separator.
+  ///
+  /// E.g. `sb |> StringBuffer.writeList StringBuffer.writeInt ", " [1; 2; 3]` → `1, 2, 3`
+  let writeList
+    (writeItem: 'T -> StringBuffer -> StringBuffer)
+    (sep: string)
+    (xs: 'T list)
+    (sb: StringBuffer)
+    : StringBuffer =
+    let rec go xs sb =
+      match xs with
+      | [] -> sb
+      | x :: xs -> sb |> writeString sep |> writeItem x |> go xs
+
+    match xs with
+    | [] -> sb
+    | x :: xs -> sb |> writeItem x |> go xs
+
+  /// Appends a block.
+  ///
+  /// - `writeSep` is called after non-first item to write a separator.
+  ///
+  /// E.g. `sb |> StringBuffer.writeBlock StringBuffer.writeInt ", " (Block.ofList [ 1; 2; 3 ])` → `1, 2, 3`
+  let writeBlock
+    (writeItem: 'T -> StringBuffer -> StringBuffer)
+    (sep: string)
+    (xs: Block<'T>)
+    (sb: StringBuffer)
+    : StringBuffer =
+    let rec go xs sb =
+      match Block.uncons xs with
+      | None -> sb
+      | Some (x, xs) -> sb |> writeString sep |> writeItem x |> go xs
+
+    match Block.uncons xs with
+    | None -> sb
+    | Some (x, xs) -> sb |> writeItem x |> go xs
+
+  // =============================================
+
+  /// Creates a StringBuffer as copy of string.
+  let ofString (s: string) : StringBuffer = writeString s (alloc s.Length)
+
+  /// Creates a StringBuffer as copy of replicated string.
+  ///
+  /// E.g. `replicate 2 "../"` is `StringBuffer.ofString "../../"`
+  let replicate (count: int) (s: string) : StringBuffer =
+    assert (count >= 0)
+
+    let rec go i sb =
+      if i < count then
+        go (i + 1) (writeString s sb)
+      else
+        sb
+
+    go 0 (alloc (s.Length * count))
+
+/// StringBuffer methods that are unsafe or niche.
+module StringBufferExt =
+  let capacity (sb: StringBuffer) : int * StringBuffer =
+    let (StringBuffer v) = sb
+    let capacity, v = VectorExt.capacity v
+    capacity, StringBuffer v
+
+  /// Wraps a vector of bytes into StringBuffer.
+  ///
+  /// - The vector must be valid UTF-8 string, which isn't checked.
+  /// - This function guarantees the result preserves the pointer, length and capacity of the input.
+  let unsafeWrap (v: Vector<byte>) : StringBuffer = StringBuffer v
+
+  /// See: VectorExt.unsafeDup
+  let unsafeDup (sb: StringBuffer) : nativeptr<byte> * uint * uint * StringBuffer = unsafeDoDup sb
+
+  /// See: VectorExt.reserve
+  let reserve (addition: int) (sb: StringBuffer) : StringBuffer = doReserve addition sb
+
+  /// See: VectorExt.reserveExact
+  let reserveExact (addition: int) (sb: StringBuffer) : StringBuffer =
+    let (StringBuffer v) = sb
+    StringBuffer(VectorExt.reserveExact addition v)
+
+  /// See: VectorExt.unsafeSetLength
+  let unsafeSetLength (len: int) (sb: StringBuffer) : StringBuffer = unsafeDoSetLength len sb

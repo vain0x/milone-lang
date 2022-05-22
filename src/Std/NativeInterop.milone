@@ -2,13 +2,12 @@ module rec Std.NativeInterop
 
 open Std.Ptr
 
-let private memcpy (dest: voidptr) (src: VoidInPtr) (size: unativeint) : voidptr = __nativeFun ("memcpy", dest, src, size)
+let private memcpy (dest: voidptr) (src: VoidInPtr) (size: unativeint) : voidptr =
+  __nativeFun ("memcpy", dest, src, size)
 
-let private npPointeeSize (p: nativeptr<'T> ) : unativeint =
-  __nativeExpr ("sizeof(*({0}))", p)
+let private npPointeeSize (p: nativeptr<'T>) : unativeint = __nativeExpr ("sizeof(*({0}))", p)
 
-let private cpPointeeSize (p: InPtr<'T> ) : unativeint =
-  __nativeExpr ("sizeof(*({0}))", p)
+let private cpPointeeSize (p: InPtr<'T>) : unativeint = __nativeExpr ("sizeof(*({0}))", p)
 
 // See also:
 //
@@ -24,11 +23,10 @@ module NativePtr =
   let toVoidPtr (p: nativeptr<_>) : voidptr = __nativeCast p
   let ofVoidPtr (p: voidptr) : nativeptr<_> = __nativeCast p
 
-  let add (p: nativeptr<'T>) (i: int) : nativeptr<'T> =
-    __nativeExpr ("(&({0})[{1}])", p, i)
+  let add (p: nativeptr<'T>) (i: int) : nativeptr<'T> = __nativeExpr ("(&({0})[{1}])", p, i)
 
   let get (p: nativeptr<'T>) (i: int) : 'T =
-    __nativeExpr ("(({0})[{1}])", p, unativeint(uint i))
+    __nativeExpr ("(({0})[{1}])", p, unativeint (uint i))
 
   let set (p: nativeptr<'T>) (i: int) (value: 'T) : unit =
     __nativeStmt ("({0})[{1}] = {2};", p, i, value)
@@ -70,8 +68,8 @@ module NativePtr =
 
       ()
 
-  // not supported: nullPtr (generic constant isn't supported)
-  // unimplemented: initBlock, clear
+// not supported: nullPtr (generic constant isn't supported)
+// unimplemented: initBlock, clear
 
 // =============================================================================
 
@@ -84,12 +82,11 @@ module InPtr =
   let toVoid (p: InPtr<_>) : VoidInPtr = __nativeCast p
   let ofVoid (p: VoidInPtr) : InPtr<_> = __nativeCast p
 
-  let add (p: InPtr<'T>) (i: int) : InPtr<'T> =
-    __nativeExpr ("(&({0})[{1}])", p, i)
+  let add (p: InPtr<'T>) (i: int) : InPtr<'T> = __nativeExpr ("(&({0})[{1}])", p, i)
 
   let get (p: InPtr<'T>) (i: int) : 'T =
     assert (i >= 0)
-    __nativeExpr ("(({0})[{1}])", p, unativeint(uint i))
+    __nativeExpr ("(({0})[{1}])", p, unativeint (uint i))
 
   let read (p: InPtr<'T>) : 'T =
     assert (p <> Ptr.nullPtr)

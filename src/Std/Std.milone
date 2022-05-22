@@ -5,6 +5,8 @@ open Std.IO
 open Std.FileTests
 open Std.PathTests
 open Std.StdError
+open Std.StdStringTests
+open Std.StringBufferTests
 open Std.VectorTests
 open Std.OsStringTests
 
@@ -13,8 +15,10 @@ open Std.Block
 
 let main _ =
   IO.exec (fun (io: IO) ->
-    testByteVector ()
+    testString ()
     testVector ()
+    testByteVector ()
+    testStringBuffer ()
     testOsString ()
     testPath ()
     testFile io)
