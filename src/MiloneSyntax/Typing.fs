@@ -380,9 +380,9 @@ let private instantiateBoundedTyScheme (ctx: TyCtx) (tyScheme: BoundedTyScheme) 
              | AddTrait ty -> Some ty
              | IsIntTrait ty -> Some ty
              | IsNumberTrait ty -> Some ty
-             | ToCharTrait ty -> Some ty
              | ToIntTrait (_, ty) -> Some ty
              | ToFloatTrait ty -> Some ty
+             | ToCharTrait ty -> Some ty
              | ToStringTrait ty -> Some ty
              | _ -> None
 
@@ -616,16 +616,6 @@ let private resolveTraitBound (ctx: TyCtx) theTrait loc : TyCtx =
 
     | _ -> defaultToInt ctx ty
 
-  | ToCharTrait (Ty (tk, _)) ->
-    match tk with
-    | ErrorTk _
-    | IntTk I8
-    | IntTk U8
-    | CharTk
-    | StringTk -> ok ctx
-
-    | _ -> error ctx
-
   | ToIntTrait (flavor, Ty (tk, _)) ->
     match tk, flavor with
     | ErrorTk _, _
@@ -645,6 +635,16 @@ let private resolveTraitBound (ctx: TyCtx) theTrait loc : TyCtx =
     | ErrorTk _
     | IntTk _
     | FloatTk _
+    | StringTk -> ok ctx
+
+    | _ -> error ctx
+
+  | ToCharTrait (Ty (tk, _)) ->
+    match tk with
+    | ErrorTk _
+    | IntTk I8
+    | IntTk U8
+    | CharTk
     | StringTk -> ok ctx
 
     | _ -> error ctx

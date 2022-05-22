@@ -114,13 +114,13 @@ type Trait =
   /// Integer or float type. Defaults to int.
   | IsNumberTrait of Ty
 
-  /// Type supports conversion to char.
-  | ToCharTrait of Ty
-
   /// Type supports conversion to integer.
   | ToIntTrait of flavor: IntFlavor * Ty
 
   | ToFloatTrait of Ty
+
+  /// Type supports conversion to char.
+  | ToCharTrait of Ty
 
   /// Type can be applied to `string` function.
   | ToStringTrait of Ty
