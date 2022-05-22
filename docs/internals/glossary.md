@@ -6,41 +6,49 @@
 
 - alt (alternative):
     1. Default value to replace None with.
-    2. An expression in `else` clause.
+    2. Expression in `else` clause.
 - arg (argument):
-    - Value to pass in when calling function.
-    - `a` in use-site `f a`; in contrast to parameter x in def-site `let f x`.
+    - Value to pass in when calling function at runtime.
+    - Expression to be applied to a function (`a` in `f a` in the view of syntax.)
     - Warning: Currently "arg" is also used for parameters but it should be rephrased.
 - closure:
     - Specific runtime representation of function object that might capture some state. That is, pair of an opaque pointer (`obj`) and a function pointer.
     - Warning: Currently "closure" is also used for syntax `fun _ -> ....` but it should be rephrased.
 - cond (condition):
-    - Expression in some part of if/match syntax.
+    - Expression in a particular part of if/match syntax.
         - `if cond then ...`
         - `match cond with ...`
 - decl (declaration):
     - Kind of syntax that appears in module directly.
     - In milone-lang, declarations don't appear inside statements or expressions.
 - def (definition)
-    - Data of entities (such as variables and types).
+    - Data of entities such as variables and types.
 - deref (dereference)
-    - Operation `*p` in C.
+    - Operation to read or write to location pointed by a pointer; `*p` in C.
 - div (division)
+    - Arithmetic operation `/`.
 - env (environment)
     - Mapping from name to thing in a delimited context.
+    - Field of a function object. Parameter of an underlying function of function object.
 - expr (expression):
-    - A kind of syntax. Evaluating an expression results in a value.
+    - Kind of syntax that represents a value.
 - fun (function)
+- fun expression
+    - Syntax that looks like `fun ... -> ...`.
 - gen (generation)
-    - Note: avoid using `gen` for generic/generalize.
+    - Note: Avoid using `gen` for generic or generalize.
 - ident (identifier)
-    - A kind of token. Name of something.
-    - Note ident doesn't include `.`s in contrast to name, path or nav.
+    - Kind of token. Name of thing.
+    - Note: Ident doesn't include `.`s in contrast to name, path or nav.
 - infer type:
-    - Name of `_` type, which is a placeholder of some type to be inferred.
-- init (initialize)
+    - Name of `_` type, which is a placeholder of a type to be inferred.
+- init (initialization)
+- let-val
+    - Syntax that looks like `let x = ...` (no parameters in left-hand side) in contrast to let-fun.
+- let-fun
+    - Syntax that looks like `let f x = ...` (some parameters in left-hand side) in contrast to let-val.
 - lit (literal)
-    - A kind of token and expression that represent a specific value.
+    - Kind of token and expression that represent a specific value.
 - mul (multiplication)
 - NameRes (name resolution)
     - Particular pass
@@ -49,25 +57,25 @@
 - NsOwner (namespace owner)
     - (In NameRes) Reference of a symbol that owns a namespace.
 - op (operator)
-    - Note: avoid using "op" for operation that is unrelated to operator.
+    - Note: Avoid using "op" for operation that is unrelated to operator.
 - opt (optional)
-    - Note: Variable name `xOpt` indicates `option<T>` type.
+    - Note: Variable name `xOpt` indicates its type is `T option`.
 - param (parameter)
-    - Note that `params` is keyword in F#. Use `paramList` or something.
+    - Note: `params` is a keyword. Use `paramList` or something instead.
 - symbol
-    - Token that denotes to a defined entity (such as variables and types).
-    - Value to identify a defined entity, similar to ID.
+    - Token that denotes to a defined entity (such as variables and types.)
+    - Value to identify a defined entity such as ID.
 - qual (qualifier)
-    - Non-last segment of path of name.
+    - Non-last segment in a path of name.
 - ref (reference)
 - semi (semicolon)
 - sub (subtraction)
 - std (standard)
 - stmt (statement)
-    - Note that I feel this spelling awful but it's commonly used.
+    - Note: I feel this spelling awful but it's commonly used.
 - ty (type)
 - univ (universal)
-    - "Universal" in "universally quantified variable" (`∀a`, `'A`).
+    - Universally quantified type variable, e.g. `'A`.
 
 ### Policy
 
