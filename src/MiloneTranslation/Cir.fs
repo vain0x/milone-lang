@@ -58,11 +58,11 @@ type CUnary =
 /// Binary operators in CIR.
 [<NoEquality; NoComparison>]
 type CBinary =
-  | CMulBinary
-  | CDivBinary
+  | CMultiplyBinary
+  | CDivideBinary
   | CModuloBinary
   | CAddBinary
-  | CSubBinary
+  | CSubtractBinary
   | CBitAndBinary
   | CBitOrBinary
   | CBitXorBinary

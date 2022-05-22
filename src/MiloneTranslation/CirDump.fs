@@ -57,9 +57,9 @@ let private unaryToString op =
 let private binaryToString op =
   match op with
   | CAddBinary -> "+"
-  | CSubBinary -> "-"
-  | CMulBinary -> "*"
-  | CDivBinary -> "/"
+  | CSubtractBinary -> "-"
+  | CMultiplyBinary -> "*"
+  | CDivideBinary -> "/"
   | CModuloBinary -> "%"
   | CBitAndBinary -> "&"
   | CBitOrBinary -> "|"

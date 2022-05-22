@@ -1152,7 +1152,7 @@ let private primAddScheme =
   let addTy = meta 1
   BoundedTyScheme([ 1 ], tyFun addTy (tyFun addTy addTy), [ AddTrait addTy ])
 
-let private primSubEtcScheme =
+let private primSubtractEtcScheme =
   let meta id = tyMeta id noLoc
   let ty = meta 1
   BoundedTyScheme([ 1 ], tyFun ty (tyFun ty ty), [ IsNumberTrait ty ])
@@ -1289,10 +1289,10 @@ let private inferPrimExpr ctx prim loc =
   | TPrim.Not -> onMono primNotTy
   | TPrim.Add -> onBounded primAddScheme
 
-  | TPrim.Sub
-  | TPrim.Mul
-  | TPrim.Div
-  | TPrim.Modulo -> onBounded primSubEtcScheme
+  | TPrim.Subtract
+  | TPrim.Multiply
+  | TPrim.Divide
+  | TPrim.Modulo -> onBounded primSubtractEtcScheme
 
   | TPrim.BitAnd
   | TPrim.BitOr

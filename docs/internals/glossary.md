@@ -25,8 +25,6 @@
     - Data of entities such as variables and types.
 - deref (dereference)
     - Operation to read or write to location pointed by a pointer; `*p` in C.
-- div (division)
-    - Arithmetic operation `/`.
 - env (environment)
     - Mapping from name to thing in a delimited context.
     - Field of a function object. Parameter of an underlying function of function object.
@@ -49,7 +47,6 @@
     - Syntax that looks like `let f x = ...` (some parameters in left-hand side) in contrast to let-val.
 - lit (literal)
     - Kind of token and expression that represent a specific value.
-- mul (multiplication)
 - NameRes (name resolution)
     - Particular pass
 - ns (namespace)
@@ -69,7 +66,6 @@
     - Non-last segment in a path of name.
 - ref (reference)
 - semi (semicolon)
-- sub (subtraction)
 - std (standard)
 - stmt (statement)
     - Note: I feel this spelling awful but it's commonly used.

@@ -117,7 +117,7 @@ let private canMerge3 (pos1: Pos) pos2 pos3 =
 [<NoEquality; NoComparison>]
 type private Bp =
   | PrefixBp
-  | MulBp
+  | MultiplyBp
   | AddBp
   | ConsBp
   | XorBp
@@ -135,9 +135,9 @@ let private bpNext bp =
   | SigilBp -> XorBp
   | XorBp -> ConsBp
   | ConsBp -> AddBp
-  | AddBp -> MulBp
+  | AddBp -> MultiplyBp
 
-  | MulBp
+  | MultiplyBp
   | PrefixBp -> PrefixBp
 
 // -----------------------------------------------
@@ -816,11 +816,11 @@ let private parseOps bp basePos l (tokens, errors) : PR<AExpr> =
   | ConsBp, (ColonColonToken, opPos) :: tokens -> nextR l ConsBinary opPos (tokens, errors)
 
   | AddBp, (PlusToken, opPos) :: tokens -> nextL l AddBinary opPos (tokens, errors)
-  | AddBp, (MinusToken false, opPos) :: tokens -> nextL l SubBinary opPos (tokens, errors)
+  | AddBp, (MinusToken false, opPos) :: tokens -> nextL l SubtractBinary opPos (tokens, errors)
 
-  | MulBp, (StarToken, opPos) :: tokens -> nextL l MulBinary opPos (tokens, errors)
-  | MulBp, (SlashToken, opPos) :: tokens -> nextL l DivBinary opPos (tokens, errors)
-  | MulBp, (PercentToken, opPos) :: tokens -> nextL l ModuloBinary opPos (tokens, errors)
+  | MultiplyBp, (StarToken, opPos) :: tokens -> nextL l MultiplyBinary opPos (tokens, errors)
+  | MultiplyBp, (SlashToken, opPos) :: tokens -> nextL l DivideBinary opPos (tokens, errors)
+  | MultiplyBp, (PercentToken, opPos) :: tokens -> nextL l ModuloBinary opPos (tokens, errors)
 
   | _ -> l, tokens, errors
 

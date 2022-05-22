@@ -70,9 +70,9 @@ let private txApp2 f x1 x2 loc = txApp (txApp f x1 loc) x2 loc
 let private binaryToPrim op : TPrim =
   match op with
   | AddBinary -> TPrim.Add
-  | SubBinary -> TPrim.Sub
-  | MulBinary -> TPrim.Mul
-  | DivBinary -> TPrim.Div
+  | SubtractBinary -> TPrim.Subtract
+  | MultiplyBinary -> TPrim.Multiply
+  | DivideBinary -> TPrim.Divide
   | ModuloBinary -> TPrim.Modulo
   | BitAndBinary -> TPrim.BitAnd
   | BitOrBinary -> TPrim.BitOr

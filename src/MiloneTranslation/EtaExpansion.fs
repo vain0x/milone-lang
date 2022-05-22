@@ -137,9 +137,9 @@ let private primToArity ty prim =
   | HPrim.NativeCast -> 1
 
   | HPrim.Add
-  | HPrim.Sub
-  | HPrim.Mul
-  | HPrim.Div
+  | HPrim.Subtract
+  | HPrim.Multiply
+  | HPrim.Divide
   | HPrim.Modulo
   | HPrim.BitAnd
   | HPrim.BitOr

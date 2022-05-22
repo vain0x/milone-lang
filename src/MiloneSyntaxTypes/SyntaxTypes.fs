@@ -186,16 +186,16 @@ type Unary =
 /// Binary operator.
 [<NoEquality; NoComparison>]
 type Binary =
-  /// `*` Multiplication
-  | MulBinary
-  /// `/` Division
-  | DivBinary
+  /// `*`
+  | MultiplyBinary
+  /// `/`
+  | DivideBinary
   /// `%`
   | ModuloBinary
-  /// `+` Addition
+  /// `+`
   | AddBinary
-  /// `-` Subtraction
-  | SubBinary
+  /// `-`
+  | SubtractBinary
   /// `=`
   | EqualBinary
   // `<>`

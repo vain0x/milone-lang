@@ -165,9 +165,9 @@ type HPrim =
   // operator:
   | Not
   | Add
-  | Sub
-  | Mul
-  | Div
+  | Subtract
+  | Multiply
+  | Divide
   | Modulo
   | BitAnd
   | BitOr

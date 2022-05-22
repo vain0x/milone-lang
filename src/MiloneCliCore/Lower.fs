@@ -110,9 +110,9 @@ let private lowerPrim (prim: Tir.TPrim) : Hir.HPrim =
   match prim with
   | Tir.TPrim.Not -> Hir.HPrim.Not
   | Tir.TPrim.Add -> Hir.HPrim.Add
-  | Tir.TPrim.Sub -> Hir.HPrim.Sub
-  | Tir.TPrim.Mul -> Hir.HPrim.Mul
-  | Tir.TPrim.Div -> Hir.HPrim.Div
+  | Tir.TPrim.Subtract -> Hir.HPrim.Subtract
+  | Tir.TPrim.Multiply -> Hir.HPrim.Multiply
+  | Tir.TPrim.Divide -> Hir.HPrim.Divide
   | Tir.TPrim.Modulo -> Hir.HPrim.Modulo
   | Tir.TPrim.BitAnd -> Hir.HPrim.BitAnd
   | Tir.TPrim.BitOr -> Hir.HPrim.BitOr

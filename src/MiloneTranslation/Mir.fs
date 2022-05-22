@@ -91,11 +91,11 @@ type MUnary =
 /// Built-in 2-arity operation in middle IR.
 [<NoEquality; NoComparison>]
 type MBinary =
-  | MMulBinary
-  | MDivBinary
+  | MMultiplyBinary
+  | MDivideBinary
   | MModuloBinary
   | MAddBinary
-  | MSubBinary
+  | MSubtractBinary
   | MBitAndBinary
   | MBitOrBinary
   | MBitXorBinary
