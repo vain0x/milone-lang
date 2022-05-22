@@ -5,19 +5,13 @@
 #    $ make test
 
 CC ?= gcc
-MILONE_RUNTIME := ${HOME}/.milone/src/libmilonert
+MILONE_HOME := ${PWD}/../..
 
-cat: cmd_cat.generated.c cmd_cat.c
-	${CC} -std=c11 -g \
-		-Wall -Wextra -Wno-unused-variable -Wno-unused-but-set-variable -Wno-unused-label -Wno-unused-parameter -Wno-unused-but-set-parameter \
-		-I${MILONE_RUNTIME} \
-		${MILONE_RUNTIME}/milone.c \
-		cmd_cat.c \
-		cmd_cat.generated.c \
-		-o cat
-
-cmd_cat.generated.c: *.fs
-	milone compile ${PWD} >cmd_cat.generated.c
+default: test
+.PHONY: default test
 
 test: cat
 	./test
+
+cat: cmd_cat.c ${wildcard *.milone} milone_manifest
+	MILONE_HOME=${MILONE_HOME} milone build ${PWD} -o cat

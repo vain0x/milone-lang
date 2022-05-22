@@ -1,0 +1,103 @@
+module rec CmdCat.Program
+
+open CmdCat.Ffi
+open Std.StdList
+open Std.Vector
+
+// -----------------------------------------------
+// Util
+// -----------------------------------------------
+
+// use Std.StdError?
+let private failwith msg =
+  printfn "ERROR: %s" msg
+  exit 1
+
+let private guard f cond = if not cond then f ()
+
+let private unwrapOrElse f opt =
+  match opt with
+  | Some it -> it
+  | None -> f ()
+
+// -----------------------------------------------
+// Application logic
+// -----------------------------------------------
+
+/// Reads a file and writes its contents to standard output.
+let private doCatFile (outFd: Fd) profiler pathname =
+  let profiler =
+    profileLog ("OPEN: " + pathname) profiler
+
+  let inFd =
+    match fdOpenRead pathname with
+    | Some fd -> fd
+    | None ->
+      failwith ("open: '" + pathname + "'")
+      stdoutFd () // wants never type
+
+  let buf: Vector<byte> = Vector.alloc 1000
+
+  let rec go inFd outFd buf profiler =
+    let profiler = profileLog "READ" profiler
+
+    let ok, buf, inFd = fdReadBytes buf inFd
+
+    if ok then
+      let len, buf = Vector.length buf
+
+      if len <> 0 then
+        let ok, buf, outFd = fdWriteBytes buf outFd
+
+        if not ok then
+          failwith "write to STDOUT"
+
+        let buf = VectorExt.unsafeSetLength 0 buf // wants Vector.clear
+
+        go inFd outFd buf profiler
+      else
+        // reached at EOF
+        inFd, outFd, buf, profiler
+    else
+      failwith ("read: '" + pathname + "'")
+      inFd, outFd, buf, profiler // wants never type
+
+  let inFd, outFd, buf, profiler = go inFd outFd buf profiler
+
+  let ok = fdClose inFd
+
+  if not ok then
+    failwith ("close: '" + pathname + "'")
+
+  Vector.dispose buf
+
+  let profiler = profileLog "CLOSED" profiler
+  outFd, profiler
+
+let main _ =
+  let args = getArgs () |> List.drop 1
+
+  (args |> List.isEmpty |> not)
+  |> guard (fun () -> failwith "file not specified")
+
+  let outFd = stdoutFd ()
+
+  let profiler = profileInit ()
+  let profiler = profileLog "START" profiler
+
+  let rec go outFd profiler args =
+    match args with
+    | arg :: args ->
+      let outFd, profiler = doCatFile outFd profiler arg
+      go outFd profiler args
+
+    | [] -> outFd, profiler
+
+  let outFd, profiler = go outFd profiler args
+
+  let ok = fdClose outFd
+  if not ok then failwith "close: stdout"
+
+  let profiler = profileLog "FINISH" profiler
+  profileDispose profiler
+  0
