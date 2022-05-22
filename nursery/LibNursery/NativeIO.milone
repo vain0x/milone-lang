@@ -2,6 +2,8 @@
 
 module rec LibNursery.NativeIO
 
+open Std.Ptr
+
 let private allocateBuffer (capacity: unativeint) : nativeptr<byte> =
   __nativeExpr ("milone_region_alloc({0}, sizeof(int8_t))", capacity)
 

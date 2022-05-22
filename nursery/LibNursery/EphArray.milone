@@ -3,6 +3,7 @@ module rec LibNursery.EphArray
 open LibNursery.EphSerial
 open LibNursery.Runtime
 open Std.NativeInterop
+open Std.Ptr
 
 let private ephArrayIsAlive (array: EphArray<'T>) : bool * EphArray<'T> =
   let ptr, len, serial = array
@@ -63,7 +64,7 @@ type EphArray<'T> = nativeptr<'T> * int * EphSerial
 
 let private ephArrayEmpty (serial: EphSerial) : EphArray<_> * EphSerial =
   let arraySerial, parentSerial = EphSerial.create serial
-  (Ptr.nullPtr (), 0, arraySerial), parentSerial // TASK: should not allocate
+  (Ptr.nullPtr, 0, arraySerial), parentSerial // TASK: should not allocate
 
 module EphArray =
   module Unsafe =
@@ -224,7 +225,7 @@ module EphArray =
     let srcPtr, srcLen, _ = src
 
     rawCopySlice
-      (NativePtr.sizeOf destPtr)
+      (sizeof<'T> destPtr)
       (__nativeCast destPtr)
       destLen
       destStart

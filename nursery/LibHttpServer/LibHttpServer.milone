@@ -5,6 +5,7 @@
 // Impure things need replacing by ephemeral objects.
 module rec LibHttpServer.Program
 
+open Std.Ptr
 open Std.Region
 open Std.StdError
 open Std.StdMap
