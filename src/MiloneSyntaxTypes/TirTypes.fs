@@ -199,9 +199,6 @@ type TPatKind =
   /// `p1 :: p2`.
   | TConsPN
 
-  /// `p1 p2`.
-  | TAppPN
-
   /// `Variant p1`.
   | TVariantAppPN of variantApp: VariantSerial
 

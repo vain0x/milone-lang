@@ -186,7 +186,6 @@ let patIsClearlyExhaustive isNewtypeVariant pat =
 
       | TNilPN, _
       | TConsPN, _
-      | TAppPN, _
       | TVariantAppPN _, _
       | TNavPN _, _ -> false
 

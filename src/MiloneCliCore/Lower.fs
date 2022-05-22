@@ -160,11 +160,8 @@ let private lowerPatKind (kind: Tir.TPatKind) : Hir.HPatKind =
   | Tir.TVariantAppPN serial -> Hir.HVariantAppPN(lowerVariantSerial serial)
   | Tir.TTuplePN -> Hir.HTuplePN
 
-  | Tir.TAppPN
   | Tir.TNavPN _ -> unreachable () // Resolved in NameRes.
-
   | Tir.TAscribePN -> unreachable () // Resolved in Typing.
-
   | Tir.TAbortPN -> unreachable () // Compile error occurred.
 
 let private lowerExprKind (kind: Tir.TExprKind) : Hir.HExprKind =

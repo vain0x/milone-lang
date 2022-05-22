@@ -1082,7 +1082,6 @@ let private inferNodePat ctx pat =
   | TAscribePN, [ bodyPat ] -> inferAscribePat ctx bodyPat (getTy ()) loc
   | TAscribePN, _ -> unreachable ()
 
-  | TAppPN, _ // Error in NameRes.
   | TNavPN _, _ -> unreachable () // Resolved in NameRes.
 
 let private inferPat ctx pat : TPat * Ty * TyCtx =
