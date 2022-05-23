@@ -1,9 +1,7 @@
 module rec LibNurseryTests.Program
 
 open LibNurseryTests.ClapTests
-open LibNurseryTests.NativeIOTests
 
 let main _ =
   testClapModule ()
-  testNativeIO ()
   0
