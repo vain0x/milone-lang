@@ -334,8 +334,8 @@ type private Buffer = nativeptr<byte> * uint
 
 module private Buffer =
   let allocate (capacity: uint) : Buffer =
-    if capacity = 0 then
-      __nativeCast (unativeint 1), 0
+    if capacity = 0u then
+      __nativeCast (unativeint 1), 0u
     else
       __nativeStmt ("unsigned char *buf = milone_region_alloc({0}, sizeof(unsigned char));", capacity)
 
@@ -431,7 +431,7 @@ let private writeString (s: string) (output: Stream) : Stream =
   if s.Length <> 0 then
     let ptr: InPtr<char> = __nativeExpr ("({0}.ptr)", s)
     let ptr: InPtr<byte> = __nativeCast ptr
-    let output = doWriteExact ptr s.Length output
+    let output = doWriteExact ptr (uint s.Length) output
     __nativeStmt ("fflush({0});", output)
     output
 
@@ -810,7 +810,7 @@ let private readRawRequest () : JsonValue =
       | "Content-Length" ->
         match I.tryParse value with
         | None -> failwith ("Can't parse length as integer: '" + value + "'")
-        | Some len -> readHeader (Some len)
+        | Some len -> readHeader (Some (uint len))
 
       | _ ->
         trace ("Ignore header: '" + key + "'")

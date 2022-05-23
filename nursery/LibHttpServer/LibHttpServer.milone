@@ -279,6 +279,8 @@ let private loopInRegion (f: unit -> int) : int =
 
   go ()
 
+let private uintMin (l: uint) r = if r < l then r else l
+
 // -----------------------------------------------
 // Types
 // -----------------------------------------------
@@ -406,7 +408,7 @@ let private readReqBody (input: Stream) (size: uint) : Stream =
     if size = 0u then
       input
     else
-      let blockSize = I.min bufSize size
+      let blockSize = uintMin bufSize size
       let ok, buf, input = readExact buf blockSize input
       if not ok then failwith "readExact"
       go input buf (size - blockSize)
