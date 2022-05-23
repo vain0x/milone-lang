@@ -2,7 +2,7 @@
 // WARN: Don't expose to Internet.
 //
 // Support only Linux.
-// Impure things need replacing by ephemeral objects.
+// Impure things need replacing by owned types.
 module rec LibHttpServer.Program
 
 open Std.Ptr

@@ -1,20 +1,9 @@
 module rec LibNurseryTests.Program
 
 open LibNurseryTests.ClapTests
-open LibNurseryTests.EphArrayTests
-open LibNurseryTests.EphRefTests
-open LibNurseryTests.EphSerialTests
-open LibNurseryTests.EphVectorTests
-open LibNurseryTests.ImpureTests
 open LibNurseryTests.NativeIOTests
 
 let main _ =
   testClapModule ()
-  testEphArrayModule ()
-  testEphRefModule ()
-  testEphSerialModule ()
-  testEphVectorModule ()
   testNativeIO ()
-
-  // Exits.
-  testImpureModule ()
+  0
