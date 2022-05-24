@@ -1,4 +1,3 @@
-open Std.OsString
 open Std.Path
 open Std.StdTesting
 
