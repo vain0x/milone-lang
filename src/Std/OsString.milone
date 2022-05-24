@@ -2,7 +2,11 @@
 
 open Std.Block
 open Std.Ptr
+open Std.Region
 open Std.Vector
+
+// For memcpy.
+__nativeDecl "#include <string.h>"
 
 // See also milone.h and milone_platform.c
 // #milone_os_string
@@ -14,6 +18,8 @@ type OsChar = __nativeType<OsChar>
 type OsStringPtr = InPtr<OsChar>
 
 /// String of OS-dependent encoding.
+///
+/// This holds the same invariants as String.
 ///
 /// ## Length of String
 ///
@@ -28,27 +34,65 @@ type OsString = __nativeType<``struct MiloneOsString``>
 let private toPtrLenPair (s: OsString) : OsStringPtr * uint =
   __nativeExpr ("{0}.ptr", s), __nativeExpr ("{0}.len", s)
 
+/// Unsafely creates a clone of OS-encode string.
+/// Result is NUL-terminated.
+///
+/// SAFETY:
+///
+/// - Input span must be readable.
+/// - These contents must be valid as the OS-native encoding.
+let private unsafeCloneOfRawParts (ptr: OsStringPtr) (len: uint) : OsStringPtr =
+  assert (len = 0u || ptr <> Ptr.nullPtr)
+
+  if len <> 0u then
+    let destPtr: OutPtr<OsChar> = Region.alloc (len + 1u)
+    __nativeStmt ("memcpy({0}, {1}, {2});", destPtr, ptr, unativeint len * unativeint sizeof<OsChar>)
+    Ptr.cast destPtr
+  else
+    __nativeExpr """((OsChar const *)L"")"""
+
+let private uintCompare (l: uint) r = compare l r
+
 module OsChar =
+  /// U+0000
   let nul: OsChar = __nativeExpr "(OsChar)0"
+
+  let ofByte (n: byte) : OsChar = __nativeExpr ("(OsChar){0}", n)
+
+  /// Casts an OsChar to byte.
+  ///
+  /// This function is lossy on Windows where OsChar isn't byte-sized.
+  let toByte (n: OsChar) : byte = __nativeExpr ("(uint8_t){0}", n)
+
+  let ofUInt16 (n: uint16) : OsChar = __nativeExpr ("(OsChar){0}", n)
+  let toUInt16 (n: OsChar) : uint16 = __nativeExpr ("(uint16_t){0}", n)
 
   let ofUInt (n: uint) : OsChar = __nativeExpr ("(OsChar){0}", n)
   let toUInt (n: OsChar) : uint = __nativeExpr ("(uint32_t){0}", n)
 
-  let ofChar (c: char) : OsChar = __nativeExpr ("(OsChar){0}", byte c)
+  let ofChar (c: char) : OsChar = __nativeExpr ("(OsChar)(uint8_t){0}", c)
 
   /// Converts an OsChar value to char if it's an ASCII character.
   /// Returns NUL ('\x00') if not.
   let asChar (c: OsChar) : char =
-    let n = toUInt c
-
-    if n <= 255u then
-      char (byte n)
+    if toUInt c <= 255u then
+      char (toByte c)
     else
       '\x00'
 
-  let isAscii (c: OsChar) = toUInt c <= 255u
+  let isAscii (c: OsChar) : bool = toUInt c <= 255u
+
+  let equals (l: OsChar) (r: OsChar) : bool =
+    __nativeExpr ("({0} == {1})", l, r)
+
+  let compare (l: OsChar) (r: OsChar) : int =
+    uintCompare (toUInt l) (toUInt r)
 
 module OsString =
+  /// Gets an empty OsString.
+  let empty () : OsString =
+    __nativeExpr """(struct MiloneOsString){.ptr = (OsChar const *)L"", .len = 0}"""
+
   /// Creates an OS-encode string by converting from a UTF-8 string.
   let ofString (s: string) : OsString =
     __nativeExpr ("milone_os_string_of({0})", s)
@@ -62,12 +106,12 @@ module OsString =
     let _, len = toPtrLenPair s
     int len
 
-  /// Exposes code units of a string as a block.
+  /// Exposes code units of an OsString as a block.
   ///
   /// PERF: Contents aren't copied.
   let asBlock (s: OsString) : Block<OsChar> =
     let ptr, len = toPtrLenPair s
-    BlockExt.unsafeOfRawParts ptr len
+    BlockExt.unsafeCreate ptr len
 
   /// Gets a "character" at the specified position.
   /// Index must be within the bounds.
@@ -77,30 +121,36 @@ module OsString =
     Ptr.read (ptr: InPtr<OsChar>).[index]
 
 module OsStringExt =
-  /// Unsafely creates an OsString
-  /// of a pointer and a length without copying.
-  ///
-  /// SAFETY: The result is valid as long as the given pointer is valid.
-  let unsafeCreate (ptr: OsStringPtr) (len: uint) : OsString =
-    assert (len = 0u || ptr <> Ptr.nullPtr)
-    __nativeExpr ("(struct MiloneOsString){.ptr = {0}, .len = {1}}", ptr, len)
+  /// Exposes a pointer of buffer.
+  let asPtr (s: OsString) : OsStringPtr =
+    let ptr, _ = toPtrLenPair s
+    ptr
 
   /// Unsafely creates an OsString
   /// of a pointer and a length without copying.
   ///
-  /// SAFETY: The result is valid as long as the given pointer is valid.
-  let unsafeBorrow (ptr: OsStringPtr) : OsString =
+  /// SAFETY:
+  ///
+  /// - Input must satisfy invariants of OsString.
+  /// - The result is valid as long as the given pointer is valid.
+  let unsafeCreate (ptr: OsStringPtr) (len: uint) : OsString =
+    assert (ptr <> Ptr.nullPtr)
+    __nativeExpr ("(struct MiloneOsString){.ptr = {0}, .len = {1}}", ptr, len)
+
+  /// Unsafely creates an OsString
+  /// of a NUL-terminated pointer without copying.
+  /// Length is counted.
+  ///
+  /// SAFETY:
+  ///
+  /// - Input must satisfy invariants of OsString.
+  /// - The result is valid as long as the given pointer is valid.
+  let unsafeOfNative (ptr: OsStringPtr) : OsString =
     __nativeExpr ("milone_os_string_borrow({0})", ptr)
 
   /// Unsafely creates an OsString by copying contents from a pointer.
   let unsafeOfRawParts (ptr: OsStringPtr) (len: uint) : OsString =
-    let block: Block<OsChar> = BlockExt.unsafeOfRawParts ptr len
-    let ptr, len = BlockExt.unsafeToRawParts block
-    __nativeExpr ("(struct MiloneOsString){.ptr = {0}, .len = {1}}", ptr, len)
-
-  let unsafeAsPtr (s: OsString) : OsStringPtr =
-    let ptr, _ = toPtrLenPair s
-    ptr
+    unsafeCreate (unsafeCloneOfRawParts ptr len) len
 
   /// Unsafely creates an OsString
   /// of a block of OsChar.
@@ -109,4 +159,4 @@ module OsStringExt =
   ///         but that's unchecked.
   let unsafeOfBlockUnchecked (block: Block<OsChar>) : OsString =
     let ptr, len = BlockExt.unsafeToRawParts block
-    unsafeBorrow ptr
+    unsafeCreate ptr len
