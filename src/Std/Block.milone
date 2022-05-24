@@ -256,6 +256,18 @@ module Block =
     toListLoop [] (length block)
 
 module BlockExt =
+  /// Unsafely creates a block by wrapping pointer and length.
+  ///
+  /// PERF: Contents aren't copied.
+  ///
+  /// SAFETY:
+  ///
+  /// - The input pointer can be null when length is zero.
+  /// - Result block is valid as long as the input pointer is valid.
+  let unsafeCreate (ptr: InPtr<'T>) (len: uint) : Block<'T> =
+    assert (len = 0u || ptr <> Ptr.nullPtr)
+    Block (ptr, len)
+
   /// Unsafely exposes pointer and length.
   ///
   /// - Pointer can be null when length is zero.
