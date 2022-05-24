@@ -217,7 +217,10 @@ module Vector =
 /// Vector methods that are unsafe or niche.
 module VectorExt =
   /// Unsafely restores a vector instance from components.
-  let unsafeOfRawParts (ptr: Own<nativeptr<'T>>) (len: int) (capacity: int) : Vector<'T> = Vector(ptr, len, capacity)
+  let unsafeOfRawParts (ptr: Own<nativeptr<'T>>) (len: int) (capacity: int) : Vector<'T> =
+    assert (0 <= len && len <= capacity)
+    assert (ptr <> Ptr.nullPtr || capacity = 0)
+    Vector(ptr, len, capacity)
 
   /// Unwraps a vector into components.
   /// Use unsafeOfRawParts to restore.
