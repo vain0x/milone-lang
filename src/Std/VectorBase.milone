@@ -15,6 +15,131 @@ __nativeDecl
 #endif
 """
 
+/// Allocates an untyped vector.
+///
+/// Returns NULL if count or size is zero.
+///
+/// - Result is valid until free.
+///   - This implies that result can escape from the region.
+/// - Result must be free'd exactly once.
+let alloc (count: uint) (size: uint) : Own<voidptr> =
+  if (count ||| size) = 0u then
+    // __trace "allocate 0"
+    Own.acquire Ptr.nullPtr
+  else
+    assert (count < (1u <<< 31) / size)
+
+    let ptr: voidptr =
+      __nativeExpr ("calloc({0}, {1})", unativeint count, unativeint size)
+
+    // __trace (
+    //   ("allocate " + string (unativeint ptr))
+    //   + (" " + string (count * size))
+    // )
+
+    assert (ptr <> Ptr.nullPtr)
+    Own.acquire ptr
+
+/// Deallocates an untyped vector that is allocated with `heapAlloc`.
+///
+/// - This function is noop if ptr is null.
+/// - Never use the input pointer after this.
+let unsafeFree (ptr: Own<voidptr>) : unit =
+  let ptr = Own.release ptr
+  // __trace ("free " + string (unativeint ptr))
+  __nativeStmt ("free({0});", ptr)
+
+/// Grows an untyped vector that is allocated with `heapAlloc`.
+///
+/// Vector moves to newly reallocated memory.
+/// New memory must have a capacity `minLength` at least.
+let unsafeGrowExact
+  (newCapacity: uint)
+  (ptr: Own<voidptr>)
+  (length: uint)
+  (capacity: uint)
+  (size: uint)
+  : Own<voidptr> * uint =
+  let oldPtr = Own.release ptr
+
+  // __trace (
+  //   ("grow len:" + string length)
+  //   + (" cap:" + string capacity)
+  //   + (" -> " + string newCapacity)
+  // )
+
+  let newPtr = Own.release (alloc newCapacity size)
+
+  if oldPtr <> Ptr.nullPtr then
+    if length <> 0u then
+      __nativeStmt ("memcpy({0}, {1}, {2});", newPtr, oldPtr, unativeint length * unativeint size)
+
+    unsafeFree (Own.acquire oldPtr)
+
+  Own.acquire newPtr, newCapacity
+
+/// Reserves more capacity for an untyped vector.
+///
+/// In result, `length + addition` doesn't exceed capacity`.
+let unsafeReserve (addition: uint) ptr length capacity size =
+  assert (addition < (1u <<< 31) - length)
+
+  let minLength = length + uint addition
+
+  if minLength > capacity then
+    // #exponentially_grow
+    // newCapacity >= max(capacity * 2, minLength, 15).
+    let newCapacity = (capacity <<< 1) ||| minLength ||| 15u
+    unsafeGrowExact newCapacity ptr length capacity size
+  else
+    ptr, capacity
+
+/// Reserves more capacity for an untyped vector.
+///
+/// In result, `length + addition == capacity`.
+let unsafeReserveExact (addition: uint) ptr length capacity size =
+  assert (addition < (1u <<< 31) - length)
+
+  let newCapacity = length + uint addition
+
+  if newCapacity > capacity then
+    unsafeGrowExact newCapacity ptr length capacity size
+  else
+    ptr, capacity
+
+/// Appends an item to an untyped vector.
+///
+/// Returns new pointer and capacity since the vector grows if full.
+let unsafePush
+  (item: VoidInPtr)
+  (ptr: Own<voidptr>)
+  (length: uint)
+  (capacity: uint)
+  (size: uint)
+  : Own<voidptr> * uint =
+  let ptr, capacity =
+    if length = capacity then
+      // #exponentially_grow
+      // newCapacity >= max(capacity * 2, minLength, 15).
+      let newCapacity =
+        (capacity <<< 1) ||| (length + 1u) ||| 15u
+
+      unsafeGrowExact newCapacity ptr length capacity size
+    else
+      ptr, capacity
+
+  let ptr = Own.release ptr
+
+  __nativeStmt (
+    "memcpy(&({0})[{1}], {2}, {3});",
+    (__nativeCast ptr: nativeptr<byte>),
+    unativeint length * unativeint size,
+    item,
+    unativeint size
+  )
+
+  Own.acquire ptr, capacity
+
 /// Sorts an untyped vector in-place.
 ///
 /// - Sort algorithm is an unstable sort.

@@ -21,127 +21,6 @@ __nativeDecl "#include <string.h>"
 /// - For all i in {0, ..., len - 1}, ptr[i] must be valid as 'T type.
 type Vector<'T> = private Vector of ptr: Own<nativeptr<'T>> * len: uint * capacity: uint
 
-/// Allocates an untyped dynamic array with `calloc`.
-///
-/// Returns NULL if count or size is zero.
-let private rawAllocate (count: uint) (size: uint) : Own<voidptr> =
-  if (count ||| size) = 0u then
-    // __trace "allocate 0"
-    Own.acquire Ptr.nullPtr
-  else
-    assert (count < (1u <<< 31) / size)
-
-    let ptr: voidptr =
-      __nativeExpr ("calloc({0}, {1})", unativeint count, unativeint size)
-
-    // __trace (
-    //   ("allocate " + string (unativeint ptr))
-    //   + (" " + string (count * size))
-    // )
-
-    assert (ptr <> Ptr.nullPtr)
-    Own.acquire ptr
-
-/// Deallocates an untyped dynamic array with `free`.
-///
-/// If ptr is null, it's noop.
-let private rawDeallocate (ptr: Own<voidptr>) : unit =
-  let ptr = Own.release ptr
-  // __trace ("free " + string (unativeint ptr))
-  __nativeStmt ("free({0});", ptr)
-
-/// Grows an untyped vector.
-///
-/// Vector moves to newly reallocated memory.
-/// New memory must have a capacity `minLength` at least.
-let private rawGrowExact
-  (newCapacity: uint)
-  (ptr: Own<voidptr>)
-  (length: uint)
-  (capacity: uint)
-  (size: uint)
-  : Own<voidptr> * uint =
-  let oldPtr = Own.release ptr
-
-  // __trace (
-  //   ("grow len:" + string length)
-  //   + (" cap:" + string capacity)
-  //   + (" -> " + string newCapacity)
-  // )
-
-  let newPtr =
-    Own.release (rawAllocate newCapacity size)
-
-  if oldPtr <> Ptr.nullPtr then
-    if length <> 0u then
-      __nativeStmt ("memcpy({0}, {1}, {2});", newPtr, oldPtr, unativeint length * unativeint size)
-
-    rawDeallocate (Own.acquire oldPtr)
-
-  Own.acquire newPtr, newCapacity
-
-/// Reserves more capacity for an untyped vector.
-///
-/// In result, `length + addition` doesn't exceed capacity`.
-let private rawReserve (addition: uint) ptr length capacity size =
-  assert (addition < (1u <<< 31) - length)
-
-  let minLength = length + uint addition
-
-  if minLength > capacity then
-    // #exponentially_grow
-    // newCapacity >= max(capacity * 2, minLength, 15).
-    let newCapacity = (capacity <<< 1) ||| minLength ||| 15u
-    rawGrowExact newCapacity ptr length capacity size
-  else
-    ptr, capacity
-
-/// Reserves more capacity for an untyped vector.
-///
-/// In result, `length + addition == capacity`.
-let private rawReserveExact (addition: uint) ptr length capacity size =
-  assert (addition < (1u <<< 31) - length)
-
-  let newCapacity = length + uint addition
-
-  if newCapacity > capacity then
-    rawGrowExact newCapacity ptr length capacity size
-  else
-    ptr, capacity
-
-/// Appends an item to an untyped vector.
-///
-/// Returns new ptr and capacity since the vector grows if full.
-let private rawPush
-  (item: VoidInPtr)
-  (ptr: Own<voidptr>)
-  (length: uint)
-  (capacity: uint)
-  (size: uint)
-  : Own<voidptr> * uint =
-  let ptr, capacity =
-    if length = capacity then
-      // #exponentially_grow
-      // newCapacity >= max(capacity * 2, minLength, 15).
-      let newCapacity =
-        (capacity <<< 1) ||| (length + 1u) ||| 15u
-
-      rawGrowExact newCapacity ptr length capacity size
-    else
-      ptr, capacity
-
-  let ptr = Own.release ptr
-
-  __nativeStmt (
-    "memcpy(&({0})[{1}], {2}, {3});",
-    (__nativeCast ptr: nativeptr<byte>),
-    unativeint length * unativeint size,
-    item,
-    unativeint size
-  )
-
-  Own.acquire ptr, capacity
-
 module Vector =
   /// Gets an empty vector.
   let empty () : Vector<'T> = Vector(Own.acquire Ptr.nullPtr, 0u, 0u)
@@ -150,7 +29,7 @@ module Vector =
   let alloc (capacity: int) : Vector<'T> =
     if capacity > 0 then
       let ptr =
-        rawAllocate (uint capacity) (uint sizeof<'T>)
+        VectorBase.alloc (uint capacity) (uint sizeof<'T>)
 
       let ptr: Own<nativeptr<'T>> =
         Own.acquire (__nativeCast (Own.release ptr))
@@ -162,11 +41,7 @@ module Vector =
   /// Disposes a vector.
   let dispose (v: Vector<'T>) : unit =
     let (Vector (ptr, _, _)) = v
-
-    let ptr: Own<voidptr> =
-      Own.acquire (__nativeCast (Own.release ptr))
-
-    rawDeallocate ptr
+    VectorBase.unsafeFree (Ptr.cast ptr)
 
   /// Gets the length.
   let length (v: Vector<'T>) : int * Vector<'T> =
@@ -202,7 +77,7 @@ module Vector =
       let ptr: Own<voidptr> =
         Own.acquire (__nativeCast (Own.release ptr))
 
-      rawPush itemPtr ptr length capacity (uint sizeof<'T>)
+      VectorBase.unsafePush itemPtr ptr length capacity (uint sizeof<'T>)
 
     let ptr: Own<nativeptr<'T>> =
       Own.acquire (__nativeCast (Own.release ptr))
@@ -239,7 +114,7 @@ module Vector =
       let addition = 1u + uint (List.length xs)
 
       let ptr, capacity =
-        rawReserve addition ptr length capacity (uint sizeof<'T>)
+        VectorBase.unsafeReserve addition ptr length capacity (uint sizeof<'T>)
 
       let ptr: nativeptr<'T> = __nativeCast (Own.release ptr)
 
@@ -341,7 +216,7 @@ module Vector =
 
     if len <> 0u then
       let destPtr =
-        Own.release (rawAllocate len (uint sizeof<'T>))
+        Own.release (VectorBase.alloc len (uint sizeof<'T>))
 
       __nativeStmt ("memcpy({0}, {1}, {2});", destPtr, srcPtr, unativeint len * unativeint sizeof<'T>)
       Vector(Own.acquire (Ptr.cast destPtr), len, len)
@@ -376,7 +251,7 @@ module VectorExt =
   /// Item type must be one of: intNN, uintNN, float, unit, bool, char, obj, voidptr, nativeptr, InPtr.
   let unsafeZeroCreate (length: int) : Vector<'T> =
     assert (length >= 0)
-    let ptr = rawAllocate (uint length) 1u
+    let ptr = VectorBase.alloc (uint length) 1u
     Vector(Own.acquire (__nativeCast (Own.release ptr)), uint length, uint length)
 
   /// Unsafely exposes the internal buffer of the vector.
@@ -412,7 +287,7 @@ module VectorExt =
       Own.acquire (__nativeCast (Own.release ptr))
 
     let ptr, capacity =
-      rawReserve (uint addition) ptr length capacity (uint sizeof<'T>)
+      VectorBase.unsafeReserve (uint addition) ptr length capacity (uint sizeof<'T>)
 
     let ptr =
       Own.acquire (__nativeCast (Own.release ptr))
@@ -434,7 +309,7 @@ module VectorExt =
       Own.acquire (__nativeCast (Own.release ptr))
 
     let ptr, capacity =
-      rawReserveExact (uint addition) ptr length capacity (uint sizeof<'T>)
+      VectorBase.unsafeReserveExact (uint addition) ptr length capacity (uint sizeof<'T>)
 
     let ptr =
       Own.acquire (__nativeCast (Own.release ptr))
