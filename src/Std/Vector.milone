@@ -31,10 +31,7 @@ module Vector =
       let ptr =
         VectorBase.alloc (uint capacity) (uint sizeof<'T>)
 
-      let ptr: Own<nativeptr<'T>> =
-        Own.acquire (__nativeCast (Own.release ptr))
-
-      Vector(ptr, 0u, uint capacity)
+      Vector(Ptr.cast ptr, 0u, uint capacity)
     else
       empty ()
 
@@ -54,8 +51,7 @@ module Vector =
     assert (uint i < length)
     let ptr = Own.release ptr
 
-    let item =
-      Ptr.read (__nativeCast ptr: InPtr<'T>).[i]
+    let item = Ptr.read (Ptr.cast ptr: InPtr<'T>).[i]
 
     item, Vector(Own.acquire ptr, length, capacity)
 
@@ -74,15 +70,9 @@ module Vector =
     let ptr, capacity =
       let itemPtr: VoidInPtr = __nativeExpr ("&({0})", item)
 
-      let ptr: Own<voidptr> =
-        Own.acquire (__nativeCast (Own.release ptr))
+      VectorBase.unsafePush itemPtr (Ptr.cast ptr) length capacity (uint sizeof<'T>)
 
-      VectorBase.unsafePush itemPtr ptr length capacity (uint sizeof<'T>)
-
-    let ptr: Own<nativeptr<'T>> =
-      Own.acquire (__nativeCast (Own.release ptr))
-
-    Vector(ptr, length + 1u, capacity)
+    Vector(Ptr.cast ptr, length + 1u, capacity)
 
   /// Removes the last item from the vector unless empty.
   ///
@@ -94,7 +84,7 @@ module Vector =
       let ptr = Own.release ptr
 
       let item =
-        Ptr.read (__nativeCast ptr: InPtr<'T>).[int (length - 1u)]
+        Ptr.read (Ptr.cast ptr: InPtr<'T>).[int (length - 1u)]
 
       Some item, Vector(Own.acquire ptr, length - 1u, capacity)
     else
@@ -108,15 +98,12 @@ module Vector =
     | x :: xs ->
       let (Vector (ptr, length, capacity)) = v
 
-      let ptr: Own<voidptr> =
-        Own.acquire (__nativeCast (Own.release ptr))
-
       let addition = 1u + uint (List.length xs)
 
       let ptr, capacity =
-        VectorBase.unsafeReserve addition ptr length capacity (uint sizeof<'T>)
+        VectorBase.unsafeReserve addition (Ptr.cast ptr) length capacity (uint sizeof<'T>)
 
-      let ptr: nativeptr<'T> = __nativeCast (Own.release ptr)
+      let ptr: nativeptr<'T> = Ptr.cast (Own.release ptr)
 
       let rec extendFromListLoop i x xs =
         Ptr.write ptr.[i] x
@@ -140,7 +127,7 @@ module Vector =
     assert (uint start <= uint endIndex)
 
     let xs =
-      let ptr: InPtr<'T> = __nativeCast ptr
+      let ptr: InPtr<'T> = Ptr.cast ptr
 
       let rec toListLoop acc i =
         let acc = Ptr.read ptr.[i] :: acc
@@ -195,20 +182,14 @@ module Vector =
     // ptrComparer pl pr = itemComparer (*pl) (*pr)
     let ptrComparer =
       fun (l: VoidInPtr) (r: VoidInPtr) ->
-        itemComparer (Ptr.read (__nativeCast l: InPtr<'T>)) (Ptr.read (__nativeCast r: InPtr<'T>))
+        itemComparer (Ptr.read (Ptr.cast l: InPtr<'T>)) (Ptr.read (Ptr.cast r: InPtr<'T>))
 
     let (Vector (ptr, length, capacity)) = v
 
     let ptr =
-      Own.acquire (__nativeCast (Own.release ptr))
+      VectorBase.unsafeSortUnstable ptrComparer (Ptr.cast ptr) length (uint sizeof<'T>)
 
-    let ptr =
-      VectorBase.unsafeSortUnstable ptrComparer ptr length (uint sizeof<'T>)
-
-    let ptr =
-      Own.acquire (__nativeCast (Own.release ptr))
-
-    Vector(ptr, length, capacity)
+    Vector(Ptr.cast ptr, length, capacity)
 
   /// Creates a vector by copying from a block.
   let ofBlock (block: Block<'T>) : Vector<'T> =
@@ -252,7 +233,7 @@ module VectorExt =
   let unsafeZeroCreate (length: int) : Vector<'T> =
     assert (length >= 0)
     let ptr = VectorBase.alloc (uint length) 1u
-    Vector(Own.acquire (__nativeCast (Own.release ptr)), uint length, uint length)
+    Vector((Ptr.cast ptr: Own<nativeptr<'T>>), uint length, uint length)
 
   /// Unsafely exposes the internal buffer of the vector.
   ///
@@ -283,16 +264,10 @@ module VectorExt =
 
     let (Vector (ptr, length, capacity)) = v
 
-    let ptr =
-      Own.acquire (__nativeCast (Own.release ptr))
-
     let ptr, capacity =
-      VectorBase.unsafeReserve (uint addition) ptr length capacity (uint sizeof<'T>)
+      VectorBase.unsafeReserve (uint addition) (Ptr.cast ptr) length capacity (uint sizeof<'T>)
 
-    let ptr =
-      Own.acquire (__nativeCast (Own.release ptr))
-
-    Vector(ptr, length, capacity)
+    Vector(Ptr.cast ptr, length, capacity)
 
   /// Reserves more memory for a vector.
   ///
@@ -305,13 +280,7 @@ module VectorExt =
 
     let (Vector (ptr, length, capacity)) = v
 
-    let ptr =
-      Own.acquire (__nativeCast (Own.release ptr))
-
     let ptr, capacity =
-      VectorBase.unsafeReserveExact (uint addition) ptr length capacity (uint sizeof<'T>)
+      VectorBase.unsafeReserveExact (uint addition) (Ptr.cast ptr) length capacity (uint sizeof<'T>)
 
-    let ptr =
-      Own.acquire (__nativeCast (Own.release ptr))
-
-    Vector(ptr, length, capacity)
+    Vector(Ptr.cast ptr, length, capacity)
