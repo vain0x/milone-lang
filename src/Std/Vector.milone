@@ -5,17 +5,10 @@ open Std.Own
 open Std.Ptr
 open Std.StdError
 
-// For memcpy.
-__nativeDecl
-  """
-  #include <string.h>
+module VectorBase = Std.VectorBase
 
-#if defined(_MSC_VER) // On Windows MSVC
-#define THREAD_LOCAL __declspec(thread)
-#else
-#define THREAD_LOCAL _Thread_local
-#endif
-"""
+// For memcpy.
+__nativeDecl "#include <string.h>"
 
 /// Owned dynamic array.
 ///
@@ -148,46 +141,6 @@ let private rawPush
   )
 
   Own.acquire ptr, capacity
-
-/// Sorts an untyped vector in-place.
-///
-/// - Sort algorithm is an unstable sort.
-/// - `ptrComparer` is called with two pointers, each of them points to an item in the vector.
-let private rawSortUnstable
-  (ptrComparer: VoidInPtr -> VoidInPtr -> int)
-  (ptr: Own<voidptr>)
-  (length: uint)
-  (size: uint)
-  : Own<voidptr> =
-  let ptr = Own.release ptr
-
-  // Define a static function that captures the comparer via thread local.
-  __nativeDecl
-    """
-      struct PtrCompareFun {
-        int(*fun)(void const *, void const *, void const *);
-        void const *env;
-      };
-      _Thread_local struct PtrCompareFun t_compare_fun;
-      static int static_compare(void const *l, void const *r) {
-        return t_compare_fun.fun(t_compare_fun.env, l, r);
-      }
-    """
-
-  __nativeStmt (
-    """
-      struct PtrCompareFun prev = t_compare_fun;
-      t_compare_fun = (struct PtrCompareFun){.fun = {0}.fun, .env = {0}.env};
-      qsort({1}, {2}, {3}, static_compare);
-      t_compare_fun = prev;
-    """,
-    ptrComparer,
-    ptr,
-    length,
-    size
-  )
-
-  Own.acquire ptr
 
 module Vector =
   /// Gets an empty vector.
@@ -375,7 +328,7 @@ module Vector =
       Own.acquire (__nativeCast (Own.release ptr))
 
     let ptr =
-      rawSortUnstable ptrComparer ptr length (uint sizeof<'T>)
+      VectorBase.unsafeSortUnstable ptrComparer ptr length (uint sizeof<'T>)
 
     let ptr =
       Own.acquire (__nativeCast (Own.release ptr))

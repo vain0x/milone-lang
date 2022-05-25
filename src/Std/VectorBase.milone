@@ -1,0 +1,57 @@
+module rec Std.VectorBase
+
+open Std.Own
+open Std.Ptr
+
+// For memcpy.
+__nativeDecl
+  """
+#include <string.h>
+
+#if defined(_MSC_VER) // On Windows MSVC
+#define THREAD_LOCAL __declspec(thread)
+#else
+#define THREAD_LOCAL _Thread_local
+#endif
+"""
+
+/// Sorts an untyped vector in-place.
+///
+/// - Sort algorithm is an unstable sort.
+/// - `ptrComparer` is called with two pointers, each of them points to an item in the vector.
+/// - Input span must be valid to read and write.
+let unsafeSortUnstable
+  (ptrComparer: VoidInPtr -> VoidInPtr -> int)
+  (ptr: Own<voidptr>)
+  (len: uint)
+  (size: uint)
+  : Own<voidptr> =
+  let ptr = Own.release ptr
+
+  // Define a static function that captures the comparer via thread local.
+  __nativeDecl
+    """
+      struct PtrCompareFun {
+        int32_t(*fun)(void const *, void const *, void const *);
+        void const *env;
+      };
+      THREAD_LOCAL struct PtrCompareFun t_compare_fun;
+      static int static_compare(void const *l, void const *r) {
+        return (int)t_compare_fun.fun(t_compare_fun.env, l, r);
+      }
+    """
+
+  __nativeStmt (
+    """
+      struct PtrCompareFun prev = t_compare_fun;
+      t_compare_fun = (struct PtrCompareFun){.fun = {0}.fun, .env = {0}.env};
+      qsort({1}, {2}, {3}, static_compare);
+      t_compare_fun = prev;
+    """,
+    ptrComparer,
+    ptr,
+    len,
+    size
+  )
+
+  Own.acquire ptr
