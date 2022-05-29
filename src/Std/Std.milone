@@ -10,6 +10,7 @@ open Std.StdStringTests
 open Std.StringBufferTests
 open Std.VectorTests
 open Std.OsStringTests
+open Std.HashMapTests
 
 // Test is written in tests/primitives/std_block
 open Std.Block
@@ -22,6 +23,7 @@ let main _ =
     testStringBuffer ()
     testOsString ()
     testBox ()
+    testHashMap ()
     testPath ()
     testFile io)
   |> never
