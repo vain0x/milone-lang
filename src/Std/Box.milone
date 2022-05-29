@@ -1,0 +1,43 @@
+module rec Std.Box
+
+open Std.Own
+open Std.Ptr
+
+module VectorBase = Std.VectorBase
+
+type BoxBuffer<'T> = private BoxBuffer of Own<nativeptr<'T>>
+type BoxWriter<'T> = private BoxWriter of Own<OutPtr<'T>>
+
+module BoxWriter =
+  let alloc () : BoxWriter<'T> =
+    let ptr = VectorBase.alloc 1u (uint sizeof<'T>)
+    BoxWriter(Ptr.cast ptr)
+
+  let dispose (bw: BoxWriter<'T>) : unit =
+    let (BoxWriter ptr) = bw
+    VectorBase.unsafeFree (Ptr.cast ptr)
+
+  let write (item: 'T) (bw: BoxWriter<'T>) : BoxBuffer<'T> =
+    let (BoxWriter ptr) = bw
+    let ptr = Own.release ptr
+    Ptr.write ptr item
+    BoxBuffer(Own.acquire (Ptr.cast ptr))
+
+module BoxBuffer =
+  let create (item: 'T) : BoxBuffer<'T> =
+    BoxWriter.write item (BoxWriter.alloc ())
+
+  let dispose (bb: BoxBuffer<'T>) : unit =
+    let (BoxBuffer ptr) = bb
+    VectorBase.unsafeFree (Ptr.cast ptr)
+
+  let read (bb: BoxBuffer<'T>) : 'T * BoxBuffer<'T> =
+    let (BoxBuffer ptr) = bb
+    let ptr = Own.release ptr
+    Ptr.read ptr, BoxBuffer(Own.acquire ptr)
+
+  let write (item: 'T) (bb: BoxBuffer<'T>) : BoxBuffer<'T> =
+    let (BoxBuffer ptr) = bb
+    let ptr = Own.release ptr
+    Ptr.write ptr item
+    BoxBuffer(Own.acquire ptr)
