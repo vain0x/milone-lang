@@ -255,7 +255,57 @@ module Block =
 
     toListLoop [] (length block)
 
+  let debug (itemDebug: 'T -> string) (block: Block<'T>) : string =
+    let rec go block =
+      let len = length block
+      // assert (len >= 1)
+
+      if len <= 1 then
+        itemDebug (forceGet 0 block)
+      else
+        let l, r = splitAt (len / 2) block
+        go l + "; " + go r
+
+    if length block >= 1 then
+      "[: " + go block + " :]"
+    else
+      "[::]"
+
+  let equals (itemEquals: 'T -> 'T -> bool) (l: Block<'T>) (r: Block<'T>) : bool =
+    let rec go l r =
+      match uncons l, uncons r with
+      | Some (lh, lt), Some (rh, rt) -> itemEquals lh rh && go lt rt
+      | None, None -> true
+      | _ -> false
+
+    go l r
+
+  let compare (itemCompare: 'T -> 'T -> int) (l: Block<'T>) (r: Block<'T>) : int =
+    let rec go l r =
+      match uncons l, uncons r with
+      | Some (lh, lt), Some (rh, rt) ->
+        let c = itemCompare lh rh
+        if c <> 0 then c else go lt rt
+
+      | None, Some _ -> -1
+      | Some _, None -> 1
+      | None, None -> 0
+
+    go l r
+
 module BlockExt =
+  /// Unsafely creates a block by wrapping pointer and length.
+  ///
+  /// PERF: Contents aren't copied.
+  ///
+  /// SAFETY:
+  ///
+  /// - The input pointer can be null when length is zero.
+  /// - Result block is valid as long as the input pointer is valid.
+  let unsafeCreate (ptr: InPtr<'T>) (len: uint) : Block<'T> =
+    assert (len = 0u || ptr <> Ptr.nullPtr)
+    Block(ptr, len)
+
   /// Unsafely exposes pointer and length.
   ///
   /// - Pointer can be null when length is zero.

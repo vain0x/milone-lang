@@ -27,5 +27,5 @@ module IO =
   let exec (action: IO -> IO) : Never =
     let (IO io) = action (IO(Own.acquire ()))
     Own.release io
-    __nativeStmt ("exit(0);")
+    __nativeStmt "exit(0);"
     unreachable ()

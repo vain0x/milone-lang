@@ -1,6 +1,7 @@
 // Test Std library.
 
 open Std.ByteVectorTests
+open Std.BoxTests
 open Std.IO
 open Std.FileTests
 open Std.PathTests
@@ -9,6 +10,7 @@ open Std.StdStringTests
 open Std.StringBufferTests
 open Std.VectorTests
 open Std.OsStringTests
+open Std.HashMapTests
 
 // Test is written in tests/primitives/std_block
 open Std.Block
@@ -20,6 +22,8 @@ let main _ =
     testByteVector ()
     testStringBuffer ()
     testOsString ()
+    testBox ()
+    testHashMap ()
     testPath ()
     testFile io)
   |> never

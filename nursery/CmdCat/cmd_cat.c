@@ -1,3 +1,6 @@
+// Only for Linux.
+
+#include <errno.h>
 #include <assert.h>
 #include <fcntl.h>
 #include <stdbool.h>
@@ -11,53 +14,48 @@
 #include <milone.h>
 
 // -----------------------------------------------
-// buffer
-// -----------------------------------------------
-
-struct Buffer {
-    char *ptr;
-    uint32_t len;
-};
-
-uint32_t buffer_get_length(void const *buf) {
-    return ((struct Buffer const *)buf)->len;
-}
-
-// -----------------------------------------------
 // file IO
 // -----------------------------------------------
 
-int file_open_read(struct String path) { return open(path.ptr, O_RDONLY); }
+int32_t fd_open_read(struct String pathname) { return open(string_to_c_str(pathname), O_RDONLY); }
 
-int file_close(int fd) {
-    assert(fd >= 0);
-    return close(fd);
-}
+int32_t fd_close(uint32_t fd) { return close((int)fd); }
 
-void const *file_read_bytes(int fd, uint32_t len) {
-    struct Buffer *buf = milone_region_alloc(1, sizeof(struct Buffer));
-    buf->ptr = milone_region_alloc(len + 1, sizeof(char));
-    buf->len = len;
+bool fd_read_bytes(uint32_t fd, void *buf, uint32_t buf_size, uint32_t *read_size) {
+    fprintf(stderr, "trace: read fd:%d size:%d\n", fd, (int)buf_size);
 
-    // fprintf(stderr, "reading fd=%d buf ptr=%p len=%d\n", fd, buf->ptr,
-    //         buf->len);
+    assert(buf != NULL);
+    assert(buf_size < (1UL << 31));
+    assert(read_size != NULL);
 
-    long long n = read(fd, buf->ptr, buf->len);
+    long long n = read((int)fd, buf, buf_size);
     if (n < 0 || n >= (1LL << 31)) {
-        return NULL;
+        fprintf(stderr, "trace: read failed\n");
+        return false;
     }
 
-    buf->len = (uint32_t)n;
-    return buf;
+    fprintf(stderr, "trace:   -> read:%d\n", (uint32_t)n);
+    *read_size = (uint32_t)n;
+    return true;
 }
 
-int file_write_bytes(int fd, void const *src, int src_epoch) {
-    assert(fd >= 0);
+void fd_write_bytes(uint32_t fd, void const *src, uint32_t size) {
+    assert(src != NULL);
 
-    struct Buffer *buf = (struct Buffer *)src;
-    if (buf->len == 0) {
-        return 0;
+    fprintf(stderr, "trace: write fd:%d size:%d\n", fd, size);
+
+    while (size >= 1) {
+        ssize_t n = write((int)fd, src, size);
+        if (n == 0 || n == -1) {
+            fprintf(stderr, "%s\n", strerror(errno));
+            fprintf(stderr, "trace: write failed\n");
+            exit(1);
+        }
+
+        assert((uint32_t)n <= size);
+        if (n >= size) break;
+
+        src = (uint8_t *)src + (uint32_t)n;
+        size -= (uint32_t)n;
     }
-
-    return write(fd, buf->ptr, buf->len);
 }

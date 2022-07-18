@@ -142,6 +142,30 @@ let private toListTest () =
 
   | _ -> ()
 
+let private debugTest () =
+  assert (B.debug string (B.empty (): Block<int>) = "[::]")
+  assert (B.debug string (B.range 1) = "[: 0 :]")
+  assert (B.debug string (B.range 3) = "[: 0; 1; 2 :]")
+  assert (B.debug string (B.range 4) = "[: 0; 1; 2; 3 :]")
+
+let private equalsTest () =
+  let intEquals (l: int) r = l = r
+
+  assert (B.equals intEquals (B.ofList []) (B.ofList []))
+  assert (B.equals intEquals (B.range 3) (B.ofList [ 0; 1; 2 ]))
+
+  assert (B.equals intEquals (B.ofList [ 1 ]) (B.ofList [ 2 ])
+          |> not)
+
+  assert (B.equals intEquals (B.ofList [ 1 ]) (B.ofList [ 1; 2 ])
+          |> not)
+
+let private compareTest () =
+  assert (B.compare compare (B.ofList []) (B.ofList []: Block<int>) = 0)
+  assert (B.compare compare (B.range 3) (B.ofList [ 0; 1; 2 ]) = 0)
+  assert (B.compare compare (B.ofList [ 1 ]) (B.ofList [ 2 ]) < 0)
+  assert (B.compare compare (B.ofList [ 2 ]) (B.ofList [ 2; 1 ]) < 0)
+
 let main _ =
   initTest ()
   rangeTest ()
@@ -154,4 +178,7 @@ let main _ =
   // scanTest ()
   ofListTest ()
   toListTest ()
+  debugTest ()
+  equalsTest ()
+  compareTest ()
   0
