@@ -35,6 +35,20 @@ json_get: ${JSON_GET}
 test_json_get: ${JSON_GET} CmdJsonGet/test
 	( cd CmdJsonGet; JSON_GET=${JSON_GET} ./test )
 
+# ------------------------------------------------
+# LibSqlite3
+# ------------------------------------------------
+
+LibSqlite3/test-output.txt: \
+	vendor/sqlite3/sqlite3.o \
+	${wildcard LibSqlite3/*.milone} \
+	LibSqlite3/milone_manifest \
+	LibSqlite3/lib_sqlite3_runtime.c
+	milone run LibSqlite3 >LibSqlite3/test-output.txt
+
+test_lib_sqlite3: LibSqlite3/test-output.txt LibSqlite3/test-expected.txt
+	diff -q LibSqlite3/test-output.txt LibSqlite3/test-expected.txt && echo OK
+
 
 
 LSP_SERVER := ${PWD}/target/CmdLspServer/lsp_server
@@ -96,7 +110,7 @@ run: build
 	${TODO} remove 'up'
 	${TODO}
 
-test: test_cat test_json_get target/LibNurseryTests/.timestamp
+test: test_cat test_json_get test_lib_sqlite3 target/LibNurseryTests/.timestamp
 
 # test: target/lib_span_tests \
 # 		target/lib_file_system_tests \
