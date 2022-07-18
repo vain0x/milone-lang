@@ -205,6 +205,12 @@ module File =
     __nativeStmt ("remove({0});", toCStr pathname)
     io
 
+  /// Flushes a file.
+  let flush (io: IO) (file: File) : File * IO =
+    let fp, file = unsafeDup file
+    __nativeStmt ("fflush({0});\n", fp)
+    file, io
+
 /// Features rarely used or unsafe.
 module FileExt =
   /// `FILE *`

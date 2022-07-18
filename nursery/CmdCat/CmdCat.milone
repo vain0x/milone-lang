@@ -13,15 +13,7 @@ module Env = Std.StdEnv
 
 // should be in Std.File
 module File =
-  let flush (io: IO) (file: File) : File * IO =
-    let fp = FileExt.unsafeUnwrap file
-    let fp = Own.release fp
-
-    __nativeStmt ("fflush({0});\n", fp)
-
-    let file = FileExt.unsafeWrap (Own.acquire fp)
-    file, io
-
+  /// Writes contents of ByteVector to a file.
   let writeBlock (io: IO) (buf: Vector<byte>) (file: File) : bool * File * Vector<byte> * IO =
     let ptr, len, _, buf = VectorExt.unsafeDup buf
 
@@ -29,7 +21,11 @@ module File =
       let ok, file, io =
         File.unsafeWriteExactFromRawParts io (Ptr.cast ptr) (int len) file
 
-      let file, io = if ok then flush io file else file, io
+      let file, io =
+        if ok then
+          File.flush io file
+        else
+          file, io
 
       ok, file, buf, io
     else
