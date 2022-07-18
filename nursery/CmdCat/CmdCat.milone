@@ -35,6 +35,23 @@ module File =
 // Application
 // -----------------------------------------------
 
+let private helpText () =
+  """cat: Concatenates multiple files
+
+USAGE:
+   cat <FILE...>
+
+EXAMPLES:
+    # Write concatenation of input1.txt and input2.txt to standard output.
+    cat input1.txt input2.txt
+
+    # Pipe standard input to standard output.
+    cat -
+
+ARGUMENTS:
+  FILE: pathname of file to read from.
+        '-' for standard input."""
+
 /// Reads a file and writes its contents to standard output.
 let private doCatFile (io: IO) profiler (output: File) pathname =
   let rec readLoop (io: IO) profiler input output buf =
@@ -62,7 +79,11 @@ let private doCatFile (io: IO) profiler (output: File) pathname =
   let profiler =
     Profiler.log ("OPEN: " + pathname) profiler
 
-  let inputOpt, io = File.openRead io pathname
+  let inputOpt, io =
+    if pathname = "-" then
+      Some(File.stdin ()), io
+    else
+      File.openRead io pathname
 
   match inputOpt with
   | None -> Error("open: '" + pathname + "'"), io, profiler, output
@@ -80,21 +101,15 @@ let private doCatFile (io: IO) profiler (output: File) pathname =
     result, io, profiler, output
 
 let private catFiles (io: IO) profiler output (inputs: string list) =
-  let rec loop (io: IO) profiler output inputs =
-    match inputs with
-    | [] -> Ok(), io, profiler, output
-
-    | pathname :: inputs ->
-      let result, io, profiler, output = doCatFile io profiler output pathname
-
-      match result with
-      | Ok () -> catFiles io profiler output inputs
-      | Error msg -> Error msg, io, profiler, output
-
   match inputs with
-  | [] -> Error "No inputs.", io, profiler, output
+  | [] -> Ok(), io, profiler, output
 
-  | _ -> loop io profiler output inputs
+  | pathname :: inputs ->
+    let result, io, profiler, output = doCatFile io profiler output pathname
+
+    match result with
+    | Ok () -> catFiles io profiler output inputs
+    | Error msg -> Error msg, io, profiler, output
 
 // -----------------------------------------------
 // Entrypoint
@@ -104,19 +119,26 @@ let main _ =
   let args = Env.commandLineArgs () |> List.drop 1
 
   IO.exec (fun io ->
-    let profiler = Profiler.create ()
-    let output = File.stdout ()
+    match args with
+    | []
+    | "-h" :: "--help" :: _ ->
+      printfn "%s" (helpText ())
+      io
 
-    let result, io, profiler, output = catFiles io profiler output args
+    | _ ->
+      let profiler = Profiler.create ()
+      let output = File.stdout ()
 
-    let io = File.close io output
-    Profiler.dispose profiler
+      let result, io, profiler, output = catFiles io profiler output args
 
-    match result with
-    | Ok () -> io
+      let io = File.close io output
+      Profiler.dispose profiler
 
-    | Error msg ->
-      printfn "ERROR: %s" msg
-      exit 1
-      io)
+      match result with
+      | Ok () -> io
+
+      | Error msg ->
+        printfn "ERROR: %s" msg
+        exit 1
+        io)
   |> never
