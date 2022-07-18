@@ -92,6 +92,10 @@ module File =
     )
 
     let len: int = __nativeExpr "len"
+
+    let dest =
+      VectorExt.unsafeSetLength (int (destLength + uint len)) dest
+
     len, dest, input, io
 
   /// Reads a block of bytes equal to the specified size from the file to append the buffer.

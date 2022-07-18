@@ -42,11 +42,6 @@ let private doCatFile (io: IO) profiler (output: File) pathname =
 
     let readSize, buf, input, io = File.readBlock io buf input
 
-    let bufLen, buf = Vector.length buf
-
-    // FIXME: readBlock should do this
-    let buf = VectorExt.unsafeSetLength readSize buf
-
     if readSize < 0 then
       Vector.dispose buf // buf seems not consumed here; compiler bug?
 
