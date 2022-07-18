@@ -79,41 +79,44 @@ let private doCatFile (io: IO) profiler (output: File) pathname =
 
     result, io, profiler, output
 
+let private catFiles (io: IO) profiler output (inputs: string list) =
+  let rec loop (io: IO) profiler output inputs =
+    match inputs with
+    | [] -> Ok(), io, profiler, output
+
+    | pathname :: inputs ->
+      let result, io, profiler, output = doCatFile io profiler output pathname
+
+      match result with
+      | Ok () -> catFiles io profiler output inputs
+      | Error msg -> Error msg, io, profiler, output
+
+  match inputs with
+  | [] -> Error "No inputs.", io, profiler, output
+
+  | _ -> loop io profiler output inputs
+
+// -----------------------------------------------
+// Entrypoint
+// -----------------------------------------------
+
 let main _ =
   let args = Env.commandLineArgs () |> List.drop 1
 
-  if args |> List.isEmpty then
-    failwith "No argument. Usage: cat <FILE>"
-  else
-    IO.exec (fun io ->
-      let output = File.stdout ()
+  IO.exec (fun io ->
+    let profiler = Profiler.create ()
+    let output = File.stdout ()
 
-      let profiler = Profiler.create ()
-      let profiler = Profiler.log "START" profiler
+    let result, io, profiler, output = catFiles io profiler output args
 
-      let rec go (io: IO) profiler output args =
-        match args with
-        | [] -> Ok(), io, profiler, output
+    let io = File.close io output
+    Profiler.dispose profiler
 
-        | arg :: args ->
-          let result, io, profiler, output = doCatFile io profiler output arg
+    match result with
+    | Ok () -> io
 
-          match result with
-          | Error msg -> Error msg, io, profiler, output
-          | Ok () -> go io profiler output args
-
-      let result, io, profiler, output = go io profiler output args
-
-      let io = File.close io output
-
-      let profiler = Profiler.log "FINISH" profiler
-      Profiler.dispose profiler
-
-      match result with
-      | Ok () -> io
-
-      | Error msg ->
-        printfn "ERROR: %s" msg
-        exit 1
-        io)
-    |> never
+    | Error msg ->
+      printfn "ERROR: %s" msg
+      exit 1
+      io)
+  |> never
