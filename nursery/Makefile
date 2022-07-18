@@ -1,6 +1,6 @@
 default: build
 
-.PHONY: build clean default restore run test json_get lsp_server todo
+.PHONY: build clean default restore run test cat json_get lsp_server todo
 
 MILONE := milone-dev
 TRIPLET := x86_64-unknown-linux-gnu
@@ -14,24 +14,33 @@ CAT := ${PWD}/target/CmdCat/${TRIPLET}-debug/CmdCat
 ${CAT}: ${wildcard CmdCat/*.milone}
 	milone build CmdCat
 
-cat_test: ${CAT} CmdCat/test
+cat: ${CAT}
+	cp ${CAT} cat
+
+test_cat: ${CAT} CmdCat/test
 	( cd CmdCat; CAT=${CAT} ./test )
 
+# ------------------------------------------------
+# CmdJsonGet
+# ------------------------------------------------
+
+JSON_GET := ${PWD}/target/CmdJsonGet/${TRIPLET}-debug/CmdJsonGet
+
+${JSON_GET}: ${wildcard CmdJsonGet/*.milone}
+	milone build CmdJsonGet
+
+json_get: ${JSON_GET}
+	cp ${JSON_GET} json_get
+
+test_json_get: ${JSON_GET} CmdJsonGet/test
+	( cd CmdJsonGet; JSON_GET=${JSON_GET} ./test )
 
 
-JSON_GET := ${PWD}/target/CmdJsonGet/json_get
+
 LSP_SERVER := ${PWD}/target/CmdLspServer/lsp_server
 TODO := ${PWD}/target/CmdSqliteTodo/todo
 
-build: ${JSON_GET} ${LSP_SERVER} ${TODO}
-
-${JSON_GET}: \
-	CmdJsonGet/CmdJsonGet.milone \
-	CmdJsonGet/cmd_json_get_runtime.c \
-	CmdJsonGet/milone_manifest
-	(cd CmdJsonGet; ./build)
-
-json_get: ${JSON_GET}
+build: ${CAT} ${JSON_GET} ${LSP_SERVER} ${TODO}
 
 ${LSP_SERVER}: \
 	CmdLspServer/milone_manifest \
@@ -80,9 +89,6 @@ target/LibNurseryTests/.timestamp: \
 test_lib_nursery: target/LibNurseryTests/.timestamp
 
 run: build
-	cat .vscode/c_cpp_properties.json | ${JSON_GET} version
-	cat .vscode/c_cpp_properties.json | ${JSON_GET} configurations.length
-	cat .vscode/c_cpp_properties.json | ${JSON_GET} configurations.0.name
 	${TODO} add 'wash dishes'
 	${TODO} add 'clean up table'
 	${TODO}
@@ -90,7 +96,7 @@ run: build
 	${TODO} remove 'up'
 	${TODO}
 
-test: target/LibNurseryTests/.timestamp
+test: test_cat test_json_get target/LibNurseryTests/.timestamp
 
 # test: target/lib_span_tests \
 # 		target/lib_file_system_tests \

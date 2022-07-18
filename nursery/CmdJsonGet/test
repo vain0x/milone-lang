@@ -1,0 +1,23 @@
+#!/bin/sh
+# env: JSON_GET
+
+set -eu
+
+INPUT="$PWD/test-input.json"
+
+{
+    # Examples in the help.
+    echo '{"foo": 42}' | $JSON_GET foo
+    echo '{"greets": {"en": "Hello"}}' | $JSON_GET greets.en
+    echo '[null, false, true]' | $JSON_GET 1
+
+    cat "$INPUT" | $JSON_GET version
+    cat "$INPUT" | $JSON_GET entries.length
+    cat "$INPUT" | $JSON_GET entries.0
+    cat "$INPUT" | $JSON_GET entries.0.value
+    cat "$INPUT" | $JSON_GET entries.1
+    cat "$INPUT" | $JSON_GET entries.1.value
+} >test-output.ignored.txt
+
+diff -q test-expected.txt test-output.ignored.txt
+echo OK

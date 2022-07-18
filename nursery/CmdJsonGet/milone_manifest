@@ -1,3 +1,1 @@
-std gnu11
-cc cmd_json_get_runtime.c
-sanitize address,undefined
+sanitize address,leak,undefined

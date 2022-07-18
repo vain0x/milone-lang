@@ -1,8 +1,0 @@
-#!/bin/sh
-
-set -eu
-
-TARGET=$PWD/../target/CmdJsonGet
-
-milone build --target-dir "$TARGET" $PWD
-cp -f "$TARGET/x86_64-unknown-linux-gnu-debug/CmdJsonGet" "$TARGET/json_get"
