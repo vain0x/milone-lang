@@ -4,86 +4,21 @@ open Std.Own
 open Std.Ptr
 open Std.Vector
 
-module Env = Std.StdEnv
-
-let getArgs () : string list = Env.commandLineArgs ()
-
-// -----------------------------------------------
-// file IO
-// -----------------------------------------------
-
-// this should go to Std
-
-/// File descriptor.
-type Fd = Fd of Own<uint>
-
-let stdoutFd () = Fd (Own.acquire 1u)
-
-let fdOpenRead (pathname: string) : Fd option =
-  let fd: int = __nativeFun ("fd_open_read", pathname)
-  if fd >= 0 then Some(Fd (Own.acquire (uint fd))) else None
-
-let fdClose (Fd fd) : bool =
-  let fd = Own.release fd
-
-  let stat: int = __nativeFun ("fd_close", fd)
-  stat = 0
-
-let fdReadBytes (buf: Vector<byte>) (Fd fd) : bool * Vector<byte> * Fd =
-  let fd = Own.release fd
-
-  // wants dedicated api (to borrow unwritten part of vector)
-  let ptr, len, capacity, buf = VectorExt.unsafeDup buf
-
-  assert (len < capacity) // input vector must have capacity
-  let dest : OutPtr<byte> = Ptr.cast (Ptr.select ptr.[int len])
-
-  // wants dedicated api
-  let readSize : OutPtr<uint> =
-    __nativeStmt "uint32_t read_size = 0;"
-    __nativeExpr "&read_size"
-
-  let ok: bool =
-    __nativeFun ("fd_read_bytes", fd, dest, capacity - len, readSize)
-
-  let readSizeOpt =
-    if ok then
-      Ptr.read (Ptr.asNative readSize) |> Some
-    else
-      None
-
-  let buf =
-    match readSizeOpt with
-    | Some size when size >= 1u -> VectorExt.unsafeSetLength (int (len + size)) buf
-    | _ -> buf
-
-  ok, buf, Fd(Own.acquire fd)
-
-let fdWriteBytes (buf: Vector<byte>) (Fd fd) : bool * Vector<byte> * Fd =
-  let fd = Own.release fd
-
-  // wants dedicated api (to borrow a part of vector)
-  let ptr, len, capacity, buf = VectorExt.unsafeDup buf
-
-  let ok : bool =
-    __nativeFun ("fd_write_bytes", fd, ptr, len)
-
-  ok, buf, Fd (Own.acquire fd)
-
 // -----------------------------------------------
 // Profiler
 // -----------------------------------------------
 
-type Profiler = Profiler of Own<voidptr>
+/// Memory profiler.
+type Profiler = private Profiler of Own<voidptr>
 
-let profileInit () : Profiler =
-  let state: voidptr = __nativeFun "milone_profile_init"
-  Profiler (Own.acquire state)
+module Profiler =
+  let create () : Profiler =
+    let state: voidptr = __nativeFun "milone_profile_init"
+    Profiler(Own.acquire state)
 
-let profileLog (msg: string) (Profiler state) : Profiler =
-  let state = Own.release state
-  __nativeFun ("milone_profile_log", msg, state)
-  Profiler (Own.acquire state)
+  let dispose (Profiler state) : unit = Own.release state |> ignore
 
-let profileDispose (Profiler state) : unit =
-  Own.release state |> ignore
+  let log (msg: string) (Profiler state) : Profiler =
+    let state = Own.release state
+    __nativeFun ("milone_profile_log", msg, state)
+    Profiler(Own.acquire state)

@@ -1,103 +1,128 @@
 module rec CmdCat.Program
 
 open CmdCat.Ffi
+open Std.IO
+open Std.File
+open Std.Own
+open Std.Ptr
+open Std.StdError
 open Std.StdList
 open Std.Vector
 
+module Env = Std.StdEnv
+
+// should be in Std.File
+module File =
+  let flush (io: IO) (file: File) : File * IO =
+    let fp = FileExt.unsafeUnwrap file
+    let fp = Own.release fp
+
+    __nativeStmt ("fflush({0});\n", fp)
+
+    let file = FileExt.unsafeWrap (Own.acquire fp)
+    file, io
+
+  let writeBlock (io: IO) (buf: Vector<byte>) (file: File) : bool * File * Vector<byte> * IO =
+    let ptr, len, _, buf = VectorExt.unsafeDup buf
+
+    if len <> 0u then
+      let ok, file, io =
+        File.unsafeWriteExactFromRawParts io (Ptr.cast ptr) (int len) file
+
+      let file, io = if ok then flush io file else file, io
+
+      ok, file, buf, io
+    else
+      true, file, buf, io
+
 // -----------------------------------------------
-// Util
-// -----------------------------------------------
-
-// use Std.StdError?
-let private failwith msg =
-  printfn "ERROR: %s" msg
-  exit 1
-
-let private guard f cond = if not cond then f ()
-
-let private unwrapOrElse f opt =
-  match opt with
-  | Some it -> it
-  | None -> f ()
-
-// -----------------------------------------------
-// Application logic
+// Application
 // -----------------------------------------------
 
 /// Reads a file and writes its contents to standard output.
-let private doCatFile (outFd: Fd) profiler pathname =
-  let profiler =
-    profileLog ("OPEN: " + pathname) profiler
+let private doCatFile (io: IO) profiler (output: File) pathname =
+  let rec readLoop (io: IO) profiler input output buf =
+    let profiler = Profiler.log "READ" profiler
 
-  let inFd =
-    match fdOpenRead pathname with
-    | Some fd -> fd
-    | None ->
-      failwith ("open: '" + pathname + "'")
-      stdoutFd () // wants never type
+    let readSize, buf, input, io = File.readBlock io buf input
 
-  let buf: Vector<byte> = Vector.alloc 1000
+    let bufLen, buf = Vector.length buf
 
-  let rec go inFd outFd buf profiler =
-    let profiler = profileLog "READ" profiler
+    // FIXME: readBlock should do this
+    let buf = VectorExt.unsafeSetLength readSize buf
 
-    let ok, buf, inFd = fdReadBytes buf inFd
+    if readSize < 0 then
+      Vector.dispose buf // buf seems not consumed here; compiler bug?
 
-    if ok then
-      let len, buf = Vector.length buf
+      Error("read: '" + pathname + "'"), io, profiler, input, output, buf
+    else if readSize = 0 then
+      // reached at EOF
+      Ok(), io, profiler, input, output, buf
+    else
+      let ok, output, buf, io = File.writeBlock io buf output
 
-      if len <> 0 then
-        let ok, buf, outFd = fdWriteBytes buf outFd
-
-        if not ok then
-          failwith "write to STDOUT"
-
+      if not ok then
+        Error "Write failed", io, profiler, input, output, buf
+      else
         let buf = VectorExt.unsafeSetLength 0 buf // wants Vector.clear
 
-        go inFd outFd buf profiler
-      else
-        // reached at EOF
-        inFd, outFd, buf, profiler
-    else
-      failwith ("read: '" + pathname + "'")
-      inFd, outFd, buf, profiler // wants never type
+        readLoop io profiler input output buf
 
-  let inFd, outFd, buf, profiler = go inFd outFd buf profiler
+  let profiler =
+    Profiler.log ("OPEN: " + pathname) profiler
 
-  let ok = fdClose inFd
+  let inputOpt, io = File.openRead io pathname
 
-  if not ok then
-    failwith ("close: '" + pathname + "'")
+  match inputOpt with
+  | None -> Error("open: '" + pathname + "'"), io, profiler, output
 
-  Vector.dispose buf
+  | Some input ->
+    let buf: Vector<byte> = Vector.alloc 1000
 
-  let profiler = profileLog "CLOSED" profiler
-  outFd, profiler
+    let result, io, profiler, input, output, buf = readLoop io profiler input output buf
+
+    let io = File.close io input
+    Vector.dispose buf
+
+    let profiler = Profiler.log "CLOSED" profiler
+
+    result, io, profiler, output
 
 let main _ =
-  let args = getArgs () |> List.drop 1
+  let args = Env.commandLineArgs () |> List.drop 1
 
-  (args |> List.isEmpty |> not)
-  |> guard (fun () -> failwith "file not specified")
+  if args |> List.isEmpty then
+    failwith "No argument. Usage: cat <FILE>"
+  else
+    IO.exec (fun io ->
+      let output = File.stdout ()
 
-  let outFd = stdoutFd ()
+      let profiler = Profiler.create ()
+      let profiler = Profiler.log "START" profiler
 
-  let profiler = profileInit ()
-  let profiler = profileLog "START" profiler
+      let rec go (io: IO) profiler output args =
+        match args with
+        | [] -> Ok(), io, profiler, output
 
-  let rec go outFd profiler args =
-    match args with
-    | arg :: args ->
-      let outFd, profiler = doCatFile outFd profiler arg
-      go outFd profiler args
+        | arg :: args ->
+          let result, io, profiler, output = doCatFile io profiler output arg
 
-    | [] -> outFd, profiler
+          match result with
+          | Error msg -> Error msg, io, profiler, output
+          | Ok () -> go io profiler output args
 
-  let outFd, profiler = go outFd profiler args
+      let result, io, profiler, output = go io profiler output args
 
-  let ok = fdClose outFd
-  if not ok then failwith "close: stdout"
+      let io = File.close io output
 
-  let profiler = profileLog "FINISH" profiler
-  profileDispose profiler
-  0
+      let profiler = Profiler.log "FINISH" profiler
+      Profiler.dispose profiler
+
+      match result with
+      | Ok () -> io
+
+      | Error msg ->
+        printfn "ERROR: %s" msg
+        exit 1
+        io)
+    |> never
