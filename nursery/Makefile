@@ -2,6 +2,23 @@ default: build
 
 .PHONY: build clean default restore run test json_get lsp_server todo
 
+MILONE := milone-dev
+TRIPLET := x86_64-unknown-linux-gnu
+
+# ------------------------------------------------
+# CmdCat
+# ------------------------------------------------
+
+CAT := ${PWD}/target/CmdCat/${TRIPLET}-debug/CmdCat
+
+${CAT}: ${wildcard CmdCat/*.milone}
+	milone build CmdCat
+
+cat_test: ${CAT} CmdCat/test
+	( cd CmdCat; CAT=${CAT} ./test )
+
+
+
 JSON_GET := ${PWD}/target/CmdJsonGet/json_get
 LSP_SERVER := ${PWD}/target/CmdLspServer/lsp_server
 TODO := ${PWD}/target/CmdSqliteTodo/todo
