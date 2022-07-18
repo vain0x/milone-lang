@@ -3,13 +3,33 @@ module rec CmdCat.Program
 open CmdCat.Ffi
 open Std.IO
 open Std.File
-open Std.Own
 open Std.Ptr
 open Std.StdError
 open Std.StdList
 open Std.Vector
 
 module Env = Std.StdEnv
+
+let private helpText () =
+  """cat: Concatenates multiple files
+
+USAGE:
+   cat <FILE...>
+
+EXAMPLES:
+    # Write concatenation of input1.txt and input2.txt to standard output.
+    cat input1.txt input2.txt
+
+    # Pipe standard input to standard output.
+    cat -
+
+ARGUMENTS:
+  FILE: pathname of file to read from.
+        '-' for standard input."""
+
+// -----------------------------------------------
+// Utility
+// -----------------------------------------------
 
 // should be in Std.File
 module File =
@@ -35,49 +55,33 @@ module File =
 // Application
 // -----------------------------------------------
 
-let private helpText () =
-  """cat: Concatenates multiple files
-
-USAGE:
-   cat <FILE...>
-
-EXAMPLES:
-    # Write concatenation of input1.txt and input2.txt to standard output.
-    cat input1.txt input2.txt
-
-    # Pipe standard input to standard output.
-    cat -
-
-ARGUMENTS:
-  FILE: pathname of file to read from.
-        '-' for standard input."""
-
 /// Reads a file and writes its contents to standard output.
-let private doCatFile (io: IO) profiler (output: File) pathname =
-  let rec readLoop (io: IO) profiler input output buf =
-    let profiler = Profiler.log "READ" profiler
-
+let private doCatFile
+  (io: IO)
+  (prof: Profiler)
+  (output: File)
+  (pathname: string)
+  : Result<unit, string> * IO * Profiler * File =
+  let rec loop (io: IO) prof input output buf =
+    let prof = Profiler.log "READ" prof
     let readSize, buf, input, io = File.readBlock io buf input
 
     if readSize < 0 then
       Vector.dispose buf // buf seems not consumed here; compiler bug?
-
-      Error("read: '" + pathname + "'"), io, profiler, input, output, buf
+      Error "read", io, prof, input, output, buf
     else if readSize = 0 then
       // reached at EOF
-      Ok(), io, profiler, input, output, buf
+      Ok(), io, prof, input, output, buf
     else
       let ok, output, buf, io = File.writeBlock io buf output
 
       if not ok then
-        Error "Write failed", io, profiler, input, output, buf
+        Error "fwrite", io, prof, input, output, buf
       else
         let buf = VectorExt.unsafeSetLength 0 buf // wants Vector.clear
+        loop io prof input output buf
 
-        readLoop io profiler input output buf
-
-  let profiler =
-    Profiler.log ("OPEN: " + pathname) profiler
+  let prof = Profiler.log ("OPEN: " + pathname) prof
 
   let inputOpt, io =
     if pathname = "-" then
@@ -86,26 +90,31 @@ let private doCatFile (io: IO) profiler (output: File) pathname =
       File.openRead io pathname
 
   match inputOpt with
-  | None -> Error("open: '" + pathname + "'"), io, profiler, output
+  | None -> Error("open: '" + pathname + "'"), io, prof, output
 
   | Some input ->
     let buf: Vector<byte> = Vector.alloc 1000
 
-    let result, io, profiler, input, output, buf = readLoop io profiler input output buf
+    let result, io, prof, input, output, buf = loop io prof input output buf
 
     let io = File.close io input
     Vector.dispose buf
 
-    let profiler = Profiler.log "CLOSED" profiler
+    let prof = Profiler.log "CLOSE" prof
 
-    result, io, profiler, output
+    result, io, prof, output
 
-let private catFiles (io: IO) profiler output (inputs: string list) =
+let private catFiles
+  (io: IO)
+  (prof: Profiler)
+  (output: File)
+  (inputs: string list)
+  : Result<unit, string> * IO * Profiler * File =
   match inputs with
-  | [] -> Ok(), io, profiler, output
+  | [] -> Ok(), io, prof, output
 
   | pathname :: inputs ->
-    let result, io, profiler, output = doCatFile io profiler output pathname
+    let result, io, profiler, output = doCatFile io prof output pathname
 
     match result with
     | Ok () -> catFiles io profiler output inputs
@@ -121,18 +130,19 @@ let main _ =
   IO.exec (fun io ->
     match args with
     | []
-    | "-h" :: "--help" :: _ ->
+    | "-h" :: _
+    | "--help" :: _ ->
       printfn "%s" (helpText ())
       io
 
     | _ ->
-      let profiler = Profiler.create ()
+      let prof = Profiler.create ()
       let output = File.stdout ()
 
-      let result, io, profiler, output = catFiles io profiler output args
+      let result, io, prof, output = catFiles io prof output args
 
       let io = File.close io output
-      Profiler.dispose profiler
+      Profiler.dispose prof
 
       match result with
       | Ok () -> io
