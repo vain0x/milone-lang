@@ -74,7 +74,7 @@ Function must NOT capture any local variables.
     let fp: __nativeFun<int, int> = __nativeFun f
 ```
 
-## Call statically-linked native function
+## Call external native function
 
 `__nativeFun ("name", args...)` is a special expression to call a native function with the specified name.
 
@@ -99,9 +99,9 @@ Use manifest file to specify linker options (TODO: write document of manifest fi
 
 Restriction: Variadic parameter functions (e.g. `printf`) can't be called with this syntax.
 
-## Call dynamically-linked native function
+## Call native function from so/dll
 
-(Not implemented yet. Use `dlopen` on Unix and link `libdl` (-lm). Use `LoadLibrary` on Windows.)
+(Not implemented yet. Use `dlopen` on Unix and link `libdl` (`-ldl` option). Use `LoadLibrary` on Windows.)
 
 ## Size of type
 
@@ -125,7 +125,7 @@ Other arguments are bound to placeholders (see below).
 
 ### Placeholders
 
-Placeholder `{i}` (`i >= 0`) in the template is each replaced with the i'th placeholder argument. Remark: Currently there's no way to escape braces.
+Placeholder `{i}` (`i >= 0`) in the template is each replaced with the i'th placeholder argument.
 
 ### Value placeholders
 
@@ -189,12 +189,6 @@ Value of `__nativeDecl (...)` is `()`.
 
 ----
 
-## Recommended practice: Safe wrapper
+## Recommended practice: Abstraction
 
-Function is *safe* if it can't cause undefined behavior (UB) for any arguments.
-
-*Safe wrapper* is an API which exposes a set of *safe* functions and types.
-
-Avoid using these features described in this page directly from application. Instead, make a module as a safe wrapper on top of them.
-
-(TODO: explain more precisely, add examples)
+See [Pointer Types / Recommended Practice: Abstraction](x_ptr_types.md#recommended-practice-abstraction)

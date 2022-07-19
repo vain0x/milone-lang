@@ -2,11 +2,9 @@
 
 This page describes non-function pointer feature.
 
-- *NOTICE(lang-ext)*: This feature is "language extension", i.e. not compatible with F#. Identifiers that start with `__` are for extensions.
-
 ## Prerequisites
 
-It's assumed that the reader know about:
+This page assumes the reader knows:
 
 - Basics of the C language
 - Undefined behavior (UB) in C
@@ -25,10 +23,10 @@ There are several types for pointers.
 
 | milone-lang       | C                 | Permission    |
 |:------------------|:------------------|:--------------|
-| `InPtr<T>`      | `T const *`       | Read-only     |
-| `OutPtr<T>`     | `T *`             | Write-only    |
+| `InPtr<T>`        | `T const *`       | Read-only     |
+| `OutPtr<T>`       | `T *`             | Write-only    |
 | `nativeptr<T>`    | `T *`             | Read-write    |
-| `VoidInPtr`     | `void const *`    | -             |
+| `VoidInPtr`       | `void const *`    | -             |
 | `voidptr`         | `void *`          | -             |
 
 *Note*: `nativeptr` and `voidptr` exist in F# but others don't.
@@ -44,13 +42,6 @@ Cast to a generic pointer type to use.
 `OutPtr` is same as `nativeptr` in the view of C language.
 The difference is that `OutPtr` isn't readable.
 Intentional usage is an uninitialized buffer (result of allocation function) and an output parameter.
-
-### Notation of Types
-
-Some of pointer primitives are treated specially in type check.
-
-- `{ptr}` represents all pointer types.
-- `{ptr<T>}` represents all generic pointer types.
 
 ## Obtaining Pointer
 
@@ -70,14 +61,18 @@ It's invalidated when the variable goes out of scope.
 ### Allocated Pointer
 
 ```fsharp
-    Ptr.regionAlloc : uint -> OutPtr<'T>
+    open Std.Region
+
+    Region.alloc : uint -> OutPtr<'T>
 ```
 
-`Ptr.regionAlloc` function allocates a number of items of a type on the current region and returns a pointer to the start of memory block.
+`Region.alloc` function allocates a number of items of a type on the current region and returns a pointer to the start of memory block.
 
 - Allocated memory is zeroed.
 - The returned pointer is guaranteed to be valid. This function aborts the program if allocation failed.
 - The returned pointer is invalidated when to leave of the current region.
+
+See also "Memory Management" in plans.md for "regions".
 
 ### Null Pointer
 
@@ -95,7 +90,7 @@ It's invalidated when the variable goes out of scope.
     // when 'P is a pointer type
 ```
 
-`Ptr.invalid` makes a pointer that points to the specified address.
+`Ptr.invalid` function makes a pointer that points to the specified address.
 
 There are two kind of potential usage:
 
@@ -217,15 +212,10 @@ Also, [owned types](x_own_type.md) help such design.
 
 ## Appendix
 
-### Legacy Misuse of `obj` Types
+### Difference of `obj` and `VoidInPtr`
 
-The codebase might still contain incorrect use of `obj` due to the change of its semantics.
+Both `obj` and `VoidInPtr` are compiled to `void const *` in C.
+However, `obj` isn't a pointer type.
 
-In previous version of the milone-lang, `obj` was one of pointer types that was equivalent to `void const *` in C.
-`obj` was used instead of current `VoidInPtr`.
-
-However, there was a problem that `box` function did't always make a pointer to its argument but just cast it to pointer type when the value type was pointer-sized.
-For example, `Ptr.read (Ptr.cast (box 42un): InPtr<unativeint>)` attempted to read a value from an address `42`, which was definitely error.
-
-That is, existing `box` function made use of `obj` type more unsafe.
-I decided to add a separate type `VoidInPtr` for pointer.
+The `box` function doesn't always make a pointer to its argument but just cast it to pointer type when the value type fits in a pointer.
+For example, `Ptr.read (Ptr.cast (box 42un): InPtr<unativeint>)` attempts to read a value at the address `42`, which is definitely an error.
