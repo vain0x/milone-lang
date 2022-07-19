@@ -5,10 +5,10 @@ Documentation about design and implementation of the compiler.
 - Development Environment -> [dev_env.md](dev_env.md)
 - [ARCHITECTURE](../../ARCHITECTURE.md)
 - [#Passes](#Passes)
-- [#Plans](#Plans)
 - Also
     - [Design Policy](design_policy.md)
     - [Glossary](glossary.md)
+    - [Idea](idea.md)
     - [nursery](nursery): Experimental projects written in milone-lang
 
 ## Passes
@@ -40,11 +40,6 @@ Transformation:
 - ~~cir_dump~~
 
 See also header comments in implementation files.
-
-## Plans
-
-- [Foreign function interface](plans.md#ffi)
-- [Memory management](plans.md#memory-management)
 
 ----
 

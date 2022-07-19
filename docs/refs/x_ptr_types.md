@@ -72,7 +72,7 @@ It's invalidated when the variable goes out of scope.
 - The returned pointer is guaranteed to be valid. This function aborts the program if allocation failed.
 - The returned pointer is invalidated when to leave of the current region.
 
-See also "Memory Management" in plans.md for "regions".
+See also [region](./x_region.md), and "Memory Management" in idea.md for "regions".
 
 ### Null Pointer
 
