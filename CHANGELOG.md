@@ -38,7 +38,7 @@ https://github.com/vain0x/milone-lang/commits/develop?after=689350a9d82133b68350
     - Support equality for built-in types: list, option, tuple and discriminated union
         - (Note `open Std.Equal` is required to enable this feature.)
     - `unit` is comparable now
-    - `char` is now convertible from/to 8-bit integers to avoid incompatibility with F#
+    - `char` is now convertible only from/to 8-bit integers to avoid incompatibility with F#
     - `option` is defined as a discriminated union now (which is still built-in type, almost non-functional change)
     - `Result` is a new built-in type (which is also defined as a discriminated union)
 - Improve transformation:
@@ -105,8 +105,7 @@ https://github.com/vain0x/milone-lang/commits/develop?after=689350a9d82133b68350
     - `Ptr`
     - `Region`
     - `IO`, `File`, `Path`, `OsString`
-    - `Box`
-    - `Vector`, `ByteVector`, `Block`
+    - `Vector`, `ByteVector`, `Block`, `Box`, `HashMap`
     - `StringBuffer`
 - Add functions:
     - `Option.fold`
@@ -174,10 +173,10 @@ Compiler:
 - Map of non-static variables are split into modules
 - HIR no longer has visibility of symbols and `rec` modifiers
 - Rewrite monomorphization algorithm for more efficiency
-- change parameter order
+- Change parameter order
     - `S -> T -> S` for fold
     - `S -> T -> T * S` for map-fold
-- remove intermediate type information from MIR expressions
+- Remove intermediate type information from MIR expressions
 
 LSP server:
 
