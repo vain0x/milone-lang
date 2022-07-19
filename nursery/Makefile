@@ -36,6 +36,26 @@ test_json_get: ${JSON_GET} CmdJsonGet/test
 	( cd CmdJsonGet; JSON_GET=${JSON_GET} ./test )
 
 # ------------------------------------------------
+# CmdSqliteTodo
+# ------------------------------------------------
+
+TODO := ${PWD}/target/CmdSqliteTodo/${TRIPLET}-debug/CmdSqliteTodo
+
+${TODO}: vendor/sqlite3/sqlite3.o \
+	${wildcard CmdSqliteTodo/*.milone} \
+	CmdSqliteTodo/milone_manifest \
+	${wildcard LibSqlite3/*.milone} \
+	LibSqlite3/milone_manifest \
+	LibSqlite3/lib_sqlite3_runtime.c
+	milone build CmdSqliteTodo
+
+todo: ${TODO}
+	cp ${TODO} todo
+
+test_todo: ${TODO} CmdSqliteTodo/test CmdSqliteTodo/test-expected.txt
+	( cd CmdSqliteTodo; TODO=${TODO} ./test )
+
+# ------------------------------------------------
 # LibSqlite3
 # ------------------------------------------------
 
@@ -52,7 +72,6 @@ test_lib_sqlite3: LibSqlite3/test-output.txt LibSqlite3/test-expected.txt
 
 
 LSP_SERVER := ${PWD}/target/CmdLspServer/lsp_server
-TODO := ${PWD}/target/CmdSqliteTodo/todo
 
 build: ${CAT} ${JSON_GET} ${LSP_SERVER} ${TODO}
 
@@ -66,16 +85,6 @@ lsp_server: ${LSP_SERVER}
 
 test_lsp_server: ${LSP_SERVER}
 	(cd CmdLspServer; env LSP_SERVER_BIN=${LSP_SERVER} ./test)
-
-${TODO}: \
-	CmdSqliteTodo/CmdSqliteTodo.milone \
-	CmdSqliteTodo/milone_manifest \
-	LibSqlite3/Db.milone \
-	LibSqlite3/lib_sqlite3_runtime.c \
-	vendor/sqlite3/sqlite3.o
-	(cd CmdSqliteTodo; ./build)
-
-todo: ${TODO}
 
 # target/lib_span_tests: \
 # 	LibSpan/lib_span_runtime.c \
@@ -102,15 +111,7 @@ target/LibNurseryTests/.timestamp: \
 
 test_lib_nursery: target/LibNurseryTests/.timestamp
 
-run: build
-	${TODO} add 'wash dishes'
-	${TODO} add 'clean up table'
-	${TODO}
-	${TODO} remove 'wash'
-	${TODO} remove 'up'
-	${TODO}
-
-test: test_cat test_json_get test_lib_sqlite3 target/LibNurseryTests/.timestamp
+test: test_cat test_json_get test_todo test_lib_sqlite3 target/LibNurseryTests/.timestamp
 
 # test: target/lib_span_tests \
 # 		target/lib_file_system_tests \

@@ -39,7 +39,6 @@ let private MaxLength = 1 <<< 25
 
 /// Reads a file and writes its contents to standard output.
 let private readToEnd (io: IO) (input: File) (buf: Vector<byte>) : Result<unit, string> * IO * File * Vector<byte> =
-
   let rec loop (io: IO) input buf =
     let buf = VectorExt.reserve 1000 buf
 
