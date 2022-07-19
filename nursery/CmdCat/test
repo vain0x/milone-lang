@@ -1,13 +1,12 @@
 #!/bin/sh
+# env: $CAT
 
 set -eu
 
-CAT="$PWD/cat"
-
 (
     cd tests
-    $CAT input1.txt input2.txt >output.generated.txt
-    diff -q output.generated.txt output-expected.txt
+    ${CAT} input1.txt input2.txt >output.ignored.txt
+    diff -q output.ignored.txt output-expected.txt
 )
 
 echo OK

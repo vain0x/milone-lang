@@ -92,6 +92,10 @@ module File =
     )
 
     let len: int = __nativeExpr "len"
+
+    let dest =
+      VectorExt.unsafeSetLength (int (destLength + uint len)) dest
+
     len, dest, input, io
 
   /// Reads a block of bytes equal to the specified size from the file to append the buffer.
@@ -204,6 +208,12 @@ module File =
   let remove (io: IO) (pathname: string) : IO =
     __nativeStmt ("remove({0});", toCStr pathname)
     io
+
+  /// Flushes a file.
+  let flush (io: IO) (file: File) : File * IO =
+    let fp, file = unsafeDup file
+    __nativeStmt ("fflush({0});\n", fp)
+    file, io
 
 /// Features rarely used or unsafe.
 module FileExt =

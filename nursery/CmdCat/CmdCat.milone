@@ -1,103 +1,154 @@
 module rec CmdCat.Program
 
 open CmdCat.Ffi
+open Std.IO
+open Std.File
+open Std.Ptr
+open Std.StdError
 open Std.StdList
 open Std.Vector
 
+module Env = Std.StdEnv
+
+let private helpText () =
+  """cat: Concatenates multiple files
+
+USAGE:
+   cat <FILE...>
+
+EXAMPLES:
+    # Write concatenation of input1.txt and input2.txt to standard output.
+    cat input1.txt input2.txt
+
+    # Pipe standard input to standard output.
+    cat -
+
+ARGUMENTS:
+  FILE: pathname of file to read from.
+        '-' for standard input."""
+
 // -----------------------------------------------
-// Util
+// Utility
 // -----------------------------------------------
 
-// use Std.StdError?
-let private failwith msg =
-  printfn "ERROR: %s" msg
-  exit 1
+// should be in Std.File
+module File =
+  /// Writes contents of ByteVector to a file.
+  let writeBlock (io: IO) (buf: Vector<byte>) (file: File) : bool * File * Vector<byte> * IO =
+    let ptr, len, _, buf = VectorExt.unsafeDup buf
 
-let private guard f cond = if not cond then f ()
+    if len <> 0u then
+      let ok, file, io =
+        File.unsafeWriteExactFromRawParts io (Ptr.cast ptr) (int len) file
 
-let private unwrapOrElse f opt =
-  match opt with
-  | Some it -> it
-  | None -> f ()
+      let file, io =
+        if ok then
+          File.flush io file
+        else
+          file, io
+
+      ok, file, buf, io
+    else
+      true, file, buf, io
 
 // -----------------------------------------------
-// Application logic
+// Application
 // -----------------------------------------------
 
 /// Reads a file and writes its contents to standard output.
-let private doCatFile (outFd: Fd) profiler pathname =
-  let profiler =
-    profileLog ("OPEN: " + pathname) profiler
+let private doCatFile
+  (io: IO)
+  (prof: Profiler)
+  (output: File)
+  (pathname: string)
+  : Result<unit, string> * IO * Profiler * File =
+  let rec loop (io: IO) prof input output buf =
+    let prof = Profiler.log "READ" prof
+    let readSize, buf, input, io = File.readBlock io buf input
 
-  let inFd =
-    match fdOpenRead pathname with
-    | Some fd -> fd
-    | None ->
-      failwith ("open: '" + pathname + "'")
-      stdoutFd () // wants never type
-
-  let buf: Vector<byte> = Vector.alloc 1000
-
-  let rec go inFd outFd buf profiler =
-    let profiler = profileLog "READ" profiler
-
-    let ok, buf, inFd = fdReadBytes buf inFd
-
-    if ok then
-      let len, buf = Vector.length buf
-
-      if len <> 0 then
-        let ok, buf, outFd = fdWriteBytes buf outFd
-
-        if not ok then
-          failwith "write to STDOUT"
-
-        let buf = VectorExt.unsafeSetLength 0 buf // wants Vector.clear
-
-        go inFd outFd buf profiler
-      else
-        // reached at EOF
-        inFd, outFd, buf, profiler
+    if readSize < 0 then
+      Vector.dispose buf // buf seems not consumed here; compiler bug?
+      Error "read", io, prof, input, output, buf
+    else if readSize = 0 then
+      // reached at EOF
+      Ok(), io, prof, input, output, buf
     else
-      failwith ("read: '" + pathname + "'")
-      inFd, outFd, buf, profiler // wants never type
+      let ok, output, buf, io = File.writeBlock io buf output
 
-  let inFd, outFd, buf, profiler = go inFd outFd buf profiler
+      if not ok then
+        Error "fwrite", io, prof, input, output, buf
+      else
+        let buf = VectorExt.unsafeSetLength 0 buf // wants Vector.clear
+        loop io prof input output buf
 
-  let ok = fdClose inFd
+  let prof = Profiler.log ("OPEN: " + pathname) prof
 
-  if not ok then
-    failwith ("close: '" + pathname + "'")
+  let inputOpt, io =
+    if pathname = "-" then
+      Some(File.stdin ()), io
+    else
+      File.openRead io pathname
 
-  Vector.dispose buf
+  match inputOpt with
+  | None -> Error("open: '" + pathname + "'"), io, prof, output
 
-  let profiler = profileLog "CLOSED" profiler
-  outFd, profiler
+  | Some input ->
+    let buf: Vector<byte> = Vector.alloc 1000
+
+    let result, io, prof, input, output, buf = loop io prof input output buf
+
+    let io = File.close io input
+    Vector.dispose buf
+
+    let prof = Profiler.log "CLOSE" prof
+
+    result, io, prof, output
+
+let private catFiles
+  (io: IO)
+  (prof: Profiler)
+  (output: File)
+  (inputs: string list)
+  : Result<unit, string> * IO * Profiler * File =
+  match inputs with
+  | [] -> Ok(), io, prof, output
+
+  | pathname :: inputs ->
+    let result, io, profiler, output = doCatFile io prof output pathname
+
+    match result with
+    | Ok () -> catFiles io profiler output inputs
+    | Error msg -> Error msg, io, profiler, output
+
+// -----------------------------------------------
+// Entrypoint
+// -----------------------------------------------
 
 let main _ =
-  let args = getArgs () |> List.drop 1
+  let args = Env.commandLineArgs () |> List.drop 1
 
-  (args |> List.isEmpty |> not)
-  |> guard (fun () -> failwith "file not specified")
-
-  let outFd = stdoutFd ()
-
-  let profiler = profileInit ()
-  let profiler = profileLog "START" profiler
-
-  let rec go outFd profiler args =
+  IO.exec (fun io ->
     match args with
-    | arg :: args ->
-      let outFd, profiler = doCatFile outFd profiler arg
-      go outFd profiler args
+    | []
+    | "-h" :: _
+    | "--help" :: _ ->
+      printfn "%s" (helpText ())
+      io
 
-    | [] -> outFd, profiler
+    | _ ->
+      let prof = Profiler.create ()
+      let output = File.stdout ()
 
-  let outFd, profiler = go outFd profiler args
+      let result, io, prof, output = catFiles io prof output args
 
-  let ok = fdClose outFd
-  if not ok then failwith "close: stdout"
+      let io = File.close io output
+      Profiler.dispose prof
 
-  let profiler = profileLog "FINISH" profiler
-  profileDispose profiler
-  0
+      match result with
+      | Ok () -> io
+
+      | Error msg ->
+        printfn "ERROR: %s" msg
+        exit 1
+        io)
+  |> never
