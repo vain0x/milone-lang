@@ -124,6 +124,17 @@ let private copyFilesTo (srcFiles: string list) (destDir: string) : unit =
 
     System.IO.File.Copy(src, destFile, true)
 
+let private copyFilesWithExt (srcDir: string) (extList: string list) (destDir: string) : unit =
+  for src in System.IO.Directory.GetFiles(srcDir) do
+    if
+      extList
+      |> List.contains (System.IO.Path.GetExtension(src))
+    then
+      let destFile =
+        Path.Combine(destDir, System.IO.Path.GetFileName(src))
+
+      System.IO.File.Copy(src, destFile, true)
+
 let private copyDir src dest : unit =
   let rec go src dest =
     makeDir dest
@@ -151,6 +162,11 @@ let private removeDir dir : unit =
     System.IO.Directory.Delete(dir, true)
   with
   | :? System.IO.DirectoryNotFoundException -> ()
+
+let private removeFilesWithExt (extList: string list) dir : unit =
+  for file in System.IO.Directory.GetFiles(dir) do
+    if extList |> List.contains (Path.GetExtension(file)) then
+      System.IO.File.Delete(file)
 
 let private run command (args: string list) : unit =
   let startInfo = ProcessStartInfo(command)
@@ -504,7 +520,7 @@ let private commandPack () =
   let destMiloneExe = $"{destBinDir}/milone{ext}"
   let destMiloneDotnetDir = $"{destMiloneHome}/bin/milone_dotnet"
   let destMiloneLspDir = $"{destMiloneHome}/bin/milone_lsp"
-  let destSrcDir = $"{destMiloneHome}/projects"
+  let destSrcDir = $"{destMiloneHome}/src"
   let destVersionFile = $"{destMiloneHome}/version"
 
   // Make structure.
@@ -552,6 +568,8 @@ let private commandPack () =
       destMiloneDotnetDir
       "-nologo" ]
 
+  removeFilesWithExt [ ".pdb" ] destMiloneDotnetDir
+
   // Build LSP server.
   run
     "dotnet"
@@ -567,18 +585,26 @@ let private commandPack () =
       destMiloneLspDir
       "-nologo" ]
 
-  // Copy runtime files.
-  copyDir "src/libmilonert" $"{destSrcDir}/libmilonert"
-  copyDir "src/MiloneCore" $"{destSrcDir}/MiloneCore"
-  copyDir "src/Std" $"{destSrcDir}/Std"
+  removeFilesWithExt [ ".pdb" ] destMiloneLspDir
 
-  // FIXME: Exclude files
-  removeFile $"{destSrcDir}/libmilonert/milone.o"
-  removeFile $"{destSrcDir}/libmilonert/milone_platform.o"
-  removeDir $"{destSrcDir}/MiloneCore/bin"
-  removeDir $"{destSrcDir}/MiloneCore/obj"
-  removeDir $"{destSrcDir}/Std/bin"
-  removeDir $"{destSrcDir}/Std/obj"
+  // Copy runtime files.
+  (let src = "src/libmilonert"
+   let dest = $"{destSrcDir}/libmilonert"
+   makeDir dest
+   copyFile $"{src}/LICENSE" $"{dest}/LICENSE"
+   copyFilesWithExt src [ ".c"; ".h" ] dest)
+
+  (let src = "src/MiloneCore"
+   let dest = $"{destSrcDir}/MiloneCore"
+   makeDir dest
+   copyFile $"{src}/LICENSE" $"{dest}/LICENSE"
+   copyFilesWithExt src [ ".fs"; ".milone"; ".md" ] dest)
+
+  (let src = "src/Std"
+   let dest = $"{destSrcDir}/Std"
+   makeDir dest
+   copyFile $"{src}/LICENSE" $"{dest}/LICENSE"
+   copyFilesWithExt src [ ".fs"; ".milone"; ".md" ] dest)
 
   // Add documents.
   copyFilesTo
