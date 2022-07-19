@@ -157,6 +157,7 @@ https://github.com/vain0x/milone-lang/commits/develop?after=689350a9d82133b68350
 
 - Migrate to .NET 6 (from .NET 5)
 - No longer require `busybox`
+- Installation script for Linux now requires `curl` and automatically downloads `ninja` binary
 
 ### Internal Changes
 

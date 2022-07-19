@@ -425,6 +425,7 @@ let private commandSelfInstall () : unit =
   copyDir "src/libmilonert" $"{destSrcDir}/libmilonert"
   copyDir "src/MiloneCore" $"{destSrcDir}/MiloneCore"
   copyDir "src/Std" $"{destSrcDir}/Std"
+  copyFile "bin/ninja" $"{miloneHome}/bin/ninja"
 
   // FIXME: Exclude files
   removeFile $"{destSrcDir}/libmilonert/milone.o"
