@@ -40,6 +40,7 @@ User-defined types:
 
 - [own type](x_own_type.md)
 - [pointer types](x_ptr_types.md)
+- [region](x_region.md)
 - [native code](x_native_code.md)
 
 ## Others
