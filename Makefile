@@ -46,7 +46,7 @@ ${MY_BUILD_TIMESTAMP}: target/.timestamp/dotnet_restore \
 
 my_build: ${MY_BUILD_TIMESTAMP}
 
-install: ${MY_BUILD_TIMESTAMP}
+install: ${MY_BUILD_TIMESTAMP} bin/ninja
 	${MY_BUILD} self-install
 
 uninstall: ${MY_BUILD_TIMESTAMP}
