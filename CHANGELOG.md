@@ -4,9 +4,11 @@
 
 ## [Unreleased]
 
-[Unreleased]: https://github.com/vain0x/milone-lang/v0.4.0...develop
+[Unreleased]: https://github.com/vain0x/milone-lang/compare/v0.5.0...develop
 
-https://github.com/vain0x/milone-lang/commits/develop?after=689350a9d82133b68350a91c806303dab408630a+839&branch=develop&qualified_name=refs%2Fheads%2Fdevelop
+## [v0.5.0] - 2022-07-21
+
+[v0.5.0]: https://github.com/vain0x/milone-lang/releases/tag/v0.5.0
 
 ### Documentation
 
