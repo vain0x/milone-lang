@@ -1,9 +1,12 @@
-#include "milone.h"
+#include <stdio.h>
+#include <stdlib.h>
+#include <milone.h>
 
-int milone_main(void);
+int main(int argc, char **argv);
 
-int milone_main(void) {
-    int if_;
+int main(int argc, char **argv) {
+    milone_start(argc, argv);
+    int32_t if_;
     if (true) {
         goto then_2;
     } else {

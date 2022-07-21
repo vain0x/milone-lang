@@ -1,5 +1,4 @@
-
-module rec MiloneStd.StdData
+module rec Std.StdData
 
 /// Standard data type for untyped computation
 /// such as serialization and deserialization.

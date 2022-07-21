@@ -1,29 +1,34 @@
-#include "milone.h"
+#include <stdio.h>
+#include <stdlib.h>
+#include <milone.h>
 
-struct IntList;
+struct Int32Cons;
 
-struct IntList;
+struct Int32Cons;
 
-bool isEmpty_(struct IntList const* );
+bool MiloneCore_List_Int32ListBoolFun1_isEmpty(struct Int32Cons const *);
 
-void assertNotEmpty_(struct IntList const* xs_61);
+void module_milone_core_module_milone_core_Int32ListUnitFun1_assertNotEmpty(struct Int32Cons const *xs_);
 
-int milone_main(void);
+int main(int argc, char **argv);
 
-struct IntList {
-    int head;
-    struct IntList const* tail;
+struct Int32Cons {
+    int32_t head;
+    struct Int32Cons const *tail;
 };
 
-void assertNotEmpty_(struct IntList const* xs_61) {
-    bool call_ = isEmpty_(xs_61);
-    milone_assert((!(call_)), 5, 34);
+void module_milone_core_module_milone_core_Int32ListUnitFun1_assertNotEmpty(struct Int32Cons const *xs_) {
+    bool call_;
+    call_ = MiloneCore_List_Int32ListBoolFun1_isEmpty(xs_);
+    if (call_) milone_assert_error("module_milone_core/module_milone_core.milone", 5, 34);
     return;
 }
 
-int milone_main(void) {
-    struct IntList const* list_ = milone_mem_alloc(1, sizeof(struct IntList));
-    (*(((struct IntList*)list_))) = (struct IntList){.head = 1, .tail = NULL};
-    assertNotEmpty_(list_);
+int main(int argc, char **argv) {
+    milone_start(argc, argv);
+    struct Int32Cons const *list_;
+    list_ = ((struct Int32Cons const *)milone_region_alloc(1, sizeof(struct Int32Cons)));
+    (*(((struct Int32Cons *)list_))) = (struct Int32Cons){.head = 1, .tail = NULL};
+    module_milone_core_module_milone_core_Int32ListUnitFun1_assertNotEmpty(list_);
     return 0;
 }

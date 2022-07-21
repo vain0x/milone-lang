@@ -15,7 +15,8 @@ module rec MiloneTranslation.Mir
 open MiloneShared.SharedTypes
 open MiloneShared.TypeFloat
 open MiloneShared.TypeIntegers
-open MiloneTranslation.Hir
+open MiloneTranslationTypes.HirTypes
+open Std.StdMap
 
 // -----------------------------------------------
 // MIR types
@@ -37,14 +38,16 @@ type MatchIR =
 [<NoEquality; NoComparison>]
 type MGenericValue =
   | MNilGv
+  | MNullPtrGv
   | MSizeOfGv
+  | MTyPlaceholderGv
 
 /// Built-in 1-arity operation in middle IR.
-[<Struct>]
 [<NoEquality; NoComparison>]
 type MUnary =
   | MMinusUnary
   | MNotUnary
+  | MPtrOfUnary
 
   // Converts a scalar to int.
   | MIntOfScalarUnary of intOfScalarFlavor: IntFlavor
@@ -52,44 +55,47 @@ type MUnary =
   | MCharOfScalarUnary
 
   /// Gets raw ptr of string.
-  | MStrPtrUnary
+  | MStringAsPtrUnary
 
   /// Gets length of string.
-  | MStrLenUnary
+  | MStringLengthUnary
 
   /// Downcast.
-  | MUnboxUnary
+  | MUnboxUnary of itemTy: Ty
 
+  // note: tuple is converted to a record in MonoTy
   /// Gets an item of tuple.
-  | MTupleItemUnary of tupleItemIndex: int
+  | MTupleItemUnary of tupleItemIndex: int * tupleTy: Ty
 
   /// Gets variant tag of union value.
-  | MGetDiscriminantUnary
+  | MGetDiscriminantUnary of unionTy: Ty
 
   /// Gets payload of union value, unchecked.
   | MGetVariantUnary of variantSerial: VariantSerial
 
   /// Gets a field of record.
-  | MRecordItemUnary of recordItemIndex: int
+  | MRecordItemUnary of recordItemIndex: int * recordTy: Ty
 
   | MListIsEmptyUnary
 
   /// Gets head of list, unchecked.
-  | MListHeadUnary
+  | MListHeadUnary of itemTy: Ty
 
   /// Gets tail of list, unchecked.
-  | MListTailUnary
+  | MListTailUnary of itemTy: Ty
 
-  | MNativeCastUnary
+  /// Dereference a typed pointer.
+  | MDerefUnary of itemTy: Ty
+  | MNativeCastUnary of targetTy: Ty
 
 /// Built-in 2-arity operation in middle IR.
 [<NoEquality; NoComparison>]
 type MBinary =
-  | MMulBinary
-  | MDivBinary
+  | MMultiplyBinary
+  | MDivideBinary
   | MModuloBinary
   | MAddBinary
-  | MSubBinary
+  | MSubtractBinary
   | MBitAndBinary
   | MBitOrBinary
   | MBitXorBinary
@@ -99,45 +105,47 @@ type MBinary =
   | MNotEqualBinary
   | MLessBinary
   | MGreaterEqualBinary
-  | MIntCompareBinary
+  | MInt32CompareBinary
   | MInt64CompareBinary
   | MUInt64CompareBinary
-  | MStrAddBinary
-  | MStrCompareBinary
+  | MStringAddBinary
+  | MStringCompareBinary
 
-  /// `s.str[i]`
-  | MStrIndexBinary
+  /// `s.ptr[i]`
+  | MStringIndexBinary
+  // `&p[i]`
+  | MPtrAddBinary
 
 [<NoEquality; NoComparison>]
 type MAction =
-  | MAssertAction
-  | MPrintfnAction
+  | MAssertNotAction
+  | MPrintfnAction of argTys: Ty list
   | MEnterRegionAction
   | MLeaveRegionAction
   | MCallProcAction
   | MCallClosureAction
-  | MCallNativeAction of funName: string
+  | MCallNativeAction of funName: string * argTys: Ty list
+  /// [ ptr; value ]
   | MPtrWriteAction
 
-[<Struct; NoEquality; NoComparison>]
+[<NoEquality; NoComparison>]
 type MPrim =
-  /// string -> int
-  | MIntOfStrPrim of intOfStrFlavor: IntFlavor
-  | MFloatOfStrPrim of floatOfStrFlavor: FloatFlavor
-  | MCharOfStrPrim
+  | MIntOfStringPrim of intOfStringFlavor: IntFlavor
+  | MFloatOfStringPrim of floatOfStringFlavor: FloatFlavor
+  | MCharOfStringPrim
 
-  | MStrOfBoolPrim
-  | MStrOfCharPrim
-  | MStrOfIntPrim of strOfIntFlavor: IntFlavor
-  | MStrOfFloatPrim of strOfFloatFlavor: FloatFlavor
+  | MStringOfBoolPrim
+  | MStringOfCharPrim
+  | MStringOfIntPrim of stringOfIntFlavor: IntFlavor
+  | MStringOfFloatPrim of stringOfFloatFlavor: FloatFlavor
 
-  | MStrGetSlicePrim
+  | MStringGetSlicePrim
 
   /// Construct a closure, packing environment.
   | MClosurePrim of closureFunSerial: FunSerial
 
-  | MBoxPrim
-  | MConsPrim
+  | MBoxPrim of argTy: Ty
+  | MConsPrim of itemTy: Ty
   | MVariantPrim of variantSerial: VariantSerial
   | MRecordPrim
 
@@ -147,8 +155,9 @@ type MPrim =
   /// Indirect call to closure.
   | MCallClosurePrim
 
-  | MCallNativePrim of funName: string
-  | MPtrReadPrim
+  | MCallNativePrim of funName: string * argTys: Ty list
+
+  | MPtrInvalidPrim
 
 /// Expression in middle IR.
 [<NoEquality; NoComparison>]
@@ -163,20 +172,20 @@ type MExpr =
   | MVarExpr of VarSerial * Ty * Loc
 
   /// Procedure.
-  | MProcExpr of FunSerial * Ty * Loc
+  | MProcExpr of FunSerial * Loc
 
   /// Variant constant.
-  | MVariantExpr of TySerial * VariantSerial * Ty * Loc
+  | MVariantExpr of TySerial * VariantSerial * Loc
 
   | MDiscriminantConstExpr of VariantSerial * Loc
   | MGenericValueExpr of MGenericValue * Ty * Loc
 
-  | MUnaryExpr of MUnary * arg: MExpr * resultTy: Ty * Loc
-  | MBinaryExpr of MBinary * MExpr * MExpr * resultTy: Ty * Loc
+  | MUnaryExpr of MUnary * arg: MExpr * Loc
 
-  | MNativeExpr of code: string * Ty * Loc
+  | MBinaryExpr of MBinary * MExpr * MExpr * Loc
 
-[<Struct>]
+  | MNativeExpr of code: string * MExpr list * Ty * Loc
+
 [<NoEquality; NoComparison>]
 type MConst =
   | MLitConst of l: Lit
@@ -191,7 +200,7 @@ type MSwitchClause =
 [<NoEquality; NoComparison>]
 type MTerminator =
   | MExitTerminator of exitCode: MExpr
-  | MReturnTerminator of result: MExpr
+  | MReturnTerminator of result: MExpr * resultTy: Ty
   | MGotoTerminator of Label
   | MIfTerminator of cond: MExpr * thenCl: MTerminator * elseCl: MTerminator
   | MSwitchTerminator of cond: MExpr * MSwitchClause list
@@ -222,33 +231,25 @@ type MBlock = { Stmts: MStmt list }
 
 [<NoEquality; NoComparison>]
 type MDecl =
-  | MProcDecl of FunSerial * args: (VarSerial * Ty * Loc) list * body: MBlock list * resultTy: Ty * Loc
-  | MNativeDecl of code: string * Loc
+  | MProcDecl of
+    FunSerial *
+    args: (VarSerial * Ty * Loc) list *
+    body: MBlock list *
+    resultTy: Ty *
+    localVars: (VarSerial * Ty * Loc) list *
+    Loc
+  | MNativeDecl of code: string * args: MExpr list * Loc
 
-// -----------------------------------------------
-// Expressions (MIR)
-// -----------------------------------------------
-
-let mexprExtract expr =
-  match expr with
-  | MLitExpr (lit, loc) -> litToTy lit, loc
-  | MUnitExpr loc -> tyUnit, loc
-  | MNeverExpr loc -> tyUnit, loc
-  | MVarExpr (_, ty, loc) -> ty, loc
-  | MProcExpr (_, ty, loc) -> ty, loc
-  | MVariantExpr (_, _, ty, loc) -> ty, loc
-  | MDiscriminantConstExpr (_, loc) -> tyInt, loc
-
-  | MGenericValueExpr (genericValue, ty, loc) ->
-    match genericValue with
-    | MNilGv -> ty, loc
-    | MSizeOfGv -> tyInt, loc
-
-  | MUnaryExpr (_, _, ty, loc) -> ty, loc
-  | MBinaryExpr (_, _, _, ty, loc) -> ty, loc
-  | MNativeExpr (_, ty, loc) -> ty, loc
-
-let mexprToTy expr = expr |> mexprExtract |> fst
+[<RequireQualifiedAccess; NoEquality; NoComparison>]
+type MModule =
+  { DocId: DocId
+    /// Name of local variables.
+    Vars: VarNameMap
+    /// Static variables that are defined to in the module.
+    StaticVars: (VarSerial * Ty) list
+    /// Extern variables that are referred to in the module.
+    ExternVars: TreeMap<VarSerial, Ty>
+    Decls: MDecl list }
 
 // -----------------------------------------------
 // Declarations (MIR)
@@ -256,62 +257,62 @@ let mexprToTy expr = expr |> mexprExtract |> fst
 
 let mDeclToLoc (decl: MDecl) : Loc =
   match decl with
-  | MProcDecl (_, _, _, _, loc) -> loc
-  | MNativeDecl (_, loc) -> loc
+  | MProcDecl (_, _, _, _, _, loc) -> loc
+  | MNativeDecl (_, _, loc) -> loc
 
 // -----------------------------------------------
 // Expression sugaring (MIR)
 // -----------------------------------------------
 
 let mxSugar expr =
-  let mxSugarUni op l ty loc =
+  let mxSugarNot l loc =
     match l with
     // SUGAR: `not true` ==> `false`
     // SUGAR: `not false` ==> `true`
     | MLitExpr (BoolLit value, loc) -> MLitExpr(BoolLit(not value), loc)
 
     // SUGAR: `not (not x)` ==> `x`
-    | MUnaryExpr (MNotUnary, l, _, _) -> l
+    | MUnaryExpr (MNotUnary, l, _) -> l
 
     // SUGAR: `not (x = y)` ==> `x <> y`
-    | MBinaryExpr (MEqualBinary, l, r, ty, loc) -> MBinaryExpr(MNotEqualBinary, l, r, ty, loc)
+    | MBinaryExpr (MEqualBinary, l, r, loc) -> MBinaryExpr(MNotEqualBinary, l, r, loc)
 
     // SUGAR: `not (x <> y)` ==> `x = y`
-    | MBinaryExpr (MNotEqualBinary, l, r, ty, loc) -> MBinaryExpr(MEqualBinary, l, r, ty, loc)
+    | MBinaryExpr (MNotEqualBinary, l, r, loc) -> MBinaryExpr(MEqualBinary, l, r, loc)
 
     // SUGAR: `not (x < y)` ==> `x >= y`
-    | MBinaryExpr (MLessBinary, l, r, ty, loc) -> MBinaryExpr(MGreaterEqualBinary, l, r, ty, loc)
+    | MBinaryExpr (MLessBinary, l, r, loc) -> MBinaryExpr(MGreaterEqualBinary, l, r, loc)
 
     // SUGAR: `not (x >= y)` ==> `x < y`
-    | MBinaryExpr (MGreaterEqualBinary, l, r, ty, loc) -> MBinaryExpr(MLessBinary, l, r, ty, loc)
+    | MBinaryExpr (MGreaterEqualBinary, l, r, loc) -> MBinaryExpr(MLessBinary, l, r, loc)
 
-    | _ -> MUnaryExpr(op, l, ty, loc)
+    | _ -> MUnaryExpr(MNotUnary, l, loc)
 
-  let mxSugarBin op l r ty loc =
+  let mxSugarBin op l r loc =
     match op, l, r with
     // SUGAR: `x = false` ==> `not x`
-    | MEqualBinary, MLitExpr (BoolLit false, _), _ -> mxSugarUni MNotUnary r ty loc
+    | MEqualBinary, MLitExpr (BoolLit false, _), _ -> mxSugarNot r loc
 
-    | MEqualBinary, _, MLitExpr (BoolLit false, _) -> mxSugarUni MNotUnary l ty loc
+    | MEqualBinary, _, MLitExpr (BoolLit false, _) -> mxSugarNot l loc
 
     // SUGAR: `x = true` ==> `x`
     | MEqualBinary, MLitExpr (BoolLit true, _), _ -> r
 
     | MEqualBinary, _, MLitExpr (BoolLit true, _) -> l
 
-    | _ -> MBinaryExpr(op, l, r, ty, loc)
+    | _ -> MBinaryExpr(op, l, r, loc)
 
   match expr with
   // SUGAR: `x: unit` ==> `()`
   | MVarExpr (_, Ty (TupleTk, []), loc) -> MUnitExpr loc
 
-  | MUnaryExpr (op, l, ty, loc) ->
+  | MUnaryExpr (MNotUnary, l, loc) ->
     let l = mxSugar l
-    mxSugarUni op l ty loc
+    mxSugarNot l loc
 
-  | MBinaryExpr (op, l, r, ty, loc) ->
+  | MBinaryExpr (op, l, r, loc) ->
     let l = mxSugar l
     let r = mxSugar r
-    mxSugarBin op l r ty loc
+    mxSugarBin op l r loc
 
   | _ -> expr

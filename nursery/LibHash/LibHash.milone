@@ -1,0 +1,18 @@
+// Tests
+module rec LibHash.Program
+
+open LibHash.FnvHash
+open LibHash.StringHash
+
+assert (hex64 0UL = "0")
+assert (hex64 0x7f3cDeadBeefUL = "7f3cdeadbeef")
+
+let padding = "0000000000000000" // 16
+let pad (s: string) = padding.[0..16 - 1 - s.Length] + s
+
+let f s = s |> stringHash |> hex64 |> pad
+
+assert (f "" = "000000000000001f")
+assert (f "hello" = "0000000040be31bd")
+assert (f "bye" = "00000000000f5fa1")
+assert (f "😺🐶🐧🐬" = "d45da24b9aaa7523")

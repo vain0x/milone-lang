@@ -1,7 +1,7 @@
 /// Core parts of clap (command line arguments parser).
 module rec LibNursery.ClapCore
 
-module S = MiloneStd.StdString
+module S = Std.StdString
 
 /// Property name. Long or short (one letter).
 [<RequireQualifiedAccess; NoEquality; NoComparison>]
@@ -16,7 +16,7 @@ type Msg =
   | Positional of string
 
 [<RequireQualifiedAccess; NoEquality; NoComparison>]
-type Result =
+type ParseResult =
   | Ok
   | NoValueError of PropName
   | RedundantValueError of PropName * string
@@ -33,13 +33,18 @@ let private isValueArg (arg: string) =
 /// This function reads an argument list
 /// and emits an event to state machine for each occurrence of:
 ///   - flag (`-f`),
-///   - binding (``--p=a``), or
+///   - binding (`--p=a`), or
 ///   - positional arg (`foo`).
 ///
 /// @param init initial state
 /// @param hasParam gets whether a property should be followed by an argument
 /// @param update: update state after an occurrence of flag or binding
-let runClapCore (args: string list) (init: 'S) (hasParam: PropName -> 'S -> bool) (update: Msg -> 'S -> 'S) : 'S * Result =
+let runClapCore
+  (args: string list)
+  (init: 'S)
+  (hasParam: PropName -> 'S -> bool)
+  (update: Msg -> 'S -> 'S)
+  : 'S * ParseResult =
   let addPositional (state: 'S) value = update (Msg.Positional value) state
 
   let addPositionalList (state: 'S) args = args |> List.fold addPositional state
@@ -54,73 +59,73 @@ let runClapCore (args: string list) (init: 'S) (hasParam: PropName -> 'S -> bool
     | value :: args when isValueArg value -> Some value, args
     | _ -> None, args
 
-  let addWithValueOpt (state: 'S) name valueOpt args : 'S * string list * Result =
+  let addWithValueOpt (state: 'S) name valueOpt args : 'S * string list * ParseResult =
     match hasParam name state, valueOpt with
     | true, Some _
-    | false, None -> addBinding state name valueOpt, args, Result.Ok
+    | false, None -> addBinding state name valueOpt, args, ParseResult.Ok
 
-    | false, Some value -> state, args, Result.RedundantValueError(name, value)
+    | false, Some value -> state, args, ParseResult.RedundantValueError(name, value)
 
     | true, None ->
-        let valueOpt, args = take args
+      let valueOpt, args = take args
 
-        match valueOpt with
-        | Some _ -> addBinding state name valueOpt, args, Result.Ok
-        | None -> state, args, Result.NoValueError name
+      match valueOpt with
+      | Some _ -> addBinding state name valueOpt, args, ParseResult.Ok
+      | None -> state, args, ParseResult.NoValueError name
 
-  let rec go args (state: 'S) : 'S * Result =
+  let rec go args (state: 'S) : 'S * ParseResult =
     match args with
-    | [] -> state, Result.Ok
+    | [] -> state, ParseResult.Ok
 
-    | "--" :: args -> args |> List.fold addPositional state, Result.Ok
+    | "--" :: args -> args |> List.fold addPositional state, ParseResult.Ok
 
     // Long option.
     | arg :: args when S.startsWith "--" arg ->
-        let arg = arg.[2..arg.Length - 1]
+      let arg = arg.[2..arg.Length - 1]
 
-        let name, valueOpt =
-          match S.findIndex "=" arg with
-          | None -> arg, None
-          | Some i -> arg.[0..i - 1], Some arg.[i + 1..arg.Length - 1]
+      let name, valueOpt =
+        match S.findIndex "=" arg with
+        | None -> arg, None
+        | Some i -> arg.[0..i - 1], Some arg.[i + 1..arg.Length - 1]
 
-        let state, args, result =
-          addWithValueOpt state (PropName.Long name) valueOpt args
+      let state, args, result =
+        addWithValueOpt state (PropName.Long name) valueOpt args
 
-        match result with
-        | Result.Ok -> go args state
-        | _ -> state, result
+      match result with
+      | ParseResult.Ok -> go args state
+      | _ -> state, result
 
     // Short option.
     | arg :: args when not (isValueArg arg) ->
-        let arg = arg.[1..arg.Length - 1]
+      let arg = arg.[1..arg.Length - 1]
 
-        let flags, last, valueOpt =
-          match S.findIndex "=" arg with
-          | Some i -> arg.[0..i - 2], arg.[i - 1], Some arg.[i + 1..arg.Length - 1]
-          | None -> arg.[0..arg.Length - 2], arg.[arg.Length - 1], None
+      let flags, last, valueOpt =
+        match S.findIndex "=" arg with
+        | Some i -> arg.[0..i - 2], arg.[i - 1], Some arg.[i + 1..arg.Length - 1]
+        | None -> arg.[0..arg.Length - 2], arg.[arg.Length - 1], None
 
-        let state, result =
-          let rec gogo (i: int) (state: 'S) : 'S * Result =
-            if i = flags.Length then
-              state, Result.Ok
+      let state, result =
+        let rec gogo (i: int) (state: 'S) : 'S * ParseResult =
+          if i = flags.Length then
+            state, ParseResult.Ok
+          else
+            let name = PropName.Short flags.[i]
+
+            if hasParam name state then
+              state, ParseResult.NoValueError name
             else
-              let name = PropName.Short flags.[i]
+              addBinding state name None |> gogo (i + 1)
 
-              if hasParam name state then
-                state, Result.NoValueError name
-              else
-                addBinding state name None |> gogo (i + 1)
+        gogo 0 state
 
-          gogo 0 state
-
-        let state, args, result =
-          match result with
-          | Result.Ok -> addWithValueOpt state (PropName.Short last) valueOpt args
-          | _ -> state, args, result
-
+      let state, args, result =
         match result with
-        | Result.Ok -> go args state
-        | _ -> state, result
+        | ParseResult.Ok -> addWithValueOpt state (PropName.Short last) valueOpt args
+        | _ -> state, args, result
+
+      match result with
+      | ParseResult.Ok -> go args state
+      | _ -> state, result
 
     | value :: args -> addPositional state value |> go args
 

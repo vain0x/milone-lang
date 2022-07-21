@@ -15,8 +15,9 @@ mkdir -p $TARGET
 } >$TARGET/lib_file_system_tests.c
 
 $CC -std=gnu11 -fsanitize=address,undefined \
-    -I$MILONE_HOME/runtime \
-    $MILONE_HOME/runtime/milone.c \
+    -I$MILONE_HOME/src/libmilonert \
+    $MILONE_HOME/src/libmilonert/milone.c \
+    $MILONE_HOME/src/libmilonert/milone_platform.c \
     ../LibSpan/lib_span_runtime.c \
     $TARGET/lib_file_system_tests.c \
     -o $TARGET/lib_file_system_tests

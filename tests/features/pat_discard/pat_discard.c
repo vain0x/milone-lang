@@ -1,24 +1,28 @@
-#include "milone.h"
+#include <stdio.h>
+#include <stdlib.h>
+#include <milone.h>
 
 struct UnitUnitTuple2_;
 
-void f_(void);
+void pat_discard_pat_discard_main_f(void);
 
-int milone_main(void);
+int main(int argc, char **argv);
 
 struct UnitUnitTuple2_ {
     char t0;
     char t1;
 };
 
-void f_(void) {
+void pat_discard_pat_discard_main_f(void) {
     printf("hello\n");
     return;
 }
 
-int milone_main(void) {
-    f_();
-    f_();
-    struct UnitUnitTuple2_ UnitUnitTuple2_ = (struct UnitUnitTuple2_){.t0 = 0, .t1 = 0};
+int main(int argc, char **argv) {
+    milone_start(argc, argv);
+    struct UnitUnitTuple2_ UnitUnitTuple2_;
+    pat_discard_pat_discard_main_f();
+    pat_discard_pat_discard_main_f();
+    UnitUnitTuple2_ = (struct UnitUnitTuple2_){.t0 = 0, .t1 = 0};
     return 0;
 }

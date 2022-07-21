@@ -1,0 +1,32 @@
+open LibTinyYaml.TinyYaml
+
+module S = Std.StdString
+
+let private dump y =
+  match y with
+  | YamlStr s -> "'" + s + "'"
+
+  | YamlTable entries ->
+    let contents =
+      entries
+      |> List.map (fun (key, value) -> key + ":" + dump value)
+      |> S.concat ", "
+
+    "{" + contents + "}"
+
+let it =
+  parseYaml
+    """
+foo:
+  a: x
+
+# comment
+bar:
+  b: 2
+  c: 3
+
+baz: zzz
+    """
+  |> dump
+
+assert (it = "{foo:{a:'x'}, bar:{b:'2', c:'3'}, baz:'zzz'}")

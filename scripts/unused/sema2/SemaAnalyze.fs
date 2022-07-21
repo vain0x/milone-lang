@@ -40,8 +40,8 @@ let private saPatEarly vis pat ctx =
   | AMissingPat _ -> todo ()
 
   | AIdentPat (name, pos) ->
-      // this is static var
-      todo ()
+    // this is static var
+    todo ()
 
   | _ -> todo ()
 
@@ -63,43 +63,43 @@ let private saDeclEarly decl ctx =
   | AExprDecl expr -> todo ()
 
   | ALetDecl _ ->
-      match classifyLetDecl decl with
-      | ALetValDecl (vis, pat, init, pos) -> saLetValDeclEarly vis pat init pos ctx
+    match classifyLetDecl decl with
+    | ALetValDecl (vis, pat, init, pos) -> saLetValDeclEarly vis pat init pos ctx
 
-      | ALetFunDecl (vis, funName, paramPats, body, pos) -> saLetFunDeclEarly vis funName paramPats body pos ctx
+    | ALetFunDecl (vis, funName, paramPats, body, pos) -> saLetFunDeclEarly vis funName paramPats body pos ctx
 
   | ATySynonymDecl (vis, synonymName, tyArgs, bodyTy, pos) ->
-      // define type synonym: name, provisional body type, pos
-      // add to module namespace if public
-      // import to scope
-      // add to type decl queue
-      todo ()
+    // define type synonym: name, provisional body type, pos
+    // add to module namespace if public
+    // import to scope
+    // add to type decl queue
+    todo ()
 
   | AUnionTyDecl (vis, unionName, variantDecls, pos) ->
-      // define union type: name, no variants, pos
-      // for each variant:
-      //    add to union namespace
-      //    add to module namespace if public
-      //    import to scope
-      // set variants
-      // add to module namespace if public
-      // import to scope
-      // add to type decl queue
+    // define union type: name, no variants, pos
+    // for each variant:
+    //    add to union namespace
+    //    add to module namespace if public
+    //    import to scope
+    // set variants
+    // add to module namespace if public
+    // import to scope
+    // add to type decl queue
 
-      todo ()
+    todo ()
 
   | ARecordTyDecl (vis, recordName, fieldDecls, pos) ->
-      // define record type: name, field with provisional types, pos
-      // add to namespace if public
-      // import to scope
-      // add to type decl queue
-      todo ()
+    // define record type: name, field with provisional types, pos
+    // add to namespace if public
+    // import to scope
+    // add to type decl queue
+    todo ()
 
   | AOpenDecl (path, pos) ->
-      // find project name by first segment of path
-      // find module by second segment of path; or error
-      // import symbols in the module to scope
-      todo ()
+    // find project name by first segment of path
+    // find module by second segment of path; or error
+    // import symbols in the module to scope
+    todo ()
 
   | AAttrDecl (_, next, _) -> saDeclEarly next ctx
 
@@ -112,45 +112,45 @@ let private saDeclLate decl ctx =
   | AExprDecl expr -> todo ()
 
   | ALetDecl _ ->
-      match classifyLetDecl decl with
-      | ALetValDecl _ ->
-          // do same as early pass if not yet
-          // enter scope
-          //    process init
-          //    process pat (irrefutable)
-          // leave scope
-          todo ()
-
-      | ALetFunDecl _ ->
-          // do same as early pass if not yet
-          // enter scope, inc level, stash trait queue
-          //    process arg pats
-          //    unify function type created by patterns to provisional type
-          //    process body
-          //    resolve traits
-          // leave scope, dec level, restore trait queue
-          // generalize
-          todo ()
-
-  | ATySynonymDecl (vis, synonymName, tyArgs, bodyTy, pos) ->
+    match classifyLetDecl decl with
+    | ALetValDecl _ ->
       // do same as early pass if not yet
       // enter scope
-      //    define type args
-      //    process body type
+      //    process init
+      //    process pat (irrefutable)
       // leave scope
-      // update data
       todo ()
 
-  | AUnionTyDecl (vis, unionName, variantDecls, pos) ->
+    | ALetFunDecl _ ->
       // do same as early pass if not yet
-      // resolve variant payload types
+      // enter scope, inc level, stash trait queue
+      //    process arg pats
+      //    unify function type created by patterns to provisional type
+      //    process body
+      //    resolve traits
+      // leave scope, dec level, restore trait queue
+      // generalize
       todo ()
+
+  | ATySynonymDecl (vis, synonymName, tyArgs, bodyTy, pos) ->
+    // do same as early pass if not yet
+    // enter scope
+    //    define type args
+    //    process body type
+    // leave scope
+    // update data
+    todo ()
+
+  | AUnionTyDecl (vis, unionName, variantDecls, pos) ->
+    // do same as early pass if not yet
+    // resolve variant payload types
+    todo ()
 
   | ARecordTyDecl (vis, recordName, fieldDecls, pos) -> todo ()
 
   | AOpenDecl (path, pos) ->
-      // do nothing
-      todo ()
+    // do nothing
+    todo ()
 
   | AAttrDecl (_, next, _) -> saDeclLate next ctx
 

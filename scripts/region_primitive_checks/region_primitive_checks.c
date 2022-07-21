@@ -61,7 +61,7 @@ else_7:;
         goto else_10;
     }
 then_9:;
-    struct IntList const* list_ = milone_mem_alloc(1, sizeof(struct IntList));
+    struct IntList const* list_ = milone_region_alloc(1, sizeof(struct IntList));
     (*(((struct IntList*)list_))) = (struct IntList){.head = i_, .tail = acc_};
     struct IntList const* arg_3 = list_;
     int arg_4 = (t_ / 2);
@@ -73,7 +73,7 @@ then_9:;
     if_2 = NULL;
     goto if_next_8;
 else_10:;
-    struct IntList const* list_1 = milone_mem_alloc(1, sizeof(struct IntList));
+    struct IntList const* list_1 = milone_region_alloc(1, sizeof(struct IntList));
     (*(((struct IntList*)list_1))) = (struct IntList){.head = i_, .tail = acc_};
     struct IntList const* arg_6 = list_1;
     int arg_7 = ((t_ * 3) + 1);
@@ -154,12 +154,12 @@ then_17:;
 else_18:;
     printf("go i=%d\n", i_2);
     struct IntTuple1 tuple_ = (struct IntTuple1){.t0 = i_2};
-    void const* box_ = milone_mem_alloc(1, sizeof(struct IntTuple1));
+    void const* box_ = milone_region_alloc(1, sizeof(struct IntTuple1));
     (*(((struct IntTuple1*)box_))) = tuple_;
     struct UnitIntFun1 fun_4 = (struct UnitIntFun1){.fun = fun_2, .env = box_};
-    milone_enter_region();
+    milone_region_enter();
     int region_result_ = fun_4.fun(fun_4.env, 0);
-    milone_leave_region();
+    milone_region_leave();
     int h_2 = (h_1 + region_result_);
     int arg_12 = h_2;
     int arg_13 = (i_2 - 1);
@@ -183,11 +183,11 @@ int fun_3(void const* env_1, int arg_2) {
 }
 
 int milone_main() {
-    void const* box_1 = milone_mem_alloc(1, sizeof(int));
+    void const* box_1 = milone_region_alloc(1, sizeof(int));
     (*(((int*)box_1))) = 0;
     struct UnitIntFun1 fun_5 = (struct UnitIntFun1){.fun = fun_3, .env = box_1};
-    milone_enter_region();
+    milone_region_enter();
     int region_result_1 = fun_5.fun(fun_5.env, 0);
-    milone_leave_region();
+    milone_region_leave();
     return region_result_1;
 }

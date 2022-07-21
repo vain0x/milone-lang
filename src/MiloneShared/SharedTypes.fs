@@ -3,6 +3,13 @@
 /// Provides types that are commonly used in syntax part and semantics part.
 module rec MiloneShared.SharedTypes
 
+open MiloneShared.TypeIntegers
+open MiloneShared.UtilSymbol
+open Std.StdPair
+
+let private compareInt (l: int) r = compare l r
+let private compareString (l: string) r = compare l r
+
 // -----------------------------------------------
 // Vocabulary types
 // -----------------------------------------------
@@ -57,14 +64,30 @@ type IsMut =
   | IsConst
   | IsMut
 
+/// Read-write permission.
+[<RequireQualifiedAccess; NoEquality; NoComparison>]
+type RefMode =
+  /// nativeptr
+  | ReadWrite
+  /// InPtr
+  | ReadOnly
+  /// OutPtr
+  | WriteOnly
+
+[<NoEquality; NoComparison>]
+type IsCRepr = IsCRepr of bool
+
+let isCRepr (IsCRepr x) = x
+
 /// Literal of primitive, non-generic value.
-[<Struct; NoEquality; NoComparison>]
+[<NoEquality; NoComparison>]
 type Lit =
   | BoolLit of boolValue: bool
   | IntLit of intText: string
+  | IntLitWithFlavor of string * IntFlavor
   | FloatLit of floatText: string
   | CharLit of charValue: char
-  | StrLit of stringValue: string
+  | StringLit of stringValue: string
 
 // -----------------------------------------------
 // Position and location
@@ -81,40 +104,69 @@ type Pos = RowIndex * ColumnIndex
 
 /// Identity of documents.
 /// Document can be a source file, an editor tab, or something else.
-type DocId = string
+type DocId = Symbol
 
 /// Location.
 type Loc = Loc of DocId * RowIndex * ColumnIndex
 
 // -----------------------------------------------
+// RefMode
+// -----------------------------------------------
+
+module RefMode =
+  let toInt mode =
+    match mode with
+    | RefMode.ReadWrite -> 1
+    | RefMode.ReadOnly -> 2
+    | RefMode.WriteOnly -> 3
+
+  let equals l r = toInt l = toInt r
+
+// -----------------------------------------------
 // Position
 // -----------------------------------------------
 
-let private pairCompare compare1 compare2 (l1, l2) (r1, r2) =
-  let c = compare1 l1 r1
-  if c <> 0 then c else compare2 l2 r2
+module Pos =
+  let compare (l: Pos) (r: Pos) = Pair.compare compareInt compareInt l r
 
-let posCompare (l: Pos) (r: Pos) = pairCompare compare compare l r
-
-let posToString ((y, x): Pos) = string (y + 1) + ":" + string (x + 1)
+  let toString (pos: Pos) =
+    let (y, x) = pos
+    string (y + 1) + ":" + string (x + 1)
 
 // -----------------------------------------------
 // Location
 // -----------------------------------------------
 
 /// No location information. Should be fixed.
-let noLoc = Loc("<noLoc>", 0, 0)
+let noLoc = Loc(Symbol.intern "<noLoc>", 0, 0)
 
-let locToString (Loc (docId, y, x)) =
-  docId
-  + ":"
-  + string (y + 1)
-  + ":"
-  + string (x + 1)
+module Loc =
+  let ofDocPos (docId: DocId) (pos: Pos) : Loc =
+    let y, x = pos
+    Loc(docId, y, x)
 
-let locCompare (Loc (lDoc, ly, lx)) (Loc (rDoc, ry, rx)) =
-  let c = compare lDoc rDoc
+  let toDocPos (loc: Loc) : DocId * Pos =
+    let (Loc (docId, y, x)) = loc
+    docId, (y, x)
 
-  if c <> 0 then c
-  else if ly <> ry then compare ly ry
-  else compare lx rx
+  let toString (Loc (docId, y, x)) =
+    Symbol.toString docId
+    + ":"
+    + string (y + 1)
+    + ":"
+    + string (x + 1)
+
+  let equals l r =
+    let (Loc (lDoc, ly, lx)) = l
+    let (Loc (rDoc, ry, rx)) = r
+    Symbol.equals lDoc rDoc && ly = ry && lx = rx
+
+  let compare l r =
+    let (Loc (lDoc, ly, lx)) = l
+    let (Loc (rDoc, ry, rx)) = r
+
+    let c = Symbol.compare lDoc rDoc
+
+    if c <> 0 then c
+    else if ly <> ry then compareInt ly ry
+    else compareInt lx rx

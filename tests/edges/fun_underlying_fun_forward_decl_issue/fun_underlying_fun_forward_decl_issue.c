@@ -1,24 +1,27 @@
-#include "milone.h"
+#include <stdio.h>
+#include <stdlib.h>
+#include <milone.h>
+
+typedef struct String(*VoidConstPtrStringStringFunPtr2)(void const *, struct String);
 
 struct StringStringFun1;
 
-struct String fun_(void const* , struct String );
+void fun_underlying_fun_forward_decl_issue_sub_start(void);
 
-int milone_main(void);
+int main(int argc, char **argv);
 
 struct StringStringFun1 {
-    struct String(*fun)(void const*, struct String);
-    void const* env;
+    VoidConstPtrStringStringFunPtr2 fun;
+    void const *env;
 };
-
-struct StringStringFun1 fun_underlying_fun_forward_decl_issue_sub_f2;
 
 extern struct StringStringFun1 fun_underlying_fun_forward_decl_issue_sub_f2;
 
-int milone_main(void) {
-    struct StringStringFun1 fun_1 = (struct StringStringFun1){.fun = fun_, .env = ((void const*)((intptr_t)2))};
-    fun_underlying_fun_forward_decl_issue_sub_f2 = fun_1;
-    struct String app_ = fun_underlying_fun_forward_decl_issue_sub_f2.fun(fun_underlying_fun_forward_decl_issue_sub_f2.env, (struct String){.str = "hi", .len = 2});
-    milone_assert((str_compare(app_, (struct String){.str = "x = 2, y = hi", .len = 13}) == 0), 22, 2);
+int main(int argc, char **argv) {
+    milone_start(argc, argv);
+    struct String app_;
+    fun_underlying_fun_forward_decl_issue_sub_start();
+    app_ = fun_underlying_fun_forward_decl_issue_sub_f2.fun(fun_underlying_fun_forward_decl_issue_sub_f2.env, (struct String){.ptr = "hi", .len = 2});
+    if ((string_compare(app_, (struct String){.ptr = "x = 2, y = hi", .len = 13}) != 0)) milone_assert_error("fun_underlying_fun_forward_decl_issue/fun_underlying_fun_forward_decl_issue.milone", 22, 2);
     return 0;
 }

@@ -4,7 +4,7 @@ module Buffer = LibSpan.Buffer
 
 let main _ =
   let buffer =
-    Buffer.create (unativeint 1000) (unativeint (__sizeOfVal '\x00'))
+    Buffer.create (unativeint 1000) 1un
 
   assert (Buffer.cap buffer = unativeint 1000)
   0

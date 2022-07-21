@@ -2,12 +2,11 @@
 
   <PropertyGroup>
     <OutputType>Exe</OutputType>
-    <TargetFramework>net5.0</TargetFramework>
+    <TargetFramework>net6.0</TargetFramework>
   </PropertyGroup>
 
   <ItemGroup>
     <Compile Include="FSharpOnly.fs" />
-    <Compile Include="Helpers.fs" />
     <Compile Include="SegTree.fs" />
     <Compile Include="ABC140A.fs" />
     <Compile Include="ABC140B.fs" />

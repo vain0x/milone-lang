@@ -1,64 +1,13 @@
-/// # SyntaxTokenize
-///
-/// Performs tokenization, i.e. splits a source code to a list of tokens.
-///
-/// ## Motivation
-///
-/// This stage makes the parser simpler.
-///
-/// - The parser needs to know token position (row/column indexes)
-///   for the indent-sensitive syntax. This stage takes over the task.
-/// - The parser needs to look easily.
-///   Plain string is much difficult to look ahead due to spaces and comments.
-///   List of tokens is better structure for that.
-///
-/// ## Examples
-///
-/// ```fsharp
-/// let main _ =
-///   0
-/// ```
-///
-/// This stage should break the the above code down to the following tokens:
-///
-/// | Y:X   | Token  | Text
-/// |------:|:-------|:-----
-/// |   0:0 | Let    | let
-/// |   0:4 | Ident  | main
-/// |   0:9 | Ident  | _
-/// |  0:11 | Equal  | =
-/// |   1:2 | IntLit | 0
-///
-/// ## Remarks
-///
-/// ### Reliability
-///
-/// This stage should *never fail*. Even if the input is completely broken,
-/// tokenization must not cause fatal errors since tokenization is
-/// constantly performed by LSP server while the programmer is editing
-/// so that it can collect some information (such as list of symbols)
-/// from incomplete codes.
-///
-/// This stage should also be fast as possible for the same reason.
-///
-/// ### About char
-///
-/// On .NET, `char` is a UTF-16 code unit, i.e. 2-byte.
-/// However, in milone-lang, `char` is a UTF-8 code unit (1-byte).
-/// Currently milone-lang keeps non-ASCII chars untouched,
-/// so this difference doesn't matter.
-///
-/// ### Other notes
-///
-/// Sometimes row number is denoted by `y` and column number by `x`.
+// See docs/internals/tokenize.md
 module rec MiloneSyntax.SyntaxTokenize
 
 open MiloneShared.SharedTypes
-open MiloneShared.Util
-open MiloneSyntax.Syntax
+open MiloneShared.TypeIntegers
+open Std.StdError
+open MiloneSyntaxTypes.SyntaxTypes
 
-module C = MiloneStd.StdChar
-module S = MiloneStd.StdString
+module C = Std.StdChar
+module S = Std.StdString
 
 // -----------------------------------------------
 // Char
@@ -112,15 +61,6 @@ let private isFollowedByBackticks (i: int) (s: string) : bool =
   && (match s.[i], s.[i + 1] with
       | '`', '`' -> true
       | _ -> false)
-
-let private strToAsciiLower (s: string) : string =
-  let rec go (i: int) acc =
-    if i < s.Length then
-      go (i + 1) (string (C.toLower s.[i]) :: acc)
-    else
-      List.rev acc
-
-  go 0 [] |> S.concat ""
 
 // -----------------------------------------------
 // Pos
@@ -322,7 +262,7 @@ let private scanCharLit (text: string) (i: int) =
   assert (i >= 1 && at (i - 1) = '\'')
   go i
 
-let private scanStrLit (text: string) (i: int) =
+let private scanStringLit (text: string) (i: int) =
   let at (i: int) =
     if i < text.Length then
       text.[i]
@@ -348,7 +288,7 @@ let private scanStrLit (text: string) (i: int) =
   assert (i >= 1 && text.[i - 1] = '"')
   go i
 
-let private scanStrLitRaw (text: string) (i: int) =
+let private scanStringLitRaw (text: string) (i: int) =
   let rec go i =
     if i + 3 <= text.Length then
       if text |> isFollowedByRawQuotes i then
@@ -377,7 +317,7 @@ let private tokenOfOp allowPrefix (text: string) l r : Token =
   | '&' ->
     match s with
     | "&" -> AmpToken
-    | "&&" -> AmpAmpToken
+    | "&&" -> AmpAmpToken(allowPrefix && not (atSpace text r))
     | "&&&" -> AmpAmpAmpToken
     | _ -> error ()
 
@@ -401,7 +341,10 @@ let private tokenOfOp allowPrefix (text: string) l r : Token =
 
   | '<' ->
     match s with
-    | "<" -> LeftAngleToken
+    | "<" ->
+      // adjacent=true if the previous token is blank or newline.
+      LeftAngleToken(not allowPrefix)
+
     | "<=" -> LeftEqualToken
     | "<>" -> LeftRightToken
     | "<<" -> LeftLeftToken
@@ -468,14 +411,16 @@ let private evalCharLit (text: string) (l: int) (r: int) : Token =
     && text.[l + 2] = 'x'
     && text.[l + 5] = '\''
     ->
-    if text.[l + 3] = '0' && text.[l + 4] = '0' then
-      CharToken '\x00'
-    else
-      ErrorToken UnimplHexEscapeError
+    let hex =
+      text.[l + 3..l + 4]
+      |> S.parseHexAsUInt64
+      |> Option.defaultWith unreachable
+
+    CharToken(char (byte hex))
 
   | _ -> ErrorToken InvalidCharLitError
 
-let private evalStrLit (text: string) (l: int) (r: int) : Token =
+let private evalStringLit (text: string) (l: int) (r: int) : Token =
   let rec skipVerbatim i =
     if i + 1 < r && text.[i] <> '\\' then
       skipVerbatim (i + 1)
@@ -483,7 +428,7 @@ let private evalStrLit (text: string) (l: int) (r: int) : Token =
       i
 
   /// Splits a string to alternating list of unescaped "verbatim" parts
-  /// and escape sequences. E.g. "hello\nworld" -> "hello", "\n", "world".
+  /// and escape sequences. E.g. "hello\nworld" ⇒ "hello", "\n", "world".
   let rec go acc i =
     assert (i < r)
 
@@ -500,17 +445,33 @@ let private evalStrLit (text: string) (l: int) (r: int) : Token =
 
     // Take an escape sequence or halt.
     if i = r - 1 then
-      StrToken(acc |> List.rev |> strConcat)
+      StringToken(acc |> List.rev |> S.concat "")
     else
       assert (i < r - 1 && text.[i] = '\\')
 
       match text.[i + 1] with
       | 'x' when
         i + 4 < r
-        && text.[i + 2] = '0'
-        && text.[i + 3] = '0'
+        && C.isHex text.[i + 2]
+        && C.isHex text.[i + 3]
         ->
-        go ("\x00" :: acc) (i + 4)
+        let acc =
+          let hex =
+            text.[i + 2..i + 3]
+            |> S.parseHexAsUInt64
+            |> Option.defaultWith unreachable
+            |> byte
+
+          let s =
+            if hex = 0uy then
+              "\x00"
+            else
+              string (char hex)
+
+          s :: acc
+
+        go acc (i + 4)
+
       | 't' when i + 2 < r -> go ("	" :: acc) (i + 2)
       | 'r' when i + 2 < r -> go ("\r" :: acc) (i + 2)
       | 'n' when i + 2 < r -> go ("\n" :: acc) (i + 2)
@@ -524,15 +485,15 @@ let private evalStrLit (text: string) (l: int) (r: int) : Token =
   if l + 2 <= r && text.[l] = '"' && text.[r - 1] = '"' then
     go [] (l + 1)
   else
-    ErrorToken InvalidStrLitError
+    ErrorToken InvalidStringLitError
 
-let private evalStrLitRaw (text: string) l r =
+let private evalStringLitRaw (text: string) l r =
   if (l + 6 <= r)
      && text |> isFollowedByRawQuotes l
      && text |> isFollowedByRawQuotes (r - 3) then
-    StrToken(text |> S.slice (l + 3) (r - 3))
+    StringToken(text |> S.slice (l + 3) (r - 3))
   else
-    ErrorToken InvalidStrLitError
+    ErrorToken InvalidStringLitError
 
 // -----------------------------------------------
 // Tokenize routines
@@ -548,7 +509,6 @@ let private leadsPrefix token : bool =
 
   | _ -> false
 
-[<Struct>]
 [<NoEquality; NoComparison>]
 type private Lookahead =
   | LEof
@@ -735,25 +695,26 @@ let private doNext (host: TokenizeHost) allowPrefix (text: string) (index: int) 
     CommentToken, r
 
   | LNumber ->
+    // Value can be too large or too small. Range should be checked in Typing.
     let isFloat, m, r = scanNumberLit text (index + len)
 
-    // Value can be too large or too small; range should be checked in Typing.
-    // m: before suffix
-    if m < r then
-      ErrorToken UnimplNumberSuffixError, r
-    else if isFloat then
-      FloatToken text.[index..r - 1], r
+    if isFloat then
+      if m < r then
+        ErrorToken UnimplNumberSuffixError, r
+      else
+        FloatToken text.[index..r - 1], r
     else
-      IntToken(S.slice index r text), r
+      match intFlavorOfSuffix (text |> S.slice m r) with
+      | None when m < r -> ErrorToken UnimplNumberSuffixError, r
+      | suffixOpt -> IntToken(S.slice index m text, suffixOpt), r
 
   | LZeroX ->
     let l = index + len
     let m, r = scanHex text l
 
-    if m < r then
-      ErrorToken UnimplNumberSuffixError, r
-    else
-      IntToken(strToAsciiLower (S.slice index r text)), r
+    match intFlavorOfSuffix (text |> S.slice m r) with
+    | None when m < r -> ErrorToken UnimplNumberSuffixError, r
+    | suffixOpt -> IntToken(S.toLower (S.slice index m text), suffixOpt), r
 
   | LNonKeywordIdent ->
     let r = scanIdent text (index + len)
@@ -788,12 +749,12 @@ let private doNext (host: TokenizeHost) allowPrefix (text: string) (index: int) 
     evalCharLit text index r, r
 
   | LStr ->
-    let r = scanStrLit text (index + len)
-    evalStrLit text index r, r
+    let r = scanStringLit text (index + len)
+    evalStringLit text index r, r
 
   | LRawStr ->
-    let r = scanStrLitRaw text (index + len)
-    evalStrLitRaw text index r, r
+    let r = scanStringLitRaw text (index + len)
+    evalStringLitRaw text index r, r
 
   | LOp ->
     let r = scanOp text (index + len)
@@ -809,7 +770,7 @@ let private doNext (host: TokenizeHost) allowPrefix (text: string) (index: int) 
     ErrorToken BadTokenError, r
 
 /// Tokenizes a string. Trivias are removed.
-let tokenize (host: TokenizeHost) (text: string) : (Token * Pos) list =
+let tokenize (host: TokenizeHost) (text: string) : TokenizeResult =
   // allowPrefix: preceded by space?
   let rec go acc allowPrefix (i: int) (pos: Pos) =
     if i < text.Length then
@@ -833,7 +794,7 @@ let tokenize (host: TokenizeHost) (text: string) : (Token * Pos) list =
   go [] true 0 (0, 0) |> List.rev
 
 /// Tokenizes a string. Trivias are preserved.
-let tokenizeAll (host: TokenizeHost) (text: string) : (Token * Pos) list =
+let tokenizeAll (host: TokenizeHost) (text: string) : TokenizeFullResult =
   let rec go acc allowPrefix (i: int) (pos: Pos) =
     if i < text.Length then
       let token, r = doNext host allowPrefix text i

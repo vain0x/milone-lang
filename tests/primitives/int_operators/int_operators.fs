@@ -27,9 +27,9 @@ let bitOperatorsTest (n1: int) =
   let n8 = n4 * 2
   let n16 = n8 * 2
 
-  assert ((n1 + n2 + n4) &&& (n2 + n4 + n8) = n2 + n4)
-  assert ((n1 + n2 + n4) ||| (n2 + n4 + n8) = n1 + n2 + n4 + n8)
-  assert ((n1 + n2 + n4) ^^^ (n2 + n4 + n8) = n1 + n8)
+  assert (((n1 + n2 + n4) &&& (n2 + n4 + n8)) = n2 + n4)
+  assert (((n1 + n2 + n4) ||| (n2 + n4 + n8)) = n1 + n2 + n4 + n8)
+  assert (((n1 + n2 + n4) ^^^ (n2 + n4 + n8)) = n1 + n8)
 
   assert ((n1 <<< 0) = n1)
   assert ((n1 <<< 1) = n2)
@@ -57,7 +57,6 @@ let compareTest (n2: int) (n3: int) =
 
 let toIntTest () =
   assert (int 0 = 0)
-  assert (int 'a' = 97)
   assert (int "42" = 42)
   assert (int "-1" + 1 = 0)
 

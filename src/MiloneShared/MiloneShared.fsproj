@@ -1,20 +1,22 @@
-﻿<Project Sdk="Microsoft.NET.Sdk">
+<Project Sdk="Microsoft.NET.Sdk">
 
   <PropertyGroup>
-    <TargetFramework>net5.0</TargetFramework>
-    <GenerateDocumentationFile>true</GenerateDocumentationFile>
+    <TargetFramework>net6.0</TargetFramework>
   </PropertyGroup>
 
   <ItemGroup>
     <Compile Include="FSharpOnly.fs" />
-    <Compile Include="SharedTypes.fs" />
+    <Compile Include="UtilParallel.fs" />
+    <Compile Include="UtilSymbol.fs" />
     <Compile Include="TypeFloat.fs" />
     <Compile Include="TypeIntegers.fs" />
+    <Compile Include="SharedTypes.fs" />
     <Compile Include="Util.fs" />
+    <Compile Include="UtilProfiler.fs" />
   </ItemGroup>
 
   <ItemGroup>
-    <ProjectReference Include="..\..\milone_libs\MiloneStd\MiloneStd.fsproj" />
+    <ProjectReference Include="..\Std\Std.fsproj" />
   </ItemGroup>
 
 </Project>

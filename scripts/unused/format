@@ -5,7 +5,7 @@
 # Install fantomas-tool with dotnet tool command as written in the page.
 # On Linux, add `$HOME/.dotnet/tools` to PATH.
 
-# FIXME: This doesn't format .milone files
+# NOTE: This doesn't format .milone files
 #        because fantomas uses allow list for file extension
 #        and it always use indent_size=4 for --stdin.
 

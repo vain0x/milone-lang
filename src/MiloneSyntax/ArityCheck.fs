@@ -1,15 +1,14 @@
+// See docs/internals/arity_check.md
 module rec MiloneSyntax.ArityCheck
 
 open MiloneShared.SharedTypes
 open MiloneShared.Util
 open MiloneSyntax.Tir
-open MiloneSyntax.Typing
 open MiloneSyntax.TySystem
+open MiloneSyntaxTypes.TirTypes
 
-module StdInt = MiloneStd.StdInt
-module S = MiloneStd.StdString
-module TMap = MiloneStd.StdMap
-module TSet = MiloneStd.StdSet
+module StdInt = Std.StdInt
+module S = Std.StdString
 
 // -----------------------------------------------
 // ArityEx
@@ -70,6 +69,7 @@ let private tyToArityEx ty =
       let args, result = goFun tTy
       sTy :: args, result
 
+    | Ty (ErrorTk _, _) -> [], HungryAx
     | _ -> [], UnitAx
 
   let args, result = goFun ty
@@ -89,12 +89,11 @@ type private ArityCheckCtx =
     Errors: (string * string * Loc) list }
 
 let private addArityError actual expected (loc: Loc) (ctx: ArityCheckCtx) =
-  { ctx with
-      Errors = (actual, expected, loc) :: ctx.Errors }
+  { ctx with Errors = (actual, expected, loc) :: ctx.Errors }
 
-let private acExprChecked expr ctx =
+let private acExprChecked ctx expr =
   let expected = tyToArityEx (exprToTy expr)
-  let actual, ctx = acExpr (expr, ctx)
+  let actual, ctx = expr |> acExpr ctx
 
   if arityExIsUnifiable actual expected |> not then
     ctx
@@ -106,7 +105,7 @@ let private acExprChecked expr ctx =
 // Control
 // -----------------------------------------------
 
-let private acExpr (expr, ctx: ArityCheckCtx) : ArityEx * ArityCheckCtx =
+let private acExpr (ctx: ArityCheckCtx) expr : ArityEx * ArityCheckCtx =
   match expr with
   | TLitExpr _ -> UnitAx, ctx
 
@@ -119,35 +118,35 @@ let private acExpr (expr, ctx: ArityCheckCtx) : ArityEx * ArityCheckCtx =
   | TRecordExpr (baseOpt, fields, _, _) ->
     let ctx =
       match baseOpt with
-      | Some baseExpr -> acExpr (baseExpr, ctx) |> snd
+      | Some baseExpr -> baseExpr |> acExpr ctx |> snd
       | None -> ctx
 
     let ctx =
       fields
-      |> List.fold (fun ctx (_, init, _) -> acExprChecked init ctx) ctx
+      |> List.fold (fun ctx (_, init, _) -> acExprChecked ctx init) ctx
 
     UnitAx, ctx
 
   | TMatchExpr (cond, arms, ty, _) ->
-    let _, ctx = acExpr (cond, ctx)
+    let _, ctx = cond |> acExpr ctx
 
     let ctx =
       arms
       |> List.fold
            (fun ctx (_, guard, body) ->
-             let _, ctx = acExpr (guard, ctx)
-             acExprChecked body ctx)
+             let _, ctx = guard |> acExpr ctx
+             acExprChecked ctx body)
            ctx
 
     tyToArityEx ty, ctx
 
   | TNavExpr (l, _, ty, _) ->
-    let _, ctx = acExpr (l, ctx)
+    let _, ctx = l |> acExpr ctx
     tyToArityEx ty, ctx
 
   | TNodeExpr (TAppEN, [ callee; arg ], ty, loc) ->
-    let calleeArity, ctx = acExpr (callee, ctx)
-    let argArity, ctx = acExpr (arg, ctx)
+    let calleeArity, ctx = callee |> acExpr ctx
+    let argArity, ctx = arg |> acExpr ctx
 
     match calleeArity with
     | HungryAx -> HungryAx, ctx
@@ -168,42 +167,35 @@ let private acExpr (expr, ctx: ArityCheckCtx) : ArityEx * ArityCheckCtx =
       tyToArityEx ty, ctx
 
   | TNodeExpr (_, items, ty, _) ->
-    let ctx = acExprs items ctx
+    let ctx = items |> acExprs ctx
     tyToArityEx ty, ctx
 
-  | TBlockExpr (_, stmts, last) ->
-    let ctx = acStmts stmts ctx
-    acExpr (last, ctx)
+  | TBlockExpr (stmts, last) ->
+    let ctx = stmts |> acStmts ctx
+    last |> acExpr ctx
 
-let private acExprs exprs ctx =
+let private acExprs ctx exprs : ArityCheckCtx =
   exprs
-  |> List.fold (fun ctx expr -> acExpr (expr, ctx) |> snd) ctx
+  |> List.fold (fun ctx expr -> expr |> acExpr ctx |> snd) ctx
 
-let private acStmt (stmt, ctx: ArityCheckCtx) : ArityCheckCtx =
+let private acStmt (ctx: ArityCheckCtx) stmt : ArityCheckCtx =
   match stmt with
-  | TExprStmt expr -> acExprChecked expr ctx
-  | TLetValStmt (_, init, _) -> acExprChecked init ctx
-  | TLetFunStmt (_, _, _, _, body, _) -> acExprChecked body ctx
+  | TExprStmt expr -> acExprChecked ctx expr
+  | TLetValStmt (_, init, _) -> acExprChecked ctx init
+  | TLetFunStmt (_, _, _, _, body, _) -> acExprChecked ctx body
+  | TBlockStmt (_, stmts) -> acStmts ctx stmts
 
-  | TTyDeclStmt _
-  | TOpenStmt _ -> ctx
-
-  | TModuleStmt _
-  | TModuleSynonymStmt _ -> unreachable () // Resolved in NameRes.
-
-let private acStmts stmts ctx =
-  stmts
-  |> List.fold (fun ctx stmt -> acStmt (stmt, ctx)) ctx
+let private acStmts ctx stmts = stmts |> List.fold acStmt ctx
 
 // -----------------------------------------------
 // Interface
 // -----------------------------------------------
 
-let arityCheck (modules: TProgram, tyCtx: Typing.TyCtx) : Typing.TyCtx =
+let arityCheck (modules: TProgram, tirCtx: TirCtx) : TirCtx =
   let ctx: ArityCheckCtx =
     { GetFunArity =
         fun funSerial ->
-          let funDef = tyCtx.Funs |> mapFind funSerial
+          let funDef = tirCtx.Funs |> mapFind funSerial
 
           // HACK: failwithf can take any number of arguments.
           if funDef.Name = "failwithf" then
@@ -227,11 +219,10 @@ let arityCheck (modules: TProgram, tyCtx: Typing.TyCtx) : Typing.TyCtx =
 
       Errors = [] }
 
-  let ctx = modules |> hirProgramFoldStmt acStmt ctx
+  let ctx = modules |> TProgram.foldStmt acStmt ctx
 
   let logs =
     ctx.Errors
     |> List.map (fun (actual, expected, loc) -> Log.ArityMismatch(actual, expected), loc)
 
-  { tyCtx with
-      Logs = List.append tyCtx.Logs logs }
+  { tirCtx with Logs = List.append tirCtx.Logs logs }

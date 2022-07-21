@@ -1,0 +1,28 @@
+module rec CmdCat.Ffi
+
+open Std.Own
+open Std.Ptr
+open Std.Vector
+
+// -----------------------------------------------
+// Profiler
+// -----------------------------------------------
+
+/// Profiler to measure time and memory.
+type Profiler = private Profiler of Own<voidptr>
+
+module Profiler =
+  let log (msg: string) (Profiler state) : Profiler =
+    let state = Own.release state
+    __nativeFun ("milone_profile_log", msg, state)
+    Profiler(Own.acquire state)
+
+  let create () : Profiler =
+    let state: voidptr = __nativeFun "milone_profile_init"
+    let profiler = Profiler(Own.acquire state)
+    log "START" profiler
+
+  let dispose profiler : unit =
+    let profiler = log "FINISH" profiler
+    let (Profiler state) = log "" profiler
+    Own.release state |> ignore

@@ -1,0 +1,13 @@
+#!/bin/sh
+
+set -eu
+
+URL='https://github.com/sheredom/hashmap.h/raw/c78ba67ab540c3ee2044094f9c0945f877b367d2/hashmap.h'
+
+if test -x src/libmilonert/hashmap.h
+then
+    echo 'trace: src/libmilonert/hashmap.h is already fetched.' >&2
+    exit
+fi
+
+dotnet fsi scripts/DownloadText.fsx "$URL" -o src/libmilonert/hashmap.h

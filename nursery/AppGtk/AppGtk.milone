@@ -1,6 +1,8 @@
-module rec AppGtk.EntryPoint
+module rec AppGtk.Program
 
-module S = MiloneStd.StdString
+open Std.Region
+
+module S = Std.StdString
 
 let cons head tail = head :: tail
 
@@ -182,4 +184,4 @@ let private view (state: MyState) : UI =
   stack (List.append buttons labels)
 
 let main _ : int =
-  inRegion (fun () -> gtkRun init update view)
+  Region.run (fun () -> gtkRun init update view)

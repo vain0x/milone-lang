@@ -83,10 +83,11 @@ module rec MiloneTranslation.ClosureConversion
 
 open MiloneShared.SharedTypes
 open MiloneShared.Util
+open Std.StdError
+open Std.StdMap
+open Std.StdSet
 open MiloneTranslation.Hir
-
-module TMap = MiloneStd.StdMap
-module TSet = MiloneStd.StdSet
+open MiloneTranslationTypes.HirTypes
 
 // -----------------------------------------------
 // KnownCtx
@@ -94,9 +95,9 @@ module TSet = MiloneStd.StdSet
 
 [<RequireQualifiedAccess; NoEquality; NoComparison>]
 type private KnownCtx =
-  { Locals: AssocSet<VarSerial>
-    UseVars: AssocSet<VarSerial>
-    UseFuns: AssocSet<FunSerial> }
+  { Locals: TreeSet<VarSerial>
+    UseVars: TreeSet<VarSerial>
+    UseFuns: TreeSet<FunSerial> }
 
 let private knownCtxEmpty () : KnownCtx =
   { Locals = TSet.empty varSerialCompare
@@ -116,18 +117,15 @@ let private knownCtxLeaveFunDecl (baseCtx: KnownCtx) (ctx: KnownCtx) =
       Locals = baseCtx.Locals }
 
 let private knownCtxAddLocal serial (ctx: KnownCtx) =
-  { ctx with
-      Locals = ctx.Locals |> TSet.add serial }
+  { ctx with Locals = ctx.Locals |> TSet.add serial }
 
 let private knownCtxUseVar serial (ctx: KnownCtx) =
-  { ctx with
-      UseVars = ctx.UseVars |> TSet.add serial }
+  { ctx with UseVars = ctx.UseVars |> TSet.add serial }
 
 let private knownCtxUseFun funSerial (ctx: KnownCtx) =
-  { ctx with
-      UseFuns = ctx.UseFuns |> TSet.add funSerial }
+  { ctx with UseFuns = ctx.UseFuns |> TSet.add funSerial }
 
-let private knownCtxToNonlocalVars (ctx: KnownCtx) : AssocSet<VarSerial> =
+let private knownCtxToNonlocalVars (ctx: KnownCtx) : TreeSet<VarSerial> =
   ctx.UseVars
   |> TSet.fold
        (fun acc varSerial ->
@@ -170,7 +168,7 @@ let private capsMakeApp calleeSerial tyArgs calleeTy calleeLoc (caps: Caps) =
 /// Updates the argument patterns to take captured variables.
 let private capsAddToFunPats args (caps: Caps) =
   caps
-  |> List.fold (fun args (serial, ty, loc) -> HVarPat(PrivateVis, serial, ty, loc) :: args) args
+  |> List.fold (fun args (serial, ty, loc) -> HVarPat(serial, ty, loc) :: args) args
 
 let private capsUpdateFunDef funTy arity (caps: Caps) =
   let funTy = caps |> capsAddToFunTy funTy
@@ -184,66 +182,55 @@ let private capsUpdateFunDef funTy arity (caps: Caps) =
 /// Context of closure conversion.
 [<RequireQualifiedAccess; NoEquality; NoComparison>]
 type private CcCtx =
-  { Serial: Serial
-    Vars: AssocMap<VarSerial, VarDef>
-    Funs: AssocMap<FunSerial, FunDef>
-    Tys: AssocMap<TySerial, TyDef>
+  { StaticVars: TreeMap<VarSerial, VarDef>
+    Vars: TreeMap<VarSerial, VarDef>
+    Funs: TreeMap<FunSerial, FunDef>
     Current: KnownCtx
-    FunKnowns: AssocMap<FunSerial, KnownCtx>
-    FunUpvars: AssocMap<FunSerial, AssocSet<VarSerial>> }
+    FunKnowns: TreeMap<FunSerial, KnownCtx>
+    FunUpvars: TreeMap<FunSerial, TreeSet<VarSerial>> }
 
-let private ofTyCtx (tyCtx: TyCtx) : CcCtx =
-  { Serial = tyCtx.Serial
-    Vars = tyCtx.Vars
-    Funs = tyCtx.Funs
-    Tys = tyCtx.Tys
+let private ofHirCtx (hirCtx: HirCtx) : CcCtx =
+  { StaticVars = hirCtx.StaticVars
+    Vars = emptyVars
+    Funs = hirCtx.Funs
 
     Current = knownCtxEmpty ()
     FunKnowns = TMap.empty funSerialCompare
     FunUpvars = TMap.empty funSerialCompare }
 
-let private toTyCtx (tyCtx: TyCtx) (ctx: CcCtx) =
-  { tyCtx with
-      Serial = ctx.Serial
-      Vars = ctx.Vars
-      Funs = ctx.Funs
-      Tys = ctx.Tys }
+let private toHirCtx (ctx: CcCtx) (hirCtx: HirCtx) = { hirCtx with Funs = ctx.Funs }
 
-let private addLocal varSerial (ctx: CcCtx) =
-  { ctx with
-      Current = ctx.Current |> knownCtxAddLocal varSerial }
+let private addLocal (ctx: CcCtx) varSerial =
+  { ctx with Current = ctx.Current |> knownCtxAddLocal varSerial }
 
-let private useVar varSerial (ctx: CcCtx) =
-  match (ctx.Vars |> mapFind varSerial).IsStatic with
-  | IsStatic ->
+let private isStaticVar (ctx: CcCtx) varSerial =
+  ctx.StaticVars |> TMap.containsKey varSerial
+
+let private useVar (ctx: CcCtx) varSerial =
+  if isStaticVar ctx varSerial then
     // Don't count static vars as used.
     ctx
+  else
+    { ctx with Current = ctx.Current |> knownCtxUseVar varSerial }
 
-  | _ ->
-    { ctx with
-        Current = ctx.Current |> knownCtxUseVar varSerial }
-
-let private useFun funSerial (ctx: CcCtx) =
-  { ctx with
-      Current = ctx.Current |> knownCtxUseFun funSerial }
+let private useFun (ctx: CcCtx) funSerial =
+  { ctx with Current = ctx.Current |> knownCtxUseFun funSerial }
 
 /// Called on leave function declaration to store the current known context.
-let private saveKnownCtxToFun funSerial (ctx: CcCtx) =
+let private saveKnownCtxToFun (ctx: CcCtx) funSerial =
   // Don't update in the second traversal for transformation.
   let funKnowns = ctx.FunKnowns
 
   if funKnowns |> TMap.containsKey funSerial then
     ctx
   else
-    { ctx with
-        FunKnowns = funKnowns |> TMap.add funSerial ctx.Current }
+    { ctx with FunKnowns = funKnowns |> TMap.add funSerial ctx.Current }
 
 let private enterFunDecl (ctx: CcCtx) =
-  { ctx with
-      Current = ctx.Current |> knownCtxEnterFunDecl }
+  { ctx with Current = ctx.Current |> knownCtxEnterFunDecl }
 
-let private leaveFunDecl funSerial (baseCtx: CcCtx) (ctx: CcCtx) =
-  let ctx = ctx |> saveKnownCtxToFun funSerial
+let private leaveFunDecl (ctx: CcCtx) funSerial (baseCtx: CcCtx) =
+  let ctx = saveKnownCtxToFun ctx funSerial
 
   { ctx with
       Current =
@@ -251,25 +238,22 @@ let private leaveFunDecl funSerial (baseCtx: CcCtx) (ctx: CcCtx) =
         |> knownCtxLeaveFunDecl baseCtx.Current }
 
 /// Gets a list of captured variables for a function.
-let private genFunCaps funSerial (ctx: CcCtx) : Caps =
+let private genFunCaps (ctx: CcCtx) funSerial : Caps =
   let varSerials =
     match ctx.FunUpvars |> TMap.tryFind funSerial with
     | Some it -> it |> TSet.toList
     | None -> []
 
-  // FIXME: List.rev here is just to reduce diff. Remove later.
   varSerials
-  |> List.choose
-       (fun varSerial ->
-         let varDef = ctx.Vars |> mapFind varSerial
-
-         match varDef.IsStatic with
-         | NotStatic -> Some(varSerial, varDef.Ty, varDef.Loc)
-         | _ -> None)
-  |> List.rev
+  |> List.choose (fun varSerial ->
+    if isStaticVar ctx varSerial |> not then
+      let varDef = ctx.Vars |> mapFind varSerial
+      Some(varSerial, varDef.Ty, varDef.Loc)
+    else
+      None)
 
 let private closureRefs (ctx: CcCtx) : CcCtx =
-  let mergeUpvars localVars newUpvars (modified, upvars) : bool * AssocSet<VarSerial> =
+  let mergeUpvars localVars newUpvars (modified, upvars) : bool * TreeSet<VarSerial> =
     newUpvars
     |> TSet.fold
          (fun (modified, upvars) varSerial ->
@@ -285,10 +269,14 @@ let private closureRefs (ctx: CcCtx) : CcCtx =
       funs
       |> List.fold
            (fun (modified, upvars) funSerial ->
-             let newUpvars, _, _ = funUpvarsMap |> mapFind funSerial
+             match funUpvarsMap |> TMap.tryFind funSerial with
+             | Some (newUpvars, _, _) ->
+               (modified, upvars)
+               |> mergeUpvars localVars newUpvars
 
-             (modified, upvars)
-             |> mergeUpvars localVars newUpvars)
+             | None ->
+               // `funSerial` is defined in earlier module. newUpvars is [].
+               modified, upvars)
            (false, upvars)
 
     if modified then
@@ -310,11 +298,10 @@ let private closureRefs (ctx: CcCtx) : CcCtx =
 
   let funUpvars =
     ctx.FunKnowns
-    |> TMap.map
-         (fun (_: FunSerial) (knownCtx: KnownCtx) ->
-           knownCtxToNonlocalVars knownCtx, knownCtx.Locals, TSet.toList knownCtx.UseFuns)
+    |> TMap.map (fun (_: FunSerial) (knownCtx: KnownCtx) ->
+      knownCtxToNonlocalVars knownCtx, knownCtx.Locals, TSet.toList knownCtx.UseFuns)
     |> makeTransitive
-    |> TMap.map (fun (_: FunSerial) (upvars: AssocSet<VarSerial>, _: AssocSet<VarSerial>, _: FunSerial list) -> upvars)
+    |> TMap.map (fun (_: FunSerial) (upvars: TreeSet<VarSerial>, _: TreeSet<VarSerial>, _: FunSerial list) -> upvars)
 
   { ctx with FunUpvars = funUpvars }
 
@@ -324,7 +311,7 @@ let private updateFunDefs (ctx: CcCtx) =
     ctx.FunKnowns
     |> TMap.fold
          (fun funs funSerial (_: KnownCtx) ->
-           match ctx |> genFunCaps funSerial with
+           match genFunCaps ctx funSerial with
            | [] -> funs
 
            | caps ->
@@ -346,118 +333,129 @@ let private updateFunDefs (ctx: CcCtx) =
 // Featured transformations
 // -----------------------------------------------
 
-let private ccFunExpr funSerial tyArgs funTy funLoc ctx =
-  ctx
-  |> genFunCaps funSerial
+let private ccFunExpr ctx funSerial tyArgs funTy funLoc =
+  genFunCaps ctx funSerial
   |> capsMakeApp funSerial tyArgs funTy funLoc
 
-let private ccLetFunExpr callee isRec vis args body next ty loc ctx =
+let private ccLetFunStmt ctx stmt =
+  let callee, args, body, loc =
+    match stmt with
+    | HLetFunStmt (funSerial, argPats, body, loc) -> funSerial, argPats, body, loc
+    | _ -> unreachable ()
+
   let args, body, ctx =
     let baseCtx = ctx
-    let ctx = ctx |> enterFunDecl
+    let ctx = enterFunDecl ctx
 
-    let args, ctx = (args, ctx) |> stMap ccPat
-    let body, ctx = (body, ctx) |> ccExpr
+    let ctx = args |> List.fold ccPat ctx
+    let body, ctx = body |> ccExpr ctx
 
-    let ctx = ctx |> leaveFunDecl callee baseCtx
+    let ctx = leaveFunDecl ctx callee baseCtx
     args, body, ctx
 
   let args =
-    ctx |> genFunCaps callee |> capsAddToFunPats args
+    genFunCaps ctx callee |> capsAddToFunPats args
 
-  let next, ctx = (next, ctx) |> ccExpr
-  HLetFunExpr(callee, isRec, vis, args, body, next, ty, loc), ctx
+  HLetFunStmt(callee, args, body, loc), ctx
 
 // -----------------------------------------------
 // Control
 // -----------------------------------------------
 
-let private ccPat (pat, ctx) =
+let private ccPat ctx pat : CcCtx =
+  let onPat pat ctx = ccPat ctx pat
+  let onPats pats ctx = pats |> List.fold ccPat ctx
+
   match pat with
   | HLitPat _
   | HDiscardPat _
-  | HVariantPat _ -> pat, ctx
+  | HVariantPat _ -> ctx
 
-  | HVarPat (_, serial, _, _) ->
-    let ctx = ctx |> addLocal serial
-    pat, ctx
+  | HVarPat (serial, _, _) -> addLocal ctx serial
+  | HNodePat (_, argPats, _, _) -> ctx |> onPats argPats
+  | HAsPat (bodyPat, serial, _) -> addLocal ctx serial |> onPat bodyPat
+  | HOrPat (l, r, _) -> ctx |> onPat l |> onPat r
 
-  | HNodePat (kind, argPats, ty, loc) ->
-    let argPats, ctx = (argPats, ctx) |> stMap ccPat
-    HNodePat(kind, argPats, ty, loc), ctx
-
-  | HAsPat (pat, serial, loc) ->
-    let ctx = ctx |> addLocal serial
-    let pat, ctx = (pat, ctx) |> ccPat
-    HAsPat(pat, serial, loc), ctx
-
-  | HOrPat (l, r, loc) ->
-    let l, ctx = (l, ctx) |> ccPat
-    let r, ctx = (r, ctx) |> ccPat
-    HOrPat(l, r, loc), ctx
-
-let private ccExpr (expr, ctx) =
+let private ccExpr ctx expr : HExpr * CcCtx =
   match expr with
   | HLitExpr _
   | HVariantExpr _
   | HPrimExpr _ -> expr, ctx
 
   | HVarExpr (serial, ty, loc) ->
-    let ctx = ctx |> useVar serial
+    let ctx = useVar ctx serial
     HVarExpr(serial, ty, loc), ctx
 
   | HFunExpr (serial, funTy, tyArgs, funLoc) ->
-    let ctx = ctx |> useFun serial
-    ccFunExpr serial tyArgs funTy funLoc ctx, ctx
+    let ctx = useFun ctx serial
+    ccFunExpr ctx serial tyArgs funTy funLoc, ctx
 
   | HMatchExpr (cond, arms, ty, loc) ->
-    let cond, ctx = ccExpr (cond, ctx)
+    let cond, ctx = ccExpr ctx cond
 
-    let go ((pat, guard, body), ctx) =
-      let pat, ctx = ccPat (pat, ctx)
-      let guard, ctx = ccExpr (guard, ctx)
-      let body, ctx = ccExpr (body, ctx)
-      (pat, guard, body), ctx
+    let arms, ctx =
+      arms
+      |> List.mapFold
+           (fun ctx (pat, guard, body) ->
+             let ctx = ccPat ctx pat
+             let guard, ctx = ccExpr ctx guard
+             let body, ctx = ccExpr ctx body
+             (pat, guard, body), ctx)
+           ctx
 
-    let arms, ctx = (arms, ctx) |> stMap go
     HMatchExpr(cond, arms, ty, loc), ctx
 
   | HNodeExpr (kind, items, ty, loc) ->
-    let items, ctx = (items, ctx) |> stMap ccExpr
+    let items, ctx = items |> List.mapFold ccExpr ctx
     HNodeExpr(kind, items, ty, loc), ctx
 
   | HBlockExpr (stmts, last) ->
-    let stmts, ctx = (stmts, ctx) |> stMap ccExpr
-    let last, ctx = (last, ctx) |> ccExpr
+    let stmts, ctx = stmts |> List.mapFold ccStmt ctx
+    let last, ctx = last |> ccExpr ctx
     HBlockExpr(stmts, last), ctx
-
-  | HLetValExpr (pat, body, next, ty, loc) ->
-    let pat, ctx = ccPat (pat, ctx)
-    let body, ctx = ccExpr (body, ctx)
-    let next, ctx = ccExpr (next, ctx)
-    HLetValExpr(pat, body, next, ty, loc), ctx
-
-  | HLetFunExpr (callee, isRec, vis, args, body, next, ty, loc) ->
-    ccLetFunExpr callee isRec vis args body next ty loc ctx
 
   | HNavExpr _ -> unreachable () // HNavExpr is resolved in NameRes, Typing, or RecordRes.
   | HRecordExpr _ -> unreachable () // HRecordExpr is resolved in RecordRes.
 
-let closureConversion (expr, tyCtx: TyCtx) =
-  let ccCtx = ofTyCtx tyCtx
+let private ccStmt ctx stmt : HStmt * CcCtx =
+  match stmt with
+  | HExprStmt expr ->
+    let expr, ctx = expr |> ccExpr ctx
+    HExprStmt expr, ctx
+
+  | HLetValStmt (pat, body, loc) ->
+    let ctx = ccPat ctx pat
+    let body, ctx = body |> ccExpr ctx
+    HLetValStmt(pat, body, loc), ctx
+
+  | HLetFunStmt _ -> ccLetFunStmt ctx stmt
+
+  | HNativeDeclStmt _ -> unreachable () // Generated in Hoist.
+
+let private ccModule1 (ctx: CcCtx) (m: HModule) =
+  let stmts, ctx = m.Stmts |> List.mapFold ccStmt ctx
+  let m = { m with Stmts = stmts }
+  m, ctx
+
+let private ccModule (hirCtx: HirCtx) (m: HModule) =
+  let ccCtx = ofHirCtx hirCtx
+
+  let ccCtx = { ccCtx with Vars = m.Vars }
 
   // Traverse for reference collection.
   // NOTE: Converted expression is possibly incorrect
   //       because the set of captured variables is incomplete
   //       when to process a function reference before definition.
-  let _, ccCtx = (expr, ccCtx) |> ccExpr
+  let _, ccCtx = ccModule1 ccCtx m
 
   // Resolve transitive references.
-  let ccCtx = ccCtx |> closureRefs
+  let ccCtx = closureRefs ccCtx
 
   // Traverse again to transform function references.
-  let expr, ccCtx = (expr, ccCtx) |> ccExpr
+  let m, ccCtx = ccModule1 ccCtx m
 
-  let tyCtx = ccCtx |> updateFunDefs |> toTyCtx tyCtx
+  let hirCtx = toHirCtx (updateFunDefs ccCtx) hirCtx
 
-  expr, tyCtx
+  m, hirCtx
+
+let closureConversion (modules: HProgram, hirCtx: HirCtx) : HProgram * HirCtx = modules |> List.mapFold ccModule hirCtx

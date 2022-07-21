@@ -1,4 +1,4 @@
-module rec Lib.Lcm
+// module rec Lib.Lcm
 
 open Lib.Gcd
 

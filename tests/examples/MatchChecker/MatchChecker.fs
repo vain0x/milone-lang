@@ -3,9 +3,9 @@
 /// ## References
 ///
 /// - "Pattern matching covering check used in the Swift compiler"
-///   <https://qiita.com/ukitaka/items/7345e74116e11eb10f33> (written in Japanese)
+///   https://qiita.com/ukitaka/items/7345e74116e11eb10f33 (written in Japanese)
 /// - "A generic algorithm for checking exhaustivity of pattern matching"
-///   <https://infoscience.epfl.ch/record/225497> (written in English)
+///   https://infoscience.epfl.ch/record/225497 (written in English)
 module rec MatchChecker.Program
 
 // -----------------------------------------------
@@ -84,7 +84,7 @@ let listZip xs ys =
 
   go [] xs ys
 
-let strConcat xs =
+let stringConcat xs =
   let rec go (xs: string list) =
     match xs with
     | [] -> ""
@@ -158,7 +158,6 @@ let spaceRef tag thunk = Space.Ref(tag, thunk)
 let spaceEmpty = Space.Union []
 
 /// Union of spaces.
-/// FIXME: Merge spaces of ctors with the same tag?
 let spaceUnion spaces =
   let rec go spaces acc =
     match spaces with
@@ -257,22 +256,20 @@ let rec spaceExclude first second =
       spaceEmpty
     else
 
-      // FIXME: disjoint case
+      // add disjoint case here!
 
       // `(s, t) - (u, v) = (s - u, t) + (s, t - v)`.
       // For example, the space of bool^2 excluded by the `false, true` pattern
       // is "the left is not false, or the right is not true."
       firsts
-      |> listMapWithIndex
-           (fun i _ ->
-             listZip firsts seconds
-             |> listMapWithIndex
-                  (fun j (first, second) ->
-                    if i = j then
-                      spaceExclude first second
-                    else
-                      first)
-             |> spaceCtor tag)
+      |> listMapWithIndex (fun i _ ->
+        listZip firsts seconds
+        |> listMapWithIndex (fun j (first, second) ->
+          if i = j then
+            spaceExclude first second
+          else
+            first)
+        |> spaceCtor tag)
       |> spaceUnion
 
   // Non-matching constructors do nothing because disjoint.
@@ -333,7 +330,7 @@ let spaceToString space =
 
     | _ -> failwith "NEVER: suppress warning"
 
-  [] |> go space |> listRev |> strConcat
+  [] |> go space |> listRev |> stringConcat
 
 // -----------------------------------------------
 // Space generation
@@ -429,15 +426,14 @@ let testSpaceToString () =
 
   let ok =
     cases
-    |> listMap
-         (fun (expected, space) ->
-           let actual = space |> spaceToString
+    |> listMap (fun (expected, space) ->
+      let actual = space |> spaceToString
 
-           if actual = expected then
-             true
-           else
-             printfn "%s: NG (%s)" expected actual
-             false)
+      if actual = expected then
+        true
+      else
+        printfn "%s: NG (%s)" expected actual
+        false)
     |> listForAll id
 
   assert ok
@@ -504,36 +500,35 @@ let main _ =
 
   let ok =
     testCases
-    |> listMap
-         (fun (name, ty, pats, covering) ->
-           // The pattern matching is covering if
-           // that the space of patterns covers that of the type.
-           let tySpace = ty |> tyToSpace
-           let patSpace = pats |> patsToSpace
+    |> listMap (fun (name, ty, pats, covering) ->
+      // The pattern matching is covering if
+      // that the space of patterns covers that of the type.
+      let tySpace = ty |> tyToSpace
+      let patSpace = pats |> patsToSpace
 
-           let actual =
-             if patSpace |> spaceCovers tySpace then
-               Covering
-             else
-               Open
+      let actual =
+        if patSpace |> spaceCovers tySpace then
+          Covering
+        else
+          Open
 
-           let ok, msg =
-             match covering, actual with
-             | Covering, Covering
-             | Open, Open -> true, "OK"
+      let ok, msg =
+        match covering, actual with
+        | Covering, Covering
+        | Open, Open -> true, "OK"
 
-             | Covering, Open -> false, "NG. Expected covering but open"
+        | Covering, Open -> false, "NG. Expected covering but open"
 
-             | _ -> false, "NG. Expected open but covering"
+        | _ -> false, "NG. Expected open but covering"
 
-           printfn "%s: %s" name msg
+      printfn "%s: %s" name msg
 
-           if not ok then
-             // Print for debugging.
-             printfn "  ty: %s" (tySpace |> spaceToString)
-             printfn "  pats: %s" (patSpace |> spaceToString)
+      if not ok then
+        // Print for debugging.
+        printfn "  ty: %s" (tySpace |> spaceToString)
+        printfn "  pats: %s" (patSpace |> spaceToString)
 
-           ok)
+      ok)
     |> listForAll id
 
   let exitCode = if ok then 0 else 1

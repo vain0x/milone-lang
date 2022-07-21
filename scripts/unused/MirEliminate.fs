@@ -19,14 +19,14 @@ let private forList folder xs state =
 
 let private mPrimIsPure prim =
   match prim with
-  | MIntOfStrPrim _
-  | MFloatOfStrPrim _
-  | MCharOfStrPrim
-  | MStrOfBoolPrim
-  | MStrOfCharPrim
-  | MStrOfIntPrim _
-  | MStrOfFloatPrim _
-  | MStrGetSlicePrim
+  | MIntOfStringPrim _
+  | MFloatOfStringPrim _
+  | MCharOfStringPrim
+  | MStringOfBoolPrim
+  | MStringOfCharPrim
+  | MStringOfIntPrim _
+  | MStringOfFloatPrim _
+  | MStringGetSlicePrim
   | MPtrReadPrim -> true
 
   | MCallNativePrim _ -> false
@@ -59,14 +59,14 @@ type private MeCtx =
     VarKill: AssocSet<VarSerial>
     IsChanged: bool }
 
-let private ofMirCtx (mirCtx: MirCtx): MeCtx =
+let private ofMirCtx (mirCtx: MirCtx) : MeCtx =
   { Vars = mirCtx.Vars
     Funs = mirCtx.Funs
     VarUse = setEmpty varSerialCmp
     VarKill = setEmpty varSerialCmp
     IsChanged = false }
 
-let private toResult (ctx: MeCtx): MirEliminateResult = { VarKill = ctx.VarKill }
+let private toResult (ctx: MeCtx) : MirEliminateResult = { VarKill = ctx.VarKill }
 
 // -----------------------------------------------
 // Data flow analysis
@@ -83,6 +83,7 @@ let private addVarUse varSerial (ctx: MeCtx) =
     ctx
   else
     printfn "// var marked as use: %s" (mapFind varSerial ctx.Vars |> varDefToName)
+
     { ctx with
         VarUse = ctx.VarUse |> setAdd varSerial
         IsChanged = true }
@@ -130,14 +131,14 @@ let private dfaTerminator terminator ctx =
   | MGotoIfTerminator (cond, _) -> ctx |> dfaExpr cond
 
   | MIfTerminator (cond, thenCl, elseCl) ->
-      ctx
-      |> dfaTerminator thenCl
-      |> dfaTerminator elseCl
-      |> dfaExpr cond
+    ctx
+    |> dfaTerminator thenCl
+    |> dfaTerminator elseCl
+    |> dfaExpr cond
 
   | MSwitchTerminator (cond, clauses) ->
-      let dfaClause (clause: MSwitchClause) ctx = ctx |> dfaTerminator clause.Terminator
-      ctx |> forList dfaClause clauses |> dfaExpr cond
+    let dfaClause (clause: MSwitchClause) ctx = ctx |> dfaTerminator clause.Terminator
+    ctx |> forList dfaClause clauses |> dfaExpr cond
 
 let private dfaActionStmt stmt ctx =
   match stmt with
@@ -147,15 +148,20 @@ let private dfaActionStmt stmt ctx =
 let private dfaLetValStmt stmt ctx =
   match stmt with
   | MLetValStmt (varSerial, init, _, _) ->
-      if inUse varSerial ctx || not (mInitIsPure init)
-      then ctx |> dfaInit init
-      else ctx
+    if inUse varSerial ctx || not (mInitIsPure init) then
+      ctx |> dfaInit init
+    else
+      ctx
 
   | _ -> failwith "NEVER"
 
 let private dfaSetStmt stmt ctx =
   match stmt with
-  | MSetStmt (varSerial, init, _) -> if ctx |> inUse varSerial then ctx |> dfaExpr init else ctx
+  | MSetStmt (varSerial, init, _) ->
+    if ctx |> inUse varSerial then
+      ctx |> dfaExpr init
+    else
+      ctx
   | _ -> failwith "NEVER"
 
 let private dfaTerminatorStmt stmt ctx =
@@ -183,11 +189,11 @@ let private dfaBlock (block: MBlock) ctx =
 let private dfaDecl decl (ctx: MeCtx) =
   match decl with
   | MProcDecl (funSerial, _, body, _, _) ->
-      let funName = (mapFind funSerial ctx.Funs).Name
-      printfn "// enter fun: %s" funName
-      let ctx = ctx |> forList dfaBlock body
-      printfn "// leave fun: %s" funName
-      ctx
+    let funName = (mapFind funSerial ctx.Funs).Name
+    printfn "// enter fun: %s" funName
+    let ctx = ctx |> forList dfaBlock body
+    printfn "// leave fun: %s" funName
+    ctx
 
   | MNativeDecl _ -> ctx
 
@@ -214,18 +220,19 @@ let private dfaRoot decls (ctx: MeCtx) =
   // Kill variables not in use.
   let isChanged, ctx =
     ctx.Vars
-    |> mapFold (fun (isChanged, ctx: MeCtx) varSerial (_: VarDef) ->
-         if setContains varSerial ctx.VarUse
-            || setContains varSerial ctx.VarKill then
-           isChanged, ctx
-         else
-           printfn "// kill %s" (mapFind varSerial ctx.Vars |> varDefToName)
+    |> mapFold
+         (fun (isChanged, ctx: MeCtx) varSerial (_: VarDef) ->
+           if setContains varSerial ctx.VarUse
+              || setContains varSerial ctx.VarKill then
+             isChanged, ctx
+           else
+             printfn "// kill %s" (mapFind varSerial ctx.Vars |> varDefToName)
 
-           let ctx =
-             { ctx with
-                 VarKill = setAdd varSerial ctx.VarKill }
+             let ctx =
+               { ctx with VarKill = setAdd varSerial ctx.VarKill }
 
-           true, ctx) (false, ctx)
+             true, ctx)
+         (false, ctx)
 
   if isChanged then
     printfn "// some var killed"
@@ -237,6 +244,6 @@ let private dfaRoot decls (ctx: MeCtx) =
 // Entrypoint
 // -----------------------------------------------
 
-let mirEliminate (decls, mirCtx: MirCtx): MirEliminateResult =
+let mirEliminate (decls, mirCtx: MirCtx) : MirEliminateResult =
   let ctx = ofMirCtx mirCtx
   ctx |> dfaRoot decls |> toResult

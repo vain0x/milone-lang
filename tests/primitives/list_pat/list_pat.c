@@ -1,165 +1,183 @@
-#include "milone.h"
+#include <stdio.h>
+#include <stdlib.h>
+#include <milone.h>
 
-struct IntOption_;
+struct Int32option1_;
 
-struct IntOptionOption_;
+struct Int32option1option1_;
 
-struct IntOptionOptionOption_;
+struct Int32option1option1option1_;
 
-struct IntIntOptionOptionOption_Fun1;
+typedef struct Int32option1option1option1_(*VoidConstPtrInt32Int32option1option1option1_FunPtr2)(void const *, int32_t);
 
-struct IntList;
+struct Int32Int32option1option1option1_Fun1;
 
-struct IntList;
+struct Int32Cons;
 
-struct IntOptionOptionOption_List;
+struct Int32option1option1option1_Cons;
 
-struct IntOptionOptionOption_List;
+struct Int32Cons;
 
-struct IntOptionOptionOption_ fun_1(int x_22);
+struct Int32option1option1option1_Cons;
 
-struct IntOptionOptionOption_ fun_(void const* env_, int arg_);
+struct Int32option1option1option1_ list_pat_list_pat_main_fun(int32_t x_);
 
-struct IntOptionOptionOption_List const* map_(struct IntIntOptionOptionOption_Fun1 , struct IntList const* );
+struct Int32option1option1option1_ list_pat_list_pat_eta2_main_fun(void const *env_, int32_t arg_);
 
-int milone_main(void);
+struct Int32option1option1option1_Cons const *MiloneCore_List_Int32Int32option1option1option1Fun1Int32ListInt32option1option1option1ListFun2_map(struct Int32Int32option1option1option1_Fun1, struct Int32Cons const *);
 
-enum IntOption_Discriminant {
-    None_,
-    Some_,
+int main(int argc, char **argv);
+
+enum Int32option1_Discriminant {
+    Int32option1_None,
+    Int32option1_Some,
 };
 
-struct IntOption_ {
-    enum IntOption_Discriminant discriminant;
+struct Int32option1_ {
+    enum Int32option1_Discriminant discriminant;
     union {
-        int Some_;
+        int32_t Int32option1_Some;
     };
 };
 
-enum IntOptionOption_Discriminant {
-    None_1,
-    Some_1,
+enum Int32option1option1_Discriminant {
+    Int32option1option1_None,
+    Int32option1option1_Some,
 };
 
-struct IntOptionOption_ {
-    enum IntOptionOption_Discriminant discriminant;
+struct Int32option1option1_ {
+    enum Int32option1option1_Discriminant discriminant;
     union {
-        struct IntOption_ Some_1;
+        struct Int32option1_ Int32option1option1_Some;
     };
 };
 
-enum IntOptionOptionOption_Discriminant {
-    None_2,
-    Some_2,
+enum Int32option1option1option1_Discriminant {
+    Int32option1option1option1_None,
+    Int32option1option1option1_Some,
 };
 
-struct IntOptionOptionOption_ {
-    enum IntOptionOptionOption_Discriminant discriminant;
+struct Int32option1option1option1_ {
+    enum Int32option1option1option1_Discriminant discriminant;
     union {
-        struct IntOptionOption_ Some_2;
+        struct Int32option1option1_ Int32option1option1option1_Some;
     };
 };
 
-struct IntIntOptionOptionOption_Fun1 {
-    struct IntOptionOptionOption_(*fun)(void const*, int);
-    void const* env;
+struct Int32Int32option1option1option1_Fun1 {
+    VoidConstPtrInt32Int32option1option1option1_FunPtr2 fun;
+    void const *env;
 };
 
-struct IntList {
-    int head;
-    struct IntList const* tail;
+struct Int32Cons {
+    int32_t head;
+    struct Int32Cons const *tail;
 };
 
-struct IntOptionOptionOption_List {
-    struct IntOptionOptionOption_ head;
-    struct IntOptionOptionOption_List const* tail;
+struct Int32option1option1option1_Cons {
+    struct Int32option1option1option1_ head;
+    struct Int32option1option1option1_Cons const *tail;
 };
 
-struct IntOptionOptionOption_ fun_1(int x_22) {
-    struct IntOption_ variant_ = (struct IntOption_){.discriminant = Some_, .Some_ = x_22};
-    struct IntOptionOption_ variant_1 = (struct IntOptionOption_){.discriminant = Some_1, .Some_1 = variant_};
-    struct IntOptionOptionOption_ variant_2 = (struct IntOptionOptionOption_){.discriminant = Some_2, .Some_2 = variant_1};
+struct Int32option1option1option1_ list_pat_list_pat_main_fun(int32_t x_) {
+    struct Int32option1_ variant_;
+    struct Int32option1option1_ variant_1;
+    struct Int32option1option1option1_ variant_2;
+    variant_ = (struct Int32option1_){.discriminant = Int32option1_Some, .Int32option1_Some = x_};
+    variant_1 = (struct Int32option1option1_){.discriminant = Int32option1option1_Some, .Int32option1option1_Some = variant_};
+    variant_2 = (struct Int32option1option1option1_){.discriminant = Int32option1option1option1_Some, .Int32option1option1option1_Some = variant_1};
     return variant_2;
 }
 
-struct IntOptionOptionOption_ fun_(void const* env_, int arg_) {
-    struct IntOptionOptionOption_ call_3 = fun_1(arg_);
-    return call_3;
+struct Int32option1option1option1_ list_pat_list_pat_eta2_main_fun(void const *env_, int32_t arg_) {
+    struct Int32option1option1option1_ call_;
+    call_ = list_pat_list_pat_main_fun(arg_);
+    return call_;
 }
 
-int milone_main(void) {
-    int x7_;
-    int x6_;
-    int x5_;
-    int x4_;
-    int x3_;
-    int x2_;
-    int x1_;
-    char match_2;
-    struct IntIntOptionOptionOption_Fun1 fun_2 = (struct IntIntOptionOptionOption_Fun1){.fun = fun_, .env = NULL};
-    struct IntList const* list_8 = milone_mem_alloc(1, sizeof(struct IntList));
-    (*(((struct IntList*)list_8))) = (struct IntList){.head = 7, .tail = NULL};
-    struct IntList const* list_7 = milone_mem_alloc(1, sizeof(struct IntList));
-    (*(((struct IntList*)list_7))) = (struct IntList){.head = 6, .tail = list_8};
-    struct IntList const* list_6 = milone_mem_alloc(1, sizeof(struct IntList));
-    (*(((struct IntList*)list_6))) = (struct IntList){.head = 5, .tail = list_7};
-    struct IntList const* list_5 = milone_mem_alloc(1, sizeof(struct IntList));
-    (*(((struct IntList*)list_5))) = (struct IntList){.head = 4, .tail = list_6};
-    struct IntList const* list_4 = milone_mem_alloc(1, sizeof(struct IntList));
-    (*(((struct IntList*)list_4))) = (struct IntList){.head = 3, .tail = list_5};
-    struct IntList const* list_3 = milone_mem_alloc(1, sizeof(struct IntList));
-    (*(((struct IntList*)list_3))) = (struct IntList){.head = 2, .tail = list_4};
-    struct IntList const* list_2 = milone_mem_alloc(1, sizeof(struct IntList));
-    (*(((struct IntList*)list_2))) = (struct IntList){.head = 1, .tail = list_3};
-    struct IntOptionOptionOption_List const* call_4 = map_(fun_2, list_2);
-    if ((!(call_4))) goto next_10;
-    if ((call_4->head.discriminant != Some_2)) goto next_10;
-    if ((call_4->head.Some_2.discriminant != Some_1)) goto next_10;
-    if ((call_4->head.Some_2.Some_1.discriminant != Some_)) goto next_10;
-    x1_ = call_4->head.Some_2.Some_1.Some_;
-    if ((!(call_4->tail))) goto next_10;
-    if ((call_4->tail->head.discriminant != Some_2)) goto next_10;
-    if ((call_4->tail->head.Some_2.discriminant != Some_1)) goto next_10;
-    if ((call_4->tail->head.Some_2.Some_1.discriminant != Some_)) goto next_10;
-    x2_ = call_4->tail->head.Some_2.Some_1.Some_;
-    if ((!(call_4->tail->tail))) goto next_10;
-    if ((call_4->tail->tail->head.discriminant != Some_2)) goto next_10;
-    if ((call_4->tail->tail->head.Some_2.discriminant != Some_1)) goto next_10;
-    if ((call_4->tail->tail->head.Some_2.Some_1.discriminant != Some_)) goto next_10;
-    x3_ = call_4->tail->tail->head.Some_2.Some_1.Some_;
-    if ((!(call_4->tail->tail->tail))) goto next_10;
-    if ((call_4->tail->tail->tail->head.discriminant != Some_2)) goto next_10;
-    if ((call_4->tail->tail->tail->head.Some_2.discriminant != Some_1)) goto next_10;
-    if ((call_4->tail->tail->tail->head.Some_2.Some_1.discriminant != Some_)) goto next_10;
-    x4_ = call_4->tail->tail->tail->head.Some_2.Some_1.Some_;
-    if ((!(call_4->tail->tail->tail->tail))) goto next_10;
-    if ((call_4->tail->tail->tail->tail->head.discriminant != Some_2)) goto next_10;
-    if ((call_4->tail->tail->tail->tail->head.Some_2.discriminant != Some_1)) goto next_10;
-    if ((call_4->tail->tail->tail->tail->head.Some_2.Some_1.discriminant != Some_)) goto next_10;
-    x5_ = call_4->tail->tail->tail->tail->head.Some_2.Some_1.Some_;
-    if ((!(call_4->tail->tail->tail->tail->tail))) goto next_10;
-    if ((call_4->tail->tail->tail->tail->tail->head.discriminant != Some_2)) goto next_10;
-    if ((call_4->tail->tail->tail->tail->tail->head.Some_2.discriminant != Some_1)) goto next_10;
-    if ((call_4->tail->tail->tail->tail->tail->head.Some_2.Some_1.discriminant != Some_)) goto next_10;
-    x6_ = call_4->tail->tail->tail->tail->tail->head.Some_2.Some_1.Some_;
-    if ((!(call_4->tail->tail->tail->tail->tail->tail))) goto next_10;
-    if ((call_4->tail->tail->tail->tail->tail->tail->head.discriminant != Some_2)) goto next_10;
-    if ((call_4->tail->tail->tail->tail->tail->tail->head.Some_2.discriminant != Some_1)) goto next_10;
-    if ((call_4->tail->tail->tail->tail->tail->tail->head.Some_2.Some_1.discriminant != Some_)) goto next_10;
-    x7_ = call_4->tail->tail->tail->tail->tail->tail->head.Some_2.Some_1.Some_;
-    if ((!((!(call_4->tail->tail->tail->tail->tail->tail->tail))))) goto next_10;
-    milone_assert((x1_ == 1), 14, 4);
-    milone_assert((x2_ == 2), 15, 4);
-    milone_assert((x3_ == 3), 16, 4);
-    milone_assert((x4_ == 4), 17, 4);
-    milone_assert((x5_ == 5), 18, 4);
-    milone_assert((x6_ == 6), 19, 4);
-    milone_assert((x7_ == 7), 20, 4);
-    match_2 = 0;
+int main(int argc, char **argv) {
+    milone_start(argc, argv);
+    int32_t x1_;
+    int32_t x2_;
+    int32_t x3_;
+    int32_t x4_;
+    int32_t x5_;
+    int32_t x6_;
+    int32_t x7_;
+    char match_;
+    struct Int32Int32option1option1option1_Fun1 fun_;
+    struct Int32Cons const *list_;
+    struct Int32Cons const *list_1;
+    struct Int32Cons const *list_2;
+    struct Int32Cons const *list_3;
+    struct Int32Cons const *list_4;
+    struct Int32Cons const *list_5;
+    struct Int32Cons const *list_6;
+    struct Int32option1option1option1_Cons const *call_1;
+    fun_ = (struct Int32Int32option1option1option1_Fun1){.fun = list_pat_list_pat_eta2_main_fun, .env = NULL};
+    list_6 = ((struct Int32Cons const *)milone_region_alloc(1, sizeof(struct Int32Cons)));
+    (*(((struct Int32Cons *)list_6))) = (struct Int32Cons){.head = 7, .tail = NULL};
+    list_5 = ((struct Int32Cons const *)milone_region_alloc(1, sizeof(struct Int32Cons)));
+    (*(((struct Int32Cons *)list_5))) = (struct Int32Cons){.head = 6, .tail = list_6};
+    list_4 = ((struct Int32Cons const *)milone_region_alloc(1, sizeof(struct Int32Cons)));
+    (*(((struct Int32Cons *)list_4))) = (struct Int32Cons){.head = 5, .tail = list_5};
+    list_3 = ((struct Int32Cons const *)milone_region_alloc(1, sizeof(struct Int32Cons)));
+    (*(((struct Int32Cons *)list_3))) = (struct Int32Cons){.head = 4, .tail = list_4};
+    list_2 = ((struct Int32Cons const *)milone_region_alloc(1, sizeof(struct Int32Cons)));
+    (*(((struct Int32Cons *)list_2))) = (struct Int32Cons){.head = 3, .tail = list_3};
+    list_1 = ((struct Int32Cons const *)milone_region_alloc(1, sizeof(struct Int32Cons)));
+    (*(((struct Int32Cons *)list_1))) = (struct Int32Cons){.head = 2, .tail = list_2};
+    list_ = ((struct Int32Cons const *)milone_region_alloc(1, sizeof(struct Int32Cons)));
+    (*(((struct Int32Cons *)list_))) = (struct Int32Cons){.head = 1, .tail = list_1};
+    call_1 = MiloneCore_List_Int32Int32option1option1option1Fun1Int32ListInt32option1option1option1ListFun2_map(fun_, list_);
+    if ((!(call_1))) goto next_10;
+    if ((call_1->head.discriminant != Int32option1option1option1_Some)) goto next_10;
+    if ((call_1->head.Int32option1option1option1_Some.discriminant != Int32option1option1_Some)) goto next_10;
+    if ((call_1->head.Int32option1option1option1_Some.Int32option1option1_Some.discriminant != Int32option1_Some)) goto next_10;
+    x1_ = call_1->head.Int32option1option1option1_Some.Int32option1option1_Some.Int32option1_Some;
+    if ((!(call_1->tail))) goto next_10;
+    if ((call_1->tail->head.discriminant != Int32option1option1option1_Some)) goto next_10;
+    if ((call_1->tail->head.Int32option1option1option1_Some.discriminant != Int32option1option1_Some)) goto next_10;
+    if ((call_1->tail->head.Int32option1option1option1_Some.Int32option1option1_Some.discriminant != Int32option1_Some)) goto next_10;
+    x2_ = call_1->tail->head.Int32option1option1option1_Some.Int32option1option1_Some.Int32option1_Some;
+    if ((!(call_1->tail->tail))) goto next_10;
+    if ((call_1->tail->tail->head.discriminant != Int32option1option1option1_Some)) goto next_10;
+    if ((call_1->tail->tail->head.Int32option1option1option1_Some.discriminant != Int32option1option1_Some)) goto next_10;
+    if ((call_1->tail->tail->head.Int32option1option1option1_Some.Int32option1option1_Some.discriminant != Int32option1_Some)) goto next_10;
+    x3_ = call_1->tail->tail->head.Int32option1option1option1_Some.Int32option1option1_Some.Int32option1_Some;
+    if ((!(call_1->tail->tail->tail))) goto next_10;
+    if ((call_1->tail->tail->tail->head.discriminant != Int32option1option1option1_Some)) goto next_10;
+    if ((call_1->tail->tail->tail->head.Int32option1option1option1_Some.discriminant != Int32option1option1_Some)) goto next_10;
+    if ((call_1->tail->tail->tail->head.Int32option1option1option1_Some.Int32option1option1_Some.discriminant != Int32option1_Some)) goto next_10;
+    x4_ = call_1->tail->tail->tail->head.Int32option1option1option1_Some.Int32option1option1_Some.Int32option1_Some;
+    if ((!(call_1->tail->tail->tail->tail))) goto next_10;
+    if ((call_1->tail->tail->tail->tail->head.discriminant != Int32option1option1option1_Some)) goto next_10;
+    if ((call_1->tail->tail->tail->tail->head.Int32option1option1option1_Some.discriminant != Int32option1option1_Some)) goto next_10;
+    if ((call_1->tail->tail->tail->tail->head.Int32option1option1option1_Some.Int32option1option1_Some.discriminant != Int32option1_Some)) goto next_10;
+    x5_ = call_1->tail->tail->tail->tail->head.Int32option1option1option1_Some.Int32option1option1_Some.Int32option1_Some;
+    if ((!(call_1->tail->tail->tail->tail->tail))) goto next_10;
+    if ((call_1->tail->tail->tail->tail->tail->head.discriminant != Int32option1option1option1_Some)) goto next_10;
+    if ((call_1->tail->tail->tail->tail->tail->head.Int32option1option1option1_Some.discriminant != Int32option1option1_Some)) goto next_10;
+    if ((call_1->tail->tail->tail->tail->tail->head.Int32option1option1option1_Some.Int32option1option1_Some.discriminant != Int32option1_Some)) goto next_10;
+    x6_ = call_1->tail->tail->tail->tail->tail->head.Int32option1option1option1_Some.Int32option1option1_Some.Int32option1_Some;
+    if ((!(call_1->tail->tail->tail->tail->tail->tail))) goto next_10;
+    if ((call_1->tail->tail->tail->tail->tail->tail->head.discriminant != Int32option1option1option1_Some)) goto next_10;
+    if ((call_1->tail->tail->tail->tail->tail->tail->head.Int32option1option1option1_Some.discriminant != Int32option1option1_Some)) goto next_10;
+    if ((call_1->tail->tail->tail->tail->tail->tail->head.Int32option1option1option1_Some.Int32option1option1_Some.discriminant != Int32option1_Some)) goto next_10;
+    x7_ = call_1->tail->tail->tail->tail->tail->tail->head.Int32option1option1option1_Some.Int32option1option1_Some.Int32option1_Some;
+    if ((!((!(call_1->tail->tail->tail->tail->tail->tail->tail))))) goto next_10;
+    if ((x1_ != 1)) milone_assert_error("list_pat/list_pat.milone", 15, 4);
+    if ((x2_ != 2)) milone_assert_error("list_pat/list_pat.milone", 16, 4);
+    if ((x3_ != 3)) milone_assert_error("list_pat/list_pat.milone", 17, 4);
+    if ((x4_ != 4)) milone_assert_error("list_pat/list_pat.milone", 18, 4);
+    if ((x5_ != 5)) milone_assert_error("list_pat/list_pat.milone", 19, 4);
+    if ((x6_ != 6)) milone_assert_error("list_pat/list_pat.milone", 20, 4);
+    if ((x7_ != 7)) milone_assert_error("list_pat/list_pat.milone", 21, 4);
+    match_ = 0;
     goto end_match_9;
 next_10:;
-    milone_assert(false, 22, 9);
-    match_2 = 0;
+    if (true) milone_assert_error("list_pat/list_pat.milone", 23, 9);
+    match_ = 0;
     goto end_match_9;
 next_11:;
 end_match_9:;

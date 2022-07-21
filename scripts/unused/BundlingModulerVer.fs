@@ -73,7 +73,7 @@ open MiloneLang.Util
 open MiloneLang.Syntax
 open MiloneLang.Hir
 
-module S = MiloneStd.StdString
+module S = Std.StdString
 
 type private ProjectName = string
 
@@ -146,15 +146,15 @@ let bundleErrorToString error =
 // Project schema evaluator
 // -----------------------------------------------
 
-let evalProjectSchema projectName ast: ProjectSchemaResult option =
-  let asProjectRef expr: (ProjectOption * Pos) option =
+let evalProjectSchema projectName ast : ProjectSchemaResult option =
+  let asProjectRef expr : (ProjectOption * Pos) option =
     match expr with
-    | ABinaryExpr (AppBinary, AIdentExpr ("Ref", pos), ALitExpr (StrLit projectDir, _), _) ->
-        Some(ProjectOption.Ref projectDir, pos)
+    | ABinaryExpr (AppBinary, AIdentExpr ("Ref", pos), ALitExpr (StringLit projectDir, _), _) ->
+      Some(ProjectOption.Ref projectDir, pos)
 
     | ABinaryExpr (AppBinary,
                    AIdentExpr ("AliasedRef", pos),
-                   ATupleExpr ([ ALitExpr (StrLit projectName, _); ALitExpr (StrLit projectDir, _) ], _),
+                   ATupleExpr ([ ALitExpr (StringLit projectName, _); ALitExpr (StringLit projectDir, _) ], _),
                    _) -> Some(ProjectOption.AliasedRef(projectName, projectDir), pos)
 
     | _ -> None
@@ -162,10 +162,11 @@ let evalProjectSchema projectName ast: ProjectSchemaResult option =
   let asProjectSchema decl =
     match decl with
     | AExprDecl (ARecordExpr (None, fields, _)) ->
-        match fields
-              |> List.tryFind (fun (name, _, _) -> name = "Options") with
-        | Some (_, AListExpr (items, _), _) -> items |> List.choose asProjectRef |> Some
-        | _ -> None
+      match fields
+            |> List.tryFind (fun (name, _, _) -> name = "Options")
+        with
+      | Some (_, AListExpr (items, _), _) -> items |> List.choose asProjectRef |> Some
+      | _ -> None
 
     | _ -> None
 
@@ -177,11 +178,11 @@ let evalProjectSchema projectName ast: ProjectSchemaResult option =
   match decls |> List.tryPick asProjectSchema with
   | None -> None
   | Some options ->
-      let schema: ProjectSchemaResult =
-        { Name = projectName
-          Options = options }
+    let schema: ProjectSchemaResult =
+      { Name = projectName
+        Options = options }
 
-      Some schema
+    Some schema
 
 // -----------------------------------------------
 // Bundle API
@@ -208,38 +209,38 @@ type Bundle =
     Modules: AssocMap<DocLoc, ModuleData>
     RequestAcc: BundleRequest list }
 
-let bundleNew (): Bundle =
+let bundleNew () : Bundle =
   { Projects = mapEmpty compare
     Modules = mapEmpty (pairCmp compare compare)
     RequestAcc = [] }
 
 /// Adds a project to be bundled, if not exists.
-let bundleAddProject (input: ProjectInput) (bundle: Bundle): Bundle =
+let bundleAddProject (input: ProjectInput) (bundle: Bundle) : Bundle =
   match bundle.Projects |> mapTryFind input.ProjectName with
   | Some _ -> bundle
 
   | None ->
-      let projectData: ProjectData =
-        { Modules = mapEmpty compare
-          SchemaDocIdOpt = None
-          Refs = [] }
+    let projectData: ProjectData =
+      { Modules = mapEmpty compare
+        SchemaDocIdOpt = None
+        Refs = [] }
 
-      // HACK: Automatically request a module, named "MiloneOnly", to be bundled.
-      let miloneOnlyRequest =
-        BundleRequest.Module(input.ProjectName, "MiloneOnly")
+    // HACK: Automatically request a module, named "MiloneOnly", to be bundled.
+    let miloneOnlyRequest =
+      BundleRequest.Module(input.ProjectName, "MiloneOnly")
 
-      let entryModuleRequest =
-        BundleRequest.Module(input.ProjectName, input.ProjectName)
+    let entryModuleRequest =
+      BundleRequest.Module(input.ProjectName, input.ProjectName)
 
-      { bundle with
-          Projects =
-            bundle.Projects
-            |> mapAdd input.ProjectName projectData
-          RequestAcc =
-            miloneOnlyRequest
-            :: entryModuleRequest
-            :: BundleRequest.ProjectSchema input.ProjectName
-            :: bundle.RequestAcc }
+    { bundle with
+        Projects =
+          bundle.Projects
+          |> mapAdd input.ProjectName projectData
+        RequestAcc =
+          miloneOnlyRequest
+          :: entryModuleRequest
+             :: BundleRequest.ProjectSchema input.ProjectName
+                :: bundle.RequestAcc }
 
 let bundleAddSchema (input: ProjectSchemaInput) (bundle: Bundle) =
   match bundle.Projects |> mapTryFind input.ProjectName with
@@ -248,18 +249,20 @@ let bundleAddSchema (input: ProjectSchemaInput) (bundle: Bundle) =
   | Some projectData when projectData.SchemaDocIdOpt |> Option.isSome -> bundle
 
   | Some projectData ->
-      { bundle with
-          Projects =
-            bundle.Projects
-            |> mapAdd
-                 input.ProjectName
-                 { projectData with
-                     Refs = input.Refs
-                     SchemaDocIdOpt = Some input.DocId } }
+    { bundle with
+        Projects =
+          bundle.Projects
+          |> mapAdd
+               input.ProjectName
+               { projectData with
+                   Refs = input.Refs
+                   SchemaDocIdOpt = Some input.DocId } }
 
 let bundleAddModule (input: ModuleInput) (bundle: Bundle) =
-  if bundle.Modules
-     |> mapContainsKey (input.ProjectName, input.ModuleName) then
+  if
+    bundle.Modules
+    |> mapContainsKey (input.ProjectName, input.ModuleName)
+  then
     bundle
   else
     let dependencies =
@@ -274,9 +277,11 @@ let bundleAddModule (input: ModuleInput) (bundle: Bundle) =
 
     let requests =
       dependencies
-      |> List.fold (fun acc (projectName, moduleName, _) ->
-           BundleRequest.Module(projectName, moduleName)
-           :: acc) bundle.RequestAcc
+      |> List.fold
+           (fun acc (projectName, moduleName, _) ->
+             BundleRequest.Module(projectName, moduleName)
+             :: acc)
+           bundle.RequestAcc
 
     { bundle with
         Modules =
@@ -284,7 +289,7 @@ let bundleAddModule (input: ModuleInput) (bundle: Bundle) =
           |> mapAdd (input.ProjectName, input.ModuleName) moduleData
         RequestAcc = requests }
 
-let bundleTakeRequests (bundle: Bundle): BundleRequest list * Bundle =
+let bundleTakeRequests (bundle: Bundle) : BundleRequest list * Bundle =
   // remove duplicated requests?
   let requests, bundle =
     bundle.RequestAcc, { bundle with RequestAcc = [] }
@@ -295,20 +300,20 @@ let bundleTakeRequests (bundle: Bundle): BundleRequest list * Bundle =
   let requests =
     requests
     |> List.filter (fun request ->
-         match request with
-         | BundleRequest.ProjectSchema projectName ->
-             match bundle.Projects |> mapTryFind projectName with
-             | Some projectData -> projectData.SchemaDocIdOpt |> Option.isNone
-             | None -> false
+      match request with
+      | BundleRequest.ProjectSchema projectName ->
+        match bundle.Projects |> mapTryFind projectName with
+        | Some projectData -> projectData.SchemaDocIdOpt |> Option.isNone
+        | None -> false
 
-         | BundleRequest.Module (projectName, moduleName) ->
-             bundle.Modules
-             |> mapContainsKey (projectName, moduleName)
-             |> not)
+      | BundleRequest.Module (projectName, moduleName) ->
+        bundle.Modules
+        |> mapContainsKey (projectName, moduleName)
+        |> not)
 
   requests, bundle
 
-let bundleProcess (bundle: Bundle): BundleResult = newCtx bundle |> doBundle |> toResult
+let bundleProcess (bundle: Bundle) : BundleResult = newCtx bundle |> doBundle |> toResult
 
 // -----------------------------------------------
 // BundleCtx
@@ -330,7 +335,7 @@ type private BundleCtx =
     ProcessMap: AssocMap<DocLoc, Status>
     Bundle: Bundle }
 
-let private newCtx bundle: BundleCtx =
+let private newCtx bundle : BundleCtx =
   { NameCtx = nameCtxEmpty ()
     ModuleQueue = []
     ModuleAcc = []
@@ -338,70 +343,75 @@ let private newCtx bundle: BundleCtx =
     ProcessMap = mapEmpty (pairCmp compare compare)
     Bundle = bundle }
 
-let private toResult (ctx: BundleCtx): BundleResult =
+let private toResult (ctx: BundleCtx) : BundleResult =
   { Exprs = ctx.ModuleAcc |> List.rev |> List.collect id
     NameCtx = ctx.NameCtx
     Errors = ctx.ErrorAcc }
 
 let private addError msg loc (ctx: BundleCtx) =
-  { ctx with
-      ErrorAcc = (msg, loc) :: ctx.ErrorAcc }
+  { ctx with ErrorAcc = (msg, loc) :: ctx.ErrorAcc }
 
 let private doMarkingAsProcessing docId (f: BundleCtx -> BundleCtx) (ctx: BundleCtx) =
   let ctx =
-    { ctx with
-        ProcessMap = ctx.ProcessMap |> mapAdd docId Status.Processing }
+    { ctx with ProcessMap = ctx.ProcessMap |> mapAdd docId Status.Processing }
 
   let ctx = f ctx
-  { ctx with
-      ProcessMap = ctx.ProcessMap |> mapAdd docId Status.Done }
+  { ctx with ProcessMap = ctx.ProcessMap |> mapAdd docId Status.Done }
 
-let private requireModule projectName moduleName (ctx: BundleCtx): BundleCtx =
-  match ctx.ProcessMap
-        |> mapTryFind (projectName, moduleName) with
+let private requireModule projectName moduleName (ctx: BundleCtx) : BundleCtx =
+  match
+    ctx.ProcessMap
+    |> mapTryFind (projectName, moduleName)
+    with
   | Some Status.Done -> ctx
 
   | Some Status.Processing ->
-      printfn "/* cyclic dependencies involved in %s.%s */" projectName moduleName
-      // recursive dependency
-      ctx
+    printfn "/* cyclic dependencies involved in %s.%s */" projectName moduleName
+    // recursive dependency
+    ctx
 
   | None ->
-      match ctx.Bundle.Modules
-            |> mapTryFind (projectName, moduleName) with
-      | None ->
-          // not found?
-          printfn "/* module not found: %s.%s */" projectName moduleName
-          ctx
+    match
+      ctx.Bundle.Modules
+      |> mapTryFind (projectName, moduleName)
+      with
+    | None ->
+      // not found?
+      printfn "/* module not found: %s.%s */" projectName moduleName
+      ctx
 
-      | Some moduleData ->
-          let ctx =
-            ctx
-            |> doMarkingAsProcessing (projectName, moduleName) (fun ctx ->
-                 moduleData.Dependencies
-                 |> List.fold (fun (ctx: BundleCtx) (projectName, moduleName, pos) ->
-                      // duplicated?
-                      match ctx.Bundle.Modules
-                            |> mapTryFind (projectName, moduleName) with
-                      | Some _ -> ctx |> requireModule projectName moduleName
+    | Some moduleData ->
+      let ctx =
+        ctx
+        |> doMarkingAsProcessing (projectName, moduleName) (fun ctx ->
+          moduleData.Dependencies
+          |> List.fold
+               (fun (ctx: BundleCtx) (projectName, moduleName, pos) ->
+                 // duplicated?
+                 match
+                   ctx.Bundle.Modules
+                   |> mapTryFind (projectName, moduleName)
+                   with
+                 | Some _ -> ctx |> requireModule projectName moduleName
 
-                      | None ->
-                          let y, x = pos
-                          let loc: Loc = moduleData.DocId, y, x
-                          ctx |> addError BundleError.ModuleNotFound loc) ctx)
+                 | None ->
+                   let y, x = pos
+                   let loc: Loc = moduleData.DocId, y, x
+                   ctx |> addError BundleError.ModuleNotFound loc)
+               ctx)
 
-          // Add to bundled program.
-          match moduleData.AstOpt with
-          | None -> ctx
-          | Some ast ->
-              let exprs, nameCtx =
-                astToHir moduleData.DocId (ast, ctx.NameCtx)
+      // Add to bundled program.
+      match moduleData.AstOpt with
+      | None -> ctx
+      | Some ast ->
+        let exprs, nameCtx =
+          astToHir moduleData.DocId (ast, ctx.NameCtx)
 
-              { ctx with
-                  ModuleAcc = exprs :: ctx.ModuleAcc
-                  NameCtx = nameCtx }
+        { ctx with
+            ModuleAcc = exprs :: ctx.ModuleAcc
+            NameCtx = nameCtx }
 
-let private doBundle (ctx: BundleCtx): BundleCtx =
+let private doBundle (ctx: BundleCtx) : BundleCtx =
   // HACK: "MiloneOnly" must be first.
   let ctx =
     ctx.Bundle.Projects

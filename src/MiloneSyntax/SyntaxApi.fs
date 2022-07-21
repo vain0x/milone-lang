@@ -4,35 +4,71 @@
 module rec MiloneSyntax.SyntaxApi
 
 open MiloneShared.SharedTypes
+open MiloneShared.UtilParallel
 open MiloneShared.Util
+open MiloneShared.UtilSymbol
+open Std.StdError
+open Std.StdMap
 open MiloneSyntax.Syntax
+open MiloneSyntaxTypes.SyntaxTypes
+open MiloneSyntaxTypes.SyntaxApiTypes
 
 module ArityCheck = MiloneSyntax.ArityCheck
 module AstBundle = MiloneSyntax.AstBundle
+module OwnershipCheck = MiloneSyntax.OwnershipCheck
 module NameRes = MiloneSyntax.NameRes
-module S = MiloneStd.StdString
+module Manifest = MiloneSyntax.Manifest
+module S = Std.StdString
 module SyntaxParse = MiloneSyntax.SyntaxParse
 module SyntaxTokenize = MiloneSyntax.SyntaxTokenize
 module Tir = MiloneSyntax.Tir
-module TMap = MiloneStd.StdMap
 module Typing = MiloneSyntax.Typing
 module TySystem = MiloneSyntax.TySystem
-
-type private ProjectName = string
-type private ProjectDir = string
-type private ModuleName = string
-type private SourceCode = string
+module TirTypes = MiloneSyntaxTypes.TirTypes
 
 /// `.fs` or `.milone`.
 type private SourceExt = string
 
+/// File extension. Starts with `.`.
+type private FileExt = string
+
+type private FileExistsFun = string -> bool
+
+let private changeExt (ext: FileExt) (path: string) : string =
+  assert (ext |> S.startsWith "." && ext <> ".")
+
+  let dirname, basename =
+    match path |> S.cutLast "/" with
+    | dirname, basename, true -> dirname + "/", basename
+    | s, _, _ -> "", s
+
+  let stem =
+    let s = basename
+
+    match s |> S.findIndex "." with
+    | Some i when 0 < i && i < s.Length -> S.truncate i s
+    | _ -> s
+
+  dirname + stem + ext
+
 // -----------------------------------------------
-// MiloneCore resolution
+// Std library
 // -----------------------------------------------
 
-// FIXME: move to ast bundle?
+let private getStdLibNames () = [ "MiloneCore"; "Std" ]
 
-[<RequireQualifiedAccess>]
+let private computeStdLibProjectDir (miloneHome: MiloneHome) (projectName: ProjectName) : ProjectDir =
+  miloneHome + "/src/" + projectName
+
+let getStdLibProjects (miloneHome: MiloneHome) : (ProjectName * ProjectDir) list =
+  getStdLibNames ()
+  |> List.map (fun name -> name, computeStdLibProjectDir miloneHome name)
+
+// -----------------------------------------------
+// Prelude resolution
+// -----------------------------------------------
+
+[<RequireQualifiedAccess; NoEquality; NoComparison>]
 type ModuleKind =
   | MiloneCore
   | Regular
@@ -43,16 +79,25 @@ let getModuleKind projectName _moduleName =
   | _ -> ModuleKind.Regular
 
 let private preludeFuns = [ "ignore"; "id"; "fst"; "snd" ]
+let private optionIdents = [ "option"; "None"; "Some" ]
+let private resultIdents = [ "Result"; "Ok"; "Error" ]
 
 let private knownModules =
   [ "List"
     "Option"
     "Prelude"
+    "Result"
     "String" ]
 
 let private isPreludeFun funName =
   preludeFuns
   |> List.exists (fun name -> name = funName)
+
+let private isOptionIdent ident =
+  optionIdents |> List.exists (fun x -> x = ident)
+
+let private isResultIdent ident =
+  resultIdents |> List.exists (fun x -> x = ident)
 
 let private isKnownModule moduleName =
   knownModules
@@ -62,17 +107,25 @@ let private isKnownModule moduleName =
 /// whose name appears in the token stream.
 let private resolveMiloneCoreDeps kind tokens ast =
   let analyze tokens =
-    let rec go preludeOpt acc tokens =
+    let rec go preludeOpt optionOpt resultOpt acc tokens =
       match tokens with
-      | [] -> preludeOpt, acc
+      | [] -> preludeOpt, optionOpt, resultOpt, acc
 
-      | (IdentToken name, pos) :: tokens when Option.isNone preludeOpt && isPreludeFun name -> go (Some pos) acc tokens
+      | (IdentToken name, pos) :: tokens when Option.isNone preludeOpt && isPreludeFun name ->
+        go (Some pos) optionOpt resultOpt acc tokens
 
-      | (IdentToken moduleName, pos) :: (DotToken, _) :: tokens -> go preludeOpt ((moduleName, pos) :: acc) tokens
+      | (IdentToken name, pos) :: tokens when Option.isNone optionOpt && isOptionIdent name ->
+        go preludeOpt (Some pos) resultOpt acc tokens
 
-      | _ :: tokens -> go preludeOpt acc tokens
+      | (IdentToken name, pos) :: tokens when Option.isNone resultOpt && isResultIdent name ->
+        go preludeOpt optionOpt (Some pos) acc tokens
 
-    let preludeOpt, moduleNames = go None [] tokens
+      | (IdentToken moduleName, pos) :: (DotToken, _) :: tokens ->
+        go preludeOpt optionOpt resultOpt ((moduleName, pos) :: acc) tokens
+
+      | _ :: tokens -> go preludeOpt optionOpt resultOpt acc tokens
+
+    let preludeOpt, optionOpt, resultOpt, moduleNames = go None None None [] tokens
 
     let add acc (moduleName, pos) =
       if (acc |> TMap.containsKey moduleName |> not)
@@ -84,10 +137,10 @@ let private resolveMiloneCoreDeps kind tokens ast =
     let moduleMap =
       moduleNames |> List.fold add (TMap.empty compare)
 
-    preludeOpt, moduleMap
+    preludeOpt, optionOpt, resultOpt, moduleMap
 
   let insertOpenDecls decls =
-    let preludeOpt, moduleMap = analyze tokens
+    let preludeOpt, optionOpt, resultOpt, moduleMap = analyze tokens
 
     let decls =
       moduleMap
@@ -102,20 +155,41 @@ let private resolveMiloneCoreDeps kind tokens ast =
              :: decls)
            decls
 
-    match preludeOpt with
+    let decls =
+      match preludeOpt with
+      | Some pos ->
+        AOpenDecl(
+          [ Name("MiloneCore", pos)
+            Name("Prelude", pos) ],
+          pos
+        )
+        :: decls
+      | None -> decls
+
+    let decls =
+      match optionOpt with
+      | Some pos ->
+        AOpenDecl(
+          [ Name("MiloneCore", pos)
+            Name("Option", pos) ],
+          pos
+        )
+        :: decls
+      | None -> decls
+
+    match resultOpt with
     | Some pos ->
       AOpenDecl(
         [ Name("MiloneCore", pos)
-          Name("Prelude", pos) ],
+          Name("Result", pos) ],
         pos
       )
       :: decls
     | None -> decls
 
   let updateAst ast =
-    match ast with
-    | AExprRoot decls -> AExprRoot(insertOpenDecls decls)
-    | AModuleRoot (name, decls, pos) -> AModuleRoot(name, insertOpenDecls decls, pos)
+    let (ARoot (headOpt, decls)) = ast
+    ARoot(headOpt, insertOpenDecls decls)
 
   match kind with
   | ModuleKind.MiloneCore -> ast
@@ -125,54 +199,36 @@ let private resolveMiloneCoreDeps kind tokens ast =
 // Utilities
 // -----------------------------------------------
 
-let getMiloneHomeFromEnv (getEnv: string -> string option) : string =
-  match getEnv "MILONE_HOME" with
+let getMiloneHomeFromEnv (getMiloneHomeEnv: unit -> string option) (getHomeEnv: unit -> string option) : MiloneHome =
+  match getMiloneHomeEnv () with
   | Some miloneHome ->
     assert (miloneHome <> "")
     miloneHome
 
   | None ->
-    match getEnv "HOME" with
+    match getHomeEnv () with
     | Some home -> home + "/.milone"
     | None -> failwith "$MILONE_HOME and $HOME are missing."
 
-let private findProjectWith
-  (projects: TMap.TreeMap<ProjectName, ProjectDir>)
-  (entryProjectDir: ProjectDir)
-  (projectName: ProjectName)
-  =
-  match projects |> TMap.tryFind projectName with
-  | Some it -> it
-  | None -> entryProjectDir + "/../" + projectName
+/// Computes preferred filename of source file.
+let chooseSourceExt (fileExists: FileExistsFun) filename =
+  let fs = changeExt ".fs" filename
 
-/// filename -> (contents option)
-type private ReadTextFileFun = string -> Future<string option>
+  if fileExists filename || not (fileExists fs) then
+    filename
+  else
+    fs
 
-/// Reads a file to get source code of specified module.
-let private readModuleInProjectWith
-  (readTextFile: ReadTextFileFun)
-  (projectDir: ProjectDir)
-  (moduleName: ModuleName)
-  : Future<(SourceExt * SourceCode) option> =
-  let read (ext: SourceExt) =
-    readTextFile (projectDir + "/" + moduleName + ext)
-    |> Future.map
-         (fun result ->
-           match result with
-           | Some contents -> Some(ext, contents)
-           | None -> None)
+let readSourceFile (readTextFile: ReadTextFileFun) filename : Future<string option> =
+  readTextFile filename
+  |> Future.andThen (fun result ->
+    match result with
+    | (Some _) as it -> Future.just it
+    | None -> readTextFile (changeExt ".fs" filename))
 
-  read ".milone"
-  |> Future.andThen
-       (fun result ->
-         match result with
-         | (Some _) as it -> Future.just it
-         | None -> read ".fs")
-
-type private ModuleSyntaxData = DocId * ARoot * (string * Pos) list
-
-let parseModuleWith (docId: DocId) (kind: ModuleKind) (tokens: (Token * Pos) list) : ModuleSyntaxData =
+let parseModule (docId: DocId) (kind: ModuleKind) (tokens: TokenizeResult) : ModuleSyntaxData =
   let errorTokens, tokens = tokens |> List.partition isErrorToken
+
   let ast, parseErrors = tokens |> SyntaxParse.parse
 
   let errors =
@@ -184,37 +240,76 @@ let parseModuleWith (docId: DocId) (kind: ModuleKind) (tokens: (Token * Pos) lis
     else
       ast
 
-  docId, ast, errors
+  docId, tokens, ast, errors
 
-type private FetchModuleFun = ProjectName -> ModuleName -> Future<ModuleSyntaxData option>
+// -----------------------------------------------
+// FetchModule
+// -----------------------------------------------
 
-let private fetchModuleWith
-  (readTextFile: ReadTextFileFun)
-  (projects: TMap.TreeMap<ProjectName, ProjectDir>)
-  (entryProjectDir: ProjectDir)
-  (tokenize: SourceCode -> (Token * Pos) list)
-  (projectName: ProjectName)
-  (moduleName: ModuleName)
-  : Future<ModuleSyntaxData option> =
-  let projectDir =
-    findProjectWith projects entryProjectDir projectName
+[<RequireQualifiedAccess; NoEquality; NoComparison>]
+type private FetchModuleCtx =
+  { Projects: TreeMap<ProjectName, ProjectDir>
+    Manifest: ManifestData
+    TokenizeHost: TokenizeHost
+    Host: FetchModuleHost }
 
-  readModuleInProjectWith readTextFile projectDir moduleName
-  |> Future.map
-       (fun result ->
-         match result with
-         | None -> None
+let private readManifestFile (readTextFile: ReadTextFileFun) projectDir =
+  let manifestFile = projectDir |> Manifest.getManifestPath
+  let docId: DocId = Symbol.intern manifestFile
 
-         | Some (_, contents) ->
-           let docId =
-             AstBundle.computeDocId projectName moduleName
+  manifestFile
+  |> readTextFile
+  |> Future.map (Manifest.parseManifestOpt docId)
 
-           let kind = getModuleKind projectName moduleName
+let private prepareFetchModule (host: FetchModuleHost) : ManifestData * FetchModuleFun =
+  let entryProjectName = host.EntryProjectName
+  let entryProjectDir = host.EntryProjectDir
+  let miloneHome = host.MiloneHome
+  let readTextFile = host.ReadTextFile
+  let tokenizeHost = tokenizeHostNew ()
 
-           contents
-           |> tokenize
-           |> parseModuleWith docId kind
-           |> Some)
+  let manifest =
+    readManifestFile readTextFile entryProjectDir
+    |> Future.wait // #avoidBlocking
+
+  let projects =
+    let manifestProjects =
+      manifest.Projects
+      |> List.map (fun (name, dir, _) -> name, entryProjectDir + "/" + dir)
+
+    let projects = TMap.ofList compare manifestProjects
+
+    getStdLibProjects miloneHome
+    |> List.fold (fun projects (name, dir) -> projects |> TMap.add name dir) projects
+    |> TMap.add entryProjectName entryProjectDir
+
+  let fetchModule: FetchModuleFun =
+    fun projectName moduleName ->
+      let filename =
+        let projectDir =
+          match projects |> TMap.tryFind projectName with
+          | Some it -> it
+          | None -> entryProjectDir + "/../" + projectName
+
+        projectDir + "/" + moduleName + ".milone"
+
+      readSourceFile readTextFile filename
+      |> Future.map (fun result ->
+        match result with
+        | None -> None
+
+        | Some text ->
+          let docId =
+            AstBundle.computeDocId projectName moduleName
+
+          let kind = getModuleKind projectName moduleName
+
+          text
+          |> SyntaxTokenize.tokenize tokenizeHost
+          |> parseModule docId kind
+          |> Some)
+
+  manifest, fetchModule
 
 // -----------------------------------------------
 // Error processing
@@ -229,11 +324,10 @@ let private isErrorToken token =
 
 let private tokenizeErrors errorTokens =
   errorTokens
-  |> List.map
-       (fun token ->
-         match token with
-         | ErrorToken error, pos -> tokenizeErrorToString error, pos
-         | _ -> unreachable ())
+  |> List.map (fun token ->
+    match token with
+    | ErrorToken error, pos -> tokenizeErrorToString error, pos
+    | _ -> unreachable ())
 
 let private collectNameResErrors logs : SyntaxError list option =
   if List.isEmpty logs then
@@ -243,15 +337,15 @@ let private collectNameResErrors logs : SyntaxError list option =
     |> List.map (fun (log, loc) -> Tir.nameResLogToString log, loc)
     |> Some
 
-let private collectTypingErrors (tyCtx: Typing.TyCtx) : SyntaxError list option =
-  let logs = tyCtx.Logs
+let private collectTypingErrors (tirCtx: TirTypes.TirCtx) : SyntaxError list option =
+  let logs = tirCtx.Logs
 
   if List.isEmpty logs then
     None
   else
     let tyDisplayFn ty =
       let getTyName tySerial =
-        tyCtx.Tys
+        tirCtx.Tys
         |> TMap.tryFind tySerial
         |> Option.map Tir.tyDefToName
 
@@ -263,8 +357,8 @@ let private collectTypingErrors (tyCtx: Typing.TyCtx) : SyntaxError list option 
 
 let syntaxErrorsToString (errors: SyntaxError list) : string =
   errors
-  |> listSort (fun (_, l) (_, r) -> locCompare l r)
-  |> List.map (fun (msg, loc) -> "#error " + locToString loc + " " + msg + "\n")
+  |> listSort (fun (_, l) (_, r) -> Loc.compare l r)
+  |> List.map (fun (msg, loc) -> "#error " + Loc.toString loc + " " + msg + "\n")
   |> S.concat ""
 
 // -----------------------------------------------
@@ -272,73 +366,92 @@ let syntaxErrorsToString (errors: SyntaxError list) : string =
 // -----------------------------------------------
 
 [<RequireQualifiedAccess; NoEquality; NoComparison>]
-type SyntaxHost =
-  { EntryProjectDir: ProjectDir
-    EntryProjectName: ProjectName
-    MiloneHome: ProjectDir
-
-    ReadTextFile: ReadTextFileFun
-    WriteLog: string -> unit }
-
-[<RequireQualifiedAccess; NoEquality; NoComparison>]
 type SyntaxCtx =
-  { Projects: TMap.TreeMap<ProjectName, ProjectDir>
-    FetchModule: FetchModuleFun
-    Host: SyntaxHost }
+  private
+    { EntryProjectName: ProjectName
+      Manifest: ManifestData
+      FetchModule: FetchModuleFun
+      WriteLog: WriteLogFun }
 
-let syntaxCtxNew (host: SyntaxHost) : SyntaxCtx =
-  let entryProjectName = host.EntryProjectName
-  let entryProjectDir = host.EntryProjectDir
-  let miloneHome = host.MiloneHome
+/// Using file system.
+let newSyntaxCtx (host: FetchModuleHost) : SyntaxCtx =
+  let manifest, fetchModule = prepareFetchModule host
 
-  let projects =
-    TMap.empty compare
-    |> TMap.add "MiloneCore" (miloneHome + "/milone_libs/MiloneCore")
-    |> TMap.add "MiloneStd" (miloneHome + "/milone_libs/MiloneStd")
-    |> TMap.add entryProjectName entryProjectDir
+  { EntryProjectName = host.EntryProjectName
+    Manifest = manifest
+    FetchModule = fetchModule
+    WriteLog = host.WriteLog }
 
-  let tokenize =
-    SyntaxTokenize.tokenize (tokenizeHostNew ())
+module SyntaxCtx =
+  let getManifest (ctx: SyntaxCtx) = ctx.Manifest
 
-  { Projects = projects
-    FetchModule = fetchModuleWith host.ReadTextFile projects entryProjectDir tokenize
-    Host = host }
+  let withFetchModule fetchModule (ctx: SyntaxCtx) =
+    { ctx with FetchModule = fetchModule ctx.FetchModule }
 
 // -----------------------------------------------
 // Analysis
 // -----------------------------------------------
 
-[<NoEquality; NoComparison>]
-type SyntaxAnalysisResult =
-  | SyntaxAnalysisOk of Tir.TProgram * Typing.TyCtx
-  | SyntaxAnalysisError of SyntaxError list * Typing.TyCtx option
-
 /// Creates a TIR and collects errors
 /// by loading source files and processing.
-let performSyntaxAnalysis (ctx: SyntaxCtx) : SyntaxAnalysisResult =
-  let writeLog = ctx.Host.WriteLog
+let performSyntaxAnalysis (ctx: SyntaxCtx) : SyntaxLayers * SyntaxAnalysisResult =
+  let writeLog = ctx.WriteLog
+  let manifestErrors = ctx.Manifest.Errors
 
   writeLog "AstBundle"
 
-  let modules, nameCtx, bundleErrors =
-    AstBundle.bundle ctx.FetchModule ctx.Host.EntryProjectName
+  let layers, bundleErrors =
+    AstBundle.bundle ctx.FetchModule ctx.EntryProjectName
 
-  if bundleErrors |> List.isEmpty |> not then
-    SyntaxAnalysisError(bundleErrors, None)
+  let syntaxLayers = layers |> List.map (List.map fst)
+
+  let errors = List.append manifestErrors bundleErrors
+
+  if errors |> List.isEmpty |> not then
+    syntaxLayers, SyntaxAnalysisError(errors, None)
   else
     writeLog "NameRes"
-    let modules, nameResResult = NameRes.nameRes (modules, nameCtx)
+
+    let modules, nameResResult =
+      let modules: NModuleRoot list list =
+        layers
+        |> List.map (fun modules ->
+          modules
+          |> List.map (fun (syntaxData, root) ->
+            let docId, _, _, _ = syntaxData
+            docId, root))
+
+      NameRes.nameRes modules
 
     match collectNameResErrors nameResResult.Logs with
-    | Some errors -> SyntaxAnalysisError(errors, None)
+    | Some errors -> syntaxLayers, SyntaxAnalysisError(errors, None)
 
     | None ->
       writeLog "Typing"
-      let modules, tyCtx = Typing.infer (modules, nameResResult)
+      let modules, tirCtx = Typing.infer (modules, nameResResult)
 
       writeLog "ArityCheck"
-      let tyCtx = ArityCheck.arityCheck (modules, tyCtx)
+      let tirCtx = ArityCheck.arityCheck (modules, tirCtx)
 
-      match collectTypingErrors tyCtx with
-      | Some errors -> SyntaxAnalysisError(errors, Some tyCtx)
-      | None -> SyntaxAnalysisOk(modules, tyCtx)
+      writeLog "OwnershipCheck"
+
+      let modules, tirCtx =
+        OwnershipCheck.ownershipCheck (modules, tirCtx)
+
+      match collectTypingErrors tirCtx with
+      | Some errors -> syntaxLayers, SyntaxAnalysisError(errors, Some tirCtx)
+      | None -> syntaxLayers, SyntaxAnalysisOk(modules, tirCtx)
+
+// -----------------------------------------------
+// Interface
+// -----------------------------------------------
+
+let newSyntaxApi () : SyntaxApi =
+  let wrap (ctx: SyntaxCtx) = SyntaxCtx(box ctx)
+  let unwrap (SyntaxCtx ctx) : SyntaxCtx = unbox ctx
+
+  { GetMiloneHomeFromEnv = getMiloneHomeFromEnv
+    SyntaxErrorsToString = syntaxErrorsToString
+    NewSyntaxCtx = fun host -> newSyntaxCtx host |> wrap
+    GetManifest = fun ctx -> ctx |> unwrap |> SyntaxCtx.getManifest
+    PerformSyntaxAnalysis = fun ctx -> ctx |> unwrap |> performSyntaxAnalysis }

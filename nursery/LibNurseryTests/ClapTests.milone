@@ -1,10 +1,10 @@
 module rec LibNurseryTests.ClapTests
 
-module M = MiloneStd.StdMap
-module S = MiloneStd.StdString
-module Clap = LibNursery.Clap
-
+open Std.StdMap
 open LibNursery.ClapCore
+
+module S = Std.StdString
+module Clap = LibNursery.Clap
 
 let private format (s: string) (args: string list) =
   let _, s =
@@ -44,13 +44,13 @@ let private parseForTest (args: string list) (hasParam: string -> bool) : string
 
   let acc =
     match result with
-    | Result.Ok -> acc
+    | ParseResult.Ok -> acc
 
-    | Result.NoValueError name ->
+    | ParseResult.NoValueError name ->
       format "error (no-value) {0}" [ ofName name ]
       :: acc
 
-    | Result.RedundantValueError (name, value) ->
+    | ParseResult.RedundantValueError (name, value) ->
       format "error (invalid-value) {0} = `{1}`" [ ofName name; value ]
       :: acc
 
@@ -97,7 +97,14 @@ let private testCore () =
   // Separator.
   assert (parseForTest [ "--" ] noParam = "")
   assert (parseForTest [ "--"; "--help" ] noParam = "pos `--help`")
-  assert (parseForTest [ "--"; "dotnet"; "run"; "--"; "--help"  ] noParam = "pos `dotnet`; pos `run`; pos `--`; pos `--help`")
+
+  assert (parseForTest
+            [ "--"
+              "dotnet"
+              "run"
+              "--"
+              "--help" ]
+            noParam = "pos `dotnet`; pos `run`; pos `--`; pos `--help`")
 
   // Edges.
   assert (parseForTest [ "-"; "-=" ] noParam = "pos `-`; pos `-=`")

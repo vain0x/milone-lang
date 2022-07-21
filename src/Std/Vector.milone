@@ -1,0 +1,286 @@
+module rec Std.Vector
+
+open Std.Block
+open Std.Own
+open Std.Ptr
+open Std.StdError
+
+module VectorBase = Std.VectorBase
+
+// For memcpy.
+__nativeDecl "#include <string.h>"
+
+/// Owned dynamic array.
+///
+/// - len and capacity represents the number of items.
+///
+/// Invariants:
+///
+/// - If capacity is zero, ptr isn't null and can be disposed with a particular method. If capacity is zero, ptr is null.
+/// - len is less than or equal to capacity.
+/// - For all i in {0, ..., len - 1}, ptr[i] must be valid as 'T type.
+type Vector<'T> = private Vector of ptr: Own<nativeptr<'T>> * len: uint * capacity: uint
+
+module Vector =
+  /// Gets an empty vector.
+  let empty () : Vector<'T> = Vector(Own.acquire Ptr.nullPtr, 0u, 0u)
+
+  /// Allocates an empty vector with the specified capacity.
+  let alloc (capacity: int) : Vector<'T> =
+    if capacity > 0 then
+      let ptr =
+        VectorBase.alloc (uint capacity) (uint sizeof<'T>)
+
+      Vector(Ptr.cast ptr, 0u, uint capacity)
+    else
+      empty ()
+
+  /// Disposes a vector.
+  let dispose (v: Vector<'T>) : unit =
+    let (Vector (ptr, _, _)) = v
+    VectorBase.unsafeFree (Ptr.cast ptr)
+
+  /// Gets the length.
+  let length (v: Vector<'T>) : int * Vector<'T> =
+    let (Vector (ptr, length, capacity)) = v
+    int length, Vector(ptr, length, capacity)
+
+  /// Gets an item at the position. Out of bound causes crash.
+  let forceGet (i: int) (v: Vector<'T>) : 'T * Vector<'T> =
+    let (Vector (ptr, length, capacity)) = v
+    assert (uint i < length)
+    let ptr = Own.release ptr
+
+    let item = Ptr.read (Ptr.cast ptr: InPtr<'T>).[i]
+
+    item, Vector(Own.acquire ptr, length, capacity)
+
+  /// Sets an item at the position. Out of bound causes crash.
+  let forceSet (i: int) (item: 'T) (v: Vector<'T>) : Vector<'T> =
+    let (Vector (ptr, length, capacity)) = v
+    assert (uint i < length)
+    let ptr = Own.release ptr
+    Ptr.write ptr.[i] item
+    Vector(Own.acquire ptr, length, capacity)
+
+  /// Appends an item to the end of vector.
+  let push (item: 'T) (v: Vector<'T>) : Vector<'T> =
+    let (Vector (ptr, length, capacity)) = v
+
+    let ptr, capacity =
+      let itemPtr: VoidInPtr = __nativeExpr ("&({0})", item)
+
+      VectorBase.unsafePush itemPtr (Ptr.cast ptr) length capacity (uint sizeof<'T>)
+
+    Vector(Ptr.cast ptr, length + 1u, capacity)
+
+  /// Removes the last item from the vector unless empty.
+  ///
+  /// Remark: Allocated memory doesn't get freed.
+  let pop (v: Vector<'T>) : 'T option * Vector<'T> =
+    let (Vector (ptr, length, capacity)) = v
+
+    if length <> 0u then
+      let ptr = Own.release ptr
+
+      let item =
+        Ptr.read (Ptr.cast ptr: InPtr<'T>).[int (length - 1u)]
+
+      Some item, Vector(Own.acquire ptr, length - 1u, capacity)
+    else
+      None, Vector(ptr, length, capacity)
+
+  /// Appends all items in a list to the vector.
+  let extendFromList (xs: 'T list) (v: Vector<'T>) : Vector<'T> =
+    match xs with
+    | [] -> v
+
+    | x :: xs ->
+      let (Vector (ptr, length, capacity)) = v
+
+      let addition = 1u + uint (List.length xs)
+
+      let ptr, capacity =
+        VectorBase.unsafeReserve addition (Ptr.cast ptr) length capacity (uint sizeof<'T>)
+
+      let ptr: nativeptr<'T> = Ptr.cast (Own.release ptr)
+
+      let rec extendFromListLoop i x xs =
+        Ptr.write ptr.[i] x
+
+        match xs with
+        | [] -> ()
+        | x :: xs -> extendFromListLoop (i + 1) x xs
+
+      extendFromListLoop (int length) x xs
+      Vector(Own.acquire ptr, length + addition, capacity)
+
+  /// Creates a vector from a list.
+  let ofList (xs: 'T list) : Vector<'T> = extendFromList xs (empty ())
+
+  /// Creates a list from a range of the vector.
+  let sliceToList (start: int) (endIndex: int) (v: Vector<'T>) : 'T list * Vector<'T> =
+    let (Vector (ptr, length, capacity)) = v
+    let ptr = Own.release ptr
+
+    assert (uint endIndex <= length)
+    assert (uint start <= uint endIndex)
+
+    let xs =
+      let ptr: InPtr<'T> = Ptr.cast ptr
+
+      let rec toListLoop acc i =
+        let acc = Ptr.read ptr.[i] :: acc
+
+        if i = start then
+          acc
+        else
+          toListLoop acc (i - 1)
+
+      if start < endIndex then
+        toListLoop [] (int (uint endIndex - 1u))
+      else
+        []
+
+    xs, Vector(Own.acquire ptr, length, capacity)
+
+  /// Creates a list from a vector.
+  let toList (v: Vector<'T>) : 'T list * Vector<'T> =
+    let length, v = length v
+    sliceToList 0 length v
+
+  /// Creates a vector with the specified length.
+  let replicate (len: int) (item: 'T) : Vector<'T> =
+    let v = alloc len
+
+    let rec go i v =
+      if i < len then
+        go (i + 1) (push item v)
+      else
+        v
+
+    go 0 v
+
+  /// Folds a vector.
+  let fold (folder: 'S -> 'T -> 'S) (init: 'S) (v: Vector<'T>) : 'S * Vector<'T> =
+    let n, v = length v
+
+    let rec go i state v =
+      if i < n then
+        let item, v = forceGet i v
+        go (i + 1) (folder state item) v
+      else
+        state, v
+
+    go 0 init v
+
+  /// Sorts a vector in-place.
+  ///
+  /// (Currently unstable sort algorithm is used.
+  ///  This function in future version will use a stable sort algorithm.)
+  let sort (itemComparer: 'T -> 'T -> int) (v: Vector<'T>) : Vector<'T> =
+    // ptrComparer pl pr = itemComparer (*pl) (*pr)
+    let ptrComparer =
+      fun (l: VoidInPtr) (r: VoidInPtr) ->
+        itemComparer (Ptr.read (Ptr.cast l: InPtr<'T>)) (Ptr.read (Ptr.cast r: InPtr<'T>))
+
+    let (Vector (ptr, length, capacity)) = v
+
+    let ptr =
+      VectorBase.unsafeSortUnstable ptrComparer (Ptr.cast ptr) length (uint sizeof<'T>)
+
+    Vector(Ptr.cast ptr, length, capacity)
+
+  /// Creates a vector by copying from a block.
+  let ofBlock (block: Block<'T>) : Vector<'T> =
+    let srcPtr, len = BlockExt.unsafeToRawParts block
+
+    if len <> 0u then
+      let destPtr =
+        Own.release (VectorBase.alloc len (uint sizeof<'T>))
+
+      __nativeStmt ("memcpy({0}, {1}, {2});", destPtr, srcPtr, unativeint len * unativeint sizeof<'T>)
+      Vector(Own.acquire (Ptr.cast destPtr), len, len)
+    else
+      empty ()
+
+  /// Creates a block by copying from a vector.
+  let toBlock (v: Vector<'T>) : Block<'T> * Vector<'T> =
+    let (Vector (ptr, len, cap)) = v
+    let ptr = Own.release ptr
+
+    let block =
+      BlockExt.unsafeOfRawParts (Ptr.asIn ptr) len
+
+    block, Vector(Own.acquire ptr, len, cap)
+
+/// Vector methods that are unsafe or niche.
+module VectorExt =
+  /// Unsafely restores a vector instance from components.
+  let unsafeOfRawParts (ptr: Own<nativeptr<'T>>) (len: uint) (capacity: uint) : Vector<'T> = Vector(ptr, len, capacity)
+
+  /// Unwraps a vector into components.
+  /// Use unsafeOfRawParts to restore.
+  let toRawParts (v: Vector<'T>) =
+    let (Vector (ptr, len, capacity)) = v
+    ptr, len, capacity
+
+  /// Creates a vector with the specified length and capacity. Contents are zero'ed.
+  ///
+  /// Prefer to use `alloc` to allocate and `push` contents to it.
+  ///
+  /// Item type must be one of: intNN, uintNN, float, unit, bool, char, obj, voidptr, nativeptr, InPtr.
+  let unsafeZeroCreate (length: int) : Vector<'T> =
+    assert (length >= 0)
+    let ptr = VectorBase.alloc (uint length) 1u
+    Vector((Ptr.cast ptr: Own<nativeptr<'T>>), uint length, uint length)
+
+  /// Unsafely exposes the internal buffer of the vector.
+  ///
+  /// This function exists to build another type on the top of Vector efficiently.
+  let unsafeDup (v: Vector<'T>) : nativeptr<'T> * uint * uint * Vector<'T> =
+    let (Vector (ptr, length, capacity)) = v
+    let ptr = Own.release ptr
+    ptr, length, capacity, Vector(Own.acquire ptr, length, capacity)
+
+  let unsafeSetLength (length: int) (v: Vector<'T>) : Vector<'T> =
+    let (Vector (ptr, _, capacity)) = v
+    assert (uint length <= capacity)
+    Vector(ptr, uint length, capacity)
+
+  /// Gets the capacity.
+  let capacity (v: Vector<'T>) : int * Vector<'T> =
+    let (Vector (ptr, length, capacity)) = v
+    int capacity, Vector(ptr, length, capacity)
+
+  /// Reserves more memory for a vector.
+  ///
+  /// - If the vector already have plenty memory, it's noop.
+  /// - Result vector should satisfy `length + addition` is less than or equal to `capacity`.
+  ///   Note that new capacity may be greater than required size
+  ///   to ensure the number of reallocation is small (O(log N)).
+  let reserve (addition: int) (v: Vector<'T>) : Vector<'T> =
+    assert (addition >= 0)
+
+    let (Vector (ptr, length, capacity)) = v
+
+    let ptr, capacity =
+      VectorBase.unsafeReserve (uint addition) (Ptr.cast ptr) length capacity (uint sizeof<'T>)
+
+    Vector(Ptr.cast ptr, length, capacity)
+
+  /// Reserves more memory for a vector.
+  ///
+  /// Prefer to use `reserve` instead of this in most of cases.
+  ///
+  /// - If the vector already have plenty memory, it's noop.
+  /// - Result vector should satisfy `length + addition = capacity`.
+  let reserveExact (addition: int) (v: Vector<'T>) : Vector<'T> =
+    assert (addition >= 0)
+
+    let (Vector (ptr, length, capacity)) = v
+
+    let ptr, capacity =
+      VectorBase.unsafeReserveExact (uint addition) (Ptr.cast ptr) length capacity (uint sizeof<'T>)
+
+    Vector(Ptr.cast ptr, length, capacity)

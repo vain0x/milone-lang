@@ -3,29 +3,29 @@ module rec int_flavor_unsigned.Program
 // Unsigned integer types.
 
 let main _ =
-  // Conversion from/to other scalars.
-  assert (int (uint 42) = 42)
-  assert (int (uint 'A') = int 'A')
+  // Conversion from/to int.
+  assert (int 42u = 42)
+  assert (uint 42 = 42u)
 
-  // Conversion from/to strings.
+  // Conversion from/to string.
   assert (int (uint "42") = 42)
-  assert (string (uint 42) = "42")
+  assert (string 42u = "42")
 
   // Arithmetic operations.
-  assert (int (uint 40 + uint 2) = 42)
-  assert (int (uint 49 - uint 7) = 42)
-  assert (int (uint 6 * uint 7) = 42)
-  assert (int (uint 294 / uint 7) = 42)
-  assert (int (uint 2063 % uint 43) = 42)
+  assert (int (40u + 2u) = 42)
+  assert (int (49u - 7u) = 42)
+  assert (int (6u * 7u) = 42)
+  assert (int (294u / 7u) = 42)
+  assert (int (2063u % 43u) = 42)
 
   // Wrapping.
-  assert (int ((uint (-1) - uint 1) / uint 2) = 2147483647)
+  assert (int ((uint (-1) - 1u) / 2u) = 2147483647)
 
   // Comparison.
-  assert (uint 2 < uint 3)
-  assert (uint 2 <= uint 3)
-  assert (uint 2 <= uint 3)
-  assert (uint 2 = uint 2)
-  assert (uint 2 <> uint 3)
+  assert (2u < 3u)
+  assert (2u <= 3u)
+  assert (2u <= 3u)
+  assert (2u = 2u)
+  assert (2u <> 3u)
 
   0

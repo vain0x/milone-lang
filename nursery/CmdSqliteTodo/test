@@ -1,0 +1,31 @@
+#!/bin/sh
+# env TODO
+
+set -eu
+
+rm -f todo.db
+
+{
+    $TODO | head -1
+    echo
+
+    $TODO add 'wash cups'
+    $TODO add 'wash dishes'
+    $TODO add 'wipe table'
+    $TODO list
+    echo
+
+    $TODO remove wash
+    $TODO list
+    echo
+
+    $TODO remove nothing
+    $TODO list
+    echo
+
+    $TODO add 'take bath'
+    $TODO list
+} >test-output.txt
+
+diff -q test-output.txt test-expected.txt
+echo OK

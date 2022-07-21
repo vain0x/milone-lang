@@ -1,13 +1,18 @@
-#include "milone.h"
+#include <stdio.h>
+#include <stdlib.h>
+#include <milone.h>
 
-int module_dependencies_second_second(void);
+int32_t module_dependencies_second_second(void);
 
-int module_dependencies_third_third(void);
+int32_t module_dependencies_third_third(void);
 
-int milone_main(void);
+int main(int argc, char **argv);
 
-int milone_main(void) {
-    int call_2 = module_dependencies_second_second();
-    int call_3 = module_dependencies_third_third();
-    return (call_2 + call_3);
+int main(int argc, char **argv) {
+    milone_start(argc, argv);
+    int32_t call_;
+    int32_t call_1;
+    call_ = module_dependencies_second_second();
+    call_1 = module_dependencies_third_third();
+    return (call_ + call_1);
 }

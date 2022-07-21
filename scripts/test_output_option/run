@@ -1,0 +1,9 @@
+#!/bin/sh
+
+set -eu
+
+MILONE=${MILONE:-milone}
+PROJECT_DIR=$(dirname "$0")/OutputOptionTest
+OUTPUT=$PROJECT_DIR/a.out
+
+"$MILONE" build --output "$OUTPUT" "$PROJECT_DIR" && "$OUTPUT"

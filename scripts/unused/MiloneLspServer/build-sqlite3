@@ -1,8 +1,0 @@
-#!/bin/sh
-
-set -eu
-
-# Several minutes.
-gcc -O2 \
-    -c vendor/sqlite3/sqlite3.c \
-    -o vendor/sqlite3/sqlite3.o

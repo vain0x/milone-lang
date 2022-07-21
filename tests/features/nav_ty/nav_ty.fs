@@ -17,7 +17,7 @@ let main _ =
   let t = node (leaf 2) (node (leaf 3) (leaf 5))
 
   match t with
-  // FIXME: abbreviation of union doesn't work as namespace of variants
+  // abbreviation of union doesn't work as namespace of variants
   // | MyNode.Leaf _ -> ...
 
   | Node (Leaf x, _) -> assert (x = 2)

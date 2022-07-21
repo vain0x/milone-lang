@@ -1,13 +1,13 @@
-﻿<Project Sdk="Microsoft.NET.Sdk">
+<Project Sdk="Microsoft.NET.Sdk">
 
   <PropertyGroup>
-    <TargetFramework>net5.0</TargetFramework>
-    <GenerateDocumentationFile>true</GenerateDocumentationFile>
+    <TargetFramework>net6.0</TargetFramework>
   </PropertyGroup>
 
   <ItemGroup>
     <Compile Include="Hir.fs" />
     <Compile Include="Hoist.fs" />
+    <Compile Include="Derive.fs" />
     <Compile Include="AutoBoxing.fs" />
     <Compile Include="RecordRes.fs" />
     <Compile Include="ClosureConversion.fs" />
@@ -21,11 +21,13 @@
     <Compile Include="Cir.fs" />
     <Compile Include="CirGen.fs" />
     <Compile Include="CirDump.fs" />
+    <Compile Include="TranslationApi.fs" />
   </ItemGroup>
 
   <ItemGroup>
     <ProjectReference Include="..\MiloneShared\MiloneShared.fsproj" />
-    <ProjectReference Include="..\..\milone_libs\MiloneStd\MiloneStd.fsproj" />
+    <ProjectReference Include="..\Std\Std.fsproj" />
+    <ProjectReference Include="..\MiloneTranslationTypes\MiloneTranslationTypes.fsproj" />
   </ItemGroup>
 
 </Project>

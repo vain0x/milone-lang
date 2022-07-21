@@ -17,27 +17,27 @@ let private deeper indent = indent + "    "
 let private getVarName varSerial (ctx: KirGenCtx) =
   match ctx.Vars |> mapTryFind varSerial with
   | None ->
-      "UNDEFINED_VAR_"
-      + string (varSerialToInt varSerial)
+    "UNDEFINED_VAR_"
+    + string (varSerialToInt varSerial)
 
   | Some varDef ->
-      varDefToName varDef
-      + "_"
-      + string (varSerialToInt varSerial)
+    varDefToName varDef
+    + "_"
+    + string (varSerialToInt varSerial)
 
 let private getFunName funSerial (ctx: KirGenCtx) =
   match ctx.Funs |> mapTryFind funSerial with
   | None ->
-      "UNDEFINED_FUN_"
-      + string (funSerialToInt funSerial)
+    "UNDEFINED_FUN_"
+    + string (funSerialToInt funSerial)
 
   | Some variantDef -> variantDef.Name
 
 let private getVariantName variantSerial (ctx: KirGenCtx) =
   match ctx.Variants |> mapTryFind variantSerial with
   | None ->
-      let (VariantSerial variantSerial) = variantSerial
-      "UNDEFINED_VARIANT_" + string variantSerial
+    let (VariantSerial variantSerial) = variantSerial
+    "UNDEFINED_VARIANT_" + string variantSerial
 
   | Some variantDef -> variantDef.Name
 
@@ -62,7 +62,7 @@ let private litToDebugString lit =
   | FloatLit text -> text
   | IntLit text -> text
   | CharLit value -> "'" + charEscape value + "'"
-  | StrLit value -> "\"" + strEscape value + "\""
+  | StringLit value -> "\"" + stringEscape value + "\""
 
 let private tsConstStmt indent pat init =
   indent + "const " + pat + " = " + init + "\n"
@@ -80,62 +80,60 @@ let private tyToDebugString ty ctx =
   | ErrorTy loc -> "/* ERROR @" + locToString loc + " */ any"
 
   | MetaTy (tySerial, loc) ->
-      "/* ?"
-      + string tySerial
-      + " @"
-      + locToString loc
-      + "*/ any"
+    "/* ?"
+    + string tySerial
+    + " @"
+    + locToString loc
+    + "*/ any"
 
   | AppTy (tyCtor, args) ->
-      match tyCtor, args with
-      | FunTyCtor, [ sTy; tTy ] ->
-          "(_: "
-          + tyToDebugString sTy ctx
-          + ") => "
-          + tyToDebugString tTy ctx
+    match tyCtor, args with
+    | FunTyCtor, [ sTy; tTy ] ->
+      "(_: "
+      + tyToDebugString sTy ctx
+      + ") => "
+      + tyToDebugString tTy ctx
 
-      | TupleTyCtor, [] -> "unit"
+    | TupleTyCtor, [] -> "unit"
 
-      | TupleTyCtor, _ ->
-          "["
-          + strConcat (
-            args
-            |> List.mapi
-                 (fun i ty ->
-                   (if i = 0 then "" else ", ")
-                   + tyToDebugString ty ctx)
-          )
-          + "]"
+    | TupleTyCtor, _ ->
+      "["
+      + stringConcat (
+        args
+        |> List.mapi (fun i ty ->
+          (if i = 0 then "" else ", ")
+          + tyToDebugString ty ctx)
+      )
+      + "]"
 
-      | ListTyCtor, [ itemTy ] -> "Array<" + tyToDebugString itemTy ctx + ">"
+    | ListTyCtor, [ itemTy ] -> "Array<" + tyToDebugString itemTy ctx + ">"
 
-      | NativePtrTyCtor IsMut, [ itemTy ] -> "MutPtr<" + tyToDebugString itemTy ctx + ">"
+    | NativePtrTyCtor IsMut, [ itemTy ] -> "MutPtr<" + tyToDebugString itemTy ctx + ">"
 
-      | NativePtrTyCtor IsConst, [ itemTy ] -> "ConstPtr<" + tyToDebugString itemTy ctx + ">"
+    | NativePtrTyCtor IsConst, [ itemTy ] -> "ConstPtr<" + tyToDebugString itemTy ctx + ">"
 
-      | NativeFunTyCtor, _
-      | NativeTypeTyCtor _, _ -> "unimplemented"
+    | NativeFunTyCtor, _
+    | NativeTypeTyCtor _, _ -> "unimplemented"
 
-      | _, [] -> tyCtorToDebugString tyCtor ctx
+    | _, [] -> tyCtorToDebugString tyCtor ctx
 
-      | _ ->
-          tyCtorToDebugString tyCtor ctx
-          + "<"
-          + strConcat (
-            args
-            |> List.mapi
-                 (fun i ty ->
-                   (if i = 0 then "" else ", ")
-                   + tyToDebugString ty ctx)
-          )
-          + ">"
+    | _ ->
+      tyCtorToDebugString tyCtor ctx
+      + "<"
+      + stringConcat (
+        args
+        |> List.mapi (fun i ty ->
+          (if i = 0 then "" else ", ")
+          + tyToDebugString ty ctx)
+      )
+      + ">"
 
 let private kdVarAsTy varSerial (ctx: KirGenCtx) =
   match ctx.Vars |> mapTryFind varSerial with
   | None ->
-      "/* ?"
-      + string (varSerialToInt varSerial)
-      + " */ unknown"
+    "/* ?"
+    + string (varSerialToInt varSerial)
+    + " */ unknown"
   | Some (VarDef (_, _, ty, _)) -> tyToDebugString ty ctx
 
 // -----------------------------------------------
@@ -161,20 +159,19 @@ let private kdTerm term ctx =
 let private kdArgsAsParamList args ctx =
   "("
   + (args
-     |> List.mapi
-          (fun i arg ->
-            (if i = 0 then "" else ", ")
-            + getVarName arg ctx
-            + ": "
-            + kdVarAsTy arg ctx)
-     |> strConcat)
+     |> List.mapi (fun i arg ->
+       (if i = 0 then "" else ", ")
+       + getVarName arg ctx
+       + ": "
+       + kdVarAsTy arg ctx)
+     |> stringConcat)
   + ")"
 
 let private kdTermsAsArgList args ctx =
   "("
   + (args
      |> List.mapi (fun i arg -> (if i = 0 then "" else ", ") + kdTerm arg ctx)
-     |> strConcat)
+     |> stringConcat)
   + ")"
 
 // -----------------------------------------------
@@ -197,11 +194,11 @@ let private kdPrim prim =
   | KLessPrim -> "Less"
   | KNotPrim -> "Not"
   | KIntComparePrim -> "IntCompare"
-  | KStrAddPrim -> "StrAdd"
-  | KStrComparePrim -> "StrCompare"
-  | KStrIndexPrim -> "StrIndex"
-  | KStrLengthPrim -> "StrLength"
-  | KStrGetSlicePrim -> "StrGetSlice"
+  | KStringAddPrim -> "StringAdd"
+  | KStringComparePrim -> "StringCompare"
+  | KStringIndexPrim -> "StringIndex"
+  | KStringLengthPrim -> "StringLength"
+  | KStringGetSlicePrim -> "StringGetSlice"
   | KConsPrim -> "Cons"
   | KSomePrim -> "Some"
   | KTuplePrim -> "Tuple"
@@ -259,32 +256,30 @@ let private kdPrimNode indent prim args results conts ctx =
 
     let resultList =
       results
-      |> List.mapi
-           (fun i result ->
-             (if i = 0 then "" else ", ")
-             + getVarName result ctx)
-      |> strConcat
+      |> List.mapi (fun i result ->
+        (if i = 0 then "" else ", ")
+        + getVarName result ctx)
+      |> stringConcat
 
     match conts with
     | [] -> indent + "throw " + kdPrim prim + argList + "\n"
 
     | [ cont ] ->
-        tsConstStmt indent ("[" + resultList + "]") (kdPrim prim + argList)
-        + kdNode indent cont ctx
+      tsConstStmt indent ("[" + resultList + "]") (kdPrim prim + argList)
+      + kdNode indent cont ctx
 
     | _ ->
-        tsConstStmt indent ("[" + resultList + "]") (kdPrim prim + argList)
-        + (conts
-           |> List.mapi
-                (fun (i: int) cont ->
-                  (indent
-                   + "// "
-                   + (kdPrim prim + ".cont#" + string i)
-                   + "\n")
-                  + (indent + "{\n")
-                  + kdNode (deeper indent) cont ctx
-                  + (indent + "}\n"))
-           |> strConcat)
+      tsConstStmt indent ("[" + resultList + "]") (kdPrim prim + argList)
+      + (conts
+         |> List.mapi (fun (i: int) cont ->
+           (indent
+            + "// "
+            + (kdPrim prim + ".cont#" + string i)
+            + "\n")
+           + (indent + "{\n")
+           + kdNode (deeper indent) cont ctx
+           + (indent + "}\n"))
+         |> stringConcat)
 
   match prim, args, results, conts with
   | KAddPrim, [ l; r ], [ result ], [ cont ] -> binary "+" l r result cont
@@ -298,11 +293,11 @@ let private kdPrimNode indent prim args results conts ctx =
 
   | KNotPrim, [ arg ], [ result ], [ cont ] -> prefix "!" arg result cont
 
-  | KStrAddPrim, [ l; r ], [ result ], [ cont ] -> methodCall ".concat" l [ r ] result cont
-  | KStrComparePrim, [ l; r ], [ result ], [ cont ] -> methodCall ".compare" l [ r ] result cont
-  | KStrIndexPrim, [ l; r ], [ result ], [ cont ] -> index l r result cont
-  | KStrLengthPrim, [ arg ], [ result ], [ cont ] -> prop ".length" arg result cont
-  | KStrGetSlicePrim, [ l; r; s ], [ result ], [ cont ] -> methodCall ".slice" s [ l; r ] result cont
+  | KStringAddPrim, [ l; r ], [ result ], [ cont ] -> methodCall ".concat" l [ r ] result cont
+  | KStringComparePrim, [ l; r ], [ result ], [ cont ] -> methodCall ".compare" l [ r ] result cont
+  | KStringIndexPrim, [ l; r ], [ result ], [ cont ] -> index l r result cont
+  | KStringLengthPrim, [ arg ], [ result ], [ cont ] -> prop ".length" arg result cont
+  | KStringGetSlicePrim, [ l; r; s ], [ result ], [ cont ] -> methodCall ".slice" s [ l; r ] result cont
 
   | KConsPrim, [ l; r ], [ result ], [ cont ] -> basic ("[" + kdTerm l ctx + ", ..." + kdTerm r ctx + "]") result cont
 
@@ -310,25 +305,25 @@ let private kdPrimNode indent prim args results conts ctx =
 
   | KTuplePrim, [], [ result ], [ cont ] -> basic "Unit" result cont
   | KTuplePrim, _, [ result ], [ cont ] ->
-      basic
-        ("["
-         + (args
-            |> List.mapi (fun i arg -> (if i = 0 then "" else ", ") + kdTerm arg ctx)
-            |> strConcat)
-         + "]")
-        result
-        cont
+    basic
+      ("["
+       + (args
+          |> List.mapi (fun i arg -> (if i = 0 then "" else ", ") + kdTerm arg ctx)
+          |> stringConcat)
+       + "]")
+      result
+      cont
 
   | KCallProcPrim, callee :: args, [ result ], [ cont ] ->
-      basic (kdTerm callee ctx + kdTermsAsArgList args ctx) result cont
+    basic (kdTerm callee ctx + kdTermsAsArgList args ctx) result cont
 
   | KCallClosurePrim, callee :: args, [ result ], [ cont ] ->
-      basic
-        (kdTerm callee ctx
-         + ".call"
-         + kdTermsAsArgList args ctx)
-        result
-        cont
+    basic
+      (kdTerm callee ctx
+       + ".call"
+       + kdTermsAsArgList args ctx)
+      result
+      cont
 
   | _ -> other ()
 
@@ -339,37 +334,37 @@ let private kdPrimNode indent prim args results conts ctx =
 let private kdNode indent node ctx =
   match node with
   | KJumpNode (jointSerial, args, loc) ->
-      (indent + "// " + locToString loc + "\n")
-      + (indent
-         + "return "
-         + getFunName jointSerial ctx
-         + kdTermsAsArgList args ctx
-         + "\n")
+    (indent + "// " + locToString loc + "\n")
+    + (indent
+       + "return "
+       + getFunName jointSerial ctx
+       + kdTermsAsArgList args ctx
+       + "\n")
 
   | KReturnNode (_funSerial, [], _) -> indent + "return\n"
 
   | KReturnNode (_funSerial, [ arg ], _) -> indent + "return " + kdTerm arg ctx + "\n"
 
   | KReturnNode (_funSerial, args, _) ->
-      // unlikely happen
-      indent
-      + "return "
-      + kdTermsAsArgList args ctx
-      + "\n"
+    // unlikely happen
+    indent
+    + "return "
+    + kdTermsAsArgList args ctx
+    + "\n"
 
   | KSelectNode (term, path, result, cont, _) ->
-      tsConstStmt indent (getVarName result ctx) (kdTerm term ctx + kdPath path ctx)
-      + kdNode indent cont ctx
+    tsConstStmt indent (getVarName result ctx) (kdTerm term ctx + kdPath path ctx)
+    + kdNode indent cont ctx
 
   | KPrimNode (prim, args, results, conts, _) -> kdPrimNode indent prim args results conts ctx
 
   | KJointNode ([], cont, _) -> kdNode indent cont ctx
 
   | KJointNode (joints, cont, _) ->
-      kdNode indent cont ctx
-      + (joints
-         |> List.map (fun joint -> kdJointBinding indent false joint ctx)
-         |> strConcat)
+    kdNode indent cont ctx
+    + (joints
+       |> List.map (fun joint -> kdJointBinding indent false joint ctx)
+       |> stringConcat)
 
 let private kdJointBinding indent isEntryPoint jointBinding ctx =
   let (KJointBinding (jointSerial, args, body, loc)) = jointBinding
@@ -432,4 +427,4 @@ let kirDump hint indent (kRoot: KRoot, ctx: KirGenCtx) : string =
   + "\n"
   + (funBindings
      |> List.map (fun funBinding -> kdFunBinding indent funBinding ctx)
-     |> strConcat)
+     |> stringConcat)

@@ -1,0 +1,18 @@
+#!/bin/sh
+
+set -eu
+
+OUTPUT_FILE=output.ignored.txt
+EXPECT_FILE=expect.ignored.txt
+
+echo 'John' | milone run StdIoTest >$OUTPUT_FILE
+
+printf "What's your name?\nHello, John-san!\n" >$EXPECT_FILE
+EQUAL=$( \
+    if diff -q $OUTPUT_FILE $EXPECT_FILE 2>/dev/null; \
+    then echo 0; else echo 1;
+    fi )
+diff $OUTPUT_FILE $EXPECT_FILE
+rm $OUTPUT_FILE $EXPECT_FILE
+
+exit $EQUAL

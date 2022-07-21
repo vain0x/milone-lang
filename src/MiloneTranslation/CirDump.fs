@@ -6,9 +6,12 @@ module rec MiloneTranslation.CirDump
 open MiloneShared.TypeFloat
 open MiloneShared.TypeIntegers
 open MiloneShared.Util
+open Std.StdError
 open MiloneTranslation.Cir
 
-module S = MiloneStd.StdString
+module C = Std.StdChar
+module S = Std.StdString
+module SB = Std.StdStringBase
 
 let private eol = "\n"
 
@@ -23,6 +26,7 @@ let private join sep xs f acc =
 
   go xs acc
 
+[<NoEquality; NoComparison>]
 type private First =
   | First
   | NotFirst
@@ -34,6 +38,7 @@ let private isFirst first =
 
 let private declIsForwardOnly decl =
   match decl with
+  | CFunPtrTyDef _
   | CStructForwardDecl _
   | CFunForwardDecl _ -> true
   | _ -> false
@@ -46,14 +51,15 @@ let private unaryToString op =
   match op with
   | CMinusUnary -> "-"
   | CNotUnary -> "!"
+  | CAddressOfUnary -> "&"
   | CDerefUnary -> "*"
 
 let private binaryToString op =
   match op with
   | CAddBinary -> "+"
-  | CSubBinary -> "-"
-  | CMulBinary -> "*"
-  | CDivBinary -> "/"
+  | CSubtractBinary -> "-"
+  | CMultiplyBinary -> "*"
+  | CDivideBinary -> "/"
   | CModuloBinary -> "%"
   | CBitAndBinary -> "&"
   | CBitOrBinary -> "|"
@@ -71,23 +77,11 @@ let private binaryToString op =
 // Types
 // -----------------------------------------------
 
-let private cpFunPtrTy name argTys resultTy acc =
-  match argTys with
-  | [] ->
-    acc
-    |> cpTy resultTy
-    |> cons "(*"
-    |> cons name
-    |> cons ")(void)"
-
-  | _ ->
-    acc
-    |> cpTy resultTy
-    |> cons "(*"
-    |> cons name
-    |> cons ")("
-    |> join ", " argTys cpTy
-    |> cons ")"
+let private cTyIsPtrOrConstPtr ty =
+  match ty with
+  | CPtrTy _
+  | CConstPtrTy _ -> true
+  | _ -> false
 
 let private cpTy ty acc : string list =
   match ty with
@@ -96,33 +90,51 @@ let private cpTy ty acc : string list =
   | CFloatTy flavor -> acc |> cons (cFloatTyName flavor)
   | CBoolTy -> acc |> cons "bool"
   | CCharTy -> acc |> cons "char"
-  | CPtrTy ty -> acc |> cpTy ty |> cons "*"
-  | CConstPtrTy ty -> acc |> cpTy ty |> cons " const*"
-  | CFunPtrTy (argTys, resultTy) -> acc |> cpFunPtrTy "" argTys resultTy
+
+  | CPtrTy ty ->
+    acc
+    |> cpTy ty
+    |> cons (
+      if cTyIsPtrOrConstPtr ty then
+        "*"
+      else
+        " *"
+    )
+
+  | CConstPtrTy ty ->
+    acc
+    |> cpTy ty
+    |> cons (
+      if cTyIsPtrOrConstPtr ty then
+        "const *"
+      else
+        " const *"
+    )
+
   | CStructTy name -> acc |> cons "struct " |> cons name
   | CEnumTy name -> acc |> cons "enum " |> cons name
   | CEmbedTy code -> acc |> cons code
 
-/// `T x` or `T (*x)(..)`
-let private cpTyWithName name ty acc =
-  match ty with
-  | CFunPtrTy (argTys, resultTy) -> acc |> cpFunPtrTy name argTys resultTy
-  | _ -> acc |> cpTy ty |> cons " " |> cons name
+/// `T x`. (CTy isn't a function pointer.)
+let private cpTyWithName (name: string) ty acc =
+  let acc = acc |> cpTy ty
+
+  let acc =
+    if not (cTyIsPtrOrConstPtr ty) && name.Length <> 0 then
+      acc |> cons " "
+    else
+      acc
+
+  acc |> cons name
 
 let private cpParams ps acc : string list =
   let rec go ps acc =
     match ps with
     | [] -> acc
 
-    | [ name, ty ] -> acc |> cpTy ty |> cons " " |> cons name
+    | [ name, ty ] -> acc |> cpTyWithName name ty
 
-    | (name, ty) :: ps ->
-      acc
-      |> cpTy ty
-      |> cons " "
-      |> cons name
-      |> cons ", "
-      |> go ps
+    | (name, ty) :: ps -> acc |> cpTyWithName name ty |> cons ", " |> go ps
 
   match ps with
   | [] -> acc |> cons "void"
@@ -132,17 +144,56 @@ let private cpParams ps acc : string list =
 // Literals
 // -----------------------------------------------
 
-let private cpIntLit (text: string) acc =
-  if S.startsWith "0x" text
-     && text.Length >= 10
-     && intFromHex 2 3 text >= 8 then
-    // Since hex literal `>=0x80000000` is unsigned in C.
-    acc |> cons "(int)" |> cons text
-  else if text = "-2147483648" then
-    // Since `-2147483648` is int64_t in C.
-    acc |> cons "(int)0x80000000"
+let private uint64FromHex (l: int) (r: int) (s: string) =
+  assert (0 <= l && l < r && r <= s.Length)
+
+  S.parseHexAsUInt64 s.[l..r - 1]
+  |> Option.defaultWith unreachable
+
+let private uint64ToHex (len: int) (value: uint64) = S.uint64ToHex len value
+
+// See also: https://en.cppreference.com/w/c/language/integer_constant
+//
+// Remarks: When signed hex literal is >=2^(N-1), it's negative in milone-lang, but positive (larger type) in C.
+//          So (int32_t)0x80000000 must need casting.
+let private cpIntLit flavor (text: string) =
+  // s: -?<digit>+ or 0x<hex>+
+  let withFlavor force (s: string) =
+    match flavor with
+    | I8 -> "(int8_t)" + s
+    | I16 -> "(int16_t)" + s
+    | I32 when force -> "(int32_t)" + s
+    | I32 -> s
+    | I64
+    | IPtr -> s + "LL"
+
+    | U8 -> "(uint8_t)" + s + "U"
+    | U16 -> "(uint16_t)" + s + "U"
+    | U32 -> "(uint32_t)" + s + "U" // U suffix can be 64-bit
+    | U64 -> s + "ULL"
+    | UPtr -> "(size_t)" + s + "ULL" // size_t can be 32-bit
+
+  if S.startsWith "-0x" text then
+    assert (text.Length >= 4)
+    let text = text.[3..text.Length - 1]
+
+    let value =
+      // (~~~) is unimplemented
+      let a = uint64FromHex 0 text.Length text
+
+      if a = uint64 0 then
+        a
+      else
+        (a ^^^ (uint64 (int64 (-1)))) + uint64 1
+
+    withFlavor true ("0x" + uint64ToHex 1 value)
+  else if S.startsWith "0x" text then
+    assert (text.Length >= 3)
+    withFlavor true text
   else
-    acc |> cons text
+    match flavor, text with
+    | I32, "-2147483648" -> "(int32_t)0x80000000"
+    | _ -> withFlavor false text
 
 let private cpCharLit value =
   if value |> charNeedsEscaping then
@@ -153,15 +204,15 @@ let private cpCharLit value =
 let private cpStrRawLit (value: string) acc =
   acc
   |> cons "\""
-  |> cons (strEscape value)
+  |> cons (stringEscape value)
   |> cons "\""
 
 let private cpStrObjLit (value: string) acc =
   acc
-  |> cons "(struct String){.str = "
+  |> cons "(struct String){.ptr = "
   |> cpStrRawLit value
   |> cons ", .len = "
-  |> cons (string (__stringLengthInUtf8Bytes value))
+  |> cons (string (SB.utf8Length value))
   |> cons "}"
 
 let private cpStructLit fields ty acc =
@@ -169,20 +220,33 @@ let private cpStructLit fields ty acc =
   |> cons "("
   |> cpTy ty
   |> cons "){"
-  |> join
-       ", "
-       fields
-       (fun (field, value) acc ->
-         acc
-         |> cons "."
-         |> cons field
-         |> cons " = "
-         |> cpExpr value)
+  |> join ", " fields (fun (field, value) acc ->
+    acc
+    |> cons "."
+    |> cons field
+    |> cons " = "
+    |> cpExpr value)
   |> cons "}"
 
 // -----------------------------------------------
 // Expressions
 // -----------------------------------------------
+
+/// Replaces `{i}` with i'th argument.
+let private expandPlaceholders args code =
+  args
+  |> List.mapi (fun i arg -> i, arg)
+  |> List.fold
+       (fun code (i: int, arg) ->
+         let arg =
+           [] |> cpExpr arg |> List.rev |> S.concat ""
+
+         let code =
+           let placeholder = "{" + string i + "}"
+           code |> S.replace placeholder arg
+
+         code)
+       code
 
 let private cpExpr expr acc : string list =
   let rec cpExprList sep exprs acc =
@@ -201,8 +265,14 @@ let private cpExpr expr acc : string list =
     |> snd
 
   match expr with
-  | CIntExpr value -> acc |> cpIntLit value
+  | CIntExpr (value, flavor) -> acc |> cons (cpIntLit flavor value)
   | CDoubleExpr value -> acc |> cons (string value)
+
+  | CCharExpr value when C.isAscii value |> not ->
+    acc
+    |> cons "(char)'\\x"
+    |> cons (S.uint64ToHex 2 (uint64 (byte value)))
+    |> cons "'"
 
   | CCharExpr value ->
     acc
@@ -210,14 +280,12 @@ let private cpExpr expr acc : string list =
     |> cons (cpCharLit value)
     |> cons "'"
 
-  | CStrObjExpr value -> acc |> cpStrObjLit value
-  | CStrRawExpr value -> acc |> cpStrRawLit value
+  | CStringInitExpr value -> acc |> cpStrObjLit value
+  | CStringLitExpr value -> acc |> cpStrRawLit value
 
   | CInitExpr (fields, ty) -> acc |> cpStructLit fields ty
 
-  | CDotExpr (CStrObjExpr value, "len") ->
-    acc
-    |> cons (string (__stringLengthInUtf8Bytes value))
+  | CDotExpr (CStringInitExpr value, "len") -> acc |> cons (string (SB.utf8Length value))
 
   | CVarExpr name -> acc |> cons name
 
@@ -249,6 +317,10 @@ let private cpExpr expr acc : string list =
 
   | CSizeOfExpr ty -> acc |> cons "sizeof(" |> cpTy ty |> cons ")"
 
+  | CTyPlaceholderExpr ty -> acc |> cpTy ty
+
+  | CUnaryExpr (CDerefUnary, CUnaryExpr (CAddressOfUnary, arg)) -> acc |> cpExpr arg
+
   | CUnaryExpr (op, arg) ->
     acc
     |> cons "("
@@ -267,7 +339,9 @@ let private cpExpr expr acc : string list =
     |> cpExpr r
     |> cons ")"
 
-  | CNativeExpr code -> acc |> cons code
+  | CNativeExpr (code, args) ->
+    let code = expandPlaceholders args code
+    acc |> cons code
 
 // -----------------------------------------------
 // Statements
@@ -303,15 +377,6 @@ let private cpStmt indent stmt acc : string list =
     |> cpTyWithName name ty
     |> cpInit
     |> cons ";"
-    |> cons eol
-
-  | CLetAllocStmt (name, valTy, varTy) ->
-    acc
-    |> cons indent
-    |> cpTyWithName name varTy
-    |> cons " = milone_mem_alloc(1, sizeof("
-    |> cpTy valTy
-    |> cons "));"
     |> cons eol
 
   | CSetStmt (l, r) ->
@@ -350,14 +415,22 @@ let private cpStmt indent stmt acc : string list =
     |> cpExpr cond
     |> cons ") {"
     |> cons eol
-    |> cpStmtList (deeper indent) thenCl
+    |> cpStmt (deeper indent) thenCl
     |> cons indent
     |> cons "} else {"
     |> cons eol
-    |> cpStmtList (deeper indent) elseCl
+    |> cpStmt (deeper indent) elseCl
     |> cons indent
     |> cons "}"
     |> cons eol
+
+  | CIfStmt1 (cond, thenCl) ->
+    acc
+    |> cons indent
+    |> cons "if ("
+    |> cpExpr cond
+    |> cons ") "
+    |> cpStmt "" thenCl // indent isn't used.
 
   | CSwitchStmt (cond, clauses) ->
     let cpCaseLabels cases acc =
@@ -392,7 +465,7 @@ let private cpStmt indent stmt acc : string list =
                   acc |> cons eol)
                |> cpCaseLabels cases
                |> cpDefaultLabel isDefault
-               |> cpStmtList (deeper (deeper indent)) body
+               |> cpStmt (deeper (deeper indent)) body
 
              NotFirst, acc)
            (First, acc)
@@ -410,21 +483,7 @@ let private cpStmt indent stmt acc : string list =
     |> cons eol
 
   | CNativeStmt (code, args) ->
-    let code =
-      List.fold
-        (fun (i, code) arg ->
-          let arg =
-            [] |> cpExpr arg |> List.rev |> S.concat ""
-
-          let code =
-            let placeholder = "{" + string i + "}"
-            code |> S.replace placeholder arg
-
-          i + 1, code)
-        (0, code)
-        args
-      |> snd
-
+    let code = expandPlaceholders args code
     acc |> cons code
 
 let private cpStmtList indent stmts acc : string list =
@@ -509,7 +568,7 @@ let private cpDecl decl acc =
 
   | CInternalStaticVarDecl (name, ty) ->
     acc
-    // FIXME: global variable is now defined in entry module no matter where it is.
+    // FIXME: global variable is now defined in entry module no matter where it is. (this might be resolved)
     // |> cons "static "
     |> cpTyWithName name ty
     |> cons ";"
@@ -548,6 +607,7 @@ let private cpDecl decl acc =
     |> cons "}"
     |> cons eol
 
+  | CFunPtrTyDef _
   | CStructForwardDecl _
   | CFunForwardDecl _
   | CNativeDecl _ -> acc
@@ -569,6 +629,29 @@ let private cpForwardDecl decl acc =
   | CStaticVarDecl _
   | CInternalStaticVarDecl _
   | CExternVarDecl _ -> acc
+
+  | CFunPtrTyDef (ident, argTys, resultTy) ->
+    let acc = acc |> cons "typedef "
+
+    let acc =
+      match argTys with
+      | [] ->
+        acc
+        |> cpTy resultTy
+        |> cons "(*"
+        |> cons ident
+        |> cons ")(void)"
+
+      | _ ->
+        acc
+        |> cpTy resultTy
+        |> cons "(*"
+        |> cons ident
+        |> cons ")("
+        |> join ", " argTys cpTy
+        |> cons ")"
+
+    acc |> cons ";" |> cons eol |> cons eol
 
   | CStructDecl (name, _, _) ->
     acc
@@ -602,7 +685,9 @@ let private cpForwardDecl decl acc =
     // |> cons "static "
     |> cpFunForwardDecl name (cpParams args) resultTy
 
-  | CNativeDecl code -> acc |> cons code |> cons eol
+  | CNativeDecl (code, args) ->
+    let code = expandPlaceholders args code
+    acc |> cons code |> cons eol
 
 let private cpForwardDecls decls acc =
   decls
@@ -631,7 +716,11 @@ let private cpDecls decls acc =
 // -----------------------------------------------
 
 let private cpHeader acc =
-  let header = "#include \"milone.h\""
+  // stdio for printf
+  // stdlib for exit
+  let header =
+    "#include <stdio.h>\n#include <stdlib.h>\n#include <milone.h>"
+
   acc |> cons header |> cons eol |> cons eol
 
 let cirDump (decls: CDecl list) : string =
@@ -640,11 +729,11 @@ let cirDump (decls: CDecl list) : string =
   |> cpForwardDecls decls
   |> cpDecls decls
   |> List.rev
-  |> strConcat
+  |> S.concat ""
 
 let cirDumpHeader (decls: CDecl list) : string =
   []
   |> cpHeader
   |> cpForwardDecls decls
   |> List.rev
-  |> strConcat
+  |> S.concat ""

@@ -81,7 +81,7 @@ In quotes, backslashes *escape* other characters.
 
 ### Runtime representation
 
-(See also `struct String` in [milone.h](../../runtime/milone.h).)
+(See also `struct String` in [milone.h](../../src/libmilonert/milone.h).)
 
 Currently, string is a pair of a pointer (to `char`s) and length.
 The pointer can't be null.

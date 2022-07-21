@@ -20,24 +20,23 @@ let private findKVarDef varSerial (ctx: KirPropagateCtx) = ctx.VarDefs |> mapTry
 let private kpDefVar varSerial varDef (ctx: KirPropagateCtx) =
   // printfn "// kp: [TRACE] def #%d := %s" varSerial (objToString varDef)
 
-  { ctx with
-      VarDefs = ctx.VarDefs |> mapAdd varSerial varDef }
+  { ctx with VarDefs = ctx.VarDefs |> mapAdd varSerial varDef }
 
 let private kpUseTerm term (ctx: KirPropagateCtx) =
   match term with
   | KVarTerm (varSerial, _, loc) ->
-      match ctx |> findKVarDef varSerial with
-      | Some (KLitVarDef lit) ->
-          printfn "// kp: [TRACE] const prop #%s => %s" (objToString varSerial) (objToString lit)
+    match ctx |> findKVarDef varSerial with
+    | Some (KLitVarDef lit) ->
+      printfn "// kp: [TRACE] const prop #%s => %s" (objToString varSerial) (objToString lit)
 
-          KLitTerm(lit, loc), ctx
+      KLitTerm(lit, loc), ctx
 
-      | Some (KSelectVarDef (term, KSelfPath)) ->
-          printfn "// kp: [TRACE] remove mov #%s => %s" (objToString varSerial) (objToString term)
+    | Some (KSelectVarDef (term, KSelfPath)) ->
+      printfn "// kp: [TRACE] remove mov #%s => %s" (objToString varSerial) (objToString term)
 
-          term, ctx
+      term, ctx
 
-      | _ -> term, ctx
+    | _ -> term, ctx
 
   | _ -> term, ctx
 
@@ -48,54 +47,53 @@ let private kpUseTerms terms ctx =
 let private kpNode (node: KNode) ctx : KNode * KirPropagateCtx =
   match node with
   | KJumpNode (jointSerial, args, loc) ->
-      let args, ctx = ctx |> kpUseTerms args
-      KJumpNode(jointSerial, args, loc), ctx
+    let args, ctx = ctx |> kpUseTerms args
+    KJumpNode(jointSerial, args, loc), ctx
 
   | KReturnNode (funSerial, args, loc) ->
-      let args, ctx = ctx |> kpUseTerms args
-      KReturnNode(funSerial, args, loc), ctx
+    let args, ctx = ctx |> kpUseTerms args
+    KReturnNode(funSerial, args, loc), ctx
 
   | KSelectNode (term, path, result, cont, loc) ->
-      let cont, ctx =
-        ctx
-        |> kpDefVar result (KSelectVarDef(term, path))
-        |> kpNode cont
+    let cont, ctx =
+      ctx
+      |> kpDefVar result (KSelectVarDef(term, path))
+      |> kpNode cont
 
-      let term, ctx = ctx |> kpUseTerm term
-      KSelectNode(term, path, result, cont, loc), ctx
+    let term, ctx = ctx |> kpUseTerm term
+    KSelectNode(term, path, result, cont, loc), ctx
 
   | KPrimNode (prim, args, results, conts, loc) ->
-      let ctx =
-        match prim, args, results with
-        | KAddPrim, [ KLitTerm (IntLit l, _); KLitTerm (IntLit r, _) ], [ result ] ->
-            printfn "// kp: [TRACE] lit #%s := %s + %s" (objToString result) l r
+    let ctx =
+      match prim, args, results with
+      | KAddPrim, [ KLitTerm (IntLit l, _); KLitTerm (IntLit r, _) ], [ result ] ->
+        printfn "// kp: [TRACE] lit #%s := %s + %s" (objToString result) l r
 
-            // should check overflow
-            ctx
-            |> kpDefVar result (KLitVarDef(IntLit(string (int l + int r))))
+        // should check overflow
+        ctx
+        |> kpDefVar result (KLitVarDef(IntLit(string (int l + int r))))
 
-        | _ -> ctx
+      | _ -> ctx
 
-      let conts, ctx =
-        (conts, ctx)
-        |> stMap (fun (cont, ctx) -> kpNode cont ctx)
+    let conts, ctx =
+      (conts, ctx)
+      |> stMap (fun (cont, ctx) -> kpNode cont ctx)
 
-      let args, ctx = ctx |> kpUseTerms args
-      KPrimNode(prim, args, results, conts, loc), ctx
+    let args, ctx = ctx |> kpUseTerms args
+    KPrimNode(prim, args, results, conts, loc), ctx
 
   | KJointNode (joints, cont, loc) ->
-      let joints, ctx =
-        (joints, ctx)
-        |> stMap
-             (fun (jointBinding, ctx) ->
-               let (KJointBinding (jointSerial, args, body, loc)) = jointBinding
+    let joints, ctx =
+      (joints, ctx)
+      |> stMap (fun (jointBinding, ctx) ->
+        let (KJointBinding (jointSerial, args, body, loc)) = jointBinding
 
-               let body, ctx = ctx |> kpNode body
+        let body, ctx = ctx |> kpNode body
 
-               KJointBinding(jointSerial, args, body, loc), ctx)
+        KJointBinding(jointSerial, args, body, loc), ctx)
 
-      let cont, ctx = ctx |> kpNode cont
-      KJointNode(joints, cont, loc), ctx
+    let cont, ctx = ctx |> kpNode cont
+    KJointNode(joints, cont, loc), ctx
 
 let kirPropagate (root: KRoot, kirGenCtx: KirGenCtx) : KRoot * KirGenCtx =
   let (KRoot (funBindings)) = root
@@ -104,12 +102,11 @@ let kirPropagate (root: KRoot, kirGenCtx: KirGenCtx) : KRoot * KirGenCtx =
 
   let funBindings, _ =
     (funBindings, ctx)
-    |> stMap
-         (fun (funBinding, ctx) ->
-           let (KFunBinding (funSerial, args, body, loc)) = funBinding
+    |> stMap (fun (funBinding, ctx) ->
+      let (KFunBinding (funSerial, args, body, loc)) = funBinding
 
-           let body, ctx = ctx |> kpNode body
+      let body, ctx = ctx |> kpNode body
 
-           KFunBinding(funSerial, args, body, loc), ctx)
+      KFunBinding(funSerial, args, body, loc), ctx)
 
   KRoot(funBindings), kirGenCtx

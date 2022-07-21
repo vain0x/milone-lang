@@ -1,0 +1,5 @@
+#!/bin/sh
+
+set -eu
+
+MILONE_LSP_SERVER_LOG_LEVEL=debug dotnet run -- test

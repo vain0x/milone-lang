@@ -1,0 +1,42 @@
+#!/bin/bash
+# env LSP_SERVER_BIN
+
+set -eu
+
+send() {
+    BODY="$1"
+    LEN=$(printf "%s\n" "$BODY" | wc -c)
+    printf "Content-Length: %d\r\n\r\n%s\n" "$LEN" "$BODY"
+}
+
+ROOT_URI="file://$PWD"
+INITIALIZE_PARAMS="{\"rootUri\": \"$ROOT_URI\"}"
+
+{
+    send "{\"method\": \"initialize\", \"id\": 1, \"params\": $INITIALIZE_PARAMS}"
+    send '{"method": "initialized"}'
+
+    send '{
+        "method": "textDocument/didOpen",
+        "params": {"textDocument": {"uri": "a.txt", "version": 1, "text": "hey!"}}
+    }'
+    send '{
+        "method": "textDocument/didChange",
+        "params": {
+            "textDocument": {"uri": "a.txt", "version": 2},
+            "contentChanges": [{"text": "hey!"}]
+        }
+    }'
+    sleep 1s
+    send '{
+        "method": "textDocument/didOpen",
+        "params": {"textDocument": {"uri": "b.txt", "version": 1, "text": "bbb"}}
+    }'
+    send '{
+        "method": "textDocument/didClose",
+        "params": {"textDocument": {"uri": "b.txt"}}
+    }'
+
+    send '{"method": "shutdown", "id": 2}'
+    send '{"method": "exit"}'
+} | "$LSP_SERVER_BIN"

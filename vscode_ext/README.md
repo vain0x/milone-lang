@@ -25,6 +25,8 @@ npm ci
     - [ ] Find field references
 - [ ] Rename
 - [ ] Completion
+- [x] Formatting
+    - `fantomas-tool` is required. See also documentation about LSP server.
 
 ----
 
@@ -33,7 +35,7 @@ npm ci
 ### Dev: Prerequisites
 
 - Install [Visual Studio Code](https://code.visualstudio.com/) (1.52.1)
-- Install [Node.js](https://nodejs.org) (13.14.0)
+- Install [Node.js](https://nodejs.org) (17.0.1)
 - On Windows:
     - Install Git 2.30.0 (To run shell scripts)
 

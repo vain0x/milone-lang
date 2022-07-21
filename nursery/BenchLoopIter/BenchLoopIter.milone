@@ -1,0 +1,49 @@
+// Benchmark of loop and iter.
+
+open Std.StdIter
+open Std.StdLoop
+
+module Env = Std.StdEnv
+
+let private xor (l: int) (r: int) = l ^^^ r
+
+// Native loop as baseline.
+let private benchXorNative (n: int) =
+  let rec go i x =
+    if i < n then
+      go (i + 1) (x ^^^ (i + 1))
+    else
+      x
+
+  go 0 0
+
+let private benchXorLoop (n: int) =
+  Loop.range 0 n
+  |> Loop.map (fun x -> x + 1)
+  |> Loop.fold xor 0
+
+let private benchXorIter (n: int) =
+  Iter.range 0 n
+  |> Iter.map (fun x -> x + 1)
+  |> Iter.fold xor 0
+
+let main _ =
+  match Env.commandLineArgs () with
+  | [ _; kind; n ] ->
+    let n = int n
+
+    let result =
+      match kind with
+      | "native" -> benchXorNative n
+      | "loop" -> benchXorLoop n
+      | "iter" -> benchXorIter n
+
+      | _ ->
+        printfn "kind = native/loop/iter"
+        exit 1
+
+    result &&& 0x7f
+
+  | _ ->
+    printfn "./command <number>"
+    0

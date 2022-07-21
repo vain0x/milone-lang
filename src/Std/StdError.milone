@@ -1,0 +1,50 @@
+module rec Std.StdError
+
+let __dump (_: 'T) : string = "<dump>"
+
+let __writeError (s: string) : unit =
+  __nativeStmt ("fwrite({0}.ptr, sizeof(char), (size_t){0}.len, stderr);", s)
+
+let __writeErrorLine (s: string) : unit = __writeError (s + "\n")
+
+/// Only for debugging. Prints to stderr.
+let __trace (s: string) : unit = __writeErrorLine s
+
+/// Only for debugging. Adds context to error info if thrown.
+let __context _ (action: unit -> 'A) : 'A = action ()
+
+// -----------------------------------------------
+// F# primitives
+// -----------------------------------------------
+
+// add to prelude?
+
+let failwith (msg: string) : 'A =
+  __writeErrorLine ("FATAL ERROR: " + msg)
+  assert false
+  exit 1
+
+let failwithf (msg: string) _ : 'A =
+  __writeErrorLine ("FATAL ERROR: " + msg)
+  assert false
+  exit 1
+
+// -----------------------------------------------
+// Exceptions
+// -----------------------------------------------
+
+/// Never executed.
+let unreachable (_: 'T) : 'A = failwith "unreachable"
+
+/// Not implemented.
+let todo (_: 'T) : 'A = failwith "todo"
+
+// -----------------------------------------------
+// Never
+// -----------------------------------------------
+
+/// Placeholder of result type of diverging function.
+type Never = private | Never
+
+/// Never happens.
+let never Never : 'A = unreachable ()

@@ -15,8 +15,8 @@ struct ObjectObjectObjectFun2 {
     void const *env;
 };
 
-void str_error(struct String s) {
-    fprintf(stderr, "error: %s\n", str_to_c_str(s));
+void string_error(struct String s) {
+    fprintf(stderr, "error: %s\n", string_to_c_str(s));
 }
 
 // -----------------------------------------------
@@ -63,7 +63,7 @@ void const *milone_gtk_get_view(void) {
 void milone_gtk_apply_diff(struct String diff_string) {
     GtkWidget *grid = s_grid;
 
-    char *diff = strdup(str_to_c_str(diff_string));
+    char *diff = strdup(string_to_c_str(diff_string));
     char *tok = NULL;
     char const *delim = " \r\n";
 
@@ -79,7 +79,7 @@ void milone_gtk_apply_diff(struct String diff_string) {
         fprintf(stderr, "tok: '%s' (%ld)\n", s, strlen(s));
 
         if (strcmp(s, "ADD_LABEL") == 0) {
-            int index = str_to_int(str_borrow(strtok_r(NULL, delim, &tok)));
+            int index = string_to_int32(string_borrow(strtok_r(NULL, delim, &tok)));
             char const *text = strtok_r(NULL, delim, &tok);
             fprintf(stderr, "trace: add_label index=%d text=%s\n", index, text);
 
@@ -91,8 +91,8 @@ void milone_gtk_apply_diff(struct String diff_string) {
         }
 
         if (strcmp(s, "ADD_BUTTON") == 0) {
-            int index = str_to_int(str_borrow(strtok_r(NULL, delim, &tok)));
-            int msg = str_to_int(str_borrow(strtok_r(NULL, delim, &tok)));
+            int index = string_to_int32(string_borrow(strtok_r(NULL, delim, &tok)));
+            int msg = string_to_int32(string_borrow(strtok_r(NULL, delim, &tok)));
             char const *text = strtok_r(NULL, delim, &tok);
 
             GtkWidget *button = gtk_button_new_with_label(text);
@@ -105,7 +105,7 @@ void milone_gtk_apply_diff(struct String diff_string) {
         }
 
         if (strcmp(s, "SET_LABEL") == 0) {
-            int index = str_to_int(str_borrow(strtok_r(NULL, delim, &tok)));
+            int index = string_to_int32(string_borrow(strtok_r(NULL, delim, &tok)));
             char const *text = strtok_r(NULL, delim, &tok);
             fprintf(stderr, "trace: set_label index=%d text=%s\n", index, text);
 

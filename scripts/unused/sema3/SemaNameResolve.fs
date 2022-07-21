@@ -4,15 +4,15 @@ open MiloneLang.Util
 open MiloneLang.Syntax
 open MiloneLang.Sema
 
-module M = MiloneStd.StdMap
+module M = Std.StdMap
 
 let private desugarLetDecl isRec vis pat body pos =
   match pat with
   | AAscribePat (pat, ascriptionTy, ascriptionLoc) ->
-      let body =
-        AAscribeExpr(body, ascriptionTy, ascriptionLoc)
+    let body =
+      AAscribeExpr(body, ascriptionTy, ascriptionLoc)
 
-      desugarLetDecl isRec vis pat body pos
+    desugarLetDecl isRec vis pat body pos
 
   | AFunDeclPat (name, args) -> ALetFunDecl(isRec, vis, name, args, body, pos)
 
@@ -22,12 +22,11 @@ let private desugarLetDecl isRec vis pat body pos =
 // Context
 // -----------------------------------------------
 
-type Ctx =
-  { Db: SemaDb }
+type Ctx = { Db: SemaDb }
 
-let newCtx (db: SemaDb): Ctx = { Db = db }
+let newCtx (db: SemaDb) : Ctx = { Db = db }
 
-let finishCtx (ctx: Ctx): SemaDb = ctx.Db
+let finishCtx (ctx: Ctx) : SemaDb = ctx.Db
 
 let private todo () = failwithf "TODO"
 
@@ -58,18 +57,21 @@ let defineSymbolsInPat pat ctx =
 
   | ANavPat (l, _, _) -> ctx |> defineSymbolsInPat l
   | AListPat (pats, _) -> ctx |> forList defineSymbolsInPat pats
-  | AConsPat (l, r, _) -> ctx |> defineSymbolsInPat l |> defineSymbolsInPat r
+  | AConsPat (l, r, _) ->
+    ctx
+    |> defineSymbolsInPat l
+    |> defineSymbolsInPat r
   | ATuplePat (pats, _) -> ctx |> forList defineSymbolsInPat pats
 
   | AAppPat (l, r, _) ->
-      ctx
-      |> defineSymbolAsValueInLocal l
-      |> defineSymbolAsValueInLocal r
+    ctx
+    |> defineSymbolAsValueInLocal l
+    |> defineSymbolAsValueInLocal r
 
   | AAsPat (body, name, _) ->
-      ctx
-      |> defineSymbolsInPat body
-      |> defineSymbolAsValueInLocal name
+    ctx
+    |> defineSymbolsInPat body
+    |> defineSymbolAsValueInLocal name
 
   | AAscribePat (body, _, _) -> defineSymbolsInPat body ctx
 
@@ -86,9 +88,11 @@ let declareDecl decl ctx =
   | ATySynonymDecl (_, name, _, _, _) -> ctx |> defineSymbolAsTypeInLocal name
 
   | AUnionTyDecl (_, name, variants, _) ->
-      let declareVariant (AVariant (name, _, _)) ctx = defineSymbolAsValueInLocal name ctx
+    let declareVariant (AVariant (name, _, _)) ctx = defineSymbolAsValueInLocal name ctx
 
-      ctx |> defineSymbolAsTypeInLocal name |> forList declareVariant variants
+    ctx
+    |> defineSymbolAsTypeInLocal name
+    |> forList declareVariant variants
 
   | ARecordTyDecl (_, name, _, _) -> ctx |> defineSymbolAsTypeInLocal name
 
@@ -106,7 +110,7 @@ let declareDecl decl ctx =
 
 let resolveDecl decl ctx = ctx
 
-let resolveDecls (decls: ADecl list) ctx: Ctx =
+let resolveDecls (decls: ADecl list) ctx : Ctx =
   ctx
   |> forList declareDecl decls
   |> forList resolveDecl decls
@@ -115,11 +119,8 @@ let resolveDecls (decls: ADecl list) ctx: Ctx =
 // Interface
 // -----------------------------------------------
 
-let resolveNames (ast: ARoot) (db: SemaDb): SemaDb =
+let resolveNames (ast: ARoot) (db: SemaDb) : SemaDb =
   match ast with
   | AExprRoot _ -> todo ()
 
-  | AModuleRoot (_, decls, _) ->
-      newCtx db
-      |> resolveDecls decls
-      |> finishCtx
+  | AModuleRoot (_, decls, _) -> newCtx db |> resolveDecls decls |> finishCtx

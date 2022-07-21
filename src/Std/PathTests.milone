@@ -1,0 +1,185 @@
+open Std.Path
+open Std.StdTesting
+
+let private hasDriveLetterTest () =
+  let t pathname expected =
+    shouldEqual string expected (Pathname.hasDriveLetter pathname)
+
+  // Drive letter only.
+  assert (t "C:" true)
+  // Absolute path with drive letter.
+  assert (t "C:/" true)
+  // Filename with drive letter.
+  assert (t "C:file.txt" true)
+
+  assert (t "/" false)
+  assert (t "/path/to" false)
+
+let private hasRootTest () =
+  let t pathname expected =
+    shouldEqual string expected (Pathname.hasRoot pathname)
+
+  // Root path.
+  assert (t "/" true)
+  // Absolute path.
+  assert (t "/absolute/path" true)
+  // Absolute path with drive letter.
+  assert (t "C:/" true)
+
+  // Relative path.
+  assert (t "relative/path" false)
+  // Filename.
+  assert (t "filename.txt" false)
+  // Filename with trailing separator.
+  assert (t "dir/" false)
+  // Filename with drive letter.
+  assert (t "C:file.txt" false)
+  // Relative to self/parent.
+  assert (t "./it" false)
+  assert (t "../local" false)
+  // Empty.
+  assert (t "" false)
+
+let private cutRootTest () =
+  let t pathname expected =
+    let l, r = expected
+    shouldEqual (fun (l, r) -> l + ";" + r) expected (Pathname.cutRoot pathname)
+
+  // root -> root, .
+  assert (t "/" ("/", "."))
+  assert (t "C:/" ("C:/", "."))
+
+  // absolute -> root, relative
+  assert (t "/path/to" ("/", "path/to"))
+  assert (t "C:/path/to" ("C:/", "path/to"))
+
+  // relative -> ., relative
+  assert (t "my/relative" (".", "my/relative"))
+  assert (t "dir/" (".", "dir/"))
+  assert (t "file.txt" (".", "file.txt"))
+
+  // empty
+  assert (t "" (".", ""))
+
+// not yet
+// assert (t "C:" ("C:.", "."))
+
+let private cutTest () =
+  let t pathname expected =
+    let l, r = expected
+    shouldEqual (fun (l, r) -> l + ";" + r) expected (Pathname.cut pathname)
+
+  // Relative path:
+  assert (t "my/relative/to" ("my", "relative/to"))
+  assert (t "./self/file" (".", "self/file"))
+  assert (t "../parent/file" ("..", "parent/file"))
+
+  // Single segment:
+  assert (t "dir/" (".", "dir"))
+  assert (t "file.txt" (".", "file.txt"))
+
+  // Same as cutRoot
+  assert (t "/" ("/", "."))
+  assert (t "C:/" ("C:/", "."))
+  assert (t "/path/to" ("/", "path/to"))
+  assert (t "C:/path/to" ("C:/", "path/to"))
+  assert (t "" (".", ""))
+
+// not yet
+// assert (t "C:my/relative/to" ("C:.", "my/relative/to"))
+// assert (t "C:" ("C:.", "."))
+
+let private cutLastTest () =
+  let t pathname expected =
+    shouldEqual (fun (l, r) -> l + ";" + r) expected (Pathname.cutLast pathname)
+
+  assert (t "/" ("/", "."))
+  assert (t "." (".", "."))
+  assert (t ".." (".", ".."))
+  assert (t "/path/to" ("/path", "to"))
+  assert (t "dirname/" (".", "dirname"))
+  assert (t "filename.txt" (".", "filename.txt"))
+
+let private joinTest () =
+  let t l r expected =
+    shouldEqual id expected (Pathname.join l r)
+
+  // Basic cases:
+  assert (t "l" "r" "l/r")
+  assert (t "a/b" "c/d" "a/b/c/d")
+
+  // Trailing sep:
+  assert (t "l/" "r" "l/r")
+  assert (t "l" "r/" "l/r")
+
+  // Replace with an absolute path:
+  assert (t "/path/to" "/" "/")
+  assert (t "/x/x" "/path/to/r" "/path/to/r")
+  // assert (t "/x/x" "/path/to/r/" "/path/to/r")
+  assert (t "/x/x" "/path/to/r/" "/path/to/r/")
+
+  // Contraction:
+  assert (t "." "." ".")
+  assert (t "a/b" "." "a/b")
+  assert (t "a/b" "./c" "a/b/c")
+  assert (t "a/b" "." "a/b")
+  assert (t "/" "." "/")
+  assert (t "a/b" ".." "a")
+  assert (t "a/b" "../.." ".")
+  assert (t "a/b" "../../.." "..")
+  assert (t "a/b" "././." "a/b")
+  assert (t "/" ".." "/..")
+
+let private normalizeTest () =
+  let t pathname expected =
+    shouldEqual id expected (Pathname.normalize pathname)
+
+  assert (t "double//slash" "double/slash")
+  assert (t "back\\slash" "back/slash")
+  assert (t "parent/two/../dots" "parent/dots")
+  assert (t "single/./dot" "single/dot")
+  assert (t "" "")
+  assert (t "/regular/rooted.ext" "/regular/rooted.ext")
+  assert (t "a\\b/\\c\\..\\\\d" "a/b/d")
+  assert (t "c:\\Program Files\\Git" "C:/Program Files/Git")
+
+let private basenameTest () =
+  let t pathname expected =
+    shouldEqual id expected (Pathname.basename pathname)
+
+  assert (t "path/to/foo.txt" "foo.txt")
+  assert (t ".." "..")
+
+  // Subtle:
+  assert (t "/path/to/." ".")
+
+  // Posix basename differs: `/` -> `/`
+  assert (t "/" ".")
+
+let private dirnameTest () =
+  let t pathname expected =
+    shouldEqual id expected (Pathname.dirname pathname)
+
+  assert (t "path/to/foo.txt" "path/to")
+  assert (t "/" "/")
+
+let private stemTest () =
+  let t pathname expected =
+    shouldEqual id expected (Pathname.stem pathname)
+
+  assert (t "path/to/foo.txt" "foo")
+  assert (t "path/to/bar.tar.gz" "bar.tar")
+  assert (t "path/to/.hidden" ".hidden")
+  assert (t "path/to/.hidden.txt" ".hidden")
+
+let testPath () =
+  hasDriveLetterTest ()
+  hasRootTest ()
+  cutRootTest ()
+  cutTest ()
+  cutLastTest ()
+  joinTest ()
+  normalizeTest ()
+  basenameTest ()
+  dirnameTest ()
+  stemTest ()

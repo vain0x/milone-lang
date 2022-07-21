@@ -1,41 +1,48 @@
-#include "milone.h"
+#include <stdio.h>
+#include <stdlib.h>
+#include <milone.h>
 
 struct Val_;
 
-int f_(int );
+int32_t modules_sub_Int32Int32Fun1_f(int32_t);
 
-int milone_main(void);
+int main(int argc, char **argv);
 
 enum Val_Discriminant {
-    Int_,
-    Str_,
+    Val_Int,
+    Val_String,
 };
 
 struct Val_ {
     enum Val_Discriminant discriminant;
     union {
-        int Int_;
-        struct String Str_;
+        int32_t Val_Int;
+        struct String Val_String;
     };
 };
 
-int milone_main(void) {
-    int x_1;
-    int match_;
-    struct Val_ variant_ = (struct Val_){.discriminant = Int_, .Int_ = 0};
-    if ((variant_.discriminant != Int_)) goto next_2;
-    x_1 = variant_.Int_;
-    match_ = x_1;
+int main(int argc, char **argv) {
+    milone_start(argc, argv);
+    int32_t x_;
+    int32_t n_;
+    int32_t m_;
+    int32_t match_;
+    struct Val_ variant_;
+    int32_t call_;
+    variant_ = (struct Val_){.discriminant = Val_Int, .Val_Int = 0};
+    if ((variant_.discriminant != Val_Int)) goto next_2;
+    x_ = variant_.Val_Int;
+    match_ = x_;
     goto end_match_1;
 next_2:;
-    if ((variant_.discriminant != Str_)) goto next_3;
+    if ((variant_.discriminant != Val_String)) goto next_3;
     match_ = 0;
     goto end_match_1;
 next_3:;
     exit(1);
 end_match_1:;
-    int n_ = match_;
-    int call_ = f_(n_);
-    int m_ = call_;
+    n_ = match_;
+    call_ = modules_sub_Int32Int32Fun1_f(n_);
+    m_ = call_;
     return m_;
 }

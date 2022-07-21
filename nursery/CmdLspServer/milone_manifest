@@ -1,0 +1,11 @@
+std gnu11
+
+cc cmd_lsp_server_runtime.c
+
+# sqlite3
+cc ../LibSqlite3/lib_sqlite3_runtime.c
+obj ../vendor/sqlite3/sqlite3.o
+lib dl
+lib pthread
+
+sanitize address,undefined

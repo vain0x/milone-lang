@@ -36,7 +36,6 @@ type CTy =
   | CCharTy
   | CPtrTy of CTy
   | CConstPtrTy of CTy
-  | CFunPtrTy of argTys: CTy list * resultTy: CTy
   | CStructTy of Ident
   | CEnumTy of Ident
   | CEmbedTy of string
@@ -50,17 +49,20 @@ type CUnary =
   /// `!p`
   | CNotUnary
 
+  // `&x`
+  | CAddressOfUnary
+
   /// `*p`
   | CDerefUnary
 
 /// Binary operators in CIR.
 [<NoEquality; NoComparison>]
 type CBinary =
-  | CMulBinary
-  | CDivBinary
+  | CMultiplyBinary
+  | CDivideBinary
   | CModuloBinary
   | CAddBinary
-  | CSubBinary
+  | CSubtractBinary
   | CBitAndBinary
   | CBitOrBinary
   | CBitXorBinary
@@ -76,15 +78,15 @@ type CBinary =
 /// Expression in CIR.
 [<NoEquality; NoComparison>]
 type CExpr =
-  | CIntExpr of text: string
+  | CIntExpr of text: string * IntFlavor
   | CDoubleExpr of text: string
   | CCharExpr of char
 
   /// E.g. `"hi"`
-  | CStrRawExpr of string
+  | CStringLitExpr of string
 
-  /// E.g. `(struct String){.str = "hi", .len = 2}`
-  | CStrObjExpr of string
+  /// E.g. `(struct String){.ptr = "hi", .len = 2}`
+  | CStringInitExpr of string
 
   /// Variable.
   | CVarExpr of Ident
@@ -98,7 +100,7 @@ type CExpr =
   /// `a.x`
   | CDotExpr of CExpr * Ident
 
-  /// `p->x`
+  // `p->x`
   | CArrowExpr of CExpr * Ident
 
   /// `a[i]`
@@ -106,9 +108,10 @@ type CExpr =
 
   | CCallExpr of CExpr * args: CExpr list
   | CSizeOfExpr of CTy
+  | CTyPlaceholderExpr of CTy
   | CUnaryExpr of CUnary * CExpr
   | CBinaryExpr of CBinary * CExpr * CExpr
-  | CNativeExpr of string
+  | CNativeExpr of string * CExpr list
 
 /// Statement in CIR.
 [<NoEquality; NoComparison>]
@@ -119,19 +122,18 @@ type CStmt =
   /// `T x = a;`
   | CLetStmt of Ident * init: CExpr option * CTy
 
-  /// `U* x = (U*)malloc(sizeof T);`
-  | CLetAllocStmt of Ident * valTy: CTy * varTy: CTy
-
   /// `x = a;`
   | CSetStmt of CExpr * CExpr
 
   | CLabelStmt of CLabel
   | CGotoStmt of CLabel
   | CGotoIfStmt of CExpr * CLabel
-  | CIfStmt of CExpr * CStmt list * CStmt list
+  | CIfStmt of CExpr * CStmt * CStmt
+  /// `if (cond) stmt;`
+  | CIfStmt1 of CExpr * CStmt
 
   /// clause: (caseLiterals, isDefault, body).
-  | CSwitchStmt of cond: CExpr * clauses: (CExpr list * bool * CStmt list) list
+  | CSwitchStmt of cond: CExpr * clauses: (CExpr list * bool * CStmt) list
 
   | CReturnStmt of CExpr option
   | CNativeStmt of string * args: CExpr list
@@ -141,6 +143,9 @@ type CStmt =
 type CDecl =
   /// `#error` directive to cause compile error manually.
   | CErrorDecl of message: string * line: int
+
+  /// `typedef ResultTy (*Ident)(ArgTy1, ArgTy2, ..);`
+  | CFunPtrTyDef of Ident * argTys: CTy list * resultTy: CTy
 
   /// Definition of struct type including anonymous union.
   /// ```c
@@ -170,4 +175,4 @@ type CDecl =
 
   | CStaticFunDecl of Ident * args: (Ident * CTy) list * resultTy: CTy * body: CStmt list
 
-  | CNativeDecl of string
+  | CNativeDecl of string * args: CExpr list

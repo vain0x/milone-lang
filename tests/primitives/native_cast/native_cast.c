@@ -1,13 +1,21 @@
-#include "milone.h"
+#include <stdio.h>
+#include <stdlib.h>
+#include <milone.h>
 
-int milone_main(void);
+int main(int argc, char **argv);
 
-int milone_main(void) {
-    void* mutNull_ = ((void*)((uintptr_t)0));
-    void const* constNull_ = ((void const*)mutNull_);
-    int const* constIntPtr_ = ((int const*)constNull_);
-    int* intPtr_ = ((int*)constIntPtr_);
-    intptr_t address_ = ((intptr_t)intPtr_);
-    milone_assert((((int)address_) == 0), 11, 2);
+int main(int argc, char **argv) {
+    milone_start(argc, argv);
+    void *mutNull_;
+    void const *constNull_;
+    int32_t const *constIntPtr_;
+    int32_t *intPtr_;
+    intptr_t address_;
+    mutNull_ = NULL;
+    constNull_ = ((void const *)mutNull_);
+    constIntPtr_ = ((int32_t const *)constNull_);
+    intPtr_ = ((int32_t *)constIntPtr_);
+    address_ = ((intptr_t)intPtr_);
+    if ((address_ != 0LL)) milone_assert_error("native_cast/native_cast.milone", 14, 2);
     return 0;
 }

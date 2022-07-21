@@ -1,0 +1,22 @@
+<Project Sdk="Microsoft.NET.Sdk">
+
+  <PropertyGroup>
+    <TargetFramework>net6.0</TargetFramework>
+  </PropertyGroup>
+
+  <ItemGroup>
+    <Compile Include="Lower.fs" />
+    <Compile Include="PlatformUnix.fs" />
+    <Compile Include="PlatformWindows.fs" />
+    <Compile Include="Cli.fs" />
+    <Compile Include="FSharpOnly.fs" />
+  </ItemGroup>
+
+  <ItemGroup>
+    <ProjectReference Include="..\MiloneShared\MiloneShared.fsproj" />
+    <ProjectReference Include="..\MiloneSyntaxTypes\MiloneSyntaxTypes.fsproj" />
+    <ProjectReference Include="..\MiloneTranslationTypes\MiloneTranslationTypes.fsproj" />
+    <ProjectReference Include="..\Std\Std.fsproj" />
+  </ItemGroup>
+
+</Project>

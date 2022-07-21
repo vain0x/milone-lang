@@ -1,9 +1,14 @@
-#include "milone.h"
+#include <stdio.h>
+#include <stdlib.h>
+#include <milone.h>
 
-int milone_main(void);
+int main(int argc, char **argv);
 
-int milone_main(void) {
-    int if_;
+int main(int argc, char **argv) {
+    milone_start(argc, argv);
+    struct String hello_;
+    int32_t if_;
+    int32_t if_1;
     if (true) {
         goto then_2;
     } else {
@@ -11,8 +16,7 @@ int milone_main(void) {
     }
 then_2:;
     printf("then\n");
-    struct String hello_ = (struct String){.str = "hello", .len = 5};
-    int if_1;
+    hello_ = (struct String){.ptr = "hello", .len = 5};
     if (true) {
         goto then_4;
     } else {
@@ -22,7 +26,7 @@ then_4:;
     if_1 = 0;
     goto if_next_3;
 else_5:;
-    printf("else: %s\n", str_to_c_str(hello_));
+    printf("else: %s\n", string_to_c_str(hello_));
     if_1 = 1;
     goto if_next_3;
 if_next_3:;

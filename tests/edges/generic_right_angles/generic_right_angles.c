@@ -1,12 +1,17 @@
-#include "milone.h"
+#include <stdio.h>
+#include <stdlib.h>
+#include <milone.h>
 
-struct IntListListList;
+struct Int32ListListCons;
 
-int milone_main(void);
+int main(int argc, char **argv);
 
-int milone_main(void) {
-    struct IntListListList const* n_ = NULL;
+int main(int argc, char **argv) {
+    milone_start(argc, argv);
+    struct Int32ListListCons const *n_;
+    bool ok_;
     bool if_;
+    n_ = NULL;
     if ((!(n_))) {
         goto nil_cl_2;
     } else {
@@ -19,9 +24,9 @@ cons_cl_3:;
     if_ = false;
     goto if_next_1;
 if_next_1:;
-    bool ok_ = if_;
-    milone_assert(ok_, 16, 2);
-    milone_assert((3 >= 2), 19, 2);
-    milone_assert(((2 << 3) == 16), 22, 2);
+    ok_ = if_;
+    if ((!(ok_))) milone_assert_error("generic_right_angles/generic_right_angles.milone", 16, 2);
+    if ((3 < 2)) milone_assert_error("generic_right_angles/generic_right_angles.milone", 19, 2);
+    if (((2 << 3) != 16)) milone_assert_error("generic_right_angles/generic_right_angles.milone", 22, 2);
     return 0;
 }

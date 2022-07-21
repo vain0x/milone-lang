@@ -17,7 +17,7 @@ let rec printList xs =
     printfn "%s" x
     printList xs
 
-let isDigit c = '0' <= c && c <= '9'
+let isDigit c = byte '0' <= byte c && byte c <= byte '9'
 
 let tokenize (s: string) =
   let rec readInt i =

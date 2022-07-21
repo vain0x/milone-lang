@@ -16,9 +16,9 @@ let baseCase () =
 // int = ExitCode should be unifiable.
 let yodaCase (exitCode: ExitCode) = assert (0 = exitCode)
 
-let polymorphicFunCase () =
-  let proj (cond: Condition) body alt = if cond then body else alt
+let private proj (cond: Condition) body alt = if cond then body else alt
 
+let polymorphicFunCase () =
   assert (proj true 1 0 = 1)
   assert (proj false "T" "F" = "F")
 

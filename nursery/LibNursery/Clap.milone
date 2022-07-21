@@ -1,11 +1,11 @@
 /// Command line arguments parser.
 module rec LibNursery.Clap
 
-module S = MiloneStd.StdString
-module TMap = MiloneStd.StdMap
-module TSet = MiloneStd.StdSet
-
+open Std.StdMap
+open Std.StdSet
 open LibNursery.ClapCore
+
+module S = Std.StdString
 
 type private Kind =
   | Flag
@@ -62,7 +62,7 @@ let parseOpts (def: string list) (args: string list) : Opts =
            defMap, missed)
          (TMap.empty compare, TSet.empty compare)
 
-  let hasParam name (_: Opts, _: TSet.TreeSet<string>, _: string list) =
+  let hasParam name (_: Opts, _: TreeSet<string>, _: string list) =
     match defMap |> TMap.tryFind (nameToString name) with
     | Some Optional
     | Some Required -> true
@@ -79,36 +79,25 @@ let parseOpts (def: string list) (args: string list) : Opts =
 
       | Some Flag, _ -> { opts with Flags = name :: opts.Flags }, missed, redundant
 
-      | Some Optional, Some value ->
-        { opts with
-            Bindings = (name, value) :: opts.Bindings },
-        missed,
-        redundant
+      | Some Optional, Some value -> { opts with Bindings = (name, value) :: opts.Bindings }, missed, redundant
 
       | Some Required, Some value ->
         let _, missed = missed |> TSet.remove name
 
-        { opts with
-            Bindings = (name, value) :: opts.Bindings },
-        missed,
-        redundant
+        { opts with Bindings = (name, value) :: opts.Bindings }, missed, redundant
 
       | _ ->
         assert false // unreachable
         exit 1
 
-    | Msg.Positional value ->
-      { opts with
-          Positional = value :: opts.Positional },
-      missed,
-      redundant
+    | Msg.Positional value -> { opts with Positional = value :: opts.Positional }, missed, redundant
 
   let (opts, missed, redundant), result =
     runClapCore args (emptyOpts, missed, []) hasParam update
 
   let error =
     match result with
-    | Result.Ok ->
+    | ParseResult.Ok ->
       let missedError missed =
         "Missed options: " + S.concat ", " missed + "."
 
@@ -128,9 +117,9 @@ let parseOpts (def: string list) (args: string list) : Opts =
           + redundantError redundant
         )
 
-    | Result.NoValueError name -> Some("Specify value of option: " + nameToString name)
+    | ParseResult.NoValueError name -> Some("Specify value of option: " + nameToString name)
 
-    | Result.RedundantValueError (name, _) ->
+    | ParseResult.RedundantValueError (name, _) ->
       Some(
         "Don't specify value for flag: "
         + nameToString name

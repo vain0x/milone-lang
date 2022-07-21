@@ -86,7 +86,7 @@ When both pattern and body expression are short, clause can be written in one li
 
 ### Type-specific Patterns
 
-- Literal patterns: `1`, `'c'`, `"str"`, etc.
+- Literal patterns: `1`, `'c'`, `"string"`, etc.
     - This pattern matches when the condition equals to the literal.
 - Variant patterns: `None` etc.
     - This pattern matches when the condition equals to the variant.

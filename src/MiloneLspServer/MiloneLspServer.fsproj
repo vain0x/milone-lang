@@ -2,7 +2,7 @@
 
   <PropertyGroup>
     <OutputType>Exe</OutputType>
-    <TargetFramework>net5.0</TargetFramework>
+    <TargetFramework>net6.0</TargetFramework>
   </PropertyGroup>
 
   <ItemGroup>
@@ -11,11 +11,11 @@
     <Compile Include="JsonRpcReader.fs" />
     <Compile Include="JsonRpcWriter.fs" />
     <Compile Include="Util.fs" />
-    <Compile Include="LspCacheLayer.fs" />
+    <Compile Include="LspUtil.fs" />
     <Compile Include="Lsp.fs" />
-    <Compile Include="LspDocCache.fs" />
     <Compile Include="LspLangService.fs" />
     <Compile Include="LspServer.fs" />
+    <Compile Include="LspTests.fs" />
     <Compile Include="Program.fs" />
   </ItemGroup>
 
@@ -25,7 +25,6 @@
 
   <ItemGroup>
     <ProjectReference Include="..\MiloneSyntax\MiloneSyntax.fsproj" />
-    <ProjectReference Include="..\MiloneTranslation\MiloneTranslation.fsproj" />
   </ItemGroup>
 
 </Project>

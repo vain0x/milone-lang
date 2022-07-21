@@ -8,9 +8,8 @@ let layoutTest () =
 
   let a =
     2
-    |> apply
-         (fun x -> // callee can be deeper than arguments
-           x + 3)
+    |> apply (fun x -> // callee can be deeper than arguments
+      x + 3)
 
   assert (a = 5)
 
@@ -19,10 +18,9 @@ let main _ =
 
   let x =
     40
-    |> twice
-         (fun x ->
-           let y = x + 1
-           y)
+    |> twice (fun x ->
+      let y = x + 1
+      y)
 
   assert (x = 42)
 

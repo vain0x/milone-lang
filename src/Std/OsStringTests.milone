@@ -1,0 +1,96 @@
+open Std.Block
+open Std.OsString
+open Std.Ptr
+open Std.StdError
+open Std.Vector
+
+let private basicTest () =
+  // Creation.
+  let s = OsString.ofString "你好, 🐧！" // (Hello, penguin!)
+
+  let n = OsString.length s
+  assert (n = 7 || n = 15) // 7 in UTF-16, 15 in UTF-8
+
+  // of/to roundtrip
+  let t = OsString.toString s
+  assert (t = "你好, 🐧！")
+
+  // Empty string.
+  let empty = OsString.ofString ""
+  assert (OsString.length empty = 0)
+
+let private osCharTest () =
+  // NUL
+  assert (OsChar.toUInt OsChar.nul = 0u)
+
+  // conversion between uint
+  assert (OsChar.toUInt (OsChar.ofUInt 65u) = 65u)
+
+  // conversion between char
+  let c = OsChar.asChar (OsChar.ofChar 'A')
+  assert (byte c = 65uy)
+  let c = OsChar.ofChar (char 0xFFuy)
+  assert (byte (OsChar.asChar c) = 0uy)
+
+  // comparison
+  assert (OsChar.equals (OsChar.ofChar 'A') (OsChar.ofUInt 65u))
+
+  assert (OsChar.equals (OsChar.ofChar 'A') (OsChar.ofChar 'a')
+          |> not)
+
+  assert (OsChar.compare OsChar.nul (OsChar.ofChar 'A') < 0)
+  assert (OsChar.compare (OsChar.ofChar 'A') (OsChar.ofUInt 65u) = 0)
+
+let private osStringEmptyTest () =
+  let s = OsString.empty ()
+  assert (OsString.length s = 0)
+
+  let p = OsStringExt.asPtr s
+  assert (p <> Ptr.nullPtr)
+  assert (OsChar.equals (Ptr.read p) OsChar.nul)
+
+let private osStringOfStringTest () =
+  let s = OsString.ofString "Penguin is 🐧."
+  let n = OsString.length s
+
+  // Length of "🐧" is 2 on Windows or 4 on Linux.
+  assert (n = 12 + 2 || n = 12 + 4)
+
+let private osStringToStringTest () =
+  let s = "Penguin is 🐧."
+  let t = OsString.toString (OsString.ofString s)
+  assert (s = t)
+
+let private osStringAsBlockTest () =
+  let s = OsString.ofString "Penguin is 🐧."
+  let t = OsString.asBlock s
+
+  let case i c =
+    OsChar.equals
+      (OsChar.ofChar c)
+      (Block.tryItem i t
+       |> Option.defaultValue OsChar.nul)
+
+  assert (case 0 'P')
+  assert (case 6 'n')
+  assert (case (OsString.length s - 1) '.')
+
+let private osStringExtUnsafeOfRawPartsTest () =
+  let s = OsString.ofString "Penguin is 🐧."
+  let n = OsString.length s
+
+  let t = OsStringExt.unsafeOfRawParts (OsStringExt.asPtr s) (uint (n - 1))
+  assert (OsString.toString t = "Penguin is 🐧")
+
+  // NUL-terminated.
+  let p = OsStringExt.asPtr t
+  assert (OsChar.equals OsChar.nul (Ptr.read p.[n - 1]))
+
+let testOsString () =
+  basicTest ()
+  osCharTest ()
+  osStringEmptyTest ()
+  osStringOfStringTest ()
+  osStringToStringTest ()
+  osStringAsBlockTest ()
+  osStringExtUnsafeOfRawPartsTest ()

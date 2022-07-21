@@ -1,9 +1,11 @@
-# Makefile as a thin wrapper of MyBuildTool.
+# Makefile as a thin(?) wrapper of MyBuildTool and scripts in `scripts/`.
 #
 # USAGE:
 #    make
 #    make install
 #    make install-dev
+
+# FIXME: add scripts/test-std, scripts/test-stdio
 
 default: test
 
@@ -22,27 +24,29 @@ install-dev:
 bin/ninja:
 	scripts/install-ninja
 
+src/libmilonert/hashmap.h:
+	scripts/install-hashmap
+
 # ------------------------------------------------
 # MyBuildTool wrapper
 # ------------------------------------------------
 
-MY_BUILD := scripts/MyBuildTool/bin/Debug/net5.0/MyBuildTool
+MY_BUILD := src/MyBuildTool/bin/Debug/net6.0/MyBuildTool
 MY_BUILD_TIMESTAMP := target/.timestamp/my_build_tool
 
 .PHONY: dotnet_restore gen2 gen3 integration_tests my_build self test_self
 
-target/.timestamp/dotnet_restore: \
-		$(shell find src milone_libs -maxdepth 3 -name '*.fsproj')
+target/.timestamp/dotnet_restore: $(wildcard src/*/*.fsproj)
 	dotnet restore && mkdir -p $(shell dirname $@) && touch $@
 
 ${MY_BUILD_TIMESTAMP}: target/.timestamp/dotnet_restore \
-		$(wildcard scripts/MyBuildTool/*.fs) \
-		$(wildcard scripts/MyBuildTool/*.fsproj)
-	dotnet build -nologo scripts/MyBuildTool && mkdir -p $(shell dirname $@) && touch $@
+		$(wildcard src/MyBuildTool/*.fs) \
+		$(wildcard src/MyBuildTool/*.fsproj)
+	dotnet build -nologo src/MyBuildTool && mkdir -p $(shell dirname $@) && touch $@
 
 my_build: ${MY_BUILD_TIMESTAMP}
 
-install: ${MY_BUILD_TIMESTAMP}
+install: ${MY_BUILD_TIMESTAMP} bin/ninja
 	${MY_BUILD} self-install
 
 uninstall: ${MY_BUILD_TIMESTAMP}
@@ -52,11 +56,10 @@ pack: ${MY_BUILD_TIMESTAMP}
 	${MY_BUILD} pack
 
 target/milone: bin/ninja ${MY_BUILD_TIMESTAMP} \
-		runtime/milone.h \
-		runtime/milone.c \
-		runtime/milone_platform.c \
-		$(wildcard milone_libs/*/*.fs) \
-		$(wildcard milone_libs/*/*.milone) \
+		src/libmilonert/hashmap.h \
+		src/libmilonert/milone.h \
+		src/libmilonert/milone.c \
+		src/libmilonert/milone_platform.c \
 		$(wildcard src/*/*.fs) \
 		$(wildcard src/*/*.fsproj) \
 		$(wildcard src/*/*.milone)

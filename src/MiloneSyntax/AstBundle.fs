@@ -1,20 +1,18 @@
-/// # AST Bundle
-///
-/// Resolves dependencies between modules.
-/// This stage determines the set of modules in the project and the ordering of them.
-///
-/// These modules are combined into single HIR expression.
+// See docs/internals/ast_bundle.md
 module rec MiloneSyntax.AstBundle
 
 open MiloneShared.SharedTypes
 open MiloneShared.Util
-open MiloneSyntax.AstToHir
+open MiloneShared.UtilParallel
+open MiloneShared.UtilSymbol
+open Std.StdError
+open Std.StdSet
+open Std.StdMap
 open MiloneSyntax.Syntax
-open MiloneSyntax.Tir
+open MiloneSyntaxTypes.SyntaxTypes
 
-module TSet = MiloneStd.StdSet
-module TMap = MiloneStd.StdMap
-module S = MiloneStd.StdString
+module S = Std.StdString
+module NirGen = MiloneSyntax.NirGen
 
 // -----------------------------------------------
 // Utils
@@ -61,25 +59,20 @@ let private computeLayer
 // Types
 // -----------------------------------------------
 
-type private ProjectName = string
-type private ModuleName = string
 type private Error = string * Loc
 
 [<RequireQualifiedAccess; NoEquality; NoComparison>]
 type private ModuleRequest =
   { ProjectName: ProjectName
     ModuleName: ModuleName
-    Origin: Loc
-    Optional: bool }
+    Origin: Loc }
 
 [<RequireQualifiedAccess; NoEquality; NoComparison>]
 type private ModuleData =
   { Name: ModuleName
     Project: ProjectName
-    DocId: DocId
-    Ast: ARoot
+    SyntaxData: ModuleSyntaxData
     Deps: ModuleRequest list
-    SymbolCount: SymbolCount
     Errors: Error list }
 
 [<RequireQualifiedAccess; NoEquality; NoComparison>]
@@ -88,10 +81,10 @@ type private RequestResult =
   | Resolved of ModuleData
   | Failed
 
-type private RequestMap = TMap.TreeMap<ProjectName * ModuleName, RequestResult>
+type private RequestMap = TreeMap<ProjectName * ModuleName, RequestResult>
 
 // note: avoid using this function so that DocId can be computed by clients.
-let computeDocId (p: ProjectName) (m: ModuleName) : DocId = p + "." + m
+let computeDocId (p: ProjectName) (m: ModuleName) : DocId = Symbol.intern (p + "." + m)
 
 // -----------------------------------------------
 // ModuleRequest
@@ -100,26 +93,14 @@ let computeDocId (p: ProjectName) (m: ModuleName) : DocId = p + "." + m
 let private newRootRequest (docId: DocId) (p: ProjectName) (m: ModuleName) : ModuleRequest =
   { ProjectName = p
     ModuleName = m
-    Origin = Loc(docId, 0, 0)
-    Optional = false }
-
-let private newMiloneOnlyRequest (p: ProjectName) (originDocId: DocId) : ModuleRequest =
-  { ProjectName = p
-    ModuleName = "MiloneOnly"
-    Origin = Loc(originDocId, 0, 0)
-    Optional = true }
+    Origin = Loc(docId, 0, 0) }
 
 let private newDepRequest (p: ProjectName) (m: ModuleName) (originLoc: Loc) : ModuleRequest =
   { ProjectName = p
     ModuleName = m
-    Origin = originLoc
-    Optional = false }
+    Origin = originLoc }
 
-let private requestToNotFoundError (r: ModuleRequest) : Error option =
-  if not r.Optional then
-    Some("Module not found.", r.Origin)
-  else
-    None
+let private requestToNotFoundError (r: ModuleRequest) : Error = "Module not found.", r.Origin
 
 // -----------------------------------------------
 // Interface
@@ -140,8 +121,7 @@ let private addRequest (state: State) (request: ModuleRequest) : ModuleRequest o
 
   if not (TMap.containsKey key requestMap) then
     let state =
-      { state with
-          RequestMap = TMap.add key RequestResult.Requested requestMap }
+      { state with RequestMap = TMap.add key RequestResult.Requested requestMap }
 
     Some request, state
   else
@@ -150,12 +130,11 @@ let private addRequest (state: State) (request: ModuleRequest) : ModuleRequest o
 let private toModules (state: State) : ModuleData list =
   state.RequestMap
   |> TMap.toList
-  |> List.choose
-       (fun (_, r: RequestResult) ->
-         match r with
-         | RequestResult.Resolved moduleData -> Some moduleData
-         | RequestResult.Failed -> None
-         | RequestResult.Requested -> unreachable ())
+  |> List.choose (fun (_, r: RequestResult) ->
+    match r with
+    | RequestResult.Resolved moduleData -> Some moduleData
+    | RequestResult.Failed -> None
+    | RequestResult.Requested -> unreachable ())
 
 let private toErrors (state: State) : Error list =
   state
@@ -178,8 +157,7 @@ let private consumer (state: State) action : State * ModuleRequest list =
     match TMap.tryFind key requestMap with
     | Some RequestResult.Requested ->
       let state =
-        { state with
-            RequestMap = TMap.add key (RequestResult.Resolved m) requestMap }
+        { state with RequestMap = TMap.add key (RequestResult.Resolved m) requestMap }
 
       let requests, state = m.Deps |> List.mapFold addRequest state
 
@@ -196,9 +174,7 @@ let private consumer (state: State) action : State * ModuleRequest list =
         TMap.add key RequestResult.Failed requestMap
 
       let errors =
-        match requestToNotFoundError request with
-        | Some error -> error :: state.Errors
-        | None -> state.Errors
+        requestToNotFoundError request :: state.Errors
 
       let state =
         { state with
@@ -211,56 +187,42 @@ let private consumer (state: State) action : State * ModuleRequest list =
 
 let private producer (fetchModule: FetchModuleFun) (_: State) (r: ModuleRequest) : Future<Action> =
   fetchModule r.ProjectName r.ModuleName
-  |> Future.map
-       (fun result ->
-         match result with
-         | Some (docId, ast, errors) ->
-           let deps =
-             let dep1 =
-               if r.ModuleName <> "MiloneOnly" then
-                 [ newMiloneOnlyRequest r.ProjectName docId ]
-               else
-                 []
+  |> Future.map (fun result ->
+    match result with
+    | Some syntaxData ->
+      let docId, _, ast, errors = syntaxData
 
-             let otherDeps =
-               findDependentModules ast
-               |> List.map
-                    (fun (projectName, moduleName, pos) ->
-                      let originLoc =
-                        let y, x = pos
-                        Loc(docId, y, x)
+      let deps =
+        findDependentModules ast
+        |> List.map (fun (projectName, moduleName, pos) ->
+          let originLoc =
+            let y, x = pos
+            Loc(docId, y, x)
 
-                      newDepRequest projectName moduleName originLoc)
+          newDepRequest projectName moduleName originLoc)
 
-             List.append dep1 otherDeps
+      let errors =
+        errors
+        |> List.map (fun (msg, (y, x)) -> (msg, Loc(docId, y, x)))
 
-           let errors =
-             errors
-             |> List.map (fun (msg, (y, x)) -> (msg, Loc(docId, y, x)))
+      let m: ModuleData =
+        { Name = r.ModuleName
+          Project = r.ProjectName
+          SyntaxData = syntaxData
+          Deps = deps
+          Errors = errors }
 
-           let m: ModuleData =
-             { Name = r.ModuleName
-               Project = r.ProjectName
-               DocId = docId
-               Ast = ast
-               Deps = deps
-               SymbolCount = countSymbols ast
-               Errors = errors }
+      Action.DidFetchOk m
 
-           Action.DidFetchOk m
-
-         | None -> Action.DidFetchFail r)
+    | None -> Action.DidFetchFail r)
 
 // -----------------------------------------------
 // Interface
 // -----------------------------------------------
 
-type private SymbolCount = int
-type private ModuleSyntaxData = DocId * ARoot * (string * Pos) list
-type private FetchModuleFun = ProjectName -> ModuleName -> Future<ModuleSyntaxData option>
-type private BundleResult = TProgram list * NameCtx * Error list
+type private BundleResult = (ModuleSyntaxData * NRoot) list list * Error list
 
-let bundle (fetchModule: FetchModuleFun) (entryProjectName: string) : BundleResult =
+let bundle (fetchModule: FetchModuleFun) (entryProjectName: ProjectName) : BundleResult =
   let entryRequest =
     let p = entryProjectName
     let docId = computeDocId p p
@@ -273,15 +235,17 @@ let bundle (fetchModule: FetchModuleFun) (entryProjectName: string) : BundleResu
     mpscConcurrent consumer (producer fetchModule) state [ entryRequest ]
 
   let layers =
-    let comparer (l: ModuleData) (r: ModuleData) = compare l.DocId r.DocId
+    let comparer (l: ModuleData) (r: ModuleData) =
+      let l, _, _, _ = l.SyntaxData
+      let r, _, _, _ = r.SyntaxData
+      Symbol.compare l r
 
     let getDeps (m: ModuleData) =
       m.Deps
-      |> List.choose
-           (fun (r: ModuleRequest) ->
-             match TMap.tryFind (r.ProjectName, r.ModuleName) state.RequestMap with
-             | Some (RequestResult.Resolved m) -> Some m
-             | _ -> None)
+      |> List.choose (fun (r: ModuleRequest) ->
+        match TMap.tryFind (r.ProjectName, r.ModuleName) state.RequestMap with
+        | Some (RequestResult.Resolved m) -> Some m
+        | _ -> None)
 
     state
     |> toModules
@@ -289,68 +253,35 @@ let bundle (fetchModule: FetchModuleFun) (entryProjectName: string) : BundleResu
 
   let errors = state |> toErrors
 
-  // Allocate serials for all modules.
-  let layers, lastSerial =
-    layers
-    |> List.mapFold
-         (fun (serial: int) layer ->
-           layer
-           |> List.mapFold
-                (fun (serial: int) (moduleData: ModuleData) ->
-                  let endSerial = serial + moduleData.SymbolCount
-                  (serial, moduleData), endSerial)
-                serial)
-         0
-
-  // Convert to TIR.
+  // Convert to NIR.
   let layers =
     layers
-    |> __parallelMap
-         (fun modules ->
-           modules
-           |> __parallelMap
-                (fun (serial: Serial, moduleData: ModuleData) ->
-                  let moduleName = moduleData.Name
-                  let projectName = moduleData.Project
-                  let docId = moduleData.DocId
-                  let ast = moduleData.Ast
-                  let symbolCount = moduleData.SymbolCount
+    |> __parallelMap (fun modules ->
+      modules
+      |> __parallelMap (fun (moduleData: ModuleData) ->
+        let projectName = moduleData.Project
+        let moduleName = moduleData.Name
+        let syntaxData = moduleData.SyntaxData
+        let docId, _, ast, _ = syntaxData
 
-                  let exprs, nameCtx =
-                    let nameCtx = AhNameCtx(serial, [])
-                    astToHir projectName docId (ast, nameCtx)
+        let nir, logs =
+          NirGen.genNir projectName moduleName docId ast
 
-                  let (AhNameCtx (lastSerial, _)) = nameCtx
+        syntaxData, nir, logs))
 
-                  //  printfn
-                  //    "%s expect: %d..%d (%d) actual: %d..%d (%d)"
-                  //    docId
-                  //    serial
-                  //    (serial + symbolCount)
-                  //    symbolCount
-                  //    serial
-                  //    lastSerial
-                  //    (lastSerial - serial)
+  let errors =
+    let errors2 =
+      layers
+      |> List.collect (
+        List.collect (fun (_, _, logs) ->
+          logs
+          |> List.map (fun (log, loc) -> NirGen.nirGenLogToString log, loc))
+      )
 
-                  assert (lastSerial - serial = symbolCount)
+    List.append errors errors2
 
-                  (projectName, moduleName, exprs), nameCtx))
-
-  let layers, identMap =
+  let layers =
     layers
-    |> List.mapFold
-         (fun nameCtx modules ->
-           modules
-           |> List.mapFold
-                (fun identMap (m, nameCtx) ->
-                  let _, identMap =
-                    nameCtx
-                    |> nameCtxFold (fun map serial ident -> TMap.add serial ident map) identMap
+    |> List.map (List.map (fun (syntaxData, nir, _) -> syntaxData, nir))
 
-                  m, identMap)
-                nameCtx)
-         (TMap.empty compare)
-
-  let nameCtx = NameCtx(identMap, lastSerial)
-
-  layers, nameCtx, errors
+  layers, errors

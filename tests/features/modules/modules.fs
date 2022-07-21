@@ -11,7 +11,7 @@ let main _ =
     | Int x -> x
 
     // nav pattern of imported type
-    | Val.Str _ -> 0
+    | Val.String _ -> 0
 
   // `sub.f` is imported
   let m = f n

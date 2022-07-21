@@ -1,48 +1,54 @@
-#include "milone.h"
+#include <stdio.h>
+#include <stdlib.h>
+#include <milone.h>
 
 struct BoxedVariant_;
 
-struct BoxedVariantOption_;
+struct BoxedVariantoption1_;
 
-struct BoxedVariantOption_BoxedVariant_Fun1;
+typedef struct BoxedVariant_(*VoidConstPtrBoxedVariantoption1_BoxedVariant_FunPtr2)(void const *, struct BoxedVariantoption1_);
 
-struct BoxedVariant_ variant_fun_auto_boxing_bug_Program_feedNil(struct BoxedVariantOption_BoxedVariant_Fun1 f_);
+struct BoxedVariantoption1_BoxedVariant_Fun1;
 
-int milone_main(void);
+struct BoxedVariant_ variant_fun_auto_boxing_bug_variant_fun_auto_boxing_bug_feedNil(struct BoxedVariantoption1_BoxedVariant_Fun1 f_);
+
+int main(int argc, char **argv);
 
 enum BoxedVariant_Discriminant {
-    A_,
+    BoxedVariant_A,
 };
 
 struct BoxedVariant_ {
     enum BoxedVariant_Discriminant discriminant;
     union {
-        void const* A_;
+        void const *BoxedVariant_A;
     };
 };
 
-enum BoxedVariantOption_Discriminant {
-    None_,
-    Some_,
+enum BoxedVariantoption1_Discriminant {
+    BoxedVariantoption1_None,
+    BoxedVariantoption1_Some,
 };
 
-struct BoxedVariantOption_ {
-    enum BoxedVariantOption_Discriminant discriminant;
+struct BoxedVariantoption1_ {
+    enum BoxedVariantoption1_Discriminant discriminant;
     union {
-        struct BoxedVariant_ Some_;
+        struct BoxedVariant_ BoxedVariantoption1_Some;
     };
 };
 
-struct BoxedVariantOption_BoxedVariant_Fun1 {
-    struct BoxedVariant_(*fun)(void const*, struct BoxedVariantOption_);
-    void const* env;
+struct BoxedVariantoption1_BoxedVariant_Fun1 {
+    VoidConstPtrBoxedVariantoption1_BoxedVariant_FunPtr2 fun;
+    void const *env;
 };
 
-struct BoxedVariant_ variant_fun_auto_boxing_bug_Program_feedNil(struct BoxedVariantOption_BoxedVariant_Fun1 f_) {
-    struct BoxedVariant_ app_ = f_.fun(f_.env, (struct BoxedVariantOption_){.discriminant = None_});
+struct BoxedVariant_ variant_fun_auto_boxing_bug_variant_fun_auto_boxing_bug_feedNil(struct BoxedVariantoption1_BoxedVariant_Fun1 f_) {
+    struct BoxedVariant_ app_;
+    app_ = f_.fun(f_.env, (struct BoxedVariantoption1_){.discriminant = BoxedVariantoption1_None});
     return app_;
 }
 
-int milone_main(void) {
+int main(int argc, char **argv) {
+    milone_start(argc, argv);
     return 0;
 }

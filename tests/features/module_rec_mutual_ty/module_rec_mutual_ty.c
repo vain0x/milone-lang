@@ -1,69 +1,75 @@
-#include "milone.h"
+#include <stdio.h>
+#include <stdlib.h>
+#include <milone.h>
 
-struct UnitList;
-
-struct UnitList;
-
-struct UnionX_;
-
-struct RecA_ListList;
+struct RecA_ListCons;
 
 struct RecA_;
 
-int milone_main(void);
+struct UnitCons;
 
-struct UnitList {
+struct UnitCons;
+
+struct UnionX_;
+
+int main(int argc, char **argv);
+
+enum RecA_Discriminant {
+    RecA_T,
+};
+
+struct RecA_ {
+    enum RecA_Discriminant discriminant;
+    union {
+        struct RecA_ListCons const *RecA_T;
+    };
+};
+
+struct UnitCons {
     char head;
-    struct UnitList const* tail;
+    struct UnitCons const *tail;
 };
 
 enum UnionX_Discriminant {
-    VariantX_,
-    VariantY_,
+    UnionX_VariantX,
+    UnionX_VariantY,
 };
 
 struct UnionX_ {
     enum UnionX_Discriminant discriminant;
 };
 
-enum RecA_Discriminant {
-    T_2,
-};
-
-struct RecA_ {
-    enum RecA_Discriminant discriminant;
-    union {
-        struct RecA_ListList const* T_2;
-    };
-};
-
-int milone_main(void) {
-    struct UnitList const* list_ = milone_mem_alloc(1, sizeof(struct UnitList));
-    (*(((struct UnitList*)list_))) = (struct UnitList){.head = 0, .tail = NULL};
+int main(int argc, char **argv) {
+    milone_start(argc, argv);
+    struct RecA_ useRecA_;
+    struct UnitCons const *list_;
     char switch_;
-    switch ((struct UnionX_){.discriminant = VariantY_}.discriminant) {
-        case VariantX_:
+    struct RecA_ variant_;
+    char match_;
+    list_ = ((struct UnitCons const *)milone_region_alloc(1, sizeof(struct UnitCons)));
+    (*(((struct UnitCons *)list_))) = (struct UnitCons){.head = 0, .tail = NULL};
+    switch ((struct UnionX_){.discriminant = UnionX_VariantY}.discriminant) {
+        case UnionX_VariantX:
             goto clause_2;
 
         default:
             goto clause_3;
     }
 clause_2:;
-    milone_assert(false, 19, 4);
+    if (true) milone_assert_error("module_rec_mutual_ty/module_rec_mutual_ty.milone", 19, 4);
     switch_ = 0;
     goto switch_next_1;
 clause_3:;
     switch_ = 0;
     goto switch_next_1;
 switch_next_1:;
-    struct RecA_ variant_ = (struct RecA_){.discriminant = T_2, .T_2 = NULL};
-    struct RecA_ useRecA_ = variant_;
-    char match_;
-    if ((!((!(useRecA_.T_2))))) goto next_5;
+    variant_ = (struct RecA_){.discriminant = RecA_T, .RecA_T = NULL};
+    useRecA_ = variant_;
+    if ((!((!(useRecA_.RecA_T))))) goto next_5;
     match_ = 0;
     goto end_match_4;
 next_5:;
-    milone_assert(false, 26, 9);
+    if (true) milone_assert_error("module_rec_mutual_ty/module_rec_mutual_ty.milone", 26, 9);
     match_ = 0;
     goto end_match_4;
 next_6:;

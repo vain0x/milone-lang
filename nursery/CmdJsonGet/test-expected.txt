@@ -1,0 +1,9 @@
+42
+"Hello"
+false
+"3.14"
+2
+{"type":"null","value":null}
+null
+{"type":"boolean","value":true}
+true

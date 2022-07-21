@@ -4,7 +4,7 @@ set -eu
 
 CC=${CC:-gcc}
 MILONE_HOME=${MILONE_HOME:-"${HOME}/.milone"}
-MILONE_RUNTIME="$MILONE_HOME/runtime"
+MILONE_RUNTIME="$MILONE_HOME/src/libmilonert"
 
 $CC -std=gnu11 -g \
     -fsanitize=undefined \
@@ -18,6 +18,7 @@ $CC -std=gnu11 -g \
     $(pkg-config --cflags --libs gtk+-3.0) \
     -I$MILONE_RUNTIME \
     "$MILONE_RUNTIME/milone.c" \
+    "$MILONE_RUNTIME/milone_platform.c" \
     app_gtk.c \
     target/app_gtk.c \
     -o target/app \

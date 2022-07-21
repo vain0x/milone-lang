@@ -1,0 +1,78 @@
+open Std.ByteVector
+open Std.StdTesting
+open Std.Vector
+
+let private basicCase () =
+  let b = ByteVector.zeroCreate 3
+  let length, b = Vector.length b
+  assert (length = 3)
+
+  let b = Vector.forceSet 0 (byte 'H') b
+  let b = Vector.forceSet 1 (byte 'i') b
+  let b = Vector.forceSet 2 (byte '!') b
+
+  let s, b = ByteVector.sliceToString 0 3 b
+  assert (s = "Hi!")
+
+  Vector.dispose b
+
+let private writeStringCase () =
+  let b = ByteVector.zeroCreate 0
+
+  let b = ByteVector.writeString "Hello" b
+  let length, b = Vector.length b
+  assert (length = 5)
+
+  let b = ByteVector.writeString ", world!" b
+  let length, b = Vector.length b
+  assert (length = 13)
+
+  Vector.dispose b
+
+let private writeIntCase () =
+  let b =
+    Vector.empty ()
+    |> ByteVector.writeInt 42
+    |> Vector.push (byte ' ')
+    |> ByteVector.writeInt (-1)
+
+  let s, b = ByteVector.sliceToString 0 5 b
+  assert (shouldEqual id "42 -1" s)
+  Vector.dispose b
+
+let private writeFloatCase () =
+  let b =
+    Vector.empty ()
+    |> ByteVector.writeFloat 42.195
+    |> Vector.push (byte ' ')
+    |> ByteVector.writeFloat (10.0 / 7.0)
+    |> Vector.push (byte ' ')
+    |> ByteVector.writeFloat (-12.5)
+    |> Vector.push (byte ' ')
+    |> ByteVector.writeFloat 6.02e23
+    |> Vector.push (byte ' ')
+    |> ByteVector.writeFloat 6.02e-23
+
+  let length, b = Vector.length b
+  let s, b = ByteVector.sliceToString 0 length b
+  assert (shouldEqual id "42.195000 1.428571 -12.500000 601999999999999995805696.000000 0.000000" s)
+  Vector.dispose b
+
+let private writeBoolCase () =
+  let b =
+    Vector.empty ()
+    |> ByteVector.writeBool false
+    |> Vector.push (byte ' ')
+    |> ByteVector.writeBool true
+
+  let length, b = Vector.length b
+  let s, b = ByteVector.sliceToString 0 length b
+  assert (shouldEqual id "False True" s)
+  Vector.dispose b
+
+let testByteVector () =
+  basicCase ()
+  writeStringCase ()
+  writeIntCase ()
+  writeFloatCase ()
+  writeBoolCase ()

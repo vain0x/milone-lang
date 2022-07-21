@@ -1,10 +1,13 @@
-#include "milone.h"
+#include <stdio.h>
+#include <stdlib.h>
+#include <milone.h>
 
-int module_dependencies_root_root(void);
+int32_t module_dependencies_root_root(void);
 
-int module_dependencies_third_third(void);
+int32_t module_dependencies_third_third(void);
 
-int module_dependencies_third_third(void) {
-    int call_1 = module_dependencies_root_root();
-    return call_1;
+int32_t module_dependencies_third_third(void) {
+    int32_t call_;
+    call_ = module_dependencies_root_root();
+    return call_;
 }

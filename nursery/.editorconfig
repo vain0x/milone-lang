@@ -1,0 +1,37 @@
+root = true
+
+[*.{c,cc,cpp,cxx,h,hh,hpp,hxx}]
+indent_size = 4
+insert_final_newline = true
+trim_trailing_whitespace = true
+charset = utf-8
+
+[*.{fs,fsx,milone}]
+indent_size = 2
+insert_final_newline = true
+trim_trailing_whitespace = true
+charset = utf-8
+
+[*.json]
+insert_final_newline = true
+trim_trailing_whitespace = true
+
+[*.md]
+indent_size = 4
+insert_final_newline = true
+trim_trailing_whitespace = true
+
+[*.rs]
+indent_size = 4
+insert_final_line = true
+trim_trailing_whitespace = true
+
+[*.yml]
+indent_size = 2
+insert_final_newline = true
+trim_trailing_whitespace = true
+
+[milone_manifest]
+indent_size = 2
+insert_final_newline = true
+trim_trailing_whitespace = true

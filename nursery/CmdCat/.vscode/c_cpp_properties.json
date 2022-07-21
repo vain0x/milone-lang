@@ -4,7 +4,7 @@
             "name": "Linux",
             "includePath": [
                 "${workspaceFolder}/**",
-                "${workspaceFolder}/../../runtime"
+                "${workspaceFolder}/../../src/libmilonert"
             ],
             "defines": [],
             "compilerPath": "/usr/bin/gcc",

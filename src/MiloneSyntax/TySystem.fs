@@ -9,10 +9,12 @@ open MiloneShared.SharedTypes
 open MiloneShared.TypeFloat
 open MiloneShared.TypeIntegers
 open MiloneShared.Util
+open Std.StdError
+open Std.StdMap
 open MiloneSyntax.Tir
+open MiloneSyntaxTypes.TirTypes
 
-module TMap = MiloneStd.StdMap
-module S = MiloneStd.StdString
+module S = Std.StdString
 
 // -----------------------------------------------
 // Tk
@@ -36,38 +38,35 @@ let private tkEncode tk : int =
   | FloatTk flavor -> pair 2 (floatFlavorToOrdinary flavor)
   | BoolTk -> just 3
   | CharTk -> just 4
-  | StrTk -> just 5
+  | StringTk -> just 5
   | ObjTk -> just 6
   | FunTk -> just 7
   | TupleTk -> just 8
-  | OptionTk -> just 9
   | ListTk -> just 10
 
-  | VoidTk -> just 11
-  | NativePtrTk isMut -> pair 12 (isMutToInt isMut)
-  | NativeFunTk -> just 13
+  | OwnTk -> just 11
+  | VoidPtrTk isMut -> pair 12 (isMutToInt isMut)
+  | NativePtrTk mode -> pair 13 (RefMode.toInt mode)
+  | NativeFunTk -> just 14
 
   | MetaTk (tySerial, _) -> pair 20 tySerial
+  | UnivTk (tySerial, _, _) -> pair 24 tySerial
   | SynonymTk tySerial -> pair 21 tySerial
-  | UnionTk tySerial -> pair 22 tySerial
-  | RecordTk tySerial -> pair 23 tySerial
+  | UnionTk (tySerial, _) -> pair 22 tySerial
+  | RecordTk (tySerial, _) -> pair 23 tySerial
 
   | NativeTypeTk _
-  | UnresolvedTk _
-  | UnresolvedVarTk _ -> unreachable ()
+  | InferTk _ -> unreachable ()
 
 let tkCompare l r : int =
   match l, r with
   | NativeTypeTk l, NativeTypeTk r -> compare l r
-
   | NativeTypeTk _, _ -> -1
   | _, NativeTypeTk _ -> 1
 
-  | UnresolvedTk (lQuals, lSerial), UnresolvedTk (rQuals, rSerial) ->
-    pairCompare (listCompare compare) compare (lQuals, lSerial) (rQuals, rSerial)
-
-  | UnresolvedTk _, _ -> -1
-  | _, UnresolvedTk _ -> 1
+  | InferTk _, InferTk _ -> 0
+  | InferTk _, _ -> -1
+  | _, InferTk _ -> 1
 
   | _ -> tkEncode l - tkEncode r
 
@@ -75,28 +74,30 @@ let tkEqual l r : bool = tkCompare l r = 0
 
 let tkDisplay getTyName tk =
   match tk with
-  | ErrorTk loc -> "{error}@" + locToString loc
+  | ErrorTk loc -> "{error}@" + Loc.toString loc
   | IntTk flavor -> fsharpIntegerTyName flavor
   | FloatTk flavor -> fsharpFloatTyName flavor
   | BoolTk -> "bool"
   | CharTk -> "char"
-  | StrTk -> "string"
+  | StringTk -> "string"
   | ObjTk -> "obj"
   | FunTk -> "fun"
   | TupleTk -> "tuple"
-  | OptionTk -> "option"
   | ListTk -> "list"
-  | VoidTk -> "void"
-  | NativePtrTk IsMut -> "nativeptr"
-  | NativePtrTk IsConst -> "__constptr"
+  | OwnTk -> "Own"
+  | VoidPtrTk IsMut -> "voidptr"
+  | VoidPtrTk IsConst -> "VoidInPtr"
+  | NativePtrTk RefMode.ReadWrite -> "nativeptr"
+  | NativePtrTk RefMode.ReadOnly -> "InPtr"
+  | NativePtrTk RefMode.WriteOnly -> "OutPtr"
   | NativeFunTk -> "__nativeFun"
   | NativeTypeTk _ -> "__nativeType"
   | MetaTk (tySerial, _) -> getTyName tySerial
+  | UnivTk (_, name, _) -> name
   | SynonymTk tySerial -> getTyName tySerial
-  | RecordTk tySerial -> getTyName tySerial
-  | UnionTk tySerial -> getTyName tySerial
-  | UnresolvedTk (_, serial) -> "?" + string serial
-  | UnresolvedVarTk (serial, _) -> "'" + string serial
+  | RecordTk (tySerial, _) -> getTyName tySerial
+  | UnionTk (tySerial, _) -> getTyName tySerial
+  | InferTk _ -> "_"
 
 // -----------------------------------------------
 // Traits (HIR)
@@ -110,11 +111,13 @@ let traitMapTys f it =
   | IndexTrait (lTy, rTy, resultTy) -> IndexTrait(f lTy, f rTy, f resultTy)
   | IsIntTrait ty -> IsIntTrait(f ty)
   | IsNumberTrait ty -> IsNumberTrait(f ty)
-  | ToCharTrait ty -> ToCharTrait(f ty)
-  | ToIntTrait ty -> ToIntTrait(f ty)
+  | ToIntTrait (flavor, ty) -> ToIntTrait(flavor, f ty)
   | ToFloatTrait ty -> ToFloatTrait(f ty)
+  | ToCharTrait ty -> ToCharTrait(f ty)
   | ToStringTrait ty -> ToStringTrait(f ty)
   | PtrTrait ty -> PtrTrait(f ty)
+  | PtrSizeTrait ty -> PtrSizeTrait(f ty)
+  | PtrCastTrait (lTy, rTy) -> PtrCastTrait(f lTy, f rTy)
 
 // -----------------------------------------------
 // Types (HIR/MIR)
@@ -131,6 +134,19 @@ let tyCompare l r =
       listCompare tyCompare lTyArgs rTyArgs
 
 let tyEqual l r = tyCompare l r = 0
+
+/// Gets if the type is monomorphic.
+/// Assume all bound type variables are substituted.
+let tyIsMonomorphic ty : bool =
+  let rec go tys =
+    match tys with
+    | [] -> true
+
+    | Ty (MetaTk _, _) :: _ -> false
+
+    | Ty (_, tys1) :: tys2 -> go tys1 && go tys2
+
+  go [ ty ]
 
 /// Gets if the specified type variable doesn't appear in a type.
 let private tyIsFreeIn ty tySerial : bool =
@@ -180,7 +196,11 @@ let tySubst (substMeta: TySerial -> Ty option) ty =
     | Ty (MetaTk (tySerial, _), _) ->
       match substMeta tySerial with
       | Some ty -> go ty
+      | None -> ty
 
+    | Ty (UnivTk (tySerial, _, _), _) ->
+      match substMeta tySerial with
+      | Some ty -> go ty
       | None -> ty
 
     | Ty (_, []) -> ty
@@ -226,10 +246,19 @@ let tyExpandSynonyms (expand: TySerial -> TyDef option) ty : Ty =
 /// For example, `let f x = (let g = f in g x)` will have too generic type
 /// without this checking (according to TaPL).
 let tyGeneralize (isOwned: TySerial -> bool) (ty: Ty) : TyScheme =
-  let fvs =
-    tyCollectFreeVars ty |> List.filter isOwned
+  let collectMetaAndUniv ty =
+    let rec go acc ty =
+      match ty with
+      | Ty (MetaTk (serial, _), _) -> serial :: acc
+      | Ty (UnivTk (serial, _, _), _) -> serial :: acc
+      | Ty (_, tyArgs) -> tyArgs |> List.fold go acc
 
-  TyScheme(fvs, ty)
+    go [] ty |> listUnique compare
+
+  let tyVars =
+    collectMetaAndUniv ty |> List.filter isOwned
+
+  TyScheme(tyVars, ty)
 
 /// Converts a type to human readable string.
 let tyDisplay getTyName ty =
@@ -262,18 +291,17 @@ let tyDisplay getTyName ty =
       + (itemTys |> List.map (go 20) |> S.concat " * ")
       + ")"
 
-    | Ty (OptionTk, [ itemTy ]) -> paren 30 (go 30 itemTy + " option")
-
     | Ty (ListTk, [ itemTy ]) -> paren 30 (go 30 itemTy + " list")
 
     | Ty (MetaTk (tySerial, loc), _) ->
       match getTyName tySerial with
-      | Some name -> "{" + name + "}@" + locToString loc
-      | None -> "{?" + string tySerial + "}@" + locToString loc
+      | Some name -> "{" + name + "}@" + Loc.toString loc
+      | None -> "{?" + string tySerial + "}@" + Loc.toString loc
 
+    | Ty (UnivTk (_, name, _), _) -> name
     | Ty (SynonymTk tySerial, args) -> nominal tySerial args
-    | Ty (UnionTk tySerial, args) -> nominal tySerial args
-    | Ty (RecordTk tySerial, args) -> nominal tySerial args
+    | Ty (UnionTk (tySerial, _), args) -> nominal tySerial args
+    | Ty (RecordTk (tySerial, _), args) -> nominal tySerial args
 
     | Ty (tk, args) ->
       let tk = tkDisplay (fun _ -> unreachable ()) tk
@@ -286,112 +314,14 @@ let tyDisplay getTyName ty =
 
   go 0 ty
 
-/// Generates a unique name from a type.
-///
-/// Must be used after successful Typing.
-let tyMangle (ty: Ty, memo: AssocMap<Ty, string>) : string * AssocMap<Ty, string> =
-  let rec go ty ctx =
-    let (Ty (tk, tyArgs)) = ty
-
-    let mangleList tys ctx =
-      (tys, ctx)
-      |> stMap (fun (ty, ctx) -> ctx |> go ty)
-
-    let fixedGeneric (name: string) =
-      let tyArgs, ctx = mangleList tyArgs ctx
-      S.concat "" tyArgs + name, ctx
-
-    let variadicGeneric (name: string) =
-      let arity = List.length tyArgs
-      let tyArgs, ctx = mangleList tyArgs ctx
-      S.concat "" tyArgs + (name + string arity), ctx
-
-    let doMangle () : string * AssocMap<_, _> =
-      match tk with
-      | IntTk flavor -> cIntegerTyPascalName flavor, ctx
-      | FloatTk flavor -> cFloatTyPascalName flavor, ctx
-      | BoolTk -> "Bool", ctx
-      | CharTk -> "Char", ctx
-      | StrTk -> "String", ctx
-
-      | MetaTk _
-      | ObjTk -> "Object", ctx
-
-      | TupleTk when List.isEmpty tyArgs -> "Unit", ctx
-      | TupleTk -> variadicGeneric "Tuple"
-
-      | OptionTk -> fixedGeneric "Option"
-      | ListTk -> fixedGeneric "List"
-
-      | VoidTk -> "Void", ctx
-      | NativePtrTk IsConst -> fixedGeneric "ConstPtr"
-      | NativePtrTk IsMut -> fixedGeneric "MutPtr"
-      | NativeFunTk -> variadicGeneric "NativeFun"
-      | NativeTypeTk name -> name, ctx
-
-      | FunTk ->
-        let arity, argTys, resultTy = tyToArgList ty
-
-        let argTys, ctx = mangleList argTys ctx
-        let resultTy, ctx = ctx |> go resultTy
-
-        let funTy =
-          (argTys |> strConcat)
-          + resultTy
-          + "Fun"
-          + string arity
-
-        funTy, ctx
-
-      | UnionTk _
-      | RecordTk _ -> unreachable () // Must be stored in memo.
-
-      | ErrorTk _
-      | SynonymTk _ -> unreachable () // Resolved in Typing.
-
-      | UnresolvedTk _
-      | UnresolvedVarTk _ -> unreachable () // Resolved in NameRes..
-
-    // Memoization.
-    match TMap.tryFind ty ctx with
-    | Some name -> name, ctx
-
-    | None ->
-      let name, ctx = doMangle ()
-      name, TMap.add ty name ctx
-
-  go ty memo
-
 // -----------------------------------------------
 // Context-free functions
 // -----------------------------------------------
 
-let private getLevel tyLevels levelChanges tySerial : Level =
-  match levelChanges |> TMap.tryFind tySerial with
-  | Some level -> level
-  | _ ->
-    tyLevels
-    |> TMap.tryFind tySerial
-    |> Option.defaultValue 0
-
-let private metaTyIsBound tys binding tySerial : bool =
-  TMap.containsKey tySerial binding
-  || (match tys |> TMap.tryFind tySerial with
-      | Some (MetaTyDef _) -> true
-      | _ -> false)
-
-let private tyExpandMeta tys binding tySerial : Ty option =
-  match binding |> TMap.tryFind tySerial with
-  | (Some _) as it -> it
-  | _ ->
-    match tys |> TMap.tryFind tySerial with
-    | Some (MetaTyDef ty) -> Some ty
-    | _ -> None
-
 let doInstantiateTyScheme
   (serial: int)
   (level: Level)
-  (tyLevels: AssocMap<TySerial, Level>)
+  (tyLevels: TreeMap<TySerial, Level>)
   (tySerials: TySerial list)
   (ty: Ty)
   (loc: Loc)
@@ -454,6 +384,9 @@ let unifyNext (lTy: Ty) (rTy: Ty) (loc: Loc) : UnifyResult =
     | _, Ty (SynonymTk tySerial, tyArgs) -> UnifyExpandSynonym(tySerial, tyArgs, lTy)
     | _ -> unreachable ()
 
+  | Ty (ErrorTk _, _), _
+  | _, Ty (ErrorTk _, _) -> UnifyOk
+
   | _ -> mismatchError ()
 
 [<RequireQualifiedAccess>]
@@ -471,8 +404,6 @@ let unifyAfterExpandMeta lTy rTy tySerial otherTy loc =
     UnifyAfterExpandMetaResult.Error(Log.TyUnify(TyUnifyLog.SelfRec, lTy, rTy), loc)
 
   | _ -> UnifyAfterExpandMetaResult.OkBind
-
-let typingSubst tys binding ty : Ty = tySubst (tyExpandMeta tys binding) ty
 
 let typingExpandSynonyms tys ty =
   tyExpandSynonyms (fun tySerial -> tys |> TMap.tryFind tySerial) ty

@@ -1,0 +1,127 @@
+// Provides functions to read from standard input
+// for competitive programming.
+
+module rec Competitive.Scan
+
+open Std.IO
+
+__nativeDecl
+  """
+    #include <string.h>
+    #include <stdio.h>
+  """
+
+// -----------------------------------------------
+// Basic scanners
+// -----------------------------------------------
+
+let scanInt (io: IO) : int * IO =
+  __nativeStmt
+    """
+      int value;
+      int _n = scanf("%d", &value);
+    """
+
+  __nativeExpr "(int32_t)value", io
+
+let scanInt64 (io: IO) : int64 * IO =
+  __nativeStmt
+    """
+      long long value;
+      int _n = scanf("%lld", &value);
+    """
+
+  __nativeExpr "(int64_t)value", io
+
+let scanFloat (io: IO) : float * IO =
+  __nativeStmt
+    """
+      double value;
+      int _n = scanf("%lf", &value);
+    """
+
+  __nativeExpr "value", io
+
+let scanChar (io: IO) : char * IO =
+  __nativeStmt
+    """
+      char value;
+      int _n = scanf("%c", &value);
+    """
+
+  __nativeExpr "value", io
+
+/// Scans a word from standard input.
+/// Input is delimited by whitespace.
+///
+/// Input is truncated to 500 byte including NUL.
+let scanWord (io: IO) : string * IO =
+  __nativeStmt
+    """
+      char buf[503];
+      int _n = scanf("%500s", buf);
+      struct String s = string_of_c_str(buf);
+    """
+
+  __nativeExpr "s", io
+
+/// Scans a line from standard input.
+/// Trailing newline is removed.
+///
+/// Input is truncated to 4000 byte excluding newline and NUL.
+let scanLine (io: IO) : string * IO =
+  __nativeStmt
+    """
+      char buf[4003];
+      char *p = fgets(buf, 4000, stdin);
+      if (!p) {
+        fprintf(stderr, "scanLine failed\n");
+        exit(1);
+      }
+      size_t len = strlen(buf);
+      if (len >= 2 && buf[len - 2] == '\r' && buf[len - 1] == '\n') {
+        len -= 2;
+      } else if (len >= 1 && buf[len - 1] == '\n') {
+        len--;
+      }
+      struct String s = string_of_raw_parts(buf, len);
+    """
+
+  __nativeExpr "s", io
+
+// -----------------------------------------------
+// Scanner combinators
+// -----------------------------------------------
+
+type private Scanner<'T> = IO -> 'T * IO
+
+/// Scans two values.
+///
+/// ```fsharp
+///   let (n, m), io = scanT2 scanInt scanInt io
+/// ```
+let scanT2 (scanner0: Scanner<'T>) (scanner1: Scanner<'U>) (io: IO) : ('T * 'U) * IO =
+  let x0, io = scanner0 io
+  let x1, io = scanner1 io
+  (x0, x1), io
+
+let scanT3 (scanner0: Scanner<_>) (scanner1: Scanner<_>) (scanner2: Scanner<_>) (io: IO) =
+  let x0, io = scanner0 io
+  let x1, io = scanner1 io
+  let x2, io = scanner2 io
+  (x0, x1, x2), io
+
+/// Scans the number of times equal to the specified value, from standard input.
+///
+/// ```fsharp
+///   let xs, io = scanList scanInt 10 io
+/// ```
+let scanList (scanner: Scanner<'T>) (len: int) (io: IO) : 'T list * IO =
+  let rec go io acc i =
+    if i < len then
+      let x, io = scanner io
+      go io (x :: acc) (i + 1)
+    else
+      List.rev acc, io
+
+  go io [] 0

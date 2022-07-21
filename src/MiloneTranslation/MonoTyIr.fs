@@ -4,8 +4,9 @@ module rec MiloneTranslation.MonoTyIr
 open MiloneShared.SharedTypes
 open MiloneShared.TypeIntegers
 open MiloneShared.TypeFloat
+open Std.StdMap
 
-module Hir = MiloneTranslation.Hir
+module Hir = MiloneTranslationTypes.HirTypes
 
 // Same as HIR but type is mono ty (monomorphized).
 type private Ty = MonoTy
@@ -26,15 +27,15 @@ type MonoTy =
   | UnitMt
   | BoolMt
   | CharMt
-  | StrMt
+  | StringMt
   | ObjMt
 
   | FunMt of MonoTy list
   | ListMt of MonoTy
 
   // FFI types.
-  | VoidMt
-  | NativePtrMt of IsMut * MonoTy
+  | VoidPtrMt of IsMut
+  | NativePtrMt of RefMode * MonoTy
   | NativeFunMt of MonoTy list
   | NativeTypeMt of cCode: string
 
@@ -45,7 +46,14 @@ type MonoTy =
 [<NoEquality; NoComparison>]
 type TyDef =
   | UnionTyDef of Ident * tyArgs: TySerial list * VariantSerial list * Loc
-  | RecordTyDef of Ident * fields: (Ident * Ty * Loc) list * Loc
+  | RecordTyDef of Ident * fields: (Ident * Ty * Loc) list * IsCRepr * Loc
+
+[<RequireQualifiedAccess; NoEquality; NoComparison>]
+type VarDef =
+  { Name: Ident
+    Ty: Ty
+    Linkage: Linkage
+    Loc: Loc }
 
 [<RequireQualifiedAccess; NoEquality; NoComparison>]
 type FunDef =
@@ -54,7 +62,7 @@ type FunDef =
     Ty: Ty
     Abi: FunAbi
     Linkage: Linkage
-    ParentOpt: FunSerial option
+    Prefix: string list
     Loc: Loc }
 
 [<RequireQualifiedAccess; NoEquality; NoComparison>]
@@ -78,7 +86,7 @@ type HPat =
   | HDiscardPat of Ty * Loc
 
   /// Variable pattern.
-  | HVarPat of Vis * VarSerial * Ty * Loc
+  | HVarPat of VarSerial * Ty * Loc
 
   /// Variant name pattern.
   | HVariantPat of VariantSerial * Ty * Loc
@@ -113,7 +121,22 @@ type HExpr =
   | HNodeExpr of HExprKind * HExpr list * Ty * Loc
 
   /// Evaluate a list of expressions and returns the last, e.g. `x1; x2; ...; y`.
-  | HBlockExpr of HExpr list * HExpr
+  | HBlockExpr of HStmt list * HExpr
 
-  | HLetValExpr of pat: HPat * init: HExpr * next: HExpr * Ty * Loc
-  | HLetFunExpr of FunSerial * IsRec * Vis * args: HPat list * body: HExpr * next: HExpr * Ty * Loc
+/// Statement in HIR.
+[<NoEquality; NoComparison>]
+type HStmt =
+  | HExprStmt of HExpr
+  | HLetValStmt of HPat * init: HExpr * Loc
+  | HLetFunStmt of FunSerial * argPats: HPat list * body: HExpr * Loc
+  | HNativeDeclStmt of cCode: string * args: HExpr list * Loc
+
+/// Module. Variable info is reduced.
+[<RequireQualifiedAccess; NoEquality; NoComparison>]
+type HModule2 =
+  { DocId: DocId
+
+    /// Non-static variables.
+    Vars: TreeMap<VarSerial, Ident>
+
+    Stmts: HStmt list }

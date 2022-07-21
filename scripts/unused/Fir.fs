@@ -9,8 +9,8 @@ open MiloneLang.TypeFloat
 open MiloneLang.TypeIntegers
 open MiloneLang.Hir
 
-module TMap = MiloneStd.StdMap
-module S = MiloneStd.StdString
+module TMap = Std.StdMap
+module S = Std.StdString
 
 /// Identity. Unique number to identify such as variables.
 type Id = int
@@ -26,7 +26,7 @@ type FTk =
   | FloatTk of floatFlavor: FloatFlavor
   | BoolTk
   | CharTk
-  | StrTk
+  | StringTk
   | ObjTk
 
   /// Ty args must be `[s; t]`.
@@ -73,10 +73,7 @@ type FRecordTyDef =
 // -----------------------------------------------
 
 [<RequireQualifiedAccess; NoEquality; NoComparison>]
-type FLocalVarDef =
-  { Name: Ident
-    Ty: Ty
-    Loc: Loc }
+type FLocalVarDef = { Name: Ident; Ty: Ty; Loc: Loc }
 
 [<RequireQualifiedAccess; NoEquality; NoComparison>]
 type FFunDef =
@@ -153,7 +150,7 @@ type FPrim =
   | Unbox
 
   // string:
-  | StrLength
+  | StringLength
 
   // option:
   | OptionNone
@@ -240,7 +237,7 @@ type FExpr =
   /// arms: (pat, guard, body). Guard is `true` if omit.
   | HMatchExpr of cond: HExpr * arms: (HPat * HExpr * HExpr) list * Ty * Loc
 
-  /// E.g. `List.isEmpty`, `str.Length`
+  /// E.g. `List.isEmpty`, `s.Length`
   | HNavExpr of HExpr * Ident * Ty * Loc
 
   /// Some built-in operation.

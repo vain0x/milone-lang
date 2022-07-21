@@ -49,19 +49,19 @@ type KPrim =
 
   // String:
   /// 2/1/1.
-  | KStrAddPrim
+  | KStringAddPrim
 
   /// 2/1/1.
-  | KStrComparePrim
+  | KStringComparePrim
 
   /// 2/1/1.
-  | KStrIndexPrim
+  | KStringIndexPrim
 
   /// 1/1/1.
-  | KStrLengthPrim
+  | KStringLengthPrim
 
   /// 2/1/1.
-  | KStrGetSlicePrim
+  | KStringGetSlicePrim
 
   // List, option:
   /// 2/1/1.
@@ -106,7 +106,7 @@ type KPrim =
   | KCharPrim
 
   /// 1/1/1.
-  // FIXME: signedness, precision
+  //         v add signedness, precision
   | KIntPrim
 
   /// 1/1/1.
