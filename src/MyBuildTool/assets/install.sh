@@ -18,7 +18,7 @@ mkdir -p "$HOME/bin"
 mkdir -p "$HOME/.milone"
 
 # Uninstall.
-rm "$HOME/bin/milone"
+rm -f "$HOME/bin/milone"
 rm -rf "$HOME/.milone"
 
 # Install.
