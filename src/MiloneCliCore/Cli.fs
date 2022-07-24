@@ -144,7 +144,10 @@ let private pathJoin (l: string) (r: string) =
 
   let l = slash l
   let r = slash r
-  if isRooted r then r else l + "/" + r
+
+  if isRooted r then r
+  else if r = "." then l
+  else l + "/" + r
 
 let private hostToMiloneHome (sApi: SyntaxApi) (host: CliHost) =
   sApi.GetMiloneHomeFromEnv(fun () -> host.MiloneHome) (fun () -> Some host.Home)

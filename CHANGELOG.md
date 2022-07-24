@@ -6,6 +6,10 @@
 
 [Unreleased]: https://github.com/vain0x/milone-lang/compare/v0.5.0...develop
 
+### CLI Tool
+
+- Fix that `milone run .` didn't work
+
 ## [v0.5.0] - 2022-07-21
 
 [v0.5.0]: https://github.com/vain0x/milone-lang/releases/tag/v0.5.0
