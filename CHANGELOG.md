@@ -6,6 +6,10 @@
 
 [Unreleased]: https://github.com/vain0x/milone-lang/compare/v0.5.0...develop
 
+### Features
+
+- Add built-in type `Std.Ptr.FunPtr<P, T>` (renamed from `__nativeFun` type)
+
 ### CLI Tool
 
 - Fix that `milone run .` didn't work

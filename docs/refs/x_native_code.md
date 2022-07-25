@@ -31,7 +31,7 @@ See [x_ptr_types](x_ptr_types.md).
 
 ## Function pointer types
 
-`__nativeFun<T, U>` is a function pointer type. `T` represents the parameter list and `U` represents the result type.
+`FunPtr<T, U>` is a function pointer type. `T` represents the parameter list and `U` represents the result type.
 
 `T` is a tuple type or other:
 
@@ -50,14 +50,16 @@ See [x_ptr_types](x_ptr_types.md).
 | `U` (not unit)    | `U`           |
 
 ```fsharp
+    open Std.Ptr
+
     // void(*)(void)
-    type ActionFun = __nativeFun<unit, unit>
+    type ActionFun = FunPtr<unit, unit>
 
     // int(*)(int)
-    type IntUnaryFun = __nativeFun<int, int>
+    type IntUnaryFun = FunPtr<int, int>
 
     // int(*)(int, int)
-    type IntBinaryFun = __nativeFun<int * int, int>
+    type IntBinaryFun = FunPtr<int * int, int>
 ```
 
 (Currently there is no way to specify calling convention.)
@@ -69,9 +71,11 @@ See [x_ptr_types](x_ptr_types.md).
 Function must NOT capture any local variables.
 
 ```fsharp
+    open Std.Ptr
+
     let f (x: int) : int = x + 1
 
-    let fp: __nativeFun<int, int> = __nativeFun f
+    let fp: FunPtr<int, int> = __nativeFun f
 ```
 
 ## Call external native function

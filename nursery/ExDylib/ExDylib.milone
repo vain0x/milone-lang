@@ -1,6 +1,8 @@
 // note: update this for recent compiler changes
 
 module Dylib =
+  open Std.Ptr
+
   type private DylibPtr = nativeptr<__nativeType<``struct Dylib``>>
 
   let load (path: string): DylibPtr = __nativeFun("milone_dylib_open", path)
@@ -18,7 +20,7 @@ __nativeDecl
   """
 
 // __nativeCast doesn't allow to cast to MyHelloFn
-let myPlusPtr : __nativeFun<int * int, int> =
+let myPlusPtr : FunPtr<int * int, int> =
   Dylib.getSymbol "my_plus2" libHello
   |> __nativeCast
 

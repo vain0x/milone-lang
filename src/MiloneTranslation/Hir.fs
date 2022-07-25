@@ -410,7 +410,7 @@ let tkDisplay getTyName tk =
   | NativePtrTk RefMode.ReadWrite -> "nativeptr"
   | NativePtrTk RefMode.ReadOnly -> "InPtr"
   | NativePtrTk RefMode.WriteOnly -> "OutPtr"
-  | NativeFunTk -> "__nativeFun"
+  | NativeFunTk -> "FunPtr"
   | NativeTypeTk _ -> "__nativeType"
   | MetaTk (tySerial, _) -> getTyName tySerial
   | RecordTk tySerial -> getTyName tySerial

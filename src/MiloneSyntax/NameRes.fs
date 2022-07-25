@@ -2058,8 +2058,7 @@ let private addPrims (ctx: ScopeCtx) =
       "obj", ofTy tyObj
       "voidptr", ofTy tyVoidPtr
       "list", ofTk ListTk
-      "nativeptr", ofTk (NativePtrTk RefMode.ReadWrite)
-      "__nativeFun", ofTk NativeFunTk ]
+      "nativeptr", ofTk (NativePtrTk RefMode.ReadWrite) ]
     |> TMap.ofList compare
 
   // Std.Own
@@ -2089,6 +2088,7 @@ let private addPrims (ctx: ScopeCtx) =
     |> addTy "InPtr" (PrimTkSymbol(NativePtrTk RefMode.ReadOnly))
     |> addTy "OutPtr" (PrimTkSymbol(NativePtrTk RefMode.WriteOnly))
     |> addTy "VoidInPtr" (PrimTySymbol tyVoidInPtr)
+    |> addTy "FunPtr" (PrimTkSymbol NativeFunTk)
     |> addValue "select" TPrim.PtrSelect
     |> addValue "read" TPrim.PtrRead
     |> addValue "write" TPrim.PtrWrite

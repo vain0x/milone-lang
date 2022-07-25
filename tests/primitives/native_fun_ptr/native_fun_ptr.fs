@@ -4,7 +4,7 @@ module rec native_fun_ptr.Program
 
 open Std.Ptr
 
-type private CompareFun = __nativeFun<VoidInPtr * VoidInPtr, int>
+type private CompareFun = FunPtr<VoidInPtr * VoidInPtr, int>
 
 let private memAlloc (len: uint) (size: uint) : voidptr =
   __nativeFun ("milone_region_alloc", len, size)
@@ -18,7 +18,8 @@ let private sortIntArray (array: nativeptr<int>) (len: uint) : unit =
 let private testSort () =
   let len = 5u
 
-  let array: nativeptr<int> = memAlloc len (uint sizeof<int>) |> __nativeCast
+  let array: nativeptr<int> =
+    memAlloc len (uint sizeof<int>) |> __nativeCast
 
   Ptr.write array.[0] 3
   Ptr.write array.[1] 1
@@ -35,7 +36,7 @@ let private testSort () =
   assert (Ptr.read array.[3] = 4)
   assert (Ptr.read array.[4] = 5)
 
-type private UnitFun = __nativeFun<unit, int>
+type private UnitFun = FunPtr<unit, int>
 
 let private testUnitFun () =
   let answer () = 42
@@ -46,7 +47,7 @@ let private testUnitFun () =
   let value: int = __nativeExpr "unit_fun()"
   assert (value = 42)
 
-type private UnaryFun = __nativeFun<int, int>
+type private UnaryFun = FunPtr<int, int>
 
 let private testUnaryFun () =
   let inc (n: int) : int = n + 1
@@ -57,7 +58,7 @@ let private testUnaryFun () =
   let value: int = __nativeExpr "unary_fun(41)"
   assert (value = 42)
 
-type private VoidFun = __nativeFun<int, unit>
+type private VoidFun = FunPtr<int, unit>
 
 let private testVoidFun () =
   let log (n: int) =

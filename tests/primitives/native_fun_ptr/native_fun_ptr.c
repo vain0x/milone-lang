@@ -74,11 +74,11 @@ void native_fun_ptr_native_fun_ptr_testSort(void) {
     array_1[4] = 5;
     native_fun_ptr_native_fun_ptr_sortIntArray(array_1, len_2);
     array_2 = ((int32_t const *)array_1);
-    if ((array_2[0] != 1)) milone_assert_error("native_fun_ptr/native_fun_ptr.milone", 31, 2);
-    if ((array_2[1] != 1)) milone_assert_error("native_fun_ptr/native_fun_ptr.milone", 32, 2);
-    if ((array_2[2] != 3)) milone_assert_error("native_fun_ptr/native_fun_ptr.milone", 33, 2);
-    if ((array_2[3] != 4)) milone_assert_error("native_fun_ptr/native_fun_ptr.milone", 34, 2);
-    if ((array_2[4] != 5)) milone_assert_error("native_fun_ptr/native_fun_ptr.milone", 35, 2);
+    if ((array_2[0] != 1)) milone_assert_error("native_fun_ptr/native_fun_ptr.milone", 32, 2);
+    if ((array_2[1] != 1)) milone_assert_error("native_fun_ptr/native_fun_ptr.milone", 33, 2);
+    if ((array_2[2] != 3)) milone_assert_error("native_fun_ptr/native_fun_ptr.milone", 34, 2);
+    if ((array_2[3] != 4)) milone_assert_error("native_fun_ptr/native_fun_ptr.milone", 35, 2);
+    if ((array_2[4] != 5)) milone_assert_error("native_fun_ptr/native_fun_ptr.milone", 36, 2);
     return;
 }
 
@@ -91,7 +91,7 @@ void native_fun_ptr_native_fun_ptr_testUnitFun(void) {
     int32_t value_;
     fp_ = ((Int32FunPtr0)native_fun_ptr_native_fun_ptr_testUnitFun_answer);
 int (*unit_fun)(void) = fp_;    value_ = unit_fun();
-    if ((value_ != 42)) milone_assert_error("native_fun_ptr/native_fun_ptr.milone", 46, 2);
+    if ((value_ != 42)) milone_assert_error("native_fun_ptr/native_fun_ptr.milone", 47, 2);
     return;
 }
 
@@ -104,7 +104,7 @@ void native_fun_ptr_native_fun_ptr_testUnaryFun(void) {
     int32_t value_1;
     fp_1 = native_fun_ptr_native_fun_ptr_testUnaryFun_inc;
 int (*unary_fun)(int) = fp_1;    value_1 = unary_fun(41);
-    if ((value_1 != 42)) milone_assert_error("native_fun_ptr/native_fun_ptr.milone", 57, 2);
+    if ((value_1 != 42)) milone_assert_error("native_fun_ptr/native_fun_ptr.milone", 58, 2);
     return;
 }
 
@@ -131,7 +131,7 @@ void native_fun_ptr_native_fun_ptr_testFunPtrCanBeResult(void) {
     Int32Int32Int32FunPtr2 call_1;
     call_1 = native_fun_ptr_native_fun_ptr_testFunPtrCanBeResult_getFunPtr();
     p_ = call_1;
-    if ((p_ == ((Int32Int32Int32FunPtr2)NULL))) milone_assert_error("native_fun_ptr/native_fun_ptr.milone", 73, 2);
+    if ((p_ == ((Int32Int32Int32FunPtr2)NULL))) milone_assert_error("native_fun_ptr/native_fun_ptr.milone", 74, 2);
     return;
 }
 

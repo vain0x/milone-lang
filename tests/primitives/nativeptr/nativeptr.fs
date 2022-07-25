@@ -46,9 +46,6 @@ let private testNullPtr () =
   let nullOutPtr: OutPtr<float> = Ptr.nullPtr
   assert (__nativeCast nullOutPtr = 0un)
 
-  let nullFunPtr: __nativeFun<unit, unit> = Ptr.nullPtr
-  assert (__nativeCast nullFunPtr = 0un)
-
 let private testPtrInvalid () =
   let danglingPtr: nativeptr<int64> = Ptr.invalid 8un
   assert (unativeint danglingPtr = 8un)
@@ -67,7 +64,6 @@ let private testPtrCast () =
   // Downcast.
   let intPtr: nativeptr<int> = Ptr.cast (Ptr.nullPtr: voidptr)
   let objOutPtr: OutPtr<obj> = Ptr.cast (Ptr.nullPtr: InPtr<string>)
-  let funPtr: __nativeFun<obj * obj, obj> = Ptr.cast (Ptr.nullPtr: voidptr)
 
   // Own type can be cast.
   let uintPtrOwn: Own<nativeptr<uint>> =
