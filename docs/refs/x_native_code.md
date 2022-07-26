@@ -66,7 +66,7 @@ See [x_ptr_types](x_ptr_types.md).
 
 ## Get pointer of function
 
-`__nativeFun f` represents a function pointer of a function `f`, where `f` is a function defined by let-fun syntax.
+`&&f` represents a function pointer of a function `f`, where `f` is a function defined by let-fun syntax.
 
 Function must NOT capture any local variables.
 
@@ -75,7 +75,7 @@ Function must NOT capture any local variables.
 
     let f (x: int) : int = x + 1
 
-    let fp: FunPtr<int, int> = __nativeFun f
+    let fp: FunPtr<int, int> = &&f
 ```
 
 ## Call external native function

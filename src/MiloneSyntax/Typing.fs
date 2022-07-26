@@ -1696,11 +1696,6 @@ let private inferPrimAppExpr ctx itself =
 
     TNodeExpr(TPtrReadEN, [ expr ], itemTy, loc), itemTy, ctx
 
-  // __nativeFun f
-  | TPrim.NativeFun, TFunExpr (funSerial, _, _) ->
-    let targetTy, ctx = castFunAsNativeFun funSerial ctx
-    TNodeExpr(TNativeFunEN funSerial, [], targetTy, loc), targetTy, ctx
-
   // __nativeFun "funName"
   | TPrim.NativeFun, TLitExpr (StringLit funName, _) ->
     let targetTy, ctx = ctx |> freshMetaTyForExpr itself
@@ -1748,7 +1743,7 @@ let private inferPrimAppExpr ctx itself =
                | TLitExpr _
                | TVarExpr _ -> inferExpr ctx None arg
 
-               | TNodeExpr (TAppEN, [ TPrimExpr (TPrim.NativeFun, _, _); TFunExpr _ ], _, _) -> inferExpr ctx None arg
+               | TNodeExpr (TPtrOfEN, [ TFunExpr _ ], _, _) -> inferExpr ctx None arg
 
                | TNodeExpr (TTyPlaceholderEN, [], ty, loc) ->
                  let ty, ctx = resolveAscriptionTy ctx ty
@@ -1800,6 +1795,11 @@ let private inferPtrOfExpr ctx arg loc =
     let arg, argTy, ctx = inferExpr ctx None arg
     let ty = tyInPtr argTy
     TNodeExpr(TPtrOfEN, [ arg ], ty, loc), ty, ctx
+
+  | TFunExpr (funSerial, _, _) ->
+    let arg, _, ctx = inferExpr ctx None arg
+    let ty, ctx = castFunAsNativeFun funSerial ctx
+    TNodeExpr(TFunPtrOfEN, [ arg ], ty, loc), ty, ctx
 
   | _ ->
     let ctx = addError ctx "Expected a variable." loc
@@ -1894,12 +1894,12 @@ let private inferNodeExpr ctx expr : TExpr * Ty * TyCtx =
 
   | TAbortEN, _ -> txAbort ctx loc
 
+  | TFunPtrOfEN, _
   | TDiscriminantEN _, _
   | TCallNativeEN _, _
   | TPtrOffsetEN _, _
   | TPtrReadEN _, _
   | TPtrWriteEN _, _
-  | TNativeFunEN _, _
   | TNativeExprEN _, _
   | TNativeStmtEN _, _
   | TNativeDeclEN _, _ -> unreachable ()

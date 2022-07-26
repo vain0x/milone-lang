@@ -1479,6 +1479,8 @@ let private mirifyExprInf ctx itself kind args ty loc =
     let arg, ctx = mirifyExpr ctx arg
     MUnaryExpr(MPtrOfUnary, arg, loc), ctx
 
+  | HFunPtrOfEN _, [ HFunExpr (funSerial, _, _, _) ], _ -> MProcExpr(funSerial, loc), ctx
+
   | HTupleEN, [], _ -> MUnitExpr loc, ctx
   | HTupleEN, _, _ -> unreachable () // Non-unit HTupleEN is resolved in MonoTy.
   | HRecordEN, _, _ -> mirifyExprRecord ctx args ty loc
@@ -1526,8 +1528,6 @@ let private mirifyExprInf ctx itself kind args ty loc =
       addStmt ctx (MActionStmt(MPtrWriteAction, [ ptr; item ], loc))
 
     MUnitExpr loc, ctx
-
-  | HNativeFunEN funSerial, _, _ -> MProcExpr(funSerial, loc), ctx
 
   | HNativeExprEN code, args, _ ->
     let args, ctx = mirifyExprs ctx args

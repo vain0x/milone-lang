@@ -168,6 +168,7 @@ let private lowerExprKind (kind: Tir.TExprKind) : Hir.HExprKind =
   match kind with
   | Tir.TMinusEN -> Hir.HMinusEN
   | Tir.TPtrOfEN -> Hir.HPtrOfEN
+  | Tir.TFunPtrOfEN -> Hir.HFunPtrOfEN
   | Tir.TAppEN -> Hir.HAppEN
   | Tir.TIndexEN -> Hir.HIndexEN
   | Tir.TSliceEN -> Hir.HSliceEN
@@ -178,7 +179,6 @@ let private lowerExprKind (kind: Tir.TExprKind) : Hir.HExprKind =
   | Tir.TPtrReadEN -> Hir.HPtrReadEN
   | Tir.TPtrWriteEN -> Hir.HPtrWriteEN
 
-  | Tir.TNativeFunEN funSerial -> Hir.HNativeFunEN(lowerFunSerial funSerial)
   | Tir.TNativeExprEN code -> Hir.HNativeExprEN code
   | Tir.TNativeStmtEN code -> Hir.HNativeStmtEN code
   | Tir.TNativeDeclEN code -> Hir.HNativeDeclEN code

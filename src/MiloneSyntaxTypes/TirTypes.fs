@@ -301,6 +301,8 @@ type TExprKind =
   // `&&x`.
   | TPtrOfEN
 
+  | TFunPtrOfEN
+
   | TAppEN
 
   /// Type ascription `x : 'x`.
@@ -326,9 +328,6 @@ type TExprKind =
   | TPtrReadEN
   /// Ptr.write accessPath value
   | TPtrWriteEN
-
-  /// Use function as function pointer.
-  | TNativeFunEN of FunSerial
 
   /// Embed some C expression to output.
   | TNativeExprEN of nativeExprCode: string

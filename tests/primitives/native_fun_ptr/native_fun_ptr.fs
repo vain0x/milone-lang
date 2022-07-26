@@ -9,11 +9,11 @@ type private CompareFun = FunPtr<VoidInPtr * VoidInPtr, int>
 let private memAlloc (len: uint) (size: uint) : voidptr =
   __nativeFun ("milone_region_alloc", len, size)
 
-let private sortIntArray (array: nativeptr<int>) (len: uint) : unit =
-  let intCompare (l: VoidInPtr) (r: VoidInPtr) =
-    compare (Ptr.read (__nativeCast l: InPtr<int>)) (Ptr.read (__nativeCast r: InPtr<int>))
+let intCompare (l: VoidInPtr) (r: VoidInPtr) =
+  compare (Ptr.read (Ptr.cast l: InPtr<int>)) (Ptr.read (Ptr.cast r: InPtr<int>))
 
-  __nativeFun ("qsort", (__nativeCast array: voidptr), unativeint len, 4un, (__nativeFun intCompare: CompareFun))
+let private sortIntArray (array: nativeptr<int>) (len: uint) : unit =
+  __nativeFun ("qsort", (Ptr.cast array: voidptr), unativeint len, 4un, (&&intCompare: CompareFun))
 
 let private testSort () =
   let len = 5u
@@ -38,39 +38,35 @@ let private testSort () =
 
 type private UnitFun = FunPtr<unit, int>
 
+let private answer () = 42
+
 let private testUnitFun () =
-  let answer () = 42
-
-  let fp: UnitFun = __nativeCast (__nativeFun answer)
-
-  __nativeStmt ("""int (*unit_fun)(void) = {0};""", fp)
+  __nativeStmt ("""int (*unit_fun)(void) = {0};""", (&&answer: UnitFun))
   let value: int = __nativeExpr "unit_fun()"
   assert (value = 42)
 
 type private UnaryFun = FunPtr<int, int>
 
-let private testUnaryFun () =
-  let inc (n: int) : int = n + 1
-  let fp: UnaryFun = __nativeFun inc
+let private inc (n: int) : int = n + 1
 
-  __nativeStmt ("""int (*unary_fun)(int) = {0};""", fp)
+let private testUnaryFun () =
+  __nativeStmt ("""int (*unary_fun)(int) = {0};""", (&&inc: UnaryFun))
 
   let value: int = __nativeExpr "unary_fun(41)"
   assert (value = 42)
 
 type private VoidFun = FunPtr<int, unit>
 
+let private log (n: int) =
+  __nativeStmt ("""printf("f is called: n=%d.\n", {0});""", n)
+
 let private testVoidFun () =
-  let log (n: int) =
-    __nativeStmt ("""printf("f is called: n=%d.\n", {0});""", n)
+  __nativeStmt ("""void(*void_fun)(int) = {0}; void_fun(42);""", (&&log: VoidFun))
 
-  let fp: VoidFun = __nativeCast (__nativeFun log)
-
-  __nativeStmt ("""void(*void_fun)(int) = {0}; void_fun(42);""", fp)
+let private plus (x: int) (y: int) = x + y
 
 let private testFunPtrCanBeResult () =
-  let plus (x: int) (y: int) = x + y
-  let getFunPtr () = __nativeFun plus
+  let getFunPtr () = &&plus
   let p = getFunPtr ()
   assert (p <> Ptr.nullPtr)
 

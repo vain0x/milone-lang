@@ -209,6 +209,8 @@ type HExprKind =
   // `&&x`.
   | HPtrOfEN
 
+  | HFunPtrOfEN
+
   | HAppEN
 
   /// `s.[i]`
@@ -252,9 +254,6 @@ type HExprKind =
   | HPtrReadEN
   /// Ptr.write accessPath value
   | HPtrWriteEN
-
-  /// Use function as function pointer.
-  | HNativeFunEN of FunSerial
 
   /// Embed some C expression to output.
   | HNativeExprEN of nativeExprCode: string
