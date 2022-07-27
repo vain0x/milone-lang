@@ -179,6 +179,15 @@ Declarations are hoisted to top-level (even if `__nativeDecl` is used inside a f
 
 Value of `__nativeDecl (...)` is `()`.
 
+Placeholder arguments are limited to expressions any of:
+
+- Literals,
+- Names,
+- `&&f` (function pointer), or
+- `(__type: 'T)`;
+
+since arguments must be evaluated without using statements.
+
 ## Embedded native types
 
 `__nativeType<T>` is a special type to embed a C type into generated code.

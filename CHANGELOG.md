@@ -15,6 +15,10 @@
 
 - Fix that `milone run .` didn't work
 
+### Documentation
+
+- Clarify limitation of `__nativeDecl` arguments
+
 ## [v0.5.0] - 2022-07-21
 
 [v0.5.0]: https://github.com/vain0x/milone-lang/releases/tag/v0.5.0
