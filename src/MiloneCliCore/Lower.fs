@@ -148,6 +148,7 @@ let private lowerPrim (prim: Tir.TPrim) : Hir.HPrim =
   | Tir.TPrim.PtrSelect
   | Tir.TPrim.PtrRead
   | Tir.TPrim.PtrWrite
+  | Tir.TPrim.FunPtrInvoke
   | Tir.TPrim.NativeFun
   | Tir.TPrim.NativeExpr
   | Tir.TPrim.NativeStmt
@@ -178,6 +179,7 @@ let private lowerExprKind (kind: Tir.TExprKind) : Hir.HExprKind =
   | Tir.TPtrOffsetEN -> Hir.HPtrOffsetEN
   | Tir.TPtrReadEN -> Hir.HPtrReadEN
   | Tir.TPtrWriteEN -> Hir.HPtrWriteEN
+  | Tir.TFunPtrInvokeEN -> Hir.HFunPtrInvokeEN
 
   | Tir.TNativeExprEN code -> Hir.HNativeExprEN code
   | Tir.TNativeStmtEN code -> Hir.HNativeStmtEN code

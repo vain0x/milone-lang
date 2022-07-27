@@ -6,6 +6,8 @@ typedef int32_t(*VoidConstPtrVoidConstPtrInt32FunPtr2)(void const *, void const 
 
 typedef int32_t(*Int32Int32Int32FunPtr2)(int32_t, int32_t);
 
+struct Int32Int32Tuple2_;
+
 void *milone_region_alloc(uint32_t, uint32_t);
 
 void *native_fun_ptr_native_fun_ptr_memAlloc(uint32_t len_, uint32_t size_);
@@ -36,7 +38,14 @@ Int32Int32Int32FunPtr2 native_fun_ptr_native_fun_ptr_testFunPtrCanBeResult_getFu
 
 void native_fun_ptr_native_fun_ptr_testFunPtrCanBeResult(void);
 
+void native_fun_ptr_native_fun_ptr_testFunPtrInvoke(void);
+
 int main(int argc, char **argv);
+
+struct Int32Int32Tuple2_ {
+    int32_t t0;
+    int32_t t1;
+};
 
 void *native_fun_ptr_native_fun_ptr_memAlloc(uint32_t len_, uint32_t size_) {
     void *milone_region_alloc_result;
@@ -123,6 +132,21 @@ void native_fun_ptr_native_fun_ptr_testFunPtrCanBeResult(void) {
     return;
 }
 
+void native_fun_ptr_native_fun_ptr_testFunPtrInvoke(void) {
+    int32_t app_;
+    int32_t app_1;
+    struct Int32Int32Tuple2_ Int32Int32Tuple2_;
+    int32_t app_2;
+    app_ = native_fun_ptr_native_fun_ptr_answer();
+    if ((app_ != 42)) milone_assert_error("native_fun_ptr/native_fun_ptr.milone", 73, 2);
+    app_1 = native_fun_ptr_native_fun_ptr_inc(2);
+    if ((app_1 != 3)) milone_assert_error("native_fun_ptr/native_fun_ptr.milone", 74, 2);
+    Int32Int32Tuple2_ = (struct Int32Int32Tuple2_){.t0 = 2, .t1 = 3};
+    app_2 = native_fun_ptr_native_fun_ptr_plus(Int32Int32Tuple2_.t0, Int32Int32Tuple2_.t1);
+    if ((app_2 != 5)) milone_assert_error("native_fun_ptr/native_fun_ptr.milone", 75, 2);
+    return;
+}
+
 int main(int argc, char **argv) {
     milone_start(argc, argv);
     native_fun_ptr_native_fun_ptr_testSort();
@@ -130,5 +154,6 @@ int main(int argc, char **argv) {
     native_fun_ptr_native_fun_ptr_testUnaryFun();
     native_fun_ptr_native_fun_ptr_testVoidFun();
     native_fun_ptr_native_fun_ptr_testFunPtrCanBeResult();
+    native_fun_ptr_native_fun_ptr_testFunPtrInvoke();
     return 0;
 }

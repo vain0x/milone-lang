@@ -1379,7 +1379,8 @@ let private inferPrimExpr ctx prim loc =
   | TPrim.PtrRead
   | TPrim.PtrWrite
   | TPrim.PtrAsIn
-  | TPrim.PtrAsNative -> errorExpr ctx "This function misses some argument." loc
+  | TPrim.PtrAsNative
+  | TPrim.FunPtrInvoke -> errorExpr ctx "This function misses some argument." loc
 
 let private inferRecordExpr ctx expectOpt baseOpt fields loc =
   // First, infer base if exists.
@@ -1787,6 +1788,34 @@ let private inferWriteExpr ctx expr : TExpr * Ty * TyCtx =
   let ctx = unifyTy ctx loc actualItemTy itemTy
   TNodeExpr(TPtrWriteEN, [ ptr; item ], tyUnit, loc), tyUnit, ctx
 
+let private inferFunPtrInvokeExpr ctx expr : TExpr * Ty * TyCtx =
+  let callee, arg, loc =
+    match expr with
+    | TNodeExpr (TAppEN, [ TNodeExpr (TAppEN, [ TPrimExpr (TPrim.FunPtrInvoke, _, loc); callee ], _, _); arg ], _, _) ->
+      callee, arg, loc
+    | _ -> unreachable ()
+
+  let callee, calleeTy, ctx = inferExpr ctx None callee
+
+  let argTys, resultTy =
+    match substTy ctx calleeTy with
+    | Ty (NativeFunTk, tyArgs) ->
+      match splitLast tyArgs with
+      | Some (argTys, resultTy) -> argTys, resultTy
+      | None -> unreachable ()
+    | _ -> unreachable ()
+
+  let argTy =
+    match argTys with
+    | [ ty ] -> ty
+    | [] -> tyUnit
+    | _ -> tyTuple argTys
+
+  let arg, actualArgTy, ctx = inferExpr ctx (Some argTy) arg
+  let ctx = unifyTy ctx loc actualArgTy argTy
+
+  TNodeExpr(TFunPtrInvokeEN, [ callee; arg ], resultTy, loc), resultTy, ctx
+
 let private inferMinusExpr ctx arg loc =
   let arg, argTy, ctx = inferExpr ctx None arg
 
@@ -1871,6 +1900,8 @@ let private inferNodeExpr ctx expr : TExpr * Ty * TyCtx =
   match kind, args with
   | TAppEN, [ TPrimExpr _; _ ] -> inferPrimAppExpr ctx expr
   | TAppEN, [ TNodeExpr (TAppEN, [ TPrimExpr (TPrim.PtrWrite, _, _); _ ], _, _); _ ] -> inferWriteExpr ctx expr
+  | TAppEN, [ TNodeExpr (TAppEN, [ TPrimExpr (TPrim.FunPtrInvoke, _, _); _ ], _, _); _ ] ->
+    inferFunPtrInvokeExpr ctx expr
   | TAppEN, [ _; _ ] -> inferAppExpr ctx expr
   | TAppEN, _ -> unreachable ()
 
@@ -1903,9 +1934,10 @@ let private inferNodeExpr ctx expr : TExpr * Ty * TyCtx =
   | TFunPtrOfEN, _
   | TDiscriminantEN _, _
   | TCallNativeEN _, _
-  | TPtrOffsetEN _, _
-  | TPtrReadEN _, _
-  | TPtrWriteEN _, _
+  | TPtrOffsetEN, _
+  | TPtrReadEN, _
+  | TPtrWriteEN, _
+  | TFunPtrInvokeEN, _
   | TNativeExprEN _, _
   | TNativeStmtEN _, _
   | TNativeDeclEN _, _ -> unreachable ()

@@ -70,10 +70,16 @@ let private testFunPtrCanBeResult () =
   let p = getFunPtr ()
   assert (p <> Ptr.nullPtr)
 
+let private testFunPtrInvoke () =
+  assert (FunPtr.invoke &&answer () = 42)
+  assert (FunPtr.invoke &&inc 2 = 3)
+  assert (FunPtr.invoke &&plus (2, 3) = 5)
+
 let main _ =
   testSort ()
   testUnitFun ()
   testUnaryFun ()
   testVoidFun ()
   testFunPtrCanBeResult ()
+  testFunPtrInvoke ()
   0

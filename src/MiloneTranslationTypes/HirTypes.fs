@@ -230,6 +230,9 @@ type HExprKind =
   /// Direct call to current procedure at the end of function (i.e. tail-call).
   | HCallTailRecEN
 
+  /// Call to a function pointer. Argument is a tuple of arguments or an argument if 1-arity.
+  | HFunPtrInvokeEN
+
   /// Direct call to native fun.
   | HCallNativeEN of funName: string
 

@@ -62,13 +62,12 @@ See [x_ptr_types](x_ptr_types.md).
     type IntBinaryFun = FunPtr<int * int, int>
 ```
 
-(Currently there is no way to specify calling convention.)
+- Value of `FunPtr` shouldn't be null.
+- Calling convention is same as C.
 
 ## Get pointer of function
 
-`&&f` represents a function pointer of a function `f`, where `f` is a function defined by let-fun syntax.
-
-Function must NOT capture any local variables.
+`&&f` represents a function pointer of a function `f`, where `f` is a non-local function defined by let-fun syntax.
 
 ```fsharp
     open Std.Ptr
@@ -76,6 +75,26 @@ Function must NOT capture any local variables.
     let f (x: int) : int = x + 1
 
     let fp: FunPtr<int, int> = &&f
+```
+
+Pointer to local functions can't be taken since local functions might capture variables.
+
+## Call to function pointer
+
+The `FunPtr.invoke` primitive invokes a function pointer.
+Unless it's 1-arity, it takes arguments as a tuple.
+
+```fsharp
+open Std.Ptr
+
+// Calling to zero-arity function pointer.
+FunPtr.invoke funPtr ()
+
+// Calling to 1-arity function pointer.
+FunPtr.invoke funPtr arg
+
+// Calling to 2+-arity function pointer.
+FunPtr.invoke funPtr (arg1, arg2, ...)
 ```
 
 ## Call external native function

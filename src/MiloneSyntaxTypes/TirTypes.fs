@@ -295,6 +295,7 @@ type TPrim =
   | PtrAsIn
   | PtrAsNative
   | PtrDistance
+  | FunPtrInvoke
 
 [<NoEquality; NoComparison>]
 type TExprKind =
@@ -331,6 +332,8 @@ type TExprKind =
   | TPtrReadEN
   /// Ptr.write accessPath value
   | TPtrWriteEN
+
+  | TFunPtrInvokeEN
 
   /// Embed some C expression to output.
   | TNativeExprEN of nativeExprCode: string

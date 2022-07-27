@@ -2011,9 +2011,13 @@ let private addPrims (ctx: ScopeCtx) =
   let stdModuleSerial, s = s, s + 1
   let stdNs = nsOwnerOfModule stdModuleSerial
   let stdOwnNs, s = nsOwnerOfModule s, s + 1
+  // Std.Own.Own
   let ownModuleNs, s = nsOwnerOfModule s, s + 1
   let stdPtrNs, s = nsOwnerOfModule s, s + 1
-  let ptrModuleNs = nsOwnerOfModule s
+  // Std.Ptr.FunPtr
+  let funPtrModuleNs, s = nsOwnerOfModule s, s + 1
+  // Std.Ptr.Ptr
+  let ptrModuleNs, _ = nsOwnerOfModule s, s + 1
 
   let ctx = addNsToNs ctx stdNs "Own" stdOwnNs
   let ctx = addNsToNs ctx stdNs "Ptr" stdPtrNs
@@ -2123,6 +2127,17 @@ let private addPrims (ctx: ScopeCtx) =
     |> addValue "asIn" TPrim.PtrAsIn
     |> addValue "asNative" TPrim.PtrAsNative
     |> addValue "distance" TPrim.PtrDistance
+
+  // Std.Ptr.FunPtr
+  let ctx =
+    let addValue alias prim ctx =
+      addValueToNs ctx funPtrModuleNs alias (PrimSymbol prim)
+
+    let ctx =
+      addNsToNs ctx stdPtrNs "FunPtr" funPtrModuleNs
+
+    ctx
+    |> addValue "invoke" TPrim.FunPtrInvoke
 
   { ctx with
       RootModules = ("Std", stdModuleSerial) :: ctx.RootModules
