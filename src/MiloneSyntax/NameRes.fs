@@ -324,7 +324,11 @@ type private ScopeCtx =
     NewTys: (TySerial * TyDef) list
 
     RootModules: (Ident * ModuleTySerial) list
+    /// Syntactically ancestral module names.
     CurrentPath: string list
+    /// Whether it's inside a statement. (false if it's inside module.)
+    InsideModule: bool
+    /// Syntactically ancestral function names.
     AncestralFuns: Ident list
 
     ValueNs: Ns<ValueSymbol>
@@ -358,6 +362,7 @@ let private emptyScopeCtx () : ScopeCtx =
     NewTys = []
     RootModules = []
     CurrentPath = []
+    InsideModule = true
     AncestralFuns = []
     ValueNs = TMap.empty nsOwnerCompare
     TyNs = TMap.empty nsOwnerCompare
@@ -551,6 +556,20 @@ let private openModule (ctx: ScopeCtx) moduleSerial =
 
 let private openModules ctx moduleSerials =
   moduleSerials |> List.fold openModule ctx
+
+let private enterStmt (ctx: ScopeCtx) =
+  let insideModule = ctx.InsideModule
+
+  if insideModule then
+    true, { ctx with InsideModule = false }
+  else
+    false, ctx
+
+let private leaveStmt insideModule (ctx: ScopeCtx) =
+  if ctx.InsideModule <> insideModule then
+    { ctx with InsideModule = insideModule }
+  else
+    ctx
 
 /// Called on enter the init of let-fun expressions.
 let private enterLetInit (ctx: ScopeCtx) funName : ScopeCtx =
@@ -1691,12 +1710,13 @@ let private nameResLetValStmt (ctx: ScopeCtx) stmt : TStmt * ScopeCtx =
     | NStmt.LetVal (pat, init, loc) -> pat, init, loc
     | _ -> unreachable ()
 
+  let parent, ctx = enterStmt ctx
   let ctx = startScope ctx ExprScope
   let init, ctx = init |> nameResExpr ctx
   let ctx = finishScope ctx
 
   let pat, ctx = pat |> nameResIrrefutablePat ctx
-  TLetValStmt(pat, init, loc), ctx
+  TLetValStmt(pat, init, loc), leaveStmt parent ctx
 
 let private nameResLetFunStmt (ctx: ScopeCtx) stmt : TStmt * ScopeCtx =
   let isRec, vis, name, argPats, body, loc =
@@ -1718,6 +1738,7 @@ let private nameResLetFunStmt (ctx: ScopeCtx) stmt : TStmt * ScopeCtx =
         Ty = TyScheme([], noTy)
         Abi = MiloneAbi
         Linkage = makeLinkage ctx vis funName
+        Nonlocal = not ctx.InsideModule
         Prefix = ctx.AncestralFuns
         Loc = loc }
 
@@ -1732,6 +1753,8 @@ let private nameResLetFunStmt (ctx: ScopeCtx) stmt : TStmt * ScopeCtx =
   let argPats, body, ctx =
     // __trace ("enterLetFun " + funName)
 
+    let parent, ctx = enterStmt ctx
+
     let ctx =
       let ctx = enterLetInit ctx funName
       startScope ctx ExprScope
@@ -1743,7 +1766,8 @@ let private nameResLetFunStmt (ctx: ScopeCtx) stmt : TStmt * ScopeCtx =
 
     let ctx =
       let ctx = finishScope ctx
-      leaveLetInit ctx
+      let ctx = leaveLetInit ctx
+      leaveStmt parent ctx
 
     // __trace ("leaveLetFun " + funName)
     argPats, body, ctx
@@ -1758,8 +1782,9 @@ let private nameResLetFunStmt (ctx: ScopeCtx) stmt : TStmt * ScopeCtx =
 let private nameResStmt ctx (stmt: NStmt) : TStmt * ScopeCtx =
   match stmt with
   | NStmt.Expr expr ->
+    let parent, ctx = enterStmt ctx
     let expr, ctx = expr |> nameResExpr ctx
-    TExprStmt expr, ctx
+    TExprStmt expr, leaveStmt parent ctx
 
   | NStmt.LetVal _ -> nameResLetValStmt ctx stmt
   | NStmt.LetFun _ -> nameResLetFunStmt ctx stmt

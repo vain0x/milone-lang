@@ -158,6 +158,9 @@ type FunDef =
     Abi: FunAbi
     Linkage: Linkage
 
+    /// Whether it's declared in a module, rather than module.
+    Nonlocal: bool
+
     /// Represents a context of function (in reversed order.) Function name is finally prefixed to be unique.
     Prefix: string list
 

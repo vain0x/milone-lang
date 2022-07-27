@@ -873,8 +873,14 @@ let private instantiateVariant variantSerial loc (ctx: TyCtx) : Ty * Ty * Ty * T
     let unionTy = tyAssign assignment unionTy
     payloadTy, unionTy, variantTy, ctx
 
-let private castFunAsNativeFun funSerial (ctx: TyCtx) : Ty * TyCtx =
+let private castFunAsNativeFun funSerial loc (ctx: TyCtx) : Ty * TyCtx =
   let funDef = ctx.Funs |> mapFind funSerial
+
+  let ctx =
+    if funDef.Nonlocal then
+      addError ctx "Pointer to a local function is unavailable since it might capture local variables." loc
+    else
+      ctx
 
   // Mark this function as extern "C".
   let ctx =
@@ -1798,7 +1804,7 @@ let private inferPtrOfExpr ctx arg loc =
 
   | TFunExpr (funSerial, _, _) ->
     let arg, _, ctx = inferExpr ctx None arg
-    let ty, ctx = castFunAsNativeFun funSerial ctx
+    let ty, ctx = castFunAsNativeFun funSerial loc ctx
     TNodeExpr(TFunPtrOfEN, [ arg ], ty, loc), ty, ctx
 
   | _ ->
