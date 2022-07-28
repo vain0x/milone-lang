@@ -217,7 +217,7 @@ let private trdTy isDirect (ctx: TrdCtx) ty : TrdCtx =
     | FunTk
     | TupleTk
     | NativePtrTk _
-    | NativeFunTk
+    | FunPtrTk
     | NativeTypeTk _ -> tyArgs |> List.fold (trdTy isDirect) ctx
 
     | UnionTk tySerial ->
@@ -400,7 +400,7 @@ let private tsmTy (ctx: TsmCtx) ty =
     | ListTk
     | VoidPtrTk _
     | NativePtrTk _
-    | NativeFunTk -> 8, ctx
+    | FunPtrTk -> 8, ctx
 
     | StringTk
     | FunTk -> 16, ctx

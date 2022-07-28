@@ -52,7 +52,7 @@ type Tk =
   // FFI types.
   | VoidPtrTk of IsMut
   | NativePtrTk of mode: RefMode
-  | NativeFunTk
+  | FunPtrTk
   | NativeTypeTk of cCode: string
 
   // Nominal types.
@@ -209,6 +209,8 @@ type HExprKind =
   // `&&x`.
   | HPtrOfEN
 
+  | HFunPtrOfEN
+
   | HAppEN
 
   /// `s.[i]`
@@ -227,6 +229,9 @@ type HExprKind =
 
   /// Direct call to current procedure at the end of function (i.e. tail-call).
   | HCallTailRecEN
+
+  /// Call to a function pointer. Argument is a tuple of arguments or an argument if 1-arity.
+  | HFunPtrInvokeEN
 
   /// Direct call to native fun.
   | HCallNativeEN of funName: string
@@ -252,9 +257,6 @@ type HExprKind =
   | HPtrReadEN
   /// Ptr.write accessPath value
   | HPtrWriteEN
-
-  /// Use function as function pointer.
-  | HNativeFunEN of FunSerial
 
   /// Embed some C expression to output.
   | HNativeExprEN of nativeExprCode: string

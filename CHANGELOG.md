@@ -6,9 +6,19 @@
 
 [Unreleased]: https://github.com/vain0x/milone-lang/compare/v0.5.0...develop
 
+### Features
+
+- Add built-in type `Std.Ptr.FunPtr<P, T>` (renamed from `__nativeFun` type)
+- Ptr-of operator (`&&`) can now make a pointer to a named function. (Instead, `__nativeFun funName` is no longer supported.)
+- Add `Std.Ptr.FunPtr.invoke`
+
 ### CLI Tool
 
 - Fix that `milone run .` didn't work
+
+### Documentation
+
+- Clarify limitation of `__nativeDecl` arguments
 
 ## [v0.5.0] - 2022-07-21
 

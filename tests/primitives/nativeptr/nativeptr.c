@@ -2,10 +2,6 @@
 #include <stdlib.h>
 #include <milone.h>
 
-typedef void(*VoidFunPtr0)(void);
-
-typedef void const *(*VoidConstPtrVoidConstPtrVoidConstPtrFunPtr2)(void const *, void const *);
-
 struct ObjectObjectTuple2_;
 
 typedef void(*VoidConstPtrVoidFunPtr1)(void const *);
@@ -126,7 +122,6 @@ void nativeptr_nativeptr_testNullPtr(void) {
     double *nullNativePtr_;
     double const *nullInPtr_;
     double *nullOutPtr_;
-    VoidFunPtr0 nullFunPtr_;
     nullVoidPtr_ = NULL;
     if ((((uintptr_t)nullVoidPtr_) != (size_t)0ULL)) milone_assert_error("nativeptr/nativeptr.milone", 34, 2);
     nullVoidInPtr_ = NULL;
@@ -137,8 +132,6 @@ void nativeptr_nativeptr_testNullPtr(void) {
     if ((((uintptr_t)nullInPtr_) != (size_t)0ULL)) milone_assert_error("nativeptr/nativeptr.milone", 43, 2);
     nullOutPtr_ = ((double *)NULL);
     if ((((uintptr_t)nullOutPtr_) != (size_t)0ULL)) milone_assert_error("nativeptr/nativeptr.milone", 46, 2);
-    nullFunPtr_ = ((VoidFunPtr0)NULL);
-    if ((((uintptr_t)nullFunPtr_) != (size_t)0ULL)) milone_assert_error("nativeptr/nativeptr.milone", 49, 2);
     return;
 }
 
@@ -151,12 +144,12 @@ void nativeptr_nativeptr_testPtrInvalid(void) {
     uintptr_t address_3;
     danglingPtr_ = ((int64_t *)(size_t)8ULL);
     address_2 = ((uintptr_t)danglingPtr_);
-    if ((address_2 != (size_t)8ULL)) milone_assert_error("nativeptr/nativeptr.milone", 53, 2);
+    if ((address_2 != (size_t)8ULL)) milone_assert_error("nativeptr/nativeptr.milone", 50, 2);
     n_ = 42;
     address_3 = ((uintptr_t)(&(n_)));
     address_ = address_3;
     exposedPtr_ = ((int32_t *)address_);
-    if (((*(exposedPtr_)) != 42)) milone_assert_error("nativeptr/nativeptr.milone", 58, 2);
+    if (((*(exposedPtr_)) != 42)) milone_assert_error("nativeptr/nativeptr.milone", 55, 2);
     return;
 }
 
@@ -166,14 +159,12 @@ void nativeptr_nativeptr_testPtrCast(void) {
     int32_t *intOutPtr_;
     int32_t *intPtr_;
     void const **objOutPtr_;
-    VoidConstPtrVoidConstPtrVoidConstPtrFunPtr2 funPtr_;
     uint32_t *uintPtrOwn_;
     voidPtr_ = ((void *)((uint8_t *)NULL));
     voidInPtr_ = ((void const *)((int32_t const *)NULL));
     intOutPtr_ = ((int32_t *)((int32_t *)NULL));
     intPtr_ = ((int32_t *)NULL);
     objOutPtr_ = ((void const **)((struct String const *)NULL));
-    funPtr_ = ((VoidConstPtrVoidConstPtrVoidConstPtrFunPtr2)NULL);
     uintPtrOwn_ = ((uint32_t *)NULL);
     return;
 }
@@ -185,10 +176,10 @@ void nativeptr_nativeptr_testAsIn(void) {
     void const *kq_;
     mp_ = ((int32_t *)NULL);
     kp_ = ((int32_t const *)mp_);
-    if ((kp_ != ((int32_t const *)NULL))) milone_assert_error("nativeptr/nativeptr.milone", 82, 2);
+    if ((kp_ != ((int32_t const *)NULL))) milone_assert_error("nativeptr/nativeptr.milone", 78, 2);
     mq_ = NULL;
     kq_ = ((void const *)mq_);
-    if ((kq_ != NULL)) milone_assert_error("nativeptr/nativeptr.milone", 87, 2);
+    if ((kq_ != NULL)) milone_assert_error("nativeptr/nativeptr.milone", 83, 2);
     return;
 }
 
@@ -199,10 +190,10 @@ void nativeptr_nativeptr_testAsNative(void) {
     void *mq_1;
     kp_1 = ((int32_t const *)NULL);
     mp_1 = ((int32_t *)kp_1);
-    if ((mp_1 != ((int32_t *)NULL))) milone_assert_error("nativeptr/nativeptr.milone", 93, 2);
+    if ((mp_1 != ((int32_t *)NULL))) milone_assert_error("nativeptr/nativeptr.milone", 89, 2);
     kq_1 = NULL;
     mq_1 = ((void *)kq_1);
-    if ((mq_1 != NULL)) milone_assert_error("nativeptr/nativeptr.milone", 98, 2);
+    if ((mq_1 != NULL)) milone_assert_error("nativeptr/nativeptr.milone", 94, 2);
     return;
 }
 
@@ -211,9 +202,9 @@ void nativeptr_nativeptr_testPtrDistance(void) {
     int32_t *q_;
     p_ = ((int32_t *)(size_t)0x8000ULL);
     q_ = ((int32_t *)(size_t)0x8020ULL);
-    if (((p_ - p_) != 0LL)) milone_assert_error("nativeptr/nativeptr.milone", 103, 2);
-    if (((q_ - p_) != 8LL)) milone_assert_error("nativeptr/nativeptr.milone", 104, 2);
-    if (((p_ - q_) != -8LL)) milone_assert_error("nativeptr/nativeptr.milone", 105, 2);
+    if (((p_ - p_) != 0LL)) milone_assert_error("nativeptr/nativeptr.milone", 99, 2);
+    if (((q_ - p_) != 8LL)) milone_assert_error("nativeptr/nativeptr.milone", 100, 2);
+    if (((p_ - q_) != -8LL)) milone_assert_error("nativeptr/nativeptr.milone", 101, 2);
     return;
 }
 
@@ -224,10 +215,10 @@ void nativeptr_nativeptr_testEquality(void) {
     int32_t const *q_1;
     np_ = ((int32_t *)NULL);
     p_1 = ((int32_t *)(size_t)42ULL);
-    if ((p_1 == np_)) milone_assert_error("nativeptr/nativeptr.milone", 110, 2);
+    if ((p_1 == np_)) milone_assert_error("nativeptr/nativeptr.milone", 106, 2);
     nq_ = ((int32_t const *)NULL);
     q_1 = ((int32_t const *)(size_t)42ULL);
-    if ((q_1 == nq_)) milone_assert_error("nativeptr/nativeptr.milone", 114, 2);
+    if ((q_1 == nq_)) milone_assert_error("nativeptr/nativeptr.milone", 110, 2);
     return;
 }
 
@@ -238,19 +229,19 @@ int32_t nativeptr_nativeptr_ObjectObjectTuple2MutPtrInt32Fun1_sizeOfPointee(stru
 void nativeptr_nativeptr_testSizeOf(void) {
     int32_t w_;
     int32_t call_1;
-    if ((sizeof(char) != 1)) milone_assert_error("nativeptr/nativeptr.milone", 119, 2);
-    if ((sizeof(uint8_t) != 1)) milone_assert_error("nativeptr/nativeptr.milone", 120, 2);
-    if ((sizeof(int16_t) != 2)) milone_assert_error("nativeptr/nativeptr.milone", 121, 2);
-    if ((sizeof(int32_t) != 4)) milone_assert_error("nativeptr/nativeptr.milone", 122, 2);
-    if ((sizeof(int64_t) != 8)) milone_assert_error("nativeptr/nativeptr.milone", 123, 2);
+    if ((sizeof(char) != 1)) milone_assert_error("nativeptr/nativeptr.milone", 115, 2);
+    if ((sizeof(uint8_t) != 1)) milone_assert_error("nativeptr/nativeptr.milone", 116, 2);
+    if ((sizeof(int16_t) != 2)) milone_assert_error("nativeptr/nativeptr.milone", 117, 2);
+    if ((sizeof(int32_t) != 4)) milone_assert_error("nativeptr/nativeptr.milone", 118, 2);
+    if ((sizeof(int64_t) != 8)) milone_assert_error("nativeptr/nativeptr.milone", 119, 2);
     w_ = sizeof(uintptr_t);
-    if ((sizeof(void *) != w_)) milone_assert_error("nativeptr/nativeptr.milone", 126, 2);
-    if ((sizeof(struct ObjectObjectTuple2_ *) != w_)) milone_assert_error("nativeptr/nativeptr.milone", 127, 2);
-    if ((sizeof(struct String) != (w_ * 2))) milone_assert_error("nativeptr/nativeptr.milone", 128, 2);
-    if ((sizeof(struct UnitUnitFun1) != (w_ * 2))) milone_assert_error("nativeptr/nativeptr.milone", 129, 2);
-    if ((sizeof(struct Int64UInt8UInt8Tuple3_) != 16)) milone_assert_error("nativeptr/nativeptr.milone", 131, 2);
+    if ((sizeof(void *) != w_)) milone_assert_error("nativeptr/nativeptr.milone", 122, 2);
+    if ((sizeof(struct ObjectObjectTuple2_ *) != w_)) milone_assert_error("nativeptr/nativeptr.milone", 123, 2);
+    if ((sizeof(struct String) != (w_ * 2))) milone_assert_error("nativeptr/nativeptr.milone", 124, 2);
+    if ((sizeof(struct UnitUnitFun1) != (w_ * 2))) milone_assert_error("nativeptr/nativeptr.milone", 125, 2);
+    if ((sizeof(struct Int64UInt8UInt8Tuple3_) != 16)) milone_assert_error("nativeptr/nativeptr.milone", 127, 2);
     call_1 = nativeptr_nativeptr_ObjectObjectTuple2MutPtrInt32Fun1_sizeOfPointee(((struct ObjectObjectTuple2_ *)NULL));
-    if ((call_1 != sizeof(struct ObjectObjectTuple2_))) milone_assert_error("nativeptr/nativeptr.milone", 134, 2);
+    if ((call_1 != sizeof(struct ObjectObjectTuple2_))) milone_assert_error("nativeptr/nativeptr.milone", 130, 2);
     return;
 }
 
@@ -259,7 +250,7 @@ void nativeptr_nativeptr_testPtrOf(void) {
     int32_t const *p_2;
     x_ = 42;
     p_2 = (&(x_));
-    if (((*(p_2)) != 42)) milone_assert_error("nativeptr/nativeptr.milone", 139, 2);
+    if (((*(p_2)) != 42)) milone_assert_error("nativeptr/nativeptr.milone", 135, 2);
     return;
 }
 
@@ -270,10 +261,10 @@ void nativeptr_nativeptr_testPtrSelect(void) {
     uintptr_t address_5;
     call_2 = nativeptr_nativeptr_memAlloc((uint32_t)4U, ((uint32_t)sizeof(int32_t)));
     p_3 = ((int32_t *)call_2);
-    if (((&(p_3[0])) != p_3)) milone_assert_error("nativeptr/nativeptr.milone", 145, 2);
+    if (((&(p_3[0])) != p_3)) milone_assert_error("nativeptr/nativeptr.milone", 141, 2);
     address_4 = ((uintptr_t)(&(p_3[1])));
     address_5 = ((uintptr_t)p_3);
-    if (((address_4 - address_5) != ((uintptr_t)sizeof(int32_t)))) milone_assert_error("nativeptr/nativeptr.milone", 146, 2);
+    if (((address_4 - address_5) != ((uintptr_t)sizeof(int32_t)))) milone_assert_error("nativeptr/nativeptr.milone", 142, 2);
     return;
 }
 
@@ -281,12 +272,12 @@ void nativeptr_nativeptr_testPtrRead(void) {
     int32_t *p_4;
     int32_t const *q_2;
 int array[] = {1, 2, 4, 8, 16};    p_4 = array;
-    if (((*(p_4)) != 1)) milone_assert_error("nativeptr/nativeptr.milone", 152, 2);
-    if ((p_4[0] != 1)) milone_assert_error("nativeptr/nativeptr.milone", 153, 2);
-    if ((p_4[4] != 16)) milone_assert_error("nativeptr/nativeptr.milone", 154, 2);
+    if (((*(p_4)) != 1)) milone_assert_error("nativeptr/nativeptr.milone", 148, 2);
+    if ((p_4[0] != 1)) milone_assert_error("nativeptr/nativeptr.milone", 149, 2);
+    if ((p_4[4] != 16)) milone_assert_error("nativeptr/nativeptr.milone", 150, 2);
     q_2 = ((int32_t const *)p_4);
-    if (((*(q_2)) != 1)) milone_assert_error("nativeptr/nativeptr.milone", 157, 2);
-    if ((q_2[2] != 4)) milone_assert_error("nativeptr/nativeptr.milone", 158, 2);
+    if (((*(q_2)) != 1)) milone_assert_error("nativeptr/nativeptr.milone", 153, 2);
+    if ((q_2[2] != 4)) milone_assert_error("nativeptr/nativeptr.milone", 154, 2);
     return;
 }
 
@@ -296,15 +287,15 @@ void nativeptr_nativeptr_testPtrWrite(void) {
     int32_t *q_4;
 int data[8] = { 0 };    p_5 = data;
     (*(p_5)) = 42;
-    if (((*(p_5)) != 42)) milone_assert_error("nativeptr/nativeptr.milone", 165, 2);
+    if (((*(p_5)) != 42)) milone_assert_error("nativeptr/nativeptr.milone", 161, 2);
     p_5[0] = 43;
-    if (((*(p_5)) != 43)) milone_assert_error("nativeptr/nativeptr.milone", 167, 2);
+    if (((*(p_5)) != 43)) milone_assert_error("nativeptr/nativeptr.milone", 163, 2);
     p_5[3] = 39;
-    if ((p_5[3] != 39)) milone_assert_error("nativeptr/nativeptr.milone", 169, 2);
+    if ((p_5[3] != 39)) milone_assert_error("nativeptr/nativeptr.milone", 165, 2);
     q_3 = &data[7];
     (*(q_3)) = 77;
     q_4 = ((int32_t *)q_3);
-    if (((*(q_4)) != 77)) milone_assert_error("nativeptr/nativeptr.milone", 174, 2);
+    if (((*(q_4)) != 77)) milone_assert_error("nativeptr/nativeptr.milone", 170, 2);
     return;
 }
 
@@ -317,8 +308,8 @@ void nativeptr_nativeptr_testRegionAlloc(void) {
     p_6[0] = 42;
     p_6[1] = 43;
     p_7 = ((int32_t *)p_6);
-    if (((*(p_7)) != 42)) milone_assert_error("nativeptr/nativeptr.milone", 183, 2);
-    if ((p_7[1] != 43)) milone_assert_error("nativeptr/nativeptr.milone", 184, 2);
+    if (((*(p_7)) != 42)) milone_assert_error("nativeptr/nativeptr.milone", 179, 2);
+    if ((p_7[1] != 43)) milone_assert_error("nativeptr/nativeptr.milone", 180, 2);
     return;
 }
 

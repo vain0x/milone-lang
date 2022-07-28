@@ -225,7 +225,7 @@ let private mxCompare ctx (op: MBinary) lTy (l: MExpr) r loc =
         | CharTk
         | VoidPtrTk _
         | NativePtrTk _
-        | NativeFunTk),
+        | FunPtrTk),
         _) -> mxBinOpScalar ctx op l r loc
 
   | Ty (StringTk, _) -> mxStringCompare ctx op l r loc
@@ -264,7 +264,7 @@ let private toBoxMode (ty: Ty) : BoxMode =
   | Ty (ListTk, _)
   | Ty (VoidPtrTk _, _)
   | Ty (NativePtrTk _, _)
-  | Ty (NativeFunTk, _) -> BoxMode.Cast
+  | Ty (FunPtrTk, _) -> BoxMode.Cast
 
   | _ -> BoxMode.Alloc
 
@@ -1440,6 +1440,39 @@ let private mirifyExprInfCallTailRec (ctx: MirCtx) args loc =
 
   MNeverExpr loc, ctx
 
+let private mirifyExprFunPtrInvoke ctx callee arg resultTy loc =
+  let argTy = exprToTy arg
+
+  let callee, ctx = mirifyExpr ctx callee
+  let arg, ctx = mirifyExpr ctx arg
+
+  let args =
+    match argTy with
+    | Ty (TupleTk, []) -> []
+
+    | Ty (RecordTk tySerial, _) ->
+      let fields =
+        match (ctx: MirCtx).Rx.Tys |> mapFind tySerial with
+        | RecordTyDef (_, fields, _, _) -> fields
+        | _ -> unreachable ()
+
+      List.init (List.length fields) (fun i -> MUnaryExpr(MRecordItemUnary(i, argTy), arg, loc))
+
+    | _ -> [ arg ]
+
+  if tyIsUnit resultTy then
+    let ctx =
+      addStmt ctx (MActionStmt(MCallProcAction, callee :: args, loc))
+
+    MUnitExpr loc, ctx
+  else
+    let tempRef, tempSerial, ctx = freshVar ctx "app" resultTy loc
+
+    let ctx =
+      addStmt ctx (MPrimStmt(MCallProcPrim, callee :: args, tempSerial, resultTy, loc))
+
+    tempRef, ctx
+
 let private mirifyExprInfClosure ctx funSerial env funTy loc =
   let env, ctx = mirifyExpr ctx env
 
@@ -1479,6 +1512,8 @@ let private mirifyExprInf ctx itself kind args ty loc =
     let arg, ctx = mirifyExpr ctx arg
     MUnaryExpr(MPtrOfUnary, arg, loc), ctx
 
+  | HFunPtrOfEN _, [ HFunExpr (funSerial, _, _, _) ], _ -> MProcExpr(funSerial, loc), ctx
+
   | HTupleEN, [], _ -> MUnitExpr loc, ctx
   | HTupleEN, _, _ -> unreachable () // Non-unit HTupleEN is resolved in MonoTy.
   | HRecordEN, _, _ -> mirifyExprRecord ctx args ty loc
@@ -1494,6 +1529,7 @@ let private mirifyExprInf ctx itself kind args ty loc =
   | HCallProcEN, callee :: args, _ -> mirifyCallProcExpr ctx callee args ty loc
 
   | HCallTailRecEN, _ :: args, _ -> mirifyExprInfCallTailRec ctx args loc
+  | HFunPtrInvokeEN, [ callee; arg ], _ -> mirifyExprFunPtrInvoke ctx callee arg ty loc
   | HCallClosureEN, callee :: args, _ -> mirifyExprInfCallClosure ctx callee args ty loc
   | HCallNativeEN funName, args, _ -> mirifyExprInfCallNative ctx funName args ty loc
   | HClosureEN, [ HFunExpr (funSerial, _, _, _); env ], _ -> mirifyExprInfClosure ctx funSerial env ty loc
@@ -1526,8 +1562,6 @@ let private mirifyExprInf ctx itself kind args ty loc =
       addStmt ctx (MActionStmt(MPtrWriteAction, [ ptr; item ], loc))
 
     MUnitExpr loc, ctx
-
-  | HNativeFunEN funSerial, _, _ -> MProcExpr(funSerial, loc), ctx
 
   | HNativeExprEN code, args, _ ->
     let args, ctx = mirifyExprs ctx args

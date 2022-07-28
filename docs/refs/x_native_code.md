@@ -31,7 +31,7 @@ See [x_ptr_types](x_ptr_types.md).
 
 ## Function pointer types
 
-`__nativeFun<T, U>` is a function pointer type. `T` represents the parameter list and `U` represents the result type.
+`FunPtr<T, U>` is a function pointer type. `T` represents the parameter list and `U` represents the result type.
 
 `T` is a tuple type or other:
 
@@ -50,28 +50,51 @@ See [x_ptr_types](x_ptr_types.md).
 | `U` (not unit)    | `U`           |
 
 ```fsharp
+    open Std.Ptr
+
     // void(*)(void)
-    type ActionFun = __nativeFun<unit, unit>
+    type ActionFun = FunPtr<unit, unit>
 
     // int(*)(int)
-    type IntUnaryFun = __nativeFun<int, int>
+    type IntUnaryFun = FunPtr<int, int>
 
     // int(*)(int, int)
-    type IntBinaryFun = __nativeFun<int * int, int>
+    type IntBinaryFun = FunPtr<int * int, int>
 ```
 
-(Currently there is no way to specify calling convention.)
+- Value of `FunPtr` shouldn't be null.
+- Calling convention is same as C.
 
 ## Get pointer of function
 
-`__nativeFun f` represents a function pointer of a function `f`, where `f` is a function defined by let-fun syntax.
-
-Function must NOT capture any local variables.
+`&&f` represents a function pointer of a function `f`, where `f` is a non-local function defined by let-fun syntax.
 
 ```fsharp
+    open Std.Ptr
+
     let f (x: int) : int = x + 1
 
-    let fp: __nativeFun<int, int> = __nativeFun f
+    let fp: FunPtr<int, int> = &&f
+```
+
+Pointer to local functions can't be taken since local functions might capture variables.
+
+## Call to function pointer
+
+The `FunPtr.invoke` primitive invokes a function pointer.
+Unless it's 1-arity, it takes arguments as a tuple.
+
+```fsharp
+open Std.Ptr
+
+// Calling to zero-arity function pointer.
+FunPtr.invoke funPtr ()
+
+// Calling to 1-arity function pointer.
+FunPtr.invoke funPtr arg
+
+// Calling to 2+-arity function pointer.
+FunPtr.invoke funPtr (arg1, arg2, ...)
 ```
 
 ## Call external native function
@@ -174,6 +197,15 @@ Declarations are hoisted to top-level (even if `__nativeDecl` is used inside a f
 ```
 
 Value of `__nativeDecl (...)` is `()`.
+
+Placeholder arguments are limited to expressions any of:
+
+- Literals,
+- Names,
+- `&&f` (function pointer), or
+- `(__type: 'T)`;
+
+since arguments must be evaluated without using statements.
 
 ## Embedded native types
 

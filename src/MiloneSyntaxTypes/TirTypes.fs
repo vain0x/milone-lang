@@ -66,7 +66,8 @@ type Tk =
   | OwnTk
   | VoidPtrTk of voidPtrIsMut: IsMut
   | NativePtrTk of mode: RefMode
-  | NativeFunTk
+  /// Ty args must be `paramTys :: resultTy`
+  | FunPtrTk
   | NativeTypeTk of cCode: string
 
   // Nominal types.
@@ -157,6 +158,9 @@ type FunDef =
     Ty: TyScheme
     Abi: FunAbi
     Linkage: Linkage
+
+    /// Whether it's declared in a module, rather than module.
+    Nonlocal: bool
 
     /// Represents a context of function (in reversed order.) Function name is finally prefixed to be unique.
     Prefix: string list
@@ -292,6 +296,7 @@ type TPrim =
   | PtrAsIn
   | PtrAsNative
   | PtrDistance
+  | FunPtrInvoke
 
 [<NoEquality; NoComparison>]
 type TExprKind =
@@ -300,6 +305,8 @@ type TExprKind =
 
   // `&&x`.
   | TPtrOfEN
+
+  | TFunPtrOfEN
 
   | TAppEN
 
@@ -327,8 +334,7 @@ type TExprKind =
   /// Ptr.write accessPath value
   | TPtrWriteEN
 
-  /// Use function as function pointer.
-  | TNativeFunEN of FunSerial
+  | TFunPtrInvokeEN
 
   /// Embed some C expression to output.
   | TNativeExprEN of nativeExprCode: string

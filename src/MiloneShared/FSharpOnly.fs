@@ -10,9 +10,9 @@ module FSharpOnly
 ///
 /// P is `()` or `P1 * P2 * ...`.
 [<AbstractClass; Sealed>]
-type __nativeFun<'P, 'T> =
+type FunPtr<'P, 'T> =
   override _.ToString() =
-    failwith "__nativeFun type is not available in F#"
+    failwith "FunPtr type is not available in F#"
 
 // Calls a C function, which should be linked statically.
 let __nativeFun _ =

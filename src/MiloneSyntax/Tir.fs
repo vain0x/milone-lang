@@ -45,7 +45,7 @@ let tyOutPtr itemTy =
   Ty(NativePtrTk RefMode.WriteOnly, [ itemTy ])
 
 let tyNativeFun paramTys resultTy =
-  Ty(NativeFunTk, List.append paramTys [ resultTy ])
+  Ty(FunPtrTk, List.append paramTys [ resultTy ])
 
 let tyUniv serial name loc = Ty(UnivTk(serial, name, loc), [])
 let tyMeta serial loc = Ty(MetaTk(serial, loc), [])

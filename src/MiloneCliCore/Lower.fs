@@ -42,7 +42,7 @@ let private lowerTk (tk: Tir.Tk) : Hir.Tk =
 
   | Tir.VoidPtrTk isMut -> Hir.VoidPtrTk isMut
   | Tir.NativePtrTk mode -> Hir.NativePtrTk mode
-  | Tir.NativeFunTk -> Hir.NativeFunTk
+  | Tir.FunPtrTk -> Hir.FunPtrTk
   | Tir.NativeTypeTk code -> Hir.NativeTypeTk code
 
   | Tir.MetaTk (serial, loc) -> Hir.MetaTk(serial, loc)
@@ -148,6 +148,7 @@ let private lowerPrim (prim: Tir.TPrim) : Hir.HPrim =
   | Tir.TPrim.PtrSelect
   | Tir.TPrim.PtrRead
   | Tir.TPrim.PtrWrite
+  | Tir.TPrim.FunPtrInvoke
   | Tir.TPrim.NativeFun
   | Tir.TPrim.NativeExpr
   | Tir.TPrim.NativeStmt
@@ -168,6 +169,7 @@ let private lowerExprKind (kind: Tir.TExprKind) : Hir.HExprKind =
   match kind with
   | Tir.TMinusEN -> Hir.HMinusEN
   | Tir.TPtrOfEN -> Hir.HPtrOfEN
+  | Tir.TFunPtrOfEN -> Hir.HFunPtrOfEN
   | Tir.TAppEN -> Hir.HAppEN
   | Tir.TIndexEN -> Hir.HIndexEN
   | Tir.TSliceEN -> Hir.HSliceEN
@@ -177,8 +179,8 @@ let private lowerExprKind (kind: Tir.TExprKind) : Hir.HExprKind =
   | Tir.TPtrOffsetEN -> Hir.HPtrOffsetEN
   | Tir.TPtrReadEN -> Hir.HPtrReadEN
   | Tir.TPtrWriteEN -> Hir.HPtrWriteEN
+  | Tir.TFunPtrInvokeEN -> Hir.HFunPtrInvokeEN
 
-  | Tir.TNativeFunEN funSerial -> Hir.HNativeFunEN(lowerFunSerial funSerial)
   | Tir.TNativeExprEN code -> Hir.HNativeExprEN code
   | Tir.TNativeStmtEN code -> Hir.HNativeStmtEN code
   | Tir.TNativeDeclEN code -> Hir.HNativeDeclEN code

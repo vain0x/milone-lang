@@ -477,6 +477,8 @@ let private exPrimExpr (ctx: EtaCtx) expr prim primTy calleeLoc =
 
 let private exInfExpr ctx expr kind args ty loc =
   match kind with
+  | HFunPtrOfEN -> expr, ctx
+
   | HAppEN ->
     /// Converts `(((f x) ..) y)` to `f(x, .., y)`.
     let rec roll acc callee =

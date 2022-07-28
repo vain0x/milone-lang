@@ -451,7 +451,7 @@ let private deriveOnStmt (hirCtx: HirCtx) (ctx: DCtx) stmt : DCtx =
     | StringTk _, _
     | VoidPtrTk _, _
     | NativePtrTk _, _
-    | NativeFunTk _, _ -> ctx
+    | FunPtrTk, _ -> ctx
 
     | _ when ctx.EqualFunInstances |> TMap.containsKey ty -> ctx
 
