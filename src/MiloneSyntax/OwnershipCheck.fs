@@ -159,6 +159,7 @@ let private tyIsOwnedWith ownedTySet ty : bool =
     | NativePtrTk _
     | FunPtrTk
     | NativeTypeTk _
+    | OpaqueTk _
     | MetaTk _
     | UnivTk _ -> false
 
@@ -271,7 +272,8 @@ let private ocDefs ownedTySet (tirCtx: TirCtx) =
 
            | UnivTyDef _
            | SynonymTyDef _
-           | UnionTyDef _ -> logs)
+           | UnionTyDef _
+           | OpaqueTyDef _ -> logs)
          logs
 
   { tirCtx with Logs = logs }
@@ -792,7 +794,8 @@ let private lwProgram modules (tirCtx: TirCtx) : TProgram * TirCtx =
 
             | UnivTyDef _
             | SynonymTyDef _
-            | UnionTyDef _ -> tyDef) }
+            | UnionTyDef _
+            | OpaqueTyDef _ -> tyDef) }
 
   modules, tirCtx
 

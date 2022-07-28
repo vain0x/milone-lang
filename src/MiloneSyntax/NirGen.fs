@@ -480,6 +480,13 @@ let private ngDecl docId attrs ctx decl : NDecl * NirGenCtx =
     NDecl.TySynonym(vis, onName name, tyArgs, bodyTy, toLoc pos), ctx
 
   | AUnionTyDecl (vis, name, tyArgs, variants, pos) ->
+    let opaque =
+      attrs
+      |> List.exists (fun a ->
+        match a with
+        | AIdentExpr (Name ("Opaque", _), []) -> true
+        | _ -> false)
+
     let tyArgs = tyArgs |> ngTyArgs docId
 
     let variants, ctx =
@@ -490,7 +497,14 @@ let private ngDecl docId attrs ctx decl : NDecl * NirGenCtx =
              (onName name, payloadTyOpt, toLoc pos), ctx)
            ctx
 
-    NDecl.Union(vis, onName name, tyArgs, variants, toLoc pos), ctx
+    let decl =
+      if not opaque then
+        NDecl.Union(vis, onName name, tyArgs, variants, toLoc pos)
+      else
+        // FIXME: report error is tyArgs isn't empty
+        NDecl.Opaque(vis, onName name, toLoc pos)
+
+    decl, ctx
 
   | ARecordTyDecl (vis, name, tyArgs, fields, pos) ->
     let repr =

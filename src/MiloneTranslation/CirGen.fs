@@ -254,6 +254,7 @@ let private ofMirResult (mirCtx: MirResult) : CirCtx =
       match tyDef with
       | UnionTyDef _ -> tyUnion serial []
       | RecordTyDef _ -> tyRecord serial
+      | OpaqueTyDef _ -> Ty(OpaqueTk serial, [])
 
     mirCtx.Tys
     |> renameIdents tyDefToName toKey tyCompare
@@ -507,6 +508,29 @@ let private genIncompleteRecordTyDecl (ctx: CirCtx) tySerial =
 
     selfTy, ctx
 
+let private genOpaqueTyDecl (ctx: CirCtx) tySerial =
+  let opaqueTyRef = Ty(OpaqueTk tySerial, [])
+
+  match ctx.TyEnv |> TMap.tryFind opaqueTyRef with
+  | Some (_, ty) -> ty, ctx
+
+  | None ->
+    let name =
+      match ctx.Rx.Tys |> mapFind tySerial with
+      | OpaqueTyDef (name, _) -> name
+      | _ -> unreachable ()
+
+    let selfTy = CStructTy name
+
+    let ctx =
+      { ctx with
+          Decls = CStructForwardDecl name :: ctx.Decls
+          TyEnv =
+            ctx.TyEnv
+            |> TMap.add opaqueTyRef (CTyDeclared, selfTy) }
+
+    selfTy, ctx
+
 let private genRecordTyDef ctx tySerial fields =
   let recordTyRef = tyRecord tySerial
   let structName, ctx = getUniqueTyName ctx recordTyRef
@@ -599,6 +623,7 @@ let private cgTyIncomplete (ctx: CirCtx) (ty: Ty) : CTy * CirCtx =
 
   | UnionTk tySerial, _ -> genIncompleteUnionTyDecl ctx tySerial
   | RecordTk tySerial, _ -> genIncompleteRecordTyDecl ctx tySerial
+  | OpaqueTk tySerial, _ -> genOpaqueTyDecl ctx tySerial
 
   | MetaTk _, _ -> unreachable () // Resolved in Typing.
 
@@ -648,6 +673,8 @@ let private cgTyComplete (ctx: CirCtx) (ty: Ty) : CTy * CirCtx =
     | Some (RecordTyDef (_, fields, _, _)) -> genRecordTyDef ctx serial fields
 
     | _ -> unreachable () // Record type undefined?
+
+  | OpaqueTk serial, _ -> genOpaqueTyDecl ctx serial
 
   | MetaTk _, _ -> unreachable () // Resolved in Typing.
 

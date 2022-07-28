@@ -63,6 +63,7 @@ let tyDefToName tyDef =
   | SynonymTyDef (name, _, _, _) -> name
   | UnionTyDef (name, _, _, _) -> name
   | RecordTyDef (name, _, _, _, _) -> name
+  | OpaqueTyDef (name, _) -> name
 
 // -----------------------------------------------
 // VarDef

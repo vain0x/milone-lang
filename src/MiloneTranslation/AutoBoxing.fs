@@ -194,6 +194,8 @@ let private trdTyDef isDirect (ctx: TrdCtx) tySerial tyDef : TrdCtx =
 
   | RecordTyDef _ -> trdRecordTyDef isDirect ctx tySerial tyDef
 
+  | OpaqueTyDef _ -> ctx
+
 let private trdTy isDirect (ctx: TrdCtx) ty : TrdCtx =
   match ty with
   | Ty (tk, tyArgs) ->
@@ -208,6 +210,7 @@ let private trdTy isDirect (ctx: TrdCtx) ty : TrdCtx =
     | StringTk
     | ObjTk
     | VoidPtrTk _
+    | OpaqueTk _
     | MetaTk _ ->
       assert (List.isEmpty tyArgs)
       ctx
@@ -383,6 +386,8 @@ let private tsmTyDef (ctx: TsmCtx) tySerial tyDef =
 
   | RecordTyDef _ -> tsmRecordTyDef ctx tySerial tyDef
 
+  | OpaqueTyDef _ -> 1000000, ctx
+
 let private tsmTy (ctx: TsmCtx) ty =
   match ty with
   | Ty (tk, tyArgs) ->
@@ -420,7 +425,8 @@ let private tsmTy (ctx: TsmCtx) ty =
     | RecordTk tySerial -> nominal tySerial
 
     | MetaTk _ -> 8, ctx
-    | NativeTypeTk _ -> 1000000, ctx
+    | NativeTypeTk _
+    | OpaqueTk _ -> 1000000, ctx
 
 let private measureTys (trdCtx: TrdCtx) : TsmCtx =
   let boxedVariants =

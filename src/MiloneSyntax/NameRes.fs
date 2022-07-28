@@ -110,6 +110,7 @@ type private TySymbol =
   | SynonymTySymbol of synonymTySerial: TySerial
   | UnionTySymbol of unionTySerial: TySerial
   | RecordTySymbol of recordTySerial: TySerial
+  | OpaqueTySymbol of opaqueTySerial: TySerial
   | PrimTkSymbol of Tk
   | PrimTySymbol of Ty
 
@@ -138,6 +139,7 @@ let private nsOwnerOfTySymbol (tySymbol: TySymbol) : NsOwner option =
   | UnivTySymbol _
   | SynonymTySymbol _
   | RecordTySymbol _
+  | OpaqueTySymbol _
   | PrimTkSymbol _
   | PrimTySymbol _ -> None
 
@@ -760,6 +762,7 @@ let private resolveTy ctx ty selfTyArgs : Ty * ScopeCtx =
           | Some (SynonymTyDef (_, tyArgs, _, _)) -> List.length tyArgs
           | Some (UnionTyDef (_, tyArgs, _, _)) -> List.length tyArgs
           | Some (RecordTyDef (_, tyArgs, _, _, _)) -> List.length tyArgs
+          | Some (OpaqueTyDef _) -> 0
           | _ -> 0 // maybe unreachable?
 
       match symbolOpt with
@@ -789,6 +792,15 @@ let private resolveTy ctx ty selfTyArgs : Ty * ScopeCtx =
           errorTy ctx (TyArityError(ident, arity, defArity)) loc
         else
           tyRecord tySerial loc, ctx
+
+      | Some (OpaqueTySymbol tySerial) ->
+        // #ty_arity_check
+        let defArity = 0
+
+        if arity <> defArity then
+          errorTy ctx (TyArityError(ident, arity, defArity)) loc
+        else
+          Ty(OpaqueTk tySerial, []), ctx
 
       | Some (PrimTkSymbol tk) ->
         let onRegular defArity =
@@ -824,6 +836,7 @@ let private resolveTy ctx ty selfTyArgs : Ty * ScopeCtx =
         | SynonymTk _
         | UnionTk _
         | RecordTk _
+        | OpaqueTk _
         | InferTk _ -> unreachable ()
 
       | Some (PrimTySymbol ty) ->
@@ -1063,6 +1076,16 @@ let private cdRecordTyDecl currentModule ctx decl : ScopeCtx =
   let arity = List.length tyArgs
   cdAfterTyDecl ctx currentModule vis name tySerial tySymbol arity
 
+let private cdOpaqueTyDecl currentModule ctx decl : ScopeCtx =
+  let vis, name =
+    match decl with
+    | NDecl.Opaque (vis, name, _) -> vis, name
+    | _ -> unreachable ()
+
+  let tySerial, ctx = freshSerial ctx
+  let tySymbol = OpaqueTySymbol tySerial
+  cdAfterTyDecl ctx currentModule vis name tySerial tySymbol 0
+
 let private cdOpenDecl ctx path loc : ScopeCtx =
   let path = path |> List.map identOf
   let moduleSerials = resolveModulePath ctx path
@@ -1131,6 +1154,7 @@ let private cdDecl (currentModule: NsOwner) (ctx: ScopeCtx) decl : ScopeCtx =
   | NDecl.TySynonym _ -> cdTySynonymDecl currentModule ctx decl
   | NDecl.Union _ -> cdUnionTyDecl currentModule ctx decl
   | NDecl.Record _ -> cdRecordTyDecl currentModule ctx decl
+  | NDecl.Opaque _ -> cdOpaqueTyDecl currentModule ctx decl
 
   | NDecl.Open (path, loc) -> cdOpenDecl ctx path loc
   | NDecl.ModuleSynonym (name, path, _) -> cdModuleSynonymDecl ctx name path
@@ -1927,6 +1951,16 @@ let private nameResRecordTyDecl (ctx: ScopeCtx) decl : ScopeCtx =
   let ctx = addTyDef ctx tySerial tyDef
   finishScope ctx
 
+let private nameResOpaqueTyDecl (ctx: ScopeCtx) decl : ScopeCtx =
+  let name, loc =
+    match decl with
+    | NDecl.Opaque (_, name, loc) -> name, loc
+    | _ -> unreachable ()
+
+  let tySerial, _ = ctx.DeclaredTys |> mapFind (posOf name)
+  let tyDef = OpaqueTyDef(identOf name, loc)
+  addTyDef ctx tySerial tyDef
+
 let private nameResModuleDecl (ctx: ScopeCtx) moduleDecl : TStmt * ScopeCtx =
   let (NModuleDecl (_, _, name, decls, _)) = moduleDecl
 
@@ -1962,6 +1996,7 @@ let private nameResDecl ctx (decl: NDecl) : TStmt option * ScopeCtx =
   | NDecl.TySynonym _ -> nameResTySynonymDecl ctx decl |> none
   | NDecl.Union _ -> nameResUnionTyDecl ctx decl |> none
   | NDecl.Record _ -> nameResRecordTyDecl ctx decl |> none
+  | NDecl.Opaque _ -> nameResOpaqueTyDecl ctx decl |> none
   | NDecl.Module decl -> nameResModuleDecl ctx decl |> some
 
   // Open and module synonym statements are used in collectDecls and no longer necessary.

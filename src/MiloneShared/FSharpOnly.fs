@@ -14,6 +14,11 @@ type FunPtr<'P, 'T> =
   override _.ToString() =
     failwith "FunPtr type is not available in F#"
 
+/// Defines an opaque type.
+[<Sealed; System.AttributeUsage(System.AttributeTargets.Class)>]
+type OpaqueAttribute() =
+  inherit System.Attribute()
+
 // Calls a C function, which should be linked statically.
 let __nativeFun _ =
   failwith "__nativeFun is not available in F#"

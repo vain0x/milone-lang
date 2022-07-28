@@ -58,6 +58,7 @@ let tyDefToName tyDef =
   match tyDef with
   | UnionTyDef (name, _, _, _) -> name
   | RecordTyDef (name, _, _, _) -> name
+  | OpaqueTyDef (name, _) -> name
 
 // -----------------------------------------------
 // Variable definitions (HIR)
@@ -380,6 +381,7 @@ let private tkEncode tk : int =
   | MetaTk (tySerial, _) -> pair 20 tySerial
   | UnionTk tySerial -> pair 22 tySerial
   | RecordTk tySerial -> pair 23 tySerial
+  | OpaqueTk tySerial -> pair 24 tySerial
 
   | NativeTypeTk _ -> unreachable ()
 
@@ -415,6 +417,7 @@ let tkDisplay getTyName tk =
   | MetaTk (tySerial, _) -> getTyName tySerial
   | RecordTk tySerial -> getTyName tySerial
   | UnionTk tySerial -> getTyName tySerial
+  | OpaqueTk tySerial -> getTyName tySerial
 
 // -----------------------------------------------
 // Types (HIR/MIR)
@@ -571,7 +574,8 @@ let tyMangle (ty: Ty, memo: TreeMap<Ty, string>) : string * TreeMap<Ty, string> 
         funTy, ctx
 
       | UnionTk _
-      | RecordTk _ ->
+      | RecordTk _
+      | OpaqueTk _ ->
         // Name must be stored in memo if monomorphic.
         assert (List.isEmpty tyArgs |> not)
         let name = memo |> mapFind (Ty(tk, []))

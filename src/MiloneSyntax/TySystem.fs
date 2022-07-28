@@ -54,6 +54,7 @@ let private tkEncode tk : int =
   | SynonymTk tySerial -> pair 21 tySerial
   | UnionTk (tySerial, _) -> pair 22 tySerial
   | RecordTk (tySerial, _) -> pair 23 tySerial
+  | OpaqueTk tySerial -> pair 24 tySerial
 
   | NativeTypeTk _
   | InferTk _ -> unreachable ()
@@ -96,6 +97,7 @@ let tkDisplay getTyName tk =
   | UnivTk (_, name, _) -> name
   | SynonymTk tySerial -> getTyName tySerial
   | RecordTk (tySerial, _) -> getTyName tySerial
+  | OpaqueTk tySerial -> getTyName tySerial
   | UnionTk (tySerial, _) -> getTyName tySerial
   | InferTk _ -> "_"
 
@@ -302,6 +304,7 @@ let tyDisplay getTyName ty =
     | Ty (SynonymTk tySerial, args) -> nominal tySerial args
     | Ty (UnionTk (tySerial, _), args) -> nominal tySerial args
     | Ty (RecordTk (tySerial, _), args) -> nominal tySerial args
+    | Ty (OpaqueTk tySerial, args) -> nominal tySerial args
 
     | Ty (tk, args) ->
       let tk = tkDisplay (fun _ -> unreachable ()) tk

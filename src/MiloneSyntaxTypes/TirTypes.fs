@@ -76,6 +76,7 @@ type Tk =
   | SynonymTk of synonymTy: TySerial
   | UnionTk of unionTy: TySerial * Loc option
   | RecordTk of recordTy: TySerial * Loc option
+  | OpaqueTk of opaqueTy: TySerial
 
   /// `_` in ascription.
   | InferTk of Loc
@@ -141,6 +142,8 @@ type TyDef =
   | UnionTyDef of Ident * tyArgs: TySerial list * VariantSerial list * Loc
 
   | RecordTyDef of Ident * tyArgs: TySerial list * fields: (Ident * Ty * Loc) list * IsCRepr * Loc
+
+  | OpaqueTyDef of Ident * Loc
 
 /// Definition of named value.
 [<RequireQualifiedAccess; NoEquality; NoComparison>]

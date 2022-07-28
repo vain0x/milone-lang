@@ -11,6 +11,7 @@
 - Add built-in type `Std.Ptr.FunPtr<P, T>` (renamed from `__nativeFun` type)
 - Ptr-of operator (`&&`) can now make a pointer to a named function. (Instead, `__nativeFun funName` is no longer supported.)
 - Add `Std.Ptr.FunPtr.invoke`
+- Add opaque types
 
 ### CLI Tool
 

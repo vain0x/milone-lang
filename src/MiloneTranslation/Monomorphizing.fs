@@ -379,6 +379,7 @@ let monify (modules: HProgram, hirCtx: HirCtx) : HProgram * HirCtx =
              match tyDef with
              | UnionTyDef (ident, _, _, _) -> UnionTk tySerial, ident
              | RecordTyDef (ident, _, _, _) -> RecordTk tySerial, ident
+             | OpaqueTyDef (ident, _) -> OpaqueTk tySerial, ident
 
            tyNames |> TMap.add (Ty(tk, [])) name)
          (TMap.empty tyCompare)

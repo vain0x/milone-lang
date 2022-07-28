@@ -72,6 +72,7 @@ let private monoTyCompare (l: MonoTy) (r: MonoTy) : int =
 
     | M.UnionMt tySerial -> pair 21 tySerial
     | M.RecordMt tySerial -> pair 22 tySerial
+    | M.OpaqueMt tySerial -> pair 23 tySerial
 
   match l, r with
   | M.ListMt l, M.ListMt r -> monoTyCompare l r
@@ -104,6 +105,7 @@ let private ofHirCtx (hirCtx: HirCtx) : MtCtx =
              match tyDef with
              | UnionTyDef (ident, _, _, _) -> UnionTk tySerial, ident
              | RecordTyDef (ident, _, _, _) -> RecordTk tySerial, ident
+             | OpaqueTyDef (ident, _) -> OpaqueTk tySerial, ident
 
            tyNames |> TMap.add (Ty(tk, [])) name)
          (TMap.empty tyCompare)
@@ -183,6 +185,7 @@ let private mtTy (ctx: MtCtx) (ty: Ty) : M.MonoTy * MtCtx =
   | VoidPtrTk isMut, _ -> M.VoidPtrMt isMut, ctx
   | NativeTypeTk cCode, _ -> M.NativeTypeMt cCode, ctx
   | RecordTk tySerial, _ -> M.RecordMt tySerial, ctx
+  | OpaqueTk tySerial, _ -> M.OpaqueMt tySerial, ctx
 
   | TupleTk, [] -> M.UnitMt, ctx
 
@@ -552,6 +555,10 @@ let private mtDefs (hirCtx: HirCtx) (mtCtx: MtCtx) =
                     ctx
 
              let tyDef = M.RecordTyDef(ident, fields, repr, loc)
+             tys |> TMap.add tySerial tyDef, ctx
+
+           | OpaqueTyDef (ident, loc) ->
+             let tyDef = M.OpaqueTyDef(ident, loc)
              tys |> TMap.add tySerial tyDef, ctx)
          (TMap.empty compare, mtCtx)
 
@@ -591,6 +598,7 @@ let private bthTy (ty: MonoTy) : Ty =
 
   | M.UnionMt tySerial -> ofTk (UnionTk tySerial)
   | M.RecordMt tySerial -> ofTk (RecordTk tySerial)
+  | M.OpaqueMt tySerial -> ofTk (OpaqueTk tySerial)
 
 let private bthPat (pat: M.HPat) : HPat =
   let ofTy ty = bthTy ty
@@ -683,6 +691,8 @@ let private bthTyDef (tyDef: M.TyDef) : TyDef =
       |> List.map (fun (ident, ty, loc) -> ident, bthTy ty, loc)
 
     RecordTyDef(ident, fields, repr, loc)
+
+  | M.OpaqueTyDef (ident, loc) -> OpaqueTyDef(ident, loc)
 
 // -----------------------------------------------
 // Interface

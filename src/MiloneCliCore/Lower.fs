@@ -49,6 +49,7 @@ let private lowerTk (tk: Tir.Tk) : Hir.Tk =
   | Tir.UnivTk (serial, _, loc) -> Hir.MetaTk(serial, loc)
   | Tir.UnionTk (serial, _) -> Hir.UnionTk serial
   | Tir.RecordTk (serial, _) -> Hir.RecordTk serial
+  | Tir.OpaqueTk serial -> Hir.OpaqueTk serial
 
   | Tir.ErrorTk _
   | Tir.SynonymTk _
@@ -98,6 +99,7 @@ let private lowerTyDef (def: Tir.TyDef) : Hir.TyDef =
     Hir.UnionTyDef(ident, tyArgs, List.map lowerVariantSerial variants, loc)
   | Tir.RecordTyDef (ident, unimplTyArgs, fields, repr, loc) ->
     Hir.RecordTyDef(ident, List.map (fun (ident, ty, loc) -> ident, lowerTy ty, loc) fields, repr, loc)
+  | Tir.OpaqueTyDef (ident, loc) -> Hir.OpaqueTyDef(ident, loc)
 
   | Tir.UnivTyDef _
   | Tir.SynonymTyDef _ -> unreachable () // Resolved in Typing.

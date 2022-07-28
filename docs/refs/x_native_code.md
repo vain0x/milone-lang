@@ -130,6 +130,28 @@ Restriction: Variadic parameter functions (e.g. `printf`) can't be called with t
 
 `sizeof<'T>` is the size of type T in bytes. Type is `int`. Equivalent to `sizeof(T)` in C.
 
+## Opaque types
+
+**Opaque** type is a kind of user-defined types.
+
+```fsharp
+[<Opaque>]
+type Opaque = private | Opaque
+```
+
+The syntax is same as new-type discriminated union types.
+The variant won't be used.
+
+Opaque types compile to struct declarations without definitions in C:
+
+```c
+struct Opaque;
+```
+
+Incomplete struct types are commonly used as abstract data types and in object-oriented API.
+
+Opaque types don't have definitions and you need to use it with some indirection such as `nativeptr`.
+
 ## Embedded naive expressions
 
 `__nativeExpr ("expression", arg1, arg2, ...)` is an expression to embed a C expression into generated code.

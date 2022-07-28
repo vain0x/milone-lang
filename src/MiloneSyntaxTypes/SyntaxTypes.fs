@@ -501,6 +501,7 @@ type NDecl =
   | TySynonym of Vis * NName * tyArgs: NName list * NTy * NLoc
   | Union of Vis * NName * tyArgs: NName list * NVariantDecl list * NLoc
   | Record of Vis * NName * tyArgs: NName list * NFieldDecl list * IsCRepr * NLoc
+  | Opaque of Vis * NName * NLoc
   | Open of NName list * NLoc
   | ModuleSynonym of NName * NName list * NLoc
   | Module of NModuleDecl
