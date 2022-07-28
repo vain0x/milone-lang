@@ -786,12 +786,12 @@ let private resolveTy ctx ty selfTyArgs : Ty * ScopeCtx =
 
       | Some (RecordTySymbol tySerial) ->
         // #ty_arity_check
-        let defArity = 0 // generic record type is unimplemented
+        let defArity = getArity tySerial
 
         if arity <> defArity then
           errorTy ctx (TyArityError(ident, arity, defArity)) loc
         else
-          tyRecord tySerial loc, ctx
+          tyRecord tySerial tyArgs loc, ctx
 
       | Some (OpaqueTySymbol tySerial) ->
         // #ty_arity_check
@@ -1060,16 +1060,10 @@ let private cdUnionTyDecl currentModule (ctx: ScopeCtx) decl : ScopeCtx =
   cdAfterTyDecl ctx currentModule vis name tySerial tySymbol arity
 
 let private cdRecordTyDecl currentModule ctx decl : ScopeCtx =
-  let vis, name, tyArgs, loc =
+  let vis, name, tyArgs =
     match decl with
-    | NDecl.Record (vis, name, tyArgs, _, _, loc) -> vis, name, tyArgs, loc
+    | NDecl.Record (vis, name, tyArgs, _, _, _) -> vis, name, tyArgs
     | _ -> unreachable ()
-
-  let ctx =
-    if tyArgs |> List.isEmpty |> not then
-      addLog ctx UnimplGenericTyError loc
-    else
-      ctx
 
   let tySerial, ctx = freshSerial ctx
   let tySymbol = RecordTySymbol tySerial

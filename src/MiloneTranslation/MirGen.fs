@@ -1453,7 +1453,7 @@ let private mirifyExprFunPtrInvoke ctx callee arg resultTy loc =
     | Ty (RecordTk tySerial, _) ->
       let fields =
         match (ctx: MirCtx).Rx.Tys |> mapFind tySerial with
-        | RecordTyDef (_, fields, _, _) -> fields
+        | RecordTyDef (_, _, fields, _, _) -> fields
         | _ -> unreachable ()
 
       List.init (List.length fields) (fun i -> MUnaryExpr(MRecordItemUnary(i, argTy), arg, loc))

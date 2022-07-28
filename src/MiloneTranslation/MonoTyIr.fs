@@ -46,7 +46,7 @@ type MonoTy =
 
 [<NoEquality; NoComparison>]
 type TyDef =
-  | UnionTyDef of Ident * tyArgs: TySerial list * VariantSerial list * Loc
+  | UnionTyDef of Ident * VariantSerial list * Loc
   | RecordTyDef of Ident * fields: (Ident * Ty * Loc) list * IsCRepr * Loc
   | OpaqueTyDef of Ident * Loc
 

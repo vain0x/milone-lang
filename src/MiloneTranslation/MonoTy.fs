@@ -31,6 +31,7 @@ type private UnionDef =
 type private GeneratedTy =
   | TupleGT
   | UnionGT of UnionDef
+  | RecordGT
 
 let private tupleField (i: int) : string = "t" + string i
 
@@ -90,6 +91,7 @@ let private monoTyCompare (l: MonoTy) (r: MonoTy) : int =
 type private MtCtx =
   { Serial: Serial
     GetUnionDef: TySerial -> TySerial list * (string * VariantSerial * bool * Ty * Loc) list * Loc
+    GetRecordDef: TySerial -> TySerial list * (string * Ty * Loc) list * Loc
     Map: TreeMap<Tk * MonoTy list, MonoTy * GeneratedTy>
     TyNames: TreeMap<Ty, string>
     NewTys: (TySerial * M.TyDef) list
@@ -104,7 +106,7 @@ let private ofHirCtx (hirCtx: HirCtx) : MtCtx =
            let tk, name =
              match tyDef with
              | UnionTyDef (ident, _, _, _) -> UnionTk tySerial, ident
-             | RecordTyDef (ident, _, _, _) -> RecordTk tySerial, ident
+             | RecordTyDef (ident, _, _, _, _) -> RecordTk tySerial, ident
              | OpaqueTyDef (ident, _) -> OpaqueTk tySerial, ident
 
            tyNames |> TMap.add (Ty(tk, [])) name)
@@ -124,8 +126,14 @@ let private ofHirCtx (hirCtx: HirCtx) : MtCtx =
 
     tyArgs, variantDefs, loc
 
+  let getRecordDef tySerial =
+    match hirCtx.Tys |> mapFind tySerial with
+    | RecordTyDef (_, tyArgs, fields, _, loc) -> tyArgs, fields, loc
+    | _ -> unreachable ()
+
   { Serial = hirCtx.Serial
     GetUnionDef = getUnionDef
+    GetRecordDef = getRecordDef
     Map = TMap.empty (pairCompare tkCompare (listCompare monoTyCompare))
     TyNames = tyNames
     NewTys = []
@@ -184,14 +192,11 @@ let private mtTy (ctx: MtCtx) (ty: Ty) : M.MonoTy * MtCtx =
   | ObjTk, _ -> M.ObjMt, ctx
   | VoidPtrTk isMut, _ -> M.VoidPtrMt isMut, ctx
   | NativeTypeTk cCode, _ -> M.NativeTypeMt cCode, ctx
-  | RecordTk tySerial, _ -> M.RecordMt tySerial, ctx
   | OpaqueTk tySerial, _ -> M.OpaqueMt tySerial, ctx
 
   | TupleTk, [] -> M.UnitMt, ctx
 
   | TupleTk, _ ->
-    assert (List.isEmpty tyArgs |> not)
-
     match ctx.Map |> TMap.tryFind (tk, tyArgs) with
     | Some (ty, _) -> ty, ctx
 
@@ -229,7 +234,7 @@ let private mtTy (ctx: MtCtx) (ty: Ty) : M.MonoTy * MtCtx =
         let monoVariantSerials =
           List.init variantCount getMonoVariantSerial
 
-        M.UnionTyDef(name, [], monoVariantSerials, loc)
+        M.UnionTyDef(name, monoVariantSerials, loc)
 
       let unionDef: UnionDef =
         let variantMap =
@@ -277,6 +282,55 @@ let private mtTy (ctx: MtCtx) (ty: Ty) : M.MonoTy * MtCtx =
             NewVariants = List.append monoVariants ctx.NewVariants }
 
       unionMt, ctx
+
+  | RecordTk tySerial, [] -> M.RecordMt tySerial, ctx
+
+  | RecordTk polyTySerial, tyArgs ->
+    match ctx.Map |> TMap.tryFind (tk, tyArgs) with
+    | Some (ty, _) -> ty, ctx
+
+    | None ->
+      let name, ctx = mangle ctx (tk, polyTyArgs)
+      let tyVars, fields, loc = ctx.GetRecordDef polyTySerial
+      let assignment = getTyAssignment tyVars polyTyArgs
+
+      let monoTySerial = ctx.Serial + 1
+      let recordTy = Ty(RecordTk monoTySerial, [])
+      let recordMt = M.RecordMt monoTySerial
+
+      // Register to prevent recursion.
+      let ctx: MtCtx =
+        { ctx with
+            Serial = ctx.Serial + 1
+            TyNames = ctx.TyNames |> TMap.add recordTy name
+            Map =
+              ctx.Map
+              |> TMap.add (tk, tyArgs) (recordMt, RecordGT)
+              |> TMap.add (RecordTk monoTySerial, []) (recordMt, RecordGT) }
+
+      let monoFields, ctx =
+        fields
+        |> List.mapi (fun i item -> i, item)
+        |> List.mapFold
+             (fun (ctx: MtCtx) (i, t) ->
+               let ident, polyFieldTy, loc = t
+
+               let monoFieldTy, ctx =
+                 polyFieldTy |> tyAssign assignment |> mtTy ctx
+
+               (ident, monoFieldTy, loc), ctx)
+             ctx
+
+      let ctx =
+        // Repr doesn't matter after AutoBoxing.
+        let repr = IsCRepr true
+
+        let monoTyDef =
+          M.RecordTyDef(name, monoFields, repr, loc)
+
+        { ctx with NewTys = (monoTySerial, monoTyDef) :: ctx.NewTys }
+
+      recordMt, ctx
 
   | MetaTk _, _ -> unreachable () // Resolved in Typing.
 
@@ -541,11 +595,11 @@ let private mtDefs (hirCtx: HirCtx) (mtCtx: MtCtx) =
     |> TMap.fold
          (fun (tys, ctx) tySerial (tyDef: TyDef) ->
            match tyDef with
-           | UnionTyDef (name, tyArgs, serials, loc) ->
-             let tyDef = M.UnionTyDef(name, tyArgs, serials, loc)
+           | UnionTyDef (name, [], serials, loc) ->
+             let tyDef = M.UnionTyDef(name, serials, loc)
              tys |> TMap.add tySerial tyDef, ctx
 
-           | RecordTyDef (ident, fields, repr, loc) ->
+           | RecordTyDef (ident, [], fields, repr, loc) ->
              let fields, ctx =
                fields
                |> List.mapFold
@@ -555,11 +609,15 @@ let private mtDefs (hirCtx: HirCtx) (mtCtx: MtCtx) =
                     ctx
 
              let tyDef = M.RecordTyDef(ident, fields, repr, loc)
+
              tys |> TMap.add tySerial tyDef, ctx
 
            | OpaqueTyDef (ident, loc) ->
              let tyDef = M.OpaqueTyDef(ident, loc)
-             tys |> TMap.add tySerial tyDef, ctx)
+             tys |> TMap.add tySerial tyDef, ctx
+
+           | UnionTyDef _
+           | RecordTyDef _ -> tys, ctx)
          (TMap.empty compare, mtCtx)
 
   let variants =
@@ -683,14 +741,14 @@ let private bthVariantDef (variantDef: M.VariantDef) : VariantDef =
 
 let private bthTyDef (tyDef: M.TyDef) : TyDef =
   match tyDef with
-  | M.UnionTyDef (ident, tyArgs, variantSerials, loc) -> UnionTyDef(ident, tyArgs, variantSerials, loc)
+  | M.UnionTyDef (ident, variantSerials, loc) -> UnionTyDef(ident, [], variantSerials, loc)
 
   | M.RecordTyDef (ident, fields, repr, loc) ->
     let fields =
       fields
       |> List.map (fun (ident, ty, loc) -> ident, bthTy ty, loc)
 
-    RecordTyDef(ident, fields, repr, loc)
+    RecordTyDef(ident, [], fields, repr, loc)
 
   | M.OpaqueTyDef (ident, loc) -> OpaqueTyDef(ident, loc)
 

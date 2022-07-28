@@ -437,7 +437,6 @@ type NameResLog =
   // other
   | ModulePathNotFoundError
 
-  | UnimplGenericTyError
   | UnimplOrPatBindingError
   | UnimplTyArgListError
 

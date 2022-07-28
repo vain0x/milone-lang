@@ -175,9 +175,10 @@ let private tyIsOwnedWith ownedTySet ty : bool =
       TSet.contains tySerial ownedTySet
       || tyArgs |> List.exists go
 
-    | RecordTk _ ->
-      assert (List.isEmpty tyArgs)
-      false // Record types can't be owned types nor generic for now.
+    | RecordTk (tySerial, _) ->
+      // Same as UnionTk.
+      TSet.contains tySerial ownedTySet
+      || tyArgs |> List.exists go
 
     | SynonymTk _
     | InferTk _ -> unreachable () // SynonymTk, InferTk are resolved in Typing.

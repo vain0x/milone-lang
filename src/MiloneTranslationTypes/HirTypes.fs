@@ -76,7 +76,7 @@ type TyScheme = TyScheme of tyVars: TySerial list * Ty
 type TyDef =
   | UnionTyDef of Ident * tyArgs: TySerial list * VariantSerial list * Loc
 
-  | RecordTyDef of Ident * fields: (Ident * Ty * Loc) list * IsCRepr * Loc
+  | RecordTyDef of Ident * tyArgs: TySerial list * fields: (Ident * Ty * Loc) list * IsCRepr * Loc
 
   | OpaqueTyDef of Ident * Loc
 

@@ -10,6 +10,16 @@ open Std.StdMap
 open MiloneTranslation.Hir
 open MiloneTranslationTypes.HirTypes
 
+// #tyAssign?
+let private getTyAssignment tyVars tyArgs : TreeMap<TySerial, Ty> =
+  match listTryZip tyVars tyArgs with
+  | zipped, [], [] -> TMap.ofList compare zipped
+  | _ -> unreachable () // Arity mismatch.
+
+// #tyAssign?
+let private tyAssign assignment (ty: Ty) =
+  tySubst (fun tySerial -> assignment |> TMap.tryFind tySerial) ty
+
 let private hxIsVarOrUnboxingVar expr =
   match expr with
   | HVarExpr _
@@ -24,8 +34,8 @@ let private hxIsVarOrUnboxingVar expr =
 type private RrCtx =
   { Tys: TreeMap<TySerial, TyDef>
 
-    // recordTySerial -> (fieldTys, (field -> (fieldIndex, fieldTy)))
-    RecordMap: TreeMap<TySerial, (Ty list * TreeMap<Ident, int * Ty>)> }
+    // recordTySerial -> (tyVars, fieldTys, (field -> (fieldIndex, fieldTy)))
+    RecordMap: TreeMap<TySerial, (TySerial list * Ty list * TreeMap<Ident, int * Ty>)> }
 
 let private ofHirCtx (hirCtx: HirCtx) : RrCtx =
   { Tys = hirCtx.Tys
@@ -88,7 +98,7 @@ let private buildRecordMap (ctx: RrCtx) =
   |> TMap.fold
        (fun acc tySerial tyDef ->
          match tyDef with
-         | RecordTyDef (_, fields, _, _) ->
+         | RecordTyDef (_, tyVars, fields, _, _) ->
            let fieldTys =
              fields |> List.map (fun (_, ty, _) -> ty)
 
@@ -97,17 +107,18 @@ let private buildRecordMap (ctx: RrCtx) =
              |> List.mapi (fun i (name, ty, _) -> name, (i, ty))
              |> TMap.ofList compare
 
-           acc |> TMap.add tySerial (fieldTys, fieldMap)
+           acc
+           |> TMap.add tySerial (tyVars, fieldTys, fieldMap)
 
          | _ -> acc)
        (TMap.empty compare)
 
 let private rewriteRecordExpr (ctx: RrCtx) itself baseOpt fields ty loc =
-  let fieldTys, fieldMap =
+  let assignment, fieldTys, fieldMap =
     match ty with
-    | Ty (RecordTk tySerial, _) ->
+    | Ty (RecordTk tySerial, tyArgs) ->
       match ctx.RecordMap |> TMap.tryFind tySerial with
-      | Some (fieldTys, fieldMap) -> fieldTys, fieldMap
+      | Some (tyVars, fieldTys, fieldMap) -> getTyAssignment tyVars tyArgs, fieldTys, fieldMap
       | _ -> unreachable itself
     | _ -> unreachable itself
 
@@ -129,7 +140,7 @@ let private rewriteRecordExpr (ctx: RrCtx) itself baseOpt fields ty loc =
   match baseOpt with
   | Some baseExpr ->
     let itemExpr index fieldTy =
-      HNodeExpr(HRecordItemEN index, [ baseExpr ], fieldTy, loc)
+      HNodeExpr(HRecordItemEN index, [ baseExpr ], tyAssign assignment fieldTy, loc)
 
     let rec go i fields fieldTys =
       match fields, fieldTys with
@@ -154,7 +165,7 @@ let private rewriteFieldExpr (ctx: RrCtx) itself recordTy l r ty loc =
   let index =
     match recordTy with
     | Ty (RecordTk tySerial, _) ->
-      let _, fieldMap = ctx.RecordMap |> mapFind tySerial
+      let _, _, fieldMap = ctx.RecordMap |> mapFind tySerial
 
       let index, _ = fieldMap |> mapFind r
       index

@@ -253,7 +253,7 @@ let private ofMirResult (mirCtx: MirResult) : CirCtx =
     let toKey (serial, tyDef) =
       match tyDef with
       | UnionTyDef _ -> tyUnion serial []
-      | RecordTyDef _ -> tyRecord serial
+      | RecordTyDef _ -> tyRecord serial []
       | OpaqueTyDef _ -> Ty(OpaqueTk serial, [])
 
     mirCtx.Tys
@@ -491,7 +491,7 @@ let private genUnionTyDef (ctx: CirCtx) tySerial variants =
     selfTy, ctx
 
 let private genIncompleteRecordTyDecl (ctx: CirCtx) tySerial =
-  let recordTyRef = tyRecord tySerial
+  let recordTyRef = tyRecord tySerial []
 
   match ctx.TyEnv |> TMap.tryFind recordTyRef with
   | Some (_, ty) -> ty, ctx
@@ -532,7 +532,7 @@ let private genOpaqueTyDecl (ctx: CirCtx) tySerial =
     selfTy, ctx
 
 let private genRecordTyDef ctx tySerial fields =
-  let recordTyRef = tyRecord tySerial
+  let recordTyRef = tyRecord tySerial []
   let structName, ctx = getUniqueTyName ctx recordTyRef
   let selfTy, ctx = genIncompleteRecordTyDecl ctx tySerial
 
@@ -670,7 +670,7 @@ let private cgTyComplete (ctx: CirCtx) (ty: Ty) : CTy * CirCtx =
 
   | RecordTk serial, _ ->
     match ctx.Rx.Tys |> TMap.tryFind serial with
-    | Some (RecordTyDef (_, fields, _, _)) -> genRecordTyDef ctx serial fields
+    | Some (RecordTyDef (_, _, fields, _, _)) -> genRecordTyDef ctx serial fields
 
     | _ -> unreachable () // Record type undefined?
 

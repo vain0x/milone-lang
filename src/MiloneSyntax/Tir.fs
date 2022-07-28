@@ -51,7 +51,9 @@ let tyUniv serial name loc = Ty(UnivTk(serial, name, loc), [])
 let tyMeta serial loc = Ty(MetaTk(serial, loc), [])
 let tySynonym tySerial tyArgs = Ty(SynonymTk tySerial, tyArgs)
 let tyUnion tySerial tyArgs loc = Ty(UnionTk(tySerial, Some loc), tyArgs)
-let tyRecord tySerial loc = Ty(RecordTk(tySerial, Some loc), [])
+
+let tyRecord tySerial tyArgs loc =
+  Ty(RecordTk(tySerial, Some loc), tyArgs)
 
 // -----------------------------------------------
 // TyDef
@@ -366,7 +368,6 @@ let nameResLogToString log =
 
   | ModulePathNotFoundError -> "Module not found for this path"
 
-  | UnimplGenericTyError -> "Generic record type is unimplemented."
   | UnimplOrPatBindingError -> "OR pattern including some bindings is unimplemented."
   | UnimplTyArgListError -> "Type argument list is unimplemented."
 

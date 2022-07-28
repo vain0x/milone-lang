@@ -48,7 +48,7 @@ let tyMeta serial loc = Ty(MetaTk(serial, loc), [])
 
 let tyUnion tySerial tyArgs = Ty(UnionTk tySerial, tyArgs)
 
-let tyRecord tySerial = Ty(RecordTk tySerial, [])
+let tyRecord tySerial tyArgs = Ty(RecordTk tySerial, tyArgs)
 
 // -----------------------------------------------
 // Type definitions (HIR)
@@ -57,7 +57,7 @@ let tyRecord tySerial = Ty(RecordTk tySerial, [])
 let tyDefToName tyDef =
   match tyDef with
   | UnionTyDef (name, _, _, _) -> name
-  | RecordTyDef (name, _, _, _) -> name
+  | RecordTyDef (name, _, _, _, _) -> name
   | OpaqueTyDef (name, _) -> name
 
 // -----------------------------------------------

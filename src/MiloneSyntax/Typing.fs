@@ -1396,11 +1396,9 @@ let private inferRecordExpr ctx expectOpt baseOpt fields loc =
   let recordTyInfoOpt =
     let asRecordTy tyOpt =
       match tyOpt |> Option.map (substTy ctx) with
-      | Some ((Ty (RecordTk (tySerial, _), tyArgs)) as recordTy) ->
-        assert (List.isEmpty tyArgs)
-
+      | Some ((Ty (RecordTk (tySerial, _), _)) as recordTy) ->
         match ctx |> findTy tySerial with
-        | RecordTyDef (name, _unimplTyArgs, fieldDefs, _, _) -> Some(recordTy, name, fieldDefs)
+        | RecordTyDef (name, tyVars, fieldDefs, _, _) -> Some(recordTy, name, tyVars, fieldDefs)
         | _ -> None
 
       | _ -> None
@@ -1416,12 +1414,20 @@ let private inferRecordExpr ctx expectOpt baseOpt fields loc =
 
     txAbort ctx loc
 
-  | Some (recordTy, recordName, fieldDefs) ->
+  | Some (recordTy, recordName, tyVars, fieldDefs) ->
     let addRedundantErr fieldName loc ctx =
       addLog ctx (Log.RedundantFieldError(recordName, fieldName)) loc
 
     let addIncompleteErr fieldNames ctx =
       addLog ctx (Log.MissingFieldsError(recordName, fieldNames)) loc
+
+    // #tyAssign
+    let assignment =
+      let (Ty (_, tyArgs)) = recordTy
+
+      match listTryZip tyVars tyArgs with
+      | it, [], [] -> it
+      | _ -> unreachable () // NameRes verified arity.
 
     // Infer field initializers and whether each of them is member of the record type.
     // Whenever a field appears, remove it from the set of fields
@@ -1429,7 +1435,7 @@ let private inferRecordExpr ctx expectOpt baseOpt fields loc =
     let fields, (fieldDefs, ctx) =
       let fieldDefs =
         fieldDefs
-        |> List.map (fun (name, ty, _) -> name, ty)
+        |> List.map (fun (name, ty, _) -> name, tyAssign assignment ty)
         |> TMap.ofList compare
 
       fields
@@ -1533,15 +1539,21 @@ let private inferNavExpr ctx l (r: Ident, rLoc) loc =
     txApp funExpr l tyInt loc, tyInt, ctx
 
   | Ty (RecordTk (tySerial, _), tyArgs), _ ->
-    assert (List.isEmpty tyArgs)
-
     let fieldTyOpt =
       match ctx |> findTy tySerial with
-      | RecordTyDef (_, _unimplTyArgs, fieldDefs, _, _) ->
+      | RecordTyDef (_, tyVars, fieldDefs, _, _) ->
         match fieldDefs
               |> List.tryFind (fun (theName, _, _) -> theName = r)
           with
-        | Some (_, fieldTy, _) -> Some fieldTy
+        | Some (_, fieldTy, _) ->
+          // #tyAssign
+          let fieldTy =
+            match listTryZip tyVars tyArgs with
+            | it, [], [] -> tyAssign it fieldTy
+            | _ -> unreachable () // NameRes verified arity.
+
+          Some fieldTy
+
         | None -> None
       | _ -> None
 
@@ -2361,7 +2373,7 @@ let infer (modules: TProgram, nameRes: NameResResult) : TProgram * TirCtx =
              | UnivTyDef _
              | SynonymTyDef _ -> acc
 
-             | RecordTyDef (recordName, unimplTyArgs, fields, repr, loc) ->
+             | RecordTyDef (recordName, tyArgs, fields, repr, loc) ->
                let fields =
                  fields
                  |> List.map (fun (name, ty, loc) ->
@@ -2369,7 +2381,7 @@ let infer (modules: TProgram, nameRes: NameResResult) : TProgram * TirCtx =
                    name, ty, loc)
 
                acc
-               |> TMap.add tySerial (RecordTyDef(recordName, unimplTyArgs, fields, repr, loc))
+               |> TMap.add tySerial (RecordTyDef(recordName, tyArgs, fields, repr, loc))
 
              | _ -> acc |> TMap.add tySerial tyDef)
            (TMap.empty compare)

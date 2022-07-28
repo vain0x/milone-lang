@@ -20,19 +20,9 @@ let private isFunTy ty =
   | Ty (FunTk, _) -> true
   | _ -> false
 
-let private tyIsRecord ty =
-  match ty with
-  | Ty (RecordTk _, tyArgs) ->
-    assert (List.isEmpty tyArgs)
-    true
-
-  | _ -> false
-
 let private unwrapRecordTy ty =
   match ty with
-  | Ty (RecordTk tySerial, tyArgs) ->
-    assert (List.isEmpty tyArgs)
-    tySerial
+  | Ty (RecordTk tySerial, tyArgs) -> tySerial, tyArgs
   | _ -> unreachable ()
 
 let private hxBox itemExpr itemTy loc =
@@ -162,7 +152,7 @@ let private trdRecordTyDef isDirect (ctx: TrdCtx) tySerial tyDef =
 
     let ctx: TrdCtx =
       match tyDef with
-      | RecordTyDef (_, fields, _, _) ->
+      | RecordTyDef (_, _, fields, _, _) ->
         fields
         |> List.fold (fun ctx (_, fieldTy, _) -> trdTy isDirect ctx fieldTy) ctx
 
@@ -316,7 +306,7 @@ let private tsmVariant (ctx: TsmCtx) variantSerial (variantDefOpt: VariantDef op
 let private tsmRecordTyDef (ctx: TsmCtx) tySerial tyDef =
   let canBox () =
     match ctx.Tys |> mapFind tySerial with
-    | RecordTyDef (_, _, IsCRepr true, _) -> false
+    | RecordTyDef (_, _, _, IsCRepr true, _) -> false
     | _ -> true
 
   match ctx.RecordTyMemo |> TMap.tryFind tySerial with
@@ -338,7 +328,7 @@ let private tsmRecordTyDef (ctx: TsmCtx) tySerial tyDef =
 
     let size, (ctx: TsmCtx) =
       match tyDef with
-      | RecordTyDef (_, fields, _, _) ->
+      | RecordTyDef (_, _, fields, _, _) ->
         fields
         |> List.fold
              (fun (totalSize, ctx) (fieldName, fieldTy, _) ->
@@ -666,18 +656,18 @@ let private eraseRecordTy ctx ty =
   else
     None
 
-let private postProcessRecordExpr ctx recordTySerial args loc =
+let private postProcessRecordExpr ctx recordTySerial tyArgs args loc =
   if needsBoxedRecordTySerial ctx recordTySerial then
-    let ty = tyRecord recordTySerial
+    let ty = tyRecord recordTySerial tyArgs
     let recordExpr = HNodeExpr(HRecordEN, args, ty, loc)
 
     Some(hxBox recordExpr ty loc)
   else
     None
 
-let private postProcessFieldExpr ctx recordTySerial recordExpr index fieldTy loc =
+let private postProcessFieldExpr ctx recordTySerial tyArgs recordExpr index fieldTy loc =
   if needsBoxedRecordTySerial ctx recordTySerial then
-    let ty = tyRecord recordTySerial
+    let ty = tyRecord recordTySerial tyArgs
 
     Some(HNodeExpr(HRecordItemEN index, [ hxUnbox recordExpr ty loc ], fieldTy, loc))
   else
@@ -689,8 +679,10 @@ let private postProcessFieldExpr ctx recordTySerial recordExpr index fieldTy loc
 
 let private abTy ctx ty =
   match ty with
-  | Ty (RecordTk _, tyArgs) ->
-    assert (List.isEmpty tyArgs)
+  | Ty (RecordTk tySerial, tyArgs) ->
+    let ty =
+      let tyArgs = tyArgs |> List.map (abTy ctx)
+      Ty(RecordTk tySerial, tyArgs)
 
     match eraseRecordTy ctx ty with
     | Some ty -> ty
@@ -776,20 +768,22 @@ let private abExpr ctx expr =
       | None -> hxCallProc callee [ payload ] ty loc
 
     | HRecordEN, _ ->
-      let recordSerial = unwrapRecordTy ty
+      let recordSerial, tyArgs = unwrapRecordTy ty
       let items = items |> List.map (abExpr ctx)
       let ty = ty |> abTy ctx
 
-      match postProcessRecordExpr ctx recordSerial items loc with
+      match postProcessRecordExpr ctx recordSerial tyArgs items loc with
       | Some expr -> expr
       | None -> HNodeExpr(HRecordEN, items, ty, loc)
 
     | HRecordItemEN index, [ recordExpr ] ->
-      let recordTySerial = recordExpr |> exprToTy |> unwrapRecordTy
+      let recordTySerial, tyArgs =
+        recordExpr |> exprToTy |> unwrapRecordTy
+
       let recordExpr = recordExpr |> abExpr ctx
       let ty = ty |> abTy ctx
 
-      match postProcessFieldExpr ctx recordTySerial recordExpr index ty loc with
+      match postProcessFieldExpr ctx recordTySerial tyArgs recordExpr index ty loc with
       | Some expr -> expr
       | None -> HNodeExpr(HRecordItemEN index, [ recordExpr ], ty, loc)
 
@@ -887,14 +881,14 @@ let autoBox (modules: HProgram, hirCtx: HirCtx) : HProgram * HirCtx =
     ctx.Tys
     |> TMap.map (fun _ tyDef ->
       match tyDef with
-      | RecordTyDef (recordName, fields, repr, loc) ->
+      | RecordTyDef (recordName, tyArgs, fields, repr, loc) ->
         let fields =
           fields
           |> List.map (fun (name, ty, loc) ->
             let ty = ty |> abTy ctx
             name, ty, loc)
 
-        RecordTyDef(recordName, fields, repr, loc)
+        RecordTyDef(recordName, tyArgs, fields, repr, loc)
 
       | _ -> tyDef)
 
