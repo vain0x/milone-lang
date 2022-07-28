@@ -52,7 +52,7 @@ type Tk =
   // FFI types.
   | VoidPtrTk of IsMut
   | NativePtrTk of mode: RefMode
-  | NativeFunTk
+  | FunPtrTk
   | NativeTypeTk of cCode: string
 
   // Nominal types.

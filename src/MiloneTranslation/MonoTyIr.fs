@@ -36,7 +36,7 @@ type MonoTy =
   // FFI types.
   | VoidPtrMt of IsMut
   | NativePtrMt of RefMode * MonoTy
-  | NativeFunMt of MonoTy list
+  | FunPtrMt of MonoTy list
   | NativeTypeMt of cCode: string
 
   // Nominal types.

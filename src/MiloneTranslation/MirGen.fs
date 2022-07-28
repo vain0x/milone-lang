@@ -225,7 +225,7 @@ let private mxCompare ctx (op: MBinary) lTy (l: MExpr) r loc =
         | CharTk
         | VoidPtrTk _
         | NativePtrTk _
-        | NativeFunTk),
+        | FunPtrTk),
         _) -> mxBinOpScalar ctx op l r loc
 
   | Ty (StringTk, _) -> mxStringCompare ctx op l r loc
@@ -264,7 +264,7 @@ let private toBoxMode (ty: Ty) : BoxMode =
   | Ty (ListTk, _)
   | Ty (VoidPtrTk _, _)
   | Ty (NativePtrTk _, _)
-  | Ty (NativeFunTk, _) -> BoxMode.Cast
+  | Ty (FunPtrTk, _) -> BoxMode.Cast
 
   | _ -> BoxMode.Alloc
 

@@ -474,7 +474,7 @@ let private tyIsPtr ty =
   match tk with
   | VoidPtrTk _
   | NativePtrTk _
-  | NativeFunTk -> true
+  | FunPtrTk -> true
   | _ -> false
 
 let private addTraitBound theTrait loc (ctx: TyCtx) =
@@ -545,7 +545,7 @@ let private resolveTraitBound (ctx: TyCtx) theTrait loc : TyCtx =
       | _ when tyIsBasic ty -> true, memo
 
       | TupleTk, []
-      | NativeFunTk, _ -> true, memo
+      | FunPtrTk, _ -> true, memo
 
       // Don't memoize structural types
       // because it doesn't cause infinite recursion
@@ -666,7 +666,7 @@ let private resolveTraitBound (ctx: TyCtx) theTrait loc : TyCtx =
     | ListTk
     | VoidPtrTk _
     | NativePtrTk _
-    | NativeFunTk -> ok ctx
+    | FunPtrTk -> ok ctx
 
     | _ -> error ctx
 
@@ -1799,7 +1799,7 @@ let private inferFunPtrInvokeExpr ctx expr : TExpr * Ty * TyCtx =
 
   let argTys, resultTy =
     match substTy ctx calleeTy with
-    | Ty (NativeFunTk, tyArgs) ->
+    | Ty (FunPtrTk, tyArgs) ->
       match splitLast tyArgs with
       | Some (argTys, resultTy) -> argTys, resultTy
       | None -> unreachable ()

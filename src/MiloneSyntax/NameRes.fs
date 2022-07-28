@@ -798,10 +798,10 @@ let private resolveTy ctx ty selfTyArgs : Ty * ScopeCtx =
             Ty(tk, tyArgs), ctx
 
         match tk with
-        | NativeFunTk ->
+        | FunPtrTk ->
           match tyArgs with
-          | [ Ty (TupleTk, itemTys); resultTy ] -> Ty(NativeFunTk, List.append itemTys [ resultTy ]), ctx
-          | [ itemTy; resultTy ] -> Ty(NativeFunTk, [ itemTy; resultTy ]), ctx
+          | [ Ty (TupleTk, itemTys); resultTy ] -> Ty(FunPtrTk, List.append itemTys [ resultTy ]), ctx
+          | [ itemTy; resultTy ] -> Ty(FunPtrTk, [ itemTy; resultTy ]), ctx
           | _ -> onRegular 2
 
         | ListTk
@@ -2117,7 +2117,7 @@ let private addPrims (ctx: ScopeCtx) =
     |> addTy "InPtr" (PrimTkSymbol(NativePtrTk RefMode.ReadOnly))
     |> addTy "OutPtr" (PrimTkSymbol(NativePtrTk RefMode.WriteOnly))
     |> addTy "VoidInPtr" (PrimTySymbol tyVoidInPtr)
-    |> addTy "FunPtr" (PrimTkSymbol NativeFunTk)
+    |> addTy "FunPtr" (PrimTkSymbol FunPtrTk)
     |> addValue "select" TPrim.PtrSelect
     |> addValue "read" TPrim.PtrRead
     |> addValue "write" TPrim.PtrWrite
@@ -2136,8 +2136,7 @@ let private addPrims (ctx: ScopeCtx) =
     let ctx =
       addNsToNs ctx stdPtrNs "FunPtr" funPtrModuleNs
 
-    ctx
-    |> addValue "invoke" TPrim.FunPtrInvoke
+    ctx |> addValue "invoke" TPrim.FunPtrInvoke
 
   { ctx with
       RootModules = ("Std", stdModuleSerial) :: ctx.RootModules

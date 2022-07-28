@@ -594,7 +594,7 @@ let private cgTyIncomplete (ctx: CirCtx) (ty: Ty) : CTy * CirCtx =
   | VoidPtrTk IsConst, _ -> cVoidConstPtrTy, ctx
   | NativePtrTk mode, [ itemTy ] -> cgNativePtrTy ctx mode itemTy
   | NativePtrTk _, _ -> unreachable ()
-  | NativeFunTk, _ -> cgNativeFunTy ctx tyArgs
+  | FunPtrTk, _ -> cgNativeFunTy ctx tyArgs
   | NativeTypeTk code, _ -> CEmbedTy code, ctx
 
   | UnionTk tySerial, _ -> genIncompleteUnionTyDecl ctx tySerial
@@ -634,7 +634,7 @@ let private cgTyComplete (ctx: CirCtx) (ty: Ty) : CTy * CirCtx =
   | NativePtrTk mode, [ itemTy ] -> cgNativePtrTy ctx mode itemTy
   | NativePtrTk _, _ -> unreachable ()
 
-  | NativeFunTk, _ -> cgNativeFunTy ctx tyArgs
+  | FunPtrTk, _ -> cgNativeFunTy ctx tyArgs
   | NativeTypeTk code, _ -> CEmbedTy code, ctx
 
   | UnionTk serial, _ ->

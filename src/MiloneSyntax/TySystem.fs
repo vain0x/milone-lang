@@ -47,7 +47,7 @@ let private tkEncode tk : int =
   | OwnTk -> just 11
   | VoidPtrTk isMut -> pair 12 (isMutToInt isMut)
   | NativePtrTk mode -> pair 13 (RefMode.toInt mode)
-  | NativeFunTk -> just 14
+  | FunPtrTk -> just 14
 
   | MetaTk (tySerial, _) -> pair 20 tySerial
   | UnivTk (tySerial, _, _) -> pair 24 tySerial
@@ -90,7 +90,7 @@ let tkDisplay getTyName tk =
   | NativePtrTk RefMode.ReadWrite -> "nativeptr"
   | NativePtrTk RefMode.ReadOnly -> "InPtr"
   | NativePtrTk RefMode.WriteOnly -> "OutPtr"
-  | NativeFunTk -> "FunPtr"
+  | FunPtrTk -> "FunPtr"
   | NativeTypeTk _ -> "__nativeType"
   | MetaTk (tySerial, _) -> getTyName tySerial
   | UnivTk (_, name, _) -> name

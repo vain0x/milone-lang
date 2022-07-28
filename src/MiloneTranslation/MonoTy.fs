@@ -67,7 +67,7 @@ let private monoTyCompare (l: MonoTy) (r: MonoTy) : int =
     | M.VoidPtrMt IsConst -> pair 11 1
     | M.VoidPtrMt IsMut -> pair 11 2
     | M.NativePtrMt (mode, _) -> pair 12 (RefMode.toInt mode)
-    | M.NativeFunMt _ -> just 13
+    | M.FunPtrMt _ -> just 13
     | M.NativeTypeMt _ -> just 14
 
     | M.UnionMt tySerial -> pair 21 tySerial
@@ -76,7 +76,7 @@ let private monoTyCompare (l: MonoTy) (r: MonoTy) : int =
   match l, r with
   | M.ListMt l, M.ListMt r -> monoTyCompare l r
   | M.FunMt l, M.FunMt r -> listCompare monoTyCompare l r
-  | M.NativeFunMt l, M.NativeFunMt r -> listCompare monoTyCompare l r
+  | M.FunPtrMt l, M.FunPtrMt r -> listCompare monoTyCompare l r
   | M.NativePtrMt (lMode, l), M.NativePtrMt (rMode, r) when RefMode.equals lMode rMode -> monoTyCompare l r
   | M.NativeTypeMt l, M.NativeTypeMt r -> compare l r
   | _ -> compare (encode l) (encode r)
@@ -203,7 +203,7 @@ let private mtTy (ctx: MtCtx) (ty: Ty) : M.MonoTy * MtCtx =
 
   | NativePtrTk mode, [ itemTy ] -> M.NativePtrMt(mode, itemTy), ctx
   | NativePtrTk _, _ -> unreachable ()
-  | NativeFunTk, _ -> M.NativeFunMt tyArgs, ctx
+  | FunPtrTk, _ -> M.FunPtrMt tyArgs, ctx
 
   | UnionTk tySerial, [] -> M.UnionMt tySerial, ctx
 
@@ -586,7 +586,7 @@ let private bthTy (ty: MonoTy) : Ty =
 
   | M.VoidPtrMt isMut -> ofTk (VoidPtrTk isMut)
   | M.NativePtrMt (isMut, itemTy) -> newTyApp (NativePtrTk isMut) [ itemTy ]
-  | M.NativeFunMt tyArgs -> newTyApp NativeFunTk tyArgs
+  | M.FunPtrMt tyArgs -> newTyApp FunPtrTk tyArgs
   | M.NativeTypeMt cCode -> ofTk (NativeTypeTk cCode)
 
   | M.UnionMt tySerial -> ofTk (UnionTk tySerial)

@@ -157,7 +157,7 @@ let private tyIsOwnedWith ownedTySet ty : bool =
     | FunTk
     | VoidPtrTk _
     | NativePtrTk _
-    | NativeFunTk
+    | FunPtrTk
     | NativeTypeTk _
     | MetaTk _
     | UnivTk _ -> false

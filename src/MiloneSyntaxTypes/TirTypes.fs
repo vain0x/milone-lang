@@ -66,7 +66,8 @@ type Tk =
   | OwnTk
   | VoidPtrTk of voidPtrIsMut: IsMut
   | NativePtrTk of mode: RefMode
-  | NativeFunTk
+  /// Ty args must be `paramTys :: resultTy`
+  | FunPtrTk
   | NativeTypeTk of cCode: string
 
   // Nominal types.

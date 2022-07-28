@@ -40,7 +40,7 @@ let tyList ty = Ty(ListTk, [ ty ])
 let tyFun sourceTy targetTy = Ty(FunTk, [ sourceTy; targetTy ])
 
 let tyNativeFun paramTys resultTy =
-  Ty(NativeFunTk, List.append paramTys [ resultTy ])
+  Ty(FunPtrTk, List.append paramTys [ resultTy ])
 
 let tyUnit = tyTuple []
 
@@ -375,7 +375,7 @@ let private tkEncode tk : int =
 
   | VoidPtrTk isMut -> pair 11 (isMutToInt isMut)
   | NativePtrTk mode -> pair 12 (RefMode.toInt mode)
-  | NativeFunTk -> just 13
+  | FunPtrTk -> just 13
 
   | MetaTk (tySerial, _) -> pair 20 tySerial
   | UnionTk tySerial -> pair 22 tySerial
@@ -410,7 +410,7 @@ let tkDisplay getTyName tk =
   | NativePtrTk RefMode.ReadWrite -> "nativeptr"
   | NativePtrTk RefMode.ReadOnly -> "InPtr"
   | NativePtrTk RefMode.WriteOnly -> "OutPtr"
-  | NativeFunTk -> "FunPtr"
+  | FunPtrTk -> "FunPtr"
   | NativeTypeTk _ -> "__nativeType"
   | MetaTk (tySerial, _) -> getTyName tySerial
   | RecordTk tySerial -> getTyName tySerial
@@ -553,7 +553,7 @@ let tyMangle (ty: Ty, memo: TreeMap<Ty, string>) : string * TreeMap<Ty, string> 
       | NativePtrTk RefMode.ReadWrite -> fixedGeneric "MutPtr"
       | NativePtrTk RefMode.ReadOnly -> fixedGeneric "InPtr"
       | NativePtrTk RefMode.WriteOnly -> fixedGeneric "OutPtr"
-      | NativeFunTk -> variadicGeneric "NativeFun"
+      | FunPtrTk -> variadicGeneric "FunPtr"
       | NativeTypeTk name -> S.replace " " "_" name, ctx
 
       | FunTk ->
