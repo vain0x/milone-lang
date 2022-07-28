@@ -1026,8 +1026,8 @@ let private inferTuplePat ctx itemPats loc =
   TNodePat(TTuplePN, itemPats, tupleTy, loc), tupleTy, ctx
 
 let private inferAscribePat ctx body ascriptionTy loc =
-  let body, bodyTy, ctx = inferPat ctx body
   let ascriptionTy, ctx = resolveAscriptionTy ctx ascriptionTy
+  let body, bodyTy, ctx = inferPat ctx body
 
   let ctx = unifyTy ctx loc bodyTy ascriptionTy
   body, ascriptionTy, ctx
@@ -1880,8 +1880,8 @@ let private inferTupleExpr (ctx: TyCtx) items loc =
   txTuple items loc, tyTuple itemTys, ctx
 
 let private inferAscribeExpr ctx body ascriptionTy loc =
-  let body, bodyTy, ctx = inferExpr ctx (Some ascriptionTy) body
   let ascriptionTy, ctx = resolveAscriptionTy ctx ascriptionTy
+  let body, bodyTy, ctx = inferExpr ctx (Some ascriptionTy) body
 
   let ctx = unifyTy ctx loc bodyTy ascriptionTy
   body, ascriptionTy, ctx
