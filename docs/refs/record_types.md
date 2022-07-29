@@ -103,6 +103,28 @@ assert (agedJohn.Name = "John Doe")
 assert (agedJohn.Age = 19)
 ```
 
+### Generics
+
+Record types can be parameterized over types. (Same as other nominal types.)
+Such types are called *generic record types*.
+
+Example:
+`CountingList` below is an extension to the list type by adding `Count` field that holds the length of the list for constant-time length access.
+
+```fsharp
+type CountingList<'T> =
+  private
+    { Items: 'T list
+      Count: int }
+
+module CountingList =
+    let ofList xs : CountingList<'T> =
+        { Items = xs
+          Count = List.length }
+
+    let count (xs: CountingList<_>) = xs.Count
+```
+
 ## Detailed explanation
 
 ### Type inference of records
@@ -147,3 +169,7 @@ struct Person {
     int Age;
 };
 ```
+
+## Monomorphization of generic nominal types
+
+See a section in [Discriminated Union Types](./discriminated_union_types.md).

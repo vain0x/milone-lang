@@ -100,6 +100,32 @@ To handle the case of value-carrying variants, variant in arm can take some "par
     assert (greetMessage john = "Hi, John Doe!")
 ```
 
+## Generics
+
+Discriminated union types can be parameterized over types. (Same as other nominal types.)
+Such types are called *generic discriminated union types*.
+
+A typical example is `option` type that looks like:
+
+```fsharp
+type Option<'T> =
+    | None
+    | Some of 'T
+```
+
+Syntax:
+The angle brackets in the first line is a *generic parameter list*.
+It defines a set of *type variables* that are written in `'T`.
+
+Type variables can be used in field types.
+Type variables represent some types that are specified at use-site.
+
+When to use a generic type, type arguments that bind to type variables must be specified by a *generic argument list*.
+
+```fsharp
+    let opt: Option<int> = Some 42
+```
+
 ## Advanced topics
 
 ### Notes on name of parts
@@ -166,3 +192,12 @@ struct Customer {
     };
 };
 ```
+
+### Monomorphization of generic nominal types
+
+Generic discriminated union types are monomorphized after monomorphization of generic functions.
+
+When a generic type appear in a non-generic function, its type arguments are all non-generic since no type variables are defined in the context.
+Such a use-site of generic type is each replaced with a new non-generic type definition obtained by substituting type variables with the type arguments.
+After all generic type definitions are removed.
+That's why runtime representation of generic types are same as non-generic types.
