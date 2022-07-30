@@ -22,6 +22,7 @@
 
 - Clarify limitation of `__nativeDecl` arguments
 - Add explanation of generic nominal types
+- Add page of type synonyms
 
 ## [v0.5.0] - 2022-07-21
 
