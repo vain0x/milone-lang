@@ -9,7 +9,7 @@ Language references.
 - [match_expressions](match_expressions.md)
 - [modules](modules.md)
 
-## Types and type-specific primitives
+## Types and Type-specific Primitives
 
 Built-in basic types:
 
@@ -31,12 +31,13 @@ User-defined types:
 
 - [discriminated union types (DU)](discriminated_union_types.md)
 - [record types](record_types.md)
+- [type synonyms](type_synonyms.md)
 
 ## Structure
 
 - [projects](projects.md)
 
-## Language extensions
+## Language Extensions
 
 - [own type](x_own_type.md)
 - [pointer types](x_ptr_types.md)

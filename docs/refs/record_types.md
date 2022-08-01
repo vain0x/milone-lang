@@ -1,8 +1,8 @@
-# Record types
+# Record Types
 
 Record type is one of user-defined types. It represents some specific group of values.
 
-## Instant usage
+## Instant Usage
 
 ```fsharp
 // Declare Person record type.
@@ -29,9 +29,9 @@ let agedJohn =
 assert (agedJohn.Age = 19)
 ```
 
-## Guide-level explanation
+## Guide-level Explanation
 
-### Record type declaration
+### Record Type Declaration
 
 Type declaration defines a record type. Record consists of any number of fields. Each field has name and type.
 
@@ -43,7 +43,7 @@ type Person =
 
 In the example, `Person` is name of record type. `Name` and `Age` are fields of the Person record type.
 
-### Record creation
+### Record Creation
 
 A value of Person type is a exhaustive mapping from fields to values. Record expression `{ .. }` creates a record from specified assignment.
 
@@ -81,7 +81,7 @@ On the contrary, redundant field is error.
 //        ^ ERROR: Person doesn't have From field.
 ```
 
-### Field access
+### Field Access
 
 Field is accessible with dot notation like this.
 
@@ -89,7 +89,7 @@ Field is accessible with dot notation like this.
     assert (john.Name = "John Doe")
 ```
 
-### Record update
+### Record Update
 
 Sometimes you want to create a record, whose value is almost same as existing one. Optional `with` clause in record expression specifies a "base" record to fill values of unspecified fields. This is called *immutable update* of record.
 
@@ -103,9 +103,31 @@ assert (agedJohn.Name = "John Doe")
 assert (agedJohn.Age = 19)
 ```
 
-## Detailed explanation
+### Generics
 
-### Type inference of records
+Record types can be parameterized over types. (Same as other nominal types.)
+Such types are called *generic record types*.
+
+Example:
+`CountingList` below is an extension to the list type by adding `Count` field that holds the length of the list for constant-time length access.
+
+```fsharp
+type CountingList<'T> =
+  private
+    { Items: 'T list
+      Count: int }
+
+module CountingList =
+    let ofList xs : CountingList<'T> =
+        { Items = xs
+          Count = List.length }
+
+    let count (xs: CountingList<_>) = xs.Count
+```
+
+## Detailed Explanation
+
+### Type Inference of Records
 
 Current implementation of type inference is subtle on records.
 
@@ -135,9 +157,11 @@ Similarly, left-hand side of field expression (before `.`) also needs type ascri
 - Records are all immutable. No operation is provided to mutate field value after record creation.
 - Unlike F#, fields can't be qualified. (`{ Person.Name = "" }`)
 
-## Runtime representation
+## Advanced Topics
 
-(Runtime representation of record types are unlikely stabilized. Compiler may put some of records on heap for performance optimization. I want to introduce an attribute to specify runtime layout, such as `#[repr(C)]` in Rust.)
+### Runtime Representation
+
+(Runtime Representation of record types are unlikely stabilized. Compiler may put some of records on heap for performance optimization. I want to introduce an attribute to specify runtime layout, such as `#[repr(C)]` in Rust.)
 
 Record types are converted to C structs.
 
@@ -147,3 +171,7 @@ struct Person {
     int Age;
 };
 ```
+
+### Monomorphization of Generic Nominal Types
+
+See a section in [Discriminated Union Types](./discriminated_union_types.md).

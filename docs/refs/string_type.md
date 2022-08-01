@@ -1,12 +1,12 @@
-# String type
+# String Type
 
 `string` is a built-in type to represent a string (text).
 
-## Guide-level explanation
+## Guide-level Explanation
 
 String literals are written between two double-quotes (`"`), e.g. `"Hello, world!"`.
 
-### `Length` property
+### `Length` Property
 
 Strings have `Length` property to get its length in bytes.
 
@@ -26,7 +26,7 @@ Strings support concatenation operation (`(+)`) and comparison operations (`(=)`
 
 About performance: concatenation likely copies the both strings and newly allocates a string on heap.
 
-### Index operation
+### Index Operation
 
 `s.[i]` extracts the `i`'th byte of string `s`.
 
@@ -45,7 +45,7 @@ Index must have `int` type (rather than other integer types). Since `.[]` operat
 
 About performance and safety: indexing is O(1) time. Exceeding the boundary is undefined behavior for now.
 
-### Subscript operation
+### Subscript Operation
 
 `s.[l .. r]` is a substring from `l`'th byte to `r`'th byte, inclusive.
 
@@ -57,7 +57,7 @@ About performance and safety: indexing is O(1) time. Exceeding the boundary is u
 
 About performance and safety: O(1) time and no allocation. Exceeding the boundary is runtime error for now.
 
-### Conversion from numbers
+### Conversion from Numbers
 
 `string` function converts a value of integer or float type to string. (The result format is unspecified for now.)
 
@@ -65,7 +65,7 @@ About performance and safety: O(1) time and no allocation. Exceeding the boundar
     assert (string 42 = "42")
 ```
 
-### Escape sequences
+### Escape Sequences
 
 In quotes, backslashes *escape* other characters.
 
@@ -77,9 +77,9 @@ In quotes, backslashes *escape* other characters.
 - `\"`: the character `"`
 - `\\`: the character `\`
 
-## Advanced topics
+## Advanced Topics
 
-### Runtime representation
+### Runtime Representation
 
 (See also `struct String` in [milone.h](../../src/libmilonert/milone.h).)
 

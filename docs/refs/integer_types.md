@@ -1,12 +1,12 @@
-# Integer types
+# Integer Types
 
-## Guide-level explanation
+## Guide-level Explanation
 
 `int` is a built-in type to represent a integer (in a limited set).
 
 Integer literals are written as `0`, `1`, `42`, etc. Their type is `int`.
 
-### Arithmetic operations
+### Arithmetic Operations
 
 - `-x`: minus
     - *Known issue*: Due to incorrect parsing of unary operators, you should wrap it with parens, e.g. `(-1)`.
@@ -16,7 +16,7 @@ Integer literals are written as `0`, `1`, `42`, etc. Their type is `int`.
 - `x / y`: division
 - `x % y`: modulo
 
-### Bit operations
+### Bitwise Operations
 
 - `x &&& y`: bit-wise and
 - `x ||| y`: bit-wise or
@@ -24,7 +24,7 @@ Integer literals are written as `0`, `1`, `42`, etc. Their type is `int`.
 - `x <<< n`: left shift
 - `x >>> n`: right shift
 
-### Comparison operations
+### Comparison Operations
 
 - `x = y`: x equals to y (Don't confuse with `==`.)
 - `x <> y`: x does NOT equal to y
@@ -44,9 +44,9 @@ When string-to-int conversion failed, the program ends with runtime error.
 
 - Overflow of signed integer is undefined behavior. (This behavior is derived from C language.)
 
-## Advanced topics
+## Advanced Topics
 
-### Integer types other than `int`
+### Other Integer Types
 
 | name          | signedness    | width     | suffix | alias |
 |:--------------|--------------:|----------:|:-------|:------|
@@ -112,7 +112,7 @@ Typing rules:
     (l >>> r): I
 ```
 
-### Runtime representation
+### Runtime Representation
 
 N-bit integer types in milone-lang map to corresponding fixed integer types[^1] in C; e.g. `int` → `int32_t`.
 

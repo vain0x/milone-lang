@@ -4,7 +4,7 @@
 
 The following illustrates edge cases that F# allows but milone-lang doesn't.
 
-### As pattern syntax
+### As Pattern Syntax
 
 `as` patterns don't parse correctly.
 
@@ -27,7 +27,7 @@ In F#, the two lines are same, but milone-lang doesn't parse the first line.
     | ((_, _) as xs :: _) as ys -> ...
 ```
 
-### Union type syntax without pipes
+### Union Type Syntax without Pipes
 
 Defining discriminated unions require `|` in front of all variants.
 
@@ -40,7 +40,7 @@ Defining discriminated unions require `|` in front of all variants.
     type T = A
 ```
 
-### Redundant payload patterns
+### Redundant Payload Patterns
 
 Const variants can't have payload patterns.
 

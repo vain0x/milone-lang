@@ -1,8 +1,8 @@
-# Float types
+# Float Types
 
 (Float is implemented just to use with FFI and not supported well for now.)
 
-## Guide-level explanation
+## Guide-level Explanation
 
 `float` is a built-in type to represent a real number approximately.
 
@@ -27,8 +27,8 @@ The `float` type and integer types are convertible with built-in functions.
 - `0` is zero of int and `0.0` is zero of float. Two values are incompatible.
 - No implicit conversion between float types and integer types. This improves type inference.
 
-## Advanced topics
+## Advanced Topics
 
-### Runtime representation
+### Runtime Representation
 
 Currently, `float` in milone-lang is same as `double` in C.
