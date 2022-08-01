@@ -2,7 +2,7 @@
 
 *Type synonym* is a kind of user-defined types.
 
-## Instant usage
+## Instant Usage
 
 ```fsharp
 // Define type.
@@ -13,7 +13,7 @@ let getRowText (row: RowIndex) (text: string) : string =
     "<row'th line in t>"
 ```
 
-## Guide-level explanation
+## Guide-level Explanation
 
 Type declaration like below defines a type synonym.
 
@@ -31,19 +31,19 @@ type RowIndex = int
 It's the same type as `int` written in the right-hand side.
 That type is called *underlying type*.
 
-### Type check
+### Type Check
 
 Type synonym is *same* as the underlying type.
-These types are interchangable.
+These types are interchangeable.
 
 ```fsharp
 let intValue : int = 1
 
-// This assigns an int value to a vaiable of RowIndex type, which is okay.
+// This assigns an int value to a variable of RowIndex type, which is okay.
 let rowIndex : RowIndex = intValue
 ```
 
-### Typical usage
+### Typical Usage
 
 Type synonym is useful when a type (say, `int`) is used for multiple purposes.
 Name of type synonym adds information for the reader of code.
@@ -67,13 +67,13 @@ let equalTwo (equals: EqualFun<int>) x1 x2 y1 y2 =
     equals x1 y1 && equals x2 y2
 ```
 
-## Advanced topics
+## Advanced Topics
 
 ### Naming
 
 Type synonyms are also known as type abbreviations in F#, type aliases in Rust. `typedef` in C.
 
-### Cyclic type synonyms
+### Cyclic Type Synonyms
 
 Cyclic definitions are forbidden.
 
@@ -98,6 +98,6 @@ type X =
     | X
 ```
 
-### Elimination of type synonyms
+### Elimination of Type Synonyms
 
 Type synonyms are all substituted to underlying types after type check.

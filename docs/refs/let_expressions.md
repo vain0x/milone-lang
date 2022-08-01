@@ -1,8 +1,8 @@
 # Let Expressions
 
-## Guide-level explanation
+## Guide-level Explanation
 
-### Variable definition
+### Variable Definition
 
 Let expression defines a variable like this:
 
@@ -37,7 +37,7 @@ Example:
     assert (sum = 2 + 3 + 5)
 ```
 
-### About indentation
+### Indentation
 
 `next` expression must be indented on the same column as `let` keyword.
 
@@ -63,7 +63,7 @@ Example:
     assert (sum = 5)
 ```
 
-### Type ascription
+### Type Ascription
 
 The type of variable is same as the type of `initializer` expression. If you want to make it explicit, write a type ascription like this:
 
@@ -78,7 +78,7 @@ Compiler reports a type error if the ascription is wrong.
 
 **Remark**: Type ascription doesn't change the value of expression. Type ascription is not *type casting*.
 
-### Function definition
+### Function Definition
 
 Let expression also defines a function like this:
 
@@ -105,7 +105,7 @@ These type ascriptions are recommended for readability, but optional:
     assert (squareSum 3 4 = 25)
 ```
 
-### Recursive functions
+### Recursive Functions
 
 Recursive let expression defines a recursive function.
 
@@ -130,7 +130,7 @@ Example:
     assert (sum 3 = 3 + 2 + 1 + 0)
 ```
 
-### Polymorphic functions
+### Polymorphic Functions
 
 Function defined by `let-fun` is polymorphic as possible.
 
@@ -148,9 +148,9 @@ Function defined by `let-fun` is polymorphic as possible.
 
 (TODO: Explain more. If you want to learn by yourself, search for Hindley-Milner type inference.)
 
-## Advanced topics
+## Advanced Topics
 
-### Generic syntax of let expressions
+### Generic Syntax of Let Expressions
 
 Let expression has several variants of syntax.
 

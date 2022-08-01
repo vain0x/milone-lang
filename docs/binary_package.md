@@ -1,4 +1,4 @@
-# Binary package
+# Binary Package
 
 Binary packages are distributed in [GitHub Releases](https://github.com/vain0x/milone-lang/releases).
 Package file extension is either `.tar.gz` or `.zip`.
@@ -10,7 +10,7 @@ Package file extension is either `.tar.gz` or `.zip`.
 
 ----
 
-## Package structure
+## Package Structure
 
 Package should consist of these files.
 
@@ -23,7 +23,7 @@ Package should consist of these files.
     - `LICENSE`
     - `README.md`
 
-## Generated files by installation
+## Generated Files by Installation
 
 Installation script should place these files (and these files only):
 

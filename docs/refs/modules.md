@@ -1,6 +1,6 @@
 # Modules
 
-## Guide-level explanation
+## Guide-level Explanation
 
 Each source file is a module.
 
@@ -15,7 +15,7 @@ module rec ProjectName.ModuleName
 Symbols defined in a module are separated from other modules.
 To access symbols in other modules, there are several ways: module synonyms and `open` statements.
 
-### Module synonyms
+### Module Synonyms
 
 A module statement defines a module synonym.
 
@@ -44,7 +44,7 @@ module A = P.A
 let g () = A.f ()
 ```
 
-### Open statements
+### Open Declarations
 
 After `open` statement, all symbols defined in specified module are visible in the current module.
 
@@ -64,7 +64,7 @@ open P.A
 let g () = f () // f is defined in `P.A`
 ```
 
-### Private symbols
+### Private Symbols
 
 `private` keyword in front of defined symbol hides it from other modules.
 
@@ -76,7 +76,7 @@ type private InnerTy = | InnerTy of int
 let private innerFun () = ()
 ```
 
-## Advanced topics
+## Advanced Topics
 
 - `module rec` is implemented, but non-recursive `module` isn't.
 

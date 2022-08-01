@@ -1,8 +1,8 @@
-# Discriminated union types
+# Discriminated Union Types
 
 Discriminated union type (DU) is a kind of user-defined types.
 
-## Instant usage
+## Instant Usage
 
 ```fsharp
 // Define type and variants.
@@ -19,9 +19,9 @@ match john with
 | Member id -> assert (id = 1)
 ```
 
-## Guide-level explanation
+## Guide-level Explanation
 
-### Constant variants
+### Constant Variants
 
 Type declaration defines a discriminated union type. Discriminated union consists of any number of variants, separated by pipes (`|`).
 
@@ -61,7 +61,7 @@ When a function takes a parameter of `CustomerKind` type, there only exists two 
     assert (not (isGuest Member))
 ```
 
-### Value-carrying variants
+### Value-carrying Variants
 
 Variants can have some fields.
 
@@ -126,9 +126,9 @@ When to use a generic type, type arguments that bind to type variables must be s
     let opt: Option<int> = Some 42
 ```
 
-## Advanced topics
+## Advanced Topics
 
-### Notes on name of parts
+### Name of Parts
 
 - "discriminated union type" is also known as "algebraic data type (ADT)", "custom type", "enum" (enumeration), "sum type", "tagged union type", "variant", etc. in other communities.
 - "variant" is also known as "case", "constructor", etc.
@@ -159,7 +159,7 @@ If a variant is declared without `of` clause, its payload is empty. Its payload 
 
 Each variant is associated with an integer. The value is called *discriminant* of the variant.
 
-### Runtime representation
+### Runtime Representation
 
 (The runtime representation of discriminated union types is unlikely stabilized. FFI codes shouldn't rely on the layout.)
 
@@ -193,7 +193,7 @@ struct Customer {
 };
 ```
 
-### Monomorphization of generic nominal types
+### Monomorphization of Generic Nominal Types
 
 Generic discriminated union types are monomorphized after monomorphization of generic functions.
 

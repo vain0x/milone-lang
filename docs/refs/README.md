@@ -9,7 +9,7 @@ Language references.
 - [match_expressions](match_expressions.md)
 - [modules](modules.md)
 
-## Types and type-specific primitives
+## Types and Type-specific Primitives
 
 Built-in basic types:
 
@@ -37,7 +37,7 @@ User-defined types:
 
 - [projects](projects.md)
 
-## Language extensions
+## Language Extensions
 
 - [own type](x_own_type.md)
 - [pointer types](x_ptr_types.md)

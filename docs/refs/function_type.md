@@ -1,8 +1,8 @@
-# Function type
+# Function Type
 
 Function type is built-in type.
 
-## Instant usage
+## Instant Usage
 
 ```fsharp
     // Define a function. Polymorphic by default.
@@ -19,7 +19,7 @@ Function type is built-in type.
     // opt is None
 ```
 
-## Guide-level explanation
+## Guide-level Explanation
 
 Functions are values. A function can be assigned to a variable, passed to other functions as parameter, and returned from a function.
 
@@ -31,9 +31,9 @@ See [let_expressions](let_expressions.md) to define named functions.
 
 (Someone calls this kind of expressions *lambda*, but the term is problematic.)
 
-## Advanced topics
+## Advanced Topics
 
-### Currying and partial application
+### Currying and Partial Application
 
 Functions are *curried* by default.
 
@@ -58,7 +58,7 @@ Due to currying, functions can be partially applied.
     assert (increment 2 = 1 + 2)
 ```
 
-### Arity error
+### Arity Error
 
 Due to immaturity of compiler, use of function objects sometimes causes unusual compile error "arity mismatch".
 This is not a problem of your code.
@@ -83,11 +83,11 @@ To workaround the issue, eta-expand the function as possible.
 
 Test case about this: [tests/pendings/fun_arity_over](../../tests/pendings/fun_arity_over/fun_arity_over.fs).
 
-### Derived forms
+### Derived Forms
 
 - `fun p1 p2 ... -> body` expands to `let f p1 p2 = body in f`.
 
-## Runtime representation
+## Runtime Representation
 
 (The runtime representation of functions is unlikely stabilized.)
 

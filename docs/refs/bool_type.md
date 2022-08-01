@@ -1,14 +1,14 @@
-# Bool type
+# Bool Type
 
 `bool` is a built-in type to represent a truth value.
 
-## Guide-level explanation
+## Guide-level Explanation
 
 Boolean literals are `true` and `false`.
 
 The `bool` type supports comparison operations in the order: `false < true`. See [Integer types](integer_types.md#Operations) for details.
 
-### `not` function
+### `not` Function
 
 The `not` function flips a boolean value.
 
@@ -16,14 +16,14 @@ The `not` function flips a boolean value.
     assert (not false)
 ```
 
-### Logical operators
+### Logical Operators
 
 Logical operators combine two conditions.
 
 - `p && q`: both p and q are true
 - `p || q`: either p or q is true
 
-### If expression
+### If Expression
 
 `if` expression evaluates either of two expressions depending on a condition.
 
@@ -73,7 +73,7 @@ Example: the function `collatz` halves an integer if even or multiplies by 3 and
     assert (collatz 5 = 16)  // 5 * 3 + 1
 ```
 
-### `assert` function
+### `assert` Function
 
 The `assert` function states that "This condition must be true."
 
@@ -96,9 +96,9 @@ If the condition evaluated to false, the program ends with runtime error.
     - No truthy/falsy categorization.
     - This design choice is compatible with F#. It improves type inference.
 
-## Advanced topics
+## Advanced Topics
 
-### Typing rule
+### Typing Rules
 
 The condition must have `bool` type.
 The two expressions must have same type.
@@ -119,13 +119,13 @@ If `else` clause is omitted, body must have `unit` type.
     (if condition then body else alt): T
 ```
 
-### Derived forms
+### Derived Forms
 
 - `p && q` expands to `if p then q else false`. (Short-circuit occurs.)
 - `p || q` expands to `if p then true else q`.
 - `if cond then body else alt` expands to `match cond with true -> body | false -> alt`.
 
-### Runtime representation
+### Runtime Representation
 
 Currently, `bool` in milone-lang is same as `bool` from `<stdbool.h>`, which is a macro of `_Bool`.
 See [`_Bool` type introduced from C99](https://en.cppreference.com/w/c/language/arithmetic_types#Boolean_type).

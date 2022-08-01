@@ -1,8 +1,8 @@
-# Option type
+# Option Type
 
 Option is a container for some value which can be missing.
 
-## Instant usage
+## Instant Usage
 
 ```fsharp
     // Creation.
@@ -15,12 +15,12 @@ Option is a container for some value which can be missing.
     | Some x -> assert (x = 42)
 ```
 
-## Guide-level explanation
+## Guide-level Explanation
 
 `T option` or `option<T>` is an option type for type `T`.
 For example, `int option` is an option of int value.
 
-### As error handling
+### As Error Handling
 
 Option is useful when a function can fail to produce its result.
 A typical example is `List.tryHead` function in the List module.
@@ -36,12 +36,12 @@ For such case, `tryHead` returns a value wrapped with an option.
 
     let _ = tryHead []
     //=> None
-    
+
     let _ = tryHead [ "x"; "y" ]
     //=> Some "x"
 ```
 
-### As optional data
+### As Optional Data
 
 Option is also useful when a value is missing at first and is filled later.
 
@@ -70,7 +70,7 @@ In `doSomething`, the option is unwrapped to use.
 It can still be None.
 You need to consider what to do in the case: falling back to a default value, raising an error, or something.
 
-### Helper functions
+### Helper Functions
 
 Once you are familiar with option types, pattern matching on option might look too verbose.
 Use Option module for built-in helper functions.
@@ -86,9 +86,9 @@ List module also provides several utilities related to options. Check these:
 - List.tryPick
 - List.choose
 
-## Advanced topics
+## Advanced Topics
 
-### As discriminated union
+### As Discriminated Union
 
 Option is just a generic discriminated union.
 
@@ -98,7 +98,7 @@ type option<'T> =
     | Some of 'T
 ```
 
-### Runtime representation
+### Runtime Representation
 
 (Unlikely stabilized.
 Ideally the runtime representation should depend on the content type.

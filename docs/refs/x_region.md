@@ -1,10 +1,8 @@
-# Dynamic Region
+# Dynamic Regions
 
 This page explains *dynamic regions*.
 
 NOTICE: *Region API is still incomplete for practical use.*
-
-## Dynamic Regions
 
 Dynamic region is a way to manage resources by the milone-lang runtime.
 Especially, the allocator that is owned by the current region is used to allocate objects such as strings, lists, and closures.

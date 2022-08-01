@@ -158,7 +158,7 @@ Otherwise, it becomes unclear that a variable of owned type is disposed or not, 
 
 `if` expressions go same.
 
-## Immaturity and future extensions
+## Immaturity and Future Extensions
 
 There are some restrictions due to maturity of language and implementation.
 
@@ -168,14 +168,14 @@ There are some restrictions due to maturity of language and implementation.
     - Note that type variables of generic types can be owned types; e.g. `option<Own<int>>`.
 - Variables of owned type can't be used in local functions.
 
-## Advanced topics
+## Advanced Topics
 
-### Runtime representation
+### Runtime Representation
 
-Runtime representation of `Own<T>` is same as `T`.
+Runtime Representation of `Own<T>` is same as `T`.
 `acquire` and `dispose` are noop at runtime.
 
-### Prior art
+### Prior Arts
 
 - [linear types · Wiki · Glasgow Haskell Compiler / GHC · GitLab](https://gitlab.haskell.org/ghc/ghc/-/wikis/linear-types): Linear types (academic name of "owned types" here) in Haskell as compiler extension
 - [What is Ownership? - The Rust Programming Language](https://doc.rust-lang.org/book/ch04-01-what-is-ownership.html): "Ownership" in the Rust language shares the motivation although it's different than that in the milone-lang.

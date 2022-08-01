@@ -1,4 +1,4 @@
-# LSP server
+# LSP Server
 
 WIP: write document about MiloneLspServer
 
@@ -19,7 +19,7 @@ To enable formatting feature, you need to install it locally (in workspace) or g
     - Read this article: [Tutorial: Install and use a .NET global tool - .NET CLI | Microsoft Docs](https://docs.microsoft.com/en-us/dotnet/core/tools/global-tools-how-to-use)
     - Basically, `dotnet tool install -g fantomas-tool` and add `$HOME/.dotnet/tool` to PATH
 
-### Versions of toolchain
+### Versions of Toolchain
 
 Fantomas sometimes changes formatting algorithm.
 You want to use the same version of fantomas with the one used by F# IDE for consistent formatting.
