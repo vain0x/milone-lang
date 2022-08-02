@@ -46,6 +46,9 @@ type CUnary =
   /// `-x`
   | CMinusUnary
 
+  /// `~x`
+  | CBitNotUnary
+
   /// `!p`
   | CNotUnary
 

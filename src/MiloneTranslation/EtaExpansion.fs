@@ -125,6 +125,7 @@ let private primToArity ty prim =
   | HPrim.NullPtr -> 0
 
   | HPrim.Not
+  | HPrim.BitNot
   | HPrim.Exit
   | HPrim.Assert
   | HPrim.Box

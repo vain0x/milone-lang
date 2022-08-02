@@ -807,6 +807,7 @@ let private genUnaryExpr ctx op arg =
 
   match op with
   | MMinusUnary -> CUnaryExpr(CMinusUnary, arg), ctx
+  | MBitNotUnary -> CUnaryExpr(CBitNotUnary, arg), ctx
   | MNotUnary -> CUnaryExpr(CNotUnary, arg), ctx
   | MPtrOfUnary -> CUnaryExpr(CAddressOfUnary, arg), ctx
   | MIntOfScalarUnary flavor -> CCastExpr(arg, CIntTy flavor), ctx

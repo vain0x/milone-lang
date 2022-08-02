@@ -174,6 +174,7 @@ let private inFirstOfPat (token: Token) =
 let private inFirstOfExpr (token: Token) =
   match token with
   | AmpAmpToken _
+  | TildeTildeTildeToken _
   | IfToken
   | MatchToken
   | FunToken
@@ -185,7 +186,8 @@ let private inFirstOfExpr (token: Token) =
 let private inFirstOfArg (token: Token) =
   match token with
   | MinusToken false
-  | AmpAmpToken false -> false
+  | AmpAmpToken false
+  | TildeTildeTildeToken false -> false
 
   | _ -> inFirstOfExpr token
 
@@ -757,7 +759,7 @@ let private parseApp basePos (tokens, errors) : PR<AExpr> =
 
   go callee (tokens, errors)
 
-// `prefix = ('-' | '&&')? app`
+// `prefix = ('-' | '&&' | '~~~')? app`
 let private parsePrefix basePos (tokens, errors) : PR<AExpr> =
   match tokens with
   | (MinusToken _, pos) :: tokens ->
@@ -767,6 +769,10 @@ let private parsePrefix basePos (tokens, errors) : PR<AExpr> =
   | (AmpAmpToken _, pos) :: tokens ->
     let arg, tokens, errors = parseSuffix basePos (tokens, errors)
     AUnaryExpr(PtrOfUnary, arg, pos), tokens, errors
+
+  | (TildeTildeTildeToken _, pos) :: tokens ->
+    let arg, tokens, errors = parseSuffix basePos (tokens, errors)
+    AUnaryExpr(BitNotUnary, arg, pos), tokens, errors
 
   | _ -> parseSuffix basePos (tokens, errors)
 

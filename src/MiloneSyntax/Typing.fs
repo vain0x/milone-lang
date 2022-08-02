@@ -1152,6 +1152,10 @@ let private inferVariantExpr (ctx: TyCtx) variantSerial loc =
 
 let private primNotTy = tyFun tyBool tyBool
 
+let private primBitNotScheme =
+  let ty = tyMeta 1 noLoc
+  BoundedTyScheme([ 1 ], tyFun ty ty, [ IsIntTrait ty ])
+
 let private primAddScheme =
   let meta id = tyMeta id noLoc
   let addTy = meta 1
@@ -1292,6 +1296,7 @@ let private inferPrimExpr ctx prim loc =
 
   match prim with
   | TPrim.Not -> onMono primNotTy
+  | TPrim.BitNot -> onBounded primBitNotScheme
   | TPrim.Add -> onBounded primAddScheme
 
   | TPrim.Subtract

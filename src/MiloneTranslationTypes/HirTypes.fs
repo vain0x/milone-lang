@@ -167,6 +167,7 @@ type HPat =
 type HPrim =
   // operator:
   | Not
+  | BitNot
   | Add
   | Subtract
   | Multiply

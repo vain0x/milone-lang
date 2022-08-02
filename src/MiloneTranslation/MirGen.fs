@@ -1110,6 +1110,25 @@ let private mirifyExprRecordItem ctx index record loc =
   let record, ctx = mirifyExpr ctx record
   MUnaryExpr(MRecordItemUnary(index, recordTy), record, loc), ctx
 
+let private mirifyExprBitNotUnary ctx arg loc =
+  let argTy = exprToTy arg
+  let arg, ctx = mirifyExpr ctx arg
+
+  let result = MUnaryExpr(MBitNotUnary, arg, loc)
+
+  // Insert a cast to ensure the result is the same type as the argument.
+  // C bit-not operator automatically promotes the result to int in some cases;
+  // e.g. `~(uint8_t)1` is `(int)(-2)` rather than `(uint8_t)254`.
+  let result =
+    match argTy with
+    | Ty (IntTk I32, _) -> result
+
+    | _ ->
+      // assert: argTy is some integer type.
+      MUnaryExpr(MNativeCastUnary argTy, result, loc)
+
+  result, ctx
+
 let private mirifyExprOpArith ctx itself op l r loc =
   let lTy = exprToTy l
   let l, ctx = mirifyExpr ctx l
@@ -1351,6 +1370,8 @@ let private mirifyCallPrimExpr ctx itself prim args ty loc =
   | HPrim.Cons, _ -> fail ()
   | HPrim.Not, [ arg ] -> regularUnary MNotUnary arg
   | HPrim.Not, _ -> fail ()
+  | HPrim.BitNot, [ arg ] -> mirifyExprBitNotUnary ctx arg loc
+  | HPrim.BitNot, _ -> fail ()
   | HPrim.Exit, [ arg ] -> mirifyExprCallExit ctx arg loc
   | HPrim.Exit, _ -> fail ()
   | HPrim.Box, [ arg ] -> mirifyExprCallBox ctx arg loc

@@ -13,6 +13,7 @@
 - Add `Std.Ptr.FunPtr.invoke`
 - Add opaque types
 - Support generic records
+- Add Bitwise negation operator (`~~~`)
 
 ### CLI Tool
 

@@ -148,6 +148,8 @@ type Token =
   | SlashToken
   /// `*`
   | StarToken
+  /// `~~~`
+  | TildeTildeTildeToken of prefix: bool
 
   // keywords:
   | AsToken
@@ -180,6 +182,8 @@ type TokenizeFullResult = (Token * Pos) list
 [<NoEquality; NoComparison>]
 type Unary =
   | MinusUnary
+  /// `~~~`
+  | BitNotUnary
   // `&&`
   | PtrOfUnary
 

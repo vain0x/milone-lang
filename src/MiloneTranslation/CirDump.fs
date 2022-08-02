@@ -50,6 +50,7 @@ let private declIsForwardOnly decl =
 let private unaryToString op =
   match op with
   | CMinusUnary -> "-"
+  | CBitNotUnary -> "~"
   | CNotUnary -> "!"
   | CAddressOfUnary -> "&"
   | CDerefUnary -> "*"

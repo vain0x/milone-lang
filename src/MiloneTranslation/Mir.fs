@@ -46,6 +46,7 @@ type MGenericValue =
 [<NoEquality; NoComparison>]
 type MUnary =
   | MMinusUnary
+  | MBitNotUnary
   | MNotUnary
   | MPtrOfUnary
 

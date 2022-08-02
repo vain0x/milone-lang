@@ -18,6 +18,7 @@ Integer literals are written as `0`, `1`, `42`, etc. Their type is `int`.
 
 ### Bitwise Operations
 
+- `~~~x`: bit-wise not
 - `x &&& y`: bit-wise and
 - `x ||| y`: bit-wise or
 - `x ^^^ y`: bit-wise xor
@@ -91,6 +92,13 @@ Typing rules:
     n: I
 ==>
     (-n): I
+```
+
+```fsharp
+    I: integer type,
+    n: I
+==>
+    (~~~n): I
 ```
 
 ```fsharp

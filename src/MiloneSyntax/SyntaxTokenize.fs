@@ -33,7 +33,8 @@ let private charIsOp (c: char) : bool =
   | ':'
   | '@'
   | ';'
-  | '.' -> true
+  | '.'
+  | '~' -> true
 
   | _ -> false
 
@@ -371,6 +372,11 @@ let private tokenOfOp allowPrefix (text: string) l r : Token =
     | "^^^" -> HatHatHatToken
     | _ -> error ()
 
+  | '~' ->
+    match s with
+    | "~~~" -> TildeTildeTildeToken(allowPrefix && not (atSpace text r))
+    | _ -> error ()
+
   | '=' -> expect "=" EqualToken
   | '%' -> expect "%" PercentToken
   | '+' -> expect "+" PlusToken
@@ -672,7 +678,8 @@ let private lookahead (text: string) (i: int) =
   | '+'
   | '<'
   | '='
-  | '|' -> LOp, 1
+  | '|'
+  | '~' -> LOp, 1
 
   | _ -> LBad, 1
 

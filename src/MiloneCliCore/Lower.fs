@@ -111,6 +111,7 @@ let private lowerVarMap vars =
 let private lowerPrim (prim: Tir.TPrim) : Hir.HPrim =
   match prim with
   | Tir.TPrim.Not -> Hir.HPrim.Not
+  | Tir.TPrim.BitNot -> Hir.HPrim.BitNot
   | Tir.TPrim.Add -> Hir.HPrim.Add
   | Tir.TPrim.Subtract -> Hir.HPrim.Subtract
   | Tir.TPrim.Multiply -> Hir.HPrim.Multiply

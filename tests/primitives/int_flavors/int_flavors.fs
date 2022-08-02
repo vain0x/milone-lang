@@ -32,6 +32,8 @@ let private signedCases () =
 
   assert ((-1y >>> 1) = (-1y))
 
+  assert (~~~60y = -61y)
+
   // Comparison.
   assert (int32 13 = 13)
   assert (17L = 17L)
@@ -71,6 +73,8 @@ let private unsignedCases () =
 
   assert (((1uy + 4uy + 16uy) <<< 1) = (2uy + 8uy + 32uy))
   assert (((1us + 4us + 16us) >>> 1) = (0us + 2us + 8us))
+
+  assert (~~~60uy = 195uy)
 
   // Comparison.
   assert (uint 13 = 13u)

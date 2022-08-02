@@ -247,6 +247,7 @@ type TPat =
 type TPrim =
   // operator:
   | Not
+  | BitNot
   | Add
   | Subtract
   | Multiply
