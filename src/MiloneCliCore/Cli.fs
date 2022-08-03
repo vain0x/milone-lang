@@ -199,8 +199,10 @@ let private computeExePath targetDir platform isRelease binaryType name : Path =
     match platform, binaryType with
     | Platform.Unix _, BinaryType.Exe -> ""
     | Platform.Unix _, BinaryType.SharedObj -> ".so"
+    | Platform.Unix _, BinaryType.StaticLib -> ".a"
     | Platform.Windows _, BinaryType.Exe -> ".exe"
     | Platform.Windows _, BinaryType.SharedObj -> ".dll"
+    | Platform.Windows _, BinaryType.StaticLib -> ".lib"
 
   Path(
     Path.toString targetDir

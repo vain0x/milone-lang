@@ -14,7 +14,9 @@
 - Add opaque types
 - Support generic records
 - Add Bitwise negation operator (`~~~`)
-- Add `binary shared` directive in manifest
+- Add directives to specify output binary type in manifest
+    - `binary shared` (`*.so`)
+    - `binary staticlib` (`*.a`)
 
 ### CLI Tool
 

@@ -68,6 +68,7 @@ let parseManifest (docId: DocId) (text: string) : ManifestData =
              push name dir
 
          | [ "binary"; "shared" ] -> { m with BinaryType = Some(BinaryType.SharedObj, loc) }
+         | [ "binary"; "staticlib" ] -> { m with BinaryType = Some(BinaryType.StaticLib, loc) }
          | [ "sanitize"; value ] -> { m with CSanitize = Some value }
          | [ "std"; version ] -> { m with CStd = version }
          | [ "cc"; path ] -> { m with CcList = (Path path, loc) :: m.CcList }

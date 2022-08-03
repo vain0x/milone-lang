@@ -27,6 +27,8 @@ type BinaryType =
   | Exe
   /// Shared object (.so) or dynamic-link library (.dll).
   | SharedObj
+  /// Archive (.a) or static library (.lib).
+  | StaticLib
 
 [<RequireQualifiedAccess; NoEquality; NoComparison>]
 type ManifestData =
