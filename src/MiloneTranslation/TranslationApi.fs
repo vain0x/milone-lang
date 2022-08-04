@@ -22,7 +22,11 @@ module MonoTy = MiloneTranslation.MonoTy
 module RecordRes = MiloneTranslation.RecordRes
 module TailRecOptimizing = MiloneTranslation.TailRecOptimizing
 
-let private codeGenHir (writeLog: WriteLogFun) (modules: HProgram, hirCtx: HirCtx) : (DocId * CCode) list =
+let private codeGenHir
+  entrypointName
+  (writeLog: WriteLogFun)
+  (modules: HProgram, hirCtx: HirCtx)
+  : (DocId * CCode) list =
   writeLog "RecordRes"
   let modules, hirCtx = RecordRes.recordRes (modules, hirCtx)
 
@@ -80,7 +84,9 @@ let private codeGenHir (writeLog: WriteLogFun) (modules: HProgram, hirCtx: HirCt
   let modules, mirCtx = MirGen.mirify (modules, hirCtx)
 
   writeLog "CirGen"
-  let modules = CirGen.genCir (modules, mirCtx)
+
+  let modules =
+    CirGen.genCir entrypointName (modules, mirCtx)
 
   writeLog "CirDump"
 

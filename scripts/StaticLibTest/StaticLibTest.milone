@@ -7,4 +7,5 @@ let my_gcd (x: int) (y: int) =
   else
     my_gcd y (x % y)
 
-let my_multiple (x: int) (y: float) = float x * y
+[<Export>]
+let my_multiply (x: int) (y: float) = float x * y

@@ -3,22 +3,12 @@
 set -eu
 
 PROJECT_DIR=$(dirname "$PWD/$0")
-T="$PROJECT_DIR/target"
-TRIPLET=x86_64-unknown-linux-gnu
 
 (
     cd "$PROJECT_DIR"
     set -x
 
-    milone-latest build "$PROJECT_DIR"
-
-    # Remove main function
-    sed -i 's;int main;int StaticLibTest_main;' "$T/StaticLibTest/StaticLibTest.c"
-
-    # Rebuild
-    ninja -f "$T/StaticLibTest/build.ninja"
-    cp "$T/StaticLibTest/$TRIPLET-debug/StaticLibTest.a" mylib.a
-
+    milone build "$PROJECT_DIR" -o mylib.a
     gcc -c app.c -o app.o
     gcc -o app.out mylib.a app.o
     ./app.out

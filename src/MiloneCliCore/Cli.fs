@@ -221,6 +221,7 @@ let private computeExePath targetDir platform isRelease binaryType name : Path =
 type private CompileCtx =
   { EntryProjectName: ProjectName
     SyntaxCtx: SyntaxCtx
+    EntrypointName: string
     WriteLog: string -> unit }
 
 let private compileCtxNew (sApi: SyntaxApi) (host: CliHost) verbosity projectDir : CompileCtx =
@@ -240,6 +241,14 @@ let private compileCtxNew (sApi: SyntaxApi) (host: CliHost) verbosity projectDir
 
   { EntryProjectName = projectName
     SyntaxCtx = syntaxCtx
+
+    EntrypointName =
+      match (syntaxCtx |> sApi.GetManifest).BinaryType with
+      | None
+      | Some (BinaryType.Exe, _) -> "main"
+
+      | _ -> projectName + "_initialize"
+
     WriteLog = writeLog host verbosity }
 
 // -----------------------------------------------
@@ -287,7 +296,7 @@ let private compile (sApi: SyntaxApi) (tApi: TranslationApi) (ctx: CompileCtx) :
     let modules, hirCtx = Lower.lower (modules, tirCtx)
 
     let cFiles =
-      tApi.CodeGenHir writeLog (modules, hirCtx)
+      tApi.CodeGenHir ctx.EntrypointName writeLog (modules, hirCtx)
 
     let cFiles =
       cFiles
