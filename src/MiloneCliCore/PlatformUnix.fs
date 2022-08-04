@@ -53,6 +53,8 @@ type BuildOnUnixParams =
     CcList: Path list
     ObjList: Path list
     Libs: string list
+    LinuxCFlags: string
+    LinuxLinkFlags: string
 
     // Effects
     DirCreate: Path -> unit
@@ -71,7 +73,9 @@ let private toRenderNinjaParams (p: BuildOnUnixParams) : RenderNinjaFileParams =
     CStd = p.CStd
     CcList = p.CcList
     ObjList = p.ObjList
-    Libs = p.Libs }
+    Libs = p.Libs
+    LinuxCFlags = p.LinuxCFlags
+    LinuxLinkFlags = p.LinuxLinkFlags }
 
 let buildOnUnix (p: BuildOnUnixParams) : Never =
   let targetDir = p.TargetDir
@@ -141,7 +145,9 @@ type private RenderNinjaFileParams =
     CSanitize: string option
     CcList: Path list
     ObjList: Path list
-    Libs: string list }
+    Libs: string list
+    LinuxCFlags: string
+    LinuxLinkFlags: string }
 
 let private renderNinjaFile (p: RenderNinjaFileParams) : string =
   let miloneHome = Path.toString p.MiloneHome
@@ -212,7 +218,8 @@ build $milone_platform_o: cc $milone_platform_c | $milone_h
       [ pic
         debug
         [ optimize; std ]
-        sanitizerFlags ]
+        sanitizerFlags
+        [ p.LinuxCFlags ] ]
     |> S.concat " "
 
   let linkFlags =
@@ -225,7 +232,12 @@ build $milone_platform_o: cc $milone_platform_c | $milone_h
     let lFlags =
       p.Libs |> List.map (fun lib -> "-l" + lib)
 
-    List.collect id [ binaryFlag; lFlags; sanitizerFlags ]
+    List.collect
+      id
+      [ binaryFlag
+        lFlags
+        sanitizerFlags
+        [ p.LinuxLinkFlags ] ]
     |> S.concat " "
 
   let build =

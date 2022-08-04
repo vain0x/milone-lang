@@ -22,7 +22,9 @@ let emptyManifest: ManifestData =
     CStd = "c11"
     CcList = []
     ObjList = []
-    Libs = [] }
+    Libs = []
+    LinuxCFlags = None
+    LinuxLinkFlags = None }
 
 let getManifestPath (projectDir: ProjectDir) : string = projectDir + "/milone_manifest"
 
@@ -76,6 +78,8 @@ let parseManifest (docId: DocId) (text: string) : ManifestData =
          | [ "cc"; path ] -> { m with CcList = (Path path, loc) :: m.CcList }
          | [ "obj"; path ] -> { m with ObjList = (Path path, loc) :: m.ObjList }
          | [ "lib"; name ] -> { m with Libs = (name, loc) :: m.Libs }
+         | "linux:" :: "cflags" :: flags -> { m with LinuxCFlags = Some(S.concat " " flags) }
+         | "linux:" :: "link" :: flags -> { m with LinuxLinkFlags = Some(S.concat " " flags) }
 
          | _ -> warn "Invalid statement.")
        emptyManifest

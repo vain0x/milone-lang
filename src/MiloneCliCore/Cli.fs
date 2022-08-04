@@ -405,6 +405,8 @@ let private toBuildOnUnixParams
       manifest.ObjList
       |> List.map (fun (Path name, _) -> Path(projectDir + "/" + name))
     Libs = manifest.Libs |> List.map fst
+    LinuxCFlags = manifest.LinuxCFlags |> Option.defaultValue ""
+    LinuxLinkFlags = manifest.LinuxLinkFlags |> Option.defaultValue ""
     DirCreate = dirCreateOrFail host
     FileWrite = fileWrite host
     ExecuteInto = u.ExecuteInto }

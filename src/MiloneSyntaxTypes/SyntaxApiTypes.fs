@@ -49,7 +49,11 @@ type ManifestData =
     CStd: string
     CcList: (Path * Loc) list
     ObjList: (Path * Loc) list
-    Libs: (string * Loc) list }
+    Libs: (string * Loc) list
+    /// Passed to cc to compile a source file, only on Linux.
+    LinuxCFlags: string option
+    /// Passed to cc to link object files, only on Linux.
+    LinuxLinkFlags: string option }
 
 [<Struct; NoEquality; NoComparison>]
 type SyntaxCtx = SyntaxCtx of obj
