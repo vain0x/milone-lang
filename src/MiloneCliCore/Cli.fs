@@ -443,6 +443,8 @@ let private toBuildOnWindowsParams
     ExeFile = computeExePath (Path targetDir) host.Platform isRelease binaryType projectName
     OutputOpt = outputOpt |> Option.map Path
 
+    BinaryType = binaryType
+
     CcList =
       manifest.CcList
       |> List.map (fun (Path name, _) -> Path(pathJoin projectDir name))

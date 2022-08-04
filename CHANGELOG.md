@@ -15,8 +15,8 @@
 - Support generic records
 - Add Bitwise negation operator (`~~~`)
 - Add directives to specify output binary type in manifest
-    - `binary shared` (`*.so`)
-    - `binary staticlib` (`*.a`)
+    - `binary shared` (`*.so`, `*.dll`)
+    - `binary staticlib` (`*.a`, `*.lib`)
 - Support `Export` attribute on functions
 
 ### CLI Tool

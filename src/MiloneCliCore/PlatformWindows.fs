@@ -1,5 +1,6 @@
 module rec MiloneCliCore.PlatformWindows
 
+open MiloneSyntaxTypes.SyntaxApiTypes
 open Std.StdPath
 
 module S = Std.StdString
@@ -81,6 +82,7 @@ type BuildOnWindowsParams =
     ExeFile: Path
     OutputOpt: Path option
     // FIXME: support csanitize, cstd, objList
+    BinaryType: BinaryType
     CcList: Path list
     Libs: string list
 
@@ -149,7 +151,13 @@ let buildOnWindows (p: BuildOnWindowsParams) : unit =
         ProjectGuid = projectGuid
         ProjectName = p.ProjectName
         IncludeDir = runtimeDir
-        RuntimeDir = runtimeDir }
+        RuntimeDir = runtimeDir
+
+        ConfigurationType =
+          match p.BinaryType with
+          | BinaryType.Exe -> "Application"
+          | BinaryType.SharedObj -> "DynamicLibrary"
+          | BinaryType.StaticLib -> "StaticLibrary" }
 
     renderVcxProjectXml p
 
@@ -257,7 +265,8 @@ type private VcxProjectParams =
     ProjectGuid: Guid
     ProjectName: string
     IncludeDir: string
-    RuntimeDir: string }
+    RuntimeDir: string
+    ConfigurationType: string }
 
 let private renderVcxProjectXml (p: VcxProjectParams) : string =
   """<?xml version="1.0" encoding="utf-8"?>
@@ -289,26 +298,26 @@ let private renderVcxProjectXml (p: VcxProjectParams) : string =
   </PropertyGroup>
   <Import Project="$(VCTargetsPath)\Microsoft.Cpp.Default.props" />
   <PropertyGroup Condition="'$(Configuration)|$(Platform)'=='Debug|Win32'" Label="Configuration">
-    <ConfigurationType>Application</ConfigurationType>
+    <ConfigurationType>${CONFIGURATION_TYPE}</ConfigurationType>
     <UseDebugLibraries>true</UseDebugLibraries>
     <PlatformToolset>v142</PlatformToolset>
     <CharacterSet>Unicode</CharacterSet>
   </PropertyGroup>
   <PropertyGroup Condition="'$(Configuration)|$(Platform)'=='Release|Win32'" Label="Configuration">
-    <ConfigurationType>Application</ConfigurationType>
+    <ConfigurationType>${CONFIGURATION_TYPE}</ConfigurationType>
     <UseDebugLibraries>false</UseDebugLibraries>
     <PlatformToolset>v142</PlatformToolset>
     <WholeProgramOptimization>true</WholeProgramOptimization>
     <CharacterSet>Unicode</CharacterSet>
   </PropertyGroup>
   <PropertyGroup Condition="'$(Configuration)|$(Platform)'=='Debug|x64'" Label="Configuration">
-    <ConfigurationType>Application</ConfigurationType>
+    <ConfigurationType>${CONFIGURATION_TYPE}</ConfigurationType>
     <UseDebugLibraries>true</UseDebugLibraries>
     <PlatformToolset>v142</PlatformToolset>
     <CharacterSet>Unicode</CharacterSet>
   </PropertyGroup>
   <PropertyGroup Condition="'$(Configuration)|$(Platform)'=='Release|x64'" Label="Configuration">
-    <ConfigurationType>Application</ConfigurationType>
+    <ConfigurationType>${CONFIGURATION_TYPE}</ConfigurationType>
     <UseDebugLibraries>false</UseDebugLibraries>
     <PlatformToolset>v142</PlatformToolset>
     <WholeProgramOptimization>true</WholeProgramOptimization>
@@ -453,6 +462,7 @@ let private renderVcxProjectXml (p: VcxProjectParams) : string =
   |> S.replace "${PROJECT_NAME}" p.ProjectName
   |> S.replace "${RUNTIME_DIR}" p.RuntimeDir
   |> S.replace "${INCLUDE_DIR}" p.IncludeDir
+  |> S.replace "${CONFIGURATION_TYPE}" p.ConfigurationType
   |> S.replace
        "${SRCS}"
        (p.CFiles
