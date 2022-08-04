@@ -1,11 +1,10 @@
-// [<Export("my_gcd")>]
-let myGcd (x: int) (y: int) =
+[<Export>]
+let my_gcd (x: int) (y: int) =
   assert (y >= 0)
 
   if y = 0 then
     x
   else
-    myGcd y (x % y)
+    my_gcd y (x % y)
 
-// [<Export("my_multiple")>]
-let myMultiple (x: int) (y: float) = float x * y
+let my_multiple (x: int) (y: float) = float x * y

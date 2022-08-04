@@ -17,6 +17,7 @@
 - Add directives to specify output binary type in manifest
     - `binary shared` (`*.so`)
     - `binary staticlib` (`*.a`)
+- Support `Export` attribute on functions
 
 ### CLI Tool
 

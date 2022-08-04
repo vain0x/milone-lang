@@ -1,8 +1,5 @@
 #include <stdio.h>
 
-#define my_gcd SharedObjectTest_SharedObjectTest_myGcd
-#define my_multiply SharedObjectTest_SharedObjectTest_myMultiple
-
 // From libsotest.so
 extern int my_gcd(int x, int y);
 extern double my_multiply(int x, double y);

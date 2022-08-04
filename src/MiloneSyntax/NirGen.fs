@@ -288,7 +288,7 @@ let private ngPat (docId: DocId) (ctx: NirGenCtx) (pat: APat) : NPat * NirGenCtx
     let loc = toLoc pos
     NPat.Or(l, r, loc), ctx
 
-let private ngLetContents docId ctx (contents: ALetContents) pos : NStmt * NirGenCtx =
+let private ngLetContents docId ctx attrs (contents: ALetContents) pos : NStmt * NirGenCtx =
   let onPat ctx pat = ngPat docId ctx pat
   let onPats ctx pats = List.mapFold (ngPat docId) ctx pats
   let onExpr ctx expr = ngExpr docId ctx expr
@@ -297,13 +297,20 @@ let private ngLetContents docId ctx (contents: ALetContents) pos : NStmt * NirGe
 
   match contents with
   | ALetContents.LetFun (isRec, vis, name, argPats, resultTyOpt, body) ->
+    let exported =
+      attrs
+      |> List.exists (fun a ->
+        match a with
+        | AIdentExpr (Name ("Export", _), []) -> true
+        | _ -> false)
+
     let argPats, ctx = argPats |> onPats ctx
 
     let body, ctx =
       let body = desugarResultTy body resultTyOpt
       body |> onExpr ctx
 
-    NStmt.LetFun(isRec, vis, onName name, argPats, body, toLoc pos), ctx
+    NStmt.LetFun(isRec, vis, onName name, argPats, body, exported, toLoc pos), ctx
 
   | ALetContents.LetVal (_, pat, body) ->
     // let rec for let-val should be error.
@@ -441,7 +448,7 @@ let private ngExpr (docId: DocId) (ctx: NirGenCtx) (expr: AExpr) : NExpr * NirGe
     NExpr.Block(stmts, last), ctx
 
   | ALetExpr (contents, next, pos) ->
-    let stmt, ctx = ngLetContents docId ctx contents pos
+    let stmt, ctx = ngLetContents docId ctx [] contents pos
     let next, ctx = next |> onExpr ctx
     NExpr.Block([ stmt ], next), ctx
 
@@ -471,7 +478,7 @@ let private ngDecl docId attrs ctx decl : NDecl * NirGenCtx =
     NDecl.Stmt(NStmt.Expr expr), ctx
 
   | ALetDecl (contents, pos) ->
-    let stmt, ctx = ngLetContents docId ctx contents pos
+    let stmt, ctx = ngLetContents docId ctx attrs contents pos
     NDecl.Stmt stmt, ctx
 
   | ATySynonymDecl (vis, name, tyArgs, bodyTy, pos) ->

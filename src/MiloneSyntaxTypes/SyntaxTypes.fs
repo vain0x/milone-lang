@@ -491,7 +491,7 @@ type NExpr =
 type NStmt =
   | Expr of NExpr
   | LetVal of pat: NPat * init: NExpr * NLoc
-  | LetFun of IsRec * Vis * NName * argPats: NPat list * body: NExpr * NLoc
+  | LetFun of IsRec * Vis * NName * argPats: NPat list * body: NExpr * exported: bool * NLoc
 
 type NVariantDecl = NName * NTy option * NLoc
 type NFieldDecl = NName * NTy * NLoc

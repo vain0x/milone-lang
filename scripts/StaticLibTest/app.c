@@ -1,9 +1,5 @@
 #include <stdio.h>
 
-// wants to specify exported symbol name
-#define my_gcd StaticLibTest_StaticLibTest_myGcd
-#define my_multiply StaticLibTest_StaticLibTest_myMultiple
-
 // From StaticLibTest.a
 extern int my_gcd(int x, int y);
 extern double my_multiply(int x, double y);

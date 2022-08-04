@@ -10,6 +10,6 @@ PROJECT_DIR=$(dirname "$PWD/$0")
 
     milone build "$PROJECT_DIR" -o libsotest.so
     gcc -c app.c -o app.o
-    gcc -o app.out libsotest.so app.o
+    gcc -Wl,-R "-Wl,$PROJECT_DIR" -o app.out libsotest.so app.o
     ./app.out
 )

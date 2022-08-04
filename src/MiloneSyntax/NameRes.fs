@@ -964,7 +964,7 @@ let private cdStmt currentModule ctx stmt : ScopeCtx =
 
   | NStmt.LetVal (pat, _, _) -> cdPat currentModule ctx pat
 
-  | NStmt.LetFun (_, vis, name, _, _, _) ->
+  | NStmt.LetFun (_, vis, name, _, _, _, _) ->
     let funSerial, ctx = freshFunSerial ctx
     let funSymbol = FunSymbol funSerial
 
@@ -1741,9 +1741,9 @@ let private nameResLetValStmt (ctx: ScopeCtx) stmt : TStmt * ScopeCtx =
   TLetValStmt(pat, init, loc), leaveStmt parent ctx
 
 let private nameResLetFunStmt (ctx: ScopeCtx) stmt : TStmt * ScopeCtx =
-  let isRec, vis, name, argPats, body, loc =
+  let isRec, vis, name, argPats, body, exported, loc =
     match stmt with
-    | NStmt.LetFun (isRec, vis, name, argPats, body, loc) -> isRec, vis, name, argPats, body, loc
+    | NStmt.LetFun (isRec, vis, name, argPats, body, exported, loc) -> isRec, vis, name, argPats, body, exported, loc
     | _ -> unreachable ()
 
   let vis, (funSerial, ctx) =
@@ -1754,12 +1754,18 @@ let private nameResLetFunStmt (ctx: ScopeCtx) stmt : TStmt * ScopeCtx =
   let funName = identOf name
 
   let ctx =
+    let linkage =
+      if exported then
+        ExternalLinkage funName
+      else
+        makeLinkage ctx vis funName
+
     let funDef: FunDef =
       { Name = funName
         Arity = List.length argPats
         Ty = TyScheme([], noTy)
-        Abi = MiloneAbi
-        Linkage = makeLinkage ctx vis funName
+        Abi = if exported then CAbi else MiloneAbi
+        Linkage = linkage
         Nonlocal = not ctx.InsideModule
         Prefix = ctx.AncestralFuns
         Loc = loc }
