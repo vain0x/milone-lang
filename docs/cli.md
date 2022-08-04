@@ -283,10 +283,7 @@ Notes:
 
 (On windows only.)
 
-Install `MSBuild.exe` in some way:
-
-- install Visual Studio 2019 with "Desktop development with C++" option, *OR*
-- install [Visual Studio 2019 Build Tools](https://visualstudio.microsoft.com/ja/downloads/?q=build+tools#build-tools-for-visual-studio-2019).
+Install [Visual Studio 2022 Build Tools](https://visualstudio.microsoft.com/ja/downloads/?q=build+tools#build-tools-for-visual-studio-2022).
 
 Notes:
 

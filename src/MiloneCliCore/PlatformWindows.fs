@@ -43,27 +43,47 @@ module private Path =
 type private FileExistsFun = Path -> bool
 
 let private findMSBuild (fileExists: FileExistsFun) : Path =
-  let years = [ 2019; 2017; 2015; 2021 ]
+  let pathsPre2019 =
+    let years = [ 2019; 2017; 2015 ]
 
-  let editions =
-    [ "Community"
-      "Enterprise"
-      "Professional"
-      "BuildTools" ]
+    let editions =
+      [ "Community"
+        "Enterprise"
+        "Professional"
+        "BuildTools" ]
 
-  let msBuildPath (year: int) edition =
-    Path(
-      "C:/Program Files (x86)/Microsoft Visual Studio/"
-      + string year
-      + "/"
-      + edition
-      + "/MSBuild/Current/Bin/MSBuild.exe"
-    )
+    years
+    |> List.collect (fun (year: int) ->
+      editions
+      |> List.map (fun edition ->
+        Path(
+          "C:/Program Files (x86)/Microsoft Visual Studio/"
+          + string year
+          + "/"
+          + edition
+          + "/MSBuild/Current/Bin/MSBuild.exe"
+        )))
 
-  years
-  |> List.collect (fun year ->
+  let paths =
+    let year = 2022
+
+    let editions =
+      [ "Community"
+        "Enterprise"
+        "Professional"
+        "BuildTools" ]
+
     editions
-    |> List.map (fun edition -> msBuildPath year edition))
+    |> List.map (fun edition ->
+      Path(
+        "C:/Program Files/Microsoft Visual Studio/"
+        + string year
+        + "/"
+        + edition
+        + "/MSBuild/Current/Bin/MSBuild.exe"
+      ))
+
+  List.append paths pathsPre2019
   |> List.tryFind fileExists
   |> Option.defaultValue (Path "MSBuild.exe")
 
