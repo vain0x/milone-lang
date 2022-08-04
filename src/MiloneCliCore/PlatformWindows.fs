@@ -83,6 +83,7 @@ type BuildOnWindowsParams =
     OutputOpt: Path option
     // FIXME: support csanitize, cstd, objList
     BinaryType: BinaryType
+    SubSystem: SubSystem
     CcList: Path list
     Libs: string list
 
@@ -157,7 +158,17 @@ let buildOnWindows (p: BuildOnWindowsParams) : unit =
           match p.BinaryType with
           | BinaryType.Exe -> "Application"
           | BinaryType.SharedObj -> "DynamicLibrary"
-          | BinaryType.StaticLib -> "StaticLibrary" }
+          | BinaryType.StaticLib -> "StaticLibrary"
+
+        SubSystem =
+          match p.SubSystem with
+          | SubSystem.Console -> "Console"
+          | SubSystem.Windows -> "Windows"
+
+        Macro =
+          match p.SubSystem with
+          | SubSystem.Console -> "_CONSOLE"
+          | SubSystem.Windows -> "_WINDOWS" }
 
     renderVcxProjectXml p
 
@@ -266,7 +277,9 @@ type private VcxProjectParams =
     ProjectName: string
     IncludeDir: string
     RuntimeDir: string
-    ConfigurationType: string }
+    ConfigurationType: string
+    Macro: string
+    SubSystem: string }
 
 let private renderVcxProjectXml (p: VcxProjectParams) : string =
   """<?xml version="1.0" encoding="utf-8"?>
@@ -370,7 +383,7 @@ let private renderVcxProjectXml (p: VcxProjectParams) : string =
     <ClCompile>
       <WarningLevel>Level3</WarningLevel>
       <SDLCheck>true</SDLCheck>
-      <PreprocessorDefinitions>_CRT_SECURE_NO_WARNINGS;WIN32;_DEBUG;_CONSOLE;%(PreprocessorDefinitions)</PreprocessorDefinitions>
+      <PreprocessorDefinitions>_CRT_SECURE_NO_WARNINGS;WIN32;_DEBUG;${MACRO};%(PreprocessorDefinitions)</PreprocessorDefinitions>
       <ConformanceMode>true</ConformanceMode>
       <AdditionalIncludeDirectories>${INCLUDE_DIR}</AdditionalIncludeDirectories>
       <AdditionalOptions>/utf-8 %(AdditionalOptions)</AdditionalOptions>
@@ -378,7 +391,7 @@ let private renderVcxProjectXml (p: VcxProjectParams) : string =
       <LanguageStandard_C>stdc17</LanguageStandard_C>
     </ClCompile>
     <Link>
-      <SubSystem>Console</SubSystem>
+      <SubSystem>${SUBSYSTEM}</SubSystem>
       <GenerateDebugInformation>true</GenerateDebugInformation>
       <AdditionalDependencies>${LIBS};kernel32.lib;user32.lib;gdi32.lib;winspool.lib;comdlg32.lib;advapi32.lib;shell32.lib;ole32.lib;oleaut32.lib;uuid.lib;odbc32.lib;odbccp32.lib;%(AdditionalDependencies)</AdditionalDependencies>
     </Link>
@@ -389,7 +402,7 @@ let private renderVcxProjectXml (p: VcxProjectParams) : string =
       <FunctionLevelLinking>true</FunctionLevelLinking>
       <IntrinsicFunctions>true</IntrinsicFunctions>
       <SDLCheck>true</SDLCheck>
-      <PreprocessorDefinitions>_CRT_SECURE_NO_WARNINGS;WIN32;NDEBUG;_CONSOLE;%(PreprocessorDefinitions)</PreprocessorDefinitions>
+      <PreprocessorDefinitions>_CRT_SECURE_NO_WARNINGS;WIN32;NDEBUG;${MACRO};%(PreprocessorDefinitions)</PreprocessorDefinitions>
       <ConformanceMode>true</ConformanceMode>
       <AdditionalIncludeDirectories>${INCLUDE_DIR}</AdditionalIncludeDirectories>
       <AdditionalOptions>/utf-8 %(AdditionalOptions)</AdditionalOptions>
@@ -398,7 +411,7 @@ let private renderVcxProjectXml (p: VcxProjectParams) : string =
       <RuntimeLibrary>MultiThreaded</RuntimeLibrary>
     </ClCompile>
     <Link>
-      <SubSystem>Console</SubSystem>
+      <SubSystem>${SUBSYSTEM}</SubSystem>
       <EnableCOMDATFolding>true</EnableCOMDATFolding>
       <OptimizeReferences>true</OptimizeReferences>
       <GenerateDebugInformation>true</GenerateDebugInformation>
@@ -410,7 +423,7 @@ let private renderVcxProjectXml (p: VcxProjectParams) : string =
     <ClCompile>
       <WarningLevel>Level3</WarningLevel>
       <SDLCheck>true</SDLCheck>
-      <PreprocessorDefinitions>_CRT_SECURE_NO_WARNINGS;_DEBUG;_CONSOLE;%(PreprocessorDefinitions)</PreprocessorDefinitions>
+      <PreprocessorDefinitions>_CRT_SECURE_NO_WARNINGS;_DEBUG;${MACRO};%(PreprocessorDefinitions)</PreprocessorDefinitions>
       <ConformanceMode>true</ConformanceMode>
       <AdditionalIncludeDirectories>${INCLUDE_DIR}</AdditionalIncludeDirectories>
       <AdditionalOptions>/utf-8 %(AdditionalOptions)</AdditionalOptions>
@@ -418,7 +431,7 @@ let private renderVcxProjectXml (p: VcxProjectParams) : string =
       <LanguageStandard_C>stdc17</LanguageStandard_C>
     </ClCompile>
     <Link>
-      <SubSystem>Console</SubSystem>
+      <SubSystem>${SUBSYSTEM}</SubSystem>
       <GenerateDebugInformation>true</GenerateDebugInformation>
       <AdditionalDependencies>${LIBS};kernel32.lib;user32.lib;gdi32.lib;winspool.lib;comdlg32.lib;advapi32.lib;shell32.lib;ole32.lib;oleaut32.lib;uuid.lib;odbc32.lib;odbccp32.lib;%(AdditionalDependencies)</AdditionalDependencies>
     </Link>
@@ -429,7 +442,7 @@ let private renderVcxProjectXml (p: VcxProjectParams) : string =
       <FunctionLevelLinking>true</FunctionLevelLinking>
       <IntrinsicFunctions>true</IntrinsicFunctions>
       <SDLCheck>true</SDLCheck>
-      <PreprocessorDefinitions>_CRT_SECURE_NO_WARNINGS;NDEBUG;_CONSOLE;%(PreprocessorDefinitions)</PreprocessorDefinitions>
+      <PreprocessorDefinitions>_CRT_SECURE_NO_WARNINGS;NDEBUG;${MACRO};%(PreprocessorDefinitions)</PreprocessorDefinitions>
       <ConformanceMode>true</ConformanceMode>
       <AdditionalIncludeDirectories>${INCLUDE_DIR}</AdditionalIncludeDirectories>
       <AdditionalOptions>/utf-8 %(AdditionalOptions)</AdditionalOptions>
@@ -438,7 +451,7 @@ let private renderVcxProjectXml (p: VcxProjectParams) : string =
       <RuntimeLibrary>MultiThreaded</RuntimeLibrary>
     </ClCompile>
     <Link>
-      <SubSystem>Console</SubSystem>
+      <SubSystem>${SUBSYSTEM}</SubSystem>
       <EnableCOMDATFolding>true</EnableCOMDATFolding>
       <OptimizeReferences>true</OptimizeReferences>
       <GenerateDebugInformation>true</GenerateDebugInformation>
@@ -463,6 +476,8 @@ let private renderVcxProjectXml (p: VcxProjectParams) : string =
   |> S.replace "${RUNTIME_DIR}" p.RuntimeDir
   |> S.replace "${INCLUDE_DIR}" p.IncludeDir
   |> S.replace "${CONFIGURATION_TYPE}" p.ConfigurationType
+  |> S.replace "${MACRO}" p.Macro
+  |> S.replace "${SUBSYSTEM}" p.SubSystem
   |> S.replace
        "${SRCS}"
        (p.CFiles

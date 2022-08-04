@@ -17,6 +17,7 @@ let emptyManifest: ManifestData =
     Errors = []
 
     BinaryType = None
+    SubSystem = None
     CSanitize = None
     CStd = "c11"
     CcList = []
@@ -69,6 +70,7 @@ let parseManifest (docId: DocId) (text: string) : ManifestData =
 
          | [ "binary"; "shared" ] -> { m with BinaryType = Some(BinaryType.SharedObj, loc) }
          | [ "binary"; "staticlib" ] -> { m with BinaryType = Some(BinaryType.StaticLib, loc) }
+         | [ "subsystem"; "windows" ] -> { m with SubSystem = Some SubSystem.Windows }
          | [ "sanitize"; value ] -> { m with CSanitize = Some value }
          | [ "std"; version ] -> { m with CStd = version }
          | [ "cc"; path ] -> { m with CcList = (Path path, loc) :: m.CcList }

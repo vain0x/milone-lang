@@ -17,6 +17,7 @@
 - Add directives to specify output binary type in manifest
     - `binary shared` (`*.so`, `*.dll`)
     - `binary staticlib` (`*.a`, `*.lib`)
+- Add `subsystem windows` directive (only on Windows)
 - Support `Export` attribute on functions
 
 ### CLI Tool

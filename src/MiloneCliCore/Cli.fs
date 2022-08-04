@@ -433,6 +433,11 @@ let private toBuildOnWindowsParams
     | Some (it, _) -> it
     | None -> BinaryType.Exe
 
+  let subSystem =
+    match manifest.SubSystem with
+    | Some it -> it
+    | None -> SubSystem.Windows
+
   { ProjectName = projectName
     CFiles =
       cFiles
@@ -444,6 +449,7 @@ let private toBuildOnWindowsParams
     OutputOpt = outputOpt |> Option.map Path
 
     BinaryType = binaryType
+    SubSystem = subSystem
 
     CcList =
       manifest.CcList

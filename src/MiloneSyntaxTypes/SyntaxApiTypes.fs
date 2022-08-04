@@ -31,6 +31,11 @@ type BinaryType =
   | StaticLib
 
 [<RequireQualifiedAccess; NoEquality; NoComparison>]
+type SubSystem =
+  | Console
+  | Windows
+
+[<RequireQualifiedAccess; NoEquality; NoComparison>]
 type ManifestData =
   { /// Referenced non-entry projects.
     /// Path is relative to current project directory (where the manifest is).
@@ -39,6 +44,7 @@ type ManifestData =
 
     // #experimental
     BinaryType: (BinaryType * Loc) option
+    SubSystem: SubSystem option
     CSanitize: string option
     CStd: string
     CcList: (Path * Loc) list
