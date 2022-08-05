@@ -702,9 +702,9 @@ void file_write_all_text(struct String file_name, struct String content) {
         }
     }
 
-    fp = fopen(file_name.ptr, "w+");
+    fp = fopen(file_name.ptr, "wb+");
     if (!fp) {
-        perror("fopen(w+)");
+        perror("fopen(wb+)");
         exit(1);
     }
 
