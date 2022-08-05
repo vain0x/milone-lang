@@ -185,7 +185,7 @@ struct String milone_get_cwd(void) {
     return string_of_c_str(buf);
 #elif defined(MILONE_PLATFORM_WINDOWS)
     TCHAR buf[MAX_PATH + 1] = {0};
-    DWORD len = GetCurrentDirectory(sizeof(buf), buf);
+    DWORD len = GetCurrentDirectory(sizeof(buf) / sizeof(TCHAR), buf);
     if (len == 0 || len >= sizeof(buf)) {
         failwith("GetCurrentDirectory");
         exit(1);

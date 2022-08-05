@@ -229,6 +229,9 @@ static void do_region_defer(DeferFunPtr fun, void const *env) {
     s_heap_alloc++;
     s_heap_size += sizeof(struct DeferChain);
     struct DeferChain *chain = calloc(1, sizeof(struct DeferChain));
+    if (chain == NULL) {
+        oom();
+    }
     chain->fun = fun;
     chain->env = env;
     chain->parent = s_heap.defer_chain;
@@ -681,6 +684,9 @@ void file_write_all_text(struct String file_name, struct String content) {
 
             if (size >= 0 && (size_t)size == (size_t)content.len) {
                 char *old_content = calloc((uint32_t)size + 1, sizeof(char));
+                if (old_content == NULL) {
+                    oom();
+                }
                 size_t read_len =
                     fread(old_content, sizeof(char), (size_t)size, fp);
                 bool same = read_len == (size_t)size &&
@@ -761,7 +767,7 @@ struct String milone_get_env(struct String name) {
 
 static long milone_get_time_millis(void) {
     struct timespec t;
-    timespec_get(&t, TIME_UTC);
+    (void)timespec_get(&t, TIME_UTC);
     return (long)(t.tv_sec * 1000L + t.tv_nsec / (1000L * 1000L));
 }
 
