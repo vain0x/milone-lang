@@ -7,6 +7,7 @@ open MiloneShared.SharedTypes
 open Std.StdMap
 open MiloneTranslationTypes.HirTypes
 open MiloneTranslationTypes.TranslationApiTypes
+open MiloneTranslation.Cir
 
 module S = Std.StdString
 module AutoBoxing = MiloneTranslation.AutoBoxing
@@ -26,7 +27,7 @@ let private codeGenHir
   entrypointName
   (writeLog: WriteLogFun)
   (modules: HProgram, hirCtx: HirCtx)
-  : (DocId * CCode) list =
+  : (DocId * CCode) list * ExportName list =
   writeLog "RecordRes"
   let modules, hirCtx = RecordRes.recordRes (modules, hirCtx)
 
@@ -94,6 +95,13 @@ let private codeGenHir
     modules
     |> List.map (fun (docId, cir) -> docId, CirDump.cirDump cir)
 
-  cFiles
+  let exportNames =
+    modules |> List.collect (fun (_, decls) ->
+      decls |> List.choose (fun decl ->
+        match decl with
+        | CFunDecl (ident, _, _, _) -> Some ident
+        | _ -> None ))
+
+  cFiles, exportNames
 
 let newTranslationApi () : TranslationApi = { CodeGenHir = codeGenHir }

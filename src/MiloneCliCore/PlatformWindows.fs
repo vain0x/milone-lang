@@ -106,6 +106,8 @@ type BuildOnWindowsParams =
     SubSystem: SubSystem
     CcList: Path list
     Libs: string list
+    /// Symbol names to be exported by `/EXPORT` link option
+    Exports: string list
 
     NewGuid: NewGuidFun
     DirCreate: Path -> unit
@@ -169,6 +171,7 @@ let buildOnWindows (p: BuildOnWindowsParams) : unit =
       { MiloneTargetDir = p.TargetDir
         CFiles = List.append p.CFiles p.CcList
         Libs = p.Libs |> List.map Path
+        Exports = p.Exports
         ProjectGuid = projectGuid
         ProjectName = p.ProjectName
         IncludeDir = runtimeDir
@@ -292,6 +295,7 @@ type private VcxProjectParams =
   { MiloneTargetDir: Path
     CFiles: Path list
     Libs: Path list
+    Exports: string list
 
     ProjectGuid: Guid
     ProjectName: string
@@ -414,6 +418,7 @@ let private renderVcxProjectXml (p: VcxProjectParams) : string =
       <SubSystem>${SUBSYSTEM}</SubSystem>
       <GenerateDebugInformation>true</GenerateDebugInformation>
       <AdditionalDependencies>${LIBS};kernel32.lib;user32.lib;gdi32.lib;winspool.lib;comdlg32.lib;advapi32.lib;shell32.lib;ole32.lib;oleaut32.lib;uuid.lib;odbc32.lib;odbccp32.lib;%(AdditionalDependencies)</AdditionalDependencies>
+      <AdditionalOptions>${EXPORTS} %(AdditionalOptions)</AdditionalOptions>
     </Link>
   </ItemDefinitionGroup>
   <ItemDefinitionGroup Condition="'$(Configuration)|$(Platform)'=='Release|Win32'">
@@ -436,6 +441,7 @@ let private renderVcxProjectXml (p: VcxProjectParams) : string =
       <OptimizeReferences>true</OptimizeReferences>
       <GenerateDebugInformation>true</GenerateDebugInformation>
       <AdditionalDependencies>${LIBS};kernel32.lib;user32.lib;gdi32.lib;winspool.lib;comdlg32.lib;advapi32.lib;shell32.lib;ole32.lib;oleaut32.lib;uuid.lib;odbc32.lib;odbccp32.lib;%(AdditionalDependencies)</AdditionalDependencies>
+      <AdditionalOptions>${EXPORTS} %(AdditionalOptions)</AdditionalOptions>
     </Link>
   </ItemDefinitionGroup>"""
   + """
@@ -454,6 +460,7 @@ let private renderVcxProjectXml (p: VcxProjectParams) : string =
       <SubSystem>${SUBSYSTEM}</SubSystem>
       <GenerateDebugInformation>true</GenerateDebugInformation>
       <AdditionalDependencies>${LIBS};kernel32.lib;user32.lib;gdi32.lib;winspool.lib;comdlg32.lib;advapi32.lib;shell32.lib;ole32.lib;oleaut32.lib;uuid.lib;odbc32.lib;odbccp32.lib;%(AdditionalDependencies)</AdditionalDependencies>
+      <AdditionalOptions>${EXPORTS} %(AdditionalOptions)</AdditionalOptions>
     </Link>
   </ItemDefinitionGroup>
   <ItemDefinitionGroup Condition="'$(Configuration)|$(Platform)'=='Release|x64'">
@@ -476,6 +483,7 @@ let private renderVcxProjectXml (p: VcxProjectParams) : string =
       <OptimizeReferences>true</OptimizeReferences>
       <GenerateDebugInformation>true</GenerateDebugInformation>
       <AdditionalDependencies>${LIBS};kernel32.lib;user32.lib;gdi32.lib;winspool.lib;comdlg32.lib;advapi32.lib;shell32.lib;ole32.lib;oleaut32.lib;uuid.lib;odbc32.lib;odbccp32.lib;%(AdditionalDependencies)</AdditionalDependencies>
+      <AdditionalOptions>${EXPORTS} %(AdditionalOptions)</AdditionalOptions>
     </Link>
   </ItemDefinitionGroup>
   <ItemGroup>
@@ -508,3 +516,4 @@ let private renderVcxProjectXml (p: VcxProjectParams) : string =
         |> S.concat "\n  ")
 
   |> S.replace "${LIBS}" (p.Libs |> List.map Path.toString |> S.concat ";")
+  |> S.replace "${EXPORTS}" (p.Exports |> List.map (fun name -> "/EXPORT:" + name) |> S.concat " ")

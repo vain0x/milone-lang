@@ -260,7 +260,7 @@ type private CFilename = string
 
 type private CCode = string
 
-type private CodeGenResult = (CFilename * CCode) list
+type private CodeGenResult = (CFilename * CCode) list * ExportName list
 
 [<NoEquality; NoComparison>]
 type private CompileResult =
@@ -295,7 +295,7 @@ let private compile (sApi: SyntaxApi) (tApi: TranslationApi) (ctx: CompileCtx) :
     writeLog "Lower"
     let modules, hirCtx = Lower.lower (modules, tirCtx)
 
-    let cFiles =
+    let cFiles, exportNames =
       tApi.CodeGenHir ctx.EntrypointName writeLog (modules, hirCtx)
 
     let cFiles =
@@ -303,7 +303,7 @@ let private compile (sApi: SyntaxApi) (tApi: TranslationApi) (ctx: CompileCtx) :
       |> List.map (fun (docId, cCode) -> computeCFilename projectName docId, cCode)
 
     writeLog "Finish"
-    CompileOk cFiles
+    CompileOk (cFiles, exportNames)
 
 // -----------------------------------------------
 // Others
@@ -348,7 +348,7 @@ let private cliCompile sApi tApi (host: CliHost) (options: CompileOptions) =
     host.WriteStdout output
     1
 
-  | CompileOk cFiles ->
+  | CompileOk (cFiles, _) ->
     dirCreateOrFail host (Path targetDir)
     writeCFiles host targetDir cFiles
 
@@ -418,6 +418,7 @@ let private toBuildOnWindowsParams
   (options: BuildOptions)
   (ctx: CompileCtx)
   (cFiles: (CFilename * CCode) list)
+  (exportNames: ExportName list)
   : PW.BuildOnWindowsParams =
   let miloneHome = Path(hostToMiloneHome sApi host)
 
@@ -457,6 +458,7 @@ let private toBuildOnWindowsParams
       manifest.CcList
       |> List.map (fun (Path name, _) -> Path(pathJoin projectDir name))
     Libs = manifest.Libs |> List.map fst
+    Exports = exportNames
 
     NewGuid = fun () -> PW.Guid(w.NewGuid())
     DirCreate = dirCreateOrFail host
@@ -479,7 +481,7 @@ let private cliBuild sApi tApi (host: CliHost) (options: BuildOptions) =
     host.WriteStdout output
     1
 
-  | CompileOk cFiles ->
+  | CompileOk (cFiles, exportNames) ->
     writeCFiles host targetDir cFiles
 
     match host.Platform with
@@ -488,7 +490,7 @@ let private cliBuild sApi tApi (host: CliHost) (options: BuildOptions) =
       |> never
 
     | Platform.Windows w ->
-      PW.buildOnWindows (toBuildOnWindowsParams sApi host w options ctx cFiles)
+      PW.buildOnWindows (toBuildOnWindowsParams sApi host w options ctx cFiles exportNames)
       0
 
 let private cliRun sApi tApi (host: CliHost) (options: BuildOptions) (restArgs: string list) =
@@ -505,7 +507,7 @@ let private cliRun sApi tApi (host: CliHost) (options: BuildOptions) (restArgs: 
     host.WriteStdout output
     1
 
-  | CompileOk cFiles ->
+  | CompileOk (cFiles, _) ->
     writeCFiles host targetDir cFiles
 
     match host.Platform with
@@ -517,7 +519,7 @@ let private cliRun sApi tApi (host: CliHost) (options: BuildOptions) (restArgs: 
 
     | Platform.Windows w ->
       let p =
-        toBuildOnWindowsParams sApi host w options ctx cFiles
+        toBuildOnWindowsParams sApi host w options ctx cFiles []
 
       PW.runOnWindows p restArgs
       0
@@ -560,7 +562,7 @@ let main _ =
     host.WriteStdout output
     1
 
-  | CompileOk cFiles ->
+  | CompileOk (cFiles, _) ->
     writeCFiles host targetDir cFiles
 
     match host.Platform with
@@ -572,7 +574,7 @@ let main _ =
 
     | Platform.Windows w ->
       let p =
-        toBuildOnWindowsParams sApi host w options ctx cFiles
+        toBuildOnWindowsParams sApi host w options ctx cFiles []
 
       PW.runOnWindows p []
       0
