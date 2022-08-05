@@ -438,7 +438,7 @@ let private toBuildOnWindowsParams
   let subSystem =
     match manifest.SubSystem with
     | Some it -> it
-    | None -> SubSystem.Windows
+    | None -> SubSystem.Console
 
   { ProjectName = projectName
     CFiles =
