@@ -30,6 +30,12 @@
 - Add explanation of generic nominal types
 - Add page of type synonyms
 
+### Others
+
+- Default install directory is changed to match XDG base directory.
+    - `$HOME/.local/bin` (rather than `$HOME/bin`)
+    - `$HOME/.local/share` (rather than `$HOME/.milone`)
+
 ## [v0.5.0] - 2022-07-21
 
 [v0.5.0]: https://github.com/vain0x/milone-lang/releases/tag/v0.5.0

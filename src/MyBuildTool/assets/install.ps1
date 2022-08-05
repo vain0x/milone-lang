@@ -1,23 +1,37 @@
 #!/bin/pwsh
 # Install milone command to your home directory.
 
-# This script is placed at the root of package.
+# **IMPORTANT**
+# The script must be sync with documentation: binary_package.md, INSTALL.md
 
 $ErrorActionPreference = 'Stop'
 
-$VERSION = $(Get-Content '.milone/version').Trim()
+$MILONE_CMD = $env:MILONE_CMD
+if (!$MILONE_CMD) {
+    $MILONE_CMD = "$env:USERPROFILE/.local/bin/milone.exe"
+}
+
+$MILONE_HOME = $env:MILONE_HOME
+if (!$MILONE_HOME) {
+    $MILONE_HOME = "$env:USERPROFILE/.local/share/milone"
+}
+
+$MILONE_CMD_DIR = [System.IO.Path]::GetDirectoryName($MILONE_CMD)
+
+$VERSION = $(Get-Content 'share/milone/version').Trim()
 
 # Ensure directories exist and non-directory doesn't resident.
-New-Item -Type Directory -Force "$HOME/bin"
-New-Item -Type Directory -Force "$HOME/.milone"
+New-Item -Type Directory -Force $MILONE_CMD_DIR | out-null
+New-Item -Type Directory -Force $MILONE_HOME | out-null
 
 # Uninstall.
-Remove-Item -Force "$HOME/bin/milone.exe" -ErrorAction SilentlyContinue
-Remove-Item -Recurse -Force "$HOME/.milone"
+Remove-Item -Force $MILONE_CMD -ErrorAction SilentlyContinue
+Remove-Item -Recurse -Force $MILONE_HOME
 
 # Install.
-Copy-Item -Force 'bin/milone.exe' -Destination "$HOME/bin/milone.exe"
-Copy-Item -Recurse -Force '.milone' -Destination "$HOME/.milone"
+Copy-Item -Force 'bin/milone.exe' -Destination $MILONE_CMD
+Copy-Item -Recurse -Force 'share/milone' -Destination $MILONE_HOME
+Copy-Item 'uninstall.ps1' "$MILONE_HOME/uninstall.ps1"
 
 # Information about PATH.
 $underPath = $true
@@ -27,7 +41,7 @@ try {
     $underPath = $false
 }
 if (!$underPath) {
-    echo "It's recommended to add $HOME/bin to `$PATH."
+    echo "It's recommended to add $MILONE_CMD_DIR to `$PATH."
 }
 
 # Finish.

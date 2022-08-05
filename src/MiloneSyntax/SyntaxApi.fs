@@ -207,7 +207,7 @@ let getMiloneHomeFromEnv (getMiloneHomeEnv: unit -> string option) (getHomeEnv: 
 
   | None ->
     match getHomeEnv () with
-    | Some home -> home + "/.milone"
+    | Some home -> home + "/.local/share/milone"
     | None -> failwith "$MILONE_HOME and $HOME are missing."
 
 /// Computes preferred filename of source file.
