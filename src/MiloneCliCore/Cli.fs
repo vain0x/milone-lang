@@ -579,6 +579,82 @@ let main _ =
       PW.runOnWindows p []
       0
 
+let private cliParse (sApi: SyntaxApi) (host: CliHost) (pathnameList: string list) : int =
+  assert (pathnameList |> List.isEmpty |> not)
+
+  pathnameList
+  |> List.map (fun pathname ->
+    let docId, textFuture =
+      match pathname with
+      | "-" ->
+        let docId: DocId = Symbol.intern "stdin"
+        docId, host.ReadStdinAll() |> Some |> Future.just
+
+      | pathname ->
+        let pathname = pathJoin host.WorkDir pathname
+        let docId: DocId = Symbol.intern pathname
+        docId, host.FileReadAllText pathname
+
+    textFuture
+    |> Future.map (fun textOpt ->
+      match textOpt with
+      | Some text ->
+        let output, errors = sApi.DumpSyntax text
+
+        let errors =
+          errors
+          |> List.map (fun (msg, pos) -> msg, Loc.ofDocPos docId pos)
+
+        let good = List.isEmpty errors
+
+        let output =
+          "{\"file\": \""
+          + S.replace "\\" "/" pathname
+          + "\", \"root\":\n"
+          + output
+          + (if good then
+               ""
+             else
+               ",\n\n  \"errors\": ["
+               + (errors
+                  |> List.map (fun (msg, pos) ->
+                    "\n    [\""
+                    + Loc.toString pos
+                    + "\""
+                    + msg
+                    + "\"]")
+                  |> S.concat ",")
+               + "\n]")
+          + "}\n"
+
+        output, good
+
+      | None ->
+        let output =
+          "{\"file\": \""
+          + S.replace "\\" "/" pathname
+          + "\",\n\"error\": \"Couldn't read from file.\"}\n"
+
+        output, false))
+  |> Future.whenAll
+  |> Future.map (fun entries ->
+    let output =
+      "["
+      + (entries
+         |> List.map (fun (output, _) -> output)
+         |> S.concat "\n")
+      + "]\n"
+
+    let exitCode =
+      if entries |> List.forall (fun (_, good) -> good) then
+        0
+      else
+        1
+
+    host.WriteStdout output
+    exitCode)
+  |> Future.wait
+
 // -----------------------------------------------
 // Arg parsing
 // -----------------------------------------------
@@ -757,6 +833,7 @@ type private CliCmd =
   | BuildCmd
   | RunCmd
   | EvalCmd
+  | ParseCmd
   | BadCmd of string
 
 let private parseArgs args =
@@ -778,6 +855,7 @@ let private parseArgs args =
     | "compile" -> CompileCmd, args
     | "run" -> RunCmd, args
     | "eval" -> EvalCmd, args
+    | "parse" -> ParseCmd, args
     | _ -> BadCmd arg, []
 
 // -----------------------------------------------
@@ -841,6 +919,13 @@ let cli (sApi: SyntaxApi) (tApi: TranslationApi) (host: CliHost) =
         exit 1
 
     cliEval sApi tApi host sourceCode
+
+  | ParseCmd, args ->
+    if args |> List.isEmpty |> not then
+      cliParse sApi host args
+    else
+      printfn "ERROR: No inputs. `milone parse <FILE...>`"
+      1
 
   | BadCmd subcommand, _ ->
     printfn "ERROR: Unknown subcommand '%s'." subcommand

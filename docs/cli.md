@@ -11,6 +11,7 @@
 Less important:
 
 - [check](#check)
+- [parse](#parse)
 - [compile](#compile)
 - [help](#help)
 - [version](#version)
@@ -172,6 +173,36 @@ Output:
 - Code: 0 if okay.
 - Stdout: Compile errors if any.
 
+### `parse`
+
+Parse a source file.
+
+Examples:
+
+```sh
+milone parse <FILE...>
+```
+
+```sh
+milone parse src/Std/StdChar.milone
+```
+
+Output:
+
+- Code: 0 if success. 1 if IO error or syntax error in any input.
+- Stdout: JSON text including syntax tree and syntax errors (described later -> [#syntax-tree-json-format](#syntax-tree-json-format)).
+- Files: *None.*
+
+### Read from Standard Input
+
+`-` can be specified instead of an input file to read from standard input:
+
+```sh
+milone parse - <<'EOF'
+let main _ = 0
+EOF
+```
+
 ### `compile`
 
 Compile a project to C source files.
@@ -305,3 +336,116 @@ Notes:
 - I'm NOT familiar with external tools; please teach me.
 - Interface is similar to `cargo` (in Rust).
 - On linux: consider to install [mold](https://github.com/rui314/mold) for faster linking.
+
+----
+
+## Syntax Tree JSON Format
+
+(See also [#parse](#parse) subcommand.)
+
+This section consists of three steps:
+
+- Provide a small example of input code and output JSON text
+- Describe underlying data model of syntax tree
+- Describe mapping from data model to JSON
+
+Note the output format is subject to change.
+
+##### Example:
+
+```fs
+    f (x + 1) // comment
+```
+
+```json
+[
+{"file": "FILE",
+ "root":
+
+["Root", "1:1..2:1", [
+  ["Blank", "1:1..1:5"],
+  ["ExprDecl", "1:5..1:25", [
+    ["AppExpr", "1:5..1:25", [
+      ["NameExpr", "1:5..1:7", [
+        ["Ident", "1:5..1:6", "f"],
+        ["Blank", "1:6..1:7"]
+      ]],
+      ["ParenExpr", "1:7..1:25", [
+        ["LeftParen", "1:7..1:8"],
+        ["BinaryExpr", "1:8..1:13", [
+          ["NameExpr", "1:8..1:10", [
+            ["Ident", "1:8..1:9", "x"],
+            ["Blank", "1:9..1:10"]
+          ]],
+          ["Plus", "1:10..1:11"],
+          ["Blank", "1:11..1:12"],
+          ["LiteralExpr", "1:12..1:13", [
+            ["Int", "1:12..1:13", 1]
+          ]]
+        ]],
+        ["RightParen", "1:13..1:14"],
+        ["Blank", "1:14..1:15"],
+        ["Comment", "1:15..1:25"]
+      ]]
+    ]]
+  ]],
+  ["Newlines", "1:25..2:1", "\n"]
+]]}
+]
+```
+
+##### Data model:
+
+Syntax tree is a data structure that consists of tokens and syntax nodes.
+It's well-known as component of compiler and can be learned with text books and web pages about tokenizer and parser.
+
+Token is a division of source text.
+
+Syntax node is a group of tokens and other nodes.
+
+##### Mapping:
+
+Range is mapped to a string:
+
+```json
+    "y1:x1...y2:x2"
+```
+
+where y1, x1 are start positions and y2, x2 are (exclusive) end positions.
+y's are 1-origin row numbers.
+x's are 1-origin column numbers (computed in UTF-8 encoding.)
+
+Token is mapped to either a 2-element array:
+
+```json
+    [kind, range]
+```
+
+or a 3-element array:
+
+```json
+    [kind, range, value]
+```
+
+where `value` is a string, number or boolean.
+
+Node is mapped to a three-element array:
+
+```json
+    [kind, range, children]
+```
+
+where `children` is an array of tokens and nodes.
+
+Error is mapped to a string that represents an error.
+
+Toplevel is an array of files.
+Each file is an object like this:
+
+```json
+    { "file": pathname, "root": node, "errors"?: error[] }
+```
+
+where `errors` can be omit if empty.
+
+See [milone_syntax_tree.ungram](./refs/milone_syntax_tree.ungram) for more detailed structure.

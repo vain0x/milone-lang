@@ -102,6 +102,9 @@ type ColumnIndex = int
 /// Position. Coordinate in a file.
 type Pos = RowIndex * ColumnIndex
 
+/// Range of text.
+type Range = Pos * Pos
+
 /// Identity of documents.
 /// Document can be a source file, an editor tab, or something else.
 type DocId = Symbol

@@ -3,95 +3,77 @@
 // (Not validated yet.)
 
 // -----------------------------------------------
-// Misc
+// Fragments
 // -----------------------------------------------
 
-// Visibility.
-Vis =
-  'public'
-| 'private'
-
-// Path to symbol (value or type).
-Path = (Path '.')? 'ident' TyArgList?
-
-// Path to module.
-ModulePath = (ModulePath '.')? 'ident'
-
-// Attribute.
 Attr = '[<' Expr '>]'
 
-// Literal.
-Lit =
-  'int_number'
-| 'float_number'
+Vis =
+  'private'
+| 'public'
+
+Literal =
+  'int_literal'
+| 'float_literal'
 | 'false' | 'true'
-| 'char'
-| 'string'
+| 'char_literal'
+| 'string_literal'
+
+TyParamList = '<' ('ty_var' ',')* 'ty_var' '>'
+TyArgList = '<' (Ty ',')* Ty '>'
+
+ModulePath = ('ident' '.')* 'ident'
 
 // -----------------------------------------------
 // Type
 // -----------------------------------------------
 
-TyParamList = '<' ('greek' (',' 'greek')*)? '>'
-
-TyArgList = '<' (Ty (',' Ty)*)? '>'
+NameTy = ('ident' '.')* 'ident' TyArgList?
+VarTy = 'ty_var'
+ParenTy = '(' Ty ')'
+SuffixTy = Ty 'ident'
+TupleTy = (Ty '*')+ Ty
+FunTy = Ty '->' Ty
 
 // Term of type.
 Ty =
-  Path
-| '(' Ty ')'
-| Ty '[]'
-| Ty 'ident'
-| Ty ('*' Ty)+
-| Ty '->' Ty
-
-
-
-LabeledTy = ('ident' ':')? Ty
-
-VariantDecl = 'ident' ('of' LabeledTy ('*' LabeledTy)*)?
-
-FieldDecl = 'ident' ':' Ty
-
-// Body of type declaration.
-TyDeclBody =
-  Ty
-| '|'? VariantDecl ('|' VariantDecl)*
-| '{' FieldDecl (';'? FieldDecl)* '}'
+  NameTy
+| VarTy
+| ParenTy
+| SuffixTy
+| TupleTy
+| FunTy
 
 // -----------------------------------------------
 // Pattern
 // -----------------------------------------------
 
-LitPat = Lit
-
+LiteralPat = Literal
+WildcardPat = '_'
 VarPat = Vis? 'ident'
+PathPat = Pat '.' 'ident' TyArgList?
 
-// At least one dot is required to be distinct from VarPat.
-PathPat = Path '.' 'ident' TyArgList?
-
-UnitPat = '(' ')'
-GroupPat = '(' Pat ')'
-ListPat = '[' (Pat (';'? Pat)*)? ']'
-AppPat = Pat Pat
-TuplePat = Pat (',' Pat)+
-ConsPat = Pat ':' Pat
+ParenPat = '(' Pat ')'
+ListPat = '[' ((Pat ';'?)* Pat)? ']'
+WrapPat = Pat Pat
+ConsPat = Pat '::' Pat
 AscribePat = Pat ':' Ty
-AsPat = Pat 'as' Vis? 'ident'
+TuplePat = (Pat ',')+ Pat | '(' ')'
+AsPat = Pat 'as' Pat
 OrPat = Pat '|' Pat
 
 // Term of pattern.
 Pat =
-  LitPat
+  LiteralPat
+| WildcardPat
 | VarPat
 | PathPat
-| UnitPat
-| GroupPat
+| ParenPat
 | ListPat
-| AppPat
-| TuplePat
+| WrapPat
 | ConsPat
 | AscribePat
+| TuplePat
 | AsPat
 | OrPat
 
@@ -99,7 +81,7 @@ Pat =
 // Expression
 // -----------------------------------------------
 
-Unary = '-'
+Unary = '-' | '&&'
 
 Binary =
   '+'
@@ -123,75 +105,63 @@ Binary =
 | '||'
 | '|>'
 
-LitExpr = Lit
-PathExpr = Path
-UnitExpr = '(' ')'
-GroupExpr = '(' Expr ')'
-ListExpr = '[' (Expr (';'? Expr)*)? ']'
+LiteralExpr = Literal
+NameExpr = 'ident' TyArgList?
+PathExpr = Expr '.' 'ident' TyArgList?
 
+ParenExpr = '(' Expr ')'
+ListExpr = '[' ((Expr ';'?)* Expr)? ']'
+
+WithClause = Expr 'with'
+FieldInit = 'ident' '=' Expr
 RecordExpr =
-    '{'
-        (Expr 'with')?
-        'ident' '=' Expr (';'? 'ident' '=' Expr)*
-    '}'
+  '{'
+    WithClause?
+    (FieldInit ';'?)* FieldInit
+  '}'
 
-IfExpr = 'if' Expr 'then' Expr ('else' Expr)?
+ElseClause = 'else' Expr
+IfExpr = 'if' Expr 'then' Expr ElseClause?
 
-MatchArm = Pat ('when' Expr)? '->' Expr
-
-MatchExpr = 'match' Expr 'with' '|'? MatchArm ('|' MatchArm)*
+GuardClause = 'when' Expr
+Arm = '|'? Pat GuardClause? '->' Expr
+MatchExpr = 'match' Expr 'with' Arm+
 
 FunExpr = 'fun' Pat+ '->' Expr
 
-
-
-// Arithmetic expressions:
-
-UnaryExpr = Unary Expr
-
-FieldExpr = Expr '.' 'ident'
-
 IndexExpr = Expr '.' '[' Expr ']'
-
+UnaryExpr = Unary Expr
 AppExpr = Expr Expr
-
-RangeExpr = Expr ('..' Expr)+
-
 BinaryExpr = Expr Binary Expr
-
+RangeExpr = Expr '..' Expr
+TupleExpr = (Expr ',')+ Expr | '(' ')'
 AscribeExpr = Expr ':' Ty
+BlockExpr = (Expr ';'?)+ Expr
 
-TupleExpr = Expr (',' Expr)+
-
-BlockExpr = Expr (';'? Expr)+
-
-
-
-// Bindings:
-
-LetValExpr = 'let' Pat '=' Expr 'in'? Expr
+LetValExpr = 'let' Pat '=' Expr 'in'? Expr?
 
 LetFunExpr =
     'let' 'rec'?
     Vis? 'ident' TyParamList? Pat+
     '=' Expr
-    'in'? Expr
+    'in'? Expr?
+
+
 
 Expr =
-  LitExpr
+  LiteralExpr
+| NameExpr
 | PathExpr
-| UnitExpr
-| GroupExpr
+| ParenExpr
 | ListExpr
 | RecordExpr
 | IfExpr
 | MatchExpr
 | FunExpr
 | UnaryExpr
-| FieldExpr
 | IndexExpr
+| SliceExpr
 | AppExpr
-| RangeExpr
 | BinaryExpr
 | AscribeExpr
 | TupleExpr
@@ -208,26 +178,52 @@ ExprDecl = Expr
 LetValDecl = 'let' Pat '=' Expr
 
 LetFunDecl =
-    'let' 'rec'?
-    Vis? 'ident' TyParamList? Pat+
-    '=' Expr
+  Attr? 'let' 'rec'?
+  Vis? 'ident' TyParamList? Pat+
+  '=' Expr
 
-TyDecl = 'type' Vis? 'ident' TyParamList? '=' TyDeclBody
+
+
+TySynonymDecl =
+  'type' Vis? 'ident' TyParamList? '='
+  Ty
+
+
+
+LabeledTy = ('ident' ':')? Ty
+VariantDecl = '|'? 'ident' ('of' (LabeledTy '*')* LabeledTy)?
+UnionTyDecl =
+  'type' Vis? 'ident' TyParamList? '='
+  VariantDecl+
+
+
+
+FieldDecl = 'ident' ':' Ty
+RecordTyDecl =
+  Attr?
+  'type' Vis? 'ident' TyParamList? '='
+  '{' (FieldDecl ';'?)* FieldDecl '}'
+
+
 
 OpenDecl = 'open' ModulePath
-
 ModuleSynonymDecl = 'module' 'ident' '=' ModulePath
+ModuleDecl = 'module' 'rec'? Vis? 'ident' '=' Decl*
+
+
 
 Decl =
   ExprDecl
 | LetValDecl
 | LetFunDecl
-| TyDecl
+| TySynonymDecl
+| UnionTyDecl
+| RecordTyDecl
 | OpenDecl
 | ModuleSynonymDecl
+| ModuleDecl
 
 
 
-Header = 'module' 'rec' ModulePath
-
-Program = Header? Decl*
+ModuleHead = 'module' 'rec'? ModulePath
+Root = ModuleHead? Decl*

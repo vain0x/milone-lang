@@ -18,6 +18,7 @@ module S = Std.StdString
 module AstBundle = MiloneSyntax.AstBundle
 module SyntaxApi = MiloneSyntax.SyntaxApi
 module SyntaxTokenize = MiloneSyntax.SyntaxTokenize
+module SyntaxTreeGen = MiloneSyntax.SyntaxTreeGen
 module TySystem = MiloneSyntax.TySystem
 
 // Hide compiler-specific types from other modules.
@@ -30,6 +31,15 @@ type LTokenList = private LTokenList of TokenizeFullResult
 
 [<NoEquality; NoComparison>]
 type LSyntaxData = private LSyntaxData of ModuleSyntaxData
+
+[<RequireQualifiedAccess; NoEquality; NoComparison>]
+type LSyntax2 =
+  { DocId: DocId
+    Text: SourceCode
+    FullTokens: TokenizeFullResult
+    Ast: ARoot
+    SyntaxTree: SyntaxTree
+    Errors: ModuleSyntaxError list }
 
 // -----------------------------------------------
 // Utils
@@ -308,6 +318,25 @@ module LSyntaxData =
       | DModuleSynonymDef (synonym, modulePath), Some loc -> Some(synonym, modulePath, loc)
       | _ -> None)
 
+module LSyntax2 =
+  let private host = tokenizeHostNew ()
+
+  let parse projectName moduleName docId (text: SourceCode) : LSyntax2 =
+    let fullTokens = SyntaxTokenize.tokenizeAll host text
+
+    let _, _, ast, errors =
+      parseAllTokens projectName moduleName docId fullTokens
+
+    let syntax: LSyntax2 =
+      { DocId = docId
+        Text = text
+        FullTokens = fullTokens
+        Ast = ast
+        SyntaxTree = SyntaxTreeGen.genSyntaxTree fullTokens ast
+        Errors = errors }
+
+    syntax
+
 module BundleResult =
   let getErrors (b: BundleResult) = b.Errors
 
@@ -321,6 +350,7 @@ type ProjectAnalysisHost =
   { GetDocVersion: DocId -> DocVersion
     Tokenize: DocId -> DocVersion * LTokenList
     Parse: DocId -> (DocVersion * LSyntaxData) option
+    Parse2: DocId -> LSyntax2 option
 
     MiloneHome: FilePath
     ReadTextFile: string -> Future<string option> }
@@ -522,16 +552,24 @@ let private lowerATy docId acc ty : DSymbolOccurrence list =
   | AMissingTy _
   | AVarTy _ -> acc
 
-  | AAppTy (_, Name (name, pos), tyArgs, _) ->
+  | AAppTy (_, None, _) -> acc
+
+  | AAppTy (_, Some(Name (name, pos)), tyArgList) ->
     let acc =
       (DTySymbol name, Use, At(Loc.ofDocPos docId pos))
       :: acc
 
+    let tyArgs =
+      match tyArgList with
+      | Some (_, tyArgs, _) -> tyArgs
+      | None -> []
+
     onTys acc tyArgs
 
+  | AParenTy (_, bodyTy, _) -> onTy acc bodyTy
   | ASuffixTy (bodyTy, _) -> onTy acc bodyTy
   | ATupleTy (itemTys, _) -> itemTys |> List.fold onTy acc
-  | AFunTy (l, r, _) -> acc |> up onTy l |> up onTy r
+  | AFunTy (l, _, r) -> acc |> up onTy l |> up onTy r
 
 let private lowerAPat docId acc pat : DSymbolOccurrence list =
   let onTy acc ty = lowerATy docId acc ty
@@ -544,16 +582,17 @@ let private lowerAPat docId acc pat : DSymbolOccurrence list =
   | ALitPat _
   | AIdentPat _ -> acc
 
-  | AListPat (itemPats, _) -> acc |> up onPats itemPats
+  | AParenPat (_, bodyPat, _) -> lowerAPat docId acc bodyPat
+  | AListPat (_, itemPats, _) -> acc |> up onPats itemPats
   | ANavPat (l, _, _) -> acc |> up onPat l
 
-  | AAppPat (l, r, _)
-  | AConsPat (l, r, _) -> acc |> up onPat l |> up onPat r
+  | AAppPat (l, _, r)
+  | AConsPat (l, _, r) -> acc |> up onPat l |> up onPat r
 
-  | ATuplePat (itemPats, _) -> acc |> up onPats itemPats
+  | ATuplePat (_, itemPats, _) -> acc |> up onPats itemPats
   | AAsPat (bodyPat, _, _) -> acc |> up onPat bodyPat
-  | AAscribePat (l, r, _) -> acc |> up onPat l |> up onTy r
-  | AOrPat (l, r, _) -> acc |> up onPat l |> up onPat r
+  | AAscribePat (l, _, r) -> acc |> up onPat l |> up onTy r
+  | AOrPat (l, _, r) -> acc |> up onPat l |> up onPat r
 
 let private lowerALetContents docId acc contents =
   let onTy acc ty = lowerATy docId acc ty
@@ -563,16 +602,16 @@ let private lowerALetContents docId acc contents =
   let toLoc (y, x) = At(Loc(docId, y, x))
 
   match contents with
-  | ALetContents.LetFun (_, _, name, argPats, resultTyOpt, body) ->
+  | ALetContents.LetFun (_, _, name, argPats, resultTyOpt, _, body) ->
     let (Name (name, pos)) = name
     let acc = (DFunSymbol name, Def, toLoc pos) :: acc
 
     let acc =
-      acc |> upOpt onTy (resultTyOpt |> Option.map fst)
+      acc |> upOpt onTy (resultTyOpt |> Option.map snd)
 
     acc |> up onPats argPats |> up onExpr body
 
-  | ALetContents.LetVal (_, pat, init) -> acc |> up onPat pat |> up onExpr init
+  | ALetContents.LetVal (_, pat, _, init) -> acc |> up onPat pat |> up onExpr init
 
 let private lowerAExpr docId acc expr : DSymbolOccurrence list =
   let onTy acc ty = lowerATy docId acc ty
@@ -591,43 +630,48 @@ let private lowerAExpr docId acc expr : DSymbolOccurrence list =
   | ALitExpr _
   | AIdentExpr _ -> acc
 
-  | AListExpr (items, _) -> onExprs acc items
+  | AParenExpr (_, body, _) -> lowerAExpr docId acc body
+  | AListExpr (_, items, _) -> onExprs acc items
 
-  | ARecordExpr (baseOpt, fields, _) ->
+  | ARecordExpr (_, baseOpt, fields, _) ->
     acc
-    |> up onExprOpt baseOpt
-    |> up (List.fold (fun acc (_, init, _) -> onExpr acc init)) fields
+    |> up onExprOpt (baseOpt |> Option.map fst)
+    |> up (List.fold (fun acc (_, _, init) -> onExpr acc init)) fields
 
-  | AIfExpr (cond, body, alt, _) ->
+  | AIfExpr (_, cond, _, body, alt) ->
     acc
     |> up onExpr cond
     |> up onExpr body
-    |> up onExprOpt alt
+    |> up onExprOpt (alt |> Option.map snd)
 
-  | AMatchExpr (cond, arms, _) ->
+  | AMatchExpr (_, cond, _, arms) ->
     acc
     |> up onExpr cond
     |> up
          (List.fold (fun acc arm ->
-           let (AArm (_, guard, body, _)) = arm
-           acc |> up onExprOpt guard |> up onExpr body))
+           let (_, pat, guard, _, body) = arm
+
+           acc
+           |> up onPat pat
+           |> up onExprOpt (guard |> Option.map snd)
+           |> up onExpr body))
          arms
 
-  | AFunExpr (argPats, body, pos) ->
+  | AFunExpr (pos, argPats, _, body) ->
     ((DFunSymbol "<fun>", Def, toLoc pos) :: acc)
     |> upList onPat argPats
     |> up onExpr body
 
   | ANavExpr (l, _, _) ->
     match l with
-    | AIdentExpr (Name (l, pos), []) when l.Length = 1 && C.isUpper l.[0] ->
+    | AIdentExpr (Name (l, pos), None) when l.Length = 1 && C.isUpper l.[0] ->
       (DModuleSymbol [ Symbol.toString docId
                        l ],
        Use,
        toLoc pos)
       :: acc
 
-    | ANavExpr (AIdentExpr (p, []), m, _) ->
+    | ANavExpr (AIdentExpr (p, None), _, Some m) ->
       let path = [ p; m ] |> List.map nameToIdent
 
       if isModulePathLike path then
@@ -640,18 +684,21 @@ let private lowerAExpr docId acc expr : DSymbolOccurrence list =
 
     | _ -> onExpr acc l
 
-  | AIndexExpr (l, r, _) -> onExprs acc [ l; r ]
-  | AUnaryExpr (_, arg, _) -> onExpr acc arg
-  | ABinaryExpr (_, l, r, _) -> onExprs acc [ l; r ]
-  | ARangeExpr (l, r, _) -> onExprs acc [ l; r ]
-  | ATupleExpr (items, _) -> onExprs acc items
+  | AIndexExpr (l, _, _, r, _) -> onExprs acc [ l; r ]
+  | AUnaryExpr (_, _, arg) -> onExpr acc arg
+  | ABinaryExpr (_, l, _, r) -> onExprs acc [ l; r ]
+  | ARangeExpr (l, _, r) -> onExprs acc [ l; r ]
+  | ATupleExpr (_, items, _) -> onExprs acc items
 
-  | AAscribeExpr (l, r, _) -> acc |> up onExpr l |> up onTy r
+  | AAscribeExpr (l, _, r) -> acc |> up onExpr l |> up onTy r
   | ASemiExpr (stmts, last, _) -> acc |> up onExprs stmts |> up onExpr last
 
-  | ALetExpr (contents, next, _) ->
+  | ALetExpr (_, contents, nextOpt) ->
     let acc = lowerALetContents docId acc contents
-    lowerAExpr docId acc next
+
+    match nextOpt with
+    | Some next -> lowerAExpr docId acc next
+    | None -> acc
 
 let private lowerADecl docId acc decl : DSymbolOccurrence list =
   let onTy acc ty = lowerATy docId acc ty
@@ -663,19 +710,19 @@ let private lowerADecl docId acc decl : DSymbolOccurrence list =
   match decl with
   | AExprDecl expr -> onExpr acc expr
 
-  | ALetDecl (contents, _) -> lowerALetContents docId acc contents
+  | ALetDecl (_, contents) -> lowerALetContents docId acc contents
 
-  | ATySynonymDecl (_, name, _, _, _) ->
+  | ATySynonymDecl (_, _, name, _, _, _) ->
     let (Name (name, pos)) = name
     (DTySymbol name, Def, toLoc pos) :: acc
 
-  | AUnionTyDecl (_, name, _, variants, _) ->
+  | AUnionTyDecl (_, _, name, _, _, variants) ->
     let (Name (unionIdent, pos)) = name
 
     let acc =
       variants
       |> List.fold
-           (fun acc (AVariant (name, _, _)) ->
+           (fun acc (_, name, _) ->
              let (Name (ident, pos)) = name
 
              (DVariantSymbol(ident, unionIdent, docId), Def, toLoc pos)
@@ -684,7 +731,7 @@ let private lowerADecl docId acc decl : DSymbolOccurrence list =
 
     (DTySymbol unionIdent, Def, toLoc pos) :: acc
 
-  | ARecordTyDecl (_, name, _, fields, _) ->
+  | ARecordTyDecl (_, _, name, _, _, _, fields, _) ->
     let (Name (recordIdent, pos)) = name
 
     let acc =
@@ -699,14 +746,14 @@ let private lowerADecl docId acc decl : DSymbolOccurrence list =
 
     (DTySymbol recordIdent, Def, toLoc pos) :: acc
 
-  | AOpenDecl (path, pos) ->
+  | AOpenDecl (pos, path) ->
     let pos = path |> pathToPos pos
 
     (DOpenUse(path |> List.map nameToIdent), Use, toLoc pos)
     :: (DModuleSymbol(path |> List.map nameToIdent), Use, toLoc pos)
        :: acc
 
-  | AModuleSynonymDecl (Name (synonym, identPos), path, pos) ->
+  | AModuleSynonymDecl (pos, Name (synonym, identPos), _, path) ->
     let acc =
       (DModuleSymbol [ Symbol.toString docId
                        synonym ],
@@ -720,13 +767,13 @@ let private lowerADecl docId acc decl : DSymbolOccurrence list =
     (DModuleSynonymDef(synonym, path), Use, toLoc pos)
     :: (DModuleSymbol path, Use, toLoc pos) :: acc
 
-  | AModuleDecl (_, _, Name (name, pos), decls, _) ->
+  | AModuleDecl (_, _, _, Name (name, pos), _, decls) ->
     let acc =
       (DModuleSymbol [ name ], Def, toLoc pos) :: acc
 
     acc |> up (List.fold onDecl) decls
 
-  | AAttrDecl (_, next, _) -> lowerADecl docId acc next
+  | AAttrDecl (_, _, _, next) -> lowerADecl docId acc next
 
 let private lowerARoot (docId: DocId) acc root : DSymbolOccurrence list =
   let toLoc (y, x) = At(Loc(docId, y, x))
@@ -734,7 +781,7 @@ let private lowerARoot (docId: DocId) acc root : DSymbolOccurrence list =
 
   let pos: Pos =
     match headOpt with
-    | Some (_, pos) -> pos
+    | Some (pos, _) -> pos
     | _ -> 0, 0
 
   let acc =
@@ -1102,6 +1149,8 @@ module ProjectAnalysis1 =
     LTokenList tokens, pa
 
   let parse (docId: DocId) (pa: ProjectAnalysis) : LSyntaxData option * ProjectAnalysis = parseWithCache docId pa, pa
+
+  let parse2 (docId: DocId) (pa: ProjectAnalysis) : LSyntax2 option * ProjectAnalysis = pa.Host.Parse2 docId, pa
 
   let bundle (pa: ProjectAnalysis) : BundleResult * ProjectAnalysis = bundleWithCache pa
 

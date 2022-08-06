@@ -3,6 +3,7 @@ module MiloneLspServer.LspLangService
 open MiloneShared.SharedTypes
 open MiloneShared.UtilParallel
 open MiloneShared.UtilSymbol
+open MiloneSyntaxTypes.SyntaxTypes
 open Std.StdError
 open Std.StdMap
 open Std.StdSet
@@ -671,6 +672,46 @@ module ProjectAnalysis =
     | None, pa -> None, pa
 
   let hover (docId: DocId) (targetPos: Pos) (pa: ProjectAnalysis) : string option * ProjectAnalysis =
+    let syntaxOpt, pa = ProjectAnalysis1.parse2 docId pa
+
+    match syntaxOpt with
+    | Some syntax ->
+      let (SyntaxTree root) = syntax.SyntaxTree
+
+      let getRange node =
+        match node with
+        | SyntaxToken (_, range) -> range
+        | SyntaxNode (_, range, _) -> range
+
+      let between range pos =
+        let p, q = range
+        Pos.compare p pos <= 0 && Pos.compare pos q < 0
+
+      let rec go node =
+        if between (getRange node) targetPos then
+          match node with
+          | SyntaxToken (kind, range) -> [ kind, range ]
+
+          | SyntaxNode (kind, range, children) ->
+            let childOpt =
+              children
+              |> List.tryFind (fun child -> between (getRange child) targetPos)
+
+            match childOpt with
+            | Some child -> (kind, range) :: go child
+            | None -> [ kind, range ]
+        else
+          []
+
+      go root
+      |> List.map string
+      |> S.concat "\n"
+      |> Some,
+      pa
+
+    | None -> None, pa
+
+  let hover1 (docId: DocId) (targetPos: Pos) (pa: ProjectAnalysis) : string option * ProjectAnalysis =
     let tokens, pa = ProjectAnalysis1.tokenize docId pa
     let tokenOpt = tokens |> LTokenList.findAt targetPos
 
@@ -968,6 +1009,27 @@ let private parseDoc (uri: Uri) (wa: WorkspaceAnalysis) =
 
   | None -> None
 
+let private parse2Doc uri (wa: WorkspaceAnalysis) =
+  match wa.Docs |> TMap.tryFind uri with
+  | Some (v, text) ->
+    traceFn "parse2: '%s' v:%d" (Uri.toString uri) v
+
+    let docId = uri |> uriToFilePath |> filePathToDocId
+
+    let projectName, moduleName =
+      match docId |> docIdToModulePath with
+      | Some it -> it
+      | None -> unreachable () // docId is created in `p.m` format explicitly
+
+    let syntax =
+      LSyntax2.parse projectName moduleName docId text
+
+    Some syntax
+
+  | None ->
+    debugFn "parse2: '%s' not open" (Uri.toString uri)
+    None
+
 let doWithProjectAnalysis
   (p: ProjectInfo)
   (action: ProjectAnalysis -> 'A * ProjectAnalysis)
@@ -987,6 +1049,11 @@ let doWithProjectAnalysis
         fun docId ->
           let uri = docIdToUri p docId wa
           parseDoc uri wa
+
+      Parse2 =
+        fun docId ->
+          let uri = docIdToUri p docId wa
+          parse2Doc uri wa
 
       MiloneHome = wa.Host.MiloneHome
       ReadTextFile = wa.Host.ReadTextFile }

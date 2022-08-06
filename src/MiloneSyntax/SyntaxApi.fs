@@ -21,6 +21,7 @@ module Manifest = MiloneSyntax.Manifest
 module S = Std.StdString
 module SyntaxParse = MiloneSyntax.SyntaxParse
 module SyntaxTokenize = MiloneSyntax.SyntaxTokenize
+module SyntaxTreeGen = MiloneSyntax.SyntaxTreeGen
 module Tir = MiloneSyntax.Tir
 module Typing = MiloneSyntax.Typing
 module TySystem = MiloneSyntax.TySystem
@@ -73,7 +74,7 @@ type ModuleKind =
   | MiloneCore
   | Regular
 
-let getModuleKind projectName _moduleName =
+let getModuleKind projectName (_: ModuleName) =
   match projectName with
   | "MiloneCore" -> ModuleKind.MiloneCore
   | _ -> ModuleKind.Regular
@@ -147,10 +148,11 @@ let private resolveMiloneCoreDeps kind tokens ast =
       |> TMap.fold
            (fun decls moduleName pos ->
              AModuleSynonymDecl(
+               pos,
                Name(moduleName, pos),
+               pos,
                [ Name("MiloneCore", pos)
-                 Name(moduleName, pos) ],
-               pos
+                 Name(moduleName, pos) ]
              )
              :: decls)
            decls
@@ -159,9 +161,9 @@ let private resolveMiloneCoreDeps kind tokens ast =
       match preludeOpt with
       | Some pos ->
         AOpenDecl(
+          pos,
           [ Name("MiloneCore", pos)
-            Name("Prelude", pos) ],
-          pos
+            Name("Prelude", pos) ]
         )
         :: decls
       | None -> decls
@@ -170,9 +172,9 @@ let private resolveMiloneCoreDeps kind tokens ast =
       match optionOpt with
       | Some pos ->
         AOpenDecl(
+          pos,
           [ Name("MiloneCore", pos)
-            Name("Option", pos) ],
-          pos
+            Name("Option", pos) ]
         )
         :: decls
       | None -> decls
@@ -180,9 +182,9 @@ let private resolveMiloneCoreDeps kind tokens ast =
     match resultOpt with
     | Some pos ->
       AOpenDecl(
+        pos,
         [ Name("MiloneCore", pos)
-          Name("Result", pos) ],
-        pos
+          Name("Result", pos) ]
       )
       :: decls
     | None -> decls
@@ -443,6 +445,21 @@ let performSyntaxAnalysis (ctx: SyntaxCtx) : SyntaxLayers * SyntaxAnalysisResult
       | None -> syntaxLayers, SyntaxAnalysisOk(modules, tirCtx)
 
 // -----------------------------------------------
+// Dump
+// -----------------------------------------------
+
+let dumpSyntax (text: string) : string * ModuleSyntaxError list =
+  let host = tokenizeHostNew ()
+  let tokens = SyntaxTokenize.tokenizeAll host text
+
+  let ast, errors =
+    SyntaxTokenize.tokenize host text
+    |> SyntaxParse.parse
+
+  let tree = SyntaxTreeGen.dumpTree tokens ast
+  tree, errors
+
+// -----------------------------------------------
 // Interface
 // -----------------------------------------------
 
@@ -454,4 +471,6 @@ let newSyntaxApi () : SyntaxApi =
     SyntaxErrorsToString = syntaxErrorsToString
     NewSyntaxCtx = fun host -> newSyntaxCtx host |> wrap
     GetManifest = fun ctx -> ctx |> unwrap |> SyntaxCtx.getManifest
-    PerformSyntaxAnalysis = fun ctx -> ctx |> unwrap |> performSyntaxAnalysis }
+    PerformSyntaxAnalysis = fun ctx -> ctx |> unwrap |> performSyntaxAnalysis
+    GenSyntaxTree = SyntaxTreeGen.genSyntaxTree
+    DumpSyntax = dumpSyntax }
