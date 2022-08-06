@@ -15,7 +15,7 @@ open MiloneTranslationTypes.TranslationApiTypes
 module C = Std.StdChar
 module S = Std.StdString
 module Lower = MiloneCliCore.Lower
-module PU = MiloneCliCore.PlatformUnix
+module PL = MiloneCliCore.PlatformLinux
 module PW = MiloneCliCore.PlatformWindows
 
 let private currentVersion () = "0.5.0"
@@ -54,7 +54,7 @@ type Verbosity =
   | Quiet
 
 [<RequireQualifiedAccess; NoEquality; NoComparison>]
-type UnixApi =
+type LinuxApi =
   { /// Turns this process into a shell that runs specified command.
     ExecuteInto: string -> Never }
 
@@ -69,7 +69,7 @@ type WindowsApi =
 
 [<RequireQualifiedAccess; NoEquality; NoComparison>]
 type Platform =
-  | Unix of UnixApi
+  | Linux of LinuxApi
   | Windows of WindowsApi
 
 /// Abstraction layer of CLI program.
@@ -188,7 +188,7 @@ let private writeLog (host: CliHost) verbosity msg : unit =
 let private computeExePath targetDir platform isRelease binaryType name : Path =
   let triple =
     match platform with
-    | Platform.Unix _ -> "x86_64-unknown-linux-gnu"
+    | Platform.Linux _ -> "x86_64-unknown-linux-gnu"
     | Platform.Windows _ -> "x86_64-pc-windows-msvc"
 
   let mode = if isRelease then "release" else "debug"
@@ -197,9 +197,9 @@ let private computeExePath targetDir platform isRelease binaryType name : Path =
 
   let ext =
     match platform, binaryType with
-    | Platform.Unix _, BinaryType.Exe -> ""
-    | Platform.Unix _, BinaryType.SharedObj -> ".so"
-    | Platform.Unix _, BinaryType.StaticLib -> ".a"
+    | Platform.Linux _, BinaryType.Exe -> ""
+    | Platform.Linux _, BinaryType.SharedObj -> ".so"
+    | Platform.Linux _, BinaryType.StaticLib -> ".a"
     | Platform.Windows _, BinaryType.Exe -> ".exe"
     | Platform.Windows _, BinaryType.SharedObj -> ".dll"
     | Platform.Windows _, BinaryType.StaticLib -> ".lib"
@@ -303,7 +303,7 @@ let private compile (sApi: SyntaxApi) (tApi: TranslationApi) (ctx: CompileCtx) :
       |> List.map (fun (docId, cCode) -> computeCFilename projectName docId, cCode)
 
     writeLog "Finish"
-    CompileOk (cFiles, exportNames)
+    CompileOk(cFiles, exportNames)
 
 // -----------------------------------------------
 // Others
@@ -365,14 +365,14 @@ type private BuildOptions =
     IsRelease: bool
     OutputOpt: string option }
 
-let private toBuildOnUnixParams
+let private toBuildOnLinuxParams
   sApi
   (host: CliHost)
-  (u: UnixApi)
+  (u: LinuxApi)
   (options: BuildOptions)
   (ctx: CompileCtx)
   (cFiles: (CFilename * CCode) list)
-  : PU.BuildOnUnixParams =
+  : PL.BuildOnLinuxParams =
   let miloneHome = Path(hostToMiloneHome sApi host)
 
   let compileOptions = options.CompileOptions
@@ -485,8 +485,8 @@ let private cliBuild sApi tApi (host: CliHost) (options: BuildOptions) =
     writeCFiles host targetDir cFiles
 
     match host.Platform with
-    | Platform.Unix u ->
-      PU.buildOnUnix (toBuildOnUnixParams sApi host u options ctx cFiles)
+    | Platform.Linux l ->
+      PL.buildOnLinux (toBuildOnLinuxParams sApi host l options ctx cFiles)
       |> never
 
     | Platform.Windows w ->
@@ -511,11 +511,11 @@ let private cliRun sApi tApi (host: CliHost) (options: BuildOptions) (restArgs: 
     writeCFiles host targetDir cFiles
 
     match host.Platform with
-    | Platform.Unix u ->
+    | Platform.Linux l ->
       let p =
-        toBuildOnUnixParams sApi host u options ctx cFiles
+        toBuildOnLinuxParams sApi host l options ctx cFiles
 
-      PU.runOnUnix p restArgs |> never
+      PL.runOnLinux p restArgs |> never
 
     | Platform.Windows w ->
       let p =
@@ -566,11 +566,11 @@ let main _ =
     writeCFiles host targetDir cFiles
 
     match host.Platform with
-    | Platform.Unix u ->
+    | Platform.Linux l ->
       let p =
-        toBuildOnUnixParams sApi host u options ctx cFiles
+        toBuildOnLinuxParams sApi host l options ctx cFiles
 
-      PU.runOnUnix p [] |> never
+      PL.runOnLinux p [] |> never
 
     | Platform.Windows w ->
       let p =

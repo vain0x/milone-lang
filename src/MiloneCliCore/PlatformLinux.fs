@@ -1,4 +1,4 @@
-module rec MiloneCliCore.PlatformUnix
+module rec MiloneCliCore.PlatformLinux
 
 open Std.StdError
 open Std.StdPath
@@ -40,7 +40,7 @@ let private andCopyCommand exeFile outputOpt =
 // -----------------------------------------------
 
 [<RequireQualifiedAccess; NoEquality; NoComparison>]
-type BuildOnUnixParams =
+type BuildOnLinuxParams =
   { CFiles: Path list
     TargetDir: Path
     IsRelease: bool
@@ -61,7 +61,7 @@ type BuildOnUnixParams =
     FileWrite: Path -> string -> unit
     ExecuteInto: string -> Never }
 
-let private toRenderNinjaParams (p: BuildOnUnixParams) : RenderNinjaFileParams =
+let private toRenderNinjaParams (p: BuildOnLinuxParams) : RenderNinjaFileParams =
   { TargetDir = p.TargetDir
     CFiles = p.CFiles
     ExeFile = p.ExeFile
@@ -77,7 +77,7 @@ let private toRenderNinjaParams (p: BuildOnUnixParams) : RenderNinjaFileParams =
     LinuxCFlags = p.LinuxCFlags
     LinuxLinkFlags = p.LinuxLinkFlags }
 
-let buildOnUnix (p: BuildOnUnixParams) : Never =
+let buildOnLinux (p: BuildOnLinuxParams) : Never =
   let targetDir = p.TargetDir
 
   let ninjaFile =
@@ -100,7 +100,7 @@ let buildOnUnix (p: BuildOnUnixParams) : Never =
     + andCopyCommand p.ExeFile p.OutputOpt
   )
 
-let runOnUnix (p: BuildOnUnixParams) (args: string list) : Never =
+let runOnLinux (p: BuildOnLinuxParams) (args: string list) : Never =
   let targetDir = p.TargetDir
   let exeFile = p.ExeFile
 

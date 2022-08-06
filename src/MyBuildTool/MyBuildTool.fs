@@ -265,32 +265,32 @@ let private io label = IOBuilder(label)
 
 [<RequireQualifiedAccess>]
 type private Platform =
-  | Unix
+  | Linux
   | Windows
 
 let private getPlatform () : Platform =
   match Environment.OSVersion.Platform with
   | PlatformID.Win32NT -> Platform.Windows
-  | _ -> Platform.Unix
+  | _ -> Platform.Linux
 
 let private getExeExt () : string =
   match getPlatform () with
-  | Platform.Unix -> ""
+  | Platform.Linux -> ""
   | Platform.Windows -> ".exe"
 
 let private getTriplet () =
   match getPlatform () with
-  | Platform.Unix -> "x86_64-unknown-linux-gnu"
+  | Platform.Linux -> "x86_64-unknown-linux-gnu"
   | Platform.Windows -> "x86_64-pc-windows-msvc"
 
 let private generatedExeFile () =
   match getPlatform () with
-  | Platform.Unix -> "target/MiloneCli/x86_64-unknown-linux-gnu-release/MiloneCli"
+  | Platform.Linux -> "target/MiloneCli/x86_64-unknown-linux-gnu-release/MiloneCli"
   | Platform.Windows -> "target/MiloneCli/x86_64-pc-windows-msvc-release/MiloneCli.exe"
 
 let private getRuntimeIdentifier () =
   match getPlatform () with
-  | Platform.Unix -> "linux-x64"
+  | Platform.Linux -> "linux-x64"
   | Platform.Windows -> "win10-x64"
 
 let private cwd () : string = Environment.CurrentDirectory
@@ -580,7 +580,7 @@ let private destFiles (destDir: string) =
 
 /// Generates a binary package.
 let private generateBinaryPackage (destDir: string) =
-  let onLinux = getPlatform () = Platform.Unix
+  let onLinux = getPlatform () = Platform.Linux
   let dest = destFiles destDir
 
   io "package" {
@@ -628,7 +628,7 @@ let private generateBinaryPackage (destDir: string) =
     // Add assets.
     let installScript, uninstallScript =
       match getPlatform () with
-      | Platform.Unix -> $"{AssetsDir}/install.sh", $"{AssetsDir}/uninstall.sh"
+      | Platform.Linux -> $"{AssetsDir}/install.sh", $"{AssetsDir}/uninstall.sh"
       | Platform.Windows -> $"{AssetsDir}/install.ps1", $"{AssetsDir}/uninstall.ps1"
 
     CopyFiles(
@@ -658,13 +658,13 @@ let private commandPack () =
     // Compress.
     let outFile =
       match getPlatform () with
-      | Platform.Unix -> $"target/milone-{version}-{triplet}.tar.gz"
+      | Platform.Linux -> $"target/milone-{version}-{triplet}.tar.gz"
       | Platform.Windows -> $"target/milone-{version}-{triplet}.zip"
 
     RemoveFile outFile
 
     match getPlatform () with
-    | Platform.Unix -> Run("tar", [ "-czf"; outFile; destDir ], [], None)
+    | Platform.Linux -> Run("tar", [ "-czf"; outFile; destDir ], [], None)
     | Platform.Windows -> Do("compress", (fun () -> Compression.ZipFile.CreateFromDirectory(destDir, outFile)))
 
     ReadBytesWith(
@@ -690,7 +690,7 @@ let private commandSelfInstall () : Action =
     generateBinaryPackage destDir
 
     match getPlatform () with
-    | Platform.Unix -> Run("/bin/sh", [ $"{destDir}/install.sh" ], [], Some destDir)
+    | Platform.Linux -> Run("/bin/sh", [ $"{destDir}/install.sh" ], [], Some destDir)
     | Platform.Windows -> RunPwsh $"{destDir}/install.ps1"
   }
 
@@ -701,7 +701,7 @@ let private commandSelfInstall () : Action =
 let private commandSelfUninstall () =
   io "uninstall" {
     match getPlatform () with
-    | Platform.Unix -> Run("/bin/sh", [ $"{AssetsDir}/uninstall.sh" ], [], None)
+    | Platform.Linux -> Run("/bin/sh", [ $"{AssetsDir}/uninstall.sh" ], [], None)
     | Platform.Windows -> RunPwsh $"{AssetsDir}/uninstall.ps1"
   }
 

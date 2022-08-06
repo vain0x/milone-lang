@@ -124,7 +124,7 @@ Restriction: Variadic parameter functions (e.g. `printf`) can't be called with t
 
 ## Call Native Function from so/dll
 
-(Not implemented yet. Use `dlopen` on Unix and link `libdl` (`-ldl` option). Use `LoadLibrary` on Windows.)
+(Not implemented yet. Use `dlopen` on Linux and link `libdl` (`-ldl` option). Use `LoadLibrary` on Windows.)
 
 ## Size of Type
 

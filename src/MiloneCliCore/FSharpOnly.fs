@@ -70,8 +70,8 @@ let private getPlatform () : Platform =
     Platform.Windows w
 
   | _ ->
-    let u: UnixApi = { ExecuteInto = executeInto }
-    Platform.Unix u
+    let l: LinuxApi = { ExecuteInto = executeInto }
+    Platform.Linux l
 
 let dotnetCliHost () : CliHost =
   let args =

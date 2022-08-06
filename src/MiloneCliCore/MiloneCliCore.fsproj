@@ -6,7 +6,7 @@
 
   <ItemGroup>
     <Compile Include="Lower.fs" />
-    <Compile Include="PlatformUnix.fs" />
+    <Compile Include="PlatformLinux.fs" />
     <Compile Include="PlatformWindows.fs" />
     <Compile Include="Cli.fs" />
     <Compile Include="FSharpOnly.fs" />
