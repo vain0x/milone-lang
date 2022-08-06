@@ -14,6 +14,7 @@
 - Add opaque types
 - Support generic records
 - Add Bitwise negation operator (`~~~`)
+- Add `binary shared` directive in manifest
 
 ### CLI Tool
 

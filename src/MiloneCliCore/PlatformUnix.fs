@@ -3,6 +3,7 @@ module rec MiloneCliCore.PlatformUnix
 open Std.StdError
 open Std.StdPath
 open MiloneShared.Util
+open MiloneSyntaxTypes.SyntaxApiTypes
 
 module S = Std.StdString
 
@@ -46,6 +47,7 @@ type BuildOnUnixParams =
     ExeFile: Path
     OutputOpt: Path option
     MiloneHome: Path
+    BinaryType: BinaryType
     CSanitize: string option
     CStd: string
     CcList: Path list
@@ -62,6 +64,7 @@ let private toRenderNinjaParams (p: BuildOnUnixParams) : RenderNinjaFileParams =
     CFiles = p.CFiles
     ExeFile = p.ExeFile
     MiloneHome = p.MiloneHome
+    BinaryType = p.BinaryType
     CDebug = not p.IsRelease
     COptimize = p.IsRelease
     CSanitize = p.CSanitize
@@ -131,6 +134,7 @@ type private RenderNinjaFileParams =
     ExeFile: Path
     MiloneHome: Path
 
+    BinaryType: BinaryType
     CDebug: bool
     COptimize: bool
     CStd: string
@@ -184,6 +188,11 @@ build $milone_platform_o: cc $milone_platform_c | $milone_h
     | None -> []
 
   let cFlags =
+    let pic =
+      match p.BinaryType with
+      | BinaryType.Exe -> []
+      | BinaryType.SharedObj -> [ "-fPIC" ]
+
     let debug =
       if p.CDebug then
         [ "-g" ]
@@ -193,14 +202,24 @@ build $milone_platform_o: cc $milone_platform_c | $milone_h
     let optimize = if p.COptimize then "-O2" else "-O1"
     let std = "-std=" + p.CStd
 
-    List.append debug [ optimize; std ]
-    |> List.append sanitizerFlags
+    List.collect
+      id
+      [ pic
+        debug
+        [ optimize; std ]
+        sanitizerFlags ]
     |> S.concat " "
 
   let linkFlags =
-    p.Libs
-    |> List.map (fun lib -> "-l" + lib)
-    |> List.append sanitizerFlags
+    let binaryFlag =
+      match p.BinaryType with
+      | BinaryType.Exe -> []
+      | BinaryType.SharedObj -> [ "-shared" ]
+
+    let lFlags =
+      p.Libs |> List.map (fun lib -> "-l" + lib)
+
+    List.collect id [ binaryFlag; lFlags; sanitizerFlags ]
     |> S.concat " "
 
   let build =

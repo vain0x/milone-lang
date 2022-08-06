@@ -22,6 +22,13 @@ type FetchModuleHost =
     WriteLog: WriteLogFun }
 
 [<RequireQualifiedAccess; NoEquality; NoComparison>]
+type BinaryType =
+  /// Executable.
+  | Exe
+  /// Shared object (.so) or dynamic-link library (.dll).
+  | SharedObj
+
+[<RequireQualifiedAccess; NoEquality; NoComparison>]
 type ManifestData =
   { /// Referenced non-entry projects.
     /// Path is relative to current project directory (where the manifest is).
@@ -29,6 +36,7 @@ type ManifestData =
     Errors: (string * Loc) list
 
     // #experimental
+    BinaryType: (BinaryType * Loc) option
     CSanitize: string option
     CStd: string
     CcList: (Path * Loc) list

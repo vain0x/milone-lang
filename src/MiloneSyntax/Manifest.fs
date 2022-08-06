@@ -16,6 +16,7 @@ let emptyManifest: ManifestData =
   { Projects = []
     Errors = []
 
+    BinaryType = None
     CSanitize = None
     CStd = "c11"
     CcList = []
@@ -66,6 +67,7 @@ let parseManifest (docId: DocId) (text: string) : ManifestData =
            else
              push name dir
 
+         | [ "binary"; "shared" ] -> { m with BinaryType = Some(BinaryType.SharedObj, loc) }
          | [ "sanitize"; value ] -> { m with CSanitize = Some value }
          | [ "std"; version ] -> { m with CStd = version }
          | [ "cc"; path ] -> { m with CcList = (Path path, loc) :: m.CcList }

@@ -184,7 +184,8 @@ let private writeLog (host: CliHost) verbosity msg : unit =
 
   | Quiet -> ()
 
-let private computeExePath targetDir platform isRelease name : Path =
+/// Computes the path where the output is generated.
+let private computeExePath targetDir platform isRelease binaryType name : Path =
   let triple =
     match platform with
     | Platform.Unix _ -> "x86_64-unknown-linux-gnu"
@@ -195,9 +196,11 @@ let private computeExePath targetDir platform isRelease name : Path =
   let quad = triple + "-" + mode
 
   let ext =
-    match platform with
-    | Platform.Unix _ -> ""
-    | Platform.Windows _ -> ".exe"
+    match platform, binaryType with
+    | Platform.Unix _, BinaryType.Exe -> ""
+    | Platform.Unix _, BinaryType.SharedObj -> ".so"
+    | Platform.Windows _, BinaryType.Exe -> ".exe"
+    | Platform.Windows _, BinaryType.SharedObj -> ".dll"
 
   Path(
     Path.toString targetDir
@@ -370,12 +373,18 @@ let private toBuildOnUnixParams
 
   let manifest = ctx.SyntaxCtx |> sApi.GetManifest
 
+  let binaryType =
+    match manifest.BinaryType with
+    | Some (it, _) -> it
+    | None -> BinaryType.Exe
+
   { TargetDir = Path targetDir
     IsRelease = isRelease
-    ExeFile = computeExePath (Path targetDir) host.Platform isRelease projectName
+    ExeFile = computeExePath (Path targetDir) host.Platform isRelease binaryType projectName
     OutputOpt = outputOpt |> Option.map Path
     CFiles = cFiles |> List.map (fun (name, _) -> Path name)
     MiloneHome = miloneHome
+    BinaryType = binaryType
     CSanitize = manifest.CSanitize
     CStd = manifest.CStd
     CcList =
@@ -408,6 +417,11 @@ let private toBuildOnWindowsParams
 
   let manifest = ctx.SyntaxCtx |> sApi.GetManifest
 
+  let binaryType =
+    match manifest.BinaryType with
+    | Some (it, _) -> it
+    | None -> BinaryType.Exe
+
   { ProjectName = projectName
     CFiles =
       cFiles
@@ -415,7 +429,7 @@ let private toBuildOnWindowsParams
     MiloneHome = miloneHome
     TargetDir = Path targetDir
     IsRelease = isRelease
-    ExeFile = computeExePath (Path targetDir) host.Platform isRelease projectName
+    ExeFile = computeExePath (Path targetDir) host.Platform isRelease binaryType projectName
     OutputOpt = outputOpt |> Option.map Path
 
     CcList =
