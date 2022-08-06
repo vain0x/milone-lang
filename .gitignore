@@ -11,8 +11,10 @@ src/libmilonert/hashmap.h
 
 
 # Generated files.
+*.a
 *.o
 *.out
+*.so
 
 target/
 

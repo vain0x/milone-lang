@@ -14,6 +14,11 @@
 - Add opaque types
 - Support generic records
 - Add Bitwise negation operator (`~~~`)
+- Add directives to specify output binary type in manifest
+    - `binary shared` (`*.so`, `*.dll`)
+    - `binary staticlib` (`*.a`, `*.lib`)
+- Add `subsystem windows` directive (only on Windows)
+- Support `Export` attribute on functions
 
 ### CLI Tool
 
@@ -24,6 +29,12 @@
 - Clarify limitation of `__nativeDecl` arguments
 - Add explanation of generic nominal types
 - Add page of type synonyms
+
+### Others
+
+- Default install directory is changed to match XDG base directory.
+    - `$HOME/.local/bin` (rather than `$HOME/bin`)
+    - `$HOME/.local/share` (rather than `$HOME/.milone`)
 
 ## [v0.5.0] - 2022-07-21
 

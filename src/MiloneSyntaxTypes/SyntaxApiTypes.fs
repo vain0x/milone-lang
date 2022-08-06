@@ -22,6 +22,20 @@ type FetchModuleHost =
     WriteLog: WriteLogFun }
 
 [<RequireQualifiedAccess; NoEquality; NoComparison>]
+type BinaryType =
+  /// Executable.
+  | Exe
+  /// Shared object (.so) or dynamic-link library (.dll).
+  | SharedObj
+  /// Archive (.a) or static library (.lib).
+  | StaticLib
+
+[<RequireQualifiedAccess; NoEquality; NoComparison>]
+type SubSystem =
+  | Console
+  | Windows
+
+[<RequireQualifiedAccess; NoEquality; NoComparison>]
 type ManifestData =
   { /// Referenced non-entry projects.
     /// Path is relative to current project directory (where the manifest is).
@@ -29,11 +43,17 @@ type ManifestData =
     Errors: (string * Loc) list
 
     // #experimental
+    BinaryType: (BinaryType * Loc) option
+    SubSystem: SubSystem option
     CSanitize: string option
     CStd: string
     CcList: (Path * Loc) list
     ObjList: (Path * Loc) list
-    Libs: (string * Loc) list }
+    Libs: (string * Loc) list
+    /// Passed to cc to compile a source file, only on Linux.
+    LinuxCFlags: string option
+    /// Passed to cc to link object files, only on Linux.
+    LinuxLinkFlags: string option }
 
 [<Struct; NoEquality; NoComparison>]
 type SyntaxCtx = SyntaxCtx of obj

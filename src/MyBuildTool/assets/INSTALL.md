@@ -1,17 +1,25 @@
-# Install milone command
+# Install
 
-Run a script to complete installation.
+To complete milone installation, open a shell in this directory to run an install script.
 
-- On linux: `./install.sh`
-- On windows: `powershell -c "Set-ExecutionPolicy RemoteSigned -Scope Process; ./install.ps1"`
+- On Linux: `./install.sh`
+- On Windows: `powershell -c "Set-ExecutionPolicy RemoteSigned -Scope Process; ./install.ps1"`
+
+Installation has been completed!
 
 ----
 
 ## Uninstall
 
-- On linux: `./uninstall.sh`
-- On windows: `powershell -c "Set-ExecutionPolicy RemoteSigned -Scope Process; ./uninstall.ps1"`
+To uninstall, run an uninstall script as below.
 
-## Remarks on PATH
+- On Linux: `./uninstall.sh`
+- On Windows: `powershell -c "Set-ExecutionPolicy RemoteSigned -Scope Process; ./uninstall.ps1"`
 
-To use unqualified `milone` command, add `$HOME/bin` to your `$PATH` environment variable.
+## PATH Environment Variable
+
+To use unqualified `milone` command, add `$HOME/.local/bin` to your `$PATH` environment variable.
+
+## See Also
+
+→ [binary_package.md](https://github.com/vain0x/milone-lang/blob/v0.5.0/docs/binary_package.md)

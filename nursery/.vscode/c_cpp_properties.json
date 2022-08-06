@@ -4,7 +4,7 @@
             "name": "Linux",
             "includePath": [
                 "${workspaceFolder}/**",
-                "${HOME}/.milone/src/libmilonert"
+                "${HOME}/.local/share/milone/src/libmilonert"
             ],
             "defines": [],
             "cStandard": "gnu11",

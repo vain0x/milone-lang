@@ -1,8 +1,9 @@
-module rec MiloneCliCore.PlatformUnix
+module rec MiloneCliCore.PlatformLinux
 
 open Std.StdError
 open Std.StdPath
 open MiloneShared.Util
+open MiloneSyntaxTypes.SyntaxApiTypes
 
 module S = Std.StdString
 
@@ -39,38 +40,44 @@ let private andCopyCommand exeFile outputOpt =
 // -----------------------------------------------
 
 [<RequireQualifiedAccess; NoEquality; NoComparison>]
-type BuildOnUnixParams =
+type BuildOnLinuxParams =
   { CFiles: Path list
     TargetDir: Path
     IsRelease: bool
     ExeFile: Path
     OutputOpt: Path option
     MiloneHome: Path
+    BinaryType: BinaryType
     CSanitize: string option
     CStd: string
     CcList: Path list
     ObjList: Path list
     Libs: string list
+    LinuxCFlags: string
+    LinuxLinkFlags: string
 
     // Effects
     DirCreate: Path -> unit
     FileWrite: Path -> string -> unit
     ExecuteInto: string -> Never }
 
-let private toRenderNinjaParams (p: BuildOnUnixParams) : RenderNinjaFileParams =
+let private toRenderNinjaParams (p: BuildOnLinuxParams) : RenderNinjaFileParams =
   { TargetDir = p.TargetDir
     CFiles = p.CFiles
     ExeFile = p.ExeFile
     MiloneHome = p.MiloneHome
+    BinaryType = p.BinaryType
     CDebug = not p.IsRelease
     COptimize = p.IsRelease
     CSanitize = p.CSanitize
     CStd = p.CStd
     CcList = p.CcList
     ObjList = p.ObjList
-    Libs = p.Libs }
+    Libs = p.Libs
+    LinuxCFlags = p.LinuxCFlags
+    LinuxLinkFlags = p.LinuxLinkFlags }
 
-let buildOnUnix (p: BuildOnUnixParams) : Never =
+let buildOnLinux (p: BuildOnLinuxParams) : Never =
   let targetDir = p.TargetDir
 
   let ninjaFile =
@@ -93,7 +100,7 @@ let buildOnUnix (p: BuildOnUnixParams) : Never =
     + andCopyCommand p.ExeFile p.OutputOpt
   )
 
-let runOnUnix (p: BuildOnUnixParams) (args: string list) : Never =
+let runOnLinux (p: BuildOnLinuxParams) (args: string list) : Never =
   let targetDir = p.TargetDir
   let exeFile = p.ExeFile
 
@@ -131,13 +138,16 @@ type private RenderNinjaFileParams =
     ExeFile: Path
     MiloneHome: Path
 
+    BinaryType: BinaryType
     CDebug: bool
     COptimize: bool
     CStd: string
     CSanitize: string option
     CcList: Path list
     ObjList: Path list
-    Libs: string list }
+    Libs: string list
+    LinuxCFlags: string
+    LinuxLinkFlags: string }
 
 let private renderNinjaFile (p: RenderNinjaFileParams) : string =
   let miloneHome = Path.toString p.MiloneHome
@@ -173,6 +183,10 @@ rule link
   description = link $out
   command = $${CC:-gcc} $in -o $out ${LINK_FLAGS}
 
+rule archive
+  description = archive $out
+  command = ar r $out $in
+
 build $milone_o: cc $milone_c | $milone_h
 build $milone_platform_o: cc $milone_platform_c | $milone_h
 
@@ -184,6 +198,12 @@ build $milone_platform_o: cc $milone_platform_c | $milone_h
     | None -> []
 
   let cFlags =
+    let pic =
+      match p.BinaryType with
+      | BinaryType.Exe -> []
+      | BinaryType.SharedObj
+      | BinaryType.StaticLib -> [ "-fPIC" ]
+
     let debug =
       if p.CDebug then
         [ "-g" ]
@@ -193,14 +213,31 @@ build $milone_platform_o: cc $milone_platform_c | $milone_h
     let optimize = if p.COptimize then "-O2" else "-O1"
     let std = "-std=" + p.CStd
 
-    List.append debug [ optimize; std ]
-    |> List.append sanitizerFlags
+    List.collect
+      id
+      [ pic
+        debug
+        [ optimize; std ]
+        sanitizerFlags
+        [ p.LinuxCFlags ] ]
     |> S.concat " "
 
   let linkFlags =
-    p.Libs
-    |> List.map (fun lib -> "-l" + lib)
-    |> List.append sanitizerFlags
+    let binaryFlag =
+      match p.BinaryType with
+      | BinaryType.Exe
+      | BinaryType.StaticLib -> []
+      | BinaryType.SharedObj -> [ "-shared" ]
+
+    let lFlags =
+      p.Libs |> List.map (fun lib -> "-l" + lib)
+
+    List.collect
+      id
+      [ binaryFlag
+        lFlags
+        sanitizerFlags
+        [ p.LinuxLinkFlags ] ]
     |> S.concat " "
 
   let build =
@@ -246,8 +283,16 @@ build $milone_platform_o: cc $milone_platform_c | $milone_h
       |> List.append (p.ObjList |> List.map Path.toString)
       |> S.concat " "
 
+    let linkRule =
+      match p.BinaryType with
+      | BinaryType.Exe
+      | BinaryType.SharedObj -> "link"
+      | BinaryType.StaticLib -> "archive"
+
     build
-    |> cons "build $exe_file: link $milone_o $milone_platform_o "
+    |> cons "build $exe_file: "
+    |> cons linkRule
+    |> cons " $milone_o $milone_platform_o "
     |> cons objFiles
     |> cons "\n"
 

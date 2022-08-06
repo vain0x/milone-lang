@@ -199,6 +199,7 @@ type private Rx =
     Variants: TreeMap<VariantSerial, VariantDef>
     Tys: TreeMap<TySerial, TyDef>
     MainFunOpt: FunSerial option
+    EntrypointName: string
 
     ValueNameFreq: TreeMap<Ident, int>
     VarUniqueNames: TreeMap<VarSerial, Ident>
@@ -227,7 +228,7 @@ type private CirCtx =
     /// Nominalized fun pointer types.
     FunPtrTys: TreeMap<CTy list * CTy, string> }
 
-let private ofMirResult (mirCtx: MirResult) : CirCtx =
+let private ofMirResult entrypointName (mirCtx: MirResult) : CirCtx =
   let freq = freqEmpty compare
 
   let varUniqueNames, freq =
@@ -265,6 +266,7 @@ let private ofMirResult (mirCtx: MirResult) : CirCtx =
       Variants = mirCtx.Variants
       Tys = mirCtx.Tys
       MainFunOpt = mirCtx.MainFunOpt
+      EntrypointName = entrypointName
 
       ValueNameFreq = freq
       VarUniqueNames = varUniqueNames
@@ -1304,7 +1306,7 @@ let private cgStmts (ctx: CirCtx) (stmts: MStmt list) : CirCtx =
 
   go ctx stmts
 
-let private genMainFun stmts : CDecl =
+let private genMainFun entrypointName stmts : CDecl =
   let intTy = CEmbedTy "int"
 
   let args =
@@ -1315,7 +1317,7 @@ let private genMainFun stmts : CDecl =
     CExprStmt(CCallExpr(CVarExpr "milone_start", [ CVarExpr "argc"; CVarExpr "argv" ]))
     :: stmts
 
-  CFunDecl("main", args, intTy, stmts)
+  CFunDecl(entrypointName, args, intTy, stmts)
 
 let private cgDecls (ctx: CirCtx) decls =
   match decls with
@@ -1326,7 +1328,7 @@ let private cgDecls (ctx: CirCtx) decls =
 
     let main, funName, args =
       if isMainFun ctx callee then
-        true, "main", []
+        true, ctx.Rx.EntrypointName, []
       else
         false, getUniqueFunName ctx callee, args
 
@@ -1356,7 +1358,7 @@ let private cgDecls (ctx: CirCtx) decls =
       let body = List.append stmts body
 
       if main then
-        genMainFun body
+        genMainFun funName body
       else
         match def.Linkage with
         | InternalLinkage -> CStaticFunDecl(funName, args, resultTy, body)
@@ -1454,8 +1456,8 @@ let private cgModule (ctx: CirCtx) (m: MModule) : DocId * CDecl list =
 // Interface
 // -----------------------------------------------
 
-let genCir (modules: MModule list, mirResult: MirResult) : (DocId * CDecl list) list =
-  let ctx = ofMirResult mirResult
+let genCir (entrypointName: string) (modules: MModule list, mirResult: MirResult) : (DocId * CDecl list) list =
+  let ctx = ofMirResult entrypointName mirResult
 
   modules
   |> __parallelMap (cgModule ctx)

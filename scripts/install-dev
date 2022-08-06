@@ -14,10 +14,10 @@
 set -eu
 
 # Somewhere in PATH.
-BIN_DIR="$HOME/bin"
+BIN_DIR="$HOME/.local/bin"
 
 # Installation directory.
-MILONE_HOME="$HOME/.milone"
+MILONE_HOME="$HOME/.local/share/milone"
 
 # ------------------------------------------------
 # Prepare
