@@ -180,7 +180,7 @@ Parse a source file.
 Examples:
 
 ```sh
-milone parse <FILE>
+milone parse <FILE...>
 ```
 
 ```sh
@@ -189,7 +189,7 @@ milone parse src/Std/StdChar.milone
 
 Output:
 
-- Code: 0 if success. 1 if syntax error.
+- Code: 0 if success. 1 if IO error or syntax error in any input.
 - Stdout: JSON text including syntax tree and syntax errors (described later -> [#syntax-tree-json-format](#syntax-tree-json-format)).
 - Files: *None.*
 
@@ -358,7 +358,9 @@ Note the output format is subject to change.
 ```
 
 ```json
-{"root":
+[
+{"file": "FILE",
+ "root":
 
 ["Root", "1:1..2:1", [
   ["Blank", "1:1..1:5"],
@@ -389,6 +391,7 @@ Note the output format is subject to change.
   ]],
   ["Newlines", "1:25..2:1", "\n"]
 ]]}
+]
 ```
 
 ##### Data model:
@@ -436,10 +439,11 @@ where `children` is an array of tokens and nodes.
 
 Error is mapped to a string that represents an error.
 
-Toplevel object is:
+Toplevel is an array of files.
+Each file is an object like this:
 
 ```json
-    { "root": node, "errors"?: error[] }
+    { "file": pathname, "root": node, "errors"?: error[] }
 ```
 
 where `errors` can be omit if empty.

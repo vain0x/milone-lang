@@ -579,35 +579,77 @@ let main _ =
       PW.runOnWindows p []
       0
 
-let private cliParse (sApi: SyntaxApi) (host: CliHost) docId (text: Future<string>) : int =
-  text
-  |> Future.map (fun text ->
-    let output, errors = sApi.DumpSyntax text
+let private cliParse (sApi: SyntaxApi) (host: CliHost) (pathnameList: string list) : int =
+  assert (pathnameList |> List.isEmpty |> not)
 
-    let errors =
-      errors
-      |> List.map (fun (msg, pos) -> msg, Loc.ofDocPos docId pos)
+  pathnameList
+  |> List.map (fun pathname ->
+    let docId, textFuture =
+      match pathname with
+      | "-" ->
+        let docId: DocId = Symbol.intern "stdin"
+        docId, host.ReadStdinAll() |> Some |> Future.just
 
-    let good = List.isEmpty errors
-    let exitCode = if good then 0 else 1
+      | pathname ->
+        let pathname = pathJoin host.WorkDir pathname
+        let docId: DocId = Symbol.intern pathname
+        docId, host.FileReadAllText pathname
 
+    textFuture
+    |> Future.map (fun textOpt ->
+      match textOpt with
+      | Some text ->
+        let output, errors = sApi.DumpSyntax text
+
+        let errors =
+          errors
+          |> List.map (fun (msg, pos) -> msg, Loc.ofDocPos docId pos)
+
+        let good = List.isEmpty errors
+
+        let output =
+          "{\"file\": \""
+          + S.replace "\\" "/" pathname
+          + "\", \"root\":\n"
+          + output
+          + (if good then
+               ""
+             else
+               ",\n\n  \"errors\": ["
+               + (errors
+                  |> List.map (fun (msg, pos) ->
+                    "\n    [\""
+                    + Loc.toString pos
+                    + "\""
+                    + msg
+                    + "\"]")
+                  |> S.concat ",")
+               + "\n]")
+          + "}\n"
+
+        output, good
+
+      | None ->
+        let output =
+          "{\"file\": \""
+          + S.replace "\\" "/" pathname
+          + "\",\n\"error\": \"Couldn't read from file.\"}\n"
+
+        output, false))
+  |> Future.whenAll
+  |> Future.map (fun entries ->
     let output =
-      "{\"root\":\n\n"
-      + output
-      + (if good then
-           ""
-         else
-           ",\n\n  \"errors\": ["
-           + (errors
-              |> List.map (fun (msg, pos) ->
-                "\n    [\""
-                + Loc.toString pos
-                + "\""
-                + msg
-                + "\"]")
-              |> S.concat ",")
-           + "\n]")
-      + "}\n"
+      "["
+      + (entries
+         |> List.map (fun (output, _) -> output)
+         |> S.concat "\n")
+      + "]\n"
+
+    let exitCode =
+      if entries |> List.forall (fun (_, good) -> good) then
+        0
+      else
+        1
 
     host.WriteStdout output
     exitCode)
@@ -879,32 +921,11 @@ let cli (sApi: SyntaxApi) (tApi: TranslationApi) (host: CliHost) =
     cliEval sApi tApi host sourceCode
 
   | ParseCmd, args ->
-    let docId, text =
-      match args with
-      | [ "-" ] ->
-        let docId: DocId = Symbol.intern "/dev/stdin"
-        docId, host.ReadStdinAll() |> Future.just
-
-      | [ pathname ] ->
-        let pathname = pathJoin host.WorkDir pathname
-        let docId: DocId = Symbol.intern pathname
-
-        let contentsFuture =
-          host.FileReadAllText pathname
-          |> Future.map (fun textOpt ->
-            match textOpt with
-            | Some it -> it
-            | None ->
-              printfn "ERROR: Can't read from '%s'" pathname
-              exit 1)
-
-        docId, contentsFuture
-
-      | _ ->
-        printfn "ERROR: Invalid args: `milone parse <pathname>`"
-        exit 1
-
-    cliParse sApi host docId text
+    if args |> List.isEmpty |> not then
+      cliParse sApi host args
+    else
+      printfn "ERROR: No inputs. `milone parse <FILE...>`"
+      1
 
   | BadCmd subcommand, _ ->
     printfn "ERROR: Unknown subcommand '%s'." subcommand
