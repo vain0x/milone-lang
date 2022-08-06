@@ -22,6 +22,7 @@
 
 ### CLI Tool
 
+- Add `milone parse` subcommand
 - Fix that `milone run .` didn't work
 
 ### Documentation
@@ -35,6 +36,10 @@
 - Default install directory is changed to match XDG base directory.
     - `$HOME/.local/bin` (rather than `$HOME/bin`)
     - `$HOME/.local/share` (rather than `$HOME/.milone`)
+
+### Internal Changes
+
+- Add SyntaxTree generation.
 
 ## [v0.5.0] - 2022-07-21
 
