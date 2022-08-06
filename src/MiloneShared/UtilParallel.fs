@@ -10,7 +10,7 @@ module Future =
   open System.Threading.Tasks
 
   // .NET only
-  let ofTask (task: Task<'T>) : Future<'T> = ValueTask<'T>(task)
+  let inline ofTask (task: Task<'T>) : Future<'T> = ValueTask<'T>(task)
 
   // .NET only
   let internal unwrap (future: Future<'T>) =
@@ -18,7 +18,7 @@ module Future =
     assert future.IsCompletedSuccessfully
     future.Result
 
-  let just (value: 'T) : Future<'T> = ValueTask.FromResult(value)
+  let inline just (value: 'T) : Future<'T> = ValueTask.FromResult(value)
 
   let map (f: 'T -> 'U) (task: Future<'T>) : Future<'U> =
     if not AllowParallel || task.IsCompletedSuccessfully then
@@ -37,6 +37,18 @@ module Future =
         .AsTask()
         .ContinueWith((fun (task: Task<_>) -> (f task.Result).AsTask()), TaskContinuationOptions.OnlyOnRanToCompletion)
         .Unwrap()
+      |> ofTask
+
+  let whenAll (futureList: Future<'T> list) : Future<'T list> =
+    if not AllowParallel then
+      futureList
+      |> List.map (fun (f: Future<_>) -> f.Result)
+      |> just
+    else
+      (futureList
+       |> List.map (fun (f: Future<_>) -> f.AsTask())
+       |> Task.WhenAll)
+        .ContinueWith((fun (task: Task<_>) -> List.ofArray task.Result), TaskContinuationOptions.OnlyOnRanToCompletion)
       |> ofTask
 
   /// Waits for a future to complete.

@@ -22,6 +22,9 @@ module Future =
     let (Future x) = future
     x
 
+  let whenAll (futureList: Future<'T> list) : Future<'T list> =
+    futureList |> List.map wait |> just
+
 // #mpscSync
 let private mpscSync
   (consumer: 'S -> 'A -> 'S * 'T list)
