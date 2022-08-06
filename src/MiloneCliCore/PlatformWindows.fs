@@ -1,5 +1,6 @@
 module rec MiloneCliCore.PlatformWindows
 
+open MiloneSyntaxTypes.SyntaxApiTypes
 open Std.StdPath
 
 module S = Std.StdString
@@ -42,27 +43,47 @@ module private Path =
 type private FileExistsFun = Path -> bool
 
 let private findMSBuild (fileExists: FileExistsFun) : Path =
-  let years = [ 2019; 2017; 2015; 2021 ]
+  let pathsPre2019 =
+    let years = [ 2019; 2017; 2015 ]
 
-  let editions =
-    [ "Community"
-      "Enterprise"
-      "Professional"
-      "BuildTools" ]
+    let editions =
+      [ "Community"
+        "Enterprise"
+        "Professional"
+        "BuildTools" ]
 
-  let msBuildPath (year: int) edition =
-    Path(
-      "C:/Program Files (x86)/Microsoft Visual Studio/"
-      + string year
-      + "/"
-      + edition
-      + "/MSBuild/Current/Bin/MSBuild.exe"
-    )
+    years
+    |> List.collect (fun (year: int) ->
+      editions
+      |> List.map (fun edition ->
+        Path(
+          "C:/Program Files (x86)/Microsoft Visual Studio/"
+          + string year
+          + "/"
+          + edition
+          + "/MSBuild/Current/Bin/MSBuild.exe"
+        )))
 
-  years
-  |> List.collect (fun year ->
+  let paths =
+    let year = 2022
+
+    let editions =
+      [ "Community"
+        "Enterprise"
+        "Professional"
+        "BuildTools" ]
+
     editions
-    |> List.map (fun edition -> msBuildPath year edition))
+    |> List.map (fun edition ->
+      Path(
+        "C:/Program Files/Microsoft Visual Studio/"
+        + string year
+        + "/"
+        + edition
+        + "/MSBuild/Current/Bin/MSBuild.exe"
+      ))
+
+  List.append paths pathsPre2019
   |> List.tryFind fileExists
   |> Option.defaultValue (Path "MSBuild.exe")
 
@@ -81,8 +102,12 @@ type BuildOnWindowsParams =
     ExeFile: Path
     OutputOpt: Path option
     // FIXME: support csanitize, cstd, objList
+    BinaryType: BinaryType
+    SubSystem: SubSystem
     CcList: Path list
     Libs: string list
+    /// Symbol names to be exported by `/EXPORT` link option
+    Exports: string list
 
     NewGuid: NewGuidFun
     DirCreate: Path -> unit
@@ -146,10 +171,27 @@ let buildOnWindows (p: BuildOnWindowsParams) : unit =
       { MiloneTargetDir = p.TargetDir
         CFiles = List.append p.CFiles p.CcList
         Libs = p.Libs |> List.map Path
+        Exports = p.Exports
         ProjectGuid = projectGuid
         ProjectName = p.ProjectName
         IncludeDir = runtimeDir
-        RuntimeDir = runtimeDir }
+        RuntimeDir = runtimeDir
+
+        ConfigurationType =
+          match p.BinaryType with
+          | BinaryType.Exe -> "Application"
+          | BinaryType.SharedObj -> "DynamicLibrary"
+          | BinaryType.StaticLib -> "StaticLibrary"
+
+        SubSystem =
+          match p.SubSystem with
+          | SubSystem.Console -> "Console"
+          | SubSystem.Windows -> "Windows"
+
+        Macro =
+          match p.SubSystem with
+          | SubSystem.Console -> "_CONSOLE"
+          | SubSystem.Windows -> "_WINDOWS" }
 
     renderVcxProjectXml p
 
@@ -253,11 +295,15 @@ type private VcxProjectParams =
   { MiloneTargetDir: Path
     CFiles: Path list
     Libs: Path list
+    Exports: string list
 
     ProjectGuid: Guid
     ProjectName: string
     IncludeDir: string
-    RuntimeDir: string }
+    RuntimeDir: string
+    ConfigurationType: string
+    Macro: string
+    SubSystem: string }
 
 let private renderVcxProjectXml (p: VcxProjectParams) : string =
   """<?xml version="1.0" encoding="utf-8"?>
@@ -289,26 +335,26 @@ let private renderVcxProjectXml (p: VcxProjectParams) : string =
   </PropertyGroup>
   <Import Project="$(VCTargetsPath)\Microsoft.Cpp.Default.props" />
   <PropertyGroup Condition="'$(Configuration)|$(Platform)'=='Debug|Win32'" Label="Configuration">
-    <ConfigurationType>Application</ConfigurationType>
+    <ConfigurationType>${CONFIGURATION_TYPE}</ConfigurationType>
     <UseDebugLibraries>true</UseDebugLibraries>
     <PlatformToolset>v142</PlatformToolset>
     <CharacterSet>Unicode</CharacterSet>
   </PropertyGroup>
   <PropertyGroup Condition="'$(Configuration)|$(Platform)'=='Release|Win32'" Label="Configuration">
-    <ConfigurationType>Application</ConfigurationType>
+    <ConfigurationType>${CONFIGURATION_TYPE}</ConfigurationType>
     <UseDebugLibraries>false</UseDebugLibraries>
     <PlatformToolset>v142</PlatformToolset>
     <WholeProgramOptimization>true</WholeProgramOptimization>
     <CharacterSet>Unicode</CharacterSet>
   </PropertyGroup>
   <PropertyGroup Condition="'$(Configuration)|$(Platform)'=='Debug|x64'" Label="Configuration">
-    <ConfigurationType>Application</ConfigurationType>
+    <ConfigurationType>${CONFIGURATION_TYPE}</ConfigurationType>
     <UseDebugLibraries>true</UseDebugLibraries>
     <PlatformToolset>v142</PlatformToolset>
     <CharacterSet>Unicode</CharacterSet>
   </PropertyGroup>
   <PropertyGroup Condition="'$(Configuration)|$(Platform)'=='Release|x64'" Label="Configuration">
-    <ConfigurationType>Application</ConfigurationType>
+    <ConfigurationType>${CONFIGURATION_TYPE}</ConfigurationType>
     <UseDebugLibraries>false</UseDebugLibraries>
     <PlatformToolset>v142</PlatformToolset>
     <WholeProgramOptimization>true</WholeProgramOptimization>
@@ -361,7 +407,7 @@ let private renderVcxProjectXml (p: VcxProjectParams) : string =
     <ClCompile>
       <WarningLevel>Level3</WarningLevel>
       <SDLCheck>true</SDLCheck>
-      <PreprocessorDefinitions>_CRT_SECURE_NO_WARNINGS;WIN32;_DEBUG;_CONSOLE;%(PreprocessorDefinitions)</PreprocessorDefinitions>
+      <PreprocessorDefinitions>_CRT_SECURE_NO_WARNINGS;WIN32;_DEBUG;${MACRO};%(PreprocessorDefinitions)</PreprocessorDefinitions>
       <ConformanceMode>true</ConformanceMode>
       <AdditionalIncludeDirectories>${INCLUDE_DIR}</AdditionalIncludeDirectories>
       <AdditionalOptions>/utf-8 %(AdditionalOptions)</AdditionalOptions>
@@ -369,9 +415,10 @@ let private renderVcxProjectXml (p: VcxProjectParams) : string =
       <LanguageStandard_C>stdc17</LanguageStandard_C>
     </ClCompile>
     <Link>
-      <SubSystem>Console</SubSystem>
+      <SubSystem>${SUBSYSTEM}</SubSystem>
       <GenerateDebugInformation>true</GenerateDebugInformation>
       <AdditionalDependencies>${LIBS};kernel32.lib;user32.lib;gdi32.lib;winspool.lib;comdlg32.lib;advapi32.lib;shell32.lib;ole32.lib;oleaut32.lib;uuid.lib;odbc32.lib;odbccp32.lib;%(AdditionalDependencies)</AdditionalDependencies>
+      <AdditionalOptions>${EXPORTS} %(AdditionalOptions)</AdditionalOptions>
     </Link>
   </ItemDefinitionGroup>
   <ItemDefinitionGroup Condition="'$(Configuration)|$(Platform)'=='Release|Win32'">
@@ -380,7 +427,7 @@ let private renderVcxProjectXml (p: VcxProjectParams) : string =
       <FunctionLevelLinking>true</FunctionLevelLinking>
       <IntrinsicFunctions>true</IntrinsicFunctions>
       <SDLCheck>true</SDLCheck>
-      <PreprocessorDefinitions>_CRT_SECURE_NO_WARNINGS;WIN32;NDEBUG;_CONSOLE;%(PreprocessorDefinitions)</PreprocessorDefinitions>
+      <PreprocessorDefinitions>_CRT_SECURE_NO_WARNINGS;WIN32;NDEBUG;${MACRO};%(PreprocessorDefinitions)</PreprocessorDefinitions>
       <ConformanceMode>true</ConformanceMode>
       <AdditionalIncludeDirectories>${INCLUDE_DIR}</AdditionalIncludeDirectories>
       <AdditionalOptions>/utf-8 %(AdditionalOptions)</AdditionalOptions>
@@ -389,11 +436,12 @@ let private renderVcxProjectXml (p: VcxProjectParams) : string =
       <RuntimeLibrary>MultiThreaded</RuntimeLibrary>
     </ClCompile>
     <Link>
-      <SubSystem>Console</SubSystem>
+      <SubSystem>${SUBSYSTEM}</SubSystem>
       <EnableCOMDATFolding>true</EnableCOMDATFolding>
       <OptimizeReferences>true</OptimizeReferences>
       <GenerateDebugInformation>true</GenerateDebugInformation>
       <AdditionalDependencies>${LIBS};kernel32.lib;user32.lib;gdi32.lib;winspool.lib;comdlg32.lib;advapi32.lib;shell32.lib;ole32.lib;oleaut32.lib;uuid.lib;odbc32.lib;odbccp32.lib;%(AdditionalDependencies)</AdditionalDependencies>
+      <AdditionalOptions>${EXPORTS} %(AdditionalOptions)</AdditionalOptions>
     </Link>
   </ItemDefinitionGroup>"""
   + """
@@ -401,7 +449,7 @@ let private renderVcxProjectXml (p: VcxProjectParams) : string =
     <ClCompile>
       <WarningLevel>Level3</WarningLevel>
       <SDLCheck>true</SDLCheck>
-      <PreprocessorDefinitions>_CRT_SECURE_NO_WARNINGS;_DEBUG;_CONSOLE;%(PreprocessorDefinitions)</PreprocessorDefinitions>
+      <PreprocessorDefinitions>_CRT_SECURE_NO_WARNINGS;_DEBUG;${MACRO};%(PreprocessorDefinitions)</PreprocessorDefinitions>
       <ConformanceMode>true</ConformanceMode>
       <AdditionalIncludeDirectories>${INCLUDE_DIR}</AdditionalIncludeDirectories>
       <AdditionalOptions>/utf-8 %(AdditionalOptions)</AdditionalOptions>
@@ -409,9 +457,10 @@ let private renderVcxProjectXml (p: VcxProjectParams) : string =
       <LanguageStandard_C>stdc17</LanguageStandard_C>
     </ClCompile>
     <Link>
-      <SubSystem>Console</SubSystem>
+      <SubSystem>${SUBSYSTEM}</SubSystem>
       <GenerateDebugInformation>true</GenerateDebugInformation>
       <AdditionalDependencies>${LIBS};kernel32.lib;user32.lib;gdi32.lib;winspool.lib;comdlg32.lib;advapi32.lib;shell32.lib;ole32.lib;oleaut32.lib;uuid.lib;odbc32.lib;odbccp32.lib;%(AdditionalDependencies)</AdditionalDependencies>
+      <AdditionalOptions>${EXPORTS} %(AdditionalOptions)</AdditionalOptions>
     </Link>
   </ItemDefinitionGroup>
   <ItemDefinitionGroup Condition="'$(Configuration)|$(Platform)'=='Release|x64'">
@@ -420,7 +469,7 @@ let private renderVcxProjectXml (p: VcxProjectParams) : string =
       <FunctionLevelLinking>true</FunctionLevelLinking>
       <IntrinsicFunctions>true</IntrinsicFunctions>
       <SDLCheck>true</SDLCheck>
-      <PreprocessorDefinitions>_CRT_SECURE_NO_WARNINGS;NDEBUG;_CONSOLE;%(PreprocessorDefinitions)</PreprocessorDefinitions>
+      <PreprocessorDefinitions>_CRT_SECURE_NO_WARNINGS;NDEBUG;${MACRO};%(PreprocessorDefinitions)</PreprocessorDefinitions>
       <ConformanceMode>true</ConformanceMode>
       <AdditionalIncludeDirectories>${INCLUDE_DIR}</AdditionalIncludeDirectories>
       <AdditionalOptions>/utf-8 %(AdditionalOptions)</AdditionalOptions>
@@ -429,11 +478,12 @@ let private renderVcxProjectXml (p: VcxProjectParams) : string =
       <RuntimeLibrary>MultiThreaded</RuntimeLibrary>
     </ClCompile>
     <Link>
-      <SubSystem>Console</SubSystem>
+      <SubSystem>${SUBSYSTEM}</SubSystem>
       <EnableCOMDATFolding>true</EnableCOMDATFolding>
       <OptimizeReferences>true</OptimizeReferences>
       <GenerateDebugInformation>true</GenerateDebugInformation>
       <AdditionalDependencies>${LIBS};kernel32.lib;user32.lib;gdi32.lib;winspool.lib;comdlg32.lib;advapi32.lib;shell32.lib;ole32.lib;oleaut32.lib;uuid.lib;odbc32.lib;odbccp32.lib;%(AdditionalDependencies)</AdditionalDependencies>
+      <AdditionalOptions>${EXPORTS} %(AdditionalOptions)</AdditionalOptions>
     </Link>
   </ItemDefinitionGroup>
   <ItemGroup>
@@ -453,6 +503,9 @@ let private renderVcxProjectXml (p: VcxProjectParams) : string =
   |> S.replace "${PROJECT_NAME}" p.ProjectName
   |> S.replace "${RUNTIME_DIR}" p.RuntimeDir
   |> S.replace "${INCLUDE_DIR}" p.IncludeDir
+  |> S.replace "${CONFIGURATION_TYPE}" p.ConfigurationType
+  |> S.replace "${MACRO}" p.Macro
+  |> S.replace "${SUBSYSTEM}" p.SubSystem
   |> S.replace
        "${SRCS}"
        (p.CFiles
@@ -463,3 +516,4 @@ let private renderVcxProjectXml (p: VcxProjectParams) : string =
         |> S.concat "\n  ")
 
   |> S.replace "${LIBS}" (p.Libs |> List.map Path.toString |> S.concat ";")
+  |> S.replace "${EXPORTS}" (p.Exports |> List.map (fun name -> "/EXPORT:" + name) |> S.concat " ")

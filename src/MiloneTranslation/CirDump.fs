@@ -50,6 +50,7 @@ let private declIsForwardOnly decl =
 let private unaryToString op =
   match op with
   | CMinusUnary -> "-"
+  | CBitNotUnary -> "~"
   | CNotUnary -> "!"
   | CAddressOfUnary -> "&"
   | CDerefUnary -> "*"
@@ -57,9 +58,9 @@ let private unaryToString op =
 let private binaryToString op =
   match op with
   | CAddBinary -> "+"
-  | CSubBinary -> "-"
-  | CMulBinary -> "*"
-  | CDivBinary -> "/"
+  | CSubtractBinary -> "-"
+  | CMultiplyBinary -> "*"
+  | CDivideBinary -> "/"
   | CModuloBinary -> "%"
   | CBitAndBinary -> "&"
   | CBitOrBinary -> "|"
@@ -484,7 +485,6 @@ let private cpStmt indent stmt acc : string list =
 
   | CNativeStmt (code, args) ->
     let code = expandPlaceholders args code
-
     acc |> cons code
 
 let private cpStmtList indent stmts acc : string list =
@@ -686,7 +686,9 @@ let private cpForwardDecl decl acc =
     // |> cons "static "
     |> cpFunForwardDecl name (cpParams args) resultTy
 
-  | CNativeDecl code -> acc |> cons code |> cons eol
+  | CNativeDecl (code, args) ->
+    let code = expandPlaceholders args code
+    acc |> cons code |> cons eol
 
 let private cpForwardDecls decls acc =
   decls

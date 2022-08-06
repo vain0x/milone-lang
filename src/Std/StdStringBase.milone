@@ -1,5 +1,52 @@
 module rec Std.StdStringBase
 
+open Std.Ptr
+
 let utf8Length (s: string) = s.Length
 
 let concat (sep: string) (xs: string list) : string = __nativeFun ("string_concat", sep, xs)
+
+/// Gets a raw pointer of string.
+///
+/// Result isn't null.
+///
+/// SAFETY: Returned pointer is valid only in the current region.
+///         If input is a string literal, returned pointer is perpetually valid.
+let stringAsPtr (s: string) : InPtr<char> = __nativeExpr ("{0}.ptr", s)
+
+/// Converts a string that is null-terminated.
+///
+/// This function can make a copy of string
+/// when input isn't null-terminated.
+///
+/// Pointer of returned string is safe to pass in a function
+/// that expects a null-terminated string.
+let ensureNullTerminatedString (s: string) : string =
+  __nativeExpr ("string_ensure_null_terminated({0})", s)
+
+/// Gets a pointer to a native null-terminated string.
+///
+/// This function can make a copy of string
+/// when input isn't null-terminated.
+let stringToNative (s: string) : InPtr<char> =
+  __nativeExpr ("string_ensure_null_terminated({0}).ptr", s)
+
+/// Creates a string instance by wrapping raw representation.
+///
+/// SAFETY:
+///
+/// - The result is valid as long as the pointer is valid.
+/// - Input also must satisfy invariants of string.
+let unsafeWrapString (ptr: InPtr<char>) (len: int) : string =
+  assert (len >= 0 && (len = 0 || ptr <> Ptr.nullPtr))
+  __nativeExpr ("(struct String){.ptr = {0}, .len = (uint32_t){1}}", ptr, len)
+
+/// Creates a copy of a native string.
+let unsafeStringOfNative (ptr: InPtr<char>) : string =
+  assert (ptr <> Ptr.nullPtr)
+  __nativeExpr ("string_of_c_str({0})", ptr)
+
+/// Creates a copy of a native string.
+let unsafeStringOfRawParts (ptr: InPtr<char>) (len: int) : string =
+  assert (len >= 0 && (len = 0 || ptr <> Ptr.nullPtr))
+  __nativeExpr ("string_of_raw_parts({0}, (uint32_t){1})", ptr, len)

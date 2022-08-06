@@ -52,13 +52,14 @@ type Tk =
   // FFI types.
   | VoidPtrTk of IsMut
   | NativePtrTk of mode: RefMode
-  | NativeFunTk
+  | FunPtrTk
   | NativeTypeTk of cCode: string
 
   // Nominal types.
   | MetaTk of metaTy: TySerial * metaLoc: Loc
   | UnionTk of unionTy: TySerial
   | RecordTk of recordTy: TySerial
+  | OpaqueTk of opaqueTy: TySerial
 
 /// Type of expressions.
 [<Struct; NoEquality; NoComparison>]
@@ -75,7 +76,9 @@ type TyScheme = TyScheme of tyVars: TySerial list * Ty
 type TyDef =
   | UnionTyDef of Ident * tyArgs: TySerial list * VariantSerial list * Loc
 
-  | RecordTyDef of Ident * fields: (Ident * Ty * Loc) list * IsCRepr * Loc
+  | RecordTyDef of Ident * tyArgs: TySerial list * fields: (Ident * Ty * Loc) list * IsCRepr * Loc
+
+  | OpaqueTyDef of Ident * Loc
 
 /// Definition of named value in HIR.
 [<RequireQualifiedAccess; NoEquality; NoComparison>]
@@ -164,10 +167,11 @@ type HPat =
 type HPrim =
   // operator:
   | Not
+  | BitNot
   | Add
-  | Sub
-  | Mul
-  | Div
+  | Subtract
+  | Multiply
+  | Divide
   | Modulo
   | BitAnd
   | BitOr
@@ -181,8 +185,8 @@ type HPrim =
   // conversion:
   | ToInt of toIntFlavor: IntFlavor
   | ToFloat of toFloatFlavor: FloatFlavor
-  | Char
-  | String
+  | ToChar
+  | ToString
   | Box
   | Unbox
 
@@ -197,7 +201,6 @@ type HPrim =
   | Exit
   | Assert
   | Printfn
-  | InRegion
   | NullPtr
   | PtrDistance
   | NativeCast
@@ -207,8 +210,10 @@ type HExprKind =
   /// `-x`.
   | HMinusEN
 
-  /// `&&x`.
+  // `&&x`.
   | HPtrOfEN
+
+  | HFunPtrOfEN
 
   | HAppEN
 
@@ -228,6 +233,9 @@ type HExprKind =
 
   /// Direct call to current procedure at the end of function (i.e. tail-call).
   | HCallTailRecEN
+
+  /// Call to a function pointer. Argument is a tuple of arguments or an argument if 1-arity.
+  | HFunPtrInvokeEN
 
   /// Direct call to native fun.
   | HCallNativeEN of funName: string
@@ -254,16 +262,13 @@ type HExprKind =
   /// Ptr.write accessPath value
   | HPtrWriteEN
 
-  /// Use function as function pointer.
-  | HNativeFunEN of FunSerial
-
   /// Embed some C expression to output.
   | HNativeExprEN of nativeExprCode: string
 
   /// Embed some C statement to output.
   | HNativeStmtEN of nativeStmtCode: string
 
-  /// Embed some C toplevel codes to output.
+  /// Embed some C toplevel codes to output. This is converted to HNativeDeclStmt in Hoist.
   | HNativeDeclEN of nativeDeclCode: string
 
   /// Size of type. Argument is a type placeholder. The result type is int.
@@ -308,6 +313,9 @@ type HStmt =
   | HExprStmt of HExpr
   | HLetValStmt of HPat * init: HExpr * Loc
   | HLetFunStmt of FunSerial * argPats: HPat list * body: HExpr * Loc
+
+  /// Generated after Hoist.
+  | HNativeDeclStmt of cCode: string * args: HExpr list * Loc
 
 type VarMap = TreeMap<VarSerial, VarDef>
 type VarNameMap = TreeMap<VarSerial, Ident>

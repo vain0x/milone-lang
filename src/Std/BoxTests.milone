@@ -1,0 +1,11 @@
+open Std.Box
+
+let testBox () =
+  let bb = BoxBuffer.create 42
+  let n, bb = BoxBuffer.read bb
+  assert (n = 42)
+
+  let bb = BoxBuffer.write 64 bb
+  let n, bb = BoxBuffer.read bb
+  assert (n = 64)
+  BoxBuffer.dispose bb

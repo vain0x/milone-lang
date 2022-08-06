@@ -1,6 +1,6 @@
 {
     "$schema": "https://raw.githubusercontent.com/martinring/tmlanguage/master/tmlanguage.json",
-    "version": "0.4.0",
+    "version": "0.5.0",
     "name": "milone",
     "scopeName": "source.milone",
     "patterns": [
@@ -267,7 +267,7 @@
                 {
                     "comment": "Rule of unsupported keywords.",
                     "name": "invalid.illegal.milone",
-                    "match": "\\b(abstract|and|async|base|become|begin|break|checked|class|component|const|constraint|continue|default|delegate|done|downcast|downto|do|elif|end|event|exception|extern|external|finally|fixed|for|function|global|include|inherit|inline|interface|internal|lazy|member|mixin|mutable|mut|namespace|new|null|or|override|parallel|process|protected|pure|ref|return|sealed|select|seq|signature|sig|static|struct|tailcall|to|trait|try|upcast|use|val|virtual|void|while|yield)\\b"
+                    "match": "\\b(abstract|and|async|base|become|begin|break|checked|class|component|const|constraint|continue|default|delegate|done|downcast|downto|do|elif|end|event|exception|extern|external|finally|fixed|for|function|global|include|inherit|inline|interface|internal|lazy|member|mixin|mutable|namespace|new|null|or|override|parallel|process|protected|pure|ref|return|sealed|signature|sig|static|struct|tailcall|to|trait|try|upcast|use|val|virtual|void|while|yield)\\b"
                 }
             ]
         },
@@ -474,7 +474,7 @@
                 {
                     "comment": "Rule of identifiers in type context. Type name starts with an upper alphabet or one of built-in type names.",
                     "name": "entity.name.type.milone",
-                    "match": "\\b([A-Z]\\w*|bool|char|float(32)?|list|nativeptr|obj|option|s?byte|sizeof|string|u?int(8|16|32|64)?|u?nativeint|unit|voidptr|__nativeType|__inptr|__outptr|__voidinptr)\\b"
+                    "match": "\\b([A-Z]\\w*|bool|char|float(32)?|list|nativeptr|obj|option|s?byte|sizeof|string|u?int(8|16|32|64)?|u?nativeint|unit|voidptr|__nativeType)\\b"
                 },
                 {
                     "include": "#unknown_sigil_rule"

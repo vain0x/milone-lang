@@ -1,0 +1,69 @@
+// Test.
+
+open LibSqlite3.Db
+open Std.IO
+open Std.StdError
+
+module S = Std.StdString
+
+let private Schema =
+  """
+create table entries(entry_id integer primary key autoincrement, text string not null);
+"""
+
+let main _ =
+  IO.exec (fun io ->
+    let dbResult, io = Db.openFile io ":memory:"
+
+    let result =
+      match dbResult with
+      | Error msg -> Error msg
+
+      | Ok db ->
+        let result, db =
+          let result, db = Db.exec Schema db
+
+          match result with
+          | Error msg -> Error msg, db
+
+          | Ok () ->
+            let ok, db =
+              Db.mutate
+                """insert into entries(text) values (:a), (:b), (:c)"""
+                [ ":a", DString "asparagus"
+                  ":b", DString "brocoli"
+                  ":c", DString "cucumber" ]
+                db
+
+            if not ok then
+              Error "insert", db
+            else
+              let result, db = Db.select "select * from entries" [] db
+
+              match result with
+              | Error () -> Error "select", db
+
+              | Ok rows ->
+                let output =
+                  rows
+                  |> List.mapi (fun i row ->
+                    match row with
+                    | [ DInt id; DString text ] -> string id + ":" + text
+                    | _ -> "error: " + string i)
+                  |> S.concat "\n"
+
+                Ok output, db
+
+        Db.close db
+        result
+
+    match result with
+    | Ok output ->
+      printfn "%s" output
+      io
+
+    | Error msg ->
+      printfn "ERROR: %s.\n" msg
+      exit 1
+      io)
+  |> never

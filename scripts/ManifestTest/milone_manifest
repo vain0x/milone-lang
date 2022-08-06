@@ -1,0 +1,2 @@
+linux: cflags -pg -fsanitize=address
+linux: link -pg -fsanitize=address

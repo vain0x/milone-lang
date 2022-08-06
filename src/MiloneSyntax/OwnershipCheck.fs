@@ -14,7 +14,7 @@ module S = Std.StdString
 
 let private emptyOwnedTySet: TreeSet<TySerial> = TSet.empty compare
 
-/// varSerial -> (true = owned | false = disposed)
+/// Mapping from varSerial to (true = owned | false = disposed)
 type private OwnershipMap = TreeMap<VarSerial, bool>
 
 /// Empty ownership map.
@@ -157,8 +157,9 @@ let private tyIsOwnedWith ownedTySet ty : bool =
     | FunTk
     | VoidPtrTk _
     | NativePtrTk _
-    | NativeFunTk
+    | FunPtrTk
     | NativeTypeTk _
+    | OpaqueTk _
     | MetaTk _
     | UnivTk _ -> false
 
@@ -174,9 +175,10 @@ let private tyIsOwnedWith ownedTySet ty : bool =
       TSet.contains tySerial ownedTySet
       || tyArgs |> List.exists go
 
-    | RecordTk _ ->
-      assert (List.isEmpty tyArgs)
-      false // Record types can't be owned types nor generic for now.
+    | RecordTk (tySerial, _) ->
+      // Same as UnionTk.
+      TSet.contains tySerial ownedTySet
+      || tyArgs |> List.exists go
 
     | SynonymTk _
     | InferTk _ -> unreachable () // SynonymTk, InferTk are resolved in Typing.
@@ -271,7 +273,8 @@ let private ocDefs ownedTySet (tirCtx: TirCtx) =
 
            | UnivTyDef _
            | SynonymTyDef _
-           | UnionTyDef _ -> logs)
+           | UnionTyDef _
+           | OpaqueTyDef _ -> logs)
          logs
 
   { tirCtx with Logs = logs }
@@ -792,7 +795,8 @@ let private lwProgram modules (tirCtx: TirCtx) : TProgram * TirCtx =
 
             | UnivTyDef _
             | SynonymTyDef _
-            | UnionTyDef _ -> tyDef) }
+            | UnionTyDef _
+            | OpaqueTyDef _ -> tyDef) }
 
   modules, tirCtx
 

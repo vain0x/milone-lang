@@ -36,17 +36,19 @@ type MonoTy =
   // FFI types.
   | VoidPtrMt of IsMut
   | NativePtrMt of RefMode * MonoTy
-  | NativeFunMt of MonoTy list
+  | FunPtrMt of MonoTy list
   | NativeTypeMt of cCode: string
 
   // Nominal types.
   | UnionMt of unionTy: TySerial
   | RecordMt of recordTy: TySerial
+  | OpaqueMt of opaqueTy: TySerial
 
 [<NoEquality; NoComparison>]
 type TyDef =
-  | UnionTyDef of Ident * tyArgs: TySerial list * VariantSerial list * Loc
+  | UnionTyDef of Ident * VariantSerial list * Loc
   | RecordTyDef of Ident * fields: (Ident * Ty * Loc) list * IsCRepr * Loc
+  | OpaqueTyDef of Ident * Loc
 
 [<RequireQualifiedAccess; NoEquality; NoComparison>]
 type VarDef =
@@ -129,6 +131,7 @@ type HStmt =
   | HExprStmt of HExpr
   | HLetValStmt of HPat * init: HExpr * Loc
   | HLetFunStmt of FunSerial * argPats: HPat list * body: HExpr * Loc
+  | HNativeDeclStmt of cCode: string * args: HExpr list * Loc
 
 /// Module. Variable info is reduced.
 [<RequireQualifiedAccess; NoEquality; NoComparison>]

@@ -69,9 +69,9 @@ type IsMut =
 type RefMode =
   /// nativeptr
   | ReadWrite
-  /// __inptr
+  /// InPtr
   | ReadOnly
-  /// __outptr
+  /// OutPtr
   | WriteOnly
 
 [<NoEquality; NoComparison>]

@@ -72,6 +72,7 @@ let private fuStmt ctx stmt : FCtx =
   | HExprStmt expr -> fuExpr ctx expr
   | HLetValStmt (_, init, _) -> fuExpr ctx init
   | HLetFunStmt (_, _, body, _) -> fuExpr ctx body
+  | HNativeDeclStmt _ -> unreachable () // Generated in Hoist.
 
 // -----------------------------------------------
 // Apply changes
@@ -117,6 +118,7 @@ let private rewriteStmt ctx stmt : HStmt =
   | HExprStmt expr -> HExprStmt(onExpr expr)
   | HLetValStmt (pat, init, loc) -> HLetValStmt(pat, onExpr init, loc)
   | HLetFunStmt (callee, args, body, loc) -> HLetFunStmt(callee, args, onExpr body, loc)
+  | HNativeDeclStmt _ -> stmt
 
 // -----------------------------------------------
 // Generation
@@ -449,7 +451,7 @@ let private deriveOnStmt (hirCtx: HirCtx) (ctx: DCtx) stmt : DCtx =
     | StringTk _, _
     | VoidPtrTk _, _
     | NativePtrTk _, _
-    | NativeFunTk _, _ -> ctx
+    | FunPtrTk, _ -> ctx
 
     | _ when ctx.EqualFunInstances |> TMap.containsKey ty -> ctx
 

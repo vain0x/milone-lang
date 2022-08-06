@@ -33,7 +33,8 @@ let private charIsOp (c: char) : bool =
   | ':'
   | '@'
   | ';'
-  | '.' -> true
+  | '.'
+  | '~' -> true
 
   | _ -> false
 
@@ -371,6 +372,11 @@ let private tokenOfOp allowPrefix (text: string) l r : Token =
     | "^^^" -> HatHatHatToken
     | _ -> error ()
 
+  | '~' ->
+    match s with
+    | "~~~" -> TildeTildeTildeToken(allowPrefix && not (atSpace text r))
+    | _ -> error ()
+
   | '=' -> expect "=" EqualToken
   | '%' -> expect "%" PercentToken
   | '+' -> expect "+" PlusToken
@@ -428,7 +434,7 @@ let private evalStringLit (text: string) (l: int) (r: int) : Token =
       i
 
   /// Splits a string to alternating list of unescaped "verbatim" parts
-  /// and escape sequences. E.g. "hello\nworld" -> "hello", "\n", "world".
+  /// and escape sequences. E.g. "hello\nworld" ⇒ "hello", "\n", "world".
   let rec go acc i =
     assert (i < r)
 
@@ -672,7 +678,8 @@ let private lookahead (text: string) (i: int) =
   | '+'
   | '<'
   | '='
-  | '|' -> LOp, 1
+  | '|'
+  | '~' -> LOp, 1
 
   | _ -> LBad, 1
 

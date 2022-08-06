@@ -1,0 +1,13 @@
+{
+    "version": "3.14",
+    "entries": [
+        {
+            "type": "null",
+            "value": null
+        },
+        {
+            "type": "boolean",
+            "value": true
+        }
+    ]
+}

@@ -3,6 +3,11 @@
 
 
 
+/cat
+/json_get
+/lsp_server
+/todo
+test-output.txt
 todo.db
 
 

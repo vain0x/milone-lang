@@ -40,7 +40,7 @@ let tyList ty = Ty(ListTk, [ ty ])
 let tyFun sourceTy targetTy = Ty(FunTk, [ sourceTy; targetTy ])
 
 let tyNativeFun paramTys resultTy =
-  Ty(NativeFunTk, List.append paramTys [ resultTy ])
+  Ty(FunPtrTk, List.append paramTys [ resultTy ])
 
 let tyUnit = tyTuple []
 
@@ -48,7 +48,7 @@ let tyMeta serial loc = Ty(MetaTk(serial, loc), [])
 
 let tyUnion tySerial tyArgs = Ty(UnionTk tySerial, tyArgs)
 
-let tyRecord tySerial = Ty(RecordTk tySerial, [])
+let tyRecord tySerial tyArgs = Ty(RecordTk tySerial, tyArgs)
 
 // -----------------------------------------------
 // Type definitions (HIR)
@@ -57,7 +57,8 @@ let tyRecord tySerial = Ty(RecordTk tySerial, [])
 let tyDefToName tyDef =
   match tyDef with
   | UnionTyDef (name, _, _, _) -> name
-  | RecordTyDef (name, _, _, _) -> name
+  | RecordTyDef (name, _, _, _, _) -> name
+  | OpaqueTyDef (name, _) -> name
 
 // -----------------------------------------------
 // Variable definitions (HIR)
@@ -300,11 +301,12 @@ let exprToLoc expr =
 // HStmt
 // -----------------------------------------------
 
-// let stmtToLoc stmt : Loc =
-//   match stmt with
-//   | HExprStmt expr -> exprToLoc expr
-//   | HLetValStmt (_, _, a) -> a
-//   | HLetFunStmt (_, _, _, a) -> a
+let stmtToLoc stmt : Loc =
+  match stmt with
+  | HExprStmt expr -> exprToLoc expr
+  | HLetValStmt (_, _, a) -> a
+  | HLetFunStmt (_, _, _, a) -> a
+  | HNativeDeclStmt (_, _, a) -> a
 
 let stmtMap (f: Ty -> Ty) stmt =
   let onPat pat = patMap f pat
@@ -314,18 +316,21 @@ let stmtMap (f: Ty -> Ty) stmt =
   | HExprStmt expr -> HExprStmt(onExpr expr)
   | HLetValStmt (pat, init, loc) -> HLetValStmt(onPat pat, onExpr init, loc)
   | HLetFunStmt (funSerial, argPats, body, loc) -> HLetFunStmt(funSerial, List.map onPat argPats, onExpr body, loc)
+  | HNativeDeclStmt (code, args, loc) -> HNativeDeclStmt(code, List.map onExpr args, loc)
 
 let private stmtMapExpr (f: HExpr -> HExpr) stmt =
   match stmt with
   | HExprStmt expr -> HExprStmt(f expr)
   | HLetValStmt (pat, init, loc) -> HLetValStmt(pat, f init, loc)
   | HLetFunStmt (funSerial, argPats, body, loc) -> HLetFunStmt(funSerial, argPats, f body, loc)
+  | HNativeDeclStmt (code, args, loc) -> HNativeDeclStmt(code, List.map f args, loc)
 
 let private stmtFoldExpr (folder: 'S -> HExpr -> 'S) (state: 'S) stmt =
   match stmt with
   | HExprStmt expr -> folder state expr
   | HLetValStmt (_, init, _) -> folder state init
   | HLetFunStmt (_, _, body, _) -> folder state body
+  | HNativeDeclStmt (code, args, loc) -> List.fold folder state args
 
 // -----------------------------------------------
 // HProgram
@@ -371,11 +376,12 @@ let private tkEncode tk : int =
 
   | VoidPtrTk isMut -> pair 11 (isMutToInt isMut)
   | NativePtrTk mode -> pair 12 (RefMode.toInt mode)
-  | NativeFunTk -> just 13
+  | FunPtrTk -> just 13
 
   | MetaTk (tySerial, _) -> pair 20 tySerial
   | UnionTk tySerial -> pair 22 tySerial
   | RecordTk tySerial -> pair 23 tySerial
+  | OpaqueTk tySerial -> pair 24 tySerial
 
   | NativeTypeTk _ -> unreachable ()
 
@@ -402,15 +408,16 @@ let tkDisplay getTyName tk =
   | TupleTk -> "tuple"
   | ListTk -> "list"
   | VoidPtrTk IsMut -> "voidptr"
-  | VoidPtrTk IsConst -> "__voidinptr"
+  | VoidPtrTk IsConst -> "VoidInPtr"
   | NativePtrTk RefMode.ReadWrite -> "nativeptr"
-  | NativePtrTk RefMode.ReadOnly -> "__inptr"
-  | NativePtrTk RefMode.WriteOnly -> "__outptr"
-  | NativeFunTk -> "__nativeFun"
+  | NativePtrTk RefMode.ReadOnly -> "InPtr"
+  | NativePtrTk RefMode.WriteOnly -> "OutPtr"
+  | FunPtrTk -> "FunPtr"
   | NativeTypeTk _ -> "__nativeType"
   | MetaTk (tySerial, _) -> getTyName tySerial
   | RecordTk tySerial -> getTyName tySerial
   | UnionTk tySerial -> getTyName tySerial
+  | OpaqueTk tySerial -> getTyName tySerial
 
 // -----------------------------------------------
 // Types (HIR/MIR)
@@ -549,7 +556,7 @@ let tyMangle (ty: Ty, memo: TreeMap<Ty, string>) : string * TreeMap<Ty, string> 
       | NativePtrTk RefMode.ReadWrite -> fixedGeneric "MutPtr"
       | NativePtrTk RefMode.ReadOnly -> fixedGeneric "InPtr"
       | NativePtrTk RefMode.WriteOnly -> fixedGeneric "OutPtr"
-      | NativeFunTk -> variadicGeneric "NativeFun"
+      | FunPtrTk -> variadicGeneric "FunPtr"
       | NativeTypeTk name -> S.replace " " "_" name, ctx
 
       | FunTk ->
@@ -567,7 +574,8 @@ let tyMangle (ty: Ty, memo: TreeMap<Ty, string>) : string * TreeMap<Ty, string> 
         funTy, ctx
 
       | UnionTk _
-      | RecordTk _ ->
+      | RecordTk _
+      | OpaqueTk _ ->
         // Name must be stored in memo if monomorphic.
         assert (List.isEmpty tyArgs |> not)
         let name = memo |> mapFind (Ty(tk, []))

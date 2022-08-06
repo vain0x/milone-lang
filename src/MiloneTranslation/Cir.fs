@@ -46,10 +46,13 @@ type CUnary =
   /// `-x`
   | CMinusUnary
 
+  /// `~x`
+  | CBitNotUnary
+
   /// `!p`
   | CNotUnary
 
-  /// `&x`
+  // `&x`
   | CAddressOfUnary
 
   /// `*p`
@@ -58,11 +61,11 @@ type CUnary =
 /// Binary operators in CIR.
 [<NoEquality; NoComparison>]
 type CBinary =
-  | CMulBinary
-  | CDivBinary
+  | CMultiplyBinary
+  | CDivideBinary
   | CModuloBinary
   | CAddBinary
-  | CSubBinary
+  | CSubtractBinary
   | CBitAndBinary
   | CBitOrBinary
   | CBitXorBinary
@@ -100,7 +103,7 @@ type CExpr =
   /// `a.x`
   | CDotExpr of CExpr * Ident
 
-  /// `p->x`
+  // `p->x`
   | CArrowExpr of CExpr * Ident
 
   /// `a[i]`
@@ -175,4 +178,4 @@ type CDecl =
 
   | CStaticFunDecl of Ident * args: (Ident * CTy) list * resultTy: CTy * body: CStmt list
 
-  | CNativeDecl of string
+  | CNativeDecl of string * args: CExpr list

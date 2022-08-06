@@ -1,24 +1,35 @@
 module rec CmdSqliteTodo.Program
 
+open Std.IO
+open Std.StdError
+open Std.StdList
+open LibSqlite3.Db
+
 module E = Std.StdEnv
 module S = Std.StdString
 
-open LibSqlite3.Db
+let private helpText () =
+  """todo: Tiny TODO app.
 
-let helpText () =
-  """todo
-
-Tiny TODO app.
+USAGE:
+    $ todo <subcommand> [OPTIONS]
 
 EXAMPLE:
+    # Create a task.
     $ todo add 'wash dishes'
+    $ todo add 'clean kitchen sink'
+
+    # Show all tasks.
     $ todo list
     wash dishes
+    clean kitchen sink
+
+    # Delete a task
     $ todo remove 'wash'
 
 SUBCOMMANDS:
     add <TEXT>
-        Add an TODO item.
+        Add a TODO item.
 
     remove <WORD>
         Remove a TODO item that contains the word.
@@ -26,98 +37,155 @@ SUBCOMMANDS:
     list
         Show all TODO items."""
 
-let private dbInit () =
-  dbOpen "todo.db"
+let private dbInit (io: IO) : Result<Db, string> * IO =
+  let result, io = Db.openFile io "todo.db"
 
-  dbExec
-    """
-    create table if not exists todos(
-      todo_id integer primary key autoincrement,
-      text text not null
-    );
-  """
+  match result with
+  | Error msg -> Error msg, io
+  | Ok db ->
+    let result, db =
+      Db.exec
+        """
+          create table if not exists todos(
+            todo_id integer primary key autoincrement,
+            text text not null
+          );
+        """
+        db
+
+    match result with
+    | Error msg ->
+      Db.close db
+      Error msg, io
+
+    | Ok () -> Ok db, io
 
 // -----------------------------------------------
 // add
 // -----------------------------------------------
 
-let private cmdAdd text =
-  dbInit ()
+let private cmdAdd io text =
+  let result, io = dbInit io
 
-  dbMutate
-    """
-    insert into todos(text) values (:text)
-  """
-    [ ":text", DString text ]
+  match result with
+  | Error msg -> Error msg, io
+  | Ok db ->
+    let ok, db =
+      Db.mutate
+        """
+          insert into todos(text) values (:text)
+        """
+        [ ":text", DString text ]
+        db
+
+    Db.close db
+
+    if ok then
+      Ok(), io
+    else
+      Error "insert", io
 
 // -----------------------------------------------
 // remove
 // -----------------------------------------------
 
-let private cmdRemove word =
-  dbInit ()
+let private cmdRemove io word =
+  let result, io = dbInit io
 
-  // escape '%' and '_'!
-  dbMutate
-    """
-    delete from todos
-    where text like :word
-  """
-    [ ":word", DString("%" + word + "%") ]
+  match result with
+  | Error msg -> Error msg, io
+  | Ok db ->
+    // todo: escape '%' and '_'
+    let ok, db =
+      Db.mutate
+        """
+          delete from todos
+          where text like :word
+        """
+        [ ":word", DString("%" + word + "%") ]
+        db
+
+    Db.close db
+
+    if ok then
+      Ok(), io
+    else
+      Error "delete", io
 
 // -----------------------------------------------
 // list
 // -----------------------------------------------
 
-let private cmdList () =
-  dbInit ()
+let private cmdList io : Result<unit, string> * IO =
+  let result, io = dbInit io
 
-  dbSelect
-    """
-    select todo_id, text from todos
-    order by todo_id
-  """
-    []
-  |> List.fold
-       (fun () row ->
-         match row with
-         | [ DInt todoId; DString text ] -> printfn "%d: %s" todoId text
+  match result with
+  | Error msg -> Error msg, io
+  | Ok db ->
+    let result, db =
+      Db.select
+        """
+          select todo_id, text
+          from todos
+          order by todo_id
+        """
+        []
+        db
 
-         | _ ->
-           assert false
-           exit 1)
-       ()
+    Db.close db
+
+    match result with
+    | Error () -> Error "select", io
+
+    | Ok [] ->
+      printfn "No tasks."
+      Ok(), io
+
+    | Ok rows ->
+      let output =
+        rows
+        |> List.choose (fun row ->
+          match row with
+          | [ DInt todoId; DString text ] -> Some(string todoId + ":" + text)
+          | _ ->
+            printfn "warn: invalid row?" // for debug
+            None)
+        |> S.concat "\n"
+
+      printfn "%s" output
+      Ok(), io
 
 // -----------------------------------------------
 // Entrypoint
 // -----------------------------------------------
 
 let main _ =
-  let args =
-    // wants List.skip
-    match E.commandLineArgs () with
-    | [] -> exit 1
-    | _ :: xs -> xs
+  IO.exec (fun io ->
+    let args = E.commandLineArgs () |> List.drop 1
 
-  match args with
-  | "-h" :: _
-  | "--help" :: _ ->
-    printfn "%s" (helpText ())
-    0
+    let result, io =
+      match args with
+      | "-h" :: _
+      | "--help" :: _ ->
+        printfn "%s" (helpText ())
+        Ok(), io
 
-  | [ "add"; text ] ->
-    cmdAdd text
-    0
+      | [ "add"; text ] -> cmdAdd io text
 
-  | [ "remove"; word ] ->
-    cmdRemove word
-    0
+      | [ "remove"; word ] -> cmdRemove io word
 
-  | []
-  | [ "list" ] ->
-    cmdList ()
-    0
+      | []
+      | [ "list" ] -> cmdList io
 
-  | _ ->
-    printfn "error: Unknown arguments. Run with --help for usage."
-    1
+      | _ ->
+        printfn "%s" (helpText ())
+        Error "Unknown arguments.", io
+
+    match result with
+    | Ok () -> io
+
+    | Error msg ->
+      printfn "error: %s" msg
+      exit 1
+      io)
+  |> never

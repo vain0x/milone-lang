@@ -52,8 +52,6 @@ open Std.StdMap
 open MiloneTranslation.Hir
 open MiloneTranslationTypes.HirTypes
 
-let private hxDummy: HExpr = hxUnit noLoc
-
 let private hpUnit loc = HNodePat(HTuplePN, [], tyUnit, loc)
 
 let private hxBlock stmts last : HExpr =
@@ -112,6 +110,10 @@ let private hoistExpr ctx expr : HExpr * HoistCtx =
 
     HMatchExpr(cond, arms, ty, loc), ctx
 
+  | HNodeExpr (HNativeDeclEN cCode, args, _, loc) ->
+    let args, ctx = args |> List.mapFold hoistExpr ctx
+    hxUnit loc, addDecl (HNativeDeclStmt(cCode, args, loc)) ctx
+
   | HNodeExpr (kind, items, ty, loc) ->
     let items, ctx = items |> List.mapFold hoistExpr ctx
     HNodeExpr(kind, items, ty, loc), ctx
@@ -152,6 +154,8 @@ let private hoistStmt ctx stmt : HoistCtx =
 
     ctx
     |> addDecl (HLetFunStmt(callee, args, body, loc))
+
+  | HNativeDeclStmt _ -> unreachable () // Generated in Hoist.
 
 let private hoistModule (hirCtx: HirCtx) (m: HModule) : (HModule * HStmt option) * HirCtx =
   let ctx =

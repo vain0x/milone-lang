@@ -1,25 +1,26 @@
 open Std.Own
-
-module Ptr = Std.Ptr
+open Std.Ptr
+open Std.Region
 
 // For memcpy
 __nativeDecl "#include <string.h>"
 
 /// Immutable array.
-type Block<'T> = private Block of ptr: __inptr<'T> * len: uint
+type Block<'T> = private Block of ptr: InPtr<'T> * len: uint
 
 /// Owned growable array to build a block object. (Allocated on a region.)
-type BlockBuilder<'T> = private BlockBuilder of ptr: Own<__outptr<'T>> * cap: uint
+type BlockBuilder<'T> = private BlockBuilder of ptr: Own<OutPtr<'T>> * cap: uint
 
 // -----------------------------------------------
 // BlockBuilder helpers
 // -----------------------------------------------
 
-let private bbEmpty () : BlockBuilder<'T> = BlockBuilder(Own.acquire Ptr.nullPtr, 0u)
+let private bbEmpty () : BlockBuilder<'T> =
+  BlockBuilder(Own.acquire Ptr.nullPtr, 0u)
 
 let private bbAlloc (count: uint) : BlockBuilder<'T> =
   if count <> 0u then
-    let ptr: __outptr<'T> = Ptr.regionAlloc count
+    let ptr: OutPtr<'T> = Region.alloc count
     BlockBuilder(Own.acquire ptr, count)
   else
     bbEmpty ()
@@ -165,8 +166,8 @@ module Block =
     slice 0 index block, slice index (length block) block
 
   /// Tries to split a block into a pair of the first item and the other part.
-  ///
-  /// E.g. `[: x1; x2; ... :]` => `Some (x1, [: x2; ... :])`
+  //
+  // E.g. `[: x1; x2; ... :]` => `Some (x1, [: x2; ... :])`
   let uncons (block: Block<'T>) : ('T * Block<'T>) option =
     let (Block (ptr, len)) = block
 
@@ -254,20 +255,70 @@ module Block =
 
     toListLoop [] (length block)
 
+  let debug (itemDebug: 'T -> string) (block: Block<'T>) : string =
+    let rec go block =
+      let len = length block
+      // assert (len >= 1)
+
+      if len <= 1 then
+        itemDebug (forceGet 0 block)
+      else
+        let l, r = splitAt (len / 2) block
+        go l + "; " + go r
+
+    if length block >= 1 then
+      "[: " + go block + " :]"
+    else
+      "[::]"
+
+  let equals (itemEquals: 'T -> 'T -> bool) (l: Block<'T>) (r: Block<'T>) : bool =
+    let rec go l r =
+      match uncons l, uncons r with
+      | Some (lh, lt), Some (rh, rt) -> itemEquals lh rh && go lt rt
+      | None, None -> true
+      | _ -> false
+
+    go l r
+
+  let compare (itemCompare: 'T -> 'T -> int) (l: Block<'T>) (r: Block<'T>) : int =
+    let rec go l r =
+      match uncons l, uncons r with
+      | Some (lh, lt), Some (rh, rt) ->
+        let c = itemCompare lh rh
+        if c <> 0 then c else go lt rt
+
+      | None, Some _ -> -1
+      | Some _, None -> 1
+      | None, None -> 0
+
+    go l r
+
 module BlockExt =
+  /// Unsafely creates a block by wrapping pointer and length.
+  ///
+  /// PERF: Contents aren't copied.
+  ///
+  /// SAFETY:
+  ///
+  /// - The input pointer can be null when length is zero.
+  /// - Result block is valid as long as the input pointer is valid.
+  let unsafeCreate (ptr: InPtr<'T>) (len: uint) : Block<'T> =
+    assert (len = 0u || ptr <> Ptr.nullPtr)
+    Block(ptr, len)
+
   /// Unsafely exposes pointer and length.
   ///
   /// - Pointer can be null when length is zero.
   /// - Pointer is invalidated when to leave the current region.
-  let unsafeToRawParts (block: Block<'T>) : __inptr<'T> * uint =
-    let (Block(ptr, len)) = block
+  let unsafeToRawParts (block: Block<'T>) : InPtr<'T> * uint =
+    let (Block (ptr, len)) = block
     ptr, len
 
   /// Creates a block by copying from a pointer.
-  let unsafeOfRawParts (ptr: __inptr<'T>) (len: uint) : Block<'T> =
+  let unsafeOfRawParts (ptr: InPtr<'T>) (len: uint) : Block<'T> =
     if len <> 0u then
       assert (ptr <> Ptr.nullPtr)
-      let destPtr: __outptr<'T> = Ptr.regionAlloc len
+      let destPtr: OutPtr<'T> = Region.alloc len
       __nativeStmt ("memcpy({0}, {1}, {2});", destPtr, ptr, unativeint len * unativeint sizeof<'T>)
       Block(Ptr.cast destPtr, len)
     else

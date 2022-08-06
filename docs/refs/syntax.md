@@ -415,7 +415,7 @@ Argument expression must be inside of the callee expression.
 A prefix expression consists of a operator and an argument expression.
 Operator and expression must appear consecutively without spaces so that the operator is distinct from a binary operator.
 
-    prefix_expr = ('-' | '&&') app_expr
+    prefix_expr = ('-' | '&&' | '~~~') app_expr
 
 A binary operator consists of two expressions separated by an operator.
 Precedence from higher to lower:

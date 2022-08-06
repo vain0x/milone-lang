@@ -2,9 +2,11 @@
 // WARN: Don't expose to Internet.
 //
 // Support only Linux.
-// Impure things need replacing by ephemeral objects.
+// Impure things need replacing by owned types.
 module rec LibHttpServer.Program
 
+open Std.Ptr
+open Std.Region
 open Std.StdError
 open Std.StdMap
 
@@ -179,7 +181,7 @@ let private readLine (input: Stream) : string option * Stream =
   else
     None, input
 
-let private doWriteExact (ptr: __inptr<byte>) (len: uint) (output: Stream) : unit =
+let private doWriteExact (ptr: InPtr<byte>) (len: uint) (output: Stream) : unit =
   assert (len >= 1u)
 
   __nativeStmt (
@@ -207,8 +209,8 @@ let private writeExact (buf: Buffer) (len: uint) (output: Stream) : Buffer * Str
 let private writeStringExact (s: string) (output: Stream) : Stream =
   if s.Length > 0 then
     __nativeStmt ("char const *ptr = {0}.ptr;", s)
-    let ptr: __inptr<char> = __nativeExpr "ptr"
-    doWriteExact (__nativeCast ptr: __inptr<byte>) (uint s.Length) output
+    let ptr: InPtr<char> = __nativeExpr "ptr"
+    doWriteExact (__nativeCast ptr: InPtr<byte>) (uint s.Length) output
 
   output
 
@@ -272,10 +274,12 @@ module Option =
 /// (Therefore, this function never returns 0.)
 let private loopInRegion (f: unit -> int) : int =
   let rec go () =
-    let code = __inRegion f
+    let code = Region.run f
     if code = 0 then go () else code
 
   go ()
+
+let private uintMin (l: uint) r = if r < l then r else l
 
 // -----------------------------------------------
 // Types
@@ -404,7 +408,7 @@ let private readReqBody (input: Stream) (size: uint) : Stream =
     if size = 0u then
       input
     else
-      let blockSize = I.min bufSize size
+      let blockSize = uintMin bufSize size
       let ok, buf, input = readExact buf blockSize input
       if not ok then failwith "readExact"
       go input buf (size - blockSize)
@@ -477,7 +481,7 @@ let private writeResponse (res: HttpResponseContext) : unit =
 ///
 /// - None: stream ends
 /// - Some 0: a request is gracefully processed
-/// - Some code when `code <> 0`: error
+/// - Some code when code is non-zero: error
 let private readReq (handler: HttpActionContext -> unit) (input: Stream) (output: Stream) : int option =
   __trace "reading request line"
   let reqLineOpt, input = readRequestLine input

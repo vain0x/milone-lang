@@ -24,15 +24,15 @@
 /// ```fsharp
 ///   // file: P/M.milone
 ///   module rec P.M
-///   <contents>
+///   contents...
 /// ```
 ///
-/// ==>
+/// ⇒
 ///
 /// ```fsharp
 ///   module rec P =
 ///     module rec M =
-///       <contents>
+///       contents...
 /// ```
 module rec MiloneSyntax.NirGen
 
@@ -68,7 +68,7 @@ let private axUnit pos = ATupleExpr(pos, [], None)
 let private axFalse pos = ALitExpr(BoolLit false, pos)
 let private axTrue pos = ALitExpr(BoolLit true, pos)
 
-/// `not x` ==> `x = false`
+// Desugar: `not x` ==> `x = false`
 let private axNot arg pos =
   let falseExpr = axFalse pos
   ABinaryExpr(EqualBinary, arg, pos, falseExpr)
@@ -106,8 +106,8 @@ let private desugarListExpr items pos : AExpr =
 
 /// Desugars `if` to `match`.
 ///
-/// `if cond then body else alt` ==>
-/// `match cond with | true -> body | false -> alt`.
+// `if cond then body else alt` ==>
+// `match cond with | true -> body | false -> alt`.
 let private desugarIf ifPos cond body altOpt : AExpr =
   let pos = ifPos
 
@@ -123,7 +123,7 @@ let private desugarIf ifPos cond body altOpt : AExpr =
   AMatchExpr(ifPos, cond, None, arms)
 
 /// Desugars to let expression.
-/// `fun x y .. -> z` ==> `let f x y .. = z in f`
+// `fun x y .. -> z` ==> `let f x y .. = z in f`
 let private desugarFun funPos argPats equalPos body : AExpr =
   let name = "fun"
 
@@ -134,9 +134,8 @@ let private desugarFun funPos argPats equalPos body : AExpr =
   )
 
 /// Desugars `-x`.
-///
-/// `-(-x)` ==> x.
-/// `-n` (n: literal).
+// `-(-x)` ==> x.
+// `-n` (n: literal).
 let private desugarMinusUnary arg : AExpr option =
   match arg with
   | AUnaryExpr (MinusUnary, _, arg) -> Some arg
@@ -151,37 +150,37 @@ let private desugarMinusUnary arg : AExpr option =
 
   | _ -> None
 
-/// `l <> r` ==> `not (l = r)`
+// Desugar: `l <> r` ==> `not (l = r)`
 let private desugarBinNe l r pos : AExpr =
   let equalExpr = ABinaryExpr(EqualBinary, l, pos, r)
   axNot equalExpr pos
 
-/// `l <= r` ==> `not (r < l)`
+// Desugar: `l <= r` ==> `not (r < l)`
 /// NOTE: Evaluation order does change.
 let private desugarBinLe l r pos : AExpr =
   let ltExpr = ABinaryExpr(LessBinary, r, pos, l)
   axNot ltExpr pos
 
-/// `l > r` ==> `r < l`
-/// NOTE: Evaluation order does change.
+// Desugar: `l > r` ==> `r < l`
+// NOTE: Evaluation order does change.
 let private desugarBinGt l r pos : AExpr = ABinaryExpr(LessBinary, r, pos, l)
 
-/// `l >= r` ==> `not (l < r)`
+// Desugar: `l >= r` ==> `not (l < r)`
 let private desugarBinGe l r pos : AExpr =
   let ltExpr = ABinaryExpr(LessBinary, l, pos, r)
   axNot ltExpr pos
 
-/// `l && r` ==> `if l then r else false`
+// Desugar: `l && r` ==> `if l then r else false`
 let private desugarBinAnd l r pos : AExpr = desugarIf pos l r (Some(axFalse pos))
 
-/// `l || r` ==> `if l then true else r`
+// Desugar: `l || r` ==> `if l then true else r`
 let private desugarBinOr l r pos : AExpr = desugarIf pos l (axTrue pos) (Some r)
 
-/// `x |> f` ==> `f x`
+// Desugar: `x |> f` ==> `f x`
 /// NOTE: Evaluation order does change.
 let private desugarBinPipe l r pos : AExpr = ABinaryExpr(AppBinary, r, pos, l)
 
-/// `let f ... : ty = body` ==> `let f ... = body : ty`
+// Desugar: `let f ... : ty = body` ==> `let f ... = body : ty`
 let private desugarResultTy expr resultTyOpt : AExpr =
   match resultTyOpt with
   | Some (colonPos, ascriptionTy) -> AAscribeExpr(expr, colonPos, ascriptionTy)
@@ -312,7 +311,7 @@ let private ngPat (docId: DocId) (ctx: NirGenCtx) (pat: APat) : NPat * NirGenCtx
     let r, ctx = r |> onPat ctx
     NPat.Or(l, r, toLoc pos), ctx
 
-let private ngLetContents docId ctx pos (contents: ALetContents) : NStmt * NirGenCtx =
+let private ngLetContents docId ctx attrs pos (contents: ALetContents) : NStmt * NirGenCtx =
   let onPat ctx pat = ngPat docId ctx pat
   let onPats ctx pats = List.mapFold (ngPat docId) ctx pats
   let onExpr ctx expr = ngExpr docId ctx expr
@@ -321,13 +320,20 @@ let private ngLetContents docId ctx pos (contents: ALetContents) : NStmt * NirGe
 
   match contents with
   | ALetContents.LetFun (isRec, vis, name, argPats, resultTyOpt, _, body) ->
+    let exported =
+      attrs
+      |> List.exists (fun a ->
+        match a with
+        | AIdentExpr (Name ("Export", _), None) -> true
+        | _ -> false)
+
     let argPats, ctx = argPats |> onPats ctx
 
     let body, ctx =
       let body = desugarResultTy body resultTyOpt
       body |> onExpr ctx
 
-    NStmt.LetFun(isRec, vis, onName name, argPats, body, toLoc pos), ctx
+    NStmt.LetFun(isRec, vis, onName name, argPats, body, exported, toLoc pos), ctx
 
   | ALetContents.LetVal (_, pat, _, body) ->
     // let rec for let-val should be error.
@@ -487,7 +493,9 @@ let private ngExpr (docId: DocId) (ctx: NirGenCtx) (expr: AExpr) : NExpr * NirGe
     NExpr.Block(stmts, last), ctx
 
   | ALetExpr (letPos, contents, nextOpt) ->
-    let stmt, ctx = ngLetContents docId ctx letPos contents
+    let stmt, ctx =
+      ngLetContents docId ctx [] letPos contents
+
     let nextOpt, ctx = nextOpt |> onExprOpt ctx
 
     let next =
@@ -528,7 +536,9 @@ let private ngDecl docId attrs ctx decl : NDecl * NirGenCtx =
     NDecl.Stmt(NStmt.Expr expr), ctx
 
   | ALetDecl (contents, pos) ->
-    let stmt, ctx = ngLetContents docId ctx contents pos
+    let stmt, ctx =
+      ngLetContents docId ctx attrs contents pos
+
     NDecl.Stmt stmt, ctx
 
   | ATySynonymDecl (pos, vis, name, tyParamList, _, bodyTy) ->
@@ -538,6 +548,13 @@ let private ngDecl docId attrs ctx decl : NDecl * NirGenCtx =
 
   | AUnionTyDecl (pos, vis, name, tyParamList, _, variants) ->
     let tyParamList = tyParamList |> ngTyParamList docId
+
+    let opaque =
+      attrs
+      |> List.exists (fun a ->
+        match a with
+        | AIdentExpr (Name ("Opaque", _), None) -> true
+        | _ -> false)
 
     let variants, ctx =
       variants
@@ -561,7 +578,14 @@ let private ngDecl docId attrs ctx decl : NDecl * NirGenCtx =
              (onName name, payloadTyOpt, toLoc pos), ctx)
            ctx
 
-    NDecl.Union(vis, onName name, tyParamList, variants, toLoc pos), ctx
+    let decl =
+      if not opaque then
+        NDecl.Union(vis, onName name, tyParamList, variants, toLoc pos)
+      else
+        // FIXME: report error is tyParamList isn't empty
+        NDecl.Opaque(vis, onName name, toLoc pos)
+
+    decl, ctx
 
   | ARecordTyDecl (pos, vis, name, tyParamList, _, _, fields, _) ->
     let repr =

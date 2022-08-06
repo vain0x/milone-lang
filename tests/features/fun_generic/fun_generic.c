@@ -38,6 +38,8 @@ struct StringCons const *fun_generic_fun_generic_StringListStringListFun1_listRe
 
 struct Int32Cons const *fun_generic_fun_generic_Int32ListInt32ListFun1_listRev(struct Int32Cons const *xs_);
 
+int32_t fun_generic_fun_generic_f(int32_t x_3);
+
 struct StringInt32Tuple2_ fun_generic_fun_generic_Int32StringTuple2StringInt32Tuple2Fun1_flip(struct Int32StringTuple2_ arg_3);
 
 struct Int32StringTuple2_ fun_generic_fun_generic_StringInt32Tuple2Int32StringTuple2Fun1_flip(struct StringInt32Tuple2_ arg_4);
@@ -51,8 +53,6 @@ int32_t fun_generic_fun_generic_Int32Int32Fun1_id(int32_t x_2);
 struct Int32Cons const *fun_generic_fun_generic_listRev_Int32ListInt32ListInt32ListFun2_go(struct Int32Cons const *acc_, struct Int32Cons const *xs_1);
 
 struct StringCons const *fun_generic_fun_generic_listRev_StringListStringListStringListFun2_go(struct StringCons const *acc_, struct StringCons const *xs_1);
-
-int32_t fun_generic_fun_generic_f(int32_t x_3);
 
 int32_t fun_generic_fun_generic_eta2_main_f(void const *env_, int32_t arg_);
 
@@ -143,6 +143,11 @@ struct Int32Cons const *fun_generic_fun_generic_Int32ListInt32ListFun1_listRev(s
     struct Int32Cons const *call_2;
     call_2 = fun_generic_fun_generic_listRev_Int32ListInt32ListInt32ListFun2_go(NULL, xs_);
     return call_2;
+}
+
+int32_t fun_generic_fun_generic_f(int32_t x_3) {
+    printf("%d\n", x_3);
+    return (x_3 * x_3);
 }
 
 struct StringInt32Tuple2_ fun_generic_fun_generic_Int32StringTuple2StringInt32Tuple2Fun1_flip(struct Int32StringTuple2_ arg_3) {
@@ -253,11 +258,6 @@ next_14:;
     exit(1);
 end_match_12:;
     return match_3;
-}
-
-int32_t fun_generic_fun_generic_f(int32_t x_3) {
-    printf("%d\n", x_3);
-    return (x_3 * x_3);
 }
 
 int32_t fun_generic_fun_generic_eta2_main_f(void const *env_, int32_t arg_) {

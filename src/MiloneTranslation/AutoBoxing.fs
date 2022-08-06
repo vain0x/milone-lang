@@ -20,19 +20,9 @@ let private isFunTy ty =
   | Ty (FunTk, _) -> true
   | _ -> false
 
-let private tyIsRecord ty =
-  match ty with
-  | Ty (RecordTk _, tyArgs) ->
-    assert (List.isEmpty tyArgs)
-    true
-
-  | _ -> false
-
 let private unwrapRecordTy ty =
   match ty with
-  | Ty (RecordTk tySerial, tyArgs) ->
-    assert (List.isEmpty tyArgs)
-    tySerial
+  | Ty (RecordTk tySerial, tyArgs) -> tySerial, tyArgs
   | _ -> unreachable ()
 
 let private hxBox itemExpr itemTy loc =
@@ -71,9 +61,9 @@ type private TrdCtx =
   { Variants: TreeMap<VariantSerial, VariantDef>
     Tys: TreeMap<TySerial, TyDef>
 
-    /// ((variantSerial, IsDirect) -> Boxed) means:
+    // ((variantSerial, IsDirect), Boxed) means:
     ///     The variant should be boxed because it is recursive without indirection.
-    /// ((variantSerial, IsIndirect) -> Boxed) means:
+    /// ((variantSerial, IsIndirect), Boxed) means:
     ///     The variant is indirectly recursive (i.e. by following pointers).
     VariantMemo: TreeMap<VariantSerial * IsDirect, Status>
 
@@ -162,7 +152,7 @@ let private trdRecordTyDef isDirect (ctx: TrdCtx) tySerial tyDef =
 
     let ctx: TrdCtx =
       match tyDef with
-      | RecordTyDef (_, fields, _, _) ->
+      | RecordTyDef (_, _, fields, _, _) ->
         fields
         |> List.fold (fun ctx (_, fieldTy, _) -> trdTy isDirect ctx fieldTy) ctx
 
@@ -194,6 +184,8 @@ let private trdTyDef isDirect (ctx: TrdCtx) tySerial tyDef : TrdCtx =
 
   | RecordTyDef _ -> trdRecordTyDef isDirect ctx tySerial tyDef
 
+  | OpaqueTyDef _ -> ctx
+
 let private trdTy isDirect (ctx: TrdCtx) ty : TrdCtx =
   match ty with
   | Ty (tk, tyArgs) ->
@@ -208,6 +200,7 @@ let private trdTy isDirect (ctx: TrdCtx) ty : TrdCtx =
     | StringTk
     | ObjTk
     | VoidPtrTk _
+    | OpaqueTk _
     | MetaTk _ ->
       assert (List.isEmpty tyArgs)
       ctx
@@ -217,7 +210,7 @@ let private trdTy isDirect (ctx: TrdCtx) ty : TrdCtx =
     | FunTk
     | TupleTk
     | NativePtrTk _
-    | NativeFunTk
+    | FunPtrTk
     | NativeTypeTk _ -> tyArgs |> List.fold (trdTy isDirect) ctx
 
     | UnionTk tySerial ->
@@ -313,7 +306,7 @@ let private tsmVariant (ctx: TsmCtx) variantSerial (variantDefOpt: VariantDef op
 let private tsmRecordTyDef (ctx: TsmCtx) tySerial tyDef =
   let canBox () =
     match ctx.Tys |> mapFind tySerial with
-    | RecordTyDef (_, _, IsCRepr true, _) -> false
+    | RecordTyDef (_, _, _, IsCRepr true, _) -> false
     | _ -> true
 
   match ctx.RecordTyMemo |> TMap.tryFind tySerial with
@@ -335,7 +328,7 @@ let private tsmRecordTyDef (ctx: TsmCtx) tySerial tyDef =
 
     let size, (ctx: TsmCtx) =
       match tyDef with
-      | RecordTyDef (_, fields, _, _) ->
+      | RecordTyDef (_, _, fields, _, _) ->
         fields
         |> List.fold
              (fun (totalSize, ctx) (fieldName, fieldTy, _) ->
@@ -383,6 +376,8 @@ let private tsmTyDef (ctx: TsmCtx) tySerial tyDef =
 
   | RecordTyDef _ -> tsmRecordTyDef ctx tySerial tyDef
 
+  | OpaqueTyDef _ -> 1000000, ctx
+
 let private tsmTy (ctx: TsmCtx) ty =
   match ty with
   | Ty (tk, tyArgs) ->
@@ -400,7 +395,7 @@ let private tsmTy (ctx: TsmCtx) ty =
     | ListTk
     | VoidPtrTk _
     | NativePtrTk _
-    | NativeFunTk -> 8, ctx
+    | FunPtrTk -> 8, ctx
 
     | StringTk
     | FunTk -> 16, ctx
@@ -420,7 +415,8 @@ let private tsmTy (ctx: TsmCtx) ty =
     | RecordTk tySerial -> nominal tySerial
 
     | MetaTk _ -> 8, ctx
-    | NativeTypeTk _ -> 1000000, ctx
+    | NativeTypeTk _
+    | OpaqueTk _ -> 1000000, ctx
 
 let private measureTys (trdCtx: TrdCtx) : TsmCtx =
   let boxedVariants =
@@ -515,12 +511,12 @@ let private needsBoxedRecordTy ctx ty =
 /// ```fsharp
 ///   // Variant creation. K is a variant that has payload.
 ///   K payload
-///   // =>
+///   // ⇒
 ///   K (box payload)
 ///
 ///   // Variant decomposition. x is a variable defined in the pattern.
 ///   K payloadPat
-///   // =>
+///   // ⇒
 ///   K (box payloadPat)  // using box pattern to unbox the payload
 /// ```
 
@@ -635,22 +631,22 @@ let private unwrapNewtypeVariantCallExpr (ctx: AbCtx) variantSerial payload : HE
 /// ```fsharp
 ///   // Record creation.
 ///   { fields... }: R
-///   // =>
+///   // ⇒
 ///   box { fields... }: obj
 ///
 ///   // Record mutation.
 ///   { record with fields... }: R
-///   // =>
+///   // ⇒
 ///   box { unbox record with fields... }: obj
 ///
 ///   // Field projection.
 ///   (record: R).field
-///   // =>
+///   // ⇒
 ///   (unbox record).field
 ///
 ///   // Def/use of record-type pat/expr.
 ///   record: R
-///   // =>
+///   // ⇒
 ///   record: obj
 /// ```
 
@@ -660,18 +656,18 @@ let private eraseRecordTy ctx ty =
   else
     None
 
-let private postProcessRecordExpr ctx recordTySerial args loc =
+let private postProcessRecordExpr ctx recordTySerial tyArgs args loc =
   if needsBoxedRecordTySerial ctx recordTySerial then
-    let ty = tyRecord recordTySerial
+    let ty = tyRecord recordTySerial tyArgs
     let recordExpr = HNodeExpr(HRecordEN, args, ty, loc)
 
     Some(hxBox recordExpr ty loc)
   else
     None
 
-let private postProcessFieldExpr ctx recordTySerial recordExpr index fieldTy loc =
+let private postProcessFieldExpr ctx recordTySerial tyArgs recordExpr index fieldTy loc =
   if needsBoxedRecordTySerial ctx recordTySerial then
-    let ty = tyRecord recordTySerial
+    let ty = tyRecord recordTySerial tyArgs
 
     Some(HNodeExpr(HRecordItemEN index, [ hxUnbox recordExpr ty loc ], fieldTy, loc))
   else
@@ -683,8 +679,10 @@ let private postProcessFieldExpr ctx recordTySerial recordExpr index fieldTy loc
 
 let private abTy ctx ty =
   match ty with
-  | Ty (RecordTk _, tyArgs) ->
-    assert (List.isEmpty tyArgs)
+  | Ty (RecordTk tySerial, tyArgs) ->
+    let ty =
+      let tyArgs = tyArgs |> List.map (abTy ctx)
+      Ty(RecordTk tySerial, tyArgs)
 
     match eraseRecordTy ctx ty with
     | Some ty -> ty
@@ -770,20 +768,22 @@ let private abExpr ctx expr =
       | None -> hxCallProc callee [ payload ] ty loc
 
     | HRecordEN, _ ->
-      let recordSerial = unwrapRecordTy ty
+      let recordSerial, tyArgs = unwrapRecordTy ty
       let items = items |> List.map (abExpr ctx)
       let ty = ty |> abTy ctx
 
-      match postProcessRecordExpr ctx recordSerial items loc with
+      match postProcessRecordExpr ctx recordSerial tyArgs items loc with
       | Some expr -> expr
       | None -> HNodeExpr(HRecordEN, items, ty, loc)
 
     | HRecordItemEN index, [ recordExpr ] ->
-      let recordTySerial = recordExpr |> exprToTy |> unwrapRecordTy
+      let recordTySerial, tyArgs =
+        recordExpr |> exprToTy |> unwrapRecordTy
+
       let recordExpr = recordExpr |> abExpr ctx
       let ty = ty |> abTy ctx
 
-      match postProcessFieldExpr ctx recordTySerial recordExpr index ty loc with
+      match postProcessFieldExpr ctx recordTySerial tyArgs recordExpr index ty loc with
       | Some expr -> expr
       | None -> HNodeExpr(HRecordItemEN index, [ recordExpr ], ty, loc)
 
@@ -829,6 +829,8 @@ let private abStmt ctx stmt =
     let args = args |> List.map (abPat ctx)
     let body = body |> abExpr ctx
     HLetFunStmt(callee, args, body, loc)
+
+  | HNativeDeclStmt _ -> unreachable () // Generated in Hoist.
 
 let autoBox (modules: HProgram, hirCtx: HirCtx) : HProgram * HirCtx =
   // Detect recursion.
@@ -879,14 +881,14 @@ let autoBox (modules: HProgram, hirCtx: HirCtx) : HProgram * HirCtx =
     ctx.Tys
     |> TMap.map (fun _ tyDef ->
       match tyDef with
-      | RecordTyDef (recordName, fields, repr, loc) ->
+      | RecordTyDef (recordName, tyArgs, fields, repr, loc) ->
         let fields =
           fields
           |> List.map (fun (name, ty, loc) ->
             let ty = ty |> abTy ctx
             name, ty, loc)
 
-        RecordTyDef(recordName, fields, repr, loc)
+        RecordTyDef(recordName, tyArgs, fields, repr, loc)
 
       | _ -> tyDef)
 
@@ -1033,6 +1035,8 @@ let private tvStmt stmt ctx =
 
     ctx
 
+  | HNativeDeclStmt _ -> unreachable () // Generated in Hoist.
+
 // -----------------------------------------------
 // Compute ty args
 // -----------------------------------------------
@@ -1099,6 +1103,7 @@ let private taStmt ctx stmt =
   | HExprStmt expr -> HExprStmt(onExpr expr)
   | HLetValStmt (pat, init, loc) -> HLetValStmt(pat, onExpr init, loc)
   | HLetFunStmt (callee, args, body, loc) -> HLetFunStmt(callee, args, taExpr ctx body, loc)
+  | HNativeDeclStmt _ -> unreachable () // Generated in Hoist.
 
 let computeFunTyArgs (modules: HProgram, hirCtx: HirCtx) : HProgram * HirCtx =
   let hirCtx =

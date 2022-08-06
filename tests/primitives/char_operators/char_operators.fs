@@ -1,40 +1,26 @@
 module rec char_operators.Program
 
-// char type supports some of operators.
+let private testAddition () =
+  assert ('\r' + '\n' = char (13uy + 10uy))
 
-let arithmeticOperatorsTest () =
-  // (+) works (why?)
-  assert ('\r' + '\n' = char (13 + 10))
-
-  // (-), (*), (&&&) etc. are type error.
-  // assert ('8' - '0' = char 8)
-  ()
-
-let comparisonOperatorsTest () =
+let private testEquality () =
   assert ('A' = 'A')
-  assert ('A' <> 'B')
+  assert ('A' <> 'a')
 
-  assert ('A' < 'B')
-  assert ('A' <= 'A')
-  assert ('A' <= 'B')
-
-  assert ('B' > 'A')
-  assert ('A' >= 'A')
-  assert ('B' >= 'A')
-
-  assert (compare 'A' 'A' = 0)
-  assert (compare 'A' 'B' < 0)
-  assert (compare 'B' 'A' > 0)
-
-let conversionTest () =
+let private testConversion () =
   assert (char 'A' = 'A')
-  assert (char 65 = 'A')
-  assert (char 65u = 'A')
-  assert (char 65.5 = 'A')
   assert (char "A" = 'A')
 
+  // Char can convert from/to byte-sized integers.
+  assert (char 65uy = 'A')
+  assert (char 65y = 'A')
+
+  assert (char 0uy = '\x00')
+  assert (char 127uy = '\x7f')
+  assert (char 255uy = '\xff')
+
 let main _ =
-  arithmeticOperatorsTest ()
-  comparisonOperatorsTest ()
-  conversionTest ()
+  testAddition ()
+  testEquality ()
+  testConversion ()
   0

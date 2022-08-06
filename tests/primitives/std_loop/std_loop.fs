@@ -61,6 +61,19 @@ let private testForall (len: int) =
             i < 2)
           |> not)
 
+let private testShare () =
+  let xs =
+    gen 3 |> Loop.map (fun (x: int) -> x + 1)
+
+  // (xs |> Loop.share) can be used later.
+  assert ((xs |> Loop.share |> Loop.length) = 3)
+
+  assert (xs
+          |> Loop.share
+          |> Loop.toList
+          |> Loop.ofList
+          |> eq [ 1; 2; 3 ])
+
 let private testAppend () =
   assert (Loop.append (gen 2) (gen 3)
           |> eq [ 0; 1; 0; 1; 2 ])
@@ -76,5 +89,6 @@ let main _ =
   testReplicate 3
   testMap 4
   testForall 4
+  testShare ()
   testAppend ()
   0

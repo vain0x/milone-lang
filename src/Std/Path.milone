@@ -28,20 +28,20 @@ module Pathname =
   ///
   /// If the specified pathname is a root itself,
   /// this returns a root and ".";
-  /// e.g. `/` -> `/`, `.`
+  /// e.g. `/` → `/`, `.`
   ///
   /// If the specified pathname is an absolute path (and isn't a root),
   /// this returns its root part and its relative part; e.g.
   ///
-  /// - `/path/to` -> `/`, `path/to`
-  /// - `C:/path/to` -> `C:/`, `path/to`
+  /// - `/path/to` → `/`, `path/to`
+  /// - `C:/path/to` → `C:/`, `path/to`
   ///
   /// If the specified pathname is a relative path or single filename,
   /// this returns "." as root and the pathname; e.g.
   ///
-  /// - `my/relative` -> `.`, `my/relative`
-  /// - `dir/` -> `.`, `dir/`
-  /// - `file.txt` -> `.`, `file.txt`
+  /// - `my/relative` → `.`, `my/relative`
+  /// - `dir/` → `.`, `dir/`
+  /// - `file.txt` → `.`, `file.txt`
   let cutRoot (pathname: string) : string * string =
     if hasDriveLetter pathname then
       let root, rest = S.splitAt 3 pathname
@@ -74,20 +74,20 @@ module Pathname =
   /// this returns its root and its relative part
   /// (same as cutRoot); e.g.
   ///
-  /// - `/` -> `/`, `.`
-  /// - `/path/to` -> `/`, `path/to`
+  /// - `/` → `/`, `.`
+  /// - `/path/to` → `/`, `path/to`
   ///
   /// If the specified pathname is a relative path
   /// and contains a non-trailing separator "/",
   /// this returns the directory part and the rest;
-  /// e.g. `path/to/filename` -> `path`, `to/filename`
+  /// e.g. `path/to/filename` → `path`, `to/filename`
   ///
   /// Otherwise the specified pathname is single segment
   /// that is optionally followed by trailing separators.
   /// This returns `.` as head and the basename as tail; e.g.
   ///
-  /// - `dirname/` -> `.`, `dirname`
-  /// - `filename.txt` -> `.`, `filename.txt`
+  /// - `dirname/` → `.`, `dirname`
+  /// - `filename.txt` → `.`, `filename.txt`
   let cut (pathname: string) : string * string =
     let root, pathname = cutRoot pathname
 
@@ -122,12 +122,12 @@ module Pathname =
   ///   assert (join parent basename) = pathname
   /// ```
   ///
-  /// - `/` -> `/`, `.`
-  /// - `/path/to` -> `/path`, `to`
-  /// - `.` -> `.`, `.`
-  /// - `..` -> `.`, `..`
-  /// - `dirname/` -> `.`, `dirname`
-  /// - `filename.txt` -> `.`, `filename.txt`
+  /// - `/` → `/`, `.`
+  /// - `/path/to` → `/path`, `to`
+  /// - `.` → `.`, `.`
+  /// - `..` → `.`, `..`
+  /// - `dirname/` → `.`, `dirname`
+  /// - `filename.txt` → `.`, `filename.txt`
   let cutLast (pathname: string) : string * string =
     let len = pathname.Length
 
@@ -150,8 +150,8 @@ module Pathname =
 
   /// Removes `.` and `..` segments in the middle of pathname.
   ///
-  /// - `./foo` -> `foo`
-  /// - `../foo` -> `foo`
+  /// - `./foo` → `foo`
+  /// - `../foo` → `foo`
   let private contract (pathname: string) : string =
     let rec go acc (xs: string list) =
       match acc, xs with
@@ -172,7 +172,10 @@ module Pathname =
         |> List.rev
         |> S.concat "/"
 
-      if root <> "." then root + pathname else pathname
+      if root <> "." then
+        root + pathname
+      else
+        pathname
 
   /// Concatenates two pathnames in the order.
   ///

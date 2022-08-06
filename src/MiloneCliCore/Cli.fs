@@ -15,10 +15,10 @@ open MiloneTranslationTypes.TranslationApiTypes
 module C = Std.StdChar
 module S = Std.StdString
 module Lower = MiloneCliCore.Lower
-module PU = MiloneCliCore.PlatformUnix
+module PL = MiloneCliCore.PlatformLinux
 module PW = MiloneCliCore.PlatformWindows
 
-let private currentVersion () = "0.4.0"
+let private currentVersion () = "0.5.0"
 
 let private helpText () =
   let s =
@@ -54,7 +54,7 @@ type Verbosity =
   | Quiet
 
 [<RequireQualifiedAccess; NoEquality; NoComparison>]
-type UnixApi =
+type LinuxApi =
   { /// Turns this process into a shell that runs specified command.
     ExecuteInto: string -> Never }
 
@@ -69,7 +69,7 @@ type WindowsApi =
 
 [<RequireQualifiedAccess; NoEquality; NoComparison>]
 type Platform =
-  | Unix of UnixApi
+  | Linux of LinuxApi
   | Windows of WindowsApi
 
 /// Abstraction layer of CLI program.
@@ -95,8 +95,7 @@ type CliHost =
     ProfileLog: string -> Profiler -> unit
 
     /// Ensures directory exist.
-    ///
-    /// baseDir -> dir -> exist
+    // baseDir -> dir -> exist
     DirCreate: string -> string -> bool
 
     FileExists: string -> bool
@@ -145,7 +144,10 @@ let private pathJoin (l: string) (r: string) =
 
   let l = slash l
   let r = slash r
-  if isRooted r then r else l + "/" + r
+
+  if isRooted r then r
+  else if r = "." then l
+  else l + "/" + r
 
 let private hostToMiloneHome (sApi: SyntaxApi) (host: CliHost) =
   sApi.GetMiloneHomeFromEnv(fun () -> host.MiloneHome) (fun () -> Some host.Home)
@@ -182,10 +184,11 @@ let private writeLog (host: CliHost) verbosity msg : unit =
 
   | Quiet -> ()
 
-let private computeExePath targetDir platform isRelease name : Path =
+/// Computes the path where the output is generated.
+let private computeExePath targetDir platform isRelease binaryType name : Path =
   let triple =
     match platform with
-    | Platform.Unix _ -> "x86_64-unknown-linux-gnu"
+    | Platform.Linux _ -> "x86_64-unknown-linux-gnu"
     | Platform.Windows _ -> "x86_64-pc-windows-msvc"
 
   let mode = if isRelease then "release" else "debug"
@@ -193,9 +196,13 @@ let private computeExePath targetDir platform isRelease name : Path =
   let quad = triple + "-" + mode
 
   let ext =
-    match platform with
-    | Platform.Unix _ -> ""
-    | Platform.Windows _ -> ".exe"
+    match platform, binaryType with
+    | Platform.Linux _, BinaryType.Exe -> ""
+    | Platform.Linux _, BinaryType.SharedObj -> ".so"
+    | Platform.Linux _, BinaryType.StaticLib -> ".a"
+    | Platform.Windows _, BinaryType.Exe -> ".exe"
+    | Platform.Windows _, BinaryType.SharedObj -> ".dll"
+    | Platform.Windows _, BinaryType.StaticLib -> ".lib"
 
   Path(
     Path.toString targetDir
@@ -214,6 +221,7 @@ let private computeExePath targetDir platform isRelease name : Path =
 type private CompileCtx =
   { EntryProjectName: ProjectName
     SyntaxCtx: SyntaxCtx
+    EntrypointName: string
     WriteLog: string -> unit }
 
 let private compileCtxNew (sApi: SyntaxApi) (host: CliHost) verbosity projectDir : CompileCtx =
@@ -233,6 +241,14 @@ let private compileCtxNew (sApi: SyntaxApi) (host: CliHost) verbosity projectDir
 
   { EntryProjectName = projectName
     SyntaxCtx = syntaxCtx
+
+    EntrypointName =
+      match (syntaxCtx |> sApi.GetManifest).BinaryType with
+      | None
+      | Some (BinaryType.Exe, _) -> "main"
+
+      | _ -> projectName + "_initialize"
+
     WriteLog = writeLog host verbosity }
 
 // -----------------------------------------------
@@ -244,7 +260,7 @@ type private CFilename = string
 
 type private CCode = string
 
-type private CodeGenResult = (CFilename * CCode) list
+type private CodeGenResult = (CFilename * CCode) list * ExportName list
 
 [<NoEquality; NoComparison>]
 type private CompileResult =
@@ -279,15 +295,15 @@ let private compile (sApi: SyntaxApi) (tApi: TranslationApi) (ctx: CompileCtx) :
     writeLog "Lower"
     let modules, hirCtx = Lower.lower (modules, tirCtx)
 
-    let cFiles =
-      tApi.CodeGenHir writeLog (modules, hirCtx)
+    let cFiles, exportNames =
+      tApi.CodeGenHir ctx.EntrypointName writeLog (modules, hirCtx)
 
     let cFiles =
       cFiles
       |> List.map (fun (docId, cCode) -> computeCFilename projectName docId, cCode)
 
     writeLog "Finish"
-    CompileOk cFiles
+    CompileOk(cFiles, exportNames)
 
 // -----------------------------------------------
 // Others
@@ -332,7 +348,7 @@ let private cliCompile sApi tApi (host: CliHost) (options: CompileOptions) =
     host.WriteStdout output
     1
 
-  | CompileOk cFiles ->
+  | CompileOk (cFiles, _) ->
     dirCreateOrFail host (Path targetDir)
     writeCFiles host targetDir cFiles
 
@@ -349,14 +365,14 @@ type private BuildOptions =
     IsRelease: bool
     OutputOpt: string option }
 
-let private toBuildOnUnixParams
+let private toBuildOnLinuxParams
   sApi
   (host: CliHost)
-  (u: UnixApi)
+  (u: LinuxApi)
   (options: BuildOptions)
   (ctx: CompileCtx)
   (cFiles: (CFilename * CCode) list)
-  : PU.BuildOnUnixParams =
+  : PL.BuildOnLinuxParams =
   let miloneHome = Path(hostToMiloneHome sApi host)
 
   let compileOptions = options.CompileOptions
@@ -368,12 +384,18 @@ let private toBuildOnUnixParams
 
   let manifest = ctx.SyntaxCtx |> sApi.GetManifest
 
+  let binaryType =
+    match manifest.BinaryType with
+    | Some (it, _) -> it
+    | None -> BinaryType.Exe
+
   { TargetDir = Path targetDir
     IsRelease = isRelease
-    ExeFile = computeExePath (Path targetDir) host.Platform isRelease projectName
+    ExeFile = computeExePath (Path targetDir) host.Platform isRelease binaryType projectName
     OutputOpt = outputOpt |> Option.map Path
     CFiles = cFiles |> List.map (fun (name, _) -> Path name)
     MiloneHome = miloneHome
+    BinaryType = binaryType
     CSanitize = manifest.CSanitize
     CStd = manifest.CStd
     CcList =
@@ -383,6 +405,8 @@ let private toBuildOnUnixParams
       manifest.ObjList
       |> List.map (fun (Path name, _) -> Path(projectDir + "/" + name))
     Libs = manifest.Libs |> List.map fst
+    LinuxCFlags = manifest.LinuxCFlags |> Option.defaultValue ""
+    LinuxLinkFlags = manifest.LinuxLinkFlags |> Option.defaultValue ""
     DirCreate = dirCreateOrFail host
     FileWrite = fileWrite host
     ExecuteInto = u.ExecuteInto }
@@ -394,6 +418,7 @@ let private toBuildOnWindowsParams
   (options: BuildOptions)
   (ctx: CompileCtx)
   (cFiles: (CFilename * CCode) list)
+  (exportNames: ExportName list)
   : PW.BuildOnWindowsParams =
   let miloneHome = Path(hostToMiloneHome sApi host)
 
@@ -406,6 +431,16 @@ let private toBuildOnWindowsParams
 
   let manifest = ctx.SyntaxCtx |> sApi.GetManifest
 
+  let binaryType =
+    match manifest.BinaryType with
+    | Some (it, _) -> it
+    | None -> BinaryType.Exe
+
+  let subSystem =
+    match manifest.SubSystem with
+    | Some it -> it
+    | None -> SubSystem.Console
+
   { ProjectName = projectName
     CFiles =
       cFiles
@@ -413,13 +448,17 @@ let private toBuildOnWindowsParams
     MiloneHome = miloneHome
     TargetDir = Path targetDir
     IsRelease = isRelease
-    ExeFile = computeExePath (Path targetDir) host.Platform isRelease projectName
+    ExeFile = computeExePath (Path targetDir) host.Platform isRelease binaryType projectName
     OutputOpt = outputOpt |> Option.map Path
+
+    BinaryType = binaryType
+    SubSystem = subSystem
 
     CcList =
       manifest.CcList
       |> List.map (fun (Path name, _) -> Path(pathJoin projectDir name))
     Libs = manifest.Libs |> List.map fst
+    Exports = exportNames
 
     NewGuid = fun () -> PW.Guid(w.NewGuid())
     DirCreate = dirCreateOrFail host
@@ -442,16 +481,16 @@ let private cliBuild sApi tApi (host: CliHost) (options: BuildOptions) =
     host.WriteStdout output
     1
 
-  | CompileOk cFiles ->
+  | CompileOk (cFiles, exportNames) ->
     writeCFiles host targetDir cFiles
 
     match host.Platform with
-    | Platform.Unix u ->
-      PU.buildOnUnix (toBuildOnUnixParams sApi host u options ctx cFiles)
+    | Platform.Linux l ->
+      PL.buildOnLinux (toBuildOnLinuxParams sApi host l options ctx cFiles)
       |> never
 
     | Platform.Windows w ->
-      PW.buildOnWindows (toBuildOnWindowsParams sApi host w options ctx cFiles)
+      PW.buildOnWindows (toBuildOnWindowsParams sApi host w options ctx cFiles exportNames)
       0
 
 let private cliRun sApi tApi (host: CliHost) (options: BuildOptions) (restArgs: string list) =
@@ -468,19 +507,19 @@ let private cliRun sApi tApi (host: CliHost) (options: BuildOptions) (restArgs: 
     host.WriteStdout output
     1
 
-  | CompileOk cFiles ->
+  | CompileOk (cFiles, _) ->
     writeCFiles host targetDir cFiles
 
     match host.Platform with
-    | Platform.Unix u ->
+    | Platform.Linux l ->
       let p =
-        toBuildOnUnixParams sApi host u options ctx cFiles
+        toBuildOnLinuxParams sApi host l options ctx cFiles
 
-      PU.runOnUnix p restArgs |> never
+      PL.runOnLinux p restArgs |> never
 
     | Platform.Windows w ->
       let p =
-        toBuildOnWindowsParams sApi host w options ctx cFiles
+        toBuildOnWindowsParams sApi host w options ctx cFiles []
 
       PW.runOnWindows p restArgs
       0
@@ -523,19 +562,19 @@ let main _ =
     host.WriteStdout output
     1
 
-  | CompileOk cFiles ->
+  | CompileOk (cFiles, _) ->
     writeCFiles host targetDir cFiles
 
     match host.Platform with
-    | Platform.Unix u ->
+    | Platform.Linux l ->
       let p =
-        toBuildOnUnixParams sApi host u options ctx cFiles
+        toBuildOnLinuxParams sApi host l options ctx cFiles
 
-      PU.runOnUnix p [] |> never
+      PL.runOnLinux p [] |> never
 
     | Platform.Windows w ->
       let p =
-        toBuildOnWindowsParams sApi host w options ctx cFiles
+        toBuildOnWindowsParams sApi host w options ctx cFiles []
 
       PW.runOnWindows p []
       0

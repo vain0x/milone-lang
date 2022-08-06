@@ -39,6 +39,14 @@ static uint32_t const LIMIT = 1U << 31;
 size_t milone_heap_size(void);
 size_t milone_alloc_cost(void);
 
+typedef void (*DeferFunPtr)(void const *env);
+
+struct DeferChain {
+  DeferFunPtr fun;
+  void const *env;
+  struct DeferChain *parent;
+};
+
 // structure for memory management. poor implementation. thread unsafe.
 struct MemoryChunk {
     // start of allocated memory or null
@@ -59,6 +67,8 @@ struct MemoryChunk {
     // each region is allocated by calloc and should be freed after leaving
     // region
     struct MemoryChunk *parent;
+
+    struct DeferChain *defer_chain;
 };
 
 THREAD_LOCAL struct MemoryChunk s_heap;
@@ -104,6 +114,20 @@ static void do_region_leave(void) {
 
     assert(s_heap.parent != NULL);
     struct MemoryChunk *parent = s_heap.parent;
+
+    // free resources
+    {
+        struct DeferChain *chain = s_heap.defer_chain;
+        s_heap.defer_chain = NULL;
+
+        while (chain != NULL) {
+            struct DeferChain *parent = chain->parent;
+            chain->fun(chain->env);
+            free(chain);
+            s_heap_size -= sizeof(struct DeferChain);
+            chain = parent;
+        }
+    }
 
     // free current region
     {
@@ -201,6 +225,19 @@ static void *do_region_alloc(uint32_t count, uint32_t size) {
     return ptr;
 }
 
+static void do_region_defer(DeferFunPtr fun, void const *env) {
+    s_heap_alloc++;
+    s_heap_size += sizeof(struct DeferChain);
+    struct DeferChain *chain = calloc(1, sizeof(struct DeferChain));
+    if (chain == NULL) {
+        oom();
+    }
+    chain->fun = fun;
+    chain->env = env;
+    chain->parent = s_heap.defer_chain;
+    s_heap.defer_chain = chain;
+}
+
 #ifndef MILONE_NO_DEFAULT_ALLOCATOR
 
 size_t milone_heap_size(void) { return s_heap_size; }
@@ -212,6 +249,8 @@ void milone_region_leave(void) { do_region_leave(); }
 void *milone_region_alloc(uint32_t count, uint32_t size) {
     return do_region_alloc(count, size);
 }
+
+void milone_region_defer(DeferFunPtr fun, void const *env) { do_region_defer(fun, env); }
 
 #endif // MILONE_NO_DEFAULT_ALLOCATOR
 
@@ -645,6 +684,9 @@ void file_write_all_text(struct String file_name, struct String content) {
 
             if (size >= 0 && (size_t)size == (size_t)content.len) {
                 char *old_content = calloc((uint32_t)size + 1, sizeof(char));
+                if (old_content == NULL) {
+                    oom();
+                }
                 size_t read_len =
                     fread(old_content, sizeof(char), (size_t)size, fp);
                 bool same = read_len == (size_t)size &&
@@ -660,9 +702,9 @@ void file_write_all_text(struct String file_name, struct String content) {
         }
     }
 
-    fp = fopen(file_name.ptr, "w+");
+    fp = fopen(file_name.ptr, "wb+");
     if (!fp) {
-        perror("fopen(w+)");
+        perror("fopen(wb+)");
         exit(1);
     }
 
@@ -725,7 +767,7 @@ struct String milone_get_env(struct String name) {
 
 static long milone_get_time_millis(void) {
     struct timespec t;
-    timespec_get(&t, TIME_UTC);
+    (void)timespec_get(&t, TIME_UTC);
     return (long)(t.tv_sec * 1000L + t.tv_nsec / (1000L * 1000L));
 }
 

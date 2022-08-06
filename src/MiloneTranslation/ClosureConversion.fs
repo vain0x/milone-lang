@@ -430,6 +430,8 @@ let private ccStmt ctx stmt : HStmt * CcCtx =
 
   | HLetFunStmt _ -> ccLetFunStmt ctx stmt
 
+  | HNativeDeclStmt _ -> unreachable () // Generated in Hoist.
+
 let private ccModule1 (ctx: CcCtx) (m: HModule) =
   let stmts, ctx = m.Stmts |> List.mapFold ccStmt ctx
   let m = { m with Stmts = stmts }

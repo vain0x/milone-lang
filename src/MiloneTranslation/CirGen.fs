@@ -199,6 +199,7 @@ type private Rx =
     Variants: TreeMap<VariantSerial, VariantDef>
     Tys: TreeMap<TySerial, TyDef>
     MainFunOpt: FunSerial option
+    EntrypointName: string
 
     ValueNameFreq: TreeMap<Ident, int>
     VarUniqueNames: TreeMap<VarSerial, Ident>
@@ -227,7 +228,7 @@ type private CirCtx =
     /// Nominalized fun pointer types.
     FunPtrTys: TreeMap<CTy list * CTy, string> }
 
-let private ofMirResult (mirCtx: MirResult) : CirCtx =
+let private ofMirResult entrypointName (mirCtx: MirResult) : CirCtx =
   let freq = freqEmpty compare
 
   let varUniqueNames, freq =
@@ -253,7 +254,8 @@ let private ofMirResult (mirCtx: MirResult) : CirCtx =
     let toKey (serial, tyDef) =
       match tyDef with
       | UnionTyDef _ -> tyUnion serial []
-      | RecordTyDef _ -> tyRecord serial
+      | RecordTyDef _ -> tyRecord serial []
+      | OpaqueTyDef _ -> Ty(OpaqueTk serial, [])
 
     mirCtx.Tys
     |> renameIdents tyDefToName toKey tyCompare
@@ -264,6 +266,7 @@ let private ofMirResult (mirCtx: MirResult) : CirCtx =
       Variants = mirCtx.Variants
       Tys = mirCtx.Tys
       MainFunOpt = mirCtx.MainFunOpt
+      EntrypointName = entrypointName
 
       ValueNameFreq = freq
       VarUniqueNames = varUniqueNames
@@ -490,7 +493,7 @@ let private genUnionTyDef (ctx: CirCtx) tySerial variants =
     selfTy, ctx
 
 let private genIncompleteRecordTyDecl (ctx: CirCtx) tySerial =
-  let recordTyRef = tyRecord tySerial
+  let recordTyRef = tyRecord tySerial []
 
   match ctx.TyEnv |> TMap.tryFind recordTyRef with
   | Some (_, ty) -> ty, ctx
@@ -507,8 +510,31 @@ let private genIncompleteRecordTyDecl (ctx: CirCtx) tySerial =
 
     selfTy, ctx
 
+let private genOpaqueTyDecl (ctx: CirCtx) tySerial =
+  let opaqueTyRef = Ty(OpaqueTk tySerial, [])
+
+  match ctx.TyEnv |> TMap.tryFind opaqueTyRef with
+  | Some (_, ty) -> ty, ctx
+
+  | None ->
+    let name =
+      match ctx.Rx.Tys |> mapFind tySerial with
+      | OpaqueTyDef (name, _) -> name
+      | _ -> unreachable ()
+
+    let selfTy = CStructTy name
+
+    let ctx =
+      { ctx with
+          Decls = CStructForwardDecl name :: ctx.Decls
+          TyEnv =
+            ctx.TyEnv
+            |> TMap.add opaqueTyRef (CTyDeclared, selfTy) }
+
+    selfTy, ctx
+
 let private genRecordTyDef ctx tySerial fields =
-  let recordTyRef = tyRecord tySerial
+  let recordTyRef = tyRecord tySerial []
   let structName, ctx = getUniqueTyName ctx recordTyRef
   let selfTy, ctx = genIncompleteRecordTyDecl ctx tySerial
 
@@ -594,11 +620,12 @@ let private cgTyIncomplete (ctx: CirCtx) (ty: Ty) : CTy * CirCtx =
   | VoidPtrTk IsConst, _ -> cVoidConstPtrTy, ctx
   | NativePtrTk mode, [ itemTy ] -> cgNativePtrTy ctx mode itemTy
   | NativePtrTk _, _ -> unreachable ()
-  | NativeFunTk, _ -> cgNativeFunTy ctx tyArgs
+  | FunPtrTk, _ -> cgNativeFunTy ctx tyArgs
   | NativeTypeTk code, _ -> CEmbedTy code, ctx
 
   | UnionTk tySerial, _ -> genIncompleteUnionTyDecl ctx tySerial
   | RecordTk tySerial, _ -> genIncompleteRecordTyDecl ctx tySerial
+  | OpaqueTk tySerial, _ -> genOpaqueTyDecl ctx tySerial
 
   | MetaTk _, _ -> unreachable () // Resolved in Typing.
 
@@ -634,7 +661,7 @@ let private cgTyComplete (ctx: CirCtx) (ty: Ty) : CTy * CirCtx =
   | NativePtrTk mode, [ itemTy ] -> cgNativePtrTy ctx mode itemTy
   | NativePtrTk _, _ -> unreachable ()
 
-  | NativeFunTk, _ -> cgNativeFunTy ctx tyArgs
+  | FunPtrTk, _ -> cgNativeFunTy ctx tyArgs
   | NativeTypeTk code, _ -> CEmbedTy code, ctx
 
   | UnionTk serial, _ ->
@@ -645,9 +672,11 @@ let private cgTyComplete (ctx: CirCtx) (ty: Ty) : CTy * CirCtx =
 
   | RecordTk serial, _ ->
     match ctx.Rx.Tys |> TMap.tryFind serial with
-    | Some (RecordTyDef (_, fields, _, _)) -> genRecordTyDef ctx serial fields
+    | Some (RecordTyDef (_, _, fields, _, _)) -> genRecordTyDef ctx serial fields
 
     | _ -> unreachable () // Record type undefined?
+
+  | OpaqueTk serial, _ -> genOpaqueTyDecl ctx serial
 
   | MetaTk _, _ -> unreachable () // Resolved in Typing.
 
@@ -696,11 +725,11 @@ let private cgExternFunDecl (ctx: CirCtx) funSerial =
 
 let private cBinaryOf op =
   match op with
-  | MMulBinary -> CMulBinary
-  | MDivBinary -> CDivBinary
+  | MMultiplyBinary -> CMultiplyBinary
+  | MDivideBinary -> CDivideBinary
   | MModuloBinary -> CModuloBinary
   | MAddBinary -> CAddBinary
-  | MSubBinary -> CSubBinary
+  | MSubtractBinary -> CSubtractBinary
 
   | MBitAndBinary -> CBitAndBinary
   | MBitOrBinary -> CBitOrBinary
@@ -780,6 +809,7 @@ let private genUnaryExpr ctx op arg =
 
   match op with
   | MMinusUnary -> CUnaryExpr(CMinusUnary, arg), ctx
+  | MBitNotUnary -> CUnaryExpr(CBitNotUnary, arg), ctx
   | MNotUnary -> CUnaryExpr(CNotUnary, arg), ctx
   | MPtrOfUnary -> CUnaryExpr(CAddressOfUnary, arg), ctx
   | MIntOfScalarUnary flavor -> CCastExpr(arg, CIntTy flavor), ctx
@@ -1276,7 +1306,7 @@ let private cgStmts (ctx: CirCtx) (stmts: MStmt list) : CirCtx =
 
   go ctx stmts
 
-let private genMainFun stmts : CDecl =
+let private genMainFun entrypointName stmts : CDecl =
   let intTy = CEmbedTy "int"
 
   let args =
@@ -1287,7 +1317,7 @@ let private genMainFun stmts : CDecl =
     CExprStmt(CCallExpr(CVarExpr "milone_start", [ CVarExpr "argc"; CVarExpr "argv" ]))
     :: stmts
 
-  CFunDecl("main", args, intTy, stmts)
+  CFunDecl(entrypointName, args, intTy, stmts)
 
 let private cgDecls (ctx: CirCtx) decls =
   match decls with
@@ -1298,7 +1328,7 @@ let private cgDecls (ctx: CirCtx) decls =
 
     let main, funName, args =
       if isMainFun ctx callee then
-        true, "main", []
+        true, ctx.Rx.EntrypointName, []
       else
         false, getUniqueFunName ctx callee, args
 
@@ -1328,7 +1358,7 @@ let private cgDecls (ctx: CirCtx) decls =
       let body = List.append stmts body
 
       if main then
-        genMainFun body
+        genMainFun funName body
       else
         match def.Linkage with
         | InternalLinkage -> CStaticFunDecl(funName, args, resultTy, body)
@@ -1337,35 +1367,36 @@ let private cgDecls (ctx: CirCtx) decls =
     let ctx = addDecl ctx funDecl
     cgDecls ctx decls
 
-  | MNativeDecl (code, _) :: decls ->
-    let ctx = addDecl ctx (CNativeDecl code)
+  | MNativeDecl (code, args, _) :: decls ->
+    let args, ctx = cgExprList ctx args
+    let ctx = addDecl ctx (CNativeDecl(code, args))
     cgDecls ctx decls
 
 // Sort declarations by kind.
 // Without this, static variable definition can appear before its type definition.
 let private sortDecls (decls: CDecl list) : CDecl list =
-  let types, vars, bodies =
+  let tys, vars, funs =
     decls
     |> List.fold
-         (fun (types, vars, bodies) decl ->
+         (fun (tys, vars, funs) decl ->
            match decl with
            | CErrorDecl _
            | CFunPtrTyDef _
            | CStructForwardDecl _
            | CStructDecl _
            | CEnumDecl _
-           | CNativeDecl _ -> decl :: types, vars, bodies
+           | CNativeDecl _ -> decl :: tys, vars, funs
 
            | CStaticVarDecl _
            | CInternalStaticVarDecl _
-           | CExternVarDecl _ -> types, decl :: vars, bodies
+           | CExternVarDecl _ -> tys, decl :: vars, funs
 
            | CFunForwardDecl _
            | CFunDecl _
-           | CStaticFunDecl _ -> types, vars, decl :: bodies)
+           | CStaticFunDecl _ -> tys, vars, decl :: funs)
          ([], [], [])
 
-  List.collect List.rev [ types; vars; bodies ]
+  List.collect List.rev [ tys; vars; funs ]
 
 let private cgModule (ctx: CirCtx) (m: MModule) : DocId * CDecl list =
   let varUniqueNames, _ =
@@ -1382,6 +1413,18 @@ let private cgModule (ctx: CirCtx) (m: MModule) : DocId * CDecl list =
       Decls = []
       FunDecls = TSet.empty funSerialCompare
       FunPtrTys = TMap.empty (pairCompare (listCompare cTyCompare) cTyCompare) }
+
+  // Generate leading native decls to not be preceded by generated decls.
+  let moduleDecls, ctx =
+    let leadingNativeDeclAcc, decls =
+      let rec go acc decls =
+        match decls with
+        | (MNativeDecl (cCode, [], _)) :: decls -> go (CNativeDecl(cCode, []) :: acc) decls
+        | _ -> acc, decls
+
+      go [] m.Decls
+
+    decls, { ctx with Decls = leadingNativeDeclAcc }
 
   // Generate extern var decls.
   let ctx =
@@ -1404,7 +1447,7 @@ let private cgModule (ctx: CirCtx) (m: MModule) : DocId * CDecl list =
          ctx
 
   // Generate decls.
-  let ctx = cgDecls ctx m.Decls
+  let ctx = cgDecls ctx moduleDecls
   let decls = List.rev ctx.Decls |> sortDecls
 
   m.DocId, decls
@@ -1413,8 +1456,8 @@ let private cgModule (ctx: CirCtx) (m: MModule) : DocId * CDecl list =
 // Interface
 // -----------------------------------------------
 
-let genCir (modules: MModule list, mirResult: MirResult) : (DocId * CDecl list) list =
-  let ctx = ofMirResult mirResult
+let genCir (entrypointName: string) (modules: MModule list, mirResult: MirResult) : (DocId * CDecl list) list =
+  let ctx = ofMirResult entrypointName mirResult
 
   modules
   |> __parallelMap (cgModule ctx)

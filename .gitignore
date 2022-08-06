@@ -11,8 +11,10 @@ src/libmilonert/hashmap.h
 
 
 # Generated files.
+*.a
 *.o
 *.out
+*.so
 
 target/
 
@@ -21,6 +23,7 @@ tests/**/MiloneDerive_*.c
 tests/**/Std_*.c
 
 tests/examples/*/*.c
+!tests/examples/factorial/factorial.c
 tests/primitives/std_*/*.c
 
 

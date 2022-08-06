@@ -42,13 +42,14 @@ let private lowerTk (tk: Tir.Tk) : Hir.Tk =
 
   | Tir.VoidPtrTk isMut -> Hir.VoidPtrTk isMut
   | Tir.NativePtrTk mode -> Hir.NativePtrTk mode
-  | Tir.NativeFunTk -> Hir.NativeFunTk
+  | Tir.FunPtrTk -> Hir.FunPtrTk
   | Tir.NativeTypeTk code -> Hir.NativeTypeTk code
 
   | Tir.MetaTk (serial, loc) -> Hir.MetaTk(serial, loc)
   | Tir.UnivTk (serial, _, loc) -> Hir.MetaTk(serial, loc)
   | Tir.UnionTk (serial, _) -> Hir.UnionTk serial
   | Tir.RecordTk (serial, _) -> Hir.RecordTk serial
+  | Tir.OpaqueTk serial -> Hir.OpaqueTk serial
 
   | Tir.ErrorTk _
   | Tir.SynonymTk _
@@ -96,8 +97,9 @@ let private lowerTyDef (def: Tir.TyDef) : Hir.TyDef =
   match def with
   | Tir.UnionTyDef (ident, tyArgs, variants, loc) ->
     Hir.UnionTyDef(ident, tyArgs, List.map lowerVariantSerial variants, loc)
-  | Tir.RecordTyDef (ident, unimplTyArgs, fields, repr, loc) ->
-    Hir.RecordTyDef(ident, List.map (fun (ident, ty, loc) -> ident, lowerTy ty, loc) fields, repr, loc)
+  | Tir.RecordTyDef (ident, tyArgs, fields, repr, loc) ->
+    Hir.RecordTyDef(ident, tyArgs, List.map (fun (ident, ty, loc) -> ident, lowerTy ty, loc) fields, repr, loc)
+  | Tir.OpaqueTyDef (ident, loc) -> Hir.OpaqueTyDef(ident, loc)
 
   | Tir.UnivTyDef _
   | Tir.SynonymTyDef _ -> unreachable () // Resolved in Typing.
@@ -109,10 +111,11 @@ let private lowerVarMap vars =
 let private lowerPrim (prim: Tir.TPrim) : Hir.HPrim =
   match prim with
   | Tir.TPrim.Not -> Hir.HPrim.Not
+  | Tir.TPrim.BitNot -> Hir.HPrim.BitNot
   | Tir.TPrim.Add -> Hir.HPrim.Add
-  | Tir.TPrim.Sub -> Hir.HPrim.Sub
-  | Tir.TPrim.Mul -> Hir.HPrim.Mul
-  | Tir.TPrim.Div -> Hir.HPrim.Div
+  | Tir.TPrim.Subtract -> Hir.HPrim.Subtract
+  | Tir.TPrim.Multiply -> Hir.HPrim.Multiply
+  | Tir.TPrim.Divide -> Hir.HPrim.Divide
   | Tir.TPrim.Modulo -> Hir.HPrim.Modulo
   | Tir.TPrim.BitAnd -> Hir.HPrim.BitAnd
   | Tir.TPrim.BitOr -> Hir.HPrim.BitOr
@@ -124,8 +127,8 @@ let private lowerPrim (prim: Tir.TPrim) : Hir.HPrim =
   | Tir.TPrim.Compare -> Hir.HPrim.Compare
   | Tir.TPrim.ToInt flavor -> Hir.HPrim.ToInt flavor
   | Tir.TPrim.ToFloat flavor -> Hir.HPrim.ToFloat flavor
-  | Tir.TPrim.Char -> Hir.HPrim.Char
-  | Tir.TPrim.String -> Hir.HPrim.String
+  | Tir.TPrim.ToChar -> Hir.HPrim.ToChar
+  | Tir.TPrim.ToString -> Hir.HPrim.ToString
   | Tir.TPrim.Box -> Hir.HPrim.Box
   | Tir.TPrim.Unbox -> Hir.HPrim.Unbox
   | Tir.TPrim.StringLength -> Hir.HPrim.StringLength
@@ -134,7 +137,6 @@ let private lowerPrim (prim: Tir.TPrim) : Hir.HPrim =
   | Tir.TPrim.Exit -> Hir.HPrim.Exit
   | Tir.TPrim.Assert -> Hir.HPrim.Assert
   | Tir.TPrim.Printfn -> Hir.HPrim.Printfn
-  | Tir.TPrim.InRegion -> Hir.HPrim.InRegion
   | Tir.TPrim.PtrCast
   | Tir.TPrim.PtrInvalid
   | Tir.TPrim.PtrAsIn
@@ -149,6 +151,7 @@ let private lowerPrim (prim: Tir.TPrim) : Hir.HPrim =
   | Tir.TPrim.PtrSelect
   | Tir.TPrim.PtrRead
   | Tir.TPrim.PtrWrite
+  | Tir.TPrim.FunPtrInvoke
   | Tir.TPrim.NativeFun
   | Tir.TPrim.NativeExpr
   | Tir.TPrim.NativeStmt
@@ -161,17 +164,15 @@ let private lowerPatKind (kind: Tir.TPatKind) : Hir.HPatKind =
   | Tir.TVariantAppPN serial -> Hir.HVariantAppPN(lowerVariantSerial serial)
   | Tir.TTuplePN -> Hir.HTuplePN
 
-  | Tir.TAppPN
   | Tir.TNavPN _ -> unreachable () // Resolved in NameRes.
-
   | Tir.TAscribePN -> unreachable () // Resolved in Typing.
-
   | Tir.TAbortPN -> unreachable () // Compile error occurred.
 
 let private lowerExprKind (kind: Tir.TExprKind) : Hir.HExprKind =
   match kind with
   | Tir.TMinusEN -> Hir.HMinusEN
   | Tir.TPtrOfEN -> Hir.HPtrOfEN
+  | Tir.TFunPtrOfEN -> Hir.HFunPtrOfEN
   | Tir.TAppEN -> Hir.HAppEN
   | Tir.TIndexEN -> Hir.HIndexEN
   | Tir.TSliceEN -> Hir.HSliceEN
@@ -181,8 +182,8 @@ let private lowerExprKind (kind: Tir.TExprKind) : Hir.HExprKind =
   | Tir.TPtrOffsetEN -> Hir.HPtrOffsetEN
   | Tir.TPtrReadEN -> Hir.HPtrReadEN
   | Tir.TPtrWriteEN -> Hir.HPtrWriteEN
+  | Tir.TFunPtrInvokeEN -> Hir.HFunPtrInvokeEN
 
-  | Tir.TNativeFunEN funSerial -> Hir.HNativeFunEN(lowerFunSerial funSerial)
   | Tir.TNativeExprEN code -> Hir.HNativeExprEN code
   | Tir.TNativeStmtEN code -> Hir.HNativeStmtEN code
   | Tir.TNativeDeclEN code -> Hir.HNativeDeclEN code

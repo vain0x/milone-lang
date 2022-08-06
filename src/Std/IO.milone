@@ -16,16 +16,16 @@ type IO = private IO of Own<unit>
 
 module IO =
   /// Executes a program that uses IO operations inside of it.
-  ///
-  /// Usage:
-  ///
-  /// ```fs
-  ///   open Std.StdError
-  ///
-  ///   let main _ = never (IO.exec (fun io -> action io))
-  /// ```
+  //
+  // Usage:
+  //
+  // ```fs
+  //   open Std.StdError
+  //
+  //   let main _ = never (IO.exec (fun io -> action io))
+  // ```
   let exec (action: IO -> IO) : Never =
     let (IO io) = action (IO(Own.acquire ()))
     Own.release io
-    __nativeStmt ("exit(0);")
+    __nativeStmt "exit(0);"
     unreachable ()

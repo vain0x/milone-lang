@@ -5,8 +5,7 @@ let __dump (_: 'T) : string = "<dump>"
 let __writeError (s: string) : unit =
   __nativeStmt ("fwrite({0}.ptr, sizeof(char), (size_t){0}.len, stderr);", s)
 
-let __writeErrorLine (s: string) : unit =
-  __writeError (s + "\n")
+let __writeErrorLine (s: string) : unit = __writeError (s + "\n")
 
 /// Only for debugging. Prints to stderr.
 let __trace (s: string) : unit = __writeErrorLine s

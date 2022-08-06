@@ -5,6 +5,7 @@
 module rec MiloneSyntax.NameRes
 
 open MiloneShared.SharedTypes
+open MiloneShared.TypeFloat
 open MiloneShared.TypeIntegers
 open MiloneShared.Util
 open Std.StdError
@@ -21,12 +22,12 @@ let private identOf (name: NName) = fst name
 
 /// Identity of token based on its text position. (Byte index is better though.)
 ///
-/// While both row number  and column number are 32-bit,
+/// While both row number and column number are 32-bit,
 /// PosId is compressed to 32-bit.
 ///
 /// Heuristically most of source files follow either:
-///    1. y <= 2^23 and x <= 2^9 (manually written)
-///    2. x <= 2^23 and y <= 2^9 (machinery generated)
+///    1. y ≤ 2^23 and x ≤ 2^9 (manually written)
+///    2. x ≤ 2^23 and y ≤ 2^9 (machinery generated)
 /// (noting that 2^9 ~ 500, 2^23 ~ 8M.)
 ///
 /// By rotating x by 23 bits up, y and x likely become orthogonal.
@@ -63,57 +64,15 @@ let private txApp f x loc = TNodeExpr(TAppEN, [ f; x ], noTy, loc)
 let private txApp2 f x1 x2 loc = txApp (txApp f x1 loc) x2 loc
 
 // -----------------------------------------------
-// Type primitives
+// Binary
 // -----------------------------------------------
-
-let private tyPrimOfName ident tys =
-  match ident, tys with
-  | "unit", [] -> Some tyUnit
-  | "bool", [] -> Some tyBool
-
-  | "int", []
-  | "int32", [] -> Some tyInt
-  | "uint", []
-  | "uint32", [] -> Ty(IntTk U32, []) |> Some
-  | "sbyte", []
-  | "int8", [] -> Ty(IntTk I8, []) |> Some
-  | "byte", []
-  | "uint8", [] -> Ty(IntTk U8, []) |> Some
-
-  | "int16", [] -> Ty(IntTk I16, []) |> Some
-  | "int64", [] -> Ty(IntTk I64, []) |> Some
-  | "nativeint", [] -> Ty(IntTk IPtr, []) |> Some
-  | "uint16", [] -> Ty(IntTk U16, []) |> Some
-  | "uint64", [] -> Ty(IntTk U64, []) |> Some
-  | "unativeint", [] -> Ty(IntTk UPtr, []) |> Some
-
-  | "float", [] -> Some tyFloat
-  | "char", [] -> Some tyChar
-  | "string", [] -> Some tyString
-  | "obj", [] -> Some tyObj
-
-  | "list", [ itemTy ] -> Some(tyList itemTy)
-
-  | "voidptr", [] -> Ty(VoidPtrTk IsMut, []) |> Some
-  | "nativeptr", [ itemTy ] -> tyNativePtr itemTy |> Some
-  | "__voidinptr", [] -> Ty(VoidPtrTk IsConst, []) |> Some
-  | "__inptr", [ itemTy ] -> tyInPtr itemTy |> Some
-  | "__outptr", [ itemTy ] -> tyOutPtr itemTy |> Some
-
-  | "__nativeFun", [ Ty (TupleTk, itemTys); resultTy ] ->
-    Ty(NativeFunTk, List.append itemTys [ resultTy ])
-    |> Some
-
-  | "__nativeFun", [ itemTy; resultTy ] -> Ty(NativeFunTk, [ itemTy; resultTy ]) |> Some
-
-  | _ -> None
 
 let private binaryToPrim op : TPrim =
   match op with
   | AddBinary -> TPrim.Add
-  | SubBinary -> TPrim.Sub
-  | MulBinary -> TPrim.Mul
-  | DivBinary -> TPrim.Div
+  | SubtractBinary -> TPrim.Subtract
+  | MultiplyBinary -> TPrim.Multiply
+  | DivideBinary -> TPrim.Divide
   | ModuloBinary -> TPrim.Modulo
   | BitAndBinary -> TPrim.BitAnd
   | BitOrBinary -> TPrim.BitOr
@@ -151,7 +110,9 @@ type private TySymbol =
   | SynonymTySymbol of synonymTySerial: TySerial
   | UnionTySymbol of unionTySerial: TySerial
   | RecordTySymbol of recordTySerial: TySerial
-  | PrimTySymbol of Tk
+  | OpaqueTySymbol of opaqueTySerial: TySerial
+  | PrimTkSymbol of Tk
+  | PrimTySymbol of Ty
 
 // -----------------------------------------------
 // NsOwner
@@ -178,6 +139,8 @@ let private nsOwnerOfTySymbol (tySymbol: TySymbol) : NsOwner option =
   | UnivTySymbol _
   | SynonymTySymbol _
   | RecordTySymbol _
+  | OpaqueTySymbol _
+  | PrimTkSymbol _
   | PrimTySymbol _ -> None
 
 let private nsOwnerDump (nsOwner: NsOwner) = nsOwner |> string
@@ -363,7 +326,11 @@ type private ScopeCtx =
     NewTys: (TySerial * TyDef) list
 
     RootModules: (Ident * ModuleTySerial) list
+    /// Syntactically ancestral module names.
     CurrentPath: string list
+    /// Whether it's inside a statement. (false if it's inside module.)
+    InsideModule: bool
+    /// Syntactically ancestral function names.
     AncestralFuns: Ident list
 
     ValueNs: Ns<ValueSymbol>
@@ -375,8 +342,8 @@ type private ScopeCtx =
     Local: Scope
 
     /// Variables defined in current pattern.
-    ///
-    /// ident -> (varSerial, definedLoc, usedLoc list)
+    //
+    // ident -> (varSerial, definedLoc, usedLoc list)
     PatScope: TreeMap<Ident, VarSerial * Loc * Loc list>
 
     NewLogs: (NameResLog * Loc) list }
@@ -397,6 +364,7 @@ let private emptyScopeCtx () : ScopeCtx =
     NewTys = []
     RootModules = []
     CurrentPath = []
+    InsideModule = true
     AncestralFuns = []
     ValueNs = TMap.empty nsOwnerCompare
     TyNs = TMap.empty nsOwnerCompare
@@ -493,7 +461,7 @@ let private addTyToNs (ctx: ScopeCtx) (nsOwner: NsOwner) alias tySymbol : ScopeC
 
 /// Makes a child namespace accessible from a namespace.
 ///
-/// `<parent>.<alias>` can be resolved to `<child>`.
+/// `parent.alias` can be resolved to `child`.
 let private addNsToNs (ctx: ScopeCtx) (parentNsOwner: NsOwner) alias (childNsOwner: NsOwner) : ScopeCtx =
   // __trace (
   //   "addNsToNs "
@@ -590,6 +558,20 @@ let private openModule (ctx: ScopeCtx) moduleSerial =
 
 let private openModules ctx moduleSerials =
   moduleSerials |> List.fold openModule ctx
+
+let private enterStmt (ctx: ScopeCtx) =
+  let insideModule = ctx.InsideModule
+
+  if insideModule then
+    true, { ctx with InsideModule = false }
+  else
+    false, ctx
+
+let private leaveStmt insideModule (ctx: ScopeCtx) =
+  if ctx.InsideModule <> insideModule then
+    { ctx with InsideModule = insideModule }
+  else
+    ctx
 
 /// Called on enter the init of let-fun expressions.
 let private enterLetInit (ctx: ScopeCtx) funName : ScopeCtx =
@@ -780,6 +762,7 @@ let private resolveTy ctx ty selfTyArgs : Ty * ScopeCtx =
           | Some (SynonymTyDef (_, tyArgs, _, _)) -> List.length tyArgs
           | Some (UnionTyDef (_, tyArgs, _, _)) -> List.length tyArgs
           | Some (RecordTyDef (_, tyArgs, _, _, _)) -> List.length tyArgs
+          | Some (OpaqueTyDef _) -> 0
           | _ -> 0 // maybe unreachable?
 
       match symbolOpt with
@@ -803,32 +786,71 @@ let private resolveTy ctx ty selfTyArgs : Ty * ScopeCtx =
 
       | Some (RecordTySymbol tySerial) ->
         // #ty_arity_check
-        let defArity = 0 // generic record type is unimplemented
+        let defArity = getArity tySerial
 
         if arity <> defArity then
           errorTy ctx (TyArityError(ident, arity, defArity)) loc
         else
-          tyRecord tySerial loc, ctx
+          tyRecord tySerial tyArgs loc, ctx
 
-      | Some (PrimTySymbol tk) ->
-        match tk with
-        | OwnTk ->
-          // #ty_arity_check
-          let defArity = 1
+      | Some (OpaqueTySymbol tySerial) ->
+        // #ty_arity_check
+        let defArity = 0
 
+        if arity <> defArity then
+          errorTy ctx (TyArityError(ident, arity, defArity)) loc
+        else
+          Ty(OpaqueTk tySerial, []), ctx
+
+      | Some (PrimTkSymbol tk) ->
+        let onRegular defArity =
           if arity <> defArity then
             errorTy ctx (TyArityError(ident, arity, defArity)) loc
           else
             Ty(tk, tyArgs), ctx
 
-        | _ -> unreachable ()
+        match tk with
+        | FunPtrTk ->
+          match tyArgs with
+          | [ Ty (TupleTk, itemTys); resultTy ] -> Ty(FunPtrTk, List.append itemTys [ resultTy ]), ctx
+          | [ itemTy; resultTy ] -> Ty(FunPtrTk, [ itemTy; resultTy ]), ctx
+          | _ -> onRegular 2
+
+        | ListTk
+        | OwnTk
+        | NativePtrTk _
+        | NativeTypeTk _ -> onRegular 1
+
+        | ErrorTk _
+        | IntTk _
+        | FloatTk _
+        | BoolTk
+        | CharTk
+        | StringTk
+        | ObjTk
+        | FunTk
+        | TupleTk
+        | VoidPtrTk _
+        | MetaTk _
+        | UnivTk _
+        | SynonymTk _
+        | UnionTk _
+        | RecordTk _
+        | OpaqueTk _
+        | InferTk _ -> unreachable ()
+
+      | Some (PrimTySymbol ty) ->
+        // #ty_arity_check
+        let defArity = 0
+
+        if arity <> defArity then
+          errorTy ctx (TyArityError(ident, arity, defArity)) loc
+        else
+          ty, ctx
 
       | Some (UnivTySymbol _) -> unreachable () // UnivTySymbol is only resolved from type variable.
 
-      | None ->
-        match tyPrimOfName ident tyArgs with
-        | Some ty -> ty, ctx
-        | None -> errorTy ctx (UndefinedTyError ident) loc
+      | None -> errorTy ctx (UndefinedTyError ident) loc
 
     | NTy.Infer loc -> Ty(InferTk loc, []), ctx
 
@@ -942,7 +964,7 @@ let private cdStmt currentModule ctx stmt : ScopeCtx =
 
   | NStmt.LetVal (pat, _, _) -> cdPat currentModule ctx pat
 
-  | NStmt.LetFun (_, vis, name, _, _, _) ->
+  | NStmt.LetFun (_, vis, name, _, _, _, _) ->
     let funSerial, ctx = freshFunSerial ctx
     let funSymbol = FunSymbol funSerial
 
@@ -1038,21 +1060,25 @@ let private cdUnionTyDecl currentModule (ctx: ScopeCtx) decl : ScopeCtx =
   cdAfterTyDecl ctx currentModule vis name tySerial tySymbol arity
 
 let private cdRecordTyDecl currentModule ctx decl : ScopeCtx =
-  let vis, name, tyArgs, loc =
+  let vis, name, tyArgs =
     match decl with
-    | NDecl.Record (vis, name, tyArgs, _, _, loc) -> vis, name, tyArgs, loc
+    | NDecl.Record (vis, name, tyArgs, _, _, _) -> vis, name, tyArgs
     | _ -> unreachable ()
-
-  let ctx =
-    if tyArgs |> List.isEmpty |> not then
-      addLog ctx UnimplGenericTyError loc
-    else
-      ctx
 
   let tySerial, ctx = freshSerial ctx
   let tySymbol = RecordTySymbol tySerial
   let arity = List.length tyArgs
   cdAfterTyDecl ctx currentModule vis name tySerial tySymbol arity
+
+let private cdOpaqueTyDecl currentModule ctx decl : ScopeCtx =
+  let vis, name =
+    match decl with
+    | NDecl.Opaque (vis, name, _) -> vis, name
+    | _ -> unreachable ()
+
+  let tySerial, ctx = freshSerial ctx
+  let tySymbol = OpaqueTySymbol tySerial
+  cdAfterTyDecl ctx currentModule vis name tySerial tySymbol 0
 
 let private cdOpenDecl ctx path loc : ScopeCtx =
   let path = path |> List.map identOf
@@ -1122,6 +1148,7 @@ let private cdDecl (currentModule: NsOwner) (ctx: ScopeCtx) decl : ScopeCtx =
   | NDecl.TySynonym _ -> cdTySynonymDecl currentModule ctx decl
   | NDecl.Union _ -> cdUnionTyDecl currentModule ctx decl
   | NDecl.Record _ -> cdRecordTyDecl currentModule ctx decl
+  | NDecl.Opaque _ -> cdOpaqueTyDecl currentModule ctx decl
 
   | NDecl.Open (path, loc) -> cdOpenDecl ctx path loc
   | NDecl.ModuleSynonym (name, path, _) -> cdModuleSynonymDecl ctx name path
@@ -1290,7 +1317,7 @@ let private npNormalize (pat: NPat) : NPat list =
   /// - sub-patterns
   /// - a function to update sub-patterns
   ///
-  /// That is, `decompose Pat(P) = (P, fun P' -> Pat(P'))`
+  /// That is, `decompose Pat(P) = (P, fun P' → Pat(P'))`
   /// where P, P' are arguments of a particular pattern.
   let decompose pat =
     match pat with
@@ -1496,10 +1523,7 @@ let private doNameResVarExpr ctx ident loc : TExpr option =
 
     Some expr
 
-  | None ->
-    match primFromIdent ident with
-    | Some prim -> TPrimExpr(prim, noTy, loc) |> Some
-    | None -> None
+  | None -> None
 
 let private nameResUnqualifiedIdentExpr ctx ident loc tyArgs : TExpr * ScopeCtx =
   if List.isEmpty tyArgs then
@@ -1668,6 +1692,10 @@ let private nameResExpr (ctx: ScopeCtx) (expr: NExpr) : TExpr * ScopeCtx =
     let arg, ctx = arg |> nameResExpr ctx
     TNodeExpr(TMinusEN, [ arg ], noTy, loc), ctx
 
+  | NExpr.Unary (BitNotUnary, arg, loc) ->
+    let arg, ctx = arg |> nameResExpr ctx
+    txApp (TPrimExpr(TPrim.BitNot, noTy, loc)) arg loc, ctx
+
   | NExpr.Unary (PtrOfUnary, arg, loc) ->
     let arg, ctx = arg |> nameResExpr ctx
     TNodeExpr(TPtrOfEN, [ arg ], noTy, loc), ctx
@@ -1704,17 +1732,18 @@ let private nameResLetValStmt (ctx: ScopeCtx) stmt : TStmt * ScopeCtx =
     | NStmt.LetVal (pat, init, loc) -> pat, init, loc
     | _ -> unreachable ()
 
+  let parent, ctx = enterStmt ctx
   let ctx = startScope ctx ExprScope
   let init, ctx = init |> nameResExpr ctx
   let ctx = finishScope ctx
 
   let pat, ctx = pat |> nameResIrrefutablePat ctx
-  TLetValStmt(pat, init, loc), ctx
+  TLetValStmt(pat, init, loc), leaveStmt parent ctx
 
 let private nameResLetFunStmt (ctx: ScopeCtx) stmt : TStmt * ScopeCtx =
-  let isRec, vis, name, argPats, body, loc =
+  let isRec, vis, name, argPats, body, exported, loc =
     match stmt with
-    | NStmt.LetFun (isRec, vis, name, argPats, body, loc) -> isRec, vis, name, argPats, body, loc
+    | NStmt.LetFun (isRec, vis, name, argPats, body, exported, loc) -> isRec, vis, name, argPats, body, exported, loc
     | _ -> unreachable ()
 
   let vis, (funSerial, ctx) =
@@ -1725,12 +1754,19 @@ let private nameResLetFunStmt (ctx: ScopeCtx) stmt : TStmt * ScopeCtx =
   let funName = identOf name
 
   let ctx =
+    let linkage =
+      if exported then
+        ExternalLinkage funName
+      else
+        makeLinkage ctx vis funName
+
     let funDef: FunDef =
       { Name = funName
         Arity = List.length argPats
         Ty = TyScheme([], noTy)
-        Abi = MiloneAbi
-        Linkage = makeLinkage ctx vis funName
+        Abi = if exported then CAbi else MiloneAbi
+        Linkage = linkage
+        Nonlocal = not ctx.InsideModule
         Prefix = ctx.AncestralFuns
         Loc = loc }
 
@@ -1745,6 +1781,8 @@ let private nameResLetFunStmt (ctx: ScopeCtx) stmt : TStmt * ScopeCtx =
   let argPats, body, ctx =
     // __trace ("enterLetFun " + funName)
 
+    let parent, ctx = enterStmt ctx
+
     let ctx =
       let ctx = enterLetInit ctx funName
       startScope ctx ExprScope
@@ -1756,7 +1794,8 @@ let private nameResLetFunStmt (ctx: ScopeCtx) stmt : TStmt * ScopeCtx =
 
     let ctx =
       let ctx = finishScope ctx
-      leaveLetInit ctx
+      let ctx = leaveLetInit ctx
+      leaveStmt parent ctx
 
     // __trace ("leaveLetFun " + funName)
     argPats, body, ctx
@@ -1771,8 +1810,9 @@ let private nameResLetFunStmt (ctx: ScopeCtx) stmt : TStmt * ScopeCtx =
 let private nameResStmt ctx (stmt: NStmt) : TStmt * ScopeCtx =
   match stmt with
   | NStmt.Expr expr ->
+    let parent, ctx = enterStmt ctx
     let expr, ctx = expr |> nameResExpr ctx
-    TExprStmt expr, ctx
+    TExprStmt expr, leaveStmt parent ctx
 
   | NStmt.LetVal _ -> nameResLetValStmt ctx stmt
   | NStmt.LetFun _ -> nameResLetFunStmt ctx stmt
@@ -1915,6 +1955,16 @@ let private nameResRecordTyDecl (ctx: ScopeCtx) decl : ScopeCtx =
   let ctx = addTyDef ctx tySerial tyDef
   finishScope ctx
 
+let private nameResOpaqueTyDecl (ctx: ScopeCtx) decl : ScopeCtx =
+  let name, loc =
+    match decl with
+    | NDecl.Opaque (_, name, loc) -> name, loc
+    | _ -> unreachable ()
+
+  let tySerial, _ = ctx.DeclaredTys |> mapFind (posOf name)
+  let tyDef = OpaqueTyDef(identOf name, loc)
+  addTyDef ctx tySerial tyDef
+
 let private nameResModuleDecl (ctx: ScopeCtx) moduleDecl : TStmt * ScopeCtx =
   let (NModuleDecl (_, _, name, decls, _)) = moduleDecl
 
@@ -1950,6 +2000,7 @@ let private nameResDecl ctx (decl: NDecl) : TStmt option * ScopeCtx =
   | NDecl.TySynonym _ -> nameResTySynonymDecl ctx decl |> none
   | NDecl.Union _ -> nameResUnionTyDecl ctx decl |> none
   | NDecl.Record _ -> nameResRecordTyDecl ctx decl |> none
+  | NDecl.Opaque _ -> nameResOpaqueTyDecl ctx decl |> none
   | NDecl.Module decl -> nameResModuleDecl ctx decl |> some
 
   // Open and module synonym statements are used in collectDecls and no longer necessary.
@@ -1991,6 +2042,146 @@ let private nameResModuleRoot ctx (root: NModuleRoot) : _ * TModule * ScopeCtx =
   newRootModule, m, ctx
 
 // -----------------------------------------------
+// Primitives
+// -----------------------------------------------
+
+let private addPrims (ctx: ScopeCtx) =
+  let s: ModuleTySerial = 1000000001 // 10^8
+  let stdModuleSerial, s = s, s + 1
+  let stdNs = nsOwnerOfModule stdModuleSerial
+  let stdOwnNs, s = nsOwnerOfModule s, s + 1
+  // Std.Own.Own
+  let ownModuleNs, s = nsOwnerOfModule s, s + 1
+  let stdPtrNs, s = nsOwnerOfModule s, s + 1
+  // Std.Ptr.FunPtr
+  let funPtrModuleNs, s = nsOwnerOfModule s, s + 1
+  // Std.Ptr.Ptr
+  let ptrModuleNs, _ = nsOwnerOfModule s, s + 1
+
+  let ctx = addNsToNs ctx stdNs "Own" stdOwnNs
+  let ctx = addNsToNs ctx stdNs "Ptr" stdPtrNs
+
+  // Top-level value primitives.
+  let topLevelValueScope =
+    [ "not", TPrim.Not
+      "exit", TPrim.Exit
+      "assert", TPrim.Assert
+      "box", TPrim.Box
+      "unbox", TPrim.Unbox
+      "printfn", TPrim.Printfn
+      "compare", TPrim.Compare
+
+      "int", TPrim.ToInt I32
+      "int32", TPrim.ToInt I32
+      "uint", TPrim.ToInt U32
+      "uint32", TPrim.ToInt U32
+      "sbyte", TPrim.ToInt I8
+      "int8", TPrim.ToInt I8
+      "byte", TPrim.ToInt U8
+      "uint8", TPrim.ToInt U8
+      "int16", TPrim.ToInt I16
+      "int64", TPrim.ToInt I64
+      "nativeint", TPrim.ToInt IPtr
+      "uint16", TPrim.ToInt U16
+      "uint64", TPrim.ToInt U64
+      "unativeint", TPrim.ToInt UPtr
+      "float", TPrim.ToFloat F64
+      "float32", TPrim.ToFloat F32
+      "char", TPrim.ToChar
+      "string", TPrim.ToString
+
+      "__discriminant", TPrim.Discriminant
+      "__nativeFun", TPrim.NativeFun
+      "__nativeCast", TPrim.NativeCast
+      "__nativeExpr", TPrim.NativeExpr
+      "__nativeStmt", TPrim.NativeStmt
+      "__nativeDecl", TPrim.NativeDecl ]
+    |> List.map (fun (ident, prim) -> ident, PrimSymbol prim)
+    |> TMap.ofList compare
+
+  let topLevelTyScope =
+    let ofTk tk = PrimTkSymbol tk
+    let ofTy ty = PrimTySymbol ty
+
+    [ "int", ofTy tyInt
+      "int32", ofTy tyInt
+      "uint", ofTy (Ty(IntTk U32, []))
+      "uint32", ofTy (Ty(IntTk U32, []))
+      "sbyte", ofTy (Ty(IntTk I8, []))
+      "int8", ofTy (Ty(IntTk I8, []))
+      "byte", ofTy (Ty(IntTk U8, []))
+      "uint8", ofTy (Ty(IntTk U8, []))
+      "int16", ofTy (Ty(IntTk I16, []))
+      "int64", ofTy (Ty(IntTk I64, []))
+      "nativeint", ofTy (Ty(IntTk IPtr, []))
+      "uint16", ofTy (Ty(IntTk U16, []))
+      "uint64", ofTy (Ty(IntTk U64, []))
+      "unativeint", ofTy tyUNativeInt
+      "float", ofTy tyFloat
+      "float32", ofTy (Ty(FloatTk F32, []))
+      "unit", ofTy tyUnit
+      "bool", ofTy tyBool
+      "char", ofTy tyChar
+      "string", ofTy tyString
+      "obj", ofTy tyObj
+      "voidptr", ofTy tyVoidPtr
+      "list", ofTk ListTk
+      "nativeptr", ofTk (NativePtrTk RefMode.ReadWrite) ]
+    |> TMap.ofList compare
+
+  // Std.Own
+  let ctx =
+    let addTy alias tySymbol ctx = addTyToNs ctx stdOwnNs alias tySymbol
+
+    let addValue alias prim ctx =
+      addValueToNs ctx ownModuleNs alias (PrimSymbol prim)
+
+    let ctx = addNsToNs ctx stdOwnNs "Own" ownModuleNs
+
+    ctx
+    |> addTy "Own" (PrimTkSymbol OwnTk)
+    |> addValue "acquire" TPrim.OwnAcquire
+    |> addValue "release" TPrim.OwnRelease
+
+  // Std.Ptr
+  let ctx =
+    let addTy alias tySymbol ctx = addTyToNs ctx stdPtrNs alias tySymbol
+
+    let addValue alias prim ctx =
+      addValueToNs ctx ptrModuleNs alias (PrimSymbol prim)
+
+    let ctx = addNsToNs ctx stdPtrNs "Ptr" ptrModuleNs
+
+    ctx
+    |> addTy "InPtr" (PrimTkSymbol(NativePtrTk RefMode.ReadOnly))
+    |> addTy "OutPtr" (PrimTkSymbol(NativePtrTk RefMode.WriteOnly))
+    |> addTy "VoidInPtr" (PrimTySymbol tyVoidInPtr)
+    |> addTy "FunPtr" (PrimTkSymbol FunPtrTk)
+    |> addValue "select" TPrim.PtrSelect
+    |> addValue "read" TPrim.PtrRead
+    |> addValue "write" TPrim.PtrWrite
+    |> addValue "nullPtr" TPrim.NullPtr
+    |> addValue "cast" TPrim.PtrCast
+    |> addValue "invalid" TPrim.PtrInvalid
+    |> addValue "asIn" TPrim.PtrAsIn
+    |> addValue "asNative" TPrim.PtrAsNative
+    |> addValue "distance" TPrim.PtrDistance
+
+  // Std.Ptr.FunPtr
+  let ctx =
+    let addValue alias prim ctx =
+      addValueToNs ctx funPtrModuleNs alias (PrimSymbol prim)
+
+    let ctx =
+      addNsToNs ctx stdPtrNs "FunPtr" funPtrModuleNs
+
+    ctx |> addValue "invoke" TPrim.FunPtrInvoke
+
+  { ctx with
+      RootModules = ("Std", stdModuleSerial) :: ctx.RootModules
+      Local = [], [ topLevelValueScope ], [ topLevelTyScope ], scopeChainEmpty () }
+
+// -----------------------------------------------
 // Interface
 // -----------------------------------------------
 
@@ -1999,52 +2190,8 @@ let nameRes (layers: NModuleRoot list list) : TProgram * NameResResult =
   //       but it doesn't so due to sequential serial generation for now.
 
   let state =
-    let s: ModuleTySerial = 1000000001 // 10^8
-    let stdModuleSerial, s = s, s + 1
-    let stdNs = nsOwnerOfModule stdModuleSerial
-    let stdOwnNs, s = nsOwnerOfModule s, s + 1
-    let ownModuleNs, s = nsOwnerOfModule s, s + 1
-    let ptrNs = nsOwnerOfModule s
-
     let state = emptyState ()
-    let ctx = state.ScopeCtx
-    let ctx = addNsToNs ctx stdNs "Own" stdOwnNs
-    let ctx = addNsToNs ctx stdNs "Ptr" ptrNs
-
-    // Std.Own
-    let ctx =
-      let ctx =
-        addTyToNs ctx stdOwnNs "Own" (PrimTySymbol OwnTk)
-
-      let ctx = addNsToNs ctx stdOwnNs "Own" ownModuleNs
-
-      let addValue alias prim ctx =
-        addValueToNs ctx ownModuleNs alias (PrimSymbol prim)
-
-      ctx
-      |> addValue "acquire" TPrim.OwnAcquire
-      |> addValue "release" TPrim.OwnRelease
-
-    // Std.Ptr.select etc.
-    let ctx =
-      let add alias prim ctx =
-        addValueToNs ctx ptrNs alias (PrimSymbol prim)
-
-      ctx
-      |> add "select" TPrim.PtrSelect
-      |> add "read" TPrim.PtrRead
-      |> add "write" TPrim.PtrWrite
-      |> add "nullPtr" TPrim.NullPtr
-      |> add "cast" TPrim.PtrCast
-      |> add "invalid" TPrim.PtrInvalid
-      |> add "asIn" TPrim.PtrAsIn
-      |> add "asNative" TPrim.PtrAsNative
-      |> add "distance" TPrim.PtrDistance
-
-    let ctx =
-      { ctx with RootModules = ("Std", stdModuleSerial) :: ctx.RootModules }
-
-    { state with ScopeCtx = ctx }
+    { state with ScopeCtx = addPrims state.ScopeCtx }
 
   let modules, state =
     layers

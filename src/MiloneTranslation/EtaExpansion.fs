@@ -41,7 +41,7 @@
 ///
 /// ```fsharp
 ///    let env = box (x, y)
-///    (sumObj2, env) :> (int -> int)  // closure object creation
+///    (sumObj2, env) as (int → int)  // closure object creation
 /// ```
 ///
 /// Given arguments are packed into an object `env` so that `sumObj2` can use them
@@ -73,7 +73,7 @@
 ///
 /// ```fsharp
 ///    let env = box ()
-///    (sumObj0, ()) :> (int -> int -> int -> int)
+///    (sumObj0, ()) as (int → int → int → int)
 /// ```
 module rec MiloneTranslation.EtaExpansion
 
@@ -125,22 +125,22 @@ let private primToArity ty prim =
   | HPrim.NullPtr -> 0
 
   | HPrim.Not
+  | HPrim.BitNot
   | HPrim.Exit
   | HPrim.Assert
   | HPrim.Box
   | HPrim.Unbox
   | HPrim.StringLength
-  | HPrim.Char
   | HPrim.ToInt _
   | HPrim.ToFloat _
-  | HPrim.String
-  | HPrim.InRegion
+  | HPrim.ToChar
+  | HPrim.ToString
   | HPrim.NativeCast -> 1
 
   | HPrim.Add
-  | HPrim.Sub
-  | HPrim.Mul
-  | HPrim.Div
+  | HPrim.Subtract
+  | HPrim.Multiply
+  | HPrim.Divide
   | HPrim.Modulo
   | HPrim.BitAnd
   | HPrim.BitOr
@@ -478,6 +478,8 @@ let private exPrimExpr (ctx: EtaCtx) expr prim primTy calleeLoc =
 
 let private exInfExpr ctx expr kind args ty loc =
   match kind with
+  | HFunPtrOfEN -> expr, ctx
+
   | HAppEN ->
     /// Converts `(((f x) ..) y)` to `f(x, .., y)`.
     let rec roll acc callee =
@@ -558,6 +560,8 @@ let private exStmt ctx stmt : HStmt * EtaCtx =
     HLetValStmt(pat, init, loc), ctx
 
   | HLetFunStmt _ -> exLetFunStmt ctx stmt
+
+  | HNativeDeclStmt _ -> unreachable () // Generated in Hoist.
 
 let private exModule (ctx: EtaCtx) (m: HModule) =
   let ctx = { ctx with Vars = m.Vars }

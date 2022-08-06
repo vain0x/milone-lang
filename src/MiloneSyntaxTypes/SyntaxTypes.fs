@@ -32,7 +32,7 @@ type ModuleSyntaxError = string * Pos
 
 type ModuleSyntaxData = DocId * TokenizeResult * ARoot * ModuleSyntaxError list
 
-/// filename -> (contents option)
+// filename -> (contents option)
 type ReadTextFileFun = string -> Future<string option>
 
 type FetchModuleFun = ProjectName -> ModuleName -> Future<ModuleSyntaxData option>
@@ -86,21 +86,21 @@ type Token =
   | LeftBraceToken
   /// `}`
   | RightBraceToken
-  /// `<`
+  // `<`
   | LeftAngleToken of adjacent: bool
-  /// `>`
+  // `>`
   | RightAngleToken
-  /// `[<`
+  // `[<`
   | LeftAttrToken
-  /// `>]`
+  // `>]`
   | RightAttrToken
-  /// `&`
+  // `&`
   | AmpToken
-  /// `&&`
+  // `&&`
   | AmpAmpToken of prefix: bool
-  /// `&&&`
+  // `&&&`
   | AmpAmpAmpToken
-  /// `->`
+  // `->`
   | ArrowToken
   /// `:`
   | ColonToken
@@ -118,15 +118,15 @@ type Token =
   | HatToken
   /// `^^^`
   | HatHatHatToken
-  /// `<=`
+  // `<=`
   | LeftEqualToken
-  /// `<<`
+  // `<<`
   | LeftLeftToken
-  /// `<<<`
+  // `<<<`
   | LeftLeftLeftToken
-  /// `<>`
+  // `<>`
   | LeftRightToken
-  /// `>=`
+  // `>=`
   | RightEqualToken
   /// `-`
   | MinusToken of minusPrefix: bool
@@ -134,7 +134,7 @@ type Token =
   | PercentToken
   /// `|`
   | PipeToken
-  /// `|>`
+  // `|>`
   | PipeRightToken
   /// `||`
   | PipePipeToken
@@ -148,6 +148,8 @@ type Token =
   | SlashToken
   /// `*`
   | StarToken
+  /// `~~~`
+  | TildeTildeTildeToken of prefix: bool
 
   // keywords:
   | AsToken
@@ -180,47 +182,49 @@ type TokenizeFullResult = (Token * Pos) list
 [<NoEquality; NoComparison>]
 type Unary =
   | MinusUnary
-  /// `&&`
+  /// `~~~`
+  | BitNotUnary
+  // `&&`
   | PtrOfUnary
 
 /// Binary operator.
 [<NoEquality; NoComparison>]
 type Binary =
-  /// `*` Multiplication
-  | MulBinary
-  /// `/` Division
-  | DivBinary
+  /// `*`
+  | MultiplyBinary
+  /// `/`
+  | DivideBinary
   /// `%`
   | ModuloBinary
-  /// `+` Addition
+  /// `+`
   | AddBinary
-  /// `-` Subtraction
-  | SubBinary
+  /// `-`
+  | SubtractBinary
   /// `=`
   | EqualBinary
-  /// `<>`
+  // `<>`
   | NotEqualBinary
-  /// `<`
+  // `<`
   | LessBinary
-  /// `<=`
+  // `<=`
   | LessEqualBinary
-  /// `>`
+  // `>`
   | GreaterBinary
-  /// `>=`
+  // `>=`
   | GreaterEqualBinary
-  /// `&&&`
+  // `&&&`
   | BitAndBinary
   /// `|||`
   | BitOrBinary
   /// `^^^`
   | BitXorBinary
-  /// `<<<`
+  // `<<<`
   | LeftShiftBinary
-  /// `>>>`
+  // `>>>`
   | RightShiftBinary
-  /// `|>`
+  // `|>`
   | PipeBinary
-  /// `&&`
+  // `&&`
   | LogicalAndBinary
   /// `||`
   | LogicalOrBinary
@@ -249,9 +253,9 @@ type ATy =
   | AMissingTy of Pos
 
   /// Named type with potential qualifiers and type arguments,
-  /// e.g. `int`, `TMap.AssocMap<K, V>`.
-  ///
-  /// quals: `(name, '.' option) list`
+  // E.g. `int`, `TMap.AssocMap<K, V>`.
+  //
+  // quals: `(name, '.' option) list`
   | AAppTy of quals: (Name * Pos) list * Name option * ATyArgList option
 
   /// Type variable, e.g. `'T`.
@@ -268,7 +272,8 @@ type ATy =
   /// `starPos` is position of the first star.
   | ATupleTy of ATy list * starPos: Pos
 
-  /// Function type, e.g. `int -> string`.
+  /// Function type.
+  // E.g. `int -> string`
   | AFunTy of ATy * arrowPos: Pos * ATy
 
 /// Pattern in AST.
@@ -352,7 +357,7 @@ type AExpr =
 
   | ALitExpr of Lit * Pos
 
-  /// E.g. `x`, `f<'T>`.
+  // E.g. `x`, `f<'T>`.
   | AIdentExpr of Name * ATyArgList option
 
   /// `'(' Expr ')'`.
@@ -375,15 +380,14 @@ type AExpr =
   | AIfExpr of ifPos: Pos * cond: AExpr * thenPos: Pos * body: AExpr * alt: (Pos * AExpr) option
 
   /// `match cond with (| pat when guard -> body)*`
-  ///
-  /// arm: `'|', Pat, ('when' Expr), '->', Expr
+  // arm: `'|', Pat, ('when' Expr), '->', Expr
   | AMatchExpr of
     matchPos: Pos *
     cond: AExpr *
     withPos: Pos option *
     arms: (Pos option * APat * (Pos * AExpr) option * Pos * AExpr) list
 
-  /// `fun pat1 pat2 ... -> body`
+  // `fun pat1 pat2 ... -> body`
   | AFunExpr of funPos: Pos * argPats: APat list * arrowPos: Pos * AExpr
 
   /// Navigation, e.g. `s.Length`.
@@ -406,8 +410,7 @@ type AExpr =
   | ARangeExpr of AExpr * dotDot: Pos * AExpr
 
   /// Tuple construction or unit literal, e.g. `()`, `2, "two"`.
-  ///
-  /// `lPos` is at first ',' if non-unit or `(` if unit. It also can be some position.
+  // `lPos` is at first ',' if non-unit or `(` if unit. It also can be some position.
   | ATupleExpr of lPos: Pos * items: AExpr list * rOpt: Pos option
 
   /// Type ascription, e.g. `None: int option`.
@@ -541,7 +544,7 @@ type NExpr =
 type NStmt =
   | Expr of NExpr
   | LetVal of pat: NPat * init: NExpr * NLoc
-  | LetFun of IsRec * Vis * NName * argPats: NPat list * body: NExpr * NLoc
+  | LetFun of IsRec * Vis * NName * argPats: NPat list * body: NExpr * exported: bool * NLoc
 
 type NVariantDecl = NName * NTy option * NLoc
 type NFieldDecl = NName * NTy * NLoc
@@ -555,6 +558,7 @@ type NDecl =
   | TySynonym of Vis * NName * tyArgs: NName list * NTy * NLoc
   | Union of Vis * NName * tyArgs: NName list * NVariantDecl list * NLoc
   | Record of Vis * NName * tyArgs: NName list * NFieldDecl list * IsCRepr * NLoc
+  | Opaque of Vis * NName * NLoc
   | Open of NName list * NLoc
   | ModuleSynonym of NName * NName list * NLoc
   | Module of NModuleDecl
@@ -621,6 +625,7 @@ type SyntaxKind =
   | Semi
   | Slash
   | Star
+  | TildeTildeTilde
   // Keywords:
   | As
   | Else

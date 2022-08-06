@@ -46,6 +46,7 @@ type MGenericValue =
 [<NoEquality; NoComparison>]
 type MUnary =
   | MMinusUnary
+  | MBitNotUnary
   | MNotUnary
   | MPtrOfUnary
 
@@ -91,11 +92,11 @@ type MUnary =
 /// Built-in 2-arity operation in middle IR.
 [<NoEquality; NoComparison>]
 type MBinary =
-  | MMulBinary
-  | MDivBinary
+  | MMultiplyBinary
+  | MDivideBinary
   | MModuloBinary
   | MAddBinary
-  | MSubBinary
+  | MSubtractBinary
   | MBitAndBinary
   | MBitOrBinary
   | MBitXorBinary
@@ -113,7 +114,7 @@ type MBinary =
 
   /// `s.ptr[i]`
   | MStringIndexBinary
-  /// `&p[i]`
+  // `&p[i]`
   | MPtrAddBinary
 
 [<NoEquality; NoComparison>]
@@ -130,7 +131,6 @@ type MAction =
 
 [<NoEquality; NoComparison>]
 type MPrim =
-  /// string -> int
   | MIntOfStringPrim of intOfStringFlavor: IntFlavor
   | MFloatOfStringPrim of floatOfStringFlavor: FloatFlavor
   | MCharOfStringPrim
@@ -239,7 +239,7 @@ type MDecl =
     resultTy: Ty *
     localVars: (VarSerial * Ty * Loc) list *
     Loc
-  | MNativeDecl of code: string * Loc
+  | MNativeDecl of code: string * args: MExpr list * Loc
 
 [<RequireQualifiedAccess; NoEquality; NoComparison>]
 type MModule =
@@ -259,7 +259,7 @@ type MModule =
 let mDeclToLoc (decl: MDecl) : Loc =
   match decl with
   | MProcDecl (_, _, _, _, _, loc) -> loc
-  | MNativeDecl (_, loc) -> loc
+  | MNativeDecl (_, _, loc) -> loc
 
 // -----------------------------------------------
 // Expression sugaring (MIR)

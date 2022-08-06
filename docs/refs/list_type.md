@@ -1,8 +1,8 @@
-# List type
+# List Type
 
 List is a container of multiple values in order.
 
-## Instant usage
+## Instant Usage
 
 ```fsharp
     // Create a list.
@@ -27,12 +27,12 @@ List is a container of multiple values in order.
     | _ -> assert false
 ```
 
-## Guide-level explanation
+## Guide-level Explanation
 
 `T list` or `list<T>` is a list type for values of type `T`.
 For example, `int list` is the list type of int values.
 
-### List literals
+### List Literals
 
 Lists are written as `[ x; y; z ]` or in multiline:
 
@@ -48,7 +48,7 @@ Examples: `[]`, `[ 1 ]`, `[ 1; 2; 3; 4 ]`.
 
 Empty list `[]` is called *nil*.
 
-### Cons operator
+### Cons Operator
 
 Cons operator (`(::)`) prepends an item to a list: `x :: xs`.
 
@@ -60,7 +60,7 @@ For example:
     // ys is [ 0; 1; 2 ]
 ```
 
-### Pattern matching
+### Pattern Matching
 
 A list value is either *nil* (empty) or *cons* (non-empty).
 
@@ -80,9 +80,9 @@ List literal can be used as a pattern.
     | [ first; second ] -> ...
 ```
 
-## Advanced topics
+## Advanced Topics
 
-### Runtime representation
+### Runtime Representation
 
 Currently, list types are represented by intrusive linked list structure like this:
 

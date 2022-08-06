@@ -1,0 +1,15 @@
+#!/bin/sh
+
+set -eu
+
+PROJECT_DIR=$(dirname "$PWD/$0")
+
+(
+    cd "$PROJECT_DIR"
+    set -x
+
+    milone build "$PROJECT_DIR" -o libsotest.so
+    gcc -c app.c -o app.o
+    gcc -Wl,-R "-Wl,$PROJECT_DIR" -o app.out libsotest.so app.o
+    ./app.out
+)

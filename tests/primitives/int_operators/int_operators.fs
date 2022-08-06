@@ -41,6 +41,10 @@ let bitOperatorsTest (n1: int) =
   assert ((n4 >>> 3) = 0)
   assert (((n1 + n2 + n8) >>> 1) = 0 + n1 + n4)
 
+  assert (~~~0 = 0xffffffff)
+  assert (~~~0xffffffff = 0)
+  assert (~~~0xca10cafe = 0x35ef3501)
+
 let compareTest (n2: int) (n3: int) =
   assert (n2 = 2)
   assert (n3 <> 2)
@@ -57,7 +61,6 @@ let compareTest (n2: int) (n3: int) =
 
 let toIntTest () =
   assert (int 0 = 0)
-  assert (int 'a' = 97)
   assert (int "42" = 42)
   assert (int "-1" + 1 = 0)
 

@@ -20,7 +20,7 @@
 
 #else
 
-#define MILONE_PLATFORM_UNIX 1
+#define MILONE_PLATFORM_LINUX 1
 #include <sys/stat.h>
 #include <sys/types.h>
 #include <unistd.h>
@@ -36,7 +36,7 @@ _Noreturn static void failwith(char const *msg) {
 }
 
 static bool path_is_absolute(struct String path) {
-#if defined(MILONE_PLATFORM_UNIX)
+#if defined(MILONE_PLATFORM_LINUX)
     return path.len >= 1 && *path.ptr == '/';
 #elif defined(MILONE_PLATFORM_WINDOWS)
     // UNC style path isn't supported
@@ -160,8 +160,8 @@ struct String milone_os_string_to(struct MiloneOsString s) {
 // -----------------------------------------------
 
 struct String milone_get_platform(void) {
-#if defined(MILONE_PLATFORM_UNIX)
-    return string_borrow("unix");
+#if defined(MILONE_PLATFORM_LINUX)
+    return string_borrow("linux");
 #elif defined(MILONE_PLATFORM_WINDOWS)
     return string_borrow("windows");
 #else
@@ -174,7 +174,7 @@ struct String milone_get_platform(void) {
 // -----------------------------------------------
 
 struct String milone_get_cwd(void) {
-#if defined(MILONE_PLATFORM_UNIX)
+#if defined(MILONE_PLATFORM_LINUX)
     char buf[FILENAME_MAX + 1];
     bool ok = getcwd(buf, sizeof buf) != NULL;
     if (!ok) {
@@ -185,7 +185,7 @@ struct String milone_get_cwd(void) {
     return string_of_c_str(buf);
 #elif defined(MILONE_PLATFORM_WINDOWS)
     TCHAR buf[MAX_PATH + 1] = {0};
-    DWORD len = GetCurrentDirectory(sizeof(buf), buf);
+    DWORD len = GetCurrentDirectory(sizeof(buf) / sizeof(TCHAR), buf);
     if (len == 0 || len >= sizeof(buf)) {
         failwith("GetCurrentDirectory");
         exit(1);
@@ -203,7 +203,7 @@ struct String milone_get_cwd(void) {
 
 // Convert all path separators to `/`. (On windows, `\\` to `/`.)
 static struct String milone_platform_normalize_path_sep(struct String path) {
-#if defined(MILONE_PLATFORM_UNIX)
+#if defined(MILONE_PLATFORM_LINUX)
     return path;
 #elif defined(MILONE_PLATFORM_WINDOWS)
     char *buf = milone_region_alloc(path.len + 1, sizeof(char));
@@ -221,7 +221,7 @@ static struct String milone_platform_normalize_path_sep(struct String path) {
 
 // Create a single directory (not recursive).
 static bool milone_platform_create_single_directory(struct String dir) {
-#if defined(MILONE_PLATFORM_UNIX)
+#if defined(MILONE_PLATFORM_LINUX)
     return mkdir(string_to_c_str(dir), 0774) == 0 || errno == EEXIST;
 #elif defined(MILONE_PLATFORM_WINDOWS)
     struct MiloneOsString d = milone_os_string_of(dir);
@@ -290,7 +290,7 @@ struct StringCons {
     struct StringCons const *tail;
 };
 
-#if defined(MILONE_PLATFORM_UNIX)
+#if defined(MILONE_PLATFORM_LINUX)
 
 // pass
 
@@ -389,9 +389,9 @@ static void milone_subprocess_run_windows(struct String cmdline, int *code) {
 // Return exit code.
 int milone_subprocess_run(struct String command,
                           struct StringCons const *args) {
-#if defined(MILONE_PLATFORM_UNIX)
+#if defined(MILONE_PLATFORM_LINUX)
     // FIXME: see CmdLspServer
-    fprintf(stderr, "ERROR: subprocess not implemented on Unix.\n");
+    fprintf(stderr, "ERROR: subprocess not implemented on Linux.\n");
     exit(1);
 #elif defined(MILONE_PLATFORM_WINDOWS)
     char buf[8000] = "";
@@ -408,7 +408,7 @@ int milone_subprocess_run(struct String command,
 
 // Turn current process into a shell to execute a command.
 void execute_into(struct String cmd) {
-#if defined(MILONE_PLATFORM_UNIX)
+#if defined(MILONE_PLATFORM_LINUX)
     char *argv[] = {
         "/bin/sh",
         "-c",

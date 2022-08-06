@@ -113,6 +113,7 @@ let private kindOfToken token =
   | SemiToken -> SyntaxKind.Semi
   | SlashToken -> SyntaxKind.Slash
   | StarToken -> SyntaxKind.Star
+  | TildeTildeTildeToken _ -> SyntaxKind.TildeTildeTilde
   | AsToken -> SyntaxKind.As
   | ElseToken -> SyntaxKind.Else
   | FalseToken -> SyntaxKind.False
@@ -182,6 +183,7 @@ let private kindToString kind =
   | SyntaxKind.Semi -> "Semi"
   | SyntaxKind.Slash -> "Slash"
   | SyntaxKind.Star -> "Star"
+  | SyntaxKind.TildeTildeTilde -> "TildeTildeTilde"
   | SyntaxKind.As -> "As"
   | SyntaxKind.Else -> "Else"
   | SyntaxKind.False -> "False"

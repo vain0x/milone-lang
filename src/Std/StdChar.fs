@@ -1,10 +1,10 @@
 module rec Std.StdChar
 
 /// Subtracts char codes.
-let subtract (l: char) (r: char) : char = char (int l - int r)
+let subtract (l: char) (r: char) : char = char (byte l - byte r)
 
-/// Gets whether a char is in ASCII range, i.e. `0x00 <= c <= 0x7f`.
-let isAscii (c: char) : bool = uint c <= uint 127
+/// Gets whether a char is in ASCII range.
+let isAscii (c: char) : bool = byte c <= 0x7fuy
 
 // -----------------------------------------------
 // Char class checks
@@ -13,32 +13,35 @@ let isAscii (c: char) : bool = uint c <= uint 127
 // These functions should be compatible with functions from <ctype.h> in the C language.
 // See: https://en.cppreference.com/w/c/string/byte
 
-let isControl (c: char) : bool =
-  let n = int c
-  (0 <= n && n <= 31) || n = 127
+let isControl (c: char) : bool = (byte c <= 31uy) || c = '\x7f'
 
 let isBlank (c: char) : bool = c = ' ' || c = '\t'
 
-let isSpace (c: char) : bool = ('\t' <= c && c <= '\r') || c = ' '
+let isSpace (c: char) : bool =
+  (byte '\t' <= byte c && byte c <= byte '\r')
+  || c = ' '
 
 let isPunctuation (c: char) : bool =
-  let n = int c
+  let n = byte c
 
-  (33 <= n && n <= 47)
-  || (58 <= n && n <= 64)
-  || (91 <= n && n <= 96)
-  || (123 <= n && n <= 126)
+  (33uy <= n && n <= 47uy)
+  || (58uy <= n && n <= 64uy)
+  || (91uy <= n && n <= 96uy)
+  || (123uy <= n && n <= 126uy)
 
-let isDigit (c: char) : bool = '0' <= c && c <= '9'
+let isDigit (c: char) : bool =
+  byte '0' <= byte c && byte c <= byte '9'
 
 let isHex (c: char) : bool =
   isDigit c
-  || ('A' <= c && c <= 'F')
-  || ('a' <= c && c <= 'f')
+  || (byte 'A' <= byte c && byte c <= byte 'F')
+  || (byte 'a' <= byte c && byte c <= byte 'f')
 
-let isUpper (c: char) : bool = 'A' <= c && c <= 'Z'
+let isLower (c: char) : bool =
+  byte 'a' <= byte c && byte c <= byte 'z'
 
-let isLower (c: char) : bool = 'a' <= c && c <= 'z'
+let isUpper (c: char) : bool =
+  byte 'A' <= byte c && byte c <= byte 'Z'
 
 let isAlphabetic (c: char) : bool = isUpper c || isLower c
 
@@ -61,14 +64,15 @@ let toLower (c: char) : char =
 // -----------------------------------------------
 
 let evalDigit (c: char) : int =
-  assert ('0' <= c && c <= '9')
+  assert (isDigit c)
   int (byte c - byte '0')
 
 let evalHex (c: char) : int =
-  if '0' <= c && c <= '9' then
+  if isDigit c then
     int (byte c - byte '0')
-  else if 'a' <= c && c <= 'f' then
+  else if isLower c then
+    assert (byte c <= byte 'f')
     int (byte c - byte 'a') + 10
   else
-    assert ('A' <= c && c <= 'F')
+    assert (isUpper c && byte c <= byte 'F')
     int (byte c - byte 'A') + 10

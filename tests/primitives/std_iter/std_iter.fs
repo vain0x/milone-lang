@@ -6,7 +6,7 @@ open Std.StdIter
 
 let private bang () = exit 1
 
-/// Generates `i`: `0 <= i < n`.
+/// Generates integers from 0 to n (exclusive).
 let private gen (n: int) : Iter<int> = Iter.range 0 n
 
 let private cat (xs: Iter<int>) : int = Iter.fold (fun n x -> n * 10 + x) 0 xs

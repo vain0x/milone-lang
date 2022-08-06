@@ -2,23 +2,24 @@ module rec native_fun_ptr.Program
 
 // See also x_native_code.md in docs.
 
-module Ptr = Std.Ptr
+open Std.Ptr
 
-type private CompareFun = __nativeFun<__voidinptr * __voidinptr, int>
+type private CompareFun = FunPtr<VoidInPtr * VoidInPtr, int>
 
 let private memAlloc (len: uint) (size: uint) : voidptr =
   __nativeFun ("milone_region_alloc", len, size)
 
-let private sortIntArray (array: nativeptr<int>) (len: uint) : unit =
-  let intCompare (l: __voidinptr) (r: __voidinptr) =
-    compare (Ptr.read (__nativeCast l: __inptr<int>)) (Ptr.read (__nativeCast r: __inptr<int>))
+let intCompare (l: VoidInPtr) (r: VoidInPtr) =
+  compare (Ptr.read (Ptr.cast l: InPtr<int>)) (Ptr.read (Ptr.cast r: InPtr<int>))
 
-  __nativeFun ("qsort", (__nativeCast array: voidptr), unativeint len, 4un, (__nativeFun intCompare: CompareFun))
+let private sortIntArray (array: nativeptr<int>) (len: uint) : unit =
+  __nativeFun ("qsort", (Ptr.cast array: voidptr), unativeint len, 4un, (&&intCompare: CompareFun))
 
 let private testSort () =
   let len = 5u
 
-  let array: nativeptr<int> = memAlloc len (uint sizeof<int>) |> __nativeCast
+  let array: nativeptr<int> =
+    memAlloc len (uint sizeof<int>) |> __nativeCast
 
   Ptr.write array.[0] 3
   Ptr.write array.[1] 1
@@ -28,50 +29,51 @@ let private testSort () =
 
   sortIntArray array len
 
-  let array: __inptr<int> = __nativeCast array
+  let array: InPtr<int> = __nativeCast array
   assert (Ptr.read array.[0] = 1)
   assert (Ptr.read array.[1] = 1)
   assert (Ptr.read array.[2] = 3)
   assert (Ptr.read array.[3] = 4)
   assert (Ptr.read array.[4] = 5)
 
-type private UnitFun = __nativeFun<unit, int>
+type private UnitFun = FunPtr<unit, int>
+
+let private answer () = 42
 
 let private testUnitFun () =
-  let answer () = 42
-
-  let fp: UnitFun = __nativeCast (__nativeFun answer)
-
-  __nativeStmt ("""int (*unit_fun)(void) = {0};""", fp)
+  __nativeStmt ("""int (*unit_fun)(void) = {0};""", (&&answer: UnitFun))
   let value: int = __nativeExpr "unit_fun()"
   assert (value = 42)
 
-type private UnaryFun = __nativeFun<int, int>
+type private UnaryFun = FunPtr<int, int>
+
+let private inc (n: int) : int = n + 1
 
 let private testUnaryFun () =
-  let inc (n: int) : int = n + 1
-  let fp: UnaryFun = __nativeFun inc
-
-  __nativeStmt ("""int (*unary_fun)(int) = {0};""", fp)
+  __nativeStmt ("""int (*unary_fun)(int) = {0};""", (&&inc: UnaryFun))
 
   let value: int = __nativeExpr "unary_fun(41)"
   assert (value = 42)
 
-type private VoidFun = __nativeFun<int, unit>
+type private VoidFun = FunPtr<int, unit>
+
+let private log (n: int) =
+  __nativeStmt ("""printf("f is called: n=%d.\n", {0});""", n)
 
 let private testVoidFun () =
-  let log (n: int) =
-    __nativeStmt ("""printf("f is called: n=%d.\n", {0});""", n)
+  __nativeStmt ("""void(*void_fun)(int) = {0}; void_fun(42);""", (&&log: VoidFun))
 
-  let fp: VoidFun = __nativeCast (__nativeFun log)
-
-  __nativeStmt ("""void(*void_fun)(int) = {0}; void_fun(42);""", fp)
+let private plus (x: int) (y: int) = x + y
 
 let private testFunPtrCanBeResult () =
-  let plus (x: int) (y: int) = x + y
-  let getFunPtr () = __nativeFun plus
+  let getFunPtr () = &&plus
   let p = getFunPtr ()
   assert (p <> Ptr.nullPtr)
+
+let private testFunPtrInvoke () =
+  assert (FunPtr.invoke &&answer () = 42)
+  assert (FunPtr.invoke &&inc 2 = 3)
+  assert (FunPtr.invoke &&plus (2, 3) = 5)
 
 let main _ =
   testSort ()
@@ -79,4 +81,5 @@ let main _ =
   testUnaryFun ()
   testVoidFun ()
   testFunPtrCanBeResult ()
+  testFunPtrInvoke ()
   0

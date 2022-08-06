@@ -14,6 +14,7 @@
     <Compile Include="StdStringBase.fs" />
     <Compile Include="StdString.fs" />
     <Compile Include="StdList.fs" />
+    <Compile Include="StdLoopBase.fs" />
     <Compile Include="StdLoop.fs" />
     <Compile Include="StdIter.fs" />
     <Compile Include="StdAssoc.fs" />

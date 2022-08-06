@@ -72,9 +72,7 @@ make install
 Prerequisites:
 
 - Windows 10
-- Install `MSBuild.exe` in either way:
-    - Install Visual Studio 2019 with "Desktop development with C++" enabled, *OR*
-    - Install [Visual Studio 2019 Build Tools](https://visualstudio.microsoft.com/ja/downloads/?q=build+tools#build-tools-for-visual-studio-2019).
+- Install [Visual Studio 2022 Build Tools](https://visualstudio.microsoft.com/ja/downloads/?q=build+tools#build-tools-for-visual-studio-2022)
 
 Instructions:
 

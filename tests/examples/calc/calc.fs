@@ -45,7 +45,7 @@ let tokenListRev (xs: Token list) =
 
   go [] xs
 
-let isDigit c = '0' <= c && c <= '9'
+let isDigit c = byte '0' <= byte c && byte c <= byte '9'
 
 let takeWhile (pred: char -> bool) (source: string, i) =
   let rec go r =

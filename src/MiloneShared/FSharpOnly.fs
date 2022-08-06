@@ -2,27 +2,22 @@
 [<AutoOpen>]
 module FSharpOnly
 
-let __inRegion (f: unit -> int) : int = f ()
-
 // -----------------------------------------------
 // C FFI
 // -----------------------------------------------
-
-/// `T const *` in C.
-[<AbstractClass; Sealed>]
-type __inptr<'T> =
-  override _.ToString() = "__inptr is not available in F#"
-
-  static member op_Implicit(_: __inptr<'T>) : int = 0
-  static member op_Implicit(_: __inptr<'T>) : unativeint = unativeint 0
 
 /// C-ABI function pointer type: `T (*)(params...)` in C.
 ///
 /// P is `()` or `P1 * P2 * ...`.
 [<AbstractClass; Sealed>]
-type __nativeFun<'P, 'T> =
+type FunPtr<'P, 'T> =
   override _.ToString() =
-    failwith "__nativeFun type is not available in F#"
+    failwith "FunPtr type is not available in F#"
+
+/// Defines an opaque type.
+[<Sealed; System.AttributeUsage(System.AttributeTargets.Class)>]
+type OpaqueAttribute() =
+  inherit System.Attribute()
 
 // Calls a C function, which should be linked statically.
 let __nativeFun _ =
@@ -42,3 +37,27 @@ module Std =
 
     /// Writes a value into a pointer.
     let write (_ptr: nativeptr<'T>) (_: 'T) : unit = failwith "Ptr.write not available"
+
+    module Ptr =
+      /// `T const *` in C.
+      [<AbstractClass; Sealed>]
+      type InPtr<'T> =
+        override _.ToString() = "InPtr is not available in F#"
+
+        static member op_Implicit(_: InPtr<'T>) : int = 0
+        static member op_Implicit(_: InPtr<'T>) : unativeint = unativeint 0
+
+      /// `void const *` in C.
+      type VoidInPtr = voidptr
+
+      /// Non-readable `T *` in C.
+      [<AbstractClass; Sealed>]
+      type OutPtr<'T> =
+        override _.ToString() = "OutPtr is not available in F#"
+
+        static member op_Implicit(_: InPtr<'T>) : int = 0
+        static member op_Implicit(_: InPtr<'T>) : unativeint = unativeint 0
+
+  module Region =
+    module Region =
+      let run (f: unit -> int) : int = f ()

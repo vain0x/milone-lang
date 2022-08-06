@@ -21,7 +21,7 @@
 ///   - `if cond then body else alt`
 ///     - `cond` and `body` are inner subterms
 ///     - `alt` is a dangling subterm
-///   - `match cond with | pat when guard -> body`
+///   - `match cond with | pat when guard → body`
 ///     - `cond`, `pat` and `guard` are inner subterms
 ///     - `body` is a dangling subterm if it's in the last arm;
 ///         or an inner subterm otherwise
@@ -119,16 +119,16 @@ let private canMerge3 (pos1: Pos) pos2 pos3 =
 
 /// Binding power.
 ///
-/// See: <https://docs.microsoft.com/en-us/dotnet/fsharp/language-reference/symbol-and-operator-reference/#operator-precedence>
+/// See: https://docs.microsoft.com/en-us/dotnet/fsharp/language-reference/symbol-and-operator-reference/#operator-precedence
 [<NoEquality; NoComparison>]
 type private Bp =
   | PrefixBp
-  | MulBp
+  | MultiplyBp
   | AddBp
   | ConsBp
   | XorBp
 
-  /// `<`, `>`, `=`, `|>`, `|||`, `&&&`
+  // `<`, `>`, `=`, `|>`, `|||`, `&&&`
   | SigilBp
 
   | AndBp
@@ -141,9 +141,9 @@ let private bpNext bp =
   | SigilBp -> XorBp
   | XorBp -> ConsBp
   | ConsBp -> AddBp
-  | AddBp -> MulBp
+  | AddBp -> MultiplyBp
 
-  | MulBp
+  | MultiplyBp
   | PrefixBp -> PrefixBp
 
 // -----------------------------------------------
@@ -180,6 +180,7 @@ let private inFirstOfPat (token: Token) =
 let private inFirstOfExpr (token: Token) =
   match token with
   | AmpAmpToken _
+  | TildeTildeTildeToken _
   | IfToken
   | MatchToken
   | FunToken
@@ -191,7 +192,8 @@ let private inFirstOfExpr (token: Token) =
 let private inFirstOfArg (token: Token) =
   match token with
   | MinusToken false
-  | AmpAmpToken false -> false
+  | AmpAmpToken false
+  | TildeTildeTildeToken false -> false
 
   | _ -> inFirstOfExpr token
 
@@ -337,7 +339,7 @@ let private behindName name : Pos =
 // Parse types
 // -----------------------------------------------
 
-/// `'<' ty '>'`
+// `'<' ty '>'`
 let private parseTyArgs basePos (tokens, errors) : PR<ATyArgList option> =
   match tokens with
   | (LeftAngleToken true, lPos) :: tokens when posInside basePos lPos ->
@@ -356,7 +358,7 @@ let private parseTyArgs basePos (tokens, errors) : PR<ATyArgList option> =
 
   | _ -> None, tokens, errors
 
-/// `qual.ident <...>`
+// `qual.ident<...>`
 // pos: position behind name
 let private parseNavTy basePos (tokens, errors) : PR<ATy> =
   let rec go acc pos (tokens, errors) =
@@ -430,7 +432,7 @@ let private parseTyTuple basePos (tokens, errors) : PR<ATy> =
 
   | _ -> itemTy, tokens, errors
 
-/// `ty-fun = ty-tuple ( '->' ty-fun )?`
+// `ty-fun = ty-tuple ( '->' ty-fun )?`
 let private parseTyFun basePos (tokens, errors) : PR<ATy> =
   let sTy, tokens, errors = parseTyTuple basePos (tokens, errors)
 
@@ -780,7 +782,7 @@ let private parseApp basePos (tokens, errors) : PR<AExpr> =
 
   go callee (tokens, errors)
 
-/// `prefix = ('-' | '&&')? app`
+// `prefix = ('-' | '&&' | '~~~')? app`
 let private parsePrefix basePos (tokens, errors) : PR<AExpr> =
   match tokens with
   | (MinusToken _, pos) :: tokens ->
@@ -790,6 +792,10 @@ let private parsePrefix basePos (tokens, errors) : PR<AExpr> =
   | (AmpAmpToken _, pos) :: tokens ->
     let arg, tokens, errors = parseSuffix basePos (tokens, errors)
     AUnaryExpr(PtrOfUnary, pos, arg), tokens, errors
+
+  | (TildeTildeTildeToken _, pos) :: tokens ->
+    let arg, tokens, errors = parseSuffix basePos (tokens, errors)
+    AUnaryExpr(BitNotUnary, pos, arg), tokens, errors
 
   | _ -> parseSuffix basePos (tokens, errors)
 
@@ -837,11 +843,11 @@ let private parseOps bp basePos l (tokens, errors) : PR<AExpr> =
   | ConsBp, (ColonColonToken, opPos) :: tokens -> nextR l ConsBinary opPos (tokens, errors)
 
   | AddBp, (PlusToken, opPos) :: tokens -> nextL l AddBinary opPos (tokens, errors)
-  | AddBp, (MinusToken false, opPos) :: tokens -> nextL l SubBinary opPos (tokens, errors)
+  | AddBp, (MinusToken false, opPos) :: tokens -> nextL l SubtractBinary opPos (tokens, errors)
 
-  | MulBp, (StarToken, opPos) :: tokens -> nextL l MulBinary opPos (tokens, errors)
-  | MulBp, (SlashToken, opPos) :: tokens -> nextL l DivBinary opPos (tokens, errors)
-  | MulBp, (PercentToken, opPos) :: tokens -> nextL l ModuloBinary opPos (tokens, errors)
+  | MultiplyBp, (StarToken, opPos) :: tokens -> nextL l MultiplyBinary opPos (tokens, errors)
+  | MultiplyBp, (SlashToken, opPos) :: tokens -> nextL l DivideBinary opPos (tokens, errors)
+  | MultiplyBp, (PercentToken, opPos) :: tokens -> nextL l ModuloBinary opPos (tokens, errors)
 
   | _ -> l, tokens, errors
 
@@ -1011,7 +1017,7 @@ let private parseIf ifPos (tokens, errors) : PR<AExpr> =
   let altOpt, tokens, errors = parseElseClause ifPos (tokens, errors)
   AIfExpr(ifPos, cond, thenPos, body, altOpt), tokens, errors
 
-/// `'|'? pat ( 'when' expr )? -> expr`
+// `pat ( 'when' expr )? -> expr`
 let private parseMatchArm matchPos (pipePos: Pos option) (tokens, errors) =
   let innerBasePos = matchPos |> posAddX 1
 
@@ -1072,7 +1078,7 @@ let private parseMatch matchPos (tokens, errors) : PR<AExpr> =
 
   AMatchExpr(matchPos, cond, withPos, arms), tokens, errors
 
-/// `fun-expr = 'fun' pat* '->' expr`
+// `fun-expr = 'fun' pat* '->' expr`
 let private parseFun basePos funPos (tokens, errors) : PR<AExpr> =
   let argPats, tokens, errors =
     parsePatCallArgs basePos (tokens, errors)

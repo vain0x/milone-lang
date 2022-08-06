@@ -1,14 +1,13 @@
 module rec Std.NativeInterop
 
-module Ptr = Std.Ptr
+open Std.Ptr
 
-let private memcpy (dest: voidptr) (src: __voidinptr) (size: unativeint) : voidptr = __nativeFun ("memcpy", dest, src, size)
+let private memcpy (dest: voidptr) (src: VoidInPtr) (size: unativeint) : voidptr =
+  __nativeFun ("memcpy", dest, src, size)
 
-let private npPointeeSize (p: nativeptr<'T> ) : unativeint =
-  __nativeExpr ("sizeof(*({0}))", p)
+let private npPointeeSize (p: nativeptr<'T>) : unativeint = __nativeExpr ("sizeof(*({0}))", p)
 
-let private cpPointeeSize (p: __inptr<'T> ) : unativeint =
-  __nativeExpr ("sizeof(*({0}))", p)
+let private cpPointeeSize (p: InPtr<'T>) : unativeint = __nativeExpr ("sizeof(*({0}))", p)
 
 // See also:
 //
@@ -24,11 +23,10 @@ module NativePtr =
   let toVoidPtr (p: nativeptr<_>) : voidptr = __nativeCast p
   let ofVoidPtr (p: voidptr) : nativeptr<_> = __nativeCast p
 
-  let add (p: nativeptr<'T>) (i: int) : nativeptr<'T> =
-    __nativeExpr ("(&({0})[{1}])", p, i)
+  let add (p: nativeptr<'T>) (i: int) : nativeptr<'T> = __nativeExpr ("(&({0})[{1}])", p, i)
 
   let get (p: nativeptr<'T>) (i: int) : 'T =
-    __nativeExpr ("(({0})[{1}])", p, unativeint(uint i))
+    __nativeExpr ("(({0})[{1}])", p, unativeint (uint i))
 
   let set (p: nativeptr<'T>) (i: int) (value: 'T) : unit =
     __nativeStmt ("({0})[{1}] = {2};", p, i, value)
@@ -70,40 +68,39 @@ module NativePtr =
 
       ()
 
-  // not supported: nullPtr (generic constant isn't supported)
-  // unimplemented: initBlock, clear
+// not supported: nullPtr (generic constant isn't supported)
+// unimplemented: initBlock, clear
 
 // =============================================================================
 
-module __InPtr =
+module InPtr =
   // F# 5.0
   // not supported: stackalloc, toByRef, set, write
 
-  let ofNativeInt (p: nativeint) : __inptr<'T> = __nativeCast p
-  let toNativeInt (p: __inptr<_>) : nativeint = nativeint p
-  let toVoid (p: __inptr<_>) : __voidinptr = __nativeCast p
-  let ofVoid (p: __voidinptr) : __inptr<_> = __nativeCast p
+  let ofNativeInt (p: nativeint) : InPtr<'T> = __nativeCast p
+  let toNativeInt (p: InPtr<_>) : nativeint = nativeint p
+  let toVoid (p: InPtr<_>) : VoidInPtr = __nativeCast p
+  let ofVoid (p: VoidInPtr) : InPtr<_> = __nativeCast p
 
-  let add (p: __inptr<'T>) (i: int) : __inptr<'T> =
-    __nativeExpr ("(&({0})[{1}])", p, i)
+  let add (p: InPtr<'T>) (i: int) : InPtr<'T> = __nativeExpr ("(&({0})[{1}])", p, i)
 
-  let get (p: __inptr<'T>) (i: int) : 'T =
+  let get (p: InPtr<'T>) (i: int) : 'T =
     assert (i >= 0)
-    __nativeExpr ("(({0})[{1}])", p, unativeint(uint i))
+    __nativeExpr ("(({0})[{1}])", p, unativeint (uint i))
 
-  let read (p: __inptr<'T>) : 'T =
+  let read (p: InPtr<'T>) : 'T =
     assert (p <> Ptr.nullPtr)
     __nativeExpr ("(*({0}))", p)
 
   // F# RFC FS-1109
   // not supported: nullPtr (generic constant isn't supported)
 
-  let isNullPtr (p: __inptr<_>) : bool = p = Ptr.nullPtr
+  let isNullPtr (p: InPtr<_>) : bool = p = Ptr.nullPtr
 
   // =============================================
 
   /// Adds const qualifier.
-  let ofNativePtr (p: nativeptr<'T>) : __inptr<'T> = __nativeCast p
+  let ofNativePtr (p: nativeptr<'T>) : InPtr<'T> = __nativeCast p
 
   /// Drops const qualifier.
-  let toNativePtr (p: __inptr<'T>) : nativeptr<'T> = __nativeCast p
+  let toNativePtr (p: InPtr<'T>) : nativeptr<'T> = __nativeCast p

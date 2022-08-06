@@ -66,7 +66,8 @@ type Tk =
   | OwnTk
   | VoidPtrTk of voidPtrIsMut: IsMut
   | NativePtrTk of mode: RefMode
-  | NativeFunTk
+  /// Ty args must be `paramTys :: resultTy`
+  | FunPtrTk
   | NativeTypeTk of cCode: string
 
   // Nominal types.
@@ -75,6 +76,7 @@ type Tk =
   | SynonymTk of synonymTy: TySerial
   | UnionTk of unionTy: TySerial * Loc option
   | RecordTk of recordTy: TySerial * Loc option
+  | OpaqueTk of opaqueTy: TySerial
 
   /// `_` in ascription.
   | InferTk of Loc
@@ -102,7 +104,7 @@ type Trait =
   /// The type supports `=`.
   | EqualTrait of Ty
 
-  /// The type supports `<`.
+  /// The type supports comparison operators.
   | CompareTrait of Ty
 
   /// For `l: lTy, r: rTy`, `l.[r]` is allowed.
@@ -114,13 +116,13 @@ type Trait =
   /// Integer or float type. Defaults to int.
   | IsNumberTrait of Ty
 
-  /// Type supports conversion to char.
-  | ToCharTrait of Ty
-
   /// Type supports conversion to integer.
-  | ToIntTrait of Ty
+  | ToIntTrait of flavor: IntFlavor * Ty
 
   | ToFloatTrait of Ty
+
+  /// Type supports conversion to char.
+  | ToCharTrait of Ty
 
   /// Type can be applied to `string` function.
   | ToStringTrait of Ty
@@ -141,6 +143,8 @@ type TyDef =
 
   | RecordTyDef of Ident * tyArgs: TySerial list * fields: (Ident * Ty * Loc) list * IsCRepr * Loc
 
+  | OpaqueTyDef of Ident * Loc
+
 /// Definition of named value.
 [<RequireQualifiedAccess; NoEquality; NoComparison>]
 type VarDef =
@@ -157,6 +161,9 @@ type FunDef =
     Ty: TyScheme
     Abi: FunAbi
     Linkage: Linkage
+
+    /// Whether it's declared in a module, rather than module.
+    Nonlocal: bool
 
     /// Represents a context of function (in reversed order.) Function name is finally prefixed to be unique.
     Prefix: string list
@@ -199,9 +206,6 @@ type TPatKind =
   /// `p1 :: p2`.
   | TConsPN
 
-  /// `p1 p2`.
-  | TAppPN
-
   /// `Variant p1`.
   | TVariantAppPN of variantApp: VariantSerial
 
@@ -243,10 +247,11 @@ type TPat =
 type TPrim =
   // operator:
   | Not
+  | BitNot
   | Add
-  | Sub
-  | Mul
-  | Div
+  | Subtract
+  | Multiply
+  | Divide
   | Modulo
   | BitAnd
   | BitOr
@@ -260,8 +265,8 @@ type TPrim =
   // conversion:
   | ToInt of toIntFlavor: IntFlavor
   | ToFloat of toFloatFlavor: FloatFlavor
-  | Char
-  | String
+  | ToChar
+  | ToString
   | Box
   | Unbox
 
@@ -279,7 +284,6 @@ type TPrim =
   | Exit
   | Assert
   | Printfn
-  | InRegion
   | OwnAcquire
   | OwnRelease
   | NativeFun
@@ -296,14 +300,17 @@ type TPrim =
   | PtrAsIn
   | PtrAsNative
   | PtrDistance
+  | FunPtrInvoke
 
 [<NoEquality; NoComparison>]
 type TExprKind =
   /// `-x`.
   | TMinusEN
 
-  /// `&&x`.
+  // `&&x`.
   | TPtrOfEN
+
+  | TFunPtrOfEN
 
   | TAppEN
 
@@ -331,8 +338,7 @@ type TExprKind =
   /// Ptr.write accessPath value
   | TPtrWriteEN
 
-  /// Use function as function pointer.
-  | TNativeFunEN of FunSerial
+  | TFunPtrInvokeEN
 
   /// Embed some C expression to output.
   | TNativeExprEN of nativeExprCode: string
@@ -432,7 +438,6 @@ type NameResLog =
   // other
   | ModulePathNotFoundError
 
-  | UnimplGenericTyError
   | UnimplOrPatBindingError
   | UnimplTyArgListError
 

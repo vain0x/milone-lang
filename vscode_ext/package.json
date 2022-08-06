@@ -1,6 +1,6 @@
 {
   "name": "milone-lang",
-  "version": "0.4.0-rc1",
+  "version": "0.5.0",
   "description": "milone-lang support for VSCode",
   "author": "vain0x <vainzerox@gmail.com>",
   "publisher": "vain0x",
@@ -38,7 +38,7 @@
         },
         "milone-lang.lsp-command": {
           "type": "string",
-          "description": "[debug] Absolute path to the LSP server binary to be used. Defaults to '$HOME/.milone/bin/MiloneLspServer'."
+          "description": "[debug] Absolute path to the LSP server binary to be used. Defaults to '$HOME/.local/share/milone/bin/MiloneLspServer'."
         },
         "milone-lang.trace.server": {
           "type": "string",

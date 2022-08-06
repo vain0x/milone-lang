@@ -47,13 +47,14 @@ let private tkEncode tk : int =
   | OwnTk -> just 11
   | VoidPtrTk isMut -> pair 12 (isMutToInt isMut)
   | NativePtrTk mode -> pair 13 (RefMode.toInt mode)
-  | NativeFunTk -> just 14
+  | FunPtrTk -> just 14
 
   | MetaTk (tySerial, _) -> pair 20 tySerial
   | UnivTk (tySerial, _, _) -> pair 24 tySerial
   | SynonymTk tySerial -> pair 21 tySerial
   | UnionTk (tySerial, _) -> pair 22 tySerial
   | RecordTk (tySerial, _) -> pair 23 tySerial
+  | OpaqueTk tySerial -> pair 24 tySerial
 
   | NativeTypeTk _
   | InferTk _ -> unreachable ()
@@ -86,16 +87,17 @@ let tkDisplay getTyName tk =
   | ListTk -> "list"
   | OwnTk -> "Own"
   | VoidPtrTk IsMut -> "voidptr"
-  | VoidPtrTk IsConst -> "__voidinptr"
+  | VoidPtrTk IsConst -> "VoidInPtr"
   | NativePtrTk RefMode.ReadWrite -> "nativeptr"
-  | NativePtrTk RefMode.ReadOnly -> "__inptr"
-  | NativePtrTk RefMode.WriteOnly -> "__outptr"
-  | NativeFunTk -> "__nativeFun"
+  | NativePtrTk RefMode.ReadOnly -> "InPtr"
+  | NativePtrTk RefMode.WriteOnly -> "OutPtr"
+  | FunPtrTk -> "FunPtr"
   | NativeTypeTk _ -> "__nativeType"
   | MetaTk (tySerial, _) -> getTyName tySerial
   | UnivTk (_, name, _) -> name
   | SynonymTk tySerial -> getTyName tySerial
   | RecordTk (tySerial, _) -> getTyName tySerial
+  | OpaqueTk tySerial -> getTyName tySerial
   | UnionTk (tySerial, _) -> getTyName tySerial
   | InferTk _ -> "_"
 
@@ -111,9 +113,9 @@ let traitMapTys f it =
   | IndexTrait (lTy, rTy, resultTy) -> IndexTrait(f lTy, f rTy, f resultTy)
   | IsIntTrait ty -> IsIntTrait(f ty)
   | IsNumberTrait ty -> IsNumberTrait(f ty)
-  | ToCharTrait ty -> ToCharTrait(f ty)
-  | ToIntTrait ty -> ToIntTrait(f ty)
+  | ToIntTrait (flavor, ty) -> ToIntTrait(flavor, f ty)
   | ToFloatTrait ty -> ToFloatTrait(f ty)
+  | ToCharTrait ty -> ToCharTrait(f ty)
   | ToStringTrait ty -> ToStringTrait(f ty)
   | PtrTrait ty -> PtrTrait(f ty)
   | PtrSizeTrait ty -> PtrSizeTrait(f ty)
@@ -302,6 +304,7 @@ let tyDisplay getTyName ty =
     | Ty (SynonymTk tySerial, args) -> nominal tySerial args
     | Ty (UnionTk (tySerial, _), args) -> nominal tySerial args
     | Ty (RecordTk (tySerial, _), args) -> nominal tySerial args
+    | Ty (OpaqueTk tySerial, args) -> nominal tySerial args
 
     | Ty (tk, args) ->
       let tk = tkDisplay (fun _ -> unreachable ()) tk

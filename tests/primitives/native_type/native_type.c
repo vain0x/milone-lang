@@ -2,7 +2,9 @@
 #include <stdlib.h>
 #include <milone.h>
 
-struct struct_OpaqueMutPtroption1;
+struct OpaqueStruct;
+
+struct OpaqueStructMutPtroption1_;
 
 char const *string_as_ptr(struct String);
 
@@ -20,15 +22,15 @@ void native_type_native_type_testOpaqueStruct(void);
 
 int main(int argc, char **argv);
 
-enum struct_OpaqueMutPtroption1Discriminant {
-    struct_OpaqueMutPtroption1_None,
-    struct_OpaqueMutPtroption1_Some,
+enum OpaqueStructMutPtroption1_Discriminant {
+    OpaqueStructMutPtroption1_None,
+    OpaqueStructMutPtroption1_Some,
 };
 
-struct struct_OpaqueMutPtroption1 {
-    enum struct_OpaqueMutPtroption1Discriminant discriminant;
+struct OpaqueStructMutPtroption1_ {
+    enum OpaqueStructMutPtroption1_Discriminant discriminant;
     union {
-        struct Opaque *struct_OpaqueMutPtroption1_Some;
+        struct OpaqueStruct *OpaqueStructMutPtroption1_Some;
     };
 };
 
@@ -55,9 +57,9 @@ int32_t native_type_native_type_fclose(FILE *fp_) {
 }
 
 void native_type_native_type_testOpaqueStruct(void) {
-    struct struct_OpaqueMutPtroption1 opt_;
-    struct struct_OpaqueMutPtroption1 variant_;
-    variant_ = (struct struct_OpaqueMutPtroption1){.discriminant = struct_OpaqueMutPtroption1_Some, .struct_OpaqueMutPtroption1_Some = ((struct Opaque *)NULL)};
+    struct OpaqueStructMutPtroption1_ opt_;
+    struct OpaqueStructMutPtroption1_ variant_;
+    variant_ = (struct OpaqueStructMutPtroption1_){.discriminant = OpaqueStructMutPtroption1_Some, .OpaqueStructMutPtroption1_Some = ((struct OpaqueStruct *)NULL)};
     opt_ = variant_;
     return;
 }
@@ -70,9 +72,9 @@ int main(int argc, char **argv) {
     int32_t call_3;
     call_2 = native_type_native_type_fopen((struct String){.ptr = "LICENSE", .len = 7}, (struct String){.ptr = "r", .len = 1});
     fp_1 = call_2;
-    if ((fp_1 == ((FILE *)NULL))) milone_assert_error("native_type/native_type.milone", 25, 2);
+    if ((fp_1 == ((FILE *)NULL))) milone_assert_error("native_type/native_type.milone", 26, 2);
     call_3 = native_type_native_type_fclose(fp_1);
     stat_ = call_3;
-    if ((stat_ != 0)) milone_assert_error("native_type/native_type.milone", 28, 2);
+    if ((stat_ != 0)) milone_assert_error("native_type/native_type.milone", 29, 2);
     return 0;
 }

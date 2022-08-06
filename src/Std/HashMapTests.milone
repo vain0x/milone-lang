@@ -1,0 +1,83 @@
+open Std.StdList
+open Std.StdTesting
+open Std.Vector
+open Std.HashMap
+open Std.StdOption
+
+module MB = Std.HashMap.HashMapBuffer
+
+module private Int =
+  let equals (l: int) r = l = r
+  let hash (value: int) = uint value
+
+module private String =
+  let equals (l: string) r = l = r
+
+  let hash (value: string) =
+    let rec go h i =
+      if i < value.Length then
+        let h = h ^^^ ((h <<< 5) ||| (h >>> 27))
+        go (h ^^^ (uint (byte value.[i]))) (i + 1)
+      else
+        h
+
+    go 31u 0
+
+let private debugPair (l: int, r: int) = "(" + string l + ", " + string r + ")"
+
+let private compareInt2 (l: int * int) (r: int * int) = compare (fst l) (fst r)
+
+let private testRemove () =
+  let map =
+    MB.empty Int.equals (fun (n: int) -> uint (n % 2))
+    |> MB.insert 0 100
+    |> MB.insert 1 101
+    |> MB.insert 2 102
+    |> MB.insert 3 103
+
+  let k = 1
+  let opt, map = map |> MB.remove k
+  // printfn "%d -> %s" k (Option.debug debugPair opt)
+
+  assert (opt
+          |> shouldEqual (Option.debug debugPair) (Some(1, 101)))
+
+  let k = 3
+  let x, map = map |> MB.tryFind k
+  // printfn "%d -> %s" k (Option.debug string x)
+  assert (x |> shouldEqual (Option.debug string) (Some 103))
+
+  let k = 4
+  let opt, map = map |> MB.remove k
+  // printfn "%d -> %s" k (Option.debug debugPair opt)
+  assert (opt |> shouldEqual (Option.debug debugPair) None)
+
+  MB.dispose map
+
+let private testOfList () =
+  let map =
+    MB.ofList String.equals String.hash [ "zero", 0; "one", 1; "two", 2 ]
+
+  let x, map = MB.tryFind "one" map
+  assert (x |> shouldEqual (Option.debug string) (Some 1))
+
+  MB.dispose map
+
+let private testToList () =
+  let map =
+    MB.empty Int.equals Int.hash
+    |> MB.insert 0 100
+    |> MB.insert 1 101
+    |> MB.insert 2 102
+    |> MB.insert 3 103
+
+  let entries, map = MB.toList map
+  MB.dispose map
+
+  let entries = List.sortWith compareInt2 entries
+  assert (shouldEqual (List.debug debugPair) [ 0, 100; 1, 101; 2, 102; 3, 103 ] entries)
+
+let testHashMap () =
+  testRemove ()
+  testOfList ()
+  testToList ()

@@ -18,15 +18,10 @@ module S = Std.StdString
 let tyError loc = Ty(ErrorTk loc, [])
 
 let tyInt = Ty(IntTk I32, [])
-let tyInt64 = Ty(IntTk I64, [])
 let tyNativeInt = Ty(IntTk IPtr, [])
-let tyUint8 = Ty(IntTk U8, [])
-let tyUInt16 = Ty(IntTk U16, [])
-let tyUInt64 = Ty(IntTk U32, [])
 let tyUNativeInt = Ty(IntTk UPtr, [])
-
-let tyBool = Ty(BoolTk, [])
 let tyFloat = Ty(FloatTk F64, [])
+let tyBool = Ty(BoolTk, [])
 let tyChar = Ty(CharTk, [])
 let tyString = Ty(StringTk, [])
 let tyObj = Ty(ObjTk, [])
@@ -50,13 +45,15 @@ let tyOutPtr itemTy =
   Ty(NativePtrTk RefMode.WriteOnly, [ itemTy ])
 
 let tyNativeFun paramTys resultTy =
-  Ty(NativeFunTk, List.append paramTys [ resultTy ])
+  Ty(FunPtrTk, List.append paramTys [ resultTy ])
 
 let tyUniv serial name loc = Ty(UnivTk(serial, name, loc), [])
 let tyMeta serial loc = Ty(MetaTk(serial, loc), [])
 let tySynonym tySerial tyArgs = Ty(SynonymTk tySerial, tyArgs)
 let tyUnion tySerial tyArgs loc = Ty(UnionTk(tySerial, Some loc), tyArgs)
-let tyRecord tySerial loc = Ty(RecordTk(tySerial, Some loc), [])
+
+let tyRecord tySerial tyArgs loc =
+  Ty(RecordTk(tySerial, Some loc), tyArgs)
 
 // -----------------------------------------------
 // TyDef
@@ -68,6 +65,7 @@ let tyDefToName tyDef =
   | SynonymTyDef (name, _, _, _) -> name
   | UnionTyDef (name, _, _, _) -> name
   | RecordTyDef (name, _, _, _, _) -> name
+  | OpaqueTyDef (name, _) -> name
 
 // -----------------------------------------------
 // VarDef
@@ -100,60 +98,6 @@ let litToTy (lit: Lit) : Ty =
   | FloatLit _ -> tyFloat
   | CharLit _ -> tyChar
   | StringLit _ -> tyString
-
-// -----------------------------------------------
-// TPrim
-// -----------------------------------------------
-
-let primFromIdent ident =
-  match ident with
-  | "not" -> TPrim.Not |> Some
-
-  | "exit" -> TPrim.Exit |> Some
-
-  | "assert" -> TPrim.Assert |> Some
-
-  | "box" -> TPrim.Box |> Some
-
-  | "unbox" -> TPrim.Unbox |> Some
-
-  | "printfn" -> TPrim.Printfn |> Some
-
-  | "compare" -> TPrim.Compare |> Some
-
-  | "char" -> TPrim.Char |> Some
-
-  | "int"
-  | "int32" -> TPrim.ToInt I32 |> Some
-  | "uint"
-  | "uint32" -> TPrim.ToInt U32 |> Some
-  | "sbyte"
-  | "int8" -> TPrim.ToInt I8 |> Some
-  | "byte"
-  | "uint8" -> TPrim.ToInt U8 |> Some
-
-  | "int16" -> TPrim.ToInt I16 |> Some
-  | "int64" -> TPrim.ToInt I64 |> Some
-  | "nativeint" -> TPrim.ToInt IPtr |> Some
-  | "uint16" -> TPrim.ToInt U16 |> Some
-  | "uint64" -> TPrim.ToInt U64 |> Some
-  | "unativeint" -> TPrim.ToInt UPtr |> Some
-
-  | "float" -> TPrim.ToFloat F64 |> Some
-  | "float32" -> TPrim.ToFloat F32 |> Some
-
-  | "string" -> TPrim.String |> Some
-
-  | "__inRegion" -> TPrim.InRegion |> Some
-  | "__discriminant" -> TPrim.Discriminant |> Some
-
-  | "__nativeFun" -> TPrim.NativeFun |> Some
-  | "__nativeCast" -> TPrim.NativeCast |> Some
-  | "__nativeExpr" -> TPrim.NativeExpr |> Some
-  | "__nativeStmt" -> TPrim.NativeStmt |> Some
-  | "__nativeDecl" -> TPrim.NativeDecl |> Some
-
-  | _ -> None
 
 // -----------------------------------------------
 // TPat
@@ -245,7 +189,6 @@ let patIsClearlyExhaustive isNewtypeVariant pat =
 
       | TNilPN, _
       | TConsPN, _
-      | TAppPN, _
       | TVariantAppPN _, _
       | TNavPN _, _ -> false
 
@@ -425,7 +368,6 @@ let nameResLogToString log =
 
   | ModulePathNotFoundError -> "Module not found for this path"
 
-  | UnimplGenericTyError -> "Generic record type is unimplemented."
   | UnimplOrPatBindingError -> "OR pattern including some bindings is unimplemented."
   | UnimplTyArgListError -> "Type argument list is unimplemented."
 
@@ -458,9 +400,9 @@ let private traitBoundErrorToString tyDisplay it =
     "Expected int or float type but was: "
     + tyDisplay ty
 
-  | ToCharTrait ty -> "Can't convert to char from: " + tyDisplay ty
-  | ToIntTrait ty -> "Can't convert to integer from: " + tyDisplay ty
+  | ToIntTrait (_, ty) -> "Can't convert to integer from: " + tyDisplay ty
   | ToFloatTrait ty -> "Can't convert to float from: " + tyDisplay ty
+  | ToCharTrait ty -> "Can't convert to char from: " + tyDisplay ty
   | ToStringTrait ty -> "Can't convert to string from: " + tyDisplay ty
   | PtrTrait ty -> "Expected a pointer type but was: " + tyDisplay ty
 

@@ -1,9 +1,10 @@
+open Std.Ptr
 open Std.StdError
 open Std.Vector
 
 __nativeDecl "#include <string.h>" // for memcpy
 
-/// Functions for `Vector<byte>`.
+// Functions for `Vector<byte>`.
 module ByteVector =
   /// Creates a vector with the specified length and all elements are zero.
   let zeroCreate (length: int) : Vector<byte> = VectorExt.unsafeZeroCreate length
@@ -21,7 +22,7 @@ module ByteVector =
 
   /// Appends UTF-8 bytes of string to the vector.
   let writeString (s: string) (v: Vector<byte>) : Vector<byte> =
-    let stringPtr: __inptr<char> = __nativeExpr ("{0}.ptr", s)
+    let stringPtr: InPtr<char> = __nativeExpr ("{0}.ptr", s)
     unsafeWriteRawParts (__nativeCast stringPtr) (uint s.Length) v
 
   /// Creates a vector and copies from a string.

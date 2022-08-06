@@ -3,7 +3,7 @@ module rec LibNursery.RawStringBuilder
 
 // WIP
 
-let private stringAsPtr (s: string) : __voidinptr =
+let private stringAsPtr (s: string) : VoidInPtr =
   __nativeExpr ("{0}.ptr", s)
 
 let private __alloc (size: uint) : voidptr =

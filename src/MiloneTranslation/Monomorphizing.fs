@@ -17,7 +17,7 @@
 ///
 /// ```fsharp
 ///   let flip (x, y) = (y, x)
-///   (1, "one") |> flip |> flip
+///   flip (flip (1, "one"))
 /// ```
 ///
 /// The monomorphization converts it to the code below:
@@ -25,7 +25,7 @@
 /// ```fsharp
 ///   let flipIntStringPair ((x, y): int * string): string * int = (y, x)
 ///   let flipStringIntPair ((x, y): string * int): int * string = (y, x)
-///   (1, "one") |> flipIntStringPair |> flipStringIntPair
+///   flipStringIntPair (flipIntStringPair (1, "one"))
 /// ```
 ///
 /// In short, this conversion *clones* generic definitions
@@ -172,6 +172,8 @@ let private collectOnStmt (rx: CollectRx) (wx: CollectWx) stmt : CollectWx =
 
     wx |> onExpr body
 
+  | HNativeDeclStmt _ -> wx
+
 // -----------------------------------------------
 // Rewrite
 // -----------------------------------------------
@@ -250,6 +252,8 @@ let private rewriteStmt (rx: RewriteRx) stmt : HStmt option =
     else
       HLetFunStmt(callee, args, onExpr body, loc)
       |> Some
+
+  | HNativeDeclStmt (code, args, loc) -> HNativeDeclStmt(code, onExprs args, loc) |> Some
 
 // -----------------------------------------------
 // Generation
@@ -374,7 +378,8 @@ let monify (modules: HProgram, hirCtx: HirCtx) : HProgram * HirCtx =
            let tk, name =
              match tyDef with
              | UnionTyDef (ident, _, _, _) -> UnionTk tySerial, ident
-             | RecordTyDef (ident, _, _, _) -> RecordTk tySerial, ident
+             | RecordTyDef (ident, _, _, _, _) -> RecordTk tySerial, ident
+             | OpaqueTyDef (ident, _) -> OpaqueTk tySerial, ident
 
            tyNames |> TMap.add (Ty(tk, [])) name)
          (TMap.empty tyCompare)
@@ -452,7 +457,20 @@ let monify (modules: HProgram, hirCtx: HirCtx) : HProgram * HirCtx =
           let (FunBody (args, body)) = body
           HLetFunStmt(funSerial, args, body, loc))
 
-      let stmts = List.append funBodies m.Stmts
+      let stmts =
+        let locToPos (Loc (_, y, x)) = ((uint64 y) <<< 32) ||| (uint64 x)
+
+        let precedes l r =
+          locToPos (stmtToLoc l) < locToPos (stmtToLoc r)
+
+        let rec merge acc stmts funBodies =
+          match stmts, funBodies with
+          | [], _ -> List.append (List.rev acc) funBodies
+          | _, [] -> List.append (List.rev acc) stmts
+          | (stmt :: stmts), (funBody :: _) when precedes stmt funBody -> merge (stmt :: acc) stmts funBodies
+          | _, funBody :: funBodies -> merge (funBody :: acc) stmts funBodies
+
+        merge [] m.Stmts funBodies
 
       let stmts =
         let rx: RewriteRx =

@@ -61,31 +61,33 @@ void int_operators_int_operators_bitOperatorsTest(int32_t n1_) {
     if (((n4_ >> 2) != n1_)) milone_assert_error("int_operators/int_operators.milone", 39, 2);
     if (((n4_ >> 3) != 0)) milone_assert_error("int_operators/int_operators.milone", 40, 2);
     if (((((n1_ + n2_) + n8_) >> 1) != ((0 + n1_) + n4_))) milone_assert_error("int_operators/int_operators.milone", 41, 2);
+    if (((~(0)) != (int32_t)0xffffffff)) milone_assert_error("int_operators/int_operators.milone", 43, 2);
+    if (((~((int32_t)0xffffffff)) != 0)) milone_assert_error("int_operators/int_operators.milone", 44, 2);
+    if (((~((int32_t)0xca10cafe)) != (int32_t)0x35ef3501)) milone_assert_error("int_operators/int_operators.milone", 45, 2);
     return;
 }
 
 void int_operators_int_operators_compareTest(int32_t n2_1, int32_t n3_) {
-    if ((n2_1 != 2)) milone_assert_error("int_operators/int_operators.milone", 44, 2);
-    if ((n3_ == 2)) milone_assert_error("int_operators/int_operators.milone", 45, 2);
-    if ((2 < n2_1)) milone_assert_error("int_operators/int_operators.milone", 47, 2);
-    if ((n3_ < n2_1)) milone_assert_error("int_operators/int_operators.milone", 48, 2);
-    if ((n2_1 >= n3_)) milone_assert_error("int_operators/int_operators.milone", 49, 2);
-    if ((n2_1 >= n3_)) milone_assert_error("int_operators/int_operators.milone", 51, 2);
-    if ((milone_int32_compare(n2_1, 3) >= 0)) milone_assert_error("int_operators/int_operators.milone", 53, 2);
-    if ((milone_int32_compare(n2_1, 2) != 0)) milone_assert_error("int_operators/int_operators.milone", 54, 2);
-    if ((0 >= milone_int32_compare(n3_, 2))) milone_assert_error("int_operators/int_operators.milone", 55, 2);
+    if ((n2_1 != 2)) milone_assert_error("int_operators/int_operators.milone", 48, 2);
+    if ((n3_ == 2)) milone_assert_error("int_operators/int_operators.milone", 49, 2);
+    if ((2 < n2_1)) milone_assert_error("int_operators/int_operators.milone", 51, 2);
+    if ((n3_ < n2_1)) milone_assert_error("int_operators/int_operators.milone", 52, 2);
+    if ((n2_1 >= n3_)) milone_assert_error("int_operators/int_operators.milone", 53, 2);
+    if ((n2_1 >= n3_)) milone_assert_error("int_operators/int_operators.milone", 55, 2);
+    if ((milone_int32_compare(n2_1, 3) >= 0)) milone_assert_error("int_operators/int_operators.milone", 57, 2);
+    if ((milone_int32_compare(n2_1, 2) != 0)) milone_assert_error("int_operators/int_operators.milone", 58, 2);
+    if ((0 >= milone_int32_compare(n3_, 2))) milone_assert_error("int_operators/int_operators.milone", 59, 2);
     return;
 }
 
 void int_operators_int_operators_toIntTest(void) {
     int32_t call_;
     int32_t call_1;
-    if ((0 != 0)) milone_assert_error("int_operators/int_operators.milone", 58, 2);
-    if ((((int32_t)'a') != 97)) milone_assert_error("int_operators/int_operators.milone", 59, 2);
+    if ((0 != 0)) milone_assert_error("int_operators/int_operators.milone", 62, 2);
     call_ = string_to_int32((struct String){.ptr = "42", .len = 2});
-    if ((call_ != 42)) milone_assert_error("int_operators/int_operators.milone", 60, 2);
+    if ((call_ != 42)) milone_assert_error("int_operators/int_operators.milone", 63, 2);
     call_1 = string_to_int32((struct String){.ptr = "-1", .len = 2});
-    if (((call_1 + 1) != 0)) milone_assert_error("int_operators/int_operators.milone", 61, 2);
+    if (((call_1 + 1) != 0)) milone_assert_error("int_operators/int_operators.milone", 64, 2);
     return;
 }
 

@@ -3,14 +3,19 @@ module rec native_code.Program
 // Embedding arbitrary C codes.
 // See also x_native_code.md in docs.
 
-module Ptr = Std.Ptr
+open Std.Ptr
+
+__nativeDecl
+  """
+    // Embedded by __nativeDecl on toplevel.
+  """
 
 let private writeLine (msg: string) : unit =
   __nativeDecl
     """
-      // Embedded by __nativeDecl.
+      // Embedded by __nativeDecl in function.
       #include <stdio.h>
-  """
+    """
 
   __nativeStmt (
     """
@@ -41,6 +46,22 @@ let private nativeStmtWithTyPlaceholder () =
   assert (alignOf (Ptr.nullPtr: nativeptr<char>) = 1un)
   assert (alignOf (Ptr.nullPtr: nativeptr<int>) = 4un)
   assert (alignOf (Ptr.nullPtr: nativeptr<int -> unit>) = 8un)
+
+type private R = { X: int }
+
+let private getX (r: nativeptr<R>) : int = (Ptr.read r).X
+
+__nativeDecl (
+  """
+    int32_t {1}({0} *r);
+
+    int32_t getX({0} *r) {
+      return {1}(r);
+    }
+  """,
+  (__type: R),
+  &&getX
+)
 
 let main _ =
   writeLine "HEY!"

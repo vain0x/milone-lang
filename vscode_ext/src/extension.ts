@@ -30,7 +30,7 @@ const getMiloneHome = (logger: Logger): string => {
   }
   logger.info("Environment variable 'MILONE_HOME' is unset or empty.")
 
-  return path.join(homedir(), ".milone")
+  return path.join(homedir(), ".local/share/milone")
 }
 
 const getLspCommand = (miloneHome: string, logger: Logger): string | undefined => {

@@ -2,7 +2,7 @@
 
 Match expressions perform *pattern matching* on a value for conditional branching based on structure of values.
 
-## Instant usage
+## Instant Usage
 
 ```fsharp
 let f (opt: int option): string =
@@ -27,7 +27,7 @@ assert (f (Some (-1)) = "negative")
 assert (f None = "none")
 ```
 
-## Guide-level explanation
+## Guide-level Explanation
 
 A match expression consists of an condition expression and a number of clauses.
 Each clause consists of a pattern and body expression.
@@ -101,7 +101,7 @@ When both pattern and body expression are short, clause can be written in one li
 - Tuple patterns: `p1, p2, ..., pN`
     - This pattern matches when the condition is a tuple with same number of items; and for all i, i'th item pattern matches its i'th item.
 
-### Guarded clauses
+### Guarded Clauses
 
 Clauses have optional `when` clause.
 
@@ -113,7 +113,7 @@ Guarded clause is picked only if the `pat` matches the condition as well as the 
 
 `guard` must have bool type.
 
-## Advanced topics
+## Advanced Topics
 
 Match expression can be written in one line like this (not recommended).
 

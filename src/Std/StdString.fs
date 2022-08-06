@@ -2,13 +2,13 @@
 ///
 /// Provides functions to manipulate string.
 ///
-/// See also: <https://github.com/fsharp/fslang-design/blob/e50f1bcd5f9824e287a9e70d03b37f07d170d25f/RFCs/FS-1033-extend-string-module.md>
+/// See also: https://github.com/fsharp/fslang-design/blob/e50f1bcd5f9824e287a9e70d03b37f07d170d25f/RFCs/FS-1033-extend-string-module.md
 module rec Std.StdString
 
 module B = Std.StdStringBase
 module C = Std.StdChar
 
-/// Ensures `minValue <= value <= maxValue`.
+// Ensures `minValue <= value <= maxValue`.
 let private intClamp (minValue: int) (maxValue: int) (value: int) =
   if value < minValue then minValue
   else if maxValue < value then maxValue
@@ -102,8 +102,8 @@ let contains (substr: string) (s: string) : bool =
 /// Analogue to `List.truncate`.
 ///
 /// This function is tolerant about exceeding the boundary.
-/// If `prefixLen < 0`, returns `""`.
-/// If `prefixLen > s.Length`, returns s itself.
+/// If prefixLen is negative, returns `""`.
+/// If prefixLen is greater than s.Length, returns s itself.
 let truncate (prefixLen: int) (s: string) : string =
   if prefixLen <= 0 then ""
   else if prefixLen >= s.Length then s
@@ -114,8 +114,8 @@ let truncate (prefixLen: int) (s: string) : string =
 /// Analogue to `List.skip`.
 ///
 /// This function is tolerant about exceeding the boundary.
-/// If `prefixLen < 0`, returns `s` itself.
-/// If `prefixLen > s.Length`, returns `""`.
+/// If prefixLen is negative, returns `s` itself.
+/// If prefixLen is greater than s.Length, returns `""`.
 let skip (prefixLen: int) (s: string) : string =
   if prefixLen <= 0 then s
   else if prefixLen >= s.Length then ""
@@ -124,8 +124,8 @@ let skip (prefixLen: int) (s: string) : string =
 /// Gets a contiguous substring in specified range. End index is exclusive.
 ///
 /// Unlike `s.[..]`, this function is tolerant about exceeding the boundary.
-/// If `start < 0`, use 0 as start index instead.
-/// If `end > s.Length`, use `s.Length` as end index instead.
+/// If start is negative, use 0 as start index instead.
+/// If endIndex is greater than s.Length, use `s.Length` as end index instead.
 ///
 /// O(1) time.
 let slice (start: int) (endIndex: int) (s: string) : string =
@@ -140,7 +140,8 @@ let slice (start: int) (endIndex: int) (s: string) : string =
 /// Splits a string into two parts at the specified index.
 ///
 /// Index is tolerant.
-/// If `i < 0`, use `0`. If `i > s.Length`, use length.
+/// If i is negative, use `0`.
+/// If i is greater than s.Length, use length.
 let splitAt (i: int) (s: string) : string * string =
   if i <= 0 then "", s
   else if s.Length <= i then s, ""
@@ -450,3 +451,21 @@ let format (s: string) (args: string list) =
          i + 1, s)
        (0, s)
   |> snd
+
+// -----------------------------------------------
+// StringExt
+// -----------------------------------------------
+
+/// Rarely-used or unsafe features.
+module StringExt =
+  let asPtr (s: string) = B.stringAsPtr s
+
+  let ensureNullTerminated (s: string) : string = B.ensureNullTerminatedString s
+
+  let toNative (s: string) = B.stringToNative s
+
+  let unsafeWrap ptr (length: int) : string = B.unsafeWrapString ptr length
+
+  let unsafeOfNative ptr : string = B.unsafeStringOfNative ptr
+
+  let unsafeOfRawParts ptr (length: int) : string = B.unsafeStringOfRawParts ptr length

@@ -62,15 +62,15 @@ let private getPlatform () : Platform =
     Platform.Windows w
 
   | _ ->
-    let u: UnixApi = { ExecuteInto = executeInto }
-    Platform.Unix u
+    let u: LinuxApi = { ExecuteInto = executeInto }
+    Platform.Linux u
 
 let miloneCliHost () : CliHost =
   let args = Env.commandLineArgs ()
 
   let home =
     match getPlatform () with
-    | Platform.Unix _ -> getEnv "HOME"
+    | Platform.Linux _ -> getEnv "HOME"
     | Platform.Windows _ -> getEnv "USERPROFILE"
 
   let miloneHome =

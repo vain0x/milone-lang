@@ -1,8 +1,8 @@
-# Result type
+# Result Type
 
 Result is a container type for value that might be failed with error.
 
-## Instant usage
+## Instant Usage
 
 ```fsharp
     // Creation.
@@ -18,7 +18,7 @@ Result is a container type for value that might be failed with error.
     result |> Result.bind fallibleFun |> Result.map pureFun
 ```
 
-## Guide-level explanation
+## Guide-level Explanation
 
 `Result<T, E>` is a result type whose value type is `T` and error type is `E`.
 
@@ -26,13 +26,13 @@ A computation that can abort with an error returns a value of result type.
 
 *WIP: add intuitive example where there are two kind of non-logical failure*
 
-### Difference from option type
+### Difference from Option Type
 
 Result is similar to [option type](option_type.md).
 
 Prefer Result over option when reason of failure is concerned.
 
-### Difference from exceptions
+### Difference from Exceptions
 
 Milone-lang doesn't support exceptions.
 
@@ -41,20 +41,20 @@ Milone-lang doesn't support exceptions.
 - Use assertion or "abort with message" for logical or non-recoverable error.
 - One might attempt to write perfectly precise error type, which might be unnecessary.
 
-## Advanced topics
+## Advanced Topics
 
 ### Wording
 
 - A function is *fallible* when its result type is `Result`.
 
-### Runtime representation
+### Runtime Representation
 
 Result is a generic discriminated union type.
 
 - See definition in `Std.Result`
-- See details in [discriminated union types#Runtime representation](discriminated_union_types.md#Runtime-representation)
+- See details in [discriminated union types#Runtime Representation](discriminated_union_types.md#Runtime-representation)
 
-### History of name
+### History of Name
 
 Name of `Result` type starts with uppercase unlike `option`.
 
