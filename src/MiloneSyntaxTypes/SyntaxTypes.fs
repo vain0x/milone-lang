@@ -37,6 +37,13 @@ type ReadTextFileFun = string -> Future<string option>
 
 type FetchModuleFun = ProjectName -> ModuleName -> Future<ModuleSyntaxData option>
 
+[<RequireQualifiedAccess; NoEquality; NoComparison>]
+type ModuleSyntaxData2 =
+  { ProjectName: string
+    ModuleName: string
+    DocId: DocId
+    Ast: ARoot }
+
 // -----------------------------------------------
 // Syntax errors
 // -----------------------------------------------

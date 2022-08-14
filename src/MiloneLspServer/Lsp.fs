@@ -192,16 +192,17 @@ let private firstIdentAfter tokens docId pos =
     | _ -> None)
 
 let private parseAllTokens projectName moduleName docId allTokens =
-  let tokens =
-    allTokens
-    |> List.filter (fun (token, _) -> token |> isTrivia |> not)
+  // let tokens =
+  //   allTokens
+  //   |> List.filter (fun (token, _) -> token |> isTrivia |> not)
 
-  let kind =
-    SyntaxApi.getModuleKind projectName moduleName
+  // let kind =
+  //   SyntaxApi.getModuleKind projectName moduleName
 
-  let docId, _, ast, errors = SyntaxApi.parseModule docId kind tokens
+  // let docId, _, ast, errors = SyntaxApi.parseModule docId kind tokens
 
-  docId, allTokens, ast, errors
+  // docId, allTokens, ast, errors
+  failwith "todo"
 
 let private tyDisplayFn (tirCtx: TirCtx) ty =
   let getTyName tySerial =
@@ -398,27 +399,29 @@ let private doBundle (pa: ProjectAnalysis) : BundleResult =
   let projectName = pa.ProjectName
   let miloneHome = pa.Host.MiloneHome
 
-  let fetchModuleUsingCache _ (projectName: string) (moduleName: string) =
-    let docId =
-      AstBundle.computeDocId projectName moduleName
+  // let fetchModuleUsingCache _ (projectName: string) (moduleName: string) =
+  //   let docId =
+  //     AstBundle.computeDocId projectName moduleName
 
-    match pa |> parseWithCache docId with
-    | None -> Future.just None
-    | Some (LSyntaxData syntaxData) -> Future.just (Some syntaxData)
+  //   match pa |> parseWithCache docId with
+  //   | None -> Future.just None
+  //   | Some (LSyntaxData syntaxData) -> Future.just (Some syntaxData)
 
-  let syntaxCtx =
-    let host: FetchModuleHost =
-      { EntryProjectDir = projectDir
-        EntryProjectName = projectName
-        MiloneHome = miloneHome
-        ReadTextFile = pa.Host.ReadTextFile
-        WriteLog = fun _ -> () }
+  // let syntaxCtx =
+  //   let host: FetchModuleHost =
+  //     { EntryProjectDir = projectDir
+  //       EntryProjectName = projectName
+  //       MiloneHome = miloneHome
+  //       ReadTextFile = pa.Host.ReadTextFile
+  //       WriteLog = fun _ -> () }
 
-    SyntaxApi.newSyntaxCtx host
-    |> SyntaxApi.SyntaxCtx.withFetchModule fetchModuleUsingCache
+  //   SyntaxApi.newSyntaxCtx host
+  //   |> SyntaxApi.SyntaxCtx.withFetchModule fetchModuleUsingCache
 
-  let layers, result =
-    SyntaxApi.performSyntaxAnalysis syntaxCtx
+  // let layers, result =
+  //   SyntaxApi.performSyntaxAnalysis syntaxCtx
+
+  let layers, result = failwith "todo"
 
   let docVersions =
     layers
@@ -554,7 +557,7 @@ let private lowerATy docId acc ty : DSymbolOccurrence list =
 
   | AAppTy (_, None, _) -> acc
 
-  | AAppTy (_, Some(Name (name, pos)), tyArgList) ->
+  | AAppTy (_, Some (Name (name, pos)), tyArgList) ->
     let acc =
       (DTySymbol name, Use, At(Loc.ofDocPos docId pos))
       :: acc

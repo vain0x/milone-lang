@@ -7,6 +7,7 @@ open MiloneShared.UtilParallel
 open MiloneShared.UtilProfiler
 open MiloneShared.UtilSymbol
 open Std.StdError
+open Std.StdMap
 open Std.StdPath
 open MiloneSyntaxTypes.SyntaxTypes
 open MiloneSyntaxTypes.SyntaxApiTypes
@@ -15,6 +16,8 @@ open MiloneTranslationTypes.TranslationApiTypes
 module C = Std.StdChar
 module S = Std.StdString
 module Lower = MiloneCliCore.Lower
+module ModuleFetch = MiloneCliCore.ModuleFetch
+module ModuleLoad = MiloneCliCore.ModuleLoad
 module PL = MiloneCliCore.PlatformLinux
 module PW = MiloneCliCore.PlatformWindows
 
@@ -214,44 +217,6 @@ let private computeExePath targetDir platform isRelease binaryType name : Path =
   )
 
 // -----------------------------------------------
-// Context
-// -----------------------------------------------
-
-[<RequireQualifiedAccess; NoEquality; NoComparison>]
-type private CompileCtx =
-  { EntryProjectName: ProjectName
-    SyntaxCtx: SyntaxCtx
-    EntrypointName: string
-    WriteLog: string -> unit }
-
-let private compileCtxNew (sApi: SyntaxApi) (host: CliHost) verbosity projectDir : CompileCtx =
-  let miloneHome = hostToMiloneHome sApi host
-  let projectDir = projectDir |> pathStrTrimEndPathSep
-  let projectName = projectDir |> pathStrToStem
-
-  let syntaxCtx: SyntaxCtx =
-    let host: FetchModuleHost =
-      { EntryProjectDir = projectDir
-        EntryProjectName = projectName
-        MiloneHome = miloneHome
-        ReadTextFile = host.FileReadAllText
-        WriteLog = writeLog host verbosity }
-
-    sApi.NewSyntaxCtx host
-
-  { EntryProjectName = projectName
-    SyntaxCtx = syntaxCtx
-
-    EntrypointName =
-      match (syntaxCtx |> sApi.GetManifest).BinaryType with
-      | None
-      | Some (BinaryType.Exe, _) -> "main"
-
-      | _ -> projectName + "_initialize"
-
-    WriteLog = writeLog host verbosity }
-
-// -----------------------------------------------
 // Processes
 // -----------------------------------------------
 
@@ -273,37 +238,103 @@ let private computeCFilename projectName (docId: DocId) : CFilename =
   else
     S.replace "." "_" (Symbol.toString docId) + ".c"
 
-let private check (sApi: SyntaxApi) (ctx: CompileCtx) : bool * string =
-  let _, result =
-    sApi.PerformSyntaxAnalysis ctx.SyntaxCtx
+[<RequireQualifiedAccess; NoEquality; NoComparison>]
+type private CompileCtx =
+  { EntryProjectName: ProjectName
+    EntrypointName: string
+    Manifest: ManifestData
+    Layers: SyntaxLayers
+    Errors: SyntaxError list
+    WriteLog: string -> unit }
 
-  match result with
-  | SyntaxAnalysisOk _ -> true, ""
-  | SyntaxAnalysisError (errors, _) -> false, sApi.SyntaxErrorsToString errors
+let private prepareCompile
+  (sApi: SyntaxApi)
+  (host: CliHost)
+  verbosity
+  projectDir
+  entryModulePathOpt
+  : Future<CompileCtx> =
+  let miloneHome = hostToMiloneHome sApi host
+  let projectDir = projectDir |> pathStrTrimEndPathSep
+  let projectName = projectDir |> pathStrToStem
+  let writeLog = writeLog host verbosity
+
+  let manifestFut =
+    let manifestFile = projectDir + "/milone_manifest"
+    let docId: DocId = Symbol.intern manifestFile
+
+    manifestFile
+    |> host.FileReadAllText
+    |> Future.map (fun textOpt ->
+      let text = Option.defaultValue "" textOpt
+      sApi.ParseManifest docId text)
+
+  manifestFut
+  |> Future.map (fun (manifest: ManifestData) ->
+    let fetchModule =
+      let host: ModuleFetch.FetchModuleHost =
+        { EntryProjectDir = projectDir
+          EntryProjectName = projectName
+          EntryModulePathOpt = entryModulePathOpt
+          MiloneHome = hostToMiloneHome sApi host
+          Manifest = manifest
+
+          ReadTextFile = host.FileReadAllText
+          WriteLog = writeLog }
+
+      ModuleFetch.prepareFetchModule sApi host
+
+    let layers, errors = ModuleLoad.load fetchModule projectName
+
+    ({ EntryProjectName = projectName
+
+       EntrypointName =
+         match manifest.BinaryType with
+         | None
+         | Some (BinaryType.Exe, _) -> "main"
+
+         | _ -> projectName + "_initialize"
+
+       Manifest = manifest
+       Layers = layers
+       Errors = errors
+
+       WriteLog = writeLog }: CompileCtx))
+
+let private check (sApi: SyntaxApi) (ctx: CompileCtx) : bool * string =
+  if ctx.Errors |> List.isEmpty |> not then
+    false, sApi.SyntaxErrorsToString ctx.Errors
+  else
+    let result =
+      sApi.PerformSyntaxAnalysis ctx.WriteLog ctx.Layers
+
+    match result with
+    | SyntaxAnalysisOk _ -> true, ""
+    | SyntaxAnalysisError (errors, _) -> false, sApi.SyntaxErrorsToString errors
 
 let private compile (sApi: SyntaxApi) (tApi: TranslationApi) (ctx: CompileCtx) : CompileResult =
   let projectName = ctx.EntryProjectName
   let writeLog = ctx.WriteLog
 
-  let _, result =
-    sApi.PerformSyntaxAnalysis ctx.SyntaxCtx
+  if ctx.Errors |> List.isEmpty |> not then
+    CompileError(sApi.SyntaxErrorsToString ctx.Errors)
+  else
+    match sApi.PerformSyntaxAnalysis ctx.WriteLog ctx.Layers with
+    | SyntaxAnalysisError (errors, _) -> CompileError(sApi.SyntaxErrorsToString errors)
 
-  match result with
-  | SyntaxAnalysisError (errors, _) -> CompileError(sApi.SyntaxErrorsToString errors)
+    | SyntaxAnalysisOk (modules, tirCtx) ->
+      writeLog "Lower"
+      let modules, hirCtx = Lower.lower (modules, tirCtx)
 
-  | SyntaxAnalysisOk (modules, tirCtx) ->
-    writeLog "Lower"
-    let modules, hirCtx = Lower.lower (modules, tirCtx)
+      let cFiles, exportNames =
+        tApi.CodeGenHir ctx.EntrypointName writeLog (modules, hirCtx)
 
-    let cFiles, exportNames =
-      tApi.CodeGenHir ctx.EntrypointName writeLog (modules, hirCtx)
+      let cFiles =
+        cFiles
+        |> List.map (fun (docId, cCode) -> computeCFilename projectName docId, cCode)
 
-    let cFiles =
-      cFiles
-      |> List.map (fun (docId, cCode) -> computeCFilename projectName docId, cCode)
-
-    writeLog "Finish"
-    CompileOk(cFiles, exportNames)
+      writeLog "Finish"
+      CompileOk(cFiles, exportNames)
 
 // -----------------------------------------------
 // Others
@@ -317,9 +348,10 @@ let private writeCFiles (host: CliHost) (targetDir: string) (cFiles: (CFilename 
 // Actions
 // -----------------------------------------------
 
-let private cliCheck sApi (host: CliHost) verbosity projectDir =
+let private cliCheck sApi (host: CliHost) verbosity projectDir entryModulePathOpt =
   let ctx =
-    compileCtxNew sApi host verbosity projectDir
+    prepareCompile sApi host verbosity projectDir entryModulePathOpt
+    |> Future.wait
 
   let ok, output = check sApi ctx
   let exitCode = if ok then 0 else 1
@@ -332,16 +364,16 @@ let private cliCheck sApi (host: CliHost) verbosity projectDir =
 [<RequireQualifiedAccess; NoEquality; NoComparison>]
 type private CompileOptions =
   { ProjectDir: string
+    EntryModulePathOpt: string option
     TargetDir: string
     Verbosity: Verbosity }
 
-let private cliCompile sApi tApi (host: CliHost) (options: CompileOptions) =
-  let projectDir = options.ProjectDir
-  let targetDir = options.TargetDir
-  let verbosity = options.Verbosity
+let private cliCompile sApi tApi (host: CliHost) (co: CompileOptions) =
+  let targetDir = co.TargetDir
 
   let ctx =
-    compileCtxNew sApi host verbosity projectDir
+    prepareCompile sApi host co.Verbosity co.ProjectDir co.EntryModulePathOpt
+    |> Future.wait
 
   match compile sApi tApi ctx with
   | CompileError output ->
@@ -381,8 +413,7 @@ let private toBuildOnLinuxParams
   let isRelease = options.IsRelease
   let outputOpt = options.OutputOpt
   let projectName = ctx.EntryProjectName
-
-  let manifest = ctx.SyntaxCtx |> sApi.GetManifest
+  let manifest = ctx.Manifest
 
   let binaryType =
     match manifest.BinaryType with
@@ -428,8 +459,7 @@ let private toBuildOnWindowsParams
   let outputOpt = options.OutputOpt
   let projectName = ctx.EntryProjectName
   let projectDir = compileOptions.ProjectDir
-
-  let manifest = ctx.SyntaxCtx |> sApi.GetManifest
+  let manifest = ctx.Manifest
 
   let binaryType =
     match manifest.BinaryType with
@@ -474,7 +504,8 @@ let private cliBuild sApi tApi (host: CliHost) (options: BuildOptions) =
   let verbosity = compileOptions.Verbosity
 
   let ctx =
-    compileCtxNew sApi host verbosity projectDir
+    prepareCompile sApi host verbosity projectDir options.CompileOptions.EntryModulePathOpt
+    |> Future.wait
 
   match compile sApi tApi ctx with
   | CompileError output ->
@@ -500,7 +531,8 @@ let private cliRun sApi tApi (host: CliHost) (options: BuildOptions) (restArgs: 
   let verbosity = compileOptions.Verbosity
 
   let ctx =
-    compileCtxNew sApi host verbosity projectDir
+    prepareCompile sApi host verbosity projectDir compileOptions.EntryModulePathOpt
+    |> Future.wait
 
   match compile sApi tApi ctx with
   | CompileError output ->
@@ -546,13 +578,15 @@ let main _ =
   let options: BuildOptions =
     { CompileOptions =
         { ProjectDir = projectDir
+          EntryModulePathOpt = None
           TargetDir = targetDir
           Verbosity = verbosity }
       IsRelease = false
       OutputOpt = None }
 
   let ctx =
-    compileCtxNew sApi host verbosity projectDir
+    prepareCompile sApi host verbosity projectDir options.CompileOptions.EntryModulePathOpt
+    |> Future.wait
 
   dirCreateOrFail host (Path targetDir)
   fileWrite host (Path(projectDir + "/Eval.milone")) sourceCode
@@ -745,6 +779,7 @@ let private defaultTargetDir projectDir =
 [<RequireQualifiedAccess; NoEquality; NoComparison>]
 type private BuildLikeOptions =
   { ProjectDir: ProjectDir
+    EntryModulePathOpt: string option
     TargetDir: string
     IsRelease: bool
     OutputOpt: string option
@@ -753,6 +788,7 @@ type private BuildLikeOptions =
 module private BuildLikeOptions =
   let toCompileOptions (b: BuildLikeOptions) : CompileOptions =
     { ProjectDir = b.ProjectDir
+      EntryModulePathOpt = b.EntryModulePathOpt
       TargetDir = b.TargetDir
       Verbosity = b.Verbosity }
 
@@ -780,21 +816,40 @@ let private parseBuildLikeOptions host args : BuildLikeOptions * string list =
   let outputFileOpt, args =
     parseOption (fun x -> x = "-o" || x = "--output") args
 
-  let projectDirOpt, args =
-    let projectDirOpt, args =
+  let projectOpt, args =
+    let projectOpt, args =
       parseOption (fun x -> x = "--project") args
 
-    match projectDirOpt, args with
+    match projectOpt, args with
     | Some it, _ -> Some it, args
     | _, arg :: args when not (S.startsWith "-" arg) -> Some arg, args
     | _ -> None, args
 
-  let projectDir =
-    match projectDirOpt with
+  let project =
+    match projectOpt with
     | Some it -> it
     | None ->
-      printfn "ERROR: Expected project dir."
+      printfn "ERROR: Expected a project directory or a source file."
       exit 1
+
+  let projectDir, entryModulePathOpt =
+    let path =
+      pathJoin host.WorkDir project
+      |> S.replace "\\" "/"
+
+    if project |> S.endsWith ".milone"
+       || project |> S.endsWith ".fs" then
+      let dir =
+        match S.findLastIndex "/" path with
+        | Some i when i >= 1 -> path.[0..i - 1]
+
+        | _ ->
+          printfn "ERROR: Invalid path."
+          exit 1
+
+      dir, Some path
+    else
+      path, None
 
   let targetDir =
     match targetDirOpt with
@@ -808,6 +863,7 @@ let private parseBuildLikeOptions host args : BuildLikeOptions * string list =
 
   let options: BuildLikeOptions =
     { ProjectDir = pathJoin host.WorkDir projectDir
+      EntryModulePathOpt = entryModulePathOpt
       TargetDir = pathJoin host.WorkDir targetDir
       IsRelease = Option.defaultValue false isReleaseOpt
       OutputOpt = outputFileOpt
@@ -878,7 +934,7 @@ let cli (sApi: SyntaxApi) (tApi: TranslationApi) (host: CliHost) =
 
     let projectDir = b.ProjectDir
     let verbosity = b.Verbosity
-    cliCheck sApi host verbosity projectDir
+    cliCheck sApi host verbosity projectDir b.EntryModulePathOpt
 
   | CompileCmd, args ->
     let args = eatParallelFlag args
