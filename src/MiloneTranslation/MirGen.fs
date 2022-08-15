@@ -13,7 +13,7 @@ open Std.StdError
 open Std.StdMap
 open MiloneTranslation.Hir
 open MiloneTranslation.Mir
-open MiloneTranslationTypes.HirTypes
+open MiloneTranslation.HirTypes
 
 module S = Std.StdString
 

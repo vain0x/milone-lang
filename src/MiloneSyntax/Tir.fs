@@ -7,7 +7,7 @@ open MiloneShared.SharedTypes
 open MiloneShared.TypeFloat
 open MiloneShared.TypeIntegers
 open Std.StdMap
-open MiloneSyntaxTypes.TirTypes
+open MiloneSyntax.TirTypes
 
 module S = Std.StdString
 

@@ -1,8 +1,8 @@
 /// Entry point of the milone-lang compiler.
 module MiloneCli.Program
 
-open MiloneCliCore.Cli
-open MiloneCliCore.FSharpOnly
+open MiloneCli.Cli
+open MiloneCli.FSharpOnly
 open MiloneSyntax.SyntaxApi
 open MiloneTranslation.TranslationApi
 

@@ -37,7 +37,7 @@
 module rec MiloneSyntax.NirGen
 
 open MiloneShared.SharedTypes
-open MiloneSyntaxTypes.SyntaxTypes
+open MiloneSyntax.SyntaxTypes
 open Std.StdError
 
 let private optionMapFold (mapFolder: 'S -> 'T -> 'U * 'S) (state: 'S) (opt: 'T option) : 'U option * 'S =

@@ -3,7 +3,7 @@ module MiloneLspServer.LspLangService
 open MiloneShared.SharedTypes
 open MiloneShared.UtilParallel
 open MiloneShared.UtilSymbol
-open MiloneSyntaxTypes.SyntaxTypes
+open MiloneSyntax.SyntaxTypes
 open Std.StdError
 open Std.StdMap
 open Std.StdSet

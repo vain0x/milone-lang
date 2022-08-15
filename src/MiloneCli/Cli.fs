@@ -1,5 +1,5 @@
 /// Front end of the compiler.
-module rec MiloneCliCore.Cli
+module rec MiloneCli.Cli
 
 open MiloneShared.SharedTypes
 open MiloneShared.Util
@@ -9,17 +9,17 @@ open MiloneShared.UtilSymbol
 open Std.StdError
 open Std.StdMap
 open Std.StdPath
-open MiloneSyntaxTypes.SyntaxTypes
-open MiloneSyntaxTypes.SyntaxApiTypes
-open MiloneTranslationTypes.TranslationApiTypes
+open MiloneSyntax.SyntaxTypes
+open MiloneSyntax.SyntaxApiTypes
+open MiloneTranslation.TranslationApiTypes
 
 module C = Std.StdChar
 module S = Std.StdString
-module Lower = MiloneCliCore.Lower
-module ModuleFetch = MiloneCliCore.ModuleFetch
-module ModuleLoad = MiloneCliCore.ModuleLoad
-module PL = MiloneCliCore.PlatformLinux
-module PW = MiloneCliCore.PlatformWindows
+module Lower = MiloneCli.Lower
+module ModuleFetch = MiloneCli.ModuleFetch
+module ModuleLoad = MiloneCli.ModuleLoad
+module PL = MiloneCli.PlatformLinux
+module PW = MiloneCli.PlatformWindows
 
 let private currentVersion () = "0.5.0"
 

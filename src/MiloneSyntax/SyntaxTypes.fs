@@ -8,7 +8,7 @@
 /// Source code (string) is split into a list of tokens in `SyntaxTokenize`
 /// and converted to an abstract syntax tree (AST) in `SyntaxParse`.
 /// Finally AST is converted to NIR in `NirGen`.
-module rec MiloneSyntaxTypes.SyntaxTypes
+module rec MiloneSyntax.SyntaxTypes
 
 open MiloneShared.SharedTypes
 open MiloneShared.TypeIntegers

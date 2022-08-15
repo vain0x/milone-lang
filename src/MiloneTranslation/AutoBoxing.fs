@@ -11,7 +11,7 @@ open Std.StdError
 open Std.StdMap
 open Std.StdSet
 open MiloneTranslation.Hir
-open MiloneTranslationTypes.HirTypes
+open MiloneTranslation.HirTypes
 
 module Int = Std.StdInt
 

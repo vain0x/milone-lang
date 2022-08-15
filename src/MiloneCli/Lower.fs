@@ -1,14 +1,14 @@
 /// # Lower
 ///
 /// Conversion from TIR to HIR.
-module rec MiloneCliCore.Lower
+module rec MiloneCli.Lower
 
 open MiloneShared.SharedTypes
 open Std.StdError
 open Std.StdMap
 
-module Hir = MiloneTranslationTypes.HirTypes
-module Tir = MiloneSyntaxTypes.TirTypes
+module Hir = MiloneTranslation.HirTypes
+module Tir = MiloneSyntax.TirTypes
 
 module private Hir =
   let hxUnit loc =

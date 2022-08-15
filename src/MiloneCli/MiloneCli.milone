@@ -1,8 +1,8 @@
 /// Entry point of the milone-lang compiler.
 module rec MiloneCli.Program
 
-open MiloneCliCore.Cli
-open MiloneCliCore.MiloneOnly
+open MiloneCli.Cli
+open MiloneCli.MiloneOnly
 open MiloneSyntax.SyntaxApi
 open MiloneTranslation.TranslationApi
 

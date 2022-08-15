@@ -8,7 +8,7 @@ open MiloneShared.Util
 open Std.StdError
 open Std.StdMap
 open MiloneTranslation.Hir
-open MiloneTranslationTypes.HirTypes
+open MiloneTranslation.HirTypes
 
 // #tyAssign?
 let private getTyAssignment tyVars tyArgs : TreeMap<TySerial, Ty> =

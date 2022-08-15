@@ -3,7 +3,7 @@
 /// Provides types for high-level intermediate representation (HIR).
 ///
 /// HIR is functional-style. Similar to milone-lang's syntax.
-module rec MiloneTranslationTypes.HirTypes
+module rec MiloneTranslation.HirTypes
 
 open MiloneShared.SharedTypes
 open MiloneShared.TypeFloat

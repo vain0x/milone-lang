@@ -7,9 +7,9 @@ open MiloneShared.UtilParallel
 open MiloneShared.UtilSymbol
 open MiloneSyntax.Syntax
 open MiloneSyntax.Tir
-open MiloneSyntaxTypes.SyntaxApiTypes
-open MiloneSyntaxTypes.SyntaxTypes
-open MiloneSyntaxTypes.TirTypes
+open MiloneSyntax.SyntaxApiTypes
+open MiloneSyntax.SyntaxTypes
+open MiloneSyntax.TirTypes
 open Std.StdMap
 open Std.StdSet
 

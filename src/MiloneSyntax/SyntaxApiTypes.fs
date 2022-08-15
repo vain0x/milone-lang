@@ -1,9 +1,9 @@
-module rec MiloneSyntaxTypes.SyntaxApiTypes
+module rec MiloneSyntax.SyntaxApiTypes
 
 open MiloneShared.SharedTypes
 open MiloneShared.UtilParallel
-open MiloneSyntaxTypes.SyntaxTypes
-open MiloneSyntaxTypes.TirTypes
+open MiloneSyntax.SyntaxTypes
+open MiloneSyntax.TirTypes
 open Std.StdPath
 
 /// `MILONE_HOME`

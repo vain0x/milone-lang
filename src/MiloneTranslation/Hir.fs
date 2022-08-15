@@ -11,7 +11,7 @@ open MiloneShared.TypeIntegers
 open MiloneShared.Util
 open Std.StdError
 open Std.StdMap
-open MiloneTranslationTypes.HirTypes
+open MiloneTranslation.HirTypes
 
 module S = Std.StdString
 

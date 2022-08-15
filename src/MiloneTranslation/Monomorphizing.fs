@@ -58,7 +58,7 @@ open Std.StdError
 open Std.StdMap
 open Std.StdMultimap
 open MiloneTranslation.Hir
-open MiloneTranslationTypes.HirTypes
+open MiloneTranslation.HirTypes
 
 module S = Std.StdString
 

@@ -25,7 +25,7 @@ printfn "5! = %d" (factorial 5) //=> 120
     - CLI -> [docs/cli.md](docs/cli.md)
 - Examples
     - [tests/examples](tests/examples)
-    - Compiler itself -> [src/MiloneCliCore/Cli.fs](src/MiloneCliCore/Cli.fs)
+    - Compiler itself -> [src/MiloneCli/Cli.fs](src/MiloneCli/Cli.fs)
 - Libraries
     - Built-in library -> [src/MiloneCore](src/MiloneCore)
     - Standard library -> [src/Std](src/Std)

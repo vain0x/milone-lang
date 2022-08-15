@@ -9,7 +9,7 @@ open MiloneShared.Util
 open Std.StdError
 open Std.StdMap
 open MiloneTranslation.Hir
-open MiloneTranslationTypes.HirTypes
+open MiloneTranslation.HirTypes
 
 module M = MiloneTranslation.MonoTyIr
 

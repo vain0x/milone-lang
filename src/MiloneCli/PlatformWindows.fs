@@ -1,6 +1,6 @@
-module rec MiloneCliCore.PlatformWindows
+module rec MiloneCli.PlatformWindows
 
-open MiloneSyntaxTypes.SyntaxApiTypes
+open MiloneSyntax.SyntaxApiTypes
 open Std.StdPath
 
 module S = Std.StdString
@@ -516,4 +516,8 @@ let private renderVcxProjectXml (p: VcxProjectParams) : string =
         |> S.concat "\n  ")
 
   |> S.replace "${LIBS}" (p.Libs |> List.map Path.toString |> S.concat ";")
-  |> S.replace "${EXPORTS}" (p.Exports |> List.map (fun name -> "/EXPORT:" + name) |> S.concat " ")
+  |> S.replace
+       "${EXPORTS}"
+       (p.Exports
+        |> List.map (fun name -> "/EXPORT:" + name)
+        |> S.concat " ")

@@ -1,9 +1,9 @@
-module rec MiloneCliCore.FSharpOnly
+module rec MiloneCli.FSharpOnly
 
 open Std.StdError
 open MiloneShared.UtilParallel
 open MiloneShared.UtilProfiler
-open MiloneCliCore.Cli
+open MiloneCli.Cli
 
 let private dirCreate (baseDir: string) (dir: string) =
   try

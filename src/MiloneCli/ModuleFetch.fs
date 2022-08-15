@@ -1,10 +1,10 @@
-module rec MiloneCliCore.ModuleFetch
+module rec MiloneCli.ModuleFetch
 
 open MiloneShared.SharedTypes
 open MiloneShared.UtilParallel
 open MiloneShared.UtilSymbol
-open MiloneSyntaxTypes.SyntaxApiTypes
-open MiloneSyntaxTypes.SyntaxTypes
+open MiloneSyntax.SyntaxApiTypes
+open MiloneSyntax.SyntaxTypes
 open Std.StdMap
 
 module S = Std.StdString

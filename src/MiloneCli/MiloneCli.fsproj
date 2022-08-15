@@ -6,13 +6,21 @@
   </PropertyGroup>
 
   <ItemGroup>
+    <Compile Include="ModuleFetch.fs" />
+    <Compile Include="ModuleLoad.fs" />
+    <Compile Include="Lower.fs" />
+    <Compile Include="PlatformLinux.fs" />
+    <Compile Include="PlatformWindows.fs" />
+    <Compile Include="Cli.fs" />
+    <Compile Include="FSharpOnly.fs" />
     <Compile Include="MiloneCli.fs" />
   </ItemGroup>
 
   <ItemGroup>
-    <ProjectReference Include="..\MiloneCliCore\MiloneCliCore.fsproj" />
+    <ProjectReference Include="..\MiloneShared\MiloneShared.fsproj" />
     <ProjectReference Include="..\MiloneSyntax\MiloneSyntax.fsproj" />
     <ProjectReference Include="..\MiloneTranslation\MiloneTranslation.fsproj" />
+    <ProjectReference Include="..\Std\Std.fsproj" />
   </ItemGroup>
 
 </Project>

@@ -7,8 +7,8 @@ module rec MiloneSyntax.Manifest
 
 open MiloneShared.SharedTypes
 open Std.StdPath
-open MiloneSyntaxTypes.SyntaxApiTypes
-open MiloneSyntaxTypes.SyntaxTypes
+open MiloneSyntax.SyntaxApiTypes
+open MiloneSyntax.SyntaxTypes
 
 module S = Std.StdString
 

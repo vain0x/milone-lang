@@ -9,8 +9,8 @@ open MiloneShared.Util
 open Std.StdError
 open Std.StdMap
 open MiloneSyntax.Syntax
-open MiloneSyntaxTypes.SyntaxTypes
-open MiloneSyntaxTypes.SyntaxApiTypes
+open MiloneSyntax.SyntaxTypes
+open MiloneSyntax.SyntaxApiTypes
 
 module ArityCheck = MiloneSyntax.ArityCheck
 module OwnershipCheck = MiloneSyntax.OwnershipCheck
@@ -24,7 +24,7 @@ module SyntaxTreeGen = MiloneSyntax.SyntaxTreeGen
 module Tir = MiloneSyntax.Tir
 module Typing = MiloneSyntax.Typing
 module TySystem = MiloneSyntax.TySystem
-module TirTypes = MiloneSyntaxTypes.TirTypes
+module TirTypes = MiloneSyntax.TirTypes
 
 /// `.fs` or `.milone`.
 type private SourceExt = string

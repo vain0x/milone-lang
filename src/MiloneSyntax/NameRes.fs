@@ -13,8 +13,8 @@ open Std.StdMap
 open Std.StdMultimap
 open Std.StdSet
 open MiloneSyntax.Tir
-open MiloneSyntaxTypes.SyntaxTypes
-open MiloneSyntaxTypes.TirTypes
+open MiloneSyntax.SyntaxTypes
+open MiloneSyntax.TirTypes
 
 module S = Std.StdString
 

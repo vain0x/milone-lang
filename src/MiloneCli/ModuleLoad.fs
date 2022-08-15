@@ -22,13 +22,13 @@
 //    to check them and report errors to the editor.
 //    On the other hand, MiloneCli doesn't want to open unused source files.
 
-module rec MiloneCliCore.ModuleLoad
+module rec MiloneCli.ModuleLoad
 
 open MiloneShared.SharedTypes
 open MiloneShared.Util
 open MiloneShared.UtilParallel
 open MiloneShared.UtilSymbol
-open MiloneSyntaxTypes.SyntaxTypes
+open MiloneSyntax.SyntaxTypes
 open Std.StdError
 open Std.StdSet
 open Std.StdMap

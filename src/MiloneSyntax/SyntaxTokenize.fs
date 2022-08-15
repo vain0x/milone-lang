@@ -4,7 +4,7 @@ module rec MiloneSyntax.SyntaxTokenize
 open MiloneShared.SharedTypes
 open MiloneShared.TypeIntegers
 open Std.StdError
-open MiloneSyntaxTypes.SyntaxTypes
+open MiloneSyntax.SyntaxTypes
 
 module C = Std.StdChar
 module S = Std.StdString

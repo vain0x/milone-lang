@@ -12,7 +12,7 @@ open MiloneShared.Util
 open Std.StdError
 open Std.StdMap
 open MiloneSyntax.Tir
-open MiloneSyntaxTypes.TirTypes
+open MiloneSyntax.TirTypes
 
 module S = Std.StdString
 

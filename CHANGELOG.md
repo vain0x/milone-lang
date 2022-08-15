@@ -41,6 +41,7 @@
 
 - Add SyntaxTree generation.
 - Transfer module load process to clients (CLI/LSP server)
+- Revert separation of types and implementation projects
 
 ## [v0.5.0] - 2022-07-21
 

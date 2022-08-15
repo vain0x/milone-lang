@@ -3,7 +3,7 @@ module rec MiloneSyntax.SyntaxTreeGen
 open MiloneShared.SharedTypes
 open MiloneShared.TypeIntegers
 open MiloneShared.Util
-open MiloneSyntaxTypes.SyntaxTypes
+open MiloneSyntax.SyntaxTypes
 open Std.StdError
 open Std.StdPair
 open Std.StdMap

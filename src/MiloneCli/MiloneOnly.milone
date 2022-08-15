@@ -1,4 +1,4 @@
-module rec MiloneCliCore.MiloneOnly
+module rec MiloneCli.MiloneOnly
 
 open Std.StdChar
 open Std.StdError
@@ -6,7 +6,7 @@ open Std.StdString
 open MiloneShared.Util
 open MiloneShared.UtilParallel
 open MiloneShared.UtilProfiler
-open MiloneCliCore.Cli
+open MiloneCli.Cli
 
 module Env = Std.StdEnv
 

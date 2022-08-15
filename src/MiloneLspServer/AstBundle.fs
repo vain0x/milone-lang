@@ -9,7 +9,7 @@ open Std.StdError
 open Std.StdSet
 open Std.StdMap
 open MiloneSyntax.Syntax
-open MiloneSyntaxTypes.SyntaxTypes
+open MiloneSyntax.SyntaxTypes
 
 module S = Std.StdString
 module NirGen = MiloneSyntax.NirGen

@@ -1,7 +1,7 @@
 /// # TirTypes
 ///
 /// Provides public types about typed intermediate representation (TIR).
-module rec MiloneSyntaxTypes.TirTypes
+module rec MiloneSyntax.TirTypes
 
 open MiloneShared.SharedTypes
 open MiloneShared.TypeFloat

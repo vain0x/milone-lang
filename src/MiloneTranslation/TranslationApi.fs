@@ -5,8 +5,8 @@ module rec MiloneTranslation.TranslationApi
 
 open MiloneShared.SharedTypes
 open Std.StdMap
-open MiloneTranslationTypes.HirTypes
-open MiloneTranslationTypes.TranslationApiTypes
+open MiloneTranslation.HirTypes
+open MiloneTranslation.TranslationApiTypes
 open MiloneTranslation.Cir
 
 module S = Std.StdString
@@ -96,11 +96,13 @@ let private codeGenHir
     |> List.map (fun (docId, cir) -> docId, CirDump.cirDump cir)
 
   let exportNames =
-    modules |> List.collect (fun (_, decls) ->
-      decls |> List.choose (fun decl ->
+    modules
+    |> List.collect (fun (_, decls) ->
+      decls
+      |> List.choose (fun decl ->
         match decl with
         | CFunDecl (ident, _, _, _) -> Some ident
-        | _ -> None ))
+        | _ -> None))
 
   cFiles, exportNames
 

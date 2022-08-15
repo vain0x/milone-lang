@@ -24,7 +24,7 @@ open MiloneTranslation.Cir
 open MiloneTranslation.Hir
 open MiloneTranslation.Mir
 open MiloneTranslation.MirGen
-open MiloneTranslationTypes.HirTypes
+open MiloneTranslation.HirTypes
 
 module S = Std.StdString
 

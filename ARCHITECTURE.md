@@ -22,18 +22,14 @@ Compiler does *parse* a program and then *codegen*.
 Projects:
 
 - lib: MiloneShared: Shared types, functions and utilities
-- lib: MiloneSyntaxTypes: Types for MiloneSyntax
 - lib: MiloneSyntax: Syntax analysis and semantic check
-- lib: MiloneTranslationTypes: Types for MiloneTranslation
 - lib: MiloneTranslation: Code generation actual logic
-- lib: MiloneCliCore: CLI client implementation
-- app: MiloneCli
-- lib: MiloneLspServerCore: LSP server implementation (F#)
-- app: MiloneLspServer
+- app: MiloneCli: CLI client
+- app: MiloneLspServer: LSP server implementation (F#)
 
 Diagram of project dependencies:
 
-        Shared
+         Shared
             ^
           /   \
          /     \
@@ -41,8 +37,10 @@ Diagram of project dependencies:
      ^  ^       ^
      |   \     /
      |    \   /
-     |     Cli
-    LSP
+     |      v
+     |   CLI tool
+     |
+  LSP server
 
 Note that Translation isn't depended by Syntax and LSP server.
 That illustrates modification of Translation doesn't affect the interface of language.
@@ -65,8 +63,7 @@ That illustrates modification of Translation doesn't affect the interface of lan
 Diagram of data flow.
 
     Files (*.fs, *.milone)
-      | tokenize & parse
-      v
+      ↓ tokenize & parse
      AST
     　↓
      NIR
@@ -90,10 +87,3 @@ Diagram of data flow.
 ## Cross-Cutting Concerns
 
 *WIP*
-
-----
-
-## Less Interesting Notes
-
-- Reason why app project and lib project are separated (e.g. MiloneCliCore and MiloneCli.):
-    - I expected separation should reduce the compilation time. Improvement isn't observed though.

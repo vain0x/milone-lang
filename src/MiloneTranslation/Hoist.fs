@@ -50,7 +50,7 @@ open MiloneShared.Util
 open Std.StdError
 open Std.StdMap
 open MiloneTranslation.Hir
-open MiloneTranslationTypes.HirTypes
+open MiloneTranslation.HirTypes
 
 let private hpUnit loc = HNodePat(HTuplePN, [], tyUnit, loc)
 

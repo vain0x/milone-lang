@@ -5,7 +5,7 @@ module rec MiloneSyntax.Syntax
 
 open MiloneShared.SharedTypes
 open Std.StdMap
-open MiloneSyntaxTypes.SyntaxTypes
+open MiloneSyntax.SyntaxTypes
 
 // -----------------------------------------------
 // TokenizeError

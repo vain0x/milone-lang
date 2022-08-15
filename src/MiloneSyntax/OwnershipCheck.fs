@@ -4,7 +4,7 @@ open MiloneShared.SharedTypes
 open MiloneShared.Util
 open MiloneSyntax.Tir
 open MiloneSyntax.TySystem
-open MiloneSyntaxTypes.TirTypes
+open MiloneSyntax.TirTypes
 open Std.StdError
 open Std.StdMap
 open Std.StdSet

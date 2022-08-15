@@ -1,7 +1,7 @@
-module rec MiloneTranslationTypes.TranslationApiTypes
+module rec MiloneTranslation.TranslationApiTypes
 
 open MiloneShared.SharedTypes
-open MiloneTranslationTypes.HirTypes
+open MiloneTranslation.HirTypes
 
 /// Name of entrypoint function, typically `main`
 type EntrypointName = string

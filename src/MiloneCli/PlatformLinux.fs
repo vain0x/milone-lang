@@ -1,9 +1,9 @@
-module rec MiloneCliCore.PlatformLinux
+module rec MiloneCli.PlatformLinux
 
 open Std.StdError
 open Std.StdPath
 open MiloneShared.Util
-open MiloneSyntaxTypes.SyntaxApiTypes
+open MiloneSyntax.SyntaxApiTypes
 
 module S = Std.StdString
 

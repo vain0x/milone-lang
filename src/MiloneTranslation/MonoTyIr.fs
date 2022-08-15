@@ -6,7 +6,7 @@ open MiloneShared.TypeIntegers
 open MiloneShared.TypeFloat
 open Std.StdMap
 
-module Hir = MiloneTranslationTypes.HirTypes
+module Hir = MiloneTranslation.HirTypes
 
 // Same as HIR but type is mono ty (monomorphized).
 type private Ty = MonoTy

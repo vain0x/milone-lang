@@ -10,7 +10,7 @@ open Std.StdError
 open Std.StdMap
 open Std.StdSet
 open MiloneTranslation.Hir
-open MiloneTranslationTypes.HirTypes
+open MiloneTranslation.HirTypes
 
 // #tyAppliedBy
 let private tyAppliedBy n ty =
