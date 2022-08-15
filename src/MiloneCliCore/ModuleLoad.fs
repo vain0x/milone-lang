@@ -1,23 +1,50 @@
-// See docs/internals/ast_bundle.md
-module rec MiloneSyntax.AstBundle
+// Successor to AstBundle. See also docs/internals/ast_bundle.md
+
+// This pass does an asynchronous recursive process:
+//
+//    - start from an entrypoint module that is specified by CLI args
+//    - load source files and parse them
+//    - find dependent modules by loaded ones and enqueue them
+//    - do recursively until queue becomes empty.
+
+// This pass is a business of MiloneCli rather than Syntax library
+// because details vary on the client.
+//
+// Consider how the other client, LSP server (say, S), does work in this pass.
+//
+// - (How to load files)
+//    The server has loaded all source files before starting analysis
+//    and some of them are modified in the editor.
+//    On the other hand, MiloneCli loads files on-demand.
+//
+// - (Which files to load)
+//    The server also loads files that don't have any dependents
+//    to check them and report errors to the editor.
+//    On the other hand, MiloneCli doesn't want to open unused source files.
+
+module rec MiloneCliCore.ModuleLoad
 
 open MiloneShared.SharedTypes
 open MiloneShared.Util
 open MiloneShared.UtilParallel
 open MiloneShared.UtilSymbol
+open MiloneSyntaxTypes.SyntaxTypes
 open Std.StdError
 open Std.StdSet
 open Std.StdMap
-open MiloneSyntax.Syntax
-open MiloneSyntaxTypes.SyntaxTypes
 
 module S = Std.StdString
-module NirGen = MiloneSyntax.NirGen
+
+type private FetchModuleFun2 =
+  ProjectName
+    -> ModuleName
+    -> Future<(ModuleSyntaxData2 * (ProjectName * ModuleName * Pos) list * ModuleSyntaxError list) option>
 
 // -----------------------------------------------
-// Utils
+// ComputeLayer
 // -----------------------------------------------
 
+// #computeLayer
 /// Splits vertices in a tree into a list of layers.
 ///
 /// Result (list of layers) satisfies a condition:
@@ -59,7 +86,7 @@ let private computeLayer
 // Types
 // -----------------------------------------------
 
-type private Error = string * Loc
+type private SyntaxError = string * Loc
 
 [<RequireQualifiedAccess; NoEquality; NoComparison>]
 type private ModuleRequest =
@@ -71,9 +98,9 @@ type private ModuleRequest =
 type private ModuleData =
   { Name: ModuleName
     Project: ProjectName
-    SyntaxData: ModuleSyntaxData
+    SyntaxData: ModuleSyntaxData2
     Deps: ModuleRequest list
-    Errors: Error list }
+    Errors: SyntaxError list }
 
 [<RequireQualifiedAccess; NoEquality; NoComparison>]
 type private RequestResult =
@@ -100,7 +127,7 @@ let private newDepRequest (p: ProjectName) (m: ModuleName) (originLoc: Loc) : Mo
     ModuleName = m
     Origin = originLoc }
 
-let private requestToNotFoundError (r: ModuleRequest) : Error = "Module not found.", r.Origin
+let private requestToNotFoundError (r: ModuleRequest) : SyntaxError = "Module not found.", r.Origin
 
 // -----------------------------------------------
 // Interface
@@ -109,7 +136,7 @@ let private requestToNotFoundError (r: ModuleRequest) : Error = "Module not foun
 [<RequireQualifiedAccess; NoEquality; NoComparison>]
 type private State =
   { RequestMap: RequestMap
-    Errors: Error list }
+    Errors: SyntaxError list }
 
 let private initialState: State =
   { RequestMap = TMap.empty (pairCompare compare compare)
@@ -136,7 +163,7 @@ let private toModules (state: State) : ModuleData list =
     | RequestResult.Failed -> None
     | RequestResult.Requested -> unreachable ())
 
-let private toErrors (state: State) : Error list =
+let private toErrors (state: State) : SyntaxError list =
   state
   |> toModules
   |> List.collect (fun (m: ModuleData) -> m.Errors)
@@ -185,15 +212,15 @@ let private consumer (state: State) action : State * ModuleRequest list =
 
     | _ -> unreachable ()
 
-let private producer (fetchModule: FetchModuleFun) (_: State) (r: ModuleRequest) : Future<Action> =
+let private producer (fetchModule: FetchModuleFun2) (_: State) (r: ModuleRequest) : Future<Action> =
   fetchModule r.ProjectName r.ModuleName
   |> Future.map (fun result ->
     match result with
-    | Some syntaxData ->
-      let docId, _, ast, errors = syntaxData
+    | Some ((syntaxData: ModuleSyntaxData2), dependentModules, errors) ->
+      let docId = syntaxData.DocId
 
       let deps =
-        findDependentModules ast
+        dependentModules
         |> List.map (fun (projectName, moduleName, pos) ->
           let originLoc =
             let y, x = pos
@@ -220,9 +247,9 @@ let private producer (fetchModule: FetchModuleFun) (_: State) (r: ModuleRequest)
 // Interface
 // -----------------------------------------------
 
-type private BundleResult = (ModuleSyntaxData * NRoot) list list * Error list
+type LoadResult = ModuleSyntaxData2 list list * SyntaxError list
 
-let bundle (fetchModule: FetchModuleFun) (entryProjectName: ProjectName) : BundleResult =
+let load (fetchModule: FetchModuleFun2) (entryProjectName: ProjectName) : LoadResult =
   let entryRequest =
     let p = entryProjectName
     let docId = computeDocId p p
@@ -236,9 +263,7 @@ let bundle (fetchModule: FetchModuleFun) (entryProjectName: ProjectName) : Bundl
 
   let layers =
     let comparer (l: ModuleData) (r: ModuleData) =
-      let l, _, _, _ = l.SyntaxData
-      let r, _, _, _ = r.SyntaxData
-      Symbol.compare l r
+      Symbol.compare l.SyntaxData.DocId r.SyntaxData.DocId
 
     let getDeps (m: ModuleData) =
       m.Deps
@@ -250,38 +275,14 @@ let bundle (fetchModule: FetchModuleFun) (entryProjectName: ProjectName) : Bundl
     state
     |> toModules
     |> computeLayer comparer getDeps
+    |> List.map (fun layer ->
+      layer
+      |> List.map (fun (m: ModuleData) ->
+        ({ ProjectName = m.Project
+           ModuleName = m.Name
+           DocId = m.SyntaxData.DocId
+           Ast = m.SyntaxData.Ast }: ModuleSyntaxData2)))
 
   let errors = state |> toErrors
-
-  // Convert to NIR.
-  let layers =
-    layers
-    |> __parallelMap (fun modules ->
-      modules
-      |> __parallelMap (fun (moduleData: ModuleData) ->
-        let projectName = moduleData.Project
-        let moduleName = moduleData.Name
-        let syntaxData = moduleData.SyntaxData
-        let docId, _, ast, _ = syntaxData
-
-        let nir, logs =
-          NirGen.genNir projectName moduleName docId ast
-
-        syntaxData, nir, logs))
-
-  let errors =
-    let errors2 =
-      layers
-      |> List.collect (
-        List.collect (fun (_, _, logs) ->
-          logs
-          |> List.map (fun (log, loc) -> NirGen.nirGenLogToString log, loc))
-      )
-
-    List.append errors errors2
-
-  let layers =
-    layers
-    |> List.map (List.map (fun (syntaxData, nir, _) -> syntaxData, nir))
 
   layers, errors

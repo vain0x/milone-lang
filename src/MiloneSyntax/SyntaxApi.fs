@@ -6,7 +6,6 @@ module rec MiloneSyntax.SyntaxApi
 open MiloneShared.SharedTypes
 open MiloneShared.UtilParallel
 open MiloneShared.Util
-open MiloneShared.UtilSymbol
 open Std.StdError
 open Std.StdMap
 open MiloneSyntax.Syntax
@@ -14,10 +13,10 @@ open MiloneSyntaxTypes.SyntaxTypes
 open MiloneSyntaxTypes.SyntaxApiTypes
 
 module ArityCheck = MiloneSyntax.ArityCheck
-module AstBundle = MiloneSyntax.AstBundle
 module OwnershipCheck = MiloneSyntax.OwnershipCheck
 module NameRes = MiloneSyntax.NameRes
 module Manifest = MiloneSyntax.Manifest
+module NirGen = MiloneSyntax.NirGen
 module S = Std.StdString
 module SyntaxParse = MiloneSyntax.SyntaxParse
 module SyntaxTokenize = MiloneSyntax.SyntaxTokenize
@@ -198,7 +197,7 @@ let private resolveMiloneCoreDeps kind tokens ast =
   | _ -> updateAst ast
 
 // -----------------------------------------------
-// Utilities
+// Misc
 // -----------------------------------------------
 
 let getMiloneHomeFromEnv (getMiloneHomeEnv: unit -> string option) (getHomeEnv: unit -> string option) : MiloneHome =
@@ -221,6 +220,7 @@ let chooseSourceExt (fileExists: FileExistsFun) filename =
   else
     fs
 
+// #readSourceFile
 let readSourceFile (readTextFile: ReadTextFileFun) filename : Future<string option> =
   readTextFile filename
   |> Future.andThen (fun result ->
@@ -244,74 +244,28 @@ let parseModule (docId: DocId) (kind: ModuleKind) (tokens: TokenizeResult) : Mod
 
   docId, tokens, ast, errors
 
-// -----------------------------------------------
-// FetchModule
-// -----------------------------------------------
+let parse1 host beingCore sourceCode : ARoot * ModuleSyntaxError list =
+  let kind =
+    if beingCore then
+      ModuleKind.MiloneCore
+    else
+      ModuleKind.Regular
 
-[<RequireQualifiedAccess; NoEquality; NoComparison>]
-type private FetchModuleCtx =
-  { Projects: TreeMap<ProjectName, ProjectDir>
-    Manifest: ManifestData
-    TokenizeHost: TokenizeHost
-    Host: FetchModuleHost }
+  let tokens = SyntaxTokenize.tokenize host sourceCode
+  let errorTokens, tokens = tokens |> List.partition isErrorToken
 
-let private readManifestFile (readTextFile: ReadTextFileFun) projectDir =
-  let manifestFile = projectDir |> Manifest.getManifestPath
-  let docId: DocId = Symbol.intern manifestFile
+  let ast, parseErrors = SyntaxParse.parse tokens
 
-  manifestFile
-  |> readTextFile
-  |> Future.map (Manifest.parseManifestOpt docId)
+  let errors =
+    List.append (tokenizeErrors errorTokens) parseErrors
 
-let private prepareFetchModule (host: FetchModuleHost) : ManifestData * FetchModuleFun =
-  let entryProjectName = host.EntryProjectName
-  let entryProjectDir = host.EntryProjectDir
-  let miloneHome = host.MiloneHome
-  let readTextFile = host.ReadTextFile
-  let tokenizeHost = tokenizeHostNew ()
+  let ast =
+    if errors |> List.isEmpty then
+      resolveMiloneCoreDeps kind tokens ast
+    else
+      ast
 
-  let manifest =
-    readManifestFile readTextFile entryProjectDir
-    |> Future.wait // #avoidBlocking
-
-  let projects =
-    let manifestProjects =
-      manifest.Projects
-      |> List.map (fun (name, dir, _) -> name, entryProjectDir + "/" + dir)
-
-    let projects = TMap.ofList compare manifestProjects
-
-    getStdLibProjects miloneHome
-    |> List.fold (fun projects (name, dir) -> projects |> TMap.add name dir) projects
-    |> TMap.add entryProjectName entryProjectDir
-
-  let fetchModule: FetchModuleFun =
-    fun projectName moduleName ->
-      let filename =
-        let projectDir =
-          match projects |> TMap.tryFind projectName with
-          | Some it -> it
-          | None -> entryProjectDir + "/../" + projectName
-
-        projectDir + "/" + moduleName + ".milone"
-
-      readSourceFile readTextFile filename
-      |> Future.map (fun result ->
-        match result with
-        | None -> None
-
-        | Some text ->
-          let docId =
-            AstBundle.computeDocId projectName moduleName
-
-          let kind = getModuleKind projectName moduleName
-
-          text
-          |> SyntaxTokenize.tokenize tokenizeHost
-          |> parseModule docId kind
-          |> Some)
-
-  manifest, fetchModule
+  ast, errors
 
 // -----------------------------------------------
 // Error processing
@@ -364,69 +318,48 @@ let syntaxErrorsToString (errors: SyntaxError list) : string =
   |> S.concat ""
 
 // -----------------------------------------------
-// Context
-// -----------------------------------------------
-
-[<RequireQualifiedAccess; NoEquality; NoComparison>]
-type SyntaxCtx =
-  private
-    { EntryProjectName: ProjectName
-      Manifest: ManifestData
-      FetchModule: FetchModuleFun
-      WriteLog: WriteLogFun }
-
-/// Using file system.
-let newSyntaxCtx (host: FetchModuleHost) : SyntaxCtx =
-  let manifest, fetchModule = prepareFetchModule host
-
-  { EntryProjectName = host.EntryProjectName
-    Manifest = manifest
-    FetchModule = fetchModule
-    WriteLog = host.WriteLog }
-
-module SyntaxCtx =
-  let getManifest (ctx: SyntaxCtx) = ctx.Manifest
-
-  let withFetchModule fetchModule (ctx: SyntaxCtx) =
-    { ctx with FetchModule = fetchModule ctx.FetchModule }
-
-// -----------------------------------------------
 // Analysis
 // -----------------------------------------------
 
-/// Creates a TIR and collects errors
+/// Creates an NIR and collects errors
 /// by loading source files and processing.
-let performSyntaxAnalysis (ctx: SyntaxCtx) : SyntaxLayers * SyntaxAnalysisResult =
-  let writeLog = ctx.WriteLog
-  let manifestErrors = ctx.Manifest.Errors
+let performSyntaxAnalysis (writeLog: WriteLogFun) (layers: SyntaxLayers) : SyntaxAnalysisResult =
+  writeLog "NirGen"
 
-  writeLog "AstBundle"
+  let nirLayers =
+    layers
+    |> __parallelMap (fun modules ->
+      modules
+      |> __parallelMap (fun (m: ModuleSyntaxData2) ->
+        let nir, logs =
+          NirGen.genNir m.ProjectName m.ModuleName m.DocId m.Ast
 
-  let layers, bundleErrors =
-    AstBundle.bundle ctx.FetchModule ctx.EntryProjectName
+        m.DocId, nir, logs))
 
-  let syntaxLayers = layers |> List.map (List.map fst)
-
-  let errors = List.append manifestErrors bundleErrors
+  let errors =
+    nirLayers
+    |> List.collect (
+      List.collect (fun (_, _, logs) ->
+        logs
+        |> List.map (fun (log, loc) -> NirGen.nirGenLogToString log, loc))
+    )
 
   if errors |> List.isEmpty |> not then
-    syntaxLayers, SyntaxAnalysisError(errors, None)
+    SyntaxAnalysisError(errors, None)
   else
     writeLog "NameRes"
 
     let modules, nameResResult =
       let modules: NModuleRoot list list =
-        layers
-        |> List.map (fun modules ->
-          modules
-          |> List.map (fun (syntaxData, root) ->
-            let docId, _, _, _ = syntaxData
-            docId, root))
+        nirLayers
+        |> List.map (fun layer ->
+          layer
+          |> List.map (fun (docId, (root: NRoot), _) -> docId, root))
 
       NameRes.nameRes modules
 
     match collectNameResErrors nameResResult.Logs with
-    | Some errors -> syntaxLayers, SyntaxAnalysisError(errors, None)
+    | Some errors -> SyntaxAnalysisError(errors, None)
 
     | None ->
       writeLog "Typing"
@@ -441,8 +374,8 @@ let performSyntaxAnalysis (ctx: SyntaxCtx) : SyntaxLayers * SyntaxAnalysisResult
         OwnershipCheck.ownershipCheck (modules, tirCtx)
 
       match collectTypingErrors tirCtx with
-      | Some errors -> syntaxLayers, SyntaxAnalysisError(errors, Some tirCtx)
-      | None -> syntaxLayers, SyntaxAnalysisOk(modules, tirCtx)
+      | Some errors -> SyntaxAnalysisError(errors, Some tirCtx)
+      | None -> SyntaxAnalysisOk(modules, tirCtx)
 
 // -----------------------------------------------
 // Dump
@@ -464,13 +397,15 @@ let dumpSyntax (text: string) : string * ModuleSyntaxError list =
 // -----------------------------------------------
 
 let newSyntaxApi () : SyntaxApi =
-  let wrap (ctx: SyntaxCtx) = SyntaxCtx(box ctx)
-  let unwrap (SyntaxCtx ctx) : SyntaxCtx = unbox ctx
+  let host = tokenizeHostNew ()
 
   { GetMiloneHomeFromEnv = getMiloneHomeFromEnv
+    GetStdLibProjects = getStdLibProjects
+    ReadSourceFile = readSourceFile
+    ParseManifest = fun docId text -> Manifest.parseManifest docId text
+    Parse = fun beingCore sourceCode -> parse1 host beingCore sourceCode
+    FindDependentModules = findDependentModules
     SyntaxErrorsToString = syntaxErrorsToString
-    NewSyntaxCtx = fun host -> newSyntaxCtx host |> wrap
-    GetManifest = fun ctx -> ctx |> unwrap |> SyntaxCtx.getManifest
-    PerformSyntaxAnalysis = fun ctx -> ctx |> unwrap |> performSyntaxAnalysis
+    PerformSyntaxAnalysis = fun writeLog layers -> performSyntaxAnalysis writeLog layers
     GenSyntaxTree = SyntaxTreeGen.genSyntaxTree
     DumpSyntax = dumpSyntax }

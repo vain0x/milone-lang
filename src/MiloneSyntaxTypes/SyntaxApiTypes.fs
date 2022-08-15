@@ -1,25 +1,17 @@
 module rec MiloneSyntaxTypes.SyntaxApiTypes
 
 open MiloneShared.SharedTypes
-open Std.StdPath
+open MiloneShared.UtilParallel
 open MiloneSyntaxTypes.SyntaxTypes
 open MiloneSyntaxTypes.TirTypes
+open Std.StdPath
 
 /// `MILONE_HOME`
 type MiloneHome = string
 
 type WriteLogFun = string -> unit
 
-type private SyntaxError = string * Loc
-
-[<RequireQualifiedAccess; NoEquality; NoComparison>]
-type FetchModuleHost =
-  { EntryProjectDir: ProjectDir
-    EntryProjectName: ProjectName
-    MiloneHome: MiloneHome
-
-    ReadTextFile: ReadTextFileFun
-    WriteLog: WriteLogFun }
+type SyntaxError = string * Loc
 
 [<RequireQualifiedAccess; NoEquality; NoComparison>]
 type BinaryType =
@@ -55,10 +47,7 @@ type ManifestData =
     /// Passed to cc to link object files, only on Linux.
     LinuxLinkFlags: string option }
 
-[<Struct; NoEquality; NoComparison>]
-type SyntaxCtx = SyntaxCtx of obj
-
-type SyntaxLayers = ModuleSyntaxData list list
+type SyntaxLayers = ModuleSyntaxData2 list list
 
 [<NoEquality; NoComparison>]
 type SyntaxAnalysisResult =
@@ -69,9 +58,16 @@ type SyntaxAnalysisResult =
 type SyntaxApi =
   { // getMiloneHomeEnv -> getHomeEnv -> MiloneHome
     GetMiloneHomeFromEnv: (unit -> string option) -> (unit -> string option) -> string
+    GetStdLibProjects: MiloneHome -> (ProjectName * ProjectDir) list
+    ReadSourceFile: ReadTextFileFun -> string -> Future<string option>
+    ParseManifest: DocId -> string -> ManifestData
+    // beingCore:bool
+    Parse: bool -> SourceCode -> ARoot * ModuleSyntaxError list
+    FindDependentModules: ARoot -> (ProjectName * ModuleName * Pos) list
+
     SyntaxErrorsToString: SyntaxError list -> string
-    NewSyntaxCtx: FetchModuleHost -> SyntaxCtx
-    GetManifest: SyntaxCtx -> ManifestData
-    PerformSyntaxAnalysis: SyntaxCtx -> SyntaxLayers * SyntaxAnalysisResult
+
+    PerformSyntaxAnalysis: WriteLogFun -> SyntaxLayers -> SyntaxAnalysisResult
+
     GenSyntaxTree: TokenizeFullResult -> ARoot -> SyntaxTree
     DumpSyntax: string -> string * ModuleSyntaxError list }
