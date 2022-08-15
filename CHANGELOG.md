@@ -40,6 +40,7 @@
 ### Internal Changes
 
 - Add SyntaxTree generation.
+- Transfer module load process to clients (CLI/LSP server)
 
 ## [v0.5.0] - 2022-07-21
 
