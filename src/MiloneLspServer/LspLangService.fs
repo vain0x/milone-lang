@@ -671,7 +671,8 @@ module ProjectAnalysis =
 
     | None, pa -> None, pa
 
-  let hover (docId: DocId) (targetPos: Pos) (pa: ProjectAnalysis) : string option * ProjectAnalysis =
+  // experimental: show syntax structure
+  let hover2 (docId: DocId) (targetPos: Pos) (pa: ProjectAnalysis) : string option * ProjectAnalysis =
     let syntaxOpt, pa = ProjectAnalysis1.parse2 docId pa
 
     match syntaxOpt with
@@ -711,6 +712,7 @@ module ProjectAnalysis =
 
     | None -> None, pa
 
+  // current: show symbol type
   let hover1 (docId: DocId) (targetPos: Pos) (pa: ProjectAnalysis) : string option * ProjectAnalysis =
     let tokens, pa = ProjectAnalysis1.tokenize docId pa
     let tokenOpt = tokens |> LTokenList.findAt targetPos
@@ -1425,7 +1427,7 @@ module WorkspaceAnalysis =
   let hover (uri: Uri) (pos: Pos) (wa: WorkspaceAnalysis) =
     let results, wa =
       wa.ProjectList
-      |> List.mapFold (fun wa p -> doWithProjectAnalysis p (ProjectAnalysis.hover (uriToDocId uri) pos) wa) wa
+      |> List.mapFold (fun wa p -> doWithProjectAnalysis p (ProjectAnalysis.hover1 (uriToDocId uri) pos) wa) wa
 
     List.choose id results, wa
 

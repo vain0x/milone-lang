@@ -360,7 +360,7 @@ let private doTestRefsSingleFile title text docId (pa: ProjectAnalysis) : bool *
 
       a, pa
 
-  actual |> assertEqual title expected, pa
+  actual |> assertEqual ("refs: " + title) expected, pa
 
 let private testRefsSingleFile title text : bool =
   createSingleFileProject text (doTestRefsSingleFile title text)
@@ -376,11 +376,11 @@ let private doTestHoverSingleFile title text expected docId pa : bool * _ =
     |> S.concat "\n"
 
   let actual, pa =
-    match pa |> LLS.ProjectAnalysis.hover docId targetPos with
+    match pa |> LLS.ProjectAnalysis.hover1 docId targetPos with
     | None, pa -> debugProject pa
     | Some it, pa -> it, pa
 
-  actual |> assertEqual title expected, pa
+  actual |> assertEqual ("hover: " + title) expected, pa
 
 let private testHoverSingleFile title text expected : bool =
   createSingleFileProject text (doTestHoverSingleFile title text expected)
@@ -591,6 +591,7 @@ let private testRefs () =
           0
       """
 
+    // FIXME: position of final use is incorrect
     testRefsSingleFile
       "value-carrying variant"
       """
@@ -608,7 +609,7 @@ let private testRefs () =
         let main _ =
           match some 1 with
           | MySome _ -> 0
-        //  ^use
+        //        ^use
           | _ -> 1
       """
 
