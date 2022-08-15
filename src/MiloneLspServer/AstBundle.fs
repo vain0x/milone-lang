@@ -1,5 +1,5 @@
 // See docs/internals/ast_bundle.md
-module rec MiloneSyntax.AstBundle
+module rec MiloneLspServer.AstBundle
 
 open MiloneShared.SharedTypes
 open MiloneShared.Util
@@ -59,7 +59,7 @@ let private computeLayer
 // Types
 // -----------------------------------------------
 
-type private Error = string * Loc
+type private SyntaxError = string * Loc
 
 [<RequireQualifiedAccess; NoEquality; NoComparison>]
 type private ModuleRequest =
@@ -73,7 +73,7 @@ type private ModuleData =
     Project: ProjectName
     SyntaxData: ModuleSyntaxData
     Deps: ModuleRequest list
-    Errors: Error list }
+    Errors: SyntaxError list }
 
 [<RequireQualifiedAccess; NoEquality; NoComparison>]
 type private RequestResult =
@@ -100,7 +100,7 @@ let private newDepRequest (p: ProjectName) (m: ModuleName) (originLoc: Loc) : Mo
     ModuleName = m
     Origin = originLoc }
 
-let private requestToNotFoundError (r: ModuleRequest) : Error = "Module not found.", r.Origin
+let private requestToNotFoundError (r: ModuleRequest) : SyntaxError = "Module not found.", r.Origin
 
 // -----------------------------------------------
 // Interface
@@ -109,7 +109,7 @@ let private requestToNotFoundError (r: ModuleRequest) : Error = "Module not foun
 [<RequireQualifiedAccess; NoEquality; NoComparison>]
 type private State =
   { RequestMap: RequestMap
-    Errors: Error list }
+    Errors: SyntaxError list }
 
 let private initialState: State =
   { RequestMap = TMap.empty (pairCompare compare compare)
@@ -136,7 +136,7 @@ let private toModules (state: State) : ModuleData list =
     | RequestResult.Failed -> None
     | RequestResult.Requested -> unreachable ())
 
-let private toErrors (state: State) : Error list =
+let private toErrors (state: State) : SyntaxError list =
   state
   |> toModules
   |> List.collect (fun (m: ModuleData) -> m.Errors)
@@ -220,7 +220,7 @@ let private producer (fetchModule: FetchModuleFun) (_: State) (r: ModuleRequest)
 // Interface
 // -----------------------------------------------
 
-type private BundleResult = (ModuleSyntaxData * NRoot) list list * Error list
+type private BundleResult = (ModuleSyntaxData * ModuleSyntaxData2) list list * SyntaxError list
 
 let bundle (fetchModule: FetchModuleFun) (entryProjectName: ProjectName) : BundleResult =
   let entryRequest =
@@ -253,35 +253,19 @@ let bundle (fetchModule: FetchModuleFun) (entryProjectName: ProjectName) : Bundl
 
   let errors = state |> toErrors
 
-  // Convert to NIR.
   let layers =
     layers
     |> __parallelMap (fun modules ->
       modules
-      |> __parallelMap (fun (moduleData: ModuleData) ->
-        let projectName = moduleData.Project
-        let moduleName = moduleData.Name
-        let syntaxData = moduleData.SyntaxData
-        let docId, _, ast, _ = syntaxData
+      |> List.map (fun (m: ModuleData) ->
+        let docId, _, ast, _ = m.SyntaxData
 
-        let nir, logs =
-          NirGen.genNir projectName moduleName docId ast
+        let m2: ModuleSyntaxData2 =
+          { ProjectName = m.Project
+            ModuleName = m.Name
+            DocId = docId
+            Ast = ast }
 
-        syntaxData, nir, logs))
-
-  let errors =
-    let errors2 =
-      layers
-      |> List.collect (
-        List.collect (fun (_, _, logs) ->
-          logs
-          |> List.map (fun (log, loc) -> NirGen.nirGenLogToString log, loc))
-      )
-
-    List.append errors errors2
-
-  let layers =
-    layers
-    |> List.map (List.map (fun (syntaxData, nir, _) -> syntaxData, nir))
+        m.SyntaxData, m2))
 
   layers, errors

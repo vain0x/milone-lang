@@ -15,7 +15,8 @@ open Std.StdSet
 
 module C = Std.StdChar
 module S = Std.StdString
-module AstBundle = MiloneSyntax.AstBundle
+module AstBundle = MiloneLspServer.AstBundle
+module Manifest = MiloneSyntax.Manifest
 module SyntaxApi = MiloneSyntax.SyntaxApi
 module SyntaxTokenize = MiloneSyntax.SyntaxTokenize
 module SyntaxTreeGen = MiloneSyntax.SyntaxTreeGen
@@ -192,17 +193,16 @@ let private firstIdentAfter tokens docId pos =
     | _ -> None)
 
 let private parseAllTokens projectName moduleName docId allTokens =
-  // let tokens =
-  //   allTokens
-  //   |> List.filter (fun (token, _) -> token |> isTrivia |> not)
+  let tokens =
+    allTokens
+    |> List.filter (fun (token, _) -> token |> isTrivia |> not)
 
-  // let kind =
-  //   SyntaxApi.getModuleKind projectName moduleName
+  let kind =
+    SyntaxApi.getModuleKind projectName moduleName
 
-  // let docId, _, ast, errors = SyntaxApi.parseModule docId kind tokens
+  let docId, _, ast, errors = SyntaxApi.parseModule docId kind tokens
 
-  // docId, allTokens, ast, errors
-  failwith "todo"
+  docId, allTokens, ast, errors
 
 let private tyDisplayFn (tirCtx: TirCtx) ty =
   let getTyName tySerial =
@@ -395,46 +395,42 @@ type BundleResult =
       ParseResults: (DocVersion * LSyntaxData) list }
 
 let private doBundle (pa: ProjectAnalysis) : BundleResult =
-  let projectDir = pa.ProjectDir
   let projectName = pa.ProjectName
-  let miloneHome = pa.Host.MiloneHome
+  let writeLog: string -> unit = ignore
 
-  // let fetchModuleUsingCache _ (projectName: string) (moduleName: string) =
-  //   let docId =
-  //     AstBundle.computeDocId projectName moduleName
+  let fetchModuleUsingCache (projectName: string) (moduleName: string) =
+    let docId =
+      AstBundle.computeDocId projectName moduleName
 
-  //   match pa |> parseWithCache docId with
-  //   | None -> Future.just None
-  //   | Some (LSyntaxData syntaxData) -> Future.just (Some syntaxData)
+    match pa |> parseWithCache docId with
+    | None -> Future.just None
+    | Some (LSyntaxData syntaxData) -> Future.just (Some syntaxData)
 
-  // let syntaxCtx =
-  //   let host: FetchModuleHost =
-  //     { EntryProjectDir = projectDir
-  //       EntryProjectName = projectName
-  //       MiloneHome = miloneHome
-  //       ReadTextFile = pa.Host.ReadTextFile
-  //       WriteLog = fun _ -> () }
+  let layers, bundleErrors =
+    AstBundle.bundle fetchModuleUsingCache projectName
 
-  //   SyntaxApi.newSyntaxCtx host
-  //   |> SyntaxApi.SyntaxCtx.withFetchModule fetchModuleUsingCache
+  let result =
+    if bundleErrors |> List.isEmpty |> not then
+      SyntaxAnalysisError(bundleErrors, None)
+    else
+      let layers =
+        layers
+        |> List.map (fun modules -> modules |> List.map (fun (_, m) -> m))
 
-  // let layers, result =
-  //   SyntaxApi.performSyntaxAnalysis syntaxCtx
-
-  let layers, result = failwith "todo"
+      SyntaxApi.performSyntaxAnalysis writeLog layers
 
   let docVersions =
     layers
     |> List.collect (fun modules ->
       modules
-      |> List.map (fun (docId, _, _, _) -> docId, getVersion docId pa))
+      |> List.map (fun (_, (m: ModuleSyntaxData2)) -> m.DocId, getVersion m.DocId pa))
 
   let parseResults =
     layers
     |> List.collect (fun modules ->
       modules
-      |> List.map (fun ((docId, _, _, _) as syntaxData) ->
-        let v = getVersion docId pa
+      |> List.map (fun ((syntaxData: ModuleSyntaxData), (m: ModuleSyntaxData2)) ->
+        let v = getVersion m.DocId pa
         v, LSyntaxData syntaxData))
 
   match result with

@@ -6,7 +6,6 @@ module rec MiloneSyntax.SyntaxApi
 open MiloneShared.SharedTypes
 open MiloneShared.UtilParallel
 open MiloneShared.Util
-open MiloneShared.UtilSymbol
 open Std.StdError
 open Std.StdMap
 open MiloneSyntax.Syntax
@@ -14,10 +13,10 @@ open MiloneSyntaxTypes.SyntaxTypes
 open MiloneSyntaxTypes.SyntaxApiTypes
 
 module ArityCheck = MiloneSyntax.ArityCheck
-module AstBundle = MiloneSyntax.AstBundle
 module OwnershipCheck = MiloneSyntax.OwnershipCheck
 module NameRes = MiloneSyntax.NameRes
 module Manifest = MiloneSyntax.Manifest
+module NirGen = MiloneSyntax.NirGen
 module S = Std.StdString
 module SyntaxParse = MiloneSyntax.SyntaxParse
 module SyntaxTokenize = MiloneSyntax.SyntaxTokenize

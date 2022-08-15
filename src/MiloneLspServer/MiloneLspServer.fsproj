@@ -13,6 +13,7 @@
     <Compile Include="JsonRpcWriter.fs" />
     <Compile Include="Util.fs" />
     <Compile Include="LspUtil.fs" />
+    <Compile Include="AstBundle.fs" />
     <Compile Include="Lsp.fs" />
     <Compile Include="LspLangService.fs" />
     <Compile Include="LspServer.fs" />
