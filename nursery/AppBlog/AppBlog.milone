@@ -1,0 +1,39 @@
+module S = Std.StdString
+
+type private Doc = Text of string
+
+let private renderDoc doc =
+  match doc with
+  | Doc.Text s -> s
+
+let private TemplateHtml =
+  """<!DOCTYPE html>
+<html lang="ja">
+<head>
+    <meta charset="UTF-8">
+    <meta http-equiv="X-UA-Compatible" content="IE=edge">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>{{ TITLE }}</title>
+</head>
+<body>{{ CONTENTS }}</body>
+</html>
+"""
+
+let private renderHtml title (doc: Doc) =
+  TemplateHtml
+  |> S.replace "{{ TITLE }}" title
+  |> S.replace "{{ CONTENTS }}" (renderDoc doc)
+
+[<Export>]
+let generate (contents: string) : string =
+  // ---
+  let _, contents, _ = S.cutLine contents
+  // title:
+  let line1, contents, _ = S.cutLine contents
+  let title, _ = line1 |> S.stripStart "title: "
+  // url:
+  let _, contents, _ = S.cutLine contents
+  // ---
+  let _, contents, _ = S.cutLine contents
+
+  renderHtml title (Doc.Text contents)

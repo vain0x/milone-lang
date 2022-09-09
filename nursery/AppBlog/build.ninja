@@ -1,0 +1,16 @@
+rule milone_build
+    command = milone build . --output $out
+
+build target/libapp.a: milone_build . | $
+    AppBlog.milone $
+    milone_manifest
+
+rule cargo_run
+    command = cargo run
+
+build run: cargo_run | $
+    src/main.rs $
+    target/libapp.a
+    pool = console
+
+default run
