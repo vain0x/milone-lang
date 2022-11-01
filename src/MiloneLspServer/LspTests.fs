@@ -27,8 +27,8 @@ let private splitLast xs =
 
 let private pathToProjectName path =
   path
-  |> LLS.dirname
-  |> Option.map LLS.basename
+  |> Path.dirname
+  |> Option.map Path.basename
   |> expect "project"
 
 // -----------------------------------------------
@@ -210,7 +210,7 @@ let private stripCommonPrefix equals prefix xs =
   | _ -> prefix, xs
 
 let private ensureNormalization hint path =
-  let normalized = LLS.normalize path
+  let normalized = Path.normalize path
 
   if path <> normalized then
     eprintfn "warn: %s non-normal filepath used.\n  given: %s\n  normal: %s" hint path normalized
@@ -266,12 +266,12 @@ let private testDirEntries () =
 
 let private dummyMiloneHome = "/$/.milone"
 let private dummyRootDir = "/$/root"
-let private dummyRootUri = LLS.uriOfFilePath dummyRootDir
+let private dummyRootUri = uriOfFilePath dummyRootDir
 
 let private createWorkspaceAnalysisHostWithFiles files : LLS.WorkspaceAnalysisHost =
   let fileMap =
     files
-    |> List.map (fun (name, contents) -> LLS.normalize name, contents)
+    |> List.map (fun (name, contents) -> Path.normalize name, contents)
     |> Map.ofList
 
   let host: LLS.WorkspaceAnalysisHost =
@@ -419,7 +419,7 @@ let private testRenameSingleFile title text newName expected : bool =
 
 let private testDocChange () =
   let path = "/$/root/TestProject/TestProject.milone"
-  let uri = LLS.uriOfFilePath path
+  let uri = uriOfFilePath path
 
   // (File of version N has a diagnostic at row N.)
   let diagnosticsToVersion diagnostics =
@@ -818,7 +818,7 @@ let private testCodeActionGenerateModuleHead () =
 
   let result, _ =
     wa
-    |> WorkspaceAnalysis.codeAction (LLS.uriOfFilePath path) range
+    |> WorkspaceAnalysis.codeAction (uriOfFilePath path) range
 
   let actual =
     result
@@ -877,7 +877,7 @@ let private testCodeActionGenerateOpen () =
     let range: Range = cursorPos, cursorPos
 
     wa
-    |> WorkspaceAnalysis.codeAction (LLS.uriOfFilePath path) range
+    |> WorkspaceAnalysis.codeAction (uriOfFilePath path) range
 
   let actual =
     result
@@ -937,7 +937,7 @@ let private testCodeActionGenerateModuleSynonym () =
     let range: Range = cursorPos, cursorPos
 
     wa
-    |> WorkspaceAnalysis.codeAction (LLS.uriOfFilePath path) range
+    |> WorkspaceAnalysis.codeAction (uriOfFilePath path) range
 
   let actual =
     result
@@ -1061,7 +1061,7 @@ let private testFindProjects () =
   let wa =
     createWorkspaceAnalysisWithFiles files
     |> WorkspaceAnalysis.withHost (createWorkspaceAnalysisHostWithFiles newFiles)
-    |> WorkspaceAnalysis.didOpenFile (LLS.uriOfFilePath newFile)
+    |> WorkspaceAnalysis.didOpenFile (uriOfFilePath newFile)
 
   [ wa
     |> WorkspaceAnalysis.getProjectDirs
@@ -1070,7 +1070,7 @@ let private testFindProjects () =
 
     wa
     |> WorkspaceAnalysis.withHost (createWorkspaceAnalysisHostWithFiles files)
-    |> WorkspaceAnalysis.didCloseFile (LLS.uriOfFilePath newFile)
+    |> WorkspaceAnalysis.didCloseFile (uriOfFilePath newFile)
     |> WorkspaceAnalysis.getProjectDirs
     |> S.concat "; "
     |> assertEqual "after close" "" ]
@@ -1084,10 +1084,10 @@ let private testFindProjects () =
 let private testDiagnostics host =
   let workDir =
     System.Environment.CurrentDirectory
-    |> LLS.normalize
+    |> Path.normalize
 
   let wa =
-    let rootUri = workDir |> LLS.uriOfFilePath
+    let rootUri = workDir |> uriOfFilePath
 
     WorkspaceAnalysis.create host
     |> WorkspaceAnalysis.onInitialized (Some rootUri)
@@ -1098,7 +1098,7 @@ let private testDiagnostics host =
   let filename =
     System.IO.Path.Combine(workDir, "tests/DiagnosticsTest/DiagnosticsTest.milone")
 
-  let fileUri = LLS.uriOfFilePath filename
+  let fileUri = uriOfFilePath filename
   let initialText = System.IO.File.ReadAllText(filename)
 
   let result, wa =

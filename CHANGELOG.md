@@ -25,6 +25,11 @@
 - Add `milone parse` subcommand
 - Fix that `milone run .` didn't work
 
+### LSP Server
+
+- Support `prepareRename` request so that the editor can reject to rename at invalid position
+- Fix `diagnostics` are too frequently updated
+
 ### Documentation
 
 - Clarify limitation of `__nativeDecl` arguments

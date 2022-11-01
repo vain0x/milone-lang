@@ -708,6 +708,9 @@
             },
             "patterns": [
                 {
+                    "include": "#type_ascription_rule"
+                },
+                {
                     "include": "#type_rule"
                 }
             ]
