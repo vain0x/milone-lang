@@ -27,6 +27,7 @@
 
 ### LSP Server
 
+- Support `prepareRename` request so that the editor can reject to rename at invalid position
 - Fix `diagnostics` are too frequently updated
 
 ### Documentation

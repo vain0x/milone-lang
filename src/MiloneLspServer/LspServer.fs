@@ -178,7 +178,7 @@ let private createInitializeResult () =
           "documentSymbolProvider": true,
           "hoverProvider": true,
           "referencesProvider": true,
-          "renameProvider": true
+          "renameProvider": { "prepareProvider": true }
       },
       "serverInfo": {
           "name": "milone_lsp",
@@ -467,6 +467,7 @@ type LspIncome =
   | FormattingRequest of MsgId * Uri
   /// https://microsoft.github.io/language-server-protocol/specifications/specification-current/#textDocument_hover
   | HoverRequest of MsgId * DocumentPositionParam
+  | PrepareRenameRequest of MsgId * DocumentPositionParam
   | RenameRequest of MsgId * RenameParam
 
   // Others.
@@ -507,6 +508,7 @@ let parseIncome (jsonValue: JsonValue) : LspIncome =
   | "textDocument/documentSymbol" -> DocumentSymbolRequest(getMsgId (), parseDocumentSymbolParam jsonValue)
   | "textDocument/formatting" -> FormattingRequest(getMsgId (), getUriParam jsonValue)
   | "textDocument/hover" -> HoverRequest(getMsgId (), parseDocumentPositionParam jsonValue)
+  | "textDocument/prepareRename" -> PrepareRenameRequest(getMsgId (), parseDocumentPositionParam jsonValue)
   | "textDocument/rename" -> RenameRequest(getMsgId (), parseRenameParam jsonValue)
 
   | "$/response" -> RegisterCapabilityResponse(getMsgId ())
@@ -766,6 +768,35 @@ let private processNext host : LspIncome -> CancellationToken -> ProcessResult =
           jOfObj [ "contents", contents |> List.map jOfMarkdownString |> JArray
                    // "range", jOfRange range
                     ])
+
+      Continue
+
+    | PrepareRenameRequest (msgId, p) ->
+      handleRequestWith "prepareRename" msgId (fun () ->
+        // Dry-run rename operation.
+        let changes, _ =
+          WorkspaceAnalysis.rename p.Uri p.Pos "_" current
+
+        let rangeOpt =
+          changes
+          |> List.tryPick (fun (uri, changes) ->
+            if uri = p.Uri then
+              changes
+              |> List.tryPick (fun (range, _) ->
+                let l, r = range
+
+                // Range.contains?
+                // FIXME: Don't compare UTF-16 position and UTF-8 position
+                if l <= p.Pos && p.Pos <= r then
+                  Some range
+                else
+                  None)
+            else
+              None)
+
+        match rangeOpt with
+        | Some range -> jOfRange range
+        | None -> JNull)
 
       Continue
 
