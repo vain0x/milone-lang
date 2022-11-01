@@ -1,6 +1,5 @@
 module MiloneLspServer.LspServer
 
-open System.Collections.Concurrent
 open System.Threading
 open MiloneLspServer.JsonValue
 open MiloneLspServer.JsonSerialization

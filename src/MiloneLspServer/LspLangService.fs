@@ -14,7 +14,6 @@ open MiloneLspServer.Util
 // FIXME: shouldn't depend
 module SyntaxApi = MiloneSyntax.SyntaxApi
 
-module C = Std.StdChar
 module S = Std.StdString
 
 type private LError = string * Location
@@ -25,7 +24,6 @@ type private DirEntriesFun = string -> string list * string list
 type private ReadSourceFileFun = FilePath -> Future<string option>
 
 let private MinVersion: DocVersion = 0
-let private InitialVersion: DocVersion = 1
 let private DocBaseVersion: DocVersion = 0x8000
 
 // -----------------------------------------------
@@ -36,198 +34,13 @@ let private DocBaseVersion: DocVersion = 0x8000
 let private listUnique xs =
   xs |> TSet.ofList compare |> TSet.toList
 
-/// Reversed list.
-type private RevList<'T> = 'T list
-
-let rec private listAppend (acc: RevList<'T>) (xs: 'T list) : 'T list =
-  match acc with
-  | [] -> xs
-  | x :: acc -> listAppend acc (x :: xs)
-
-let private listPickWith (chooser: 'T -> 'U option) (xs: 'T list) : 'T RevList * ('U * 'T list) option =
-  let rec go acc xs =
-    match xs with
-    | [] -> acc, None
-
-    | x :: xs ->
-      match chooser x with
-      | None -> go (x :: acc) xs
-      | Some u -> acc, Some(u, xs)
-
-  go [] xs
-
-let private listCutWith equals item xs : 'T RevList * 'T list * bool =
-  let acc, restOpt =
-    xs
-    |> listPickWith (fun x -> if equals item x then Some() else None)
-
-  match restOpt with
-  | Some (_, rest) -> acc, rest, true
-  | None -> acc, [], false
-
-let private splitAt (i: int) (s: string) =
-  if i <= 0 then "", s
-  else if s.Length <= i then s, ""
-  else s.[0..i - 1], s.[i..s.Length - 1]
-
-let private upperFirst (s: string) =
-  if s.Length >= 1 && C.isLower s.[0] then
-    string (C.toUpper s.[0]) + s.[1..s.Length - 1]
-  else
-    s
-
-let private lowerFirst (s: string) =
-  if s.Length >= 1 && C.isUpper s.[0] then
-    string (C.toLower s.[0]) + s.[1..s.Length - 1]
-  else
-    s
-
-let private tryReplace (pattern: string) (target: string) (s: string) =
-  if s |> S.contains pattern then
-    s |> S.replace pattern target, true
-  else
-    s, false
-
-let private trimEndSep (path: string) = S.trimEndIf (fun c -> c = '/') path
-
-let private pathJoin l r = l + "/" + r
-
-let dirname (path: string) =
-  let rec go (s: string) =
-    match S.findLastIndex "/" s with
-    | None
-    | Some 0 -> None
-
-    | Some i when i = s.Length - 1 -> go (S.truncate (s.Length - 1) s)
-
-    | Some i -> S.truncate i s |> Some
-
-  path |> trimEndSep |> go
-
-let basename (path: string) =
-  match S.findLastIndex "/" path with
-  | Some i when path <> "/" -> S.skip (i + 1) path
-  | _ -> path
-
-let private stem (path: string) =
-  let path = basename path
-
-  match S.findLastIndex "." path with
-  | Some i when 0 < i && i + 1 < path.Length -> S.slice 0 i path
-  | _ -> path
-
-let private hasDriveLetter (path: string) =
-  path.Length >= 2
-  && C.isAlphabetic path.[0]
-  && path.[1] = ':'
-
-let private isRooted (path: string) =
-  path |> S.startsWith "/" || hasDriveLetter path
-
-let private stripRoot (path: string) =
-  let path, rooted = path |> S.stripStart "/"
-
-  if rooted then
-    Some "/", path
-  else if path.Length >= 3
-          && hasDriveLetter path
-          && path.[2] = '/' then
-    let root, rest = splitAt 3 path
-    Some root, rest
-  else
-    None, path
-
-let private pathContract (path: string) =
-  let rec go acc (xs: string list) =
-    match acc, xs with
-    | _, "." :: xs -> go acc xs
-    | _ :: acc, ".." :: xs -> go acc xs
-
-    | _, [] -> acc
-    | _, x :: xs -> go (x :: acc) xs
-
-  match stripRoot path with
-  | _, "" -> path
-
-  | rootOpt, path ->
-    let path =
-      path
-      |> S.split "/"
-      |> go []
-      |> List.rev
-      |> S.concat "/"
-
-    (rootOpt |> Option.defaultValue "") + path
-
-/// Normalizes path syntactically. Note some of Windows prefix is unsupported yet.
-let normalize (path: string) =
-  let path = path |> S.replace "\\" "/"
-
-  let path =
-    let rec removeDoubleSlashes (s: string) =
-      let s, ok = s |> tryReplace "//" "/"
-      if ok then removeDoubleSlashes s else s
-
-    removeDoubleSlashes path
-
-  let path = path |> trimEndSep
-
-  // Upper drive letter.
-  let path =
-    if path |> hasDriveLetter then
-      upperFirst path
-    else
-      path
-
-  pathContract path
-
-let private getExt (path: string) =
-  let path = basename path
-
-  match S.findLastIndex "." path with
-  | Some i when 0 < i && i < path.Length -> Some(S.skip i path)
-  | _ -> None
-
-let uriOfFilePath (path: string) =
-  let path = normalize path
-
-  if path |> S.startsWith "/" then
-    Uri("file://" + path)
-  else if hasDriveLetter path then
-    let path =
-      path |> lowerFirst |> S.replace ":" "%3A"
-
-    Uri("file:///" + path)
-  else
-    // unlikely used
-    Uri("file://./" + path)
-
-// Note: pathname contains backslashes even on Linux, provided by VSCode.
-let private uriToFilePath (uri: Uri) =
-  let path, fileScheme =
-    uri |> Uri.toString |> S.stripStart "file://"
-
-  if fileScheme then
-    let path =
-      // Windows path.
-      if path |> S.skip 2 |> S.startsWith "%3A" then
-        path |> S.skip 1 |> S.replace "%3A" ":"
-      else
-        path
-
-    path |> normalize
-  else
-    // Not a file scheme.
-    warnFn "Not file scheme: %s" path
-    path
-
 // -----------------------------------------------
 // File search
 // -----------------------------------------------
 
 /// Whether dir is excluded in traversal?
 let private dirIsExcluded (dir: string) =
-  let name = basename dir
+  let name = Path.basename dir
 
   name.StartsWith(".")
   || name.Contains("~")
@@ -250,7 +63,7 @@ let private findModulesRecursively (getDirEntries: DirEntriesFun) (maxDepth: int
         files
         |> Seq.fold
              (fun acc file ->
-               match getExt file with
+               match Path.ext file with
                | Some ".milone"
                | Some ".fs" -> file :: acc
 
@@ -289,7 +102,7 @@ let private doFindProjects fileExists getDirEntries (rootUri: Uri) : ProjectInfo
 
     | (depth, dir) :: stack ->
       let acc =
-        let projectName = stem dir
+        let projectName = Path.stem dir
 
         let tryToProjectInfo ext =
           if fileExists (dir + "/" + projectName + ext) then
@@ -323,30 +136,30 @@ let private doFindProjects fileExists getDirEntries (rootUri: Uri) : ProjectInfo
   bfs [] [ 0, rootDir ]
 
 let private isSourceFile (path: string) =
-  match getExt path with
+  match Path.ext path with
   | Some ".milone"
   | Some ".fs" -> true
   | _ -> false
 
-let private isManifest (path: string) = basename path = "milone_manifest"
+let private isManifest (path: string) = Path.basename path = "milone_manifest"
 
 let private isEntrypoint (path: string) =
-  match dirname path with
-  | Some parent -> basename parent = stem path
+  match Path.dirname path with
+  | Some parent -> Path.basename parent = Path.stem path
   | None -> false
 
 let private filePathToModulePath path =
-  match dirname path with
-  | Some parent -> Some(basename parent, stem path)
+  match Path.dirname path with
+  | Some parent -> Some(Path.basename parent, Path.stem path)
   | None -> None
 
 let filePathToDocId (path: string) : DocId =
   let projectName =
-    match dirname path with
-    | Some path -> basename path
+    match Path.dirname path with
+    | Some path -> Path.basename path
     | None -> "NoProject" // unlikely happen
 
-  let moduleName = stem path
+  let moduleName = Path.stem path
 
   Symbol.intern (projectName + "." + moduleName)
 
@@ -382,7 +195,7 @@ let private convertDocIdToFilePath
     | _ when fileExists (Symbol.toString docId) -> Symbol.toString docId
     | _ -> failwithf "Bad docId: '%A'" docId
 
-  path |> normalize |> fixExt
+  path |> Path.normalize |> fixExt
 
 // ---------------------------------------------
 // ProjectAnalysis
@@ -531,26 +344,6 @@ module ProjectAnalysis =
       modules
       |> List.collect (fun (p, m) -> [ p; m ])
       |> listUnique
-
-    let beforeDot () =
-      let y, x = targetPos
-
-      let isTouched t =
-        let _, x1 = t |> LToken.getPos
-        x1 = x - 1 || x1 = x
-
-      let rec go tokens =
-        match tokens with
-        | t1 :: t2 :: _ when t2 |> LToken.isDot && t2 |> isTouched -> t1 |> LToken.asIdent
-
-        | [] -> None
-        | _ :: ts -> go ts
-
-      tokens |> LTokenList.filterByLine y |> go
-
-    let collectNsSymbols qual pa =
-      // FIXME: resolve `qual` as qualifier and collect symbols in its namespace
-      [ qual + ".*" ], pa
 
     let collectLocalSymbols pa =
       let hint = "completion"
@@ -892,10 +685,9 @@ let private readSourceFile p docId (wa: WorkspaceAnalysis) =
 /// Files inside a project directory can be edited.
 let private isSafeToEdit (uri: Uri) (wa: WorkspaceAnalysis) =
   let dir =
-    uriToFilePath uri
-    |> dirname
-    |> Option.map stem
-    |> Option.defaultValue ""
+    match Path.dirname (uriToFilePath uri) with
+    | Some dir -> Path.stem dir
+    | None -> ""
 
   wa.ProjectList
   |> List.exists (fun (p: ProjectInfo) ->
@@ -1242,9 +1034,9 @@ module WorkspaceAnalysis =
       let textOpt =
         if isEmpty then
           let path = uri |> uriToFilePath
-          let parentOpt = dirname path
-          let projectNameOpt = parentOpt |> Option.map basename
-          let moduleName = path |> stem
+          let parentOpt = Path.dirname path
+          let projectNameOpt = parentOpt |> Option.map Path.basename
+          let moduleName = path |> Path.stem
 
           match projectNameOpt with
           | Some projectName ->
