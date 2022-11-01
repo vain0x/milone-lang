@@ -262,7 +262,7 @@ let main (args: string array) =
 
                   match LspServer.processNext LspIncome.diagnostics ct server with
                   | Continue ->
-                    diagnosticsFresh <- false
+                    diagnosticsFresh <- true
                     return! loop ()
 
                   | Exit _ -> return! failwith "unreachable"

@@ -25,6 +25,10 @@
 - Add `milone parse` subcommand
 - Fix that `milone run .` didn't work
 
+### LSP Server
+
+- Fix `diagnostics` are too frequently updated
+
 ### Documentation
 
 - Clarify limitation of `__nativeDecl` arguments
