@@ -1086,6 +1086,11 @@ let private testDiagnostics host =
     System.Environment.CurrentDirectory
     |> Path.normalize
 
+  let workDirAsPathname =
+    let uri = Uri.toString (uriOfFilePath workDir)
+    let i = "file://".Length
+    uri.[i..]
+
   let wa =
     let rootUri = workDir |> uriOfFilePath
 
@@ -1137,7 +1142,7 @@ let private testDiagnostics host =
 
   assert (actual
           |> S.concat "\n"
-          |> S.replace workDir "$HOME"
+          |> S.replace workDirAsPathname "$HOME"
           |> assertEqual
                "testDiagnostics"
                """error: "PARSE ERROR: Missing '=' (0:1)" file://$HOME/tests/DiagnosticsTest/DiagnosticsTest.milone:7:1..7:1
