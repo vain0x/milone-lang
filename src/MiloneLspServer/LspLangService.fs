@@ -13,6 +13,7 @@ open MiloneLspServer.Util
 
 // FIXME: shouldn't depend
 module SyntaxApi = MiloneSyntax.SyntaxApi
+module SyntaxTreeGen = MiloneSyntax.SyntaxTreeGen
 
 module S = Std.StdString
 
@@ -1294,6 +1295,11 @@ module WorkspaceAnalysis =
       |> List.forall (fun (uri, _) -> isSafeToEdit uri wa)
 
     (if ok then changes else []), wa
+
+  let syntaxTree (uri: Uri) (wa: WorkspaceAnalysis) : string option =
+    wa
+    |> parse2Doc uri
+    |> Option.map (fun (syntax: LSyntax2) -> SyntaxTreeGen.dumpSyntaxTree syntax.FullTokens syntax.SyntaxTree)
 
 // -----------------------------------------------
 // Formatting

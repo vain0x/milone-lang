@@ -23,6 +23,12 @@
     "vsce-package": "vsce package --out milone-lang.vsix"
   },
   "contributes": {
+    "commands": [
+      {
+        "command": "milone-lang.show-syntax-tree",
+        "title": "milone-lang: Show Syntax Tree"
+      }
+    ],
     "configuration": {
       "type": "object",
       "title": "Settings for milone-lang",

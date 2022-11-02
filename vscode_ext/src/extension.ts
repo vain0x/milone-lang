@@ -6,6 +6,7 @@ import path from "path"
 import { ExtensionContext, workspace } from "vscode"
 import { Disposable, LanguageClient, LanguageClientOptions, ServerOptions, State } from "vscode-languageclient/node"
 import { startLspSessionDev } from "./lsp_session_dev"
+import { registerShowSyntaxTreeCommand } from "./providers/syntax_tree_document_provider"
 
 const DEV = process.env["MILONE_LSP_SERVER_DEV"] === "1"
 const MILONE_LSP_COMMAND = process.env["MILONE_LSP_COMMAND"] ?? ""
@@ -137,16 +138,25 @@ const startLspSession = (context: ExtensionContext, logger: Logger) => {
   const dotnetCommand = workspace.getConfiguration("milone-lang").get<string>("dotnet-command") ?? undefined
   logger.info("dotnetCommand = ", dotnetCommand)
 
+  let currentClient: LanguageClient | undefined
+
   if (DEV) {
     startLspSessionDev({
       lspCommand,
       context,
-      newLanguageClient: command => newLanguageClient(command, miloneHome, dotnetCommand, logger),
+      newLanguageClient: command => {
+        const client = newLanguageClient(command, miloneHome, dotnetCommand, logger)
+        currentClient = client
+        return client
+      },
     })
   } else {
     const client = newLanguageClient(lspCommand, miloneHome, dotnetCommand, logger)
     context.subscriptions.push(client.start())
+    currentClient = client
   }
+
+  registerShowSyntaxTreeCommand(context, { getClient: () => currentClient })
 }
 
 /** Called when the extension is activated. */

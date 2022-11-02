@@ -358,6 +358,12 @@ let private parseRenameParam jsonValue : RenameParam =
     Pos = p.Pos
     NewName = newName }
 
+let private parseSyntaxTreeParam jsonValue : Uri =
+  jsonValue
+  |> jFind3 "params" "textDocument" "uri"
+  |> jToString
+  |> Uri
+
 // -----------------------------------------------
 // LspError
 // -----------------------------------------------
@@ -469,6 +475,13 @@ type LspIncome =
   | PrepareRenameRequest of MsgId * DocumentPositionParam
   | RenameRequest of MsgId * RenameParam
 
+  // Extended queries.
+  /// Request to show a syntax tree.
+  //
+  // - params: { textDocument: { uri: URI } }
+  // - result: { content: JsonText }
+  | SyntaxTreeRequest of MsgId * Uri
+
   // Others.
   | RegisterCapabilityResponse of MsgId
   | CancelRequestNotification of MsgId
@@ -510,6 +523,7 @@ let parseIncome (jsonValue: JsonValue) : LspIncome =
   | "textDocument/prepareRename" -> PrepareRenameRequest(getMsgId (), parseDocumentPositionParam jsonValue)
   | "textDocument/rename" -> RenameRequest(getMsgId (), parseRenameParam jsonValue)
 
+  | "$/syntaxTree" -> SyntaxTreeRequest(getMsgId (), parseSyntaxTreeParam jsonValue)
   | "$/response" -> RegisterCapabilityResponse(getMsgId ())
   | "$/cancelRequest" -> CancelRequestNotification(jsonValue |> jFind2 "params" "id")
 
@@ -810,6 +824,16 @@ let private processNext host : LspIncome -> CancellationToken -> ProcessResult =
           jWorkspaceEdit changes
         else
           JNull)
+
+      Continue
+
+    | SyntaxTreeRequest (msgId, uri) ->
+      handleRequestWith "$/syntaxTree" msgId (fun () ->
+        let contentOpt = WorkspaceAnalysis.syntaxTree uri current
+
+        match contentOpt with
+        | Some content -> jOfObj [ "content", JString content ]
+        | None -> JNull)
 
       Continue
 

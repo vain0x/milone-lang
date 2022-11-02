@@ -1272,3 +1272,16 @@ let dumpTree (tokens: TokenizeFullResult) (ast: ARoot) : string =
 
   // assert (stValidate rangeMap tokens root)
   SyntaxTreeDump.sdRoot rangeMap root
+
+let dumpSyntaxTree (tokens: TokenizeFullResult) (tree: SyntaxTree) : string =
+  let eofPos: Pos =
+    match List.tryLast tokens with
+    | Some (_, (y, _)) -> y + 1, 0
+    | None -> 0, 0
+
+  let rangeMap = toTokenRangeMap tokens eofPos
+
+  let (SyntaxTree root) = tree
+  assert (stValidate rangeMap tokens root)
+
+  SyntaxTreeDump.sdRoot rangeMap root

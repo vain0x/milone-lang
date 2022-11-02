@@ -30,6 +30,10 @@
 - Support `prepareRename` request so that the editor can reject to rename at invalid position
 - Fix `diagnostics` are too frequently updated
 
+### VSCode Extension
+
+- Support `Show Syntax Tree` command
+
 ### Documentation
 
 - Clarify limitation of `__nativeDecl` arguments
