@@ -1124,8 +1124,68 @@ module Symbol =
       | ModuleSymbol (_) -> None // unimplemented
     | None -> None
 
+// syntax tree
+// FIXME: transfer to appriciate place
+module internal CompletionHelper =
+  open MiloneLspServer.Util
+
+  module Range =
+    let isTouched (pos: Pos) (range: Range) =
+      let s, t = range
+      Pos.compare s pos <= 0 && Pos.compare pos t <= 0
+
+    let start ((s, _): Range) = s
+    let endPos ((_, t): Range) = t
+
+  module SyntaxElement =
+    let range element =
+      match element with
+      | SyntaxToken (_, range) -> range
+      | SyntaxNode (_, range, _) -> range
+
+    let children element =
+      match element with
+      | SyntaxToken _ -> []
+      | SyntaxNode (_, _, children) -> children
+
+    let endPos element = element |> range |> Range.endPos
+
+  let textOfRange (text: string) (range: Range) =
+    let s = text
+    let startPos, endPos = range
+
+    let rec go1 (s: string) (i: int) y y2 =
+      if y < y2 then
+        let j = s.IndexOf('\n', i)
+
+        if j >= 0 then
+          go1 s (j + 1) (y + 1) y2
+        else
+          errorFn "invalid pos1"
+          i
+      else
+        assert (y = y2)
+        i
+
+    let indexAt i p1 p2 =
+      let y1, x1 = p1
+      let y2, x2 = p2
+
+      if y1 < y2 then
+        let i = go1 s i y1 y2
+        i + x2
+      else
+        i + x2 - x1
+
+    let zero: Pos = 0, 0
+    let startIndex = indexAt 0 zero startPos
+    let endIndex = indexAt startIndex startPos endPos
+    s.[startIndex..endIndex - 1]
+
 // Provides fundamental operations as building block of queries.
 module ProjectAnalysis1 =
+  open CompletionHelper
+
   let create (projectDir: ProjectDir) (projectName: ProjectName) (host: ProjectAnalysisHost) : ProjectAnalysis =
     { ProjectDir = projectDir
       ProjectName = projectName
@@ -1176,24 +1236,118 @@ module ProjectAnalysis1 =
       | Some ty -> tyDisplayFn tirCtx ty |> Some |> Some
 
   // for completion. rough implementation
-  let resolveAsNs (b: BundleResult) (nsIdent: string) (_pa: ProjectAnalysis) =
+  let resolveAsNs _docId text ancestors (nsIdent: string) (targetPos: Pos) (pa: ProjectAnalysis) =
     Util.debugFn "resolveAsNs nsIdent='%s'" nsIdent
 
-    match b.ProgramOpt with
-    | None -> None
-    | Some (_, tirCtx) ->
-      let variants =
-        tirCtx.Tys
-        |> TMap.toList
-        |> List.collect (fun (_, tyDef) ->
-          match tyDef with
-          | UnionTyDef (tyIdent, _, variants, _) when tyIdent = nsIdent ->
-            variants
-            |> List.choose (fun variantSerial ->
-              match tirCtx.Variants |> TMap.tryFind variantSerial with
-              | Some variantDef -> Some variantDef.Name
-              | None -> None)
+    let asIdent text node =
+      match node with
+      | SyntaxToken (SyntaxKind.Ident, identRange) -> Some(textOfRange text identRange)
+      | _ -> None
 
-          | _ -> [])
+    let asModulePath node =
+      match node with
+      | SyntaxNode (SyntaxKind.ModulePath, _, children) -> Some children
+      | _ -> None
 
-      Some variants
+    let isDecl node =
+      match node with
+      | SyntaxNode (kind, _, _) ->
+        match kind with
+        | SyntaxKind.LetValDecl
+        | SyntaxKind.LetFunDecl
+        | SyntaxKind.TySynonymDecl
+        | SyntaxKind.UnionTyDecl
+        | SyntaxKind.RecordTyDecl
+        | SyntaxKind.ModuleDecl -> true
+
+        | _ -> false
+      | _ -> false
+
+    let findToplevelDecls docId (pa: ProjectAnalysis) =
+      match pa.Host.Parse2 docId with
+      | Some syntax ->
+        let (SyntaxTree root) = syntax.SyntaxTree
+
+        root
+        |> SyntaxElement.children
+        |> List.choose (fun node ->
+          if isDecl node then
+            Some(syntax, node)
+          else
+            None)
+
+      | None ->
+        Util.warnFn "doc not parsed %s" (Symbol.toString docId)
+        []
+
+    // checks if node has the specified name and collects items for completion
+    let collectCompletionItems (text: string) (node: SyntaxElement) =
+      match node with
+      | SyntaxNode (SyntaxKind.UnionTyDecl, _, children) ->
+        let ok =
+          match children |> List.tryPick (asIdent text) with
+          | Some ident -> ident = nsIdent
+          | None -> false
+
+        if ok then
+          children
+          |> List.choose (fun node ->
+            match node with
+            | SyntaxNode (SyntaxKind.VariantDecl, _, children) -> children |> List.tryPick (asIdent text)
+            | _ -> None)
+        else
+          []
+
+      | SyntaxNode (SyntaxKind.ModuleDecl, _, children) ->
+        let ok =
+          match children |> List.tryPick (asIdent text) with
+          | Some ident -> ident = nsIdent
+          | None -> false
+
+        if ok then
+          children
+          |> List.filter isDecl
+          |> List.choose (fun decl ->
+            decl
+            |> SyntaxElement.children
+            |> List.tryPick (asIdent text))
+        else
+          []
+
+      | _ -> []
+
+    let rec collectViaOpenDecls text node (pa: ProjectAnalysis) =
+      match node with
+      | SyntaxNode (SyntaxKind.OpenDecl, _, children) ->
+        match
+          children |> List.tryPick asModulePath
+          |> Option.map (List.choose (asIdent text))
+          with
+        | Some [ p; m ] ->
+          let docId: DocId = AstBundle.computeDocId p m
+
+          findToplevelDecls docId pa
+          |> List.collect (fun ((syntax: LSyntax2), decl) ->
+            let text = syntax.Text
+            collectCompletionItems text decl)
+
+        | _ -> []
+
+      | _ -> collectCompletionItems text node
+
+    let resolveUnqualifiedAsNs (targetPos: Pos) (pa: ProjectAnalysis) =
+      ancestors
+      |> List.collect (fun ancestor ->
+        let isBeforeTarget node =
+          Pos.compare (SyntaxElement.endPos node) targetPos
+          <= 0
+
+        ancestor
+        |> SyntaxElement.children
+        |> List.collect (fun child ->
+          if isBeforeTarget child then
+            collectViaOpenDecls text child pa
+          else
+            []))
+
+    resolveUnqualifiedAsNs targetPos pa

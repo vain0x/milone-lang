@@ -277,6 +277,8 @@ let private doFindDefsOrUses hint docId targetPos includeDef includeUse pa =
     Some result, pa
 
 module ProjectAnalysis =
+  open CompletionHelper
+
   let validateProject (pa: ProjectAnalysis) : LError list * ProjectAnalysis =
     let result, pa = pa |> ProjectAnalysis1.bundle
 
@@ -418,50 +420,8 @@ module ProjectAnalysis =
         debugFn "no syntax2"
         "", SyntaxTreeGen.genSyntaxTree [] (ARoot(None, []))
 
-    let textOfRange (range: Range) =
-      let s = text
-      let startPos, endPos = range
-
-      let rec go1 (s: string) (i: int) y y2 =
-        if y < y2 then
-          let j = s.IndexOf('\n', i)
-
-          if j >= 0 then
-            go1 s (j + 1) (y + 1) y2
-          else
-            errorFn "invalid pos1"
-            i
-        else
-          assert (y = y2)
-          i
-
-      let indexAt i p1 p2 =
-        let y1, x1 = p1
-        let y2, x2 = p2
-
-        if y1 < y2 then
-          let i = go1 s i y1 y2
-          i + x2
-        else
-          i + x2 - x1
-
-      let zero: Pos = 0, 0
-      let startIndex = indexAt 0 zero startPos
-      let endIndex = indexAt startIndex startPos endPos
-      s.[startIndex..endIndex - 1]
-
+    // find siblings before the dot and ancestral nodes.
     let findQuals (tree: SyntaxTree) =
-      let rangeOf element =
-        match element with
-        | SyntaxToken (_, range) -> range
-        | SyntaxNode (_, range, _) -> range
-
-      let isTouched pos range =
-        let s, t = range
-        Pos.compare s pos <= 0 && Pos.compare pos t <= 0
-
-      let endOfRange ((_, t): Range) = t
-
       let isPathLike kind =
         match kind with
         | SyntaxKind.NameTy
@@ -469,33 +429,38 @@ module ProjectAnalysis =
         | SyntaxKind.PathExpr -> true
         | _ -> false
 
-      let rec findRec pos parent node =
-        match node, parent with
+      let rec findRec pos ancestors node =
+        let parentOpt = List.tryHead ancestors
+
+        match node, parentOpt with
         // Cursor is at `.<|>` and parent is path
-        | SyntaxToken (SyntaxKind.Dot, range), SyntaxNode (parentKind, _, children) when
-          Pos.compare (endOfRange range) pos = 0
+        | SyntaxToken (SyntaxKind.Dot, range), Some (SyntaxNode (parentKind, _, children)) when
+          Pos.compare (Range.endPos range) pos = 0
           && isPathLike parentKind
           ->
-          children
-          |> List.filter (fun child -> Pos.compare (endOfRange (rangeOf child)) pos <= 0)
-          |> Some
+          // siblings before position
+          let left =
+            children
+            |> List.filter (fun child -> Pos.compare (SyntaxElement.endPos child) pos <= 0)
+
+          (left, ancestors) |> Some
 
         | SyntaxToken _, _ -> None
 
         | SyntaxNode (_, range, children), _ ->
-          if isTouched pos range then
+          if Range.isTouched pos range then
             children
-            |> List.tryPick (fun child -> findRec pos node child)
+            |> List.tryPick (fun child -> findRec pos (node :: ancestors) child)
           else
             None
 
       let (SyntaxTree root) = tree
-      findRec targetPos root root
+      findRec targetPos [] root
 
     let lastIdent nodes =
       let asIdent node =
         match node with
-        | SyntaxToken (SyntaxKind.Ident, identRange) -> Some(textOfRange identRange)
+        | SyntaxToken (SyntaxKind.Ident, identRange) -> Some(textOfRange text identRange, Range.start identRange)
         | _ -> None
 
       let pickLast nodes =
@@ -514,7 +479,7 @@ module ProjectAnalysis =
         debugFn "no quals"
         None, pa
 
-      | Some quals ->
+      | Some (quals, ancestors) ->
         debugFn "quals=%A" quals
 
         match lastIdent quals with
@@ -522,15 +487,15 @@ module ProjectAnalysis =
           debugFn "no ident"
           None, pa
 
-        | Some ident ->
-          let b, pa = ProjectAnalysis1.bundle pa
+        | Some (qualIdent, qualPos) ->
+          let _, pa = ProjectAnalysis1.bundle pa
 
-          match ProjectAnalysis1.resolveAsNs b ident pa with
-          | None ->
-            debugFn "no members in %s" ident
+          match ProjectAnalysis1.resolveAsNs docId text ancestors qualIdent qualPos pa with
+          | [] ->
+            debugFn "no members in %s" qualIdent
             None, pa
 
-          | Some items -> Some items, pa
+          | items -> Some items, pa
 
     if inModuleLine then
       collectModuleNames (), pa

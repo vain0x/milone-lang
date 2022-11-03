@@ -1048,7 +1048,25 @@ let private testCompletion () =
           0
       """
       [ "A"; "B" ]
-    ]
+
+    testCompletionMultipleFiles
+      "ns: opened inner module"
+      [ "/$/root/TestProject/Lib.milone",
+        """module rec TestProject.Lib
+
+          module Inner =
+            type T = int
+            let f () = ()
+        """
+
+        "/$/root/TestProject/TestProject.milone",
+        """
+          open TestProject.Lib
+
+          Inner.f
+          //    ^cursor
+        """ ]
+      [ "T"; "f" ] ]
 
 // -----------------------------------------------
 // Find projects
