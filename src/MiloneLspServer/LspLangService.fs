@@ -409,13 +409,135 @@ module ProjectAnalysis =
 
         result, pa
 
+    let syntaxOpt, pa = ProjectAnalysis1.parse2 docId pa
+
+    let text, tree =
+      match syntaxOpt with
+      | Some syntax -> syntax.Text, syntax.SyntaxTree
+      | None ->
+        debugFn "no syntax2"
+        "", SyntaxTreeGen.genSyntaxTree [] (ARoot(None, []))
+
+    let textOfRange (range: Range) =
+      let s = text
+      let startPos, endPos = range
+
+      let rec go1 (s: string) (i: int) y y2 =
+        if y < y2 then
+          let j = s.IndexOf('\n', i)
+
+          if j >= 0 then
+            go1 s (j + 1) (y + 1) y2
+          else
+            errorFn "invalid pos1"
+            i
+        else
+          assert (y = y2)
+          i
+
+      let indexAt i p1 p2 =
+        let y1, x1 = p1
+        let y2, x2 = p2
+
+        if y1 < y2 then
+          let i = go1 s i y1 y2
+          i + x2
+        else
+          i + x2 - x1
+
+      let zero: Pos = 0, 0
+      let startIndex = indexAt 0 zero startPos
+      let endIndex = indexAt startIndex startPos endPos
+      s.[startIndex..endIndex - 1]
+
+    let findQuals (tree: SyntaxTree) =
+      let rangeOf element =
+        match element with
+        | SyntaxToken (_, range) -> range
+        | SyntaxNode (_, range, _) -> range
+
+      let isTouched pos range =
+        let s, t = range
+        Pos.compare s pos <= 0 && Pos.compare pos t <= 0
+
+      let endOfRange ((_, t): Range) = t
+
+      let isPathLike kind =
+        match kind with
+        | SyntaxKind.NameTy
+        | SyntaxKind.PathPat
+        | SyntaxKind.PathExpr -> true
+        | _ -> false
+
+      let rec findRec pos parent node =
+        match node, parent with
+        // Cursor is at `.<|>` and parent is path
+        | SyntaxToken (SyntaxKind.Dot, range), SyntaxNode (parentKind, _, children) when
+          Pos.compare (endOfRange range) pos = 0
+          && isPathLike parentKind
+          ->
+          children
+          |> List.filter (fun child -> Pos.compare (endOfRange (rangeOf child)) pos <= 0)
+          |> Some
+
+        | SyntaxToken _, _ -> None
+
+        | SyntaxNode (_, range, children), _ ->
+          if isTouched pos range then
+            children
+            |> List.tryPick (fun child -> findRec pos node child)
+          else
+            None
+
+      let (SyntaxTree root) = tree
+      findRec targetPos root root
+
+    let lastIdent nodes =
+      let asIdent node =
+        match node with
+        | SyntaxToken (SyntaxKind.Ident, identRange) -> Some(textOfRange identRange)
+        | _ -> None
+
+      let pickLast nodes =
+        nodes |> List.rev |> List.tryPick asIdent
+
+      nodes
+      |> List.rev
+      |> List.tryPick (fun node ->
+        match node with
+        | SyntaxNode (SyntaxKind.NameExpr, _, children) -> pickLast children
+        | _ -> asIdent node)
+
+    let tryNsCompletion pa =
+      match findQuals tree with
+      | None ->
+        debugFn "no quals"
+        None, pa
+
+      | Some quals ->
+        debugFn "quals=%A" quals
+
+        match lastIdent quals with
+        | None ->
+          debugFn "no ident"
+          None, pa
+
+        | Some ident ->
+          let b, pa = ProjectAnalysis1.bundle pa
+
+          match ProjectAnalysis1.resolveAsNs b ident pa with
+          | None ->
+            debugFn "no members in %s" ident
+            None, pa
+
+          | Some items -> Some items, pa
+
     if inModuleLine then
       collectModuleNames (), pa
     else
-      // match beforeDot () with
-      // | Some token -> collectNsSymbols token pa
-      // | None -> collectLocalSymbols pa
-      collectLocalSymbols pa
+      match tryNsCompletion pa with
+      | Some items, pa -> items, pa
+      | None, pa -> collectLocalSymbols pa
 
   /// `(defs, uses) option`
   let findRefs

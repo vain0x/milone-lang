@@ -1036,15 +1036,18 @@ let private testCompletion () =
           """ ]
       [ "Std"; "StdFoo"; "TestProject" ]
 
-    // testCompletionSingleFile
-    //   "dot"
-    //   """
-    //     let main _ =
-    //       List.   (x.y)
-    //   //       ^cursor
-    //       0
-    //   """
-    //   [ "List.*" ]
+    // ns-cases: completion from namespaces.
+    testCompletionSingleFile
+      "ns: file-local discriminated union"
+      """
+        type U = A of int | B of string
+
+        let main _ =
+          U.A
+      //    ^cursor
+          0
+      """
+      [ "A"; "B" ]
     ]
 
 // -----------------------------------------------

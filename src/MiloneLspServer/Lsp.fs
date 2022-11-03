@@ -1174,3 +1174,26 @@ module ProjectAnalysis1 =
       match findTyInStmt pa modules tokenLoc with
       | None -> Some None
       | Some ty -> tyDisplayFn tirCtx ty |> Some |> Some
+
+  // for completion. rough implementation
+  let resolveAsNs (b: BundleResult) (nsIdent: string) (_pa: ProjectAnalysis) =
+    Util.debugFn "resolveAsNs nsIdent='%s'" nsIdent
+
+    match b.ProgramOpt with
+    | None -> None
+    | Some (_, tirCtx) ->
+      let variants =
+        tirCtx.Tys
+        |> TMap.toList
+        |> List.collect (fun (_, tyDef) ->
+          match tyDef with
+          | UnionTyDef (tyIdent, _, variants, _) when tyIdent = nsIdent ->
+            variants
+            |> List.choose (fun variantSerial ->
+              match tirCtx.Variants |> TMap.tryFind variantSerial with
+              | Some variantDef -> Some variantDef.Name
+              | None -> None)
+
+          | _ -> [])
+
+      Some variants
