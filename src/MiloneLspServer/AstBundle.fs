@@ -14,6 +14,8 @@ open MiloneSyntax.SyntaxTypes
 module S = Std.StdString
 module NirGen = MiloneSyntax.NirGen
 
+type private FetchModuleFun = ProjectName -> ModuleName -> Future<ModuleSyntaxData option>
+
 // -----------------------------------------------
 // Utils
 // -----------------------------------------------

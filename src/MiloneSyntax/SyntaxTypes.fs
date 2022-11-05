@@ -33,8 +33,6 @@ type ModuleSyntaxError = string * Pos
 // filename -> (contents option)
 type ReadTextFileFun = string -> Future<string option>
 
-type FetchModuleFun = ProjectName -> ModuleName -> Future<ModuleSyntaxData option>
-
 /// Result of parsing a document.
 [<RequireQualifiedAccess; NoEquality; NoComparison>]
 type ModuleSyntaxData =
