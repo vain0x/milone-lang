@@ -47,6 +47,13 @@ type ManifestData =
     /// Passed to cc to link object files, only on Linux.
     LinuxLinkFlags: string option }
 
+[<RequireQualifiedAccess; NoEquality; NoComparison>]
+type ParseInput =
+  { SourceCode:SourceCode
+
+    /// In MiloneCore project?
+    BeingCore: bool }
+
 type SyntaxLayers = ModuleSyntaxData2 list list
 
 [<NoEquality; NoComparison>]
@@ -61,8 +68,7 @@ type SyntaxApi =
     GetStdLibProjects: MiloneHome -> (ProjectName * ProjectDir) list
     ReadSourceFile: ReadTextFileFun -> string -> Future<string option>
     ParseManifest: DocId -> string -> ManifestData
-    // beingCore:bool
-    Parse: bool -> SourceCode -> ARoot * ModuleSyntaxError list
+    Parse: ParseInput -> ARoot * ModuleSyntaxError list
     FindDependentModules: ARoot -> (ProjectName * ModuleName * Pos) list
 
     SyntaxErrorsToString: SyntaxError list -> string

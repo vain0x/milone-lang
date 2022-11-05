@@ -81,8 +81,12 @@ let prepareFetchModule (sApi: SyntaxApi) (host: FetchModuleHost) : FetchModuleFu
           // #parse
           let docId = computeDocId projectName moduleName
 
-          let beingCore = projectName = "MiloneCore"
-          let ast, errors = sApi.Parse beingCore text
+          let ast, errors =
+            let parseInput: ParseInput =
+              { SourceCode = text
+                BeingCore = projectName = "MiloneCore" }
+
+            sApi.Parse parseInput
 
           let s: ModuleSyntaxData2 =
             { ProjectName = projectName

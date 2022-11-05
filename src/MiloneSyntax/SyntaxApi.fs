@@ -244,14 +244,14 @@ let parseModule (docId: DocId) (kind: ModuleKind) (tokens: TokenizeResult) : Mod
 
   docId, tokens, ast, errors
 
-let parse1 host beingCore sourceCode : ARoot * ModuleSyntaxError list =
+let parse1 host (input: ParseInput) : ARoot * ModuleSyntaxError list =
   let kind =
-    if beingCore then
+    if input.BeingCore then
       ModuleKind.MiloneCore
     else
       ModuleKind.Regular
 
-  let tokens = SyntaxTokenize.tokenize host sourceCode
+  let tokens = SyntaxTokenize.tokenize host input.SourceCode
   let errorTokens, tokens = tokens |> List.partition isErrorToken
 
   let ast, parseErrors = SyntaxParse.parse tokens
@@ -403,7 +403,7 @@ let newSyntaxApi () : SyntaxApi =
     GetStdLibProjects = getStdLibProjects
     ReadSourceFile = readSourceFile
     ParseManifest = fun docId text -> Manifest.parseManifest docId text
-    Parse = fun beingCore sourceCode -> parse1 host beingCore sourceCode
+    Parse = fun input -> parse1 host input
     FindDependentModules = findDependentModules
     SyntaxErrorsToString = syntaxErrorsToString
     PerformSyntaxAnalysis = fun writeLog layers -> performSyntaxAnalysis writeLog layers
