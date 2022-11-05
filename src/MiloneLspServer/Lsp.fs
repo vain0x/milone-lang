@@ -1441,8 +1441,95 @@ module internal ProjectAnalysisCompletion =
         warnFn "doc not parsed %s" (Symbol.toString docId)
         []
 
+    // assume node is UnionTyDecl
+    let collectVariants text (node: SyntaxElement) =
+      node
+      |> SyntaxElement.children
+      |> List.choose (fun node ->
+        match node with
+        | SyntaxNode (SyntaxKind.VariantDecl, _, children) ->
+          children
+          |> List.tryPick (asIdent text)
+          |> Option.map (fun name -> Kind.EnumMember, name)
+
+        | _ -> None)
+
+    // assumes node is the declaration that is exposed to the namespace
+    let collectFromDecl text (node: SyntaxElement) =
+      let children = SyntaxElement.children node
+
+      match SyntaxElement.kind node with
+      | SyntaxKind.LetValDecl ->
+        let isPatLike kind =
+          match kind with
+          | SyntaxKind.LiteralPat
+          | SyntaxKind.WildcardPat
+          | SyntaxKind.VarPat
+          | SyntaxKind.PathPat
+          | SyntaxKind.ParenPat
+          | SyntaxKind.ListPat
+          | SyntaxKind.WrapPat
+          | SyntaxKind.ConsPat
+          | SyntaxKind.AscribePat
+          | SyntaxKind.TuplePat
+          | SyntaxKind.AsPat
+          | SyntaxKind.OrPat -> true
+          | _ -> false
+
+        match children
+              |> List.tryFind (fun node -> isPatLike (SyntaxElement.kind node))
+          with
+        | Some pat ->
+          let rec patRec acc pat =
+            let acc =
+              SyntaxElement.children pat |> List.fold patRec acc
+
+            match SyntaxElement.kind pat with
+            | SyntaxKind.VarPat
+            | SyntaxKind.AsPat ->
+              match
+                pat |> SyntaxElement.children
+                |> List.tryPick (asIdent text)
+                with
+              | Some name -> (Kind.Value, name) :: acc
+              | None -> acc
+
+            | _ -> acc
+
+          patRec [] pat
+
+        | None -> []
+
+      | SyntaxKind.LetFunDecl
+      | SyntaxKind.TySynonymDecl
+      | SyntaxKind.RecordTyDecl
+      | SyntaxKind.ModuleDecl ->
+        let kind =
+          match SyntaxElement.kind node with
+          | SyntaxKind.LetFunDecl -> Kind.Function
+          | SyntaxKind.ModuleDecl -> Kind.Module
+          | _ -> Kind.Class
+
+        node
+        |> SyntaxElement.children
+        |> List.tryPick (asIdent text)
+        |> Option.map (fun name -> kind, name)
+        |> Option.toList
+
+      | SyntaxKind.UnionTyDecl ->
+        let nameOpt =
+          children
+          |> List.tryPick (asIdent text)
+          |> Option.map (fun name -> Kind.Enum, name)
+
+        let variants = collectVariants text node
+
+        List.append (Option.toList nameOpt) variants
+
+      | _ -> []
+
     // checks if node has the specified name and collects items for completion
-    let collectCompletionItems (text: string) (node: SyntaxElement) =
+    let collectContents (text: string) (node: SyntaxElement) =
       match node with
       | SyntaxNode (SyntaxKind.UnionTyDecl, _, children) ->
         let ok =
@@ -1451,15 +1538,7 @@ module internal ProjectAnalysisCompletion =
           | None -> false
 
         if ok then
-          children
-          |> List.choose (fun node ->
-            match node with
-            | SyntaxNode (SyntaxKind.VariantDecl, _, children) ->
-              children
-              |> List.tryPick (asIdent text)
-              |> Option.map (fun name -> Kind.EnumMember, name)
-
-            | _ -> None)
+          collectVariants text node
         else
           []
 
@@ -1470,13 +1549,7 @@ module internal ProjectAnalysisCompletion =
           | None -> false
 
         if ok then
-          children
-          |> List.filter isPublicDecl
-          |> List.choose (fun decl ->
-            decl
-            |> SyntaxElement.children
-            |> List.tryPick (asIdent text)
-            |> Option.map (fun name -> kindOf decl, name))
+          children |> List.collect (collectFromDecl text)
         else
           []
 
@@ -1499,16 +1572,7 @@ module internal ProjectAnalysisCompletion =
             let docId: DocId = AstBundle.computeDocId p m
 
             findToplevelDecls docId pa
-            |> List.choose (fun (syntax, decl) ->
-              let text = syntax.Text
-
-              if isPublicDecl decl then
-                decl
-                |> SyntaxElement.children
-                |> List.tryPick (asIdent text)
-                |> Option.map (fun name -> kindOf decl, name)
-              else
-                None)
+            |> List.collect (fun (syntax, decl) -> collectFromDecl syntax.Text decl)
 
           | _ -> []
         else
@@ -1523,13 +1587,11 @@ module internal ProjectAnalysisCompletion =
           let docId: DocId = AstBundle.computeDocId p m
 
           findToplevelDecls docId pa
-          |> List.collect (fun ((syntax: LSyntax2), decl) ->
-            let text = syntax.Text
-            collectCompletionItems text decl)
+          |> List.collect (fun ((syntax: LSyntax2), decl) -> collectContents syntax.Text decl)
 
         | _ -> []
 
-      | _ -> collectCompletionItems text node
+      | _ -> collectContents text node
 
     let resolveUnqualifiedAsNs (targetPos: Pos) (pa: ProjectAnalysis) =
       ancestors
@@ -1552,16 +1614,7 @@ module internal ProjectAnalysisCompletion =
           AstBundle.computeDocId "MiloneCore" nsIdent
 
         findToplevelDecls docId pa
-        |> List.choose (fun (syntax, decl) ->
-          let text = syntax.Text
-
-          if isPublicDecl decl then
-            decl
-            |> SyntaxElement.children
-            |> List.tryPick (asIdent text)
-            |> Option.map (fun name -> kindOf decl, name)
-          else
-            None)
+        |> List.collect (fun (syntax, decl) -> collectFromDecl syntax.Text decl)
       else
         []
 

@@ -1052,13 +1052,57 @@ let private testCompletion () =
       """
       [ "A"; "B" ]
 
+
+    testCompletionMultipleFiles
+      "ns: file-local inner module"
+      [ "/$/root/TestProject/Lib.milone",
+        """
+          type NotExposed = int
+        """
+
+        "/$/root/TestProject/TestProject.milone",
+        """
+          module X =
+            // open doesn't re-export
+            open TestProject.Lib
+            // module synonym isn't exposed
+            module ModuleSynonymIsNotExposed = TestProject.Lib
+
+            // variables
+            let a, b = 1
+            // function
+            let f () = ()
+            // synonym
+            type S = int
+            // union and variants
+            type U = | V | W of int
+            // record
+            type R = { F: int }
+            // module
+            module M =
+              // inner decl isn't exposed
+              type InnerT = int
+
+          X.__
+          //^cursor
+        """ ]
+      [ "M"
+        "R"
+        "S"
+        "U"
+        "V"
+        "W"
+        "a"
+        "b"
+        "f" ]
+
     testCompletionMultipleFiles
       "ns: opened inner module"
       [ "/$/root/TestProject/Lib.milone",
         """module rec TestProject.Lib
 
           module Inner =
-            type T = int
+            type T = V of int
             let f () = ()
         """
 
@@ -1069,7 +1113,7 @@ let private testCompletion () =
           Inner.f
           //    ^cursor
         """ ]
-      [ "T"; "f" ]
+      [ "T"; "V"; "f" ]
 
     testCompletionMultipleFiles
       "ns: synonym of module"
