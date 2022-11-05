@@ -1124,68 +1124,8 @@ module Symbol =
       | ModuleSymbol (_) -> None // unimplemented
     | None -> None
 
-// syntax tree
-// FIXME: transfer to appriciate place
-module internal CompletionHelper =
-  open MiloneLspServer.Util
-
-  module Range =
-    let isTouched (pos: Pos) (range: Range) =
-      let s, t = range
-      Pos.compare s pos <= 0 && Pos.compare pos t <= 0
-
-    let start ((s, _): Range) = s
-    let endPos ((_, t): Range) = t
-
-  module SyntaxElement =
-    let range element =
-      match element with
-      | SyntaxToken (_, range) -> range
-      | SyntaxNode (_, range, _) -> range
-
-    let children element =
-      match element with
-      | SyntaxToken _ -> []
-      | SyntaxNode (_, _, children) -> children
-
-    let endPos element = element |> range |> Range.endPos
-
-  let textOfRange (text: string) (range: Range) =
-    let s = text
-    let startPos, endPos = range
-
-    let rec go1 (s: string) (i: int) y y2 =
-      if y < y2 then
-        let j = s.IndexOf('\n', i)
-
-        if j >= 0 then
-          go1 s (j + 1) (y + 1) y2
-        else
-          errorFn "invalid pos1"
-          i
-      else
-        assert (y = y2)
-        i
-
-    let indexAt i p1 p2 =
-      let y1, x1 = p1
-      let y2, x2 = p2
-
-      if y1 < y2 then
-        let i = go1 s i y1 y2
-        i + x2
-      else
-        i + x2 - x1
-
-    let zero: Pos = 0, 0
-    let startIndex = indexAt 0 zero startPos
-    let endIndex = indexAt startIndex startPos endPos
-    s.[startIndex..endIndex - 1]
-
 // Provides fundamental operations as building block of queries.
 module ProjectAnalysis1 =
-  open CompletionHelper
-
   let create (projectDir: ProjectDir) (projectName: ProjectName) (host: ProjectAnalysisHost) : ProjectAnalysis =
     { ProjectDir = projectDir
       ProjectName = projectName
@@ -1235,9 +1175,123 @@ module ProjectAnalysis1 =
       | None -> Some None
       | Some ty -> tyDisplayFn tirCtx ty |> Some |> Some
 
-  // for completion. rough implementation
+// -----------------------------------------------
+// Completion
+// -----------------------------------------------
+
+// Rough, incomplete implementation of completion feature.
+module internal ProjectAnalysisCompletion =
+  open MiloneLspServer.Util
+
+  module private Range =
+    let isTouched (pos: Pos) (range: Range) =
+      let s, t = range
+      Pos.compare s pos <= 0 && Pos.compare pos t <= 0
+
+    let start ((s, _): Range) = s
+    let endPos ((_, t): Range) = t
+
+  module private SyntaxElement =
+    let range element =
+      match element with
+      | SyntaxToken (_, range) -> range
+      | SyntaxNode (_, range, _) -> range
+
+    let children element =
+      match element with
+      | SyntaxToken _ -> []
+      | SyntaxNode (_, _, children) -> children
+
+    let endPos element = element |> range |> Range.endPos
+
+  // inefficient
+  let textOfRange (text: string) (range: Range) =
+    let s = text
+    let startPos, endPos = range
+
+    let rec go1 (s: string) (i: int) y y2 =
+      if y < y2 then
+        let j = s.IndexOf('\n', i)
+
+        if j >= 0 then
+          go1 s (j + 1) (y + 1) y2
+        else
+          errorFn "invalid pos1"
+          i
+      else
+        assert (y = y2)
+        i
+
+    let indexAt i p1 p2 =
+      let y1, x1 = p1
+      let y2, x2 = p2
+
+      if y1 < y2 then
+        let i = go1 s i y1 y2
+        i + x2
+      else
+        i + x2 - x1
+
+    let zero: Pos = 0, 0
+    let startIndex = indexAt 0 zero startPos
+    let endIndex = indexAt startIndex startPos endPos
+    s.[startIndex..endIndex - 1]
+
+  // finds the sibling nodes before the dot and ancestral nodes.
+  let private findQuals (tree: SyntaxTree) targetPos =
+    let isPathLike kind =
+      match kind with
+      | SyntaxKind.NameTy
+      | SyntaxKind.PathPat
+      | SyntaxKind.PathExpr -> true
+      | _ -> false
+
+    let rec findRec pos ancestors node =
+      let parentOpt = List.tryHead ancestors
+
+      match node, parentOpt with
+      // Cursor is at `.<|>` and parent is path
+      | SyntaxToken (SyntaxKind.Dot, range), Some (SyntaxNode (parentKind, _, children)) when
+        Pos.compare (Range.endPos range) pos = 0
+        && isPathLike parentKind
+        ->
+        // siblings before position
+        let left =
+          children
+          |> List.filter (fun child -> Pos.compare (SyntaxElement.endPos child) pos <= 0)
+
+        (left, ancestors) |> Some
+
+      | SyntaxToken _, _ -> None
+
+      | SyntaxNode (_, range, children), _ ->
+        if Range.isTouched pos range then
+          children
+          |> List.tryPick (fun child -> findRec pos (node :: ancestors) child)
+        else
+          None
+
+    let (SyntaxTree root) = tree
+    findRec targetPos [] root
+
+  let private lastIdent text nodes =
+    let asIdent node =
+      match node with
+      | SyntaxToken (SyntaxKind.Ident, identRange) -> Some(textOfRange text identRange, Range.start identRange)
+      | _ -> None
+
+    let pickLast nodes =
+      nodes |> List.rev |> List.tryPick asIdent
+
+    nodes
+    |> List.rev
+    |> List.tryPick (fun node ->
+      match node with
+      | SyntaxNode (SyntaxKind.NameExpr, _, children) -> pickLast children
+      | _ -> asIdent node)
+
   let resolveAsNs _docId text ancestors (nsIdent: string) (targetPos: Pos) (pa: ProjectAnalysis) =
-    Util.debugFn "resolveAsNs nsIdent='%s'" nsIdent
+    debugFn "resolveAsNs nsIdent='%s'" nsIdent
 
     let asIdent text node =
       match node with
@@ -1292,7 +1346,7 @@ module ProjectAnalysis1 =
             None)
 
       | None ->
-        Util.warnFn "doc not parsed %s" (Symbol.toString docId)
+        warnFn "doc not parsed %s" (Symbol.toString docId)
         []
 
     // checks if node has the specified name and collects items for completion
@@ -1413,3 +1467,38 @@ module ProjectAnalysis1 =
         []
 
     List.append (resolveUnqualifiedAsNs targetPos pa) (resolvePrelude ())
+
+  let tryNsCompletion (docId: DocId) (targetPos: Pos) pa : string list option * ProjectAnalysis =
+    let syntaxOpt, pa = ProjectAnalysis1.parse2 docId pa
+
+    match syntaxOpt with
+    | Some syntax ->
+      let text = syntax.Text
+      let tree = syntax.SyntaxTree
+
+      match findQuals tree targetPos with
+      | None ->
+        debugFn "no quals"
+        None, pa
+
+      | Some (quals, ancestors) ->
+        debugFn "quals=%A" quals
+
+        match lastIdent text quals with
+        | None ->
+          debugFn "no ident"
+          None, pa
+
+        | Some (qualIdent, qualPos) ->
+          let _, pa = ProjectAnalysis1.bundle pa
+
+          match resolveAsNs docId text ancestors qualIdent qualPos pa with
+          | [] ->
+            debugFn "no members in %s" qualIdent
+            None, pa
+
+          | items -> Some items, pa
+
+    | None ->
+      debugFn "no syntax2"
+      None, pa

@@ -277,8 +277,6 @@ let private doFindDefsOrUses hint docId targetPos includeDef includeUse pa =
     Some result, pa
 
 module ProjectAnalysis =
-  open CompletionHelper
-
   let validateProject (pa: ProjectAnalysis) : LError list * ProjectAnalysis =
     let result, pa = pa |> ProjectAnalysis1.bundle
 
@@ -411,96 +409,10 @@ module ProjectAnalysis =
 
         result, pa
 
-    let syntaxOpt, pa = ProjectAnalysis1.parse2 docId pa
-
-    let text, tree =
-      match syntaxOpt with
-      | Some syntax -> syntax.Text, syntax.SyntaxTree
-      | None ->
-        debugFn "no syntax2"
-        "", SyntaxTreeGen.genSyntaxTree [] (ARoot(None, []))
-
-    // find siblings before the dot and ancestral nodes.
-    let findQuals (tree: SyntaxTree) =
-      let isPathLike kind =
-        match kind with
-        | SyntaxKind.NameTy
-        | SyntaxKind.PathPat
-        | SyntaxKind.PathExpr -> true
-        | _ -> false
-
-      let rec findRec pos ancestors node =
-        let parentOpt = List.tryHead ancestors
-
-        match node, parentOpt with
-        // Cursor is at `.<|>` and parent is path
-        | SyntaxToken (SyntaxKind.Dot, range), Some (SyntaxNode (parentKind, _, children)) when
-          Pos.compare (Range.endPos range) pos = 0
-          && isPathLike parentKind
-          ->
-          // siblings before position
-          let left =
-            children
-            |> List.filter (fun child -> Pos.compare (SyntaxElement.endPos child) pos <= 0)
-
-          (left, ancestors) |> Some
-
-        | SyntaxToken _, _ -> None
-
-        | SyntaxNode (_, range, children), _ ->
-          if Range.isTouched pos range then
-            children
-            |> List.tryPick (fun child -> findRec pos (node :: ancestors) child)
-          else
-            None
-
-      let (SyntaxTree root) = tree
-      findRec targetPos [] root
-
-    let lastIdent nodes =
-      let asIdent node =
-        match node with
-        | SyntaxToken (SyntaxKind.Ident, identRange) -> Some(textOfRange text identRange, Range.start identRange)
-        | _ -> None
-
-      let pickLast nodes =
-        nodes |> List.rev |> List.tryPick asIdent
-
-      nodes
-      |> List.rev
-      |> List.tryPick (fun node ->
-        match node with
-        | SyntaxNode (SyntaxKind.NameExpr, _, children) -> pickLast children
-        | _ -> asIdent node)
-
-    let tryNsCompletion pa =
-      match findQuals tree with
-      | None ->
-        debugFn "no quals"
-        None, pa
-
-      | Some (quals, ancestors) ->
-        debugFn "quals=%A" quals
-
-        match lastIdent quals with
-        | None ->
-          debugFn "no ident"
-          None, pa
-
-        | Some (qualIdent, qualPos) ->
-          let _, pa = ProjectAnalysis1.bundle pa
-
-          match ProjectAnalysis1.resolveAsNs docId text ancestors qualIdent qualPos pa with
-          | [] ->
-            debugFn "no members in %s" qualIdent
-            None, pa
-
-          | items -> Some items, pa
-
     if inModuleLine then
       collectModuleNames (), pa
     else
-      match tryNsCompletion pa with
+      match ProjectAnalysisCompletion.tryNsCompletion docId targetPos pa with
       | Some items, pa -> items, pa
       | None, pa -> collectLocalSymbols pa
 
