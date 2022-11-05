@@ -26,9 +26,6 @@ module Typing = MiloneSyntax.Typing
 module TySystem = MiloneSyntax.TySystem
 module TirTypes = MiloneSyntax.TirTypes
 
-/// `.fs` or `.milone`.
-type private SourceExt = string
-
 /// File extension. Starts with `.`.
 type private FileExt = string
 
@@ -231,27 +228,33 @@ let readSourceFile (readTextFile: ReadTextFileFun) filename : Future<string opti
 let parseModule (docId: DocId) (kind: ModuleKind) (tokens: TokenizeResult) : ModuleSyntaxData =
   let errorTokens, tokens = tokens |> List.partition isErrorToken
 
-  let ast, parseErrors = tokens |> SyntaxParse.parse
+  let unmodifiedAst, parseErrors = tokens |> SyntaxParse.parse
 
   let errors =
     List.append (tokenizeErrors errorTokens) parseErrors
 
-  let ast =
+  let modifiedAst =
     if errors |> List.isEmpty then
-      resolveMiloneCoreDeps kind tokens ast
+      resolveMiloneCoreDeps kind tokens unmodifiedAst
     else
-      ast
+      unmodifiedAst
 
-  docId, tokens, ast, errors
+  ({ DocId = docId
+     Tokens = tokens
+     Ast = modifiedAst
+     UnmodifiedAst = unmodifiedAst
+     Errors = errors }: ModuleSyntaxData)
 
-let parse1 host beingCore sourceCode : ARoot * ModuleSyntaxError list =
+let parse1 host (input: ParseInput) : ARoot * ModuleSyntaxError list =
   let kind =
-    if beingCore then
+    if input.BeingCore then
       ModuleKind.MiloneCore
     else
       ModuleKind.Regular
 
-  let tokens = SyntaxTokenize.tokenize host sourceCode
+  let tokens =
+    SyntaxTokenize.tokenize host input.SourceCode
+
   let errorTokens, tokens = tokens |> List.partition isErrorToken
 
   let ast, parseErrors = SyntaxParse.parse tokens
@@ -270,8 +273,6 @@ let parse1 host beingCore sourceCode : ARoot * ModuleSyntaxError list =
 // -----------------------------------------------
 // Error processing
 // -----------------------------------------------
-
-type private SyntaxError = string * Loc
 
 let private isErrorToken token =
   match token with
@@ -403,7 +404,7 @@ let newSyntaxApi () : SyntaxApi =
     GetStdLibProjects = getStdLibProjects
     ReadSourceFile = readSourceFile
     ParseManifest = fun docId text -> Manifest.parseManifest docId text
-    Parse = fun beingCore sourceCode -> parse1 host beingCore sourceCode
+    Parse = fun input -> parse1 host input
     FindDependentModules = findDependentModules
     SyntaxErrorsToString = syntaxErrorsToString
     PerformSyntaxAnalysis = fun writeLog layers -> performSyntaxAnalysis writeLog layers

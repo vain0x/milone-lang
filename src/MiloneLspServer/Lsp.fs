@@ -200,9 +200,9 @@ let private parseAllTokens projectName moduleName docId allTokens =
   let kind =
     SyntaxApi.getModuleKind projectName moduleName
 
-  let docId, _, ast, errors = SyntaxApi.parseModule docId kind tokens
+  let m = SyntaxApi.parseModule docId kind tokens
 
-  docId, allTokens, ast, errors
+  { m with Tokens = allTokens }
 
 let private tyDisplayFn (tirCtx: TirCtx) ty =
   let getTyName tySerial =
@@ -294,28 +294,28 @@ module LSyntaxData =
     |> LSyntaxData
 
   let getDocId syntaxData =
-    let (LSyntaxData (docId, _, _, _)) = syntaxData
-    docId
+    let (LSyntaxData m) = syntaxData
+    m.DocId
 
   let getTokens syntaxData =
-    let (LSyntaxData (_, tokens, _, _)) = syntaxData
-    LTokenList tokens
+    let (LSyntaxData m) = syntaxData
+    LTokenList m.Tokens
 
   let findModuleDefs (s: LSyntaxData) : string list =
-    let (LSyntaxData (docId, _, ast, _)) = s
+    let (LSyntaxData m) = s
 
-    lowerARoot docId [] ast
+    lowerARoot m.DocId [] m.Ast
     |> List.choose (fun (symbol, defOrUse, _) ->
       match symbol, defOrUse with
       | DModuleSymbol ([ name ]), Def -> Some name
       | _ -> None)
 
   let findModuleSynonyms (s: LSyntaxData) : (string * ModulePath * Loc) list =
-    let (LSyntaxData (docId, tokens, ast, _)) = s
+    let (LSyntaxData m) = s
 
-    lowerARoot docId [] ast
+    lowerARoot m.DocId [] m.Ast
     |> List.choose (fun (symbol, _, loc2) ->
-      match symbol, resolveLoc2 docId tokens loc2 with
+      match symbol, resolveLoc2 m.DocId m.Tokens loc2 with
       | DModuleSynonymDef (synonym, modulePath), Some loc -> Some(synonym, modulePath, loc)
       | _ -> None)
 
@@ -325,16 +325,16 @@ module LSyntax2 =
   let parse projectName moduleName docId (text: SourceCode) : LSyntax2 =
     let fullTokens = SyntaxTokenize.tokenizeAll host text
 
-    let _, _, ast, errors =
+    let m =
       parseAllTokens projectName moduleName docId fullTokens
 
     let syntax: LSyntax2 =
       { DocId = docId
         Text = text
         FullTokens = fullTokens
-        Ast = ast
-        SyntaxTree = SyntaxTreeGen.genSyntaxTree fullTokens ast
-        Errors = errors }
+        Ast = m.Ast
+        SyntaxTree = SyntaxTreeGen.genSyntaxTree fullTokens m.UnmodifiedAst
+        Errors = m.Errors }
 
     syntax
 
@@ -475,8 +475,8 @@ let private bundleWithCache (pa: ProjectAnalysis) : BundleResult * ProjectAnalys
             result.ParseResults
             |> List.fold
                  (fun map (_, syntaxData) ->
-                   let (LSyntaxData (docId, tokens, _, _)) = syntaxData
-                   map |> TMap.add docId (LTokenList tokens))
+                   let (LSyntaxData m) = syntaxData
+                   map |> TMap.add m.DocId (LTokenList m.Tokens))
                  pa.NewTokenizeCache
           NewParseResults = List.append result.ParseResults pa.NewParseResults
           BundleCache = Some result }
@@ -965,7 +965,7 @@ let private collectSymbolsInExpr (pa: ProjectAnalysis) (modules: TProgram) (tirC
     let docId = m.DocId
 
     match pa |> parseWithCache docId with
-    | Some (LSyntaxData (_, _, ast, _)) -> docId, ast
+    | Some (LSyntaxData m) -> docId, m.Ast
     | None -> failwith "must be parsed"
 
   let variantNameMap =
@@ -1154,11 +1154,11 @@ module ProjectAnalysis1 =
   let bundle (pa: ProjectAnalysis) : BundleResult * ProjectAnalysis = bundleWithCache pa
 
   let documentSymbols (syntax: LSyntaxData) (_pa: ProjectAnalysis) =
-    let (LSyntaxData (docId, tokens, ast, _)) = syntax
+    let (LSyntaxData m) = syntax
 
-    lowerARoot docId [] ast
+    lowerARoot m.DocId [] m.Ast
     |> List.choose (fun (symbol, defOrUse, loc2) ->
-      match defOrUse, resolveLoc2 docId tokens loc2 with
+      match defOrUse, resolveLoc2 m.DocId m.Tokens loc2 with
       | Def, Some loc -> Some(symbol, defOrUse, loc)
       | _ -> None)
 
