@@ -228,20 +228,21 @@ let readSourceFile (readTextFile: ReadTextFileFun) filename : Future<string opti
 let parseModule (docId: DocId) (kind: ModuleKind) (tokens: TokenizeResult) : ModuleSyntaxData =
   let errorTokens, tokens = tokens |> List.partition isErrorToken
 
-  let ast, parseErrors = tokens |> SyntaxParse.parse
+  let unmodifiedAst, parseErrors = tokens |> SyntaxParse.parse
 
   let errors =
     List.append (tokenizeErrors errorTokens) parseErrors
 
-  let ast =
+  let modifiedAst =
     if errors |> List.isEmpty then
-      resolveMiloneCoreDeps kind tokens ast
+      resolveMiloneCoreDeps kind tokens unmodifiedAst
     else
-      ast
+      unmodifiedAst
 
   ({ DocId = docId
      Tokens = tokens
-     Ast = ast
+     Ast = modifiedAst
+     UnmodifiedAst = unmodifiedAst
      Errors = errors }: ModuleSyntaxData)
 
 let parse1 host (input: ParseInput) : ARoot * ModuleSyntaxError list =

@@ -39,6 +39,10 @@ type ModuleSyntaxData =
   { DocId: DocId
     Tokens: (Token * Pos) list
     Ast: ARoot
+
+    /// AST that isn't modified (by prelude resolution) after parsing.
+    UnmodifiedAst: ARoot
+
     Errors: ModuleSyntaxError list }
 
 [<RequireQualifiedAccess; NoEquality; NoComparison>]

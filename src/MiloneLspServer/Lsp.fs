@@ -333,7 +333,7 @@ module LSyntax2 =
         Text = text
         FullTokens = fullTokens
         Ast = m.Ast
-        SyntaxTree = SyntaxTreeGen.genSyntaxTree fullTokens m.Ast
+        SyntaxTree = SyntaxTreeGen.genSyntaxTree fullTokens m.UnmodifiedAst
         Errors = m.Errors }
 
     syntax
