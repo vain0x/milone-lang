@@ -28,6 +28,7 @@ open MiloneShared.SharedTypes
 open MiloneShared.Util
 open MiloneShared.UtilParallel
 open MiloneShared.UtilSymbol
+open MiloneSyntax.SyntaxApiTypes
 open MiloneSyntax.SyntaxTypes
 open Std.StdError
 open Std.StdSet
@@ -85,8 +86,6 @@ let private computeLayer
 // -----------------------------------------------
 // Types
 // -----------------------------------------------
-
-type private SyntaxError = string * Loc
 
 [<RequireQualifiedAccess; NoEquality; NoComparison>]
 type private ModuleRequest =

@@ -276,8 +276,6 @@ let parse1 host (input: ParseInput) : ARoot * ModuleSyntaxError list =
 // Error processing
 // -----------------------------------------------
 
-type private SyntaxError = string * Loc
-
 let private isErrorToken token =
   match token with
   | ErrorToken _, _ -> true

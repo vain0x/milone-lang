@@ -10,6 +10,7 @@ open Std.StdSet
 open Std.StdMap
 open MiloneSyntax.Syntax
 open MiloneSyntax.SyntaxTypes
+open MiloneSyntax.SyntaxApiTypes
 
 module S = Std.StdString
 module NirGen = MiloneSyntax.NirGen
@@ -60,8 +61,6 @@ let private computeLayer
 // -----------------------------------------------
 // Types
 // -----------------------------------------------
-
-type private SyntaxError = string * Loc
 
 [<RequireQualifiedAccess; NoEquality; NoComparison>]
 type private ModuleRequest =
