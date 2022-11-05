@@ -26,9 +26,6 @@ module Typing = MiloneSyntax.Typing
 module TySystem = MiloneSyntax.TySystem
 module TirTypes = MiloneSyntax.TirTypes
 
-/// `.fs` or `.milone`.
-type private SourceExt = string
-
 /// File extension. Starts with `.`.
 type private FileExt = string
 
