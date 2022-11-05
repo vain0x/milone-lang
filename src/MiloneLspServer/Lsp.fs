@@ -1183,6 +1183,83 @@ module ProjectAnalysis1 =
 module internal ProjectAnalysisCompletion =
   open MiloneLspServer.Util
 
+  // #CompletionItemKind
+  module private Kind =
+    [<Literal>]
+    let Text = 1
+
+    [<Literal>]
+    let Method = 2
+
+    [<Literal>]
+    let Function = 3
+
+    [<Literal>]
+    let Constructor = 4
+
+    [<Literal>]
+    let Field = 5
+
+    [<Literal>]
+    let Variable = 6
+
+    [<Literal>]
+    let Class = 7
+
+    [<Literal>]
+    let Interface = 8
+
+    [<Literal>]
+    let Module = 9
+
+    [<Literal>]
+    let Property = 10
+
+    [<Literal>]
+    let Unit = 11
+
+    [<Literal>]
+    let Value = 12
+
+    [<Literal>]
+    let Enum = 13
+
+    [<Literal>]
+    let Keyword = 14
+
+    [<Literal>]
+    let Snippet = 15
+
+    [<Literal>]
+    let Color = 16
+
+    [<Literal>]
+    let File = 17
+
+    [<Literal>]
+    let Reference = 18
+
+    [<Literal>]
+    let Folder = 19
+
+    [<Literal>]
+    let EnumMember = 20
+
+    [<Literal>]
+    let Constant = 21
+
+    [<Literal>]
+    let Struct = 22
+
+    [<Literal>]
+    let Event = 23
+
+    [<Literal>]
+    let Operator = 24
+
+    [<Literal>]
+    let TypeParameter = 25
+
   module private Range =
     let isTouched (pos: Pos) (range: Range) =
       let s, t = range
@@ -1192,9 +1269,14 @@ module internal ProjectAnalysisCompletion =
     let endPos ((_, t): Range) = t
 
   module private SyntaxElement =
+    let kind element =
+      match element with
+      | SyntaxToken (kind, _)
+      | SyntaxNode (kind, _, _) -> kind
+
     let range element =
       match element with
-      | SyntaxToken (_, range) -> range
+      | SyntaxToken (_, range)
       | SyntaxNode (_, range, _) -> range
 
     let children element =
@@ -1332,6 +1414,16 @@ module internal ProjectAnalysisCompletion =
         | _ -> false
       | _ -> false
 
+    let kindOf node =
+      match SyntaxElement.kind node with
+      | SyntaxKind.LetValDecl -> Kind.Value
+      | SyntaxKind.LetFunDecl -> Kind.Function
+      | SyntaxKind.TySynonymDecl -> Kind.Class
+      | SyntaxKind.UnionTyDecl -> Kind.Enum
+      | SyntaxKind.RecordTyDecl -> Kind.Struct
+      | SyntaxKind.ModuleDecl -> Kind.Module
+      | _ -> Kind.Text
+
     let findToplevelDecls docId (pa: ProjectAnalysis) =
       match pa.Host.Parse2 docId with
       | Some syntax ->
@@ -1362,7 +1454,11 @@ module internal ProjectAnalysisCompletion =
           children
           |> List.choose (fun node ->
             match node with
-            | SyntaxNode (SyntaxKind.VariantDecl, _, children) -> children |> List.tryPick (asIdent text)
+            | SyntaxNode (SyntaxKind.VariantDecl, _, children) ->
+              children
+              |> List.tryPick (asIdent text)
+              |> Option.map (fun name -> Kind.EnumMember, name)
+
             | _ -> None)
         else
           []
@@ -1379,7 +1475,8 @@ module internal ProjectAnalysisCompletion =
           |> List.choose (fun decl ->
             decl
             |> SyntaxElement.children
-            |> List.tryPick (asIdent text))
+            |> List.tryPick (asIdent text)
+            |> Option.map (fun name -> kindOf decl, name))
         else
           []
 
@@ -1409,6 +1506,7 @@ module internal ProjectAnalysisCompletion =
                 decl
                 |> SyntaxElement.children
                 |> List.tryPick (asIdent text)
+                |> Option.map (fun name -> kindOf decl, name)
               else
                 None)
 
@@ -1461,6 +1559,7 @@ module internal ProjectAnalysisCompletion =
             decl
             |> SyntaxElement.children
             |> List.tryPick (asIdent text)
+            |> Option.map (fun name -> kindOf decl, name)
           else
             None)
       else
@@ -1468,7 +1567,7 @@ module internal ProjectAnalysisCompletion =
 
     List.append (resolveUnqualifiedAsNs targetPos pa) (resolvePrelude ())
 
-  let tryNsCompletion (docId: DocId) (targetPos: Pos) pa : string list option * ProjectAnalysis =
+  let tryNsCompletion (docId: DocId) (targetPos: Pos) pa : (int * string) list option * ProjectAnalysis =
     let syntaxOpt, pa = ProjectAnalysis1.parse2 docId pa
 
     match syntaxOpt with

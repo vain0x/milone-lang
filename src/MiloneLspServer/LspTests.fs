@@ -987,7 +987,10 @@ let private doTestCompletion (p: LLS.ProjectInfo) (wa: LLS.WorkspaceAnalysis) ti
           |> LLS.ProjectAnalysis.completion (WorkspaceAnalysis.getModules p wa) docId targetPos
       with
     | [], pa -> debugProject pa
-    | result, pa -> debug result, pa
+
+    | result, pa ->
+      // FIXME: test kind of items
+      debug (List.map snd result), pa
 
   actual |> assertEqual title (debug expected), pa
 
