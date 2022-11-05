@@ -242,7 +242,10 @@ let parseModule (docId: DocId) (kind: ModuleKind) (tokens: TokenizeResult) : Mod
     else
       ast
 
-  docId, tokens, ast, errors
+  ({ DocId = docId
+     Tokens = tokens
+     Ast = ast
+     Errors = errors }: ModuleSyntaxData)
 
 let parse1 host (input: ParseInput) : ARoot * ModuleSyntaxError list =
   let kind =
@@ -251,7 +254,9 @@ let parse1 host (input: ParseInput) : ARoot * ModuleSyntaxError list =
     else
       ModuleKind.Regular
 
-  let tokens = SyntaxTokenize.tokenize host input.SourceCode
+  let tokens =
+    SyntaxTokenize.tokenize host input.SourceCode
+
   let errorTokens, tokens = tokens |> List.partition isErrorToken
 
   let ast, parseErrors = SyntaxParse.parse tokens

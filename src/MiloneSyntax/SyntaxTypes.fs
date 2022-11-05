@@ -30,12 +30,18 @@ type SourceCode = string
 
 type ModuleSyntaxError = string * Pos
 
-type ModuleSyntaxData = DocId * TokenizeResult * ARoot * ModuleSyntaxError list
-
 // filename -> (contents option)
 type ReadTextFileFun = string -> Future<string option>
 
 type FetchModuleFun = ProjectName -> ModuleName -> Future<ModuleSyntaxData option>
+
+/// Result of parsing a document.
+[<RequireQualifiedAccess; NoEquality; NoComparison>]
+type ModuleSyntaxData =
+  { DocId: DocId
+    Tokens: (Token * Pos) list
+    Ast: ARoot
+    Errors: ModuleSyntaxError list }
 
 [<RequireQualifiedAccess; NoEquality; NoComparison>]
 type ModuleSyntaxData2 =
@@ -182,7 +188,10 @@ type Token =
 [<RequireQualifiedAccess; NoEquality; NoComparison>]
 type TokenizeHost = { FindKeyword: string -> Token option }
 
+/// Result of tokenization. This doesn't include Trivia or bad tokens.
 type TokenizeResult = (Token * Pos) list
+
+/// Result of tokenization. This includes all tokens including trivia or bad tokens.
 type TokenizeFullResult = (Token * Pos) list
 
 /// Unary operator.

@@ -190,10 +190,10 @@ let private producer (fetchModule: FetchModuleFun) (_: State) (r: ModuleRequest)
   |> Future.map (fun result ->
     match result with
     | Some syntaxData ->
-      let docId, _, ast, errors = syntaxData
+      let docId = syntaxData.DocId
 
       let deps =
-        findDependentModules ast
+        findDependentModules syntaxData.Ast
         |> List.map (fun (projectName, moduleName, pos) ->
           let originLoc =
             let y, x = pos
@@ -202,7 +202,7 @@ let private producer (fetchModule: FetchModuleFun) (_: State) (r: ModuleRequest)
           newDepRequest projectName moduleName originLoc)
 
       let errors =
-        errors
+        syntaxData.Errors
         |> List.map (fun (msg, (y, x)) -> (msg, Loc(docId, y, x)))
 
       let m: ModuleData =
@@ -236,9 +236,7 @@ let bundle (fetchModule: FetchModuleFun) (entryProjectName: ProjectName) : Bundl
 
   let layers =
     let comparer (l: ModuleData) (r: ModuleData) =
-      let l, _, _, _ = l.SyntaxData
-      let r, _, _, _ = r.SyntaxData
-      Symbol.compare l r
+      Symbol.compare l.SyntaxData.DocId r.SyntaxData.DocId
 
     let getDeps (m: ModuleData) =
       m.Deps
@@ -258,13 +256,11 @@ let bundle (fetchModule: FetchModuleFun) (entryProjectName: ProjectName) : Bundl
     |> __parallelMap (fun modules ->
       modules
       |> List.map (fun (m: ModuleData) ->
-        let docId, _, ast, _ = m.SyntaxData
-
         let m2: ModuleSyntaxData2 =
           { ProjectName = m.Project
             ModuleName = m.Name
-            DocId = docId
-            Ast = ast }
+            DocId = m.SyntaxData.DocId
+            Ast = m.SyntaxData.Ast }
 
         m.SyntaxData, m2))
 
