@@ -1394,4 +1394,22 @@ module ProjectAnalysis1 =
           else
             []))
 
-    resolveUnqualifiedAsNs targetPos pa
+    let resolvePrelude () =
+      if SyntaxApi.isKnownModule nsIdent then
+        let docId: DocId =
+          AstBundle.computeDocId "MiloneCore" nsIdent
+
+        findToplevelDecls docId pa
+        |> List.choose (fun (syntax, decl) ->
+          let text = syntax.Text
+
+          if isPublicDecl decl then
+            decl
+            |> SyntaxElement.children
+            |> List.tryPick (asIdent text)
+          else
+            None)
+      else
+        []
+
+    List.append (resolveUnqualifiedAsNs targetPos pa) (resolvePrelude ())

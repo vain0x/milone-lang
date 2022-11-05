@@ -1084,7 +1084,21 @@ let private testCompletion () =
           L.f
           //^cursor
         """ ]
-      [ "T"; "f" ] ]
+      [ "T"; "f" ]
+
+    testCompletionMultipleFiles
+      "ns: prelude modules"
+      [ "/$/.milone/src/MiloneCore/List.milone",
+        """
+          let isEmpty (_: _ list) = true
+        """
+
+        "/$/root/TestProject/TestProject.milone",
+        """
+          List.isEmpty
+          //   ^cursor
+        """ ]
+      [ "isEmpty" ] ]
 
 // -----------------------------------------------
 // Find projects

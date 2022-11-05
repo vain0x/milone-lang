@@ -96,7 +96,7 @@ let private isOptionIdent ident =
 let private isResultIdent ident =
   resultIdents |> List.exists (fun x -> x = ident)
 
-let private isKnownModule moduleName =
+let isKnownModule moduleName =
   knownModules
   |> List.exists (fun name -> name = moduleName)
 
