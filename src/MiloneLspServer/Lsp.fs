@@ -1258,6 +1258,21 @@ module ProjectAnalysis1 =
         | SyntaxKind.TySynonymDecl
         | SyntaxKind.UnionTyDecl
         | SyntaxKind.RecordTyDecl
+        | SyntaxKind.ModuleDecl
+        | SyntaxKind.ModuleSynonymDecl -> true
+
+        | _ -> false
+      | _ -> false
+
+    let isPublicDecl node =
+      match node with
+      | SyntaxNode (kind, _, _) ->
+        match kind with
+        | SyntaxKind.LetValDecl
+        | SyntaxKind.LetFunDecl
+        | SyntaxKind.TySynonymDecl
+        | SyntaxKind.UnionTyDecl
+        | SyntaxKind.RecordTyDecl
         | SyntaxKind.ModuleDecl -> true
 
         | _ -> false
@@ -1306,7 +1321,7 @@ module ProjectAnalysis1 =
 
         if ok then
           children
-          |> List.filter isDecl
+          |> List.filter isPublicDecl
           |> List.choose (fun decl ->
             decl
             |> SyntaxElement.children
@@ -1318,6 +1333,35 @@ module ProjectAnalysis1 =
 
     let rec collectViaOpenDecls text node (pa: ProjectAnalysis) =
       match node with
+      | SyntaxNode (SyntaxKind.ModuleSynonymDecl, _, children) ->
+        let ok =
+          match children |> List.tryPick (asIdent text) with
+          | Some ident -> ident = nsIdent
+          | None -> false
+
+        if ok then
+          match
+            children |> List.tryPick asModulePath
+            |> Option.map (List.choose (asIdent text))
+            with
+          | Some [ p; m ] ->
+            let docId: DocId = AstBundle.computeDocId p m
+
+            findToplevelDecls docId pa
+            |> List.choose (fun (syntax, decl) ->
+              let text = syntax.Text
+
+              if isPublicDecl decl then
+                decl
+                |> SyntaxElement.children
+                |> List.tryPick (asIdent text)
+              else
+                None)
+
+          | _ -> []
+        else
+          []
+
       | SyntaxNode (SyntaxKind.OpenDecl, _, children) ->
         match
           children |> List.tryPick asModulePath

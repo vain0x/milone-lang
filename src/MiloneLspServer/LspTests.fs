@@ -1066,6 +1066,24 @@ let private testCompletion () =
           Inner.f
           //    ^cursor
         """ ]
+      [ "T"; "f" ]
+
+    testCompletionMultipleFiles
+      "ns: synonym of module"
+      [ "/$/root/TestProject/Lib.milone",
+        """module rec TestProject.Lib
+
+          type T = int
+          let f () = ()
+        """
+
+        "/$/root/TestProject/TestProject.milone",
+        """
+          module L = TestProject.Lib
+
+          L.f
+          //^cursor
+        """ ]
       [ "T"; "f" ] ]
 
 // -----------------------------------------------
