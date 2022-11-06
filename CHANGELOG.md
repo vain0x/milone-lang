@@ -28,6 +28,7 @@
 ### LSP Server
 
 - Support `prepareRename` request so that the editor can reject to rename at invalid position
+- Support `completion` of static namespace members experimentally
 - Fix `diagnostics` are too frequently updated
 
 ### VSCode Extension
