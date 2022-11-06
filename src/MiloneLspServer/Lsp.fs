@@ -1319,6 +1319,179 @@ module internal ProjectAnalysisCompletion =
     let endIndex = indexAt startIndex startPos endPos
     s.[startIndex..endIndex - 1]
 
+  let private isPatLike kind =
+    match kind with
+    | SyntaxKind.LiteralPat
+    | SyntaxKind.WildcardPat
+    | SyntaxKind.VarPat
+    | SyntaxKind.PathPat
+    | SyntaxKind.ParenPat
+    | SyntaxKind.ListPat
+    | SyntaxKind.WrapPat
+    | SyntaxKind.ConsPat
+    | SyntaxKind.AscribePat
+    | SyntaxKind.TuplePat
+    | SyntaxKind.AsPat
+    | SyntaxKind.OrPat -> true
+    | _ -> false
+
+  let private findVarsInPat pat =
+    let rec patRec acc pat =
+      let acc =
+        SyntaxElement.children pat |> List.fold patRec acc
+
+      match SyntaxElement.kind pat with
+      | SyntaxKind.VarPat
+      | SyntaxKind.AsPat ->
+        match pat
+              |> SyntaxElement.children
+              |> List.tryFind (fun node ->
+                match SyntaxElement.kind node with
+                | SyntaxKind.Ident -> true
+                | _ -> false)
+          with
+        | Some it -> it :: acc
+        | None -> acc
+
+      | _ -> acc
+
+    patRec [] pat
+
+  let resolveUnqualifiedAsValue docId text ancestors qualIdent (targetPos: Pos) (pa: ProjectAnalysis) =
+    let asIdent text node =
+      match node with
+      | SyntaxToken (SyntaxKind.Ident, identRange) -> Some(textOfRange text identRange)
+      | _ -> None
+
+    let asModulePath node =
+      match node with
+      | SyntaxNode (SyntaxKind.ModulePath, _, children) -> Some children
+      | _ -> None
+
+    // finds all fields of record type declarations that are found
+    // by going through open declarations transitively
+    let collectFields (pa: ProjectAnalysis) =
+      // checks if a node is record type declaration and if so, finds all field identifiers
+      // if it's open or module synonym declaration, enqueues the opened module to be processed
+      // otherwise just returns an empty list
+      let foldOnNode text state node =
+        let acc, docAcc, doneSet = state
+
+        match SyntaxElement.kind node with
+        | SyntaxKind.RecordTyDecl ->
+          let fields =
+            SyntaxElement.children node
+            |> List.collect (fun node ->
+              match SyntaxElement.kind node with
+              | SyntaxKind.FieldDecl ->
+                node
+                |> SyntaxElement.children
+                |> List.choose (asIdent text)
+              | _ -> [])
+
+          fields :: acc, docAcc, doneSet
+
+        | SyntaxKind.ModuleSynonymDecl
+        | SyntaxKind.OpenDecl ->
+          match
+            SyntaxElement.children node
+            |> List.tryPick asModulePath
+            |> Option.map (List.choose (asIdent text))
+            with
+          | Some [ p; m ] ->
+            let docId: DocId = AstBundle.computeDocId p m
+
+            let docAcc, doneSet =
+              if doneSet |> TSet.contains docId |> not then
+                docId :: docAcc, TSet.add docId doneSet
+              else
+                docAcc, doneSet
+
+            acc, docAcc, doneSet
+
+          | _ -> state
+        | _ -> state
+
+      let rec onDocRec acc docAcc doneSet =
+        match docAcc with
+        | [] -> acc
+
+        | docId :: docAcc ->
+          match pa.Host.Parse2 docId with
+          | Some syntax ->
+            let (SyntaxTree root) = syntax.SyntaxTree
+
+            let acc, docAcc, doneSet =
+              SyntaxElement.children root
+              |> List.fold (foldOnNode syntax.Text) (acc, docAcc, doneSet)
+
+            onDocRec acc docAcc doneSet
+
+          | None -> onDocRec acc docAcc doneSet
+
+      let acc =
+        let docAcc = [ docId ]
+
+        let doneSet =
+          TSet.empty Symbol.compare |> TSet.add docId
+
+        onDocRec [] docAcc doneSet
+
+      acc
+      |> List.rev
+      |> List.collect id
+      |> List.map (fun fieldIdent -> Kind.Field, fieldIdent)
+
+    // finds all variables in a pattern
+    let rec patRec acc pat =
+      let acc =
+        SyntaxElement.children pat |> List.fold patRec acc
+
+      match SyntaxElement.kind pat with
+      | SyntaxKind.VarPat
+      | SyntaxKind.AsPat ->
+        match pat
+              |> SyntaxElement.children
+              |> List.tryFind (fun node ->
+                match SyntaxElement.kind node with
+                | SyntaxKind.Ident -> true
+                | _ -> false)
+          with
+        | Some ident -> ident :: acc
+        | None -> acc
+
+      | _ -> acc
+
+    // checkes if `nsIdent` is a name of variable
+    let isVar =
+      ancestors
+      |> List.exists (fun ancestor ->
+        ancestor
+        |> SyntaxElement.children
+        |> List.exists (fun node ->
+          match SyntaxElement.kind node with
+          | SyntaxKind.FunExpr
+          | SyntaxKind.LetValExpr
+          | SyntaxKind.LetFunExpr
+          | SyntaxKind.LetValDecl
+          | SyntaxKind.LetFunDecl ->
+            SyntaxElement.children node
+            |> List.exists (fun node ->
+              isPatLike (SyntaxElement.kind node)
+              && (patRec [] node
+                  |> List.exists (fun ident ->
+                    match asIdent text ident with
+                    | Some ident -> ident = qualIdent
+                    | None -> false)))
+
+          | _ -> false))
+
+    if isVar then
+      List.append (collectFields pa) [ Kind.Property, "Length" ]
+    else
+      debugFn "not a variable: %s" qualIdent
+      []
+
   // finds the sibling nodes before the dot and ancestral nodes.
   let private findQuals (tree: SyntaxTree) targetPos =
     let isPathLike kind =
@@ -1400,30 +1573,6 @@ module internal ProjectAnalysisCompletion =
         | _ -> false
       | _ -> false
 
-    let isPublicDecl node =
-      match node with
-      | SyntaxNode (kind, _, _) ->
-        match kind with
-        | SyntaxKind.LetValDecl
-        | SyntaxKind.LetFunDecl
-        | SyntaxKind.TySynonymDecl
-        | SyntaxKind.UnionTyDecl
-        | SyntaxKind.RecordTyDecl
-        | SyntaxKind.ModuleDecl -> true
-
-        | _ -> false
-      | _ -> false
-
-    let kindOf node =
-      match SyntaxElement.kind node with
-      | SyntaxKind.LetValDecl -> Kind.Value
-      | SyntaxKind.LetFunDecl -> Kind.Function
-      | SyntaxKind.TySynonymDecl -> Kind.Class
-      | SyntaxKind.UnionTyDecl -> Kind.Enum
-      | SyntaxKind.RecordTyDecl -> Kind.Struct
-      | SyntaxKind.ModuleDecl -> Kind.Module
-      | _ -> Kind.Text
-
     let findToplevelDecls docId (pa: ProjectAnalysis) =
       match pa.Host.Parse2 docId with
       | Some syntax ->
@@ -1460,22 +1609,6 @@ module internal ProjectAnalysisCompletion =
 
       match SyntaxElement.kind node with
       | SyntaxKind.LetValDecl ->
-        let isPatLike kind =
-          match kind with
-          | SyntaxKind.LiteralPat
-          | SyntaxKind.WildcardPat
-          | SyntaxKind.VarPat
-          | SyntaxKind.PathPat
-          | SyntaxKind.ParenPat
-          | SyntaxKind.ListPat
-          | SyntaxKind.WrapPat
-          | SyntaxKind.ConsPat
-          | SyntaxKind.AscribePat
-          | SyntaxKind.TuplePat
-          | SyntaxKind.AsPat
-          | SyntaxKind.OrPat -> true
-          | _ -> false
-
         match children
               |> List.tryFind (fun node -> isPatLike (SyntaxElement.kind node))
           with
@@ -1642,12 +1775,23 @@ module internal ProjectAnalysisCompletion =
           None, pa
 
         | Some (qualIdent, qualPos) ->
-          let _, pa = ProjectAnalysis1.bundle pa
+          // ignore non-last qualifiers for now
+
+          // ensure depended files are parsed
+          let pa =
+            if pa.BundleCache |> Option.isNone then
+              ProjectAnalysis1.bundle pa |> snd
+            else
+              pa
 
           match resolveAsNs docId text ancestors qualIdent qualPos pa with
           | [] ->
             debugFn "no members in %s" qualIdent
-            None, pa
+
+            match resolveUnqualifiedAsValue docId text ancestors qualIdent qualPos pa with
+            | [] -> None, pa
+
+            | items -> Some items, pa
 
           | items -> Some items, pa
 

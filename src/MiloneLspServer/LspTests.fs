@@ -1145,7 +1145,26 @@ let private testCompletion () =
           List.isEmpty
           //   ^cursor
         """ ]
-      [ "isEmpty" ] ]
+      [ "isEmpty" ]
+
+    testCompletionMultipleFiles
+      "ns: prelude modules"
+      [ "/$/root/TestProject/Lib.milone",
+        """
+          type Record1 = { F1: int }
+        """
+
+        "/$/root/TestProject/TestProject.milone",
+        """
+          open TestProject.Lib
+
+          type Record2 = { F2: int }
+
+          let f (x: Record2) =
+            x.__
+          //  ^cursor
+        """ ]
+      [ "F1"; "F2"; "Length" ] ]
 
 // -----------------------------------------------
 // Find projects
