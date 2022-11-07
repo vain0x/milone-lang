@@ -42,6 +42,9 @@ type LSyntax2 =
     SyntaxTree: SyntaxTree
     Errors: ModuleSyntaxError list }
 
+// #docIdIssue #temp
+type internal DocIdToModulePath = DocId -> (ProjectName * ModuleName) option
+
 // -----------------------------------------------
 // Utils
 // -----------------------------------------------
@@ -301,19 +304,19 @@ module LSyntaxData =
     let (LSyntaxData m) = syntaxData
     LTokenList m.Tokens
 
-  let findModuleDefs (s: LSyntaxData) : string list =
+  let findModuleDefs (docIdToModulePath: DocIdToModulePath) (s: LSyntaxData) : string list =
     let (LSyntaxData m) = s
 
-    lowerARoot m.DocId [] m.Ast
+    lowerARoot docIdToModulePath m.DocId [] m.Ast
     |> List.choose (fun (symbol, defOrUse, _) ->
       match symbol, defOrUse with
       | DModuleSymbol ([ name ]), Def -> Some name
       | _ -> None)
 
-  let findModuleSynonyms (s: LSyntaxData) : (string * ModulePath * Loc) list =
+  let findModuleSynonyms (docIdToModulePath: DocIdToModulePath) (s: LSyntaxData) : (string * ModulePath * Loc) list =
     let (LSyntaxData m) = s
 
-    lowerARoot m.DocId [] m.Ast
+    lowerARoot docIdToModulePath m.DocId [] m.Ast
     |> List.choose (fun (symbol, _, loc2) ->
       match symbol, resolveLoc2 m.DocId m.Tokens loc2 with
       | DModuleSynonymDef (synonym, modulePath), Some loc -> Some(synonym, modulePath, loc)
@@ -349,6 +352,7 @@ module BundleResult =
 [<RequireQualifiedAccess; NoEquality; NoComparison>]
 type ProjectAnalysisHost =
   { GetDocVersion: DocId -> DocVersion
+    DocIdToModulePath: DocIdToModulePath
     Tokenize: DocId -> DocVersion * LTokenList
     Parse: DocId -> (DocVersion * LSyntaxData) option
     Parse2: DocId -> LSyntax2 option
@@ -774,7 +778,8 @@ let private lowerADecl docId acc decl : DSymbolOccurrence list =
 
   | AAttrDecl (_, _, _, next) -> lowerADecl docId acc next
 
-let private lowerARoot (docId: DocId) acc root : DSymbolOccurrence list =
+// #docIdIssue (use-site of docIdToModulePath)
+let private lowerARoot docIdToModulePath (docId: DocId) acc root : DSymbolOccurrence list =
   let toLoc (y, x) = At(Loc(docId, y, x))
   let (ARoot (headOpt, decls)) = root
 
@@ -784,9 +789,12 @@ let private lowerARoot (docId: DocId) acc root : DSymbolOccurrence list =
     | _ -> 0, 0
 
   let acc =
-    // #abusingDocId
-    let path = Symbol.toString docId |> S.split "."
-    (DModuleSymbol path, Def, toLoc pos) :: acc
+    let modulePath =
+      // #temp (Option.get)
+      let p, m = docIdToModulePath docId |> Option.get
+      [ p; m ]
+
+    (DModuleSymbol modulePath, Def, toLoc pos) :: acc
 
   acc |> up (List.fold (lowerADecl docId)) decls
 
@@ -961,6 +969,9 @@ let private findTyInStmt (pa: ProjectAnalysis) (modules: TProgram) (tokenLoc: Lo
     | _ -> None)
 
 let private collectSymbolsInExpr (pa: ProjectAnalysis) (modules: TProgram) (tirCtx: TirCtx) =
+  // #temp
+  let docIdToModulePath: DocIdToModulePath = pa.Host.DocIdToModulePath
+
   let parseModule (m: TModule) =
     let docId = m.DocId
 
@@ -1027,7 +1038,7 @@ let private collectSymbolsInExpr (pa: ProjectAnalysis) (modules: TProgram) (tirC
     |> List.fold
          (fun acc m ->
            let docId, ast = parseModule m
-           lowerARoot docId acc ast)
+           lowerARoot docIdToModulePath docId acc ast)
          []
 
   let tySymbols =
@@ -1153,10 +1164,10 @@ module ProjectAnalysis1 =
 
   let bundle (pa: ProjectAnalysis) : BundleResult * ProjectAnalysis = bundleWithCache pa
 
-  let documentSymbols (syntax: LSyntaxData) (_pa: ProjectAnalysis) =
+  let documentSymbols (syntax: LSyntaxData) (pa: ProjectAnalysis) =
     let (LSyntaxData m) = syntax
 
-    lowerARoot m.DocId [] m.Ast
+    lowerARoot pa.Host.DocIdToModulePath m.DocId [] m.Ast
     |> List.choose (fun (symbol, defOrUse, loc2) ->
       match defOrUse, resolveLoc2 m.DocId m.Tokens loc2 with
       | Def, Some loc -> Some(symbol, defOrUse, loc)
