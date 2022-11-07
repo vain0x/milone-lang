@@ -330,7 +330,7 @@ module ProjectAnalysis =
 
     List.collect id errorListList, pa
 
-  let completion modules (docId: DocId) (targetPos: Pos) (pa: ProjectAnalysis) : string list * ProjectAnalysis =
+  let completion modules (docId: DocId) (targetPos: Pos) (pa: ProjectAnalysis) : (int * string) list * ProjectAnalysis =
     let tokens, pa = ProjectAnalysis1.tokenize docId pa
 
     let inModuleLine =
@@ -340,10 +340,12 @@ module ProjectAnalysis =
       |> LTokenList.filterByLine y
       |> List.exists LToken.isModuleOrOpenKeyword
 
+    // #CompletionItemKind
     /// All project names and module names.
     let collectModuleNames () =
       modules
       |> List.collect (fun (p, m) -> [ p; m ])
+      |> List.map (fun text -> 9, text)
       |> listUnique
 
     let collectLocalSymbols pa =
@@ -405,17 +407,22 @@ module ProjectAnalysis =
               Some symbol
             else
               None)
-          |> List.choose (fun symbol -> symbol |> Symbol.name bundleResult)
+          |> List.choose (fun symbol ->
+            match symbol |> Symbol.name bundleResult with
+            | Some name ->
+              // #CompletionItemKind (1: text)
+              Some(1, name)
+
+            | None -> None)
 
         result, pa
 
     if inModuleLine then
       collectModuleNames (), pa
     else
-      // match beforeDot () with
-      // | Some token -> collectNsSymbols token pa
-      // | None -> collectLocalSymbols pa
-      collectLocalSymbols pa
+      match ProjectAnalysisCompletion.tryNsCompletion docId targetPos pa with
+      | Some items, pa -> items, pa
+      | None, pa -> collectLocalSymbols pa
 
   /// `(defs, uses) option`
   let findRefs

@@ -987,7 +987,10 @@ let private doTestCompletion (p: LLS.ProjectInfo) (wa: LLS.WorkspaceAnalysis) ti
           |> LLS.ProjectAnalysis.completion (WorkspaceAnalysis.getModules p wa) docId targetPos
       with
     | [], pa -> debugProject pa
-    | result, pa -> debug result, pa
+
+    | result, pa ->
+      // FIXME: test kind of items
+      debug (List.map snd result), pa
 
   actual |> assertEqual title (debug expected), pa
 
@@ -1036,16 +1039,132 @@ let private testCompletion () =
           """ ]
       [ "Std"; "StdFoo"; "TestProject" ]
 
-    // testCompletionSingleFile
-    //   "dot"
-    //   """
-    //     let main _ =
-    //       List.   (x.y)
-    //   //       ^cursor
-    //       0
-    //   """
-    //   [ "List.*" ]
-    ]
+    // ns-cases: completion from namespaces.
+    testCompletionSingleFile
+      "ns: file-local discriminated union"
+      """
+        type U = A of int | B of string
+
+        let main _ =
+          U.A
+      //    ^cursor
+          0
+      """
+      [ "A"; "B" ]
+
+
+    testCompletionMultipleFiles
+      "ns: file-local inner module"
+      [ "/$/root/TestProject/Lib.milone",
+        """
+          type NotExposed = int
+        """
+
+        "/$/root/TestProject/TestProject.milone",
+        """
+          module X =
+            // open doesn't re-export
+            open TestProject.Lib
+            // module synonym isn't exposed
+            module ModuleSynonymIsNotExposed = TestProject.Lib
+
+            // variables
+            let a, b = 1
+            // function
+            let f () = ()
+            // synonym
+            type S = int
+            // union and variants
+            type U = | V | W of int
+            // record
+            type R = { F: int }
+            // module
+            module M =
+              // inner decl isn't exposed
+              type InnerT = int
+
+          X.__
+          //^cursor
+        """ ]
+      [ "M"
+        "R"
+        "S"
+        "U"
+        "V"
+        "W"
+        "a"
+        "b"
+        "f" ]
+
+    testCompletionMultipleFiles
+      "ns: opened inner module"
+      [ "/$/root/TestProject/Lib.milone",
+        """module rec TestProject.Lib
+
+          module Inner =
+            type T = V of int
+            let f () = ()
+        """
+
+        "/$/root/TestProject/TestProject.milone",
+        """
+          open TestProject.Lib
+
+          Inner.f
+          //    ^cursor
+        """ ]
+      [ "T"; "V"; "f" ]
+
+    testCompletionMultipleFiles
+      "ns: synonym of module"
+      [ "/$/root/TestProject/Lib.milone",
+        """module rec TestProject.Lib
+
+          type T = int
+          let f () = ()
+        """
+
+        "/$/root/TestProject/TestProject.milone",
+        """
+          module L = TestProject.Lib
+
+          L.f
+          //^cursor
+        """ ]
+      [ "T"; "f" ]
+
+    testCompletionMultipleFiles
+      "ns: prelude modules"
+      [ "/$/.milone/src/MiloneCore/List.milone",
+        """
+          let isEmpty (_: _ list) = true
+        """
+
+        "/$/root/TestProject/TestProject.milone",
+        """
+          List.isEmpty
+          //   ^cursor
+        """ ]
+      [ "isEmpty" ]
+
+    testCompletionMultipleFiles
+      "ns: prelude modules"
+      [ "/$/root/TestProject/Lib.milone",
+        """
+          type Record1 = { F1: int }
+        """
+
+        "/$/root/TestProject/TestProject.milone",
+        """
+          open TestProject.Lib
+
+          type Record2 = { F2: int }
+
+          let f (x: Record2) =
+            x.__
+          //  ^cursor
+        """ ]
+      [ "F1"; "F2"; "Length" ] ]
 
 // -----------------------------------------------
 // Find projects

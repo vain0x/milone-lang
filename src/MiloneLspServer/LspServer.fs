@@ -681,7 +681,9 @@ let private processNext host : LspIncome -> CancellationToken -> ProcessResult =
         current <- wa
 
         result
-        |> List.map (fun text -> jOfObj [ "label", JString text ])
+        |> List.map (fun (kind, text) ->
+          jOfObj [ "kind", JNumber kind
+                   "label", JString text ])
         |> jArrayOrNull)
 
       Continue
