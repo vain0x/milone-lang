@@ -865,31 +865,32 @@ let doWithProjectAnalysis
   : 'A * WorkspaceAnalysis =
   // #temp
   let docIdToUri =
-    fun (_: ProjectInfo) docId wa ->
-      WorkspaceAnalysis1.docIdToUri docId wa
-      |> Option.get
+    fun (_: ProjectInfo) docId wa -> WorkspaceAnalysis1.docIdToUri docId wa
 
   let host: ProjectAnalysisHost =
-    { GetDocVersion = fun docId -> getDocVersion (docIdToUri p docId wa) wa
-
-      DocIdToModulePath = fun docId -> WorkspaceAnalysis1.docIdToModulePath docId wa
+    { GetDocVersion =
+        fun docId ->
+          match docIdToUri p docId wa with
+          | Some uri -> getDocVersion uri wa
+          | None -> MinVersion
 
       Tokenize =
         fun docId ->
-          let uri = docIdToUri p docId wa
-
-          tokenizeDoc uri wa
-          |> Option.defaultValue (MinVersion, LTokenList.empty)
+          match docIdToUri p docId wa
+                |> Option.bind (fun uri -> tokenizeDoc uri wa)
+            with
+          | Some it -> it
+          | None -> MinVersion, LTokenList.empty
 
       Parse =
         fun docId ->
-          let uri = docIdToUri p docId wa
-          parseDoc uri wa
+          docIdToUri p docId wa
+          |> Option.bind (fun uri -> parseDoc uri wa)
 
       Parse2 =
         fun docId ->
-          let uri = docIdToUri p docId wa
-          parse2Doc uri wa
+          docIdToUri p docId wa
+          |> Option.bind (fun uri -> parse2Doc uri wa)
 
       MiloneHome = wa.Host.MiloneHome
       ReadTextFile = wa.Host.ReadTextFile }
@@ -910,7 +911,9 @@ let doWithProjectAnalysis
          (fun (wa: WorkspaceAnalysis) (v, syntaxData) ->
            let docId = LSyntaxData.getDocId syntaxData
            let tokens = LSyntaxData.getTokens syntaxData
-           let uri = docIdToUri p docId wa
+
+           // #temp (Option.get)
+           let uri = docIdToUri p docId wa |> Option.get
 
            { wa with
                TokenizeCache = wa.TokenizeCache |> TMap.add uri (v, tokens)
@@ -1126,7 +1129,7 @@ module WorkspaceAnalysis =
         match parseDoc uri wa, uriToDocId uri |> docIdToModulePath with
         | Some (_, syntax), Some (projectName, moduleName) ->
           if syntax
-             |> LSyntaxData.findModuleDefs docIdToModulePath
+             |> LSyntaxData.findModuleDefs
              |> List.exists (fun name -> name = usedModule) then
             Some(projectName, moduleName)
           else
@@ -1203,7 +1206,7 @@ module WorkspaceAnalysis =
               match parseDoc uri wa with
               | Some (_, syntax) ->
                 syntax
-                |> LSyntaxData.findModuleSynonyms docIdToModulePath
+                |> LSyntaxData.findModuleSynonyms
                 |> List.tryFind (fun (name, _, _) -> name = ident)
                 |> Option.map (fun (_, path, _) ->
                   "module "

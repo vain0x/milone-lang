@@ -33,6 +33,7 @@ type LTokenList = private LTokenList of TokenizeFullResult
 [<NoEquality; NoComparison>]
 type LSyntaxData = private LSyntaxData of ModuleSyntaxData
 
+// (this includes Text, FullTokens and SyntaxTree unlike SyntaxData)
 [<RequireQualifiedAccess; NoEquality; NoComparison>]
 type LSyntax2 =
   { DocId: DocId
@@ -200,10 +201,8 @@ let private parseAllTokens projectName moduleName docId allTokens =
     allTokens
     |> List.filter (fun (token, _) -> token |> isTrivia |> not)
 
-  let kind =
-    SyntaxApi.getModuleKind projectName moduleName
-
-  let m = SyntaxApi.parseModule docId kind tokens
+  let m =
+    SyntaxApi.parseModule docId projectName moduleName tokens
 
   { m with Tokens = allTokens }
 
@@ -304,19 +303,19 @@ module LSyntaxData =
     let (LSyntaxData m) = syntaxData
     LTokenList m.Tokens
 
-  let findModuleDefs (docIdToModulePath: DocIdToModulePath) (s: LSyntaxData) : string list =
-    let (LSyntaxData m) = s
+  let findModuleDefs syntaxData : string list =
+    let (LSyntaxData m) = syntaxData
 
-    lowerARoot docIdToModulePath m.DocId [] m.Ast
+    lowerARoot m.DocId m.ProjectName m.ModuleName [] m.Ast
     |> List.choose (fun (symbol, defOrUse, _) ->
       match symbol, defOrUse with
       | DModuleSymbol ([ name ]), Def -> Some name
       | _ -> None)
 
-  let findModuleSynonyms (docIdToModulePath: DocIdToModulePath) (s: LSyntaxData) : (string * ModulePath * Loc) list =
-    let (LSyntaxData m) = s
+  let findModuleSynonyms syntaxData : (string * ModulePath * Loc) list =
+    let (LSyntaxData m) = syntaxData
 
-    lowerARoot docIdToModulePath m.DocId [] m.Ast
+    lowerARoot m.DocId m.ProjectName m.ModuleName [] m.Ast
     |> List.choose (fun (symbol, _, loc2) ->
       match symbol, resolveLoc2 m.DocId m.Tokens loc2 with
       | DModuleSynonymDef (synonym, modulePath), Some loc -> Some(synonym, modulePath, loc)
@@ -352,7 +351,6 @@ module BundleResult =
 [<RequireQualifiedAccess; NoEquality; NoComparison>]
 type ProjectAnalysisHost =
   { GetDocVersion: DocId -> DocVersion
-    DocIdToModulePath: DocIdToModulePath
     Tokenize: DocId -> DocVersion * LTokenList
     Parse: DocId -> (DocVersion * LSyntaxData) option
     Parse2: DocId -> LSyntax2 option
@@ -408,7 +406,7 @@ let private doBundle (pa: ProjectAnalysis) : BundleResult =
 
     match pa |> parseWithCache docId with
     | None -> Future.just None
-    | Some (LSyntaxData syntaxData) -> Future.just (Some syntaxData)
+    | Some (LSyntaxData m) -> Future.just (Some m)
 
   let layers, bundleErrors =
     AstBundle.bundle fetchModuleUsingCache projectName
@@ -433,9 +431,9 @@ let private doBundle (pa: ProjectAnalysis) : BundleResult =
     layers
     |> List.collect (fun modules ->
       modules
-      |> List.map (fun ((syntaxData: ModuleSyntaxData), (m: ModuleSyntaxData2)) ->
+      |> List.map (fun ((m: ModuleSyntaxData), (_: ModuleSyntaxData2)) ->
         let v = getVersion m.DocId pa
-        v, LSyntaxData syntaxData))
+        v, LSyntaxData m))
 
   match result with
   | SyntaxAnalysisOk (modules, tirCtx) ->
@@ -668,6 +666,7 @@ let private lowerAExpr docId acc expr : DSymbolOccurrence list =
   | ANavExpr (l, _, _) ->
     match l with
     | AIdentExpr (Name (l, pos), None) when l.Length = 1 && C.isUpper l.[0] ->
+      // #abusingDocId
       (DModuleSymbol [ Symbol.toString docId
                        l ],
        Use,
@@ -758,6 +757,7 @@ let private lowerADecl docId acc decl : DSymbolOccurrence list =
 
   | AModuleSynonymDecl (pos, Name (synonym, identPos), _, path) ->
     let acc =
+      // #abusingDocId
       (DModuleSymbol [ Symbol.toString docId
                        synonym ],
        Def,
@@ -779,7 +779,13 @@ let private lowerADecl docId acc decl : DSymbolOccurrence list =
   | AAttrDecl (_, _, _, next) -> lowerADecl docId acc next
 
 // #docIdIssue (use-site of docIdToModulePath)
-let private lowerARoot docIdToModulePath (docId: DocId) acc root : DSymbolOccurrence list =
+let private lowerARoot
+  (docId: DocId)
+  (projectName: ProjectName)
+  (moduleName: ModuleName)
+  acc
+  root
+  : DSymbolOccurrence list =
   let toLoc (y, x) = At(Loc(docId, y, x))
   let (ARoot (headOpt, decls)) = root
 
@@ -789,11 +795,7 @@ let private lowerARoot docIdToModulePath (docId: DocId) acc root : DSymbolOccurr
     | _ -> 0, 0
 
   let acc =
-    let modulePath =
-      // #temp (Option.get)
-      let p, m = docIdToModulePath docId |> Option.get
-      [ p; m ]
-
+    let modulePath = [ projectName; moduleName ]
     (DModuleSymbol modulePath, Def, toLoc pos) :: acc
 
   acc |> up (List.fold (lowerADecl docId)) decls
@@ -969,14 +971,11 @@ let private findTyInStmt (pa: ProjectAnalysis) (modules: TProgram) (tokenLoc: Lo
     | _ -> None)
 
 let private collectSymbolsInExpr (pa: ProjectAnalysis) (modules: TProgram) (tirCtx: TirCtx) =
-  // #temp
-  let docIdToModulePath: DocIdToModulePath = pa.Host.DocIdToModulePath
-
   let parseModule (m: TModule) =
     let docId = m.DocId
 
     match pa |> parseWithCache docId with
-    | Some (LSyntaxData m) -> docId, m.Ast
+    | Some (LSyntaxData m) -> m
     | None -> failwith "must be parsed"
 
   let variantNameMap =
@@ -1037,8 +1036,8 @@ let private collectSymbolsInExpr (pa: ProjectAnalysis) (modules: TProgram) (tirC
     modules
     |> List.fold
          (fun acc m ->
-           let docId, ast = parseModule m
-           lowerARoot docIdToModulePath docId acc ast)
+           let m = parseModule m
+           lowerARoot m.DocId m.ProjectName m.ModuleName acc m.Ast)
          []
 
   let tySymbols =
@@ -1164,10 +1163,10 @@ module ProjectAnalysis1 =
 
   let bundle (pa: ProjectAnalysis) : BundleResult * ProjectAnalysis = bundleWithCache pa
 
-  let documentSymbols (syntax: LSyntaxData) (pa: ProjectAnalysis) =
-    let (LSyntaxData m) = syntax
+  let documentSymbols (s: LSyntaxData) (_pa: ProjectAnalysis) =
+    let (LSyntaxData m) = s
 
-    lowerARoot pa.Host.DocIdToModulePath m.DocId [] m.Ast
+    lowerARoot m.DocId m.ProjectName m.ModuleName [] m.Ast
     |> List.choose (fun (symbol, defOrUse, loc2) ->
       match defOrUse, resolveLoc2 m.DocId m.Tokens loc2 with
       | Def, Some loc -> Some(symbol, defOrUse, loc)

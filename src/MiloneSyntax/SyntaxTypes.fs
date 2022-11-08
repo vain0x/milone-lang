@@ -37,6 +37,9 @@ type ReadTextFileFun = string -> Future<string option>
 [<RequireQualifiedAccess; NoEquality; NoComparison>]
 type ModuleSyntaxData =
   { DocId: DocId
+    ProjectName: ProjectName
+    ModuleName: ModuleName
+
     Tokens: (Token * Pos) list
     Ast: ARoot
 

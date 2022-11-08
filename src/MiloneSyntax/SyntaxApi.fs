@@ -225,7 +225,14 @@ let readSourceFile (readTextFile: ReadTextFileFun) filename : Future<string opti
     | (Some _) as it -> Future.just it
     | None -> readTextFile (changeExt ".fs" filename))
 
-let parseModule (docId: DocId) (kind: ModuleKind) (tokens: TokenizeResult) : ModuleSyntaxData =
+let parseModule
+  (docId: DocId)
+  (projectName: ProjectName)
+  (moduleName: ModuleName)
+  (tokens: TokenizeResult)
+  : ModuleSyntaxData =
+  let kind = getModuleKind projectName moduleName
+
   let errorTokens, tokens = tokens |> List.partition isErrorToken
 
   let unmodifiedAst, parseErrors = tokens |> SyntaxParse.parse
@@ -240,6 +247,8 @@ let parseModule (docId: DocId) (kind: ModuleKind) (tokens: TokenizeResult) : Mod
       unmodifiedAst
 
   ({ DocId = docId
+     ProjectName = projectName
+     ModuleName = moduleName
      Tokens = tokens
      Ast = modifiedAst
      UnmodifiedAst = unmodifiedAst
