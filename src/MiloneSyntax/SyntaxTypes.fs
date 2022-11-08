@@ -13,6 +13,7 @@ module rec MiloneSyntax.SyntaxTypes
 open MiloneShared.SharedTypes
 open MiloneShared.TypeIntegers
 open MiloneShared.UtilParallel
+open Std.StdMap
 
 /// Name with ID.
 [<NoEquality; NoComparison>]
@@ -48,12 +49,17 @@ type ModuleSyntaxData =
 
     Errors: ModuleSyntaxError list }
 
+// (item of module layer)
 [<RequireQualifiedAccess; NoEquality; NoComparison>]
 type ModuleSyntaxData2 =
   { ProjectName: string
     ModuleName: string
     DocId: DocId
     Ast: ARoot }
+
+// #docIdIssue #temp
+type DocIdToModulePath = DocId -> (ProjectName * ModuleName) option
+type DocIdToModulePathMap = TreeMap<DocId, ProjectName * ModuleName>
 
 // -----------------------------------------------
 // Syntax errors

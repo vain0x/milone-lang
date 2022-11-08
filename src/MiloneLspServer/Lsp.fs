@@ -43,9 +43,6 @@ type LSyntax2 =
     SyntaxTree: SyntaxTree
     Errors: ModuleSyntaxError list }
 
-// #docIdIssue #temp
-type internal DocIdToModulePath = DocId -> (ProjectName * ModuleName) option
-
 // -----------------------------------------------
 // Utils
 // -----------------------------------------------

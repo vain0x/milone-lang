@@ -14,4 +14,4 @@ type CCode = string
 
 [<RequireQualifiedAccess; NoEquality; NoComparison>]
 type TranslationApi =
-  { CodeGenHir: EntrypointName -> WriteLogFun -> HProgram * HirCtx -> (DocId * CCode) list * ExportName list }
+  { CodeGenHir: EntrypointName -> DocIdToModulePath -> WriteLogFun -> HProgram * HirCtx -> (DocId * CCode) list * ExportName list }

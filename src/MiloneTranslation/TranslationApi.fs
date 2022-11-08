@@ -25,6 +25,7 @@ module TailRecOptimizing = MiloneTranslation.TailRecOptimizing
 
 let private codeGenHir
   entrypointName
+  (df: DocIdToModulePath)
   (writeLog: WriteLogFun)
   (modules: HProgram, hirCtx: HirCtx)
   : (DocId * CCode) list * ExportName list =
@@ -87,7 +88,7 @@ let private codeGenHir
   writeLog "CirGen"
 
   let modules =
-    CirGen.genCir entrypointName (modules, mirCtx)
+    CirGen.genCir entrypointName df (modules, mirCtx)
 
   writeLog "CirDump"
 

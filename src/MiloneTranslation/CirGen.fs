@@ -167,15 +167,14 @@ let private linkageToIdent rawName linkage =
 let private varDefToName (varDef: VarDef) =
   linkageToIdent varDef.Name varDef.Linkage
 
-let private funDefToName (funDef: FunDef) =
+let private funDefToName (df: DocIdToModulePath) (funDef: FunDef) =
   match funDef.Linkage with
   | InternalLinkage ->
     let name =
-      // #avoidAbusingDocId
-      let (Loc (docId, _, _)) = funDef.Loc
-
       let doc =
-        Symbol.toString docId |> S.replace "." "_"
+        match funDef.Loc |> Loc.docId |> df with
+        | Some (p, m) -> p + "_" + m
+        | None -> unreachable ()
 
       doc
       + "_"
@@ -207,7 +206,9 @@ type private Rx =
     VariantUniqueNames: TreeMap<VariantSerial, Ident>
 
     /// Doc ID of current module.
-    DocIdOpt: DocId option }
+    DocIdOpt: DocId option
+
+    DocIdToModulePath: DocIdToModulePath }
 
 // -----------------------------------------------
 // Context
@@ -228,14 +229,14 @@ type private CirCtx =
     /// Nominalized fun pointer types.
     FunPtrTys: TreeMap<CTy list * CTy, string> }
 
-let private ofMirResult entrypointName (mirCtx: MirResult) : CirCtx =
+let private ofMirResult entrypointName (df: DocIdToModulePath) (mirCtx: MirResult) : CirCtx =
   let freq = freqEmpty compare
 
   let varUniqueNames, freq =
     renameIdents2 mirCtx.StaticVars varDefToName (TMap.empty varSerialCompare) freq
 
   let funUniqueNames, freq =
-    renameIdents2 mirCtx.Funs funDefToName (TMap.empty funSerialCompare) freq
+    renameIdents2 mirCtx.Funs (funDefToName df) (TMap.empty funSerialCompare) freq
 
   let variantUniqueNames, freq =
     renameIdents2
@@ -272,7 +273,8 @@ let private ofMirResult entrypointName (mirCtx: MirResult) : CirCtx =
       VarUniqueNames = varUniqueNames
       FunUniqueNames = funUniqueNames
       VariantUniqueNames = variantUniqueNames
-      DocIdOpt = None }
+      DocIdOpt = None
+      DocIdToModulePath = df }
 
   { Rx = rx
     TyEnv = TMap.empty tyCompare
@@ -921,7 +923,7 @@ let private addNativeFunDecl ctx funName argTys resultTy =
 
   addDecl ctx (CFunForwardDecl(funName, argTys, resultTy))
 
-let private cgActionStmt ctx itself action args loc =
+let private cgActionStmt (ctx: CirCtx) itself action args loc =
   match action with
   | MAssertNotAction ->
     let cond, ctx =
@@ -933,12 +935,12 @@ let private cgActionStmt ctx itself action args loc =
     let args =
       let (Loc (docId, y, x)) = loc
 
-      // #abusingDocId
-      let name =
-        (Symbol.toString docId |> S.replace "." "/")
-        + ".milone"
+      let pathname =
+        match ctx.Rx.DocIdToModulePath docId with
+        | Some (p, m) -> p + "/" + m + ".milone"
+        | None -> unreachable ()
 
-      [ CStringLitExpr name
+      [ CStringLitExpr pathname
         CIntExpr(string y, I32)
         CIntExpr(string x, I32) ]
 
@@ -1456,8 +1458,12 @@ let private cgModule (ctx: CirCtx) (m: MModule) : DocId * CDecl list =
 // Interface
 // -----------------------------------------------
 
-let genCir (entrypointName: string) (modules: MModule list, mirResult: MirResult) : (DocId * CDecl list) list =
-  let ctx = ofMirResult entrypointName mirResult
+let genCir
+  (entrypointName: string)
+  (df: DocIdToModulePath)
+  (modules: MModule list, mirResult: MirResult)
+  : (DocId * CDecl list) list =
+  let ctx = ofMirResult entrypointName df mirResult
 
   modules
   |> __parallelMap (cgModule ctx)

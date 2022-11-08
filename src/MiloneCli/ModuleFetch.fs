@@ -9,11 +9,6 @@ open Std.StdMap
 
 module S = Std.StdString
 
-/// File extension. Starts with `.`.
-type private FileExt = string
-
-type private FileExistsFun = string -> bool
-
 type private FetchModuleFun2 =
   ProjectName
     -> ModuleName
@@ -36,6 +31,10 @@ type FetchModuleHost =
 
     ReadTextFile: ReadTextFileFun
     WriteLog: WriteLogFun }
+
+// -----------------------------------------------
+// Fetch
+// -----------------------------------------------
 
 let prepareFetchModule (sApi: SyntaxApi) (host: FetchModuleHost) : FetchModuleFun2 =
   let entryProjectName = host.EntryProjectName

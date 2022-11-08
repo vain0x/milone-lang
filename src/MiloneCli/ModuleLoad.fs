@@ -246,7 +246,7 @@ let private producer (fetchModule: FetchModuleFun2) (_: State) (r: ModuleRequest
 // Interface
 // -----------------------------------------------
 
-type LoadResult = ModuleSyntaxData2 list list * SyntaxError list
+type LoadResult = ModuleSyntaxData2 list list * DocIdToModulePathMap * SyntaxError list
 
 let load (fetchModule: FetchModuleFun2) (entryProjectName: ProjectName) : LoadResult =
   let entryRequest =
@@ -284,4 +284,16 @@ let load (fetchModule: FetchModuleFun2) (entryProjectName: ProjectName) : LoadRe
 
   let errors = state |> toErrors
 
-  layers, errors
+  let docIdToModulePathMap: DocIdToModulePathMap =
+    layers
+    |> List.fold
+         (fun map layer ->
+           layer
+           |> List.fold
+                (fun map (m: ModuleSyntaxData2) ->
+                  map
+                  |> TMap.add m.DocId (m.ProjectName, m.ModuleName))
+                map)
+         (TMap.empty Symbol.compare)
+
+  layers, docIdToModulePathMap, errors
