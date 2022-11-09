@@ -1,0 +1,81 @@
+// Provides text positions and ranges.
+
+module S = Std.StdString
+
+/// Index of a string in bytes.
+///
+/// - This value depends on string encoding and line break style (CR+LF or LF.)
+type ByteIndex = int
+
+/// Row number. 0-indexed.
+///
+/// - Computed from the number of line breaks.
+type RowIndex = int
+
+/// Column number. 0-indexed.
+///
+/// - This value depends on string encoding.
+/// - Computed from the length of final line.
+type ColumnIndex = int
+
+/// Position. Coordinate in a text.
+[<RequireQualifiedAccess; NoEquality; NoComparison>]
+type TextPosition =
+  { Index: ByteIndex
+    Row: RowIndex
+    Column: ColumnIndex }
+
+/// Range.
+[<RequireQualifiedAccess; NoEquality; NoComparison>]
+type TextRange =
+  { Start: TextPosition
+    End: TextPosition }
+
+/// Finds LF from s.[i..endIndex - 1].
+let private findLf (s: string) (i: int) (endIndex: int) =
+  if i >= endIndex then None
+  else if s.[i] = '\n' then Some i
+  else findLf s (i + 1) endIndex
+
+let private compareUInt64 (l: uint64) r = compare l r
+
+module TextPosition =
+  let private toUInt64 (pos: RowIndex * ColumnIndex) : uint64 =
+    let y, x = pos
+    (uint64 (uint y) <<< 32) ||| uint64 (uint x)
+
+  let equals (l: RowIndex * ColumnIndex) (r: RowIndex * ColumnIndex) = toUInt64 l = toUInt64 r
+
+  let compare (l: RowIndex * ColumnIndex) (r: RowIndex * ColumnIndex) = compareUInt64 (toUInt64 l) (toUInt64 r)
+
+  let debug (pos: RowIndex * ColumnIndex) : string =
+    let y, x = pos
+    string (y + 1) + ":" + string (x + 1)
+
+  let min (l: RowIndex * ColumnIndex) (r: RowIndex * ColumnIndex) =
+    if toUInt64 r < toUInt64 l then r else l
+
+  let max (l: RowIndex * ColumnIndex) (r: RowIndex * ColumnIndex) =
+    if toUInt64 l < toUInt64 r then r else l
+
+  /// Assuming start = `(i, y, x)` means `s.[i]` is at the position `(y, x)`,
+  /// this function computes the position at `s.[i + len]`.
+  let shiftBy (s: string) (startIndex: int) (startPos: RowIndex * ColumnIndex) (len: int) : RowIndex * ColumnIndex =
+    let si = startIndex
+    let sy, sx = startPos
+    assert (len >= 0 && (0 <= si && si + len <= s.Length))
+
+    let rec shiftLoop i y x len =
+      match findLf s i (i + len) with
+      | None -> y, x + len
+      | Some n ->
+        // i becomes to the start index of the next line.
+        // y is updated by 1 and x is reset.
+        shiftLoop (n + 1) (y + 1) 0 (i + len - (n + 1))
+
+    shiftLoop si sy sx len
+
+  /// Computes the position at `s.[i]`.
+  let compute (s: string) (i: int) : RowIndex * ColumnIndex =
+    assert (uint i <= uint s.Length)
+    shiftBy s 0 (0, 0) i

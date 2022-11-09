@@ -1,2 +1,3 @@
+open LibTextProcess.TextPositionTests
 open LibTextProcess.TinyIniTests
 open LibTextProcess.TinyYamlTests

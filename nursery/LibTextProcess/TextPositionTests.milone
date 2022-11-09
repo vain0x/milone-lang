@@ -1,0 +1,42 @@
+open Std.StdTesting
+open LibTextProcess.TextPosition
+
+// test equals
+let () =
+  assert (TextPosition.equals (0, 0) (2, 3) |> not)
+  assert (TextPosition.equals (2, 3) (2, 3))
+
+// test compare
+let () =
+  assert (TextPosition.compare (0, 0) (2, 3) < 0)
+  assert (TextPosition.compare (2, 2) (2, 3) < 0)
+  assert (TextPosition.compare (2, 3) (2, 3) = 0)
+  assert (TextPosition.compare (2, 4) (2, 3) > 0)
+  assert (TextPosition.compare (3, 0) (2, 3) > 0)
+
+// test debug
+let () = assert ((2, 3) |> TextPosition.debug |> shouldEqual id "3:4")
+
+// test min, max
+let () =
+  let p m1 m2 =
+    TextPosition.equals (TextPosition.min m1 m2) m1
+    && TextPosition.equals (TextPosition.min m2 m1) m1
+    && TextPosition.equals (TextPosition.max m1 m2) m2
+    && TextPosition.equals (TextPosition.max m2 m1) m2
+
+  assert (p (2, 2) (2, 3))
+  assert (p (2, 3) (2, 3))
+  assert (p (2, 3) (2, 4))
+  assert (p (2, 3) (3, 0))
+
+// test compute
+let () =
+  let p (s: string) (expected: RowIndex * ColumnIndex) =
+    TextPosition.compute s s.Length |> shouldEqual TextPosition.debug expected
+
+  assert (p "" (0, 0))
+  assert (p "x" (0, 1))
+  assert (p "\n" (1, 0))
+  assert (p "🐧" (0, 4))
+  assert (p " \n  \n   \n    " (3, 4))
