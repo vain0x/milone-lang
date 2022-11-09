@@ -1,5 +1,6 @@
 // Provides text positions and ranges.
 
+module Int = Std.StdInt
 module S = Std.StdString
 
 /// Index of a string in bytes.
@@ -79,3 +80,24 @@ module TextPosition =
   let compute (s: string) (i: int) : RowIndex * ColumnIndex =
     assert (uint i <= uint s.Length)
     shiftBy s 0 (0, 0) i
+
+  /// Computes the index at the specified position. O(N) time.
+  let computeIndex (s: string) (pos: RowIndex * ColumnIndex) : Result<int, int> =
+    let ty, tx = pos
+
+    let rec loop i y =
+      if y < ty then
+        match findLf s i s.Length with
+        | Some j -> loop (j + 1) (y + 1)
+        | None -> Error s.Length
+      else if i + tx <= s.Length then
+        match findLf s i (i + tx) with
+        | None -> Ok(i + tx)
+        | Some j -> Error j
+      else
+        // Find the index of the end of line for error value.
+        match findLf s i s.Length with
+        | None -> Error s.Length
+        | Some j -> if j >= 1 && s.[j - 1] = '\r' then Error(j - 1) else Error j
+
+    loop 0 0

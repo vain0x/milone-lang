@@ -40,3 +40,28 @@ let () =
   assert (p "\n" (1, 0))
   assert (p "🐧" (0, 4))
   assert (p " \n  \n   \n    " (3, 4))
+
+// test computeIndex
+let () =
+  let debug (result: Result<int, int>) =
+    match result with
+    | Ok i -> string i
+    | Error i -> "Error " + string i
+
+  let p (s: string) pos expected =
+    TextPosition.computeIndex s pos |> shouldEqual debug expected
+
+  assert (p "" (0, 0) (Ok 0))
+  assert (p "" (1, 0) (Error 0))
+  assert (p "" (0, 1) (Error 0))
+
+  let s = "hello\nworld\r\n"
+  assert (p s (0, 1) (Ok 1))
+  assert (p s (0, 5) (Ok 5))
+  assert (p s (1, 0) (Ok 6))
+  assert (p s (1, 5) (Ok 11))
+  assert (p s (2, 0) (Ok 13))
+  // Column index overflow. Error index is at the end of line 1.
+  assert (p s (1, 99) (Error 11))
+  // Row index overflow. Error index is at the end of string.
+  assert (p s (99, 0) (Error 13))
