@@ -1,4 +1,4 @@
-open LibTinyYaml.TinyYaml
+open LibTextProcess.TinyYaml
 
 module S = Std.StdString
 

@@ -1,5 +1,3 @@
-module rec LibIni.Ini
-
 open Std.StdError
 open Std.StringBuffer
 

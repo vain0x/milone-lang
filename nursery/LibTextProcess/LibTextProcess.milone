@@ -1,0 +1,2 @@
+open LibTextProcess.TinyIniTests
+open LibTextProcess.TinyYamlTests

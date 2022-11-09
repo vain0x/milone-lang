@@ -1,25 +1,19 @@
-open LibIni.Ini
+open LibTextProcess.TinyIni
 open Std.StdTesting
 
 let private testWrite () =
   let p doc expected =
-    doc
-    |> IniDocument.toString
-    |> shouldEqual id expected
+    doc |> IniDocument.toString |> shouldEqual id expected
 
   assert (p IniDocument.empty "")
 
   // top-only
-  let doc: IniDocument =
-    { IniDocument.empty with Top = [ "a", IniInt 42 ] }
+  let doc: IniDocument = { IniDocument.empty with Top = [ "a", IniInt 42 ] }
 
   assert (p doc "a = 42\n")
 
   let doc: IniDocument =
-    { IniDocument.empty with
-        Top =
-          [ "a", IniInt 42
-            "b", IniString "hello" ] }
+    { IniDocument.empty with Top = [ "a", IniInt 42; "b", IniString "hello" ] }
 
   assert (p doc "a = 42\nb = hello\n")
 
@@ -34,9 +28,7 @@ let private testWrite () =
 
   // both top and sections
   let doc: IniDocument =
-    { Top =
-        [ "a", IniInt 42
-          "b", IniString "hello" ]
+    { Top = [ "a", IniInt 42; "b", IniString "hello" ]
       Sections =
         [ "first", [ "x", IniInt 1; "y", IniInt 2 ]
           "second", [ "z", IniInt 3; "w", IniInt 4 ] ] }
@@ -75,9 +67,9 @@ let private testParse () =
       let doc, result = IniParse.parseDocument s
 
       match result with
-      | Ok () -> IniDocument.toString doc
+      | Ok() -> IniDocument.toString doc
 
-      | Error (msg, i) -> "Parse error at " + string i + ": " + msg
+      | Error(msg, i) -> "Parse error at " + string i + ": " + msg
 
     actual |> debugDoc |> shouldEqual id expected
 
@@ -93,13 +85,15 @@ let private testParse () =
      assert (List.length doc.Top = 1)
      assert (List.length doc.Sections = 2)
 
-     assert (match doc.Top with
-             | [ "top", IniInt 1 ] -> true
-             | _ -> false)
+     assert
+       (match doc.Top with
+        | [ "top", IniInt 1 ] -> true
+        | _ -> false)
 
-     assert (match doc.Sections with
-             | [ "first", [ "firstKey", IniInt 2 ]; "second", [ "secondKey", IniInt3 ] ] -> true
-             | _ -> false)
+     assert
+       (match doc.Sections with
+        | [ "first", [ "firstKey", IniInt 2 ]; "second", [ "secondKey", IniInt3 ] ] -> true
+        | _ -> false)
 
    | None -> assert false)
 
@@ -153,7 +147,5 @@ let private testParse () =
   assert (p "k = \"\\x1\"" "Parse error at 5: InvalidEscapeSequence")
   assert (p "k = \"\\xZZ\"" "Parse error at 5: InvalidEscapeSequence")
 
-let main _ =
-  testWrite ()
-  testParse ()
-  0
+testWrite ()
+testParse ()

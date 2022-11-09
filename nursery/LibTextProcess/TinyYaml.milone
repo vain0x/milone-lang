@@ -1,5 +1,3 @@
-module rec LibTinyYaml.TinyYaml
-
 open Std.StdError
 
 module C = Std.StdChar
@@ -55,14 +53,11 @@ let private pWhile pred p =
   go p
 
 let private pLook (text: string, i: int, _, _) =
-  if i < text.Length then
-    text.[i]
-  else
-    '\x00'
+  if i < text.Length then text.[i] else '\x00'
 
 let private pSlice (text: string, l: int, _, _) (_, r: int, _, _) =
   assert (0 <= l && l <= r && r <= text.Length)
-  if l = r then "" else text.[l..r - 1]
+  if l = r then "" else text.[l .. r - 1]
 
 let private pToPos (_, _, y, x) = y, x
 
@@ -88,23 +83,17 @@ let private pLine p =
   p |> pWhile (fun c -> c <> '\r' && c <> '\n')
 
 let private pBlank p =
-  let p =
-    p |> pWhile (fun c -> c = ' ' || c = '\r')
+  let p = p |> pWhile (fun c -> c = ' ' || c = '\r')
 
   if pLook p = '#' then p |> pLine else p
 
 let private pSpace p =
   let p = p |> pBlank
 
-  if pLook p |> C.isSpace then
-    p |> pBump |> pSpace
-  else
-    p
+  if pLook p |> C.isSpace then p |> pBump |> pSpace else p
 
 let private pIdent p =
-  let q =
-    p
-    |> pWhile (fun c -> c = '_' || C.isAlphanumeric c)
+  let q = p |> pWhile (fun c -> c = '_' || C.isAlphanumeric c)
 
   pSlice p q, q
 
@@ -116,8 +105,7 @@ let private pTable basePos p =
   let rec go (entries, p) =
     let q = p |> pSpace
 
-    if q |> pIsAligned basePos
-       && q |> pIdent |> fst <> "" then
+    if q |> pIsAligned basePos && q |> pIdent |> fst <> "" then
       q
       |> pIdent
       |> pairMap pBlank
@@ -149,8 +137,4 @@ let parseYaml (text: string) : YamlValue =
   let p = text, 0, 0, 0
   let basePos = 0, 0
 
-  p
-  |> pTable basePos
-  |> pairMap pSpace
-  |> pairMap pEof
-  |> fst
+  p |> pTable basePos |> pairMap pSpace |> pairMap pEof |> fst
