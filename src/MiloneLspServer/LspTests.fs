@@ -1,6 +1,7 @@
 // should be separate project
 module rec MiloneLspServer.LspTests
 
+open MiloneShared.SharedTypes
 open MiloneShared.UtilParallel
 open MiloneShared.UtilSymbol
 open MiloneLspServer.Lsp
@@ -314,7 +315,8 @@ let private createSingleFileProject text action =
   let wa =
     createWorkspaceAnalysisWithFiles [ "/$/root/TestProject/TestProject.milone", text ]
 
-  let docId = Symbol.intern "TestProject.TestProject"
+  // #generateDocId
+  let docId: DocId = Symbol.intern "TestProject.TestProject"
 
   wa
   |> LLS.doWithProjectAnalysis (getProject "TestProject" wa) (action docId)

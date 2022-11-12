@@ -18,6 +18,7 @@ type private FetchModuleFun2 =
 // Util
 // -----------------------------------------------
 
+// #generateDocId
 // note: avoid using this function so that DocId can be computed by clients.
 let computeDocId (p: ProjectName) (m: ModuleName) : DocId = Symbol.intern (p + "." + m)
 

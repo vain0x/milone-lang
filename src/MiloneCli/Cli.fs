@@ -239,7 +239,7 @@ let private computeCFilename (df: DocIdToModulePath) projectName (docId: DocId) 
     | None -> unreachable ()
 
   // Check if it's the entrypoint module.
-  if p = projectName && p = m  then
+  if p = projectName && p = m then
     projectName + ".c"
   else
     p + "_" + m + ".c"
@@ -267,7 +267,10 @@ let private prepareCompile
 
   let manifestFut =
     let manifestFile = projectDir + "/milone_manifest"
-    let docId: DocId = Symbol.intern manifestFile
+
+    let docId: DocId =
+      // #generateDocId
+      Symbol.intern manifestFile
 
     manifestFile
     |> host.FileReadAllText
@@ -631,12 +634,19 @@ let private cliParse (sApi: SyntaxApi) (host: CliHost) (pathnameList: string lis
     let docId, textFuture =
       match pathname with
       | "-" ->
-        let docId: DocId = Symbol.intern "stdin"
+        let docId: DocId =
+          // #generateDocId
+          Symbol.intern "stdin"
+
         docId, host.ReadStdinAll() |> Some |> Future.just
 
       | pathname ->
         let pathname = pathJoin host.WorkDir pathname
-        let docId: DocId = Symbol.intern pathname
+
+        let docId: DocId =
+          // #generateDocId
+          Symbol.intern pathname
+
         docId, host.FileReadAllText pathname
 
     textFuture

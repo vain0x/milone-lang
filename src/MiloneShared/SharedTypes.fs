@@ -140,6 +140,7 @@ module Pos =
 // Location
 // -----------------------------------------------
 
+// #generateDocId
 /// No location information. Should be fixed.
 let noLoc = Loc(Symbol.intern "<noLoc>", 0, 0)
 

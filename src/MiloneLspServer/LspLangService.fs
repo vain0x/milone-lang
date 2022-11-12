@@ -153,6 +153,7 @@ let private filePathToModulePath path =
   | Some parent -> Some(Path.basename parent, Path.stem path)
   | None -> None
 
+// #generateDocId
 let filePathToDocId (path: string) : DocId =
   let projectName =
     match Path.dirname path with

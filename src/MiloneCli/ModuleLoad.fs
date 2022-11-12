@@ -35,6 +35,7 @@ open Std.StdSet
 open Std.StdMap
 
 module S = Std.StdString
+module ModuleFetch = MiloneCli.ModuleFetch
 
 type private FetchModuleFun2 =
   ProjectName
@@ -109,8 +110,8 @@ type private RequestResult =
 
 type private RequestMap = TreeMap<ProjectName * ModuleName, RequestResult>
 
-// note: avoid using this function so that DocId can be computed by clients.
-let computeDocId (p: ProjectName) (m: ModuleName) : DocId = Symbol.intern (p + "." + m)
+// #generateDocId
+let computeDocId (p: ProjectName) (m: ModuleName) : DocId = ModuleFetch.computeDocId p m
 
 // -----------------------------------------------
 // ModuleRequest
