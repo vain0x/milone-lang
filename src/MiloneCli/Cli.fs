@@ -236,7 +236,15 @@ let private computeCFilename (df: DocIdToModulePath) projectName (docId: DocId) 
   let p, m =
     match df docId with
     | Some it -> it
-    | None -> unreachable ()
+    | None ->
+      // #abusingDocId
+      let s = Symbol.toString docId
+
+      match S.split "." s with
+      | [ p; m ] -> p, m
+      | _ ->
+        __trace ("Unknown docId: '" + s + "'")
+        "Unknown", "Unknown"
 
   // Check if it's the entrypoint module.
   if p = projectName && p = m then

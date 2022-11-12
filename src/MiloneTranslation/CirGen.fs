@@ -174,7 +174,13 @@ let private funDefToName (df: DocIdToModulePath) (funDef: FunDef) =
       let doc =
         match funDef.Loc |> Loc.docId |> df with
         | Some (p, m) -> p + "_" + m
-        | None -> unreachable ()
+        | None ->
+          // #abusingDocId
+          // This can happen e.g. Derive generates non-file documents.
+          funDef.Loc
+          |> Loc.docId
+          |> Symbol.toString
+          |> S.replace "." "_"
 
       doc
       + "_"
