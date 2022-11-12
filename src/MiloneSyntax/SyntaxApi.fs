@@ -218,12 +218,19 @@ let chooseSourceExt (fileExists: FileExistsFun) filename =
     fs
 
 // #readSourceFile
-let readSourceFile (readTextFile: ReadTextFileFun) filename : Future<string option> =
-  readTextFile filename
+let readSourceFile (readTextFile: ReadTextFileFun) filePath : Future<(string * string) option> =
+  readTextFile filePath
   |> Future.andThen (fun result ->
     match result with
-    | (Some _) as it -> Future.just it
-    | None -> readTextFile (changeExt ".fs" filename))
+    | Some contents -> Future.just (Some(filePath, contents))
+    | None ->
+      let filePath = changeExt ".fs" filePath
+
+      readTextFile filePath
+      |> Future.map (fun result ->
+        match result with
+        | Some contents -> Some(filePath, contents)
+        | None -> None))
 
 let parseModule
   (docId: DocId)

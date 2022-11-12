@@ -85,7 +85,7 @@ type private RequestResult =
 type private RequestMap = TreeMap<ProjectName * ModuleName, RequestResult>
 
 // #generateDocId
-// note: avoid using this function so that DocId can be computed by clients.
+/// Computes docId for LSP server.
 let computeDocId (p: ProjectName) (m: ModuleName) : DocId = Symbol.intern (p + "." + m)
 
 // -----------------------------------------------

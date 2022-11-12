@@ -21,7 +21,7 @@ type private LError = string * Location
 type private FileExistsFun = FilePath -> bool
 type private ReadTextFileFun = FilePath -> Future<string option>
 type private DirEntriesFun = string -> string list * string list
-type private ReadSourceFileFun = FilePath -> Future<string option>
+type private ReadSourceFileFun = FilePath -> Future<(string * string) option>
 
 let private MinVersion: DocVersion = 0
 let private DocBaseVersion: DocVersion = 0x8000
@@ -770,7 +770,7 @@ let private openAllModules version (wa: WorkspaceAnalysis) =
     textFut
     |> Future.map (fun textOpt -> textOpt |> Option.map (fun text -> uri, text)))
   |> List.choose Future.wait // #avoidBlocking
-  |> List.fold (fun (wa: WorkspaceAnalysis) (uri, text) -> doDidOpenFile uri version text wa) wa
+  |> List.fold (fun (wa: WorkspaceAnalysis) (uri, (_, text)) -> doDidOpenFile uri version text wa) wa
 
 let private getDocVersion uri (wa: WorkspaceAnalysis) =
   match wa.Docs |> TMap.tryFind uri with

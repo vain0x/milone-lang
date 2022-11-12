@@ -66,7 +66,7 @@ type SyntaxApi =
   { // getMiloneHomeEnv -> getHomeEnv -> MiloneHome
     GetMiloneHomeFromEnv: (unit -> string option) -> (unit -> string option) -> string
     GetStdLibProjects: MiloneHome -> (ProjectName * ProjectDir) list
-    ReadSourceFile: ReadTextFileFun -> string -> Future<string option>
+    ReadSourceFile: ReadTextFileFun -> string -> Future<(string * string) option>
     ParseManifest: DocId -> string -> ManifestData
     Parse: ParseInput -> ARoot * ModuleSyntaxError list
     FindDependentModules: ARoot -> (ProjectName * ModuleName * Pos) list

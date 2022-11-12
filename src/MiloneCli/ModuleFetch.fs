@@ -19,7 +19,7 @@ type private FetchModuleFun2 =
 // -----------------------------------------------
 
 // #generateDocId
-// note: avoid using this function so that DocId can be computed by clients.
+/// Computes docId for CLI.
 let computeDocId (p: ProjectName) (m: ModuleName) : DocId = Symbol.intern (p + "." + m)
 
 [<RequireQualifiedAccess; NoEquality; NoComparison>]
@@ -77,13 +77,12 @@ let prepareFetchModule (sApi: SyntaxApi) (host: FetchModuleHost) : FetchModuleFu
         match result with
         | None -> None
 
-        | Some text ->
-          // #parse
+        | Some (_, contents) ->
           let docId = computeDocId projectName moduleName
 
           let ast, errors =
             let parseInput: ParseInput =
-              { SourceCode = text
+              { SourceCode = contents
                 BeingCore = projectName = "MiloneCore" }
 
             sApi.Parse parseInput
