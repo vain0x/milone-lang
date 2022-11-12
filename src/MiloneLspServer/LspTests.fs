@@ -1,11 +1,13 @@
 // should be separate project
 module rec MiloneLspServer.LspTests
 
+open MiloneShared.SharedTypes
 open MiloneShared.UtilParallel
 open MiloneShared.UtilSymbol
 open MiloneLspServer.Lsp
 open MiloneLspServer.LspUtil
 
+module AstBundle = MiloneLspServer.AstBundle
 module S = Std.StdString
 module LLS = MiloneLspServer.LspLangService
 module WorkspaceAnalysis = LLS.WorkspaceAnalysis
@@ -311,10 +313,11 @@ let private getProject name (wa: LLS.WorkspaceAnalysis) =
   |> expect ("project " + name)
 
 let private createSingleFileProject text action =
-  let wa =
-    createWorkspaceAnalysisWithFiles [ "/$/root/TestProject/TestProject.milone", text ]
+  let path = "/$/root/TestProject/TestProject.milone"
+  let docId = AstBundle.computeDocId path
 
-  let docId = Symbol.intern "TestProject.TestProject"
+  let wa =
+    createWorkspaceAnalysisWithFiles [ path, text ]
 
   wa
   |> LLS.doWithProjectAnalysis (getProject "TestProject" wa) (action docId)
@@ -1002,7 +1005,7 @@ let private testCompletionMultipleFiles title files expected : bool =
     |> List.tryFind (fun (_, text) -> parseAnchors text |> List.isEmpty |> not)
     |> expect "anchor"
 
-  let docId = LLS.filePathToDocId path
+  let docId = AstBundle.computeDocId path
   let p = getProject (pathToProjectName path) wa
 
   LLS.doWithProjectAnalysis p (doTestCompletion p wa title text expected docId) wa

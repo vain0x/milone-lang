@@ -33,6 +33,7 @@ type LTokenList = private LTokenList of TokenizeFullResult
 [<NoEquality; NoComparison>]
 type LSyntaxData = private LSyntaxData of ModuleSyntaxData
 
+// (this includes Text, FullTokens and SyntaxTree unlike SyntaxData)
 [<RequireQualifiedAccess; NoEquality; NoComparison>]
 type LSyntax2 =
   { DocId: DocId
@@ -41,6 +42,14 @@ type LSyntax2 =
     Ast: ARoot
     SyntaxTree: SyntaxTree
     Errors: ModuleSyntaxError list }
+
+/// Identifier of a document.
+[<RequireQualifiedAccess; NoEquality; NoComparison>]
+type private Doc =
+  { DocId: DocId
+
+    /// `[ ProjectName; ModuleName ]`
+    ModulePath: string list }
 
 // -----------------------------------------------
 // Utils
@@ -197,10 +206,8 @@ let private parseAllTokens projectName moduleName docId allTokens =
     allTokens
     |> List.filter (fun (token, _) -> token |> isTrivia |> not)
 
-  let kind =
-    SyntaxApi.getModuleKind projectName moduleName
-
-  let m = SyntaxApi.parseModule docId kind tokens
+  let m =
+    SyntaxApi.parseModule docId projectName moduleName tokens
 
   { m with Tokens = allTokens }
 
@@ -211,6 +218,10 @@ let private tyDisplayFn (tirCtx: TirCtx) ty =
     |> Option.map tyDefToName
 
   TySystem.tyDisplay getTyName ty
+
+let private makeDoc (m: ModuleSyntaxData) : Doc =
+  { DocId = m.DocId
+    ModulePath = [ m.ProjectName; m.ModuleName ] }
 
 // -----------------------------------------------
 // Abstraction
@@ -301,19 +312,19 @@ module LSyntaxData =
     let (LSyntaxData m) = syntaxData
     LTokenList m.Tokens
 
-  let findModuleDefs (s: LSyntaxData) : string list =
-    let (LSyntaxData m) = s
+  let findModuleDefs syntaxData : string list =
+    let (LSyntaxData m) = syntaxData
 
-    lowerARoot m.DocId [] m.Ast
+    lowerARoot (makeDoc m) [] m.Ast
     |> List.choose (fun (symbol, defOrUse, _) ->
       match symbol, defOrUse with
       | DModuleSymbol ([ name ]), Def -> Some name
       | _ -> None)
 
-  let findModuleSynonyms (s: LSyntaxData) : (string * ModulePath * Loc) list =
-    let (LSyntaxData m) = s
+  let findModuleSynonyms syntaxData : (string * ModulePath * Loc) list =
+    let (LSyntaxData m) = syntaxData
 
-    lowerARoot m.DocId [] m.Ast
+    lowerARoot (makeDoc m) [] m.Ast
     |> List.choose (fun (symbol, _, loc2) ->
       match symbol, resolveLoc2 m.DocId m.Tokens loc2 with
       | DModuleSynonymDef (synonym, modulePath), Some loc -> Some(synonym, modulePath, loc)
@@ -348,7 +359,9 @@ module BundleResult =
 /// Operations for project analysis.
 [<RequireQualifiedAccess; NoEquality; NoComparison>]
 type ProjectAnalysisHost =
-  { GetDocVersion: DocId -> DocVersion
+  { ComputeDocId: ProjectName * ModuleName * DocId -> DocId
+    GetCoreDocId: ModuleName -> DocId
+    GetDocVersion: DocId -> DocVersion
     Tokenize: DocId -> DocVersion * LTokenList
     Parse: DocId -> (DocVersion * LSyntaxData) option
     Parse2: DocId -> LSyntax2 option
@@ -362,6 +375,7 @@ type ProjectAnalysis =
   private
     { ProjectDir: ProjectDir
       ProjectName: ProjectName
+      EntryDoc: DocId * ProjectName * ModuleName
       NewTokenizeCache: TreeMap<DocId, LTokenList>
       NewParseResults: (DocVersion * LSyntaxData) list
       BundleCache: BundleResult option
@@ -395,19 +409,18 @@ type BundleResult =
       ParseResults: (DocVersion * LSyntaxData) list }
 
 let private doBundle (pa: ProjectAnalysis) : BundleResult =
-  let projectName = pa.ProjectName
   let writeLog: string -> unit = ignore
 
-  let fetchModuleUsingCache (projectName: string) (moduleName: string) =
+  let fetchModuleUsingCache (r: AstBundle.FetchModuleParams) : Future<ModuleSyntaxData option> =
     let docId =
-      AstBundle.computeDocId projectName moduleName
+      pa.Host.ComputeDocId(r.ProjectName, r.ModuleName, r.Origin)
 
     match pa |> parseWithCache docId with
     | None -> Future.just None
-    | Some (LSyntaxData syntaxData) -> Future.just (Some syntaxData)
+    | Some (LSyntaxData m) -> Future.just (Some m)
 
   let layers, bundleErrors =
-    AstBundle.bundle fetchModuleUsingCache projectName
+    AstBundle.bundle fetchModuleUsingCache pa.EntryDoc
 
   let result =
     if bundleErrors |> List.isEmpty |> not then
@@ -429,9 +442,9 @@ let private doBundle (pa: ProjectAnalysis) : BundleResult =
     layers
     |> List.collect (fun modules ->
       modules
-      |> List.map (fun ((syntaxData: ModuleSyntaxData), (m: ModuleSyntaxData2)) ->
+      |> List.map (fun ((m: ModuleSyntaxData), (_: ModuleSyntaxData2)) ->
         let v = getVersion m.DocId pa
-        v, LSyntaxData syntaxData))
+        v, LSyntaxData m))
 
   match result with
   | SyntaxAnalysisOk (modules, tirCtx) ->
@@ -543,8 +556,8 @@ type Symbol =
 
 type private SymbolOccurrence = Symbol * DefOrUse * Ty option * Loc2
 
-let private lowerATy docId acc ty : DSymbolOccurrence list =
-  let onTy acc ty = lowerATy docId acc ty
+let private lowerATy (doc: Doc) acc ty : DSymbolOccurrence list =
+  let onTy acc ty = lowerATy doc acc ty
   let onTys acc tys = tys |> List.fold onTy acc
 
   match ty with
@@ -555,7 +568,7 @@ let private lowerATy docId acc ty : DSymbolOccurrence list =
 
   | AAppTy (_, Some (Name (name, pos)), tyArgList) ->
     let acc =
-      (DTySymbol name, Use, At(Loc.ofDocPos docId pos))
+      (DTySymbol name, Use, At(Loc.ofDocPos doc.DocId pos))
       :: acc
 
     let tyArgs =
@@ -570,18 +583,18 @@ let private lowerATy docId acc ty : DSymbolOccurrence list =
   | ATupleTy (itemTys, _) -> itemTys |> List.fold onTy acc
   | AFunTy (l, _, r) -> acc |> up onTy l |> up onTy r
 
-let private lowerAPat docId acc pat : DSymbolOccurrence list =
-  let onTy acc ty = lowerATy docId acc ty
-  let onPat acc pat = lowerAPat docId acc pat
+let private lowerAPat (doc: Doc) acc pat : DSymbolOccurrence list =
+  let onTy acc ty = lowerATy doc acc ty
+  let onPat acc pat = lowerAPat doc acc pat
   let onPats acc pats = pats |> List.fold onPat acc
-  let toLoc (y, x) = At(Loc(docId, y, x))
+  let toLoc (y, x) = At(Loc(doc.DocId, y, x))
 
   match pat with
   | AMissingPat _
   | ALitPat _
   | AIdentPat _ -> acc
 
-  | AParenPat (_, bodyPat, _) -> lowerAPat docId acc bodyPat
+  | AParenPat (_, bodyPat, _) -> lowerAPat doc acc bodyPat
   | AListPat (_, itemPats, _) -> acc |> up onPats itemPats
   | ANavPat (l, _, _) -> acc |> up onPat l
 
@@ -593,12 +606,12 @@ let private lowerAPat docId acc pat : DSymbolOccurrence list =
   | AAscribePat (l, _, r) -> acc |> up onPat l |> up onTy r
   | AOrPat (l, _, r) -> acc |> up onPat l |> up onPat r
 
-let private lowerALetContents docId acc contents =
-  let onTy acc ty = lowerATy docId acc ty
-  let onPat acc pat = lowerAPat docId acc pat
+let private lowerALetContents (doc: Doc) acc contents =
+  let onTy acc ty = lowerATy doc acc ty
+  let onPat acc pat = lowerAPat doc acc pat
   let onPats acc pats = pats |> List.fold onPat acc
-  let onExpr acc expr = lowerAExpr docId acc expr
-  let toLoc (y, x) = At(Loc(docId, y, x))
+  let onExpr acc expr = lowerAExpr doc acc expr
+  let toLoc (y, x) = At(Loc(doc.DocId, y, x))
 
   match contents with
   | ALetContents.LetFun (_, _, name, argPats, resultTyOpt, _, body) ->
@@ -612,24 +625,24 @@ let private lowerALetContents docId acc contents =
 
   | ALetContents.LetVal (_, pat, _, init) -> acc |> up onPat pat |> up onExpr init
 
-let private lowerAExpr docId acc expr : DSymbolOccurrence list =
-  let onTy acc ty = lowerATy docId acc ty
-  let onPat acc pat = lowerAPat docId acc pat
-  let onExpr acc expr = lowerAExpr docId acc expr
+let private lowerAExpr (doc: Doc) acc expr : DSymbolOccurrence list =
+  let onTy acc ty = lowerATy doc acc ty
+  let onPat acc pat = lowerAPat doc acc pat
+  let onExpr acc expr = lowerAExpr doc acc expr
   let onExprOpt acc exprOpt = exprOpt |> Option.fold onExpr acc
   let onExprs acc exprs = exprs |> List.fold onExpr acc
 
   let isModuleSynonymLike (s: string) = s.Length = 1 && C.isUpper s.[0]
   let isModuleNameLike (s: string) = s.Length >= 1 && C.isUpper s.[0]
   let isModulePathLike path = path |> List.forall isModuleNameLike
-  let toLoc (y, x) = At(Loc(docId, y, x))
+  let toLoc (y, x) = At(Loc(doc.DocId, y, x))
 
   match expr with
   | AMissingExpr _
   | ALitExpr _
   | AIdentExpr _ -> acc
 
-  | AParenExpr (_, body, _) -> lowerAExpr docId acc body
+  | AParenExpr (_, body, _) -> lowerAExpr doc acc body
   | AListExpr (_, items, _) -> onExprs acc items
 
   | ARecordExpr (_, baseOpt, fields, _) ->
@@ -664,10 +677,7 @@ let private lowerAExpr docId acc expr : DSymbolOccurrence list =
   | ANavExpr (l, _, _) ->
     match l with
     | AIdentExpr (Name (l, pos), None) when l.Length = 1 && C.isUpper l.[0] ->
-      (DModuleSymbol [ Symbol.toString docId
-                       l ],
-       Use,
-       toLoc pos)
+      (DModuleSymbol(List.append doc.ModulePath [ l ]), Use, toLoc pos)
       :: acc
 
     | ANavExpr (AIdentExpr (p, None), _, Some m) ->
@@ -693,23 +703,24 @@ let private lowerAExpr docId acc expr : DSymbolOccurrence list =
   | ASemiExpr (stmts, last, _) -> acc |> up onExprs stmts |> up onExpr last
 
   | ALetExpr (_, contents, nextOpt) ->
-    let acc = lowerALetContents docId acc contents
+    let acc = lowerALetContents doc acc contents
 
     match nextOpt with
-    | Some next -> lowerAExpr docId acc next
+    | Some next -> lowerAExpr doc acc next
     | None -> acc
 
-let private lowerADecl docId acc decl : DSymbolOccurrence list =
-  let onTy acc ty = lowerATy docId acc ty
-  let onPat acc pat = lowerAPat docId acc pat
-  let onExpr acc expr = lowerAExpr docId acc expr
-  let onDecl acc decl = lowerADecl docId acc decl
+let private lowerADecl (doc: Doc) acc decl : DSymbolOccurrence list =
+  let onTy acc ty = lowerATy doc acc ty
+  let onPat acc pat = lowerAPat doc acc pat
+  let onExpr acc expr = lowerAExpr doc acc expr
+  let onDecl acc decl = lowerADecl doc acc decl
+  let docId = doc.DocId
   let toLoc (y, x) = At(Loc(docId, y, x))
 
   match decl with
   | AExprDecl expr -> onExpr acc expr
 
-  | ALetDecl (_, contents) -> lowerALetContents docId acc contents
+  | ALetDecl (_, contents) -> lowerALetContents doc acc contents
 
   | ATySynonymDecl (_, _, name, _, _, _) ->
     let (Name (name, pos)) = name
@@ -754,10 +765,7 @@ let private lowerADecl docId acc decl : DSymbolOccurrence list =
 
   | AModuleSynonymDecl (pos, Name (synonym, identPos), _, path) ->
     let acc =
-      (DModuleSymbol [ Symbol.toString docId
-                       synonym ],
-       Def,
-       toLoc identPos)
+      (DModuleSymbol(List.append doc.ModulePath [ synonym ]), Def, toLoc identPos)
       :: acc
 
     let pos = path |> pathToPos pos
@@ -772,10 +780,10 @@ let private lowerADecl docId acc decl : DSymbolOccurrence list =
 
     acc |> up (List.fold onDecl) decls
 
-  | AAttrDecl (_, _, _, next) -> lowerADecl docId acc next
+  | AAttrDecl (_, _, _, next) -> lowerADecl doc acc next
 
-let private lowerARoot (docId: DocId) acc root : DSymbolOccurrence list =
-  let toLoc (y, x) = At(Loc(docId, y, x))
+let private lowerARoot (doc: Doc) acc root : DSymbolOccurrence list =
+  let toLoc (y, x) = At(Loc(doc.DocId, y, x))
   let (ARoot (headOpt, decls)) = root
 
   let pos: Pos =
@@ -784,11 +792,10 @@ let private lowerARoot (docId: DocId) acc root : DSymbolOccurrence list =
     | _ -> 0, 0
 
   let acc =
-    // #abusingDocId
-    let path = Symbol.toString docId |> S.split "."
-    (DModuleSymbol path, Def, toLoc pos) :: acc
+    (DModuleSymbol doc.ModulePath, Def, toLoc pos)
+    :: acc
 
-  acc |> up (List.fold (lowerADecl docId)) decls
+  acc |> up (List.fold (lowerADecl doc)) decls
 
 let private lowerTPat acc pat : SymbolOccurrence list =
   match pat with
@@ -965,7 +972,7 @@ let private collectSymbolsInExpr (pa: ProjectAnalysis) (modules: TProgram) (tirC
     let docId = m.DocId
 
     match pa |> parseWithCache docId with
-    | Some (LSyntaxData m) -> docId, m.Ast
+    | Some (LSyntaxData m) -> m
     | None -> failwith "must be parsed"
 
   let variantNameMap =
@@ -1026,8 +1033,8 @@ let private collectSymbolsInExpr (pa: ProjectAnalysis) (modules: TProgram) (tirC
     modules
     |> List.fold
          (fun acc m ->
-           let docId, ast = parseModule m
-           lowerARoot docId acc ast)
+           let m = parseModule m
+           lowerARoot (makeDoc m) acc m.Ast)
          []
 
   let tySymbols =
@@ -1126,9 +1133,15 @@ module Symbol =
 
 // Provides fundamental operations as building block of queries.
 module ProjectAnalysis1 =
-  let create (projectDir: ProjectDir) (projectName: ProjectName) (host: ProjectAnalysisHost) : ProjectAnalysis =
+  let create
+    (entryDoc: DocId * ProjectName * ModuleName)
+    (projectDir: ProjectDir)
+    (projectName: ProjectName)
+    (host: ProjectAnalysisHost)
+    : ProjectAnalysis =
     { ProjectDir = projectDir
       ProjectName = projectName
+      EntryDoc = entryDoc
       NewTokenizeCache = emptyTokenizeCache
       NewParseResults = []
       BundleCache = None
@@ -1153,10 +1166,10 @@ module ProjectAnalysis1 =
 
   let bundle (pa: ProjectAnalysis) : BundleResult * ProjectAnalysis = bundleWithCache pa
 
-  let documentSymbols (syntax: LSyntaxData) (_pa: ProjectAnalysis) =
-    let (LSyntaxData m) = syntax
+  let documentSymbols (s: LSyntaxData) (_pa: ProjectAnalysis) =
+    let (LSyntaxData m) = s
 
-    lowerARoot m.DocId [] m.Ast
+    lowerARoot (makeDoc m) [] m.Ast
     |> List.choose (fun (symbol, defOrUse, loc2) ->
       match defOrUse, resolveLoc2 m.DocId m.Tokens loc2 with
       | Def, Some loc -> Some(symbol, defOrUse, loc)
@@ -1399,9 +1412,9 @@ module internal ProjectAnalysisCompletion =
             |> Option.map (List.choose (asIdent text))
             with
           | Some [ p; m ] ->
-            let docId: DocId = AstBundle.computeDocId p m
-
             let docAcc, doneSet =
+              let docId = pa.Host.ComputeDocId(p, m, docId)
+
               if doneSet |> TSet.contains docId |> not then
                 docId :: docAcc, TSet.add docId doneSet
               else
@@ -1462,7 +1475,7 @@ module internal ProjectAnalysisCompletion =
 
       | _ -> acc
 
-    // checkes if `nsIdent` is a name of variable
+    // checks if `nsIdent` is a name of variable
     let isVar =
       ancestors
       |> List.exists (fun ancestor ->
@@ -1545,7 +1558,7 @@ module internal ProjectAnalysisCompletion =
       | SyntaxNode (SyntaxKind.NameExpr, _, children) -> pickLast children
       | _ -> asIdent node)
 
-  let resolveAsNs _docId text ancestors (nsIdent: string) (targetPos: Pos) (pa: ProjectAnalysis) =
+  let resolveAsNs docId text ancestors (nsIdent: string) (targetPos: Pos) (pa: ProjectAnalysis) =
     debugFn "resolveAsNs nsIdent='%s'" nsIdent
 
     let asIdent text node =
@@ -1688,7 +1701,7 @@ module internal ProjectAnalysisCompletion =
 
       | _ -> []
 
-    let rec collectViaOpenDecls text node (pa: ProjectAnalysis) =
+    let rec collectViaOpenDecls docId text node (pa: ProjectAnalysis) =
       match node with
       | SyntaxNode (SyntaxKind.ModuleSynonymDecl, _, children) ->
         let ok =
@@ -1702,7 +1715,7 @@ module internal ProjectAnalysisCompletion =
             |> Option.map (List.choose (asIdent text))
             with
           | Some [ p; m ] ->
-            let docId: DocId = AstBundle.computeDocId p m
+            let docId: DocId = pa.Host.ComputeDocId(p, m, docId)
 
             findToplevelDecls docId pa
             |> List.collect (fun (syntax, decl) -> collectFromDecl syntax.Text decl)
@@ -1717,7 +1730,7 @@ module internal ProjectAnalysisCompletion =
           |> Option.map (List.choose (asIdent text))
           with
         | Some [ p; m ] ->
-          let docId: DocId = AstBundle.computeDocId p m
+          let docId = pa.Host.ComputeDocId(p, m, docId)
 
           findToplevelDecls docId pa
           |> List.collect (fun ((syntax: LSyntax2), decl) -> collectContents syntax.Text decl)
@@ -1726,7 +1739,7 @@ module internal ProjectAnalysisCompletion =
 
       | _ -> collectContents text node
 
-    let resolveUnqualifiedAsNs (targetPos: Pos) (pa: ProjectAnalysis) =
+    let resolveUnqualifiedAsNs docId (targetPos: Pos) (pa: ProjectAnalysis) =
       ancestors
       |> List.collect (fun ancestor ->
         let isBeforeTarget node =
@@ -1737,21 +1750,20 @@ module internal ProjectAnalysisCompletion =
         |> SyntaxElement.children
         |> List.collect (fun child ->
           if isBeforeTarget child then
-            collectViaOpenDecls text child pa
+            collectViaOpenDecls docId text child pa
           else
             []))
 
     let resolvePrelude () =
       if SyntaxApi.isKnownModule nsIdent then
-        let docId: DocId =
-          AstBundle.computeDocId "MiloneCore" nsIdent
+        let docId: DocId = pa.Host.GetCoreDocId nsIdent
 
         findToplevelDecls docId pa
         |> List.collect (fun (syntax, decl) -> collectFromDecl syntax.Text decl)
       else
         []
 
-    List.append (resolveUnqualifiedAsNs targetPos pa) (resolvePrelude ())
+    List.append (resolveUnqualifiedAsNs docId targetPos pa) (resolvePrelude ())
 
   let tryNsCompletion (docId: DocId) (targetPos: Pos) pa : (int * string) list option * ProjectAnalysis =
     let syntaxOpt, pa = ProjectAnalysis1.parse2 docId pa

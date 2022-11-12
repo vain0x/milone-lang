@@ -232,11 +232,25 @@ type private CompileResult =
   | CompileOk of CodeGenResult
   | CompileError of string
 
-let private computeCFilename projectName (docId: DocId) : CFilename =
-  if Symbol.toString docId = projectName + "." + projectName then
+let private computeCFilename (df: DocIdToModulePath) projectName (docId: DocId) : CFilename =
+  let p, m =
+    match df docId with
+    | Some it -> it
+    | None ->
+      // #abusingDocId
+      let s = Symbol.toString docId
+
+      match S.split "." s with
+      | [ p; m ] -> p, m
+      | _ ->
+        __trace ("Unknown docId: '" + s + "'")
+        "Unknown", "Unknown"
+
+  // Check if it's the entrypoint module.
+  if p = projectName && p = m then
     projectName + ".c"
   else
-    S.replace "." "_" (Symbol.toString docId) + ".c"
+    p + "_" + m + ".c"
 
 [<RequireQualifiedAccess; NoEquality; NoComparison>]
 type private CompileCtx =
@@ -244,6 +258,7 @@ type private CompileCtx =
     EntrypointName: string
     Manifest: ManifestData
     Layers: SyntaxLayers
+    DocIdToModulePathMap: TreeMap<DocId, ProjectName * ModuleName>
     Errors: SyntaxError list
     WriteLog: string -> unit }
 
@@ -254,14 +269,16 @@ let private prepareCompile
   projectDir
   entryModulePathOpt
   : Future<CompileCtx> =
-  let miloneHome = hostToMiloneHome sApi host
   let projectDir = projectDir |> pathStrTrimEndPathSep
   let projectName = projectDir |> pathStrToStem
   let writeLog = writeLog host verbosity
 
   let manifestFut =
     let manifestFile = projectDir + "/milone_manifest"
-    let docId: DocId = Symbol.intern manifestFile
+
+    let docId: DocId =
+      // #generateDocId
+      Symbol.intern manifestFile
 
     manifestFile
     |> host.FileReadAllText
@@ -284,7 +301,7 @@ let private prepareCompile
 
       ModuleFetch.prepareFetchModule sApi host
 
-    let layers, errors = ModuleLoad.load fetchModule projectName
+    let layers, docIdToModulePathMap, errors = ModuleLoad.load fetchModule projectName
 
     ({ EntryProjectName = projectName
 
@@ -297,6 +314,7 @@ let private prepareCompile
 
        Manifest = manifest
        Layers = layers
+       DocIdToModulePathMap = docIdToModulePathMap
        Errors = errors
 
        WriteLog = writeLog }: CompileCtx))
@@ -316,6 +334,9 @@ let private compile (sApi: SyntaxApi) (tApi: TranslationApi) (ctx: CompileCtx) :
   let projectName = ctx.EntryProjectName
   let writeLog = ctx.WriteLog
 
+  let df: DocIdToModulePath =
+    fun docId -> TMap.tryFind docId ctx.DocIdToModulePathMap
+
   if ctx.Errors |> List.isEmpty |> not then
     CompileError(sApi.SyntaxErrorsToString ctx.Errors)
   else
@@ -327,11 +348,11 @@ let private compile (sApi: SyntaxApi) (tApi: TranslationApi) (ctx: CompileCtx) :
       let modules, hirCtx = Lower.lower (modules, tirCtx)
 
       let cFiles, exportNames =
-        tApi.CodeGenHir ctx.EntrypointName writeLog (modules, hirCtx)
+        tApi.CodeGenHir ctx.EntrypointName df writeLog (modules, hirCtx)
 
       let cFiles =
         cFiles
-        |> List.map (fun (docId, cCode) -> computeCFilename projectName docId, cCode)
+        |> List.map (fun (docId, cCode) -> computeCFilename df projectName docId, cCode)
 
       writeLog "Finish"
       CompileOk(cFiles, exportNames)
@@ -621,12 +642,19 @@ let private cliParse (sApi: SyntaxApi) (host: CliHost) (pathnameList: string lis
     let docId, textFuture =
       match pathname with
       | "-" ->
-        let docId: DocId = Symbol.intern "stdin"
+        let docId: DocId =
+          // #generateDocId
+          Symbol.intern "stdin"
+
         docId, host.ReadStdinAll() |> Some |> Future.just
 
       | pathname ->
         let pathname = pathJoin host.WorkDir pathname
-        let docId: DocId = Symbol.intern pathname
+
+        let docId: DocId =
+          // #generateDocId
+          Symbol.intern pathname
+
         docId, host.FileReadAllText pathname
 
     textFuture

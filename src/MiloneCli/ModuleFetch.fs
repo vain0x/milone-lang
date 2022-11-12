@@ -9,11 +9,6 @@ open Std.StdMap
 
 module S = Std.StdString
 
-/// File extension. Starts with `.`.
-type private FileExt = string
-
-type private FileExistsFun = string -> bool
-
 type private FetchModuleFun2 =
   ProjectName
     -> ModuleName
@@ -23,7 +18,8 @@ type private FetchModuleFun2 =
 // Util
 // -----------------------------------------------
 
-// note: avoid using this function so that DocId can be computed by clients.
+// #generateDocId
+/// Computes docId for CLI.
 let computeDocId (p: ProjectName) (m: ModuleName) : DocId = Symbol.intern (p + "." + m)
 
 [<RequireQualifiedAccess; NoEquality; NoComparison>]
@@ -36,6 +32,10 @@ type FetchModuleHost =
 
     ReadTextFile: ReadTextFileFun
     WriteLog: WriteLogFun }
+
+// -----------------------------------------------
+// Fetch
+// -----------------------------------------------
 
 let prepareFetchModule (sApi: SyntaxApi) (host: FetchModuleHost) : FetchModuleFun2 =
   let entryProjectName = host.EntryProjectName
@@ -77,13 +77,12 @@ let prepareFetchModule (sApi: SyntaxApi) (host: FetchModuleHost) : FetchModuleFu
         match result with
         | None -> None
 
-        | Some text ->
-          // #parse
+        | Some (_, contents) ->
           let docId = computeDocId projectName moduleName
 
           let ast, errors =
             let parseInput: ParseInput =
-              { SourceCode = text
+              { SourceCode = contents
                 BeingCore = projectName = "MiloneCore" }
 
             sApi.Parse parseInput

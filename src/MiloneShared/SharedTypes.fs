@@ -140,6 +140,7 @@ module Pos =
 // Location
 // -----------------------------------------------
 
+// #generateDocId
 /// No location information. Should be fixed.
 let noLoc = Loc(Symbol.intern "<noLoc>", 0, 0)
 
@@ -151,6 +152,10 @@ module Loc =
   let toDocPos (loc: Loc) : DocId * Pos =
     let (Loc (docId, y, x)) = loc
     docId, (y, x)
+
+  let docId (loc: Loc) : DocId =
+    let (Loc (docId, _, _)) = loc
+    docId
 
   let toString (Loc (docId, y, x)) =
     Symbol.toString docId

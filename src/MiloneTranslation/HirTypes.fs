@@ -12,6 +12,11 @@ open Std.StdMap
 
 module S = Std.StdString
 
+// #docIdIssue #temp
+type ProjectName = string
+type ModuleName = string
+type DocIdToModulePath = DocId -> (ProjectName * ModuleName) option
+
 // -----------------------------------------------
 // HIR types
 // -----------------------------------------------

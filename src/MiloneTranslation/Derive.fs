@@ -176,6 +176,7 @@ let private deriveOnStmt (hirCtx: HirCtx) (ctx: DCtx) stmt : DCtx =
              (fun opt funSerial (funDef: FunDef) ->
                let (Loc (docId, _, _)) = funDef.Loc
 
+               // #abusingDocId #generateDocId
                if Symbol.equals docId (Symbol.intern "Std.Equal")
                   && funDef.Name = "genericListEqual" then
                  Some funSerial
@@ -196,6 +197,7 @@ let private deriveOnStmt (hirCtx: HirCtx) (ctx: DCtx) stmt : DCtx =
   //    (l1 = r1) & (l2 = r2) & ...
   let deriveEqualForTuple ty (ctx: DCtx) : DCtx =
     let loc =
+      // #generateDocId
       Loc(Symbol.intern "MiloneDerive.TupleEqual", 0, 0)
 
     let tyArgs =
@@ -282,6 +284,7 @@ let private deriveOnStmt (hirCtx: HirCtx) (ctx: DCtx) stmt : DCtx =
   //    Std.Equal.genericListEqual compare l r
   let deriveEqualForList ty (ctx: DCtx) : DCtx =
     let loc =
+      // #generateDocId
       Loc(Symbol.intern "MiloneDerive.ListEqual", 0, 0)
 
     let itemTy =

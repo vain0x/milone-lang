@@ -218,14 +218,28 @@ let chooseSourceExt (fileExists: FileExistsFun) filename =
     fs
 
 // #readSourceFile
-let readSourceFile (readTextFile: ReadTextFileFun) filename : Future<string option> =
-  readTextFile filename
+let readSourceFile (readTextFile: ReadTextFileFun) filePath : Future<(string * string) option> =
+  readTextFile filePath
   |> Future.andThen (fun result ->
     match result with
-    | (Some _) as it -> Future.just it
-    | None -> readTextFile (changeExt ".fs" filename))
+    | Some contents -> Future.just (Some(filePath, contents))
+    | None ->
+      let filePath = changeExt ".fs" filePath
 
-let parseModule (docId: DocId) (kind: ModuleKind) (tokens: TokenizeResult) : ModuleSyntaxData =
+      readTextFile filePath
+      |> Future.map (fun result ->
+        match result with
+        | Some contents -> Some(filePath, contents)
+        | None -> None))
+
+let parseModule
+  (docId: DocId)
+  (projectName: ProjectName)
+  (moduleName: ModuleName)
+  (tokens: TokenizeResult)
+  : ModuleSyntaxData =
+  let kind = getModuleKind projectName moduleName
+
   let errorTokens, tokens = tokens |> List.partition isErrorToken
 
   let unmodifiedAst, parseErrors = tokens |> SyntaxParse.parse
@@ -240,6 +254,8 @@ let parseModule (docId: DocId) (kind: ModuleKind) (tokens: TokenizeResult) : Mod
       unmodifiedAst
 
   ({ DocId = docId
+     ProjectName = projectName
+     ModuleName = moduleName
      Tokens = tokens
      Ast = modifiedAst
      UnmodifiedAst = unmodifiedAst
