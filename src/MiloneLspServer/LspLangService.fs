@@ -154,15 +154,7 @@ let private filePathToModulePath path =
   | None -> None
 
 // #generateDocId
-let filePathToDocId (path: string) : DocId =
-  let projectName =
-    match Path.dirname path with
-    | Some path -> Path.basename path
-    | None -> "NoProject" // unlikely happen
-
-  let moduleName = Path.stem path
-
-  Symbol.intern (projectName + "." + moduleName)
+let private filePathToDocId (filePath: string) : DocId = AstBundle.computeDocId filePath
 
 let private uriToDocId (uri: Uri) : DocId = uri |> uriToFilePath |> filePathToDocId
 
@@ -625,7 +617,7 @@ type WorkspaceAnalysis =
 
     RootUriOpt: Uri option
     StdLibFiles: FilePath list
-    StdLibModules: (string * ProjectDir) list
+    StdLibModules: (ProjectName * ModuleName) list
     ReadSourceFile: ReadSourceFileFun
 
     Host: WorkspaceAnalysisHost }
@@ -657,6 +649,8 @@ module private WorkspaceAnalysis1 =
     wa.DocToPathMap
     |> TMap.tryFind docId
     |> Option.map uriOfFilePath
+
+  let docIdToFilePath (docId: DocId) (wa: WorkspaceAnalysis) = wa.DocToPathMap |> TMap.tryFind docId
 
   let addDoc (uri: Uri) version text (wa: WorkspaceAnalysis) =
     // #temp
@@ -868,8 +862,42 @@ let doWithProjectAnalysis
   let docIdToUri =
     fun (_: ProjectInfo) docId wa -> WorkspaceAnalysis1.docIdToUri docId wa
 
+  let computeDocIdIn projectDir moduleName =
+    let p1 =
+      (projectDir + "/") + (moduleName + ".milone")
+
+    let p2 =
+      (projectDir + "/") + (moduleName + ".fs")
+
+    (if wa.Docs |> TMap.containsKey (uriOfFilePath p2) then
+       p2
+     else
+       p1)
+    |> filePathToDocId
+
   let host: ProjectAnalysisHost =
-    { GetDocVersion =
+    { ComputeDocId =
+        fun (projectName, moduleName, originDocId) ->
+          let projectDir =
+            match wa.StdLibModules
+                  |> List.tryFind (fun (p, _) -> p = projectName)
+              with
+            | Some _ -> wa.Host.MiloneHome + "/" + projectName
+
+            | None ->
+              let containingDir =
+                WorkspaceAnalysis1.docIdToFilePath originDocId wa
+                |> Option.bind Path.dirname
+                |> Option.bind Path.dirname
+                |> Option.defaultValue ".."
+
+              containingDir + "/" + projectName
+
+          computeDocIdIn projectDir moduleName
+
+      GetCoreDocId = fun moduleName -> computeDocIdIn (wa.Host.MiloneHome + "/src/MiloneCore") moduleName
+
+      GetDocVersion =
         fun docId ->
           match docIdToUri p docId wa with
           | Some uri -> getDocVersion uri wa
@@ -899,7 +927,15 @@ let doWithProjectAnalysis
   let pa =
     match wa.Projects |> TMap.tryFind p.ProjectName with
     | Some it -> it |> ProjectAnalysis1.withHost host
-    | None -> ProjectAnalysis1.create p.ProjectDir p.ProjectName host
+
+    | None ->
+      let entryDoc =
+        let docId =
+          computeDocIdIn p.ProjectDir p.ProjectName
+
+        docId, p.ProjectName, p.ProjectName
+
+      ProjectAnalysis1.create entryDoc p.ProjectDir p.ProjectName host
 
   let result, pa = action pa
 

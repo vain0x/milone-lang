@@ -347,7 +347,9 @@ module BundleResult =
 /// Operations for project analysis.
 [<RequireQualifiedAccess; NoEquality; NoComparison>]
 type ProjectAnalysisHost =
-  { GetDocVersion: DocId -> DocVersion
+  { ComputeDocId: ProjectName * ModuleName * DocId -> DocId
+    GetCoreDocId: ModuleName -> DocId
+    GetDocVersion: DocId -> DocVersion
     Tokenize: DocId -> DocVersion * LTokenList
     Parse: DocId -> (DocVersion * LSyntaxData) option
     Parse2: DocId -> LSyntax2 option
@@ -361,6 +363,7 @@ type ProjectAnalysis =
   private
     { ProjectDir: ProjectDir
       ProjectName: ProjectName
+      EntryDoc: DocId * ProjectName * ModuleName
       NewTokenizeCache: TreeMap<DocId, LTokenList>
       NewParseResults: (DocVersion * LSyntaxData) list
       BundleCache: BundleResult option
@@ -394,19 +397,18 @@ type BundleResult =
       ParseResults: (DocVersion * LSyntaxData) list }
 
 let private doBundle (pa: ProjectAnalysis) : BundleResult =
-  let projectName = pa.ProjectName
   let writeLog: string -> unit = ignore
 
-  let fetchModuleUsingCache (projectName: string) (moduleName: string) =
+  let fetchModuleUsingCache (r: AstBundle.FetchModuleParams) : Future<ModuleSyntaxData option> =
     let docId =
-      AstBundle.computeDocId projectName moduleName
+      pa.Host.ComputeDocId(r.ProjectName, r.ModuleName, r.Origin)
 
     match pa |> parseWithCache docId with
     | None -> Future.just None
     | Some (LSyntaxData m) -> Future.just (Some m)
 
   let layers, bundleErrors =
-    AstBundle.bundle fetchModuleUsingCache projectName
+    AstBundle.bundle fetchModuleUsingCache pa.EntryDoc
 
   let result =
     if bundleErrors |> List.isEmpty |> not then
@@ -1133,9 +1135,15 @@ module Symbol =
 
 // Provides fundamental operations as building block of queries.
 module ProjectAnalysis1 =
-  let create (projectDir: ProjectDir) (projectName: ProjectName) (host: ProjectAnalysisHost) : ProjectAnalysis =
+  let create
+    (entryDoc: DocId * ProjectName * ModuleName)
+    (projectDir: ProjectDir)
+    (projectName: ProjectName)
+    (host: ProjectAnalysisHost)
+    : ProjectAnalysis =
     { ProjectDir = projectDir
       ProjectName = projectName
+      EntryDoc = entryDoc
       NewTokenizeCache = emptyTokenizeCache
       NewParseResults = []
       BundleCache = None
@@ -1406,9 +1414,9 @@ module internal ProjectAnalysisCompletion =
             |> Option.map (List.choose (asIdent text))
             with
           | Some [ p; m ] ->
-            let docId: DocId = AstBundle.computeDocId p m
-
             let docAcc, doneSet =
+              let docId = pa.Host.ComputeDocId(p, m, docId)
+
               if doneSet |> TSet.contains docId |> not then
                 docId :: docAcc, TSet.add docId doneSet
               else
@@ -1469,7 +1477,7 @@ module internal ProjectAnalysisCompletion =
 
       | _ -> acc
 
-    // checkes if `nsIdent` is a name of variable
+    // checks if `nsIdent` is a name of variable
     let isVar =
       ancestors
       |> List.exists (fun ancestor ->
@@ -1552,7 +1560,7 @@ module internal ProjectAnalysisCompletion =
       | SyntaxNode (SyntaxKind.NameExpr, _, children) -> pickLast children
       | _ -> asIdent node)
 
-  let resolveAsNs _docId text ancestors (nsIdent: string) (targetPos: Pos) (pa: ProjectAnalysis) =
+  let resolveAsNs docId text ancestors (nsIdent: string) (targetPos: Pos) (pa: ProjectAnalysis) =
     debugFn "resolveAsNs nsIdent='%s'" nsIdent
 
     let asIdent text node =
@@ -1695,7 +1703,7 @@ module internal ProjectAnalysisCompletion =
 
       | _ -> []
 
-    let rec collectViaOpenDecls text node (pa: ProjectAnalysis) =
+    let rec collectViaOpenDecls docId text node (pa: ProjectAnalysis) =
       match node with
       | SyntaxNode (SyntaxKind.ModuleSynonymDecl, _, children) ->
         let ok =
@@ -1709,7 +1717,7 @@ module internal ProjectAnalysisCompletion =
             |> Option.map (List.choose (asIdent text))
             with
           | Some [ p; m ] ->
-            let docId: DocId = AstBundle.computeDocId p m
+            let docId: DocId = pa.Host.ComputeDocId(p, m, docId)
 
             findToplevelDecls docId pa
             |> List.collect (fun (syntax, decl) -> collectFromDecl syntax.Text decl)
@@ -1724,7 +1732,7 @@ module internal ProjectAnalysisCompletion =
           |> Option.map (List.choose (asIdent text))
           with
         | Some [ p; m ] ->
-          let docId: DocId = AstBundle.computeDocId p m
+          let docId = pa.Host.ComputeDocId(p, m, docId)
 
           findToplevelDecls docId pa
           |> List.collect (fun ((syntax: LSyntax2), decl) -> collectContents syntax.Text decl)
@@ -1733,7 +1741,7 @@ module internal ProjectAnalysisCompletion =
 
       | _ -> collectContents text node
 
-    let resolveUnqualifiedAsNs (targetPos: Pos) (pa: ProjectAnalysis) =
+    let resolveUnqualifiedAsNs docId (targetPos: Pos) (pa: ProjectAnalysis) =
       ancestors
       |> List.collect (fun ancestor ->
         let isBeforeTarget node =
@@ -1744,21 +1752,20 @@ module internal ProjectAnalysisCompletion =
         |> SyntaxElement.children
         |> List.collect (fun child ->
           if isBeforeTarget child then
-            collectViaOpenDecls text child pa
+            collectViaOpenDecls docId text child pa
           else
             []))
 
     let resolvePrelude () =
       if SyntaxApi.isKnownModule nsIdent then
-        let docId: DocId =
-          AstBundle.computeDocId "MiloneCore" nsIdent
+        let docId: DocId = pa.Host.GetCoreDocId nsIdent
 
         findToplevelDecls docId pa
         |> List.collect (fun (syntax, decl) -> collectFromDecl syntax.Text decl)
       else
         []
 
-    List.append (resolveUnqualifiedAsNs targetPos pa) (resolvePrelude ())
+    List.append (resolveUnqualifiedAsNs docId targetPos pa) (resolvePrelude ())
 
   let tryNsCompletion (docId: DocId) (targetPos: Pos) pa : (int * string) list option * ProjectAnalysis =
     let syntaxOpt, pa = ProjectAnalysis1.parse2 docId pa

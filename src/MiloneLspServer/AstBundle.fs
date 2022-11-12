@@ -15,7 +15,13 @@ open MiloneSyntax.SyntaxApiTypes
 module S = Std.StdString
 module NirGen = MiloneSyntax.NirGen
 
-type private FetchModuleFun = ProjectName -> ModuleName -> Future<ModuleSyntaxData option>
+[<RequireQualifiedAccess; NoEquality; NoComparison>]
+type FetchModuleParams =
+  { ProjectName: ProjectName
+    ModuleName: ModuleName
+    Origin: DocId }
+
+type private FetchModuleFun = FetchModuleParams -> Future<ModuleSyntaxData option>
 
 // -----------------------------------------------
 // Utils
@@ -86,7 +92,26 @@ type private RequestMap = TreeMap<ProjectName * ModuleName, RequestResult>
 
 // #generateDocId
 /// Computes docId for LSP server.
-let computeDocId (p: ProjectName) (m: ModuleName) : DocId = Symbol.intern (p + "." + m)
+let computeDocId (filePath: string) : DocId =
+  let () =
+    let absolute =
+      filePath.Length >= 2
+      && (filePath.[0] = '/' || filePath.[1] = ':')
+
+    let normal =
+      not (S.contains "/../" filePath)
+      && not (S.contains "/./" filePath)
+      && not (S.contains "\\" filePath)
+
+    let acceptable =
+      S.endsWith "milone_manifest" filePath
+      || S.endsWith ".fs" filePath
+      || S.endsWith ".milone" filePath
+
+    if not (absolute && normal && acceptable) then
+      failwithf "%s" ("docId: Bad filePath: '" + filePath + "'")
+
+  Symbol.intern filePath
 
 // -----------------------------------------------
 // ModuleRequest
@@ -188,7 +213,12 @@ let private consumer (state: State) action : State * ModuleRequest list =
     | _ -> unreachable ()
 
 let private producer (fetchModule: FetchModuleFun) (_: State) (r: ModuleRequest) : Future<Action> =
-  fetchModule r.ProjectName r.ModuleName
+  let p: FetchModuleParams =
+    { ProjectName = r.ProjectName
+      ModuleName = r.ModuleName
+      Origin = Loc.docId r.Origin }
+
+  fetchModule p
   |> Future.map (fun result ->
     match result with
     | Some syntaxData ->
@@ -222,13 +252,13 @@ let private producer (fetchModule: FetchModuleFun) (_: State) (r: ModuleRequest)
 // Interface
 // -----------------------------------------------
 
+/// (layers, errors)
 type private BundleResult = (ModuleSyntaxData * ModuleSyntaxData2) list list * SyntaxError list
 
-let bundle (fetchModule: FetchModuleFun) (entryProjectName: ProjectName) : BundleResult =
+let bundle (fetchModule: FetchModuleFun) (entryDoc: DocId * ProjectName * ModuleName) : BundleResult =
   let entryRequest =
-    let p = entryProjectName
-    let docId = computeDocId p p
-    newRootRequest docId p p
+    let docId, p, m = entryDoc
+    newRootRequest docId p m
 
   let state = initialState
   let _, state = addRequest state entryRequest
