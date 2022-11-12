@@ -1,0 +1,151 @@
+open LibTextProcess.TinyIni
+open Std.StdTesting
+
+let private testWrite () =
+  let p doc expected =
+    doc |> IniDocument.toString |> shouldEqual id expected
+
+  assert (p IniDocument.empty "")
+
+  // top-only
+  let doc: IniDocument = { IniDocument.empty with Top = [ "a", IniInt 42 ] }
+
+  assert (p doc "a = 42\n")
+
+  let doc: IniDocument =
+    { IniDocument.empty with Top = [ "a", IniInt 42; "b", IniString "hello" ] }
+
+  assert (p doc "a = 42\nb = hello\n")
+
+  // top is empty
+  let doc: IniDocument =
+    { IniDocument.empty with
+        Sections =
+          [ "first", [ "x", IniInt 1; "y", IniInt 2 ]
+            "second", [ "z", IniInt 3; "w", IniInt 4 ] ] }
+
+  assert (p doc "[first]\nx = 1\ny = 2\n\n[second]\nz = 3\nw = 4\n")
+
+  // both top and sections
+  let doc: IniDocument =
+    { Top = [ "a", IniInt 42; "b", IniString "hello" ]
+      Sections =
+        [ "first", [ "x", IniInt 1; "y", IniInt 2 ]
+          "second", [ "z", IniInt 3; "w", IniInt 4 ] ] }
+
+  assert (p doc "a = 42\nb = hello\n\n[first]\nx = 1\ny = 2\n\n[second]\nz = 3\nw = 4\n")
+
+  // empty sections
+  let doc: IniDocument =
+    { IniDocument.empty with Sections = [ "first", []; "second", [] ] }
+
+  assert (p doc "[first]\n\n[second]\n")
+
+  // string escape
+  let doc: IniDocument =
+    { IniDocument.empty with
+        Top =
+          [ "empty", IniString ""
+            "space", IniString " "
+            "newline", IniString "\n"
+            "quote", IniString "\""
+            "binary", IniString "\x00\x01\x7f" ] }
+
+  let expected =
+    """empty =
+space = " "
+newline = "\n"
+quote = "\""
+binary = "\x00\x01\x7f"
+"""
+
+  assert (p doc expected)
+
+let private testParse () =
+  let p actual expected =
+    let debugDoc s =
+      let doc, result = IniParse.parseDocument s
+
+      match result with
+      | Ok() -> IniDocument.toString doc
+
+      | Error(msg, i) -> "Parse error at " + string i + ": " + msg
+
+    actual |> debugDoc |> shouldEqual id expected
+
+  // Basic cases
+  (match IniDocument.parse "" with
+   | Some doc ->
+     assert (List.isEmpty doc.Top)
+     assert (List.isEmpty doc.Sections)
+   | None -> assert false)
+
+  (match IniDocument.parse "top = 1\n[first]\nfirstKey = 2\n[second]\nsecondKey = 3\n" with
+   | Some doc ->
+     assert (List.length doc.Top = 1)
+     assert (List.length doc.Sections = 2)
+
+     assert
+       (match doc.Top with
+        | [ "top", IniInt 1 ] -> true
+        | _ -> false)
+
+     assert
+       (match doc.Sections with
+        | [ "first", [ "firstKey", IniInt 2 ]; "second", [ "secondKey", IniInt3 ] ] -> true
+        | _ -> false)
+
+   | None -> assert false)
+
+  // Spaces.
+  assert (p "  \n  \r\n  \n \r\n" "")
+
+  // Comments.
+  assert (p "; This is comment\n; This is also a comment\n" "")
+
+  // No trailing newline.
+  assert (p "key = value" "key = value\n")
+
+  // Key and values have blank around.
+  assert (p "  key containing spaces  =  value containing spaces  " "key containing spaces = value containing spaces\n")
+
+  // Empty value.
+  assert (p "empty=" "empty =\n")
+  assert (p "empty=\n" "empty =\n")
+  assert (p "crlf=\r\n" "crlf =\n")
+
+  // Quoted values.
+  assert (p "empty = \"\"" "empty =\n")
+  assert (p "space = \" \"" "space = \" \"\n")
+  assert (p "escape = \"\\\\\\x7f\\r\\n\"" "escape = \"\\\\\\x7f\\r\\n\"\n")
+
+  // Edge cases:
+
+  // Empty key.
+  assert (p "= value" " = value\n")
+
+  // Empty section name.
+  assert (p "[]" "[]\n")
+
+  // Semicolon in unquoted value
+  assert (p "semicolon = a;b;c" "semicolon = a;b;c\n")
+
+  // Error cases:
+  // Missing equal.
+  assert (p "key" "Parse error at 3: ExpectedEqual")
+  // Unclosed section.
+  assert (p "[" "Parse error at 1: SectionHeadUnclosed")
+  // Anything after section head
+  assert (p "[x] zzz\n" "Parse error at 4: ExpectedNewline")
+  // Unclosed quote.
+  assert (p "k = \"" "Parse error at 5: QuoteUnclosed")
+  // Anything after quote.
+  assert (p "k = \"\"s" "Parse error at 6: ExpectedNewline")
+  // Invalid escape sequences.
+  assert (p "k = \"\\" "Parse error at 5: InvalidEscapeSequence")
+  assert (p "k = \"\\!\"" "Parse error at 5: InvalidEscapeSequence")
+  assert (p "k = \"\\x1\"" "Parse error at 5: InvalidEscapeSequence")
+  assert (p "k = \"\\xZZ\"" "Parse error at 5: InvalidEscapeSequence")
+
+testWrite ()
+testParse ()

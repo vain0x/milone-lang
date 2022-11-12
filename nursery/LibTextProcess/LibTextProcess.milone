@@ -1,0 +1,4 @@
+open LibTextProcess.TextPositionTests
+open LibTextProcess.TinyIniTests
+open LibTextProcess.TinyYamlTests
+open LibTextProcess.UnicodeTests
