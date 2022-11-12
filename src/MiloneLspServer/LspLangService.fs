@@ -817,7 +817,7 @@ let private parseDoc (uri: Uri) (wa: WorkspaceAnalysis) =
       let projectName, moduleName =
         match docId |> docIdToModulePath with
         | Some it -> it
-        | None -> unreachable () // docId is created in `p.m` format explicitly
+        | None -> unreachable () // the document isn't opened
 
       traceFn "parse '%A' v:%d" docId v
 
@@ -859,8 +859,7 @@ let doWithProjectAnalysis
   (wa: WorkspaceAnalysis)
   : 'A * WorkspaceAnalysis =
   // #temp
-  let docIdToUri =
-    fun (_: ProjectInfo) docId wa -> WorkspaceAnalysis1.docIdToUri docId wa
+  let docIdToUri docId = WorkspaceAnalysis1.docIdToUri docId wa
 
   let computeDocIdIn projectDir moduleName =
     let p1 =
@@ -899,13 +898,13 @@ let doWithProjectAnalysis
 
       GetDocVersion =
         fun docId ->
-          match docIdToUri p docId wa with
+          match docIdToUri docId with
           | Some uri -> getDocVersion uri wa
           | None -> MinVersion
 
       Tokenize =
         fun docId ->
-          match docIdToUri p docId wa
+          match docIdToUri docId
                 |> Option.bind (fun uri -> tokenizeDoc uri wa)
             with
           | Some it -> it
@@ -913,12 +912,12 @@ let doWithProjectAnalysis
 
       Parse =
         fun docId ->
-          docIdToUri p docId wa
+          docIdToUri docId
           |> Option.bind (fun uri -> parseDoc uri wa)
 
       Parse2 =
         fun docId ->
-          docIdToUri p docId wa
+          docIdToUri docId
           |> Option.bind (fun uri -> parse2Doc uri wa)
 
       MiloneHome = wa.Host.MiloneHome
@@ -950,7 +949,7 @@ let doWithProjectAnalysis
            let tokens = LSyntaxData.getTokens syntaxData
 
            // #temp (Option.get)
-           let uri = docIdToUri p docId wa |> Option.get
+           let uri = docIdToUri docId |> Option.get
 
            { wa with
                TokenizeCache = wa.TokenizeCache |> TMap.add uri (v, tokens)
