@@ -89,6 +89,13 @@ However it doesn't work well with:
 - monomorphization that duplicates generic functions, and
 - ownership restriction that rejects generic function parameters to be bound to owned types.
 
+### Remarks
+
+- There exists no value of `never` type.
+- `never` unifies with only `never` as usual.
+- No structural subtyping.
+- In C, never as function result type is compiled to `void` and other never is to `char`.
+
 ## See Also
 
 There exist other languages that have built-in `never` type.
