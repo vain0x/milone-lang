@@ -120,6 +120,7 @@
         - `nullPtr`, `invalid`
         - `cast`, `asIn`, `asNative`
         - `distance`
+- Support `never` type
 - Improve primitives:
     - Fix an issue that `string : bool -> string` didn't work at all
     - `string` now works for tuples and unions (result is unstable)

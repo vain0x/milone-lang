@@ -39,6 +39,7 @@ User-defined types:
 
 ## Language Extensions
 
+- [never type](x_never_type.md)
 - [own type](x_own_type.md)
 - [pointer types](x_ptr_types.md)
 - [region](x_region.md)
