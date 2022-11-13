@@ -12,6 +12,13 @@ open Std.StdSet
 open MiloneTranslation.Hir
 open MiloneTranslation.HirTypes
 
+// #tyAssign
+let tyAssign tyVars tyArgs =
+  match listTryZip tyVars tyArgs with
+  | [], [], [] -> id
+  | assignment, [], [] -> tySubst (fun tySerial -> assocTryFind compare tySerial assignment)
+  | _ -> fun (_: Ty) -> unreachable ()
+
 // #tyAppliedBy
 let private tyAppliedBy n ty =
   match ty with
@@ -33,9 +40,11 @@ let private hxApp3 callee arg1 arg2 arg3 = hxApp1 (hxApp2 callee arg1 arg2) arg3
 // Collect usage
 // -----------------------------------------------
 
-type private FCtx = TreeSet<Ty>
+type private FCtx =
+  { Equal: TreeSet<Ty>
+    String: TreeSet<Ty> }
 
-let private fuExpr ctx expr : FCtx =
+let private fuExpr (ctx: FCtx) expr : FCtx =
   let onExpr expr ctx = fuExpr ctx expr
   let onExprs exprs ctx = exprs |> List.fold fuExpr ctx
   let onStmts stmts ctx = stmts |> List.fold fuStmt ctx
@@ -52,7 +61,15 @@ let private fuExpr ctx expr : FCtx =
       | Ty (FunTk, ty :: _) -> ty
       | _ -> unreachable ()
 
-    ctx |> TSet.add ty
+    { ctx with Equal = ctx.Equal |> TSet.add ty }
+
+  | HPrimExpr (HPrim.ToString, funTy, _) when tyIsMonomorphic funTy ->
+    let ty =
+      match funTy with
+      | Ty (FunTk, ty :: _) -> ty
+      | _ -> unreachable ()
+
+    { ctx with String = ctx.String |> TSet.add ty }
 
   | HPrimExpr _ -> ctx
 
@@ -78,7 +95,12 @@ let private fuStmt ctx stmt : FCtx =
 // Apply changes
 // -----------------------------------------------
 
-let private rewriteExpr (ctx: TreeMap<Ty, FunSerial>) expr : HExpr =
+/// Context of rewrite.
+type private RCtx =
+  { Equal: TreeMap<Ty, FunSerial>
+    String: TreeMap<Ty, FunSerial> }
+
+let private rewriteExpr (ctx: RCtx) expr : HExpr =
   let onExpr expr = rewriteExpr ctx expr
   let onExprs exprs = exprs |> List.map (rewriteExpr ctx)
   let onStmts stmts = stmts |> List.map (rewriteStmt ctx)
@@ -95,7 +117,17 @@ let private rewriteExpr (ctx: TreeMap<Ty, FunSerial>) expr : HExpr =
       | Ty (FunTk, ty :: _) -> ty
       | _ -> unreachable ()
 
-    match ctx |> TMap.tryFind ty with
+    match ctx.Equal |> TMap.tryFind ty with
+    | None -> expr
+    | Some funSerial -> HFunExpr(funSerial, funTy, [], loc)
+
+  | HPrimExpr (HPrim.ToString, funTy, loc) ->
+    let ty =
+      match funTy with
+      | Ty (FunTk, ty :: _) -> ty
+      | _ -> unreachable ()
+
+    match ctx.String |> TMap.tryFind ty with
     | None -> expr
     | Some funSerial -> HFunExpr(funSerial, funTy, [], loc)
 
@@ -124,14 +156,22 @@ let private rewriteStmt ctx stmt : HStmt =
 // Generation
 // -----------------------------------------------
 
+[<RequireQualifiedAccess; NoEquality; NoComparison>]
+type private DRx =
+  { Variants: TreeMap<VariantSerial, VariantDef>
+    Tys: TreeMap<TySerial, TyDef> }
+
+[<RequireQualifiedAccess; NoEquality; NoComparison>]
 type private DCtx =
   { Serial: Serial
     NewVars: (VarSerial * VarDef) list
     NewFuns: (FunSerial * FunDef) list
     NewLetFuns: (Ty * HStmt) list
     WorkList: Ty list
+    StringWorkList: Ty list
     GenericListEqualFunOpt: FunSerial option
-    EqualFunInstances: TreeMap<Ty, FunSerial> }
+    EqualFunInstances: TreeMap<Ty, FunSerial>
+    StringFunInstances: TreeMap<Ty, FunSerial> }
 
 let private ofHirCtx (hirCtx: HirCtx) : DCtx =
   { Serial = hirCtx.Serial
@@ -139,32 +179,207 @@ let private ofHirCtx (hirCtx: HirCtx) : DCtx =
     NewFuns = []
     NewLetFuns = []
     WorkList = []
+    StringWorkList = []
     GenericListEqualFunOpt = None
-    EqualFunInstances = TMap.empty tyCompare }
+    EqualFunInstances = TMap.empty tyCompare
+    StringFunInstances = TMap.empty tyCompare }
+
+let private addVar (name: string) (ty: Ty) (loc: Loc) (ctx: DCtx) =
+  let serial = ctx.Serial + 1
+  let varSerial = VarSerial serial
+
+  let varDef: VarDef =
+    { Name = name
+      IsStatic = NotStatic
+      Linkage = InternalLinkage
+      Ty = ty
+      Loc = loc }
+
+  let ctx =
+    { ctx with
+        Serial = serial
+        NewVars = (varSerial, varDef) :: ctx.NewVars }
+
+  varSerial, ctx
+
+// string tuple :=
+//    let (x1, x2, ...) = tuple
+//    "(" + string x1 + ", " + string x2 + ", " + ... + ")"
+let private deriveStringForTuple (tupleTy: Ty) (ctx: DCtx) : DCtx =
+  let loc =
+    Loc(Symbol.intern "MiloneDerive.TupleString", 0, 0)
+
+  let itemTys =
+    match tupleTy with
+    | Ty (TupleTk, tyArgs) -> tyArgs
+    | _ -> unreachable ()
+
+  let funSerial, ctx =
+    FunSerial(ctx.Serial + 1), { ctx with Serial = ctx.Serial + 1 }
+
+  let funDef: FunDef =
+    { Name = "tuple" + string (List.length itemTys) + "String"
+      Arity = 1
+      Ty = TyScheme([], tyFun tupleTy tyString)
+      Abi = MiloneAbi
+      Linkage = InternalLinkage
+      Prefix = []
+      Loc = loc }
+
+  let _, itemPatAcc, itemAcc, ctx =
+    itemTys
+    |> List.fold
+         (fun (i, itemPatAcc, itemAcc, ctx) itemTy ->
+           let itemArg, ctx = addVar ("x" + string i) itemTy loc ctx
+           let itemPat = hpVar itemArg itemTy loc
+
+           let item =
+             let stringFun =
+               HPrimExpr(HPrim.ToString, tyFun itemTy tyString, loc)
+
+             let item = HVarExpr(itemArg, itemTy, loc)
+             hxApp stringFun item tyString loc
+
+           i + 1, itemPat :: itemPatAcc, item :: itemAcc, ctx)
+         (0, [], [], ctx)
+
+  let concat =
+    let leftParen = HLitExpr(StringLit "(", loc)
+    let comma = HLitExpr(StringLit ", ", loc)
+    let rightParen = HLitExpr(StringLit ")", loc)
+
+    let fun1Ty = tyFun tyString tyString
+
+    let addPrim =
+      HPrimExpr(HPrim.Add, tyFun tyString fun1Ty, loc)
+
+    let parts =
+      let rec go acc itemAcc =
+        match itemAcc with
+        | [] -> acc
+        | item :: itemAcc -> go (item :: comma :: acc) itemAcc
+
+      match itemAcc with
+      | [] -> [ HLitExpr(StringLit "()", loc) ]
+
+      | item :: itemAcc -> go [ item; rightParen ] itemAcc
+
+    parts |> List.fold (hxApp2 addPrim) leftParen
+
+  let letFunStmt =
+    let tuplePat =
+      HNodePat(HTuplePN, List.rev itemPatAcc, tupleTy, loc)
+
+    HLetFunStmt(funSerial, [ tuplePat ], concat, loc)
+
+  { ctx with
+      NewFuns = (funSerial, funDef) :: ctx.NewFuns
+      NewLetFuns = (tupleTy, letFunStmt) :: ctx.NewLetFuns
+      StringWorkList = List.append itemTys ctx.StringWorkList
+      StringFunInstances =
+        ctx.StringFunInstances
+        |> TMap.add tupleTy funSerial }
+
+// string union :=
+//    match union with
+//    | U.UnitLike -> "U.UnitLike"
+//    | U.Carrying payload -> "U.Carrying(" + string payload + ")"
+let private deriveStringForUnion (rx: DRx) (unionTy: Ty) (ctx: DCtx) : DCtx =
+  let loc =
+    Loc(Symbol.intern "MiloneDerive.UnionString", 0, 0)
+
+  let tySerial, tyArgs =
+    match unionTy with
+    | Ty (UnionTk tySerial, tyArgs) -> tySerial, tyArgs
+    | _ -> unreachable ()
+
+  let unionIdent, tyVars, variants =
+    match rx.Tys |> mapFind tySerial with
+    | UnionTyDef (unionIdent, tyVars, variants, _) -> unionIdent, tyVars, variants
+    | _ -> unreachable ()
+
+  let funSerial, ctx =
+    FunSerial(ctx.Serial + 1), { ctx with Serial = ctx.Serial + 1 }
+
+  let funDef: FunDef =
+    { Name = "union" + string (List.length tyArgs) + "String"
+      Arity = 1
+      Ty = TyScheme([], tyFun unionTy tyString)
+      Abi = MiloneAbi
+      Linkage = InternalLinkage
+      Prefix = []
+      Loc = loc }
+
+  let tyAssign = tyAssign tyVars tyArgs
+
+  let addPrim =
+    let fun1Ty = tyFun tyString tyString
+    HPrimExpr(HPrim.Add, tyFun tyString fun1Ty, loc)
+
+  let trueExpr = hxTrue loc
+
+  let unionArg, ctx = addVar "union" unionTy loc ctx
+
+  let armAcc, ctx =
+    variants
+    |> List.map (fun variantSerial -> variantSerial, rx.Variants |> mapFind variantSerial)
+    |> List.fold
+         (fun (armAcc, ctx) (variantSerial, variantDef: VariantDef) ->
+           let name =
+             if variantDef.Name <> unionIdent then
+               unionIdent + "." + variantDef.Name
+             else
+               variantDef.Name
+
+           if not variantDef.HasPayload then
+             let armPat = HVariantPat(variantSerial, unionTy, loc)
+             let body = HLitExpr(StringLit name, loc)
+             (armPat, trueExpr, body) :: armAcc, ctx
+           else
+             let payloadTy = tyAssign variantDef.PayloadTy
+             let payloadArg, ctx = addVar "payload" payloadTy loc ctx
+
+             let armPat =
+               HNodePat(HVariantAppPN variantSerial, [ hpVar payloadArg payloadTy loc ], unionTy, loc)
+
+             let payload =
+               let stringFun =
+                 HPrimExpr(HPrim.ToString, tyFun payloadTy tyString, loc)
+
+               let item = HVarExpr(payloadArg, payloadTy, loc)
+               hxApp stringFun item tyString loc
+
+             let concat =
+               let s1 = HLitExpr(StringLit(name + "("), loc)
+               let s2 = HLitExpr(StringLit ")", loc)
+               hxApp2 addPrim (hxApp2 addPrim s1 payload) s2
+
+             (armPat, trueExpr, concat) :: armAcc, ctx)
+         ([], ctx)
+
+  let body =
+    HMatchExpr(HVarExpr(unionArg, unionTy, loc), List.rev armAcc, tyString, loc)
+
+  let letFunStmt =
+    HLetFunStmt(funSerial, [ hpVar unionArg unionTy loc ], body, loc)
+
+  { ctx with
+      NewFuns = (funSerial, funDef) :: ctx.NewFuns
+      NewLetFuns = (unionTy, letFunStmt) :: ctx.NewLetFuns
+      StringWorkList = List.append tyArgs ctx.StringWorkList
+      StringFunInstances =
+        ctx.StringFunInstances
+        |> TMap.add unionTy funSerial }
 
 let private deriveOnStmt (hirCtx: HirCtx) (ctx: DCtx) stmt : DCtx =
+  let rx: DRx =
+    { Variants = hirCtx.Variants
+      Tys = hirCtx.Tys }
+
   let findTy tySerial = hirCtx.Tys |> mapFind tySerial
 
   let findVariant variantSerial =
     hirCtx.Variants |> mapFind variantSerial
-
-  let addVar name ty loc (ctx: DCtx) =
-    let serial = ctx.Serial + 1
-    let varSerial = VarSerial serial
-
-    let varDef: VarDef =
-      { Name = name
-        IsStatic = NotStatic
-        Linkage = InternalLinkage
-        Ty = ty
-        Loc = loc }
-
-    let ctx =
-      { ctx with
-          Serial = serial
-          NewVars = (varSerial, varDef) :: ctx.NewVars }
-
-    varSerial, ctx
 
   let findGenericListEqualFunOpt (ctx: DCtx) : FunSerial option * DCtx =
     match ctx.GenericListEqualFunOpt with
@@ -354,12 +569,7 @@ let private deriveOnStmt (hirCtx: HirCtx) (ctx: DCtx) stmt : DCtx =
       | UnionTyDef (ident, tyVars, variantSerials, loc) -> ident, tyVars, variantSerials, loc
       | _ -> unreachable ()
 
-    // #tyAssign
-    let tyAssign =
-      match listTryZip tyVars tyArgs with
-      | [], [], [] -> id
-      | assignment, [], [] -> tySubst (fun tySerial -> assocTryFind compare tySerial assignment)
-      | _ -> fun (_: Ty) -> unreachable ()
+    let tyAssign = tyAssign tyVars tyArgs
 
     let trueExpr = hxTrue loc
     let falseExpr = HLitExpr(BoolLit false, loc)
@@ -443,7 +653,7 @@ let private deriveOnStmt (hirCtx: HirCtx) (ctx: DCtx) stmt : DCtx =
 
     ctx
 
-  let generate (ctx: DCtx) ty : DCtx =
+  let generateEqualFun (ctx: DCtx) ty : DCtx =
     let (Ty (tk, tyArgs)) = ty
 
     match tk, tyArgs with
@@ -451,41 +661,85 @@ let private deriveOnStmt (hirCtx: HirCtx) (ctx: DCtx) stmt : DCtx =
     | FloatTk _, _
     | BoolTk, _
     | CharTk, _
-    | StringTk _, _
+    | StringTk, _
     | VoidPtrTk _, _
     | NativePtrTk _, _
-    | FunPtrTk, _ -> ctx
+    | FunPtrTk, _
+    | TupleTk, [] -> ctx
 
     | _ when ctx.EqualFunInstances |> TMap.containsKey ty -> ctx
 
-    | TupleTk _, [] -> ctx
-    | TupleTk _, _ -> deriveEqualForTuple ty ctx
-
-    | ListTk _, _ -> deriveEqualForList ty ctx
+    | TupleTk, _ -> deriveEqualForTuple ty ctx
+    | ListTk, _ -> deriveEqualForList ty ctx
     | UnionTk _, _ -> deriveEqualForUnion ty ctx
 
     | _ -> ctx
 
+  let generateStringFun (ctx: DCtx) ty : DCtx =
+    let (Ty (tk, tyArgs)) = ty
+
+    match tk, tyArgs with
+    | IntTk _, _
+    | FloatTk _, _
+    | BoolTk, _
+    | CharTk, _
+    | StringTk, _
+    | TupleTk, [] -> ctx
+
+    | _ when ctx.StringFunInstances |> TMap.containsKey ty -> ctx
+
+    | TupleTk, _ -> deriveStringForTuple ty ctx
+    // | ListTk _, _ -> deriveStringForList ty ctx
+    | UnionTk _, _ -> deriveStringForUnion rx ty ctx
+    | _ -> ctx
+
   let ctx =
-    fuStmt (TSet.empty tyCompare) stmt
-    |> TSet.fold generate ctx
+    let empty: FCtx =
+      { Equal = TSet.empty tyCompare
+        String = TSet.empty tyCompare }
 
-  let rec go workList (ctx: DCtx) : DCtx =
-    match workList with
-    | [] ->
-      if ctx.WorkList |> List.isEmpty then
-        ctx
-      else
-        let workList, ctx =
-          ctx.WorkList, { ctx with WorkList = [] }
+    let fCtx = fuStmt empty stmt
 
-        go workList ctx
+    let ctx =
+      fCtx.Equal |> TSet.fold generateEqualFun ctx
 
-    | ty :: workList -> go workList (generate ctx ty)
+    fCtx.String |> TSet.fold generateStringFun ctx
 
-  let ctx = go [] ctx
+  let ctx =
+    let rec go workList (ctx: DCtx) : DCtx =
+      match workList with
+      | [] ->
+        if ctx.WorkList |> List.isEmpty then
+          ctx
+        else
+          let workList, ctx =
+            ctx.WorkList, { ctx with WorkList = [] }
+
+          go workList ctx
+
+      | ty :: workList -> go workList (generateEqualFun ctx ty)
+
+    go [] ctx
 
   assert (List.isEmpty ctx.WorkList)
+
+  let ctx =
+    let rec go workList (ctx: DCtx) : DCtx =
+      match workList with
+      | [] ->
+        if ctx.StringWorkList |> List.isEmpty then
+          ctx
+        else
+          let workList, ctx =
+            ctx.StringWorkList, { ctx with StringWorkList = [] }
+
+          go workList ctx
+
+      | ty :: workList -> go workList (generateStringFun ctx ty)
+
+    go [] ctx
+
+  assert (List.isEmpty ctx.StringWorkList)
   ctx
 
 let private deriveOnModule (hirCtx: HirCtx) (m: HModule) : HModule * HirCtx =
@@ -504,8 +758,11 @@ let private deriveOnModule (hirCtx: HirCtx) (m: HModule) : HModule * HirCtx =
 
     let stmts = List.append letFunStmts m.Stmts
 
-    stmts
-    |> List.map (rewriteStmt ctx.EqualFunInstances)
+    let ctx: RCtx =
+      { Equal = ctx.EqualFunInstances
+        String = ctx.StringFunInstances }
+
+    stmts |> List.map (rewriteStmt ctx)
 
   // Merge.
   let localVars =

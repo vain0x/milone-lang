@@ -515,6 +515,7 @@ let private resolveTraitBound (ctx: TyCtx) theTrait loc : TyCtx =
     | _ -> defaultToInt ctx ty
 
   | EqualTrait ty ->
+    // #trait_resolve
     let rec go memo ty =
       let (Ty (tk, tyArgs)) = ty
 
@@ -649,7 +650,68 @@ let private resolveTraitBound (ctx: TyCtx) theTrait loc : TyCtx =
 
     | _ -> error ctx
 
-  | ToStringTrait ty -> expectBasic ctx ty
+  | ToStringTrait ty ->
+    // #trait_resolve
+    let rec go memo ty =
+      let (Ty (tk, tyArgs)) = ty
+
+      let onTys memo tys =
+        tys
+        |> List.fold
+             (fun (ok, memo) tyArg ->
+               if not ok then
+                 ok, memo
+               else
+                 let ok1, memo = go memo tyArg
+                 ok && ok1, memo)
+             (true, memo)
+
+      let allowRec memo action =
+        if memo |> TSet.contains ty then
+          true, memo
+        else
+          memo |> TSet.add ty |> action
+
+      match tk, tyArgs with
+      | _ when tyIsBasic ty -> true, memo
+
+      | TupleTk, [] -> true, memo
+      | TupleTk, _ -> onTys memo tyArgs
+
+      | UnionTk (tySerial, _), _ ->
+        allowRec memo (fun memo ->
+          match ctx.Tys |> mapFind tySerial with
+          | UnionTyDef (_, tyVars, variants, _) ->
+            let assignmentOpt =
+              match listTryZip tyVars tyArgs with
+              | assignment, [], [] -> Some assignment
+              | _ -> None
+
+            let payloadTysOpt =
+              match assignmentOpt with
+              | Some assignment ->
+                variants
+                |> List.choose (fun variantSerial ->
+                  let variantDef = ctx.Variants |> mapFind variantSerial
+
+                  if variantDef.HasPayload then
+                    variantDef.PayloadTy
+                    |> tySubst (fun tySerial -> assocTryFind compare tySerial assignment)
+                    |> Some
+                  else
+                    None)
+                |> Some
+              | _ -> None
+
+            match payloadTysOpt with
+            | Some payloadTys -> onTys memo payloadTys
+            | _ -> false, memo
+          | _ -> false, memo)
+      | _ -> false, memo
+
+    let resolved, _ = go (TSet.empty tyCompare) ty
+
+    if resolved then ok ctx else error ctx
 
   | PtrTrait ty ->
     match ty with

@@ -39,6 +39,12 @@ Tuple values are created by separating expressions by commas (`,`).
 
 And so on.
 
+## Operations
+
+- `string` function:
+    Tuples is convertible to string if it's unit or all item types are convertible to string.
+    - *Remark*: The output might change in future.
+
 ## Advanced Topics
 
 ### Runtime Representation
