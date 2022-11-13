@@ -51,6 +51,7 @@ type Tk =
   | BoolTk
   | CharTk
   | StringTk
+  | NeverTk
   | ObjTk
 
   /// Ty args must be `[s; t]`.
@@ -322,6 +323,9 @@ type TExprKind =
 
   /// `s.[l .. r]`
   | TSliceEN
+
+  /// This is a marker of a never-completing expression.
+  | TCatchNeverEN
 
   /// Direct call to native fun.
   | TCallNativeEN of funName: string

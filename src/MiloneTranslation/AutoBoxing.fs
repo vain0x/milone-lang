@@ -198,6 +198,7 @@ let private trdTy isDirect (ctx: TrdCtx) ty : TrdCtx =
     | BoolTk
     | CharTk
     | StringTk
+    | NeverTk
     | ObjTk
     | VoidPtrTk _
     | OpaqueTk _
@@ -386,7 +387,8 @@ let private tsmTy (ctx: TsmCtx) ty =
 
     match tk with
     | BoolTk
-    | CharTk -> 1, ctx
+    | CharTk
+    | NeverTk -> 1, ctx
 
     | IntTk flavor -> intFlavorToBytes flavor, ctx
     | FloatTk flavor -> floatFlavorToBytes flavor, ctx

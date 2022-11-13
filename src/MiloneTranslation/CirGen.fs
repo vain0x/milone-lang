@@ -322,7 +322,7 @@ let private cgArgTys ctx argTys : CTy list * CirCtx =
   |> List.mapFold cgTyComplete ctx
 
 let private cgResultTy ctx resultTy : CTy * CirCtx =
-  if tyIsUnit resultTy then
+  if tyIsUnit resultTy || tyIsNever resultTy then
     CVoidTy, ctx
   else
     cgTyComplete ctx resultTy
@@ -618,6 +618,7 @@ let private cgTyIncomplete (ctx: CirCtx) (ty: Ty) : CTy * CirCtx =
   | FunTk, [ sTy; tTy ] -> genIncompleteFunTyDecl ctx sTy tTy
   | FunTk, _ -> unreachable ()
 
+  | NeverTk, _
   | TupleTk, [] -> CCharTy, ctx
   | TupleTk, _ -> unreachable () // Non-unit TupleTk is resolved in MonoTy.
 
@@ -654,6 +655,7 @@ let private cgTyComplete (ctx: CirCtx) (ty: Ty) : CTy * CirCtx =
   | FunTk, [ sTy; tTy ] -> genFunTyDef ctx sTy tTy
   | FunTk, _ -> unreachable ()
 
+  | NeverTk, _
   | TupleTk, [] -> CCharTy, ctx
   | TupleTk, _ -> unreachable () // Non-unit TupleTk is resolved in MonoTy.
 
@@ -1233,7 +1235,7 @@ let private cgSetStmt ctx serial right =
   addStmt ctx (CSetStmt(left, right))
 
 let private cgReturnStmt ctx expr argTy =
-  if tyIsUnit argTy then
+  if tyIsUnit argTy || tyIsNever argTy then
     CReturnStmt None, ctx
   else
     let expr, ctx = cgExpr ctx expr

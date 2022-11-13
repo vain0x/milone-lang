@@ -153,6 +153,7 @@ let private tyIsOwnedWith ownedTySet ty : bool =
     | BoolTk
     | CharTk
     | StringTk
+    | NeverTk
     | ObjTk
     | FunTk
     | VoidPtrTk _

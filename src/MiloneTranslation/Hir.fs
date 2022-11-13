@@ -20,34 +20,25 @@ module S = Std.StdString
 // -----------------------------------------------
 
 let tyInt = Ty(IntTk I32, [])
-
 let tyNativeInt = Ty(IntTk IPtr, [])
-
-let tyBool = Ty(BoolTk, [])
-
 let tyFloat = Ty(FloatTk F64, [])
-
+let tyBool = Ty(BoolTk, [])
 let tyChar = Ty(CharTk, [])
-
 let tyString = Ty(StringTk, [])
-
+let tyNever = Ty(NeverTk, [])
 let tyObj = Ty(ObjTk, [])
 
-let tyTuple tys = Ty(TupleTk, tys)
-
 let tyList ty = Ty(ListTk, [ ty ])
-
 let tyFun sourceTy targetTy = Ty(FunTk, [ sourceTy; targetTy ])
 
 let tyNativeFun paramTys resultTy =
   Ty(FunPtrTk, List.append paramTys [ resultTy ])
 
+let tyTuple tys = Ty(TupleTk, tys)
 let tyUnit = tyTuple []
 
 let tyMeta serial loc = Ty(MetaTk(serial, loc), [])
-
 let tyUnion tySerial tyArgs = Ty(UnionTk tySerial, tyArgs)
-
 let tyRecord tySerial tyArgs = Ty(RecordTk tySerial, tyArgs)
 
 // -----------------------------------------------
@@ -369,6 +360,7 @@ let private tkEncode tk : int =
   | BoolTk -> just 3
   | CharTk -> just 4
   | StringTk -> just 5
+  | NeverTk -> just 26 // to be reordered
   | ObjTk -> just 6
   | FunTk -> just 7
   | TupleTk -> just 8
@@ -403,6 +395,7 @@ let tkDisplay getTyName tk =
   | BoolTk -> "bool"
   | CharTk -> "char"
   | StringTk -> "string"
+  | NeverTk -> "never"
   | ObjTk -> "obj"
   | FunTk -> "fun"
   | TupleTk -> "tuple"
@@ -428,6 +421,11 @@ let noTy: Ty = Ty(NativeTypeTk "__no_use", [])
 let tyIsUnit ty =
   match ty with
   | Ty (TupleTk, []) -> true
+  | _ -> false
+
+let tyIsNever ty =
+  match ty with
+  | Ty (NeverTk, _) -> true
   | _ -> false
 
 let tyIsFun ty =
@@ -542,6 +540,7 @@ let tyMangle (ty: Ty, memo: TreeMap<Ty, string>) : string * TreeMap<Ty, string> 
       | BoolTk -> "Bool", ctx
       | CharTk -> "Char", ctx
       | StringTk -> "String", ctx
+      | NeverTk -> "Never", ctx
 
       | MetaTk _
       | ObjTk -> "Object", ctx

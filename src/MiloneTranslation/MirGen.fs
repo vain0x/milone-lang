@@ -255,6 +255,8 @@ let private toBoxMode (ty: Ty) : BoxMode =
   match ty with
   | Ty (IntTk I64, _)
   | Ty (IntTk U64, _) -> BoxMode.Alloc
+
+  | Ty (NeverTk, _)
   | Ty (TupleTk, []) -> BoxMode.Null
 
   | Ty (IntTk _, _)
@@ -1051,6 +1053,14 @@ let private mirifyCallStringGetSliceExpr ctx args loc =
 
   temp, ctx
 
+let private mirifyCatchNeverExpr (ctx: MirCtx) arg loc =
+  let _, ctx = mirifyExpr ctx arg
+
+  let ctx =
+    addTerminator ctx (MExitTerminator (MLitExpr (IntLit "1", loc))) loc
+
+  MNeverExpr loc, ctx
+
 let private mirifyDiscriminantExpr (ctx: MirCtx) variantSerial loc =
   let tySerial =
     (ctx.Rx.Variants |> mapFind variantSerial)
@@ -1298,7 +1308,7 @@ let private mirifyCallProcExpr ctx callee args ty loc =
   let callee, ctx = mirifyExpr ctx callee
   let args, ctx = mirifyArgs ctx args
 
-  if tyIsUnit ty then
+  if tyIsUnit ty || tyIsNever ty then
     let ctx =
       addStmt ctx (MActionStmt(MCallProcAction, callee :: args, loc))
 
@@ -1407,7 +1417,7 @@ let private mirifyExprInfCallClosure ctx callee args resultTy loc =
   let callee, ctx = mirifyExpr ctx callee
   let args, ctx = mirifyArgs ctx args
 
-  if tyIsUnit resultTy then
+  if tyIsUnit resultTy || tyIsNever resultTy then
     let ctx =
       addStmt ctx (MActionStmt(MCallClosureAction, callee :: args, loc))
 
@@ -1485,7 +1495,7 @@ let private mirifyExprFunPtrInvoke ctx callee arg resultTy loc =
 
     | _ -> [ arg ]
 
-  if tyIsUnit resultTy then
+  if tyIsUnit resultTy || tyIsNever resultTy then
     let ctx =
       addStmt ctx (MActionStmt(MCallProcAction, callee :: args, loc))
 
@@ -1513,7 +1523,7 @@ let private mirifyExprInfCallNative ctx (funName: string) args ty loc =
   let args, ctx = mirifyExprs ctx args
 
   // No result if result type is unit.
-  if ty |> tyIsUnit then
+  if tyIsUnit ty || tyIsNever ty then
     let ctx =
       addStmt ctx (MActionStmt(MCallNativeAction(funName, argTys), args, loc))
 
@@ -1546,6 +1556,8 @@ let private mirifyExprInf ctx itself kind args ty loc =
 
   | HIndexEN, [ l; r ], _ -> mirifyCallStringIndexExpr ctx l r loc
   | HSliceEN, _, _ -> mirifyCallStringGetSliceExpr ctx args loc
+
+  | HCatchNeverEN, [ arg ], _ -> mirifyCatchNeverExpr ctx arg loc
 
   | HDiscriminantEN variantSerial, _, _ -> mirifyDiscriminantExpr ctx variantSerial loc
 

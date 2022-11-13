@@ -827,6 +827,7 @@ let private resolveTy ctx ty selfTyArgs : Ty * ScopeCtx =
         | BoolTk
         | CharTk
         | StringTk
+        | NeverTk
         | ObjTk
         | FunTk
         | TupleTk
@@ -2123,6 +2124,7 @@ let private addPrims (ctx: ScopeCtx) =
       "bool", ofTy tyBool
       "char", ofTy tyChar
       "string", ofTy tyString
+      "never", ofTy tyNever
       "obj", ofTy tyObj
       "voidptr", ofTy tyVoidPtr
       "list", ofTk ListTk
