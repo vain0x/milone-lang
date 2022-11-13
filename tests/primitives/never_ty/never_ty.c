@@ -34,6 +34,10 @@ void never_ty_never_ty_testFunObj(void);
 
 void never_ty_never_ty_testOwn(void);
 
+void never_ty_never_ty_testInfiniteLoop_diverge(void);
+
+void never_ty_never_ty_testInfiniteLoop(void);
+
 int main(int argc, char **argv);
 
 void never_ty_never_ty_start(void);
@@ -152,6 +156,15 @@ switch_next_7:;
     return;
 }
 
+void never_ty_never_ty_testInfiniteLoop_diverge(void) {
+tailrec_10:;
+    goto tailrec_10;
+}
+
+void never_ty_never_ty_testInfiniteLoop(void) {
+    return;
+}
+
 int main(int argc, char **argv) {
     milone_start(argc, argv);
     never_ty_never_ty_start();
@@ -160,6 +173,7 @@ int main(int argc, char **argv) {
     never_ty_never_ty_testMatchArm();
     never_ty_never_ty_testFunObj();
     never_ty_never_ty_testOwn();
+    never_ty_never_ty_testInfiniteLoop();
     never_ty_never_ty_crash();
     exit(1);
 }

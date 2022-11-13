@@ -47,6 +47,11 @@ let private testOwn () =
 
   Own.release resource
 
+// Infinite loop can be never type.
+let private testInfiniteLoop () =
+  let rec diverge () : never = diverge ()
+  ()
+
 // Result type of main can be never.
 let main _ : never =
   // This actually exists with 0.
@@ -56,5 +61,6 @@ let main _ : never =
   testMatchArm ()
   testFunObj ()
   testOwn ()
+  testInfiniteLoop ()
 
   crash ()
