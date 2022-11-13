@@ -128,6 +128,8 @@ When to use a generic type, type arguments that bind to type variables must be s
 
 ## Operations
 
+- Equality:
+    Discriminated union type is equatable if all payloads are equatable.
 - `string` function:
     Discriminated union type is convertible to string if all payloads are convertible to string.
     - *Remark*: The output might change in future.

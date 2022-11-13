@@ -41,6 +41,8 @@ And so on.
 
 ## Operations
 
+- Equality:
+    Tuple is equatable if it's unit or all item types are equatable.
 - `string` function:
     Tuples is convertible to string if it's unit or all item types are convertible to string.
     - *Remark*: The output might change in future.
