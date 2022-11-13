@@ -126,6 +126,12 @@ When to use a generic type, type arguments that bind to type variables must be s
     let opt: Option<int> = Some 42
 ```
 
+## Operations
+
+- `string` function:
+    Discriminated union type is convertible to string if all payloads are convertible to string.
+    - *Remark*: The output might change in future.
+
 ## Advanced Topics
 
 ### Name of Parts
