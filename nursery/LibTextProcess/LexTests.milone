@@ -1,0 +1,63 @@
+module S = Std.StdString
+
+open LibTextProcess.Lex
+open LibTextProcess.TextPosition
+open Std.StdError
+open Std.StdTesting
+
+// test create
+let () =
+  let ok s =
+    match Lexer.create s with
+    | Ok _ -> true
+
+    | Error pos ->
+      printfn "%s" ("Error at " + TextPosition.debug pos)
+      false
+
+  assert (ok "")
+  assert (ok """rule [^\r\n]""")
+  assert (ok "true \"T\"\ndigits [\\d]+\nspaces [ \\t]\n")
+
+// test tokenize
+let () =
+  let rule =
+    """
+spaces [ \t]+
+
+var "var"
+ident [_\w][_\d\w]*
+
+lp "("
+rp ")"
+plus "+"
+inc "++"
+"""
+
+  let p s expected =
+    let lexer =
+      match Lexer.create rule with
+      | Ok it -> it
+      | Error pos -> failwith ("Error at " + TextPosition.debug pos)
+
+    let result, _ = Lexer.tokenize s lexer
+
+    let actual =
+      match result with
+      | Ok tokens ->
+        tokens
+        |> List.map (fun (t, (len: int)) -> (t + ":" + string len))
+        |> S.concat " "
+
+      | Error i -> "Tokenize error at " + string i
+
+    actual |> shouldEqual id expected
+
+  assert (p "" "")
+  assert (p "+++++" "inc:2 inc:2 plus:1")
+  assert (p "var variable" "var:3 spaces:1 ident:8")
+  assert (p "-1" "Tokenize error at 0")
+
+  assert (p "_" "ident:1")
+  assert (p "_AZaz09" "ident:7")
+  assert (p "0F" "Tokenize error at 0")

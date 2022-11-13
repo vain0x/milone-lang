@@ -1,0 +1,755 @@
+// Lexer using memoized NFA emulation.
+
+open LibTextProcess.TextPosition
+open Std.StdError
+open Std.StdMap
+open Std.StdMultimap
+open Std.StdPair
+open Std.StdSet
+open Std.StringBuffer
+open Std.StdList
+
+module S = Std.StdString
+
+let private __trace (s: string) = ()
+
+// -----------------------------------------------
+// Util
+// -----------------------------------------------
+
+module private S =
+  let toBytes (s: string) : byte list =
+    let rec loop acc i =
+      if i >= 0 then loop (byte s.[i] :: acc) (i - 1) else acc
+
+    loop [] (s.Length - 1)
+
+module private TSet =
+  let compare itemCompare (l: TreeSet<int> * int list) (r: TreeSet<int> * int list) =
+    // assume l = (set, list) satisfies (toList set) == list
+    List.compare itemCompare (snd l) (snd r)
+
+  let union first second =
+    second |> TSet.fold (fun set item -> TSet.add item set) first
+
+// -----------------------------------------------
+// ByteSet
+// -----------------------------------------------
+
+// set<byte>
+// type ByteSet = ByteSet of uint64 * uint64 * uint64 * uint64
+type private ByteSet = ByteSet of byte list
+
+module private ByteSet =
+  let empty () : ByteSet = ByteSet []
+  let singleton (b: byte) = ByteSet [ b ]
+  let ofList bs = ByteSet bs
+  let toList (ByteSet bs) = bs
+  let ofString (s: string) : ByteSet = ByteSet(S.toBytes s)
+
+  let contains b (ByteSet bs) = bs |> List.exists (fun x -> x = b)
+  let fold folder init (ByteSet bs) = List.fold folder init bs
+
+  let add (b: byte) (ByteSet bs) = ByteSet(b :: bs)
+
+// -----------------------------------------------
+
+// almost copied from TinyIni
+
+// This parses `(escape | verbatim)* '"'`.
+let private parseQuotedValue (sb: StringBuffer) (s: string) i : string option * int * StringBuffer =
+  // assert (s.[i - 1] = '"')
+
+  let sb = StringBuffer.clear sb
+
+  let rec verbatimLoop i =
+    if i < s.Length then
+      match s.[i] with
+      | '\r'
+      | '\n'
+      | '\\'
+      | '"' -> i
+
+      | _ -> verbatimLoop (i + 1)
+    else
+      i
+
+  let rec segmentLoop sb i =
+    if i < s.Length then
+      match s.[i] with
+      | '\r'
+      | '\n' -> false, i, sb
+
+      | '"' -> true, i + 1, sb
+
+      | '\\' when i + 1 < s.Length ->
+        match s.[i + 1] with
+        | 'r' -> segmentLoop (StringBuffer.writeAscii '\r' sb) (i + 2)
+        | 'n' -> segmentLoop (StringBuffer.writeAscii '\n' sb) (i + 2)
+        | 't' -> segmentLoop (StringBuffer.writeAscii '\t' sb) (i + 2)
+
+        | '\\'
+        | '\''
+        | '"' -> segmentLoop (StringBuffer.writeAscii s.[i + 1] sb) (i + 2)
+
+        | 'x' when i + 3 < s.Length ->
+          match S.parseHexAsUInt64 s.[i + 2 .. i + 3] with
+          | Some value -> segmentLoop (StringBuffer.writeAscii (char (byte value)) sb) (i + 4)
+          | None -> false, i, sb
+
+        | _ -> false, i, sb
+
+      | '\\' -> false, i, sb
+
+      | _ ->
+        let endIndex = verbatimLoop (i + 1)
+        segmentLoop (StringBuffer.writeString s.[i .. endIndex - 1] sb) endIndex
+    else
+      false, i, sb
+
+  let ok, i, sb = segmentLoop sb i
+
+  if ok then
+    let value, sb = StringBuffer.toString sb
+    Some value, i, sb
+  else
+    None, i, sb
+
+// -----------------------------------------------
+// Term
+// -----------------------------------------------
+
+/// Term of regular expression.
+[<RequireQualifiedAccess; NoEquality; NoComparison>]
+type private Term =
+  | String of string
+  /// `[...]`
+  | AnyOf of ByteSet
+  /// `[^...]`
+  | NoneOf of ByteSet
+  /// `x?`
+  | Opt of Term
+  /// `x*`
+  | Rep0 of Term
+  /// `x+`
+  | Rep1 of Term
+
+// -----------------------------------------------
+// Parse
+// -----------------------------------------------
+
+let private digitSet = S.toBytes "0123456789"
+
+let private wordSet =
+  S.toBytes "ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz"
+
+let private unescape (c: char) =
+  match c with
+  | 'r' -> Some '\r'
+  | 'n' -> Some '\n'
+  | 't' -> Some '\t'
+
+  | '-'
+  | '^'
+  | '['
+  | ']'
+  | '\''
+  | '"'
+  | '\\' -> Some c
+
+  | _ -> None
+
+let private parseStringLiteral (text: string) i =
+  assert (i < text.Length && text.[i] = '"')
+
+  let sb = StringBuffer.alloc 64
+  let valueOpt, i, sb = parseQuotedValue sb text (i + 1)
+
+  let termOpt =
+    match valueOpt with
+    | Some value -> Some(Term.String value)
+    | None ->
+      __trace "parseStringLiteral failed"
+      None
+
+  StringBuffer.dispose sb
+  termOpt, i
+
+/// Parses character set.
+let private parseCharSet (text: string) i =
+  assert (text.[i] = '[')
+
+  let rec go acc i =
+    if i < text.Length then
+      match text.[i] with
+      | ']' -> Some acc, i + 1
+
+      // escape
+      | '\\' when i + 1 < text.Length ->
+        match unescape text.[i + 1] with
+        | Some c -> go (byte c :: acc) (i + 2)
+
+        | None ->
+          match text.[i + 1] with
+          // hex
+          | 'x' when i + 3 < text.Length ->
+            match S.parseHexAsUInt64 text.[i + 2 .. i + 3] with
+            | Some value -> go (byte value :: acc) (i + 4)
+            | None -> None, i
+
+          // classes
+          | 'd' -> go (List.append digitSet acc) (i + 2)
+          | 's' -> go (byte ' ' :: byte '\t' :: acc) (i + 2)
+          | 'w' -> go (List.append wordSet acc) (i + 2)
+
+          | _ ->
+            __trace ("invalid escape: " + string i)
+            None, i
+
+      | '\\' ->
+        __trace "backtick at eof"
+        None, i
+
+      // range
+      | c when i + 2 < text.Length && text.[i + 1] = '-' ->
+        let l = byte c
+        let r = byte text.[i + 2]
+
+        if l < r then
+          go (List.append (List.init (int (r - l) + 1) (fun i -> l + byte i)) acc) (i + 3)
+        else
+          __trace "invalid range"
+          None, i
+
+      | c -> go (byte c :: acc) (i + 1)
+    else
+      None, i
+
+  let exclude, i =
+    if i + 1 < text.Length && text.[i + 1] = '^' then
+      true, i + 1
+    else
+      false, i
+
+  let result, i = go [] (i + 1)
+
+  match result with
+  | Some acc ->
+    let chars = ByteSet.ofList acc
+
+    let term = if exclude then Term.NoneOf chars else Term.AnyOf chars
+
+    Some term, i
+
+  | None -> None, i
+
+let private parsePrimaryTerm (text: string) (i: int) =
+  assert (i < text.Length)
+
+  match text.[i] with
+  | '"' -> parseStringLiteral text i
+  | '[' -> parseCharSet text i
+
+  // support dot, escape
+
+  | _ ->
+    __trace ("parsePrimaryTerm failed at " + string i)
+    None, i
+
+let private parseSuffixTerm (text: string) (i: int) =
+  let tOpt, i = parsePrimaryTerm text i
+
+  match tOpt with
+  | Some t ->
+    let t, i =
+      if i < text.Length then
+        match text.[i] with
+        | '?' -> Term.Opt t, i + 1
+        | '+' -> Term.Rep1 t, i + 1
+        | '*' -> Term.Rep0 t, i + 1
+        | _ -> t, i
+      else
+        t, i
+
+    Some t, i
+
+  | None -> None, i
+
+/// Parses `SuffixTerm+ eof`
+let private parseTerm (text: string) i =
+  let rec skipSpaces i =
+    if i < text.Length && text.[i] = ' ' then
+      skipSpaces (i + 1)
+    else
+      i
+
+  let rec go acc i =
+    let i = skipSpaces i
+
+    if i < text.Length then
+      let tOpt, i = parseSuffixTerm text i
+
+      match tOpt with
+      | Some t -> go (t :: acc) i
+      | None -> Error i
+    else
+      Ok(List.rev acc)
+
+  go [] i
+
+type private LexGrammarSyntax = (string * Term list) list
+
+let parseLexGrammar (text: string) : Result<LexGrammarSyntax, int * int> =
+  let lines =
+    text
+    |> S.toLines
+    |> List.mapi (fun i line -> i, line)
+    |> List.filter (fun (_, (line: string)) -> line.Length <> 0 && line.[0] <> '#')
+    |> List.map (fun (row, line) ->
+      // Find the end of rule name.
+      let k =
+        match S.findIndex " " line with
+        | Some it -> it
+        | None -> line.Length
+
+      let name = line.[0 .. k - 1]
+
+      let result = parseTerm line (k + 1)
+
+      row, name, result)
+
+  let rec go acc lines =
+    match lines with
+    | [] -> Ok(List.rev acc)
+
+    | (_, name, Ok term) :: lines -> go ((name, term) :: acc) lines
+
+    | (row, name, Error i) :: _ -> Error(row + 1, i + 1)
+
+  go [] lines
+
+// -----------------------------------------------
+// NTerm
+// -----------------------------------------------
+
+/// Normalized term.
+[<RequireQualifiedAccess; NoEquality; NoComparison>]
+type private NTerm =
+  | NEps
+  | AnyOf of ByteSet
+  | Conj of NTerm * NTerm
+  | Opt of NTerm
+  | Rep of NTerm
+
+let rec private lower term : NTerm =
+  match term with
+  | Term.String "" -> NTerm.NEps
+
+  | Term.String s ->
+    let rec go (l: int) r =
+      assert (l < r)
+
+      if r = l + 1 then
+        NTerm.AnyOf(ByteSet.singleton (byte s.[l]))
+      else
+        let m = (l + r) / 2
+        NTerm.Conj(go l m, go m r)
+
+    go 0 s.Length
+
+  | Term.AnyOf chars -> NTerm.AnyOf chars
+
+  | Term.NoneOf chars ->
+    List.init 255 (fun i ->
+      let b = byte (i + 1)
+      if ByteSet.contains b chars then None else Some b)
+    |> List.choose id
+    |> ByteSet.ofList
+    |> NTerm.AnyOf
+
+  | Term.Opt t -> NTerm.Opt(lower t)
+
+  | Term.Rep0 t -> NTerm.Rep(lower t)
+
+  | Term.Rep1 t ->
+    let t = lower t
+    NTerm.Conj(t, NTerm.Rep t)
+
+let private lowerTerms terms =
+  let rec go acc terms =
+    match terms with
+    | term :: terms -> go (NTerm.Conj(acc, lower term)) terms
+    | [] -> acc
+
+  match terms with
+  | term :: terms -> go (lower term) terms
+  | _ -> unreachable ()
+
+// -----------------------------------------------
+// NFA
+// -----------------------------------------------
+
+type private NfaState = int
+
+/// `NfaState * InputByte => NextNfaState list`
+type private TransitionMap = TreeMap<NfaState * byte, NfaState list>
+
+/// `NfaState => RuleName`
+type private AcceptMap = TreeMap<NfaState, string>
+
+/// NFA (Non-deterministic finite automaton)
+///
+/// `(initialState, transitionMap, acceptMap)`
+type private Nfa = NfaState * TransitionMap * AcceptMap
+
+/// Label of ε-transition.
+[<Literal>]
+let private Eps = 0uy
+
+/// Converts rules to an NFA.
+let private generateNfa (rules: (string * Term list) list) : Nfa =
+  let fresh (trans, last) = last + 1, (trans, last + 1)
+
+  let connect (c: byte) (u: int) (v: int) (trans, last) = Multimap.add (u, c) v trans, last
+
+  let rec go (u: int) b term =
+    match term with
+    | NTerm.AnyOf chars ->
+      let v, b = fresh b
+      let b = chars |> ByteSet.fold (fun b c -> connect c u v b) b
+      v, b
+
+    | NTerm.Conj(l, r) ->
+      let v, b = go u b l
+      go v b r
+
+    | NTerm.NEps ->
+      //       ε
+      // -> u ---> ((v))
+
+      let v, b = fresh b
+      let b = connect Eps u v b
+      v, b
+
+    | NTerm.Opt t ->
+      //        ε
+      // -> u -------------+
+      //    |              ↓
+      //    +----> [t] --> w --> ((v))
+
+      let v, b = fresh b
+      let w, b = go v b t
+      let b = b |> connect Eps u w |> connect Eps w v
+      v, b
+
+    | NTerm.Rep t ->
+      //      ε
+      // ->u ---> ((v)) <------+
+      //            |          | ε
+      //            |          |
+      //            +-> [t] -> w
+
+      let v, b = fresh b
+      let w, b = go v b t
+      let b = b |> connect Eps u v |> connect Eps w v
+      v, b
+
+  let u = 1 // start state
+  let ctx = TMap.empty (Pair.compare compare compare), u
+
+  let ctx, accepts =
+    rules
+    |> List.fold
+         (fun (ctx, accepts) (name, terms) ->
+           // ->u --[terms]--> ((v))
+           let v, ctx = go u ctx (lowerTerms terms)
+
+           // Remember accept state and its name.
+           let accepts = accepts |> TMap.add v name
+
+           ctx, accepts)
+         (ctx, TMap.empty compare)
+
+  let trans, _ = ctx
+  u, trans, accepts
+
+// -----------------------------------------------
+// NFA
+// -----------------------------------------------
+
+// u, v: NFA state
+// d, e: DFA state (= set of NFA states)
+
+type private DfaState = TreeSet<int>
+
+let private computeClosure (ns: DfaState) (trans: TransitionMap) : DfaState =
+  let add (modified, ns) (v: int) =
+    if TSet.contains v ns |> not then
+      true, TSet.add v ns
+    else
+      modified, ns
+
+  let update ns =
+    ns
+    |> TSet.fold (fun acc u -> Multimap.find (u, Eps) trans |> List.fold add acc) (false, ns)
+
+  let rec closureLoop ns =
+    let modified, ns = update ns
+    if modified then closureLoop ns else ns
+
+  closureLoop ns
+
+/// Computes the target DFA state of an edge `d ->^c e`.
+let private computeDfaEdge (d: DfaState) (c: byte) (trans: TransitionMap) : DfaState =
+  d
+  |> TSet.fold
+       (fun (e: DfaState) (u: NfaState) ->
+         let vs = Multimap.find (u, c) trans |> TSet.ofList compare
+         TSet.union e (computeClosure vs trans))
+       (TSet.empty compare: DfaState)
+
+type private DfaStateId = int
+
+/// ID of the empty state.
+let private EmptyId: DfaStateId = 0
+
+type private NfaCtx =
+  {
+    // Mutual mapping between DfaStateId <-> DfaState
+    // so that DfaStateId can be used as compact representation of DfaState.
+    VertexData: TreeMap<DfaStateId, DfaState>
+    VertexMemo: TreeMap<DfaState * NfaState list, DfaStateId>
+    VertexCount: int
+
+    // interned initial state
+    InitVertex: DfaStateId * DfaState
+
+    // Memoization of edge generation (`d ->^c e`)
+    EdgeMemo: TreeMap<DfaStateId * byte, DfaStateId * DfaState>
+
+    // Memoization of acceptance check
+    AcceptMemo: TreeMap<DfaStateId, string option>
+    AcceptMax: int
+
+    Nfa: Nfa }
+
+module private Nx =
+  let create nfa : NfaCtx =
+    let di0 = 0
+    let d0: DfaState = TSet.empty compare
+
+    let di1 = 1
+
+    let d1: DfaState =
+      let u, trans, _ = nfa
+      let d: DfaState = TSet.ofList compare [ u ]
+      computeClosure d trans
+
+    ({ VertexData = TMap.empty compare |> TMap.add di0 d0 |> TMap.add di1 d1
+
+       VertexMemo =
+         TMap.empty (TSet.compare compare)
+         |> TMap.add (d0, TSet.toList d0) di0
+         |> TMap.add (d1, TSet.toList d1) di1
+
+       VertexCount = 2
+       InitVertex = di1, d1
+
+       EdgeMemo = TMap.empty (Pair.compare compare compare)
+       AcceptMemo = TMap.empty compare
+       AcceptMax = 0
+       Nfa = nfa }: NfaCtx)
+
+  let intern (d: DfaState) (nx: NfaCtx) : DfaStateId * NfaCtx =
+    match nx.VertexMemo |> TMap.tryFind (d, TSet.toList d) with
+    | Some di -> di, nx
+
+    | None ->
+      let di = nx.VertexCount
+
+      let nx =
+        { nx with
+            VertexData = nx.VertexData |> TMap.add di d
+            VertexMemo = nx.VertexMemo |> TMap.add (d, TSet.toList d) di
+            VertexCount = nx.VertexCount + 1 }
+
+      (let s = d |> TSet.toList |> List.map string |> S.concat ", "
+       __trace ("intern " + string di + " : " + s))
+
+      di, nx
+
+  let edge (di: DfaStateId) (c: byte) (nx: NfaCtx) : DfaStateId * DfaState * NfaCtx =
+    match nx.EdgeMemo |> TMap.tryFind (di, c) with
+    | Some(e, eSet) -> e, eSet, nx
+
+    | None ->
+      let _, trans, _ = nx.Nfa
+
+      let d =
+        match nx.VertexData |> TMap.tryFind di with
+        | Some it -> it
+        | None -> unreachable () // must be interned
+
+      let e = computeDfaEdge d c trans
+      let ei, nx = intern e nx
+
+      let nx = { nx with EdgeMemo = nx.EdgeMemo |> TMap.add (di, c) (ei, e) }
+
+      (let s = d |> TSet.toList |> List.map string |> S.concat ", "
+       __trace ("edge " + string di + ", " + string (uint c) + " : " + s))
+
+      // trace "edge %d,%d -> %d" d c ei
+      ei, e, nx
+
+  let checkAccept (di: DfaStateId) (nx: NfaCtx) : string option * NfaCtx =
+    match nx.AcceptMemo |> TMap.tryFind di with
+    | Some it -> it, nx
+
+    | None ->
+      assert (di >= nx.AcceptMax)
+
+      let _, _, acceptMap = nx.Nfa
+
+      let rec computeLoop memo ei =
+        __trace ("computeLoop " + (string (ei: int)))
+
+        let nameOpt =
+          match nx.VertexData |> TMap.tryFind ei with
+          | Some e ->
+            e
+            |> TSet.fold
+                 (fun opt (v: NfaState) ->
+                   match opt with
+                   | Some _ -> opt
+                   | None -> acceptMap |> TMap.tryFind v)
+                 None
+
+          | None ->
+            // interner bug
+            unreachable ()
+
+        let memo = memo |> TMap.add ei nameOpt
+
+        (let s =
+          match nameOpt with
+          | Some name -> name
+          | None -> "not"
+
+         __trace ("accept " + string ei + " " + s))
+
+        if ei = di then nameOpt, memo else computeLoop memo (ei + 1)
+
+      let result, memo = computeLoop nx.AcceptMemo nx.AcceptMax
+
+      let nx =
+        { nx with
+            AcceptMemo = memo
+            AcceptMax = di - 1 }
+
+      result, nx
+
+  let tokenizeNext (input: string) (start: int) (nx: NfaCtx) : (string * int) option * NfaCtx =
+    assert (start < input.Length)
+
+    // Loop until hit end of input or reach to empty state
+    // and returns the accepted longest rule.
+    //
+    // last: Last acceptable rule and its index
+    // (di, d): current DFA state
+    let rec loop last (di, d) i nx =
+      if di <> EmptyId && i < input.Length then
+        let b = byte input.[i]
+        let ei, e, nx = edge di b nx
+        let i = i + 1
+        let result, nx = checkAccept ei nx
+
+        let last =
+          match result with
+          | Some label -> Some(label, i)
+          | None -> last
+
+        if ei <> EmptyId && i < input.Length then
+          __trace (S.format "lex {0} {1}->{2} {3}" [ string i; string di; string ei; string (Option.isSome last) ])
+
+        loop last (ei, e) i nx
+      else
+        last, nx
+
+    let result, nx = loop None nx.InitVertex start nx
+
+    match result with
+    | Some(label, r) when start < r -> Some(label, r - start), nx
+    | _ -> None, nx
+
+  let tokenizePartial (input: string) (start: int) (nx: NfaCtx) : Result<unit, int> * (string * int) list * NfaCtx =
+    let rec loop acc i nx =
+      if i < input.Length then
+        let result, nx = tokenizeNext input i nx
+
+        match result with
+        | Some(token, len) ->
+          assert (len >= 1)
+          loop ((token, len) :: acc) (i + len) nx
+
+        | None -> Error i, List.rev acc, nx
+      else
+        Ok(), List.rev acc, nx
+
+    loop [] start nx
+
+// -----------------------------------------------
+// Lexer
+// -----------------------------------------------
+
+[<NoEquality; NoComparison>]
+type Lexer = private Lexer of NfaCtx
+
+module Lexer =
+  /// Creates a lexer by parsing the rules.
+  let create (ruleText: string) : Result<Lexer, RowIndex * ColumnIndex> =
+    match parseLexGrammar ruleText with
+    | Ok rules ->
+      let nfa = generateNfa rules
+      let nx = Nx.create nfa
+      Ok(Lexer nx)
+
+    | Error pos -> Error pos
+
+  /// Performs tokenization on a string.
+  ///
+  /// Returns (result, lexer) where:
+  ///
+  /// - result:
+  ///     - `Ok tokens`. Each item is `(rule, len)`. rule is name of accepted rule and len is its length.
+  ///     - `Error i`. `i` is index at the tokenization failed.
+  /// - lexer: Updated lexer
+  let tokenize (input: string) (lexer: Lexer) : Result<(string * int) list, int> * Lexer =
+    let (Lexer nx) = lexer
+    let result, tokens, nx = Nx.tokenizePartial input 0 nx
+
+    match result with
+    | Ok() -> Ok tokens, Lexer nx
+    | Error i -> Error i, Lexer nx
+
+module LexerExt =
+  /// Tries to tokenize next token.
+  ///
+  /// Returns `Some (token, len)` if success.
+  let tokenizeNext (input: string) (start: int) (lexer: Lexer) : (string * int) option * Lexer =
+    let (Lexer nx) = lexer
+    let tokenOpt, nx = Nx.tokenizeNext input start nx
+    tokenOpt, Lexer nx
+
+  /// Tries to tokenize multiple tokens as possible.
+  ///
+  /// Returns `result, tokens, lexer` where
+  ///
+  /// - result:
+  ///     - `Ok ()` if completed
+  ///     - `Error i` if stopped at any point
+  /// - tokens: List of tokens gracefully parsed
+  /// - lexer: Updated lexer
+  let tokenizePartial (input: string) (start: int) (lexer: Lexer) : Result<unit, int> * (string * int) list * Lexer =
+    let (Lexer nx) = lexer
+    let result, tokens, nx = Nx.tokenizePartial input start nx
+    result, tokens, Lexer nx
