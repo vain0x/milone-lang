@@ -102,7 +102,7 @@ let private codeGenHir
       decls
       |> List.choose (fun decl ->
         match decl with
-        | CFunDecl (ident, _, _, _) -> Some ident
+        | CFunDecl (ident, _, _, _, _) -> Some ident
         | _ -> None))
 
   cFiles, exportNames

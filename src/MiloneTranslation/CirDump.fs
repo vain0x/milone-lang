@@ -350,6 +350,8 @@ let private cpExpr expr acc : string list =
 
 let private cpStmt indent stmt acc : string list =
   match stmt with
+  | CNoopStmt -> unreachable ()
+
   | CReturnStmt None -> acc |> cons indent |> cons "return;" |> cons eol
 
   | CReturnStmt (Some expr) ->
@@ -582,7 +584,10 @@ let private cpDecl decl acc =
     |> cons ";"
     |> cons eol
 
-  | CFunDecl (name, args, resultTy, body) ->
+  | CFunDecl (name, args, resultTy, body, isNoReturn) ->
+    let acc =
+      if isNoReturn then acc |> cons "_Noreturn " else acc
+
     acc
     |> cpTyWithName name resultTy
     |> cons "("
@@ -593,9 +598,12 @@ let private cpDecl decl acc =
     |> cons "}"
     |> cons eol
 
-  | CStaticFunDecl (name, args, resultTy, body) ->
+  | CStaticFunDecl (name, args, resultTy, body, isNoReturn) ->
     // FIXME: monomorphization instances can't have stable external linkage,
     //        however, they still need to have external linkage.
+
+    let acc =
+      if isNoReturn then acc |> cons "_Noreturn " else acc
 
     acc
     // |> cons "static "
@@ -615,7 +623,10 @@ let private cpDecl decl acc =
 
 /// Prints forward declaration.
 let private cpForwardDecl decl acc =
-  let cpFunForwardDecl name cpParams resultTy acc =
+  let cpFunForwardDecl name cpParams resultTy isNoReturn acc =
+    let acc =
+      if isNoReturn then acc |> cons "_Noreturn " else acc
+
     acc
     |> cpTyWithName name resultTy
     |> cons "("
@@ -670,21 +681,21 @@ let private cpForwardDecl decl acc =
     |> cons eol
     |> cons eol
 
-  | CFunForwardDecl (name, argTys, resultTy) ->
+  | CFunForwardDecl (name, argTys, resultTy, isNoReturn) ->
     let cpParamTys acc =
       let args = List.map (fun argTy -> "", argTy) argTys
       acc |> cpParams args
 
-    acc |> cpFunForwardDecl name cpParamTys resultTy
+    acc |> cpFunForwardDecl name cpParamTys resultTy isNoReturn
 
-  | CFunDecl (name, args, resultTy, _) ->
+  | CFunDecl (name, args, resultTy, _, isNoReturn) ->
     acc
-    |> cpFunForwardDecl name (cpParams args) resultTy
+    |> cpFunForwardDecl name (cpParams args) resultTy isNoReturn
 
-  | CStaticFunDecl (name, args, resultTy, _) ->
+  | CStaticFunDecl (name, args, resultTy, _, isNoReturn) ->
     acc
     // |> cons "static "
-    |> cpFunForwardDecl name (cpParams args) resultTy
+    |> cpFunForwardDecl name (cpParams args) resultTy isNoReturn
 
   | CNativeDecl (code, args) ->
     let code = expandPlaceholders args code

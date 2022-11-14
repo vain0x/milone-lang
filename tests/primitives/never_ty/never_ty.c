@@ -18,7 +18,7 @@ void never_ty_never_ty_opaqueStmt(void);
 
 void never_ty_never_ty_graceful(void);
 
-void never_ty_never_ty_crash(void);
+_Noreturn void never_ty_never_ty_crash(void);
 
 void never_ty_never_ty_testStmt(void);
 
@@ -28,7 +28,7 @@ void MiloneCore_Prelude_Int32UnitFun1_ignore(int32_t);
 
 void never_ty_never_ty_testMatchArm(void);
 
-void never_ty_never_ty_eta2_testFunObj_crash(void const *env_1);
+_Noreturn void never_ty_never_ty_eta2_testFunObj_crash(void const *env_1);
 
 void MiloneCore_Prelude_NeverUnitFun1_ignore(char);
 
@@ -36,7 +36,7 @@ void never_ty_never_ty_testFunObj(void);
 
 void never_ty_never_ty_testOwn(void);
 
-void never_ty_never_ty_testInfiniteLoop_diverge(void);
+_Noreturn void never_ty_never_ty_testInfiniteLoop_diverge(void);
 
 void never_ty_never_ty_testInfiniteLoop(void);
 
@@ -86,7 +86,7 @@ switch_next_1:;
     return;
 }
 
-void never_ty_never_ty_crash(void) {
+_Noreturn void never_ty_never_ty_crash(void) {
     never_ty_never_ty_opaqueStmt();
     exit(1);
 }
@@ -123,9 +123,8 @@ switch_next_4:;
     return;
 }
 
-void never_ty_never_ty_eta2_testFunObj_crash(void const *env_1) {
+_Noreturn void never_ty_never_ty_eta2_testFunObj_crash(void const *env_1) {
     never_ty_never_ty_crash();
-    return;
 }
 
 void never_ty_never_ty_testFunObj(void) {
@@ -163,7 +162,7 @@ switch_next_7:;
     return;
 }
 
-void never_ty_never_ty_testInfiniteLoop_diverge(void) {
+_Noreturn void never_ty_never_ty_testInfiniteLoop_diverge(void) {
 tailrec_10:;
     goto tailrec_10;
 }
