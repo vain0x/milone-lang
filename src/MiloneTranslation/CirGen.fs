@@ -233,7 +233,10 @@ type private CirCtx =
     FunDecls: TreeSet<FunSerial>
 
     /// Nominalized fun pointer types.
-    FunPtrTys: TreeMap<CTy list * CTy, string> }
+    FunPtrTys: TreeMap<CTy list * CTy, string>
+
+    /// Gets if current function is never-returning
+    IsNoReturn: bool }
 
 let private ofMirResult entrypointName (df: DocIdToModulePath) (mirCtx: MirResult) : CirCtx =
   let freq = freqEmpty compare
@@ -288,7 +291,8 @@ let private ofMirResult entrypointName (df: DocIdToModulePath) (mirCtx: MirResul
     Stmts = []
     Decls = []
     FunDecls = TSet.empty funSerialCompare
-    FunPtrTys = TMap.empty (pairCompare (listCompare cTyCompare) cTyCompare) }
+    FunPtrTys = TMap.empty (pairCompare (listCompare cTyCompare) cTyCompare)
+    IsNoReturn = false }
 
 let private currentDocId (ctx: CirCtx) : DocId =
   match ctx.Rx.DocIdOpt with
@@ -322,7 +326,7 @@ let private cgArgTys ctx argTys : CTy list * CirCtx =
   |> List.mapFold cgTyComplete ctx
 
 let private cgResultTy ctx resultTy : CTy * CirCtx =
-  if tyIsUnit resultTy then
+  if tyIsUnit resultTy || tyIsNever resultTy then
     CVoidTy, ctx
   else
     cgTyComplete ctx resultTy
@@ -618,6 +622,7 @@ let private cgTyIncomplete (ctx: CirCtx) (ty: Ty) : CTy * CirCtx =
   | FunTk, [ sTy; tTy ] -> genIncompleteFunTyDecl ctx sTy tTy
   | FunTk, _ -> unreachable ()
 
+  | NeverTk, _
   | TupleTk, [] -> CCharTy, ctx
   | TupleTk, _ -> unreachable () // Non-unit TupleTk is resolved in MonoTy.
 
@@ -654,6 +659,7 @@ let private cgTyComplete (ctx: CirCtx) (ty: Ty) : CTy * CirCtx =
   | FunTk, [ sTy; tTy ] -> genFunTyDef ctx sTy tTy
   | FunTk, _ -> unreachable ()
 
+  | NeverTk, _
   | TupleTk, [] -> CCharTy, ctx
   | TupleTk, _ -> unreachable () // Non-unit TupleTk is resolved in MonoTy.
 
@@ -720,10 +726,11 @@ let private cgExternFunDecl (ctx: CirCtx) funSerial =
 
       let name = getUniqueFunName ctx funSerial
       let argTys, ctx = cgArgTys ctx argTys
+      let isNoReturn = tyIsNever resultTy
       let resultTy, ctx = cgResultTy ctx resultTy
 
       let ctx: CirCtx =
-        addDecl ctx (CFunForwardDecl(name, argTys, resultTy))
+        addDecl ctx (CFunForwardDecl(name, argTys, resultTy, isNoReturn))
 
       { ctx with FunDecls = TSet.add funSerial ctx.FunDecls }
 
@@ -925,9 +932,10 @@ let private cgExprList ctx exprs : CExpr list * CirCtx = exprs |> List.mapFold c
 
 let private addNativeFunDecl ctx funName argTys resultTy =
   let argTys, ctx = cgArgTys ctx argTys
+  let isNoReturn = tyIsNever resultTy
   let resultTy, ctx = cgResultTy ctx resultTy
 
-  addDecl ctx (CFunForwardDecl(funName, argTys, resultTy))
+  addDecl ctx (CFunForwardDecl(funName, argTys, resultTy, isNoReturn))
 
 let private cgActionStmt (ctx: CirCtx) itself action args loc =
   match action with
@@ -1232,16 +1240,17 @@ let private cgSetStmt ctx serial right =
   let left = CVarExpr(name)
   addStmt ctx (CSetStmt(left, right))
 
-let private cgReturnStmt ctx expr argTy =
-  if tyIsUnit argTy then
-    CReturnStmt None, ctx
-  else
-    let expr, ctx = cgExpr ctx expr
-    CReturnStmt(Some expr), ctx
-
-let private cgTerminatorStmt ctx stmt : CStmt * CirCtx =
+let private cgTerminatorStmt (ctx: CirCtx) stmt : CStmt * CirCtx =
   match stmt with
-  | MReturnTerminator (expr, argTy) -> cgReturnStmt ctx expr argTy
+  | MReturnTerminator (expr, argTy) ->
+    if ctx.IsNoReturn then
+      CNoopStmt, ctx
+    else if tyIsUnit argTy || tyIsNever argTy then
+      CReturnStmt None, ctx
+    else
+      let expr, ctx = cgExpr ctx expr
+      CReturnStmt(Some expr), ctx
+
   | MGotoTerminator label -> CGotoStmt label, ctx
 
   | MIfTerminator (cond, thenCl, elseCl) ->
@@ -1286,11 +1295,13 @@ let private cgStmt ctx stmt =
 
   | MTerminatorStmt (terminator, _loc) ->
     let stmt, ctx = cgTerminatorStmt ctx terminator
-    addStmt ctx stmt
+
+    match stmt with
+    | CNoopStmt -> ctx
+    | _ -> addStmt ctx stmt
 
   | MNativeStmt (code, args, _) ->
     let args, ctx = cgExprList ctx args
-
     addStmt ctx (CNativeStmt(code, args))
 
 let private cgBlock (ctx: CirCtx) (stmts: MStmt list) =
@@ -1325,7 +1336,9 @@ let private genMainFun entrypointName stmts : CDecl =
     CExprStmt(CCallExpr(CVarExpr "milone_start", [ CVarExpr "argc"; CVarExpr "argv" ]))
     :: stmts
 
-  CFunDecl(entrypointName, args, intTy, stmts)
+  let isNoReturn = false
+
+  CFunDecl(entrypointName, args, intTy, stmts, isNoReturn)
 
 let private cgDecls (ctx: CirCtx) decls =
   match decls with
@@ -1333,6 +1346,9 @@ let private cgDecls (ctx: CirCtx) decls =
 
   | MProcDecl (callee, args, body, resultTy, localVars, _) :: decls ->
     let def: FunDef = ctx.Rx.Funs |> mapFind callee
+
+    let isNoReturn = tyIsNever resultTy
+    let ctx = { ctx with IsNoReturn = isNoReturn }
 
     let main, funName, args =
       if isMainFun ctx callee then
@@ -1369,8 +1385,8 @@ let private cgDecls (ctx: CirCtx) decls =
         genMainFun funName body
       else
         match def.Linkage with
-        | InternalLinkage -> CStaticFunDecl(funName, args, resultTy, body)
-        | ExternalLinkage _ -> CFunDecl(funName, args, resultTy, body)
+        | InternalLinkage -> CStaticFunDecl(funName, args, resultTy, body, isNoReturn)
+        | ExternalLinkage _ -> CFunDecl(funName, args, resultTy, body, isNoReturn)
 
     let ctx = addDecl ctx funDecl
     cgDecls ctx decls
@@ -1420,7 +1436,8 @@ let private cgModule (ctx: CirCtx) (m: MModule) : DocId * CDecl list =
       Stmts = []
       Decls = []
       FunDecls = TSet.empty funSerialCompare
-      FunPtrTys = TMap.empty (pairCompare (listCompare cTyCompare) cTyCompare) }
+      FunPtrTys = TMap.empty (pairCompare (listCompare cTyCompare) cTyCompare)
+      IsNoReturn = false }
 
   // Generate leading native decls to not be preceded by generated decls.
   let moduleDecls, ctx =

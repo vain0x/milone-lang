@@ -44,6 +44,7 @@ type Tk =
   | BoolTk
   | CharTk
   | StringTk
+  | NeverTk
   | ObjTk
 
   /// Ty args must be `[s; t]`.
@@ -227,6 +228,9 @@ type HExprKind =
 
   /// `s.[l .. r]`
   | HSliceEN
+
+  /// This is a marker of a never-completing expression.
+  | HCatchNeverEN
 
   | HDiscriminantEN of VariantSerial
 

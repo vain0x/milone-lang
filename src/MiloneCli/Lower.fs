@@ -34,6 +34,7 @@ let private lowerTk (tk: Tir.Tk) : Hir.Tk =
   | Tir.BoolTk -> Hir.BoolTk
   | Tir.CharTk -> Hir.CharTk
   | Tir.StringTk -> Hir.StringTk
+  | Tir.NeverTk -> Hir.NeverTk
   | Tir.ObjTk -> Hir.ObjTk
 
   | Tir.FunTk -> Hir.FunTk
@@ -176,6 +177,7 @@ let private lowerExprKind (kind: Tir.TExprKind) : Hir.HExprKind =
   | Tir.TAppEN -> Hir.HAppEN
   | Tir.TIndexEN -> Hir.HIndexEN
   | Tir.TSliceEN -> Hir.HSliceEN
+  | Tir.TCatchNeverEN -> Hir.HCatchNeverEN
   | Tir.TDiscriminantEN variantSerial -> Hir.HDiscriminantEN(lowerVariantSerial variantSerial)
   | Tir.TCallNativeEN funName -> Hir.HCallNativeEN funName
   | Tir.TTupleEN -> Hir.HTupleEN

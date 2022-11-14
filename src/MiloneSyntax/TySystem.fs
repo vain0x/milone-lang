@@ -39,6 +39,7 @@ let private tkEncode tk : int =
   | BoolTk -> just 3
   | CharTk -> just 4
   | StringTk -> just 5
+  | NeverTk -> just 26 // to be reordered
   | ObjTk -> just 6
   | FunTk -> just 7
   | TupleTk -> just 8
@@ -50,7 +51,7 @@ let private tkEncode tk : int =
   | FunPtrTk -> just 14
 
   | MetaTk (tySerial, _) -> pair 20 tySerial
-  | UnivTk (tySerial, _, _) -> pair 24 tySerial
+  | UnivTk (tySerial, _, _) -> pair 25 tySerial // to be reordered
   | SynonymTk tySerial -> pair 21 tySerial
   | UnionTk (tySerial, _) -> pair 22 tySerial
   | RecordTk (tySerial, _) -> pair 23 tySerial
@@ -81,6 +82,7 @@ let tkDisplay getTyName tk =
   | BoolTk -> "bool"
   | CharTk -> "char"
   | StringTk -> "string"
+  | NeverTk -> "never"
   | ObjTk -> "obj"
   | FunTk -> "fun"
   | TupleTk -> "tuple"

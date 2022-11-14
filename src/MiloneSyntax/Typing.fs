@@ -1013,6 +1013,23 @@ let private errorExpr (ctx: TyCtx) msg loc : TExpr * Ty * TyCtx =
   txAbort ctx loc
 
 // -----------------------------------------------
+// Misc
+// -----------------------------------------------
+
+/// This function replaces a `never` type expression
+/// with an expression of a freshly generated meta type
+/// so that the target passes the type-check.
+//
+// `a not in Gamma, E : never |- E : a`
+let private catchNever ctx expr exprTy loc =
+  match substTy ctx exprTy with
+  | Ty(NeverTk, _) ->
+    let metaTy, ctx = freshMetaTy loc ctx
+    TNodeExpr(TCatchNeverEN, [ expr ], metaTy, loc), metaTy, ctx
+
+  | ty -> expr, ty, ctx
+
+// -----------------------------------------------
 // Pattern
 // -----------------------------------------------
 
@@ -1577,7 +1594,9 @@ let private inferMatchExpr ctx expectOpt itself cond arms loc =
            let ctx =
              unifyTy ctx (exprToLoc guard) guardTy tyBool
 
-           let body, bodyTy, ctx = inferExpr ctx expectOpt body
+           let body, bodyTy, ctx =
+            let body, bodyTy, ctx = inferExpr ctx expectOpt body
+            catchNever ctx body bodyTy (exprToLoc body)
 
            let ctx =
              unifyTy ctx (exprToLoc body) targetTy bodyTy
@@ -2012,6 +2031,7 @@ let private inferNodeExpr ctx expr : TExpr * Ty * TyCtx =
 
   | TFunPtrOfEN, _
   | TDiscriminantEN _, _
+  | TCatchNeverEN, _
   | TCallNativeEN _, _
   | TPtrOffsetEN, _
   | TPtrReadEN, _
@@ -2037,14 +2057,18 @@ let private inferBlockExpr ctx expectOpt (stmts: TStmt list) last =
 // -----------------------------------------------
 
 let private inferExprStmt ctx expr =
-  let expr, ty, ctx = inferExpr ctx None expr
+  let expr, ty, ctx =
+    let expr, ty, ctx = inferExpr ctx None expr
+    catchNever ctx expr ty (exprToLoc expr)
+
   let ctx = unifyTy ctx (exprToLoc expr) ty tyUnit
   TExprStmt expr, ctx
 
 let private inferLetValStmt ctx pat init loc =
   let init, initTy, ctx =
     let expectOpt = patToAscriptionTy pat
-    inferExpr ctx expectOpt init
+    let init, initTy, ctx = inferExpr ctx expectOpt init
+    catchNever ctx init initTy loc
 
   let pat, patTy, ctx = inferIrrefutablePat ctx pat
 
@@ -2102,7 +2126,17 @@ let private inferLetFunStmt ctx mutuallyRec callee vis argPats body loc =
 
   let ctx = unifyTy ctx loc calleeTy funTy
 
-  let body, bodyTy, ctx = inferExpr ctx None body
+  let body, bodyTy, ctx =
+    let body, bodyTy, ctx = inferExpr ctx None body
+
+    match substTy ctx bodyTy with
+    | Ty(NeverTk, _) ->
+      let resultTy =
+        if Option.isSome mainFunTyOpt then tyInt else tyNever
+
+      TNodeExpr(TCatchNeverEN, [ body ], resultTy, loc), resultTy, ctx
+
+    | bodyTy -> body, bodyTy, ctx
 
   let ctx =
     unifyTy ctx loc bodyTy provisionalResultTy
@@ -2127,8 +2161,6 @@ let private inferLetFunStmt ctx mutuallyRec callee vis argPats body loc =
   TLetFunStmt(callee, NotRec, vis, argPats, body, loc), ctx
 
 let private inferExpr (ctx: TyCtx) (expectOpt: Ty option) (expr: TExpr) : TExpr * Ty * TyCtx =
-  let fail () = unreachable expr
-
   match expr with
   | TLitExpr (lit, _) -> inferLitExpr ctx expr lit
   | TVarExpr (serial, _, loc) -> inferVarExpr ctx serial loc

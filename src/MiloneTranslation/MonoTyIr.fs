@@ -28,6 +28,7 @@ type MonoTy =
   | BoolMt
   | CharMt
   | StringMt
+  | NeverMt
   | ObjMt
 
   | FunMt of MonoTy list

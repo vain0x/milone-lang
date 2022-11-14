@@ -24,6 +24,7 @@ let tyFloat = Ty(FloatTk F64, [])
 let tyBool = Ty(BoolTk, [])
 let tyChar = Ty(CharTk, [])
 let tyString = Ty(StringTk, [])
+let tyNever = Ty(NeverTk, [])
 let tyObj = Ty(ObjTk, [])
 
 let tyFun sourceTy targetTy = Ty(FunTk, [ sourceTy; targetTy ])
