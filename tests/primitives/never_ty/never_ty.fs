@@ -36,7 +36,8 @@ let private testMatchArm () =
 // Function object with result type never can be created and called.
 let private testFunObj () =
   let crashFn: unit -> never = crash
-  crashFn () |> ignore
+  let callFnObj () = crashFn ()
+  callFnObj () |> ignore
 
 // Never can be replaced with an owned type. (Unlike generic returning function.)
 let private testOwn () =

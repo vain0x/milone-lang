@@ -2130,8 +2130,11 @@ let private inferLetFunStmt ctx mutuallyRec callee vis argPats body loc =
     let body, bodyTy, ctx = inferExpr ctx None body
 
     match substTy ctx bodyTy with
-    | Ty(NeverTk, _) when Option.isSome mainFunTyOpt ->
-      TNodeExpr(TCatchNeverEN, [ body ], tyInt, loc), tyInt, ctx
+    | Ty(NeverTk, _) ->
+      let resultTy =
+        if Option.isSome mainFunTyOpt then tyInt else tyNever
+
+      TNodeExpr(TCatchNeverEN, [ body ], resultTy, loc), resultTy, ctx
 
     | bodyTy -> body, bodyTy, ctx
 
