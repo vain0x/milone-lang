@@ -58,6 +58,23 @@ let private testInfiniteLoop () =
   let rec diverge () : never = diverge ()
   ()
 
+// Never can be used as values.
+let private testNeverAsValue () =
+  let opt = Some (crash ())
+
+  (match opt with
+   | Some n -> n
+   | None -> crash ())
+
+  let ok : Result<int, never> = Ok 0
+
+  let value =
+    match ok with
+    | Ok it -> it
+    | Error n -> n
+
+  assert (value = 0)
+
 // Result type of main can be never.
 let main _ : never =
   // This actually exists with 0.
@@ -69,5 +86,6 @@ let main _ : never =
   testFunObj ()
   testOwn ()
   testInfiniteLoop ()
+  testNeverAsValue ()
 
   crash ()
