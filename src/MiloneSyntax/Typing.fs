@@ -2057,7 +2057,10 @@ let private inferBlockExpr ctx expectOpt (stmts: TStmt list) last =
 // -----------------------------------------------
 
 let private inferExprStmt ctx expr =
-  let expr, ty, ctx = inferExpr ctx None expr
+  let expr, ty, ctx =
+    let expr, ty, ctx = inferExpr ctx None expr
+    catchNever ctx expr ty (exprToLoc expr)
+
   let ctx = unifyTy ctx (exprToLoc expr) ty tyUnit
   TExprStmt expr, ctx
 

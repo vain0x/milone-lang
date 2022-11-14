@@ -20,6 +20,8 @@ void never_ty_never_ty_graceful(void);
 
 void never_ty_never_ty_crash(void);
 
+void never_ty_never_ty_testStmt(void);
+
 void never_ty_never_ty_testLetInit(void);
 
 void MiloneCore_Prelude_Int32UnitFun1_ignore(int32_t);
@@ -86,6 +88,11 @@ switch_next_1:;
 
 void never_ty_never_ty_crash(void) {
     never_ty_never_ty_opaqueStmt();
+    exit(1);
+}
+
+void never_ty_never_ty_testStmt(void) {
+    never_ty_never_ty_crash();
     exit(1);
 }
 
@@ -169,6 +176,7 @@ int main(int argc, char **argv) {
     milone_start(argc, argv);
     never_ty_never_ty_start();
     never_ty_never_ty_graceful();
+    never_ty_never_ty_testStmt();
     never_ty_never_ty_testLetInit();
     never_ty_never_ty_testMatchArm();
     never_ty_never_ty_testFunObj();

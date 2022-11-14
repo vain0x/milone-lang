@@ -15,6 +15,11 @@ let private crash () : never =
   opaqueStmt ()
   exit 1
 
+// Expression statement can be never.
+let private testStmt () =
+  crash ()
+  ()
+
 // Let-init can be never.
 let private testLetInit () =
   let nothing: int = crash ()
@@ -57,6 +62,7 @@ let main _ : never =
   // This actually exists with 0.
   graceful ()
 
+  testStmt ()
   testLetInit ()
   testMatchArm ()
   testFunObj ()
