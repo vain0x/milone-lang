@@ -1,10 +1,10 @@
 # Extension: Never Type
 
-The `never` type is a special type for a particular situation.
+The `never` type is a special type for particular situations.
 
 ## Guide-level Explanation
 
-This is a typical usage of never type:
+This is a typical usage of `never`:
 
 ```fsharp
     // There exists a function findThing : () -> A option.
@@ -14,22 +14,48 @@ This is a typical usage of never type:
         match findThing () with
         | Some it -> it
         | None -> unreachable ()
+    //            ^^^^^^^^^^^^^^
 ```
 
-The type of the expression `unreachable ()` is `never`.
-`never` is an exception of the rule that the all arms of a match needs to have the same type.
+The type of `unreachable ()` is `never`.
+Never-typed arms are ignored to compute the type of match expressions.
 
 ### Never-returning Functions
 
-`never` type is usually used as a result type of a function that returns **never**.
-There are several reasons such situation happens:
+`never` is usually used as a result type of a function that **never** returns.
+There are several reasons:
 
-- **exit**: Function that exits the thread or the process, which doesn't return to the caller
-- **stop**: Function that enters into unconditionally infinite loop, which that doesn't return
+- **exit**: Function that exits the thread or the process, which doesn't return
+- **stop**: Function that enters into unconditionally infinite loop, which doesn't return
 
 ## Advanced Topics
 
+### Motivation
+
+`never` is an appropriate way to represent never-returning function.
+
+Note that [generic return type pattern](#generic-return-type-pattern) written below works also in milone-lang but not good in several reasons:
+
+- Monomorphization unnecessarily duplicates generic-return functions
+- Ownership restriction rejects generic-return functions to make its return type an owned type
+- Doesn't represent never-returning actually
+
+Another benefit is the compiler can emit [`_Noreturn`][_Noreturn] attribute on never-returning functions.
+
+[_Noreturn]: https://en.cppreference.com/w/c/language/_Noreturn
+
 ### Typing Rules
+
+**Expression Statements**:
+
+```
+    Γ |- e1: never,
+    Γ |- e2: T
+==>
+    Γ |- (e1; e2): T
+```
+
+- (Informally) Non-last expressions in block can be `never`.
 
 **Let-init**:
 
@@ -41,8 +67,8 @@ There are several reasons such situation happens:
     Γ |- (let pat = init in next): T
 ```
 
-- During type-checking of a `let-ini` expression,
-    if the type of init is `never`,
+- During type-checking of a let-val expression,
+    if init type is `never`,
     apply this rule:
     - Generate a fresh meta type A.
     - Perform type-checking `pat : A` rather than `pat : never`.
@@ -58,43 +84,38 @@ There are several reasons such situation happens:
 ```
 
 - Durning type-checking of a match expression,
-    if the type of an arm body is `never`,
+    if type of an arm is `never`,
     apply this rule:
     - Don't unify the type of arm (`never`) to the target type of the match expression.
 
-**The `main` Function**:
+### Generic Return Type Pattern
 
-- The body of the `main` function is allowed to be `never`.
+F# doesn't have `never` as a built-in type.
+Instead, never-returning functions have signatures with generic type parameter in return position.
 
-### Generic Result Type Pattern
-
-OCaml and F# don't have `never` type as a built-in type.
-Instead, never-returning functions in the languages have some form of signatures that the result type is an unconditionally generic type parameter.
-
-For example, there exists `failwith` function that always raises an exception, never-returning.
-Its signature is:
+For example, signature of `failwith` is:
 
 ```fsharp
     fun failwith<'T> : string -> 'T
 ```
 
-That reads "this function takes a string and returns something of type 'T," and the type `'T` is arbitrary.
-The signature implies that `failwith` never returns because there doesn't exist such a function that returns something of whatever type the caller demand.
+Expression `failwith "message"` can have any type.
+All rules of `never` above are virtually applied.
 
-### Motivation
+The signature doesn't necessarily imply that the function never returns.
+There exists a non-never function of the same signature (`fun _ -> unbox (box 0)`.)
 
-In milone-lang, never-returning functions can be just a generic function as above.
-However it doesn't work well with:
+### Runtime Representation
 
-- monomorphization that duplicates generic functions, and
-- ownership restriction that rejects generic function parameters to be bound to owned types.
+- Runtime representation of `never` is same as `unit` (`char` in C)
+- `never` as function return type compiles to `void` in C instead
 
 ### Remarks
 
-- There exists no value of `never` type.
-- `never` unifies with only `never` as usual.
-- No structural subtyping.
-- In C, never as function result type is compiled to `void` and other never is to `char`.
+- There exists no value of `never` type
+- `never` is just a unit-like type except for the rules above
+- No structural subtyping. `never` doesn't work like the bottom type
+- The type of `assert false` is `unit` since type check doesn't depend on values
 
 ## See Also
 
