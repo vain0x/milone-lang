@@ -24,16 +24,11 @@
 #include <sys/stat.h>
 #include <sys/types.h>
 #include <unistd.h>
-#endif              // defined(_MSC_VER)
+#endif // defined(_MSC_VER)
 
 // -----------------------------------------------
 // utils
 // -----------------------------------------------
-
-_Noreturn static void failwith(char const *msg) {
-    fprintf(stderr, "ERROR: %s\n", msg);
-    exit(1);
-}
 
 static bool path_is_absolute(struct String path) {
 #if defined(MILONE_PLATFORM_LINUX)
@@ -82,7 +77,7 @@ struct MiloneOsString milone_os_string_of(struct String s) {
 
     int len = MultiByteToWideChar(CP_UTF8, 0, s.ptr, s.len, NULL, 0);
     if (len == 0) {
-        failwith("MultiByteToWideChar");
+        milone_failwith("MultiByteToWideChar");
     }
     assert(len >= 0);
 
@@ -90,7 +85,7 @@ struct MiloneOsString milone_os_string_of(struct String s) {
 
     int n = MultiByteToWideChar(CP_UTF8, 0, s.ptr, s.len, buf, len);
     if (n == 0) {
-        failwith("MultiByteToWideChar");
+        milone_failwith("MultiByteToWideChar");
     }
     assert(n >= 0);
     assert(n <= len);
@@ -107,7 +102,7 @@ struct String milone_os_string_to(struct MiloneOsString s) {
     int len =
         WideCharToMultiByte(CP_UTF8, 0, s.ptr, (int)s.len, NULL, 0, NULL, NULL);
     if (len == 0) {
-        failwith("WideCharToMultiByte");
+        milone_failwith("WideCharToMultiByte");
     }
     assert(len >= 0);
 
@@ -116,7 +111,7 @@ struct String milone_os_string_to(struct MiloneOsString s) {
     int n = WideCharToMultiByte(CP_UTF8, 0, s.ptr, (int)s.len, buf, len, NULL,
                                 NULL);
     if (n == 0) {
-        failwith("WideCharToMultiByte");
+        milone_failwith("WideCharToMultiByte");
     }
     assert(n >= 0);
     assert(n <= len);
@@ -179,7 +174,7 @@ struct String milone_get_cwd(void) {
     bool ok = getcwd(buf, sizeof buf) != NULL;
     if (!ok) {
         perror("getcwd");
-        exit(1);
+        milone_failwith("milone_get_cwd");
     }
 
     return string_of_c_str(buf);
@@ -187,8 +182,7 @@ struct String milone_get_cwd(void) {
     TCHAR buf[MAX_PATH + 1] = {0};
     DWORD len = GetCurrentDirectory(sizeof(buf) / sizeof(TCHAR), buf);
     if (len == 0 || len >= sizeof(buf)) {
-        failwith("GetCurrentDirectory");
-        exit(1);
+        milone_failwith("GetCurrentDirectory");
     }
 
     return milone_os_string_to((struct MiloneOsString){.ptr = buf, .len = len});
@@ -309,8 +303,7 @@ static void build_cmdline(struct String command, struct StringCons const *args,
         }
     }
     if (buf_size <= total_len) {
-        fprintf(stderr, "error: command line too long\n");
-        exit(1);
+        milone_failwith("build_cmd: command line too long\n");
     }
 
     uint32_t i = 0;
@@ -368,15 +361,15 @@ static void milone_subprocess_run_windows(struct String cmdline, int *code) {
         // working directory: null to use parent's current directory
         NULL, &start_info, &process_info);
     if (!ok) {
-        fprintf(stderr, "error: CreateProcess %d\n", (int)GetLastError());
-        exit(1);
+        milone_failwithf("CreateProcess %d", (int)GetLastError());
     }
 
     WaitForSingleObject(process_info.hProcess, INFINITE);
 
     DWORD exit_code = 0;
     ok = GetExitCodeProcess(process_info.hProcess, &exit_code);
-    assert(ok && "GetExitCodeProcess");
+    if (!ok)
+        milone_failwith("GetExitCodeProcess");
     *code = (int)exit_code;
 
     CloseHandle(process_info.hProcess);
@@ -438,8 +431,9 @@ void execute_into(struct String cmd) {
 
 static BCRYPT_ALG_HANDLE rng_create() {
     BCRYPT_ALG_HANDLE h_alg;
-    if (BCryptOpenAlgorithmProvider(&h_alg, BCRYPT_RNG_ALGORITHM, NULL, 0) != 0) {
-        failwith("BCryptCloseAlgorithmProvider");
+    if (BCryptOpenAlgorithmProvider(&h_alg, BCRYPT_RNG_ALGORITHM, NULL, 0) !=
+        0) {
+        milone_failwith("BCryptCloseAlgorithmProvider");
     }
     return h_alg;
 }
@@ -452,7 +446,7 @@ static void rng_random_bytes(BCRYPT_ALG_HANDLE h_alg, uint8_t *buf, uint32_t len
     assert(buf != NULL && len != 0);
 
     if (BCryptGenRandom(h_alg, (PUCHAR)buf, (ULONG)len, 0) != 0) {
-        failwith("BCryptGenRandom");
+        milone_failwith("BCryptGenRandom");
     }
 }
 
@@ -480,7 +474,7 @@ struct String milone_uuid(void) {
 #else
 
 _Noreturn struct String milone_uuid(void) {
-    failwith("uuid not supported on linux");
+    milone_failwith("milone_uuid: Not supported on linux");
 }
 
 #endif

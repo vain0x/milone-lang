@@ -173,4 +173,8 @@ _Noreturn static void milone_never_error(char const *filename, int32_t row, int3
     milone_abort("Never Error", filename, row, column);
 }
 
+// Invoke a runtime error, commonly used by runtime libraries.
+_Noreturn void milone_failwith(char const *msg);
+_Noreturn void milone_failwithf(char const *fmt, ...);
+
 #endif
