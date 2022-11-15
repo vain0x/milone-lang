@@ -1,10 +1,12 @@
 module rec std_iter.Program
 
-module S = Std.StdString
-
 open Std.StdIter
 
-let private bang () = exit 1
+module S = Std.StdString
+
+let private bang () : 'T =
+  exit 1
+  bang ()
 
 /// Generates integers from 0 to n (exclusive).
 let private gen (n: int) : Iter<int> = Iter.range 0 n

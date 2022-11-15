@@ -10,3 +10,7 @@ let id (idArg: 'T) : 'T = idArg
 let fst (fstArg: 'T, _: 'A) : 'T = fstArg
 
 let snd (_: 'A, sndArg: 'T) : 'T = sndArg
+
+let exit (exitCode: int) : never =
+  __nativeStmt ("    exit({0});\n", exitCode)
+  __nativeExpr "never"

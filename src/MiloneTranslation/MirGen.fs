@@ -996,14 +996,6 @@ let private reuseArmLocals (ctx: MirCtx) arms : _ * MirCtx =
 // Expressions
 // -----------------------------------------------
 
-let private mirifyExprCallExit ctx arg loc =
-  let arg, ctx = mirifyExpr ctx arg
-
-  let ctx =
-    addTerminator ctx (MExitTerminator arg) loc
-
-  MNeverExpr loc, ctx
-
 let private mirifyExprCallBox ctx arg loc =
   let argTy = exprToTy arg
   let arg, ctx = mirifyExpr ctx arg
@@ -1381,8 +1373,6 @@ let private mirifyCallPrimExpr ctx itself prim args ty loc =
   | HPrim.Not, _ -> fail ()
   | HPrim.BitNot, [ arg ] -> mirifyExprBitNotUnary ctx arg loc
   | HPrim.BitNot, _ -> fail ()
-  | HPrim.Exit, [ arg ] -> mirifyExprCallExit ctx arg loc
-  | HPrim.Exit, _ -> fail ()
   | HPrim.Box, [ arg ] -> mirifyExprCallBox ctx arg loc
   | HPrim.Box, _ -> fail ()
   | HPrim.Unbox, [ arg ] -> mirifyCallUnbox ctx arg ty loc

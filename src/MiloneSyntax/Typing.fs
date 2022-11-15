@@ -1315,11 +1315,6 @@ let private primConsScheme =
   let listTy = tyList itemTy
   TyScheme([ 1 ], tyFun itemTy (tyFun listTy listTy))
 
-let private primExitScheme =
-  let meta id = tyMeta id noLoc
-  let resultTy = meta 1
-  TyScheme([ 1 ], tyFun tyInt resultTy)
-
 let private primAssertTy = tyFun tyBool tyUnit
 
 let private primOwnAcquireTy =
@@ -1412,7 +1407,6 @@ let private inferPrimExpr ctx prim loc =
 
     txAbort ctx loc
 
-  | TPrim.Exit -> onUnbounded primExitScheme
   | TPrim.Assert -> onMono primAssertTy
 
   | TPrim.Printfn ->

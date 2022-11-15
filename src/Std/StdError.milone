@@ -22,12 +22,12 @@ let __context _ (action: unit -> 'A) : 'A = action ()
 let failwith (msg: string) : 'A =
   __writeErrorLine ("FATAL ERROR: " + msg)
   assert false
-  exit 1
+  failwith msg
 
-let failwithf (msg: string) _ : 'A =
+let failwithf (msg: string) a : 'A =
   __writeErrorLine ("FATAL ERROR: " + msg)
   assert false
-  exit 1
+  failwithf msg a
 
 // -----------------------------------------------
 // Exceptions

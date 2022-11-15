@@ -282,7 +282,6 @@ type TPrim =
   | Discriminant
 
   // effects:
-  | Exit
   | Assert
   | Printfn
   | OwnAcquire

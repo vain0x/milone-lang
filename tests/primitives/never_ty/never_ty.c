@@ -20,6 +20,8 @@ int32_t never_ty_never_ty_eta2__id(void const *env_, int32_t arg_);
 
 void never_ty_never_ty_opaqueStmt(void);
 
+_Noreturn void MiloneCore_Prelude_exit(int32_t);
+
 void never_ty_never_ty_graceful(void);
 
 _Noreturn void never_ty_never_ty_crash(void);
@@ -111,7 +113,8 @@ void never_ty_never_ty_graceful(void) {
             goto clause_3;
     }
 clause_2:;
-    exit(0);
+    MiloneCore_Prelude_exit(0);
+    milone_never_error("never_ty/never_ty.milone", 9, 13);
 clause_3:;
     switch_ = 0;
     goto switch_next_1;
@@ -121,7 +124,8 @@ switch_next_1:;
 
 _Noreturn void never_ty_never_ty_crash(void) {
     never_ty_never_ty_opaqueStmt();
-    exit(1);
+    MiloneCore_Prelude_exit(1);
+    milone_never_error("never_ty/never_ty.milone", 13, 0);
 }
 
 void never_ty_never_ty_testStmt(void) {

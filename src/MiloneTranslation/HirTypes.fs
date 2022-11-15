@@ -204,7 +204,6 @@ type HPrim =
   | Cons
 
   // effects:
-  | Exit
   | Assert
   | Printfn
   | NullPtr

@@ -4,6 +4,8 @@
 
 void bool_operators_bool_operators_test(bool t_, bool f_);
 
+_Noreturn void MiloneCore_Prelude_exit(int32_t);
+
 void bool_operators_bool_operators_testShortCircuit(bool t_1, bool f_1);
 
 int main(int argc, char **argv);
@@ -148,7 +150,8 @@ void bool_operators_bool_operators_testShortCircuit(bool t_1, bool f_1) {
         goto else_27;
     }
 then_26:;
-    exit(1);
+    MiloneCore_Prelude_exit(1);
+    milone_never_error("bool_operators/bool_operators.milone", 44, 12);
 else_27:;
     if_8 = false;
     goto if_next_25;
@@ -163,7 +166,8 @@ then_29:;
     if_9 = true;
     goto if_next_28;
 else_30:;
-    exit(1);
+    MiloneCore_Prelude_exit(1);
+    milone_never_error("bool_operators/bool_operators.milone", 49, 18);
 if_next_28:;
     if ((!(if_9))) milone_assert_error("bool_operators/bool_operators.milone", 48, 2);
     return;
