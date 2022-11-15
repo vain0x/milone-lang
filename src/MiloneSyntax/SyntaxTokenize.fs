@@ -9,6 +9,11 @@ open MiloneSyntax.SyntaxTypes
 module C = Std.StdChar
 module S = Std.StdString
 
+let private unwrap opt =
+  match opt with
+  | Some it -> it
+  | None -> unreachable ()
+
 // -----------------------------------------------
 // Char
 // -----------------------------------------------
@@ -420,7 +425,7 @@ let private evalCharLit (text: string) (l: int) (r: int) : Token =
     let hex =
       text.[l + 3..l + 4]
       |> S.parseHexAsUInt64
-      |> Option.defaultWith unreachable
+      |> unwrap
 
     CharToken(char (byte hex))
 
@@ -465,7 +470,7 @@ let private evalStringLit (text: string) (l: int) (r: int) : Token =
           let hex =
             text.[i + 2..i + 3]
             |> S.parseHexAsUInt64
-            |> Option.defaultWith unreachable
+            |> unwrap
             |> byte
 
           let s =

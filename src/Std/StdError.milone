@@ -19,25 +19,30 @@ let __context _ (action: unit -> 'A) : 'A = action ()
 
 // add to prelude?
 
-let failwith (msg: string) : 'A =
-  __writeErrorLine ("FATAL ERROR: " + msg)
-  assert false
-  failwith msg
+let failwith (msg: string) : never =
+  __nativeStmt (
+    """
+    milone_failwithf("failwith: %s", string_to_c_str({0}));
+    """,
+    msg
+  )
 
-let failwithf (msg: string) a : 'A =
-  __writeErrorLine ("FATAL ERROR: " + msg)
+  // Make it clear that it's cold path.
   assert false
-  failwithf msg a
+
+  __nativeExpr "never"
+
+let failwithf (msg: string) (_: 'A) : never = failwith msg
 
 // -----------------------------------------------
 // Exceptions
 // -----------------------------------------------
 
 /// Never executed.
-let unreachable (_: 'T) : 'A = failwith "unreachable"
+let unreachable (_: 'A) : never = failwith "unreachable"
 
 /// Not implemented.
-let todo (_: 'T) : 'A = failwith "todo"
+let todo () : never = failwith "todo"
 
-/// Converts never to arbitrary type for compatibility with F#.
-let never (n: never) : 'T = unreachable ()
+/// For compatibility with F#.
+let never (n: never) : never = n
