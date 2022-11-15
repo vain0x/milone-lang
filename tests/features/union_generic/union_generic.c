@@ -72,7 +72,7 @@ next_2:;
     if (true) milone_assert_error("union_generic/union_generic.milone", 16, 4);
     exit(1);
 next_3:;
-    exit(1);
+    milone_exhaust_error("union_generic/union_generic.milone", 12, 2);
 end_match_1:;
     return match_;
 }
@@ -87,7 +87,7 @@ bool union_generic_union_generic_StringMyOption1BoolFun1_isNone(struct StringMyO
             goto clause_6;
 
         default:
-            exit(1);
+            milone_exhaust_error("union_generic/union_generic.milone", 7, 2);
     }
 clause_5:;
     switch_ = true;
@@ -111,7 +111,7 @@ next_8:;
     if (true) milone_assert_error("union_generic/union_generic.milone", 16, 4);
     exit(1);
 next_9:;
-    exit(1);
+    milone_exhaust_error("union_generic/union_generic.milone", 12, 2);
 end_match_7:;
     return match_1;
 }
@@ -126,7 +126,7 @@ bool union_generic_union_generic_Int32MyOption1BoolFun1_isNone(struct Int32MyOpt
             goto clause_12;
 
         default:
-            exit(1);
+            milone_exhaust_error("union_generic/union_generic.milone", 7, 2);
     }
 clause_11:;
     switch_1 = true;
@@ -148,7 +148,7 @@ bool union_generic_union_generic_UnitMyOption1BoolFun1_isNone(struct UnitMyOptio
             goto clause_15;
 
         default:
-            exit(1);
+            milone_exhaust_error("union_generic/union_generic.milone", 7, 2);
     }
 clause_14:;
     switch_2 = true;

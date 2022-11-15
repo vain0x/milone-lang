@@ -152,11 +152,25 @@ struct MiloneOsString milone_os_string_of(struct String s);
 struct String milone_os_string_to(struct MiloneOsString s);
 
 // -----------------------------------------------
-// assertion
+// runtime error
 // -----------------------------------------------
 
-// Invoke an assertion violation error.
-// Print location and abort the execution.
-_Noreturn void milone_assert_error(char const *filename, int32_t row, int32_t column);
+// Invoke a runtime error with an error message to terminate the process.
+_Noreturn void milone_abort(char const *name, char const *filename, int32_t row, int32_t column);
+
+// Invoked when asserted condition was evaluated to false.
+_Noreturn static void milone_assert_error(char const *filename, int32_t row, int32_t column) {
+    milone_abort("Assertion Error", filename, row, column);
+}
+
+// Invoked when match expression didn't have any arm to match.
+_Noreturn static void milone_exhaust_error(char const *filename, int32_t row, int32_t column) {
+    milone_abort("Exhaustion Error", filename, row, column);
+}
+
+// Invoked when never-returning function actually returned to caller.
+_Noreturn static void milone_never_error(char const *filename, int32_t row, int32_t column) {
+    milone_abort("Never Error", filename, row, column);
+}
 
 #endif

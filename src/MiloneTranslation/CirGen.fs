@@ -952,7 +952,7 @@ let private cgActionStmt (ctx: CirCtx) itself action args loc =
       let pathname =
         match ctx.Rx.DocIdToModulePath docId with
         | Some (p, m) -> p + "/" + m + ".milone"
-        | None -> unreachable ()
+        | None -> Symbol.toString docId
 
       [ CStringLitExpr pathname
         CIntExpr(string y, I32)
@@ -1240,7 +1240,7 @@ let private cgSetStmt ctx serial right =
   let left = CVarExpr(name)
   addStmt ctx (CSetStmt(left, right))
 
-let private cgTerminatorStmt (ctx: CirCtx) stmt : CStmt * CirCtx =
+let private cgTerminatorStmt (ctx: CirCtx) stmt loc : CStmt * CirCtx =
   match stmt with
   | MReturnTerminator (expr, argTy) ->
     if ctx.IsNoReturn then
@@ -1255,8 +1255,8 @@ let private cgTerminatorStmt (ctx: CirCtx) stmt : CStmt * CirCtx =
 
   | MIfTerminator (cond, thenCl, elseCl) ->
     let cond, ctx = cgExpr ctx cond
-    let thenCl, ctx = cgTerminatorStmt ctx thenCl
-    let elseCl, ctx = cgTerminatorStmt ctx elseCl
+    let thenCl, ctx = cgTerminatorStmt ctx thenCl loc
+    let elseCl, ctx = cgTerminatorStmt ctx elseCl loc
     CIfStmt(cond, thenCl, elseCl), ctx
 
   | MSwitchTerminator (cond, clauses) ->
@@ -1270,7 +1270,7 @@ let private cgTerminatorStmt (ctx: CirCtx) stmt : CStmt * CirCtx =
                clause.Cases
                |> List.map (fun cond -> cgConst ctx cond)
 
-             let stmt, ctx = cgTerminatorStmt ctx clause.Terminator
+             let stmt, ctx = cgTerminatorStmt ctx clause.Terminator loc
 
              (cases, clause.IsDefault, stmt), ctx)
            ctx
@@ -1280,6 +1280,28 @@ let private cgTerminatorStmt (ctx: CirCtx) stmt : CStmt * CirCtx =
   | MExitTerminator arg ->
     let arg, ctx = cgExpr ctx arg
     CExprStmt(CCallExpr(CVarExpr "exit", [ arg ])), ctx
+
+  | MAbortTerminator cause ->
+    let f =
+      match cause with
+      | MAbortCause.Assert -> "milone_assert_error"
+      | MAbortCause.Exhaust -> "milone_exhaust_error"
+      | MAbortCause.Never -> "milone_never_error"
+
+    // Embed the source location information.
+    let args =
+      let (Loc (docId, y, x)) = loc
+
+      let pathname =
+        match ctx.Rx.DocIdToModulePath docId with
+        | Some (p, m) -> p + "/" + m + ".milone"
+        | None -> Symbol.toString docId
+
+      [ CStringLitExpr pathname
+        CIntExpr(string y, I32)
+        CIntExpr(string x, I32) ]
+
+    CExprStmt(CCallExpr(CVarExpr f, args)), ctx
 
 let private cgStmt ctx stmt =
   match stmt with
@@ -1293,8 +1315,8 @@ let private cgStmt ctx stmt =
     let cond, ctx = cgExpr ctx cond
     addStmt ctx (CGotoIfStmt(cond, label))
 
-  | MTerminatorStmt (terminator, _loc) ->
-    let stmt, ctx = cgTerminatorStmt ctx terminator
+  | MTerminatorStmt (terminator, loc) ->
+    let stmt, ctx = cgTerminatorStmt ctx terminator loc
 
     match stmt with
     | CNoopStmt -> ctx

@@ -49,7 +49,7 @@ next_3:;
     match_ = 0;
     goto end_match_1;
 next_4:;
-    exit(1);
+    milone_exhaust_error("match_nested_nonbinding/match_nested_nonbinding.milone", 14, 2);
 end_match_1:;
     return 0;
 }

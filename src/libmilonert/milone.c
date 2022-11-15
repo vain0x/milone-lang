@@ -608,12 +608,13 @@ struct String string_concat(struct String sep, struct StringCons const *strings)
 }
 
 // -----------------------------------------------
-// assertion
+// runtime error
 // -----------------------------------------------
 
-_Noreturn void milone_assert_error(char const *filename, int32_t row, int32_t column) {
-    fprintf(stderr, "Assertion failed at %s:%d:%d\n", filename, row + 1, column + 1);
-    exit(1);
+_Noreturn void milone_abort(char const *name, char const *filename, int32_t row, int32_t column) {
+    fflush(stdout);
+    fprintf(stderr, "milone: %s: %s:%d:%d\n", name, filename, row + 1, column + 1);
+    abort();
 }
 
 // -----------------------------------------------

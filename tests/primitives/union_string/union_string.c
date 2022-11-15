@@ -44,7 +44,7 @@ next_3:;
     match_ = string_add(string_add((struct String){.ptr = "MyUnion.CarryingOther(", .len = 22}, (struct String){.ptr = "()", .len = 2}), (struct String){.ptr = ")", .len = 1});
     goto end_match_1;
 next_4:;
-    exit(1);
+    milone_exhaust_error("MiloneDerive.UnionString", 0, 0);
 end_match_1:;
     return match_;
 }

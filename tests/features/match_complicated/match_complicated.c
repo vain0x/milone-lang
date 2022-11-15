@@ -58,7 +58,7 @@ next_5:;
     match_1 = 0;
     goto end_match_3;
 next_6:;
-    exit(1);
+    milone_exhaust_error("match_complicated/match_complicated.milone", 9, 2);
 end_match_3:;
     return;
 }

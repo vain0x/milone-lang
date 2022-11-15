@@ -75,7 +75,7 @@ if_next_5:;
     match_ = if_;
     goto end_match_2;
 next_4:;
-    exit(1);
+    milone_exhaust_error("float/float.milone", 6, 4);
 end_match_2:;
     return match_;
 }

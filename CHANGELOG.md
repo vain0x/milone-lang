@@ -136,6 +136,7 @@
 - Heaps are now stored in thread-local variables (rather than static)
 - Rename most of functions
 - Prefer `uint32_t` for size/length/capacity (over `int`)
+- Assertion error and other runtime errors call `abort` (rather than `exit(1)`)
 
 ### Standard Libraries
 

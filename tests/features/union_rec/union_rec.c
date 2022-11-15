@@ -92,7 +92,7 @@ next_5:;
     xs_1 = arg_4;
     goto tailrec_1;
 next_6:;
-    exit(1);
+    milone_exhaust_error("union_rec/union_rec.milone", 14, 8);
 end_match_4:;
     if_ = 0;
     goto if_next_2;

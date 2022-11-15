@@ -126,12 +126,12 @@ _Noreturn void never_ty_never_ty_crash(void) {
 
 void never_ty_never_ty_testStmt(void) {
     never_ty_never_ty_crash();
-    exit(1);
+    milone_never_error("never_ty/never_ty.milone", 19, 7);
 }
 
 void never_ty_never_ty_testLetInit(void) {
     never_ty_never_ty_crash();
-    exit(1);
+    milone_never_error("never_ty/never_ty.milone", 24, 2);
 }
 
 void never_ty_never_ty_testMatchArm(void) {
@@ -147,7 +147,7 @@ void never_ty_never_ty_testMatchArm(void) {
     }
 clause_5:;
     never_ty_never_ty_crash();
-    exit(1);
+    milone_never_error("never_ty/never_ty.milone", 30, 16);
 clause_6:;
     switch_1 = 1;
     goto switch_next_4;
@@ -162,7 +162,7 @@ _Noreturn void never_ty_never_ty_eta2_testFunObj_crash(void const *env_1) {
 
 _Noreturn void never_ty_never_ty_testFunObj_callFnObj(struct UnitNeverFun1 crashFn_) {
     crashFn_.fun(crashFn_.env);
-    exit(1);
+    milone_never_error("never_ty/never_ty.milone", 38, 2);
 }
 
 void never_ty_never_ty_testFunObj(void) {
@@ -191,7 +191,7 @@ void never_ty_never_ty_testOwn(void) {
     }
 clause_8:;
     never_ty_never_ty_crash();
-    exit(1);
+    milone_never_error("never_ty/never_ty.milone", 49, 11);
 clause_9:;
     switch_2 = 0;
     goto switch_next_7;
@@ -202,7 +202,7 @@ switch_next_7:;
 
 _Noreturn void never_ty_never_ty_testInfiniteLoop_diverge(void) {
     never_ty_never_ty_testInfiniteLoop_diverge();
-    exit(1);
+    milone_never_error("never_ty/never_ty.milone", 57, 2);
 }
 
 void never_ty_never_ty_testInfiniteLoop(void) {
@@ -225,13 +225,13 @@ void never_ty_never_ty_testNeverAsValue(void) {
     opt_ = variant_;
     if ((opt_.discriminant != Neveroption1_Some)) goto next_11;
     n_ = opt_.Neveroption1_Some;
-    exit(1);
+    milone_never_error("never_ty/never_ty.milone", 65, 15);
 next_11:;
     if ((opt_.discriminant != Neveroption1_None)) goto next_12;
     never_ty_never_ty_crash();
-    exit(1);
+    milone_never_error("never_ty/never_ty.milone", 66, 18);
 next_12:;
-    exit(1);
+    milone_exhaust_error("never_ty/never_ty.milone", 64, 3);
 end_match_10:;
     variant_1 = (struct Int32NeverResult2_){.discriminant = Int32NeverResult2_Ok, .Int32NeverResult2_Ok = 0};
     ok_ = variant_1;
@@ -242,9 +242,9 @@ end_match_10:;
 next_14:;
     if ((ok_.discriminant != Int32NeverResult2_Error)) goto next_15;
     n_1 = ok_.Int32NeverResult2_Error;
-    exit(1);
+    milone_never_error("never_ty/never_ty.milone", 73, 17);
 next_15:;
-    exit(1);
+    milone_exhaust_error("never_ty/never_ty.milone", 71, 4);
 end_match_13:;
     value_ = match_1;
     if ((value_ != 0)) milone_assert_error("never_ty/never_ty.milone", 75, 2);
@@ -263,7 +263,7 @@ int main(int argc, char **argv) {
     never_ty_never_ty_testInfiniteLoop();
     never_ty_never_ty_testNeverAsValue();
     never_ty_never_ty_crash();
-    exit(1);
+    milone_never_error("never_ty/never_ty.milone", 78, 0);
 }
 
 void never_ty_never_ty_start(void) {
