@@ -19,6 +19,8 @@
     - `binary staticlib` (`*.a`, `*.lib`)
 - Add `subsystem windows` directive (only on Windows)
 - Support `Export` attribute on functions
+- Support `never` type
+- Assertion error and other runtime errors call `abort` (rather than `exit(1)`)
 
 ### CLI Tool
 
@@ -120,7 +122,6 @@
         - `nullPtr`, `invalid`
         - `cast`, `asIn`, `asNative`
         - `distance`
-- Support `never` type
 - Improve primitives:
     - Fix an issue that `string : bool -> string` didn't work at all
     - `string` now works for tuples and unions (result is unstable)
@@ -136,7 +137,6 @@
 - Heaps are now stored in thread-local variables (rather than static)
 - Rename most of functions
 - Prefer `uint32_t` for size/length/capacity (over `int`)
-- Assertion error and other runtime errors call `abort` (rather than `exit(1)`)
 
 ### Standard Libraries
 
