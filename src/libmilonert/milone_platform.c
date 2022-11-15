@@ -401,7 +401,7 @@ int milone_subprocess_run(struct String command,
 }
 
 // Turn current process into a shell to execute a command.
-void execute_into(struct String cmd) {
+_Noreturn void execute_into(struct String cmd) {
 #if defined(MILONE_PLATFORM_LINUX)
     char *argv[] = {
         "/bin/sh",

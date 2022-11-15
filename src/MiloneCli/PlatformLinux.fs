@@ -59,7 +59,7 @@ type BuildOnLinuxParams =
     // Effects
     DirCreate: Path -> unit
     FileWrite: Path -> string -> unit
-    ExecuteInto: string -> Never }
+    ExecuteInto: string -> never }
 
 let private toRenderNinjaParams (p: BuildOnLinuxParams) : RenderNinjaFileParams =
   { TargetDir = p.TargetDir
@@ -77,7 +77,7 @@ let private toRenderNinjaParams (p: BuildOnLinuxParams) : RenderNinjaFileParams 
     LinuxCFlags = p.LinuxCFlags
     LinuxLinkFlags = p.LinuxLinkFlags }
 
-let buildOnLinux (p: BuildOnLinuxParams) : Never =
+let buildOnLinux (p: BuildOnLinuxParams) : never =
   let targetDir = p.TargetDir
 
   let ninjaFile =
@@ -100,7 +100,7 @@ let buildOnLinux (p: BuildOnLinuxParams) : Never =
     + andCopyCommand p.ExeFile p.OutputOpt
   )
 
-let runOnLinux (p: BuildOnLinuxParams) (args: string list) : Never =
+let runOnLinux (p: BuildOnLinuxParams) (args: string list) : never =
   let targetDir = p.TargetDir
   let exeFile = p.ExeFile
 

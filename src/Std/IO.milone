@@ -24,7 +24,7 @@ module IO =
   //
   //   let main _ = never (IO.exec (fun io -> action io))
   // ```
-  let exec (action: IO -> IO) : Never =
+  let exec (action: IO -> IO) : never =
     let (IO io) = action (IO(Own.acquire ()))
     Own.release io
     __nativeStmt "exit(0);"

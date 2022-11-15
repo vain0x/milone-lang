@@ -59,7 +59,7 @@ type Verbosity =
 [<RequireQualifiedAccess; NoEquality; NoComparison>]
 type LinuxApi =
   { /// Turns this process into a shell that runs specified command.
-    ExecuteInto: string -> Never }
+    ExecuteInto: string -> never }
 
 [<RequireQualifiedAccess; NoEquality; NoComparison>]
 type WindowsApi =

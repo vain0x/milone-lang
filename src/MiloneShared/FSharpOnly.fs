@@ -2,6 +2,12 @@
 [<AutoOpen>]
 module FSharpOnly
 
+type never = private | Never
+
+let never<'T> (_: never) : 'T =
+  assert false
+  exit 1
+
 // -----------------------------------------------
 // C FFI
 // -----------------------------------------------
