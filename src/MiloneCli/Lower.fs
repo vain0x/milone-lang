@@ -135,7 +135,6 @@ let private lowerPrim (prim: Tir.TPrim) : Hir.HPrim =
   | Tir.TPrim.StringLength -> Hir.HPrim.StringLength
   | Tir.TPrim.Nil -> Hir.HPrim.Nil
   | Tir.TPrim.Cons -> Hir.HPrim.Cons
-  | Tir.TPrim.Exit -> Hir.HPrim.Exit
   | Tir.TPrim.Assert -> Hir.HPrim.Assert
   | Tir.TPrim.Printfn -> Hir.HPrim.Printfn
   | Tir.TPrim.PtrCast

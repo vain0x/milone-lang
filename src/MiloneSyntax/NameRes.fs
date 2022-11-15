@@ -2065,7 +2065,6 @@ let private addPrims (ctx: ScopeCtx) =
   // Top-level value primitives.
   let topLevelValueScope =
     [ "not", TPrim.Not
-      "exit", TPrim.Exit
       "assert", TPrim.Assert
       "box", TPrim.Box
       "unbox", TPrim.Unbox

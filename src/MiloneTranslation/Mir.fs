@@ -198,9 +198,16 @@ type MSwitchClause =
     IsDefault: bool
     Terminator: MTerminator }
 
+[<RequireQualifiedAccess; NoEquality; NoComparison>]
+type MAbortCause =
+  | Assert
+  | Exhaust
+  | Never
+
 [<NoEquality; NoComparison>]
 type MTerminator =
   | MExitTerminator of exitCode: MExpr
+  | MAbortTerminator of MAbortCause
   | MReturnTerminator of result: MExpr * resultTy: Ty
   | MGotoTerminator of Label
   | MIfTerminator of cond: MExpr * thenCl: MTerminator * elseCl: MTerminator

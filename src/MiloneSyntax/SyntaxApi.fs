@@ -75,7 +75,7 @@ let getModuleKind projectName (_: ModuleName) =
   | "MiloneCore" -> ModuleKind.MiloneCore
   | _ -> ModuleKind.Regular
 
-let private preludeFuns = [ "ignore"; "id"; "fst"; "snd" ]
+let private preludeFuns = [ "exit"; "ignore"; "id"; "fst"; "snd" ]
 let private optionIdents = [ "option"; "None"; "Some" ]
 let private resultIdents = [ "Result"; "Ok"; "Error" ]
 

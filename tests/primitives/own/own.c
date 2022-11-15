@@ -379,7 +379,7 @@ next_19:;
     match_ = 0;
     goto end_match_18;
 next_20:;
-    exit(1);
+    milone_exhaust_error("own/own.milone", 120, 2);
 end_match_18:;
     return;
 }

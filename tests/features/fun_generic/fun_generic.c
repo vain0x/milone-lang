@@ -128,7 +128,7 @@ next_2:;
     match_ = list_;
     goto end_match_1;
 next_3:;
-    exit(1);
+    milone_exhaust_error("fun_generic/fun_generic.milone", 14, 2);
 end_match_1:;
     return match_;
 }
@@ -191,7 +191,7 @@ next_5:;
     match_1 = list_1;
     goto end_match_4;
 next_6:;
-    exit(1);
+    milone_exhaust_error("fun_generic/fun_generic.milone", 14, 2);
 end_match_4:;
     return match_1;
 }
@@ -227,7 +227,7 @@ next_9:;
     xs_1 = arg_6;
     goto tailrec_7;
 next_10:;
-    exit(1);
+    milone_exhaust_error("fun_generic/fun_generic.milone", 6, 4);
 end_match_8:;
     return match_2;
 }
@@ -255,7 +255,7 @@ next_13:;
     xs_1 = arg_8;
     goto tailrec_11;
 next_14:;
-    exit(1);
+    milone_exhaust_error("fun_generic/fun_generic.milone", 6, 4);
 end_match_12:;
     return match_3;
 }

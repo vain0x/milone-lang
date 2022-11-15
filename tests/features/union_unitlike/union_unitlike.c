@@ -64,7 +64,7 @@ next_4:;
     match_1 = true;
     goto end_match_3;
 next_5:;
-    exit(1);
+    milone_exhaust_error("union_unitlike/union_unitlike.milone", 23, 4);
 end_match_3:;
     return match_1;
 }

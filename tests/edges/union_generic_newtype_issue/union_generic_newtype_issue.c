@@ -48,7 +48,7 @@ int main(int argc, char **argv) {
             goto clause_3;
 
         default:
-            exit(1);
+            milone_exhaust_error("union_generic_newtype_issue/union_generic_newtype_issue.milone", 14, 2);
     }
 clause_2:;
     switch_ = 0;

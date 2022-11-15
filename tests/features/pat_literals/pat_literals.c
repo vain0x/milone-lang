@@ -25,7 +25,7 @@ next_4:;
     match_1 = 0;
     goto end_match_3;
 next_5:;
-    exit(1);
+    milone_exhaust_error("pat_literals/pat_literals.milone", 8, 2);
 end_match_3:;
     switch (1) {
         case 0:

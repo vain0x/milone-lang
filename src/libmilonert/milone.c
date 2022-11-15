@@ -13,6 +13,7 @@
 #include <assert.h>
 #include <ctype.h>
 #include <errno.h>
+#include <stdarg.h>
 #include <stdbool.h>
 #include <stddef.h>
 #include <stdint.h>
@@ -33,6 +34,33 @@
 static uint32_t const LIMIT = 1U << 31;
 
 // -----------------------------------------------
+// runtime error
+// -----------------------------------------------
+
+_Noreturn void milone_abort(char const *name, char const *filename, int32_t row,
+                            int32_t column) {
+    fflush(stdout);
+    fprintf(stderr, "milone: %s: %s:%d:%d\n", name, filename, row + 1,
+            column + 1);
+    abort();
+}
+
+_Noreturn void milone_failwith(char const *msg) {
+    fprintf(stderr, "milone: Runtime Error: %s\n", msg);
+    abort();
+}
+
+_Noreturn void milone_failwithf(char const *fmt, ...) {
+    va_list va;
+    va_start(va, fmt);
+    fprintf(stderr, "milone: Runtime Error: ");
+    vfprintf(stderr, fmt, va);
+    fprintf(stderr, "\n");
+    va_end(va);
+    abort();
+}
+
+// -----------------------------------------------
 // memory management (memory pool)
 // -----------------------------------------------
 
@@ -42,9 +70,9 @@ size_t milone_alloc_cost(void);
 typedef void (*DeferFunPtr)(void const *env);
 
 struct DeferChain {
-  DeferFunPtr fun;
-  void const *env;
-  struct DeferChain *parent;
+    DeferFunPtr fun;
+    void const *env;
+    struct DeferChain *parent;
 };
 
 // structure for memory management. poor implementation. thread unsafe.
@@ -77,10 +105,7 @@ THREAD_LOCAL size_t s_heap_size;  // consumed size in all regions
 THREAD_LOCAL size_t s_heap_alloc; // allocated size in all regions
 THREAD_LOCAL size_t s_alloc_cost; // allocation count
 
-_Noreturn static void oom(void) {
-    fprintf(stderr, "Out of memory.\n");
-    exit(1);
-}
+_Noreturn static void oom(void) { milone_failwith("Out of memory"); }
 
 // free chunk itself, not used list
 static void free_chunk(struct MemoryChunk *chunk) {
@@ -250,7 +275,9 @@ void *milone_region_alloc(uint32_t count, uint32_t size) {
     return do_region_alloc(count, size);
 }
 
-void milone_region_defer(DeferFunPtr fun, void const *env) { do_region_defer(fun, env); }
+void milone_region_defer(DeferFunPtr fun, void const *env) {
+    do_region_defer(fun, env);
+}
 
 #endif // MILONE_NO_DEFAULT_ALLOCATOR
 
@@ -265,21 +292,13 @@ int milone_int32_compare(int32_t l, int32_t r) {
     return (r < l) - (l < r);
 }
 
-int milone_int64_compare(int64_t l, int64_t r) {
-    return (r < l) - (l < r);
-}
+int milone_int64_compare(int64_t l, int64_t r) { return (r < l) - (l < r); }
 
-int milone_uint64_compare(uint64_t l, uint64_t r) {
-    return (r < l) - (l < r);
-}
+int milone_uint64_compare(uint64_t l, uint64_t r) { return (r < l) - (l < r); }
 
-static uint32_t uint32_min(uint32_t l, uint32_t r) {
-    return r < l ? r : l;
-}
+static uint32_t uint32_min(uint32_t l, uint32_t r) { return r < l ? r : l; }
 
-static int uint32_compare(uint32_t l, uint32_t r) {
-    return (r < l) - (l < r);
-}
+static int uint32_compare(uint32_t l, uint32_t r) { return (r < l) - (l < r); }
 
 // -----------------------------------------------
 // string
@@ -305,7 +324,8 @@ static struct StringBuilder *string_builder_new_with_capacity(uint32_t cap) {
 static void string_builder_grow(struct StringBuilder *sb, uint32_t addition) {
     // Addition must be larger than unused space.
     assert(addition >= sb->cap - sb->len);
-    if (addition >= LIMIT - sb->cap) oom();
+    if (addition >= LIMIT - sb->cap)
+        oom();
 
     // grow exponentially
     sb->cap *= 2;
@@ -354,16 +374,13 @@ int string_compare(struct String left, struct String right) {
     return uint32_compare(left.len, right.len);
 }
 
-_Noreturn static void error_str_of_raw_parts(uint32_t len) {
-    fprintf(stderr, "FATAL: Negative string length (%d).\n", len);
-    exit(1);
-}
-
 struct String string_of_raw_parts(char const *p, uint32_t len) {
     assert(p != NULL);
 
-    if (len == 0) return string_borrow("");
-    if (len >= LIMIT - 1) oom();
+    if (len == 0)
+        return string_borrow("");
+    if (len >= LIMIT - 1)
+        oom();
 
     // +1 for the invariant of existence of null byte.
     char *buf = milone_region_alloc(len + 1, sizeof(char));
@@ -377,11 +394,6 @@ struct String string_of_c_str(char const *s) {
     return string_of_raw_parts(s, (uint32_t)strlen(s));
 }
 
-_Noreturn static void error_str_add_overflow() {
-    fprintf(stderr, "string_add: length overflow.\n");
-    exit(1);
-}
-
 struct String string_add(struct String left, struct String right) {
     if (left.len == 0 || right.len == 0) {
         return right.len == 0 ? left : right;
@@ -389,7 +401,7 @@ struct String string_add(struct String left, struct String right) {
 
     // Length limit: |l| + |r| < LIMIT
     if (right.len >= LIMIT - left.len) {
-        error_str_add_overflow();
+        milone_failwith("str_add: Length overflow");
     }
 
     uint32_t len = left.len + right.len;
@@ -401,8 +413,10 @@ struct String string_add(struct String left, struct String right) {
 }
 
 struct String string_slice(struct String s, int32_t l, int32_t r) {
-    if (l < 0) l = 0;
-    if (r < 0) r = 0;
+    if (l < 0)
+        l = 0;
+    if (r < 0)
+        r = 0;
     uint32_t ur = uint32_min((uint32_t)r, s.len);
     uint32_t ul = uint32_min((uint32_t)l, (uint32_t)r);
     assert(ul <= ur && ur <= s.len);
@@ -431,11 +445,10 @@ static bool string_is_all_spaces(char const *begin, char const *end) {
     return p == end;
 }
 
+// type_name: name of a number type in milone-lang
 static void verify_str_to_number(const char *type_name, bool ok) {
     if (!ok) {
-        fprintf(stderr, "FATAL: Failed to convert a string to %s.\n",
-                type_name);
-        exit(1);
+        milone_failwithf("%s: Failed to convert from a string", type_name);
     }
 }
 
@@ -508,7 +521,9 @@ int64_t string_to_int64(struct String s) {
     return value;
 }
 
-intptr_t string_to_nativeint(struct String s) { return (intptr_t)string_to_int64(s); }
+intptr_t string_to_nativeint(struct String s) {
+    return (intptr_t)string_to_int64(s);
+}
 
 uint8_t string_to_uint8(struct String s) {
     uint64_t value;
@@ -581,7 +596,8 @@ struct MyStringCons {
     struct MyStringCons const *tail;
 };
 
-struct String string_concat(struct String sep, struct StringCons const *strings) {
+struct String string_concat(struct String sep,
+                            struct StringCons const *strings) {
     struct MyStringCons const *ss = (struct MyStringCons const *)strings;
 
     struct StringBuilder *sb = string_builder_new_with_capacity(0x1000);
@@ -608,15 +624,6 @@ struct String string_concat(struct String sep, struct StringCons const *strings)
 }
 
 // -----------------------------------------------
-// assertion
-// -----------------------------------------------
-
-_Noreturn void milone_assert_error(char const *filename, int32_t row, int32_t column) {
-    fprintf(stderr, "Assertion failed at %s:%d:%d\n", filename, row + 1, column + 1);
-    exit(1);
-}
-
-// -----------------------------------------------
 // file IO
 // -----------------------------------------------
 
@@ -639,34 +646,38 @@ struct String file_read_all_text(struct String file_name) {
 
     FILE *fp = fopen(file_name.ptr, "rb");
     if (!fp) {
+        perror("fopen");
         fprintf(stderr, "File '%s' not found.", file_name.ptr);
-        exit(1);
+        goto FAIL;
     }
 
     fseek(fp, 0, SEEK_END);
     long size = ftell(fp);
     if (size < 0) {
-        fclose(fp);
-        fprintf(stderr, "%s", "Couldn't retrieve the file size.\n");
-        exit(1);
+        perror("ftell");
+        goto FAIL;
     }
     if ((size_t)size >= LIMIT) {
-        fclose(fp);
         fprintf(stderr, "%s", "File size is too large.\n");
-        exit(1);
+        goto FAIL;
     }
     fseek(fp, 0, SEEK_SET);
 
     char *content = milone_region_alloc((uint32_t)size + 1, sizeof(char));
     size_t read_size = fread(content, 1, (size_t)size, fp);
     if (read_size != (size_t)size) {
-        fclose(fp);
-        fprintf(stderr, "%s", "Couldn't retrieve the file contents");
-        exit(1);
+        perror("fread");
+        goto FAIL;
     }
 
     fclose(fp);
     return (struct String){.ptr = content, .len = (uint32_t)size};
+
+FAIL:
+    if (fp)
+        fclose(fp);
+
+    milone_failwith("file_read_all_text");
 }
 
 void file_write_all_text(struct String file_name, struct String content) {
@@ -705,7 +716,7 @@ void file_write_all_text(struct String file_name, struct String content) {
     fp = fopen(file_name.ptr, "wb+");
     if (!fp) {
         perror("fopen(wb+)");
-        exit(1);
+        milone_failwith("file_write_all_text");
     }
 
     bool ok = fwrite(content.ptr, sizeof(char), (size_t)content.len, fp) ==
@@ -713,7 +724,7 @@ void file_write_all_text(struct String file_name, struct String content) {
     if (!ok) {
         perror("fwrite");
         fclose(fp);
-        exit(1);
+        milone_failwith("file_write_all_text");
     }
 
 END:
@@ -726,8 +737,7 @@ struct String milone_read_stdin_all(void) {
 
     while (true) {
         if (sb->cap > 10100100) {
-            fprintf(stderr, "error: stdin too long\n");
-            exit(1);
+            milone_failwith("milone_read_stdin_all: stdin too long");
         }
 
         size_t read_len = fread(buf, 1, sizeof buf, stdin);

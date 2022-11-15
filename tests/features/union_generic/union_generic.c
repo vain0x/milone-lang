@@ -8,6 +8,8 @@ struct Int32MyOption1_;
 
 struct UnitMyOption1_;
 
+_Noreturn void MiloneCore_Prelude_exit(int32_t);
+
 struct String union_generic_union_generic_StringMyOption1StringFun1_unwrap(struct StringMyOption1_ opt_1);
 
 bool union_generic_union_generic_StringMyOption1BoolFun1_isNone(struct StringMyOption1_ opt_);
@@ -70,9 +72,10 @@ struct String union_generic_union_generic_StringMyOption1StringFun1_unwrap(struc
 next_2:;
     if ((opt_1.discriminant != StringMyOption1_MyNone)) goto next_3;
     if (true) milone_assert_error("union_generic/union_generic.milone", 16, 4);
-    exit(1);
+    MiloneCore_Prelude_exit(1);
+    milone_never_error("union_generic/union_generic.milone", 17, 8);
 next_3:;
-    exit(1);
+    milone_exhaust_error("union_generic/union_generic.milone", 12, 2);
 end_match_1:;
     return match_;
 }
@@ -87,7 +90,7 @@ bool union_generic_union_generic_StringMyOption1BoolFun1_isNone(struct StringMyO
             goto clause_6;
 
         default:
-            exit(1);
+            milone_exhaust_error("union_generic/union_generic.milone", 7, 2);
     }
 clause_5:;
     switch_ = true;
@@ -109,9 +112,10 @@ int32_t union_generic_union_generic_Int32MyOption1Int32Fun1_unwrap(struct Int32M
 next_8:;
     if ((opt_1.discriminant != Int32MyOption1_MyNone)) goto next_9;
     if (true) milone_assert_error("union_generic/union_generic.milone", 16, 4);
-    exit(1);
+    MiloneCore_Prelude_exit(1);
+    milone_never_error("union_generic/union_generic.milone", 17, 8);
 next_9:;
-    exit(1);
+    milone_exhaust_error("union_generic/union_generic.milone", 12, 2);
 end_match_7:;
     return match_1;
 }
@@ -126,7 +130,7 @@ bool union_generic_union_generic_Int32MyOption1BoolFun1_isNone(struct Int32MyOpt
             goto clause_12;
 
         default:
-            exit(1);
+            milone_exhaust_error("union_generic/union_generic.milone", 7, 2);
     }
 clause_11:;
     switch_1 = true;
@@ -148,7 +152,7 @@ bool union_generic_union_generic_UnitMyOption1BoolFun1_isNone(struct UnitMyOptio
             goto clause_15;
 
         default:
-            exit(1);
+            milone_exhaust_error("union_generic/union_generic.milone", 7, 2);
     }
 clause_14:;
     switch_2 = true;

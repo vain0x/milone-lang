@@ -8,6 +8,8 @@ void record_inference_record_inference_letWithTypeAscriptionCase(int32_t n_);
 
 void record_inference_record_inference_typeAscriptionExprCase(int32_t n_1);
 
+_Noreturn void MiloneCore_Prelude_exit(int32_t);
+
 void record_inference_record_inference_matchExprCase(int32_t n_2);
 
 int32_t record_inference_record_inference_funAppCase_unwrap(struct IntWrapper_ w_1);
@@ -52,7 +54,8 @@ clause_2:;
     switch_ = IntWrapper_2;
     goto switch_next_1;
 clause_3:;
-    exit(1);
+    MiloneCore_Prelude_exit(1);
+    milone_never_error("record_inference/record_inference.milone", 19, 15);
 switch_next_1:;
     t_ = switch_;
     if ((t_.t0 != 0)) milone_assert_error("record_inference/record_inference.milone", 21, 2);

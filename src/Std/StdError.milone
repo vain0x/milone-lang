@@ -22,12 +22,12 @@ let __context _ (action: unit -> 'A) : 'A = action ()
 let failwith (msg: string) : 'A =
   __writeErrorLine ("FATAL ERROR: " + msg)
   assert false
-  exit 1
+  failwith msg
 
-let failwithf (msg: string) _ : 'A =
+let failwithf (msg: string) a : 'A =
   __writeErrorLine ("FATAL ERROR: " + msg)
   assert false
-  exit 1
+  failwithf msg a
 
 // -----------------------------------------------
 // Exceptions
@@ -39,12 +39,5 @@ let unreachable (_: 'T) : 'A = failwith "unreachable"
 /// Not implemented.
 let todo (_: 'T) : 'A = failwith "todo"
 
-// -----------------------------------------------
-// Never
-// -----------------------------------------------
-
-/// Placeholder of result type of diverging function.
-type Never = private | Never
-
-/// Never happens.
-let never Never : 'A = unreachable ()
+/// Converts never to arbitrary type for compatibility with F#.
+let never (n: never) : 'T = unreachable ()

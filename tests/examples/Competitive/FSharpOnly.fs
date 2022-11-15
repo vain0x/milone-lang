@@ -15,10 +15,6 @@ module Block =
 module StdError =
   let unreachable () = failwith ""
 
-  type Never = private | Never
-
-  let never Never = failwith "never"
-
 module Vector =
   open Block
 

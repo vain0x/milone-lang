@@ -47,7 +47,7 @@ let private runCommand (command: string) (args: string list) : int =
   p.WaitForExit()
   p.ExitCode
 
-let private executeInto (cmd: string) : Never =
+let private executeInto (cmd: string) : never =
   try
     let p =
       System.Diagnostics.Process.Start("/bin/sh", [ "-c"; cmd ])

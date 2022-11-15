@@ -10,6 +10,8 @@ struct Int32StringTuple2_;
 
 struct ApiResponse_;
 
+_Noreturn void MiloneCore_Prelude_exit(int32_t);
+
 int main(int argc, char **argv);
 
 enum Status_Discriminant {
@@ -95,7 +97,7 @@ next_2:;
     match_ = 0;
     goto end_match_1;
 next_3:;
-    exit(1);
+    milone_exhaust_error("union/union.milone", 27, 4);
 end_match_1:;
     variant_2 = (struct Limit_){.discriminant = Limit_LimitVal, .Limit_LimitVal = 1};
     if ((variant_2.discriminant != Limit_LimitVal)) goto next_5;
@@ -105,9 +107,10 @@ end_match_1:;
     goto end_match_4;
 next_5:;
     if ((variant_2.discriminant != Limit_LimitDiv)) goto next_6;
-    exit(2);
+    MiloneCore_Prelude_exit(2);
+    milone_never_error("union/union.milone", 34, 22);
 next_6:;
-    exit(1);
+    milone_exhaust_error("union/union.milone", 32, 4);
 end_match_4:;
     switch ((struct ApiResponse_){.discriminant = ApiResponse_ARCancel}.discriminant) {
         case ApiResponse_ARCancel:
@@ -161,7 +164,7 @@ end_match_10:;
             goto clause_18;
 
         default:
-            exit(1);
+            milone_exhaust_error("union/union.milone", 53, 2);
     }
 clause_17:;
     switch_1 = 0;

@@ -42,9 +42,8 @@ let private getEnv (name: string) : string = __nativeFun ("milone_get_env", name
 let private runCommand (command: string) (args: string list) : int =
   __nativeFun ("milone_subprocess_run", command, args)
 
-let private executeInto (cmd: string) : Never =
+let private executeInto (cmd: string) : never =
   __nativeFun ("execute_into", cmd)
-  unreachable ()
 
 let private readFile filePath =
   if fileExists filePath then

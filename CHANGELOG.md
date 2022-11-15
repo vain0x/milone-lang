@@ -19,6 +19,8 @@
     - `binary staticlib` (`*.a`, `*.lib`)
 - Add `subsystem windows` directive (only on Windows)
 - Support `Export` attribute on functions
+- Support `never` type
+- Assertion error and other runtime errors call `abort` (rather than `exit(1)`)
 
 ### CLI Tool
 
@@ -53,6 +55,7 @@
 - Transfer module load process to clients (CLI/LSP server)
 - Revert separation of types and implementation projects
 - `DocId` representation is no longer limited to `P.M`. LSP server now uses absolute file paths to avoid conflict.
+- `exit` is now a regular function (rather than primitive)
 
 ## [v0.5.0] - 2022-07-21
 
@@ -120,7 +123,6 @@
         - `nullPtr`, `invalid`
         - `cast`, `asIn`, `asNative`
         - `distance`
-- Support `never` type
 - Improve primitives:
     - Fix an issue that `string : bool -> string` didn't work at all
     - `string` now works for tuples and unions (result is unstable)

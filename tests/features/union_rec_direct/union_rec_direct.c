@@ -48,7 +48,7 @@ next_2:;
     match_ = (call_ + call_1);
     goto end_match_1;
 next_3:;
-    exit(1);
+    milone_exhaust_error("union_rec_direct/union_rec_direct.milone", 10, 4);
 end_match_1:;
     return match_;
 }

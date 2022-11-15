@@ -39,7 +39,7 @@ next_2:;
     match_ = 0;
     goto end_match_1;
 next_3:;
-    exit(1);
+    milone_exhaust_error("modules/modules.milone", 8, 4);
 end_match_1:;
     n_ = match_;
     call_ = modules_sub_Int32Int32Fun1_f(n_);

@@ -282,9 +282,6 @@ let private mxUnbox expr ty loc : MExpr =
 
   | BoxMode.Alloc -> MUnaryExpr(MUnboxUnary ty, expr, loc)
 
-let private mtAbort loc =
-  MExitTerminator(MLitExpr(IntLit "1", loc))
-
 let private msGotoUnless cond label loc = MGotoIfStmt(mxNot cond loc, label)
 
 // -----------------------------------------------
@@ -417,8 +414,6 @@ let private mirifyPatTuple ctx endLabel itemPats expr tupleTy loc =
 let private mirifyPatBox ctx endLabel itemPat expr loc =
   let ty, _ = patExtract itemPat
   mirifyPat ctx endLabel itemPat (mxUnbox expr ty loc) ty
-
-let private mirifyPatAbort ctx loc = addTerminator ctx (mtAbort loc) loc
 
 let private mirifyPatAs ctx endLabel pat serial expr loc =
   let ty, _ = patExtract pat
@@ -681,7 +676,7 @@ let private mirifyExprMatchAsSwitchStmt ctx cond arms ty loc =
       let clause: MSwitchClause =
         { Cases = []
           IsDefault = true
-          Terminator = mtAbort loc }
+          Terminator = MAbortTerminator MAbortCause.Exhaust }
 
       clause :: clauses
 
@@ -848,7 +843,7 @@ let private mirifyExprMatchFull ctx cond arms ty loc =
       if isCovering then
         ctx
       else
-        addTerminator ctx (mtAbort loc) loc
+        addTerminator ctx (MAbortTerminator MAbortCause.Exhaust) loc
 
   let instructionsRev, ctx = goArms ctx [] true arms
   let instructions = fixUp [] endLabel instructionsRev
@@ -1001,14 +996,6 @@ let private reuseArmLocals (ctx: MirCtx) arms : _ * MirCtx =
 // Expressions
 // -----------------------------------------------
 
-let private mirifyExprCallExit ctx arg loc =
-  let arg, ctx = mirifyExpr ctx arg
-
-  let ctx =
-    addTerminator ctx (MExitTerminator arg) loc
-
-  MNeverExpr loc, ctx
-
 let private mirifyExprCallBox ctx arg loc =
   let argTy = exprToTy arg
   let arg, ctx = mirifyExpr ctx arg
@@ -1057,7 +1044,7 @@ let private mirifyCatchNeverExpr (ctx: MirCtx) arg loc =
   let _, ctx = mirifyExpr ctx arg
 
   let ctx =
-    addTerminator ctx (MExitTerminator (MLitExpr (IntLit "1", loc))) loc
+    addTerminator ctx (MAbortTerminator MAbortCause.Never) loc
 
   MNeverExpr loc, ctx
 
@@ -1386,8 +1373,6 @@ let private mirifyCallPrimExpr ctx itself prim args ty loc =
   | HPrim.Not, _ -> fail ()
   | HPrim.BitNot, [ arg ] -> mirifyExprBitNotUnary ctx arg loc
   | HPrim.BitNot, _ -> fail ()
-  | HPrim.Exit, [ arg ] -> mirifyExprCallExit ctx arg loc
-  | HPrim.Exit, _ -> fail ()
   | HPrim.Box, [ arg ] -> mirifyExprCallBox ctx arg loc
   | HPrim.Box, _ -> fail ()
   | HPrim.Unbox, [ arg ] -> mirifyCallUnbox ctx arg ty loc

@@ -729,7 +729,7 @@ let private cpDecls decls acc =
 
 let private cpHeader acc =
   // stdio for printf
-  // stdlib for exit
+  // stdlib for Prelude.exit
   let header =
     "#include <stdio.h>\n#include <stdlib.h>\n#include <milone.h>"
 
