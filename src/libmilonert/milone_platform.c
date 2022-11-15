@@ -145,7 +145,8 @@ struct MiloneOsString milone_os_string_of(struct String s) {
 }
 
 struct String milone_os_string_to(struct MiloneOsString s) {
-    return string_ensure_null_terminated((struct String){.ptr = s.ptr, .len = s.len});
+    return string_ensure_null_terminated(
+        (struct String){.ptr = s.ptr, .len = s.len});
 }
 
 #endif
@@ -303,7 +304,7 @@ static void build_cmdline(struct String command, struct StringCons const *args,
         }
     }
     if (buf_size <= total_len) {
-        milone_failwith("build_cmd: command line too long\n");
+        milone_failwith("build_cmd: command line too long");
     }
 
     uint32_t i = 0;
@@ -442,7 +443,8 @@ static void rng_destroy(BCRYPT_ALG_HANDLE h_alg) {
     BCryptCloseAlgorithmProvider(h_alg, 0);
 }
 
-static void rng_random_bytes(BCRYPT_ALG_HANDLE h_alg, uint8_t *buf, uint32_t len) {
+static void rng_random_bytes(BCRYPT_ALG_HANDLE h_alg, uint8_t *buf,
+                             uint32_t len) {
     assert(buf != NULL && len != 0);
 
     if (BCryptGenRandom(h_alg, (PUCHAR)buf, (ULONG)len, 0) != 0) {
@@ -463,11 +465,9 @@ struct String milone_uuid(void) {
     sprintf(
         s,
         "%02x%02x%02x%02x-%02x%02x-%02x%02x-%02x%02x-%02x%02x%02x%02x%02x%02x",
-        buf[0x0], buf[0x1], buf[0x2], buf[0x3],
-        buf[0x4], buf[0x5], buf[0x6], buf[0x7],
-        buf[0x8], buf[0x9], buf[0xa], buf[0xb],
-        buf[0xc], buf[0xd], buf[0xe], buf[0xf]
-    );
+        buf[0x0], buf[0x1], buf[0x2], buf[0x3], buf[0x4], buf[0x5], buf[0x6],
+        buf[0x7], buf[0x8], buf[0x9], buf[0xa], buf[0xb], buf[0xc], buf[0xd],
+        buf[0xe], buf[0xf]);
     return string_of_c_str(s);
 }
 

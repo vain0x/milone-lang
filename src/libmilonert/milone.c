@@ -70,9 +70,9 @@ size_t milone_alloc_cost(void);
 typedef void (*DeferFunPtr)(void const *env);
 
 struct DeferChain {
-  DeferFunPtr fun;
-  void const *env;
-  struct DeferChain *parent;
+    DeferFunPtr fun;
+    void const *env;
+    struct DeferChain *parent;
 };
 
 // structure for memory management. poor implementation. thread unsafe.
@@ -275,7 +275,9 @@ void *milone_region_alloc(uint32_t count, uint32_t size) {
     return do_region_alloc(count, size);
 }
 
-void milone_region_defer(DeferFunPtr fun, void const *env) { do_region_defer(fun, env); }
+void milone_region_defer(DeferFunPtr fun, void const *env) {
+    do_region_defer(fun, env);
+}
 
 #endif // MILONE_NO_DEFAULT_ALLOCATOR
 
@@ -290,21 +292,13 @@ int milone_int32_compare(int32_t l, int32_t r) {
     return (r < l) - (l < r);
 }
 
-int milone_int64_compare(int64_t l, int64_t r) {
-    return (r < l) - (l < r);
-}
+int milone_int64_compare(int64_t l, int64_t r) { return (r < l) - (l < r); }
 
-int milone_uint64_compare(uint64_t l, uint64_t r) {
-    return (r < l) - (l < r);
-}
+int milone_uint64_compare(uint64_t l, uint64_t r) { return (r < l) - (l < r); }
 
-static uint32_t uint32_min(uint32_t l, uint32_t r) {
-    return r < l ? r : l;
-}
+static uint32_t uint32_min(uint32_t l, uint32_t r) { return r < l ? r : l; }
 
-static int uint32_compare(uint32_t l, uint32_t r) {
-    return (r < l) - (l < r);
-}
+static int uint32_compare(uint32_t l, uint32_t r) { return (r < l) - (l < r); }
 
 // -----------------------------------------------
 // string
@@ -330,7 +324,8 @@ static struct StringBuilder *string_builder_new_with_capacity(uint32_t cap) {
 static void string_builder_grow(struct StringBuilder *sb, uint32_t addition) {
     // Addition must be larger than unused space.
     assert(addition >= sb->cap - sb->len);
-    if (addition >= LIMIT - sb->cap) oom();
+    if (addition >= LIMIT - sb->cap)
+        oom();
 
     // grow exponentially
     sb->cap *= 2;
@@ -382,8 +377,10 @@ int string_compare(struct String left, struct String right) {
 struct String string_of_raw_parts(char const *p, uint32_t len) {
     assert(p != NULL);
 
-    if (len == 0) return string_borrow("");
-    if (len >= LIMIT - 1) oom();
+    if (len == 0)
+        return string_borrow("");
+    if (len >= LIMIT - 1)
+        oom();
 
     // +1 for the invariant of existence of null byte.
     char *buf = milone_region_alloc(len + 1, sizeof(char));
@@ -416,8 +413,10 @@ struct String string_add(struct String left, struct String right) {
 }
 
 struct String string_slice(struct String s, int32_t l, int32_t r) {
-    if (l < 0) l = 0;
-    if (r < 0) r = 0;
+    if (l < 0)
+        l = 0;
+    if (r < 0)
+        r = 0;
     uint32_t ur = uint32_min((uint32_t)r, s.len);
     uint32_t ul = uint32_min((uint32_t)l, (uint32_t)r);
     assert(ul <= ur && ur <= s.len);
@@ -522,7 +521,9 @@ int64_t string_to_int64(struct String s) {
     return value;
 }
 
-intptr_t string_to_nativeint(struct String s) { return (intptr_t)string_to_int64(s); }
+intptr_t string_to_nativeint(struct String s) {
+    return (intptr_t)string_to_int64(s);
+}
 
 uint8_t string_to_uint8(struct String s) {
     uint64_t value;
@@ -595,7 +596,8 @@ struct MyStringCons {
     struct MyStringCons const *tail;
 };
 
-struct String string_concat(struct String sep, struct StringCons const *strings) {
+struct String string_concat(struct String sep,
+                            struct StringCons const *strings) {
     struct MyStringCons const *ss = (struct MyStringCons const *)strings;
 
     struct StringBuilder *sb = string_builder_new_with_capacity(0x1000);
