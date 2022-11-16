@@ -60,13 +60,13 @@ let private testInfiniteLoop () =
 
 // Never can be used as values.
 let private testNeverAsValue () =
-  let opt = Some (crash ())
+  let opt: never option = None
 
   (match opt with
    | Some n -> n
    | None -> crash ())
 
-  let ok : Result<int, never> = Ok 0
+  let ok: Result<int, never> = Ok 0
 
   let value =
     match ok with

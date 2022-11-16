@@ -1013,23 +1013,6 @@ let private errorExpr (ctx: TyCtx) msg loc : TExpr * Ty * TyCtx =
   txAbort ctx loc
 
 // -----------------------------------------------
-// Misc
-// -----------------------------------------------
-
-/// This function replaces a `never` type expression
-/// with an expression of a freshly generated meta type
-/// so that the target passes the type-check.
-//
-// `a not in Gamma, E : never |- E : a`
-let private catchNever ctx expr exprTy loc =
-  match substTy ctx exprTy with
-  | Ty(NeverTk, _) ->
-    let metaTy, ctx = freshMetaTy loc ctx
-    TNodeExpr(TCatchNeverEN, [ expr ], metaTy, loc), metaTy, ctx
-
-  | ty -> expr, ty, ctx
-
-// -----------------------------------------------
 // Pattern
 // -----------------------------------------------
 
@@ -1589,11 +1572,15 @@ let private inferMatchExpr ctx expectOpt itself cond arms loc =
              unifyTy ctx (exprToLoc guard) guardTy tyBool
 
            let body, bodyTy, ctx =
-            let body, bodyTy, ctx = inferExpr ctx expectOpt body
-            catchNever ctx body bodyTy (exprToLoc body)
+             let body, bodyTy, ctx = inferExpr ctx expectOpt body
 
-           let ctx =
-             unifyTy ctx (exprToLoc body) targetTy bodyTy
+             match substTy ctx bodyTy with
+             | Ty(NeverTk, _) ->
+               TNodeExpr(TCatchNeverEN, [ body ], bodyTy, exprToLoc body), bodyTy, ctx
+
+             | bodyTy ->
+              let ctx = unifyTy ctx (exprToLoc body) targetTy bodyTy
+              body, bodyTy, ctx
 
            (pat, guard, body), ctx)
          ctx
@@ -1679,7 +1666,14 @@ let private inferAppExpr ctx itself =
   let ctx =
     unifyTy ctx loc calleeTy (tyFun argTy targetTy)
 
-  txApp callee arg targetTy loc, targetTy, ctx
+  let appExpr = txApp callee arg targetTy loc
+
+  match substTy ctx targetTy with
+  | Ty(NeverTk, _) ->
+    let metaTy, ctx = freshMetaTy loc ctx
+    TNodeExpr(TCatchNeverEN, [ appExpr ], metaTy, loc), metaTy, ctx
+
+  | ty -> appExpr, ty, ctx
 
 type private PtrProjectionInferError =
   | PtrProjectionOk of TExpr * Ty * TyCtx
@@ -2051,9 +2045,7 @@ let private inferBlockExpr ctx expectOpt (stmts: TStmt list) last =
 // -----------------------------------------------
 
 let private inferExprStmt ctx expr =
-  let expr, ty, ctx =
-    let expr, ty, ctx = inferExpr ctx None expr
-    catchNever ctx expr ty (exprToLoc expr)
+  let expr, ty, ctx = inferExpr ctx None expr
 
   let ctx = unifyTy ctx (exprToLoc expr) ty tyUnit
   TExprStmt expr, ctx
@@ -2061,8 +2053,7 @@ let private inferExprStmt ctx expr =
 let private inferLetValStmt ctx pat init loc =
   let init, initTy, ctx =
     let expectOpt = patToAscriptionTy pat
-    let init, initTy, ctx = inferExpr ctx expectOpt init
-    catchNever ctx init initTy loc
+    inferExpr ctx expectOpt init
 
   let pat, patTy, ctx = inferIrrefutablePat ctx pat
 

@@ -38,7 +38,7 @@ Note that [generic return type pattern](#generic-return-type-pattern) written be
 
 - Monomorphization unnecessarily duplicates generic-return functions
 - Ownership restriction rejects generic-return functions to make its return type an owned type
-- Doesn't represent never-returning actually
+- The pattern doesn't represent never-returning actually
 
 Another benefit is the compiler can emit [`_Noreturn`][_Noreturn] attribute on never-returning functions.
 
@@ -46,32 +46,17 @@ Another benefit is the compiler can emit [`_Noreturn`][_Noreturn] attribute on n
 
 ### Typing Rules
 
-**Expression Statements**:
-
-```
-    Γ |- e1: never,
-    Γ |- e2: T
-==>
-    Γ |- (e1; e2): T
-```
-
-- (Informally) Non-last expressions in block can be `never`.
-
-**Let-init**:
+**Function Application**:
 
 ```
     meta type A is fresh,
-    Γ |- init: never,
-    Γ |- (let pat = (_: A) in next): T
+    Γ |- f: T -> never,
+    Γ |- a: T
 ==>
-    Γ |- (let pat = init in next): T
+    Γ |- (f a): A
 ```
 
-- During type-checking of a let-val expression,
-    if init type is `never`,
-    apply this rule:
-    - Generate a fresh meta type A.
-    - Perform type-checking `pat : A` rather than `pat : never`.
+Type of function application to a never-returning function is a fresh meta type.
 
 **Match**:
 
@@ -86,7 +71,7 @@ Another benefit is the compiler can emit [`_Noreturn`][_Noreturn] attribute on n
 - Durning type-checking of a match expression,
     if type of an arm is `never`,
     apply this rule:
-    - Don't unify the type of arm (`never`) to the target type of the match expression.
+    - Don't unify the type of arm (`never`) to the target type.
 
 ### Generic Return Type Pattern
 
@@ -113,7 +98,7 @@ There exists a non-never function of the same signature (`fun _ -> unbox (box 0)
 ### Remarks
 
 - There exists no value of `never` type
-- `never` is just a unit-like type except for the rules above
+- `never` is just a unit-like type except for the rule above
 - No structural subtyping. `never` doesn't work like the bottom type
 - The type of `assert false` is `unit` since type check doesn't depend on values
 

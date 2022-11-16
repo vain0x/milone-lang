@@ -323,7 +323,7 @@ type TExprKind =
   /// `s.[l .. r]`
   | TSliceEN
 
-  /// This is a marker of a never-completing expression.
+  /// This is a marker of a never-returning functional application.
   | TCatchNeverEN
 
   /// Direct call to native fun.
