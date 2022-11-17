@@ -474,7 +474,7 @@
                 {
                     "comment": "Rule of identifiers in type context. Type name starts with an upper alphabet or one of built-in type names.",
                     "name": "entity.name.type.milone",
-                    "match": "\\b([A-Z]\\w*|bool|char|float(32)?|list|nativeptr|obj|option|s?byte|sizeof|string|u?int(8|16|32|64)?|u?nativeint|unit|voidptr|__nativeType)\\b"
+                    "match": "\\b([A-Z]\\w*|bool|char|float(32)?|list|nativeptr|never|obj|option|s?byte|sizeof|string|u?int(8|16|32|64)?|u?nativeint|unit|voidptr|__nativeType)\\b"
                 },
                 {
                     "include": "#unknown_sigil_rule"
