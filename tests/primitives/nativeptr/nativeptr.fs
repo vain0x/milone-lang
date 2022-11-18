@@ -50,11 +50,6 @@ let private testPtrInvalid () =
   let danglingPtr: nativeptr<int64> = Ptr.invalid 8un
   assert (unativeint danglingPtr = 8un)
 
-  let n = 42
-  let address = unativeint &&n
-  let exposedPtr: nativeptr<int> = Ptr.invalid address
-  assert (Ptr.read exposedPtr = 42)
-
 let private testPtrCast () =
   // Upcast.
   let voidPtr: voidptr = Ptr.cast (Ptr.nullPtr: nativeptr<byte>)
