@@ -592,7 +592,7 @@ let main _ =
   0
 """
 
-  let projectDir = "target/Eval"
+  let projectDir = host.WorkDir + "/target/Eval"
   let targetDir = projectDir
   let verbosity = Quiet
 
@@ -605,12 +605,12 @@ let main _ =
       IsRelease = false
       OutputOpt = None }
 
+  dirCreateOrFail host (Path targetDir)
+  fileWrite host (Path(projectDir + "/Eval.milone")) sourceCode
+
   let ctx =
     prepareCompile sApi host verbosity projectDir options.CompileOptions.EntryModulePathOpt
     |> Future.wait
-
-  dirCreateOrFail host (Path targetDir)
-  fileWrite host (Path(projectDir + "/Eval.milone")) sourceCode
 
   match compile sApi tApi ctx with
   | CompileError output ->
