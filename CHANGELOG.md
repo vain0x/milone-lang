@@ -22,6 +22,7 @@
 - Support `never` type
 - Assertion error and other runtime errors call `abort` (rather than `exit(1)`)
 - Prefer `int32_t` for size/length/capacity. See also [prefer_signed_indexes.md](docs/internals/prefer_signed_indexes.md)
+- Fix unicode string literals are broken
 
 ### CLI Tool
 
@@ -92,7 +93,7 @@
     - Support equality for built-in types: list, option, tuple and discriminated union
         - (Note `open Std.Equal` is required to enable this feature.)
     - `unit` is comparable now
-    - `char` is now convertible only from/to 8-bit integers to avoid incompatibility with F#
+    - `char` is now convertible only from/to 8-bit integers to avoid incompatibility with F# (**EDIT**: Reverted in 0.6.0)
     - `option` is defined as a discriminated union now (which is still built-in type, almost non-functional change)
     - `Result` is a new built-in type (which is also defined as a discriminated union)
 - Improve transformation:
