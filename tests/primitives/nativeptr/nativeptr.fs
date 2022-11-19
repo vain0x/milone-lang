@@ -6,10 +6,10 @@ open Std.Own
 open Std.Ptr
 open Std.Region
 
-let private memAlloc (count: uint) (size: uint) : voidptr =
+let private memAlloc (count: int) (size: int) : voidptr =
   __nativeFun ("milone_region_alloc", count, size)
 
-let private memSet (dest: voidptr) (value: uint8) (count: uint) =
+let private memSet (dest: voidptr) (value: uint8) (count: int) =
   let _ =
     (__nativeFun ("memset", dest, int value, unativeint count): voidptr)
 
@@ -18,8 +18,8 @@ let private memSet (dest: voidptr) (value: uint8) (count: uint) =
 let private strcpy (dest: nativeptr<char>) (src: InPtr<char>) : nativeptr<char> = __nativeFun ("strcpy", dest, src)
 
 let private testBasic () =
-  let buf = memAlloc 1u 8u
-  memSet buf 255uy 8u
+  let buf = memAlloc 1 8
+  memSet buf 255uy 8
   assert (Ptr.read (__nativeCast buf: InPtr<int>) = -1)
 
   // Conversion to int.
@@ -132,7 +132,7 @@ let private testPtrOf () =
 
 let private testPtrSelect () =
   let p: nativeptr<int> =
-    __nativeCast (memAlloc 4u (uint sizeof<int>))
+    __nativeCast (memAlloc 4 sizeof<int>)
 
   assert (Ptr.select p.[0] = p)
   assert (unativeint (Ptr.select p.[1]) - unativeint p = unativeint sizeof<int>)
@@ -166,7 +166,7 @@ let private testPtrWrite () =
   assert (Ptr.read q = 77)
 
 let private testRegionAlloc () =
-  let p: OutPtr<int> = Region.alloc 2u
+  let p: OutPtr<int> = Region.alloc 2
   Ptr.write p.[0] 42
   Ptr.write p.[1] 43
   // It's now initialized.

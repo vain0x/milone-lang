@@ -6,20 +6,20 @@ open Std.Ptr
 
 type private CompareFun = FunPtr<VoidInPtr * VoidInPtr, int>
 
-let private memAlloc (len: uint) (size: uint) : voidptr =
+let private memAlloc (len: int) (size: int) : voidptr =
   __nativeFun ("milone_region_alloc", len, size)
 
 let intCompare (l: VoidInPtr) (r: VoidInPtr) =
   compare (Ptr.read (Ptr.cast l: InPtr<int>)) (Ptr.read (Ptr.cast r: InPtr<int>))
 
-let private sortIntArray (array: nativeptr<int>) (len: uint) : unit =
+let private sortIntArray (array: nativeptr<int>) (len: int) : unit =
   __nativeFun ("qsort", (Ptr.cast array: voidptr), unativeint len, 4un, (&&intCompare: CompareFun))
 
 let private testSort () =
-  let len = 5u
+  let len = 5
 
   let array: nativeptr<int> =
-    memAlloc len (uint sizeof<int>) |> __nativeCast
+    Ptr.cast (memAlloc len sizeof<int>)
 
   Ptr.write array.[0] 3
   Ptr.write array.[1] 1

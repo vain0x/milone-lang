@@ -22,12 +22,12 @@ __nativeDecl
 /// - Result is valid until free.
 ///   - This implies that result can escape from the region.
 /// - Result must be free'd exactly once.
-let alloc (count: uint) (size: uint) : Own<voidptr> =
-  if (count ||| size) = 0u then
+let alloc (count: int) (size: int) : Own<voidptr> =
+  if count <= 0 || size <= 0 then
     // __trace "allocate 0"
     Own.acquire Ptr.nullPtr
   else
-    assert (count < (1u <<< 31) / size)
+    assert (uint count < (1u <<< 31) / (uint size))
 
     let ptr: voidptr =
       __nativeExpr ("calloc({0}, {1})", unativeint count, unativeint size)
@@ -54,12 +54,12 @@ let unsafeFree (ptr: Own<voidptr>) : unit =
 /// Vector moves to newly reallocated memory.
 /// New memory must have a capacity `minLength` at least.
 let unsafeGrowExact
-  (newCapacity: uint)
+  (newCapacity: int)
   (ptr: Own<voidptr>)
-  (length: uint)
-  (capacity: uint)
-  (size: uint)
-  : Own<voidptr> * uint =
+  (length: int)
+  (capacity: int)
+  (size: int)
+  : Own<voidptr> * int =
   let oldPtr = Own.release ptr
 
   // __trace (
@@ -71,7 +71,7 @@ let unsafeGrowExact
   let newPtr = Own.release (alloc newCapacity size)
 
   if oldPtr <> Ptr.nullPtr then
-    if length <> 0u then
+    if length <> 0 then
       __nativeStmt ("memcpy({0}, {1}, {2});", newPtr, oldPtr, unativeint length * unativeint size)
 
     unsafeFree (Own.acquire oldPtr)
@@ -81,15 +81,15 @@ let unsafeGrowExact
 /// Reserves more capacity for an untyped vector.
 ///
 /// In result, `length + addition` doesn't exceed capacity`.
-let unsafeReserve (addition: uint) ptr length capacity size =
-  assert (addition < (1u <<< 31) - length)
+let unsafeReserve (addition: int) ptr (length: int) capacity size =
+  assert (uint addition < (1u <<< 31) - uint length)
 
-  let minLength = length + uint addition
+  let minLength = length + addition
 
   if minLength > capacity then
     // #exponentially_grow
     // newCapacity >= max(capacity * 2, minLength, 15).
-    let newCapacity = (capacity <<< 1) ||| minLength ||| 15u
+    let newCapacity = (capacity <<< 1) ||| minLength ||| 15
     unsafeGrowExact newCapacity ptr length capacity size
   else
     ptr, capacity
@@ -97,10 +97,10 @@ let unsafeReserve (addition: uint) ptr length capacity size =
 /// Reserves more capacity for an untyped vector.
 ///
 /// In result, `length + addition == capacity`.
-let unsafeReserveExact (addition: uint) ptr length capacity size =
-  assert (addition < (1u <<< 31) - length)
+let unsafeReserveExact (addition: int) ptr (length: int) capacity size =
+  assert (uint addition < (1u <<< 31) - uint length)
 
-  let newCapacity = length + uint addition
+  let newCapacity = length + addition
 
   if newCapacity > capacity then
     unsafeGrowExact newCapacity ptr length capacity size
@@ -113,16 +113,16 @@ let unsafeReserveExact (addition: uint) ptr length capacity size =
 let unsafePush
   (item: VoidInPtr)
   (ptr: Own<voidptr>)
-  (length: uint)
-  (capacity: uint)
-  (size: uint)
-  : Own<voidptr> * uint =
+  (length: int)
+  (capacity: int)
+  (size: int)
+  : Own<voidptr> * int =
   let ptr, capacity =
     if length = capacity then
       // #exponentially_grow
       // newCapacity >= max(capacity * 2, minLength, 15).
       let newCapacity =
-        (capacity <<< 1) ||| (length + 1u) ||| 15u
+        (capacity <<< 1) ||| (length + 1) ||| 15
 
       unsafeGrowExact newCapacity ptr length capacity size
     else
@@ -148,8 +148,8 @@ let unsafePush
 let unsafeSortUnstable
   (ptrComparer: VoidInPtr -> VoidInPtr -> int)
   (ptr: Own<voidptr>)
-  (len: uint)
-  (size: uint)
+  (len: int)
+  (size: int)
   : Own<voidptr> =
   let ptr = Own.release ptr
 

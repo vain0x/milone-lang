@@ -8,15 +8,15 @@ typedef int32_t(*Int32Int32Int32FunPtr2)(int32_t, int32_t);
 
 struct Int32Int32Tuple2_;
 
-void *milone_region_alloc(uint32_t, uint32_t);
+void *milone_region_alloc(int32_t, int32_t);
 
-void *native_fun_ptr_native_fun_ptr_memAlloc(uint32_t len_, uint32_t size_);
+void *native_fun_ptr_native_fun_ptr_memAlloc(int32_t len_, int32_t size_);
 
 int32_t native_fun_ptr_native_fun_ptr_intCompare(void const *l_, void const *r_);
 
 void qsort(void *, uintptr_t, uintptr_t, VoidConstPtrVoidConstPtrInt32FunPtr2);
 
-void native_fun_ptr_native_fun_ptr_sortIntArray(int32_t *array_, uint32_t len_1);
+void native_fun_ptr_native_fun_ptr_sortIntArray(int32_t *array_, int32_t len_1);
 
 void native_fun_ptr_native_fun_ptr_testSort(void);
 
@@ -47,7 +47,7 @@ struct Int32Int32Tuple2_ {
     int32_t t1;
 };
 
-void *native_fun_ptr_native_fun_ptr_memAlloc(uint32_t len_, uint32_t size_) {
+void *native_fun_ptr_native_fun_ptr_memAlloc(int32_t len_, int32_t size_) {
     void *milone_region_alloc_result;
     milone_region_alloc_result = milone_region_alloc(len_, size_);
     return milone_region_alloc_result;
@@ -57,18 +57,18 @@ int32_t native_fun_ptr_native_fun_ptr_intCompare(void const *l_, void const *r_)
     return milone_int32_compare((*(((int32_t const *)l_))), (*(((int32_t const *)r_))));
 }
 
-void native_fun_ptr_native_fun_ptr_sortIntArray(int32_t *array_, uint32_t len_1) {
+void native_fun_ptr_native_fun_ptr_sortIntArray(int32_t *array_, int32_t len_1) {
     qsort(((void *)array_), ((uintptr_t)len_1), (size_t)4ULL, native_fun_ptr_native_fun_ptr_intCompare);
     return;
 }
 
 void native_fun_ptr_native_fun_ptr_testSort(void) {
-    uint32_t len_2;
+    int32_t len_2;
     int32_t *array_1;
     int32_t const *array_2;
     void *call_;
-    len_2 = (uint32_t)5U;
-    call_ = native_fun_ptr_native_fun_ptr_memAlloc(len_2, ((uint32_t)sizeof(int32_t)));
+    len_2 = 5;
+    call_ = native_fun_ptr_native_fun_ptr_memAlloc(len_2, sizeof(int32_t));
     array_1 = ((int32_t *)call_);
     array_1[0] = 3;
     array_1[1] = 1;

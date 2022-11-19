@@ -21,6 +21,7 @@
 - Support `Export` attribute on functions
 - Support `never` type
 - Assertion error and other runtime errors call `abort` (rather than `exit(1)`)
+- Prefer `int32_t` for size/length/capacity. See also [prefer_signed_indexes.md](docs/internals/prefer_signed_indexes.md)
 
 ### CLI Tool
 
@@ -137,7 +138,7 @@
 - Reduce headers included in `milone.h`
 - Heaps are now stored in thread-local variables (rather than static)
 - Rename most of functions
-- Prefer `uint32_t` for size/length/capacity (over `int`)
+- Prefer `uint32_t` for size/length/capacity (over `int`) (**EDIT**: Reverted in 0.6.0)
 
 ### Standard Libraries
 

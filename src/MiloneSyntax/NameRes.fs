@@ -31,13 +31,13 @@ let private identOf (name: NName) = fst name
 /// (noting that 2^9 ~ 500, 2^23 ~ 8M.)
 ///
 /// By rotating x by 23 bits up, y and x likely become orthogonal.
-type private PosId = uint
+type private PosId = int
 
 let private posOf (name: NName) : PosId =
   let _, (Loc (_, y, x)) = name
   let y = uint y
   let x = uint x
-  y ^^^ ((x <<< 23) ||| (x >>> 9))
+  int(y ^^^ ((x <<< 23) ||| (x >>> 9)))
 
 let private npLoc pat : Loc =
   match pat with
@@ -55,7 +55,6 @@ let private npLoc pat : Loc =
   | NPat.VariantApp (_, _, loc) -> loc
 
 type private ModuleTySerial = Serial
-type private ModuleSynonymSerial = Serial
 
 let private noTy = tyError noLoc
 let private txTrue loc = TLitExpr(BoolLit true, loc)
@@ -119,14 +118,14 @@ type private TySymbol =
 // -----------------------------------------------
 
 /// Identity of namespace owner.
-type private NsOwner = uint
+type private NsOwner = int
 
-let private nsOwnerOfTy tySerial = uint tySerial <<< 1
-let private nsOwnerOfModule moduleSerial = (uint moduleSerial <<< 1) ||| 1u
+let private nsOwnerOfTy tySerial = tySerial <<< 1
+let private nsOwnerOfModule moduleSerial = (moduleSerial <<< 1) ||| 1
 
 let private nsOwnerAsModule (nsOwner: NsOwner) : ModuleTySerial option =
-  if (nsOwner &&& 1u) <> 0u then
-    Some(int (nsOwner >>> 1))
+  if (nsOwner &&& 1) <> 0 then
+    Some(int (uint nsOwner >>> 1))
   else
     None
 
@@ -142,8 +141,6 @@ let private nsOwnerOfTySymbol (tySymbol: TySymbol) : NsOwner option =
   | OpaqueTySymbol _
   | PrimTkSymbol _
   | PrimTySymbol _ -> None
-
-let private nsOwnerDump (nsOwner: NsOwner) = nsOwner |> string
 
 // -----------------------------------------------
 // Namespace

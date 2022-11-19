@@ -10,20 +10,20 @@ module ByteVector =
   let zeroCreate (length: int) : Vector<byte> = VectorExt.unsafeZeroCreate length
 
   /// Appends contiguous part of memory to the vector.
-  let unsafeWriteRawParts (p: voidptr) (l: uint) (v: Vector<byte>) : Vector<byte> =
-    if l <> 0u then
-      let v = VectorExt.reserve (int l) v
+  let unsafeWriteRawParts (p: voidptr) (l: int) (v: Vector<byte>) : Vector<byte> =
+    if l <> 0 then
+      let v = VectorExt.reserve l v
       let ptr, length, _, v = VectorExt.unsafeDup v
-      __nativeStmt ("memcpy(&{0}[{1}], {2}, {3});", ptr, length, p, l)
+      __nativeStmt ("memcpy(&{0}[{1}], {2}, (size_t){3});", ptr, length, p, l)
       let (Vector (ptr, length, capacity)) = v
-      Vector(ptr, length + uint l, capacity)
+      Vector(ptr, length + l, capacity)
     else
       v
 
   /// Appends UTF-8 bytes of string to the vector.
   let writeString (s: string) (v: Vector<byte>) : Vector<byte> =
     let stringPtr: InPtr<char> = __nativeExpr ("{0}.ptr", s)
-    unsafeWriteRawParts (__nativeCast stringPtr) (uint s.Length) v
+    unsafeWriteRawParts (__nativeCast stringPtr) s.Length v
 
   /// Creates a vector and copies from a string.
   let ofString (s: string) : Vector<byte> = writeString s (Vector.empty ())
@@ -39,7 +39,7 @@ module ByteVector =
     assert (uint start <= uint endIndex)
 
     let s: string =
-      if length <> 0u then
+      if length <> 0 then
         __nativeExpr ("string_of_raw_parts(&({0})[{1}], {2})", ptr, start, endIndex - start)
       else
         ""
@@ -51,7 +51,7 @@ module ByteVector =
     __nativeStmt (
       """
         char buf[16] = "";
-        uint32_t len = (uint32_t)sprintf(buf, "%d", {0});
+        int32_t len = (int32_t)sprintf(buf, "%d", {0});
       """,
       value
     )
@@ -64,7 +64,7 @@ module ByteVector =
     __nativeStmt (
       """
         char buf[64] = "";
-        uint32_t len = (uint32_t)sprintf(buf, "%f", {0});
+        int32_t len = (int32_t)sprintf(buf, "%f", {0});
       """,
       value
     )

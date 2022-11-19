@@ -63,7 +63,7 @@ It's invalidated when the variable goes out of scope.
 ```fsharp
     open Std.Region
 
-    Region.alloc : uint -> OutPtr<'T>
+    Region.alloc : int -> OutPtr<'T>
 ```
 
 `Region.alloc` function allocates a number of items of a type on the current region and returns a pointer to the start of memory block.

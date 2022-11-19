@@ -67,7 +67,7 @@ static struct String path_join(struct String base_path, struct String path) {
 
 struct MiloneOsString milone_os_string_borrow(LPCTSTR s) {
     assert(s != NULL);
-    return (struct MiloneOsString){.ptr = s, .len = (uint32_t)_tcslen(s)};
+    return (struct MiloneOsString){.ptr = s, .len = (int32_t)_tcslen(s)};
 }
 
 struct MiloneOsString milone_os_string_of(struct String s) {
@@ -81,7 +81,7 @@ struct MiloneOsString milone_os_string_of(struct String s) {
     }
     assert(len >= 0);
 
-    LPTSTR buf = milone_region_alloc((uint32_t)len + 1, sizeof(TCHAR));
+    LPTSTR buf = milone_region_alloc((int32_t)len + 1, sizeof(TCHAR));
 
     int n = MultiByteToWideChar(CP_UTF8, 0, s.ptr, s.len, buf, len);
     if (n == 0) {
@@ -89,8 +89,8 @@ struct MiloneOsString milone_os_string_of(struct String s) {
     }
     assert(n >= 0);
     assert(n <= len);
-    assert(buf[(uint32_t)n] == (TCHAR)'\0');
-    return (struct MiloneOsString){.ptr = buf, .len = (uint32_t)n};
+    assert(buf[n] == (TCHAR)'\0');
+    return (struct MiloneOsString){.ptr = buf, .len = n};
 }
 
 struct String milone_os_string_to(struct MiloneOsString s) {
@@ -106,7 +106,7 @@ struct String milone_os_string_to(struct MiloneOsString s) {
     }
     assert(len >= 0);
 
-    char *buf = milone_region_alloc((uint32_t)len + 1, sizeof(char));
+    char *buf = milone_region_alloc((int32_t)len + 1, sizeof(char));
 
     int n = WideCharToMultiByte(CP_UTF8, 0, s.ptr, (int)s.len, buf, len, NULL,
                                 NULL);
@@ -115,13 +115,13 @@ struct String milone_os_string_to(struct MiloneOsString s) {
     }
     assert(n >= 0);
     assert(n <= len);
-    assert(buf[(uint32_t)n] == '\0');
-    return (struct String){.ptr = buf, .len = (uint32_t)n};
+    assert(buf[n] == '\0');
+    return (struct String){.ptr = buf, .len = n};
 }
 
 struct MiloneOsString milone_os_string_of_native(LPCTSTR ptr) {
     assert(ptr != NULL);
-    uint32_t len = (uint32_t)_tcslen(ptr);
+    int32_t len = (int32_t)_tcslen(ptr);
     TCHAR *buf = milone_region_alloc(len + 1, sizeof(TCHAR));
     memcpy(buf, ptr, len * sizeof(TCHAR));
     assert(buf[len] == (TCHAR)'\0');
@@ -131,7 +131,7 @@ struct MiloneOsString milone_os_string_of_native(LPCTSTR ptr) {
 #else
 
 struct MiloneOsString milone_os_string_borrow(OsStringPtr ptr) {
-    return (struct MiloneOsString){.ptr = ptr, .len = (uint32_t)strlen(ptr)};
+    return (struct MiloneOsString){.ptr = ptr, .len = (int32_t)strlen(ptr)};
 }
 
 struct MiloneOsString milone_os_string_of_native(OsStringPtr ptr) {
@@ -203,7 +203,7 @@ static struct String milone_platform_normalize_path_sep(struct String path) {
 #elif defined(MILONE_PLATFORM_WINDOWS)
     char *buf = milone_region_alloc(path.len + 1, sizeof(char));
     strncpy(buf, path.ptr, path.len);
-    for (uint32_t i = 0; i < path.len; i++) {
+    for (int32_t i = 0; i < path.len; i++) {
         if (buf[i] == '\\') {
             buf[i] = '/';
         }
@@ -294,8 +294,8 @@ struct StringCons {
 // Combine command and args into single command line string.
 // Write to buf.
 static void build_cmdline(struct String command, struct StringCons const *args,
-                          char *buf, uint32_t buf_size) {
-    uint32_t total_len = command.len + 2;
+                          char *buf, int32_t buf_size) {
+    int32_t total_len = command.len + 2;
     {
         struct StringCons const *a = args;
         while (a != NULL) {
@@ -307,11 +307,11 @@ static void build_cmdline(struct String command, struct StringCons const *args,
         milone_failwith("build_cmd: command line too long");
     }
 
-    uint32_t i = 0;
+    int32_t i = 0;
     buf[i] = '"';
     i++;
 
-    memcpy(&buf[i], command.ptr, (uint32_t)command.len);
+    memcpy(&buf[i], command.ptr, (size_t)command.len);
     i += command.len;
 
     buf[i] = '"';
@@ -444,7 +444,7 @@ static void rng_destroy(BCRYPT_ALG_HANDLE h_alg) {
 }
 
 static void rng_random_bytes(BCRYPT_ALG_HANDLE h_alg, uint8_t *buf,
-                             uint32_t len) {
+                             int32_t len) {
     assert(buf != NULL && len != 0);
 
     if (BCryptGenRandom(h_alg, (PUCHAR)buf, (ULONG)len, 0) != 0) {

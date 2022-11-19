@@ -221,11 +221,11 @@ static void *do_region_alloc_slow(size_t total) {
     return ptr;
 }
 
-static void *do_region_alloc(uint32_t count, uint32_t size) {
-    assert(count != 0 && size != 0);
+static void *do_region_alloc(int32_t count, int32_t size) {
+    assert(count >= 0 && size >= 0);
 
     // Allocation size limit: count * size < LIMIT
-    if (count >= LIMIT / size) {
+    if ((uint32_t)count >= LIMIT / (uint32_t)size) {
         oom();
     }
 
@@ -271,7 +271,7 @@ size_t milone_alloc_cost(void) { return s_alloc_cost; }
 void milone_region_enter(void) { do_region_enter(); }
 void milone_region_leave(void) { do_region_leave(); }
 
-void *milone_region_alloc(uint32_t count, uint32_t size) {
+void *milone_region_alloc(int32_t count, int32_t size) {
     return do_region_alloc(count, size);
 }
 
@@ -292,13 +292,13 @@ int milone_int32_compare(int32_t l, int32_t r) {
     return (r < l) - (l < r);
 }
 
+static int32_t int32_min(int32_t l, int32_t r) { return r < l ? r : l; }
+
 int milone_int64_compare(int64_t l, int64_t r) { return (r < l) - (l < r); }
 
 int milone_uint64_compare(uint64_t l, uint64_t r) { return (r < l) - (l < r); }
 
 static uint32_t uint32_min(uint32_t l, uint32_t r) { return r < l ? r : l; }
-
-static int uint32_compare(uint32_t l, uint32_t r) { return (r < l) - (l < r); }
 
 // -----------------------------------------------
 // string
@@ -306,11 +306,12 @@ static int uint32_compare(uint32_t l, uint32_t r) { return (r < l) - (l < r); }
 
 struct StringBuilder {
     char *buf;
-    uint32_t len;
-    uint32_t cap;
+    int32_t len;
+    int32_t cap;
 };
 
-static struct StringBuilder *string_builder_new_with_capacity(uint32_t cap) {
+static struct StringBuilder *string_builder_new_with_capacity(int32_t cap) {
+    assert(cap >= 0);
     struct StringBuilder *sb =
         milone_region_alloc(1, sizeof(struct StringBuilder));
     *sb = (struct StringBuilder){
@@ -321,17 +322,17 @@ static struct StringBuilder *string_builder_new_with_capacity(uint32_t cap) {
     return sb;
 }
 
-static void string_builder_grow(struct StringBuilder *sb, uint32_t addition) {
+static void string_builder_grow(struct StringBuilder *sb, int32_t addition) {
     // Addition must be larger than unused space.
     assert(addition >= sb->cap - sb->len);
-    if (addition >= LIMIT - sb->cap)
+    if ((uint32_t)addition >= LIMIT - (uint32_t)sb->cap)
         oom();
 
     // grow exponentially
     sb->cap *= 2;
 
     // +1 for final null byte.
-    uint32_t min_len = sb->len + addition + 1;
+    int32_t min_len = sb->len + addition + 1;
     if (sb->cap < min_len) {
         sb->cap = min_len;
     }
@@ -359,27 +360,27 @@ static void string_builder_append_string(struct StringBuilder *sb,
 
 struct String string_borrow(char const *c_str) {
     assert(c_str != NULL);
-    return (struct String){.ptr = c_str, .len = (uint32_t)strlen(c_str)};
+    return (struct String){.ptr = c_str, .len = (int32_t)strlen(c_str)};
 }
 
 int string_compare(struct String left, struct String right) {
     // Compare prefix part of two strings.
-    uint32_t min_len = uint32_min(left.len, right.len);
+    int32_t min_len = int32_min(left.len, right.len);
     int c = memcmp(left.ptr, right.ptr, min_len);
     if (c != 0) {
         return c;
     }
 
     // One is prefix of the other here, and therefore, longer is greater.
-    return uint32_compare(left.len, right.len);
+    return milone_int32_compare(left.len, right.len);
 }
 
-struct String string_of_raw_parts(char const *p, uint32_t len) {
+struct String string_of_raw_parts(char const *p, int32_t len) {
     assert(p != NULL);
 
     if (len == 0)
         return string_borrow("");
-    if (len >= LIMIT - 1)
+    if ((uint32_t)len >= LIMIT - 1)
         oom();
 
     // +1 for the invariant of existence of null byte.
@@ -391,7 +392,7 @@ struct String string_of_raw_parts(char const *p, uint32_t len) {
 
 struct String string_of_c_str(char const *s) {
     assert(s != NULL);
-    return string_of_raw_parts(s, (uint32_t)strlen(s));
+    return string_of_raw_parts(s, (int32_t)strlen(s));
 }
 
 struct String string_add(struct String left, struct String right) {
@@ -400,11 +401,11 @@ struct String string_add(struct String left, struct String right) {
     }
 
     // Length limit: |l| + |r| < LIMIT
-    if (right.len >= LIMIT - left.len) {
+    if ((uint32_t)right.len >= LIMIT - left.len) {
         milone_failwith("str_add: Length overflow");
     }
 
-    uint32_t len = left.len + right.len;
+    int32_t len = left.len + right.len;
     char *buf = milone_region_alloc(len + 1, sizeof(char));
     memcpy(buf, left.ptr, left.len);
     memcpy(buf + left.len, right.ptr, right.len);
@@ -417,8 +418,8 @@ struct String string_slice(struct String s, int32_t l, int32_t r) {
         l = 0;
     if (r < 0)
         r = 0;
-    uint32_t ur = uint32_min((uint32_t)r, s.len);
-    uint32_t ul = uint32_min((uint32_t)l, (uint32_t)r);
+    int32_t ur = int32_min(r, s.len);
+    int32_t ul = int32_min(l, r);
     assert(ul <= ur && ur <= s.len);
     return (struct String){.ptr = s.ptr + ul, .len = ur - ul};
 }
@@ -663,7 +664,7 @@ struct String file_read_all_text(struct String file_name) {
     }
     fseek(fp, 0, SEEK_SET);
 
-    char *content = milone_region_alloc((uint32_t)size + 1, sizeof(char));
+    char *content = milone_region_alloc((int32_t)size + 1, sizeof(char));
     size_t read_size = fread(content, 1, (size_t)size, fp);
     if (read_size != (size_t)size) {
         perror("fread");
@@ -671,7 +672,7 @@ struct String file_read_all_text(struct String file_name) {
     }
 
     fclose(fp);
-    return (struct String){.ptr = content, .len = (uint32_t)size};
+    return (struct String){.ptr = content, .len = (int32_t)size};
 
 FAIL:
     if (fp)
@@ -694,7 +695,7 @@ void file_write_all_text(struct String file_name, struct String content) {
             fseek(fp, 0, SEEK_SET);
 
             if (size >= 0 && (size_t)size == (size_t)content.len) {
-                char *old_content = calloc((uint32_t)size + 1, sizeof(char));
+                char *old_content = calloc((int32_t)size + 1, sizeof(char));
                 if (old_content == NULL) {
                     oom();
                 }
@@ -745,7 +746,7 @@ struct String milone_read_stdin_all(void) {
             break;
 
         string_builder_append_string(
-            sb, (struct String){.ptr = buf, .len = (uint32_t)read_len});
+            sb, (struct String){.ptr = buf, .len = (int32_t)read_len});
     }
 
     // #sb_finish
@@ -794,8 +795,8 @@ static void thousand_sep(long value, char *buf, size_t buf_size) {
     long mega = kilo / 1000;
     kilo %= 1000;
 
-    size_t written = snprintf(buf, buf_size, "%3u,%03u,%03u", (uint32_t)mega,
-                              (uint32_t)kilo, (uint32_t)value);
+    size_t written = snprintf(buf, buf_size, "%3d,%03d,%03d", (int)mega,
+                              (int)kilo, (int)value);
     assert(written < buf_size);
 }
 

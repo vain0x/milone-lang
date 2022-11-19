@@ -21,7 +21,7 @@ __nativeDecl "#include <string.h>"
 // - https://hnw.hatenablog.com/entry/2021/01/10/162018 (Japanese)
 
 /// Hash value. Fixed-width integer that is deterministically computed from a value.
-type HashValue = uint
+type HashValue = int
 
 type EqualFun<'T> = 'T -> 'T -> bool
 
@@ -31,7 +31,7 @@ type EqualFun<'T> = 'T -> 'T -> bool
 type HashFun<'T> = 'T -> HashValue
 
 /// Gets some random value.
-let private baseHash () : uint =
+let private baseHash () : int =
   __nativeStmt
     """
       static char s_char;
@@ -40,7 +40,7 @@ let private baseHash () : uint =
       uint32_t hi = (a >> 32) & 0xffffffff;
     """
 
-  __nativeExpr "(((hi << 5) | (hi >> 27)) ^ lo) & 0xffffffff"
+  __nativeExpr "(int32_t)((((hi << 5) | (hi >> 27)) ^ lo) & 0xffffffff)"
 
 type private ProbeResult =
   | PrEqual
@@ -48,66 +48,64 @@ type private ProbeResult =
   | PrFull
 
 /// Searches a hash table for an unoccupied (non-tombstone) slot.
-let private proveEqual (equalFun: EqualFun<'K>) (hashValue: uint) (key: 'K) (table: Vector<uint>) (keys: Vector<'K>) =
-  let capacity, table = table |> Vector.length
-  let capacity = uint capacity
+let private proveEqual (equalFun: EqualFun<'K>) (hashValue: int) (key: 'K) (table: Vector<int>) (keys: Vector<'K>) =
+  let capacity, table = Vector.length table
 
   // Search for a range (ti < tn). (ti: table index)
   let rec go ti tn table keys =
     if ti < tn then
-      let cell, table = Vector.forceGet (int ti) table
+      let cell, table = Vector.forceGet ti table
 
       match cell with
-      | 0u ->
+      | 0 ->
         // 0: unoccupied
-        // printfn "probe ti:%d -> unoccupied" (int ti)
+        // printfn "probe ti:%d -> unoccupied" ti
         PrUnoccupied, ti, table, keys
 
-      | 1u ->
+      | 1 ->
         // 1: tombstone
-        // printfn "probe ti:%d -> tombstone" (int ti)
-        go (ti + 1u) tn table keys
+        // printfn "probe ti:%d -> tombstone" ti
+        go (ti + 1) tn table keys
 
       | _ ->
         // entry index; 2: offset
-        let ei = int (cell - 2u)
-        // printfn "probe ti:%d -> entry(%d)" (int ti) ei
+        let ei = cell - 2
+        // printfn "probe ti:%d -> entry(%d)" ti ei
 
         let k, keys = Vector.forceGet ei keys
 
         if equalFun key k then
           PrEqual, ti, table, keys
         else
-          go (ti + 1u) tn table keys
+          go (ti + 1) tn table keys
     else
       // 0 isn't used
-      PrFull, 0u, table, keys
+      PrFull, 0, table, keys
 
-  if capacity <> 0u then
-    let ti = (hashValue ^^^ baseHash ()) % capacity
+  if capacity <> 0 then
+    let ti = int ((uint hashValue ^^^ uint (baseHash ())) % uint capacity)
     let status, tj, table, keys = go ti capacity table keys
 
     match status with
     | PrEqual
     | PrUnoccupied -> status, tj, table, keys
-    | PrFull -> go 0u ti table keys
+    | PrFull -> go 0 ti table keys
   else
-    PrFull, 0u, table, keys
+    PrFull, 0, table, keys
 
 /// Finds the next occupied entry in table.
-let private probeNext (ti: uint) (table: Vector<uint>) =
+let private probeNext (ti: int) (table: Vector<int>) =
   let len, table = Vector.length table
-  let len = uint len
 
-  let rec go table (ti: uint) =
+  let rec go table ti =
     if ti < len then
-      let cell, table = Vector.forceGet (int ti) table
+      let cell, table = Vector.forceGet ti table
 
       // 2: offset
-      if cell >= 2u then
-        Some(cell - 2u, ti + 1u), table
+      if cell >= 2 then
+        Some(cell - 2, ti + 1), table
       else
-        go table (ti + 1u)
+        go table (ti + 1)
     else
       None, table
 
@@ -120,13 +118,13 @@ let private probeNext (ti: uint) (table: Vector<uint>) =
 /// Owned hash map.
 type HashMapBuffer<'K, 'T> =
   private | HashMapBuffer of
-    table: Vector<uint> *
+    table: Vector<int> *
     keys: Vector<'K> *
     values: Vector<'T> *
     equalFun: EqualFun<'K> *
     hashFun: HashFun<'K>
 
-let private rehash (equalFun: EqualFun<'K>) (hashFun: HashFun<'K>) (table: Vector<uint>) (keys: Vector<'K>) =
+let private rehash (equalFun: EqualFun<'K>) (hashFun: HashFun<'K>) (table: Vector<int>) (keys: Vector<'K>) =
   let length, keys = Vector.length keys
   let oldCapacity, keys = VectorExt.capacity keys
   let oldTableCapacity, table = Vector.length table
@@ -145,14 +143,12 @@ let private rehash (equalFun: EqualFun<'K>) (hashFun: HashFun<'K>) (table: Vecto
       VectorExt.reserveExact (newTableCapacity - oldTableCapacity) table
 
     let ptr, _, capacity, table = VectorExt.unsafeDup table
-    assert (capacity = uint newTableCapacity)
-    __nativeStmt ("memset({0}, 0, {1} * sizeof(uint32_t));", ptr, capacity)
+    assert (capacity = newTableCapacity)
+    __nativeStmt ("memset({0}, 0, (size_t){1} * sizeof(uint32_t));", ptr, capacity)
 
-    VectorExt.unsafeSetLength (int capacity) table
+    VectorExt.unsafeSetLength capacity table
 
   // Recompute table.
-  let capacity = uint newTableCapacity
-
   let rec go ei table keys =
     if ei < length then
       let key, keys = Vector.forceGet ei keys
@@ -170,7 +166,7 @@ let private rehash (equalFun: EqualFun<'K>) (hashFun: HashFun<'K>) (table: Vecto
       | PrUnoccupied ->
         // 2: offset
         let table =
-          Vector.forceSet (int ti) (uint ei + 2u) table
+          Vector.forceSet ti (ei + 2) table
 
         go (ei + 1) table keys
     else
@@ -191,7 +187,7 @@ module HashMapBuffer =
     // That is, c/t = 0.7 <=> t = c/0.7 <=> t = c * 1.43
     let tableCapacity = capacity + int (float capacity * 0.43)
 
-    HashMapBuffer(Vector.replicate tableCapacity 0u, Vector.alloc capacity, Vector.alloc capacity, equalFun, hashFun)
+    HashMapBuffer(Vector.replicate tableCapacity 0, Vector.alloc capacity, Vector.alloc capacity, equalFun, hashFun)
 
   let dispose (map: HashMapBuffer<'K, 'T>) : unit =
     let (HashMapBuffer (table, keys, values, _, _)) = map
@@ -203,16 +199,15 @@ module HashMapBuffer =
     let (HashMapBuffer (table, keys, values, equalFun, hashFun)) = map
 
     let capacity, table = Vector.length table
-    let capacity = uint capacity
 
     let h = hashFun key
     let status, ti, table, keys = proveEqual equalFun h key table keys
 
     match status with
     | PrEqual ->
-      let ei, table = Vector.forceGet (int ti) table
-      assert (ei >= 2u) // 2: offset
-      let ei = int (ei - 2u)
+      let ei, table = Vector.forceGet ti table
+      assert (ei >= 2) // 2: offset
+      let ei = ei - 2
 
       let value, values = Vector.forceGet ei values
       Some value, HashMapBuffer(table, keys, values, equalFun, hashFun)
@@ -228,21 +223,21 @@ module HashMapBuffer =
 
     match status with
     | PrEqual ->
-      let ei, table = Vector.forceGet (int ti) table
-      assert (ei >= 2u)
-      let ei = int (ei - 2u) // 2: offset
+      let ei, table = Vector.forceGet ti table
+      assert (ei >= 2)
+      let ei = ei - 2 // 2: offset
 
       let keys = Vector.forceSet ei key keys
       let values = Vector.forceSet ei value values
-      // printfn "insert (set): ti:%d ei:%d" (int ti) ei
+      // printfn "insert (set): ti:%d ei:%d" ti ei
       HashMapBuffer(table, keys, values, equalFun, hashFun)
 
     | PrUnoccupied ->
       let ei, keys = Vector.length keys
-      let ei = uint (ei + 2) // 2: offset
-      // printfn "insert (push): ti:%d ei:%d" (int ti) (int ei)
+      let ei = ei + 2 // 2: offset
+      // printfn "insert (push): ti:%d ei:%d" ti ei
 
-      let table = Vector.forceSet (int ti) ei table
+      let table = Vector.forceSet ti ei table
       let keys = Vector.push key keys
       let values = Vector.push value values
 
@@ -271,13 +266,13 @@ module HashMapBuffer =
 
     match status with
     | PrEqual ->
-      let ei, table = Vector.forceGet (int ti) table
-      assert (ei >= 2u)
-      let ei = int (ei - 2u) // 2: offset
+      let ei, table = Vector.forceGet ti table
+      assert (ei >= 2)
+      let ei = ei - 2 // 2: offset
       let key, keys = Vector.forceGet ei keys
       let value, values = Vector.forceGet ei values
-      let table = Vector.forceSet (int ti) 1u table // 1: tombstone
-      // printfn "remove (tomb): ti:%d ei:%d" (int ti) ei
+      let table = Vector.forceSet ti 1 table // 1: tombstone
+      // printfn "remove (tomb): ti:%d ei:%d" ti ei
       Some(key, value), HashMapBuffer(table, keys, values, equalFun, hashFun)
 
     | _ -> None, HashMapBuffer(table, keys, values, equalFun, hashFun)
@@ -299,12 +294,12 @@ module HashMapBuffer =
 
       match opt with
       | Some (ei, ti) ->
-        let key, keys = Vector.forceGet (int ei) keys
-        let value, values = Vector.forceGet (int ei) values
+        let key, keys = Vector.forceGet ei keys
+        let value, values = Vector.forceGet ei values
         go ((key, value) :: acc) ti table keys values
 
       | None -> List.rev acc, table, keys, values
 
     let (HashMapBuffer (table, keys, values, equalFun, hashFun)) = map
-    let entries, table, keys, values = go [] 0u table keys values
+    let entries, table, keys, values = go [] 0 table keys values
     entries, HashMapBuffer(table, keys, values, equalFun, hashFun)

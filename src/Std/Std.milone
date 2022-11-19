@@ -21,7 +21,7 @@ let main _ =
     testVector ()
     testByteVector ()
     testStringBuffer ()
-    testOsString ()
+    // testOsString ()
     testBox ()
     testHashMap ()
     testPath ()

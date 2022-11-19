@@ -19,19 +19,19 @@ __nativeDecl "#include <string.h>"
 /// - If capacity is zero, ptr isn't null and can be disposed with a particular method. If capacity is zero, ptr is null.
 /// - len is less than or equal to capacity.
 /// - For all i in {0, ..., len - 1}, ptr[i] must be valid as 'T type.
-type Vector<'T> = private Vector of ptr: Own<nativeptr<'T>> * len: uint * capacity: uint
+type Vector<'T> = private Vector of ptr: Own<nativeptr<'T>> * len: int * capacity: int
 
 module Vector =
   /// Gets an empty vector.
-  let empty () : Vector<'T> = Vector(Own.acquire Ptr.nullPtr, 0u, 0u)
+  let empty () : Vector<'T> = Vector(Own.acquire Ptr.nullPtr, 0, 0)
 
   /// Allocates an empty vector with the specified capacity.
   let alloc (capacity: int) : Vector<'T> =
     if capacity > 0 then
       let ptr =
-        VectorBase.alloc (uint capacity) (uint sizeof<'T>)
+        VectorBase.alloc capacity sizeof<'T>
 
-      Vector(Ptr.cast ptr, 0u, uint capacity)
+      Vector(Ptr.cast ptr, 0, capacity)
     else
       empty ()
 
@@ -48,7 +48,7 @@ module Vector =
   /// Gets an item at the position. Out of bound causes crash.
   let forceGet (i: int) (v: Vector<'T>) : 'T * Vector<'T> =
     let (Vector (ptr, length, capacity)) = v
-    assert (uint i < length)
+    assert (uint i < uint length)
     let ptr = Own.release ptr
 
     let item = Ptr.read (Ptr.cast ptr: InPtr<'T>).[i]
@@ -58,7 +58,7 @@ module Vector =
   /// Sets an item at the position. Out of bound causes crash.
   let forceSet (i: int) (item: 'T) (v: Vector<'T>) : Vector<'T> =
     let (Vector (ptr, length, capacity)) = v
-    assert (uint i < length)
+    assert (uint i < uint length)
     let ptr = Own.release ptr
     Ptr.write ptr.[i] item
     Vector(Own.acquire ptr, length, capacity)
@@ -70,9 +70,9 @@ module Vector =
     let ptr, capacity =
       let itemPtr: VoidInPtr = __nativeExpr ("&({0})", item)
 
-      VectorBase.unsafePush itemPtr (Ptr.cast ptr) length capacity (uint sizeof<'T>)
+      VectorBase.unsafePush itemPtr (Ptr.cast ptr) length capacity sizeof<'T>
 
-    Vector(Ptr.cast ptr, length + 1u, capacity)
+    Vector(Ptr.cast ptr, length + 1, capacity)
 
   /// Removes the last item from the vector unless empty.
   ///
@@ -80,13 +80,13 @@ module Vector =
   let pop (v: Vector<'T>) : 'T option * Vector<'T> =
     let (Vector (ptr, length, capacity)) = v
 
-    if length <> 0u then
+    if length <> 0 then
       let ptr = Own.release ptr
 
       let item =
-        Ptr.read (Ptr.cast ptr: InPtr<'T>).[int (length - 1u)]
+        Ptr.read (Ptr.cast ptr: InPtr<'T>).[length - 1]
 
-      Some item, Vector(Own.acquire ptr, length - 1u, capacity)
+      Some item, Vector(Own.acquire ptr, length - 1, capacity)
     else
       None, Vector(ptr, length, capacity)
 
@@ -98,10 +98,10 @@ module Vector =
     | x :: xs ->
       let (Vector (ptr, length, capacity)) = v
 
-      let addition = 1u + uint (List.length xs)
+      let addition = 1 + List.length xs
 
       let ptr, capacity =
-        VectorBase.unsafeReserve addition (Ptr.cast ptr) length capacity (uint sizeof<'T>)
+        VectorBase.unsafeReserve addition (Ptr.cast ptr) length capacity sizeof<'T>
 
       let ptr: nativeptr<'T> = Ptr.cast (Own.release ptr)
 
@@ -112,7 +112,7 @@ module Vector =
         | [] -> ()
         | x :: xs -> extendFromListLoop (i + 1) x xs
 
-      extendFromListLoop (int length) x xs
+      extendFromListLoop length x xs
       Vector(Own.acquire ptr, length + addition, capacity)
 
   /// Creates a vector from a list.
@@ -123,7 +123,7 @@ module Vector =
     let (Vector (ptr, length, capacity)) = v
     let ptr = Own.release ptr
 
-    assert (uint endIndex <= length)
+    assert (uint endIndex <= uint length)
     assert (uint start <= uint endIndex)
 
     let xs =
@@ -138,7 +138,7 @@ module Vector =
           toListLoop acc (i - 1)
 
       if start < endIndex then
-        toListLoop [] (int (uint endIndex - 1u))
+        toListLoop [] (endIndex - 1)
       else
         []
 
@@ -187,7 +187,7 @@ module Vector =
     let (Vector (ptr, length, capacity)) = v
 
     let ptr =
-      VectorBase.unsafeSortUnstable ptrComparer (Ptr.cast ptr) length (uint sizeof<'T>)
+      VectorBase.unsafeSortUnstable ptrComparer (Ptr.cast ptr) length sizeof<'T>
 
     Vector(Ptr.cast ptr, length, capacity)
 
@@ -195,9 +195,9 @@ module Vector =
   let ofBlock (block: Block<'T>) : Vector<'T> =
     let srcPtr, len = BlockExt.unsafeToRawParts block
 
-    if len <> 0u then
+    if len <> 0 then
       let destPtr =
-        Own.release (VectorBase.alloc len (uint sizeof<'T>))
+        Own.release (VectorBase.alloc len sizeof<'T>)
 
       __nativeStmt ("memcpy({0}, {1}, {2});", destPtr, srcPtr, unativeint len * unativeint sizeof<'T>)
       Vector(Own.acquire (Ptr.cast destPtr), len, len)
@@ -217,7 +217,7 @@ module Vector =
 /// Vector methods that are unsafe or niche.
 module VectorExt =
   /// Unsafely restores a vector instance from components.
-  let unsafeOfRawParts (ptr: Own<nativeptr<'T>>) (len: uint) (capacity: uint) : Vector<'T> = Vector(ptr, len, capacity)
+  let unsafeOfRawParts (ptr: Own<nativeptr<'T>>) (len: int) (capacity: int) : Vector<'T> = Vector(ptr, len, capacity)
 
   /// Unwraps a vector into components.
   /// Use unsafeOfRawParts to restore.
@@ -232,26 +232,26 @@ module VectorExt =
   /// Item type must be one of: intNN, uintNN, float, unit, bool, char, obj, voidptr, nativeptr, InPtr.
   let unsafeZeroCreate (length: int) : Vector<'T> =
     assert (length >= 0)
-    let ptr = VectorBase.alloc (uint length) 1u
-    Vector((Ptr.cast ptr: Own<nativeptr<'T>>), uint length, uint length)
+    let ptr = VectorBase.alloc length 1
+    Vector((Ptr.cast ptr: Own<nativeptr<'T>>), length, length)
 
   /// Unsafely exposes the internal buffer of the vector.
   ///
   /// This function exists to build another type on the top of Vector efficiently.
-  let unsafeDup (v: Vector<'T>) : nativeptr<'T> * uint * uint * Vector<'T> =
+  let unsafeDup (v: Vector<'T>) : nativeptr<'T> * int * int * Vector<'T> =
     let (Vector (ptr, length, capacity)) = v
     let ptr = Own.release ptr
     ptr, length, capacity, Vector(Own.acquire ptr, length, capacity)
 
   let unsafeSetLength (length: int) (v: Vector<'T>) : Vector<'T> =
     let (Vector (ptr, _, capacity)) = v
-    assert (uint length <= capacity)
-    Vector(ptr, uint length, capacity)
+    assert (uint length <= uint capacity)
+    Vector(ptr, length, capacity)
 
   /// Gets the capacity.
   let capacity (v: Vector<'T>) : int * Vector<'T> =
     let (Vector (ptr, length, capacity)) = v
-    int capacity, Vector(ptr, length, capacity)
+    capacity, Vector(ptr, length, capacity)
 
   /// Reserves more memory for a vector.
   ///
@@ -265,7 +265,7 @@ module VectorExt =
     let (Vector (ptr, length, capacity)) = v
 
     let ptr, capacity =
-      VectorBase.unsafeReserve (uint addition) (Ptr.cast ptr) length capacity (uint sizeof<'T>)
+      VectorBase.unsafeReserve addition (Ptr.cast ptr) length capacity sizeof<'T>
 
     Vector(Ptr.cast ptr, length, capacity)
 
@@ -281,6 +281,6 @@ module VectorExt =
     let (Vector (ptr, length, capacity)) = v
 
     let ptr, capacity =
-      VectorBase.unsafeReserveExact (uint addition) (Ptr.cast ptr) length capacity (uint sizeof<'T>)
+      VectorBase.unsafeReserveExact addition (Ptr.cast ptr) length capacity sizeof<'T>
 
     Vector(Ptr.cast ptr, length, capacity)

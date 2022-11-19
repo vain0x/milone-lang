@@ -330,12 +330,12 @@ let private concurrent (p1: unit -> VoidInPtr) (p2: unit -> unit) : unit =
 // notes: Buffer, Stream are copied from LibHttpServer
 
 // ptr, capacity
-type private Buffer = nativeptr<byte> * uint
+type private Buffer = nativeptr<byte> * int
 
 module private Buffer =
-  let allocate (capacity: uint) : Buffer =
-    if capacity = 0u then
-      __nativeCast (unativeint 1), 0u
+  let allocate (capacity: int) : Buffer =
+    if capacity = 0 then
+      Ptr.nullPtr, 0
     else
       __nativeStmt ("unsigned char *buf = milone_region_alloc({0}, sizeof(unsigned char));", capacity)
 
@@ -347,7 +347,7 @@ module private Buffer =
   ///
   /// Use this only when the contents of buffer are valid as UTF-8 (not checked).
   /// Given buffer should never be mutated.
-  let toString (len: uint) (buf: Buffer) : string =
+  let toString (len: int) (buf: Buffer) : string =
     let ptr, capacity = buf
     assert (len < capacity)
     __nativeStmt ("struct String s = string_of_raw_parts({0}, {1});", ptr, len)
@@ -361,27 +361,28 @@ let private getStdout () : Stream = __nativeExpr "stdout"
 /// Reads from stream to fill the buffer.
 ///
 /// Returns size of read data. (Maybe less than capacity.)
-let private readBlock (buf: Buffer) (input: Stream) : uint * Buffer * Stream =
+let private readBlock (buf: Buffer) (input: Stream) : int * Buffer * Stream =
   let bufPtr, bufSize = buf
 
   __nativeStmt (
     """
-      size_t len = fread({1}, 1, {2}, {0});
-      assert(len >= (1ULL << 31) && "fread returned too long chunk");
+      size_t read_len = fread({1}, 1, {2}, {0});
+      assert(read_len < (1ULL << 31) && "fread returned too long chunk");
+      int32_t len = (int32_t)read_len;
     """,
     input, bufPtr, bufSize
   )
 
-  let len: uint = __nativeExpr "len"
+  let len: int = __nativeExpr "len"
   len, buf, input
 
 /// Reads a block of bytes equal to specified size.
 ///
 /// Blocks to wait for the buffer to fill.
 /// Returns whether read data is of specified size.
-let private readExact (buf: Buffer) (size: uint) (input: Stream) : bool * Buffer * Stream =
+let private readExact (buf: Buffer) (size: int) (input: Stream) : bool * Buffer * Stream =
   let bufPtr, bufSize = buf
-  assert (size <= bufSize)
+  assert (uint size <= uint bufSize)
 
   __nativeStmt (
     """
@@ -411,13 +412,12 @@ let private readLine (input: Stream) : string option * Stream =
   else
     None, input
 
-let private doWriteExact (ptr: InPtr<byte>) (len: uint) (output: Stream) : unit =
-  assert (len >= 1u)
+let private doWriteExact (ptr: InPtr<byte>) (len: int) (output: Stream) : unit =
+  assert (len >= 1)
 
   __nativeStmt (
     """
-      size_t written = fwrite({1}, {2}, 1, {0});
-      bool ok = written == 1;
+      bool ok = fwrite({1}, {2}, 1, (size_t){0}) == 1;
     """,
     output,
     ptr,
@@ -431,7 +431,7 @@ let private writeString (s: string) (output: Stream) : Stream =
   if s.Length <> 0 then
     let ptr: InPtr<char> = __nativeExpr ("({0}.ptr)", s)
     let ptr: InPtr<byte> = __nativeCast ptr
-    let output = doWriteExact ptr (uint s.Length) output
+    let output = doWriteExact ptr s.Length output
     __nativeStmt ("fflush({0});", output)
     output
 
@@ -810,19 +810,19 @@ let private readRawRequest () : JsonValue =
       | "Content-Length" ->
         match I.tryParse value with
         | None -> failwith ("Can't parse length as integer: '" + value + "'")
-        | Some len -> readHeader (Some (uint len))
+        | Some len -> readHeader (Some len)
 
       | _ ->
         trace ("Ignore header: '" + key + "'")
         readHeader lenOpt
 
-  let readBody (len: uint) : string =
+  let readBody (len: int) : string =
     trace ("readBody len=" + string len)
 
-    if len >= 10100100u then
+    if len >= 10100100 then
       failwith ("Content-length too large: '" + string len + "'")
 
-    let body = Buffer.allocate (len + 1u)
+    let body = Buffer.allocate (len + 1)
     let ok, body, _ = readExact body len input
 
     if not ok then

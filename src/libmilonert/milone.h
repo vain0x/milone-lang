@@ -16,7 +16,7 @@ void milone_start(int argc, char **argv);
 
 void milone_region_enter(void);
 void milone_region_leave(void);
-void *milone_region_alloc(uint32_t count, uint32_t size);
+void *milone_region_alloc(int32_t count, int32_t size);
 void milone_region_defer(void (*fun)(void const *env), void const *env);
 
 // -----------------------------------------------
@@ -34,7 +34,7 @@ int milone_uint64_compare(uint64_t l, uint64_t r);
 // This assumes some invariants, see documentation about string type.
 struct String {
     char const *ptr;
-    uint32_t len;
+    int32_t len;
 };
 
 // Convert a null-terminated string to a string object by computing its length.
@@ -46,7 +46,7 @@ struct String string_borrow(char const *c_str);
 int string_compare(struct String l, struct String r);
 
 // Create a copy of native C string.
-struct String string_of_raw_parts(char const *ptr, uint32_t len);
+struct String string_of_raw_parts(char const *ptr, int32_t len);
 
 // Create a copy of native null-terminated C string.
 struct String string_of_c_str(char const *s);
@@ -132,7 +132,7 @@ typedef OsChar const *OsStringPtr;
 // This holds the same invariants as String.
 struct MiloneOsString {
     OsStringPtr ptr;
-    uint32_t len;
+    int32_t len;
 };
 
 // Wraps a pointer with a string object.

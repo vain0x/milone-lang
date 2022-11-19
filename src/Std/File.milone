@@ -94,7 +94,7 @@ module File =
     let len: int = __nativeExpr "len"
 
     let dest =
-      VectorExt.unsafeSetLength (int (destLength + uint len)) dest
+      VectorExt.unsafeSetLength (destLength + len) dest
 
     len, dest, input, io
 
@@ -137,7 +137,7 @@ module File =
         dest, input, io
       else
         let dest =
-          VectorExt.unsafeSetLength (int destLength + len) dest
+          VectorExt.unsafeSetLength (destLength + len) dest
 
         go io dest input
 
@@ -160,7 +160,7 @@ module File =
     __nativeStmt (
       """
         char *p = fgets(&{0}[{1}], {2}, {3});
-        uint32_t size = p != NULL ? (uint32_t)strlen(p) : 0;
+        int32_t size = p != NULL ? (int32_t)strlen(p) : 0;
       """,
       bufPtr,
       length,
@@ -168,12 +168,12 @@ module File =
       fp
     )
 
-    let size: uint = __nativeExpr "size"
+    let size: int = __nativeExpr "size"
 
     let buf =
-      VectorExt.unsafeSetLength (int (length + size)) buf
+      VectorExt.unsafeSetLength (length + size) buf
 
-    size <> 0u, buf, file, io
+    size <> 0, buf, file, io
 
   /// Unsafely writes a block of bytes to the file.
   ///
@@ -182,7 +182,7 @@ module File =
     let fp, output = unsafeDup output
     assert (len >= 1)
 
-    __nativeStmt ("bool ok = fwrite({1}, {2}, 1, {0}) == 1;", fp, ptr, uint len)
+    __nativeStmt ("bool ok = fwrite({1}, (size_t){2}, 1, {0}) == 1;", fp, ptr, len)
 
     let ok: bool = __nativeExpr "ok"
     ok, output, io

@@ -43,7 +43,7 @@ let private compareUInt64 (l: uint64) r = compare l r
 module TextPosition =
   let private toUInt64 (pos: RowIndex * ColumnIndex) : uint64 =
     let y, x = pos
-    (uint64 (uint y) <<< 32) ||| uint64 (uint x)
+    (uint64 y <<< 32) ||| uint64 x
 
   let equals (l: RowIndex * ColumnIndex) (r: RowIndex * ColumnIndex) = toUInt64 l = toUInt64 r
 

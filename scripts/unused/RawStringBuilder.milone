@@ -6,15 +6,15 @@ module rec LibNursery.RawStringBuilder
 let private stringAsPtr (s: string) : VoidInPtr =
   __nativeExpr ("{0}.ptr", s)
 
-let private __alloc (size: uint) : voidptr =
-  __nativeFun ("milone_region_alloc", 1u, size)
+let private __alloc (size: int) : voidptr =
+  __nativeFun ("milone_region_alloc", 1, size)
 
 /// Raw reference cell.
 type private Ref<'T> = Ref of nativeptr<'T>
 
 module Ref =
   let uninit () : Ref<'T> =
-    let p = __alloc (uint sizeof<'T>)
+    let p = __alloc sizeof<'T>
     Ref p
 
   let write (value: 'T) (r: Ref<'T>) : unit =

@@ -10,7 +10,7 @@ type BoxWriter<'T> = private BoxWriter of Own<OutPtr<'T>>
 
 module BoxWriter =
   let alloc () : BoxWriter<'T> =
-    let ptr = VectorBase.alloc 1u (uint sizeof<'T>)
+    let ptr = VectorBase.alloc 1 sizeof<'T>
     BoxWriter(Ptr.cast ptr)
 
   let dispose (bw: BoxWriter<'T>) : unit =
