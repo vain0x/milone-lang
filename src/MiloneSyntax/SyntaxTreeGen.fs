@@ -73,6 +73,7 @@ let private kindOfToken token =
   | IntToken _ -> SyntaxKind.Int
   | FloatToken _ -> SyntaxKind.Float
   | CharToken _ -> SyntaxKind.Char
+  | ByteToken _ -> SyntaxKind.Byte
   | StringToken _ -> SyntaxKind.String
   | IdentToken _ -> SyntaxKind.Ident
   | TyVarToken _ -> SyntaxKind.TyVar
@@ -143,6 +144,7 @@ let private kindToString kind =
   | SyntaxKind.Int -> "Int"
   | SyntaxKind.Float -> "Float"
   | SyntaxKind.Char -> "Char"
+  | SyntaxKind.Byte -> "Byte"
   | SyntaxKind.String -> "String"
   | SyntaxKind.Ident -> "Ident"
   | SyntaxKind.TyVar -> "TyVar"
@@ -1144,6 +1146,14 @@ module private SyntaxTreeDump =
             else
               string c
           )
+          |> cons "\"]"
+
+        | ByteToken value ->
+          acc
+          |> cons "[\"Byte\", "
+          |> range
+          |> cons ", \"0x"
+          |> cons (S.uint64ToHex 2 (uint64 value))
           |> cons "\"]"
 
         | StringToken s ->

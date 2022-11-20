@@ -91,6 +91,7 @@ type Token =
   | IntToken of intText: string * IntFlavor option
   | FloatToken of floatText: string
   | CharToken of char
+  | ByteToken of byte
   | StringToken of string
   | IdentToken of Ident
 
@@ -610,6 +611,7 @@ type SyntaxKind =
   | Int
   | Float
   | Char
+  | Byte
   | String
   | Ident
   | TyVar

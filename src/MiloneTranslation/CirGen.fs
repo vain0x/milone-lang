@@ -773,6 +773,7 @@ let private genLit lit =
   | BoolLit false -> CVarExpr "false"
   | BoolLit true -> CVarExpr "true"
   | CharLit value -> CCharExpr value
+  | ByteLit value -> CCastExpr(CCharExpr (char value), CIntTy U8)
   | StringLit value -> CStringInitExpr value
 
 let private genDiscriminant ctx variantSerial =

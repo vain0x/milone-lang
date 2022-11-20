@@ -20,6 +20,7 @@ module S = Std.StdString
 // -----------------------------------------------
 
 let tyInt = Ty(IntTk I32, [])
+let tyByte = Ty(IntTk U8, [])
 let tyNativeInt = Ty(IntTk IPtr, [])
 let tyFloat = Ty(FloatTk F64, [])
 let tyBool = Ty(BoolTk, [])
@@ -81,6 +82,7 @@ let litToTy (lit: Lit) : Ty =
   | IntLitWithFlavor (_, flavor) -> Ty(IntTk flavor, [])
   | FloatLit _ -> tyFloat
   | CharLit _ -> tyChar
+  | ByteLit _ -> tyByte
   | StringLit _ -> tyString
 
 // -----------------------------------------------

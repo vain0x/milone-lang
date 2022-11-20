@@ -23,6 +23,7 @@
 - Assertion error and other runtime errors call `abort` (rather than `exit(1)`)
 - Prefer `int32_t` for size/length/capacity. See also [prefer_signed_indexes.md](docs/internals/prefer_signed_indexes.md)
 - Fix unicode string literals are broken
+- Support byte literal (`'a'B` syntax)
 
 ### CLI Tool
 

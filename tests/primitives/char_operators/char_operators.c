@@ -8,6 +8,8 @@ void char_operators_char_operators_testEquality(void);
 
 void char_operators_char_operators_testConversion(void);
 
+void char_operators_char_operators_testByteLit(void);
+
 int main(int argc, char **argv);
 
 void char_operators_char_operators_testAddition(void) {
@@ -34,10 +36,17 @@ void char_operators_char_operators_testConversion(void) {
     return;
 }
 
+void char_operators_char_operators_testByteLit(void) {
+    if ((((uint8_t)'A') != (uint8_t)65U)) milone_assert_error("char_operators/char_operators.milone", 22, 2);
+    if ((((uint8_t)'~') != (uint8_t)0x7eU)) milone_assert_error("char_operators/char_operators.milone", 23, 2);
+    return;
+}
+
 int main(int argc, char **argv) {
     milone_start(argc, argv);
     char_operators_char_operators_testAddition();
     char_operators_char_operators_testEquality();
     char_operators_char_operators_testConversion();
+    char_operators_char_operators_testByteLit();
     return 0;
 }

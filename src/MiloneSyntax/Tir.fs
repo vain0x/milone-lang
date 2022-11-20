@@ -18,6 +18,7 @@ module S = Std.StdString
 let tyError loc = Ty(ErrorTk loc, [])
 
 let tyInt = Ty(IntTk I32, [])
+let tyByte = Ty(IntTk U8, [])
 let tyNativeInt = Ty(IntTk IPtr, [])
 let tyUNativeInt = Ty(IntTk UPtr, [])
 let tyFloat = Ty(FloatTk F64, [])
@@ -98,6 +99,7 @@ let litToTy (lit: Lit) : Ty =
   | IntLitWithFlavor (_, flavor) -> Ty(IntTk flavor, [])
   | FloatLit _ -> tyFloat
   | CharLit _ -> tyChar
+  | ByteLit _ -> tyByte
   | StringLit _ -> tyString
 
 // -----------------------------------------------

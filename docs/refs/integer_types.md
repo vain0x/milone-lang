@@ -120,6 +120,14 @@ Typing rules:
     (l >>> r): I
 ```
 
+### Byte Literals
+
+A character literal with suffix `B` represents a byte value.
+
+```fsharp
+    assert (`'a'B` = 97uy)
+```
+
 ### Runtime Representation
 
 N-bit integer types in milone-lang map to corresponding fixed integer types[^1] in C; e.g. `int` → `int32_t`.

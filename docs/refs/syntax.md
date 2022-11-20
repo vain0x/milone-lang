@@ -15,6 +15,7 @@ Category of tokens:
         - With exponential (`1e-9`)
 - Character literal tokens (`'a'`)
     - Escaped (`'\x0a'`)
+    - Byte (`'a'B`)
 - String literal tokens
     - Single-line (`"hey"`)
     - Raw (`"""..."""`)
@@ -85,6 +86,8 @@ It starts with a backslash and an ASCII alphabet follows.
     char_lit = "'" (escape | verbatim_char) "'"
 
 Remark: `'\0'` isn't valid.
+
+Character literal may by followed by `B` without any blank.
 
 ### String Literal Tokens
 

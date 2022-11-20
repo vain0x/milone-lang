@@ -87,6 +87,7 @@ type Lit =
   | IntLitWithFlavor of string * IntFlavor
   | FloatLit of floatText: string
   | CharLit of charValue: char
+  | ByteLit of byteValue: byte
   | StringLit of stringValue: string
 
 // -----------------------------------------------
