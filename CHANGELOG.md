@@ -59,6 +59,8 @@
 - Revert separation of types and implementation projects
 - `DocId` representation is no longer limited to `P.M`. LSP server now uses absolute file paths to avoid conflict.
 - `exit` is now a regular function (rather than primitive)
+- Add `Std/FormatBase.milone` as wrapper of `sprintf`-like code
+- Add `StringBuffer.milone`
 
 ## [v0.5.0] - 2022-07-21
 

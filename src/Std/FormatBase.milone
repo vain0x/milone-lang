@@ -1,0 +1,102 @@
+// For internal use.
+//
+// Provides functions to format values to textual representation.
+module rec Std.FormatBase
+
+open Std.Own
+open Std.Ptr
+
+// For memcpy, sprintf
+__nativeDecl "#include <string.h>"
+
+/// Formats an int64 as decimal and a NUL byte.
+///
+/// Input buf must be writable 21 bytes (which includes NUL) and padding zeros.
+///
+/// Result: Length written excluding NUL and input buf.
+let formatInt64 (width: int) (value: int64) (buf: Own<OutPtr<byte>>) (bufLen: int) =
+  assert (uint width < uint bufLen)
+  assert (bufLen >= 21)
+  let buf = Own.release buf
+
+  __nativeStmt (
+    """
+      int32_t len = (int32_t)sprintf({0}, "%0*lld", (int){1}, (long long){2});
+    """,
+    buf,
+    width,
+    value
+  )
+
+  let len: int = __nativeExpr "len"
+  len, Own.acquire buf
+
+/// Formats an uint64 as decimal and a NUL byte.
+///
+/// Input buf must be writable 21 bytes (includes NUL) and padding zeros.
+///
+/// Result: Length written excluding NUL and input buf.
+let formatUInt64 (width: int) (value: uint64) (buf: Own<OutPtr<byte>>) (bufLen: int) =
+  assert (uint width < uint bufLen)
+  assert (bufLen > 21)
+  let buf = Own.release buf
+
+  __nativeStmt (
+    """
+      int32_t len = (int32_t)sprintf({0}, "%0*lld", (int){1}, (unsigned long long){2});
+    """,
+    buf,
+    width,
+    value
+  )
+
+  let len: int = __nativeExpr "len"
+  len, Own.acquire buf
+
+let formatInt (width: int) (value: int) (buf: Own<OutPtr<byte>>) (bufLen: int) : int * Own<OutPtr<byte>> =
+  formatInt64 width (int64 value) buf bufLen
+
+let formatUInt (width: int) (value: uint) (buf: Own<OutPtr<byte>>) (bufLen: int) : int * Own<OutPtr<byte>> =
+  formatUInt64 width (uint64 value) buf bufLen
+
+/// Formats an uint64 value as hex and a NUL byte (zero-padded, lowercase.)
+///
+/// Input buf must be writable 21 bytes (which includes NUL) and padding zeros.
+///
+/// Result: Length written excluding NUL and input buf.
+let formatLowerHex (width: int) (value: uint64) (buf: Own<OutPtr<byte>>) (bufLen: int) =
+  assert (uint width < uint bufLen)
+  assert (bufLen > 16)
+  let buf = Own.release buf
+
+  __nativeStmt (
+    """
+      int32_t len = (int32_t)sprintf({0}, "%0*llx", (int){1}, (unsigned long long){2});
+    """,
+    buf,
+    width,
+    value
+  )
+
+  let len: int = __nativeExpr "len"
+  len, Own.acquire buf
+
+/// Formats a float as decimal and a NUL byte.
+///
+/// Input buf must be writable 64 bytes (which includes NUL.)
+///
+/// Result: Length written excluding NUL and input buf.
+let formatFloat (value: float) (buf: Own<OutPtr<byte>>) (bufLen: int) : int * Own<OutPtr<byte>> =
+  assert (bufLen >= 64)
+  let buf = Own.release buf
+
+  __nativeStmt (
+    """
+      int32_t len = (int32_t)sprintf({0}, "%f", {1});
+    """,
+    buf,
+    value
+  )
+
+  let len: int = __nativeExpr "len"
+  len, Own.acquire buf

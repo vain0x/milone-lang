@@ -5,25 +5,22 @@ open Std.Vector
 __nativeDecl "#include <string.h>" // for memcpy
 
 // Functions for `Vector<byte>`.
+// No "ByteVectorExt" because ByteVector itself is rarely used.
 module ByteVector =
   /// Creates a vector with the specified length and all elements are zero.
   let zeroCreate (length: int) : Vector<byte> = VectorExt.unsafeZeroCreate length
 
-  /// Appends contiguous part of memory to the vector.
-  let unsafeWriteRawParts (p: voidptr) (l: int) (v: Vector<byte>) : Vector<byte> =
-    if l <> 0 then
-      let v = VectorExt.reserve l v
-      let ptr, length, _, v = VectorExt.unsafeDup v
-      __nativeStmt ("memcpy(&{0}[{1}], {2}, (size_t){3});", ptr, length, p, l)
-      let (Vector (ptr, length, capacity)) = v
-      Vector(ptr, length + l, capacity)
-    else
-      v
-
   /// Appends UTF-8 bytes of string to the vector.
   let writeString (s: string) (v: Vector<byte>) : Vector<byte> =
-    let stringPtr: InPtr<char> = __nativeExpr ("{0}.ptr", s)
-    unsafeWriteRawParts (__nativeCast stringPtr) s.Length v
+    if s.Length <> 0 then
+      let sPtr: InPtr<byte> = __nativeExpr ("(uint8_t const *){0}.ptr", s)
+
+      v
+      |> VectorWriter.start s.Length
+      |> VectorWriter.copy sPtr s.Length
+      |> VectorWriter.finish
+    else
+      v
 
   /// Creates a vector and copies from a string.
   let ofString (s: string) : Vector<byte> = writeString s (Vector.empty ())
@@ -48,29 +45,17 @@ module ByteVector =
 
   /// Writes an int to the vector. (Decimal)
   let writeInt (value: int) (v: Vector<byte>) =
-    __nativeStmt (
-      """
-        char buf[16] = "";
-        int32_t len = (int32_t)sprintf(buf, "%d", {0});
-      """,
-      value
-    )
-
-    let buf: nativeptr<char> = __nativeExpr "buf"
-    unsafeWriteRawParts (__nativeCast buf) (__nativeExpr "len") v
+    v
+    |> VectorWriter.start 21
+    |> VectorWriter.writeWith (fun v len -> FormatBase.formatInt64 0 (int64 value) v len)
+    |> VectorWriter.finish
 
   /// Writes a float to the vector. Format is unspecified yet.
   let writeFloat (value: float) (v: Vector<byte>) =
-    __nativeStmt (
-      """
-        char buf[64] = "";
-        int32_t len = (int32_t)sprintf(buf, "%f", {0});
-      """,
-      value
-    )
-
-    let buf: nativeptr<char> = __nativeExpr "buf"
-    unsafeWriteRawParts (__nativeCast buf) (__nativeExpr "len") v
+    v
+    |> VectorWriter.start 64
+    |> VectorWriter.writeWith (fun v len -> FormatBase.formatFloat value v len)
+    |> VectorWriter.finish
 
   /// Writes a boolean to the vector. "True" or "False".
   let writeBool (value: bool) (v: Vector<byte>) = writeString (string value) v

@@ -10,13 +10,14 @@ module VectorBase = Std.VectorBase
 // For memcpy.
 __nativeDecl "#include <string.h>"
 
-/// Owned dynamic array.
+/// Owned, mutable and growable array structure.
 ///
 /// - len and capacity represents the number of items.
 ///
 /// Invariants:
 ///
-/// - If capacity is zero, ptr isn't null and can be disposed with a particular method. If capacity is zero, ptr is null.
+/// - If capacity isn't zero, ptr isn't null and can be disposed with a particular method.
+///     If capacity is zero, ptr is null.
 /// - len is less than or equal to capacity.
 /// - For all i in {0, ..., len - 1}, ptr[i] must be valid as 'T type.
 type Vector<'T> = private Vector of ptr: Own<nativeptr<'T>> * len: int * capacity: int
@@ -219,7 +220,11 @@ module VectorExt =
   /// Unsafely restores a vector instance from components.
   let unsafeOfRawParts (ptr: Own<nativeptr<'T>>) (len: int) (capacity: int) : Vector<'T> =
     assert (0 <= len && len <= capacity)
+
+    let ptr = Own.release ptr
     assert (ptr <> Ptr.nullPtr || capacity = 0)
+    let ptr = Own.acquire ptr
+
     Vector(ptr, len, capacity)
 
   /// Unwraps a vector into components.
@@ -287,3 +292,99 @@ module VectorExt =
       VectorBase.unsafeReserveExact addition (Ptr.cast ptr) length capacity sizeof<'T>
 
     Vector(Ptr.cast ptr, length, capacity)
+
+// -----------------------------------------------
+// VectorWriter
+// -----------------------------------------------
+
+/// Wrapper of a vector so that you can write data to it.
+///
+/// - `destPtr`:
+///     Pointer to the **end** of the buffer, where the next data is written.
+///     This pointer will advance whenever written.
+/// - `destCapacity`:
+///     Size of allocation past the `destPtr`.
+///     That is, `destPtr.[0..destPtr + destCapacity - 1]` is the range that can be written to.
+/// - `offsetLen`:
+///     Distance between the start of underlying buffer and the current `destPtr`.
+///     In other words, `destPtr.[offsetLen]` is the start of underlying buffer.
+type VectorWriter<'T> = private VectorWriter of destPtr: Own<OutPtr<'T>> * destCapacity: int * offsetLen: int
+
+// See StringBuffer for basic usage.
+
+module VectorWriter =
+  /// Wraps a vector into a writer.
+  ///
+  /// - `addition`: A predicted size that would be written in addition. (Can be inexact, or just 0.)
+  let start (addition: int) (v: Vector<'T>) : VectorWriter<'T> =
+    assert (addition >= 0)
+
+    let v = VectorExt.reserve addition v
+    let ptr, len, capacity = VectorExt.toRawParts v
+
+    let destPtr =
+      let ptr = Own.release ptr
+      let destPtr = Ptr.select ptr.[len]
+      Own.acquire (Ptr.cast destPtr: OutPtr<'T>)
+
+    let destCapacity = capacity - len
+    VectorWriter(destPtr, destCapacity, len)
+
+  /// Unwraps the underlying vector out of the writer.
+  let finish (w: VectorWriter<'T>) : Vector<'T> =
+    let (VectorWriter(destPtr, destCapacity, offsetLen)) = w
+
+    let ptr: Own<nativeptr<'T>> =
+      let ptr = Own.release destPtr
+      let ptr = Ptr.select ptr.[-offsetLen]
+      Own.acquire (Ptr.cast ptr)
+
+    let capacity = offsetLen + destCapacity
+    VectorExt.unsafeOfRawParts ptr offsetLen capacity
+
+  /// Writes an item.
+  let push (value: 'T) (w: VectorWriter<'T>) =
+    let (VectorWriter(destPtr, destCapacity, offsetLen)) = w
+    assert (destCapacity >= 1)
+
+    let destPtr =
+      let destPtr = Own.release destPtr
+      __nativeStmt ("memcpy({0}, {1}, 1);", destPtr, &&value)
+      Own.acquire (Ptr.select destPtr.[1])
+
+    let destCapacity = destCapacity - 1
+    let offsetLen = offsetLen + 1
+    VectorWriter(destPtr, destCapacity, offsetLen)
+
+  /// Writes an non-empty block of items.
+  let copy (srcPtr: InPtr<'T>) (srcLen: int) (w: VectorWriter<'T>) =
+    assert (srcLen >= 1)
+
+    let (VectorWriter(destPtr, destCapacity, offsetLen)) = w
+    assert (srcLen <= destCapacity)
+
+    let destPtr =
+      let destPtr = Own.release destPtr
+      __nativeStmt ("memcpy({0}, {1}, (size_t){2});", destPtr, srcPtr, srcLen)
+      Own.acquire (Ptr.select destPtr.[srcLen])
+
+    let destCapacity = destCapacity - srcLen
+    let offsetLen = offsetLen + srcLen
+    VectorWriter(destPtr, destCapacity, offsetLen)
+
+  /// Performs a write operation.
+  ///
+  /// writer: bufPtr -> bufOffset -> (writtenLen, bufPtr)
+  let writeWith (writer: Own<OutPtr<'T>> -> int -> int * Own<OutPtr<'T>>) (w: VectorWriter<'T>) =
+    let (VectorWriter(destPtr, destCapacity, offsetLen)) = w
+
+    let writtenLen, destPtr = writer destPtr destCapacity
+    assert (writtenLen <= destCapacity)
+
+    let destPtr =
+      let destPtr = Own.release destPtr
+      Own.acquire (Ptr.select destPtr.[writtenLen])
+
+    let destCapacity = destCapacity - writtenLen
+    let offsetLen = offsetLen + writtenLen
+    VectorWriter(destPtr, destCapacity, offsetLen)
