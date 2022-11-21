@@ -29,8 +29,7 @@ module Vector =
   /// Allocates an empty vector with the specified capacity.
   let alloc (capacity: int) : Vector<'T> =
     if capacity > 0 then
-      let ptr =
-        VectorBase.alloc capacity sizeof<'T>
+      let ptr = VectorBase.alloc capacity sizeof<'T>
 
       Vector(Ptr.cast ptr, 0, capacity)
     else
@@ -38,39 +37,38 @@ module Vector =
 
   /// Disposes a vector.
   let dispose (v: Vector<'T>) : unit =
-    let (Vector (ptr, _, _)) = v
+    let (Vector(ptr, _, _)) = v
     VectorBase.unsafeFree (Ptr.cast ptr)
 
   /// Gets the length.
   let length (v: Vector<'T>) : int * Vector<'T> =
-    let (Vector (ptr, length, capacity)) = v
-    int length, Vector(ptr, length, capacity)
+    let (Vector(ptr, length, capacity)) = v
+    length, Vector(ptr, length, capacity)
 
   /// Gets an item at the position. Out of bound causes crash.
   let forceGet (i: int) (v: Vector<'T>) : 'T * Vector<'T> =
-    let (Vector (ptr, length, capacity)) = v
+    let (Vector(ptr, length, capacity)) = v
     assert (uint i < uint length)
+
     let ptr = Own.release ptr
-
     let item = Ptr.read (Ptr.cast ptr: InPtr<'T>).[i]
-
     item, Vector(Own.acquire ptr, length, capacity)
 
   /// Sets an item at the position. Out of bound causes crash.
   let forceSet (i: int) (item: 'T) (v: Vector<'T>) : Vector<'T> =
-    let (Vector (ptr, length, capacity)) = v
+    let (Vector(ptr, length, capacity)) = v
     assert (uint i < uint length)
+
     let ptr = Own.release ptr
     Ptr.write ptr.[i] item
     Vector(Own.acquire ptr, length, capacity)
 
   /// Appends an item to the end of vector.
   let push (item: 'T) (v: Vector<'T>) : Vector<'T> =
-    let (Vector (ptr, length, capacity)) = v
+    let (Vector(ptr, length, capacity)) = v
 
     let ptr, capacity =
       let itemPtr: VoidInPtr = __nativeExpr ("&({0})", item)
-
       VectorBase.unsafePush itemPtr (Ptr.cast ptr) length capacity sizeof<'T>
 
     Vector(Ptr.cast ptr, length + 1, capacity)
@@ -79,14 +77,11 @@ module Vector =
   ///
   /// Remark: Allocated memory doesn't get freed.
   let pop (v: Vector<'T>) : 'T option * Vector<'T> =
-    let (Vector (ptr, length, capacity)) = v
+    let (Vector(ptr, length, capacity)) = v
 
     if length <> 0 then
       let ptr = Own.release ptr
-
-      let item =
-        Ptr.read (Ptr.cast ptr: InPtr<'T>).[length - 1]
-
+      let item = Ptr.read (Ptr.cast ptr: InPtr<'T>).[length - 1]
       Some item, Vector(Own.acquire ptr, length - 1, capacity)
     else
       None, Vector(ptr, length, capacity)
@@ -97,7 +92,7 @@ module Vector =
     | [] -> v
 
     | x :: xs ->
-      let (Vector (ptr, length, capacity)) = v
+      let (Vector(ptr, length, capacity)) = v
 
       let addition = 1 + List.length xs
 
@@ -121,7 +116,7 @@ module Vector =
 
   /// Creates a list from a range of the vector.
   let sliceToList (start: int) (endIndex: int) (v: Vector<'T>) : 'T list * Vector<'T> =
-    let (Vector (ptr, length, capacity)) = v
+    let (Vector(ptr, length, capacity)) = v
     let ptr = Own.release ptr
 
     assert (uint endIndex <= uint length)
@@ -132,11 +127,7 @@ module Vector =
 
       let rec toListLoop acc i =
         let acc = Ptr.read ptr.[i] :: acc
-
-        if i = start then
-          acc
-        else
-          toListLoop acc (i - 1)
+        if i = start then acc else toListLoop acc (i - 1)
 
       if start < endIndex then
         toListLoop [] (endIndex - 1)
@@ -155,10 +146,7 @@ module Vector =
     let v = alloc len
 
     let rec go i v =
-      if i < len then
-        go (i + 1) (push item v)
-      else
-        v
+      if i < len then go (i + 1) (push item v) else v
 
     go 0 v
 
@@ -185,11 +173,8 @@ module Vector =
       fun (l: VoidInPtr) (r: VoidInPtr) ->
         itemComparer (Ptr.read (Ptr.cast l: InPtr<'T>)) (Ptr.read (Ptr.cast r: InPtr<'T>))
 
-    let (Vector (ptr, length, capacity)) = v
-
-    let ptr =
-      VectorBase.unsafeSortUnstable ptrComparer (Ptr.cast ptr) length sizeof<'T>
-
+    let (Vector(ptr, length, capacity)) = v
+    let ptr = VectorBase.unsafeSortUnstable ptrComparer (Ptr.cast ptr) length sizeof<'T>
     Vector(Ptr.cast ptr, length, capacity)
 
   /// Creates a vector by copying from a block.
@@ -197,8 +182,7 @@ module Vector =
     let srcPtr, len = BlockExt.unsafeToRawParts block
 
     if len <> 0 then
-      let destPtr =
-        Own.release (VectorBase.alloc len sizeof<'T>)
+      let destPtr = Own.release (VectorBase.alloc len sizeof<'T>)
 
       __nativeStmt ("memcpy({0}, {1}, {2});", destPtr, srcPtr, unativeint len * unativeint sizeof<'T>)
       Vector(Own.acquire (Ptr.cast destPtr), len, len)
@@ -207,12 +191,9 @@ module Vector =
 
   /// Creates a block by copying from a vector.
   let toBlock (v: Vector<'T>) : Block<'T> * Vector<'T> =
-    let (Vector (ptr, len, cap)) = v
+    let (Vector(ptr, len, cap)) = v
     let ptr = Own.release ptr
-
-    let block =
-      BlockExt.unsafeOfRawParts (Ptr.asIn ptr) len
-
+    let block = BlockExt.unsafeOfRawParts (Ptr.asIn ptr) len
     block, Vector(Own.acquire ptr, len, cap)
 
 /// Vector methods that are unsafe or niche.
@@ -230,7 +211,7 @@ module VectorExt =
   /// Unwraps a vector into components.
   /// Use unsafeOfRawParts to restore.
   let toRawParts (v: Vector<'T>) =
-    let (Vector (ptr, len, capacity)) = v
+    let (Vector(ptr, len, capacity)) = v
     ptr, len, capacity
 
   /// Creates a vector with the specified length and capacity. Contents are zero'ed.
@@ -247,18 +228,18 @@ module VectorExt =
   ///
   /// This function exists to build another type on the top of Vector efficiently.
   let unsafeDup (v: Vector<'T>) : nativeptr<'T> * int * int * Vector<'T> =
-    let (Vector (ptr, length, capacity)) = v
+    let (Vector(ptr, length, capacity)) = v
     let ptr = Own.release ptr
     ptr, length, capacity, Vector(Own.acquire ptr, length, capacity)
 
   let unsafeSetLength (length: int) (v: Vector<'T>) : Vector<'T> =
-    let (Vector (ptr, _, capacity)) = v
+    let (Vector(ptr, _, capacity)) = v
     assert (uint length <= uint capacity)
     Vector(ptr, length, capacity)
 
   /// Gets the capacity.
   let capacity (v: Vector<'T>) : int * Vector<'T> =
-    let (Vector (ptr, length, capacity)) = v
+    let (Vector(ptr, length, capacity)) = v
     capacity, Vector(ptr, length, capacity)
 
   /// Reserves more memory for a vector.
@@ -270,7 +251,7 @@ module VectorExt =
   let reserve (addition: int) (v: Vector<'T>) : Vector<'T> =
     assert (addition >= 0)
 
-    let (Vector (ptr, length, capacity)) = v
+    let (Vector(ptr, length, capacity)) = v
 
     let ptr, capacity =
       VectorBase.unsafeReserve addition (Ptr.cast ptr) length capacity sizeof<'T>
@@ -286,7 +267,7 @@ module VectorExt =
   let reserveExact (addition: int) (v: Vector<'T>) : Vector<'T> =
     assert (addition >= 0)
 
-    let (Vector (ptr, length, capacity)) = v
+    let (Vector(ptr, length, capacity)) = v
 
     let ptr, capacity =
       VectorBase.unsafeReserveExact addition (Ptr.cast ptr) length capacity sizeof<'T>

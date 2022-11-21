@@ -11,10 +11,7 @@ let private testWriteUInt64 () =
   assert (shouldEqual string 2 s.Length)
   let sb = sb |> StringBuffer.clear
 
-  let sb =
-    sb
-    |> StringBuffer.writeUInt64 20 0x7fff00007fff0000UL
-
+  let sb = sb |> StringBuffer.writeUInt64 20 0x7fff00007fff0000UL
   let s, sb = sb |> StringBuffer.toString
   assert (shouldEqual id "09223090564025483264" s)
   assert (shouldEqual string 20 s.Length)
@@ -23,18 +20,14 @@ let private testWriteUInt64 () =
 let private testWriteHex () =
   let sb = StringBuffer.empty ()
 
-  let sb =
-    sb |> StringBuffer.writeHex 0 0xCa10CafeUL
+  let sb = sb |> StringBuffer.writeHex 0 0xCa10CafeUL
 
   let s, sb = sb |> StringBuffer.toString
   assert (shouldEqual id "ca10cafe" s)
   assert (shouldEqual string 8 s.Length)
   let sb = sb |> StringBuffer.clear
 
-  let sb =
-    sb
-    |> StringBuffer.writeHex 20 0x7fff00006eee0000UL
-
+  let sb = sb |> StringBuffer.writeHex 20 0x7fff00006eee0000UL
   let s, sb = sb |> StringBuffer.toString
   assert (shouldEqual id "00007fff00006eee0000" s)
   assert (shouldEqual string 20 s.Length)
@@ -42,23 +35,14 @@ let private testWriteHex () =
 
 let private testWriteAscii () =
   let sb = StringBuffer.empty ()
-
-  let sb =
-    sb
-    |> StringBuffer.writeAscii '^'
-    |> StringBuffer.writeAscii '$'
-
+  let sb = sb |> StringBuffer.writeAscii '^' |> StringBuffer.writeAscii '$'
   let s, sb = sb |> StringBuffer.toString
   assert (shouldEqual id "^$" s)
   StringBuffer.dispose sb
 
 let private testWriteList () =
   let sb = StringBuffer.empty ()
-
-  let sb =
-    sb
-    |> StringBuffer.writeList StringBuffer.writeInt ", " [ 31; 41; 59; 26 ]
-
+  let sb = sb |> StringBuffer.writeList StringBuffer.writeInt ", " [ 31; 41; 59; 26 ]
   let s, sb = sb |> StringBuffer.toString
   assert (shouldEqual id "31, 41, 59, 26" s)
   StringBuffer.dispose sb
@@ -66,11 +50,7 @@ let private testWriteList () =
 let private testWriteBlock () =
   let sb = StringBuffer.empty ()
   let b = Block.ofList [ 27; 18; 28; 18 ]
-
-  let sb =
-    sb
-    |> StringBuffer.writeBlock StringBuffer.writeInt ", " b
-
+  let sb = sb |> StringBuffer.writeBlock StringBuffer.writeInt ", " b
   let s, sb = sb |> StringBuffer.toString
   assert (shouldEqual id "27, 18, 28, 18" s)
   StringBuffer.dispose sb

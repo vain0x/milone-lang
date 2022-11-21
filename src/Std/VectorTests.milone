@@ -71,10 +71,7 @@ let private forceSetCase () =
   // Make vector.
   let v =
     let rec go i v =
-      if i < n then
-        go (i + 1) (Vector.push 0 v)
-      else
-        v
+      if i < n then go (i + 1) (Vector.push 0 v) else v
 
     go 0 (Vector.empty ())
 
@@ -173,9 +170,7 @@ let private sortCase () =
   Vector.dispose v
 
 let private ofBlockCase () =
-  let v =
-    Vector.ofBlock (Block.ofList [ 3; 1; 4; 1; 5; 9 ])
-
+  let v = Vector.ofBlock (Block.ofList [ 3; 1; 4; 1; 5; 9 ])
   let xs, v = Vector.toList v
   Vector.dispose v
 
@@ -201,10 +196,7 @@ let private reserveCase () =
 
   let v =
     let rec go i v =
-      if i < n then
-        go (i + 1) (Vector.push i v)
-      else
-        v
+      if i < n then go (i + 1) (Vector.push i v) else v
 
     go 0 v
 
@@ -227,10 +219,7 @@ let private reserveExactCase () =
 
   let v =
     let rec go i v =
-      if i < n then
-        go (i + 1) (Vector.push i v)
-      else
-        v
+      if i < n then go (i + 1) (Vector.push i v) else v
 
     go 0 v
 

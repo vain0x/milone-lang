@@ -74,10 +74,7 @@ module StringBuffer =
     // roughly validate
     let hasZero, v = vectorContainsByte 0uy v
 
-    if not hasZero then
-      Ok(StringBuffer v)
-    else
-      Error v
+    if not hasZero then Ok(StringBuffer v) else Error v
 
   let intoVector (sb: StringBuffer) : Vector<byte> =
     let (StringBuffer v) = sb
@@ -89,11 +86,7 @@ module StringBuffer =
 
     let start = if start >= 0 then start else 0
 
-    let endIndex =
-      if endIndex >= 0 then
-        endIndex
-      else
-        0
+    let endIndex = if endIndex >= 0 then endIndex else 0
 
     let endIndex = intMin len endIndex
     let start = intMin endIndex start
@@ -230,11 +223,11 @@ module StringBuffer =
     let rec go xs sb =
       match Block.uncons xs with
       | None -> sb
-      | Some (x, xs) -> sb |> writeString sep |> writeItem x |> go xs
+      | Some(x, xs) -> sb |> writeString sep |> writeItem x |> go xs
 
     match Block.uncons xs with
     | None -> sb
-    | Some (x, xs) -> sb |> writeItem x |> go xs
+    | Some(x, xs) -> sb |> writeItem x |> go xs
 
   // =============================================
 
@@ -248,10 +241,7 @@ module StringBuffer =
     assert (count >= 0)
 
     let rec go i sb =
-      if i < count then
-        go (i + 1) (writeString s sb)
-      else
-        sb
+      if i < count then go (i + 1) (writeString s sb) else sb
 
     let total =
       if count <> 0 then
