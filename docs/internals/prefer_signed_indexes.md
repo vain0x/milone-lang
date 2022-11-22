@@ -34,10 +34,6 @@ C standard library uses `size_t` (basically `unativeint` in the milone-lang) for
 
 Note file and blobs tend to be larger than the max value of int (2GB.)
 
-## Why Not `uint`
-
-
-
 ----
 ----
 
