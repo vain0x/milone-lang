@@ -148,7 +148,7 @@
                 {
                     "comment": "Rule of char literals. Structure is basically: `'(<char>|<escape>)' <suffix>`. Suffix is marked as illegal.",
                     "name": "string.quoted.single.milone",
-                    "match": "'([^'\\\\]|\\\\(?:x[0-9A-Fa-f]{2}|.))'(\\w*)",
+                    "match": "'([^'\\\\]|\\\\(?:x[0-9A-Fa-f]{2}|.))'(?:(B\\b)|(\\w*))",
                     "captures": {
                         "1": {
                             "patterns": [
@@ -158,6 +158,9 @@
                             ]
                         },
                         "2": {
+                            "name": "string.quoted.single.suffix.milone"
+                        },
+                        "3": {
                             "name": "invalid.illegal.milone"
                         }
                     }
