@@ -708,6 +708,8 @@ let private processNext host : LspIncome -> CancellationToken -> ProcessResult =
         let result, wa =
           WorkspaceAnalysis.references p.Uri p.Pos p.IncludeDecl current
 
+        current <- wa
+
         result
         |> List.map (fun (Uri uri, range) ->
           jOfObj [ "uri", JString uri
