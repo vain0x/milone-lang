@@ -40,6 +40,7 @@
 ### VSCode Extension
 
 - Support `Show Syntax Tree` command
+- Double-backticks (\`\`) are now brackets
 
 ### Documentation
 
