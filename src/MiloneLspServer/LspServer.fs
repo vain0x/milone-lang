@@ -1,5 +1,6 @@
 module MiloneLspServer.LspServer
 
+open System
 open System.Threading
 open MiloneLspServer.JsonValue
 open MiloneLspServer.JsonSerialization
@@ -391,6 +392,10 @@ let private handleRequestError (hint: string) (msgId: JsonValue) (ex: exn) : uni
              "message", JString msg ]
 
   jsonRpcWriteWithError msgId error
+
+  match ex with
+  | :? OutOfMemoryException -> raise ex
+  | _ -> ()
 
 // For when server received a notification and caused an error.
 let private showErrorMessage (msg: string) : unit =

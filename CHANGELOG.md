@@ -35,6 +35,7 @@
 - Support `prepareRename` request so that the editor can reject to rename at invalid position
 - Support `completion` of static namespace members experimentally
 - Fix `diagnostics` are too frequently updated
+- Fix the server tries to continue after out of memory
 
 ### VSCode Extension
 
