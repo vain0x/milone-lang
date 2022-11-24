@@ -1,9 +1,12 @@
 // note: update this for recent compiler changes
 
-module Dylib =
-  open Std.Ptr
+open Std.Ptr
 
-  type private DylibPtr = nativeptr<__nativeType<``struct Dylib``>>
+module Dylib =
+  [<Opaque>]
+  type private Dylib = private | Dylib
+
+  type private DylibPtr = nativeptr<Dylib>
 
   let load (path: string): DylibPtr = __nativeFun("milone_dylib_open", path)
 

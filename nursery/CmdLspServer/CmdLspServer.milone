@@ -7,6 +7,7 @@
 module rec CmdLspServer.Program
 
 open Std.Equal
+open Std.IO
 open Std.Ptr
 open Std.StdError
 open Std.StdJson
@@ -23,6 +24,8 @@ __nativeDecl
     #include <errno.h>
 
     #include <unistd.h> // for sleep
+
+    struct sqlite3; // for persistence
   """
 
 let private writeErrorLine (s: string) : unit =
@@ -870,10 +873,10 @@ let private parseRawRequest (req: JsonValue) : LspRequest =
     UnknownRequest
 
 // -----------------------------------------------
-// Persistent
+// Persistence
 // -----------------------------------------------
 
-let private dumpDbTable tableName =
+let private dumpDbTable db tableName =
   let cons h t = h :: t
   let consBetween l r x acc = r :: x :: l :: acc
 
@@ -904,19 +907,25 @@ let private dumpDbTable tableName =
            dumpRow row acc)
          acc
 
-  let rows =
-    dbSelect ("select * from " + tableName) []
+  match Db.select ("select * from " + tableName) [] db with
+  | Error e, db -> Error e, db
 
-  dumpRows rows []
-  |> List.rev
-  |> S.concat ""
-  |> printfn "%s"
+  | Ok rows, db ->
+    dumpRows rows []
+    |> List.rev
+    |> S.concat ""
+    |> printfn "%s"
+    Ok(), db
 
-let private dbInit () =
-  dbOpen ":memory:"
+let private dbInit (io: IO) : Result<Db, string> * IO =
+  let result, io = Db.openFile io ":memory:"
 
-  dbExec
-    """
+  match result with
+  | Error e -> Error e, io
+
+  | Ok db ->
+    let schema =
+      """
       create table if not exists globals(
         global_id int primary key,
         dirty int default 1
@@ -942,41 +951,75 @@ let private dbInit () =
       );
     """
 
-let private dbSetDirty (value: bool) =
+    let result, db = Db.exec schema db
+    match result with
+    | Ok () -> Ok db, io
+    | Error e->
+      Db.close db
+      Error e, io
+
+let private dbSetDirty (value: bool) db : Result<_, _> * Db =
   let value = if value then 1 else 0
 
-  dbMutate "update globals set dirty = :dirty where global_id = 1" [ ":dirty", DInt value ]
+  Db.mutate
+      "update globals set dirty = :dirty where global_id = 1"
+      [ ":dirty", DInt value ]
+      db
 
-let private dbTakeDirty () =
-  match dbSelect "select dirty from globals where global_id = 1" [] with
-  | [ [ DInt value ] ] ->
+let private dbTakeDirty db =
+  let result, db = Db.select "select dirty from globals where global_id = 1" [] db
+  match result with
+  | Ok [ [ DInt value ] ] ->
     let value = value <> 0
-    if value then dbSetDirty false
-    value
+    if value then
+      match dbSetDirty false db with
+      | Ok (), db -> Ok value, db
+      | Error e, db -> Error e, db
+    else
+      Ok value, db
 
-  | _ -> unreachable ()
+  | Ok _ -> unreachable (), db
+  | Error e -> Error e, db
 
-let private dbGetProjects () =
-  dbSelect "select project_dir from projects" []
-  |> List.map (fun row ->
-    match row with
-    | [ DString projectDir ] -> projectDir
-    | _ -> unreachable ())
+let private dbGetProjects db : Result<string list, _> * Db =
+  let result, db = Db.select "select project_dir from projects" [] db
 
-let private dbAddProjects projectDirList =
-  projectDirList
-  |> List.fold
-       (fun () projectDir ->
-         dbMutate
-           """
-        insert into projects(project_dir) values
-          (:dir)
-      """
-           [ ":dir", DString projectDir ])
-       ()
+  match result with
+  | Error e -> Error e, db
 
-let private dbAddDoc uri version text =
-  dbMutate
+  | Ok rows ->
+    let output =
+      rows
+      |> List.map (fun row ->
+        match row with
+        | [ DString projectDir ] -> projectDir
+        | _ -> unreachable ())
+
+    Ok output, db
+
+let private dbAddProjects projectDirList db =
+  let rec loop projectDirList db =
+    match projectDirList with
+    | projectDir :: projectDirList ->
+         let result, db =
+           Db.mutate
+             """
+              insert into projects(project_dir) values
+                (:dir)
+            """
+            [ ":dir", DString projectDir ]
+            db
+
+         match result with
+         | Ok () -> loop projectDirList db
+         | Error e -> Error e, db
+
+    | [] -> Ok (), db
+
+  loop projectDirList db
+
+let private dbAddDoc uri version text db =
+  Db.mutate
     """
       insert into docs(uri, version, text) values
         (:uri, :version, :text)
@@ -984,9 +1027,10 @@ let private dbAddDoc uri version text =
     [ ":uri", DString uri
       ":version", DInt version
       ":text", DString text ]
+    db
 
-let private dbUpdateDoc uri version text =
-  dbMutate
+let private dbUpdateDoc uri version text db =
+  Db.mutate
     """
       update docs set
           version = :version,
@@ -997,37 +1041,47 @@ let private dbUpdateDoc uri version text =
     [ ":uri", DString uri
       ":version", DInt version
       ":text", DString text ]
+    db
 
-let private dbRemoveDoc uri =
-  dbMutate "delete from docs where uri = :uri" [ ":uri", DString uri ]
+let private dbRemoveDoc uri db =
+  Db.mutate "delete from docs where uri = :uri" [ ":uri", DString uri ] db
 
-let private dbAddMessage (message: JsonValue) : unit =
-  dbMutate
+let private dbAddMessage (message: JsonValue) db : Result<unit,string> * Db =
+  Db.mutate
     """
       insert into messages(json) values (:json);
     """
     [ ":json", DString(Json.dump message) ]
+    db
 
-let private dbPopMessage () : JsonValue option =
-  let rows =
-    dbSelect
+let private dbPopMessage db : Result<JsonValue option, _> * Db =
+  let result, db =
+    Db.select
       """
         select message_id, json from messages
         order by message_id limit 1
       """
       []
+      db
 
-  match rows with
-  | [ [ messageId; DString json ] ] ->
-    dbMutate
-      """
-        delete from messages
-        where message_id = :message_id
-      """
-      [ ":message_id", messageId ]
+  match result with
+  | Error e -> Error e, db
 
-    json |> Json.parse
-  | _ -> None
+  | Ok [ [ messageId; DString json ] ] ->
+    let result, db =
+      Db.mutate
+        """
+          delete from messages
+          where message_id = :message_id
+        """
+        [ ":message_id", messageId ]
+        db
+
+    match result with
+    | Error e -> Error e, db
+    | Ok () -> json |> Json.parse |> Ok, db
+
+  | Ok [] -> Ok None, db
 
 // -----------------------------------------------
 // Interface
@@ -1057,7 +1111,9 @@ let private readerLoop () : VoidInPtr =
   doInRegion (fun () ->
     whileInRegion (fun () ->
       let request = readRawRequest ()
-      dbAddMessage request
+
+      // let result, db = dbAddMessage request db
+      todo ()
 
       match parseRawRequest request with
       | ExitNotification -> false
@@ -1068,6 +1124,9 @@ let private readerLoop () : VoidInPtr =
   Ptr.nullPtr
 
 let private serverLoop () =
+  // let db = dbInit ()
+  todo ()
+
   let output = getStdout ()
 
   let getProjects () =
@@ -1274,7 +1333,6 @@ let private serverLoop () =
 let main _ =
   doInRegion (fun () ->
     trace "Hello, lsp server!"
-    dbInit ()
 
     concurrent readerLoop serverLoop
     debug "Exit gracefully.")

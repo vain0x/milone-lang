@@ -27,7 +27,7 @@ let main _ =
           | Error msg -> Error msg, db
 
           | Ok () ->
-            let ok, db =
+            let result, db =
               Db.mutate
                 """insert into entries(text) values (:a), (:b), (:c)"""
                 [ ":a", DString "asparagus"
@@ -35,13 +35,14 @@ let main _ =
                   ":c", DString "cucumber" ]
                 db
 
-            if not ok then
-              Error "insert", db
-            else
+            match result with
+            | Error e -> Error e, db
+
+            | Ok () ->
               let result, db = Db.select "select * from entries" [] db
 
               match result with
-              | Error () -> Error "select", db
+              | Error e -> Error e, db
 
               | Ok rows ->
                 let output =
