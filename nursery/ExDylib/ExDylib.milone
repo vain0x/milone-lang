@@ -8,11 +8,12 @@ module Dylib =
 
   type private DylibPtr = nativeptr<Dylib>
 
-  let load (path: string): DylibPtr = __nativeFun("milone_dylib_open", path)
+  let load (path: string) : DylibPtr = __nativeFun ("milone_dylib_open", path)
 
-  let dispose (lib: DylibPtr) : unit = __nativeFun("milone_dylib_close", lib)
+  let dispose (lib: DylibPtr) : unit = __nativeFun ("milone_dylib_close", lib)
 
-  let getSymbol (name: string) (lib: DylibPtr) : voidptr = __nativeFun("milone_dylib_get_symbol", lib, name)
+  let getSymbol (name: string) (lib: DylibPtr) : voidptr =
+    __nativeFun ("milone_dylib_get_symbol", lib, name)
 
 let libHello = Dylib.load "./hello/target/debug/hello.dll"
 
@@ -23,14 +24,15 @@ __nativeDecl
   """
 
 // __nativeCast doesn't allow to cast to MyHelloFn
-let myPlusPtr : FunPtr<int * int, int> =
-  Dylib.getSymbol "my_plus2" libHello
-  |> __nativeCast
+let myPlusPtr: FunPtr<int * int, int> =
+  Dylib.getSymbol "my_plus2" libHello |> __nativeCast
 
-let myPlus (x: int) (y: int): int = __nativeExpr("{0}({1}, {2})", myPlusPtr, x, y)
+let myPlus (x: int) (y: int) : int =
+  __nativeExpr ("{0}({1}, {2})", myPlusPtr, x, y)
+
 printfn "my_plus %d" (myPlus 40 2)
 
-let myHello : __nativeType<MyHelloFn> =
+let myHello: __nativeType<MyHelloFn> =
   let p = Dylib.getSymbol "my_hello" libHello
   __nativeExpr ("(MyHelloFn){0}", p)
 

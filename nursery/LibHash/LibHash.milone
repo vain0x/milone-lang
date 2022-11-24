@@ -8,7 +8,7 @@ assert (hex64 0UL = "0")
 assert (hex64 0x7f3cDeadBeefUL = "7f3cdeadbeef")
 
 let padding = "0000000000000000" // 16
-let pad (s: string) = padding.[0..16 - 1 - s.Length] + s
+let pad (s: string) = padding.[0 .. 16 - 1 - s.Length] + s
 
 let f s = s |> stringHash |> hex64 |> pad
 

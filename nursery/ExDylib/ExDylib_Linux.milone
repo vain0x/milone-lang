@@ -1,11 +1,12 @@
-
-__nativeDecl """
+__nativeDecl
+  """
 #include <assert.h>
 #include <dlfcn.h>
 """
 
 // Use so written in C.
-__nativeStmt """
+__nativeStmt
+  """
   {
     void *lib = dlopen("./libplus.so", RTLD_LAZY);
     if (lib == NULL) {
@@ -23,7 +24,8 @@ __nativeStmt """
 """
 
 // Use so written in Rust.
-__nativeStmt """
+__nativeStmt
+  """
   {
     void *lib = dlopen("./hello/target/debug/libhello.so", RTLD_LAZY);
     if (lib == NULL) {

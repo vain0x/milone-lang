@@ -5,7 +5,8 @@ open Std.Ptr
 let memAlloc (len: int) (size: int) : voidptr =
   __nativeFun ("milone_region_alloc", len, size)
 
-let memcpy (dest: voidptr) (src: VoidInPtr) (size: int) : voidptr = __nativeFun ("memcpy", dest, src, unativeint size)
+let memcpy (dest: voidptr) (src: VoidInPtr) (size: int) : voidptr =
+  __nativeFun ("memcpy", dest, src, unativeint size)
 
 /// Prints a message to stderr and returns false.
 ///

@@ -40,7 +40,7 @@ let divideBase (path: Path) : Path * Path option =
     if i = 0 then
       path, None
     else if isSep s.[i - 1] then
-      trimEnd (Path s.[0..i - 2]), Some(Path s.[i..s.Length])
+      trimEnd (Path s.[0 .. i - 2]), Some(Path s.[i .. s.Length])
     else
       go (i - 1)
 
@@ -52,11 +52,7 @@ let toDir (path: Path) : Path =
 
   match baseOpt with
   | Some _ -> dir
-  | None ->
-    if isAbsolute path then
-      Path "/"
-    else
-      Path "."
+  | None -> if isAbsolute path then Path "/" else Path "."
 
 /// Gets basename part of path.
 let toBase (path: Path) : Path option =
@@ -71,12 +67,12 @@ let divideExt (path: Path) : Path * Path option * string option =
   let dir, baseOpt = divideBase path
 
   match baseOpt with
-  | Some (Path ".")
-  | Some (Path "..") -> dir, baseOpt, None
+  | Some(Path ".")
+  | Some(Path "..") -> dir, baseOpt, None
 
-  | Some (Path s) ->
+  | Some(Path s) ->
     match s |> S.findLastIndex "." with
-    | Some i -> dir, Some(Path s.[0..i - 2]), Some s.[i..s.Length]
+    | Some i -> dir, Some(Path s.[0 .. i - 2]), Some s.[i .. s.Length]
     | None -> dir, Some(Path s), None
 
   | None -> path, None, None

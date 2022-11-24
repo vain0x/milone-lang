@@ -75,22 +75,15 @@ let item (index: int) (ral: RandomAccessList<_>) : _ =
       assert (w = 1)
       unbox x
 
-    | Node (x, t1, t2) ->
-      if i = 0 then
-        unbox x
-      else if i <= w / 2 then
-        go2 (w / 2) (i - 1) t1
-      else
-        go2 (w / 2) (i - 1 - w / 2) t2
+    | Node(x, t1, t2) ->
+      if i = 0 then unbox x
+      else if i <= w / 2 then go2 (w / 2) (i - 1) t1
+      else go2 (w / 2) (i - 1 - w / 2) t2
 
   let rec go1 i ts =
     match ts with
     | [] -> failwith "NEVER: Out of range."
-    | (w, t) :: ts ->
-      if i < w then
-        go2 w i t
-      else
-        go1 (i - w) ts
+    | (w, t) :: ts -> if i < w then go2 w i t else go1 (i - w) ts
 
   let value = go1 (len - 1 - index) ts
   let _typeUnifier () = [ Some value; none ] |> ignore
@@ -110,7 +103,7 @@ let withItem (index: int) value (ral: RandomAccessList<_>) : RandomAccessList<_>
     match t with
     | Leaf _ -> Leaf value
 
-    | Node (x, t1, t2) ->
+    | Node(x, t1, t2) ->
       if i <= w / 2 then
         Node(x, go2 (w / 2) (i - 1) t1, t2)
       else
@@ -142,7 +135,7 @@ let fold folder state (ral: RandomAccessList<_>) =
     match t with
     | Leaf x -> folder state (unbox x)
 
-    | Node (x, t1, t2) ->
+    | Node(x, t1, t2) ->
       let state = go2 state t2
       let state = go2 state t1
       folder state (unbox x)
@@ -172,7 +165,7 @@ let map f (ral: RandomAccessList<_>) =
     match t with
     | Leaf x -> Leaf(g x)
 
-    | Node (x, t1, t2) ->
+    | Node(x, t1, t2) ->
       let t2 = go2 t2
       let t1 = go2 t1
       Node(g x, t1, t2)

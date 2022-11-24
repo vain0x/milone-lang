@@ -27,12 +27,15 @@ let hex64 (n: uint64) =
     if n = 0UL then
       acc
     else
-      let d = int(byte(n % 16UL))
+      let d = int (byte (n % 16UL))
+
       let s =
-        if d < 10 then digits.[d..d]
+        if d < 10 then
+          digits.[d..d]
         else
           let d = d - 10
           alpha.[d..d]
+
       go (s + acc) (n / 16UL)
 
   if n = 0UL then "0" else go "" n

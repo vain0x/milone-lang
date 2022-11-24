@@ -19,16 +19,10 @@ type File = File of FP
 type Dir = Dir of FP
 
 let private fpAsFileOption (fp: FP) : File option =
-  if fp <> Ptr.nullPtr then
-    Some(File fp)
-  else
-    None
+  if fp <> Ptr.nullPtr then Some(File fp) else None
 
 let private fpAsDirOption (fp: FP) : Dir option =
-  if fp <> Ptr.nullPtr then
-    Some(Dir fp)
-  else
-    None
+  if fp <> Ptr.nullPtr then Some(Dir fp) else None
 
 let private fileAsFp (File fp) : FP = fp
 
@@ -40,12 +34,10 @@ let openRead (path: Path) : File option =
   let filename = toCStr (Path.asString path)
   let mode = toCStr "r"
 
-  __nativeFun ("fopen", filename, mode)
-  |> fpAsFileOption
+  __nativeFun ("fopen", filename, mode) |> fpAsFileOption
 
 let closeFile (file: File) : unit =
-  let ok =
-    __nativeFun ("fclose", fileAsFp file) = 0
+  let ok = __nativeFun ("fclose", fileAsFp file) = 0
 
   assert ok
 
@@ -66,8 +58,7 @@ let readAllText (file: File) : string =
     if n = unativeint 0 then
       contents
     else
-      let chunk =
-        chunk |> SpanMut.asConst |> Span.take n itemSize
+      let chunk = chunk |> SpanMut.asConst |> Span.take n itemSize
 
       contents |> Buffer.append chunk itemSize |> go
 

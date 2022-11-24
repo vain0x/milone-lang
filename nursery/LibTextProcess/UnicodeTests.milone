@@ -26,8 +26,7 @@ let () =
     let rec go acc i =
       if i < text.Length then
         match Utf8.decodeNext i text with
-        | Some(cp, len) ->
-          go (S.uint64ToHex 6 (uint64 cp) :: acc) (i + len)
+        | Some(cp, len) -> go (S.uint64ToHex 6 (uint64 cp) :: acc) (i + len)
 
         | None -> "Error " + (string i)
       else

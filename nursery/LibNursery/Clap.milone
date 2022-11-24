@@ -45,12 +45,9 @@ let parseOpts (def: string list) (args: string list) : Opts =
     |> List.fold
          (fun (defMap, missed) def ->
            let name, kind =
-             if S.startsWith "*" def then
-               S.skip 1 def, Required
-             else if S.startsWith "?" def then
-               S.skip 1 def, Optional
-             else
-               def, Flag
+             if S.startsWith "*" def then S.skip 1 def, Required
+             else if S.startsWith "?" def then S.skip 1 def, Optional
+             else def, Flag
 
            let defMap = defMap |> TMap.add name kind
 
@@ -71,7 +68,7 @@ let parseOpts (def: string list) (args: string list) : Opts =
 
   let update msg (opts: Opts, missed, redundant) =
     match msg with
-    | Msg.Binding (name, valueOpt) ->
+    | Msg.Binding(name, valueOpt) ->
       let name = nameToString name
 
       match TMap.tryFind name defMap, valueOpt with
@@ -102,27 +99,16 @@ let parseOpts (def: string list) (args: string list) : Opts =
         "Missed options: " + S.concat ", " missed + "."
 
       let redundantError redundant =
-        "Redundant flags: "
-        + S.concat ", " redundant
-        + "."
+        "Redundant flags: " + S.concat ", " redundant + "."
 
       match TSet.toList missed, redundant with
       | [], [] -> None
       | missed, [] -> Some(missedError missed)
       | [], redundant -> Some(redundantError redundant)
-      | missed, redundant ->
-        Some(
-          missedError missed
-          + " "
-          + redundantError redundant
-        )
+      | missed, redundant -> Some(missedError missed + " " + redundantError redundant)
 
     | ParseResult.NoValueError name -> Some("Specify value of option: " + nameToString name)
 
-    | ParseResult.RedundantValueError (name, _) ->
-      Some(
-        "Don't specify value for flag: "
-        + nameToString name
-      )
+    | ParseResult.RedundantValueError(name, _) -> Some("Don't specify value for flag: " + nameToString name)
 
   { opts with Error = error }

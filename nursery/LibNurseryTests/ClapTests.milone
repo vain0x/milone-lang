@@ -11,8 +11,7 @@ let private format (s: string) (args: string list) =
     args
     |> List.fold
          (fun (i, s) arg ->
-           let s =
-             s |> S.replace ("{" + string i + "}") arg
+           let s = s |> S.replace ("{" + string i + "}") arg
 
            i + 1, s)
          (0, s)
@@ -27,11 +26,9 @@ let private parseForTest (args: string list) (hasParam: string -> bool) : string
 
   let myUpdate msg acc =
     match msg with
-    | Msg.Binding (name, None) -> format "flag {0}" [ ofName name ] :: acc
+    | Msg.Binding(name, None) -> format "flag {0}" [ ofName name ] :: acc
 
-    | Msg.Binding (name, Some value) ->
-      format "binding {0} = `{1}`" [ ofName name; value ]
-      :: acc
+    | Msg.Binding(name, Some value) -> format "binding {0} = `{1}`" [ ofName name; value ] :: acc
 
     | Msg.Positional value -> format "pos `{0}`" [ value ] :: acc
 
@@ -46,13 +43,10 @@ let private parseForTest (args: string list) (hasParam: string -> bool) : string
     match result with
     | ParseResult.Ok -> acc
 
-    | ParseResult.NoValueError name ->
-      format "error (no-value) {0}" [ ofName name ]
-      :: acc
+    | ParseResult.NoValueError name -> format "error (no-value) {0}" [ ofName name ] :: acc
 
-    | ParseResult.RedundantValueError (name, value) ->
-      format "error (invalid-value) {0} = `{1}`" [ ofName name; value ]
-      :: acc
+    | ParseResult.RedundantValueError(name, value) ->
+      format "error (invalid-value) {0} = `{1}`" [ ofName name; value ] :: acc
 
   acc |> List.rev |> S.concat "; "
 
@@ -78,8 +72,7 @@ let private testCore () =
   assert (parseForTest [ "foo" ] noParam = "pos `foo`")
 
   // Short bindings.
-  let hasParam =
-    fun (name: string) -> name = "n" || S.startsWith "set-" name
+  let hasParam = fun (name: string) -> name = "n" || S.startsWith "set-" name
 
   assert (parseForTest [ "-n"; "10" ] hasParam = "binding short `n` = `10`")
 
@@ -98,13 +91,8 @@ let private testCore () =
   assert (parseForTest [ "--" ] noParam = "")
   assert (parseForTest [ "--"; "--help" ] noParam = "pos `--help`")
 
-  assert (parseForTest
-            [ "--"
-              "dotnet"
-              "run"
-              "--"
-              "--help" ]
-            noParam = "pos `dotnet`; pos `run`; pos `--`; pos `--help`")
+  assert
+    (parseForTest [ "--"; "dotnet"; "run"; "--"; "--help" ] noParam = "pos `dotnet`; pos `run`; pos `--`; pos `--help`")
 
   // Edges.
   assert (parseForTest [ "-"; "-=" ] noParam = "pos `-`; pos `-=`")
@@ -119,17 +107,14 @@ let private testParseOpts () =
   let def = [ "help"; "*user"; "?level" ]
 
   let display (opts: Clap.Opts) =
-    let s =
-      opts.Flags
-      |> List.fold (fun s name -> name :: s) []
+    let s = opts.Flags |> List.fold (fun s name -> name :: s) []
 
     let s =
       opts.Bindings
       |> List.fold (fun s (name, value) -> format "{0}=`{1}`" [ name; value ] :: s) s
 
     let s =
-      opts.Positional
-      |> List.fold (fun s value -> format "`{0}`" [ value ] :: s) s
+      opts.Positional |> List.fold (fun s value -> format "`{0}`" [ value ] :: s) s
 
     let s =
       match opts.Error with
@@ -138,14 +123,9 @@ let private testParseOpts () =
 
     s |> List.rev |> S.concat "; "
 
-  assert (Clap.parseOpts
-            def
-            [ "--user"
-              "john"
-              "foo.txt"
-              "--level=0"
-              "bar.txt" ]
-          |> display = "level=`0`; user=`john`; `bar.txt`; `foo.txt`")
+  assert
+    (Clap.parseOpts def [ "--user"; "john"; "foo.txt"; "--level=0"; "bar.txt" ]
+     |> display = "level=`0`; user=`john`; `bar.txt`; `foo.txt`")
 
 let testClapModule () =
   testCore ()

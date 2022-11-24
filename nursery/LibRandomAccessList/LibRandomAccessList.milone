@@ -35,27 +35,18 @@ addTest ()
 
 let private addManyTest () =
   let rec go i xs =
-    if i = 100 then
-      xs
-    else
-      xs |> Ral.add i |> go (i + 1)
+    if i = 100 then xs else xs |> Ral.add i |> go (i + 1)
 
   let xs = Ral.empty () |> go 0
 
-  Loop.range 0 100
-  |> Loop.fold (fun () i -> xs |> Ral.item i |> isN i) ()
+  Loop.range 0 100 |> Loop.fold (fun () i -> xs |> Ral.item i |> isN i) ()
 
   xs |> Ral.length |> isN 100
 
 addManyTest ()
 
 let private withItemTest () =
-  let xs =
-    Ral.empty ()
-    |> Ral.add 1
-    |> Ral.add 2
-    |> Ral.add 3
-    |> Ral.withItem 1 (-2)
+  let xs = Ral.empty () |> Ral.add 1 |> Ral.add 2 |> Ral.add 3 |> Ral.withItem 1 (-2)
 
   xs |> Ral.item 0 |> isN 1
   xs |> Ral.item 1 |> isN (-2)
