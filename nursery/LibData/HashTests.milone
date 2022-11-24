@@ -1,0 +1,31 @@
+// Tests
+
+open LibData.Hash
+
+module H = LibData.Hash.Fnv1a
+module S = LibData.Hash
+
+let private padding = "0000000000000000" // 16
+let private pad (s: string) = padding.[0 .. 16 - 1 - s.Length] + s
+
+// test hex64
+let () =
+  assert (hex64 0UL = "0")
+  assert (hex64 0x7f3cDeadBeefUL = "7f3cdeadbeef")
+
+// test String.hash
+let () =
+  let f s = s |> String.hash |> hex64 |> pad
+
+  assert (f "" = "000000000000001f")
+  assert (f "hello" = "0000000040be31bd")
+  assert (f "bye" = "00000000000f5fa1")
+  assert (f "😺🐶🐧🐬" = "d45da24b9aaa7523")
+
+// test List.hash
+let () =
+  let f xs =
+    List.hash String.hash xs |> hex64 |> pad
+
+  assert (f [] = "cbf29ce484222325")
+  assert (f [ "a"; "b"; "c" ] = "5ab4e6793d0b508a")
