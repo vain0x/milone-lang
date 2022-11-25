@@ -1,5 +1,6 @@
 module MiloneLspServer.LspServer
 
+open System
 open System.Threading
 open MiloneLspServer.JsonValue
 open MiloneLspServer.JsonSerialization
@@ -392,6 +393,10 @@ let private handleRequestError (hint: string) (msgId: JsonValue) (ex: exn) : uni
 
   jsonRpcWriteWithError msgId error
 
+  match ex with
+  | :? OutOfMemoryException -> raise ex
+  | _ -> ()
+
 // For when server received a notification and caused an error.
 let private showErrorMessage (msg: string) : unit =
   let p =
@@ -707,6 +712,8 @@ let private processNext host : LspIncome -> CancellationToken -> ProcessResult =
       handleRequestWith "references" msgId (fun () ->
         let result, wa =
           WorkspaceAnalysis.references p.Uri p.Pos p.IncludeDecl current
+
+        current <- wa
 
         result
         |> List.map (fun (Uri uri, range) ->

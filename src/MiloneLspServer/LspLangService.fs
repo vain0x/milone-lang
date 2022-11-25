@@ -826,7 +826,10 @@ let doWithProjectAnalysis
     let fsOne =
       (projectDir + "/") + (moduleName + ".fs")
 
-    (if wa.Docs |> TMap.containsKey (uriOfFilePath fsOne) then
+    let miloneOneExists = wa.Docs |> TMap.containsKey (uriOfFilePath miloneOne)
+    let fsOneExists = wa.Docs |> TMap.containsKey (uriOfFilePath fsOne)
+
+    (if fsOneExists && not miloneOneExists then
        fsOne
      else
        miloneOne)
@@ -839,7 +842,7 @@ let doWithProjectAnalysis
             match wa.StdLibModules
                   |> List.tryFind (fun (p, _) -> p = projectName)
               with
-            | Some _ -> wa.Host.MiloneHome + "/" + projectName
+            | Some _ -> wa.Host.MiloneHome + "/src/" + projectName
 
             | None ->
               let containingDir =
