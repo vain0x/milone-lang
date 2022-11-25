@@ -148,8 +148,9 @@ let private cpParams ps acc : string list =
 let private uint64FromHex (l: int) (r: int) (s: string) =
   assert (0 <= l && l < r && r <= s.Length)
 
-  S.parseHexAsUInt64 s.[l..r - 1]
-  |> Option.defaultWith unreachable
+  match S.parseHexAsUInt64 s.[l..r - 1] with
+  | Some it -> it
+  | None -> unreachable ()
 
 let private uint64ToHex (len: int) (value: uint64) = S.uint64ToHex len value
 

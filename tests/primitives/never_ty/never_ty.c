@@ -36,9 +36,9 @@ void never_ty_never_ty_testMatchArm(void);
 
 _Noreturn void never_ty_never_ty_eta2_testFunObj_crash(void const *env_1);
 
-_Noreturn void never_ty_never_ty_testFunObj_callFnObj(struct UnitNeverFun1 crashFn_);
+void never_ty_never_ty_testFunObj_callFnObj(struct UnitNeverFun1 crashFn_);
 
-void MiloneCore_Prelude_NeverUnitFun1_ignore(char);
+void MiloneCore_Prelude_UnitUnitFun1_ignore(void);
 
 void never_ty_never_ty_testFunObj(void);
 
@@ -125,7 +125,7 @@ switch_next_1:;
 _Noreturn void never_ty_never_ty_crash(void) {
     never_ty_never_ty_opaqueStmt();
     MiloneCore_Prelude_exit(1);
-    milone_never_error("never_ty/never_ty.milone", 13, 0);
+    milone_never_error("never_ty/never_ty.milone", 15, 6);
 }
 
 void never_ty_never_ty_testStmt(void) {
@@ -135,7 +135,7 @@ void never_ty_never_ty_testStmt(void) {
 
 void never_ty_never_ty_testLetInit(void) {
     never_ty_never_ty_crash();
-    milone_never_error("never_ty/never_ty.milone", 24, 2);
+    milone_never_error("never_ty/never_ty.milone", 24, 26);
 }
 
 void never_ty_never_ty_testMatchArm(void) {
@@ -164,9 +164,9 @@ _Noreturn void never_ty_never_ty_eta2_testFunObj_crash(void const *env_1) {
     never_ty_never_ty_crash();
 }
 
-_Noreturn void never_ty_never_ty_testFunObj_callFnObj(struct UnitNeverFun1 crashFn_) {
+void never_ty_never_ty_testFunObj_callFnObj(struct UnitNeverFun1 crashFn_) {
     crashFn_.fun(crashFn_.env);
-    milone_never_error("never_ty/never_ty.milone", 38, 2);
+    milone_never_error("never_ty/never_ty.milone", 38, 28);
 }
 
 void never_ty_never_ty_testFunObj(void) {
@@ -175,7 +175,7 @@ void never_ty_never_ty_testFunObj(void) {
     fun_ = (struct UnitNeverFun1){.fun = never_ty_never_ty_eta2_testFunObj_crash, .env = NULL};
     crashFn_ = fun_;
     never_ty_never_ty_testFunObj_callFnObj(crashFn_);
-    MiloneCore_Prelude_NeverUnitFun1_ignore(0);
+    MiloneCore_Prelude_UnitUnitFun1_ignore();
     return;
 }
 
@@ -220,13 +220,10 @@ void never_ty_never_ty_testNeverAsValue(void) {
     int32_t it_;
     char n_1;
     int32_t value_;
-    struct Neveroption1_ variant_;
     char match_;
-    struct Int32NeverResult2_ variant_1;
+    struct Int32NeverResult2_ variant_;
     int32_t match_1;
-    never_ty_never_ty_crash();
-    variant_ = (struct Neveroption1_){.discriminant = Neveroption1_Some, .Neveroption1_Some = 0};
-    opt_ = variant_;
+    opt_ = (struct Neveroption1_){.discriminant = Neveroption1_None};
     if ((opt_.discriminant != Neveroption1_Some)) goto next_11;
     n_ = opt_.Neveroption1_Some;
     milone_never_error("never_ty/never_ty.milone", 65, 15);
@@ -237,8 +234,8 @@ next_11:;
 next_12:;
     milone_exhaust_error("never_ty/never_ty.milone", 64, 3);
 end_match_10:;
-    variant_1 = (struct Int32NeverResult2_){.discriminant = Int32NeverResult2_Ok, .Int32NeverResult2_Ok = 0};
-    ok_ = variant_1;
+    variant_ = (struct Int32NeverResult2_){.discriminant = Int32NeverResult2_Ok, .Int32NeverResult2_Ok = 0};
+    ok_ = variant_;
     if ((ok_.discriminant != Int32NeverResult2_Ok)) goto next_14;
     it_ = ok_.Int32NeverResult2_Ok;
     match_1 = it_;
@@ -267,7 +264,7 @@ int main(int argc, char **argv) {
     never_ty_never_ty_testInfiniteLoop();
     never_ty_never_ty_testNeverAsValue();
     never_ty_never_ty_crash();
-    milone_never_error("never_ty/never_ty.milone", 78, 0);
+    milone_never_error("never_ty/never_ty.milone", 90, 7);
 }
 
 void never_ty_never_ty_start(void) {

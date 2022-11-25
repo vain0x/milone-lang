@@ -25,7 +25,7 @@ struct Int32Int32Fun1 {
 
 _Noreturn void resolved_issues_resolved_issues_testFunArityNeverResultBug_unreachable(void) {
     MiloneCore_Prelude_exit(1);
-    milone_never_error("resolved_issues/resolved_issues.milone", 15, 2);
+    milone_never_error("resolved_issues/resolved_issues.milone", 15, 35);
 }
 
 int32_t resolved_issues_resolved_issues_eta2_testFunArityNeverResultBug_id(void const *env_, int32_t arg_) {
