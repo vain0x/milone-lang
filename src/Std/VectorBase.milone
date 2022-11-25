@@ -110,19 +110,12 @@ let unsafeReserveExact (addition: int) ptr (length: int) capacity size =
 /// Appends an item to an untyped vector.
 ///
 /// Returns new pointer and capacity since the vector grows if full.
-let unsafePush
-  (item: VoidInPtr)
-  (ptr: Own<voidptr>)
-  (length: int)
-  (capacity: int)
-  (size: int)
-  : Own<voidptr> * int =
+let unsafePush (item: VoidInPtr) (ptr: Own<voidptr>) (length: int) (capacity: int) (size: int) : Own<voidptr> * int =
   let ptr, capacity =
     if length = capacity then
       // #exponentially_grow
       // newCapacity >= max(capacity * 2, minLength, 15).
-      let newCapacity =
-        (capacity <<< 1) ||| (length + 1) ||| 15
+      let newCapacity = (capacity <<< 1) ||| (length + 1) ||| 15
 
       unsafeGrowExact newCapacity ptr length capacity size
     else
