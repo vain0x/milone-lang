@@ -1,0 +1,34 @@
+// Example: Adapt CSV-parser and generater written in C to milone-lang.
+
+open Std.Block
+open Std.Ptr
+open Std.StdError
+open LibCita.Cita
+
+let private asCString (s: string) : InPtr<char> = __nativeFun ("string_to_c_str", s)
+
+module private CiData =
+  let debug (value: CiData) =
+    match value with
+    | CiData.String s ->
+      // wants String.debug
+      "\"" + s + "\""
+
+    | CiData.Array array -> Block.debug debug array
+    | CiData.Foreign ptr -> "<foreign>"
+    | _ -> todo ()
+
+module private Csv =
+  let parse (text: string) : CiData =
+    __nativeFun ("parse_csv_for_milone", asCString text)
+
+let () =
+  let text =
+    """id,name
+1,Alice
+2,Bob
+3,Charlotte
+"""
+
+  let data = Csv.parse text
+  printfn "%s" (CiData.debug data)
