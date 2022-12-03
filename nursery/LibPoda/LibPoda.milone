@@ -1,2 +1,21 @@
+open Std.Ptr
+open Std.StdTesting
+open Std.StringBuffer
 open LibPoda.Poda
+open LibPoda.PodaExt
+
+// tests
 open LibPoda.ExCsv
+
+// test debug
+let () =
+  let p value expected =
+    Poda.debug value |> shouldEqual id expected
+
+  assert
+    (p
+      (Poda.ofEntries [ "a", Poda.ofList [ Poda.Int 42; Poda.Int -12 ]; "b", Poda.String "B" ])
+      """{"a": [42, -12], "b": "B"}""")
+
+  assert (p (Poda.Foreign Ptr.nullPtr) "<Foreign(null)>")
+  assert (p (Poda.Foreign(Ptr.invalid 1024un)) "<Foreign(_)>")

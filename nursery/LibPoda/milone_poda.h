@@ -53,6 +53,10 @@ typedef struct PodaMap PodaMap;
 typedef struct Poda Poda;
 typedef struct PodaEntry PodaEntry;
 
+#ifdef __cplusplus
+extern "C" {
+#endif
+
 struct Poda Poda_null(void);
 
 struct Poda Poda_ofBool(bool value);
@@ -102,3 +106,7 @@ bool Poda_asArray(struct Poda value, struct PodaArray *writtenTo);
 bool Poda_asMap(struct Poda value, struct PodaMap *writtenTo);
 
 bool Poda_asForeign(struct Poda value, void **writtenTo);
+
+#ifdef __cplusplus
+} // extern "C"
+#endif

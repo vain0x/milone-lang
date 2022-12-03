@@ -1,10 +1,10 @@
+// Definition of Poda values and C API functions.
+
 open Std.Block
 open Std.Own
 open Std.Ptr
 
 type private CStr = InPtr<__nativeType<char>>
-
-// note: 64-bit float is called float64 here to avoid confusion
 
 /// Value of Poda.
 // Size of payload is bounded by sizeof<voidptr * int32>.
@@ -192,6 +192,3 @@ module private Internals =
     | _ ->
       Ptr.write writtenTo Ptr.nullPtr
       false
-
-module Poda =
-  ()
