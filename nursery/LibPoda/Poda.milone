@@ -1,0 +1,197 @@
+open Std.Block
+open Std.Own
+open Std.Ptr
+
+type private CStr = InPtr<__nativeType<char>>
+
+// note: 64-bit float is called float64 here to avoid confusion
+
+/// Value of Poda.
+// Size of payload is bounded by sizeof<voidptr * int32>.
+// [<Export; Repr("C")>]
+type Poda =
+  | Null
+  | Bool of bool
+  | Int of int
+  | Int64 of int64
+  | UInt64 of uint64
+  | Float64 of float
+  | String of string
+  | Array of Block<Poda>
+  | Map of Block<PodaEntry>
+  | Foreign of voidptr
+
+// [<Export; Repr("C")>]
+[<Repr("C")>]
+type PodaEntry = { Key: string; Value: Poda }
+
+[<Opaque>]
+type PodaArray = private | PodaArray
+
+[<Opaque>]
+type PodaMap = private | PodaMap
+
+// struct PodaArray { ... };
+__nativeDecl ("""{0} { {1} const *ptr; int32_t len; };""", (__type: PodaArray), (__type: Poda))
+
+// struct PodaMap { ... };
+__nativeDecl ("""{0} { {1} const *ptr; int32_t len; };""", (__type: PodaMap), (__type: PodaEntry))
+
+module private Internals =
+  // Factories:
+  [<Export>]
+  let Poda_null () : Poda = Poda.Null
+
+  [<Export>]
+  let Poda_ofBool (value: bool) : Poda = Poda.Bool value
+
+  [<Export>]
+  let Poda_ofInt (value: int) : Poda = Poda.Int value
+
+  [<Export>]
+  let Poda_ofInt64 (value: int64) : Poda = Poda.Int64 value
+
+  [<Export>]
+  let Poda_ofUInt64 (value: uint64) : Poda = Poda.UInt64 value
+
+  [<Export>]
+  let Poda_ofFloat64 (value: float) : Poda = Poda.Float64 value
+
+  [<Export>]
+  let Poda_ofString (value: string) : Poda = Poda.String value
+
+  // unsafeFn
+  [<Export>]
+  let Poda_unsafeOfCString (value: CStr) : Poda =
+    let s = __nativeFun ("string_of_c_str", value)
+    Poda.String s
+
+  [<Export>]
+  let Poda_emptyArray () : Poda = Poda.Array(Block.empty ())
+
+  // unsafeFn
+  [<Export>]
+  let Poda_unsafeWrapArray (array: PodaArray) : Poda =
+    BlockExt.unsafeOfRawParts (__nativeExpr ("{0}.ptr", array): InPtr<Poda>) (__nativeExpr ("{0}.len", array): int)
+    |> Poda.Array
+
+  [<Export>]
+  let Poda_emptyMap () : Poda = Poda.Map(Block.empty ())
+
+  // unsafeFn
+  [<Export>]
+  let Poda_unsafeWrapMap (map: PodaMap) : Poda =
+    BlockExt.unsafeOfRawParts (__nativeExpr ("{0}.ptr", map): InPtr<PodaEntry>) (__nativeExpr ("{0}.len", map): int)
+    |> Poda.Map
+
+  [<Export>]
+  let Poda_createForeign (ptr: voidptr) : Poda = Poda.Foreign ptr
+
+  [<Export>]
+  let PodaEntry_create (key: string) (value: Poda) : PodaEntry = { Key = key; Value = value }
+
+  [<Export>]
+  let PodaEntry_key (e: PodaEntry) : string = e.Key
+
+  [<Export>]
+  let PodaEntry_value (e: PodaEntry) : Poda = e.Value
+
+  // Downcasts:
+  [<Export>]
+  let Poda_isNull (value: Poda) : bool =
+    match value with
+    | Poda.Null -> true
+    | _ -> false
+
+  [<Export>]
+  let Poda_asBool (value: Poda) (writtenTo: OutPtr<bool>) : bool =
+    match value with
+    | Poda.Bool value ->
+      Ptr.write writtenTo value
+      true
+    | _ ->
+      Ptr.write writtenTo false
+      false
+
+  [<Export>]
+  let Poda_asInt (value: Poda) (writtenTo: OutPtr<int>) : bool =
+    match value with
+    | Poda.Int value ->
+      Ptr.write writtenTo value
+      true
+    | _ ->
+      Ptr.write writtenTo 0
+      false
+
+  [<Export>]
+  let Poda_asInt64 (value: Poda) (writtenTo: OutPtr<int64>) : bool =
+    match value with
+    | Poda.Int64 value ->
+      Ptr.write writtenTo value
+      true
+
+    | _ ->
+      Ptr.write writtenTo 0L
+      false
+
+  [<Export>]
+  let Poda_asUInt64 (value: Poda) (writtenTo: OutPtr<uint64>) : bool =
+    match value with
+    | Poda.UInt64 value ->
+      Ptr.write writtenTo value
+      true
+
+    | _ ->
+      Ptr.write writtenTo 0UL
+      false
+
+  [<Export>]
+  let Poda_asFloat64 (value: Poda) (writtenTo: OutPtr<float>) : bool =
+    match value with
+    | Poda.Float64 value ->
+      Ptr.write writtenTo value
+      true
+
+    | _ ->
+      Ptr.write writtenTo 0.0
+      false
+
+  // unsafeFn
+  [<Export>]
+  let Poda_asArray (value: Poda) (writtenTo: OutPtr<PodaArray>) : bool =
+    match value with
+    | Poda.Array value ->
+      let ptr, len = BlockExt.unsafeToRawParts value
+      Ptr.write writtenTo (__nativeExpr ("({0}){.ptr = {1}, .len = {2}}", (__type: PodaArray), ptr, len): PodaArray)
+      true
+
+    | _ ->
+      Ptr.write writtenTo (__nativeExpr ("({0}){.ptr = NULL}", (__type: PodaArray)): PodaArray)
+      false
+
+  // unsafeFn
+  [<Export>]
+  let Poda_asMap (value: Poda) (writtenTo: OutPtr<PodaMap>) : bool =
+    match value with
+    | Poda.Map value ->
+      let ptr, len = BlockExt.unsafeToRawParts value
+      Ptr.write writtenTo (__nativeExpr ("({0}){.ptr = {1}, .len = {2}}", (__type: PodaMap), ptr, len): PodaMap)
+      true
+
+    | _ ->
+      Ptr.write writtenTo (__nativeExpr ("({0}){.ptr = NULL}", (__type: PodaMap)): PodaMap)
+      false
+
+  [<Export>]
+  let Poda_asForeign (value: Poda) (writtenTo: OutPtr<voidptr>) : bool =
+    match value with
+    | Poda.Foreign value ->
+      Ptr.write writtenTo value
+      true
+
+    | _ ->
+      Ptr.write writtenTo Ptr.nullPtr
+      false
+
+module Poda =
+  ()

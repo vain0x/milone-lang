@@ -6,7 +6,7 @@
 
 #include <milone.h>
 
-#include "milone_cita.h"
+#include "milone_poda.h"
 
 // library code:
 
@@ -84,7 +84,7 @@ static void parse_csv(char const *text, struct RowArray *out) {
 
 // glue code:
 
-struct CiData parse_csv_for_milone(struct String text) {
+struct Poda parse_csv_for_milone(struct String text) {
     struct Row row_data[32];
     memset(row_data, 0, sizeof(row_data));
     struct RowArray row_array = {
@@ -94,21 +94,21 @@ struct CiData parse_csv_for_milone(struct String text) {
 
     parse_csv(string_to_c_str(text), &row_array);
 
-    // convert to cita value
-    struct CiData *buf =
-        milone_region_alloc(row_array.row_count, sizeof(struct CiData));
+    // convert to Poda value
+    struct Poda *buf =
+        milone_region_alloc(row_array.row_count, sizeof(struct Poda));
     for (int32_t i = 0; i < row_array.row_count; i++) {
         struct Row *row = &row_array.items[i];
 
-        struct CiData *field_buf =
-            milone_region_alloc(row->field_count, sizeof(struct CiData));
+        struct Poda *field_buf =
+            milone_region_alloc(row->field_count, sizeof(struct Poda));
         for (int32_t x = 0; x < row->field_count; x++) {
-            field_buf[x] = CiData_unsafeOfCString(row->fields[x].value);
+            field_buf[x] = Poda_unsafeOfCString(row->fields[x].value);
         }
 
-        buf[i] = CiData_unsafeWrapArray(
-            (struct CiArray){.ptr = field_buf, .len = row->field_count});
+        buf[i] = Poda_unsafeWrapArray(
+            (struct PodaArray){.ptr = field_buf, .len = row->field_count});
     }
-    return CiData_unsafeWrapArray(
-        (struct CiArray){.ptr = buf, .len = row_array.row_count});
+    return Poda_unsafeWrapArray(
+        (struct PodaArray){.ptr = buf, .len = row_array.row_count});
 }

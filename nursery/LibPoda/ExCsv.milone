@@ -3,23 +3,23 @@
 open Std.Block
 open Std.Ptr
 open Std.StdError
-open LibCita.Cita
+open LibPoda.Poda
 
 let private asCString (s: string) : InPtr<char> = __nativeFun ("string_to_c_str", s)
 
-module private CiData =
-  let debug (value: CiData) =
+module private Poda =
+  let debug (value: Poda) =
     match value with
-    | CiData.String s ->
+    | Poda.String s ->
       // wants String.debug
       "\"" + s + "\""
 
-    | CiData.Array array -> Block.debug debug array
-    | CiData.Foreign ptr -> "<foreign>"
+    | Poda.Array array -> Block.debug debug array
+    | Poda.Foreign ptr -> "<foreign>"
     | _ -> todo ()
 
 module private Csv =
-  let parse (text: string) : CiData =
+  let parse (text: string) : Poda =
     __nativeFun ("parse_csv_for_milone", asCString text)
 
 let () =
@@ -31,4 +31,4 @@ let () =
 """
 
   let data = Csv.parse text
-  printfn "%s" (CiData.debug data)
+  printfn "%s" (Poda.debug data)
