@@ -24,9 +24,7 @@ type ParseResult =
 /// Gets whether a string can be used as parameter of option.
 /// It can't be a value if it starts with a '-', except for "-" and "-=".
 let private isValueArg (arg: string) =
-  not (arg.Length >= 1 && arg.[0] = '-')
-  || arg.Length = 1
-  || arg.[1] = '='
+  not (arg.Length >= 1 && arg.[0] = '-') || arg.Length = 1 || arg.[1] = '='
 
 /// Parses argument list. (Simple function for internal use.)
 ///
@@ -81,15 +79,14 @@ let runClapCore
 
     // Long option.
     | arg :: args when S.startsWith "--" arg ->
-      let arg = arg.[2..arg.Length - 1]
+      let arg = arg.[2 .. arg.Length - 1]
 
       let name, valueOpt =
         match S.findIndex "=" arg with
         | None -> arg, None
-        | Some i -> arg.[0..i - 1], Some arg.[i + 1..arg.Length - 1]
+        | Some i -> arg.[0 .. i - 1], Some arg.[i + 1 .. arg.Length - 1]
 
-      let state, args, result =
-        addWithValueOpt state (PropName.Long name) valueOpt args
+      let state, args, result = addWithValueOpt state (PropName.Long name) valueOpt args
 
       match result with
       | ParseResult.Ok -> go args state
@@ -97,12 +94,12 @@ let runClapCore
 
     // Short option.
     | arg :: args when not (isValueArg arg) ->
-      let arg = arg.[1..arg.Length - 1]
+      let arg = arg.[1 .. arg.Length - 1]
 
       let flags, last, valueOpt =
         match S.findIndex "=" arg with
-        | Some i -> arg.[0..i - 2], arg.[i - 1], Some arg.[i + 1..arg.Length - 1]
-        | None -> arg.[0..arg.Length - 2], arg.[arg.Length - 1], None
+        | Some i -> arg.[0 .. i - 2], arg.[i - 1], Some arg.[i + 1 .. arg.Length - 1]
+        | None -> arg.[0 .. arg.Length - 2], arg.[arg.Length - 1], None
 
       let state, result =
         let rec gogo (i: int) (state: 'S) : 'S * ParseResult =

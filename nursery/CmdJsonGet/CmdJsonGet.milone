@@ -49,12 +49,9 @@ let private readToEnd (io: IO) (input: File) (buf: Vector<byte>) : Result<unit, 
     else
       let readSize, buf, input, io = File.readBlock io buf input
 
-      if readSize < 0 then
-        Error "read", io, input, buf
-      else if readSize = 0 then
-        Ok(), io, input, buf
-      else
-        loop io input buf
+      if readSize < 0 then Error "read", io, input, buf
+      else if readSize = 0 then Ok(), io, input, buf
+      else loop io input buf
 
   loop io input buf
 
@@ -80,7 +77,7 @@ let private doProcess (io: IO) (input: File) (path: string) =
     match result with
     | Error msg -> Error msg
 
-    | Ok () ->
+    | Ok() ->
       match Json.parse jsonText with
       | None -> Error "Invalid JSON"
       | Some root -> Ok root

@@ -61,8 +61,7 @@ let private getDate () : string option =
   let ok: bool = __nativeExpr "ok"
 
   if ok then
-    let date: string =
-      __nativeExpr "string_of_raw_parts(buf, (int)len)"
+    let date: string = __nativeExpr "string_of_raw_parts(buf, (int)len)"
 
     Some date
   else
@@ -195,7 +194,9 @@ let private doWriteExact (ptr: InPtr<byte>) (len: int) (output: Stream) : unit =
   )
 
   let ok: bool = __nativeExpr "ok"
-  if not ok then failwith "writeExact"
+
+  if not ok then
+    failwith "writeExact"
 
 /// Writes data to stream. Blocks to wait for all data to be written.
 let private writeExact (buf: Buffer) (len: int) (output: Stream) : Buffer * Stream =
@@ -246,10 +247,7 @@ let private readAllText (filePath: string) : string option =
       let ok, buf, fp = readExact buf size fp
       closeFile fp
 
-      if ok then
-        Some(bufToString size buf)
-      else
-        None
+      if ok then Some(bufToString size buf) else None
 
 let private flushStream (output: Stream) : Stream =
   __nativeStmt ("fflush({0});", output)
@@ -291,7 +289,8 @@ type private HttpMethod =
   | POST // etc.
 
 type private HttpActionContext =
-  { Method: HttpMethod
+  {
+    Method: HttpMethod
     Pathname: string
 
     /// HTTP protocol minor version. (x in HTTP 1.x)
@@ -304,7 +303,8 @@ type private HttpActionContext =
     Write: string -> unit
 
     /// Writes trace log to standard error.
-    Trace: string -> unit }
+    Trace: string -> unit
+  }
 
 type private HttpResponseContext =
   { StatusText: string
@@ -391,7 +391,7 @@ let private readHeaderField (input: Stream) : Map<string, string> option * Strea
     | Some line ->
       match parseHeaderField line with
       | None -> Some acc, input
-      | Some (name, value) -> go input (i + 1) (TMap.add name value acc)
+      | Some(name, value) -> go input (i + 1) (TMap.add name value acc)
 
   go input 0 (TMap.empty compare)
 
@@ -410,7 +410,10 @@ let private readReqBody (input: Stream) (size: int) : Stream =
     else
       let blockSize = intMin bufSize size
       let ok, buf, input = readExact buf blockSize input
-      if not ok then failwith "readExact"
+
+      if not ok then
+        failwith "readExact"
+
       go input buf (size - blockSize)
 
   go input buf size
@@ -420,15 +423,7 @@ let private writeAccess (res: HttpResponseContext) : unit =
   let pathname = res.Action.Pathname
   let statusText = res.StatusText
 
-  __trace (
-    "["
-    + methodName
-    + "] "
-    + pathname
-    + " - "
-    + statusText
-    + "\n"
-  )
+  __trace ("[" + methodName + "] " + pathname + " - " + statusText + "\n")
 
 let private newResponseContext (context: HttpActionContext) (data: HttpResponseData) : HttpResponseContext =
   let writeLine (line: string) =
@@ -491,7 +486,7 @@ let private readReq (handler: HttpActionContext -> unit) (input: Stream) (output
     __trace "requests end"
     None
 
-  | Some (methodOpt, pathname, minorOpt) ->
+  | Some(methodOpt, pathname, minorOpt) ->
     let headersOpt, input = readHeaderField input
 
     match headersOpt with
@@ -520,9 +515,7 @@ let private readReq (handler: HttpActionContext -> unit) (input: Stream) (output
 
         let _input = readReqBody input contentLength
 
-        let date =
-          getDate ()
-          |> Option.defaultWith (fun () -> failwith "get_date")
+        let date = getDate () |> Option.defaultWith (fun () -> failwith "get_date")
 
         let context: HttpActionContext =
           { Date = date
@@ -568,12 +561,12 @@ let private newResponseData (statusText: string) : HttpResponseData =
 
 let private resultToResponseData (result: HfsResult) : HttpResponseData =
   match result with
-  | Ok (content, contentType) ->
+  | Ok(content, contentType) ->
     { newResponseData "200 OK" with
         Content = Some content
         Headers = [ "Content-Type", contentType ] }
 
-  | Error (err, _) ->
+  | Error(err, _) ->
     let statusText, headers =
       match err with
       | FoundError location -> "302 Found", [ "Location", location ]
@@ -581,10 +574,7 @@ let private resultToResponseData (result: HfsResult) : HttpResponseData =
       | NotFoundError -> "404 Not Found", []
       | NotImplementedError -> "501 Not Implemented", []
 
-    { newResponseData statusText with
-        Headers =
-          ("Content-Type", "text/plain; charset=utf-8")
-          :: headers }
+    { newResponseData statusText with Headers = ("Content-Type", "text/plain; charset=utf-8") :: headers }
 
 /// Gets extension of filename, e.g. `.txt`.
 let private getExt (pathname: string) : string =
@@ -621,8 +611,7 @@ let private doServeStatic (distDir: string) (m: HttpMethod) (pathname: string) :
       |> Option.map (fun text -> Ok(text, contentType (getExt filePath)))
 
     let readIndex () =
-      let pathname =
-        S.trimEndIf (fun c -> c = '/') pathname + "/"
+      let pathname = S.trimEndIf (fun c -> c = '/') pathname + "/"
 
       readAllText (filePath + "/index.html")
       |> Option.map (fun text -> Error(FoundError(pathname + "index.html"), "Redirect."))
@@ -738,12 +727,6 @@ let main _ =
 
   let args = StdEnv.commandLineArgs ()
 
-  let useStdio =
-    args
-    |> List.tryFind (fun arg -> arg = "--stdio")
-    |> Option.isSome
+  let useStdio = args |> List.tryFind (fun arg -> arg = "--stdio") |> Option.isSome
 
-  if useStdio then
-    runWithStdio ()
-  else
-    runWithSocket ()
+  if useStdio then runWithStdio () else runWithSocket ()

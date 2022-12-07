@@ -60,16 +60,13 @@ module IniParse =
 
   /// Skips over the current line. Returns the index to the next line break (CR or LF) or the end of `s`.
   let private skipLine (s: string) (i: int) =
-    let line, _, _ = S.cutLine s.[i..s.Length - 1]
+    let line, _, _ = S.cutLine s.[i .. s.Length - 1]
     i + line.Length
 
   /// Skips over spaces except for line breaks.
   let private skipBlank (s: string) (i: int) =
     if i < s.Length then
-      if C.isBlank s.[i] then
-        skipBlank s (i + 1)
-      else
-        i
+      if C.isBlank s.[i] then skipBlank s (i + 1) else i
     else
       i
 
@@ -125,7 +122,7 @@ module IniParse =
           | '"' -> segmentLoop (StringBuffer.writeAscii s.[i + 1] sb) (i + 2)
 
           | 'x' when i + 3 < s.Length ->
-            match S.parseHexAsUInt64 s.[i + 2..i + 3] with
+            match S.parseHexAsUInt64 s.[i + 2 .. i + 3] with
             | Some value -> segmentLoop (StringBuffer.writeAscii (char (byte value)) sb) (i + 4)
             | None -> Error IniParseError.InvalidEscapeSequence, i, sb
 
@@ -135,14 +132,14 @@ module IniParse =
 
         | _ ->
           let endIndex = verbatimLoop (i + 1)
-          segmentLoop (StringBuffer.writeString s.[i..endIndex - 1] sb) endIndex
+          segmentLoop (StringBuffer.writeString s.[i .. endIndex - 1] sb) endIndex
       else
         Error IniParseError.QuoteUnclosed, i, sb
 
     let result, i, sb = segmentLoop sb i
 
     match result with
-    | Ok () ->
+    | Ok() ->
       let value, sb = StringBuffer.toString sb
       Ok value, i, sb
 
@@ -152,7 +149,7 @@ module IniParse =
     // assert (S.trimStart s.[i..] = s)
 
     let r = skipLine s i
-    S.trimEnd s.[i..r - 1], r
+    S.trimEnd s.[i .. r - 1], r
 
   /// Parses `key '=' value eol`
   let private parseEntry
@@ -181,7 +178,7 @@ module IniParse =
       else
         let start = i
         let i = skipToEqual i
-        let key = S.trimEnd s.[start..i - 1]
+        let key = S.trimEnd s.[start .. i - 1]
         Ok key, i, sb
 
     match result with
@@ -225,7 +222,7 @@ module IniParse =
       if i < s.Length then
         match s.[i] with
         | ']' ->
-          let name = S.trim s.[start..i - 1]
+          let name = S.trim s.[start .. i - 1]
           let i = skipBlank s (i + 1)
           Ok name, i
 
@@ -264,7 +261,7 @@ module IniParse =
 
           match result with
           | Ok _ when not (atEol s i) -> acc, Error IniParseError.ExpectedNewline, i, sb
-          | Ok (key, value) -> entriesLoop sb ((key, value) :: acc) (skipNewline s i)
+          | Ok(key, value) -> entriesLoop sb ((key, value) :: acc) (skipNewline s i)
           | Error msg -> acc, Error msg, i, sb
       else
         acc, Ok(), i, sb
@@ -291,7 +288,7 @@ module IniParse =
           let acc = (name, entries) :: acc
 
           match result with
-          | Ok () -> sectionsLoop sb acc i
+          | Ok() -> sectionsLoop sb acc i
           | Error msg -> acc, Error(msg, i), sb
 
         | Error msg -> acc, Error(msg, i), sb
@@ -310,7 +307,7 @@ module IniParse =
 
     let sections, result, sb =
       match result with
-      | Ok () -> parseSections sb s i
+      | Ok() -> parseSections sb s i
       | Error msg -> [], Error(msg, i), sb
 
     StringBuffer.dispose sb
@@ -345,8 +342,7 @@ module IniWrite =
 
   let private stringNeedsEscaping (s: string) =
     let rec go i =
-      i < s.Length
-      && (charNeedsEscaping s.[i] || go (i + 1))
+      i < s.Length && (charNeedsEscaping s.[i] || go (i + 1))
 
     go 0
 
@@ -381,11 +377,7 @@ module IniWrite =
     match value with
     | IniInt value -> StringBuffer.writeInt value sb
 
-    | IniString value when
-      value.Length <> 0
-      && value |> stringNeedsEscaping |> not
-      && S.trim value = value
-      ->
+    | IniString value when value.Length <> 0 && value |> stringNeedsEscaping |> not && S.trim value = value ->
       StringBuffer.writeString value sb
 
     | IniString value ->
@@ -396,20 +388,14 @@ module IniWrite =
 
   /// Writes an entry `key = value`.
   let private writeEntry (key: string) (value: IniValue) (sb: StringBuffer) =
-    let sb =
-      sb
-      |> StringBuffer.writeString key
-      |> StringBuffer.writeString " ="
+    let sb = sb |> StringBuffer.writeString key |> StringBuffer.writeString " ="
 
     match value with
     | IniString "" ->
       // `key =` (no trailing space)
       sb
 
-    | _ ->
-      sb
-      |> StringBuffer.writeAscii ' '
-      |> writeValue value
+    | _ -> sb |> StringBuffer.writeAscii ' ' |> writeValue value
 
   let private writeEntries entries sb =
     let rec writeLoop entries sb =
@@ -420,9 +406,7 @@ module IniWrite =
         let sb = writeEntry key value sb
 
         if List.isEmpty entries |> not then
-          sb
-          |> StringBuffer.writeAscii '\n'
-          |> writeLoop entries
+          sb |> StringBuffer.writeAscii '\n' |> writeLoop entries
         else
           sb
 
@@ -436,9 +420,7 @@ module IniWrite =
       |> StringBuffer.writeAscii ']'
 
     if List.isEmpty entries |> not then
-      sb
-      |> StringBuffer.writeAscii '\n'
-      |> writeEntries entries
+      sb |> StringBuffer.writeAscii '\n' |> writeEntries entries
     else
       sb
 
@@ -474,9 +456,7 @@ module IniWrite =
 
   let toString (doc: IniDocument) : string =
     let output, sb =
-      StringBuffer.alloc 1000
-      |> writeDocument doc
-      |> StringBuffer.toString
+      StringBuffer.alloc 1000 |> writeDocument doc |> StringBuffer.toString
 
     StringBuffer.dispose sb
     output

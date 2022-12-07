@@ -1,13 +1,19 @@
 module rec LibSqlite3.Db
 
 // runtime code must be compiled with this
+// see CmdSqliteTodo as example
 
 open Std.IO
 open Std.Own
 open Std.Ptr
 open Std.Region
 
-__nativeDecl "struct sqlite3;"
+// `struct sqlite3`
+[<Opaque>]
+type private sqlite3 = private | sqlite3
+
+// `struct sqlite3 *`
+type private DbPtr = nativeptr<sqlite3>
 
 // definition must be sync with runtime code
 type DbValue =
@@ -15,17 +21,14 @@ type DbValue =
   | DString of string
   | DInt of int
 
-// struct sqlite3 *
-type private DbPtr = nativeptr<__nativeType<``struct sqlite3``>>
-
 /// Connection to a database.
 // note: not use DbPtr here so that `struct sqlite3 *` doesn't appear in other source files.
-type Db = private Db of Own<voidptr>
+type Db = private Db of Own<DbPtr>
 
 let private unsafeDup (db: Db) : DbPtr * Db =
   let (Db ownedDbPtr) = db
   let dbPtr = Own.release ownedDbPtr
-  Ptr.cast dbPtr, Db(Own.acquire dbPtr)
+  dbPtr, Db(Own.acquire dbPtr)
 
 module Db =
   /// Opens a database file. Create if missing.
@@ -36,11 +39,10 @@ module Db =
       __nativeStmt "struct String error;"
       __nativeExpr "&error"
 
-    let p: DbPtr =
-      __nativeFun ("db_open", pathname, pError)
+    let dbPtr: DbPtr = __nativeFun ("db_open", pathname, pError)
 
-    if p <> Ptr.nullPtr then
-      Ok(Db(Own.acquire (Ptr.cast p))), io
+    if dbPtr <> Ptr.nullPtr then
+      Ok(Db(Own.acquire dbPtr)), io
     else
       Error(Ptr.read pError), io
 
@@ -51,42 +53,41 @@ module Db =
     __nativeFun ("db_close", dbPtr)
 
   /// Executes a statement to retrieve data.
-  let select (sql: string) (paramList: (string * DbValue) list) (db: Db) : Result<DbValue list list, unit> * Db =
+  let select (sql: string) (paramList: (string * DbValue) list) (db: Db) : Result<DbValue list list, string> * Db =
+    // wants stackalloc
     let pRows: nativeptr<DbValue list list> =
       __nativeStmt "struct DbValue_ListCons const *rows = NULL;"
       __nativeExpr "&rows"
 
     let dbPtr, db = unsafeDup db
 
-    let ok: bool =
-      __nativeFun ("db_select", dbPtr, sql, paramList, pRows)
+    let ok: bool = __nativeFun ("db_select", dbPtr, sql, paramList, pRows)
 
-    if ok then
-      Ok(Ptr.read pRows), db
-    else
-      Error(), db
+    if ok then Ok(Ptr.read pRows), db else Error "Db.select", db
 
   /// Executes a statement to mutate the database.
-  let mutate (sql: string) (paramList: (string * DbValue) list) (db: Db) : bool * Db =
+  let mutate (sql: string) (paramList: (string * DbValue) list) (db: Db) : Result<unit, string> * Db =
     let dbPtr, db = unsafeDup db
 
-    let ok: bool =
-      __nativeFun ("db_mutate", dbPtr, sql, paramList)
+    let ok: bool = __nativeFun ("db_mutate", dbPtr, sql, paramList)
 
-    ok, db
+    let result = if ok then Ok() else Error "Db.mutate"
+
+    result, db
 
   /// Executes multiple statements.
   let exec (sql: string) (db: Db) : Result<unit, string> * Db =
-    let pError: nativeptr<string> =
+    // wants stackalloc
+    let pError: OutPtr<string> =
       __nativeStmt "struct String error;"
       __nativeExpr "&error"
 
     let dbPtr, db = unsafeDup db
 
-    let ok: bool =
-      __nativeFun ("db_exec", dbPtr, sql, pError)
+    let ok: bool = __nativeFun ("db_exec", dbPtr, sql, pError)
 
     if ok then
       Ok(), db
     else
-      Error(Ptr.read pError), db
+      let msg = Ptr.read (Ptr.cast pError: InPtr<string>)
+      Error msg, db

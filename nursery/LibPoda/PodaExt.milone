@@ -1,0 +1,104 @@
+// Provides additional functions to manipulate Poda.
+
+open Std.Block
+open Std.Ptr
+open Std.StdError
+open Std.StringBuffer
+open LibPoda.Poda
+
+module Poda =
+  /// Converts a list to array.
+  let ofList (items: Poda list) : Poda = items |> Block.ofList |> Poda.Array
+
+  /// Converts an entry list to map.
+  let ofEntries (entries: (string * Poda) list) : Poda =
+    entries
+    |> List.map (fun (key, value) -> ({ Key = key; Value = value }: PodaEntry))
+    |> Block.ofList
+    |> Poda.Map
+
+  let writeDebugWith (writer: StringBuffer -> Poda -> bool * StringBuffer) (sb: StringBuffer) (value: Poda) : StringBuffer =
+    // wants String.debug, needs escape
+    let writeString value sb =
+      sb
+      |> StringBuffer.writeAscii '"'
+      |> StringBuffer.writeString value
+      |> StringBuffer.writeAscii '"'
+
+    let rec writeRec value sb =
+      let written, sb = writer sb value
+
+      if written then
+        sb
+      else
+        match value with
+        | Poda.Null -> sb |> StringBuffer.writeString "null"
+        | Poda.Bool value -> sb |> StringBuffer.writeString (if value then "true" else "false")
+        | Poda.Int value -> sb |> StringBuffer.writeInt value
+
+        // wants StringBuffer.writeInt64
+        | Poda.Int64 value -> sb |> StringBuffer.writeInt (int value)
+
+        | Poda.UInt64 value -> sb |> StringBuffer.writeUInt64 0 value
+        | Poda.Float64 value -> sb |> StringBuffer.writeFloat value
+        | Poda.String value -> sb |> writeString value
+
+        | Poda.Array array ->
+          // wants Block.debugWith
+          match Block.uncons array with
+          | None -> sb |> StringBuffer.writeString "[]"
+
+          | Some(x, xs) ->
+            let rec writeItemsLoop array sb =
+              match Block.uncons array with
+              | None -> sb
+              | Some(x, xs) -> sb |> StringBuffer.writeString ", " |> writeRec x |> writeItemsLoop xs
+
+            sb
+            |> StringBuffer.writeAscii '['
+            |> writeRec x
+            |> writeItemsLoop xs
+            |> StringBuffer.writeAscii ']'
+
+        | Poda.Map entries ->
+          // wants Block.debugWith
+          match Block.uncons entries with
+          | None -> sb |> StringBuffer.writeString "{}"
+
+          | Some(e, es) ->
+            let rec writeEntriesLoop (es: Block<PodaEntry>) sb =
+              match Block.uncons es with
+              | None -> sb
+
+              | Some(e, es) ->
+                sb
+                |> StringBuffer.writeString ", "
+                |> writeString e.Key
+                |> StringBuffer.writeString ": "
+                |> writeRec e.Value
+                |> writeEntriesLoop es
+
+            sb
+            |> StringBuffer.writeAscii '{'
+            |> writeString e.Key
+            |> StringBuffer.writeString ": "
+            |> writeRec e.Value
+            |> writeEntriesLoop es
+            |> StringBuffer.writeAscii '}'
+
+        | Poda.Foreign ptr ->
+          let s =
+            if ptr <> Ptr.nullPtr then
+              "<Foreign(_)>"
+            else
+              "<Foreign(null)>"
+
+          sb |> StringBuffer.writeString s
+
+    sb |> writeRec value
+
+  let debug (value: Poda) : string =
+    let sb = StringBuffer.alloc 256
+    let output, sb = writeDebugWith (fun sb _ -> false, sb) sb value |> StringBuffer.toString
+    StringBuffer.dispose sb
+    output

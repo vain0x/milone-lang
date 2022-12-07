@@ -63,6 +63,7 @@
 - `exit` is now a regular function (rather than primitive)
 - Add `Std/FormatBase.milone` as wrapper of `sprintf`-like code
 - Add `StringBuffer.milone`
+- nursery: Add Poda
 
 ## [v0.5.0] - 2022-07-21
 
