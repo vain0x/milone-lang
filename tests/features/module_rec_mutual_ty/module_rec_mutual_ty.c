@@ -6,11 +6,9 @@ struct RecA_ListCons;
 
 struct RecA_;
 
-struct UnitCons;
+struct Int32Cons;
 
-struct UnitCons;
-
-struct UnionX_;
+struct Int32Cons;
 
 int main(int argc, char **argv);
 
@@ -25,31 +23,22 @@ struct RecA_ {
     };
 };
 
-struct UnitCons {
-    char head;
-    struct UnitCons const *tail;
-};
-
-enum UnionX_Discriminant {
-    UnionX_VariantX,
-    UnionX_VariantY,
-};
-
-struct UnionX_ {
-    enum UnionX_Discriminant discriminant;
+struct Int32Cons {
+    int32_t head;
+    struct Int32Cons const *tail;
 };
 
 int main(int argc, char **argv) {
     milone_start(argc, argv);
     struct RecA_ useRecA_;
-    struct UnitCons const *list_;
+    struct Int32Cons const *list_;
     char switch_;
     struct RecA_ variant_;
     char match_;
-    list_ = ((struct UnitCons const *)milone_region_alloc(1, sizeof(struct UnitCons)));
-    (*(((struct UnitCons *)list_))) = (struct UnitCons){.head = 0, .tail = NULL};
-    switch ((struct UnionX_){.discriminant = UnionX_VariantY}.discriminant) {
-        case UnionX_VariantX:
+    list_ = ((struct Int32Cons const *)milone_region_alloc(1, sizeof(struct Int32Cons)));
+    (*(((struct Int32Cons *)list_))) = (struct Int32Cons){.head = 0, .tail = NULL};
+    switch (1) {
+        case 0:
             goto clause_2;
 
         default:

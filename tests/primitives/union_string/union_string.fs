@@ -11,6 +11,6 @@ let main _ =
   assert (string UnitLike = "MyUnion.UnitLike")
   assert (string (CarryingInt 1) = "MyUnion.CarryingInt(1)")
 
-  // unfortunately newtype unwrapping changes semantics
-  assert (string (CarryingOther OtherUnion) = "MyUnion.CarryingOther(())")
+  // #erase_enum_like unfortunately changes semantics
+  assert (string (CarryingOther OtherUnion) = "MyUnion.CarryingOther(0)")
   0
