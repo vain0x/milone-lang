@@ -31,6 +31,11 @@ type PodaArray = private | PodaArray
 [<Opaque>]
 type PodaMap = private | PodaMap
 
+/// Represents (obj -> obj).
+type PodaFun =
+  { Fun: FunPtr<obj * obj, obj>
+    Env: obj }
+
 // struct PodaArray { ... };
 __nativeDecl ("""{0} { {1} const *ptr; int32_t len; };""", (__type: PodaArray), (__type: Poda))
 
@@ -192,3 +197,12 @@ module private Internals =
     | _ ->
       Ptr.write writtenTo Ptr.nullPtr
       false
+
+module PodaFun =
+  let ofFun (f: obj -> obj) : PodaFun =
+    { Fun = __nativeExpr ("{0}.fun", f)
+      Env = __nativeExpr ("{0}.env", f) }
+
+  let invoke (f: PodaFun) (arg: obj) : obj =
+    __nativeStmt ("void const *result = {0}({1}, {2});", f.Fun, f.Env, arg)
+    __nativeExpr "result"

@@ -19,3 +19,17 @@ let () =
 
   assert (p (Poda.Foreign Ptr.nullPtr) "<Foreign(null)>")
   assert (p (Poda.Foreign(Ptr.invalid 1024un)) "<Foreign(_)>")
+
+// test PodaFun
+let () =
+  let myFun =
+    let a = 2
+
+    let localFun (x: int) (b: int) =
+      a * x + b
+
+    PodaFun.ofFun (fun (arg: obj) ->
+      let x, b = unbox arg
+      localFun x b |> box)
+
+  assert (PodaFun.invoke myFun (box (3, 1)) |> unbox = 7)
