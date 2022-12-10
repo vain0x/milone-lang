@@ -1,0 +1,47 @@
+/// Provides fundamental memory-access functions.
+
+open Std.Ptr
+
+__nativeDecl
+  """
+  #include <string.h>
+"""
+
+module CMemory =
+  /// (`memcpy`)
+  /// Copies a block of memory of the specified size in bytes.
+  /// The source and destination may not overlap.
+  ///
+  /// Use `unsafeCopy` in case of overlapping.
+  let unsafeCopyNonoverlapping (dest: voidptr) (src: VoidInPtr) (size: int) : unit =
+    __nativeStmt ("memcpy({0}, {1}, (size_t){2});", dest, src, size)
+
+  /// (`memmove`)
+  /// Copies a block of memory of the specified size in bytes.
+  let unsafeCopy (dest: voidptr) (src: VoidInPtr) (size: int) : unit =
+    __nativeStmt ("memmove({0}, {1}, (size_t){2});", dest, src, size)
+
+  /// (`memset`)
+  /// Fills a block of memory with the specified value.
+  let unsafeWriteBytes (dest: voidptr) (value: byte) (size: int) : unit =
+    __nativeStmt ("memset({0}, {1}, (size_t){2});", dest, value, size)
+
+  /// (`memset(_, 0, _)`)
+  /// Zero-fills a block of memory.
+  let unsafeWriteZeros (dest: voidptr) (size: int) : unit =
+    __nativeStmt ("memset({0}, 0, (size_t){1});", dest, size)
+
+  /// (`memcmp`)
+  /// Compares two blocks of memory as byte sequences in lexicographical order.
+  ///
+  /// Note two pointers must be non-null.
+  let unsafeCompare (l: VoidInPtr) (r: VoidInPtr) (size: int) : int =
+    __nativeExpr ("memcmp({0}, {1}, (size_t){2})", l, r, size)
+
+  /// (`memchr`)
+  /// Finds a byte of the specified value in the `size` bytes of pointed region
+  /// and returns `Some p` where p is the pointer to the position.
+  let unsafeFindByte (src: VoidInPtr) (value: byte) : VoidInPtr option =
+    __nativeStmt ("void const *result = memchr({0}, {1});", src, value)
+    let result: VoidInPtr = __nativeExpr "result"
+    if __nativeExpr "result != NULL" then Some result else None
