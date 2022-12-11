@@ -98,12 +98,11 @@ module CFile =
     __nativeStmt ("bool ok = fgets({0}, {1}, {2}) != NULL;", dest, capacity, fp)
 
     if __nativeExpr "ok" then
-      if __nativeExpr ("feof({0}) != 0", fp) then
-        FGetsEof
-      else
-        FGetsOk
-    else
+      FGetsOk
+    else if __nativeExpr ("ferror({0}) != 0", fp) then
       FGetsError(__nativeExpr "errno")
+    else
+      FGetsEof
 
   /// (`fwrite`)
   let fwrite (src: VoidInPtr) (size: int) (count: int) (fp: FilePtr) : Result<int, int> =

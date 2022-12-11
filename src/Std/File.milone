@@ -9,6 +9,7 @@ open Std.CStr
 open Std.Own
 open Std.Ptr
 open Std.StdError
+open Std.StringBuffer
 open Std.Vector
 
 module S = Std.StdString
@@ -146,6 +147,41 @@ module File =
       result, dest
 
     | Error e -> Error e, dest
+
+  /// Reads a line to append the buffer.
+  /// If newline character is read, it's also appended to the buffer.
+  ///
+  /// Returns:
+  ///
+  /// - `Ok true`: If some data is read.
+  /// - `Ok false`: No data is read. It reached at EOF.
+  /// - `Error e`: If failed. `e` is errno.
+  let readLine (dest: StringBuffer) (input: File) : Result<bool, int> * StringBuffer * File =
+    let rec readLoop reading dest input =
+      let fp, input = unsafeDup input
+
+      let destPtr, destLength, destCapacity, dest =
+        StringBufferExt.unsafeDup (StringBufferExt.reserve 1000 dest)
+
+      let endPtr = Ptr.select destPtr.[destLength]
+      let size = destCapacity - destLength
+
+      match CFile.fgets (Ptr.cast endPtr: voidptr) size fp with
+      | FGetsOk ->
+        let len = CStr.unsafeLength (Ptr.cast endPtr: InPtr<char>)
+        let dest = StringBufferExt.unsafeSetLength (destLength + len) dest
+
+        let newline = len >= 1 && Ptr.read endPtr.[len - 1] = '\n'B
+
+        if newline then
+          Ok true, dest, input
+        else
+          readLoop true dest input
+
+      | FGetsEof -> Ok reading, dest, input
+      | FGetsError e -> Error e, dest, input
+
+    readLoop false dest input
 
   /// Writes a block of bytes to the file.
   ///
