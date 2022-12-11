@@ -1,19 +1,20 @@
 // Provides file system API.
 //
 // Currently functionality is designed similar to C standard library.
+open Std.Block
 open Std.ByteVector
-open Std.IO
+open Std.CFileInternal
+open Std.CMemory
+open Std.CStr
 open Std.Own
 open Std.Ptr
 open Std.StdError
+open Std.StringBuffer
 open Std.Vector
 
-// For strlen.
-__nativeDecl "#include <string.h>"
+module S = Std.StdString
 
-let private toCStr (s: string) : InPtr<char> = __nativeFun ("string_to_c_str", s)
-
-/// `FILE *`
+/// `FILE *` in C
 type private FilePtr = nativeptr<__nativeType<FILE>>
 
 /// Represents a connection to an opened file.
@@ -25,84 +26,82 @@ let private unsafeDup (file: File) : FilePtr * File =
   let fp = Own.release fp
   fp, File(Own.acquire fp)
 
+type FileSystem = private | FileSystem
+
 module File =
   /// Gets the file abstraction of standard input.
-  let stdin () : File =
-    File(Own.acquire (__nativeExpr "stdin"))
+  let stdin () : File = File(Own.acquire (CFile.stdin ()))
 
   /// Gets the file abstraction of standard output.
-  let stdout () : File =
-    File(Own.acquire (__nativeExpr "stdout"))
+  let stdout () : File = File(Own.acquire (CFile.stdout ()))
 
   /// Gets the file abstraction of standard error.
-  let stderr () : File =
-    File(Own.acquire (__nativeExpr "stderr"))
+  let stderr () : File = File(Own.acquire (CFile.stderr ()))
 
-  /// Opens a regular file for reading.
-  let openRead (io: IO) (pathname: string) : File option * IO =
-    let fp: FilePtr =
-      __nativeFun ("fopen", toCStr pathname, toCStr "rb")
+  /// Opens a file for reading.
+  ///
+  /// On Windows: The file is opened in binary mode.
+  let openRead (pathname: string) : Result<File, int> =
+    match CFile.fopen pathname "rb" with
+    | Ok fp -> Ok(File(Own.acquire fp))
+    | Error e -> Error e
 
-    if fp <> Ptr.nullPtr then
-      Some(File(Own.acquire fp)), io
-    else
-      None, io
-
-  /// Creates or opens a regular file for writing.
-  let openWrite (io: IO) (pathname: string) : File option * IO =
-    let fp: FilePtr =
-      __nativeFun ("fopen", toCStr pathname, toCStr "wb")
-
-    if fp <> Ptr.nullPtr then
-      Some(File(Own.acquire fp)), io
-    else
-      None, io
+  /// Opens or a file for writing. Creates a regular file if missing.
+  ///
+  /// On Windows: The file is opened in binary mode.
+  let openWrite (pathname: string) : Result<File, int> =
+    match CFile.fopen pathname "wb" with
+    | Ok fp -> Ok(File(Own.acquire fp))
+    | Error e -> Error e
 
   /// Closes the file.
   ///
   /// The underlying file descriptor is closed.
   /// Remark: Closing stdin/stdout/stderr is noop. It's required to close such file due to the ownership check.
-  let close (io: IO) (file: File) : IO =
+  let close (file: File) : Result<unit, int> =
     let (File fp) = file
-    let fp = Own.release fp
-
-    __nativeStmt (
-      """
-        FILE *fp = {0};
-        if (fp != stdin && fp != stdout && fp != stderr) fclose(fp);
-      """,
-      fp
-    )
-
-    io
+    CFile.fclose (Own.release fp)
 
   /// Reads a chunk from the file to append the buffer.
   ///
-  /// Returns size of read data. Maybe less than capacity.
-  let readBlock (io: IO) (dest: Vector<byte>) (input: File) : int * Vector<byte> * File * IO =
+  /// Returns:
+  ///
+  /// - `Ok size`: If success. `size` is the size of data to read.
+  /// - `Error e`: If failed. `e` is errno.
+  ///
+  /// Effects:
+  ///
+  /// - This function blocks to wait until the buffer is fill (unless the underlying file is asynchronous).
+  let readBlock (dest: Vector<byte>) (input: File) : Result<int, int> * Vector<byte> * File =
     let fp, input = unsafeDup input
     let destPtr, destLength, destCapacity, dest = VectorExt.unsafeDup dest
+    let size = destCapacity - destLength
 
-    __nativeStmt (
-      "int len = (int)fread(&{1}[{2}], 1, (size_t){3}, {0});",
-      fp,
-      destPtr,
-      destLength,
-      destCapacity - destLength
-    )
+    let resultOpt =
+      match CFile.fread (Ptr.cast (Ptr.select destPtr.[destLength]): voidptr) 1 size fp with
+      | FReadFull -> Ok size
+      | FReadPartial len -> Ok len
+      | FReadError e -> Error e
 
-    let len: int = __nativeExpr "len"
+    match resultOpt with
+    | Ok len ->
+      let dest = VectorExt.unsafeSetLength (destLength + len) dest
+      Ok len, dest, input
 
-    let dest =
-      VectorExt.unsafeSetLength (destLength + len) dest
-
-    len, dest, input, io
+    | Error e -> Error e, dest, input
 
   /// Reads a block of bytes equal to the specified size from the file to append the buffer.
   ///
-  /// This function blocks to wait until the buffer is fill (unless the underlying file is asynchronous).
-  /// Returns whether the size of read data equals to the specified size.
-  let readExact (io: IO) (dest: Vector<byte>) (size: int) (input: File) : bool * Vector<byte> * File * IO =
+  /// Returns:
+  ///
+  /// - `Ok true`: if successfully read.
+  /// - `Ok false`: if nothing to read. It's at EOF.
+  /// - `Error e`: if failed. e is errno.
+  ///
+  /// Effects:
+  ///
+  /// - This function blocks to wait until the buffer is fill (unless the underlying file is asynchronous).
+  let readExact (dest: Vector<byte>) (size: int) (input: File) : Result<bool, int> * Vector<byte> * File =
     assert (size >= 0)
 
     let fp, input = unsafeDup input
@@ -110,110 +109,142 @@ module File =
     let destPtr, destLength, destCapacity, dest =
       VectorExt.unsafeDup (VectorExt.reserve size dest)
 
-    __nativeStmt ("bool ok = fread(&{1}[{2}], (size_t){3}, 1, {0}) == 1;", fp, destPtr, destLength, size)
+    let resultOpt =
+      match CFile.fread (Ptr.cast (Ptr.select destPtr.[destLength]): voidptr) size 1 fp with
+      | FReadFull -> Ok true
+      | FReadPartial _ -> Ok false
+      | FReadError e -> Error e
 
-    let ok: bool = __nativeExpr "ok"
-    ok, dest, input, io
+    match resultOpt with
+    | Ok len ->
+      let dest = VectorExt.unsafeSetLength (destLength + size) dest
+      Ok len, dest, input
 
-  /// Reads all contents from the file to append the buffer.
-  let readToEnd (io: IO) (dest: Vector<byte>) (input: File) : Vector<byte> * File * IO =
-    let fp, input = unsafeDup input
+    | Error e -> Error e, dest, input
 
-    let rec go (io: IO) dest input =
-      let dest = VectorExt.reserve 4000 dest
-      let destPtr, destLength, destCapacity, dest = VectorExt.unsafeDup dest
+  let private readAllTo (dest: Vector<byte>) (input: File) : Result<unit, int> * Vector<byte> * File =
+    let rec readLoop dest input =
+      let dest = VectorExt.reserve 1000 dest
+      let len, dest = Vector.length dest
+      let capacity, dest = VectorExt.capacity dest
+      let size = capacity - len
 
-      __nativeStmt (
-        "int len = (int)fread(&{1}[{2}], 1, (size_t){3}, {0});",
-        fp,
-        destPtr,
-        destLength,
-        destCapacity - destLength
-      )
+      let result, dest, input = readBlock dest input
 
-      let len: int = __nativeExpr "len"
+      match result with
+      | Ok n when n < size -> Ok(), dest, input
+      | Ok _ -> readLoop dest input
+      | Error e -> Error e, dest, input
 
-      if len = 0 then
-        dest, input, io
-      else
-        let dest =
-          VectorExt.unsafeSetLength (destLength + len) dest
+    readLoop dest input
 
-        go io dest input
+  /// Reads all contents from a file to append the buffer.
+  let readToEnd (dest: Vector<byte>) (pathname: string) : Result<unit, int> * Vector<byte> =
+    match openRead pathname with
+    | Ok file ->
+      let result, dest, file = readAllTo dest file
+      let _ = File.close file
+      result, dest
 
-    go io dest input
+    | Error e -> Error e, dest
 
-  /// Reads a line from the file to append the buffer.
+  /// Reads a line to append the buffer.
+  /// If newline character is read, it's also appended to the buffer.
   ///
-  /// Input buffer must have capacity enough to contain a line.
-  /// This function doesn't reserve.
+  /// Returns:
   ///
-  /// Returns false if empty or error.
+  /// - `Ok true`: If some data is read.
+  /// - `Ok false`: No data is read. It reached at EOF.
+  /// - `Error e`: If failed. `e` is errno.
+  let readLine (dest: StringBuffer) (input: File) : Result<bool, int> * StringBuffer * File =
+    let rec readLoop reading dest input =
+      let fp, input = unsafeDup input
+
+      let destPtr, destLength, destCapacity, dest =
+        StringBufferExt.unsafeDup (StringBufferExt.reserve 1000 dest)
+
+      let endPtr = Ptr.select destPtr.[destLength]
+      let size = destCapacity - destLength
+
+      match CFile.fgets (Ptr.cast endPtr: voidptr) size fp with
+      | FGetsOk ->
+        let len = CStr.unsafeLength (Ptr.cast endPtr: InPtr<char>)
+        let dest = StringBufferExt.unsafeSetLength (destLength + len) dest
+
+        let newline = len >= 1 && Ptr.read endPtr.[len - 1] = '\n'B
+
+        if newline then
+          Ok true, dest, input
+        else
+          readLoop true dest input
+
+      | FGetsEof -> Ok reading, dest, input
+      | FGetsError e -> Error e, dest, input
+
+    readLoop false dest input
+
+  /// Writes a block of bytes to the file.
   ///
-  /// If the file read a newline character, it was also appended to the buffer.
-  let readLine (io: IO) (buf: Vector<byte>) (file: File) : bool * Vector<byte> * File * IO =
-    let bufPtr, length, capacity, buf = VectorExt.unsafeDup buf
-    let fp, file = unsafeDup file
-
-    assert (length < capacity)
-
-    __nativeStmt (
-      """
-        char *p = fgets(&{0}[{1}], {2}, {3});
-        int32_t size = p != NULL ? (int32_t)strlen(p) : 0;
-      """,
-      bufPtr,
-      length,
-      unativeint (capacity - length),
-      fp
-    )
-
-    let size: int = __nativeExpr "size"
-
-    let buf =
-      VectorExt.unsafeSetLength (length + size) buf
-
-    size <> 0, buf, file, io
-
-  /// Unsafely writes a block of bytes to the file.
-  ///
-  /// This function blocks to wait until all data are written (unless the underlying file is asynchronous).
-  let unsafeWriteExactFromRawParts (io: IO) (ptr: InPtr<byte>) (len: int) (output: File) : bool * File * IO =
+  /// This function blocks the thread (unless the underlying file descriptor is asynchronous mode)
+  /// until all data has been written.
+  let writeExact (contents: Block<byte>) (output: File) : Result<unit, int> * File =
     let fp, output = unsafeDup output
-    assert (len >= 1)
+    let ptr, len = BlockExt.unsafeToRawParts contents
 
-    __nativeStmt ("bool ok = fwrite({1}, (size_t){2}, 1, {0}) == 1;", fp, ptr, len)
-
-    let ok: bool = __nativeExpr "ok"
-    ok, output, io
+    match CFile.fwrite (Ptr.cast ptr: VoidInPtr) len 1 fp with
+    | Ok _ -> Ok(), output
+    | Error e -> Error e, output
 
   /// Writes a string to the file.
-  let writeString (io: IO) (s: string) (output: File) : bool * File * IO =
-    let fp, output = unsafeDup output
+  let writeString (s: string) (output: File) : Result<unit, int> * File =
+    let b =
+      let ptr = (Ptr.cast (S.StringExt.asPtr s): InPtr<byte>)
+      BlockExt.unsafeOfRawParts ptr s.Length
 
-    if s.Length <> 0 then
-      let ptr: InPtr<char> = __nativeExpr ("{0}.ptr", s)
+    writeExact b output
 
-      let ok, output, io =
-        unsafeWriteExactFromRawParts io (__nativeCast ptr) s.Length output
-
-      if ok then
-        __nativeStmt ("fflush({0});", fp)
-
-      ok, output, io
-    else
-      true, output, io
+  /// Moves a file.
+  let rename (oldPathname: string) (newPathname: string) : Result<unit, int> = CFile.rename oldPathname newPathname
 
   /// Deletes a non-directory file.
-  let remove (io: IO) (pathname: string) : IO =
-    __nativeStmt ("remove({0});", toCStr pathname)
-    io
+  let remove (pathname: string) : Result<unit, int> = CFile.remove pathname
 
   /// Flushes a file.
-  let flush (io: IO) (file: File) : File * IO =
+  let flush (file: File) : Result<unit, int> * File =
     let fp, file = unsafeDup file
-    __nativeStmt ("fflush({0});\n", fp)
-    file, io
+    CFile.fflush fp, file
+
+  // Easy to use functions:
+
+  /// Reads all contents of a text file.
+  let readAllText (pathname: string) : Result<string, int> =
+    let dest = Vector.alloc 1024
+    let result, dest = readToEnd dest pathname
+
+    match result with
+    | Ok() ->
+      let ptr, length, _, dest = VectorExt.unsafeDup dest
+      let s = S.StringExt.unsafeOfRawParts (Ptr.cast ptr: InPtr<char>) length
+      Vector.dispose dest
+      Ok s
+
+    | Error e ->
+      Vector.dispose dest
+      Error e
+
+  /// Replaces all contents of a text file, or creates a file.
+  let writeAllText (s: string) (pathname: string) : Result<unit, int> =
+    match openWrite pathname with
+    | Ok file ->
+      let r1, file = writeString s file
+      let r2 = File.close file
+
+      match r1, r2 with
+      | Ok(), Ok() -> Ok()
+      | Ok(), _ -> r2
+      | _ -> r1
+
+    | Error e -> Error e
 
 /// Features rarely used or unsafe.
 module FileExt =

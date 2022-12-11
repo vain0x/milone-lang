@@ -1,0 +1,31 @@
+// Provides CStr type and related functions.
+
+open Std.Ptr
+
+__nativeDecl
+  """
+  #include <string.h>
+  """
+
+/// C-style string. This is `char const *` in C.
+///
+/// There's no guarantee on value.
+/// The pointer might be null,
+///     might not point to a valid location,
+///     might not be NUL-terminated,
+///     might not have a length `< 2^31 - 1` (max of `int`),
+///     might not contain a valid string in any character encoding (e.g. UTF-8), etc.
+type CStr = InPtr<char>
+
+module CStr =
+  // ensures NUL-termination
+  let ofString (s: string) : CStr = __nativeFun ("string_to_c_str", s)
+
+  // allocates on a region
+  let unsafeToString (cs: CStr) : string = __nativeFun ("string_of_c_str", cs)
+
+  // O(N) or infinite
+  let unsafeLength (s: CStr) : int =
+    __nativeExpr ("(int32_t)strlen({0})", s)
+
+// TODO: add memchr, strstr

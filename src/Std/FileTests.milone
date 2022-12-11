@@ -3,81 +3,92 @@ open Std.File
 open Std.IO
 open Std.StdError
 open Std.StdTesting
+open Std.StringBuffer
 open Std.Vector
 
 __nativeDecl "#include <assert.h>"
 
-let private writeCase (io: IO) =
-  let file, io =
-    match File.openWrite io "output.ignored.txt" with
-    | Some it, io -> it, io
-    | None, io ->
-      failwith "Not found"
-      File.stdin (), io // HACK: failwith "" can't be File
+let private testWrite () =
+  match File.openWrite "output.ignored.txt" with
+  | Ok file ->
+    let result, file = File.writeString "Hello, world!\n" file
 
-  let ok, file, io =
-    file |> File.writeString io "Hello, world!\n"
+    match result with
+    | Ok() ->
+      let result, file = File.writeString "Good bye!\n" file
+      let _ = File.close file
 
-  assert ok
+      match result with
+      | Ok() -> ()
+      | Error e -> failwith "write 2 failed"
 
-  let ok, file, io =
-    file |> File.writeString io "Good bye!\n"
+    | Error e ->
+      let _ = File.close file
+      failwith "write 1 failed"
 
-  assert ok
-  File.close io file
+  | Error _ -> failwith "openWrite failed"
 
-let private readCase (io: IO) =
-  let file, io =
-    match File.openRead io "output.ignored.txt" with
-    | Some it, io -> it, io
-    | None, io ->
-      failwith "Not found"
-      File.stdin (), io // HACK: failwith "" can't be File
+let private testRead () =
+  match File.readAllText "output.ignored.txt" with
+  | Ok contents -> assert (shouldEqual id "Hello, world!\nGood bye!\n" contents)
+  | Error _ -> assert false
 
-  let contents, file, io =
-    File.readToEnd io (Vector.empty ()) file
+let private testReadLine () =
+  let drain (buf: StringBuffer) =
+    let output, buf = StringBuffer.toString buf
+    output, StringBuffer.clear buf
 
-  let length, contents = Vector.length contents
+  match File.openRead "output.ignored.txt" with
+  | Ok file ->
+    let buf = StringBuffer.empty ()
+    let result, buf, file = File.readLine buf file
 
-  let s, contents =
-    ByteVector.sliceToString 0 length contents
+    match result with
+    | Ok true ->
+      let s, buf = drain buf
+      assert (shouldEqual id "Hello, world!\n" s)
 
-  assert (shouldEqual id "Hello, world!\nGood bye!\n" s)
-  Vector.dispose contents
-  File.close io file
+      let result, buf, file = File.readLine buf file
 
-let private readLineCase (io: IO) =
-  let file, io =
-    match File.openRead io "output.ignored.txt" with
-    | Some it, io -> it, io
-    | None, io ->
-      failwith "Not found"
-      File.stdin (), io // HACK: failwith "" can't be File
+      match result with
+      | Ok true ->
+        let s, buf = drain buf
+        assert (shouldEqual id "Good bye!\n" s)
 
-  let buf = Vector.alloc 1024
-  let ok, buf, file, io = File.readLine io buf file
-  assert ok
-  let length, buf = Vector.length buf
-  let s, buf = ByteVector.sliceToString 0 length buf
-  assert (shouldEqual id "Hello, world!\n" s)
+        let result, buf, file = File.readLine buf file
 
-  let ok, buf, file, io = File.readLine io buf file
-  assert ok
-  let length2, buf = Vector.length buf
+        match result with
+        | Ok false -> ()
+        | _ -> assert false
 
-  let s, buf =
-    ByteVector.sliceToString length length2 buf
+        StringBuffer.dispose buf
+        let _ = File.close file
+        ()
 
-  assert (shouldEqual id "Good bye!\n" s)
+      | _ ->
+        StringBuffer.dispose buf
+        let _ = File.close file
+        assert false
 
-  let ok, buf, file, io = File.readLine io buf file
-  assert (not ok) // EOF.
+    | _ ->
+      StringBuffer.dispose buf
+      let _ = File.close file
+      assert false
 
-  Vector.dispose buf
-  File.close io file
+  | Error _ -> assert false
 
-let testFile (io: IO) =
-  let io =
-    io |> writeCase |> readCase |> readLineCase
+let testRename () =
+  let r1 = File.writeAllText "a" "rename1.ignored.txt"
+  let r2 = File.rename "rename1.ignored.txt" "rename2.ignored.txt"
+  let r3 = File.remove "rename2.ignored.txt"
 
-  File.remove io "output.ignored.txt"
+  match r1, r2, r3 with
+  | Ok(), Ok(), Ok() -> ()
+  | _ -> assert false
+
+let testFile () =
+  testWrite ()
+  testRead ()
+  testReadLine ()
+  testRename ()
+  File.remove "output.ignored.txt" |> ignore
