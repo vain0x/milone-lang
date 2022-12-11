@@ -25,6 +25,7 @@
 - Fix unicode string literals are broken
 - Support byte literal (`'a'B` syntax)
 - Add `Std.CStr`, `Std.CMemory`
+- Remake `Std.File`
 
 ### CLI Tool
 
