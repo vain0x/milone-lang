@@ -1,6 +1,6 @@
 # The Milone Language
 
-The *Milone* language is an F#-subset programming language. This is all-in-one repository.
+The Milone language is an F#-subset programming language. This is all-in-one repository.
 
 ```fsharp
 let rec factorial n =
@@ -9,8 +9,14 @@ let rec factorial n =
   else
     n * factorial (n - 1)
 
-printfn "5! = %d" (factorial 5) //=> 120
+printfn "5! = %d" (factorial 5)
 ```
+
+```
+5! = 120
+```
+
+---
 
 ## Table of Contents
 
@@ -19,29 +25,29 @@ printfn "5! = %d" (factorial 5) //=> 120
     - ~~With package manager~~ (yet)
     - [#From sources on Linux](#install-from-sources-on-linux)
     - [#From binary package on Windows](#install-from-binary-package-on-windows)
-- [#How it works](#how-it-works)
-- Documentation
+- ~~Getting Started~~ (yet)
+- References:
     - Language -> [docs/refs](docs/refs)
     - CLI -> [docs/cli.md](docs/cli.md)
-- Examples
-    - [tests/examples](tests/examples)
-    - Compiler itself -> [src/MiloneCli/Cli.fs](src/MiloneCli/Cli.fs)
-- Libraries
-    - Built-in library -> [src/MiloneCore](src/MiloneCore)
-    - Standard library -> [src/Std](src/Std)
-- Tools
-    - VSCode extension -> [vscode_ext](vscode_ext)
-- Internals -> [docs/internals](docs/internals)
+- Reading:
+    - [C as Backend](docs/articles/c_as_backend.md)
+    - Examples -> [tests/examples](tests/examples)
+    - Internals -> [docs/internals](docs/internals)
+- Implementation:
+    - Compiler -> [src/MiloneCli/Cli.fs](src/MiloneCli/Cli.fs)
+    - LSP Server -> [src/MiloneLspServer/Program.fs](src/MiloneLspServer/Program.fs)
+    - Built-In Library -> [src/MiloneCore](src/MiloneCore)
+    - Standard Library -> [src/Std](src/Std)
+    - VSCode Extension -> [vscode_ext](vscode_ext)
 
 ## About
 
-*History*:
+**History**:
 The author started this project in 2018 just for fun. Initial goal was making a compiler that can compile itself (that is, **[self-hosting](https://en.wikipedia.org/wiki/Self-hosting)**). It was achieved at [v0.1.0](https://github.com/vain0x/milone-lang/tree/v0.1.0) in 2019.
 
-*Status*: Currently this project is being developed for v1.0 release.
+**Status**: Currently this project is being developed for v1.0 release.
 
-*Disclaimer*:
-This is a hobby project. Don't use in production.
+**Disclaimer**: This is a hobby project. Don't use in production.
 
 ## Install
 
@@ -81,50 +87,6 @@ Instructions:
 - Follow instructions written in [INSTALL.md](src/MyBuildTool/assets/INSTALL.md)
 
 See [docs/binary_package.md](docs/binary_package.md) for more details.
-
-## How It Works
-
-Currently the target language is C. That is, the milone-lang compiler reads a source code and translates to a C code. For example, assume the following code is given.
-
-```fsharp
-let main _ =
-  let rec factorial x =
-    if x = 0 then 1 else x * factorial (x - 1)
-  factorial 5 - 120 // exit code
-```
-
-The compiler emits a C code that is equivalent to the following:
-
-```c
-int factorial(int x) {
-    if (x == 0) {
-        return 1;
-    } else {
-        return x * factorial(x - 1);
-    }
-}
-
-int main() {
-    return factorial(5) - 120;
-}
-```
-
-*The actual output is available at [factorial.c](tests/examples/factorial/factorial.c).*
-
-The diagram below illustrates how it does self-hosting.
-
-```
-    <milone-lang compiler>.fs
-        |                | Compile with F# compiler
-        |                v
-        | Compile with <milone-lang compiler>.exe
-        v                           ^ an executable on .NET runtime
-    <milone-lang compiler>.c
-        | Compile with C compiler
-        v
-    <milone-lang compiler>.exe
-                 ^ a native executable
-```
 
 ## Contribute
 
