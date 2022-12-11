@@ -25,5 +25,6 @@ let main _ =
     testBox ()
     testHashMap ()
     testPath ()
-    testFile io)
+    testFile ()
+    io)
   |> never

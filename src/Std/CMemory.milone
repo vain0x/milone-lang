@@ -1,4 +1,4 @@
-/// Provides fundamental memory-access functions.
+// Provides fundamental memory-access functions.
 
 open Std.Ptr
 
@@ -41,7 +41,7 @@ module CMemory =
   /// (`memchr`)
   /// Finds a byte of the specified value in the `size` bytes of pointed region
   /// and returns `Some p` where p is the pointer to the position.
-  let unsafeFindByte (src: VoidInPtr) (value: byte) : VoidInPtr option =
-    __nativeStmt ("void const *result = memchr({0}, {1});", src, value)
+  let unsafeFindByte (src: VoidInPtr) (value: byte) (size: int) : VoidInPtr option =
+    __nativeStmt ("void const *result = memchr({0}, {1}, {2});", src, value, size)
     let result: VoidInPtr = __nativeExpr "result"
     if __nativeExpr "result != NULL" then Some result else None

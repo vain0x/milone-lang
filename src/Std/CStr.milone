@@ -1,4 +1,4 @@
-/// Provides CStr type and related functions.
+// Provides CStr type and related functions.
 
 open Std.Ptr
 
