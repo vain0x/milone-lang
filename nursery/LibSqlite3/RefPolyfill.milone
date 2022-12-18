@@ -1,0 +1,36 @@
+// provisional library for unimplemented "checked ref" mechanism
+
+open Std.Own
+open Std.Ptr
+open Std.Region
+
+type Ref<'T> = private Ref of InPtr<'T>
+
+module Ref =
+  let devoteOwn (r: Own<'T>) (dispose: Own<'T> -> unit) : Ref<'T> =
+    let cell =
+      let cell: OutPtr<'T> = Region.alloc 1
+      Ptr.write cell (Own.release r)
+      Ptr.asIn cell
+
+    Region.defer (fun d ->
+      let t = Ptr.read cell
+      dispose (Own.acquire t))
+
+    Ref cell
+
+  let create (value: 'T) : Ref<'T> =
+    let cell =
+      let cell: OutPtr<'T> = Region.alloc 1
+      Ptr.write cell value
+      Ptr.asIn cell
+
+    Ref cell
+
+  let read (r: Ref<'T>) : 'T =
+    let (Ref p) = r
+    Ptr.read p
+
+module RefExt =
+  let toRawParts (Ref p) : nativeptr<'T> = Ptr.asNative p
+  let unsafeOfRawParts (p: nativeptr<'T>) : Ref<'T> = Ref (Ptr.asIn p)

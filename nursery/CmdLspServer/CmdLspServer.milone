@@ -12,7 +12,8 @@ open Std.Ptr
 open Std.StdError
 open Std.StdJson
 open Std.StdMap
-open LibSqlite3.Db
+open LibSqlite3.DbRef
+open LibSqlite3.RefPolyfill
 
 module C = Std.StdChar
 module I = Std.StdInt
@@ -868,11 +869,11 @@ let private dumpDbTable db tableName =
     dumpRows rows [] |> List.rev |> S.concat "" |> printfn "%s"
     Ok(), db
 
-let private dbInit (io: IO) : Result<Db, string> * IO =
-  let result, io = Db.openFile io ":memory:"
+let private dbInit () : Result<DbRef, string> =
+  let result = DbRef.openFile ":memory:"
 
   match result with
-  | Error e -> Error e, io
+  | Error e -> Error e
 
   | Ok db ->
     let schema =
@@ -1070,7 +1071,7 @@ let private readerLoop () : VoidInPtr =
 
   Ptr.nullPtr
 
-let private serverLoop () =
+let private serverLoop (db: DbRef) =
   // let db = dbInit ()
   todo ()
 

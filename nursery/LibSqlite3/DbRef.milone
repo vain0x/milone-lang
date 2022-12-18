@@ -1,0 +1,80 @@
+// copied from Db.milone
+// this uses "checked ref" mechanism that isn't implemented yet
+
+module rec LibSqlite3.DbRef
+
+// runtime code must be compiled with this
+
+open Std.Ptr
+open Std.Region
+open LibSqlite3.RefPolyfill
+
+// `struct sqlite3`
+[<Opaque>]
+type private sqlite3 = private | sqlite3
+
+// `struct sqlite3 *`
+type private DbPtr = nativeptr<sqlite3>
+
+// definition must be sync with runtime code
+type DbValue2 =
+  | DNull2
+  | DString2 of string
+  | DInt2 of int
+
+/// Connection to a database.
+type DbRef = Ref<sqlite3>
+
+module DbRef =
+  /// Opens a database file. Create if missing.
+  ///
+  /// Pass `":memory:"` to create an in-memory database.
+  let openFile (pathname: string) : Result<DbRef, string> =
+    let pError: nativeptr<string> =
+      __nativeStmt "struct String error;"
+      __nativeExpr "&error"
+
+    let dbPtr: DbPtr = __nativeFun ("db_open", pathname, pError)
+
+    if dbPtr <> Ptr.nullPtr then
+      Region.defer (fun () -> __nativeFun ("db_close", dbPtr))
+
+      Ok(RefExt.unsafeOfRawParts dbPtr)
+    else
+      Error(Ptr.read pError)
+
+  /// Executes a statement to retrieve data.
+  let select (sql: string) (paramList: (string * DbValue2) list) (db: DbRef) : Result<DbValue2 list list, string> =
+    // wants stackalloc
+    let pRows: nativeptr<DbValue2 list list> =
+      __nativeStmt "struct DbValue2_ListCons const *rows = NULL;"
+      __nativeExpr "&rows"
+
+    let dbPtr = RefExt.toRawParts db
+
+    let ok: bool = __nativeFun ("db_select", dbPtr, sql, paramList, pRows)
+    if ok then Ok(Ptr.read pRows) else Error "Db.select"
+
+  /// Executes a statement to mutate the database.
+  let mutate (sql: string) (paramList: (string * DbValue2) list) (db: DbRef) : Result<unit, string> =
+    let dbPtr = RefExt.toRawParts db
+
+    let ok: bool = __nativeFun ("db_mutate", dbPtr, sql, paramList)
+    if ok then Ok() else Error "Db.mutate"
+
+  /// Executes multiple statements.
+  let exec (sql: string) (db: DbRef) : Result<unit, string> =
+    // wants stackalloc
+    let pError: OutPtr<string> =
+      __nativeStmt "struct String error;"
+      __nativeExpr "&error"
+
+    let dbPtr = RefExt.toRawParts db
+
+    let ok: bool = __nativeFun ("db_exec", dbPtr, sql, pError)
+
+    if ok then
+      Ok()
+    else
+      let msg = Ptr.read (Ptr.cast pError: InPtr<string>)
+      Error msg

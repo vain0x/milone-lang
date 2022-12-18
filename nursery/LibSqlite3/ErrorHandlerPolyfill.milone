@@ -1,0 +1,162 @@
+// provisional library for unimplemented error handling mechanism
+
+open Std.Own
+open Std.Ptr
+open Std.Region
+open Std.StdError
+open Std.StdList
+open LibSqlite3.RefPolyfill
+
+module S = Std.StdString
+
+__nativeDecl
+  """
+#include <string.h>
+#include <setjmp.h>
+
+struct ErrorHandlerData {
+  bool err;
+  int32_t err_status;
+  char err_message_buf[1000];
+  int32_t err_message_len;
+
+  jmp_buf jb;
+};
+"""
+
+[<Opaque>]
+type ErrorHandlerData = private | ErrorHandlerData
+
+type ErrorHandler = Ref<ErrorHandlerData>
+
+[<RequireQualifiedAccess>]
+type ErrorValue = { Status: int; Message: string }
+
+module ErrorHandler =
+  let run (action: ErrorHandler -> 'T) : Result<'T, ErrorValue> =
+    __nativeStmt "struct ErrorHandlerData eh_data = { 0 };"
+
+    let slot: OutPtr<'T> =
+      // wants stack alloc
+      __nativeStmt ("{0} slot;", (__type: 'T))
+      __nativeExpr "&slot"
+
+    __nativeStmt "int status = setjmp(eh_data.jb);"
+
+    if (__nativeExpr "status": int) = 0 then
+      // After setjmp has captured execution context.
+      printfn "eh: begin"
+
+      let eh =
+        RefExt.unsafeOfRawParts (__nativeExpr "&eh_data": nativeptr<ErrorHandlerData>)
+
+      let r = action eh |> Ok
+      printfn "eh: end"
+      r
+    else
+      // After longjmp has performed.
+      printfn "eh: returned from longjmp"
+      assert (__nativeExpr "eh_data.err": bool)
+
+      ({ Status = (__nativeExpr "eh_data.err_status": int)
+         Message = (__nativeExpr "string_of_raw_parts(eh_data.err_message_buf, eh_data.err_message_len)": string) }: ErrorValue)
+      |> Error
+
+  let raise (eh: ErrorHandler) (ev: ErrorValue) : never =
+    printfn "eh: raise"
+
+    let message =
+      if ev.Message.Length < 1000 then
+        ev.Message
+      else
+        printfn "eh: message is truncated (%d)" ev.Message.Length
+        ev.Message.[0 .. 1000 - 1]
+
+    __nativeStmt (
+      """
+        struct ErrorHandlerData *eh = {0};
+        eh->err = true;
+        eh->err_status = {1};
+        memcpy(eh->err_message_buf, string_to_c_str({2}), {3});
+        eh->err_message_len = {3};
+        longjmp(eh->jb, 1);
+       """,
+      RefExt.toRawParts eh,
+      ev.Status,
+      message,
+      message.Length
+    )
+
+    unreachable ()
+
+// ===============================================
+
+let test () =
+  let maybeFail eh value =
+    if value = 666 then
+      ErrorHandler.raise eh ({ Status = value; Message = "Failed!" }: ErrorValue)
+
+  // Ok case.
+  match
+    ErrorHandler.run (fun eh ->
+      maybeFail eh 1
+      maybeFail eh 2)
+  with
+  | Ok() -> ()
+  | Error _ -> assert false
+
+  // Raise under deep recursion.
+  match
+    ErrorHandler.run (fun eh ->
+      let rec enterRec eh x =
+        // printfn "e: begin x=%d" x
+
+        if x >= 3 then
+          enterRec eh (x / 2)
+          maybeFail eh x
+          enterRec eh (x / 3)
+
+      // printfn "e: end x=%d" x
+
+      enterRec eh (666 * 4))
+  with
+  | Ok() -> assert false
+
+  | Error e ->
+    printfn "e: status=%d message=%s" e.Status e.Message
+    assert (string e.Status + ": " + e.Message = "666: Failed!")
+
+  // Allocation in a different region.
+  match
+    ErrorHandler.run (fun eh ->
+      Region.run (fun other ->
+        // Allocate on region.
+        let msg = List.init 4 string |> S.concat ","
+
+        ErrorHandler.raise eh ({ Status = 99; Message = msg })))
+  with
+  | Ok _ -> assert false
+
+  | Error e ->
+    printfn "e: status=%d message=%s" e.Status e.Message
+    assert (string e.Status + ": " + e.Message = "99: 0,1,2,3")
+
+  // FIXME: Defer while unwinding.
+  match
+    ErrorHandler.run (fun eh ->
+      Region.run (fun other ->
+        Region.defer (fun () ->
+          printfn "defer!"
+        )
+
+        ErrorHandler.raise eh ({ Status = 99; Message = "defer?" })))
+  with
+  | Ok _ -> assert false
+
+  | Error e ->
+    printfn "e: status=%d message=%s" e.Status e.Message
+    assert (string e.Status + ": " + e.Message = "99: 0,1,2,3")
+
+// region.defer variance for unwinding only
+// action "context" data
+// error value as Poda

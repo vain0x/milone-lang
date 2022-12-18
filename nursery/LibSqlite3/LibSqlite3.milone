@@ -1,6 +1,8 @@
 // Test.
 
 open LibSqlite3.Db
+open LibSqlite3.DbRef
+open LibSqlite3.ErrorHandlerPolyfill
 open Std.IO
 open Std.StdError
 
@@ -12,6 +14,8 @@ create table entries(entry_id integer primary key autoincrement, text string not
 """
 
 let main _ =
+  ErrorHandlerPolyfill.test ()
+
   IO.exec (fun io ->
     let dbResult, io = Db.openFile io ":memory:"
 
