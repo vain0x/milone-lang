@@ -1,14 +1,5 @@
 /// Infers the type of expressions.
 ///
-/// The algorithm is based on Didier Rémy's rank-based Hindley-Milner type inference:
-///   - [eq-theory-on-types.pdf](http://gallium.inria.fr/~remy/ftp/eq-theory-on-types.pdf)
-///
-/// This web article (written in English) is very helpful:
-///   - [Efficient and Insightful Generalization](http://okmij.org/ftp/ML/generalization.html)
-///
-/// and this one (written in Japanese) too:
-///   - [OCaml でも採用されているレベルベースの多相型型推論とは](https://rhysd.hatenablog.com/entry/2017/12/16/002048)
-///
 /// Only top-level functions are generalized. See also:
 ///   - [Let Should Not Be Generalised](https://www.microsoft.com/en-us/research/publication/let-should-not-be-generalised/)
 
@@ -51,10 +42,12 @@ type private TyCtx =
     /// Type serial to type definition.
     Tys: TreeMap<TySerial, TyDef>
 
-    TyLevels: TreeMap<TySerial, Level>
     MetaTys: TreeMap<TySerial, Ty>
+    /// Meta types that can't be generalized.
+    NoGeneralizeMetaTys: TreeSet<TySerial>
     QuantifiedTys: TreeSet<TySerial>
-    Level: Level
+    /// Whether it's in a function.
+    IsFunLocal: bool
 
     NewFuns: FunSerial list
 
@@ -90,10 +83,10 @@ let private newTyCtx (nr: NameResResult) : TyCtx =
     Variants = nr.Variants
     MainFunOpt = nr.MainFunOpt
     Tys = nr.Tys
-    TyLevels = TMap.empty compare
     MetaTys = TMap.empty compare
+    NoGeneralizeMetaTys = TSet.empty compare
     QuantifiedTys = TSet.empty compare
-    Level = 0
+    IsFunLocal = false
     NewFuns = []
     GrayFuns = TSet.empty funSerialCompare
     GrayInstantiations = TMap.empty funSerialCompare
@@ -116,18 +109,12 @@ let private addLog (ctx: TyCtx) log loc =
 let private addError (ctx: TyCtx) message loc =
   { ctx with Logs = (Log.Error message, loc) :: ctx.Logs }
 
-let private incLevel (ctx: TyCtx) = { ctx with Level = ctx.Level + 1 }
-
-let private decLevel (ctx: TyCtx) = { ctx with Level = ctx.Level - 1 }
-
 let private findVar (ctx: TyCtx) serial = ctx.Vars |> mapFind serial
 
 let private findTy tySerial (ctx: TyCtx) = ctx.Tys |> mapFind tySerial
 
-let private getTyLevel tySerial (ctx: TyCtx) : Level =
-  ctx.TyLevels
-  |> TMap.tryFind tySerial
-  |> Option.defaultValue 0
+let private canGeneralize (ctx: TyCtx) metaTySerial =
+  ctx.NoGeneralizeMetaTys |> TSet.contains metaTySerial |> not
 
 let private isNewtypeVariant (ctx: TyCtx) variantSerial =
   let variantDef = ctx.Variants |> mapFind variantSerial
@@ -160,20 +147,7 @@ let private freshTySerial (ctx: TyCtx) =
 
   let ctx =
     { ctx with
-        Serial = ctx.Serial + 1
-        TyLevels = ctx.TyLevels |> TMap.add serial ctx.Level }
-
-  serial, ctx
-
-let private freshTySerialWithLevel levelDelta (ctx: TyCtx) =
-  let serial = ctx.Serial + 1
-
-  let ctx =
-    { ctx with
-        Serial = ctx.Serial + 1
-        TyLevels =
-          ctx.TyLevels
-          |> TMap.add serial (ctx.Level + levelDelta) }
+        Serial = ctx.Serial + 1 }
 
   serial, ctx
 
@@ -264,30 +238,30 @@ let private substOrDegenerateTy (ctx: TyCtx) ty =
 let private expandSynonyms (ctx: TyCtx) ty : Ty =
   tyExpandSynonyms (fun tySerial -> ctx.Tys |> TMap.tryFind tySerial) ty
 
-/// Does level-up a meta type.
-let private levelUp (ctx: TyCtx) tySerial ty =
-  let level = getTyLevel tySerial ctx
-
-  ty
-  |> tyCollectFreeVars
-  |> List.fold
-       (fun tyLevels tySerial ->
-         if getTyLevel tySerial ctx <= level then
-           // Already non-deep enough.
-           tyLevels
-         else
-           // Prevent this meta ty from getting generalized until level of the bound meta ty.
-           tyLevels |> TMap.add tySerial level)
-       ctx.TyLevels
-
 /// Binds a type to a meta type.
 ///
 /// As a precondition, that meta type must be free (not bound)
 /// and must not occur in that type (no recursion).
 let private bindMetaTy (ctx: TyCtx) tySerial otherTy : TyCtx =
+  /// If no-generalize meta type is bound to a type,
+  /// propagate "no-generalize" attribute to meta types in the type.
+  let noGeneralizeMetaTys =
+    if canGeneralize ctx tySerial |> not then
+      otherTy
+      |> tyCollectFreeVars
+      |> List.fold
+          (fun acc tySerial ->
+            if canGeneralize ctx tySerial |> not then
+              acc
+            else
+              acc |> TSet.add tySerial)
+          ctx.NoGeneralizeMetaTys
+    else
+      ctx.NoGeneralizeMetaTys
+
   { ctx with
       MetaTys = ctx.MetaTys |> TMap.add tySerial otherTy
-      TyLevels = levelUp ctx tySerial otherTy }
+      NoGeneralizeMetaTys = noGeneralizeMetaTys }
 
 let private unifyTy (ctx: TyCtx) loc (lTy: Ty) (rTy: Ty) : TyCtx =
   let rec go lTy rTy loc (ctx: TyCtx) =
@@ -347,21 +321,17 @@ let private instantiateTyScheme (ctx: TyCtx) (tyScheme: TyScheme) loc : Ty * (Ty
   | TyScheme ([], ty) -> ty, [], ctx
 
   | TyScheme (fvs, ty) ->
-    let serial, tyLevels, ty, assignment =
-      doInstantiateTyScheme ctx.Serial ctx.Level ctx.TyLevels fvs ty loc
+    let serial, ty, assignment =
+      doInstantiateTyScheme ctx.Serial fvs ty loc
 
-    ty,
-    assignment,
-    { ctx with
-        Serial = serial
-        TyLevels = tyLevels }
+    ty, assignment, { ctx with Serial = serial}
 
 let private instantiateBoundedTyScheme (ctx: TyCtx) (tyScheme: BoundedTyScheme) loc : Ty * TyCtx =
   let (BoundedTyScheme (fvs, ty, traits)) = tyScheme
   assert (List.isEmpty fvs |> not)
 
-  let serial, tyLevels, ty, assignment =
-    doInstantiateTyScheme ctx.Serial ctx.Level ctx.TyLevels fvs ty loc
+  let serial, ty, assignment =
+    doInstantiateTyScheme ctx.Serial fvs ty loc
 
   let traits =
     let substMeta = tyAssign assignment
@@ -369,12 +339,11 @@ let private instantiateBoundedTyScheme (ctx: TyCtx) (tyScheme: BoundedTyScheme) 
     traits
     |> List.map (fun theTrait -> theTrait |> traitMapTys substMeta, loc)
 
-  // Reset level of meta types that move over monomorphic types due to trait bounds
-  // so that these meta types aren't get generalized.
-  let tyLevels =
+  // Meta types that appear in trait bounds can't be generalized for now.
+  let noGeneralizeMetaTys =
     traits
     |> List.fold
-         (fun tyLevels (theTrait, _) ->
+         (fun acc (theTrait, _) ->
            let asInnerTy theTrait =
              match theTrait with
              | AddTrait ty -> Some ty
@@ -387,30 +356,27 @@ let private instantiateBoundedTyScheme (ctx: TyCtx) (tyScheme: BoundedTyScheme) 
              | _ -> None
 
            match asInnerTy theTrait with
-           | Some (Ty (MetaTk (serial, _), _)) -> tyLevels |> TMap.remove serial |> snd
-           | _ -> tyLevels)
-         tyLevels
+           | Some (Ty (MetaTk (serial, _), _)) ->
+             TSet.add serial acc
+           | _ -> acc)
+         ctx.NoGeneralizeMetaTys
 
   ty,
   { ctx with
       Serial = serial
-      TyLevels = tyLevels
+      NoGeneralizeMetaTys = noGeneralizeMetaTys
       NewTraitBounds = List.append traits ctx.NewTraitBounds }
 
 // #generalizeFun
-let private generalizeFun (ctx: TyCtx) (outerLevel: Level) funSerial =
+let private generalizeFun (ctx: TyCtx) funSerial =
   let funDef = ctx.Funs |> mapFind funSerial
 
   match funDef.Ty with
   | TyScheme ([], funTy) ->
     assert (isNoTy funTy |> not)
 
-    let isOwned tySerial =
-      let level = getTyLevel tySerial ctx
-      level > outerLevel
-
     let funTy = substTy ctx funTy
-    let funTyScheme = tyGeneralize isOwned funTy
+    let funTyScheme = tyGeneralize (canGeneralize ctx) funTy
 
     let ctx =
       { ctx with
@@ -865,7 +831,7 @@ let private initializeFunTy (ctx: TyCtx) funSerial =
 
   match funDef.Ty with
   | TyScheme ([], funTy) when isNoTy funTy ->
-    let tySerial, ctx = freshTySerialWithLevel 1 ctx
+    let tySerial, ctx = freshTySerial ctx
     let metaTy = tyMeta tySerial funDef.Loc
 
     let funDef =
@@ -976,12 +942,6 @@ let private resolveAscriptionTy ctx ascriptionTy =
     | Ty (InferTk loc, _) ->
       let serial, ctx = freshTySerial ctx
       tyMeta serial loc, ctx
-
-    | Ty (UnivTk (serial, _, _), _) when ctx.TyLevels |> TMap.containsKey serial |> not ->
-      let ctx =
-        { ctx with TyLevels = ctx.TyLevels |> TMap.add serial ctx.Level }
-
-      ty, ctx
 
     | Ty (UnivTk _, _) -> ty, ctx
 
@@ -2087,8 +2047,7 @@ let private inferLetFunStmt ctx mutuallyRec callee vis argPats body loc =
       let argPats, funTy, ctx = inferArgs ctx funTy argPats
       argPat :: argPats, tyFun argTy funTy, ctx
 
-  let outerLevel = ctx.Level
-  let ctx = ctx |> incLevel
+  let ctx, parentIsFunLocal = { ctx with IsFunLocal = true }, ctx.IsFunLocal
 
   let calleeTy, ctx =
     let calleeTy, ctx =
@@ -2126,12 +2085,10 @@ let private inferLetFunStmt ctx mutuallyRec callee vis argPats body loc =
   let ctx =
     unifyTy ctx loc bodyTy provisionalResultTy
 
-  let ctx = ctx |> decLevel
-
   let ctx =
-    if outerLevel = 0 then
+    if not parentIsFunLocal then
       let ctx = attemptResolveTraitBounds ctx
-      generalizeFun ctx outerLevel callee
+      generalizeFun ctx callee
     else
       finishLocalFun ctx callee
 
@@ -2141,7 +2098,7 @@ let private inferLetFunStmt ctx mutuallyRec callee vis argPats body loc =
     | _ -> ctx
 
   let ctx =
-    { ctx with NewFuns = callee :: ctx.NewFuns }
+    { ctx with NewFuns = callee :: ctx.NewFuns; IsFunLocal = parentIsFunLocal }
 
   TLetFunStmt(callee, NotRec, vis, argPats, body, loc), ctx
 
@@ -2159,7 +2116,6 @@ let private inferExpr (ctx: TyCtx) (expectOpt: Ty option) (expr: TExpr) : TExpr 
   | TBlockExpr (stmts, last) -> inferBlockExpr ctx expectOpt stmts last
 
 let private inferBlockStmt (ctx: TyCtx) mutuallyRec stmts : TStmt * TyCtx =
-  let outerLevel = ctx.Level
   let parentCtx = ctx
 
   let ctx = collectVarsAndFuns ctx stmts
@@ -2184,18 +2140,16 @@ let private inferBlockStmt (ctx: TyCtx) mutuallyRec stmts : TStmt * TyCtx =
 
              | _ ->
                // #generalizeFun
-               let isOwned tySerial =
-                 let highLevel () =
-                   let level = getTyLevel tySerial ctx
-                   level > outerLevel
-
-                 let alreadyQuantified () =
-                   tyVars |> List.exists (fun t -> t = tySerial)
-
-                 highLevel () || alreadyQuantified ()
-
                let funTy = substTy ctx funTy
-               let funTyScheme = tyGeneralize isOwned funTy
+
+               let funTyScheme =
+                let generalizable (tySerial: int) =
+                  let alreadyQuantified () =
+                    tyVars |> List.exists (fun t -> t = tySerial)
+
+                  canGeneralize ctx tySerial || alreadyQuantified ()
+
+                tyGeneralize generalizable funTy
 
                let funs =
                  ctx.Funs
@@ -2381,6 +2335,7 @@ let infer (modules: TProgram, nameRes: NameResResult) : TProgram * TirCtx =
            let ctx = { ctx with Vars = vars }
 
            let stmts, ctx =
+             let ctx = { ctx with IsFunLocal = false }
              let ctx = collectVarsAndFuns ctx m.Stmts
 
              m.Stmts
@@ -2428,7 +2383,7 @@ let infer (modules: TProgram, nameRes: NameResResult) : TProgram * TirCtx =
                    Funs = funs
                    NewFuns = []
                    MetaTys = TMap.empty compare
-                   TyLevels = TMap.empty compare
+                   NoGeneralizeMetaTys = TSet.empty compare
                    QuantifiedTys = TMap.empty compare }
 
              stmts, staticVars, localVars, ctx
