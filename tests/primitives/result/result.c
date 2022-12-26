@@ -92,20 +92,20 @@ struct String result_result_Int32StringResult2StringFun1_unexpected(struct Int32
     int32_t value_;
     struct String e_;
     char match_;
-    if ((result_.discriminant != Int32StringResult2_Ok)) goto next_11;
+    if ((result_.discriminant != Int32StringResult2_Ok)) goto next_2;
     value_ = result_.Int32StringResult2_Ok;
     printf("Ok(%d)\n", value_);
     match_ = 0;
-    goto end_match_10;
-next_11:;
-    if ((result_.discriminant != Int32StringResult2_Error)) goto next_12;
+    goto end_match_1;
+next_2:;
+    if ((result_.discriminant != Int32StringResult2_Error)) goto next_3;
     e_ = result_.Int32StringResult2_Error;
     printf("Error(%s)\n", string_to_c_str(e_));
     match_ = 0;
-    goto end_match_10;
-next_12:;
+    goto end_match_1;
+next_3:;
     milone_exhaust_error("result/result.milone", 5, 2);
-end_match_10:;
+end_match_1:;
     if (true) milone_assert_error("result/result.milone", 9, 2);
     MiloneCore_Prelude_exit(1);
     milone_never_error("result/result.milone", 10, 6);
@@ -115,20 +115,20 @@ int32_t result_result_Int32StringResult2Int32Fun1_unexpected(struct Int32StringR
     int32_t value_;
     struct String e_;
     char match_1;
-    if ((result_.discriminant != Int32StringResult2_Ok)) goto next_14;
+    if ((result_.discriminant != Int32StringResult2_Ok)) goto next_2;
     value_ = result_.Int32StringResult2_Ok;
     printf("Ok(%d)\n", value_);
     match_1 = 0;
-    goto end_match_13;
-next_14:;
-    if ((result_.discriminant != Int32StringResult2_Error)) goto next_15;
+    goto end_match_1;
+next_2:;
+    if ((result_.discriminant != Int32StringResult2_Error)) goto next_3;
     e_ = result_.Int32StringResult2_Error;
     printf("Error(%s)\n", string_to_c_str(e_));
     match_1 = 0;
-    goto end_match_13;
-next_15:;
+    goto end_match_1;
+next_3:;
     milone_exhaust_error("result/result.milone", 5, 2);
-end_match_13:;
+end_match_1:;
     if (true) milone_assert_error("result/result.milone", 9, 2);
     MiloneCore_Prelude_exit(1);
     milone_never_error("result/result.milone", 10, 6);
@@ -138,16 +138,16 @@ int32_t result_result_unwrapOk(struct Int32StringResult2_ result_1) {
     int32_t value_1;
     int32_t match_2;
     int32_t call_;
-    if ((result_1.discriminant != Int32StringResult2_Ok)) goto next_17;
+    if ((result_1.discriminant != Int32StringResult2_Ok)) goto next_2;
     value_1 = result_1.Int32StringResult2_Ok;
     match_2 = value_1;
-    goto end_match_16;
-next_17:;
+    goto end_match_1;
+next_2:;
     call_ = result_result_Int32StringResult2Int32Fun1_unexpected(result_1);
     match_2 = call_;
-    goto end_match_16;
-next_18:;
-end_match_16:;
+    goto end_match_1;
+next_3:;
+end_match_1:;
     return match_2;
 }
 
@@ -155,16 +155,16 @@ struct String result_result_unwrapError(struct Int32StringResult2_ result_2) {
     struct String e_1;
     struct String match_3;
     struct String call_1;
-    if ((result_2.discriminant != Int32StringResult2_Error)) goto next_20;
+    if ((result_2.discriminant != Int32StringResult2_Error)) goto next_2;
     e_1 = result_2.Int32StringResult2_Error;
     match_3 = e_1;
-    goto end_match_19;
-next_20:;
+    goto end_match_1;
+next_2:;
     call_1 = result_result_Int32StringResult2StringFun1_unexpected(result_2);
     match_3 = call_1;
-    goto end_match_19;
-next_21:;
-end_match_19:;
+    goto end_match_1;
+next_3:;
+end_match_1:;
     return match_3;
 }
 
@@ -173,19 +173,19 @@ struct Int32StringResult2_ result_result_testBind_divBy2(int32_t n_) {
     struct Int32StringResult2_ variant_;
     struct Int32StringResult2_ variant_1;
     if (((n_ % 2) == 0)) {
-        goto then_23;
+        goto then_2;
     } else {
-        goto else_24;
+        goto else_3;
     }
-then_23:;
+then_2:;
     variant_ = (struct Int32StringResult2_){.discriminant = Int32StringResult2_Ok, .Int32StringResult2_Ok = (n_ / 2)};
     if_ = variant_;
-    goto if_next_22;
-else_24:;
+    goto if_next_1;
+else_3:;
     variant_1 = (struct Int32StringResult2_){.discriminant = Int32StringResult2_Error, .Int32StringResult2_Error = (struct String){.ptr = "Odd", .len = 3}};
     if_ = variant_1;
-    goto if_next_22;
-if_next_22:;
+    goto if_next_1;
+if_next_1:;
     return if_;
 }
 

@@ -49,18 +49,18 @@ void list_operators_list_operators_cons1Test(void) {
     list_ = ((struct Int32Cons const *)milone_region_alloc(1, sizeof(struct Int32Cons)));
     (*(((struct Int32Cons *)list_))) = (struct Int32Cons){.head = 1, .tail = NULL};
     xs_ = list_;
-    if ((!(xs_))) goto next_5;
+    if ((!(xs_))) goto next_2;
     x_ = xs_->head;
-    if ((!((!(xs_->tail))))) goto next_5;
+    if ((!((!(xs_->tail))))) goto next_2;
     if ((x_ != 1)) milone_assert_error("list_operators/list_operators.milone", 15, 15);
     match_ = 0;
-    goto end_match_4;
-next_5:;
+    goto end_match_1;
+next_2:;
     if (true) milone_assert_error("list_operators/list_operators.milone", 16, 9);
     match_ = 0;
-    goto end_match_4;
-next_6:;
-end_match_4:;
+    goto end_match_1;
+next_3:;
+end_match_1:;
     return;
 }
 
@@ -77,32 +77,32 @@ void list_operators_list_operators_cons2Test(void) {
     list_1 = ((struct Int32Cons const *)milone_region_alloc(1, sizeof(struct Int32Cons)));
     (*(((struct Int32Cons *)list_1))) = (struct Int32Cons){.head = 2, .tail = list_2};
     ys_ = list_1;
-    if ((!(ys_))) goto next_8;
+    if ((!(ys_))) goto next_2;
     y2_ = ys_->head;
-    if ((!(ys_->tail))) goto next_8;
+    if ((!(ys_->tail))) goto next_2;
     y3_ = ys_->tail->head;
-    if ((!((!(ys_->tail->tail))))) goto next_8;
+    if ((!((!(ys_->tail->tail))))) goto next_2;
     if ((y2_ == 2)) {
-        goto then_11;
+        goto then_5;
     } else {
-        goto else_12;
+        goto else_6;
     }
-then_11:;
+then_5:;
     if_1 = (y3_ == 3);
-    goto if_next_10;
-else_12:;
+    goto if_next_4;
+else_6:;
     if_1 = false;
-    goto if_next_10;
-if_next_10:;
+    goto if_next_4;
+if_next_4:;
     if ((!(if_1))) milone_assert_error("list_operators/list_operators.milone", 22, 22);
     match_1 = 0;
-    goto end_match_7;
-next_8:;
+    goto end_match_1;
+next_2:;
     if (true) milone_assert_error("list_operators/list_operators.milone", 23, 9);
     match_1 = 0;
-    goto end_match_7;
-next_9:;
-end_match_7:;
+    goto end_match_1;
+next_3:;
+end_match_1:;
     return;
 }
 
@@ -126,27 +126,27 @@ void list_operators_list_operators_literalTest(void) {
     list_3 = ((struct Int32Cons const *)milone_region_alloc(1, sizeof(struct Int32Cons)));
     (*(((struct Int32Cons *)list_3))) = (struct Int32Cons){.head = 2, .tail = list_4};
     zs_ = list_3;
-    if ((!(zs_))) goto next_14;
+    if ((!(zs_))) goto next_2;
     z2_ = zs_->head;
-    if ((!(zs_->tail))) goto next_14;
+    if ((!(zs_->tail))) goto next_2;
     z3_ = zs_->tail->head;
-    if ((!(zs_->tail->tail))) goto next_14;
+    if ((!(zs_->tail->tail))) goto next_2;
     z5_ = zs_->tail->tail->head;
-    if ((!(zs_->tail->tail->tail))) goto next_14;
+    if ((!(zs_->tail->tail->tail))) goto next_2;
     z7_ = zs_->tail->tail->tail->head;
-    if ((!((!(zs_->tail->tail->tail->tail))))) goto next_14;
+    if ((!((!(zs_->tail->tail->tail->tail))))) goto next_2;
     if ((z2_ != 2)) milone_assert_error("list_operators/list_operators.milone", 30, 4);
     if ((z3_ != 3)) milone_assert_error("list_operators/list_operators.milone", 31, 4);
     if ((z5_ != 5)) milone_assert_error("list_operators/list_operators.milone", 32, 4);
     if ((z7_ != 7)) milone_assert_error("list_operators/list_operators.milone", 33, 4);
     match_2 = 0;
-    goto end_match_13;
-next_14:;
+    goto end_match_1;
+next_2:;
     if (true) milone_assert_error("list_operators/list_operators.milone", 35, 9);
     match_2 = 0;
-    goto end_match_13;
-next_15:;
-end_match_13:;
+    goto end_match_1;
+next_3:;
+end_match_1:;
     return;
 }
 

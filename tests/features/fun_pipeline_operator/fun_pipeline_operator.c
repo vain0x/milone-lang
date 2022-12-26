@@ -55,17 +55,17 @@ if_next_1:;
 int32_t fun_pipeline_operator_fun_pipeline_operator_main_len(struct Int32Cons const *xs_) {
     int32_t if_1;
     if ((!(xs_))) {
-        goto nil_cl_5;
+        goto nil_cl_2;
     } else {
-        goto cons_cl_6;
+        goto cons_cl_3;
     }
-nil_cl_5:;
+nil_cl_2:;
     if_1 = 0;
-    goto if_next_4;
-cons_cl_6:;
+    goto if_next_1;
+cons_cl_3:;
     if_1 = 1;
-    goto if_next_4;
-if_next_4:;
+    goto if_next_1;
+if_next_1:;
     return if_1;
 }
 

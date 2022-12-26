@@ -113,23 +113,23 @@ bool MiloneCore_Option_optionEqual_1(struct Int32StringTuple2option1_ l_2, struc
     struct Int32StringTuple2option1Int32StringTuple2option1Tuple2_ Int32StringTuple2option1Int32StringTuple2option1Tuple2_;
     bool call_;
     Int32StringTuple2option1Int32StringTuple2option1Tuple2_ = (struct Int32StringTuple2option1Int32StringTuple2option1Tuple2_){.t0 = l_2, .t1 = r_2};
-    if ((Int32StringTuple2option1Int32StringTuple2option1Tuple2_.t0.discriminant != Int32StringTuple2option1_None)) goto next_6;
-    if ((Int32StringTuple2option1Int32StringTuple2option1Tuple2_.t1.discriminant != Int32StringTuple2option1_None)) goto next_6;
+    if ((Int32StringTuple2option1Int32StringTuple2option1Tuple2_.t0.discriminant != Int32StringTuple2option1_None)) goto next_2;
+    if ((Int32StringTuple2option1Int32StringTuple2option1Tuple2_.t1.discriminant != Int32StringTuple2option1_None)) goto next_2;
     match_1 = true;
-    goto end_match_5;
-next_6:;
-    if ((Int32StringTuple2option1Int32StringTuple2option1Tuple2_.t0.discriminant != Int32StringTuple2option1_Some)) goto next_7;
+    goto end_match_1;
+next_2:;
+    if ((Int32StringTuple2option1Int32StringTuple2option1Tuple2_.t0.discriminant != Int32StringTuple2option1_Some)) goto next_3;
     l_3 = Int32StringTuple2option1Int32StringTuple2option1Tuple2_.t0.Int32StringTuple2option1_Some;
-    if ((Int32StringTuple2option1Int32StringTuple2option1Tuple2_.t1.discriminant != Int32StringTuple2option1_Some)) goto next_7;
+    if ((Int32StringTuple2option1Int32StringTuple2option1Tuple2_.t1.discriminant != Int32StringTuple2option1_Some)) goto next_3;
     r_3 = Int32StringTuple2option1Int32StringTuple2option1Tuple2_.t1.Int32StringTuple2option1_Some;
     call_ = MiloneDerive_TupleEqual_tuple2Equal(l_3, r_3);
     match_1 = call_;
-    goto end_match_5;
-next_7:;
+    goto end_match_1;
+next_3:;
     match_1 = false;
-    goto end_match_5;
-next_8:;
-end_match_5:;
+    goto end_match_1;
+next_4:;
+end_match_1:;
     return match_1;
 }
 

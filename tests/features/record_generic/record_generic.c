@@ -179,22 +179,22 @@ struct String record_generic_record_generic_nodePrint_StringStringFun1StringNode
     value_2 = app_1;
     call_7 = MiloneCore_List_StringNode1ListBoolFun1_isEmpty(node_1.t1);
     if (call_7) {
-        goto then_327;
+        goto then_2;
     } else {
-        goto else_328;
+        goto else_3;
     }
-then_327:;
+then_2:;
     if_ = value_2;
-    goto if_next_326;
-else_328:;
+    goto if_next_1;
+else_3:;
     box_ = ((void const *)milone_region_alloc(1, sizeof(struct StringStringFun1)));
     (*(((struct StringStringFun1 *)box_))) = toString_;
     fun_1 = (struct StringNode1_StringFun1){.fun = record_generic_record_generic_eta2_ObjectStringNode1StringFun2_nodePrint_go_go, .env = box_};
     call_8 = MiloneCore_List_StringNode1StringFun1StringNode1ListStringListFun2_map(fun_1, node_1.t1);
     call_9 = Std_StdString_concat((struct String){.ptr = " ", .len = 1}, call_8);
     if_ = string_add(string_add(string_add(value_2, (struct String){.ptr = "(", .len = 1}), call_9), (struct String){.ptr = ")", .len = 1});
-    goto if_next_326;
-if_next_326:;
+    goto if_next_1;
+if_next_1:;
     return if_;
 }
 

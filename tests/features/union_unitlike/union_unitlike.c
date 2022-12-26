@@ -63,18 +63,18 @@ switch_next_1:;
 
 bool union_unitlike_union_unitlike_usedInOtherSumTypeCase_toBool(struct MyBool_ myBool_1) {
     bool match_;
-    if ((myBool_1.discriminant != MyBool_MyFalse)) goto next_4;
-    if ((myBool_1.MyBool_MyFalse != 0)) goto next_4;
+    if ((myBool_1.discriminant != MyBool_MyFalse)) goto next_2;
+    if ((myBool_1.MyBool_MyFalse != 0)) goto next_2;
     match_ = false;
-    goto end_match_3;
-next_4:;
-    if ((myBool_1.discriminant != MyBool_MyTrue)) goto next_5;
-    if ((myBool_1.MyBool_MyTrue != 0)) goto next_5;
+    goto end_match_1;
+next_2:;
+    if ((myBool_1.discriminant != MyBool_MyTrue)) goto next_3;
+    if ((myBool_1.MyBool_MyTrue != 0)) goto next_3;
     match_ = true;
-    goto end_match_3;
-next_5:;
+    goto end_match_1;
+next_3:;
     milone_exhaust_error("union_unitlike/union_unitlike.milone", 23, 4);
-end_match_3:;
+end_match_1:;
     return match_;
 }
 
@@ -98,17 +98,17 @@ void union_unitlike_union_unitlike_usedInRecordTypeCase(void) {
     (*(((struct Int32Cons *)list_))) = (struct Int32Cons){.head = 0, .tail = NULL};
     RecordUsingMyUnit_ = (struct RecordUsingMyUnit_){.t0 = 0, .t1 = list_};
     record_ = RecordUsingMyUnit_;
-    if ((!(record_.t1))) goto next_7;
-    if ((record_.t1->head != 0)) goto next_7;
-    if ((!((!(record_.t1->tail))))) goto next_7;
+    if ((!(record_.t1))) goto next_2;
+    if ((record_.t1->head != 0)) goto next_2;
+    if ((!((!(record_.t1->tail))))) goto next_2;
     match_1 = 0;
-    goto end_match_6;
-next_7:;
+    goto end_match_1;
+next_2:;
     if (true) milone_assert_error("union_unitlike/union_unitlike.milone", 37, 9);
     match_1 = 0;
-    goto end_match_6;
-next_8:;
-end_match_6:;
+    goto end_match_1;
+next_3:;
+end_match_1:;
     return;
 }
 

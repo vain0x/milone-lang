@@ -60,6 +60,8 @@ type private MirCtx =
 
     Serial: Serial
     VarNameMap: TreeMap<VarSerial, Ident>
+
+    /// Serial number of labels. This is reset in each function.
     LabelSerial: Serial
 
     CurrentFunSerial: FunSerial option
@@ -1702,6 +1704,7 @@ let private mirifyExprLetFunContents (ctx: MirCtx) calleeSerial argPats body let
     args, blockTy, body, localVars, ctx
 
   let core () =
+    let ctx = { ctx with LabelSerial = 0 }
     let bodyCtx = startBlock ctx
     let args, resultTy, body, localVars, bodyCtx = mirifyFunBody bodyCtx argPats body
     let ctx = rollback ctx bodyCtx

@@ -76,21 +76,21 @@ end_match_1:;
 
 void option_option_basicNoneCase(void) {
     char match_1;
-    if (((struct Stringoption1_){.discriminant = Stringoption1_None}.discriminant != Stringoption1_Some)) goto next_6;
-    if ((string_compare((struct Stringoption1_){.discriminant = Stringoption1_None}.Stringoption1_Some, (struct String){.ptr = "a", .len = 1}) != 0)) goto next_6;
+    if (((struct Stringoption1_){.discriminant = Stringoption1_None}.discriminant != Stringoption1_Some)) goto next_2;
+    if ((string_compare((struct Stringoption1_){.discriminant = Stringoption1_None}.Stringoption1_Some, (struct String){.ptr = "a", .len = 1}) != 0)) goto next_2;
     if (true) milone_assert_error("option/option.milone", 14, 16);
     match_1 = 0;
-    goto end_match_5;
-next_6:;
-    if (((struct Stringoption1_){.discriminant = Stringoption1_None}.discriminant != Stringoption1_None)) goto next_7;
+    goto end_match_1;
+next_2:;
+    if (((struct Stringoption1_){.discriminant = Stringoption1_None}.discriminant != Stringoption1_None)) goto next_3;
     match_1 = 0;
-    goto end_match_5;
-next_7:;
+    goto end_match_1;
+next_3:;
     if (true) milone_assert_error("option/option.milone", 18, 9);
     match_1 = 0;
-    goto end_match_5;
-next_8:;
-end_match_5:;
+    goto end_match_1;
+next_4:;
+end_match_1:;
     return;
 }
 
@@ -100,19 +100,19 @@ void option_option_basicMatchCase(void) {
     variant_1 = (struct Unitoption1_){.discriminant = Unitoption1_Some, .Unitoption1_Some = 0};
     switch (variant_1.discriminant) {
         case Unitoption1_None:
-            goto clause_10;
+            goto clause_2;
 
         default:
-            goto clause_11;
+            goto clause_3;
     }
-clause_10:;
+clause_2:;
     if (true) milone_assert_error("option/option.milone", 24, 12);
     switch_ = 0;
-    goto switch_next_9;
-clause_11:;
+    goto switch_next_1;
+clause_3:;
     switch_ = 0;
-    goto switch_next_9;
-switch_next_9:;
+    goto switch_next_1;
+switch_next_1:;
     return;
 }
 

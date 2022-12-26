@@ -49,34 +49,34 @@ void pat_as_pat_as_shadowingCase(void) {
     y1_ = y_.t0;
     y2_ = y_.t1;
     if ((x_2 == 2)) {
+        goto then_4;
+    } else {
+        goto else_5;
+    }
+then_4:;
+    if_ = (y1_ == 1);
+    goto if_next_3;
+else_5:;
+    if_ = false;
+    goto if_next_3;
+if_next_3:;
+    if (if_) {
         goto then_7;
     } else {
         goto else_8;
     }
 then_7:;
-    if_ = (y1_ == 1);
+    if_1 = (y2_ == 2);
     goto if_next_6;
 else_8:;
-    if_ = false;
+    if_1 = false;
     goto if_next_6;
 if_next_6:;
-    if (if_) {
-        goto then_10;
-    } else {
-        goto else_11;
-    }
-then_10:;
-    if_1 = (y2_ == 2);
-    goto if_next_9;
-else_11:;
-    if_1 = false;
-    goto if_next_9;
-if_next_9:;
     if ((!(if_1))) milone_assert_error("pat_as/pat_as.milone", 15, 4);
     match_1 = 0;
-    goto end_match_4;
-next_5:;
-end_match_4:;
+    goto end_match_1;
+next_2:;
+end_match_1:;
     return;
 }
 

@@ -59,18 +59,18 @@ void pat_or_pat_or_simpleCase(void) {
     bool call_2;
     call_ = pat_or_pat_or_isZeroOrOne(0);
     if (call_) {
-        goto then_5;
+        goto then_2;
     } else {
-        goto else_6;
+        goto else_3;
     }
-then_5:;
+then_2:;
     call_1 = pat_or_pat_or_isZeroOrOne(1);
     if_ = call_1;
-    goto if_next_4;
-else_6:;
+    goto if_next_1;
+else_3:;
     if_ = false;
-    goto if_next_4;
-if_next_4:;
+    goto if_next_1;
+if_next_1:;
     if ((!(if_))) milone_assert_error("pat_or/pat_or.milone", 12, 2);
     call_2 = pat_or_pat_or_isZeroOrOne(2);
     if (call_2) milone_assert_error("pat_or/pat_or.milone", 13, 2);
@@ -79,37 +79,37 @@ if_next_4:;
 
 bool pat_or_pat_or_startsWithDoubleBits(struct Int32Cons const *xs_) {
     bool match_;
-    if ((!(xs_))) goto next_9;
-    if ((xs_->head != 0)) goto next_9;
-    if ((!(xs_->tail))) goto next_9;
-    if ((xs_->tail->head != 0)) goto next_9;
-    goto match_body_8;
-next_9:;
-    if ((!(xs_))) goto next_10;
-    if ((xs_->head != 1)) goto next_10;
-    if ((!(xs_->tail))) goto next_10;
-    if ((xs_->tail->head != 0)) goto next_10;
-    goto match_body_8;
-next_10:;
-    if ((!(xs_))) goto next_11;
-    if ((xs_->head != 0)) goto next_11;
-    if ((!(xs_->tail))) goto next_11;
-    if ((xs_->tail->head != 1)) goto next_11;
-    goto match_body_8;
-next_11:;
-    if ((!(xs_))) goto next_12;
-    if ((xs_->head != 1)) goto next_12;
-    if ((!(xs_->tail))) goto next_12;
-    if ((xs_->tail->head != 1)) goto next_12;
-    goto match_body_8;
-match_body_8:;
+    if ((!(xs_))) goto next_3;
+    if ((xs_->head != 0)) goto next_3;
+    if ((!(xs_->tail))) goto next_3;
+    if ((xs_->tail->head != 0)) goto next_3;
+    goto match_body_2;
+next_3:;
+    if ((!(xs_))) goto next_4;
+    if ((xs_->head != 1)) goto next_4;
+    if ((!(xs_->tail))) goto next_4;
+    if ((xs_->tail->head != 0)) goto next_4;
+    goto match_body_2;
+next_4:;
+    if ((!(xs_))) goto next_5;
+    if ((xs_->head != 0)) goto next_5;
+    if ((!(xs_->tail))) goto next_5;
+    if ((xs_->tail->head != 1)) goto next_5;
+    goto match_body_2;
+next_5:;
+    if ((!(xs_))) goto next_6;
+    if ((xs_->head != 1)) goto next_6;
+    if ((!(xs_->tail))) goto next_6;
+    if ((xs_->tail->head != 1)) goto next_6;
+    goto match_body_2;
+match_body_2:;
     match_ = true;
-    goto end_match_7;
-next_12:;
+    goto end_match_1;
+next_6:;
     match_ = false;
-    goto end_match_7;
-next_13:;
-end_match_7:;
+    goto end_match_1;
+next_7:;
+end_match_1:;
     return match_;
 }
 
@@ -140,21 +140,21 @@ void pat_or_pat_or_nestedCase(void) {
 
 bool pat_or_pat_or_performComplexMatching(struct Int32Int32Tuple2_ expr_) {
     bool match_1;
-    if ((expr_.t0 != 0)) goto next_16;
-    if ((expr_.t1 != 0)) goto next_16;
-    goto match_body_15;
-next_16:;
-    if ((expr_.t0 != 0)) goto next_17;
-    if ((expr_.t1 != 1)) goto next_17;
-    goto match_body_15;
-match_body_15:;
+    if ((expr_.t0 != 0)) goto next_3;
+    if ((expr_.t1 != 0)) goto next_3;
+    goto match_body_2;
+next_3:;
+    if ((expr_.t0 != 0)) goto next_4;
+    if ((expr_.t1 != 1)) goto next_4;
+    goto match_body_2;
+match_body_2:;
     match_1 = true;
-    goto end_match_14;
-next_17:;
+    goto end_match_1;
+next_4:;
     match_1 = false;
-    goto end_match_14;
-next_18:;
-end_match_14:;
+    goto end_match_1;
+next_5:;
+end_match_1:;
     return match_1;
 }
 

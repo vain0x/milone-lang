@@ -65,17 +65,17 @@ if_next_1:;
 int32_t ty_synonym_ty_synonym_BoolInt32Int32Int32Fun3_proj(bool cond_, int32_t body_, int32_t alt_) {
     int32_t if_1;
     if (cond_) {
-        goto then_5;
+        goto then_2;
     } else {
-        goto else_6;
+        goto else_3;
     }
-then_5:;
+then_2:;
     if_1 = body_;
-    goto if_next_4;
-else_6:;
+    goto if_next_1;
+else_3:;
     if_1 = alt_;
-    goto if_next_4;
-if_next_4:;
+    goto if_next_1;
+if_next_1:;
     return if_1;
 }
 

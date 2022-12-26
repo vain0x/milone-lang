@@ -66,6 +66,7 @@
 - Add `Std/FormatBase.milone` as wrapper of `sprintf`-like code
 - Add `StringBuffer.milone`
 - nursery: Add Poda
+- Assign serial numbers to labels per function
 
 ## [v0.5.0] - 2022-07-21
 

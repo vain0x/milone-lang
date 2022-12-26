@@ -144,18 +144,18 @@ void never_ty_never_ty_testMatchArm(void) {
     app_1 = blackBox_.fun(blackBox_.env, 0);
     switch (app_1) {
         case 0:
-            goto clause_5;
+            goto clause_2;
 
         default:
-            goto clause_6;
+            goto clause_3;
     }
-clause_5:;
+clause_2:;
     never_ty_never_ty_crash();
     milone_never_error("never_ty/never_ty.milone", 30, 16);
-clause_6:;
+clause_3:;
     switch_1 = 1;
-    goto switch_next_4;
-switch_next_4:;
+    goto switch_next_1;
+switch_next_1:;
     MiloneCore_Prelude_Int32UnitFun1_ignore((switch_1 + 1));
     return;
 }
@@ -188,18 +188,18 @@ void never_ty_never_ty_testOwn(void) {
     app_2 = blackBox_.fun(blackBox_.env, 1);
     switch (app_2) {
         case 1:
-            goto clause_8;
+            goto clause_2;
 
         default:
-            goto clause_9;
+            goto clause_3;
     }
-clause_8:;
+clause_2:;
     never_ty_never_ty_crash();
     milone_never_error("never_ty/never_ty.milone", 49, 11);
-clause_9:;
+clause_3:;
     switch_2 = 0;
-    goto switch_next_7;
-switch_next_7:;
+    goto switch_next_1;
+switch_next_1:;
     resource_1 = 0;
     return;
 }
@@ -224,29 +224,29 @@ void never_ty_never_ty_testNeverAsValue(void) {
     struct Int32NeverResult2_ variant_;
     int32_t match_1;
     opt_ = (struct Neveroption1_){.discriminant = Neveroption1_None};
-    if ((opt_.discriminant != Neveroption1_Some)) goto next_11;
+    if ((opt_.discriminant != Neveroption1_Some)) goto next_2;
     n_ = opt_.Neveroption1_Some;
     milone_never_error("never_ty/never_ty.milone", 65, 15);
-next_11:;
-    if ((opt_.discriminant != Neveroption1_None)) goto next_12;
+next_2:;
+    if ((opt_.discriminant != Neveroption1_None)) goto next_3;
     never_ty_never_ty_crash();
     milone_never_error("never_ty/never_ty.milone", 66, 18);
-next_12:;
+next_3:;
     milone_exhaust_error("never_ty/never_ty.milone", 64, 3);
-end_match_10:;
+end_match_1:;
     variant_ = (struct Int32NeverResult2_){.discriminant = Int32NeverResult2_Ok, .Int32NeverResult2_Ok = 0};
     ok_ = variant_;
-    if ((ok_.discriminant != Int32NeverResult2_Ok)) goto next_14;
+    if ((ok_.discriminant != Int32NeverResult2_Ok)) goto next_5;
     it_ = ok_.Int32NeverResult2_Ok;
     match_1 = it_;
-    goto end_match_13;
-next_14:;
-    if ((ok_.discriminant != Int32NeverResult2_Error)) goto next_15;
+    goto end_match_4;
+next_5:;
+    if ((ok_.discriminant != Int32NeverResult2_Error)) goto next_6;
     n_1 = ok_.Int32NeverResult2_Error;
     milone_never_error("never_ty/never_ty.milone", 73, 17);
-next_15:;
+next_6:;
     milone_exhaust_error("never_ty/never_ty.milone", 71, 4);
-end_match_13:;
+end_match_4:;
     value_ = match_1;
     if ((value_ != 0)) milone_assert_error("never_ty/never_ty.milone", 75, 2);
     return;
