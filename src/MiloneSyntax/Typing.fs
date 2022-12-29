@@ -2195,6 +2195,177 @@ let private inferStmt ctx mutuallyRec stmt : TStmt * TyCtx =
   | TBlockStmt (mutuallyRec, stmts) -> inferBlockStmt ctx mutuallyRec stmts
 
 // -----------------------------------------------
+// Recursive Declaration Decomposition
+// -----------------------------------------------
+
+// What:
+// Split declarations into a list of recursive blocks
+// so that forward references are all bound in each block.
+//
+// Why:
+// This improves result of generalization
+// by preventing unnecessary unification of meta types that can be generalized.
+//
+// How:
+// First attach a number level to each declaration in order.
+// For each occurrence of a variable or function that is defined at level U
+// in a declaration of level L (< U), unify levels L..U to L.
+// Finally group declarations by their levels.
+//
+// Proof (sketch):
+// After the process, forward-references are all bound in each block
+// because variables and functions defined in a recursive block
+// must not be referred in another forward block;
+// if so, these two blocks must have had the same level.
+//
+// Remark:
+// This doesn't change order of declarations.
+
+module private RecursiveDeclDecomposition =
+  [<RequireQualifiedAccess; NoEquality; NoComparison>]
+  type private RddCtx =
+    { VarLevels: TreeMap<VarSerial, int>
+      FunLevels: TreeMap<FunSerial, int>
+      LevelMap: TreeMap<int, int> }
+
+  /// Unwrap recursive blocks that are made from modules in NameRes.
+  let private flattenBlocks stmts =
+    stmts |> List.collect
+      (fun stmt ->
+        match stmt with
+        | TBlockStmt (IsRec, stmts) -> flattenBlocks stmts
+        | _ -> [ stmt ])
+
+  /// Enumerates all variables defined in a pattern
+  /// to compute varLevelMap.
+  let private collectVars (level: int) (varLevelMap: TreeMap<VarSerial, int>) pat : TreeMap<VarSerial, int> =
+    let onVar varMap varSerial = TMap.add varSerial level varMap
+
+    match pat with
+    | TLitPat _
+    | TDiscardPat _
+    | TVariantPat _ -> varLevelMap
+
+    | TVarPat (_, varSerial, _, _) -> onVar varLevelMap varSerial
+
+    | TAsPat(argPat, varSerial, _) ->
+      let varMap = onVar varLevelMap varSerial
+      collectVars level varMap argPat
+
+    | TNodePat(_, argPats, _, _) -> argPats |> List.fold (collectVars level) varLevelMap
+    | TOrPat(lPat, _, _) -> collectVars level varLevelMap lPat
+
+  /// Finds occurrences of variables and functions
+  /// to unify levels.
+  let private rddOnExpr level (ctx: RddCtx) (expr: TExpr) =
+    let toCurrentLevel level =
+      ctx.LevelMap |> TMap.tryFind level |> Option.defaultValue level
+
+    let levelDown (ctx: RddCtx) (lower: int) (upper: int) =
+      let lower = toCurrentLevel lower
+
+      let rec update levelMap l =
+        if l <= upper then
+          update (levelMap |> TMap.add l lower) (l + 1)
+        else
+          levelMap
+
+      { ctx with LevelMap = update ctx.LevelMap lower }
+
+    match expr with
+    | TVarExpr (varSerial, _, _) ->
+      match ctx.VarLevels |> TMap.tryFind varSerial |> Option.map toCurrentLevel with
+      | Some varLevel when level < varLevel -> levelDown ctx level varLevel
+
+      | _ -> ctx
+
+    | TFunExpr(funSerial, _, _) ->
+      match ctx.FunLevels |> TMap.tryFind funSerial |> Option.map toCurrentLevel with
+      | Some funLevel when level < funLevel -> levelDown ctx level funLevel
+      | _ -> ctx
+
+    | TLitExpr _
+    | TVariantExpr _
+    | TPrimExpr _ -> ctx
+
+    | TRecordExpr(_, fields, _, _) -> fields |> List.fold (fun ctx (_, init, _) -> rddOnExpr level ctx init) ctx
+
+    | TMatchExpr(cond, arms, _, _) ->
+      let ctx = rddOnExpr level ctx cond
+
+      arms |> List.fold
+        (fun ctx (_, guard, arm) ->
+          let ctx = rddOnExpr level ctx guard
+          rddOnExpr level ctx arm)
+        ctx
+
+    | TNavExpr(lExpr, _, _, _) -> rddOnExpr level ctx lExpr
+    | TNodeExpr(_, args, _, _) -> args |> List.fold (rddOnExpr level) ctx
+
+    | TBlockExpr(stmts, last) ->
+      let ctx = stmts |> List.fold (rddOnStmt level) ctx
+      rddOnExpr level ctx last
+
+  let private rddOnStmt level (ctx: RddCtx) (stmt: TStmt) =
+    match stmt with
+    | TExprStmt expr -> rddOnExpr level ctx expr
+    | TLetValStmt (_, init, _) -> rddOnExpr level ctx init
+    | TLetFunStmt(_, _, _, _, body, _) -> rddOnExpr level ctx body
+    | TBlockStmt(_, stmts) -> stmts |> List.fold (rddOnStmt level) ctx
+
+  // See comments above.
+  let decompose (_tyCtx: TyCtx) (stmts: TStmt list) : TStmt list =
+    let leveledStmts =
+      stmts
+      |> flattenBlocks
+      |> List.mapi (fun i stmt -> i + 1, stmt)
+
+    let levelMap =
+      leveledStmts
+      |> List.fold
+        (fun acc (level, stmt) ->
+          let varLevelMap, funLevelMap = acc
+          match stmt with
+          | TExprStmt _
+          | TBlockStmt _ -> acc
+
+          | TLetValStmt (pat, _, _) -> collectVars level varLevelMap pat, funLevelMap
+          | TLetFunStmt (funSerial, _, _, _, _, _) -> varLevelMap, TMap.add funSerial level funLevelMap
+        )
+        (TMap.empty varSerialCompare, TMap.empty funSerialCompare)
+
+    let ctx =
+      let varLevels, funLevels = levelMap
+      let ctx: RddCtx = { VarLevels = varLevels; FunLevels = funLevels; LevelMap = TMap.empty compare }
+
+      leveledStmts |> List.fold (fun ctx (level, stmt) -> rddOnStmt level ctx stmt) ctx
+
+    let blocks =
+      let getLevel l = ctx.LevelMap |> TMap.tryFind l |> Option.defaultValue l
+      let same l r = getLevel l = getLevel r
+
+      let rec groupLoop acc stmts =
+        match stmts with
+        | [] -> List.rev acc
+
+        | (level, stmt) :: stmts ->
+          let rec blockLoop acc stmts =
+            match stmts with
+            | (l, stmt) :: stmts when same l level -> blockLoop (stmt :: acc) stmts
+            | _ -> List.rev acc, stmts
+
+          let block, stmts = blockLoop [ stmt ] stmts
+          groupLoop (block :: acc) stmts
+
+      groupLoop [] leveledStmts
+
+    blocks
+    |> List.map (fun stmts ->
+      match stmts with
+      | [ stmt ] -> stmt
+      | _ -> TBlockStmt(IsRec, stmts))
+
+// -----------------------------------------------
 // Reject cyclic synonyms
 // -----------------------------------------------
 
@@ -2336,9 +2507,14 @@ let infer (modules: TProgram, nameRes: NameResResult) : TProgram * TirCtx =
 
            let stmts, ctx =
              let ctx = { ctx with IsFunLocal = false }
-             let ctx = collectVarsAndFuns ctx m.Stmts
 
-             m.Stmts
+             let stmts =
+              m.Stmts
+              |> RecursiveDeclDecomposition.decompose ctx
+
+             let ctx = collectVarsAndFuns ctx stmts
+
+             stmts
              |> List.mapFold (fun ctx stmt -> inferStmt ctx NotRec stmt) ctx
 
            let ctx = ctx |> resolveTraitBoundsAll

@@ -26,6 +26,7 @@
 - Support byte literal (`'a'B` syntax)
 - Add `Std.CStr`, `Std.CMemory`
 - Remake `Std.File`
+- Better type inference of recursive functions
 
 ### CLI Tool
 
