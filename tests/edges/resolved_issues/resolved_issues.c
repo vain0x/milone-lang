@@ -16,6 +16,14 @@ int32_t resolved_issues_resolved_issues_eta2_testFunArityNeverResultBug_id(void 
 
 void resolved_issues_resolved_issues_testFunArityNeverResultBug(void);
 
+void resolved_issues_generalization_issue_3_start(void);
+
+void resolved_issues_generalization_issue_2_start(void);
+
+void resolved_issues_variant_wrapper_auto_box_start(void);
+
+void resolved_issues_generalization_issue_1_start(void);
+
 int main(int argc, char **argv);
 
 struct Int32Int32Fun1 {
@@ -25,7 +33,7 @@ struct Int32Int32Fun1 {
 
 _Noreturn void resolved_issues_resolved_issues_testFunArityNeverResultBug_unreachable(void) {
     MiloneCore_Prelude_exit(1);
-    milone_never_error("resolved_issues/resolved_issues.milone", 15, 35);
+    milone_never_error("resolved_issues/resolved_issues.milone", 20, 35);
 }
 
 int32_t resolved_issues_resolved_issues_eta2_testFunArityNeverResultBug_id(void const *env_, int32_t arg_) {
@@ -52,16 +60,20 @@ clause_2:;
     goto switch_next_1;
 clause_3:;
     resolved_issues_resolved_issues_testFunArityNeverResultBug_unreachable();
-    milone_never_error("resolved_issues/resolved_issues.milone", 19, 22);
+    milone_never_error("resolved_issues/resolved_issues.milone", 24, 22);
 switch_next_1:;
     f_ = switch_;
     app_ = f_.fun(f_.env, 1);
-    if ((app_ != 1)) milone_assert_error("resolved_issues/resolved_issues.milone", 22, 2);
+    if ((app_ != 1)) milone_assert_error("resolved_issues/resolved_issues.milone", 27, 2);
     return;
 }
 
 int main(int argc, char **argv) {
     milone_start(argc, argv);
+    resolved_issues_generalization_issue_3_start();
+    resolved_issues_generalization_issue_2_start();
+    resolved_issues_variant_wrapper_auto_box_start();
+    resolved_issues_generalization_issue_1_start();
     resolved_issues_resolved_issues_testFunArityNeverResultBug();
     return 0;
 }
