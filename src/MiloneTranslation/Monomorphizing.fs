@@ -172,7 +172,7 @@ let private collectOnStmt (rx: CollectRx) (wx: CollectWx) stmt : CollectWx =
 
     wx |> onExpr body
 
-  | HNativeDeclStmt _ -> wx
+  | HNativeDeclStmt (_, args, _) -> args |> List.fold (collectOnExpr rx) wx
 
 // -----------------------------------------------
 // Rewrite
