@@ -2459,14 +2459,10 @@ let private synonymCycleCheck (tyCtx: TyCtx) =
   { tyCtx with Tys = tys; Logs = logs }
 
 // -----------------------------------------------
-// Interface
+// Modules
 // -----------------------------------------------
 
-let infer (modules: TProgram, nameRes: NameResResult) : TProgram * TirCtx =
-  let ctx = newTyCtx nameRes
-
-  let ctx = synonymCycleCheck ctx
-
+let private inferModule (ctx: TyCtx) (m: TModule) : TModule * TyCtx =
   let substOrDegenerate ctx ty =
     ty
     |> substOrDegenerateTy ctx
@@ -2482,125 +2478,134 @@ let infer (modules: TProgram, nameRes: NameResResult) : TProgram * TirCtx =
     stmts
     |> List.map (fun stmt -> stmtMap (substOrDegenerate ctx) stmt)
 
-  let modules, ctx =
-    let oldStaticVars = ctx.Vars
+  let parentCtx = ctx
 
-    let isStaticVar varSerial =
-      oldStaticVars |> TMap.containsKey varSerial
+  let isStaticVar varSerial =
+    parentCtx.Vars |> TMap.containsKey varSerial
 
-    modules
-    |> List.mapFold
-         (fun (ctx: TyCtx) (m: TModule) ->
-           // #map_merge
-           let vars, ctx =
-             m.Vars
-             |> TMap.fold
-                  (fun (vars, ctx: TyCtx) varSerial (varDef: VarDef) ->
-                    let vars = TMap.add varSerial varDef vars
-                    vars, ctx)
-                  (ctx.Vars, ctx)
+  // #map_merge
+  let vars, ctx =
+    m.Vars
+    |> TMap.fold
+        (fun (vars, ctx: TyCtx) varSerial (varDef: VarDef) ->
+          let vars = TMap.add varSerial varDef vars
+          vars, ctx)
+        (ctx.Vars, ctx)
 
-           let ctx = { ctx with Vars = vars }
+  let ctx = { ctx with Vars = vars }
 
-           let stmts, ctx =
-             let ctx = { ctx with IsFunLocal = false }
+  let stmts, ctx =
+    let ctx = { ctx with IsFunLocal = false }
 
-             let stmts =
-              m.Stmts
-              |> RecursiveDeclDecomposition.decompose ctx
+    let stmts =
+      m.Stmts
+      |> RecursiveDeclDecomposition.decompose ctx
 
-             let ctx = collectVarsAndFuns ctx stmts
+    let ctx = collectVarsAndFuns ctx stmts
 
-             stmts
-             |> List.mapFold (fun ctx stmt -> inferStmt ctx NotRec stmt) ctx
+    stmts
+    |> List.mapFold (fun ctx stmt -> inferStmt ctx NotRec stmt) ctx
 
-           let ctx = ctx |> resolveTraitBoundsAll
+  let ctx = ctx |> resolveTraitBoundsAll
 
-           let staticVars, localVars =
-             ctx.Vars
-             |> TMap.fold
-                  (fun (staticVars, localVars) varSerial varDef ->
-                    if isStaticVar varSerial then
-                      let staticVars = staticVars |> TMap.add varSerial varDef
+  let staticVars, localVars =
+    ctx.Vars
+    |> TMap.fold
+        (fun (staticVars, localVars) varSerial varDef ->
+          if isStaticVar varSerial then
+            let staticVars = staticVars |> TMap.add varSerial varDef
 
-                      staticVars, localVars
-                    else
-                      let localVars = localVars |> TMap.add varSerial varDef
+            staticVars, localVars
+          else
+            let localVars = localVars |> TMap.add varSerial varDef
 
-                      staticVars, localVars)
-                  (emptyVars, emptyVars)
+            staticVars, localVars)
+        (emptyVars, emptyVars)
 
-           // Resolve meta types.
-           let stmts, staticVars, localVars, ctx =
-             let stmts = substOrDegenerateStmts ctx stmts
-             let staticVars = substOrDegenerateVars ctx staticVars
-             let localVars = substOrDegenerateVars ctx localVars
+  // Resolve meta types.
+  let stmts, staticVars, localVars, ctx =
+    let stmts = substOrDegenerateStmts ctx stmts
+    let staticVars = substOrDegenerateVars ctx staticVars
+    let localVars = substOrDegenerateVars ctx localVars
 
-             let funs =
-               ctx.NewFuns
-               |> List.fold
-                    (fun funs funSerial ->
-                      let funDef: FunDef = funs |> mapFind funSerial
+    let funs =
+      ctx.NewFuns
+      |> List.fold
+          (fun funs funSerial ->
+            let funDef: FunDef = funs |> mapFind funSerial
 
-                      let (TyScheme (tyVars, ty)) = funDef.Ty
-                      let ty = substOrDegenerate ctx ty
+            let (TyScheme (tyVars, ty)) = funDef.Ty
+            let ty = substOrDegenerate ctx ty
 
-                      let funDef =
-                        { funDef with Ty = TyScheme(tyVars, ty) }
+            let funDef =
+              { funDef with Ty = TyScheme(tyVars, ty) }
 
-                      funs |> TMap.add funSerial funDef)
-                    ctx.Funs
+            funs |> TMap.add funSerial funDef)
+          ctx.Funs
 
-             let ctx =
-               { ctx with
-                   Funs = funs
-                   NewFuns = []
-                   MetaTys = TMap.empty compare
-                   NoGeneralizeMetaTys = TSet.empty compare
-                   QuantifiedTys = TMap.empty compare }
+    let ctx =
+      { ctx with
+          Funs = funs
+          NewFuns = []
+          MetaTys = TMap.empty compare
+          NoGeneralizeMetaTys = TSet.empty compare
+          QuantifiedTys = TMap.empty compare }
 
-             stmts, staticVars, localVars, ctx
+    stmts, staticVars, localVars, ctx
 
-           let m =
-             { m with
-                 Vars = localVars
-                 Stmts = stmts }
+  let m =
+    { m with
+        Vars = localVars
+        Stmts = stmts }
 
-           let ctx = { ctx with Vars = staticVars }
-           m, ctx)
-         ctx
+  let ctx = { ctx with Vars = staticVars }
+  m, ctx
 
-  // Expand synonyms.
-  let ctx =
-    let variants =
-      ctx.Variants
-      |> TMap.map (fun _ (variantDef: VariantDef) ->
-        { variantDef with PayloadTy = expandSynonyms ctx variantDef.PayloadTy })
+// -----------------------------------------------
+// Expand Synonyms
+// -----------------------------------------------
 
-    let tys =
-      ctx.Tys
-      |> TMap.fold
-           (fun acc tySerial tyDef ->
-             match tyDef with
-             | UnivTyDef _
-             | SynonymTyDef _ -> acc
+let private expandAllSynonyms (ctx: TyCtx) : TyCtx =
+  let variants =
+    ctx.Variants
+    |> TMap.map (fun _ (variantDef: VariantDef) ->
+      { variantDef with PayloadTy = expandSynonyms ctx variantDef.PayloadTy })
 
-             | RecordTyDef (recordName, tyArgs, fields, repr, loc) ->
-               let fields =
-                 fields
-                 |> List.map (fun (name, ty, loc) ->
-                   let ty = expandSynonyms ctx ty
-                   name, ty, loc)
+  let tys =
+    ctx.Tys
+    |> TMap.fold
+          (fun acc tySerial tyDef ->
+            match tyDef with
+            | UnivTyDef _
+            | SynonymTyDef _ -> acc
 
-               acc
-               |> TMap.add tySerial (RecordTyDef(recordName, tyArgs, fields, repr, loc))
+            | RecordTyDef (recordName, tyArgs, fields, repr, loc) ->
+              let fields =
+                fields
+                |> List.map (fun (name, ty, loc) ->
+                  let ty = expandSynonyms ctx ty
+                  name, ty, loc)
 
-             | _ -> acc |> TMap.add tySerial tyDef)
-           (TMap.empty compare)
+              acc
+              |> TMap.add tySerial (RecordTyDef(recordName, tyArgs, fields, repr, loc))
 
-    { ctx with
-        Variants = variants
-        Tys = tys }
+            | _ -> acc |> TMap.add tySerial tyDef)
+          (TMap.empty compare)
+
+  { ctx with
+      Variants = variants
+      Tys = tys }
+
+// -----------------------------------------------
+// Interface
+// -----------------------------------------------
+
+let infer (modules: TProgram, nameRes: NameResResult) : TProgram * TirCtx =
+  let ctx = newTyCtx nameRes
+
+  let ctx = synonymCycleCheck ctx
+  let modules, ctx = modules |> List.mapFold inferModule ctx
+  let ctx = expandAllSynonyms ctx
 
   let tirCtx = toTirCtx ctx
 
