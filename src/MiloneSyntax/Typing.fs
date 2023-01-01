@@ -783,7 +783,7 @@ let private isNoTy ty =
   | Ty (ErrorTk _, _) -> true
   | _ -> false
 
-let private addVarLevels ctx pat =
+let private initializeVarTy ctx pat =
   let onVar (ctx: TyCtx) varSerial loc =
     let varDef = ctx.Vars |> mapFind varSerial
 
@@ -800,15 +800,15 @@ let private addVarLevels ctx pat =
   | TVariantPat _ -> ctx
 
   | TVarPat (_, varSerial, _, loc) -> onVar ctx varSerial loc
-  | TNodePat (_, argPats, _, _) -> argPats |> List.fold addVarLevels ctx
+  | TNodePat (_, argPats, _, _) -> argPats |> List.fold initializeVarTy ctx
 
   | TAsPat (bodyPat, varSerial, loc) ->
-    let ctx = addVarLevels ctx bodyPat
+    let ctx = initializeVarTy ctx bodyPat
     onVar ctx varSerial loc
 
   | TOrPat (l, r, _) ->
-    let ctx = addVarLevels ctx l
-    addVarLevels ctx r
+    let ctx = initializeVarTy ctx l
+    initializeVarTy ctx r
 
 let private initializeFunTy (ctx: TyCtx) funSerial =
   let funDef = ctx.Funs |> mapFind funSerial
@@ -830,12 +830,12 @@ let private collectVarsAndFuns ctx stmts =
   |> List.fold
        (fun ctx stmt ->
          match stmt with
-         | TLetValStmt (pat, _, _) -> addVarLevels ctx pat
+         | TLetValStmt (pat, _, _) -> initializeVarTy ctx pat
          | TLetFunStmt (funSerial, _, _, _, _, _) -> initializeFunTy ctx funSerial
          | _ -> ctx)
        ctx
 
-let private collectVarsInPats ctx pats = pats |> List.fold addVarLevels ctx
+let private collectVarsInPats ctx pats = pats |> List.fold initializeVarTy ctx
 
 // payloadTy, unionTy, variantTy
 let private instantiateVariant variantSerial loc (ctx: TyCtx) : Ty * Ty * Ty * TyCtx =
@@ -1500,7 +1500,7 @@ let private inferMatchExpr ctx expectOpt itself cond arms loc =
 
   let ctx =
     arms
-    |> List.fold (fun ctx (pat, _, _) -> addVarLevels ctx pat) ctx
+    |> List.fold (fun ctx (pat, _, _) -> initializeVarTy ctx pat) ctx
 
   let arms, ctx =
     arms
