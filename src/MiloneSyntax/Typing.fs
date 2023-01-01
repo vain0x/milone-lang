@@ -2360,10 +2360,7 @@ module private RecursiveDeclDecomposition =
       groupLoop [] leveledStmts
 
     blocks
-    |> List.map (fun stmts ->
-      match stmts with
-      | [ stmt ] -> stmt
-      | _ -> TBlockStmt(IsRec, stmts))
+    |> List.map (fun stmts -> TBlockStmt(IsRec, stmts))
 
 // -----------------------------------------------
 // Reject cyclic synonyms
