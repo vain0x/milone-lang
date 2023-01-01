@@ -355,10 +355,10 @@ let private instantiateBoundedTyScheme (ctx: TyCtx) (tyScheme: BoundedTyScheme) 
 let private generalizeFun (ctx: TyCtx) funSerial =
   let funDef = ctx.Funs |> mapFind funSerial
 
-  match funDef.Ty with
-  | TyScheme ([], funTy) ->
-    assert (isNoTy funTy |> not)
+  let (TyScheme(_, funTy)) = funDef.Ty
+  assert (isNoTy funTy |> not)
 
+  let ctx =
     let funTy = substTy ctx funTy
     let funTyScheme = tyGeneralize (canGeneralize ctx) funTy
 
@@ -379,18 +379,15 @@ let private generalizeFun (ctx: TyCtx) funSerial =
 
     ctx
 
-  | _ -> unreachable () // Can't generalize already-generalized functions.
+  ctx
 
 let private finishLocalFun (ctx: TyCtx) funSerial =
   let funDef = ctx.Funs |> mapFind funSerial
 
   let funTy =
-    match funDef.Ty with
-    | TyScheme ([], funTy) ->
-      assert (isNoTy funTy |> not)
-      funTy
-
-    | _ -> unreachable ()
+    let (TyScheme (_, funTy)) = funDef.Ty
+    assert (isNoTy funTy |> not)
+    funTy
 
   let funTy = substTy ctx funTy
 
@@ -810,20 +807,29 @@ let private initializeVarTy ctx pat =
     let ctx = initializeVarTy ctx l
     initializeVarTy ctx r
 
-let private initializeFunTy (ctx: TyCtx) funSerial =
+/// Sets initialized type information in function definition.
+let private initializeFunTy (ctx: TyCtx) funSerial stubFunTy =
   let funDef = ctx.Funs |> mapFind funSerial
 
-  match funDef.Ty with
-  | TyScheme ([], funTy) when isNoTy funTy ->
-    let tySerial, ctx = freshTySerial ctx
-    let metaTy = tyMeta tySerial funDef.Loc
+  // Ensure pre-initialized function definition doesn't have meaningful type information.
+  let _ =
+    let (TyScheme (tyVars, uninitTy)) = funDef.Ty
+    assert (List.isEmpty tyVars)
+    assert (isNoTy uninitTy)
 
-    let funDef =
-      { funDef with Ty = TyScheme([], metaTy) }
+  // Universal types are only definite type parameters at this time.
+  let univTyVars =
+    let rec univRec acc ty =
+      match ty with
+      | Ty (UnivTk (tySerial, _, _), _) -> tySerial :: acc
+      | Ty (_, tyArgs) -> List.fold univRec acc tyArgs
 
-    { ctx with Funs = ctx.Funs |> TMap.add funSerial funDef }
+    univRec [] stubFunTy
+    |> listUnique compare
 
-  | _ -> ctx
+  let funDef = { funDef with Ty = TyScheme(univTyVars, stubFunTy) }
+
+  { ctx with Funs = ctx.Funs |> TMap.add funSerial funDef }
 
 let private collectVarsAndFuns ctx stmts =
   stmts
@@ -831,7 +837,27 @@ let private collectVarsAndFuns ctx stmts =
        (fun ctx stmt ->
          match stmt with
          | TLetValStmt (pat, _, _) -> initializeVarTy ctx pat
-         | TLetFunStmt (funSerial, _, _, _, _, _) -> initializeFunTy ctx funSerial
+
+         | TLetFunStmt (funSerial, _, _, args, body, _) ->
+          let argTys, ctx =
+            args
+            |> List.mapFold (fun ctx pat ->
+              match patToAscriptionTy pat with
+              | Some ty -> resolveAscriptionTy ctx ty
+              | None -> freshMetaTyForPat pat ctx
+            ) ctx
+
+          let resultTy, ctx =
+            match exprToAscriptionTy body with
+            | Some ty -> resolveAscriptionTy ctx ty
+            | None -> freshMetaTyForExpr body ctx
+
+          let funTy =
+            argTys
+            |> List.rev
+            |> List.fold (fun funTy argTy -> tyFun argTy funTy) resultTy
+
+          initializeFunTy ctx funSerial funTy
          | _ -> ctx)
        ctx
 
@@ -918,7 +944,7 @@ let private castFunAsNativeFun funSerial loc (ctx: TyCtx) : Ty * TyCtx =
 /// Resolves ascription type.
 ///
 /// Current level is assigned to `'T`s and `_`s.
-let private resolveAscriptionTy ctx ascriptionTy =
+let private resolveAscriptionTy ctx ascriptionTy : Ty * TyCtx =
   let rec go (ctx: TyCtx) ty =
     match ty with
     | Ty (ErrorTk _, _) -> ty, ctx
@@ -1125,6 +1151,27 @@ let private inferIrrefutablePat ctx pat =
 // -----------------------------------------------
 // Expression
 // -----------------------------------------------
+
+/// Tries to extract ascription type from an expression.
+let private exprToAscriptionTy (expr: TExpr) : Ty option =
+  match expr with
+  | TLitExpr(lit, _) -> Some(litToTy lit)
+  | TNodeExpr(TAscribeEN, _, ty, _) -> Some ty
+
+  | TVarExpr _
+  | TFunExpr _
+  | TVariantExpr _
+  | TPrimExpr _
+  | TRecordExpr _
+  | TNavExpr(_, _, _, _)
+  | TNodeExpr _ -> None
+
+  | TMatchExpr(_, arms, _, _) ->
+    arms
+    |> List.map (fun (_, _, arm) -> arm)
+    |> List.tryPick exprToAscriptionTy
+
+  | TBlockExpr(_, last) -> exprToAscriptionTy last
 
 let private inferLitExpr ctx expr lit =
   let ctx = validateLit ctx lit (exprToLoc expr)
@@ -2034,17 +2081,9 @@ let private inferLetFunStmt ctx mutuallyRec callee vis argPats body loc =
   let ctx, parentIsFunLocal = { ctx with IsFunLocal = true }, ctx.IsFunLocal
 
   let calleeTy, ctx =
-    let calleeTy, ctx =
-      match mainFunTyOpt with
-      | Some calleeTy -> calleeTy, ctx
-      | None -> freshMetaTy loc ctx
-
-    let ctx =
-      match (ctx.Funs |> mapFind callee).Ty with
-      | TyScheme ([], oldTy) -> unifyTy ctx loc oldTy calleeTy
-      | _ -> unreachable () // It must be a pre-generalized function.
-
-    calleeTy, ctx
+    let funDef = ctx.Funs |> mapFind callee
+    let oldTy, _, ctx = instantiateTyScheme ctx funDef.Ty loc
+    oldTy, ctx
 
   let provisionalResultTy, ctx = ctx |> freshMetaTyForExpr body
 
@@ -2058,16 +2097,17 @@ let private inferLetFunStmt ctx mutuallyRec callee vis argPats body loc =
     let body, bodyTy, ctx = inferExpr ctx None body
 
     match substTy ctx bodyTy with
-    | Ty(NeverTk, _) ->
-      let resultTy =
-        if Option.isSome mainFunTyOpt then tyInt else tyNever
-
-      TNodeExpr(TCatchNeverEN, [ body ], resultTy, loc), resultTy, ctx
-
+    | Ty(NeverTk, _) -> TNodeExpr(TCatchNeverEN, [ body ], tyNever, loc), tyNever, ctx
     | bodyTy -> body, bodyTy, ctx
 
   let ctx =
     unifyTy ctx loc bodyTy provisionalResultTy
+
+  let ctx =
+    match mainFunTyOpt, bodyTy with
+    | Some _, Ty(NeverTk, _) -> unifyTy ctx loc (tyFun tyUnit tyNever) calleeTy
+    | Some mainFunTy, _ -> unifyTy ctx loc mainFunTy calleeTy
+    | _ -> ctx
 
   let ctx =
     if not parentIsFunLocal then
@@ -2681,6 +2721,7 @@ module private SoundnessCheck =
     | TLetFunStmt(_, _, _, _, body, _) -> onExpr state body
     | TBlockStmt(_, stmts) -> List.fold onStmt state stmts
 
+  [<RequireQualifiedAccess; NoEquality; NoComparison>]
   type private ScCtx =
     { Funs: TreeMap<FunSerial, FunDef>
 
