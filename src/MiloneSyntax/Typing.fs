@@ -362,6 +362,14 @@ let private generalizeFun (ctx: TyCtx) funSerial =
     let funTy = substTy ctx funTy
     let funTyScheme = tyGeneralize (canGeneralize ctx) funTy
 
+    // (let (TyScheme (tyVars, funTy)) = funTyScheme
+    //  let getTyName tySerial =
+    //     ctx.Tys
+    //     |> TMap.tryFind tySerial
+    //     |> Option.map tyDefToName
+
+    //  __trace ("gen1 fun " + funDef.Name + "<" + (tyVars |> List.map (fun tySerial -> getTyName tySerial |> Option.defaultValue (string tySerial)) |> S.concat ", ") + "> : " + tyDisplay getTyName funTy))
+
     let ctx =
       { ctx with
           Funs =
@@ -2191,6 +2199,14 @@ let private inferBlockStmt (ctx: TyCtx) mutuallyRec stmts : TStmt * TyCtx =
                      Funs = funs
                      QuantifiedTys = quantifiedTys
                      GrayInstantiations = grayInstantiations }
+
+              //  let _ =
+              //   let getTyName tySerial =
+              //       ctx.Tys
+              //       |> TMap.tryFind tySerial
+              //       |> Option.map tyDefToName
+
+              //   __trace ("gen2 fun " + funDef.Name + "<" + (tyVars |> List.map (fun tySerial -> getTyName tySerial |> Option.defaultValue (string tySerial)) |> S.concat ", ") + "> : " + tyDisplay getTyName funTy)
 
                let ctx =
                  instantiations
