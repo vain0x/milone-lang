@@ -2173,15 +2173,7 @@ let private inferBlockStmt (ctx: TyCtx) mutuallyRec stmts : TStmt * TyCtx =
              | _ ->
                // #generalizeFun
                let funTy = substTy ctx funTy
-
-               let funTyScheme =
-                let generalizable (tySerial: int) =
-                  let alreadyQuantified () =
-                    tyVars |> List.exists (fun t -> t = tySerial)
-
-                  canGeneralize ctx tySerial || alreadyQuantified ()
-
-                tyGeneralize generalizable funTy
+               let funTyScheme = tyGeneralize (canGeneralize ctx) funTy
 
                let funs =
                  ctx.Funs
