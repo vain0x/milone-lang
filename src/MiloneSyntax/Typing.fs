@@ -2506,7 +2506,7 @@ let private substOrDegenerateTy (ctx: TyCtx) ty =
       if ctx.QuantifiedTys |> TSet.contains tySerial then
         None
       else
-        __trace ("degenerate: '" + string tySerial)
+        // __trace ("degenerate: '" + string tySerial)
         Some tyUnit
 
   tySubst substMeta ty
@@ -2573,6 +2573,8 @@ let private inferModule (ctx: TyCtx) (m: TModule) : TModule * TyCtx =
 
   // Resolve meta types.
   let stmts, staticVars, localVars, ctx =
+    // (For debug): Check type scoping.
+    // assert (soundnessCheck ctx [ { m with Stmts = stmts } ])
     let stmts = substOrDegenerateStmts ctx stmts
     let staticVars = substOrDegenerateVars ctx staticVars
     let localVars = substOrDegenerateVars ctx localVars
@@ -2733,6 +2735,7 @@ module private SoundnessCheck =
   [<RequireQualifiedAccess; NoEquality; NoComparison>]
   type private ScCtx =
     { Funs: TreeMap<FunSerial, FunDef>
+      MetaTys: TreeMap<TySerial, Ty>
 
       /// Meta types and universal types that are defined in the current scope.
       DefinedTys: TreeSet<TySerial> }
@@ -2755,7 +2758,9 @@ module private SoundnessCheck =
         ctx
 
   let private scTy (ctx: ScCtx) ty =
-    let (Ty(tk, tyArgs)) = ty
+    let (Ty(tk, tyArgs)) =
+      let expandMeta tySerial = ctx.MetaTys |> TMap.tryFind tySerial
+      tySubst expandMeta ty
 
     let check tySerial nameOpt loc =
       if ctx.DefinedTys |> TSet.contains tySerial |> not then
@@ -2774,18 +2779,19 @@ module private SoundnessCheck =
     | _ -> List.fold scTy ctx tyArgs
 
   let private scStmts (ctx: ScCtx) stmts : ScCtx =
-    let ctx = List.fold extendScope ctx stmts
-
     stmts |> List.fold
       (fun ctx stmt ->
         match stmt with
         | TBlockStmt (_, stmts) -> scStmts ctx stmts
-        | _ -> stmtFold1 scTy ctx stmt)
+        | _ ->
+          let ctx = extendScope ctx stmt
+          stmtFold1 scTy ctx stmt)
       ctx
 
   let check (ctx: TyCtx) (modules: TProgram) : bool =
     let emptyCtx () : ScCtx =
       { Funs = ctx.Funs
+        MetaTys = ctx.MetaTys
         DefinedTys = TMap.empty compare }
 
     modules |> List.fold
@@ -2796,6 +2802,8 @@ module private SoundnessCheck =
     |> ignore
 
     true
+
+let private soundnessCheck ctx modules = SoundnessCheck.check ctx modules
 
 // -----------------------------------------------
 // Interface
