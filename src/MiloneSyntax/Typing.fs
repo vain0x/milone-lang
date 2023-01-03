@@ -2506,6 +2506,7 @@ let private substOrDegenerateTy (ctx: TyCtx) ty =
       if ctx.QuantifiedTys |> TSet.contains tySerial then
         None
       else
+        __trace ("degenerate: '" + string tySerial)
         Some tyUnit
 
   tySubst substMeta ty
@@ -2748,6 +2749,7 @@ module private SoundnessCheck =
 
       if List.isEmpty tyVars |> not then
         // #map_merge
+        __trace ("params " + (List.map string tyVars |> S.concat ", "))
         { ctx with DefinedTys = tyVars |> List.fold (fun set tyVar -> TSet.add tyVar set) ctx.DefinedTys }
       else
         ctx
@@ -2774,7 +2776,12 @@ module private SoundnessCheck =
   let private scStmts (ctx: ScCtx) stmts : ScCtx =
     let ctx = List.fold extendScope ctx stmts
 
-    stmts |> List.fold (stmtFold1 scTy) ctx
+    stmts |> List.fold
+      (fun ctx stmt ->
+        match stmt with
+        | TBlockStmt (_, stmts) -> scStmts ctx stmts
+        | _ -> stmtFold1 scTy ctx stmt)
+      ctx
 
   let check (ctx: TyCtx) (modules: TProgram) : bool =
     let emptyCtx () : ScCtx =
@@ -2782,7 +2789,9 @@ module private SoundnessCheck =
         DefinedTys = TMap.empty compare }
 
     modules |> List.fold
-      (fun ctx (m: TModule) -> scStmts ctx m.Stmts)
+      (fun ctx (m: TModule) ->
+        __trace ("module " + Loc.toString (Loc.ofDocPos m.DocId (0, 0)))
+        scStmts ctx m.Stmts)
       (emptyCtx ())
     |> ignore
 
