@@ -1,6 +1,7 @@
 .fake
 .ionide
 .vscode/ipch
+.vscode/settings.json
 
 
 
