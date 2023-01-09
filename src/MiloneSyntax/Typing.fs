@@ -49,7 +49,10 @@ type private TyCtx =
     /// Whether it's in a function.
     IsFunLocal: bool
 
-    NewFuns: FunSerial list
+    /// List of non-local functions in the module or local functions defined in the current function.
+    SiblingFuns: FunSerial list
+    /// Represents syntactic tree structure of functions defined in the module.
+    FunChildrenMap: TreeMap<FunSerial, FunSerial list list>
 
     /// Funs that are mutually recursive and defined in the current block.
     ///
@@ -87,7 +90,8 @@ let private newTyCtx (nr: NameResResult) : TyCtx =
     NoGeneralizeMetaTys = TSet.empty compare
     QuantifiedTys = TSet.empty compare
     IsFunLocal = false
-    NewFuns = []
+    SiblingFuns = []
+    FunChildrenMap = TMap.empty funSerialCompare
     GrayFuns = TSet.empty funSerialCompare
     GrayInstantiations = TMap.empty funSerialCompare
     TraitBounds = []
@@ -2086,7 +2090,7 @@ let private inferLetFunStmt ctx mutuallyRec callee vis argPats body loc =
       let argPats, funTy, ctx = inferArgs ctx funTy argPats
       argPat :: argPats, tyFun argTy funTy, ctx
 
-  let ctx, parentIsFunLocal = { ctx with IsFunLocal = true }, ctx.IsFunLocal
+  let ctx, parentIsFunLocal, parentSiblingFuns = { ctx with IsFunLocal = true; SiblingFuns = [] }, ctx.IsFunLocal, ctx.SiblingFuns
 
   let calleeTy, ctx =
     let funDef = ctx.Funs |> mapFind callee
@@ -2130,7 +2134,12 @@ let private inferLetFunStmt ctx mutuallyRec callee vis argPats body loc =
     | _ -> ctx
 
   let ctx =
-    { ctx with NewFuns = callee :: ctx.NewFuns; IsFunLocal = parentIsFunLocal }
+    let childFuns = ctx.SiblingFuns
+
+    { ctx with
+        SiblingFuns = callee :: parentSiblingFuns
+        FunChildrenMap = ctx.FunChildrenMap |> Multimap.add callee childFuns
+        IsFunLocal = parentIsFunLocal }
 
   TLetFunStmt(callee, NotRec, vis, argPats, body, loc), ctx
 
@@ -2494,38 +2503,105 @@ let private synonymCycleCheck (tyCtx: TyCtx) =
 // Modules
 // -----------------------------------------------
 
+// sdx = substitute + degenerate + expand
+//
+// substitute: replace resolved meta types with actual types
+// degenerate: replace undefined meta types with unit.
+// expand: replace type synonyms with actual types
+
 /// Substitutes bound meta tys in a ty.
 /// Unbound meta tys are degenerated, i.e. replaced with unit.
-let private substOrDegenerateTy (ctx: TyCtx) ty =
+let private sdxTy (ctx: SdxCtx) (ty: Ty) : Ty =
   let substMeta tySerial =
     match ctx.MetaTys |> TMap.tryFind tySerial with
     | Some ty -> Some ty
 
-    | _ ->
-      // Degenerate unless quantified.
-      if ctx.QuantifiedTys |> TSet.contains tySerial then
-        None
-      else
-        // __trace ("degenerate: '" + string tySerial)
-        Some tyUnit
+    | _ when ctx.DefinedTys |> TSet.contains tySerial |> not ->
+      // Degenerate unbounded meta type.
+      __trace ("degenerate: " + string tySerial + " in " + __dump ty)
+      Some tyUnit
 
-  tySubst substMeta ty
+    | _ -> None
+
+  let ty = tySubst substMeta ty
+
+  tyExpandSynonyms (fun tySerial -> ctx.Tys |> TMap.tryFind tySerial) ty
+
+[<RequireQualifiedAccess; NoEquality; NoComparison>]
+type private SdxCtx =
+  { Tys: TreeMap<TySerial, TyDef>
+    MetaTys: TreeMap<TySerial, Ty>
+    DefinedTys: TreeSet<TySerial> }
+
+let private sdxPat (ctx: SdxCtx) (pat: TPat) : TPat = patMap (sdxTy ctx) pat
+let private sdxExpr (ctx: SdxCtx) (expr: TExpr) : TExpr = exprMap (sdxTy ctx) expr
+
+let private sdxStmt funs (ctx: SdxCtx) (stmt: TStmt) : TStmt =
+  match stmt with
+  | TLetFunStmt (funSerial, isRec, vis, argPats, body, loc) ->
+    let funDef: FunDef = funs |> mapFind funSerial
+    let (TyScheme(tyVars, _)) = funDef.Ty
+    let definedTys = TSet.ofList compare tyVars
+
+    __trace ("enter fun " + funDef.Name + " with types [" + (tyVars |> List.map string |> S.concat "; ") + "]")
+
+    let ctx: SdxCtx = { ctx with DefinedTys = definedTys }
+
+    let argPats = argPats |> List.map (sdxPat ctx)
+    let body = sdxExpr ctx body
+    TLetFunStmt (funSerial, isRec, vis, argPats, body, loc)
+
+  | TBlockStmt (isRec, stmts) ->
+    TBlockStmt (isRec, List.map (sdxStmt funs ctx) stmts)
+
+  | _ -> stmtMap (sdxTy ctx) stmt
 
 let private inferModule (ctx: TyCtx) (m: TModule) : TModule * TyCtx =
-  let substOrDegenerate ctx ty =
-    ty
-    |> substOrDegenerateTy ctx
-    |> expandSynonyms ctx
+  let newSdxCtx (ctx: TyCtx): SdxCtx =
+    { Tys = ctx.Tys
+      MetaTys = ctx.MetaTys
+      DefinedTys = TSet.empty compare }
 
-  let substOrDegenerateVars ctx vars =
+  let sdxVars ctx vars =
+    let sdxCtx = newSdxCtx ctx
+
+    // FIXME: definedTys should be computed by the ancestor of function
+    let sdxCtx = { sdxCtx with DefinedTys = ctx.QuantifiedTys }
+
     vars
     |> TMap.map (fun _ (varDef: VarDef) ->
-      let ty = substOrDegenerate ctx varDef.Ty
+      let ty = sdxTy sdxCtx varDef.Ty
       { varDef with Ty = ty })
 
-  let substOrDegenerateStmts ctx stmts =
-    stmts
-    |> List.map (fun stmt -> stmtMap (substOrDegenerate ctx) stmt)
+  let sdxFuns (ctx: TyCtx) siblingFuns funChildrenMap =
+    let sdxCtx = newSdxCtx ctx
+
+    let rec funRec definedTys funs funSerial =
+      let funDef: FunDef = funs |> mapFind funSerial
+      let (TyScheme (tyVars, ty)) = funDef.Ty
+
+      // #set_merge
+      let definedTys = List.fold (fun set tySerial -> TSet.add tySerial set) definedTys tyVars
+
+      let ty =
+        let sdxCtx = { sdxCtx with DefinedTys = TSet.ofList compare tyVars }
+        sdxTy sdxCtx ty
+
+      let funDef =
+        { funDef with Ty = TyScheme(tyVars, ty) }
+
+      let funs = funs |> TMap.add funSerial funDef
+
+      Multimap.find funSerial funChildrenMap
+      |> List.collect id
+      |> List.fold (funRec definedTys) funs
+
+    siblingFuns
+    |> List.fold (funRec sdxCtx.DefinedTys) ctx.Funs
+
+  let sdxStmts (ctx: TyCtx) stmts =
+    let sdxCtx = newSdxCtx ctx
+    stmts |> List.map (sdxStmt ctx.Funs sdxCtx)
 
   let parentCtx = ctx
 
@@ -2571,33 +2647,20 @@ let private inferModule (ctx: TyCtx) (m: TModule) : TModule * TyCtx =
             staticVars, localVars)
         (emptyVars, emptyVars)
 
-  // Resolve meta types.
+  // Resolve meta types and synonyms.
   let stmts, staticVars, localVars, ctx =
     // (For debug): Check type scoping.
     // assert (soundnessCheck ctx [ { m with Stmts = stmts } ])
-    let stmts = substOrDegenerateStmts ctx stmts
-    let staticVars = substOrDegenerateVars ctx staticVars
-    let localVars = substOrDegenerateVars ctx localVars
-
-    let funs =
-      ctx.NewFuns
-      |> List.fold
-          (fun funs funSerial ->
-            let funDef: FunDef = funs |> mapFind funSerial
-
-            let (TyScheme (tyVars, ty)) = funDef.Ty
-            let ty = substOrDegenerate ctx ty
-
-            let funDef =
-              { funDef with Ty = TyScheme(tyVars, ty) }
-
-            funs |> TMap.add funSerial funDef)
-          ctx.Funs
+    let stmts = sdxStmts ctx stmts
+    let staticVars = sdxVars ctx staticVars
+    let localVars = sdxVars ctx localVars
+    let funs = sdxFuns ctx ctx.SiblingFuns ctx.FunChildrenMap
 
     let ctx =
       { ctx with
           Funs = funs
-          NewFuns = []
+          SiblingFuns = []
+          FunChildrenMap = TMap.empty funSerialCompare
           MetaTys = TMap.empty compare
           NoGeneralizeMetaTys = TSet.empty compare
           QuantifiedTys = TMap.empty compare }
