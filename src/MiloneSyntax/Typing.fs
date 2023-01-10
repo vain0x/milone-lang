@@ -811,17 +811,20 @@ let private initializeFunTy (ctx: TyCtx) funSerial stubFunTy =
     assert (List.isEmpty tyVars)
     assert (isNoTy uninitTy)
 
-  // Universal types are only definite type parameters at this time.
-  let univTyVars =
-    let rec univRec acc ty =
-      match ty with
-      | Ty (UnivTk (tySerial, _, _), _) -> tySerial :: acc
-      | Ty (_, tyArgs) -> List.fold univRec acc tyArgs
+  let tyVars =
+    if not ctx.IsFunLocal then
+      // Universal types are only definite type parameters at this time.
+      let rec univRec acc ty =
+        match ty with
+        | Ty (UnivTk (tySerial, _, _), _) -> tySerial :: acc
+        | Ty (_, tyArgs) -> List.fold univRec acc tyArgs
 
-    univRec [] stubFunTy
-    |> listUnique compare
+      univRec [] stubFunTy
+      |> listUnique compare
+    else
+      []
 
-  let funDef = { funDef with Ty = TyScheme(univTyVars, stubFunTy) }
+  let funDef = { funDef with Ty = TyScheme(tyVars, stubFunTy) }
 
   { ctx with Funs = ctx.Funs |> TMap.add funSerial funDef }
 
