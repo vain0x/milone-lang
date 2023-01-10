@@ -206,7 +206,7 @@ switch_next_1:;
 
 _Noreturn void never_ty_never_ty_testInfiniteLoop_diverge(void) {
     never_ty_never_ty_testInfiniteLoop_diverge();
-    milone_never_error("never_ty/never_ty.milone", 57, 2);
+    milone_never_error("never_ty/never_ty.milone", 57, 38);
 }
 
 void never_ty_never_ty_testInfiniteLoop(void) {

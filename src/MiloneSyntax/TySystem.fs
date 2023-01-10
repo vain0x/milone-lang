@@ -245,11 +245,7 @@ let tyExpandSynonyms (expand: TySerial -> TyDef option) ty : Ty =
   go ty
 
 /// Assume all bound type variables are resolved by `substTy`.
-///
-/// `isOwned` checks if the type variable is introduced by the most recent `let`.
-/// For example, `let f x = (let g = f in g x)` will have too generic type
-/// without this checking (according to TaPL).
-let tyGeneralize (isOwned: TySerial -> bool) (ty: Ty) : TyScheme =
+let tyGeneralize (canGeneralize: TySerial -> bool) (ty: Ty) : TyScheme =
   let collectMetaAndUniv ty =
     let rec go acc ty =
       match ty with
@@ -260,7 +256,7 @@ let tyGeneralize (isOwned: TySerial -> bool) (ty: Ty) : TyScheme =
     go [] ty |> listUnique compare
 
   let tyVars =
-    collectMetaAndUniv ty |> List.filter isOwned
+    collectMetaAndUniv ty |> List.filter canGeneralize
 
   TyScheme(tyVars, ty)
 
@@ -325,27 +321,24 @@ let tyDisplay getTyName ty =
 
 let doInstantiateTyScheme
   (serial: int)
-  (level: Level)
-  (tyLevels: TreeMap<TySerial, Level>)
   (tySerials: TySerial list)
   (ty: Ty)
   (loc: Loc)
   =
-  let serial, tyLevels, assignment =
+  let serial, assignment =
     tySerials
     |> List.fold
-         (fun (serial, tyLevels, assignment) tySerial ->
+         (fun (serial, assignment) tySerial ->
            let serial = serial + 1
-           let tyLevels = tyLevels |> TMap.add serial level
 
            let assignment =
              (tySerial, tyMeta serial loc) :: assignment
 
-           serial, tyLevels, assignment)
-         (serial, tyLevels, [])
+           serial, assignment)
+         (serial, [])
 
   let ty = tyAssign assignment ty
-  serial, tyLevels, ty, assignment
+  serial, ty, assignment
 
 // -----------------------------------------------
 // Unification

@@ -1,9 +1,18 @@
-module rec monomorphize_bug.Program
+// Fixed.
 
-let main _ =
+// Invalid C code was generated.
+
+// The reason was:
+// Meta types bounded by traits (constraints) can be generalized.
+// Functions that generalized these meta types have too generic type schemes.
+// Use of functions with incorrect type arguments becomes incorrect code.
+
+let private test () =
   // This emits invalid C code. Bug.
-  // assert (List.fold (fun x y -> x + y) "" [ "x"; "y"; "z" ] = "xyz")
-  0
+  assert (List.fold (fun x y -> x + y) "" [ "x"; "y"; "z" ] = "xyz")
+  ()
+
+test ()
 
 // In (fun x y -> x + y), (+) is codegen'd as int -> int -> int.
 // int fun_(int x_22, int y_3) {

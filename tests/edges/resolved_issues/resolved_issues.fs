@@ -1,5 +1,10 @@
 module rec resolved_issues.Program
 
+open resolved_issues.generalization_issue_1
+open resolved_issues.generalization_issue_2
+open resolved_issues.generalization_issue_3
+open resolved_issues.variant_wrapper_auto_box
+
 // -----------------------------------------------
 // fun_arity_never_result_bug
 // -----------------------------------------------

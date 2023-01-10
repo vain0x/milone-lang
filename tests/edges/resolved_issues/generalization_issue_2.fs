@@ -1,22 +1,27 @@
-module rec monomorphization_bug_2.Program
+// Fixed.
 
-// Bug: invalid code is generated.
+// Invalid C code was generated.
+// The reason was unclear but seemed related to generalization of mutually recursive functions.
 
-// type Tag = | Tag
+// ====
 
-// // type Package<'T> = 'T * Tag
+type private Tag = | Tag
 
-// let tag1 item = tag2 item
+// type Package<'T> = 'T * Tag
 
-// let tag2 item = item, Tag
+let private tag1 item = tag2 item
 
-// let untag package =
-//   let item, (_: Tag) = package
-//   item
+let private tag2 item = item, Tag
 
-// let main _ =
-//   let _ = untag (tag1 "anything")
-//   0
+let private untag package =
+  let item, (_: Tag) = package
+  item
+
+let private test () =
+  let _ = untag (tag1 "anything")
+  ()
+
+test ()
 
 // ============
 
@@ -64,5 +69,3 @@ module rec monomorphization_bug_2.Program
 //     untag_(call_1);
 //     return 0;
 // }
-
-let main _ = 0

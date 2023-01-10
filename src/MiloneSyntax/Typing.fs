@@ -1,14 +1,5 @@
 /// Infers the type of expressions.
 ///
-/// The algorithm is based on Didier Rémy's rank-based Hindley-Milner type inference:
-///   - [eq-theory-on-types.pdf](http://gallium.inria.fr/~remy/ftp/eq-theory-on-types.pdf)
-///
-/// This web article (written in English) is very helpful:
-///   - [Efficient and Insightful Generalization](http://okmij.org/ftp/ML/generalization.html)
-///
-/// and this one (written in Japanese) too:
-///   - [OCaml でも採用されているレベルベースの多相型型推論とは](https://rhysd.hatenablog.com/entry/2017/12/16/002048)
-///
 /// Only top-level functions are generalized. See also:
 ///   - [Let Should Not Be Generalised](https://www.microsoft.com/en-us/research/publication/let-should-not-be-generalised/)
 
@@ -51,12 +42,11 @@ type private TyCtx =
     /// Type serial to type definition.
     Tys: TreeMap<TySerial, TyDef>
 
-    TyLevels: TreeMap<TySerial, Level>
     MetaTys: TreeMap<TySerial, Ty>
-    QuantifiedTys: TreeSet<TySerial>
-    Level: Level
-
-    NewFuns: FunSerial list
+    /// Meta types that can't be generalized.
+    NoGeneralizeMetaTys: TreeSet<TySerial>
+    /// Whether it's in a function.
+    IsFunLocal: bool
 
     /// Funs that are mutually recursive and defined in the current block.
     ///
@@ -90,11 +80,9 @@ let private newTyCtx (nr: NameResResult) : TyCtx =
     Variants = nr.Variants
     MainFunOpt = nr.MainFunOpt
     Tys = nr.Tys
-    TyLevels = TMap.empty compare
     MetaTys = TMap.empty compare
-    QuantifiedTys = TSet.empty compare
-    Level = 0
-    NewFuns = []
+    NoGeneralizeMetaTys = TSet.empty compare
+    IsFunLocal = false
     GrayFuns = TSet.empty funSerialCompare
     GrayInstantiations = TMap.empty funSerialCompare
     TraitBounds = []
@@ -116,18 +104,12 @@ let private addLog (ctx: TyCtx) log loc =
 let private addError (ctx: TyCtx) message loc =
   { ctx with Logs = (Log.Error message, loc) :: ctx.Logs }
 
-let private incLevel (ctx: TyCtx) = { ctx with Level = ctx.Level + 1 }
-
-let private decLevel (ctx: TyCtx) = { ctx with Level = ctx.Level - 1 }
-
 let private findVar (ctx: TyCtx) serial = ctx.Vars |> mapFind serial
 
 let private findTy tySerial (ctx: TyCtx) = ctx.Tys |> mapFind tySerial
 
-let private getTyLevel tySerial (ctx: TyCtx) : Level =
-  ctx.TyLevels
-  |> TMap.tryFind tySerial
-  |> Option.defaultValue 0
+let private canGeneralize (ctx: TyCtx) metaTySerial =
+  ctx.NoGeneralizeMetaTys |> TSet.contains metaTySerial |> not
 
 let private isNewtypeVariant (ctx: TyCtx) variantSerial =
   let variantDef = ctx.Variants |> mapFind variantSerial
@@ -160,20 +142,7 @@ let private freshTySerial (ctx: TyCtx) =
 
   let ctx =
     { ctx with
-        Serial = ctx.Serial + 1
-        TyLevels = ctx.TyLevels |> TMap.add serial ctx.Level }
-
-  serial, ctx
-
-let private freshTySerialWithLevel levelDelta (ctx: TyCtx) =
-  let serial = ctx.Serial + 1
-
-  let ctx =
-    { ctx with
-        Serial = ctx.Serial + 1
-        TyLevels =
-          ctx.TyLevels
-          |> TMap.add serial (ctx.Level + levelDelta) }
+        Serial = ctx.Serial + 1 }
 
   serial, ctx
 
@@ -245,49 +214,33 @@ let private expandMeta (ctx: TyCtx) tySerial : Ty option = ctx.MetaTys |> TMap.t
 
 let private substTy (ctx: TyCtx) ty : Ty = tySubst (expandMeta ctx) ty
 
-/// Substitutes bound meta tys in a ty.
-/// Unbound meta tys are degenerated, i.e. replaced with unit.
-let private substOrDegenerateTy (ctx: TyCtx) ty =
-  let substMeta tySerial =
-    match ctx.MetaTys |> TMap.tryFind tySerial with
-    | Some ty -> Some ty
-
-    | _ ->
-      // Degenerate unless quantified.
-      if ctx.QuantifiedTys |> TSet.contains tySerial then
-        None
-      else
-        Some tyUnit
-
-  tySubst substMeta ty
-
 let private expandSynonyms (ctx: TyCtx) ty : Ty =
   tyExpandSynonyms (fun tySerial -> ctx.Tys |> TMap.tryFind tySerial) ty
-
-/// Does level-up a meta type.
-let private levelUp (ctx: TyCtx) tySerial ty =
-  let level = getTyLevel tySerial ctx
-
-  ty
-  |> tyCollectFreeVars
-  |> List.fold
-       (fun tyLevels tySerial ->
-         if getTyLevel tySerial ctx <= level then
-           // Already non-deep enough.
-           tyLevels
-         else
-           // Prevent this meta ty from getting generalized until level of the bound meta ty.
-           tyLevels |> TMap.add tySerial level)
-       ctx.TyLevels
 
 /// Binds a type to a meta type.
 ///
 /// As a precondition, that meta type must be free (not bound)
 /// and must not occur in that type (no recursion).
 let private bindMetaTy (ctx: TyCtx) tySerial otherTy : TyCtx =
+  /// If no-generalize meta type is bound to a type,
+  /// propagate "no-generalize" attribute to meta types in the type.
+  let noGeneralizeMetaTys =
+    if canGeneralize ctx tySerial |> not then
+      otherTy
+      |> tyCollectFreeVars
+      |> List.fold
+          (fun acc tySerial ->
+            if canGeneralize ctx tySerial |> not then
+              acc
+            else
+              acc |> TSet.add tySerial)
+          ctx.NoGeneralizeMetaTys
+    else
+      ctx.NoGeneralizeMetaTys
+
   { ctx with
       MetaTys = ctx.MetaTys |> TMap.add tySerial otherTy
-      TyLevels = levelUp ctx tySerial otherTy }
+      NoGeneralizeMetaTys = noGeneralizeMetaTys }
 
 let private unifyTy (ctx: TyCtx) loc (lTy: Ty) (rTy: Ty) : TyCtx =
   let rec go lTy rTy loc (ctx: TyCtx) =
@@ -347,21 +300,17 @@ let private instantiateTyScheme (ctx: TyCtx) (tyScheme: TyScheme) loc : Ty * (Ty
   | TyScheme ([], ty) -> ty, [], ctx
 
   | TyScheme (fvs, ty) ->
-    let serial, tyLevels, ty, assignment =
-      doInstantiateTyScheme ctx.Serial ctx.Level ctx.TyLevels fvs ty loc
+    let serial, ty, assignment =
+      doInstantiateTyScheme ctx.Serial fvs ty loc
 
-    ty,
-    assignment,
-    { ctx with
-        Serial = serial
-        TyLevels = tyLevels }
+    ty, assignment, { ctx with Serial = serial}
 
 let private instantiateBoundedTyScheme (ctx: TyCtx) (tyScheme: BoundedTyScheme) loc : Ty * TyCtx =
   let (BoundedTyScheme (fvs, ty, traits)) = tyScheme
   assert (List.isEmpty fvs |> not)
 
-  let serial, tyLevels, ty, assignment =
-    doInstantiateTyScheme ctx.Serial ctx.Level ctx.TyLevels fvs ty loc
+  let serial, ty, assignment =
+    doInstantiateTyScheme ctx.Serial fvs ty loc
 
   let traits =
     let substMeta = tyAssign assignment
@@ -369,12 +318,11 @@ let private instantiateBoundedTyScheme (ctx: TyCtx) (tyScheme: BoundedTyScheme) 
     traits
     |> List.map (fun theTrait -> theTrait |> traitMapTys substMeta, loc)
 
-  // Reset level of meta types that move over monomorphic types due to trait bounds
-  // so that these meta types aren't get generalized.
-  let tyLevels =
+  // Meta types that appear in trait bounds can't be generalized for now.
+  let noGeneralizeMetaTys =
     traits
     |> List.fold
-         (fun tyLevels (theTrait, _) ->
+         (fun acc (theTrait, _) ->
            let asInnerTy theTrait =
              match theTrait with
              | AddTrait ty -> Some ty
@@ -387,30 +335,35 @@ let private instantiateBoundedTyScheme (ctx: TyCtx) (tyScheme: BoundedTyScheme) 
              | _ -> None
 
            match asInnerTy theTrait with
-           | Some (Ty (MetaTk (serial, _), _)) -> tyLevels |> TMap.remove serial |> snd
-           | _ -> tyLevels)
-         tyLevels
+           | Some (Ty (MetaTk (serial, _), _)) ->
+             TSet.add serial acc
+           | _ -> acc)
+         ctx.NoGeneralizeMetaTys
 
   ty,
   { ctx with
       Serial = serial
-      TyLevels = tyLevels
+      NoGeneralizeMetaTys = noGeneralizeMetaTys
       NewTraitBounds = List.append traits ctx.NewTraitBounds }
 
 // #generalizeFun
-let private generalizeFun (ctx: TyCtx) (outerLevel: Level) funSerial =
+let private generalizeFun (ctx: TyCtx) funSerial =
   let funDef = ctx.Funs |> mapFind funSerial
 
-  match funDef.Ty with
-  | TyScheme ([], funTy) ->
-    assert (isNoTy funTy |> not)
+  let (TyScheme(_, funTy)) = funDef.Ty
+  assert (isNoTy funTy |> not)
 
-    let isOwned tySerial =
-      let level = getTyLevel tySerial ctx
-      level > outerLevel
-
+  let ctx =
     let funTy = substTy ctx funTy
-    let funTyScheme = tyGeneralize isOwned funTy
+    let funTyScheme = tyGeneralize (canGeneralize ctx) funTy
+
+    // (let (TyScheme (tyVars, funTy)) = funTyScheme
+    //  let getTyName tySerial =
+    //     ctx.Tys
+    //     |> TMap.tryFind tySerial
+    //     |> Option.map tyDefToName
+
+    //  __trace ("gen1 fun " + funDef.Name + "<" + (tyVars |> List.map (fun tySerial -> getTyName tySerial |> Option.defaultValue (string tySerial)) |> S.concat ", ") + "> : " + tyDisplay getTyName funTy))
 
     let ctx =
       { ctx with
@@ -418,29 +371,17 @@ let private generalizeFun (ctx: TyCtx) (outerLevel: Level) funSerial =
             ctx.Funs
             |> TMap.add funSerial { funDef with Ty = funTyScheme } }
 
-    // Mark generalized meta tys (universally quantified vars)
-    let ctx =
-      let (TyScheme (fvs, _)) = funTyScheme
-
-      { ctx with
-          QuantifiedTys =
-            fvs
-            |> List.fold (fun quantifiedTys tyVar -> TSet.add tyVar quantifiedTys) ctx.QuantifiedTys }
-
     ctx
 
-  | _ -> unreachable () // Can't generalize already-generalized functions.
+  ctx
 
 let private finishLocalFun (ctx: TyCtx) funSerial =
   let funDef = ctx.Funs |> mapFind funSerial
 
   let funTy =
-    match funDef.Ty with
-    | TyScheme ([], funTy) ->
-      assert (isNoTy funTy |> not)
-      funTy
-
-    | _ -> unreachable ()
+    let (TyScheme (_, funTy)) = funDef.Ty
+    assert (isNoTy funTy |> not)
+    funTy
 
   let funTy = substTy ctx funTy
 
@@ -833,7 +774,7 @@ let private isNoTy ty =
   | Ty (ErrorTk _, _) -> true
   | _ -> false
 
-let private addVarLevels ctx pat =
+let private initializeVarTy ctx pat =
   let onVar (ctx: TyCtx) varSerial loc =
     let varDef = ctx.Vars |> mapFind varSerial
 
@@ -850,42 +791,74 @@ let private addVarLevels ctx pat =
   | TVariantPat _ -> ctx
 
   | TVarPat (_, varSerial, _, loc) -> onVar ctx varSerial loc
-  | TNodePat (_, argPats, _, _) -> argPats |> List.fold addVarLevels ctx
+  | TNodePat (_, argPats, _, _) -> argPats |> List.fold initializeVarTy ctx
 
   | TAsPat (bodyPat, varSerial, loc) ->
-    let ctx = addVarLevels ctx bodyPat
+    let ctx = initializeVarTy ctx bodyPat
     onVar ctx varSerial loc
 
   | TOrPat (l, r, _) ->
-    let ctx = addVarLevels ctx l
-    addVarLevels ctx r
+    let ctx = initializeVarTy ctx l
+    initializeVarTy ctx r
 
-let private initializeFunTy (ctx: TyCtx) funSerial =
+/// Sets initialized type information in function definition.
+let private initializeFunTy (ctx: TyCtx) funSerial stubFunTy =
   let funDef = ctx.Funs |> mapFind funSerial
 
-  match funDef.Ty with
-  | TyScheme ([], funTy) when isNoTy funTy ->
-    let tySerial, ctx = freshTySerialWithLevel 1 ctx
-    let metaTy = tyMeta tySerial funDef.Loc
+  // Ensure pre-initialized function definition doesn't have meaningful type information.
+  let _ =
+    let (TyScheme (tyVars, uninitTy)) = funDef.Ty
+    assert (List.isEmpty tyVars)
+    assert (isNoTy uninitTy)
 
-    let funDef =
-      { funDef with Ty = TyScheme([], metaTy) }
+  let tyVars =
+    if not ctx.IsFunLocal then
+      // Universal types are only definite type parameters at this time.
+      let rec univRec acc ty =
+        match ty with
+        | Ty (UnivTk (tySerial, _, _), _) -> tySerial :: acc
+        | Ty (_, tyArgs) -> List.fold univRec acc tyArgs
 
-    { ctx with Funs = ctx.Funs |> TMap.add funSerial funDef }
+      univRec [] stubFunTy
+      |> listUnique compare
+    else
+      []
 
-  | _ -> ctx
+  let funDef = { funDef with Ty = TyScheme(tyVars, stubFunTy) }
+
+  { ctx with Funs = ctx.Funs |> TMap.add funSerial funDef }
 
 let private collectVarsAndFuns ctx stmts =
   stmts
   |> List.fold
        (fun ctx stmt ->
          match stmt with
-         | TLetValStmt (pat, _, _) -> addVarLevels ctx pat
-         | TLetFunStmt (funSerial, _, _, _, _, _) -> initializeFunTy ctx funSerial
+         | TLetValStmt (pat, _, _) -> initializeVarTy ctx pat
+
+         | TLetFunStmt (funSerial, _, _, args, body, _) ->
+          let argTys, ctx =
+            args
+            |> List.mapFold (fun ctx pat ->
+              match patToAscriptionTy pat with
+              | Some ty -> resolveAscriptionTy ctx ty
+              | None -> freshMetaTyForPat pat ctx
+            ) ctx
+
+          let resultTy, ctx =
+            match exprToAscriptionTy body with
+            | Some ty -> resolveAscriptionTy ctx ty
+            | None -> freshMetaTyForExpr body ctx
+
+          let funTy =
+            argTys
+            |> List.rev
+            |> List.fold (fun funTy argTy -> tyFun argTy funTy) resultTy
+
+          initializeFunTy ctx funSerial funTy
          | _ -> ctx)
        ctx
 
-let private collectVarsInPats ctx pats = pats |> List.fold addVarLevels ctx
+let private collectVarsInPats ctx pats = pats |> List.fold initializeVarTy ctx
 
 // payloadTy, unionTy, variantTy
 let private instantiateVariant variantSerial loc (ctx: TyCtx) : Ty * Ty * Ty * TyCtx =
@@ -968,7 +941,7 @@ let private castFunAsNativeFun funSerial loc (ctx: TyCtx) : Ty * TyCtx =
 /// Resolves ascription type.
 ///
 /// Current level is assigned to `'T`s and `_`s.
-let private resolveAscriptionTy ctx ascriptionTy =
+let private resolveAscriptionTy ctx ascriptionTy : Ty * TyCtx =
   let rec go (ctx: TyCtx) ty =
     match ty with
     | Ty (ErrorTk _, _) -> ty, ctx
@@ -976,12 +949,6 @@ let private resolveAscriptionTy ctx ascriptionTy =
     | Ty (InferTk loc, _) ->
       let serial, ctx = freshTySerial ctx
       tyMeta serial loc, ctx
-
-    | Ty (UnivTk (serial, _, _), _) when ctx.TyLevels |> TMap.containsKey serial |> not ->
-      let ctx =
-        { ctx with TyLevels = ctx.TyLevels |> TMap.add serial ctx.Level }
-
-      ty, ctx
 
     | Ty (UnivTk _, _) -> ty, ctx
 
@@ -1181,6 +1148,27 @@ let private inferIrrefutablePat ctx pat =
 // -----------------------------------------------
 // Expression
 // -----------------------------------------------
+
+/// Tries to extract ascription type from an expression.
+let private exprToAscriptionTy (expr: TExpr) : Ty option =
+  match expr with
+  | TLitExpr(lit, _) -> Some(litToTy lit)
+  | TNodeExpr(TAscribeEN, _, ty, _) -> Some ty
+
+  | TVarExpr _
+  | TFunExpr _
+  | TVariantExpr _
+  | TPrimExpr _
+  | TRecordExpr _
+  | TNavExpr(_, _, _, _)
+  | TNodeExpr _ -> None
+
+  | TMatchExpr(_, arms, _, _) ->
+    arms
+    |> List.map (fun (_, _, arm) -> arm)
+    |> List.tryPick exprToAscriptionTy
+
+  | TBlockExpr(_, last) -> exprToAscriptionTy last
 
 let private inferLitExpr ctx expr lit =
   let ctx = validateLit ctx lit (exprToLoc expr)
@@ -1556,7 +1544,7 @@ let private inferMatchExpr ctx expectOpt itself cond arms loc =
 
   let ctx =
     arms
-    |> List.fold (fun ctx (pat, _, _) -> addVarLevels ctx pat) ctx
+    |> List.fold (fun ctx (pat, _, _) -> initializeVarTy ctx pat) ctx
 
   let arms, ctx =
     arms
@@ -2087,21 +2075,12 @@ let private inferLetFunStmt ctx mutuallyRec callee vis argPats body loc =
       let argPats, funTy, ctx = inferArgs ctx funTy argPats
       argPat :: argPats, tyFun argTy funTy, ctx
 
-  let outerLevel = ctx.Level
-  let ctx = ctx |> incLevel
+  let ctx, parentIsFunLocal = { ctx with IsFunLocal = true }, ctx.IsFunLocal
 
   let calleeTy, ctx =
-    let calleeTy, ctx =
-      match mainFunTyOpt with
-      | Some calleeTy -> calleeTy, ctx
-      | None -> freshMetaTy loc ctx
-
-    let ctx =
-      match (ctx.Funs |> mapFind callee).Ty with
-      | TyScheme ([], oldTy) -> unifyTy ctx loc oldTy calleeTy
-      | _ -> unreachable () // It must be a pre-generalized function.
-
-    calleeTy, ctx
+    let funDef = ctx.Funs |> mapFind callee
+    let oldTy, _, ctx = instantiateTyScheme ctx funDef.Ty loc
+    oldTy, ctx
 
   let provisionalResultTy, ctx = ctx |> freshMetaTyForExpr body
 
@@ -2115,23 +2094,22 @@ let private inferLetFunStmt ctx mutuallyRec callee vis argPats body loc =
     let body, bodyTy, ctx = inferExpr ctx None body
 
     match substTy ctx bodyTy with
-    | Ty(NeverTk, _) ->
-      let resultTy =
-        if Option.isSome mainFunTyOpt then tyInt else tyNever
-
-      TNodeExpr(TCatchNeverEN, [ body ], resultTy, loc), resultTy, ctx
-
+    | Ty(NeverTk, _) -> TNodeExpr(TCatchNeverEN, [ body ], tyNever, loc), tyNever, ctx
     | bodyTy -> body, bodyTy, ctx
 
   let ctx =
     unifyTy ctx loc bodyTy provisionalResultTy
 
-  let ctx = ctx |> decLevel
+  let ctx =
+    match mainFunTyOpt, bodyTy with
+    | Some _, Ty(NeverTk, _) -> unifyTy ctx loc (tyFun tyUnit tyNever) calleeTy
+    | Some mainFunTy, _ -> unifyTy ctx loc mainFunTy calleeTy
+    | _ -> ctx
 
   let ctx =
-    if outerLevel = 0 then
+    if not parentIsFunLocal then
       let ctx = attemptResolveTraitBounds ctx
-      generalizeFun ctx outerLevel callee
+      generalizeFun ctx callee
     else
       finishLocalFun ctx callee
 
@@ -2140,8 +2118,7 @@ let private inferLetFunStmt ctx mutuallyRec callee vis argPats body loc =
     | IsRec -> { ctx with GrayFuns = ctx.GrayFuns |> TSet.add callee }
     | _ -> ctx
 
-  let ctx =
-    { ctx with NewFuns = callee :: ctx.NewFuns }
+  let ctx = { ctx with IsFunLocal = parentIsFunLocal }
 
   TLetFunStmt(callee, NotRec, vis, argPats, body, loc), ctx
 
@@ -2159,7 +2136,6 @@ let private inferExpr (ctx: TyCtx) (expectOpt: Ty option) (expr: TExpr) : TExpr 
   | TBlockExpr (stmts, last) -> inferBlockExpr ctx expectOpt stmts last
 
 let private inferBlockStmt (ctx: TyCtx) mutuallyRec stmts : TStmt * TyCtx =
-  let outerLevel = ctx.Level
   let parentCtx = ctx
 
   let ctx = collectVarsAndFuns ctx stmts
@@ -2184,26 +2160,12 @@ let private inferBlockStmt (ctx: TyCtx) mutuallyRec stmts : TStmt * TyCtx =
 
              | _ ->
                // #generalizeFun
-               let isOwned tySerial =
-                 let highLevel () =
-                   let level = getTyLevel tySerial ctx
-                   level > outerLevel
-
-                 let alreadyQuantified () =
-                   tyVars |> List.exists (fun t -> t = tySerial)
-
-                 highLevel () || alreadyQuantified ()
-
                let funTy = substTy ctx funTy
-               let funTyScheme = tyGeneralize isOwned funTy
+               let funTyScheme = tyGeneralize (canGeneralize ctx) funTy
 
                let funs =
                  ctx.Funs
                  |> TMap.add funSerial { funDef with Ty = funTyScheme }
-
-               let quantifiedTys =
-                 tyVars
-                 |> List.fold (fun quantifiedTys tyVar -> TSet.add tyVar quantifiedTys) ctx.QuantifiedTys
 
                let instantiations, grayInstantiations =
                  ctx.GrayInstantiations |> TMap.remove funSerial
@@ -2211,8 +2173,15 @@ let private inferBlockStmt (ctx: TyCtx) mutuallyRec stmts : TStmt * TyCtx =
                let ctx =
                  { ctx with
                      Funs = funs
-                     QuantifiedTys = quantifiedTys
                      GrayInstantiations = grayInstantiations }
+
+              //  let _ =
+              //   let getTyName tySerial =
+              //       ctx.Tys
+              //       |> TMap.tryFind tySerial
+              //       |> Option.map tyDefToName
+
+              //   __trace ("gen2 fun " + funDef.Name + "<" + (tyVars |> List.map (fun tySerial -> getTyName tySerial |> Option.defaultValue (string tySerial)) |> S.concat ", ") + "> : " + tyDisplay getTyName funTy)
 
                let ctx =
                  instantiations
@@ -2239,6 +2208,174 @@ let private inferStmt ctx mutuallyRec stmt : TStmt * TyCtx =
   | TLetValStmt (pat, init, loc) -> inferLetValStmt ctx pat init loc
   | TLetFunStmt (oldSerial, _, vis, args, body, loc) -> inferLetFunStmt ctx mutuallyRec oldSerial vis args body loc
   | TBlockStmt (mutuallyRec, stmts) -> inferBlockStmt ctx mutuallyRec stmts
+
+// -----------------------------------------------
+// Recursive Declaration Decomposition
+// -----------------------------------------------
+
+// What:
+// Split declarations into a list of recursive blocks
+// so that forward references are all bound in each block.
+//
+// Why:
+// This improves result of generalization
+// by preventing unnecessary unification of meta types that can be generalized.
+//
+// How:
+// First attach a number level to each declaration in order.
+// For each occurrence of a variable or function that is defined at level U
+// in a declaration of level L (< U), unify levels L..U to L.
+// Finally group declarations by their levels.
+//
+// Proof (sketch):
+// After the process, forward-references are all bound in each block
+// because variables and functions defined in a recursive block
+// must not be referred in another forward block;
+// if so, these two blocks must have had the same level.
+//
+// Remark:
+// This doesn't change order of declarations.
+
+module private RecursiveDeclDecomposition =
+  [<RequireQualifiedAccess; NoEquality; NoComparison>]
+  type private RddCtx =
+    { VarLevels: TreeMap<VarSerial, int>
+      FunLevels: TreeMap<FunSerial, int>
+      LevelMap: TreeMap<int, int> }
+
+  /// Unwrap recursive blocks that are made from modules in NameRes.
+  let private flattenBlocks stmts =
+    stmts |> List.collect
+      (fun stmt ->
+        match stmt with
+        | TBlockStmt (IsRec, stmts) -> flattenBlocks stmts
+        | _ -> [ stmt ])
+
+  /// Enumerates all variables defined in a pattern
+  /// to compute varLevelMap.
+  let private collectVars (level: int) (varLevelMap: TreeMap<VarSerial, int>) pat : TreeMap<VarSerial, int> =
+    let onVar varMap varSerial = TMap.add varSerial level varMap
+
+    match pat with
+    | TLitPat _
+    | TDiscardPat _
+    | TVariantPat _ -> varLevelMap
+
+    | TVarPat (_, varSerial, _, _) -> onVar varLevelMap varSerial
+
+    | TAsPat(argPat, varSerial, _) ->
+      let varMap = onVar varLevelMap varSerial
+      collectVars level varMap argPat
+
+    | TNodePat(_, argPats, _, _) -> argPats |> List.fold (collectVars level) varLevelMap
+    | TOrPat(lPat, _, _) -> collectVars level varLevelMap lPat
+
+  /// Finds occurrences of variables and functions
+  /// to unify levels.
+  let private rddOnExpr level (ctx: RddCtx) (expr: TExpr) =
+    let toCurrentLevel level =
+      ctx.LevelMap |> TMap.tryFind level |> Option.defaultValue level
+
+    let levelDown (ctx: RddCtx) (lower: int) (upper: int) =
+      let lower = toCurrentLevel lower
+
+      let rec update levelMap l =
+        if l <= upper then
+          update (levelMap |> TMap.add l lower) (l + 1)
+        else
+          levelMap
+
+      { ctx with LevelMap = update ctx.LevelMap lower }
+
+    match expr with
+    | TVarExpr (varSerial, _, _) ->
+      match ctx.VarLevels |> TMap.tryFind varSerial |> Option.map toCurrentLevel with
+      | Some varLevel when level < varLevel -> levelDown ctx level varLevel
+
+      | _ -> ctx
+
+    | TFunExpr(funSerial, _, _) ->
+      match ctx.FunLevels |> TMap.tryFind funSerial |> Option.map toCurrentLevel with
+      | Some funLevel when level < funLevel -> levelDown ctx level funLevel
+      | _ -> ctx
+
+    | TLitExpr _
+    | TVariantExpr _
+    | TPrimExpr _ -> ctx
+
+    | TRecordExpr(_, fields, _, _) -> fields |> List.fold (fun ctx (_, init, _) -> rddOnExpr level ctx init) ctx
+
+    | TMatchExpr(cond, arms, _, _) ->
+      let ctx = rddOnExpr level ctx cond
+
+      arms |> List.fold
+        (fun ctx (_, guard, arm) ->
+          let ctx = rddOnExpr level ctx guard
+          rddOnExpr level ctx arm)
+        ctx
+
+    | TNavExpr(lExpr, _, _, _) -> rddOnExpr level ctx lExpr
+    | TNodeExpr(_, args, _, _) -> args |> List.fold (rddOnExpr level) ctx
+
+    | TBlockExpr(stmts, last) ->
+      let ctx = stmts |> List.fold (rddOnStmt level) ctx
+      rddOnExpr level ctx last
+
+  let private rddOnStmt level (ctx: RddCtx) (stmt: TStmt) =
+    match stmt with
+    | TExprStmt expr -> rddOnExpr level ctx expr
+    | TLetValStmt (_, init, _) -> rddOnExpr level ctx init
+    | TLetFunStmt(_, _, _, _, body, _) -> rddOnExpr level ctx body
+    | TBlockStmt(_, stmts) -> stmts |> List.fold (rddOnStmt level) ctx
+
+  // See comments above.
+  let decompose (_tyCtx: TyCtx) (stmts: TStmt list) : TStmt list =
+    let leveledStmts =
+      stmts
+      |> flattenBlocks
+      |> List.mapi (fun i stmt -> i + 1, stmt)
+
+    let levelMap =
+      leveledStmts
+      |> List.fold
+        (fun acc (level, stmt) ->
+          let varLevelMap, funLevelMap = acc
+          match stmt with
+          | TExprStmt _
+          | TBlockStmt _ -> acc
+
+          | TLetValStmt (pat, _, _) -> collectVars level varLevelMap pat, funLevelMap
+          | TLetFunStmt (funSerial, _, _, _, _, _) -> varLevelMap, TMap.add funSerial level funLevelMap
+        )
+        (TMap.empty varSerialCompare, TMap.empty funSerialCompare)
+
+    let ctx =
+      let varLevels, funLevels = levelMap
+      let ctx: RddCtx = { VarLevels = varLevels; FunLevels = funLevels; LevelMap = TMap.empty compare }
+
+      leveledStmts |> List.fold (fun ctx (level, stmt) -> rddOnStmt level ctx stmt) ctx
+
+    let blocks =
+      let getLevel l = ctx.LevelMap |> TMap.tryFind l |> Option.defaultValue l
+      let same l r = getLevel l = getLevel r
+
+      let rec groupLoop acc stmts =
+        match stmts with
+        | [] -> List.rev acc
+
+        | (level, stmt) :: stmts ->
+          let rec blockLoop acc stmts =
+            match stmts with
+            | (l, stmt) :: stmts when same l level -> blockLoop (stmt :: acc) stmts
+            | _ -> List.rev acc, stmts
+
+          let block, stmts = blockLoop [ stmt ] stmts
+          groupLoop (block :: acc) stmts
+
+      groupLoop [] leveledStmts
+
+    blocks
+    |> List.map (fun stmts -> TBlockStmt(IsRec, stmts))
 
 // -----------------------------------------------
 // Reject cyclic synonyms
@@ -2337,6 +2474,452 @@ let private synonymCycleCheck (tyCtx: TyCtx) =
   { tyCtx with Tys = tys; Logs = logs }
 
 // -----------------------------------------------
+// Rms
+// -----------------------------------------------
+
+// RMS: Resolve Meta types and Synonyms. A follow-up pass of type check.
+
+// RMS includes three operations:
+//
+// - substitute: replace resolved meta types with actual types
+// - degenerate: replace undefined meta types with unit
+// - expand: replace type synonyms with actual types
+module private Rms =
+  // #map_merge
+  let private setAppend first secondSet =
+    secondSet |> TSet.fold (fun set item -> TSet.add item set) first
+
+  [<RequireQualifiedAccess; NoEquality; NoComparison>]
+  type private RmsCtx =
+    { StaticVars: TreeMap<VarSerial, VarDef>
+      LocalVars: TreeMap<VarSerial, VarDef>
+      Funs: TreeMap<FunSerial, FunDef>
+      Tys: TreeMap<TySerial, TyDef>
+      MetaTys: TreeMap<TySerial, Ty>
+      DefinedTys: TreeSet<TySerial> }
+
+  let private newRmsCtx localVars (ctx: TyCtx): RmsCtx =
+    { StaticVars = ctx.Vars
+      LocalVars = localVars
+      Funs = ctx.Funs
+      Tys = ctx.Tys
+      MetaTys = ctx.MetaTys
+      DefinedTys = TSet.empty compare }
+
+  /// Substitutes bound meta tys in a ty.
+  /// Unbound meta tys are degenerated, i.e. replaced with unit.
+  let private rmsTy (ctx: RmsCtx) (ty: Ty) : Ty =
+    let substMeta tySerial =
+      match ctx.MetaTys |> TMap.tryFind tySerial with
+      | Some ty -> Some ty
+
+      | _ when ctx.DefinedTys |> TSet.contains tySerial |> not ->
+        // Degenerate unbounded meta type.
+        __trace ("degenerate: " + string tySerial + " in " + __dump ty)
+        Some tyUnit
+
+      | _ -> None
+
+    let ty = tySubst substMeta ty
+    tyExpandSynonyms (fun tySerial -> ctx.Tys |> TMap.tryFind tySerial) ty
+
+  let private rmsPat (ctx: RmsCtx) (pat: TPat) : TPat * RmsCtx =
+    let onTy ty = rmsTy ctx ty
+
+    let onVar (ctx: RmsCtx) varSerial =
+      match ctx.LocalVars |> TMap.tryFind varSerial with
+      | Some varDef ->
+          let ty = rmsTy ctx varDef.Ty
+          { ctx with LocalVars = ctx.LocalVars |> TMap.add varSerial { varDef with Ty = ty } }
+
+      | None ->
+          let varDef = ctx.StaticVars |> mapFind varSerial
+          let ty = rmsTy ctx varDef.Ty
+          { ctx with StaticVars = ctx.StaticVars |> TMap.add varSerial { varDef with Ty = ty } }
+
+    match pat with
+    | TLitPat _ -> pat, ctx
+    | TDiscardPat(ty, loc) -> TDiscardPat(onTy ty, loc), ctx
+
+    | TVarPat(vis, varSerial, ty, loc) ->
+      let ctx = onVar ctx varSerial
+      TVarPat(vis, varSerial, onTy ty, loc), ctx
+
+    | TVariantPat(variantSerial, ty, loc) -> TVariantPat(variantSerial, onTy ty, loc), ctx
+
+    | TNodePat(kind, argPats, ty, loc) ->
+      let argPats, ctx = List.mapFold rmsPat ctx argPats
+      TNodePat(kind, argPats, onTy ty, loc), ctx
+
+    | TAsPat(argPat, varSerial, loc) ->
+      let ctx = onVar ctx varSerial
+      let argPat, ctx = rmsPat ctx argPat
+      TAsPat(argPat, varSerial, loc), ctx
+
+    | TOrPat(lPat, rPat, loc) ->
+      let lPat, ctx = rmsPat ctx lPat
+      let rPat, ctx = rmsPat ctx rPat
+      TOrPat(lPat, rPat, loc), ctx
+
+  let private rmsExpr (ctx: RmsCtx) (expr: TExpr) : TExpr * RmsCtx =
+    let onTy ty = rmsTy ctx ty
+
+    match expr with
+    | TLitExpr _ -> expr, ctx
+
+    | TVarExpr _
+    | TFunExpr _
+    | TVariantExpr _
+    | TPrimExpr _ -> exprMap onTy expr, ctx
+
+    | TRecordExpr (baseOpt, fields, ty, loc) ->
+      let baseOpt, ctx = optionMapFold rmsExpr ctx baseOpt
+
+      let fields, ctx =
+        fields
+        |> List.mapFold (fun ctx (name, init, loc) ->
+          let init, ctx = rmsExpr ctx init
+          (name, init, loc), ctx)
+          ctx
+
+      TRecordExpr(baseOpt, fields, onTy ty, loc), ctx
+
+    | TMatchExpr (cond, arms, ty, loc) ->
+      let cond, ctx = rmsExpr ctx cond
+
+      let arms, ctx =
+        arms
+        |> List.mapFold (fun ctx (pat, guard, body) ->
+          let pat , ctx = rmsPat ctx pat
+          let guard, ctx = rmsExpr ctx guard
+          let body ,ctx = rmsExpr ctx body
+          (pat, guard, body), ctx) ctx
+
+      TMatchExpr(cond, arms, onTy ty, loc), ctx
+
+    | TNavExpr (lExpr, r, ty, loc) ->
+      let lExpr, ctx = rmsExpr ctx lExpr
+      TNavExpr(lExpr, r, onTy ty, loc), ctx
+
+    | TNodeExpr (kind, args, ty, loc) ->
+      let args, ctx = List.mapFold rmsExpr ctx args
+      TNodeExpr(kind, args, onTy ty, loc), ctx
+
+    | TBlockExpr (stmts, last) ->
+      let stmts, ctx = List.mapFold rmsStmt ctx stmts
+      let last, ctx = rmsExpr ctx last
+      TBlockExpr(stmts, last), ctx
+
+  let private rmsStmt (ctx: RmsCtx) (stmt: TStmt) : TStmt * RmsCtx =
+    match stmt with
+    | TExprStmt expr ->
+      let expr, ctx = rmsExpr ctx expr
+      TExprStmt expr, ctx
+
+    | TLetValStmt (pat, init, loc) ->
+      let pat, ctx = rmsPat ctx pat
+      let init, ctx = rmsExpr ctx init
+      TLetValStmt(pat, init, loc), ctx
+
+    | TLetFunStmt (funSerial, isRec, vis, argPats, body, loc) ->
+      let parentCtx = ctx
+
+      // Update definition:
+      let funDef: FunDef = ctx.Funs |> mapFind funSerial
+      let (TyScheme(tyVars, funTy)) = funDef.Ty
+      let definedTys = TSet.ofList compare tyVars
+      let ctx = { ctx with DefinedTys = setAppend ctx.DefinedTys definedTys }
+      let funTy = rmsTy ctx funTy
+      let funDef = { funDef with Ty = TyScheme(tyVars, funTy) }
+      let ctx = { ctx with Funs = ctx.Funs |> TMap.add funSerial funDef }
+
+      // Recurse:
+      let argPats, ctx = argPats |> List.mapFold rmsPat ctx
+      let body, ctx = rmsExpr ctx body
+      let ctx = { ctx with DefinedTys = parentCtx.DefinedTys }
+
+      TLetFunStmt (funSerial, isRec, vis, argPats, body, loc), ctx
+
+    | TBlockStmt (isRec, stmts) ->
+      let stmts, ctx = List.mapFold rmsStmt ctx stmts
+      TBlockStmt (isRec, stmts), ctx
+
+  let rmsModule (ctx: TyCtx) (m: TModule) : TModule * TyCtx =
+    // (For debug): Check type scoping.
+    // assert (soundnessCheck ctx [ { m with Stmts = stmts } ])
+
+    let rmsCtx = newRmsCtx m.Vars ctx
+    let stmts, rmsCtx = List.mapFold rmsStmt rmsCtx m.Stmts
+
+    let m =
+      { m with
+          Vars = rmsCtx.LocalVars
+          Stmts = stmts }
+
+    let ctx =
+      { ctx with
+          Vars = rmsCtx.StaticVars
+          Funs = rmsCtx.Funs
+          MetaTys = TMap.empty compare
+          NoGeneralizeMetaTys = TSet.empty compare }
+
+    m, ctx
+
+// -----------------------------------------------
+// Expand Synonyms
+// -----------------------------------------------
+
+let private expandAllSynonyms (ctx: TyCtx) : TyCtx =
+  let variants =
+    ctx.Variants
+    |> TMap.map (fun _ (variantDef: VariantDef) ->
+      { variantDef with PayloadTy = expandSynonyms ctx variantDef.PayloadTy })
+
+  let tys =
+    ctx.Tys
+    |> TMap.fold
+          (fun acc tySerial tyDef ->
+            match tyDef with
+            | UnivTyDef _
+            | SynonymTyDef _ -> acc
+
+            | RecordTyDef (recordName, tyArgs, fields, repr, loc) ->
+              let fields =
+                fields
+                |> List.map (fun (name, ty, loc) ->
+                  let ty = expandSynonyms ctx ty
+                  name, ty, loc)
+
+              acc
+              |> TMap.add tySerial (RecordTyDef(recordName, tyArgs, fields, repr, loc))
+
+            | _ -> acc |> TMap.add tySerial tyDef)
+          (TMap.empty compare)
+
+  { ctx with
+      Variants = variants
+      Tys = tys }
+
+// -----------------------------------------------
+// Soundness Check
+// -----------------------------------------------
+
+// Ensure all meta types and universal types are bounded.
+// (Just emit trace messages if broken because current implementation actually break it.)
+
+module private SoundnessCheck =
+  // FIXME: type check fails if use 'S in the ascription
+  let private patFold1 (onTy: _ -> Ty -> _) (state: _) (pat: TPat) : _ =
+    let rec patRec state pat =
+      match pat with
+      | TLitPat _ -> state
+
+      | TDiscardPat (ty, _) -> onTy state ty
+      | TVarPat (_, _, ty, _) -> onTy state ty
+      | TVariantPat (_, ty, _) -> onTy state ty
+
+      | TNodePat (_, args, ty, _) ->
+        let state = onTy state ty
+        args |> List.fold patRec state
+
+      | TAsPat (argPat, _, _) -> patRec state argPat
+
+      | TOrPat (lPat, rPat, _) ->
+        let state = patRec state lPat
+        patRec state rPat
+
+    patRec state pat
+
+  // FIXME: type check fails if use 'S in the ascription
+  let private exprFold1 (onTy: _ -> Ty -> _) (state: _) (expr: TExpr) : _ =
+    let onPat state pat = patFold1 onTy state pat
+    let onStmt state stmt = stmtFold1 onTy state stmt
+
+    let rec exprRec state expr =
+      match expr with
+      | TLitExpr _ -> state
+
+      | TVarExpr (_, ty, _) -> onTy state ty
+      | TFunExpr(_, ty, _) -> onTy state ty
+      | TVariantExpr (_, ty, _) -> onTy state ty
+      | TPrimExpr (_, ty, _) -> onTy state ty
+
+      | TRecordExpr(_, fields, ty, _) ->
+        let state = fields |> List.fold (fun state (_, init, _) -> exprRec state init) state
+        onTy state ty
+
+      | TMatchExpr(cond, arms, ty, _) ->
+        let state = exprRec state cond
+
+        let state =
+          arms |> List.fold
+            (fun state (pat, guard, arm) ->
+              let state = onPat state pat
+              let state = exprRec state guard
+              exprRec state arm)
+            state
+
+        onTy state ty
+
+      | TNavExpr(lExpr, _, ty, _) ->
+        let state = exprRec state lExpr
+        onTy state ty
+
+      | TNodeExpr(_, args, ty, _) ->
+        let state = List.fold exprRec state args
+        onTy state ty
+
+      | TBlockExpr(stmts, last) ->
+        let state = List.fold onStmt state stmts
+        exprRec state last
+
+    exprRec state expr
+
+  let private stmtFold1 (onTy: 'S -> Ty -> 'S) (state: 'S) (stmt: TStmt) : 'S =
+    let onExpr state expr = exprFold1 onTy state expr
+    let onStmt state stmt = stmtFold1 onTy state stmt
+
+    match stmt with
+    | TExprStmt expr -> onExpr state expr
+    | TLetValStmt (_, init, _) -> onExpr state init
+    | TLetFunStmt(_, _, _, _, body, _) -> onExpr state body
+    | TBlockStmt(_, stmts) -> List.fold onStmt state stmts
+
+  [<RequireQualifiedAccess; NoEquality; NoComparison>]
+  type private ScCtx =
+    { Funs: TreeMap<FunSerial, FunDef>
+      MetaTys: TreeMap<TySerial, Ty>
+
+      /// Meta types and universal types that are defined in the current scope.
+      DefinedTys: TreeSet<TySerial> }
+
+  let private extendScope (ctx: ScCtx) (stmt: TStmt) : ScCtx =
+    match stmt with
+    | TExprStmt _
+    | TLetValStmt _
+    | TBlockStmt _ -> ctx
+
+    | TLetFunStmt(funSerial, _, _, _, _, _) ->
+      let funDef = ctx.Funs |> mapFind funSerial
+      let (TyScheme(tyVars, _)) = funDef.Ty
+
+      if List.isEmpty tyVars |> not then
+        // #map_merge
+        __trace ("params " + (List.map string tyVars |> S.concat ", "))
+        { ctx with DefinedTys = tyVars |> List.fold (fun set tyVar -> TSet.add tyVar set) ctx.DefinedTys }
+      else
+        ctx
+
+  let private scTy (ctx: ScCtx) ty =
+    let (Ty(tk, tyArgs)) =
+      let expandMeta tySerial = ctx.MetaTys |> TMap.tryFind tySerial
+      tySubst expandMeta ty
+
+    let check tySerial nameOpt loc =
+      if ctx.DefinedTys |> TSet.contains tySerial |> not then
+        let name =
+          match nameOpt with
+          | Some it -> it
+          | None -> "'" + string tySerial
+
+        __trace ("unbound type: " + name + " " + Loc.toString loc)
+
+      ctx
+
+    match tk with
+    | MetaTk (tySerial, loc) -> check tySerial None loc
+    | UnivTk (tySerial, name, loc) -> check tySerial (Some name) loc
+    | _ -> List.fold scTy ctx tyArgs
+
+  let private scStmts (ctx: ScCtx) stmts : ScCtx =
+    stmts |> List.fold
+      (fun ctx stmt ->
+        match stmt with
+        | TBlockStmt (_, stmts) -> scStmts ctx stmts
+        | _ ->
+          let ctx = extendScope ctx stmt
+          stmtFold1 scTy ctx stmt)
+      ctx
+
+  let check (ctx: TyCtx) (modules: TProgram) : bool =
+    let emptyCtx () : ScCtx =
+      { Funs = ctx.Funs
+        MetaTys = ctx.MetaTys
+        DefinedTys = TMap.empty compare }
+
+    modules |> List.fold
+      (fun ctx (m: TModule) ->
+        __trace ("module " + Loc.toString (Loc.ofDocPos m.DocId (0, 0)))
+        scStmts ctx m.Stmts)
+      (emptyCtx ())
+    |> ignore
+
+    true
+
+let private soundnessCheck ctx modules = SoundnessCheck.check ctx modules
+
+// -----------------------------------------------
+// Interface
+// -----------------------------------------------
+
+let private inferModule (ctx: TyCtx) (m: TModule) : TModule * TyCtx =
+  let parentCtx = ctx
+
+  let isStaticVar varSerial =
+    parentCtx.Vars |> TMap.containsKey varSerial
+
+  // #map_merge
+  let vars, ctx =
+    m.Vars
+    |> TMap.fold
+        (fun (vars, ctx: TyCtx) varSerial (varDef: VarDef) ->
+          let vars = TMap.add varSerial varDef vars
+          vars, ctx)
+        (ctx.Vars, ctx)
+
+  let ctx = { ctx with Vars = vars }
+
+  let stmts, ctx =
+    let ctx = { ctx with IsFunLocal = false }
+
+    let stmts =
+      m.Stmts
+      |> RecursiveDeclDecomposition.decompose ctx
+
+    let ctx = collectVarsAndFuns ctx stmts
+
+    stmts
+    |> List.mapFold (fun ctx stmt -> inferStmt ctx NotRec stmt) ctx
+
+  let ctx = ctx |> resolveTraitBoundsAll
+
+  let staticVars, localVars =
+    ctx.Vars
+    |> TMap.fold
+        (fun (staticVars, localVars) varSerial varDef ->
+          if isStaticVar varSerial then
+            let staticVars = staticVars |> TMap.add varSerial varDef
+
+            staticVars, localVars
+          else
+            let localVars = localVars |> TMap.add varSerial varDef
+
+            staticVars, localVars)
+        (emptyVars, emptyVars)
+
+  let m =
+    { m with
+        Vars = localVars
+        Stmts = stmts }
+
+  let ctx = { ctx with Vars = staticVars }
+
+  // Resolve meta types and synonyms.
+  let m, ctx = Rms.rmsModule ctx m
+
+  m, ctx
+
+// -----------------------------------------------
 // Interface
 // -----------------------------------------------
 
@@ -2344,135 +2927,11 @@ let infer (modules: TProgram, nameRes: NameResResult) : TProgram * TirCtx =
   let ctx = newTyCtx nameRes
 
   let ctx = synonymCycleCheck ctx
+  let modules, ctx = modules |> List.mapFold inferModule ctx
+  let ctx = expandAllSynonyms ctx
 
-  let substOrDegenerate ctx ty =
-    ty
-    |> substOrDegenerateTy ctx
-    |> expandSynonyms ctx
-
-  let substOrDegenerateVars ctx vars =
-    vars
-    |> TMap.map (fun _ (varDef: VarDef) ->
-      let ty = substOrDegenerate ctx varDef.Ty
-      { varDef with Ty = ty })
-
-  let substOrDegenerateStmts ctx stmts =
-    stmts
-    |> List.map (fun stmt -> stmtMap (substOrDegenerate ctx) stmt)
-
-  let modules, ctx =
-    let oldStaticVars = ctx.Vars
-
-    let isStaticVar varSerial =
-      oldStaticVars |> TMap.containsKey varSerial
-
-    modules
-    |> List.mapFold
-         (fun (ctx: TyCtx) (m: TModule) ->
-           // #map_merge
-           let vars, ctx =
-             m.Vars
-             |> TMap.fold
-                  (fun (vars, ctx: TyCtx) varSerial (varDef: VarDef) ->
-                    let vars = TMap.add varSerial varDef vars
-                    vars, ctx)
-                  (ctx.Vars, ctx)
-
-           let ctx = { ctx with Vars = vars }
-
-           let stmts, ctx =
-             let ctx = collectVarsAndFuns ctx m.Stmts
-
-             m.Stmts
-             |> List.mapFold (fun ctx stmt -> inferStmt ctx NotRec stmt) ctx
-
-           let ctx = ctx |> resolveTraitBoundsAll
-
-           let staticVars, localVars =
-             ctx.Vars
-             |> TMap.fold
-                  (fun (staticVars, localVars) varSerial varDef ->
-                    if isStaticVar varSerial then
-                      let staticVars = staticVars |> TMap.add varSerial varDef
-
-                      staticVars, localVars
-                    else
-                      let localVars = localVars |> TMap.add varSerial varDef
-
-                      staticVars, localVars)
-                  (emptyVars, emptyVars)
-
-           // Resolve meta types.
-           let stmts, staticVars, localVars, ctx =
-             let stmts = substOrDegenerateStmts ctx stmts
-             let staticVars = substOrDegenerateVars ctx staticVars
-             let localVars = substOrDegenerateVars ctx localVars
-
-             let funs =
-               ctx.NewFuns
-               |> List.fold
-                    (fun funs funSerial ->
-                      let funDef: FunDef = funs |> mapFind funSerial
-
-                      let (TyScheme (tyVars, ty)) = funDef.Ty
-                      let ty = substOrDegenerate ctx ty
-
-                      let funDef =
-                        { funDef with Ty = TyScheme(tyVars, ty) }
-
-                      funs |> TMap.add funSerial funDef)
-                    ctx.Funs
-
-             let ctx =
-               { ctx with
-                   Funs = funs
-                   NewFuns = []
-                   MetaTys = TMap.empty compare
-                   TyLevels = TMap.empty compare
-                   QuantifiedTys = TMap.empty compare }
-
-             stmts, staticVars, localVars, ctx
-
-           let m =
-             { m with
-                 Vars = localVars
-                 Stmts = stmts }
-
-           let ctx = { ctx with Vars = staticVars }
-           m, ctx)
-         ctx
-
-  // Expand synonyms.
-  let ctx =
-    let variants =
-      ctx.Variants
-      |> TMap.map (fun _ (variantDef: VariantDef) ->
-        { variantDef with PayloadTy = expandSynonyms ctx variantDef.PayloadTy })
-
-    let tys =
-      ctx.Tys
-      |> TMap.fold
-           (fun acc tySerial tyDef ->
-             match tyDef with
-             | UnivTyDef _
-             | SynonymTyDef _ -> acc
-
-             | RecordTyDef (recordName, tyArgs, fields, repr, loc) ->
-               let fields =
-                 fields
-                 |> List.map (fun (name, ty, loc) ->
-                   let ty = expandSynonyms ctx ty
-                   name, ty, loc)
-
-               acc
-               |> TMap.add tySerial (RecordTyDef(recordName, tyArgs, fields, repr, loc))
-
-             | _ -> acc |> TMap.add tySerial tyDef)
-           (TMap.empty compare)
-
-    { ctx with
-        Variants = variants
-        Tys = tys }
+  // (For debug): Check type scoping.
+  // assert (SoundnessCheck.check ctx modules)
 
   let tirCtx = toTirCtx ctx
 
