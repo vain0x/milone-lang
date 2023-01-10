@@ -2511,14 +2511,24 @@ let private synonymCycleCheck (tyCtx: TyCtx) =
 // - degenerate: replace undefined meta types with unit
 // - expand: replace type synonyms with actual types
 module private Rms =
+  // #map_merge
+  let private setAppend first secondSet =
+    secondSet |> TSet.fold (fun set item -> TSet.add item set) first
+
   [<RequireQualifiedAccess; NoEquality; NoComparison>]
   type private RmsCtx =
-    { Tys: TreeMap<TySerial, TyDef>
+    { StaticVars: TreeMap<VarSerial, VarDef>
+      LocalVars: TreeMap<VarSerial, VarDef>
+      Funs: TreeMap<FunSerial, FunDef>
+      Tys: TreeMap<TySerial, TyDef>
       MetaTys: TreeMap<TySerial, Ty>
       DefinedTys: TreeSet<TySerial> }
 
-  let private newRmsCtx (ctx: TyCtx): RmsCtx =
-    { Tys = ctx.Tys
+  let private newRmsCtx localVars (ctx: TyCtx): RmsCtx =
+    { StaticVars = ctx.Vars
+      LocalVars = localVars
+      Funs = ctx.Funs
+      Tys = ctx.Tys
       MetaTys = ctx.MetaTys
       DefinedTys = TSet.empty compare }
 
@@ -2537,88 +2547,145 @@ module private Rms =
       | _ -> None
 
     let ty = tySubst substMeta ty
-
     tyExpandSynonyms (fun tySerial -> ctx.Tys |> TMap.tryFind tySerial) ty
 
-  let private rmsPat (ctx: RmsCtx) (pat: TPat) : TPat = patMap (rmsTy ctx) pat
-  let private rmsExpr (ctx: RmsCtx) (expr: TExpr) : TExpr = exprMap (rmsTy ctx) expr
+  let private rmsPat (ctx: RmsCtx) (pat: TPat) : TPat * RmsCtx =
+    let onTy ty = rmsTy ctx ty
 
-  let private rmsStmt funs (ctx: RmsCtx) (stmt: TStmt) : TStmt =
+    let onVar (ctx: RmsCtx) varSerial =
+      match ctx.LocalVars |> TMap.tryFind varSerial with
+      | Some varDef ->
+          let ty = rmsTy ctx varDef.Ty
+          { ctx with LocalVars = ctx.LocalVars |> TMap.add varSerial { varDef with Ty = ty } }
+
+      | None ->
+          let varDef = ctx.StaticVars |> mapFind varSerial
+          let ty = rmsTy ctx varDef.Ty
+          { ctx with StaticVars = ctx.StaticVars |> TMap.add varSerial { varDef with Ty = ty } }
+
+    match pat with
+    | TLitPat _ -> pat, ctx
+    | TDiscardPat(ty, loc) -> TDiscardPat(onTy ty, loc), ctx
+
+    | TVarPat(vis, varSerial, ty, loc) ->
+      let ctx = onVar ctx varSerial
+      TVarPat(vis, varSerial, onTy ty, loc), ctx
+
+    | TVariantPat(variantSerial, ty, loc) -> TVariantPat(variantSerial, onTy ty, loc), ctx
+
+    | TNodePat(kind, argPats, ty, loc) ->
+      let argPats, ctx = List.mapFold rmsPat ctx argPats
+      TNodePat(kind, argPats, onTy ty, loc), ctx
+
+    | TAsPat(argPat, varSerial, loc) ->
+      let ctx = onVar ctx varSerial
+      let argPat, ctx = rmsPat ctx argPat
+      TAsPat(argPat, varSerial, loc), ctx
+
+    | TOrPat(lPat, rPat, loc) ->
+      let lPat, ctx = rmsPat ctx lPat
+      let rPat, ctx = rmsPat ctx rPat
+      TOrPat(lPat, rPat, loc), ctx
+
+  let private rmsExpr (ctx: RmsCtx) (expr: TExpr) : TExpr * RmsCtx =
+    let onTy ty = rmsTy ctx ty
+
+    match expr with
+    | TLitExpr _ -> expr, ctx
+
+    | TVarExpr _
+    | TFunExpr _
+    | TVariantExpr _
+    | TPrimExpr _ -> exprMap onTy expr, ctx
+
+    | TRecordExpr (baseOpt, fields, ty, loc) ->
+      let baseOpt, ctx = optionMapFold rmsExpr ctx baseOpt
+
+      let fields, ctx =
+        fields
+        |> List.mapFold (fun ctx (name, init, loc) ->
+          let init, ctx = rmsExpr ctx init
+          (name, init, loc), ctx)
+          ctx
+
+      TRecordExpr(baseOpt, fields, onTy ty, loc), ctx
+
+    | TMatchExpr (cond, arms, ty, loc) ->
+      let cond, ctx = rmsExpr ctx cond
+
+      let arms, ctx =
+        arms
+        |> List.mapFold (fun ctx (pat, guard, body) ->
+          let pat , ctx = rmsPat ctx pat
+          let guard, ctx = rmsExpr ctx guard
+          let body ,ctx = rmsExpr ctx body
+          (pat, guard, body), ctx) ctx
+
+      TMatchExpr(cond, arms, onTy ty, loc), ctx
+
+    | TNavExpr (lExpr, r, ty, loc) ->
+      let lExpr, ctx = rmsExpr ctx lExpr
+      TNavExpr(lExpr, r, onTy ty, loc), ctx
+
+    | TNodeExpr (kind, args, ty, loc) ->
+      let args, ctx = List.mapFold rmsExpr ctx args
+      TNodeExpr(kind, args, onTy ty, loc), ctx
+
+    | TBlockExpr (stmts, last) ->
+      let stmts, ctx = List.mapFold rmsStmt ctx stmts
+      let last, ctx = rmsExpr ctx last
+      TBlockExpr(stmts, last), ctx
+
+  let private rmsStmt (ctx: RmsCtx) (stmt: TStmt) : TStmt * RmsCtx =
     match stmt with
+    | TExprStmt expr ->
+      let expr, ctx = rmsExpr ctx expr
+      TExprStmt expr, ctx
+
+    | TLetValStmt (pat, init, loc) ->
+      let pat, ctx = rmsPat ctx pat
+      let init, ctx = rmsExpr ctx init
+      TLetValStmt(pat, init, loc), ctx
+
     | TLetFunStmt (funSerial, isRec, vis, argPats, body, loc) ->
-      let funDef: FunDef = funs |> mapFind funSerial
-      let (TyScheme(tyVars, _)) = funDef.Ty
+      let parentCtx = ctx
+
+      // Update definition:
+      let funDef: FunDef = ctx.Funs |> mapFind funSerial
+      let (TyScheme(tyVars, funTy)) = funDef.Ty
       let definedTys = TSet.ofList compare tyVars
+      let ctx = { ctx with DefinedTys = setAppend ctx.DefinedTys definedTys }
+      let funTy = rmsTy ctx funTy
+      let funDef = { funDef with Ty = TyScheme(tyVars, funTy) }
+      let ctx = { ctx with Funs = ctx.Funs |> TMap.add funSerial funDef }
 
-      let ctx: RmsCtx = { ctx with DefinedTys = definedTys }
+      // Recurse:
+      let argPats, ctx = argPats |> List.mapFold rmsPat ctx
+      let body, ctx = rmsExpr ctx body
+      let ctx = { ctx with DefinedTys = parentCtx.DefinedTys }
 
-      let argPats = argPats |> List.map (rmsPat ctx)
-      let body = rmsExpr ctx body
-      TLetFunStmt (funSerial, isRec, vis, argPats, body, loc)
+      TLetFunStmt (funSerial, isRec, vis, argPats, body, loc), ctx
 
     | TBlockStmt (isRec, stmts) ->
-      TBlockStmt (isRec, List.map (rmsStmt funs ctx) stmts)
-
-    | _ -> stmtMap (rmsTy ctx) stmt
-
-  let private rmsStmts (ctx: TyCtx) stmts =
-    let rmsCtx = newRmsCtx ctx
-    stmts |> List.map (rmsStmt ctx.Funs rmsCtx)
-
-  let private rmsVars (ctx: TyCtx) vars =
-    let rmsCtx = newRmsCtx ctx
-
-    // FIXME: definedTys should be computed by the ancestor of function
-    let rmsCtx = { rmsCtx with DefinedTys = ctx.QuantifiedTys }
-
-    vars
-    |> TMap.map (fun _ (varDef: VarDef) ->
-      let ty = rmsTy rmsCtx varDef.Ty
-      { varDef with Ty = ty })
-
-  let private rmsFuns (ctx: TyCtx) siblingFuns funChildrenMap =
-    let rmsCtx = newRmsCtx ctx
-
-    let rec funRec definedTys funs funSerial =
-      let funDef: FunDef = funs |> mapFind funSerial
-      let (TyScheme (tyVars, ty)) = funDef.Ty
-
-      // #set_merge
-      let definedTys = List.fold (fun set tySerial -> TSet.add tySerial set) definedTys tyVars
-
-      let ty =
-        let rmsCtx = { rmsCtx with DefinedTys = TSet.ofList compare tyVars }
-        rmsTy rmsCtx ty
-
-      let funDef =
-        { funDef with Ty = TyScheme(tyVars, ty) }
-
-      let funs = funs |> TMap.add funSerial funDef
-
-      Multimap.find funSerial funChildrenMap
-      |> List.collect id
-      |> List.fold (funRec definedTys) funs
-
-    siblingFuns
-    |> List.fold (funRec rmsCtx.DefinedTys) ctx.Funs
+      let stmts, ctx = List.mapFold rmsStmt ctx stmts
+      TBlockStmt (isRec, stmts), ctx
 
   let rmsModule (ctx: TyCtx) (m: TModule) : TModule * TyCtx =
     // (For debug): Check type scoping.
     // assert (soundnessCheck ctx [ { m with Stmts = stmts } ])
-    let stmts = rmsStmts ctx m.Stmts
-    let staticVars = rmsVars ctx ctx.Vars
-    let localVars = rmsVars ctx m.Vars
-    let funs = rmsFuns ctx ctx.SiblingFuns ctx.FunChildrenMap
+
+    let rmsCtx = newRmsCtx m.Vars ctx
+    let stmts, rmsCtx = List.mapFold rmsStmt rmsCtx m.Stmts
 
     let m =
       { m with
-          Vars = localVars
+          Vars = rmsCtx.LocalVars
           Stmts = stmts }
 
     let ctx =
       { ctx with
-          Vars = staticVars
-          Funs = funs
+          Vars = rmsCtx.StaticVars
+          Funs = rmsCtx.Funs
           SiblingFuns = []
           FunChildrenMap = TMap.empty funSerialCompare
           MetaTys = TMap.empty compare
