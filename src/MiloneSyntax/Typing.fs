@@ -2515,7 +2515,7 @@ module private Rms =
 
       | _ when ctx.DefinedTys |> TSet.contains tySerial |> not ->
         // Degenerate unbounded meta type.
-        __trace ("degenerate: " + string tySerial + " in " + __dump ty)
+        // __trace ("degenerate: " + string tySerial + " in " + __dump ty)
         Some tyUnit
 
       | _ -> None
