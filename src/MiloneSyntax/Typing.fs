@@ -45,14 +45,8 @@ type private TyCtx =
     MetaTys: TreeMap<TySerial, Ty>
     /// Meta types that can't be generalized.
     NoGeneralizeMetaTys: TreeSet<TySerial>
-    QuantifiedTys: TreeSet<TySerial>
     /// Whether it's in a function.
     IsFunLocal: bool
-
-    /// List of non-local functions in the module or local functions defined in the current function.
-    SiblingFuns: FunSerial list
-    /// Represents syntactic tree structure of functions defined in the module.
-    FunChildrenMap: TreeMap<FunSerial, FunSerial list list>
 
     /// Funs that are mutually recursive and defined in the current block.
     ///
@@ -88,10 +82,7 @@ let private newTyCtx (nr: NameResResult) : TyCtx =
     Tys = nr.Tys
     MetaTys = TMap.empty compare
     NoGeneralizeMetaTys = TSet.empty compare
-    QuantifiedTys = TSet.empty compare
     IsFunLocal = false
-    SiblingFuns = []
-    FunChildrenMap = TMap.empty funSerialCompare
     GrayFuns = TSet.empty funSerialCompare
     GrayInstantiations = TMap.empty funSerialCompare
     TraitBounds = []
@@ -379,15 +370,6 @@ let private generalizeFun (ctx: TyCtx) funSerial =
           Funs =
             ctx.Funs
             |> TMap.add funSerial { funDef with Ty = funTyScheme } }
-
-    // Mark generalized meta tys (universally quantified vars)
-    let ctx =
-      let (TyScheme (fvs, _)) = funTyScheme
-
-      { ctx with
-          QuantifiedTys =
-            fvs
-            |> List.fold (fun quantifiedTys tyVar -> TSet.add tyVar quantifiedTys) ctx.QuantifiedTys }
 
     ctx
 
@@ -2090,7 +2072,7 @@ let private inferLetFunStmt ctx mutuallyRec callee vis argPats body loc =
       let argPats, funTy, ctx = inferArgs ctx funTy argPats
       argPat :: argPats, tyFun argTy funTy, ctx
 
-  let ctx, parentIsFunLocal, parentSiblingFuns = { ctx with IsFunLocal = true; SiblingFuns = [] }, ctx.IsFunLocal, ctx.SiblingFuns
+  let ctx, parentIsFunLocal = { ctx with IsFunLocal = true }, ctx.IsFunLocal
 
   let calleeTy, ctx =
     let funDef = ctx.Funs |> mapFind callee
@@ -2133,13 +2115,7 @@ let private inferLetFunStmt ctx mutuallyRec callee vis argPats body loc =
     | IsRec -> { ctx with GrayFuns = ctx.GrayFuns |> TSet.add callee }
     | _ -> ctx
 
-  let ctx =
-    let childFuns = ctx.SiblingFuns
-
-    { ctx with
-        SiblingFuns = callee :: parentSiblingFuns
-        FunChildrenMap = ctx.FunChildrenMap |> Multimap.add callee childFuns
-        IsFunLocal = parentIsFunLocal }
+  let ctx = { ctx with IsFunLocal = parentIsFunLocal }
 
   TLetFunStmt(callee, NotRec, vis, argPats, body, loc), ctx
 
@@ -2188,17 +2164,12 @@ let private inferBlockStmt (ctx: TyCtx) mutuallyRec stmts : TStmt * TyCtx =
                  ctx.Funs
                  |> TMap.add funSerial { funDef with Ty = funTyScheme }
 
-               let quantifiedTys =
-                 tyVars
-                 |> List.fold (fun quantifiedTys tyVar -> TSet.add tyVar quantifiedTys) ctx.QuantifiedTys
-
                let instantiations, grayInstantiations =
                  ctx.GrayInstantiations |> TMap.remove funSerial
 
                let ctx =
                  { ctx with
                      Funs = funs
-                     QuantifiedTys = quantifiedTys
                      GrayInstantiations = grayInstantiations }
 
               //  let _ =
@@ -2686,11 +2657,8 @@ module private Rms =
       { ctx with
           Vars = rmsCtx.StaticVars
           Funs = rmsCtx.Funs
-          SiblingFuns = []
-          FunChildrenMap = TMap.empty funSerialCompare
           MetaTys = TMap.empty compare
-          NoGeneralizeMetaTys = TSet.empty compare
-          QuantifiedTys = TMap.empty compare }
+          NoGeneralizeMetaTys = TSet.empty compare }
 
     m, ctx
 
