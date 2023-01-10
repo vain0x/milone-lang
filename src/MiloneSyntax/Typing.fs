@@ -120,23 +120,6 @@ let private isMainFun funSerial (ctx: TyCtx) =
   | Some mainFun -> funSerialCompare mainFun funSerial = 0
   | _ -> false
 
-let private freshVar (ctx: TyCtx) hint ty loc =
-  let varSerial = VarSerial(ctx.Serial + 1)
-
-  let varDef: VarDef =
-    { Name = hint
-      IsStatic = NotStatic
-      Ty = ty
-      Linkage = InternalLinkage
-      Loc = loc }
-
-  let ctx =
-    { ctx with
-        Serial = ctx.Serial + 1
-        Vars = ctx.Vars |> TMap.add varSerial varDef }
-
-  varSerial, ctx
-
 let private freshTySerial (ctx: TyCtx) =
   let serial = ctx.Serial + 1
 
@@ -1517,24 +1500,7 @@ let private inferRecordExpr ctx expectOpt baseOpt fields loc =
       else
         ctx
 
-    match baseOpt with
-    | None -> TRecordExpr(None, fields, recordTy, loc), recordTy, ctx
-
-    | Some baseExpr ->
-      // Assign to a temporary var so that RecordRes can reuse the expr safely.
-      // (This kind of modification is not business of typing, though.)
-      // { base with fields... } ==> let t = base in { t with fields... }
-      let varSerial, ctx = freshVar ctx "base" recordTy loc
-
-      let varPat =
-        TVarPat(PrivateVis, varSerial, recordTy, loc)
-
-      let varExpr = TVarExpr(varSerial, recordTy, loc)
-
-      let recordExpr =
-        TRecordExpr(Some varExpr, fields, recordTy, loc)
-
-      txLetIn (TLetValStmt(varPat, baseExpr, loc)) recordExpr, recordTy, ctx
+    TRecordExpr(baseOpt, fields, recordTy, loc), recordTy, ctx
 
 // match 'a with ( | 'a -> 'b )*
 let private inferMatchExpr ctx expectOpt itself cond arms loc =

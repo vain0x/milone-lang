@@ -122,8 +122,9 @@ let private rewriteRecordExpr (ctx: RrCtx) itself baseOpt fields ty loc =
       | _ -> unreachable itself
     | _ -> unreachable itself
 
-  // Base expr is guaranteed to be a cheap expr thanks to modification in Typing,
-  // so we can freely clone this.
+  // Base expression is guaranteed to be cheap due to modification in NameRes.
+  // So we can freely clone this.
+  // #base_expression_simplification
   let baseOpt =
     assert (baseOpt |> Option.forall hxIsVarOrUnboxingVar)
 

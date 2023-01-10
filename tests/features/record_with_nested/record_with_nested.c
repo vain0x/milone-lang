@@ -32,9 +32,9 @@ struct Person_ record_with_nested_record_with_nested_newPerson(void) {
 
 int main(int argc, char **argv) {
     milone_start(argc, argv);
+    struct Person_ base_;
     struct Person_ john_;
     struct String name_;
-    struct Person_ base_;
     struct Person_ call_;
     struct Person_ Person_1;
     call_ = record_with_nested_record_with_nested_newPerson();

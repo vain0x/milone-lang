@@ -221,7 +221,6 @@ struct String record_generic_record_generic_eta2_testRecusive_id_1(void const *e
 void record_generic_record_generic_testRecusive(void) {
     struct StringNode1_ node_2;
     struct StringNode1_ other_;
-    struct StringNode1_ base_;
     struct StringNode1_Cons const *list_;
     struct StringNode1_Cons const *list_1;
     struct StringNode1_ call_13;
@@ -248,8 +247,7 @@ void record_generic_record_generic_testRecusive(void) {
     fun_2 = (struct StringStringFun1){.fun = record_generic_record_generic_eta2_testRecusive_id, .env = NULL};
     call_17 = record_generic_record_generic_StringStringFun1StringNode1StringFun2_nodePrint(fun_2, node_2);
     if ((string_compare(call_17, (struct String){.ptr = "add(f(x) y)", .len = 11}) != 0)) milone_assert_error("record_generic/record_generic.milone", 48, 2);
-    base_ = node_2;
-    StringNode1_1 = (struct StringNode1_){.t0 = (struct String){.ptr = "mul", .len = 3}, .t1 = base_.t1};
+    StringNode1_1 = (struct StringNode1_){.t0 = (struct String){.ptr = "mul", .len = 3}, .t1 = node_2.t1};
     other_ = StringNode1_1;
     fun_3 = (struct StringStringFun1){.fun = record_generic_record_generic_eta2_testRecusive_id_1, .env = NULL};
     call_18 = record_generic_record_generic_StringStringFun1StringNode1StringFun2_nodePrint(fun_3, other_);
