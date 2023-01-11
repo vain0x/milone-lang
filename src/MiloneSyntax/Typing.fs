@@ -785,7 +785,25 @@ let private initializeVarTy ctx pat =
     initializeVarTy ctx r
 
 /// Sets initialized type information in function definition.
-let private initializeFunTy (ctx: TyCtx) funSerial stubFunTy =
+let private initializeFunTy (ctx: TyCtx) funSerial args body =
+  let argTys, ctx =
+    args
+    |> List.mapFold (fun ctx pat ->
+      match patToAscriptionTy pat with
+      | Some ty -> resolveAscriptionTy ctx ty
+      | None -> freshMetaTyForPat pat ctx
+    ) ctx
+
+  let resultTy, ctx =
+    match exprToAscriptionTy body with
+    | Some ty -> resolveAscriptionTy ctx ty
+    | None -> freshMetaTyForExpr body ctx
+
+  let stubFunTy =
+    argTys
+    |> List.rev
+    |> List.fold (fun funTy argTy -> tyFun argTy funTy) resultTy
+
   let funDef = ctx.Funs |> mapFind funSerial
 
   // Ensure pre-initialized function definition doesn't have meaningful type information.
@@ -817,27 +835,7 @@ let private collectVarsAndFuns ctx stmts =
        (fun ctx stmt ->
          match stmt with
          | TLetValStmt (pat, _, _) -> initializeVarTy ctx pat
-
-         | TLetFunStmt (funSerial, _, _, args, body, _) ->
-          let argTys, ctx =
-            args
-            |> List.mapFold (fun ctx pat ->
-              match patToAscriptionTy pat with
-              | Some ty -> resolveAscriptionTy ctx ty
-              | None -> freshMetaTyForPat pat ctx
-            ) ctx
-
-          let resultTy, ctx =
-            match exprToAscriptionTy body with
-            | Some ty -> resolveAscriptionTy ctx ty
-            | None -> freshMetaTyForExpr body ctx
-
-          let funTy =
-            argTys
-            |> List.rev
-            |> List.fold (fun funTy argTy -> tyFun argTy funTy) resultTy
-
-          initializeFunTy ctx funSerial funTy
+         | TLetFunStmt (funSerial, _, _, args, body, _) -> initializeFunTy ctx funSerial args body
          | _ -> ctx)
        ctx
 
