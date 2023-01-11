@@ -139,7 +139,8 @@ let tyCompare l r =
 
 let tyEqual l r = tyCompare l r = 0
 
-/// Gets if the type is monomorphic.
+/// Gets if the type contains meta types. (Universal types aren't counted.)
+/// ~Gets if the type is monomorphic.~
 /// Assume all bound type variables are substituted.
 let tyIsMonomorphic ty : bool =
   let rec go tys =
