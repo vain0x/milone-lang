@@ -1052,9 +1052,7 @@ let private inferAsPat ctx body varSerial loc =
 
 let private inferOrPat ctx l r loc =
   let l, lTy, ctx = inferPat ctx l
-  let r, rTy, ctx = inferPat ctx r
-
-  let ctx = unifyTy ctx loc lTy rTy
+  let r, ctx = checkPat ctx r lTy
   TOrPat(l, r, loc), lTy, ctx
 
 let private inferAbortPat ctx loc =
@@ -1137,7 +1135,8 @@ let private checkPat (ctx: TyCtx) (pat: TPat) (targetTy: Ty) : TPat * TyCtx =
 
   | TAsPat (bodyPat, varSerial, loc) ->
     let ty, ctx = ctx |> unifyVarTy varSerial (Some targetTy) loc
-    checkPat ctx bodyPat ty
+    let bodyPat, ctx = checkPat ctx bodyPat ty
+    TAsPat(bodyPat, varSerial, loc), ctx
 
   | TOrPat (lPat, rPat, loc) ->
     let lPat, ctx = checkPat ctx lPat targetTy
