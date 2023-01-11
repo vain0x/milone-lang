@@ -1126,6 +1126,46 @@ let private inferIrrefutablePat ctx pat =
   else
     inferPat ctx pat
 
+/// Checks a pattern type to be equal to the specified type.
+let private checkPat (ctx: TyCtx) (pat: TPat) (targetTy: Ty) : TPat * TyCtx =
+  match pat with
+  | TDiscardPat (_, loc) -> TDiscardPat (targetTy, loc), ctx
+
+  | TVarPat (_, varSerial, _, loc) ->
+    let ty, ctx = ctx |> unifyVarTy varSerial (Some targetTy) loc
+    TVarPat(PrivateVis, varSerial, ty, loc), ctx
+
+  | TAsPat (bodyPat, varSerial, loc) ->
+    let ty, ctx = ctx |> unifyVarTy varSerial (Some targetTy) loc
+    checkPat ctx bodyPat ty
+
+  | TOrPat (lPat, rPat, loc) ->
+    let lPat, ctx = checkPat ctx lPat targetTy
+    let rPat, ctx = checkPat ctx rPat targetTy
+    TOrPat(lPat, rPat, loc), ctx
+
+  | TLitPat _
+  | TVariantPat _
+  | TNodePat _ ->
+    let pat, inferredTy, ctx = inferPat ctx pat
+    let ctx = unifyTy ctx (patToLoc pat) inferredTy targetTy
+    pat, ctx
+
+let private checkRefutablePat ctx pat targetTy = checkPat ctx pat targetTy
+
+let private checkIrrefutablePat ctx pat targetTy =
+  if pat
+     |> patIsClearlyExhaustive (isNewtypeVariant ctx)
+     |> not then
+    let loc = patToLoc pat
+
+    let ctx =
+      addLog ctx Log.IrrefutablePatNonExhaustiveError loc
+
+    tpAbort (tyError loc) loc, ctx
+  else
+    checkPat ctx pat targetTy
+
 // -----------------------------------------------
 // Expression
 // -----------------------------------------------
@@ -2003,14 +2043,9 @@ let private inferExprStmt ctx expr =
   TExprStmt expr, ctx
 
 let private inferLetValStmt ctx pat init loc =
-  let init, initTy, ctx =
-    let expectOpt = patToAscriptionTy pat
-    inferExpr ctx expectOpt init
-
-  let pat, patTy, ctx = inferIrrefutablePat ctx pat
-
-  let ctx = unifyTy ctx loc initTy patTy
-
+  let ascriptionTyOpt = patToAscriptionTy pat
+  let init, initTy, ctx = inferExpr ctx ascriptionTyOpt init
+  let pat, ctx = checkIrrefutablePat ctx pat initTy
   TLetValStmt(pat, init, loc), ctx
 
 let private inferLetFunStmt ctx mutuallyRec callee vis argPats body loc =
