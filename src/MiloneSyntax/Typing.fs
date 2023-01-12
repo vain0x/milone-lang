@@ -1035,11 +1035,9 @@ let private inferTuplePat ctx itemPats loc =
   let tupleTy = tyTuple itemTys
   TNodePat(TTuplePN, itemPats, tupleTy, loc), tupleTy, ctx
 
-let private inferAscribePat ctx body ascriptionTy loc =
+let private inferAscribePat ctx body ascriptionTy =
   let ascriptionTy, ctx = resolveAscriptionTy ctx ascriptionTy
-  let body, bodyTy, ctx = inferPat ctx body
-
-  let ctx = unifyTy ctx loc bodyTy ascriptionTy
+  let body, ctx = checkPat ctx body ascriptionTy
   body, ascriptionTy, ctx
 
 let private inferAsPat ctx body varSerial loc =
@@ -1093,7 +1091,7 @@ let private inferNodePat ctx pat =
 
   | TAbortPN, _ -> inferAbortPat ctx loc
 
-  | TAscribePN, [ bodyPat ] -> inferAscribePat ctx bodyPat (getTy ()) loc
+  | TAscribePN, [ bodyPat ] -> inferAscribePat ctx bodyPat (getTy ())
   | TAscribePN, _ -> unreachable ()
 
   | TNavPN _, _ -> unreachable () // Resolved in NameRes.
