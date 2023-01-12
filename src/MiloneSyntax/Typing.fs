@@ -1034,11 +1034,38 @@ let private inferVariantAppPat (ctx: TyCtx) variantSerial payloadPat loc =
 
   TNodePat(TVariantAppPN variantSerial, [ payloadPat ], unionTy, loc), unionTy, ctx
 
-let private inferTuplePat ctx itemPats loc =
-  let itemPats, itemTys, ctx = doInferPats ctx itemPats
+let private checkUnitPat ctx loc targetTy =
+  let ctx = unifyTy ctx loc targetTy tyUnit
+  TNodePat(TTuplePN, [], tyUnit, loc), ctx
 
-  let tupleTy = tyTuple itemTys
-  TNodePat(TTuplePN, itemPats, tupleTy, loc), tupleTy, ctx
+let private checkTuplePat ctx itemPats loc targetTy =
+  match targetTy with
+  | Ty(TupleTk, itemTys) when List.length itemTys = List.length itemPats ->
+    let entries =
+      match listTryZip itemPats itemTys with
+      | entries, [], [] -> entries
+      | _ -> unreachable ()
+
+    let itemPats, ctx =
+      entries
+      |> List.mapFold (fun ctx (itemPat, itemTy) -> checkPat ctx itemPat itemTy) ctx
+
+    let tupleTy = tyTuple (List.map patToTy itemPats)
+    TNodePat(TTuplePN, itemPats, tupleTy, loc), ctx
+
+  | _ ->
+    let itemPatTyPairs, ctx =
+      itemPats
+      |> List.mapFold
+           (fun ctx itemPat ->
+             let pat, ty, ctx = inferPat ctx itemPat
+             (pat, ty), ctx)
+           ctx
+
+    let itemPats, itemTys = List.unzip itemPatTyPairs
+    let tupleTy = tyTuple itemTys
+    let ctx = unifyTy ctx loc targetTy tupleTy
+    TNodePat(TTuplePN, itemPats, tupleTy, loc), ctx
 
 let private inferAscribePat ctx body ascriptionTy =
   let ascriptionTy, ctx = resolveAscriptionTy ctx ascriptionTy
@@ -1062,17 +1089,6 @@ let private inferAbortPat ctx loc =
   let targetTy = tyError loc
   tpAbort targetTy loc, targetTy, ctx
 
-let private doInferPats ctx pats =
-  let rec go ctx patAcc tyAcc pats =
-    match pats with
-    | [] -> List.rev patAcc, List.rev tyAcc, ctx
-
-    | pat :: pats ->
-      let pat, ty, ctx = inferPat ctx pat
-      go ctx (pat :: patAcc) (ty :: tyAcc) pats
-
-  go ctx [] [] pats
-
 let private inferNodePat ctx pat =
   let kind, argPats, loc =
     match pat with
@@ -1088,15 +1104,14 @@ let private inferNodePat ctx pat =
   | TVariantAppPN variantSerial, [ payloadPat ] -> inferVariantAppPat ctx variantSerial payloadPat loc
   | TVariantAppPN _, _ -> unreachable ()
 
-  | TTuplePN, _ -> inferTuplePat ctx argPats loc
-
   | TAbortPN, _ -> inferAbortPat ctx loc
 
   | TAscribePN, [ bodyPat ] -> inferAscribePat ctx bodyPat (getTy ())
   | TAscribePN, _ -> unreachable ()
 
   | TNilPN, _
-  | TConsPN, _ ->
+  | TConsPN, _
+  | TTuplePN, _ ->
     // Forward to check.
     let ty, ctx = freshMetaTyForPat pat ctx
     let pat, ctx = checkPat ctx pat ty
@@ -1126,8 +1141,12 @@ let private checkPat (ctx: TyCtx) (pat: TPat) (targetTy: Ty) : TPat * TyCtx =
   | TNodePat (kind, argPats, _, loc) ->
     match kind, argPats with
     | TNilPN, _ -> checkNilPat ctx loc targetTy
+
     | TConsPN, [ hPat; tPat ] -> checkConsPat ctx hPat tPat loc targetTy
     | TConsPN, _ -> unreachable ()
+
+    | TTuplePN, [] -> checkUnitPat ctx loc targetTy
+    | TTuplePN, _ -> checkTuplePat ctx argPats loc targetTy
 
     | _ ->
       // Forward to synthesis.
@@ -1152,7 +1171,9 @@ let private checkPat (ctx: TyCtx) (pat: TPat) (targetTy: Ty) : TPat * TyCtx =
     let ctx = unifyTy ctx (patToLoc pat) inferredTy targetTy
     pat, ctx
 
-let private checkRefutablePat ctx pat targetTy = checkPat ctx pat targetTy
+let private checkRefutablePat ctx pat targetTy =
+  let targetTy = substTy ctx targetTy
+  checkPat ctx pat targetTy
 
 let private inferIrrefutablePat ctx pat targetTyOpt : TPat * Ty * TyCtx =
   if pat
@@ -1168,6 +1189,7 @@ let private inferIrrefutablePat ctx pat targetTyOpt : TPat * Ty * TyCtx =
   else
     match targetTyOpt with
     | Some ty ->
+      let ty = substTy ctx ty
       let pat, ctx = checkPat ctx pat ty
       pat, ty, ctx
 
