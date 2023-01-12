@@ -964,10 +964,6 @@ let private errorExpr (ctx: TyCtx) msg loc : TExpr * Ty * TyCtx =
 // Pattern
 // -----------------------------------------------
 
-let private inferLitPat ctx pat lit =
-  let ctx = validateLit ctx lit (patToLoc pat)
-  pat, litToTy lit, ctx
-
 /// Tries to get ty ascription from pat.
 let private patToAscriptionTy pat =
   match pat with
@@ -982,10 +978,28 @@ let private patToAscriptionTy pat =
 
   | _ -> None
 
-let private inferNilPat ctx pat loc =
-  let itemTy, ctx = ctx |> freshMetaTyForPat pat
-  let ty = tyList itemTy
-  TNodePat(TNilPN, [], ty, loc), ty, ctx
+let private inferLitPat ctx pat lit =
+  let ctx = validateLit ctx lit (patToLoc pat)
+  pat, litToTy lit, ctx
+
+let private expectListTy ctx targetTy loc =
+  match targetTy with
+  | Ty(ListTk, [ itemTy ]) -> targetTy, itemTy, ctx
+
+  | _ ->
+    let itemTy, ctx = freshMetaTy loc ctx
+    let listTy = tyList itemTy
+    listTy, itemTy, unifyTy ctx loc listTy targetTy
+
+let private checkNilPat ctx loc targetTy =
+  let listTy, _, ctx = expectListTy ctx targetTy loc
+  TNodePat(TNilPN, [], listTy, loc), ctx
+
+let private checkConsPat ctx headPat tailPat loc targetTy =
+  let listTy, itemTy, ctx = expectListTy ctx targetTy loc
+  let headPat, ctx = checkPat ctx headPat itemTy
+  let tailPat, ctx = checkPat ctx tailPat listTy
+  TNodePat(TConsPN, [ headPat; tailPat ], listTy, loc), ctx
 
 let private inferDiscardPat ctx pat loc =
   let ty, ctx = ctx |> freshMetaTyForPat pat
@@ -1019,15 +1033,6 @@ let private inferVariantAppPat (ctx: TyCtx) variantSerial payloadPat loc =
     unifyTy ctx loc expectedPayloadTy payloadTy
 
   TNodePat(TVariantAppPN variantSerial, [ payloadPat ], unionTy, loc), unionTy, ctx
-
-let private inferConsPat ctx l r loc =
-  let l, lTy, ctx = inferPat ctx l
-  let r, rTy, ctx = inferPat ctx r
-
-  let listTy = tyList lTy
-  let ctx = unifyTy ctx loc rTy listTy
-
-  TNodePat(TConsPN, [ l; r ], listTy, loc), listTy, ctx
 
 let private inferTuplePat ctx itemPats loc =
   let itemPats, itemTys, ctx = doInferPats ctx itemPats
@@ -1080,10 +1085,6 @@ let private inferNodePat ctx pat =
     | _ -> unreachable ()
 
   match kind, argPats with
-  | TNilPN, _ -> inferNilPat ctx pat loc
-  | TConsPN, [ l; r ] -> inferConsPat ctx l r loc
-  | TConsPN, _ -> unreachable ()
-
   | TVariantAppPN variantSerial, [ payloadPat ] -> inferVariantAppPat ctx variantSerial payloadPat loc
   | TVariantAppPN _, _ -> unreachable ()
 
@@ -1093,6 +1094,13 @@ let private inferNodePat ctx pat =
 
   | TAscribePN, [ bodyPat ] -> inferAscribePat ctx bodyPat (getTy ())
   | TAscribePN, _ -> unreachable ()
+
+  | TNilPN, _
+  | TConsPN, _ ->
+    // Forward to check.
+    let ty, ctx = freshMetaTyForPat pat ctx
+    let pat, ctx = checkPat ctx pat ty
+    pat, ty, ctx
 
   | TNavPN _, _ -> unreachable () // Resolved in NameRes.
 
@@ -1115,6 +1123,18 @@ let private checkPat (ctx: TyCtx) (pat: TPat) (targetTy: Ty) : TPat * TyCtx =
     let ty, ctx = ctx |> unifyVarTy varSerial (Some targetTy) loc
     TVarPat(PrivateVis, varSerial, ty, loc), ctx
 
+  | TNodePat (kind, argPats, _, loc) ->
+    match kind, argPats with
+    | TNilPN, _ -> checkNilPat ctx loc targetTy
+    | TConsPN, [ hPat; tPat ] -> checkConsPat ctx hPat tPat loc targetTy
+    | TConsPN, _ -> unreachable ()
+
+    | _ ->
+      // Forward to synthesis.
+      let pat, inferredTy, ctx = inferPat ctx pat
+      let ctx = unifyTy ctx (patToLoc pat) inferredTy targetTy
+      pat, ctx
+
   | TAsPat (bodyPat, varSerial, loc) ->
     let ty, ctx = ctx |> unifyVarTy varSerial (Some targetTy) loc
     let bodyPat, ctx = checkPat ctx bodyPat ty
@@ -1126,8 +1146,8 @@ let private checkPat (ctx: TyCtx) (pat: TPat) (targetTy: Ty) : TPat * TyCtx =
     TOrPat(lPat, rPat, loc), ctx
 
   | TLitPat _
-  | TVariantPat _
-  | TNodePat _ ->
+  | TVariantPat _ ->
+    // Forward to synthesis.
     let pat, inferredTy, ctx = inferPat ctx pat
     let ctx = unifyTy ctx (patToLoc pat) inferredTy targetTy
     pat, ctx
