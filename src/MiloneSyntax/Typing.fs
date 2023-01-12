@@ -1108,8 +1108,6 @@ let private inferPat ctx pat : TPat * Ty * TyCtx =
   | TAsPat (bodyPat, serial, loc) -> inferAsPat ctx bodyPat serial loc
   | TOrPat (l, r, loc) -> inferOrPat ctx l r loc
 
-let private inferRefutablePat ctx pat = inferPat ctx pat
-
 let private inferIrrefutablePat ctx pat =
   if pat
      |> patIsClearlyExhaustive (isNewtypeVariant ctx)
@@ -1567,16 +1565,13 @@ let private inferMatchExpr ctx expr targetTyOpt =
     arms
     |> List.mapFold
          (fun ctx (pat, guard, body) ->
-           let pat, patTy, ctx = inferRefutablePat ctx pat
-
-           let ctx = unifyTy ctx (patToLoc pat) patTy condTy
-
+           let pat, ctx = checkRefutablePat ctx pat condTy
            let guard, guardTy, ctx = inferExpr ctx guard None
 
            let ctx =
              unifyTy ctx (exprToLoc guard) guardTy tyBool
 
-           let body, bodyTy, ctx =
+           let body, _, ctx =
              let body, bodyTy, ctx = inferExpr ctx body (Some targetTy)
 
              match substTy ctx bodyTy with
