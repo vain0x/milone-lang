@@ -1106,20 +1106,6 @@ let private inferPat ctx pat : TPat * Ty * TyCtx =
   | TAsPat (bodyPat, serial, loc) -> inferAsPat ctx bodyPat serial loc
   | TOrPat (l, r, loc) -> inferOrPat ctx l r loc
 
-let private inferIrrefutablePat ctx pat =
-  if pat
-     |> patIsClearlyExhaustive (isNewtypeVariant ctx)
-     |> not then
-    let loc = patToLoc pat
-
-    let ctx =
-      addLog ctx Log.IrrefutablePatNonExhaustiveError loc
-
-    let ty, ctx = freshMetaTyForPat pat ctx
-    tpAbort ty loc, ty, ctx
-  else
-    inferPat ctx pat
-
 /// Checks a pattern type to be equal to the specified type.
 let private checkPat (ctx: TyCtx) (pat: TPat) (targetTy: Ty) : TPat * TyCtx =
   match pat with
@@ -1148,7 +1134,7 @@ let private checkPat (ctx: TyCtx) (pat: TPat) (targetTy: Ty) : TPat * TyCtx =
 
 let private checkRefutablePat ctx pat targetTy = checkPat ctx pat targetTy
 
-let private checkIrrefutablePat ctx pat targetTy =
+let private inferIrrefutablePat ctx pat targetTyOpt : TPat * Ty * TyCtx =
   if pat
      |> patIsClearlyExhaustive (isNewtypeVariant ctx)
      |> not then
@@ -1157,9 +1143,15 @@ let private checkIrrefutablePat ctx pat targetTy =
     let ctx =
       addLog ctx Log.IrrefutablePatNonExhaustiveError loc
 
-    tpAbort (tyError loc) loc, ctx
+    let errorTy = tyError loc
+    tpAbort errorTy loc, errorTy, ctx
   else
-    checkPat ctx pat targetTy
+    match targetTyOpt with
+    | Some ty ->
+      let pat, ctx = checkPat ctx pat ty
+      pat, ty, ctx
+
+    | None -> inferPat ctx pat
 
 // -----------------------------------------------
 // Expression
@@ -2056,7 +2048,7 @@ let private inferExprStmt ctx expr =
 let private inferLetValStmt ctx pat init loc =
   let ascriptionTyOpt = patToAscriptionTy pat
   let init, initTy, ctx = inferExpr ctx init ascriptionTyOpt
-  let pat, ctx = checkIrrefutablePat ctx pat initTy
+  let pat, _, ctx = inferIrrefutablePat ctx pat (Some initTy)
   TLetValStmt(pat, init, loc), ctx
 
 let private inferLetFunStmt ctx mutuallyRec callee vis argPats body loc =
@@ -2081,7 +2073,7 @@ let private inferLetFunStmt ctx mutuallyRec callee vis argPats body loc =
     | [] -> [], funTy, ctx
 
     | argPat :: argPats ->
-      let argPat, argTy, ctx = inferIrrefutablePat ctx argPat
+      let argPat, argTy, ctx = inferIrrefutablePat ctx argPat None
       let argPats, funTy, ctx = inferArgs ctx funTy argPats
       argPat :: argPats, tyFun argTy funTy, ctx
 
