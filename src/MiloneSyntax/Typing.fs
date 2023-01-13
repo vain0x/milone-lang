@@ -1981,18 +1981,31 @@ let private inferSliceExpr ctx l r x loc =
 
   TNodeExpr(TSliceEN, [ l; r; x ], xTy, loc), xTy, ctx
 
-let private inferTupleExpr (ctx: TyCtx) items loc =
-  let rec go acc itemTys ctx items =
-    match items with
-    | [] -> List.rev acc, List.rev itemTys, ctx
+let private inferTupleExpr (ctx: TyCtx) items loc targetTyOpt =
+  let targetTy, ctx =
+    match targetTyOpt with
+    | Some it -> it, ctx
+    | None -> freshMetaTy loc ctx
 
-    | item :: items ->
-      let item, itemTy, ctx = inferExpr ctx item None
-      go (item :: acc) (itemTy :: itemTys) ctx items
+  match targetTy with
+  | Ty(TupleTk, itemTys) when List.length itemTys = List.length items ->
+    let items, _, _ = listTryZip items itemTys
+    let items, ctx =
+      items |> List.mapFold (fun ctx (item, itemTy) ->
+        let item, _, ctx = checkExpr ctx item itemTy
+        item, ctx)
+        ctx
+    txTuple items loc, targetTy, ctx
 
-  let items, itemTys, ctx = go [] [] ctx items
+  | _ ->
+    let itemExprTyPairs, ctx =
+      items |> List.mapFold (fun ctx item ->
+        let item, itemTy, ctx = inferExpr ctx item None
+        (item, itemTy), ctx)
+        ctx
 
-  txTuple items loc, tyTuple itemTys, ctx
+    let items, itemTys = List.unzip itemExprTyPairs
+    txTuple items loc, tyTuple itemTys, ctx
 
 let private inferAscribeExpr ctx body ascriptionTy =
   let ascriptionTy, ctx = resolveAscriptionTy ctx ascriptionTy
@@ -2027,7 +2040,7 @@ let private inferNodeExpr ctx expr targetTyOpt : TExpr * Ty * TyCtx =
   | TSliceEN, [ l; r; x ] -> inferSliceExpr ctx l r x loc
   | TSliceEN, _ -> unreachable ()
 
-  | TTupleEN, _ -> inferTupleExpr ctx args loc
+  | TTupleEN, _ -> inferTupleExpr ctx args loc targetTyOpt
 
   | TAscribeEN, [ expr ] -> inferAscribeExpr ctx expr (getTy ())
   | TAscribeEN, _ -> unreachable ()
