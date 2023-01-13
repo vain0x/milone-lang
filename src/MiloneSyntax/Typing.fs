@@ -1551,12 +1551,11 @@ let private inferRecordExpr ctx expr targetTyOpt =
              match fieldDefs |> TMap.remove name with
              | None, _ ->
                let ctx = ctx |> addRedundantErr name loc
-               let init, _, ctx = inferExpr ctx init None
+               let init, _, ctx = checkExpr ctx init (tyError loc)
                (name, init, loc), (fieldDefs, ctx)
 
              | Some defTy, fieldDefs ->
-               let init, initTy, ctx = inferExpr ctx init (Some defTy)
-               let ctx = unifyTy ctx loc initTy defTy
+               let init, initTy, ctx = checkExpr ctx init defTy
                (name, init, loc), (fieldDefs, ctx))
            (fieldDefs, ctx)
 
@@ -1598,21 +1597,17 @@ let private inferMatchExpr ctx expr targetTyOpt =
     |> List.mapFold
          (fun ctx (pat, guard, body) ->
            let pat, ctx = checkRefutablePat ctx pat condTy
-           let guard, guardTy, ctx = inferExpr ctx guard None
-
-           let ctx =
-             unifyTy ctx (exprToLoc guard) guardTy tyBool
+           let guard, _, ctx = checkExpr ctx guard tyBool
 
            let body, _, ctx =
-             let body, bodyTy, ctx = inferExpr ctx body (Some targetTy)
+             // FIXME: if type of body is never, it shouldn't be unified with targetTy. test never_ty is failing due to this
+             let body, bodyTy, ctx = checkExpr ctx body targetTy
 
              match substTy ctx bodyTy with
              | Ty(NeverTk, _) ->
-               TNodeExpr(TCatchNeverEN, [ body ], bodyTy, exprToLoc body), bodyTy, ctx
+               TNodeExpr(TCatchNeverEN, [ body ], targetTy, exprToLoc body), targetTy, ctx
 
-             | bodyTy ->
-              let ctx = unifyTy ctx (exprToLoc body) targetTy bodyTy
-              body, bodyTy, ctx
+             | bodyTy -> body, bodyTy, ctx
 
            (pat, guard, body), ctx)
          ctx
@@ -1627,7 +1622,6 @@ let private inferNavExpr ctx l (r: Ident, rLoc) loc =
     txAbort ctx loc
 
   let l, lTy, ctx = inferExpr ctx l None
-
   let lTy = substTy ctx lTy
 
   match lTy, r with
@@ -1724,11 +1718,7 @@ let private inferExprAsPtrProjection ctx (kind: PtrOperationKind) expr : TExpr *
     | TNodeExpr (TIndexEN, [ ptr; index ], _, loc) ->
       match go ctx ptr with
       | PtrProjectionOk (ptr, ptrTy, ctx) ->
-        let index, indexTy, ctx = inferExpr ctx index (Some tyInt)
-
-        let ctx =
-          unifyTy ctx (exprToLoc index) indexTy tyInt
-
+        let index, _, ctx = checkExpr ctx index tyInt
         PtrProjectionOk(TNodeExpr(TPtrOffsetEN, [ ptr; index ], ptrTy, loc), ptrTy, ctx)
 
       | err -> err
@@ -1902,8 +1892,7 @@ let private inferWriteExpr ctx expr : TExpr * Ty * TyCtx =
     | Ty (ErrorTk _, _) -> ptrTy
     | _ -> unreachable ()
 
-  let item, actualItemTy, ctx = inferExpr ctx item (Some itemTy)
-  let ctx = unifyTy ctx loc actualItemTy itemTy
+  let item, _, ctx = checkExpr ctx item itemTy
   TNodeExpr(TPtrWriteEN, [ ptr; item ], tyUnit, loc), tyUnit, ctx
 
 let private inferFunPtrInvokeExpr ctx expr : TExpr * Ty * TyCtx =
@@ -1929,9 +1918,7 @@ let private inferFunPtrInvokeExpr ctx expr : TExpr * Ty * TyCtx =
     | [] -> tyUnit
     | _ -> tyTuple argTys
 
-  let arg, actualArgTy, ctx = inferExpr ctx arg (Some argTy)
-  let ctx = unifyTy ctx loc actualArgTy argTy
-
+  let arg, _, ctx = checkExpr ctx arg argTy
   TNodeExpr(TFunPtrInvokeEN, [ callee; arg ], resultTy, loc), resultTy, ctx
 
 let private inferMinusExpr ctx arg loc =
@@ -1959,8 +1946,8 @@ let private inferPtrOfExpr ctx arg loc =
     txAbort ctx loc
 
 let private inferIndexExpr ctx l r loc =
-  let l, lTy, ctx = inferExpr ctx l (Some tyString)
-  let r, rTy, ctx = inferExpr ctx r (Some tyInt)
+  let l, lTy, ctx = inferExpr ctx l None
+  let r, rTy, ctx = inferExpr ctx r None
   let tTy, ctx = freshMetaTy loc ctx
 
   let ctx =
@@ -1970,8 +1957,8 @@ let private inferIndexExpr ctx l r loc =
   TNodeExpr(TIndexEN, [ l; r ], tTy, loc), tTy, ctx
 
 let private inferSliceExpr ctx l r x loc =
-  let l, lTy, ctx = inferExpr ctx l (Some tyInt)
-  let r, rTy, ctx = inferExpr ctx r (Some tyInt)
+  let l, lTy, ctx = inferExpr ctx l None
+  let r, rTy, ctx = inferExpr ctx r None
   let x, xTy, ctx = inferExpr ctx x None
 
   let ctx =
@@ -1999,9 +1986,7 @@ let private inferTupleExpr (ctx: TyCtx) items loc =
 
 let private inferAscribeExpr ctx body ascriptionTy loc =
   let ascriptionTy, ctx = resolveAscriptionTy ctx ascriptionTy
-  let body, bodyTy, ctx = inferExpr ctx body (Some ascriptionTy)
-
-  let ctx = unifyTy ctx loc bodyTy ascriptionTy
+  let body, _, ctx = checkExpr ctx body ascriptionTy
   body, ascriptionTy, ctx
 
 let private inferNodeExpr ctx expr : TExpr * Ty * TyCtx =
@@ -2082,9 +2067,7 @@ let private inferBlockExpr ctx expr targetTyOpt =
 // -----------------------------------------------
 
 let private inferExprStmt ctx expr =
-  let expr, ty, ctx = inferExpr ctx expr None
-
-  let ctx = unifyTy ctx (exprToLoc expr) ty tyUnit
+  let expr, _, ctx = checkExpr ctx expr tyUnit
   TExprStmt expr, ctx
 
 let private inferLetValStmt ctx pat init loc =
@@ -2135,14 +2118,11 @@ let private inferLetFunStmt ctx mutuallyRec callee vis argPats body loc =
   let ctx = unifyTy ctx loc calleeTy funTy
 
   let body, bodyTy, ctx =
-    let body, bodyTy, ctx = inferExpr ctx body None
+    let body, bodyTy, ctx = checkExpr ctx body provisionalResultTy
 
     match substTy ctx bodyTy with
     | Ty(NeverTk, _) -> TNodeExpr(TCatchNeverEN, [ body ], tyNever, loc), tyNever, ctx
     | bodyTy -> body, bodyTy, ctx
-
-  let ctx =
-    unifyTy ctx loc bodyTy provisionalResultTy
 
   let ctx =
     match mainFunTyOpt, bodyTy with
@@ -2178,6 +2158,17 @@ let private inferExpr (ctx: TyCtx) (expr: TExpr) (targetTyOpt: Ty option) : TExp
   | TNavExpr (receiver, field, _, loc) -> inferNavExpr ctx receiver field loc
   | TNodeExpr _ -> inferNodeExpr ctx expr
   | TBlockExpr _ -> inferBlockExpr ctx expr targetTyOpt
+
+/// Transforms an expression for type check.
+/// The result is guaranteed to have the specified type.
+let private checkExpr (ctx: TyCtx) (expr: TExpr) (targetTy: Ty) : TExpr * Ty * TyCtx =
+  let expr, inferredTy, ctx = inferExpr ctx expr (Some targetTy)
+
+  // inferExpr should ensure (targetTy = inferredTy) but currently not. Unify here as workaround.
+  let ctx = unifyTy ctx (exprToLoc expr) targetTy inferredTy
+
+  // note: inferredTy is equivalent to (exprToTy expr) in theory so it's redundant
+  expr, inferredTy, ctx
 
 let private inferBlockStmt (ctx: TyCtx) mutuallyRec stmts : TStmt * TyCtx =
   let parentCtx = ctx
