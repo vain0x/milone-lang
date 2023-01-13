@@ -1671,35 +1671,45 @@ let private inferUntypedExprs ctx exprs =
          expr, ctx)
        ctx
 
-let private inferAppExpr ctx itself =
+let private inferAppExpr ctx itself targetTyOpt =
   let callee, arg, loc =
     match itself with
     | TNodeExpr (TAppEN, [ callee; arg ], _, loc) -> callee, arg, loc
     | _ -> unreachable ()
 
-  let targetTy, ctx = ctx |> freshMetaTyForExpr itself
+  let targetTy, ctx =
+    match targetTyOpt with
+    | Some it -> it, ctx
+    | None -> freshMetaTyForExpr itself ctx
 
   let callee, calleeTy, ctx = inferExpr ctx callee None
 
-  let arg, argTy, ctx =
-    let tyAsFunArg ty =
-      match ty with
-      | Ty (FunTk, it :: _) -> Some it
-      | _ -> None
+  let calleeTy, neverReturning, ctx =
+    match calleeTy with
+    | Ty(FunTk, [ sTy; Ty(NeverTk, _) ]) ->
+      let metaTy, ctx = freshMetaTyForExpr itself ctx
+      tyFun sTy metaTy, true, ctx
 
-    inferExpr ctx arg (tyAsFunArg calleeTy)
+    | _ -> calleeTy, false, ctx
+
+  let arg, argTy, ctx =
+    let argTy, ctx =
+      match calleeTy with
+      | Ty(FunTk, it :: _) -> it, ctx
+      | _ -> freshMetaTyForExpr itself ctx
+
+    checkExpr ctx arg argTy
 
   let ctx =
     unifyTy ctx loc calleeTy (tyFun argTy targetTy)
 
+  let targetTy = substTy ctx targetTy
   let appExpr = txApp callee arg targetTy loc
 
-  match substTy ctx targetTy with
-  | Ty(NeverTk, _) ->
-    let metaTy, ctx = freshMetaTy loc ctx
-    TNodeExpr(TCatchNeverEN, [ appExpr ], metaTy, loc), metaTy, ctx
-
-  | ty -> appExpr, ty, ctx
+  if neverReturning then
+    TNodeExpr(TCatchNeverEN, [ appExpr ], targetTy, loc), targetTy, ctx
+  else
+    appExpr, targetTy, ctx
 
 type private PtrProjectionInferError =
   | PtrProjectionOk of TExpr * Ty * TyCtx
@@ -1746,7 +1756,7 @@ let private inferExprAsPtrProjection ctx (kind: PtrOperationKind) expr : TExpr *
 
     txAbort ctx loc
 
-let private inferPrimAppExpr ctx itself =
+let private inferPrimAppExpr ctx itself targetTyOpt =
   let prim, arg, loc =
     match itself with
     | TNodeExpr (TAppEN, [ TPrimExpr (prim, _, loc); arg ], _, _) -> prim, arg, loc
@@ -1871,7 +1881,7 @@ let private inferPrimAppExpr ctx itself =
 
     TNodeExpr(TNativeDeclEN code, args, tyUnit, loc), tyUnit, ctx
 
-  | _ -> inferAppExpr ctx itself
+  | _ -> inferAppExpr ctx itself targetTyOpt
 
 let private inferWriteExpr ctx expr : TExpr * Ty * TyCtx =
   let ptr, item, loc =
@@ -1984,12 +1994,12 @@ let private inferTupleExpr (ctx: TyCtx) items loc =
 
   txTuple items loc, tyTuple itemTys, ctx
 
-let private inferAscribeExpr ctx body ascriptionTy loc =
+let private inferAscribeExpr ctx body ascriptionTy =
   let ascriptionTy, ctx = resolveAscriptionTy ctx ascriptionTy
   let body, _, ctx = checkExpr ctx body ascriptionTy
   body, ascriptionTy, ctx
 
-let private inferNodeExpr ctx expr : TExpr * Ty * TyCtx =
+let private inferNodeExpr ctx expr targetTyOpt : TExpr * Ty * TyCtx =
   let kind, args, loc =
     match expr with
     | TNodeExpr (kind, args, _, loc) -> kind, args, loc
@@ -2001,11 +2011,11 @@ let private inferNodeExpr ctx expr : TExpr * Ty * TyCtx =
     | _ -> unreachable ()
 
   match kind, args with
-  | TAppEN, [ TPrimExpr _; _ ] -> inferPrimAppExpr ctx expr
+  | TAppEN, [ TPrimExpr _; _ ] -> inferPrimAppExpr ctx expr targetTyOpt
   | TAppEN, [ TNodeExpr (TAppEN, [ TPrimExpr (TPrim.PtrWrite, _, _); _ ], _, _); _ ] -> inferWriteExpr ctx expr
   | TAppEN, [ TNodeExpr (TAppEN, [ TPrimExpr (TPrim.FunPtrInvoke, _, _); _ ], _, _); _ ] ->
     inferFunPtrInvokeExpr ctx expr
-  | TAppEN, [ _; _ ] -> inferAppExpr ctx expr
+  | TAppEN, [ _; _ ] -> inferAppExpr ctx expr targetTyOpt
   | TAppEN, _ -> unreachable ()
 
   | TMinusEN, [ arg ] -> inferMinusExpr ctx arg loc
@@ -2019,7 +2029,7 @@ let private inferNodeExpr ctx expr : TExpr * Ty * TyCtx =
 
   | TTupleEN, _ -> inferTupleExpr ctx args loc
 
-  | TAscribeEN, [ expr ] -> inferAscribeExpr ctx expr (getTy ()) loc
+  | TAscribeEN, [ expr ] -> inferAscribeExpr ctx expr (getTy ())
   | TAscribeEN, _ -> unreachable ()
 
   | TSizeOfEN, [ TNodeExpr (TTyPlaceholderEN, _, ty, _) ] ->
@@ -2163,7 +2173,7 @@ let private inferExpr (ctx: TyCtx) (expr: TExpr) (targetTyOpt: Ty option) : TExp
   | TRecordExpr _ -> inferRecordExpr ctx expr targetTyOpt
   | TMatchExpr _ -> inferMatchExpr ctx expr targetTyOpt
   | TNavExpr (receiver, field, _, loc) -> inferNavExpr ctx receiver field loc
-  | TNodeExpr _ -> inferNodeExpr ctx expr
+  | TNodeExpr _ -> inferNodeExpr ctx expr targetTyOpt
   | TBlockExpr _ -> inferBlockExpr ctx expr targetTyOpt
 
 /// Transforms an expression for type check.
