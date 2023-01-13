@@ -2071,7 +2071,14 @@ let private inferExprStmt ctx expr =
   TExprStmt expr, ctx
 
 let private inferLetValStmt ctx pat init loc =
-  let ascriptionTyOpt = patToAscriptionTy pat
+  let ascriptionTyOpt, ctx =
+    match patToAscriptionTy pat with
+    | Some ty ->
+      let ty, ctx = resolveAscriptionTy ctx ty
+      Some ty, ctx
+
+    | None -> None, ctx
+
   let init, initTy, ctx = inferExpr ctx init ascriptionTyOpt
   let pat, _, ctx = inferIrrefutablePat ctx pat (Some initTy)
   TLetValStmt(pat, init, loc), ctx
