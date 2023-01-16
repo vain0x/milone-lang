@@ -273,24 +273,24 @@ let private instantiateTyScheme (ctx: TyCtx) (tyScheme: TyScheme) loc : Ty * (Ty
   match tyScheme with
   | TyScheme ([], ty) -> ty, [], ctx
 
-  | TyScheme (fvs, ty) ->
-    let serial, ty, assignment =
-      doInstantiateTyScheme ctx.Serial fvs ty loc
+  | TyScheme (tyVars, ty) ->
+    let lastSerial, ty, assignment =
+      doInstantiateTyScheme ctx.Serial tyVars ty loc
 
-    ty, assignment, { ctx with Serial = serial}
+    ty, assignment, { ctx with Serial = lastSerial }
 
 let private instantiateBoundedTyScheme (ctx: TyCtx) (tyScheme: BoundedTyScheme) loc : Ty * TyCtx =
-  let (BoundedTyScheme (fvs, ty, traits)) = tyScheme
-  assert (List.isEmpty fvs |> not)
+  let (BoundedTyScheme (tyVars, ty, traits)) = tyScheme
+  assert (List.isEmpty tyVars |> not)
 
-  let serial, ty, assignment =
-    doInstantiateTyScheme ctx.Serial fvs ty loc
+  let lastSerial, ty, assignment =
+    doInstantiateTyScheme ctx.Serial tyVars ty loc
 
   let traits =
     let substMeta = tyAssign assignment
 
     traits
-    |> List.map (fun theTrait -> theTrait |> traitMapTys substMeta, loc)
+    |> List.map (fun (t: Trait) -> t |> traitMapTys substMeta, loc)
 
   // Meta types that appear in trait bounds can't be generalized for now.
   let noGeneralizeMetaTys =
@@ -316,7 +316,7 @@ let private instantiateBoundedTyScheme (ctx: TyCtx) (tyScheme: BoundedTyScheme) 
 
   ty,
   { ctx with
-      Serial = serial
+      Serial = lastSerial
       NoGeneralizeMetaTys = noGeneralizeMetaTys
       NewTraitBounds = List.append traits ctx.NewTraitBounds }
 
