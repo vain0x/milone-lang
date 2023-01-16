@@ -231,17 +231,6 @@ let private unifyTy (ctx: TyCtx) loc (lTy: Ty) (rTy: Ty) : TyCtx =
 
   go lTy rTy loc ctx
 
-let private unifyVarTy (ctx: TyCtx) varSerial tyOpt loc =
-  let varTy = (ctx.Vars |> mapFind varSerial).Ty
-  assert (isNoTy varTy |> not)
-
-  match tyOpt with
-  | Some ty ->
-    let ctx = unifyTy ctx loc varTy ty
-    varTy, ctx
-
-  | None -> varTy, ctx
-
 // -----------------------------------------------
 // Trait bounds
 // -----------------------------------------------
@@ -1071,6 +1060,12 @@ let private expectTupleTy (arity: int) ctx targetTy loc =
 // Helpers for patterns
 // -----------------------------------------------
 
+let private unifyVarTy (ctx: TyCtx) varSerial ty loc =
+  let varTy = (ctx.Vars |> mapFind varSerial).Ty
+  assert (isNoTy varTy |> not)
+
+  unifyTy ctx loc varTy ty
+
 // payloadTy, unionTy, variantTy
 let private instantiateVariant (ctx: TyCtx) variantSerial loc : Ty * Ty * Ty * TyCtx =
   let variantDef = ctx.Variants |> mapFind variantSerial
@@ -1142,8 +1137,10 @@ let private inferDiscardPat ctx pat loc =
   TDiscardPat(ty, loc), ty, ctx
 
 let private inferVarPat (ctx: TyCtx) varSerial loc =
-  let ty, ctx = unifyVarTy ctx varSerial None loc
-  TVarPat(PrivateVis, varSerial, ty, loc), ty, ctx
+  let varTy = (ctx.Vars |> mapFind varSerial).Ty
+  assert (isNoTy varTy |> not)
+
+  TVarPat(PrivateVis, varSerial, varTy, loc), varTy, ctx
 
 let private inferVariantPat (ctx: TyCtx) variantSerial loc =
   let _, unionTy, _, ctx =
@@ -1196,10 +1193,7 @@ let private inferAscribePat ctx body ascriptionTy =
 
 let private inferAsPat ctx body varSerial loc =
   let body, bodyTy, ctx = inferPat ctx body
-
-  let _, ctx =
-    unifyVarTy ctx varSerial (Some bodyTy) loc
-
+  let ctx = unifyVarTy ctx varSerial bodyTy loc
   TAsPat(body, varSerial, loc), bodyTy, ctx
 
 let private inferOrPat ctx l r loc =
@@ -1257,8 +1251,8 @@ let private checkPat (ctx: TyCtx) (pat: TPat) (targetTy: Ty) : TPat * TyCtx =
   | TDiscardPat (_, loc) -> TDiscardPat (targetTy, loc), ctx
 
   | TVarPat (_, varSerial, _, loc) ->
-    let ty, ctx = unifyVarTy ctx varSerial (Some targetTy) loc
-    TVarPat(PrivateVis, varSerial, ty, loc), ctx
+    let ctx = unifyVarTy ctx varSerial targetTy loc
+    TVarPat(PrivateVis, varSerial, targetTy, loc), ctx
 
   | TNodePat (kind, argPats, _, loc) ->
     match kind, argPats with
@@ -1277,8 +1271,8 @@ let private checkPat (ctx: TyCtx) (pat: TPat) (targetTy: Ty) : TPat * TyCtx =
       pat, ctx
 
   | TAsPat (bodyPat, varSerial, loc) ->
-    let ty, ctx = unifyVarTy ctx varSerial (Some targetTy) loc
-    let bodyPat, ctx = checkPat ctx bodyPat ty
+    let ctx = unifyVarTy ctx varSerial targetTy loc
+    let bodyPat, ctx = checkPat ctx bodyPat targetTy
     TAsPat(bodyPat, varSerial, loc), ctx
 
   | TOrPat (lPat, rPat, loc) ->
@@ -1328,7 +1322,8 @@ let private inferLitExpr ctx expr lit =
   expr, litToTy lit, ctx
 
 let private inferVarExpr (ctx: TyCtx) varSerial loc =
-  let ty, ctx = unifyVarTy ctx varSerial None loc
+  let ty = (ctx.Vars |> mapFind varSerial).Ty
+  assert (isNoTy ty |> not)
 
   TVarExpr(varSerial, ty, loc), ty, ctx
 
