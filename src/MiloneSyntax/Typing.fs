@@ -1155,7 +1155,7 @@ let private inferVariantPat (ctx: TyCtx) variantSerial loc =
     let variantDef = ctx.Variants |> mapFind variantSerial
 
     if variantDef.HasPayload then
-      addError ctx "Variant with payload must be used in the form of: `Variant pattern`." loc
+      addLog ctx Log.MissingPayloadPat loc
     else
       ctx
 
@@ -1368,6 +1368,10 @@ let private inferPrimExpr ctx prim loc =
 
     TPrimExpr(prim, primTy, loc), primTy, ctx
 
+  let bad ctx err =
+    let ctx = addLog ctx err loc
+    txAbort ctx loc
+
   match prim with
   | TPrim.Not -> onMono primNotTy
   | TPrim.BitNot -> onBounded primBitNotScheme
@@ -1401,22 +1405,10 @@ let private inferPrimExpr ctx prim loc =
   | TPrim.Nil -> onUnbounded primNilScheme
   | TPrim.Cons -> onUnbounded primConsScheme
 
-  | TPrim.Discriminant _ ->
-    let ctx =
-      addError ctx "Illegal use of __discriminant. Hint: `__discriminant Variant`." loc
-
-    txAbort ctx loc
+  | TPrim.Discriminant _ -> bad ctx Log.UseOfDiscriminant
 
   | TPrim.Assert -> onMono primAssertTy
-
-  | TPrim.Printfn ->
-    let ctx =
-      addError
-        ctx
-        "Illegal use of printfn. printfn must have string literal as first argument; e.g. `printfn \"%s\" s`."
-        loc
-
-    txAbort ctx loc
+  | TPrim.Printfn -> bad ctx Log.UseOfPrintfn
 
   | TPrim.OwnAcquire -> onUnbounded primOwnAcquireTy
   | TPrim.OwnRelease -> onUnbounded primOwnReleaseTy
@@ -1425,31 +1417,11 @@ let private inferPrimExpr ctx prim loc =
   | TPrim.PtrInvalid -> onBounded primPtrInvalidScheme
   | TPrim.PtrDistance -> onBounded primPtrDistanceScheme
 
-  | TPrim.NativeFun ->
-    let ctx =
-      addError ctx "Illegal use of __nativeFun. Hint: `__nativeFun (\"funName\", arg1, arg2, ...): ResultType`." loc
-
-    txAbort ctx loc
-
   | TPrim.NativeCast -> onBounded primNativeCastScheme
-
-  | TPrim.NativeExpr ->
-    let ctx =
-      addError ctx "Illegal use of __nativeExpr. Hint: `__nativeExpr \"Some C code here.\"`." loc
-
-    txAbort ctx loc
-
-  | TPrim.NativeStmt ->
-    let ctx =
-      addError ctx "Illegal use of __nativeStmt. Hint: `__nativeStmt \"Some C code here.\"`." loc
-
-    txAbort ctx loc
-
-  | TPrim.NativeDecl ->
-    let ctx =
-      addError ctx "Illegal use of __nativeDecl. Hint: `__nativeDecl \"Some C code here.\"`." loc
-
-    txAbort ctx loc
+  | TPrim.NativeFun -> bad ctx Log.UseOfNativeFun
+  | TPrim.NativeExpr -> bad ctx Log.UseOfNativeExpr
+  | TPrim.NativeStmt -> bad ctx Log.UseOfNativeStmt
+  | TPrim.NativeDecl -> bad ctx Log.UseOfNativeDecl
 
   | TPrim.NullPtr -> onBounded primNullPtrScheme
 
@@ -1458,7 +1430,7 @@ let private inferPrimExpr ctx prim loc =
   | TPrim.PtrWrite
   | TPrim.PtrAsIn
   | TPrim.PtrAsNative
-  | TPrim.FunPtrInvoke -> errorExpr ctx "This function misses some argument." loc
+  | TPrim.FunPtrInvoke -> bad ctx Log.PrimRequireParam
 
 /// Infers record construction expression.
 let private inferRecordExpr ctx expr targetTyOpt =
@@ -1493,9 +1465,7 @@ let private inferRecordExpr ctx expr targetTyOpt =
 
   match recordTyInfoOpt with
   | None ->
-    let ctx =
-      addError ctx "Can't infer type of record." loc
-
+    let ctx = addLog ctx Log.RecordTypeNotInferred loc
     txAbort ctx loc
 
   | Some (recordTy, recordName, tyVars, fieldDefs) ->
@@ -1594,9 +1564,9 @@ let private inferMatchExpr ctx expr targetTyOpt =
   TMatchExpr(cond, arms, targetTy, loc), targetTy, ctx
 
 let private inferNavExpr ctx l (r: Ident, rLoc) loc =
-  let fail ctx =
+  let fail log ctx =
     let ctx =
-      addError ctx ("Expected to have field: '" + r + "'.") loc
+      addLog ctx log loc
 
     txAbort ctx loc
 
@@ -1631,9 +1601,9 @@ let private inferNavExpr ctx l (r: Ident, rLoc) loc =
 
     match fieldTyOpt with
     | Some fieldTy -> TNavExpr(l, (r, rLoc), fieldTy, loc), fieldTy, ctx
-    | None -> fail ctx
+    | None -> fail (Log.RecordFieldNotFound(r, lTy)) ctx
 
-  | _ -> fail ctx
+  | _ -> fail (Log.FieldNotFound r) ctx
 
 let private inferUntypedExprs ctx exprs =
   exprs

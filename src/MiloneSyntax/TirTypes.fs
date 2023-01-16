@@ -460,5 +460,19 @@ type Log =
   | TySynonymCycleError
   | RedundantFieldError of ty: Ident * field: Ident
   | MissingFieldsError of ty: Ident * fields: Ident list
+  | RecordTypeNotInferred
+  | RecordFieldNotFound of field: Ident * recordTy: Ty
+  | FieldNotFound of field: Ident
+  | MissingPayloadPat
   | ArityMismatch of actual: string * expected: string
+
+  // Illegal use of primitives.
+  | UseOfDiscriminant
+  | UseOfPrintfn
+  | UseOfNativeFun
+  | UseOfNativeExpr
+  | UseOfNativeStmt
+  | UseOfNativeDecl
+  | PrimRequireParam
+
   | Error of string

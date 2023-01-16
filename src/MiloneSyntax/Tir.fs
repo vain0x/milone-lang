@@ -449,11 +449,27 @@ let logToString tyDisplay log =
     + "' must have fields: "
     + fields
 
+  | Log.RecordTypeNotInferred -> "Record type is not inferred. Record type must be known at the point. Hint: Consider add a type ascription."
+
+  | Log.RecordFieldNotFound (field, ty) -> "Field " + tyDisplay ty + "." + field + " is not found here."
+
+  | Log.FieldNotFound field -> "Field " + field + " is not found here."
+
+  | Log.MissingPayloadPat -> "Variant with payload must be used in the form of: `Variant pattern`."
+
   | Log.ArityMismatch (actual, expected) ->
     "Arity mismatch: expected "
     + expected
     + ", but was "
     + actual
     + "."
+
+  | Log.UseOfDiscriminant -> "Illegal use of __discriminant. Hint: `__discriminant Variant`."
+  | Log.UseOfPrintfn -> "Illegal use of printfn. printfn must have string literal as first argument; e.g. `printfn \"%s\" s`."
+  | Log.UseOfNativeFun -> "Illegal use of __nativeFun. Hint: `__nativeFun (\"funName\", arg1, arg2, ...): ResultType`."
+  | Log.UseOfNativeExpr -> "Illegal use of __nativeExpr. Hint: `__nativeExpr \"Some C code here.\"`."
+  | Log.UseOfNativeStmt -> "Illegal use of __nativeStmt. Hint: `__nativeStmt \"Some C code here.\"`."
+  | Log.UseOfNativeDecl -> "Illegal use of __nativeDecl. Hint: `__nativeDecl \"Some C code here.\"`."
+  | Log.PrimRequireParam -> "This primitive misses some argument."
 
   | Log.Error msg -> msg
