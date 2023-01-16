@@ -107,15 +107,6 @@ let private addError (ctx: TyCtx) message loc =
 let private canGeneralize (ctx: TyCtx) metaTySerial =
   ctx.NoGeneralizeMetaTys |> TSet.contains metaTySerial |> not
 
-let private isNewtypeVariant (ctx: TyCtx) variantSerial =
-  let variantDef = ctx.Variants |> mapFind variantSerial
-  variantDef.IsNewtype
-
-let private isMainFun funSerial (ctx: TyCtx) =
-  match ctx.MainFunOpt with
-  | Some mainFun -> funSerialCompare mainFun funSerial = 0
-  | _ -> false
-
 let private freshTySerial (ctx: TyCtx) =
   let serial = ctx.Serial + 1
 
@@ -141,6 +132,10 @@ let private freshMetaTyForExpr expr ctx =
   let tySerial, ctx = ctx |> freshTySerial
   let ty = tyMeta tySerial loc
   ty, ctx
+
+// -----------------------------------------------
+// Literal validation
+// -----------------------------------------------
 
 let private validateLit ctx lit loc =
   // should validate float too
@@ -1185,6 +1180,8 @@ let private checkRefutablePat ctx pat targetTy =
   checkPat ctx pat targetTy
 
 let private inferIrrefutablePat ctx pat targetTyOpt : TPat * Ty * TyCtx =
+  let isNewtypeVariant (ctx: TyCtx) variantSerial = ((ctx.Variants |> mapFind variantSerial): VariantDef).IsNewtype
+
   if pat
      |> patIsClearlyExhaustive (isNewtypeVariant ctx)
      |> not then
@@ -2114,9 +2111,14 @@ let private inferLetValStmt ctx pat init loc =
   TLetValStmt(pat, init, loc), ctx
 
 let private inferLetFunStmt ctx mutuallyRec callee vis argPats body loc =
+  let isMainFun (ctx: TyCtx) funSerial =
+    match ctx.MainFunOpt with
+    | Some mainFun -> funSerialCompare mainFun funSerial = 0
+    | _ -> false
+
   // Special treatment for main function.
   let mainFunTyOpt, ctx =
-    if ctx |> isMainFun callee then
+    if isMainFun ctx callee then
       // arguments must be syntactically `_`.
       let ctx =
         match argPats with
