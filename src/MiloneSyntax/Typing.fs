@@ -727,32 +727,21 @@ let private exprToAscriptionTy (expr: TExpr) : Ty option =
 
 // Fill Ty fields of definitions for forward reference.
 
+/// Sets provisional type information in variable definitions of static variables.
+/// This allows forward reference of static variables without breaking type inference.
 let private initializeVarTy ctx pat =
-  let onVar (ctx: TyCtx) varSerial loc =
-    let varDef = ctx.Vars |> mapFind varSerial
+  patFoldVars
+    (fun (ctx: TyCtx) (varSerial, loc) ->
+      let varDef = ctx.Vars |> mapFind varSerial
 
-    if isNoTy varDef.Ty then
-      let metaTy, ctx = freshMetaTy loc ctx
-      let varDef = { varDef with Ty = metaTy }
-      { ctx with Vars = ctx.Vars |> TMap.add varSerial varDef }
-    else
-      ctx
-
-  match pat with
-  | TLitPat _
-  | TDiscardPat _
-  | TVariantPat _ -> ctx
-
-  | TVarPat (_, varSerial, _, loc) -> onVar ctx varSerial loc
-  | TNodePat (_, argPats, _, _) -> argPats |> List.fold initializeVarTy ctx
-
-  | TAsPat (bodyPat, varSerial, loc) ->
-    let ctx = initializeVarTy ctx bodyPat
-    onVar ctx varSerial loc
-
-  | TOrPat (l, r, _) ->
-    let ctx = initializeVarTy ctx l
-    initializeVarTy ctx r
+      if isNoTy varDef.Ty then
+        let metaTy, ctx = freshMetaTy loc ctx
+        let varDef = { varDef with Ty = metaTy }
+        { ctx with Vars = ctx.Vars |> TMap.add varSerial varDef }
+      else
+        ctx)
+    ctx
+    pat
 
 /// Sets initialized type information in function definition.
 let private initializeFunTy (ctx: TyCtx) funSerial args body =
@@ -2277,21 +2266,7 @@ module private RecursiveDeclDecomposition =
   /// Enumerates all variables defined in a pattern
   /// to compute varLevelMap.
   let private collectVars (level: int) (varLevelMap: TreeMap<VarSerial, int>) pat : TreeMap<VarSerial, int> =
-    let onVar varMap varSerial = TMap.add varSerial level varMap
-
-    match pat with
-    | TLitPat _
-    | TDiscardPat _
-    | TVariantPat _ -> varLevelMap
-
-    | TVarPat (_, varSerial, _, _) -> onVar varLevelMap varSerial
-
-    | TAsPat(argPat, varSerial, _) ->
-      let varMap = onVar varLevelMap varSerial
-      collectVars level varMap argPat
-
-    | TNodePat(_, argPats, _, _) -> argPats |> List.fold (collectVars level) varLevelMap
-    | TOrPat(lPat, _, _) -> collectVars level varLevelMap lPat
+    patFoldVars (fun varMap (varSerial, _) -> TMap.add varSerial level varMap) varLevelMap pat
 
   /// Finds occurrences of variables and functions
   /// to unify levels.

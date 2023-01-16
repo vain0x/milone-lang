@@ -137,6 +137,21 @@ let patMap (f: Ty -> Ty) (pat: TPat) : TPat =
 
   go pat
 
+/// Folds all variables in a pattern. This skips right-hand side of OR patterns.
+let patFoldVars (folder: 'S -> VarSerial * Loc -> 'S) (state: 'S) (pat: TPat) : 'S =
+  let rec patRec state pat =
+    match pat with
+    | TLitPat _
+    | TDiscardPat _
+    | TVariantPat _ -> state
+
+    | TVarPat (_, varSerial, _, loc) -> folder state (varSerial, loc)
+    | TAsPat(argPat, varSerial, loc) -> folder (patRec state argPat) (varSerial, loc)
+    | TNodePat(_, argPats, _, _) -> List.fold patRec state argPats
+    | TOrPat(lPat, _, _) -> patRec state lPat
+
+  patRec state pat
+
 /// Converts a pattern in disjunctive normal form.
 /// E.g. `A, [B | C]` → `(A | [B]), (A | [C])`
 let patNormalize pat =
