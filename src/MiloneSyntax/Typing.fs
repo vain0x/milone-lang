@@ -2032,6 +2032,30 @@ let private inferBlockExpr ctx expr targetTyOpt =
 
   TBlockExpr(stmts, last), lastTy, ctx
 
+let private inferExpr (ctx: TyCtx) (expr: TExpr) (targetTyOpt: Ty option) : TExpr * Ty * TyCtx =
+  match expr with
+  | TLitExpr (lit, _) -> inferLitExpr ctx expr lit
+  | TVarExpr (serial, _, loc) -> inferVarExpr ctx serial loc
+  | TFunExpr (serial, _, loc) -> inferFunExpr ctx serial loc
+  | TVariantExpr (serial, _, loc) -> inferVariantExpr ctx serial loc
+  | TPrimExpr (prim, _, loc) -> inferPrimExpr ctx prim loc
+  | TRecordExpr _ -> inferRecordExpr ctx expr targetTyOpt
+  | TMatchExpr _ -> inferMatchExpr ctx expr targetTyOpt
+  | TNavExpr (receiver, field, _, loc) -> inferNavExpr ctx receiver field loc
+  | TNodeExpr _ -> inferNodeExpr ctx expr targetTyOpt
+  | TBlockExpr _ -> inferBlockExpr ctx expr targetTyOpt
+
+/// Transforms an expression for type check.
+/// The result is guaranteed to have the specified type.
+let private checkExpr (ctx: TyCtx) (expr: TExpr) (targetTy: Ty) : TExpr * Ty * TyCtx =
+  let expr, inferredTy, ctx = inferExpr ctx expr (Some targetTy)
+
+  // inferExpr should ensure (targetTy = inferredTy) but currently not. Unify here as workaround.
+  let ctx = unifyTy ctx (exprToLoc expr) targetTy inferredTy
+
+  // note: inferredTy is equivalent to (exprToTy expr) in theory so it's redundant
+  expr, inferredTy, ctx
+
 // -----------------------------------------------
 // Statement
 // -----------------------------------------------
@@ -2140,30 +2164,6 @@ let private inferLetFunStmt ctx mutuallyRec callee vis argPats body loc =
   let ctx = { ctx with IsFunLocal = parentIsFunLocal }
 
   TLetFunStmt(callee, NotRec, vis, argPats, body, loc), ctx
-
-let private inferExpr (ctx: TyCtx) (expr: TExpr) (targetTyOpt: Ty option) : TExpr * Ty * TyCtx =
-  match expr with
-  | TLitExpr (lit, _) -> inferLitExpr ctx expr lit
-  | TVarExpr (serial, _, loc) -> inferVarExpr ctx serial loc
-  | TFunExpr (serial, _, loc) -> inferFunExpr ctx serial loc
-  | TVariantExpr (serial, _, loc) -> inferVariantExpr ctx serial loc
-  | TPrimExpr (prim, _, loc) -> inferPrimExpr ctx prim loc
-  | TRecordExpr _ -> inferRecordExpr ctx expr targetTyOpt
-  | TMatchExpr _ -> inferMatchExpr ctx expr targetTyOpt
-  | TNavExpr (receiver, field, _, loc) -> inferNavExpr ctx receiver field loc
-  | TNodeExpr _ -> inferNodeExpr ctx expr targetTyOpt
-  | TBlockExpr _ -> inferBlockExpr ctx expr targetTyOpt
-
-/// Transforms an expression for type check.
-/// The result is guaranteed to have the specified type.
-let private checkExpr (ctx: TyCtx) (expr: TExpr) (targetTy: Ty) : TExpr * Ty * TyCtx =
-  let expr, inferredTy, ctx = inferExpr ctx expr (Some targetTy)
-
-  // inferExpr should ensure (targetTy = inferredTy) but currently not. Unify here as workaround.
-  let ctx = unifyTy ctx (exprToLoc expr) targetTy inferredTy
-
-  // note: inferredTy is equivalent to (exprToTy expr) in theory so it's redundant
-  expr, inferredTy, ctx
 
 let private inferBlockStmt (ctx: TyCtx) mutuallyRec stmts : TStmt * TyCtx =
   let parentCtx = ctx
