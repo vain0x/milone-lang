@@ -104,10 +104,6 @@ let private addLog (ctx: TyCtx) log loc =
 let private addError (ctx: TyCtx) message loc =
   { ctx with Logs = (Log.Error message, loc) :: ctx.Logs }
 
-let private findVar (ctx: TyCtx) serial = ctx.Vars |> mapFind serial
-
-let private findTy tySerial (ctx: TyCtx) = ctx.Tys |> mapFind tySerial
-
 let private canGeneralize (ctx: TyCtx) metaTySerial =
   ctx.NoGeneralizeMetaTys |> TSet.contains metaTySerial |> not
 
@@ -263,8 +259,8 @@ let private unifyTy (ctx: TyCtx) loc (lTy: Ty) (rTy: Ty) : TyCtx =
 
   go lTy rTy loc ctx
 
-let private unifyVarTy varSerial tyOpt loc ctx =
-  let varTy = (findVar ctx varSerial).Ty
+let private unifyVarTy varSerial tyOpt loc (ctx: TyCtx) =
+  let varTy = (ctx.Vars |> mapFind varSerial).Ty
   assert (isNoTy varTy |> not)
 
   match tyOpt with
@@ -1515,7 +1511,7 @@ let private inferRecordExpr ctx expr targetTyOpt =
     let asRecordTy tyOpt =
       match tyOpt |> Option.map (substTy ctx) with
       | Some ((Ty (RecordTk (tySerial, _), _)) as recordTy) ->
-        match ctx |> findTy tySerial with
+        match ctx.Tys |> mapFind tySerial with
         | RecordTyDef (name, tyVars, fieldDefs, _, _) -> Some(recordTy, name, tyVars, fieldDefs)
         | _ -> None
 
@@ -1646,7 +1642,7 @@ let private inferNavExpr ctx l (r: Ident, rLoc) loc =
 
   | Ty (RecordTk (tySerial, _), tyArgs), _ ->
     let fieldTyOpt =
-      match ctx |> findTy tySerial with
+      match ctx.Tys |> mapFind tySerial with
       | RecordTyDef (_, tyVars, fieldDefs, _, _) ->
         match fieldDefs
               |> List.tryFind (fun (theName, _, _) -> theName = r)
@@ -2511,7 +2507,7 @@ let private synonymCycleCheck (tyCtx: TyCtx) =
   let ctx: SynonymCycleCtx =
     { ExpandMetaOrSynonymTy =
         fun tySerial ->
-          match findTy tySerial tyCtx with
+          match tyCtx.Tys |> mapFind tySerial with
           | SynonymTyDef (_, _, bodyTy, _) -> Some bodyTy
           | _ -> None
 
@@ -2532,7 +2528,7 @@ let private synonymCycleCheck (tyCtx: TyCtx) =
          (fun (tys, logs) tySerial state ->
            match state with
            | State.Cyclic ->
-             match findTy tySerial tyCtx with
+             match tyCtx.Tys |> mapFind tySerial with
              | SynonymTyDef (ident, tyArgs, _, loc) ->
                // Remove body of cyclic synonym to prevent the synonym expansion
                // from running into stack overflow.
