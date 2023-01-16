@@ -254,7 +254,7 @@ let private unifyTy (ctx: TyCtx) loc (lTy: Ty) (rTy: Ty) : TyCtx =
 
   go lTy rTy loc ctx
 
-let private unifyVarTy varSerial tyOpt loc (ctx: TyCtx) =
+let private unifyVarTy (ctx: TyCtx) varSerial tyOpt loc =
   let varTy = (ctx.Vars |> mapFind varSerial).Ty
   assert (isNoTy varTy |> not)
 
@@ -1020,7 +1020,7 @@ let private inferDiscardPat ctx pat loc =
   TDiscardPat(ty, loc), ty, ctx
 
 let private inferVarPat (ctx: TyCtx) varSerial loc =
-  let ty, ctx = ctx |> unifyVarTy varSerial None loc
+  let ty, ctx = unifyVarTy ctx varSerial None loc
   TVarPat(PrivateVis, varSerial, ty, loc), ty, ctx
 
 let private inferVariantPat (ctx: TyCtx) variantSerial loc =
@@ -1076,7 +1076,7 @@ let private inferAsPat ctx body varSerial loc =
   let body, bodyTy, ctx = inferPat ctx body
 
   let _, ctx =
-    ctx |> unifyVarTy varSerial (Some bodyTy) loc
+    unifyVarTy ctx varSerial (Some bodyTy) loc
 
   TAsPat(body, varSerial, loc), bodyTy, ctx
 
@@ -1135,7 +1135,7 @@ let private checkPat (ctx: TyCtx) (pat: TPat) (targetTy: Ty) : TPat * TyCtx =
   | TDiscardPat (_, loc) -> TDiscardPat (targetTy, loc), ctx
 
   | TVarPat (_, varSerial, _, loc) ->
-    let ty, ctx = ctx |> unifyVarTy varSerial (Some targetTy) loc
+    let ty, ctx = unifyVarTy ctx varSerial (Some targetTy) loc
     TVarPat(PrivateVis, varSerial, ty, loc), ctx
 
   | TNodePat (kind, argPats, _, loc) ->
@@ -1155,7 +1155,7 @@ let private checkPat (ctx: TyCtx) (pat: TPat) (targetTy: Ty) : TPat * TyCtx =
       pat, ctx
 
   | TAsPat (bodyPat, varSerial, loc) ->
-    let ty, ctx = ctx |> unifyVarTy varSerial (Some targetTy) loc
+    let ty, ctx = unifyVarTy ctx varSerial (Some targetTy) loc
     let bodyPat, ctx = checkPat ctx bodyPat ty
     TAsPat(bodyPat, varSerial, loc), ctx
 
@@ -1227,7 +1227,7 @@ let private inferLitExpr ctx expr lit =
   expr, litToTy lit, ctx
 
 let private inferVarExpr (ctx: TyCtx) varSerial loc =
-  let ty, ctx = ctx |> unifyVarTy varSerial None loc
+  let ty, ctx = unifyVarTy ctx varSerial None loc
 
   TVarExpr(varSerial, ty, loc), ty, ctx
 
