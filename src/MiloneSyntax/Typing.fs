@@ -788,7 +788,9 @@ let private initializeFunTy (ctx: TyCtx) funSerial args body =
 
   { ctx with Funs = ctx.Funs |> TMap.add funSerial funDef }
 
-let private collectVarsAndFuns ctx stmts =
+/// Initializes type information in definitions.
+/// Used for non-local declarations, i.e. static variables and non-local functions.
+let private initializeNonlocalVarsAndFuns ctx stmts =
   stmts
   |> List.fold
        (fun ctx stmt ->
@@ -798,7 +800,21 @@ let private collectVarsAndFuns ctx stmts =
          | _ -> ctx)
        ctx
 
-let private collectVarsInPats ctx pats = pats |> List.fold initializeVarTy ctx
+/// Initializes type information in definitions.
+/// Used for local functions.
+/// Note: Local variables are initialized when its pattern is processed at first time.
+let private initializeLocalFuns ctx stmts =
+  stmts
+  |> List.fold
+       (fun ctx stmt ->
+         match stmt with
+         | TLetFunStmt (funSerial, _, _, args, body, _) -> initializeFunTy ctx funSerial args body
+         | _ -> ctx)
+       ctx
+
+/// Initializes type information in definitions.
+/// Used for parameter patterns in function declarations.
+let private initializeParams ctx pats = pats |> List.fold initializeVarTy ctx
 
 // -----------------------------------------------
 // Literal validation
@@ -1049,11 +1065,17 @@ let private expectTupleTy (arity: int) ctx targetTy loc =
 // Helpers for patterns
 // -----------------------------------------------
 
-let private unifyVarTy (ctx: TyCtx) varSerial ty loc =
-  let varTy = (ctx.Vars |> mapFind varSerial).Ty
-  assert (isNoTy varTy |> not)
+/// Unifies the target type to the type of the variable
+/// if the variable type is already initialized.
+/// Otherwise, the target type is just assigned to the local variable definition.
+let private unifyOrAssignVarTy (ctx: TyCtx) varSerial ty loc =
+  let varDef = ctx.Vars |> mapFind varSerial
 
-  unifyTy ctx loc varTy ty
+  if isNoTy varDef.Ty then
+    let varDef = { varDef with Ty = ty }
+    { ctx with Vars = ctx.Vars |> TMap.add varSerial varDef }
+  else
+    unifyTy ctx loc varDef.Ty ty
 
 // payloadTy, unionTy, variantTy
 let private instantiateVariant (ctx: TyCtx) variantSerial loc : Ty * Ty * Ty * TyCtx =
@@ -1121,16 +1143,6 @@ let private checkConsPat ctx headPat tailPat loc targetTy =
   let tailPat, ctx = checkPat ctx tailPat listTy
   TNodePat(TConsPN, [ headPat; tailPat ], listTy, loc), ctx
 
-let private inferDiscardPat ctx pat loc =
-  let ty, ctx = ctx |> freshMetaTyForPat pat
-  TDiscardPat(ty, loc), ty, ctx
-
-let private inferVarPat (ctx: TyCtx) varSerial loc =
-  let varTy = (ctx.Vars |> mapFind varSerial).Ty
-  assert (isNoTy varTy |> not)
-
-  TVarPat(PrivateVis, varSerial, varTy, loc), varTy, ctx
-
 let private inferVariantPat (ctx: TyCtx) variantSerial loc =
   let _, unionTy, _, ctx =
     instantiateVariant ctx variantSerial loc
@@ -1180,11 +1192,6 @@ let private inferAscribePat ctx body ascriptionTy =
   let body, ctx = checkPat ctx body ascriptionTy
   body, ascriptionTy, ctx
 
-let private inferAsPat ctx body varSerial loc =
-  let body, bodyTy, ctx = inferPat ctx body
-  let ctx = unifyVarTy ctx varSerial bodyTy loc
-  TAsPat(body, varSerial, loc), bodyTy, ctx
-
 let private inferOrPat ctx l r loc =
   let l, lTy, ctx = inferPat ctx l
   let r, ctx = checkPat ctx r lTy
@@ -1227,12 +1234,17 @@ let private inferNodePat ctx pat =
 let private inferPat ctx pat : TPat * Ty * TyCtx =
   match pat with
   | TLitPat (lit, _) -> inferLitPat ctx pat lit
-  | TDiscardPat (_, loc) -> inferDiscardPat ctx pat loc
-  | TVarPat (_, varSerial, _, loc) -> inferVarPat ctx varSerial loc
   | TVariantPat (variantSerial, _, loc) -> inferVariantPat ctx variantSerial loc
   | TNodePat _ -> inferNodePat ctx pat
-  | TAsPat (bodyPat, serial, loc) -> inferAsPat ctx bodyPat serial loc
   | TOrPat (l, r, loc) -> inferOrPat ctx l r loc
+
+  | TDiscardPat _
+  | TVarPat _
+  | TAsPat _ ->
+    // Forward to check.
+    let ty, ctx = ctx |> freshMetaTyForPat pat
+    let pat, ctx = checkPat ctx pat ty
+    pat, ty, ctx
 
 /// Checks a pattern type to be equal to the specified type.
 let private checkPat (ctx: TyCtx) (pat: TPat) (targetTy: Ty) : TPat * TyCtx =
@@ -1240,7 +1252,7 @@ let private checkPat (ctx: TyCtx) (pat: TPat) (targetTy: Ty) : TPat * TyCtx =
   | TDiscardPat (_, loc) -> TDiscardPat (targetTy, loc), ctx
 
   | TVarPat (_, varSerial, _, loc) ->
-    let ctx = unifyVarTy ctx varSerial targetTy loc
+    let ctx = unifyOrAssignVarTy ctx varSerial targetTy loc
     TVarPat(PrivateVis, varSerial, targetTy, loc), ctx
 
   | TNodePat (kind, argPats, _, loc) ->
@@ -1254,13 +1266,13 @@ let private checkPat (ctx: TyCtx) (pat: TPat) (targetTy: Ty) : TPat * TyCtx =
     | TTuplePN, _ -> checkTuplePat ctx argPats loc targetTy
 
     | _ ->
-      // Forward to synthesis.
+      // Forward to inference.
       let pat, inferredTy, ctx = inferPat ctx pat
       let ctx = unifyTy ctx (patToLoc pat) inferredTy targetTy
       pat, ctx
 
   | TAsPat (bodyPat, varSerial, loc) ->
-    let ctx = unifyVarTy ctx varSerial targetTy loc
+    let ctx = unifyOrAssignVarTy ctx varSerial targetTy loc
     let bodyPat, ctx = checkPat ctx bodyPat targetTy
     TAsPat(bodyPat, varSerial, loc), ctx
 
@@ -1271,7 +1283,7 @@ let private checkPat (ctx: TyCtx) (pat: TPat) (targetTy: Ty) : TPat * TyCtx =
 
   | TLitPat _
   | TVariantPat _ ->
-    // Forward to synthesis.
+    // Forward to inference.
     let pat, inferredTy, ctx = inferPat ctx pat
     let ctx = unifyTy ctx (patToLoc pat) inferredTy targetTy
     pat, ctx
@@ -1281,19 +1293,10 @@ let private checkRefutablePat ctx pat targetTy =
   checkPat ctx pat targetTy
 
 let private inferIrrefutablePat ctx pat targetTyOpt : TPat * Ty * TyCtx =
-  let isNewtypeVariant (ctx: TyCtx) variantSerial = ((ctx.Variants |> mapFind variantSerial): VariantDef).IsNewtype
+  let isNewtypeVariant (ctx: TyCtx) variantSerial =
+    ((ctx.Variants |> mapFind variantSerial): VariantDef).IsNewtype
 
-  if pat
-     |> patIsClearlyExhaustive (isNewtypeVariant ctx)
-     |> not then
-    let loc = patToLoc pat
-
-    let ctx =
-      addLog ctx Log.IrrefutablePatNonExhaustiveError loc
-
-    let errorTy = tyError loc
-    tpAbort errorTy loc, errorTy, ctx
-  else
+  let pat, ty, ctx =
     match targetTyOpt with
     | Some ty ->
       let ty = substTy ctx ty
@@ -1301,6 +1304,16 @@ let private inferIrrefutablePat ctx pat targetTyOpt : TPat * Ty * TyCtx =
       pat, ty, ctx
 
     | None -> inferPat ctx pat
+
+  if pat |> patIsClearlyExhaustive (isNewtypeVariant ctx) |> not then
+    let loc = patToLoc pat
+
+    let ctx = addLog ctx Log.IrrefutablePatNonExhaustiveError loc
+
+    let errorTy = tyError loc
+    tpAbort errorTy loc, errorTy, ctx
+  else
+    pat, ty, ctx
 
 // -----------------------------------------------
 // Expression
@@ -2004,7 +2017,7 @@ let private inferBlockExpr ctx expr targetTyOpt =
     | TBlockExpr (stmts, last) -> stmts, last
     | _ -> unreachable ()
 
-  let ctx = collectVarsAndFuns ctx stmts
+  let ctx = initializeLocalFuns ctx stmts
 
   let stmts, ctx =
     stmts
@@ -2100,7 +2113,7 @@ let private inferLetFunStmt ctx mutuallyRec callee vis argPats body loc =
   let provisionalResultTy, ctx = ctx |> freshMetaTyForExpr body
 
   let argPats, funTy, ctx =
-    let ctx = argPats |> collectVarsInPats ctx
+    let ctx = argPats |> initializeParams ctx
     inferArgs ctx provisionalResultTy argPats
 
   let ctx = unifyTy ctx loc calleeTy funTy
@@ -2150,7 +2163,7 @@ let private inferLetFunStmt ctx mutuallyRec callee vis argPats body loc =
 let private inferBlockStmt (ctx: TyCtx) mutuallyRec stmts : TStmt * TyCtx =
   let parentCtx = ctx
 
-  let ctx = collectVarsAndFuns ctx stmts
+  let ctx = initializeNonlocalVarsAndFuns ctx stmts
 
   let stmts, ctx =
     stmts
@@ -2723,7 +2736,7 @@ let private inferModule (ctx: TyCtx) (m: TModule) : TModule * TyCtx =
       m.Stmts
       |> RecursiveDeclDecomposition.decompose ctx
 
-    let ctx = collectVarsAndFuns ctx stmts
+    let ctx = initializeNonlocalVarsAndFuns ctx stmts
 
     stmts
     |> List.mapFold (fun ctx stmt -> inferStmt ctx NotRec stmt) ctx
