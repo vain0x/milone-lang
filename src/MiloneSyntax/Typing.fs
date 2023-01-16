@@ -918,11 +918,7 @@ let private resolveAscriptionTy ctx ascriptionTy : Ty * TyCtx =
     match ty with
     | Ty (ErrorTk _, _) -> ty, ctx
 
-    | Ty (InferTk loc, _) ->
-      let serial, ctx = freshTySerial ctx
-      tyMeta serial loc, ctx
-
-    | Ty (UnivTk _, _) -> ty, ctx
+    | Ty (InferTk loc, _) -> freshMetaTy loc ctx
 
     | Ty (_, []) -> ty, ctx
 
