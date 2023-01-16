@@ -374,50 +374,38 @@ let nameResLogToString log =
   | UnimplOrPatBindingError -> "OR pattern including some bindings is unimplemented."
   | UnimplTyArgListError -> "Type argument list is unimplemented."
 
-let private traitBoundErrorToString tyDisplay it =
-  match it with
-  | AddTrait ty ->
-    "Operator (+) is not supported for type: "
-    + tyDisplay ty
+let private traitBoundErrorToString tyDisplay (t: Trait) =
+  match t with
+  | Trait.Unary(unary, ty) ->
+    let message =
+      match unary with
+      | UnaryTrait.Add -> "Operator (+) is not supported for the type"
+      | UnaryTrait.Equal -> "Operator (=) is not supported for the type"
+      | UnaryTrait.Compare -> "The compare function is not supported for the type"
+      | UnaryTrait.IntLike -> "Expected int or some integer type but was"
+      | UnaryTrait.NumberLike -> "Expected int, float or some number type but was"
+      | UnaryTrait.ToInt flavor -> ("Cannot convert to " + fsharpIntegerTyName flavor + " from")
+      | UnaryTrait.ToFloat -> "Cannot convert to float type from"
+      | UnaryTrait.ToChar -> "Cannot convert to char type from"
+      | UnaryTrait.ToString -> "Cannot convert to string type from"
+      | UnaryTrait.PtrLike -> "Expected a pointer type but was"
+      | UnaryTrait.PtrSize -> "Expected a pointer-sized type but was"
 
-  | EqualTrait ty ->
-    "Equality is not defined for type: "
-    + tyDisplay ty
+    message + ": " + tyDisplay ty
 
-  | CompareTrait ty ->
-    "Comparison is not defined for type: "
-    + tyDisplay ty
-
-  | IndexTrait (lTy, rTy, _) ->
-    "Index operation type error: lhs: '"
+  | Trait.Index(lTy, rTy, _) ->
+    "Index expression (say, l.[r]) is not supported for the combination of types (lhs: "
     + tyDisplay lTy
-    + "', rhs: "
+    + ", rhs: "
     + tyDisplay rTy
-    + "."
+    + ".)"
 
-  | IsIntTrait ty ->
-    "Expected int or some integer type but was: "
-    + tyDisplay ty
-
-  | IsNumberTrait ty ->
-    "Expected int or float type but was: "
-    + tyDisplay ty
-
-  | ToIntTrait (_, ty) -> "Can't convert to integer from: " + tyDisplay ty
-  | ToFloatTrait ty -> "Can't convert to float from: " + tyDisplay ty
-  | ToCharTrait ty -> "Can't convert to char from: " + tyDisplay ty
-  | ToStringTrait ty -> "Can't convert to string from: " + tyDisplay ty
-  | PtrTrait ty -> "Expected a pointer type but was: " + tyDisplay ty
-
-  | PtrSizeTrait ty ->
-    "Expected a pointer-size type but was: "
-    + tyDisplay ty
-
-  | PtrCastTrait (lTy, rTy) ->
-    "Expected two different pointer types but: one was "
+  | Trait.PtrCast(lTy, rTy) ->
+    "Pointer cast operation is not allowed between the two types (from: "
     + tyDisplay lTy
-    + ", the other: "
+    + ", to: "
     + tyDisplay rTy
+    + ".)"
 
 let logToString tyDisplay log =
   match log with

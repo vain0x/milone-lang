@@ -133,6 +133,9 @@ let private freshMetaTyForExpr expr ctx =
   let ty = tyMeta tySerial loc
   ty, ctx
 
+let private addTraitBound (t: Trait) loc (ctx: TyCtx) =
+  { ctx with NewTraitBounds = (t, loc) :: ctx.NewTraitBounds }
+
 // -----------------------------------------------
 // Literal validation
 // -----------------------------------------------
@@ -280,38 +283,29 @@ let private instantiateTyScheme (ctx: TyCtx) (tyScheme: TyScheme) loc : Ty * (Ty
     ty, assignment, { ctx with Serial = lastSerial }
 
 let private instantiateBoundedTyScheme (ctx: TyCtx) (tyScheme: BoundedTyScheme) loc : Ty * TyCtx =
-  let (BoundedTyScheme (tyVars, ty, traits)) = tyScheme
+  let (BoundedTyScheme(tyVars, ty, traits)) = tyScheme
   assert (List.isEmpty tyVars |> not)
 
-  let lastSerial, ty, assignment =
-    doInstantiateTyScheme ctx.Serial tyVars ty loc
+  let lastSerial, ty, assignment = doInstantiateTyScheme ctx.Serial tyVars ty loc
 
   let traits =
     let substMeta = tyAssign assignment
 
-    traits
-    |> List.map (fun (t: Trait) -> t |> traitMapTys substMeta, loc)
+    traits |> List.map (fun (t: Trait) -> t |> Trait.map substMeta, loc)
 
   // Meta types that appear in trait bounds can't be generalized for now.
   let noGeneralizeMetaTys =
     traits
     |> List.fold
-         (fun acc (theTrait, _) ->
-           let asInnerTy theTrait =
-             match theTrait with
-             | AddTrait ty -> Some ty
-             | IsIntTrait ty -> Some ty
-             | IsNumberTrait ty -> Some ty
-             | ToIntTrait (_, ty) -> Some ty
-             | ToFloatTrait ty -> Some ty
-             | ToCharTrait ty -> Some ty
-             | ToStringTrait ty -> Some ty
-             | _ -> None
-
-           match asInnerTy theTrait with
-           | Some (Ty (MetaTk (serial, _), _)) ->
-             TSet.add serial acc
-           | _ -> acc)
+         (fun acc ((t: Trait), _) ->
+           // #map_merge
+           t
+           |> Trait.collectTys
+           |> List.choose (fun ty ->
+             match ty with
+             | Ty(MetaTk(serial, _), _) -> Some serial
+             | _ -> None)
+           |> List.fold (fun acc tySerial -> TSet.add tySerial acc) acc)
          ctx.NoGeneralizeMetaTys
 
   ty,
@@ -392,15 +386,11 @@ let private tyIsPtr ty =
   | FunPtrTk -> true
   | _ -> false
 
-let private addTraitBound theTrait loc (ctx: TyCtx) =
-  { ctx with NewTraitBounds = (theTrait, loc) :: ctx.NewTraitBounds }
-
-let private resolveTraitBound (ctx: TyCtx) theTrait loc : TyCtx =
+let private resolveTraitBound (ctx: TyCtx) (theTrait: Trait) loc : TyCtx =
   let ok ctx = ctx
 
   let error ctx =
-    addLog ctx (Log.TyBoundError theTrait) loc
-    |> addTraitBound theTrait loc
+    addLog ctx (Log.TyBoundError theTrait) loc |> addTraitBound theTrait loc
 
   let unify2 (lTy1, rTy1) (lTy2, rTy2) =
     let ctx = unifyTy ctx loc lTy1 rTy1
@@ -411,260 +401,244 @@ let private resolveTraitBound (ctx: TyCtx) theTrait loc : TyCtx =
 
   /// integer, bool, char, or string
   let expectBasic ctx ty =
-    if tyIsBasic ty then
-      ok ctx
-    else
-      error ctx
+    if tyIsBasic ty then ok ctx else error ctx
 
   match theTrait with
-  | AddTrait ty ->
-    let (Ty (tk, _)) = ty
+  | Trait.Unary(unary, ty) ->
+    let (Ty(tk, _)) = ty
 
-    match tk with
-    | ErrorTk _
-    | IntTk _
-    | FloatTk _
-    | CharTk
-    | StringTk -> ok ctx
+    match unary with
+    | UnaryTrait.Add ->
+      match tk with
+      | ErrorTk _
+      | IntTk _
+      | FloatTk _
+      | CharTk
+      | StringTk -> ok ctx
+      | _ -> defaultToInt ctx ty
 
-    | _ -> defaultToInt ctx ty
+    | UnaryTrait.Equal ->
+      // #trait_resolve
+      let rec go memo ty =
+        let (Ty(tk, tyArgs)) = ty
 
-  | EqualTrait ty ->
-    // #trait_resolve
-    let rec go memo ty =
-      let (Ty (tk, tyArgs)) = ty
+        let onTys memo tys =
+          tys
+          |> List.fold
+               (fun (ok, memo) tyArg ->
+                 if not ok then
+                   ok, memo
+                 else
+                   let ok1, memo = go memo tyArg
+                   ok && ok1, memo)
+               (true, memo)
 
-      let onTys memo tys =
-        tys
-        |> List.fold
-             (fun (ok, memo) tyArg ->
-               if not ok then
-                 ok, memo
-               else
-                 let ok1, memo = go memo tyArg
-                 ok && ok1, memo)
-             (true, memo)
+        let allowRec memo action =
+          if memo |> TSet.contains ty then
+            true, memo
+          else
+            // Put memo to prevent recursion. Suppose `ty` is okay here.
+            let memo = memo |> TSet.add ty
 
-      let allowRec memo action =
-        if memo |> TSet.contains ty then
-          true, memo
-        else
-          // Put memo to prevent recursion. Suppose `ty` is okay here.
-          let memo = memo |> TSet.add ty
+            // If not ok, `ty` and other tys (that are newly added and depend on `ty`)
+            // should be removed from memo. But no need to do here because
+            // (1) memo is no longer used if not ok and (2) memo is discarded later.
+            action memo
 
-          // If not ok, `ty` and other tys (that are newly added and depend on `ty`)
-          // should be removed from memo. But no need to do here because
-          // (1) memo is no longer used if not ok and (2) memo is discarded later.
-          action memo
+        match tk, tyArgs with
+        | _ when tyIsBasic ty -> true, memo
 
-      match tk, tyArgs with
-      | _ when tyIsBasic ty -> true, memo
+        | TupleTk, []
+        | FunPtrTk, _ -> true, memo
 
-      | TupleTk, []
-      | FunPtrTk, _ -> true, memo
+        // Don't memoize structural types
+        // because it doesn't cause infinite recursion
+        // and unfortunately memo is discarded.
+        | TupleTk, _ -> onTys memo tyArgs
+        | ListTk, [ itemTy ] -> go memo itemTy
 
-      // Don't memoize structural types
-      // because it doesn't cause infinite recursion
-      // and unfortunately memo is discarded.
-      | TupleTk, _ -> onTys memo tyArgs
-      | ListTk, [ itemTy ] -> go memo itemTy
+        | UnionTk(tySerial, _), _ ->
+          allowRec memo (fun memo ->
+            match ctx.Tys |> mapFind tySerial with
+            | UnionTyDef(_, tyVars, variants, _) ->
+              let assignmentOpt =
+                match listTryZip tyVars tyArgs with
+                | assignment, [], [] -> Some assignment
+                | _ -> None
 
-      | UnionTk (tySerial, _), _ ->
-        allowRec memo (fun memo ->
-          match ctx.Tys |> mapFind tySerial with
-          | UnionTyDef (_, tyVars, variants, _) ->
-            let assignmentOpt =
-              match listTryZip tyVars tyArgs with
-              | assignment, [], [] -> Some assignment
-              | _ -> None
+              let payloadTysOpt =
+                match assignmentOpt with
+                | Some assignment ->
+                  variants
+                  |> List.choose (fun variantSerial ->
+                    let variantDef = ctx.Variants |> mapFind variantSerial
 
-            let payloadTysOpt =
-              match assignmentOpt with
-              | Some assignment ->
-                variants
-                |> List.choose (fun variantSerial ->
-                  let variantDef = ctx.Variants |> mapFind variantSerial
+                    if variantDef.HasPayload then
+                      variantDef.PayloadTy
+                      |> tySubst (fun tySerial -> assocTryFind compare tySerial assignment)
+                      |> Some
+                    else
+                      None)
+                  |> Some
+                | _ -> None
 
-                  if variantDef.HasPayload then
-                    variantDef.PayloadTy
-                    |> tySubst (fun tySerial -> assocTryFind compare tySerial assignment)
-                    |> Some
-                  else
-                    None)
-                |> Some
-              | _ -> None
+              match payloadTysOpt with
+              | Some payloadTys -> onTys memo payloadTys
+              | _ -> false, memo
+            | _ -> false, memo)
 
-            match payloadTysOpt with
-            | Some payloadTys -> onTys memo payloadTys
-            | _ -> false, memo
-          | _ -> false, memo)
+        | _ -> false, memo
 
-      | _ -> false, memo
+      let resolved, _ = go (TSet.empty tyCompare) ty
 
-    let resolved, _ = go (TSet.empty tyCompare) ty
+      if resolved then ok ctx else error ctx
 
-    if resolved then ok ctx else error ctx
+    | UnaryTrait.Compare ->
+      match ty with
+      | Ty(TupleTk, []) -> ok ctx
+      | Ty(CharTk, _) -> error ctx
+      | _ -> expectBasic ctx ty
 
-  | CompareTrait ty ->
-    match ty with
-    | Ty (TupleTk, []) -> ok ctx
-    | Ty (CharTk, _) -> error ctx
-    | _ -> expectBasic ctx ty
+    | UnaryTrait.IntLike ->
+      match tk with
+      | ErrorTk _
+      | IntTk _ -> ok ctx
+      | _ -> defaultToInt ctx ty
 
-  | IndexTrait (lTy, rTy, resultTy) ->
+    | UnaryTrait.NumberLike ->
+      match tk with
+      | ErrorTk _
+      | IntTk _
+      | FloatTk _ -> ok ctx
+      | _ -> defaultToInt ctx ty
+
+    | UnaryTrait.ToInt flavor ->
+      match tk, flavor with
+      | ErrorTk _, _
+      | IntTk _, _
+      | FloatTk _, _
+      | StringTk, _
+      | VoidPtrTk _, _
+      | NativePtrTk _, _ -> ok ctx
+
+      | CharTk, I8
+      | CharTk, U8 -> ok ctx
+
+      | _ -> error ctx
+
+    | UnaryTrait.ToFloat ->
+      match tk with
+      | ErrorTk _
+      | IntTk _
+      | FloatTk _
+      | StringTk -> ok ctx
+      | _ -> error ctx
+
+    | UnaryTrait.ToChar ->
+      match tk with
+      | ErrorTk _
+      | IntTk I8
+      | IntTk U8
+      | CharTk
+      | StringTk -> ok ctx
+      | _ -> error ctx
+
+    | UnaryTrait.ToString ->
+      // #trait_resolve
+      let rec go memo ty =
+        let (Ty(tk, tyArgs)) = ty
+
+        let onTys memo tys =
+          tys
+          |> List.fold
+               (fun (ok, memo) tyArg ->
+                 if not ok then
+                   ok, memo
+                 else
+                   let ok1, memo = go memo tyArg
+                   ok && ok1, memo)
+               (true, memo)
+
+        let allowRec memo action =
+          if memo |> TSet.contains ty then
+            true, memo
+          else
+            memo |> TSet.add ty |> action
+
+        match tk, tyArgs with
+        | _ when tyIsBasic ty -> true, memo
+
+        | TupleTk, [] -> true, memo
+        | TupleTk, _ -> onTys memo tyArgs
+
+        | UnionTk(tySerial, _), _ ->
+          allowRec memo (fun memo ->
+            match ctx.Tys |> mapFind tySerial with
+            | UnionTyDef(_, tyVars, variants, _) ->
+              let assignmentOpt =
+                match listTryZip tyVars tyArgs with
+                | assignment, [], [] -> Some assignment
+                | _ -> None
+
+              let payloadTysOpt =
+                match assignmentOpt with
+                | Some assignment ->
+                  variants
+                  |> List.choose (fun variantSerial ->
+                    let variantDef = ctx.Variants |> mapFind variantSerial
+
+                    if variantDef.HasPayload then
+                      variantDef.PayloadTy
+                      |> tySubst (fun tySerial -> assocTryFind compare tySerial assignment)
+                      |> Some
+                    else
+                      None)
+                  |> Some
+                | _ -> None
+
+              match payloadTysOpt with
+              | Some payloadTys -> onTys memo payloadTys
+              | _ -> false, memo
+            | _ -> false, memo)
+        | _ -> false, memo
+
+      let resolved, _ = go (TSet.empty tyCompare) ty
+
+      if resolved then ok ctx else error ctx
+
+    | UnaryTrait.PtrLike ->
+      match tk with
+      | ErrorTk _ -> ok ctx
+      | _ when tyIsPtr ty -> ok ctx
+      | _ -> error ctx
+
+    | UnaryTrait.PtrSize ->
+      match tk with
+      | ErrorTk _
+      | IntTk IPtr
+      | IntTk UPtr
+      | ObjTk
+      | ListTk
+      | VoidPtrTk _
+      | NativePtrTk _
+      | FunPtrTk -> ok ctx
+      | _ -> error ctx
+
+  | Trait.Index(lTy, rTy, tTy) ->
     match lTy with
-    | Ty (ErrorTk _, _) -> ok ctx
-    | Ty (StringTk, _) -> unify2 (rTy, tyInt) (resultTy, tyChar)
+    | Ty(ErrorTk _, _) -> ok ctx
+    | Ty(StringTk, _) -> unify2 (rTy, tyInt) (tTy, tyChar)
     | _ -> error ctx
 
-  | IsIntTrait ty ->
-    match ty with
-    | Ty (ErrorTk _, _)
-    | Ty (IntTk _, _) -> ok ctx
-
-    | _ -> defaultToInt ctx ty
-
-  | IsNumberTrait ty ->
-    match ty with
-    | Ty (ErrorTk _, _)
-    | Ty (IntTk _, _)
-    | Ty (FloatTk _, _) -> ok ctx
-
-    | _ -> defaultToInt ctx ty
-
-  | ToIntTrait (flavor, Ty (tk, _)) ->
-    match tk, flavor with
-    | ErrorTk _, _
-    | IntTk _, _
-    | FloatTk _, _
-    | StringTk, _
-    | VoidPtrTk _, _
-    | NativePtrTk _, _ -> ok ctx
-
-    | CharTk, I8
-    | CharTk, U8 -> ok ctx
-
-    | _ -> error ctx
-
-  | ToFloatTrait (Ty (tk, _)) ->
-    match tk with
-    | ErrorTk _
-    | IntTk _
-    | FloatTk _
-    | StringTk -> ok ctx
-
-    | _ -> error ctx
-
-  | ToCharTrait (Ty (tk, _)) ->
-    match tk with
-    | ErrorTk _
-    | IntTk I8
-    | IntTk U8
-    | CharTk
-    | StringTk -> ok ctx
-
-    | _ -> error ctx
-
-  | ToStringTrait ty ->
-    // #trait_resolve
-    let rec go memo ty =
-      let (Ty (tk, tyArgs)) = ty
-
-      let onTys memo tys =
-        tys
-        |> List.fold
-             (fun (ok, memo) tyArg ->
-               if not ok then
-                 ok, memo
-               else
-                 let ok1, memo = go memo tyArg
-                 ok && ok1, memo)
-             (true, memo)
-
-      let allowRec memo action =
-        if memo |> TSet.contains ty then
-          true, memo
-        else
-          memo |> TSet.add ty |> action
-
-      match tk, tyArgs with
-      | _ when tyIsBasic ty -> true, memo
-
-      | TupleTk, [] -> true, memo
-      | TupleTk, _ -> onTys memo tyArgs
-
-      | UnionTk (tySerial, _), _ ->
-        allowRec memo (fun memo ->
-          match ctx.Tys |> mapFind tySerial with
-          | UnionTyDef (_, tyVars, variants, _) ->
-            let assignmentOpt =
-              match listTryZip tyVars tyArgs with
-              | assignment, [], [] -> Some assignment
-              | _ -> None
-
-            let payloadTysOpt =
-              match assignmentOpt with
-              | Some assignment ->
-                variants
-                |> List.choose (fun variantSerial ->
-                  let variantDef = ctx.Variants |> mapFind variantSerial
-
-                  if variantDef.HasPayload then
-                    variantDef.PayloadTy
-                    |> tySubst (fun tySerial -> assocTryFind compare tySerial assignment)
-                    |> Some
-                  else
-                    None)
-                |> Some
-              | _ -> None
-
-            match payloadTysOpt with
-            | Some payloadTys -> onTys memo payloadTys
-            | _ -> false, memo
-          | _ -> false, memo)
-      | _ -> false, memo
-
-    let resolved, _ = go (TSet.empty tyCompare) ty
-
-    if resolved then ok ctx else error ctx
-
-  | PtrTrait ty ->
-    match ty with
-    | Ty (ErrorTk _, _) -> ok ctx
-    | _ when tyIsPtr ty -> ok ctx
-    | _ -> error ctx
-
-  | PtrSizeTrait (Ty (tk, _)) ->
-    match tk with
-    | ErrorTk _
-    | IntTk IPtr
-    | IntTk UPtr
-    | ObjTk
-    | ListTk
-    | VoidPtrTk _
-    | NativePtrTk _
-    | FunPtrTk -> ok ctx
-
-    | _ -> error ctx
-
-  | PtrCastTrait (srcTy, destTy) ->
+  | Trait.PtrCast(srcTy, destTy) ->
     match srcTy, destTy with
-    | Ty (ErrorTk _, _), _
-    | _, Ty (ErrorTk _, _) -> ok ctx
+    | Ty(ErrorTk _, _), _
+    | _, Ty(ErrorTk _, _) -> ok ctx
 
-    | Ty (OwnTk, [ srcTy ]), Ty (OwnTk, [ destTy ]) when
-      tyIsPtr srcTy
-      && tyIsPtr destTy
-      && not (tyEqual srcTy destTy)
-      ->
+    | Ty(OwnTk, [ srcTy ]), Ty(OwnTk, [ destTy ]) when tyIsPtr srcTy && tyIsPtr destTy && not (tyEqual srcTy destTy) ->
       ok ctx
 
-    | _ when
-      tyIsPtr srcTy
-      && tyIsPtr destTy
-      && not (tyEqual srcTy destTy)
-      ->
-      ok ctx
+    | _ when tyIsPtr srcTy && tyIsPtr destTy && not (tyEqual srcTy destTy) -> ok ctx
 
     | _ -> error ctx
 
@@ -678,7 +652,7 @@ let private attemptResolveTraitBounds (ctx: TyCtx) : TyCtx =
     ctx.NewTraitBounds
     |> List.fold
          (fun (traitAcc, (ctx: TyCtx)) (theTrait, loc) ->
-           let theTrait = traitMapTys (subst ctx) theTrait
+           let theTrait = Trait.map (subst ctx) theTrait
 
            let oldCtx = ctx
            assert (List.isEmpty oldCtx.Logs)
@@ -713,7 +687,7 @@ let private resolveTraitBoundsAll (ctx: TyCtx) =
       traits
       |> List.fold
            (fun ctx (theTrait, loc) ->
-             let theTrait = traitMapTys (subst ctx) theTrait
+             let theTrait = Trait.map (subst ctx) theTrait
              resolveTraitBound ctx theTrait loc)
            ctx
 
@@ -1256,64 +1230,64 @@ let private primNotTy = tyFun tyBool tyBool
 
 let private primBitNotScheme =
   let ty = tyMeta 1 noLoc
-  BoundedTyScheme([ 1 ], tyFun ty ty, [ IsIntTrait ty ])
+  BoundedTyScheme([ 1 ], tyFun ty ty, [ Trait.newIntLike ty ])
 
 let private primAddScheme =
   let meta id = tyMeta id noLoc
   let addTy = meta 1
-  BoundedTyScheme([ 1 ], tyFun addTy (tyFun addTy addTy), [ AddTrait addTy ])
+  BoundedTyScheme([ 1 ], tyFun addTy (tyFun addTy addTy), [ Trait.newAdd addTy ])
 
 let private primSubtractEtcScheme =
   let meta id = tyMeta id noLoc
   let ty = meta 1
-  BoundedTyScheme([ 1 ], tyFun ty (tyFun ty ty), [ IsNumberTrait ty ])
+  BoundedTyScheme([ 1 ], tyFun ty (tyFun ty ty), [ Trait.newNumberLike ty ])
 
 let private primBitAndEtcScheme =
   let meta id = tyMeta id noLoc
   let ty = meta 1
-  BoundedTyScheme([ 1 ], tyFun ty (tyFun ty ty), [ IsIntTrait ty ])
+  BoundedTyScheme([ 1 ], tyFun ty (tyFun ty ty), [ Trait.newIntLike ty ])
 
 let private primShiftScheme =
   let meta id = tyMeta id noLoc
   let ty = meta 1
-  BoundedTyScheme([ 1 ], tyFun ty (tyFun tyInt ty), [ IsIntTrait ty ])
+  BoundedTyScheme([ 1 ], tyFun ty (tyFun tyInt ty), [ Trait.newIntLike ty ])
 
 let private primEqualScheme =
   let meta id = tyMeta id noLoc
   let argTy = meta 1
-  BoundedTyScheme([ 1 ], tyFun argTy (tyFun argTy tyBool), [ EqualTrait argTy ])
+  BoundedTyScheme([ 1 ], tyFun argTy (tyFun argTy tyBool), [ Trait.newEqual argTy ])
 
 let private primLessScheme =
   let meta id = tyMeta id noLoc
   let compareTy = meta 1
-  BoundedTyScheme([ 1 ], tyFun compareTy (tyFun compareTy tyBool), [ CompareTrait compareTy ])
+  BoundedTyScheme([ 1 ], tyFun compareTy (tyFun compareTy tyBool), [ Trait.newCompare compareTy ])
 
 let private primCompareScheme =
   let meta id = tyMeta id noLoc
   let compareTy = meta 1
-  BoundedTyScheme([ 1 ], tyFun compareTy (tyFun compareTy tyInt), [ CompareTrait compareTy ])
+  BoundedTyScheme([ 1 ], tyFun compareTy (tyFun compareTy tyInt), [ Trait.newCompare compareTy ])
 
 let private primIntScheme flavor =
   let meta id = tyMeta id noLoc
   let srcTy = meta 1
   let resultTy = Ty(IntTk flavor, [])
-  BoundedTyScheme([ 1 ], tyFun srcTy resultTy, [ ToIntTrait(flavor, srcTy) ])
+  BoundedTyScheme([ 1 ], tyFun srcTy resultTy, [ Trait.newToInt flavor srcTy ])
 
 let private primFloatScheme flavor =
   let meta id = tyMeta id noLoc
   let srcTy = meta 1
   let resultTy = Ty(FloatTk flavor, [])
-  BoundedTyScheme([ 1 ], tyFun srcTy resultTy, [ ToFloatTrait srcTy ])
+  BoundedTyScheme([ 1 ], tyFun srcTy resultTy, [ Trait.newToFloat srcTy ])
 
 let private primToCharScheme =
   let meta id = tyMeta id noLoc
   let srcTy = meta 1
-  BoundedTyScheme([ 1 ], tyFun srcTy tyChar, [ ToCharTrait srcTy ])
+  BoundedTyScheme([ 1 ], tyFun srcTy tyChar, [ Trait.newToChar srcTy ])
 
 let private primToStringScheme =
   let meta id = tyMeta id noLoc
   let srcTy = meta 1
-  BoundedTyScheme([ 1 ], tyFun srcTy tyString, [ ToStringTrait srcTy ])
+  BoundedTyScheme([ 1 ], tyFun srcTy tyString, [ Trait.newToString srcTy ])
 
 let private primBoxScheme =
   let meta id = tyMeta id noLoc
@@ -1350,21 +1324,21 @@ let private primOwnReleaseTy =
 
 let private primNullPtrScheme =
   let ptrTy = tyMeta 1 noLoc
-  BoundedTyScheme([ 1 ], ptrTy, [ PtrTrait ptrTy ])
+  BoundedTyScheme([ 1 ], ptrTy, [ Trait.newPtrLike ptrTy ])
 
 let private primPtrCastScheme =
   let srcTy = tyMeta 1 noLoc
   let destTy = tyMeta 2 noLoc
-  BoundedTyScheme([ 1; 2 ], tyFun srcTy destTy, [ PtrCastTrait(srcTy, destTy) ])
+  BoundedTyScheme([ 1; 2 ], tyFun srcTy destTy, [ Trait.newPtrCast srcTy destTy ])
 
 let private primPtrInvalidScheme =
   let ptrTy = tyMeta 1 noLoc
 
-  BoundedTyScheme([ 1 ], tyFun tyUNativeInt ptrTy, [ PtrTrait ptrTy ])
+  BoundedTyScheme([ 1 ], tyFun tyUNativeInt ptrTy, [ Trait.newPtrLike ptrTy ])
 
 let private primPtrDistanceScheme =
   let ptrTy = tyMeta 1 noLoc
-  BoundedTyScheme([ 1 ], tyFun ptrTy (tyFun ptrTy tyNativeInt), [ PtrTrait ptrTy ])
+  BoundedTyScheme([ 1 ], tyFun ptrTy (tyFun ptrTy tyNativeInt), [ Trait.newPtrLike ptrTy ])
 
 let private primNativeCastScheme =
   let meta id = tyMeta id noLoc
@@ -1374,8 +1348,8 @@ let private primNativeCastScheme =
   BoundedTyScheme(
     [ 1; 2 ],
     tyFun srcTy destTy,
-    [ PtrSizeTrait srcTy
-      PtrSizeTrait destTy ]
+    [ Trait.newPtrSize srcTy
+      Trait.newPtrSize destTy ]
   )
 
 let private inferPrimExpr ctx prim loc =
@@ -1937,7 +1911,7 @@ let private inferMinusExpr ctx arg loc =
   let arg, argTy, ctx = inferExpr ctx arg None
 
   let ctx =
-    ctx |> addTraitBound (IsNumberTrait argTy) loc
+    ctx |> addTraitBound (Trait.newNumberLike argTy) loc
 
   TNodeExpr(TMinusEN, [ arg ], argTy, loc), argTy, ctx
 
@@ -1964,7 +1938,7 @@ let private inferIndexExpr ctx l r loc =
 
   let ctx =
     ctx
-    |> addTraitBound (IndexTrait(lTy, rTy, tTy)) loc
+    |> addTraitBound (Trait.newIndex lTy rTy tTy) loc
 
   TNodeExpr(TIndexEN, [ l; r ], tTy, loc), tTy, ctx
 

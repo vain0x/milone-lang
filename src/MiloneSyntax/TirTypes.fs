@@ -95,43 +95,42 @@ type TyScheme = TyScheme of tyVars: TySerial list * Ty
 [<Struct; NoEquality; NoComparison>]
 type BoundedTyScheme = BoundedTyScheme of tyVars: TySerial list * Ty * Trait list
 
+[<RequireQualifiedAccess; NoEquality; NoComparison>]
+type UnaryTrait =
+  /// Support `+` operator.
+  | Add
+  /// Support `=` operator.
+  | Equal
+  /// Support `compare` function.
+  | Compare
+  /// Integer-like types. Defaults to `int`.
+  | IntLike
+  /// Types like integers or float. Defaults to `float`.
+  | NumberLike
+  /// Types convertible to an integer.
+  | ToInt of _flavor: IntFlavor
+  /// Types convertible to a float.
+  | ToFloat
+  /// Types convertible to `char`.
+  | ToChar
+  /// Types convertible to `string`.
+  | ToString
+  /// Pointer-like types.
+  | PtrLike
+  /// Types whose runtime representation has the same size as pointer types.
+  | PtrSize
+
 /// Trait, a constraint about types.
 // NOTE: `trait` is a reserved word in F#.
-[<NoEquality; NoComparison>]
+[<RequireQualifiedAccess; NoEquality; NoComparison>]
 type Trait =
-  /// The type supports `+`.
-  | AddTrait of Ty
+  | Unary of UnaryTrait * Ty
 
-  /// The type supports `=`.
-  | EqualTrait of Ty
+  /// Support index operator. (`t = l.[r]`)
+  | Index of lTy: Ty * rTy: Ty * tTy: Ty
 
-  /// The type supports comparison operators.
-  | CompareTrait of Ty
-
-  /// For `l: lTy, r: rTy`, `l.[r]` is allowed.
-  | IndexTrait of lTy: Ty * rTy: Ty * resultTy: Ty
-
-  /// Integer type. Defaults to int.
-  | IsIntTrait of Ty
-
-  /// Integer or float type. Defaults to int.
-  | IsNumberTrait of Ty
-
-  /// Type supports conversion to integer.
-  | ToIntTrait of flavor: IntFlavor * Ty
-
-  | ToFloatTrait of Ty
-
-  /// Type supports conversion to char.
-  | ToCharTrait of Ty
-
-  /// Type can be applied to `string` function.
-  | ToStringTrait of Ty
-
-  | PtrTrait of Ty
   /// Types that can be cast from srcTy to destTy.
-  | PtrCastTrait of srcTy: Ty * destTy: Ty
-  | PtrSizeTrait of Ty
+  | PtrCast of srcTy: Ty * destTy: Ty
 
 /// Type definition.
 [<NoEquality; NoComparison>]

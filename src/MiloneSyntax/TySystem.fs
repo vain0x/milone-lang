@@ -107,21 +107,37 @@ let tkDisplay getTyName tk =
 // Traits (HIR)
 // -----------------------------------------------
 
-let traitMapTys f it =
-  match it with
-  | AddTrait ty -> AddTrait(f ty)
-  | EqualTrait ty -> EqualTrait(f ty)
-  | CompareTrait ty -> CompareTrait(f ty)
-  | IndexTrait (lTy, rTy, resultTy) -> IndexTrait(f lTy, f rTy, f resultTy)
-  | IsIntTrait ty -> IsIntTrait(f ty)
-  | IsNumberTrait ty -> IsNumberTrait(f ty)
-  | ToIntTrait (flavor, ty) -> ToIntTrait(flavor, f ty)
-  | ToFloatTrait ty -> ToFloatTrait(f ty)
-  | ToCharTrait ty -> ToCharTrait(f ty)
-  | ToStringTrait ty -> ToStringTrait(f ty)
-  | PtrTrait ty -> PtrTrait(f ty)
-  | PtrSizeTrait ty -> PtrSizeTrait(f ty)
-  | PtrCastTrait (lTy, rTy) -> PtrCastTrait(f lTy, f rTy)
+module Trait =
+  let private newUnary unary ty = Trait.Unary(unary, ty)
+
+  let newAdd ty = newUnary UnaryTrait.Add ty
+  let newEqual ty = newUnary UnaryTrait.Equal ty
+  let newCompare ty = newUnary UnaryTrait.Compare ty
+  let newIntLike ty = newUnary UnaryTrait.IntLike ty
+  let newNumberLike ty = newUnary UnaryTrait.NumberLike ty
+  let newToInt flavor ty = newUnary (UnaryTrait.ToInt flavor) ty
+  let newToFloat ty = newUnary UnaryTrait.ToFloat ty
+  let newToChar ty = newUnary UnaryTrait.ToChar ty
+  let newToString ty = newUnary UnaryTrait.ToString ty
+  let newPtrLike ty = newUnary UnaryTrait.PtrLike ty
+  let newPtrSize ty = newUnary UnaryTrait.PtrSize ty
+
+  let newIndex lTy rTy tTy = Trait.Index(lTy, rTy, tTy)
+  let newPtrCast srcTy destTy = Trait.PtrCast(srcTy, destTy)
+
+  /// Converts a trait by applying `onTy` on each types inside it.
+  let map (onTy: Ty -> Ty) (t: Trait) =
+    match t with
+    | Trait.Unary(unary, ty) -> Trait.Unary(unary, onTy ty)
+    | Trait.Index(lTy, rTy, tTy) -> Trait.Index(onTy lTy, onTy rTy, onTy tTy)
+    | Trait.PtrCast(srcTy, destTy) -> Trait.PtrCast(onTy srcTy, onTy destTy)
+
+  /// Creates a list of types that appear in the trait.
+  let collectTys (t: Trait) =
+    match t with
+    | Trait.Unary(_, ty) -> [ ty ]
+    | Trait.Index(lTy, rTy, tTy) -> [ lTy; rTy; tTy ]
+    | Trait.PtrCast(srcTy, destTy) -> [ srcTy; destTy ]
 
 // -----------------------------------------------
 // Types (HIR/MIR)
