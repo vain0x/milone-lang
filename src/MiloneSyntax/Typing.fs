@@ -961,6 +961,42 @@ let private errorExpr (ctx: TyCtx) msg loc : TExpr * Ty * TyCtx =
   txAbort ctx loc
 
 // -----------------------------------------------
+// Type Decomposition
+// -----------------------------------------------
+
+let private expectListTy ctx targetTy loc =
+  match targetTy with
+  | Ty(ListTk, [ itemTy ]) -> targetTy, itemTy, ctx
+
+  | _ ->
+    let itemTy, ctx = freshMetaTy loc ctx
+    let listTy = tyList itemTy
+    listTy, itemTy, unifyTy ctx loc listTy targetTy
+
+let private expectTupleTy (arity: int) ctx targetTy loc =
+  match targetTy with
+  | Ty(TupleTk, itemTys) when List.length itemTys = arity -> targetTy, itemTys, ctx
+
+  | _ when arity = 0 ->
+    let ctx = unifyTy ctx loc targetTy tyUnit
+    tyUnit, [], ctx
+
+  | _ ->
+    let itemTys, ctx =
+      let rec loop acc ctx i =
+        if i < arity then
+          let metaTy, ctx = freshMetaTy loc ctx
+          loop (metaTy :: acc) ctx (i + 1)
+        else
+          acc, ctx
+
+      loop [] ctx 0
+
+    let tupleTy = tyTuple itemTys
+    let ctx = unifyTy ctx loc targetTy tupleTy
+    tupleTy, itemTys, ctx
+
+// -----------------------------------------------
 // Pattern
 // -----------------------------------------------
 
@@ -981,15 +1017,6 @@ let private patToAscriptionTy pat =
 let private inferLitPat ctx pat lit =
   let ctx = validateLit ctx lit (patToLoc pat)
   pat, litToTy lit, ctx
-
-let private expectListTy ctx targetTy loc =
-  match targetTy with
-  | Ty(ListTk, [ itemTy ]) -> targetTy, itemTy, ctx
-
-  | _ ->
-    let itemTy, ctx = freshMetaTy loc ctx
-    let listTy = tyList itemTy
-    listTy, itemTy, unifyTy ctx loc listTy targetTy
 
 let private checkNilPat ctx loc targetTy =
   let listTy, _, ctx = expectListTy ctx targetTy loc
@@ -1039,33 +1066,19 @@ let private checkUnitPat ctx loc targetTy =
   TNodePat(TTuplePN, [], tyUnit, loc), ctx
 
 let private checkTuplePat ctx itemPats loc targetTy =
-  match targetTy with
-  | Ty(TupleTk, itemTys) when List.length itemTys = List.length itemPats ->
-    let entries =
-      match listTryZip itemPats itemTys with
-      | entries, [], [] -> entries
-      | _ -> unreachable ()
+  let arity = List.length itemPats
+  let tupleTy, itemTys, ctx = expectTupleTy arity ctx targetTy loc
 
-    let itemPats, ctx =
-      entries
-      |> List.mapFold (fun ctx (itemPat, itemTy) -> checkPat ctx itemPat itemTy) ctx
+  let entries =
+    match listTryZip itemPats itemTys with
+    | entries, [], [] -> entries
+    | _ -> unreachable ()
 
-    let tupleTy = tyTuple (List.map patToTy itemPats)
-    TNodePat(TTuplePN, itemPats, tupleTy, loc), ctx
+  let itemPats, ctx =
+    entries
+    |> List.mapFold (fun ctx (itemPat, itemTy) -> checkPat ctx itemPat itemTy) ctx
 
-  | _ ->
-    let itemPatTyPairs, ctx =
-      itemPats
-      |> List.mapFold
-           (fun ctx itemPat ->
-             let pat, ty, ctx = inferPat ctx itemPat
-             (pat, ty), ctx)
-           ctx
-
-    let itemPats, itemTys = List.unzip itemPatTyPairs
-    let tupleTy = tyTuple itemTys
-    let ctx = unifyTy ctx loc targetTy tupleTy
-    TNodePat(TTuplePN, itemPats, tupleTy, loc), ctx
+  TNodePat(TTuplePN, itemPats, tupleTy, loc), ctx
 
 let private inferAscribePat ctx body ascriptionTy =
   let ascriptionTy, ctx = resolveAscriptionTy ctx ascriptionTy
@@ -1987,25 +2000,23 @@ let private inferTupleExpr (ctx: TyCtx) items loc targetTyOpt =
     | Some it -> it, ctx
     | None -> freshMetaTy loc ctx
 
-  match targetTy with
-  | Ty(TupleTk, itemTys) when List.length itemTys = List.length items ->
-    let items, _, _ = listTryZip items itemTys
-    let items, ctx =
-      items |> List.mapFold (fun ctx (item, itemTy) ->
-        let item, _, ctx = checkExpr ctx item itemTy
-        item, ctx)
-        ctx
-    txTuple items loc, targetTy, ctx
+  let arity = List.length items
+  let _, itemTys, ctx = expectTupleTy arity ctx targetTy loc
 
-  | _ ->
-    let itemExprTyPairs, ctx =
-      items |> List.mapFold (fun ctx item ->
-        let item, itemTy, ctx = inferExpr ctx item None
-        (item, itemTy), ctx)
-        ctx
+  let items =
+    match listTryZip items itemTys with
+    | it, [], [] -> it
+    | _ -> unreachable ()
 
-    let items, itemTys = List.unzip itemExprTyPairs
-    txTuple items loc, tyTuple itemTys, ctx
+  let items, ctx =
+    items
+    |> List.mapFold
+         (fun ctx (item, itemTy) ->
+           let item, _, ctx = checkExpr ctx item itemTy
+           item, ctx)
+         ctx
+
+  txTuple items loc, targetTy, ctx
 
 let private inferAscribeExpr ctx body ascriptionTy =
   let ascriptionTy, ctx = resolveAscriptionTy ctx ascriptionTy
