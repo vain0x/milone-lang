@@ -27,9 +27,7 @@ module StdInt = Std.StdInt
 [<RequireQualifiedAccess; NoEquality; NoComparison>]
 type private TyCtx =
   {
-    /// Next serial number.
-    /// We need to identify variables by serial number rather than names
-    /// due to scope locality and shadowing.
+    /// Last serial number. Mainly used for meta types.
     Serial: Serial
 
     /// Static and non-static variables.
@@ -1074,7 +1072,7 @@ let private expectTupleTy (arity: int) ctx targetTy loc =
 // -----------------------------------------------
 
 // payloadTy, unionTy, variantTy
-let private instantiateVariant variantSerial loc (ctx: TyCtx) : Ty * Ty * Ty * TyCtx =
+let private instantiateVariant (ctx: TyCtx) variantSerial loc : Ty * Ty * Ty * TyCtx =
   let variantDef = ctx.Variants |> mapFind variantSerial
   let tySerial = variantDef.UnionTySerial
 
@@ -1149,7 +1147,7 @@ let private inferVarPat (ctx: TyCtx) varSerial loc =
 
 let private inferVariantPat (ctx: TyCtx) variantSerial loc =
   let _, unionTy, _, ctx =
-    instantiateVariant variantSerial loc ctx
+    instantiateVariant ctx variantSerial loc
 
   let ctx =
     let variantDef = ctx.Variants |> mapFind variantSerial
@@ -1163,7 +1161,7 @@ let private inferVariantPat (ctx: TyCtx) variantSerial loc =
 
 let private inferVariantAppPat (ctx: TyCtx) variantSerial payloadPat loc =
   let expectedPayloadTy, unionTy, _, ctx =
-    instantiateVariant variantSerial loc ctx
+    instantiateVariant ctx variantSerial loc
 
   let payloadPat, payloadTy, ctx = inferPat ctx payloadPat
 
@@ -1351,7 +1349,7 @@ let private inferFunExpr (ctx: TyCtx) funSerial loc =
 
 let private inferVariantExpr (ctx: TyCtx) variantSerial loc =
   let _, _, ty, ctx =
-    instantiateVariant variantSerial loc ctx
+    instantiateVariant ctx variantSerial loc
 
   TVariantExpr(variantSerial, ty, loc), ty, ctx
 
