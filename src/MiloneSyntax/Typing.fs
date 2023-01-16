@@ -2705,9 +2705,6 @@ module private Rms =
       TBlockStmt (isRec, stmts), ctx
 
   let rmsModule (ctx: TyCtx) (m: TModule) : TModule * TyCtx =
-    // (For debug): Check type scoping.
-    // assert (soundnessCheck ctx [ { m with Stmts = stmts } ])
-
     let rmsCtx = newRmsCtx m.Vars ctx
     let stmts, rmsCtx = List.mapFold rmsStmt rmsCtx m.Stmts
 
@@ -2759,164 +2756,6 @@ let private expandAllSynonyms (ctx: TyCtx) : TyCtx =
   { ctx with
       Variants = variants
       Tys = tys }
-
-// -----------------------------------------------
-// Soundness Check
-// -----------------------------------------------
-
-// Ensure all meta types and universal types are bounded.
-// (Just emit trace messages if broken because current implementation actually break it.)
-
-module private SoundnessCheck =
-  // FIXME: type check fails if use 'S in the ascription
-  let private patFold1 (onTy: _ -> Ty -> _) (state: _) (pat: TPat) : _ =
-    let rec patRec state pat =
-      match pat with
-      | TLitPat _ -> state
-
-      | TDiscardPat (ty, _) -> onTy state ty
-      | TVarPat (_, _, ty, _) -> onTy state ty
-      | TVariantPat (_, ty, _) -> onTy state ty
-
-      | TNodePat (_, args, ty, _) ->
-        let state = onTy state ty
-        args |> List.fold patRec state
-
-      | TAsPat (argPat, _, _) -> patRec state argPat
-
-      | TOrPat (lPat, rPat, _) ->
-        let state = patRec state lPat
-        patRec state rPat
-
-    patRec state pat
-
-  // FIXME: type check fails if use 'S in the ascription
-  let private exprFold1 (onTy: _ -> Ty -> _) (state: _) (expr: TExpr) : _ =
-    let onPat state pat = patFold1 onTy state pat
-    let onStmt state stmt = stmtFold1 onTy state stmt
-
-    let rec exprRec state expr =
-      match expr with
-      | TLitExpr _ -> state
-
-      | TVarExpr (_, ty, _) -> onTy state ty
-      | TFunExpr(_, ty, _) -> onTy state ty
-      | TVariantExpr (_, ty, _) -> onTy state ty
-      | TPrimExpr (_, ty, _) -> onTy state ty
-
-      | TRecordExpr(_, fields, ty, _) ->
-        let state = fields |> List.fold (fun state (_, init, _) -> exprRec state init) state
-        onTy state ty
-
-      | TMatchExpr(cond, arms, ty, _) ->
-        let state = exprRec state cond
-
-        let state =
-          arms |> List.fold
-            (fun state (pat, guard, arm) ->
-              let state = onPat state pat
-              let state = exprRec state guard
-              exprRec state arm)
-            state
-
-        onTy state ty
-
-      | TNavExpr(lExpr, _, ty, _) ->
-        let state = exprRec state lExpr
-        onTy state ty
-
-      | TNodeExpr(_, args, ty, _) ->
-        let state = List.fold exprRec state args
-        onTy state ty
-
-      | TBlockExpr(stmts, last) ->
-        let state = List.fold onStmt state stmts
-        exprRec state last
-
-    exprRec state expr
-
-  let private stmtFold1 (onTy: 'S -> Ty -> 'S) (state: 'S) (stmt: TStmt) : 'S =
-    let onExpr state expr = exprFold1 onTy state expr
-    let onStmt state stmt = stmtFold1 onTy state stmt
-
-    match stmt with
-    | TExprStmt expr -> onExpr state expr
-    | TLetValStmt (_, init, _) -> onExpr state init
-    | TLetFunStmt(_, _, _, _, body, _) -> onExpr state body
-    | TBlockStmt(_, stmts) -> List.fold onStmt state stmts
-
-  [<RequireQualifiedAccess; NoEquality; NoComparison>]
-  type private ScCtx =
-    { Funs: TreeMap<FunSerial, FunDef>
-      MetaTys: TreeMap<TySerial, Ty>
-
-      /// Meta types and universal types that are defined in the current scope.
-      DefinedTys: TreeSet<TySerial> }
-
-  let private extendScope (ctx: ScCtx) (stmt: TStmt) : ScCtx =
-    match stmt with
-    | TExprStmt _
-    | TLetValStmt _
-    | TBlockStmt _ -> ctx
-
-    | TLetFunStmt(funSerial, _, _, _, _, _) ->
-      let funDef = ctx.Funs |> mapFind funSerial
-      let (TyScheme(tyVars, _)) = funDef.Ty
-
-      if List.isEmpty tyVars |> not then
-        // #map_merge
-        __trace ("params " + (List.map string tyVars |> S.concat ", "))
-        { ctx with DefinedTys = tyVars |> List.fold (fun set tyVar -> TSet.add tyVar set) ctx.DefinedTys }
-      else
-        ctx
-
-  let private scTy (ctx: ScCtx) ty =
-    let (Ty(tk, tyArgs)) =
-      let expandMeta tySerial = ctx.MetaTys |> TMap.tryFind tySerial
-      tySubst expandMeta ty
-
-    let check tySerial nameOpt loc =
-      if ctx.DefinedTys |> TSet.contains tySerial |> not then
-        let name =
-          match nameOpt with
-          | Some it -> it
-          | None -> "'" + string tySerial
-
-        __trace ("unbound type: " + name + " " + Loc.toString loc)
-
-      ctx
-
-    match tk with
-    | MetaTk (tySerial, loc) -> check tySerial None loc
-    | UnivTk (tySerial, name, loc) -> check tySerial (Some name) loc
-    | _ -> List.fold scTy ctx tyArgs
-
-  let private scStmts (ctx: ScCtx) stmts : ScCtx =
-    stmts |> List.fold
-      (fun ctx stmt ->
-        match stmt with
-        | TBlockStmt (_, stmts) -> scStmts ctx stmts
-        | _ ->
-          let ctx = extendScope ctx stmt
-          stmtFold1 scTy ctx stmt)
-      ctx
-
-  let check (ctx: TyCtx) (modules: TProgram) : bool =
-    let emptyCtx () : ScCtx =
-      { Funs = ctx.Funs
-        MetaTys = ctx.MetaTys
-        DefinedTys = TMap.empty compare }
-
-    modules |> List.fold
-      (fun ctx (m: TModule) ->
-        __trace ("module " + Loc.toString (Loc.ofDocPos m.DocId (0, 0)))
-        scStmts ctx m.Stmts)
-      (emptyCtx ())
-    |> ignore
-
-    true
-
-let private soundnessCheck ctx modules = SoundnessCheck.check ctx modules
 
 // -----------------------------------------------
 // Interface
@@ -2989,9 +2828,6 @@ let infer (modules: TProgram, nameRes: NameResResult) : TProgram * TirCtx =
   let ctx = synonymCycleCheck ctx
   let modules, ctx = modules |> List.mapFold inferModule ctx
   let ctx = expandAllSynonyms ctx
-
-  // (For debug): Check type scoping.
-  // assert (SoundnessCheck.check ctx modules)
 
   let tirCtx = toTirCtx ctx
 
