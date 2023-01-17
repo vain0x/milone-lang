@@ -1029,6 +1029,16 @@ let private castFunAsNativeFun funSerial loc (ctx: TyCtx) : Ty * TyCtx =
 // Type Decomposition
 // -----------------------------------------------
 
+let private expectFunTy ctx ty loc =
+  match ty with
+  | Ty(FunTk, [ sTy; tTy ]) -> sTy, tTy, ctx
+
+  | _ ->
+    let sTy, ctx = freshMetaTy loc ctx
+    let tTy, ctx = freshMetaTy loc ctx
+    let ctx = unifyTy ctx loc ty (tyFun sTy tTy)
+    sTy, tTy, ctx
+
 let private expectListTy ctx targetTy loc =
   match targetTy with
   | Ty(ListTk, [ itemTy ]) -> targetTy, itemTy, ctx
@@ -1526,7 +1536,7 @@ let private checkMatchExpr ctx expr targetTy =
     | TMatchExpr (cond, arms, _, loc) -> cond, arms, loc
     | _ -> unreachable ()
 
-  let cond, condTy, ctx = inferExpr ctx cond None
+  let cond, condTy, ctx = inferExpr ctx cond
 
   let ctx =
     arms
@@ -1561,7 +1571,7 @@ let private inferNavExpr ctx l (r: Ident, rLoc) loc =
 
     txAbort ctx loc
 
-  let l, lTy, ctx = inferExpr ctx l None
+  let l, lTy, ctx = inferExpr ctx l
   let lTy = substTy ctx lTy
 
   match lTy, r with
@@ -1606,23 +1616,18 @@ let private inferUntypedExprs ctx exprs =
              let ty, ctx = resolveAscriptionTy ctx ty
              TNodeExpr(TTyPlaceholderEN, [], ty, loc), ty, ctx
 
-           | _ -> inferExpr ctx expr None
+           | _ -> inferExpr ctx expr
 
          expr, ctx)
        ctx
 
-let private inferAppExpr ctx itself targetTyOpt =
+let private inferAppExpr ctx itself =
   let callee, arg, loc =
     match itself with
     | TNodeExpr (TAppEN, [ callee; arg ], _, loc) -> callee, arg, loc
     | _ -> unreachable ()
 
-  let targetTy, ctx =
-    match targetTyOpt with
-    | Some it -> it, ctx
-    | None -> freshMetaTyForExpr itself ctx
-
-  let callee, calleeTy, ctx = inferExpr ctx callee None
+  let callee, calleeTy, ctx = inferExpr ctx callee
 
   let calleeTy, neverReturning, ctx =
     match calleeTy with
@@ -1639,6 +1644,8 @@ let private inferAppExpr ctx itself targetTyOpt =
       | _ -> freshMetaTyForExpr itself ctx
 
     checkExpr ctx arg argTy
+
+  let _, targetTy, ctx = expectFunTy ctx calleeTy loc
 
   let ctx =
     unifyTy ctx loc calleeTy (tyFun argTy targetTy)
@@ -1674,7 +1681,7 @@ let private inferExprAsPtrProjection ctx (kind: PtrOperationKind) expr : TExpr *
       | err -> err
 
     | _ ->
-      let expr, ty, ctx = inferExpr ctx expr None
+      let expr, ty, ctx = inferExpr ctx expr
       let ty = substTy ctx ty
 
       match ty with
@@ -1696,7 +1703,7 @@ let private inferExprAsPtrProjection ctx (kind: PtrOperationKind) expr : TExpr *
 
     txAbort ctx loc
 
-let private inferPrimAppExpr ctx itself targetTyOpt =
+let private inferPrimAppExpr ctx itself =
   let prim, arg, loc =
     match itself with
     | TNodeExpr (TAppEN, [ TPrimExpr (prim, _, loc); arg ], _, _) -> prim, arg, loc
@@ -1717,7 +1724,7 @@ let private inferPrimAppExpr ctx itself targetTyOpt =
     txApp (TPrimExpr(TPrim.Printfn, funTy, loc)) arg targetTy loc, targetTy, ctx
 
   | TPrim.PtrAsIn, _ ->
-    let arg, argTy, ctx = inferExpr ctx arg None
+    let arg, argTy, ctx = inferExpr ctx arg
     let argTy = substTy ctx argTy
 
     let ok resultTy =
@@ -1731,7 +1738,7 @@ let private inferPrimAppExpr ctx itself targetTyOpt =
     | _ -> errorExpr ctx "Expected nativeptr, OutPtr or voidptr type." loc
 
   | TPrim.PtrAsNative, _ ->
-    let arg, argTy, ctx = inferExpr ctx arg None
+    let arg, argTy, ctx = inferExpr ctx arg
     let argTy = substTy ctx argTy
 
     let ok resultTy =
@@ -1806,9 +1813,9 @@ let private inferPrimAppExpr ctx itself targetTyOpt =
              let arg, _, ctx =
                match arg with
                | TLitExpr _
-               | TVarExpr _ -> inferExpr ctx arg None
+               | TVarExpr _ -> inferExpr ctx arg
 
-               | TNodeExpr (TPtrOfEN, [ TFunExpr _ ], _, _) -> inferExpr ctx arg None
+               | TNodeExpr (TPtrOfEN, [ TFunExpr _ ], _, _) -> inferExpr ctx arg
 
                | TNodeExpr (TTyPlaceholderEN, [], ty, loc) ->
                  let ty, ctx = resolveAscriptionTy ctx ty
@@ -1821,7 +1828,7 @@ let private inferPrimAppExpr ctx itself targetTyOpt =
 
     TNodeExpr(TNativeDeclEN code, args, tyUnit, loc), tyUnit, ctx
 
-  | _ -> inferAppExpr ctx itself targetTyOpt
+  | _ -> inferAppExpr ctx itself
 
 let private inferWriteExpr ctx expr : TExpr * Ty * TyCtx =
   let ptr, item, loc =
@@ -1852,7 +1859,7 @@ let private inferFunPtrInvokeExpr ctx expr : TExpr * Ty * TyCtx =
       callee, arg, loc
     | _ -> unreachable ()
 
-  let callee, calleeTy, ctx = inferExpr ctx callee None
+  let callee, calleeTy, ctx = inferExpr ctx callee
 
   let argTys, resultTy =
     match substTy ctx calleeTy with
@@ -1872,7 +1879,7 @@ let private inferFunPtrInvokeExpr ctx expr : TExpr * Ty * TyCtx =
   TNodeExpr(TFunPtrInvokeEN, [ callee; arg ], resultTy, loc), resultTy, ctx
 
 let private inferMinusExpr ctx arg loc =
-  let arg, argTy, ctx = inferExpr ctx arg None
+  let arg, argTy, ctx = inferExpr ctx arg
 
   let ctx =
     ctx |> addTraitBound (Trait.newNumberLike argTy) loc
@@ -1882,12 +1889,12 @@ let private inferMinusExpr ctx arg loc =
 let private inferPtrOfExpr ctx arg loc =
   match arg with
   | TVarExpr _ ->
-    let arg, argTy, ctx = inferExpr ctx arg None
+    let arg, argTy, ctx = inferExpr ctx arg
     let ty = tyInPtr argTy
     TNodeExpr(TPtrOfEN, [ arg ], ty, loc), ty, ctx
 
   | TFunExpr (funSerial, _, _) ->
-    let arg, _, ctx = inferExpr ctx arg None
+    let arg, _, ctx = inferExpr ctx arg
     let ty, ctx = castFunAsNativeFun funSerial loc ctx
     TNodeExpr(TFunPtrOfEN, [ arg ], ty, loc), ty, ctx
 
@@ -1896,8 +1903,8 @@ let private inferPtrOfExpr ctx arg loc =
     txAbort ctx loc
 
 let private inferIndexExpr ctx l r loc =
-  let l, lTy, ctx = inferExpr ctx l None
-  let r, rTy, ctx = inferExpr ctx r None
+  let l, lTy, ctx = inferExpr ctx l
+  let r, rTy, ctx = inferExpr ctx r
   let tTy, ctx = freshMetaTy loc ctx
 
   let ctx =
@@ -1907,9 +1914,9 @@ let private inferIndexExpr ctx l r loc =
   TNodeExpr(TIndexEN, [ l; r ], tTy, loc), tTy, ctx
 
 let private inferSliceExpr ctx l r x loc =
-  let l, lTy, ctx = inferExpr ctx l None
-  let r, rTy, ctx = inferExpr ctx r None
-  let x, xTy, ctx = inferExpr ctx x None
+  let l, lTy, ctx = inferExpr ctx l
+  let r, rTy, ctx = inferExpr ctx r
+  let x, xTy, ctx = inferExpr ctx x
 
   let ctx =
     let actualTy = tyFun lTy (tyFun rTy (tyFun xTy xTy))
@@ -1961,8 +1968,10 @@ let private checkBlockExpr ctx expr targetTy =
 
   TBlockExpr(stmts, last), lastTy, ctx
 
-/// Checks the expression to have the specified type.
-let private doCheckExpr (ctx: TyCtx) (expr: TExpr) (targetTy: Ty) : TExpr * Ty * TyCtx =
+/// Transforms an expression for type check in *check* mode.
+///
+/// The result is guaranteed to have the specified type.
+let private checkExpr (ctx: TyCtx) (expr: TExpr) (targetTy: Ty) : TExpr * Ty * TyCtx =
   match expr with
   | TRecordExpr _ -> checkRecordExpr ctx expr targetTy
   | TMatchExpr _ -> checkMatchExpr ctx expr targetTy
@@ -1974,21 +1983,21 @@ let private doCheckExpr (ctx: TyCtx) (expr: TExpr) (targetTy: Ty) : TExpr * Ty *
 
     | _ ->
       // Forward to inference.
-      let expr, inferredTy, ctx = inferExpr ctx expr (Some targetTy)
+      let expr, inferredTy, ctx = inferExpr ctx expr
       let ctx = unifyTy ctx (exprToLoc expr) targetTy inferredTy
       expr, inferredTy, ctx
 
   | _ ->
     // Forward to inference.
-    let expr, inferredTy, ctx = inferExpr ctx expr (Some targetTy)
+    let expr, inferredTy, ctx = inferExpr ctx expr
     let ctx = unifyTy ctx (exprToLoc expr) targetTy inferredTy
     expr, inferredTy, ctx
 
-/// Transforms an expression for type check.
+/// Transforms an expression for type check in *inference mode* (a.k.a. synthesis mode.)
 ///
-/// The target type is optionally provided.
-/// Current implementation doesn't ensure the provided type unifies the inferred type.
-let private inferExpr (ctx: TyCtx) (expr: TExpr) (targetTyOpt: Ty option) : TExpr * Ty * TyCtx =
+/// This mode synthesizes the type of an expression bottom-up.
+/// The target type isn't provided.
+let private inferExpr (ctx: TyCtx) (expr: TExpr) : TExpr * Ty * TyCtx =
   match expr with
   | TLitExpr (lit, _) -> inferLitExpr ctx expr lit
   | TVarExpr (serial, _, loc) -> inferVarExpr ctx serial loc
@@ -1999,11 +2008,11 @@ let private inferExpr (ctx: TyCtx) (expr: TExpr) (targetTyOpt: Ty option) : TExp
 
   | TNodeExpr (kind, args, exprTy, loc) ->
     match kind, args with
-    | TAppEN, [ TPrimExpr _; _ ] -> inferPrimAppExpr ctx expr targetTyOpt
+    | TAppEN, [ TPrimExpr _; _ ] -> inferPrimAppExpr ctx expr
     | TAppEN, [ TNodeExpr (TAppEN, [ TPrimExpr (TPrim.PtrWrite, _, _); _ ], _, _); _ ] -> inferWriteExpr ctx expr
     | TAppEN, [ TNodeExpr (TAppEN, [ TPrimExpr (TPrim.FunPtrInvoke, _, _); _ ], _, _); _ ] ->
       inferFunPtrInvokeExpr ctx expr
-    | TAppEN, [ _; _ ] -> inferAppExpr ctx expr targetTyOpt
+    | TAppEN, [ _; _ ] -> inferAppExpr ctx expr
     | TAppEN, _ -> unreachable ()
 
     | TMinusEN, [ arg ] -> inferMinusExpr ctx arg loc
@@ -2033,9 +2042,7 @@ let private inferExpr (ctx: TyCtx) (expr: TExpr) (targetTyOpt: Ty option) : TExp
     | TTupleEN, _ ->
       // Forward to check.
       let targetTy, ctx = freshMetaTyForExpr expr ctx
-      let expr, _, ctx = doCheckExpr ctx expr targetTy
-      let ctx = unifyTy ctx loc (exprToTy expr) targetTy
-      expr, targetTy, ctx
+      checkExpr ctx expr targetTy
 
     | TFunPtrOfEN, _
     | TDiscriminantEN _, _
@@ -2053,23 +2060,8 @@ let private inferExpr (ctx: TyCtx) (expr: TExpr) (targetTyOpt: Ty option) : TExp
   | TMatchExpr _
   | TBlockExpr _ ->
     // Forward to check.
-    let targetTy, ctx =
-      match targetTyOpt with
-      | Some it -> it, ctx
-      | None -> freshMetaTyForExpr expr ctx
-
-    doCheckExpr ctx expr targetTy
-
-/// Transforms an expression for type check.
-/// The result is guaranteed to have the specified type.
-let private checkExpr (ctx: TyCtx) (expr: TExpr) (targetTy: Ty) : TExpr * Ty * TyCtx =
-  let expr, inferredTy, ctx = inferExpr ctx expr (Some targetTy)
-
-  // inferExpr should ensure (targetTy = inferredTy) but currently not. Unify here as workaround.
-  let ctx = unifyTy ctx (exprToLoc expr) targetTy inferredTy
-
-  // note: inferredTy is equivalent to (exprToTy expr) in theory so it's redundant
-  expr, inferredTy, ctx
+    let targetTy, ctx = freshMetaTyForExpr expr ctx
+    checkExpr ctx expr targetTy
 
 // -----------------------------------------------
 // Statement
@@ -2088,7 +2080,11 @@ let private inferLetValStmt ctx pat init loc =
 
     | None -> None, ctx
 
-  let init, initTy, ctx = inferExpr ctx init ascriptionTyOpt
+  let init, initTy, ctx =
+    match ascriptionTyOpt with
+    | Some ascriptionTy -> checkExpr ctx init ascriptionTy
+    | None -> inferExpr ctx init
+
   let pat, _, ctx = inferIrrefutablePat ctx pat (Some initTy)
   TLetValStmt(pat, init, loc), ctx
 
