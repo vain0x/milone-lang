@@ -1427,8 +1427,7 @@ let private inferPrimExpr ctx prim loc =
   | TPrim.PtrAsNative
   | TPrim.FunPtrInvoke -> bad ctx Log.PrimRequireParam
 
-/// Infers record construction expression.
-let private inferRecordExpr ctx expr targetTyOpt =
+let private checkRecordExpr ctx expr targetTy =
   // Record type must be determined by target type or base expression type.
 
   let baseOpt, fields, loc =
@@ -1441,22 +1440,24 @@ let private inferRecordExpr ctx expr targetTyOpt =
     | None -> None, None, ctx
 
     | Some baseExpr ->
-      let baseExpr, recordTy, ctx = inferExpr ctx baseExpr targetTyOpt
+      let baseExpr, recordTy, ctx = checkExpr ctx baseExpr targetTy
       Some baseExpr, Some recordTy, ctx
 
   let recordTyInfoOpt =
-    let asRecordTy tyOpt =
-      match tyOpt |> Option.map (substTy ctx) with
-      | Some ((Ty (RecordTk (tySerial, _), _)) as recordTy) ->
+    let asRecordTy ty =
+      let ty = substTy ctx ty
+
+      match ty with
+      | Ty (RecordTk (tySerial, _), _) ->
         match ctx.Tys |> mapFind tySerial with
-        | RecordTyDef (name, tyVars, fieldDefs, _, _) -> Some(recordTy, name, tyVars, fieldDefs)
+        | RecordTyDef (name, tyVars, fieldDefs, _, _) -> Some(ty, name, tyVars, fieldDefs)
         | _ -> None
 
       | _ -> None
 
-    match baseTyOpt |> asRecordTy with
+    match baseTyOpt |> Option.bind asRecordTy with
     | (Some _) as it -> it
-    | _ -> targetTyOpt |> asRecordTy
+    | _ -> targetTy |> asRecordTy
 
   match recordTyInfoOpt with
   | None ->
@@ -1499,7 +1500,7 @@ let private inferRecordExpr ctx expr targetTyOpt =
                (name, init, loc), (fieldDefs, ctx)
 
              | Some defTy, fieldDefs ->
-               let init, initTy, ctx = checkExpr ctx init defTy
+               let init, _, ctx = checkExpr ctx init defTy
                (name, init, loc), (fieldDefs, ctx))
            (fieldDefs, ctx)
 
@@ -1519,16 +1520,11 @@ let private inferRecordExpr ctx expr targetTyOpt =
     TRecordExpr(baseOpt, fields, recordTy, loc), recordTy, ctx
 
 // match 'a with ( | 'a -> 'b )*
-let private inferMatchExpr ctx expr targetTyOpt =
+let private checkMatchExpr ctx expr targetTy =
   let cond, arms, loc =
     match expr with
     | TMatchExpr (cond, arms, _, loc) -> cond, arms, loc
     | _ -> unreachable ()
-
-  let targetTy, ctx =
-    match targetTyOpt with
-    | Some it -> it, ctx
-    | None -> freshMetaTyForExpr expr ctx
 
   let cond, condTy, ctx = inferExpr ctx cond None
 
@@ -2011,7 +2007,7 @@ let private inferNodeExpr ctx expr targetTyOpt : TExpr * Ty * TyCtx =
   | TNativeStmtEN _, _
   | TNativeDeclEN _, _ -> unreachable ()
 
-let private inferBlockExpr ctx expr targetTyOpt =
+let private checkBlockExpr ctx expr targetTy =
   let stmts, last =
     match expr with
     | TBlockExpr (stmts, last) -> stmts, last
@@ -2023,10 +2019,27 @@ let private inferBlockExpr ctx expr targetTyOpt =
     stmts
     |> List.mapFold (fun ctx stmt -> inferStmt ctx NotRec stmt) ctx
 
-  let last, lastTy, ctx = inferExpr ctx last targetTyOpt
+  let last, lastTy, ctx = checkExpr ctx last targetTy
 
   TBlockExpr(stmts, last), lastTy, ctx
 
+/// Checks the expression to have the specified type.
+let private doCheckExpr (ctx: TyCtx) (expr: TExpr) (targetTy: Ty) : TExpr * Ty * TyCtx =
+  match expr with
+  | TRecordExpr _ -> checkRecordExpr ctx expr targetTy
+  | TMatchExpr _ -> checkMatchExpr ctx expr targetTy
+  | TBlockExpr _ -> checkBlockExpr ctx expr targetTy
+
+  | _ ->
+    // Forward to inference.
+    let expr, inferredTy, ctx = inferExpr ctx expr (Some targetTy)
+    let ctx = unifyTy ctx (exprToLoc expr) targetTy inferredTy
+    expr, inferredTy, ctx
+
+/// Transforms an expression for type check.
+///
+/// The target type is optionally provided.
+/// Current implementation doesn't ensure the provided type unifies the inferred type.
 let private inferExpr (ctx: TyCtx) (expr: TExpr) (targetTyOpt: Ty option) : TExpr * Ty * TyCtx =
   match expr with
   | TLitExpr (lit, _) -> inferLitExpr ctx expr lit
@@ -2034,11 +2047,19 @@ let private inferExpr (ctx: TyCtx) (expr: TExpr) (targetTyOpt: Ty option) : TExp
   | TFunExpr (serial, _, loc) -> inferFunExpr ctx serial loc
   | TVariantExpr (serial, _, loc) -> inferVariantExpr ctx serial loc
   | TPrimExpr (prim, _, loc) -> inferPrimExpr ctx prim loc
-  | TRecordExpr _ -> inferRecordExpr ctx expr targetTyOpt
-  | TMatchExpr _ -> inferMatchExpr ctx expr targetTyOpt
   | TNavExpr (receiver, field, _, loc) -> inferNavExpr ctx receiver field loc
   | TNodeExpr _ -> inferNodeExpr ctx expr targetTyOpt
-  | TBlockExpr _ -> inferBlockExpr ctx expr targetTyOpt
+
+  | TRecordExpr _
+  | TMatchExpr _
+  | TBlockExpr _ ->
+    // Forward to check.
+    let targetTy, ctx =
+      match targetTyOpt with
+      | Some it -> it, ctx
+      | None -> freshMetaTyForExpr expr ctx
+
+    doCheckExpr ctx expr targetTy
 
 /// Transforms an expression for type check.
 /// The result is guaranteed to have the specified type.
