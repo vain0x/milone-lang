@@ -1635,8 +1635,6 @@ let private inferAppExpr ctx itself =
 
   let argTy, targetTy, ctx = expectFunTy ctx calleeTy loc
   let arg, ctx = checkExpr ctx arg argTy
-
-  let targetTy = substTy ctx targetTy
   let appExpr = txApp callee arg targetTy loc
 
   if neverReturning then
