@@ -228,7 +228,23 @@ let tySubst (substMeta: TySerial -> Ty option) ty =
 
     | Ty (tk, tys) -> Ty(tk, List.map go tys)
 
-  go ty
+  let rec canSubst ty =
+    match ty with
+    | Ty(MetaTk _, _)
+    | Ty(UnivTk _, _) -> true
+
+    | Ty(_, tyArgs) ->
+      let rec argLoop args =
+        match args with
+        | a :: args -> canSubst a || argLoop args
+        | _ -> false
+
+      argLoop tyArgs
+
+  if canSubst ty then
+    go ty
+  else
+    ty
 
 let tyAssign assignment ty =
   tySubst (fun tySerial -> assocTryFind compare tySerial assignment) ty
