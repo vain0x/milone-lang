@@ -1168,16 +1168,14 @@ let private inferVariantPat (ctx: TyCtx) variantSerial loc =
 
   TVariantPat(variantSerial, unionTy, loc), unionTy, ctx
 
-let private inferVariantAppPat (ctx: TyCtx) variantSerial payloadPat loc =
-  let expectedPayloadTy, unionTy, _, ctx =
+let private checkVariantAppPat (ctx: TyCtx) variantSerial payloadPat loc targetTy =
+  let payloadTy, unionTy, _, ctx =
     instantiateVariant ctx variantSerial loc
 
-  let payloadPat, payloadTy, ctx = inferPat ctx payloadPat
+  let ctx = unifyTy ctx loc targetTy unionTy
+  let payloadPat, ctx = checkPat ctx payloadPat payloadTy
 
-  let ctx =
-    unifyTy ctx loc expectedPayloadTy payloadTy
-
-  TNodePat(TVariantAppPN variantSerial, [ payloadPat ], unionTy, loc), unionTy, ctx
+  TNodePat(TVariantAppPN variantSerial, [ payloadPat ], unionTy, loc), ctx
 
 let private checkUnitPat ctx loc targetTy =
   let ctx = unifyTy ctx loc targetTy tyUnit
@@ -1224,8 +1222,6 @@ let private inferNodePat ctx pat =
     | _ -> unreachable ()
 
   match kind, argPats with
-  | TVariantAppPN variantSerial, [ payloadPat ] -> inferVariantAppPat ctx variantSerial payloadPat loc
-  | TVariantAppPN _, _ -> unreachable ()
 
   | TAbortPN, _ -> inferAbortPat ctx loc
 
@@ -1234,7 +1230,8 @@ let private inferNodePat ctx pat =
 
   | TNilPN, _
   | TConsPN, _
-  | TTuplePN, _ ->
+  | TTuplePN, _
+  | TVariantAppPN _, _ ->
     // Forward to check.
     let ty, ctx = freshMetaTyForPat pat ctx
     let pat, ctx = checkPat ctx pat ty
@@ -1275,6 +1272,9 @@ let private checkPat (ctx: TyCtx) (pat: TPat) (targetTy: Ty) : TPat * TyCtx =
 
     | TTuplePN, [] -> checkUnitPat ctx loc targetTy
     | TTuplePN, _ -> checkTuplePat ctx argPats loc targetTy
+
+    | TVariantAppPN variantSerial, [ payloadPat ] -> checkVariantAppPat ctx variantSerial payloadPat loc targetTy
+    | TVariantAppPN _, _ -> unreachable ()
 
     | _ ->
       // Forward to inference.
