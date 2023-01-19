@@ -193,6 +193,8 @@ let private bindMetaTy (ctx: TyCtx) tySerial otherTy : TyCtx =
       MetaTys = ctx.MetaTys |> TMap.add tySerial otherTy
       NoGeneralizeMetaTys = noGeneralizeMetaTys }
 
+// Note: Two types should be passed as possible so that lTy is a subtype of rTy.
+//       In other words, `unify lTy rTy` should check if `let (r: rTy) = (l: lTy)` is okay.
 let private unifyTy (ctx: TyCtx) loc (lTy: Ty) (rTy: Ty) : TyCtx =
   let rec go lTy rTy loc (ctx: TyCtx) =
     match unifyNext lTy rTy loc with
@@ -1046,7 +1048,7 @@ let private expectListTy ctx targetTy loc =
   | _ ->
     let itemTy, ctx = freshMetaTy loc ctx
     let listTy = tyList itemTy
-    listTy, itemTy, unifyTy ctx loc listTy targetTy
+    listTy, itemTy, unifyTy ctx loc targetTy listTy
 
 /// Expects a type to be tuple and returns item types.
 let private expectTupleTy (arity: int) ctx targetTy loc =
@@ -1068,8 +1070,7 @@ let private expectTupleTy (arity: int) ctx targetTy loc =
 
       loop [] ctx 0
 
-    let tupleTy = tyTuple itemTys
-    let ctx = unifyTy ctx loc targetTy tupleTy
+    let ctx = unifyTy ctx loc targetTy (tyTuple itemTys)
     itemTys, ctx
 
 // -----------------------------------------------
@@ -1086,7 +1087,7 @@ let private unifyOrAssignVarTy (ctx: TyCtx) varSerial ty loc =
     let varDef = { varDef with Ty = ty }
     { ctx with Vars = ctx.Vars |> TMap.add varSerial varDef }
   else
-    unifyTy ctx loc varDef.Ty ty
+    unifyTy ctx loc ty varDef.Ty
 
 // payloadTy, unionTy, variantTy
 let private instantiateVariant (ctx: TyCtx) variantSerial loc : Ty * Ty * Ty * TyCtx =
@@ -1273,7 +1274,7 @@ let private checkPat (ctx: TyCtx) (pat: TPat) (targetTy: Ty) : TPat * TyCtx =
     | _ ->
       // Forward to inference.
       let pat, inferredTy, ctx = inferPat ctx pat
-      let ctx = unifyTy ctx (patToLoc pat) inferredTy targetTy
+      let ctx = unifyTy ctx (patToLoc pat) targetTy inferredTy
       pat, ctx
 
   | TAsPat (bodyPat, varSerial, loc) ->
@@ -1290,7 +1291,7 @@ let private checkPat (ctx: TyCtx) (pat: TPat) (targetTy: Ty) : TPat * TyCtx =
   | TVariantPat _ ->
     // Forward to inference.
     let pat, inferredTy, ctx = inferPat ctx pat
-    let ctx = unifyTy ctx (patToLoc pat) inferredTy targetTy
+    let ctx = unifyTy ctx (patToLoc pat) targetTy inferredTy
     pat, ctx
 
 let private checkRefutablePat ctx pat targetTy =
@@ -1967,13 +1968,13 @@ let private checkExpr (ctx: TyCtx) (expr: TExpr) (targetTy: Ty) : TExpr * TyCtx 
     | _ ->
       // Forward to inference.
       let expr, inferredTy, ctx = inferExpr ctx expr
-      let ctx = unifyTy ctx (exprToLoc expr) targetTy inferredTy
+      let ctx = unifyTy ctx (exprToLoc expr) inferredTy targetTy
       expr, ctx
 
   | _ ->
     // Forward to inference.
     let expr, inferredTy, ctx = inferExpr ctx expr
-    let ctx = unifyTy ctx (exprToLoc expr) targetTy inferredTy
+    let ctx = unifyTy ctx (exprToLoc expr) inferredTy targetTy
     expr, ctx
 
 /// Transforms an expression for type check in *inference mode* (a.k.a. synthesis mode.)
@@ -2131,8 +2132,8 @@ let private inferLetFunStmt ctx mutuallyRec callee vis argPats body loc =
 
   let ctx =
     match mainFunTyOpt, bodyTy with
-    | Some _, Ty(NeverTk, _) -> unifyTy ctx loc (tyFun tyUnit tyNever) calleeTy
-    | Some mainFunTy, _ -> unifyTy ctx loc mainFunTy calleeTy
+    | Some _, Ty(NeverTk, _) -> unifyTy ctx loc calleeTy (tyFun tyUnit tyNever)
+    | Some mainFunTy, _ -> unifyTy ctx loc calleeTy mainFunTy
     | _ -> ctx
 
   let ctx =
@@ -2218,7 +2219,7 @@ let private inferBlockStmt (ctx: TyCtx) mutuallyRec stmts : TStmt * TyCtx =
                  |> List.fold
                       (fun (ctx: TyCtx) (useSiteTy, loc) ->
                         let funTy, _, ctx = instantiateTyScheme ctx funTyScheme loc
-                        let newCtx = unifyTy ctx loc funTy useSiteTy
+                        let newCtx = unifyTy ctx loc useSiteTy funTy
                         { ctx with Logs = newCtx.Logs })
                       ctx
 
