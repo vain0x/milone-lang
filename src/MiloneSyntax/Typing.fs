@@ -1641,7 +1641,6 @@ let private inferAppExpr ctx itself =
 
   let argTy, targetTy, ctx = expectFunTy ctx calleeTy loc
   let arg, ctx = checkExpr ctx arg argTy
-  let ctx = unifyTy ctx loc calleeTy (tyFun argTy targetTy)
 
   let targetTy = substTy ctx targetTy
   let appExpr = txApp callee arg targetTy loc
