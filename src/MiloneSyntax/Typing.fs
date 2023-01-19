@@ -1201,11 +1201,6 @@ let private inferAscribePat ctx body ascriptionTy =
   let body, ctx = checkPat ctx body ascriptionTy
   body, ascriptionTy, ctx
 
-let private inferOrPat ctx l r loc =
-  let l, lTy, ctx = inferPat ctx l
-  let r, ctx = checkPat ctx r lTy
-  TOrPat(l, r, loc), lTy, ctx
-
 let private inferAbortPat ctx loc =
   let targetTy = tyError loc
   tpAbort targetTy loc, targetTy, ctx
@@ -1222,7 +1217,6 @@ let private inferNodePat ctx pat =
     | _ -> unreachable ()
 
   match kind, argPats with
-
   | TAbortPN, _ -> inferAbortPat ctx loc
 
   | TAscribePN, [ bodyPat ] -> inferAscribePat ctx bodyPat (getTy ())
@@ -1244,11 +1238,11 @@ let private inferPat ctx pat : TPat * Ty * TyCtx =
   | TLitPat (lit, _) -> inferLitPat ctx pat lit
   | TVariantPat (variantSerial, _, loc) -> inferVariantPat ctx variantSerial loc
   | TNodePat _ -> inferNodePat ctx pat
-  | TOrPat (l, r, loc) -> inferOrPat ctx l r loc
 
   | TDiscardPat _
   | TVarPat _
-  | TAsPat _ ->
+  | TAsPat _
+  | TOrPat _ ->
     // Forward to check.
     let ty, ctx = ctx |> freshMetaTyForPat pat
     let pat, ctx = checkPat ctx pat ty
