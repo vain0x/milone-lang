@@ -407,8 +407,8 @@ type UnifyResult =
   | UnifyOk
   | UnifyOkWithStack of (Ty * Ty) list
   | UnifyError of Log * Loc
-  | UnifyExpandMeta of metaSerial: TySerial * other: Ty
-  | UnifyExpandSynonym of synonymSerial: TySerial * synonymArgs: Ty list * other: Ty
+  | UnifyExpandMeta of metaSerial: TySerial * other: Ty * isLeft: bool
+  | UnifyExpandSynonym of synonymSerial: TySerial * synonymArgs: Ty list * other: Ty * isLeft: bool
 
 let unifyNext (lTy: Ty) (rTy: Ty) (loc: Loc) : UnifyResult =
   let mismatchError () =
@@ -420,8 +420,8 @@ let unifyNext (lTy: Ty) (rTy: Ty) (loc: Loc) : UnifyResult =
     match lTy, rTy with
     | Ty (MetaTk (l, _), _), Ty (MetaTk (r, _), _) when l = r -> UnifyOk
 
-    | Ty (MetaTk (lSerial, _), _), _ -> UnifyExpandMeta(lSerial, rTy)
-    | _, Ty (MetaTk (rSerial, _), _) -> UnifyExpandMeta(rSerial, lTy)
+    | Ty (MetaTk (lSerial, _), _), _ -> UnifyExpandMeta(lSerial, rTy, true)
+    | _, Ty (MetaTk (rSerial, _), _) -> UnifyExpandMeta(rSerial, lTy, false)
 
     | _ -> unreachable ()
 
@@ -437,8 +437,8 @@ let unifyNext (lTy: Ty) (rTy: Ty) (loc: Loc) : UnifyResult =
   | Ty (SynonymTk _, _), _
   | _, Ty (SynonymTk _, _) ->
     match lTy, rTy with
-    | Ty (SynonymTk tySerial, tyArgs), _ -> UnifyExpandSynonym(tySerial, tyArgs, rTy)
-    | _, Ty (SynonymTk tySerial, tyArgs) -> UnifyExpandSynonym(tySerial, tyArgs, lTy)
+    | Ty (SynonymTk tySerial, tyArgs), _ -> UnifyExpandSynonym(tySerial, tyArgs, rTy, true)
+    | _, Ty (SynonymTk tySerial, tyArgs) -> UnifyExpandSynonym(tySerial, tyArgs, lTy, false)
     | _ -> unreachable ()
 
   | Ty (ErrorTk _, _), _

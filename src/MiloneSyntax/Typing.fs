@@ -204,9 +204,13 @@ let private unifyTy (ctx: TyCtx) loc (lTy: Ty) (rTy: Ty) : TyCtx =
 
     | UnifyError (log, loc) -> addLog ctx log loc
 
-    | UnifyExpandMeta (tySerial, otherTy) ->
+    | UnifyExpandMeta (tySerial, otherTy, isLeft) ->
       match expandMeta ctx tySerial with
-      | Some ty -> go ty otherTy loc ctx
+      | Some ty ->
+        if isLeft then
+          go ty otherTy loc ctx
+        else
+          go otherTy ty loc ctx
 
       | None ->
         let otherTy = substTy ctx otherTy
@@ -216,7 +220,7 @@ let private unifyTy (ctx: TyCtx) loc (lTy: Ty) (rTy: Ty) : TyCtx =
         | UnifyAfterExpandMetaResult.OkBind -> bindMetaTy ctx tySerial otherTy
         | UnifyAfterExpandMetaResult.Error (log, loc) -> addLog ctx log loc
 
-    | UnifyExpandSynonym (tySerial, useTyArgs, otherTy) ->
+    | UnifyExpandSynonym (tySerial, useTyArgs, otherTy, isLeft) ->
       let expandedTy =
         // Find def.
         let defTySerials, bodyTy =
@@ -229,7 +233,10 @@ let private unifyTy (ctx: TyCtx) loc (lTy: Ty) (rTy: Ty) : TyCtx =
 
         tyExpandSynonym useTyArgs defTySerials bodyTy
 
-      go expandedTy otherTy loc ctx
+      if isLeft then
+        go expandedTy otherTy loc ctx
+      else
+        go otherTy expandedTy loc ctx
 
   go lTy rTy loc ctx
 

@@ -17,9 +17,9 @@
 #error nativeptr_err.nativeptr_err:38:15 This primitive misses some argument.
 #error nativeptr_err.nativeptr_err:39:15 Expected InPtr, VoidInPtr or OutPtr type.
 #error nativeptr_err.nativeptr_err:43:9 Expected InPtr, VoidInPtr or OutPtr type.
-#error nativeptr_err.nativeptr_err:52:16 Type mismatch: 'nativeptr<int>' <> 'int'.
-#error nativeptr_err.nativeptr_err:53:16 Type mismatch: 'nativeptr<int>' <> 'InPtr<int>'.
-#error nativeptr_err.nativeptr_err:54:16 Type mismatch: 'nativeptr<int>' <> 'voidptr'.
+#error nativeptr_err.nativeptr_err:52:16 Type mismatch: 'int' <> 'nativeptr<int>'.
+#error nativeptr_err.nativeptr_err:53:16 Type mismatch: 'InPtr<int>' <> 'nativeptr<int>'.
+#error nativeptr_err.nativeptr_err:54:16 Type mismatch: 'voidptr' <> 'nativeptr<int>'.
 #error nativeptr_err.nativeptr_err:63:11 Expected a variable.
 #error nativeptr_err.nativeptr_err:66:11 Expected a variable.
 #error nativeptr_err.nativeptr_err:70:22 Expected pointer type.
