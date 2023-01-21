@@ -353,7 +353,7 @@ let private resolveTraitBound (ctx: TyCtx) (theTrait: Trait) loc : TyCtx =
 
                     if variantDef.HasPayload then
                       variantDef.PayloadTy
-                      |> tySubst (fun tySerial -> assocTryFind compare tySerial assignment)
+                      |> tyAssignByList assignment
                       |> Some
                     else
                       None)
@@ -467,7 +467,7 @@ let private resolveTraitBound (ctx: TyCtx) (theTrait: Trait) loc : TyCtx =
 
                     if variantDef.HasPayload then
                       variantDef.PayloadTy
-                      |> tySubst (fun tySerial -> assocTryFind compare tySerial assignment)
+                      |> tyAssignByList assignment
                       |> Some
                     else
                       None)
@@ -612,9 +612,8 @@ let private instantiateBoundedTyScheme (ctx: TyCtx) (tyScheme: BoundedTyScheme) 
   let lastSerial, ty, assignment = doInstantiateTyScheme ctx.Serial tyVars ty loc
 
   let traits =
-    let substMeta = tyAssign assignment
-
-    traits |> List.map (fun (t: Trait) -> t |> Trait.map substMeta, loc)
+    let assignmentMap = TMap.ofList compare assignment
+    traits |> List.map (fun (t: Trait) -> t |> Trait.map (tyAssignByMap assignmentMap), loc)
 
   // Meta types that appear in trait bounds can't be generalized for now.
   let noGeneralizeMetaTys =
@@ -1130,11 +1129,12 @@ let private instantiateVariant (ctx: TyCtx) variantSerial loc : Ty * Ty * Ty * T
           unionTy
 
       let tyScheme = TyScheme(tyArgs, variantTy)
-
       instantiateTyScheme ctx tyScheme loc
 
-    let payloadTy = tyAssign assignment payloadTy
-    let unionTy = tyAssign assignment unionTy
+    let assignmentMap = TMap.ofList compare assignment
+    let payloadTy = tyAssignByMap assignmentMap payloadTy
+    let unionTy = tyAssignByMap assignmentMap unionTy
+
     payloadTy, unionTy, variantTy, ctx
 
 // -----------------------------------------------
@@ -1486,13 +1486,15 @@ let private checkRecordExpr ctx expr targetTy =
       | it, [], [] -> it
       | _ -> unreachable () // NameRes verified arity.
 
+    let assignmentMap = TMap.ofList compare assignment
+
     // Infer field initializers and whether each of them is member of the record type.
     // Whenever a field appears, remove it from the set of fields
     // so that second occurrence of it is marked as redundant.
     let fields, (fieldDefs, ctx) =
       let fieldDefs =
         fieldDefs
-        |> List.map (fun (name, ty, _) -> name, tyAssign assignment ty)
+        |> List.map (fun (name, ty, _) -> name, tyAssignByMap assignmentMap ty)
         |> TMap.ofList compare
 
       fields
@@ -1587,11 +1589,12 @@ let private inferNavExpr ctx l (r: Ident, rLoc) loc =
           with
         | Some (_, fieldTy, _) ->
           // #tyAssign
-          let fieldTy =
+          let assignment =
             match listTryZip tyVars tyArgs with
-            | it, [], [] -> tyAssign it fieldTy
+            | it, [], [] -> it
             | _ -> unreachable () // NameRes verified arity.
 
+          let fieldTy = tyAssignByList assignment fieldTy
           Some fieldTy
 
         | None -> None

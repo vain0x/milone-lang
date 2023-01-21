@@ -210,44 +210,84 @@ let tyToArgList ty =
 
   go 0 [] ty
 
-/// Substitutes meta types in a type as possible.
-let tySubst (substMeta: TySerial -> Ty option) ty =
-  let rec go ty =
+/// Checks if a type syntactically contains any meta or universal type.
+let private tyContainsMetaOrUniv ty =
+  match ty with
+  | Ty(MetaTk _, _)
+  | Ty(UnivTk _, _) -> true
+
+  | Ty(_, tyArgs) ->
+    let rec argLoop args =
+      match args with
+      | a :: args -> tyContainsMetaOrUniv a || argLoop args
+      | _ -> false
+
+    argLoop tyArgs
+
+/// Converts a type by replacing meta types and universal types as possible.
+let tyAssignByMap (assignmentMap: TreeMap<TySerial, Ty>) ty =
+  let rec assignRec ty =
     match ty with
     | Ty (MetaTk (tySerial, _), _) ->
-      match substMeta tySerial with
-      | Some ty -> go ty
+      match assignmentMap |> TMap.tryFind tySerial with
+      | Some ty -> assignRec ty
       | None -> ty
 
     | Ty (UnivTk (tySerial, _, _), _) ->
-      match substMeta tySerial with
-      | Some ty -> go ty
+      match assignmentMap |> TMap.tryFind tySerial with
+      | Some ty -> assignRec ty
       | None -> ty
 
-    | Ty (_, []) -> ty
+    | Ty (tk, tyArgs) -> Ty(tk, List.map assignRec tyArgs)
 
-    | Ty (tk, tys) -> Ty(tk, List.map go tys)
-
-  let rec canSubst ty =
-    match ty with
-    | Ty(MetaTk _, _)
-    | Ty(UnivTk _, _) -> true
-
-    | Ty(_, tyArgs) ->
-      let rec argLoop args =
-        match args with
-        | a :: args -> canSubst a || argLoop args
-        | _ -> false
-
-      argLoop tyArgs
-
-  if canSubst ty then
-    go ty
+  if tyContainsMetaOrUniv ty then
+    assignRec ty
   else
     ty
 
-let tyAssign assignment ty =
-  tySubst (fun tySerial -> assocTryFind compare tySerial assignment) ty
+/// Converts a type by replacing meta types and universal types as possible.
+let tyAssignByList (assignment: (TySerial * Ty) list) ty =
+  if tyContainsMetaOrUniv ty then
+    tyAssignByMap (TMap.ofList compare assignment) ty
+  else
+    ty
+
+/// Checks if a type structurally contains any meta type.
+/// (perf: This runs frequently and should be efficient.)
+let rec tyContainsMeta ty =
+  match ty with
+  | Ty(MetaTk _, _) -> true
+
+  | Ty(_, tyArgs) ->
+    let rec argLoop args =
+      match args with
+      | a :: args -> tyContainsMeta a || argLoop args
+      | _ -> false
+
+    argLoop tyArgs
+
+/// Substitutes meta types in a type as possible.
+/// (perf: This runs frequently and should be efficient.)
+let tySubst (substMeta: TySerial -> Ty option) ty =
+  let rec substRec ty =
+    match ty with
+    | Ty (MetaTk (tySerial, _), _) ->
+      match substMeta tySerial with
+      | Some ty -> substRec ty
+      | None -> ty
+
+    | Ty (tk, tyArgs) ->
+      let rec substMap acc tys =
+        match tys with
+        | [] -> List.rev acc
+        | t :: tys -> substMap (substRec t :: acc) tys
+
+      Ty(tk, substMap [] tyArgs)
+
+  if tyContainsMeta ty then
+    substRec ty
+  else
+    ty
 
 /// Expands a synonym type using its definition and type args.
 let tyExpandSynonym useTyArgs defTySerials bodyTy : Ty =
@@ -259,7 +299,7 @@ let tyExpandSynonym useTyArgs defTySerials bodyTy : Ty =
     | assignment, [], [] -> assignment
     | _ -> unreachable ()
 
-  tyAssign assignment bodyTy
+  tyAssignByList assignment bodyTy
 
 /// Expands all synonyms inside of a type.
 let tyExpandSynonyms (expand: TySerial -> TyDef option) ty : Ty =
@@ -370,7 +410,7 @@ let doInstantiateTyScheme
            serial, assignment)
          (serial, [])
 
-  let ty = tyAssign assignment ty
+  let ty = tyAssignByList assignment ty
   serial, ty, assignment
 
 // -----------------------------------------------
