@@ -2795,7 +2795,7 @@ let infer (modules: TProgram, nameRes: NameResResult) : TProgram * TirCtx =
           |> TMap.toList
           |> List.forall (fun (_, varDef: VarDef) ->
             match varDef.IsStatic with
-            | IsStatic -> tyIsMonomorphic varDef.Ty
+            | IsStatic -> tyContainsMeta varDef.Ty |> not
             | NotStatic -> false))
 
   modules, tirCtx
