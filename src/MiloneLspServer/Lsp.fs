@@ -211,14 +211,6 @@ let private parseAllTokens projectName moduleName docId allTokens =
 
   { m with Tokens = allTokens }
 
-let private tyDisplayFn (tirCtx: TirCtx) ty =
-  let getTyName tySerial =
-    tirCtx.Tys
-    |> TMap.tryFind tySerial
-    |> Option.map tyDefToName
-
-  TySystem.tyDisplay getTyName ty
-
 let private makeDoc (m: ModuleSyntaxData) : Doc =
   { DocId = m.DocId
     ModulePath = [ m.ProjectName; m.ModuleName ] }
@@ -1186,7 +1178,7 @@ module ProjectAnalysis1 =
     | Some (modules, tirCtx) ->
       match findTyInStmt pa modules tokenLoc with
       | None -> Some None
-      | Some ty -> tyDisplayFn tirCtx ty |> Some |> Some
+      | Some ty -> TySystem.tyDisplay ty |> Some |> Some
 
 // -----------------------------------------------
 // Completion

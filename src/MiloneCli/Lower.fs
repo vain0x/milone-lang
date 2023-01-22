@@ -48,9 +48,9 @@ let private lowerTk (tk: Tir.Tk) : Hir.Tk =
 
   | Tir.MetaTk (serial, loc) -> Hir.MetaTk(serial, loc)
   | Tir.UnivTk (serial, info) -> Hir.MetaTk(serial, info.Loc)
-  | Tir.UnionTk (serial, _) -> Hir.UnionTk serial
-  | Tir.RecordTk (serial, _) -> Hir.RecordTk serial
-  | Tir.OpaqueTk (serial, _) -> Hir.OpaqueTk serial
+  | Tir.UnionTk (serial, info) -> Hir.UnionTk(serial, info.Name)
+  | Tir.RecordTk (serial, info) -> Hir.RecordTk(serial, info.Name)
+  | Tir.OpaqueTk (serial, info) -> Hir.OpaqueTk(serial, info.Name)
 
   | Tir.ErrorTk _
   | Tir.SynonymTk _

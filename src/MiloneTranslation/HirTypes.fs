@@ -67,9 +67,9 @@ type Tk =
   // Nominal types.
   /// Quantified meta type or universal type.
   | MetaTk of metaTy: TySerial * metaLoc: Loc
-  | UnionTk of unionTy: TySerial
-  | RecordTk of recordTy: TySerial
-  | OpaqueTk of opaqueTy: TySerial
+  | UnionTk of unionTy: TySerial * name: string
+  | RecordTk of recordTy: TySerial * name: string
+  | OpaqueTk of opaqueTy: TySerial * name: string
 
 /// Type of expressions.
 [<Struct; NoEquality; NoComparison>]

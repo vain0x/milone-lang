@@ -22,7 +22,7 @@ let private isFunTy ty =
 
 let private unwrapRecordTy ty =
   match ty with
-  | Ty (RecordTk tySerial, tyArgs) -> tySerial, tyArgs
+  | Ty (RecordTk(tySerial, name), tyArgs) -> tySerial, name, tyArgs
   | _ -> unreachable ()
 
 let private hxBox itemExpr itemTy loc =
@@ -214,11 +214,11 @@ let private trdTy isDirect (ctx: TrdCtx) ty : TrdCtx =
     | FunPtrTk
     | NativeTypeTk _ -> tyArgs |> List.fold (trdTy isDirect) ctx
 
-    | UnionTk tySerial ->
+    | UnionTk(tySerial, _) ->
       let ctx = tyArgs |> List.fold (trdTy isDirect) ctx
       nominal ctx tySerial
 
-    | RecordTk tySerial -> nominal ctx tySerial
+    | RecordTk(tySerial, _) -> nominal ctx tySerial
 
 let private detectTypeRecursion (hirCtx: HirCtx) : TrdCtx =
   let ctx: TrdCtx =
@@ -413,8 +413,8 @@ let private tsmTy (ctx: TsmCtx) ty =
 
       Int.max 1 size, ctx
 
-    | UnionTk tySerial -> nominal tySerial
-    | RecordTk tySerial -> nominal tySerial
+    | UnionTk(tySerial, _) -> nominal tySerial
+    | RecordTk(tySerial, _) -> nominal tySerial
 
     | MetaTk _ -> 8, ctx
     | NativeTypeTk _
@@ -509,7 +509,7 @@ let private isRecursiveVariant (ctx: AbCtx) variantSerial =
 
 let private needsBoxedRecordTy ctx ty =
   match ty with
-  | Ty (RecordTk tySerial, _) -> needsBoxedRecordTySerial ctx tySerial
+  | Ty (RecordTk(tySerial, _), _) -> needsBoxedRecordTySerial ctx tySerial
   | _ -> false
 
 /// ### Boxing of Payloads
@@ -572,7 +572,7 @@ let private assignToPayloadTy (ctx: AbCtx) variantSerial (tyArgs: Ty list) =
 let private unwrapNewtypeUnionTy (ctx: AbCtx) ty tyArgs : Ty option =
   let asNewtypeVariant ty =
     match ty with
-    | Ty (UnionTk tySerial, _) ->
+    | Ty (UnionTk(tySerial, _), _) ->
       match ctx.Tys |> mapFind tySerial with
       | UnionTyDef (_, _, [ variantSerial ], _) when not (isRecursiveVariant ctx variantSerial) -> Some variantSerial
       | _ -> None
@@ -666,18 +666,18 @@ let private eraseRecordTy ctx ty =
   else
     None
 
-let private postProcessRecordExpr ctx recordTySerial tyArgs args loc =
+let private postProcessRecordExpr ctx recordTySerial tyName tyArgs args loc =
   if needsBoxedRecordTySerial ctx recordTySerial then
-    let ty = tyRecord recordTySerial tyArgs
+    let ty = tyRecord recordTySerial tyName tyArgs
     let recordExpr = HNodeExpr(HRecordEN, args, ty, loc)
 
     Some(hxBox recordExpr ty loc)
   else
     None
 
-let private postProcessFieldExpr ctx recordTySerial tyArgs recordExpr index fieldTy loc =
+let private postProcessFieldExpr ctx recordTySerial tyName tyArgs recordExpr index fieldTy loc =
   if needsBoxedRecordTySerial ctx recordTySerial then
-    let ty = tyRecord recordTySerial tyArgs
+    let ty = tyRecord recordTySerial tyName tyArgs
 
     Some(HNodeExpr(HRecordItemEN index, [ hxUnbox recordExpr ty loc ], fieldTy, loc))
   else
@@ -689,22 +689,22 @@ let private postProcessFieldExpr ctx recordTySerial tyArgs recordExpr index fiel
 
 let private abTy (ctx: AbCtx) ty =
   match ty with
-  | Ty (RecordTk tySerial, tyArgs) ->
+  | Ty (RecordTk(tySerial, name), tyArgs) ->
     let ty =
       let tyArgs = tyArgs |> List.map (abTy ctx)
-      Ty(RecordTk tySerial, tyArgs)
+      Ty(RecordTk(tySerial, name), tyArgs)
 
     match eraseRecordTy ctx ty with
     | Some ty -> ty
     | None -> ty
 
   // #erase_enum_like_union
-  | Ty (UnionTk tySerial, _) when ctx.EnumLikeUnionTys |> TSet.contains tySerial -> tyInt
+  | Ty (UnionTk(tySerial, _), _) when ctx.EnumLikeUnionTys |> TSet.contains tySerial -> tyInt
 
-  | Ty (UnionTk tySerial, tyArgs) ->
+  | Ty (UnionTk(tySerial, name), tyArgs) ->
     let ty =
       let tyArgs = tyArgs |> List.map (abTy ctx)
-      Ty(UnionTk tySerial, tyArgs)
+      Ty(UnionTk(tySerial, name), tyArgs)
 
     match unwrapNewtypeUnionTy ctx ty tyArgs with
     | Some ty -> ty
@@ -791,22 +791,22 @@ let private abExpr ctx expr =
       | None -> hxCallProc callee [ payload ] ty loc
 
     | HRecordEN, _ ->
-      let recordSerial, tyArgs = unwrapRecordTy ty
+      let recordSerial, tyName, tyArgs = unwrapRecordTy ty
       let items = items |> List.map (abExpr ctx)
       let ty = ty |> abTy ctx
 
-      match postProcessRecordExpr ctx recordSerial tyArgs items loc with
+      match postProcessRecordExpr ctx recordSerial tyName tyArgs items loc with
       | Some expr -> expr
       | None -> HNodeExpr(HRecordEN, items, ty, loc)
 
     | HRecordItemEN index, [ recordExpr ] ->
-      let recordTySerial, tyArgs =
+      let recordTySerial, tyName, tyArgs =
         recordExpr |> exprToTy |> unwrapRecordTy
 
       let recordExpr = recordExpr |> abExpr ctx
       let ty = ty |> abTy ctx
 
-      match postProcessFieldExpr ctx recordTySerial tyArgs recordExpr index ty loc with
+      match postProcessFieldExpr ctx recordTySerial tyName tyArgs recordExpr index ty loc with
       | Some expr -> expr
       | None -> HNodeExpr(HRecordItemEN index, [ recordExpr ], ty, loc)
 

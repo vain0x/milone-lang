@@ -39,8 +39,8 @@ let tyTuple tys = Ty(TupleTk, tys)
 let tyUnit = tyTuple []
 
 let tyMeta serial loc = Ty(MetaTk(serial, loc), [])
-let tyUnion tySerial tyArgs = Ty(UnionTk tySerial, tyArgs)
-let tyRecord tySerial tyArgs = Ty(RecordTk tySerial, tyArgs)
+let tyUnion tySerial name tyArgs = Ty(UnionTk(tySerial, name), tyArgs)
+let tyRecord tySerial name tyArgs = Ty(RecordTk(tySerial, name), tyArgs)
 
 // -----------------------------------------------
 // Type definitions (HIR)
@@ -373,9 +373,9 @@ let private tkEncode tk : int =
   | FunPtrTk -> just 13
 
   | MetaTk (tySerial, _) -> pair 20 tySerial
-  | UnionTk tySerial -> pair 22 tySerial
-  | RecordTk tySerial -> pair 23 tySerial
-  | OpaqueTk tySerial -> pair 24 tySerial
+  | UnionTk(tySerial, _) -> pair 22 tySerial
+  | RecordTk(tySerial, _) -> pair 23 tySerial
+  | OpaqueTk(tySerial, _) -> pair 24 tySerial
 
   | NativeTypeTk _ -> unreachable ()
 
@@ -390,7 +390,7 @@ let tkCompare l r : int =
 
 let tkEqual l r : bool = tkCompare l r = 0
 
-let tkDisplay getTyName tk =
+let tkDisplay tk =
   match tk with
   | IntTk flavor -> fsharpIntegerTyName flavor
   | FloatTk flavor -> fsharpFloatTyName flavor
@@ -409,10 +409,10 @@ let tkDisplay getTyName tk =
   | NativePtrTk RefMode.WriteOnly -> "OutPtr"
   | FunPtrTk -> "FunPtr"
   | NativeTypeTk _ -> "__nativeType"
-  | MetaTk (tySerial, _) -> getTyName tySerial
-  | RecordTk tySerial -> getTyName tySerial
-  | UnionTk tySerial -> getTyName tySerial
-  | OpaqueTk tySerial -> getTyName tySerial
+  | MetaTk (tySerial, _) -> "?" + string tySerial
+  | RecordTk(tySerial, name) -> name
+  | UnionTk(tySerial, name) -> name
+  | OpaqueTk(tySerial, name) -> name
 
 // -----------------------------------------------
 // Types (HIR/MIR)

@@ -371,16 +371,16 @@ let monify (modules: HProgram, hirCtx: HirCtx) : HProgram * HirCtx =
 
     funDef.Name + " #" + serial + " " + loc
 
-  // #tyNames
+  // #tyNames (note: this might not be unnecessary because nominal types carry their names)
   let tyNames =
     hirCtx.Tys
     |> TMap.fold
          (fun tyNames tySerial tyDef ->
            let tk, name =
              match tyDef with
-             | UnionTyDef (ident, _, _, _) -> UnionTk tySerial, ident
-             | RecordTyDef (ident, _, _, _, _) -> RecordTk tySerial, ident
-             | OpaqueTyDef (ident, _) -> OpaqueTk tySerial, ident
+             | UnionTyDef (ident, _, _, _) -> UnionTk(tySerial, ident), ident
+             | RecordTyDef (ident, _, _, _, _) -> RecordTk(tySerial, ident), ident
+             | OpaqueTyDef (ident, _) -> OpaqueTk(tySerial, ident), ident
 
            tyNames |> TMap.add (Ty(tk, [])) name)
          (TMap.empty tyCompare)
