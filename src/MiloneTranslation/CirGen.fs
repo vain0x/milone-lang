@@ -260,7 +260,6 @@ let private ofMirResult entrypointName (df: DocIdToModulePath) (mirCtx: MirResul
       (TMap.empty variantSerialCompare)
       freq
 
-  // #tyNames (this might not be unnecessary because nominal types carry their names)
   let tyNames =
     let toKey (serial, tyDef) =
       match tyDef with

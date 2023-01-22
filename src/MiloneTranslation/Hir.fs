@@ -410,9 +410,9 @@ let tkDisplay tk =
   | FunPtrTk -> "FunPtr"
   | NativeTypeTk _ -> "__nativeType"
   | MetaTk (tySerial, _) -> "?" + string tySerial
-  | RecordTk(tySerial, name) -> name
-  | UnionTk(tySerial, name) -> name
-  | OpaqueTk(tySerial, name) -> name
+  | RecordTk(_, name) -> name
+  | UnionTk(_, name) -> name
+  | OpaqueTk(_, name) -> name
 
 // -----------------------------------------------
 // Types (HIR/MIR)
@@ -535,6 +535,12 @@ let tyMangle (ty: Ty, memo: TreeMap<Ty, string>) : string * TreeMap<Ty, string> 
       let tyArgs, ctx = mangleList tyArgs ctx
       S.concat "" tyArgs + (name + string arity), ctx
 
+    let nominal (name: string) =
+      if List.isEmpty tyArgs then
+        name, ctx
+      else
+        variadicGeneric name
+
     let doMangle () : string * TreeMap<_, _> =
       match tk with
       | IntTk flavor -> cIntegerTyPascalName flavor, ctx
@@ -574,13 +580,9 @@ let tyMangle (ty: Ty, memo: TreeMap<Ty, string>) : string * TreeMap<Ty, string> 
 
         funTy, ctx
 
-      | UnionTk _
-      | RecordTk _
-      | OpaqueTk _ ->
-        // Name must be stored in memo if monomorphic.
-        assert (List.isEmpty tyArgs |> not)
-        let name = memo |> mapFind (Ty(tk, []))
-        variadicGeneric name
+      | UnionTk(_, name) -> nominal name
+      | RecordTk(_, name) -> nominal name
+      | OpaqueTk(_, name) -> nominal name
 
     // Memoization.
     match TMap.tryFind ty ctx with

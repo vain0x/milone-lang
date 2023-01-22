@@ -101,20 +101,6 @@ type private MtCtx =
     NewVariants: (VariantSerial * M.VariantDef) list }
 
 let private ofHirCtx (hirCtx: HirCtx) : MtCtx =
-  // #tyNames (this might not be unnecessary because nominal types carry their names)
-  let tyNames =
-    hirCtx.Tys
-    |> TMap.fold
-         (fun tyNames tySerial tyDef ->
-           let tk, name =
-             match tyDef with
-             | UnionTyDef (ident, _, _, _) -> UnionTk(tySerial, ident), ident
-             | RecordTyDef (ident, _, _, _, _) -> RecordTk(tySerial, ident), ident
-             | OpaqueTyDef (ident, _) -> OpaqueTk(tySerial, ident), ident
-
-           tyNames |> TMap.add (Ty(tk, [])) name)
-         (TMap.empty tyCompare)
-
   let getUnionDef tySerial =
     let tyArgs, variants, loc =
       match hirCtx.Tys |> mapFind tySerial with
@@ -138,7 +124,7 @@ let private ofHirCtx (hirCtx: HirCtx) : MtCtx =
     GetUnionDef = getUnionDef
     GetRecordDef = getRecordDef
     Map = TMap.empty (pairCompare tkCompare (listCompare monoTyCompare))
-    TyNames = tyNames
+    TyNames = TMap.empty tyCompare
     NewTys = []
     NewVariants = [] }
 
@@ -171,7 +157,6 @@ let private addTupleDef (ctx: MtCtx) (name: string) (itemTys: MonoTy list) =
     let ctx =
       { ctx with
           Serial = ctx.Serial + 1
-          TyNames = ctx.TyNames |> TMap.add recordTy name
           Map =
             ctx.Map
             |> TMap.add (TupleTk, itemTys) (recordMt, TupleGT)
@@ -252,7 +237,6 @@ let private mtTy (ctx: MtCtx) (ty: Ty) : M.MonoTy * MtCtx =
       let ctx: MtCtx =
         { ctx with
             Serial = ctx.Serial + 1 + variantCount
-            TyNames = ctx.TyNames |> TMap.add unionTy name
             Map =
               ctx.Map
               |> TMap.add (tk, tyArgs) (unionMt, UnionGT unionDef)
@@ -306,7 +290,6 @@ let private mtTy (ctx: MtCtx) (ty: Ty) : M.MonoTy * MtCtx =
       let ctx: MtCtx =
         { ctx with
             Serial = ctx.Serial + 1
-            TyNames = ctx.TyNames |> TMap.add recordTy name
             Map =
               ctx.Map
               |> TMap.add (tk, tyArgs) (recordMt, RecordGT)
