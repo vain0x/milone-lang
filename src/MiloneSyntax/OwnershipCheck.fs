@@ -65,7 +65,7 @@ let private newRxForModule ownedTySet (m: TModule) (tirCtx: TirCtx) : Rx =
 
 let private funIsGeneric (rx: Rx) funSerial =
   let funDef = rx.Funs |> mapFind funSerial
-  let (TyScheme (tyVars, _)) = funDef.Ty
+  let (TyScheme(tyVars, _)) = funDef.Ty
   tyVars |> List.isEmpty |> not
 
 // -----------------------------------------------
@@ -144,7 +144,7 @@ let private addError err (loc: Loc) (ctx: OwnershipCheckCtx) =
 
 let private tyIsOwnedWith ownedTySet ty : bool =
   let rec go ty =
-    let (Ty (tk, tyArgs)) = ty
+    let (Ty(tk, tyArgs)) = ty
 
     match tk with
     | ErrorTk _
@@ -169,17 +169,15 @@ let private tyIsOwnedWith ownedTySet ty : bool =
     | TupleTk
     | ListTk -> tyArgs |> List.exists go
 
-    | UnionTk (tySerial, _) ->
+    | UnionTk(tySerial, _) ->
       // Note that it's unclear whether union is an owned when it has an owned type as argument
       // since that type variable might not appear or not *owned*.
       // (E.g. 'T in type U<'T> = V of ('T -> 'T) isn't owned.)
-      TSet.contains tySerial ownedTySet
-      || tyArgs |> List.exists go
+      TSet.contains tySerial ownedTySet || tyArgs |> List.exists go
 
-    | RecordTk (tySerial, _) ->
+    | RecordTk(tySerial, _) ->
       // Same as UnionTk.
-      TSet.contains tySerial ownedTySet
-      || tyArgs |> List.exists go
+      TSet.contains tySerial ownedTySet || tyArgs |> List.exists go
 
     | SynonymTk _
     | InferTk _ -> unreachable () // SynonymTk, InferTk are resolved in Typing.
@@ -195,14 +193,13 @@ let private computeOwnedTySet (tirCtx: TirCtx) =
   |> TMap.fold
        (fun ownedTySet tySerial (tyDef: TyDef) ->
          match tyDef with
-         | UnionTyDef (_, _, variants, _) ->
+         | UnionTyDef(_, _, variants, _) ->
            let owned =
              variants
              |> List.exists (fun variantSerial ->
                let variantDef = tirCtx.Variants |> mapFind variantSerial
 
-               variantDef.HasPayload
-               && tyIsOwnedWith ownedTySet variantDef.PayloadTy)
+               variantDef.HasPayload && tyIsOwnedWith ownedTySet variantDef.PayloadTy)
 
            if owned then
              ownedTySet |> TSet.add tySerial
@@ -228,8 +225,7 @@ let private ocDefs ownedTySet (tirCtx: TirCtx) =
     |> TMap.fold
          (fun logs _ (varDef: VarDef) ->
            if isOwned varDef.Ty then
-             let log =
-               Log.Error(errorToString OwnershipError.StaticVarCannotBeOwned)
+             let log = Log.Error(errorToString OwnershipError.StaticVarCannotBeOwned)
 
              (log, varDef.Loc) :: logs
            else
@@ -241,11 +237,8 @@ let private ocDefs ownedTySet (tirCtx: TirCtx) =
     |> TMap.fold
          (fun logs _ (variantDef: VariantDef) ->
            if tyIsOwned rx variantDef.PayloadTy then
-             if rx.OwnedTySet
-                |> TSet.contains variantDef.UnionTySerial
-                |> not then
-               let log =
-                 Log.Error(errorToString OwnershipError.VariantInvalid)
+             if rx.OwnedTySet |> TSet.contains variantDef.UnionTySerial |> not then
+               let log = Log.Error(errorToString OwnershipError.VariantInvalid)
 
                (log, variantDef.Loc) :: logs
              else
@@ -259,13 +252,12 @@ let private ocDefs ownedTySet (tirCtx: TirCtx) =
     |> TMap.fold
          (fun logs _ tyDef ->
            match tyDef with
-           | RecordTyDef (_, _, fields, _, _) ->
+           | RecordTyDef(_, _, fields, _, _) ->
              fields
              |> List.fold
                   (fun logs (_, ty, loc) ->
                     if isOwned ty then
-                      let log =
-                        Log.Error(errorToString OwnershipError.FieldCannotBeOwned)
+                      let log = Log.Error(errorToString OwnershipError.FieldCannotBeOwned)
 
                       (log, loc) :: logs
                     else
@@ -349,8 +341,7 @@ let private nextBranch (rx: Rx) (branch: Branch) (branchLoc: Loc) (ctx: Ownershi
     |> TMap.fold
          (fun logs varSerial owned ->
            if owned then
-             let log =
-               Log.Error(errorToString OwnershipError.VariableNotUsed)
+             let log = Log.Error(errorToString OwnershipError.VariableNotUsed)
 
              let loc = rx.GetVarLoc varSerial
              (log, loc) :: logs
@@ -368,8 +359,7 @@ let private nextBranch (rx: Rx) (branch: Branch) (branchLoc: Loc) (ctx: Ownershi
         |> TMap.fold
              (fun logs varSerial loc ->
                if prev |> TMap.containsKey varSerial |> not then
-                 let log =
-                   Log.Error(errorToString OwnershipError.VariableCannotBeUsed)
+                 let log = Log.Error(errorToString OwnershipError.VariableCannotBeUsed)
 
                  (log, loc) :: logs
                else
@@ -390,8 +380,7 @@ let private nextBranch (rx: Rx) (branch: Branch) (branchLoc: Loc) (ctx: Ownershi
         if unused |> List.isEmpty |> not then
           let names = unused |> List.map rx.GetVarName
 
-          let log =
-            Log.Error(errorToString (OwnershipError.BranchMustUse names))
+          let log = Log.Error(errorToString (OwnershipError.BranchMustUse names))
 
           (log, branchLoc) :: logs
         else
@@ -414,8 +403,7 @@ let private nextBranch (rx: Rx) (branch: Branch) (branchLoc: Loc) (ctx: Ownershi
 let private leaveBranches (branch: Branch) (ctx: OwnershipCheckCtx) : OwnershipCheckCtx =
   // Propagate "used" marks to the parent branch.
   let current, used =
-    let branchUsed =
-      branch.PrevOpt |> Option.defaultValue emptyUsedMap
+    let branchUsed = branch.PrevOpt |> Option.defaultValue emptyUsedMap
 
     branchUsed
     |> TMap.fold
@@ -451,25 +439,21 @@ let private ocPat (rx: Rx) (ctx: OwnershipCheckCtx) pat : OwnershipCheckCtx =
   match pat with
   | TLitPat _ -> ctx
 
-  | TDiscardPat (ty, loc) ->
+  | TDiscardPat(ty, loc) ->
     if tyIsOwned rx ty then
       addError OwnershipError.VariableNotUsed loc ctx
     else
       ctx
 
-  | TVarPat (_, varSerial, ty, _) ->
-    if tyIsOwned rx ty then
-      markAsDefined ctx varSerial
-    else
-      ctx
+  | TVarPat(_, varSerial, ty, _) -> if tyIsOwned rx ty then markAsDefined ctx varSerial else ctx
 
   | TVariantPat _ ->
     // Matching to variant is considered a use, okay?
     ctx
 
-  | TNodePat (_, argPats, _, _) -> argPats |> List.fold (ocPat rx) ctx
+  | TNodePat(_, argPats, _, _) -> argPats |> List.fold (ocPat rx) ctx
 
-  | TAsPat (bodyPat, varSerial, loc) ->
+  | TAsPat(bodyPat, varSerial, loc) ->
     let ctx =
       let ty = patToTy bodyPat
 
@@ -481,7 +465,7 @@ let private ocPat (rx: Rx) (ctx: OwnershipCheckCtx) pat : OwnershipCheckCtx =
 
     ocPat rx ctx bodyPat
 
-  | TOrPat (lPat, _, _) -> ocPat rx ctx lPat
+  | TOrPat(lPat, _, _) -> ocPat rx ctx lPat
 
 // applied: true if target of the expression is caller of function application. (It appears as `e` in `e x`.)
 let private ocExpr (rx: Rx) (applied: bool) (ctx: OwnershipCheckCtx) expr : OwnershipCheckCtx =
@@ -490,30 +474,29 @@ let private ocExpr (rx: Rx) (applied: bool) (ctx: OwnershipCheckCtx) expr : Owne
   | TVariantExpr _
   | TPrimExpr _ -> ctx
 
-  | TVarExpr (varSerial, ty, loc) ->
+  | TVarExpr(varSerial, ty, loc) ->
     if tyIsOwned rx ty then
       markAsUsed ctx varSerial loc
     else
       ctx
 
-  | TFunExpr (funSerial, ty, loc) ->
+  | TFunExpr(funSerial, ty, loc) ->
     let rec funTyContainsOwnedTy ty =
       match ty with
-      | Ty (FunTk, [ sTy; tTy ]) -> tyIsOwned rx sTy || funTyContainsOwnedTy tTy
+      | Ty(FunTk, [ sTy; tTy ]) -> tyIsOwned rx sTy || funTyContainsOwnedTy tTy
       | _ -> tyIsOwned rx ty
 
-    if funIsGeneric rx funSerial
-       && funTyContainsOwnedTy ty then
+    if funIsGeneric rx funSerial && funTyContainsOwnedTy ty then
       let funDef = rx.Funs |> mapFind funSerial
-      let (TyScheme (_, defTy)) = funDef.Ty
+      let (TyScheme(_, defTy)) = funDef.Ty
 
       let defTy =
         // Replace univTy -> metaTy
         let rec go ty =
           match ty with
-          | Ty (UnivTk (tySerial, _, loc), _) -> tyMeta tySerial loc
-          | Ty (_, []) -> ty
-          | Ty (tk, tys) -> Ty(tk, List.map go tys)
+          | Ty(UnivTk(tySerial, _, loc), _) -> tyMeta tySerial loc
+          | Ty(_, []) -> ty
+          | Ty(tk, tys) -> Ty(tk, List.map go tys)
 
         go defTy
 
@@ -531,30 +514,28 @@ let private ocExpr (rx: Rx) (applied: bool) (ctx: OwnershipCheckCtx) expr : Owne
             (Some acc)
             stack
 
-        | UnifyError (log, loc) ->
+        | UnifyError(log, loc) ->
           // __trace (__dump (log, loc))
           None
 
-        | UnifyExpandMeta (tySerial, otherTy, _) ->
+        | UnifyExpandMeta(tySerial, otherTy, _) ->
           match acc |> assocTryFind compare tySerial with
           | Some ty -> go acc ty otherTy
 
           | None ->
             let otherTy =
-              otherTy
-              |> tySubst (fun tySerial -> acc |> assocTryFind compare tySerial)
+              otherTy |> tySubst (fun tySerial -> acc |> assocTryFind compare tySerial)
 
             match unifyAfterExpandMeta lTy rTy tySerial otherTy loc with
             | UnifyAfterExpandMetaResult.OkNoBind -> Some acc
             | UnifyAfterExpandMetaResult.OkBind -> Some((tySerial, otherTy) :: acc)
-            | UnifyAfterExpandMetaResult.Error (log, loc) ->
+            | UnifyAfterExpandMetaResult.Error(log, loc) ->
               // __trace (__dump (log, loc))
               None
 
         | UnifyExpandSynonym _ -> unreachable () // Synonym types are resolved in Typing.
 
-      let tyArgsOpt =
-        go [] ty defTy |> Option.map (List.map snd)
+      let tyArgsOpt = go [] ty defTy |> Option.map (List.map snd)
 
       match tyArgsOpt with
       | Some tyArgs ->
@@ -573,14 +554,12 @@ let private ocExpr (rx: Rx) (applied: bool) (ctx: OwnershipCheckCtx) expr : Owne
     else
       ctx
 
-  | TRecordExpr (baseOpt, fields, _, _) ->
-    let ctx =
-      Option.fold (ocExpr rx false) ctx baseOpt
+  | TRecordExpr(baseOpt, fields, _, _) ->
+    let ctx = Option.fold (ocExpr rx false) ctx baseOpt
 
-    fields
-    |> List.fold (fun ctx (_, init, _) -> ocExpr rx false ctx init) ctx
+    fields |> List.fold (fun ctx (_, init, _) -> ocExpr rx false ctx init) ctx
 
-  | TMatchExpr (cond, arms, _, _) ->
+  | TMatchExpr(cond, arms, _, _) ->
     let ctx = ocExpr rx false ctx cond
 
     let branch, ctx = enterBranches ctx
@@ -597,9 +576,9 @@ let private ocExpr (rx: Rx) (applied: bool) (ctx: OwnershipCheckCtx) expr : Owne
 
     leaveBranches branch ctx
 
-  | TNavExpr (l, _, _, _) -> ocExpr rx false ctx l
+  | TNavExpr(l, _, _, _) -> ocExpr rx false ctx l
 
-  | TNodeExpr (kind, args, ty, loc) ->
+  | TNodeExpr(kind, args, ty, loc) ->
     match kind with
     | TAppEN ->
       let l, r =
@@ -609,20 +588,17 @@ let private ocExpr (rx: Rx) (applied: bool) (ctx: OwnershipCheckCtx) expr : Owne
 
       let rec takesOwnedArg ty =
         match ty with
-        | Ty (FunTk, sTy :: _) when tyIsOwned rx sTy -> true
-        | Ty (FunTk, [ _; tTy ]) -> takesOwnedArg tTy
+        | Ty(FunTk, sTy :: _) when tyIsOwned rx sTy -> true
+        | Ty(FunTk, [ _; tTy ]) -> takesOwnedArg tTy
         | _ -> false
 
       let tyIsFun ty =
         match ty with
-        | Ty (FunTk, _) -> true
+        | Ty(FunTk, _) -> true
         | _ -> false
 
       let ctx =
-        if
-          not applied && tyIsFun ty
-          && takesOwnedArg (exprToTy l)
-        then
+        if not applied && tyIsFun ty && takesOwnedArg (exprToTy l) then
           addError OwnershipError.PartialApp loc ctx
         else
           ctx
@@ -632,7 +608,7 @@ let private ocExpr (rx: Rx) (applied: bool) (ctx: OwnershipCheckCtx) expr : Owne
 
     | _ -> ocExprs rx ctx args
 
-  | TBlockExpr (stmts, last) ->
+  | TBlockExpr(stmts, last) ->
     let ctx = ocStmts rx ctx stmts
     ocExpr rx applied ctx last
 
@@ -643,17 +619,17 @@ let private ocStmt rx (ctx: OwnershipCheckCtx) stmt : OwnershipCheckCtx =
   match stmt with
   | TExprStmt expr -> ocExpr rx false ctx expr
 
-  | TLetValStmt (pat, init, _) ->
+  | TLetValStmt(pat, init, _) ->
     let ctx = ocPat rx ctx pat
     ocExpr rx false ctx init
 
-  | TLetFunStmt (_, _, _, argPats, body, loc) ->
+  | TLetFunStmt(_, _, _, argPats, body, loc) ->
     let parent, ctx = enterBody ctx
     let ctx = argPats |> List.fold (ocPat rx) ctx
     let ctx = ocExpr rx false ctx body
     leaveBody rx parent loc ctx
 
-  | TBlockStmt (_, stmts) -> ocStmts rx ctx stmts
+  | TBlockStmt(_, stmts) -> ocStmts rx ctx stmts
 
 let private ocStmts rx ctx stmts : OwnershipCheckCtx = stmts |> List.fold (ocStmt rx) ctx
 
@@ -682,14 +658,14 @@ let private ocProgram ownedTySet (modules: TProgram) (tirCtx: TirCtx) : TirCtx =
 let private tyContainsOwn ty =
   let rec go ty =
     match ty with
-    | Ty (OwnTk, _) -> true
-    | Ty (_, []) -> false
-    | Ty (_, tyArgs) -> tyArgs |> List.exists go
+    | Ty(OwnTk, _) -> true
+    | Ty(_, []) -> false
+    | Ty(_, tyArgs) -> tyArgs |> List.exists go
 
   go ty
 
 let private lwTy ty : Ty =
-  let (Ty (tk, tyArgs)) = ty
+  let (Ty(tk, tyArgs)) = ty
 
   match tk, tyArgs with
   | OwnTk, [ itemTy ] -> lwTy itemTy
@@ -706,7 +682,7 @@ let private lwExpr expr : TExpr =
   | TVariantExpr _
   | TPrimExpr _ -> exprMap lwTy expr
 
-  | TRecordExpr (baseOpt, fields, ty, loc) ->
+  | TRecordExpr(baseOpt, fields, ty, loc) ->
     TRecordExpr(
       Option.map lwExpr baseOpt,
       List.map (fun (ident, init, loc) -> ident, lwExpr init, loc) fields,
@@ -714,7 +690,7 @@ let private lwExpr expr : TExpr =
       loc
     )
 
-  | TMatchExpr (cond, arms, ty, loc) ->
+  | TMatchExpr(cond, arms, ty, loc) ->
     TMatchExpr(
       lwExpr cond,
       List.map (fun (pat, guard, body) -> lwPat pat, lwExpr guard, lwExpr body) arms,
@@ -722,23 +698,23 @@ let private lwExpr expr : TExpr =
       loc
     )
 
-  | TNavExpr (l, r, ty, loc) -> TNavExpr(lwExpr l, r, lwTy ty, loc)
+  | TNavExpr(l, r, ty, loc) -> TNavExpr(lwExpr l, r, lwTy ty, loc)
 
-  | TNodeExpr (TAppEN, [ TPrimExpr (TPrim.OwnAcquire, _, _); arg ], _, _) -> lwExpr arg
-  | TNodeExpr (TAppEN, [ TPrimExpr (TPrim.OwnRelease, _, _); arg ], _, _) -> lwExpr arg
+  | TNodeExpr(TAppEN, [ TPrimExpr(TPrim.OwnAcquire, _, _); arg ], _, _) -> lwExpr arg
+  | TNodeExpr(TAppEN, [ TPrimExpr(TPrim.OwnRelease, _, _); arg ], _, _) -> lwExpr arg
 
-  | TNodeExpr (kind, args, ty, loc) -> TNodeExpr(kind, List.map lwExpr args, lwTy ty, loc)
-  | TBlockExpr (stmts, last) -> TBlockExpr(List.map lwStmt stmts, lwExpr last)
+  | TNodeExpr(kind, args, ty, loc) -> TNodeExpr(kind, List.map lwExpr args, lwTy ty, loc)
+  | TBlockExpr(stmts, last) -> TBlockExpr(List.map lwStmt stmts, lwExpr last)
 
 let private lwStmt stmt : TStmt =
   match stmt with
   | TExprStmt expr -> TExprStmt(lwExpr expr)
-  | TLetValStmt (pat, init, loc) -> TLetValStmt(lwPat pat, lwExpr init, loc)
+  | TLetValStmt(pat, init, loc) -> TLetValStmt(lwPat pat, lwExpr init, loc)
 
-  | TLetFunStmt (funSerial, isRec, vis, argPats, body, loc) ->
+  | TLetFunStmt(funSerial, isRec, vis, argPats, body, loc) ->
     TLetFunStmt(funSerial, isRec, vis, List.map lwPat argPats, lwExpr body, loc)
 
-  | TBlockStmt (isRec, stmts) -> TBlockStmt(isRec, List.map lwStmt stmts)
+  | TBlockStmt(isRec, stmts) -> TBlockStmt(isRec, List.map lwStmt stmts)
 
 let private lwProgram modules (tirCtx: TirCtx) : TProgram * TirCtx =
   let modules =
@@ -773,7 +749,7 @@ let private lwProgram modules (tirCtx: TirCtx) : TProgram * TirCtx =
         Funs =
           tirCtx.Funs
           |> TMap.map (fun _ (funDef: FunDef) ->
-            let (TyScheme (tyVars, ty)) = funDef.Ty
+            let (TyScheme(tyVars, ty)) = funDef.Ty
 
             if tyContainsOwn ty then
               { funDef with Ty = TyScheme(tyVars, lwTy ty) }
@@ -783,12 +759,9 @@ let private lwProgram modules (tirCtx: TirCtx) : TProgram * TirCtx =
           tirCtx.Tys
           |> TMap.map (fun _ (tyDef: TyDef) ->
             match tyDef with
-            | RecordTyDef (ident, tyArgs, fields, repr, loc) ->
-              if fields
-                 |> List.exists (fun (_, ty, _) -> tyContainsOwn ty) then
-                let fields =
-                  fields
-                  |> List.map (fun (ident, ty, loc) -> ident, lwTy ty, loc)
+            | RecordTyDef(ident, tyArgs, fields, repr, loc) ->
+              if fields |> List.exists (fun (_, ty, _) -> tyContainsOwn ty) then
+                let fields = fields |> List.map (fun (ident, ty, loc) -> ident, lwTy ty, loc)
 
                 RecordTyDef(ident, tyArgs, fields, repr, loc)
               else

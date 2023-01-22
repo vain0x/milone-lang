@@ -3,7 +3,8 @@ module MiloneShared.UtilProfiler
 [<NoEquality; NoComparison>]
 type Profiler =
   private
-    { Stopwatch: System.Diagnostics.Stopwatch
+    {
+      Stopwatch: System.Diagnostics.Stopwatch
 
       /// Message specified at the time of the previous logging.
       mutable Msg: string
@@ -12,7 +13,8 @@ type Profiler =
       mutable Epoch: int
 
       /// Heap size (bytes) at the time of the previous logging.
-      mutable Mem: int64 }
+      mutable Mem: int64
+    }
 
 let private getAllocatedBytes () =
   System.GC.GetAllocatedBytesForCurrentThread()

@@ -33,6 +33,7 @@ let private symbolToString (id: int) =
 type Symbol =
   private
   | Symbol of int
+
   member private this.Value =
     let (Symbol n) = this
     n

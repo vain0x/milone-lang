@@ -41,13 +41,9 @@ module Future =
 
   let whenAll (futureList: Future<'T> list) : Future<'T list> =
     if not AllowParallel then
-      futureList
-      |> List.map (fun (f: Future<_>) -> f.Result)
-      |> just
+      futureList |> List.map (fun (f: Future<_>) -> f.Result) |> just
     else
-      (futureList
-       |> List.map (fun (f: Future<_>) -> f.AsTask())
-       |> Task.WhenAll)
+      (futureList |> List.map (fun (f: Future<_>) -> f.AsTask()) |> Task.WhenAll)
         .ContinueWith((fun (task: Task<_>) -> List.ofArray task.Result), TaskContinuationOptions.OnlyOnRanToCompletion)
       |> ofTask
 
@@ -115,15 +111,12 @@ let private mpscParallel
   : 'S =
   assert AllowParallel
 
-  let chan =
-    System.Threading.Channels.Channel.CreateBounded<'A>(256)
+  let chan = System.Threading.Channels.Channel.CreateBounded<'A>(256)
 
   let producerWork (state: 'S) (command: 'T) =
     Future.spawn (fun () ->
       producer state command
-      |> Future.andThen (fun action ->
-        chan.Writer.WriteAsync(action)
-        |> Future.ofUnitValueTask))
+      |> Future.andThen (fun action -> chan.Writer.WriteAsync(action) |> Future.ofUnitValueTask))
     |> Future.catch (fun ex -> chan.Writer.Complete(ex))
     |> ignore
 
@@ -182,10 +175,7 @@ let mpscConcurrent
 /// `List.map` in parallel.
 let __parallelMap (f: 'T -> 'U) (xs: 'T list) : 'U list =
   if AllowParallel then
-    xs
-    |> List.toArray
-    |> Array.Parallel.map f
-    |> Array.toList
+    xs |> List.toArray |> Array.Parallel.map f |> Array.toList
   else
     List.map f xs
 

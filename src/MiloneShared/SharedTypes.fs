@@ -151,28 +151,24 @@ module Loc =
     Loc(docId, y, x)
 
   let toDocPos (loc: Loc) : DocId * Pos =
-    let (Loc (docId, y, x)) = loc
+    let (Loc(docId, y, x)) = loc
     docId, (y, x)
 
   let docId (loc: Loc) : DocId =
-    let (Loc (docId, _, _)) = loc
+    let (Loc(docId, _, _)) = loc
     docId
 
-  let toString (Loc (docId, y, x)) =
-    Symbol.toString docId
-    + ":"
-    + string (y + 1)
-    + ":"
-    + string (x + 1)
+  let toString (Loc(docId, y, x)) =
+    Symbol.toString docId + ":" + string (y + 1) + ":" + string (x + 1)
 
   let equals l r =
-    let (Loc (lDoc, ly, lx)) = l
-    let (Loc (rDoc, ry, rx)) = r
+    let (Loc(lDoc, ly, lx)) = l
+    let (Loc(rDoc, ry, rx)) = r
     Symbol.equals lDoc rDoc && ly = ry && lx = rx
 
   let compare l r =
-    let (Loc (lDoc, ly, lx)) = l
-    let (Loc (rDoc, ry, rx)) = r
+    let (Loc(lDoc, ly, lx)) = l
+    let (Loc(rDoc, ry, rx)) = r
 
     let c = Symbol.compare lDoc rDoc
 

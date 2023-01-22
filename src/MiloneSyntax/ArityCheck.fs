@@ -37,13 +37,10 @@ let private arityExIsUnifiable l r =
 
     | UnitAx, UnitAx -> true
 
-    | FunAx (ls, lt), FunAx (rs, rt) ->
+    | FunAx(ls, lt), FunAx(rs, rt) ->
       let zipped, lRest, rRest = listTryZip ls rs
 
-      List.isEmpty lRest
-      && List.isEmpty rRest
-      && List.forall go zipped
-      && go (lt, rt)
+      List.isEmpty lRest && List.isEmpty rRest && List.forall go zipped && go (lt, rt)
 
     | UnitAx, _
     | FunAx _, _ -> false
@@ -55,7 +52,7 @@ let private arityExToString a =
   | UnitAx -> "_"
   | HungryAx -> "*"
 
-  | FunAx (args, result) ->
+  | FunAx(args, result) ->
     "("
     + (args |> List.map arityExToString |> S.concat ", ")
     + ") -> "
@@ -64,20 +61,17 @@ let private arityExToString a =
 let private tyToArityEx ty =
   let rec goFun ty =
     match ty with
-    | Ty (FunTk, [ sTy; tTy ]) ->
+    | Ty(FunTk, [ sTy; tTy ]) ->
       let sTy = tyToArityEx sTy
       let args, result = goFun tTy
       sTy :: args, result
 
-    | Ty (ErrorTk _, _) -> [], HungryAx
+    | Ty(ErrorTk _, _) -> [], HungryAx
     | _ -> [], UnitAx
 
   let args, result = goFun ty
 
-  if List.isEmpty args then
-    result
-  else
-    FunAx(args, result)
+  if List.isEmpty args then result else FunAx(args, result)
 
 // -----------------------------------------------
 // Context
@@ -109,25 +103,23 @@ let private acExpr (ctx: ArityCheckCtx) expr : ArityEx * ArityCheckCtx =
   match expr with
   | TLitExpr _ -> UnitAx, ctx
 
-  | TVarExpr (_, ty, _) -> tyToArityEx ty, ctx
-  | TVariantExpr (_, ty, _) -> tyToArityEx ty, ctx
-  | TPrimExpr (_, ty, _) -> tyToArityEx ty, ctx
+  | TVarExpr(_, ty, _) -> tyToArityEx ty, ctx
+  | TVariantExpr(_, ty, _) -> tyToArityEx ty, ctx
+  | TPrimExpr(_, ty, _) -> tyToArityEx ty, ctx
 
-  | TFunExpr (funSerial, _, _) -> ctx.GetFunArity funSerial, ctx
+  | TFunExpr(funSerial, _, _) -> ctx.GetFunArity funSerial, ctx
 
-  | TRecordExpr (baseOpt, fields, _, _) ->
+  | TRecordExpr(baseOpt, fields, _, _) ->
     let ctx =
       match baseOpt with
       | Some baseExpr -> baseExpr |> acExpr ctx |> snd
       | None -> ctx
 
-    let ctx =
-      fields
-      |> List.fold (fun ctx (_, init, _) -> acExprChecked ctx init) ctx
+    let ctx = fields |> List.fold (fun ctx (_, init, _) -> acExprChecked ctx init) ctx
 
     UnitAx, ctx
 
-  | TMatchExpr (cond, arms, ty, _) ->
+  | TMatchExpr(cond, arms, ty, _) ->
     let _, ctx = cond |> acExpr ctx
 
     let ctx =
@@ -140,50 +132,47 @@ let private acExpr (ctx: ArityCheckCtx) expr : ArityEx * ArityCheckCtx =
 
     tyToArityEx ty, ctx
 
-  | TNavExpr (l, _, ty, _) ->
+  | TNavExpr(l, _, ty, _) ->
     let _, ctx = l |> acExpr ctx
     tyToArityEx ty, ctx
 
-  | TNodeExpr (TAppEN, [ callee; arg ], ty, loc) ->
+  | TNodeExpr(TAppEN, [ callee; arg ], ty, loc) ->
     let calleeArity, ctx = callee |> acExpr ctx
     let argArity, ctx = arg |> acExpr ctx
 
     match calleeArity with
     | HungryAx -> HungryAx, ctx
 
-    | FunAx (a :: args, result) when arityExIsUnifiable a argArity ->
+    | FunAx(a :: args, result) when arityExIsUnifiable a argArity ->
       if List.isEmpty args then
         tyToArityEx ty, ctx
       else
         FunAx(args, result), ctx
 
     | _ ->
-      let expected =
-        "(" + arityExToString argArity + ", ..) -> .."
+      let expected = "(" + arityExToString argArity + ", ..) -> .."
 
-      let ctx =
-        addArityError (arityExToString calleeArity) expected loc ctx
+      let ctx = addArityError (arityExToString calleeArity) expected loc ctx
 
       tyToArityEx ty, ctx
 
-  | TNodeExpr (_, items, ty, _) ->
+  | TNodeExpr(_, items, ty, _) ->
     let ctx = items |> acExprs ctx
     tyToArityEx ty, ctx
 
-  | TBlockExpr (stmts, last) ->
+  | TBlockExpr(stmts, last) ->
     let ctx = stmts |> acStmts ctx
     last |> acExpr ctx
 
 let private acExprs ctx exprs : ArityCheckCtx =
-  exprs
-  |> List.fold (fun ctx expr -> expr |> acExpr ctx |> snd) ctx
+  exprs |> List.fold (fun ctx expr -> expr |> acExpr ctx |> snd) ctx
 
 let private acStmt (ctx: ArityCheckCtx) stmt : ArityCheckCtx =
   match stmt with
   | TExprStmt expr -> acExprChecked ctx expr
-  | TLetValStmt (_, init, _) -> acExprChecked ctx init
-  | TLetFunStmt (_, _, _, _, body, _) -> acExprChecked ctx body
-  | TBlockStmt (_, stmts) -> acStmts ctx stmts
+  | TLetValStmt(_, init, _) -> acExprChecked ctx init
+  | TLetFunStmt(_, _, _, _, body, _) -> acExprChecked ctx body
+  | TBlockStmt(_, stmts) -> acStmts ctx stmts
 
 let private acStmts ctx stmts = stmts |> List.fold acStmt ctx
 
@@ -201,17 +190,14 @@ let arityCheck (modules: TProgram, tirCtx: TirCtx) : TirCtx =
           if funDef.Name = "failwithf" then
             HungryAx
           else
-            let (TyScheme (_, ty)) = funDef.Ty
+            let (TyScheme(_, ty)) = funDef.Ty
 
             let _, args, result = ty |> tyToArgList
 
-            let args, otherArgs =
-              List.truncate funDef.Arity args, listSkip funDef.Arity args
+            let args, otherArgs = List.truncate funDef.Arity args, listSkip funDef.Arity args
 
             let result =
-              otherArgs
-              |> List.rev
-              |> List.fold (fun a result -> tyFun a result) result
+              otherArgs |> List.rev |> List.fold (fun a result -> tyFun a result) result
 
             let args = List.map tyToArityEx args
             let result = tyToArityEx result

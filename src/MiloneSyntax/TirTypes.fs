@@ -156,7 +156,8 @@ type VarDef =
 
 [<RequireQualifiedAccess; NoEquality; NoComparison>]
 type FunDef =
-  { Name: Ident
+  {
+    Name: Ident
     Arity: Arity
     Ty: TyScheme
     Abi: FunAbi
@@ -168,11 +169,13 @@ type FunDef =
     /// Represents a context of function (in reversed order.) Function name is finally prefixed to be unique.
     Prefix: string list
 
-    Loc: Loc }
+    Loc: Loc
+  }
 
 [<RequireQualifiedAccess; NoEquality; NoComparison>]
 type VariantDef =
-  { Name: Ident
+  {
+    Name: Ident
     UnionTySerial: TySerial
 
     /// Whether this is the only variant of the union.
@@ -180,12 +183,14 @@ type VariantDef =
 
     HasPayload: bool
     PayloadTy: Ty
-    Loc: Loc }
+    Loc: Loc
+  }
 
 /// Context of TIR program.
 [<RequireQualifiedAccess; NoEquality; NoComparison>]
 type TirCtx =
-  { /// Last serial number.
+  {
+    /// Last serial number.
     Serial: Serial
 
     StaticVars: TreeMap<VarSerial, VarDef>
@@ -195,7 +200,8 @@ type TirCtx =
     MainFunOpt: FunSerial option
 
     Tys: TreeMap<TySerial, TyDef>
-    Logs: (Log * Loc) list }
+    Logs: (Log * Loc) list
+  }
 
 /// Kind of TNodePat.
 [<NoEquality; NoComparison>]
@@ -406,12 +412,14 @@ type private VarMap = TreeMap<VarSerial, VarDef>
 
 [<RequireQualifiedAccess; NoEquality; NoComparison>]
 type TModule =
-  { DocId: DocId
+  {
+    DocId: DocId
 
     /// Non-static variables.
     Vars: VarMap
 
-    Stmts: TStmt list }
+    Stmts: TStmt list
+  }
 
 type TProgram = TModule list
 
