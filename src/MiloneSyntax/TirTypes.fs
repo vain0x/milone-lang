@@ -8,20 +8,6 @@ open MiloneShared.TypeFloat
 open MiloneShared.TypeIntegers
 open Std.StdMap
 
-/// Level.
-///
-/// Top-level is 0.
-/// Inside of init part of `let`, level is incremented by 1.
-///
-/// For example, in `let none = None: 'a option in none`,
-/// level of `'a` is 1.
-///
-/// In `let _ = (let  = None: 'b option in ()) in ()`,
-/// level of `'b` is 2.
-///
-/// Only one exception: recursive function has level higher by 1.
-type Level = int
-
 type TName = Ident * Loc
 
 // -----------------------------------------------
