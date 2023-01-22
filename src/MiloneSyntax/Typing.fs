@@ -1555,15 +1555,8 @@ let private checkMatchExpr ctx expr targetTy =
            let pat, ctx = checkRefutablePat ctx pat condTy
            let guard, ctx = checkExpr ctx guard tyBool
 
-           let body, ctx =
-             // FIXME: if type of body is never, it shouldn't be unified with targetTy. test never_ty is failing due to this
-             let body, ctx = checkExpr ctx body targetTy
-
-             match substTy ctx targetTy with
-             | Ty(NeverTk, _) ->
-               TNodeExpr(TCatchNeverEN, [ body ], targetTy, exprToLoc body), ctx
-
-             | _ -> body, ctx
+            // FIXME: if type of body is never, it shouldn't be unified with targetTy. test never_ty is failing due to this
+           let body, ctx = checkExpr ctx body targetTy
 
            (pat, guard, body), ctx)
          ctx
