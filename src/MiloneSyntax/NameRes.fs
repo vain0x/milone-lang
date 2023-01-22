@@ -289,7 +289,8 @@ let private sToResult mainFunOpt (state: NameResState) : NameResResult =
 /// Output of NameRes pass.
 [<RequireQualifiedAccess; NoEquality; NoComparison>]
 type NameResResult =
-  { Serial: Serial
+  { /// Last serial number.
+    Serial: Serial
     StaticVars: TreeMap<VarSerial, VarDef>
     Funs: TreeMap<FunSerial, FunDef>
     Variants: TreeMap<VariantSerial, VariantDef>
@@ -303,7 +304,8 @@ type NameResResult =
 
 [<RequireQualifiedAccess; NoEquality; NoComparison>]
 type private ScopeCtx =
-  { Serial: Serial
+  { /// Last serial number.
+    Serial: Serial
 
     // Partial definitions created by collect declaration.
     DeclaredVars: TreeMap<PosId, VarSerial>

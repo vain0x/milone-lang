@@ -357,7 +357,7 @@ type HProgram = HModule list
 /// Context of HIR program.
 [<RequireQualifiedAccess; NoEquality; NoComparison>]
 type HirCtx =
-  { /// Next serial number.
+  { /// Last serial number.
     Serial: Serial
 
     StaticVars: TreeMap<VarSerial, VarDef>

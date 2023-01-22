@@ -26,8 +26,7 @@ module StdInt = Std.StdInt
 
 [<RequireQualifiedAccess; NoEquality; NoComparison>]
 type private TyCtx =
-  {
-    /// Last serial number. Mainly used for meta types.
+  { /// Last serial number. Mainly used for meta types.
     Serial: Serial
 
     /// Static and non-static variables.

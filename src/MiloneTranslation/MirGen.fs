@@ -58,10 +58,11 @@ type private MirRx =
 type private MirCtx =
   { Rx: MirRx
 
+    /// Last serial number of symbols.
     Serial: Serial
     VarNameMap: TreeMap<VarSerial, Ident>
 
-    /// Serial number of labels. This is reset in each function.
+    /// Last serial number of labels. This is reset in each function.
     LabelSerial: Serial
 
     CurrentFunSerial: FunSerial option
