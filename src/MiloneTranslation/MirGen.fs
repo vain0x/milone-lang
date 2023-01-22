@@ -1093,7 +1093,7 @@ let private mirifyExprOpCons ctx l r listTy loc =
 let private mirifyExprRecord (ctx: MirCtx) args ty loc =
   let name =
     match ty with
-    | Ty (RecordTk tySerial, _) -> ctx.Rx.Tys |> mapFind tySerial |> tyDefToName
+    | Ty (RecordTk(_, name), _) -> name
     | _ -> unreachable ()
 
   let _, tempSerial, ctx = freshVar ctx name ty loc
@@ -1473,7 +1473,7 @@ let private mirifyExprFunPtrInvoke ctx callee arg resultTy loc =
     match argTy with
     | Ty (TupleTk, []) -> []
 
-    | Ty (RecordTk tySerial, _) ->
+    | Ty (RecordTk(tySerial, _), _) ->
       let fields =
         match (ctx: MirCtx).Rx.Tys |> mapFind tySerial with
         | RecordTyDef (_, _, fields, _, _) -> fields

@@ -263,9 +263,9 @@ let private ofMirResult entrypointName (df: DocIdToModulePath) (mirCtx: MirResul
   let tyNames =
     let toKey (serial, tyDef) =
       match tyDef with
-      | UnionTyDef _ -> tyUnion serial []
-      | RecordTyDef _ -> tyRecord serial []
-      | OpaqueTyDef _ -> Ty(OpaqueTk serial, [])
+      | UnionTyDef (ident, _, _, _) -> tyUnion serial ident []
+      | RecordTyDef (ident, _, _, _, _) -> tyRecord serial ident []
+      | OpaqueTyDef (ident, _) -> Ty(OpaqueTk(serial, ident), [])
 
     mirCtx.Tys
     |> renameIdents tyDefToName toKey tyCompare
@@ -306,7 +306,13 @@ let private isMainFun (ctx: CirCtx) funSerial =
 
 let private getUnionTyOfVariant (ctx: CirCtx) variantSerial =
   let variantDef = ctx.Rx.Variants |> mapFind variantSerial
-  tyUnion (variantDef.UnionTySerial) []
+
+  let unionTyName =
+    match ctx.Rx.Tys |> mapFind variantDef.UnionTySerial with
+    | UnionTyDef(ident, _, _, _) -> ident
+    | _ -> unreachable ()
+
+  tyUnion variantDef.UnionTySerial unionTyName []
 
 let private enterBlock (ctx: CirCtx) = { ctx with Stmts = [] }
 
@@ -438,8 +444,8 @@ let private genListTyDef (ctx: CirCtx) itemTy =
 
     selfTy, ctx
 
-let private genIncompleteUnionTyDecl (ctx: CirCtx) tySerial =
-  let unionTyRef = tyUnion tySerial []
+let private genIncompleteUnionTyDecl (ctx: CirCtx) tySerial name =
+  let unionTyRef = tyUnion tySerial name []
 
   match ctx.TyEnv |> TMap.tryFind unionTyRef with
   | Some (_, ty) -> ty, ctx
@@ -456,15 +462,15 @@ let private genIncompleteUnionTyDecl (ctx: CirCtx) tySerial =
 
     selfTy, ctx
 
-let private genUnionTyDef (ctx: CirCtx) tySerial variants =
-  let unionTyRef = tyUnion tySerial []
+let private genUnionTyDef (ctx: CirCtx) tySerial name variants =
+  let unionTyRef = tyUnion tySerial name []
 
   match ctx.TyEnv |> TMap.tryFind unionTyRef with
   | Some (CTyDefined, ty) -> ty, ctx
 
   | _ ->
     let structName, ctx = getUniqueTyName ctx unionTyRef
-    let selfTy, ctx = genIncompleteUnionTyDecl ctx tySerial
+    let selfTy, ctx = genIncompleteUnionTyDecl ctx tySerial name
 
     let discriminantEnumName = toDiscriminantEnumName structName
     let discriminantTy = CEnumTy discriminantEnumName
@@ -504,8 +510,8 @@ let private genUnionTyDef (ctx: CirCtx) tySerial variants =
 
     selfTy, ctx
 
-let private genIncompleteRecordTyDecl (ctx: CirCtx) tySerial =
-  let recordTyRef = tyRecord tySerial []
+let private genIncompleteRecordTyDecl (ctx: CirCtx) tySerial name =
+  let recordTyRef = tyRecord tySerial name []
 
   match ctx.TyEnv |> TMap.tryFind recordTyRef with
   | Some (_, ty) -> ty, ctx
@@ -522,8 +528,8 @@ let private genIncompleteRecordTyDecl (ctx: CirCtx) tySerial =
 
     selfTy, ctx
 
-let private genOpaqueTyDecl (ctx: CirCtx) tySerial =
-  let opaqueTyRef = Ty(OpaqueTk tySerial, [])
+let private genOpaqueTyDecl (ctx: CirCtx) tySerial name =
+  let opaqueTyRef = Ty(OpaqueTk(tySerial, name), [])
 
   match ctx.TyEnv |> TMap.tryFind opaqueTyRef with
   | Some (_, ty) -> ty, ctx
@@ -545,10 +551,10 @@ let private genOpaqueTyDecl (ctx: CirCtx) tySerial =
 
     selfTy, ctx
 
-let private genRecordTyDef ctx tySerial fields =
-  let recordTyRef = tyRecord tySerial []
+let private genRecordTyDef ctx tySerial name fields =
+  let recordTyRef = tyRecord tySerial name []
   let structName, ctx = getUniqueTyName ctx recordTyRef
-  let selfTy, ctx = genIncompleteRecordTyDecl ctx tySerial
+  let selfTy, ctx = genIncompleteRecordTyDecl ctx tySerial name
 
   match ctx.TyEnv |> TMap.tryFind recordTyRef with
   | Some (CTyDefined, ty) -> ty, ctx
@@ -636,9 +642,9 @@ let private cgTyIncomplete (ctx: CirCtx) (ty: Ty) : CTy * CirCtx =
   | FunPtrTk, _ -> cgNativeFunTy ctx tyArgs
   | NativeTypeTk code, _ -> CEmbedTy code, ctx
 
-  | UnionTk tySerial, _ -> genIncompleteUnionTyDecl ctx tySerial
-  | RecordTk tySerial, _ -> genIncompleteRecordTyDecl ctx tySerial
-  | OpaqueTk tySerial, _ -> genOpaqueTyDecl ctx tySerial
+  | UnionTk(tySerial, name), _ -> genIncompleteUnionTyDecl ctx tySerial name
+  | RecordTk(tySerial, name), _ -> genIncompleteRecordTyDecl ctx tySerial name
+  | OpaqueTk(tySerial, name), _ -> genOpaqueTyDecl ctx tySerial name
 
   | MetaTk _, _ -> unreachable () // Resolved in Typing.
 
@@ -678,19 +684,19 @@ let private cgTyComplete (ctx: CirCtx) (ty: Ty) : CTy * CirCtx =
   | FunPtrTk, _ -> cgNativeFunTy ctx tyArgs
   | NativeTypeTk code, _ -> CEmbedTy code, ctx
 
-  | UnionTk serial, _ ->
+  | UnionTk(serial, name), _ ->
     match ctx.Rx.Tys |> TMap.tryFind serial with
-    | Some (UnionTyDef (_, _, variants, _)) -> genUnionTyDef ctx serial variants
+    | Some (UnionTyDef (_, _, variants, _)) -> genUnionTyDef ctx serial name variants
 
     | _ -> unreachable () // Union type undefined?
 
-  | RecordTk serial, _ ->
+  | RecordTk(serial, name), _ ->
     match ctx.Rx.Tys |> TMap.tryFind serial with
-    | Some (RecordTyDef (_, _, fields, _, _)) -> genRecordTyDef ctx serial fields
+    | Some (RecordTyDef (_, _, fields, _, _)) -> genRecordTyDef ctx serial name fields
 
     | _ -> unreachable () // Record type undefined?
 
-  | OpaqueTk serial, _ -> genOpaqueTyDecl ctx serial
+  | OpaqueTk(serial, name), _ -> genOpaqueTyDecl ctx serial name
 
   | MetaTk _, _ -> unreachable () // Resolved in Typing.
 

@@ -291,7 +291,7 @@ let private deriveStringForUnion (rx: DRx) (unionTy: Ty) (ctx: DCtx) : DCtx =
 
   let tySerial, tyArgs =
     match unionTy with
-    | Ty (UnionTk tySerial, tyArgs) -> tySerial, tyArgs
+    | Ty (UnionTk(tySerial, _), tyArgs) -> tySerial, tyArgs
     | _ -> unreachable ()
 
   let unionIdent, tyVars, variants =
@@ -559,10 +559,10 @@ let private deriveOnStmt (hirCtx: HirCtx) (ctx: DCtx) stmt : DCtx =
     ctx
 
   // l = r := match l, r with | T1 l, T1 r -> l = r | ... | _ -> false
-  let deriveEqualForUnion ty (ctx: DCtx) : DCtx =
+  let deriveEqualForUnion unionTy (ctx: DCtx) : DCtx =
     let tySerial, tyArgs =
-      match ty with
-      | Ty (UnionTk tySerial, tyArgs) -> tySerial, tyArgs
+      match unionTy with
+      | Ty (UnionTk(tySerial, _), tyArgs) -> tySerial, tyArgs
       | _ -> unreachable ()
 
     let ident, tyVars, variantSerials, loc =
@@ -581,14 +581,14 @@ let private deriveOnStmt (hirCtx: HirCtx) (ctx: DCtx) stmt : DCtx =
     let funDef: FunDef =
       { Name = ident + "Equal"
         Arity = 2
-        Ty = TyScheme([], tyFun ty (tyFun ty tyBool))
+        Ty = TyScheme([], tyFun unionTy (tyFun unionTy tyBool))
         Abi = MiloneAbi
         Linkage = InternalLinkage
         Prefix = []
         Loc = loc }
 
-    let lArg, ctx = addVar "l" ty loc ctx
-    let rArg, ctx = addVar "r" ty loc ctx
+    let lArg, ctx = addVar "l" unionTy loc ctx
+    let rArg, ctx = addVar "r" unionTy loc ctx
 
     let arms, ctx =
       variantSerials
@@ -598,7 +598,7 @@ let private deriveOnStmt (hirCtx: HirCtx) (ctx: DCtx) stmt : DCtx =
 
              if not variantDef.HasPayload then
                // | T, T -> true
-               let variantPat = HVariantPat(variantSerial, ty, loc)
+               let variantPat = HVariantPat(variantSerial, unionTy, loc)
                let pat = hpTuple [ variantPat; variantPat ] loc
                (pat, trueExpr, trueExpr), ctx
              else
@@ -609,7 +609,7 @@ let private deriveOnStmt (hirCtx: HirCtx) (ctx: DCtx) stmt : DCtx =
 
                let appPat v =
                  let varPat = hpVar v payloadTy loc
-                 hpVariantApp variantSerial varPat ty loc
+                 hpVariantApp variantSerial varPat unionTy loc
 
                let pat = hpTuple [ appPat lv; appPat rv ] loc
 
@@ -629,28 +629,28 @@ let private deriveOnStmt (hirCtx: HirCtx) (ctx: DCtx) stmt : DCtx =
 
     let lastArm =
       // _ -> false
-      HDiscardPat(ty, loc), trueExpr, falseExpr
+      HDiscardPat(unionTy, loc), trueExpr, falseExpr
 
     let matchExpr =
       let cond =
         hxTuple
-          [ HVarExpr(lArg, ty, loc)
-            HVarExpr(rArg, ty, loc) ]
+          [ HVarExpr(lArg, unionTy, loc)
+            HVarExpr(rArg, unionTy, loc) ]
           loc
 
       let arms = List.append arms [ lastArm ]
       HMatchExpr(cond, arms, tyBool, loc)
 
     let letFunStmt =
-      let lPat = hpVar lArg ty loc
-      let rPat = hpVar rArg ty loc
+      let lPat = hpVar lArg unionTy loc
+      let rPat = hpVar rArg unionTy loc
       HLetFunStmt(funSerial, [ lPat; rPat ], matchExpr, loc)
 
     let ctx =
       { ctx with
           NewFuns = (funSerial, funDef) :: ctx.NewFuns
-          NewLetFuns = (ty, letFunStmt) :: ctx.NewLetFuns
-          EqualFunInstances = ctx.EqualFunInstances |> TMap.add ty funSerial }
+          NewLetFuns = (unionTy, letFunStmt) :: ctx.NewLetFuns
+          EqualFunInstances = ctx.EqualFunInstances |> TMap.add unionTy funSerial }
 
     ctx
 

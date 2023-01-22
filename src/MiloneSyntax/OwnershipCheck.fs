@@ -494,7 +494,7 @@ let private ocExpr (rx: Rx) (applied: bool) (ctx: OwnershipCheckCtx) expr : Owne
         // Replace univTy -> metaTy
         let rec go ty =
           match ty with
-          | Ty(UnivTk(tySerial, _, loc), _) -> tyMeta tySerial loc
+          | Ty(UnivTk(tySerial, info), _) -> tyMeta tySerial info.Loc
           | Ty(_, []) -> ty
           | Ty(tk, tys) -> Ty(tk, List.map go tys)
 

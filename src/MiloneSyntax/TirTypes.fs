@@ -8,20 +8,6 @@ open MiloneShared.TypeFloat
 open MiloneShared.TypeIntegers
 open Std.StdMap
 
-/// Level.
-///
-/// Top-level is 0.
-/// Inside of init part of `let`, level is incremented by 1.
-///
-/// For example, in `let none = None: 'a option in none`,
-/// level of `'a` is 1.
-///
-/// In `let _ = (let  = None: 'b option in ()) in ()`,
-/// level of `'b` is 2.
-///
-/// Only one exception: recursive function has level higher by 1.
-type Level = int
-
 type TName = Ident * Loc
 
 // -----------------------------------------------
@@ -41,6 +27,9 @@ type FunSerial = FunSerial of Serial
 [<Struct; NoComparison>]
 type VariantSerial = VariantSerial of Serial
 
+[<RequireQualifiedAccess; NoEquality; NoComparison>]
+type NameLocPair = { Name: string; Loc: Loc }
+
 /// Type constructor.
 [<NoEquality; NoComparison>]
 type Tk =
@@ -54,30 +43,32 @@ type Tk =
   | NeverTk
   | ObjTk
 
-  /// Ty args must be `[s; t]`.
+  /// Type arguments must be `[ s; t ]`.
   | FunTk
 
   | TupleTk
 
-  /// Ty args must be `[t]`.
+  /// Type arguments must be `[ t ]`.
   | ListTk
 
   // Special types.
-  /// Ty args must be `[t]`.
+  /// Type arguments must be `[ t ]`.
   | OwnTk
+  /// Type arguments must be `[ t ]`.
   | VoidPtrTk of voidPtrIsMut: IsMut
+  /// Type arguments must be `[ t ]`.
   | NativePtrTk of mode: RefMode
-  /// Ty args must be `paramTys :: resultTy`
+  /// Type arguments must be `paramTys @ [ resultTy ]`.
   | FunPtrTk
   | NativeTypeTk of cCode: string
 
   // Nominal types.
   | MetaTk of metaTy: TySerial * metaLoc: Loc
-  | UnivTk of univTy: TySerial * name: string * univLoc: Loc
-  | SynonymTk of synonymTy: TySerial
-  | UnionTk of unionTy: TySerial * Loc option
-  | RecordTk of recordTy: TySerial * Loc option
-  | OpaqueTk of opaqueTy: TySerial
+  | UnivTk of univTy: TySerial * NameLocPair
+  | SynonymTk of synonymTy: TySerial * NameLocPair
+  | UnionTk of unionTy: TySerial * NameLocPair
+  | RecordTk of recordTy: TySerial * NameLocPair
+  | OpaqueTk of opaqueTy: TySerial * NameLocPair
 
   /// `_` in ascription.
   | InferTk of Loc

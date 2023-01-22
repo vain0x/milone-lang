@@ -41,9 +41,9 @@ type MonoTy =
   | NativeTypeMt of cCode: string
 
   // Nominal types.
-  | UnionMt of unionTy: TySerial
-  | RecordMt of recordTy: TySerial
-  | OpaqueMt of opaqueTy: TySerial
+  | UnionMt of unionTy: TySerial * name: string
+  | RecordMt of recordTy: TySerial * name: string
+  | OpaqueMt of opaqueTy: TySerial * name: string
 
 [<NoEquality; NoComparison>]
 type TyDef =
