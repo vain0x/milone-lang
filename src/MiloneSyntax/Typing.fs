@@ -26,10 +26,7 @@ module StdInt = Std.StdInt
 
 [<RequireQualifiedAccess; NoEquality; NoComparison>]
 type private TyCtx =
-  {
-    /// Next serial number.
-    /// We need to identify variables by serial number rather than names
-    /// due to scope locality and shadowing.
+  { /// Last serial number. Mainly used for meta types.
     Serial: Serial
 
     /// Static and non-static variables.
@@ -104,38 +101,8 @@ let private addLog (ctx: TyCtx) log loc =
 let private addError (ctx: TyCtx) message loc =
   { ctx with Logs = (Log.Error message, loc) :: ctx.Logs }
 
-let private findVar (ctx: TyCtx) serial = ctx.Vars |> mapFind serial
-
-let private findTy tySerial (ctx: TyCtx) = ctx.Tys |> mapFind tySerial
-
 let private canGeneralize (ctx: TyCtx) metaTySerial =
   ctx.NoGeneralizeMetaTys |> TSet.contains metaTySerial |> not
-
-let private isNewtypeVariant (ctx: TyCtx) variantSerial =
-  let variantDef = ctx.Variants |> mapFind variantSerial
-  variantDef.IsNewtype
-
-let private isMainFun funSerial (ctx: TyCtx) =
-  match ctx.MainFunOpt with
-  | Some mainFun -> funSerialCompare mainFun funSerial = 0
-  | _ -> false
-
-let private freshVar (ctx: TyCtx) hint ty loc =
-  let varSerial = VarSerial(ctx.Serial + 1)
-
-  let varDef: VarDef =
-    { Name = hint
-      IsStatic = NotStatic
-      Ty = ty
-      Linkage = InternalLinkage
-      Loc = loc }
-
-  let ctx =
-    { ctx with
-        Serial = ctx.Serial + 1
-        Vars = ctx.Vars |> TMap.add varSerial varDef }
-
-  varSerial, ctx
 
 let private freshTySerial (ctx: TyCtx) =
   let serial = ctx.Serial + 1
@@ -162,6 +129,703 @@ let private freshMetaTyForExpr expr ctx =
   let tySerial, ctx = ctx |> freshTySerial
   let ty = tyMeta tySerial loc
   ty, ctx
+
+// -----------------------------------------------
+// Extensions for Ty, Expr
+// -----------------------------------------------
+
+let private isNoTy ty =
+  match ty with
+  | Ty (ErrorTk _, _) -> true
+  | _ -> false
+
+let private txApp f x resultTy loc =
+  TNodeExpr(TAppEN, [ f; x ], resultTy, loc)
+
+/// Must be used after error occurred.
+let private txAbort (ctx: TyCtx) loc =
+  assert (ctx.Logs |> List.isEmpty |> not)
+
+  let ty = tyError loc
+  TNodeExpr(TAbortEN, [], ty, loc), ty, ctx
+
+/// Reports an error and makes a dummy expression.
+let private errorExpr (ctx: TyCtx) msg loc : TExpr * Ty * TyCtx =
+  let ctx = addError ctx msg loc
+  txAbort ctx loc
+
+// -----------------------------------------------
+// Unification
+// -----------------------------------------------
+
+// And meta type resolution by substitution or degeneration.
+
+let private expandMeta (ctx: TyCtx) tySerial : Ty option = ctx.MetaTys |> TMap.tryFind tySerial
+
+let private substTy (ctx: TyCtx) ty : Ty = tySubst (expandMeta ctx) ty
+
+let private expandSynonyms (ctx: TyCtx) ty : Ty =
+  tyExpandSynonyms (fun tySerial -> ctx.Tys |> TMap.tryFind tySerial) ty
+
+/// Binds a type to a meta type.
+///
+/// As a precondition, that meta type must be free (not bound)
+/// and must not occur in that type (no recursion).
+let private bindMetaTy (ctx: TyCtx) tySerial otherTy : TyCtx =
+  /// If no-generalize meta type is bound to a type,
+  /// propagate "no-generalize" attribute to meta types in the type.
+  let noGeneralizeMetaTys =
+    if canGeneralize ctx tySerial |> not then
+      otherTy
+      |> tyCollectFreeVars
+      |> List.fold
+          (fun acc tySerial ->
+            if canGeneralize ctx tySerial |> not then
+              acc
+            else
+              acc |> TSet.add tySerial)
+          ctx.NoGeneralizeMetaTys
+    else
+      ctx.NoGeneralizeMetaTys
+
+  { ctx with
+      MetaTys = ctx.MetaTys |> TMap.add tySerial otherTy
+      NoGeneralizeMetaTys = noGeneralizeMetaTys }
+
+// Note: Two types should be passed as possible so that lTy is a subtype of rTy.
+//       In other words, `unify lTy rTy` should check if `let (r: rTy) = (l: lTy)` is okay.
+let private unifyTy (ctx: TyCtx) loc (lTy: Ty) (rTy: Ty) : TyCtx =
+  let rec go lTy rTy loc (ctx: TyCtx) =
+    match unifyNext lTy rTy loc with
+    | UnifyOk -> ctx
+
+    | UnifyOkWithStack stack -> List.fold (fun ctx (l, r) -> go l r loc ctx) ctx stack
+
+    | UnifyError (log, loc) -> addLog ctx log loc
+
+    | UnifyExpandMeta (tySerial, otherTy, isLeft) ->
+      match expandMeta ctx tySerial with
+      | Some ty ->
+        if isLeft then
+          go ty otherTy loc ctx
+        else
+          go otherTy ty loc ctx
+
+      | None ->
+        let otherTy = substTy ctx otherTy
+
+        match unifyAfterExpandMeta lTy rTy tySerial otherTy loc with
+        | UnifyAfterExpandMetaResult.OkNoBind -> ctx
+        | UnifyAfterExpandMetaResult.OkBind -> bindMetaTy ctx tySerial otherTy
+        | UnifyAfterExpandMetaResult.Error (log, loc) -> addLog ctx log loc
+
+    | UnifyExpandSynonym (tySerial, useTyArgs, otherTy, isLeft) ->
+      let expandedTy =
+        // Find def.
+        let defTySerials, bodyTy =
+          match ctx.Tys |> TMap.tryFind tySerial with
+          | Some (SynonymTyDef (_, defTySerials, bodyTy, _)) -> defTySerials, bodyTy
+          | _ -> unreachable ()
+
+        // Checked in NameRes.
+        assert (List.length defTySerials = List.length useTyArgs)
+
+        tyExpandSynonym useTyArgs defTySerials bodyTy
+
+      if isLeft then
+        go expandedTy otherTy loc ctx
+      else
+        go otherTy expandedTy loc ctx
+
+  go lTy rTy loc ctx
+
+// -----------------------------------------------
+// Trait bounds
+// -----------------------------------------------
+
+let private tyIsBasic ty =
+  let (Ty (tk, _)) = ty
+
+  match tk with
+  | ErrorTk _
+  | IntTk _
+  | FloatTk _
+  | BoolTk
+  | CharTk
+  | StringTk
+  | VoidPtrTk _
+  | NativePtrTk _ -> true
+
+  | _ -> false
+
+let private tyIsPtr ty =
+  let (Ty (tk, _)) = ty
+
+  match tk with
+  | VoidPtrTk _
+  | NativePtrTk _
+  | FunPtrTk -> true
+  | _ -> false
+
+let private addTraitBound (t: Trait) loc (ctx: TyCtx) =
+  { ctx with NewTraitBounds = (t, loc) :: ctx.NewTraitBounds }
+
+let private resolveTraitBound (ctx: TyCtx) (theTrait: Trait) loc : TyCtx =
+  let ok ctx = ctx
+
+  let error ctx =
+    addLog ctx (Log.TyBoundError theTrait) loc |> addTraitBound theTrait loc
+
+  let unify2 (lTy1, rTy1) (lTy2, rTy2) =
+    let ctx = unifyTy ctx loc lTy1 rTy1
+    unifyTy ctx loc lTy2 rTy2
+
+  // Coerce to int as default.
+  let defaultToInt ctx ty = unifyTy ctx loc ty tyInt
+
+  /// integer, bool, char, or string
+  let expectBasic ctx ty =
+    if tyIsBasic ty then ok ctx else error ctx
+
+  match theTrait with
+  | Trait.Unary(unary, ty) ->
+    let (Ty(tk, _)) = ty
+
+    match unary with
+    | UnaryTrait.Add ->
+      match tk with
+      | ErrorTk _
+      | IntTk _
+      | FloatTk _
+      | CharTk
+      | StringTk -> ok ctx
+      | _ -> defaultToInt ctx ty
+
+    | UnaryTrait.Equal ->
+      // #trait_resolve
+      let rec go memo ty =
+        let (Ty(tk, tyArgs)) = ty
+
+        let onTys memo tys =
+          tys
+          |> List.fold
+               (fun (ok, memo) tyArg ->
+                 if not ok then
+                   ok, memo
+                 else
+                   let ok1, memo = go memo tyArg
+                   ok && ok1, memo)
+               (true, memo)
+
+        let allowRec memo action =
+          if memo |> TSet.contains ty then
+            true, memo
+          else
+            // Put memo to prevent recursion. Suppose `ty` is okay here.
+            let memo = memo |> TSet.add ty
+
+            // If not ok, `ty` and other tys (that are newly added and depend on `ty`)
+            // should be removed from memo. But no need to do here because
+            // (1) memo is no longer used if not ok and (2) memo is discarded later.
+            action memo
+
+        match tk, tyArgs with
+        | _ when tyIsBasic ty -> true, memo
+
+        | TupleTk, []
+        | FunPtrTk, _ -> true, memo
+
+        // Don't memoize structural types
+        // because it doesn't cause infinite recursion
+        // and unfortunately memo is discarded.
+        | TupleTk, _ -> onTys memo tyArgs
+        | ListTk, [ itemTy ] -> go memo itemTy
+
+        | UnionTk(tySerial, _), _ ->
+          allowRec memo (fun memo ->
+            match ctx.Tys |> mapFind tySerial with
+            | UnionTyDef(_, tyVars, variants, _) ->
+              let assignmentOpt =
+                match listTryZip tyVars tyArgs with
+                | assignment, [], [] -> Some assignment
+                | _ -> None
+
+              let payloadTysOpt =
+                match assignmentOpt with
+                | Some assignment ->
+                  variants
+                  |> List.choose (fun variantSerial ->
+                    let variantDef = ctx.Variants |> mapFind variantSerial
+
+                    if variantDef.HasPayload then
+                      variantDef.PayloadTy
+                      |> tyAssignByList assignment
+                      |> Some
+                    else
+                      None)
+                  |> Some
+                | _ -> None
+
+              match payloadTysOpt with
+              | Some payloadTys -> onTys memo payloadTys
+              | _ -> false, memo
+            | _ -> false, memo)
+
+        | _ -> false, memo
+
+      let resolved, _ = go (TSet.empty tyCompare) ty
+
+      if resolved then ok ctx else error ctx
+
+    | UnaryTrait.Compare ->
+      match ty with
+      | Ty(TupleTk, []) -> ok ctx
+      | Ty(CharTk, _) -> error ctx
+      | _ -> expectBasic ctx ty
+
+    | UnaryTrait.IntLike ->
+      match tk with
+      | ErrorTk _
+      | IntTk _ -> ok ctx
+      | _ -> defaultToInt ctx ty
+
+    | UnaryTrait.NumberLike ->
+      match tk with
+      | ErrorTk _
+      | IntTk _
+      | FloatTk _ -> ok ctx
+      | _ -> defaultToInt ctx ty
+
+    | UnaryTrait.ToInt flavor ->
+      match tk, flavor with
+      | ErrorTk _, _
+      | IntTk _, _
+      | FloatTk _, _
+      | StringTk, _
+      | VoidPtrTk _, _
+      | NativePtrTk _, _ -> ok ctx
+
+      | CharTk, I8
+      | CharTk, U8 -> ok ctx
+
+      | _ -> error ctx
+
+    | UnaryTrait.ToFloat ->
+      match tk with
+      | ErrorTk _
+      | IntTk _
+      | FloatTk _
+      | StringTk -> ok ctx
+      | _ -> error ctx
+
+    | UnaryTrait.ToChar ->
+      match tk with
+      | ErrorTk _
+      | IntTk I8
+      | IntTk U8
+      | CharTk
+      | StringTk -> ok ctx
+      | _ -> error ctx
+
+    | UnaryTrait.ToString ->
+      // #trait_resolve
+      let rec go memo ty =
+        let (Ty(tk, tyArgs)) = ty
+
+        let onTys memo tys =
+          tys
+          |> List.fold
+               (fun (ok, memo) tyArg ->
+                 if not ok then
+                   ok, memo
+                 else
+                   let ok1, memo = go memo tyArg
+                   ok && ok1, memo)
+               (true, memo)
+
+        let allowRec memo action =
+          if memo |> TSet.contains ty then
+            true, memo
+          else
+            memo |> TSet.add ty |> action
+
+        match tk, tyArgs with
+        | _ when tyIsBasic ty -> true, memo
+
+        | TupleTk, [] -> true, memo
+        | TupleTk, _ -> onTys memo tyArgs
+
+        | UnionTk(tySerial, _), _ ->
+          allowRec memo (fun memo ->
+            match ctx.Tys |> mapFind tySerial with
+            | UnionTyDef(_, tyVars, variants, _) ->
+              let assignmentOpt =
+                match listTryZip tyVars tyArgs with
+                | assignment, [], [] -> Some assignment
+                | _ -> None
+
+              let payloadTysOpt =
+                match assignmentOpt with
+                | Some assignment ->
+                  variants
+                  |> List.choose (fun variantSerial ->
+                    let variantDef = ctx.Variants |> mapFind variantSerial
+
+                    if variantDef.HasPayload then
+                      variantDef.PayloadTy
+                      |> tyAssignByList assignment
+                      |> Some
+                    else
+                      None)
+                  |> Some
+                | _ -> None
+
+              match payloadTysOpt with
+              | Some payloadTys -> onTys memo payloadTys
+              | _ -> false, memo
+            | _ -> false, memo)
+        | _ -> false, memo
+
+      let resolved, _ = go (TSet.empty tyCompare) ty
+
+      if resolved then ok ctx else error ctx
+
+    | UnaryTrait.PtrLike ->
+      match tk with
+      | ErrorTk _ -> ok ctx
+      | _ when tyIsPtr ty -> ok ctx
+      | _ -> error ctx
+
+    | UnaryTrait.PtrSize ->
+      match tk with
+      | ErrorTk _
+      | IntTk IPtr
+      | IntTk UPtr
+      | ObjTk
+      | ListTk
+      | VoidPtrTk _
+      | NativePtrTk _
+      | FunPtrTk -> ok ctx
+      | _ -> error ctx
+
+  | Trait.Index(lTy, rTy, tTy) ->
+    match lTy with
+    | Ty(ErrorTk _, _) -> ok ctx
+    | Ty(StringTk, _) -> unify2 (rTy, tyInt) (tTy, tyChar)
+    | _ -> error ctx
+
+  | Trait.PtrCast(srcTy, destTy) ->
+    match srcTy, destTy with
+    | Ty(ErrorTk _, _), _
+    | _, Ty(ErrorTk _, _) -> ok ctx
+
+    | Ty(OwnTk, [ srcTy ]), Ty(OwnTk, [ destTy ]) when tyIsPtr srcTy && tyIsPtr destTy && not (tyEqual srcTy destTy) ->
+      ok ctx
+
+    | _ when tyIsPtr srcTy && tyIsPtr destTy && not (tyEqual srcTy destTy) -> ok ctx
+
+    | _ -> error ctx
+
+let private attemptResolveTraitBounds (ctx: TyCtx) : TyCtx =
+  let subst (ctx: TyCtx) ty =
+    ty |> substTy ctx |> typingExpandSynonyms ctx.Tys
+
+  let logs, ctx = ctx.Logs, { ctx with Logs = [] }
+
+  let traitAcc, (ctx: TyCtx) =
+    ctx.NewTraitBounds
+    |> List.fold
+         (fun (traitAcc, (ctx: TyCtx)) (theTrait, loc) ->
+           let theTrait = Trait.map (subst ctx) theTrait
+
+           let oldCtx = ctx
+           assert (List.isEmpty oldCtx.Logs)
+
+           let ctx = resolveTraitBound ctx theTrait loc
+
+           if ctx.Logs |> List.isEmpty then
+             traitAcc, ctx
+           else
+             (theTrait, loc) :: traitAcc, oldCtx)
+         ([], ctx)
+
+  { ctx with
+      TraitBounds = List.append traitAcc ctx.TraitBounds
+      NewTraitBounds = []
+      Logs = logs }
+
+let private resolveTraitBoundsAll (ctx: TyCtx) =
+  let subst (ctx: TyCtx) ty =
+    ty |> substTy ctx |> typingExpandSynonyms ctx.Tys
+
+  // Even if a trait bound can't be resolved,
+  // it can become able to resolve after some resolution (unification),
+  // so try to resolve all bounds repeatedly until no bound is resolved.
+  let rec go (ctx: TyCtx) =
+    let traits, ctx =
+      ctx.NewTraitBounds, { ctx with NewTraitBounds = [] }
+
+    let n = List.length traits
+
+    let ctx: TyCtx =
+      traits
+      |> List.fold
+           (fun ctx (theTrait, loc) ->
+             let theTrait = Trait.map (subst ctx) theTrait
+             resolveTraitBound ctx theTrait loc)
+           ctx
+
+    if List.length ctx.NewTraitBounds < n then
+      let ctx = { ctx with Logs = [] }
+      go ctx
+    else
+      ctx
+
+  let logs, ctx = ctx.Logs, { ctx with Logs = [] }
+
+  let ctx =
+    { ctx with
+        TraitBounds = []
+        NewTraitBounds = List.append ctx.NewTraitBounds ctx.TraitBounds }
+
+  let ctx = go ctx
+
+  assert (not (List.isEmpty ctx.Logs)
+          || List.isEmpty ctx.TraitBounds)
+
+  { ctx with
+      Logs = List.append logs ctx.Logs
+      TraitBounds = [] }
+
+// -----------------------------------------------
+// Generalization and instantiation
+// -----------------------------------------------
+
+let private instantiateTyScheme (ctx: TyCtx) (tyScheme: TyScheme) loc : Ty * (TySerial * Ty) list * TyCtx =
+  match tyScheme with
+  | TyScheme ([], ty) -> ty, [], ctx
+
+  | TyScheme (tyVars, ty) ->
+    let lastSerial, ty, assignment =
+      doInstantiateTyScheme ctx.Serial tyVars ty loc
+
+    ty, assignment, { ctx with Serial = lastSerial }
+
+let private instantiateBoundedTyScheme (ctx: TyCtx) (tyScheme: BoundedTyScheme) loc : Ty * TyCtx =
+  let (BoundedTyScheme(tyVars, ty, traits)) = tyScheme
+  assert (List.isEmpty tyVars |> not)
+
+  let lastSerial, ty, assignment = doInstantiateTyScheme ctx.Serial tyVars ty loc
+
+  let traits =
+    let assignmentMap = TMap.ofList compare assignment
+    traits |> List.map (fun (t: Trait) -> t |> Trait.map (tyAssignByMap assignmentMap), loc)
+
+  // Meta types that appear in trait bounds can't be generalized for now.
+  let noGeneralizeMetaTys =
+    traits
+    |> List.fold
+         (fun acc ((t: Trait), _) ->
+           // #map_merge
+           t
+           |> Trait.collectTys
+           |> List.choose (fun ty ->
+             match ty with
+             | Ty(MetaTk(serial, _), _) -> Some serial
+             | _ -> None)
+           |> List.fold (fun acc tySerial -> TSet.add tySerial acc) acc)
+         ctx.NoGeneralizeMetaTys
+
+  ty,
+  { ctx with
+      Serial = lastSerial
+      NoGeneralizeMetaTys = noGeneralizeMetaTys
+      NewTraitBounds = List.append traits ctx.NewTraitBounds }
+
+// #generalizeFun
+let private generalizeFun (ctx: TyCtx) funSerial =
+  let funDef = ctx.Funs |> mapFind funSerial
+
+  let (TyScheme(_, funTy)) = funDef.Ty
+  assert (isNoTy funTy |> not)
+
+  let ctx =
+    let funTy = substTy ctx funTy
+    let funTyScheme = tyGeneralize (canGeneralize ctx) funTy
+
+    // (let (TyScheme (tyVars, funTy)) = funTyScheme
+    //  let getTyName tySerial =
+    //     ctx.Tys
+    //     |> TMap.tryFind tySerial
+    //     |> Option.map tyDefToName
+
+    //  __trace ("gen1 fun " + funDef.Name + "<" + (tyVars |> List.map (fun tySerial -> getTyName tySerial |> Option.defaultValue (string tySerial)) |> S.concat ", ") + "> : " + tyDisplay getTyName funTy))
+
+    let ctx =
+      { ctx with
+          Funs =
+            ctx.Funs
+            |> TMap.add funSerial { funDef with Ty = funTyScheme } }
+
+    ctx
+
+  ctx
+
+// -----------------------------------------------
+// Ascription
+// -----------------------------------------------
+
+/// Resolves ascription type.
+///
+/// Current level is assigned to `'T`s and `_`s.
+let private resolveAscriptionTy ctx ascriptionTy : Ty * TyCtx =
+  let rec go (ctx: TyCtx) ty =
+    match ty with
+    | Ty (ErrorTk _, _) -> ty, ctx
+
+    | Ty (InferTk loc, _) -> freshMetaTy loc ctx
+
+    | Ty (_, []) -> ty, ctx
+
+    | Ty (tk, tys) ->
+      let tys, ctx = tys |> List.mapFold go ctx
+      Ty(tk, tys), ctx
+
+  go ctx ascriptionTy
+
+/// Tries to get ty ascription from pat.
+let private patToAscriptionTy pat =
+  match pat with
+  | TNodePat (TAscribePN, _, ty, _) -> Some ty
+
+  | TAsPat (bodyPat, _, _) -> patToAscriptionTy bodyPat
+
+  | TOrPat (l, r, _) ->
+    match patToAscriptionTy l with
+    | None -> patToAscriptionTy r
+    | it -> it
+
+  | _ -> None
+
+/// Tries to extract ascription type from an expression.
+let private exprToAscriptionTy (expr: TExpr) : Ty option =
+  match expr with
+  | TLitExpr(lit, _) -> Some(litToTy lit)
+  | TNodeExpr(TAscribeEN, _, ty, _) -> Some ty
+
+  | TVarExpr _
+  | TFunExpr _
+  | TVariantExpr _
+  | TPrimExpr _
+  | TRecordExpr _
+  | TNavExpr(_, _, _, _)
+  | TNodeExpr _ -> None
+
+  | TMatchExpr(_, arms, _, _) ->
+    arms
+    |> List.map (fun (_, _, arm) -> arm)
+    |> List.tryPick exprToAscriptionTy
+
+  | TBlockExpr(_, last) -> exprToAscriptionTy last
+
+// -----------------------------------------------
+// ...
+// -----------------------------------------------
+
+// Fill Ty fields of definitions for forward reference.
+
+/// Sets provisional type information in variable definitions of static variables.
+/// This allows forward reference of static variables without breaking type inference.
+let private initializeVarTy ctx pat =
+  patFoldVars
+    (fun (ctx: TyCtx) (varSerial, loc) ->
+      let varDef = ctx.Vars |> mapFind varSerial
+
+      if isNoTy varDef.Ty then
+        let metaTy, ctx = freshMetaTy loc ctx
+        let varDef = { varDef with Ty = metaTy }
+        { ctx with Vars = ctx.Vars |> TMap.add varSerial varDef }
+      else
+        ctx)
+    ctx
+    pat
+
+/// Sets initialized type information in function definition.
+let private initializeFunTy (ctx: TyCtx) funSerial args body =
+  let argTys, ctx =
+    args
+    |> List.mapFold (fun ctx pat ->
+      match patToAscriptionTy pat with
+      | Some ty -> resolveAscriptionTy ctx ty
+      | None -> freshMetaTyForPat pat ctx
+    ) ctx
+
+  let resultTy, ctx =
+    match exprToAscriptionTy body with
+    | Some ty -> resolveAscriptionTy ctx ty
+    | None -> freshMetaTyForExpr body ctx
+
+  let stubFunTy =
+    argTys
+    |> List.rev
+    |> List.fold (fun funTy argTy -> tyFun argTy funTy) resultTy
+
+  let funDef = ctx.Funs |> mapFind funSerial
+
+  // Ensure pre-initialized function definition doesn't have meaningful type information.
+  let _ =
+    let (TyScheme (tyVars, uninitTy)) = funDef.Ty
+    assert (List.isEmpty tyVars)
+    assert (isNoTy uninitTy)
+
+  let tyVars =
+    if not ctx.IsFunLocal then
+      // Universal types are only definite type parameters at this time.
+      let rec univRec acc ty =
+        match ty with
+        | Ty (UnivTk (tySerial, _, _), _) -> tySerial :: acc
+        | Ty (_, tyArgs) -> List.fold univRec acc tyArgs
+
+      univRec [] stubFunTy
+      |> listUnique compare
+    else
+      []
+
+  let funDef = { funDef with Ty = TyScheme(tyVars, stubFunTy) }
+
+  { ctx with Funs = ctx.Funs |> TMap.add funSerial funDef }
+
+/// Initializes type information in definitions.
+/// Used for non-local declarations, i.e. static variables and non-local functions.
+let private initializeNonlocalVarsAndFuns ctx stmts =
+  stmts
+  |> List.fold
+       (fun ctx stmt ->
+         match stmt with
+         | TLetValStmt (pat, _, _) -> initializeVarTy ctx pat
+         | TLetFunStmt (funSerial, _, _, args, body, _) -> initializeFunTy ctx funSerial args body
+         | _ -> ctx)
+       ctx
+
+/// Initializes type information in definitions.
+/// Used for local functions.
+/// Note: Local variables are initialized when its pattern is processed at first time.
+let private initializeLocalFuns ctx stmts =
+  stmts
+  |> List.fold
+       (fun ctx stmt ->
+         match stmt with
+         | TLetFunStmt (funSerial, _, _, args, body, _) -> initializeFunTy ctx funSerial args body
+         | _ -> ctx)
+       ctx
+
+/// Initializes type information in definitions.
+/// Used for parameter patterns in function declarations.
+let private initializeParams ctx pats = pats |> List.fold initializeVarTy ctx
+
+// -----------------------------------------------
+// Literal validation
+// -----------------------------------------------
 
 let private validateLit ctx lit loc =
   // should validate float too
@@ -205,663 +869,233 @@ let private validateLit ctx lit loc =
   | _ -> ctx
 
 // -----------------------------------------------
-// Unification
+// Primitives
 // -----------------------------------------------
 
-// And meta type resolution by substitution or degeneration.
+let private primNotTy = tyFun tyBool tyBool
 
-let private expandMeta (ctx: TyCtx) tySerial : Ty option = ctx.MetaTys |> TMap.tryFind tySerial
+let private primBitNotScheme =
+  let ty = tyMeta 1 noLoc
+  BoundedTyScheme([ 1 ], tyFun ty ty, [ Trait.newIntLike ty ])
 
-let private substTy (ctx: TyCtx) ty : Ty = tySubst (expandMeta ctx) ty
+let private primAddScheme =
+  let meta id = tyMeta id noLoc
+  let addTy = meta 1
+  BoundedTyScheme([ 1 ], tyFun addTy (tyFun addTy addTy), [ Trait.newAdd addTy ])
 
-let private expandSynonyms (ctx: TyCtx) ty : Ty =
-  tyExpandSynonyms (fun tySerial -> ctx.Tys |> TMap.tryFind tySerial) ty
+let private primSubtractEtcScheme =
+  let meta id = tyMeta id noLoc
+  let ty = meta 1
+  BoundedTyScheme([ 1 ], tyFun ty (tyFun ty ty), [ Trait.newNumberLike ty ])
 
-/// Binds a type to a meta type.
-///
-/// As a precondition, that meta type must be free (not bound)
-/// and must not occur in that type (no recursion).
-let private bindMetaTy (ctx: TyCtx) tySerial otherTy : TyCtx =
-  /// If no-generalize meta type is bound to a type,
-  /// propagate "no-generalize" attribute to meta types in the type.
-  let noGeneralizeMetaTys =
-    if canGeneralize ctx tySerial |> not then
-      otherTy
-      |> tyCollectFreeVars
-      |> List.fold
-          (fun acc tySerial ->
-            if canGeneralize ctx tySerial |> not then
-              acc
-            else
-              acc |> TSet.add tySerial)
-          ctx.NoGeneralizeMetaTys
-    else
-      ctx.NoGeneralizeMetaTys
+let private primBitAndEtcScheme =
+  let meta id = tyMeta id noLoc
+  let ty = meta 1
+  BoundedTyScheme([ 1 ], tyFun ty (tyFun ty ty), [ Trait.newIntLike ty ])
 
-  { ctx with
-      MetaTys = ctx.MetaTys |> TMap.add tySerial otherTy
-      NoGeneralizeMetaTys = noGeneralizeMetaTys }
+let private primShiftScheme =
+  let meta id = tyMeta id noLoc
+  let ty = meta 1
+  BoundedTyScheme([ 1 ], tyFun ty (tyFun tyInt ty), [ Trait.newIntLike ty ])
 
-let private unifyTy (ctx: TyCtx) loc (lTy: Ty) (rTy: Ty) : TyCtx =
-  let rec go lTy rTy loc (ctx: TyCtx) =
-    match unifyNext lTy rTy loc with
-    | UnifyOk -> ctx
+let private primEqualScheme =
+  let meta id = tyMeta id noLoc
+  let argTy = meta 1
+  BoundedTyScheme([ 1 ], tyFun argTy (tyFun argTy tyBool), [ Trait.newEqual argTy ])
 
-    | UnifyOkWithStack stack -> List.fold (fun ctx (l, r) -> go l r loc ctx) ctx stack
+let private primLessScheme =
+  let meta id = tyMeta id noLoc
+  let compareTy = meta 1
+  BoundedTyScheme([ 1 ], tyFun compareTy (tyFun compareTy tyBool), [ Trait.newCompare compareTy ])
 
-    | UnifyError (log, loc) -> addLog ctx log loc
+let private primCompareScheme =
+  let meta id = tyMeta id noLoc
+  let compareTy = meta 1
+  BoundedTyScheme([ 1 ], tyFun compareTy (tyFun compareTy tyInt), [ Trait.newCompare compareTy ])
 
-    | UnifyExpandMeta (tySerial, otherTy) ->
-      match expandMeta ctx tySerial with
-      | Some ty -> go ty otherTy loc ctx
+let private primIntScheme flavor =
+  let meta id = tyMeta id noLoc
+  let srcTy = meta 1
+  let resultTy = Ty(IntTk flavor, [])
+  BoundedTyScheme([ 1 ], tyFun srcTy resultTy, [ Trait.newToInt flavor srcTy ])
 
-      | None ->
-        let otherTy = substTy ctx otherTy
+let private primFloatScheme flavor =
+  let meta id = tyMeta id noLoc
+  let srcTy = meta 1
+  let resultTy = Ty(FloatTk flavor, [])
+  BoundedTyScheme([ 1 ], tyFun srcTy resultTy, [ Trait.newToFloat srcTy ])
 
-        match unifyAfterExpandMeta lTy rTy tySerial otherTy loc with
-        | UnifyAfterExpandMetaResult.OkNoBind -> ctx
-        | UnifyAfterExpandMetaResult.OkBind -> bindMetaTy ctx tySerial otherTy
-        | UnifyAfterExpandMetaResult.Error (log, loc) -> addLog ctx log loc
+let private primToCharScheme =
+  let meta id = tyMeta id noLoc
+  let srcTy = meta 1
+  BoundedTyScheme([ 1 ], tyFun srcTy tyChar, [ Trait.newToChar srcTy ])
 
-    | UnifyExpandSynonym (tySerial, useTyArgs, otherTy) ->
-      let expandedTy =
-        // Find def.
-        let defTySerials, bodyTy =
-          match ctx.Tys |> TMap.tryFind tySerial with
-          | Some (SynonymTyDef (_, defTySerials, bodyTy, _)) -> defTySerials, bodyTy
-          | _ -> unreachable ()
+let private primToStringScheme =
+  let meta id = tyMeta id noLoc
+  let srcTy = meta 1
+  BoundedTyScheme([ 1 ], tyFun srcTy tyString, [ Trait.newToString srcTy ])
 
-        // Checked in NameRes.
-        assert (List.length defTySerials = List.length useTyArgs)
+let private primBoxScheme =
+  let meta id = tyMeta id noLoc
+  let itemTy = meta 1
+  TyScheme([ 1 ], tyFun itemTy tyObj)
 
-        tyExpandSynonym useTyArgs defTySerials bodyTy
+let private primUnboxScheme =
+  let meta id = tyMeta id noLoc
+  let resultTy = meta 1
+  TyScheme([ 1 ], tyFun tyObj resultTy)
 
-      go expandedTy otherTy loc ctx
+let private primStringLengthTy = tyFun tyString tyInt
 
-  go lTy rTy loc ctx
+let private primNilScheme =
+  let meta id = tyMeta id noLoc
+  let itemTy = meta 1
+  TyScheme([ 1 ], tyList itemTy)
 
-let private unifyVarTy varSerial tyOpt loc ctx =
-  let varTy = (findVar ctx varSerial).Ty
-  assert (isNoTy varTy |> not)
+let private primConsScheme =
+  let meta id = tyMeta id noLoc
+  let itemTy = meta 1
+  let listTy = tyList itemTy
+  TyScheme([ 1 ], tyFun itemTy (tyFun listTy listTy))
 
-  match tyOpt with
-  | Some ty ->
-    let ctx = unifyTy ctx loc varTy ty
-    varTy, ctx
+let private primAssertTy = tyFun tyBool tyUnit
 
-  | None -> varTy, ctx
+let private primOwnAcquireTy =
+  let itemTy = tyMeta 1 noLoc
+  TyScheme([ 1 ], tyFun itemTy (tyOwn itemTy))
+
+let private primOwnReleaseTy =
+  let itemTy = tyMeta 1 noLoc
+  TyScheme([ 1 ], tyFun (tyOwn itemTy) itemTy)
+
+let private primNullPtrScheme =
+  let ptrTy = tyMeta 1 noLoc
+  BoundedTyScheme([ 1 ], ptrTy, [ Trait.newPtrLike ptrTy ])
+
+let private primPtrCastScheme =
+  let srcTy = tyMeta 1 noLoc
+  let destTy = tyMeta 2 noLoc
+  BoundedTyScheme([ 1; 2 ], tyFun srcTy destTy, [ Trait.newPtrCast srcTy destTy ])
+
+let private primPtrInvalidScheme =
+  let ptrTy = tyMeta 1 noLoc
+
+  BoundedTyScheme([ 1 ], tyFun tyUNativeInt ptrTy, [ Trait.newPtrLike ptrTy ])
+
+let private primPtrDistanceScheme =
+  let ptrTy = tyMeta 1 noLoc
+  BoundedTyScheme([ 1 ], tyFun ptrTy (tyFun ptrTy tyNativeInt), [ Trait.newPtrLike ptrTy ])
+
+let private primNativeCastScheme =
+  let meta id = tyMeta id noLoc
+  let srcTy = meta 1
+  let destTy = meta 2
+
+  BoundedTyScheme(
+    [ 1; 2 ],
+    tyFun srcTy destTy,
+    [ Trait.newPtrSize srcTy
+      Trait.newPtrSize destTy ]
+  )
 
 // -----------------------------------------------
-// Generalization and instantiation
+// Features for native interoperability
 // -----------------------------------------------
 
-let private instantiateTyScheme (ctx: TyCtx) (tyScheme: TyScheme) loc : Ty * (TySerial * Ty) list * TyCtx =
-  match tyScheme with
-  | TyScheme ([], ty) -> ty, [], ctx
-
-  | TyScheme (fvs, ty) ->
-    let serial, ty, assignment =
-      doInstantiateTyScheme ctx.Serial fvs ty loc
-
-    ty, assignment, { ctx with Serial = serial}
-
-let private instantiateBoundedTyScheme (ctx: TyCtx) (tyScheme: BoundedTyScheme) loc : Ty * TyCtx =
-  let (BoundedTyScheme (fvs, ty, traits)) = tyScheme
-  assert (List.isEmpty fvs |> not)
-
-  let serial, ty, assignment =
-    doInstantiateTyScheme ctx.Serial fvs ty loc
-
-  let traits =
-    let substMeta = tyAssign assignment
-
-    traits
-    |> List.map (fun theTrait -> theTrait |> traitMapTys substMeta, loc)
-
-  // Meta types that appear in trait bounds can't be generalized for now.
-  let noGeneralizeMetaTys =
-    traits
-    |> List.fold
-         (fun acc (theTrait, _) ->
-           let asInnerTy theTrait =
-             match theTrait with
-             | AddTrait ty -> Some ty
-             | IsIntTrait ty -> Some ty
-             | IsNumberTrait ty -> Some ty
-             | ToIntTrait (_, ty) -> Some ty
-             | ToFloatTrait ty -> Some ty
-             | ToCharTrait ty -> Some ty
-             | ToStringTrait ty -> Some ty
-             | _ -> None
-
-           match asInnerTy theTrait with
-           | Some (Ty (MetaTk (serial, _), _)) ->
-             TSet.add serial acc
-           | _ -> acc)
-         ctx.NoGeneralizeMetaTys
-
-  ty,
-  { ctx with
-      Serial = serial
-      NoGeneralizeMetaTys = noGeneralizeMetaTys
-      NewTraitBounds = List.append traits ctx.NewTraitBounds }
-
-// #generalizeFun
-let private generalizeFun (ctx: TyCtx) funSerial =
+let private castFunAsNativeFun funSerial loc (ctx: TyCtx) : Ty * TyCtx =
   let funDef = ctx.Funs |> mapFind funSerial
-
-  let (TyScheme(_, funTy)) = funDef.Ty
-  assert (isNoTy funTy |> not)
 
   let ctx =
-    let funTy = substTy ctx funTy
-    let funTyScheme = tyGeneralize (canGeneralize ctx) funTy
-
-    // (let (TyScheme (tyVars, funTy)) = funTyScheme
-    //  let getTyName tySerial =
-    //     ctx.Tys
-    //     |> TMap.tryFind tySerial
-    //     |> Option.map tyDefToName
-
-    //  __trace ("gen1 fun " + funDef.Name + "<" + (tyVars |> List.map (fun tySerial -> getTyName tySerial |> Option.defaultValue (string tySerial)) |> S.concat ", ") + "> : " + tyDisplay getTyName funTy))
-
-    let ctx =
-      { ctx with
-          Funs =
-            ctx.Funs
-            |> TMap.add funSerial { funDef with Ty = funTyScheme } }
-
-    ctx
-
-  ctx
-
-let private finishLocalFun (ctx: TyCtx) funSerial =
-  let funDef = ctx.Funs |> mapFind funSerial
-
-  let funTy =
-    let (TyScheme (_, funTy)) = funDef.Ty
-    assert (isNoTy funTy |> not)
-    funTy
-
-  let funTy = substTy ctx funTy
-
-  { ctx with
-      Funs =
-        ctx.Funs
-        |> TMap.add funSerial { funDef with Ty = TyScheme([], funTy) } }
-
-// -----------------------------------------------
-// Trait bounds
-// -----------------------------------------------
-
-let private tyIsBasic ty =
-  let (Ty (tk, _)) = ty
-
-  match tk with
-  | ErrorTk _
-  | IntTk _
-  | FloatTk _
-  | BoolTk
-  | CharTk
-  | StringTk
-  | VoidPtrTk _
-  | NativePtrTk _ -> true
-
-  | _ -> false
-
-let private tyIsPtr ty =
-  let (Ty (tk, _)) = ty
-
-  match tk with
-  | VoidPtrTk _
-  | NativePtrTk _
-  | FunPtrTk -> true
-  | _ -> false
-
-let private addTraitBound theTrait loc (ctx: TyCtx) =
-  { ctx with NewTraitBounds = (theTrait, loc) :: ctx.NewTraitBounds }
-
-let private resolveTraitBound (ctx: TyCtx) theTrait loc : TyCtx =
-  let ok ctx = ctx
-
-  let error ctx =
-    addLog ctx (Log.TyBoundError theTrait) loc
-    |> addTraitBound theTrait loc
-
-  let unify2 (lTy1, rTy1) (lTy2, rTy2) =
-    let ctx = unifyTy ctx loc lTy1 rTy1
-    unifyTy ctx loc lTy2 rTy2
-
-  // Coerce to int as default.
-  let defaultToInt ctx ty = unifyTy ctx loc ty tyInt
-
-  /// integer, bool, char, or string
-  let expectBasic ctx ty =
-    if tyIsBasic ty then
-      ok ctx
-    else
-      error ctx
-
-  match theTrait with
-  | AddTrait ty ->
-    let (Ty (tk, _)) = ty
-
-    match tk with
-    | ErrorTk _
-    | IntTk _
-    | FloatTk _
-    | CharTk
-    | StringTk -> ok ctx
-
-    | _ -> defaultToInt ctx ty
-
-  | EqualTrait ty ->
-    // #trait_resolve
-    let rec go memo ty =
-      let (Ty (tk, tyArgs)) = ty
-
-      let onTys memo tys =
-        tys
-        |> List.fold
-             (fun (ok, memo) tyArg ->
-               if not ok then
-                 ok, memo
-               else
-                 let ok1, memo = go memo tyArg
-                 ok && ok1, memo)
-             (true, memo)
-
-      let allowRec memo action =
-        if memo |> TSet.contains ty then
-          true, memo
-        else
-          // Put memo to prevent recursion. Suppose `ty` is okay here.
-          let memo = memo |> TSet.add ty
-
-          // If not ok, `ty` and other tys (that are newly added and depend on `ty`)
-          // should be removed from memo. But no need to do here because
-          // (1) memo is no longer used if not ok and (2) memo is discarded later.
-          action memo
-
-      match tk, tyArgs with
-      | _ when tyIsBasic ty -> true, memo
-
-      | TupleTk, []
-      | FunPtrTk, _ -> true, memo
-
-      // Don't memoize structural types
-      // because it doesn't cause infinite recursion
-      // and unfortunately memo is discarded.
-      | TupleTk, _ -> onTys memo tyArgs
-      | ListTk, [ itemTy ] -> go memo itemTy
-
-      | UnionTk (tySerial, _), _ ->
-        allowRec memo (fun memo ->
-          match ctx.Tys |> mapFind tySerial with
-          | UnionTyDef (_, tyVars, variants, _) ->
-            let assignmentOpt =
-              match listTryZip tyVars tyArgs with
-              | assignment, [], [] -> Some assignment
-              | _ -> None
-
-            let payloadTysOpt =
-              match assignmentOpt with
-              | Some assignment ->
-                variants
-                |> List.choose (fun variantSerial ->
-                  let variantDef = ctx.Variants |> mapFind variantSerial
-
-                  if variantDef.HasPayload then
-                    variantDef.PayloadTy
-                    |> tySubst (fun tySerial -> assocTryFind compare tySerial assignment)
-                    |> Some
-                  else
-                    None)
-                |> Some
-              | _ -> None
-
-            match payloadTysOpt with
-            | Some payloadTys -> onTys memo payloadTys
-            | _ -> false, memo
-          | _ -> false, memo)
-
-      | _ -> false, memo
-
-    let resolved, _ = go (TSet.empty tyCompare) ty
-
-    if resolved then ok ctx else error ctx
-
-  | CompareTrait ty ->
-    match ty with
-    | Ty (TupleTk, []) -> ok ctx
-    | Ty (CharTk, _) -> error ctx
-    | _ -> expectBasic ctx ty
-
-  | IndexTrait (lTy, rTy, resultTy) ->
-    match lTy with
-    | Ty (ErrorTk _, _) -> ok ctx
-    | Ty (StringTk, _) -> unify2 (rTy, tyInt) (resultTy, tyChar)
-    | _ -> error ctx
-
-  | IsIntTrait ty ->
-    match ty with
-    | Ty (ErrorTk _, _)
-    | Ty (IntTk _, _) -> ok ctx
-
-    | _ -> defaultToInt ctx ty
-
-  | IsNumberTrait ty ->
-    match ty with
-    | Ty (ErrorTk _, _)
-    | Ty (IntTk _, _)
-    | Ty (FloatTk _, _) -> ok ctx
-
-    | _ -> defaultToInt ctx ty
-
-  | ToIntTrait (flavor, Ty (tk, _)) ->
-    match tk, flavor with
-    | ErrorTk _, _
-    | IntTk _, _
-    | FloatTk _, _
-    | StringTk, _
-    | VoidPtrTk _, _
-    | NativePtrTk _, _ -> ok ctx
-
-    | CharTk, I8
-    | CharTk, U8 -> ok ctx
-
-    | _ -> error ctx
-
-  | ToFloatTrait (Ty (tk, _)) ->
-    match tk with
-    | ErrorTk _
-    | IntTk _
-    | FloatTk _
-    | StringTk -> ok ctx
-
-    | _ -> error ctx
-
-  | ToCharTrait (Ty (tk, _)) ->
-    match tk with
-    | ErrorTk _
-    | IntTk I8
-    | IntTk U8
-    | CharTk
-    | StringTk -> ok ctx
-
-    | _ -> error ctx
-
-  | ToStringTrait ty ->
-    // #trait_resolve
-    let rec go memo ty =
-      let (Ty (tk, tyArgs)) = ty
-
-      let onTys memo tys =
-        tys
-        |> List.fold
-             (fun (ok, memo) tyArg ->
-               if not ok then
-                 ok, memo
-               else
-                 let ok1, memo = go memo tyArg
-                 ok && ok1, memo)
-             (true, memo)
-
-      let allowRec memo action =
-        if memo |> TSet.contains ty then
-          true, memo
-        else
-          memo |> TSet.add ty |> action
-
-      match tk, tyArgs with
-      | _ when tyIsBasic ty -> true, memo
-
-      | TupleTk, [] -> true, memo
-      | TupleTk, _ -> onTys memo tyArgs
-
-      | UnionTk (tySerial, _), _ ->
-        allowRec memo (fun memo ->
-          match ctx.Tys |> mapFind tySerial with
-          | UnionTyDef (_, tyVars, variants, _) ->
-            let assignmentOpt =
-              match listTryZip tyVars tyArgs with
-              | assignment, [], [] -> Some assignment
-              | _ -> None
-
-            let payloadTysOpt =
-              match assignmentOpt with
-              | Some assignment ->
-                variants
-                |> List.choose (fun variantSerial ->
-                  let variantDef = ctx.Variants |> mapFind variantSerial
-
-                  if variantDef.HasPayload then
-                    variantDef.PayloadTy
-                    |> tySubst (fun tySerial -> assocTryFind compare tySerial assignment)
-                    |> Some
-                  else
-                    None)
-                |> Some
-              | _ -> None
-
-            match payloadTysOpt with
-            | Some payloadTys -> onTys memo payloadTys
-            | _ -> false, memo
-          | _ -> false, memo)
-      | _ -> false, memo
-
-    let resolved, _ = go (TSet.empty tyCompare) ty
-
-    if resolved then ok ctx else error ctx
-
-  | PtrTrait ty ->
-    match ty with
-    | Ty (ErrorTk _, _) -> ok ctx
-    | _ when tyIsPtr ty -> ok ctx
-    | _ -> error ctx
-
-  | PtrSizeTrait (Ty (tk, _)) ->
-    match tk with
-    | ErrorTk _
-    | IntTk IPtr
-    | IntTk UPtr
-    | ObjTk
-    | ListTk
-    | VoidPtrTk _
-    | NativePtrTk _
-    | FunPtrTk -> ok ctx
-
-    | _ -> error ctx
-
-  | PtrCastTrait (srcTy, destTy) ->
-    match srcTy, destTy with
-    | Ty (ErrorTk _, _), _
-    | _, Ty (ErrorTk _, _) -> ok ctx
-
-    | Ty (OwnTk, [ srcTy ]), Ty (OwnTk, [ destTy ]) when
-      tyIsPtr srcTy
-      && tyIsPtr destTy
-      && not (tyEqual srcTy destTy)
-      ->
-      ok ctx
-
-    | _ when
-      tyIsPtr srcTy
-      && tyIsPtr destTy
-      && not (tyEqual srcTy destTy)
-      ->
-      ok ctx
-
-    | _ -> error ctx
-
-let private attemptResolveTraitBounds (ctx: TyCtx) : TyCtx =
-  let subst (ctx: TyCtx) ty =
-    ty |> substTy ctx |> typingExpandSynonyms ctx.Tys
-
-  let logs, ctx = ctx.Logs, { ctx with Logs = [] }
-
-  let traitAcc, (ctx: TyCtx) =
-    ctx.NewTraitBounds
-    |> List.fold
-         (fun (traitAcc, (ctx: TyCtx)) (theTrait, loc) ->
-           let theTrait = traitMapTys (subst ctx) theTrait
-
-           let oldCtx = ctx
-           assert (List.isEmpty oldCtx.Logs)
-
-           let ctx = resolveTraitBound ctx theTrait loc
-
-           if ctx.Logs |> List.isEmpty then
-             traitAcc, ctx
-           else
-             (theTrait, loc) :: traitAcc, oldCtx)
-         ([], ctx)
-
-  { ctx with
-      TraitBounds = List.append traitAcc ctx.TraitBounds
-      NewTraitBounds = []
-      Logs = logs }
-
-let private resolveTraitBoundsAll (ctx: TyCtx) =
-  let subst (ctx: TyCtx) ty =
-    ty |> substTy ctx |> typingExpandSynonyms ctx.Tys
-
-  // Even if a trait bound can't be resolved,
-  // it can become able to resolve after some resolution (unification),
-  // so try to resolve all bounds repeatedly until no bound is resolved.
-  let rec go (ctx: TyCtx) =
-    let traits, ctx =
-      ctx.NewTraitBounds, { ctx with NewTraitBounds = [] }
-
-    let n = List.length traits
-
-    let ctx: TyCtx =
-      traits
-      |> List.fold
-           (fun ctx (theTrait, loc) ->
-             let theTrait = traitMapTys (subst ctx) theTrait
-             resolveTraitBound ctx theTrait loc)
-           ctx
-
-    if List.length ctx.NewTraitBounds < n then
-      let ctx = { ctx with Logs = [] }
-      go ctx
+    if funDef.Nonlocal then
+      addError ctx "Pointer to a local function is unavailable since it might capture local variables." loc
     else
       ctx
 
-  let logs, ctx = ctx.Logs, { ctx with Logs = [] }
-
+  // Mark this function as extern "C".
   let ctx =
     { ctx with
-        TraitBounds = []
-        NewTraitBounds = List.append ctx.NewTraitBounds ctx.TraitBounds }
+        Funs =
+          ctx.Funs
+          |> TMap.add funSerial { funDef with Abi = CAbi } }
 
-  let ctx = go ctx
+  let nativeFunTy =
+    let (TyScheme (_, ty)) = funDef.Ty
 
-  assert (not (List.isEmpty ctx.Logs)
-          || List.isEmpty ctx.TraitBounds)
+    let ty = expandSynonyms ctx ty
 
-  { ctx with
-      Logs = List.append logs ctx.Logs
-      TraitBounds = [] }
+    let _, paramTys, resultTy =
+      match ty with
+      | Ty (FunTk, [ Ty (TupleTk, []); resultTy ]) -> 0, [], resultTy
+      | _ -> tyToArgList ty
+
+    tyNativeFun paramTys resultTy
+
+  nativeFunTy, ctx
 
 // -----------------------------------------------
-// Others
+// Type Decomposition
 // -----------------------------------------------
 
-let private isNoTy ty =
+let private expectFunTy ctx ty loc =
   match ty with
-  | Ty (ErrorTk _, _) -> true
-  | _ -> false
+  | Ty(FunTk, [ sTy; tTy ]) -> sTy, tTy, ctx
 
-let private initializeVarTy ctx pat =
-  let onVar (ctx: TyCtx) varSerial loc =
-    let varDef = ctx.Vars |> mapFind varSerial
+  | _ ->
+    let sTy, ctx = freshMetaTy loc ctx
+    let tTy, ctx = freshMetaTy loc ctx
+    let ctx = unifyTy ctx loc ty (tyFun sTy tTy)
+    sTy, tTy, ctx
 
-    if isNoTy varDef.Ty then
-      let metaTy, ctx = freshMetaTy loc ctx
-      let varDef = { varDef with Ty = metaTy }
-      { ctx with Vars = ctx.Vars |> TMap.add varSerial varDef }
-    else
-      ctx
+let private expectListTy ctx targetTy loc =
+  match targetTy with
+  | Ty(ListTk, [ itemTy ]) -> targetTy, itemTy, ctx
 
-  match pat with
-  | TLitPat _
-  | TDiscardPat _
-  | TVariantPat _ -> ctx
+  | _ ->
+    let itemTy, ctx = freshMetaTy loc ctx
+    let listTy = tyList itemTy
+    listTy, itemTy, unifyTy ctx loc targetTy listTy
 
-  | TVarPat (_, varSerial, _, loc) -> onVar ctx varSerial loc
-  | TNodePat (_, argPats, _, _) -> argPats |> List.fold initializeVarTy ctx
+/// Expects a type to be tuple and returns item types.
+let private expectTupleTy (arity: int) ctx targetTy loc =
+  match targetTy with
+  | Ty(TupleTk, itemTys) when List.length itemTys = arity -> itemTys, ctx
 
-  | TAsPat (bodyPat, varSerial, loc) ->
-    let ctx = initializeVarTy ctx bodyPat
-    onVar ctx varSerial loc
+  | _ when arity = 0 ->
+    let ctx = unifyTy ctx loc targetTy tyUnit
+    [], ctx
 
-  | TOrPat (l, r, _) ->
-    let ctx = initializeVarTy ctx l
-    initializeVarTy ctx r
+  | _ ->
+    let itemTys, ctx =
+      let rec loop acc ctx i =
+        if i < arity then
+          let metaTy, ctx = freshMetaTy loc ctx
+          loop (metaTy :: acc) ctx (i + 1)
+        else
+          acc, ctx
 
-/// Sets initialized type information in function definition.
-let private initializeFunTy (ctx: TyCtx) funSerial stubFunTy =
-  let funDef = ctx.Funs |> mapFind funSerial
+      loop [] ctx 0
 
-  // Ensure pre-initialized function definition doesn't have meaningful type information.
-  let _ =
-    let (TyScheme (tyVars, uninitTy)) = funDef.Ty
-    assert (List.isEmpty tyVars)
-    assert (isNoTy uninitTy)
+    let ctx = unifyTy ctx loc targetTy (tyTuple itemTys)
+    itemTys, ctx
 
-  let tyVars =
-    if not ctx.IsFunLocal then
-      // Universal types are only definite type parameters at this time.
-      let rec univRec acc ty =
-        match ty with
-        | Ty (UnivTk (tySerial, _, _), _) -> tySerial :: acc
-        | Ty (_, tyArgs) -> List.fold univRec acc tyArgs
+// -----------------------------------------------
+// Helpers for patterns
+// -----------------------------------------------
 
-      univRec [] stubFunTy
-      |> listUnique compare
-    else
-      []
+/// Unifies the target type to the type of the variable
+/// if the variable type is already initialized.
+/// Otherwise, the target type is just assigned to the local variable definition.
+let private unifyOrAssignVarTy (ctx: TyCtx) varSerial ty loc =
+  let varDef = ctx.Vars |> mapFind varSerial
 
-  let funDef = { funDef with Ty = TyScheme(tyVars, stubFunTy) }
-
-  { ctx with Funs = ctx.Funs |> TMap.add funSerial funDef }
-
-let private collectVarsAndFuns ctx stmts =
-  stmts
-  |> List.fold
-       (fun ctx stmt ->
-         match stmt with
-         | TLetValStmt (pat, _, _) -> initializeVarTy ctx pat
-
-         | TLetFunStmt (funSerial, _, _, args, body, _) ->
-          let argTys, ctx =
-            args
-            |> List.mapFold (fun ctx pat ->
-              match patToAscriptionTy pat with
-              | Some ty -> resolveAscriptionTy ctx ty
-              | None -> freshMetaTyForPat pat ctx
-            ) ctx
-
-          let resultTy, ctx =
-            match exprToAscriptionTy body with
-            | Some ty -> resolveAscriptionTy ctx ty
-            | None -> freshMetaTyForExpr body ctx
-
-          let funTy =
-            argTys
-            |> List.rev
-            |> List.fold (fun funTy argTy -> tyFun argTy funTy) resultTy
-
-          initializeFunTy ctx funSerial funTy
-         | _ -> ctx)
-       ctx
-
-let private collectVarsInPats ctx pats = pats |> List.fold initializeVarTy ctx
+  if isNoTy varDef.Ty then
+    let varDef = { varDef with Ty = ty }
+    { ctx with Vars = ctx.Vars |> TMap.add varSerial varDef }
+  else
+    unifyTy ctx loc ty varDef.Ty
 
 // payloadTy, unionTy, variantTy
-let private instantiateVariant variantSerial loc (ctx: TyCtx) : Ty * Ty * Ty * TyCtx =
+let private instantiateVariant (ctx: TyCtx) variantSerial loc : Ty * Ty * Ty * TyCtx =
   let variantDef = ctx.Variants |> mapFind variantSerial
   let tySerial = variantDef.UnionTySerial
 
@@ -901,83 +1135,13 @@ let private instantiateVariant variantSerial loc (ctx: TyCtx) : Ty * Ty * Ty * T
           unionTy
 
       let tyScheme = TyScheme(tyArgs, variantTy)
-
       instantiateTyScheme ctx tyScheme loc
 
-    let payloadTy = tyAssign assignment payloadTy
-    let unionTy = tyAssign assignment unionTy
+    let assignmentMap = TMap.ofList compare assignment
+    let payloadTy = tyAssignByMap assignmentMap payloadTy
+    let unionTy = tyAssignByMap assignmentMap unionTy
+
     payloadTy, unionTy, variantTy, ctx
-
-let private castFunAsNativeFun funSerial loc (ctx: TyCtx) : Ty * TyCtx =
-  let funDef = ctx.Funs |> mapFind funSerial
-
-  let ctx =
-    if funDef.Nonlocal then
-      addError ctx "Pointer to a local function is unavailable since it might capture local variables." loc
-    else
-      ctx
-
-  // Mark this function as extern "C".
-  let ctx =
-    { ctx with
-        Funs =
-          ctx.Funs
-          |> TMap.add funSerial { funDef with Abi = CAbi } }
-
-  let nativeFunTy =
-    let (TyScheme (_, ty)) = funDef.Ty
-
-    let ty = expandSynonyms ctx ty
-
-    let _, paramTys, resultTy =
-      match ty with
-      | Ty (FunTk, [ Ty (TupleTk, []); resultTy ]) -> 0, [], resultTy
-      | _ -> tyToArgList ty
-
-    tyNativeFun paramTys resultTy
-
-  nativeFunTy, ctx
-
-/// Resolves ascription type.
-///
-/// Current level is assigned to `'T`s and `_`s.
-let private resolveAscriptionTy ctx ascriptionTy : Ty * TyCtx =
-  let rec go (ctx: TyCtx) ty =
-    match ty with
-    | Ty (ErrorTk _, _) -> ty, ctx
-
-    | Ty (InferTk loc, _) ->
-      let serial, ctx = freshTySerial ctx
-      tyMeta serial loc, ctx
-
-    | Ty (UnivTk _, _) -> ty, ctx
-
-    | Ty (_, []) -> ty, ctx
-
-    | Ty (tk, tys) ->
-      let tys, ctx = tys |> List.mapFold go ctx
-      Ty(tk, tys), ctx
-
-  go ctx ascriptionTy
-
-// -----------------------------------------------
-// Emission helpers
-// -----------------------------------------------
-
-let private txApp f x resultTy loc =
-  TNodeExpr(TAppEN, [ f; x ], resultTy, loc)
-
-/// Must be used after error occurred.
-let private txAbort (ctx: TyCtx) loc =
-  assert (ctx.Logs |> List.isEmpty |> not)
-
-  let ty = tyError loc
-  TNodeExpr(TAbortEN, [], ty, loc), ty, ctx
-
-/// Reports an error and makes a dummy expression.
-let private errorExpr (ctx: TyCtx) msg loc : TExpr * Ty * TyCtx =
-  let ctx = addError ctx msg loc
-  txAbort ctx loc
 
 // -----------------------------------------------
 // Pattern
@@ -987,109 +1151,66 @@ let private inferLitPat ctx pat lit =
   let ctx = validateLit ctx lit (patToLoc pat)
   pat, litToTy lit, ctx
 
-/// Tries to get ty ascription from pat.
-let private patToAscriptionTy pat =
-  match pat with
-  | TNodePat (TAscribePN, _, ty, _) -> Some ty
+let private checkNilPat ctx loc targetTy =
+  let listTy, _, ctx = expectListTy ctx targetTy loc
+  TNodePat(TNilPN, [], listTy, loc), ctx
 
-  | TAsPat (bodyPat, _, _) -> patToAscriptionTy bodyPat
-
-  | TOrPat (l, r, _) ->
-    match patToAscriptionTy l with
-    | None -> patToAscriptionTy r
-    | it -> it
-
-  | _ -> None
-
-let private inferNilPat ctx pat loc =
-  let itemTy, ctx = ctx |> freshMetaTyForPat pat
-  let ty = tyList itemTy
-  TNodePat(TNilPN, [], ty, loc), ty, ctx
-
-let private inferDiscardPat ctx pat loc =
-  let ty, ctx = ctx |> freshMetaTyForPat pat
-  TDiscardPat(ty, loc), ty, ctx
-
-let private inferVarPat (ctx: TyCtx) varSerial loc =
-  let ty, ctx = ctx |> unifyVarTy varSerial None loc
-  TVarPat(PrivateVis, varSerial, ty, loc), ty, ctx
+let private checkConsPat ctx headPat tailPat loc targetTy =
+  let listTy, itemTy, ctx = expectListTy ctx targetTy loc
+  let headPat, ctx = checkPat ctx headPat itemTy
+  let tailPat, ctx = checkPat ctx tailPat listTy
+  TNodePat(TConsPN, [ headPat; tailPat ], listTy, loc), ctx
 
 let private inferVariantPat (ctx: TyCtx) variantSerial loc =
   let _, unionTy, _, ctx =
-    instantiateVariant variantSerial loc ctx
+    instantiateVariant ctx variantSerial loc
 
   let ctx =
     let variantDef = ctx.Variants |> mapFind variantSerial
 
     if variantDef.HasPayload then
-      addError ctx "Variant with payload must be used in the form of: `Variant pattern`." loc
+      addLog ctx Log.MissingPayloadPat loc
     else
       ctx
 
   TVariantPat(variantSerial, unionTy, loc), unionTy, ctx
 
-let private inferVariantAppPat (ctx: TyCtx) variantSerial payloadPat loc =
-  let expectedPayloadTy, unionTy, _, ctx =
-    instantiateVariant variantSerial loc ctx
+let private checkVariantAppPat (ctx: TyCtx) variantSerial payloadPat loc targetTy =
+  let payloadTy, unionTy, _, ctx =
+    instantiateVariant ctx variantSerial loc
 
-  let payloadPat, payloadTy, ctx = inferPat ctx payloadPat
+  let ctx = unifyTy ctx loc targetTy unionTy
+  let payloadPat, ctx = checkPat ctx payloadPat payloadTy
 
-  let ctx =
-    unifyTy ctx loc expectedPayloadTy payloadTy
+  TNodePat(TVariantAppPN variantSerial, [ payloadPat ], unionTy, loc), ctx
 
-  TNodePat(TVariantAppPN variantSerial, [ payloadPat ], unionTy, loc), unionTy, ctx
+let private checkUnitPat ctx loc targetTy =
+  let ctx = unifyTy ctx loc targetTy tyUnit
+  TNodePat(TTuplePN, [], tyUnit, loc), ctx
 
-let private inferConsPat ctx l r loc =
-  let l, lTy, ctx = inferPat ctx l
-  let r, rTy, ctx = inferPat ctx r
+let private checkTuplePat ctx itemPats loc targetTy =
+  let arity = List.length itemPats
+  let itemTys, ctx = expectTupleTy arity ctx targetTy loc
 
-  let listTy = tyList lTy
-  let ctx = unifyTy ctx loc rTy listTy
+  let entries =
+    match listTryZip itemPats itemTys with
+    | entries, [], [] -> entries
+    | _ -> unreachable ()
 
-  TNodePat(TConsPN, [ l; r ], listTy, loc), listTy, ctx
+  let itemPats, ctx =
+    entries
+    |> List.mapFold (fun ctx (itemPat, itemTy) -> checkPat ctx itemPat itemTy) ctx
 
-let private inferTuplePat ctx itemPats loc =
-  let itemPats, itemTys, ctx = doInferPats ctx itemPats
+  TNodePat(TTuplePN, itemPats, targetTy, loc), ctx
 
-  let tupleTy = tyTuple itemTys
-  TNodePat(TTuplePN, itemPats, tupleTy, loc), tupleTy, ctx
-
-let private inferAscribePat ctx body ascriptionTy loc =
+let private inferAscribePat ctx body ascriptionTy =
   let ascriptionTy, ctx = resolveAscriptionTy ctx ascriptionTy
-  let body, bodyTy, ctx = inferPat ctx body
-
-  let ctx = unifyTy ctx loc bodyTy ascriptionTy
+  let body, ctx = checkPat ctx body ascriptionTy
   body, ascriptionTy, ctx
-
-let private inferAsPat ctx body varSerial loc =
-  let body, bodyTy, ctx = inferPat ctx body
-
-  let _, ctx =
-    ctx |> unifyVarTy varSerial (Some bodyTy) loc
-
-  TAsPat(body, varSerial, loc), bodyTy, ctx
-
-let private inferOrPat ctx l r loc =
-  let l, lTy, ctx = inferPat ctx l
-  let r, rTy, ctx = inferPat ctx r
-
-  let ctx = unifyTy ctx loc lTy rTy
-  TOrPat(l, r, loc), lTy, ctx
 
 let private inferAbortPat ctx loc =
   let targetTy = tyError loc
   tpAbort targetTy loc, targetTy, ctx
-
-let private doInferPats ctx pats =
-  let rec go ctx patAcc tyAcc pats =
-    match pats with
-    | [] -> List.rev patAcc, List.rev tyAcc, ctx
-
-    | pat :: pats ->
-      let pat, ty, ctx = inferPat ctx pat
-      go ctx (pat :: patAcc) (ty :: tyAcc) pats
-
-  go ctx [] [] pats
 
 let private inferNodePat ctx pat =
   let kind, argPats, loc =
@@ -1103,79 +1224,120 @@ let private inferNodePat ctx pat =
     | _ -> unreachable ()
 
   match kind, argPats with
-  | TNilPN, _ -> inferNilPat ctx pat loc
-  | TConsPN, [ l; r ] -> inferConsPat ctx l r loc
-  | TConsPN, _ -> unreachable ()
-
-  | TVariantAppPN variantSerial, [ payloadPat ] -> inferVariantAppPat ctx variantSerial payloadPat loc
-  | TVariantAppPN _, _ -> unreachable ()
-
-  | TTuplePN, _ -> inferTuplePat ctx argPats loc
-
   | TAbortPN, _ -> inferAbortPat ctx loc
 
-  | TAscribePN, [ bodyPat ] -> inferAscribePat ctx bodyPat (getTy ()) loc
+  | TAscribePN, [ bodyPat ] -> inferAscribePat ctx bodyPat (getTy ())
   | TAscribePN, _ -> unreachable ()
+
+  | TNilPN, _
+  | TConsPN, _
+  | TTuplePN, _
+  | TVariantAppPN _, _ ->
+    // Forward to check.
+    let ty, ctx = freshMetaTyForPat pat ctx
+    let pat, ctx = checkPat ctx pat ty
+    pat, ty, ctx
 
   | TNavPN _, _ -> unreachable () // Resolved in NameRes.
 
 let private inferPat ctx pat : TPat * Ty * TyCtx =
   match pat with
   | TLitPat (lit, _) -> inferLitPat ctx pat lit
-  | TDiscardPat (_, loc) -> inferDiscardPat ctx pat loc
-  | TVarPat (_, varSerial, _, loc) -> inferVarPat ctx varSerial loc
   | TVariantPat (variantSerial, _, loc) -> inferVariantPat ctx variantSerial loc
   | TNodePat _ -> inferNodePat ctx pat
-  | TAsPat (bodyPat, serial, loc) -> inferAsPat ctx bodyPat serial loc
-  | TOrPat (l, r, loc) -> inferOrPat ctx l r loc
 
-let private inferRefutablePat ctx pat = inferPat ctx pat
+  | TDiscardPat _
+  | TVarPat _
+  | TAsPat _
+  | TOrPat _ ->
+    // Forward to check.
+    let ty, ctx = ctx |> freshMetaTyForPat pat
+    let pat, ctx = checkPat ctx pat ty
+    pat, ty, ctx
 
-let private inferIrrefutablePat ctx pat =
-  if pat
-     |> patIsClearlyExhaustive (isNewtypeVariant ctx)
-     |> not then
+/// Checks a pattern type to be equal to the specified type.
+let private checkPat (ctx: TyCtx) (pat: TPat) (targetTy: Ty) : TPat * TyCtx =
+  match pat with
+  | TDiscardPat (_, loc) -> TDiscardPat (targetTy, loc), ctx
+
+  | TVarPat (_, varSerial, _, loc) ->
+    let ctx = unifyOrAssignVarTy ctx varSerial targetTy loc
+    TVarPat(PrivateVis, varSerial, targetTy, loc), ctx
+
+  | TNodePat (kind, argPats, _, loc) ->
+    match kind, argPats with
+    | TNilPN, _ -> checkNilPat ctx loc targetTy
+
+    | TConsPN, [ hPat; tPat ] -> checkConsPat ctx hPat tPat loc targetTy
+    | TConsPN, _ -> unreachable ()
+
+    | TTuplePN, [] -> checkUnitPat ctx loc targetTy
+    | TTuplePN, _ -> checkTuplePat ctx argPats loc targetTy
+
+    | TVariantAppPN variantSerial, [ payloadPat ] -> checkVariantAppPat ctx variantSerial payloadPat loc targetTy
+    | TVariantAppPN _, _ -> unreachable ()
+
+    | _ ->
+      // Forward to inference.
+      let pat, inferredTy, ctx = inferPat ctx pat
+      let ctx = unifyTy ctx (patToLoc pat) targetTy inferredTy
+      pat, ctx
+
+  | TAsPat (bodyPat, varSerial, loc) ->
+    let ctx = unifyOrAssignVarTy ctx varSerial targetTy loc
+    let bodyPat, ctx = checkPat ctx bodyPat targetTy
+    TAsPat(bodyPat, varSerial, loc), ctx
+
+  | TOrPat (lPat, rPat, loc) ->
+    let lPat, ctx = checkPat ctx lPat targetTy
+    let rPat, ctx = checkPat ctx rPat targetTy
+    TOrPat(lPat, rPat, loc), ctx
+
+  | TLitPat _
+  | TVariantPat _ ->
+    // Forward to inference.
+    let pat, inferredTy, ctx = inferPat ctx pat
+    let ctx = unifyTy ctx (patToLoc pat) targetTy inferredTy
+    pat, ctx
+
+let private checkRefutablePat ctx pat targetTy =
+  let targetTy = substTy ctx targetTy
+  checkPat ctx pat targetTy
+
+let private inferIrrefutablePat ctx pat targetTyOpt : TPat * Ty * TyCtx =
+  let isNewtypeVariant (ctx: TyCtx) variantSerial =
+    ((ctx.Variants |> mapFind variantSerial): VariantDef).IsNewtype
+
+  let pat, ty, ctx =
+    match targetTyOpt with
+    | Some ty ->
+      let ty = substTy ctx ty
+      let pat, ctx = checkPat ctx pat ty
+      pat, ty, ctx
+
+    | None -> inferPat ctx pat
+
+  if pat |> patIsClearlyExhaustive (isNewtypeVariant ctx) |> not then
     let loc = patToLoc pat
 
-    let ctx =
-      addLog ctx Log.IrrefutablePatNonExhaustiveError loc
+    let ctx = addLog ctx Log.IrrefutablePatNonExhaustiveError loc
 
-    let ty, ctx = freshMetaTyForPat pat ctx
-    tpAbort ty loc, ty, ctx
+    let errorTy = tyError loc
+    tpAbort errorTy loc, errorTy, ctx
   else
-    inferPat ctx pat
+    pat, ty, ctx
 
 // -----------------------------------------------
 // Expression
 // -----------------------------------------------
-
-/// Tries to extract ascription type from an expression.
-let private exprToAscriptionTy (expr: TExpr) : Ty option =
-  match expr with
-  | TLitExpr(lit, _) -> Some(litToTy lit)
-  | TNodeExpr(TAscribeEN, _, ty, _) -> Some ty
-
-  | TVarExpr _
-  | TFunExpr _
-  | TVariantExpr _
-  | TPrimExpr _
-  | TRecordExpr _
-  | TNavExpr(_, _, _, _)
-  | TNodeExpr _ -> None
-
-  | TMatchExpr(_, arms, _, _) ->
-    arms
-    |> List.map (fun (_, _, arm) -> arm)
-    |> List.tryPick exprToAscriptionTy
-
-  | TBlockExpr(_, last) -> exprToAscriptionTy last
 
 let private inferLitExpr ctx expr lit =
   let ctx = validateLit ctx lit (exprToLoc expr)
   expr, litToTy lit, ctx
 
 let private inferVarExpr (ctx: TyCtx) varSerial loc =
-  let ty, ctx = ctx |> unifyVarTy varSerial None loc
+  let ty = (ctx.Vars |> mapFind varSerial).Ty
+  assert (isNoTy ty |> not)
 
   TVarExpr(varSerial, ty, loc), ty, ctx
 
@@ -1196,135 +1358,9 @@ let private inferFunExpr (ctx: TyCtx) funSerial loc =
 
 let private inferVariantExpr (ctx: TyCtx) variantSerial loc =
   let _, _, ty, ctx =
-    instantiateVariant variantSerial loc ctx
+    instantiateVariant ctx variantSerial loc
 
   TVariantExpr(variantSerial, ty, loc), ty, ctx
-
-let private primNotTy = tyFun tyBool tyBool
-
-let private primBitNotScheme =
-  let ty = tyMeta 1 noLoc
-  BoundedTyScheme([ 1 ], tyFun ty ty, [ IsIntTrait ty ])
-
-let private primAddScheme =
-  let meta id = tyMeta id noLoc
-  let addTy = meta 1
-  BoundedTyScheme([ 1 ], tyFun addTy (tyFun addTy addTy), [ AddTrait addTy ])
-
-let private primSubtractEtcScheme =
-  let meta id = tyMeta id noLoc
-  let ty = meta 1
-  BoundedTyScheme([ 1 ], tyFun ty (tyFun ty ty), [ IsNumberTrait ty ])
-
-let private primBitAndEtcScheme =
-  let meta id = tyMeta id noLoc
-  let ty = meta 1
-  BoundedTyScheme([ 1 ], tyFun ty (tyFun ty ty), [ IsIntTrait ty ])
-
-let private primShiftScheme =
-  let meta id = tyMeta id noLoc
-  let ty = meta 1
-  BoundedTyScheme([ 1 ], tyFun ty (tyFun tyInt ty), [ IsIntTrait ty ])
-
-let private primEqualScheme =
-  let meta id = tyMeta id noLoc
-  let argTy = meta 1
-  BoundedTyScheme([ 1 ], tyFun argTy (tyFun argTy tyBool), [ EqualTrait argTy ])
-
-let private primLessScheme =
-  let meta id = tyMeta id noLoc
-  let compareTy = meta 1
-  BoundedTyScheme([ 1 ], tyFun compareTy (tyFun compareTy tyBool), [ CompareTrait compareTy ])
-
-let private primCompareScheme =
-  let meta id = tyMeta id noLoc
-  let compareTy = meta 1
-  BoundedTyScheme([ 1 ], tyFun compareTy (tyFun compareTy tyInt), [ CompareTrait compareTy ])
-
-let private primIntScheme flavor =
-  let meta id = tyMeta id noLoc
-  let srcTy = meta 1
-  let resultTy = Ty(IntTk flavor, [])
-  BoundedTyScheme([ 1 ], tyFun srcTy resultTy, [ ToIntTrait(flavor, srcTy) ])
-
-let private primFloatScheme flavor =
-  let meta id = tyMeta id noLoc
-  let srcTy = meta 1
-  let resultTy = Ty(FloatTk flavor, [])
-  BoundedTyScheme([ 1 ], tyFun srcTy resultTy, [ ToFloatTrait srcTy ])
-
-let private primToCharScheme =
-  let meta id = tyMeta id noLoc
-  let srcTy = meta 1
-  BoundedTyScheme([ 1 ], tyFun srcTy tyChar, [ ToCharTrait srcTy ])
-
-let private primToStringScheme =
-  let meta id = tyMeta id noLoc
-  let srcTy = meta 1
-  BoundedTyScheme([ 1 ], tyFun srcTy tyString, [ ToStringTrait srcTy ])
-
-let private primBoxScheme =
-  let meta id = tyMeta id noLoc
-  let itemTy = meta 1
-  TyScheme([ 1 ], tyFun itemTy tyObj)
-
-let private primUnboxScheme =
-  let meta id = tyMeta id noLoc
-  let resultTy = meta 1
-  TyScheme([ 1 ], tyFun tyObj resultTy)
-
-let private primStringLengthTy = tyFun tyString tyInt
-
-let private primNilScheme =
-  let meta id = tyMeta id noLoc
-  let itemTy = meta 1
-  TyScheme([ 1 ], tyList itemTy)
-
-let private primConsScheme =
-  let meta id = tyMeta id noLoc
-  let itemTy = meta 1
-  let listTy = tyList itemTy
-  TyScheme([ 1 ], tyFun itemTy (tyFun listTy listTy))
-
-let private primAssertTy = tyFun tyBool tyUnit
-
-let private primOwnAcquireTy =
-  let itemTy = tyMeta 1 noLoc
-  TyScheme([ 1 ], tyFun itemTy (tyOwn itemTy))
-
-let private primOwnReleaseTy =
-  let itemTy = tyMeta 1 noLoc
-  TyScheme([ 1 ], tyFun (tyOwn itemTy) itemTy)
-
-let private primNullPtrScheme =
-  let ptrTy = tyMeta 1 noLoc
-  BoundedTyScheme([ 1 ], ptrTy, [ PtrTrait ptrTy ])
-
-let private primPtrCastScheme =
-  let srcTy = tyMeta 1 noLoc
-  let destTy = tyMeta 2 noLoc
-  BoundedTyScheme([ 1; 2 ], tyFun srcTy destTy, [ PtrCastTrait(srcTy, destTy) ])
-
-let private primPtrInvalidScheme =
-  let ptrTy = tyMeta 1 noLoc
-
-  BoundedTyScheme([ 1 ], tyFun tyUNativeInt ptrTy, [ PtrTrait ptrTy ])
-
-let private primPtrDistanceScheme =
-  let ptrTy = tyMeta 1 noLoc
-  BoundedTyScheme([ 1 ], tyFun ptrTy (tyFun ptrTy tyNativeInt), [ PtrTrait ptrTy ])
-
-let private primNativeCastScheme =
-  let meta id = tyMeta id noLoc
-  let srcTy = meta 1
-  let destTy = meta 2
-
-  BoundedTyScheme(
-    [ 1; 2 ],
-    tyFun srcTy destTy,
-    [ PtrSizeTrait srcTy
-      PtrSizeTrait destTy ]
-  )
 
 let private inferPrimExpr ctx prim loc =
   let onMono ty = TPrimExpr(prim, ty, loc), ty, ctx
@@ -1338,6 +1374,10 @@ let private inferPrimExpr ctx prim loc =
       instantiateBoundedTyScheme ctx scheme loc
 
     TPrimExpr(prim, primTy, loc), primTy, ctx
+
+  let bad ctx err =
+    let ctx = addLog ctx err loc
+    txAbort ctx loc
 
   match prim with
   | TPrim.Not -> onMono primNotTy
@@ -1372,22 +1412,10 @@ let private inferPrimExpr ctx prim loc =
   | TPrim.Nil -> onUnbounded primNilScheme
   | TPrim.Cons -> onUnbounded primConsScheme
 
-  | TPrim.Discriminant _ ->
-    let ctx =
-      addError ctx "Illegal use of __discriminant. Hint: `__discriminant Variant`." loc
-
-    txAbort ctx loc
+  | TPrim.Discriminant _ -> bad ctx Log.UseOfDiscriminant
 
   | TPrim.Assert -> onMono primAssertTy
-
-  | TPrim.Printfn ->
-    let ctx =
-      addError
-        ctx
-        "Illegal use of printfn. printfn must have string literal as first argument; e.g. `printfn \"%s\" s`."
-        loc
-
-    txAbort ctx loc
+  | TPrim.Printfn -> bad ctx Log.UseOfPrintfn
 
   | TPrim.OwnAcquire -> onUnbounded primOwnAcquireTy
   | TPrim.OwnRelease -> onUnbounded primOwnReleaseTy
@@ -1396,31 +1424,11 @@ let private inferPrimExpr ctx prim loc =
   | TPrim.PtrInvalid -> onBounded primPtrInvalidScheme
   | TPrim.PtrDistance -> onBounded primPtrDistanceScheme
 
-  | TPrim.NativeFun ->
-    let ctx =
-      addError ctx "Illegal use of __nativeFun. Hint: `__nativeFun (\"funName\", arg1, arg2, ...): ResultType`." loc
-
-    txAbort ctx loc
-
   | TPrim.NativeCast -> onBounded primNativeCastScheme
-
-  | TPrim.NativeExpr ->
-    let ctx =
-      addError ctx "Illegal use of __nativeExpr. Hint: `__nativeExpr \"Some C code here.\"`." loc
-
-    txAbort ctx loc
-
-  | TPrim.NativeStmt ->
-    let ctx =
-      addError ctx "Illegal use of __nativeStmt. Hint: `__nativeStmt \"Some C code here.\"`." loc
-
-    txAbort ctx loc
-
-  | TPrim.NativeDecl ->
-    let ctx =
-      addError ctx "Illegal use of __nativeDecl. Hint: `__nativeDecl \"Some C code here.\"`." loc
-
-    txAbort ctx loc
+  | TPrim.NativeFun -> bad ctx Log.UseOfNativeFun
+  | TPrim.NativeExpr -> bad ctx Log.UseOfNativeExpr
+  | TPrim.NativeStmt -> bad ctx Log.UseOfNativeStmt
+  | TPrim.NativeDecl -> bad ctx Log.UseOfNativeDecl
 
   | TPrim.NullPtr -> onBounded primNullPtrScheme
 
@@ -1429,39 +1437,45 @@ let private inferPrimExpr ctx prim loc =
   | TPrim.PtrWrite
   | TPrim.PtrAsIn
   | TPrim.PtrAsNative
-  | TPrim.FunPtrInvoke -> errorExpr ctx "This function misses some argument." loc
+  | TPrim.FunPtrInvoke -> bad ctx Log.PrimRequireParam
 
-let private inferRecordExpr ctx expectOpt baseOpt fields loc =
-  // First, infer base if exists.
+let private checkRecordExpr ctx expr targetTy =
+  // Record type must be determined by target type or base expression type.
+
+  let baseOpt, fields, loc =
+    match expr with
+    | TRecordExpr (baseOpt, fields, _, loc) -> baseOpt, fields, loc
+    | _ -> unreachable ()
+
   let baseOpt, baseTyOpt, ctx =
     match baseOpt with
     | None -> None, None, ctx
 
     | Some baseExpr ->
-      let baseExpr, recordTy, ctx = inferExpr ctx expectOpt baseExpr
-      Some baseExpr, Some recordTy, ctx
+      let baseExpr, ctx = checkExpr ctx baseExpr targetTy
+      Some baseExpr, Some targetTy, ctx
 
-  // Determine the record type by base expr or expectation.
   let recordTyInfoOpt =
-    let asRecordTy tyOpt =
-      match tyOpt |> Option.map (substTy ctx) with
-      | Some ((Ty (RecordTk (tySerial, _), _)) as recordTy) ->
-        match ctx |> findTy tySerial with
-        | RecordTyDef (name, tyVars, fieldDefs, _, _) -> Some(recordTy, name, tyVars, fieldDefs)
+    let asRecordTy ty =
+      let ty = substTy ctx ty
+
+      match ty with
+      | Ty (RecordTk (tySerial, _), _) ->
+        match ctx.Tys |> mapFind tySerial with
+        | RecordTyDef (name, tyVars, fieldDefs, _, _) -> Some(ty, name, tyVars, fieldDefs)
         | _ -> None
 
       | _ -> None
 
-    match baseTyOpt |> asRecordTy with
-    | ((Some _) as it) -> it
-    | _ -> expectOpt |> asRecordTy
+    match baseTyOpt |> Option.bind asRecordTy with
+    | (Some _) as it -> it
+    | _ -> targetTy |> asRecordTy
 
   match recordTyInfoOpt with
   | None ->
-    let ctx =
-      addError ctx "Can't infer type of record." loc
-
-    txAbort ctx loc
+    let ctx = addLog ctx Log.RecordTypeNotInferred loc
+    let expr, _, ctx = txAbort ctx loc
+    expr, ctx
 
   | Some (recordTy, recordName, tyVars, fieldDefs) ->
     let addRedundantErr fieldName loc ctx =
@@ -1478,13 +1492,15 @@ let private inferRecordExpr ctx expectOpt baseOpt fields loc =
       | it, [], [] -> it
       | _ -> unreachable () // NameRes verified arity.
 
+    let assignmentMap = TMap.ofList compare assignment
+
     // Infer field initializers and whether each of them is member of the record type.
     // Whenever a field appears, remove it from the set of fields
     // so that second occurrence of it is marked as redundant.
     let fields, (fieldDefs, ctx) =
       let fieldDefs =
         fieldDefs
-        |> List.map (fun (name, ty, _) -> name, tyAssign assignment ty)
+        |> List.map (fun (name, ty, _) -> name, tyAssignByMap assignmentMap ty)
         |> TMap.ofList compare
 
       fields
@@ -1495,12 +1511,11 @@ let private inferRecordExpr ctx expectOpt baseOpt fields loc =
              match fieldDefs |> TMap.remove name with
              | None, _ ->
                let ctx = ctx |> addRedundantErr name loc
-               let init, _, ctx = inferExpr ctx None init
+               let init, _, ctx = inferExpr ctx init
                (name, init, loc), (fieldDefs, ctx)
 
              | Some defTy, fieldDefs ->
-               let init, initTy, ctx = inferExpr ctx (Some defTy) init
-               let ctx = unifyTy ctx loc initTy defTy
+               let init, ctx = checkExpr ctx init defTy
                (name, init, loc), (fieldDefs, ctx))
            (fieldDefs, ctx)
 
@@ -1517,30 +1532,16 @@ let private inferRecordExpr ctx expectOpt baseOpt fields loc =
       else
         ctx
 
-    match baseOpt with
-    | None -> TRecordExpr(None, fields, recordTy, loc), recordTy, ctx
-
-    | Some baseExpr ->
-      // Assign to a temporary var so that RecordRes can reuse the expr safely.
-      // (This kind of modification is not business of typing, though.)
-      // { base with fields... } ==> let t = base in { t with fields... }
-      let varSerial, ctx = freshVar ctx "base" recordTy loc
-
-      let varPat =
-        TVarPat(PrivateVis, varSerial, recordTy, loc)
-
-      let varExpr = TVarExpr(varSerial, recordTy, loc)
-
-      let recordExpr =
-        TRecordExpr(Some varExpr, fields, recordTy, loc)
-
-      txLetIn (TLetValStmt(varPat, baseExpr, loc)) recordExpr, recordTy, ctx
+    TRecordExpr(baseOpt, fields, recordTy, loc), ctx
 
 // match 'a with ( | 'a -> 'b )*
-let private inferMatchExpr ctx expectOpt itself cond arms loc =
-  let targetTy, ctx = freshMetaTyForExpr itself ctx
+let private checkMatchExpr ctx expr targetTy =
+  let cond, arms, loc =
+    match expr with
+    | TMatchExpr (cond, arms, _, loc) -> cond, arms, loc
+    | _ -> unreachable ()
 
-  let cond, condTy, ctx = inferExpr ctx None cond
+  let cond, condTy, ctx = inferExpr ctx cond
 
   let ctx =
     arms
@@ -1550,40 +1551,25 @@ let private inferMatchExpr ctx expectOpt itself cond arms loc =
     arms
     |> List.mapFold
          (fun ctx (pat, guard, body) ->
-           let pat, patTy, ctx = inferRefutablePat ctx pat
+           let pat, ctx = checkRefutablePat ctx pat condTy
+           let guard, ctx = checkExpr ctx guard tyBool
 
-           let ctx = unifyTy ctx (patToLoc pat) patTy condTy
-
-           let guard, guardTy, ctx = inferExpr ctx None guard
-
-           let ctx =
-             unifyTy ctx (exprToLoc guard) guardTy tyBool
-
-           let body, bodyTy, ctx =
-             let body, bodyTy, ctx = inferExpr ctx expectOpt body
-
-             match substTy ctx bodyTy with
-             | Ty(NeverTk, _) ->
-               TNodeExpr(TCatchNeverEN, [ body ], bodyTy, exprToLoc body), bodyTy, ctx
-
-             | bodyTy ->
-              let ctx = unifyTy ctx (exprToLoc body) targetTy bodyTy
-              body, bodyTy, ctx
+            // FIXME: if type of body is never, it shouldn't be unified with targetTy. test never_ty is failing due to this
+           let body, ctx = checkExpr ctx body targetTy
 
            (pat, guard, body), ctx)
          ctx
 
-  TMatchExpr(cond, arms, targetTy, loc), targetTy, ctx
+  TMatchExpr(cond, arms, targetTy, loc), ctx
 
 let private inferNavExpr ctx l (r: Ident, rLoc) loc =
-  let fail ctx =
+  let fail log ctx =
     let ctx =
-      addError ctx ("Expected to have field: '" + r + "'.") loc
+      addLog ctx log loc
 
     txAbort ctx loc
 
-  let l, lTy, ctx = inferExpr ctx None l
-
+  let l, lTy, ctx = inferExpr ctx l
   let lTy = substTy ctx lTy
 
   match lTy, r with
@@ -1595,18 +1581,19 @@ let private inferNavExpr ctx l (r: Ident, rLoc) loc =
 
   | Ty (RecordTk (tySerial, _), tyArgs), _ ->
     let fieldTyOpt =
-      match ctx |> findTy tySerial with
+      match ctx.Tys |> mapFind tySerial with
       | RecordTyDef (_, tyVars, fieldDefs, _, _) ->
         match fieldDefs
               |> List.tryFind (fun (theName, _, _) -> theName = r)
           with
         | Some (_, fieldTy, _) ->
           // #tyAssign
-          let fieldTy =
+          let assignment =
             match listTryZip tyVars tyArgs with
-            | it, [], [] -> tyAssign it fieldTy
+            | it, [], [] -> it
             | _ -> unreachable () // NameRes verified arity.
 
+          let fieldTy = tyAssignByList assignment fieldTy
           Some fieldTy
 
         | None -> None
@@ -1614,9 +1601,9 @@ let private inferNavExpr ctx l (r: Ident, rLoc) loc =
 
     match fieldTyOpt with
     | Some fieldTy -> TNavExpr(l, (r, rLoc), fieldTy, loc), fieldTy, ctx
-    | None -> fail ctx
+    | None -> fail (Log.RecordFieldNotFound(r, lTy)) ctx
 
-  | _ -> fail ctx
+  | _ -> fail (Log.FieldNotFound r) ctx
 
 let private inferUntypedExprs ctx exprs =
   exprs
@@ -1628,7 +1615,7 @@ let private inferUntypedExprs ctx exprs =
              let ty, ctx = resolveAscriptionTy ctx ty
              TNodeExpr(TTyPlaceholderEN, [], ty, loc), ty, ctx
 
-           | _ -> inferExpr ctx None expr
+           | _ -> inferExpr ctx expr
 
          expr, ctx)
        ctx
@@ -1636,32 +1623,27 @@ let private inferUntypedExprs ctx exprs =
 let private inferAppExpr ctx itself =
   let callee, arg, loc =
     match itself with
-    | TNodeExpr (TAppEN, [ callee; arg ], _, loc) -> callee, arg, loc
+    | TNodeExpr(TAppEN, [ callee; arg ], _, loc) -> callee, arg, loc
     | _ -> unreachable ()
 
-  let targetTy, ctx = ctx |> freshMetaTyForExpr itself
+  let callee, calleeTy, ctx = inferExpr ctx callee
 
-  let callee, calleeTy, ctx = inferExpr ctx None callee
+  let calleeTy, neverReturning, ctx =
+    match calleeTy with
+    | Ty(FunTk, [ sTy; Ty(NeverTk, _) ]) ->
+      let metaTy, ctx = freshMetaTyForExpr itself ctx
+      tyFun sTy metaTy, true, ctx
 
-  let arg, argTy, ctx =
-    let tyAsFunArg ty =
-      match ty with
-      | Ty (FunTk, it :: _) -> Some it
-      | _ -> None
+    | _ -> calleeTy, false, ctx
 
-    inferExpr ctx (tyAsFunArg calleeTy) arg
-
-  let ctx =
-    unifyTy ctx loc calleeTy (tyFun argTy targetTy)
-
+  let argTy, targetTy, ctx = expectFunTy ctx calleeTy loc
+  let arg, ctx = checkExpr ctx arg argTy
   let appExpr = txApp callee arg targetTy loc
 
-  match substTy ctx targetTy with
-  | Ty(NeverTk, _) ->
-    let metaTy, ctx = freshMetaTy loc ctx
-    TNodeExpr(TCatchNeverEN, [ appExpr ], metaTy, loc), metaTy, ctx
-
-  | ty -> appExpr, ty, ctx
+  if neverReturning then
+    TNodeExpr(TCatchNeverEN, [ appExpr ], targetTy, loc), targetTy, ctx
+  else
+    appExpr, targetTy, ctx
 
 type private PtrProjectionInferError =
   | PtrProjectionOk of TExpr * Ty * TyCtx
@@ -1680,17 +1662,13 @@ let private inferExprAsPtrProjection ctx (kind: PtrOperationKind) expr : TExpr *
     | TNodeExpr (TIndexEN, [ ptr; index ], _, loc) ->
       match go ctx ptr with
       | PtrProjectionOk (ptr, ptrTy, ctx) ->
-        let index, indexTy, ctx = inferExpr ctx (Some tyInt) index
-
-        let ctx =
-          unifyTy ctx (exprToLoc index) indexTy tyInt
-
+        let index, ctx = checkExpr ctx index tyInt
         PtrProjectionOk(TNodeExpr(TPtrOffsetEN, [ ptr; index ], ptrTy, loc), ptrTy, ctx)
 
       | err -> err
 
     | _ ->
-      let expr, ty, ctx = inferExpr ctx None expr
+      let expr, ty, ctx = inferExpr ctx expr
       let ty = substTy ctx ty
 
       match ty with
@@ -1733,7 +1711,7 @@ let private inferPrimAppExpr ctx itself =
     txApp (TPrimExpr(TPrim.Printfn, funTy, loc)) arg targetTy loc, targetTy, ctx
 
   | TPrim.PtrAsIn, _ ->
-    let arg, argTy, ctx = inferExpr ctx None arg
+    let arg, argTy, ctx = inferExpr ctx arg
     let argTy = substTy ctx argTy
 
     let ok resultTy =
@@ -1747,7 +1725,7 @@ let private inferPrimAppExpr ctx itself =
     | _ -> errorExpr ctx "Expected nativeptr, OutPtr or voidptr type." loc
 
   | TPrim.PtrAsNative, _ ->
-    let arg, argTy, ctx = inferExpr ctx None arg
+    let arg, argTy, ctx = inferExpr ctx arg
     let argTy = substTy ctx argTy
 
     let ok resultTy =
@@ -1822,9 +1800,9 @@ let private inferPrimAppExpr ctx itself =
              let arg, _, ctx =
                match arg with
                | TLitExpr _
-               | TVarExpr _ -> inferExpr ctx None arg
+               | TVarExpr _ -> inferExpr ctx arg
 
-               | TNodeExpr (TPtrOfEN, [ TFunExpr _ ], _, _) -> inferExpr ctx None arg
+               | TNodeExpr (TPtrOfEN, [ TFunExpr _ ], _, _) -> inferExpr ctx arg
 
                | TNodeExpr (TTyPlaceholderEN, [], ty, loc) ->
                  let ty, ctx = resolveAscriptionTy ctx ty
@@ -1858,8 +1836,7 @@ let private inferWriteExpr ctx expr : TExpr * Ty * TyCtx =
     | Ty (ErrorTk _, _) -> ptrTy
     | _ -> unreachable ()
 
-  let item, actualItemTy, ctx = inferExpr ctx (Some itemTy) item
-  let ctx = unifyTy ctx loc actualItemTy itemTy
+  let item, ctx = checkExpr ctx item itemTy
   TNodeExpr(TPtrWriteEN, [ ptr; item ], tyUnit, loc), tyUnit, ctx
 
 let private inferFunPtrInvokeExpr ctx expr : TExpr * Ty * TyCtx =
@@ -1869,7 +1846,7 @@ let private inferFunPtrInvokeExpr ctx expr : TExpr * Ty * TyCtx =
       callee, arg, loc
     | _ -> unreachable ()
 
-  let callee, calleeTy, ctx = inferExpr ctx None callee
+  let callee, calleeTy, ctx = inferExpr ctx callee
 
   let argTys, resultTy =
     match substTy ctx calleeTy with
@@ -1885,28 +1862,26 @@ let private inferFunPtrInvokeExpr ctx expr : TExpr * Ty * TyCtx =
     | [] -> tyUnit
     | _ -> tyTuple argTys
 
-  let arg, actualArgTy, ctx = inferExpr ctx (Some argTy) arg
-  let ctx = unifyTy ctx loc actualArgTy argTy
-
+  let arg, ctx = checkExpr ctx arg argTy
   TNodeExpr(TFunPtrInvokeEN, [ callee; arg ], resultTy, loc), resultTy, ctx
 
 let private inferMinusExpr ctx arg loc =
-  let arg, argTy, ctx = inferExpr ctx None arg
+  let arg, argTy, ctx = inferExpr ctx arg
 
   let ctx =
-    ctx |> addTraitBound (IsNumberTrait argTy) loc
+    ctx |> addTraitBound (Trait.newNumberLike argTy) loc
 
   TNodeExpr(TMinusEN, [ arg ], argTy, loc), argTy, ctx
 
 let private inferPtrOfExpr ctx arg loc =
   match arg with
   | TVarExpr _ ->
-    let arg, argTy, ctx = inferExpr ctx None arg
+    let arg, argTy, ctx = inferExpr ctx arg
     let ty = tyInPtr argTy
     TNodeExpr(TPtrOfEN, [ arg ], ty, loc), ty, ctx
 
   | TFunExpr (funSerial, _, _) ->
-    let arg, _, ctx = inferExpr ctx None arg
+    let arg, _, ctx = inferExpr ctx arg
     let ty, ctx = castFunAsNativeFun funSerial loc ctx
     TNodeExpr(TFunPtrOfEN, [ arg ], ty, loc), ty, ctx
 
@@ -1915,144 +1890,195 @@ let private inferPtrOfExpr ctx arg loc =
     txAbort ctx loc
 
 let private inferIndexExpr ctx l r loc =
-  let l, lTy, ctx = inferExpr ctx (Some tyString) l
-  let r, rTy, ctx = inferExpr ctx (Some tyInt) r
+  let l, lTy, ctx = inferExpr ctx l
+  let r, rTy, ctx = inferExpr ctx r
   let tTy, ctx = freshMetaTy loc ctx
 
   let ctx =
     ctx
-    |> addTraitBound (IndexTrait(lTy, rTy, tTy)) loc
+    |> addTraitBound (Trait.newIndex lTy rTy tTy) loc
 
   TNodeExpr(TIndexEN, [ l; r ], tTy, loc), tTy, ctx
 
 let private inferSliceExpr ctx l r x loc =
-  let l, lTy, ctx = inferExpr ctx (Some tyInt) l
-  let r, rTy, ctx = inferExpr ctx (Some tyInt) r
-  let x, xTy, ctx = inferExpr ctx None x
+  let l, ctx = checkExpr ctx l tyInt
+  let r, ctx = checkExpr ctx r tyInt
+  let x, ctx = checkExpr ctx x tyString
+  TNodeExpr(TSliceEN, [ l; r; x ], tyString, loc), tyString, ctx
 
-  let ctx =
-    let actualTy = tyFun lTy (tyFun rTy (tyFun xTy xTy))
+let private checkTupleExpr (ctx: TyCtx) items loc targetTy =
+  let arity = List.length items
+  let itemTys, ctx = expectTupleTy arity ctx targetTy loc
 
-    let expectedTy =
-      tyFun tyInt (tyFun tyInt (tyFun tyString tyString))
+  let items =
+    match listTryZip items itemTys with
+    | it, [], [] -> it
+    | _ -> unreachable ()
 
-    unifyTy ctx loc actualTy expectedTy
+  let items, ctx =
+    items
+    |> List.mapFold
+         (fun ctx (item, itemTy) ->
+           let item, ctx = checkExpr ctx item itemTy
+           item, ctx)
+         ctx
 
-  TNodeExpr(TSliceEN, [ l; r; x ], xTy, loc), xTy, ctx
+  txTuple items loc, ctx
 
-let private inferTupleExpr (ctx: TyCtx) items loc =
-  let rec go acc itemTys ctx items =
-    match items with
-    | [] -> List.rev acc, List.rev itemTys, ctx
-
-    | item :: items ->
-      let item, itemTy, ctx = inferExpr ctx None item
-      go (item :: acc) (itemTy :: itemTys) ctx items
-
-  let items, itemTys, ctx = go [] [] ctx items
-
-  txTuple items loc, tyTuple itemTys, ctx
-
-let private inferAscribeExpr ctx body ascriptionTy loc =
+let private inferAscribeExpr ctx body ascriptionTy =
   let ascriptionTy, ctx = resolveAscriptionTy ctx ascriptionTy
-  let body, bodyTy, ctx = inferExpr ctx (Some ascriptionTy) body
-
-  let ctx = unifyTy ctx loc bodyTy ascriptionTy
+  let body, ctx = checkExpr ctx body ascriptionTy
   body, ascriptionTy, ctx
 
-let private inferNodeExpr ctx expr : TExpr * Ty * TyCtx =
-  let kind, args, loc =
+let private checkBlockExpr ctx expr targetTy =
+  let stmts, last =
     match expr with
-    | TNodeExpr (kind, args, _, loc) -> kind, args, loc
+    | TBlockExpr(stmts, last) -> stmts, last
     | _ -> unreachable ()
 
-  let getTy () =
-    match expr with
-    | TNodeExpr (_, _, ty, _) -> ty
-    | _ -> unreachable ()
-
-  match kind, args with
-  | TAppEN, [ TPrimExpr _; _ ] -> inferPrimAppExpr ctx expr
-  | TAppEN, [ TNodeExpr (TAppEN, [ TPrimExpr (TPrim.PtrWrite, _, _); _ ], _, _); _ ] -> inferWriteExpr ctx expr
-  | TAppEN, [ TNodeExpr (TAppEN, [ TPrimExpr (TPrim.FunPtrInvoke, _, _); _ ], _, _); _ ] ->
-    inferFunPtrInvokeExpr ctx expr
-  | TAppEN, [ _; _ ] -> inferAppExpr ctx expr
-  | TAppEN, _ -> unreachable ()
-
-  | TMinusEN, [ arg ] -> inferMinusExpr ctx arg loc
-  | TMinusEN, _ -> unreachable ()
-  | TPtrOfEN, [ arg ] -> inferPtrOfExpr ctx arg loc
-  | TPtrOfEN, _ -> unreachable ()
-  | TIndexEN, [ l; r ] -> inferIndexExpr ctx l r loc
-  | TIndexEN, _ -> unreachable ()
-  | TSliceEN, [ l; r; x ] -> inferSliceExpr ctx l r x loc
-  | TSliceEN, _ -> unreachable ()
-
-  | TTupleEN, _ -> inferTupleExpr ctx args loc
-
-  | TAscribeEN, [ expr ] -> inferAscribeExpr ctx expr (getTy ()) loc
-  | TAscribeEN, _ -> unreachable ()
-
-  | TSizeOfEN, [ TNodeExpr (TTyPlaceholderEN, _, ty, _) ] ->
-    assert (isNoTy ty |> not)
-    assert (getTy () |> tyEqual tyInt)
-    expr, tyInt, ctx
-
-  | TSizeOfEN, _ -> unreachable ()
-
-  | TTyPlaceholderEN, _ ->
-    txUnit loc, tyUnit, addError ctx "Type placeholder can appear in argument of __nativeExpr or __nativeStmt." loc
-
-  | TAbortEN, _ -> txAbort ctx loc
-
-  | TFunPtrOfEN, _
-  | TDiscriminantEN _, _
-  | TCatchNeverEN, _
-  | TCallNativeEN _, _
-  | TPtrOffsetEN, _
-  | TPtrReadEN, _
-  | TPtrWriteEN, _
-  | TFunPtrInvokeEN, _
-  | TNativeExprEN _, _
-  | TNativeStmtEN _, _
-  | TNativeDeclEN _, _ -> unreachable ()
-
-let private inferBlockExpr ctx expectOpt (stmts: TStmt list) last =
-  let ctx = collectVarsAndFuns ctx stmts
+  let ctx = initializeLocalFuns ctx stmts
 
   let stmts, ctx =
-    stmts
-    |> List.mapFold (fun ctx stmt -> inferStmt ctx NotRec stmt) ctx
+    stmts |> List.mapFold (fun ctx stmt -> inferStmt ctx NotRec stmt) ctx
 
-  let last, lastTy, ctx = inferExpr ctx expectOpt last
+  let last, ctx = checkExpr ctx last targetTy
 
-  TBlockExpr(stmts, last), lastTy, ctx
+  TBlockExpr(stmts, last), ctx
+
+/// Transforms an expression for type check in *check* mode.
+///
+/// The result is guaranteed to have the specified type.
+let private checkExpr (ctx: TyCtx) (expr: TExpr) (targetTy: Ty) : TExpr * TyCtx =
+  match expr with
+  | TRecordExpr _ -> checkRecordExpr ctx expr targetTy
+  | TMatchExpr _ -> checkMatchExpr ctx expr targetTy
+  | TBlockExpr _ -> checkBlockExpr ctx expr targetTy
+
+  | TNodeExpr (kind, args, _, loc) ->
+    match kind, args with
+    | TTupleEN, _ -> checkTupleExpr ctx args loc targetTy
+
+    | _ ->
+      // Forward to inference.
+      let expr, inferredTy, ctx = inferExpr ctx expr
+      let ctx = unifyTy ctx (exprToLoc expr) inferredTy targetTy
+      expr, ctx
+
+  | _ ->
+    // Forward to inference.
+    let expr, inferredTy, ctx = inferExpr ctx expr
+    let ctx = unifyTy ctx (exprToLoc expr) inferredTy targetTy
+    expr, ctx
+
+/// Transforms an expression for type check in *inference mode* (a.k.a. synthesis mode.)
+///
+/// This mode synthesizes the type of an expression bottom-up.
+/// The target type isn't provided.
+let private inferExpr (ctx: TyCtx) (expr: TExpr) : TExpr * Ty * TyCtx =
+  match expr with
+  | TLitExpr (lit, _) -> inferLitExpr ctx expr lit
+  | TVarExpr (serial, _, loc) -> inferVarExpr ctx serial loc
+  | TFunExpr (serial, _, loc) -> inferFunExpr ctx serial loc
+  | TVariantExpr (serial, _, loc) -> inferVariantExpr ctx serial loc
+  | TPrimExpr (prim, _, loc) -> inferPrimExpr ctx prim loc
+  | TNavExpr (receiver, field, _, loc) -> inferNavExpr ctx receiver field loc
+
+  | TNodeExpr (kind, args, exprTy, loc) ->
+    match kind, args with
+    | TAppEN, [ TPrimExpr _; _ ] -> inferPrimAppExpr ctx expr
+    | TAppEN, [ TNodeExpr (TAppEN, [ TPrimExpr (TPrim.PtrWrite, _, _); _ ], _, _); _ ] -> inferWriteExpr ctx expr
+    | TAppEN, [ TNodeExpr (TAppEN, [ TPrimExpr (TPrim.FunPtrInvoke, _, _); _ ], _, _); _ ] ->
+      inferFunPtrInvokeExpr ctx expr
+    | TAppEN, [ _; _ ] -> inferAppExpr ctx expr
+    | TAppEN, _ -> unreachable ()
+
+    | TMinusEN, [ arg ] -> inferMinusExpr ctx arg loc
+    | TMinusEN, _ -> unreachable ()
+    | TPtrOfEN, [ arg ] -> inferPtrOfExpr ctx arg loc
+    | TPtrOfEN, _ -> unreachable ()
+    | TIndexEN, [ l; r ] -> inferIndexExpr ctx l r loc
+    | TIndexEN, _ -> unreachable ()
+    | TSliceEN, [ l; r; x ] -> inferSliceExpr ctx l r x loc
+    | TSliceEN, _ -> unreachable ()
+
+    | TAscribeEN, [ arg ] -> inferAscribeExpr ctx arg exprTy
+    | TAscribeEN, _ -> unreachable ()
+
+    | TSizeOfEN, [ TNodeExpr (TTyPlaceholderEN, _, ty, _) ] ->
+      assert (isNoTy ty |> not)
+      assert (tyEqual exprTy tyInt)
+      expr, tyInt, ctx
+
+    | TSizeOfEN, _ -> unreachable ()
+
+    | TTyPlaceholderEN, _ ->
+      txUnit loc, tyUnit, addError ctx "Type placeholder can appear in argument of __nativeExpr or __nativeStmt." loc
+
+    | TAbortEN, _ -> txAbort ctx loc
+
+    | TTupleEN, _ ->
+      // Forward to check.
+      let targetTy, ctx = freshMetaTyForExpr expr ctx
+      let expr, ctx = checkExpr ctx expr targetTy
+      expr, targetTy, ctx
+
+    | TFunPtrOfEN, _
+    | TDiscriminantEN _, _
+    | TCatchNeverEN, _
+    | TCallNativeEN _, _
+    | TPtrOffsetEN, _
+    | TPtrReadEN, _
+    | TPtrWriteEN, _
+    | TFunPtrInvokeEN, _
+    | TNativeExprEN _, _
+    | TNativeStmtEN _, _
+    | TNativeDeclEN _, _ -> unreachable ()
+
+  | TRecordExpr _
+  | TMatchExpr _
+  | TBlockExpr _ ->
+    // Forward to check.
+    let targetTy, ctx = freshMetaTyForExpr expr ctx
+    let expr, ctx = checkExpr ctx expr targetTy
+    expr, targetTy, ctx
 
 // -----------------------------------------------
 // Statement
 // -----------------------------------------------
 
 let private inferExprStmt ctx expr =
-  let expr, ty, ctx = inferExpr ctx None expr
-
-  let ctx = unifyTy ctx (exprToLoc expr) ty tyUnit
+  let expr, ctx = checkExpr ctx expr tyUnit
   TExprStmt expr, ctx
 
 let private inferLetValStmt ctx pat init loc =
+  let ascriptionTyOpt, ctx =
+    match patToAscriptionTy pat with
+    | Some ty ->
+      let ty, ctx = resolveAscriptionTy ctx ty
+      Some ty, ctx
+
+    | None -> None, ctx
+
   let init, initTy, ctx =
-    let expectOpt = patToAscriptionTy pat
-    inferExpr ctx expectOpt init
+    match ascriptionTyOpt with
+    | Some ascriptionTy ->
+      let expr, ctx = checkExpr ctx init ascriptionTy
+      expr, ascriptionTy, ctx
 
-  let pat, patTy, ctx = inferIrrefutablePat ctx pat
+    | None -> inferExpr ctx init
 
-  let ctx = unifyTy ctx loc initTy patTy
-
+  let pat, _, ctx = inferIrrefutablePat ctx pat (Some initTy)
   TLetValStmt(pat, init, loc), ctx
 
 let private inferLetFunStmt ctx mutuallyRec callee vis argPats body loc =
+  let isMainFun (ctx: TyCtx) funSerial =
+    match ctx.MainFunOpt with
+    | Some mainFun -> funSerialCompare mainFun funSerial = 0
+    | _ -> false
+
   // Special treatment for main function.
   let mainFunTyOpt, ctx =
-    if ctx |> isMainFun callee then
+    if isMainFun ctx callee then
       // arguments must be syntactically `_`.
       let ctx =
         match argPats with
@@ -2071,7 +2097,7 @@ let private inferLetFunStmt ctx mutuallyRec callee vis argPats body loc =
     | [] -> [], funTy, ctx
 
     | argPat :: argPats ->
-      let argPat, argTy, ctx = inferIrrefutablePat ctx argPat
+      let argPat, argTy, ctx = inferIrrefutablePat ctx argPat None
       let argPats, funTy, ctx = inferArgs ctx funTy argPats
       argPat :: argPats, tyFun argTy funTy, ctx
 
@@ -2085,25 +2111,22 @@ let private inferLetFunStmt ctx mutuallyRec callee vis argPats body loc =
   let provisionalResultTy, ctx = ctx |> freshMetaTyForExpr body
 
   let argPats, funTy, ctx =
-    let ctx = argPats |> collectVarsInPats ctx
+    let ctx = argPats |> initializeParams ctx
     inferArgs ctx provisionalResultTy argPats
 
   let ctx = unifyTy ctx loc calleeTy funTy
 
   let body, bodyTy, ctx =
-    let body, bodyTy, ctx = inferExpr ctx None body
+    let body, ctx = checkExpr ctx body provisionalResultTy
 
-    match substTy ctx bodyTy with
+    match substTy ctx provisionalResultTy with
     | Ty(NeverTk, _) -> TNodeExpr(TCatchNeverEN, [ body ], tyNever, loc), tyNever, ctx
     | bodyTy -> body, bodyTy, ctx
 
   let ctx =
-    unifyTy ctx loc bodyTy provisionalResultTy
-
-  let ctx =
     match mainFunTyOpt, bodyTy with
-    | Some _, Ty(NeverTk, _) -> unifyTy ctx loc (tyFun tyUnit tyNever) calleeTy
-    | Some mainFunTy, _ -> unifyTy ctx loc mainFunTy calleeTy
+    | Some _, Ty(NeverTk, _) -> unifyTy ctx loc calleeTy (tyFun tyUnit tyNever)
+    | Some mainFunTy, _ -> unifyTy ctx loc calleeTy mainFunTy
     | _ -> ctx
 
   let ctx =
@@ -2111,7 +2134,20 @@ let private inferLetFunStmt ctx mutuallyRec callee vis argPats body loc =
       let ctx = attemptResolveTraitBounds ctx
       generalizeFun ctx callee
     else
-      finishLocalFun ctx callee
+      let funSerial = callee
+      let funDef = ctx.Funs |> mapFind funSerial
+
+      let funTy =
+        let (TyScheme (_, funTy)) = funDef.Ty
+        assert (isNoTy funTy |> not)
+        funTy
+
+      let funTy = substTy ctx funTy
+
+      { ctx with
+          Funs =
+            ctx.Funs
+            |> TMap.add funSerial { funDef with Ty = TyScheme([], funTy) } }
 
   let ctx =
     match mutuallyRec with
@@ -2122,23 +2158,10 @@ let private inferLetFunStmt ctx mutuallyRec callee vis argPats body loc =
 
   TLetFunStmt(callee, NotRec, vis, argPats, body, loc), ctx
 
-let private inferExpr (ctx: TyCtx) (expectOpt: Ty option) (expr: TExpr) : TExpr * Ty * TyCtx =
-  match expr with
-  | TLitExpr (lit, _) -> inferLitExpr ctx expr lit
-  | TVarExpr (serial, _, loc) -> inferVarExpr ctx serial loc
-  | TFunExpr (serial, _, loc) -> inferFunExpr ctx serial loc
-  | TVariantExpr (serial, _, loc) -> inferVariantExpr ctx serial loc
-  | TPrimExpr (prim, _, loc) -> inferPrimExpr ctx prim loc
-  | TRecordExpr (baseOpt, fields, _, loc) -> inferRecordExpr ctx expectOpt baseOpt fields loc
-  | TMatchExpr (cond, arms, _, loc) -> inferMatchExpr ctx expectOpt expr cond arms loc
-  | TNavExpr (receiver, field, _, loc) -> inferNavExpr ctx receiver field loc
-  | TNodeExpr _ -> inferNodeExpr ctx expr
-  | TBlockExpr (stmts, last) -> inferBlockExpr ctx expectOpt stmts last
-
 let private inferBlockStmt (ctx: TyCtx) mutuallyRec stmts : TStmt * TyCtx =
   let parentCtx = ctx
 
-  let ctx = collectVarsAndFuns ctx stmts
+  let ctx = initializeNonlocalVarsAndFuns ctx stmts
 
   let stmts, ctx =
     stmts
@@ -2189,7 +2212,7 @@ let private inferBlockStmt (ctx: TyCtx) mutuallyRec stmts : TStmt * TyCtx =
                  |> List.fold
                       (fun (ctx: TyCtx) (useSiteTy, loc) ->
                         let funTy, _, ctx = instantiateTyScheme ctx funTyScheme loc
-                        let newCtx = unifyTy ctx loc funTy useSiteTy
+                        let newCtx = unifyTy ctx loc useSiteTy funTy
                         { ctx with Logs = newCtx.Logs })
                       ctx
 
@@ -2254,21 +2277,7 @@ module private RecursiveDeclDecomposition =
   /// Enumerates all variables defined in a pattern
   /// to compute varLevelMap.
   let private collectVars (level: int) (varLevelMap: TreeMap<VarSerial, int>) pat : TreeMap<VarSerial, int> =
-    let onVar varMap varSerial = TMap.add varSerial level varMap
-
-    match pat with
-    | TLitPat _
-    | TDiscardPat _
-    | TVariantPat _ -> varLevelMap
-
-    | TVarPat (_, varSerial, _, _) -> onVar varLevelMap varSerial
-
-    | TAsPat(argPat, varSerial, _) ->
-      let varMap = onVar varLevelMap varSerial
-      collectVars level varMap argPat
-
-    | TNodePat(_, argPats, _, _) -> argPats |> List.fold (collectVars level) varLevelMap
-    | TOrPat(lPat, _, _) -> collectVars level varLevelMap lPat
+    patFoldVars (fun varMap (varSerial, _) -> TMap.add varSerial level varMap) varLevelMap pat
 
   /// Finds occurrences of variables and functions
   /// to unify levels.
@@ -2435,7 +2444,7 @@ let private synonymCycleCheck (tyCtx: TyCtx) =
   let ctx: SynonymCycleCtx =
     { ExpandMetaOrSynonymTy =
         fun tySerial ->
-          match findTy tySerial tyCtx with
+          match tyCtx.Tys |> mapFind tySerial with
           | SynonymTyDef (_, _, bodyTy, _) -> Some bodyTy
           | _ -> None
 
@@ -2456,7 +2465,7 @@ let private synonymCycleCheck (tyCtx: TyCtx) =
          (fun (tys, logs) tySerial state ->
            match state with
            | State.Cyclic ->
-             match findTy tySerial tyCtx with
+             match tyCtx.Tys |> mapFind tySerial with
              | SynonymTyDef (ident, tyArgs, _, loc) ->
                // Remove body of cyclic synonym to prevent the synonym expansion
                // from running into stack overflow.
@@ -2645,9 +2654,6 @@ module private Rms =
       TBlockStmt (isRec, stmts), ctx
 
   let rmsModule (ctx: TyCtx) (m: TModule) : TModule * TyCtx =
-    // (For debug): Check type scoping.
-    // assert (soundnessCheck ctx [ { m with Stmts = stmts } ])
-
     let rmsCtx = newRmsCtx m.Vars ctx
     let stmts, rmsCtx = List.mapFold rmsStmt rmsCtx m.Stmts
 
@@ -2701,164 +2707,6 @@ let private expandAllSynonyms (ctx: TyCtx) : TyCtx =
       Tys = tys }
 
 // -----------------------------------------------
-// Soundness Check
-// -----------------------------------------------
-
-// Ensure all meta types and universal types are bounded.
-// (Just emit trace messages if broken because current implementation actually break it.)
-
-module private SoundnessCheck =
-  // FIXME: type check fails if use 'S in the ascription
-  let private patFold1 (onTy: _ -> Ty -> _) (state: _) (pat: TPat) : _ =
-    let rec patRec state pat =
-      match pat with
-      | TLitPat _ -> state
-
-      | TDiscardPat (ty, _) -> onTy state ty
-      | TVarPat (_, _, ty, _) -> onTy state ty
-      | TVariantPat (_, ty, _) -> onTy state ty
-
-      | TNodePat (_, args, ty, _) ->
-        let state = onTy state ty
-        args |> List.fold patRec state
-
-      | TAsPat (argPat, _, _) -> patRec state argPat
-
-      | TOrPat (lPat, rPat, _) ->
-        let state = patRec state lPat
-        patRec state rPat
-
-    patRec state pat
-
-  // FIXME: type check fails if use 'S in the ascription
-  let private exprFold1 (onTy: _ -> Ty -> _) (state: _) (expr: TExpr) : _ =
-    let onPat state pat = patFold1 onTy state pat
-    let onStmt state stmt = stmtFold1 onTy state stmt
-
-    let rec exprRec state expr =
-      match expr with
-      | TLitExpr _ -> state
-
-      | TVarExpr (_, ty, _) -> onTy state ty
-      | TFunExpr(_, ty, _) -> onTy state ty
-      | TVariantExpr (_, ty, _) -> onTy state ty
-      | TPrimExpr (_, ty, _) -> onTy state ty
-
-      | TRecordExpr(_, fields, ty, _) ->
-        let state = fields |> List.fold (fun state (_, init, _) -> exprRec state init) state
-        onTy state ty
-
-      | TMatchExpr(cond, arms, ty, _) ->
-        let state = exprRec state cond
-
-        let state =
-          arms |> List.fold
-            (fun state (pat, guard, arm) ->
-              let state = onPat state pat
-              let state = exprRec state guard
-              exprRec state arm)
-            state
-
-        onTy state ty
-
-      | TNavExpr(lExpr, _, ty, _) ->
-        let state = exprRec state lExpr
-        onTy state ty
-
-      | TNodeExpr(_, args, ty, _) ->
-        let state = List.fold exprRec state args
-        onTy state ty
-
-      | TBlockExpr(stmts, last) ->
-        let state = List.fold onStmt state stmts
-        exprRec state last
-
-    exprRec state expr
-
-  let private stmtFold1 (onTy: 'S -> Ty -> 'S) (state: 'S) (stmt: TStmt) : 'S =
-    let onExpr state expr = exprFold1 onTy state expr
-    let onStmt state stmt = stmtFold1 onTy state stmt
-
-    match stmt with
-    | TExprStmt expr -> onExpr state expr
-    | TLetValStmt (_, init, _) -> onExpr state init
-    | TLetFunStmt(_, _, _, _, body, _) -> onExpr state body
-    | TBlockStmt(_, stmts) -> List.fold onStmt state stmts
-
-  [<RequireQualifiedAccess; NoEquality; NoComparison>]
-  type private ScCtx =
-    { Funs: TreeMap<FunSerial, FunDef>
-      MetaTys: TreeMap<TySerial, Ty>
-
-      /// Meta types and universal types that are defined in the current scope.
-      DefinedTys: TreeSet<TySerial> }
-
-  let private extendScope (ctx: ScCtx) (stmt: TStmt) : ScCtx =
-    match stmt with
-    | TExprStmt _
-    | TLetValStmt _
-    | TBlockStmt _ -> ctx
-
-    | TLetFunStmt(funSerial, _, _, _, _, _) ->
-      let funDef = ctx.Funs |> mapFind funSerial
-      let (TyScheme(tyVars, _)) = funDef.Ty
-
-      if List.isEmpty tyVars |> not then
-        // #map_merge
-        __trace ("params " + (List.map string tyVars |> S.concat ", "))
-        { ctx with DefinedTys = tyVars |> List.fold (fun set tyVar -> TSet.add tyVar set) ctx.DefinedTys }
-      else
-        ctx
-
-  let private scTy (ctx: ScCtx) ty =
-    let (Ty(tk, tyArgs)) =
-      let expandMeta tySerial = ctx.MetaTys |> TMap.tryFind tySerial
-      tySubst expandMeta ty
-
-    let check tySerial nameOpt loc =
-      if ctx.DefinedTys |> TSet.contains tySerial |> not then
-        let name =
-          match nameOpt with
-          | Some it -> it
-          | None -> "'" + string tySerial
-
-        __trace ("unbound type: " + name + " " + Loc.toString loc)
-
-      ctx
-
-    match tk with
-    | MetaTk (tySerial, loc) -> check tySerial None loc
-    | UnivTk (tySerial, name, loc) -> check tySerial (Some name) loc
-    | _ -> List.fold scTy ctx tyArgs
-
-  let private scStmts (ctx: ScCtx) stmts : ScCtx =
-    stmts |> List.fold
-      (fun ctx stmt ->
-        match stmt with
-        | TBlockStmt (_, stmts) -> scStmts ctx stmts
-        | _ ->
-          let ctx = extendScope ctx stmt
-          stmtFold1 scTy ctx stmt)
-      ctx
-
-  let check (ctx: TyCtx) (modules: TProgram) : bool =
-    let emptyCtx () : ScCtx =
-      { Funs = ctx.Funs
-        MetaTys = ctx.MetaTys
-        DefinedTys = TMap.empty compare }
-
-    modules |> List.fold
-      (fun ctx (m: TModule) ->
-        __trace ("module " + Loc.toString (Loc.ofDocPos m.DocId (0, 0)))
-        scStmts ctx m.Stmts)
-      (emptyCtx ())
-    |> ignore
-
-    true
-
-let private soundnessCheck ctx modules = SoundnessCheck.check ctx modules
-
-// -----------------------------------------------
 // Interface
 // -----------------------------------------------
 
@@ -2886,7 +2734,7 @@ let private inferModule (ctx: TyCtx) (m: TModule) : TModule * TyCtx =
       m.Stmts
       |> RecursiveDeclDecomposition.decompose ctx
 
-    let ctx = collectVarsAndFuns ctx stmts
+    let ctx = initializeNonlocalVarsAndFuns ctx stmts
 
     stmts
     |> List.mapFold (fun ctx stmt -> inferStmt ctx NotRec stmt) ctx
@@ -2930,9 +2778,6 @@ let infer (modules: TProgram, nameRes: NameResResult) : TProgram * TirCtx =
   let modules, ctx = modules |> List.mapFold inferModule ctx
   let ctx = expandAllSynonyms ctx
 
-  // (For debug): Check type scoping.
-  // assert (SoundnessCheck.check ctx modules)
-
   let tirCtx = toTirCtx ctx
 
   // Enforce.
@@ -2940,7 +2785,7 @@ let infer (modules: TProgram, nameRes: NameResResult) : TProgram * TirCtx =
           |> TMap.toList
           |> List.forall (fun (_, varDef: VarDef) ->
             match varDef.IsStatic with
-            | IsStatic -> tyIsMonomorphic varDef.Ty
+            | IsStatic -> tyContainsMeta varDef.Ty |> not
             | NotStatic -> false))
 
   modules, tirCtx

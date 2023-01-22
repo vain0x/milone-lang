@@ -289,7 +289,8 @@ let private sToResult mainFunOpt (state: NameResState) : NameResResult =
 /// Output of NameRes pass.
 [<RequireQualifiedAccess; NoEquality; NoComparison>]
 type NameResResult =
-  { Serial: Serial
+  { /// Last serial number.
+    Serial: Serial
     StaticVars: TreeMap<VarSerial, VarDef>
     Funs: TreeMap<FunSerial, FunDef>
     Variants: TreeMap<VariantSerial, VariantDef>
@@ -303,7 +304,8 @@ type NameResResult =
 
 [<RequireQualifiedAccess; NoEquality; NoComparison>]
 type private ScopeCtx =
-  { Serial: Serial
+  { /// Last serial number.
+    Serial: Serial
 
     // Partial definitions created by collect declaration.
     DeclaredVars: TreeMap<PosId, VarSerial>
@@ -1680,7 +1682,30 @@ let private nameResExpr (ctx: ScopeCtx) (expr: NExpr) : TExpr * ScopeCtx =
              (ident, init, loc), ctx)
            ctx
 
-    TRecordExpr(baseOpt, fields, noTy, loc), ctx
+    match baseOpt with
+    | None
+    | Some(TVarExpr _) -> TRecordExpr(baseOpt, fields, noTy, loc), ctx
+
+    | Some baseExpr ->
+      // #base_expression_simplification
+      // { E with ... } ==> let b = E in { b with ... }
+
+      let varSerial, ctx = freshVarSerial ctx
+
+      let varDef: VarDef =
+        { Name = "base"
+          IsStatic = NotStatic
+          Linkage = InternalLinkage
+          Ty = noTy
+          Loc = exprToLoc baseExpr }
+
+      let ctx = addVarDef ctx varSerial varDef
+
+      TBlockExpr(
+        [ TLetValStmt(TVarPat(PrivateVis, varSerial, noTy, loc), baseExpr, loc) ],
+        TRecordExpr(Some(TVarExpr(varSerial, noTy, loc)), fields, noTy, loc)
+      ),
+      ctx
 
   | NExpr.Tuple (items, loc) ->
     let items, ctx = items |> List.mapFold nameResExpr ctx

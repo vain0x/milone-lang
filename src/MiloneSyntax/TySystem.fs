@@ -107,21 +107,37 @@ let tkDisplay getTyName tk =
 // Traits (HIR)
 // -----------------------------------------------
 
-let traitMapTys f it =
-  match it with
-  | AddTrait ty -> AddTrait(f ty)
-  | EqualTrait ty -> EqualTrait(f ty)
-  | CompareTrait ty -> CompareTrait(f ty)
-  | IndexTrait (lTy, rTy, resultTy) -> IndexTrait(f lTy, f rTy, f resultTy)
-  | IsIntTrait ty -> IsIntTrait(f ty)
-  | IsNumberTrait ty -> IsNumberTrait(f ty)
-  | ToIntTrait (flavor, ty) -> ToIntTrait(flavor, f ty)
-  | ToFloatTrait ty -> ToFloatTrait(f ty)
-  | ToCharTrait ty -> ToCharTrait(f ty)
-  | ToStringTrait ty -> ToStringTrait(f ty)
-  | PtrTrait ty -> PtrTrait(f ty)
-  | PtrSizeTrait ty -> PtrSizeTrait(f ty)
-  | PtrCastTrait (lTy, rTy) -> PtrCastTrait(f lTy, f rTy)
+module Trait =
+  let private newUnary unary ty = Trait.Unary(unary, ty)
+
+  let newAdd ty = newUnary UnaryTrait.Add ty
+  let newEqual ty = newUnary UnaryTrait.Equal ty
+  let newCompare ty = newUnary UnaryTrait.Compare ty
+  let newIntLike ty = newUnary UnaryTrait.IntLike ty
+  let newNumberLike ty = newUnary UnaryTrait.NumberLike ty
+  let newToInt flavor ty = newUnary (UnaryTrait.ToInt flavor) ty
+  let newToFloat ty = newUnary UnaryTrait.ToFloat ty
+  let newToChar ty = newUnary UnaryTrait.ToChar ty
+  let newToString ty = newUnary UnaryTrait.ToString ty
+  let newPtrLike ty = newUnary UnaryTrait.PtrLike ty
+  let newPtrSize ty = newUnary UnaryTrait.PtrSize ty
+
+  let newIndex lTy rTy tTy = Trait.Index(lTy, rTy, tTy)
+  let newPtrCast srcTy destTy = Trait.PtrCast(srcTy, destTy)
+
+  /// Converts a trait by applying `onTy` on each types inside it.
+  let map (onTy: Ty -> Ty) (t: Trait) =
+    match t with
+    | Trait.Unary(unary, ty) -> Trait.Unary(unary, onTy ty)
+    | Trait.Index(lTy, rTy, tTy) -> Trait.Index(onTy lTy, onTy rTy, onTy tTy)
+    | Trait.PtrCast(srcTy, destTy) -> Trait.PtrCast(onTy srcTy, onTy destTy)
+
+  /// Creates a list of types that appear in the trait.
+  let collectTys (t: Trait) =
+    match t with
+    | Trait.Unary(_, ty) -> [ ty ]
+    | Trait.Index(lTy, rTy, tTy) -> [ lTy; rTy; tTy ]
+    | Trait.PtrCast(srcTy, destTy) -> [ srcTy; destTy ]
 
 // -----------------------------------------------
 // Types (HIR/MIR)
@@ -138,19 +154,6 @@ let tyCompare l r =
       listCompare tyCompare lTyArgs rTyArgs
 
 let tyEqual l r = tyCompare l r = 0
-
-/// Gets if the type is monomorphic.
-/// Assume all bound type variables are substituted.
-let tyIsMonomorphic ty : bool =
-  let rec go tys =
-    match tys with
-    | [] -> true
-
-    | Ty (MetaTk _, _) :: _ -> false
-
-    | Ty (_, tys1) :: tys2 -> go tys1 && go tys2
-
-  go [ ty ]
 
 /// Gets if the specified type variable doesn't appear in a type.
 let private tyIsFreeIn ty tySerial : bool =
@@ -193,28 +196,84 @@ let tyToArgList ty =
 
   go 0 [] ty
 
-/// Substitutes meta types in a type as possible.
-let tySubst (substMeta: TySerial -> Ty option) ty =
-  let rec go ty =
+/// Checks if a type syntactically contains any meta or universal type.
+let private tyContainsMetaOrUniv ty =
+  match ty with
+  | Ty(MetaTk _, _)
+  | Ty(UnivTk _, _) -> true
+
+  | Ty(_, tyArgs) ->
+    let rec argLoop args =
+      match args with
+      | a :: args -> tyContainsMetaOrUniv a || argLoop args
+      | _ -> false
+
+    argLoop tyArgs
+
+/// Converts a type by replacing meta types and universal types as possible.
+let tyAssignByMap (assignmentMap: TreeMap<TySerial, Ty>) ty =
+  let rec assignRec ty =
     match ty with
     | Ty (MetaTk (tySerial, _), _) ->
-      match substMeta tySerial with
-      | Some ty -> go ty
+      match assignmentMap |> TMap.tryFind tySerial with
+      | Some ty -> assignRec ty
       | None -> ty
 
     | Ty (UnivTk (tySerial, _, _), _) ->
-      match substMeta tySerial with
-      | Some ty -> go ty
+      match assignmentMap |> TMap.tryFind tySerial with
+      | Some ty -> assignRec ty
       | None -> ty
 
-    | Ty (_, []) -> ty
+    | Ty (tk, tyArgs) -> Ty(tk, List.map assignRec tyArgs)
 
-    | Ty (tk, tys) -> Ty(tk, List.map go tys)
+  if tyContainsMetaOrUniv ty then
+    assignRec ty
+  else
+    ty
 
-  go ty
+/// Converts a type by replacing meta types and universal types as possible.
+let tyAssignByList (assignment: (TySerial * Ty) list) ty =
+  if tyContainsMetaOrUniv ty then
+    tyAssignByMap (TMap.ofList compare assignment) ty
+  else
+    ty
 
-let tyAssign assignment ty =
-  tySubst (fun tySerial -> assocTryFind compare tySerial assignment) ty
+/// Checks if a type structurally contains any meta type.
+/// (perf: This runs frequently and should be efficient.)
+let rec tyContainsMeta ty =
+  match ty with
+  | Ty(MetaTk _, _) -> true
+
+  | Ty(_, tyArgs) ->
+    let rec argLoop args =
+      match args with
+      | a :: args -> tyContainsMeta a || argLoop args
+      | _ -> false
+
+    argLoop tyArgs
+
+/// Substitutes meta types in a type as possible.
+/// (perf: This runs frequently and should be efficient.)
+let tySubst (substMeta: TySerial -> Ty option) ty =
+  let rec substRec ty =
+    match ty with
+    | Ty (MetaTk (tySerial, _), _) ->
+      match substMeta tySerial with
+      | Some ty -> substRec ty
+      | None -> ty
+
+    | Ty (tk, tyArgs) ->
+      let rec substMap acc tys =
+        match tys with
+        | [] -> List.rev acc
+        | t :: tys -> substMap (substRec t :: acc) tys
+
+      Ty(tk, substMap [] tyArgs)
+
+  if tyContainsMeta ty then
+    substRec ty
+  else
+    ty
 
 /// Expands a synonym type using its definition and type args.
 let tyExpandSynonym useTyArgs defTySerials bodyTy : Ty =
@@ -226,7 +285,7 @@ let tyExpandSynonym useTyArgs defTySerials bodyTy : Ty =
     | assignment, [], [] -> assignment
     | _ -> unreachable ()
 
-  tyAssign assignment bodyTy
+  tyAssignByList assignment bodyTy
 
 /// Expands all synonyms inside of a type.
 let tyExpandSynonyms (expand: TySerial -> TyDef option) ty : Ty =
@@ -337,7 +396,7 @@ let doInstantiateTyScheme
            serial, assignment)
          (serial, [])
 
-  let ty = tyAssign assignment ty
+  let ty = tyAssignByList assignment ty
   serial, ty, assignment
 
 // -----------------------------------------------
@@ -348,8 +407,8 @@ type UnifyResult =
   | UnifyOk
   | UnifyOkWithStack of (Ty * Ty) list
   | UnifyError of Log * Loc
-  | UnifyExpandMeta of metaSerial: TySerial * other: Ty
-  | UnifyExpandSynonym of synonymSerial: TySerial * synonymArgs: Ty list * other: Ty
+  | UnifyExpandMeta of metaSerial: TySerial * other: Ty * isLeft: bool
+  | UnifyExpandSynonym of synonymSerial: TySerial * synonymArgs: Ty list * other: Ty * isLeft: bool
 
 let unifyNext (lTy: Ty) (rTy: Ty) (loc: Loc) : UnifyResult =
   let mismatchError () =
@@ -361,8 +420,8 @@ let unifyNext (lTy: Ty) (rTy: Ty) (loc: Loc) : UnifyResult =
     match lTy, rTy with
     | Ty (MetaTk (l, _), _), Ty (MetaTk (r, _), _) when l = r -> UnifyOk
 
-    | Ty (MetaTk (lSerial, _), _), _ -> UnifyExpandMeta(lSerial, rTy)
-    | _, Ty (MetaTk (rSerial, _), _) -> UnifyExpandMeta(rSerial, lTy)
+    | Ty (MetaTk (lSerial, _), _), _ -> UnifyExpandMeta(lSerial, rTy, true)
+    | _, Ty (MetaTk (rSerial, _), _) -> UnifyExpandMeta(rSerial, lTy, false)
 
     | _ -> unreachable ()
 
@@ -378,8 +437,8 @@ let unifyNext (lTy: Ty) (rTy: Ty) (loc: Loc) : UnifyResult =
   | Ty (SynonymTk _, _), _
   | _, Ty (SynonymTk _, _) ->
     match lTy, rTy with
-    | Ty (SynonymTk tySerial, tyArgs), _ -> UnifyExpandSynonym(tySerial, tyArgs, rTy)
-    | _, Ty (SynonymTk tySerial, tyArgs) -> UnifyExpandSynonym(tySerial, tyArgs, lTy)
+    | Ty (SynonymTk tySerial, tyArgs), _ -> UnifyExpandSynonym(tySerial, tyArgs, rTy, true)
+    | _, Ty (SynonymTk tySerial, tyArgs) -> UnifyExpandSynonym(tySerial, tyArgs, lTy, false)
     | _ -> unreachable ()
 
   | Ty (ErrorTk _, _), _

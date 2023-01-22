@@ -261,7 +261,8 @@ let private rewriteStmt (rx: RewriteRx) stmt : HStmt option =
 
 /// State of monomorphization.
 type private MonoCtx =
-  { Serial: Serial
+  { /// Last serial number.
+    Serial: Serial
     NewFuns: (FunSerial * FunDef * FunBody * FunSerial * Loc) list
     InstanceMap: TreeMap<MonoUse, FunSerial>
     WorkList: MonoUse list }

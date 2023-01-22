@@ -163,7 +163,8 @@ type private DRx =
 
 [<RequireQualifiedAccess; NoEquality; NoComparison>]
 type private DCtx =
-  { Serial: Serial
+  { /// Last serial number.
+    Serial: Serial
     NewVars: (VarSerial * VarDef) list
     NewFuns: (FunSerial * FunDef) list
     NewLetFuns: (Ty * HStmt) list

@@ -90,7 +90,9 @@ let private monoTyCompare (l: MonoTy) (r: MonoTy) : int =
 
 [<RequireQualifiedAccess; NoEquality; NoComparison>]
 type private MtCtx =
-  { Serial: Serial
+  { /// Last serial number.
+    Serial: Serial
+
     GetUnionDef: TySerial -> TySerial list * (string * VariantSerial * bool * Ty * Loc) list * Loc
     GetRecordDef: TySerial -> TySerial list * (string * Ty * Loc) list * Loc
     Map: TreeMap<Tk * MonoTy list, MonoTy * GeneratedTy>

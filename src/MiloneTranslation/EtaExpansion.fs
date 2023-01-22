@@ -160,7 +160,8 @@ let private primToArity ty prim =
 
 [<RequireQualifiedAccess; NoEquality; NoComparison>]
 type private EtaCtx =
-  { Serial: Serial
+  { /// Last serial number.
+    Serial: Serial
     StaticVars: VarMap
     Vars: VarMap
     Funs: TreeMap<FunSerial, FunDef>

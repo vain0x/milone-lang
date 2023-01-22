@@ -535,7 +535,7 @@ let private ocExpr (rx: Rx) (applied: bool) (ctx: OwnershipCheckCtx) expr : Owne
           // __trace (__dump (log, loc))
           None
 
-        | UnifyExpandMeta (tySerial, otherTy) ->
+        | UnifyExpandMeta (tySerial, otherTy, _) ->
           match acc |> assocTryFind compare tySerial with
           | Some ty -> go acc ty otherTy
 

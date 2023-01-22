@@ -137,6 +137,21 @@ let patMap (f: Ty -> Ty) (pat: TPat) : TPat =
 
   go pat
 
+/// Folds all variables in a pattern. This skips right-hand side of OR patterns.
+let patFoldVars (folder: 'S -> VarSerial * Loc -> 'S) (state: 'S) (pat: TPat) : 'S =
+  let rec patRec state pat =
+    match pat with
+    | TLitPat _
+    | TDiscardPat _
+    | TVariantPat _ -> state
+
+    | TVarPat (_, varSerial, _, loc) -> folder state (varSerial, loc)
+    | TAsPat(argPat, varSerial, loc) -> folder (patRec state argPat) (varSerial, loc)
+    | TNodePat(_, argPats, _, _) -> List.fold patRec state argPats
+    | TOrPat(lPat, _, _) -> patRec state lPat
+
+  patRec state pat
+
 /// Converts a pattern in disjunctive normal form.
 /// E.g. `A, [B | C]` → `(A | [B]), (A | [C])`
 let patNormalize pat =
@@ -374,50 +389,38 @@ let nameResLogToString log =
   | UnimplOrPatBindingError -> "OR pattern including some bindings is unimplemented."
   | UnimplTyArgListError -> "Type argument list is unimplemented."
 
-let private traitBoundErrorToString tyDisplay it =
-  match it with
-  | AddTrait ty ->
-    "Operator (+) is not supported for type: "
-    + tyDisplay ty
+let private traitBoundErrorToString tyDisplay (t: Trait) =
+  match t with
+  | Trait.Unary(unary, ty) ->
+    let message =
+      match unary with
+      | UnaryTrait.Add -> "Operator (+) is not supported for the type"
+      | UnaryTrait.Equal -> "Operator (=) is not supported for the type"
+      | UnaryTrait.Compare -> "The compare function is not supported for the type"
+      | UnaryTrait.IntLike -> "Expected int or some integer type but was"
+      | UnaryTrait.NumberLike -> "Expected int, float or some number type but was"
+      | UnaryTrait.ToInt flavor -> ("Cannot convert to " + fsharpIntegerTyName flavor + " from")
+      | UnaryTrait.ToFloat -> "Cannot convert to float type from"
+      | UnaryTrait.ToChar -> "Cannot convert to char type from"
+      | UnaryTrait.ToString -> "Cannot convert to string type from"
+      | UnaryTrait.PtrLike -> "Expected a pointer type but was"
+      | UnaryTrait.PtrSize -> "Expected a pointer-sized type but was"
 
-  | EqualTrait ty ->
-    "Equality is not defined for type: "
-    + tyDisplay ty
+    message + ": " + tyDisplay ty
 
-  | CompareTrait ty ->
-    "Comparison is not defined for type: "
-    + tyDisplay ty
-
-  | IndexTrait (lTy, rTy, _) ->
-    "Index operation type error: lhs: '"
+  | Trait.Index(lTy, rTy, _) ->
+    "Index expression (say, l.[r]) is not supported for the combination of types (lhs: "
     + tyDisplay lTy
-    + "', rhs: "
+    + ", rhs: "
     + tyDisplay rTy
-    + "."
+    + ".)"
 
-  | IsIntTrait ty ->
-    "Expected int or some integer type but was: "
-    + tyDisplay ty
-
-  | IsNumberTrait ty ->
-    "Expected int or float type but was: "
-    + tyDisplay ty
-
-  | ToIntTrait (_, ty) -> "Can't convert to integer from: " + tyDisplay ty
-  | ToFloatTrait ty -> "Can't convert to float from: " + tyDisplay ty
-  | ToCharTrait ty -> "Can't convert to char from: " + tyDisplay ty
-  | ToStringTrait ty -> "Can't convert to string from: " + tyDisplay ty
-  | PtrTrait ty -> "Expected a pointer type but was: " + tyDisplay ty
-
-  | PtrSizeTrait ty ->
-    "Expected a pointer-size type but was: "
-    + tyDisplay ty
-
-  | PtrCastTrait (lTy, rTy) ->
-    "Expected two different pointer types but: one was "
+  | Trait.PtrCast(lTy, rTy) ->
+    "Pointer cast operation is not allowed between the two types (from: "
     + tyDisplay lTy
-    + ", the other: "
+    + ", to: "
     + tyDisplay rTy
+    + ".)"
 
 let logToString tyDisplay log =
   match log with
@@ -461,11 +464,27 @@ let logToString tyDisplay log =
     + "' must have fields: "
     + fields
 
+  | Log.RecordTypeNotInferred -> "Record type is not inferred. Record type must be known at the point. Hint: Consider add a type ascription."
+
+  | Log.RecordFieldNotFound (field, ty) -> "Field " + tyDisplay ty + "." + field + " is not found here."
+
+  | Log.FieldNotFound field -> "Field " + field + " is not found here."
+
+  | Log.MissingPayloadPat -> "Variant with payload must be used in the form of: `Variant pattern`."
+
   | Log.ArityMismatch (actual, expected) ->
     "Arity mismatch: expected "
     + expected
     + ", but was "
     + actual
     + "."
+
+  | Log.UseOfDiscriminant -> "Illegal use of __discriminant. Hint: `__discriminant Variant`."
+  | Log.UseOfPrintfn -> "Illegal use of printfn. printfn must have string literal as first argument; e.g. `printfn \"%s\" s`."
+  | Log.UseOfNativeFun -> "Illegal use of __nativeFun. Hint: `__nativeFun (\"funName\", arg1, arg2, ...): ResultType`."
+  | Log.UseOfNativeExpr -> "Illegal use of __nativeExpr. Hint: `__nativeExpr \"Some C code here.\"`."
+  | Log.UseOfNativeStmt -> "Illegal use of __nativeStmt. Hint: `__nativeStmt \"Some C code here.\"`."
+  | Log.UseOfNativeDecl -> "Illegal use of __nativeDecl. Hint: `__nativeDecl \"Some C code here.\"`."
+  | Log.PrimRequireParam -> "This primitive misses some argument."
 
   | Log.Error msg -> msg
