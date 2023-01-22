@@ -1902,19 +1902,10 @@ let private inferIndexExpr ctx l r loc =
   TNodeExpr(TIndexEN, [ l; r ], tTy, loc), tTy, ctx
 
 let private inferSliceExpr ctx l r x loc =
-  let l, lTy, ctx = inferExpr ctx l
-  let r, rTy, ctx = inferExpr ctx r
-  let x, xTy, ctx = inferExpr ctx x
-
-  let ctx =
-    let actualTy = tyFun lTy (tyFun rTy (tyFun xTy xTy))
-
-    let expectedTy =
-      tyFun tyInt (tyFun tyInt (tyFun tyString tyString))
-
-    unifyTy ctx loc actualTy expectedTy
-
-  TNodeExpr(TSliceEN, [ l; r; x ], xTy, loc), xTy, ctx
+  let l, ctx = checkExpr ctx l tyInt
+  let r, ctx = checkExpr ctx r tyInt
+  let x, ctx = checkExpr ctx x tyString
+  TNodeExpr(TSliceEN, [ l; r; x ], tyString, loc), tyString, ctx
 
 let private checkTupleExpr (ctx: TyCtx) items loc targetTy =
   let arity = List.length items
