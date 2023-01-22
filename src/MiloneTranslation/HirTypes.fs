@@ -47,21 +47,25 @@ type Tk =
   | NeverTk
   | ObjTk
 
-  /// Ty args must be `[s; t]`.
+  /// Type arguments must be `[ s; t ]`.
   | FunTk
 
   | TupleTk
 
-  /// Ty args must be `[t]`.
+  /// Type arguments must be `[ t ]`.
   | ListTk
 
   // FFI types.
+  /// Type arguments must be `[ t ]`.
   | VoidPtrTk of IsMut
+  /// Type arguments must be `[ t ]`.
   | NativePtrTk of mode: RefMode
+  /// Type arguments must be `paramTys @ [ resultTy ]`.
   | FunPtrTk
   | NativeTypeTk of cCode: string
 
   // Nominal types.
+  /// Quantified meta type or universal type.
   | MetaTk of metaTy: TySerial * metaLoc: Loc
   | UnionTk of unionTy: TySerial
   | RecordTk of recordTy: TySerial

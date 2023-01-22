@@ -54,20 +54,22 @@ type Tk =
   | NeverTk
   | ObjTk
 
-  /// Ty args must be `[s; t]`.
+  /// Type arguments must be `[ s; t ]`.
   | FunTk
 
   | TupleTk
 
-  /// Ty args must be `[t]`.
+  /// Type arguments must be `[ t ]`.
   | ListTk
 
   // Special types.
-  /// Ty args must be `[t]`.
+  /// Type arguments must be `[ t ]`.
   | OwnTk
+  /// Type arguments must be `[ t ]`.
   | VoidPtrTk of voidPtrIsMut: IsMut
+  /// Type arguments must be `[ t ]`.
   | NativePtrTk of mode: RefMode
-  /// Ty args must be `paramTys :: resultTy`
+  /// Type arguments must be `paramTys @ [ resultTy ]`.
   | FunPtrTk
   | NativeTypeTk of cCode: string
 
