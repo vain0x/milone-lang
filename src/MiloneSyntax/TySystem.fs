@@ -51,11 +51,11 @@ let private tkEncode tk : int =
   | FunPtrTk -> just 14
 
   | MetaTk(tySerial, _) -> pair 20 tySerial
-  | UnivTk(tySerial, _, _) -> pair 25 tySerial // to be reordered
-  | SynonymTk tySerial -> pair 21 tySerial
+  | UnivTk(tySerial, _) -> pair 25 tySerial // to be reordered
+  | SynonymTk(tySerial, _) -> pair 21 tySerial
   | UnionTk(tySerial, _) -> pair 22 tySerial
   | RecordTk(tySerial, _) -> pair 23 tySerial
-  | OpaqueTk tySerial -> pair 24 tySerial
+  | OpaqueTk(tySerial, _) -> pair 24 tySerial
 
   | NativeTypeTk _
   | InferTk _ -> unreachable ()
@@ -74,9 +74,9 @@ let tkCompare l r : int =
 
 let tkEqual l r : bool = tkCompare l r = 0
 
-let tkDisplay getTyName tk =
+let tkDisplay tk =
   match tk with
-  | ErrorTk loc -> "{error}@" + Loc.toString loc
+  | ErrorTk _ -> "error"
   | IntTk flavor -> fsharpIntegerTyName flavor
   | FloatTk flavor -> fsharpFloatTyName flavor
   | BoolTk -> "bool"
@@ -95,12 +95,12 @@ let tkDisplay getTyName tk =
   | NativePtrTk RefMode.WriteOnly -> "OutPtr"
   | FunPtrTk -> "FunPtr"
   | NativeTypeTk _ -> "__nativeType"
-  | MetaTk(tySerial, _) -> getTyName tySerial
-  | UnivTk(_, name, _) -> name
-  | SynonymTk tySerial -> getTyName tySerial
-  | RecordTk(tySerial, _) -> getTyName tySerial
-  | OpaqueTk tySerial -> getTyName tySerial
-  | UnionTk(tySerial, _) -> getTyName tySerial
+  | MetaTk(tySerial, loc) -> debugMetaTk tySerial loc
+  | UnivTk(_, info) -> info.Name
+  | SynonymTk(_, info) -> info.Name
+  | RecordTk(_, info) -> info.Name
+  | OpaqueTk(_, info) -> info.Name
+  | UnionTk(_, info) -> info.Name
   | InferTk _ -> "_"
 
 // -----------------------------------------------
@@ -216,7 +216,7 @@ let tyAssignByMap (assignmentMap: TreeMap<TySerial, Ty>) ty =
       | Some ty -> assignRec ty
       | None -> ty
 
-    | Ty(UnivTk(tySerial, _, _), _) ->
+    | Ty(UnivTk(tySerial, _), _) ->
       match assignmentMap |> TMap.tryFind tySerial with
       | Some ty -> assignRec ty
       | None -> ty
@@ -282,11 +282,11 @@ let tyExpandSynonym useTyArgs defTySerials bodyTy : Ty =
 let tyExpandSynonyms (expand: TySerial -> TyDef option) ty : Ty =
   let rec go ty =
     match ty with
-    | Ty(SynonymTk tySerial, useTyArgs) ->
+    | Ty(SynonymTk(tySerial, _), useTyArgs) ->
       match expand tySerial with
       | Some(SynonymTyDef(_, defTySerials, bodyTy, _)) -> tyExpandSynonym useTyArgs defTySerials bodyTy |> go
 
-      | _ -> Ty(SynonymTk tySerial, useTyArgs)
+      | _ -> ty
 
     | Ty(tk, tyArgs) -> Ty(tk, tyArgs |> List.map go)
 
@@ -298,7 +298,7 @@ let tyGeneralize (canGeneralize: TySerial -> bool) (ty: Ty) : TyScheme =
     let rec go acc ty =
       match ty with
       | Ty(MetaTk(serial, _), _) -> serial :: acc
-      | Ty(UnivTk(serial, _, _), _) -> serial :: acc
+      | Ty(UnivTk(serial, _), _) -> serial :: acc
       | Ty(_, tyArgs) -> tyArgs |> List.fold go acc
 
     go [] ty |> listUnique compare
@@ -308,16 +308,13 @@ let tyGeneralize (canGeneralize: TySerial -> bool) (ty: Ty) : TyScheme =
   TyScheme(tyVars, ty)
 
 /// Converts a type to human readable string.
-let tyDisplay getTyName ty =
+let tyDisplay ty =
   let rec go (outerBp: int) ty =
     let paren (bp: int) s =
       if bp >= outerBp then s else "(" + s + ")"
 
-    let nominal tySerial args =
-      let tk =
-        match tySerial |> getTyName with
-        | Some name -> name
-        | None -> "?" + string tySerial
+    let nominal name args =
+      let tk = name
 
       match args with
       | [] -> tk
@@ -334,19 +331,15 @@ let tyDisplay getTyName ty =
 
     | Ty(ListTk, [ itemTy ]) -> paren 30 (go 30 itemTy + " list")
 
-    | Ty(MetaTk(tySerial, loc), _) ->
-      match getTyName tySerial with
-      | Some name -> "{" + name + "}@" + Loc.toString loc
-      | None -> "{?" + string tySerial + "}@" + Loc.toString loc
-
-    | Ty(UnivTk(_, name, _), _) -> name
-    | Ty(SynonymTk tySerial, args) -> nominal tySerial args
-    | Ty(UnionTk(tySerial, _), args) -> nominal tySerial args
-    | Ty(RecordTk(tySerial, _), args) -> nominal tySerial args
-    | Ty(OpaqueTk tySerial, args) -> nominal tySerial args
+    | Ty(MetaTk(tySerial, loc), _) -> debugMetaTk tySerial loc
+    | Ty(UnivTk(_, info), _) -> info.Name
+    | Ty(SynonymTk(_, info), args) -> nominal info.Name args
+    | Ty(UnionTk(_, info), args) -> nominal info.Name args
+    | Ty(RecordTk(_, info), args) -> nominal info.Name args
+    | Ty(OpaqueTk(_, info), args) -> nominal info.Name args
 
     | Ty(tk, args) ->
-      let tk = tkDisplay (fun _ -> unreachable ()) tk
+      let tk = tkDisplay tk
 
       match args with
       | [] -> tk
@@ -413,8 +406,8 @@ let unifyNext (lTy: Ty) (rTy: Ty) (loc: Loc) : UnifyResult =
   | Ty(SynonymTk _, _), _
   | _, Ty(SynonymTk _, _) ->
     match lTy, rTy with
-    | Ty(SynonymTk tySerial, tyArgs), _ -> UnifyExpandSynonym(tySerial, tyArgs, rTy, true)
-    | _, Ty(SynonymTk tySerial, tyArgs) -> UnifyExpandSynonym(tySerial, tyArgs, lTy, false)
+    | Ty(SynonymTk(tySerial, _), tyArgs), _ -> UnifyExpandSynonym(tySerial, tyArgs, rTy, true)
+    | _, Ty(SynonymTk(tySerial, _), tyArgs) -> UnifyExpandSynonym(tySerial, tyArgs, lTy, false)
     | _ -> unreachable ()
 
   | Ty(ErrorTk _, _), _

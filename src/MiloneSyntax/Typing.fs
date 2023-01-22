@@ -771,7 +771,7 @@ let private initializeFunTy (ctx: TyCtx) funSerial args body =
       // Universal types are only definite type parameters at this time.
       let rec univRec acc ty =
         match ty with
-        | Ty(UnivTk(tySerial, _, _), _) -> tySerial :: acc
+        | Ty(UnivTk(tySerial, _), _) -> tySerial :: acc
         | Ty(_, tyArgs) -> List.fold univRec acc tyArgs
 
       univRec [] stubFunTy |> listUnique compare
@@ -1067,19 +1067,24 @@ let private unifyOrAssignVarTy (ctx: TyCtx) varSerial ty loc =
     unifyTy ctx loc ty varDef.Ty
 
 // payloadTy, unionTy, variantTy
-let private instantiateVariant (ctx: TyCtx) variantSerial loc : Ty * Ty * Ty * TyCtx =
+let private instantiateVariant (ctx: TyCtx) variantSerial (loc: Loc) : Ty * Ty * Ty * TyCtx =
   let variantDef = ctx.Variants |> mapFind variantSerial
   let tySerial = variantDef.UnionTySerial
+  let unionTyDef = ctx.Tys |> mapFind tySerial
+
+  let info: NameLocPair =
+    { Name = tyDefToName unionTyDef
+      Loc = loc }
 
   let tyArgs =
-    match ctx.Tys |> mapFind tySerial with
+    match unionTyDef with
     | UnionTyDef(_, tyArgs, _, _) -> tyArgs
     | _ -> []
 
   match tyArgs with
   | [] ->
     let payloadTy = variantDef.PayloadTy
-    let unionTy = tyUnion tySerial [] loc
+    let unionTy = tyUnion tySerial [] info
 
     let variantTy =
       if variantDef.HasPayload then
@@ -1095,7 +1100,7 @@ let private instantiateVariant (ctx: TyCtx) variantSerial loc : Ty * Ty * Ty * T
     let unionTy =
       let tyArgs = tyArgs |> List.map (fun tyArg -> Ty(MetaTk(tyArg, loc), []))
 
-      tyUnion tySerial tyArgs loc
+      tyUnion tySerial tyArgs info
 
     let variantTy, assignment, ctx =
       let variantTy =
@@ -1131,7 +1136,7 @@ let private checkConsPat ctx headPat tailPat loc targetTy =
   let tailPat, ctx = checkPat ctx tailPat listTy
   TNodePat(TConsPN, [ headPat; tailPat ], listTy, loc), ctx
 
-let private inferVariantPat (ctx: TyCtx) variantSerial loc =
+let private inferVariantPat (ctx: TyCtx) variantSerial (loc: Loc) =
   let _, unionTy, _, ctx = instantiateVariant ctx variantSerial loc
 
   let ctx =
@@ -2380,7 +2385,7 @@ let private rcsTy (ctx: SynonymCycleCtx) (ty: Ty) =
     let ctx = rcsTys ctx tyArgs
 
     match tk with
-    | SynonymTk tySerial -> rcsSynonymTy ctx tySerial
+    | SynonymTk(tySerial, _) -> rcsSynonymTy ctx tySerial
     | _ -> ctx
 
 let private rcsTys ctx tys = List.fold rcsTy ctx tys

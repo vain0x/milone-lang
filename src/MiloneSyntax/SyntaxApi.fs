@@ -316,16 +316,8 @@ let private collectTypingErrors (tirCtx: TirTypes.TirCtx) : SyntaxError list opt
   if List.isEmpty logs then
     None
   else
-    let tyDisplayFn ty =
-      let getTyName tySerial =
-        tirCtx.Tys
-        |> TMap.tryFind tySerial
-        |> Option.map Tir.tyDefToName
-
-      TySystem.tyDisplay getTyName ty
-
     logs
-    |> List.map (fun (log, loc) -> Tir.logToString tyDisplayFn log, loc)
+    |> List.map (fun (log, loc) -> Tir.logToString TySystem.tyDisplay log, loc)
     |> Some
 
 let syntaxErrorsToString (errors: SyntaxError list) : string =

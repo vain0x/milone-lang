@@ -3,6 +3,7 @@
 /// Provides functions for Tir.
 module rec MiloneSyntax.Tir
 
+open Std.StdError
 open MiloneShared.SharedTypes
 open MiloneShared.TypeFloat
 open MiloneShared.TypeIntegers
@@ -49,13 +50,16 @@ let tyOutPtr itemTy =
 let tyNativeFun paramTys resultTy =
   Ty(FunPtrTk, List.append paramTys [ resultTy ])
 
-let tyUniv serial name loc = Ty(UnivTk(serial, name, loc), [])
+let tyUniv serial info = Ty(UnivTk(serial, info), [])
 let tyMeta serial loc = Ty(MetaTk(serial, loc), [])
-let tySynonym tySerial tyArgs = Ty(SynonymTk tySerial, tyArgs)
-let tyUnion tySerial tyArgs loc = Ty(UnionTk(tySerial, Some loc), tyArgs)
+let tySynonym tySerial tyArgs info = Ty(SynonymTk(tySerial, info), tyArgs)
+let tyUnion tySerial tyArgs info = Ty(UnionTk(tySerial, info), tyArgs)
+let tyRecord tySerial tyArgs info = Ty(RecordTk(tySerial, info), tyArgs)
 
-let tyRecord tySerial tyArgs loc =
-  Ty(RecordTk(tySerial, Some loc), tyArgs)
+/// Converts meta type constructor to name.
+let debugMetaTk (tySerial: TySerial) (loc: Loc) : string =
+  // __trace ("def meta#" + string tySerial + " @" + Loc.toString loc)
+  "?" + string tySerial
 
 // -----------------------------------------------
 // TyDef

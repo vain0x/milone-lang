@@ -712,6 +712,8 @@ let private resolveNavTy ctx quals last : TySymbol option * ScopeCtx =
 ///
 /// selfTyArgs: Type parameters defined by current type declaration.
 let private resolveTy ctx ty selfTyArgs : Ty * ScopeCtx =
+  let newNameLocPair ident loc : NameLocPair = { Name = ident; Loc = loc }
+
   let rec go ctx ty : Ty * ScopeCtx =
     match ty with
     | NTy.Bad loc -> tyError loc, ctx
@@ -723,7 +725,7 @@ let private resolveTy ctx ty selfTyArgs : Ty * ScopeCtx =
         | None -> resolveUnqualifiedTy ctx ident
 
       match resolved with
-      | Some (UnivTySymbol tySerial) -> tyUniv tySerial ident loc, ctx
+      | Some (UnivTySymbol tySerial) -> tyUniv tySerial (newNameLocPair ident loc), ctx
 
       | _ when isTyDeclScope ctx -> errorTy ctx (UndefinedTyError ident) loc
 
@@ -739,7 +741,7 @@ let private resolveTy ctx ty selfTyArgs : Ty * ScopeCtx =
 
           importTy ctx ident (UnivTySymbol tySerial)
 
-        tyUniv tySerial ident loc, ctx
+        tyUniv tySerial (newNameLocPair ident loc), ctx
 
     // `__nativeType<T>`
     | NTy.App ([], ("__nativeType", _), [ NTy.App ([], (code, _), [], _) ], _) -> Ty(NativeTypeTk code, []), ctx
@@ -772,7 +774,7 @@ let private resolveTy ctx ty selfTyArgs : Ty * ScopeCtx =
         if defArity <> arity then
           errorTy ctx (TyArityError(ident, arity, defArity)) loc
         else
-          tySynonym tySerial tyArgs, ctx
+          tySynonym tySerial tyArgs (newNameLocPair ident loc), ctx
 
       | Some (UnionTySymbol tySerial) ->
         // #ty_arity_check
@@ -781,7 +783,7 @@ let private resolveTy ctx ty selfTyArgs : Ty * ScopeCtx =
         if defArity <> arity then
           errorTy ctx (TyArityError(ident, arity, defArity)) loc
         else
-          tyUnion tySerial tyArgs loc, ctx
+          tyUnion tySerial tyArgs (newNameLocPair ident loc), ctx
 
       | Some (RecordTySymbol tySerial) ->
         // #ty_arity_check
@@ -790,7 +792,7 @@ let private resolveTy ctx ty selfTyArgs : Ty * ScopeCtx =
         if arity <> defArity then
           errorTy ctx (TyArityError(ident, arity, defArity)) loc
         else
-          tyRecord tySerial tyArgs loc, ctx
+          tyRecord tySerial tyArgs (newNameLocPair ident loc), ctx
 
       | Some (OpaqueTySymbol tySerial) ->
         // #ty_arity_check
@@ -799,7 +801,7 @@ let private resolveTy ctx ty selfTyArgs : Ty * ScopeCtx =
         if arity <> defArity then
           errorTy ctx (TyArityError(ident, arity, defArity)) loc
         else
-          Ty(OpaqueTk tySerial, []), ctx
+          Ty(OpaqueTk(tySerial, newNameLocPair ident loc), []), ctx
 
       | Some (PrimTkSymbol tk) ->
         let onRegular defArity =

@@ -27,6 +27,9 @@ type FunSerial = FunSerial of Serial
 [<Struct; NoComparison>]
 type VariantSerial = VariantSerial of Serial
 
+[<RequireQualifiedAccess; NoEquality; NoComparison>]
+type NameLocPair = { Name: string; Loc: Loc }
+
 /// Type constructor.
 [<NoEquality; NoComparison>]
 type Tk =
@@ -61,11 +64,11 @@ type Tk =
 
   // Nominal types.
   | MetaTk of metaTy: TySerial * metaLoc: Loc
-  | UnivTk of univTy: TySerial * name: string * univLoc: Loc
-  | SynonymTk of synonymTy: TySerial
-  | UnionTk of unionTy: TySerial * Loc option
-  | RecordTk of recordTy: TySerial * Loc option
-  | OpaqueTk of opaqueTy: TySerial
+  | UnivTk of univTy: TySerial * NameLocPair
+  | SynonymTk of synonymTy: TySerial * NameLocPair
+  | UnionTk of unionTy: TySerial * NameLocPair
+  | RecordTk of recordTy: TySerial * NameLocPair
+  | OpaqueTk of opaqueTy: TySerial * NameLocPair
 
   /// `_` in ascription.
   | InferTk of Loc
