@@ -2058,8 +2058,8 @@ type private NameResState =
     Variants: TreeMap<VariantSerial, VariantDef>
     Logs: (NameResLog * Loc) list }
 
-let private emptyState scopeCtx : NameResState =
-  { ScopeCtx = scopeCtx
+let private emptyState () : NameResState =
+  { ScopeCtx = emptyScopeCtx ()
     StaticVars = emptyVars
     Funs = TMap.empty funSerialCompare
     Variants = TMap.empty variantSerialCompare
@@ -2163,7 +2163,7 @@ let nameRes (layers: NModuleRoot list list) : TProgram * NameResResult =
   //       but it doesn't so due to sequential serial generation for now.
 
   let state =
-    let state = emptyState (emptyScopeCtx ())
+    let state = emptyState ()
 
     { state with
         ScopeCtx = addPrims state.ScopeCtx }
