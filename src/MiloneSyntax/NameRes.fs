@@ -190,115 +190,6 @@ let private scopeEmpty () : Scope =
   [], scopeChainEmpty (), scopeChainEmpty (), scopeChainEmpty ()
 
 // -----------------------------------------------
-// NameResState
-// -----------------------------------------------
-
-/// Intermediate state of NameRes pass.
-[<RequireQualifiedAccess; NoEquality; NoComparison>]
-type private NameResState =
-  { ScopeCtx: ScopeCtx
-    StaticVars: TreeMap<VarSerial, VarDef>
-    Funs: TreeMap<FunSerial, FunDef>
-    Variants: TreeMap<VariantSerial, VariantDef>
-    Logs: (NameResLog * Loc) list }
-
-let private emptyState scopeCtx : NameResState =
-  { ScopeCtx = scopeCtx
-    StaticVars = emptyVars
-    Funs = TMap.empty funSerialCompare
-    Variants = TMap.empty variantSerialCompare
-    Logs = [] }
-
-let private mapMerge first second : TreeMap<_, _> =
-  second
-  |> TMap.fold (fun map key value -> TMap.add key value map) first
-
-let private mapAddEntries (entries: ('K * 'T) list) (map: TreeMap<'K, 'T>) : TreeMap<'K, 'T> =
-  entries
-  |> List.rev
-  |> List.fold (fun map (key, value) -> TMap.add key value map) map
-
-let private mergeChain xs1 xs2 : ScopeChain<_> =
-  [ List.append xs1 xs2
-    |> List.fold mapMerge (scopeMapEmpty ()) ]
-
-/// Merges two scopes into flattened scope.
-let private scopeMerge (first: Scope) (second: Scope) : Scope =
-  let _, values1, tys1, nss1 = first
-  let _, values2, tys2, nss2 = second
-  [], mergeChain values1 values2, mergeChain tys1 tys2, mergeChain nss1 nss2
-
-let private sMerge newRootModule (state: NameResState) (ctx: ScopeCtx) : NameResState * _ =
-  let s = state.ScopeCtx
-
-  let globalVars, localVars =
-    ctx.NewVars
-    |> List.fold
-         (fun (globalVars, localVars) (varSerial, varDef: VarDef) ->
-           match TMap.tryFind varSerial ctx.NewVarMeta with
-           | Some (isStatic, linkage) ->
-             // Definition is always for non-static. Inherits meta data here.
-             let varDef =
-               { varDef with
-                   IsStatic = isStatic
-                   Linkage = linkage }
-
-             let globalVars = globalVars |> TMap.add varSerial varDef
-             globalVars, localVars
-
-           | None ->
-             let localVars = localVars |> TMap.add varSerial varDef
-             globalVars, localVars)
-         (state.StaticVars, emptyVars)
-
-  // Other fields are intermediate state.
-  { state with
-      ScopeCtx =
-        { state.ScopeCtx with
-            Serial = ctx.Serial
-            Tys = mapAddEntries ctx.NewTys s.Tys
-            RootModules = newRootModule :: s.RootModules
-
-            // These seem inefficient but not.
-            Local = scopeMerge ctx.Local s.Local
-            ValueNs = mapMerge s.ValueNs ctx.ValueNs
-            TyNs = mapMerge s.TyNs ctx.TyNs
-            NsNs = mapMerge s.NsNs ctx.NsNs }
-
-      StaticVars = globalVars
-      Funs = mapAddEntries ctx.NewFuns state.Funs
-      Variants = mapAddEntries ctx.NewVariants state.Variants
-      Logs = List.append ctx.NewLogs state.Logs },
-  localVars
-
-let private sToResult mainFunOpt (state: NameResState) : NameResResult =
-  let ctx = state.ScopeCtx
-
-  { Serial = ctx.Serial
-    StaticVars = state.StaticVars
-    Funs = state.Funs
-    Variants = state.Variants
-    Tys = ctx.Tys
-    MainFunOpt = mainFunOpt
-    Logs = state.Logs }
-
-// -----------------------------------------------
-// NameResResult
-// -----------------------------------------------
-
-/// Output of NameRes pass.
-[<RequireQualifiedAccess; NoEquality; NoComparison>]
-type NameResResult =
-  { /// Last serial number.
-    Serial: Serial
-    StaticVars: TreeMap<VarSerial, VarDef>
-    Funs: TreeMap<FunSerial, FunDef>
-    Variants: TreeMap<VariantSerial, VariantDef>
-    Tys: TreeMap<TySerial, TyDef>
-    MainFunOpt: FunSerial option
-    Logs: (NameResLog * Loc) list }
-
-// -----------------------------------------------
 // ScopeCtx
 // -----------------------------------------------
 
@@ -2205,6 +2096,115 @@ let private addPrims (ctx: ScopeCtx) =
   { ctx with
       RootModules = ("Std", stdModuleSerial) :: ctx.RootModules
       Local = [], [ topLevelValueScope ], [ topLevelTyScope ], scopeChainEmpty () }
+
+// -----------------------------------------------
+// NameResState
+// -----------------------------------------------
+
+/// Intermediate state of NameRes pass.
+[<RequireQualifiedAccess; NoEquality; NoComparison>]
+type private NameResState =
+  { ScopeCtx: ScopeCtx
+    StaticVars: TreeMap<VarSerial, VarDef>
+    Funs: TreeMap<FunSerial, FunDef>
+    Variants: TreeMap<VariantSerial, VariantDef>
+    Logs: (NameResLog * Loc) list }
+
+let private emptyState scopeCtx : NameResState =
+  { ScopeCtx = scopeCtx
+    StaticVars = emptyVars
+    Funs = TMap.empty funSerialCompare
+    Variants = TMap.empty variantSerialCompare
+    Logs = [] }
+
+let private mapMerge first second : TreeMap<_, _> =
+  second
+  |> TMap.fold (fun map key value -> TMap.add key value map) first
+
+let private mapAddEntries (entries: ('K * 'T) list) (map: TreeMap<'K, 'T>) : TreeMap<'K, 'T> =
+  entries
+  |> List.rev
+  |> List.fold (fun map (key, value) -> TMap.add key value map) map
+
+let private mergeChain xs1 xs2 : ScopeChain<_> =
+  [ List.append xs1 xs2
+    |> List.fold mapMerge (scopeMapEmpty ()) ]
+
+/// Merges two scopes into flattened scope.
+let private scopeMerge (first: Scope) (second: Scope) : Scope =
+  let _, values1, tys1, nss1 = first
+  let _, values2, tys2, nss2 = second
+  [], mergeChain values1 values2, mergeChain tys1 tys2, mergeChain nss1 nss2
+
+let private sMerge newRootModule (state: NameResState) (ctx: ScopeCtx) : NameResState * _ =
+  let s = state.ScopeCtx
+
+  let globalVars, localVars =
+    ctx.NewVars
+    |> List.fold
+         (fun (globalVars, localVars) (varSerial, varDef: VarDef) ->
+           match TMap.tryFind varSerial ctx.NewVarMeta with
+           | Some (isStatic, linkage) ->
+             // Definition is always for non-static. Inherits meta data here.
+             let varDef =
+               { varDef with
+                   IsStatic = isStatic
+                   Linkage = linkage }
+
+             let globalVars = globalVars |> TMap.add varSerial varDef
+             globalVars, localVars
+
+           | None ->
+             let localVars = localVars |> TMap.add varSerial varDef
+             globalVars, localVars)
+         (state.StaticVars, emptyVars)
+
+  // Other fields are intermediate state.
+  { state with
+      ScopeCtx =
+        { state.ScopeCtx with
+            Serial = ctx.Serial
+            Tys = mapAddEntries ctx.NewTys s.Tys
+            RootModules = newRootModule :: s.RootModules
+
+            // These seem inefficient but not.
+            Local = scopeMerge ctx.Local s.Local
+            ValueNs = mapMerge s.ValueNs ctx.ValueNs
+            TyNs = mapMerge s.TyNs ctx.TyNs
+            NsNs = mapMerge s.NsNs ctx.NsNs }
+
+      StaticVars = globalVars
+      Funs = mapAddEntries ctx.NewFuns state.Funs
+      Variants = mapAddEntries ctx.NewVariants state.Variants
+      Logs = List.append ctx.NewLogs state.Logs },
+  localVars
+
+// -----------------------------------------------
+// NameResResult
+// -----------------------------------------------
+
+/// Output of NameRes pass.
+[<RequireQualifiedAccess; NoEquality; NoComparison>]
+type NameResResult =
+  { /// Last serial number.
+    Serial: Serial
+    StaticVars: TreeMap<VarSerial, VarDef>
+    Funs: TreeMap<FunSerial, FunDef>
+    Variants: TreeMap<VariantSerial, VariantDef>
+    Tys: TreeMap<TySerial, TyDef>
+    MainFunOpt: FunSerial option
+    Logs: (NameResLog * Loc) list }
+
+let private sToResult mainFunOpt (state: NameResState) : NameResResult =
+  let ctx = state.ScopeCtx
+
+  { Serial = ctx.Serial
+    StaticVars = state.StaticVars
+    Funs = state.Funs
+    Variants = state.Variants
+    Tys = ctx.Tys
+    MainFunOpt = mainFunOpt
+    Logs = state.Logs }
 
 // -----------------------------------------------
 // Interface
