@@ -8,10 +8,12 @@ open MiloneShared.SharedTypes
 open MiloneShared.TypeFloat
 open MiloneShared.TypeIntegers
 open MiloneShared.Util
+open MiloneShared.UtilSymbol
 open Std.StdError
 open Std.StdMap
 open Std.StdMultimap
 open Std.StdSet
+open Std.StdList
 open MiloneSyntax.Tir
 open MiloneSyntax.SyntaxTypes
 open MiloneSyntax.TirTypes
@@ -261,6 +263,12 @@ let private emptyScopeCtx () : ScopeCtx =
     Local = scopeEmpty ()
     PatScope = TMap.empty compare
     NewLogs = [] }
+
+let private shiftSerial lastSerial (ctx: ScopeCtx) =
+  if lastSerial > ctx.Serial then
+    { ctx with Serial = lastSerial }
+  else
+    ctx
 
 let private freshSerial (ctx: ScopeCtx) =
   let serial = ctx.Serial + 1
@@ -2051,12 +2059,13 @@ let private addPrims (ctx: ScopeCtx) =
 
 /// Intermediate state of NameRes pass.
 [<RequireQualifiedAccess; NoEquality; NoComparison>]
-type private NameResState =
-  { ScopeCtx: ScopeCtx
-    StaticVars: TreeMap<VarSerial, VarDef>
-    Funs: TreeMap<FunSerial, FunDef>
-    Variants: TreeMap<VariantSerial, VariantDef>
-    Logs: (NameResLog * Loc) list }
+type NameResState =
+  private
+    { ScopeCtx: ScopeCtx
+      StaticVars: TreeMap<VarSerial, VarDef>
+      Funs: TreeMap<FunSerial, FunDef>
+      Variants: TreeMap<VariantSerial, VariantDef>
+      Logs: (NameResLog * Loc) list }
 
 let private emptyState () : NameResState =
   { ScopeCtx = emptyScopeCtx ()
@@ -2065,6 +2074,7 @@ let private emptyState () : NameResState =
     Variants = TMap.empty variantSerialCompare
     Logs = [] }
 
+// #map_merge
 let private mapMerge first second : TreeMap<_, _> =
   second |> TMap.fold (fun map key value -> TMap.add key value map) first
 
@@ -2125,6 +2135,10 @@ let private sMerge newRootModule (state: NameResState) (ctx: ScopeCtx) : NameRes
       Logs = List.append ctx.NewLogs state.Logs },
   localVars
 
+let private sShiftSerial lastSerial (s: NameResState) =
+  { s with
+      ScopeCtx = shiftSerial lastSerial s.ScopeCtx }
+
 // -----------------------------------------------
 // NameResResult
 // -----------------------------------------------
@@ -2153,6 +2167,108 @@ let private sToResult mainFunOpt (state: NameResState) : NameResResult =
     Tys = ctx.Tys
     MainFunOpt = mainFunOpt
     Logs = state.Logs }
+
+// -----------------------------------------------
+// NameResolveSystem
+// -----------------------------------------------
+
+[<RequireQualifiedAccess; NoEquality; NoComparison>]
+type NameResolveSystem =
+  private
+    { InitialState: NameResState
+      Memo: (DocId list * TProgram * NameResState) list }
+
+[<RequireQualifiedAccess; NoEquality; NoComparison>]
+type NameResolveRequest =
+  { LastSerial: Serial
+    Layers: NModuleRoot list list
+    InvalidatedDocIds: DocId list }
+
+[<RequireQualifiedAccess; NoEquality; NoComparison>]
+type NameResolveOutput =
+  { OldLayers: (DocId list * TProgram * NameResState) list
+    NewLayers: (DocId list * TProgram * NameResState) list }
+
+module NameResolveSystem =
+  let empty () : NameResolveSystem =
+    { InitialState =
+        let state = emptyState ()
+
+        { state with
+            ScopeCtx = addPrims state.ScopeCtx }
+
+      Memo = [] }
+
+  let private diffLayers
+    (memo: (DocId list * TProgram * NameResState) list)
+    (newLayers: NModuleRoot list list)
+    invalidatedDocIds
+    =
+    let rec go acc memoLayers newLayers =
+      match memoLayers, newLayers with
+      | memoLayer :: memoLayers, newLayer :: newLayers ->
+        let memoDocIds, _, _ = memoLayer
+
+        let invalidated =
+          memoDocIds
+          |> List.exists (fun d -> invalidatedDocIds |> List.exists (fun i -> Symbol.equals i d))
+
+        let newLayerDocIds =
+          if not invalidated then
+            newLayer |> List.map (fun (docId, _) -> docId) |> listSort Symbol.compare
+          else
+            []
+
+        let ok = List.equals Symbol.equals memoDocIds newLayerDocIds
+
+        if ok then
+          go (memoLayer :: acc) memoLayers newLayers
+        else
+          List.rev acc, newLayer :: newLayers
+
+      | [], _ -> List.rev acc, newLayers
+      | _, [] -> List.rev acc, []
+
+    go [] memo newLayers
+
+  let update (req: NameResolveRequest) (system: NameResolveSystem) =
+    let oldLayers, newLayers = diffLayers system.Memo req.Layers req.InvalidatedDocIds
+
+    let state =
+      match oldLayers |> List.tryLast with
+      | Some(_, _, state) -> state
+      | None -> system.InitialState
+
+    let state = sShiftSerial req.LastSerial state
+
+    let newLayers, _ =
+      newLayers
+      |> List.mapFold
+        (fun (state: NameResState) modules ->
+          let docIds =
+            modules |> List.map (fun (docId, _) -> docId) |> listSort Symbol.compare
+
+          let modules, state =
+            modules
+            |> List.mapFold
+              (fun (state: NameResState) moduleRoot ->
+                let newRootModule, m, ctx = nameResModuleRoot state.ScopeCtx moduleRoot
+                let state, localVars = sMerge newRootModule state ctx
+                { m with Vars = localVars }, state)
+              state
+
+          (docIds, modules, state), state)
+        state
+
+    let output: NameResolveOutput =
+      { OldLayers = oldLayers
+        NewLayers = newLayers }
+
+    let system =
+      { system with
+          Memo = List.append oldLayers newLayers }
+
+    output, system
 
 // -----------------------------------------------
 // Interface
