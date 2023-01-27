@@ -2187,7 +2187,8 @@ type NameResolveRequest =
 [<RequireQualifiedAccess; NoEquality; NoComparison>]
 type NameResolveOutput =
   { OldLayers: (DocId list * TProgram * NameResState) list
-    NewLayers: (DocId list * TProgram * NameResState) list }
+    NewLayers: (DocId list * TProgram * NameResState) list
+    Result: NameResResult }
 
 module NameResolveSystem =
   let empty () : NameResolveSystem =
@@ -2199,6 +2200,7 @@ module NameResolveSystem =
 
       Memo = [] }
 
+  // #diffLayers
   let private diffLayers
     (memo: (DocId list * TProgram * NameResState) list)
     (newLayers: NModuleRoot list list)
@@ -2241,7 +2243,7 @@ module NameResolveSystem =
 
     let state = sShiftSerial req.LastSerial state
 
-    let newLayers, _ =
+    let newLayers, state =
       newLayers
       |> List.mapFold
         (fun (state: NameResState) modules ->
@@ -2260,9 +2262,18 @@ module NameResolveSystem =
           (docIds, modules, state), state)
         state
 
+    let result =
+      let mainFunOpt =
+        state.Funs
+        |> TMap.fold (fun acc funSerial (funDef: FunDef) -> if funDef.Name = "main" then funSerial :: acc else acc) []
+        |> List.tryLast
+
+      sToResult mainFunOpt state
+
     let output: NameResolveOutput =
       { OldLayers = oldLayers
-        NewLayers = newLayers }
+        NewLayers = newLayers
+        Result = result }
 
     let system =
       { system with
