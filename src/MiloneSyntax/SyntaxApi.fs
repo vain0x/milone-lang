@@ -330,6 +330,7 @@ let syntaxErrorsToString (errors: SyntaxError list) : string =
 // Analysis
 // -----------------------------------------------
 
+// #performSyntaxAnalysis (no-cache version)
 /// Creates an NIR and collects errors
 /// by loading source files and processing.
 let performSyntaxAnalysis (writeLog: WriteLogFun) (layers: SyntaxLayers) : SyntaxAnalysisResult =
@@ -385,6 +386,91 @@ let performSyntaxAnalysis (writeLog: WriteLogFun) (layers: SyntaxLayers) : Synta
       match collectTypingErrors tirCtx with
       | Some errors -> SyntaxAnalysisError(errors, Some tirCtx)
       | None -> SyntaxAnalysisOk(modules, tirCtx)
+
+[<RequireQualifiedAccess; NoEquality; NoComparison>]
+type SyntaxAnalysisDb =
+  {
+    NameResolveSystem: NameRes.NameResolveSystem
+  }
+
+module SyntaxAnalysisDb =
+  let empty () : SyntaxAnalysisDb =
+    { NameResolveSystem = NameRes.NameResolveSystem.empty () }
+
+// #performSyntaxAnalysis (cached one)
+let performSyntaxAnalysisWithCache (db: SyntaxAnalysisDb) (writeLog: WriteLogFun) (layers: SyntaxLayers) invalidatedDocIds : SyntaxAnalysisResult * SyntaxAnalysisDb =
+  writeLog "NirGen"
+
+  let nirLayers =
+    layers
+    |> __parallelMap (fun modules ->
+      modules
+      |> __parallelMap (fun (m: ModuleSyntaxData2) ->
+        let nir, logs =
+          NirGen.genNir m.ProjectName m.ModuleName m.DocId m.Ast
+
+        m.DocId, nir, logs))
+
+  let errors =
+    nirLayers
+    |> List.collect (
+      List.collect (fun (_, _, logs) ->
+        logs
+        |> List.map (fun (log, loc) -> NirGen.nirGenLogToString log, loc))
+    )
+
+  if errors |> List.isEmpty |> not then
+    SyntaxAnalysisError(errors, None), db
+  else
+    writeLog "NameRes (with cache)"
+
+    let output, db =
+      let modules: NModuleRoot list list =
+        nirLayers
+        |> List.map (fun layer ->
+          layer
+          |> List.map (fun (docId, (root: NRoot), _) -> docId, root))
+
+      let req: NameRes.NameResolveRequest =
+        { LastSerial = 0
+          Layers = modules
+          InvalidatedDocIds = invalidatedDocIds }
+
+      let output, system = NameRes.NameResolveSystem.update req db.NameResolveSystem
+
+      // Print cache metrics.
+      let _ =
+        let sumOf xs = xs |> List.map (fun (docIds, _, _) -> List.length docIds) |> List.fold (fun (l: int) r -> l + r) 0
+        let o = output.OldLayers |> sumOf
+        let n = output.NewLayers |> sumOf
+        __trace ("  cache: old: " + string o + ", new: " + string n)
+
+      output, { db with NameResolveSystem = system }
+
+    let modules =
+      let layers = List.append output.OldLayers output.NewLayers
+      layers |> List.collect (fun (_, t, _) -> t)
+
+    let nameResResult = output.Result
+
+    match collectNameResErrors nameResResult.Logs with
+    | Some errors -> SyntaxAnalysisError(errors, None), db
+
+    | None ->
+      writeLog "Typing"
+      let modules, tirCtx = Typing.infer (modules, nameResResult)
+
+      writeLog "ArityCheck"
+      let tirCtx = ArityCheck.arityCheck (modules, tirCtx)
+
+      writeLog "OwnershipCheck"
+
+      let modules, tirCtx =
+        OwnershipCheck.ownershipCheck (modules, tirCtx)
+
+      match collectTypingErrors tirCtx with
+      | Some errors -> SyntaxAnalysisError(errors, Some tirCtx), db
+      | None -> SyntaxAnalysisOk(modules, tirCtx), db
 
 // -----------------------------------------------
 // Dump

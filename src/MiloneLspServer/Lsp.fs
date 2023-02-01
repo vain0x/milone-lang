@@ -20,6 +20,7 @@ module Manifest = MiloneSyntax.Manifest
 module SyntaxApi = MiloneSyntax.SyntaxApi
 module SyntaxTokenize = MiloneSyntax.SyntaxTokenize
 module SyntaxTreeGen = MiloneSyntax.SyntaxTreeGen
+module NameRes = MiloneSyntax.NameRes
 module TySystem = MiloneSyntax.TySystem
 
 // Hide compiler-specific types from other modules.
@@ -370,6 +371,7 @@ type ProjectAnalysis =
       EntryDoc: DocId * ProjectName * ModuleName
       NewTokenizeCache: TreeMap<DocId, LTokenList>
       NewParseResults: (DocVersion * LSyntaxData) list
+      Db: SyntaxApi.SyntaxAnalysisDb
       BundleCache: BundleResult option
       Host: ProjectAnalysisHost }
 
@@ -472,18 +474,93 @@ let private bundleWithCache (pa: ProjectAnalysis) : BundleResult * ProjectAnalys
     // | Some _ -> eprintfn "bundle cache invalidated"
     // | _ -> eprintfn "bundle cache not found"
 
-    let result = doBundle pa
+    let writeLog: string -> unit = ignore
+
+    let fetchModuleUsingCache (r: AstBundle.FetchModuleParams) : Future<ModuleSyntaxData option> =
+      let docId =
+        pa.Host.ComputeDocId(r.ProjectName, r.ModuleName, r.Origin)
+
+      match pa |> parseWithCache docId with
+      | None -> Future.just None
+      | Some (LSyntaxData m) -> Future.just (Some m)
+
+    let layers, bundleErrors =
+      AstBundle.bundle fetchModuleUsingCache pa.EntryDoc
+
+    let oldDocs =
+      match cacheOpt with
+      | Some cache -> cache.DocVersions
+      | None -> []
+
+    let newDocMap =
+      layers |> List.collect (fun modules -> modules |> List.map (fun (s: ModuleSyntaxData, _) -> s.DocId))
+      |> List.map (fun docId -> docId, getVersion docId pa)
+      |> TMap.ofList Symbol.compare
+
+    let invalidatedDocIds =
+      oldDocs
+      |> List.filter (fun (docId, u) ->
+        match newDocMap |> TMap.tryFind docId with
+        | Some v -> u <> v
+        | _ -> true
+      )
+      |> List.map fst
+
+    let result, db =
+      if bundleErrors |> List.isEmpty |> not then
+        SyntaxAnalysisError(bundleErrors, None), pa.Db
+      else
+        let layers2 =
+          layers
+          |> List.map (fun modules -> modules |> List.map (fun (_, m) -> m))
+
+        SyntaxApi.performSyntaxAnalysisWithCache pa.Db writeLog layers2 invalidatedDocIds
+
+    let docVersions =
+      layers
+      |> List.collect (fun modules ->
+        modules
+        |> List.map (fun (_, (m: ModuleSyntaxData2)) -> m.DocId, getVersion m.DocId pa))
+
+    let parseResults =
+      layers
+      |> List.collect (fun modules ->
+        modules
+        |> List.map (fun ((m: ModuleSyntaxData), (_: ModuleSyntaxData2)) ->
+          let v = getVersion m.DocId pa
+          v, LSyntaxData m))
+
+    let result : BundleResult =
+      match result with
+      | SyntaxAnalysisOk (modules, tirCtx) ->
+        { ProgramOpt = Some(modules, tirCtx)
+          Errors = []
+          DocVersions = docVersions
+          ParseResults = parseResults }
+
+      | SyntaxAnalysisError (errors, tirCtxOpt) ->
+        { ProgramOpt =
+            match tirCtxOpt with
+            | Some tirCtx -> Some([], tirCtx)
+            | None -> None
+
+          Errors = errors
+          DocVersions = docVersions
+          ParseResults = parseResults }
+
+    // let result = doBundle pa
 
     let pa =
       { pa with
           NewTokenizeCache =
             result.ParseResults
             |> List.fold
-                 (fun map (_, syntaxData) ->
-                   let (LSyntaxData m) = syntaxData
-                   map |> TMap.add m.DocId (LTokenList m.Tokens))
-                 pa.NewTokenizeCache
+                (fun map (_, syntaxData) ->
+                  let (LSyntaxData m) = syntaxData
+                  map |> TMap.add m.DocId (LTokenList m.Tokens))
+                pa.NewTokenizeCache
           NewParseResults = List.append result.ParseResults pa.NewParseResults
+          Db = db
           BundleCache = Some result }
 
     result, pa
@@ -1136,6 +1213,7 @@ module ProjectAnalysis1 =
       EntryDoc = entryDoc
       NewTokenizeCache = emptyTokenizeCache
       NewParseResults = []
+      Db = SyntaxApi.SyntaxAnalysisDb.empty ()
       BundleCache = None
       Host = host }
 
