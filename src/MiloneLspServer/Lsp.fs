@@ -34,11 +34,21 @@ type LTokenList = private LTokenList of TokenizeFullResult
 [<NoEquality; NoComparison>]
 type LSyntaxData = private LSyntaxData of ModuleSyntaxData
 
+/// Text with line-oriented indexes.
+[<RequireQualifiedAccess; NoEquality; NoComparison>]
+type LineBuffer =
+  private
+    { Text: string
+      LineCount: int
+      /// Line index → byte range.
+      OffsetMap: TreeMap<int, int * int> }
+
 // (this includes Text, FullTokens and SyntaxTree unlike SyntaxData)
 [<RequireQualifiedAccess; NoEquality; NoComparison>]
 type LSyntax2 =
   { DocId: DocId
     Text: SourceCode
+    LineBuffer: LineBuffer
     FullTokens: TokenizeFullResult
     Ast: ARoot
     SyntaxTree: SyntaxTree
@@ -323,7 +333,53 @@ module LSyntaxData =
       | DModuleSynonymDef (synonym, modulePath), Some loc -> Some(synonym, modulePath, loc)
       | _ -> None)
 
-module LSyntax2 =
+module internal LineBuffer =
+  let compute (text: string) : LineBuffer =
+    let rec computeLoop acc y (i: int) =
+      if i < text.Length then
+        let j = text.IndexOf('\n', i)
+
+        if j >= i then
+          let r = if i < j && text.[j - 1] = '\r' then j - 1 else j
+          computeLoop ((y, (i, r)) :: acc) (y + 1) (j + 1)
+        else
+          let acc = (y, (i, text.Length)) :: acc
+          y + 1, acc
+      else
+        y, acc
+
+    let lineCount, acc = computeLoop [] 0 0
+
+    { Text = text
+      LineCount = lineCount
+      OffsetMap = TMap.ofList compare acc }
+
+  let lineRangeAt index (buf: LineBuffer) =
+    buf.OffsetMap |> TMap.tryFind index
+
+  let lineStringAt index (buf: LineBuffer) =
+    match buf.OffsetMap |> TMap.tryFind index with
+    | Some (l, r) ->
+      let r = if l < r && buf.Text.[r - 1] = '\r' then r - 1 else r
+      buf.Text.[l..r - 1]
+
+    | None -> ""
+
+  let posToIndex (pos: Pos) (buf: LineBuffer) =
+    let y, x = pos
+
+    match lineRangeAt y buf with
+    | Some (l, r) -> Some(l + min x r)
+    | _ -> None
+
+  let stringBetween (range: Range) (buf: LineBuffer) =
+    let startPos, endPos = range
+
+    match posToIndex startPos buf, posToIndex endPos buf with
+    | Some l, Some r when l <= r -> buf.Text[l..r - 1]
+    | _ -> ""
+
+module internal LSyntax2 =
   let private host = tokenizeHostNew ()
 
   let parse projectName moduleName docId (text: SourceCode) : LSyntax2 =
@@ -335,6 +391,7 @@ module LSyntax2 =
     let syntax: LSyntax2 =
       { DocId = docId
         Text = text
+        LineBuffer = LineBuffer.compute text
         FullTokens = fullTokens
         Ast = m.Ast
         SyntaxTree = SyntaxTreeGen.genSyntaxTree fullTokens m.UnmodifiedAst
@@ -1369,39 +1426,6 @@ module internal ProjectAnalysisCompletion =
 
     let endPos element = element |> range |> Range.endPos
 
-  // inefficient
-  let textOfRange (text: string) (range: Range) =
-    let s = text
-    let startPos, endPos = range
-
-    let rec go1 (s: string) (i: int) y y2 =
-      if y < y2 then
-        let j = s.IndexOf('\n', i)
-
-        if j >= 0 then
-          go1 s (j + 1) (y + 1) y2
-        else
-          errorFn "invalid pos1"
-          i
-      else
-        assert (y = y2)
-        i
-
-    let indexAt i p1 p2 =
-      let y1, x1 = p1
-      let y2, x2 = p2
-
-      if y1 < y2 then
-        let i = go1 s i y1 y2
-        i + x2
-      else
-        i + x2 - x1
-
-    let zero: Pos = 0, 0
-    let startIndex = indexAt 0 zero startPos
-    let endIndex = indexAt startIndex startPos endPos
-    s.[startIndex..endIndex - 1]
-
   let private isPatLike kind =
     match kind with
     | SyntaxKind.LiteralPat
@@ -1443,7 +1467,7 @@ module internal ProjectAnalysisCompletion =
   let resolveUnqualifiedAsValue docId text ancestors qualIdent (targetPos: Pos) (pa: ProjectAnalysis) =
     let asIdent text node =
       match node with
-      | SyntaxToken (SyntaxKind.Ident, identRange) -> Some(textOfRange text identRange)
+      | SyntaxToken (SyntaxKind.Ident, identRange) -> Some(LineBuffer.stringBetween identRange text)
       | _ -> None
 
     let asModulePath node =
@@ -1506,7 +1530,7 @@ module internal ProjectAnalysisCompletion =
 
             let acc, docAcc, doneSet =
               SyntaxElement.children root
-              |> List.fold (foldOnNode syntax.Text) (acc, docAcc, doneSet)
+              |> List.fold (foldOnNode syntax.LineBuffer) (acc, docAcc, doneSet)
 
             onDocRec acc docAcc doneSet
 
@@ -1615,7 +1639,7 @@ module internal ProjectAnalysisCompletion =
   let private lastIdent text nodes =
     let asIdent node =
       match node with
-      | SyntaxToken (SyntaxKind.Ident, identRange) -> Some(textOfRange text identRange, Range.start identRange)
+      | SyntaxToken (SyntaxKind.Ident, identRange) -> Some(LineBuffer.stringBetween identRange text, Range.start identRange)
       | _ -> None
 
     let pickLast nodes =
@@ -1633,7 +1657,7 @@ module internal ProjectAnalysisCompletion =
 
     let asIdent text node =
       match node with
-      | SyntaxToken (SyntaxKind.Ident, identRange) -> Some(textOfRange text identRange)
+      | SyntaxToken (SyntaxKind.Ident, identRange) -> Some(LineBuffer.stringBetween identRange text)
       | _ -> None
 
     let asModulePath node =
@@ -1745,7 +1769,7 @@ module internal ProjectAnalysisCompletion =
       | _ -> []
 
     // checks if node has the specified name and collects items for completion
-    let collectContents (text: string) (node: SyntaxElement) =
+    let collectContents text (node: SyntaxElement) =
       match node with
       | SyntaxNode (SyntaxKind.UnionTyDecl, _, children) ->
         let ok =
@@ -1788,7 +1812,7 @@ module internal ProjectAnalysisCompletion =
             let docId: DocId = pa.Host.ComputeDocId(p, m, docId)
 
             findToplevelDecls docId pa
-            |> List.collect (fun (syntax, decl) -> collectFromDecl syntax.Text decl)
+            |> List.collect (fun (syntax, decl) -> collectFromDecl syntax.LineBuffer decl)
 
           | _ -> []
         else
@@ -1803,7 +1827,7 @@ module internal ProjectAnalysisCompletion =
           let docId = pa.Host.ComputeDocId(p, m, docId)
 
           findToplevelDecls docId pa
-          |> List.collect (fun ((syntax: LSyntax2), decl) -> collectContents syntax.Text decl)
+          |> List.collect (fun ((syntax: LSyntax2), decl) -> collectContents syntax.LineBuffer decl)
 
         | _ -> []
 
@@ -1829,7 +1853,7 @@ module internal ProjectAnalysisCompletion =
         let docId: DocId = pa.Host.GetCoreDocId nsIdent
 
         findToplevelDecls docId pa
-        |> List.collect (fun (syntax, decl) -> collectFromDecl syntax.Text decl)
+        |> List.collect (fun (syntax, decl) -> collectFromDecl syntax.LineBuffer decl)
       else
         []
 
@@ -1840,7 +1864,7 @@ module internal ProjectAnalysisCompletion =
 
     match syntaxOpt with
     | Some syntax ->
-      let text = syntax.Text
+      let text = syntax.LineBuffer
       let tree = syntax.SyntaxTree
 
       match findQuals tree targetPos with
