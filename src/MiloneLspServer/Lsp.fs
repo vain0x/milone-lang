@@ -430,6 +430,7 @@ type ProjectAnalysis =
       NewParseResults: (DocVersion * LSyntaxData) list
       Db: SyntaxApi.SyntaxAnalysisDb
       BundleCache: BundleResult option
+      TirSymbolsCache: SymbolOccurrence list option
       Host: ProjectAnalysisHost }
 
 let private emptyTokenizeCache: TreeMap<DocId, LTokenList> = TMap.empty Symbol.compare
@@ -618,7 +619,8 @@ let private bundleWithCache (pa: ProjectAnalysis) : BundleResult * ProjectAnalys
                 pa.NewTokenizeCache
           NewParseResults = List.append result.ParseResults pa.NewParseResults
           Db = db
-          BundleCache = Some result }
+          BundleCache = Some result
+          TirSymbolsCache = None }
 
     result, pa
 
@@ -1084,14 +1086,20 @@ let private resolveLoc (symbols: SymbolOccurrence list) pa =
   |> fst
   |> List.choose id
 
-let private findTyInStmt (pa: ProjectAnalysis) (modules: TProgram) (tokenLoc: Loc) =
-  let symbols = lowerTModules [] modules
+let private paGetTirSymbolsWithCache (pa: ProjectAnalysis) =
+  match pa.BundleCache, pa.TirSymbolsCache with
+  | _, Some it -> Some it, pa
 
-  resolveLoc symbols pa
-  |> List.tryPick (fun (_, _, tyOpt, loc) ->
-    match tyOpt with
-    | Some ty when Loc.equals loc tokenLoc -> Some ty
-    | _ -> None)
+  | Some b, _ ->
+    match b.ProgramOpt with
+    | None -> None, pa
+
+    | Some (modules, _) ->
+      let symbols = lowerTModules [] modules
+      let pa = { pa with TirSymbolsCache = Some symbols }
+      Some symbols, pa
+
+  | _ -> None, pa
 
 let private collectSymbolsInExpr (pa: ProjectAnalysis) (modules: TProgram) (tirCtx: TirCtx) =
   let parseModule (m: TModule) =
@@ -1272,6 +1280,7 @@ module ProjectAnalysis1 =
       NewParseResults = []
       Db = SyntaxApi.SyntaxAnalysisDb.empty ()
       BundleCache = None
+      TirSymbolsCache = None
       Host = host }
 
   let withHost (host: ProjectAnalysisHost) pa : ProjectAnalysis = { pa with Host = host }
@@ -1302,18 +1311,26 @@ module ProjectAnalysis1 =
       | Def, Some loc -> Some(symbol, defOrUse, loc)
       | _ -> None)
 
+  // collect symbols from AST
   let collectSymbols (b: BundleResult) (pa: ProjectAnalysis) =
     match b.ProgramOpt with
     | None -> None
     | Some (modules, tirCtx) -> collectSymbolsInExpr pa modules tirCtx |> Some
 
-  let getTyName (b: BundleResult) (tokenLoc: Loc) (pa: ProjectAnalysis) =
-    match b.ProgramOpt with
-    | None -> None
-    | Some (modules, tirCtx) ->
-      match findTyInStmt pa modules tokenLoc with
-      | None -> Some None
-      | Some ty -> TySystem.tyDisplay ty |> Some |> Some
+  let getTyName (tokenLoc: Loc) (pa: ProjectAnalysis) =
+    let symbolsOpt, pa = paGetTirSymbolsWithCache pa
+    let symbols = Option.defaultValue [] symbolsOpt
+
+    let resultOpt =
+      resolveLoc symbols pa
+      |> List.tryPick (fun (_, _, tyOpt, loc) ->
+        match tyOpt with
+        | Some ty when Loc.equals loc tokenLoc -> Some ty
+        | _ -> None)
+      |> Option.map TySystem.tyDisplay
+      |> Some
+
+    resultOpt, pa
 
 // -----------------------------------------------
 // Completion

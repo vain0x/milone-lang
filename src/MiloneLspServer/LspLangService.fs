@@ -490,8 +490,9 @@ module ProjectAnalysis =
       // eprintfn "hover: %A, tokenLoc=%A" token tokenLoc
 
       let result, pa = pa |> ProjectAnalysis1.bundle
+      let tyNameOpt, pa = ProjectAnalysis1.getTyName tokenLoc pa
 
-      match ProjectAnalysis1.getTyName result tokenLoc pa with
+      match tyNameOpt with
       | None ->
         let errorCount =
           result |> BundleResult.getErrors |> List.length
