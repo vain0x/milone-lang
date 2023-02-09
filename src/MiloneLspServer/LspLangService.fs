@@ -384,7 +384,10 @@ module ProjectAnalysis =
     else
       match ProjectAnalysisCompletion.tryNsCompletion docId targetPos pa with
       | Some items, pa -> items, pa
-      | None, pa -> collectLocalSymbols pa
+      | None, pa ->
+        match ProjectAnalysisCompletion.tryRecordCompletion docId targetPos pa with
+        | Some items, pa -> items, pa
+        | None, pa -> collectLocalSymbols pa
 
   /// `(defs, uses) option`
   let findRefs

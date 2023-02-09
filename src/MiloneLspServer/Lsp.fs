@@ -1886,15 +1886,15 @@ module internal ProjectAnalysisCompletion =
 
       match findQuals tree targetPos with
       | None ->
-        debugFn "no quals"
+        // debugFn "no quals"
         None, pa
 
       | Some (quals, ancestors) ->
-        debugFn "quals=%A" quals
+        // debugFn "quals=%A" quals
 
         match lastIdent text quals with
         | None ->
-          debugFn "no ident"
+          // debugFn "no ident"
           None, pa
 
         | Some (qualIdent, qualPos) ->
@@ -1909,7 +1909,7 @@ module internal ProjectAnalysisCompletion =
 
           match resolveAsNs docId text ancestors qualIdent qualPos pa with
           | [] ->
-            debugFn "no members in %s" qualIdent
+            // debugFn "no members in %s" qualIdent
 
             match resolveUnqualifiedAsValue docId text ancestors qualIdent qualPos pa with
             | [] -> None, pa
@@ -1919,5 +1919,101 @@ module internal ProjectAnalysisCompletion =
           | items -> Some items, pa
 
     | None ->
-      debugFn "no syntax2"
+      // debugFn "no syntax2"
       None, pa
+
+  let private findAncestorsAt (targetPos: Pos) (tree: SyntaxTree) =
+    let rec findRec ancestors node =
+      match node with
+      | SyntaxToken (_, range) when Range.isTouched targetPos range -> [ancestors]
+
+      | SyntaxToken _ -> []
+
+      | SyntaxNode (_, range, children) ->
+        if Range.isTouched targetPos range then
+          children
+          |> List.collect (findRec (node :: ancestors))
+        else
+          []
+
+    let (SyntaxTree root) = tree
+    findRec [] root
+
+  /// Attempts generate completion items in record expressions.
+  let tryRecordCompletion (docId: DocId) (targetPos: Pos) pa : (int * string) list option * ProjectAnalysis =
+    let tryFindParentRecordExprNode tree : Range option =
+      findAncestorsAt targetPos tree
+      |> List.tryPick (fun ancestors ->
+        ancestors
+        |> List.tryFind (fun node ->
+          match SyntaxElement.kind node with
+          | SyntaxKind.RecordExpr _ -> true
+          | _ -> false))
+      |> Option.map SyntaxElement.range
+
+    // performs syntactic analysis and checks if whether record completion is applicable.
+    let tryDetectRecordRange pa =
+      let syntaxOpt, pa = ProjectAnalysis1.parse2 docId pa
+
+      match syntaxOpt with
+      | Some syntax ->
+        let tree = syntax.SyntaxTree
+        let recordRangeOpt = tryFindParentRecordExprNode tree
+        recordRangeOpt, pa
+
+      | None -> None, pa
+
+    let computeTypeInfo pa =
+      let bundleResult, pa = ProjectAnalysis1.bundle pa
+      let symbolsOpt, pa = paGetTirSymbolsWithCache pa
+
+      let tysAndSymbolsOpt =
+        match bundleResult.ProgramOpt, symbolsOpt with
+        | Some(_, tirCtx), Some symbols -> Some(tirCtx.Tys, symbols)
+        | _ -> None
+
+      tysAndSymbolsOpt, pa
+
+    let findRecordTySerialFromRange recordRange symbols =
+      let toLoc loc2 =
+        match loc2 with
+        | At loc -> loc
+        | PreviousIdent loc -> loc
+        | NextIdent loc -> loc
+
+      symbols
+      |> List.tryPick (fun (symbol, _, _, loc2) ->
+        let loc = toLoc loc2
+
+        match symbol with
+        | FieldSymbol(tySerial, ident) when Symbol.equals docId (Loc.docId loc) ->
+          let _, pos = Loc.toDocPos loc
+
+          if Range.isTouched pos recordRange then
+            Some tySerial
+          else
+            None
+        | _ -> None)
+
+    let findFieldsOfRecordTy tys tySerialOpt =
+      match tySerialOpt with
+      | Some tySerial ->
+        match tys |> TMap.tryFind tySerial with
+        | Some(RecordTyDef(_, _, fields, _, _)) -> fields |> List.map (fun (ident, _, _) -> ident) |> Some
+
+        | _ -> None
+      | _ -> None
+
+    let newFieldItem (ident: string) = Kind.Field, ident
+
+    match tryDetectRecordRange pa with
+    | Some recordRange, pa ->
+      match computeTypeInfo pa with
+      | Some(tys, symbols), pa ->
+        let tySerialOpt = findRecordTySerialFromRange recordRange symbols
+        let fieldsOpt = findFieldsOfRecordTy tys tySerialOpt
+        let itemsOpt = Option.map (List.map newFieldItem) fieldsOpt
+        itemsOpt, pa
+
+      | None, pa -> None, pa
+    | None, pa -> None, pa

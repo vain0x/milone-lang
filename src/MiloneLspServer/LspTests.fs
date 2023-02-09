@@ -989,7 +989,9 @@ let private doTestCompletion (p: LLS.ProjectInfo) (wa: LLS.WorkspaceAnalysis) ti
     match pa
           |> LLS.ProjectAnalysis.completion (WorkspaceAnalysis.getModules p wa) docId targetPos
       with
-    | [], pa -> debugProject pa
+    | [], pa ->
+      let output, pa = debugProject pa
+      "No completion results.\n" + output, pa
 
     | result, pa ->
       // FIXME: test kind of items
@@ -1169,6 +1171,35 @@ let private testCompletion () =
         """ ]
       [ "F1"; "F2"; "Length" ] ]
 
+let private testRecordCompletion () =
+  // FIXME: to use type information it type check needs to be passing, which is inconvenient
+  [ testCompletionSingleFile
+      "recordCompletion: record expression"
+      """
+        type R =
+          { A: int
+            B: int }
+
+        let _ : R =
+          { A = 0
+            B = 0 }
+        //  ^cursor
+      """
+      [ "A"; "B" ]
+
+    testCompletionSingleFile
+      "recordCompletion: nested record expression"
+      """
+        type R1 = { A: int; B: int }
+        type R2 = { C: int; D: R1 }
+
+        let _ : R2 =
+          { C = 0
+            D = { A = 0; B = 0 } }
+        //        ^cursor
+      """
+      [ "A"; "B" ] ]
+
 // -----------------------------------------------
 // Find projects
 // -----------------------------------------------
@@ -1286,6 +1317,7 @@ let lspTests host =
       testDocumentSymbol ()
       testCodeAction ()
       testCompletion ()
+      testRecordCompletion ()
       testFindProjects () ]
     |> List.collect id
     |> runTests
