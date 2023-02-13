@@ -455,65 +455,11 @@ let private parseWithCache docId (pa: ProjectAnalysis) = pa.Host.Parse docId |> 
 [<RequireQualifiedAccess; NoEquality; NoComparison>]
 type BundleResult =
   private
-    { ProgramOpt: (TProgram * TirCtx) option
+    { Program: TProgram
+      TirCtxOpt: TirCtx option
       Errors: (string * Loc) list
       DocVersions: (DocId * DocVersion) list
       ParseResults: (DocVersion * LSyntaxData) list }
-
-let private doBundle (pa: ProjectAnalysis) : BundleResult =
-  let writeLog: string -> unit = ignore
-
-  let fetchModuleUsingCache (r: AstBundle.FetchModuleParams) : Future<ModuleSyntaxData option> =
-    let docId =
-      pa.Host.ComputeDocId(r.ProjectName, r.ModuleName, r.Origin)
-
-    match pa |> parseWithCache docId with
-    | None -> Future.just None
-    | Some (LSyntaxData m) -> Future.just (Some m)
-
-  let layers, bundleErrors =
-    AstBundle.bundle fetchModuleUsingCache pa.EntryDoc
-
-  let result =
-    if bundleErrors |> List.isEmpty |> not then
-      SyntaxAnalysisError(bundleErrors, None)
-    else
-      let layers =
-        layers
-        |> List.map (fun modules -> modules |> List.map (fun (_, m) -> m))
-
-      SyntaxApi.performSyntaxAnalysis writeLog layers
-
-  let docVersions =
-    layers
-    |> List.collect (fun modules ->
-      modules
-      |> List.map (fun (_, (m: ModuleSyntaxData2)) -> m.DocId, getVersion m.DocId pa))
-
-  let parseResults =
-    layers
-    |> List.collect (fun modules ->
-      modules
-      |> List.map (fun ((m: ModuleSyntaxData), (_: ModuleSyntaxData2)) ->
-        let v = getVersion m.DocId pa
-        v, LSyntaxData m))
-
-  match result with
-  | SyntaxAnalysisOk (modules, tirCtx) ->
-    { ProgramOpt = Some(modules, tirCtx)
-      Errors = []
-      DocVersions = docVersions
-      ParseResults = parseResults }
-
-  | SyntaxAnalysisError (errors, tirCtxOpt) ->
-    { ProgramOpt =
-        match tirCtxOpt with
-        | Some tirCtx -> Some([], tirCtx)
-        | None -> None
-
-      Errors = errors
-      DocVersions = docVersions
-      ParseResults = parseResults }
 
 let private bundleWithCache (pa: ProjectAnalysis) : BundleResult * ProjectAnalysis =
   let docsAreAllFresh docVersions =
@@ -564,9 +510,9 @@ let private bundleWithCache (pa: ProjectAnalysis) : BundleResult * ProjectAnalys
       )
       |> List.map fst
 
-    let result, db =
+    let result, modules, tirCtxOpt, db =
       if bundleErrors |> List.isEmpty |> not then
-        SyntaxAnalysisError(bundleErrors, None), pa.Db
+        Error bundleErrors, [], None, pa.Db
       else
         let layers2 =
           layers
@@ -589,22 +535,16 @@ let private bundleWithCache (pa: ProjectAnalysis) : BundleResult * ProjectAnalys
           v, LSyntaxData m))
 
     let result : BundleResult =
-      match result with
-      | SyntaxAnalysisOk (modules, tirCtx) ->
-        { ProgramOpt = Some(modules, tirCtx)
-          Errors = []
-          DocVersions = docVersions
-          ParseResults = parseResults }
+      let errors =
+        match result with
+        | Ok () -> []
+        | Error it -> it
 
-      | SyntaxAnalysisError (errors, tirCtxOpt) ->
-        { ProgramOpt =
-            match tirCtxOpt with
-            | Some tirCtx -> Some([], tirCtx)
-            | None -> None
-
-          Errors = errors
-          DocVersions = docVersions
-          ParseResults = parseResults }
+      { Program = modules
+        TirCtxOpt = tirCtxOpt
+        Errors = errors
+        DocVersions = docVersions
+        ParseResults = parseResults }
 
     // let result = doBundle pa
 
@@ -1091,13 +1031,9 @@ let private paGetTirSymbolsWithCache (pa: ProjectAnalysis) =
   | _, Some it -> Some it, pa
 
   | Some b, _ ->
-    match b.ProgramOpt with
-    | None -> None, pa
-
-    | Some (modules, _) ->
-      let symbols = lowerTModules [] modules
-      let pa = { pa with TirSymbolsCache = Some symbols }
-      Some symbols, pa
+    let symbols = lowerTModules [] b.Program
+    let pa = { pa with TirSymbolsCache = Some symbols }
+    Some symbols, pa
 
   | _ -> None, pa
 
@@ -1223,8 +1159,10 @@ let private collectSymbolsInExpr (pa: ProjectAnalysis) (modules: TProgram) (tirC
 
 module Symbol =
   let name (b: BundleResult) (symbol: Symbol) =
-    match b.ProgramOpt with
-    | Some (modules, tirCtx) ->
+    let modules = b.Program
+
+    match b.TirCtxOpt with
+    | Some tirCtx ->
       match symbol with
       | DiscardSymbol _
       | PrimSymbol _ -> None // not implemented, completion need filter out
@@ -1313,9 +1251,9 @@ module ProjectAnalysis1 =
 
   // collect symbols from AST
   let collectSymbols (b: BundleResult) (pa: ProjectAnalysis) =
-    match b.ProgramOpt with
+    match b.TirCtxOpt with
     | None -> None
-    | Some (modules, tirCtx) -> collectSymbolsInExpr pa modules tirCtx |> Some
+    | Some tirCtx -> collectSymbolsInExpr pa b.Program tirCtx |> Some
 
   let getTyName (tokenLoc: Loc) (pa: ProjectAnalysis) =
     let symbolsOpt, pa = paGetTirSymbolsWithCache pa
@@ -1968,8 +1906,8 @@ module internal ProjectAnalysisCompletion =
       let symbolsOpt, pa = paGetTirSymbolsWithCache pa
 
       let tysAndSymbolsOpt =
-        match bundleResult.ProgramOpt, symbolsOpt with
-        | Some(_, tirCtx), Some symbols -> Some(tirCtx.Tys, symbols)
+        match bundleResult.TirCtxOpt, symbolsOpt with
+        | Some tirCtx, Some symbols -> Some(tirCtx.Tys, symbols)
         | _ -> None
 
       tysAndSymbolsOpt, pa

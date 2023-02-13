@@ -398,7 +398,7 @@ module SyntaxAnalysisDb =
     { NameResolveSystem = NameRes.NameResolveSystem.empty () }
 
 // #performSyntaxAnalysis (cached one)
-let performSyntaxAnalysisWithCache (db: SyntaxAnalysisDb) (writeLog: WriteLogFun) (layers: SyntaxLayers) invalidatedDocIds : SyntaxAnalysisResult * SyntaxAnalysisDb =
+let performSyntaxAnalysisWithCache (db: SyntaxAnalysisDb) (writeLog: WriteLogFun) (layers: SyntaxLayers) invalidatedDocIds : Result<unit, SyntaxError list> * TirTypes.TProgram * TirTypes.TirCtx option * SyntaxAnalysisDb =
   writeLog "NirGen"
 
   let nirLayers =
@@ -420,7 +420,7 @@ let performSyntaxAnalysisWithCache (db: SyntaxAnalysisDb) (writeLog: WriteLogFun
     )
 
   if errors |> List.isEmpty |> not then
-    SyntaxAnalysisError(errors, None), db
+    Error errors, [], None, db
   else
     writeLog "NameRes (with cache)"
 
@@ -454,7 +454,7 @@ let performSyntaxAnalysisWithCache (db: SyntaxAnalysisDb) (writeLog: WriteLogFun
     let nameResResult = output.Result
 
     match collectNameResErrors nameResResult.Logs with
-    | Some errors -> SyntaxAnalysisError(errors, None), db
+    | Some errors -> Error errors, [], None, db
 
     | None ->
       writeLog "Typing"
@@ -469,8 +469,8 @@ let performSyntaxAnalysisWithCache (db: SyntaxAnalysisDb) (writeLog: WriteLogFun
         OwnershipCheck.ownershipCheck (modules, tirCtx)
 
       match collectTypingErrors tirCtx with
-      | Some errors -> SyntaxAnalysisError(errors, Some tirCtx), db
-      | None -> SyntaxAnalysisOk(modules, tirCtx), db
+      | Some errors -> Error errors, modules, Some tirCtx, db
+      | None -> Ok(), modules, Some tirCtx, db
 
 // -----------------------------------------------
 // Dump
