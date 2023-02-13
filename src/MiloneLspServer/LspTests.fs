@@ -1172,7 +1172,6 @@ let private testCompletion () =
       [ "F1"; "F2"; "Length" ] ]
 
 let private testRecordCompletion () =
-  // FIXME: to use type information it type check needs to be passing, which is inconvenient
   [ testCompletionSingleFile
       "recordCompletion: record expression"
       """
@@ -1182,8 +1181,9 @@ let private testRecordCompletion () =
 
         let _ : R =
           { A = 0
-            B = 0 }
+            //
         //  ^cursor
+            }
       """
       [ "A"; "B" ]
 
@@ -1195,7 +1195,7 @@ let private testRecordCompletion () =
 
         let _ : R2 =
           { C = 0
-            D = { A = 0; B = 0 } }
+            D = { A = 0 } }
         //        ^cursor
       """
       [ "A"; "B" ] ]
