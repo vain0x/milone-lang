@@ -1198,7 +1198,34 @@ let private testRecordCompletion () =
             D = { A = 0 } }
         //        ^cursor
       """
-      [ "A"; "B" ] ]
+      [ "A"; "B" ]
+
+    testCompletionSingleFile
+      "recordCompletion: empty record expression"
+      """
+        type R = { F1: int; F2: int }
+
+        let takeR (r: R) = ()
+
+        let () =
+          takeR { }
+        //        ^cursor
+      """
+      [ "F1"; "F2" ]
+
+    testCompletionSingleFile
+      "recordCompletion: navigation from a record"
+      """
+        type R = { N1: int; N2: int }
+
+        let makeR () : R = todo
+
+        let _ =
+          let r = makeR ()
+          r.
+        //  ^cursor
+      """
+      [ "Length"; "N1"; "N2" ] ]
 
 // -----------------------------------------------
 // Find projects

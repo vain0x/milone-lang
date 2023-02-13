@@ -621,6 +621,8 @@ type Symbol =
   | ValueSymbol of ValueSymbol
   | TySymbol of TySymbol
   | ModuleSymbol of ModulePath
+  // (this is not a symbol though)
+  | RecordOccurrence
 
 type private SymbolOccurrence = Symbol * DefOrUse * Ty option * Loc2
 
@@ -925,7 +927,9 @@ let private lowerTExpr acc expr =
            |> up lowerTExpr body))
          arms
 
-  | TRecordExpr (baseOpt, fields, ty, _) ->
+  | TRecordExpr (baseOpt, fields, ty, loc) ->
+    let acc = (RecordOccurrence, Def, Some ty, At loc) :: acc
+
     acc
     |> up (Option.fold lowerTExpr) baseOpt
     |> up
@@ -949,6 +953,7 @@ let private lowerTExpr acc expr =
     match exprToTy l with
     | Ty (RecordTk (tySerial, _), _) ->
       (FieldSymbol(tySerial, r), Use, Some ty, At loc)
+      :: (RecordOccurrence, Use, Some ty, At loc)
       :: acc
     | _ -> acc
 
@@ -1200,7 +1205,8 @@ module Symbol =
           | RecordTyDef (name, _, _, _, _) -> Some name
           | _ -> None)
 
-      | ModuleSymbol (_) -> None // unimplemented
+      | ModuleSymbol _ // unimplemented
+      | RecordOccurrence -> None
     | None -> None
 
 // Provides fundamental operations as building block of queries.
@@ -1920,11 +1926,19 @@ module internal ProjectAnalysisCompletion =
         | NextIdent loc -> loc
 
       symbols
-      |> List.tryPick (fun (symbol, _, _, loc2) ->
+      |> List.tryPick (fun (symbol, _, tyOpt, loc2) ->
         let loc = toLoc loc2
 
-        match symbol with
-        | FieldSymbol(tySerial, ident) when Symbol.equals docId (Loc.docId loc) ->
+        match symbol, tyOpt with
+        | RecordOccurrence, Some(Ty(RecordTk(tySerial, _), _)) when Symbol.equals docId (Loc.docId loc) ->
+          let _, pos = Loc.toDocPos loc
+
+          if Range.isTouched pos recordRange then
+            Some tySerial
+          else
+            None
+
+        | FieldSymbol(tySerial, ident), _ when Symbol.equals docId (Loc.docId loc) ->
           let _, pos = Loc.toDocPos loc
 
           if Range.isTouched pos recordRange then
