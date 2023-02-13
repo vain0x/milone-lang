@@ -1,5 +1,0 @@
-#!/bin/sh
-
-set -eu
-
-cat ./milone.ungram | dotnet run --project Ungrammar.fsproj

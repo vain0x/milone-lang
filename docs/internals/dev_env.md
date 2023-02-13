@@ -4,8 +4,6 @@ This explains how to set up an environment to develop the milone-lang compiler.
 
 Remark: Scripts are written for `bash` because I use a Ubuntu desktop.
 
-TODO: prepare scripts/unused/.devcontainer
-
 ### Prerequisites
 
 See also the "install" section in [README](../../README.md) in the root.
