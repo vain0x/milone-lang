@@ -39,6 +39,8 @@
 - Support `completion` of static namespace members experimentally
 - Fix `diagnostics` are too frequently updated
 - Fix the server tries to continue after out of memory
+- Analysis queries can now be performed even if type errors present
+- Support fields completion
 
 ### VSCode Extension
 

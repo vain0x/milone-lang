@@ -218,6 +218,10 @@ type MiloneHome = string
 module Range =
   let zero: Range = (0, 0), (0, 0)
 
+  let toString (range: Range) =
+    let ((y1, x1), (y2, x2)) = range
+    sprintf "%d:%d-%d:%d" (y1 + 1) (x1 + 1) (y2 + 1) (x2 + 1)
+
 // -----------------------------------------------
 // URI
 // -----------------------------------------------

@@ -384,7 +384,10 @@ module ProjectAnalysis =
     else
       match ProjectAnalysisCompletion.tryNsCompletion docId targetPos pa with
       | Some items, pa -> items, pa
-      | None, pa -> collectLocalSymbols pa
+      | None, pa ->
+        match ProjectAnalysisCompletion.tryRecordCompletion docId targetPos pa with
+        | Some items, pa -> items, pa
+        | None, pa -> collectLocalSymbols pa
 
   /// `(defs, uses) option`
   let findRefs
@@ -490,8 +493,9 @@ module ProjectAnalysis =
       // eprintfn "hover: %A, tokenLoc=%A" token tokenLoc
 
       let result, pa = pa |> ProjectAnalysis1.bundle
+      let tyNameOpt, pa = ProjectAnalysis1.getTyName tokenLoc pa
 
-      match ProjectAnalysis1.getTyName result tokenLoc pa with
+      match tyNameOpt with
       | None ->
         let errorCount =
           result |> BundleResult.getErrors |> List.length

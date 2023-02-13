@@ -430,6 +430,7 @@ type ProjectAnalysis =
       NewParseResults: (DocVersion * LSyntaxData) list
       Db: SyntaxApi.SyntaxAnalysisDb
       BundleCache: BundleResult option
+      TirSymbolsCache: SymbolOccurrence list option
       Host: ProjectAnalysisHost }
 
 let private emptyTokenizeCache: TreeMap<DocId, LTokenList> = TMap.empty Symbol.compare
@@ -454,65 +455,11 @@ let private parseWithCache docId (pa: ProjectAnalysis) = pa.Host.Parse docId |> 
 [<RequireQualifiedAccess; NoEquality; NoComparison>]
 type BundleResult =
   private
-    { ProgramOpt: (TProgram * TirCtx) option
+    { Program: TProgram
+      TirCtxOpt: TirCtx option
       Errors: (string * Loc) list
       DocVersions: (DocId * DocVersion) list
       ParseResults: (DocVersion * LSyntaxData) list }
-
-let private doBundle (pa: ProjectAnalysis) : BundleResult =
-  let writeLog: string -> unit = ignore
-
-  let fetchModuleUsingCache (r: AstBundle.FetchModuleParams) : Future<ModuleSyntaxData option> =
-    let docId =
-      pa.Host.ComputeDocId(r.ProjectName, r.ModuleName, r.Origin)
-
-    match pa |> parseWithCache docId with
-    | None -> Future.just None
-    | Some (LSyntaxData m) -> Future.just (Some m)
-
-  let layers, bundleErrors =
-    AstBundle.bundle fetchModuleUsingCache pa.EntryDoc
-
-  let result =
-    if bundleErrors |> List.isEmpty |> not then
-      SyntaxAnalysisError(bundleErrors, None)
-    else
-      let layers =
-        layers
-        |> List.map (fun modules -> modules |> List.map (fun (_, m) -> m))
-
-      SyntaxApi.performSyntaxAnalysis writeLog layers
-
-  let docVersions =
-    layers
-    |> List.collect (fun modules ->
-      modules
-      |> List.map (fun (_, (m: ModuleSyntaxData2)) -> m.DocId, getVersion m.DocId pa))
-
-  let parseResults =
-    layers
-    |> List.collect (fun modules ->
-      modules
-      |> List.map (fun ((m: ModuleSyntaxData), (_: ModuleSyntaxData2)) ->
-        let v = getVersion m.DocId pa
-        v, LSyntaxData m))
-
-  match result with
-  | SyntaxAnalysisOk (modules, tirCtx) ->
-    { ProgramOpt = Some(modules, tirCtx)
-      Errors = []
-      DocVersions = docVersions
-      ParseResults = parseResults }
-
-  | SyntaxAnalysisError (errors, tirCtxOpt) ->
-    { ProgramOpt =
-        match tirCtxOpt with
-        | Some tirCtx -> Some([], tirCtx)
-        | None -> None
-
-      Errors = errors
-      DocVersions = docVersions
-      ParseResults = parseResults }
 
 let private bundleWithCache (pa: ProjectAnalysis) : BundleResult * ProjectAnalysis =
   let docsAreAllFresh docVersions =
@@ -563,9 +510,9 @@ let private bundleWithCache (pa: ProjectAnalysis) : BundleResult * ProjectAnalys
       )
       |> List.map fst
 
-    let result, db =
+    let result, modules, tirCtxOpt, db =
       if bundleErrors |> List.isEmpty |> not then
-        SyntaxAnalysisError(bundleErrors, None), pa.Db
+        Error bundleErrors, [], None, pa.Db
       else
         let layers2 =
           layers
@@ -588,22 +535,16 @@ let private bundleWithCache (pa: ProjectAnalysis) : BundleResult * ProjectAnalys
           v, LSyntaxData m))
 
     let result : BundleResult =
-      match result with
-      | SyntaxAnalysisOk (modules, tirCtx) ->
-        { ProgramOpt = Some(modules, tirCtx)
-          Errors = []
-          DocVersions = docVersions
-          ParseResults = parseResults }
+      let errors =
+        match result with
+        | Ok () -> []
+        | Error it -> it
 
-      | SyntaxAnalysisError (errors, tirCtxOpt) ->
-        { ProgramOpt =
-            match tirCtxOpt with
-            | Some tirCtx -> Some([], tirCtx)
-            | None -> None
-
-          Errors = errors
-          DocVersions = docVersions
-          ParseResults = parseResults }
+      { Program = modules
+        TirCtxOpt = tirCtxOpt
+        Errors = errors
+        DocVersions = docVersions
+        ParseResults = parseResults }
 
     // let result = doBundle pa
 
@@ -618,7 +559,8 @@ let private bundleWithCache (pa: ProjectAnalysis) : BundleResult * ProjectAnalys
                 pa.NewTokenizeCache
           NewParseResults = List.append result.ParseResults pa.NewParseResults
           Db = db
-          BundleCache = Some result }
+          BundleCache = Some result
+          TirSymbolsCache = None }
 
     result, pa
 
@@ -679,6 +621,8 @@ type Symbol =
   | ValueSymbol of ValueSymbol
   | TySymbol of TySymbol
   | ModuleSymbol of ModulePath
+  // (this is not a symbol though)
+  | RecordOccurrence
 
 type private SymbolOccurrence = Symbol * DefOrUse * Ty option * Loc2
 
@@ -983,7 +927,9 @@ let private lowerTExpr acc expr =
            |> up lowerTExpr body))
          arms
 
-  | TRecordExpr (baseOpt, fields, ty, _) ->
+  | TRecordExpr (baseOpt, fields, ty, loc) ->
+    let acc = (RecordOccurrence, Def, Some ty, At loc) :: acc
+
     acc
     |> up (Option.fold lowerTExpr) baseOpt
     |> up
@@ -1007,6 +953,7 @@ let private lowerTExpr acc expr =
     match exprToTy l with
     | Ty (RecordTk (tySerial, _), _) ->
       (FieldSymbol(tySerial, r), Use, Some ty, At loc)
+      :: (RecordOccurrence, Use, Some ty, At loc)
       :: acc
     | _ -> acc
 
@@ -1084,14 +1031,16 @@ let private resolveLoc (symbols: SymbolOccurrence list) pa =
   |> fst
   |> List.choose id
 
-let private findTyInStmt (pa: ProjectAnalysis) (modules: TProgram) (tokenLoc: Loc) =
-  let symbols = lowerTModules [] modules
+let private paGetTirSymbolsWithCache (pa: ProjectAnalysis) =
+  match pa.BundleCache, pa.TirSymbolsCache with
+  | _, Some it -> Some it, pa
 
-  resolveLoc symbols pa
-  |> List.tryPick (fun (_, _, tyOpt, loc) ->
-    match tyOpt with
-    | Some ty when Loc.equals loc tokenLoc -> Some ty
-    | _ -> None)
+  | Some b, _ ->
+    let symbols = lowerTModules [] b.Program
+    let pa = { pa with TirSymbolsCache = Some symbols }
+    Some symbols, pa
+
+  | _ -> None, pa
 
 let private collectSymbolsInExpr (pa: ProjectAnalysis) (modules: TProgram) (tirCtx: TirCtx) =
   let parseModule (m: TModule) =
@@ -1215,8 +1164,10 @@ let private collectSymbolsInExpr (pa: ProjectAnalysis) (modules: TProgram) (tirC
 
 module Symbol =
   let name (b: BundleResult) (symbol: Symbol) =
-    match b.ProgramOpt with
-    | Some (modules, tirCtx) ->
+    let modules = b.Program
+
+    match b.TirCtxOpt with
+    | Some tirCtx ->
       match symbol with
       | DiscardSymbol _
       | PrimSymbol _ -> None // not implemented, completion need filter out
@@ -1254,7 +1205,8 @@ module Symbol =
           | RecordTyDef (name, _, _, _, _) -> Some name
           | _ -> None)
 
-      | ModuleSymbol (_) -> None // unimplemented
+      | ModuleSymbol _ // unimplemented
+      | RecordOccurrence -> None
     | None -> None
 
 // Provides fundamental operations as building block of queries.
@@ -1272,6 +1224,7 @@ module ProjectAnalysis1 =
       NewParseResults = []
       Db = SyntaxApi.SyntaxAnalysisDb.empty ()
       BundleCache = None
+      TirSymbolsCache = None
       Host = host }
 
   let withHost (host: ProjectAnalysisHost) pa : ProjectAnalysis = { pa with Host = host }
@@ -1302,18 +1255,26 @@ module ProjectAnalysis1 =
       | Def, Some loc -> Some(symbol, defOrUse, loc)
       | _ -> None)
 
+  // collect symbols from AST
   let collectSymbols (b: BundleResult) (pa: ProjectAnalysis) =
-    match b.ProgramOpt with
+    match b.TirCtxOpt with
     | None -> None
-    | Some (modules, tirCtx) -> collectSymbolsInExpr pa modules tirCtx |> Some
+    | Some tirCtx -> collectSymbolsInExpr pa b.Program tirCtx |> Some
 
-  let getTyName (b: BundleResult) (tokenLoc: Loc) (pa: ProjectAnalysis) =
-    match b.ProgramOpt with
-    | None -> None
-    | Some (modules, tirCtx) ->
-      match findTyInStmt pa modules tokenLoc with
-      | None -> Some None
-      | Some ty -> TySystem.tyDisplay ty |> Some |> Some
+  let getTyName (tokenLoc: Loc) (pa: ProjectAnalysis) =
+    let symbolsOpt, pa = paGetTirSymbolsWithCache pa
+    let symbols = Option.defaultValue [] symbolsOpt
+
+    let resultOpt =
+      resolveLoc symbols pa
+      |> List.tryPick (fun (_, _, tyOpt, loc) ->
+        match tyOpt with
+        | Some ty when Loc.equals loc tokenLoc -> Some ty
+        | _ -> None)
+      |> Option.map TySystem.tyDisplay
+      |> Some
+
+    resultOpt, pa
 
 // -----------------------------------------------
 // Completion
@@ -1869,15 +1830,15 @@ module internal ProjectAnalysisCompletion =
 
       match findQuals tree targetPos with
       | None ->
-        debugFn "no quals"
+        // debugFn "no quals"
         None, pa
 
       | Some (quals, ancestors) ->
-        debugFn "quals=%A" quals
+        // debugFn "quals=%A" quals
 
         match lastIdent text quals with
         | None ->
-          debugFn "no ident"
+          // debugFn "no ident"
           None, pa
 
         | Some (qualIdent, qualPos) ->
@@ -1892,7 +1853,7 @@ module internal ProjectAnalysisCompletion =
 
           match resolveAsNs docId text ancestors qualIdent qualPos pa with
           | [] ->
-            debugFn "no members in %s" qualIdent
+            // debugFn "no members in %s" qualIdent
 
             match resolveUnqualifiedAsValue docId text ancestors qualIdent qualPos pa with
             | [] -> None, pa
@@ -1902,5 +1863,109 @@ module internal ProjectAnalysisCompletion =
           | items -> Some items, pa
 
     | None ->
-      debugFn "no syntax2"
+      // debugFn "no syntax2"
       None, pa
+
+  let private findAncestorsAt (targetPos: Pos) (tree: SyntaxTree) =
+    let rec findRec ancestors node =
+      match node with
+      | SyntaxToken (_, range) when Range.isTouched targetPos range -> [ancestors]
+
+      | SyntaxToken _ -> []
+
+      | SyntaxNode (_, range, children) ->
+        if Range.isTouched targetPos range then
+          children
+          |> List.collect (findRec (node :: ancestors))
+        else
+          []
+
+    let (SyntaxTree root) = tree
+    findRec [] root
+
+  /// Attempts generate completion items in record expressions.
+  let tryRecordCompletion (docId: DocId) (targetPos: Pos) pa : (int * string) list option * ProjectAnalysis =
+    let tryFindParentRecordExprNode tree : Range option =
+      findAncestorsAt targetPos tree
+      |> List.tryPick (fun ancestors ->
+        ancestors
+        |> List.tryFind (fun node ->
+          match SyntaxElement.kind node with
+          | SyntaxKind.RecordExpr _ -> true
+          | _ -> false))
+      |> Option.map SyntaxElement.range
+
+    // performs syntactic analysis and checks if whether record completion is applicable.
+    let tryDetectRecordRange pa =
+      let syntaxOpt, pa = ProjectAnalysis1.parse2 docId pa
+
+      match syntaxOpt with
+      | Some syntax ->
+        let tree = syntax.SyntaxTree
+        let recordRangeOpt = tryFindParentRecordExprNode tree
+        recordRangeOpt, pa
+
+      | None -> None, pa
+
+    let computeTypeInfo pa =
+      let bundleResult, pa = ProjectAnalysis1.bundle pa
+      let symbolsOpt, pa = paGetTirSymbolsWithCache pa
+
+      let tysAndSymbolsOpt =
+        match bundleResult.TirCtxOpt, symbolsOpt with
+        | Some tirCtx, Some symbols -> Some(tirCtx.Tys, symbols)
+        | _ -> None
+
+      tysAndSymbolsOpt, pa
+
+    let findRecordTySerialFromRange recordRange symbols =
+      let toLoc loc2 =
+        match loc2 with
+        | At loc -> loc
+        | PreviousIdent loc -> loc
+        | NextIdent loc -> loc
+
+      symbols
+      |> List.tryPick (fun (symbol, _, tyOpt, loc2) ->
+        let loc = toLoc loc2
+
+        match symbol, tyOpt with
+        | RecordOccurrence, Some(Ty(RecordTk(tySerial, _), _)) when Symbol.equals docId (Loc.docId loc) ->
+          let _, pos = Loc.toDocPos loc
+
+          if Range.isTouched pos recordRange then
+            Some tySerial
+          else
+            None
+
+        | FieldSymbol(tySerial, ident), _ when Symbol.equals docId (Loc.docId loc) ->
+          let _, pos = Loc.toDocPos loc
+
+          if Range.isTouched pos recordRange then
+            Some tySerial
+          else
+            None
+        | _ -> None)
+
+    let findFieldsOfRecordTy tys tySerialOpt =
+      match tySerialOpt with
+      | Some tySerial ->
+        match tys |> TMap.tryFind tySerial with
+        | Some(RecordTyDef(_, _, fields, _, _)) -> fields |> List.map (fun (ident, _, _) -> ident) |> Some
+
+        | _ -> None
+      | _ -> None
+
+    let newFieldItem (ident: string) = Kind.Field, ident
+
+    match tryDetectRecordRange pa with
+    | Some recordRange, pa ->
+      match computeTypeInfo pa with
+      | Some(tys, symbols), pa ->
+        let tySerialOpt = findRecordTySerialFromRange recordRange symbols
+        let fieldsOpt = findFieldsOfRecordTy tys tySerialOpt
+        let itemsOpt = Option.map (List.map newFieldItem) fieldsOpt
+        itemsOpt, pa
+
+      | None, pa -> None, pa
+    | None, pa -> None, pa
