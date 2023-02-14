@@ -19,6 +19,11 @@ struct PodaMap {
     int32_t len;
 };
 
+struct PodaFun {
+    void const *(*fun)(void const *, void const *);
+    void const *env;
+};
+
 enum PodaType {
     PodaType_Null,
     PodaType_Bool,
