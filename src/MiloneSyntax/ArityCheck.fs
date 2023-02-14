@@ -171,7 +171,7 @@ let private acStmt (ctx: ArityCheckCtx) stmt : ArityCheckCtx =
   match stmt with
   | TExprStmt expr -> acExprChecked ctx expr
   | TLetValStmt(_, init, _) -> acExprChecked ctx init
-  | TLetFunStmt(_, _, _, _, body, _) -> acExprChecked ctx body
+  | TLetFunStmt f -> acExprChecked ctx f.Body
   | TBlockStmt(_, stmts) -> acStmts ctx stmts
 
 let private acStmts ctx stmts = stmts |> List.fold acStmt ctx

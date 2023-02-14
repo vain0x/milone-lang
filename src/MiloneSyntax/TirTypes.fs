@@ -389,12 +389,21 @@ type TExpr =
   /// - Statements might define symbols locally for the last expression.
   | TBlockExpr of TStmt list * last: TExpr
 
+[<RequireQualifiedAccess; NoEquality; NoComparison>]
+type TLetFunStmt =
+  { FunSerial: FunSerial
+    IsRec: IsRec
+    Vis: Vis
+    Params: TPat list
+    Body: TExpr
+    Loc: Loc }
+
 /// Statement.
 [<NoEquality; NoComparison>]
 type TStmt =
   | TExprStmt of TExpr
   | TLetValStmt of TPat * TExpr * Loc
-  | TLetFunStmt of FunSerial * IsRec * Vis * args: TPat list * body: TExpr * Loc
+  | TLetFunStmt of TLetFunStmt
 
   /// If recursive, local definitions are mutually recursive.
   | TBlockStmt of IsRec * TStmt list

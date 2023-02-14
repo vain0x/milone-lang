@@ -235,8 +235,8 @@ let private lowerStmt (stmt: Tir.TStmt) : Hir.HStmt =
 
   | Tir.TLetValStmt (pat, init, loc) -> Hir.HLetValStmt(lowerPat pat, lowerExpr init, loc)
 
-  | Tir.TLetFunStmt (funSerial, _, _, argPats, body, loc) ->
-    Hir.HLetFunStmt(lowerFunSerial funSerial, List.map lowerPat argPats, lowerExpr body, loc)
+  | Tir.TLetFunStmt f ->
+    Hir.HLetFunStmt(lowerFunSerial f.FunSerial, List.map lowerPat f.Params, lowerExpr f.Body, f.Loc)
 
   // note: if flatten all blocks, compile fails (invalid code generated). Does them need being nested or wrapped by HExprStmt?
   | Tir.TBlockStmt (_, stmts) ->

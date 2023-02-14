@@ -970,7 +970,9 @@ let private lowerTStmt acc stmt =
 
   | TLetValStmt (pat, init, _) -> acc |> up lowerTPat pat |> up lowerTExpr init
 
-  | TLetFunStmt (callee, _, _, argPats, body, loc) ->
+  | TLetFunStmt f ->
+    let callee, argPats, body, loc = f.FunSerial, f.Params, f.Body, f.Loc
+
     let tyFunN argTys resultTy : Ty =
       argTys
       |> List.fold (fun funTy argTy -> tyFun argTy funTy) resultTy

@@ -740,9 +740,11 @@ let private initializeVarTy ctx pat =
     pat
 
 /// Sets initialized type information in function definition.
-let private initializeFunTy (ctx: TyCtx) funSerial args body =
+let private initializeFunTy (ctx: TyCtx) (f: TLetFunStmt) =
+  let funSerial, argPats, body = f.FunSerial, f.Params, f.Body
+
   let argTys, ctx =
-    args
+    argPats
     |> List.mapFold
          (fun ctx pat ->
            match patToAscriptionTy pat with
@@ -790,7 +792,7 @@ let private initializeNonlocalVarsAndFuns ctx stmts =
        (fun ctx stmt ->
          match stmt with
          | TLetValStmt(pat, _, _) -> initializeVarTy ctx pat
-         | TLetFunStmt(funSerial, _, _, args, body, _) -> initializeFunTy ctx funSerial args body
+         | TLetFunStmt f -> initializeFunTy ctx f
          | _ -> ctx)
        ctx
 
@@ -802,7 +804,7 @@ let private initializeLocalFuns ctx stmts =
   |> List.fold
        (fun ctx stmt ->
          match stmt with
-         | TLetFunStmt(funSerial, _, _, args, body, _) -> initializeFunTy ctx funSerial args body
+         | TLetFunStmt f -> initializeFunTy ctx f
          | _ -> ctx)
        ctx
 
@@ -2023,7 +2025,9 @@ let private inferLetValStmt ctx pat init loc =
   let pat, _, ctx = inferIrrefutablePat ctx pat (Some initTy)
   TLetValStmt(pat, init, loc), ctx
 
-let private inferLetFunStmt ctx mutuallyRec callee vis argPats body loc =
+let private inferLetFunStmt ctx mutuallyRec (f: TLetFunStmt) =
+  let callee, vis, argPats, body, loc = f.FunSerial, f.Vis, f.Params, f.Body, f.Loc
+
   let isMainFun (ctx: TyCtx) funSerial =
     match ctx.MainFunOpt with
     | Some mainFun -> funSerialCompare mainFun funSerial = 0
@@ -2106,7 +2110,10 @@ let private inferLetFunStmt ctx mutuallyRec callee vis argPats body loc =
 
   let ctx = { ctx with IsFunLocal = parentIsFunLocal }
 
-  TLetFunStmt(callee, NotRec, vis, argPats, body, loc), ctx
+  let stmt =
+    TLetFunStmt { FunSerial = callee; IsRec = NotRec; Vis = vis; Params = argPats; Body = body; Loc = loc }
+
+  stmt, ctx
 
 let private inferBlockStmt (ctx: TyCtx) mutuallyRec stmts : TStmt * TyCtx =
   let parentCtx = ctx
@@ -2123,7 +2130,8 @@ let private inferBlockStmt (ctx: TyCtx) mutuallyRec stmts : TStmt * TyCtx =
     |> List.fold
          (fun (ctx: TyCtx) stmt ->
            match stmt with
-           | TLetFunStmt(funSerial, _, _, _, _, _) ->
+           | TLetFunStmt f ->
+             let funSerial = f.FunSerial
              let funDef: FunDef = ctx.Funs |> mapFind funSerial
              let (TyScheme(tyVars, funTy)) = funDef.Ty
 
@@ -2175,7 +2183,7 @@ let private inferStmt ctx mutuallyRec stmt : TStmt * TyCtx =
   match stmt with
   | TExprStmt expr -> inferExprStmt ctx expr
   | TLetValStmt(pat, init, loc) -> inferLetValStmt ctx pat init loc
-  | TLetFunStmt(oldSerial, _, vis, args, body, loc) -> inferLetFunStmt ctx mutuallyRec oldSerial vis args body loc
+  | TLetFunStmt f -> inferLetFunStmt ctx mutuallyRec f
   | TBlockStmt(mutuallyRec, stmts) -> inferBlockStmt ctx mutuallyRec stmts
 
 // -----------------------------------------------
@@ -2281,7 +2289,7 @@ module private RecursiveDeclDecomposition =
     match stmt with
     | TExprStmt expr -> rddOnExpr level ctx expr
     | TLetValStmt(_, init, _) -> rddOnExpr level ctx init
-    | TLetFunStmt(_, _, _, _, body, _) -> rddOnExpr level ctx body
+    | TLetFunStmt f -> rddOnExpr level ctx f.Body
     | TBlockStmt(_, stmts) -> stmts |> List.fold (rddOnStmt level) ctx
 
   // See comments above.
@@ -2299,7 +2307,7 @@ module private RecursiveDeclDecomposition =
              | TBlockStmt _ -> acc
 
              | TLetValStmt(pat, _, _) -> collectVars level varLevelMap pat, funLevelMap
-             | TLetFunStmt(funSerial, _, _, _, _, _) -> varLevelMap, TMap.add funSerial level funLevelMap)
+             | TLetFunStmt f -> varLevelMap, TMap.add f.FunSerial level funLevelMap)
            (TMap.empty varSerialCompare, TMap.empty funSerialCompare)
 
     let ctx =
@@ -2581,7 +2589,8 @@ module private Rms =
       let init, ctx = rmsExpr ctx init
       TLetValStmt(pat, init, loc), ctx
 
-    | TLetFunStmt(funSerial, isRec, vis, argPats, body, loc) ->
+    | TLetFunStmt f ->
+      let funSerial, argPats, body = f.FunSerial, f.Params, f.Body
       let parentCtx = ctx
 
       // Update definition:
@@ -2598,7 +2607,7 @@ module private Rms =
       let body, ctx = rmsExpr ctx body
       let ctx = { ctx with DefinedTys = parentCtx.DefinedTys }
 
-      TLetFunStmt(funSerial, isRec, vis, argPats, body, loc), ctx
+      TLetFunStmt { f with Params = argPats; Body = body }, ctx
 
     | TBlockStmt(isRec, stmts) ->
       let stmts, ctx = List.mapFold rmsStmt ctx stmts

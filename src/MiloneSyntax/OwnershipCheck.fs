@@ -623,7 +623,8 @@ let private ocStmt rx (ctx: OwnershipCheckCtx) stmt : OwnershipCheckCtx =
     let ctx = ocPat rx ctx pat
     ocExpr rx false ctx init
 
-  | TLetFunStmt(_, _, _, argPats, body, loc) ->
+  | TLetFunStmt f ->
+    let argPats, body, loc = f.Params, f.Body, f.Loc
     let parent, ctx = enterBody ctx
     let ctx = argPats |> List.fold (ocPat rx) ctx
     let ctx = ocExpr rx false ctx body
@@ -711,8 +712,8 @@ let private lwStmt stmt : TStmt =
   | TExprStmt expr -> TExprStmt(lwExpr expr)
   | TLetValStmt(pat, init, loc) -> TLetValStmt(lwPat pat, lwExpr init, loc)
 
-  | TLetFunStmt(funSerial, isRec, vis, argPats, body, loc) ->
-    TLetFunStmt(funSerial, isRec, vis, List.map lwPat argPats, lwExpr body, loc)
+  | TLetFunStmt f ->
+    TLetFunStmt { f with Params = List.map lwPat f.Params; Body = lwExpr f.Body }
 
   | TBlockStmt(isRec, stmts) -> TBlockStmt(isRec, List.map lwStmt stmts)
 

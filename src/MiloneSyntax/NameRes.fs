@@ -1687,7 +1687,16 @@ let private nameResLetFunStmt (ctx: ScopeCtx) stmt : TStmt * ScopeCtx =
     | NotRec -> importValue ctx funName (FunSymbol funSerial)
     | _ -> ctx
 
-  TLetFunStmt(funSerial, isRec, vis, argPats, body, loc), ctx
+  let stmt =
+    TLetFunStmt
+      { FunSerial = funSerial
+        IsRec = isRec
+        Vis = vis
+        Params = argPats
+        Body = body
+        Loc = loc }
+
+  stmt, ctx
 
 let private nameResStmt ctx (stmt: NStmt) : TStmt * ScopeCtx =
   match stmt with

@@ -294,7 +294,7 @@ let stmtMap (onTy: Ty -> Ty) (stmt: TStmt) : TStmt =
   match stmt with
   | TExprStmt expr -> TExprStmt(onExpr expr)
   | TLetValStmt(pat, init, loc) -> TLetValStmt(onPat pat, onExpr init, loc)
-  | TLetFunStmt(serial, isRec, vis, args, body, loc) -> TLetFunStmt(serial, isRec, vis, onPats args, onExpr body, loc)
+  | TLetFunStmt f -> TLetFunStmt { f with Params = onPats f.Params; Body = onExpr f.Body }
   | TBlockStmt(isRec, stmts) -> TBlockStmt(isRec, onStmts stmts)
 
 // -----------------------------------------------
