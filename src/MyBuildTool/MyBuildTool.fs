@@ -622,9 +622,6 @@ let private generateBinaryPackage (destDir: string) =
     CopyDirWithFilter("src/MiloneCore", $"{dest.SrcDir}/MiloneCore", [ "*.fs"; "*.milone"; "LICENSE" ])
     CopyDirWithFilter("src/Std", $"{dest.SrcDir}/Std", [ "*.fs"; "*.milone"; "LICENSE" ])
 
-    if onLinux then
-      CopyFile("bin/ninja", $"{dest.MiloneHome}/bin/ninja")
-
     // Add assets.
     let installScript, uninstallScript =
       match getPlatform () with
@@ -650,10 +647,10 @@ let private commandPack () =
   let triplet = getTriplet ()
 
   let version = MiloneVersion
-  let destDir = $"{cwd ()}/target/milone-{version}"
+  let destName = $"milone-{version}"
 
   io "pack" {
-    generateBinaryPackage destDir
+    generateBinaryPackage destName
 
     // Compress.
     let outFile =
@@ -664,8 +661,8 @@ let private commandPack () =
     RemoveFile outFile
 
     match getPlatform () with
-    | Platform.Linux -> Run("tar", [ "-czf"; outFile; destDir ], [], None)
-    | Platform.Windows -> Do("compress", (fun () -> Compression.ZipFile.CreateFromDirectory(destDir, outFile)))
+    | Platform.Linux -> Run("tar", [ "cf"; outFile; "-C"; "target"; destName ], [], None)
+    | Platform.Windows -> Do("compress", (fun () -> Compression.ZipFile.CreateFromDirectory($"target/{destName}", outFile)))
 
     ReadBytesWith(
       outFile,
