@@ -19,8 +19,8 @@
 ### Language Features
 
 - Support generic records
-- Fixed type check bugs
-- Fixed unicode string literals broken
+- Fix type check bugs
+- Fix unicode string literals broken
 - Add `never` type
 - Add primitives:
     - Add byte literals (`'a'B` syntax)
@@ -37,7 +37,7 @@
         - `binary staticlib` (`*.a`, `*.lib`)
     - Add `subsystem windows` directive (only on Windows)
 
-## Standard Libraries
+### Standard Libraries
 
 - Add `Std.CStr`, `Std.CMemory` modules for native interop
 - Add `Std.StringBuffer` module
