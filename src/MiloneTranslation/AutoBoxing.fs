@@ -11,7 +11,7 @@ open Std.StdError
 open Std.StdMap
 open Std.StdSet
 open MiloneTranslation.Hir
-open MiloneTranslationTypes.HirTypes
+open MiloneTranslation.HirTypes
 
 module Int = Std.StdInt
 
@@ -20,19 +20,9 @@ let private isFunTy ty =
   | Ty (FunTk, _) -> true
   | _ -> false
 
-let private tyIsRecord ty =
-  match ty with
-  | Ty (RecordTk _, tyArgs) ->
-    assert (List.isEmpty tyArgs)
-    true
-
-  | _ -> false
-
 let private unwrapRecordTy ty =
   match ty with
-  | Ty (RecordTk tySerial, tyArgs) ->
-    assert (List.isEmpty tyArgs)
-    tySerial
+  | Ty (RecordTk(tySerial, name), tyArgs) -> tySerial, name, tyArgs
   | _ -> unreachable ()
 
 let private hxBox itemExpr itemTy loc =
@@ -162,7 +152,7 @@ let private trdRecordTyDef isDirect (ctx: TrdCtx) tySerial tyDef =
 
     let ctx: TrdCtx =
       match tyDef with
-      | RecordTyDef (_, fields, _, _) ->
+      | RecordTyDef (_, _, fields, _, _) ->
         fields
         |> List.fold (fun ctx (_, fieldTy, _) -> trdTy isDirect ctx fieldTy) ctx
 
@@ -194,6 +184,8 @@ let private trdTyDef isDirect (ctx: TrdCtx) tySerial tyDef : TrdCtx =
 
   | RecordTyDef _ -> trdRecordTyDef isDirect ctx tySerial tyDef
 
+  | OpaqueTyDef _ -> ctx
+
 let private trdTy isDirect (ctx: TrdCtx) ty : TrdCtx =
   match ty with
   | Ty (tk, tyArgs) ->
@@ -206,8 +198,10 @@ let private trdTy isDirect (ctx: TrdCtx) ty : TrdCtx =
     | BoolTk
     | CharTk
     | StringTk
+    | NeverTk
     | ObjTk
     | VoidPtrTk _
+    | OpaqueTk _
     | MetaTk _ ->
       assert (List.isEmpty tyArgs)
       ctx
@@ -217,14 +211,14 @@ let private trdTy isDirect (ctx: TrdCtx) ty : TrdCtx =
     | FunTk
     | TupleTk
     | NativePtrTk _
-    | NativeFunTk
+    | FunPtrTk
     | NativeTypeTk _ -> tyArgs |> List.fold (trdTy isDirect) ctx
 
-    | UnionTk tySerial ->
+    | UnionTk(tySerial, _) ->
       let ctx = tyArgs |> List.fold (trdTy isDirect) ctx
       nominal ctx tySerial
 
-    | RecordTk tySerial -> nominal ctx tySerial
+    | RecordTk(tySerial, _) -> nominal ctx tySerial
 
 let private detectTypeRecursion (hirCtx: HirCtx) : TrdCtx =
   let ctx: TrdCtx =
@@ -313,7 +307,7 @@ let private tsmVariant (ctx: TsmCtx) variantSerial (variantDefOpt: VariantDef op
 let private tsmRecordTyDef (ctx: TsmCtx) tySerial tyDef =
   let canBox () =
     match ctx.Tys |> mapFind tySerial with
-    | RecordTyDef (_, _, IsCRepr true, _) -> false
+    | RecordTyDef (_, _, _, IsCRepr true, _) -> false
     | _ -> true
 
   match ctx.RecordTyMemo |> TMap.tryFind tySerial with
@@ -335,7 +329,7 @@ let private tsmRecordTyDef (ctx: TsmCtx) tySerial tyDef =
 
     let size, (ctx: TsmCtx) =
       match tyDef with
-      | RecordTyDef (_, fields, _, _) ->
+      | RecordTyDef (_, _, fields, _, _) ->
         fields
         |> List.fold
              (fun (totalSize, ctx) (fieldName, fieldTy, _) ->
@@ -383,6 +377,8 @@ let private tsmTyDef (ctx: TsmCtx) tySerial tyDef =
 
   | RecordTyDef _ -> tsmRecordTyDef ctx tySerial tyDef
 
+  | OpaqueTyDef _ -> 1000000, ctx
+
 let private tsmTy (ctx: TsmCtx) ty =
   match ty with
   | Ty (tk, tyArgs) ->
@@ -391,7 +387,8 @@ let private tsmTy (ctx: TsmCtx) ty =
 
     match tk with
     | BoolTk
-    | CharTk -> 1, ctx
+    | CharTk
+    | NeverTk -> 1, ctx
 
     | IntTk flavor -> intFlavorToBytes flavor, ctx
     | FloatTk flavor -> floatFlavorToBytes flavor, ctx
@@ -400,7 +397,7 @@ let private tsmTy (ctx: TsmCtx) ty =
     | ListTk
     | VoidPtrTk _
     | NativePtrTk _
-    | NativeFunTk -> 8, ctx
+    | FunPtrTk -> 8, ctx
 
     | StringTk
     | FunTk -> 16, ctx
@@ -416,11 +413,12 @@ let private tsmTy (ctx: TsmCtx) ty =
 
       Int.max 1 size, ctx
 
-    | UnionTk tySerial -> nominal tySerial
-    | RecordTk tySerial -> nominal tySerial
+    | UnionTk(tySerial, _) -> nominal tySerial
+    | RecordTk(tySerial, _) -> nominal tySerial
 
     | MetaTk _ -> 8, ctx
-    | NativeTypeTk _ -> 1000000, ctx
+    | NativeTypeTk _
+    | OpaqueTk _ -> 1000000, ctx
 
 let private measureTys (trdCtx: TrdCtx) : TsmCtx =
   let boxedVariants =
@@ -470,7 +468,11 @@ type private AbCtx =
     BoxedVariants: TreeSet<VariantSerial>
     BoxedRecordTys: TreeSet<TySerial>
 
-    RecursiveVariants: TreeSet<VariantSerial> }
+    RecursiveVariants: TreeSet<VariantSerial>
+
+    // #erase_enum_like_union
+    EnumLikeUnionTys: TreeSet<TySerial>
+    EnumLikeVariants: TreeMap<VariantSerial, TySerial * int * Lit> }
 
 let private ofHirCtx (hirCtx: HirCtx) : AbCtx =
   { Vars = hirCtx.StaticVars
@@ -479,7 +481,11 @@ let private ofHirCtx (hirCtx: HirCtx) : AbCtx =
     Tys = hirCtx.Tys
     BoxedVariants = TMap.empty variantSerialCompare
     BoxedRecordTys = TMap.empty compare
-    RecursiveVariants = TMap.empty variantSerialCompare }
+    RecursiveVariants = TMap.empty variantSerialCompare
+
+    // #erase_enum_like_union
+    EnumLikeUnionTys = TMap.empty compare
+    EnumLikeVariants = TMap.empty variantSerialCompare }
 
 let private toHirCtx (hirCtx: HirCtx) (ctx: AbCtx) =
   { hirCtx with
@@ -503,7 +509,7 @@ let private isRecursiveVariant (ctx: AbCtx) variantSerial =
 
 let private needsBoxedRecordTy ctx ty =
   match ty with
-  | Ty (RecordTk tySerial, _) -> needsBoxedRecordTySerial ctx tySerial
+  | Ty (RecordTk(tySerial, _), _) -> needsBoxedRecordTySerial ctx tySerial
   | _ -> false
 
 /// ### Boxing of Payloads
@@ -566,7 +572,7 @@ let private assignToPayloadTy (ctx: AbCtx) variantSerial (tyArgs: Ty list) =
 let private unwrapNewtypeUnionTy (ctx: AbCtx) ty tyArgs : Ty option =
   let asNewtypeVariant ty =
     match ty with
-    | Ty (UnionTk tySerial, _) ->
+    | Ty (UnionTk(tySerial, _), _) ->
       match ctx.Tys |> mapFind tySerial with
       | UnionTyDef (_, _, [ variantSerial ], _) when not (isRecursiveVariant ctx variantSerial) -> Some variantSerial
       | _ -> None
@@ -660,18 +666,18 @@ let private eraseRecordTy ctx ty =
   else
     None
 
-let private postProcessRecordExpr ctx recordTySerial args loc =
+let private postProcessRecordExpr ctx recordTySerial tyName tyArgs args loc =
   if needsBoxedRecordTySerial ctx recordTySerial then
-    let ty = tyRecord recordTySerial
+    let ty = tyRecord recordTySerial tyName tyArgs
     let recordExpr = HNodeExpr(HRecordEN, args, ty, loc)
 
     Some(hxBox recordExpr ty loc)
   else
     None
 
-let private postProcessFieldExpr ctx recordTySerial recordExpr index fieldTy loc =
+let private postProcessFieldExpr ctx recordTySerial tyName tyArgs recordExpr index fieldTy loc =
   if needsBoxedRecordTySerial ctx recordTySerial then
-    let ty = tyRecord recordTySerial
+    let ty = tyRecord recordTySerial tyName tyArgs
 
     Some(HNodeExpr(HRecordItemEN index, [ hxUnbox recordExpr ty loc ], fieldTy, loc))
   else
@@ -681,19 +687,24 @@ let private postProcessFieldExpr ctx recordTySerial recordExpr index fieldTy loc
 // Control
 // -----------------------------------------------
 
-let private abTy ctx ty =
+let private abTy (ctx: AbCtx) ty =
   match ty with
-  | Ty (RecordTk _, tyArgs) ->
-    assert (List.isEmpty tyArgs)
+  | Ty (RecordTk(tySerial, name), tyArgs) ->
+    let ty =
+      let tyArgs = tyArgs |> List.map (abTy ctx)
+      Ty(RecordTk(tySerial, name), tyArgs)
 
     match eraseRecordTy ctx ty with
     | Some ty -> ty
     | None -> ty
 
-  | Ty (UnionTk tySerial, tyArgs) ->
+  // #erase_enum_like_union
+  | Ty (UnionTk(tySerial, _), _) when ctx.EnumLikeUnionTys |> TSet.contains tySerial -> tyInt
+
+  | Ty (UnionTk(tySerial, name), tyArgs) ->
     let ty =
       let tyArgs = tyArgs |> List.map (abTy ctx)
-      Ty(UnionTk tySerial, tyArgs)
+      Ty(UnionTk(tySerial, name), tyArgs)
 
     match unwrapNewtypeUnionTy ctx ty tyArgs with
     | Some ty -> ty
@@ -713,6 +724,11 @@ let private abPat ctx pat =
 
   | HVariantPat (variantSerial, ty, loc) ->
     let ty = ty |> abTy ctx
+
+    // #erase_enum_like_union
+    match (ctx: AbCtx).EnumLikeVariants |> TMap.tryFind variantSerial with
+    | Some (_, _, lit) -> HLitPat (lit, loc)
+    | _ ->
 
     match unwrapNewtypeVariantPat ctx variantSerial loc with
     | Some pat -> pat
@@ -750,6 +766,11 @@ let private abExpr ctx expr =
   | HVariantExpr (variantSerial, ty, loc) ->
     let ty = ty |> abTy ctx
 
+    // #erase_enum_like_union
+    match (ctx: AbCtx).EnumLikeVariants |> TMap.tryFind variantSerial with
+    | Some (_, _, lit) -> HLitExpr (lit, loc)
+    | _ ->
+
     match unwrapNewtypeVariantExpr ctx variantSerial loc with
     | Some expr -> expr
     | None -> HVariantExpr(variantSerial, ty, loc)
@@ -770,20 +791,22 @@ let private abExpr ctx expr =
       | None -> hxCallProc callee [ payload ] ty loc
 
     | HRecordEN, _ ->
-      let recordSerial = unwrapRecordTy ty
+      let recordSerial, tyName, tyArgs = unwrapRecordTy ty
       let items = items |> List.map (abExpr ctx)
       let ty = ty |> abTy ctx
 
-      match postProcessRecordExpr ctx recordSerial items loc with
+      match postProcessRecordExpr ctx recordSerial tyName tyArgs items loc with
       | Some expr -> expr
       | None -> HNodeExpr(HRecordEN, items, ty, loc)
 
     | HRecordItemEN index, [ recordExpr ] ->
-      let recordTySerial = recordExpr |> exprToTy |> unwrapRecordTy
+      let recordTySerial, tyName, tyArgs =
+        recordExpr |> exprToTy |> unwrapRecordTy
+
       let recordExpr = recordExpr |> abExpr ctx
       let ty = ty |> abTy ctx
 
-      match postProcessFieldExpr ctx recordTySerial recordExpr index ty loc with
+      match postProcessFieldExpr ctx recordTySerial tyName tyArgs recordExpr index ty loc with
       | Some expr -> expr
       | None -> HNodeExpr(HRecordItemEN index, [ recordExpr ], ty, loc)
 
@@ -850,10 +873,39 @@ let autoBox (modules: HProgram, hirCtx: HirCtx) : HProgram * HirCtx =
              | _ -> set)
            (TSet.empty variantSerialCompare)
 
+    // #erase_enum_like_union
+    let enumLikeUnionTys, enumLikeVariants =
+      hirCtx.Tys |> TMap.fold
+        (fun (tySet, variantMap) tySerial tyDef ->
+          match tyDef with
+          | UnionTyDef (_, _, variants, _) ->
+            let isEnumLike =
+              variants |> List.forall (fun v ->
+                let variantDef = hirCtx.Variants |> mapFind v
+                not variantDef.HasPayload
+              )
+
+            if isEnumLike then
+              let variantMap =
+                variants
+                |> List.mapi (fun i v -> i, v)
+                |> List.fold (fun variantMap (i, v) ->
+                  variantMap |> TMap.add v (tySerial, i, IntLit (string i))) variantMap
+
+              tySet |> TSet.add tySerial, variantMap
+            else
+              tySet, variantMap
+          | _ -> tySet, variantMap)
+        (TMap.empty compare, TMap.empty variantSerialCompare)
+
     { ofHirCtx hirCtx with
         BoxedVariants = tsmCtx.BoxedVariants
         BoxedRecordTys = tsmCtx.BoxedRecordTys
-        RecursiveVariants = recursiveVariants }
+        RecursiveVariants = recursiveVariants
+
+        // #erase_enum_like_union
+        EnumLikeUnionTys = enumLikeUnionTys
+        EnumLikeVariants = enumLikeVariants }
 
   let abVars vars =
     vars
@@ -881,14 +933,14 @@ let autoBox (modules: HProgram, hirCtx: HirCtx) : HProgram * HirCtx =
     ctx.Tys
     |> TMap.map (fun _ tyDef ->
       match tyDef with
-      | RecordTyDef (recordName, fields, repr, loc) ->
+      | RecordTyDef (recordName, tyArgs, fields, repr, loc) ->
         let fields =
           fields
           |> List.map (fun (name, ty, loc) ->
             let ty = ty |> abTy ctx
             name, ty, loc)
 
-        RecordTyDef(recordName, fields, repr, loc)
+        RecordTyDef(recordName, tyArgs, fields, repr, loc)
 
       | _ -> tyDef)
 

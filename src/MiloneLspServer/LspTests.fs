@@ -1,11 +1,13 @@
 // should be separate project
 module rec MiloneLspServer.LspTests
 
+open MiloneShared.SharedTypes
 open MiloneShared.UtilParallel
 open MiloneShared.UtilSymbol
 open MiloneLspServer.Lsp
 open MiloneLspServer.LspUtil
 
+module AstBundle = MiloneLspServer.AstBundle
 module S = Std.StdString
 module LLS = MiloneLspServer.LspLangService
 module WorkspaceAnalysis = LLS.WorkspaceAnalysis
@@ -27,8 +29,8 @@ let private splitLast xs =
 
 let private pathToProjectName path =
   path
-  |> LLS.dirname
-  |> Option.map LLS.basename
+  |> Path.dirname
+  |> Option.map Path.basename
   |> expect "project"
 
 // -----------------------------------------------
@@ -210,7 +212,7 @@ let private stripCommonPrefix equals prefix xs =
   | _ -> prefix, xs
 
 let private ensureNormalization hint path =
-  let normalized = LLS.normalize path
+  let normalized = Path.normalize path
 
   if path <> normalized then
     eprintfn "warn: %s non-normal filepath used.\n  given: %s\n  normal: %s" hint path normalized
@@ -266,12 +268,12 @@ let private testDirEntries () =
 
 let private dummyMiloneHome = "/$/.milone"
 let private dummyRootDir = "/$/root"
-let private dummyRootUri = LLS.uriOfFilePath dummyRootDir
+let private dummyRootUri = uriOfFilePath dummyRootDir
 
 let private createWorkspaceAnalysisHostWithFiles files : LLS.WorkspaceAnalysisHost =
   let fileMap =
     files
-    |> List.map (fun (name, contents) -> LLS.normalize name, contents)
+    |> List.map (fun (name, contents) -> Path.normalize name, contents)
     |> Map.ofList
 
   let host: LLS.WorkspaceAnalysisHost =
@@ -311,10 +313,11 @@ let private getProject name (wa: LLS.WorkspaceAnalysis) =
   |> expect ("project " + name)
 
 let private createSingleFileProject text action =
-  let wa =
-    createWorkspaceAnalysisWithFiles [ "/$/root/TestProject/TestProject.milone", text ]
+  let path = "/$/root/TestProject/TestProject.milone"
+  let docId = AstBundle.computeDocId path
 
-  let docId = Symbol.intern "TestProject.TestProject"
+  let wa =
+    createWorkspaceAnalysisWithFiles [ path, text ]
 
   wa
   |> LLS.doWithProjectAnalysis (getProject "TestProject" wa) (action docId)
@@ -360,7 +363,7 @@ let private doTestRefsSingleFile title text docId (pa: ProjectAnalysis) : bool *
 
       a, pa
 
-  actual |> assertEqual title expected, pa
+  actual |> assertEqual ("refs: " + title) expected, pa
 
 let private testRefsSingleFile title text : bool =
   createSingleFileProject text (doTestRefsSingleFile title text)
@@ -376,11 +379,11 @@ let private doTestHoverSingleFile title text expected docId pa : bool * _ =
     |> S.concat "\n"
 
   let actual, pa =
-    match pa |> LLS.ProjectAnalysis.hover docId targetPos with
+    match pa |> LLS.ProjectAnalysis.hover1 docId targetPos with
     | None, pa -> debugProject pa
     | Some it, pa -> it, pa
 
-  actual |> assertEqual title expected, pa
+  actual |> assertEqual ("hover: " + title) expected, pa
 
 let private testHoverSingleFile title text expected : bool =
   createSingleFileProject text (doTestHoverSingleFile title text expected)
@@ -419,7 +422,7 @@ let private testRenameSingleFile title text newName expected : bool =
 
 let private testDocChange () =
   let path = "/$/root/TestProject/TestProject.milone"
-  let uri = LLS.uriOfFilePath path
+  let uri = uriOfFilePath path
 
   // (File of version N has a diagnostic at row N.)
   let diagnosticsToVersion diagnostics =
@@ -591,6 +594,7 @@ let private testRefs () =
           0
       """
 
+    // FIXME: position of final use is incorrect
     testRefsSingleFile
       "value-carrying variant"
       """
@@ -608,7 +612,7 @@ let private testRefs () =
         let main _ =
           match some 1 with
           | MySome _ -> 0
-        //  ^use
+        //        ^use
           | _ -> 1
       """
 
@@ -817,7 +821,7 @@ let private testCodeActionGenerateModuleHead () =
 
   let result, _ =
     wa
-    |> WorkspaceAnalysis.codeAction (LLS.uriOfFilePath path) range
+    |> WorkspaceAnalysis.codeAction (uriOfFilePath path) range
 
   let actual =
     result
@@ -876,7 +880,7 @@ let private testCodeActionGenerateOpen () =
     let range: Range = cursorPos, cursorPos
 
     wa
-    |> WorkspaceAnalysis.codeAction (LLS.uriOfFilePath path) range
+    |> WorkspaceAnalysis.codeAction (uriOfFilePath path) range
 
   let actual =
     result
@@ -936,7 +940,7 @@ let private testCodeActionGenerateModuleSynonym () =
     let range: Range = cursorPos, cursorPos
 
     wa
-    |> WorkspaceAnalysis.codeAction (LLS.uriOfFilePath path) range
+    |> WorkspaceAnalysis.codeAction (uriOfFilePath path) range
 
   let actual =
     result
@@ -985,8 +989,13 @@ let private doTestCompletion (p: LLS.ProjectInfo) (wa: LLS.WorkspaceAnalysis) ti
     match pa
           |> LLS.ProjectAnalysis.completion (WorkspaceAnalysis.getModules p wa) docId targetPos
       with
-    | [], pa -> debugProject pa
-    | result, pa -> debug result, pa
+    | [], pa ->
+      let output, pa = debugProject pa
+      "No completion results.\n" + output, pa
+
+    | result, pa ->
+      // FIXME: test kind of items
+      debug (List.map snd result), pa
 
   actual |> assertEqual title (debug expected), pa
 
@@ -998,7 +1007,7 @@ let private testCompletionMultipleFiles title files expected : bool =
     |> List.tryFind (fun (_, text) -> parseAnchors text |> List.isEmpty |> not)
     |> expect "anchor"
 
-  let docId = LLS.filePathToDocId path
+  let docId = AstBundle.computeDocId path
   let p = getProject (pathToProjectName path) wa
 
   LLS.doWithProjectAnalysis p (doTestCompletion p wa title text expected docId) wa
@@ -1035,16 +1044,188 @@ let private testCompletion () =
           """ ]
       [ "Std"; "StdFoo"; "TestProject" ]
 
-    // testCompletionSingleFile
-    //   "dot"
-    //   """
-    //     let main _ =
-    //       List.   (x.y)
-    //   //       ^cursor
-    //       0
-    //   """
-    //   [ "List.*" ]
-    ]
+    // ns-cases: completion from namespaces.
+    testCompletionSingleFile
+      "ns: file-local discriminated union"
+      """
+        type U = A of int | B of string
+
+        let main _ =
+          U.A
+      //    ^cursor
+          0
+      """
+      [ "A"; "B" ]
+
+
+    testCompletionMultipleFiles
+      "ns: file-local inner module"
+      [ "/$/root/TestProject/Lib.milone",
+        """
+          type NotExposed = int
+        """
+
+        "/$/root/TestProject/TestProject.milone",
+        """
+          module X =
+            // open doesn't re-export
+            open TestProject.Lib
+            // module synonym isn't exposed
+            module ModuleSynonymIsNotExposed = TestProject.Lib
+
+            // variables
+            let a, b = 1
+            // function
+            let f () = ()
+            // synonym
+            type S = int
+            // union and variants
+            type U = | V | W of int
+            // record
+            type R = { F: int }
+            // module
+            module M =
+              // inner decl isn't exposed
+              type InnerT = int
+
+          X.__
+          //^cursor
+        """ ]
+      [ "M"
+        "R"
+        "S"
+        "U"
+        "V"
+        "W"
+        "a"
+        "b"
+        "f" ]
+
+    testCompletionMultipleFiles
+      "ns: opened inner module"
+      [ "/$/root/TestProject/Lib.milone",
+        """module rec TestProject.Lib
+
+          module Inner =
+            type T = V of int
+            let f () = ()
+        """
+
+        "/$/root/TestProject/TestProject.milone",
+        """
+          open TestProject.Lib
+
+          Inner.f
+          //    ^cursor
+        """ ]
+      [ "T"; "V"; "f" ]
+
+    testCompletionMultipleFiles
+      "ns: synonym of module"
+      [ "/$/root/TestProject/Lib.milone",
+        """module rec TestProject.Lib
+
+          type T = int
+          let f () = ()
+        """
+
+        "/$/root/TestProject/TestProject.milone",
+        """
+          module L = TestProject.Lib
+
+          L.f
+          //^cursor
+        """ ]
+      [ "T"; "f" ]
+
+    testCompletionMultipleFiles
+      "ns: prelude modules"
+      [ "/$/.milone/src/MiloneCore/List.milone",
+        """
+          let isEmpty (_: _ list) = true
+        """
+
+        "/$/root/TestProject/TestProject.milone",
+        """
+          List.isEmpty
+          //   ^cursor
+        """ ]
+      [ "isEmpty" ]
+
+    testCompletionMultipleFiles
+      "ns: prelude modules"
+      [ "/$/root/TestProject/Lib.milone",
+        """
+          type Record1 = { F1: int }
+        """
+
+        "/$/root/TestProject/TestProject.milone",
+        """
+          open TestProject.Lib
+
+          type Record2 = { F2: int }
+
+          let f (x: Record2) =
+            x.__
+          //  ^cursor
+        """ ]
+      [ "F1"; "F2"; "Length" ] ]
+
+let private testRecordCompletion () =
+  [ testCompletionSingleFile
+      "recordCompletion: record expression"
+      """
+        type R =
+          { A: int
+            B: int }
+
+        let _ : R =
+          { A = 0
+            //
+        //  ^cursor
+            }
+      """
+      [ "A"; "B" ]
+
+    testCompletionSingleFile
+      "recordCompletion: nested record expression"
+      """
+        type R1 = { A: int; B: int }
+        type R2 = { C: int; D: R1 }
+
+        let _ : R2 =
+          { C = 0
+            D = { A = 0 } }
+        //        ^cursor
+      """
+      [ "A"; "B" ]
+
+    testCompletionSingleFile
+      "recordCompletion: empty record expression"
+      """
+        type R = { F1: int; F2: int }
+
+        let takeR (r: R) = ()
+
+        let () =
+          takeR { }
+        //        ^cursor
+      """
+      [ "F1"; "F2" ]
+
+    testCompletionSingleFile
+      "recordCompletion: navigation from a record"
+      """
+        type R = { N1: int; N2: int }
+
+        let makeR () : R = todo
+
+        let _ =
+          let r = makeR ()
+          r.
+        //  ^cursor
+      """
+      [ "Length"; "N1"; "N2" ] ]
 
 // -----------------------------------------------
 // Find projects
@@ -1060,7 +1241,7 @@ let private testFindProjects () =
   let wa =
     createWorkspaceAnalysisWithFiles files
     |> WorkspaceAnalysis.withHost (createWorkspaceAnalysisHostWithFiles newFiles)
-    |> WorkspaceAnalysis.didOpenFile (LLS.uriOfFilePath newFile)
+    |> WorkspaceAnalysis.didOpenFile (uriOfFilePath newFile)
 
   [ wa
     |> WorkspaceAnalysis.getProjectDirs
@@ -1069,7 +1250,7 @@ let private testFindProjects () =
 
     wa
     |> WorkspaceAnalysis.withHost (createWorkspaceAnalysisHostWithFiles files)
-    |> WorkspaceAnalysis.didCloseFile (LLS.uriOfFilePath newFile)
+    |> WorkspaceAnalysis.didCloseFile (uriOfFilePath newFile)
     |> WorkspaceAnalysis.getProjectDirs
     |> S.concat "; "
     |> assertEqual "after close" "" ]
@@ -1083,10 +1264,15 @@ let private testFindProjects () =
 let private testDiagnostics host =
   let workDir =
     System.Environment.CurrentDirectory
-    |> LLS.normalize
+    |> Path.normalize
+
+  let workDirAsPathname =
+    let uri = Uri.toString (uriOfFilePath workDir)
+    let i = "file://".Length
+    uri.[i..]
 
   let wa =
-    let rootUri = workDir |> LLS.uriOfFilePath
+    let rootUri = workDir |> uriOfFilePath
 
     WorkspaceAnalysis.create host
     |> WorkspaceAnalysis.onInitialized (Some rootUri)
@@ -1097,7 +1283,7 @@ let private testDiagnostics host =
   let filename =
     System.IO.Path.Combine(workDir, "tests/DiagnosticsTest/DiagnosticsTest.milone")
 
-  let fileUri = LLS.uriOfFilePath filename
+  let fileUri = uriOfFilePath filename
   let initialText = System.IO.File.ReadAllText(filename)
 
   let result, wa =
@@ -1136,7 +1322,7 @@ let private testDiagnostics host =
 
   assert (actual
           |> S.concat "\n"
-          |> S.replace workDir "$HOME"
+          |> S.replace workDirAsPathname "$HOME"
           |> assertEqual
                "testDiagnostics"
                """error: "PARSE ERROR: Missing '=' (0:1)" file://$HOME/tests/DiagnosticsTest/DiagnosticsTest.milone:7:1..7:1
@@ -1158,6 +1344,7 @@ let lspTests host =
       testDocumentSymbol ()
       testCodeAction ()
       testCompletion ()
+      testRecordCompletion ()
       testFindProjects () ]
     |> List.collect id
     |> runTests

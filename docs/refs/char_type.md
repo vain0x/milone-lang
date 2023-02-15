@@ -1,12 +1,12 @@
-# Char type
+# Char Type
 
 `char` is a built-in type to represent a component of strings.
 
-## Guide-level explanation
+## Guide-level Explanation
 
 Char literals are written between two single-quotes (`'`), e.g. `'a'`.
 
-### Escape sequences
+### Escape Sequences
 
 Escape sequences work same as string literals. See also [String type](string_type.md).
 
@@ -30,9 +30,9 @@ Char value can be converted to 8-bit integer types. See [Int types#Conversion](i
 - `char` value is typically used to represent a UTF-8 code unit in milone-lang, but it's not guaranteed.
 - `char` doesn't support comparison operators (`<` etc.) to avoid incompatibility with F#.
 
-## Advanced topics
+## Advanced Topics
 
-### Runtime representation
+### Runtime Representation
 
 (F#'s `char` type is 2-byte to represent UTF-16 code unit.)
 

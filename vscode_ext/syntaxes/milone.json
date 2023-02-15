@@ -148,7 +148,7 @@
                 {
                     "comment": "Rule of char literals. Structure is basically: `'(<char>|<escape>)' <suffix>`. Suffix is marked as illegal.",
                     "name": "string.quoted.single.milone",
-                    "match": "'([^'\\\\]|\\\\(?:x[0-9A-Fa-f]{2}|.))'(\\w*)",
+                    "match": "'([^'\\\\]|\\\\(?:x[0-9A-Fa-f]{2}|.))'(?:(B\\b)|(\\w*))",
                     "captures": {
                         "1": {
                             "patterns": [
@@ -158,6 +158,9 @@
                             ]
                         },
                         "2": {
+                            "name": "string.quoted.single.suffix.milone"
+                        },
+                        "3": {
                             "name": "invalid.illegal.milone"
                         }
                     }
@@ -474,7 +477,7 @@
                 {
                     "comment": "Rule of identifiers in type context. Type name starts with an upper alphabet or one of built-in type names.",
                     "name": "entity.name.type.milone",
-                    "match": "\\b([A-Z]\\w*|bool|char|float(32)?|list|nativeptr|obj|option|s?byte|sizeof|string|u?int(8|16|32|64)?|u?nativeint|unit|voidptr|__nativeType)\\b"
+                    "match": "\\b([A-Z]\\w*|bool|char|float(32)?|list|nativeptr|never|obj|option|s?byte|string|u?int(8|16|32|64)?|u?nativeint|unit|voidptr|__nativeType)\\b"
                 },
                 {
                     "include": "#unknown_sigil_rule"
@@ -707,6 +710,9 @@
                 }
             },
             "patterns": [
+                {
+                    "include": "#type_ascription_rule"
+                },
                 {
                     "include": "#type_rule"
                 }

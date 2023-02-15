@@ -28,7 +28,7 @@ next_2:;
     match_ = 1;
     goto end_match_1;
 next_3:;
-    exit(1);
+    milone_exhaust_error("match_nonexhaustive/match_nonexhaustive.milone", 5, 2);
 end_match_1:;
     return match_;
 }

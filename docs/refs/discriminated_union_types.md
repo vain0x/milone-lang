@@ -1,8 +1,8 @@
-# Discriminated union types
+# Discriminated Union Types
 
 Discriminated union type (DU) is a kind of user-defined types.
 
-## Instant usage
+## Instant Usage
 
 ```fsharp
 // Define type and variants.
@@ -19,9 +19,9 @@ match john with
 | Member id -> assert (id = 1)
 ```
 
-## Guide-level explanation
+## Guide-level Explanation
 
-### Constant variants
+### Constant Variants
 
 Type declaration defines a discriminated union type. Discriminated union consists of any number of variants, separated by pipes (`|`).
 
@@ -61,7 +61,7 @@ When a function takes a parameter of `CustomerKind` type, there only exists two 
     assert (not (isGuest Member))
 ```
 
-### Value-carrying variants
+### Value-carrying Variants
 
 Variants can have some fields.
 
@@ -100,9 +100,43 @@ To handle the case of value-carrying variants, variant in arm can take some "par
     assert (greetMessage john = "Hi, John Doe!")
 ```
 
-## Advanced topics
+## Generics
 
-### Notes on name of parts
+Discriminated union types can be parameterized over types. (Same as other nominal types.)
+Such types are called *generic discriminated union types*.
+
+A typical example is `option` type that looks like:
+
+```fsharp
+type Option<'T> =
+    | None
+    | Some of 'T
+```
+
+Syntax:
+The angle brackets in the first line is a *generic parameter list*.
+It defines a set of *type variables* that are written in `'T`.
+
+Type variables can be used in field types.
+Type variables represent some types that are specified at use-site.
+
+When to use a generic type, type arguments that bind to type variables must be specified by a *generic argument list*.
+
+```fsharp
+    let opt: Option<int> = Some 42
+```
+
+## Operations
+
+- Equality:
+    Discriminated union type is equatable if all payloads are equatable.
+- `string` function:
+    Discriminated union type is convertible to string if all payloads are convertible to string.
+    - *Remark*: The output might change in future.
+
+## Advanced Topics
+
+### Name of Parts
 
 - "discriminated union type" is also known as "algebraic data type (ADT)", "custom type", "enum" (enumeration), "sum type", "tagged union type", "variant", etc. in other communities.
 - "variant" is also known as "case", "constructor", etc.
@@ -133,7 +167,7 @@ If a variant is declared without `of` clause, its payload is empty. Its payload 
 
 Each variant is associated with an integer. The value is called *discriminant* of the variant.
 
-### Runtime representation
+### Runtime Representation
 
 (The runtime representation of discriminated union types is unlikely stabilized. FFI codes shouldn't rely on the layout.)
 
@@ -166,3 +200,12 @@ struct Customer {
     };
 };
 ```
+
+### Monomorphization of Generic Nominal Types
+
+Generic discriminated union types are monomorphized after monomorphization of generic functions.
+
+When a generic type appear in a non-generic function, its type arguments are all non-generic since no type variables are defined in the context.
+Such a use-site of generic type is each replaced with a new non-generic type definition obtained by substituting type variables with the type arguments.
+After all generic type definitions are removed.
+That's why runtime representation of generic types are same as non-generic types.

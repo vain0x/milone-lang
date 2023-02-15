@@ -12,9 +12,7 @@ typedef bool(*VoidConstPtrInt32MyNode1_Int32MyNode1_BoolFunPtr3)(void const *, s
 
 struct Int32MyNode1_Int32MyNode1_BoolFun2;
 
-struct MyBool_;
-
-struct MyBoolMyBoolTuple2_;
+struct Int32Int32Tuple2_;
 
 struct MyIntOption_;
 
@@ -34,7 +32,7 @@ struct Int32MyNode1_Cons;
 
 bool MiloneDerive_ListEqual_listEqual(struct Int32MyNode1_Cons const *, struct Int32MyNode1_Cons const *);
 
-bool MiloneDerive_TupleEqual_tuple2Equal(struct Int32Int32MyNode1ListTuple2_ l_8, struct Int32Int32MyNode1ListTuple2_ r_8);
+bool MiloneDerive_TupleEqual_tuple2Equal(struct Int32Int32MyNode1ListTuple2_ l_11, struct Int32Int32MyNode1ListTuple2_ r_11);
 
 bool MiloneDerive_ListEqual_eta3_listEqual_MyNodeEqual(void const *env_, struct Int32MyNode1_ arg_, struct Int32MyNode1_ arg_1);
 
@@ -42,17 +40,17 @@ bool Std_Equal_Int32MyNode1Int32MyNode1BoolFun2Int32MyNode1ListInt32MyNode1ListB
 
 bool MiloneDerive_ListEqual_listEqual(struct Int32MyNode1_Cons const *l_14, struct Int32MyNode1_Cons const *r_14);
 
-bool union_equal_union_equal_MyBoolEqual(struct MyBool_ l_, struct MyBool_ r_);
+bool union_equal_union_equal_MyBoolEqual(int32_t l_, int32_t r_);
 
 bool union_equal_union_equal_MyIntOptionEqual(struct MyIntOption_ l_1, struct MyIntOption_ r_1);
 
-bool union_equal_union_equal_MyValueEqual(struct MyValue_ l_11, struct MyValue_ r_11);
+bool union_equal_union_equal_MyValueEqual(struct MyValue_ l_6, struct MyValue_ r_6);
 
 bool union_equal_union_equal_MyResultEqual(struct MyResult_ l_3, struct MyResult_ r_3);
 
 bool MiloneDerive_TupleEqual_tuple2Equal(struct Int32Int32MyNode1ListTuple2_, struct Int32Int32MyNode1ListTuple2_);
 
-bool union_equal_union_equal_MyNodeEqual(struct Int32MyNode1_ l_6, struct Int32MyNode1_ r_6);
+bool union_equal_union_equal_MyNodeEqual(struct Int32MyNode1_ l_9, struct Int32MyNode1_ r_9);
 
 void union_equal_union_equal_testMyBool(void);
 
@@ -85,18 +83,9 @@ struct Int32MyNode1_Int32MyNode1_BoolFun2 {
     void const *env;
 };
 
-enum MyBool_Discriminant {
-    MyBool_MyTrue,
-    MyBool_MyFalse,
-};
-
-struct MyBool_ {
-    enum MyBool_Discriminant discriminant;
-};
-
-struct MyBoolMyBoolTuple2_ {
-    struct MyBool_ t0;
-    struct MyBool_ t1;
+struct Int32Int32Tuple2_ {
+    int32_t t0;
+    int32_t t1;
 };
 
 enum MyIntOption_Discriminant {
@@ -163,18 +152,18 @@ struct Int32MyNode1_Cons {
     struct Int32MyNode1_Cons const *tail;
 };
 
-bool MiloneDerive_TupleEqual_tuple2Equal(struct Int32Int32MyNode1ListTuple2_ l_8, struct Int32Int32MyNode1ListTuple2_ r_8) {
-    int32_t l_9;
-    int32_t r_9;
-    struct Int32MyNode1_Cons const *l_10;
-    struct Int32MyNode1_Cons const *r_10;
+bool MiloneDerive_TupleEqual_tuple2Equal(struct Int32Int32MyNode1ListTuple2_ l_11, struct Int32Int32MyNode1ListTuple2_ r_11) {
+    int32_t l_12;
+    int32_t r_12;
+    struct Int32MyNode1_Cons const *l_13;
+    struct Int32MyNode1_Cons const *r_13;
     bool call_;
-    l_9 = l_8.t0;
-    l_10 = l_8.t1;
-    r_9 = r_8.t0;
-    r_10 = r_8.t1;
-    call_ = MiloneDerive_ListEqual_listEqual(l_10, r_10);
-    return ((l_9 == r_9) & call_);
+    l_12 = l_11.t0;
+    l_13 = l_11.t1;
+    r_12 = r_11.t0;
+    r_13 = r_11.t1;
+    call_ = MiloneDerive_ListEqual_listEqual(l_13, r_13);
+    return ((l_12 == r_12) & call_);
 }
 
 bool MiloneDerive_ListEqual_eta3_listEqual_MyNodeEqual(void const *env_, struct Int32MyNode1_ arg_, struct Int32MyNode1_ arg_1) {
@@ -191,24 +180,24 @@ bool MiloneDerive_ListEqual_listEqual(struct Int32MyNode1_Cons const *l_14, stru
     return call_2;
 }
 
-bool union_equal_union_equal_MyBoolEqual(struct MyBool_ l_, struct MyBool_ r_) {
+bool union_equal_union_equal_MyBoolEqual(int32_t l_, int32_t r_) {
     bool match_;
-    struct MyBoolMyBoolTuple2_ MyBoolMyBoolTuple2_;
-    MyBoolMyBoolTuple2_ = (struct MyBoolMyBoolTuple2_){.t0 = l_, .t1 = r_};
-    if ((MyBoolMyBoolTuple2_.t0.discriminant != MyBool_MyTrue)) goto next_7;
-    if ((MyBoolMyBoolTuple2_.t1.discriminant != MyBool_MyTrue)) goto next_7;
+    struct Int32Int32Tuple2_ Int32Int32Tuple2_;
+    Int32Int32Tuple2_ = (struct Int32Int32Tuple2_){.t0 = l_, .t1 = r_};
+    if ((Int32Int32Tuple2_.t0 != 0)) goto next_2;
+    if ((Int32Int32Tuple2_.t1 != 0)) goto next_2;
     match_ = true;
-    goto end_match_6;
-next_7:;
-    if ((MyBoolMyBoolTuple2_.t0.discriminant != MyBool_MyFalse)) goto next_8;
-    if ((MyBoolMyBoolTuple2_.t1.discriminant != MyBool_MyFalse)) goto next_8;
+    goto end_match_1;
+next_2:;
+    if ((Int32Int32Tuple2_.t0 != 1)) goto next_3;
+    if ((Int32Int32Tuple2_.t1 != 1)) goto next_3;
     match_ = true;
-    goto end_match_6;
-next_8:;
+    goto end_match_1;
+next_3:;
     match_ = false;
-    goto end_match_6;
-next_9:;
-end_match_6:;
+    goto end_match_1;
+next_4:;
+end_match_1:;
     return match_;
 }
 
@@ -218,56 +207,56 @@ bool union_equal_union_equal_MyIntOptionEqual(struct MyIntOption_ l_1, struct My
     bool match_1;
     struct MyIntOptionMyIntOptionTuple2_ MyIntOptionMyIntOptionTuple2_;
     MyIntOptionMyIntOptionTuple2_ = (struct MyIntOptionMyIntOptionTuple2_){.t0 = l_1, .t1 = r_1};
-    if ((MyIntOptionMyIntOptionTuple2_.t0.discriminant != MyIntOption_MySome)) goto next_11;
+    if ((MyIntOptionMyIntOptionTuple2_.t0.discriminant != MyIntOption_MySome)) goto next_2;
     l_2 = MyIntOptionMyIntOptionTuple2_.t0.MyIntOption_MySome;
-    if ((MyIntOptionMyIntOptionTuple2_.t1.discriminant != MyIntOption_MySome)) goto next_11;
+    if ((MyIntOptionMyIntOptionTuple2_.t1.discriminant != MyIntOption_MySome)) goto next_2;
     r_2 = MyIntOptionMyIntOptionTuple2_.t1.MyIntOption_MySome;
     match_1 = (l_2 == r_2);
-    goto end_match_10;
-next_11:;
-    if ((MyIntOptionMyIntOptionTuple2_.t0.discriminant != MyIntOption_MyNone)) goto next_12;
-    if ((MyIntOptionMyIntOptionTuple2_.t1.discriminant != MyIntOption_MyNone)) goto next_12;
+    goto end_match_1;
+next_2:;
+    if ((MyIntOptionMyIntOptionTuple2_.t0.discriminant != MyIntOption_MyNone)) goto next_3;
+    if ((MyIntOptionMyIntOptionTuple2_.t1.discriminant != MyIntOption_MyNone)) goto next_3;
     match_1 = true;
-    goto end_match_10;
-next_12:;
+    goto end_match_1;
+next_3:;
     match_1 = false;
-    goto end_match_10;
-next_13:;
-end_match_10:;
+    goto end_match_1;
+next_4:;
+end_match_1:;
     return match_1;
 }
 
-bool union_equal_union_equal_MyValueEqual(struct MyValue_ l_11, struct MyValue_ r_11) {
-    int32_t l_12;
-    int32_t r_12;
-    struct String l_13;
-    struct String r_13;
+bool union_equal_union_equal_MyValueEqual(struct MyValue_ l_6, struct MyValue_ r_6) {
+    int32_t l_7;
+    int32_t r_7;
+    struct String l_8;
+    struct String r_8;
     bool match_2;
     struct MyValueMyValueTuple2_ MyValueMyValueTuple2_;
-    MyValueMyValueTuple2_ = (struct MyValueMyValueTuple2_){.t0 = l_11, .t1 = r_11};
-    if ((MyValueMyValueTuple2_.t0.discriminant != MyValue_MyUnit)) goto next_15;
-    if ((MyValueMyValueTuple2_.t1.discriminant != MyValue_MyUnit)) goto next_15;
+    MyValueMyValueTuple2_ = (struct MyValueMyValueTuple2_){.t0 = l_6, .t1 = r_6};
+    if ((MyValueMyValueTuple2_.t0.discriminant != MyValue_MyUnit)) goto next_2;
+    if ((MyValueMyValueTuple2_.t1.discriminant != MyValue_MyUnit)) goto next_2;
     match_2 = true;
-    goto end_match_14;
-next_15:;
-    if ((MyValueMyValueTuple2_.t0.discriminant != MyValue_MyInt)) goto next_16;
-    l_12 = MyValueMyValueTuple2_.t0.MyValue_MyInt;
-    if ((MyValueMyValueTuple2_.t1.discriminant != MyValue_MyInt)) goto next_16;
-    r_12 = MyValueMyValueTuple2_.t1.MyValue_MyInt;
-    match_2 = (l_12 == r_12);
-    goto end_match_14;
-next_16:;
-    if ((MyValueMyValueTuple2_.t0.discriminant != MyValue_MyString)) goto next_17;
-    l_13 = MyValueMyValueTuple2_.t0.MyValue_MyString;
-    if ((MyValueMyValueTuple2_.t1.discriminant != MyValue_MyString)) goto next_17;
-    r_13 = MyValueMyValueTuple2_.t1.MyValue_MyString;
-    match_2 = (string_compare(l_13, r_13) == 0);
-    goto end_match_14;
-next_17:;
+    goto end_match_1;
+next_2:;
+    if ((MyValueMyValueTuple2_.t0.discriminant != MyValue_MyInt)) goto next_3;
+    l_7 = MyValueMyValueTuple2_.t0.MyValue_MyInt;
+    if ((MyValueMyValueTuple2_.t1.discriminant != MyValue_MyInt)) goto next_3;
+    r_7 = MyValueMyValueTuple2_.t1.MyValue_MyInt;
+    match_2 = (l_7 == r_7);
+    goto end_match_1;
+next_3:;
+    if ((MyValueMyValueTuple2_.t0.discriminant != MyValue_MyString)) goto next_4;
+    l_8 = MyValueMyValueTuple2_.t0.MyValue_MyString;
+    if ((MyValueMyValueTuple2_.t1.discriminant != MyValue_MyString)) goto next_4;
+    r_8 = MyValueMyValueTuple2_.t1.MyValue_MyString;
+    match_2 = (string_compare(l_8, r_8) == 0);
+    goto end_match_1;
+next_4:;
     match_2 = false;
-    goto end_match_14;
-next_18:;
-end_match_14:;
+    goto end_match_1;
+next_5:;
+end_match_1:;
     return match_2;
 }
 
@@ -280,64 +269,64 @@ bool union_equal_union_equal_MyResultEqual(struct MyResult_ l_3, struct MyResult
     struct MyResultMyResultTuple2_ MyResultMyResultTuple2_;
     bool call_3;
     MyResultMyResultTuple2_ = (struct MyResultMyResultTuple2_){.t0 = l_3, .t1 = r_3};
-    if ((MyResultMyResultTuple2_.t0.discriminant != MyResult_MyOk)) goto next_20;
+    if ((MyResultMyResultTuple2_.t0.discriminant != MyResult_MyOk)) goto next_2;
     l_4 = MyResultMyResultTuple2_.t0.MyResult_MyOk;
-    if ((MyResultMyResultTuple2_.t1.discriminant != MyResult_MyOk)) goto next_20;
+    if ((MyResultMyResultTuple2_.t1.discriminant != MyResult_MyOk)) goto next_2;
     r_4 = MyResultMyResultTuple2_.t1.MyResult_MyOk;
     call_3 = union_equal_union_equal_MyValueEqual(l_4, r_4);
     match_3 = call_3;
-    goto end_match_19;
-next_20:;
-    if ((MyResultMyResultTuple2_.t0.discriminant != MyResult_MyErr)) goto next_21;
+    goto end_match_1;
+next_2:;
+    if ((MyResultMyResultTuple2_.t0.discriminant != MyResult_MyErr)) goto next_3;
     l_5 = MyResultMyResultTuple2_.t0.MyResult_MyErr;
-    if ((MyResultMyResultTuple2_.t1.discriminant != MyResult_MyErr)) goto next_21;
+    if ((MyResultMyResultTuple2_.t1.discriminant != MyResult_MyErr)) goto next_3;
     r_5 = MyResultMyResultTuple2_.t1.MyResult_MyErr;
     match_3 = (string_compare(l_5, r_5) == 0);
-    goto end_match_19;
-next_21:;
+    goto end_match_1;
+next_3:;
     match_3 = false;
-    goto end_match_19;
-next_22:;
-end_match_19:;
+    goto end_match_1;
+next_4:;
+end_match_1:;
     return match_3;
 }
 
-bool union_equal_union_equal_MyNodeEqual(struct Int32MyNode1_ l_6, struct Int32MyNode1_ r_6) {
-    struct Int32Int32MyNode1ListTuple2_ l_7;
-    struct Int32Int32MyNode1ListTuple2_ r_7;
+bool union_equal_union_equal_MyNodeEqual(struct Int32MyNode1_ l_9, struct Int32MyNode1_ r_9) {
+    struct Int32Int32MyNode1ListTuple2_ l_10;
+    struct Int32Int32MyNode1ListTuple2_ r_10;
     bool match_4;
     struct Int32MyNode1Int32MyNode1Tuple2_ Int32MyNode1Int32MyNode1Tuple2_;
     bool call_4;
-    Int32MyNode1Int32MyNode1Tuple2_ = (struct Int32MyNode1Int32MyNode1Tuple2_){.t0 = l_6, .t1 = r_6};
-    l_7 = Int32MyNode1Int32MyNode1Tuple2_.t0.Int32MyNode1_MyNode;
-    r_7 = Int32MyNode1Int32MyNode1Tuple2_.t1.Int32MyNode1_MyNode;
-    call_4 = MiloneDerive_TupleEqual_tuple2Equal(l_7, r_7);
+    Int32MyNode1Int32MyNode1Tuple2_ = (struct Int32MyNode1Int32MyNode1Tuple2_){.t0 = l_9, .t1 = r_9};
+    l_10 = Int32MyNode1Int32MyNode1Tuple2_.t0.Int32MyNode1_MyNode;
+    r_10 = Int32MyNode1Int32MyNode1Tuple2_.t1.Int32MyNode1_MyNode;
+    call_4 = MiloneDerive_TupleEqual_tuple2Equal(l_10, r_10);
     match_4 = call_4;
-    goto end_match_23;
-next_24:;
+    goto end_match_1;
+next_2:;
     match_4 = false;
-    goto end_match_23;
-next_25:;
-end_match_23:;
+    goto end_match_1;
+next_3:;
+end_match_1:;
     return match_4;
 }
 
 void union_equal_union_equal_testMyBool(void) {
-    struct MyBool_ t_;
-    struct MyBool_ f_;
+    int32_t t_;
+    int32_t f_;
     bool call_5;
     bool call_6;
     bool call_7;
     bool call_8;
-    t_ = (struct MyBool_){.discriminant = MyBool_MyTrue};
-    call_5 = union_equal_union_equal_MyBoolEqual(t_, (struct MyBool_){.discriminant = MyBool_MyTrue});
+    t_ = 0;
+    call_5 = union_equal_union_equal_MyBoolEqual(t_, 0);
     if ((!(call_5))) milone_assert_error("union_equal/union_equal.milone", 11, 2);
-    call_6 = union_equal_union_equal_MyBoolEqual(t_, (struct MyBool_){.discriminant = MyBool_MyFalse});
+    call_6 = union_equal_union_equal_MyBoolEqual(t_, 1);
     if (call_6) milone_assert_error("union_equal/union_equal.milone", 12, 2);
-    f_ = (struct MyBool_){.discriminant = MyBool_MyFalse};
+    f_ = 1;
     call_7 = union_equal_union_equal_MyBoolEqual(t_, f_);
     if (call_7) milone_assert_error("union_equal/union_equal.milone", 15, 2);
-    call_8 = union_equal_union_equal_MyBoolEqual(f_, (struct MyBool_){.discriminant = MyBool_MyFalse});
+    call_8 = union_equal_union_equal_MyBoolEqual(f_, 1);
     if ((!(call_8))) milone_assert_error("union_equal/union_equal.milone", 16, 2);
     return;
 }

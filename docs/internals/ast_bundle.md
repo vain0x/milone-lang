@@ -1,5 +1,7 @@
 # AstBundle
 
+*This pass is replaced with Cli/ModuleLoad and LspServer/AstBundle.*
+
 This pass loads from source files and constructs an IR of entire program.
 
 This pass also drives tokenizer, parser and NirGen for each file.

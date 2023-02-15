@@ -6,8 +6,8 @@ open Std.Ptr
 /// (Similar to `calloc`.)
 ///
 /// Contents are zeroed.
-let rawRegionAlloc (count: uint) (size: uint) : voidptr =
-  if (count ||| size) <> 0u then
+let rawRegionAlloc (count: int) (size: int) : voidptr =
+  if count >= 0 && size >= 0 && not (count = 0 && size = 0) then
     __nativeExpr ("milone_region_alloc({0}, {1})", count, size)
   else
     Ptr.nullPtr
@@ -21,8 +21,8 @@ module Region =
     code
 
   /// Allocates a block of memory in current region.
-  let alloc (count: uint) : OutPtr<'T> =
-    __nativeCast (rawRegionAlloc count (uint sizeof<'T>))
+  let alloc (count: int) : OutPtr<'T> =
+    __nativeCast (rawRegionAlloc count sizeof<'T>)
 
   /// Registers a function to be executed when to leave of current region.
   let defer (action: unit -> unit) : unit =

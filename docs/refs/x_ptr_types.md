@@ -63,7 +63,7 @@ It's invalidated when the variable goes out of scope.
 ```fsharp
     open Std.Region
 
-    Region.alloc : uint -> OutPtr<'T>
+    Region.alloc : int -> OutPtr<'T>
 ```
 
 `Region.alloc` function allocates a number of items of a type on the current region and returns a pointer to the start of memory block.
@@ -90,12 +90,10 @@ See also [region](./x_region.md), and "Memory Management" in idea.md for "region
     // when 'P is a pointer type
 ```
 
-`Ptr.invalid` function makes a pointer that points to the specified address.
+`Ptr.invalid` function converts an address-sized integer to a fake pointer that is always valid.
 
-There are two kind of potential usage:
-
-- To make an non-null dangling pointer intentionally.
-- To make a pointer that is valid if it has some previously exposed provenance.
+The generated pointer is something to carry an integer as pointer type.
+It may not be used to memory access but can be converted back to an integer later.
 
 ## Pointer Transformation
 

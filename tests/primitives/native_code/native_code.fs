@@ -48,6 +48,7 @@ let private nativeStmtWithTyPlaceholder () =
   assert (alignOf (Ptr.nullPtr: nativeptr<int -> unit>) = 8un)
 
 type private R = { X: int }
+
 let private getX (r: nativeptr<R>) : int = (Ptr.read r).X
 
 __nativeDecl (
@@ -59,7 +60,7 @@ __nativeDecl (
     }
   """,
   (__type: R),
-  __nativeFun getX
+  &&getX
 )
 
 let main _ =

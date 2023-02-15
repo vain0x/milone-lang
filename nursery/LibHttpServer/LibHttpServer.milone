@@ -61,8 +61,7 @@ let private getDate () : string option =
   let ok: bool = __nativeExpr "ok"
 
   if ok then
-    let date: string =
-      __nativeExpr "string_of_raw_parts(buf, (int)len)"
+    let date: string = __nativeExpr "string_of_raw_parts(buf, (int)len)"
 
     Some date
   else
@@ -77,11 +76,11 @@ let private getCwd () : string = __nativeFun "get_cwd"
 // -----------------------------------------------
 
 // ptr, capacity
-type private Buffer = nativeptr<byte> * uint
+type private Buffer = nativeptr<byte> * int
 
 /// Allocates new buffer with specified size of capacity.
-let private newBuffer (capacity: uint) : Buffer =
-  assert (capacity >= 1u)
+let private newBuffer (capacity: int) : Buffer =
+  assert (capacity >= 1)
 
   __nativeStmt ("unsigned char *buf = milone_region_alloc({0}, sizeof(unsigned char));", capacity)
 
@@ -92,7 +91,7 @@ let private newBuffer (capacity: uint) : Buffer =
 /// Converts a buffer to string.
 ///
 /// Use this only when the contents of buffer are valid as UTF-8 (not checked).
-let private bufToString (len: uint) (buf: Buffer) : string =
+let private bufToString (len: int) (buf: Buffer) : string =
   let ptr, _ = buf
   __nativeStmt ("struct String s = string_of_raw_parts({0}, {1});", ptr, len)
   __nativeExpr "s"
@@ -134,25 +133,25 @@ let private closeFd (fd: int) : unit = __nativeStmt ("close({0});", fd)
 /// Reads from stream to fill the buffer.
 ///
 /// Returns size of read data. (Maybe less than capacity.)
-let private readBlock (buf: Buffer) (input: Stream) : uint * Buffer * Stream =
+let private readBlock (buf: Buffer) (input: Stream) : int * Buffer * Stream =
   let bufPtr, bufSize = buf
 
-  __nativeStmt ("uint32_t len = (uint32_t)fread({1}, 1, {2}, {0});", input, bufPtr, bufSize)
+  __nativeStmt ("int32_t len = (int32_t)fread({1}, 1, {2}, {0});", input, bufPtr, bufSize)
 
-  let len: uint = __nativeExpr "len"
+  let len: int = __nativeExpr "len"
   len, buf, input
 
 /// Reads a block of bytes equal to specified size.
 ///
 /// Blocks to wait for the buffer to fill.
 /// Returns whether read data is of specified size.
-let private readExact (buf: Buffer) (size: uint) (input: Stream) : bool * Buffer * Stream =
+let private readExact (buf: Buffer) (size: int) (input: Stream) : bool * Buffer * Stream =
   let bufPtr, bufSize = buf
-  assert (size <= bufSize)
+  assert (uint size <= uint bufSize)
 
   __nativeStmt (
     """
-      size_t result = fread({1}, {2}, 1, {0});
+      size_t result = fread({1}, {2}, 1, (size_t){0});
       bool ok = result == 1;
     """,
     input,
@@ -181,12 +180,12 @@ let private readLine (input: Stream) : string option * Stream =
   else
     None, input
 
-let private doWriteExact (ptr: InPtr<byte>) (len: uint) (output: Stream) : unit =
-  assert (len >= 1u)
+let private doWriteExact (ptr: InPtr<byte>) (len: int) (output: Stream) : unit =
+  assert (len >= 1)
 
   __nativeStmt (
     """
-      size_t written = fwrite({1}, {2}, 1, {0});
+      size_t written = fwrite({1}, {2}, 1, (size_t){0});
       bool ok = written == 1;
     """,
     output,
@@ -195,10 +194,12 @@ let private doWriteExact (ptr: InPtr<byte>) (len: uint) (output: Stream) : unit 
   )
 
   let ok: bool = __nativeExpr "ok"
-  if not ok then failwith "writeExact"
+
+  if not ok then
+    failwith "writeExact"
 
 /// Writes data to stream. Blocks to wait for all data to be written.
-let private writeExact (buf: Buffer) (len: uint) (output: Stream) : Buffer * Stream =
+let private writeExact (buf: Buffer) (len: int) (output: Stream) : Buffer * Stream =
   let bufPtr, bufSize = buf
   assert (len <= bufSize)
 
@@ -207,10 +208,10 @@ let private writeExact (buf: Buffer) (len: uint) (output: Stream) : Buffer * Str
 
 /// Writes a string to stream. Blocks to wait for all data to be written.
 let private writeStringExact (s: string) (output: Stream) : Stream =
-  if s.Length > 0 then
+  if s.Length <> 0 then
     __nativeStmt ("char const *ptr = {0}.ptr;", s)
     let ptr: InPtr<char> = __nativeExpr "ptr"
-    doWriteExact (__nativeCast ptr: InPtr<byte>) (uint s.Length) output
+    doWriteExact (__nativeCast ptr: InPtr<byte>) s.Length output
 
   output
 
@@ -227,18 +228,18 @@ let private readAllText (filePath: string) : string option =
           struct stat st;
           int result = fstat(fileno({0}), &st);
           bool ok = result == 0 && S_ISREG(st.st_mode) && st.st_size < (1L << 30);
-          uint32_t len = ok ? (uint32_t)st.st_size : 0;
+          int32_t len = ok ? (int32_t)st.st_size : 0;
         """,
       fp
     )
 
-    let size: uint = __nativeExpr "len"
+    let size: int = __nativeExpr "len"
     let ok: bool = __nativeExpr "ok"
 
     if not ok then
       closeFile fp
       None
-    else if size = 0u then
+    else if size = 0 then
       closeFile fp
       Some ""
     else
@@ -246,10 +247,7 @@ let private readAllText (filePath: string) : string option =
       let ok, buf, fp = readExact buf size fp
       closeFile fp
 
-      if ok then
-        Some(bufToString size buf)
-      else
-        None
+      if ok then Some(bufToString size buf) else None
 
 let private flushStream (output: Stream) : Stream =
   __nativeStmt ("fflush({0});", output)
@@ -279,7 +277,7 @@ let private loopInRegion (f: unit -> int) : int =
 
   go ()
 
-let private uintMin (l: uint) r = if r < l then r else l
+let private intMin (l: int) r = if r < l then r else l
 
 // -----------------------------------------------
 // Types
@@ -291,7 +289,8 @@ type private HttpMethod =
   | POST // etc.
 
 type private HttpActionContext =
-  { Method: HttpMethod
+  {
+    Method: HttpMethod
     Pathname: string
 
     /// HTTP protocol minor version. (x in HTTP 1.x)
@@ -304,7 +303,8 @@ type private HttpActionContext =
     Write: string -> unit
 
     /// Writes trace log to standard error.
-    Trace: string -> unit }
+    Trace: string -> unit
+  }
 
 type private HttpResponseContext =
   { StatusText: string
@@ -391,26 +391,29 @@ let private readHeaderField (input: Stream) : Map<string, string> option * Strea
     | Some line ->
       match parseHeaderField line with
       | None -> Some acc, input
-      | Some (name, value) -> go input (i + 1) (TMap.add name value acc)
+      | Some(name, value) -> go input (i + 1) (TMap.add name value acc)
 
   go input 0 (TMap.empty compare)
 
 /// Reads HTTP request body of specified size.
 // data is discarded
-let private readReqBody (input: Stream) (size: uint) : Stream =
-  if size > 1100100100u then
+let private readReqBody (input: Stream) (size: int) : Stream =
+  if size > 1100100100 then
     failwith "body too long"
 
-  let bufSize = 8000u
+  let bufSize = 8000
   let buf = newBuffer bufSize
 
   let rec go input buf size =
-    if size = 0u then
+    if size = 0 then
       input
     else
-      let blockSize = uintMin bufSize size
+      let blockSize = intMin bufSize size
       let ok, buf, input = readExact buf blockSize input
-      if not ok then failwith "readExact"
+
+      if not ok then
+        failwith "readExact"
+
       go input buf (size - blockSize)
 
   go input buf size
@@ -420,15 +423,7 @@ let private writeAccess (res: HttpResponseContext) : unit =
   let pathname = res.Action.Pathname
   let statusText = res.StatusText
 
-  __trace (
-    "["
-    + methodName
-    + "] "
-    + pathname
-    + " - "
-    + statusText
-    + "\n"
-  )
+  __trace ("[" + methodName + "] " + pathname + " - " + statusText + "\n")
 
 let private newResponseContext (context: HttpActionContext) (data: HttpResponseData) : HttpResponseContext =
   let writeLine (line: string) =
@@ -491,7 +486,7 @@ let private readReq (handler: HttpActionContext -> unit) (input: Stream) (output
     __trace "requests end"
     None
 
-  | Some (methodOpt, pathname, minorOpt) ->
+  | Some(methodOpt, pathname, minorOpt) ->
     let headersOpt, input = readHeaderField input
 
     match headersOpt with
@@ -517,13 +512,10 @@ let private readReq (handler: HttpActionContext -> unit) (input: Stream) (output
           |> TMap.tryFind "content-length"
           |> Option.bind I.tryParse
           |> Option.defaultValue 0
-          |> uint
 
         let _input = readReqBody input contentLength
 
-        let date =
-          getDate ()
-          |> Option.defaultWith (fun () -> failwith "get_date")
+        let date = getDate () |> Option.defaultWith (fun () -> failwith "get_date")
 
         let context: HttpActionContext =
           { Date = date
@@ -569,12 +561,12 @@ let private newResponseData (statusText: string) : HttpResponseData =
 
 let private resultToResponseData (result: HfsResult) : HttpResponseData =
   match result with
-  | Ok (content, contentType) ->
+  | Ok(content, contentType) ->
     { newResponseData "200 OK" with
         Content = Some content
         Headers = [ "Content-Type", contentType ] }
 
-  | Error (err, _) ->
+  | Error(err, _) ->
     let statusText, headers =
       match err with
       | FoundError location -> "302 Found", [ "Location", location ]
@@ -582,10 +574,7 @@ let private resultToResponseData (result: HfsResult) : HttpResponseData =
       | NotFoundError -> "404 Not Found", []
       | NotImplementedError -> "501 Not Implemented", []
 
-    { newResponseData statusText with
-        Headers =
-          ("Content-Type", "text/plain; charset=utf-8")
-          :: headers }
+    { newResponseData statusText with Headers = ("Content-Type", "text/plain; charset=utf-8") :: headers }
 
 /// Gets extension of filename, e.g. `.txt`.
 let private getExt (pathname: string) : string =
@@ -622,8 +611,7 @@ let private doServeStatic (distDir: string) (m: HttpMethod) (pathname: string) :
       |> Option.map (fun text -> Ok(text, contentType (getExt filePath)))
 
     let readIndex () =
-      let pathname =
-        S.trimEndIf (fun c -> c = '/') pathname + "/"
+      let pathname = S.trimEndIf (fun c -> c = '/') pathname + "/"
 
       readAllText (filePath + "/index.html")
       |> Option.map (fun text -> Error(FoundError(pathname + "index.html"), "Redirect."))
@@ -739,12 +727,6 @@ let main _ =
 
   let args = StdEnv.commandLineArgs ()
 
-  let useStdio =
-    args
-    |> List.tryFind (fun arg -> arg = "--stdio")
-    |> Option.isSome
+  let useStdio = args |> List.tryFind (fun arg -> arg = "--stdio") |> Option.isSome
 
-  if useStdio then
-    runWithStdio ()
-  else
-    runWithSocket ()
+  if useStdio then runWithStdio () else runWithSocket ()

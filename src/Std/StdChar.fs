@@ -1,10 +1,7 @@
 module rec Std.StdChar
 
-/// Subtracts char codes.
-let subtract (l: char) (r: char) : char = char (byte l - byte r)
-
 /// Gets whether a char is in ASCII range.
-let isAscii (c: char) : bool = byte c <= 0x7fuy
+let isAscii (c: char) : bool = uint c <= 0x7fu
 
 // -----------------------------------------------
 // Char class checks
@@ -13,35 +10,35 @@ let isAscii (c: char) : bool = byte c <= 0x7fuy
 // These functions should be compatible with functions from <ctype.h> in the C language.
 // See: https://en.cppreference.com/w/c/string/byte
 
-let isControl (c: char) : bool = (byte c <= 31uy) || c = '\x7f'
+let isControl (c: char) : bool = (uint c <= 31u) || c = '\x7f'
 
 let isBlank (c: char) : bool = c = ' ' || c = '\t'
 
 let isSpace (c: char) : bool =
-  (byte '\t' <= byte c && byte c <= byte '\r')
+  ('\t' <= c && c <= '\r')
   || c = ' '
 
 let isPunctuation (c: char) : bool =
-  let n = byte c
+  let n = uint c
 
-  (33uy <= n && n <= 47uy)
-  || (58uy <= n && n <= 64uy)
-  || (91uy <= n && n <= 96uy)
-  || (123uy <= n && n <= 126uy)
+  (33u <= n && n <= 47u)
+  || (58u <= n && n <= 64u)
+  || (91u <= n && n <= 96u)
+  || (123u <= n && n <= 126u)
 
 let isDigit (c: char) : bool =
-  byte '0' <= byte c && byte c <= byte '9'
+  '0' <= c && c <= '9'
 
 let isHex (c: char) : bool =
   isDigit c
-  || (byte 'A' <= byte c && byte c <= byte 'F')
-  || (byte 'a' <= byte c && byte c <= byte 'f')
+  || ('A' <= c && c <= 'F')
+  || ('a' <= c && c <= 'f')
 
 let isLower (c: char) : bool =
-  byte 'a' <= byte c && byte c <= byte 'z'
+  'a' <= c && c <= 'z'
 
 let isUpper (c: char) : bool =
-  byte 'A' <= byte c && byte c <= byte 'Z'
+  'A' <= c && c <= 'Z'
 
 let isAlphabetic (c: char) : bool = isUpper c || isLower c
 
@@ -49,15 +46,22 @@ let isAlphanumeric (c: char) : bool = isDigit c || isAlphabetic c
 
 let toUpper (c: char) : char =
   if isLower c then
-    subtract c 'a' + 'A'
+    char(uint c - uint 'a' + uint 'A')
   else
     c
 
 let toLower (c: char) : char =
   if isUpper c then
-    subtract c 'A' + 'a'
+    char(uint c - uint 'A' + uint 'a')
   else
     c
+
+// -----------------------------------------------
+// Conversion
+// -----------------------------------------------
+
+let toUInt16 (c: char) : uint16 = uint16 c
+let ofUInt16 (n : uint16) : char = char n
 
 // -----------------------------------------------
 // Other
@@ -65,14 +69,14 @@ let toLower (c: char) : char =
 
 let evalDigit (c: char) : int =
   assert (isDigit c)
-  int (byte c - byte '0')
+  int c - int '0'
 
 let evalHex (c: char) : int =
   if isDigit c then
-    int (byte c - byte '0')
+    int c - int '0'
   else if isLower c then
-    assert (byte c <= byte 'f')
-    int (byte c - byte 'a') + 10
+    assert (c <= 'f')
+    int c - int 'a' + 10
   else
-    assert (isUpper c && byte c <= byte 'F')
-    int (byte c - byte 'A') + 10
+    assert (isUpper c && c <= 'F')
+    int c - int 'A' + 10

@@ -8,6 +8,8 @@ struct Int32MyOption1_;
 
 struct UnitMyOption1_;
 
+_Noreturn void MiloneCore_Prelude_exit(int32_t);
+
 struct String union_generic_union_generic_StringMyOption1StringFun1_unwrap(struct StringMyOption1_ opt_1);
 
 bool union_generic_union_generic_StringMyOption1BoolFun1_isNone(struct StringMyOption1_ opt_);
@@ -70,9 +72,10 @@ struct String union_generic_union_generic_StringMyOption1StringFun1_unwrap(struc
 next_2:;
     if ((opt_1.discriminant != StringMyOption1_MyNone)) goto next_3;
     if (true) milone_assert_error("union_generic/union_generic.milone", 16, 4);
-    exit(1);
+    MiloneCore_Prelude_exit(1);
+    milone_never_error("union_generic/union_generic.milone", 17, 8);
 next_3:;
-    exit(1);
+    milone_exhaust_error("union_generic/union_generic.milone", 12, 2);
 end_match_1:;
     return match_;
 }
@@ -81,38 +84,39 @@ bool union_generic_union_generic_StringMyOption1BoolFun1_isNone(struct StringMyO
     bool switch_;
     switch (opt_.discriminant) {
         case StringMyOption1_MyNone:
-            goto clause_5;
+            goto clause_2;
 
         case StringMyOption1_MySome:
-            goto clause_6;
+            goto clause_3;
 
         default:
-            exit(1);
+            milone_exhaust_error("union_generic/union_generic.milone", 7, 2);
     }
-clause_5:;
+clause_2:;
     switch_ = true;
-    goto switch_next_4;
-clause_6:;
+    goto switch_next_1;
+clause_3:;
     switch_ = false;
-    goto switch_next_4;
-switch_next_4:;
+    goto switch_next_1;
+switch_next_1:;
     return switch_;
 }
 
 int32_t union_generic_union_generic_Int32MyOption1Int32Fun1_unwrap(struct Int32MyOption1_ opt_1) {
     int32_t it_;
     int32_t match_1;
-    if ((opt_1.discriminant != Int32MyOption1_MySome)) goto next_8;
+    if ((opt_1.discriminant != Int32MyOption1_MySome)) goto next_2;
     it_ = opt_1.Int32MyOption1_MySome;
     match_1 = it_;
-    goto end_match_7;
-next_8:;
-    if ((opt_1.discriminant != Int32MyOption1_MyNone)) goto next_9;
+    goto end_match_1;
+next_2:;
+    if ((opt_1.discriminant != Int32MyOption1_MyNone)) goto next_3;
     if (true) milone_assert_error("union_generic/union_generic.milone", 16, 4);
-    exit(1);
-next_9:;
-    exit(1);
-end_match_7:;
+    MiloneCore_Prelude_exit(1);
+    milone_never_error("union_generic/union_generic.milone", 17, 8);
+next_3:;
+    milone_exhaust_error("union_generic/union_generic.milone", 12, 2);
+end_match_1:;
     return match_1;
 }
 
@@ -120,21 +124,21 @@ bool union_generic_union_generic_Int32MyOption1BoolFun1_isNone(struct Int32MyOpt
     bool switch_1;
     switch (opt_.discriminant) {
         case Int32MyOption1_MyNone:
-            goto clause_11;
+            goto clause_2;
 
         case Int32MyOption1_MySome:
-            goto clause_12;
+            goto clause_3;
 
         default:
-            exit(1);
+            milone_exhaust_error("union_generic/union_generic.milone", 7, 2);
     }
-clause_11:;
+clause_2:;
     switch_1 = true;
-    goto switch_next_10;
-clause_12:;
+    goto switch_next_1;
+clause_3:;
     switch_1 = false;
-    goto switch_next_10;
-switch_next_10:;
+    goto switch_next_1;
+switch_next_1:;
     return switch_1;
 }
 
@@ -142,21 +146,21 @@ bool union_generic_union_generic_UnitMyOption1BoolFun1_isNone(struct UnitMyOptio
     bool switch_2;
     switch (opt_.discriminant) {
         case UnitMyOption1_MyNone:
-            goto clause_14;
+            goto clause_2;
 
         case UnitMyOption1_MySome:
-            goto clause_15;
+            goto clause_3;
 
         default:
-            exit(1);
+            milone_exhaust_error("union_generic/union_generic.milone", 7, 2);
     }
-clause_14:;
+clause_2:;
     switch_2 = true;
-    goto switch_next_13;
-clause_15:;
+    goto switch_next_1;
+clause_3:;
     switch_2 = false;
-    goto switch_next_13;
-switch_next_13:;
+    goto switch_next_1;
+switch_next_1:;
     return switch_2;
 }
 

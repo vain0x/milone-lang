@@ -194,22 +194,22 @@ void own_own_multipleMatches(void) {
     second_ = call_9;
     switch (1) {
         default:
-            goto clause_5;
+            goto clause_2;
     }
-clause_5:;
+clause_2:;
     own_own_drop(first_);
     switch_1 = 0;
-    goto switch_next_4;
-switch_next_4:;
+    goto switch_next_1;
+switch_next_1:;
     switch (2) {
         default:
-            goto clause_7;
+            goto clause_4;
     }
-clause_7:;
+clause_4:;
     own_own_drop(second_);
     switch_2 = 0;
-    goto switch_next_6;
-switch_next_6:;
+    goto switch_next_3;
+switch_next_3:;
     return;
 }
 
@@ -224,24 +224,24 @@ void own_own_nestedMatches(void) {
     root_ = call_10;
     switch (1) {
         default:
-            goto clause_9;
+            goto clause_2;
     }
-clause_9:;
+clause_2:;
     call_11 = own_own_create(2);
     inner_ = call_11;
     switch (2) {
         default:
-            goto clause_11;
+            goto clause_4;
     }
-clause_11:;
+clause_4:;
     own_own_drop(inner_);
     own_own_drop(root_);
     switch_4 = 0;
-    goto switch_next_10;
-switch_next_10:;
+    goto switch_next_3;
+switch_next_3:;
     switch_3 = 0;
-    goto switch_next_8;
-switch_next_8:;
+    goto switch_next_1;
+switch_next_1:;
     return;
 }
 
@@ -250,20 +250,20 @@ struct Int32Cons const *own_own_loopCase_acquireMany_go(int32_t n_6, struct Int3
     struct Int32Cons const *list_;
     int32_t call_12;
     if ((i_ < n_6)) {
-        goto then_13;
+        goto then_2;
     } else {
-        goto else_14;
+        goto else_3;
     }
-then_13:;
+then_2:;
     call_12 = own_own_create(i_);
     list_ = ((struct Int32Cons const *)milone_region_alloc(1, sizeof(struct Int32Cons)));
     (*(((struct Int32Cons *)list_))) = (struct Int32Cons){.head = call_12, .tail = acc_};
     if_ = list_;
-    goto if_next_12;
-else_14:;
+    goto if_next_1;
+else_3:;
     if_ = acc_;
-    goto if_next_12;
-if_next_12:;
+    goto if_next_1;
+if_next_1:;
     return if_;
 }
 
@@ -295,17 +295,17 @@ void own_own_genericOwnCase(void) {
     x_ = l_.t0;
     y_ = l_.t1;
     if ((x_ == 2)) {
-        goto then_16;
+        goto then_2;
     } else {
-        goto else_17;
+        goto else_3;
     }
-then_16:;
+then_2:;
     if_1 = (y_ == 3);
-    goto if_next_15;
-else_17:;
+    goto if_next_1;
+else_3:;
     if_1 = false;
-    goto if_next_15;
-if_next_15:;
+    goto if_next_1;
+if_next_1:;
     if ((!(if_1))) milone_assert_error("own/own.milone", 102, 2);
     return;
 }
@@ -355,32 +355,32 @@ void own_own_optionOfOwnCase(void) {
     Int32Int32Tuple2_2 = (struct Int32Int32Tuple2_){.t0 = 5, .t1 = 7};
     variant_ = (struct Int32Int32Tuple2option1_){.discriminant = Int32Int32Tuple2option1_Some, .Int32Int32Tuple2option1_Some = Int32Int32Tuple2_2};
     ownOpt_ = variant_;
-    if ((ownOpt_.discriminant != Int32Int32Tuple2option1_Some)) goto next_19;
+    if ((ownOpt_.discriminant != Int32Int32Tuple2option1_Some)) goto next_2;
     l_5 = ownOpt_.Int32Int32Tuple2option1_Some;
     x_2 = l_5.t0;
     y_1 = l_5.t1;
     if ((x_2 == 5)) {
-        goto then_22;
+        goto then_5;
     } else {
-        goto else_23;
+        goto else_6;
     }
-then_22:;
+then_5:;
     if_2 = (y_1 == 3);
-    goto if_next_21;
-else_23:;
+    goto if_next_4;
+else_6:;
     if_2 = false;
-    goto if_next_21;
-if_next_21:;
+    goto if_next_4;
+if_next_4:;
     if ((!(if_2))) milone_assert_error("own/own.milone", 123, 4);
     match_ = 0;
-    goto end_match_18;
-next_19:;
-    if ((ownOpt_.discriminant != Int32Int32Tuple2option1_None)) goto next_20;
+    goto end_match_1;
+next_2:;
+    if ((ownOpt_.discriminant != Int32Int32Tuple2option1_None)) goto next_3;
     match_ = 0;
-    goto end_match_18;
-next_20:;
-    exit(1);
-end_match_18:;
+    goto end_match_1;
+next_3:;
+    milone_exhaust_error("own/own.milone", 120, 2);
+end_match_1:;
     return;
 }
 

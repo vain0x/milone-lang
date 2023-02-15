@@ -1,0 +1,159 @@
+// Internal: This module isn't considered a public API of the Std.
+// Provides a thin-wrapper of file manipulation in C standard library.
+
+open Std.CMemory
+open Std.CStr
+open Std.IO
+open Std.Ptr
+open Std.StdError
+
+__nativeDecl
+  """
+#include <errno.h>
+#include <stdio.h>
+  """
+
+/// (`FILE *`)
+type FilePtr = nativeptr<__nativeType<FILE>>
+
+type FReadResult =
+  | FReadFull
+  | FReadPartial of count: int
+  | FReadError of errno: int
+
+type FGetsResult =
+  | FGetsOk
+  | FGetsEof
+  | FGetsError of errno: int
+
+module CFile =
+  // missing feof, freopen, fgetc/fputc/ungetc, fseek/ftell/rewind etc.
+
+  let stdin () : FilePtr = __nativeExpr "stdin"
+  let stdout () : FilePtr = __nativeExpr "stdout"
+  let stderr () : FilePtr = __nativeExpr "stderr"
+
+  /// (`fopen`)
+  let fopen (pathname: string) (mode: string) : Result<FilePtr, int> =
+    __nativeStmt (
+      """
+        FILE *fp = fopen({0}, {1});
+        bool ok = fp != NULL;
+      """,
+      CStr.ofString pathname,
+      CStr.ofString mode
+    )
+
+    if __nativeExpr "ok" then
+      Ok(__nativeExpr "fp")
+    else
+      Error(__nativeExpr "errno")
+
+  /// (`fclose`)
+  ///
+  /// Returns true if okay.
+  let fclose (fp: FilePtr) : Result<unit, int> =
+    __nativeStmt (
+      """
+        FILE *fp = {0};
+        bool ok = fp != stdin && fp != stdout && fp != stderr && fclose(fp) == 0;
+      """,
+      fp
+    )
+
+    if __nativeExpr "ok" then
+      Ok()
+    else
+      Error(__nativeExpr "errno")
+
+  /// (`fread`)
+  ///
+  /// Returns:
+  ///   - `FReadFull`: The specified number of objects are read
+  ///   - `FReadPartial n`: `n` objects are read (`0 <= n < count`) and EOF is reached
+  ///   - `FReadError e`: Failed to read, `e` is errno.
+  let fread (dest: voidptr) (size: int) (count: int) (fp: FilePtr) : FReadResult =
+    __nativeStmt ("int32_t result = (int32_t)fread({0}, (size_t){1}, (size_t){2}, {3});", dest, size, count, fp)
+
+    let result: int = __nativeExpr "result"
+
+    if result = count then
+      FReadFull
+    else
+      let e: int = __nativeExpr "errno"
+
+      if __nativeExpr ("ferror({0}) != 0", fp) then
+        FReadError e
+      else
+        FReadPartial result
+
+  /// (`fgets`)
+  ///
+  /// Returns:
+  ///
+  ///   - `FGetsOk`: Some data is read, `buffer` is written and NUL-terminated.
+  ///   - `FGetsEof`: Some data is read, `buffer` is written and NUL-terminated, and the file reached at EOF.
+  ///   - `FGetsError e`: Failed. `e` is `errno`.
+  let fgets (dest: voidptr) (capacity: int) (fp: FilePtr) =
+    __nativeStmt ("bool ok = fgets({0}, {1}, {2}) != NULL;", dest, capacity, fp)
+
+    if __nativeExpr "ok" then
+      FGetsOk
+    else if __nativeExpr ("ferror({0}) != 0", fp) then
+      FGetsError(__nativeExpr "errno")
+    else
+      FGetsEof
+
+  /// (`fwrite`)
+  let fwrite (src: VoidInPtr) (size: int) (count: int) (fp: FilePtr) : Result<int, int> =
+    __nativeStmt (
+      """
+        int32_t result = (int32_t)fwrite({0}, (size_t){1}, (size_t){2}, {3});
+        int e = errno;
+        bool ok = ferror({3}) == 0;
+      """,
+      src,
+      size,
+      count,
+      fp
+    )
+
+    if __nativeExpr "ok" then
+      Ok(__nativeExpr "result")
+    else
+      Error(__nativeExpr "e")
+
+  /// (`fflush`)
+  let fflush (fp: FilePtr) : Result<unit, int> =
+    __nativeStmt ("bool ok = fflush({0}) == 0;", fp)
+
+    if __nativeExpr "ok" then
+      Ok()
+    else
+      Error(__nativeExpr "errno")
+
+  /// (`ferror`)
+  /// Gets if the error flag is on.
+  let ferror (fp: FilePtr) : bool = __nativeExpr ("ferror({0}) != 0", fp)
+
+  /// (`clearerr`)
+  /// Sets the error flag off.
+  let clearerr (fp: FilePtr) : unit = __nativeStmt ("clearerr({0});", fp)
+
+  /// (`rename`)
+  let rename (oldPathname: string) (newPathname: string) : Result<unit, int> =
+    __nativeStmt ("bool ok = rename({0}, {1}) == 0;", CStr.ofString oldPathname, CStr.ofString newPathname)
+
+    if __nativeExpr "ok" then
+      Ok()
+    else
+      Error(__nativeExpr "errno")
+
+  /// (`remove`)
+  let remove (pathname: string) : Result<unit, int> =
+    __nativeStmt ("bool ok = remove({0}) == 0;", CStr.ofString pathname)
+
+    if __nativeExpr "ok" then
+      Ok()
+    else
+      Error(__nativeExpr "errno")

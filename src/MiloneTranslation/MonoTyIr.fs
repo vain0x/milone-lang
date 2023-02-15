@@ -6,7 +6,7 @@ open MiloneShared.TypeIntegers
 open MiloneShared.TypeFloat
 open Std.StdMap
 
-module Hir = MiloneTranslationTypes.HirTypes
+module Hir = MiloneTranslation.HirTypes
 
 // Same as HIR but type is mono ty (monomorphized).
 type private Ty = MonoTy
@@ -28,6 +28,7 @@ type MonoTy =
   | BoolMt
   | CharMt
   | StringMt
+  | NeverMt
   | ObjMt
 
   | FunMt of MonoTy list
@@ -36,17 +37,19 @@ type MonoTy =
   // FFI types.
   | VoidPtrMt of IsMut
   | NativePtrMt of RefMode * MonoTy
-  | NativeFunMt of MonoTy list
+  | FunPtrMt of MonoTy list
   | NativeTypeMt of cCode: string
 
   // Nominal types.
-  | UnionMt of unionTy: TySerial
-  | RecordMt of recordTy: TySerial
+  | UnionMt of unionTy: TySerial * name: string
+  | RecordMt of recordTy: TySerial * name: string
+  | OpaqueMt of opaqueTy: TySerial * name: string
 
 [<NoEquality; NoComparison>]
 type TyDef =
-  | UnionTyDef of Ident * tyArgs: TySerial list * VariantSerial list * Loc
+  | UnionTyDef of Ident * VariantSerial list * Loc
   | RecordTyDef of Ident * fields: (Ident * Ty * Loc) list * IsCRepr * Loc
+  | OpaqueTyDef of Ident * Loc
 
 [<RequireQualifiedAccess; NoEquality; NoComparison>]
 type VarDef =

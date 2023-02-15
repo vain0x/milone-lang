@@ -1,0 +1,140 @@
+open Std.StdError
+
+module C = Std.StdChar
+
+let private stateMap f (x, s) = f x, s
+
+let private pairMap f (x, s) =
+  let t = f s
+  x, t
+
+let private pairThen f (x, s) =
+  let y, t = f s
+  (x, y), t
+
+let private cons head tail = head :: tail
+
+// -----------------------------------------------
+// YamlValue
+// -----------------------------------------------
+
+[<NoEquality; NoComparison>]
+type YamlValue =
+  | YamlStr of string
+  | YamlTable of (string * YamlValue) list
+
+// -----------------------------------------------
+// Yaml parser
+// -----------------------------------------------
+
+type private RowIndex = int
+type private ColumnIndex = int
+type private Pos = RowIndex * ColumnIndex
+
+let private pError msg (_, _, y, x) =
+  printfn "ERROR: %s (%d:%d)" msg (y + 1) (x + 1)
+  failwith "Parse error"
+
+let private pBump (text: string, i: int, y, x) =
+  assert (i < text.Length)
+
+  if text.[i] = '\n' then
+    text, i + 1, y + 1, 0
+  else
+    text, i + 1, y, x + 1
+
+let private pWhile pred p =
+  let rec go p =
+    if pLook p <> '\x00' && pred (pLook p) then
+      p |> pBump |> go
+    else
+      p
+
+  go p
+
+let private pLook (text: string, i: int, _, _) =
+  if i < text.Length then text.[i] else '\x00'
+
+let private pSlice (text: string, l: int, _, _) (_, r: int, _, _) =
+  assert (0 <= l && l <= r && r <= text.Length)
+  if l = r then "" else text.[l .. r - 1]
+
+let private pToPos (_, _, y, x) = y, x
+
+let private pIsAligned (_, posX: int) (_, _, _, x: int) = x = posX
+
+let private pIsDeeper (_, posX: int) (_, _, _, x: int) = x > posX
+
+let private pExpect (text: string) p =
+  let rec go count p =
+    if count = 0 || pLook p = '\x00' then
+      p
+    else
+      go (count - 1) (p |> pBump)
+
+  let q = go text.Length p
+
+  if pSlice p q <> text then
+    pError ("Expected `" + text + "`") p
+
+  q
+
+let private pLine p =
+  p |> pWhile (fun c -> c <> '\r' && c <> '\n')
+
+let private pBlank p =
+  let p = p |> pWhile (fun c -> c = ' ' || c = '\r')
+
+  if pLook p = '#' then p |> pLine else p
+
+let private pSpace p =
+  let p = p |> pBlank
+
+  if pLook p |> C.isSpace then p |> pBump |> pSpace else p
+
+let private pIdent p =
+  let q = p |> pWhile (fun c -> c = '_' || C.isAlphanumeric c)
+
+  pSlice p q, q
+
+let private pEof p =
+  if pLook p <> '\x00' then
+    pError "Expected EOF" p
+
+let private pTable basePos p =
+  let rec go (entries, p) =
+    let q = p |> pSpace
+
+    if q |> pIsAligned basePos && q |> pIdent |> fst <> "" then
+      q
+      |> pIdent
+      |> pairMap pBlank
+      |> pairMap (pExpect ":")
+      |> pairMap pSpace
+      |> pairThen (pItem basePos)
+      |> stateMap (fun entry -> entry :: entries)
+      |> go
+    else
+      YamlTable(List.rev entries), p
+
+  go ([], p)
+
+let private pItem basePos p =
+  if p |> pIsDeeper basePos then
+    let pos = p |> pToPos
+    let _, q = p |> pIdent |> pairMap pBlank
+
+    if pLook q = ':' then
+      pTable pos p
+    else
+      let q = p |> pLine
+      let text = pSlice p q
+      YamlStr text, q
+  else
+    pError "Expected a value" p
+
+let parseYaml (text: string) : YamlValue =
+  let p = text, 0, 0, 0
+  let basePos = 0, 0
+
+  p |> pTable basePos |> pairMap pSpace |> pairMap pEof |> fst

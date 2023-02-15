@@ -105,8 +105,7 @@ let charEscape (c: char) =
 
 let stringNeedsEscaping (s: string) =
   let rec go i =
-    i < s.Length
-    && (charNeedsEscaping s.[i] || go (i + 1))
+    i < s.Length && (charNeedsEscaping s.[i] || go (i + 1))
 
   go 0
 

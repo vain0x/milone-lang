@@ -1,0 +1,478 @@
+open Std.StdError
+open Std.StringBuffer
+
+module Int = Std.StdInt
+module C = Std.StdChar
+module S = Std.StdString
+
+// -----------------------------------------------
+// DOM
+// -----------------------------------------------
+
+/// Value in `ini` format.
+type IniValue =
+  | IniInt of int
+  | IniString of string
+
+/// Contents of a section in `ini` format.
+type IniEntries = (string * IniValue) list
+
+/// Entire data of `ini` format.
+[<RequireQualifiedAccess; NoEquality; NoComparison>]
+type IniDocument =
+  { Top: IniEntries
+    Sections: (string * IniEntries) list }
+
+// -----------------------------------------------
+// Parse
+// -----------------------------------------------
+
+module IniParseError =
+  [<Literal>]
+  let SectionHeadUnclosed = "SectionHeadUnclosed"
+
+  [<Literal>]
+  let ExpectedEqual = "ExpectedEqual"
+
+  [<Literal>]
+  let QuoteUnclosed = "QuoteUnclosed"
+
+  [<Literal>]
+  let InvalidEscapeSequence = "InvalidEscapeSequence"
+
+  [<Literal>]
+  let ExpectedNewline = "ExpectedNewline"
+
+module IniParse =
+  type private ParseError = string
+
+  // This module implements hand-written recursive descend parser.
+
+  // Notes:
+  //
+  // - NUL: The parser doesn't stop at NUL character (U+0000) for binary safety.
+  // - CR: The parser assumes CR that isn't followed by LF is also a newline.
+  // - Spaces:
+  //    Parser functions should skip spaces only inside of the element to be parsed.
+  //    Keep leading or trailing spaces to let the parent shift.
+  // - Recursion depth:
+  //    Recursion is limited to a constant depth due to ini format.
+
+  /// Skips over the current line. Returns the index to the next line break (CR or LF) or the end of `s`.
+  let private skipLine (s: string) (i: int) =
+    let line, _, _ = S.cutLine s.[i .. s.Length - 1]
+    i + line.Length
+
+  /// Skips over spaces except for line breaks.
+  let private skipBlank (s: string) (i: int) =
+    if i < s.Length then
+      if C.isBlank s.[i] then skipBlank s (i + 1) else i
+    else
+      i
+
+  /// Skips over a newline if any.
+  let private skipNewline (s: string) (i: int) =
+    match s.[i] with
+    | '\n' -> i + 1
+    | '\r' ->
+      if i + 1 < s.Length && s.[i + 1] = '\n' then
+        i + 2
+      else
+        i + 1
+    | _ -> i
+
+  /// Gets true if the index is at the end of a line.
+  let private atEol (s: string) (i: int) =
+    i = s.Length || s.[i] = '\n' || s.[i] = '\r'
+
+  // This parses `(escape | verbatim)* '"'`.
+  let private parseQuotedValue (sb: StringBuffer) (s: string) i : Result<string, ParseError> * int * StringBuffer =
+    // assert (s.[i - 1] = '"')
+
+    let sb = StringBuffer.clear sb
+
+    let rec verbatimLoop i =
+      if i < s.Length then
+        match s.[i] with
+        | '\r'
+        | '\n'
+        | '\\'
+        | '"' -> i
+
+        | _ -> verbatimLoop (i + 1)
+      else
+        i
+
+    let rec segmentLoop sb i =
+      if i < s.Length then
+        match s.[i] with
+        | '\r'
+        | '\n' -> Error IniParseError.QuoteUnclosed, i, sb
+
+        | '"' -> Ok(), i + 1, sb
+
+        | '\\' when i + 1 < s.Length ->
+          match s.[i + 1] with
+          | 'r' -> segmentLoop (StringBuffer.writeAscii '\r' sb) (i + 2)
+          | 'n' -> segmentLoop (StringBuffer.writeAscii '\n' sb) (i + 2)
+          | 't' -> segmentLoop (StringBuffer.writeAscii '\t' sb) (i + 2)
+
+          | '\\'
+          | '\''
+          | '"' -> segmentLoop (StringBuffer.writeAscii s.[i + 1] sb) (i + 2)
+
+          | 'x' when i + 3 < s.Length ->
+            match S.parseHexAsUInt64 s.[i + 2 .. i + 3] with
+            | Some value -> segmentLoop (StringBuffer.writeAscii (char (byte value)) sb) (i + 4)
+            | None -> Error IniParseError.InvalidEscapeSequence, i, sb
+
+          | _ -> Error IniParseError.InvalidEscapeSequence, i, sb
+
+        | '\\' -> Error IniParseError.InvalidEscapeSequence, i, sb
+
+        | _ ->
+          let endIndex = verbatimLoop (i + 1)
+          segmentLoop (StringBuffer.writeString s.[i .. endIndex - 1] sb) endIndex
+      else
+        Error IniParseError.QuoteUnclosed, i, sb
+
+    let result, i, sb = segmentLoop sb i
+
+    match result with
+    | Ok() ->
+      let value, sb = StringBuffer.toString sb
+      Ok value, i, sb
+
+    | Error msg -> Error msg, i, sb
+
+  let private parseUnquotedValue (s: string) i =
+    // assert (S.trimStart s.[i..] = s)
+
+    let r = skipLine s i
+    S.trimEnd s.[i .. r - 1], r
+
+  /// Parses `key '=' value eol`
+  let private parseEntry
+    (sb: StringBuffer)
+    (s: string)
+    (i: int)
+    : Result<string * IniValue, ParseError> * int * StringBuffer =
+    // assume s.[i] isn't blank character
+
+    // Parse key:
+    let result, i, sb =
+      let rec skipToEqual i =
+        if i < s.Length then
+          match s.[i] with
+          | '='
+          | '\r'
+          | '\n' -> i
+          | _ -> skipToEqual (i + 1)
+        else
+          i
+
+      if i < s.Length && s.[i] = '"' then
+        let result, i, sb = parseQuotedValue sb s (i + 1)
+        let i = skipBlank s i
+        result, i, sb
+      else
+        let start = i
+        let i = skipToEqual i
+        let key = S.trimEnd s.[start .. i - 1]
+        Ok key, i, sb
+
+    match result with
+    | Ok _ when not (i < s.Length && s.[i] = '=') -> Error IniParseError.ExpectedEqual, i, sb
+
+    | Ok key ->
+      // Shift '=' and trailing blank.
+      let i = skipBlank s (i + 1)
+
+      // Parse value:
+      let result, i, sb =
+        if i < s.Length && s.[i] = '"' then
+          let result, i, sb = parseQuotedValue sb s (i + 1)
+          let i = skipBlank s i
+
+          match result with
+          | Ok value -> Ok(IniString value), i, sb
+          | Error msg -> Error msg, i, sb
+        else
+          let value, i = parseUnquotedValue s i
+
+          let value =
+            match Int.tryParse value with
+            | Some n -> IniInt n
+            | None -> IniString value
+
+          Ok value, i, sb
+
+      match result with
+      | Ok value -> Ok(key, value), i, sb
+      | Error msg -> Error msg, i, sb
+
+    | Error msg -> Error msg, i, sb
+
+  /// Parses `sectionName ']' eol`
+  let private parseSectionHead (s: string) (i: int) =
+    // assert (s.[i - 1] = '[')
+    let start = i
+
+    let rec rightLoop i =
+      if i < s.Length then
+        match s.[i] with
+        | ']' ->
+          let name = S.trim s.[start .. i - 1]
+          let i = skipBlank s (i + 1)
+          Ok name, i
+
+        | '\r'
+        | '\n' -> Error IniParseError.SectionHeadUnclosed, i
+
+        | _ -> rightLoop (i + 1)
+      else
+        Error IniParseError.SectionHeadUnclosed, i
+
+    rightLoop i
+
+  /// Parses `entry*`.
+  ///
+  /// - `i` must be at the beginning of a line.
+  /// - This stops only at '[' or EOF.
+  let parseEntries sb (s: string) i : IniEntries * Result<unit, ParseError> * int * StringBuffer =
+    let rec entriesLoop sb acc i =
+      // assume i is at the beginning of a line
+      // this iteration parses an entire line
+      let i = skipBlank s i
+
+      if i < s.Length then
+        match s.[i] with
+        | '\r'
+        | '\n' -> entriesLoop sb acc (skipNewline s i)
+
+        | ';' ->
+          let i = skipLine s i
+          entriesLoop sb acc (skipNewline s i)
+
+        | '[' -> acc, Ok(), i, sb
+
+        | _ ->
+          let result, i, sb = parseEntry sb s i
+
+          match result with
+          | Ok _ when not (atEol s i) -> acc, Error IniParseError.ExpectedNewline, i, sb
+          | Ok(key, value) -> entriesLoop sb ((key, value) :: acc) (skipNewline s i)
+          | Error msg -> acc, Error msg, i, sb
+      else
+        acc, Ok(), i, sb
+
+    let acc, result, i, sb = entriesLoop sb [] i
+    List.rev acc, result, i, sb
+
+  /// Parses `section*`.
+  ///
+  /// - `i` must be an index returned by `parseEntries`.
+  let parseSections sb (s: string) i =
+    let rec sectionsLoop sb acc i =
+      if i < s.Length then
+        // Parse section head:
+        assert (s.[i] = '[')
+        let result, i = parseSectionHead s (i + 1)
+
+        match result with
+        | Ok _ when not (atEol s i) -> acc, Error(IniParseError.ExpectedNewline, i), sb
+
+        | Ok name ->
+          let i = skipNewline s i
+          let entries, result, i, sb = parseEntries sb s i
+          let acc = (name, entries) :: acc
+
+          match result with
+          | Ok() -> sectionsLoop sb acc i
+          | Error msg -> acc, Error(msg, i), sb
+
+        | Error msg -> acc, Error(msg, i), sb
+      else
+        acc, Ok(), sb
+
+    let acc, result, sb = sectionsLoop sb [] i
+    List.rev acc, result, sb
+
+  /// Parses an entire ini document.
+  let parseDocument (s: string) : IniDocument * Result<unit, ParseError * int> =
+    // Temporary buffer to build a quoted value, which might contain escape sequences.
+    let sb = StringBuffer.alloc 200
+
+    let top, result, i, sb = parseEntries sb s 0
+
+    let sections, result, sb =
+      match result with
+      | Ok() -> parseSections sb s i
+      | Error msg -> [], Error(msg, i), sb
+
+    StringBuffer.dispose sb
+    ({ Top = top; Sections = sections }: IniDocument), result
+
+// -----------------------------------------------
+// Write
+// -----------------------------------------------
+
+module IniWrite =
+  // Note: write functions shouldn't write leading or trailing spaces and let it do its parent.
+
+  // from MiloneShared/Util.fs
+
+  let private charNeedsEscaping (c: char) =
+    C.isControl c || c = '\\' || c = '"' || c = '\''
+
+  let private charEscape (c: char) =
+    assert (c |> charNeedsEscaping)
+
+    match c with
+    | '\t' -> "\\t"
+    | '\n' -> "\\n"
+    | '\r' -> "\\r"
+    | '\'' -> "\\\'"
+    | '"' -> "\\\""
+    | '\\' -> "\\\\"
+
+    | c ->
+      let hh = S.uint64ToHex 2 (uint64 (byte c))
+      "\\x" + hh
+
+  let private stringNeedsEscaping (s: string) =
+    let rec go i =
+      i < s.Length && (charNeedsEscaping s.[i] || go (i + 1))
+
+    go 0
+
+  let private stringEscape (s: string) =
+    let rec go acc i =
+      /// Finds the end index of the maximum non-escaping segment
+      /// that starts at `l`.
+      let rec raw i =
+        if i = s.Length || charNeedsEscaping s.[i] then
+          i
+        else
+          raw (i + 1)
+
+      // Skip the non-escape segment that starts at `i`.
+      let i, acc =
+        let r = raw i
+        r, (s |> S.slice i r) :: acc
+
+      if i = s.Length then
+        acc
+      else
+        let t = s.[i] |> charEscape
+        go (t :: acc) (i + 1)
+
+    if s |> stringNeedsEscaping |> not then
+      s
+    else
+      go [] 0 |> List.rev |> S.concat ""
+
+  /// Writes a value. Uses quotes only if necessary.
+  let private writeValue (value: IniValue) (sb: StringBuffer) =
+    match value with
+    | IniInt value -> StringBuffer.writeInt value sb
+
+    | IniString value when value.Length <> 0 && value |> stringNeedsEscaping |> not && S.trim value = value ->
+      StringBuffer.writeString value sb
+
+    | IniString value ->
+      sb
+      |> StringBuffer.writeAscii '"'
+      |> StringBuffer.writeString (stringEscape value)
+      |> StringBuffer.writeAscii '"'
+
+  /// Writes an entry `key = value`.
+  let private writeEntry (key: string) (value: IniValue) (sb: StringBuffer) =
+    let sb = sb |> StringBuffer.writeString key |> StringBuffer.writeString " ="
+
+    match value with
+    | IniString "" ->
+      // `key =` (no trailing space)
+      sb
+
+    | _ -> sb |> StringBuffer.writeAscii ' ' |> writeValue value
+
+  let private writeEntries entries sb =
+    let rec writeLoop entries sb =
+      match entries with
+      | [] -> sb
+
+      | (key, value) :: entries ->
+        let sb = writeEntry key value sb
+
+        if List.isEmpty entries |> not then
+          sb |> StringBuffer.writeAscii '\n' |> writeLoop entries
+        else
+          sb
+
+    writeLoop entries sb
+
+  let private writeSection name entries sb =
+    let sb =
+      sb
+      |> StringBuffer.writeAscii '['
+      |> StringBuffer.writeString name
+      |> StringBuffer.writeAscii ']'
+
+    if List.isEmpty entries |> not then
+      sb |> StringBuffer.writeAscii '\n' |> writeEntries entries
+    else
+      sb
+
+  let private writeSections sections sb =
+    let rec loop sb section sections =
+      let name, entries = section
+      let sb = sb |> writeSection name entries
+
+      match sections with
+      | [] -> sb
+
+      | section :: sections ->
+        let sb = sb |> StringBuffer.writeString "\n\n"
+        loop sb section sections
+
+    match sections with
+    | [] -> sb
+    | section :: sections -> loop sb section sections
+
+  let private writeDocument (doc: IniDocument) (sb: StringBuffer) =
+    let padding, trailing =
+      match doc.Top, doc.Sections with
+      | [], [] -> "", ""
+      | _ :: _, [] -> "", "\n"
+      | [], _ :: _ -> "", "\n"
+      | _ -> "\n\n", "\n"
+
+    sb
+    |> writeEntries doc.Top
+    |> StringBuffer.writeString padding
+    |> writeSections doc.Sections
+    |> StringBuffer.writeString trailing
+
+  let toString (doc: IniDocument) : string =
+    let output, sb =
+      StringBuffer.alloc 1000 |> writeDocument doc |> StringBuffer.toString
+
+    StringBuffer.dispose sb
+    output
+
+// -----------------------------------------------
+// IniDocument
+// -----------------------------------------------
+
+module IniDocument =
+  let empty: IniDocument = { Top = []; Sections = [] }
+
+  let parse (s: string) : IniDocument option =
+    let doc, result = IniParse.parseDocument s
+
+    match result with
+    | Ok _ -> Some doc
+    | Error _ -> None
+
+  let toString (doc: IniDocument) : string = IniWrite.toString doc

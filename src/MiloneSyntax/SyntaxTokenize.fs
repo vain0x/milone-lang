@@ -4,10 +4,15 @@ module rec MiloneSyntax.SyntaxTokenize
 open MiloneShared.SharedTypes
 open MiloneShared.TypeIntegers
 open Std.StdError
-open MiloneSyntaxTypes.SyntaxTypes
+open MiloneSyntax.SyntaxTypes
 
 module C = Std.StdChar
 module S = Std.StdString
+
+let private unwrap opt =
+  match opt with
+  | Some it -> it
+  | None -> unreachable ()
 
 // -----------------------------------------------
 // Char
@@ -33,7 +38,8 @@ let private charIsOp (c: char) : bool =
   | ':'
   | '@'
   | ';'
-  | '.' -> true
+  | '.'
+  | '~' -> true
 
   | _ -> false
 
@@ -260,7 +266,15 @@ let private scanCharLit (text: string) (i: int) =
     | _ -> go (i + 1)
 
   assert (i >= 1 && at (i - 1) = '\'')
-  go i
+  let m = go i
+
+  let r =
+    if charIsIdent (at m) then
+      scanIdent text m
+    else
+      m
+
+  m, r
 
 let private scanStringLit (text: string) (i: int) =
   let at (i: int) =
@@ -371,6 +385,11 @@ let private tokenOfOp allowPrefix (text: string) l r : Token =
     | "^^^" -> HatHatHatToken
     | _ -> error ()
 
+  | '~' ->
+    match s with
+    | "~~~" -> TildeTildeTildeToken(allowPrefix && not (atSpace text r))
+    | _ -> error ()
+
   | '=' -> expect "=" EqualToken
   | '%' -> expect "%" PercentToken
   | '+' -> expect "+" PlusToken
@@ -380,45 +399,55 @@ let private tokenOfOp allowPrefix (text: string) l r : Token =
 
   | _ -> error ()
 
-let private evalCharLit (text: string) (l: int) (r: int) : Token =
-  match r - l with
-  // '?'
-  | 3 when text.[l] = '\'' && text.[l + 2] = '\'' -> CharToken(text.[l + 1])
+// m: end of quote
+// r: end of suffix
+let private evalCharLit (text: string) (l: int) (m: int) (r: int) : Token =
+  let result =
+    match m - l with
+    // '?'
+    | 3 when text.[l] = '\'' && text.[l + 2] = '\'' -> Ok text.[l + 1]
 
-  // '\?'
-  | 4 when
-    text.[l] = '\''
-    && text.[l + 1] = '\\'
-    && text.[l + 3] = '\''
-    ->
-    let c = text.[l + 2]
+    // '\?'
+    | 4 when
+      text.[l] = '\''
+      && text.[l + 1] = '\\'
+      && text.[l + 3] = '\''
+      ->
+      let c = text.[l + 2]
 
-    match c with
-    | 't' -> CharToken '\t'
-    | 'r' -> CharToken '\r'
-    | 'n' -> CharToken '\n'
+      match c with
+      | 't' -> Ok '\t'
+      | 'r' -> Ok '\r'
+      | 'n' -> Ok '\n'
 
-    | '\\'
-    | '\''
-    | '"' -> CharToken c
+      | '\\'
+      | '\''
+      | '"' -> Ok c
 
-    | _ -> ErrorToken UnknownEscapeSequenceError
+      | _ -> Error UnknownEscapeSequenceError
 
-  // '\xHH'
-  | 6 when
-    text.[l] = '\''
-    && text.[l + 1] = '\\'
-    && text.[l + 2] = 'x'
-    && text.[l + 5] = '\''
-    ->
-    let hex =
-      text.[l + 3..l + 4]
-      |> S.parseHexAsUInt64
-      |> Option.defaultWith unreachable
+    // '\xHH'
+    | 6 when
+      text.[l] = '\''
+      && text.[l + 1] = '\\'
+      && text.[l + 2] = 'x'
+      && text.[l + 5] = '\''
+      ->
+      let hex =
+        text.[l + 3..l + 4]
+        |> S.parseHexAsUInt64
+        |> unwrap
 
-    CharToken(char (byte hex))
+      Ok (char (byte hex))
 
-  | _ -> ErrorToken InvalidCharLitError
+    | _ -> Error InvalidCharLitError
+
+  match result with
+  | Ok c when text.[m..r - 1] = "B" -> ByteToken (byte c)
+  | Ok _ when m < r -> ErrorToken InvalidCharLitError
+
+  | Ok c -> CharToken c
+  | Error e -> ErrorToken e
 
 let private evalStringLit (text: string) (l: int) (r: int) : Token =
   let rec skipVerbatim i =
@@ -459,7 +488,7 @@ let private evalStringLit (text: string) (l: int) (r: int) : Token =
           let hex =
             text.[i + 2..i + 3]
             |> S.parseHexAsUInt64
-            |> Option.defaultWith unreachable
+            |> unwrap
             |> byte
 
           let s =
@@ -672,7 +701,8 @@ let private lookahead (text: string) (i: int) =
   | '+'
   | '<'
   | '='
-  | '|' -> LOp, 1
+  | '|'
+  | '~' -> LOp, 1
 
   | _ -> LBad, 1
 
@@ -745,8 +775,8 @@ let private doNext (host: TokenizeHost) allowPrefix (text: string) (index: int) 
     TyVarToken text.[index + 1..r - 1], r
 
   | LChar ->
-    let r = scanCharLit text (index + len)
-    evalCharLit text index r, r
+    let m, r = scanCharLit text (index + len)
+    evalCharLit text index m r, r
 
   | LStr ->
     let r = scanStringLit text (index + len)

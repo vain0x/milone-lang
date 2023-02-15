@@ -1,6 +1,9 @@
 open Std.Block
+open Std.Own
 open Std.Ptr
 open Std.Vector
+
+module FormatBase = Std.FormatBase
 
 // for memchr, memcpy
 __nativeDecl
@@ -8,67 +11,30 @@ __nativeDecl
     #include <string.h>
   """
 
-let private uintMin (l: uint) r = if r < l then r else l
-let private uintMax (l: uint) r = if l < r then r else l
+let private intMin (l: int) r = if r < l then r else l
 
 let private vectorContainsByte (b: byte) (v: Vector<byte>) : bool * Vector<byte> =
   let ptr, len, _, v = VectorExt.unsafeDup v
 
-  if len <> 0u then
+  if len <> 0 then
     let found: bool =
-      __nativeExpr ("memchr({0}, {1}, {2}) != NULL", ptr, b, len)
+      __nativeExpr ("memchr({0}, {1}, (size_t){2}) != NULL", ptr, b, len)
 
     found, v
   else
     false, v
 
-// -----------------------------------------------
-// Vector Utilities
-// -----------------------------------------------
-
-/// Appends contiguous part of memory to the vector.
-let private unsafeWriteRawParts (p: VoidInPtr) (len: uint) (v: Vector<byte>) : Vector<byte> =
-  if len <> 0u then
-    let v = VectorExt.reserve (int len) v
-    let ptr, bufLen, capacity, v = VectorExt.unsafeDup v
-    assert (ptr <> Ptr.nullPtr)
-    assert (bufLen + len <= capacity)
-    __nativeStmt ("memcpy(&{0}[{1}], {2}, {3});", ptr, bufLen, p, len)
-    VectorExt.unsafeSetLength (int (bufLen + len)) v
-  else
-    v
-
-let private doWriteInt (value: int) (v: Vector<byte>) =
-  __nativeStmt (
-    """
-      char buf[16] = "";
-      uint32_t len = (uint32_t)sprintf(buf, "%d", {0});
-    """,
-    value
-  )
-
-  let buf: nativeptr<char> = __nativeExpr "buf"
-  unsafeWriteRawParts (__nativeCast buf) (__nativeExpr "len") v
-
-let private doWriteFloat (value: float) (v: Vector<byte>) =
-  __nativeStmt (
-    """
-      char buf[64] = "";
-      uint32_t len = (uint32_t)sprintf(buf, "%f", {0});
-    """,
-    value
-  )
-
-  let buf: nativeptr<char> = __nativeExpr "buf"
-  unsafeWriteRawParts (__nativeCast buf) (__nativeExpr "len") v
-
 // ===============================================
 
 /// Owned, growable string object.
+///
+/// Invariant: Contained data should be valid in UTF-8.
+///
+/// Underlying buffer isn't NUL-terminated.
 type StringBuffer = private StringBuffer of Vector<byte>
 
 /// (ptr, len, capacity, self)
-let private unsafeDoDup (StringBuffer v) : nativeptr<byte> * uint * uint * StringBuffer =
+let private unsafeDoDup (StringBuffer v) : nativeptr<byte> * int * int * StringBuffer =
   let ptr, len, capacity, v = VectorExt.unsafeDup v
   ptr, len, capacity, StringBuffer v
 
@@ -108,10 +74,7 @@ module StringBuffer =
     // roughly validate
     let hasZero, v = vectorContainsByte 0uy v
 
-    if not hasZero then
-      Ok(StringBuffer v)
-    else
-      Error v
+    if not hasZero then Ok(StringBuffer v) else Error v
 
   let intoVector (sb: StringBuffer) : Vector<byte> =
     let (StringBuffer v) = sb
@@ -121,16 +84,12 @@ module StringBuffer =
   let sliceToString (start: int) (endIndex: int) (sb: StringBuffer) : string * StringBuffer =
     let ptr, len, _, sb = unsafeDoDup sb
 
-    let start = if start >= 0 then uint start else 0u
+    let start = if start >= 0 then start else 0
 
-    let endIndex =
-      if endIndex >= 0 then
-        uint endIndex
-      else
-        0u
+    let endIndex = if endIndex >= 0 then endIndex else 0
 
-    let endIndex = uintMin len endIndex
-    let start = uintMin endIndex start
+    let endIndex = intMin len endIndex
+    let start = intMin endIndex start
 
     assert (start <= endIndex && endIndex <= len)
 
@@ -152,78 +111,80 @@ module StringBuffer =
 
   /// Appends a string.
   let writeString (s: string) (sb: StringBuffer) : StringBuffer =
-    let charPtr: VoidInPtr =
-      __nativeExpr ("(void const *){0}.ptr", s)
+    if s.Length <> 0 then
+      let sPtr: InPtr<byte> = __nativeExpr ("(uint8_t const *){0}.ptr", s)
 
-    let (StringBuffer v) = sb
+      let (StringBuffer v) = sb
 
-    let v =
-      unsafeWriteRawParts charPtr (uint s.Length) v
-
-    StringBuffer v
+      v
+      |> VectorWriter.start s.Length
+      |> VectorWriter.copy sPtr s.Length
+      |> VectorWriter.finish
+      |> StringBuffer
+    else
+      sb
 
   /// Appends a non-NUL ASCII character.
   let writeAscii (c: char) (sb: StringBuffer) : StringBuffer =
     assert (c <> '\x00' && byte c <= 0x7fuy)
 
     let (StringBuffer v) = sb
-    StringBuffer(unsafeWriteRawParts (Ptr.cast &&c) 1u v)
+
+    v
+    |> VectorWriter.start 1
+    |> VectorWriter.push (byte c)
+    |> VectorWriter.finish
+    |> StringBuffer
 
   /// Appends a decimal representation of an integer.
   let writeInt (value: int) (sb: StringBuffer) : StringBuffer =
     let (StringBuffer v) = sb
-    StringBuffer(doWriteInt value v)
+
+    v
+    |> VectorWriter.start 21
+    |> VectorWriter.writeWith (fun v len -> FormatBase.formatInt64 0 (int64 value) v len)
+    |> VectorWriter.finish
+    |> StringBuffer
 
   /// Appends a 64-bit integer in decimal representation. (Zero-padded, unsigned.)
   ///
   /// If decimal representation of `value` is shorter than `width`,
   /// leading 0's are filled to write at least `width` bytes.
-  /// `width` must be less than 300.
   let writeUInt64 (width: int) (value: uint64) (sb: StringBuffer) : StringBuffer =
-    assert (width >= 0 && width <= 300)
-
-    __nativeStmt (
-      """
-        char buf[350];
-        uint32_t len = sprintf(buf, "%0*lld", (int){0}, (unsigned long long){1});
-      """,
-      width,
-      value
-    )
-
-    let buf: VoidInPtr = __nativeExpr "(void const *)buf"
-    let len: uint = __nativeExpr "len"
+    assert (width >= 0)
 
     let (StringBuffer v) = sb
-    StringBuffer(unsafeWriteRawParts buf len v)
+
+    v
+    |> VectorWriter.start 21
+    |> VectorWriter.writeWith (fun v len -> FormatBase.formatUInt64 width value v len)
+    |> VectorWriter.finish
+    |> StringBuffer
 
   /// Appends a 64-bit integer in hexadecimal representation. (Zero-padded, lowercase, unsigned.)
   ///
   /// If `value` can be written in hex digits shorter than `width`,
   /// leading 0's are filled to write at least `width` bytes.
-  /// `width` must be less than 300.
   let writeHex (width: int) (value: uint64) (sb: StringBuffer) : StringBuffer =
-    assert (width >= 0 && width <= 300)
-
-    __nativeStmt (
-      """
-        char buf[350];
-        uint32_t len = sprintf(buf, "%0*llx", (int){0}, (unsigned long long){1});
-      """,
-      width,
-      value
-    )
-
-    let buf: VoidInPtr = __nativeExpr "(void const *)buf"
-    let len: uint = __nativeExpr "len"
+    assert (width >= 0)
 
     let (StringBuffer v) = sb
-    StringBuffer(unsafeWriteRawParts buf len v)
+
+    v
+    |> VectorWriter.start 21
+    |> VectorWriter.writeWith (fun v n -> FormatBase.formatLowerHex width value v n)
+    |> VectorWriter.finish
+    |> StringBuffer
 
   /// Appends a string representation of float. (Format isn't determined yet.)
   let writeFloat (value: float) (sb: StringBuffer) : StringBuffer =
     let (StringBuffer v) = sb
-    StringBuffer(doWriteFloat value v)
+
+    v
+    |> VectorWriter.start 64
+    |> VectorWriter.writeWith (fun v n -> FormatBase.formatFloat value v n)
+    |> VectorWriter.finish
+    |> StringBuffer
 
   /// Appends a string representation of boolean: "True" or "False".
   let writeBool (value: bool) (sb: StringBuffer) : StringBuffer = writeString (string value) sb
@@ -262,11 +223,11 @@ module StringBuffer =
     let rec go xs sb =
       match Block.uncons xs with
       | None -> sb
-      | Some (x, xs) -> sb |> writeString sep |> writeItem x |> go xs
+      | Some(x, xs) -> sb |> writeString sep |> writeItem x |> go xs
 
     match Block.uncons xs with
     | None -> sb
-    | Some (x, xs) -> sb |> writeItem x |> go xs
+    | Some(x, xs) -> sb |> writeItem x |> go xs
 
   // =============================================
 
@@ -280,12 +241,16 @@ module StringBuffer =
     assert (count >= 0)
 
     let rec go i sb =
-      if i < count then
-        go (i + 1) (writeString s sb)
-      else
-        sb
+      if i < count then go (i + 1) (writeString s sb) else sb
 
-    go 0 (alloc (s.Length * count))
+    let total =
+      if count <> 0 then
+        assert (uint s.Length <= (1u <<< 31) / (uint count))
+        s.Length * count
+      else
+        0
+
+    go 0 (alloc total)
 
 /// StringBuffer methods that are unsafe or niche.
 module StringBufferExt =
@@ -301,7 +266,7 @@ module StringBufferExt =
   let unsafeWrap (v: Vector<byte>) : StringBuffer = StringBuffer v
 
   /// See: VectorExt.unsafeDup
-  let unsafeDup (sb: StringBuffer) : nativeptr<byte> * uint * uint * StringBuffer = unsafeDoDup sb
+  let unsafeDup (sb: StringBuffer) : nativeptr<byte> * int * int * StringBuffer = unsafeDoDup sb
 
   /// See: VectorExt.reserve
   let reserve (addition: int) (sb: StringBuffer) : StringBuffer = doReserve addition sb

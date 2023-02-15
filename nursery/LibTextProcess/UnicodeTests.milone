@@ -1,0 +1,37 @@
+open LibTextProcess.Unicode
+
+open Std.StdTesting
+
+module S = Std.StdString
+
+// test byteLength
+let () =
+  let ok b expected = Utf8.byteLength b = Some expected
+
+  let bad b = Utf8.byteLength b = None
+
+  assert (ok 0x00uy 1)
+  assert (ok (byte 'A') 1)
+  assert (ok (byte "ɸ".[0]) 2)
+  assert (ok (byte "世".[0]) 3)
+  assert (ok (byte "🐧".[0]) 4)
+
+  assert (bad (byte "世".[1]))
+  assert (bad (byte "世".[2]))
+  assert (bad (byte "φ".[1]))
+
+// test decodeNext
+let () =
+  let ok (text: string) expected =
+    let rec go acc i =
+      if i < text.Length then
+        match Utf8.decodeNext i text with
+        | Some(cp, len) -> go (S.uint64ToHex 6 (uint64 cp) :: acc) (i + len)
+
+        | None -> "Error " + (string i)
+      else
+        acc |> List.rev |> S.concat " "
+
+    go [] 0 |> shouldEqual id expected
+
+  assert (ok "Aφ世🐧" "000041 0003c6 004e16 01f427")

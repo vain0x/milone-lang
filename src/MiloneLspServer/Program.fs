@@ -8,6 +8,7 @@ open System.Threading.Channels
 open MiloneShared.UtilParallel
 open MiloneLspServer.JsonRpcReader
 open MiloneLspServer.LspServer
+open MiloneLspServer.LspUtil
 open MiloneLspServer.Util
 
 // FIXME: shouldn't depend
@@ -36,7 +37,7 @@ let private getHomeEnv () =
 
 let private miloneHome =
   SyntaxApi.getMiloneHomeFromEnv getMiloneHomeEnv getHomeEnv
-  |> LLS.normalize
+  |> Path.normalize
 
 let private readTextFile (filePath: string) : Future<string option> =
   try
@@ -67,7 +68,7 @@ let private getHost () : LLS.WorkspaceAnalysisHost =
         traceFn "DirEntries (%s)" dir
 
         let collect paths =
-          paths |> Array.map LLS.normalize |> Array.toList
+          paths |> Array.map Path.normalize |> Array.toList
 
         collect (Directory.GetFiles(dir)), collect (Directory.GetDirectories(dir)) }
 
@@ -262,7 +263,7 @@ let main (args: string array) =
 
                   match LspServer.processNext LspIncome.diagnostics ct server with
                   | Continue ->
-                    diagnosticsFresh <- false
+                    diagnosticsFresh <- true
                     return! loop ()
 
                   | Exit _ -> return! failwith "unreachable"

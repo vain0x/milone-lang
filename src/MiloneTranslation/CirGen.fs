@@ -24,7 +24,7 @@ open MiloneTranslation.Cir
 open MiloneTranslation.Hir
 open MiloneTranslation.Mir
 open MiloneTranslation.MirGen
-open MiloneTranslationTypes.HirTypes
+open MiloneTranslation.HirTypes
 
 module S = Std.StdString
 
@@ -167,15 +167,20 @@ let private linkageToIdent rawName linkage =
 let private varDefToName (varDef: VarDef) =
   linkageToIdent varDef.Name varDef.Linkage
 
-let private funDefToName (funDef: FunDef) =
+let private funDefToName (df: DocIdToModulePath) (funDef: FunDef) =
   match funDef.Linkage with
   | InternalLinkage ->
     let name =
-      // #avoidAbusingDocId
-      let (Loc (docId, _, _)) = funDef.Loc
-
       let doc =
-        Symbol.toString docId |> S.replace "." "_"
+        match funDef.Loc |> Loc.docId |> df with
+        | Some (p, m) -> p + "_" + m
+        | None ->
+          // #abusingDocId
+          // This can happen e.g. Derive generates non-file documents.
+          funDef.Loc
+          |> Loc.docId
+          |> Symbol.toString
+          |> S.replace "." "_"
 
       doc
       + "_"
@@ -199,6 +204,7 @@ type private Rx =
     Variants: TreeMap<VariantSerial, VariantDef>
     Tys: TreeMap<TySerial, TyDef>
     MainFunOpt: FunSerial option
+    EntrypointName: string
 
     ValueNameFreq: TreeMap<Ident, int>
     VarUniqueNames: TreeMap<VarSerial, Ident>
@@ -206,7 +212,9 @@ type private Rx =
     VariantUniqueNames: TreeMap<VariantSerial, Ident>
 
     /// Doc ID of current module.
-    DocIdOpt: DocId option }
+    DocIdOpt: DocId option
+
+    DocIdToModulePath: DocIdToModulePath }
 
 // -----------------------------------------------
 // Context
@@ -225,16 +233,19 @@ type private CirCtx =
     FunDecls: TreeSet<FunSerial>
 
     /// Nominalized fun pointer types.
-    FunPtrTys: TreeMap<CTy list * CTy, string> }
+    FunPtrTys: TreeMap<CTy list * CTy, string>
 
-let private ofMirResult (mirCtx: MirResult) : CirCtx =
+    /// Gets if current function is never-returning
+    IsNoReturn: bool }
+
+let private ofMirResult entrypointName (df: DocIdToModulePath) (mirCtx: MirResult) : CirCtx =
   let freq = freqEmpty compare
 
   let varUniqueNames, freq =
     renameIdents2 mirCtx.StaticVars varDefToName (TMap.empty varSerialCompare) freq
 
   let funUniqueNames, freq =
-    renameIdents2 mirCtx.Funs funDefToName (TMap.empty funSerialCompare) freq
+    renameIdents2 mirCtx.Funs (funDefToName df) (TMap.empty funSerialCompare) freq
 
   let variantUniqueNames, freq =
     renameIdents2
@@ -252,8 +263,9 @@ let private ofMirResult (mirCtx: MirResult) : CirCtx =
   let tyNames =
     let toKey (serial, tyDef) =
       match tyDef with
-      | UnionTyDef _ -> tyUnion serial []
-      | RecordTyDef _ -> tyRecord serial
+      | UnionTyDef (ident, _, _, _) -> tyUnion serial ident []
+      | RecordTyDef (ident, _, _, _, _) -> tyRecord serial ident []
+      | OpaqueTyDef (ident, _) -> Ty(OpaqueTk(serial, ident), [])
 
     mirCtx.Tys
     |> renameIdents tyDefToName toKey tyCompare
@@ -264,12 +276,14 @@ let private ofMirResult (mirCtx: MirResult) : CirCtx =
       Variants = mirCtx.Variants
       Tys = mirCtx.Tys
       MainFunOpt = mirCtx.MainFunOpt
+      EntrypointName = entrypointName
 
       ValueNameFreq = freq
       VarUniqueNames = varUniqueNames
       FunUniqueNames = funUniqueNames
       VariantUniqueNames = variantUniqueNames
-      DocIdOpt = None }
+      DocIdOpt = None
+      DocIdToModulePath = df }
 
   { Rx = rx
     TyEnv = TMap.empty tyCompare
@@ -277,7 +291,8 @@ let private ofMirResult (mirCtx: MirResult) : CirCtx =
     Stmts = []
     Decls = []
     FunDecls = TSet.empty funSerialCompare
-    FunPtrTys = TMap.empty (pairCompare (listCompare cTyCompare) cTyCompare) }
+    FunPtrTys = TMap.empty (pairCompare (listCompare cTyCompare) cTyCompare)
+    IsNoReturn = false }
 
 let private currentDocId (ctx: CirCtx) : DocId =
   match ctx.Rx.DocIdOpt with
@@ -291,7 +306,13 @@ let private isMainFun (ctx: CirCtx) funSerial =
 
 let private getUnionTyOfVariant (ctx: CirCtx) variantSerial =
   let variantDef = ctx.Rx.Variants |> mapFind variantSerial
-  tyUnion (variantDef.UnionTySerial) []
+
+  let unionTyName =
+    match ctx.Rx.Tys |> mapFind variantDef.UnionTySerial with
+    | UnionTyDef(ident, _, _, _) -> ident
+    | _ -> unreachable ()
+
+  tyUnion variantDef.UnionTySerial unionTyName []
 
 let private enterBlock (ctx: CirCtx) = { ctx with Stmts = [] }
 
@@ -311,7 +332,7 @@ let private cgArgTys ctx argTys : CTy list * CirCtx =
   |> List.mapFold cgTyComplete ctx
 
 let private cgResultTy ctx resultTy : CTy * CirCtx =
-  if tyIsUnit resultTy then
+  if tyIsUnit resultTy || tyIsNever resultTy then
     CVoidTy, ctx
   else
     cgTyComplete ctx resultTy
@@ -423,8 +444,8 @@ let private genListTyDef (ctx: CirCtx) itemTy =
 
     selfTy, ctx
 
-let private genIncompleteUnionTyDecl (ctx: CirCtx) tySerial =
-  let unionTyRef = tyUnion tySerial []
+let private genIncompleteUnionTyDecl (ctx: CirCtx) tySerial name =
+  let unionTyRef = tyUnion tySerial name []
 
   match ctx.TyEnv |> TMap.tryFind unionTyRef with
   | Some (_, ty) -> ty, ctx
@@ -441,15 +462,15 @@ let private genIncompleteUnionTyDecl (ctx: CirCtx) tySerial =
 
     selfTy, ctx
 
-let private genUnionTyDef (ctx: CirCtx) tySerial variants =
-  let unionTyRef = tyUnion tySerial []
+let private genUnionTyDef (ctx: CirCtx) tySerial name variants =
+  let unionTyRef = tyUnion tySerial name []
 
   match ctx.TyEnv |> TMap.tryFind unionTyRef with
   | Some (CTyDefined, ty) -> ty, ctx
 
   | _ ->
     let structName, ctx = getUniqueTyName ctx unionTyRef
-    let selfTy, ctx = genIncompleteUnionTyDecl ctx tySerial
+    let selfTy, ctx = genIncompleteUnionTyDecl ctx tySerial name
 
     let discriminantEnumName = toDiscriminantEnumName structName
     let discriminantTy = CEnumTy discriminantEnumName
@@ -489,8 +510,8 @@ let private genUnionTyDef (ctx: CirCtx) tySerial variants =
 
     selfTy, ctx
 
-let private genIncompleteRecordTyDecl (ctx: CirCtx) tySerial =
-  let recordTyRef = tyRecord tySerial
+let private genIncompleteRecordTyDecl (ctx: CirCtx) tySerial name =
+  let recordTyRef = tyRecord tySerial name []
 
   match ctx.TyEnv |> TMap.tryFind recordTyRef with
   | Some (_, ty) -> ty, ctx
@@ -507,10 +528,33 @@ let private genIncompleteRecordTyDecl (ctx: CirCtx) tySerial =
 
     selfTy, ctx
 
-let private genRecordTyDef ctx tySerial fields =
-  let recordTyRef = tyRecord tySerial
+let private genOpaqueTyDecl (ctx: CirCtx) tySerial name =
+  let opaqueTyRef = Ty(OpaqueTk(tySerial, name), [])
+
+  match ctx.TyEnv |> TMap.tryFind opaqueTyRef with
+  | Some (_, ty) -> ty, ctx
+
+  | None ->
+    let name =
+      match ctx.Rx.Tys |> mapFind tySerial with
+      | OpaqueTyDef (name, _) -> name
+      | _ -> unreachable ()
+
+    let selfTy = CStructTy name
+
+    let ctx =
+      { ctx with
+          Decls = CStructForwardDecl name :: ctx.Decls
+          TyEnv =
+            ctx.TyEnv
+            |> TMap.add opaqueTyRef (CTyDeclared, selfTy) }
+
+    selfTy, ctx
+
+let private genRecordTyDef ctx tySerial name fields =
+  let recordTyRef = tyRecord tySerial name []
   let structName, ctx = getUniqueTyName ctx recordTyRef
-  let selfTy, ctx = genIncompleteRecordTyDecl ctx tySerial
+  let selfTy, ctx = genIncompleteRecordTyDecl ctx tySerial name
 
   match ctx.TyEnv |> TMap.tryFind recordTyRef with
   | Some (CTyDefined, ty) -> ty, ctx
@@ -584,6 +628,7 @@ let private cgTyIncomplete (ctx: CirCtx) (ty: Ty) : CTy * CirCtx =
   | FunTk, [ sTy; tTy ] -> genIncompleteFunTyDecl ctx sTy tTy
   | FunTk, _ -> unreachable ()
 
+  | NeverTk, _
   | TupleTk, [] -> CCharTy, ctx
   | TupleTk, _ -> unreachable () // Non-unit TupleTk is resolved in MonoTy.
 
@@ -594,11 +639,12 @@ let private cgTyIncomplete (ctx: CirCtx) (ty: Ty) : CTy * CirCtx =
   | VoidPtrTk IsConst, _ -> cVoidConstPtrTy, ctx
   | NativePtrTk mode, [ itemTy ] -> cgNativePtrTy ctx mode itemTy
   | NativePtrTk _, _ -> unreachable ()
-  | NativeFunTk, _ -> cgNativeFunTy ctx tyArgs
+  | FunPtrTk, _ -> cgNativeFunTy ctx tyArgs
   | NativeTypeTk code, _ -> CEmbedTy code, ctx
 
-  | UnionTk tySerial, _ -> genIncompleteUnionTyDecl ctx tySerial
-  | RecordTk tySerial, _ -> genIncompleteRecordTyDecl ctx tySerial
+  | UnionTk(tySerial, name), _ -> genIncompleteUnionTyDecl ctx tySerial name
+  | RecordTk(tySerial, name), _ -> genIncompleteRecordTyDecl ctx tySerial name
+  | OpaqueTk(tySerial, name), _ -> genOpaqueTyDecl ctx tySerial name
 
   | MetaTk _, _ -> unreachable () // Resolved in Typing.
 
@@ -619,6 +665,7 @@ let private cgTyComplete (ctx: CirCtx) (ty: Ty) : CTy * CirCtx =
   | FunTk, [ sTy; tTy ] -> genFunTyDef ctx sTy tTy
   | FunTk, _ -> unreachable ()
 
+  | NeverTk, _
   | TupleTk, [] -> CCharTy, ctx
   | TupleTk, _ -> unreachable () // Non-unit TupleTk is resolved in MonoTy.
 
@@ -634,20 +681,22 @@ let private cgTyComplete (ctx: CirCtx) (ty: Ty) : CTy * CirCtx =
   | NativePtrTk mode, [ itemTy ] -> cgNativePtrTy ctx mode itemTy
   | NativePtrTk _, _ -> unreachable ()
 
-  | NativeFunTk, _ -> cgNativeFunTy ctx tyArgs
+  | FunPtrTk, _ -> cgNativeFunTy ctx tyArgs
   | NativeTypeTk code, _ -> CEmbedTy code, ctx
 
-  | UnionTk serial, _ ->
+  | UnionTk(serial, name), _ ->
     match ctx.Rx.Tys |> TMap.tryFind serial with
-    | Some (UnionTyDef (_, _, variants, _)) -> genUnionTyDef ctx serial variants
+    | Some (UnionTyDef (_, _, variants, _)) -> genUnionTyDef ctx serial name variants
 
     | _ -> unreachable () // Union type undefined?
 
-  | RecordTk serial, _ ->
+  | RecordTk(serial, name), _ ->
     match ctx.Rx.Tys |> TMap.tryFind serial with
-    | Some (RecordTyDef (_, fields, _, _)) -> genRecordTyDef ctx serial fields
+    | Some (RecordTyDef (_, _, fields, _, _)) -> genRecordTyDef ctx serial name fields
 
     | _ -> unreachable () // Record type undefined?
+
+  | OpaqueTk(serial, name), _ -> genOpaqueTyDecl ctx serial name
 
   | MetaTk _, _ -> unreachable () // Resolved in Typing.
 
@@ -683,10 +732,11 @@ let private cgExternFunDecl (ctx: CirCtx) funSerial =
 
       let name = getUniqueFunName ctx funSerial
       let argTys, ctx = cgArgTys ctx argTys
+      let isNoReturn = tyIsNever resultTy
       let resultTy, ctx = cgResultTy ctx resultTy
 
       let ctx: CirCtx =
-        addDecl ctx (CFunForwardDecl(name, argTys, resultTy))
+        addDecl ctx (CFunForwardDecl(name, argTys, resultTy, isNoReturn))
 
       { ctx with FunDecls = TSet.add funSerial ctx.FunDecls }
 
@@ -729,6 +779,7 @@ let private genLit lit =
   | BoolLit false -> CVarExpr "false"
   | BoolLit true -> CVarExpr "true"
   | CharLit value -> CCharExpr value
+  | ByteLit value -> CCastExpr(CCharExpr (char value), CIntTy U8)
   | StringLit value -> CStringInitExpr value
 
 let private genDiscriminant ctx variantSerial =
@@ -780,6 +831,7 @@ let private genUnaryExpr ctx op arg =
 
   match op with
   | MMinusUnary -> CUnaryExpr(CMinusUnary, arg), ctx
+  | MBitNotUnary -> CUnaryExpr(CBitNotUnary, arg), ctx
   | MNotUnary -> CUnaryExpr(CNotUnary, arg), ctx
   | MPtrOfUnary -> CUnaryExpr(CAddressOfUnary, arg), ctx
   | MIntOfScalarUnary flavor -> CCastExpr(arg, CIntTy flavor), ctx
@@ -887,11 +939,12 @@ let private cgExprList ctx exprs : CExpr list * CirCtx = exprs |> List.mapFold c
 
 let private addNativeFunDecl ctx funName argTys resultTy =
   let argTys, ctx = cgArgTys ctx argTys
+  let isNoReturn = tyIsNever resultTy
   let resultTy, ctx = cgResultTy ctx resultTy
 
-  addDecl ctx (CFunForwardDecl(funName, argTys, resultTy))
+  addDecl ctx (CFunForwardDecl(funName, argTys, resultTy, isNoReturn))
 
-let private cgActionStmt ctx itself action args loc =
+let private cgActionStmt (ctx: CirCtx) itself action args loc =
   match action with
   | MAssertNotAction ->
     let cond, ctx =
@@ -903,12 +956,12 @@ let private cgActionStmt ctx itself action args loc =
     let args =
       let (Loc (docId, y, x)) = loc
 
-      // #abusingDocId
-      let name =
-        (Symbol.toString docId |> S.replace "." "/")
-        + ".milone"
+      let pathname =
+        match ctx.Rx.DocIdToModulePath docId with
+        | Some (p, m) -> p + "/" + m + ".milone"
+        | None -> Symbol.toString docId
 
-      [ CStringLitExpr name
+      [ CStringLitExpr pathname
         CIntExpr(string y, I32)
         CIntExpr(string x, I32) ]
 
@@ -1194,22 +1247,23 @@ let private cgSetStmt ctx serial right =
   let left = CVarExpr(name)
   addStmt ctx (CSetStmt(left, right))
 
-let private cgReturnStmt ctx expr argTy =
-  if tyIsUnit argTy then
-    CReturnStmt None, ctx
-  else
-    let expr, ctx = cgExpr ctx expr
-    CReturnStmt(Some expr), ctx
-
-let private cgTerminatorStmt ctx stmt : CStmt * CirCtx =
+let private cgTerminatorStmt (ctx: CirCtx) stmt loc : CStmt * CirCtx =
   match stmt with
-  | MReturnTerminator (expr, argTy) -> cgReturnStmt ctx expr argTy
+  | MReturnTerminator (expr, argTy) ->
+    if ctx.IsNoReturn then
+      CNoopStmt, ctx
+    else if tyIsUnit argTy || tyIsNever argTy then
+      CReturnStmt None, ctx
+    else
+      let expr, ctx = cgExpr ctx expr
+      CReturnStmt(Some expr), ctx
+
   | MGotoTerminator label -> CGotoStmt label, ctx
 
   | MIfTerminator (cond, thenCl, elseCl) ->
     let cond, ctx = cgExpr ctx cond
-    let thenCl, ctx = cgTerminatorStmt ctx thenCl
-    let elseCl, ctx = cgTerminatorStmt ctx elseCl
+    let thenCl, ctx = cgTerminatorStmt ctx thenCl loc
+    let elseCl, ctx = cgTerminatorStmt ctx elseCl loc
     CIfStmt(cond, thenCl, elseCl), ctx
 
   | MSwitchTerminator (cond, clauses) ->
@@ -1223,7 +1277,7 @@ let private cgTerminatorStmt ctx stmt : CStmt * CirCtx =
                clause.Cases
                |> List.map (fun cond -> cgConst ctx cond)
 
-             let stmt, ctx = cgTerminatorStmt ctx clause.Terminator
+             let stmt, ctx = cgTerminatorStmt ctx clause.Terminator loc
 
              (cases, clause.IsDefault, stmt), ctx)
            ctx
@@ -1233,6 +1287,28 @@ let private cgTerminatorStmt ctx stmt : CStmt * CirCtx =
   | MExitTerminator arg ->
     let arg, ctx = cgExpr ctx arg
     CExprStmt(CCallExpr(CVarExpr "exit", [ arg ])), ctx
+
+  | MAbortTerminator cause ->
+    let f =
+      match cause with
+      | MAbortCause.Assert -> "milone_assert_error"
+      | MAbortCause.Exhaust -> "milone_exhaust_error"
+      | MAbortCause.Never -> "milone_never_error"
+
+    // Embed the source location information.
+    let args =
+      let (Loc (docId, y, x)) = loc
+
+      let pathname =
+        match ctx.Rx.DocIdToModulePath docId with
+        | Some (p, m) -> p + "/" + m + ".milone"
+        | None -> Symbol.toString docId
+
+      [ CStringLitExpr pathname
+        CIntExpr(string y, I32)
+        CIntExpr(string x, I32) ]
+
+    CExprStmt(CCallExpr(CVarExpr f, args)), ctx
 
 let private cgStmt ctx stmt =
   match stmt with
@@ -1246,13 +1322,15 @@ let private cgStmt ctx stmt =
     let cond, ctx = cgExpr ctx cond
     addStmt ctx (CGotoIfStmt(cond, label))
 
-  | MTerminatorStmt (terminator, _loc) ->
-    let stmt, ctx = cgTerminatorStmt ctx terminator
-    addStmt ctx stmt
+  | MTerminatorStmt (terminator, loc) ->
+    let stmt, ctx = cgTerminatorStmt ctx terminator loc
+
+    match stmt with
+    | CNoopStmt -> ctx
+    | _ -> addStmt ctx stmt
 
   | MNativeStmt (code, args, _) ->
     let args, ctx = cgExprList ctx args
-
     addStmt ctx (CNativeStmt(code, args))
 
 let private cgBlock (ctx: CirCtx) (stmts: MStmt list) =
@@ -1276,7 +1354,7 @@ let private cgStmts (ctx: CirCtx) (stmts: MStmt list) : CirCtx =
 
   go ctx stmts
 
-let private genMainFun stmts : CDecl =
+let private genMainFun entrypointName stmts : CDecl =
   let intTy = CEmbedTy "int"
 
   let args =
@@ -1287,7 +1365,9 @@ let private genMainFun stmts : CDecl =
     CExprStmt(CCallExpr(CVarExpr "milone_start", [ CVarExpr "argc"; CVarExpr "argv" ]))
     :: stmts
 
-  CFunDecl("main", args, intTy, stmts)
+  let isNoReturn = false
+
+  CFunDecl(entrypointName, args, intTy, stmts, isNoReturn)
 
 let private cgDecls (ctx: CirCtx) decls =
   match decls with
@@ -1296,9 +1376,12 @@ let private cgDecls (ctx: CirCtx) decls =
   | MProcDecl (callee, args, body, resultTy, localVars, _) :: decls ->
     let def: FunDef = ctx.Rx.Funs |> mapFind callee
 
+    let isNoReturn = tyIsNever resultTy
+    let ctx = { ctx with IsNoReturn = isNoReturn }
+
     let main, funName, args =
       if isMainFun ctx callee then
-        true, "main", []
+        true, ctx.Rx.EntrypointName, []
       else
         false, getUniqueFunName ctx callee, args
 
@@ -1328,11 +1411,11 @@ let private cgDecls (ctx: CirCtx) decls =
       let body = List.append stmts body
 
       if main then
-        genMainFun body
+        genMainFun funName body
       else
         match def.Linkage with
-        | InternalLinkage -> CStaticFunDecl(funName, args, resultTy, body)
-        | ExternalLinkage _ -> CFunDecl(funName, args, resultTy, body)
+        | InternalLinkage -> CStaticFunDecl(funName, args, resultTy, body, isNoReturn)
+        | ExternalLinkage _ -> CFunDecl(funName, args, resultTy, body, isNoReturn)
 
     let ctx = addDecl ctx funDecl
     cgDecls ctx decls
@@ -1382,7 +1465,8 @@ let private cgModule (ctx: CirCtx) (m: MModule) : DocId * CDecl list =
       Stmts = []
       Decls = []
       FunDecls = TSet.empty funSerialCompare
-      FunPtrTys = TMap.empty (pairCompare (listCompare cTyCompare) cTyCompare) }
+      FunPtrTys = TMap.empty (pairCompare (listCompare cTyCompare) cTyCompare)
+      IsNoReturn = false }
 
   // Generate leading native decls to not be preceded by generated decls.
   let moduleDecls, ctx =
@@ -1426,8 +1510,12 @@ let private cgModule (ctx: CirCtx) (m: MModule) : DocId * CDecl list =
 // Interface
 // -----------------------------------------------
 
-let genCir (modules: MModule list, mirResult: MirResult) : (DocId * CDecl list) list =
-  let ctx = ofMirResult mirResult
+let genCir
+  (entrypointName: string)
+  (df: DocIdToModulePath)
+  (modules: MModule list, mirResult: MirResult)
+  : (DocId * CDecl list) list =
+  let ctx = ofMirResult entrypointName df mirResult
 
   modules
   |> __parallelMap (cgModule ctx)

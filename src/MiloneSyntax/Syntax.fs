@@ -5,7 +5,7 @@ module rec MiloneSyntax.Syntax
 
 open MiloneShared.SharedTypes
 open Std.StdMap
-open MiloneSyntaxTypes.SyntaxTypes
+open MiloneSyntax.SyntaxTypes
 
 // -----------------------------------------------
 // TokenizeError
@@ -172,9 +172,9 @@ let tokenizeHostNew () : TokenizeHost =
 let findDependentModules ast : (ProjectName * ModuleName * Pos) list =
   let rec onDecl decl =
     match decl with
-    | AOpenDecl ([ Name (p, _); Name (m, _) ], pos) -> Some(p, m, pos)
-    | AModuleSynonymDecl (_, [ Name (p, _); Name (m, _) ], pos) -> Some(p, m, pos)
-    | AAttrDecl (_, next, _) -> onDecl next
+    | AOpenDecl (pos, [ Name (p, _); Name (m, _) ]) -> Some(p, m, pos)
+    | AModuleSynonymDecl (pos, _, _, [ Name (p, _); Name (m, _) ]) -> Some(p, m, pos)
+    | AAttrDecl (_, _, _, next) -> onDecl next
     | _ -> None
 
   let (ARoot (_, decls)) = ast

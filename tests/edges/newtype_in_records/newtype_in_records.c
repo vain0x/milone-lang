@@ -61,19 +61,19 @@ bool newtype_in_records_newtype_in_records_between(int32_t day_, struct DayRange
     call_2 = newtype_in_records_newtype_in_records_dayToInt(day_);
     call_3 = newtype_in_records_newtype_in_records_dayToInt(range_.t0);
     if ((call_2 >= call_3)) {
-        goto then_5;
+        goto then_2;
     } else {
-        goto else_6;
+        goto else_3;
     }
-then_5:;
+then_2:;
     call_4 = newtype_in_records_newtype_in_records_dayToInt(range_.t1);
     call_5 = newtype_in_records_newtype_in_records_dayToInt(day_);
     if_1 = (call_4 >= call_5);
-    goto if_next_4;
-else_6:;
+    goto if_next_1;
+else_3:;
     if_1 = false;
-    goto if_next_4;
-if_next_4:;
+    goto if_next_1;
+if_next_1:;
     return if_1;
 }
 

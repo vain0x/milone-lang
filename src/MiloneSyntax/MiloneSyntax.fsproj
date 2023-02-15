@@ -5,14 +5,17 @@
   </PropertyGroup>
 
   <ItemGroup>
+    <Compile Include="SyntaxTypes.fs" />
+    <Compile Include="TirTypes.fs" />
+    <Compile Include="SyntaxApiTypes.fs" />
     <Compile Include="Syntax.fs" />
     <Compile Include="Tir.fs" />
     <Compile Include="TySystem.fs" />
     <Compile Include="Manifest.fs" />
     <Compile Include="SyntaxTokenize.fs" />
     <Compile Include="SyntaxParse.fs" />
+    <Compile Include="SyntaxTreeGen.fs" />
     <Compile Include="NirGen.fs" />
-    <Compile Include="AstBundle.fs" />
     <Compile Include="NameRes.fs" />
     <Compile Include="Typing.fs" />
     <Compile Include="ArityCheck.fs" />
@@ -23,7 +26,6 @@
   <ItemGroup>
     <ProjectReference Include="..\Std\Std.fsproj" />
     <ProjectReference Include="..\MiloneShared\MiloneShared.fsproj" />
-    <ProjectReference Include="..\MiloneSyntaxTypes\MiloneSyntaxTypes.fsproj" />
   </ItemGroup>
 
 </Project>

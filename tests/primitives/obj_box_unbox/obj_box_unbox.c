@@ -55,19 +55,19 @@ int main(int argc, char **argv) {
     list_ = ((struct Int32Cons const *)milone_region_alloc(1, sizeof(struct Int32Cons)));
     (*(((struct Int32Cons *)list_))) = (struct Int32Cons){.head = 4, .tail = list_1};
     xs_ = ((void const *)((intptr_t)list_));
-    if ((!(((struct Int32Cons const *)((intptr_t)xs_))))) goto next_5;
+    if ((!(((struct Int32Cons const *)((intptr_t)xs_))))) goto next_2;
     a_ = ((struct Int32Cons const *)((intptr_t)xs_))->head;
-    if ((!(((struct Int32Cons const *)((intptr_t)xs_))->tail))) goto next_5;
+    if ((!(((struct Int32Cons const *)((intptr_t)xs_))->tail))) goto next_2;
     b_ = ((struct Int32Cons const *)((intptr_t)xs_))->tail->head;
-    if ((!((!(((struct Int32Cons const *)((intptr_t)xs_))->tail->tail))))) goto next_5;
+    if ((!((!(((struct Int32Cons const *)((intptr_t)xs_))->tail->tail))))) goto next_2;
     if ((((a_ * 10) + b_) != 42)) milone_assert_error("obj_box_unbox/obj_box_unbox.milone", 24, 16);
     match_ = 0;
-    goto end_match_4;
-next_5:;
+    goto end_match_1;
+next_2:;
     if (true) milone_assert_error("obj_box_unbox/obj_box_unbox.milone", 25, 9);
     match_ = 0;
-    goto end_match_4;
-next_6:;
-end_match_4:;
+    goto end_match_1;
+next_3:;
+end_match_1:;
     return 0;
 }

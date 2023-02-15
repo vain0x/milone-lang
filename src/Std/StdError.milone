@@ -19,32 +19,30 @@ let __context _ (action: unit -> 'A) : 'A = action ()
 
 // add to prelude?
 
-let failwith (msg: string) : 'A =
-  __writeErrorLine ("FATAL ERROR: " + msg)
-  assert false
-  exit 1
+let failwith (msg: string) : never =
+  __nativeStmt (
+    """
+    milone_failwithf("failwith: %s", string_to_c_str({0}));
+    """,
+    msg
+  )
 
-let failwithf (msg: string) _ : 'A =
-  __writeErrorLine ("FATAL ERROR: " + msg)
+  // Make it clear that it's cold path.
   assert false
-  exit 1
+
+  __nativeExpr "never"
+
+let failwithf (msg: string) (_: 'A) : never = failwith msg
 
 // -----------------------------------------------
 // Exceptions
 // -----------------------------------------------
 
 /// Never executed.
-let unreachable (_: 'T) : 'A = failwith "unreachable"
+let unreachable (_: 'A) : never = failwith "unreachable"
 
 /// Not implemented.
-let todo (_: 'T) : 'A = failwith "todo"
+let todo () : never = failwith "todo"
 
-// -----------------------------------------------
-// Never
-// -----------------------------------------------
-
-/// Placeholder of result type of diverging function.
-type Never = private | Never
-
-/// Never happens.
-let never Never : 'A = unreachable ()
+/// For compatibility with F#.
+let never (n: never) : never = n

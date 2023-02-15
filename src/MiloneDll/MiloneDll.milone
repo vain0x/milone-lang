@@ -1,0 +1,26 @@
+open MiloneCli.Cli
+open MiloneCli.MiloneOnly
+open MiloneSyntax.SyntaxApi
+open MiloneTranslation.TranslationApi
+open Std.Ptr
+
+type CChar = __nativeType<char>
+// char const *. not null, null-terminated, scoped, encoded in UTF-8
+type CStr = InPtr<CChar>
+
+module private CStr =
+  // allocates on region
+  let ofString (s: string): CStr =
+    __nativeFun("string_to_c_str", s)
+
+  // allocates on region
+  let toString (cs: CStr): string =
+    __nativeFun("string_of_c_str", cs)
+
+[<Export>]
+let milone_parse (text: CStr): CStr =
+  let host = miloneCliHost ()
+  let sApi = newSyntaxApi ()
+
+  let output, _errors = sApi.DumpSyntax (CStr.toString text)
+  CStr.ofString output

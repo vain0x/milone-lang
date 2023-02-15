@@ -23,6 +23,12 @@
     "vsce-package": "vsce package --out milone-lang.vsix"
   },
   "contributes": {
+    "commands": [
+      {
+        "command": "milone-lang.show-syntax-tree",
+        "title": "milone-lang: Show Syntax Tree"
+      }
+    ],
     "configuration": {
       "type": "object",
       "title": "Settings for milone-lang",
@@ -38,7 +44,7 @@
         },
         "milone-lang.lsp-command": {
           "type": "string",
-          "description": "[debug] Absolute path to the LSP server binary to be used. Defaults to '$HOME/.milone/bin/MiloneLspServer'."
+          "description": "[debug] Absolute path to the LSP server binary to be used. Defaults to '$HOME/.local/share/milone/bin/MiloneLspServer'."
         },
         "milone-lang.trace.server": {
           "type": "string",

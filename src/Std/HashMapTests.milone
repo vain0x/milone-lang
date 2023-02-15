@@ -8,20 +8,20 @@ module MB = Std.HashMap.HashMapBuffer
 
 module private Int =
   let equals (l: int) r = l = r
-  let hash (value: int) = uint value
+  let hash (value: int) = value
 
 module private String =
   let equals (l: string) r = l = r
 
   let hash (value: string) =
-    let rec go h i =
+    let rec go (h: uint) i =
       if i < value.Length then
         let h = h ^^^ ((h <<< 5) ||| (h >>> 27))
         go (h ^^^ (uint (byte value.[i]))) (i + 1)
       else
         h
 
-    go 31u 0
+    int(go 31u 0)
 
 let private debugPair (l: int, r: int) = "(" + string l + ", " + string r + ")"
 
@@ -29,7 +29,7 @@ let private compareInt2 (l: int * int) (r: int * int) = compare (fst l) (fst r)
 
 let private testRemove () =
   let map =
-    MB.empty Int.equals (fun (n: int) -> uint (n % 2))
+    MB.empty Int.equals (fun (n: int) -> n % 2)
     |> MB.insert 0 100
     |> MB.insert 1 101
     |> MB.insert 2 102

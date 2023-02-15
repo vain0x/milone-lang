@@ -46,6 +46,9 @@ type CUnary =
   /// `-x`
   | CMinusUnary
 
+  /// `~x`
+  | CBitNotUnary
+
   /// `!p`
   | CNotUnary
 
@@ -116,6 +119,8 @@ type CExpr =
 /// Statement in CIR.
 [<NoEquality; NoComparison>]
 type CStmt =
+  | CNoopStmt
+
   /// `x;`
   | CExprStmt of CExpr
 
@@ -169,10 +174,10 @@ type CDecl =
   | CInternalStaticVarDecl of Ident * CTy
   | CExternVarDecl of Ident * CTy
 
-  | CFunForwardDecl of Ident * argTys: CTy list * resultTy: CTy
+  | CFunForwardDecl of Ident * argTys: CTy list * resultTy: CTy * isNoReturn: bool
 
-  | CFunDecl of Ident * args: (Ident * CTy) list * resultTy: CTy * body: CStmt list
+  | CFunDecl of Ident * args: (Ident * CTy) list * resultTy: CTy * body: CStmt list * isNoReturn: bool
 
-  | CStaticFunDecl of Ident * args: (Ident * CTy) list * resultTy: CTy * body: CStmt list
+  | CStaticFunDecl of Ident * args: (Ident * CTy) list * resultTy: CTy * body: CStmt list * isNoReturn: bool
 
   | CNativeDecl of string * args: CExpr list

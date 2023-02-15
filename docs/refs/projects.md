@@ -2,9 +2,9 @@
 
 Project is a set of source files.
 
-## Guide-level explanation
+## Guide-level Explanation
 
-### Project in file system
+### Project in File System
 
 A project is mapped to a directory.
 Project name (say, `Foo`) must match the directory name (`Foo/`).
@@ -21,7 +21,7 @@ Entry module enables the project to be compiled as an executable, and therefore 
 
 Project directory is not recursive. Subdirectories are not member of the project.
 
-### External project references
+### External Project References
 
 Projects can refer to other projects in the same directory.
 
@@ -30,7 +30,7 @@ Projects can refer to other projects in the same directory.
 - Bar/
     - Bar.milone : can use `open Foo.A` to import from `../Foo/A.milone`
 
-## Advanced topics
+## Advanced Topics
 
 ### Comparison to F#
 

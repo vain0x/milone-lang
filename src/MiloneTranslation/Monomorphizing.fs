@@ -58,7 +58,7 @@ open Std.StdError
 open Std.StdMap
 open Std.StdMultimap
 open MiloneTranslation.Hir
-open MiloneTranslationTypes.HirTypes
+open MiloneTranslation.HirTypes
 
 module S = Std.StdString
 
@@ -172,7 +172,7 @@ let private collectOnStmt (rx: CollectRx) (wx: CollectWx) stmt : CollectWx =
 
     wx |> onExpr body
 
-  | HNativeDeclStmt _ -> wx
+  | HNativeDeclStmt (_, args, _) -> args |> List.fold (collectOnExpr rx) wx
 
 // -----------------------------------------------
 // Rewrite
@@ -261,7 +261,8 @@ let private rewriteStmt (rx: RewriteRx) stmt : HStmt option =
 
 /// State of monomorphization.
 type private MonoCtx =
-  { Serial: Serial
+  { /// Last serial number.
+    Serial: Serial
     NewFuns: (FunSerial * FunDef * FunBody * FunSerial * Loc) list
     InstanceMap: TreeMap<MonoUse, FunSerial>
     WorkList: MonoUse list }
@@ -370,19 +371,6 @@ let monify (modules: HProgram, hirCtx: HirCtx) : HProgram * HirCtx =
 
     funDef.Name + " #" + serial + " " + loc
 
-  // #tyNames
-  let tyNames =
-    hirCtx.Tys
-    |> TMap.fold
-         (fun tyNames tySerial tyDef ->
-           let tk, name =
-             match tyDef with
-             | UnionTyDef (ident, _, _, _) -> UnionTk tySerial, ident
-             | RecordTyDef (ident, _, _, _) -> RecordTk tySerial, ident
-
-           tyNames |> TMap.add (Ty(tk, [])) name)
-         (TMap.empty tyCompare)
-
   // Analyze initially.
   let initialWorkList, genericFunBodyMap =
     let collectWx =
@@ -422,7 +410,8 @@ let monify (modules: HProgram, hirCtx: HirCtx) : HProgram * HirCtx =
 
       let mangle ty =
         // don't drop memoization state
-        tyMangle (ty, tyNames) |> fst
+        let emptyTyNames = TMap.empty tyCompare
+        tyMangle (ty, emptyTyNames) |> fst
 
       go workList (generate mangle collectRx genericFunBodyMap ctx item)
 

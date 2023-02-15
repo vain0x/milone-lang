@@ -19,6 +19,12 @@ type ApiResponse =
 
 type OkWrapper = T of Ok // use another union types
 
+// Enum-like: no payloads.
+type ConfirmationResult =
+  | Yes
+  | No
+  | Cancel
+
 let main _ =
   let () =
     let ok = Ok
@@ -56,5 +62,15 @@ let main _ =
   | Status.Err _ -> assert false
 
   let okWrapper = OkWrapper.T Ok.Ok
+
+  let yes = ConfirmationResult.Yes
+
+  match yes with
+  | ConfirmationResult.Yes -> ()
+  | ConfirmationResult.No
+  | ConfirmationResult.Cancel -> assert false
+
+  let results = [ ConfirmationResult.Yes; ConfirmationResult.No; ConfirmationResult.Cancel ]
+  assert (List.length results = 3)
 
   0

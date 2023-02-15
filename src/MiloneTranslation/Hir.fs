@@ -11,7 +11,7 @@ open MiloneShared.TypeIntegers
 open MiloneShared.Util
 open Std.StdError
 open Std.StdMap
-open MiloneTranslationTypes.HirTypes
+open MiloneTranslation.HirTypes
 
 module S = Std.StdString
 
@@ -20,35 +20,27 @@ module S = Std.StdString
 // -----------------------------------------------
 
 let tyInt = Ty(IntTk I32, [])
-
+let tyByte = Ty(IntTk U8, [])
 let tyNativeInt = Ty(IntTk IPtr, [])
-
-let tyBool = Ty(BoolTk, [])
-
 let tyFloat = Ty(FloatTk F64, [])
-
+let tyBool = Ty(BoolTk, [])
 let tyChar = Ty(CharTk, [])
-
 let tyString = Ty(StringTk, [])
-
+let tyNever = Ty(NeverTk, [])
 let tyObj = Ty(ObjTk, [])
 
-let tyTuple tys = Ty(TupleTk, tys)
-
 let tyList ty = Ty(ListTk, [ ty ])
-
 let tyFun sourceTy targetTy = Ty(FunTk, [ sourceTy; targetTy ])
 
 let tyNativeFun paramTys resultTy =
-  Ty(NativeFunTk, List.append paramTys [ resultTy ])
+  Ty(FunPtrTk, List.append paramTys [ resultTy ])
 
+let tyTuple tys = Ty(TupleTk, tys)
 let tyUnit = tyTuple []
 
 let tyMeta serial loc = Ty(MetaTk(serial, loc), [])
-
-let tyUnion tySerial tyArgs = Ty(UnionTk tySerial, tyArgs)
-
-let tyRecord tySerial = Ty(RecordTk tySerial, [])
+let tyUnion tySerial name tyArgs = Ty(UnionTk(tySerial, name), tyArgs)
+let tyRecord tySerial name tyArgs = Ty(RecordTk(tySerial, name), tyArgs)
 
 // -----------------------------------------------
 // Type definitions (HIR)
@@ -57,7 +49,8 @@ let tyRecord tySerial = Ty(RecordTk tySerial, [])
 let tyDefToName tyDef =
   match tyDef with
   | UnionTyDef (name, _, _, _) -> name
-  | RecordTyDef (name, _, _, _) -> name
+  | RecordTyDef (name, _, _, _, _) -> name
+  | OpaqueTyDef (name, _) -> name
 
 // -----------------------------------------------
 // Variable definitions (HIR)
@@ -89,6 +82,7 @@ let litToTy (lit: Lit) : Ty =
   | IntLitWithFlavor (_, flavor) -> Ty(IntTk flavor, [])
   | FloatLit _ -> tyFloat
   | CharLit _ -> tyChar
+  | ByteLit _ -> tyByte
   | StringLit _ -> tyString
 
 // -----------------------------------------------
@@ -368,6 +362,7 @@ let private tkEncode tk : int =
   | BoolTk -> just 3
   | CharTk -> just 4
   | StringTk -> just 5
+  | NeverTk -> just 26 // to be reordered
   | ObjTk -> just 6
   | FunTk -> just 7
   | TupleTk -> just 8
@@ -375,11 +370,12 @@ let private tkEncode tk : int =
 
   | VoidPtrTk isMut -> pair 11 (isMutToInt isMut)
   | NativePtrTk mode -> pair 12 (RefMode.toInt mode)
-  | NativeFunTk -> just 13
+  | FunPtrTk -> just 13
 
   | MetaTk (tySerial, _) -> pair 20 tySerial
-  | UnionTk tySerial -> pair 22 tySerial
-  | RecordTk tySerial -> pair 23 tySerial
+  | UnionTk(tySerial, _) -> pair 22 tySerial
+  | RecordTk(tySerial, _) -> pair 23 tySerial
+  | OpaqueTk(tySerial, _) -> pair 24 tySerial
 
   | NativeTypeTk _ -> unreachable ()
 
@@ -394,13 +390,14 @@ let tkCompare l r : int =
 
 let tkEqual l r : bool = tkCompare l r = 0
 
-let tkDisplay getTyName tk =
+let tkDisplay tk =
   match tk with
   | IntTk flavor -> fsharpIntegerTyName flavor
   | FloatTk flavor -> fsharpFloatTyName flavor
   | BoolTk -> "bool"
   | CharTk -> "char"
   | StringTk -> "string"
+  | NeverTk -> "never"
   | ObjTk -> "obj"
   | FunTk -> "fun"
   | TupleTk -> "tuple"
@@ -410,11 +407,12 @@ let tkDisplay getTyName tk =
   | NativePtrTk RefMode.ReadWrite -> "nativeptr"
   | NativePtrTk RefMode.ReadOnly -> "InPtr"
   | NativePtrTk RefMode.WriteOnly -> "OutPtr"
-  | NativeFunTk -> "__nativeFun"
+  | FunPtrTk -> "FunPtr"
   | NativeTypeTk _ -> "__nativeType"
-  | MetaTk (tySerial, _) -> getTyName tySerial
-  | RecordTk tySerial -> getTyName tySerial
-  | UnionTk tySerial -> getTyName tySerial
+  | MetaTk (tySerial, _) -> "?" + string tySerial
+  | RecordTk(_, name) -> name
+  | UnionTk(_, name) -> name
+  | OpaqueTk(_, name) -> name
 
 // -----------------------------------------------
 // Types (HIR/MIR)
@@ -425,6 +423,11 @@ let noTy: Ty = Ty(NativeTypeTk "__no_use", [])
 let tyIsUnit ty =
   match ty with
   | Ty (TupleTk, []) -> true
+  | _ -> false
+
+let tyIsNever ty =
+  match ty with
+  | Ty (NeverTk, _) -> true
   | _ -> false
 
 let tyIsFun ty =
@@ -532,6 +535,12 @@ let tyMangle (ty: Ty, memo: TreeMap<Ty, string>) : string * TreeMap<Ty, string> 
       let tyArgs, ctx = mangleList tyArgs ctx
       S.concat "" tyArgs + (name + string arity), ctx
 
+    let nominal (name: string) =
+      if List.isEmpty tyArgs then
+        name, ctx
+      else
+        variadicGeneric name
+
     let doMangle () : string * TreeMap<_, _> =
       match tk with
       | IntTk flavor -> cIntegerTyPascalName flavor, ctx
@@ -539,6 +548,7 @@ let tyMangle (ty: Ty, memo: TreeMap<Ty, string>) : string * TreeMap<Ty, string> 
       | BoolTk -> "Bool", ctx
       | CharTk -> "Char", ctx
       | StringTk -> "String", ctx
+      | NeverTk -> "Never", ctx
 
       | MetaTk _
       | ObjTk -> "Object", ctx
@@ -553,7 +563,7 @@ let tyMangle (ty: Ty, memo: TreeMap<Ty, string>) : string * TreeMap<Ty, string> 
       | NativePtrTk RefMode.ReadWrite -> fixedGeneric "MutPtr"
       | NativePtrTk RefMode.ReadOnly -> fixedGeneric "InPtr"
       | NativePtrTk RefMode.WriteOnly -> fixedGeneric "OutPtr"
-      | NativeFunTk -> variadicGeneric "NativeFun"
+      | FunPtrTk -> variadicGeneric "FunPtr"
       | NativeTypeTk name -> S.replace " " "_" name, ctx
 
       | FunTk ->
@@ -570,12 +580,9 @@ let tyMangle (ty: Ty, memo: TreeMap<Ty, string>) : string * TreeMap<Ty, string> 
 
         funTy, ctx
 
-      | UnionTk _
-      | RecordTk _ ->
-        // Name must be stored in memo if monomorphic.
-        assert (List.isEmpty tyArgs |> not)
-        let name = memo |> mapFind (Ty(tk, []))
-        variadicGeneric name
+      | UnionTk(_, name) -> nominal name
+      | RecordTk(_, name) -> nominal name
+      | OpaqueTk(_, name) -> nominal name
 
     // Memoization.
     match TMap.tryFind ty ctx with

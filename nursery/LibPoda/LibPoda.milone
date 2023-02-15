@@ -1,0 +1,35 @@
+open Std.Ptr
+open Std.StdTesting
+open Std.StringBuffer
+open LibPoda.Poda
+open LibPoda.PodaExt
+
+// tests
+open LibPoda.ExCsv
+
+// test debug
+let () =
+  let p value expected =
+    Poda.debug value |> shouldEqual id expected
+
+  assert
+    (p
+      (Poda.ofEntries [ "a", Poda.ofList [ Poda.Int 42; Poda.Int -12 ]; "b", Poda.String "B" ])
+      """{"a": [42, -12], "b": "B"}""")
+
+  assert (p (Poda.Foreign Ptr.nullPtr) "<Foreign(null)>")
+  assert (p (Poda.Foreign(Ptr.invalid 1024un)) "<Foreign(_)>")
+
+// test PodaFun
+let () =
+  let myFun =
+    let a = 2
+
+    let localFun (x: int) (b: int) =
+      a * x + b
+
+    PodaFun.ofFun (fun (arg: obj) ->
+      let x, b = unbox arg
+      localFun x b |> box)
+
+  assert (PodaFun.invoke myFun (box (3, 1)) |> unbox = 7)

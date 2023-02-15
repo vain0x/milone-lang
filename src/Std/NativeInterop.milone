@@ -26,9 +26,11 @@ module NativePtr =
   let add (p: nativeptr<'T>) (i: int) : nativeptr<'T> = __nativeExpr ("(&({0})[{1}])", p, i)
 
   let get (p: nativeptr<'T>) (i: int) : 'T =
-    __nativeExpr ("(({0})[{1}])", p, unativeint (uint i))
+    assert (i >= 0)
+    __nativeExpr ("(({0})[{1}])", p, i)
 
   let set (p: nativeptr<'T>) (i: int) (value: 'T) : unit =
+    assert (i >= 0)
     __nativeStmt ("({0})[{1}] = {2};", p, i, value)
 
   let read (p: nativeptr<'T>) : 'T =

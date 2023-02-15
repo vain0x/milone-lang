@@ -15,6 +15,7 @@ Category of tokens:
         - With exponential (`1e-9`)
 - Character literal tokens (`'a'`)
     - Escaped (`'\x0a'`)
+    - Byte (`'a'B`)
 - String literal tokens
     - Single-line (`"hey"`)
     - Raw (`"""..."""`)
@@ -85,6 +86,8 @@ It starts with a backslash and an ASCII alphabet follows.
     char_lit = "'" (escape | verbatim_char) "'"
 
 Remark: `'\0'` isn't valid.
+
+Character literal may by followed by `B` without any blank.
 
 ### String Literal Tokens
 
@@ -415,7 +418,7 @@ Argument expression must be inside of the callee expression.
 A prefix expression consists of a operator and an argument expression.
 Operator and expression must appear consecutively without spaces so that the operator is distinct from a binary operator.
 
-    prefix_expr = ('-' | '&&') app_expr
+    prefix_expr = ('-' | '&&' | '~~~') app_expr
 
 A binary operator consists of two expressions separated by an operator.
 Precedence from higher to lower:

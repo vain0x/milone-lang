@@ -1,0 +1,16 @@
+[<Export>]
+let my_gcd (x: int) (y: int) =
+  assert (y >= 0)
+
+  if y = 0 then
+    x
+  else
+    my_gcd y (x % y)
+
+[<Export>]
+let my_multiply (x: int) (y: float) = float x * y
+
+let private staticVar = my_gcd 12 16
+
+[<Export>]
+let my_static_var () = staticVar

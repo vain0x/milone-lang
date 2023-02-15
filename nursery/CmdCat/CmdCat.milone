@@ -41,11 +41,7 @@ module File =
       let ok, file, io =
         File.unsafeWriteExactFromRawParts io (Ptr.cast ptr) (int len) file
 
-      let file, io =
-        if ok then
-          File.flush io file
-        else
-          file, io
+      let file, io = if ok then File.flush io file else file, io
 
       ok, file, buf, io
     else
@@ -117,7 +113,7 @@ let private catFiles
     let result, io, profiler, output = doCatFile io prof output pathname
 
     match result with
-    | Ok () -> catFiles io profiler output inputs
+    | Ok() -> catFiles io profiler output inputs
     | Error msg -> Error msg, io, profiler, output
 
 // -----------------------------------------------
@@ -145,7 +141,7 @@ let main _ =
       Profiler.dispose prof
 
       match result with
-      | Ok () -> io
+      | Ok() -> io
 
       | Error msg ->
         printfn "ERROR: %s" msg

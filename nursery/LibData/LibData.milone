@@ -1,0 +1,2 @@
+open LibData.HashTests
+open LibData.RandomAccessListTests

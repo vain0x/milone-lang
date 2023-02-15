@@ -1,10 +1,11 @@
-module rec MiloneLspServer.LspUtil
+module MiloneLspServer.LspUtil
 
 open MiloneShared.SharedTypes
 open MiloneShared.Util
 open Std.StdMap
 open Std.StdMultimap
 
+module C = Std.StdChar
 module S = Std.StdString
 module SharedTypes = MiloneShared.SharedTypes
 
@@ -13,6 +14,184 @@ let private cons x y = x :: y
 // Re-exports.
 type RowIndex = SharedTypes.RowIndex
 type Pos = SharedTypes.Pos
+
+// -----------------------------------------------
+// String
+// -----------------------------------------------
+
+module internal String =
+  let tryReplace (pattern: string) (target: string) (s: string) =
+    if s |> S.contains pattern then
+      s |> S.replace pattern target, true
+    else
+      s, false
+
+// Test tryReplace
+do
+  let s, ok =
+    String.tryReplace "//" "/" "file:///foo"
+
+  assert (s = "file://foo")
+  assert ok
+
+  let s, ok = String.tryReplace "//" "/" "./relative"
+  assert (s = "./relative")
+  assert (not ok)
+
+// -----------------------------------------------
+// Path
+// -----------------------------------------------
+
+module internal Path =
+  let join l r = l + "/" + r
+
+  let basename (path: string) =
+    match S.findLastIndex "/" path with
+    | Some i when path <> "/" -> S.skip (i + 1) path
+    | _ -> path
+
+  let dirname (path: string) =
+    let trimEndSep (path: string) = S.trimEndIf (fun c -> c = '/') path
+
+    let rec go (s: string) =
+      match S.findLastIndex "/" s with
+      | None
+      | Some 0 -> None
+
+      | Some i when i = s.Length - 1 -> go (S.truncate (s.Length - 1) s)
+
+      | Some i -> S.truncate i s |> Some
+
+    path |> trimEndSep |> go
+
+  let stem (path: string) =
+    let path = basename path
+
+    match S.findLastIndex "." path with
+    | Some i when 0 < i && i + 1 < path.Length -> S.slice 0 i path
+    | _ -> path
+
+  let ext (path: string) =
+    let path = basename path
+
+    match S.findLastIndex "." path with
+    | Some i when 0 < i && i < path.Length -> Some(S.skip i path)
+    | _ -> None
+
+  let internal hasDriveLetter (path: string) =
+    path.Length >= 2
+    && C.isAlphabetic path.[0]
+    && path.[1] = ':'
+
+  let private isRooted (path: string) =
+    path |> S.startsWith "/" || hasDriveLetter path
+
+  let internal stripRoot (path: string) =
+    let path, rooted = path |> S.stripStart "/"
+
+    if rooted then
+      Some "/", path
+    else if path.Length >= 3
+            && hasDriveLetter path
+            && path.[2] = '/' then
+      let root, rest = S.splitAt 3 path
+      Some root, rest
+    else
+      None, path
+
+  let internal pathContract (path: string) =
+    let rec go acc (xs: string list) =
+      match acc, xs with
+      | _, "." :: xs -> go acc xs
+      | x :: acc, ".." :: xs -> go acc xs
+
+      | _, [] -> acc
+      | _, x :: xs -> go (x :: acc) xs
+
+    match stripRoot path with
+    | _, "" -> path
+
+    | rootOpt, path ->
+      let path =
+        path
+        |> S.split "/"
+        |> go []
+        |> List.rev
+        |> S.concat "/"
+
+      (rootOpt |> Option.defaultValue "") + path
+
+  /// Normalizes path syntactically. Note some of Windows prefix is unsupported yet.
+  let normalize (path: string) =
+    let path = path |> S.replace "\\" "/"
+
+    let path =
+      let rec removeDoubleSlashes (s: string) =
+        let s, ok = s |> String.tryReplace "//" "/"
+        if ok then removeDoubleSlashes s else s
+
+      removeDoubleSlashes path
+
+    // Upper drive letter.
+    let path =
+      if path |> hasDriveLetter then
+        S.upperFirst path
+      else
+        path
+
+    pathContract path
+
+// testBasename
+do
+  assert (Path.basename "/root/rooted.milone" = "rooted.milone")
+  assert (Path.basename "./parent/relative.milone" = "relative.milone")
+  assert (Path.basename "../." = ".")
+  assert (Path.basename "/" = "/")
+  assert (Path.basename "" = "")
+  assert (Path.basename "base" = "base")
+
+// testStem
+do
+  assert (Path.stem "/root/rooted.milone" = "rooted")
+  assert (Path.stem "../relative.milone" = "relative")
+  assert (Path.stem ".git" = ".git")
+  assert (Path.stem "." = ".")
+  assert (Path.stem ".." = "..")
+  assert (Path.stem "./no-ext" = "no-ext")
+  assert (Path.stem "stem" = "stem")
+  assert (Path.stem "ends-with-dot." = "ends-with-dot.")
+
+// testStripRoot
+do
+  assert (Path.stripRoot "/" = (Some "/", ""))
+  assert (Path.stripRoot "/rooted/path" = (Some "/", "rooted/path"))
+  assert (Path.stripRoot "C:/drive/path" = (Some "C:/", "drive/path"))
+  assert (Path.stripRoot "./relative/path" = (None, "./relative/path"))
+
+// testContract
+do
+  assert (Path.pathContract "parent/./it" = "parent/it")
+  assert (Path.pathContract "parent/sibling/../it" = "parent/it")
+  assert (Path.pathContract "parent/s/t/../../it" = "parent/it")
+
+  assert (Path.pathContract "./it" = "it")
+  assert (Path.pathContract "../it" = "../it")
+
+  assert (Path.pathContract "/./." = "/")
+  assert (Path.pathContract "/.." = "/..")
+  assert (Path.pathContract "/" = "/")
+  assert (Path.pathContract "C:/.." = "C:/..")
+
+// testNormalize
+do
+  assert (Path.normalize "double//slash" = "double/slash")
+  assert (Path.normalize "back\\slash" = "back/slash")
+  assert (Path.normalize "parent/two/../dots" = "parent/dots")
+  assert (Path.normalize "single/./dot" = "single/dot")
+  assert (Path.normalize "" = "")
+  assert (Path.normalize "/regular/rooted.ext" = "/regular/rooted.ext")
+  assert (Path.normalize "a\\b/\\c\\..\\\\d" = "a/b/d")
+  assert (Path.normalize "c:\\Program Files\\Git" = "C:/Program Files/Git")
 
 // -----------------------------------------------
 // Location
@@ -39,6 +218,10 @@ type MiloneHome = string
 module Range =
   let zero: Range = (0, 0), (0, 0)
 
+  let toString (range: Range) =
+    let ((y1, x1), (y2, x2)) = range
+    sprintf "%d:%d-%d:%d" (y1 + 1) (x1 + 1) (y2 + 1) (x2 + 1)
+
 // -----------------------------------------------
 // URI
 // -----------------------------------------------
@@ -52,6 +235,57 @@ module Uri =
   let toString (Uri s) = s
 
   let compare = compareUri
+
+// -----------------------------------------------
+// URI <-> Path
+// -----------------------------------------------
+
+let uriOfFilePath (path: string) : Uri =
+  let path = Path.normalize path
+
+  if path |> S.startsWith "/" then
+    Uri("file://" + path)
+  else if Path.hasDriveLetter path then
+    let path =
+      path |> S.lowerFirst |> S.replace ":" "%3A"
+
+    Uri("file:///" + path)
+  else
+    // unlikely used
+    Uri("file://./" + path)
+
+// Note: pathname contains backslashes even on Linux, provided by VSCode.
+let uriToFilePath (uri: Uri) : string =
+  let path, fileScheme =
+    uri |> Uri.toString |> S.stripStart "file://"
+
+  if fileScheme then
+    let path =
+      // Windows path.
+      if path |> S.skip 2 |> S.startsWith "%3A" then
+        path |> S.skip 1 |> S.replace "%3A" ":"
+      else
+        path
+
+    path |> Path.normalize
+  else
+    failwithf "Not a file scheme: %A." uri
+
+// testUriOfFilePath
+do
+  let f a x = uriOfFilePath a |> Uri.toString = x
+
+  assert (f "/rooted/path" "file:///rooted/path")
+  assert (f "slashed/path" "file://./slashed/path")
+  assert (f "C:\\windows\\path" "file:///c%3A/windows/path")
+
+// testUriToFilePath
+do
+  let f s x = uriToFilePath (Uri s) = x
+
+  assert (f "file:///rooted/path" "/rooted/path")
+  assert (f "file://\\backslash\\path" "/backslash/path")
+  assert (f "file:///c%3A\\windows\\path" "C:/windows/path")
 
 // -----------------------------------------------
 // DiagnosticsCache

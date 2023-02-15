@@ -79,7 +79,7 @@ let private osStringExtUnsafeOfRawPartsTest () =
   let s = OsString.ofString "Penguin is 🐧."
   let n = OsString.length s
 
-  let t = OsStringExt.unsafeOfRawParts (OsStringExt.asPtr s) (uint (n - 1))
+  let t = OsStringExt.unsafeOfRawParts (OsStringExt.asPtr s) (n - 1)
   assert (OsString.toString t = "Penguin is 🐧")
 
   // NUL-terminated.

@@ -1,6 +1,6 @@
 .fake
 .ionide
-.vscode/ipch
+.vscode
 
 
 
@@ -11,16 +11,21 @@ src/libmilonert/hashmap.h
 
 
 # Generated files.
+*.a
 *.o
 *.out
+*.so
+.ninja_log
 
 target/
 
+tests/**/build.ninja
 tests/**/MiloneCore_*.c
 tests/**/MiloneDerive_*.c
 tests/**/Std_*.c
 
 tests/examples/*/*.c
+!tests/examples/factorial/factorial.c
 tests/primitives/std_*/*.c
 
 
@@ -28,6 +33,5 @@ tests/primitives/std_*/*.c
 # Deprecated: These rules are no longer used.
 *.generated.*
 *.timestamp
-build.ninja
 runtime/hashmap.h
 tests/**/MiloneStd_*.c

@@ -4,7 +4,89 @@
 
 ## [Unreleased]
 
-[Unreleased]: https://github.com/vain0x/milone-lang/compare/v0.5.0...develop
+[Unreleased]: https://github.com/vain0x/milone-lang/compare/v0.6.0...develop
+
+## [v0.6.0] - 2023-02-15
+
+[v0.6.0]: https://github.com/vain0x/milone-lang/releases/tag/v0.6.0
+
+### Documentation
+
+- Clarify limitation of `__nativeDecl` arguments
+- Add explanation of generic nominal types
+- Add type synonyms page
+
+### Language Features
+
+- Support generic records
+- Fixed type check bugs
+- Fixed unicode string literals broken
+- Add `never` type
+- Add primitives:
+    - Add byte literals (`'a'B` syntax)
+    - Add bitwise negation operator (`~~~`)
+- Improve for native interop (still incomplete):
+    - Add `FunPtr<P, T>` (from `Std.Ptr`), type of function pointers (replacing experimental `__nativeFun` type)
+    - Add `FunPtr.invoke` primitive (from `Std.Ptr`) to invoke a function pointer
+    - Add Ptr-of operator (`&&`) to obtain pointers of named functions (replacing experimental `__nativeFun funName` syntax)
+    - Add `Opaque` types
+    - Add `Export` attribute on functions (to preserve the function name to link time)
+- Improve manifest:
+    - Add directives to specify output binary type in manifest
+        - `binary shared` (`*.so`, `*.dll`)
+        - `binary staticlib` (`*.a`, `*.lib`)
+    - Add `subsystem windows` directive (only on Windows)
+
+## Standard Libraries
+
+- Add `Std.CStr`, `Std.CMemory` modules for native interop
+- Add `Std.StringBuffer` module
+- Remake `Std.File`
+
+### CLI Tool
+
+- Add `milone parse` subcommand
+- Fix `milone run .` that didn't work
+
+### LSP Server
+
+- Support `prepareRename` request (the editor can now reject at invalid position)
+- Support `completion` of static namespace members and record fields
+- Fix `diagnostics` are too frequently updated
+- Fix the server tries to continue after out of memory
+- Fix the server didn't do almost anything if type errors present
+
+### VSCode Extension
+
+- Add `Show Syntax Tree` command
+- Support double-backticks (\`\`) as brackets
+
+### Build Chain
+
+- Change default install directories (to match match XDG):
+    - `$HOME/.local/bin` (rather than `$HOME/bin`)
+    - `$HOME/.local/share` (rather than `$HOME/.milone`)
+
+### Internal Changes
+
+Compiler:
+
+- Change project structure to revert separation of types and implementation projects (lack of benefits)
+- Transfer module load process to clients (CLI tool and LSP server)
+- Improve separate compilation by generating label names per function
+- Add SyntaxTree generation
+- Allow `DocId` representation to vary in clients
+    - Compiler still uses `P.M` module paths. LSP server now uses absolute file paths to avoid conflict.
+- Change `exit` to a regular function in Prelude
+
+Standard Libraries:
+
+- Add `Std/FormatBase.milone` as wrapper of `sprintf`-like code
+    - (It isn't a public interface of Std but no way to express such privacy)
+
+Nursery:
+
+- Add LibPoda
 
 ## [v0.5.0] - 2022-07-21
 
@@ -40,7 +122,7 @@
     - Support equality for built-in types: list, option, tuple and discriminated union
         - (Note `open Std.Equal` is required to enable this feature.)
     - `unit` is comparable now
-    - `char` is now convertible only from/to 8-bit integers to avoid incompatibility with F#
+    - `char` is now convertible only from/to 8-bit integers to avoid incompatibility with F# (**EDIT**: Reverted in 0.6.0)
     - `option` is defined as a discriminated union now (which is still built-in type, almost non-functional change)
     - `Result` is a new built-in type (which is also defined as a discriminated union)
 - Improve transformation:
@@ -74,6 +156,7 @@
         - `distance`
 - Improve primitives:
     - Fix an issue that `string : bool -> string` didn't work at all
+    - `string` now works for tuples and unions (result is unstable)
     - Add `__discriminant`
     - Add `sizeof<'T>`, remove `__sizeOfVal` primitive in favor of this
     - Rename `inRegion` to `Region.run`
@@ -85,7 +168,7 @@
 - Reduce headers included in `milone.h`
 - Heaps are now stored in thread-local variables (rather than static)
 - Rename most of functions
-- Prefer `uint32_t` for size/length/capacity (over `int`)
+- Prefer `uint32_t` for size/length/capacity (over `int`) (**EDIT**: Reverted in 0.6.0)
 
 ### Standard Libraries
 

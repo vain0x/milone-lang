@@ -6,20 +6,20 @@ open Std.Region
 __nativeDecl "#include <string.h>"
 
 /// Immutable array.
-type Block<'T> = private Block of ptr: InPtr<'T> * len: uint
+type Block<'T> = private Block of ptr: InPtr<'T> * len: int
 
 /// Owned growable array to build a block object. (Allocated on a region.)
-type BlockBuilder<'T> = private BlockBuilder of ptr: Own<OutPtr<'T>> * cap: uint
+type BlockBuilder<'T> = private BlockBuilder of ptr: Own<OutPtr<'T>> * cap: int
 
 // -----------------------------------------------
 // BlockBuilder helpers
 // -----------------------------------------------
 
 let private bbEmpty () : BlockBuilder<'T> =
-  BlockBuilder(Own.acquire Ptr.nullPtr, 0u)
+  BlockBuilder(Own.acquire Ptr.nullPtr, 0)
 
-let private bbAlloc (count: uint) : BlockBuilder<'T> =
-  if count <> 0u then
+let private bbAlloc (count: int) : BlockBuilder<'T> =
+  if count >= 1 then
     let ptr: OutPtr<'T> = Region.alloc count
     BlockBuilder(Own.acquire ptr, count)
   else
@@ -30,11 +30,11 @@ let private bbDispose (bb: BlockBuilder<'T>) : unit =
   let _ = Own.release ptr
   ()
 
-let private bbSet (index: uint) (item: 'T) (bb: BlockBuilder<'T>) : BlockBuilder<'T> =
+let private bbSet (index: int) (item: 'T) (bb: BlockBuilder<'T>) : BlockBuilder<'T> =
   let (BlockBuilder (ptr, cap)) = bb
-  assert (index < cap)
+  assert (uint index < uint cap)
   let ptr = Own.release ptr
-  Ptr.write ptr.[int index] item
+  Ptr.write ptr.[index] item
   BlockBuilder(Own.acquire ptr, cap)
 
 let private bbFinish (bb: BlockBuilder<'T>) : Block<'T> =
@@ -49,14 +49,14 @@ module Block =
   /// Gets an empty block.
   ///
   /// PERF: O(1) time, no allocation.
-  let empty () : Block<'T> = Block(Ptr.nullPtr, 0u)
+  let empty () : Block<'T> = Block(Ptr.nullPtr, 0)
 
   /// Gets the length of block.
   ///
   /// PERF: O(1) time.
   let length (block: Block<'T>) : int =
     let (Block (_, len)) = block
-    int len
+    len
 
   /// Gets whether the block is empty (i.e. zero length).
   ///
@@ -68,17 +68,15 @@ module Block =
   /// E.g. `init f 3` is `[: f 0; f 1; f 2 :]`.
   let init (len: int) (f: int -> 'T) : Block<'T> =
     if len >= 0 then
-      let len = uint len
-
       let rec blockInitLoop bb i =
         if i < len then
-          let bb = bbSet i (f (int i)) bb
-          blockInitLoop bb (i + 1u)
+          let bb = bbSet i (f i) bb
+          blockInitLoop bb (i + 1)
         else
           bb
 
       let bb = bbAlloc len
-      let bb = blockInitLoop bb 0u
+      let bb = blockInitLoop bb 0
       bbFinish bb
     else
       assert (len = 0)
@@ -105,7 +103,7 @@ module Block =
   /// PERF: O(1) time.
   let private forceGet (index: int) (block: Block<'T>) : 'T =
     let (Block (ptr, len)) = block
-    assert (uint index < len)
+    assert (uint index < uint len)
     Ptr.read ptr.[index]
 
   /// Gets the i'th item of block.
@@ -114,7 +112,7 @@ module Block =
   let tryItem (index: int) (block: Block<'T>) : 'T option =
     let (Block (ptr, len)) = block
 
-    if uint index < len then
+    if uint index < uint len then
       Some(Ptr.read ptr.[index])
     else
       None
@@ -145,10 +143,10 @@ module Block =
     let endIndex = if endIndex >= 0 then endIndex else 0
 
     let endIndex =
-      if uint endIndex <= len then
+      if endIndex <= len then
         endIndex
       else
-        int len
+        len
 
     let start =
       if start <= endIndex then
@@ -156,7 +154,7 @@ module Block =
       else
         endIndex
 
-    Block(Ptr.select ptr.[start], uint endIndex - uint start)
+    Block(Ptr.select ptr.[start], endIndex - start)
 
   let skip (skipLen: int) (block: Block<'T>) : Block<'T> = slice skipLen (length block) block
 
@@ -171,8 +169,8 @@ module Block =
   let uncons (block: Block<'T>) : ('T * Block<'T>) option =
     let (Block (ptr, len)) = block
 
-    if len <> 0u then
-      Some(Ptr.read ptr, Block(Ptr.select ptr.[1], len - 1u))
+    if len <> 0 then
+      Some(Ptr.read ptr, Block(Ptr.select ptr.[1], len - 1))
     else
       None
 
@@ -187,26 +185,26 @@ module Block =
     init (length block) (fun (i: int) -> f (forceGet i block))
 
   let choose (f: 'T -> 'U option) (src: Block<'T>) : Block<'U> =
-    let len = uint (length src)
+    let len = length src
 
     // si: number of items read from src.
     // di: number of items written to dest.
     let rec blockChooseLoop dest di si =
       if si < len then
-        match f (forceGet (int si) src) with
+        match f (forceGet si src) with
         | Some value ->
           let dest = bbSet di value dest
-          blockChooseLoop dest (di + 1u) (si + 1u)
+          blockChooseLoop dest (di + 1) (si + 1)
 
-        | None -> blockChooseLoop dest di (si + 1u)
+        | None -> blockChooseLoop dest di (si + 1)
       else
         dest, di
 
     let dest = bbAlloc len
-    let dest, di = blockChooseLoop dest 0u 0u
+    let dest, di = blockChooseLoop dest 0 0
 
-    if di >= 1u then
-      slice 0 (int di) (bbFinish dest)
+    if di >= 1 then
+      slice 0 di (bbFinish dest)
     else
       bbDispose dest
       empty ()
@@ -230,7 +228,7 @@ module Block =
   // let sortWith compare (array: Block<_>): Block<_> =
 
   let ofList (xs: 'T list) : Block<'T> =
-    let len = uint (List.length xs)
+    let len = List.length xs
 
     let rec ofListLoop dest i xs =
       match xs with
@@ -240,10 +238,10 @@ module Block =
 
       | x :: xs ->
         let dest = bbSet i x dest
-        ofListLoop dest (i + 1u) xs
+        ofListLoop dest (i + 1) xs
 
     let dest = bbAlloc len
-    let dest = ofListLoop dest 0u xs
+    let dest = ofListLoop dest 0 xs
     bbFinish dest
 
   let toList (block: Block<'T>) : 'T list =
@@ -302,21 +300,21 @@ module BlockExt =
   ///
   /// - The input pointer can be null when length is zero.
   /// - Result block is valid as long as the input pointer is valid.
-  let unsafeCreate (ptr: InPtr<'T>) (len: uint) : Block<'T> =
-    assert (len = 0u || ptr <> Ptr.nullPtr)
+  let unsafeCreate (ptr: InPtr<'T>) (len: int) : Block<'T> =
+    assert (len = 0 || ptr <> Ptr.nullPtr)
     Block(ptr, len)
 
   /// Unsafely exposes pointer and length.
   ///
   /// - Pointer can be null when length is zero.
   /// - Pointer is invalidated when to leave the current region.
-  let unsafeToRawParts (block: Block<'T>) : InPtr<'T> * uint =
+  let unsafeToRawParts (block: Block<'T>) : InPtr<'T> * int =
     let (Block (ptr, len)) = block
     ptr, len
 
   /// Creates a block by copying from a pointer.
-  let unsafeOfRawParts (ptr: InPtr<'T>) (len: uint) : Block<'T> =
-    if len <> 0u then
+  let unsafeOfRawParts (ptr: InPtr<'T>) (len: int) : Block<'T> =
+    if len <> 0 then
       assert (ptr <> Ptr.nullPtr)
       let destPtr: OutPtr<'T> = Region.alloc len
       __nativeStmt ("memcpy({0}, {1}, {2});", destPtr, ptr, unativeint len * unativeint sizeof<'T>)

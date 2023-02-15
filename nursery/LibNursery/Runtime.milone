@@ -2,10 +2,11 @@ module rec LibNursery.Runtime
 
 open Std.Ptr
 
-let memAlloc (len: uint) (size: uint) : voidptr =
+let memAlloc (len: int) (size: int) : voidptr =
   __nativeFun ("milone_region_alloc", len, size)
 
-let memcpy (dest: voidptr) (src: VoidInPtr) (size: uint) : voidptr = __nativeFun ("memcpy", dest, src, size)
+let memcpy (dest: voidptr) (src: VoidInPtr) (size: int) : voidptr =
+  __nativeFun ("memcpy", dest, src, unativeint size)
 
 /// Prints a message to stderr and returns false.
 ///

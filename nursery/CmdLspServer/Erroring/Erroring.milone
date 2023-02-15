@@ -1,4 +1,3 @@
-
 let bad1 = 1 <> string
 
 let bad2 = "" |> ""

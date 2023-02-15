@@ -31,7 +31,7 @@ type OsStringPtr = InPtr<OsChar>
 /// and length doesn't count terminating NUL.
 type OsString = __nativeType<``struct MiloneOsString``>
 
-let private toPtrLenPair (s: OsString) : OsStringPtr * uint =
+let private toPtrLenPair (s: OsString) : OsStringPtr * int =
   __nativeExpr ("{0}.ptr", s), __nativeExpr ("{0}.len", s)
 
 /// Unsafely creates a clone of OS-encode string.
@@ -41,11 +41,11 @@ let private toPtrLenPair (s: OsString) : OsStringPtr * uint =
 ///
 /// - Input span must be readable.
 /// - These contents must be valid as the OS-native encoding.
-let private unsafeCloneOfRawParts (ptr: OsStringPtr) (len: uint) : OsStringPtr =
-  assert (len = 0u || ptr <> Ptr.nullPtr)
+let private unsafeCloneOfRawParts (ptr: OsStringPtr) (len: int) : OsStringPtr =
+  assert (len = 0 || ptr <> Ptr.nullPtr)
 
-  if len <> 0u then
-    let destPtr: OutPtr<OsChar> = Region.alloc (len + 1u)
+  if len <> 0 then
+    let destPtr: OutPtr<OsChar> = Region.alloc (len + 1)
     __nativeStmt ("memcpy({0}, {1}, {2});", destPtr, ptr, unativeint len * unativeint sizeof<OsChar>)
     Ptr.cast destPtr
   else
@@ -104,7 +104,7 @@ module OsString =
   /// Gets "length" of a string.
   let length (s: OsString) : int =
     let _, len = toPtrLenPair s
-    int len
+    len
 
   /// Exposes code units of an OsString as a block.
   ///
@@ -117,7 +117,7 @@ module OsString =
   /// Index must be within the bounds.
   let item (index: int) (s: OsString) : OsChar =
     let ptr, len = toPtrLenPair s
-    assert (uint index < len)
+    assert (uint index < uint len)
     Ptr.read (ptr: InPtr<OsChar>).[index]
 
 module OsStringExt =
@@ -133,8 +133,9 @@ module OsStringExt =
   ///
   /// - Input must satisfy invariants of OsString.
   /// - The result is valid as long as the given pointer is valid.
-  let unsafeCreate (ptr: OsStringPtr) (len: uint) : OsString =
+  let unsafeCreate (ptr: OsStringPtr) (len: int) : OsString =
     assert (ptr <> Ptr.nullPtr)
+    assert (len >= 0)
     __nativeExpr ("(struct MiloneOsString){.ptr = {0}, .len = {1}}", ptr, len)
 
   /// Unsafely creates an OsString
@@ -149,7 +150,7 @@ module OsStringExt =
     __nativeExpr ("milone_os_string_borrow({0})", ptr)
 
   /// Unsafely creates an OsString by copying contents from a pointer.
-  let unsafeOfRawParts (ptr: OsStringPtr) (len: uint) : OsString =
+  let unsafeOfRawParts (ptr: OsStringPtr) (len: int) : OsString =
     unsafeCreate (unsafeCloneOfRawParts ptr len) len
 
   /// Unsafely creates an OsString

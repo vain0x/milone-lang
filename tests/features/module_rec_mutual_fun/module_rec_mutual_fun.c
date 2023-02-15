@@ -31,18 +31,18 @@ bool module_rec_mutual_fun_module_rec_mutual_fun_odd(int32_t n_1) {
     bool if_1;
     bool call_1;
     if ((n_1 != 0)) {
-        goto then_5;
+        goto then_2;
     } else {
-        goto else_6;
+        goto else_3;
     }
-then_5:;
+then_2:;
     call_1 = module_rec_mutual_fun_module_rec_mutual_fun_even((n_1 - 1));
     if_1 = call_1;
-    goto if_next_4;
-else_6:;
+    goto if_next_1;
+else_3:;
     if_1 = false;
-    goto if_next_4;
-if_next_4:;
+    goto if_next_1;
+if_next_1:;
     return if_1;
 }
 

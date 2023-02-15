@@ -68,6 +68,13 @@ test_todo: ${TODO} CmdSqliteTodo/test CmdSqliteTodo/test-expected.txt
 	( cd CmdSqliteTodo; TODO=${TODO} ./test )
 
 # ------------------------------------------------
+# LibData
+# ------------------------------------------------
+
+test_lib_data: $(wildcard LibData/*.milone)
+	milone run LibData
+
+# ------------------------------------------------
 # LibSqlite3
 # ------------------------------------------------
 
@@ -120,4 +127,5 @@ test: \
 	test_cat \
 	test_json_get \
 	test_todo \
-	test_lib_sqlite3
+	test_lib_sqlite3 \
+	test_lib_data

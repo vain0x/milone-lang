@@ -89,24 +89,24 @@ struct Int32Cons const *effect_region_effect_region_testRegionRun_fun_go(struct 
     struct Int32Cons const *list_;
     struct Int32Cons const *arg_8;
     int32_t arg_9;
-tailrec_4:;
+tailrec_1:;
     if ((i_ >= 0)) {
-        goto then_6;
+        goto then_3;
     } else {
-        goto else_7;
+        goto else_4;
     }
-then_6:;
+then_3:;
     if_ = acc_;
-    goto if_next_5;
-else_7:;
+    goto if_next_2;
+else_4:;
     list_ = ((struct Int32Cons const *)milone_region_alloc(1, sizeof(struct Int32Cons)));
     (*(((struct Int32Cons *)list_))) = (struct Int32Cons){.head = i_, .tail = acc_};
     arg_8 = list_;
     arg_9 = (i_ + 1);
     acc_ = arg_8;
     i_ = arg_9;
-    goto tailrec_4;
-if_next_5:;
+    goto tailrec_1;
+if_next_2:;
     return if_;
 }
 

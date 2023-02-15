@@ -3,8 +3,7 @@ module rec LibSpanTests.Program
 module Buffer = LibSpan.Buffer
 
 let main _ =
-  let buffer =
-    Buffer.create (unativeint 1000) 1un
+  let buffer = Buffer.create (unativeint 1000) 1un
 
   assert (Buffer.cap buffer = unativeint 1000)
   0

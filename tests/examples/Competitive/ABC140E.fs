@@ -18,8 +18,9 @@ let private intMax (l: int) r = if l < r then r else l
 
 module private Block =
   let get index block =
-    Block.tryItem index block
-    |> Option.defaultWith unreachable
+    match Block.tryItem index block with
+    | Some it -> it
+    | None -> unreachable ()
 
 let private solve n perm =
   // Add sentinels.

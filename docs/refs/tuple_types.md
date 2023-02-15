@@ -1,8 +1,8 @@
-# Tuple types
+# Tuple Types
 
 Tuple is an anonymous data structure to carry multiple values as single value.
 
-### Guide-level explanation
+### Guide-level Explanation
 
 Tuple types are written as `T1 * T2 * ...`, where Ti is the type of i'th item.
 For example, `int * string` is a pair of int and a string.
@@ -39,9 +39,17 @@ Tuple values are created by separating expressions by commas (`,`).
 
 And so on.
 
-## Advanced topics
+## Operations
 
-### Runtime representation
+- Equality:
+    Tuple is equatable if it's unit or all item types are equatable.
+- `string` function:
+    Tuples is convertible to string if it's unit or all item types are convertible to string.
+    - *Remark*: The output might change in future.
+
+## Advanced Topics
+
+### Runtime Representation
 
 (The runtime representation of tuples is unlikely stabilized.)
 

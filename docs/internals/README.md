@@ -44,4 +44,3 @@ See also header comments in implementation files.
 ----
 
 - [Misc](misc.md) (not interesting)
-- [TODO list](https://github.com/vain0x/milone-lang/projects/1) (recently not updated)

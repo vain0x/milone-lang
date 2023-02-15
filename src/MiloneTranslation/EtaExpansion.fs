@@ -82,7 +82,7 @@ open MiloneShared.Util
 open Std.StdError
 open Std.StdMap
 open MiloneTranslation.Hir
-open MiloneTranslationTypes.HirTypes
+open MiloneTranslation.HirTypes
 
 module Int = Std.StdInt
 module S = Std.StdString
@@ -125,7 +125,7 @@ let private primToArity ty prim =
   | HPrim.NullPtr -> 0
 
   | HPrim.Not
-  | HPrim.Exit
+  | HPrim.BitNot
   | HPrim.Assert
   | HPrim.Box
   | HPrim.Unbox
@@ -160,7 +160,8 @@ let private primToArity ty prim =
 
 [<RequireQualifiedAccess; NoEquality; NoComparison>]
 type private EtaCtx =
-  { Serial: Serial
+  { /// Last serial number.
+    Serial: Serial
     StaticVars: VarMap
     Vars: VarMap
     Funs: TreeMap<FunSerial, FunDef>
@@ -477,6 +478,8 @@ let private exPrimExpr (ctx: EtaCtx) expr prim primTy calleeLoc =
 
 let private exInfExpr ctx expr kind args ty loc =
   match kind with
+  | HFunPtrOfEN -> expr, ctx
+
   | HAppEN ->
     /// Converts `(((f x) ..) y)` to `f(x, .., y)`.
     let rec roll acc callee =

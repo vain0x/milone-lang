@@ -2,6 +2,12 @@
 [<AutoOpen>]
 module FSharpOnly
 
+type never = private | Never
+
+let never<'T> (_: never) : 'T =
+  assert false
+  exit 1
+
 // -----------------------------------------------
 // C FFI
 // -----------------------------------------------
@@ -10,9 +16,14 @@ module FSharpOnly
 ///
 /// P is `()` or `P1 * P2 * ...`.
 [<AbstractClass; Sealed>]
-type __nativeFun<'P, 'T> =
+type FunPtr<'P, 'T> =
   override _.ToString() =
-    failwith "__nativeFun type is not available in F#"
+    failwith "FunPtr type is not available in F#"
+
+/// Defines an opaque type.
+[<Sealed; System.AttributeUsage(System.AttributeTargets.Class)>]
+type OpaqueAttribute() =
+  inherit System.Attribute()
 
 // Calls a C function, which should be linked statically.
 let __nativeFun _ =

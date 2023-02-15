@@ -1,0 +1,21 @@
+#!/bin/sh
+# USAGE: src/MiloneDll/example
+#
+# This script assumes working directory is at the workspace root.
+
+set -eu
+
+echo 'trace: Building dll' >&2
+bin/milone-latest build src/MiloneDll -o target/MiloneDll/MiloneDll.so
+
+echo 'trace: Building example' >&2
+gcc -std=c17 -Wall \
+    -I "$PWD/src/libmilonert" \
+    $PWD/target/MiloneDll/milone.o \
+    $PWD/target/MiloneDll/milone_platform.o \
+    src/MiloneDll/example.c \
+    -ldl \
+    -o target/MiloneDll/example.exe
+
+echo 'trace: Running example' >&2
+target/MiloneDll/example.exe

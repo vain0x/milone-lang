@@ -196,18 +196,18 @@ int32_t fun_closure_fun_closure_escapeCase_xf1_xf2_xf3(int32_t x2_, int32_t x1_,
     int32_t if_1;
     int32_t call_10;
     if ((x3_ == 3)) {
-        goto then_6;
+        goto then_2;
     } else {
-        goto else_7;
+        goto else_3;
     }
-then_6:;
+then_2:;
     call_10 = fun_closure_fun_closure_escapeCase_xf1_xf2_xf3_xf4(x3_, x2_, x1_);
     if_1 = call_10;
-    goto if_next_5;
-else_7:;
+    goto if_next_1;
+else_3:;
     if_1 = x3_;
-    goto if_next_5;
-if_next_5:;
+    goto if_next_1;
+if_next_1:;
     return if_1;
 }
 
@@ -215,18 +215,18 @@ int32_t fun_closure_fun_closure_escapeCase_xf1_xf2(int32_t x1_, int32_t x2_) {
     int32_t if_2;
     int32_t call_11;
     if ((x2_ == 2)) {
-        goto then_9;
+        goto then_2;
     } else {
-        goto else_10;
+        goto else_3;
     }
-then_9:;
+then_2:;
     call_11 = fun_closure_fun_closure_escapeCase_xf1_xf2_xf3(x2_, x1_, 3);
     if_2 = call_11;
-    goto if_next_8;
-else_10:;
+    goto if_next_1;
+else_3:;
     if_2 = x2_;
-    goto if_next_8;
-if_next_8:;
+    goto if_next_1;
+if_next_1:;
     return if_2;
 }
 
@@ -234,18 +234,18 @@ int32_t fun_closure_fun_closure_escapeCase_xf1(int32_t x1_) {
     int32_t if_3;
     int32_t call_12;
     if ((x1_ == 1)) {
-        goto then_12;
+        goto then_2;
     } else {
-        goto else_13;
+        goto else_3;
     }
-then_12:;
+then_2:;
     call_12 = fun_closure_fun_closure_escapeCase_xf1_xf2(x1_, 2);
     if_3 = call_12;
-    goto if_next_11;
-else_13:;
+    goto if_next_1;
+else_3:;
     if_3 = x1_;
-    goto if_next_11;
-if_next_11:;
+    goto if_next_1;
+if_next_1:;
     return if_3;
 }
 

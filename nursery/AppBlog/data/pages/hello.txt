@@ -1,0 +1,7 @@
+---
+title: Hello, My Blog!
+url: /hello
+---
+
+Hi, this is my first article on [the blog].
+See you next time.

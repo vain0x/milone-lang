@@ -15,7 +15,7 @@ module rec MiloneTranslation.Mir
 open MiloneShared.SharedTypes
 open MiloneShared.TypeFloat
 open MiloneShared.TypeIntegers
-open MiloneTranslationTypes.HirTypes
+open MiloneTranslation.HirTypes
 open Std.StdMap
 
 // -----------------------------------------------
@@ -46,6 +46,7 @@ type MGenericValue =
 [<NoEquality; NoComparison>]
 type MUnary =
   | MMinusUnary
+  | MBitNotUnary
   | MNotUnary
   | MPtrOfUnary
 
@@ -197,9 +198,16 @@ type MSwitchClause =
     IsDefault: bool
     Terminator: MTerminator }
 
+[<RequireQualifiedAccess; NoEquality; NoComparison>]
+type MAbortCause =
+  | Assert
+  | Exhaust
+  | Never
+
 [<NoEquality; NoComparison>]
 type MTerminator =
   | MExitTerminator of exitCode: MExpr
+  | MAbortTerminator of MAbortCause
   | MReturnTerminator of result: MExpr * resultTy: Ty
   | MGotoTerminator of Label
   | MIfTerminator of cond: MExpr * thenCl: MTerminator * elseCl: MTerminator

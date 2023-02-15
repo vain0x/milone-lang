@@ -19,8 +19,13 @@ let private testConversion () =
   assert (char 127uy = '\x7f')
   assert (char 255uy = '\xff')
 
+let private testByteLit () =
+  assert ('A'B = 65uy)
+  assert ('\x7E'B = 0x7Euy)
+
 let main _ =
   testAddition ()
   testEquality ()
   testConversion ()
+  testByteLit ()
   0

@@ -21,11 +21,18 @@ SUBCOMMANDS:
     self-uninstall   uninstall it
     pack             make binary package
 
+    package          make uncompressed binary package (for debugging)
+    ... -n           dry run
+
     help, -h, --help
     version, -V, --version
 """
 
-let private cRules =
+let private MiloneVersion = "0.6.0"
+let private AssetsDir = __SOURCE_DIRECTORY__ + "/assets"
+let private Trace = false
+
+let private CRules =
   """
 warning_flags = $
   -Wall $
@@ -65,36 +72,34 @@ module StringExt =
   let split (sep: string) (s: string) = s.Split(sep) |> Array.toList
   let trim (s: string) = s.Trim()
 
-let private tRng =
-  new System.Threading.ThreadLocal<System.Random>(fun () -> System.Random())
-
-// Sha256.
-let private computeFileHash (file: string) : string =
-  let contents = System.IO.File.ReadAllBytes(file)
-
+let private computeSha256 (bytes: byte []) : string =
   use h =
     System.Security.Cryptography.SHA256.Create()
 
-  let hash = h.ComputeHash(contents)
+  let hash = h.ComputeHash(bytes)
 
-  System
-    .BitConverter
+  BitConverter
     .ToString(hash)
     .Replace("-", "")
     .ToLower()
 
+// -----------------------------------------------
+// Operations
+// -----------------------------------------------
+
+/// Ensures a directory exists.
 let private makeDir (dir: string) : unit =
   Directory.CreateDirectory(dir) |> ignore
 
+/// Reads from a text file.
 let private readFile file : string option =
   try
-    System.IO.File.ReadAllText(file) |> Some
+    File.ReadAllText(file) |> Some
   with
-  | _ -> None
+  | :? FileNotFoundException
+  | :? DirectoryNotFoundException -> None
 
-let private writeFile file contents : unit =
-  System.IO.File.WriteAllText(file, contents)
-
+/// Reads from a text file to be compared to an expected result.
 let private readToDiff (file: string) =
   try
     if File.Exists(file) then
@@ -104,6 +109,9 @@ let private readToDiff (file: string) =
   with
   | _ -> $"{file} couldn't be read."
 
+let private writeFile file (contents: string) : unit = File.WriteAllText(file, contents)
+
+/// Writes a text file if changed.
 let private writeTo (contents: string) (output: string) =
   let same =
     try
@@ -115,64 +123,74 @@ let private writeTo (contents: string) (output: string) =
   if not same then
     File.WriteAllText(output, contents)
 
-let private copyFile src dest : unit = System.IO.File.Copy(src, dest, true)
+let private copyFile src dest : unit = File.Copy(src, dest, true)
 
+/// Copies multiple files to a directory.
 let private copyFilesTo (srcFiles: string list) (destDir: string) : unit =
   for src in srcFiles do
     let destFile =
-      Path.Combine(destDir, System.IO.Path.GetFileName(src))
+      Path.Combine(destDir, Path.GetFileName(src))
 
-    System.IO.File.Copy(src, destFile, true)
+    File.Copy(src, destFile, true)
 
-let private copyFilesWithExt (srcDir: string) (extList: string list) (destDir: string) : unit =
-  for src in System.IO.Directory.GetFiles(srcDir) do
-    if
-      extList
-      |> List.contains (System.IO.Path.GetExtension(src))
-    then
-      let destFile =
-        Path.Combine(destDir, System.IO.Path.GetFileName(src))
+/// Gets whether the specified pathname is accepted by the filter.
+let private applyFilter (filter: string list) (pathname: string) =
+  filter
+  |> List.exists (fun (p: string) ->
+    if p.StartsWith("*.") then
+      let ext = p.[1..]
+      Path.GetExtension(pathname) = ext
+    else
+      Path.GetFileName(pathname) = p)
 
-      System.IO.File.Copy(src, destFile, true)
+/// Gets a list of files in a directory, filtering.
+let private getFilesWithFilter filter (dir: string) : string array =
+  let files =
+    try
+      Directory.GetFiles(dir)
+    with
+    | :? DirectoryNotFoundException -> [||]
 
-let private copyDir src dest : unit =
-  let rec go src dest =
-    makeDir dest
+  files |> Array.filter (applyFilter filter)
 
-    for subdir in System.IO.Directory.GetDirectories(src) do
-      let destSubdir =
-        Path.Combine(dest, System.IO.Path.GetFileName(subdir))
+/// Copies a directory shallowly. Only files passing the filter are copied.
+let private copyDirWithFilter (filter: string list) (srcDir: string) (destDir: string) : unit =
+  makeDir destDir
 
-      go subdir destSubdir
+  for src in getFilesWithFilter filter srcDir do
+    let destFile =
+      Path.Combine(destDir, Path.GetFileName(src))
 
-    for file in System.IO.Directory.GetFiles(src) do
-      let destFile =
-        Path.Combine(dest, System.IO.Path.GetFileName(file))
+    File.Copy(src, destFile, true)
 
-      System.IO.File.Copy(file, destFile)
-
-  go src dest
-
-let private moveDir (src: string) (dest: string) : unit = System.IO.Directory.Move(src, dest)
-
-let private removeFile file : unit = System.IO.File.Delete(file)
+let private removeFile file : unit =
+  try
+    File.Delete(file)
+  with
+  | :? DirectoryNotFoundException -> ()
 
 let private removeDir dir : unit =
   try
-    System.IO.Directory.Delete(dir, true)
+    Directory.Delete(dir, true)
   with
-  | :? System.IO.DirectoryNotFoundException -> ()
+  | :? DirectoryNotFoundException -> ()
 
-let private removeFilesWithExt (extList: string list) dir : unit =
-  for file in System.IO.Directory.GetFiles(dir) do
-    if extList |> List.contains (Path.GetExtension(file)) then
-      System.IO.File.Delete(file)
+let private removeFilesWithFilter (filter: string list) (dir: string) : unit =
+  for file in getFilesWithFilter filter dir do
+    removeFile file
 
-let private run command (args: string list) : unit =
+let private runWithEnv command (args: string list) env workDirOpt : unit =
   let startInfo = ProcessStartInfo(command)
 
   for arg in args do
     startInfo.ArgumentList.Add(arg)
+
+  for key, value in env do
+    startInfo.Environment.Add(key, value)
+
+  match workDirOpt with
+  | Some workDir -> startInfo.WorkingDirectory <- workDir
+  | None -> ()
 
   let p = Process.Start(startInfo)
   p.WaitForExit()
@@ -180,6 +198,8 @@ let private run command (args: string list) : unit =
   if p.ExitCode <> 0 then
     eprintfn "ERROR: '%s' %A exited with %d." command args p.ExitCode
     exit 1
+
+let private run command (args: string list) : unit = runWithEnv command args [] None
 
 let private runToOut command (args: string list) : string =
   let startInfo = ProcessStartInfo(command)
@@ -202,11 +222,94 @@ let private runToOut command (args: string list) : string =
   output
 
 // -----------------------------------------------
+// Action
+// -----------------------------------------------
+
+type private Action =
+  // Fundamental actions:
+  | Do of label: string * k: (unit -> unit)
+  | Block of label: string * Action list
+
+  // Basic actions:
+  | Echo of msg: string
+  | Run of exe: string * args: string list * env: (string * string) list * workDir: string option
+  | RunWith of exe: string * args: string list * k: (string -> unit)
+
+  // File operations:
+  | ReadBytesWith of binaryFile: string * k: (byte [] -> unit)
+  | CopyFile of src: string * dest: string
+  | CopyFiles of srcFiles: string list * dest: string
+  | CopyDirWithFilter of src: string * dest: string * filter: string list
+  | MakeDir of string
+  | RemoveFile of file: string
+  | RemoveFilesWithFilter of dir: string * filter: string list
+  | RemoveDir of dir: string
+
+[<Sealed; NoEquality; NoComparison>]
+type private IOBuilder(label: string) =
+  member _.Delay(f: unit -> Action list) = f
+
+  member _.Run(f) = Block(label, f ())
+
+  member _.Zero() : Action list = []
+  member _.Yield(x: Action) : Action list = [ x ]
+  member _.Bind(x: Action list, f: unit -> Action list) : Action list = List.append x (f ())
+  member _.Combine(x: Action, y: unit -> Action list) : Action list = x :: (y ())
+  member _.Combine(x: Action list, y: unit -> Action list) : Action list = List.append x (y ())
+
+let private io label = IOBuilder(label)
+
+// -----------------------------------------------
+// Environment
+// -----------------------------------------------
+
+[<RequireQualifiedAccess>]
+type private Platform =
+  | Linux
+  | Windows
+
+let private getPlatform () : Platform =
+  match Environment.OSVersion.Platform with
+  | PlatformID.Win32NT -> Platform.Windows
+  | _ -> Platform.Linux
+
+let private getExeExt () : string =
+  match getPlatform () with
+  | Platform.Linux -> ""
+  | Platform.Windows -> ".exe"
+
+let private getTriplet () =
+  match getPlatform () with
+  | Platform.Linux -> "x86_64-unknown-linux-gnu"
+  | Platform.Windows -> "x86_64-pc-windows-msvc"
+
+let private generatedExeFile () =
+  match getPlatform () with
+  | Platform.Linux -> "target/MiloneCli/x86_64-unknown-linux-gnu-release/MiloneCli"
+  | Platform.Windows -> "target/MiloneCli/x86_64-pc-windows-msvc-release/MiloneCli.exe"
+
+let private getRuntimeIdentifier () =
+  match getPlatform () with
+  | Platform.Linux -> "linux-x64"
+  | Platform.Windows -> "win10-x64"
+
+let private cwd () : string = Environment.CurrentDirectory
+
+let private getHome () : string =
+  Environment.GetFolderPath(Environment.SpecialFolder.UserProfile)
+
+let private setMiloneHomeToCurrentDir () =
+  if String.IsNullOrEmpty(Environment.GetEnvironmentVariable("MILONE_HOME")) then
+    Environment.SetEnvironmentVariable("MILONE_HOME", cwd ())
+
+// -----------------------------------------------
 // gen2
 // -----------------------------------------------
 
 let private commandGen2 () =
   eprintfn "milone-compiling gen2"
+
+  setMiloneHomeToCurrentDir ()
 
   run
     "dotnet"
@@ -228,6 +331,9 @@ let private commandGen2 () =
 
 let private commandGen3 () =
   eprintfn "milone-compiling gen3"
+
+  setMiloneHomeToCurrentDir ()
+
   makeDir "target/gen3"
 
   let stdOut =
@@ -261,16 +367,20 @@ let private commandGen3 () =
 // -----------------------------------------------
 
 let private commandTests () =
+  setMiloneHomeToCurrentDir ()
+
   File.WriteAllText("target/tests-build.ninja", InstantiateBuildTemplateNinja.render ())
 
   run "bin/ninja" [ "-f"; "target/tests-build.ninja" ]
 
 let private commandTestsBuild (testProjectDirs: string list) =
+  setMiloneHomeToCurrentDir ()
+
   let ninja = StringBuilder()
   let w (s: string) = ninja.AppendLine(s) |> ignore
 
   w "builddir = target/tests2"
-  w cRules
+  w CRules
 
   let exeFiles = ResizeArray()
 
@@ -315,6 +425,8 @@ let private commandTestsBuild (testProjectDirs: string list) =
   writeTo (ninja.ToString()) "target/tests2-build.ninja"
 
 let private commandTestsSummarize (testProjectDirs: string list) =
+  setMiloneHomeToCurrentDir ()
+
   let mutable pass = 0
   let mutable fail = 0
 
@@ -340,326 +452,281 @@ let private commandTestsSummarize (testProjectDirs: string list) =
   if not ok then exit 1
 
 // -----------------------------------------------
+// Helper of Package
+// -----------------------------------------------
+
+let private RunDotnetPublish (projectDir, outputDir) : Action =
+  Run(
+    "dotnet",
+    [ "publish"
+      projectDir
+      "--runtime"
+      getRuntimeIdentifier ()
+      "--self-contained"
+      "true"
+      "-c"
+      "Release"
+      "-o"
+      outputDir
+      "-nologo"
+      "-v:quiet"
+      "-consoleLoggerParameters:NoSummary" ],
+    [],
+    None
+  )
+
+let private RunPwsh command : Action =
+  Run(
+    "C:/Windows/System32/WindowsPowerShell/v1.0/powershell.exe",
+    [ "-NoLogo"
+      "-NoProfile"
+      "-NonInteractive"
+      "-c"
+      command ],
+    [],
+    Path.GetDirectoryName(command) |> Some
+  )
+
+let private dumpAction a =
+  let mutable indent = ""
+
+  let rec go a =
+    match a with
+    | Block (label, actions) ->
+      let parentIndent = indent
+      indent <- indent + "  "
+
+      eprintfn "%s%s {" parentIndent label
+
+      for a in actions do
+        go a
+
+      eprintfn "%s}" parentIndent
+
+      indent <- parentIndent
+
+    | Do (label, _) -> eprintfn "%sDo(%s)" indent label
+
+    | CopyDirWithFilter (src, dest, filter) ->
+      eprintfn "%sCopyDirWithFilter(%A, %s)" indent (getFilesWithFilter filter src) dest
+
+    | RemoveFilesWithFilter (dir, filter) ->
+      eprintfn "%sRemoveFilesWithFilter(%A)" indent (getFilesWithFilter filter dir)
+
+    | _ -> eprintfn "%s%A" indent a
+
+  go a
+
+let private performAction a =
+  let rec go a =
+    if Trace then
+      match a with
+      | Block _
+      | Echo _ -> ()
+      | _ -> dumpAction a
+
+    match a with
+    | Block (label, actions) ->
+      try
+        for a in actions do
+          go a
+      with
+      | _ ->
+        eprintfn "Failed in %s" label
+        reraise ()
+
+    | CopyFile (src, dest) -> copyFile src dest
+    | CopyFiles (srcFiles, dest) -> copyFilesTo srcFiles dest
+    | CopyDirWithFilter (src, dest, filter) -> copyDirWithFilter filter src dest
+    | MakeDir dir -> makeDir dir
+    | Run (exe, args, env, workDir) -> runWithEnv exe args env workDir
+    | RunWith (exe, args, k) -> k (runToOut exe args)
+    | RemoveFile file -> removeFile file
+    | RemoveFilesWithFilter (dir, filter) -> removeFilesWithFilter filter dir
+    | RemoveDir dir -> removeDir dir
+    | Echo msg -> printfn "%s" msg
+    | Do (_, k) -> k ()
+
+    | ReadBytesWith (file, k) ->
+      let contents =
+        try
+          File.ReadAllBytes(file)
+        with
+        | :? FileNotFoundException
+        | :? DirectoryNotFoundException -> [||]
+
+      k contents
+
+  go a
+
+let private destFiles (destDir: string) =
+  let exeExt = getExeExt ()
+  let destMiloneHome = $"{destDir}/share/milone"
+
+  {| BinDir = $"{destDir}/bin"
+     MiloneExe = $"{destDir}/bin/milone{exeExt}"
+     MiloneHome = destMiloneHome
+     MiloneLspDir = $"{destMiloneHome}/bin/milone_lsp"
+     SrcDir = $"{destMiloneHome}/src"
+     VersionFile = $"{destMiloneHome}/version" |}
+
+// -----------------------------------------------
+// Package
+// -----------------------------------------------
+
+// IMPORTANT!
+//    This script must be sync with
+//    binary_package.md, INSTALL.md, and install/uninstall scripts.
+
+/// Generates a binary package.
+let private generateBinaryPackage (destDir: string) =
+  let onLinux = getPlatform () = Platform.Linux
+  let dest = destFiles destDir
+
+  io "package" {
+    // Make structure.
+    RemoveDir destDir
+    MakeDir dest.BinDir
+    MakeDir dest.MiloneHome
+
+    // Build.
+    Run(
+      "dotnet",
+      ("run --project src/MiloneCli -- build --release src/MiloneCli"
+       |> StringExt.split " "),
+      [ "MILONE_HOME", cwd () ],
+      None
+    )
+
+    CopyFile(generatedExeFile (), dest.MiloneExe)
+
+    if onLinux then
+      Run("strip", [ "-s"; dest.MiloneExe ], [], None)
+
+    // Record version.
+    RunWith(
+      dest.MiloneExe,
+      [ "--version" ],
+      fun version ->
+        let version = StringExt.trim version
+        assert (version = MiloneVersion)
+        writeFile dest.VersionFile $"{version}\n"
+    )
+
+    // Build LSP server.
+    RunDotnetPublish("src/MiloneLspServer", dest.MiloneLspDir)
+    RemoveFilesWithFilter(dest.MiloneLspDir, [ "*.pdb" ])
+
+    // Copy runtime files.
+    CopyDirWithFilter("src/libmilonert", $"{dest.SrcDir}/libmilonert", [ "*.c"; "*.h"; "LICENSE" ])
+    CopyDirWithFilter("src/MiloneCore", $"{dest.SrcDir}/MiloneCore", [ "*.fs"; "*.milone"; "LICENSE" ])
+    CopyDirWithFilter("src/Std", $"{dest.SrcDir}/Std", [ "*.fs"; "*.milone"; "LICENSE" ])
+
+    if onLinux then
+      CopyFile("bin/ninja", $"{dest.MiloneHome}/bin/ninja")
+
+    // Add assets.
+    let installScript, uninstallScript =
+      match getPlatform () with
+      | Platform.Linux -> $"{AssetsDir}/install.sh", $"{AssetsDir}/uninstall.sh"
+      | Platform.Windows -> $"{AssetsDir}/install.ps1", $"{AssetsDir}/uninstall.ps1"
+
+    CopyFiles(
+      [ "README.md"
+        "LICENSE"
+        $"{AssetsDir}/INSTALL.md"
+        installScript
+        uninstallScript ],
+      destDir
+    )
+  }
+
+// -----------------------------------------------
+// Pack
+// -----------------------------------------------
+
+/// Makes a compressed binary package to upload.
+let private commandPack () =
+  let triplet = getTriplet ()
+
+  let version = MiloneVersion
+  let destDir = $"{cwd ()}/target/milone-{version}"
+
+  io "pack" {
+    generateBinaryPackage destDir
+
+    // Compress.
+    let outFile =
+      match getPlatform () with
+      | Platform.Linux -> $"target/milone-{version}-{triplet}.tar.gz"
+      | Platform.Windows -> $"target/milone-{version}-{triplet}.zip"
+
+    RemoveFile outFile
+
+    match getPlatform () with
+    | Platform.Linux -> Run("tar", [ "-czf"; outFile; destDir ], [], None)
+    | Platform.Windows -> Do("compress", (fun () -> Compression.ZipFile.CreateFromDirectory(destDir, outFile)))
+
+    ReadBytesWith(
+      outFile,
+      fun contents ->
+        let hash = computeSha256 contents
+        printfn "%s  %s" hash (Path.GetFileName(outFile))
+    )
+
+    Echo $"Generated {outFile}"
+    Echo $"milone-lang v{version} is packed successfully!"
+  }
+
+// -----------------------------------------------
 // self-install
 // -----------------------------------------------
 
-let private getHome () : string =
-  System.Environment.GetFolderPath(System.Environment.SpecialFolder.UserProfile)
+let private commandSelfInstall () : Action =
+  let destDir =
+    $"{cwd ()}/target/milone-{MiloneVersion}"
 
-[<RequireQualifiedAccess>]
-type private Platform =
-  | Unix
-  | Windows
+  io "self-install" {
+    generateBinaryPackage destDir
 
-let private getPlatform () : Platform =
-  match System.Environment.OSVersion.Platform with
-  | System.PlatformID.Win32NT -> Platform.Windows
-  | _ -> Platform.Unix
+    match getPlatform () with
+    | Platform.Linux -> Run("/bin/sh", [ $"{destDir}/install.sh" ], [], Some destDir)
+    | Platform.Windows -> RunPwsh $"{destDir}/install.ps1"
+  }
 
-let private getExt platform : string =
-  match platform with
-  | Platform.Unix -> ""
-  | Platform.Windows -> ".exe"
-
-let private buildSelf () : unit =
-  run
-    "dotnet"
-    ("run --project src/MiloneCli -- build --release src/MiloneCli"
-     |> StringExt.split " ")
-
-let private windowsBinaryPath =
-  "target/MiloneCli/x86_64-pc-windows-msvc-release/MiloneCli.exe"
-
-let private commandSelfInstall () : unit =
-  let home = getHome ()
-  let platform = getPlatform ()
-  let ext = getExt platform
-
-  let binDir = $"{home}/bin"
-  let miloneHome = $"{home}/.milone"
-  let destMiloneExe = $"{binDir}/milone{ext}"
-  let destMiloneDotnetDir = $"{miloneHome}/bin/milone_dotnet"
-  let destMiloneLspDir = $"{miloneHome}/bin/milone_lsp"
-  let destSrcDir = $"{miloneHome}/src"
-  let destVersionFile = $"{miloneHome}/version"
-
-  doUninstall () |> ignore
-
-  // Create directories.
-  makeDir binDir
-  makeDir miloneHome
-
-  // Build binary.
-  let generatedExeFile =
-    match platform with
-    | Platform.Unix -> "target/MiloneCli/x86_64-unknown-linux-gnu-release/MiloneCli"
-    | Platform.Windows -> windowsBinaryPath
-
-  buildSelf ()
-  copyFile generatedExeFile destMiloneExe
-
-  match platform with
-  | Platform.Unix -> run "strip" [ "-s"; destMiloneExe ]
-  | _ -> ()
-
-  // Install .NET executable.
-  let runtimeIdentifier =
-    match platform with
-    | Platform.Unix -> "linux-x64"
-    | Platform.Windows -> "win10-x64"
-
-  run
-    "dotnet"
-    [ "publish"
-      "src/MiloneCli"
-      "--runtime"
-      runtimeIdentifier
-      "--self-contained"
-      "true"
-      "-c"
-      "Release"
-      "-o"
-      destMiloneDotnetDir
-      "-nologo" ]
-
-  // Install LSP server.
-  run
-    "dotnet"
-    [ "publish"
-      "src/MiloneLspServer"
-      "--runtime"
-      runtimeIdentifier
-      "--self-contained"
-      "true"
-      "-c"
-      "Release"
-      "-o"
-      destMiloneLspDir
-      "-nologo" ]
-
-  // Copy files.
-  copyDir "src/libmilonert" $"{destSrcDir}/libmilonert"
-  copyDir "src/MiloneCore" $"{destSrcDir}/MiloneCore"
-  copyDir "src/Std" $"{destSrcDir}/Std"
-  copyFile "bin/ninja" $"{miloneHome}/bin/ninja"
-
-  // FIXME: Exclude files
-  removeFile $"{destSrcDir}/libmilonert/milone.o"
-  removeFile $"{destSrcDir}/libmilonert/milone_platform.o"
-  removeDir $"{destSrcDir}/MiloneCore/bin"
-  removeDir $"{destSrcDir}/MiloneCore/obj"
-  removeDir $"{destSrcDir}/Std/bin"
-  removeDir $"{destSrcDir}/Std/obj"
-
-  // Record version.
-  let version =
-    runToOut destMiloneExe [ "--version" ]
-    |> StringExt.trim
-
-  writeFile destVersionFile $"{version}\n"
-
-  // Info about PATH.
-  let underPath =
-    try
-      runToOut "milone" [ "--version" ] |> ignore
-      true
-    with
-    | _ -> false
-
-  if not underPath then
-    printfn "It's recommended to add %s to $PATH." binDir
-
-  printfn "milone-lang v%s is installed successfully!" version
-
-let private doUninstall () : string option =
-  let home = getHome ()
-  let platform = getPlatform ()
-  let ext = getExt platform
-
-  let binDir = $"{home}/bin"
-  let miloneHome = $"{home}/.milone"
-  let destMiloneExe = $"{binDir}/milone{ext}"
-  let destVersionFile = $"{miloneHome}/version"
-
-  let versionOpt =
-    readFile destVersionFile
-    |> Option.map StringExt.trim
-
-  match versionOpt with
-  | Some version ->
-    removeFile destMiloneExe
-    removeDir miloneHome
-    printfn "milone-lang v%s is uninstalled." version
-
-  | None -> ()
-
-  versionOpt
+// -----------------------------------------------
+// self-uninstall
+// -----------------------------------------------
 
 let private commandSelfUninstall () =
-  match doUninstall () with
-  | None -> printfn "milone-lang is not installed."
-  | Some _ -> ()
+  io "uninstall" {
+    match getPlatform () with
+    | Platform.Linux -> Run("/bin/sh", [ $"{AssetsDir}/uninstall.sh" ], [], None)
+    | Platform.Windows -> RunPwsh $"{AssetsDir}/uninstall.ps1"
+  }
 
 // -----------------------------------------------
-// Deployment
+// Interface
 // -----------------------------------------------
-
-let private commandPack () =
-  let platform = getPlatform ()
-  let ext = getExt platform
-
-  let assetsDir = "src/MyBuildTool/assets"
-
-  let workDir =
-    let n = tRng.Value.Next()
-    $"target/pack-{n}"
-
-  let tempDir = $"{workDir}/milone-X.Y.Z"
-  let destBinDir = $"{tempDir}/bin"
-  let destMiloneHome = $"{tempDir}/.milone"
-  let destMiloneExe = $"{destBinDir}/milone{ext}"
-  let destMiloneDotnetDir = $"{destMiloneHome}/bin/milone_dotnet"
-  let destMiloneLspDir = $"{destMiloneHome}/bin/milone_lsp"
-  let destSrcDir = $"{destMiloneHome}/src"
-  let destVersionFile = $"{destMiloneHome}/version"
-
-  // Make structure.
-  removeDir workDir
-  makeDir destBinDir
-  makeDir destMiloneHome
-
-  // Build binary.
-  let generatedExeFile =
-    match platform with
-    | Platform.Unix -> "target/MiloneCli/x86_64-unknown-linux-gnu-release/MiloneCli"
-    | Platform.Windows -> windowsBinaryPath
-
-  buildSelf ()
-  copyFile generatedExeFile destMiloneExe
-
-  match platform with
-  | Platform.Unix -> run "strip" [ "-s"; destMiloneExe ]
-  | _ -> ()
-
-  // Record version.
-  let version =
-    runToOut destMiloneExe [ "--version" ]
-    |> StringExt.trim
-
-  writeFile destVersionFile $"{version}\n"
-
-  // Build .NET executable.
-  let runtimeIdentifier =
-    match platform with
-    | Platform.Unix -> "linux-x64"
-    | Platform.Windows -> "win10-x64"
-
-  run
-    "dotnet"
-    [ "publish"
-      "src/MiloneCli"
-      "--runtime"
-      runtimeIdentifier
-      "--self-contained"
-      "true"
-      "-c"
-      "Release"
-      "-o"
-      destMiloneDotnetDir
-      "-nologo" ]
-
-  removeFilesWithExt [ ".pdb" ] destMiloneDotnetDir
-
-  // Build LSP server.
-  run
-    "dotnet"
-    [ "publish"
-      "src/MiloneLspServer"
-      "--runtime"
-      runtimeIdentifier
-      "--self-contained"
-      "true"
-      "-c"
-      "Release"
-      "-o"
-      destMiloneLspDir
-      "-nologo" ]
-
-  removeFilesWithExt [ ".pdb" ] destMiloneLspDir
-
-  // Copy runtime files.
-  (let src = "src/libmilonert"
-   let dest = $"{destSrcDir}/libmilonert"
-   makeDir dest
-   copyFile $"{src}/LICENSE" $"{dest}/LICENSE"
-   copyFilesWithExt src [ ".c"; ".h" ] dest)
-
-  (let src = "src/MiloneCore"
-   let dest = $"{destSrcDir}/MiloneCore"
-   makeDir dest
-   copyFile $"{src}/LICENSE" $"{dest}/LICENSE"
-   copyFilesWithExt src [ ".fs"; ".milone"; ".md" ] dest)
-
-  (let src = "src/Std"
-   let dest = $"{destSrcDir}/Std"
-   makeDir dest
-   copyFile $"{src}/LICENSE" $"{dest}/LICENSE"
-   copyFilesWithExt src [ ".fs"; ".milone"; ".md" ] dest)
-
-  // Add documents.
-  copyFilesTo
-    [ "README.md"
-      "LICENSE"
-      $"{assetsDir}/INSTALL.md"
-      $"{assetsDir}/install.ps1"
-      $"{assetsDir}/install.sh"
-      $"{assetsDir}/uninstall.ps1"
-      $"{assetsDir}/uninstall.sh" ]
-    tempDir
-
-  // Rename and compress.
-  let packDir = $"milone-{version}"
-
-  moveDir tempDir packDir
-
-  let outFile =
-    match platform with
-    | Platform.Unix ->
-      let triple = "x86_64-linux-gnu"
-
-      let outFile =
-        $"{workDir}/milone-{version}-{triple}.tar.gz"
-
-      removeFile outFile
-      run "tar" [ "-czf"; outFile; packDir ]
-      outFile
-
-    | Platform.Windows ->
-      let triple = "x86_64-pc-windows-msvc"
-
-      let outFile =
-        $"{workDir}/milone-{version}-{triple}.zip"
-
-      removeFile outFile
-      System.IO.Compression.ZipFile.CreateFromDirectory(packDir, outFile)
-      outFile
-
-  moveDir packDir tempDir
-
-  printfn "%s  %s" (computeFileHash outFile) (Path.GetFileName(outFile))
-  printfn "Generated %s" outFile
-  printfn "milone-lang v%s is packed successfully!" version
 
 [<EntryPoint>]
-let main argv =
-  if String.IsNullOrEmpty(Environment.GetEnvironmentVariable("MILONE_HOME")) then
-    Environment.SetEnvironmentVariable("MILONE_HOME", Environment.CurrentDirectory)
+let main (argv: string array) =
+  let args = Array.toList argv
 
-  match Array.toList argv with
+  let dryRun, args =
+    List.contains "-n" args, List.filter ((<>) "-n") args
+
+  let perform =
+    if dryRun then
+      dumpAction
+    else
+      performAction
+
+  match args with
   | []
   | "help" :: _
   | "-h" :: _
-  | "--help" :: _ -> printfn "%s" (helpText ())
+  | "--help" :: _ -> printf "%s" (helpText ())
 
   | "version" :: _
   | "-V" :: _
@@ -672,9 +739,10 @@ let main argv =
   | "--build-run-tests" :: args -> commandTestsBuild args
   | "--summarize-tests" :: args -> commandTestsSummarize args
 
-  | "self-install" :: _ -> commandSelfInstall ()
-  | "self-uninstall" :: _ -> commandSelfUninstall ()
-  | "pack" :: _ -> commandPack ()
+  | "self-install" :: _ -> commandSelfInstall () |> perform
+  | "self-uninstall" :: _ -> commandSelfUninstall () |> perform
+  | "pack" :: _ -> commandPack () |> perform
+  | "package" :: _ -> generateBinaryPackage "target/package" |> perform
 
   | _ ->
     eprintfn "unknown target: %A" argv

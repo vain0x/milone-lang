@@ -1,6 +1,6 @@
 module MiloneLspServer.LspServer
 
-open System.Collections.Concurrent
+open System
 open System.Threading
 open MiloneLspServer.JsonValue
 open MiloneLspServer.JsonSerialization
@@ -178,7 +178,7 @@ let private createInitializeResult () =
           "documentSymbolProvider": true,
           "hoverProvider": true,
           "referencesProvider": true,
-          "renameProvider": true
+          "renameProvider": { "prepareProvider": true }
       },
       "serverInfo": {
           "name": "milone_lsp",
@@ -359,6 +359,12 @@ let private parseRenameParam jsonValue : RenameParam =
     Pos = p.Pos
     NewName = newName }
 
+let private parseSyntaxTreeParam jsonValue : Uri =
+  jsonValue
+  |> jFind3 "params" "textDocument" "uri"
+  |> jToString
+  |> Uri
+
 // -----------------------------------------------
 // LspError
 // -----------------------------------------------
@@ -386,6 +392,10 @@ let private handleRequestError (hint: string) (msgId: JsonValue) (ex: exn) : uni
              "message", JString msg ]
 
   jsonRpcWriteWithError msgId error
+
+  match ex with
+  | :? OutOfMemoryException -> raise ex
+  | _ -> ()
 
 // For when server received a notification and caused an error.
 let private showErrorMessage (msg: string) : unit =
@@ -467,7 +477,15 @@ type LspIncome =
   | FormattingRequest of MsgId * Uri
   /// https://microsoft.github.io/language-server-protocol/specifications/specification-current/#textDocument_hover
   | HoverRequest of MsgId * DocumentPositionParam
+  | PrepareRenameRequest of MsgId * DocumentPositionParam
   | RenameRequest of MsgId * RenameParam
+
+  // Extended queries.
+  /// Request to show a syntax tree.
+  //
+  // - params: { textDocument: { uri: URI } }
+  // - result: { content: JsonText }
+  | SyntaxTreeRequest of MsgId * Uri
 
   // Others.
   | RegisterCapabilityResponse of MsgId
@@ -507,8 +525,10 @@ let parseIncome (jsonValue: JsonValue) : LspIncome =
   | "textDocument/documentSymbol" -> DocumentSymbolRequest(getMsgId (), parseDocumentSymbolParam jsonValue)
   | "textDocument/formatting" -> FormattingRequest(getMsgId (), getUriParam jsonValue)
   | "textDocument/hover" -> HoverRequest(getMsgId (), parseDocumentPositionParam jsonValue)
+  | "textDocument/prepareRename" -> PrepareRenameRequest(getMsgId (), parseDocumentPositionParam jsonValue)
   | "textDocument/rename" -> RenameRequest(getMsgId (), parseRenameParam jsonValue)
 
+  | "$/syntaxTree" -> SyntaxTreeRequest(getMsgId (), parseSyntaxTreeParam jsonValue)
   | "$/response" -> RegisterCapabilityResponse(getMsgId ())
   | "$/cancelRequest" -> CancelRequestNotification(jsonValue |> jFind2 "params" "id")
 
@@ -666,7 +686,9 @@ let private processNext host : LspIncome -> CancellationToken -> ProcessResult =
         current <- wa
 
         result
-        |> List.map (fun text -> jOfObj [ "label", JString text ])
+        |> List.map (fun (kind, text) ->
+          jOfObj [ "kind", JNumber kind
+                   "label", JString text ])
         |> jArrayOrNull)
 
       Continue
@@ -690,6 +712,8 @@ let private processNext host : LspIncome -> CancellationToken -> ProcessResult =
       handleRequestWith "references" msgId (fun () ->
         let result, wa =
           WorkspaceAnalysis.references p.Uri p.Pos p.IncludeDecl current
+
+        current <- wa
 
         result
         |> List.map (fun (Uri uri, range) ->
@@ -769,6 +793,35 @@ let private processNext host : LspIncome -> CancellationToken -> ProcessResult =
 
       Continue
 
+    | PrepareRenameRequest (msgId, p) ->
+      handleRequestWith "prepareRename" msgId (fun () ->
+        // Dry-run rename operation.
+        let changes, _ =
+          WorkspaceAnalysis.rename p.Uri p.Pos "_" current
+
+        let rangeOpt =
+          changes
+          |> List.tryPick (fun (uri, changes) ->
+            if uri = p.Uri then
+              changes
+              |> List.tryPick (fun (range, _) ->
+                let l, r = range
+
+                // Range.contains?
+                // FIXME: Don't compare UTF-16 position and UTF-8 position
+                if l <= p.Pos && p.Pos <= r then
+                  Some range
+                else
+                  None)
+            else
+              None)
+
+        match rangeOpt with
+        | Some range -> jOfRange range
+        | None -> JNull)
+
+      Continue
+
     | RenameRequest (msgId, p) ->
       handleRequestWith "rename" msgId (fun () ->
         let changes, wa =
@@ -780,6 +833,16 @@ let private processNext host : LspIncome -> CancellationToken -> ProcessResult =
           jWorkspaceEdit changes
         else
           JNull)
+
+      Continue
+
+    | SyntaxTreeRequest (msgId, uri) ->
+      handleRequestWith "$/syntaxTree" msgId (fun () ->
+        let contentOpt = WorkspaceAnalysis.syntaxTree uri current
+
+        match contentOpt with
+        | Some content -> jOfObj [ "content", JString content ]
+        | None -> JNull)
 
       Continue
 

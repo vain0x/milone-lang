@@ -7,17 +7,20 @@ open MiloneShared.UtilParallel
 open MiloneShared.UtilSymbol
 open MiloneSyntax.Syntax
 open MiloneSyntax.Tir
-open MiloneSyntaxTypes.SyntaxApiTypes
-open MiloneSyntaxTypes.SyntaxTypes
-open MiloneSyntaxTypes.TirTypes
+open MiloneSyntax.SyntaxApiTypes
+open MiloneSyntax.SyntaxTypes
+open MiloneSyntax.TirTypes
 open Std.StdMap
 open Std.StdSet
 
 module C = Std.StdChar
 module S = Std.StdString
-module AstBundle = MiloneSyntax.AstBundle
+module AstBundle = MiloneLspServer.AstBundle
+module Manifest = MiloneSyntax.Manifest
 module SyntaxApi = MiloneSyntax.SyntaxApi
 module SyntaxTokenize = MiloneSyntax.SyntaxTokenize
+module SyntaxTreeGen = MiloneSyntax.SyntaxTreeGen
+module NameRes = MiloneSyntax.NameRes
 module TySystem = MiloneSyntax.TySystem
 
 // Hide compiler-specific types from other modules.
@@ -30,6 +33,34 @@ type LTokenList = private LTokenList of TokenizeFullResult
 
 [<NoEquality; NoComparison>]
 type LSyntaxData = private LSyntaxData of ModuleSyntaxData
+
+/// Text with line-oriented indexes.
+[<RequireQualifiedAccess; NoEquality; NoComparison>]
+type LineBuffer =
+  private
+    { Text: string
+      LineCount: int
+      /// Line index → byte range.
+      OffsetMap: TreeMap<int, int * int> }
+
+// (this includes Text, FullTokens and SyntaxTree unlike SyntaxData)
+[<RequireQualifiedAccess; NoEquality; NoComparison>]
+type LSyntax2 =
+  { DocId: DocId
+    Text: SourceCode
+    LineBuffer: LineBuffer
+    FullTokens: TokenizeFullResult
+    Ast: ARoot
+    SyntaxTree: SyntaxTree
+    Errors: ModuleSyntaxError list }
+
+/// Identifier of a document.
+[<RequireQualifiedAccess; NoEquality; NoComparison>]
+type private Doc =
+  { DocId: DocId
+
+    /// `[ ProjectName; ModuleName ]`
+    ModulePath: string list }
 
 // -----------------------------------------------
 // Utils
@@ -186,20 +217,14 @@ let private parseAllTokens projectName moduleName docId allTokens =
     allTokens
     |> List.filter (fun (token, _) -> token |> isTrivia |> not)
 
-  let kind =
-    SyntaxApi.getModuleKind projectName moduleName
+  let m =
+    SyntaxApi.parseModule docId projectName moduleName tokens
 
-  let docId, _, ast, errors = SyntaxApi.parseModule docId kind tokens
+  { m with Tokens = allTokens }
 
-  docId, allTokens, ast, errors
-
-let private tyDisplayFn (tirCtx: TirCtx) ty =
-  let getTyName tySerial =
-    tirCtx.Tys
-    |> TMap.tryFind tySerial
-    |> Option.map tyDefToName
-
-  TySystem.tyDisplay getTyName ty
+let private makeDoc (m: ModuleSyntaxData) : Doc =
+  { DocId = m.DocId
+    ModulePath = [ m.ProjectName; m.ModuleName ] }
 
 // -----------------------------------------------
 // Abstraction
@@ -283,30 +308,96 @@ module LSyntaxData =
     |> LSyntaxData
 
   let getDocId syntaxData =
-    let (LSyntaxData (docId, _, _, _)) = syntaxData
-    docId
+    let (LSyntaxData m) = syntaxData
+    m.DocId
 
   let getTokens syntaxData =
-    let (LSyntaxData (_, tokens, _, _)) = syntaxData
-    LTokenList tokens
+    let (LSyntaxData m) = syntaxData
+    LTokenList m.Tokens
 
-  let findModuleDefs (s: LSyntaxData) : string list =
-    let (LSyntaxData (docId, _, ast, _)) = s
+  let findModuleDefs syntaxData : string list =
+    let (LSyntaxData m) = syntaxData
 
-    lowerARoot docId [] ast
+    lowerARoot (makeDoc m) [] m.Ast
     |> List.choose (fun (symbol, defOrUse, _) ->
       match symbol, defOrUse with
       | DModuleSymbol ([ name ]), Def -> Some name
       | _ -> None)
 
-  let findModuleSynonyms (s: LSyntaxData) : (string * ModulePath * Loc) list =
-    let (LSyntaxData (docId, tokens, ast, _)) = s
+  let findModuleSynonyms syntaxData : (string * ModulePath * Loc) list =
+    let (LSyntaxData m) = syntaxData
 
-    lowerARoot docId [] ast
+    lowerARoot (makeDoc m) [] m.Ast
     |> List.choose (fun (symbol, _, loc2) ->
-      match symbol, resolveLoc2 docId tokens loc2 with
+      match symbol, resolveLoc2 m.DocId m.Tokens loc2 with
       | DModuleSynonymDef (synonym, modulePath), Some loc -> Some(synonym, modulePath, loc)
       | _ -> None)
+
+module internal LineBuffer =
+  let compute (text: string) : LineBuffer =
+    let rec computeLoop acc y (i: int) =
+      if i < text.Length then
+        let j = text.IndexOf('\n', i)
+
+        if j >= i then
+          let r = if i < j && text.[j - 1] = '\r' then j - 1 else j
+          computeLoop ((y, (i, r)) :: acc) (y + 1) (j + 1)
+        else
+          let acc = (y, (i, text.Length)) :: acc
+          y + 1, acc
+      else
+        y, acc
+
+    let lineCount, acc = computeLoop [] 0 0
+
+    { Text = text
+      LineCount = lineCount
+      OffsetMap = TMap.ofList compare acc }
+
+  let lineRangeAt index (buf: LineBuffer) =
+    buf.OffsetMap |> TMap.tryFind index
+
+  let lineStringAt index (buf: LineBuffer) =
+    match buf.OffsetMap |> TMap.tryFind index with
+    | Some (l, r) ->
+      let r = if l < r && buf.Text.[r - 1] = '\r' then r - 1 else r
+      buf.Text.[l..r - 1]
+
+    | None -> ""
+
+  let posToIndex (pos: Pos) (buf: LineBuffer) =
+    let y, x = pos
+
+    match lineRangeAt y buf with
+    | Some (l, r) -> Some(l + min x r)
+    | _ -> None
+
+  let stringBetween (range: Range) (buf: LineBuffer) =
+    let startPos, endPos = range
+
+    match posToIndex startPos buf, posToIndex endPos buf with
+    | Some l, Some r when l <= r -> buf.Text[l..r - 1]
+    | _ -> ""
+
+module internal LSyntax2 =
+  let private host = tokenizeHostNew ()
+
+  let parse projectName moduleName docId (text: SourceCode) : LSyntax2 =
+    let fullTokens = SyntaxTokenize.tokenizeAll host text
+
+    let m =
+      parseAllTokens projectName moduleName docId fullTokens
+
+    let syntax: LSyntax2 =
+      { DocId = docId
+        Text = text
+        LineBuffer = LineBuffer.compute text
+        FullTokens = fullTokens
+        Ast = m.Ast
+        SyntaxTree = SyntaxTreeGen.genSyntaxTree fullTokens m.UnmodifiedAst
+        Errors = m.Errors }
+
+    syntax
 
 module BundleResult =
   let getErrors (b: BundleResult) = b.Errors
@@ -318,9 +409,12 @@ module BundleResult =
 /// Operations for project analysis.
 [<RequireQualifiedAccess; NoEquality; NoComparison>]
 type ProjectAnalysisHost =
-  { GetDocVersion: DocId -> DocVersion
+  { ComputeDocId: ProjectName * ModuleName * DocId -> DocId
+    GetCoreDocId: ModuleName -> DocId
+    GetDocVersion: DocId -> DocVersion
     Tokenize: DocId -> DocVersion * LTokenList
     Parse: DocId -> (DocVersion * LSyntaxData) option
+    Parse2: DocId -> LSyntax2 option
 
     MiloneHome: FilePath
     ReadTextFile: string -> Future<string option> }
@@ -331,9 +425,12 @@ type ProjectAnalysis =
   private
     { ProjectDir: ProjectDir
       ProjectName: ProjectName
+      EntryDoc: DocId * ProjectName * ModuleName
       NewTokenizeCache: TreeMap<DocId, LTokenList>
       NewParseResults: (DocVersion * LSyntaxData) list
+      Db: SyntaxApi.SyntaxAnalysisDb
       BundleCache: BundleResult option
+      TirSymbolsCache: SymbolOccurrence list option
       Host: ProjectAnalysisHost }
 
 let private emptyTokenizeCache: TreeMap<DocId, LTokenList> = TMap.empty Symbol.compare
@@ -358,68 +455,11 @@ let private parseWithCache docId (pa: ProjectAnalysis) = pa.Host.Parse docId |> 
 [<RequireQualifiedAccess; NoEquality; NoComparison>]
 type BundleResult =
   private
-    { ProgramOpt: (TProgram * TirCtx) option
+    { Program: TProgram
+      TirCtxOpt: TirCtx option
       Errors: (string * Loc) list
       DocVersions: (DocId * DocVersion) list
       ParseResults: (DocVersion * LSyntaxData) list }
-
-let private doBundle (pa: ProjectAnalysis) : BundleResult =
-  let projectDir = pa.ProjectDir
-  let projectName = pa.ProjectName
-  let miloneHome = pa.Host.MiloneHome
-
-  let fetchModuleUsingCache _ (projectName: string) (moduleName: string) =
-    let docId =
-      AstBundle.computeDocId projectName moduleName
-
-    match pa |> parseWithCache docId with
-    | None -> Future.just None
-    | Some (LSyntaxData syntaxData) -> Future.just (Some syntaxData)
-
-  let syntaxCtx =
-    let host: FetchModuleHost =
-      { EntryProjectDir = projectDir
-        EntryProjectName = projectName
-        MiloneHome = miloneHome
-        ReadTextFile = pa.Host.ReadTextFile
-        WriteLog = fun _ -> () }
-
-    SyntaxApi.newSyntaxCtx host
-    |> SyntaxApi.SyntaxCtx.withFetchModule fetchModuleUsingCache
-
-  let layers, result =
-    SyntaxApi.performSyntaxAnalysis syntaxCtx
-
-  let docVersions =
-    layers
-    |> List.collect (fun modules ->
-      modules
-      |> List.map (fun (docId, _, _, _) -> docId, getVersion docId pa))
-
-  let parseResults =
-    layers
-    |> List.collect (fun modules ->
-      modules
-      |> List.map (fun ((docId, _, _, _) as syntaxData) ->
-        let v = getVersion docId pa
-        v, LSyntaxData syntaxData))
-
-  match result with
-  | SyntaxAnalysisOk (modules, tirCtx) ->
-    { ProgramOpt = Some(modules, tirCtx)
-      Errors = []
-      DocVersions = docVersions
-      ParseResults = parseResults }
-
-  | SyntaxAnalysisError (errors, tirCtxOpt) ->
-    { ProgramOpt =
-        match tirCtxOpt with
-        | Some tirCtx -> Some([], tirCtx)
-        | None -> None
-
-      Errors = errors
-      DocVersions = docVersions
-      ParseResults = parseResults }
 
 let private bundleWithCache (pa: ProjectAnalysis) : BundleResult * ProjectAnalysis =
   let docsAreAllFresh docVersions =
@@ -438,19 +478,89 @@ let private bundleWithCache (pa: ProjectAnalysis) : BundleResult * ProjectAnalys
     // | Some _ -> eprintfn "bundle cache invalidated"
     // | _ -> eprintfn "bundle cache not found"
 
-    let result = doBundle pa
+    let writeLog: string -> unit = ignore
+
+    let fetchModuleUsingCache (r: AstBundle.FetchModuleParams) : Future<ModuleSyntaxData option> =
+      let docId =
+        pa.Host.ComputeDocId(r.ProjectName, r.ModuleName, r.Origin)
+
+      match pa |> parseWithCache docId with
+      | None -> Future.just None
+      | Some (LSyntaxData m) -> Future.just (Some m)
+
+    let layers, bundleErrors =
+      AstBundle.bundle fetchModuleUsingCache pa.EntryDoc
+
+    let oldDocs =
+      match cacheOpt with
+      | Some cache -> cache.DocVersions
+      | None -> []
+
+    let newDocMap =
+      layers |> List.collect (fun modules -> modules |> List.map (fun (s: ModuleSyntaxData, _) -> s.DocId))
+      |> List.map (fun docId -> docId, getVersion docId pa)
+      |> TMap.ofList Symbol.compare
+
+    let invalidatedDocIds =
+      oldDocs
+      |> List.filter (fun (docId, u) ->
+        match newDocMap |> TMap.tryFind docId with
+        | Some v -> u <> v
+        | _ -> true
+      )
+      |> List.map fst
+
+    let result, modules, tirCtxOpt, db =
+      if bundleErrors |> List.isEmpty |> not then
+        Error bundleErrors, [], None, pa.Db
+      else
+        let layers2 =
+          layers
+          |> List.map (fun modules -> modules |> List.map (fun (_, m) -> m))
+
+        SyntaxApi.performSyntaxAnalysisWithCache pa.Db writeLog layers2 invalidatedDocIds
+
+    let docVersions =
+      layers
+      |> List.collect (fun modules ->
+        modules
+        |> List.map (fun (_, (m: ModuleSyntaxData2)) -> m.DocId, getVersion m.DocId pa))
+
+    let parseResults =
+      layers
+      |> List.collect (fun modules ->
+        modules
+        |> List.map (fun ((m: ModuleSyntaxData), (_: ModuleSyntaxData2)) ->
+          let v = getVersion m.DocId pa
+          v, LSyntaxData m))
+
+    let result : BundleResult =
+      let errors =
+        match result with
+        | Ok () -> []
+        | Error it -> it
+
+      { Program = modules
+        TirCtxOpt = tirCtxOpt
+        Errors = errors
+        DocVersions = docVersions
+        ParseResults = parseResults }
+
+    // let result = doBundle pa
 
     let pa =
       { pa with
           NewTokenizeCache =
             result.ParseResults
             |> List.fold
-                 (fun map (_, syntaxData) ->
-                   let (LSyntaxData (docId, tokens, _, _)) = syntaxData
-                   map |> TMap.add docId (LTokenList tokens))
-                 pa.NewTokenizeCache
+                (fun map (_, syntaxData) ->
+                  let (LSyntaxData m) = syntaxData
+                  map |> TMap.add m.DocId (LTokenList m.Tokens))
+                pa.NewTokenizeCache
           NewParseResults = List.append result.ParseResults pa.NewParseResults
-          BundleCache = Some result }
+          Db = db
+          BundleCache = Some result
+          TirSymbolsCache = None }
 
     result, pa
 
@@ -511,123 +621,136 @@ type Symbol =
   | ValueSymbol of ValueSymbol
   | TySymbol of TySymbol
   | ModuleSymbol of ModulePath
+  // (this is not a symbol though)
+  | RecordOccurrence
 
 type private SymbolOccurrence = Symbol * DefOrUse * Ty option * Loc2
 
-let private lowerATy docId acc ty : DSymbolOccurrence list =
-  let onTy acc ty = lowerATy docId acc ty
+let private lowerATy (doc: Doc) acc ty : DSymbolOccurrence list =
+  let onTy acc ty = lowerATy doc acc ty
   let onTys acc tys = tys |> List.fold onTy acc
 
   match ty with
   | AMissingTy _
   | AVarTy _ -> acc
 
-  | AAppTy (_, Name (name, pos), tyArgs, _) ->
+  | AAppTy (_, None, _) -> acc
+
+  | AAppTy (_, Some (Name (name, pos)), tyArgList) ->
     let acc =
-      (DTySymbol name, Use, At(Loc.ofDocPos docId pos))
+      (DTySymbol name, Use, At(Loc.ofDocPos doc.DocId pos))
       :: acc
+
+    let tyArgs =
+      match tyArgList with
+      | Some (_, tyArgs, _) -> tyArgs
+      | None -> []
 
     onTys acc tyArgs
 
+  | AParenTy (_, bodyTy, _) -> onTy acc bodyTy
   | ASuffixTy (bodyTy, _) -> onTy acc bodyTy
   | ATupleTy (itemTys, _) -> itemTys |> List.fold onTy acc
-  | AFunTy (l, r, _) -> acc |> up onTy l |> up onTy r
+  | AFunTy (l, _, r) -> acc |> up onTy l |> up onTy r
 
-let private lowerAPat docId acc pat : DSymbolOccurrence list =
-  let onTy acc ty = lowerATy docId acc ty
-  let onPat acc pat = lowerAPat docId acc pat
+let private lowerAPat (doc: Doc) acc pat : DSymbolOccurrence list =
+  let onTy acc ty = lowerATy doc acc ty
+  let onPat acc pat = lowerAPat doc acc pat
   let onPats acc pats = pats |> List.fold onPat acc
-  let toLoc (y, x) = At(Loc(docId, y, x))
+  let toLoc (y, x) = At(Loc(doc.DocId, y, x))
 
   match pat with
   | AMissingPat _
   | ALitPat _
   | AIdentPat _ -> acc
 
-  | AListPat (itemPats, _) -> acc |> up onPats itemPats
+  | AParenPat (_, bodyPat, _) -> lowerAPat doc acc bodyPat
+  | AListPat (_, itemPats, _) -> acc |> up onPats itemPats
   | ANavPat (l, _, _) -> acc |> up onPat l
 
-  | AAppPat (l, r, _)
-  | AConsPat (l, r, _) -> acc |> up onPat l |> up onPat r
+  | AAppPat (l, _, r)
+  | AConsPat (l, _, r) -> acc |> up onPat l |> up onPat r
 
-  | ATuplePat (itemPats, _) -> acc |> up onPats itemPats
+  | ATuplePat (_, itemPats, _) -> acc |> up onPats itemPats
   | AAsPat (bodyPat, _, _) -> acc |> up onPat bodyPat
-  | AAscribePat (l, r, _) -> acc |> up onPat l |> up onTy r
-  | AOrPat (l, r, _) -> acc |> up onPat l |> up onPat r
+  | AAscribePat (l, _, r) -> acc |> up onPat l |> up onTy r
+  | AOrPat (l, _, r) -> acc |> up onPat l |> up onPat r
 
-let private lowerALetContents docId acc contents =
-  let onTy acc ty = lowerATy docId acc ty
-  let onPat acc pat = lowerAPat docId acc pat
+let private lowerALetContents (doc: Doc) acc contents =
+  let onTy acc ty = lowerATy doc acc ty
+  let onPat acc pat = lowerAPat doc acc pat
   let onPats acc pats = pats |> List.fold onPat acc
-  let onExpr acc expr = lowerAExpr docId acc expr
-  let toLoc (y, x) = At(Loc(docId, y, x))
+  let onExpr acc expr = lowerAExpr doc acc expr
+  let toLoc (y, x) = At(Loc(doc.DocId, y, x))
 
   match contents with
-  | ALetContents.LetFun (_, _, name, argPats, resultTyOpt, body) ->
+  | ALetContents.LetFun (_, _, name, argPats, resultTyOpt, _, body) ->
     let (Name (name, pos)) = name
     let acc = (DFunSymbol name, Def, toLoc pos) :: acc
 
     let acc =
-      acc |> upOpt onTy (resultTyOpt |> Option.map fst)
+      acc |> upOpt onTy (resultTyOpt |> Option.map snd)
 
     acc |> up onPats argPats |> up onExpr body
 
-  | ALetContents.LetVal (_, pat, init) -> acc |> up onPat pat |> up onExpr init
+  | ALetContents.LetVal (_, pat, _, init) -> acc |> up onPat pat |> up onExpr init
 
-let private lowerAExpr docId acc expr : DSymbolOccurrence list =
-  let onTy acc ty = lowerATy docId acc ty
-  let onPat acc pat = lowerAPat docId acc pat
-  let onExpr acc expr = lowerAExpr docId acc expr
+let private lowerAExpr (doc: Doc) acc expr : DSymbolOccurrence list =
+  let onTy acc ty = lowerATy doc acc ty
+  let onPat acc pat = lowerAPat doc acc pat
+  let onExpr acc expr = lowerAExpr doc acc expr
   let onExprOpt acc exprOpt = exprOpt |> Option.fold onExpr acc
   let onExprs acc exprs = exprs |> List.fold onExpr acc
 
   let isModuleSynonymLike (s: string) = s.Length = 1 && C.isUpper s.[0]
   let isModuleNameLike (s: string) = s.Length >= 1 && C.isUpper s.[0]
   let isModulePathLike path = path |> List.forall isModuleNameLike
-  let toLoc (y, x) = At(Loc(docId, y, x))
+  let toLoc (y, x) = At(Loc(doc.DocId, y, x))
 
   match expr with
   | AMissingExpr _
   | ALitExpr _
   | AIdentExpr _ -> acc
 
-  | AListExpr (items, _) -> onExprs acc items
+  | AParenExpr (_, body, _) -> lowerAExpr doc acc body
+  | AListExpr (_, items, _) -> onExprs acc items
 
-  | ARecordExpr (baseOpt, fields, _) ->
+  | ARecordExpr (_, baseOpt, fields, _) ->
     acc
-    |> up onExprOpt baseOpt
-    |> up (List.fold (fun acc (_, init, _) -> onExpr acc init)) fields
+    |> up onExprOpt (baseOpt |> Option.map fst)
+    |> up (List.fold (fun acc (_, _, init) -> onExpr acc init)) fields
 
-  | AIfExpr (cond, body, alt, _) ->
+  | AIfExpr (_, cond, _, body, alt) ->
     acc
     |> up onExpr cond
     |> up onExpr body
-    |> up onExprOpt alt
+    |> up onExprOpt (alt |> Option.map snd)
 
-  | AMatchExpr (cond, arms, _) ->
+  | AMatchExpr (_, cond, _, arms) ->
     acc
     |> up onExpr cond
     |> up
          (List.fold (fun acc arm ->
-           let (AArm (_, guard, body, _)) = arm
-           acc |> up onExprOpt guard |> up onExpr body))
+           let (_, pat, guard, _, body) = arm
+
+           acc
+           |> up onPat pat
+           |> up onExprOpt (guard |> Option.map snd)
+           |> up onExpr body))
          arms
 
-  | AFunExpr (argPats, body, pos) ->
+  | AFunExpr (pos, argPats, _, body) ->
     ((DFunSymbol "<fun>", Def, toLoc pos) :: acc)
     |> upList onPat argPats
     |> up onExpr body
 
   | ANavExpr (l, _, _) ->
     match l with
-    | AIdentExpr (Name (l, pos), []) when l.Length = 1 && C.isUpper l.[0] ->
-      (DModuleSymbol [ Symbol.toString docId
-                       l ],
-       Use,
-       toLoc pos)
+    | AIdentExpr (Name (l, pos), None) when l.Length = 1 && C.isUpper l.[0] ->
+      (DModuleSymbol(List.append doc.ModulePath [ l ]), Use, toLoc pos)
       :: acc
 
-    | ANavExpr (AIdentExpr (p, []), m, _) ->
+    | ANavExpr (AIdentExpr (p, None), _, Some m) ->
       let path = [ p; m ] |> List.map nameToIdent
 
       if isModulePathLike path then
@@ -640,42 +763,46 @@ let private lowerAExpr docId acc expr : DSymbolOccurrence list =
 
     | _ -> onExpr acc l
 
-  | AIndexExpr (l, r, _) -> onExprs acc [ l; r ]
-  | AUnaryExpr (_, arg, _) -> onExpr acc arg
-  | ABinaryExpr (_, l, r, _) -> onExprs acc [ l; r ]
-  | ARangeExpr (l, r, _) -> onExprs acc [ l; r ]
-  | ATupleExpr (items, _) -> onExprs acc items
+  | AIndexExpr (l, _, _, r, _) -> onExprs acc [ l; r ]
+  | AUnaryExpr (_, _, arg) -> onExpr acc arg
+  | ABinaryExpr (_, l, _, r) -> onExprs acc [ l; r ]
+  | ARangeExpr (l, _, r) -> onExprs acc [ l; r ]
+  | ATupleExpr (_, items, _) -> onExprs acc items
 
-  | AAscribeExpr (l, r, _) -> acc |> up onExpr l |> up onTy r
+  | AAscribeExpr (l, _, r) -> acc |> up onExpr l |> up onTy r
   | ASemiExpr (stmts, last, _) -> acc |> up onExprs stmts |> up onExpr last
 
-  | ALetExpr (contents, next, _) ->
-    let acc = lowerALetContents docId acc contents
-    lowerAExpr docId acc next
+  | ALetExpr (_, contents, nextOpt) ->
+    let acc = lowerALetContents doc acc contents
 
-let private lowerADecl docId acc decl : DSymbolOccurrence list =
-  let onTy acc ty = lowerATy docId acc ty
-  let onPat acc pat = lowerAPat docId acc pat
-  let onExpr acc expr = lowerAExpr docId acc expr
-  let onDecl acc decl = lowerADecl docId acc decl
+    match nextOpt with
+    | Some next -> lowerAExpr doc acc next
+    | None -> acc
+
+let private lowerADecl (doc: Doc) acc decl : DSymbolOccurrence list =
+  let onTy acc ty = lowerATy doc acc ty
+  let onPat acc pat = lowerAPat doc acc pat
+  let onExpr acc expr = lowerAExpr doc acc expr
+  let onDecl acc decl = lowerADecl doc acc decl
+  let docId = doc.DocId
   let toLoc (y, x) = At(Loc(docId, y, x))
 
   match decl with
   | AExprDecl expr -> onExpr acc expr
 
-  | ALetDecl (contents, _) -> lowerALetContents docId acc contents
+  | ALetDecl (_, contents) -> lowerALetContents doc acc contents
 
-  | ATySynonymDecl (_, name, _, _, _) ->
+  | ATySynonymDecl (_, _, name, _, _, _) ->
     let (Name (name, pos)) = name
     (DTySymbol name, Def, toLoc pos) :: acc
 
-  | AUnionTyDecl (_, name, _, variants, _) ->
+  | AUnionTyDecl (_, _, name, _, _, variants) ->
     let (Name (unionIdent, pos)) = name
 
     let acc =
       variants
       |> List.fold
-           (fun acc (AVariant (name, _, _)) ->
+           (fun acc (_, name, _) ->
              let (Name (ident, pos)) = name
 
              (DVariantSymbol(ident, unionIdent, docId), Def, toLoc pos)
@@ -684,7 +811,7 @@ let private lowerADecl docId acc decl : DSymbolOccurrence list =
 
     (DTySymbol unionIdent, Def, toLoc pos) :: acc
 
-  | ARecordTyDecl (_, name, _, fields, _) ->
+  | ARecordTyDecl (_, _, name, _, _, _, fields, _) ->
     let (Name (recordIdent, pos)) = name
 
     let acc =
@@ -699,19 +826,16 @@ let private lowerADecl docId acc decl : DSymbolOccurrence list =
 
     (DTySymbol recordIdent, Def, toLoc pos) :: acc
 
-  | AOpenDecl (path, pos) ->
+  | AOpenDecl (pos, path) ->
     let pos = path |> pathToPos pos
 
     (DOpenUse(path |> List.map nameToIdent), Use, toLoc pos)
     :: (DModuleSymbol(path |> List.map nameToIdent), Use, toLoc pos)
        :: acc
 
-  | AModuleSynonymDecl (Name (synonym, identPos), path, pos) ->
+  | AModuleSynonymDecl (pos, Name (synonym, identPos), _, path) ->
     let acc =
-      (DModuleSymbol [ Symbol.toString docId
-                       synonym ],
-       Def,
-       toLoc identPos)
+      (DModuleSymbol(List.append doc.ModulePath [ synonym ]), Def, toLoc identPos)
       :: acc
 
     let pos = path |> pathToPos pos
@@ -720,29 +844,28 @@ let private lowerADecl docId acc decl : DSymbolOccurrence list =
     (DModuleSynonymDef(synonym, path), Use, toLoc pos)
     :: (DModuleSymbol path, Use, toLoc pos) :: acc
 
-  | AModuleDecl (_, _, Name (name, pos), decls, _) ->
+  | AModuleDecl (_, _, _, Name (name, pos), _, decls) ->
     let acc =
       (DModuleSymbol [ name ], Def, toLoc pos) :: acc
 
     acc |> up (List.fold onDecl) decls
 
-  | AAttrDecl (_, next, _) -> lowerADecl docId acc next
+  | AAttrDecl (_, _, _, next) -> lowerADecl doc acc next
 
-let private lowerARoot (docId: DocId) acc root : DSymbolOccurrence list =
-  let toLoc (y, x) = At(Loc(docId, y, x))
+let private lowerARoot (doc: Doc) acc root : DSymbolOccurrence list =
+  let toLoc (y, x) = At(Loc(doc.DocId, y, x))
   let (ARoot (headOpt, decls)) = root
 
   let pos: Pos =
     match headOpt with
-    | Some (_, pos) -> pos
+    | Some (pos, _) -> pos
     | _ -> 0, 0
 
   let acc =
-    // #abusingDocId
-    let path = Symbol.toString docId |> S.split "."
-    (DModuleSymbol path, Def, toLoc pos) :: acc
+    (DModuleSymbol doc.ModulePath, Def, toLoc pos)
+    :: acc
 
-  acc |> up (List.fold (lowerADecl docId)) decls
+  acc |> up (List.fold (lowerADecl doc)) decls
 
 let private lowerTPat acc pat : SymbolOccurrence list =
   match pat with
@@ -804,7 +927,9 @@ let private lowerTExpr acc expr =
            |> up lowerTExpr body))
          arms
 
-  | TRecordExpr (baseOpt, fields, ty, _) ->
+  | TRecordExpr (baseOpt, fields, ty, loc) ->
+    let acc = (RecordOccurrence, Def, Some ty, At loc) :: acc
+
     acc
     |> up (Option.fold lowerTExpr) baseOpt
     |> up
@@ -828,6 +953,7 @@ let private lowerTExpr acc expr =
     match exprToTy l with
     | Ty (RecordTk (tySerial, _), _) ->
       (FieldSymbol(tySerial, r), Use, Some ty, At loc)
+      :: (RecordOccurrence, Use, Some ty, At loc)
       :: acc
     | _ -> acc
 
@@ -844,7 +970,9 @@ let private lowerTStmt acc stmt =
 
   | TLetValStmt (pat, init, _) -> acc |> up lowerTPat pat |> up lowerTExpr init
 
-  | TLetFunStmt (callee, _, _, argPats, body, loc) ->
+  | TLetFunStmt f ->
+    let callee, argPats, body, loc = f.FunSerial, f.Params, f.Body, f.Loc
+
     let tyFunN argTys resultTy : Ty =
       argTys
       |> List.fold (fun funTy argTy -> tyFun argTy funTy) resultTy
@@ -905,21 +1033,23 @@ let private resolveLoc (symbols: SymbolOccurrence list) pa =
   |> fst
   |> List.choose id
 
-let private findTyInStmt (pa: ProjectAnalysis) (modules: TProgram) (tokenLoc: Loc) =
-  let symbols = lowerTModules [] modules
+let private paGetTirSymbolsWithCache (pa: ProjectAnalysis) =
+  match pa.BundleCache, pa.TirSymbolsCache with
+  | _, Some it -> Some it, pa
 
-  resolveLoc symbols pa
-  |> List.tryPick (fun (_, _, tyOpt, loc) ->
-    match tyOpt with
-    | Some ty when Loc.equals loc tokenLoc -> Some ty
-    | _ -> None)
+  | Some b, _ ->
+    let symbols = lowerTModules [] b.Program
+    let pa = { pa with TirSymbolsCache = Some symbols }
+    Some symbols, pa
+
+  | _ -> None, pa
 
 let private collectSymbolsInExpr (pa: ProjectAnalysis) (modules: TProgram) (tirCtx: TirCtx) =
   let parseModule (m: TModule) =
     let docId = m.DocId
 
     match pa |> parseWithCache docId with
-    | Some (LSyntaxData (_, _, ast, _)) -> docId, ast
+    | Some (LSyntaxData m) -> m
     | None -> failwith "must be parsed"
 
   let variantNameMap =
@@ -980,8 +1110,8 @@ let private collectSymbolsInExpr (pa: ProjectAnalysis) (modules: TProgram) (tirC
     modules
     |> List.fold
          (fun acc m ->
-           let docId, ast = parseModule m
-           lowerARoot docId acc ast)
+           let m = parseModule m
+           lowerARoot (makeDoc m) acc m.Ast)
          []
 
   let tySymbols =
@@ -1036,8 +1166,10 @@ let private collectSymbolsInExpr (pa: ProjectAnalysis) (modules: TProgram) (tirC
 
 module Symbol =
   let name (b: BundleResult) (symbol: Symbol) =
-    match b.ProgramOpt with
-    | Some (modules, tirCtx) ->
+    let modules = b.Program
+
+    match b.TirCtxOpt with
+    | Some tirCtx ->
       match symbol with
       | DiscardSymbol _
       | PrimSymbol _ -> None // not implemented, completion need filter out
@@ -1075,17 +1207,26 @@ module Symbol =
           | RecordTyDef (name, _, _, _, _) -> Some name
           | _ -> None)
 
-      | ModuleSymbol (_) -> None // unimplemented
+      | ModuleSymbol _ // unimplemented
+      | RecordOccurrence -> None
     | None -> None
 
 // Provides fundamental operations as building block of queries.
 module ProjectAnalysis1 =
-  let create (projectDir: ProjectDir) (projectName: ProjectName) (host: ProjectAnalysisHost) : ProjectAnalysis =
+  let create
+    (entryDoc: DocId * ProjectName * ModuleName)
+    (projectDir: ProjectDir)
+    (projectName: ProjectName)
+    (host: ProjectAnalysisHost)
+    : ProjectAnalysis =
     { ProjectDir = projectDir
       ProjectName = projectName
+      EntryDoc = entryDoc
       NewTokenizeCache = emptyTokenizeCache
       NewParseResults = []
+      Db = SyntaxApi.SyntaxAnalysisDb.empty ()
       BundleCache = None
+      TirSymbolsCache = None
       Host = host }
 
   let withHost (host: ProjectAnalysisHost) pa : ProjectAnalysis = { pa with Host = host }
@@ -1103,26 +1244,730 @@ module ProjectAnalysis1 =
 
   let parse (docId: DocId) (pa: ProjectAnalysis) : LSyntaxData option * ProjectAnalysis = parseWithCache docId pa, pa
 
+  let parse2 (docId: DocId) (pa: ProjectAnalysis) : LSyntax2 option * ProjectAnalysis = pa.Host.Parse2 docId, pa
+
   let bundle (pa: ProjectAnalysis) : BundleResult * ProjectAnalysis = bundleWithCache pa
 
-  let documentSymbols (syntax: LSyntaxData) (_pa: ProjectAnalysis) =
-    let (LSyntaxData (docId, tokens, ast, _)) = syntax
+  let documentSymbols (s: LSyntaxData) (_pa: ProjectAnalysis) =
+    let (LSyntaxData m) = s
 
-    lowerARoot docId [] ast
+    lowerARoot (makeDoc m) [] m.Ast
     |> List.choose (fun (symbol, defOrUse, loc2) ->
-      match defOrUse, resolveLoc2 docId tokens loc2 with
+      match defOrUse, resolveLoc2 m.DocId m.Tokens loc2 with
       | Def, Some loc -> Some(symbol, defOrUse, loc)
       | _ -> None)
 
+  // collect symbols from AST
   let collectSymbols (b: BundleResult) (pa: ProjectAnalysis) =
-    match b.ProgramOpt with
+    match b.TirCtxOpt with
     | None -> None
-    | Some (modules, tirCtx) -> collectSymbolsInExpr pa modules tirCtx |> Some
+    | Some tirCtx -> collectSymbolsInExpr pa b.Program tirCtx |> Some
 
-  let getTyName (b: BundleResult) (tokenLoc: Loc) (pa: ProjectAnalysis) =
-    match b.ProgramOpt with
-    | None -> None
-    | Some (modules, tirCtx) ->
-      match findTyInStmt pa modules tokenLoc with
-      | None -> Some None
-      | Some ty -> tyDisplayFn tirCtx ty |> Some |> Some
+  let getTyName (tokenLoc: Loc) (pa: ProjectAnalysis) =
+    let symbolsOpt, pa = paGetTirSymbolsWithCache pa
+    let symbols = Option.defaultValue [] symbolsOpt
+
+    let resultOpt =
+      resolveLoc symbols pa
+      |> List.tryPick (fun (_, _, tyOpt, loc) ->
+        match tyOpt with
+        | Some ty when Loc.equals loc tokenLoc -> Some ty
+        | _ -> None)
+      |> Option.map TySystem.tyDisplay
+      |> Some
+
+    resultOpt, pa
+
+// -----------------------------------------------
+// Completion
+// -----------------------------------------------
+
+// Rough, incomplete implementation of completion feature.
+module internal ProjectAnalysisCompletion =
+  open MiloneLspServer.Util
+
+  // #CompletionItemKind
+  module private Kind =
+    [<Literal>]
+    let Text = 1
+
+    [<Literal>]
+    let Method = 2
+
+    [<Literal>]
+    let Function = 3
+
+    [<Literal>]
+    let Constructor = 4
+
+    [<Literal>]
+    let Field = 5
+
+    [<Literal>]
+    let Variable = 6
+
+    [<Literal>]
+    let Class = 7
+
+    [<Literal>]
+    let Interface = 8
+
+    [<Literal>]
+    let Module = 9
+
+    [<Literal>]
+    let Property = 10
+
+    [<Literal>]
+    let Unit = 11
+
+    [<Literal>]
+    let Value = 12
+
+    [<Literal>]
+    let Enum = 13
+
+    [<Literal>]
+    let Keyword = 14
+
+    [<Literal>]
+    let Snippet = 15
+
+    [<Literal>]
+    let Color = 16
+
+    [<Literal>]
+    let File = 17
+
+    [<Literal>]
+    let Reference = 18
+
+    [<Literal>]
+    let Folder = 19
+
+    [<Literal>]
+    let EnumMember = 20
+
+    [<Literal>]
+    let Constant = 21
+
+    [<Literal>]
+    let Struct = 22
+
+    [<Literal>]
+    let Event = 23
+
+    [<Literal>]
+    let Operator = 24
+
+    [<Literal>]
+    let TypeParameter = 25
+
+  module private Range =
+    let isTouched (pos: Pos) (range: Range) =
+      let s, t = range
+      Pos.compare s pos <= 0 && Pos.compare pos t <= 0
+
+    let start ((s, _): Range) = s
+    let endPos ((_, t): Range) = t
+
+  module private SyntaxElement =
+    let kind element =
+      match element with
+      | SyntaxToken (kind, _)
+      | SyntaxNode (kind, _, _) -> kind
+
+    let range element =
+      match element with
+      | SyntaxToken (_, range)
+      | SyntaxNode (_, range, _) -> range
+
+    let children element =
+      match element with
+      | SyntaxToken _ -> []
+      | SyntaxNode (_, _, children) -> children
+
+    let endPos element = element |> range |> Range.endPos
+
+  let private isPatLike kind =
+    match kind with
+    | SyntaxKind.LiteralPat
+    | SyntaxKind.WildcardPat
+    | SyntaxKind.VarPat
+    | SyntaxKind.PathPat
+    | SyntaxKind.ParenPat
+    | SyntaxKind.ListPat
+    | SyntaxKind.WrapPat
+    | SyntaxKind.ConsPat
+    | SyntaxKind.AscribePat
+    | SyntaxKind.TuplePat
+    | SyntaxKind.AsPat
+    | SyntaxKind.OrPat -> true
+    | _ -> false
+
+  let private findVarsInPat pat =
+    let rec patRec acc pat =
+      let acc =
+        SyntaxElement.children pat |> List.fold patRec acc
+
+      match SyntaxElement.kind pat with
+      | SyntaxKind.VarPat
+      | SyntaxKind.AsPat ->
+        match pat
+              |> SyntaxElement.children
+              |> List.tryFind (fun node ->
+                match SyntaxElement.kind node with
+                | SyntaxKind.Ident -> true
+                | _ -> false)
+          with
+        | Some it -> it :: acc
+        | None -> acc
+
+      | _ -> acc
+
+    patRec [] pat
+
+  let resolveUnqualifiedAsValue docId text ancestors qualIdent (targetPos: Pos) (pa: ProjectAnalysis) =
+    let asIdent text node =
+      match node with
+      | SyntaxToken (SyntaxKind.Ident, identRange) -> Some(LineBuffer.stringBetween identRange text)
+      | _ -> None
+
+    let asModulePath node =
+      match node with
+      | SyntaxNode (SyntaxKind.ModulePath, _, children) -> Some children
+      | _ -> None
+
+    // finds all fields of record type declarations that are found
+    // by going through open declarations transitively
+    let collectFields (pa: ProjectAnalysis) =
+      // checks if a node is record type declaration and if so, finds all field identifiers
+      // if it's open or module synonym declaration, enqueues the opened module to be processed
+      // otherwise just returns an empty list
+      let foldOnNode text state node =
+        let acc, docAcc, doneSet = state
+
+        match SyntaxElement.kind node with
+        | SyntaxKind.RecordTyDecl ->
+          let fields =
+            SyntaxElement.children node
+            |> List.collect (fun node ->
+              match SyntaxElement.kind node with
+              | SyntaxKind.FieldDecl ->
+                node
+                |> SyntaxElement.children
+                |> List.choose (asIdent text)
+              | _ -> [])
+
+          fields :: acc, docAcc, doneSet
+
+        | SyntaxKind.ModuleSynonymDecl
+        | SyntaxKind.OpenDecl ->
+          match
+            SyntaxElement.children node
+            |> List.tryPick asModulePath
+            |> Option.map (List.choose (asIdent text))
+            with
+          | Some [ p; m ] ->
+            let docAcc, doneSet =
+              let docId = pa.Host.ComputeDocId(p, m, docId)
+
+              if doneSet |> TSet.contains docId |> not then
+                docId :: docAcc, TSet.add docId doneSet
+              else
+                docAcc, doneSet
+
+            acc, docAcc, doneSet
+
+          | _ -> state
+        | _ -> state
+
+      let rec onDocRec acc docAcc doneSet =
+        match docAcc with
+        | [] -> acc
+
+        | docId :: docAcc ->
+          match pa.Host.Parse2 docId with
+          | Some syntax ->
+            let (SyntaxTree root) = syntax.SyntaxTree
+
+            let acc, docAcc, doneSet =
+              SyntaxElement.children root
+              |> List.fold (foldOnNode syntax.LineBuffer) (acc, docAcc, doneSet)
+
+            onDocRec acc docAcc doneSet
+
+          | None -> onDocRec acc docAcc doneSet
+
+      let acc =
+        let docAcc = [ docId ]
+
+        let doneSet =
+          TSet.empty Symbol.compare |> TSet.add docId
+
+        onDocRec [] docAcc doneSet
+
+      acc
+      |> List.rev
+      |> List.collect id
+      |> List.map (fun fieldIdent -> Kind.Field, fieldIdent)
+
+    // finds all variables in a pattern
+    let rec patRec acc pat =
+      let acc =
+        SyntaxElement.children pat |> List.fold patRec acc
+
+      match SyntaxElement.kind pat with
+      | SyntaxKind.VarPat
+      | SyntaxKind.AsPat ->
+        match pat
+              |> SyntaxElement.children
+              |> List.tryFind (fun node ->
+                match SyntaxElement.kind node with
+                | SyntaxKind.Ident -> true
+                | _ -> false)
+          with
+        | Some ident -> ident :: acc
+        | None -> acc
+
+      | _ -> acc
+
+    // checks if `nsIdent` is a name of variable
+    let isVar =
+      ancestors
+      |> List.exists (fun ancestor ->
+        ancestor
+        |> SyntaxElement.children
+        |> List.exists (fun node ->
+          match SyntaxElement.kind node with
+          | SyntaxKind.FunExpr
+          | SyntaxKind.LetValExpr
+          | SyntaxKind.LetFunExpr
+          | SyntaxKind.LetValDecl
+          | SyntaxKind.LetFunDecl ->
+            SyntaxElement.children node
+            |> List.exists (fun node ->
+              isPatLike (SyntaxElement.kind node)
+              && (patRec [] node
+                  |> List.exists (fun ident ->
+                    match asIdent text ident with
+                    | Some ident -> ident = qualIdent
+                    | None -> false)))
+
+          | _ -> false))
+
+    if isVar then
+      List.append (collectFields pa) [ Kind.Property, "Length" ]
+    else
+      debugFn "not a variable: %s" qualIdent
+      []
+
+  // finds the sibling nodes before the dot and ancestral nodes.
+  let private findQuals (tree: SyntaxTree) targetPos =
+    let isPathLike kind =
+      match kind with
+      | SyntaxKind.NameTy
+      | SyntaxKind.PathPat
+      | SyntaxKind.PathExpr -> true
+      | _ -> false
+
+    let rec findRec pos ancestors node =
+      let parentOpt = List.tryHead ancestors
+
+      match node, parentOpt with
+      // Cursor is at `.<|>` and parent is path
+      | SyntaxToken (SyntaxKind.Dot, range), Some (SyntaxNode (parentKind, _, children)) when
+        Pos.compare (Range.endPos range) pos = 0
+        && isPathLike parentKind
+        ->
+        // siblings before position
+        let left =
+          children
+          |> List.filter (fun child -> Pos.compare (SyntaxElement.endPos child) pos <= 0)
+
+        (left, ancestors) |> Some
+
+      | SyntaxToken _, _ -> None
+
+      | SyntaxNode (_, range, children), _ ->
+        if Range.isTouched pos range then
+          children
+          |> List.tryPick (fun child -> findRec pos (node :: ancestors) child)
+        else
+          None
+
+    let (SyntaxTree root) = tree
+    findRec targetPos [] root
+
+  let private lastIdent text nodes =
+    let asIdent node =
+      match node with
+      | SyntaxToken (SyntaxKind.Ident, identRange) -> Some(LineBuffer.stringBetween identRange text, Range.start identRange)
+      | _ -> None
+
+    let pickLast nodes =
+      nodes |> List.rev |> List.tryPick asIdent
+
+    nodes
+    |> List.rev
+    |> List.tryPick (fun node ->
+      match node with
+      | SyntaxNode (SyntaxKind.NameExpr, _, children) -> pickLast children
+      | _ -> asIdent node)
+
+  let resolveAsNs docId text ancestors (nsIdent: string) (targetPos: Pos) (pa: ProjectAnalysis) =
+    debugFn "resolveAsNs nsIdent='%s'" nsIdent
+
+    let asIdent text node =
+      match node with
+      | SyntaxToken (SyntaxKind.Ident, identRange) -> Some(LineBuffer.stringBetween identRange text)
+      | _ -> None
+
+    let asModulePath node =
+      match node with
+      | SyntaxNode (SyntaxKind.ModulePath, _, children) -> Some children
+      | _ -> None
+
+    let isDecl node =
+      match node with
+      | SyntaxNode (kind, _, _) ->
+        match kind with
+        | SyntaxKind.LetValDecl
+        | SyntaxKind.LetFunDecl
+        | SyntaxKind.TySynonymDecl
+        | SyntaxKind.UnionTyDecl
+        | SyntaxKind.RecordTyDecl
+        | SyntaxKind.ModuleDecl
+        | SyntaxKind.ModuleSynonymDecl -> true
+
+        | _ -> false
+      | _ -> false
+
+    let findToplevelDecls docId (pa: ProjectAnalysis) =
+      match pa.Host.Parse2 docId with
+      | Some syntax ->
+        let (SyntaxTree root) = syntax.SyntaxTree
+
+        root
+        |> SyntaxElement.children
+        |> List.choose (fun node ->
+          if isDecl node then
+            Some(syntax, node)
+          else
+            None)
+
+      | None ->
+        warnFn "doc not parsed %s" (Symbol.toString docId)
+        []
+
+    // assume node is UnionTyDecl
+    let collectVariants text (node: SyntaxElement) =
+      node
+      |> SyntaxElement.children
+      |> List.choose (fun node ->
+        match node with
+        | SyntaxNode (SyntaxKind.VariantDecl, _, children) ->
+          children
+          |> List.tryPick (asIdent text)
+          |> Option.map (fun name -> Kind.EnumMember, name)
+
+        | _ -> None)
+
+    // assumes node is the declaration that is exposed to the namespace
+    let collectFromDecl text (node: SyntaxElement) =
+      let children = SyntaxElement.children node
+
+      match SyntaxElement.kind node with
+      | SyntaxKind.LetValDecl ->
+        match children
+              |> List.tryFind (fun node -> isPatLike (SyntaxElement.kind node))
+          with
+        | Some pat ->
+          let rec patRec acc pat =
+            let acc =
+              SyntaxElement.children pat |> List.fold patRec acc
+
+            match SyntaxElement.kind pat with
+            | SyntaxKind.VarPat
+            | SyntaxKind.AsPat ->
+              match
+                pat |> SyntaxElement.children
+                |> List.tryPick (asIdent text)
+                with
+              | Some name -> (Kind.Value, name) :: acc
+              | None -> acc
+
+            | _ -> acc
+
+          patRec [] pat
+
+        | None -> []
+
+      | SyntaxKind.LetFunDecl
+      | SyntaxKind.TySynonymDecl
+      | SyntaxKind.RecordTyDecl
+      | SyntaxKind.ModuleDecl ->
+        let kind =
+          match SyntaxElement.kind node with
+          | SyntaxKind.LetFunDecl -> Kind.Function
+          | SyntaxKind.ModuleDecl -> Kind.Module
+          | _ -> Kind.Class
+
+        node
+        |> SyntaxElement.children
+        |> List.tryPick (asIdent text)
+        |> Option.map (fun name -> kind, name)
+        |> Option.toList
+
+      | SyntaxKind.UnionTyDecl ->
+        let nameOpt =
+          children
+          |> List.tryPick (asIdent text)
+          |> Option.map (fun name -> Kind.Enum, name)
+
+        let variants = collectVariants text node
+
+        List.append (Option.toList nameOpt) variants
+
+      | _ -> []
+
+    // checks if node has the specified name and collects items for completion
+    let collectContents text (node: SyntaxElement) =
+      match node with
+      | SyntaxNode (SyntaxKind.UnionTyDecl, _, children) ->
+        let ok =
+          match children |> List.tryPick (asIdent text) with
+          | Some ident -> ident = nsIdent
+          | None -> false
+
+        if ok then
+          collectVariants text node
+        else
+          []
+
+      | SyntaxNode (SyntaxKind.ModuleDecl, _, children) ->
+        let ok =
+          match children |> List.tryPick (asIdent text) with
+          | Some ident -> ident = nsIdent
+          | None -> false
+
+        if ok then
+          children |> List.collect (collectFromDecl text)
+        else
+          []
+
+      | _ -> []
+
+    let rec collectViaOpenDecls docId text node (pa: ProjectAnalysis) =
+      match node with
+      | SyntaxNode (SyntaxKind.ModuleSynonymDecl, _, children) ->
+        let ok =
+          match children |> List.tryPick (asIdent text) with
+          | Some ident -> ident = nsIdent
+          | None -> false
+
+        if ok then
+          match
+            children |> List.tryPick asModulePath
+            |> Option.map (List.choose (asIdent text))
+            with
+          | Some [ p; m ] ->
+            let docId: DocId = pa.Host.ComputeDocId(p, m, docId)
+
+            findToplevelDecls docId pa
+            |> List.collect (fun (syntax, decl) -> collectFromDecl syntax.LineBuffer decl)
+
+          | _ -> []
+        else
+          []
+
+      | SyntaxNode (SyntaxKind.OpenDecl, _, children) ->
+        match
+          children |> List.tryPick asModulePath
+          |> Option.map (List.choose (asIdent text))
+          with
+        | Some [ p; m ] ->
+          let docId = pa.Host.ComputeDocId(p, m, docId)
+
+          findToplevelDecls docId pa
+          |> List.collect (fun ((syntax: LSyntax2), decl) -> collectContents syntax.LineBuffer decl)
+
+        | _ -> []
+
+      | _ -> collectContents text node
+
+    let resolveUnqualifiedAsNs docId (targetPos: Pos) (pa: ProjectAnalysis) =
+      ancestors
+      |> List.collect (fun ancestor ->
+        let isBeforeTarget node =
+          Pos.compare (SyntaxElement.endPos node) targetPos
+          <= 0
+
+        ancestor
+        |> SyntaxElement.children
+        |> List.collect (fun child ->
+          if isBeforeTarget child then
+            collectViaOpenDecls docId text child pa
+          else
+            []))
+
+    let resolvePrelude () =
+      if SyntaxApi.isKnownModule nsIdent then
+        let docId: DocId = pa.Host.GetCoreDocId nsIdent
+
+        findToplevelDecls docId pa
+        |> List.collect (fun (syntax, decl) -> collectFromDecl syntax.LineBuffer decl)
+      else
+        []
+
+    List.append (resolveUnqualifiedAsNs docId targetPos pa) (resolvePrelude ())
+
+  let tryNsCompletion (docId: DocId) (targetPos: Pos) pa : (int * string) list option * ProjectAnalysis =
+    let syntaxOpt, pa = ProjectAnalysis1.parse2 docId pa
+
+    match syntaxOpt with
+    | Some syntax ->
+      let text = syntax.LineBuffer
+      let tree = syntax.SyntaxTree
+
+      match findQuals tree targetPos with
+      | None ->
+        // debugFn "no quals"
+        None, pa
+
+      | Some (quals, ancestors) ->
+        // debugFn "quals=%A" quals
+
+        match lastIdent text quals with
+        | None ->
+          // debugFn "no ident"
+          None, pa
+
+        | Some (qualIdent, qualPos) ->
+          // ignore non-last qualifiers for now
+
+          // ensure depended files are parsed
+          let pa =
+            if pa.BundleCache |> Option.isNone then
+              ProjectAnalysis1.bundle pa |> snd
+            else
+              pa
+
+          match resolveAsNs docId text ancestors qualIdent qualPos pa with
+          | [] ->
+            // debugFn "no members in %s" qualIdent
+
+            match resolveUnqualifiedAsValue docId text ancestors qualIdent qualPos pa with
+            | [] -> None, pa
+
+            | items -> Some items, pa
+
+          | items -> Some items, pa
+
+    | None ->
+      // debugFn "no syntax2"
+      None, pa
+
+  let private findAncestorsAt (targetPos: Pos) (tree: SyntaxTree) =
+    let rec findRec ancestors node =
+      match node with
+      | SyntaxToken (_, range) when Range.isTouched targetPos range -> [ancestors]
+
+      | SyntaxToken _ -> []
+
+      | SyntaxNode (_, range, children) ->
+        if Range.isTouched targetPos range then
+          children
+          |> List.collect (findRec (node :: ancestors))
+        else
+          []
+
+    let (SyntaxTree root) = tree
+    findRec [] root
+
+  /// Attempts generate completion items in record expressions.
+  let tryRecordCompletion (docId: DocId) (targetPos: Pos) pa : (int * string) list option * ProjectAnalysis =
+    let tryFindParentRecordExprNode tree : Range option =
+      findAncestorsAt targetPos tree
+      |> List.tryPick (fun ancestors ->
+        ancestors
+        |> List.tryFind (fun node ->
+          match SyntaxElement.kind node with
+          | SyntaxKind.RecordExpr _ -> true
+          | _ -> false))
+      |> Option.map SyntaxElement.range
+
+    // performs syntactic analysis and checks if whether record completion is applicable.
+    let tryDetectRecordRange pa =
+      let syntaxOpt, pa = ProjectAnalysis1.parse2 docId pa
+
+      match syntaxOpt with
+      | Some syntax ->
+        let tree = syntax.SyntaxTree
+        let recordRangeOpt = tryFindParentRecordExprNode tree
+        recordRangeOpt, pa
+
+      | None -> None, pa
+
+    let computeTypeInfo pa =
+      let bundleResult, pa = ProjectAnalysis1.bundle pa
+      let symbolsOpt, pa = paGetTirSymbolsWithCache pa
+
+      let tysAndSymbolsOpt =
+        match bundleResult.TirCtxOpt, symbolsOpt with
+        | Some tirCtx, Some symbols -> Some(tirCtx.Tys, symbols)
+        | _ -> None
+
+      tysAndSymbolsOpt, pa
+
+    let findRecordTySerialFromRange recordRange symbols =
+      let toLoc loc2 =
+        match loc2 with
+        | At loc -> loc
+        | PreviousIdent loc -> loc
+        | NextIdent loc -> loc
+
+      symbols
+      |> List.tryPick (fun (symbol, _, tyOpt, loc2) ->
+        let loc = toLoc loc2
+
+        match symbol, tyOpt with
+        | RecordOccurrence, Some(Ty(RecordTk(tySerial, _), _)) when Symbol.equals docId (Loc.docId loc) ->
+          let _, pos = Loc.toDocPos loc
+
+          if Range.isTouched pos recordRange then
+            Some tySerial
+          else
+            None
+
+        | FieldSymbol(tySerial, ident), _ when Symbol.equals docId (Loc.docId loc) ->
+          let _, pos = Loc.toDocPos loc
+
+          if Range.isTouched pos recordRange then
+            Some tySerial
+          else
+            None
+        | _ -> None)
+
+    let findFieldsOfRecordTy tys tySerialOpt =
+      match tySerialOpt with
+      | Some tySerial ->
+        match tys |> TMap.tryFind tySerial with
+        | Some(RecordTyDef(_, _, fields, _, _)) -> fields |> List.map (fun (ident, _, _) -> ident) |> Some
+
+        | _ -> None
+      | _ -> None
+
+    let newFieldItem (ident: string) = Kind.Field, ident
+
+    match tryDetectRecordRange pa with
+    | Some recordRange, pa ->
+      match computeTypeInfo pa with
+      | Some(tys, symbols), pa ->
+        let tySerialOpt = findRecordTySerialFromRange recordRange symbols
+        let fieldsOpt = findFieldsOfRecordTy tys tySerialOpt
+        let itemsOpt = Option.map (List.map newFieldItem) fieldsOpt
+        itemsOpt, pa
+
+      | None, pa -> None, pa
+    | None, pa -> None, pa

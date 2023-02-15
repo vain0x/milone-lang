@@ -9,7 +9,7 @@ mkdir -p vendor
 
 if test -f vendor/sqlite3/sqlite3.o
 then
-    echo 'warn: sqlite3 already exists. Remove vendor/sqlite3 to force redo.'
+    echo 'warn: sqlite3 already exists. Remove vendor/sqlite3 to force redo or touch sqlite3.o to dismiss this warning.'
     exit
 fi
 

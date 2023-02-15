@@ -42,24 +42,24 @@ void match_complicated_match_complicated_testListMatching(void) {
     struct Int32Cons const *list_;
     list_ = ((struct Int32Cons const *)milone_region_alloc(1, sizeof(struct Int32Cons)));
     (*(((struct Int32Cons *)list_))) = (struct Int32Cons){.head = 0, .tail = NULL};
-    if ((!(list_))) goto next_4;
-    if ((!(list_->tail))) goto next_4;
+    if ((!(list_))) goto next_2;
+    if ((!(list_->tail))) goto next_2;
     if (true) milone_assert_error("match_complicated/match_complicated.milone", 10, 19);
     match_1 = 0;
-    goto end_match_3;
-next_4:;
-    if ((!(list_))) goto next_5;
-    if ((!((!(list_->tail))))) goto next_5;
+    goto end_match_1;
+next_2:;
+    if ((!(list_))) goto next_3;
+    if ((!((!(list_->tail))))) goto next_3;
     match_1 = 0;
-    goto end_match_3;
-next_5:;
-    if ((!((!(list_))))) goto next_6;
+    goto end_match_1;
+next_3:;
+    if ((!((!(list_))))) goto next_4;
     if (true) milone_assert_error("match_complicated/match_complicated.milone", 12, 10);
     match_1 = 0;
-    goto end_match_3;
-next_6:;
-    exit(1);
-end_match_3:;
+    goto end_match_1;
+next_4:;
+    milone_exhaust_error("match_complicated/match_complicated.milone", 9, 2);
+end_match_1:;
     return;
 }
 
@@ -71,57 +71,57 @@ void match_complicated_match_complicated_testMatchArmsMakeScope(void) {
     char if_;
     x_ = 2;
     Int32Int32Tuple2_ = (struct Int32Int32Tuple2_){.t0 = x_, .t1 = 1};
-    if ((Int32Int32Tuple2_.t0 != 1)) goto next_8;
+    if ((Int32Int32Tuple2_.t0 != 1)) goto next_2;
     x_1 = Int32Int32Tuple2_.t1;
     if (true) milone_assert_error("match_complicated/match_complicated.milone", 18, 12);
     match_2 = 0;
-    goto end_match_7;
-next_8:;
-    if ((Int32Int32Tuple2_.t0 != 2)) goto next_9;
+    goto end_match_1;
+next_2:;
+    if ((Int32Int32Tuple2_.t0 != 2)) goto next_3;
     if ((x_ != 2)) {
-        goto then_12;
+        goto then_6;
     } else {
-        goto else_13;
+        goto else_7;
     }
-then_12:;
+then_6:;
     if (true) milone_assert_error("match_complicated/match_complicated.milone", 19, 27);
     if_ = 0;
-    goto if_next_11;
-else_13:;
+    goto if_next_5;
+else_7:;
     if_ = 0;
-    goto if_next_11;
-if_next_11:;
+    goto if_next_5;
+if_next_5:;
     match_2 = 0;
-    goto end_match_7;
-next_9:;
+    goto end_match_1;
+next_3:;
     if (true) milone_assert_error("match_complicated/match_complicated.milone", 20, 9);
     match_2 = 0;
-    goto end_match_7;
-next_10:;
-end_match_7:;
+    goto end_match_1;
+next_4:;
+end_match_1:;
     return;
 }
 
 void match_complicated_match_complicated_testNestedMatchesParseCorrectly(void) {
     char match_3;
     char switch_;
-    if (true) goto next_15;
+    if (true) goto next_2;
     switch (1) {
         default:
-            goto clause_18;
+            goto clause_5;
     }
-clause_18:;
+clause_5:;
     if (true) milone_assert_error("match_complicated/match_complicated.milone", 26, 11);
     switch_ = 0;
-    goto switch_next_17;
-switch_next_17:;
+    goto switch_next_4;
+switch_next_4:;
     match_3 = 0;
-    goto end_match_14;
-next_15:;
+    goto end_match_1;
+next_2:;
     match_3 = 0;
-    goto end_match_14;
-next_16:;
-end_match_14:;
+    goto end_match_1;
+next_3:;
+end_match_1:;
     return;
 }
 

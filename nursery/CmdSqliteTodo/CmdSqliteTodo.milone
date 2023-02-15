@@ -58,7 +58,7 @@ let private dbInit (io: IO) : Result<Db, string> * IO =
       Db.close db
       Error msg, io
 
-    | Ok () -> Ok db, io
+    | Ok() -> Ok db, io
 
 // -----------------------------------------------
 // add
@@ -70,7 +70,7 @@ let private cmdAdd io text =
   match result with
   | Error msg -> Error msg, io
   | Ok db ->
-    let ok, db =
+    let result, db =
       Db.mutate
         """
           insert into todos(text) values (:text)
@@ -79,11 +79,7 @@ let private cmdAdd io text =
         db
 
     Db.close db
-
-    if ok then
-      Ok(), io
-    else
-      Error "insert", io
+    result, io
 
 // -----------------------------------------------
 // remove
@@ -96,7 +92,7 @@ let private cmdRemove io word =
   | Error msg -> Error msg, io
   | Ok db ->
     // todo: escape '%' and '_'
-    let ok, db =
+    let result, db =
       Db.mutate
         """
           delete from todos
@@ -106,11 +102,7 @@ let private cmdRemove io word =
         db
 
     Db.close db
-
-    if ok then
-      Ok(), io
-    else
-      Error "delete", io
+    result, io
 
 // -----------------------------------------------
 // list
@@ -135,7 +127,7 @@ let private cmdList io : Result<unit, string> * IO =
     Db.close db
 
     match result with
-    | Error () -> Error "select", io
+    | Error e -> Error e, io
 
     | Ok [] ->
       printfn "No tasks."
@@ -182,7 +174,7 @@ let main _ =
         Error "Unknown arguments.", io
 
     match result with
-    | Ok () -> io
+    | Ok() -> io
 
     | Error msg ->
       printfn "error: %s" msg

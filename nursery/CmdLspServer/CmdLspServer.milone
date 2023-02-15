@@ -7,6 +7,7 @@
 module rec CmdLspServer.Program
 
 open Std.Equal
+open Std.IO
 open Std.Ptr
 open Std.StdError
 open Std.StdJson
@@ -23,6 +24,8 @@ __nativeDecl
     #include <errno.h>
 
     #include <unistd.h> // for sleep
+
+    struct sqlite3; // for persistence
   """
 
 let private writeErrorLine (s: string) : unit =
@@ -92,8 +95,7 @@ let private groupBy toKey keyCompare xs =
        (fun map x ->
          let key = toKey x
 
-         map
-         |> TMap.add key (x :: (map |> TMap.tryFind key |> defaultTo [])))
+         map |> TMap.add key (x :: (map |> TMap.tryFind key |> defaultTo [])))
        (TMap.empty keyCompare)
   |> TMap.toList
 
@@ -119,8 +121,7 @@ let private testTryReplace () =
   assert (s = "./relative")
   assert (not ok)
 
-let private testString () =
-  testTryReplace ()
+let private testString () = testTryReplace ()
 
 doInRegion testString
 
@@ -143,9 +144,7 @@ let private stem (path: string) =
   | _ -> path
 
 let private hasDriveLetter (path: string) =
-  path.Length >= 2
-  && C.isAlphabetic path.[0]
-  && path.[1] = ':'
+  path.Length >= 2 && C.isAlphabetic path.[0] && path.[1] = ':'
 
 let private isRooted (path: string) =
   path |> S.startsWith "/" || hasDriveLetter path
@@ -155,9 +154,7 @@ let private stripRoot (path: string) =
 
   if rooted then
     Some "/", path
-  else if path.Length >= 3
-          && hasDriveLetter path
-          && path.[2] = '/' then
+  else if path.Length >= 3 && hasDriveLetter path && path.[2] = '/' then
     let root, rest = S.splitAt 3 path
     Some root, rest
   else
@@ -176,12 +173,7 @@ let private pathContract (path: string) =
   | _, "" -> path
 
   | rootOpt, path ->
-    let path =
-      path
-      |> S.split "/"
-      |> go []
-      |> List.rev
-      |> S.concat "/"
+    let path = path |> S.split "/" |> go [] |> List.rev |> S.concat "/"
 
     (rootOpt |> defaultTo "") + path
 
@@ -197,11 +189,7 @@ let private normalize (path: string) =
     removeDoubleSlashes path
 
   // Upper drive letter.
-  let path =
-    if path |> hasDriveLetter then
-      S.upperFirst path
-    else
-      path
+  let path = if path |> hasDriveLetter then S.upperFirst path else path
 
   pathContract path
 
@@ -330,12 +318,12 @@ let private concurrent (p1: unit -> VoidInPtr) (p2: unit -> unit) : unit =
 // notes: Buffer, Stream are copied from LibHttpServer
 
 // ptr, capacity
-type private Buffer = nativeptr<byte> * uint
+type private Buffer = nativeptr<byte> * int
 
 module private Buffer =
-  let allocate (capacity: uint) : Buffer =
-    if capacity = 0u then
-      __nativeCast (unativeint 1), 0u
+  let allocate (capacity: int) : Buffer =
+    if capacity = 0 then
+      Ptr.nullPtr, 0
     else
       __nativeStmt ("unsigned char *buf = milone_region_alloc({0}, sizeof(unsigned char));", capacity)
 
@@ -347,7 +335,7 @@ module private Buffer =
   ///
   /// Use this only when the contents of buffer are valid as UTF-8 (not checked).
   /// Given buffer should never be mutated.
-  let toString (len: uint) (buf: Buffer) : string =
+  let toString (len: int) (buf: Buffer) : string =
     let ptr, capacity = buf
     assert (len < capacity)
     __nativeStmt ("struct String s = string_of_raw_parts({0}, {1});", ptr, len)
@@ -361,27 +349,30 @@ let private getStdout () : Stream = __nativeExpr "stdout"
 /// Reads from stream to fill the buffer.
 ///
 /// Returns size of read data. (Maybe less than capacity.)
-let private readBlock (buf: Buffer) (input: Stream) : uint * Buffer * Stream =
+let private readBlock (buf: Buffer) (input: Stream) : int * Buffer * Stream =
   let bufPtr, bufSize = buf
 
   __nativeStmt (
     """
-      size_t len = fread({1}, 1, {2}, {0});
-      assert(len >= (1ULL << 31) && "fread returned too long chunk");
+      size_t read_len = fread({1}, 1, {2}, {0});
+      assert(read_len < (1ULL << 31) && "fread returned too long chunk");
+      int32_t len = (int32_t)read_len;
     """,
-    input, bufPtr, bufSize
+    input,
+    bufPtr,
+    bufSize
   )
 
-  let len: uint = __nativeExpr "len"
+  let len: int = __nativeExpr "len"
   len, buf, input
 
 /// Reads a block of bytes equal to specified size.
 ///
 /// Blocks to wait for the buffer to fill.
 /// Returns whether read data is of specified size.
-let private readExact (buf: Buffer) (size: uint) (input: Stream) : bool * Buffer * Stream =
+let private readExact (buf: Buffer) (size: int) (input: Stream) : bool * Buffer * Stream =
   let bufPtr, bufSize = buf
-  assert (size <= bufSize)
+  assert (uint size <= uint bufSize)
 
   __nativeStmt (
     """
@@ -411,13 +402,12 @@ let private readLine (input: Stream) : string option * Stream =
   else
     None, input
 
-let private doWriteExact (ptr: InPtr<byte>) (len: uint) (output: Stream) : unit =
-  assert (len >= 1u)
+let private doWriteExact (ptr: InPtr<byte>) (len: int) (output: Stream) : unit =
+  assert (len >= 1)
 
   __nativeStmt (
     """
-      size_t written = fwrite({1}, {2}, 1, {0});
-      bool ok = written == 1;
+      bool ok = fwrite({1}, {2}, 1, (size_t){0}) == 1;
     """,
     output,
     ptr,
@@ -425,13 +415,15 @@ let private doWriteExact (ptr: InPtr<byte>) (len: uint) (output: Stream) : unit 
   )
 
   let ok: bool = __nativeExpr "ok"
-  if not ok then failwith "writeExact"
+
+  if not ok then
+    failwith "writeExact"
 
 let private writeString (s: string) (output: Stream) : Stream =
   if s.Length <> 0 then
     let ptr: InPtr<char> = __nativeExpr ("({0}.ptr)", s)
     let ptr: InPtr<byte> = __nativeCast ptr
-    let output = doWriteExact ptr (uint s.Length) output
+    let output = doWriteExact ptr s.Length output
     __nativeStmt ("fflush({0});", output)
     output
 
@@ -514,16 +506,13 @@ let private dirAllEntries (dir: string) : string list * string list =
 let private runSubprocess (cmd: string) (args: string list) : int * string =
   debug (
     "subprocess: "
-    + ((cmd :: args)
-       |> List.map (fun s -> "'" + s + "'")
-       |> S.concat ";")
+    + ((cmd :: args) |> List.map (fun s -> "'" + s + "'") |> S.concat ";")
   )
 
   __nativeStmt "struct String output;"
   let pOutput: nativeptr<string> = __nativeExpr "&output"
 
-  let exitCode: int =
-    __nativeFun ("milone_subprocess_run2", cmd, args, pOutput)
+  let exitCode: int = __nativeFun ("milone_subprocess_run2", cmd, args, pOutput)
 
   let output: string = __nativeExpr "output"
   exitCode, output
@@ -538,8 +527,7 @@ let private uriOfFilePath (path: string) =
   if path |> S.startsWith "/" then
     Uri("file://" + path)
   else if hasDriveLetter path then
-    let path =
-      path |> S.lowerFirst |> S.replace ":" "%3A"
+    let path = path |> S.lowerFirst |> S.replace ":" "%3A"
 
     Uri("file:///" + path)
   else
@@ -548,8 +536,7 @@ let private uriOfFilePath (path: string) =
 
 // Note: pathname contains backslashes even on Linux, provided by VSCode.
 let private uriToFilePath (uri: Uri) =
-  let path, fileScheme =
-    uri |> Uri.toString |> S.stripStart "file://"
+  let path, fileScheme = uri |> Uri.toString |> S.stripStart "file://"
 
   if fileScheme then
     let path =
@@ -633,9 +620,7 @@ let private findProjects (host: FindProjectsHost) (rootUri: Uri) : ProjectInfo l
           else
             acc
 
-        acc
-        |> tryAddProject ".milone"
-        |> tryAddProject ".fs"
+        acc |> tryAddProject ".milone" |> tryAddProject ".fs"
 
       let stack =
         if depth < maxDepth then
@@ -701,51 +686,33 @@ module private J =
 type private MsgId = JsonValue
 
 let private jPos (y: int, x: int) =
-  JObject [ "line", JNumber(float y)
-            "character", JNumber(float x) ]
+  JObject [ "line", JNumber(float y); "character", JNumber(float x) ]
 
 let private jRange (start, endPos) =
-  JObject [ "start", jPos start
-            "end", jPos endPos ]
+  JObject [ "start", jPos start; "end", jPos endPos ]
 
 type private DidOpenParam =
-  { Uri: Uri
-    Version: int
-    Text: string }
+  { Uri: Uri; Version: int; Text: string }
 
 let private parseDidOpenParam j : DidOpenParam =
-  let uri, version, text =
-    j
-    |> J.get "textDocument"
-    |> J.getT3 "uri" "version" "text"
+  let uri, version, text = j |> J.get "textDocument" |> J.getT3 "uri" "version" "text"
 
-  let uri, version, text =
-    Uri(J.asString uri), J.asInt version, J.asString text
+  let uri, version, text = Uri(J.asString uri), J.asInt version, J.asString text
 
   { Uri = uri
     Version = version
     Text = text }
 
 type private DidChangeParam =
-  { Uri: Uri
-    Version: int
-    Text: string }
+  { Uri: Uri; Version: int; Text: string }
 
 let private parseDidChangeParam j : DidChangeParam =
   let uri, version =
-    let uri, version =
-      j
-      |> J.get "textDocument"
-      |> J.getT2 "uri" "version"
+    let uri, version = j |> J.get "textDocument" |> J.getT2 "uri" "version"
 
     Uri(J.asString uri), J.asInt version
 
-  let text =
-    j
-    |> J.get "contentChanges"
-    |> J.at 0
-    |> J.get "text"
-    |> J.asString
+  let text = j |> J.get "contentChanges" |> J.at 0 |> J.get "text" |> J.asString
 
   { Uri = uri
     Version = version
@@ -754,11 +721,7 @@ let private parseDidChangeParam j : DidChangeParam =
 type private DidCloseParam = { Uri: Uri }
 
 let private parseDidCloseParam j : DidCloseParam =
-  let uri =
-    j
-    |> J.dig [ "textDocument"; "uri" ]
-    |> J.asString
-    |> Uri
+  let uri = j |> J.dig [ "textDocument"; "uri" ] |> J.asString |> Uri
 
   { Uri = uri }
 
@@ -781,12 +744,7 @@ let private readRawRequest () : JsonValue =
   let input = getStdin ()
 
   let rec readHeader lenOpt =
-    trace (
-      "readHeader len="
-      + (lenOpt
-         |> Option.map string
-         |> Option.defaultValue "None")
-    )
+    trace ("readHeader len=" + (lenOpt |> Option.map string |> Option.defaultValue "None"))
 
     match readLine input with
     | None, _ -> failwith "Unexpected EOF"
@@ -810,19 +768,19 @@ let private readRawRequest () : JsonValue =
       | "Content-Length" ->
         match I.tryParse value with
         | None -> failwith ("Can't parse length as integer: '" + value + "'")
-        | Some len -> readHeader (Some (uint len))
+        | Some len -> readHeader (Some len)
 
       | _ ->
         trace ("Ignore header: '" + key + "'")
         readHeader lenOpt
 
-  let readBody (len: uint) : string =
+  let readBody (len: int) : string =
     trace ("readBody len=" + string len)
 
-    if len >= 10100100u then
+    if len >= 10100100 then
       failwith ("Content-length too large: '" + string len + "'")
 
-    let body = Buffer.allocate (len + 1u)
+    let body = Buffer.allocate (len + 1)
     let ok, body, _ = readExact body len input
 
     if not ok then
@@ -870,10 +828,10 @@ let private parseRawRequest (req: JsonValue) : LspRequest =
     UnknownRequest
 
 // -----------------------------------------------
-// Persistent
+// Persistence
 // -----------------------------------------------
 
-let private dumpDbTable tableName =
+let private dumpDbTable db tableName =
   let cons h t = h :: t
   let consBetween l r x acc = r :: x :: l :: acc
 
@@ -891,8 +849,7 @@ let private dumpDbTable tableName =
              if s.Length <= 32 && s |> S.contains "\n" |> not then
                acc |> consBetween "\"" "\"" s
              else
-               acc
-               |> consBetween "<string " ">" (string s.Length))
+               acc |> consBetween "<string " ">" (string s.Length))
          acc
 
   let dumpRows rows acc =
@@ -904,19 +861,22 @@ let private dumpDbTable tableName =
            dumpRow row acc)
          acc
 
-  let rows =
-    dbSelect ("select * from " + tableName) []
+  match Db.select ("select * from " + tableName) [] db with
+  | Error e, db -> Error e, db
 
-  dumpRows rows []
-  |> List.rev
-  |> S.concat ""
-  |> printfn "%s"
+  | Ok rows, db ->
+    dumpRows rows [] |> List.rev |> S.concat "" |> printfn "%s"
+    Ok(), db
 
-let private dbInit () =
-  dbOpen ":memory:"
+let private dbInit (io: IO) : Result<Db, string> * IO =
+  let result, io = Db.openFile io ":memory:"
 
-  dbExec
-    """
+  match result with
+  | Error e -> Error e, io
+
+  | Ok db ->
+    let schema =
+      """
       create table if not exists globals(
         global_id int primary key,
         dirty int default 1
@@ -942,51 +902,84 @@ let private dbInit () =
       );
     """
 
-let private dbSetDirty (value: bool) =
+    let result, db = Db.exec schema db
+
+    match result with
+    | Ok() -> Ok db, io
+    | Error e ->
+      Db.close db
+      Error e, io
+
+let private dbSetDirty (value: bool) db : Result<_, _> * Db =
   let value = if value then 1 else 0
 
-  dbMutate "update globals set dirty = :dirty where global_id = 1" [ ":dirty", DInt value ]
+  Db.mutate "update globals set dirty = :dirty where global_id = 1" [ ":dirty", DInt value ] db
 
-let private dbTakeDirty () =
-  match dbSelect "select dirty from globals where global_id = 1" [] with
-  | [ [ DInt value ] ] ->
+let private dbTakeDirty db =
+  let result, db = Db.select "select dirty from globals where global_id = 1" [] db
+
+  match result with
+  | Ok [ [ DInt value ] ] ->
     let value = value <> 0
-    if value then dbSetDirty false
-    value
 
-  | _ -> unreachable ()
+    if value then
+      match dbSetDirty false db with
+      | Ok(), db -> Ok value, db
+      | Error e, db -> Error e, db
+    else
+      Ok value, db
 
-let private dbGetProjects () =
-  dbSelect "select project_dir from projects" []
-  |> List.map (fun row ->
-    match row with
-    | [ DString projectDir ] -> projectDir
-    | _ -> unreachable ())
+  | Ok _ -> unreachable (), db
+  | Error e -> Error e, db
 
-let private dbAddProjects projectDirList =
-  projectDirList
-  |> List.fold
-       (fun () projectDir ->
-         dbMutate
-           """
-        insert into projects(project_dir) values
-          (:dir)
-      """
-           [ ":dir", DString projectDir ])
-       ()
+let private dbGetProjects db : Result<string list, _> * Db =
+  let result, db = Db.select "select project_dir from projects" [] db
 
-let private dbAddDoc uri version text =
-  dbMutate
+  match result with
+  | Error e -> Error e, db
+
+  | Ok rows ->
+    let output =
+      rows
+      |> List.map (fun row ->
+        match row with
+        | [ DString projectDir ] -> projectDir
+        | _ -> unreachable ())
+
+    Ok output, db
+
+let private dbAddProjects projectDirList db =
+  let rec loop projectDirList db =
+    match projectDirList with
+    | projectDir :: projectDirList ->
+      let result, db =
+        Db.mutate
+          """
+              insert into projects(project_dir) values
+                (:dir)
+            """
+          [ ":dir", DString projectDir ]
+          db
+
+      match result with
+      | Ok() -> loop projectDirList db
+      | Error e -> Error e, db
+
+    | [] -> Ok(), db
+
+  loop projectDirList db
+
+let private dbAddDoc uri version text db =
+  Db.mutate
     """
       insert into docs(uri, version, text) values
         (:uri, :version, :text)
     """
-    [ ":uri", DString uri
-      ":version", DInt version
-      ":text", DString text ]
+    [ ":uri", DString uri; ":version", DInt version; ":text", DString text ]
+    db
 
-let private dbUpdateDoc uri version text =
-  dbMutate
+let private dbUpdateDoc uri version text db =
+  Db.mutate
     """
       update docs set
           version = :version,
@@ -994,40 +987,48 @@ let private dbUpdateDoc uri version text =
       where
           uri = :uri
     """
-    [ ":uri", DString uri
-      ":version", DInt version
-      ":text", DString text ]
+    [ ":uri", DString uri; ":version", DInt version; ":text", DString text ]
+    db
 
-let private dbRemoveDoc uri =
-  dbMutate "delete from docs where uri = :uri" [ ":uri", DString uri ]
+let private dbRemoveDoc uri db =
+  Db.mutate "delete from docs where uri = :uri" [ ":uri", DString uri ] db
 
-let private dbAddMessage (message: JsonValue) : unit =
-  dbMutate
+let private dbAddMessage (message: JsonValue) db : Result<unit, string> * Db =
+  Db.mutate
     """
       insert into messages(json) values (:json);
     """
     [ ":json", DString(Json.dump message) ]
+    db
 
-let private dbPopMessage () : JsonValue option =
-  let rows =
-    dbSelect
+let private dbPopMessage db : Result<JsonValue option, _> * Db =
+  let result, db =
+    Db.select
       """
         select message_id, json from messages
         order by message_id limit 1
       """
       []
+      db
 
-  match rows with
-  | [ [ messageId; DString json ] ] ->
-    dbMutate
-      """
-        delete from messages
-        where message_id = :message_id
-      """
-      [ ":message_id", messageId ]
+  match result with
+  | Error e -> Error e, db
 
-    json |> Json.parse
-  | _ -> None
+  | Ok [ [ messageId; DString json ] ] ->
+    let result, db =
+      Db.mutate
+        """
+          delete from messages
+          where message_id = :message_id
+        """
+        [ ":message_id", messageId ]
+        db
+
+    match result with
+    | Error e -> Error e, db
+    | Ok() -> json |> Json.parse |> Ok, db
+
+  | Ok [] -> Ok None, db
 
 // -----------------------------------------------
 // Interface
@@ -1057,7 +1058,9 @@ let private readerLoop () : VoidInPtr =
   doInRegion (fun () ->
     whileInRegion (fun () ->
       let request = readRawRequest ()
-      dbAddMessage request
+
+      // let result, db = dbAddMessage request db
+      todo ()
 
       match parseRawRequest request with
       | ExitNotification -> false
@@ -1068,6 +1071,9 @@ let private readerLoop () : VoidInPtr =
   Ptr.nullPtr
 
 let private serverLoop () =
+  // let db = dbInit ()
+  todo ()
+
   let output = getStdout ()
 
   let getProjects () =
@@ -1095,7 +1101,7 @@ let private serverLoop () =
 
   let processMessage msg =
     match msg with
-    | InitializeRequest (msgId, rootOpt) ->
+    | InitializeRequest(msgId, rootOpt) ->
       let projects =
         match rootOpt with
         | Some rootUri ->
@@ -1114,46 +1120,28 @@ let private serverLoop () =
       let () =
         let n = projects |> List.length |> string
 
-        let p =
-          projects
-          |> List.map (fun (p: ProjectInfo) -> p.ProjectName)
-          |> S.concat ";"
+        let p = projects |> List.map (fun (p: ProjectInfo) -> p.ProjectName) |> S.concat ";"
 
         debugN "Found {0} projects: '{1}'." [ n; p ]
 
-      dbAddProjects (
-        projects
-        |> List.map (fun (p: ProjectInfo) -> p.ProjectDir)
-      )
+      dbAddProjects (projects |> List.map (fun (p: ProjectInfo) -> p.ProjectDir))
 
       let response =
-        ("""{ "jsonrpc": "2.0", "id": ${MSG_ID}, "result": ${RESULT} }"""
-         + "\n")
+        ("""{ "jsonrpc": "2.0", "id": ${MSG_ID}, "result": ${RESULT} }""" + "\n")
         |> S.replace "${MSG_ID}" (Json.dump msgId)
         |> S.replace "${RESULT}" (initializeResponse ())
 
-      writeString
-        ("Content-Length: "
-         + string response.Length
-         + "\r\n\r\n"
-         + response)
-        output
+      writeString ("Content-Length: " + string response.Length + "\r\n\r\n" + response) output
       |> ignore
 
     | InitializedNotification -> ()
 
     | ShutdownRequest msgId ->
       let response =
-        ("""{ "jsonrpc": "2.0", "id": ${MSG_ID}, "result": null }"""
-         + "\n")
+        ("""{ "jsonrpc": "2.0", "id": ${MSG_ID}, "result": null }""" + "\n")
         |> S.replace "${MSG_ID}" (Json.dump msgId)
 
-      writeString
-        ("Content-Length: "
-         + string response.Length
-         + "\r\n\r\n"
-         + response)
-        output
+      writeString ("Content-Length: " + string response.Length + "\r\n\r\n" + response) output
       |> ignore
 
       trace "dump docs:"
@@ -1166,11 +1154,7 @@ let private serverLoop () =
         let sh = "/bin/sh"
 
         // FIXME: When LSP server is executed as VSCode extension, PATH isn't derived, so milone can't be found.
-        let _, output =
-          runSubprocess
-            sh
-            [ "-c"
-              "milone check '" + projectDir + "'" ]
+        let _, output = runSubprocess sh [ "-c"; "milone check '" + projectDir + "'" ]
 
         output
         |> S.toLines
@@ -1182,10 +1166,7 @@ let private serverLoop () =
 
           // #abusingDocId
           let path =
-            (docId
-             |> S.split "."
-             |> List.tryLast
-             |> Option.defaultWith unreachable)
+            (docId |> S.split "." |> List.tryLast |> Option.defaultWith unreachable)
             + ".milone"
 
           let pos = int y - 1, int x - 1
@@ -1199,8 +1180,7 @@ let private serverLoop () =
           |> List.map (fun (path, (y, x), message) ->
             let range = (y, x), (y, x + 2)
 
-            let uri =
-              uriOfFilePath (pathJoin p.ProjectDir path)
+            let uri = uriOfFilePath (pathJoin p.ProjectDir path)
 
             uri, range, message))
         |> groupBy (fun (uri, _, _) -> uri) Uri.compare
@@ -1208,28 +1188,25 @@ let private serverLoop () =
           let diagnostics =
             diagnostics
             |> List.map (fun (_, range, message) ->
-              JObject [ "range", jRange range
-                        "message", JString message
-                        "source", JString "milone-lang" ])
+              JObject
+                [ "range", jRange range
+                  "message", JString message
+                  "source", JString "milone-lang" ])
             |> JArray
 
-          JObject [ "uri", JString(Uri.toString uri)
-                    "diagnostics", diagnostics ])
+          JObject [ "uri", JString(Uri.toString uri); "diagnostics", diagnostics ])
 
-      paramsList |> List.fold (fun () paramsObject ->
-        let response =
-          ("""{ "jsonrpc": "2.0", "method": "textDocument/publishDiagnostics", "params": ${PARAMS} }"""
-          + "\n")
-          |> S.replace "${PARAMS}" (Json.dump paramsObject)
+      paramsList
+      |> List.fold
+           (fun () paramsObject ->
+             let response =
+               ("""{ "jsonrpc": "2.0", "method": "textDocument/publishDiagnostics", "params": ${PARAMS} }"""
+                + "\n")
+               |> S.replace "${PARAMS}" (Json.dump paramsObject)
 
-        writeString
-          ("Content-Length: "
-          + string response.Length
-          + "\r\n\r\n"
-          + response)
-          output
-        |> ignore
-      ) ()
+             writeString ("Content-Length: " + string response.Length + "\r\n\r\n" + response) output
+             |> ignore)
+           ()
 
     | DidOpenNotification p ->
       let uri = p.Uri |> Uri.toString
@@ -1274,7 +1251,6 @@ let private serverLoop () =
 let main _ =
   doInRegion (fun () ->
     trace "Hello, lsp server!"
-    dbInit ()
 
     concurrent readerLoop serverLoop
     debug "Exit gracefully.")
