@@ -4,72 +4,89 @@
 
 ## [Unreleased]
 
-[Unreleased]: https://github.com/vain0x/milone-lang/compare/v0.5.0...develop
+[Unreleased]: https://github.com/vain0x/milone-lang/compare/v0.6.0...develop
 
-### Features
+## [v0.6.0] - 2023-02-15
 
-- Add built-in type `Std.Ptr.FunPtr<P, T>` (renamed from `__nativeFun` type)
-- Ptr-of operator (`&&`) can now make a pointer to a named function. (Instead, `__nativeFun funName` is no longer supported.)
-- Add `Std.Ptr.FunPtr.invoke`
-- Add opaque types
-- Support generic records
-- Add Bitwise negation operator (`~~~`)
-- Add directives to specify output binary type in manifest
-    - `binary shared` (`*.so`, `*.dll`)
-    - `binary staticlib` (`*.a`, `*.lib`)
-- Add `subsystem windows` directive (only on Windows)
-- Support `Export` attribute on functions
-- Support `never` type
-- Assertion error and other runtime errors call `abort` (rather than `exit(1)`)
-- Prefer `int32_t` for size/length/capacity. See also [prefer_signed_indexes.md](docs/internals/prefer_signed_indexes.md)
-- Fix unicode string literals are broken
-- Support byte literal (`'a'B` syntax)
-- Add `Std.CStr`, `Std.CMemory`
-- Remake `Std.File`
-- Better type inference of recursive functions
-
-### CLI Tool
-
-- Add `milone parse` subcommand
-- Fix that `milone run .` didn't work
-
-### LSP Server
-
-- Support `prepareRename` request so that the editor can reject to rename at invalid position
-- Support `completion` of static namespace members experimentally
-- Fix `diagnostics` are too frequently updated
-- Fix the server tries to continue after out of memory
-- Analysis queries can now be performed even if type errors present
-- Support fields completion
-
-### VSCode Extension
-
-- Support `Show Syntax Tree` command
-- Double-backticks (\`\`) are now brackets
+[v0.6.0]: https://github.com/vain0x/milone-lang/releases/tag/v0.6.0
 
 ### Documentation
 
 - Clarify limitation of `__nativeDecl` arguments
 - Add explanation of generic nominal types
-- Add page of type synonyms
+- Add type synonyms page
 
-### Others
+### Language Features
 
-- Default install directory is changed to match XDG base directory.
+- Support generic records
+- Fixed type check bugs
+- Fixed unicode string literals broken
+- Add `never` type
+- Add primitives:
+    - Add byte literals (`'a'B` syntax)
+    - Add bitwise negation operator (`~~~`)
+- Improve for native interop (still incomplete):
+    - Add `FunPtr<P, T>` (from `Std.Ptr`), type of function pointers (replacing experimental `__nativeFun` type)
+    - Add `FunPtr.invoke` primitive (from `Std.Ptr`) to invoke a function pointer
+    - Add Ptr-of operator (`&&`) to obtain pointers of named functions (replacing experimental `__nativeFun funName` syntax)
+    - Add `Opaque` types
+    - Add `Export` attribute on functions (to preserve the function name to link time)
+- Improve manifest:
+    - Add directives to specify output binary type in manifest
+        - `binary shared` (`*.so`, `*.dll`)
+        - `binary staticlib` (`*.a`, `*.lib`)
+    - Add `subsystem windows` directive (only on Windows)
+
+## Standard Libraries
+
+- Add `Std.CStr`, `Std.CMemory` modules for native interop
+- Add `Std.StringBuffer` module
+- Remake `Std.File`
+
+### CLI Tool
+
+- Add `milone parse` subcommand
+- Fix `milone run .` that didn't work
+
+### LSP Server
+
+- Support `prepareRename` request (the editor can now reject at invalid position)
+- Support `completion` of static namespace members and record fields
+- Fix `diagnostics` are too frequently updated
+- Fix the server tries to continue after out of memory
+- Fix the server didn't do almost anything if type errors present
+
+### VSCode Extension
+
+- Add `Show Syntax Tree` command
+- Support double-backticks (\`\`) as brackets
+
+### Build Chain
+
+- Change default install directories (to match match XDG):
     - `$HOME/.local/bin` (rather than `$HOME/bin`)
     - `$HOME/.local/share` (rather than `$HOME/.milone`)
 
 ### Internal Changes
 
-- Add SyntaxTree generation.
-- Transfer module load process to clients (CLI/LSP server)
-- Revert separation of types and implementation projects
-- `DocId` representation is no longer limited to `P.M`. LSP server now uses absolute file paths to avoid conflict.
-- `exit` is now a regular function (rather than primitive)
+Compiler:
+
+- Change project structure to revert separation of types and implementation projects (lack of benefits)
+- Transfer module load process to clients (CLI tool and LSP server)
+- Improve separate compilation by generating label names per function
+- Add SyntaxTree generation
+- Allow `DocId` representation to vary in clients
+    - Compiler still uses `P.M` module paths. LSP server now uses absolute file paths to avoid conflict.
+- Change `exit` to a regular function in Prelude
+
+Standard Libraries:
+
 - Add `Std/FormatBase.milone` as wrapper of `sprintf`-like code
-- Add `StringBuffer.milone`
-- nursery: Add Poda
-- Assign serial numbers to labels per function
+    - (It isn't a public interface of Std but no way to express such privacy)
+
+Nursery:
+
+- Add LibPoda
 
 ## [v0.5.0] - 2022-07-21
 

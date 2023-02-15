@@ -28,7 +28,7 @@ SUBCOMMANDS:
     version, -V, --version
 """
 
-let private MiloneVersion = "0.5.0"
+let private MiloneVersion = "0.6.0"
 let private AssetsDir = __SOURCE_DIRECTORY__ + "/assets"
 let private Trace = false
 
