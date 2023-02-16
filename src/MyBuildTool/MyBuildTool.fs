@@ -650,7 +650,7 @@ let private commandPack () =
   let destName = $"milone-{version}"
 
   io "pack" {
-    generateBinaryPackage destName
+    generateBinaryPackage $"target/{destName}"
 
     // Compress.
     let outFile =
