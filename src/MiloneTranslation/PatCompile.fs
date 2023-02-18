@@ -66,7 +66,7 @@ type private ClauseIndex = int
 let private pcNodePat pat body alt =
   let kind, argPats, _ty, _loc =
     match pat with
-    | HNodePat (kind, argPats, ty, loc) -> kind, argPats, ty, loc
+    | HNodePat(kind, argPats, ty, loc) -> kind, argPats, ty, loc
     | _ -> unreachable ()
 
   match kind, argPats with
@@ -90,15 +90,15 @@ let private pcNodePat pat body alt =
 
 let private pcPat pat body alt : PTerm =
   match pat with
-  | HLitPat (lit, loc) -> PSwitchTerm([], [ PLitConst(lit, loc), body ], alt)
+  | HLitPat(lit, loc) -> PSwitchTerm([], [ PLitConst(lit, loc), body ], alt)
 
   | HDiscardPat _ -> body
-  | HVarPat (varSerial, _, _) -> PLetTerm(varSerial, [], body)
+  | HVarPat(varSerial, _, _) -> PLetTerm(varSerial, [], body)
 
   | HVariantPat _ -> todo ()
   | HNodePat _ -> pcNodePat pat body alt
 
-  | HAsPat (bodyPat, varSerial, _) -> PLetTerm(varSerial, [], pcPat bodyPat body alt)
+  | HAsPat(bodyPat, varSerial, _) -> PLetTerm(varSerial, [], pcPat bodyPat body alt)
 
   | HOrPat _ -> unreachable () // resolved by normalization
 

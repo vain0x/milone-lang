@@ -1,12 +1,7 @@
 module rec MiloneTranslation.XirReuse
 
-open MiloneShared.SharedTypes
-open MiloneShared.UtilSymbol
-open MiloneShared.TypeFloat
-open MiloneShared.TypeIntegers
 open MiloneShared.Util
 open MiloneTranslation.Xir
-open Std.StdError
 open Std.StdMap
 open Std.StdSet
 

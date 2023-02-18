@@ -17,13 +17,11 @@ type private TraceFun = string -> string list -> unit
 
 let private cStrTy = CStructTy "String"
 
-let private cUnitExpr: CExpr =
-  CIntExpr("/*unit*/0", I32)
+let private cUnitExpr: CExpr = CIntExpr("/*unit*/0", I32)
 
 let private cZeroExpr: CExpr = CIntExpr("0", I32)
 
-let private cIntExpr (n: int) =
-  CIntExpr(string n, I32)
+let private cIntExpr (n: int) = CIntExpr(string n, I32)
 
 let private cIntCompareFun = CVarExpr "int_compare"
 let private cStrAddFun = CVarExpr "str_add"
@@ -55,8 +53,7 @@ type private Rx =
 
 // Write context.
 type private Wx =
-  { Stmts: CStmt list
-    Decls: CDecl list }
+  { Stmts: CStmt list; Decls: CDecl list }
 
 let private newRx trace variants (bodyDef: XBodyDef) : Rx =
   { Variants = variants
@@ -72,12 +69,12 @@ let private addDecl decl (wx: Wx) = { wx with Decls = decl :: wx.Decls }
 let private xcLit lit : CExpr =
   match lit with
   | IntLit text -> CIntExpr(text, I32)
-  | IntLitWithFlavor (text, flavor) -> CIntExpr(text, flavor)
+  | IntLitWithFlavor(text, flavor) -> CIntExpr(text, flavor)
   | FloatLit text -> CDoubleExpr text
   | BoolLit false -> CVarExpr "false"
   | BoolLit true -> CVarExpr "true"
   | CharLit value -> CCharExpr value
-  | ByteLit value -> CCastExpr(CCharExpr (char value), CIntTy U8)
+  | ByteLit value -> CCastExpr(CCharExpr(char value), CIntTy U8)
   | StringLit value -> CStringInitExpr value
 
 let private xcDiscriminantConst variantId = cIntExpr variantId // FIXME: impl
@@ -101,20 +98,20 @@ let private xcPlace (place: XPlace) =
 
 let private xcArg (arg: XArg) =
   match arg with
-  | XLitArg (lit, _) -> xcLit lit
+  | XLitArg(lit, _) -> xcLit lit
   | XUnitArg _ -> cUnitExpr
-  | XDiscriminantArg (variantId, _) -> xcDiscriminantConst variantId
-  | XLocalArg (localId, _) -> xcLocal localId
+  | XDiscriminantArg(variantId, _) -> xcDiscriminantConst variantId
+  | XLocalArg(localId, _) -> xcLocal localId
 
 let private xcRval (rx: Rx) (rval: XRval) =
   match rval with
-  | XLitRval (lit, _) -> xcLit lit
+  | XLitRval(lit, _) -> xcLit lit
   | XUnitRval _ -> cUnitExpr
-  | XDiscriminantRval (variantId, _) -> xcDiscriminantConst variantId
-  | XLocalRval (localId, _) -> xcLocal localId
-  | XPlaceRval (place, _) -> xcPlace place
+  | XDiscriminantRval(variantId, _) -> xcDiscriminantConst variantId
+  | XLocalRval(localId, _) -> xcLocal localId
+  | XPlaceRval(place, _) -> xcPlace place
 
-  | XUnaryRval (unary, xArg, _) ->
+  | XUnaryRval(unary, xArg, _) ->
     let cArg = xcArg xArg
 
     match unary with
@@ -122,7 +119,7 @@ let private xcRval (rx: Rx) (rval: XRval) =
     | XNotUnary -> CUnaryExpr(CNotUnary, cArg)
     | XStrLengthUnary -> CDotExpr(cArg, "len")
 
-  | XBinaryRval (binary, l, r, _) ->
+  | XBinaryRval(binary, l, r, _) ->
     let l = xcArg l
     let r = xcArg r
 
@@ -144,79 +141,60 @@ let private xcRval (rx: Rx) (rval: XRval) =
     | XStrCompareBinary -> CCallExpr(cStrCompareFun, [ l; r ])
     | XStrIndexBinary -> CIndexExpr(CDotExpr(l, "str"), r)
 
-  | XNodeRval (kind, args, _) ->
+  | XNodeRval(kind, args, _) ->
     let args = args |> List.map xcArg
 
     match kind, args with
     | XRvalKind.StrSlice, [ l; r; s ] -> CCallExpr(cStrSliceFun, [ l; r; s ])
     | XRvalKind.StrSlice, _ -> unreachable ()
 
-  | XAggregateRval (kind, args, _) ->
+  | XAggregateRval(kind, args, _) ->
     match kind, args with
     | XVariantAk variantId, [ payload ] ->
       // FIXME: wants unionId
-      CInitExpr(
-        [ "discriminant", cIntExpr variantId
-          cVariantName variantId, xcArg payload ],
-        CEmbedTy "SomeUnion"
-      )
+      CInitExpr([ "discriminant", cIntExpr variantId; cVariantName variantId, xcArg payload ], CEmbedTy "SomeUnion")
 
     | XVariantAk _, _ -> unreachable ()
 
     | XRecordAk recordId, _ ->
-      CInitExpr(
-        args
-        |> List.mapi (fun i arg -> cFieldName i, xcArg arg),
-        CEmbedTy(cRecordName recordId)
-      )
+      CInitExpr(args |> List.mapi (fun i arg -> cFieldName i, xcArg arg), CEmbedTy(cRecordName recordId))
 
 let private xcStmt rx (wx: Wx) stmt : Wx =
   match stmt with
-  | XAssignStmt (place, rval, _) -> addStmt (CSetStmt(xcPlace place, xcRval rx rval)) wx
+  | XAssignStmt(place, rval, _) -> addStmt (CSetStmt(xcPlace place, xcRval rx rval)) wx
 
-  | XCallStmt (bodyId, args, result, _) ->
+  | XCallStmt(bodyId, args, result, _) ->
     let callee = CVarExpr(cBodyToName bodyId) // FIXME: wants function name
     let args = args |> List.map xcArg
 
-    wx
-    |> addStmt (CSetStmt(xcPlace result, CCallExpr(callee, args)))
+    wx |> addStmt (CSetStmt(xcPlace result, CCallExpr(callee, args)))
 
-  | XNativeCallStmt (_, args, result, _) ->
+  | XNativeCallStmt(_, args, result, _) ->
     // FIXME: funSerial to fun name
     let callee = CVarExpr "__nativeFun__"
     let args = args |> List.map xcArg
 
-    wx
-    |> addStmt (CSetStmt(xcPlace result, CCallExpr(callee, args)))
+    wx |> addStmt (CSetStmt(xcPlace result, CCallExpr(callee, args)))
 
-  | XAssertStmt (arg, loc) ->
-    let (Loc (docId, y, x)) = loc
+  | XAssertStmt(arg, loc) ->
+    let (Loc(docId, y, x)) = loc
 
     let args =
-      [ xcArg arg
-        CStringLitExpr (Symbol.toString docId)
-        cIntExpr y
-        cIntExpr x ]
+      [ xcArg arg; CStringLitExpr(Symbol.toString docId); cIntExpr y; cIntExpr x ]
 
-    wx
-    |> addStmt (CExprStmt(CCallExpr(cAssertFun, args)))
+    wx |> addStmt (CExprStmt(CCallExpr(cAssertFun, args)))
 
-  | XInRegionStmt (_, _) -> todo ()
+  | XInRegionStmt(_, _) -> todo ()
 
-  | XPrintfnStmt (args, _) ->
+  | XPrintfnStmt(args, _) ->
     // FIXME: convert string to char *
-    wx
-    |> addStmt (CExprStmt(CCallExpr(CVarExpr "printf", args |> List.map xcArg)))
+    wx |> addStmt (CExprStmt(CCallExpr(CVarExpr "printf", args |> List.map xcArg)))
 
 let private xcTerminator (rx: Rx) (wx: Wx) (terminator: XTerminator) : Wx =
   match terminator with
-  | XExitTk arg ->
-    wx
-    |> addStmt (CExprStmt(CCallExpr(cExitFun, [ xcArg arg ])))
+  | XExitTk arg -> wx |> addStmt (CExprStmt(CCallExpr(cExitFun, [ xcArg arg ])))
 
-  | XUnreachableTk ->
-    wx
-    |> addStmt (CExprStmt(CCallExpr(cUnreachableFun, [])))
+  | XUnreachableTk -> wx |> addStmt (CExprStmt(CCallExpr(cUnreachableFun, [])))
 
   | XReturnTk ->
     let resultOpt =
@@ -230,19 +208,16 @@ let private xcTerminator (rx: Rx) (wx: Wx) (terminator: XTerminator) : Wx =
 
   | XJumpTk blockId -> wx |> addStmt (CGotoStmt(cLabelOf blockId))
 
-  | XIfTk (cond, body, alt, _) ->
+  | XIfTk(cond, body, alt, _) ->
     let body = cLabelOf body
     let alt = cLabelOf alt
 
-    wx
-    |> addStmt (CIfStmt(xcArg cond, CGotoStmt body, CGotoStmt alt))
+    wx |> addStmt (CIfStmt(xcArg cond, CGotoStmt body, CGotoStmt alt))
 
 let private xcBlock rx (wx: Wx) (blockId: XBlockId) (blockDef: XBlockDef) : Wx =
-  let wx =
-    addStmt (CLabelStmt(cLabelOf blockId)) wx
+  let wx = addStmt (CLabelStmt(cLabelOf blockId)) wx
 
-  let wx =
-    blockDef.Stmts |> List.fold (xcStmt rx) wx
+  let wx = blockDef.Stmts |> List.fold (xcStmt rx) wx
 
   xcTerminator rx wx blockDef.Terminator
 
@@ -290,16 +265,14 @@ let private xcBody (rx: Rx) (wx: Wx) bodyId : Wx =
     let wx =
       rx.BodyDef.Locals
       |> TMap.fold
-           (fun wx localId (localDef: XLocalDef) ->
-             if localDef.Arg then
-               wx
-             else
-               wx
-               |> addStmt (CLetStmt(cLocalName localId, None, xcTy localDef.Ty)))
-           wx
+        (fun wx localId (localDef: XLocalDef) ->
+          if localDef.Arg then
+            wx
+          else
+            wx |> addStmt (CLetStmt(cLocalName localId, None, xcTy localDef.Ty)))
+        wx
 
-    go (TSet.empty compare) bodyDef.EntryBlockId wx
-    |> fst
+    go (TSet.empty compare) bodyDef.EntryBlockId wx |> fst
 
   // Emit decl.
   let wx =
@@ -308,13 +281,11 @@ let private xcBody (rx: Rx) (wx: Wx) bodyId : Wx =
       |> List.map (fun localId ->
         let ident = cLocalName localId
 
-        let ty =
-          (bodyDef.Locals |> mapFind localId).Ty |> xcTy
+        let ty = (bodyDef.Locals |> mapFind localId).Ty |> xcTy
 
         ident, ty)
 
-    let stmts, wx =
-      List.rev wx.Stmts, { wx with Stmts = [] }
+    let stmts, wx = List.rev wx.Stmts, { wx with Stmts = [] }
 
     let funDecl =
       let isNoReturn = false // TODO
@@ -329,10 +300,10 @@ let private xcBody (rx: Rx) (wx: Wx) bodyId : Wx =
 let private splitByDoc (program: XProgram) : (DocId * (XBodyId * XBodyDef) list) list =
   program.Bodies
   |> TMap.fold
-       (fun map bodyId (bodyDef: XBodyDef) ->
-         let docId, _ = Loc.toDocPos bodyDef.Loc
-         map |> Multimap.add docId (bodyId, bodyDef))
-       (TMap.empty Symbol.compare)
+    (fun map bodyId (bodyDef: XBodyDef) ->
+      let docId, _ = Loc.toDocPos bodyDef.Loc
+      map |> Multimap.add docId (bodyId, bodyDef))
+    (TMap.empty Symbol.compare)
   |> TMap.toList
 
 let xirToCir (trace: TraceFun) (program: XProgram) : (DocId * CDecl list) list =
@@ -347,10 +318,10 @@ let xirToCir (trace: TraceFun) (program: XProgram) : (DocId * CDecl list) list =
       bodiesRev
       |> List.rev
       |> List.fold
-           (fun wx (bodyId, bodyDef) ->
-             let rx = newRx trace variants bodyDef
-             xcBody rx wx bodyId)
-           wx
+        (fun wx (bodyId, bodyDef) ->
+          let rx = newRx trace variants bodyDef
+          xcBody rx wx bodyId)
+        wx
 
     let wx =
       let cInt = CEmbedTy "int"
@@ -360,8 +331,7 @@ let xirToCir (trace: TraceFun) (program: XProgram) : (DocId * CDecl list) list =
       let mainDecl =
         CFunDecl(
           "main",
-          [ "argc", cInt
-            "argv", CEmbedTy "char**" ],
+          [ "argc", cInt; "argv", CEmbedTy "char**" ],
           cInt,
           [ CExprStmt(CCallExpr(CVarExpr "milone_start", [ CVarExpr "argc"; CVarExpr "argv" ]))
             CReturnStmt(Some(CCallExpr(mainFun, []))) ],
