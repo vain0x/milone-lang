@@ -20,7 +20,12 @@
     <Compile Include="MonoTy.fs" />
     <Compile Include="Mir.fs" />
     <Compile Include="MirGen.fs" />
+    <Compile Include="PatCompile.fs" />
+    <Compile Include="Xir.fs" />
+    <Compile Include="XirGen.fs" />
+    <Compile Include="XirReuse.fs" />
     <Compile Include="Cir.fs" />
+    <Compile Include="XirToCir.fs" />
     <Compile Include="CirGen.fs" />
     <Compile Include="CirDump.fs" />
     <Compile Include="TranslationApi.fs" />

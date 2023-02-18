@@ -126,6 +126,8 @@ module RefMode =
 
   let equals l r = toInt l = toInt r
 
+  let compare l r = compareInt (toInt l) (toInt r)
+
 // -----------------------------------------------
 // Position
 // -----------------------------------------------

@@ -35,6 +35,9 @@ let private readStdinAll () : string = __nativeFun "milone_read_stdin_all"
 let private writeStdout (contents: string) : unit =
   __nativeStmt ("fwrite({0}.ptr, sizeof(char), (size_t){0}.len, stdout);", contents)
 
+let private writeStderr (contents: string) : unit =
+  __nativeStmt ("fwrite({0}.str, sizeof(char), (size_t){0}.len, stderr);", contents)
+
 let private getCwd () : string = __nativeFun "milone_get_cwd"
 
 let private getEnv (name: string) : string = __nativeFun ("milone_get_env", name)
@@ -89,6 +92,7 @@ let miloneCliHost () : CliHost =
       FileReadAllText = readFile
       FileWriteAllText = fileWriteAllText
       ReadStdinAll = readStdinAll
-      WriteStdout = writeStdout }
+      WriteStdout = writeStdout
+      WriteStderr = writeStderr }
 
   host

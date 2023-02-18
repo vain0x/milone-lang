@@ -20,6 +20,7 @@ module ModuleFetch = MiloneCli.ModuleFetch
 module ModuleLoad = MiloneCli.ModuleLoad
 module PL = MiloneCli.PlatformLinux
 module PW = MiloneCli.PlatformWindows
+module SyntaxApi = MiloneSyntax.SyntaxApi
 
 let private currentVersion () = "0.6.0"
 
@@ -113,7 +114,8 @@ type CliHost =
     ReadStdinAll: unit -> string
 
     /// Writes to standard output.
-    WriteStdout: string -> unit }
+    WriteStdout: string -> unit
+    WriteStderr: string -> unit }
 
 // -----------------------------------------------
 // Helpers
@@ -918,6 +920,10 @@ type private CliCmd =
   | RunCmd
   | EvalCmd
   | ParseCmd
+
+  // experimental
+  | XCmd
+
   | BadCmd of string
 
 let private parseArgs args =
@@ -940,6 +946,7 @@ let private parseArgs args =
     | "run" -> RunCmd, args
     | "eval" -> EvalCmd, args
     | "parse" -> ParseCmd, args
+    | "x" -> XCmd, args
     | _ -> BadCmd arg, []
 
 // -----------------------------------------------
@@ -1010,6 +1017,46 @@ let cli (sApi: SyntaxApi) (tApi: TranslationApi) (host: CliHost) =
     else
       printfn "ERROR: No inputs. `milone parse <FILE...>`"
       1
+
+  | XCmd, args ->
+       failwith "TODO"
+  //   let verbosity, args = parseVerbosity host args
+  //   let writeLog s = writeLog host verbosity s
+
+  //   let compileWithX (ctx: CompileCtx) =
+  //     match SyntaxApi.performSyntaxAnalysis ctx.SyntaxCtx with
+  //     | _, SyntaxApi.SyntaxAnalysisError (errors, _) -> CompileError(SyntaxApi.syntaxErrorsToString errors)
+
+  //     | _, SyntaxApi.SyntaxAnalysisOk (modules, tirCtx) ->
+  //       writeLog "Lower"
+  //       let modules, hirCtx = Lower.lower (modules, tirCtx)
+
+  //       TranslationApi.codeGenUsingXir writeLog (modules, hirCtx)
+  //       CompileOk []
+
+  //   let b, args = parseBuildLikeOptions host args
+  //   endArgs args
+
+  //   let options = BuildLikeOptions.toBuildOptions b
+  //   let projectDir = options.CompileOptions.ProjectDir
+  //   let targetDir = options.CompileOptions.TargetDir
+
+  //   let ctx = compileCtxNew host verbosity projectDir
+
+  //   match compileWithX ctx with
+  //   | CompileOk files ->
+  //     List.fold
+  //       (fun () (name, contents) ->
+  //         printfn "%s" name
+  //         host.FileWriteAllText(targetDir + "/" + name) contents)
+  //       ()
+  //       files
+
+  //     0
+
+  //   | CompileError output ->
+  //     host.WriteStdout output
+  //     1
 
   | BadCmd subcommand, _ ->
     printfn "ERROR: Unknown subcommand '%s'." subcommand

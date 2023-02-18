@@ -99,4 +99,5 @@ let dotnetCliHost () : CliHost =
     FileReadAllText = readFile
     FileWriteAllText = writeFile
     ReadStdinAll = stdin.ReadToEnd
-    WriteStdout = printf "%s" }
+    WriteStdout = printf "%s"
+    WriteStderr = eprintf "%s" }
