@@ -9,11 +9,8 @@ module internal StringExt =
 module internal Sha256 =
   open System.Security.Cryptography
 
-  let compute (bytes: byte []) : string =
+  let compute (bytes: byte[]) : string =
     use h = SHA256.Create()
     let hash = h.ComputeHash(bytes)
 
-    BitConverter
-      .ToString(hash)
-      .Replace("-", "")
-      .ToLower()
+    BitConverter.ToString(hash).Replace("-", "").ToLower()

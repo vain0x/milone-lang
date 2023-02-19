@@ -24,8 +24,8 @@ let internal readToDiff (file: string) =
       File.ReadAllText(file)
     else
       $"{file} doesn't exist"
-  with
-  | _ -> $"{file} couldn't be read."
+  with _ ->
+    $"{file} couldn't be read."
 
 let internal writeFile file (contents: string) : unit = File.WriteAllText(file, contents)
 
@@ -33,10 +33,9 @@ let internal writeFile file (contents: string) : unit = File.WriteAllText(file, 
 let internal writeTo (contents: string) (output: string) =
   let same =
     try
-      File.Exists(output)
-      && File.ReadAllText(output) = contents
-    with
-    | _ -> false
+      File.Exists(output) && File.ReadAllText(output) = contents
+    with _ ->
+      false
 
   if not same then
     File.WriteAllText(output, contents)
@@ -46,8 +45,7 @@ let internal copyFile src dest : unit = File.Copy(src, dest, true)
 /// Copies multiple files to a directory.
 let internal copyFilesTo (srcFiles: string list) (destDir: string) : unit =
   for src in srcFiles do
-    let destFile =
-      Path.Combine(destDir, Path.GetFileName(src))
+    let destFile = Path.Combine(destDir, Path.GetFileName(src))
 
     File.Copy(src, destFile, true)
 
@@ -66,8 +64,8 @@ let internal getFilesWithFilter filter (dir: string) : string array =
   let files =
     try
       Directory.GetFiles(dir)
-    with
-    | :? DirectoryNotFoundException -> [||]
+    with :? DirectoryNotFoundException ->
+      [||]
 
   files |> Array.filter (applyFilter filter)
 
@@ -76,22 +74,21 @@ let internal copyDirWithFilter (filter: string list) (srcDir: string) (destDir: 
   makeDir destDir
 
   for src in getFilesWithFilter filter srcDir do
-    let destFile =
-      Path.Combine(destDir, Path.GetFileName(src))
+    let destFile = Path.Combine(destDir, Path.GetFileName(src))
 
     File.Copy(src, destFile, true)
 
 let internal removeFile file : unit =
   try
     File.Delete(file)
-  with
-  | :? DirectoryNotFoundException -> ()
+  with :? DirectoryNotFoundException ->
+    ()
 
 let internal removeDir dir : unit =
   try
     Directory.Delete(dir, true)
-  with
-  | :? DirectoryNotFoundException -> ()
+  with :? DirectoryNotFoundException ->
+    ()
 
 let internal removeFilesWithFilter (filter: string list) (dir: string) : unit =
   for file in getFilesWithFilter filter dir do
@@ -154,7 +151,7 @@ type internal Action =
   | RunWith of exe: string * args: string list * k: (string -> unit)
 
   // File operations:
-  | ReadBytesWith of binaryFile: string * k: (byte [] -> unit)
+  | ReadBytesWith of binaryFile: string * k: (byte[] -> unit)
   | CopyFile of src: string * dest: string
   | CopyFiles of srcFiles: string list * dest: string
   | CopyDirWithFilter of src: string * dest: string * filter: string list
@@ -186,7 +183,7 @@ let internal dumpAction a =
 
   let rec go a =
     match a with
-    | Block (label, actions) ->
+    | Block(label, actions) ->
       let parentIndent = indent
       indent <- indent + "  "
 
@@ -199,12 +196,12 @@ let internal dumpAction a =
 
       indent <- parentIndent
 
-    | Do (label, _) -> eprintfn "%sDo(%s)" indent label
+    | Do(label, _) -> eprintfn "%sDo(%s)" indent label
 
-    | CopyDirWithFilter (src, dest, filter) ->
+    | CopyDirWithFilter(src, dest, filter) ->
       eprintfn "%sCopyDirWithFilter(%A, %s)" indent (getFilesWithFilter filter src) dest
 
-    | RemoveFilesWithFilter (dir, filter) ->
+    | RemoveFilesWithFilter(dir, filter) ->
       eprintfn "%sRemoveFilesWithFilter(%A)" indent (getFilesWithFilter filter dir)
 
     | _ -> eprintfn "%s%A" indent a
@@ -226,7 +223,7 @@ let internal performAction a =
       | _ -> dumpAction a
 
     match a with
-    | Block (label, actions) ->
+    | Block(label, actions) ->
       try
         if Trace then
           eprintfn "begin %s" label
@@ -236,24 +233,23 @@ let internal performAction a =
 
         if Trace then
           eprintfn "end %s" label
-      with
-      | _ ->
+      with _ ->
         eprintfn "Failed in %s" label
         reraise ()
 
-    | CopyFile (src, dest) -> copyFile src dest
-    | CopyFiles (srcFiles, dest) -> copyFilesTo srcFiles dest
-    | CopyDirWithFilter (src, dest, filter) -> copyDirWithFilter filter src dest
+    | CopyFile(src, dest) -> copyFile src dest
+    | CopyFiles(srcFiles, dest) -> copyFilesTo srcFiles dest
+    | CopyDirWithFilter(src, dest, filter) -> copyDirWithFilter filter src dest
     | MakeDir dir -> makeDir dir
-    | Run (exe, args, env, workDir) -> runWithEnv exe args env workDir
-    | RunWith (exe, args, k) -> k (runToOut exe args)
+    | Run(exe, args, env, workDir) -> runWithEnv exe args env workDir
+    | RunWith(exe, args, k) -> k (runToOut exe args)
     | RemoveFile file -> removeFile file
-    | RemoveFilesWithFilter (dir, filter) -> removeFilesWithFilter filter dir
+    | RemoveFilesWithFilter(dir, filter) -> removeFilesWithFilter filter dir
     | RemoveDir dir -> removeDir dir
     | Echo msg -> printfn "%s" msg
-    | Do (_, k) -> k ()
+    | Do(_, k) -> k ()
 
-    | ReadBytesWith (file, k) ->
+    | ReadBytesWith(file, k) ->
       let contents =
         try
           File.ReadAllBytes(file)

@@ -4,6 +4,7 @@ open System
 open System.IO
 open System.Text
 open MyBuildTool.MyShell
+open MyBuildTool.PlatformInfo
 open MyBuildTool.Util
 
 module FS = MyBuildTool.FileSearch
@@ -72,42 +73,12 @@ build src/libmilonert/milone_platform.o: $
 // Environment
 // -----------------------------------------------
 
-[<RequireQualifiedAccess>]
-type private Platform =
-  | Linux
-  | Windows
+let internal cwd () : string = Environment.CurrentDirectory
 
-let private getPlatform () : Platform =
-  match Environment.OSVersion.Platform with
-  | PlatformID.Win32NT -> Platform.Windows
-  | _ -> Platform.Linux
-
-let private getExeExt () : string =
-  match getPlatform () with
-  | Platform.Linux -> ""
-  | Platform.Windows -> ".exe"
-
-let private getTriplet () =
-  match getPlatform () with
-  | Platform.Linux -> "x86_64-unknown-linux-gnu"
-  | Platform.Windows -> "x86_64-pc-windows-msvc"
-
-let private generatedExeFile () =
-  match getPlatform () with
-  | Platform.Linux -> "target/MiloneCli/x86_64-unknown-linux-gnu-release/MiloneCli"
-  | Platform.Windows -> "target/MiloneCli/x86_64-pc-windows-msvc-release/MiloneCli.exe"
-
-let private getRuntimeIdentifier () =
-  match getPlatform () with
-  | Platform.Linux -> "linux-x64"
-  | Platform.Windows -> "win10-x64"
-
-let private cwd () : string = Environment.CurrentDirectory
-
-let private getHome () : string =
+let internal getHome () : string =
   Environment.GetFolderPath(Environment.SpecialFolder.UserProfile)
 
-let private setMiloneHomeToCurrentDir () =
+let internal setMiloneHomeToCurrentDir () =
   if String.IsNullOrEmpty(Environment.GetEnvironmentVariable("MILONE_HOME")) then
     Environment.SetEnvironmentVariable("MILONE_HOME", cwd ())
 
@@ -146,20 +117,13 @@ let private commandGen3 () =
   makeDir "target/gen3"
 
   let stdOut =
-    runToOut
-      "target/milone"
-      [ "compile"
-        "--profile"
-        "src/MiloneCli"
-        "--target-dir"
-        "target/gen3" ]
+    runToOut "target/milone" [ "compile"; "--profile"; "src/MiloneCli"; "--target-dir"; "target/gen3" ]
 
   // compare
   let mutable ok = true
 
   for name in stdOut.Split("\n") do
-    let name =
-      Path.GetFileNameWithoutExtension(name.Trim())
+    let name = Path.GetFileNameWithoutExtension(name.Trim())
 
     if name <> "" then
       let c2 = $"target/gen2/{name}.c"
@@ -169,7 +133,8 @@ let private commandGen3 () =
         printfn $"differ: {c2} vs {c3}"
         ok <- true
 
-  if not ok then exit 1
+  if not ok then
+    exit 1
 
 // -----------------------------------------------
 // tests
@@ -196,8 +161,7 @@ let private commandTestsBuild (testProjectDirs: string list) =
   for projectDir in testProjectDirs do
     let projectName = Path.GetFileName(projectDir)
 
-    let category =
-      Path.GetFileName(Path.GetDirectoryName(projectDir))
+    let category = Path.GetFileName(Path.GetDirectoryName(projectDir))
 
     let targetDir = $"target/tests/{category}/{projectName}"
     let exe = $"{targetDir}/{projectName}.exe"
@@ -207,14 +171,12 @@ let private commandTestsBuild (testProjectDirs: string list) =
     w $"# {projectDir}"
     w "# ----------------------------------"
 
-    let files =
-      File.ReadAllText($"{targetDir}/files.txt")
+    let files = File.ReadAllText($"{targetDir}/files.txt")
 
     let oFiles = ResizeArray()
 
     for name in files.Split("\n") do
-      let name =
-        Path.GetFileNameWithoutExtension(name.Trim())
+      let name = Path.GetFileNameWithoutExtension(name.Trim())
 
       if String.IsNullOrEmpty(name) |> not then
         let c = $"{projectDir}/{name}.c"
@@ -242,8 +204,7 @@ let private commandTestsSummarize (testProjectDirs: string list) =
   for projectDir in testProjectDirs do
     let projectName = Path.GetFileName(projectDir)
 
-    let category =
-      Path.GetFileName(Path.GetDirectoryName(projectDir))
+    let category = Path.GetFileName(Path.GetDirectoryName(projectDir))
 
     let targetDir = $"target/tests/{category}/{projectName}"
     let expectedOut = $"{projectDir}/{projectName}.output"
@@ -258,7 +219,9 @@ let private commandTestsSummarize (testProjectDirs: string list) =
   let ok = pass <> 0 && fail = 0
   printfn "pass %d / fail %d / total %d" pass fail (pass + fail)
   printfn "%s" (if ok then "OK" else "FAILED")
-  if not ok then exit 1
+
+  if not ok then
+    exit 1
 
 // -----------------------------------------------
 // Helper of Package
@@ -270,7 +233,7 @@ let private RunDotnetPublish (projectDir, outputDir) : Action =
     [ "publish"
       projectDir
       "--runtime"
-      getRuntimeIdentifier ()
+      Platform.RuntimeIdentifier
       "--self-contained"
       "true"
       "-c"
@@ -287,17 +250,13 @@ let private RunDotnetPublish (projectDir, outputDir) : Action =
 let private RunPwsh command : Action =
   Run(
     "C:/Windows/System32/WindowsPowerShell/v1.0/powershell.exe",
-    [ "-NoLogo"
-      "-NoProfile"
-      "-NonInteractive"
-      "-c"
-      command ],
+    [ "-NoLogo"; "-NoProfile"; "-NonInteractive"; "-c"; command ],
     [],
     Path.GetDirectoryName(command) |> Some
   )
 
 let private destFiles (destDir: string) =
-  let exeExt = getExeExt ()
+  let exeExt = Platform.ExeExt
   let destMiloneHome = $"{destDir}/share/milone"
 
   {| BinDir = $"{destDir}/bin"
@@ -317,7 +276,7 @@ let private destFiles (destDir: string) =
 
 /// Generates a binary package.
 let private generateBinaryPackage (destDir: string) =
-  let onLinux = getPlatform () = Platform.Linux
+  let onLinux = Platform.Current = Platform.Linux
   let dest = destFiles destDir
 
   io "package" {
@@ -335,7 +294,7 @@ let private generateBinaryPackage (destDir: string) =
       None
     )
 
-    CopyFile(generatedExeFile (), dest.MiloneExe)
+    CopyFile(Platform.GeneratedExeFile, dest.MiloneExe)
 
     if onLinux then
       Run("strip", [ "-s"; dest.MiloneExe ], [], None)
@@ -361,7 +320,7 @@ let private generateBinaryPackage (destDir: string) =
 
     // Add assets.
     let installScript, uninstallScript =
-      match getPlatform () with
+      match Platform.Current with
       | Platform.Linux -> $"{AssetsDir}/install.sh", $"{AssetsDir}/uninstall.sh"
       | Platform.Windows -> $"{AssetsDir}/install.ps1", $"{AssetsDir}/uninstall.ps1"
 
@@ -381,7 +340,7 @@ let private generateBinaryPackage (destDir: string) =
 
 /// Makes a compressed binary package to upload.
 let private commandPack () =
-  let triplet = getTriplet ()
+  let triplet = Platform.Triplet
 
   let version = MiloneVersion
   let destName = $"milone-{version}"
@@ -391,15 +350,16 @@ let private commandPack () =
 
     // Compress.
     let outFile =
-      match getPlatform () with
+      match Platform.Current with
       | Platform.Linux -> $"target/milone-{version}-{triplet}.tar.gz"
       | Platform.Windows -> $"target/milone-{version}-{triplet}.zip"
 
     RemoveFile outFile
 
-    match getPlatform () with
+    match Platform.Current with
     | Platform.Linux -> Run("tar", [ "cf"; outFile; "-C"; "target"; destName ], [], None)
-    | Platform.Windows -> Do("compress", (fun () -> Compression.ZipFile.CreateFromDirectory($"target/{destName}", outFile)))
+    | Platform.Windows ->
+      Do("compress", (fun () -> Compression.ZipFile.CreateFromDirectory($"target/{destName}", outFile)))
 
     ReadBytesWith(
       outFile,
@@ -417,13 +377,12 @@ let private commandPack () =
 // -----------------------------------------------
 
 let private commandSelfInstall () : Action =
-  let destDir =
-    $"{cwd ()}/target/milone-{MiloneVersion}"
+  let destDir = $"{cwd ()}/target/milone-{MiloneVersion}"
 
   io "self-install" {
     generateBinaryPackage destDir
 
-    match getPlatform () with
+    match Platform.Current with
     | Platform.Linux -> Run("/bin/sh", [ $"{destDir}/install.sh" ], [], Some destDir)
     | Platform.Windows -> RunPwsh $"{destDir}/install.ps1"
   }
@@ -434,7 +393,7 @@ let private commandSelfInstall () : Action =
 
 let private commandSelfUninstall () =
   io "uninstall" {
-    match getPlatform () with
+    match Platform.Current with
     | Platform.Linux -> Run("/bin/sh", [ $"{AssetsDir}/uninstall.sh" ], [], None)
     | Platform.Windows -> RunPwsh $"{AssetsDir}/uninstall.ps1"
   }
@@ -447,14 +406,9 @@ let private commandSelfUninstall () =
 let main (argv: string array) =
   let args = Array.toList argv
 
-  let dryRun, args =
-    List.contains "-n" args, List.filter ((<>) "-n") args
+  let dryRun, args = List.contains "-n" args, List.filter ((<>) "-n") args
 
-  let perform =
-    if dryRun then
-      dumpAction
-    else
-      performAction
+  let perform = if dryRun then dumpAction else performAction
 
   match args with
   | []
