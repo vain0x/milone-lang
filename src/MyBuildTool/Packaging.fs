@@ -1,5 +1,4 @@
 // Commands for packaging, install and uninstall.
-
 module internal MyBuildTool.Packaging
 
 open System

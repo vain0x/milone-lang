@@ -6,6 +6,7 @@ open System.Text
 open MyBuildTool.MyShell
 open MyBuildTool.Packaging
 open MyBuildTool.PlatformInfo
+open MyBuildTool.BuildingTests
 open MyBuildTool.Util
 
 module FS = MyBuildTool.FileSearch
@@ -248,6 +249,8 @@ let main (argv: string array) =
   | "tests" :: _ -> commandTests ()
   | "--build-run-tests" :: args -> commandTestsBuild args
   | "--summarize-tests" :: args -> commandTestsSummarize args
+
+  | "building-tests" :: _ -> commandBuildingTests ()
 
   | "self-install" :: _ -> commandSelfInstall () |> perform
   | "self-uninstall" :: _ -> commandSelfUninstall () |> perform
