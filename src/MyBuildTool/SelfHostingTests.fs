@@ -7,15 +7,15 @@ open System.IO
 open System.Threading
 open System.Threading.Tasks
 open MyBuildTool.MyShell
-open MyBuildTool.PlatformInfo
 
 let private Cwd = Environment.CurrentDirectory
 
 // #miloneCmdForBuild
-let private MiloneCmd =
-  match Environment.GetEnvironmentVariable("MILONE") with
-  | null -> $"{Cwd}/target/MiloneCli/milone{Platform.ExeExt}"
-  | s -> s
+let private MiloneCmdLazy: Lazy<string> =
+  lazy
+    (match Environment.GetEnvironmentVariable("MILONE") with
+     | null -> failwith "Expected 'MILONE' environment variable."
+     | s -> s)
 
 // -----------------------------------------------
 // Command
@@ -26,7 +26,7 @@ let internal commandSelfHostingTests () =
     // Run compiler.
     let mutable stdOut = ""
 
-    let command = MiloneCmd
+    let command = MiloneCmdLazy.Value
     let args = [ "build"; "src/MiloneCli"; "--target-dir"; "target/gen3" ]
 
     use p =

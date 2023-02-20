@@ -43,7 +43,7 @@ MILONE_BOOTSTRAP := target/bootstrap/bin/milone
 # Compiler to be used for testing, built from source files in the worktree with MILONE_BOOTSTRAP.
 MILONE_WORKTREE := target/MiloneCli/bin/milone
 
-.PHONY: bootstrap building_tests dotnet_restore gen2 gen3 my_build self test_self
+.PHONY: bootstrap building_tests dotnet_restore my_build self test_self
 
 ${DOTNET_RESTORE_TIMESTAMP}: $(wildcard src/*/*.fsproj)
 	dotnet restore && mkdir -p $(shell dirname $@) && touch $@
@@ -51,7 +51,7 @@ ${DOTNET_RESTORE_TIMESTAMP}: $(wildcard src/*/*.fsproj)
 ${MY_BUILD_TIMESTAMP}: ${DOTNET_RESTORE_TIMESTAMP} \
 		$(wildcard src/MyBuildTool/*.fs) \
 		$(wildcard src/MyBuildTool/*.fsproj)
-	dotnet build -nologo src/MyBuildTool && mkdir -p $(shell dirname $@) && touch $@
+	dotnet build -nologo --no-restore src/MyBuildTool && mkdir -p $(shell dirname $@) && touch $@
 
 my_build: ${MY_BUILD_TIMESTAMP}
 
@@ -84,17 +84,6 @@ ${MILONE_WORKTREE}: bin/ninja \
 target/milone: ${MILONE_WORKTREE}
 	cp ${MILONE_WORKTREE} $@
 
-gen2: target/milone
-
-target/.timestamp/gen3: bin/ninja ${MY_BUILD_TIMESTAMP} target/milone
-	${MY_BUILD} gen3 && mkdir -p $(shell dirname $@) && touch $@
-
-gen3: target/.timestamp/gen3
-
-self: gen2
-
-test_self: gen3
-
 # Building tests: Testing by building projects in the tests directory.
 target/.timestamp/building_tests: ${MY_BUILD_TIMESTAMP} ${MILONE_WORKTREE} \
 		$(shell find tests -type f -mtime -1)
@@ -102,4 +91,10 @@ target/.timestamp/building_tests: ${MY_BUILD_TIMESTAMP} ${MILONE_WORKTREE} \
 
 building_tests: target/.timestamp/building_tests
 
-test: test_self building_tests
+# Self-hosting tests: Testing by running the self-hosted compiler to verify the generated code equality.
+target/.timestamp/self_hosting_tests: ${MY_BUILD_TIMESTAMP} ${MILONE_WORKTREE}
+	 MILONE=${MILONE_WORKTREE} ${MY_BUILD} self-hosting-tests && mkdir -p $(shell dirname $@) && touch $@
+
+self_hosting_tests: target/.timestamp/self_hosting_tests
+
+test: building_tests self_hosting_tests

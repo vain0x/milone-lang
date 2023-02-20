@@ -8,8 +8,6 @@
   <ItemGroup>
     <Compile Include="Util.fs" />
     <Compile Include="PlatformInfo.fs" />
-    <Compile Include="FileSearch.fs" />
-    <Compile Include="InstantiateBuildTemplateNinja.fs" />
     <Compile Include="MyShell.fs" />
     <Compile Include="BuildingTests.fs" />
     <Compile Include="Packaging.fs" />

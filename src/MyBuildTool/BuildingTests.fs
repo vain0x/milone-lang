@@ -6,16 +6,17 @@ open System.Diagnostics
 open System.IO
 open System.Threading
 open System.Threading.Tasks
-open MyBuildTool.PlatformInfo
+open MyBuildTool.MyShell
 open MyBuildTool.Util.IO
 
 let private Cwd = Environment.CurrentDirectory
 
 // #miloneCmdForBuild
-let private MiloneCmd =
-  match Environment.GetEnvironmentVariable("MILONE") with
-  | null -> $"{Cwd}/target/MiloneCli/milone{Platform.ExeExt}"
-  | s -> s
+let private MiloneCmdLazy: Lazy<string> =
+  lazy
+    (match Environment.GetEnvironmentVariable("MILONE") with
+     | null -> failwith "Expected 'MILONE' environment variable."
+     | s -> s)
 
 let private Categories =
   [ "edges"; "errors"; "examples"; "features"; "pendings"; "primitives" ]
@@ -25,12 +26,6 @@ let private ConcurrencyLevel = 4
 // -----------------------------------------------
 // Helpers
 // -----------------------------------------------
-
-let private tryReadTextAll (filename: string) : string option =
-  try
-    File.ReadAllText(filename) |> Some
-  with :? FileNotFoundException ->
-    None
 
 /// Runs asynchronous functions in parallel and waits for all synchronously.
 let private runParallel (actions: (unit -> Task<unit>) array) : unit =
@@ -91,7 +86,7 @@ let internal commandBuildingTests () =
              ExpectedOutput = ""
              ActualOutput = "" }
 
-         match tryReadTextAll t.ExpectedOutputPath with
+         match readFile t.ExpectedOutputPath with
          | Some output ->
            t.IsPositive <- output.Contains("milone-lang compile error") |> not
            t.ExpectedOutput <- output
@@ -116,7 +111,7 @@ let internal commandBuildingTests () =
   [| for t in positiveTests do
        fun () ->
          task {
-           let command = MiloneCmd
+           let command = MiloneCmdLazy.Value
            let args = [ "run"; t.ProjectDir; "--target-dir"; t.ProjectDir; "-o"; t.ExePath ]
 
            use p =
@@ -168,7 +163,7 @@ let internal commandBuildingTests () =
      for t in negativeTests do
        fun () ->
          task {
-           let command = MiloneCmd
+           let command = MiloneCmdLazy.Value
            let args = [ "build"; t.ProjectDir; "--target-dir"; t.ProjectDir; "-o"; t.ExePath ]
 
            use p =

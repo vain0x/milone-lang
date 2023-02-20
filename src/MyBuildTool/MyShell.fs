@@ -1,7 +1,6 @@
 /// Provides `io` workflow.
 module internal MyBuildTool.MyShell
 
-open System
 open System.Diagnostics
 open System.IO
 
