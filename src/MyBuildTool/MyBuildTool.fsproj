@@ -13,6 +13,7 @@
     <Compile Include="MyShell.fs" />
     <Compile Include="BuildingTests.fs" />
     <Compile Include="Packaging.fs" />
+    <Compile Include="SelfHostingTests.fs" />
     <Compile Include="MyBuildTool.fs" />
   </ItemGroup>
 

@@ -11,6 +11,7 @@ open MyBuildTool.Util.IO
 
 let private Cwd = Environment.CurrentDirectory
 
+// #miloneCmdForBuild
 let private MiloneCmd =
   match Environment.GetEnvironmentVariable("MILONE") with
   | null -> $"{Cwd}/target/MiloneCli/milone{Platform.ExeExt}"

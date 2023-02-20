@@ -7,6 +7,7 @@ open MyBuildTool.MyShell
 open MyBuildTool.Packaging
 open MyBuildTool.PlatformInfo
 open MyBuildTool.BuildingTests
+open MyBuildTool.SelfHostingTests
 open MyBuildTool.Util
 
 module FS = MyBuildTool.FileSearch
@@ -19,7 +20,8 @@ SUBCOMMANDS:
     gen3    compiles the compiler with target/milone
             and verify the result.
 
-    tests   tests projects in the `tests` directory
+    building-tests
+    self-hosting-tests
 
     self-install     install milone locally
     self-uninstall   uninstall it
@@ -251,6 +253,7 @@ let main (argv: string array) =
   | "--summarize-tests" :: args -> commandTestsSummarize args
 
   | "building-tests" :: _ -> commandBuildingTests ()
+  | "self-hosting-tests" :: _ -> commandSelfHostingTests ()
 
   | "self-install" :: _ -> commandSelfInstall () |> perform
   | "self-uninstall" :: _ -> commandSelfUninstall () |> perform
