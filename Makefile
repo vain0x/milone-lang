@@ -31,15 +31,24 @@ src/libmilonert/hashmap.h:
 # MyBuildTool wrapper
 # ------------------------------------------------
 
+DOTNET_RESTORE_TIMESTAMP := target/.timestamp/dotnet_restore
+
 MY_BUILD := src/MyBuildTool/bin/Debug/net6.0/MyBuildTool
 MY_BUILD_TIMESTAMP := target/.timestamp/my_build_tool
 
-.PHONY: dotnet_restore gen2 gen3 integration_tests my_build self test_self
+# Compiler to be used for bootstrapping, built by .NET version.
+# (This will become outdated over development. Delete the file to rebuild.)
+MILONE_BOOTSTRAP := target/bootstrap/bin/milone
 
-target/.timestamp/dotnet_restore: $(wildcard src/*/*.fsproj)
+# Compiler to be used for testing, built from source files in the worktree with MILONE_BOOTSTRAP.
+MILONE_WORKTREE := target/MiloneCli/bin/milone
+
+.PHONY: bootstrap building_tests dotnet_restore gen2 gen3 my_build self test_self
+
+${DOTNET_RESTORE_TIMESTAMP}: $(wildcard src/*/*.fsproj)
 	dotnet restore && mkdir -p $(shell dirname $@) && touch $@
 
-${MY_BUILD_TIMESTAMP}: target/.timestamp/dotnet_restore \
+${MY_BUILD_TIMESTAMP}: ${DOTNET_RESTORE_TIMESTAMP} \
 		$(wildcard src/MyBuildTool/*.fs) \
 		$(wildcard src/MyBuildTool/*.fsproj)
 	dotnet build -nologo src/MyBuildTool && mkdir -p $(shell dirname $@) && touch $@
@@ -55,7 +64,14 @@ uninstall: ${MY_BUILD_TIMESTAMP}
 pack: ${MY_BUILD_TIMESTAMP}
 	${MY_BUILD} pack
 
-target/milone: bin/ninja ${MY_BUILD_TIMESTAMP} \
+${MILONE_BOOTSTRAP}: bin/ninja ${DOTNET_RESTORE_TIMESTAMP}
+	dotnet run --project src/MiloneCli -- build src/MiloneCli --target-dir target/bootstrap -o $@ && touch $@
+
+bootstrap: ${MILONE_BOOTSTRAP}
+
+${MILONE_WORKTREE}: bin/ninja \
+		${MILONE_BOOTSTRAP} \
+		${MY_BUILD_TIMESTAMP} \
 		src/libmilonert/hashmap.h \
 		src/libmilonert/milone.h \
 		src/libmilonert/milone.c \
@@ -63,7 +79,10 @@ target/milone: bin/ninja ${MY_BUILD_TIMESTAMP} \
 		$(wildcard src/*/*.fs) \
 		$(wildcard src/*/*.fsproj) \
 		$(wildcard src/*/*.milone)
-	${MY_BUILD} gen2 && mkdir -p $(shell dirname $@) && touch $@
+	${MILONE_BOOTSTRAP} build src/MiloneCli -o $@ && touch $@
+
+target/milone: ${MILONE_WORKTREE}
+	cp ${MILONE_WORKTREE} $@
 
 gen2: target/milone
 
@@ -76,10 +95,11 @@ self: gen2
 
 test_self: gen3
 
-target/.timestamp/integration_tests: bin/ninja ${MY_BUILD_TIMESTAMP} target/milone \
+# Building tests: Testing by building projects in the tests directory.
+target/.timestamp/building_tests: ${MY_BUILD_TIMESTAMP} ${MILONE_WORKTREE} \
 		$(shell find tests -type f -mtime -1)
-	${MY_BUILD} tests && mkdir -p $(shell dirname $@) && touch $@
+	env MILONE=${MILONE_WORKTREE} ${MY_BUILD} building-tests && mkdir -p $(shell dirname $@) && touch $@
 
-integration_tests: target/.timestamp/integration_tests
+building_tests: target/.timestamp/building_tests
 
-test: test_self integration_tests
+test: test_self building_tests
