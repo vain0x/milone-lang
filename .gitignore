@@ -23,6 +23,8 @@ tests/**/build.ninja
 tests/**/MiloneCore_*.c
 tests/**/MiloneDerive_*.c
 tests/**/Std_*.c
+tests/**/*.exe
+tests/*/*/x86_64-unknown-linux-gnu-debug/
 
 tests/examples/*/*.c
 !tests/examples/factorial/factorial.c
