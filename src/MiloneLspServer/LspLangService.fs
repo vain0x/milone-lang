@@ -611,7 +611,6 @@ type WorkspaceAnalysis =
     DocToPathMap: TreeMap<DocId, FilePath>
 
     // Per-file cache.
-    TokenizeCache: TreeMap<Uri, DocVersion * LTokenList>
     ParseCache: TreeMap<Uri, DocVersion * LSyntaxData>
 
     // Diagnostics.
@@ -657,7 +656,6 @@ let private createWorkspaceAnalysis (host: WorkspaceAnalysisHost) : WorkspaceAna
 
     DocToPathMap = TMap.empty Symbol.compare
 
-    TokenizeCache = TMap.empty Uri.compare
     ParseCache = TMap.empty Uri.compare
 
     DiagnosticsKeys = []
@@ -741,62 +739,34 @@ let private openAllModules version (wa: WorkspaceAnalysis) =
   |> List.choose Future.wait // #avoidBlocking
   |> List.fold (fun (wa: WorkspaceAnalysis) (uri, (_, text)) -> doDidOpenFile uri version text wa) wa
 
-let private getDocVersion uri (wa: WorkspaceAnalysis) =
+let private getDocEntry uri (wa: WorkspaceAnalysis) =
   match wa.Docs |> TMap.tryFind uri with
-  | Some (v, _) -> v
+  | Some (v, text) -> v, text
 
   | None ->
     traceFn "docs don't have '%s'" (uri |> Uri.toString)
-    MinVersion
-
-let private tokenizeDoc uri (wa: WorkspaceAnalysis) =
-  let version = getDocVersion uri wa
-
-  match wa.ParseCache |> TMap.tryFind uri with
-  | Some (v, syntaxData) when v = version ->
-    let tokens = LSyntaxData.getTokens syntaxData
-    Some(v, tokens)
-
-  | _ ->
-    match wa.TokenizeCache |> TMap.tryFind uri with
-    | (Some (v, _)) as it when v = version -> it
-
-    | _ ->
-      let ok v text =
-        traceFn "tokenize: '%s' v:%d" (Uri.toString uri) v
-        let tokens = LTokenList.tokenizeAll text
-        Some(v, tokens)
-
-      match wa.Docs |> TMap.tryFind uri with
-      | Some (v, text) -> ok v text
-
-      | None ->
-        debugFn "tokenize: '%s' not open" (Uri.toString uri)
-
-        None
+    MinVersion, ""
 
 let private parseDoc (uri: Uri) (wa: WorkspaceAnalysis) =
-  match tokenizeDoc uri wa, uriToModulePath uri with
-  | Some (version, tokens), Some (projectName, moduleName) ->
-    match wa.ParseCache |> TMap.tryFind uri with
-    | (Some (v, _)) as it when v = version -> it
+  let version, text = getDocEntry uri wa
 
-    | _ ->
-      let v = version
-      let docId = uriToDocId uri
+  match wa.ParseCache |> TMap.tryFind uri, uriToModulePath uri with
+  | Some (v, syntaxData), _ when v = version -> Some(v, syntaxData)
 
-      traceFn "parse '%A' v:%d" docId v
+  | _, Some (projectName, moduleName) ->
+    let v = version
+    let docId = uriToDocId uri
 
-      let syntaxData =
-        LSyntaxData.parse projectName moduleName docId tokens
+    traceFn "parse '%A' v:%d" docId v
 
-      Some(v, syntaxData)
+    let syntaxData =
+      LSyntax2.parse projectName moduleName docId text
+
+    Some(v, syntaxData)
 
   | _, None ->
     debugFn "parseDoc: Invalid URI: '%s'" (uriToFilePath uri)
     None
-
-  | _ -> None
 
 let private parse2Doc uri (wa: WorkspaceAnalysis) =
   match wa.Docs |> TMap.tryFind uri, uriToModulePath uri with
@@ -861,18 +831,18 @@ let doWithProjectAnalysis
 
       GetCoreDocId = fun moduleName -> computeDocIdIn (wa.Host.MiloneHome + "/src/MiloneCore") moduleName
 
-      GetDocVersion =
+      GetDocEntry =
         fun docId ->
           match WorkspaceAnalysis1.docIdToUri docId wa with
-          | Some uri -> getDocVersion uri wa
-          | None -> MinVersion
+          | Some uri -> getDocEntry uri wa
+          | None -> MinVersion, ""
 
       Tokenize =
         fun docId ->
           match WorkspaceAnalysis1.docIdToUri docId wa
-                |> Option.bind (fun uri -> tokenizeDoc uri wa)
+                |> Option.bind (fun uri -> parseDoc uri wa)
             with
-          | Some it -> it
+          | Some (version, syntaxData) -> version, syntaxData.FullTokens
           | None -> MinVersion, LTokenList.empty
 
       Parse =
@@ -902,27 +872,6 @@ let doWithProjectAnalysis
       ProjectAnalysis1.create entryDoc p.ProjectDir p.ProjectName host
 
   let result, pa = action pa
-
-  // FIXME: store tokenize cache
-  let _, newParseResults, pa = pa |> ProjectAnalysis1.drain
-
-  let wa =
-    newParseResults
-    |> List.fold
-         (fun (wa: WorkspaceAnalysis) (v, syntaxData) ->
-           let docId = LSyntaxData.getDocId syntaxData
-           let tokens = LSyntaxData.getTokens syntaxData
-
-           match WorkspaceAnalysis1.docIdToUri docId wa with
-           | Some uri ->
-             { wa with
-                 TokenizeCache = wa.TokenizeCache |> TMap.add uri (v, tokens)
-                 ParseCache = wa.ParseCache |> TMap.add uri (v, syntaxData) }
-
-           | None ->
-             debugFn "doWithProjectAnalysis: Missing docId %s" (Symbol.toString docId)
-             wa)
-         wa
 
   let wa =
     { wa with Projects = wa.Projects |> TMap.add p.ProjectName pa }
