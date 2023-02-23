@@ -10,17 +10,8 @@ open MiloneLspServer.Util
 
 module WorkspaceAnalysis = LspLangService.WorkspaceAnalysis
 
-/// Column index of text. (0-origin. This needs to be computed in UTF-16.)
-type private LColumnIndex = int
-
-/// Position of text. (This type is defined in LSP specification.)
-type private LPosition = RowIndex * LColumnIndex
-
-/// Range of text. (This type is defined in LSP specification.)
-type private LRange = LPosition * LPosition
-
 /// Edit to delete a range and replace it with a text.
-type private LTextEdit = LRange * string
+type private LTextEdit = Range * string
 
 // -----------------------------------------------
 // JSON helper
@@ -30,13 +21,13 @@ let private jOfInt (value: int) : JsonValue = JNumber(float value)
 
 let private jOfObj (assoc: (string * JsonValue) list) = JObject(Map.ofList assoc)
 
-let private jOfPos (pos: LPosition) : JsonValue =
+let private jOfPos (pos: Pos) : JsonValue =
   let row, column = pos
 
   jOfObj [ "line", jOfInt row
            "character", jOfInt column ]
 
-let private jOfRange (range: LRange) : JsonValue =
+let private jOfRange (range: Range) : JsonValue =
   let start, endValue = range
 
   jOfObj [ "start", jOfPos start
@@ -108,13 +99,13 @@ let private jArrayOrNull items =
   else
     JNull
 
-let private jToPos jsonValue : LPosition =
+let private jToPos jsonValue : Pos =
   let row, column =
     jsonValue |> jFields2 "line" "character"
 
   jToInt row, jToInt column
 
-let private jToRange jsonValue : LRange =
+let private jToRange jsonValue : Range =
   let start, endPos = jsonValue |> jFields2 "start" "end"
   jToPos start, jToPos endPos
 
@@ -164,6 +155,7 @@ let private createInitializeResult () =
   jsonDeserializeString
     """{
       "capabilities": {
+          "positionEncoding": "utf-8",
           "textDocumentSync": {
               "openClose": true,
               "change": 1
@@ -286,7 +278,7 @@ let private parseDidChangeWatchedFilesParam jsonValue : DidChangeWatchedFilesPar
   { Changes = changes }
 
 [<RequireQualifiedAccess; NoEquality; NoComparison>]
-type private DocumentPositionParam = { Uri: Uri; Pos: LPosition }
+type private DocumentPositionParam = { Uri: Uri; Pos: Pos }
 
 let private parseDocumentPositionParam jsonValue : DocumentPositionParam =
   let uri =
@@ -301,7 +293,7 @@ let private parseDocumentPositionParam jsonValue : DocumentPositionParam =
   { Uri = uri; Pos = pos }
 
 [<RequireQualifiedAccess; NoEquality; NoComparison>]
-type private DocumentRangeParam = { Uri: Uri; Range: LRange }
+type private DocumentRangeParam = { Uri: Uri; Range: Range }
 
 let private parseDocumentRangeParam jsonValue : DocumentRangeParam =
   let uri =
@@ -318,7 +310,7 @@ let private parseDocumentRangeParam jsonValue : DocumentRangeParam =
 [<RequireQualifiedAccess; NoEquality; NoComparison>]
 type private ReferencesParam =
   { Uri: Uri
-    Pos: LPosition
+    Pos: Pos
     IncludeDecl: bool }
 
 let private parseReferencesParam jsonValue : ReferencesParam =
@@ -344,7 +336,7 @@ let private parseDocumentSymbolParam jsonValue =
 [<RequireQualifiedAccess; NoEquality; NoComparison>]
 type private RenameParam =
   { Uri: Uri
-    Pos: LPosition
+    Pos: Pos
     NewName: string }
 
 let private parseRenameParam jsonValue : RenameParam =
@@ -808,7 +800,6 @@ let private processNext host : LspIncome -> CancellationToken -> ProcessResult =
                 let l, r = range
 
                 // Range.contains?
-                // FIXME: Don't compare UTF-16 position and UTF-8 position
                 if l <= p.Pos && p.Pos <= r then
                   Some range
                 else
