@@ -6,6 +6,10 @@
 
 [Unreleased]: https://github.com/vain0x/milone-lang/compare/v0.6.0...develop
 
+### CLI Tools
+
+- (*Windows*) `milone` command now generates VS2022 project files to build C code.
+
 ## [v0.6.0] - 2023-02-15
 
 [v0.6.0]: https://github.com/vain0x/milone-lang/releases/tag/v0.6.0
