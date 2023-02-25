@@ -65,7 +65,7 @@ pack: ${MY_BUILD_TIMESTAMP}
 	${MY_BUILD} pack
 
 ${MILONE_BOOTSTRAP}: bin/ninja ${DOTNET_RESTORE_TIMESTAMP}
-	dotnet run --project src/MiloneCli -- build src/MiloneCli --target-dir target/bootstrap -o $@ && touch $@
+	env MILONE_HOME=${PWD} dotnet run --project src/MiloneCli -- build src/MiloneCli --target-dir target/bootstrap -o $@ && touch $@
 
 bootstrap: ${MILONE_BOOTSTRAP}
 
@@ -79,7 +79,9 @@ ${MILONE_WORKTREE}: bin/ninja \
 		$(wildcard src/*/*.fs) \
 		$(wildcard src/*/*.fsproj) \
 		$(wildcard src/*/*.milone)
-	${MILONE_BOOTSTRAP} build src/MiloneCli -o $@ && touch $@
+	env MILONE_HOME=${PWD} ${MILONE_BOOTSTRAP} build src/MiloneCli -o $@ && touch $@
+
+worktree: ${MILONE_WORKTREE}
 
 target/milone: ${MILONE_WORKTREE}
 	cp ${MILONE_WORKTREE} $@
