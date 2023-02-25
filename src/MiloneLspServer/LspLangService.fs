@@ -611,7 +611,7 @@ type WorkspaceAnalysis =
     DocToPathMap: TreeMap<DocId, FilePath>
 
     // Per-file cache.
-    ParseCache: TreeMap<Uri, DocVersion * LSyntaxData>
+    ParseCache: TreeMap<Uri, DocVersion * Lazy<LSyntaxData option>>
 
     // Diagnostics.
     DiagnosticsKeys: Uri list
@@ -633,20 +633,37 @@ module private WorkspaceAnalysis1 =
     |> Option.map uriOfFilePath
 
   let addDoc (uri: Uri) version text (wa: WorkspaceAnalysis) =
+    let docId = uriToDocId uri
+
+    let syntaxOptLazy =
+      lazy (
+        match uriToModulePath uri with
+        | Some(projectName, moduleName) ->
+          traceFn "parse '%A' v:%d" docId version
+          LSyntax.parse projectName moduleName docId text |> Some
+
+        | None ->
+          debugFn "parse: Invalid URI: '%s'" (uriToFilePath uri)
+          None
+      )
+
     { wa with
         Docs = wa.Docs |> TMap.add uri (version, text)
         DocToPathMap =
           wa.DocToPathMap
-          |> TMap.add (uriToDocId uri) (uriToFilePath uri) }
+          |> TMap.add docId (uriToFilePath uri)
+        ParseCache =
+          wa.ParseCache |> TMap.add uri (version, syntaxOptLazy) }
 
   let removeDoc (uri: Uri) (wa: WorkspaceAnalysis) =
-    // FIXME: drop tokenize/parse result
     { wa with
         Docs = wa.Docs |> TMap.remove uri |> snd
         DocToPathMap =
           wa.DocToPathMap
           |> TMap.remove (uriToDocId uri)
-          |> snd }
+          |> snd
+        ParseCache =
+          wa.ParseCache |> TMap.remove uri |> snd }
 
 let private createWorkspaceAnalysis (host: WorkspaceAnalysisHost) : WorkspaceAnalysis =
   { LastId = 0
@@ -750,22 +767,14 @@ let private getDocEntry uri (wa: WorkspaceAnalysis) =
 let private getDocSyntax (uri: Uri) (wa: WorkspaceAnalysis) : (DocVersion * LSyntax) option =
   let version, text = getDocEntry uri wa
 
-  match wa.ParseCache |> TMap.tryFind uri, uriToModulePath uri with
-  | Some (v, syntaxData), _ when v = version -> Some(v, syntaxData)
+  match wa.ParseCache |> TMap.tryFind uri with
+  | Some (v, syntaxOptLazy) when v = version ->
+    match syntaxOptLazy.Value with
+    | Some syntax -> Some(v, syntax)
+    | None -> None
 
-  | _, Some (projectName, moduleName) ->
-    let v = version
-    let docId = uriToDocId uri
-
-    traceFn "parse '%A' v:%d" docId v
-
-    let syntaxData =
-      LSyntax2.parse projectName moduleName docId text
-
-    Some(v, syntaxData)
-
-  | _, None ->
-    debugFn "getDocSyntax: Invalid URI: '%s'" (uriToFilePath uri)
+  | _ ->
+    debugFn "getDocSyntax: Doc not parsed: '%s'" (Uri.toString uri)
     None
 
 let doWithProjectAnalysis

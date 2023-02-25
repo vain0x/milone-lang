@@ -323,7 +323,7 @@ module LSyntaxData =
       | DModuleSynonymDef (synonym, modulePath), Some loc -> Some(synonym, modulePath, loc)
       | _ -> None)
 
-module internal LSyntax2 =
+module internal LSyntax =
   let private host = tokenizeHostNew ()
 
   let ofModuleSyntaxData text (m: ModuleSyntaxData) : LSyntax =
@@ -442,7 +442,7 @@ let private bundleWithCache (pa: ProjectAnalysis) : BundleResult * ProjectAnalys
 
       match pa |> getParseResult docId with
       | None -> Future.just None
-      | Some s -> Future.just (Some (LSyntax2.toModuleSyntaxData s))
+      | Some s -> Future.just (Some (LSyntax.toModuleSyntaxData s))
 
     let layers, bundleErrors =
       AstBundle.bundle fetchModuleUsingCache pa.EntryDoc
@@ -488,7 +488,7 @@ let private bundleWithCache (pa: ProjectAnalysis) : BundleResult * ProjectAnalys
         modules
         |> List.map (fun ((m: ModuleSyntaxData), (_: ModuleSyntaxData2)) ->
           let v, text = pa.Host.GetDocEntry m.DocId
-          v, LSyntax2.ofModuleSyntaxData text m))
+          v, LSyntax.ofModuleSyntaxData text m))
 
     let result : BundleResult =
       let errors =
@@ -994,7 +994,7 @@ let private collectSymbolsInExpr (pa: ProjectAnalysis) (modules: TProgram) (tirC
     let docId = m.DocId
 
     match pa |> getParseResult docId with
-    | Some s -> LSyntax2.toModuleSyntaxData s
+    | Some s -> LSyntax.toModuleSyntaxData s
     | None -> failwith "must be parsed"
 
   let variantNameMap =
