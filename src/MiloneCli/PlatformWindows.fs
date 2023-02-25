@@ -114,6 +114,7 @@ type BuildOnWindowsParams =
     FileExists: FileExistsFun
     FileRead: Path -> string option
     FileWrite: Path -> string -> unit
+    CopyFile: string -> string -> unit
     RunCommand: Path -> string list -> unit }
 
 let buildOnWindows (p: BuildOnWindowsParams) : unit =
@@ -219,16 +220,7 @@ let buildOnWindows (p: BuildOnWindowsParams) : unit =
   match p.OutputOpt with
   | Some output ->
     p.DirCreate(Path.dirname output)
-
-    // FIXME: use CopyFile API
-    p.RunCommand
-      (Path "cmd.exe")
-      [ "/c"
-        "copy \""
-        + Path.toString p.ExeFile
-        + "\" \""
-        + Path.toString output
-        + "\"" ]
+    p.CopyFile (Path.toString p.ExeFile) (Path.toString output)
 
   | None -> ()
 

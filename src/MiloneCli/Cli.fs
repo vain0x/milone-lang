@@ -7,6 +7,7 @@ open MiloneShared.UtilParallel
 open MiloneShared.UtilProfiler
 open MiloneShared.UtilSymbol
 open Std.StdError
+open Std.StdList
 open Std.StdMap
 open Std.StdPath
 open MiloneSyntax.SyntaxTypes
@@ -64,6 +65,9 @@ type LinuxApi =
 [<RequireQualifiedAccess; NoEquality; NoComparison>]
 type WindowsApi =
   { NewGuid: unit -> string
+
+    // src -> dest -> success
+    CopyFile: string -> string -> bool
 
     /// Runs a subprocess and waits for exit. Returns exit code.
     ///
@@ -169,6 +173,11 @@ let private fileRead (host: CliHost) (filePath: Path) =
 
 let private fileWrite (host: CliHost) (filePath: Path) (contents: string) : unit =
   host.FileWriteAllText(Path.toString filePath) contents
+
+let private copyFile (w: WindowsApi) (src: string) (dest: string) : unit =
+  if w.CopyFile src dest |> not then
+    printfn "error: couldn't copy file from '%s' to %s" src dest
+    exit 1
 
 let private runCommand (w: WindowsApi) (command: Path) (args: string list) : unit =
   let code = w.RunCommand(Path.toString command) args
@@ -516,6 +525,7 @@ let private toBuildOnWindowsParams
     FileExists = fun filePath -> host.FileExists(Path.toString filePath)
     FileRead = fileRead host
     FileWrite = fileWrite host
+    CopyFile = copyFile w
     RunCommand = runCommand w }
 
 let private cliBuild sApi tApi (host: CliHost) (options: BuildOptions) =

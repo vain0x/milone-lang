@@ -39,6 +39,9 @@ let private getCwd () : string = __nativeFun "milone_get_cwd"
 
 let private getEnv (name: string) : string = __nativeFun ("milone_get_env", name)
 
+let private copyFile (src: string) (dest: string) : bool =
+  __nativeFun ("milone_platform_copy_file", src, dest)
+
 let private runCommand (command: string) (args: string list) : int =
   __nativeFun ("milone_subprocess_run", command, args)
 
@@ -56,6 +59,7 @@ let private getPlatform () : Platform =
   | "windows" ->
     let w: WindowsApi =
       { NewGuid = newGuid
+        CopyFile = copyFile
         RunCommand = runCommand }
 
     Platform.Windows w
