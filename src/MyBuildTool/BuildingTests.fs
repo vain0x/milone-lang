@@ -89,7 +89,7 @@ let internal commandBuildingTests () =
          match readFile t.ExpectedOutputPath with
          | Some output ->
            t.IsPositive <- output.Contains("milone-lang compile error") |> not
-           t.ExpectedOutput <- output
+           t.ExpectedOutput <- output.ReplaceLineEndings()
            yield t
 
          | None -> () |]
@@ -156,7 +156,7 @@ let internal commandBuildingTests () =
              eprintfn "error: Project '%s' exited with code %d." t.ProjectDir p.ExitCode
              eprintfn "stderr:\n%s" (p.StandardError.ReadToEnd())
 
-           t.ActualOutput <- output
+           t.ActualOutput <- output.ReplaceLineEndings()
            do! File.WriteAllTextAsync(t.ActualOutputPath, output)
          }
 
@@ -207,7 +207,7 @@ let internal commandBuildingTests () =
              let code = p.StandardOutput.ReadToEnd()
              do! File.WriteAllTextAsync($"{t.ProjectDir}/{t.ProjectName}.c", code)
 
-           t.ActualOutput <- output
+           t.ActualOutput <- output.ReplaceLineEndings()
            do! File.WriteAllTextAsync(t.ActualOutputPath, output)
          } |]
   |> runParallel
