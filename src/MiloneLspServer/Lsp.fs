@@ -31,15 +31,6 @@ type LToken = private LToken of Token * Pos
 // result of tokenization
 type LTokenList = TokenizeFullResult
 
-/// Text with line-oriented indexes.
-[<RequireQualifiedAccess; NoEquality; NoComparison>]
-type LineBuffer =
-  private
-    { Text: string
-      LineCount: int
-      /// Line index → byte range.
-      OffsetMap: TreeMap<int, int * int> }
-
 // result of parse
 // (this includes Text, FullTokens and SyntaxTree unlike SyntaxData)
 // (this is superset of ModuleSyntaxData)
@@ -331,52 +322,6 @@ module LSyntaxData =
       match symbol, resolveLoc2 s.DocId s.FullTokens loc2 with
       | DModuleSynonymDef (synonym, modulePath), Some loc -> Some(synonym, modulePath, loc)
       | _ -> None)
-
-module internal LineBuffer =
-  let compute (text: string) : LineBuffer =
-    let rec computeLoop acc y (i: int) =
-      if i < text.Length then
-        let j = text.IndexOf('\n', i)
-
-        if j >= i then
-          let r = if i < j && text.[j - 1] = '\r' then j - 1 else j
-          computeLoop ((y, (i, r)) :: acc) (y + 1) (j + 1)
-        else
-          let acc = (y, (i, text.Length)) :: acc
-          y + 1, acc
-      else
-        y, acc
-
-    let lineCount, acc = computeLoop [] 0 0
-
-    { Text = text
-      LineCount = lineCount
-      OffsetMap = TMap.ofList compare acc }
-
-  let lineRangeAt index (buf: LineBuffer) =
-    buf.OffsetMap |> TMap.tryFind index
-
-  let lineStringAt index (buf: LineBuffer) =
-    match buf.OffsetMap |> TMap.tryFind index with
-    | Some (l, r) ->
-      let r = if l < r && buf.Text.[r - 1] = '\r' then r - 1 else r
-      buf.Text.[l..r - 1]
-
-    | None -> ""
-
-  let posToIndex (pos: Pos) (buf: LineBuffer) =
-    let y, x = pos
-
-    match lineRangeAt y buf with
-    | Some (l, r) -> Some(l + min x r)
-    | _ -> None
-
-  let stringBetween (range: Range) (buf: LineBuffer) =
-    let startPos, endPos = range
-
-    match posToIndex startPos buf, posToIndex endPos buf with
-    | Some l, Some r when l <= r -> buf.Text[l..r - 1]
-    | _ -> ""
 
 module internal LSyntax2 =
   let private host = tokenizeHostNew ()
