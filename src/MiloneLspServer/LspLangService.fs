@@ -166,7 +166,7 @@ let private uriToModulePath (uri: Uri) : (ProjectName * ModuleName) option =
 
 let private doFindRefs hint docId targetPos pa =
   traceFn "doFindRefs %s" hint
-  let tokens, pa = ProjectAnalysis1.tokenize docId pa
+  let tokens = ProjectAnalysis1.getTokens docId pa
   let tokenOpt = tokens |> LTokenList.findAt targetPos
 
   match tokenOpt with
@@ -224,7 +224,7 @@ let private doFindDefsOrUses hint docId targetPos includeDef includeUse pa =
       |> TMap.toList
       |> List.mapFold
            (fun pa (docId, posList) ->
-             let tokens, pa = ProjectAnalysis1.tokenize docId pa
+             let tokens = ProjectAnalysis1.getTokens docId pa
 
              let ranges =
                tokens |> LTokenList.resolveRanges posList
@@ -253,7 +253,7 @@ module ProjectAnalysis =
       |> TMap.toList
       |> List.mapFold
            (fun pa (docId, errorList) ->
-             let tokens, pa = ProjectAnalysis1.tokenize docId pa
+             let tokens = ProjectAnalysis1.getTokens docId pa
 
              // parser reports error at EOF as y=-1. Fix up that here.
              let errorList =
@@ -293,7 +293,7 @@ module ProjectAnalysis =
     List.collect id errorListList, pa
 
   let completion modules (docId: DocId) (targetPos: Pos) (pa: ProjectAnalysis) : (int * string) list * ProjectAnalysis =
-    let tokens, pa = ProjectAnalysis1.tokenize docId pa
+    let tokens = ProjectAnalysis1.getTokens docId pa
 
     let inModuleLine =
       let y, _ = targetPos
@@ -428,7 +428,7 @@ module ProjectAnalysis =
                  readAcc, writeAcc)
              ([], [])
 
-      let tokens, pa = ProjectAnalysis1.tokenize docId pa
+      let tokens = ProjectAnalysis1.getTokens docId pa
 
       let collect posList =
         tokens |> LTokenList.resolveRanges posList
@@ -439,7 +439,7 @@ module ProjectAnalysis =
 
   // experimental: show syntax structure
   let hover2 (docId: DocId) (targetPos: Pos) (pa: ProjectAnalysis) : string option * ProjectAnalysis =
-    let syntaxOpt = ProjectAnalysis1.parse docId pa
+    let syntaxOpt = ProjectAnalysis1.getSyntax docId pa
 
     match syntaxOpt with
     | Some syntax ->
@@ -480,7 +480,7 @@ module ProjectAnalysis =
 
   // current: show symbol type
   let hover1 (docId: DocId) (targetPos: Pos) (pa: ProjectAnalysis) : string option * ProjectAnalysis =
-    let tokens, pa = ProjectAnalysis1.tokenize docId pa
+    let tokens = ProjectAnalysis1.getTokens docId pa
     let tokenOpt = tokens |> LTokenList.findAt targetPos
 
     match tokenOpt with
@@ -523,7 +523,7 @@ module ProjectAnalysis =
     Option.defaultValue [] resultOpt, pa
 
   let documentSymbol docId pa =
-    let syntaxOpt = ProjectAnalysis1.parse docId pa
+    let syntaxOpt = ProjectAnalysis1.getSyntax docId pa
 
     let symbols =
       let pathToName path =
@@ -547,7 +547,7 @@ module ProjectAnalysis =
       let kinds, posList = List.unzip symbols
 
       let ranges, pa =
-        let tokens, pa = ProjectAnalysis1.tokenize docId pa
+        let tokens = ProjectAnalysis1.getTokens docId pa
         tokens |> LTokenList.resolveRanges posList, pa
 
       let symbols =
@@ -747,7 +747,7 @@ let private getDocEntry uri (wa: WorkspaceAnalysis) =
     traceFn "docs don't have '%s'" (uri |> Uri.toString)
     MinVersion, ""
 
-let private parseDoc (uri: Uri) (wa: WorkspaceAnalysis) : (DocVersion * LSyntax2) option =
+let private getDocSyntax (uri: Uri) (wa: WorkspaceAnalysis) : (DocVersion * LSyntax) option =
   let version, text = getDocEntry uri wa
 
   match wa.ParseCache |> TMap.tryFind uri, uriToModulePath uri with
@@ -765,7 +765,7 @@ let private parseDoc (uri: Uri) (wa: WorkspaceAnalysis) : (DocVersion * LSyntax2
     Some(v, syntaxData)
 
   | _, None ->
-    debugFn "parseDoc: Invalid URI: '%s'" (uriToFilePath uri)
+    debugFn "getDocSyntax: Invalid URI: '%s'" (uriToFilePath uri)
     None
 
 let doWithProjectAnalysis
@@ -817,18 +817,10 @@ let doWithProjectAnalysis
           | Some uri -> getDocEntry uri wa
           | None -> MinVersion, ""
 
-      Tokenize =
-        fun docId ->
-          match WorkspaceAnalysis1.docIdToUri docId wa
-                |> Option.bind (fun uri -> parseDoc uri wa)
-            with
-          | Some (version, syntaxData) -> version, syntaxData.FullTokens
-          | None -> MinVersion, LTokenList.empty
-
-      Parse =
+      GetDocSyntax =
         fun docId ->
           WorkspaceAnalysis1.docIdToUri docId wa
-          |> Option.bind (fun uri -> parseDoc uri wa)
+          |> Option.bind (fun uri -> getDocSyntax uri wa)
 
       MiloneHome = wa.Host.MiloneHome
       ReadTextFile = wa.Host.ReadTextFile }
@@ -1046,7 +1038,7 @@ module WorkspaceAnalysis =
         |> Option.defaultValue 0
 
       let asOpenedModule usedModule uri =
-        match parseDoc uri wa, uriToModulePath uri with
+        match getDocSyntax uri wa, uriToModulePath uri with
         | Some (_, syntax), Some (projectName, moduleName) ->
           if syntax
              |> LSyntaxData.findModuleDefs
@@ -1066,7 +1058,7 @@ module WorkspaceAnalysis =
         let range: Range = (row, 0), (row, 0)
         title, [ uri, [ range, text ] ]
 
-      match parseDoc uri wa with
+      match getDocSyntax uri wa with
       | Some (_, syntax) ->
         let tokens = syntax |> LSyntaxData.getTokens
 
@@ -1084,7 +1076,7 @@ module WorkspaceAnalysis =
       let title = "Generate module synonym"
 
       let opt =
-        match parseDoc uri wa with
+        match getDocSyntax uri wa with
         | Some (_, syntax) ->
           let pos, _ = range
           let row, _ = pos
@@ -1119,7 +1111,7 @@ module WorkspaceAnalysis =
             wa.Docs
             |> TMap.toList
             |> List.tryPick (fun (uri, _) ->
-              match parseDoc uri wa with
+              match getDocSyntax uri wa with
               | Some (_, syntax) ->
                 syntax
                 |> LSyntaxData.findModuleSynonyms
@@ -1273,7 +1265,7 @@ module WorkspaceAnalysis =
     (if ok then changes else []), wa
 
   let syntaxTree (uri: Uri) (wa: WorkspaceAnalysis) : string option =
-    match parseDoc uri wa with
+    match getDocSyntax uri wa with
     | Some(_, syntax) -> SyntaxTreeGen.dumpSyntaxTree syntax.FullTokens syntax.SyntaxTree |> Some
     | _ -> None
 
