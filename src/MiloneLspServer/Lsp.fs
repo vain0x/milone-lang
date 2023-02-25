@@ -437,7 +437,6 @@ type ProjectAnalysisHost =
     GetDocEntry: DocId -> DocVersion * SourceCode
     Tokenize: DocId -> DocVersion * LTokenList
     Parse: DocId -> (DocVersion * LSyntaxData) option
-    Parse2: DocId -> LSyntax2 option
 
     MiloneHome: FilePath
     ReadTextFile: string -> Future<string option> }
@@ -1234,9 +1233,7 @@ module ProjectAnalysis1 =
     let tokens = getTokenizeResult docId pa
     tokens, pa
 
-  let parse (docId: DocId) (pa: ProjectAnalysis) : LSyntaxData option * ProjectAnalysis = getParseResult docId pa, pa
-
-  let parse2 (docId: DocId) (pa: ProjectAnalysis) : LSyntax2 option * ProjectAnalysis = pa.Host.Parse2 docId, pa
+  let parse (docId: DocId) (pa: ProjectAnalysis) : LSyntaxData option = getParseResult docId pa
 
   let bundle (pa: ProjectAnalysis) : BundleResult * ProjectAnalysis = bundleWithCache pa
 
@@ -1477,7 +1474,7 @@ module internal ProjectAnalysisCompletion =
         | [] -> acc
 
         | docId :: docAcc ->
-          match pa.Host.Parse2 docId with
+          match getParseResult docId pa with
           | Some syntax ->
             let (SyntaxTree root) = syntax.SyntaxTree
 
@@ -1634,7 +1631,7 @@ module internal ProjectAnalysisCompletion =
       | _ -> false
 
     let findToplevelDecls docId (pa: ProjectAnalysis) =
-      match pa.Host.Parse2 docId with
+      match getParseResult docId pa with
       | Some syntax ->
         let (SyntaxTree root) = syntax.SyntaxTree
 
@@ -1813,7 +1810,7 @@ module internal ProjectAnalysisCompletion =
     List.append (resolveUnqualifiedAsNs docId targetPos pa) (resolvePrelude ())
 
   let tryNsCompletion (docId: DocId) (targetPos: Pos) pa : (int * string) list option * ProjectAnalysis =
-    let syntaxOpt, pa = ProjectAnalysis1.parse2 docId pa
+    let syntaxOpt = getParseResult docId pa
 
     match syntaxOpt with
     | Some syntax ->
@@ -1889,7 +1886,7 @@ module internal ProjectAnalysisCompletion =
 
     // performs syntactic analysis and checks if whether record completion is applicable.
     let tryDetectRecordRange pa =
-      let syntaxOpt, pa = ProjectAnalysis1.parse2 docId pa
+      let syntaxOpt = getParseResult docId pa
 
       match syntaxOpt with
       | Some syntax ->

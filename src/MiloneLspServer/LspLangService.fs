@@ -439,7 +439,7 @@ module ProjectAnalysis =
 
   // experimental: show syntax structure
   let hover2 (docId: DocId) (targetPos: Pos) (pa: ProjectAnalysis) : string option * ProjectAnalysis =
-    let syntaxOpt, pa = ProjectAnalysis1.parse2 docId pa
+    let syntaxOpt = ProjectAnalysis1.parse docId pa
 
     match syntaxOpt with
     | Some syntax ->
@@ -523,7 +523,7 @@ module ProjectAnalysis =
     Option.defaultValue [] resultOpt, pa
 
   let documentSymbol docId pa =
-    let syntaxOpt, pa = ProjectAnalysis1.parse docId pa
+    let syntaxOpt = ProjectAnalysis1.parse docId pa
 
     let symbols =
       let pathToName path =
@@ -747,7 +747,7 @@ let private getDocEntry uri (wa: WorkspaceAnalysis) =
     traceFn "docs don't have '%s'" (uri |> Uri.toString)
     MinVersion, ""
 
-let private parseDoc (uri: Uri) (wa: WorkspaceAnalysis) =
+let private parseDoc (uri: Uri) (wa: WorkspaceAnalysis) : (DocVersion * LSyntax2) option =
   let version, text = getDocEntry uri wa
 
   match wa.ParseCache |> TMap.tryFind uri, uriToModulePath uri with
@@ -766,26 +766,6 @@ let private parseDoc (uri: Uri) (wa: WorkspaceAnalysis) =
 
   | _, None ->
     debugFn "parseDoc: Invalid URI: '%s'" (uriToFilePath uri)
-    None
-
-let private parse2Doc uri (wa: WorkspaceAnalysis) =
-  match wa.Docs |> TMap.tryFind uri, uriToModulePath uri with
-  | Some (v, text), Some (projectName, moduleName) ->
-    traceFn "parse2: '%s' v:%d" (Uri.toString uri) v
-
-    let docId = uriToDocId uri
-
-    let syntax =
-      LSyntax2.parse projectName moduleName docId text
-
-    Some syntax
-
-  | _, None ->
-    debugFn "parse2: Invalid URI: '%s'" (Uri.toString uri)
-    None
-
-  | _ ->
-    debugFn "parse2: '%s' not open" (Uri.toString uri)
     None
 
 let doWithProjectAnalysis
@@ -849,11 +829,6 @@ let doWithProjectAnalysis
         fun docId ->
           WorkspaceAnalysis1.docIdToUri docId wa
           |> Option.bind (fun uri -> parseDoc uri wa)
-
-      Parse2 =
-        fun docId ->
-          WorkspaceAnalysis1.docIdToUri docId wa
-          |> Option.bind (fun uri -> parse2Doc uri wa)
 
       MiloneHome = wa.Host.MiloneHome
       ReadTextFile = wa.Host.ReadTextFile }
@@ -1298,9 +1273,9 @@ module WorkspaceAnalysis =
     (if ok then changes else []), wa
 
   let syntaxTree (uri: Uri) (wa: WorkspaceAnalysis) : string option =
-    wa
-    |> parse2Doc uri
-    |> Option.map (fun (syntax: LSyntax2) -> SyntaxTreeGen.dumpSyntaxTree syntax.FullTokens syntax.SyntaxTree)
+    match parseDoc uri wa with
+    | Some(_, syntax) -> SyntaxTreeGen.dumpSyntaxTree syntax.FullTokens syntax.SyntaxTree |> Some
+    | _ -> None
 
 // -----------------------------------------------
 // Formatting
