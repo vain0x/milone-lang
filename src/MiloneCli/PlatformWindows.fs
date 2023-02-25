@@ -114,6 +114,7 @@ type BuildOnWindowsParams =
     FileExists: FileExistsFun
     FileRead: Path -> string option
     FileWrite: Path -> string -> unit
+    CopyFile: string -> string -> unit
     RunCommand: Path -> string list -> unit }
 
 let buildOnWindows (p: BuildOnWindowsParams) : unit =
@@ -219,16 +220,7 @@ let buildOnWindows (p: BuildOnWindowsParams) : unit =
   match p.OutputOpt with
   | Some output ->
     p.DirCreate(Path.dirname output)
-
-    // FIXME: use CopyFile API
-    p.RunCommand
-      (Path "cmd.exe")
-      [ "/c"
-        "copy \""
-        + Path.toString p.ExeFile
-        + "\" \""
-        + Path.toString output
-        + "\"" ]
+    p.CopyFile (Path.toString p.ExeFile) (Path.toString output)
 
   | None -> ()
 
@@ -251,8 +243,8 @@ type private SolutionXmlParams =
 
 let private renderSolutionXml (p: SolutionXmlParams) : string =
   """Microsoft Visual Studio Solution File, Format Version 12.00
-# Visual Studio Version 16
-VisualStudioVersion = 16.0.30225.117
+# Visual Studio Version 17
+VisualStudioVersion = 17.5.33414.496
 MinimumVisualStudioVersion = 10.0.40219.1
 Project("{${GUID1}}") = "${PROJECT_NAME}", "${PROJECT_NAME}\${PROJECT_NAME}.vcxproj", "{${PROJECT_GUID}}"
 EndProject
@@ -337,26 +329,26 @@ let private renderVcxProjectXml (p: VcxProjectParams) : string =
   <PropertyGroup Condition="'$(Configuration)|$(Platform)'=='Debug|Win32'" Label="Configuration">
     <ConfigurationType>${CONFIGURATION_TYPE}</ConfigurationType>
     <UseDebugLibraries>true</UseDebugLibraries>
-    <PlatformToolset>v142</PlatformToolset>
+    <PlatformToolset>v143</PlatformToolset>
     <CharacterSet>Unicode</CharacterSet>
   </PropertyGroup>
   <PropertyGroup Condition="'$(Configuration)|$(Platform)'=='Release|Win32'" Label="Configuration">
     <ConfigurationType>${CONFIGURATION_TYPE}</ConfigurationType>
     <UseDebugLibraries>false</UseDebugLibraries>
-    <PlatformToolset>v142</PlatformToolset>
+    <PlatformToolset>v143</PlatformToolset>
     <WholeProgramOptimization>true</WholeProgramOptimization>
     <CharacterSet>Unicode</CharacterSet>
   </PropertyGroup>
   <PropertyGroup Condition="'$(Configuration)|$(Platform)'=='Debug|x64'" Label="Configuration">
     <ConfigurationType>${CONFIGURATION_TYPE}</ConfigurationType>
     <UseDebugLibraries>true</UseDebugLibraries>
-    <PlatformToolset>v142</PlatformToolset>
+    <PlatformToolset>v143</PlatformToolset>
     <CharacterSet>Unicode</CharacterSet>
   </PropertyGroup>
   <PropertyGroup Condition="'$(Configuration)|$(Platform)'=='Release|x64'" Label="Configuration">
     <ConfigurationType>${CONFIGURATION_TYPE}</ConfigurationType>
     <UseDebugLibraries>false</UseDebugLibraries>
-    <PlatformToolset>v142</PlatformToolset>
+    <PlatformToolset>v143</PlatformToolset>
     <WholeProgramOptimization>true</WholeProgramOptimization>
     <CharacterSet>Unicode</CharacterSet>
   </PropertyGroup>
