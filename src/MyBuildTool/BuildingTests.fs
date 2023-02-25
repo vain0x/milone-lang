@@ -16,7 +16,7 @@ let private MiloneCmdLazy: Lazy<string> =
   lazy
     (match Environment.GetEnvironmentVariable("MILONE") with
      | null -> failwith "Expected 'MILONE' environment variable."
-     | s -> s)
+     | s -> eprintfn "trace: MILONE='%s'" s; s)
 
 let private Categories =
   [ "edges"; "errors"; "examples"; "features"; "pendings"; "primitives" ]
@@ -29,12 +29,29 @@ let private ConcurrencyLevel = 4
 
 /// Runs asynchronous functions in parallel and waits for all synchronously.
 let private runParallel (actions: (unit -> Task<unit>) array) : unit =
+  use cts = new CancellationTokenSource()
+  let mutable count = 0
+
+  let _ =
+    task {
+      while not cts.Token.IsCancellationRequested do
+        do! Task.Delay(TimeSpan.FromSeconds(3.0), cts.Token)
+        eprintf "\r[%d/%d] Running..." count actions.Length
+    }
+
   Parallel.ForEachAsync(
     actions,
     ParallelOptions(MaxDegreeOfParallelism = ConcurrencyLevel),
-    Func<_, _, _>(fun action _ -> ValueTask(action ()))
+    Func<_, _, _>(fun action _ ->
+      task {
+        do! action ()
+        Interlocked.Increment(&count) |> ignore
+      }
+      |> ValueTask)
   )
   |> fun (t: Task) -> t.GetAwaiter().GetResult()
+
+  cts.Cancel()
 
 // -----------------------------------------------
 // TestProject
