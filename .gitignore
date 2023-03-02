@@ -12,6 +12,8 @@ src/libmilonert/hashmap.h
 
 # Generated files.
 *.a
+*.fsi
+*.generated.*
 *.o
 *.out
 *.so
@@ -38,7 +40,6 @@ tests/primitives/std_*/*.c
 
 
 # Deprecated: These rules are no longer used.
-*.generated.*
 *.timestamp
 runtime/hashmap.h
 tests/**/MiloneStd_*.c
