@@ -165,7 +165,7 @@ let private expandMeta (ctx: TyCtx) tySerial : Ty option = ctx.MetaTys |> TMap.t
 let private substTy (ctx: TyCtx) ty : Ty = tySubst (expandMeta ctx) ty
 
 let private expandSynonyms (ctx: TyCtx) ty : Ty =
-  tyExpandSynonyms (fun tySerial -> ctx.Tys |> TMap.tryFind tySerial) ty
+  typingExpandSynonyms ctx.Tys ty
 
 /// Binds a type to a meta type.
 ///
@@ -995,7 +995,7 @@ let private castFunAsNativeFun funSerial loc (ctx: TyCtx) : Ty * TyCtx =
   let nativeFunTy =
     let (TyScheme(_, ty)) = funDef.Ty
 
-    let ty = expandSynonyms ctx ty
+    let ty = typingExpandSynonyms ctx.Tys ty
 
     let _, paramTys, resultTy =
       match ty with
@@ -2486,7 +2486,7 @@ module private Rms =
       | _ -> None
 
     let ty = tySubst substMeta ty
-    tyExpandSynonyms (fun tySerial -> ctx.Tys |> TMap.tryFind tySerial) ty
+    typingExpandSynonyms ctx.Tys ty
 
   let private rmsPat (ctx: RmsCtx) (pat: TPat) : TPat * RmsCtx =
     let onTy ty = rmsTy ctx ty

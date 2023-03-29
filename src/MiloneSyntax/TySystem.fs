@@ -207,6 +207,16 @@ let private tyContainsMetaOrUniv ty =
 
     argLoop tyArgs
 
+/// Gets if a type structurally contains any of meta type, univ type or synonym type.
+/// (perf: This runs frequently and should be efficient.)
+let tyContainsSynonym (ty: Ty) =
+  let rec containsRec ty =
+    match ty with
+    | Ty(SynonymTk _, _) -> true
+    | Ty(_, tyArgs) -> List.exists containsRec tyArgs
+
+  containsRec ty
+
 /// Converts a type by replacing meta types and universal types as possible.
 let tyAssignByMap (assignmentMap: TreeMap<TySerial, Ty>) ty =
   let rec assignRec ty =
@@ -432,4 +442,4 @@ let unifyAfterExpandMeta lTy rTy tySerial otherTy loc =
   | _ -> UnifyAfterExpandMetaResult.OkBind
 
 let typingExpandSynonyms tys ty =
-  tyExpandSynonyms (fun tySerial -> tys |> TMap.tryFind tySerial) ty
+  if tyContainsSynonym ty then tyExpandSynonyms (fun tySerial -> tys |> TMap.tryFind tySerial) ty else ty
