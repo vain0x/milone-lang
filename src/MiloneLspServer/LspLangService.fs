@@ -1331,14 +1331,8 @@ module Formatting =
           startInfo.ArgumentList.Add("fantomas")
           startInfo.ArgumentList.Add(temp)
           startInfo.WorkingDirectory <- workDir
-          startInfo.EnvironmentVariables.Add("DOTNET_CLI_HOME", homeDir ())
-
-          // HOTFIX: This raises an exception on Windows.
-          try
-            startInfo.EnvironmentVariables.Add("PATH", "")
-          with
-          | _ -> ()
-
+          startInfo.EnvironmentVariables.["DOTNET_CLI_HOME"] <- homeDir ()
+          startInfo.EnvironmentVariables.["PATH"] <- ""
           startInfo.RedirectStandardOutput <- true
           Process.Start(startInfo)
 
@@ -1371,14 +1365,8 @@ module Formatting =
         startInfo.FileName <- Path.Combine(toolDir (), "fantomas")
         startInfo.ArgumentList.Add(temp)
         startInfo.WorkingDirectory <- workDir
-        startInfo.EnvironmentVariables.Add("DOTNET_CLI_HOME", homeDir ())
-
-        // HOTFIX: This raises an exception on Windows.
-        try
-          startInfo.EnvironmentVariables.Add("PATH", "")
-        with
-        | _ -> ()
-
+        startInfo.EnvironmentVariables.["DOTNET_CLI_HOME"] <- homeDir ()
+        startInfo.EnvironmentVariables.["PATH"] <- ""
         startInfo.RedirectStandardOutput <- true
         Process.Start(startInfo)
 

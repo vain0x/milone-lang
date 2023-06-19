@@ -141,7 +141,7 @@ let internal commandBuildingTests () =
                for arg in args do
                  si.ArgumentList.Add(arg)
 
-               si.EnvironmentVariables.Add("MILONE_HOME", Cwd)
+               si.EnvironmentVariables.["MILONE_HOME"] <- Cwd
                si
 
              Process.Start(startInfo)
@@ -193,7 +193,7 @@ let internal commandBuildingTests () =
                for arg in args do
                  si.ArgumentList.Add(arg)
 
-               si.EnvironmentVariables.Add("MILONE_HOME", Cwd)
+               si.EnvironmentVariables.["MILONE_HOME"] <- Cwd
                si
 
              Process.Start(startInfo)
