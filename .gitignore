@@ -15,7 +15,9 @@ src/libmilonert/hashmap.h
 *.fsi
 *.generated.*
 *.o
+*.obj
 *.out
+*.pdb
 *.so
 .ninja_log
 
