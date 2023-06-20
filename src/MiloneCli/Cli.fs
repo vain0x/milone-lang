@@ -14,6 +14,7 @@ open MiloneSyntax.SyntaxTypes
 open MiloneSyntax.SyntaxApiTypes
 open MiloneTranslation.TranslationApiTypes
 
+module BuildWs = MiloneCli.BuildWs
 module C = Std.StdChar
 module S = Std.StdString
 module Lower = MiloneCli.Lower
@@ -925,6 +926,7 @@ type private CliCmd =
   | CheckCmd
   | CompileCmd
   | BuildCmd
+  | BuildWsCmd
   | RunCmd
   | EvalCmd
   | ParseCmd
@@ -945,6 +947,7 @@ let private parseArgs args =
   | arg :: args ->
     match arg with
     | "build" -> BuildCmd, args
+    | "build-ws" -> BuildWsCmd, args
     | "check" -> CheckCmd, args
     | "compile" -> CompileCmd, args
     | "run" -> RunCmd, args
@@ -987,6 +990,19 @@ let cli (sApi: SyntaxApi) (tApi: TranslationApi) (host: CliHost) =
     endArgs args
 
     cliBuild sApi tApi host (BuildLikeOptions.toBuildOptions b)
+
+  | BuildWsCmd, args ->
+    // (experimental)
+    printfn "trace: build-ws: args = [%s]" (S.concat "; " args)
+    // let b, args = parseBuildLikeOptions host args
+
+    let bo : BuildWs.BuildWsOptions =
+      { MiloneHome = hostToMiloneHome sApi host
+        WorkDir = host.WorkDir
+        ReadTextFile = host.FileReadAllText
+        Args = args }
+
+    BuildWs.cliBuildWs sApi tApi bo
 
   | RunCmd, args ->
     let args = eatParallelFlag args

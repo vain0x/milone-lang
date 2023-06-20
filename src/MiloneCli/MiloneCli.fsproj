@@ -12,6 +12,7 @@
     <Compile Include="Lower.fs" />
     <Compile Include="PlatformLinux.fs" />
     <Compile Include="PlatformWindows.fs" />
+    <Compile Include="BuildWs.fs" />
     <Compile Include="Cli.fs" />
     <Compile Include="FSharpOnly.fs" />
     <Compile Include="MiloneCli.fs" />
