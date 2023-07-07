@@ -142,4 +142,5 @@ type HModule2 =
     /// Non-static variables.
     Vars: TreeMap<VarSerial, Ident>
 
+    MainFunOpt: FunSerial option
     Stmts: HStmt list }

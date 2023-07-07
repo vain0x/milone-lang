@@ -498,6 +498,7 @@ let private mtModule ctx (m: HModule2) =
       // Not updated, because Ty fields are no longer used.
       Vars = m.Vars
 
+      MainFunOpt = m.MainFunOpt
       Stmts = stmts }
 
   m, ctx
@@ -701,6 +702,7 @@ let private bthStmt stmt =
 let private bthModule (m: M.HModule2) : HModule2 =
   { DocId = m.DocId
     Vars = m.Vars
+    MainFunOpt = m.MainFunOpt
     Stmts = m.Stmts |> List.map bthStmt }
 
 let private bthVarDef (varDef: M.VarDef) : VarDef =

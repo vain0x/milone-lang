@@ -474,7 +474,9 @@ let private bundleWithCache (pa: ProjectAnalysis) : BundleResult * ProjectAnalys
           layers
           |> List.map (fun modules -> modules |> List.map (fun (_, m) -> m))
 
-        SyntaxApi.performSyntaxAnalysisWithCache pa.Db writeLog layers2 invalidatedDocIds
+        let isExecutableDoc (_: DocId) = false
+
+        SyntaxApi.performSyntaxAnalysisWithCache pa.Db writeLog isExecutableDoc layers2 invalidatedDocIds
 
     let docVersions =
       layers

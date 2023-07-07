@@ -54,6 +54,9 @@ type ParseInput =
     /// In MiloneCore project?
     BeingCore: bool }
 
+/// Predicate to get if a document is an entrypoint module of executable.
+type IsExecutableDoc = DocId -> bool
+
 type SyntaxLayers = ModuleSyntaxData2 list list
 
 [<NoEquality; NoComparison>]
@@ -73,7 +76,7 @@ type SyntaxApi =
 
     SyntaxErrorsToString: SyntaxError list -> string
 
-    PerformSyntaxAnalysis: WriteLogFun -> SyntaxLayers -> SyntaxAnalysisResult
+    PerformSyntaxAnalysis: WriteLogFun -> IsExecutableDoc -> SyntaxLayers -> SyntaxAnalysisResult
 
     GenSyntaxTree: TokenizeFullResult -> ARoot -> SyntaxTree
     DumpSyntax: string -> string * ModuleSyntaxError list }

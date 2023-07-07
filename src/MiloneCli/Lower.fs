@@ -251,6 +251,8 @@ let private lowerModules (modules: Tir.TProgram) : Hir.HProgram =
     let m: Hir.HModule =
       { DocId = m.DocId
         Vars = lowerVarMap m.Vars
+        IsExecutable = m.IsExecutable
+        MainFunOpt = m.MainFunOpt |> Option.map lowerFunSerial
         Stmts = List.map lowerStmt m.Stmts }
 
     m)
@@ -267,8 +269,6 @@ let private lowerTirCtx (ctx: Tir.TirCtx) : Hir.HirCtx =
     Variants =
       ctx.Variants
       |> convertMap (fun (serial, def) -> lowerVariantSerial serial, lowerVariantDef def) Hir.variantSerialCompare
-
-    MainFunOpt = ctx.MainFunOpt |> Option.map lowerFunSerial
 
     Tys = ctx.Tys |> TMap.map (fun _ def -> lowerTyDef def) }
 

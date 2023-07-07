@@ -188,8 +188,6 @@ type TirCtx =
     Funs: TreeMap<FunSerial, FunDef>
     Variants: TreeMap<VariantSerial, VariantDef>
 
-    MainFunOpt: FunSerial option
-
     Tys: TreeMap<TySerial, TyDef>
     Logs: (Log * Loc) list
   }
@@ -418,6 +416,8 @@ type TModule =
     /// Non-static variables.
     Vars: VarMap
 
+    IsExecutable: bool
+    MainFunOpt: FunSerial option
     Stmts: TStmt list
   }
 

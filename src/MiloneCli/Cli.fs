@@ -269,6 +269,7 @@ type private CompileCtx =
     Layers: SyntaxLayers
     DocIdToModulePathMap: TreeMap<DocId, ProjectName * ModuleName>
     Errors: SyntaxError list
+    IsExecutableDoc: DocId -> bool
     WriteLog: string -> unit }
 
 let private prepareCompile
@@ -326,6 +327,18 @@ let private prepareCompile
        DocIdToModulePathMap = docIdToModulePathMap
        Errors = errors
 
+       IsExecutableDoc =
+        let entrypointOpt =
+          layers
+          |> List.tryLast
+          |> Option.defaultValue []
+          |> List.tryLast
+          |> Option.map (fun (m: ModuleSyntaxData2) -> m.DocId)
+
+        match entrypointOpt with
+        | Some e -> fun docId -> Symbol.equals docId e
+        | None -> fun _ -> false
+
        WriteLog = writeLog }: CompileCtx))
 
 let private check (sApi: SyntaxApi) (ctx: CompileCtx) : bool * string =
@@ -333,7 +346,7 @@ let private check (sApi: SyntaxApi) (ctx: CompileCtx) : bool * string =
     false, sApi.SyntaxErrorsToString ctx.Errors
   else
     let result =
-      sApi.PerformSyntaxAnalysis ctx.WriteLog ctx.Layers
+      sApi.PerformSyntaxAnalysis ctx.WriteLog ctx.IsExecutableDoc ctx.Layers
 
     match result with
     | SyntaxAnalysisOk _ -> true, ""
@@ -349,7 +362,7 @@ let private compile (sApi: SyntaxApi) (tApi: TranslationApi) (ctx: CompileCtx) :
   if ctx.Errors |> List.isEmpty |> not then
     CompileError(sApi.SyntaxErrorsToString ctx.Errors)
   else
-    match sApi.PerformSyntaxAnalysis ctx.WriteLog ctx.Layers with
+    match sApi.PerformSyntaxAnalysis ctx.WriteLog ctx.IsExecutableDoc ctx.Layers with
     | SyntaxAnalysisError (errors, _) -> CompileError(sApi.SyntaxErrorsToString errors)
 
     | SyntaxAnalysisOk (modules, tirCtx) ->

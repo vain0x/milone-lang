@@ -75,6 +75,7 @@ let private codeGenHir
       let m: HModule2 =
         { DocId = m.DocId
           Vars = varNameMap
+          MainFunOpt = m.MainFunOpt
           Stmts = m.Stmts }
 
       m)

@@ -37,9 +37,7 @@ type MirResult =
   { StaticVars: TreeMap<VarSerial, VarDef>
     Funs: TreeMap<FunSerial, FunDef>
     Variants: TreeMap<VariantSerial, VariantDef>
-    Tys: TreeMap<TySerial, TyDef>
-
-    MainFunOpt: FunSerial option }
+    Tys: TreeMap<TySerial, TyDef> }
 
 // -----------------------------------------------
 // Context
@@ -1815,6 +1813,7 @@ let private mirifyModule (ctx: MirCtx) (m: HModule2) =
       Vars = ctx.VarNameMap
       StaticVars = staticVars
       ExternVars = ctx.ExternVars
+      MainFunOpt = m.MainFunOpt
       Decls = decls }
 
   m, ctx
@@ -1829,8 +1828,6 @@ let mirify (modules: HModule2 list, hirCtx: HirCtx) : MModule list * MirResult =
     { StaticVars = hirCtx.StaticVars
       Funs = hirCtx.Funs
       Variants = hirCtx.Variants
-      Tys = hirCtx.Tys
-
-      MainFunOpt = hirCtx.MainFunOpt }
+      Tys = hirCtx.Tys }
 
   modules, result

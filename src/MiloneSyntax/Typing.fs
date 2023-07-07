@@ -77,7 +77,7 @@ let private newTyCtx (nr: NameResResult) : TyCtx =
     Vars = nr.StaticVars
     Funs = nr.Funs
     Variants = nr.Variants
-    MainFunOpt = nr.MainFunOpt
+    MainFunOpt = None
     Tys = nr.Tys
     MetaTys = TMap.empty compare
     NoGeneralizeMetaTys = TSet.empty compare
@@ -94,7 +94,6 @@ let private toTirCtx (ctx: TyCtx) : TirCtx =
     Funs = ctx.Funs
     Variants = ctx.Variants
     Tys = ctx.Tys
-    MainFunOpt = ctx.MainFunOpt
     Logs = ctx.Logs }
 
 let private addLog (ctx: TyCtx) log loc =
@@ -2684,7 +2683,7 @@ let private inferModule (ctx: TyCtx) (m: TModule) : TModule * TyCtx =
            vars, ctx)
          (ctx.Vars, ctx)
 
-  let ctx = { ctx with Vars = vars }
+  let ctx = { ctx with Vars = vars; MainFunOpt = m.MainFunOpt }
 
   let stmts, ctx =
     let ctx = { ctx with IsFunLocal = false }
