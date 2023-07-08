@@ -514,24 +514,31 @@ let private toBuildOnWindowsParams
     | Some it -> it
     | None -> SubSystem.Console
 
-  { ProjectName = projectName
-    CFiles =
-      cFiles
-      |> List.map (fun (name, _) -> Path(pathJoin targetDir name))
+  { SlnName = projectName
+
+    Projects =
+      let p: PW.ProjectOnWindows =
+        { ProjectName = projectName
+          CFiles = cFiles |> List.map (fun (name, _) -> Path(pathJoin targetDir name))
+
+          ExeFile = computeExePath (Path targetDir) host.Platform isRelease binaryType projectName
+          OutputOpt = outputOpt |> Option.map Path
+
+          BinaryType = binaryType
+          SubSystem = subSystem
+
+          CcList =
+            manifest.CcList
+            |> List.map (fun (Path name, _) -> Path(pathJoin projectDir name))
+          Libs = manifest.Libs |> List.map fst
+          Exports = exportNames
+          RunAfterBuilt = true }
+
+      [ p ]
+
     MiloneHome = miloneHome
     TargetDir = Path targetDir
     IsRelease = isRelease
-    ExeFile = computeExePath (Path targetDir) host.Platform isRelease binaryType projectName
-    OutputOpt = outputOpt |> Option.map Path
-
-    BinaryType = binaryType
-    SubSystem = subSystem
-
-    CcList =
-      manifest.CcList
-      |> List.map (fun (Path name, _) -> Path(pathJoin projectDir name))
-    Libs = manifest.Libs |> List.map fst
-    Exports = exportNames
 
     NewGuid = fun () -> PW.Guid(w.NewGuid())
     DirCreate = dirCreateOrFail host
