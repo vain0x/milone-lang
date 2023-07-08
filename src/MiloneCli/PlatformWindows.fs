@@ -1,6 +1,8 @@
 module rec MiloneCli.PlatformWindows
 
 open MiloneSyntax.SyntaxApiTypes
+open Std.StdError
+open Std.StdMap
 open Std.StdPath
 
 module S = Std.StdString
@@ -88,6 +90,42 @@ let private findMSBuild (fileExists: FileExistsFun) : Path =
   |> Option.defaultValue (Path "MSBuild.exe")
 
 // -----------------------------------------------
+// Guid files
+// -----------------------------------------------
+
+// `guid.txt` is a file to save generated project GUIDs.
+// GUIDs should be stable to avoid disrupting incremental build.
+
+// File format is simple key-value pairs:
+// `<KEY>=<VALUE>` per line.
+
+let private parseGuidFile (text: string) =
+  text
+  |> S.toLines
+  |> List.choose (fun line ->
+    let key, value, eq = line |> S.cut "="
+    if eq then Some(key, Guid value) else None)
+
+let private associateGuids (newGuidFun: NewGuidFun) keys text =
+  let mapping = parseGuidFile text |> TMap.ofList compare
+
+  let entries =
+    keys
+    |> List.map (fun key ->
+      match mapping |> TMap.tryFind key with
+      | Some value -> key, value
+      | None -> key, newGuidFun ())
+
+  let text =
+    entries
+    |> List.map (fun (key, guid) -> key + "=" + Guid.toString guid + "\n")
+    |> S.concat ""
+
+  let mapping = entries |> TMap.ofList compare
+
+  mapping, text
+
+// -----------------------------------------------
 // Interface
 // -----------------------------------------------
 
@@ -125,38 +163,40 @@ let buildOnWindows (p: BuildOnWindowsParams) : unit =
       "Debug"
 
   // Retrieve or generate GUID for solution and VC++ projects.
-  let projectGuid, guid1, guid2 =
+  let slnGuid, projectGuid =
     let path = Path.join p.TargetDir (Path "guid.txt")
 
-    match path
-          |> p.FileRead
-          |> Option.defaultValue ""
-          |> S.trimEnd
-          |> S.split ";"
-      with
-    | [ g1; g2; g3 ] -> Guid g1, Guid g2, Guid g3
+    let text =
+      path
+      |> p.FileRead
+      |> Option.defaultValue ""
+      |> S.trimEnd
 
-    | _ ->
-      let projectGuid = p.NewGuid()
-      let guid1 = p.NewGuid()
-      let guid2 = p.NewGuid()
+    let mapping, text =
+      associateGuids p.NewGuid ["sln"; p.ProjectName] text
 
-      [ projectGuid; guid1; guid2 ]
-      |> List.map Guid.toString
-      |> S.concat ";"
-      |> p.FileWrite path
+    let slnGuid =
+      match mapping |> TMap.tryFind "sln" with
+      | Some it -> it
+      | None -> unreachable ()
 
-      projectGuid, guid1, guid2
+    let projectGuid =
+      match mapping |> TMap.tryFind p.ProjectName with
+      | Some it -> it
+      | None -> unreachable ()
+
+    p.FileWrite path text
+
+    slnGuid, projectGuid
 
   let slnFile =
     Path.join p.TargetDir (Path(p.ProjectName + ".sln"))
 
   let slnXml =
     let p: SolutionXmlParams =
-      { ProjectGuid = projectGuid
-        ProjectName = p.ProjectName
-        Guid1 = guid1
-        Guid2 = guid2 }
+      { SlnGuid = slnGuid
+        ProjectGuid = projectGuid
+        ProjectName = p.ProjectName }
 
     renderSolutionXml p
 
@@ -236,8 +276,7 @@ let runOnWindows (p: BuildOnWindowsParams) (args: string list) : unit =
 
 [<RequireQualifiedAccess; NoEquality; NoComparison>]
 type private SolutionXmlParams =
-  { Guid1: Guid
-    Guid2: Guid
+  { SlnGuid: Guid
     ProjectGuid: Guid
     ProjectName: string }
 
@@ -269,12 +308,12 @@ Global
 		HideSolutionNode = FALSE
 	EndGlobalSection
 	GlobalSection(ExtensibilityGlobals) = postSolution
-		SolutionGuid = {${GUID2}}
+		SolutionGuid = {${SLN_GUID}}
 	EndGlobalSection
 EndGlobal
 """
-  |> S.replace "${GUID1}" (Guid.toString p.Guid1)
-  |> S.replace "${GUID2}" (Guid.toString p.Guid2)
+  |> S.replace "${SLN_GUID}" (Guid.toString p.SlnGuid)
+  |> S.replace "${GUID1}" (Guid.toString p.ProjectGuid)
   |> S.replace "${PROJECT_GUID}" (Guid.toString p.ProjectGuid)
   |> S.replace "${PROJECT_NAME}" p.ProjectName
 
