@@ -29,6 +29,7 @@
     <Compile Include="StdEnvBase.fs" />
     <Compile Include="StdEnv.fs" />
     <Compile Include="StdPath.fs" />
+    <Compile Include="Path.fs" />
   </ItemGroup>
 
 </Project>

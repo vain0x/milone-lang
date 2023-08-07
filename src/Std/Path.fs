@@ -1,3 +1,5 @@
+module rec Std.Path
+
 module C = Std.StdChar
 module S = Std.StdString
 
@@ -194,8 +196,6 @@ module Pathname =
         else if r = "." then
           l
         else
-          let x, y = cut r
-
           match cut r with
           | ".", rr when rr <> r -> go l rr
 
