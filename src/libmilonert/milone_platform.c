@@ -8,7 +8,7 @@
 
 #include <milone.h>
 
-#if defined(_MSC_VER) // On Windows
+#if defined(_WIN32) // On Windows
 
 #define MILONE_PLATFORM_WINDOWS 1
 #define WIN32_LEAN_AND_MEAN 1
@@ -24,7 +24,7 @@
 #include <sys/stat.h>
 #include <sys/types.h>
 #include <unistd.h>
-#endif // defined(_MSC_VER)
+#endif
 
 // -----------------------------------------------
 // utils
@@ -63,7 +63,7 @@ static struct String path_join(struct String base_path, struct String path) {
 // -----------------------------------------------
 // #milone_os_string
 
-#if defined(_MSC_VER) // On Windows MSVC
+#if defined(_WIN32) // On Windows
 
 struct MiloneOsString milone_os_string_borrow(LPCTSTR s) {
     assert(s != NULL);
@@ -375,7 +375,7 @@ static void milone_subprocess_run_windows(struct String cmdline, int *code) {
         // working directory: null to use parent's current directory
         NULL, &start_info, &process_info);
     if (!ok) {
-        milone_failwithf("CreateProcess %d", (int)GetLastError());
+        milone_failwithf("CreateProcess %d cmdline='%*s'", (int)GetLastError(), cmdline.len, cmdline.ptr);
     }
 
     WaitForSingleObject(process_info.hProcess, INFINITE);

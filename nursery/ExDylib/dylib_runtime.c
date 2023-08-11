@@ -4,7 +4,7 @@
 // Opaque
 struct Dylib;
 
-#if defined(_MSC_VER)
+#if defined(_WIN32) // On Windows
 
 #define MILONE_PLATFORM_WINDOWS 1
 #define WIN32_LEAN_AND_MEAN 1

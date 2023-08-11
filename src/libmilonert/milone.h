@@ -111,7 +111,7 @@ inline char const *string_as_ptr(struct String s) { return s.ptr; }
 //       but there's no good way.
 //       On Windows, this should include Windows.h and tchar.h if necessary.
 
-#if defined(_MSC_VER) // On Windows MSVC
+#if defined(_WIN32) // On Windows
 
 // UTF-16 code unit
 typedef uint16_t OsChar;
