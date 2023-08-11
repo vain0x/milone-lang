@@ -776,11 +776,23 @@ struct String milone_get_env(struct String name) {
 // profiling
 // -----------------------------------------------
 
+#if defined(_WIN32) // On Windows
+
+// Despite of `timespec_get` is defined C11 function, not available via `zig cc`.
+#pragma comment(lib, "winmm.lib")
+
+extern uint32_t timeGetTime(void); // From winmm
+
+static long milone_get_time_millis(void) {
+    return (long)timeGetTime();
+}
+#else
 static long milone_get_time_millis(void) {
     struct timespec t;
     (void)timespec_get(&t, TIME_UTC);
     return (long)(t.tv_sec * 1000L + t.tv_nsec / (1000L * 1000L));
 }
+#endif
 
 static void thousand_sep(long value, char *buf, size_t buf_size) {
     assert(buf_size >= 14);
