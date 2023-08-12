@@ -44,6 +44,9 @@ SUBCOMMANDS
     compile   Compile a project to C
     eval      Compute an expression
 
+EXPERIMENTAL
+    run-with-zig, build-with-zig (zig must be installed)
+
 See <https://github.com/vain0x/milone-lang/blob/v${VERSION}/docs/cli.md> for details."""
 
   s |> S.replace "${VERSION}" (currentVersion ())
@@ -549,6 +552,51 @@ let private toBuildOnWindowsParams
     CopyFile = copyFile w
     RunCommand = runCommand w }
 
+// FIXME: dedup with toBuildOnLinuxParams, support multi-project workspaces, support exportNames, windows subsystem
+let private toBuildWithZigParams
+  sApi
+  (host: CliHost)
+  (w: WindowsApi)
+  (options: BuildOptions)
+  (ctx: CompileCtx)
+  (cFiles: (CFilename * CCode) list): BZ.BuildWithZigParams =
+  let miloneHome = Path(hostToMiloneHome sApi host)
+
+  let compileOptions = options.CompileOptions
+  let projectDir = compileOptions.ProjectDir
+  let targetDir = compileOptions.TargetDir
+  let isRelease = options.IsRelease
+  let outputOpt = options.OutputOpt
+  let projectName = ctx.EntryProjectName
+  let manifest = ctx.Manifest
+
+  let binaryType =
+    match manifest.BinaryType with
+    | Some (it, _) -> it
+    | None -> BinaryType.Exe
+
+  { TargetDir = Path targetDir
+    IsRelease = isRelease
+    ExeFile = computeExePath (Path targetDir) host.Platform isRelease binaryType projectName
+    OutputOpt = outputOpt |> Option.map Path
+    CFiles = cFiles |> List.map (fun (name, _) -> Path name)
+    MiloneHome = miloneHome
+    BinaryType = binaryType
+    CSanitize = manifest.CSanitize
+    CStd = manifest.CStd
+    CcList =
+      manifest.CcList
+      |> List.map (fun (Path name, _) -> Path(projectDir + "/" + name))
+    ObjList =
+      manifest.ObjList
+      |> List.map (fun (Path name, _) -> Path(projectDir + "/" + name))
+    Libs = manifest.Libs |> List.map fst
+    LinuxCFlags = manifest.LinuxCFlags |> Option.defaultValue ""
+    LinuxLinkFlags = manifest.LinuxLinkFlags |> Option.defaultValue ""
+    DirCreate = dirCreateOrFail host
+    FileWrite = fileWrite host
+    RunCommand = runCommand w }
+
 let private cliBuild sApi tApi (host: CliHost) (options: BuildOptions) =
   let compileOptions = options.CompileOptions
   let projectDir = compileOptions.ProjectDir
@@ -591,52 +639,14 @@ let private cliBuildWithZig sApi tApi (host: CliHost) (options: BuildOptions) =
     host.WriteStdout output
     1
 
-  | CompileOk (cFiles, exportNames) ->
+  | CompileOk (cFiles, _exportNames) ->
     writeCFiles host targetDir cFiles
 
     match host.Platform with
     | Platform.Linux _ -> todo ()
 
     | Platform.Windows w ->
-      // FIXME: dedup with toBuildOnLinuxParams, support multi-project workspaces, support exportNames, windows subsystem
-      let miloneHome = Path(hostToMiloneHome sApi host)
-
-      let compileOptions = options.CompileOptions
-      let projectDir = compileOptions.ProjectDir
-      let targetDir = compileOptions.TargetDir
-      let isRelease = options.IsRelease
-      let outputOpt = options.OutputOpt
-      let projectName = ctx.EntryProjectName
-      let manifest = ctx.Manifest
-
-      let binaryType =
-        match manifest.BinaryType with
-        | Some (it, _) -> it
-        | None -> BinaryType.Exe
-
-      let p: BZ.BuildWithZigParams =
-        { TargetDir = Path targetDir
-          IsRelease = isRelease
-          ExeFile = computeExePath (Path targetDir) host.Platform isRelease binaryType projectName
-          OutputOpt = outputOpt |> Option.map Path
-          CFiles = cFiles |> List.map (fun (name, _) -> Path name)
-          MiloneHome = miloneHome
-          BinaryType = binaryType
-          CSanitize = manifest.CSanitize
-          CStd = manifest.CStd
-          CcList =
-            manifest.CcList
-            |> List.map (fun (Path name, _) -> Path(projectDir + "/" + name))
-          ObjList =
-            manifest.ObjList
-            |> List.map (fun (Path name, _) -> Path(projectDir + "/" + name))
-          Libs = manifest.Libs |> List.map fst
-          LinuxCFlags = manifest.LinuxCFlags |> Option.defaultValue ""
-          LinuxLinkFlags = manifest.LinuxLinkFlags |> Option.defaultValue ""
-          DirCreate = dirCreateOrFail host
-          FileWrite = fileWrite host
-          RunCommand = runCommand w }
-
+      let p = toBuildWithZigParams sApi host w options ctx cFiles
       BZ.buildWithZig p
 
 let private cliRun sApi tApi (host: CliHost) (options: BuildOptions) (restArgs: string list) =
@@ -670,6 +680,32 @@ let private cliRun sApi tApi (host: CliHost) (options: BuildOptions) (restArgs: 
 
       PW.runOnWindows p restArgs
       0
+
+// (Experimental) FIXME: dedup with cliRun
+let private cliRunWithZig sApi tApi (host: CliHost) (options: BuildOptions) (restArgs: string list) =
+  let compileOptions = options.CompileOptions
+  let projectDir = compileOptions.ProjectDir
+  let targetDir = compileOptions.TargetDir
+  let verbosity = compileOptions.Verbosity
+
+  let ctx =
+    prepareCompile sApi host verbosity projectDir compileOptions.EntryModulePathOpt
+    |> Future.wait
+
+  match compile sApi tApi ctx with
+  | CompileError output ->
+    host.WriteStdout output
+    1
+
+  | CompileOk (cFiles, _) ->
+    writeCFiles host targetDir cFiles
+
+    match host.Platform with
+    | Platform.Linux _ -> todo ()
+
+    | Platform.Windows w ->
+      let p = toBuildWithZigParams sApi host w options ctx cFiles
+      BZ.runWithZig p restArgs
 
 let private cliEval sApi tApi (host: CliHost) (sourceCode: string) =
   let sourceCode =
@@ -1012,6 +1048,7 @@ type private CliCmd =
   // (For experimental)
   | BuildWithZigCmd
   | RunCmd
+  | RunWithZigCmd
   | EvalCmd
   | ParseCmd
   | BadCmd of string
@@ -1035,6 +1072,7 @@ let private parseArgs args =
     | "check" -> CheckCmd, args
     | "compile" -> CompileCmd, args
     | "run" -> RunCmd, args
+    | "run-with-zig" -> RunWithZigCmd, args
     | "eval" -> EvalCmd, args
     | "parse" -> ParseCmd, args
     | _ -> BadCmd arg, []
@@ -1095,6 +1133,20 @@ let cli (sApi: SyntaxApi) (tApi: TranslationApi) (host: CliHost) =
 
     let options = BuildLikeOptions.toBuildOptions b
     cliRun sApi tApi host options runArgs
+
+  | RunWithZigCmd, args ->
+    let args = eatParallelFlag args
+    let b, args = parseBuildLikeOptions host args
+
+    let runArgs, args =
+      match args with
+      | "--" :: it -> it, []
+      | _ -> [], args
+
+    endArgs args
+
+    let options = BuildLikeOptions.toBuildOptions b
+    cliRunWithZig sApi tApi host options runArgs
 
   | EvalCmd, args ->
     let sourceCode =
