@@ -119,7 +119,7 @@ let buildWithZig (p: BuildWithZigParams) : int =
 
         CcCmd = "zig.exe cc"
         ArCmd = "zig.exe ar"
-        CpCmd = "cmd /c copy"
+        CpCmd = "pwsh -nol -noni -nop -C cp"
         ObjExt = ".obj" }
 
     generateNinjaFile a [ project ]
