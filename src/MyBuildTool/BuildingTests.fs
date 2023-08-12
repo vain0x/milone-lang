@@ -18,6 +18,16 @@ let private MiloneCmdLazy: Lazy<string> =
      | null -> failwith "Expected 'MILONE' environment variable."
      | s -> eprintfn "trace: MILONE='%s'" s; s)
 
+let private BuildCmd: string =
+  match Environment.OSVersion.Platform with
+  | PlatformID.Win32NT -> "build-with-zig"
+  | _ -> "build"
+
+let private RunCmd: string =
+  match Environment.OSVersion.Platform with
+  | PlatformID.Win32NT -> "run-with-zig"
+  | _ -> "run"
+
 let private Categories =
   [ "edges"; "errors"; "examples"; "features"; "pendings"; "primitives" ]
 
@@ -129,7 +139,7 @@ let internal commandBuildingTests () =
        fun () ->
          task {
            let command = MiloneCmdLazy.Value
-           let args = [ "run"; t.ProjectDir; "--target-dir"; t.ProjectDir; "-o"; t.ExePath ]
+           let args = [ RunCmd; t.ProjectDir; "--target-dir"; t.ProjectDir; "-o"; t.ExePath ]
 
            use p =
              let startInfo =
@@ -181,7 +191,7 @@ let internal commandBuildingTests () =
        fun () ->
          task {
            let command = MiloneCmdLazy.Value
-           let args = [ "build"; t.ProjectDir; "--target-dir"; t.ProjectDir; "-o"; t.ExePath ]
+           let args = [ BuildCmd; t.ProjectDir; "--target-dir"; t.ProjectDir; "-o"; t.ExePath ]
 
            use p =
              let startInfo =
