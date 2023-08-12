@@ -255,34 +255,31 @@ let hoist (modules: HProgram, hirCtx: HirCtx) : HProgram * HirCtx =
 
   // Mutate main function to call all start functions.
   let modules, hirCtx =
-    if List.isEmpty startStmts then
-      modules, hirCtx
-    else
-      modules
-      |> List.mapFold (fun hirCtx (m: HModule) ->
-        // Generate main function.
-        let m, hirCtx = genMainFun hirCtx m
+    modules
+    |> List.mapFold (fun hirCtx (m: HModule) ->
+      // Generate main function.
+      let m, hirCtx = genMainFun hirCtx m
 
-        let isMain stmt =
-          match stmt, m.MainFunOpt with
-          | HLetFunStmt (s, _, _, _), Some funSerial -> funSerialCompare s funSerial = 0
-          | _ -> false
+      let isMain stmt =
+        match stmt, m.MainFunOpt with
+        | HLetFunStmt (s, _, _, _), Some funSerial -> funSerialCompare s funSerial = 0
+        | _ -> false
 
-        if m.Stmts |> List.exists isMain then
-          let stmts =
-            m.Stmts
-            |> List.map (fun stmt ->
-              if isMain stmt then
-                match stmt with
-                | HLetFunStmt (funSerial, argPats, body, loc) ->
-                  let body = hxBlock startStmts body
-                  HLetFunStmt(funSerial, argPats, body, loc)
-                | _ -> stmt
-              else
-                stmt)
+      if m.Stmts |> List.exists isMain then
+        let stmts =
+          m.Stmts
+          |> List.map (fun stmt ->
+            if isMain stmt then
+              match stmt with
+              | HLetFunStmt (funSerial, argPats, body, loc) ->
+                let body = hxBlock startStmts body
+                HLetFunStmt(funSerial, argPats, body, loc)
+              | _ -> stmt
+            else
+              stmt)
 
-          { m with Stmts = stmts }, hirCtx
-        else
-          m, hirCtx) hirCtx
+        { m with Stmts = stmts }, hirCtx
+      else
+        m, hirCtx) hirCtx
 
   modules, hirCtx
