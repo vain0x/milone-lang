@@ -1,4 +1,6 @@
-module rec std_block.Program
+// FIXME: If this project is named `std_block`, another output file (`Std_Block.c`)  is overwritten on Windows, where files names are case-insensitive; a linker error occurs.
+
+module rec std_blocks.Program
 
 open Std.Block
 
