@@ -1,1 +1,2 @@
-sanitize address,undefined
+# FIXME: This doesn't work when build-with-zig on Windows
+# sanitize address,undefined
