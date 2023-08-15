@@ -2,6 +2,7 @@
 module internal MyBuildTool.BuildingTests
 
 open System
+open System.Collections.Concurrent
 open System.Diagnostics
 open System.IO
 open System.Threading
@@ -16,7 +17,9 @@ let private MiloneCmdLazy: Lazy<string> =
   lazy
     (match Environment.GetEnvironmentVariable("MILONE") with
      | null -> failwith "Expected 'MILONE' environment variable."
-     | s -> eprintfn "trace: MILONE='%s'" s; s)
+     | s ->
+       eprintfn "trace: MILONE='%s'" s
+       s)
 
 let private BuildCmd: string =
   match Environment.OSVersion.Platform with
@@ -33,29 +36,56 @@ let private Categories =
 
 let private ConcurrencyLevel = 4
 
+let StatusInterval = TimeSpan.FromSeconds(3.0)
+let PositiveTestTimeout = TimeSpan.FromSeconds(15.0)
+let NegativeTestTimeout = TimeSpan.FromSeconds(10.0)
+
 // -----------------------------------------------
 // Helpers
 // -----------------------------------------------
 
 /// Runs asynchronous functions in parallel and waits for all synchronously.
-let private runParallel (actions: (unit -> Task<unit>) array) : unit =
+let private runParallel (actions: (string * (unit -> Task<unit>)) array) : unit =
   use cts = new CancellationTokenSource()
+
+  let mutable workSet = ConcurrentDictionary()
   let mutable count = 0
+
+  let getRunningWorks () =
+    if count > 0 then
+      Array.ofSeq workSet.Keys |> String.concat "; " |> (fun s -> "[" + s + "]")
+    else
+      "[]"
+
+  let addWork (name: string) : IDisposable =
+    workSet.TryAdd(name, ()) |> ignore
+    Interlocked.Increment(&count) |> ignore
+
+    { new IDisposable with
+        member _.Dispose() = workSet.TryRemove(name) |> ignore }
 
   let _ =
     task {
+      let mutable previousCount = -1
+
       while not cts.Token.IsCancellationRequested do
-        do! Task.Delay(TimeSpan.FromSeconds(3.0), cts.Token)
+        do! Task.Delay(StatusInterval, cts.Token)
+
         eprintf "\r[%d/%d] Running..." count actions.Length
+
+        if count = previousCount then
+          eprintf "\n%s" (getRunningWorks ())
+
+        previousCount <- count
     }
 
   Parallel.ForEachAsync(
     actions,
     ParallelOptions(MaxDegreeOfParallelism = ConcurrencyLevel),
-    Func<_, _, _>(fun action _ ->
+    Func<_, _, _>(fun (name, action) _ ->
       task {
+        use _worker = addWork name
         do! action ()
-        Interlocked.Increment(&count) |> ignore
       }
       |> ValueTask)
   )
@@ -136,6 +166,7 @@ let internal commandBuildingTests () =
   // - Run all positive tests.
   // - Compile all negative tests.
   [| for t in positiveTests do
+       t.ProjectName,
        fun () ->
          task {
            let command = MiloneCmdLazy.Value
@@ -158,7 +189,7 @@ let internal commandBuildingTests () =
 
            use cts = new CancellationTokenSource()
            let ct = cts.Token
-           cts.CancelAfter(TimeSpan.FromSeconds(10.0))
+           cts.CancelAfter(PositiveTestTimeout)
 
            let mutable cancelled = false
 
@@ -166,28 +197,33 @@ let internal commandBuildingTests () =
              do! p.WaitForExitAsync(ct)
            with :? OperationCanceledException ->
              eprintfn "error: Project '%s' has been timed out." t.ProjectDir
-             eprintfn "stderr:\n%s" (p.StandardError.ReadToEnd())
+             // Reading stderr hangs.
+             // let! stderr = p.StandardError.ReadToEndAsync()
+             // eprintfn "stderr:\n%s" stderr
              p.Kill(entireProcessTree = true)
              cancelled <- true
 
-           let output =
-             if cancelled then
-               "FATAL: Timeout.\n"
-             else
-               let s = p.StandardOutput.ReadToEnd()
-               let s = if s <> "" && not (s.EndsWith('\n')) then s + "\n" else s
-               let line = $"$? = {p.ExitCode}\n"
-               $"{s}{line}"
+           let mutable output = ""
+
+           if cancelled then
+             output <- "FATAL: Timeout.\n"
+           else
+             let! s = p.StandardOutput.ReadToEndAsync()
+             let s = if s <> "" && not (s.EndsWith('\n')) then s + "\n" else s
+             let line = $"$? = {p.ExitCode}\n"
+             output <- $"{s}{line}"
 
            if p.ExitCode <> 0 then
              eprintfn "error: Project '%s' exited with code %d." t.ProjectDir p.ExitCode
-             eprintfn "stderr:\n%s" (p.StandardError.ReadToEnd())
+             let! stderr = p.StandardError.ReadToEndAsync()
+             eprintfn "stderr:\n%s" stderr
 
            t.ActualOutput <- output.ReplaceLineEndings()
            do! File.WriteAllTextAsync(t.ActualOutputPath, output)
          }
 
      for t in negativeTests do
+       t.ProjectName,
        fun () ->
          task {
            let command = MiloneCmdLazy.Value
@@ -210,7 +246,7 @@ let internal commandBuildingTests () =
 
            use cts = new CancellationTokenSource()
            let ct = cts.Token
-           cts.CancelAfter(TimeSpan.FromSeconds(10.0))
+           cts.CancelAfter(NegativeTestTimeout)
 
            let mutable cancelled = false
 
@@ -218,7 +254,8 @@ let internal commandBuildingTests () =
              do! p.WaitForExitAsync(ct)
            with :? OperationCanceledException ->
              eprintfn "error: Project '%s' has been timed out." t.ProjectDir
-             eprintfn "stderr:\n%s" (p.StandardError.ReadToEnd())
+             //  let! stderr = p.StandardError.ReadToEndAsync()
+             //  eprintfn "stderr:\n%s" stderr
              p.Kill(entireProcessTree = true)
              cancelled <- true
 
@@ -231,7 +268,7 @@ let internal commandBuildingTests () =
              eprintfn "error: Project '%s' unexpectedly passed checking.\n" t.ProjectDir
            else
              output <- "milone-lang compile error.\n"
-             let code = p.StandardOutput.ReadToEnd()
+             let! code = p.StandardOutput.ReadToEndAsync()
              do! File.WriteAllTextAsync($"{t.ProjectDir}/{t.ProjectName}.c", code)
 
            t.ActualOutput <- output.ReplaceLineEndings()
