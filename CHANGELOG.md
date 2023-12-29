@@ -10,6 +10,26 @@
 
 - (*Windows*) `milone` command now generates VS2022 project files to build C code.
 
+### LSP Server
+
+- Parse results are now memoized
+- Some refactoring
+
+### Internal Changes
+
+Compiler:
+
+- Type synonym expansions is now faster
+- Preparations for workspaces:
+    - Multiple `main` functions are now allowed
+    - (*Windows*) MSBuild backend supports multi-projects
+
+Others:
+
+- Use `--allsig` options in F# projects (to reduce compilation time)
+- Add `scripts/prof` and `docs/internals/profiling.md`
+- Fix build/pack scripts
+
 ## [v0.6.0] - 2023-02-15
 
 [v0.6.0]: https://github.com/vain0x/milone-lang/releases/tag/v0.6.0
