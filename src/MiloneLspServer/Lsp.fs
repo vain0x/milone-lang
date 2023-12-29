@@ -1118,7 +1118,7 @@ module Symbol =
     match b.TirCtxOpt with
     | Some tirCtx ->
       match symbol with
-      | DiscardSymbol _
+      | DiscardSymbol
       | PrimSymbol _ -> None // not implemented, completion need filter out
 
       | FieldSymbol _ -> None
@@ -1825,7 +1825,7 @@ module internal ProjectAnalysisCompletion =
         ancestors
         |> List.tryFind (fun node ->
           match SyntaxElement.kind node with
-          | SyntaxKind.RecordExpr _ -> true
+          | SyntaxKind.RecordExpr -> true
           | _ -> false))
       |> Option.map SyntaxElement.range
 

@@ -1381,7 +1381,7 @@ let private inferPrimExpr ctx prim loc =
   | TPrim.Nil -> onUnbounded primNilScheme
   | TPrim.Cons -> onUnbounded primConsScheme
 
-  | TPrim.Discriminant _ -> bad ctx Log.UseOfDiscriminant
+  | TPrim.Discriminant -> bad ctx Log.UseOfDiscriminant
 
   | TPrim.Assert -> onMono primAssertTy
   | TPrim.Printfn -> bad ctx Log.UseOfPrintfn

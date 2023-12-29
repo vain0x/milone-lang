@@ -40,11 +40,11 @@ let private cNullExpr = CVarExpr "NULL"
 
 let private cTyEncode ty =
   match ty with
-  | CVoidTy _ -> 1
+  | CVoidTy -> 1
   | CIntTy _ -> 2
   | CFloatTy _ -> 3
-  | CBoolTy _ -> 4
-  | CCharTy _ -> 5
+  | CBoolTy -> 4
+  | CCharTy -> 5
   | CPtrTy _ -> 11
   | CConstPtrTy _ -> 12
   | CStructTy _ -> 21
