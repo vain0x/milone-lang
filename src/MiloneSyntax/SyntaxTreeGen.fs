@@ -795,9 +795,9 @@ let private sgRoot (ctx: SgCtx) root : BuilderElement =
 let private isLeading token =
   match token with
   | ErrorToken _
-  | NewlinesToken _
-  | BlankToken _
-  | CommentToken _ -> true
+  | NewlinesToken
+  | BlankToken
+  | CommentToken -> true
   | _ -> false
 
 /// Takes (leading) trivias.
@@ -817,8 +817,8 @@ let private takeTrailingTrivias (rangeMap: TokenRangeMap) tokens =
   let isTrailing token =
     match token with
     | ErrorToken _
-    | BlankToken _
-    | CommentToken _ -> true
+    | BlankToken
+    | CommentToken -> true
     | _ -> false
 
   let rec go acc tokens =

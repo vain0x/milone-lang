@@ -33,7 +33,8 @@ src/libmilonert/hashmap.h:
 
 DOTNET_RESTORE_TIMESTAMP := target/.timestamp/dotnet_restore
 
-MY_BUILD := src/MyBuildTool/bin/Debug/net6.0/MyBuildTool
+MY_BUILD := src/MyBuildTool/bin/Debug/net8.0/MyBuildTool
+
 MY_BUILD_TIMESTAMP := target/.timestamp/my_build_tool
 
 # Compiler to be used for bootstrapping, built by .NET version.
