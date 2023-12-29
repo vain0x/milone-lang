@@ -40,8 +40,8 @@ mkdir -p "$MILONE_HOME/src"
 
 # Make symbolic links.
 ln -fs "$PWD/target/milone" "$MILONE_HOME/bin/milone_native"
-ln -fs "$PWD/src/MiloneCli/bin/Debug/net6.0/MiloneCli" "$MILONE_HOME/bin/milone_dotnet/MiloneCli"
-ln -fs "$PWD/src/MiloneLspServer/bin/Debug/net6.0/MiloneLspServer" "$MILONE_HOME/bin/milone_lsp/MiloneLspServer"
+ln -fs "$PWD/src/MiloneCli/bin/Debug/net8.0/MiloneCli" "$MILONE_HOME/bin/milone_dotnet/MiloneCli"
+ln -fs "$PWD/src/MiloneLspServer/bin/Debug/net8.0/MiloneLspServer" "$MILONE_HOME/bin/milone_lsp/MiloneLspServer"
 ln -fs "$PWD/src/libmilonert" "$MILONE_HOME/src/libmilonert"
 ln -fs "$PWD/src/MiloneCore" "$MILONE_HOME/src/MiloneCore"
 ln -fs "$PWD/src/Std" "$MILONE_HOME/src/Std"
