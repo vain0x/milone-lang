@@ -40,6 +40,13 @@ let private writeFile (filePath: string) (contents: string) : unit =
     eprintfn "Couldn't write to file '%s'. '%s'" filePath ex.Message
     reraise ()
 
+let private copyFile (src: string) (dest: string) : bool =
+  try
+    System.IO.File.Copy(src, dest, overwrite = true)
+    true
+  with
+  | _ -> false
+
 let private runCommand (command: string) (args: string list) : int =
   let p =
     System.Diagnostics.Process.Start(command, args)
@@ -65,6 +72,7 @@ let private getPlatform () : Platform =
   | System.PlatformID.Win32NT ->
     let w: WindowsApi =
       { NewGuid = fun () -> System.Guid.NewGuid().ToString()
+        CopyFile = copyFile
         RunCommand = runCommand }
 
     Platform.Windows w

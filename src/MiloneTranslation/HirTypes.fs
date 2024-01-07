@@ -339,6 +339,8 @@ type HModule =
     /// Non-static variables.
     Vars: VarMap
 
+    IsExecutable: bool
+    MainFunOpt: FunSerial option
     Stmts: HStmt list }
 
 /// Module. Variable info is reduced.
@@ -349,6 +351,7 @@ type HModule2 =
     /// Non-static variables.
     Vars: VarNameMap
 
+    MainFunOpt: FunSerial option
     Stmts: HStmt list }
 
 /// HIR program. (project name, module name, decls) list.
@@ -367,7 +370,5 @@ type HirCtx =
     StaticVars: TreeMap<VarSerial, VarDef>
     Funs: TreeMap<FunSerial, FunDef>
     Variants: TreeMap<VariantSerial, VariantDef>
-
-    MainFunOpt: FunSerial option
 
     Tys: TreeMap<TySerial, TyDef> }

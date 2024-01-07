@@ -1,6 +1,9 @@
 module rec MiloneCli.PlatformWindows
 
+open MiloneShared.Util
 open MiloneSyntax.SyntaxApiTypes
+open Std.StdError
+open Std.StdMap
 open Std.StdPath
 
 module S = Std.StdString
@@ -88,17 +91,50 @@ let private findMSBuild (fileExists: FileExistsFun) : Path =
   |> Option.defaultValue (Path "MSBuild.exe")
 
 // -----------------------------------------------
+// Guid files
+// -----------------------------------------------
+
+// `guid.txt` is a file to save generated project GUIDs.
+// GUIDs should be stable to avoid disrupting incremental build.
+
+// File format is simple key-value pairs:
+// `<KEY>=<VALUE>` per line.
+
+let private parseGuidFile (text: string) =
+  text
+  |> S.toLines
+  |> List.choose (fun line ->
+    let key, value, eq = line |> S.cut "="
+    if eq then Some(key, Guid value) else None)
+
+let private associateGuids (newGuidFun: NewGuidFun) keys text =
+  let mapping = parseGuidFile text |> TMap.ofList compare
+
+  let entries =
+    keys
+    |> List.map (fun key ->
+      match mapping |> TMap.tryFind key with
+      | Some value -> key, value
+      | None -> key, newGuidFun ())
+
+  let text =
+    entries
+    |> List.map (fun (key, guid) -> key + "=" + Guid.toString guid + "\n")
+    |> S.concat ""
+
+  let mapping = entries |> TMap.ofList compare
+
+  mapping, text
+
+// -----------------------------------------------
 // Interface
 // -----------------------------------------------
 
 [<RequireQualifiedAccess; NoEquality; NoComparison>]
-type BuildOnWindowsParams =
+type ProjectOnWindows =
   { ProjectName: string
     CFiles: Path list
 
-    MiloneHome: Path
-    TargetDir: Path
-    IsRelease: bool
     ExeFile: Path
     OutputOpt: Path option
     // FIXME: support csanitize, cstd, objList
@@ -109,99 +145,116 @@ type BuildOnWindowsParams =
     /// Symbol names to be exported by `/EXPORT` link option
     Exports: string list
 
+    RunAfterBuilt: bool }
+
+[<RequireQualifiedAccess; NoEquality; NoComparison>]
+type BuildOnWindowsParams =
+  { Projects: ProjectOnWindows list
+
+    SlnName: string
+    MiloneHome: Path
+    TargetDir: Path
+    IsRelease: bool
+
     NewGuid: NewGuidFun
     DirCreate: Path -> unit
     FileExists: FileExistsFun
     FileRead: Path -> string option
     FileWrite: Path -> string -> unit
+    CopyFile: string -> string -> unit
     RunCommand: Path -> string list -> unit }
 
 let buildOnWindows (p: BuildOnWindowsParams) : unit =
-  let configuration =
-    if p.IsRelease then
-      "Release"
-    else
-      "Debug"
+  let configuration = if p.IsRelease then "Release" else "Debug"
 
   // Retrieve or generate GUID for solution and VC++ projects.
-  let projectGuid, guid1, guid2 =
+  let slnGuid, guidMap =
     let path = Path.join p.TargetDir (Path "guid.txt")
 
-    match path
-          |> p.FileRead
-          |> Option.defaultValue ""
-          |> S.trimEnd
-          |> S.split ";"
-      with
-    | [ g1; g2; g3 ] -> Guid g1, Guid g2, Guid g3
+    let text = path |> p.FileRead |> Option.defaultValue "" |> S.trimEnd
 
-    | _ ->
-      let projectGuid = p.NewGuid()
-      let guid1 = p.NewGuid()
-      let guid2 = p.NewGuid()
+    let guidMap, guidText =
+      let projectNames =
+        p.Projects
+        |> List.map (fun (q: ProjectOnWindows) -> q.ProjectName)
+        |> listSort compare
 
-      [ projectGuid; guid1; guid2 ]
-      |> List.map Guid.toString
-      |> S.concat ";"
-      |> p.FileWrite path
+      associateGuids p.NewGuid ("sln" :: projectNames) text
 
-      projectGuid, guid1, guid2
+    let slnGuid, guidMap =
+      match guidMap |> TMap.remove "sln" with
+      | Some it, guidMap -> it, guidMap
+      | None, _ -> unreachable ()
 
-  let slnFile =
-    Path.join p.TargetDir (Path(p.ProjectName + ".sln"))
+    p.FileWrite path guidText
+
+    slnGuid, guidMap
+
+  let projects =
+    p.Projects
+    |> List.map (fun (q: ProjectOnWindows) ->
+      let guid =
+        match guidMap |> TMap.tryFind q.ProjectName with
+        | Some it -> it
+        | None -> unreachable ()
+
+      q, guid)
+
+  let slnFile = Path.join p.TargetDir (Path(p.SlnName + ".sln"))
 
   let slnXml =
     let p: SolutionXmlParams =
-      { ProjectGuid = projectGuid
-        ProjectName = p.ProjectName
-        Guid1 = guid1
-        Guid2 = guid2 }
+      { SlnGuid = slnGuid
+
+        Projects = projects |> List.map (fun (q: ProjectOnWindows, guid) -> q.ProjectName, guid) }
 
     renderSolutionXml p
 
-  let vcxprojFile =
-    Path.join p.TargetDir (Path(p.ProjectName + "/" + p.ProjectName + ".vcxproj"))
+  let vcxProjects =
+    projects
+    |> List.map (fun (q: ProjectOnWindows, projectGuid) ->
+      let vcxprojFile =
+        Path.join p.TargetDir (Path(q.ProjectName + "/" + q.ProjectName + ".vcxproj"))
 
-  let vcxprojXml =
-    let runtimeDir =
-      Path.join p.MiloneHome (Path "src/libmilonert")
-      |> Path.toString
+      let vcxprojXml =
+        let runtimeDir = Path.join p.MiloneHome (Path "src/libmilonert") |> Path.toString
 
-    let p: VcxProjectParams =
-      { MiloneTargetDir = p.TargetDir
-        CFiles = List.append p.CFiles p.CcList
-        Libs = p.Libs |> List.map Path
-        Exports = p.Exports
-        ProjectGuid = projectGuid
-        ProjectName = p.ProjectName
-        IncludeDir = runtimeDir
-        RuntimeDir = runtimeDir
+        let p: VcxProjectParams =
+          { MiloneTargetDir = p.TargetDir
+            CFiles = List.append q.CFiles q.CcList
+            Libs = q.Libs |> List.map Path
+            Exports = q.Exports
+            ProjectGuid = projectGuid
+            ProjectName = q.ProjectName
+            IncludeDir = runtimeDir
+            RuntimeDir = runtimeDir
 
-        ConfigurationType =
-          match p.BinaryType with
-          | BinaryType.Exe -> "Application"
-          | BinaryType.SharedObj -> "DynamicLibrary"
-          | BinaryType.StaticLib -> "StaticLibrary"
+            ConfigurationType =
+              match q.BinaryType with
+              | BinaryType.Exe -> "Application"
+              | BinaryType.SharedObj -> "DynamicLibrary"
+              | BinaryType.StaticLib -> "StaticLibrary"
 
-        SubSystem =
-          match p.SubSystem with
-          | SubSystem.Console -> "Console"
-          | SubSystem.Windows -> "Windows"
+            SubSystem =
+              match q.SubSystem with
+              | SubSystem.Console -> "Console"
+              | SubSystem.Windows -> "Windows"
 
-        Macro =
-          match p.SubSystem with
-          | SubSystem.Console -> "_CONSOLE"
-          | SubSystem.Windows -> "_WINDOWS" }
+            Macro =
+              match q.SubSystem with
+              | SubSystem.Console -> "_CONSOLE"
+              | SubSystem.Windows -> "_WINDOWS" }
 
-    renderVcxProjectXml p
+        renderVcxProjectXml p
 
-  [ slnFile, slnXml
-    vcxprojFile, vcxprojXml ]
+      vcxprojFile, vcxprojXml)
+
+  ((slnFile, slnXml) :: vcxProjects)
   |> List.fold
-       (fun () (filePath, contents) ->
-         p.DirCreate(Path.dirname filePath)
-         p.FileWrite filePath contents)
-       ()
+    (fun () (filePath, contents) ->
+      p.DirCreate(Path.dirname filePath)
+      p.FileWrite filePath contents)
+    ()
 
   // Build with MSBuild.
   let msBuild = findMSBuild p.FileExists
@@ -209,32 +262,30 @@ let buildOnWindows (p: BuildOnWindowsParams) : unit =
   p.RunCommand
     msBuild
     [ Path.toString slnFile
-      "-p:Configuration="
-      + configuration
-      + ";Platform=x64"
+      "-p:Configuration=" + configuration + ";Platform=x64"
       "-v:quiet"
       "-nologo" ]
 
   // Copy output.
-  match p.OutputOpt with
-  | Some output ->
-    p.DirCreate(Path.dirname output)
+  projects
+  |> List.fold
+    (fun () (q: ProjectOnWindows, _) ->
+      match q.OutputOpt with
+      | Some output ->
+        p.DirCreate(Path.dirname output)
+        p.CopyFile (Path.toString q.ExeFile) (Path.toString output)
 
-    // FIXME: use CopyFile API
-    p.RunCommand
-      (Path "cmd.exe")
-      [ "/c"
-        "copy \""
-        + Path.toString p.ExeFile
-        + "\" \""
-        + Path.toString output
-        + "\"" ]
-
-  | None -> ()
+      | None -> ())
+    ()
 
 let runOnWindows (p: BuildOnWindowsParams) (args: string list) : unit =
+  let q =
+    match p.Projects |> List.tryFind (fun (q: ProjectOnWindows) -> q.RunAfterBuilt) with
+    | Some it -> it
+    | None -> unreachable ()
+
   buildOnWindows p
-  p.RunCommand p.ExeFile args
+  p.RunCommand q.ExeFile args
 
 // =============================================================================
 
@@ -244,19 +295,27 @@ let runOnWindows (p: BuildOnWindowsParams) (args: string list) : unit =
 
 [<RequireQualifiedAccess; NoEquality; NoComparison>]
 type private SolutionXmlParams =
-  { Guid1: Guid
-    Guid2: Guid
-    ProjectGuid: Guid
-    ProjectName: string }
+  { SlnGuid: Guid
+
+    // `(projectName, projectGuid) list`
+    Projects: (string * Guid) list }
 
 let private renderSolutionXml (p: SolutionXmlParams) : string =
   """Microsoft Visual Studio Solution File, Format Version 12.00
-# Visual Studio Version 16
-VisualStudioVersion = 16.0.30225.117
+# Visual Studio Version 17
+VisualStudioVersion = 17.5.33414.496
 MinimumVisualStudioVersion = 10.0.40219.1
-Project("{${GUID1}}") = "${PROJECT_NAME}", "${PROJECT_NAME}\${PROJECT_NAME}.vcxproj", "{${PROJECT_GUID}}"
+"""
+  + (p.Projects
+     |> List.map (fun (projectName, projectGuid) ->
+       """Project("{${GUID1}}") = "${PROJECT_NAME}", "${PROJECT_NAME}\${PROJECT_NAME}.vcxproj", "{${PROJECT_GUID}}"
 EndProject
-Global
+"""
+       |> S.replace "${GUID1}" (Guid.toString projectGuid)
+       |> S.replace "${PROJECT_GUID}" (Guid.toString projectGuid)
+       |> S.replace "${PROJECT_NAME}" projectName)
+     |> S.concat "")
+  + """Global
 	GlobalSection(SolutionConfigurationPlatforms) = preSolution
 		Debug|x64 = Debug|x64
 		Debug|x86 = Debug|x86
@@ -264,7 +323,10 @@ Global
 		Release|x86 = Release|x86
 	EndGlobalSection
 	GlobalSection(ProjectConfigurationPlatforms) = postSolution
-		{${PROJECT_GUID}}.Debug|x64.ActiveCfg = Debug|x64
+"""
+  + (p.Projects
+     |> List.map (fun (_, projectGuid) ->
+       """		{${PROJECT_GUID}}.Debug|x64.ActiveCfg = Debug|x64
 		{${PROJECT_GUID}}.Debug|x64.Build.0 = Debug|x64
 		{${PROJECT_GUID}}.Debug|x86.ActiveCfg = Debug|Win32
 		{${PROJECT_GUID}}.Debug|x86.Build.0 = Debug|Win32
@@ -272,19 +334,20 @@ Global
 		{${PROJECT_GUID}}.Release|x64.Build.0 = Release|x64
 		{${PROJECT_GUID}}.Release|x86.ActiveCfg = Release|Win32
 		{${PROJECT_GUID}}.Release|x86.Build.0 = Release|Win32
-	EndGlobalSection
+"""
+       |> S.replace "${PROJECT_GUID}" (Guid.toString projectGuid))
+     |> S.concat "")
+  + """	EndGlobalSection
 	GlobalSection(SolutionProperties) = preSolution
 		HideSolutionNode = FALSE
 	EndGlobalSection
-	GlobalSection(ExtensibilityGlobals) = postSolution
-		SolutionGuid = {${GUID2}}
+"""
+  + ("""	GlobalSection(ExtensibilityGlobals) = postSolution
+		SolutionGuid = {${SLN_GUID}}
 	EndGlobalSection
 EndGlobal
 """
-  |> S.replace "${GUID1}" (Guid.toString p.Guid1)
-  |> S.replace "${GUID2}" (Guid.toString p.Guid2)
-  |> S.replace "${PROJECT_GUID}" (Guid.toString p.ProjectGuid)
-  |> S.replace "${PROJECT_NAME}" p.ProjectName
+     |> S.replace "${SLN_GUID}" (Guid.toString p.SlnGuid))
 
 // -----------------------------------------------
 // Template: vcxproj
@@ -337,26 +400,26 @@ let private renderVcxProjectXml (p: VcxProjectParams) : string =
   <PropertyGroup Condition="'$(Configuration)|$(Platform)'=='Debug|Win32'" Label="Configuration">
     <ConfigurationType>${CONFIGURATION_TYPE}</ConfigurationType>
     <UseDebugLibraries>true</UseDebugLibraries>
-    <PlatformToolset>v142</PlatformToolset>
+    <PlatformToolset>v143</PlatformToolset>
     <CharacterSet>Unicode</CharacterSet>
   </PropertyGroup>
   <PropertyGroup Condition="'$(Configuration)|$(Platform)'=='Release|Win32'" Label="Configuration">
     <ConfigurationType>${CONFIGURATION_TYPE}</ConfigurationType>
     <UseDebugLibraries>false</UseDebugLibraries>
-    <PlatformToolset>v142</PlatformToolset>
+    <PlatformToolset>v143</PlatformToolset>
     <WholeProgramOptimization>true</WholeProgramOptimization>
     <CharacterSet>Unicode</CharacterSet>
   </PropertyGroup>
   <PropertyGroup Condition="'$(Configuration)|$(Platform)'=='Debug|x64'" Label="Configuration">
     <ConfigurationType>${CONFIGURATION_TYPE}</ConfigurationType>
     <UseDebugLibraries>true</UseDebugLibraries>
-    <PlatformToolset>v142</PlatformToolset>
+    <PlatformToolset>v143</PlatformToolset>
     <CharacterSet>Unicode</CharacterSet>
   </PropertyGroup>
   <PropertyGroup Condition="'$(Configuration)|$(Platform)'=='Release|x64'" Label="Configuration">
     <ConfigurationType>${CONFIGURATION_TYPE}</ConfigurationType>
     <UseDebugLibraries>false</UseDebugLibraries>
-    <PlatformToolset>v142</PlatformToolset>
+    <PlatformToolset>v143</PlatformToolset>
     <WholeProgramOptimization>true</WholeProgramOptimization>
     <CharacterSet>Unicode</CharacterSet>
   </PropertyGroup>

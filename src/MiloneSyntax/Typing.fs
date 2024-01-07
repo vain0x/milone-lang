@@ -77,7 +77,7 @@ let private newTyCtx (nr: NameResResult) : TyCtx =
     Vars = nr.StaticVars
     Funs = nr.Funs
     Variants = nr.Variants
-    MainFunOpt = nr.MainFunOpt
+    MainFunOpt = None
     Tys = nr.Tys
     MetaTys = TMap.empty compare
     NoGeneralizeMetaTys = TSet.empty compare
@@ -94,7 +94,6 @@ let private toTirCtx (ctx: TyCtx) : TirCtx =
     Funs = ctx.Funs
     Variants = ctx.Variants
     Tys = ctx.Tys
-    MainFunOpt = ctx.MainFunOpt
     Logs = ctx.Logs }
 
 let private addLog (ctx: TyCtx) log loc =
@@ -165,7 +164,7 @@ let private expandMeta (ctx: TyCtx) tySerial : Ty option = ctx.MetaTys |> TMap.t
 let private substTy (ctx: TyCtx) ty : Ty = tySubst (expandMeta ctx) ty
 
 let private expandSynonyms (ctx: TyCtx) ty : Ty =
-  tyExpandSynonyms (fun tySerial -> ctx.Tys |> TMap.tryFind tySerial) ty
+  typingExpandSynonyms ctx.Tys ty
 
 /// Binds a type to a meta type.
 ///
@@ -995,7 +994,7 @@ let private castFunAsNativeFun funSerial loc (ctx: TyCtx) : Ty * TyCtx =
   let nativeFunTy =
     let (TyScheme(_, ty)) = funDef.Ty
 
-    let ty = expandSynonyms ctx ty
+    let ty = typingExpandSynonyms ctx.Tys ty
 
     let _, paramTys, resultTy =
       match ty with
@@ -1382,7 +1381,7 @@ let private inferPrimExpr ctx prim loc =
   | TPrim.Nil -> onUnbounded primNilScheme
   | TPrim.Cons -> onUnbounded primConsScheme
 
-  | TPrim.Discriminant _ -> bad ctx Log.UseOfDiscriminant
+  | TPrim.Discriminant -> bad ctx Log.UseOfDiscriminant
 
   | TPrim.Assert -> onMono primAssertTy
   | TPrim.Printfn -> bad ctx Log.UseOfPrintfn
@@ -2486,7 +2485,7 @@ module private Rms =
       | _ -> None
 
     let ty = tySubst substMeta ty
-    tyExpandSynonyms (fun tySerial -> ctx.Tys |> TMap.tryFind tySerial) ty
+    typingExpandSynonyms ctx.Tys ty
 
   let private rmsPat (ctx: RmsCtx) (pat: TPat) : TPat * RmsCtx =
     let onTy ty = rmsTy ctx ty
@@ -2684,7 +2683,7 @@ let private inferModule (ctx: TyCtx) (m: TModule) : TModule * TyCtx =
            vars, ctx)
          (ctx.Vars, ctx)
 
-  let ctx = { ctx with Vars = vars }
+  let ctx = { ctx with Vars = vars; MainFunOpt = m.MainFunOpt }
 
   let stmts, ctx =
     let ctx = { ctx with IsFunLocal = false }

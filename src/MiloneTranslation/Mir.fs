@@ -257,6 +257,7 @@ type MModule =
     StaticVars: (VarSerial * Ty) list
     /// Extern variables that are referred to in the module.
     ExternVars: TreeMap<VarSerial, Ty>
+    MainFunOpt: FunSerial option
     Decls: MDecl list }
 
 // -----------------------------------------------

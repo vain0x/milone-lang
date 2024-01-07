@@ -1,0 +1,22 @@
+#!/bin/sh
+# See also internals/profiling.md
+
+set -eux
+
+MILONE_CMD='target/MiloneCli/bin/milone'
+
+# build compiler
+make worktree && test -f "$MILONE_CMD"
+
+# build the optimized compiler with instrumentation enabled (-pg flag)
+CC='gcc -pg' MILONE_HOME=$PWD "$MILONE_CMD" build --release src/MiloneCli --target-dir target/MiloneProf -o target/milone-prof
+
+# run the compiler for profiling
+MILONE_HOME=$PWD target/milone-prof check src/MiloneCli && \
+    test -f gmon.out && \
+    mv gmon.out target/gmon.out
+
+gprof target/milone-prof target/gmon.out | \
+    tee target/prof.txt | \
+    gprof2dot | \
+    dot -Tpng -o target/prof.png

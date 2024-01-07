@@ -7,6 +7,7 @@ open MiloneShared.UtilParallel
 open MiloneShared.UtilProfiler
 open MiloneShared.UtilSymbol
 open Std.StdError
+open Std.StdList
 open Std.StdMap
 open Std.StdPath
 open MiloneSyntax.SyntaxTypes
@@ -21,7 +22,7 @@ module ModuleLoad = MiloneCli.ModuleLoad
 module PL = MiloneCli.PlatformLinux
 module PW = MiloneCli.PlatformWindows
 
-let private currentVersion () = "0.6.0"
+let private currentVersion () = "0.6.1"
 
 let private helpText () =
   let s =
@@ -64,6 +65,9 @@ type LinuxApi =
 [<RequireQualifiedAccess; NoEquality; NoComparison>]
 type WindowsApi =
   { NewGuid: unit -> string
+
+    // src -> dest -> success
+    CopyFile: string -> string -> bool
 
     /// Runs a subprocess and waits for exit. Returns exit code.
     ///
@@ -170,6 +174,11 @@ let private fileRead (host: CliHost) (filePath: Path) =
 let private fileWrite (host: CliHost) (filePath: Path) (contents: string) : unit =
   host.FileWriteAllText(Path.toString filePath) contents
 
+let private copyFile (w: WindowsApi) (src: string) (dest: string) : unit =
+  if w.CopyFile src dest |> not then
+    printfn "error: couldn't copy file from '%s' to %s" src dest
+    exit 1
+
 let private runCommand (w: WindowsApi) (command: Path) (args: string list) : unit =
   let code = w.RunCommand(Path.toString command) args
 
@@ -260,6 +269,7 @@ type private CompileCtx =
     Layers: SyntaxLayers
     DocIdToModulePathMap: TreeMap<DocId, ProjectName * ModuleName>
     Errors: SyntaxError list
+    IsExecutableDoc: DocId -> bool
     WriteLog: string -> unit }
 
 let private prepareCompile
@@ -317,6 +327,18 @@ let private prepareCompile
        DocIdToModulePathMap = docIdToModulePathMap
        Errors = errors
 
+       IsExecutableDoc =
+        let entrypointOpt =
+          layers
+          |> List.tryLast
+          |> Option.defaultValue []
+          |> List.tryLast
+          |> Option.map (fun (m: ModuleSyntaxData2) -> m.DocId)
+
+        match entrypointOpt with
+        | Some e -> fun docId -> Symbol.equals docId e
+        | None -> fun _ -> false
+
        WriteLog = writeLog }: CompileCtx))
 
 let private check (sApi: SyntaxApi) (ctx: CompileCtx) : bool * string =
@@ -324,7 +346,7 @@ let private check (sApi: SyntaxApi) (ctx: CompileCtx) : bool * string =
     false, sApi.SyntaxErrorsToString ctx.Errors
   else
     let result =
-      sApi.PerformSyntaxAnalysis ctx.WriteLog ctx.Layers
+      sApi.PerformSyntaxAnalysis ctx.WriteLog ctx.IsExecutableDoc ctx.Layers
 
     match result with
     | SyntaxAnalysisOk _ -> true, ""
@@ -340,7 +362,7 @@ let private compile (sApi: SyntaxApi) (tApi: TranslationApi) (ctx: CompileCtx) :
   if ctx.Errors |> List.isEmpty |> not then
     CompileError(sApi.SyntaxErrorsToString ctx.Errors)
   else
-    match sApi.PerformSyntaxAnalysis ctx.WriteLog ctx.Layers with
+    match sApi.PerformSyntaxAnalysis ctx.WriteLog ctx.IsExecutableDoc ctx.Layers with
     | SyntaxAnalysisError (errors, _) -> CompileError(sApi.SyntaxErrorsToString errors)
 
     | SyntaxAnalysisOk (modules, tirCtx) ->
@@ -492,30 +514,38 @@ let private toBuildOnWindowsParams
     | Some it -> it
     | None -> SubSystem.Console
 
-  { ProjectName = projectName
-    CFiles =
-      cFiles
-      |> List.map (fun (name, _) -> Path(pathJoin targetDir name))
+  { SlnName = projectName
+
+    Projects =
+      let p: PW.ProjectOnWindows =
+        { ProjectName = projectName
+          CFiles = cFiles |> List.map (fun (name, _) -> Path(pathJoin targetDir name))
+
+          ExeFile = computeExePath (Path targetDir) host.Platform isRelease binaryType projectName
+          OutputOpt = outputOpt |> Option.map Path
+
+          BinaryType = binaryType
+          SubSystem = subSystem
+
+          CcList =
+            manifest.CcList
+            |> List.map (fun (Path name, _) -> Path(pathJoin projectDir name))
+          Libs = manifest.Libs |> List.map fst
+          Exports = exportNames
+          RunAfterBuilt = true }
+
+      [ p ]
+
     MiloneHome = miloneHome
     TargetDir = Path targetDir
     IsRelease = isRelease
-    ExeFile = computeExePath (Path targetDir) host.Platform isRelease binaryType projectName
-    OutputOpt = outputOpt |> Option.map Path
-
-    BinaryType = binaryType
-    SubSystem = subSystem
-
-    CcList =
-      manifest.CcList
-      |> List.map (fun (Path name, _) -> Path(pathJoin projectDir name))
-    Libs = manifest.Libs |> List.map fst
-    Exports = exportNames
 
     NewGuid = fun () -> PW.Guid(w.NewGuid())
     DirCreate = dirCreateOrFail host
     FileExists = fun filePath -> host.FileExists(Path.toString filePath)
     FileRead = fileRead host
     FileWrite = fileWrite host
+    CopyFile = copyFile w
     RunCommand = runCommand w }
 
 let private cliBuild sApi tApi (host: CliHost) (options: BuildOptions) =

@@ -40,11 +40,11 @@ let private cNullExpr = CVarExpr "NULL"
 
 let private cTyEncode ty =
   match ty with
-  | CVoidTy _ -> 1
+  | CVoidTy -> 1
   | CIntTy _ -> 2
   | CFloatTy _ -> 3
-  | CBoolTy _ -> 4
-  | CCharTy _ -> 5
+  | CBoolTy -> 4
+  | CCharTy -> 5
   | CPtrTy _ -> 11
   | CConstPtrTy _ -> 12
   | CStructTy _ -> 21
@@ -203,7 +203,6 @@ type private Rx =
     Funs: TreeMap<FunSerial, FunDef>
     Variants: TreeMap<VariantSerial, VariantDef>
     Tys: TreeMap<TySerial, TyDef>
-    MainFunOpt: FunSerial option
     EntrypointName: string
 
     ValueNameFreq: TreeMap<Ident, int>
@@ -213,6 +212,8 @@ type private Rx =
 
     /// Doc ID of current module.
     DocIdOpt: DocId option
+    /// Main function of current module.
+    MainFunOpt: FunSerial option
 
     DocIdToModulePath: DocIdToModulePath }
 
@@ -275,7 +276,7 @@ let private ofMirResult entrypointName (df: DocIdToModulePath) (mirCtx: MirResul
       Funs = mirCtx.Funs
       Variants = mirCtx.Variants
       Tys = mirCtx.Tys
-      MainFunOpt = mirCtx.MainFunOpt
+      MainFunOpt = None
       EntrypointName = entrypointName
 
       ValueNameFreq = freq
@@ -1459,7 +1460,8 @@ let private cgModule (ctx: CirCtx) (m: MModule) : DocId * CDecl list =
     { Rx =
         { ctx.Rx with
             DocIdOpt = Some m.DocId
-            VarUniqueNames = varUniqueNames }
+            VarUniqueNames = varUniqueNames
+            MainFunOpt = m.MainFunOpt }
       TyEnv = TMap.empty tyCompare
       TyUniqueNames = ctx.TyUniqueNames
       Stmts = []

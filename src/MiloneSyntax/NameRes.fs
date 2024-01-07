@@ -1896,7 +1896,8 @@ let private nameResDecls (currentModule: NsOwner) ctx decls : TStmt list * Scope
   decls |> listChooseFold nameResDecl ctx
 
 let private nameResModuleRoot ctx (root: NModuleRoot) : _ * TModule * ScopeCtx =
-  let docId, moduleDecl = root
+  let docId = root.DocId
+  let moduleDecl = root.Root
   let (NModuleDecl(_, _, name, _, _)) = moduleDecl
   let moduleSerial, ctx = freshSerial ctx
   let newRootModule = identOf name, moduleSerial
@@ -1911,14 +1912,20 @@ let private nameResModuleRoot ctx (root: NModuleRoot) : _ * TModule * ScopeCtx =
   let ctx =
     { ctx with
         RootModules = newRootModule :: ctx.RootModules
-
         DeclaredModules = ctx.DeclaredModules |> TMap.add (posOf name) moduleSerial }
 
   let stmt, ctx = nameResModuleDecl ctx moduleDecl
 
+  let mainFunOpt =
+    ctx.NewFuns
+    |> List.fold (fun acc (funSerial, funDef: FunDef) -> if funDef.Name = "main" then funSerial :: acc else acc) []
+    |> List.tryLast
+
   let m: TModule =
     { DocId = docId
       Vars = emptyVars // Filled later.
+      IsExecutable = root.IsExecutable
+      MainFunOpt = mainFunOpt
       Stmts = [ stmt ] }
 
   newRootModule, m, ctx
@@ -2162,11 +2169,10 @@ type NameResResult =
     Funs: TreeMap<FunSerial, FunDef>
     Variants: TreeMap<VariantSerial, VariantDef>
     Tys: TreeMap<TySerial, TyDef>
-    MainFunOpt: FunSerial option
     Logs: (NameResLog * Loc) list
   }
 
-let private sToResult mainFunOpt (state: NameResState) : NameResResult =
+let private sToResult (state: NameResState) : NameResResult =
   let ctx = state.ScopeCtx
 
   { Serial = ctx.Serial
@@ -2174,7 +2180,6 @@ let private sToResult mainFunOpt (state: NameResState) : NameResResult =
     Funs = state.Funs
     Variants = state.Variants
     Tys = ctx.Tys
-    MainFunOpt = mainFunOpt
     Logs = state.Logs }
 
 // -----------------------------------------------
@@ -2226,7 +2231,7 @@ module NameResolveSystem =
 
         let newLayerDocIds =
           if not invalidated then
-            newLayer |> List.map (fun (docId, _) -> docId) |> listSort Symbol.compare
+            newLayer |> List.map (fun (m: NModuleRoot) -> m.DocId) |> listSort Symbol.compare
           else
             []
 
@@ -2257,7 +2262,7 @@ module NameResolveSystem =
       |> List.mapFold
         (fun (state: NameResState) modules ->
           let docIds =
-            modules |> List.map (fun (docId, _) -> docId) |> listSort Symbol.compare
+            modules |> List.map (fun (m: NModuleRoot) -> m.DocId) |> listSort Symbol.compare
 
           let modules, state =
             modules
@@ -2271,13 +2276,7 @@ module NameResolveSystem =
           (docIds, modules, state), state)
         state
 
-    let result =
-      let mainFunOpt =
-        state.Funs
-        |> TMap.fold (fun acc funSerial (funDef: FunDef) -> if funDef.Name = "main" then funSerial :: acc else acc) []
-        |> List.tryLast
-
-      sToResult mainFunOpt state
+    let result = sToResult state
 
     let output: NameResolveOutput =
       { OldLayers = oldLayers
@@ -2318,9 +2317,4 @@ let nameRes (layers: NModuleRoot list list) : TProgram * NameResResult =
           state)
       state
 
-  let mainFunOpt =
-    state.Funs
-    |> TMap.fold (fun acc funSerial (funDef: FunDef) -> if funDef.Name = "main" then funSerial :: acc else acc) []
-    |> List.tryLast
-
-  modules, sToResult mainFunOpt state
+  modules, sToResult state

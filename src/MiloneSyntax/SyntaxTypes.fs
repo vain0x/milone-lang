@@ -593,7 +593,11 @@ type NDecl =
 
 type NRoot = NModuleDecl
 
-type NModuleRoot = DocId * NRoot
+[<RequireQualifiedAccess; NoEquality; NoComparison>]
+type NModuleRoot =
+  { DocId: DocId
+    Root: NRoot
+    IsExecutable: bool }
 
 // -----------------------------------------------
 // SyntaxTree

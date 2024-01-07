@@ -208,16 +208,9 @@ let private hoistModule (hirCtx: HirCtx) (m: HModule) : (HModule * HStmt option)
 // Main function
 // -----------------------------------------------
 
-let private genMainFun (hirCtx: HirCtx) (modules: HProgram) =
-  match hirCtx.MainFunOpt with
-  | Some it -> it, modules, hirCtx
-
-  | None ->
-    let modules, m =
-      match splitLast modules with
-      | Some it -> it
-      | None -> unreachable ()
-
+let private genMainFun (hirCtx: HirCtx) (m: HModule) =
+  match m.MainFunOpt with
+  | None when m.IsExecutable ->
     let funSerial = FunSerial(hirCtx.Serial + 1)
     let loc = Loc(m.DocId, 0, 0)
 
@@ -233,19 +226,19 @@ let private genMainFun (hirCtx: HirCtx) (modules: HProgram) =
     let hirCtx =
       { hirCtx with
           Serial = hirCtx.Serial + 1
-          Funs = hirCtx.Funs |> TMap.add funSerial funDef
-          MainFunOpt = Some funSerial }
+          Funs = hirCtx.Funs |> TMap.add funSerial funDef }
 
-    let modules =
+    let m =
       let stmt =
         HLetFunStmt(funSerial, [ hpUnit loc ], HLitExpr(IntLit "0", loc), loc)
 
-      let m =
-        { m with Stmts = List.append m.Stmts [ stmt ] }
+      { m with
+          MainFunOpt = Some funSerial
+          Stmts = List.append m.Stmts [ stmt ] }
 
-      List.append modules [ m ]
+    m, hirCtx
 
-    funSerial, modules, hirCtx
+  | _ -> m, hirCtx
 
 // -----------------------------------------------
 // Interface
@@ -260,36 +253,33 @@ let hoist (modules: HProgram, hirCtx: HirCtx) : HProgram * HirCtx =
     let startStmts = startStmtOpts |> List.choose id
     modules, startStmts, hirCtx
 
-  // Generate main function.
-  let mainFunSerial, modules, hirCtx = genMainFun hirCtx modules
-
   // Mutate main function to call all start functions.
-  let modules =
-    if List.isEmpty startStmts then
-      modules
-    else
+  let modules, hirCtx =
+    modules
+    |> List.mapFold (fun hirCtx (m: HModule) ->
+      // Generate main function.
+      let m, hirCtx = genMainFun hirCtx m
+
       let isMain stmt =
-        match stmt with
-        | HLetFunStmt (s, _, _, _) -> funSerialCompare s mainFunSerial = 0
+        match stmt, m.MainFunOpt with
+        | HLetFunStmt (s, _, _, _), Some funSerial -> funSerialCompare s funSerial = 0
         | _ -> false
 
-      modules
-      |> List.map (fun (m: HModule) ->
-        if m.Stmts |> List.exists isMain then
-          let stmts =
-            m.Stmts
-            |> List.map (fun stmt ->
-              if isMain stmt then
-                match stmt with
-                | HLetFunStmt (funSerial, argPats, body, loc) ->
-                  let body = hxBlock startStmts body
-                  HLetFunStmt(funSerial, argPats, body, loc)
-                | _ -> stmt
-              else
-                stmt)
+      if m.Stmts |> List.exists isMain then
+        let stmts =
+          m.Stmts
+          |> List.map (fun stmt ->
+            if isMain stmt then
+              match stmt with
+              | HLetFunStmt (funSerial, argPats, body, loc) ->
+                let body = hxBlock startStmts body
+                HLetFunStmt(funSerial, argPats, body, loc)
+              | _ -> stmt
+            else
+              stmt)
 
-          { m with Stmts = stmts }
-        else
-          m)
+        { m with Stmts = stmts }, hirCtx
+      else
+        m, hirCtx) hirCtx
 
   modules, hirCtx

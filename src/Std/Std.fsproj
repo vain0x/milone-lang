@@ -1,7 +1,8 @@
 ﻿<Project Sdk="Microsoft.NET.Sdk">
 
   <PropertyGroup>
-    <TargetFramework>net6.0</TargetFramework>
+    <TargetFramework>net8.0</TargetFramework>
+    <OtherFlags>--allsigs</OtherFlags>
   </PropertyGroup>
 
   <ItemGroup>
@@ -28,6 +29,7 @@
     <Compile Include="StdEnvBase.fs" />
     <Compile Include="StdEnv.fs" />
     <Compile Include="StdPath.fs" />
+    <Compile Include="Path.fs" />
   </ItemGroup>
 
 </Project>

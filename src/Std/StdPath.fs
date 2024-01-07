@@ -1,3 +1,5 @@
+// Deprecated in favor of `Std.Path`
+
 module rec Std.StdPath
 
 module S = Std.StdString

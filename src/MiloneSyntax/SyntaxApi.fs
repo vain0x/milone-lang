@@ -333,7 +333,7 @@ let syntaxErrorsToString (errors: SyntaxError list) : string =
 // #performSyntaxAnalysis (no-cache version)
 /// Creates an NIR and collects errors
 /// by loading source files and processing.
-let performSyntaxAnalysis (writeLog: WriteLogFun) (layers: SyntaxLayers) : SyntaxAnalysisResult =
+let performSyntaxAnalysis (writeLog: WriteLogFun) isExecutableDoc (layers: SyntaxLayers) : SyntaxAnalysisResult =
   writeLog "NirGen"
 
   let nirLayers =
@@ -364,7 +364,10 @@ let performSyntaxAnalysis (writeLog: WriteLogFun) (layers: SyntaxLayers) : Synta
         nirLayers
         |> List.map (fun layer ->
           layer
-          |> List.map (fun (docId, (root: NRoot), _) -> docId, root))
+          |> List.map (fun (docId, (root: NRoot), _) ->
+            { DocId = docId
+              Root = root
+              IsExecutable = isExecutableDoc docId }: NModuleRoot))
 
       NameRes.nameRes modules
 
@@ -398,7 +401,7 @@ module SyntaxAnalysisDb =
     { NameResolveSystem = NameRes.NameResolveSystem.empty () }
 
 // #performSyntaxAnalysis (cached one)
-let performSyntaxAnalysisWithCache (db: SyntaxAnalysisDb) (writeLog: WriteLogFun) (layers: SyntaxLayers) invalidatedDocIds : Result<unit, SyntaxError list> * TirTypes.TProgram * TirTypes.TirCtx option * SyntaxAnalysisDb =
+let performSyntaxAnalysisWithCache (db: SyntaxAnalysisDb) (writeLog: WriteLogFun) isExecutableDoc (layers: SyntaxLayers) invalidatedDocIds : Result<unit, SyntaxError list> * TirTypes.TProgram * TirTypes.TirCtx option * SyntaxAnalysisDb =
   writeLog "NirGen"
 
   let nirLayers =
@@ -429,7 +432,10 @@ let performSyntaxAnalysisWithCache (db: SyntaxAnalysisDb) (writeLog: WriteLogFun
         nirLayers
         |> List.map (fun layer ->
           layer
-          |> List.map (fun (docId, (root: NRoot), _) -> docId, root))
+          |> List.map (fun (docId, (root: NRoot), _) ->
+              { DocId = docId
+                Root = root
+                IsExecutable = isExecutableDoc docId }: NModuleRoot))
 
       let req: NameRes.NameResolveRequest =
         { LastSerial = 0
@@ -501,6 +507,6 @@ let newSyntaxApi () : SyntaxApi =
     Parse = fun input -> parse1 host input
     FindDependentModules = findDependentModules
     SyntaxErrorsToString = syntaxErrorsToString
-    PerformSyntaxAnalysis = fun writeLog layers -> performSyntaxAnalysis writeLog layers
+    PerformSyntaxAnalysis = fun writeLog isExecutableDoc layers -> performSyntaxAnalysis writeLog isExecutableDoc layers
     GenSyntaxTree = SyntaxTreeGen.genSyntaxTree
     DumpSyntax = dumpSyntax }

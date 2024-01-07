@@ -15,7 +15,7 @@ let never<'T> (_: never) : 'T =
 /// C-ABI function pointer type: `T (*)(params...)` in C.
 ///
 /// P is `()` or `P1 * P2 * ...`.
-[<AbstractClass; Sealed>]
+[<AbstractClass>]
 type FunPtr<'P, 'T> =
   override _.ToString() =
     failwith "FunPtr type is not available in F#"
@@ -46,7 +46,7 @@ module Std =
 
     module Ptr =
       /// `T const *` in C.
-      [<AbstractClass; Sealed>]
+      [<AbstractClass>]
       type InPtr<'T> =
         override _.ToString() = "InPtr is not available in F#"
 
@@ -57,7 +57,7 @@ module Std =
       type VoidInPtr = voidptr
 
       /// Non-readable `T *` in C.
-      [<AbstractClass; Sealed>]
+      [<AbstractClass>]
       type OutPtr<'T> =
         override _.ToString() = "OutPtr is not available in F#"
 

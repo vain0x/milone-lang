@@ -28,31 +28,29 @@ module TySystem = MiloneSyntax.TySystem
 [<NoEquality; NoComparison>]
 type LToken = private LToken of Token * Pos
 
-[<NoEquality; NoComparison>]
-type LTokenList = private LTokenList of TokenizeFullResult
+// result of tokenization
+type LTokenList = TokenizeFullResult
 
-[<NoEquality; NoComparison>]
-type LSyntaxData = private LSyntaxData of ModuleSyntaxData
-
-/// Text with line-oriented indexes.
-[<RequireQualifiedAccess; NoEquality; NoComparison>]
-type LineBuffer =
-  private
-    { Text: string
-      LineCount: int
-      /// Line index → byte range.
-      OffsetMap: TreeMap<int, int * int> }
-
+// result of parse
 // (this includes Text, FullTokens and SyntaxTree unlike SyntaxData)
+// (this is superset of ModuleSyntaxData)
 [<RequireQualifiedAccess; NoEquality; NoComparison>]
-type LSyntax2 =
+type LSyntax =
   { DocId: DocId
+
+    // from ModuleSyntaxData
+    ProjectName: ProjectName
+    ModuleName: ModuleName
+    UnmodifiedAst: ARoot
+
     Text: SourceCode
     LineBuffer: LineBuffer
     FullTokens: TokenizeFullResult
     Ast: ARoot
     SyntaxTree: SyntaxTree
     Errors: ModuleSyntaxError list }
+
+type LSyntaxData = LSyntax
 
 /// Identifier of a document.
 [<RequireQualifiedAccess; NoEquality; NoComparison>]
@@ -222,9 +220,13 @@ let private parseAllTokens projectName moduleName docId allTokens =
 
   { m with Tokens = allTokens }
 
-let private makeDoc (m: ModuleSyntaxData) : Doc =
+let private makeDoc1 (m: ModuleSyntaxData) : Doc =
   { DocId = m.DocId
     ModulePath = [ m.ProjectName; m.ModuleName ] }
+
+let private makeDoc (s: LSyntax) : Doc =
+  { DocId = s.DocId
+    ModulePath = [ s.ProjectName; s.ModuleName ] }
 
 // -----------------------------------------------
 // Abstraction
@@ -276,120 +278,86 @@ module LToken =
 module LTokenList =
   let private host = tokenizeHostNew ()
 
-  let empty = LTokenList []
+  let empty: LTokenList = []
 
-  let tryLast (LTokenList tokens) =
+  let tryLast (tokens: LTokenList) =
     tokens |> List.tryLast |> Option.map LToken
 
-  let tokenizeAll text =
-    SyntaxTokenize.tokenizeAll host text |> LTokenList
+  let tokenizeAll text: LTokenList =
+    SyntaxTokenize.tokenizeAll host text
 
-  let findAt (pos: Pos) (LTokenList tokens) : LToken option =
+  let findAt (pos: Pos) (tokens: LTokenList) : LToken option =
     match findTokenAt tokens pos with
     | Some (token, pos) -> Some(LToken(token, pos))
     | None -> None
 
-  let findAdjacent (pos: Pos) (LTokenList tokens) : LToken list =
+  let findAdjacent (pos: Pos) (tokens: LTokenList) : LToken list =
     findTokensAt tokens pos |> List.map LToken
 
-  let resolveRanges (posList: Pos list) (LTokenList tokens) : Range list = resolveTokenRanges tokens posList
+  let resolveRanges (posList: Pos list) (tokens: LTokenList) : Range list = resolveTokenRanges tokens posList
 
-  let toList (LTokenList tokens) = tokens |> List.map LToken
+  let toList (tokens: LTokenList) = tokens |> List.map LToken
 
-  let filterByLine (y: int) (LTokenList tokens) : LToken list =
+  let filterByLine (y: int) (tokens: LTokenList) : LToken list =
     tokens
     |> List.skipWhile (fun (_, pos) -> pos < (y, 0))
     |> List.takeWhile (fun (_, pos) -> pos < (y + 1, 0))
     |> List.map (fun (token, pos) -> LToken(token, pos))
 
 module LSyntaxData =
-  let parse projectName moduleName docId (LTokenList tokens) =
-    parseAllTokens projectName moduleName docId tokens
-    |> LSyntaxData
+  let getDocId (s: LSyntax) = s.DocId
 
-  let getDocId syntaxData =
-    let (LSyntaxData m) = syntaxData
-    m.DocId
+  let getTokens (s: LSyntax) = s.FullTokens
 
-  let getTokens syntaxData =
-    let (LSyntaxData m) = syntaxData
-    LTokenList m.Tokens
-
-  let findModuleDefs syntaxData : string list =
-    let (LSyntaxData m) = syntaxData
-
-    lowerARoot (makeDoc m) [] m.Ast
+  let findModuleDefs (s: LSyntax) : string list =
+    lowerARoot (makeDoc s) [] s.Ast
     |> List.choose (fun (symbol, defOrUse, _) ->
       match symbol, defOrUse with
       | DModuleSymbol ([ name ]), Def -> Some name
       | _ -> None)
 
-  let findModuleSynonyms syntaxData : (string * ModulePath * Loc) list =
-    let (LSyntaxData m) = syntaxData
-
-    lowerARoot (makeDoc m) [] m.Ast
+  let findModuleSynonyms (s: LSyntax) : (string * ModulePath * Loc) list =
+    lowerARoot (makeDoc s) [] s.Ast
     |> List.choose (fun (symbol, _, loc2) ->
-      match symbol, resolveLoc2 m.DocId m.Tokens loc2 with
+      match symbol, resolveLoc2 s.DocId s.FullTokens loc2 with
       | DModuleSynonymDef (synonym, modulePath), Some loc -> Some(synonym, modulePath, loc)
       | _ -> None)
 
-module internal LineBuffer =
-  let compute (text: string) : LineBuffer =
-    let rec computeLoop acc y (i: int) =
-      if i < text.Length then
-        let j = text.IndexOf('\n', i)
-
-        if j >= i then
-          let r = if i < j && text.[j - 1] = '\r' then j - 1 else j
-          computeLoop ((y, (i, r)) :: acc) (y + 1) (j + 1)
-        else
-          let acc = (y, (i, text.Length)) :: acc
-          y + 1, acc
-      else
-        y, acc
-
-    let lineCount, acc = computeLoop [] 0 0
-
-    { Text = text
-      LineCount = lineCount
-      OffsetMap = TMap.ofList compare acc }
-
-  let lineRangeAt index (buf: LineBuffer) =
-    buf.OffsetMap |> TMap.tryFind index
-
-  let lineStringAt index (buf: LineBuffer) =
-    match buf.OffsetMap |> TMap.tryFind index with
-    | Some (l, r) ->
-      let r = if l < r && buf.Text.[r - 1] = '\r' then r - 1 else r
-      buf.Text.[l..r - 1]
-
-    | None -> ""
-
-  let posToIndex (pos: Pos) (buf: LineBuffer) =
-    let y, x = pos
-
-    match lineRangeAt y buf with
-    | Some (l, r) -> Some(l + min x r)
-    | _ -> None
-
-  let stringBetween (range: Range) (buf: LineBuffer) =
-    let startPos, endPos = range
-
-    match posToIndex startPos buf, posToIndex endPos buf with
-    | Some l, Some r when l <= r -> buf.Text[l..r - 1]
-    | _ -> ""
-
-module internal LSyntax2 =
+module internal LSyntax =
   let private host = tokenizeHostNew ()
 
-  let parse projectName moduleName docId (text: SourceCode) : LSyntax2 =
+  let ofModuleSyntaxData text (m: ModuleSyntaxData) : LSyntax =
+    { DocId = m.DocId
+      ProjectName = m.ProjectName
+      ModuleName = m.ModuleName
+      UnmodifiedAst = m.UnmodifiedAst
+      Text = text
+      LineBuffer = LineBuffer.compute text
+      FullTokens = m.Tokens
+      Ast = m.Ast
+      SyntaxTree = SyntaxTreeGen.genSyntaxTree m.Tokens m.UnmodifiedAst
+      Errors = m.Errors }
+
+  let toModuleSyntaxData (s: LSyntax) : ModuleSyntaxData =
+    { DocId = s.DocId
+      ProjectName = s.ProjectName
+      ModuleName = s.ModuleName
+      Tokens = s.FullTokens
+      Ast = s.Ast
+      UnmodifiedAst = s.UnmodifiedAst
+      Errors = s.Errors }
+
+  let parse projectName moduleName docId (text: SourceCode) : LSyntax =
     let fullTokens = SyntaxTokenize.tokenizeAll host text
 
     let m =
       parseAllTokens projectName moduleName docId fullTokens
 
-    let syntax: LSyntax2 =
+    let syntax: LSyntax =
       { DocId = docId
+        ProjectName = m.ProjectName
+        ModuleName = m.ModuleName
+        UnmodifiedAst = m.UnmodifiedAst
         Text = text
         LineBuffer = LineBuffer.compute text
         FullTokens = fullTokens
@@ -411,10 +379,8 @@ module BundleResult =
 type ProjectAnalysisHost =
   { ComputeDocId: ProjectName * ModuleName * DocId -> DocId
     GetCoreDocId: ModuleName -> DocId
-    GetDocVersion: DocId -> DocVersion
-    Tokenize: DocId -> DocVersion * LTokenList
-    Parse: DocId -> (DocVersion * LSyntaxData) option
-    Parse2: DocId -> LSyntax2 option
+    GetDocEntry: DocId -> DocVersion * SourceCode
+    GetDocSyntax: DocId -> (DocVersion * LSyntaxData) option
 
     MiloneHome: FilePath
     ReadTextFile: string -> Future<string option> }
@@ -426,31 +392,21 @@ type ProjectAnalysis =
     { ProjectDir: ProjectDir
       ProjectName: ProjectName
       EntryDoc: DocId * ProjectName * ModuleName
-      NewTokenizeCache: TreeMap<DocId, LTokenList>
-      NewParseResults: (DocVersion * LSyntaxData) list
       Db: SyntaxApi.SyntaxAnalysisDb
       BundleCache: BundleResult option
       TirSymbolsCache: SymbolOccurrence list option
       Host: ProjectAnalysisHost }
 
-let private emptyTokenizeCache: TreeMap<DocId, LTokenList> = TMap.empty Symbol.compare
+let private getVersion docId (pa: ProjectAnalysis) = pa.Host.GetDocEntry docId |> fst
 
-let private getVersion docId (pa: ProjectAnalysis) = pa.Host.GetDocVersion docId
+// returns [] if missing
+let private getTokenizeResult docId (pa: ProjectAnalysis) : LTokenList =
+  match pa.Host.GetDocSyntax docId with
+  | Some(_, syntax) -> syntax.FullTokens
+  | _ -> []
 
-let private tokenizeWithCache docId (pa: ProjectAnalysis) =
-  match pa.NewTokenizeCache |> TMap.tryFind docId with
-  | Some (LTokenList tokens) -> tokens, pa
-
-  | None ->
-    let tokens = pa.Host.Tokenize docId |> snd
-
-    let pa =
-      { pa with NewTokenizeCache = pa.NewTokenizeCache |> TMap.add docId tokens }
-
-    let (LTokenList tokens) = tokens
-    tokens, pa
-
-let private parseWithCache docId (pa: ProjectAnalysis) = pa.Host.Parse docId |> Option.map snd
+let private getParseResult docId (pa: ProjectAnalysis) : LSyntax option =
+  pa.Host.GetDocSyntax docId |> Option.map snd
 
 [<RequireQualifiedAccess; NoEquality; NoComparison>]
 type BundleResult =
@@ -484,9 +440,9 @@ let private bundleWithCache (pa: ProjectAnalysis) : BundleResult * ProjectAnalys
       let docId =
         pa.Host.ComputeDocId(r.ProjectName, r.ModuleName, r.Origin)
 
-      match pa |> parseWithCache docId with
+      match pa |> getParseResult docId with
       | None -> Future.just None
-      | Some (LSyntaxData m) -> Future.just (Some m)
+      | Some s -> Future.just (Some (LSyntax.toModuleSyntaxData s))
 
     let layers, bundleErrors =
       AstBundle.bundle fetchModuleUsingCache pa.EntryDoc
@@ -518,7 +474,9 @@ let private bundleWithCache (pa: ProjectAnalysis) : BundleResult * ProjectAnalys
           layers
           |> List.map (fun modules -> modules |> List.map (fun (_, m) -> m))
 
-        SyntaxApi.performSyntaxAnalysisWithCache pa.Db writeLog layers2 invalidatedDocIds
+        let isExecutableDoc (_: DocId) = false
+
+        SyntaxApi.performSyntaxAnalysisWithCache pa.Db writeLog isExecutableDoc layers2 invalidatedDocIds
 
     let docVersions =
       layers
@@ -531,8 +489,8 @@ let private bundleWithCache (pa: ProjectAnalysis) : BundleResult * ProjectAnalys
       |> List.collect (fun modules ->
         modules
         |> List.map (fun ((m: ModuleSyntaxData), (_: ModuleSyntaxData2)) ->
-          let v = getVersion m.DocId pa
-          v, LSyntaxData m))
+          let v, text = pa.Host.GetDocEntry m.DocId
+          v, LSyntax.ofModuleSyntaxData text m))
 
     let result : BundleResult =
       let errors =
@@ -550,14 +508,6 @@ let private bundleWithCache (pa: ProjectAnalysis) : BundleResult * ProjectAnalys
 
     let pa =
       { pa with
-          NewTokenizeCache =
-            result.ParseResults
-            |> List.fold
-                (fun map (_, syntaxData) ->
-                  let (LSyntaxData m) = syntaxData
-                  map |> TMap.add m.DocId (LTokenList m.Tokens))
-                pa.NewTokenizeCache
-          NewParseResults = List.append result.ParseResults pa.NewParseResults
           Db = db
           BundleCache = Some result
           TirSymbolsCache = None }
@@ -1010,28 +960,25 @@ let private resolveLoc2 docId tokens (loc: Loc2) =
 /// Resolve locations.
 let private resolveLoc (symbols: SymbolOccurrence list) pa =
   symbols
-  |> List.mapFold
-       (fun (pa: ProjectAnalysis) item ->
+  |> List.choose
+       (fun item ->
          let symbol, defOrUse, tyOpt, loc2 = item
 
-         let locOpt, pa =
+         let locOpt =
            match loc2 with
-           | At loc -> Some loc, pa
+           | At loc -> Some loc
 
            | PreviousIdent (Loc (docId, y, x)) ->
-             let tokens, pa = tokenizeWithCache docId pa
-             lastIdentBefore tokens docId (y, x), pa
+             let tokens = getTokenizeResult docId pa
+             lastIdentBefore tokens docId (y, x)
 
            | NextIdent (Loc (docId, y, x)) ->
-             let tokens, pa = tokenizeWithCache docId pa
-             firstIdentAfter tokens docId (y, x), pa
+             let tokens = getTokenizeResult docId pa
+             firstIdentAfter tokens docId (y, x)
 
          match locOpt with
-         | Some loc -> Some(symbol, defOrUse, tyOpt, loc), pa
-         | None -> None, pa)
-       pa
-  |> fst
-  |> List.choose id
+         | Some loc -> Some(symbol, defOrUse, tyOpt, loc)
+         | None -> None)
 
 let private paGetTirSymbolsWithCache (pa: ProjectAnalysis) =
   match pa.BundleCache, pa.TirSymbolsCache with
@@ -1048,8 +995,8 @@ let private collectSymbolsInExpr (pa: ProjectAnalysis) (modules: TProgram) (tirC
   let parseModule (m: TModule) =
     let docId = m.DocId
 
-    match pa |> parseWithCache docId with
-    | Some (LSyntaxData m) -> m
+    match pa |> getParseResult docId with
+    | Some s -> LSyntax.toModuleSyntaxData s
     | None -> failwith "must be parsed"
 
   let variantNameMap =
@@ -1111,7 +1058,7 @@ let private collectSymbolsInExpr (pa: ProjectAnalysis) (modules: TProgram) (tirC
     |> List.fold
          (fun acc m ->
            let m = parseModule m
-           lowerARoot (makeDoc m) acc m.Ast)
+           lowerARoot (makeDoc1 m) acc m.Ast)
          []
 
   let tySymbols =
@@ -1171,7 +1118,7 @@ module Symbol =
     match b.TirCtxOpt with
     | Some tirCtx ->
       match symbol with
-      | DiscardSymbol _
+      | DiscardSymbol
       | PrimSymbol _ -> None // not implemented, completion need filter out
 
       | FieldSymbol _ -> None
@@ -1222,8 +1169,6 @@ module ProjectAnalysis1 =
     { ProjectDir = projectDir
       ProjectName = projectName
       EntryDoc = entryDoc
-      NewTokenizeCache = emptyTokenizeCache
-      NewParseResults = []
       Db = SyntaxApi.SyntaxAnalysisDb.empty ()
       BundleCache = None
       TirSymbolsCache = None
@@ -1231,29 +1176,16 @@ module ProjectAnalysis1 =
 
   let withHost (host: ProjectAnalysisHost) pa : ProjectAnalysis = { pa with Host = host }
 
-  let drain (pa: ProjectAnalysis) =
-    pa.NewTokenizeCache,
-    pa.NewParseResults,
-    { pa with
-        NewTokenizeCache = emptyTokenizeCache
-        NewParseResults = [] }
+  let getTokens (docId: DocId) (pa: ProjectAnalysis) : LTokenList = getTokenizeResult docId pa
 
-  let tokenize (docId: DocId) (pa: ProjectAnalysis) : LTokenList * ProjectAnalysis =
-    let tokens, pa = tokenizeWithCache docId pa
-    LTokenList tokens, pa
-
-  let parse (docId: DocId) (pa: ProjectAnalysis) : LSyntaxData option * ProjectAnalysis = parseWithCache docId pa, pa
-
-  let parse2 (docId: DocId) (pa: ProjectAnalysis) : LSyntax2 option * ProjectAnalysis = pa.Host.Parse2 docId, pa
+  let getSyntax (docId: DocId) (pa: ProjectAnalysis) : LSyntaxData option = getParseResult docId pa
 
   let bundle (pa: ProjectAnalysis) : BundleResult * ProjectAnalysis = bundleWithCache pa
 
   let documentSymbols (s: LSyntaxData) (_pa: ProjectAnalysis) =
-    let (LSyntaxData m) = s
-
-    lowerARoot (makeDoc m) [] m.Ast
+    lowerARoot (makeDoc s) [] s.Ast
     |> List.choose (fun (symbol, defOrUse, loc2) ->
-      match defOrUse, resolveLoc2 m.DocId m.Tokens loc2 with
+      match defOrUse, resolveLoc2 s.DocId s.FullTokens loc2 with
       | Def, Some loc -> Some(symbol, defOrUse, loc)
       | _ -> None)
 
@@ -1487,7 +1419,7 @@ module internal ProjectAnalysisCompletion =
         | [] -> acc
 
         | docId :: docAcc ->
-          match pa.Host.Parse2 docId with
+          match getParseResult docId pa with
           | Some syntax ->
             let (SyntaxTree root) = syntax.SyntaxTree
 
@@ -1644,7 +1576,7 @@ module internal ProjectAnalysisCompletion =
       | _ -> false
 
     let findToplevelDecls docId (pa: ProjectAnalysis) =
-      match pa.Host.Parse2 docId with
+      match getParseResult docId pa with
       | Some syntax ->
         let (SyntaxTree root) = syntax.SyntaxTree
 
@@ -1790,7 +1722,7 @@ module internal ProjectAnalysisCompletion =
           let docId = pa.Host.ComputeDocId(p, m, docId)
 
           findToplevelDecls docId pa
-          |> List.collect (fun ((syntax: LSyntax2), decl) -> collectContents syntax.LineBuffer decl)
+          |> List.collect (fun ((syntax: LSyntax), decl) -> collectContents syntax.LineBuffer decl)
 
         | _ -> []
 
@@ -1823,7 +1755,7 @@ module internal ProjectAnalysisCompletion =
     List.append (resolveUnqualifiedAsNs docId targetPos pa) (resolvePrelude ())
 
   let tryNsCompletion (docId: DocId) (targetPos: Pos) pa : (int * string) list option * ProjectAnalysis =
-    let syntaxOpt, pa = ProjectAnalysis1.parse2 docId pa
+    let syntaxOpt = getParseResult docId pa
 
     match syntaxOpt with
     | Some syntax ->
@@ -1893,13 +1825,13 @@ module internal ProjectAnalysisCompletion =
         ancestors
         |> List.tryFind (fun node ->
           match SyntaxElement.kind node with
-          | SyntaxKind.RecordExpr _ -> true
+          | SyntaxKind.RecordExpr -> true
           | _ -> false))
       |> Option.map SyntaxElement.range
 
     // performs syntactic analysis and checks if whether record completion is applicable.
     let tryDetectRecordRange pa =
-      let syntaxOpt, pa = ProjectAnalysis1.parse2 docId pa
+      let syntaxOpt = getParseResult docId pa
 
       match syntaxOpt with
       | Some syntax ->

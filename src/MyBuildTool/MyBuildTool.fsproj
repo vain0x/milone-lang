@@ -2,12 +2,17 @@
 
   <PropertyGroup>
     <OutputType>Exe</OutputType>
-    <TargetFramework>net6.0</TargetFramework>
+    <TargetFramework>net8.0</TargetFramework>
+    <OtherFlags>--allsigs</OtherFlags>
   </PropertyGroup>
 
   <ItemGroup>
-    <Compile Include="FileSearch.fs" />
-    <Compile Include="InstantiateBuildTemplateNinja.fs" />
+    <Compile Include="Util.fs" />
+    <Compile Include="PlatformInfo.fs" />
+    <Compile Include="MyShell.fs" />
+    <Compile Include="BuildingTests.fs" />
+    <Compile Include="Packaging.fs" />
+    <Compile Include="SelfHostingTests.fs" />
     <Compile Include="MyBuildTool.fs" />
   </ItemGroup>
 

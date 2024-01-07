@@ -227,6 +227,19 @@ static bool milone_platform_create_single_directory(struct String dir) {
 #endif
 }
 
+// Copy a single file.
+bool milone_platform_copy_file(struct String src, struct String dest) {
+#if defined(MILONE_PLATFORM_LINUX)
+    milone_failwith("copy_file on linux unimplemented");
+#elif defined(MILONE_PLATFORM_WINDOWS)
+    struct MiloneOsString srcW = milone_os_string_of(src);
+    struct MiloneOsString destW = milone_os_string_of(dest);
+    return CopyFile(srcW.ptr, destW.ptr, FALSE) != 0;
+#else
+#error no platform
+#endif
+}
+
 // Create a directory unless it exists.
 bool dir_create(struct String dir, struct String base_dir) {
     assert(dir.len != 0);
