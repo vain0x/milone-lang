@@ -22,7 +22,7 @@ module ModuleLoad = MiloneCli.ModuleLoad
 module PL = MiloneCli.PlatformLinux
 module PW = MiloneCli.PlatformWindows
 
-let private currentVersion () = "0.6.0"
+let private currentVersion () = "0.6.1"
 
 let private helpText () =
   let s =

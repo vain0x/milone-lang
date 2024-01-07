@@ -7,7 +7,7 @@ open MyBuildTool.MyShell
 open MyBuildTool.PlatformInfo
 open MyBuildTool.Util
 
-let private MiloneVersion: string = "0.6.0"
+let private MiloneVersion: string = "0.6.1"
 let private AssetsDir: string = __SOURCE_DIRECTORY__ + "/assets"
 let private Cwd: string = Environment.CurrentDirectory
 
