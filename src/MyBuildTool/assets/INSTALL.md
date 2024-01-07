@@ -22,4 +22,4 @@ To use unqualified `milone` command, add `$HOME/.local/bin` to your `$PATH` envi
 
 ## See Also
 
-→ [binary_package.md](https://github.com/vain0x/milone-lang/blob/v0.6.0/docs/binary_package.md)
+→ [binary_package.md](https://github.com/vain0x/milone-lang/blob/v0.6.1/docs/binary_package.md)

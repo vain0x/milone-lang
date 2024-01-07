@@ -4,7 +4,15 @@
 
 ## [Unreleased]
 
-[Unreleased]: https://github.com/vain0x/milone-lang/compare/v0.6.0...develop
+[Unreleased]: https://github.com/vain0x/milone-lang/compare/v0.6.1...develop
+
+
+
+## [v0.6.1] - 2024-01-07
+
+[v0.6.1]: https://github.com/vain0x/milone-lang/compare/v0.6.0...develop
+
+This version fixes a build issue. It also provides .NET tool version upgrade and some performance improvement.
 
 ### CLI Tools
 
