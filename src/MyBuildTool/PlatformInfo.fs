@@ -31,4 +31,4 @@ module internal Platform =
   let internal RuntimeIdentifier =
     match Current with
     | Platform.Linux -> "linux-x64"
-    | Platform.Windows -> "win10-x64"
+    | Platform.Windows -> "win-x64"
