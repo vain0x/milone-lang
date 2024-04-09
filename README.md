@@ -45,7 +45,7 @@ printfn "5! = %d" (factorial 5)
 **History**:
 The author started this project in 2018 just for fun. Initial goal was making a compiler that can compile itself (that is, **[self-hosting](https://en.wikipedia.org/wiki/Self-hosting)**). It was achieved at [v0.1.0](https://github.com/vain0x/milone-lang/tree/v0.1.0) in 2019.
 
-**Status**: Currently this project is being developed for v1.0 release.
+**Status**: Currently this project is being developed for v1.0 release: [the current roadmap](docs/roadmap.md).
 
 **Disclaimer**: This is a hobby project. Don't use in production.
 
