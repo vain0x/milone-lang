@@ -286,6 +286,9 @@ type HExprKind =
   /// Size of type. Argument is a type placeholder. The result type is int.
   | HSizeOfEN
 
+  /// Reflect of type.
+  | HReflectEN
+
   /// Name of type.
   | HTyPlaceholderEN
 

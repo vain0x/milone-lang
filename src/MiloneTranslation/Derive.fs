@@ -42,7 +42,8 @@ let private hxApp3 callee arg1 arg2 arg3 = hxApp1 (hxApp2 callee arg1 arg2) arg3
 
 type private FCtx =
   { Equal: TreeSet<Ty>
-    String: TreeSet<Ty> }
+    String: TreeSet<Ty>
+    Reflect: TreeSet<Ty> }
 
 let private fuExpr (ctx: FCtx) expr : FCtx =
   let onExpr expr ctx = fuExpr ctx expr
@@ -78,7 +79,16 @@ let private fuExpr (ctx: FCtx) expr : FCtx =
     |> onExpr cond
     |> forList (fun (_, guard, body) ctx -> ctx |> onExpr guard |> onExpr body) arms
 
-  | HNodeExpr (_, items, _, _) -> ctx |> onExprs items
+  | HNodeExpr (_, items, _, _) ->
+    let ctx =
+      match items with
+      | [ HNodeExpr(HTyPlaceholderEN, _, ty, _) ] ->
+        __trace "reflectEN find"
+        { ctx with Reflect = ctx.Reflect |> TSet.add ty }
+      | _ -> ctx
+
+    ctx |> onExprs items
+
   | HBlockExpr (stmts, last) -> fuExpr (ctx |> onStmts stmts) last
 
   | HNavExpr _ -> unreachable () // HNavExpr is resolved in NameRes, Typing, or RecordRes.
@@ -137,7 +147,14 @@ let private rewriteExpr (ctx: RCtx) expr : HExpr =
     let arms = arms |> List.map (hArmMap id onExpr)
     HMatchExpr(onExpr cond, arms, ty, loc)
 
-  | HNodeExpr (kind, items, ty, loc) -> HNodeExpr(kind, onExprs items, ty, loc)
+  | HNodeExpr (kind, items, ty, loc) ->
+      match kind, items with
+      | HReflectEN, [ HNodeExpr(HTyPlaceholderEN, _, ty, _) ] ->
+        __trace ("reflectEN usage: " + __dump ty)
+        HLitExpr(IntLit "/* reflect */ 0", loc)
+
+      | _ -> HNodeExpr(kind, onExprs items, ty, loc)
+
   | HBlockExpr (stmts, last) -> HBlockExpr(onStmts stmts, onExpr last)
 
   | HNavExpr _ -> unreachable () // HNavExpr is resolved in NameRes, Typing, or RecordRes.
@@ -172,7 +189,8 @@ type private DCtx =
     StringWorkList: Ty list
     GenericListEqualFunOpt: FunSerial option
     EqualFunInstances: TreeMap<Ty, FunSerial>
-    StringFunInstances: TreeMap<Ty, FunSerial> }
+    StringFunInstances: TreeMap<Ty, FunSerial>
+    ReflectValueInstances: TreeMap<Ty, VarSerial> }
 
 let private ofHirCtx (hirCtx: HirCtx) : DCtx =
   { Serial = hirCtx.Serial
@@ -183,7 +201,8 @@ let private ofHirCtx (hirCtx: HirCtx) : DCtx =
     StringWorkList = []
     GenericListEqualFunOpt = None
     EqualFunInstances = TMap.empty tyCompare
-    StringFunInstances = TMap.empty tyCompare }
+    StringFunInstances = TMap.empty tyCompare
+    ReflectValueInstances = TMap.empty tyCompare }
 
 let private addVar (name: string) (ty: Ty) (loc: Loc) (ctx: DCtx) =
   let serial = ctx.Serial + 1
@@ -694,17 +713,39 @@ let private deriveOnStmt (hirCtx: HirCtx) (ctx: DCtx) stmt : DCtx =
     | UnionTk _, _ -> deriveStringForUnion rx ty ctx
     | _ -> ctx
 
+  let generateReflectValue (ctx: DCtx) ty : DCtx =
+    let (Ty (tk, tyArgs)) = ty
+
+    match tk, tyArgs with
+    | IntTk _, _
+    | FloatTk _, _
+    | BoolTk, _
+    | CharTk, _
+    | StringTk, _
+    | TupleTk, [] -> ctx
+
+    | _ when ctx.ReflectValueInstances |> TMap.containsKey ty -> ctx
+
+    | TupleTk, _ -> deriveStringForTuple ty ctx
+    // | ListTk _, _ -> deriveStringForList ty ctx
+    | UnionTk _, _ -> deriveStringForUnion rx ty ctx
+    | _ -> ctx
+
   let ctx =
     let empty: FCtx =
       { Equal = TSet.empty tyCompare
-        String = TSet.empty tyCompare }
+        String = TSet.empty tyCompare
+        Reflect = TSet.empty tyCompare }
 
     let fCtx = fuStmt empty stmt
 
     let ctx =
       fCtx.Equal |> TSet.fold generateEqualFun ctx
 
-    fCtx.String |> TSet.fold generateStringFun ctx
+    let ctx =
+      fCtx.String |> TSet.fold generateStringFun ctx
+
+    fCtx.Reflect |> TSet.fold generateReflectValue ctx
 
   let ctx =
     let rec go workList (ctx: DCtx) : DCtx =

@@ -1607,6 +1607,10 @@ let private mirifyExprInf ctx itself kind args ty loc =
     MUnitExpr loc, ctx
 
   | HSizeOfEN, [ HNodeExpr (_, _, ty, _) ], _ -> MGenericValueExpr(MSizeOfGv, ty, loc), ctx
+  | HReflectEN, [ HNodeExpr (_, _, _ty, _) ], _ ->
+    // TODO: implement
+    MNativeExpr ("<REFLECT>", [], tyUnit, loc), ctx
+
   | HTyPlaceholderEN, _, _ -> MGenericValueExpr(MTyPlaceholderGv, ty, loc), ctx
 
   | t -> unreachable t

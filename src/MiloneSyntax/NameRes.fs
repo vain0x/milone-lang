@@ -1403,6 +1403,14 @@ let private nameResUnqualifiedIdentExpr ctx ident loc tyArgs : TExpr * ScopeCtx 
       | [ ty ] -> TNodeExpr(TSizeOfEN, [ TNodeExpr(TTyPlaceholderEN, [], ty, loc) ], tyInt, loc), ctx
       | _ -> errorExpr ctx (TyArityError(ident, List.length tyArgs, 1)) loc
 
+    | None when ident = "reflect" ->
+      match tyArgs with
+      | [ ty ] ->
+        // `struct MiloneReflect const *`
+        let tyReflect = tyInPtr(Ty(NativeTypeTk "struct MiloneReflect", []))
+        TNodeExpr(TReflectEN, [ TNodeExpr(TTyPlaceholderEN, [], ty, loc) ], tyReflect, loc), ctx
+      | _ -> errorExpr ctx (TyArityError(ident, List.length tyArgs, 1)) loc
+
     | _ -> errorExpr ctx UnimplTyArgListError loc
 
 let private nameResNavExpr (ctx: ScopeCtx) (expr: NExpr) : TExpr * ScopeCtx =

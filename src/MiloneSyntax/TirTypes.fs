@@ -349,6 +349,9 @@ type TExprKind =
   /// Size of type. Argument is a type placeholder. The result type is int.
   | TSizeOfEN
 
+  /// Reflect of type.
+  | TReflectEN
+
   /// Name of type.
   | TTyPlaceholderEN
 

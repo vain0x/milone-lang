@@ -182,4 +182,29 @@ _Noreturn static void milone_never_error(char const *filename, int32_t row,
 _Noreturn void milone_failwith(char const *msg);
 _Noreturn void milone_failwithf(char const *fmt, ...);
 
+// -----------------------------------------------
+// reflection
+// -----------------------------------------------
+
+enum MiloneTypeTag {
+    // primitive
+    MiloneTypeTag_Unit = 1,
+    MiloneTypeTag_Int,
+    MiloneTypeTag_String,
+    // compound
+    MiloneTypeTag_Tuple,
+};
+
+struct MiloneReflectTuple {
+    int32_t item_count;
+    struct MiloneReflect const *items;
+};
+
+struct MiloneReflect {
+    int32_t tag;
+    union {
+        struct MiloneReflectTuple const *tuple;
+    };
+};
+
 #endif
